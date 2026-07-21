@@ -8,10 +8,17 @@ Bu dosya sistemin **kalbidir**. İş mantığına dokunan her görevde okunur. "
 
 | Terim | Anlam |
 | --- | --- |
-| **Kanal** | Bir siparişin ait olduğu tip: `B2B` (şirket) veya `B2C` (son tüketici). Sistem otomatik belirler. |
+| **Kanal** | Sipariş verenin *tipi*: `B2B` (şirket) veya `B2C` (son tüketici). Sistem otomatik belirler. **Sipariş kaynağıyla karıştırılmaz.** |
+| **Sipariş kaynağı** | Siparişin *nereden kapandığı*: `web` / `whatsapp` / `door` / `manual`. Kanaldan bağımsız eksen (bkz. `CHANNELS.md §2`). |
+| **Satış yüzeyi** | Siparişin kapatıldığı arayüz: vitrin sitesi, WhatsApp, kapı önü. Hepsi aynı `domain-core`'u çağırır. |
+| **Servis penceresi** | Müşteri yazınca açılan 24 saatlik ücretsiz mesajlaşma aralığı. Dışında işletme-başlatan mesaj onaylı template gerektirir (ücretli). |
+| **Opt-in** | Müşterinin ticari mesaj alma izni. Broadcast için double opt-in şart (GDPR). |
 | **Platform satışı** | Sistem üzerinden geçen sipariş. Ortaklık paylaşımına dahildir. |
 | **Platform dışı satış** | Sistemsiz (eski usul) yapılan satış. Paylaşıma dahil değildir. |
-| **DLC** | Son kullanma tarihi (date limite de consommation). Donuk gıdada kritik. |
+| **DLC** | *Date limite de consommation* — güvenlik/son tüketim tarihi. Geçince **satılamaz** (yasal, imha). |
+| **DDM** | *Date de durabilité minimale* — asgari kalite tarihi. Geçince **satılabilir**, kalite düşer. Donuk ürünlerin çoğu DDM'dir. |
+| **Kalan raf ömrü %** | Ürün ömrünün ne kadarının kaldığı = (kalan gün ÷ toplam raf ömrü). Uyarı, indirim ve kabul kararları buna göre. |
+| **MLOR** | *Minimum Life On Receipt* — bir parti bize (veya müşteriye) ulaşırken kalmış olması gereken asgari raf ömrü. |
 | **Rota içi** | Müşteri adresinin mevcut dağıtım rotasının kapsadığı bölgede olması. |
 | **Fiili stok** | Depoda fiziksel olarak var olan miktar. |
 | **Ayrılmış stok** | Verilmiş ama henüz teslim edilmemiş siparişlere tahsis edilmiş miktar. |
@@ -52,6 +59,10 @@ Sipariş oluştuğunda kanal, sipariş verenin **şirket olup olmadığına** g�
 
 > **Not (ajan için):** Bu, ortaklık dokümanındaki daha eski "B2B/B2C ayrı paylaşılır" mantığının **yerini alan** güncel karardır. Sistem tarafında tek havuz mantığı geçerlidir. Paylaşım oranının kendisi (yüzde) bir iş anlaşmasıdır; sistem sadece her satışı doğru, değişmez ve raporlanabilir biçimde kaydeder.
 
+### Kanal ≠ sipariş kaynağı
+
+"Kanal" (b2b/b2c) siparişi verenin **kim** olduğudur. Siparişin **nereden** kapandığı ayrı bir eksendir: `order_source` (`web`/`whatsapp`/`door`/`manual`). Bir B2C müşteri WhatsApp'tan da siteden de sipariş verebilir; kanalı değişmez, yalnızca kaynağı değişir. Günlük dilde "WhatsApp kanalı" denir ama veri modelinde bu `order_source=whatsapp`'tır — mali paylaşımla ilgisi yoktur. Ayrıntı: `CHANNELS.md`.
+
 ---
 
 ## 4. Stok kuralları
@@ -62,10 +73,35 @@ Sipariş oluştuğunda kanal, sipariş verenin **şirket olup olmadığına** g�
 
 ### Rezervasyon
 
-- Uzaktan sipariş onaylandığında stok **ayrılır** (fiiliden düşülmez, ayrılmışa eklenir).
+- Uzaktan siparişte stok **ayrılır** (fiiliden düşülmez, ayrılmışa eklenir): online ödemede **checkout başlarken** (TTL'li, aşağıya bkz.), kapıda/vadeli ödemede **onayda** (`confirmed`).
 - Sipariş teslim edildiğinde ayrılmış → fiiliden düşülür (ayrılmış da azalır).
-- Sipariş iptal edilirse ayrılmış geri bırakılır.
+- Sipariş iptal edilirse ayrılmış geri bırakılır — ama mal teslimata çıkmışsa serbest bırakma **depoya geri girişte** olur, kapıda değil (aşağıya bkz.).
 - **Hızlı satışta** (kapı önü) rezervasyon adımı atlanır: fiiliden anında düşülür.
+- Rezervasyon **ürün-toplamı** seviyesindedir (parti seçilmez); hangi partinin gideceği **hazırlıkta FEFO ile** belirlenir. Basit ve eşzamanlılığa dayanıklı; DLC takibi bundan etkilenmez (aşağıya bkz.).
+- **Nerede tutulur:** her ayırma bir `Reservation` satırıdır (sipariş + varyant + adet + varsa TTL); "ayrılmış toplam" bu satırlardan **türetilir**, sayaç tutulmaz. Partiye bağlı teklif satırı (near-expiry) aynı tablodadır, tek farkla: `stock_id` doludur. Ayrı mekanizma yoktur.
+- **Hazırlıkta parti kaydı:** hazırlık ekranı FEFO'ya göre partiyi **önerir**; depocu "hazırlandı" derken çıkan parti(ler) `OrderItemBatch`'e otomatik yazılır (3 × parti A, 2 × parti B olabilir). Depocu öneriden saparsa yalnız o satırı değiştirir — günlük ek yük yok. Bu kayıt iki şeyi mümkün kılar: **geri çağırmada** "bu parti hangi siparişlere gitti" tek sorgudur; **gerçek COGS** partinin alış fiyatından hesaplanır (§12). FEFO önerisi hesaplanırken partiye pinned rezervasyon miktarı o partinin kullanılabilirinden düşülür — normal hazırlık, teklife söz verilmiş stoğu yiyemez.
+- Parti karmaşıklığı yalnız **depo hazırlık ekranında** yaşar; müşteri, admin sipariş listesi ve kasa parti görmez (altın kural).
+
+### Online checkout: rezervasyon penceresi (TTL)
+
+Online ödemede stok **checkout başlarken** ayrılır — cart'ta değil ("sepette hold yok" kuralı korunur). Müşteri ödemeyi tamamlamazsa ayrılan stok kilitli kalmasın diye bir süre penceresi vardır:
+
+- Ayrılır; **30 dakika** (varsayılan) içinde ödeme onayı gelmezse `apps/backend` cron'u ayrılmışı **geri bırakır** (`Reservation.expires_at` üzerinden); sipariş `draft`'ta kalır/iptal olur.
+- TTL **parametrik** `Setting`'tir (kod sabiti değil).
+- **Ödeme penceresi = rezervasyon penceresi:** Stripe checkout oturumu TTL ile **aynı anda sona erdirilir** (session expiry = TTL). Stok serbest kaldığı anda ödeme kapısı da kapanır — "süre doldu ama müşteri hâlâ ödeyebiliyor" yarışı normalde imkânsızdır. Varsayılanın 30 dk olması bundandır: Stripe oturumunun asgari süresi 30 dk'dır; TTL bunun altına indirilemez. WhatsApp payment link'leri de aynı kurala bağlanır: link süresi = TTL.
+- **Geç ödeme emniyet kuralı (webhook gecikirse/tekrarlanırsa):** rezervasyon düşmüş bir sipariş için ödeme onayı gelirse sistem önce stoğu **yeniden ayırmayı** dener — ayrılabilirse sipariş normal devam eder; ayrılamazsa **otomatik para iadesi** + müşteriye bilgi mesajı. Elle karar gerekmez; dallanma `domain-core`'da tanımlıdır.
+- `confirmed` yalnız ödeme onayında olur; onaya kadar sipariş `draft`'tır ama stok ayrılmıştır.
+
+### Teslim edilememe → rezervasyon depoya çıpalıdır
+
+Mal teslimata çıktıktan sonra kapıda teslim edilemezse **stok kapıda değiştirilmez** — mal "ayrılmış" kalır (kamyondayken kimseye kullanılabilir görünmez; aşırı-satış olmaz). Kurye kapıda sonucu işaretler:
+
+- **Ulaşılamadı** (müşteri evde yok vb.): sipariş `ready`'ye döner, yeniden teslim denenir; mal **ayrılmış kalır**.
+- **Reddedildi** (müşteri kabul etmedi): sipariş `returned`'e gider; mal depoya döner.
+
+Rezervasyonun serbest bırakılması **yalnızca mal fiziksel olarak depoya geri girdiğinde**, tek bir depo aksiyonuyla olur: **restock** (ayrılmış → serbest, kullanılabilir artar) *veya* **imha** (hasarlı / DLC bozulmuş: fiiliden ve ayrılmıştan düş, imha işaretle). "Depodan çıktı / arabaya bindi / indi" gibi hareket takibi tutulmaz; yalnız iki fiziksel-gerçek anı (`delivered` ve iade depo girişi) stoğu değiştirir. Prepaid (online) reddedilirse otomatik iade; kapıda ödenecekse zaten tahsilat yapılmamıştır.
+
+**Teslim-sonrası iadede varsayılan imha:** kapıda reddedilip frigo araçtan hiç çıkmamış mal restoklanabilir; ama **teslim edilmiş ve sonra iade edilen** donuk ürün, soğuk zinciri belgelenemediği için varsayılan olarak **imha** edilir — restok yalnız admin istisnasıdır ve **sebep kaydıyla** yapılır. Her imha/fire `StockAdjustment`'a yazılır (kayıp görünür olur, bkz. §12).
 
 ### Eşzamanlılık (concurrency)
 
@@ -73,11 +109,20 @@ Sipariş oluştuğunda kanal, sipariş verenin **şirket olup olmadığına** g�
 
 > Bu, blueprint'in "aynı değeri iki yerde tutma / tek kaynaktan türet" ilkesiyle uyumludur: kullanılabilir stok saklanmaz, fiili ve ayrılmıştan türetilir.
 
-### DLC / FEFO
+### Rezervasyon ↔ ödeme sırası
 
-- Her stok partisinin DLC'si tutulur.
-- Hazırlıkta **FEFO** (önce süresi dolan çıkar) uygulanır.
-- DLC yaklaşınca sistem uyarır (parametrik eşik). Aksiyon: kampanya, öne çıkarma, indirimli satış. Karar insanın.
+- **Online ödemede** (web / WhatsApp): kural **"önce ayır, sonra tahsil et."** Stok atomik olarak ayrılır, *sonra* tahsilat başlar. Ayrılamazsa ödeme **hiç başlamaz** — müşteriden karşılığı olmayan tahsilat yapılmaz, "önce çektik sonra stok yoktu" durumu imkânsızdır. Bu sıra `domain-core` sözleşmesidir (rezervasyon → ödeme), uygulama katmanında ters çevrilemez.
+- **Kapıda ödemede** (nakit / kart / çek): rezervasyon yine `confirmed`'de yapılır; tahsilat teslim anındadır, sonra gelir — sıra sorunu doğmaz.
+
+### DLC / DDM, raf ömrü ve FEFO
+
+- Her stok partisinin **son tarihi** ve **tipi** tutulur. Tarih tipi ürün bazında: `DLC` (güvenlik — geçince satılamaz) veya `DDM` (kalite — geçince satılabilir). Varsayılan `DDM` (donukta yaygın), üründe değiştirilebilir.
+- **Kalan raf ömrü %** türetilir: (son tarih − bugün) ÷ ürünün toplam raf ömrü. Kararlar mutlak günle değil bu yüzdeyle verilir.
+- **FEFO:** hazırlıkta önce süresi dolan çıkar. (Rezervasyon ürün-toplamı seviyesinde; parti seçimi hazırlıkta.)
+- **Yaklaşan son tarih:** kalan % parametrik eşiğin (varsayılan **%25**) altına inince sistem uyarır ve indirim/hediye/öne çıkarma **önerir** — karar insanın. DDM geçmiş ama satılabilir ürünler indirim/hediye havuzuna girebilir; DLC geçmiş ürün satılamaz, imha edilir.
+- **MLOR (girişte kabul):** tedarikçiden gelen partinin kalan raf ömrü parametrik eşiğin (varsayılan **%75**) altındaysa sistem uyarır. Aynı ölçüt müşteriye söz verilen tazelikte de kullanılır.
+
+> Parametrik varsayılanlar (yaklaşan eşik %25, MLOR %75) piyasa standardına göre konuldu; `Setting`'ten değiştirilir.
 
 ---
 
@@ -87,7 +132,68 @@ Sipariş oluştuğunda kanal, sipariş verenin **şirket olup olmadığına** g�
 - **B2B fiyatı** ayrı liste; ayrıca **müşteriye özel fiyat** olabilir.
 - **B2C fiyatı** ayrı.
 - Fiyatlar arası ilişki (perakende fiyatının toptan müşteriyi rahatsız etmemesi) bir iş kararıdır; sistem farklı fiyat seviyelerini destekler, politikayı admin belirler.
-- KDV oranı ürün bazında (donuk gıda %5,5; bazı ürünler %20). Sınır ötesi B2B için gerekli KDV düzeni (autoliquidation) desteklenir.
+- KDV oranı ürün bazında (donuk gıda %5,5; bazı ürünler %20).
+
+### KDV ve sınır ötesi (müşteri-yüzü doğru, beyan muhasebede)
+
+Muhasebe programı değiliz; beyan/OSS/VIES-yönetimi muhasebenindir. Ama KDV **müşterinin ödediği fiyatı** değiştirdiği için checkout'ta doğru uygulanır:
+
+- **Yurt içi (FR) ve FR müşteri:** Fransız KDV'si (ürün oranından).
+- **Alman B2B + geçerli vergi no:** **reverse charge** — %0 KDV, müşteri kendi ülkesinde beyan eder; faturada "Autoliquidation" ibaresi. Vergi no alınır ve VIES açık API'siyle doğrulanır (`Customer.vat_number`, `vat_number_valid`). `vat_treatment = intra_eu_b2b_reverse_charge`.
+- **Alman B2C:** şimdilik Fransız KDV'si. AB kuralı: Almanya'ya tüketici satışı yıllık **10.000 €** eşiğini aşınca Alman KDV'si + OSS gerekir — **eşik aşılana kadar bizi ilgilendirmez** (fiyatı ancak o zaman değiştirir); aşılırsa o an ele alınır. Sistem DE'ye giden B2C ciroyu (`Order.delivery_country`) yıl bazında türetip izler; parametrik eşiğe yaklaşınca **uyarır**.
+- Her siparişe **KDV işleme tipi** (`vat_treatment`) yazılır ve export'a girer; muhasebe doğru beyanı bundan yapar.
+
+Kısaca: müşteri-yüzü doğru KDV = bizim işimiz (fiyat); beyan/OSS/iade = muhasebenin, biz temiz veriyi veririz.
+
+### Fiyat çözüm sırası
+
+Bir müşteriye ürün fiyatı şu sırayla belirlenir (ilk bulunan kazanır):
+
+1. **Müşteriye özel ürün fiyatı** (varsa) — o müşteri+ürün için elle girilmiş fiyat (`Price` satırı, customer_id dolu).
+2. **Müşteri indirim oranı** (varsa) — müşterinin kanal fiyatına uygulanan genel % indirim (`Customer.discount_percent`).
+3. **Kanal fiyatı** — B2B veya B2C liste fiyatı.
+
+- Giriş yapmamış ziyaretçi B2C fiyatını görür. Ürünün ilgili kanalda fiyatı yoksa satışa kapalı görünür.
+- Near-expiry teklif (aşağıda) bu sıranın dışındadır: açıksa ürün o teklif fiyatı + miktar tavanıyla gösterilir.
+
+> **Özel fiyatın teknik yükü düşük:** genel indirim tek alan; ürün-bazlı istisna yalnızca gereken yerde bir satır (her ürüne satır gerekmez). Tek maliyet: fiyat "herkese tek sayı" değil, giren müşteriye göre çözülür — zaten B2B/B2C'de öyleydi.
+
+### Kapıda/elle satışta pazarlıklı fiyat (tek seferlik)
+
+Toptanda "bugün 10 koli alırsan şu fiyat" gündeliktir; kalıcı `Price` satırı bunun yanlış aracıdır.
+
+- Yalnız `order_source=door/manual` siparişlerde ve yalnız **yetkili** (admin) kullanıcıda: kalem fiyat alanı liste fiyatıyla **dolu gelir**, pazarlık varsa üstüne yazılır. Pazarlık yoksa hiçbir ek adım yok. **Kurye fiyat değiştiremez** — fiyat sipariş oluşurken bellidir.
+- **İz kaydı:** kim değiştirdi, liste fiyatı neydi, ne girildi — "kapıda toplam ne kadar pazarlık indirimi verdim" raporu türetilir.
+- **Marj uyarısı engellemez:** girilen fiyat hedef marjın altındaysa mevcut uyarı gösterilir, işlem engellenmez (karar satıcının).
+- Aynı müşteriye sürekli aynı özel fiyat veriliyorsa doğru araç **müşteriye özel fiyat**tır (yukarıdaki çözüm sırası).
+
+### Maliyet ve hedef marj
+
+- Her stok partisinin alış fiyatı (`Stock.purchase_price`) tutulur; **güncel maliyet = en son partinin alış fiyatı**.
+- Ürüne bir **hedef kâr marjı** (`Product.target_margin_percent`) yazılabilir — maliyet üzerine markup (ör. maliyet 10€, hedef %40 → hedef fiyat ≥ 14€).
+- **Otomatik fiyatlandırma kapalıysa** (varsayılan): maliyet artıp mevcut satış fiyatı hedef marjın altına düşerse sistem **uyarır** ("şu ürün marjın altında") — son kararı admin verir.
+- **Otomatik fiyatlandırma açıksa** (`Product.auto_price=true`): sistem fiyatı hedef marjı sağlayacak şekilde **otomatik günceller** (uyarı yerine aksiyon).
+- Tek mekanizma, ürün başına bir düğmeyle iki davranış: elle kontrol (uyar) ya da otomatik (güncelle).
+
+### İndirim ve kupon
+
+- **İki tetik:** **kupon** (müşteri kod girer, daima **sepet** düzeyi) ve **otomatik indirim/kampanya** (kod yok; kapsam = sepet / kategori / koleksiyon). Yüzde veya sabit tutar.
+- **Üst üste binmez:** birden çok indirim uygun olsa bile **en büyüğü** uygulanır (birleşmez); domain-core müşteriye en iyi tekini seçer.
+- **Paketler hariç:** `Bundle` fiyatı sabittir — hiçbir genel indirim/kupon uygulanmaz. Near-expiry teklif satırı da kendi özel fiyatındadır; genel indirim binmez.
+- **Koşullar (parametrik):** asgari sepet, ilk sipariş, geçerlilik tarihi, kullanım sınırı.
+- Uygulanan indirim siparişe yazılır (`Order.discount_id` + `discount_amount`); net tutar para hareketine yansır, kâr buna göre türetilir.
+- **Kalemlere dağıtım:** sepet düzeyi indirim sipariş anında kalemlere **oransal dağıtılır** (`OrderItem.line_discount_amount`) — kısmi karşılamada iade tutarı ve kalem KDV'si **indirimli birim fiyattan** hesaplanır; sonradan hesap belirsizliği kalmaz.
+
+### Partiye bağlı indirimli teklif (near-expiry)
+
+Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, ürünün normal fiyatını değiştirmez; **o partiye bağlı ayrı bir tekliftir** (`Stock.offer_price`).
+
+- Sistem, kalan raf ömrü % eşiğin (varsayılan %25) altına inen partiyi işaretler ve indirim **önerir** (önerilen indirim varsayılan %30, parametrik). **Son fiyatı ve kararı admin verir** — depo fiyat görmediği için bu bir admin işidir (§2).
+- Teklif açıkken ürün müşteriye **tek fiyatla** (indirimli teklif) gösterilir — normal fiyat ve teklif fiyatı **aynı anda gösterilmez** (kafa karışmasın).
+- **Miktar tavanı:** müşteri teklif fiyatından **partide kalan miktardan fazlasını alamaz.** Fazlası bir sonraki (normal fiyatlı) partiye taşacağı için engellenir.
+- **Batch-pinned rezervasyon:** teklif satırının rezervasyonu **tam o partiden** yapılır (normal satışın ürün-toplamı seviyesinden farklı). Sipariş kalemi bağlı partiyi tutar (`OrderItem.stock_id`).
+- Parti tükenince teklif otomatik kalkar, ürün normal fiyatına döner.
+- Kapsam: teklif, son tarihi yaklaşan (henüz geçmemiş) partiler içindir; ayrıca **DDM'i geçmiş ama satılabilir** partiler de dahil edilebilir. **DLC'si geçmiş parti satılamaz** (§4).
 
 ---
 
@@ -95,9 +201,27 @@ Sipariş oluştuğunda kanal, sipariş verenin **şirket olup olmadığına** g�
 
 - **Rota içi:** müşteri beklemeyi kabul eder, teslimat ücretsiz, kapıda ödeme mümkün.
 - **Rota dışı:** kargo.
+- **Ürün teslimat izni:** bazı ürünler soğuk zincir nedeniyle kargoyla gönderilemez (`Product.shippable=false`) — yalnız rota-içi kapı teslimi. Böyle bir ürün rota-dışı (kargo) siparişte **görünmez/eklenemez**; sepette varsa müşteri kargo adresi seçemez, yalnız rota-içi teslim sunulur.
 - **Minimum sepet:** bir alt sınır olabilir, ama **parametrik** — kod sabiti değil, admin ayarı. Kanala/bölgeye göre farklı olabilmeli. (Blueprint STACK §10: işletme ayarı env'e/koda değil, ayar tablosuna girer.)
 - **Ücretsiz kargo eşiği:** parametrik.
-- Faz 1'de rota kapasitesi ve zaman penceresi **yok**; sadece içerideyim/dışarıdayım ayrımı.
+- **Kargo ücreti:** eşik altı siparişte müşteriden alınan ücret `Order.shipping_fee`'ye yazılır ve **KDV'ye tabidir**; `total` bu ücreti içerir. Tam iptalde ücret de iade edilir; kısmi eksikte varsayılan olarak iade edilmez (teslimat yapılmıştır).
+- Faz 1'de rota kapasitesi ve zaman penceresi **yok** (Faz 2); sadece içerideyim/dışarıdayım ayrımı.
+
+### Rota bölgeleri ve teslimat günü
+
+- **Rotalar admin tarafından düzenlenir:** her rota bölgesi (`DeliveryZone`) bir posta kodu kümesi + haftalık teslimat günleri tutar; ikisi de admin-editable (kod sabiti değil). Sınır ötesi (DE/Baden) posta kodları da bir bölgeye dahil edilebilir (ADR-002).
+- **Rota-içi/dışı** adresin posta kodunun aktif bir bölgeye düşüp düşmemesinden **türetilir**.
+- **Checkout'ta gün:** bölgenin günlerinden yaklaşan somut tarih(ler) hesaplanır — **tek gün varsa gösterilir (seçim yok); birden fazla varsa müşteri birini seçer.** Seçilen/atanan gün `Order.delivery_date`'e yazılır.
+- Günün rota listesi türetilir: `delivery_date`'i o gün olan siparişler. Kapasite/optimizasyon Faz 2.
+- **Sipariş kesim saati (cut-off, parametrik):** kesim saatinden sonra gelen sipariş **bir sonraki** rota gününe yazılır; checkout'taki tarih hesabı bunu kullanır. Araç yüklenirken gelen sipariş o günün rotasına düşmez — sabah kavgası biter.
+
+### Teslim onayı ve teslimat özeti (bon de livraison)
+
+"Eksik geldi" ihtilafının tek sigortası teslim anındaki kanıttır. Resmî belge kararına dokunmaz — bu bir **operasyon belgesi**dir, fatura değildir (üstünde ibaresi vardır).
+
+- **Dijital teslim onayı:** kurye ekranında teslimatta kalem listesi çıkar; müşteri ekranda **imzalar** (veya kurye foto çeker). Onay siparişe kaydedilir (`Order.delivery_proof`: kim, ne zaman, imza/foto).
+- **Kapsam parametrik:** B2B'de **zorunlu** (varsayılan), B2C'de **kapalı** (varsayılan) — `Setting`'ten değiştirilir.
+- **Teslimat özeti (PDF):** teslimde, e-postası olan **tüm müşterilere otomatik** gönderilir (parametrik, varsayılan açık). Kurye isterse aynı PDF'in **çıktısını alıp elden de verebilir**. İçerik: kalemler + karşılanan miktarlar + `reference_no`; "resmî fatura değildir" ibaresi.
 
 ---
 
@@ -109,13 +233,43 @@ Sipariş oluştuğunda kanal, sipariş verenin **şirket olup olmadığına** g�
 2. **Kapıda** — nakit / kart / çek. Kurye toplar.
 3. **Banka** — hesap hareketleri Excel ile içe alınır.
 
+### Checkout ödeme seçenekleri (bağlama göre)
+
+| Müşteri / teslimat | Seçenekler |
+| --- | --- |
+| Rota-içi B2C | Online öde / Kapıda öde (nakit/kart/çek) |
+| Kargo (rota-dışı) B2C | Sadece online öde (peşin) |
+| B2B (credit yok) | Online öde / havale (peşin) |
+| B2B (credit var) | + Hesaba (vadeli) |
+
+Online: Stripe hosted checkout (SCA/3DS, kart + Apple/Google Pay); WhatsApp'ta payment link (canlı kanalla). Kapıda ödeme ayrıca değer tavanı ve `cod_allowed`'a tabidir (aşağıda).
+
+### Kapıda ödeme sınırı (kötüye kullanım önlemi)
+
+Kapıda ödeme tüm rota-içi müşterilere sunulur, ama peşin taahhüt olmadığı için sınırsız bırakılmaz:
+
+- **Değer tavanı (parametrik `Setting`):** kapıda ödeme yalnız sipariş toplamı tavana kadar mümkün; üstü **online peşin** ister. "Tüm ürünleri sipariş edip kapıda öderim" senaryosunu otomatik keser; normal siparişler tavanın altında kalır, kimse takılmaz. Tavan değeri işletmeye göre admin ayarı.
+- **Müşteri bazlı kapı (`Customer.cod_allowed`, varsayılan true):** geçmişte ödememiş / tekrar tekrar reddetmiş müşteride kapıda ödeme kapatılır (admin veya no-pay olayında). Tekrar eden art niyeti engeller.
+- **Nakit yasal sınır uyarısı (yöntem bazında, parametrik):** Fransa'da mukim müşterinin işletmeye **nakit** ödemesi yasal olarak ~1.000€ ile sınırlıdır. Kapıda nakit tahsilat bu sınırı aşarsa sistem **uyarır ama engellemez** (karar sahada; kart/çek ayrı değerlendirilir). Kurye gün kapanışı zaten yöntem bazında toplar — model değişikliği yok.
+- Amaç: normal kullanıcı hiçbirine takılmaz, art niyetli hem tavana hem bloğa takılır.
+
 ### Kurye gün kapanışı
 
 Kurye gün sonunda sistemde kapanış yapar: teslim ettiği siparişler, tahsil ettiği tutar (yöntem bazında), iadeler. Kasaya teslim eder. Sistem beklenen ile teslim edileni karşılaştırır; fark aynı gün görünür.
 
 ### Sipariş ödeme durumu
 
-Her siparişin ödeme durumu ayrı izlenir (bekliyor / ödendi / kısmi / iade). Ödeme yöntemi ve anı siparişe yazılır.
+Her siparişin ödeme durumu **ayrı bir eksendir** ve **türetilir**: `amount_collected` − `amount_refunded` (net) ile karşılanan tutar karşılaştırılarak `pending/paid/partial/refunded` domain-core'da hesaplanır — elle set edilmez (bkz. `DATA_MODEL.md` Kalıcı kararlar). Ödeme yöntemi ve anı siparişe yazılır.
+
+### B2B vadeli satış (hesaba) — istisna, varsayılan değil
+
+- **Varsayılan peşin.** Hem B2C hem B2B siparişleri kural olarak peşin ödenir (online / kart / nakit / çek / havale). Vadeli tahsilat operasyonel olarak dertli olduğu için **standart değildir** — ilke: "ödeyebilen alır."
+- **Vade bir müşteri yetkisidir, elle açılır.** `Customer.credit_enabled` yalnızca güvenilen müşteride admin tarafından açılır (varsayılan **kapalı**). Kapalıysa o müşteri vadeli sipariş veremez; checkout'ta yalnızca peşin yöntemler görünür.
+- **Vadeli sipariş akışı:** sipariş `on_account=true` işaretlenir; peşin ödeme olmadan `confirmed` olur (stok yine `confirmed`'de ayrılır — "önce ayır" kuralı bozulmaz), `payment_status` `pending` kalır; sonra **banka havalesiyle** ödenir ve banka import eşleştirmesinde `paid` olur (bkz. §9).
+- **Limit ve vade süresi — müşteri bazında:** her müşterinin **kendi** limiti vardır (`Customer.credit_limit`, €) — tek genel limit yoktur; güven müşteriden müşteriye farklıdır ve admin limiti **her an değiştirebilir**. **Vade süresi** de müşteri bazında `payment_term_days` (girilmezse varsayılan 30 gün — sektör standardı, `Setting`'ten parametrik). **Açık bakiye ve gecikme saklanmaz, türetilir**: açık bakiye = ödenmemiş `on_account` siparişlerin toplamı; gecikmiş = vade süresini aşmış ödenmemiş sipariş.
+- **Otomatik fren:** açık bakiye + yeni sipariş limiti aşarsa **veya** gecikmiş sipariş varsa, checkout'ta "hesaba" seçeneği o müşteriye kapanır — diğer (peşin) yollar açık kalır. Limit aynı zamanda **stok kilitleme sigortasıdır**: vadeli rezervasyonun toplam değeri limiti aşamaz.
+- **Onay mekanizması:** limit içinde **otomatik** onay (limit, önceden verilmiş onaydır — B2B hızı bozulmaz); limit aşan vadeli sipariş otomatik reddedilmez, **admin'e düşer** — tek seferlik onay veya kalıcı limit artışı admin kararıdır.
+- **Limit kararı insanındır, sistem karne gösterir:** limit puana/skora göre otomatik belirlenmez ("ödül ≠ güven", §14). Sistem karar anında müşterinin **ödeme karnesini** türetip gösterir (toplam ciro, ortalama ödeme günü, gecikme sayısı) — öneri sistemden, karar admin'den (kısmi karşılamayla aynı ilke, §8).
 
 ---
 
@@ -124,17 +278,193 @@ Her siparişin ödeme durumu ayrı izlenir (bekliyor / ödendi / kısmi / iade).
 Kurallar birlikte netleşecek (iş kararı), ama sistem şunları desteklemeli:
 
 - Müşteri "bozuk/eksik geldi" bildirimi
-- Para iadesi **veya** sonraki siparişe alacak seçeneği
+- **Para iadesi** — online Stripe'tan, nakit kuryeyle. Muhasebe açısından para iadesi daha temiz (gerçek, simetrik hareket, KDV temiz döner). **Mağaza alacağı (store credit) belki gelecekte** — faza sabitlenmedi, muallak; gelirse taşınan borç + avoir/KDV takibi gerektirir.
 - Ürünün stoğa geri girmesi **veya** imha olarak işaretlenmesi
 - İade/hasarın kâr ve kasa mutabakatına yansıması
 
 Bu alan Faz 1'de temel haliyle bulunur; detay kuralları parametrik ve genişletilebilir tasarlanır.
 
+### Eksik ürün / kısmi karşılama
+
+Sipariş kalem-kalem karşılanabilir (all-or-nothing değil). Eksik iki noktada keşfedilir:
+
+- **Hazırlıkta (depo):** hazırlayan eksik/karşılanamayan kalemi işaretler (`OrderItem.fulfilled_qty` düşer). **Kararı hazırlayan verir:** (i) müşteriye sor — "kalanı göndereyim mi / iptal mi?" — ya da (ii) kalanı gönder + farkı otomatik iade. Sistem **akıllı bir öneri** sunar (eksiğin değeri/kritikliğine göre) ama **son karar hazırlayanda**.
+- **Kapıda (kurye):** kurye o an eksik/reddedilen kalemi işaretler.
+
+**Para çözümü ödemenin yapılıp yapılmadığına göre dallanır:**
+- **Peşin ödendiyse** (online/kargo) → fark **otomatik iade** (`amount_refunded` artar).
+- **Kapıda ödenecekse** → tahsil edilecek tutar karşılanan tutara **düşürülür**, o tahsil edilir.
+
+Ödeme durumu bu tutarlardan **türetilir** (§7). Karşılanamayan kalemin ayrılmış stoğu, stok gerçeğine göre düzeltilir (fiziksel yoksa ayrılmış geri bırakılır — bkz. §4).
+
 ---
 
 ## 9. Ön muhasebe sınırı
 
-- Sistem **resmî muhasebe değildir**, e-fatura kesmez.
+- Sistem **resmî muhasebe değildir**, e-fatura kesmez; **hiçbir resmî belge (fatura, avoir vb.) sistemde üretilmez** — müşteri faturasını muhasebe tarafından alır, sitede fatura indirme yoktur.
 - Yaptığı: dış muhasebe yazılımına gidecek veriyi temiz üretmek (export) ve o veriden iş rakamları çıkarmak.
 - Resmî fatura numarası dış yazılımda üretilir; sistem bir **referans numarası** verir, sonradan gerçek fatura numarasıyla eşleştirilir.
 - Banka hareketleri Excel ile alınır, sipariş/alımlarla eşleştirilir (öneri + elle onay; tam otomatik değil).
+
+### Para hareketleri, hesaplar ve satın almalar
+
+Tüm finans tek mantıkla: **para bir hesapta durur, hareketlerle girer/çıkar.**
+
+- **Hesap:** paranın durduğu yer — Kasa (nakit), bankalar (Revolut, Crédit Mutuel), Stripe. Kasa da banka gibi bir hesaptır; "online" ayrı havuz değil, **Stripe hesabıdır**. Nakit şirkette durabilir, bankaya yatırmak zorunlu değil.
+- **Para hareketi (tek tablo):** her giriş/çıkışın bir **hesabı** ve **tipi** var — sipariş ödemesi, gider, satın alma, transfer (hesaplar arası: nakit→banka, Stripe→banka payout), sermaye girişi, sair. Kasa hareketi ile banka hareketi **aynı şeydir**, yalnız hesabı farklı.
+- **Satın alma / gider:** giderler bu hareketlerin bir tipidir. **Stok alımı** olan gider ayrıca bir **stok girişi** (`StockIntake` → partiler + maliyet) oluşturur; diğer giderler (kira, akaryakıt, maaş) yalnız hareket + kategoridir.
+- **Reklam gideri kampanya etiketiyle girer:** `category=advertising` + `meta.campaign` — analitik, kampanyanın **cirosunu ve giderini yan yana** koyar; gerçek ROI Excel'e taşınmaz.
+- **Banka import (AI):** AI ajanı banka dosyasından sütun şablonunu çıkarır (`BankImportProfile`), satırlar hesabın para hareketleri olarak girer, sonra sipariş/gider/transfer olarak eşleşir (öneri + elle onay).
+- **Türetilir:** şirket kârlılığı (gelir − gider) ve her hesabın bakiyesi bu hareketlerden. Sipariş tahsilatı (yukarıdaki online/kapıda/banka toplama noktaları) buraya bir hesaba giriş olarak düşer.
+- **(İleride, AI):** tedarikçi faturasından stok-giriş formunu AI hazır doldurabilir — faturalar ve form kurgulandıktan sonra ayrı ele alınır.
+
+### Patron ikramı (hediye sipariş)
+
+Patron bazen bir arkadaşına siparişi hediye eder; müşteri ödemez ama **parayı patron kendisi öder** — yani para yine kasaya girer. Sipariş `is_gift_order=true` işaretlenir.
+
+- **Operasyon tam normal:** stok düşer, hazırlanır, teslim edilir.
+- **İç muhasebe tam normal:** gelir, kâr, kasa ve **ortaklık paylaşımı dahil** her şeyde sayılır — parası (patron tarafından) ödenmiş gerçek bir satıştır.
+- **Tek fark:** **muhasebe export'una girmez** — dış muhasebeye giden veride yer almaz; gerisi tam.
+- Yani `is_gift_order` yalnızca **export filtresini** etkiler, başka hiçbir hesabı değiştirmez.
+
+---
+
+## 10. Kimlik ve müşteri birleştirme
+
+Aynı kişi farklı yüzeylerden farklı anahtarlarla gelir; sistem tek müşteride birleştirir.
+
+- **Web** kimliği: e-posta / oturum. **WhatsApp** kimliği: telefon numarası.
+- WhatsApp'tan gelen sipariş/konuşmada kural: **telefonla bul-veya-oluştur.** Numara bir müşteriyle eşleşiyorsa ona bağlanır; eşleşmiyorsa taslak müşteri açılır.
+- `Customer.phone` normalize edilir (E.164) ve bir kimlik anahtarı gibi davranır.
+- Kanal (b2b/b2c) yine `company_info` varlığından türetilir — kaynaktan değil. WhatsApp'tan gelen bir şirket de B2B'dir.
+- Bu çözümleme `domain-core`'da saf bir fonksiyondur; uygulama katmanına dağıtılmaz. Ayrıntı: `CHANNELS.md §3`.
+- **E-posta ikinci kimlik anahtarıdır:** telefon *veya* e-posta eşleşirse aynı müşteridir. Yine de kopya oluşursa (WhatsApp taslağı + web kaydı) admin **"müşteri birleştir"** aksiyonuyla tekleştirir — siparişler, puanlar, konuşmalar hedef müşteriye taşınır, kaynak kayıt kapanır. Taslak müşteri `is_draft` ile işaretlidir.
+
+### B2B self-servis kayıt ve onay kapısı
+
+Şirket, hesabını **kendisi açar**; toptan fiyatlar **onaya kadar görünmez** (SIRET herkese açık bilgidir — numarayı giren kişinin o şirket olduğunu kanıtlamaz; fiyat listesi onaysız açılırsa rakibe açılmış olur).
+
+- **Kayıt:** SIRET girilir → resmî kayıt API'sinden (Sirene/Annuaire des Entreprises, ücretsiz) unvan/adres/faaliyet kodu otomatik dolar; hesap anında oluşur, `b2b_approved=false`. Alman şirketleri elle doldurur + USt-IdNr VIES ile doğrulanır (muadil açık API yok).
+- **Onay kartı (admin):** sistem başvuruyu hazır sinyallerle sunar — şirket **aktif mi**, **faaliyet kodu** gıda/restoran mı, **kuruluş yılı**, adres **rota uyumu**, telefon/e-posta/SIRET **mükerrer** kontrolü, tek-tık Google/Haritalar linki, `packages/ai` tek cümlelik özet ("2016'dan beri aktif restoran, rota içinde — risk işareti yok"). Tipik karar ~15 saniye; **karar insanın** (tek dokunuş onay/ret).
+- Onay sonrası müşteri toptan fiyatları görür; **vade/limit yine ayrı ve elle** açılır (§7). Reddedilen kayıt B2C olarak kalabilir.
+
+### Hesap ve doğrulama (kimlik nasıl kurulur)
+
+- **Hesapsız sipariş yoktur.** Sipariş "misafir" akışıyla başlasa da son adımda müşteri **doğrulanmış bir kimliğe** bağlanır; her sipariş bir hesaba bağlıdır (`Order.customer_id` zorunlu). "Misafir" burada **şifre/profil sürtünmesi olmadan hızlı doğrulama** demektir — hesapsızlık değil.
+- **Doğrulama yöntemleri:**
+  - Önce Google (OAuth) + e-posta + OTP; WhatsApp ile giriş canlı kanal devreye girince (hepsi Faz 1).
+- **Supabase Auth yalnız kimlik/oturum motorudur.** Doğrulama maili (OTP) dahil **tüm e-posta `packages/email`'den default şablonla** gönderilir (Auth "send email" hook → `packages/email`); Supabase'in yerleşik mail şablon/gönderim yapısı **kullanılmaz**.
+- Hangi yoldan girilirse girilsin (Google / e-posta / WhatsApp) kişi **aynı `Customer`'da birleşir** — yukarıdaki bul-veya-oluştur ve `company_info`'dan kanal türetme kuralları aynen geçerli.
+
+---
+
+## 11. Mesajlaşma, servis penceresi ve opt-in (GDPR)
+
+- **Inbound-öncelik:** "Önce müşteri yazsın." Kullanıcı-başlatan **24 saatlik servis penceresinde** mesajlar ücretsiz; bu pencere dışında işletme-başlatan mesaj Meta-onaylı **template** gerektirir (FR/DE'de pahalı, ~€0,13–0,14).
+- **Utility template** (sipariş onayı, kargo bildirimi) servis penceresi içinde önceliklidir.
+- **Broadcast/pazarlama** yalnızca **double opt-in** ile, seyrek ve segmentli (Faz 2). Opt-in durumu ve pencere bitişi `Conversation`'da bizde tutulur (bkz. `DATA_MODEL.md`).
+
+### Pazarlama izni — toplama gönderimden önce başlar
+
+İzin **geriye dönük üretilemez**; bu yüzden toplama ilk günden başlar, gönderim liste biriktikçe:
+
+- **Toplama (Faz 1, ilk günden):** kayıt/checkout'ta **işaretlenmemiş** kutu ("kampanyalardan haberdar olmak istiyorum") + sitede küçük bülten kayıt kutusu → `Customer.marketing_consent` (kanal bazlı: e-posta/WhatsApp; verildiği an + kaynak = GDPR kanıtı). **Hiçbir kampanya gönderimi yapılmaz** — yalnız liste birikir. Kutu baştan işaretli gelemez (AB'de açık eylem şartı).
+- **Gönderim (Faz 1, elle):** izinli listeye elle hazırlanan kampanya e-postası; WhatsApp ajanı canlıyken sohbet sonunda izni sorup kaydeder.
+- **Faz 2:** kampanya otomasyonu + WhatsApp broadcast (double opt-in, yukarıdaki kural).
+- **Edinim kaynağı:** ilk siparişte `Customer.acquisition_source` bir kez yazılır (UTM + order_source snapshot) — "bu kampanyadan gelen müşteri tekrar alıyor mu" (kohort/LTV) raporu ancak bununla mümkündür; oturum verisi geçicidir, sonradan kurulamaz.
+- Gerekçe: hem maliyet hem GDPR aynı yöne işaret eder. Karar kaydı: `ADR_WHATSAPP.md` ADR-005. Bütünsel akış: `CHANNELS.md §6`.
+
+---
+
+## 12. Kârlılık — ürün vs şirket
+
+Yalancı/kaba kâr kimseye fayda getirmez. Bu yüzden **iki ayrı kavram**, ayrı hesaplanır ve karıştırılmaz.
+
+### Ürün (sipariş) kârlılığı — olabildiğince detaylı
+
+Yalnızca siparişin **doğrudan** (o sipariş yüzünden var olan) giderleri düşülür; genel gider karışmaz ("katkı payı" mantığı):
+
+- **Malın maliyeti (COGS):** tüketilen partilerin alış fiyatı (`Stock.purchase_price`). Hazırlıkta yazılan kalem–parti kaydından (`OrderItemBatch`, §4) hesaplanır — gerçek maliyet, ortalama değil.
+- **Teslimat maliyeti:** kargoda gerçek ücret; rota-içinde sipariş başına dağıtılmış birim maliyet (parametrik).
+- **Ödeme komisyonu:** online (Stripe) ve kapıda kart (SumUp) oranı; nakit 0.
+- **Paketleme:** soğuk zincir (jel/kutu) sipariş/kalem başına maliyet (parametrik).
+
+Ürün kârı = karşılanan satış − bu doğrudan giderler. **Kanal ve ürün bazında** toplanır. Bu doğrudan gider kalemleri sipariş kapanışında **sabitlenir** (snapshot) — geçmiş kârın rakamı sonradan değişen oran/maliyetten etkilenmesin (fiyat sabitleme ile aynı mantık). **Kapanış = `completed`'a geçiş anıdır** (`OrderStatusLog`'dan).
+
+**Fire ürün kârlılığına dahil edilir:** `StockAdjustment` (DLC imhası, hasar, sayım farkı) maliyet değeriyle kayıptır; ürün bazında **"fire düşülmüş net marj"** raporlanır — "bu üründen yılda ne kadar çöpe attım" görünür, kârlılık süslü kalmaz.
+
+### Şirket kârlılığı — bütünsel
+
+Ürün kârlarının toplamından **genel giderler** (kira, maaş, araç, sabit masraf — ön muhasebe gelir/gider, §9) düşülür. Genel giderler tek tek ürüne dağıtılmaz; şirket seviyesinde bir kez düşülür. Böylece hem ürün kararı temiz kalır hem şirketin gerçek kârı görünür.
+
+> Ürün kârlılığı = katkı payı (doğrudan gider düşülür). Şirket kârlılığı = tam P&L (genel gider de düşülür). Ortaklık paylaşımı platform satışları üzerinden yürür (bkz. `PRODUCT.md`); sistem her satışı doğru ve değişmez kaydeder.
+
+---
+
+## 13. Katalog: kategori, koleksiyon, paket
+
+### Kategori — ürünün yapısal yeri (tek)
+
+- Kategoriler **düz** (tek seviye): Börekler, Tatlılar, Çerezler… İç içe ağaç yok (modern yaklaşım).
+- Her ürün **tek kategoride** — "bu ürün nedir"in sabit cevabı; kategori bazlı rapor temiz kalır.
+
+### Koleksiyon — esnek pazarlama grubu (çoklu)
+
+- Koleksiyon, adı olan bir ürün listesidir (Bayram, Yeni, İndirimde). Bir ürün **istediğin kadar** koleksiyona girer.
+- Gel-geç gruplar burada yaşar; kategori yapısını kirletmez, istediğinde açar/kapatırsın. Kendi bağlantısı (slug) sosyal paylaşıma uygundur.
+
+### Paket (bundle) — birden çok ürünü tek fiyata sunma
+
+Amaç: birkaç ürünü bir arada tek pakette, kendi fiyatıyla sunmak (sosyal medyada paylaşınca müşteri tek tıkla seçsin). **Yeni ürün yaratmaz.**
+
+- Paketin **kendi toplam fiyatı** vardır — içindeki ürünlerin normal fiyatları toplamı olmak zorunda değil. **Genel indirim/kupon paketlere uygulanmaz** (fiyatı sabittir).
+- Paket sepete eklenince **içindeki her ürün ayrı `OrderItem` olur** (variant + qty + o kaleme **atanmış birim fiyat**). Sistem, müşteri her ürünü tek tek atmış gibi akar: stok, hazırlık, kâr, **fatura hep kalem kalem**.
+- **Atanmış fiyatların toplamı = paket toplam fiyatı** (admin her kaleme fiyat verir, sistem toplamı doğrular). Müşteri **yalnız paket toplamını** görür; kalem fiyatları arka planda (fatura + her ürünün KDV'si kendi oranından doğru işlensin diye gerekli).
+- **Hediye = fiyatı 0 bir paket kalemi.** Faturada 0€ satır, stoktan normal düşer (gerçek mal), maliyeti kâra yansır. Ayrı "paket + hediye" kuralına gerek yok.
+- Sipariş kalemi hangi paketten geldiğini tutar (`OrderItem.bundle_id`) — müşteriye "Bayram Paketi" olarak gruplu göstermek ve raporlamak için.
+- Stok: paket, ancak içindeki tüm kalemler yeterli stoktaysa satılabilir görünür (türetilir).
+- **Aynı ürün hem pakette hem ayrıca sepette olabilir:** ikisi **ayrı kalem** kalır (paket kalemi atanmış fiyat + `bundle_id`; ayrı eklenen normal fiyat + boş `bundle_id`). Birleşmezler — müşteri ikisini de ister. Sepette paket **grup** olarak görünür ve bütün eklenir/çıkarılır; ayrı kalem bağımsız düzenlenir. Stok ikisini de sayar.
+
+### Aday ürün ve keşif (tinder-kart)
+
+- **Aday ürün** (`Product.is_candidate=true`): stokta olmayan ama tedarik edilebilecek ürün. **Satılamaz** — yalnız müşteri tarafındaki **keşif/beğeni bölümünde** (mobil-öncelikli tinder-kart) gösterilir. Normal (satılabilir) kataloğa karışmaz.
+- Müşteri kaydırır → **beğen/geç** = `AnalyticsEvent(product_swipe, meta.direction)`. Giriş yaptıysa `customer_id` ile kişisel tercih; değilse toplu talep.
+- **Admin — Talep/İlgi panosu (analitik içinde):** swipe beğenileri + kataloğun **ürün-ilgi** sinyali (çok bakılıp az alınan) burada birleşir; adaylar talebe göre sıralanır. Yüksek talepli adayı admin **etkinleştirir** (varyant/stok/fiyat ekleyip satılabilir yapar).
+
+---
+
+## 14. Geri bildirim, yorum, puan ve ürün skoru
+
+Tinder-kart tek bir yer değil, bir **geri bildirim mekanizması**; birkaç bağlamda çalışır. Amaç: değerli veri toplarken müşteriyi ödüllendirmek.
+
+- **Swipe geri bildirimi — aynı mekanizma, iki bağlam** (`AnalyticsEvent(product_swipe)`, `meta.context`):
+  - **Aday talep** (`candidate`): stokta olmayan aday ürünler, keşif bölümünde beğen/geç (bkz. §13).
+  - **Alım-sonrası memnuniyet** (`post_purchase`): teslimden ~10 gün sonra WhatsApp/e-posta link'iyle, aldığı ürünleri beğen/beğenme. Davet ve tamamlanma `FeedbackRequest`'te izlenir.
+- **Yazılı yorum (`Review`):** yalnız **satın alan** müşteri puan + yorum yazar; **moderasyondan sonra ürün sayfasında** görünür. Sosyal kanıt + SEO değeri.
+- **Puan / oyunlaştırma:** her değerli aksiyon (yorum, swipe'lar, sipariş…) **puan** kazandırır (`PointsEntry`; değerler parametrik). Biriken puan **kişisel indirim koduna** çevrilir (redemption → `Discount.customer_id`). Tek tek kupon yerine biriken puan — daha güçlü sadakat döngüsü. **Puan aksiyonu tamamlamaya bağlıdır, beğeniye değil.**
+- **Puan kuralları:** puanlar **süreyle yanmaz** (süresiz birikir); yalnız **B2C (son kullanıcı)** kazanır/kullanır — B2B'nin zaten özel fiyatı var. İstismara karşı: aynı ürüne yorum/swipe **bir kez** puan verir + günlük tavan. **Redemption:** müşteri kendi isteyince çevirir (otomatik değil). **Yorum:** doğrulanmış alışveriş yorumu hafif moderasyonla yayınlanır.
+- **Ödül ≠ güven (kritik ilke):** müşteri katılım için puanını **alır**, ama sinyalin **analize etkisi kalitesine bağlıdır.** Hep aynı yöne / çok hızlı / ayırt etmeyen swipe'lar **düşük kaliteli** sayılır, analizde **zayıflatılır veya hariç tutulur**; ayırt eden ve **satın almayla tutarlı** sinyaller **ağırlıklı** sayılır. Ölçüm için swipe olayında **kart süresi + oturum deseni** (`dwell_ms`) tutulur; ağırlıklandırma domain-core'da. Sonuç: müşteri ödülünü alır, **manipüle veri iş kararını bozmaz.**
+- **Ürün skoru (türetilir):** kullanıcı geri bildiriminden — yorum puan ortalaması + beğen/beğenme oranı — **her ürünün kendi puanı** oluşur. Admin için karar aracı; müşteriye de gösterilebilir (sosyal kanıt).
+- **Google yorum köprüsü:** alım-sonrası ankette memnuniyeti yüksek çıkan müşteri, akışın sonunda **Google işletme yorumuna** tek-tık yönlendirilir (yerel görünürlük; `FeedbackRequest` akışına bir link — yeni mekanizma değil).
+- **Admin geri bildirim analizi:** yorumlar + swipe oranları + ürün skorları admin analitiğinde toplanır — hangi ürün seviliyor/sevilmiyor, neyi öne çıkar, neyi düzelt/çıkar. Yorumlar **ürün sayfasında**, analiz **admin tarafında**.
+- Tümü Faz 1; **design dokümanı bu ekranları baştan kapsar** (keşif bölümü, alım-sonrası swipe, ürün sayfası yorum+skor, admin geri bildirim/puan analizi).
+
+## 15. Müşteri talep ve şikâyet
+
+Basit yaşam döngüsü; karmaşık ticket sistemi kurulmaz. Amaç: müşteri sorununu kolay iletsin, biz siparişe/ürüne bağlı net veri görelim.
+
+### Giriş noktaları — hepsi aynı akışa çıkar
+
+- **Sipariş detayından:** "Bir sorun mu var?" → siparişin kalemleri listelenir, müşteri ilgili ürünleri **işaretler**, tip seçer (bozuk / eksik / soru / diğer), açıklama + isteğe bağlı fotoğraf ekler.
+- **Genel "bize yaz":** birkaç küçük yönlendirme sorusuyla başlar — *"Bir siparişle mi ilgili?"* Evet ise: oturum yoksa oturum açtırılır, sonra sipariş seçtirilir → yukarıdaki akışa girer. Hayır ise: doğrudan serbest mesaj (siparişsiz talep).
+- **WhatsApp:** numara bir hesaba bağlıysa oradan da açılabilir. Zeminde admin konuşmadan elle talep açar; canlı kanalda AI ajanı hangi sipariş → hangi ürün → birkaç netleştirme sorusu sorup talebi kendisi oluşturur (teknik uygunluk BSP altyapısına göre doğrulanacak). Talep `conversation_id` ile konuşmaya bağlanır.
+
+### Akış ve yaşam döngüsü
+
+- Şikâyet **talep (Ticket) açar**; müşteri doğrudan iade başlatamaz. Admin inceler, gerekirse **iade/para iadesi akışını tetikler** (bkz. §8) — karar ve kontrol bizde.
+- Durumlar: `open → in_progress → resolved` (yeniden açılabilir → `open`). Müşteri hesabından talebinin durumunu ve yazışmayı **görür** (şeffaflık); cevap geldiğinde e-posta bildirimi.
+- Yazışma basit bir mesaj dizisidir (müşteri ↔ admin), talebe bağlı.
+
+### Analiz bağı
+
+Ürüne bağlı şikâyetler (bozuk/eksik) admin analitiğine girer: hangi üründe/partide sorun yoğunlaşıyor (ürün skoru ve kalite sinyaliyle yan yana, bkz. §14).

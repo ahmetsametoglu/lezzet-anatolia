@@ -10,7 +10,8 @@ Bu klasör, projenin **ne yapacağını**, **nasıl kod dizileceğini** ve **bu 
 4. `DOMAIN.md` — terimler, roller, iş kuralları (asıl kalp)
 5. `DATA_MODEL.md` — veri varlıkları ve alanlar
 6. `ORDER_LIFECYCLE.md` — sipariş durum makinesi
-7. Görev neyse ilgili dosya (aşağıdaki tablo)
+7. `CHANNELS.md` — satış yüzeyleri, sipariş kaynağı, WhatsApp'ın mimariye oturuşu
+8. Görev neyse ilgili dosya (aşağıdaki tablo)
 
 > `STACK.md` ve `WORKFLOW.md`, genel bir blueprint'ten uyarlanmıştır. `STACK.md` bu projeye özgü kararları içerir; `WORKFLOW.md` teknolojiden bağımsız çalışma disiplinidir. Kod ile doküman çelişirse kod haklıdır.
 
@@ -25,6 +26,10 @@ Bu klasör, projenin **ne yapacağını**, **nasıl kod dizileceğini** ve **bu 
 | `DOMAIN.md` | Terimler, roller/izinler, iş kuralları | İş mantığına dokunan her görevde |
 | `DATA_MODEL.md` | Varlıklar, alanlar, çok dilli alanlar, enum'lar | Şema/migration/servis yazarken |
 | `ORDER_LIFECYCLE.md` | Sipariş durumları ve izinli geçişler | Sipariş, stok, ödeme akışında |
+| `CHANNELS.md` | Satış yüzeyleri, sipariş kaynağı, kimlik, inbound/outbound, ajan sınırı | WhatsApp/kanal/kaynak işinde |
+| `ADR_WHATSAPP.md` | WhatsApp strateji kararları (ADR-001…005) | Kanal stratejisi sorgulanınca |
+| `WHATSAPP_ANALYSIS.md` | Pazar/kanal analizi, teknik olabilirlik | Kanal kararının arka planı gerekince |
+| `COMPETITORS.md` | Rakip haritası (kısa) | Konumlanma/pazar bağlamı gerekince |
 | `FEATURES.md` | Modül modül fonksiyonel gereksinimler | Bir ekran/modül yaparken |
 | `ARCHITECTURE_DECISIONS.md` | Blueprint'ten sapmalar ve gerekçeleri | Stack/yapı kararı sorgulanınca |
 | `INTEGRATIONS.md` | Dış servisler, agnostik arayüzler, fazları | Ödeme/kargo/muhasebe/bildirim işinde |

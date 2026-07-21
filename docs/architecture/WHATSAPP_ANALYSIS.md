@@ -6,8 +6,9 @@ scope: satış kanalı, pazar, entegrasyon
 created: 2026-07-20
 source: Claude yazışması (rakip araştırması + WhatsApp otomasyon teknik değerlendirmesi)
 related:
-  - content/decisions/adr-whatsapp-ai-agent-channel.md
-  - content/backlog/whatsapp-sales-channel-backlog.md
+  - ADR_WHATSAPP.md
+  - CHANNELS.md
+  - BACKLOG.md
 note: >
   Bu dosya SADECE analiz ve tespit içerir. Kalıcı kararlar ADR'de,
   yapılacak işler backlog dosyasındadır. Bir tespit karara dönüşürse

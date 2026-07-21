@@ -6,8 +6,9 @@ created: 2026-07-20
 deciders: [proje sahibi]
 source: Claude yazışması (rakip araştırması + entegrasyon değerlendirmesi)
 related:
-  - content/research/whatsapp-conversational-commerce-analysis.md
-  - content/backlog/whatsapp-sales-channel-backlog.md
+  - WHATSAPP_ANALYSIS.md
+  - CHANNELS.md
+  - BACKLOG.md
 note: >
   Bu dosya SADECE kalıcı kararları içerir. Her karar; bağlam, karar,
   gerekçe, sonuç ve alternatifler alanlarıyla yazılır. Analiz detayı

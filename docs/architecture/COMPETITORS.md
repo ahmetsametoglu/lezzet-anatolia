@@ -5,9 +5,10 @@ status: aktif
 created: 2026-07-20
 source: Claude yazışması (Avrupa rakip araştırması)
 related:
-  - content/research/whatsapp-conversational-commerce-analysis.md
+  - WHATSAPP_ANALYSIS.md
+  - CHANNELS.md
 note: >
-  Kısa referans kartı. Detaylı analiz whatsapp-conversational-commerce-analysis.md'de.
+  Kısa referans kartı. Detaylı analiz WHATSAPP_ANALYSIS.md'de.
   Veriler Temmuz 2026 snapshot; takipçi/fiyat zamanla değişir.
 ---
 

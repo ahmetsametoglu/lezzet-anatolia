@@ -49,7 +49,7 @@ ORM bilinçli yok: doğrulama Zod'da, sorgu katmanı §6 taban sınıfta. Üçü
 proje/
 ├── apps/
 │   ├── web/          # Next.js — müşteri + admin + Server Action + gerektiğinde /api
-│   ├── backend/      # Hono + cron — dış webhook'lar (ödeme), zamanlı işler
+│   ├── backend/      # Hono + cron — dış webhook'lar (ödeme, WhatsApp inbound), zamanlı işler
 │   └── worker/       # (opsiyonel) uzun/yerel işler
 ├── packages/
 │   ├── types/            # Zod şemaları + domain tipler  ← TEK KAYNAK
@@ -59,8 +59,9 @@ proje/
 │   ├── brand/            # marka sabitleri (ad, logo yolu, yasal metinler, renkler)
 │   ├── i18n/             # arayüz metinleri (tr/fr/de) + yerelleştirme yardımcıları
 │   ├── storage/          # dosya deposu istemcisi
-│   ├── email/            # mail istemcisi + şablonlar
-│   ├── notify/           # soyut bildirim katmanı (e-posta / wa.me / ileride push)
+│   ├── email/            # mail istemcisi + default şablonlar (Auth OTP dahil TÜM mail buradan; Supabase mail yapısı kullanılmaz)
+│   ├── notify/           # soyut OUTBOUND bildirim katmanı (e-posta / wa.me / ileride WhatsApp API / push)
+│   ├── ai/               # sağlayıcı-agnostik AI: çeviri, WhatsApp sohbet, banka import şablonu, fatura→stok formu — çok amaçlı ajan
 │   ├── eslint-config/
 │   └── typescript-config/
 ├── supabase/migrations/  # numaralı SQL, additive-only (WORKFLOW.md §2)
@@ -173,7 +174,7 @@ Genel blueprint §8 domain motorunu "ölçüt karşılanırsa" öneri yapar. Bu 
 - **Kanal belirleme** — müşteri tipi → b2b/b2c
 - **Kâr hesabı** — kanal/ürün bazında
 
-Hepsi UI'sız, saf fonksiyon + gerekiyorsa Zustand deposu + **birim test**. Her yüzey (müşteri, admin, arka plan, ileride AI) aynı motoru çağırır.
+Hepsi UI'sız, saf fonksiyon + gerekiyorsa Zustand deposu + **birim test**. Her yüzey (müşteri web, admin, arka plan, WhatsApp/AI ajanı) aynı motoru çağırır — WhatsApp yeni bir beyin değil, domain-core'un bir yüzeyidir (bkz. `CHANNELS.md §1`, `ADR_WHATSAPP.md` ADR-004). Kanal belirlemenin yanında **sipariş kaynağı** (`order_source`) ve telefonla **kimlik çözümü** de burada saf fonksiyondur.
 
 ---
 
@@ -228,3 +229,21 @@ Marka adı/alan adı tek sabitten okunur, elle yazılmaz.
 Bu dosya uyarlanmış **şablondur**; proje ayrıca kendi envanterini tutar (rota haritası, bileşen aileleri, tam veri modeli, kalıcı "neden"ler). Domain kuralları `DOMAIN.md`'de, veri modeli `DATA_MODEL.md`'de, sapmaların gerekçeleri `ARCHITECTURE_DECISIONS.md`'de zaten ayrık — bu dosyalar birlikte `ARCHITECTURE.md` işlevini görür.
 
 Açık iş kalemleri buraya **girmez**; `BACKLOG.md`'ye gider (WORKFLOW.md §8 rol ayrımı).
+
+---
+
+## 13. Operasyon ve güvenlik ilkeleri (taslak)
+
+> **Statü notu:** Bu bölümdeki maddeler sektör en-iyi-uygulamalarına göre konmuş **taslak varsayılanlardır**, nihai karar değildir. Bu kısmın kodlaması yapılmadan önce **tekrar konuşulacak ve netleştirilecektir**: seçenekler masaya konacak, artı/eksileriyle karşılaştırılacak ve net karar öyle verilecektir. Aşağıdakiler o konuşmanın başlangıç zeminidir.
+
+- **Veri erişimi — çift kat savunma:** tüm okuma/yazma sunucu tarafında service-role + `lib/guard.ts` rol kapılarından geçer; RLS (satır seviyesi güvenlik) **ikinci savunma hattı** olarak temel tablolara yazılır (müşteri kendi satırı, kurye kendi teslimatı). Anon key'in tarayıcıya hangi kapsamla çıktığı netleştirilecek.
+- **Çok-tablolu yazım = tek Postgres fonksiyonu (RPC):** birden çok tabloya yazan her iş akışı tek transaction'da koşar. Bilinen akışlar: sipariş onayı (Order+Reservation), teslim (Reservation+Stock+OrderItemBatch+snapshot), hızlı satış, kurye gün kapanışı, StockIntake, puan redemption, müşteri birleştirme.
+- **Migration mekanizması:** numaralı SQL dosyaları tek transaction içinde uygulanır; uygulandı bilgisi `schema_migrations`'ta; deploy hattı migration hatasında durur (araç: Supabase CLI veya basit runner — seçim netleşecek).
+- **Webhook güvenliği:** imza doğrulanmadan gövde işlenmez; her olay `WebhookEvent`'e yazılır (provider+event_id unique) — aynı olay ikinci kez gelirse no-op (idempotent).
+- **Yedekleme/felaket kurtarma:** Supabase planında günlük yedek/PITR doğrulanır + haftalık `pg_dump` off-site + Storage senkronu + yılda bir **geri yükleme provası** ("provası yapılmamış yedek, yedek değildir"); Caddyfile/PM2 konfigürasyonu repo'da.
+- **Log ve alarm:** yapılandırılmış JSON log + logrotate; kritik hatada (webhook düşmesi, cron gecikmesi, ödeme akışı hatası) admin'e otomatik e-posta — ağır APM değil, ölçeğe uygun asgari.
+- **Cron disiplini:** `apps/backend` tek instance (fork mode); her zamanlanmış iş **taramalı ve idempotent** yazılır (kaçan tik bir sonraki taramada telafi olur); kritik işler `last_run` bırakır, gecikince alarm.
+- **Deploy atomikliği:** yeni sürüm ayrı dizine derlenir → symlink değişimi → `pm2 reload`; derleme düşük trafik saatinde.
+- **Test/CI/staging:** her push'ta typecheck+lint+birim test (GitHub Actions); yerel Supabase üzerinde entegrasyon testleri — özellikle **paralel rezervasyon yarışı** ve para-akışı RPC'leri; staging = ikinci (ücretsiz) Supabase projesi + aynı VPS'te ikinci PM2 app; migration provası önce staging'de.
+- **Paket sınırı araçla zorlanır:** `apps/*` sipariş/stok/para yazımlarını yalnız domain-core'un dışa verdiği fonksiyonlar üzerinden yapar; ilgili database servislerini doğrudan import edemez (eslint-boundaries/dependency-cruiser kuralı). §4'teki bağımlılık şeması tabloya çevrilecek.
+- **Admin yüzey izolasyonu:** `(admin)`/`(shop)` route group ayrımı + `/admin` altı middleware'de toptan oturum+rol kontrolü (sayfa içi guard yine tekrarlanır — çift kat) + `noindex`.
