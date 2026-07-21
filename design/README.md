@@ -8,15 +8,18 @@ Bu klasör **Claude Design'a verilecek** tasarım girdilerini içerir. Her sayfa
 
 **Lezzet Anatolia** — Strasbourg merkezli donuk Türk gıdası satış sistemi. İki müşteri tipi: **B2C** (son tüketici; Türk diasporası + yerel Fransız/Alman müşteri) ve **B2B** (restoran/market; toptan fiyat, hacimli sipariş). Satış: web sitesi + WhatsApp; teslimat: kendi aracıyla rota içi kapı teslimi veya kargo.
 
-**Diller:** TR / FR / DE — her ekran üç dilde çalışır (metinler değişkendir, tasarım metin uzunluğu farkına dayanıklı olmalı).
+**Diller:** TR / FR / DE. Sayfa **her an tek dilde** görüntülenir — dil URL'den gelir, kullanıcı dil değiştirebilir. "Çok dilli" demek aynı ekranda birden çok dil demek **değildir**; tasarım tek dilli ekran tasarlar, ama metinler üç dilde de var olacağı için uzunluk farkına dayanıklı olmalıdır (Almanca uzun yazılır).
 
 ## Altın kural
 
 **Sade ve anlaşılır.** Sistemin içindeki karmaşıklık (parti takibi, rezervasyon mantığı, KDV işlemleri, türetilmiş durumlar) **arayüze sızmaz**. Her ekran, kullanıcısının sezgisine uyar: müşteri alışveriş yapar, depocu hazırlar, kurye teslim eder, admin yönetir — hiçbiri sistemin iç modelini öğrenmek zorunda kalmaz.
 
-## Stil
+## Stil ve sunum kararları Claude Design'ındır
 
 - Stil **verilmiyor** — renk, tipografi, doku, karakter tamamen Claude Design'ın kararı.
+- **Sunum kararları da verilmiyor.** Biz her sayfa için yalnız **hangi bilgi/aksiyon var ve neden** olduğunu söyleriz. O bilginin **nasıl** gösterileceği — hiyerarşi, gruplama, katlama/açma, hangi komponent, hangi etkileşim deseni — tamamen Claude Design'ın kararıdır. Claude Design bu kararları **uzman bir tasarımcı ve kullanıcı deneyimi uzmanı** gözüyle verir: kullanıcının sezgisel hareketini düşünür, hangi bilgi öne çıkarsa hangi bilgi geride durursa sayfanın daha sade ve anlaşılır olacağını kendisi tartar. Bu sorumluluğun kendisinde olduğunu bilir ve bu konuda **dikkatli** davranır — altın kural (sadelik) her sunum kararının ölçütüdür.
+- Bu ilke **bütün yüzeyler için** geçerlidir — müşteri kadar admin/depo/kurye tarafı da: formlar, diyaloglar ve kullanıcıyla etkileşen her komponent kurgulanırken **bir bakışta kavranabilirlik** hedeflenir; bunun için gruplama, renklendirme, ayırma, sıralama gibi bütün yaklaşımları Claude Design kendisi seçer ve uygular. Operasyon ekranı "iç araç" diye özensiz bırakılmaz — tam tersine, hız ve hatasızlık için en dikkatli kurgulanan yerdir.
+- Sayfa dokümanlarında yanlışlıkla bir sunum önerisi kalmışsa **bağlayıcı değildir**; içerik listesi bağlayıcıdır.
 - **Admin/operasyon tarafı ile müşteri tarafı farklı stillerde kurgulanabilir** (iki ayrı stil evreni serbest): müşteri tarafı marka/iştah/güven anlatır, operasyon tarafı hız ve netlik ister.
 - Her sayfa **web ve mobil** için özelleşir. Operasyon ekranları (admin, depo, kurye) **telefon önceliklidir**.
 
@@ -42,7 +45,7 @@ Her `pages/*.md` dosyası şu başlıkları taşır:
 4. **Durumlar ve varyasyonlar** — boş/dolu/hata; B2B–B2C farkı; önemli kenar durumları
 5. **Akış bağlantıları** — bu sayfaya nereden gelinir, nereye gidilir
 6. **Yapmaması gerekenler** — bu sayfada asla görünmeyecek bilgiler (karmaşıklık sızıntısı önlemi)
-7. **Web / mobil notları** — iki biçim arasındaki özelleşme
+7. **Web / mobil notları** — yalnız **işlevsel** farklar ve kullanım bağlamı (ör. "kurye sahada tek elle, eldivenle kullanır"); yerleşim/etkileşim kararı tasarımcınındır
 
 ## Sayfa listesi
 
