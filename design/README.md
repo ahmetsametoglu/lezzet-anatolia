@@ -31,9 +31,16 @@ Tasarım, tekrar eden **komponentlerden** kurulur — buton, kart, form alanı, 
 - **Neden:** biz önce komponentleri kodlayacağız, sayfaları bu kodlanmış parçalarla inşa edeceğiz. Admin/operasyon tarafında bu yaklaşım kesindir; müşteri tarafında da mümkün olduğunca aynı disiplin uygulanır (sayfaya özgü serbest bölgeler olabilir, ama form/liste/kart gibi parçalar ortak kalır).
 - İki stil evreni (müşteri / admin) **ayrı komponent setleri** olabilir; her evrenin kendi envanteri çıkar.
 
-## Faz yok
+## Çalışma sırası — sayfa sayfa, onaylı ilerleme
 
-Yapım sırası bizde fazlıdır ama **tasarımda faz yoktur**: `pages/` altındaki **tüm** sayfalar tek seferde tasarlanır (ileride yapılacak özellikler dahil).
+- Tasarım **tek seferde her şey üretilerek yapılmaz.** Sayfa sayfa ilerlenir: bir sayfa tasarlanır → kullanıcıya sunulur → beğenilmezse revize edilir → **onaydan sonra** sıradaki sayfaya geçilir.
+- **Başlangıç kritiktir:** her stil evreni için önce **tek bir temsilî sayfayla tasarım dili kurulur** (öneri: müşteri evreni için ürün detay, admin evreni için sipariş listesi/detay). Dil onaylanmadan o evrende başka sayfa üretilmez — beğenilmeyen bir dille 20 sayfa üretmek, 20 sayfa çöpe atmaktır.
+- **Komponent envanteri onaylı sayfalardan adım adım büyür.** Yeni sayfa mümkün olduğunca mevcut (onaylanmış) komponentleri kullanır; yeni komponent gerekiyorsa bu açıkça belirtilir ve envantere eklenir.
+- Sonradan gelen bir geri bildirim bir komponenti değiştirirse, o komponenti kullanan **önceki sayfalara etkisi** açıkça söylenir — sessiz tutarsızlık bırakılmaz.
+
+## Faz yok (kapsam kuralı)
+
+Yapım sırası bizde fazlıdır ama **tasarım kapsamında faz yoktur**: `pages/` altındaki **tüm** sayfalar tasarlanır — hiçbir sayfa "ileriki faz" diye atlanmaz. Süreç yine yukarıdaki gibi **sayfa sayfa ve onaylıdır**; "faz yok" kapsamı anlatır, "hepsini bir anda üret" demek değildir.
 
 ## Sayfa dokümanı şablonu
 
