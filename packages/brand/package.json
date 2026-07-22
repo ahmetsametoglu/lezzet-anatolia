@@ -1,0 +1,18 @@
+{
+  "name": "@lezzet/brand",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .turbo node_modules"
+  },
+  "devDependencies": {
+    "@lezzet/typescript-config": "workspace:*",
+    "typescript": "^5.7.2"
+  }
+}

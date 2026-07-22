@@ -1,0 +1,10 @@
+{
+  "extends": "@lezzet/typescript-config/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["eslint.config.js"],
+  "exclude": ["node_modules", "apps", "packages"]
+}
