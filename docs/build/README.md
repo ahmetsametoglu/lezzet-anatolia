@@ -25,7 +25,7 @@ Her `NN-modul.md` dosyası şunları taşır: **Kapsam** (bu modül ne, ne deği
 | 03 | `03-domain-core.md` | Durum makinesi, fiyat çözümü, rezervasyon, kanal/kaynak kuralları (saf fonksiyonlar + birim test) | bekliyor |
 | 04 | `04-auth-kimlik.md` | Supabase Auth, guard'lar, müşteri bul-veya-oluştur, misafir hızlı doğrulama | bekliyor |
 | 05 | `05-katalog.md` | Ürün/varyant/kategori/koleksiyon/paket + fiyat yönetimi (admin CRUD + vitrin okuma) | bekliyor |
-| 06 | `06-stok.md` | Parti, rezervasyon (RPC), stok girişi, tedarikçi, imha/fire, sıcaklık | bekliyor |
+| 06 | `06-stok.md` | Parti, rezervasyon (RPC), stok girişi, tedarik (tedarikçi kartı, kod eşlemesi, tedarik siparişi, eşik önerisi), imha/fire, sıcaklık | bekliyor |
 | 07 | `07-siparis.md` | Checkout, sipariş yaşam döngüsü, Stripe, kısmi karşılama, iade | bekliyor |
 | 08 | `08-musteri-app.md` | Vitrin sayfaları (komponentlerden inşa), sepet, hesap, çok dillilik | bekliyor |
 | 09 | `09-admin.md` | Admin sayfaları (komponentlerden inşa), B2B onay, ayarlar | bekliyor |

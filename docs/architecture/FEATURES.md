@@ -62,6 +62,16 @@ Her modül: ne yapar + hangi role açık. Faz bilgisi için `SCOPE.md`. Detay i�
 
 **Faz 1.** Rota dışı siparişler için etiket, takip numarası, müşteriye otomatik bilgi. Agnostik arayüz (bkz. `INTEGRATIONS.md`).
 
+## Tedarik / satın alma
+
+**Kime:** yönetici (fiyatlı taraf); depo mal kabulü ayrı (fiyatsız). Kurallar: `DOMAIN.md §16`.
+
+- Tedarikçi kartları: iletişim, vergi no, vade; **borç türetilir** (girişler − ödemeler)
+- Ürün–tedarikçi kod eşlemesi (`SupplierProduct`): sipariş tedarikçinin koduyla yazılır
+- Tedarik siparişi: taslak → temiz liste/PDF (gönderim insana ait) → mal kabulde kapanır (`StockIntake` bağı; eksik gelen fark olarak görünür)
+- "Sipariş zamanı" önerisi: asgari stok eşiği altına düşenler, tedarikçiye göre gruplu → tek dokunuş PO taslağı (akıllı tahmin Faz 2)
+- Stok girişi: parti + DLC + lot + alış fiyatı; AI fatura→form dolumu (ileride)
+
 ## Ön muhasebe
 
 **Kime:** yönetici.

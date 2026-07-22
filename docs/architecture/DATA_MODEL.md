@@ -90,6 +90,7 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 | product_id | uuid | bağlı ürün (paylaşılan ad/açıklama/görsel/DLC/KDV orada) |
 | label | string | varyant etiketi (ör. "70gr", "500gr"); tek varyantlıda varsayılan |
 | net_weight_g | int \| null | net ağırlık (gram) — etiket beyanı ve €/kg birim fiyat gösterimi |
+| min_stock_qty | int \| null | asgari stok eşiği — kullanılabilir stok altına düşünce "sipariş zamanı" önerisine düşer (bkz. `DOMAIN.md §16`); null = öneri yok |
 | sku | string \| null | stok kodu |
 | is_active | boolean | |
 | sort_order | int | |
@@ -422,6 +423,7 @@ Tüm para hareketleri **tek tablo**; kasa/banka ayrımı yok — hareketin **hes
 | counter_account_id | uuid \| null | transferde karşı hesap (nakit→banka, Stripe→banka) |
 | order_id | uuid \| null | sipariş ödemesiyse |
 | stock_intake_id | uuid \| null | stok alımıysa |
+| supplier_id | uuid \| null | tedarikçiye ödemeyse — tedarikçi borcu türetimi (bkz. `Supplier`) |
 | value_date | date | |
 | description | string \| null | |
 | source | enum(`manual`,`bank_import`) | elle mi, banka import'undan mı |
@@ -429,12 +431,56 @@ Tüm para hareketleri **tek tablo**; kasa/banka ayrımı yok — hareketin **hes
 
 ### Supplier (tedarikçi)
 
+Müşteri kartının simetriği (bkz. `DOMAIN.md §16`). **Tedarikçiye borç türetilir**, saklanmaz: Σ stok girişleri − Σ tedarikçiye ödemeler (`MoneyMovement.supplier_id`).
+
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
 | name | string | |
 | contact | jsonb \| null | telefon/e-posta/adres |
+| vat_number | string \| null | tedarikçinin vergi no'su (muhasebe eşleşmesi) |
+| payment_term_days | number \| null | bize tanıdığı vade (gün); null = peşin |
 | note | string \| null | |
+| is_active | boolean | |
+
+### SupplierProduct (ürün–tedarikçi eşlemesi)
+
+Tedarik siparişi **tedarikçinin diliyle** yazılabilsin diye: bizim varyantımız ↔ onların kodu. Bir varyantın birden çok tedarikçisi olabilir (alternatif kaynak).
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| supplier_id | uuid | |
+| variant_id | uuid | |
+| supplier_code | string | tedarikçinin ürün/sipariş kodu |
+| name_at_supplier | string \| null | üründeki adı (farklıysa) |
+| pack_qty | number \| null | koli içi adet (sipariş koliyle verilirse çeviri) |
+| last_purchase_price | number \| null | son alış (girişte otomatik güncellenir) — "geçen sefer kaçtı" |
+| is_preferred | boolean | varsayılan tedarikçi işareti |
+
+### PurchaseOrder (tedarik siparişi)
+
+Taslak → gönderildi → mal kabulde kapanır (bkz. `DOMAIN.md §16`). Sistem **göndermez** — temiz liste/PDF üretir, gönderim insana aittir.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| supplier_id | uuid | |
+| status | enum(`draft`,`sent`,`received`,`cancelled`) | |
+| sent_at | timestamptz \| null | |
+| note | string \| null | |
+| created_at | timestamptz | |
+
+### PurchaseOrderItem (tedarik siparişi kalemi)
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| purchase_order_id | uuid | |
+| variant_id | uuid | |
+| supplier_product_id | uuid \| null | kod eşlemesi (liste tedarikçi koduyla yazılır) |
+| qty | number | paket adedi |
+| unit_price | number \| null | beklenen alış (varsa) |
 
 ### StockIntake (stok girişi / satın alma)
 
@@ -444,6 +490,7 @@ Mal alımının envanter tarafı; oluşturduğu partiler buna bağlanır (`Stock
 | --- | --- | --- |
 | id | uuid | |
 | supplier_id | uuid \| null | tedarikçi (bkz. `Supplier`) — lot izlenebilirliğinin "bir adım geri" halkası |
+| purchase_order_id | uuid \| null | bağlı tedarik siparişi — mal kabul formu PO kalemleriyle önceden dolu gelir; kabulle PO `received` olur |
 | date | date | |
 | total_amount | number | |
 | note | string \| null | |
@@ -599,6 +646,7 @@ Parametrik değerler (minimum sepet, ücretsiz kargo eşiği, **yaklaşan son ta
 - `ticket_status`: open, in_progress, resolved
 - `ticket_sender`: customer, admin
 - `adjustment_reason`: expired, damaged, count_diff, lost
+- `po_status`: draft, sent, received, cancelled
 
 ---
 

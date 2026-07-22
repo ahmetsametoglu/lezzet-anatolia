@@ -26,6 +26,7 @@ Amaç: işin tamamını taşıyan sistem. WhatsApp/elle giriş kaosunu bitiren v
 - Sipariş yaşam döngüsü (esnek geçişler + hızlı satış yolu) — bkz. `ORDER_LIFECYCLE.md`
 - Rota ve dağıtım günü (temel liste; optimizasyon yok)
 - Kurye gün kapanışı ve kasa mutabakatı
+- Tedarik: tedarikçi kartı (vade + türetilen borç), ürün–kod eşlemesi, tedarik siparişi (taslak → mal kabulde kapanır), eşik bazlı "sipariş zamanı" önerisi
 
 ### Para ve raporlama
 - Kanal bazlı kârlılık ölçümü
@@ -52,7 +53,7 @@ Sistem bunlar olmadan eksiksiz çalışır; her biri belirgin ek altyapı ister:
 - **Reklam derin optimizasyonu:** Meta/Google pixel + CAPI (izin katmanıyla), retargeting; akıllı bölge önerisi (rota + kapasite + yoğunluk)
 - **Kampanya otomasyonu:** tetiklenmiş akışlar (uyuyan müşteri, sepet kurtarma zinciri vb.) — Faz 1'de elle gönderim var, otomasyon yok
 - **WhatsApp ölçek:** double opt-in broadcast/newsletter, segmentli proaktif template'ler, tam chatbot/SSS otomasyonu
-- **İleri analitik** (derin kohort/tahmin)
+- **İleri analitik** (derin kohort/tahmin); akıllı tedarik tahmini (satış hızı + sezon → "şu tarihte biter")
 - **B2B düzenli sipariş şablonu** (rota gününde otomatik taslak, onayla kesinleşir)
 - **Sepet kurtarma / win-back e-posta otomasyonları** (zemin Faz 1'de: kalıcı sepet + izinli liste)
 

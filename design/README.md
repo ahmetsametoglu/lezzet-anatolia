@@ -86,7 +86,7 @@ Her `pages/*.md` dosyası şu başlıkları taşır:
 | `admin-b2b-onay.md` | B2B başvuru onayı (kontrol kartı) |
 | `admin-talepler.md` | Talep/şikâyet kuyruğu ve yazışma |
 | `admin-stok.md` | Stok görünümü: partiler, yaklaşan tarihli, near-expiry teklif açma |
-| `admin-satin-alma.md` | Stok girişi / tedarikçi / satın alma |
+| `admin-satin-alma.md` | Tedarik: tedarikçi kartları (vade/borç), ürün–kod eşlemesi, tedarik siparişi + öneri, stok girişi |
 | `admin-para.md` | Para hareketleri, hesaplar, banka import |
 | `admin-raporlar.md` | Kârlılık (ürün/kanal/fire), muhasebe export |
 | `admin-analitik.md` | Analitik: kaynak/huni/kampanya ROI/segmentler + AI içgörü |

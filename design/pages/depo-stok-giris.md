@@ -15,6 +15,7 @@ Tedarikçiden gelen malın parti parti sisteme girildiği ekran. Kullanıcı: de
 - **Raf ömrü uyarısı** — girilen tarihe göre partinin **kalan raf ömrü beklenenden kısaysa** sistem uyarır ("bu parti kısa ömürlü geldi" anlamında). Uyarı **engellemez** — malı kabul edip etmemek sahadaki insanın kararıdır; uyarı yalnız kararı bilinçli kılar
 - **Toptan alıp paketleme girişi** — 1 kg dökme alınıp 10×100gr paketlenen mal, paketlendiği haliyle (**10 paket** olarak) girilir; ekran bu senaryoyu doğal karşılamalı (girişin birimi her zaman satılan paket)
 - **Girilen partilerin günlük özeti** — bugün kabul edilen partiler; "girdim mi girmedim mi" belirsizliği yaşanmaz, yanlış giriş hemen fark edilir
+- **Bekleyen tedarik siparişi (varsa)** — admin bir tedarik siparişi göndermişse mal kabul formu o siparişin kalemleriyle **önceden dolu** gelir: depocu ürünleri seçmez, gelen sayıyı doğrular + tarih/lot girer. Beklenenden **eksik/fazla gelen** kalem işaretlenir — fark admin tarafında görünür. Siparişsiz kabul de her zaman mümkündür (boş formla)
 
 ## 3. Aksiyonlar
 
@@ -32,7 +33,7 @@ Tedarikçiden gelen malın parti parti sisteme girildiği ekran. Kullanıcı: de
 
 ## 5. Akış bağlantıları
 
-Gelinen: mal geldiğinde doğrudan açılır (depocunun ana menüsünden); admin tarafında oluşturulan satın alma kaydıyla ilişkilenebilir.
+Gelinen: mal geldiğinde doğrudan açılır (depocunun ana menüsünden); bekleyen tedarik siparişi varsa oradan seçilerek dolu formla başlar.
 Gidilen: kayıt sonrası aynı ekranda sonraki ürüne devam; kabul bitince günlük özet. Girilen partiler anında satılabilir stoğa ve hazırlık önerilerine yansır.
 
 ## 6. Yapmaması gerekenler

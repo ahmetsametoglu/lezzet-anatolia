@@ -468,3 +468,28 @@ Basit yaşam döngüsü; karmaşık ticket sistemi kurulmaz. Amaç: müşteri so
 ### Analiz bağı
 
 Ürüne bağlı şikâyetler (bozuk/eksik) admin analitiğine girer: hangi üründe/partide sorun yoğunlaşıyor (ürün skoru ve kalite sinyaliyle yan yana, bkz. §14).
+
+## 16. Tedarik (satın alma) yönetimi
+
+Müşteri tarafının simetriği: tedarikçi de bir karttır, alım da bir akıştır. İlke aynı — **sistem önerir, siparişi insan verir.**
+
+### Tedarikçi kartı ve borç
+
+- Tedarikçi kartı: ad, iletişim, vergi no, **bize tanıdığı vade** (`payment_term_days`, null = peşin), not.
+- **Muhasebe bağı:** her stok girişi (`StockIntake.supplier_id`) ve tedarikçiye yapılan her ödeme (`MoneyMovement.supplier_id`) karta bağlanır. **Tedarikçiye borç türetilir**: Σ girişler − Σ ödemeler; "bu tedarikçiye bu yıl ne ödedik" tek sorgudur. Saklanan bakiye yoktur (türetme ilkesi).
+
+### Ürün–kod eşlemesi
+
+Her varyant için tedarikçideki **sipariş kodu**, oradaki adı, koli içi adet ve son alış fiyatı tutulur (`SupplierProduct`). Tedarik siparişi bu sayede **tedarikçinin diliyle** yazılır — telefonda kod tarif etme devri biter. Bir varyantın birden çok tedarikçisi olabilir; biri "tercihli" işaretlenir.
+
+### Tedarik siparişi (PurchaseOrder)
+
+- **Taslak:** admin kalemleri seçer (öneri listesinden veya elle); liste tedarikçi kodlarıyla oluşur.
+- **Gönderim insana aittir:** sistem WhatsApp'a/e-postaya kopyalanacak temiz bir liste/PDF üretir, **otomatik göndermez** — tedarikçi ilişkisi insan ilişkisidir.
+- **Mal kabulde kapanır:** mal gelince depo mal kabul formu PO kalemleriyle **önceden dolu** gelir; depocu tarih/lot girer, sayıyı doğrular. Kabul tamamlanınca PO `received` olur ve `StockIntake`'e bağlanır. Böylece **sipariş ettim ↔ gelen mal ↔ ödeme** üç halkası zincirlenir; eksik gelen mal fark olarak görünür.
+- PO'suz doğrudan stok girişi de her zaman mümkündür (küçük/plansız alım) — PO zorunluluk değil, araçtır.
+
+### Sipariş önerisi
+
+- **Faz 1 — eşik:** varyant başına asgari stok (`min_stock_qty`, isteğe bağlı); kullanılabilir stok altına düşen ürün admin'de **"sipariş zamanı"** listesine düşer. Liste tedarikçiye göre gruplanır → tek dokunuşla PO taslağına dönüşür.
+- **Faz 2 — akıllı öneri:** satış hızı + kalan stok + tedarik süresi + sezon (Kasım–Aralık) → "şu tarihte biter" tahmini; AI içgörü ailesine girer. Her iki halde de otomatik sipariş **yoktur**.
