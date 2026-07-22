@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Stok — parti gözü &amp; tarih kararları · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Görünüm ve karar yeri. Mal kabul/imha girişi depo ekranlarında. Depo maliyet/teklif fiyatı görmez.</span>
+    </div>
+
+    <div data-screen-label="Stok Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="stok" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">Stok</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">142 varyant · 6 yaklaşan tarihli · 1 DLC geçti</span>
+          </div>
+          <span onClick="{{ openLot }}" style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Lot / geri çağırma</span>
+        </div>
+        <div style="padding:0 24px;border-bottom:1px solid #e6e7e1;display:flex;gap:2px;background:#f8f9f5">
+          <span style="font:600 12.5px 'Space Grotesk';color:#22251f;border-bottom:2px solid #5f7a2c;padding:11px 14px;margin-bottom:-1px">Stok seviyeleri</span>
+          <span style="font:600 12.5px 'Space Grotesk';color:#8b9086;padding:11px 14px;display:flex;align-items:center;gap:6px">Yaklaşan tarihli<span style="font:500 10px 'IBM Plex Mono';color:#9a6416;background:#fdf1e3;border-radius:9px;padding:1px 6px">6</span></span>
+          <span style="font:600 12.5px 'Space Grotesk';color:#8b9086;padding:11px 14px">İmha geçmişi</span>
+        </div>
+        <div style="padding:10px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font:600 12px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:14px;padding:5px 12px">Tümü</span>
+          <span style="font:600 12px 'Space Grotesk';color:#9a6416;border:1px solid #ecd9b4;border-radius:14px;padding:5px 12px">Yaklaşan tarihli</span>
+          <span style="font:600 12px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:14px;padding:5px 12px">Teklif açık</span>
+          <span style="width:1px;height:18px;background:#dfe1d9;margin:0 4px"></span>
+          <span style="font:500 12px 'Karla';color:#6a7065;border:1px dashed #d2d4cb;border-radius:14px;padding:5px 12px">+ kategori</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.5fr 1fr;flex:1;min-height:0;overflow:hidden">
+          <div style="border-right:1px solid #e6e7e1;display:flex;flex-direction:column;min-height:0">
+            <div style="display:grid;grid-template-columns:minmax(130px,1fr) 78px 66px 100px;gap:0 10px;padding:10px 22px;border-bottom:1px solid #e6e7e1;font:500 10.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086;background:#f8f9f5">
+              <span>Varyant</span><span style="text-align:right">Kullanılab.</span><span style="text-align:right">Ayrıl.</span><span style="text-align:right">En yakın</span>
+            </div>
+            <div style="overflow-y:auto;flex:1;min-height:0" onScroll="{{ onScroll }}">
+              <sc-for list="{{ shown }}" as="v" hint-placeholder-count="12">
+                <div style="display:grid;grid-template-columns:minmax(130px,1fr) 78px 66px 100px;gap:0 10px;padding:11px 22px;border-bottom:1px solid #f0f1ec;align-items:center">
+                  <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                    <span style="font:600 13px 'Karla';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ v.name }}</span>
+                    <span style="font:400 11px 'Karla';color:#8b9086">{{ v.meta }}</span>
+                  </div>
+                  <span style="text-align:right;font:500 13.5px 'IBM Plex Mono';color:{{ v.availFg }}">{{ v.avail }}</span>
+                  <span style="text-align:right;font:500 12.5px 'IBM Plex Mono';color:#8b9086">{{ v.reserved }}</span>
+                  <span style="justify-self:end;font:600 10.5px 'Space Grotesk';color:{{ v.dFg }};background:{{ v.dBg }};border-radius:7px;padding:3px 9px">{{ v.dLabel }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ more }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:14px;text-align:center;font:500 11.5px 'IBM Plex Mono';color:#9aa094;display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:12px;height:12px;border:2px solid #cdd0c8;border-top-color:#5f7a2c;border-radius:50%;display:inline-block;animation:sp .7s linear infinite"></span>daha fazla yükleniyor…</div>
+              </sc-if>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;background:#f8f9f5;min-height:0">
+            <div style="padding:12px 20px;border-bottom:1px solid #e6e7e1;display:flex;flex-direction:column;gap:2px">
+              <span style="font:600 14px 'Space Grotesk'">Yaklaşan tarihli — teklif kararı</span>
+              <span style="font:400 11.5px 'Karla';color:#8b9086">Kalan raf ömrü %25 altı · sistem önerir, fiyatı ve kararı siz verirsiniz</span>
+            </div>
+            <div style="overflow-y:auto;flex:1;min-height:0;padding:14px 20px;display:flex;flex-direction:column;gap:11px">
+              <sc-for list="{{ nearExpiry }}" as="b" hint-placeholder-count="4">
+                <div style="background:#fff;border:1px solid {{ b.bd }};border-left:3px solid {{ b.edge }};border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:9px">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+                    <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+                      <span style="font:600 13.5px 'Karla';color:#22251f">{{ b.name }}</span>
+                      <span style="font:400 11px 'Karla';color:#8b9086">Lot {{ b.lot }} · {{ b.qty }} kaldı</span>
+                    </div>
+                    <span style="font:600 10px 'Space Grotesk';color:{{ b.tagFg }};background:{{ b.tagBg }};border-radius:6px;padding:2px 8px;flex:none">{{ b.tag }}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="flex:1;height:7px;border-radius:4px;background:#eef0ea;overflow:hidden"><span style="display:block;height:100%;width:{{ b.pct }};background:{{ b.edge }}"></span></span>
+                    <span style="font:500 11px 'IBM Plex Mono';color:{{ b.edge }}">kalan {{ b.pctT }}</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f0f1ec;padding-top:8px">
+                    <span style="font:400 11.5px 'Karla';color:#6a7065">{{ b.sub }}</span>
+                    <span onClick="{{ b.action }}" style="font:600 12px 'Space Grotesk';color:{{ b.ctaFg }};background:{{ b.ctaBg }};border:1px solid {{ b.ctaBd }};border-radius:7px;padding:6px 12px;cursor:pointer">{{ b.cta }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Stok — mobil</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Günlük: yaklaşan tarihliye bakıp teklif açmak. Acil: lot ile geri çağırma sorgusu.</span>
+    </div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+
+      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;justify-content:space-between">
+          <span style="font:600 17px 'Space Grotesk';color:#22251f">Yaklaşan tarihli</span>
+          <span style="font:500 10px 'IBM Plex Mono';color:#9a6416;background:#fdf1e3;border-radius:9px;padding:2px 8px">6</span>
+        </div>
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:11px">
+          <sc-for list="{{ mobNear }}" as="m" hint-placeholder-count="4">
+            <div style="border:1px solid {{ m.bd }};border-left:3px solid {{ m.edge }};border-radius:11px;padding:12px 13px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+                <div style="display:flex;flex-direction:column;gap:1px">
+                  <span style="font:600 13.5px 'Karla';color:#22251f">{{ m.name }}</span>
+                  <span style="font:400 11px 'Karla';color:#8b9086">{{ m.qty }} · kalan {{ m.pctT }}</span>
+                </div>
+                <span style="font:600 10px 'Space Grotesk';color:{{ m.tagFg }};background:{{ m.tagBg }};border-radius:6px;padding:2px 8px">{{ m.tag }}</span>
+              </div>
+              <span onClick="{{ m.action }}" style="font:600 12.5px 'Space Grotesk';color:{{ m.ctaFg }};background:{{ m.ctaBg }};border:1px solid {{ m.ctaBd }};border-radius:8px;padding:9px;text-align:center;cursor:pointer">{{ m.cta }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:9px">
+          <span style="color:#a5443c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span>
+          <span style="font:600 17px 'Space Grotesk';color:#22251f">Geri çağırma sorgusu</span>
+        </div>
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:8px;background:#eef0ea;border:1px solid #e0e2da;border-radius:9px;padding:11px 13px">
+            <span style="font:500 13.5px 'IBM Plex Mono';color:#22251f">LOT-2451-A</span>
+          </div>
+          <span style="font:400 11.5px/1.5 'Karla';color:#8b9086">Bu partiden çıkan siparişler ve müşteriler — hazırlık kayıtlarından türetilir.</span>
+          <div style="border:1px solid #e6e7e1;border-radius:10px;overflow:hidden">
+            <div style="padding:9px 13px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;font:500 11px 'Space Grotesk';color:#6a7065">3 sipariş · 3 müşteri</div>
+            <sc-for list="{{ recall }}" as="r" hint-placeholder-count="3">
+              <div style="padding:10px 13px;border-bottom:1px solid #f0f1ec;display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;flex-direction:column;gap:1px">
+                  <span style="font:600 12.5px 'Karla';color:#22251f">{{ r.name }}</span>
+                  <span style="font:400 10.5px 'Karla';color:#8b9086">{{ r.order }} · {{ r.date }}</span>
+                </div>
+                <span style="font:600 11px 'Space Grotesk';color:#5f7a2c">Aç →</span>
+              </div>
+            </sc-for>
+          </div>
+          <span style="font:400 11px/1.5 'Karla';color:#8b9086;text-align:center">Bir adım geri: hangi tedarikçiden, hangi girişle geldi — parti detayında.</span>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+        <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+          <li><strong>Web</strong> → tam stok seviyeleri (fiili/ayrılmış/kullanılabilir), parti listesi, imha geçmişi, teklif fiyatı düzenleme.</li>
+          <li><strong>Mobil</strong> → yaklaşan tarihli + tek dokunuş teklif aç; acil lot/geri çağırma sorgusu.</li>
+          <li><strong>Kural</strong> → DLC geçmiş parti yalnız imha; DDM geçmiş satılabilir. Karar hep admin'in; sistem yalnız işaretler ve fiyat önerir.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:480px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 18px 'Space Grotesk'">Near-expiry teklif aç</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">Fıstıklı Baklava 1kg · Lot LOT-2451-A</span>
+          </div>
+          <span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span>
+        </div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div style="border:1px solid #e6e7e1;background:#fff;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:2px"><span style="font:500 10px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Kalan</span><span style="font:500 17px 'IBM Plex Mono'">14 ad.</span></div>
+            <div style="border:1px solid #e6e7e1;background:#fff;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:2px"><span style="font:500 10px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Kalan raf</span><span style="font:500 17px 'IBM Plex Mono';color:#9a6416">%18</span></div>
+            <div style="border:1px solid #e6e7e1;background:#fff;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:2px"><span style="font:500 10px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Maliyet</span><span style="font:500 17px 'IBM Plex Mono'">9,20 €</span></div>
+          </div>
+          <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:11px 14px;display:flex;gap:9px;align-items:flex-start">
+            <span style="color:#9a6416;flex:none;font:700 13px 'Space Grotesk'">MLOR</span>
+            <span style="font:500 11.5px/1.5 'Karla';color:#8a6410">Bu parti girişte kısa ömürlü kabul edilmişti (kalan %75 altı) — teklif kararına bağlam.</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:500 11.5px 'Karla';color:#6a7065">Sistem önerisi: <strong>%30 indirim</strong> · liste 18,00 € → önerilen 12,60 €</span>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+                <span style="font:500 11px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Teklif fiyatı</span>
+                <div style="border:1.5px solid #5f7a2c;border-radius:9px;padding:11px 13px;font:500 16px 'IBM Plex Mono';color:#22251f;background:#fff">12,60 €</div>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+                <span style="font:500 11px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Miktar tavanı</span>
+                <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 16px 'IBM Plex Mono';color:#8b9086;background:#f4f5f1">14 (parti kalanı)</div>
+              </div>
+            </div>
+          </div>
+          <span style="font:400 11.5px/1.5 'Karla';color:#8b9086">Teklif bu partiye bağlı: parti tükenince kendiliğinden kalkar. Müşteriye giden teklif adı iç terim taşımaz.</span>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5">
+          <span style="font:400 11.5px 'Karla';color:#8b9086;margin-right:auto">Karar admin'in — sistem yalnız önerdi</span>
+          <span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer">İptal</span>
+          <span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer">Teklifi aç</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { visible: 14, modalOpen: false };
+  onScroll = (e) => {
+    const el = e.target;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 90 && this.state.visible < this._total) {
+      this.setState(s => ({ visible: Math.min(s.visible + 10, this._total) }));
+    }
+  };
+  renderVals() {
+    const open = () => this.setState({ modalOpen: true });
+    const ok=['#4a6121','#eef4e2'], warn=['#9a6416','#fdf1e3'], bad=['#a5443c','#fbe9e7'], neut=['#6a7065','#eef0ea'];
+    const base = [
+      { name:'Fıstıklı Baklava 1kg', meta:'Baklava · 2 parti', avail:'14', reserved:'6', d:warn, dLabel:'%18 · DLC' },
+      { name:'Cevizli Baklava 500g', meta:'Baklava · 1 parti', avail:'40', reserved:'2', d:ok, dLabel:'%64' },
+      { name:'Su Böreği (tepsi)', meta:'Börek · 3 parti', avail:'8', reserved:'0', d:bad, dLabel:'DLC geçti' },
+      { name:'Künefe 2 kişilik', meta:'Şerbetli · 1 parti', avail:'22', reserved:'4', d:warn, dLabel:'%22 · DDM' },
+      { name:'Kadayıf 500g', meta:'Şerbetli · 2 parti', avail:'55', reserved:'0', d:ok, dLabel:'%71' },
+      { name:'Şöbiyet 500g', meta:'Şerbetli · 1 parti', avail:'0', reserved:'0', d:neut, dLabel:'stok yok' },
+    ];
+    const names=['Havuç Dilim 1kg','Midye Baklava 750g','Bülbül Yuvası 500g','Sarma Kadayıf 1kg','Peynirli Börek','Ispanaklı Börek','Antep Fıstığı 250g','Tahin 500g','Lokum Karışık 500g'];
+    let seed=9; const rnd=()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
+    const all = base.slice();
+    for (let i=0;i<40;i++){
+      const p=rnd(); const d = p<0.12?warn:(p<0.16?bad:ok);
+      const av=Math.floor(rnd()*80);
+      all.push({ name:names[Math.floor(rnd()*names.length)], meta:['Baklava','Börek','Şerbetli','Malzeme'][Math.floor(rnd()*4)]+' · '+(1+Math.floor(rnd()*3))+' parti',
+        avail:String(av), reserved:String(Math.floor(rnd()*6)),
+        d, dLabel: d===warn?'%'+(15+Math.floor(rnd()*9)):(d===bad?'DLC geçti':'%'+(45+Math.floor(rnd()*40))) });
+    }
+    this._total = all.length;
+    const shown = all.slice(0, this.state.visible).map(v => ({
+      ...v, availFg: v.avail==='0' ? '#a5443c' : '#22251f', dFg:v.d[0], dBg:v.d[1] }));
+    const more = this.state.visible < all.length;
+
+    const nb = (name,lot,qty,pct,pctT,tag,kind,sub,cta,canOffer) => {
+      const edge = kind==='bad' ? '#c2571f' : '#c98a2e';
+      const bd = kind==='bad' ? '#e2c4c0' : '#ecd9b4';
+      const tagFg = kind==='bad' ? '#a5443c' : '#9a6416';
+      const tagBg = kind==='bad' ? '#fbe9e7' : '#fdf1e3';
+      const cta_ = canOffer
+        ? { ctaFg:'#fff', ctaBg:'#5f7a2c', ctaBd:'#5f7a2c' }
+        : { ctaFg:'#a5443c', ctaBg:'#fff', ctaBd:'#e2c4c0' };
+      return { name,lot,qty,pct,pctT,tag,edge,bd,tagFg,tagBg,sub,cta,action:open, ...cta_ };
+    };
+    const nearExpiry = [
+      nb('Fıstıklı Baklava 1kg','LOT-2451-A','14 ad.','18%','%18','DLC','warn','Öneri: %30 indirim → 12,60 €','Teklif aç',true),
+      nb('Künefe 2 kişilik','LOT-2440-C','22 ad.','22%','%22','DDM','warn','DDM yaklaşıyor · satılabilir','Teklif aç',true),
+      nb('Su Böreği (tepsi)','LOT-2399-B','8 ad.','0%','%0','DLC geçti','bad','DLC geçti — satılamaz','İmha başlat',false),
+      nb('Sarma Kadayıf 1kg','LOT-2445-A','9 ad.','24%','%24','DDM','warn','Öneri: %25 indirim → 15,00 €','Teklif aç',true),
+    ];
+
+    const mobNear = nearExpiry.slice(0,4).map(b => ({
+      name:b.name, qty:b.qty, pctT:b.pctT, tag:b.tag, tagFg:b.tagFg, tagBg:b.tagBg,
+      edge:b.edge, bd:b.bd, cta:b.cta, ctaFg:b.ctaFg, ctaBg:b.ctaBg, ctaBd:b.ctaBd, action:open }));
+
+    const recall = [
+      { name:'Café Marceau', order:'#2451', date:'22 Tem' },
+      { name:'Restaurant Anatolie', order:'#2450', date:'22 Tem' },
+      { name:'Ayşe Kaya', order:'#2448', date:'21 Tem' },
+    ];
+
+    return {
+      shown, more, onScroll: this.onScroll, nearExpiry, mobNear, recall,
+      modalOpen: this.state.modalOpen,
+      openLot: open, closeModal: () => this.setState({ modalOpen:false }), stop: (e)=>e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#efece3; font-family:'Karla',sans-serif; color:#3a3f35; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<div style="max-width:1180px;margin:0 auto;padding:48px 32px 80px;display:flex;flex-direction:column;gap:36px">
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <span style="font:600 13px 'Karla';letter-spacing:.14em;text-transform:uppercase;color:#5f7a2c">Lezzet Anatolia · Müşteri Evreni</span>
+    <h1 style="margin:0;font:600 40px 'Lora';color:#343b41">Komponent Envanteri</h1>
+    <p style="margin:0;font:400 16px/1.6 'Karla';color:#6d7261;max-width:760px">Onaylı yön: <strong>Aile Sofrası</strong>. Bu envanter onaylı sayfalardan büyür; kaynakları: <strong>Ana Sayfa</strong>, <strong>Katalog</strong>, <strong>Ürün Detay</strong>. Kodlama sırası: önce §0 stil sabitleri, sonra K1'den itibaren komponentler, en son sayfa kompozisyonu.</p>
+  </div>
+
+  <!-- §0 STIL SABITLERI -->
+  <div style="background:#fff;border:1px solid #e3dcc8;border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:20px">
+    <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">§0 · Stil sabitleri (design tokens)</h2>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+      <sc-for list="{{ tokens }}" as="t" hint-placeholder-count="8">
+        <div style="display:flex;align-items:center;gap:12px;border:1px solid #ece5d2;border-radius:12px;padding:10px 12px">
+          <span style="width:44px;height:44px;border-radius:10px;background:{{ t.hex }};border:1px solid rgba(0,0,0,.08);flex:none"></span>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:700 13px 'Karla'">{{ t.name }}</span>
+            <span style="font:400 12px 'Karla';color:#8a8270">{{ t.hex }} — {{ t.use }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="border:1px solid #ece5d2;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px">
+        <span style="font:600 24px 'Lora'">Lora — başlık fontu</span>
+        <span style="font:400 13px 'Karla';color:#8a8270">h1 52/600 · h2 28/600 · kart başlığı 24/600 · yalnız başlıklarda, italik vurgu serbest</span>
+      </div>
+      <div style="border:1px solid #ece5d2;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px">
+        <span style="font:700 20px 'Karla'">Karla — metin ve arayüz fontu</span>
+        <span style="font:400 13px 'Karla';color:#8a8270">gövde 14-18/400 · etiket/buton 13-16/700 · üstbaşlık 13-14/600 harf aralıklı büyük harf</span>
+      </div>
+    </div>
+    <span style="font:400 14px 'Karla';color:#6d7261">Köşe yarıçapları: kart 18px · küçük kart 14-16px · buton/hap tam yuvarlak (radius ≥ 22px) · görsel 12-24px. Gölge: yalnız sayfa mokabı düzeyinde; kartlar gölgesiz, 1px #ece5d2 çerçeveli. Zeminler: sayfa #faf6ec · vurgulu bölüm #f0e9d6 · açık yeşil bant #eef2e2 · koyu blok #3a4147.</span>
+  </div>
+
+  <!-- §1 TEMEL -->
+  <div style="background:#fff;border:1px solid #e3dcc8;border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">§1 · Temel parçalar</h2>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K1 · Birincil Buton</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Sayfanın ana aksiyonu (sepete ekle, kataloğa git). Sayfada görsel ağırlığı en yüksek eleman; bir ekran bölümünde en fazla bir tane.</span>
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';padding:13px 26px;border-radius:26px">Sepete ekle</span><span style="font:400 12px 'Karla';color:#8a8270">normal</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="background:#4a6121;color:#fff;font:700 15px 'Karla';padding:13px 26px;border-radius:26px">Sepete ekle</span><span style="font:400 12px 'Karla';color:#8a8270">hover/basılı (#4a6121)</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="background:#c9c3b0;color:#fff;font:700 15px 'Karla';padding:13px 26px;border-radius:26px">Sepete ekle</span><span style="font:400 12px 'Karla';color:#8a8270">devre dışı</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';padding:13px 26px;border-radius:26px;opacity:.85">◌ Ekleniyor…</span><span style="font:400 12px 'Karla';color:#8a8270">yükleniyor</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';width:34px;height:34px;border-radius:17px;display:grid;place-items:center">+</span><span style="font:400 12px 'Karla';color:#8a8270">ikon varyantı (mobil hızlı ekleme)</span></div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa · Katalog · Ürün detay (geniş toplam-fiyatlı varyant: "Sepete ekle — 33,80 €", toplam canlı güncellenir)</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K2 · İkincil Buton</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">İkincil yönlendirme (fırsatlara git, paketi incele). Çerçeveli, zemin almaz. Koyu zeminde açık yeşil çerçeve varyantı kullanılır.</span>
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="border:2px solid #d8cfb6;color:#3a4147;font:700 15px 'Karla';padding:11px 24px;border-radius:26px">Fırsatlara bak</span><span style="font:400 12px 'Karla';color:#8a8270">normal</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 15px 'Karla';padding:11px 24px;border-radius:26px">Fırsatlara bak</span><span style="font:400 12px 'Karla';color:#8a8270">hover</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="background:#3a4147;display:inline-block;padding:8px;border-radius:30px"><span style="border:1.5px solid #a9c46b;color:#a9c46b;font:700 13px 'Karla';padding:7px 16px;border-radius:18px;display:inline-block">Paketi incele</span></span><span style="font:400 12px 'Karla';color:#8a8270">koyu zemin varyantı</span></div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa · Katalog (kompakt kart-içi varyant: "Seçenekler" — çok varyantlı ürünü detaya götürür)</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K3 · Metin Bağlantısı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Bölüm sonu yönlendirmesi; ok işaretiyle biter.</span>
+      <div style="display:flex;gap:24px;align-items:center">
+        <span style="font:700 15px 'Karla';color:#5f7a2c">Tüm katalog →</span>
+        <span style="font:700 15px 'Karla';color:#4a6121;text-decoration:underline">Tüm katalog →</span><span style="font:400 12px 'Karla';color:#8a8270">← hover</span>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa · Katalog · Ürün detay (breadcrumb "← Katalog", "23 yorumun tümü →")</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K4 · Arama Alanı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Katalog araması; başlıkta (web) ve başlık altında (mobil). Hap biçimli.</span>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e0d8c2;border-radius:24px;padding:9px 18px;width:230px;color:#9a917c;font:400 14px 'Karla'">🔍 Ürün ara…</div><span style="font:400 12px 'Karla';color:#8a8270">boş</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px;background:#fff;border:2px solid #5f7a2c;border-radius:24px;padding:8px 17px;width:230px;color:#3a4147;font:400 14px 'Karla'">🔍 mantı|</div><span style="font:400 12px 'Karla';color:#8a8270">odak + dolu</span></div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa · Katalog (dolu + temizle ✕ hali sıfır-sonuç ekranında)</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K5 · Rozet</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Kısa durum/etiket bilgisi. Varyantlar kapalı liste: fırsat limiti · üst etiket · sepet sayacı.</span>
+      <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="font:600 12px 'Karla';color:#b05c2e;background:#f9ede2;border-radius:10px;padding:3px 9px">En fazla 5 adet</span><span style="font:400 12px 'Karla';color:#8a8270">fırsat limiti</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="font:600 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#5f7a2c">Hazır Paket · 8 ürün</span><span style="font:400 12px 'Karla';color:#8a8270">üst etiket (koyu zeminde #a9c46b)</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="background:#b05c2e;color:#fff;font:700 11px 'Karla';border-radius:10px;padding:2px 7px">2</span><span style="font:400 12px 'Karla';color:#8a8270">sepet sayacı</span></div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa · Katalog. Katalogla eklenen varyant: görsel-üstü etiket ("Fırsat" turuncu / "Tükendi" antrasit, sol üst köşe). Ürün detayla eklenen varyant: stok rozeti ("● Stokta" yeşil zeminli / "Tükendi — yakında yeniden" gri)</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:700 17px 'Karla'">K6 · Fiyat Bloğu</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Fiyat gösteriminin tek kaynağı. Kural: indirimli üründe tek satın alınabilir fiyat vardır; eski fiyat yalnız üstü çizili referanstır. B2B girişte aynı blok toptan fiyatı gösterir — yapı değişmez.</span>
+      <div style="display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;flex-direction:column"><span style="font:700 18px 'Karla';color:#343b41">12,90 €</span><span style="font:400 12px 'Karla';color:#8a8270">12,90 €/kg</span></div><span style="font:400 12px 'Karla';color:#8a8270">normal + birim fiyat</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><span style="font:700 18px 'Karla';color:#b05c2e">5,90 €</span><span style="font:400 14px 'Karla';color:#b3ab97;text-decoration:line-through">7,90 €</span></div><span style="font:400 12px 'Karla';color:#8a8270">indirimli (tek fiyat kuralı)</span></div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa · Katalog (çok varyantlıda altına "başlangıç fiyatı" notu eklenir) · Ürün detay (K22 varyant kartının içinde; seçim değişince güncellenir)</span>
+    </div>
+  </div>
+
+  <!-- §2 KARTLAR -->
+  <div style="background:#fff;border:1px solid #e3dcc8;border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">§2 · Kartlar ve listeler</h2>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K7 · Ürün Kartı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Katalogdaki ve vitrindeki temel birim. İçerik: görsel, ad, ağırlık + birim fiyat, fiyat bloğu (K6), aksiyon (K1). Tükendi halinde aksiyon devre dışıdır, "gelince haber ver" kurgusu yoktur.</span>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+          <div style="width:230px;background:#fff;border:1px solid #ece5d2;border-radius:18px;overflow:hidden">
+            <div style="height:130px;background:#f0e9d6;display:grid;place-items:center;color:#b3ab97;font:400 13px 'Karla'">görsel</div>
+            <div style="padding:12px 14px 14px;display:flex;flex-direction:column;gap:5px">
+              <span style="font:700 15px 'Karla';color:#3a4147">El Açması Su Böreği</span>
+              <span style="font:400 12.5px 'Karla';color:#8a8270">1 kg · 12,90 €/kg</span>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px"><span style="font:700 17px 'Karla';color:#343b41">12,90 €</span><span style="background:#5f7a2c;color:#fff;font:700 12.5px 'Karla';padding:7px 13px;border-radius:17px">Sepete ekle</span></div>
+            </div>
+          </div><span style="font:400 12px 'Karla';color:#8a8270">normal</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+          <div style="width:230px;background:#fff;border:1px solid #ece5d2;border-radius:18px;overflow:hidden">
+            <div style="height:130px;background:#f0e9d6;display:grid;place-items:center;color:#b3ab97;font:400 13px 'Karla';filter:grayscale(1);opacity:.7">görsel</div>
+            <div style="padding:12px 14px 14px;display:flex;flex-direction:column;gap:5px">
+              <span style="font:700 15px 'Karla';color:#8a8270">El Açması Su Böreği</span>
+              <span style="font:400 12.5px 'Karla';color:#b3ab97">1 kg · 12,90 €/kg</span>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px"><span style="font:700 14px 'Karla';color:#8a8270">Tükendi</span><span style="background:#c9c3b0;color:#fff;font:700 12.5px 'Karla';padding:7px 13px;border-radius:17px">Sepete ekle</span></div>
+            </div>
+          </div><span style="font:400 12px 'Karla';color:#8a8270">tükendi</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+          <div style="width:230px;background:#fff;border:1px solid #ece5d2;border-radius:18px;overflow:hidden">
+            <div style="height:130px;background:linear-gradient(90deg,#f0e9d6,#f7f2e4,#f0e9d6)"></div>
+            <div style="padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px">
+              <span style="background:#f0e9d6;border-radius:6px;height:14px;width:70%"></span>
+              <span style="background:#f0e9d6;border-radius:6px;height:11px;width:45%"></span>
+              <span style="background:#f0e9d6;border-radius:6px;height:16px;width:55%"></span>
+            </div>
+          </div><span style="font:400 12px 'Karla';color:#8a8270">yükleniyor (iskelet)</span>
+        </div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa · Katalog (mobilde kompakt: görsel 110px, ikon aksiyon). Katalogla eklenen varyantlar: indirimli (Fırsat etiketi + üstü çizili referans + limit rozeti) · tükendi (gri görsel + etiket, aksiyon devre dışı, listede kalır) · çok varyantlı ("Seçenekler", varyant seçimi atlanamaz) · eklendi (aksiyon K19 adet seçicisine dönüşür) · Ürün detay (benzer ürünler bölümü; kompakt 150px görsel)</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K8 · Fırsat Kartı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">İndirimli teklif birimi; yatay yerleşim, K6 indirimli fiyat + K5 limit rozeti. Yalnız fırsat bölümünde yaşar. Boş durum: aktif teklif yoksa <strong>bölüm tamamen kaldırılır</strong> — boş hal gösterilmez.</span>
+      <div style="width:380px;background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:14px;display:flex;gap:14px;align-items:center">
+        <div style="width:84px;height:84px;flex:none;background:#f0e9d6;border-radius:12px;display:grid;place-items:center;color:#b3ab97;font:400 12px 'Karla'">görsel</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="font:700 15px 'Karla';color:#3a4147">Ispanaklı Gözleme</span>
+          <span style="font:400 12.5px 'Karla';color:#8a8270">4 adet</span>
+          <div style="display:flex;align-items:center;gap:8px"><span style="font:700 17px 'Karla';color:#b05c2e">5,90 €</span><span style="font:400 13px 'Karla';color:#b3ab97;text-decoration:line-through">7,90 €</span></div>
+          <span style="font:600 11.5px 'Karla';color:#b05c2e;background:#f9ede2;border-radius:10px;padding:2px 8px;width:max-content">En fazla 5 adet</span>
+        </div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K9 · Kategori Kartı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Kataloğa giriş. Web: dikey kart (görsel + ad). Mobil: daire görsel + ad, yatay kaydırmalı şerit.</span>
+      <div style="display:flex;gap:24px;align-items:flex-end">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+          <div style="width:150px;background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:8px;align-items:center"><div style="width:100%;height:80px;background:#f0e9d6;border-radius:12px"></div><span style="font:700 14px 'Karla';color:#3a4147">Börekler</span></div>
+          <span style="font:400 12px 'Karla';color:#8a8270">web</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:center;width:80px"><div style="width:80px;height:80px;background:#f0e9d6;border-radius:50%"></div><span style="font:700 12px 'Karla';color:#3a4147">Börekler</span></div>
+          <span style="font:400 12px 'Karla';color:#8a8270">mobil</span>
+        </div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:700 17px 'Karla'">K10 · Paket Kartı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Hazır seçim (bundle) vitrini; tek koyu-zeminli kart türü — vitrindeki en güçlü blok. K5 üst etiket + K2 koyu-zemin butonu içerir.</span>
+      <div style="width:520px;background:#3a4147;color:#f3efe2;border-radius:22px;padding:22px;display:flex;gap:18px;align-items:center">
+        <div style="width:110px;height:110px;flex:none;background:#4a5257;border-radius:16px;display:grid;place-items:center;color:#8f97a0;font:400 12px 'Karla'">görsel</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <span style="font:600 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#a9c46b">Hazır Paket · 8 ürün</span>
+          <span style="font:600 22px 'Lora'">Bayram Sofrası</span>
+          <span style="font:400 13.5px/1.5 'Karla';color:#c9cdc2">Baklava, börek, sarma ve daha fazlası — 6 kişilik hazır bayram sofrası.</span>
+          <div style="display:flex;align-items:center;gap:13px;margin-top:3px"><span style="font:700 18px 'Karla'">49,90 €</span><span style="border:1.5px solid #a9c46b;color:#a9c46b;font:700 12.5px 'Karla';padding:6px 15px;border-radius:17px">Paketi incele</span></div>
+        </div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa · Boş durum: aktif paket yoksa bölüm kaldırılır</span>
+    </div>
+  </div>
+
+  <!-- §3 YERLESIM -->
+  <div style="background:#fff;border:1px solid #e3dcc8;border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">§3 · Yerleşim ve bantlar</h2>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K11 · Duyuru Şeridi</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Teslimat güveni mesajları; her sayfanın en üstünde. Web 3 mesaj, mobil 1 mesaj.</span>
+      <div style="background:#5f7a2c;color:#f3efe2;font:500 13px 'Karla';display:flex;justify-content:center;gap:28px;padding:8px 0;border-radius:8px"><span>❄ Soğuk zincirle teslim</span><span>Strasbourg &amp; çevresinde kapıya teslim</span><span>Fransa geneline kargo</span></div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa · Katalog · Ürün detay (tüm müşteri sayfalarında; mobil detayda gösterilmez — yerini üst bar alır)</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K12 · Site Başlığı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Web: logo + gezinme + arama (K4) + dil + sepet. Mobil: menü + logo + sepet; arama başlığın altında ayrı satır. "Fırsatlar" bağlantısı turuncu (#b05c2e) vurgulu. Dil seçici TR/FR/DE — sayfa her an tek dilde. Aktif sayfanın bağlantısı yeşil + altı çizili. Mobil detay varyantı: geri bağlantısı + logo + paylaş + sepet.</span>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa · Katalog · Ürün detay (tüm müşteri sayfalarında ortak) · Canlı örnek: <a href="Musteri - Anasayfa.dc.html">Ana Sayfa mokabı</a></span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K13 · Bölüm Başlığı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Lora 28/600 başlık + isteğe bağlı sağda K3 bağlantısı ya da yanında vurgu notu.</span>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;border:1px dashed #ece5d2;border-radius:12px;padding:14px 18px">
+        <span style="font:600 24px 'Lora';color:#343b41">Vitrindekiler</span>
+        <span style="font:700 14px 'Karla';color:#5f7a2c">Tüm katalog →</span>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa · Katalog (sayfa başlığı varyantı: Lora 38/600 + sonuç sayısı satırı) · Ürün detay</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K14 · CTA Bandı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Tam genişlik davet bloğu (keşif çağrısı). Açık yeşil zemin #eef2e2, başlık + açıklama + K1.</span>
+      <div style="background:#eef2e2;border-radius:18px;padding:22px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px">
+        <div style="display:flex;flex-direction:column;gap:5px"><span style="font:600 21px 'Lora';color:#343b41">Yeni lezzetleri ilk siz deneyin</span><span style="font:400 14px 'Karla';color:#6d7261">Aday ürünleri oylayın — her katkı puan kazandırır.</span></div>
+        <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:12px 22px;border-radius:24px;flex:none">Keşfe başla ✦</span>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K15 · B2B Bandı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Professionnels yönlendirmesi; kesikli çerçeve onu ticari bloklardan ayırır — satış değil, yol gösterme.</span>
+      <div style="border:1.5px dashed #cdc4a8;border-radius:18px;padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:3px"><span style="font:700 16px 'Karla';color:#3a4147">Restoran ya da market misiniz?</span><span style="font:400 13.5px 'Karla';color:#8a8270">Toptan fiyatlar ve düzenli teslimat için profesyonel hesap açın.</span></div>
+        <span style="font:700 14px 'Karla';color:#5f7a2c">Professionnels →</span>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:700 17px 'Karla'">K16 · Footer</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Koyu antrasit blok: marka + iletişim (WhatsApp dahil) + bağlantı sütunları + dil listesi. Mobilde sütunlar alt alta, dil listesi ayırıcı çizgi üstünde. Kompakt varyant: liste sayfalarında tek satır (marka + bağlantılar).</span>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ana sayfa · Katalog · Ürün detay (tüm müşteri sayfalarında ortak) · Canlı örnek: <a href="Musteri - Anasayfa.dc.html">Ana Sayfa mokabı</a></span>
+    </div>
+  </div>
+
+  <!-- §4 KATALOG EKLERI -->
+  <div style="background:#fff;border:1px solid #e3dcc8;border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">§4 · Katalog ile eklenen parçalar</h2>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K17 · Filtre Çipi</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Kategori seçimi ve indirimli anahtarı. Kategori tek seçimlidir ("Tümü" dahil); indirimli anahtarı bağımsız açılıp kapanır. Koleksiyon görünümünde kategori çipleri gizlenir.</span>
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="font:700 14px 'Karla';padding:10px 20px;border-radius:22px;background:#fff;color:#3a4147;border:1.5px solid #d8cfb6">Börekler</span><span style="font:400 12px 'Karla';color:#8a8270">normal</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="font:700 14px 'Karla';padding:10px 20px;border-radius:22px;background:#5f7a2c;color:#fff;border:1.5px solid #5f7a2c">Tümü</span><span style="font:400 12px 'Karla';color:#8a8270">aktif</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="font:700 13.5px 'Karla';color:#b05c2e;border:1.5px solid #e8c9b3;background:#f9ede2;padding:8px 16px;border-radius:20px">% Yalnız indirimliler</span><span style="font:400 12px 'Karla';color:#8a8270">indirimli anahtarı (turuncu ton)</span></div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Katalog (sıfır-sonuç önerileri de bu çiptir)</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K18 · Sıralama Seçici</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Kapalı liste: Öne çıkanlar · Fiyat artan · Fiyat azalan. Hap görünümlü, ▾ ile açılır.</span>
+      <span style="font:700 13.5px 'Karla';color:#3a4147;border:1.5px solid #d8cfb6;padding:8px 16px;border-radius:20px;background:#fff;width:max-content">Sırala: Öne çıkanlar ▾</span>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Katalog</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K19 · Adet Seçici</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Sepete eklenmiş ürünün kart üstündeki adet kontrolü; B2B'nin hızlı hacim girişinin de temelidir (basılı tutunca hızlanır, detay/sepette elle giriş desteklenir).</span>
+      <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="display:inline-flex;align-items:center;border:2px solid #5f7a2c;border-radius:18px;overflow:hidden"><span style="font:700 16px 'Karla';color:#5f7a2c;padding:5px 12px">−</span><span style="font:700 14px 'Karla';color:#3a4147;min-width:26px;text-align:center">3</span><span style="font:700 16px 'Karla';color:#fff;background:#5f7a2c;padding:5px 12px">+</span></span><span style="font:400 12px 'Karla';color:#8a8270">normal</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="display:inline-flex;align-items:center;border:2px solid #5f7a2c;border-radius:18px;overflow:hidden"><span style="font:700 16px 'Karla';color:#5f7a2c;padding:5px 12px">−</span><span style="font:700 14px 'Karla';color:#3a4147;min-width:26px;text-align:center">1</span><span style="font:700 16px 'Karla';color:#fff;background:#5f7a2c;padding:5px 12px">+</span></span><span style="font:400 12px 'Karla';color:#8a8270">1'de − sepetten çıkarır (buton geri gelir)</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="display:inline-flex;align-items:center;border:2px solid #d8cfb6;border-radius:18px;overflow:hidden"><span style="font:700 16px 'Karla';color:#5f7a2c;padding:5px 12px">−</span><span style="font:700 14px 'Karla';color:#3a4147;min-width:26px;text-align:center">5</span><span style="font:700 16px 'Karla';color:#fff;background:#c9c3b0;padding:5px 12px">+</span></span><span style="font:400 12px 'Karla';color:#8a8270">üst sınır (fırsat limiti doldu, + pasif)</span></div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Katalog · Ürün detay (büyük boy; sayıya dokununca elle giriş — B2B 10-50 koliyi rahat girer)</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K20 · Boş Durum</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Sonuçsuz liste hali: sade simge + Lora başlık + kısa açıklama + öneri çipleri (K17) + K1. Kural: arka plan sinyalleri ("talebiniz kaydedildi" vb.) asla ifşa edilmez.</span>
+      <div style="border:1px dashed #ece5d2;border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;max-width:420px">
+        <span style="font-size:28px">🍽</span>
+        <span style="font:600 19px 'Lora';color:#343b41">Aradığınızı bulamadık</span>
+        <span style="font:400 13.5px 'Karla';color:#6d7261">"lahmacun mix" için sonuç yok. Kategorilere göz atabilirsiniz.</span>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Katalog (sıfır-sonuç)</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:700 17px 'Karla'">K21 · Sepet Özet Çubuğu (mobil)</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Alışverişi kesintisiz sürdürme aracı: ekran altına sabit, adet + toplam + "Sepete git". Sepet boşken görünmez; ekleme yapıldıkça toplam canlı güncellenir.</span>
+      <div style="width:360px;background:#3a4147;color:#f3efe2;border-radius:20px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;flex-direction:column"><span style="font:700 14px 'Karla'">3 ürün · 26,30 €</span><span style="font:400 11.5px 'Karla';color:#c9cdc2">Kapıya teslim seçenekleri sepette</span></div>
+        <span style="background:#a9c46b;color:#343b41;font:700 13px 'Karla';padding:10px 18px;border-radius:16px">Sepete git</span>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Katalog (sepetli tüm gezinme sayfalarında beklenir)</span>
+    </div>
+  </div>
+
+  <!-- §5 URUN DETAY EKLERI -->
+  <div style="background:#fff;border:1px solid #e3dcc8;border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">§5 · Ürün Detay ile eklenen parçalar</h2>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K22 · Varyant Seçici</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Boy kartları; her kartta ad + fiyat (K6) + birim fiyat. Tek varyantlı üründe komponent hiç render edilmez. Varsayılan: en küçük boy seçili.</span>
+      <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="border:2px solid #5f7a2c;background:#fff;border-radius:16px;padding:12px 18px;display:flex;flex-direction:column;gap:2px"><span style="font:700 14px 'Karla';color:#3a4147">700 g tepsi</span><span style="font:700 16px 'Karla';color:#343b41">16,90 €</span><span style="font:400 12px 'Karla';color:#8a8270">24,14 €/kg</span></div><span style="font:400 12px 'Karla';color:#8a8270">seçili</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="border:1.5px solid #d8cfb6;background:#fff;border-radius:16px;padding:12px 18px;display:flex;flex-direction:column;gap:2px"><span style="font:700 14px 'Karla';color:#3a4147">1 kg tepsi</span><span style="font:700 16px 'Karla';color:#343b41">22,90 €</span><span style="font:400 12px 'Karla';color:#8a8270">22,90 €/kg</span></div><span style="font:400 12px 'Karla';color:#8a8270">normal</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="border:1.5px solid #ece5d2;background:#f7f2e4;border-radius:16px;padding:12px 18px;display:flex;flex-direction:column;gap:2px;opacity:.75"><span style="font:700 14px 'Karla';color:#8a8270">2 kg tepsi</span><span style="font:700 13px 'Karla';color:#8a8270">Tükendi</span></div><span style="font:400 12px 'Karla';color:#8a8270">varyant tükendi (seçilemez)</span></div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ürün detay</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K23 · Yıldız Puanı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Gösterim: yıldızlar (#d99a2b) + sayı + yorum adedi. Giriş hali: yorum yazarken 1-5 dokunulabilir yıldız. Yorumsuz üründe hiç gösterilmez (0,0 yazılmaz).</span>
+      <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="display:flex;align-items:center;gap:8px"><span style="color:#d99a2b;font-size:15px;letter-spacing:2px">★★★★★</span><span style="font:700 14px 'Karla';color:#3a4147">4,7</span><span style="font:400 13px 'Karla';color:#8a8270">· 23 yorum</span></div><span style="font:400 12px 'Karla';color:#8a8270">gösterim</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><span style="color:#d99a2b;font-size:22px;letter-spacing:4px">★★★<span style="color:#d8cfb6">★★</span></span><span style="font:400 12px 'Karla';color:#8a8270">giriş (3 seçildi)</span></div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ürün detay</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K24 · Yorum Kartı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Avatar harfi + ad + zaman + "onaylı alışveriş" + yıldız + metin. Boş durum K20'nin yorum varyantıdır ("Henüz yorum yok"). Puan özeti bloğu (büyük 4,7 + yıldız + adet) listenin başında durur.</span>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ürün detay · Canlı örnek: <a href="Musteri - Urun Detay.dc.html">Ürün Detay mokabı</a></span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K25 · Açılır Bölüm (akordeon)</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Mobilde yasal içerik için: başlık her zaman görünür, gövde ▾/▴ ile açılır. Alerjenli üründe başlıkta ⚠ işareti kapalıyken de görünür. Webde aynı içerik açık kartlar halindedir (akordeon yok).</span>
+      <div style="max-width:380px;display:flex;flex-direction:column;gap:8px">
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:14px;padding:13px 16px;display:flex;justify-content:space-between;align-items:center"><span style="font:700 14px 'Karla';color:#3a4147">İçindekiler ve alerjenler <span style="color:#b05c2e">⚠</span></span><span style="color:#8a8270">▾</span></div>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:14px;padding:13px 16px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font:700 14px 'Karla';color:#3a4147">Saklama ve hazırlama</span><span style="color:#8a8270">▴</span></div><span style="font:400 13px/1.6 'Karla';color:#6d7261">Dondurucuda (−18 °C) asgari tazelik tarihine kadar…</span></div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ürün detay (mobil)</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:700 17px 'Karla'">K26 · Bilgi Bandı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Satır içi bilgi/uyarı şeridi. Varyantlar: nötr (krem — teslimat güveni) · uyarı (amber — kargo kısıtı gibi engel öncesi bilgi).</span>
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:520px">
+        <div style="display:flex;gap:18px;font:400 13.5px 'Karla';color:#6d7261;background:#f0e9d6;border-radius:14px;padding:12px 16px"><span>❄ Soğuk zincirle gelir</span><span>🚚 Kapıya teslim</span><span>📦 Kargoya uygun</span></div>
+        <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:12px;padding:11px 14px;font:600 13px/1.5 'Karla';color:#8a6b2a">🚚 Yalnız Strasbourg &amp; bölge içi kapıya teslim — bu ürün kargoya verilemez.</div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Ürün detay</span>
+    </div>
+  </div>
+
+  <!-- KURALLAR -->
+  <div style="background:#3a4147;color:#f3efe2;border-radius:16px;padding:26px 32px;display:flex;flex-direction:column;gap:12px">
+    <h2 style="margin:0;font:600 24px 'Lora'">Evren kuralları (kodlayan ajan için)</h2>
+    <ul style="margin:0;padding-left:20px;font:400 14.5px/1.8 'Karla';color:#d5d8d0">
+      <li>Görseller: her görsel alanı içerik yönetiminden gelir; oranlar komponentte sabittir (ürün kartı web 170px / mobil 110px yükseklik).</li>
+      <li>Fiyat her zaman K6'dan geçer; ziyaretçi/B2C perakende, onaylı B2B toptan görür — aynı komponent, farklı veri. İki fiyat tipi asla aynı anda görünmez.</li>
+      <li>İç terimler (DLC, DDM, MLOR, FEFO, parti, rezervasyon, near-expiry) hiçbir müşteri metninde geçmez; indirim sebebi anlatılmaz.</li>
+      <li>Koşullu bölümler (fırsat, koleksiyon, paket): veri yoksa bölüm DOM'dan tamamen çıkar; boş kabuk bırakılmaz.</li>
+      <li>Metinler TR/FR/DE tek dilli gelir; komponentler ~%35 daha uzun Almanca metne taşmadan dayanmalıdır (sabit yükseklik yerine min-height).</li>
+      <li>Mobil dokunma hedefleri en az 44px.</li>
+    </ul>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      tokens: [
+        { name: "Zeytin", hex: "#5f7a2c", use: "birincil aksiyon, marka" },
+        { name: "Zeytin koyu", hex: "#4a6121", use: "hover/basılı" },
+        { name: "Zeytin açık", hex: "#a9c46b", use: "koyu zeminde vurgu" },
+        { name: "Antrasit", hex: "#343b41", use: "başlık, koyu blok" },
+        { name: "Turuncu", hex: "#b05c2e", use: "fırsat/indirim vurgusu" },
+        { name: "Krem zemin", hex: "#faf6ec", use: "sayfa zemini" },
+        { name: "Krem koyu", hex: "#f0e9d6", use: "vurgulu bölüm zemini" },
+        { name: "Çerçeve", hex: "#ece5d2", use: "kart kenarı, ayırıcı" },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

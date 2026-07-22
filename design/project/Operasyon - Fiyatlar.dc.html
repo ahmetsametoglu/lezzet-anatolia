@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Fiyatlar — kanal &amp; müşteri fiyatı, marj · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Yalnız admin — depo/kurye maliyet/marj görmez. Çözüm sırası: özel fiyat → müşteri indirimi → kanal fiyatı.</span>
+    </div>
+
+    <div data-screen-label="Fiyatlar Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="fiyatlar" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">Fiyatlar</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">128 fiyatlı varyant · 3 marj-altı · 2 fiyatı eksik</span>
+          </div>
+          <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 12px">🔍 Ara</span>
+          <span onClick="{{ openKupon }}" style="font:500 12.5px 'IBM Plex Mono';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 14px;cursor:pointer">+ İndirim / kupon</span>
+        </div>
+        <div style="padding:0 24px;border-bottom:1px solid #e6e7e1;display:flex;gap:2px;background:#f8f9f5">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+            <span onClick="{{ t.select }}" style="font:600 12.5px 'Space Grotesk';color:{{ t.fg }};border-bottom:2px solid {{ t.edge }};padding:11px 14px;margin-bottom:-1px;cursor:pointer;display:flex;align-items:center;gap:6px">{{ t.label }}<sc-if value="{{ t.badge }}" hint-placeholder-val="{{ false }}"><span style="font:500 10px 'IBM Plex Mono';color:#9a6416;background:#fdf1e3;border-radius:9px;padding:1px 6px">{{ t.badge }}</span></sc-if></span>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ isKanal }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:10px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font:600 12px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:14px;padding:5px 12px">Tümü</span>
+          <span style="font:600 12px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:14px;padding:5px 12px">Marj-altı</span>
+          <span style="font:600 12px 'Space Grotesk';color:#9a6416;border:1px solid #ecd9b4;border-radius:14px;padding:5px 12px">Fiyatı eksik</span>
+          <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:14px;padding:5px 12px">auto_price açık</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;min-height:0;flex:1">
+          <div style="display:grid;grid-template-columns:minmax(120px,1fr) 72px 72px 70px 62px 42px;gap:0 8px;padding:10px 20px;border-bottom:1px solid #e6e7e1;font:500 10.5px 'Space Grotesk';letter-spacing:.04em;text-transform:uppercase;color:#8b9086;background:#f8f9f5">
+            <span>Varyant</span><span style="text-align:right">B2C</span><span style="text-align:right">B2B</span><span style="text-align:right">Maliyet</span><span style="text-align:right">Marj</span><span style="text-align:center">auto</span>
+          </div>
+          <div style="overflow-y:auto;flex:1;min-height:0" onScroll="{{ onScroll }}">
+            <sc-for list="{{ shown }}" as="p" hint-placeholder-count="12">
+              <div onClick="{{ p.edit }}" style="display:grid;grid-template-columns:minmax(120px,1fr) 72px 72px 70px 62px 42px;gap:0 8px;padding:11px 20px;border-bottom:1px solid #f0f1ec;align-items:center;cursor:pointer">
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                  <span style="font:600 13px 'Karla';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+                  <span style="font:400 11px 'Karla';color:#8b9086">{{ p.cat }}</span>
+                </div>
+                <span style="text-align:right;font:500 13px 'IBM Plex Mono';color:{{ p.b2cFg }}">{{ p.b2c }}</span>
+                <span style="text-align:right;font:500 13px 'IBM Plex Mono';color:{{ p.b2bFg }}">{{ p.b2b }}</span>
+                <span style="text-align:right;font:500 12.5px 'IBM Plex Mono';color:#8b9086">{{ p.cost }}</span>
+                <span style="justify-self:end;font:600 10px 'Space Grotesk';color:{{ p.marginFg }};background:{{ p.marginBg }};border-radius:6px;padding:3px 6px">{{ p.margin }}</span>
+                <span style="justify-self:center">{{ p.autoDot }}</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ more }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:14px;text-align:center;font:500 11.5px 'IBM Plex Mono';color:#9aa094;display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:12px;height:12px;border:2px solid #cdd0c8;border-top-color:#5f7a2c;border-radius:50%;display:inline-block;animation:sp .7s linear infinite"></span>daha fazla yükleniyor…</div>
+            </sc-if>
+          </div>
+          <div style="padding:11px 24px;background:#f8f9f5;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:14px">
+            <span style="font:400 12px 'Karla';color:#8b9086">Satıra tıkla → fiyat dialogu. auto_price açık üründe fiyat elle değil, hedef marj değişir.</span>
+            <span style="margin-left:auto;font:600 12px 'Space Grotesk';color:#a5443c;background:#fbe9e7;border:1px solid #e2c4c0;border-radius:14px;padding:4px 12px">3 marj-altı</span>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ isOzel }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+            <div style="padding:11px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:12px">
+              <span style="font:400 12px 'Karla';color:#8b9086;margin-right:auto">Kalıcı özel fiyat · çözümde en üstte. Satıra tıkla → düzenle.</span>
+              <span onClick="{{ openOzel }}" style="font:600 12px 'Space Grotesk';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 14px;cursor:pointer">+ Özel fiyat</span>
+            </div>
+            <div style="flex:1;min-height:0;overflow-y:auto">
+              <div style="display:grid;grid-template-columns:minmax(120px,1fr) 1fr 84px 84px;gap:0 10px;padding:10px 24px;border-bottom:1px solid #e6e7e1;font:500 10.5px 'Space Grotesk';letter-spacing:.04em;text-transform:uppercase;color:#8b9086;background:#f8f9f5">
+                <span>Müşteri</span><span>Varyant</span><span style="text-align:right">Özel</span><span style="text-align:right">Liste</span>
+              </div>
+              <sc-for list="{{ ozel }}" as="o" hint-placeholder-count="5">
+                <div onClick="{{ openOzel }}" style="display:grid;grid-template-columns:minmax(120px,1fr) 1fr 84px 84px;gap:0 10px;padding:11px 24px;border-bottom:1px solid #f0f1ec;align-items:center;cursor:pointer">
+                  <div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 13px 'Karla';color:#22251f">{{ o.cust }}</span><span style="font:400 11px 'Karla';color:#8b9086">{{ o.type }}</span></div>
+                  <span style="font:500 12.5px 'Karla';color:#3a3f37">{{ o.variant }}</span>
+                  <span style="text-align:right;font:600 13px 'IBM Plex Mono';color:#4a6121">{{ o.special }}</span>
+                  <span style="text-align:right;font:500 12px 'IBM Plex Mono';color:#9aa094;text-decoration:line-through">{{ o.list }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isKupon }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 24px;display:flex;flex-direction:column;gap:11px">
+            <sc-for list="{{ kuponlar }}" as="k" hint-placeholder-count="4">
+              <div style="border:1px solid #e6e7e1;border-radius:10px;padding:13px 16px;display:flex;align-items:center;gap:14px">
+                <span style="font:600 12px 'Space Grotesk';color:{{ k.tFg }};background:{{ k.tBg }};border-radius:6px;padding:3px 9px;flex:none">{{ k.tip }}</span>
+                <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+                  <span style="font:600 13.5px 'Karla';color:#22251f">{{ k.name }}</span>
+                  <span style="font:400 11.5px 'Karla';color:#8b9086">{{ k.detail }}</span>
+                </div>
+                <span style="font:500 13px 'IBM Plex Mono';color:#22251f">{{ k.value }}</span>
+                <span style="font:600 10.5px 'Space Grotesk';color:{{ k.stFg }};background:{{ k.stBg }};border-radius:7px;padding:3px 10px;flex:none">{{ k.status }}</span>
+              </div>
+            </sc-for>
+            <div style="display:flex;align-items:center;gap:9px;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:11px 14px;margin-top:4px">
+              <span style="color:#9a6416;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></span>
+              <span style="font:500 11.5px/1.5 'Karla';color:#8a6410">Tek-en-büyük kuralı: indirimler üst üste binmez. Pakete ve near-expiry teklife genel indirim binmez.</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isNear }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 24px;display:flex;flex-direction:column;gap:11px">
+            <sc-for list="{{ nearList }}" as="n" hint-placeholder-count="4">
+              <div style="border:1px solid {{ n.bd }};border-left:3px solid {{ n.edge }};border-radius:10px;padding:13px 16px;display:flex;align-items:center;gap:14px">
+                <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+                  <span style="font:600 13.5px 'Karla';color:#22251f">{{ n.name }}</span>
+                  <span style="font:400 11.5px 'Karla';color:#8b9086">Lot {{ n.lot }} · {{ n.qty }} · kalan {{ n.pctT }} · maliyet {{ n.cost }}</span>
+                </div>
+                <span style="font:500 12px 'IBM Plex Mono';color:#9aa094;text-decoration:line-through">{{ n.listPrice }}</span>
+                <span style="font:600 13px 'IBM Plex Mono';color:#4a6121">{{ n.offerPrice }}</span>
+                <span onClick="{{ n.action }}" style="font:600 12px 'Space Grotesk';color:{{ n.ctaFg }};background:{{ n.ctaBg }};border:1px solid {{ n.ctaBd }};border-radius:7px;padding:6px 12px;flex:none;cursor:pointer">{{ n.cta }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Fiyatlar — mobil</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">En sık: tek fiyat düzeltme, marj-altı uyarısına bakıp güncelleme, near-expiry teklif — üçü de birkaç dokunuş.</span>
+    </div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+
+      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:9px">
+          <span style="color:#a5443c"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span>
+          <span style="font:600 17px 'Space Grotesk';color:#22251f">Marj-altı</span>
+          <span style="margin-left:auto;font:500 10px 'IBM Plex Mono';color:#a5443c;background:#fbe9e7;border-radius:9px;padding:2px 8px">3</span>
+        </div>
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ mobMargin }}" as="m" hint-placeholder-count="3">
+            <div style="border:1px solid #e2c4c0;border-left:3px solid #c2571f;border-radius:11px;padding:12px 13px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <div style="display:flex;flex-direction:column;gap:1px">
+                  <span style="font:600 13.5px 'Karla';color:#22251f">{{ m.name }}</span>
+                  <span style="font:400 11px 'Karla';color:#8b9086">Maliyet {{ m.cost }} · hedef {{ m.target }}</span>
+                </div>
+                <span style="font:600 11px 'Space Grotesk';color:#a5443c;background:#fbe9e7;border-radius:6px;padding:3px 8px">{{ m.margin }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font:400 11.5px 'Karla';color:#6a7065">Fiyat {{ m.price }}</span>
+                <span style="margin-left:auto;font:600 12px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:8px;padding:8px 14px">Düzelt</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="width:340px;background:rgba(34,39,43,.35);border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14);display:flex;flex-direction:column;justify-content:flex-end;min-height:560px">
+        <div style="background:#fbfbf9;border-radius:20px 20px 26px 26px;padding:16px;display:flex;flex-direction:column;gap:13px">
+          <div style="width:42px;height:5px;border-radius:3px;background:#d4d7ce;align-self:center"></div>
+          <span style="font:600 16px 'Space Grotesk';color:#22251f">Fıstıklı Baklava 1kg · B2C</span>
+          <div style="display:flex;gap:9px">
+            <div style="flex:1;border:1px solid #e6e7e1;border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;background:#f8f9f5"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Maliyet</span><span style="font:500 15px 'IBM Plex Mono';color:#22251f">9,20 €</span></div>
+            <div style="flex:1;border:1px solid #e2c4c0;border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;background:#fbe9e7"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#a5443c">Marj</span><span style="font:500 15px 'IBM Plex Mono';color:#a5443c">%28</span></div>
+            <div style="flex:1;border:1px solid #e6e7e1;border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;background:#f8f9f5"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Hedef</span><span style="font:500 15px 'IBM Plex Mono';color:#22251f">%42</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 11px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Yeni B2C fiyatı</span>
+            <div style="border:1.5px solid #5f7a2c;border-radius:9px;padding:12px 14px;font:500 18px 'IBM Plex Mono';color:#22251f;display:flex;justify-content:space-between;box-shadow:0 0 0 3px rgba(95,122,44,.12)"><span>18,00</span><span style="color:#9aa094">€</span></div>
+            <span style="font:400 11px 'Karla';color:#4a6121">Hedef marj için önerilen: 15,90 € → %42</span>
+          </div>
+          <span style="font:400 11px/1.5 'Karla';color:#8b9086;text-align:center">Verilmiş siparişlerin fiyatı değişmez; yalnız bundan sonraki satışları etkiler.</span>
+          <span style="background:#5f7a2c;color:#fff;font:600 15px 'Space Grotesk';padding:15px;border-radius:12px;text-align:center">Fiyatı kaydet</span>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+        <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+          <li><strong>Web</strong> → toplu gözden geçirme, kupon/kampanya kurma, müşteriye özel fiyat, çözüm sırası.</li>
+          <li><strong>Mobil</strong> → tek fiyat düzeltme, marj-altı uyarısı, near-expiry teklif kararı.</li>
+          <li><strong>Kural</strong> → tek-en-büyük indirim (üst üste binmez); pakete ve near-expiry teklife genel indirim binmez; verilmiş sipariş fiyatı sabit.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- FİYAT DÜZENLEME DIALOG -->
+  <sc-if value="{{ priceOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:500px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f;max-height:86vh">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 18px 'Space Grotesk'">Fiyat düzenle</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">Fıstıklı Baklava 1kg · 1kg varyant</span>
+          </div>
+          <span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span>
+        </div>
+        <div style="overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:18px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div style="border:1px solid #e6e7e1;background:#fff;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:2px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Maliyet</span><span style="font:500 16px 'IBM Plex Mono'">9,20 €</span></div>
+            <div style="border:1px solid #e2c4c0;background:#fbe9e7;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:2px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#a5443c">Marj (şimdi)</span><span style="font:500 16px 'IBM Plex Mono';color:#a5443c">%28</span></div>
+            <div style="border:1px solid #e6e7e1;background:#fff;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:2px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Hedef marj</span><span style="font:500 16px 'IBM Plex Mono'">%42</span></div>
+          </div>
+          <div style="display:flex;gap:12px">
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+              <span style="font:500 11.5px 'Karla';color:#6a7065">B2C liste fiyatı</span>
+              <div style="border:1.5px solid #5f7a2c;border-radius:9px;padding:11px 13px;font:500 15px 'IBM Plex Mono';color:#22251f;background:#fff;display:flex;justify-content:space-between"><span>18,00</span><span style="color:#9aa094">€</span></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+              <span style="font:500 11.5px 'Karla';color:#6a7065">B2B liste fiyatı</span>
+              <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 15px 'IBM Plex Mono';color:#22251f;background:#fff;display:flex;justify-content:space-between"><span>15,00</span><span style="color:#9aa094">€</span></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px">
+            <div style="display:flex;flex-direction:column"><span style="font:500 12.5px 'Karla';color:#22251f">Otomatik fiyat (auto_price)</span><span style="font:400 11px 'Karla';color:#8b9086">Açıkken fiyat elle değil, hedef marjdan hesaplanır</span></div>
+            <span style="width:42px;height:24px;border-radius:12px;background:#cfd2c9;position:relative"><span style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff"></span></span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Fiyat çözüm sırası</span>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;align-items:center;gap:10px;background:#eef4e2;border:1px solid #cdd8b6;border-radius:8px;padding:9px 12px"><span style="font:600 11px 'IBM Plex Mono';color:#4a6121">1</span><span style="font:500 12.5px 'Karla';color:#22251f;flex:1">Müşteriye özel fiyat</span><span style="font:400 11px 'Karla';color:#8b9086">2 müşteride tanımlı</span></div>
+              <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e6e7e1;border-radius:8px;padding:9px 12px"><span style="font:600 11px 'IBM Plex Mono';color:#8b9086">2</span><span style="font:500 12.5px 'Karla';color:#22251f;flex:1">Müşteri indirim oranı</span><span style="font:400 11px 'Karla';color:#8b9086">%'lik genel indirim</span></div>
+              <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e6e7e1;border-radius:8px;padding:9px 12px"><span style="font:600 11px 'IBM Plex Mono';color:#8b9086">3</span><span style="font:500 12.5px 'Karla';color:#22251f;flex:1">Kanal liste fiyatı</span><span style="font:400 11px 'Karla';color:#8b9086">taban</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5">
+          <span style="font:400 11.5px 'Karla';color:#8b9086;margin-right:auto">Verilmiş siparişleri etkilemez</span>
+          <span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer">İptal</span>
+          <span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer">Kaydet</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- KUPON DIALOG -->
+  <sc-if value="{{ ozelOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:460px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f;max-height:86vh">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 18px 'Space Grotesk'">Müşteriye özel fiyat</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">Belirli müşteri + varyant için kalıcı fiyat</span>
+          </div>
+          <span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span>
+        </div>
+        <div style="overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <span style="font:500 11.5px 'Karla';color:#6a7065">Müşteri</span>
+            <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';color:#22251f;background:#fff;display:flex;justify-content:space-between;align-items:center">Café Marceau<span style="color:#9aa094">▾</span></div>
+            <span style="font:400 11px 'Karla';color:#9aa094">B2B · sürekli müşteri</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <span style="font:500 11.5px 'Karla';color:#6a7065">Varyant</span>
+            <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';color:#22251f;background:#fff;display:flex;justify-content:space-between;align-items:center">Fıstıklı Baklava 1kg<span style="color:#9aa094">▾</span></div>
+          </div>
+          <div style="display:flex;gap:12px">
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+              <span style="font:500 11.5px 'Karla';color:#6a7065">Özel fiyat</span>
+              <div style="border:1.5px solid #5f7a2c;border-radius:9px;padding:11px 13px;font:500 16px 'IBM Plex Mono';color:#22251f;background:#fff;display:flex;justify-content:space-between"><span>13,50</span><span style="color:#9aa094">€</span></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+              <span style="font:500 11.5px 'Karla';color:#6a7065">Kanal liste (B2B)</span>
+              <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 16px 'IBM Plex Mono';color:#9aa094;background:#f4f5f1;display:flex;justify-content:space-between"><span>15,00</span><span>€</span></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px;background:#eef4e2;border:1px solid #cdd8b6;border-radius:9px;padding:11px 14px">
+            <span style="color:#4a6121;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></span>
+            <span style="font:500 11.5px/1.5 'Karla';color:#3f5a2a">Özel fiyat çözüm sırasında en üsttedir; müşteri indirim oranını ve kanal fiyatını geçersiz kılar. Pazarlıklı tek-seferlik fiyat için sipariş ekranını kullanın.</span>
+          </div>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5">
+          <span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:8px;padding:10px 16px;cursor:pointer;margin-right:auto">Kaldır</span>
+          <span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer">İptal</span>
+          <span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer">Kaydet</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- KUPON DIALOG -->
+  <sc-if value="{{ kuponOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:500px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f;max-height:86vh">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 18px 'Space Grotesk'">İndirim / kupon oluştur</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">Tek varlık, iki tetik: kupon kodu veya otomatik kampanya</span>
+          </div>
+          <span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span>
+        </div>
+        <div style="overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;gap:8px">
+            <span style="flex:1;text-align:center;font:600 12.5px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:8px;padding:10px 0">Kupon (kod)</span>
+            <span style="flex:1;text-align:center;font:600 12.5px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 0">Otomatik kampanya</span>
+          </div>
+          <div style="display:flex;gap:12px">
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Kod</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'IBM Plex Mono';color:#22251f;background:#fff">BAYRAM10</div></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Tip / değer</span><div style="display:flex;gap:6px"><span style="flex:1;text-align:center;font:600 12.5px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:8px;padding:11px 0">%</span><span style="flex:1;text-align:center;font:600 12.5px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:11px 0">€</span><div style="flex:1.4;border:1px solid #d9dbd2;border-radius:8px;padding:11px 10px;font:500 13.5px 'IBM Plex Mono';background:#fff">10</div></div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 11.5px 'Karla';color:#6a7065">Kapsam</span>
+            <div style="display:flex;gap:7px;flex-wrap:wrap"><span style="font:600 12px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:13px;padding:6px 12px">Sepet</span><span style="font:600 12px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:13px;padding:6px 12px">Kategori</span><span style="font:600 12px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:13px;padding:6px 12px">Koleksiyon</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Asgari sepet</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'IBM Plex Mono';background:#fff">50,00 €</div></div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Kullanım sınırı</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'IBM Plex Mono';background:#fff">200 · müşteri başı 1</div></div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Başlangıç</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13px 'Karla';background:#fff;display:flex;justify-content:space-between">24 Tem<span style="color:#9aa094">▾</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Bitiş</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13px 'Karla';background:#fff;display:flex;justify-content:space-between">31 Tem<span style="color:#9aa094">▾</span></div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:11px 14px">
+            <span style="color:#9a6416;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></span>
+            <span style="font:500 11.5px/1.5 'Karla';color:#8a6410">Tek-en-büyük kuralı: indirimler üst üste binmez, müşteriye en büyüğü uygulanır. Pakete ve near-expiry teklife hiçbir genel indirim binmez.</span>
+          </div>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5">
+          <span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer;margin-left:auto">İptal</span>
+          <span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer">Oluştur</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { visible: 14, priceOpen: false, kuponOpen: false, ozelOpen: false, tab: 'kanal' };
+  onScroll = (e) => {
+    const el = e.target;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 90 && this.state.visible < this._total) {
+      this.setState(s => ({ visible: Math.min(s.visible + 10, this._total) }));
+    }
+  };
+  renderVals() {
+    const E = React.createElement;
+    const autoOn = E('span',{style:{width:8,height:8,borderRadius:'50%',background:'#5f7a2c',display:'inline-block'},title:'auto_price açık'});
+    const autoOff = E('span',{style:{width:8,height:8,borderRadius:'50%',border:'1.5px solid #cfd2c9',display:'inline-block'},title:'kapalı'});
+    const okM=['#4a6121','#eef4e2'], badM=['#a5443c','#fbe9e7'], warnM=['#9a6416','#fdf1e3'];
+    const base = [
+      { name:'Fıstıklı Baklava 1kg', cat:'Baklava', b2c:'18,00', b2b:'15,00', cost:'9,20', margin:'%28', m:badM, auto:false },
+      { name:'Cevizli Baklava 1kg', cat:'Baklava', b2c:'15,00', b2b:'12,50', cost:'6,80', margin:'%55', m:okM, auto:true },
+      { name:'Şöbiyet 500g', cat:'Şerbetli', b2c:'11,00', b2b:'9,00', cost:'4,10', margin:'%63', m:okM, auto:true },
+      { name:'Su Böreği (tepsi)', cat:'Börek', b2c:'—', b2b:'22,00', cost:'12,00', margin:'—', m:warnM, auto:false },
+      { name:'Künefe 2 kişilik', cat:'Şerbetli', b2c:'14,00', b2b:'—', cost:'7,90', margin:'%44', m:okM, auto:false },
+      { name:'Midye Baklava 750g', cat:'Baklava', b2c:'22,00', b2b:'18,00', cost:'13,50', margin:'%31', m:badM, auto:false },
+    ];
+    const names=['Havuç Dilim 1kg','Kadayıf 500g','Bülbül Yuvası 500g','Sarma Kadayıf 1kg','Peynirli Börek','Ispanaklı Börek','Lokum Karışık 500g','Tahin 500g'];
+    let seed=3; const rnd=()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
+    const all = base.slice();
+    for (let i=0;i<40;i++){
+      const mv=25+Math.floor(rnd()*45); const m = mv<35?badM:(mv<42?warnM:okM);
+      const b2c=(8+rnd()*20); const b2b=b2c*0.83; const cost=b2c*(1-mv/100);
+      const f=n=>n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
+      all.push({ name:names[Math.floor(rnd()*names.length)], cat:['Baklava','Şerbetli','Börek','Malzeme'][Math.floor(rnd()*4)],
+        b2c:f(b2c), b2b:f(b2b), cost:f(cost), margin:'%'+mv, m, auto: rnd()<0.3 });
+    }
+    this._total = all.length;
+    const edit = () => this.setState({ priceOpen:true });
+    const shown = all.slice(0, this.state.visible).map(p => ({
+      ...p,
+      b2cFg: p.b2c==='—' ? '#9a6416' : '#22251f',
+      b2bFg: p.b2b==='—' ? '#9a6416' : '#22251f',
+      marginFg: p.m[0], marginBg: p.m[1],
+      autoDot: p.auto ? autoOn : autoOff,
+      edit,
+    }));
+    const more = this.state.visible < all.length;
+
+    const mobMargin = [
+      { name:'Fıstıklı Baklava 1kg', cost:'9,20 €', target:'%42', margin:'%28', price:'18,00 €' },
+      { name:'Midye Baklava 750g', cost:'13,50 €', target:'%40', margin:'%31', price:'22,00 €' },
+      { name:'Su Böreği (tepsi)', cost:'12,00 €', target:'%45', margin:'%29', price:'20,00 €' },
+    ];
+
+    const tab = this.state.tab;
+    const tabDefs = [
+      { key:'kanal', label:'Kanal fiyatları' },
+      { key:'ozel', label:'Müşteriye özel' },
+      { key:'kupon', label:'Kupon & kampanya' },
+      { key:'near', label:'Near-expiry', badge:'4' },
+    ];
+    const tabs = tabDefs.map(t => ({
+      label: t.label, badge: t.badge || null, select: () => this.setState({ tab: t.key }),
+      fg: tab===t.key ? '#22251f' : '#8b9086',
+      edge: tab===t.key ? '#5f7a2c' : 'transparent',
+    }));
+
+    const ozel = [
+      { cust:'Café Marceau', type:'B2B · sürekli', variant:'Fıstıklı Baklava 1kg', special:'13,50', list:'15,00' },
+      { cust:'Restaurant Anatolie', type:'B2B · sürekli', variant:'Baklava karışık 2kg', special:'26,00', list:'30,00' },
+      { cust:'Traiteur Yıldız', type:'B2B · sözleşmeli', variant:'Su Böreği (tepsi)', special:'19,00', list:'22,00' },
+      { cust:'Épicerie du Port', type:'B2B', variant:'Kadayıf 500g', special:'7,20', list:'8,50' },
+    ];
+
+    const kBadge = (on) => on ? ['#4a6121','#eef4e2'] : ['#6a7065','#eef0ea'];
+    const kuponlar = [
+      { tip:'Kupon', tFg:'#3a6b8a', tBg:'#e6eef3', name:'BAYRAM10', detail:'Sepet · asgari 50 € · müşteri başı 1', value:'%10', status:'Aktif', stFg:kBadge(true)[0], stBg:kBadge(true)[1] },
+      { tip:'Kampanya', tFg:'#9a6416', tBg:'#fdf1e3', name:'Baklava koleksiyonu', detail:'Koleksiyon · 24–31 Tem', value:'%15', status:'Aktif', stFg:kBadge(true)[0], stBg:kBadge(true)[1] },
+      { tip:'Kupon', tFg:'#3a6b8a', tBg:'#e6eef3', name:'ILKSIPARIS', detail:'Sepet · yalnız ilk sipariş', value:'5,00 €', status:'Aktif', stFg:kBadge(true)[0], stBg:kBadge(true)[1] },
+      { tip:'Kupon', tFg:'#3a6b8a', tBg:'#e6eef3', name:'YAZ20', detail:'Sepet · kullanım sınırı doldu', value:'%20', status:'Pasif', stFg:kBadge(false)[0], stBg:kBadge(false)[1] },
+    ];
+
+    const openTeklif = () => this.setState({ priceOpen:true });
+    const nb = (name,lot,qty,pctT,cost,listPrice,offerPrice,kind) => {
+      const edge = kind==='bad' ? '#c2571f' : '#c98a2e';
+      const bd = kind==='bad' ? '#e2c4c0' : '#ecd9b4';
+      return { name,lot,qty,pctT,cost,listPrice,offerPrice,edge,bd,
+        cta: kind==='bad' ? 'İmha' : 'Teklif aç', action: openTeklif,
+        ctaFg: kind==='bad' ? '#a5443c' : '#fff', ctaBg: kind==='bad' ? '#fff' : '#5f7a2c', ctaBd: kind==='bad' ? '#e2c4c0' : '#5f7a2c' };
+    };
+    const nearList = [
+      nb('Fıstıklı Baklava 1kg','LOT-2451-A','14 ad.','%18','9,20 €','18,00 €','12,60 €','warn'),
+      nb('Künefe 2 kişilik','LOT-2440-C','22 ad.','%22','7,90 €','14,00 €','9,80 €','warn'),
+      nb('Sarma Kadayıf 1kg','LOT-2445-A','9 ad.','%24','10,00 €','20,00 €','15,00 €','warn'),
+      nb('Su Böreği (tepsi)','LOT-2399-B','8 ad.','%0','12,00 €','—','—','bad'),
+    ];
+
+    return {
+      shown, more, onScroll: this.onScroll, mobMargin,
+      tabs, isKanal: tab==='kanal', isOzel: tab==='ozel', isKupon: tab==='kupon', isNear: tab==='near',
+      ozel, kuponlar, nearList,
+      priceOpen: this.state.priceOpen, kuponOpen: this.state.kuponOpen, ozelOpen: this.state.ozelOpen,
+      openKupon: () => this.setState({ kuponOpen:true }),
+      openOzel: () => this.setState({ ozelOpen:true }),
+      closeModal: () => this.setState({ priceOpen:false, kuponOpen:false, ozelOpen:false }),
+      stop: (e)=>e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

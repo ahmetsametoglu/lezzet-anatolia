@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Geri Bildirim — yorum · skor · beğeni · puan · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Yorum yalnız satın almış müşteriden; onaydan sonra yayınlanır. Analiz kaliteli sinyali ağırlıklı sayar. Puan yalnız B2C.</span>
+    </div>
+
+    <div data-screen-label="Geri Bildirim Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="geribildirim" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">Geri Bildirim</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">5 yorum onay bekliyor · 3 yüksek talepli aday</span>
+          </div>
+          <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 12px">Son 30 gün ▾</span>
+        </div>
+        <div style="padding:0 24px;border-bottom:1px solid #e6e7e1;display:flex;gap:2px;background:#f8f9f5;flex-wrap:wrap">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+            <span onClick="{{ t.select }}" style="font:600 12.5px 'Space Grotesk';color:{{ t.fg }};border-bottom:2px solid {{ t.edge }};padding:11px 13px;margin-bottom:-1px;cursor:pointer;display:flex;align-items:center;gap:6px">{{ t.label }}<sc-if value="{{ t.badge }}" hint-placeholder-val="{{ false }}"><span style="font:500 10px 'IBM Plex Mono';color:#9a6416;background:#fdf1e3;border-radius:9px;padding:1px 6px">{{ t.badge }}</span></sc-if></span>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ isModer }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:12px">
+            <sc-for list="{{ yorumlar }}" as="y" hint-placeholder-count="4">
+              <div style="border:1px solid #e6e7e1;background:#fff;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 13.5px 'Karla';color:#22251f">{{ y.product }}</span><span style="font:400 11px 'Karla';color:#8b9086">{{ y.customer }} · doğrulanmış alışveriş · {{ y.date }} · {{ y.lang }}</span></div>
+                  <span style="font:600 13px 'IBM Plex Mono';color:{{ y.scoreFg }};flex:none">{{ y.stars }}</span>
+                </div>
+                <span style="font:400 13px/1.6 'Karla';color:#3a3f37">{{ y.text }}</span>
+                <div style="display:flex;align-items:center;gap:9px;border-top:1px solid #f0f1ec;padding-top:9px">
+                  <span style="font:400 11px 'Karla';color:#8b9086;flex:1;min-width:0">Onaylanınca ürün sayfasında görünür · metin düzenlenmez</span>
+                  <span onClick="{{ y.reject }}" style="font:600 12px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:7px;padding:7px 13px;cursor:pointer;flex:none">Reddet</span>
+                  <span onClick="{{ y.approve }}" style="font:600 12px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:7px;padding:7px 15px;cursor:pointer;flex:none">Onayla</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isSkor }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;overflow-y:auto">
+            <div style="display:grid;grid-template-columns:minmax(130px,1fr) 80px 96px 110px;gap:0 10px;padding:10px 24px;border-bottom:1px solid #e6e7e1;font:500 10.5px 'Space Grotesk';letter-spacing:.04em;text-transform:uppercase;color:#8b9086;background:#f8f9f5"><span>Ürün</span><span style="text-align:center">Skor</span><span style="text-align:center">Beğeni</span><span style="text-align:right">Sinyal</span></div>
+            <sc-for list="{{ skorlar }}" as="s" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:minmax(130px,1fr) 80px 96px 110px;gap:0 10px;padding:12px 24px;border-bottom:1px solid #f0f1ec;align-items:center;cursor:pointer">
+                <div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 13px 'Karla';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</span><span style="font:400 11px 'Karla';color:{{ s.noteFg }}">{{ s.note }}</span></div>
+                <span style="justify-self:center;font:600 13px 'IBM Plex Mono';color:{{ s.scoreFg }}">{{ s.score }}</span>
+                <span style="justify-self:center;font:500 12px 'IBM Plex Mono';color:#6a7065">{{ s.likes }}</span>
+                <span style="justify-self:end;font:600 10.5px 'Space Grotesk';color:{{ s.sigFg }};background:{{ s.sigBg }};border-radius:7px;padding:3px 9px">{{ s.signal }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isAday }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:11px">
+            <span style="font:400 12px 'Karla';color:#8b9086">Stokta olmayan aday ürünler, keşif beğenileri ve ilgi sinyaline göre talebe göre sıralı.</span>
+            <sc-for list="{{ adaylar }}" as="a" hint-placeholder-count="4">
+              <div style="border:1px solid #e6e7e1;background:#fff;border-radius:10px;padding:13px 16px;display:flex;align-items:center;gap:14px">
+                <span style="width:30px;height:30px;border-radius:8px;background:#eef4e2;color:#4a6121;font:600 13px 'IBM Plex Mono';display:grid;place-items:center;flex:none">{{ a.rank }}</span>
+                <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 13.5px 'Karla';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.name }}</span><span style="font:400 11px 'Karla';color:#8b9086">{{ a.likes }} beğeni · güvenilirlik {{ a.trust }}</span></div>
+                <span style="flex:1;height:7px;border-radius:4px;background:#eef0ea;overflow:hidden;max-width:120px"><span style="display:block;height:100%;width:{{ a.pct }};background:#5f7a2c"></span></span>
+                <span onClick="{{ a.activate }}" style="font:600 12px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:7px;padding:7px 13px;cursor:pointer;flex:none">Satışa aç →</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isPuan }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;overflow-y:auto">
+            <div style="padding:12px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:10px"><span style="font:400 12px 'Karla';color:#8b9086;flex:1;min-width:0">Puan yalnız son tüketici (B2C). Kurallar Ayarlar'da; burası bakiye ve hareket.</span><span onClick="{{ openPuan }}" style="font:600 12px 'Space Grotesk';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 13px;cursor:pointer;flex:none">Elle puan düzelt</span></div>
+            <div style="display:grid;grid-template-columns:minmax(120px,1fr) 80px 116px 88px;gap:0 10px;padding:10px 24px;border-bottom:1px solid #e6e7e1;font:500 10.5px 'Space Grotesk';letter-spacing:.03em;text-transform:uppercase;color:#8b9086;background:#f8f9f5"><span>Müşteri</span><span style="text-align:right">Bakiye</span><span style="text-align:center">Kupona çevrim</span><span style="text-align:right">Son</span></div>
+            <sc-for list="{{ puanlar }}" as="p" hint-placeholder-count="5">
+              <div style="display:grid;grid-template-columns:minmax(120px,1fr) 80px 116px 88px;gap:0 10px;padding:12px 24px;border-bottom:1px solid #f0f1ec;align-items:center">
+                <span style="font:600 13px 'Karla';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+                <span style="text-align:right;font:500 13px 'IBM Plex Mono';color:#22251f">{{ p.balance }}</span>
+                <span style="text-align:center;font:500 11.5px 'Karla';color:{{ p.redFg }}">{{ p.redemption }}</span>
+                <span style="text-align:right;font:400 11px 'IBM Plex Mono';color:#8b9086">{{ p.last }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBİL -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Geri Bildirim — mobil</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Yorum moderasyonu "boş anda iki dakika" işi — hızlı onay/ret. Karışık dilli içeriğe dayanıklı.</span>
+    </div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;justify-content:space-between"><span style="font:600 17px 'Space Grotesk';color:#22251f">Onay bekleyen</span><span style="font:500 10px 'IBM Plex Mono';color:#9a6416;background:#fdf1e3;border-radius:9px;padding:2px 8px">5</span></div>
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:11px">
+          <sc-for list="{{ mobYorum }}" as="y" hint-placeholder-count="2">
+            <div style="border:1px solid #e6e7e1;border-radius:11px;padding:12px 13px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="font:600 13px 'Karla';color:#22251f;flex:1">{{ y.product }}</span><span style="font:600 12px 'IBM Plex Mono';color:{{ y.scoreFg }}">{{ y.stars }}</span></div>
+              <span style="font:400 12px/1.5 'Karla';color:#3a3f37">{{ y.text }}</span>
+              <span style="font:400 10.5px 'Karla';color:#8b9086">{{ y.customer }} · {{ y.lang }}</span>
+              <div style="display:flex;gap:9px"><span style="flex:1;font:600 12px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:9px;padding:9px;text-align:center">Reddet</span><span style="flex:1.4;font:600 12px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:9px;padding:9px;text-align:center">Onayla</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1"><span style="font:600 17px 'Space Grotesk';color:#22251f">Aday ürün talebi</span></div>
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ adaylar }}" as="a" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:11px;padding:8px 0;border-bottom:1px solid #f0f1ec">
+              <span style="width:26px;height:26px;border-radius:7px;background:#eef4e2;color:#4a6121;font:600 12px 'IBM Plex Mono';display:grid;place-items:center;flex:none">{{ a.rank }}</span>
+              <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 12.5px 'Karla';color:#22251f">{{ a.name }}</span><span style="font:400 10.5px 'Karla';color:#8b9086">{{ a.likes }} beğeni · {{ a.trust }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+        <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+          <li><strong>Web</strong> → moderasyon, skor tabloları, güvenilirlik ağırlıklı analiz, aday panosu, puan bakiye/hareket.</li>
+          <li><strong>Mobil</strong> → hızlı yorum onay/ret, aday talep panosu okuma.</li>
+          <li><strong>Kural</strong> → yorum metni düzenlenmez (onay/ret); az veri temkinli sunulur; puan ödülü sinyal kalitesine bağlanmaz; iç terim yok.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ELLE PUAN DIALOG -->
+  <sc-if value="{{ puanOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:440px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px"><span style="font:600 18px 'Space Grotesk';margin-right:auto">Elle puan düzeltme</span><span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span></div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Müşteri</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';background:#fff;display:flex;justify-content:space-between;align-items:center">Ayşe Kaya<span style="color:#9aa094">▾</span></div></div>
+          <div style="display:flex;gap:12px">
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Değişim (± puan)</span><div style="border:1.5px solid #5f7a2c;border-radius:9px;padding:11px 13px;font:500 15px 'IBM Plex Mono';background:#fff">+50</div></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Yeni bakiye</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 15px 'IBM Plex Mono';background:#f4f5f1;color:#8b9086">370</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Sebep (iz kaydına yazılır)</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:400 12.5px 'Karla';color:#3a3f37;background:#fff">Gecikme telafisi — jest</div></div>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5"><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer;margin-left:auto">İptal</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer">Kaydet</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: 'moder', puanOpen: false };
+  renderVals() {
+    const tab = this.state.tab;
+    const tabDefs = [
+      { key:'moder', label:'Moderasyon', badge:'5' }, { key:'skor', label:'Ürün skorları' },
+      { key:'aday', label:'Aday panosu' }, { key:'puan', label:'Puan' },
+    ];
+    const tabs = tabDefs.map(t => ({ label:t.label, badge:t.badge||null, select:()=>this.setState({tab:t.key}),
+      fg: tab===t.key?'#22251f':'#8b9086', edge: tab===t.key?'#5f7a2c':'transparent' }));
+
+    const stars = n => '★★★★★☆☆☆☆☆'.slice(5-n, 10-n);
+    const scoreFg = n => n>=4 ? '#4a6121' : (n>=3 ? '#9a6416' : '#a5443c');
+    const yDefs = [
+      { product:'Fıstıklı Baklava 1kg', customer:'Ayşe K.', date:'2 saat önce', lang:'TR', n:5, text:'Tam kıvamında, çok taze geldi. Kesinlikle tekrar alırım.' },
+      { product:'Künefe 2 kişilik', customer:'M. Leroy', date:'5 saat önce', lang:'FR', n:2, text:'Soğuk geldi, ısıtınca toparladı ama beklediğim gibi değildi.' },
+      { product:'Su Böreği (tepsi)', customer:'Sofia R.', date:'dün', lang:'DE', n:4, text:'Sehr lecker, aber die Portion war etwas klein.' },
+      { product:'Cevizli Baklava 1kg', customer:'K. Demir', date:'dün', lang:'TR', n:5, text:'Bayram için aldım, herkes çok beğendi.' },
+    ];
+    const yorumlar = yDefs.map(y => ({ ...y, stars:stars(y.n), scoreFg:scoreFg(y.n),
+      approve:()=>{}, reject:()=>{} }));
+    const mobYorum = yorumlar.slice(0,2);
+
+    const sig = (label,kind) => ({ signal:label,
+      sigFg: kind==='low'?'#9a6416':(kind==='high'?'#4a6121':'#6a7065'),
+      sigBg: kind==='low'?'#fdf1e3':(kind==='high'?'#eef4e2':'#eef0ee') });
+    const sk = (name,score,likes,note,noteBad,kind) => ({ name, score, likes, note,
+      noteFg: noteBad?'#a5443c':'#8b9086', scoreFg: scoreFg(Math.round(parseFloat(score.replace(',','.')))), ...sig(kind==='low'?'Düşük güven':(kind==='high'?'Güçlü':'Az veri'),kind) });
+    const skorlar = [
+      sk('Fıstıklı Baklava 1kg','4,8','+142','128 yorum','false','high'),
+      sk('Cevizli Baklava 1kg','4,6','+98','çok sevilen','false','high'),
+      sk('Künefe 2 kişilik','3,1','−12','şikâyet + düşük skor birleşiyor','true','normal'),
+      sk('Yeni: Şam Tatlısı','4,2','+9','3 yorum · örneklem küçük','false','az'),
+      sk('Bülbül Yuvası 500g','2,8','−20','beğeni yüksek, güven düşük','true','low'),
+    ];
+
+    const ad = (rank,name,likes,trust,pct) => ({ rank:String(rank), name, likes, trust, pct, activate:()=>{} });
+    const adaylar = [
+      ad(1,'Lahmacun (10lu)','+184','yüksek','92%'),
+      ad(2,'Antep Katmeri','+120','yüksek','74%'),
+      ad(3,'Çiğ Köfte 500g','+96','orta','58%'),
+      ad(4,'Simit (6lı)','+64','düşük · hızlı kaydırma','36%'),
+    ];
+
+    const pt = (name,balance,red,redNone,last) => ({ name, balance, redemption:red, redFg: redNone?'#9aa094':'#5f7a2c', last });
+    const puanlar = [
+      pt('Ayşe Kaya','320','2 kupon',false,'2 gün'),
+      pt('M. Leroy','80','—',true,'1 hafta'),
+      pt('Sofia R.','540','3 kupon',false,'dün'),
+      pt('K. Demir','120','1 kupon',false,'3 gün'),
+      pt('J. Bernard','0','—',true,'yeni'),
+    ];
+
+    return {
+      tabs, isModer: tab==='moder', isSkor: tab==='skor', isAday: tab==='aday', isPuan: tab==='puan',
+      yorumlar, mobYorum, skorlar, adaylar, puanlar,
+      puanOpen: this.state.puanOpen,
+      openPuan: () => this.setState({ puanOpen:true }),
+      closeModal: () => this.setState({ puanOpen:false }), stop: (e)=>e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

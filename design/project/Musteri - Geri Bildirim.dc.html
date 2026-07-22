@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+  body { margin:0; background:#e9e6df; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-wrap:wrap;gap:56px;padding:48px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Geri Bildirim · Mobil (davet linkinden; neredeyse tek biçim)</span>
+    <div data-screen-label="Geri Bildirim Karsilama" style="width:390px;background:#faf6ec;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15)">
+      <div style="padding:28px 24px;display:flex;flex-direction:column;gap:14px;text-align:center;align-items:center">
+        <img src="assets/logo.jpg" style="height:46px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+        <h1 style="margin:0;font:600 26px/1.25 'Lora';color:#343b41">Geçen haftaki siparişiniz nasıldı?</h1>
+        <span style="font:400 14px/1.6 'Karla';color:#6d7261">LZA-2417 · 8 Temmuz — aldığınız ürünleri tek tek soracağız, bir dakikadan kısa sürer. Tamamlayınca <strong style="color:#5f7a2c">+30 puan</strong> sizindir.</span>
+        <span style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';padding:14px 36px;border-radius:26px">Başlayalım</span>
+      </div>
+    </div>
+
+    <div data-screen-label="Geri Bildirim Kart" style="width:390px;background:#faf6ec;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px">
+        <span style="width:36px"></span>
+        <span style="font:400 12px 'Karla';color:#8a8270">2 / 5</span>
+        <span style="font:700 13px 'Karla';color:#8a8270">Sonra bitir</span>
+      </div>
+      <div style="margin:4px 20px;background:#fff;border-radius:24px;box-shadow:0 10px 30px rgba(58,65,71,.15);overflow:hidden;display:flex;flex-direction:column">
+        <div style="height:240px"><image-slot id="gb-card" shape="rect" placeholder="Ürün fotoğrafı"></image-slot></div>
+        <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center">
+          <span style="font:600 21px 'Lora';color:#343b41">Fıstıklı Baklava</span>
+          <div style="display:flex;gap:16px">
+            <span style="display:flex;flex-direction:column;align-items:center;gap:4px"><span style="width:64px;height:64px;border-radius:32px;background:#fff;border:2px solid #d8cfb6;display:grid;place-items:center;font-size:24px">👎</span><span style="font:600 12px 'Karla';color:#8a8270">Beğenmedim</span></span>
+            <span style="display:flex;flex-direction:column;align-items:center;gap:4px"><span style="width:64px;height:64px;border-radius:32px;background:#5f7a2c;display:grid;place-items:center;font-size:24px">👍</span><span style="font:600 12px 'Karla';color:#5f7a2c">Beğendim</span></span>
+          </div>
+          <span style="font:600 13px 'Karla';color:#5f7a2c">✎ Birkaç kelime yazmak ister misiniz? <span style="color:#8a8270;font-weight:400">(isteğe bağlı)</span></span>
+        </div>
+      </div>
+      <div style="height:4px;background:#ece5d2;margin:16px 20px;border-radius:2px"><div style="width:40%;height:4px;background:#5f7a2c;border-radius:2px"></div></div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Akış sonları (memnun / memnun değil)</span>
+    <div data-screen-label="Geri Bildirim Son Olumlu" style="width:390px;background:#faf6ec;border-radius:28px;box-shadow:0 8px 40px rgba(58,65,71,.15);padding:36px 28px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center">
+      <span style="font-size:40px">🙏</span>
+      <span style="font:600 24px 'Lora';color:#343b41">Teşekkürler Ayşe Hanım!</span>
+      <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:8px 18px;border-radius:18px">+30 puan hesabınızda</span>
+      <span style="font:400 13.5px/1.6 'Karla';color:#6d7261">Puanlarınız hesabınızda birikir, dilediğinizde indirime çevrilir.</span>
+      <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;width:100%">
+        <span style="font:600 15px/1.5 'Lora';color:#343b41">Memnuniyetinizi Google'da paylaşır mısınız?</span>
+        <span style="font:400 12.5px/1.5 'Karla';color:#6d7261">Küçük işletmemiz için büyük destek olur.</span>
+        <span style="background:#fff;border:2px solid #5f7a2c;color:#5f7a2c;font:700 13.5px 'Karla';padding:11px;border-radius:22px">Google'da değerlendir ↗</span>
+      </div>
+      <span style="font:700 13px 'Karla';color:#5f7a2c">Kataloğa dön →</span>
+    </div>
+
+    <div data-screen-label="Geri Bildirim Son Olumsuz" style="width:390px;background:#faf6ec;border-radius:28px;box-shadow:0 8px 40px rgba(58,65,71,.15);padding:36px 28px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center">
+      <span style="font-size:36px">🙏</span>
+      <span style="font:600 22px 'Lora';color:#343b41">Teşekkürler — ve kusura bakmayın</span>
+      <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:8px 18px;border-radius:18px">+30 puan hesabınızda</span>
+      <span style="font:400 13.5px/1.6 'Karla';color:#6d7261">Beğenmediğiniz ürünler oldu. Bir sorun yaşadıysanız düzeltmek isteriz.</span>
+      <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 28px;border-radius:24px;width:100%;box-sizing:border-box">Sorun bildir</span>
+      <span style="font:700 13px 'Karla';color:#5f7a2c">Kataloğa dön →</span>
+      <span style="font:400 12px 'Karla';color:#8a8270">Google daveti bu ekranda gösterilmez.</span>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Web (aynı akış, ortalanmış sütun)</span>
+    <div data-screen-label="Geri Bildirim Web" style="width:900px;background:#f0e9d6;border-radius:8px;box-shadow:0 8px 40px rgba(58,65,71,.15);padding:48px;display:grid;place-items:center">
+      <div style="width:460px;background:#faf6ec;border-radius:22px;box-shadow:0 10px 30px rgba(58,65,71,.15);padding:8px 0 20px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px">
+          <span style="width:40px"></span>
+          <span style="font:400 12px 'Karla';color:#8a8270">2 / 5</span>
+          <span style="font:700 13px 'Karla';color:#8a8270">Sonra bitir</span>
+        </div>
+        <div style="margin:0 20px;background:#fff;border-radius:20px;box-shadow:0 6px 20px rgba(58,65,71,.12);overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:220px"><image-slot id="gb-web-card" shape="rect" placeholder="Ürün fotoğrafı"></image-slot></div>
+          <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center">
+            <span style="font:600 20px 'Lora';color:#343b41">Fıstıklı Baklava</span>
+            <div style="display:flex;gap:16px">
+              <span style="width:58px;height:58px;border-radius:29px;background:#fff;border:2px solid #d8cfb6;display:grid;place-items:center;font-size:22px">👎</span>
+              <span style="width:58px;height:58px;border-radius:29px;background:#5f7a2c;display:grid;place-items:center;font-size:22px">👍</span>
+            </div>
+            <span style="font:600 12.5px 'Karla';color:#5f7a2c">✎ Birkaç kelime yazmak ister misiniz? <span style="color:#8a8270;font-weight:400">(isteğe bağlı)</span></span>
+          </div>
+        </div>
+        <div style="height:4px;background:#ece5d2;margin:6px 20px 0;border-radius:2px"><div style="width:40%;height:4px;background:#5f7a2c;border-radius:2px"></div></div>
+      </div>
+    </div>
+
+    <span style="font:600 16px 'Karla';color:#3a4147;margin-top:8px">Durumlar + sözleşme</span>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;max-width:720px">
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:22px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270;align-self:flex-start">Link zaten tamamlanmış</span>
+        <span style="font-size:28px">✓</span>
+        <span style="font:600 17px 'Lora';color:#343b41">Bu değerlendirmeyi zaten tamamladınız</span>
+        <span style="font:400 13px 'Karla';color:#6d7261">Teşekkürler! Puanınız daha önce eklendi.</span>
+        <span style="font:700 13px 'Karla';color:#5f7a2c">Puan bakiyem → · Kataloğa dön →</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:22px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Yorum yazma (isteğe bağlı derinleşme)</span>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px">
+          <span style="color:#d99a2b;font-size:18px;letter-spacing:3px">★★★★<span style="color:#d8cfb6">★</span></span>
+          <div style="border:1px solid #e0d8c2;border-radius:10px;padding:10px 12px;font:400 13px/1.5 'Karla';color:#3a4147;background:#fff">Fıstık çok cömertti, şerbeti tam kıvamında…</div>
+          <span style="font:400 11.5px 'Karla';color:#8a8270">Yorumunuz incelendikten sonra ürün sayfasında yayınlanır.</span>
+        </div>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">Karttaki "✎" dokununca kart altında açılır; akışı bölmez, atlanabilir.</span>
+      </div>
+    </div>
+
+    <div style="width:720px;background:#fff;border:1.5px dashed #cdc4a8;border-radius:16px;padding:24px 32px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:700 16px 'Karla';color:#3a4147">Etkileşim sözleşmesi (kodlayan ajan için)</span>
+      <ul style="margin:0;padding-left:20px;font:400 14px/1.8 'Karla';color:#6d7261">
+        <li><strong>Giriş</strong> → davet linki kişisel ve siparişe bağlı; oturum gerekiyorsa hızlı doğrulama araya girer ve akışa geri bırakır.</li>
+        <li><strong>Kart mekaniği</strong> → 👍/👎 seçimi karta işler ve otomatik sonrakine geçer; geri dönüp değiştirilebilir (üstte 2/5 göstergesi dokunulabilir).</li>
+        <li><strong>Yarıda bırakma</strong> → "Sonra bitir" veya kapatma; ilerleme saklanır, link tekrar açılınca kalınan karttan sürer.</li>
+        <li><strong>Tamamlama</strong> → +30 puan bir kez verilir; akış sonu memnuniyete göre dallanır: hepsinden/çoğundan memnun → Google daveti; değilse → talep köprüsü. Olumsuza Google daveti asla gösterilmez.</li>
+        <li><strong>Yorum</strong> → isteğe bağlı; puan tamamlamaya bağlıdır, yoruma/beğeniye değil — arayüz bunu ima bile etmez.</li>
+        <li>Dil: davet müşterinin dilinde gider, akış aynı dilde açılır. Web'de aynı ekranlar 480px ortalanmış sütunda.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

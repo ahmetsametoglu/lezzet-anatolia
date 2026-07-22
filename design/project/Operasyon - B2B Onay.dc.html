@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">B2B Başvuru Onayı · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">~15 saniyelik karar. Sistem sinyalleri sunar, kararı admin verir. Onay vade/limit açmaz — o ayrı karar.</span>
+    </div>
+
+    <div data-screen-label="B2B Onay Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="b2b" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">B2B Onay</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">2 bekleyen başvuru · en eski 3 saat önce</span>
+          </div>
+          <div style="display:flex;background:#eef0ea;border:1px solid #e0e2da;border-radius:8px;padding:2px">
+            <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2">
+              <span onClick="{{ t.select }}" style="font:600 12px 'Space Grotesk';padding:7px 13px;border-radius:6px;cursor:pointer;background:{{ t.bg }};color:{{ t.fg }}">{{ t.label }}</span>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:280px 1fr;flex:1;min-height:0;overflow:hidden">
+          <!-- KUYRUK -->
+          <div style="border-right:1px solid #e6e7e1;display:flex;flex-direction:column;min-height:0;overflow-y:auto">
+            <sc-for list="{{ queue }}" as="q" hint-placeholder-count="4">
+              <div onClick="{{ q.select }}" style="padding:13px 18px;border-bottom:1px solid #f0f1ec;display:flex;flex-direction:column;gap:4px;cursor:pointer;background:{{ q.rowBg }};border-left:3px solid {{ q.edge }}">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font:600 13.5px 'Karla';color:#22251f;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ q.name }}</span><span style="font:600 9.5px 'Space Grotesk';color:{{ q.flagFg }};background:{{ q.flagBg }};border-radius:6px;padding:2px 7px">{{ q.flag }}</span></div>
+                <span style="font:400 11px 'Karla';color:#8b9086">{{ q.city }} · {{ q.ago }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- KONTROL KARTI -->
+          <div style="display:flex;flex-direction:column;background:#f8f9f5;min-height:0;overflow-y:auto">
+            <div style="padding:16px 22px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:flex-start;gap:12px">
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                  <span style="font:600 18px 'Space Grotesk';color:#22251f">{{ card.name }}</span>
+                  <span style="font:400 12px 'Karla';color:#8b9086">{{ card.address }}</span>
+                </div>
+                <span style="font:600 10px 'Space Grotesk';color:{{ card.ctryFg }};background:{{ card.ctryBg }};border-radius:6px;padding:3px 9px">{{ card.country }}</span>
+              </div>
+
+              <div style="background:{{ card.aiBg }};border:1px solid {{ card.aiBd }};border-left:3px solid {{ card.aiEdge }};border-radius:9px;padding:11px 14px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:600 10px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:{{ card.aiEdge }}">AI özeti · okuma yardımı, karar değil</span>
+                <span style="font:400 13px/1.5 'Karla';color:#3a3f37">{{ card.ai }}</span>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+                <sc-for list="{{ card.signals }}" as="s" hint-placeholder-count="6">
+                  <div style="border:1px solid {{ s.bd }};background:#fff;border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:9px">
+                    <span style="width:20px;height:20px;border-radius:50%;background:{{ s.iconBg }};color:{{ s.iconFg }};display:grid;place-items:center;font:700 11px 'Space Grotesk';flex:none">{{ s.icon }}</span>
+                    <div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.04em;color:#8b9086">{{ s.k }}</span><span style="font:500 12.5px 'Karla';color:{{ s.vFg }}">{{ s.v }}</span></div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <sc-if value="{{ card.hasDup }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:11px 14px;display:flex;align-items:center;gap:10px">
+                  <span style="color:#9a6416;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></span>
+                  <span style="font:500 11.5px/1.5 'Karla';color:#8a6410;flex:1">Mükerrer: telefon mevcut bir müşteriyle eşleşiyor — kopya hesap ya da eski müşteri olabilir.</span>
+                  <span style="font:600 11.5px 'Space Grotesk';color:#9a6416;flex:none">Kaydı aç →</span>
+                </div>
+              </sc-if>
+
+              <div style="display:flex;gap:8px">
+                <span style="font:600 12px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;background:#fff;border-radius:8px;padding:9px 13px;display:flex;align-items:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>Google / Haritalar</span>
+                <span style="font:600 12px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;background:#fff;border-radius:8px;padding:9px 13px;display:flex;align-items:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>{{ card.phone }}</span>
+              </div>
+            </div>
+
+            <div style="margin-top:auto;position:sticky;bottom:0;background:#f8f9f5;border-top:1px solid #e6e7e1;padding:14px 22px;display:flex;align-items:center;gap:10px">
+              <span style="font:400 11px 'Karla';color:#8b9086;flex:1">Onay yalnız toptan fiyatı açar — vade/limit ayrı karar (müşteri detayında).</span>
+              <span onClick="{{ openRet }}" style="font:600 13px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:8px;padding:10px 18px;cursor:pointer">Reddet</span>
+              <span onClick="{{ openOnay }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 22px;cursor:pointer">Onayla</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBİL -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">B2B Onay — mobil</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Başvurular gün içinde tek tek düşer; karar telefonda anında. Tek ekranda kart, onay/ret tek dokunuş.</span>
+    </div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14);display:flex;flex-direction:column">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;justify-content:space-between"><span style="font:600 16px 'Space Grotesk';color:#22251f">Başvuru 1 / 2</span><span style="font:600 10px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:6px;padding:3px 9px">Risk yok</span></div>
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 17px 'Space Grotesk';color:#22251f">Restaurant Anatolie</span><span style="font:400 12px 'Karla';color:#8b9086">8 Rue du Fossé, 67000 Strasbourg · FR</span></div>
+          <div style="background:#eef4e2;border:1px solid #cdd8b6;border-left:3px solid #5f7a2c;border-radius:9px;padding:11px 13px"><span style="font:400 12.5px/1.5 'Karla';color:#3a3f37">2016'dan beri aktif restoran, rota içinde, faaliyet kodu uyumlu — risk işareti yok.</span></div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;align-items:center;gap:9px"><span style="width:18px;height:18px;border-radius:50%;background:#eef4e2;color:#4a6121;display:grid;place-items:center;font:700 10px 'Space Grotesk'">✓</span><span style="font:500 12.5px 'Karla';color:#3a3f37">Resmî kayıtta aktif · SIRET 812…</span></div>
+            <div style="display:flex;align-items:center;gap:9px"><span style="width:18px;height:18px;border-radius:50%;background:#eef4e2;color:#4a6121;display:grid;place-items:center;font:700 10px 'Space Grotesk'">✓</span><span style="font:500 12.5px 'Karla';color:#3a3f37">Faaliyet: Restoran (uyumlu)</span></div>
+            <div style="display:flex;align-items:center;gap:9px"><span style="width:18px;height:18px;border-radius:50%;background:#eef4e2;color:#4a6121;display:grid;place-items:center;font:700 10px 'Space Grotesk'">✓</span><span style="font:500 12.5px 'Karla';color:#3a3f37">Adres rota içinde</span></div>
+            <div style="display:flex;align-items:center;gap:9px"><span style="width:18px;height:18px;border-radius:50%;background:#eef4e2;color:#4a6121;display:grid;place-items:center;font:700 10px 'Space Grotesk'">✓</span><span style="font:500 12.5px 'Karla';color:#3a3f37">Mükerrer yok</span></div>
+          </div>
+          <span style="border:1px solid #d9dbd2;color:#3a3f37;font:600 12.5px 'Space Grotesk';padding:11px;border-radius:10px;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>Google / Haritalar'da aç</span>
+        </div>
+        <div style="margin-top:auto;padding:14px 16px;border-top:1px solid #e6e7e1;display:flex;gap:10px">
+          <span style="flex:1;font:600 14px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:11px;padding:13px;text-align:center">Reddet</span>
+          <span style="flex:1.6;font:600 14px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:11px;padding:13px;text-align:center">Onayla</span>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+        <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+          <li><strong>Web</strong> → kuyruk + geçmiş, tam sinyal ızgarası, mükerrer köprüsü, FR/DE farkı.</li>
+          <li><strong>Mobil</strong> → tek kart, dört sinyal + AI özeti, onay/ret tek dokunuş, harita geçişi.</li>
+          <li><strong>Kural</strong> → otomatik onay yok; onay vade/limit açmaz; sinyaller/AI özeti müşteriye yansımaz.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONAY/RET DIALOG -->
+  <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:420px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f">
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+          <span style="font:600 18px 'Space Grotesk';color:#22251f">{{ confirmTitle }}</span>
+          <span style="font:400 13px/1.6 'Karla';color:#3a3f37">{{ confirmBody }}</span>
+          <sc-if value="{{ isOnay }}" hint-placeholder-val="{{ true }}"><span style="font:500 11.5px/1.5 'Karla';color:#9a6416;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:8px;padding:10px 12px">Onay yalnız toptan fiyatı açar. Vade/limit açmaz — gerekiyorsa müşteri detayından ayrıca verirsiniz.</span></sc-if>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5"><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer;margin-left:auto">Vazgeç</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:{{ confirmBtn }};border-radius:8px;padding:10px 20px;cursor:pointer">{{ confirmCta }}</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: 'bekleyen', sel: 0, confirmOpen: false, confirmKind: 'onay' };
+  renderVals() {
+    const tab = this.state.tab;
+    const tabs = [ {k:'bekleyen',l:'Bekleyen'}, {k:'gecmis',l:'Karar verilmiş'} ].map(t => ({
+      label:t.l, select: () => this.setState({ tab:t.k }),
+      bg: tab===t.k?'#fff':'transparent', fg: tab===t.k?'#22251f':'#6a7065' }));
+
+    const sel = this.state.sel;
+    const qDefs = [
+      { name:'Restaurant Anatolie', city:'Strasbourg', ago:'3 saat önce', flag:'Temiz', clean:true, dup:false, de:false },
+      { name:'Bäckerei Wolff', city:'Kehl (DE)', ago:'1 saat önce', flag:'Dikkat', clean:false, dup:false, de:true },
+      { name:'Snack Bosphore', city:'Schiltigheim', ago:'22 dk önce', flag:'Mükerrer', clean:false, dup:true, de:false },
+    ];
+    const queue = qDefs.map((q,i) => {
+      const on = i===sel;
+      const fl = q.flag==='Temiz' ? ['#4a6121','#eef4e2','#5f7a2c'] : (q.flag==='Mükerrer' ? ['#9a6416','#fdf1e3','#c98a2e'] : ['#9a6416','#fdf1e3','#c98a2e']);
+      return { name:q.name, city:q.city, ago:q.ago, flag:q.flag, flagFg:fl[0], flagBg:fl[1],
+        edge: on ? fl[2] : 'transparent', rowBg: on ? '#eef4e2' : 'transparent',
+        select: () => this.setState({ sel:i }) };
+    });
+
+    const cur = qDefs[Math.min(sel, qDefs.length-1)];
+    const sig = (k,v,ok) => ({ k, v,
+      bd: ok==='bad'?'#e2c4c0':(ok==='warn'?'#ecd9b4':'#e6e7e1'),
+      iconBg: ok==='bad'?'#fbe9e7':(ok==='warn'?'#fdf1e3':'#eef4e2'),
+      iconFg: ok==='bad'?'#a5443c':(ok==='warn'?'#9a6416':'#4a6121'),
+      icon: ok==='bad'?'✕':(ok==='warn'?'!':'✓'),
+      vFg: ok==='bad'?'#a5443c':'#22251f' });
+    let card;
+    if (cur.de) {
+      card = { name:cur.name, address:'Hauptstr. 12, 77694 Kehl · elle girilmiş', country:'DE', ctryFg:'#9a6416', ctryBg:'#fdf1e3',
+        aiEdge:'#9a6416', aiBg:'#fdf1e3', aiBd:'#ecd9b4', ai:'DE başvurusu — resmî kayıt sinyalleri yok, VIES ana doğrulama. Numara geçerli görünüyor ama bilgiler elle girilmiş, dikkatli bak.',
+        phone:'+49 78 51 …', hasDup:false,
+        signals:[ sig('Resmî kayıt','Sinyal yok (DE)','warn'), sig('VIES (USt-IdNr)','Geçerli','ok'),
+          sig('Faaliyet','Elle: Fırın','warn'), sig('Kuruluş','Belirtilmemiş','warn'),
+          sig('Adres–rota','Rota içi','ok'), sig('Mükerrer','Eşleşme yok','ok') ] };
+    } else if (cur.dup) {
+      card = { name:cur.name, address:'2 Rue de la Gare, 67300 Schiltigheim', country:'FR', ctryFg:'#3a6b8a', ctryBg:'#e6eef3',
+        aiEdge:'#9a6416', aiBg:'#fdf1e3', aiBd:'#ecd9b4', ai:'Aktif işletme, rota içinde — ancak telefon mevcut bir müşteriyle eşleşiyor. Onaydan önce ilişkiyi çöz.',
+        phone:'+33 3 88 62 …', hasDup:true,
+        signals:[ sig('Resmî kayıt','Aktif','ok'), sig('Faaliyet','Snack / gıda','ok'),
+          sig('Kuruluş','2021','ok'), sig('Adres–rota','Rota içi','ok'),
+          sig('Mükerrer','Telefon eşleşti','bad'), sig('İletişim','+33 3 88 62 …','ok') ] };
+    } else {
+      card = { name:cur.name, address:'8 Rue du Fossé, 67000 Strasbourg · resmî kayıttan', country:'FR', ctryFg:'#3a6b8a', ctryBg:'#e6eef3',
+        aiEdge:'#5f7a2c', aiBg:'#eef4e2', aiBd:'#cdd8b6', ai:"2016'dan beri aktif restoran, rota içinde, faaliyet kodu uyumlu — risk işareti yok.",
+        phone:'+33 3 88 12 …', hasDup:false,
+        signals:[ sig('Resmî kayıt','Aktif','ok'), sig('Faaliyet','Restoran (uyumlu)','ok'),
+          sig('Kuruluş','2016','ok'), sig('Adres–rota','Rota içi','ok'),
+          sig('Mükerrer','Eşleşme yok','ok'), sig('SIRET','812 456 …','ok') ] };
+    }
+
+    const isOnay = this.state.confirmKind === 'onay';
+    return {
+      tabs, queue, card,
+      confirmOpen: this.state.confirmOpen, isOnay,
+      confirmTitle: isOnay ? 'Başvuruyu onayla' : 'Başvuruyu reddet',
+      confirmBody: isOnay ? `${card.name} toptan fiyatları görmeye başlayacak.` : `${card.name} reddedilecek; hesap B2C olarak kalır, toptan fiyat açılmaz.`,
+      confirmCta: isOnay ? 'Onayla' : 'Reddet', confirmBtn: isOnay ? '#5f7a2c' : '#a5443c',
+      openOnay: () => this.setState({ confirmOpen:true, confirmKind:'onay' }),
+      openRet: () => this.setState({ confirmOpen:true, confirmKind:'ret' }),
+      closeModal: () => this.setState({ confirmOpen:false }), stop: (e)=>e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

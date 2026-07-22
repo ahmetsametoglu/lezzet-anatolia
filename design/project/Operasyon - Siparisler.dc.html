@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:16px">
+
+  <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+    <span style="font:700 20px 'Space Grotesk';color:#22251f">Siparişler — operasyon tablosu</span>
+    <span style="font:400 13.5px 'Karla';color:#6a7065">Veri Masası dili · yoğun tablo, satırdan detaya. B2B/B2C, durum, tahsilat tek yüzeyde.</span>
+  </div>
+
+  <div data-screen-label="Siparisler Tezgah" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+
+    <dc-import name="AdminSidebar" active="siparisler" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+    <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+      <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+          <span style="font:600 22px 'Space Grotesk'">Siparişler</span>
+          <span style="font:400 12px 'Karla';color:#8b9086">Bugün 24 sipariş · 6 hazırlanıyor · 2 tahsilat bekliyor</span>
+        </div>
+        <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 12px">🔍 Ara</span>
+        <span style="font:500 12.5px 'IBM Plex Mono';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 14px">+ Sipariş</span>
+      </div>
+
+      <!-- DURUM SEKMELERİ -->
+      <div style="padding:0 24px;border-bottom:1px solid #e6e7e1;display:flex;gap:2px;background:#f8f9f5">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+          <span onClick="{{ t.select }}" style="font:600 12.5px 'Space Grotesk';color:{{ t.fg }};border-bottom:2px solid {{ t.edge }};padding:11px 14px;margin-bottom:-1px;display:flex;align-items:center;gap:7px;cursor:pointer">{{ t.label }}<span style="font:500 11px 'IBM Plex Mono';color:{{ t.cfg }};background:{{ t.cbg }};border-radius:9px;padding:1px 7px">{{ t.count }}</span></span>
+        </sc-for>
+      </div>
+
+      <!-- FİLTRE -->
+      <div style="padding:10px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <sc-for list="{{ chans }}" as="c" hint-placeholder-count="3">
+          <span onClick="{{ c.select }}" style="font:600 12px 'Space Grotesk';color:{{ c.fg }};background:{{ c.bg }};border:1px solid {{ c.bd }};border-radius:14px;padding:5px 12px;cursor:pointer">{{ c.label }}</span>
+        </sc-for>
+        <span style="width:1px;height:18px;background:#dfe1d9;margin:0 4px"></span>
+        <span style="font:500 12px 'Karla';color:#6a7065;border:1px dashed #d2d4cb;border-radius:14px;padding:5px 12px">+ teslim türü</span>
+        <span style="font:500 12px 'Karla';color:#6a7065;border:1px dashed #d2d4cb;border-radius:14px;padding:5px 12px">+ tahsilat</span>
+        <span style="margin-left:auto;font:500 12px 'IBM Plex Mono';color:#8b9086">bugün · 24 Tem ▾</span>
+      </div>
+
+      <!-- TABLO -->
+      <div style="display:grid;grid-template-columns:46px minmax(96px,1fr) 62px 44px 88px 92px 104px;gap:0 6px;padding:10px 16px;border-bottom:1px solid #e6e7e1;font:500 10px 'Space Grotesk';letter-spacing:.02em;text-transform:uppercase;color:#8b9086;background:#f8f9f5">
+        <span>No</span><span>Müşteri</span><span style="text-align:right">Tutar</span><span>Kanal</span><span>Teslim</span><span>Durum</span><span>Tahsilat</span>
+      </div>
+      <div style="overflow-y:auto;flex:1;min-height:0" onScroll="{{ onOrdersScroll }}">
+      <sc-for list="{{ ordersShown }}" as="o" hint-placeholder-count="12">
+        <div onClick="{{ o.open }}" style="display:grid;grid-template-columns:46px minmax(96px,1fr) 62px 44px 88px 92px 104px;gap:0 6px;padding:12px 16px;border-bottom:1px solid #f0f1ec;align-items:center;cursor:pointer;background:{{ o.rowBg }}">
+          <span style="font:400 11px 'IBM Plex Mono';color:#8b9086">{{ o.no }}</span>
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+            <span style="font:600 13px 'Karla';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ o.name }}</span>
+            <span style="font:400 11px 'Karla';color:#8b9086;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ o.items }}</span>
+          </div>
+          <span style="text-align:right;font:500 12.5px 'IBM Plex Mono';color:#22251f">{{ o.amt }}</span>
+          <span style="font:600 10px 'Space Grotesk';color:{{ o.chFg }};background:{{ o.chBg }};border-radius:6px;padding:3px 6px;justify-self:start">{{ o.channel }}</span>
+          <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+            <span style="font:500 11.5px 'Karla';color:#3a3f37;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ o.delivery }}</span>
+            <span style="font:400 10px 'Karla';color:#8b9086;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ o.deliveryMeta }}</span>
+          </div>
+          <span style="font:600 10.5px 'Space Grotesk';color:{{ o.stFg }};background:{{ o.stBg }};border-radius:7px;padding:4px 8px;justify-self:start;display:flex;align-items:center;gap:5px;max-width:100%"><span style="width:6px;height:6px;border-radius:50%;background:{{ o.stDot }};flex:none"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ o.status }}</span></span>
+          <span style="font:500 10.5px 'IBM Plex Mono';color:{{ o.payFg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ o.pay }}</span>
+        </div>
+      </sc-for>
+      <sc-if value="{{ moreOrders }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:14px;text-align:center;font:500 11.5px 'IBM Plex Mono';color:#9aa094;display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:12px;height:12px;border:2px solid #cdd0c8;border-top-color:#5f7a2c;border-radius:50%;display:inline-block;animation:sp .7s linear infinite"></span>daha fazla yükleniyor…</div>
+      </sc-if>
+      </div>
+
+      <div style="padding:12px 24px;display:flex;align-items:center;justify-content:space-between;background:#f8f9f5;border-top:1px solid #e6e7e1">
+        <span style="font:400 12px 'Karla';color:#8b9086">24 sipariş · toplam <span style="font:500 12px 'IBM Plex Mono';color:#22251f">3.842 €</span> · kapıda tahsilat <span style="font:500 12px 'IBM Plex Mono';color:#9a6416">504,50 €</span></span>
+        <span style="font:400 11.5px 'Karla';color:#a7ac9f">kaydırdıkça yüklenir</span>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ detailOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDetail }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:520px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f;max-height:86vh">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 18px 'Space Grotesk'">Sipariş {{ detail.no }}</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">{{ detail.name }} · {{ detail.channel }}</span>
+          </div>
+          <span style="font:600 11.5px 'Space Grotesk';color:{{ detail.stFg }};background:{{ detail.stBg }};border-radius:7px;padding:4px 11px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:{{ detail.stDot }}"></span>{{ detail.status }}</span>
+          <span onClick="{{ closeDetail }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span>
+        </div>
+        <div style="overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div style="border:1px solid #e6e7e1;background:#fff;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:2px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Tutar</span><span style="font:500 16px 'IBM Plex Mono'">{{ detail.amt }} €</span></div>
+            <div style="border:1px solid #e6e7e1;background:#fff;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:2px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">İçerik</span><span style="font:500 13px 'Karla'">{{ detail.items }}</span></div>
+            <div style="border:1px solid #e6e7e1;background:#fff;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:2px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Teslim</span><span style="font:500 13px 'Karla'">{{ detail.delivery }}</span></div>
+          </div>
+          <div style="border:1px solid #e6e7e1;background:#fff;border-radius:9px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font:500 12px 'Karla';color:#6a7065">Tahsilat</span>
+            <span style="font:600 13px 'IBM Plex Mono';color:{{ detail.payFg }}">{{ detail.pay }}</span>
+          </div>
+          <span style="font:400 11.5px/1.5 'Karla';color:#8b9086">Bu ekran listeler ve dağıtır; tek tek düzenleme sipariş detay ekranında yapılır. Durum ilerletme ve rota atama buradan tetiklenir.</span>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5">
+          <span style="font:600 12.5px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:8px;padding:9px 14px;cursor:pointer">Rota ata</span>
+          <span onClick="{{ closeDetail }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer;margin-left:auto">Kapat</span>
+          <span style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer">Durumu ilerlet →</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="width:100%;max-width:1360px;box-sizing:border-box;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 30px;display:flex;flex-direction:column;gap:8px">
+    <span style="font:700 15px 'Space Grotesk';color:#3a4147">Tezgâh sözleşmesi (kodlayan ajan için)</span>
+    <ul style="margin:0;padding-left:20px;font:400 13.5px/1.75 'Karla';color:#6a7065">
+      <li><strong>Durum omurgası</strong> → sekme sayaçları canlı iş kuyruğu; renk noktası tek bakışta durum (onaylandı → hazırlanıyor → hazır → yolda → teslim). Gecikmiş/dikkat isteyen satır ambere/kırmızıya kayar.</li>
+      <li><strong>B2B/B2C ayrımı</strong> → kanal rozeti + filtre; tahsilat mantığı ayrışır (B2C peşin/kapıda, B2B vadeli havale). Tutar B2B'de vade durumuyla okunur.</li>
+      <li><strong>Tahsilat sütunu</strong> → "ödendi / kapıda X € / vade 12 Tem" net; gecikmiş vade kırmızı. Tahsilat burada başlar, Para'da eşleşir.</li>
+      <li><strong>Satırdan detaya</strong> → tıkla → sipariş detay; toplu seçim → rota atama / durum ilerletme. Bu ekran listeler ve dağıtır, tek tek düzenlemeyi detayda yapar.</li>
+      <li><strong>Rol duvarı</strong> → marj/maliyet burada yok (Raporlar'da); müşteriye giden metin buradan üretilmez.</li>
+    </ul>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { ordersVisible: 12, tab: 'all', chan: 'all', detail: null };
+  onOrdersScroll = (e) => {
+    const el = e.target;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 90 && this.state.ordersVisible < this._ordersTotal) {
+      this.setState(s => ({ ordersVisible: Math.min(s.ordersVisible + 10, this._ordersTotal) }));
+    }
+  };
+  renderVals() {
+    const nav = [
+      { label:'Panel' }, { label:'Siparişler', act:true }, { label:'Ürünler' }, { label:'Müşteriler' },
+      { label:'Para' }, { label:'Raporlar' }, { label:'Analitik' }, { label:'Rotalar' },
+    ].map(n => ({ label:n.label, fg:n.act?'#22251f':'#6a7065', bg:n.act?'#e9ede0':'transparent', edge:n.act?'#5f7a2c':'transparent' }));
+
+    const curTab = this.state.tab, curChan = this.state.chan;
+
+    const b2c=['#5f7a2c','#eef4e2'], b2b=['#9a6416','#fdf1e3'];
+    const st = {
+      onay:['#3a6b8a','#e6eef3','#3a6b8a'], hazir:['#9a6416','#fdf1e3','#c98a2e'],
+      ready:['#4a6121','#eef4e2','#5f7a2c'], yolda:['#5a4a8a','#ece8f5','#6a5acd'],
+      teslim:['#6a7065','#eef0ea','#9aa094'], sorun:['#a5443c','#fbe9e7','#c2571f'],
+    };
+    const mk = (no,name,items,amt,ch,delivery,dmeta,stKey,status,pay,payFg,rowBg) => {
+      const [chFg,chBg] = ch==='B2B'?b2b:b2c; const [stFg,stBg,stDot]=st[stKey];
+      return { no,name,items,amt,channel:ch,chFg,chBg,delivery,deliveryMeta:dmeta,stKey,status,stFg,stBg,stDot,pay,payFg:payFg||'#3a3f37',rowBg:rowBg||'transparent' };
+    };
+    const orders = [
+      mk('#2452','Ayşe Kaya','2 paket · soğuk zincir','48,00','B2C','Rota · 14:00','Strasbourg centre','hazir','Hazırlanıyor','Ödendi · online','#4a6121'),
+      mk('#2451','Café Marceau','Baklava 3kg + 2','312,00','B2B','Rota · 15:30','Place Broglie','ready','Hazır','Vade 12 Tem · geçti','#a5443c','#fbe9e7'),
+      mk('#2450','Restaurant Anatolie','6 koli','466,00','B2B','Rota · 16:00','Rue du Fossé','onay','Onaylandı','Kapıda 466 € · nakit','#9a6416'),
+      mk('#2449','M. Leroy','1 paket','24,50','B2C','Rota · 14:30','Quai des Bateliers','yolda','Yolda','Kapıda 24,50 € · kart','#9a6416'),
+      mk('#2448','Épicerie du Port','2 koli','188,00','B2B','Rota · 16:30','Rue de Zurich','yolda','Yolda','Ödendi · havale','#4a6121'),
+      mk('#2447','B. Meunier','3 paket','38,50','B2C','Kargo','Colissimo · yarın','onay','Onaylandı','Ödendi · online','#4a6121'),
+      mk('#2446','Sofia R.','Fıstıklı baklava 1kg','34,00','B2C','Rota · 15:00','Neudorf','teslim','Teslim','Ödendi · online','#4a6121'),
+      mk('#2445','Traiteur Yıldız','8 koli','624,00','B2B','Rota · 17:00','Cronenbourg','hazir','Hazırlanıyor','Vade 30 Tem','#3a3f37'),
+      mk('#2444','K. Demir','2 paket','52,00','B2C','Rota · 14:15','Esplanade','teslim','Teslim','Ödendi · online','#4a6121'),
+      mk('#2443','Le Petit Marché','4 koli','276,00','B2B','Rota · 16:45','Krutenau','sorun','Sorunlu','Ulaşılamadı · tekrar','#a5443c','#fdf7f6'),
+    ];
+    // uzun liste — infinite scroll için üretilir
+    const b2cNames=['Ayşe Kaya','M. Leroy','B. Meunier','Sofia R.','K. Demir','J. Bernard','L. Petit','N. Aydın','C. Roux','H. Öz','P. Girard','E. Yılmaz'];
+    const b2bNames=['Café Marceau','Restaurant Anatolie','Épicerie du Port','Traiteur Yıldız','Le Petit Marché','Bistrot du Rhin','Brasserie Kléber','Snack Bosphore'];
+    const b2cItems=['1 paket','2 paket · soğuk zincir','3 paket','1 paket · baklava'];
+    const b2bItems=['2 koli','4 koli','6 koli','8 koli · hacimli'];
+    const stKeys=['onay','hazir','ready','yolda','teslim'];
+    const stName={onay:'Onaylandı',hazir:'Hazırlanıyor',ready:'Hazır',yolda:'Yolda',teslim:'Teslim'};
+    let seed=13; const rnd=()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
+    const ordersAll = orders.slice();
+    for (let i=0;i<46;i++){
+      const isB2B=rnd()<0.42; const no='#'+(2442-i);
+      const stKey=stKeys[Math.floor(rnd()*stKeys.length)];
+      const paid = stKey==='teslim' || rnd()<0.5;
+      let pay,payFg;
+      if (isB2B){ if(paid){pay='Ödendi · havale';payFg='#4a6121';} else {const g=rnd()<0.25; pay=g?'Vade 12 Tem · geçti':'Vade 30 Tem'; payFg=g?'#a5443c':'#3a3f37';} }
+      else { if(paid){pay='Ödendi · online';payFg='#4a6121';} else {const kart=rnd()<0.5; pay='Kapıda '+(10+Math.floor(rnd()*90))+' € · '+(kart?'kart':'nakit'); payFg='#9a6416';} }
+      const amt=(isB2B? (120+Math.floor(rnd()*520)) : (18+Math.floor(rnd()*70)));
+      ordersAll.push(mk(no, isB2B?b2bNames[Math.floor(rnd()*b2bNames.length)]:b2cNames[Math.floor(rnd()*b2cNames.length)],
+        isB2B?b2bItems[Math.floor(rnd()*b2bItems.length)]:b2cItems[Math.floor(rnd()*b2cItems.length)],
+        amt.toLocaleString('fr-FR')+',00', isB2B?'B2B':'B2C',
+        rnd()<0.15?'Kargo':'Rota · '+(14+Math.floor(rnd()*4))+':'+(rnd()<0.5?'00':'30'),
+        isB2B?'Strasbourg':'centre', stKey, stName[stKey], pay, payFg));
+    }
+    // sekme filtresi + kanal filtresi
+    const filtered = ordersAll.filter(o =>
+      (curTab==='all' || o.stKey===curTab) && (curChan==='all' || o.channel===curChan));
+
+    const cnt = k => k==='all' ? ordersAll.length : ordersAll.filter(o=>o.stKey===k).length;
+    const tabDefs = [
+      { key:'all', label:'Tümü' }, { key:'onay', label:'Onaylandı' }, { key:'hazir', label:'Hazırlanıyor' },
+      { key:'yolda', label:'Yolda' }, { key:'teslim', label:'Teslim' }, { key:'sorun', label:'Sorunlu', warn:true },
+    ];
+    const tabs = tabDefs.map(t => {
+      const act = curTab===t.key;
+      return { label:t.label, count:String(cnt(t.key)),
+        fg: act?'#22251f':'#6a7065', edge: act?'#5f7a2c':'transparent',
+        cfg: t.warn?'#9a6416':(act?'#4a6121':'#8b9086'), cbg: t.warn?'#fdf1e3':(act?'#e9ede0':'#eef0ea'),
+        select: () => this.setState({ tab:t.key, ordersVisible:12 }) };
+    });
+
+    const chanDefs = [ {key:'all',label:'Tümü'}, {key:'B2C',label:'B2C'}, {key:'B2B',label:'B2B'} ];
+    const chans = chanDefs.map(c => {
+      const act = curChan===c.key;
+      const tone = c.key==='B2B' ? ['#9a6416','#e6d3bf'] : ['#5f7a2c','#cdd8b6'];
+      return { label:c.label,
+        fg: act?'#fff':tone[0], bg: act?(c.key==='B2B'?'#9a6416':'#5f7a2c'):'transparent', bd: act?'transparent':tone[1],
+        select: () => this.setState({ chan:c.key, ordersVisible:12 }) };
+    });
+
+    this._ordersTotal = filtered.length;
+    const ordersShown = filtered.slice(0, this.state.ordersVisible).map(o => ({
+      ...o, open: () => this.setState({ detail: o }) }));
+    const moreOrders = this.state.ordersVisible < filtered.length;
+
+    const d = this.state.detail;
+    return {
+      nav, tabs, chans, ordersShown, moreOrders, onOrdersScroll: this.onOrdersScroll,
+      detailOpen: !!d, detail: d || {},
+      closeDetail: () => this.setState({ detail: null }), stop: (e)=>e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

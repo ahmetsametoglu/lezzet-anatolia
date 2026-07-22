@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Karla:wght@400..700&amp;display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:16px">
+
+  <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+    <span style="font:700 20px 'Space Grotesk';color:#22251f">Para — hesaplar, hareketler, banka eşleştirme</span>
+    <span style="font:400 13.5px 'Karla';color:#6a7065">Veri Masası dili · tek liste, hesap bir filtre. Kasa · banka · Stripe aynı kavram.</span>
+  </div>
+
+  <div data-screen-label="Para Tezgah" style="width: 100%; max-width: 1360px; box-sizing: border-box; height: 866px; background: #fbfbf9; border: 1px solid #e2e3dd; border-radius: 8px; overflow: hidden; display: flex; color: #22251f">
+
+    <dc-import name="AdminSidebar" active="para" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+    <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+      <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+          <span style="font:600 22px 'Space Grotesk'">Para</span>
+          <span style="font:400 12px 'Karla';color:#8b9086">İşletme para takibi · resmî muhasebe değil</span>
+        </div>
+        <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 13px">+ Hareket</span>
+        <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 13px">⇄ Transfer</span>
+        <span style="font:500 12.5px 'IBM Plex Mono';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 14px">↑ Banka dosyası</span>
+      </div>
+
+      <!-- HESAP BAKİYELERİ -->
+      <div style="padding:16px 24px;border-bottom:1px solid #eef0ea;display:flex;gap:0;background:#f8f9f5">
+        <sc-for list="{{ accounts }}" as="a" hint-placeholder-count="4">
+          <div style="flex:1;padding:2px 20px;border-right:1px solid #e4e6de;display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="width:7px;height:7px;border-radius:2px;background:{{ a.dot }}"></span>
+              <span style="font:500 11px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#6a7065">{{ a.name }}</span>
+            </div>
+            <span style="font:500 24px 'IBM Plex Mono';color:#22251f;letter-spacing:-.02em">{{ a.bal }}</span>
+            <span style="font:400 11px 'IBM Plex Mono';color:{{ a.dfg }}">{{ a.delta }}</span>
+          </div>
+        </sc-for>
+        <div style="flex:1;padding:2px 20px;display:flex;flex-direction:column;gap:4px">
+          <span style="font:500 11px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#5f7a2c">Toplam</span>
+          <span style="font:500 24px 'IBM Plex Mono';color:#22251f;letter-spacing:-.02em">32.612 €</span>
+          <span style="font:400 11px 'IBM Plex Mono';color:#4a6121">↑ 2.140 € / 30g</span>
+        </div>
+      </div>
+
+      <!-- FİLTRE + MUTABAKAT -->
+      <div style="padding:11px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font:500 11px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#8b9086;margin-right:2px">Hesap</span>
+        <span style="font:600 12px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:14px;padding:5px 12px">Tümü</span>
+        <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:14px;padding:5px 12px">Kasa</span>
+        <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:14px;padding:5px 12px">Crédit Mutuel</span>
+        <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:14px;padding:5px 12px">Stripe</span>
+        <span style="width:1px;height:18px;background:#dfe1d9;margin:0 4px"></span>
+        <span style="font:500 12px 'Karla';color:#6a7065;border:1px dashed #d2d4cb;border-radius:14px;padding:5px 12px">+ tip</span>
+        <span style="font:500 12px 'Karla';color:#6a7065;border:1px dashed #d2d4cb;border-radius:14px;padding:5px 12px">+ tarih</span>
+        <span style="margin-left:auto;font:600 12px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:14px;padding:5px 12px;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54z"/></svg>7 eşleşmemiş satır</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.65fr 1fr;flex:1;min-height:0;overflow:hidden">
+        <!-- HAREKET TABLOSU -->
+        <div style="border-right:1px solid #e6e7e1;display:flex;flex-direction:column;min-height:0">
+          <div style="display:grid;grid-template-columns:70px 1fr 96px 118px 20px;gap:0 12px;padding:10px 24px;border-bottom:1px solid #e6e7e1;font:500 10.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086;background:#f8f9f5">
+            <span>Tarih</span><span>Açıklama</span><span style="text-align:right">Tutar</span><span>Hesap · tip</span><span></span>
+          </div>
+          <div style="overflow-y:auto;flex:1;min-height:0" onScroll="{{ onMovesScroll }}">
+          <sc-for list="{{ movesShown }}" as="m" hint-placeholder-count="12">
+            <div style="display:grid;grid-template-columns:70px 1fr 96px 118px 20px;gap:0 12px;padding:11px 24px;border-bottom:1px solid #f0f1ec;align-items:center">
+              <span style="font:400 11.5px 'IBM Plex Mono';color:#8b9086">{{ m.date }}</span>
+              <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                <span style="font:500 13px 'Karla';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.desc }}</span>
+                <span style="font:400 11px 'Karla';color:{{ m.refFg }}">{{ m.ref }}</span>
+              </div>
+              <span style="text-align:right;font:500 13.5px 'IBM Plex Mono';color:{{ m.amtFg }}">{{ m.amt }}</span>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <span style="font:500 11.5px 'Karla';color:#3a3f37">{{ m.acct }}</span>
+                <span style="font:400 10.5px 'Karla';color:#8b9086">{{ m.type }}</span>
+              </div>
+              <span style="width:9px;height:9px;border-radius:50%;background:{{ m.mDot }};justify-self:center" title="{{ m.mTitle }}"></span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ moreMoves }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px;text-align:center;font:500 11.5px 'IBM Plex Mono';color:#9aa094;display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:12px;height:12px;border:2px solid #cdd0c8;border-top-color:#5f7a2c;border-radius:50%;display:inline-block;animation:sp .7s linear infinite"></span>daha fazla yükleniyor…</div>
+          </sc-if>
+          </div>
+        </div>
+
+        <!-- BANKA EŞLEŞTİRME KUYRUĞU -->
+        <div style="display:flex;flex-direction:column;background:#f8f9f5">
+          <div style="padding:12px 22px;border-bottom:1px solid #e6e7e1;display:flex;flex-direction:column;gap:2px">
+            <span style="font:600 14px 'Space Grotesk'">Banka satırı eşleştirme</span>
+            <span style="font:400 11.5px 'Karla';color:#8b9086">crédit-mutuel-tem.csv · şablon tanındı · sistem önerir, siz onaylarsınız</span>
+          </div>
+          <div style="padding:16px 22px;display:flex;flex-direction:column;gap:12px;overflow:auto">
+            <sc-for list="{{ matches }}" as="q" hint-placeholder-count="3">
+              <div style="background:#fff;border:1px solid {{ q.bd }};border-radius:9px;padding:13px 15px;display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline">
+                  <span style="font:500 12.5px 'Karla';color:#22251f;max-width:170px">{{ q.bankLine }}</span>
+                  <span style="font:500 14px 'IBM Plex Mono';color:{{ q.amtFg }}">{{ q.amt }}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;background:{{ q.sugBg }};border-radius:6px;padding:8px 10px">
+                  <span style="font:600 10px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:{{ q.sugFg }};flex:none">{{ q.sugLabel }}</span>
+                  <span style="font:500 12px 'Karla';color:#3a3f37;flex:1">{{ q.suggestion }}</span>
+                </div>
+                <div style="display:flex;gap:7px">
+                  <span style="flex:1;text-align:center;font:600 12px 'Space Grotesk';color:{{ q.okFg }};background:{{ q.okBg }};border:1px solid {{ q.okBd }};border-radius:6px;padding:8px">{{ q.okLabel }}</span>
+                  <span style="text-align:center;font:600 12px 'Space Grotesk';color:#6a7065;border:1px solid #d9dbd2;border-radius:6px;padding:8px 12px">Düzelt</span>
+                  <span style="text-align:center;font:600 12px 'Space Grotesk';color:#8b9086;border:1px solid #e4e6de;border-radius:6px;padding:8px 12px">Atla</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="width:100%;max-width:1360px;box-sizing:border-box;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 30px;display:flex;flex-direction:column;gap:8px">
+    <span style="font:700 15px 'Space Grotesk';color:#3a4147">Tezgâh sözleşmesi (kodlayan ajan için)</span>
+    <ul style="margin:0;padding-left:20px;font:400 13.5px/1.75 'Karla';color:#6a7065">
+      <li><strong>Tek model</strong> → kasa/banka/Stripe aynı kavram; hesap yalnız bir filtre çipi. Ayrı ekran/ayrı mantık yok. Bakiye hareketlerden hesaplanır, elle yazılmaz.</li>
+      <li><strong>Eşleştirme = öneri + onay</strong> → yeşil rozet güçlü aday (onayla), amber çoklu aday (seç), gri önerisiz (elle bağla). Otomatik kabul yok; import satırı silinmez, eşleşmesi değişir.</li>
+      <li><strong>Mutabakat kuyruğu</strong> → sağ üstteki "eşleşmemiş satır" sayacı iş kuyruğudur; "her şey mutabık" hali iyi haber olarak gösterilir.</li>
+      <li><strong>Sipariş tahsilatı elle girilmez</strong> → online/kapıda tahsilat kendi akışından düşer; elle giriş gider/transfer/sermaye içindir. Reklam giderinde <em>kampanya etiketi</em> zorunlu — Analitik'teki ROAS köprüsü budur.</li>
+      <li><strong>İç terim yok</strong> → "MoneyMovement / reconciled / BankImportProfile" değil; "hareket · eşleşti/eşleşmedi · banka şablonu".</li>
+    </ul>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { movesVisible: 14 };
+  onMovesScroll = (e) => {
+    const el = e.target;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 90 && this.state.movesVisible < this._movesTotal) {
+      this.setState(s => ({ movesVisible: Math.min(s.movesVisible + 10, this._movesTotal) }));
+    }
+  };
+  renderVals() {
+    const nav = [
+      { label:'Panel' }, { label:'Siparişler' }, { label:'Ürünler' }, { label:'Müşteriler' },
+      { label:'Para', act:true }, { label:'Raporlar' }, { label:'Analitik' }, { label:'Rotalar' },
+    ].map(n => ({ label:n.label, fg:n.act?'#22251f':'#6a7065', bg:n.act?'#e9ede0':'transparent', edge:n.act?'#5f7a2c':'transparent' }));
+
+    const accounts = [
+      { name:'Kasa (nakit)', bal:'4.180 €', delta:'↑ 476 € dün', dfg:'#4a6121', dot:'#5f7a2c' },
+      { name:'Crédit Mutuel', bal:'21.340 €', delta:'↓ 1.250 € /30g', dfg:'#b0561f', dot:'#3a6b8a' },
+      { name:'Stripe', bal:'7.092 €', delta:'↑ 2.914 € /30g', dfg:'#4a6121', dot:'#6a5acd' },
+    ];
+
+    const inc='#2f6b3a', out='#22251f', ref='#5f7a2c';
+    const moves = [
+      { date:'24 Tem', desc:'Kurye kapanışı — Murat', ref:'kasa teslimi · fark −10 €', refFg:'#9a6416', amt:'+476,00', amtFg:inc, acct:'Kasa', type:'sipariş ödemesi', mDot:'#4a6121', mTitle:'eşleşti' },
+      { date:'24 Tem', desc:'Stripe → Crédit Mutuel', ref:'transfer', refFg:'#8b9086', amt:'+2.400,00', amtFg:inc, acct:'C. Mutuel', type:'transfer', mDot:'#4a6121', mTitle:'eşleşti' },
+      { date:'23 Tem', desc:'Total Access — akaryakıt', ref:'gider · araç', refFg:'#8b9086', amt:'−92,40', amtFg:out, acct:'C. Mutuel', type:'gider · akaryakıt', mDot:'#4a6121', mTitle:'eşleşti' },
+      { date:'23 Tem', desc:'Meta Ads', ref:'kampanya: bayram-ig', refFg:ref, amt:'−280,00', amtFg:out, acct:'C. Mutuel', type:'gider · reklam', mDot:'#4a6121', mTitle:'eşleşti' },
+      { date:'22 Tem', desc:'LZA-2451 — Café Marceau', ref:'sipariş #2451', refFg:ref, amt:'+312,00', amtFg:inc, acct:'C. Mutuel', type:'sipariş ödemesi · B2B', mDot:'#4a6121', mTitle:'eşleşti' },
+      { date:'22 Tem', desc:'VIREMENT 8829 LEROY', ref:'öneri bekliyor', refFg:'#9a6416', amt:'+188,00', amtFg:inc, acct:'C. Mutuel', type:'—', mDot:'#c98a2e', mTitle:'eşleşmedi' },
+      { date:'21 Tem', desc:'Metro Cash&Carry', ref:'stok alımı #A-118', refFg:ref, amt:'−1.240,00', amtFg:out, acct:'C. Mutuel', type:'stok alımı', mDot:'#4a6121', mTitle:'eşleşti' },
+      { date:'21 Tem', desc:'İade — B. Meunier', ref:'sipariş #2438', refFg:ref, amt:'−38,50', amtFg:'#b0561f', acct:'Stripe', type:'iade', mDot:'#4a6121', mTitle:'eşleşti' },
+      { date:'20 Tem', desc:'PRLV SEPA INCONNU', ref:'öneri bekliyor', refFg:'#9a6416', amt:'−64,90', amtFg:out, acct:'C. Mutuel', type:'—', mDot:'#c98a2e', mTitle:'eşleşmedi' },
+    ];
+    // uzun geçmiş — infinite scroll için üretilir
+    const pool = [
+      ['LZA sipariş ödemesi','sipariş #',inc,'Stripe','sipariş ödemesi · B2C','+',[24.5,38,48,52,66,34]],
+      ['B2B havale','sipariş #',inc,'C. Mutuel','sipariş ödemesi · B2B','+',[188,276,312,466,624]],
+      ['Total Access — akaryakıt','gider · araç',out,'C. Mutuel','gider · akaryakıt','−',[64.4,72.1,88.9,92.4]],
+      ['Metro Cash&Carry','stok alımı #A-',out,'C. Mutuel','stok alımı','−',[840,1120,1240,1560]],
+      ['Meta Ads','kampanya: bayram-ig',out,'C. Mutuel','gider · reklam','−',[120,180,280]],
+      ['Kurye kapanışı — nakit','kasa teslimi',inc,'Kasa','sipariş ödemesi','+',[312,404,476,528]],
+      ['İade müşteri','sipariş #','#b0561f','Stripe','iade','−',[24.5,38.5,52]],
+      ['Stripe → Crédit Mutuel','transfer',inc,'C. Mutuel','transfer','+',[1200,2000,2400]],
+      ['Kira — depo','gider · kira',out,'C. Mutuel','gider · kira','−',[1450]],
+      ['SEPA bilinmeyen','öneri bekliyor',out,'C. Mutuel','—','−',[42.9,64.9,88]],
+    ];
+    const days=['24','23','22','21','20','19','18','17','16','15','14','13','12','11','10','09','08'];
+    const fmt=n=>n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const movesAll = moves.slice();
+    let seed=7;
+    const rnd=()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
+    for (let i=0;i<48;i++){
+      const p=pool[Math.floor(rnd()*pool.length)];
+      const v=p[6][Math.floor(rnd()*p[6].length)];
+      const d=days[Math.min(days.length-1,4+Math.floor(i/3))];
+      const unmatched=p[4]==='—';
+      movesAll.push({
+        date:`${d} Tem`, desc:p[0], ref: p[1].endsWith('#')? p[1]+(2400-i): p[1],
+        refFg: p[1].startsWith('kampanya')||p[1].startsWith('sipariş')||p[1].startsWith('stok')?'#5f7a2c':(unmatched?'#9a6416':'#8b9086'),
+        amt:(p[5]==='+'?'+':'−')+fmt(v), amtFg:p[2], acct:p[3], type:p[4],
+        mDot: unmatched?'#c98a2e':'#4a6121', mTitle: unmatched?'eşleşmedi':'eşleşti'
+      });
+    }
+    this._movesTotal = movesAll.length;
+    const movesShown = movesAll.slice(0, this.state.movesVisible);
+    const moreMoves = this.state.movesVisible < movesAll.length;
+
+    const matches = [
+      { bankLine:'CB CAFE MARCEAU 312,00', amt:'+312,00', amtFg:inc, bd:'#cdd8b6',
+        sugBg:'#eef4e2', sugFg:'#4a6121', sugLabel:'güçlü aday', suggestion:'Sipariş #2451 · Café Marceau · vadeli havale → "ödendi" yapar',
+        okLabel:'✓ Onayla', okFg:'#fff', okBg:'#5f7a2c', okBd:'#5f7a2c' },
+      { bankLine:'VIREMENT 8829 LEROY', amt:'+188,00', amtFg:inc, bd:'#ecd9b4',
+        sugBg:'#fdf3e4', sugFg:'#9a6416', sugLabel:'2 aday', suggestion:'Sipariş #2447 (188 €) ya da #2452 (188 €) — hangisi?',
+        okLabel:'Seç', okFg:'#9a6416', okBg:'#fff', okBd:'#ecd9b4' },
+      { bankLine:'PRLV SEPA INCONNU', amt:'−64,90', amtFg:out, bd:'#e4e6de',
+        sugBg:'#f0f1ec', sugFg:'#8b9086', sugLabel:'öneri yok', suggestion:'Eşleşen bulunamadı — tip/kategori seçip elle bağlayın',
+        okLabel:'Elle bağla', okFg:'#3a3f37', okBg:'#fff', okBd:'#d9dbd2' },
+    ];
+
+    return { nav, accounts, movesShown, moreMoves, onMovesScroll: this.onMovesScroll, matches };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Talepler / Şikâyetler · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Tek kuyruk, üç durumlu sade yaşam döngüsü. İade burada tetiklenir, siparişte sonuçlanır. AI/insan ayrımı korunur.</span>
+    </div>
+
+    <div data-screen-label="Talepler Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="talepler" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">Talepler</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">3 açık · 2 işlemde · 1 AI yürütüyor</span>
+          </div>
+          <span onClick="{{ openNew }}" style="font:500 12.5px 'IBM Plex Mono';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 14px;cursor:pointer">+ Elle talep</span>
+        </div>
+        <div style="padding:10px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+            <span onClick="{{ c.select }}" style="font:600 12px 'Space Grotesk';color:{{ c.fg }};background:{{ c.bg }};border:1px solid {{ c.bd }};border-radius:14px;padding:5px 12px;cursor:pointer">{{ c.label }}</span>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:330px 1fr;flex:1;min-height:0;overflow:hidden">
+          <!-- KUYRUK -->
+          <div style="border-right:1px solid #e6e7e1;display:flex;flex-direction:column;min-height:0;overflow-y:auto">
+            <sc-for list="{{ queue }}" as="q" hint-placeholder-count="6">
+              <div onClick="{{ q.select }}" style="padding:12px 18px;border-bottom:1px solid #f0f1ec;display:flex;flex-direction:column;gap:5px;cursor:pointer;background:{{ q.rowBg }};border-left:3px solid {{ q.edge }}">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font:600 13px 'Karla';color:#22251f;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ q.customer }}</span>
+                  <span style="font:600 9.5px 'Space Grotesk';color:{{ q.tipFg }};background:{{ q.tipBg }};border-radius:6px;padding:2px 7px">{{ q.tip }}</span>
+                </div>
+                <span style="font:400 11.5px 'Karla';color:#6a7065;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ q.preview }}</span>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font:600 9.5px 'Space Grotesk';color:{{ q.stFg }};background:{{ q.stBg }};border-radius:6px;padding:2px 7px">{{ q.status }}</span>
+                  <sc-if value="{{ q.ai }}" hint-placeholder-val="{{ false }}"><span style="font:600 9.5px 'Space Grotesk';color:#5a4a8a;background:#ece8f5;border-radius:6px;padding:2px 7px">AI yürütüyor</span></sc-if>
+                  <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono';color:#9aa094">{{ q.ago }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- DETAY -->
+          <div style="display:flex;flex-direction:column;background:#f8f9f5;min-height:0">
+            <div style="padding:14px 20px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px">
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font:600 15px 'Space Grotesk';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ det.customer }}</span><span style="font:600 9.5px 'Space Grotesk';color:{{ det.tipFg }};background:{{ det.tipBg }};border-radius:6px;padding:2px 7px;flex:none">{{ det.tip }}</span></div>
+                <span style="font:400 11px 'Karla';color:#8b9086">{{ det.meta }}</span>
+              </div>
+              <div style="display:flex;background:#eef0ea;border:1px solid #e0e2da;border-radius:8px;padding:2px;flex:none">
+                <sc-for list="{{ statusBtns }}" as="s" hint-placeholder-count="3"><span onClick="{{ s.select }}" style="font:600 10.5px 'Space Grotesk';padding:5px 9px;border-radius:6px;cursor:pointer;background:{{ s.bg }};color:{{ s.fg }}">{{ s.label }}</span></sc-for>
+              </div>
+            </div>
+
+            <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+              <sc-if value="{{ det.hasOrder }}" hint-placeholder-val="{{ true }}">
+                <div style="border:1px solid #e6e7e1;background:#fff;border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 12px 'Space Grotesk';color:#22251f">Bağlı sipariş {{ det.orderNo }}</span><span style="font:600 11px 'Space Grotesk';color:#5f7a2c">Siparişi aç →</span></div>
+                  <sc-for list="{{ det.items }}" as="it" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #f0f1ec"><span style="width:16px;height:16px;border-radius:4px;background:#fbe9e7;color:#a5443c;display:grid;place-items:center;font:700 9px 'Space Grotesk'">!</span><span style="font:500 12.5px 'Karla';color:#3a3f37;flex:1">{{ it.name }}</span><span style="font:500 11.5px 'IBM Plex Mono';color:#8b9086">{{ it.qty }}</span></div></sc-for>
+                </div>
+              </sc-if>
+
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:500 10.5px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Müşterinin anlatımı</span>
+                <div style="background:#fff;border:1px solid #e6e7e1;border-radius:9px;padding:12px 14px;font:400 13px/1.6 'Karla';color:#3a3f37">{{ det.description }}</div>
+                <sc-if value="{{ det.hasPhoto }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;gap:8px"><sc-for list="{{ det.photos }}" as="p" hint-placeholder-count="2"><div style="width:72px;height:72px;border-radius:8px;background:#e9eae4;border:1px solid #e0e2da;display:grid;place-items:center;color:#b3b7ac"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.6"></circle><path d="m21 15-5-5L5 21"></path></svg></div></sc-for></div>
+                </sc-if>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:500 10.5px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Yazışma</span>
+                <sc-for list="{{ det.messages }}" as="m" hint-placeholder-count="3">
+                  <div style="display:flex;flex-direction:column;gap:3px;align-self:{{ m.align }};max-width:78%">
+                    <span style="font:600 9.5px 'Space Grotesk';color:{{ m.whoFg }}">{{ m.who }}</span>
+                    <div style="background:{{ m.bg }};border:1px solid {{ m.bd }};border-radius:10px;padding:9px 12px;font:400 12.5px/1.5 'Karla';color:#3a3f37">{{ m.text }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="border-top:1px solid #e6e7e1;padding:12px 20px;background:#f8f9f5;display:flex;flex-direction:column;gap:10px">
+              <sc-if value="{{ det.ai }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#ece8f5;border:1px solid #d8d0ec;border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:10px"><span style="font:500 11.5px 'Karla';color:#5a4a8a;flex:1">Bu talebi şu an AI ajanı yürütüyor. Devralırsanız AI susturulur, cevaplar sizden gider.</span><span onClick="{{ openDevral }}" style="font:600 11.5px 'Space Grotesk';color:#fff;background:#5a4a8a;border-radius:7px;padding:7px 12px;cursor:pointer">Devral</span></div>
+              </sc-if>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="flex:1;border:1px solid #d9dbd2;border-radius:9px;padding:10px 13px;font:400 13px 'Karla';color:#9aa094;background:#fff">Müşteriye cevap yaz… (aynen müşteriye görünür)</div>
+                <span onClick="{{ openIade }}" style="font:600 12px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:8px;padding:10px 13px;cursor:pointer">İade tetikle</span>
+                <span style="font:600 12px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 16px;cursor:pointer">Gönder</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBİL -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Talepler — mobil</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Kuyruk taraması ve kısa cevap tek elle. Müşterinin yüklediği fotoğraf net incelenebilir.</span>
+    </div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;justify-content:space-between"><span style="font:600 17px 'Space Grotesk';color:#22251f">Açık talepler</span><span style="font:500 10px 'IBM Plex Mono';color:#9a6416;background:#fdf1e3;border-radius:9px;padding:2px 8px">3</span></div>
+        <div style="padding:8px 16px;display:flex;flex-direction:column">
+          <sc-for list="{{ mobQueue }}" as="m" hint-placeholder-count="4">
+            <div style="padding:12px 0;border-bottom:1px solid #f0f1ec;display:flex;flex-direction:column;gap:4px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="font:600 13.5px 'Karla';color:#22251f;flex:1">{{ m.customer }}</span><span style="font:600 9.5px 'Space Grotesk';color:{{ m.tipFg }};background:{{ m.tipBg }};border-radius:6px;padding:2px 7px">{{ m.tip }}</span></div>
+              <span style="font:400 11.5px 'Karla';color:#6a7065">{{ m.preview }}</span>
+              <div style="display:flex;align-items:center;gap:7px"><span style="font:600 9.5px 'Space Grotesk';color:{{ m.stFg }};background:{{ m.stBg }};border-radius:6px;padding:2px 7px">{{ m.status }}</span><sc-if value="{{ m.ai }}" hint-placeholder-val="{{ false }}"><span style="font:600 9.5px 'Space Grotesk';color:#5a4a8a;background:#ece8f5;border-radius:6px;padding:2px 7px">AI</span></sc-if></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="width:340px;background:rgba(34,39,43,.35);border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14);display:flex;flex-direction:column;justify-content:flex-end;min-height:560px">
+        <div style="background:#fbfbf9;border-radius:20px 20px 26px 26px;padding:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="width:42px;height:5px;border-radius:3px;background:#d4d7ce;align-self:center"></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="font:600 15px 'Space Grotesk';color:#22251f;flex:1">Ayşe Kaya</span><span style="font:600 9.5px 'Space Grotesk';color:#a5443c;background:#fbe9e7;border-radius:6px;padding:2px 7px">Bozuk</span></div>
+          <span style="font:400 11px 'Karla';color:#8b9086">Sipariş #2451 · WhatsApp'tan</span>
+          <div style="background:#fff;border:1px solid #e6e7e1;border-radius:9px;padding:11px 13px;font:400 12.5px/1.5 'Karla';color:#3a3f37">"Baklavanın bir kutusu ezilmiş gelmiş, fotoğrafı ekliyorum."</div>
+          <div style="display:flex;gap:8px"><div style="width:80px;height:80px;border-radius:9px;background:#e9eae4;border:1px solid #e0e2da;display:grid;place-items:center;color:#b3b7ac"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.6"></circle><path d="m21 15-5-5L5 21"></path></svg></div></div>
+          <div style="display:flex;gap:9px">
+            <span style="flex:1;font:600 13px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:11px;padding:12px;text-align:center">İade tetikle</span>
+            <span style="flex:1.4;font:600 13px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:11px;padding:12px;text-align:center">Cevap yaz</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+        <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+          <li><strong>Web</strong> → kuyruk + detay + yazışma dizisi, sipariş bağı/kalemler, AI devralma, müşteri geçmişi.</li>
+          <li><strong>Mobil</strong> → kuyruk taraması, fotoğraf inceleme, kısa cevap, iade tetikleme.</li>
+          <li><strong>Kural</strong> → iade siparişte sonuçlanır (burada tetiklenir); AI/insan ayrımı korunur; iç bilgi müşteri metnine sızmaz.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- İADE / DEVRAL / ELLE DIALOG -->
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:440px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f">
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+          <span style="font:600 18px 'Space Grotesk';color:#22251f">{{ modalTitle }}</span>
+          <span style="font:400 13px/1.6 'Karla';color:#3a3f37">{{ modalBody }}</span>
+          <span style="font:500 11.5px/1.5 'Karla';color:#9a6416;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:8px;padding:10px 12px">{{ modalNote }}</span>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5"><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer;margin-left:auto">Vazgeç</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:{{ modalBtn }};border-radius:8px;padding:10px 20px;cursor:pointer">{{ modalCta }}</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { chip: 'acik', sel: 0, status: 'acik', modalOpen: false, modalKind: 'iade' };
+  renderVals() {
+    const tip = { bozuk:['#a5443c','#fbe9e7'], eksik:['#9a6416','#fdf1e3'], soru:['#3a6b8a','#e6eef3'], diger:['#6a7065','#eef0ea'] };
+    const stC = { acik:['#9a6416','#fdf1e3'], islemde:['#3a6b8a','#e6eef3'], cozuldu:['#4a6121','#eef4e2'] };
+    const tipName = { bozuk:'Bozuk', eksik:'Eksik', soru:'Soru', diger:'Diğer' };
+    const stName = { acik:'Açık', islemde:'İşlemde', cozuldu:'Çözüldü' };
+    const qDefs = [
+      { customer:'Ayşe Kaya', tip:'bozuk', preview:'Baklavanın bir kutusu ezilmiş gelmiş…', status:'acik', ai:false, ago:'12 dk', order:'#2451' },
+      { customer:'Café Marceau', tip:'eksik', preview:'6 koli sipariş ettim, 5 geldi.', status:'islemde', ai:false, ago:'1 saat', order:'#2451' },
+      { customer:'M. Leroy', tip:'soru', preview:'Kargoyla Almanya\u2019ya gönderiyor musunuz?', status:'acik', ai:true, ago:'2 saat', order:null },
+      { customer:'Sofia R.', tip:'bozuk', preview:'Künefe soğuk gelmiş.', status:'acik', ai:false, ago:'3 saat', order:'#2446' },
+      { customer:'Traiteur Yıldız', tip:'diger', preview:'Fatura adresini güncelleyebilir misiniz?', status:'islemde', ai:false, ago:'5 saat', order:null },
+      { customer:'K. Demir', tip:'soru', preview:'Teşekkürler, çözüldü.', status:'cozuldu', ai:false, ago:'dün', order:'#2444' },
+    ];
+    const sel = this.state.sel;
+    const queue = qDefs.map((q,i) => {
+      const on = i===sel;
+      return { customer:q.customer, tip:tipName[q.tip], tipFg:tip[q.tip][0], tipBg:tip[q.tip][1],
+        preview:q.preview, status:stName[q.status], stFg:stC[q.status][0], stBg:stC[q.status][1], ai:q.ai, ago:q.ago,
+        edge: on ? tip[q.tip][0] : 'transparent', rowBg: on ? '#eef4e2' : 'transparent',
+        select: () => this.setState({ sel:i, status:q.status }) };
+    });
+    const mobQueue = qDefs.slice(0,4).map(q => ({ customer:q.customer, tip:tipName[q.tip], tipFg:tip[q.tip][0], tipBg:tip[q.tip][1],
+      preview:q.preview, status:stName[q.status], stFg:stC[q.status][0], stBg:stC[q.status][1], ai:q.ai }));
+
+    const cur = qDefs[Math.min(sel, qDefs.length-1)];
+    const wayMap = cur.order ? 'sipariş detayından' : 'genel formdan';
+    const det = {
+      customer:cur.customer, tip:tipName[cur.tip], tipFg:tip[cur.tip][0], tipBg:tip[cur.tip][1],
+      meta:`${cur.ai?'WhatsApp\u2019tan':wayMap} · açıldı ${cur.ago} önce`,
+      hasOrder: !!cur.order, orderNo: cur.order || '',
+      items: cur.tip==='eksik' ? [{name:'6 koli baklava',qty:'1 eksik'}] : [{name:'Fıstıklı Baklava 1kg',qty:'1 ad.'}],
+      description: cur.preview + ' Detaylı olarak: ' + (cur.tip==='soru' ? 'bilgi rica ediyorum.' : 'ürünü teslim aldığımda fark ettim.'),
+      hasPhoto: cur.tip==='bozuk', photos:[1,2],
+      ai: cur.ai,
+      messages: cur.ai ? [
+        { who:'Müşteri', whoFg:'#8b9086', text:cur.preview, align:'flex-start', bg:'#fff', bd:'#e6e7e1' },
+        { who:'AI ajanı', whoFg:'#5a4a8a', text:'Evet, Almanya\u2019ya kargo gönderiyoruz. Kargo süresi 2–3 iş günüdür.', align:'flex-end', bg:'#ece8f5', bd:'#d8d0ec' },
+      ] : [
+        { who:'Müşteri', whoFg:'#8b9086', text:cur.preview, align:'flex-start', bg:'#fff', bd:'#e6e7e1' },
+        { who:'Selim A. (siz)', whoFg:'#4a6121', text:'Merhaba, çok üzgünüz. Konuyu inceliyoruz, en kısa sürede dönüş yapacağız.', align:'flex-end', bg:'#eef4e2', bd:'#cdd8b6' },
+      ],
+    };
+
+    const chipDefs = [ {k:'acik',l:'Açık'},{k:'islemde',l:'İşlemde'},{k:'cozuldu',l:'Çözüldü'},{k:'siparisli',l:'Siparişli'},{k:'ai',l:'AI yanıtladı'} ];
+    const chips = chipDefs.map(c => { const on=this.state.chip===c.k; return { label:c.l, fg:on?'#fff':'#5f7a2c', bg:on?'#5f7a2c':'transparent', bd:on?'transparent':'#cdd8b6', select:()=>this.setState({chip:c.k}) }; });
+
+    const sbDefs = [ {k:'acik',l:'Açık'},{k:'islemde',l:'İşlemde'},{k:'cozuldu',l:'Çözüldü'} ];
+    const statusBtns = sbDefs.map(s => { const on=this.state.status===s.k; return { label:s.l, bg:on?'#fff':'transparent', fg:on?'#22251f':'#6a7065', select:()=>this.setState({status:s.k}) }; });
+
+    const mk = this.state.modalKind;
+    const cfg = mk==='iade' ? { title:'İade tetikle', body:`${cur.customer} · ${cur.order||'sipariş yok'} için iade akışı başlatılır. Para ve stok kararı sipariş ekranında sonuçlanır; talep buna bağlanır ve sonucu buradan izlenir.`, note:'İade burada sonuçlanmaz — siparişteki iade akışı yürütür.', cta:'Siparişte iade başlat', btn:'#a5443c' }
+      : mk==='devral' ? { title:'AI\u2019dan devral', body:'Bu talebi üstleniyorsunuz. AI bu talepte susturulur; sonraki cevaplar sizden gider.', note:'Devralınca geri AI\u2019a bırakmak elle yapılır.', cta:'Devral', btn:'#5a4a8a' }
+      : { title:'Elle talep aç', body:'WhatsApp/telefon konuşmasından talep açılır: müşteri + varsa sipariş seçilir, tip belirlenir.', note:'Müşteri kendi tarafında bu talebi ve yazışmayı görür.', cta:'Talep oluştur', btn:'#5f7a2c' };
+
+    return {
+      chips, queue, mobQueue, det, statusBtns,
+      modalOpen: this.state.modalOpen, modalTitle:cfg.title, modalBody:cfg.body, modalNote:cfg.note, modalCta:cfg.cta, modalBtn:cfg.btn,
+      openIade: () => this.setState({ modalOpen:true, modalKind:'iade' }),
+      openDevral: () => this.setState({ modalOpen:true, modalKind:'devral' }),
+      openNew: () => this.setState({ modalOpen:true, modalKind:'elle' }),
+      closeModal: () => this.setState({ modalOpen:false }), stop: (e)=>e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

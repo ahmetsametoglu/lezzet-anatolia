@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+  body { margin:0; background:#e9e6df; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-wrap:wrap;gap:56px;padding:48px;align-items:flex-start">
+
+  <!-- WEB -->
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:1360px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Ürün Detay · Web (çok varyantlı, stokta, yorumlu)</span>
+    <div data-screen-label="Urun Detay Web" style="width:1360px;background:#faf6ec;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);color:#3a3f35">
+      <div style="background:#5f7a2c;color:#f3efe2;font:500 13px 'Karla';display:flex;justify-content:center;gap:28px;padding:8px 0">
+        <span>❄ Soğuk zincirle teslim</span><span>Strasbourg &amp; çevresinde kapıya teslim</span><span>Fransa geneline kargo</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:36px;padding:18px 48px;border-bottom:1px solid #e6dfcd">
+        <img src="assets/logo.jpg" style="height:58px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+        <nav style="display:flex;gap:28px;font:600 15px 'Karla';color:#3a4147">
+          <span style="color:#5f7a2c;border-bottom:2px solid #5f7a2c;padding-bottom:2px">Katalog</span><span>Paketler</span><span style="color:#b05c2e">Fırsatlar</span><span>Keşif</span><span>Professionnels</span>
+        </nav>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:18px">
+          <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e0d8c2;border-radius:24px;padding:9px 18px;width:250px;color:#9a917c;font:400 14px 'Karla'">🔍 Ürün ara…</div>
+          <span style="font:600 14px 'Karla';color:#8a8270">TR ▾</span>
+          <div style="position:relative;font-size:22px">🧺<span style="position:absolute;top:-6px;right:-10px;background:#b05c2e;color:#fff;font:700 11px 'Karla';border-radius:10px;padding:1px 6px">3</span></div>
+        </div>
+      </div>
+      <div style="padding:20px 48px 0;font:400 14px 'Karla';color:#8a8270"><span style="color:#5f7a2c;font-weight:700">← Katalog</span> · Tatlılar · Fıstıklı Baklava</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;padding:24px 48px 44px">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="height:440px"><image-slot id="prd-main" radius="20" placeholder="Ana ürün fotoğrafı — dilimlenmiş baklava, fıstık dokusu yakın çekim"></image-slot></div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+            <div style="height:90px;border:2px solid #5f7a2c;border-radius:12px;overflow:hidden"><image-slot id="prd-thumb-0" radius="10" placeholder="1"></image-slot></div>
+            <div style="height:90px"><image-slot id="prd-thumb-1" radius="12" placeholder="2"></image-slot></div>
+            <div style="height:90px"><image-slot id="prd-thumb-2" radius="12" placeholder="3"></image-slot></div>
+            <div style="height:90px;background:#f0e9d6;border-radius:12px;display:grid;place-items:center;font:700 14px 'Karla';color:#8a8270">+2</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:600 13px 'Karla';letter-spacing:.12em;text-transform:uppercase;color:#5f7a2c">Tatlılar</span>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+              <h1 style="margin:0;font:600 40px/1.15 'Lora';color:#343b41">Fıstıklı Baklava</h1>
+              <span style="font-size:22px;border:1px solid #e0d8c2;border-radius:50%;width:44px;height:44px;display:grid;place-items:center;background:#fff;flex:none" title="WhatsApp ile paylaş">↗</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="color:#d99a2b;font-size:16px;letter-spacing:2px">★★★★★</span>
+              <span style="font:700 15px 'Karla';color:#3a4147">4,7</span>
+              <span style="font:400 14px 'Karla';color:#8a8270">· 23 yorum</span>
+              <span style="font:600 13px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:12px;padding:3px 10px">● Stokta</span>
+            </div>
+          </div>
+          <p style="margin:0;font:400 16px/1.65 'Karla';color:#6d7261">Gaziantep usulü, kat kat el açması yufka ve bol Antep fıstığıyla. Fırından çıktığı gün şoklanır — çözdürüp 10 dakika ısıtın, bayram sofranız hazır.</p>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span style="font:700 15px 'Karla';color:#3a4147">Boy seçin</span>
+            <div style="display:flex;gap:12px">
+              <div style="border:2px solid #5f7a2c;background:#fff;border-radius:16px;padding:14px 20px;display:flex;flex-direction:column;gap:3px;min-width:150px">
+                <span style="font:700 15px 'Karla';color:#3a4147">700 g tepsi</span>
+                <span style="font:700 17px 'Karla';color:#343b41">16,90 €</span>
+                <span style="font:400 12.5px 'Karla';color:#8a8270">24,14 €/kg</span>
+              </div>
+              <div style="border:1.5px solid #d8cfb6;background:#fff;border-radius:16px;padding:14px 20px;display:flex;flex-direction:column;gap:3px;min-width:150px">
+                <span style="font:700 15px 'Karla';color:#3a4147">1 kg tepsi</span>
+                <span style="font:700 17px 'Karla';color:#343b41">22,90 €</span>
+                <span style="font:400 12.5px 'Karla';color:#8a8270">22,90 €/kg</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;align-items:center">
+            <span style="display:inline-flex;align-items:center;border:2px solid #5f7a2c;border-radius:24px;overflow:hidden;background:#fff">
+              <span style="font:700 20px 'Karla';color:#5f7a2c;padding:10px 18px">−</span>
+              <span style="font:700 17px 'Karla';color:#3a4147;min-width:52px;text-align:center;border-left:1px solid #ece5d2;border-right:1px solid #ece5d2;padding:10px 0">2</span>
+              <span style="font:700 20px 'Karla';color:#fff;background:#5f7a2c;padding:10px 18px">+</span>
+            </span>
+            <span style="background:#5f7a2c;color:#fff;font:700 17px 'Karla';padding:16px 40px;border-radius:30px;flex:1;text-align:center">Sepete ekle — 33,80 €</span>
+          </div>
+          <div style="display:flex;gap:20px;font:400 13.5px 'Karla';color:#6d7261;background:#f0e9d6;border-radius:14px;padding:14px 18px">
+            <span>❄ Soğuk zincirle gelir</span><span>🚚 Bölge içi kapıya teslim</span><span>📦 Kargoya uygun</span>
+          </div>
+        </div>
+      </div>
+      <div style="padding:0 48px 44px;display:grid;grid-template-columns:1.2fr 1fr;gap:40px">
+        <div style="display:flex;flex-direction:column;gap:22px">
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:24px 28px;display:flex;flex-direction:column;gap:12px">
+            <span style="font:600 22px 'Lora';color:#343b41">İçindekiler ve alerjenler</span>
+            <p style="margin:0;font:400 14.5px/1.7 'Karla';color:#6d7261">El açması yufka (<strong>buğday unu</strong>, su, tuz), Antep fıstığı (%28), <strong>tereyağı</strong>, şeker, su, limon suyu.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <span style="background:#f9ede2;color:#b05c2e;font:700 13px 'Karla';padding:6px 14px;border-radius:14px">⚠ Gluten (buğday)</span>
+              <span style="background:#f9ede2;color:#b05c2e;font:700 13px 'Karla';padding:6px 14px;border-radius:14px">⚠ Antep fıstığı</span>
+              <span style="background:#f9ede2;color:#b05c2e;font:700 13px 'Karla';padding:6px 14px;border-radius:14px">⚠ Süt (tereyağı)</span>
+            </div>
+            <span style="font:400 13px 'Karla';color:#8a8270">Aynı tesiste diğer sert kabuklu meyveler işlenmektedir.</span>
+          </div>
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:24px 28px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between">
+              <span style="font:600 22px 'Lora';color:#343b41">Besin değerleri</span>
+              <span style="font:400 13px 'Karla';color:#8a8270">100 g için · Net ağırlık: 700 g</span>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <sc-for list="{{ nutrition }}" as="n" hint-placeholder-count="5">
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0ead9;font:400 14px 'Karla';color:#3a3f35">
+                  <span>{{ n.k }}</span><span style="font-weight:700">{{ n.v }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:24px 28px;display:flex;flex-direction:column;gap:10px">
+            <span style="font:600 22px 'Lora';color:#343b41">Saklama ve hazırlama</span>
+            <p style="margin:0;font:400 14.5px/1.7 'Karla';color:#6d7261">Dondurucuda (−18 °C) paket üzerindeki asgari tazelik tarihine kadar saklayın. Buzdolabında 4-5 saatte çözünür; çözdükten sonra 3 gün içinde tüketin, <strong>tekrar dondurmayın</strong>. 160 °C fırında 10 dakika ısıtmanız yeterli.</p>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <span style="font:600 22px 'Lora';color:#343b41">Yorumlar</span>
+            <span style="font:700 14px 'Karla';color:#5f7a2c">Yorum yaz</span>
+          </div>
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:18px 22px;display:flex;align-items:center;gap:18px">
+            <span style="font:600 40px 'Lora';color:#343b41">4,7</span>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="color:#d99a2b;font-size:15px;letter-spacing:2px">★★★★★</span>
+              <span style="font:400 13px 'Karla';color:#8a8270">23 onaylı müşteri yorumu</span>
+            </div>
+          </div>
+          <sc-for list="{{ reviews }}" as="r" hint-placeholder-count="2">
+            <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:18px 22px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="width:38px;height:38px;border-radius:50%;background:#eef2e2;color:#5f7a2c;font:700 15px 'Karla';display:grid;place-items:center">{{ r.initial }}</span>
+                <div style="display:flex;flex-direction:column">
+                  <span style="font:700 14px 'Karla';color:#3a4147">{{ r.name }}</span>
+                  <span style="font:400 12px 'Karla';color:#8a8270">{{ r.when }} · onaylı alışveriş</span>
+                </div>
+                <span style="margin-left:auto;color:#d99a2b;font-size:13px;letter-spacing:1px">{{ r.stars }}</span>
+              </div>
+              <p style="margin:0;font:400 14px/1.6 'Karla';color:#6d7261">{{ r.text }}</p>
+            </div>
+          </sc-for>
+          <span style="font:700 14px 'Karla';color:#5f7a2c">23 yorumun tümü →</span>
+          <span style="font:400 12.5px 'Karla';color:#8a8270">Yorum yazma yalnız bu ürünü satın almış müşterilere açıktır.</span>
+        </div>
+      </div>
+      <div style="padding:0 48px 48px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <h2 style="margin:0;font:600 28px 'Lora';color:#343b41">Bunları da sevebilirsiniz</h2>
+          <span style="font:700 15px 'Karla';color:#5f7a2c">Tatlılar →</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px">
+          <sc-for list="{{ similar }}" as="p" hint-placeholder-count="4">
+            <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;overflow:hidden;display:flex;flex-direction:column">
+              <div style="height:150px"><image-slot id="prd-sim-{{ $index }}" shape="rect" placeholder="{{ p.name }}"></image-slot></div>
+              <div style="padding:12px 14px 14px;display:flex;flex-direction:column;gap:5px">
+                <span style="font:700 15px 'Karla';color:#3a4147">{{ p.name }}</span>
+                <span style="font:400 12.5px 'Karla';color:#8a8270">{{ p.weight }} · {{ p.unit }}</span>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px">
+                  <span style="font:700 16px 'Karla';color:#343b41">{{ p.price }}</span>
+                  <span style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';width:30px;height:30px;border-radius:15px;display:grid;place-items:center">+</span>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:#343b41;color:#c9cdc2;padding:28px 48px;display:flex;justify-content:space-between;font:400 14px 'Karla'">
+        <span style="font:600 17px 'Lora';color:#f3efe2">Lezzet Anatolia</span>
+        <div style="display:flex;gap:28px"><span>Hakkımızda</span><span>SSS</span><span>Professionnels</span><span>TR · FR · DE</span></div>
+      </div>
+    </div>
+
+    <span style="font:600 15px 'Karla';color:#3a4147;margin-top:12px">Durumlar — satın alma panelinin halleri</span>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div style="width:320px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Tek varyant</span>
+        <span style="font:600 22px 'Lora';color:#343b41">Kayseri Mantısı</span>
+        <div style="display:flex;flex-direction:column"><span style="font:700 20px 'Karla';color:#343b41">7,50 €</span><span style="font:400 12.5px 'Karla';color:#8a8270">500 g · 15,00 €/kg</span></div>
+        <span style="font:400 13px 'Karla';color:#6d7261">Boy seçim adımı hiç yok — doğrudan adet + ekle.</span>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span style="display:inline-flex;align-items:center;border:2px solid #5f7a2c;border-radius:20px;overflow:hidden;background:#fff"><span style="font:700 16px 'Karla';color:#5f7a2c;padding:7px 13px">−</span><span style="font:700 14px 'Karla';min-width:34px;text-align:center;color:#3a4147">1</span><span style="font:700 16px 'Karla';color:#fff;background:#5f7a2c;padding:7px 13px">+</span></span>
+          <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:12px 20px;border-radius:24px;flex:1;text-align:center">Sepete ekle</span>
+        </div>
+      </div>
+      <div style="width:320px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#b05c2e">İndirimli teklif</span>
+        <span style="font:600 22px 'Lora';color:#343b41">Ispanaklı Gözleme</span>
+        <div style="display:flex;align-items:center;gap:10px"><span style="font:700 20px 'Karla';color:#b05c2e">5,90 €</span><span style="font:400 15px 'Karla';color:#b3ab97;text-decoration:line-through">7,90 €</span><span style="background:#b05c2e;color:#fff;font:700 12px 'Karla';padding:3px 9px;border-radius:11px">Fırsat</span></div>
+        <span style="font:600 13px 'Karla';color:#b05c2e;background:#f9ede2;border-radius:11px;padding:4px 10px;width:max-content">En fazla 5 adet</span>
+        <span style="font:400 13px 'Karla';color:#6d7261">Tek satın alınabilir fiyat vardır; eski fiyat yalnız referanstır. 5 adede ulaşınca + pasifleşir.</span>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span style="display:inline-flex;align-items:center;border:2px solid #d8cfb6;border-radius:20px;overflow:hidden;background:#fff"><span style="font:700 16px 'Karla';color:#5f7a2c;padding:7px 13px">−</span><span style="font:700 14px 'Karla';min-width:34px;text-align:center;color:#3a4147">5</span><span style="font:700 16px 'Karla';color:#fff;background:#c9c3b0;padding:7px 13px">+</span></span>
+          <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:12px 20px;border-radius:24px;flex:1;text-align:center">Sepete ekle</span>
+        </div>
+      </div>
+      <div style="width:320px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Tükendi</span>
+        <span style="font:600 22px 'Lora';color:#8a8270">Tel Kadayıf</span>
+        <div style="display:flex;flex-direction:column"><span style="font:700 20px 'Karla';color:#8a8270">5,90 €</span><span style="font:400 12.5px 'Karla';color:#b3ab97">500 g · 11,80 €/kg</span></div>
+        <span style="font:600 13px 'Karla';color:#3a4147;background:#e9e4d4;border-radius:11px;padding:4px 10px;width:max-content">Tükendi — yakında yeniden</span>
+        <span style="font:400 13px 'Karla';color:#6d7261">Adet seçici gizlenir; "gelince haber ver" kurgusu yok.</span>
+        <span style="background:#c9c3b0;color:#fff;font:700 14px 'Karla';padding:12px 20px;border-radius:24px;text-align:center">Sepete ekle</span>
+      </div>
+      <div style="width:320px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Kargo kısıtlı ürün</span>
+        <span style="font:600 22px 'Lora';color:#343b41">Yaprak Sarma</span>
+        <div style="display:flex;flex-direction:column"><span style="font:700 20px 'Karla';color:#343b41">9,90 €</span><span style="font:400 12.5px 'Karla';color:#8a8270">1 kg · 9,90 €/kg</span></div>
+        <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:12px;padding:10px 14px;font:600 13px/1.5 'Karla';color:#8a6b2a">🚚 Yalnız Strasbourg &amp; bölge içi kapıya teslim — bu ürün kargoya verilemez.</div>
+        <span style="font:400 13px 'Karla';color:#6d7261">Uyarı sepete eklemeden önce görünür; checkout'ta kargo seçilirse ürün engel olarak listelenir.</span>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span style="display:inline-flex;align-items:center;border:2px solid #5f7a2c;border-radius:20px;overflow:hidden;background:#fff"><span style="font:700 16px 'Karla';color:#5f7a2c;padding:7px 13px">−</span><span style="font:700 14px 'Karla';min-width:34px;text-align:center;color:#3a4147">1</span><span style="font:700 16px 'Karla';color:#fff;background:#5f7a2c;padding:7px 13px">+</span></span>
+          <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:12px 20px;border-radius:24px;flex:1;text-align:center">Sepete ekle</span>
+        </div>
+      </div>
+      <div style="width:320px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Yorumsuz ürün — boş durum</span>
+        <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font:600 20px 'Lora';color:#343b41">Yorumlar</span></div>
+        <div style="border:1px dashed #d8cfb6;border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center">
+          <span style="font-size:24px">☆</span>
+          <span style="font:700 15px 'Karla';color:#3a4147">Henüz yorum yok</span>
+          <span style="font:400 13px 'Karla';color:#8a8270">Bu ürünü satın aldıysanız ilk yorumu siz yazabilirsiniz.</span>
+        </div>
+        <span style="font:400 13px 'Karla';color:#6d7261">Puan alanı gizlenir (0,0 gösterilmez); "Yorum yaz" yalnız satın almış müşteride görünür.</span>
+      </div>
+    </div>
+
+    <div style="width:1360px;background:#fff;border:1.5px dashed #cdc4a8;border-radius:16px;padding:24px 32px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:700 16px 'Karla';color:#3a4147">Etkileşim sözleşmesi (kodlayan ajan için)</span>
+      <ul style="margin:0;padding-left:20px;font:400 14px/1.8 'Karla';color:#6d7261">
+        <li><strong>Boy kartı</strong> → seçim fiyatı, birim fiyatı ve butondaki toplamı günceller; seçili kart 2px yeşil çerçeve. Varsayılan: en küçük boy seçili gelir.</li>
+        <li><strong>Adet seçici</strong> → sayı alanına dokununca elle giriş açılır (B2B 10-50 koli rahat girer); buton toplamı canlı güncellenir.</li>
+        <li><strong>Sepete ekle</strong> → ekler, buton 1,5 sn "Eklendi ✓" olur, sayfada kalınır (alışveriş kesintisiz); sepet sayacı ve mobil özet çubuğu güncellenir.</li>
+        <li><strong>Galeri</strong> → küçük görsele dokunma ana görseli değiştirir; mobilde yatay kaydırma + nokta göstergesi.</li>
+        <li><strong>↗ paylaş</strong> → sistem paylaşım menüsü (WhatsApp öncelikli); ürün linki dil parametresiyle paylaşılır.</li>
+        <li><strong>Yorum yaz</strong> → yalnız bu ürünü satın almış girişli müşteride görünür; puan (1-5) + metin.</li>
+        <li>Yasal bölümler (içindekiler/alerjen/besin/saklama) satın alma butonundan önce DOM'da mevcuttur — mobilde akordeon ama kapalıyken de başlıkları görünür.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- MOBILE -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Ürün Detay · Mobil (açılmış tam akış)</span>
+    <div data-screen-label="Urun Detay Mobil" style="width:390px;background:#faf6ec;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px">
+        <span style="font:700 15px 'Karla';color:#5f7a2c">← Katalog</span>
+        <img src="assets/logo.jpg" style="height:36px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+        <div style="display:flex;gap:14px;align-items:center"><span style="font-size:18px">↗</span><div style="position:relative;font-size:19px">🧺<span style="position:absolute;top:-5px;right:-8px;background:#b05c2e;color:#fff;font:700 10px 'Karla';border-radius:9px;padding:1px 5px">3</span></div></div>
+      </div>
+      <div style="position:relative;height:300px;margin:0 12px">
+        <image-slot id="prd-m-main" radius="18" placeholder="Ürün fotoğrafı (kaydırmalı galeri)"></image-slot>
+        <div style="position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px;pointer-events:none">
+          <span style="width:8px;height:8px;border-radius:4px;background:#5f7a2c"></span><span style="width:8px;height:8px;border-radius:4px;background:#fff;opacity:.8"></span><span style="width:8px;height:8px;border-radius:4px;background:#fff;opacity:.8"></span>
+        </div>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 12px 'Karla';letter-spacing:.12em;text-transform:uppercase;color:#5f7a2c">Tatlılar</span>
+        <h1 style="margin:0;font:600 28px/1.2 'Lora';color:#343b41">Fıstıklı Baklava</h1>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="color:#d99a2b;font-size:14px;letter-spacing:1.5px">★★★★★</span>
+          <span style="font:700 14px 'Karla';color:#3a4147">4,7</span>
+          <span style="font:400 13px 'Karla';color:#8a8270">· 23 yorum</span>
+          <span style="font:600 12px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:11px;padding:2px 9px;margin-left:auto">● Stokta</span>
+        </div>
+        <p style="margin:0;font:400 14px/1.6 'Karla';color:#6d7261">Gaziantep usulü, kat kat el açması yufka ve bol Antep fıstığıyla. Çözdürüp 10 dakika ısıtın.</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font:700 14px 'Karla';color:#3a4147">Boy seçin</span>
+          <div style="display:flex;gap:10px">
+            <div style="border:2px solid #5f7a2c;background:#fff;border-radius:14px;padding:11px 14px;display:flex;flex-direction:column;gap:2px;flex:1">
+              <span style="font:700 13.5px 'Karla';color:#3a4147">700 g tepsi</span>
+              <span style="font:700 15px 'Karla';color:#343b41">16,90 €</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">24,14 €/kg</span>
+            </div>
+            <div style="border:1.5px solid #d8cfb6;background:#fff;border-radius:14px;padding:11px 14px;display:flex;flex-direction:column;gap:2px;flex:1">
+              <span style="font:700 13.5px 'Karla';color:#3a4147">1 kg tepsi</span>
+              <span style="font:700 15px 'Karla';color:#343b41">22,90 €</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">22,90 €/kg</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:16px;font:400 12px 'Karla';color:#6d7261;background:#f0e9d6;border-radius:12px;padding:11px 14px">
+          <span>❄ Soğuk zincir</span><span>🚚 Kapıya teslim</span><span>📦 Kargoya uygun</span>
+        </div>
+      </div>
+      <div style="margin:0 16px;display:flex;flex-direction:column;gap:8px">
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center"><span style="font:700 14px 'Karla';color:#3a4147">İçindekiler ve alerjenler <span style="color:#b05c2e">⚠</span></span><span style="color:#8a8270">▾</span></div>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:14px;padding:0 16px;display:flex;flex-direction:column">
+          <div style="padding:14px 0;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0ead9"><span style="font:700 14px 'Karla';color:#3a4147">Besin değerleri</span><span style="color:#8a8270">▴</span></div>
+          <div style="padding:4px 0 12px;display:flex;flex-direction:column">
+            <sc-for list="{{ nutrition }}" as="n" hint-placeholder-count="5">
+              <div style="display:flex;justify-content:space-between;padding:6px 0;font:400 13px 'Karla';color:#3a3f35"><span>{{ n.k }}</span><span style="font-weight:700">{{ n.v }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center"><span style="font:700 14px 'Karla';color:#3a4147">Saklama ve hazırlama</span><span style="color:#8a8270">▾</span></div>
+      </div>
+      <div style="padding:20px 16px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <span style="font:600 20px 'Lora';color:#343b41">Yorumlar · 4,7 ★</span>
+          <span style="font:700 13px 'Karla';color:#5f7a2c">Tümü (23) →</span>
+        </div>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="width:32px;height:32px;border-radius:50%;background:#eef2e2;color:#5f7a2c;font:700 13px 'Karla';display:grid;place-items:center">A</span>
+            <div style="display:flex;flex-direction:column"><span style="font:700 13px 'Karla';color:#3a4147">Ayşe K.</span><span style="font:400 11px 'Karla';color:#8a8270">2 hafta önce · onaylı alışveriş</span></div>
+            <span style="margin-left:auto;color:#d99a2b;font-size:12px">★★★★★</span>
+          </div>
+          <p style="margin:0;font:400 13px/1.55 'Karla';color:#6d7261">Antep'ten getirttiğimiz gibi. Fıstık miktarı çok cömert, şerbeti hafif.</p>
+        </div>
+      </div>
+      <div style="padding:0 16px 16px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 20px 'Lora';color:#343b41">Bunları da sevebilirsiniz</span>
+        <div style="display:flex;gap:10px;overflow:hidden">
+          <sc-for list="{{ similar }}" as="p" hint-placeholder-count="3">
+            <div style="flex:none;width:140px;background:#fff;border:1px solid #ece5d2;border-radius:14px;overflow:hidden">
+              <div style="height:90px"><image-slot id="prd-m-sim-{{ $index }}" shape="rect" placeholder=""></image-slot></div>
+              <div style="padding:9px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:700 12px 'Karla';color:#3a4147">{{ p.name }}</span>
+                <span style="font:700 13px 'Karla';color:#343b41">{{ p.price }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="margin:0 12px 12px;background:#3a4147;border-radius:20px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+        <span style="display:inline-flex;align-items:center;border:1.5px solid #a9c46b;border-radius:16px;overflow:hidden"><span style="font:700 16px 'Karla';color:#a9c46b;padding:6px 12px">−</span><span style="font:700 14px 'Karla';color:#f3efe2;min-width:26px;text-align:center">2</span><span style="font:700 16px 'Karla';color:#343b41;background:#a9c46b;padding:6px 12px">+</span></span>
+        <span style="background:#a9c46b;color:#343b41;font:700 14px 'Karla';padding:12px;border-radius:16px;flex:1;text-align:center">Sepete ekle — 33,80 €</span>
+      </div>
+      <div style="background:#343b41;color:#c9cdc2;padding:16px;display:flex;justify-content:space-between;font:400 12px 'Karla'">
+        <span style="font:600 14px 'Lora';color:#f3efe2">Lezzet Anatolia</span><span>TR · FR · DE</span>
+      </div>
+    </div>
+    <span style="font:400 13px 'Karla';color:#8a8270;max-width:390px">Not: koyu adet+ekle çubuğu gerçek uygulamada ekran altına sabitlenir (sayfa kaydırılırken hep görünür — WhatsApp/sosyal medyadan gelen trafik için tek dokunuş mesafesinde). Akordeonlardan "Besin değerleri" açık halde gösterildi.</span>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      nutrition: [
+        { k: "Enerji", v: "1932 kJ / 462 kcal" },
+        { k: "Yağ (doymuş)", v: "24 g (9 g)" },
+        { k: "Karbonhidrat (şeker)", v: "54 g (32 g)" },
+        { k: "Protein", v: "8 g" },
+        { k: "Tuz", v: "0,10 g" },
+      ],
+      reviews: [
+        { initial: "A", name: "Ayşe K.", when: "2 hafta önce", stars: "★★★★★", text: "Antep'ten getirttiğimiz gibi. Fıstık miktarı çok cömert, şerbeti hafif. Misafirlerim sipariş linkini istedi." },
+        { initial: "M", name: "Marc D.", when: "1 ay önce", stars: "★★★★", text: "Très bon produit, arrivé bien congelé. Un peu sucré à mon goût mais authentique." },
+      ],
+      similar: [
+        { name: "Cevizli Baklava", weight: "700 g", unit: "21,29 €/kg", price: "14,90 €" },
+        { name: "Şöbiyet", weight: "500 g", unit: "27,80 €/kg", price: "13,90 €" },
+        { name: "Künefe", weight: "2 porsiyon", unit: "4,45 €/porsiyon", price: "8,90 €" },
+        { name: "Sütlü Nuriye", weight: "600 g", unit: "19,83 €/kg", price: "11,90 €" },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

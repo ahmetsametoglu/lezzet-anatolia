@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-wrap:wrap;gap:40px;padding:48px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <span style="font:600 15px 'Space Grotesk';color:#3a4147">Teslimat Ekranı — sonuç seçimi (kapıda, tek elle)</span>
+    <div data-screen-label="Kurye Teslimat Ana" style="width:380px;background:#f4f5f2;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+      <div style="background:#fbfbf9;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;padding:13px 16px">
+        <span style="font:500 18px 'Space Grotesk';color:#9aa094">←</span>
+        <span style="font:600 14px 'Space Grotesk';color:#22251f">Durak 4 / 8</span>
+        <span style="margin-left:auto;font:600 10px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:6px;padding:3px 8px">B2B</span>
+      </div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:12px">
+        <div style="background:#fff;border:1px solid #e6e7e1;border-radius:13px;padding:15px 16px;display:flex;flex-direction:column;gap:6px">
+          <span style="font:600 18px 'Space Grotesk';color:#22251f">Restaurant Anatolie</span>
+          <span style="font:400 13px 'Karla';color:#6a7065">8 Rue du Fossé, 67000 Strasbourg</span>
+          <span style="font:400 12.5px 'Karla';color:#8b9086">Sipariş LZA-2452 · 6 koli · soğuk zincir</span>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <span style="flex:1;background:#22251f;color:#fff;font:600 12px 'Space Grotesk';padding:11px;border-radius:10px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>Navigasyon</span>
+            <span style="flex:1;background:#128c4b;color:#fff;font:600 12px 'Space Grotesk';padding:11px;border-radius:10px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-11.6 7.7L3 21l1.9-6.4A8.5 8.5 0 1 1 21 11.5z"></path></svg>WhatsApp</span>
+          </div>
+        </div>
+
+        <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:12px;padding:13px 15px;display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;flex-direction:column">
+            <span style="font:500 11px 'Space Grotesk';color:#9a6416;text-transform:uppercase;letter-spacing:.06em">Kapıda tahsil edilecek</span>
+            <span style="font:500 12.5px 'Karla';color:#9a6416">Nakit bekleniyor</span>
+          </div>
+          <span style="font:500 24px 'IBM Plex Mono';color:#9a6416">466,00 €</span>
+        </div>
+
+        <span style="font:600 13px 'Space Grotesk';color:#3a4147;margin-top:2px">Sonuç seç</span>
+        <span style="background:#5f7a2c;color:#fff;font:600 16px 'Space Grotesk';padding:17px;border-radius:12px;text-align:center">✓ Teslim edildi</span>
+        <div style="display:flex;gap:9px">
+          <span style="flex:1;background:#fff;border:1.5px solid #ecd9b4;color:#9a6416;font:600 13px 'Space Grotesk';padding:15px 8px;border-radius:11px;text-align:center">Ulaşılamadı</span>
+          <span style="flex:1;background:#fff;border:1.5px solid #e2c4c0;color:#a5443c;font:600 13px 'Space Grotesk';padding:15px 8px;border-radius:11px;text-align:center">Reddedildi</span>
+        </div>
+        <span style="font:400 11.5px/1.5 'Karla';color:#8b9086;text-align:center">Her sonuç kanıt ister: teslim → imza/foto + tahsilat; ulaşılamadı/reddedildi → sebep. Kanıtsız durak kapanmaz.</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <span style="font:600 15px 'Space Grotesk';color:#3a4147">"Teslim edildi" → tahsilat + kanıt</span>
+    <div data-screen-label="Kurye Teslimat Tahsilat" style="width:380px;background:#f4f5f2;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+      <div style="background:#fbfbf9;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;padding:13px 16px">
+        <span style="font:500 18px 'Space Grotesk';color:#9aa094">←</span>
+        <span style="font:600 14px 'Space Grotesk';color:#22251f">Teslim — Restaurant Anatolie</span>
+      </div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 13px 'Space Grotesk';color:#3a4147">Tahsilat yöntemi</span>
+        <div style="display:flex;gap:9px">
+          <span style="flex:1;background:#5f7a2c;color:#fff;font:600 13px 'Space Grotesk';padding:14px 8px;border-radius:11px;text-align:center">Nakit</span>
+          <span style="flex:1;background:#fff;border:1px solid #d4d7ce;color:#3a4147;font:600 13px 'Space Grotesk';padding:14px 8px;border-radius:11px;text-align:center">Kart</span>
+          <span style="flex:1;background:#fff;border:1px solid #d4d7ce;color:#3a4147;font:600 13px 'Space Grotesk';padding:14px 8px;border-radius:11px;text-align:center">Ödendi</span>
+        </div>
+
+        <div style="background:#fff;border:1px solid #e6e7e1;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font:400 12.5px 'Karla';color:#6a7065">Beklenen tutar</span>
+            <span style="font:500 16px 'IBM Plex Mono'">466,00 €</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f0f1ec;padding-top:8px">
+            <span style="font:600 13px 'Space Grotesk';color:#3a4147">Alınan nakit</span>
+            <span style="font:500 20px 'IBM Plex Mono';color:#22251f;background:#eceee8;padding:6px 14px;border-radius:9px">466,00 €</span>
+          </div>
+        </div>
+
+        <div style="background:#fbe9e7;border:1px solid #e2c4c0;border-radius:11px;padding:11px 14px;display:flex;gap:9px;align-items:flex-start">
+          <span style="color:#a5443c;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span>
+          <span style="font:500 12px/1.45 'Karla';color:#8a3a33">Tek seferde 500 € nakit sınırına yakınsınız. Bu tahsilatla günlük taşınan nakit 714,60 € olur — kapanışa kadar dikkat.</span>
+        </div>
+
+        <span style="font:600 13px 'Space Grotesk';color:#3a4147;margin-top:2px">Teslim kanıtı</span>
+        <div style="display:flex;gap:9px">
+          <span style="flex:1;background:#fff;border:1.5px dashed #c9ccc3;color:#6a7065;font:600 12px 'Space Grotesk';padding:18px 8px;border-radius:11px;text-align:center;display:flex;align-items:center;justify-content:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>İmza al</span>
+          <span style="flex:1;background:#fff;border:1.5px dashed #c9ccc3;color:#6a7065;font:600 12px 'Space Grotesk';padding:18px 8px;border-radius:11px;text-align:center;display:flex;align-items:center;justify-content:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>Foto çek</span>
+        </div>
+        <span style="background:#5f7a2c;color:#fff;font:600 16px 'Space Grotesk';padding:16px;border-radius:12px;text-align:center">Teslimatı tamamla →</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <span style="font:600 15px 'Space Grotesk';color:#3a4147">"Ulaşılamadı / Reddedildi" → sebep (para taşınmaz)</span>
+    <div data-screen-label="Kurye Teslimat Basarisiz" style="width:380px;background:#f4f5f2;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+      <div style="background:#fbfbf9;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;padding:13px 16px">
+        <span style="font:500 18px 'Space Grotesk';color:#9aa094">←</span>
+        <span style="font:600 14px 'Space Grotesk';color:#22251f">Ulaşılamadı — M. Leroy</span>
+      </div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:12px">
+        <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:11px;padding:11px 14px;display:flex;gap:9px;align-items:flex-start">
+          <span style="color:#9a6416;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></span>
+          <span style="font:500 12px/1.45 'Karla';color:#8a6410">Ulaşılamayan durak listede kalır ve gün içinde tekrar denenebilir. Tahsilat yapılmaz.</span>
+        </div>
+        <span style="font:600 13px 'Space Grotesk';color:#3a4147">Sebep</span>
+        <sc-for list="{{ reasons }}" as="r" hint-placeholder-count="4">
+          <div style="background:#fff;border:1px solid {{ r.bd }};border-radius:11px;padding:14px 15px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font:600 13px 'Space Grotesk';color:#3a4147">{{ r.label }}</span>
+            <span style="width:20px;height:20px;border-radius:50%;border:2px solid {{ r.dot }};background:{{ r.fill }}"></span>
+          </div>
+        </sc-for>
+        <div style="background:#fff;border:1px solid #e6e7e1;border-radius:11px;padding:12px 14px">
+          <span style="font:400 12.5px 'Karla';color:#8b9086">Not (opsiyonel) — "Kapı yanıt vermedi, komşuya haber bırakıldı"</span>
+        </div>
+        <span style="background:#c2571f;color:#fff;font:600 15px 'Space Grotesk';padding:16px;border-radius:12px;text-align:center">Durağı işaretle · listeye dön</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="width:100%;max-width:820px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:22px 30px;display:flex;flex-direction:column;gap:9px">
+    <span style="font:700 15px 'Space Grotesk';color:#3a4147">Etkileşim sözleşmesi (kodlayan ajan için)</span>
+    <ul style="margin:0;padding-left:20px;font:400 13.5px/1.75 'Karla';color:#6a7065">
+      <li><strong>Üç sonuç, üç ayrı akış</strong> → teslim (tahsilat + kanıt) · ulaşılamadı (sebep, para yok, listede kalır) · reddedildi (sebep, para yok, durak kapanır). Sonuçlar birbirine karışmaz.</li>
+      <li><strong>Kanıt zorunlu</strong> → teslim için imza <em>veya</em> foto + tahsilat sonucu; başarısız sonuçlar için sebep. Kanıtsız "tamamla" pasiftir.</li>
+      <li><strong>Nakit sınır uyarısı</strong> → taşınan nakit eşiğe (ör. 500 € tek tahsilat / günlük tavan) yaklaşınca kırmızı uyarı; bloklamaz ama görünür kılar. Eşikler admin ayarlarından gelir.</li>
+      <li><strong>Alınan ≠ beklenen</strong> → tutar farkı serbest bırakılır ama işaretlenir; kapanış mutabakatına fark olarak taşınır. Beklenen tutar salt-okunur.</li>
+      <li><strong>Rol duvarı</strong> → müşteri borcu/limiti, maliyet, diğer siparişler görünmez. Kurye yalnız bu durağın tutarını ve içeriğini görür.</li>
+    </ul>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      reasons: [
+        { label:'Adreste bulunamadı', bd:'#c2571f', dot:'#c2571f', fill:'#c2571f' },
+        { label:'Telefona yanıt yok', bd:'#e6e7e1', dot:'#c9ccc3', fill:'#fff' },
+        { label:'Adres hatalı / bulunamadı', bd:'#e6e7e1', dot:'#c9ccc3', fill:'#fff' },
+        { label:'Kapalı — sonra tekrar', bd:'#e6e7e1', dot:'#c9ccc3', fill:'#fff' },
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

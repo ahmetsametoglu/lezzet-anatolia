@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-wrap:wrap;gap:40px;padding:48px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <span style="font:600 15px 'Space Grotesk';color:#3a4147">Depo — İmha / Fire / Sayım · mobil (maliyet/tutar YOK)</span>
+    <div data-screen-label="Depo Imha" style="width:380px;background:#f4f5f2;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+      <div style="background:#fbfbf9;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;padding:13px 16px">
+        <span style="width:28px;height:28px;border-radius:7px;background:#22251f;color:#a9c46b;font:700 13px 'Space Grotesk';display:grid;place-items:center">L</span>
+        <span style="font:600 14px 'Space Grotesk';color:#22251f;flex:1">Depo · Stoktan düş</span>
+      </div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="background:#fff;border:1px solid #e6e7e1;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font:500 11px 'Space Grotesk';color:#8b9086;text-transform:uppercase;letter-spacing:.04em">Parti</span>
+            <span style="border:2px solid #5f7a2c;border-radius:11px;padding:11px 13px;font:600 14px 'Space Grotesk';background:#fff;color:#22251f">Tel Kadayıf 500g · son tarih 12 Tem (geçti) ▾</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font:500 11px 'Space Grotesk';color:#8b9086;text-transform:uppercase;letter-spacing:.04em">Adet</span>
+            <div style="display:flex;align-items:center;border:2px solid #5f7a2c;border-radius:11px;overflow:hidden;background:#fff">
+              <span style="font:600 20px 'Space Grotesk';color:#5f7a2c;padding:9px 15px">−</span>
+              <span style="font:500 18px 'IBM Plex Mono';flex:1;text-align:center">7</span>
+              <span style="font:600 20px 'Space Grotesk';color:#fff;background:#5f7a2c;padding:9px 15px">+</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font:500 11px 'Space Grotesk';color:#8b9086;text-transform:uppercase;letter-spacing:.04em">Sebep (zorunlu)</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span style="background:#c2571f;color:#fff;font:600 12px 'Space Grotesk';padding:9px 14px;border-radius:9px">Son tarihi geçti</span>
+              <span style="background:#fff;border:1px solid #d4d7ce;color:#3a4147;font:600 12px 'Space Grotesk';padding:9px 14px;border-radius:9px">Hasar</span>
+              <span style="background:#fff;border:1px solid #d4d7ce;color:#3a4147;font:600 12px 'Space Grotesk';padding:9px 14px;border-radius:9px">Sayım farkı</span>
+              <span style="background:#fff;border:1px solid #d4d7ce;color:#3a4147;font:600 12px 'Space Grotesk';padding:9px 14px;border-radius:9px">Kayıp</span>
+            </div>
+          </div>
+          <span style="border:1px solid #d4d7ce;border-radius:11px;padding:11px 13px;font:400 13px 'Karla';color:#8b9086;background:#fff">Not (isteğe bağlı)…</span>
+          <span style="background:#c2571f;color:#fff;font:600 15px 'Space Grotesk';padding:15px;border-radius:12px;text-align:center">Stoktan düş (basılı tut)</span>
+        </div>
+        <div style="background:#fff;border:1px solid #e6e7e1;border-radius:12px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span style="font:400 12px 'Karla';color:#6a7065">Bugün: Kadayıf 7 (tarih) · Gözleme 2 (hasar)</span>
+          <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;flex:none">Düzelt</span>
+        </div>
+        <span style="font:400 11.5px/1.5 'Karla';color:#8b9086">Artı yönlü düzeltme buradan yapılmaz — Mal kabul ekranı kullanılır. Sayım farkı yalnız eksiye düşer.</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <span style="font:600 15px 'Space Grotesk';color:#3a4147">Dönen mal + sıcaklık kaydı</span>
+    <div data-screen-label="Depo Donen Mal" style="width:380px;background:#f4f5f2;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+      <div style="background:#fbfbf9;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;justify-content:center;padding:13px 16px">
+        <span style="font:600 14px 'Space Grotesk';color:#22251f">Depoya dönen mal</span>
+      </div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="background:#fff;border:1px solid #e6e7e1;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+          <span style="font:600 14px 'Space Grotesk';color:#22251f">Gözleme 4'lü · 2 paket <span style="background:#eef4e2;color:#4a6121;font:600 10px 'Space Grotesk';padding:2px 8px;border-radius:7px">kapıda reddedildi — araçtan çıkmadı</span></span>
+          <span style="font:400 12.5px/1.5 'Karla';color:#6a7065">Malın haline bakın — karar sizin:</span>
+          <div style="display:flex;gap:8px">
+            <span style="flex:1;background:#5f7a2c;color:#fff;font:600 13px 'Space Grotesk';padding:12px;border-radius:10px;text-align:center">Stoğa geri al</span>
+            <span style="flex:1;background:#fff;border:1.5px solid #e0b7a2;color:#c2571f;font:600 13px 'Space Grotesk';padding:12px;border-radius:10px;text-align:center">İmha</span>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #e6e7e1;border-left:3px solid #b04a2a;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+          <span style="font:600 14px 'Space Grotesk';color:#22251f">Baklava 700g · 1 paket <span style="background:#fbeae2;color:#b04a2a;font:600 10px 'Space Grotesk';padding:2px 8px;border-radius:7px">teslim sonrası iade</span></span>
+          <span style="font:400 12.5px/1.5 'Karla';color:#6a7065">Soğuk zincir belgelenemez — bu mal imha edilir.</span>
+          <span style="background:#c2571f;color:#fff;font:600 13px 'Space Grotesk';padding:12px;border-radius:10px;text-align:center">İmha kaydı gir</span>
+        </div>
+        <span style="font:400 11.5px/1.5 'Karla';color:#8b9086">Teslim-sonrası iadede "stoğa geri al" seçeneği bu ekranda hiç yoktur; geri alma yalnız admin'in sebep kaydıyla yaptığı istisnadır. Kim iade etti görünmez — mal parti/ürün olarak işlenir.</span>
+      </div>
+    </div>
+
+    <div data-screen-label="Depo Sicaklik" style="width:380px;background:#f4f5f2;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+      <div style="background:#fbfbf9;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 16px">
+        <span style="color:#3a6b8a"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path></svg></span>
+        <span style="font:600 14px 'Space Grotesk';color:#22251f">Sıcaklık kaydı</span>
+      </div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px">
+          <span style="flex:1;background:#22251f;color:#fff;font:600 13px 'Space Grotesk';padding:11px;border-radius:10px;text-align:center">Dolap 1</span>
+          <span style="flex:1;background:#fff;border:1px solid #d4d7ce;font:600 13px 'Space Grotesk';padding:11px;border-radius:10px;text-align:center;color:#3a4147">Dolap 2</span>
+          <span style="flex:1;background:#fff;border:1px solid #d4d7ce;font:600 13px 'Space Grotesk';padding:11px;border-radius:10px;text-align:center;color:#3a4147">Araç</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span style="flex:1;border:2px solid #5f7a2c;border-radius:12px;padding:14px;font:500 26px 'IBM Plex Mono';text-align:center;background:#fff;color:#22251f">−18,5°</span>
+          <span style="background:#5f7a2c;color:#fff;font:600 14px 'Space Grotesk';padding:16px 20px;border-radius:12px">Kaydet</span>
+        </div>
+        <div style="background:#fff;border:1px solid #e6e7e1;border-radius:12px;padding:11px 14px;display:flex;flex-direction:column;gap:5px">
+          <span style="font:500 11px 'Space Grotesk';color:#8b9086;text-transform:uppercase;letter-spacing:.04em">Bugün</span>
+          <div style="display:flex;justify-content:space-between;font:400 12.5px 'Karla';color:#6a7065"><span>Dolap 1 · 08:10</span><span style="color:#4a6121;font-family:'IBM Plex Mono'">−18,5° ✓</span></div>
+          <div style="display:flex;justify-content:space-between;font:400 12.5px 'Karla';color:#6a7065"><span>Dolap 2 · 08:12</span><span style="color:#4a6121;font-family:'IBM Plex Mono'">−19,0° ✓</span></div>
+          <div style="display:flex;justify-content:space-between;font:400 12.5px 'Karla';color:#9a6416"><span>Araç</span><span>henüz ölçülmedi</span></div>
+        </div>
+        <div style="background:#fbeae2;border:1px solid #e8c0aa;border-radius:11px;padding:10px 13px;font:500 12px/1.5 'Karla';color:#b04a2a">−8° girildi — donuk gıda için beklenmedik yüksek. Yazım hatası mı, gerçek sorun mu? <strong>Kontrol edin.</strong> (kayıt engellenmez)</div>
+      </div>
+    </div>
+
+    <div style="width:380px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:18px 22px;display:flex;flex-direction:column;gap:8px">
+      <span style="font:700 14px 'Space Grotesk';color:#3a4147">Etkileşim sözleşmesi</span>
+      <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+        <li>Sebep zorunlu; kayıt anında stok düşer; son kayıt "Düzelt" ile toparlanır.</li>
+        <li>Basılı-tut onayı (eldiven koşulu); fire maliyeti/parasal değer asla görünmez.</li>
+        <li>Sıcaklık: nokta → derece → kaydet, 10 saniyeden kısa; ölçülmemiş nokta amber görünür kalır.</li>
+        <li>İç terimler yok: "stoktan düş", "stoğa geri al", "son tarihi geçti".</li>
+      </ul>
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

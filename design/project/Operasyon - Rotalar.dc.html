@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Rotalar — bölgeler &amp; gün planı · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">"Rota içi/dışı" tüm sistemde buradaki bölge tanımından türer. Admin planlar ve izler; teslim/tahsilat kurye ekranında.</span>
+    </div>
+
+    <div data-screen-label="Rotalar Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="rotalar" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">Rotalar</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">Bugün 8 teslimat · 1 atanmamış · 1 hazır değil</span>
+          </div>
+          <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 12px">Perş 24 Tem ▾</span>
+        </div>
+        <div style="padding:0 24px;border-bottom:1px solid #e6e7e1;display:flex;gap:2px;background:#f8f9f5">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2">
+            <span onClick="{{ t.select }}" style="font:600 12.5px 'Space Grotesk';color:{{ t.fg }};border-bottom:2px solid {{ t.edge }};padding:11px 14px;margin-bottom:-1px;cursor:pointer">{{ t.label }}</span>
+          </sc-for>
+        </div>
+
+        <!-- GÜN PLANI -->
+        <sc-if value="{{ isGun }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+            <div style="padding:10px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span style="font:600 11px 'Space Grotesk';color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6;border-radius:14px;padding:5px 12px;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Kesim saati geçti · liste kesinleşti</span>
+              <span style="font:400 11.5px 'Karla';color:#8b9086">17:00 sonrası siparişler yarına yazıldı</span>
+              <span style="margin-left:auto;font:600 12px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:7px;padding:7px 13px">Kurye ata</span>
+            </div>
+            <div style="overflow-y:auto;flex:1;min-height:0">
+              <sc-for list="{{ bolgeGrup }}" as="g" hint-placeholder-count="2">
+                <div style="padding:9px 24px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px"><span style="font:600 12px 'Space Grotesk';color:#22251f">{{ g.zone }}</span><span style="font:400 11px 'Karla';color:#8b9086">{{ g.count }} durak</span><span style="margin-left:auto;font:600 10.5px 'Space Grotesk';color:#5a4a8a;background:#ece8f5;border-radius:6px;padding:2px 9px">{{ g.courier }}</span></div>
+                <sc-for list="{{ g.stops }}" as="s" hint-placeholder-count="4">
+                  <div onClick="{{ s.open }}" style="display:grid;grid-template-columns:30px minmax(120px,1fr) 120px 96px;gap:0 10px;padding:11px 24px;border-bottom:1px solid #f0f1ec;align-items:center;cursor:pointer">
+                    <span style="font:600 12px 'IBM Plex Mono';color:#8b9086">{{ s.seq }}</span>
+                    <div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 13px 'Karla';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</span><span style="font:400 11px 'Karla';color:#8b9086;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.addr }}</span></div>
+                    <span style="font:500 11.5px 'IBM Plex Mono';color:{{ s.payFg }}">{{ s.pay }}</span>
+                    <span style="justify-self:end;font:600 10.5px 'Space Grotesk';color:{{ s.stFg }};background:{{ s.stBg }};border-radius:7px;padding:3px 9px">{{ s.status }}</span>
+                  </div>
+                </sc-for>
+              </sc-for>
+              <div style="padding:11px 24px;background:#fdf7f6;border-top:1px solid #f0e0dd;display:flex;align-items:center;gap:9px"><span style="color:#a5443c;flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span><span style="font:500 11.5px 'Karla';color:#8a3a33">1 sipariş henüz hazır değil (Le Petit Marché) — hazırlık depoda; araca yüklemeden önce bekleyin.</span></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- BÖLGELER -->
+        <sc-if value="{{ isBolge }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+            <div style="padding:11px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center"><span style="font:400 12px 'Karla';color:#8b9086;margin-right:auto">Bir posta kodu tek bölgeye. Kodu çıkarırsan o adresler kargoya düşer.</span><span onClick="{{ openBolge }}" style="font:600 12px 'Space Grotesk';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 14px;cursor:pointer">+ Bölge</span></div>
+            <div style="overflow-y:auto;flex:1;min-height:0;padding:16px 24px;display:flex;flex-direction:column;gap:12px">
+              <sc-for list="{{ bolgeler }}" as="b" hint-placeholder-count="3">
+                <div onClick="{{ openBolge }}" style="border:1px solid #e6e7e1;background:#fff;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:9px;cursor:pointer">
+                  <div style="display:flex;align-items:center;gap:10px"><span style="font:600 14px 'Space Grotesk';color:#22251f;flex:1">{{ b.name }}</span><span style="font:600 10px 'Space Grotesk';color:{{ b.stFg }};background:{{ b.stBg }};border-radius:6px;padding:2px 8px">{{ b.status }}</span></div>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ b.codes }}" as="c" hint-placeholder-count="4"><span style="font:500 11px 'IBM Plex Mono';color:#3a3f37;background:#eef0ea;border-radius:6px;padding:3px 8px">{{ c }}</span></sc-for></div>
+                  <span style="font:400 11.5px 'Karla';color:#8b9086">Teslim günleri: {{ b.days }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBİL -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Rotalar — mobil</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Gün planına en sık sabah, depoda/araç başında bakılır — liste ve atama hızlı yürümeli.</span>
+    </div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 17px 'Space Grotesk';color:#22251f">Perş 24 Tem</span><span style="font:500 10px 'IBM Plex Mono';color:#4a6121;background:#eef4e2;border-radius:9px;padding:2px 8px">8 durak</span></div>
+          <span style="font:600 10.5px 'Space Grotesk';color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6;border-radius:8px;padding:6px 10px;align-self:flex-start;display:flex;align-items:center;gap:6px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Liste kesinleşti</span>
+        </div>
+        <div style="padding:8px 16px;display:flex;flex-direction:column">
+          <sc-for list="{{ mobStops }}" as="s" hint-placeholder-count="5">
+            <div style="padding:11px 0;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:11px">
+              <span style="width:26px;height:26px;border-radius:7px;background:#eef0ea;color:#6a7065;font:600 12px 'IBM Plex Mono';display:grid;place-items:center;flex:none">{{ s.seq }}</span>
+              <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 13px 'Karla';color:#22251f">{{ s.name }}</span><span style="font:400 10.5px 'Karla';color:#8b9086">{{ s.addr }}</span></div>
+              <span style="font:600 9.5px 'Space Grotesk';color:{{ s.stFg }};background:{{ s.stBg }};border-radius:6px;padding:2px 7px">{{ s.short }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+        <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+          <li><strong>Web</strong> → bölge tanımı (posta kodu + gün), gün planı, kurye atama, güne taşıma, hazırlık durumu.</li>
+          <li><strong>Mobil</strong> → sabah gün listesi taraması, hızlı atama, kesinleşme hali.</li>
+          <li><strong>Kural</strong> → rota optimizasyonu/kapasite yok (ileri faz); teslim/tahsilat kurye ekranında; kesim saati Ayarlar'da (burada etkisi görünür).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- BÖLGE DIALOG -->
+  <sc-if value="{{ bolgeOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:480px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f;max-height:86vh">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px"><div style="display:flex;flex-direction:column;gap:1px;margin-right:auto"><span style="font:600 18px 'Space Grotesk'">Bölge düzenle</span><span style="font:400 12px 'Karla';color:#8b9086">Strasbourg Kuzey · iç etiket</span></div><span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span></div>
+        <div style="overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Bölge adı (iç etiket)</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';background:#fff">Strasbourg Kuzey</div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 11.5px 'Karla';color:#6a7065">Posta kodları (bir kod tek bölgeye)</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:10px 12px;background:#fff;display:flex;flex-wrap:wrap;gap:6px;align-items:center"><span style="font:500 11.5px 'IBM Plex Mono';color:#3a3f37;background:#eef4e2;border:1px solid #cdd8b6;border-radius:6px;padding:4px 9px">67000 ✕</span><span style="font:500 11.5px 'IBM Plex Mono';color:#3a3f37;background:#eef4e2;border:1px solid #cdd8b6;border-radius:6px;padding:4px 9px">67300 ✕</span><span style="font:500 11.5px 'IBM Plex Mono';color:#3a3f37;background:#eef4e2;border:1px solid #cdd8b6;border-radius:6px;padding:4px 9px">77694 (DE) ✕</span><span style="font:400 12px 'IBM Plex Mono';color:#9aa094">kod ekle…</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 11.5px 'Karla';color:#6a7065">Teslim günleri</span><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ gunSecim }}" as="d" hint-placeholder-count="7"><span style="font:600 11.5px 'Space Grotesk';color:{{ d.fg }};background:{{ d.bg }};border:1px solid {{ d.bd }};border-radius:8px;padding:7px 11px">{{ d.label }}</span></sc-for></div></div>
+          <div style="display:flex;align-items:center;gap:9px;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:11px 14px"><span style="color:#9a6416;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></span><span style="font:500 11.5px/1.5 'Karla';color:#8a6410">Bu bölge canlı: checkout'ta gösterilen teslim günleri ve "rota içi" hesabı buradan türer.</span></div>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5"><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:8px;padding:10px 16px;cursor:pointer;margin-right:auto">Pasifleştir</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer">İptal</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer">Kaydet</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- DURAK / ATAMA DIALOG -->
+  <sc-if value="{{ stopOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:420px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px"><div style="display:flex;flex-direction:column;gap:1px;margin-right:auto"><span style="font:600 17px 'Space Grotesk'">Restaurant Anatolie</span><span style="font:400 12px 'Karla';color:#8b9086">8 Rue du Fossé · #2450</span></div><span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span></div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:10px"><div style="flex:1;border:1px solid #e6e7e1;background:#fff;border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:1px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Tahsilat</span><span style="font:500 13px 'IBM Plex Mono';color:#9a6416">Kapıda 466 €</span></div><div style="flex:1;border:1px solid #e6e7e1;background:#fff;border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:1px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Hazırlık</span><span style="font:500 13px 'Karla';color:#4a6121">Hazır</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Kurye ata</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';background:#fff;display:flex;justify-content:space-between;align-items:center">Murat<span style="color:#9aa094">▾</span></div></div>
+          <span onClick="{{ closeModal }}" style="font:600 12.5px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:8px;padding:10px;text-align:center;cursor:pointer">Başka güne taşı</span>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5"><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer;margin-left:auto">Kapat</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer">Atamayı kaydet</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: 'gun', bolgeOpen: false, stopOpen: false };
+  renderVals() {
+    const tab = this.state.tab;
+    const tabs = [ {k:'gun',l:'Gün planı'}, {k:'bolge',l:'Bölgeler'} ].map(t => ({
+      label:t.l, select:()=>this.setState({tab:t.k}),
+      fg: tab===t.k?'#22251f':'#8b9086', edge: tab===t.k?'#5f7a2c':'transparent' }));
+
+    const open = () => this.setState({ stopOpen:true });
+    const stMap = { hazir:['#4a6121','#eef4e2','Hazır','Hazır'], hazirlaniyor:['#9a6416','#fdf1e3','Hazırlanıyor','Hzrlnyr'], degil:['#a5443c','#fbe9e7','Hazır değil','Değil'], teslim:['#6a7065','#eef0ea','Teslim','✓'] };
+    const st = (name,addr,pay,payKapida,stKey) => {
+      const m = stMap[stKey];
+      return { name, addr, pay, payFg: payKapida?'#9a6416':'#4a6121', status:m[2], short:m[3], stFg:m[0], stBg:m[1], stKey, open };
+    };
+    const g1 = { zone:'Strasbourg Kuzey', count:'5', courier:'Murat', stops:[
+      st('Ayşe Kaya','12 Rue de la Nuée Bleue','Ödendi',false,'teslim'),
+      st('Café Marceau','3 Place Broglie','Ödendi',false,'teslim'),
+      st('Restaurant Anatolie','8 Rue du Fossé','Kapıda 466 €',true,'hazir'),
+      st('B. Meunier','5 Rue des Juifs','Kapıda 38,50 €',true,'hazirlaniyor'),
+      st('Le Petit Marché','19 Rue de Zurich','Ödendi',false,'degil'),
+    ]};
+    const g2 = { zone:'Strasbourg Güney', count:'3', courier:'Atanmadı', stops:[
+      st('M. Leroy','27 Quai des Bateliers','Kapıda 24,50 €',true,'hazir'),
+      st('Sofia R.','9 Rue de Neudorf','Ödendi',false,'hazir'),
+      st('K. Demir','2 Allée Esplanade','Ödendi',false,'hazirlaniyor'),
+    ]};
+    g1.stops.forEach((s,i)=>s.seq=String(i+1));
+    g2.stops.forEach((s,i)=>s.seq=String(i+1));
+    const bolgeGrupClean = [g1, g2];
+
+    const mobStops = [...g1.stops, ...g2.stops].slice(0,6).map((s,i)=>({ ...s, seq:String(i+1) }));
+
+    const bStat = on => on ? ['#4a6121','#eef4e2'] : ['#6a7065','#eef0ea'];
+    const bolgeler = [
+      { name:'Strasbourg Kuzey', status:'Aktif', st:bStat(true), codes:['67000','67300','67200','77694 (DE)'], days:'Pzt · Çar · Perş' },
+      { name:'Strasbourg Güney', status:'Aktif', st:bStat(true), codes:['67100','67400','67540'], days:'Sal · Cum' },
+      { name:'Kehl bölgesi (DE)', status:'Pasif', st:bStat(false), codes:['77694','77656'], days:'—' },
+    ].map(b => ({ ...b, stFg:b.st[0], stBg:b.st[1] }));
+
+    const gunSecim = ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'].map((d,i) => {
+      const on = [0,2,3].includes(i);
+      return { label:d, fg: on?'#fff':'#6a7065', bg: on?'#5f7a2c':'#fff', bd: on?'#5f7a2c':'#d9dbd2' };
+    });
+
+    return {
+      tabs, isGun: tab==='gun', isBolge: tab==='bolge',
+      bolgeGrup: bolgeGrupClean, mobStops, bolgeler, gunSecim,
+      bolgeOpen: this.state.bolgeOpen, stopOpen: this.state.stopOpen,
+      openBolge: () => this.setState({ bolgeOpen:true }),
+      closeModal: () => this.setState({ bolgeOpen:false, stopOpen:false }), stop: (e)=>e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

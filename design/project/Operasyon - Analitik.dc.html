@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:18px">
+
+  <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+    <span style="font:700 20px 'Space Grotesk';color:#22251f">Analitik — çalışma tezgâhı</span>
+    <span style="font:400 13.5px 'Karla';color:#6a7065">Veri Masası dili · kıyas omurgası, Ticaret/Trafik modu, B2B/B2C, ilk-gün hali. Modu ve veri halini üstten değiştirebilirsiniz.</span>
+  </div>
+
+  <div data-screen-label="Analitik Tezgah" style="width:100%;max-width:1360px;box-sizing:border-box;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+
+    <!-- SOL RAY -->
+    <dc-import name="AdminSidebar" active="analitik" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+    <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+
+      <!-- KONTROL BARI -->
+      <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+          <span style="font:600 22px 'Space Grotesk'">Analitik</span>
+          <span style="font:400 12px 'Karla';color:#8b9086">Toplu · anonim · kişi takibi yok</span>
+        </div>
+        <div style="display:flex;background:#eef0ea;border:1px solid #e0e2da;border-radius:8px;padding:2px">
+          <span onClick="{{ setTicaret }}" style="font:600 12.5px 'Space Grotesk';padding:8px 15px;border-radius:6px;cursor:pointer;background:{{ ticBg }};color:{{ ticFg }}">Ticaret</span>
+          <span onClick="{{ setTrafik }}" style="font:600 12.5px 'Space Grotesk';padding:8px 15px;border-radius:6px;cursor:pointer;background:{{ trafBg }};color:{{ trafFg }}">Trafik</span>
+        </div>
+        <div style="display:flex;background:#eef0ea;border:1px solid #e0e2da;border-radius:8px;padding:2px">
+          <span onClick="{{ showFull }}" style="font:600 12.5px 'Space Grotesk';padding:8px 13px;border-radius:6px;cursor:pointer;background:{{ fullBg }};color:{{ fullFg }}">Dolu</span>
+          <span onClick="{{ showEmpty }}" style="font:600 12.5px 'Space Grotesk';padding:8px 13px;border-radius:6px;cursor:pointer;background:{{ emptyBg }};color:{{ emptyFg }}">İlk gün</span>
+        </div>
+        <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 13px">Son 30 gün ▾</span>
+        <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 13px">↳ önceki döneme göre</span>
+        <span style="font:500 12.5px 'IBM Plex Mono';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 14px">Dışa al ↓</span>
+      </div>
+
+      <!-- FİLTRE ŞERİDİ -->
+      <div style="padding:10px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:8px;background:#f8f9f5;flex-wrap:wrap">
+        <span style="font:500 11px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#8b9086;margin-right:2px">Kırılım</span>
+        <span style="font:600 12px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:14px;padding:5px 12px">Tüm kanallar</span>
+        <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:14px;padding:5px 12px">B2C</span>
+        <span style="font:600 12px 'Space Grotesk';color:#9a6416;border:1px solid #e6d3bf;border-radius:14px;padding:5px 12px">B2B</span>
+        <span style="width:1px;height:18px;background:#dfe1d9;margin:0 4px"></span>
+        <span style="font:500 12px 'Karla';color:#6a7065;border:1px dashed #d2d4cb;border-radius:14px;padding:5px 12px">+ kaynak</span>
+        <span style="font:500 12px 'Karla';color:#6a7065;border:1px dashed #d2d4cb;border-radius:14px;padding:5px 12px">+ dil / ülke</span>
+      </div>
+
+      <div style="padding:22px 24px;display:flex;flex-direction:column;gap:22px">
+
+        <!-- AI İÇGÖRÜ -->
+        <div style="border-left:2px solid #5f7a2c;padding:3px 0 3px 15px;display:flex;flex-direction:column;gap:5px">
+          <span style="font:600 11px 'Space Grotesk';letter-spacing:.14em;text-transform:uppercase;color:#5f7a2c">Özet · söyler, karar sizin</span>
+          <span style="font:400 14px/1.6 'Karla';color:#3a3f37">{{ insight }}</span>
+        </div>
+
+        <!-- HERO GÖSTERGE BANDI -->
+        <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:0;border:1px solid #e6e7e1;border-radius:10px;overflow:hidden">
+          <div style="padding:18px 22px;border-right:1px solid #e6e7e1;background:#f8f9f5;display:flex;flex-direction:column;gap:8px">
+            <span style="font:500 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#6a7065">{{ heroLabel }}</span>
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font:500 40px 'IBM Plex Mono';letter-spacing:-.03em;color:#22251f">{{ heroValue }}</span>
+              <span style="font:600 13px 'IBM Plex Mono';color:{{ heroDeltaFg }}">{{ heroDelta }}</span>
+            </div>
+            <sc-if value="{{ isFull }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:5px;margin-top:2px">
+                <div style="height:8px;border-radius:2px;overflow:hidden;display:flex">
+                  <span style="width:{{ splitB2C }};background:#5f7a2c"></span><span style="width:{{ splitB2B }};background:#c07a4a"></span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font:500 11px 'IBM Plex Mono';color:#6a7065">
+                  <span style="color:#5f7a2c">B2C {{ b2cVal }}</span><span style="color:#a5652f">B2B {{ b2bVal }}</span>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+              <span style="font:400 12px 'Karla';color:#8b9086;margin-top:2px">Henüz kıyaslanacak önceki dönem yok — veri birikiyor.</span>
+            </sc-if>
+          </div>
+          <sc-for list="{{ heroRest }}" as="m" hint-placeholder-count="3">
+            <div style="padding:18px 20px;border-right:1px solid #e6e7e1;display:flex;flex-direction:column;gap:6px">
+              <span style="font:500 11px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#8b9086">{{ m.label }}</span>
+              <span style="font:500 26px 'IBM Plex Mono';color:#22251f;letter-spacing:-.02em">{{ m.value }}</span>
+              <span style="font:500 12px 'IBM Plex Mono';color:{{ m.dfg }}">{{ m.delta }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- ZAMAN SERİSİ + KIYAS -->
+        <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <span style="font:600 15px 'Space Grotesk'">{{ tsTitle }} · günlük</span>
+            <div style="display:flex;gap:16px;font:500 11.5px 'Karla';color:#6a7065;align-items:center">
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:0;border-top:2px solid #5f7a2c"></span>bu dönem</span>
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:0;border-top:2px dashed #c3c8ba"></span>önceki dönem</span>
+            </div>
+          </div>
+          <sc-if value="{{ isFull }}" hint-placeholder-val="{{ true }}">
+            <div style="position:relative;height:154px;border-bottom:1px solid #e6e7e1">
+              <svg viewBox="0 0 700 150" preserveAspectRatio="none" style="width:100%;height:150px;display:block;overflow:visible">
+                <path d="{{ areaPath }}" fill="rgba(95,122,44,.09)"></path>
+                <polyline points="{{ prevPoints }}" fill="none" stroke="#c3c8ba" stroke-width="1.6" stroke-dasharray="5 4" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline>
+                <polyline points="{{ curPoints }}" fill="none" stroke="#5f7a2c" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></polyline>
+                <line x1="{{ annoX }}" y1="4" x2="{{ annoX }}" y2="150" stroke="#b0561f" stroke-width="1.3" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></line>
+              </svg>
+              <div style="position:absolute;top:-3px;left:{{ annoLeft }};transform:translateX(-50%);font:600 10px 'Space Grotesk';color:#fff;background:#b0561f;border-radius:4px;padding:2px 7px;white-space:nowrap">◆ bayram kampanyası</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font:400 10.5px 'IBM Plex Mono';color:#9aa094">
+              <span>26 Haz</span><span>3 Tem</span><span>10 Tem</span><span>17 Tem</span><span>24 Tem</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:1px dashed #dfe1d9;border-radius:8px;color:#8b9086">
+              <span style="font:500 13px 'Space Grotesk'">Grafik ilk haftadan sonra dolmaya başlar</span>
+              <span style="font:400 12px 'Karla'">Bugün 1 ziyaret kaydedildi — eğilim için birkaç güne ihtiyaç var.</span>
+            </div>
+          </sc-if>
+        </div>
+
+        <!-- HUNİ + KAYNAKLAR -->
+        <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:18px">
+          <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:13px">
+            <span style="font:600 15px 'Space Grotesk'">Dönüşüm hunisi — nerede kaybediyorum</span>
+            <sc-if value="{{ isFull }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:11px">
+                <sc-for list="{{ funnel }}" as="f" hint-placeholder-count="5">
+                  <div style="display:flex;flex-direction:column;gap:4px">
+                    <div style="display:flex;align-items:center;gap:12px">
+                      <span style="width:150px;font:400 13px 'Karla';color:{{ f.labelFg }}">{{ f.step }}</span>
+                      <span style="flex:1;height:16px;background:#eef0ea;border-radius:2px;overflow:hidden"><span style="display:block;height:100%;width:{{ f.pct }};background:{{ f.bar }}"></span></span>
+                      <span style="width:52px;text-align:right;font:500 13px 'IBM Plex Mono'">{{ f.n }}</span>
+                      <span style="width:70px;text-align:right;font:500 11.5px 'IBM Plex Mono';color:{{ f.dropFg }}">{{ f.drop }}</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <span style="font:400 12px 'Karla';color:#b0561f">En büyük sızıntı: sepet → checkout (−%41). Kayıp sepetlerin ort. büyüklüğü 41 €.</span>
+            </sc-if>
+            <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+              <span style="font:400 13px/1.6 'Karla';color:#8b9086;padding:14px 0">Huni ilk siparişlerden sonra şekillenir. Şu an ziyaret var, henüz sepet/sipariş adımı yok — adımlar doldukça en büyük sızıntı burada işaretlenecek.</span>
+            </sc-if>
+          </div>
+          <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:13px">
+            <span style="font:600 15px 'Space Grotesk'">Trafik kaynağı</span>
+            <sc-if value="{{ isFull }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:11px">
+                <sc-for list="{{ sources }}" as="s" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <span style="width:78px;font:400 12.5px 'Karla';color:#3a3f37">{{ s.name }}</span>
+                    <span style="flex:1;height:14px;background:#eef0ea;border-radius:2px;overflow:hidden"><span style="display:block;height:100%;width:{{ s.pct }};background:{{ s.bar }}"></span></span>
+                    <span style="width:38px;text-align:right;font:500 12.5px 'IBM Plex Mono'">{{ s.pctT }}</span>
+                    <span style="width:52px;text-align:right;font:500 11px 'IBM Plex Mono';color:{{ s.dfg }}">{{ s.delta }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <span style="font:400 11.5px 'Karla';color:#8b9086">Instagram düşüyor, doğrudan trafik artıyor — kaynak dengesi kayıyor.</span>
+            </sc-if>
+            <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+              <span style="font:400 13px/1.6 'Karla';color:#8b9086;padding:14px 0">İlk ziyaretçilerin nereden geldiği burada birikir. Kampanya bağlantılarınızı etiketlerseniz kaynak ayrımı gün bir netleşir.</span>
+            </sc-if>
+          </div>
+        </div>
+
+        <!-- ISI HARİTASI + ROAS -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+          <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:13px">
+            <span style="font:600 15px 'Space Grotesk'">Yoğunluk — gün / saat</span>
+            <sc-if value="{{ isFull }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:8px">
+                <div style="display:flex;flex-direction:column;gap:4px;padding-top:16px">
+                  <sc-for list="{{ heatDays }}" as="d" hint-placeholder-count="7">
+                    <span style="height:14px;font:400 10px 'IBM Plex Mono';color:#9aa094;line-height:14px">{{ d }}</span>
+                  </sc-for>
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+                  <div style="display:flex;justify-content:space-between;font:400 9.5px 'IBM Plex Mono';color:#9aa094"><span>09</span><span>13</span><span>17</span><span>21</span></div>
+                  <sc-for list="{{ heat }}" as="row" hint-placeholder-count="7">
+                    <div style="display:flex;gap:3px">
+                      <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="12">
+                        <span style="flex:1;height:14px;border-radius:2px;background:{{ c }}"></span>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <span style="font:400 11.5px 'Karla';color:#8b9086">Zirve Çarşamba–Perşembe 18–20; Salı kesimli rota gününe denk. Reklam zamanlamasına dayanak.</span>
+            </sc-if>
+            <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+              <span style="font:400 13px/1.6 'Karla';color:#8b9086;padding:14px 0">Hangi gün/saat yoğun olduğunuz birkaç haftada belirginleşir — rota ve reklam zamanlaması için.</span>
+            </sc-if>
+          </div>
+          <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:13px">
+            <span style="font:600 15px 'Space Grotesk'">Kampanya getirisi (ROAS)</span>
+            <sc-if value="{{ isFull }}" hint-placeholder-val="{{ true }}">
+              <div style="display:grid;grid-template-columns:1fr 72px 72px 56px;gap:0 10px;font:500 10.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086;border-bottom:1px solid #eef0ea;padding-bottom:7px">
+                <span>Kampanya</span><span style="text-align:right">Ciro</span><span style="text-align:right">Gider</span><span style="text-align:right">Getiri</span>
+              </div>
+              <sc-for list="{{ roas }}" as="r" hint-placeholder-count="3">
+                <div style="display:grid;grid-template-columns:1fr 72px 72px 56px;gap:0 10px;font:500 12.5px 'IBM Plex Mono';color:#22251f;align-items:baseline;padding:2px 0">
+                  <span style="font:500 12.5px 'Karla'">{{ r.name }}</span>
+                  <span style="text-align:right">{{ r.rev }}</span>
+                  <span style="text-align:right;color:{{ r.spendFg }}">{{ r.spend }}</span>
+                  <span style="text-align:right;color:{{ r.roiFg }};font-weight:600">{{ r.roi }}</span>
+                </div>
+              </sc-for>
+              <span style="font:400 11.5px 'Karla';color:#8b9086">Gider Para'da kampanya etiketiyle girilir. <span style="color:#5f7a2c;font-weight:700">google-arama gideri girilmemiş →</span></span>
+            </sc-if>
+            <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+              <span style="font:400 13px/1.6 'Karla';color:#8b9086;padding:14px 0">İlk kampanyanızı bağlayıp giderini Para'da etiketleyince gerçek getiri (ROAS) burada Excel'siz görünür.</span>
+            </sc-if>
+          </div>
+        </div>
+
+        <!-- KOHORT + SEGMENT -->
+        <div style="display:grid;grid-template-columns:1fr 1.1fr;gap:18px">
+          <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:13px">
+            <span style="font:600 15px 'Space Grotesk'">Kaynağa göre tekrar sipariş</span>
+            <span style="font:400 11.5px 'Karla';color:#8b9086;margin-top:-6px">Asıl para tekrar siparişte — hangi kaynak sadık müşteri getiriyor?</span>
+            <sc-if value="{{ isFull }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:11px">
+                <sc-for list="{{ cohort }}" as="c" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <span style="width:96px;font:400 12.5px 'Karla';color:#3a3f37">{{ c.src }}</span>
+                    <span style="flex:1;height:14px;background:#eef0ea;border-radius:2px;overflow:hidden"><span style="display:block;height:100%;width:{{ c.pct }};background:#5f7a2c"></span></span>
+                    <span style="width:44px;text-align:right;font:500 12.5px 'IBM Plex Mono'">{{ c.pctT }}</span>
+                    <span style="width:64px;text-align:right;font:400 11px 'IBM Plex Mono';color:#8b9086">{{ c.ltv }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <span style="font:400 11.5px 'Karla';color:#8b9086">bayram-ig tek satışta ucuz değil ama tekrar oranı en yüksek — uzun vadede en değerli.</span>
+            </sc-if>
+            <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+              <span style="font:400 13px/1.6 'Karla';color:#8b9086;padding:14px 0">Müşteriler ikinci kez sipariş verdikçe hangi kaynağın sadık müşteri getirdiği ortaya çıkar.</span>
+            </sc-if>
+          </div>
+          <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:13px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between">
+              <span style="font:600 15px 'Space Grotesk'">Müşteri grupları</span>
+              <span style="font:400 11px 'Karla';color:#8b9086">siparişten türetilir · dışa al izin kuralına tabi</span>
+            </div>
+            <sc-if value="{{ isFull }}" hint-placeholder-val="{{ true }}">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <sc-for list="{{ segments }}" as="s" hint-placeholder-count="3">
+                  <div style="border:1px solid #e6e7e1;border-radius:8px;padding:12px 13px;display:flex;flex-direction:column;gap:5px">
+                    <span style="font:600 13px 'Space Grotesk';color:{{ s.fg }}">{{ s.name }}</span>
+                    <span style="font:500 22px 'IBM Plex Mono';color:#22251f">{{ s.count }}</span>
+                    <span style="font:400 11px 'Karla';color:#6a7065">{{ s.meta }}</span>
+                    <span style="font:600 11.5px 'Karla';color:#5f7a2c;margin-top:2px">Dışa al ↓</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+              <span style="font:400 13px/1.6 'Karla';color:#8b9086;padding:14px 0">Sipariş biriktikçe müşteriler kendiliğinden gruplanır: iyi müşteriler, uyuyanlar, yeniler.</span>
+            </sc-if>
+          </div>
+        </div>
+
+        <!-- ARAMA + İLGİ -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+          <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:11px">
+            <span style="font:600 15px 'Space Grotesk'">Aranıp bulunamayan <span style="font:400 11.5px 'Karla';color:#8b9086">— sıfır sonuç</span></span>
+            <sc-if value="{{ isFull }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:7px;flex-wrap:wrap;font:500 12.5px 'IBM Plex Mono';color:#b0561f">
+                <span style="border:1px solid #e6d3bf;border-radius:5px;padding:4px 10px">lahmacun · 14</span>
+                <span style="border:1px solid #e6d3bf;border-radius:5px;padding:4px 10px">pide · 9</span>
+                <span style="border:1px solid #e6d3bf;border-radius:5px;padding:4px 10px">çiğ köfte · 6</span>
+                <span style="border:1px solid #e6d3bf;border-radius:5px;padding:4px 10px">ayran · 4</span>
+              </div>
+              <span style="font:600 12.5px 'Karla';color:#5f7a2c">Aday ürün olarak aç →</span>
+            </sc-if>
+            <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+              <span style="font:400 13px 'Karla';color:#8b9086;padding:8px 0">Müşterinin arayıp bulamadığı ilk sinyaller birikince — istenen ama bizde olmayan ürünlerin listesi.</span>
+            </sc-if>
+          </div>
+          <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:11px">
+            <span style="font:600 15px 'Space Grotesk'">Çok bakılıp az alınan</span>
+            <sc-if value="{{ isFull }}" hint-placeholder-val="{{ true }}">
+              <sc-for list="{{ interest }}" as="p" hint-placeholder-count="2">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid #eef0ea;padding-bottom:7px">
+                  <span style="font:500 13px 'Karla';color:#22251f">{{ p.name }}</span>
+                  <span style="font:500 12px 'IBM Plex Mono';color:#8b9086">{{ p.ratio }} <span style="color:#b0561f">{{ p.note }}</span></span>
+                </div>
+              </sc-for>
+              <span style="font:600 12.5px 'Karla';color:#5f7a2c">Fiyat/görsel gözden geçir →</span>
+            </sc-if>
+            <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+              <span style="font:400 13px 'Karla';color:#8b9086;padding:8px 0">Görüntülenip sepete girmeyen ürünler burada — fiyat mı, görsel mi sorusunun yanıtı.</span>
+            </sc-if>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div style="width:100%;max-width:1360px;box-sizing:border-box;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:22px 30px;display:flex;flex-direction:column;gap:8px">
+    <span style="font:700 15px 'Space Grotesk';color:#3a4147">Tezgâh sözleşmesi (kodlayan ajan için)</span>
+    <ul style="margin:0;padding-left:20px;font:400 13.5px/1.75 'Karla';color:#6a7065">
+      <li><strong>Kıyas omurgası</strong> → her sayı önceki döneme göre değişimiyle gelir; zaman grafiği önceki dönemi hayalet çubuk olarak bindirir. Kıyassız çıplak rakam eksik sayılır.</li>
+      <li><strong>Ticaret ↔ Trafik modu</strong> → hero göstergeler moda göre değişir (Ticaret: ciro birinci sınıf, en tepede; Trafik: ziyaretçi/oturum/kaynak). Aynı çorbada değil, mimari ayrım.</li>
+      <li><strong>B2B/B2C her yerde</strong> → ciro splitte ayrışır, kırılım şeridinden filtrelenir. Karışık bakınca dönüşüm/sepet yalan söyler.</li>
+      <li><strong>İlk-gün hali birinci sınıf</strong> → "İlk gün" görünümü uydurma rakam göstermez; her blok "veri birikiyor" halini güven verici anlatır. Yapı boş veriye de dolu veriye de dayanır.</li>
+      <li><strong>Etkileşim</strong> → dönem/kıyas seçimi, mod, filtre çipleri, rakamdan detayına inme, zaman aralığı işaretleme (◆ kampanya), sütun sıralama, segment/tablo dışa alma.</li>
+      <li><strong>Rol/gizlilik</strong> → toplu-anonim, kişi takibi yok; iç terim (UTM/RFM/funnel) insan diline çevrili; kâr rakamı burada değil Raporlar'da; export toplu mesaja bağlanmaz.</li>
+    </ul>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { mode: 'ticaret', empty: false };
+  renderVals() {
+    const empty = this.state.empty;
+    const tic = this.state.mode === 'ticaret';
+    const seg = (on) => on ? ['#fff','#22251f'] : ['transparent','#6a7065'];
+    const [ticBg,ticFg] = seg(tic); const [trafBg,trafFg] = seg(!tic);
+    const segF = (on) => on ? ['#fff','#22251f'] : ['transparent','#6a7065'];
+    const [fullBg,fullFg] = segF(!empty); const [emptyBg,emptyFg] = segF(empty);
+
+    const nav = [
+      { label:'Panel' }, { label:'Siparişler' }, { label:'Ürünler' }, { label:'Müşteriler' },
+      { label:'Para' }, { label:'Raporlar' }, { label:'Analitik', act:true }, { label:'Rotalar' },
+    ].map(n => ({ label:n.label, fg:n.act?'#22251f':'#6a7065', bg:n.act?'#e9ede0':'transparent', edge:n.act?'#5f7a2c':'transparent' }));
+
+    const pos='#4a6121', neg='#b0561f', warn='#9a6416';
+    // HERO — moda ve veri haline göre
+    let heroLabel, heroValue, heroDelta, heroDeltaFg, heroRest, tsTitle, insight;
+    if (empty) {
+      insight = 'Sistem yeni açıldı. Bugün 1 ziyaret, henüz sipariş yok. Panik yok — ilk haftalar seyrek veri normaldir; kıyas ve eğilim birkaç güne oturur.';
+      if (tic) {
+        heroLabel='Ciro'; heroValue='0 €'; heroDelta='ilk dönem'; heroDeltaFg='#8b9086'; tsTitle='Ciro';
+        heroRest=[{label:'Sipariş',value:'0'},{label:'Ort. sepet',value:'—'},{label:'Dönüşüm',value:'—'}];
+      } else {
+        heroLabel='Ziyaretçi'; heroValue='1'; heroDelta='ilk dönem'; heroDeltaFg='#8b9086'; tsTitle='Ziyaretçi';
+        heroRest=[{label:'Oturum',value:'1'},{label:'Yeni / dönen',value:'1 / 0'},{label:'Sayfa/oturum',value:'3'}];
+      }
+      heroRest = heroRest.map(m => ({...m, delta:'—', dfg:'#8b9086'}));
+    } else if (tic) {
+      insight = 'Ciro düne göre %8 yukarıda ama sıçramanın çoğu tek B2B siparişinden (612 €) — genel eğilim sanılmamalı. Künefe çok bakılıp az alınıyor (214→3): fiyat ya da görsel gözden geçir.';
+      heroLabel='Ciro'; heroValue='18.240 €'; heroDelta='↑ %8'; heroDeltaFg=pos; tsTitle='Ciro';
+      heroRest=[
+        {label:'Sipariş',value:'274',delta:'↑ %6',dfg:pos},
+        {label:'Ort. sepet',value:'66,6 €',delta:'↑ %2',dfg:pos},
+        {label:'Dönüşüm',value:'%8,0',delta:'↓ %1,4',dfg:neg},
+      ];
+    } else {
+      insight = 'Instagram trafiği bu hafta %34 düştü — son paylaşım 9 gün önce; doğrudan trafik onu telafi ediyor. Çarşamba–Perşembe akşamı belirgin yoğunluk, reklam zamanlamasına dayanak.';
+      heroLabel='Ziyaretçi'; heroValue='3.418'; heroDelta='↑ %12'; heroDeltaFg=pos; tsTitle='Ziyaretçi';
+      heroRest=[
+        {label:'Oturum',value:'4.021',delta:'↑ %10',dfg:pos},
+        {label:'Yeni / dönen',value:'%71 / %29',delta:'↑ %3',dfg:pos},
+        {label:'Sayfa/oturum',value:'4,6',delta:'↓ %2',dfg:neg},
+      ];
+    }
+
+    // ciro spliti (yalnız ticaret+dolu anlamlı, ama band her zaman gösteriyor)
+    const splitB2C='58%', splitB2B='42%', b2cVal='10.580 €', b2bVal='7.660 €';
+
+    const mkF=(step,pct,n,drop,big)=>({step,pct,n,drop,
+      labelFg:big?'#b0561f':'#6a7065', bar:big?'#c98a2e':'#5f7a2c', dropFg:big?'#b0561f':'#9aa094'});
+    const funnel=[
+      mkF('Ziyaret','100%','3.418','',false),
+      mkF('Ürün görüntüleme','64%','2.187','−%36',false),
+      mkF('Sepete ekleme','22%','742','−%66',false),
+      mkF('Checkout başlangıcı','13%','438','−%41',true),
+      mkF('Sipariş','8%','274','−%37',false),
+    ];
+
+    const sources=[
+      {name:'Instagram',pct:'38%',pctT:'%38',delta:'↓34',dfg:neg,bar:'#5f7a2c'},
+      {name:'Google',pct:'24%',pctT:'%24',delta:'↑6',dfg:pos,bar:'#7f9a4a'},
+      {name:'WhatsApp',pct:'21%',pctT:'%21',delta:'↑2',dfg:pos,bar:'#a9c46b'},
+      {name:'Doğrudan',pct:'17%',pctT:'%17',delta:'↑12',dfg:pos,bar:'#c5d3a3'},
+    ];
+
+    // zaman serisi
+    const cur=[42,48,45,52,50,58,61,55,49,53,68,88,72,64,59,63,70,66,74,81,77,69,73,90,85,79,82,96];
+    const prev=[38,44,41,47,46,50,53,49,45,48,55,60,58,52,50,54,57,55,60,63,61,58,60,66,64,61,63,70];
+    const mx=Math.max(...cur,...prev);
+    const n=cur.length, W=700, H=150;
+    const X=i=>(i/(n-1)*W), Y=v=>(14+(1-v/mx)*118);
+    const curPoints=cur.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    const prevPoints=prev.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    const areaPath=`M ${X(0).toFixed(1)},${H} `+cur.map((v,i)=>`L ${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')+` L ${X(n-1).toFixed(1)},${H} Z`;
+    const annoIdx=10, annoX=X(annoIdx).toFixed(1), annoLeft=(annoIdx/(n-1)*100).toFixed(1)+'%';
+
+    // ısı haritası 7x12
+    const heatDays=['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+    const pat=[
+      [1,1,2,2,2,1,1,2,3,2,1,1],
+      [1,2,2,3,2,2,2,2,2,1,1,1],
+      [2,2,3,3,3,2,2,3,5,5,3,2],
+      [2,2,3,4,3,2,3,4,5,4,3,2],
+      [2,3,3,3,2,2,3,3,4,4,3,2],
+      [3,3,4,4,3,3,3,3,3,2,2,1],
+      [2,2,3,3,2,2,2,2,2,1,1,1],
+    ];
+    const heat=pat.map(r=>({cells:r.map(v=>`rgba(95,122,44,${(0.12+v*0.16).toFixed(2)})`)}));
+
+    const roas=[
+      {name:'bayram-ig',rev:'1.412 €',spend:'280 €',spendFg:'#22251f',roi:'5,0×',roiFg:pos},
+      {name:'yaz-google',rev:'642 €',spend:'girilmedi',spendFg:warn,roi:'—',roiFg:'#8b9086'},
+      {name:'wa-liste',rev:'388 €',spend:'0 €',spendFg:'#22251f',roi:'∞',roiFg:pos},
+    ];
+
+    const cohort=[
+      {src:'bayram-ig',pct:'31%',pctT:'%31',ltv:'118 € ÖD'},
+      {src:'Google',pct:'19%',pctT:'%19',ltv:'74 € ÖD'},
+      {src:'Doğrudan',pct:'26%',pctT:'%26',ltv:'96 € ÖD'},
+    ];
+
+    const segments=[
+      {name:'İyi müşteriler',count:'24',meta:'ort. 142 € · %68 tekrar',fg:'#4a6121'},
+      {name:'Uyuyanlar',count:'41',meta:'60+ gündür sipariş yok',fg:'#9a6416'},
+      {name:'Yeniler',count:'38',meta:'son 30 günde ilk sipariş',fg:'#3a6b8a'},
+    ];
+
+    const interest=[
+      {name:'Künefe',ratio:'214 → 3',note:'%1,4 dönüşüm'},
+      {name:'Fıstıklı Baklava 1kg',ratio:'188 → 9',note:'%4,8'},
+    ];
+
+    return {
+      nav, ticBg,ticFg,trafBg,trafFg, fullBg,fullFg,emptyBg,emptyFg,
+      isFull: !empty, isEmpty: empty,
+      setTicaret: () => this.setState({mode:'ticaret'}),
+      setTrafik: () => this.setState({mode:'trafik'}),
+      showFull: () => this.setState({empty:false}),
+      showEmpty: () => this.setState({empty:true}),
+      insight, heroLabel, heroValue, heroDelta, heroDeltaFg, heroRest, tsTitle,
+      splitB2C, splitB2B, b2cVal, b2bVal,
+      funnel, sources, curPoints, prevPoints, areaPath, annoX, annoLeft, heatDays, heat, roas, cohort, segments, interest,
+    };
+  }
+}
+</script>
+</body>
+</html>

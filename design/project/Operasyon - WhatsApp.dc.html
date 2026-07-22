@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">WhatsApp Konuşmaları · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Satışın kapandığı yüzeylerden biri. AI ajanı yürütür, admin izler/devralır. Sohbetten siparişe köprü.</span>
+    </div>
+
+    <div data-screen-label="WhatsApp Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="whatsapp" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;min-width:0;min-height:0">
+        <!-- KONUŞMA LİSTESİ -->
+        <div style="width:208px;border-right:1px solid #e6e7e1;display:flex;flex-direction:column;min-height:0;flex:none">
+          <div style="padding:14px 18px;border-bottom:1px solid #e6e7e1;display:flex;flex-direction:column;gap:2px"><span style="font:600 18px 'Space Grotesk'">WhatsApp</span><span style="font:400 11.5px 'Karla';color:#8b9086">3 cevap bekliyor · 1 AI yürütüyor</span></div>
+          <div style="overflow-y:auto;flex:1;min-height:0">
+            <sc-for list="{{ convos }}" as="c" hint-placeholder-count="6">
+              <div onClick="{{ c.select }}" style="padding:12px 18px;border-bottom:1px solid #f0f1ec;display:flex;flex-direction:column;gap:4px;cursor:pointer;background:{{ c.rowBg }};border-left:3px solid {{ c.edge }}">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font:600 13px 'Karla';color:#22251f;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><span style="font:400 10px 'IBM Plex Mono';color:#9aa094;flex:none">{{ c.time }}</span></div>
+                <span style="font:400 11.5px 'Karla';color:#6a7065;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.preview }}</span>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <sc-if value="{{ c.ai }}" hint-placeholder-val="{{ false }}"><span style="font:600 9px 'Space Grotesk';color:#5a4a8a;background:#ece8f5;border-radius:5px;padding:2px 6px">AI</span></sc-if>
+                  <sc-if value="{{ c.waiting }}" hint-placeholder-val="{{ false }}"><span style="font:600 9px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:5px;padding:2px 6px">cevap bekliyor</span></sc-if>
+                  <span style="margin-left:auto;font:500 9px 'Space Grotesk';color:{{ c.winFg }};background:{{ c.winBg }};border-radius:5px;padding:2px 6px">{{ c.win }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- KONUŞMA GÖRÜNÜMÜ -->
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;background:#f1f2ee">
+          <div style="padding:12px 20px;border-bottom:1px solid #e6e7e1;background:#fbfbf9;display:flex;align-items:center;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 15px 'Space Grotesk';color:#22251f">{{ det.name }}</span><span style="font:400 11px 'Karla';color:#8b9086">{{ det.sub }}</span></div>
+            <sc-if value="{{ det.ai }}" hint-placeholder-val="{{ false }}"><span onClick="{{ openDevral }}" style="font:600 11.5px 'Space Grotesk';color:#fff;background:#5a4a8a;border-radius:7px;padding:7px 12px;cursor:pointer;flex:none">Devral</span></sc-if>
+            <span onClick="{{ openSiparis }}" style="font:600 11.5px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:7px;padding:7px 12px;cursor:pointer;flex:none">Sipariş oluştur</span>
+          </div>
+
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ det.messages }}" as="m" hint-placeholder-count="5">
+              <div style="align-self:{{ m.align }};max-width:74%;display:flex;flex-direction:column;gap:2px">
+                <sc-if value="{{ m.who }}" hint-placeholder-val="{{ false }}"><span style="font:600 9px 'Space Grotesk';color:{{ m.whoFg }};padding:0 4px">{{ m.who }}</span></sc-if>
+                <div style="background:{{ m.bg }};border:1px solid {{ m.bd }};border-radius:11px;padding:9px 13px;font:400 12.5px/1.5 'Karla';color:#22251f">{{ m.text }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="padding:12px 20px;border-top:1px solid #e6e7e1;background:#fbfbf9">
+            <sc-if value="{{ det.windowOpen }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="flex:1;border:1px solid #d9dbd2;border-radius:10px;padding:10px 14px;font:400 13px 'Karla';color:#9aa094;background:#fff">Mesaj yaz…</div>
+                <span style="width:40px;height:40px;border-radius:10px;background:#5f7a2c;color:#fff;display:grid;place-items:center;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"></path></svg></span>
+              </div>
+              <span style="font:400 10.5px 'Karla';color:#8b9086;margin-top:6px;display:block">Cevap süresi açık · {{ det.winLeft }} kaldı</span>
+            </sc-if>
+            <sc-if value="{{ det.windowClosed }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px">
+                <span style="color:#9a6416;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 2"></path></svg></span>
+                <span style="font:500 11.5px/1.5 'Karla';color:#8a6410;flex:1">Cevap süresi doldu — serbest mesaj gönderilemez. Yalnız onaylı kalıp mesaj (ücretli) gönderilebilir.</span>
+                <span style="font:600 11.5px 'Space Grotesk';color:#9a6416;border:1px solid #ecd9b4;border-radius:7px;padding:7px 11px;flex:none">Kalıp mesaj</span>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <!-- MÜŞTERİ BAĞLAMI -->
+        <div style="width:172px;border-left:1px solid #e6e7e1;background:#f8f9f5;display:flex;flex-direction:column;min-height:0;overflow-y:auto;flex:none">
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font:600 14px 'Space Grotesk';color:#22251f">{{ det.name }}</span>
+              <span style="font:600 9.5px 'Space Grotesk';color:{{ det.ctxFg }};background:{{ det.ctxBg }};border-radius:6px;padding:2px 8px;align-self:flex-start">{{ det.ctxLabel }}</span>
+            </div>
+            <sc-if value="{{ det.isDraft }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px"><span style="font:500 11px/1.5 'Karla';color:#8a6410">Numara kayıtlı müşteriyle eşleşmedi — taslak kayıt.</span><span style="font:600 11px 'Space Grotesk';color:#9a6416">Müşteriye bağla →</span></div>
+            </sc-if>
+            <sc-if value="{{ det.hasContext }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Son siparişler</span>
+                <sc-for list="{{ det.orders }}" as="o" hint-placeholder-count="2"><div style="background:#fff;border:1px solid #e6e7e1;border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center"><span style="font:500 11px 'IBM Plex Mono';color:#8b9086">{{ o.no }}</span><span style="font:500 11.5px 'IBM Plex Mono';color:#22251f">{{ o.amt }}</span></div></sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Kampanya izni</span><span style="font:600 10.5px 'Space Grotesk';color:{{ det.optFg }};background:{{ det.optBg }};border-radius:6px;padding:3px 9px;align-self:flex-start">{{ det.opt }}</span></div>
+              <span onClick="{{ openTalep }}" style="font:600 11.5px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:7px;padding:8px;text-align:center;cursor:pointer">Talep (şikâyet) aç</span>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBİL -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">WhatsApp — mobil</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Mesajlaşma anlık ve mobil iş — bildirimle gel, hızlı oku, kısa cevap ver ya da devral. Bağlam kaybolmaz.</span>
+    </div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;justify-content:space-between"><span style="font:600 17px 'Space Grotesk';color:#22251f">Konuşmalar</span><span style="font:500 10px 'IBM Plex Mono';color:#9a6416;background:#fdf1e3;border-radius:9px;padding:2px 8px">3</span></div>
+        <div style="padding:6px 16px;display:flex;flex-direction:column">
+          <sc-for list="{{ convos }}" as="c" hint-placeholder-count="5">
+            <div style="padding:11px 0;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:11px">
+              <span style="width:38px;height:38px;border-radius:50%;background:{{ c.avBg }};color:#fff;font:600 13px 'Space Grotesk';display:grid;place-items:center;flex:none">{{ c.initials }}</span>
+              <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 13px 'Karla';color:#22251f">{{ c.name }}</span><span style="font:400 11px 'Karla';color:#6a7065;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.preview }}</span></div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none"><span style="font:400 9.5px 'IBM Plex Mono';color:#9aa094">{{ c.time }}</span><sc-if value="{{ c.ai }}" hint-placeholder-val="{{ false }}"><span style="font:600 8.5px 'Space Grotesk';color:#5a4a8a;background:#ece8f5;border-radius:5px;padding:1px 5px">AI</span></sc-if></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="width:340px;background:#e6ddd3;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14);display:flex;flex-direction:column;height:560px">
+        <div style="padding:13px 16px;background:#fbfbf9;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px"><span style="width:34px;height:34px;border-radius:50%;background:#5f7a2c;color:#fff;font:600 12px 'Space Grotesk';display:grid;place-items:center">AK</span><div style="display:flex;flex-direction:column;gap:1px;flex:1"><span style="font:600 14px 'Space Grotesk';color:#22251f">Ayşe Kaya</span><span style="font:400 10px 'Karla';color:#8b9086">B2C · cevap süresi açık</span></div><span style="font:600 10.5px 'Space Grotesk';color:#fff;background:#5a4a8a;border-radius:7px;padding:6px 10px">Devral</span></div>
+        <div style="flex:1;padding:14px 14px;display:flex;flex-direction:column;gap:8px;overflow-y:auto">
+          <div style="align-self:flex-start;max-width:80%;background:#fff;border-radius:11px;padding:8px 12px;font:400 12px/1.5 'Karla';color:#22251f">Merhaba, bayram için 2 kg fıstıklı baklava alabilir miyim?</div>
+          <div style="align-self:flex-end;max-width:80%;display:flex;flex-direction:column;gap:2px"><span style="font:600 8.5px 'Space Grotesk';color:#5a4a8a;padding:0 4px;align-self:flex-end">AI ajanı</span><div style="background:#dcf0c8;border-radius:11px;padding:8px 12px;font:400 12px/1.5 'Karla';color:#22251f">Tabii! 2 kg Fıstıklı Baklava 36,00 €. Teslimat mı kargo mu olsun?</div></div>
+          <div style="align-self:flex-start;max-width:80%;background:#fff;border-radius:11px;padding:8px 12px;font:400 12px/1.5 'Karla';color:#22251f">Teslimat, perşembe olur mu?</div>
+        </div>
+        <div style="padding:11px 14px;background:#fbfbf9;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:9px"><div style="flex:1;border:1px solid #d9dbd2;border-radius:20px;padding:9px 14px;font:400 12.5px 'Karla';color:#9aa094;background:#fff">Mesaj…</div><span style="width:36px;height:36px;border-radius:50%;background:#5f7a2c;color:#fff;display:grid;place-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"></path></svg></span></div>
+      </div>
+
+      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+        <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+          <li><strong>Web</strong> → üç sütun: liste + sohbet + müşteri bağlamı; devralma, sipariş köprüsü, birleştirme.</li>
+          <li><strong>Mobil</strong> → liste ve sohbet; tek hamle devralma; bağlam sohbet başlığına iner.</li>
+          <li><strong>Kural</strong> → pencere kapalıyken serbest mesaj yok (baştan görünür); stok/fiyat elle uydurulmaz (sipariş köprüsü); toplu/kampanya gönderimi yok.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEVRAL / SİPARİŞ / TALEP DIALOG -->
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:430px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px"><span style="font:600 18px 'Space Grotesk';margin-right:auto">{{ modalTitle }}</span><span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span></div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+          <span style="font:400 13px/1.6 'Karla';color:#3a3f37">{{ modalBody }}</span>
+          <span style="font:500 11.5px/1.5 'Karla';color:#5a4a8a;background:#ece8f5;border:1px solid #d8d0ec;border-radius:8px;padding:10px 12px">{{ modalNote }}</span>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5"><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer;margin-left:auto">Vazgeç</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:{{ modalBtn }};border-radius:8px;padding:10px 20px;cursor:pointer">{{ modalCta }}</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { sel: 0, modalOpen: false, modalKind: 'devral' };
+  renderVals() {
+    const win = (kind) => kind==='open' ? {win:'23s',winFg:'#4a6121',winBg:'#eef4e2'} : (kind==='soon'?{win:'2s',winFg:'#9a6416',winBg:'#fdf1e3'}:{win:'kapalı',winFg:'#a5443c',winBg:'#fbe9e7'});
+    const cDefs = [
+      { name:'Ayşe Kaya', preview:'Teslimat, perşembe olur mu?', time:'2 dk', ai:true, waiting:false, winKind:'open', draft:false, b2c:true },
+      { name:'Café Marceau', preview:'Faturayı gönderebilir misiniz?', time:'18 dk', ai:false, waiting:true, winKind:'open', draft:false, b2c:false },
+      { name:'+33 7 88 34 …', preview:'Merhaba, sipariş vermek istiyorum', time:'40 dk', ai:false, waiting:true, winKind:'soon', draft:true, b2c:true },
+      { name:'M. Leroy', preview:'Teşekkürler!', time:'2 saat', ai:false, waiting:false, winKind:'closed', draft:false, b2c:true },
+      { name:'Sofia R.', preview:'Kargo ne zaman gelir?', time:'dün', ai:true, waiting:false, winKind:'open', draft:false, b2c:true },
+    ];
+    const sel = this.state.sel;
+    const avPal = ['#5f7a2c','#9a6416','#3a6b8a','#5a4a8a','#a5443c'];
+    const initials = n => n.startsWith('+') ? 'WA' : n.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    const convos = cDefs.map((c,i) => ({ name:c.name, preview:c.preview, time:c.time, ai:c.ai, waiting:c.waiting,
+      ...win(c.winKind), edge: i===sel?'#25d366':'transparent', rowBg: i===sel?'#eef4e2':'transparent',
+      initials: initials(c.name), avBg: avPal[i%avPal.length], select:()=>this.setState({sel:i}) }));
+
+    const cur = cDefs[Math.min(sel, cDefs.length-1)];
+    const M = { open:cur.winKind==='open'||cur.winKind==='soon', closed:cur.winKind==='closed' };
+    const det = {
+      name: cur.name, sub: (cur.b2c?'B2C':'B2B') + ' · ' + (cur.ai?'AI ajanı yürütüyor':(cur.waiting?'cevap bekliyor':'insan yürütüyor')),
+      ai: cur.ai, windowOpen: M.open, windowClosed: M.closed, winLeft: cur.winKind==='soon'?'2 saat':'23 saat',
+      ctxLabel: cur.draft?'Taslak numara':(cur.b2c?'B2C müşteri':'B2B müşteri'), ctxFg: cur.draft?'#9a6416':'#4a6121', ctxBg: cur.draft?'#fdf1e3':'#eef4e2',
+      isDraft: cur.draft, hasContext: !cur.draft,
+      orders:[ {no:'#2451',amt:'48,00 €'}, {no:'#2418',amt:'34,00 €'} ],
+      opt: cur.b2c?'Açık':'—', optFg: cur.b2c?'#4a6121':'#6a7065', optBg: cur.b2c?'#eef4e2':'#eef0ea',
+      messages: cur.draft ? [
+        { who:null, text:'Merhaba, sipariş vermek istiyorum', align:'flex-start', bg:'#fff', bd:'#e6e7e1' },
+        { who:'Siz', whoFg:'#4a6121', text:'Merhaba! Hangi ürünlerle ilgileniyorsunuz?', align:'flex-end', bg:'#dcf0c8', bd:'#c3e39f' },
+      ] : cur.ai ? [
+        { who:null, text:'Merhaba, bayram için 2 kg fıstıklı baklava alabilir miyim?', align:'flex-start', bg:'#fff', bd:'#e6e7e1' },
+        { who:'AI ajanı', whoFg:'#5a4a8a', text:'Tabii! 2 kg Fıstıklı Baklava 36,00 €. Teslimat mı kargo mu olsun?', align:'flex-end', bg:'#ece8f5', bd:'#d8d0ec' },
+        { who:null, text:'Teslimat, perşembe olur mu?', align:'flex-start', bg:'#fff', bd:'#e6e7e1' },
+      ] : [
+        { who:null, text:'Faturayı gönderebilir misiniz?', align:'flex-start', bg:'#fff', bd:'#e6e7e1' },
+        { who:'Siz', whoFg:'#4a6121', text:'Elbette, hemen iletiyorum.', align:'flex-end', bg:'#dcf0c8', bd:'#c3e39f' },
+      ],
+    };
+
+    const mk = this.state.modalKind;
+    const cfg = mk==='devral' ? { title:'Sohbeti devral', body:`${cur.name} sohbetini üstleniyorsunuz. AI susar, cevaplar sizden gider.`, note:'İş bitince tek dokunuşla ajana geri bırakabilirsiniz.', cta:'Devral', btn:'#5a4a8a' }
+      : mk==='siparis' ? { title:'Sohbetten sipariş oluştur', body:`Müşteri eşleşmiş halde elle sipariş girişi açılır; kaynak WhatsApp olarak işlenir.`, note:'Ticari gerçek sipariş akışından gelir — stok/fiyat sohbette elle uydurulmaz.', cta:'Sipariş girişini aç', btn:'#5f7a2c' }
+      : { title:'Talep (şikâyet) aç', body:'Bu konuşmadan talep kaydı açılır; müşteri ve varsa sipariş bağlanır.', note:'Talep, Talepler ekranından yürütülür ve iadeye bağlanabilir.', cta:'Talep oluştur', btn:'#a5443c' };
+
+    return {
+      convos, det,
+      modalOpen: this.state.modalOpen, modalTitle:cfg.title, modalBody:cfg.body, modalNote:cfg.note, modalCta:cfg.cta, modalBtn:cfg.btn,
+      openDevral: () => this.setState({ modalOpen:true, modalKind:'devral' }),
+      openSiparis: () => this.setState({ modalOpen:true, modalKind:'siparis' }),
+      openTalep: () => this.setState({ modalOpen:true, modalKind:'talep' }),
+      closeModal: () => this.setState({ modalOpen:false }), stop: (e)=>e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

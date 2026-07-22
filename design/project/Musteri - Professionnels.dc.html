@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+  body { margin:0; background:#e9e6df; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-wrap:wrap;gap:56px;padding:48px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:1360px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Professionnels · Web (tanıtım + SIRET kaydı)</span>
+    <div data-screen-label="Professionnels Web" style="width:1360px;background:#faf6ec;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);color:#3a3f35">
+      <div style="display:flex;align-items:center;gap:36px;padding:18px 48px;border-bottom:1px solid #e6dfcd">
+        <img src="assets/logo.jpg" style="height:58px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+        <nav style="display:flex;gap:28px;font:600 15px 'Karla';color:#3a4147">
+          <span>Katalog</span><span>Paketler</span><span style="color:#b05c2e">Fırsatlar</span><span>Keşif</span><span style="color:#5f7a2c;border-bottom:2px solid #5f7a2c;padding-bottom:2px">Professionnels</span>
+        </nav>
+        <span style="margin-left:auto;font:600 14px 'Karla';color:#8a8270">TR ▾</span>
+      </div>
+      <div style="background:#3a4147;color:#f3efe2;display:grid;grid-template-columns:1.1fr 1fr;align-items:center">
+        <div style="padding:52px 48px;display:flex;flex-direction:column;gap:18px">
+          <span style="font:600 13px 'Karla';letter-spacing:.14em;text-transform:uppercase;color:#a9c46b">Restoran &amp; market için</span>
+          <h1 style="margin:0;font:600 44px/1.2 'Lora'">Mutfağınızın Türk lezzeti tedarikçisi</h1>
+          <div style="display:flex;flex-direction:column;gap:10px;font:400 15.5px/1.6 'Karla';color:#d5d8d0">
+            <span>✓ Toptan fiyat listesi — onayla birlikte açılır</span>
+            <span>✓ Bölge içi düzenli teslimat, kendi soğuk zincir aracımızla</span>
+            <span>✓ Hacimli sipariş kolaylığı + tek tuşla tekrar sipariş</span>
+            <span>✓ WhatsApp'tan sipariş ve doğrudan iletişim</span>
+          </div>
+          <div style="display:flex;gap:14px;align-items:center">
+            <span style="background:#a9c46b;color:#343b41;font:700 15px 'Karla';padding:14px 28px;border-radius:26px">Hemen başvurun</span>
+            <span style="font:700 14px 'Karla';color:#a9c46b">💬 WhatsApp'tan sorun</span>
+          </div>
+        </div>
+        <div style="height:100%;min-height:380px"><image-slot id="pro-hero" shape="rect" placeholder="Restoran mutfağı / teslimat aracı fotoğrafı"></image-slot></div>
+      </div>
+      <div style="padding:36px 48px;display:flex;gap:16px">
+        <div style="flex:1;background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:20px 24px;display:flex;flex-direction:column;gap:6px">
+          <span style="font:700 22px 'Lora';color:#5f7a2c">1</span>
+          <span style="font:700 15px 'Karla';color:#3a4147">Kaydolun</span>
+          <span style="font:400 13.5px/1.6 'Karla';color:#6d7261">SIRET'inizle bir dakikada — bilgiler resmî kayıttan kendiliğinden dolar.</span>
+        </div>
+        <div style="flex:1;background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:20px 24px;display:flex;flex-direction:column;gap:6px">
+          <span style="font:700 22px 'Lora';color:#5f7a2c">2</span>
+          <span style="font:700 15px 'Karla';color:#3a4147">Onay</span>
+          <span style="font:400 13.5px/1.6 'Karla';color:#6d7261">Başvurunuzu inceleyip hızla dönüş yaparız; sonuç e-posta ile.</span>
+        </div>
+        <div style="flex:1;background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:20px 24px;display:flex;flex-direction:column;gap:6px">
+          <span style="font:700 22px 'Lora';color:#5f7a2c">3</span>
+          <span style="font:700 15px 'Karla';color:#3a4147">Toptan sipariş</span>
+          <span style="font:400 13.5px/1.6 'Karla';color:#6d7261">Fiyat listeniz açılır; dilediğiniz kanaldan sipariş verirsiniz.</span>
+        </div>
+      </div>
+      <div style="padding:0 48px 48px;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start">
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:26px 30px;display:flex;flex-direction:column;gap:14px">
+          <span style="font:600 22px 'Lora';color:#343b41">Başvuru</span>
+          <div style="display:flex;gap:8px">
+            <span style="flex:1;background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:10px;border-radius:18px;text-align:center">🇫🇷 Fransız şirketi (SIRET)</span>
+            <span style="flex:1;background:#fff;border:1.5px solid #d8cfb6;color:#3a4147;font:700 13.5px 'Karla';padding:10px;border-radius:18px;text-align:center">🇩🇪 Alman şirketi</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:700 13.5px 'Karla';color:#3a4147">SIRET numaranız</span>
+            <div style="display:flex;gap:8px">
+              <span style="flex:1;border:2px solid #5f7a2c;border-radius:12px;padding:11px 14px;font:400 15px 'Karla';color:#3a4147;background:#fff;letter-spacing:.06em">842 517 693 00021</span>
+              <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:11px 20px;border-radius:20px;display:grid;place-items:center">Getir</span>
+            </div>
+          </div>
+          <div style="background:#eef2e2;border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;gap:6px;font:400 13.5px 'Karla';color:#3a3f35">
+            <span style="font:700 13px 'Karla';color:#5f7a2c">✓ Resmî kayıttan getirildi — doğrulayın</span>
+            <div style="display:flex;justify-content:space-between"><span style="color:#8a8270">Unvan</span><span style="font-weight:700">Restaurant Anatolie SARL</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#8a8270">Adres</span><span style="font-weight:700">8 Rue du Fossé, 67000 Strasbourg</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#8a8270">Faaliyet</span><span style="font-weight:700">Restoran işletmesi</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font:700 13px 'Karla';color:#3a4147">Adınız</span><span style="border:1px solid #e0d8c2;border-radius:12px;padding:11px 14px;font:400 14px 'Karla';color:#3a4147;background:#fff">Mehmet Demir</span></div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font:700 13px 'Karla';color:#3a4147">Telefon</span><span style="border:1px solid #e0d8c2;border-radius:12px;padding:11px 14px;font:400 14px 'Karla';color:#3a4147;background:#fff">+33 6 98 76 54 32</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px"><span style="font:700 13px 'Karla';color:#3a4147">E-posta</span><span style="border:1px solid #e0d8c2;border-radius:12px;padding:11px 14px;font:400 14px 'Karla';color:#3a4147;background:#fff">mehmet@anatolie-restaurant.fr</span></div>
+          <span style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';padding:14px;border-radius:26px;text-align:center">Başvuruyu gönder</span>
+          <span style="font:400 12px/1.6 'Karla';color:#8a8270;text-align:center">Gönderince e-postanıza tek kullanımlık kod gelir — hesabınız onunla açılır; şifre yok. Zaten hesabınız varsa aynı hesapla başvurursunuz.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:22px 26px;display:flex;flex-direction:column;gap:8px">
+            <span style="font:600 18px 'Lora';color:#343b41">Sorunuz mu var?</span>
+            <span style="font:400 14px/1.6 'Karla';color:#6d7261">Çoğu iş birliği bir konuşmayla başlar. Bize doğrudan ulaşın:</span>
+            <span style="background:#eef2e2;color:#5f7a2c;font:700 14px 'Karla';padding:12px;border-radius:22px;text-align:center">💬 WhatsApp: +33 6 XX XX XX XX</span>
+          </div>
+          <div style="background:#f0e9d6;border-radius:16px;padding:18px 22px;font:400 13.5px/1.7 'Karla';color:#6d7261">
+            Onay gelene kadar kataloğu perakende fiyatlarla gezebilirsiniz. <strong>Toptan fiyat listeniz onayla birlikte açılır.</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <span style="font:600 15px 'Karla';color:#3a4147;margin-top:12px">Durumlar</span>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Alman şirketi yolu</span>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;flex-direction:column;gap:4px"><span style="font:700 12.5px 'Karla';color:#3a4147">Şirket unvanı</span><span style="border:1px solid #e0d8c2;border-radius:10px;padding:9px 12px;font:400 13px 'Karla';color:#3a4147;background:#fff">Kehl Feinkost GmbH</span></div>
+          <div style="display:flex;flex-direction:column;gap:4px"><span style="font:700 12.5px 'Karla';color:#3a4147">AB vergi numarası (USt-IdNr)</span>
+            <div style="display:flex;gap:6px"><span style="flex:1;border:2px solid #5f7a2c;border-radius:10px;padding:9px 12px;font:400 13px 'Karla';color:#3a4147;background:#fff">DE 812 345 678</span><span style="background:#eef2e2;color:#5f7a2c;font:700 12px 'Karla';padding:9px 12px;border-radius:14px">✓ Doğrulandı</span></div>
+          </div>
+        </div>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">Geçersiz numarada: alan kırmızı + "Bu numara doğrulanamadı — kontrol edin". Adres/faaliyet elle doldurulur.</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">SIRET bulunamadı</span>
+        <div style="display:flex;gap:6px"><span style="flex:1;border:1.5px solid #c25e3a;background:#fbeee8;border-radius:10px;padding:9px 12px;font:400 13px 'Karla';color:#c25e3a">999 999 999 00000</span></div>
+        <span style="font:600 13px/1.5 'Karla';color:#c25e3a">Bu SIRET ile kayıt bulamadık.</span>
+        <span style="font:400 12.5px 'Karla';color:#6d7261">Numarayı kontrol edin, <span style="color:#5f7a2c;font-weight:700">bilgileri elle doldurun</span> ya da <span style="color:#5f7a2c;font-weight:700">WhatsApp'tan yazın</span>.</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270;align-self:flex-start">Başvuru gönderildi</span>
+        <span style="font-size:30px">📨</span>
+        <span style="font:600 18px 'Lora';color:#343b41">Başvurunuz alındı</span>
+        <span style="font:400 13px/1.6 'Karla';color:#6d7261">İnceliyoruz — sonucu e-posta ile bildireceğiz. Bu sırada kataloğu perakende fiyatlarla gezebilirsiniz.</span>
+        <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:11px 24px;border-radius:22px">Kataloğa göz at</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:8px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Sonuç halleri (girişte görünür)</span>
+        <div style="background:#fdf3e0;color:#8a6b2a;font:600 12.5px/1.5 'Karla';padding:10px 14px;border-radius:12px">⏳ Başvurunuz inceleniyor — sonuç e-posta ile.</div>
+        <div style="background:#eef2e2;color:#5f7a2c;font:600 12.5px/1.5 'Karla';padding:10px 14px;border-radius:12px">✓ Onaylandı! Toptan fiyat listeniz açıldı.</div>
+        <div style="background:#f0e9d6;color:#6d7261;font:600 12.5px/1.5 'Karla';padding:10px 14px;border-radius:12px">Başvurunuz şu an onaylanamadı — hesabınızla alışverişe devam edebilirsiniz.</div>
+      </div>
+    </div>
+
+    <div style="width:1360px;background:#fff;border:1.5px dashed #cdc4a8;border-radius:16px;padding:24px 32px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:700 16px 'Karla';color:#3a4147">Etkileşim sözleşmesi (kodlayan ajan için)</span>
+      <ul style="margin:0;padding-left:20px;font:400 14px/1.8 'Karla';color:#6d7261">
+        <li><strong>SIRET "Getir"</strong> → unvan/adres/faaliyet resmî kayıttan doldurulur (salt-okunur kart); aday yalnız doğrular + iletişim bilgisi ekler. Hedef: 1 dakikada başvuru.</li>
+        <li><strong>Alman sekmesi</strong> → elle alanlar + USt-IdNr; numara girilince otomatik doğrulanır (✓/kırmızı hata). "VIES/Sirene" adları hiçbir metinde geçmez.</li>
+        <li><strong>Gönder</strong> → e-postaya tek kullanımlık kod → hesap açılır/bağlanır (mevcut B2C hesabı olan aynı hesapla başvurur) → "başvuru alındı" ekranı.</li>
+        <li>Toptan fiyat/fiyat aralığı onaysız hiçbir yerde görünmez (tanıtım metinlerinde de). Vade/limit kayıtta hiç geçmez.</li>
+        <li>Reddedilen aday perakende müşteri olarak kalır; kırmızı/suçlayıcı dil kullanılmaz.</li>
+        <li><strong>Mobil</strong> → aynı akış tek sütun; SIRET/vergi no alanları rakam klavyesi açar, boşluklu maskeleme otomatik.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Mobil (tek sütun)</span>
+    <div data-screen-label="Professionnels Mobil" style="width:390px;background:#faf6ec;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15)">
+      <div style="background:#3a4147;color:#f3efe2;padding:26px 20px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 11px 'Karla';letter-spacing:.14em;text-transform:uppercase;color:#a9c46b">Restoran &amp; market için</span>
+        <h1 style="margin:0;font:600 26px/1.25 'Lora'">Mutfağınızın Türk lezzeti tedarikçisi</h1>
+        <span style="font:400 13px/1.7 'Karla';color:#d5d8d0">✓ Toptan fiyat (onayla açılır)<br>✓ Bölge içi düzenli teslimat<br>✓ Tek tuşla tekrar sipariş</span>
+        <span style="background:#a9c46b;color:#343b41;font:700 14px 'Karla';padding:12px;border-radius:22px;text-align:center">Hemen başvurun</span>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:8px">
+          <span style="flex:1;background:#5f7a2c;color:#fff;font:700 12.5px 'Karla';padding:9px;border-radius:16px;text-align:center">🇫🇷 SIRET</span>
+          <span style="flex:1;background:#fff;border:1.5px solid #d8cfb6;color:#3a4147;font:700 12.5px 'Karla';padding:9px;border-radius:16px;text-align:center">🇩🇪 Alman şirketi</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:700 13px 'Karla';color:#3a4147">SIRET numaranız</span>
+          <div style="display:flex;gap:8px">
+            <span style="flex:1;border:2px solid #5f7a2c;border-radius:12px;padding:11px 13px;font:400 14px 'Karla';color:#3a4147;background:#fff">842 517 693 00021</span>
+            <span style="background:#5f7a2c;color:#fff;font:700 13px 'Karla';padding:11px 16px;border-radius:18px;display:grid;place-items:center">Getir</span>
+          </div>
+        </div>
+        <div style="background:#eef2e2;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:5px;font:400 12.5px 'Karla';color:#3a3f35">
+          <span style="font:700 12px 'Karla';color:#5f7a2c">✓ Resmî kayıttan getirildi</span>
+          <span><strong>Restaurant Anatolie SARL</strong><br>8 Rue du Fossé, 67000 Strasbourg · Restoran</span>
+        </div>
+        <span style="border:1px solid #e0d8c2;border-radius:12px;padding:11px 13px;font:400 13.5px 'Karla';color:#9a917c;background:#fff">Adınız</span>
+        <span style="border:1px solid #e0d8c2;border-radius:12px;padding:11px 13px;font:400 13.5px 'Karla';color:#9a917c;background:#fff">E-posta</span>
+        <span style="border:1px solid #e0d8c2;border-radius:12px;padding:11px 13px;font:400 13.5px 'Karla';color:#9a917c;background:#fff">Telefon</span>
+        <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px;border-radius:24px;text-align:center">Başvuruyu gönder</span>
+        <span style="background:#eef2e2;color:#5f7a2c;font:700 13px 'Karla';padding:11px;border-radius:20px;text-align:center">💬 WhatsApp'tan sorun</span>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Raporlar — kârlılık &amp; muhasebe export · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">İki ayrı kâr: ürün kârı (doğrudan giderler sonrası) ≠ şirket kârı (genel giderler düşülmüş). Fire ayrı görünür. Yalnız admin.</span>
+    </div>
+
+    <div data-screen-label="Raporlar Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="raporlar" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">Raporlar</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">Temmuz 2026 · kesinleşen siparişler · 6 fatura no eşleşmemiş</span>
+          </div>
+          <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 12px">Temmuz 2026 ▾</span>
+          <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 12px">↳ geçen aya göre</span>
+        </div>
+        <div style="padding:0 24px;border-bottom:1px solid #e6e7e1;display:flex;gap:2px;background:#f8f9f5;flex-wrap:wrap">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+            <span onClick="{{ t.select }}" style="font:600 12.5px 'Space Grotesk';color:{{ t.fg }};border-bottom:2px solid {{ t.edge }};padding:11px 13px;margin-bottom:-1px;cursor:pointer;display:flex;align-items:center;gap:6px">{{ t.label }}<sc-if value="{{ t.badge }}" hint-placeholder-val="{{ false }}"><span style="font:500 10px 'IBM Plex Mono';color:#9a6416;background:#fdf1e3;border-radius:9px;padding:1px 6px">{{ t.badge }}</span></sc-if></span>
+          </sc-for>
+        </div>
+
+        <!-- ÜRÜN KÂRLILIĞI -->
+        <sc-if value="{{ isUrun }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+            <div style="padding:14px 24px;border-bottom:1px solid #eef0ea;display:grid;grid-template-columns:repeat(3,1fr);background:#f8f9f5">
+              <div style="padding:0 18px;display:flex;flex-direction:column;gap:3px"><span style="font:500 10.5px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#6a7065">Satış geliri</span><span style="font:500 24px 'IBM Plex Mono';color:#22251f">18.240 €</span></div>
+              <div style="padding:0 18px;border-left:1px solid #e4e6de;display:flex;flex-direction:column;gap:3px"><span style="font:500 10.5px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#6a7065">Doğrudan gider sonrası</span><span style="font:500 24px 'IBM Plex Mono';color:#4a6121">7.820 €</span></div>
+              <div style="padding:0 18px;border-left:1px solid #e4e6de;display:flex;flex-direction:column;gap:3px"><span style="font:500 10.5px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#9a6416">Fire (ayrı)</span><span style="font:500 24px 'IBM Plex Mono';color:#9a6416">−412 €</span></div>
+            </div>
+            <div style="display:grid;grid-template-columns:minmax(130px,1fr) 84px 84px 78px 84px;gap:0 8px;padding:10px 24px;border-bottom:1px solid #e6e7e1;font:500 10px 'Space Grotesk';letter-spacing:.03em;text-transform:uppercase;color:#8b9086;background:#f8f9f5"><span>Ürün</span><span style="text-align:right">Gelir</span><span style="text-align:right">Maliyet</span><span style="text-align:right">Fire</span><span style="text-align:right">Net marj</span></div>
+            <div style="overflow-y:auto;flex:1;min-height:0">
+              <sc-for list="{{ urunler }}" as="p" hint-placeholder-count="8">
+                <div onClick="{{ p.toggle }}" style="display:flex;flex-direction:column;border-bottom:1px solid #f0f1ec;cursor:pointer">
+                  <div style="display:grid;grid-template-columns:minmax(130px,1fr) 84px 84px 78px 84px;gap:0 8px;padding:11px 24px;align-items:center">
+                    <div style="display:flex;align-items:center;gap:7px;min-width:0"><span style="color:#9aa094;font:500 11px 'Space Grotesk';flex:none">{{ p.caret }}</span><span style="font:600 13px 'Karla';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span></div>
+                    <span style="text-align:right;font:500 12.5px 'IBM Plex Mono';color:#22251f">{{ p.revenue }}</span>
+                    <span style="text-align:right;font:500 12.5px 'IBM Plex Mono';color:#8b9086">{{ p.cost }}</span>
+                    <span style="text-align:right;font:500 12px 'IBM Plex Mono';color:{{ p.fireFg }}">{{ p.fire }}</span>
+                    <span style="justify-self:end;font:600 11px 'Space Grotesk';color:{{ p.marginFg }};background:{{ p.marginBg }};border-radius:7px;padding:3px 9px">{{ p.margin }}</span>
+                  </div>
+                  <sc-if value="{{ p.open }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:2px 24px 12px 42px;display:flex;flex-direction:column;gap:5px">
+                      <sc-for list="{{ p.breakdown }}" as="b" hint-placeholder-count="4"><div style="display:flex;align-items:center;justify-content:space-between;font:400 12px 'Karla';color:#6a7065;border-bottom:1px dashed #eef0ea;padding-bottom:4px"><span>{{ b.k }}</span><span style="font-family:'IBM Plex Mono';color:#3a3f37">{{ b.v }}</span></div></sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ŞİRKET KÂRLILIĞI -->
+        <sc-if value="{{ isSirket }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:22px 24px;display:flex;flex-direction:column;gap:14px">
+            <span style="font:400 12.5px/1.5 'Karla';color:#8b9086">Genel giderler ürünlere dağıtılmaz — şirket seviyesinde bir kez düşülür. Ürün kararı temiz, şirket kârı gerçek.</span>
+            <div style="border:1px solid #e6e7e1;background:#fff;border-radius:11px;overflow:hidden">
+              <sc-for list="{{ sirket }}" as="r" hint-placeholder-count="6">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid #f0f1ec;background:{{ r.bg }}">
+                  <span style="font:{{ r.weight }} 13.5px 'Space Grotesk';color:{{ r.labelFg }}">{{ r.label }}</span>
+                  <span style="font:{{ r.weight }} 15px 'IBM Plex Mono';color:{{ r.valFg }}">{{ r.value }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <span style="font:400 11.5px 'Karla';color:#8b9086">Pazarlık indirimi (kapıda/elle verilen): −186 € · iz kayıtlarından türetilir.</span>
+          </div>
+        </sc-if>
+
+        <!-- KANAL -->
+        <sc-if value="{{ isKanal }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:22px 24px;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-content:start">
+            <sc-for list="{{ kanallar }}" as="k" hint-placeholder-count="2">
+              <div style="border:1px solid #e6e7e1;background:#fff;border-radius:11px;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+                <span style="font:600 15px 'Space Grotesk';color:{{ k.fg }}">{{ k.name }}</span>
+                <div style="display:flex;flex-direction:column;gap:9px">
+                  <sc-for list="{{ k.rows }}" as="r" hint-placeholder-count="3"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 12.5px 'Karla';color:#6a7065">{{ r.k }}</span><span style="font:500 13px 'IBM Plex Mono';color:{{ r.vFg }}">{{ r.v }}</span></div></sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- EXPORT -->
+        <sc-if value="{{ isExport }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:22px 24px;display:flex;flex-direction:column;gap:16px">
+            <div style="border:1px solid #e6e7e1;background:#fff;border-radius:11px;padding:16px 18px;display:flex;align-items:center;gap:14px">
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1"><span style="font:600 14px 'Space Grotesk';color:#22251f">Muhasebe export — Temmuz 2026</span><span style="font:400 11.5px 'Karla';color:#8b9086">Hediye (ikram) siparişler dışarı giden veriden düşülür · KDV işleme tipi taşınır</span></div>
+              <span onClick="{{ openExport }}" style="font:600 12.5px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 16px;cursor:pointer">Export üret</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:500 10.5px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Fatura no eşleşmemiş (6)</span>
+              <div style="border:1px solid #e6e7e1;background:#fff;border-radius:10px;overflow:hidden">
+                <sc-for list="{{ eslesme }}" as="e" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #f0f1ec">
+                    <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 12.5px 'Karla';color:#22251f">{{ e.ref }} · {{ e.customer }}</span><span style="font:400 11px 'Karla';color:#8b9086">{{ e.amount }} · {{ e.vat }}</span></div>
+                    <div style="border:1px solid #d9dbd2;border-radius:8px;padding:8px 12px;font:400 12px 'IBM Plex Mono';color:#9aa094;background:#f8f9f5;min-width:120px">Fatura no gir…</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBİL -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Raporlar — mobil</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">"Bu ay nasıl gidiyor" telefonda tek bakış. Export/eşleştirme masa başı ama muhasebeci arayınca yolda da olur.</span>
+    </div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;justify-content:space-between"><span style="font:600 17px 'Space Grotesk';color:#22251f">Temmuz 2026</span><span style="font:400 11px 'IBM Plex Mono';color:#8b9086">geçen aya göre</span></div>
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:11px">
+          <div style="border:1px solid #e6e7e1;border-radius:11px;padding:13px 15px;display:flex;flex-direction:column;gap:3px"><span style="font:500 10.5px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#6a7065">Satış geliri</span><div style="display:flex;align-items:baseline;gap:8px"><span style="font:500 24px 'IBM Plex Mono';color:#22251f">18.240 €</span><span style="font:500 12px 'IBM Plex Mono';color:#4a6121">↑ %8</span></div></div>
+          <div style="border:1px solid #cdd8b6;background:#f2f6ea;border-radius:11px;padding:13px 15px;display:flex;flex-direction:column;gap:3px"><span style="font:500 10.5px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#4a6121">Şirket kârı (genel gider sonrası)</span><span style="font:500 24px 'IBM Plex Mono';color:#4a6121">3.180 €</span></div>
+          <div style="display:flex;gap:9px">
+            <div style="flex:1;border:1px solid #e6e7e1;border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;gap:2px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#6a7065">Ürün kârı</span><span style="font:500 15px 'IBM Plex Mono';color:#22251f">7.820 €</span></div>
+            <div style="flex:1;border:1px solid #ecd9b4;background:#fdf7ec;border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;gap:2px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#9a6416">Fire</span><span style="font:500 15px 'IBM Plex Mono';color:#9a6416">−412 €</span></div>
+          </div>
+          <span style="border:1px solid #d9dbd2;color:#3a3f37;font:600 13px 'Space Grotesk';padding:12px;border-radius:11px;text-align:center">Muhasebe export üret</span>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+        <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+          <li><strong>Web</strong> → ürün gider kırılımı, kanal görünümü, export üretimi, fatura no eşleştirme kuyruğu.</li>
+          <li><strong>Mobil</strong> → özet rakamlar (satış/ürün kârı/şirket kârı/fire), hızlı export.</li>
+          <li><strong>Kural</strong> → iki kâr ayrı; fire ayrı; hediye export'a girmez; resmî mali tablo üretilmez.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPORT DIALOG -->
+  <sc-if value="{{ exportOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:440px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px"><span style="font:600 18px 'Space Grotesk';margin-right:auto">Muhasebe export</span><span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span></div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Dönem</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';background:#fff;display:flex;justify-content:space-between">Temmuz 2026<span style="color:#9aa094">▾</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 11.5px 'Karla';color:#6a7065">Biçim</span><div style="display:flex;gap:7px"><span style="flex:1;text-align:center;font:600 12.5px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:8px;padding:10px 0">CSV</span><span style="flex:1;text-align:center;font:600 12.5px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 0">Excel</span></div></div>
+          <div style="display:flex;align-items:center;gap:9px;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:11px 14px"><span style="color:#9a6416;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></span><span style="font:500 11.5px/1.5 'Karla';color:#8a6410">Hediye (ikram) siparişler dışarı giden veriden düşülür — iç raporda tam sayılır. Aynı dönem tekrar üretilebilir.</span></div>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5"><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer;margin-left:auto">İptal</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer">Üret &amp; indir</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: 'urun', openRow: -1, exportOpen: false };
+  renderVals() {
+    const tab = this.state.tab;
+    const tabDefs = [
+      { key:'urun', label:'Ürün kârlılığı' }, { key:'sirket', label:'Şirket kârlılığı' },
+      { key:'kanal', label:'Kanal' }, { key:'export', label:'Muhasebe export', badge:'6' },
+    ];
+    const tabs = tabDefs.map(t => ({ label:t.label, badge:t.badge||null, select:()=>this.setState({tab:t.key}),
+      fg: tab===t.key?'#22251f':'#8b9086', edge: tab===t.key?'#5f7a2c':'transparent' }));
+
+    const mB = m => m>=35 ? ['#4a6121','#eef4e2'] : (m>=0 ? ['#9a6416','#fdf1e3'] : ['#a5443c','#fbe9e7']);
+    const openRow = this.state.openRow;
+    const pDefs = [
+      { name:'Fıstıklı Baklava 1kg', revenue:'4.860 €', cost:'2.480 €', fire:'−120 €', m:44 },
+      { name:'Cevizli Baklava 1kg', revenue:'2.700 €', cost:'1.180 €', fire:'−40 €', m:52 },
+      { name:'Künefe 2 kişilik', revenue:'1.960 €', cost:'980 €', fire:'−180 €', m:31 },
+      { name:'Su Böreği (tepsi)', revenue:'1.320 €', cost:'860 €', fire:'−90 €', m:20 },
+      { name:'Bülbül Yuvası 500g', revenue:'640 €', cost:'520 €', fire:'−140 €', m:-3 },
+      { name:'Kadayıf 500g', revenue:'980 €', cost:'440 €', fire:'−10 €', m:53 },
+    ];
+    const urunler = pDefs.map((p,i) => {
+      const [marginFg,marginBg] = mB(p.m);
+      return { name:p.name, revenue:p.revenue, cost:p.cost, fire:p.fire, fireFg: p.fire==='−0 €'?'#8b9086':'#9a6416',
+        margin: (p.m<0?'':'%')+ (p.m<0?('%'+Math.abs(p.m)+' zarar'):p.m), marginFg, marginBg,
+        open: openRow===i, caret: openRow===i?'▾':'▸',
+        toggle: () => this.setState({ openRow: openRow===i ? -1 : i }),
+        breakdown: [
+          { k:'Malın maliyeti (gerçek parti)', v:p.cost },
+          { k:'Teslimat maliyeti', v:'−'+(120+i*10)+' €' },
+          { k:'Ödeme komisyonu', v:'−'+(38+i*4)+' €' },
+          { k:'Paketleme (soğuk zincir)', v:'−'+(56+i*6)+' €' },
+        ] };
+    });
+
+    const row = (label,value,kind) => ({ label, value,
+      weight: kind==='total'?600:400, bg: kind==='total'?'#f2f6ea':'#fff',
+      labelFg: kind==='total'?'#22251f':'#3a3f37',
+      valFg: kind==='neg'?'#a5443c':(kind==='total'?'#4a6121':'#22251f') });
+    const sirket = [
+      row('Ürün kârları toplamı (doğrudan gider sonrası)','7.820 €'),
+      row('Fire (imha/hasar/sayım)','−412 €','neg'),
+      row('Kira','−1.450 €','neg'),
+      row('Maaş','−2.100 €','neg'),
+      row('Araç & yakıt','−480 €','neg'),
+      row('Sabit masraf (diğer)','−198 €','neg'),
+      row('Şirket kârı','3.180 €','total'),
+    ];
+
+    const kanallar = [
+      { name:'B2C', fg:'#5f7a2c', rows:[ {k:'Satış geliri',v:'10.580 €',vFg:'#22251f'}, {k:'Ürün kârı',v:'4.760 €',vFg:'#4a6121'}, {k:'Ort. sepet',v:'52 €',vFg:'#22251f'}, {k:'Sipariş',v:'204',vFg:'#22251f'} ] },
+      { name:'B2B', fg:'#9a6416', rows:[ {k:'Satış geliri',v:'7.660 €',vFg:'#22251f'}, {k:'Ürün kârı',v:'3.060 €',vFg:'#4a6121'}, {k:'Ort. sepet',v:'218 €',vFg:'#22251f'}, {k:'Sipariş',v:'70',vFg:'#22251f'} ] },
+    ];
+
+    const eslesme = [
+      { ref:'LZA-2451', customer:'Café Marceau', amount:'312,00 €', vat:'AB şirketler arası' },
+      { ref:'LZA-2445', customer:'Traiteur Yıldız', amount:'624,00 €', vat:'Yurt içi' },
+      { ref:'LZA-2440', customer:'Épicerie du Port', amount:'188,00 €', vat:'Yurt içi' },
+      { ref:'LZA-2433', customer:'Bistrot du Rhin', amount:'96,00 €', vat:'Yurt içi' },
+    ];
+
+    return {
+      tabs, isUrun: tab==='urun', isSirket: tab==='sirket', isKanal: tab==='kanal', isExport: tab==='export',
+      urunler, sirket, kanallar, eslesme,
+      exportOpen: this.state.exportOpen,
+      openExport: () => this.setState({ exportOpen:true }),
+      closeModal: () => this.setState({ exportOpen:false }), stop: (e)=>e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-wrap:wrap;gap:40px;padding:48px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <span style="font:600 15px 'Space Grotesk';color:#3a4147">Depo — Mal Kabul · mobil (rampada, koli etiketi karşısında; fiyat alanı YOK)</span>
+    <div data-screen-label="Depo Stok Giris" style="width:380px;background:#f4f5f2;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+      <div style="background:#fbfbf9;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;padding:13px 16px">
+        <span style="width:28px;height:28px;border-radius:7px;background:#22251f;color:#a9c46b;font:700 13px 'Space Grotesk';display:grid;place-items:center">L</span>
+        <span style="font:600 14px 'Space Grotesk';color:#22251f;flex:1">Depo · Mal kabul</span>
+        <span style="font:500 12px 'Karla';color:#8b9086">Özet</span>
+      </div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="background:#eef4e2;border:1px solid #cdd8b6;border-radius:11px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span style="font:600 12.5px 'Space Grotesk';color:#4a6121">TS-042 · Baklavacı Usta'dan dolu geldi</span>
+          <span style="font:500 11.5px 'IBM Plex Mono';color:#6a7065;flex:none">2/5 ✓</span>
+        </div>
+        <div style="background:#fff;border:1px solid #e6e7e1;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <span style="font:600 17px 'Space Grotesk';color:#22251f">Fıstıklı Baklava · 700 g</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:500 11px 'Space Grotesk';letter-spacing:.04em;text-transform:uppercase;color:#8b9086">Gelen adet (paket)</span>
+              <div style="display:flex;align-items:center;border:2px solid #5f7a2c;border-radius:11px;overflow:hidden;background:#fff">
+                <span style="font:600 20px 'Space Grotesk';color:#5f7a2c;padding:9px 15px">−</span>
+                <span style="font:500 18px 'IBM Plex Mono';flex:1;text-align:center">36</span>
+                <span style="font:600 20px 'Space Grotesk';color:#fff;background:#5f7a2c;padding:9px 15px">+</span>
+              </div>
+              <span style="font:500 11px 'Karla';color:#9a6416">beklenen 40 — 4 eksik (admin görür)</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:500 11px 'Space Grotesk';letter-spacing:.04em;text-transform:uppercase;color:#8b9086">Son tarih (etiketten)</span>
+              <span style="border:2px solid #5f7a2c;border-radius:11px;padding:12px;font:500 16px 'IBM Plex Mono';text-align:center;background:#fff">12/04/2027</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:500 11px 'Space Grotesk';letter-spacing:.04em;text-transform:uppercase;color:#8b9086">Lot no (etiketten)</span>
+              <span style="border:1px solid #d4d7ce;border-radius:11px;padding:12px;font:500 15px 'IBM Plex Mono';text-align:center;background:#fff">BU-2607-A</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:500 11px 'Space Grotesk';letter-spacing:.04em;text-transform:uppercase;color:#8b9086">Konum</span>
+              <span style="border:1px solid #d4d7ce;border-radius:11px;padding:12px;font:600 15px 'Space Grotesk';text-align:center;background:#fff;display:flex;align-items:center;justify-content:center;gap:6px">RAF C-1 <span style="color:#9aa094">▾</span></span>
+            </div>
+          </div>
+          <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:10px;padding:10px 13px;display:flex;flex-direction:column;gap:8px">
+            <span style="font:500 12.5px/1.5 'Karla';color:#9a6416">Bu parti kısa ömürlü geldi — kalan raf ömrü beklenenden az. Kabul kararı sizin.</span>
+            <div style="display:flex;gap:8px">
+              <span style="flex:1;background:#5f7a2c;color:#fff;font:600 12.5px 'Space Grotesk';padding:10px;border-radius:9px;text-align:center">Yine de kabul et</span>
+              <span style="flex:1;background:#fff;border:1px solid #d4d7ce;font:600 12.5px 'Space Grotesk';padding:10px;border-radius:9px;text-align:center;color:#3a4147">Vazgeç</span>
+            </div>
+          </div>
+          <span style="background:#5f7a2c;color:#fff;font:600 15px 'Space Grotesk';padding:15px;border-radius:12px;text-align:center">Kaydet → sonraki ürün</span>
+        </div>
+        <span style="font:400 11.5px/1.6 'Karla';color:#8b9086">Tedarikçi ve ortak alanlar ardışık girişte korunur — her partide sıfırdan başlanmaz. Toptan alıp paketlenen mal <strong>paket adediyle</strong> girilir (10 kg → 100×100 g = 100 paket).</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <span style="font:600 15px 'Space Grotesk';color:#3a4147">Günün özeti + durumlar</span>
+    <div data-screen-label="Depo Giris Ozet" style="width:380px;background:#f4f5f2;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+      <div style="background:#fbfbf9;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;padding:13px 16px">
+        <span style="font:500 13px 'Space Grotesk';color:#9aa094">← Kabul</span>
+        <span style="font:600 14px 'Space Grotesk';color:#22251f;flex:1;text-align:center">Bugün girilenler</span>
+        <span style="width:44px"></span>
+      </div>
+      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+        <div style="background:#fff;border:1px solid #e6e7e1;border-radius:12px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+            <span style="font:600 13px 'Space Grotesk';color:#22251f">Baklava 700g · 36 paket</span>
+            <span style="font:400 11px 'Karla';color:#6a7065">12/04/2027 · BU-2607-A · C-1 · Baklavacı Usta</span>
+          </div>
+          <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;flex:none">Düzelt</span>
+        </div>
+        <div style="background:#fff;border:1px solid #e6e7e1;border-radius:12px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+            <span style="font:600 13px 'Space Grotesk';color:#22251f">Şöbiyet 500g · 20 paket</span>
+            <span style="font:400 11px 'Karla';color:#6a7065">08/03/2027 · BU-2607-B · C-1</span>
+          </div>
+          <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;flex:none">Düzelt</span>
+        </div>
+        <span style="font:400 11.5px 'Karla';color:#8b9086;text-align:center;padding:4px">"Girdim mi girmedim mi" belirsizliği kalmaz; yanlış giriş anında düzeltilir. Girilen partiler anında satılabilir stoğa yansır.</span>
+      </div>
+    </div>
+
+    <div style="width:380px;background:#f4f5f2;border:1px solid #e2e3dd;border-radius:14px;box-shadow:0 4px 20px rgba(34,39,43,.1);padding:18px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 11px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#8b9086">Yeni tedarikçi — akış kırılmadan</span>
+      <div style="background:#fff;border:1px solid #e6e7e1;border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:8px">
+        <span style="border:1px solid #d4d7ce;border-radius:9px;padding:9px 12px;color:#8b9086;font:400 12.5px 'Karla'">Tedarikçi ara… "Yeni Fırın" bulunamadı</span>
+        <div style="display:flex;gap:8px">
+          <span style="flex:1;border:1px solid #d4d7ce;border-radius:9px;padding:9px 12px;font:500 12.5px 'Karla'">Ad: Yeni Fırın</span>
+          <span style="flex:1;border:1px solid #d4d7ce;border-radius:9px;padding:9px 12px;font:500 12.5px 'Karla'">Tel: +33…</span>
+        </div>
+        <span style="background:#5f7a2c;color:#fff;font:600 12px 'Space Grotesk';padding:9px;border-radius:9px;text-align:center">+ Ekle ve devam et</span>
+        <span style="font:400 11px 'Karla';color:#8b9086">Ad + telefon yeter; vergi no/vade gibi detay admin işi.</span>
+      </div>
+    </div>
+
+    <div style="width:380px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:18px 22px;display:flex;flex-direction:column;gap:8px">
+      <span style="font:700 14px 'Space Grotesk';color:#3a4147">Etkileşim sözleşmesi</span>
+      <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+        <li>Siparişten dolu form: ürün seçilmez, gelen sayı doğrulanır + tarih/lot girilir; eksik/fazla fark işaretlenir, admin tarafında görünür. Siparişsiz kabul boş formla her zaman mümkün.</li>
+        <li>Alış fiyatı alanı yoktur — para tarafı admin'in satın alma ekranında.</li>
+        <li>Tarih/lot girişi büyük hedefli; tarih alanı GG/AA/YYYY maskeli, rakam klavyesi. Tarih tipi üründen bilinir — depocu tip seçmez.</li>
+        <li>Tazelik uyarısı engellemez: "yine de kabul et / vazgeç". Kaydet sonrası aynı tedarikçiyle sonraki ürüne akar.</li>
+        <li>İç terimler yok: "son tarih", "kalan raf ömrü", "giriş".</li>
+      </ul>
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

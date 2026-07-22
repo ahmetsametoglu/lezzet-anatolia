@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; color:#22251f; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<div style="max-width:1180px;margin:0 auto;padding:48px 32px 80px;display:flex;flex-direction:column;gap:28px">
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <span style="font:600 12px 'Space Grotesk';letter-spacing:.14em;text-transform:uppercase;color:#5f7a2c">Lezzet Anatolia · Operasyon Evreni (admin + depo + kurye)</span>
+    <h1 style="margin:0;font:600 34px 'Space Grotesk';color:#22251f">Komponent Envanteri</h1>
+    <p style="margin:0;font:400 15px/1.6 'Karla';color:#6a7065;max-width:820px">Onaylı yön: <strong>Veri Masası</strong> — açık zemin, ince çizgi, gölge yok; başlık/etiket <strong>Space Grotesk</strong>, rakam/fiyat <strong>IBM Plex Mono</strong>, gövde <strong>Karla</strong>. Olive vurgu · amber dikkat · kırmızı hata. Kaynak: 14 admin sayfası (web+mobil) + 6 saha sayfası (kurye/depo, telefon öncelikli). Müşteri evreninden ayrı settir; ortaklaşan parça açıkça yazılır.</p>
+  </div>
+
+  <!-- §0 -->
+  <div style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:18px">
+    <h2 style="margin:0;font:600 21px 'Space Grotesk'">§0 · Stil sabitleri</h2>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <sc-for list="{{ tokens }}" as="t" hint-placeholder-count="8">
+        <div style="display:flex;align-items:center;gap:11px;border:1px solid #eceee8;border-radius:10px;padding:9px 11px">
+          <span style="width:38px;height:38px;border-radius:8px;background:{{ t.hex }};border:1px solid rgba(0,0,0,.08);flex:none"></span>
+          <div style="display:flex;flex-direction:column;min-width:0">
+            <span style="font:600 12.5px 'Space Grotesk'">{{ t.name }}</span>
+            <span style="font:400 11px 'Karla';color:#8b9086">{{ t.hex }} · {{ t.use }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:center;border-top:1px solid #eef0ea;padding-top:16px">
+      <span style="font:600 22px 'Space Grotesk';color:#22251f">Space Grotesk <span style="font:400 12px 'Karla';color:#8b9086">— başlık, etiket, buton</span></span>
+      <span style="font:500 22px 'IBM Plex Mono';color:#22251f">1.240,00 € <span style="font:400 12px 'Karla';color:#8b9086">— IBM Plex Mono rakam/fiyat</span></span>
+      <span style="font:400 15px 'Karla';color:#22251f">Karla gövde metni <span style="font:400 12px 'Karla';color:#8b9086">— açıklama, satır</span></span>
+    </div>
+    <span style="font:400 13.5px/1.7 'Karla';color:#6a7065">Yarıçap: kart 8px · dialog 14px · çip 14px · buton 7-8px · mobil kart 26px. Kenarlık <code>#e6e7e1</code>, iç ayraç <code>#f0f1ec</code>; <strong>gölge yok</strong> (mobil kartlarda tek hafif katman serbest). Kart yüksekliği 640px, iç tablo gövdesi kaydırılır (başlık sabit) — uzun listeler infinite scroll. Renk <strong>anlam taşır</strong>: olive=yolunda, amber=dikkat/karar, kırmızı=hata/gecikme, gri=kapanmış. Tüm kartlar <code>max-width:1360px</code> ile pane'e sığar.</span>
+  </div>
+
+  <!-- §1 -->
+  <div style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:22px">
+    <h2 style="margin:0;font:600 21px 'Space Grotesk'">§1 · Çerçeve ve gezinme</h2>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O1 · AdminSidebar <span style="font:400 12px 'Karla';color:#5f7a2c">— paylaşılan bileşen (<code>active</code> prop)</span></span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Tek kaynak: 214px açık ray, olive "L" marka + arama + 5 bölüm (Günlük / Katalog / Para &amp; analiz / İlişki / Sistem) + kullanıcı bloğu. Aktif öğe olive şerit + koyu metin. Rozetler bekleyen işi taşır. Her admin sayfası <code>&lt;dc-import name="AdminSidebar" active="…"&gt;</code> ile çağırır.</span>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Canlı: <a href="AdminSidebar.dc.html">AdminSidebar</a> · Kullanıldığı sayfalar: tüm 14 admin sayfası. Depo/kurye kendi açık başlık barını alır (marka + ekran adı).</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O2 · Sekme çubuğu</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">İçerik değiştiren sekmeler (alt olive çizgi = aktif); rozetli sayaç taşıyabilir. İşlevsel — tıklanınca panel değişir.</span>
+      <div style="display:flex;gap:2px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;padding:0 4px;max-width:520px">
+        <span style="font:600 12.5px 'Space Grotesk';color:#22251f;border-bottom:2px solid #5f7a2c;padding:11px 13px">Kanal fiyatları</span>
+        <span style="font:600 12.5px 'Space Grotesk';color:#8b9086;padding:11px 13px">Müşteriye özel</span>
+        <span style="font:600 12.5px 'Space Grotesk';color:#8b9086;padding:11px 13px;display:flex;align-items:center;gap:6px">Near-expiry<span style="font:500 10px 'IBM Plex Mono';color:#9a6416;background:#fdf1e3;border-radius:9px;padding:1px 6px">4</span></span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Siparişler (durum) · Ürünler · Fiyatlar · Stok · Satın Alma · Geri Bildirim · Raporlar · Rotalar · Ayarlar</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 16px 'Space Grotesk'">O3 · Filtre çipi &amp; arama</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="background:#5f7a2c;color:#fff;font:600 12px 'Space Grotesk';border-radius:14px;padding:5px 12px">Tümü</span>
+        <span style="border:1px solid #cdd8b6;color:#5f7a2c;font:600 12px 'Space Grotesk';border-radius:14px;padding:5px 12px">B2C</span>
+        <span style="border:1px solid #e6d3bf;color:#9a6416;font:600 12px 'Space Grotesk';border-radius:14px;padding:5px 12px">B2B</span>
+        <span style="border:1px dashed #d2d4cb;color:#6a7065;font:500 12px 'Karla';border-radius:14px;padding:5px 12px">+ durum</span>
+        <span style="border:1px solid #d9dbd2;color:#4a4f45;font:500 12.5px 'IBM Plex Mono';border-radius:7px;padding:7px 12px;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Ara</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Seçili çip dolu olive; filtre tabloyu süzer (işlevsel). Kullanıldığı sayfalar: liste taşıyan tüm sayfalar.</span>
+    </div>
+  </div>
+
+  <!-- §2 -->
+  <div style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:22px">
+    <h2 style="margin:0;font:600 21px 'Space Grotesk'">§2 · Liste, tablo, gösterge</h2>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O4 · Veri tablosu (infinite scroll)</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Büyük-harf Space Grotesk sütun başlığı, sağa hizalı IBM Plex Mono tutarlar, satır → detay/dialog. Başlık sabit, gövde kaydırılır; sona yaklaşınca spinner'la yeni satır yüklenir. Sütunlar dar pane'e (~900px) sığacak şekilde daraltılır.</span>
+      <div style="border:1px solid #e6e7e1;border-radius:8px;overflow:hidden;max-width:560px">
+        <div style="display:grid;grid-template-columns:1fr 80px 90px;gap:0 10px;padding:9px 16px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;font:500 10px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086"><span>Müşteri</span><span style="text-align:right">Tutar</span><span style="text-align:right">Durum</span></div>
+        <div style="display:grid;grid-template-columns:1fr 80px 90px;gap:0 10px;padding:11px 16px;align-items:center"><span style="font:600 13px 'Karla'">Café Marceau</span><span style="text-align:right;font:500 12.5px 'IBM Plex Mono'">312,00</span><span style="justify-self:end;font:600 10px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:7px;padding:3px 8px">Hazır</span></div>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Canlı: <a href="Operasyon - Siparisler.dc.html">Siparişler</a> · <a href="Operasyon - Para.dc.html">Para</a> · Kullanıldığı sayfalar: Siparişler, Para, Ürünler, Fiyatlar, Stok, Müşteriler, Satın Alma, Raporlar</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O5 · KPI / gösterge bandı</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Etiket (üstte, büyük harf) + iri IBM Plex Mono değer + kıyas delta (olive artı / kırmızı eksi). İnce dikey çizgiyle ayrılır, kart değil.</span>
+      <div style="display:flex;border:1px solid #e6e7e1;border-radius:10px;overflow:hidden;max-width:520px">
+        <div style="flex:1;padding:14px 18px;border-right:1px solid #e6e7e1;display:flex;flex-direction:column;gap:3px"><span style="font:500 10.5px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Ciro</span><span style="font:500 24px 'IBM Plex Mono'">18.240 €</span><span style="font:500 12px 'IBM Plex Mono';color:#4a6121">↑ %8</span></div>
+        <div style="flex:1;padding:14px 18px;display:flex;flex-direction:column;gap:3px"><span style="font:500 10.5px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Dönüşüm</span><span style="font:500 24px 'IBM Plex Mono'">%8,0</span><span style="font:500 12px 'IBM Plex Mono';color:#b0561f">↓ %1,4</span></div>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Panel, Analitik, Raporlar, Para</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O6 · Durum &amp; kanal rozeti</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Ton kapalı listedir: nokta+dolgulu çip durum, ince çip kanal (B2B amber / B2C olive). Türetilmiş — buradan değiştirilmez.</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font:600 10.5px 'Space Grotesk';color:#3a6b8a;background:#e6eef3;border-radius:7px;padding:4px 10px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#3a6b8a"></span>Onaylandı</span>
+        <span style="font:600 10.5px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:7px;padding:4px 10px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#c98a2e"></span>Hazırlanıyor</span>
+        <span style="font:600 10.5px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:7px;padding:4px 10px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#5f7a2c"></span>Teslim</span>
+        <span style="font:600 10.5px 'Space Grotesk';color:#a5443c;background:#fbe9e7;border-radius:7px;padding:4px 10px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#c2571f"></span>Sorunlu</span>
+        <span style="width:1px;height:18px;background:#d4d7ce"></span>
+        <span style="font:600 10px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:6px;padding:2px 8px">B2B</span>
+        <span style="font:600 10px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:6px;padding:2px 8px">B2C</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Siparişler, Müşteriler, Rotalar, Kurye, Stok, Ürünler</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 16px 'Space Grotesk'">O7 · Karar kuyruğu satırı &amp; boş durum</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Sol renk-şeritli satır (sayı rozeti + başlık + bağlam + "→ hedef"); yalnız var olan ekrana götürür. Boş kuyruk "temiz masa" olarak olumlu gösterilir — süs yok.</span>
+      <div style="border:1px solid #e2c4c0;border-left:3px solid #c2571f;background:#fdf7f6;border-radius:10px;padding:12px 15px;display:flex;align-items:center;gap:12px;max-width:560px">
+        <span style="width:32px;height:32px;border-radius:8px;background:#fbe9e7;color:#a5443c;font:600 15px 'IBM Plex Mono';display:grid;place-items:center">1</span>
+        <div style="display:flex;flex-direction:column;flex:1"><span style="font:600 13.5px 'Space Grotesk'">Gecikmiş vadeli sipariş</span><span style="font:400 12px 'Karla';color:#6a7065">Café Marceau · #2451 · vade geçti</span></div>
+        <span style="font:600 12px 'Space Grotesk';color:#a5443c">Tahsilat →</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Panel, B2B Onay, Talepler, Stok (yaklaşan tarihli), Satın Alma (sipariş zamanı)</span>
+    </div>
+  </div>
+
+  <!-- §3 -->
+  <div style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:22px">
+    <h2 style="margin:0;font:600 21px 'Space Grotesk'">§3 · Aksiyon, girdi, dialog</h2>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O8 · Butonlar &amp; girdi kontrolleri</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Birincil olive/koyu (ekranda tek), ikincil çerçeveli, tehlike kırmızı çerçeveli. Metin/fiyat/sayı input, select, görsel-item'lı combobox, toggle/checkbox/radio, tarih &amp; tarih-aralığı seçici — hepsi tek referans sayfasında.</span>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <span style="background:#5f7a2c;color:#fff;font:600 13px 'Space Grotesk';padding:9px 16px;border-radius:8px">Kaydet</span>
+        <span style="background:#fff;border:1px solid #d9dbd2;color:#3a3f37;font:600 13px 'Space Grotesk';padding:9px 16px;border-radius:8px">İptal</span>
+        <span style="background:#fff;border:1px solid #e2c4c0;color:#a5443c;font:600 13px 'Space Grotesk';padding:9px 16px;border-radius:8px">GDPR sil</span>
+        <span style="display:flex;border:1px solid #e0e2da;background:#eef0ea;border-radius:8px;padding:2px"><span style="font:600 12px 'Space Grotesk';color:#22251f;background:#fff;border-radius:6px;padding:6px 12px">Ticaret</span><span style="font:600 12px 'Space Grotesk';color:#6a7065;padding:6px 12px">Trafik</span></span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Canlı: <a href="Operasyon - Komponentler.dc.html">Komponent Kütüphanesi</a> · Kullanıldığı sayfalar: tümü</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O9 · Dialog (edit/create — kural)</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Tüm oluştur/düzenle işleri <strong>ortada dialogda</strong> açılır (overlay + ✕/İptal ile kapanır): başlık + kaydırılır gövde + sabit alt bar (İptal / Kaydet, gerekiyorsa solda Kaldır/Varsayılana dön). Yıkıcı işlem (GDPR, birleştir) geri-alınamaz uyarısı taşır.</span>
+      <div style="border:1px solid #e6e7e1;border-radius:12px;overflow:hidden;max-width:420px;box-shadow:0 10px 30px rgba(20,22,18,.12)">
+        <div style="padding:14px 18px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center"><span style="font:600 16px 'Space Grotesk';flex:1">Fiyat düzenle</span><span style="width:26px;height:26px;border-radius:7px;background:#eef0ea;color:#6a7065;display:grid;place-items:center;font:500 14px 'Space Grotesk'">✕</span></div>
+        <div style="padding:16px 18px;font:400 12.5px 'Karla';color:#6a7065">Kaydırılır gövde — alanlar, çözüm sırası, uyarı…</div>
+        <div style="padding:12px 18px;border-top:1px solid #e6e7e1;background:#f8f9f5;display:flex;gap:8px;justify-content:flex-end"><span style="font:600 12.5px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:8px 14px">İptal</span><span style="font:600 12.5px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:8px;padding:8px 16px">Kaydet</span></div>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Ürünler, Fiyatlar, Stok, Müşteriler, B2B Onay, Talepler, Satın Alma, Geri Bildirim, Raporlar, Rotalar, Ayarlar</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 16px 'Space Grotesk'">O10 · Uyarı / bağlam kutusu</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Karar bağlamı verir, işlemi engellemez. Amber (dikkat/öneri) · kırmızı (yıkıcı/gecikme) · olive (bilgi/onay) · mor (AI). İkonlu, tek satır sol.</span>
+      <div style="display:flex;flex-direction:column;gap:8px;max-width:560px">
+        <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:10px 13px;font:500 12px/1.5 'Karla';color:#8a6410">Sistem önerir, fiyatı ve kararı siz verirsiniz — otomatik kabul yok.</div>
+        <div style="background:#ece8f5;border:1px solid #d8d0ec;border-radius:9px;padding:10px 13px;font:500 12px/1.5 'Karla';color:#5a4a8a">Bu sohbeti AI ajanı yürütüyor — devralırsanız cevaplar sizden gider.</div>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Stok, Fiyatlar, Satın Alma, B2B Onay, Talepler, WhatsApp, Ayarlar</span>
+    </div>
+  </div>
+
+  <!-- §4 -->
+  <div style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:22px">
+    <h2 style="margin:0;font:600 21px 'Space Grotesk'">§4 · Saha (kurye + depo) — telefon öncelikli</h2>
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O11 · Mobil ekran kabuğu</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">380px açık kart, olive "L" + ekran adı başlık. Büyük dokunma hedefleri (≥44px), basılı-tut onayı (eldiven koşulu), aşağı-çek yenileme. Aynı v2 renk/font dili; admin tablosu yok.</span>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Canlı: <a href="Operasyon - Kurye Gun.dc.html">Kurye Gün</a> · <a href="Operasyon - Depo Hazirlik.dc.html">Depo Hazırlık</a></span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 16px 'Space Grotesk'">O12 · Rol duvarı</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Depo/kurye yüzeyinde fiyat/tutar/maliyet/marj ve müşteri adresi/borcu <strong>asla render edilmez</strong>; kurye yalnız tahsil edeceği tutarı görür, depo yalnız adı (koli eşleştirme). İzin verilmeyen aksiyon gri değil, hiç yok.</span>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Kurye (3), Depo (3)</span>
+    </div>
+  </div>
+
+  <div style="background:#22251f;color:#f2f3ee;border-radius:12px;padding:24px 30px;display:flex;flex-direction:column;gap:10px">
+    <h2 style="margin:0;font:600 19px 'Space Grotesk'">Evren kuralları (kodlayan ajan için)</h2>
+    <ul style="margin:0;padding-left:20px;font:400 13.5px/1.75 'Karla';color:#c8ccc2">
+      <li>Admin web + mobil birlikte; saha (kurye/depo) yalnız telefon öncelikli. AdminSidebar tek kaynaktır — nav kopyalanmaz.</li>
+      <li>Oluştur/düzenle hep dialogda; sekmeler içerik değiştirir, çipler filtreler — statik taklit değil, işlevsel.</li>
+      <li>Rakam/fiyat/saat IBM Plex Mono; başlık/etiket Space Grotesk; gövde Karla. Gölge yok, ince çizgi + boşluk ayırır.</li>
+      <li>Renk anlam taşır (olive/amber/kırmızı/gri, AI için mor); dekoratif renk ve emoji yok — ikonlar çizgi SVG.</li>
+      <li>Türetilmiş alan (durum/kanal/bakiye) salt-okunur; kaynağından düzeltilir. Uyarı bilgilendirir, engel izin modelindedir.</li>
+      <li>Fiyat/marj yalnız admin; role sızmaz. Kartlar pane'e sığar (max-width, daraltılmış sütun); TR/FR/DE uzunluğuna dayanıklı.</li>
+    </ul>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      tokens: [
+        { name:'Mürekkep', hex:'#22251f', use:'başlık, koyu buton, "L"' },
+        { name:'Zemin', hex:'#dedbd3', use:'sayfa zemini' },
+        { name:'Kart', hex:'#fbfbf9', use:'kart/tablo zemini' },
+        { name:'Çizgi', hex:'#e6e7e1', use:'kenarlık; ayraç #f0f1ec' },
+        { name:'Olive', hex:'#5f7a2c', use:'birincil; açık #eef4e2' },
+        { name:'Amber', hex:'#9a6416', use:'dikkat; zemin #fdf1e3' },
+        { name:'Kırmızı', hex:'#a5443c', use:'hata/gecikme; zemin #fbe9e7' },
+        { name:'Mor', hex:'#5a4a8a', use:'AI ajanı; zemin #ece8f5' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

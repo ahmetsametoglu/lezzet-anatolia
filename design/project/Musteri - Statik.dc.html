@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#e9e6df; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-wrap:wrap;gap:56px;padding:48px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:1100px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Statik Sayfa Şablonu · Web (örnek: Teslimat / İade bilgisi)</span>
+    <div data-screen-label="Statik Web" style="width:1100px;background:#faf6ec;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);color:#3a3f35">
+      <div style="display:flex;align-items:center;gap:36px;padding:18px 48px;border-bottom:1px solid #e6dfcd">
+        <img src="assets/logo.jpg" style="height:52px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+        <nav style="display:flex;gap:28px;font:600 15px 'Karla';color:#3a4147"><span>Katalog</span><span>Paketler</span><span style="color:#b05c2e">Fırsatlar</span><span>Keşif</span><span>Professionnels</span></nav>
+        <span style="margin-left:auto;font:600 14px 'Karla';color:#8a8270">TR ▾</span>
+      </div>
+      <div style="display:grid;grid-template-columns:260px 1fr;gap:44px;padding:36px 48px 56px;align-items:start">
+        <div style="position:sticky;top:20px;display:flex;flex-direction:column;gap:4px;background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:18px 20px">
+          <span style="font:700 13px 'Karla';color:#8a8270;text-transform:uppercase;letter-spacing:.08em;padding-bottom:6px">Bu sayfada</span>
+          <span style="font:700 14px 'Karla';color:#5f7a2c;border-left:3px solid #5f7a2c;padding:5px 0 5px 10px">Teslimat bölgemiz</span>
+          <span style="font:400 14px 'Karla';color:#6d7261;border-left:3px solid transparent;padding:5px 0 5px 10px">Kargo ile gönderim</span>
+          <span style="font:400 14px 'Karla';color:#6d7261;border-left:3px solid transparent;padding:5px 0 5px 10px">Soğuk zincir</span>
+          <span style="font:400 14px 'Karla';color:#6d7261;border-left:3px solid transparent;padding:5px 0 5px 10px">İade koşulları</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:22px;max-width:680px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <h1 style="margin:0;font:600 38px 'Lora';color:#343b41">Teslimat ve iade</h1>
+            <span style="font:400 13px 'Karla';color:#8a8270">Son güncelleme: 1 Temmuz 2026</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <h2 style="margin:0;font:600 24px 'Lora';color:#343b41">Teslimat bölgemiz</h2>
+            <p style="margin:0;font:400 15.5px/1.75 'Karla';color:#4a4f44;text-wrap:pretty">Strasbourg ve çevresindeki adreslere siparişlerinizi kendi soğuk zincir aracımızla, kapınıza kadar ücretsiz getiriyoruz. Adresinizin bölgede olup olmadığını sipariş sırasında posta kodunuzla otomatik görürsünüz; teslimat gününüz bölgenizin takvimine göre sunulur.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <h2 style="margin:0;font:600 24px 'Lora';color:#343b41">Kargo ile gönderim</h2>
+            <p style="margin:0;font:400 15.5px/1.75 'Karla';color:#4a4f44;text-wrap:pretty">Bölge dışındaki adreslere Fransa genelinde soğuk zincir kargo paketiyle gönderim yapıyoruz. Kargo ücreti sepette görünür; eşik üzeri siparişlerde ücretsizdir. Bazı ürünler yapıları gereği yalnız bölge içinde teslim edilebilir — bu ürünlerde sayfada açıkça belirtilir.</p>
+          </div>
+          <div style="background:#eef2e2;border-radius:14px;padding:16px 20px;font:400 14px/1.7 'Karla';color:#3a3f35">💡 Aklınızdaki soruya burada cevap bulamadıysanız <span style="color:#5f7a2c;font-weight:700">SSS'ye bakın</span> ya da <span style="color:#5f7a2c;font-weight:700">bize yazın</span>.</div>
+        </div>
+      </div>
+      <div style="background:#343b41;color:#c9cdc2;padding:28px 48px;display:flex;justify-content:space-between;font:400 14px 'Karla'">
+        <span style="font:600 17px 'Lora';color:#f3efe2">Lezzet Anatolia</span>
+        <div style="display:flex;gap:28px"><span>Mentions légales</span><span>CGV</span><span>Gizlilik</span><span>Teslimat/İade</span><span>SSS</span></div>
+      </div>
+    </div>
+
+    <span style="font:600 15px 'Karla';color:#3a4147;margin-top:12px">SSS dokusu (aynı şablon, soru-cevap içerik)</span>
+    <div style="width:1100px;background:#faf6ec;border-radius:8px;box-shadow:0 8px 40px rgba(58,65,71,.12);padding:36px 48px;display:flex;flex-direction:column;gap:14px">
+      <h1 style="margin:0;font:600 32px 'Lora';color:#343b41">Sık sorulan sorular</h1>
+      <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e0d8c2;border-radius:22px;padding:10px 18px;width:340px;color:#9a917c;font:400 14px 'Karla'">🔍 Soru arayın…</div>
+      <div style="background:#fff;border:1px solid #ece5d2;border-radius:14px;padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:700 15px 'Karla';color:#3a4147">Ürünler donmuş mu geliyor?</span><span style="color:#8a8270">▴</span></div>
+        <span style="font:400 14px/1.7 'Karla';color:#4a4f44">Evet — tüm ürünlerimiz şoklanmış halde, soğuk zincir hiç bozulmadan kapınıza gelir. Teslim aldığınızda dondurucunuza koymanız yeterli.</span>
+      </div>
+      <div style="background:#fff;border:1px solid #ece5d2;border-radius:14px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center"><span style="font:700 15px 'Karla';color:#3a4147">Minimum sipariş tutarı var mı?</span><span style="color:#8a8270">▾</span></div>
+      <div style="background:#fff;border:1px solid #ece5d2;border-radius:14px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center"><span style="font:700 15px 'Karla';color:#3a4147">Restoranım için toptan fiyat alabilir miyim?</span><span style="color:#8a8270">▾</span></div>
+      <div style="border:1.5px dashed #cdc4a8;border-radius:14px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font:400 14px 'Karla';color:#6d7261">Cevabını bulamadınız mı?</span>
+        <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:10px 20px;border-radius:20px">Bize yazın</span>
+      </div>
+    </div>
+
+    <div style="width:1100px;background:#fff;border:1.5px dashed #cdc4a8;border-radius:16px;padding:24px 32px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:700 16px 'Karla';color:#3a4147">Etkileşim sözleşmesi (kodlayan ajan için)</span>
+      <ul style="margin:0;padding-left:20px;font:400 14px/1.8 'Karla';color:#6d7261">
+        <li><strong>Tek şablon, üç doku:</strong> düz hukuki metin (mentions/CGV/gizlilik — bölüm başlıkları + gövde), yapılandırılmış bilgi (teslimat/iade — bölümler + bilgi bandı), SSS (akordeon + soru arama).</li>
+        <li><strong>"Bu sayfada" gezinme</strong> → uzun metinde bölüme atlar; kaydırırken aktif bölüm işaretlenir. Mobilde sayfa başında yatay çip dizisi olur.</li>
+        <li><strong>Dil değişimi</strong> → aynı sayfanın diğer dildeki karşılığına gider (Almanca hukuki metin belirgin uzundur — yerleşim akışkan).</li>
+        <li><strong>Güncellenme tarihi</strong> → her yasal sayfada başlığın altında zorunlu.</li>
+        <li>Çıkış köprüleri: teslimat→katalog, gizlilik→hesap, SSS→bize yaz. SSS içine form gömülmez.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Mobil</span>
+    <div data-screen-label="Statik Mobil" style="width:390px;background:#faf6ec;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px">
+        <span style="font-size:20px">☰</span>
+        <img src="assets/logo.jpg" style="height:38px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+        <span style="font:600 13px 'Karla';color:#8a8270">TR ▾</span>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <h1 style="margin:0;font:600 26px 'Lora';color:#343b41">Teslimat ve iade</h1>
+        <span style="font:400 12px 'Karla';color:#8a8270">Son güncelleme: 1 Temmuz 2026</span>
+        <div style="display:flex;gap:8px;overflow:hidden">
+          <span style="flex:none;background:#5f7a2c;color:#fff;font:700 12px 'Karla';padding:8px 14px;border-radius:16px">Teslimat bölgemiz</span>
+          <span style="flex:none;background:#fff;border:1.5px solid #d8cfb6;color:#3a4147;font:700 12px 'Karla';padding:8px 14px;border-radius:16px">Kargo</span>
+          <span style="flex:none;background:#fff;border:1.5px solid #d8cfb6;color:#3a4147;font:700 12px 'Karla';padding:8px 14px;border-radius:16px">Soğuk zincir</span>
+          <span style="flex:none;background:#fff;border:1.5px solid #d8cfb6;color:#3a4147;font:700 12px 'Karla';padding:8px 14px;border-radius:16px">İade</span>
+        </div>
+        <h2 style="margin:6px 0 0;font:600 20px 'Lora';color:#343b41">Teslimat bölgemiz</h2>
+        <p style="margin:0;font:400 14px/1.75 'Karla';color:#4a4f44;text-wrap:pretty">Strasbourg ve çevresindeki adreslere siparişlerinizi kendi soğuk zincir aracımızla, kapınıza kadar ücretsiz getiriyoruz. Adresinizin bölgede olup olmadığını sipariş sırasında posta kodunuzla otomatik görürsünüz.</p>
+        <div style="background:#eef2e2;border-radius:12px;padding:12px 14px;font:400 12.5px/1.6 'Karla';color:#3a3f35">💡 Cevap bulamadıysanız <span style="color:#5f7a2c;font-weight:700">SSS</span> ya da <span style="color:#5f7a2c;font-weight:700">bize yazın</span>.</div>
+      </div>
+      <div style="background:#343b41;color:#c9cdc2;padding:16px;display:flex;flex-direction:column;gap:6px;font:400 12px 'Karla'">
+        <span style="font:600 14px 'Lora';color:#f3efe2">Lezzet Anatolia</span>
+        <span>Mentions légales · CGV · Gizlilik · SSS</span>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

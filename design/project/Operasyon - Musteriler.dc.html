@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Müşteriler — liste &amp; detay · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Vade/limit, ödeme karnesi, kapıda ödeme, birleştirme, GDPR. Karne karar desteğidir; kararı admin verir.</span>
+    </div>
+
+    <div data-screen-label="Musteriler Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="musteriler" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">Müşteriler</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">312 müşteri · 3 taslak (birleştirme adayı) · 2 gecikmiş vade</span>
+          </div>
+          <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 12px;display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Telefon / ad ara</span>
+        </div>
+        <div style="padding:10px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+            <span onClick="{{ c.select }}" style="font:600 12px 'Space Grotesk';color:{{ c.fg }};background:{{ c.bg }};border:1px solid {{ c.bd }};border-radius:14px;padding:5px 12px;cursor:pointer">{{ c.label }}</span>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;flex:1;min-height:0;overflow:hidden">
+          <div style="border-right:1px solid #e6e7e1;display:flex;flex-direction:column;min-height:0">
+            <div style="display:grid;grid-template-columns:minmax(120px,1fr) 70px 96px;gap:0 10px;padding:10px 22px;border-bottom:1px solid #e6e7e1;font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086;background:#f8f9f5">
+              <span>Müşteri</span><span style="text-align:center">Tip</span><span style="text-align:right">Durum</span>
+            </div>
+            <div style="overflow-y:auto;flex:1;min-height:0" onScroll="{{ onScroll }}">
+              <sc-for list="{{ shown }}" as="c" hint-placeholder-count="12">
+                <div onClick="{{ c.select }}" style="display:grid;grid-template-columns:minmax(120px,1fr) 70px 96px;gap:0 10px;padding:11px 22px;border-bottom:1px solid #f0f1ec;align-items:center;cursor:pointer;background:{{ c.rowBg }}">
+                  <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 13px 'Karla';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><span style="font:400 11px 'IBM Plex Mono';color:#8b9086">{{ c.phone }}</span></div>
+                  <span style="justify-self:center;font:600 10px 'Space Grotesk';color:{{ c.tFg }};background:{{ c.tBg }};border-radius:6px;padding:2px 8px">{{ c.type }}</span>
+                  <span style="justify-self:end;font:600 10px 'Space Grotesk';color:{{ c.stFg }};background:{{ c.stBg }};border-radius:7px;padding:3px 9px">{{ c.status }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ more }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:14px;text-align:center;font:500 11.5px 'IBM Plex Mono';color:#9aa094;display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:12px;height:12px;border:2px solid #cdd0c8;border-top-color:#5f7a2c;border-radius:50%;display:inline-block;animation:sp .7s linear infinite"></span>daha fazla yükleniyor…</div>
+              </sc-if>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;background:#f8f9f5;overflow-y:auto;min-height:0">
+            <div style="padding:11px 20px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#f8f9f5;z-index:1">
+              <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Müşteri · önizleme</span>
+              <span style="font:500 10px 'Space Grotesk';color:#8b9086;background:#e4e6de;border-radius:6px;padding:2px 8px">salt görünüm</span>
+            </div>
+            <div style="padding:16px 20px;display:flex;flex-direction:column;gap:13px">
+              <div style="display:flex;gap:12px;align-items:center">
+                <span style="width:46px;height:46px;border-radius:11px;background:#5f7a2c;color:#fff;font:600 16px 'Space Grotesk';display:grid;place-items:center;flex:none">{{ det.initials }}</span>
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                  <span style="font:600 16px 'Space Grotesk';color:#22251f">{{ det.name }}</span>
+                  <span style="font:400 12px 'IBM Plex Mono';color:#8b9086">{{ det.phone }} · {{ det.country }}</span>
+                  <div style="display:flex;gap:6px;margin-top:2px"><span style="font:600 10px 'Space Grotesk';color:{{ det.tFg }};background:{{ det.tBg }};border-radius:6px;padding:2px 8px">{{ det.type }}</span><span style="font:600 10px 'Space Grotesk';color:{{ det.stFg }};background:{{ det.stBg }};border-radius:6px;padding:2px 8px">{{ det.status }}</span></div>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px">
+                <div style="border:1px solid #e6e7e1;background:#fff;border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:1px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Ciro</span><span style="font:500 14px 'IBM Plex Mono'">{{ det.ciro }}</span></div>
+                <div style="border:1px solid #e6e7e1;background:#fff;border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:1px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Sipariş</span><span style="font:500 14px 'IBM Plex Mono'">{{ det.orders }}</span></div>
+                <div style="border:1px solid #e6e7e1;background:#fff;border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:1px"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Ort. ödeme</span><span style="font:500 14px 'IBM Plex Mono';color:{{ det.payDayFg }}">{{ det.payDay }}</span></div>
+              </div>
+
+              <sc-if value="{{ det.isB2B }}" hint-placeholder-val="{{ true }}">
+                <div style="border:1px solid {{ det.vadeBd }};background:{{ det.vadeBg }};border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:9px">
+                  <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 12.5px 'Space Grotesk';color:#22251f">Vade / limit</span><span style="font:600 10px 'Space Grotesk';color:{{ det.vadeFg }};background:#fff;border:1px solid {{ det.vadeBd }};border-radius:6px;padding:2px 8px">{{ det.vadeState }}</span></div>
+                  <div style="display:flex;gap:16px">
+                    <div style="display:flex;flex-direction:column"><span style="font:400 10.5px 'Karla';color:#8b9086">Limit</span><span style="font:500 13.5px 'IBM Plex Mono';color:#22251f">{{ det.limit }}</span></div>
+                    <div style="display:flex;flex-direction:column"><span style="font:400 10.5px 'Karla';color:#8b9086">Açık bakiye</span><span style="font:500 13.5px 'IBM Plex Mono';color:{{ det.balFg }}">{{ det.balance }}</span></div>
+                    <div style="display:flex;flex-direction:column"><span style="font:400 10.5px 'Karla';color:#8b9086">Vade süresi</span><span style="font:500 13.5px 'IBM Plex Mono';color:#22251f">{{ det.term }}</span></div>
+                  </div>
+                  <sc-if value="{{ det.overdue }}" hint-placeholder-val="{{ false }}"><span style="font:500 11px 'Karla';color:#a5443c">⚠ Gecikmiş vade — checkout'ta vadeli seçenek otomatik kapalı (sistem freni).</span></sc-if>
+                </div>
+              </sc-if>
+
+              <div style="display:flex;gap:9px">
+                <div style="flex:1;border:1px solid #e6e7e1;background:#fff;border-radius:8px;padding:9px 11px;display:flex;align-items:center;justify-content:space-between"><span style="font:500 11.5px 'Karla';color:#3a3f37">Kapıda ödeme</span><span style="font:600 10px 'Space Grotesk';color:{{ det.codFg }};background:{{ det.codBg }};border-radius:6px;padding:2px 8px">{{ det.cod }}</span></div>
+                <div style="flex:1;border:1px solid #e6e7e1;background:#fff;border-radius:8px;padding:9px 11px;display:flex;align-items:center;justify-content:space-between"><span style="font:500 11.5px 'Karla';color:#3a3f37">İndirim</span><span style="font:500 12.5px 'IBM Plex Mono';color:#22251f">{{ det.discount }}</span></div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <span style="font:500 10.5px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Son siparişler</span>
+                <sc-for list="{{ det.recentOrders }}" as="o" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e6e7e1;border-radius:8px;padding:8px 11px">
+                    <span style="font:500 11.5px 'IBM Plex Mono';color:#8b9086">{{ o.no }}</span>
+                    <span style="font:400 11px 'Karla';color:#8b9086;flex:1">{{ o.date }}</span>
+                    <span style="font:500 12px 'IBM Plex Mono';color:#22251f">{{ o.amt }}</span>
+                    <span style="font:600 10px 'Space Grotesk';color:{{ o.pFg }};background:{{ o.pBg }};border-radius:6px;padding:2px 7px">{{ o.pay }}</span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <span style="font:500 10.5px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Pazarlama izinleri (salt görünüm · GDPR)</span>
+                <div style="display:flex;gap:8px">
+                  <span style="font:600 11px 'Space Grotesk';color:{{ det.emailFg }};background:{{ det.emailBg }};border-radius:7px;padding:5px 10px">E-posta {{ det.emailPerm }}</span>
+                  <span style="font:600 11px 'Space Grotesk';color:{{ det.waFg }};background:{{ det.waBg }};border-radius:7px;padding:5px 10px">WhatsApp {{ det.waPerm }}</span>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:8px;border-top:1px solid #e6e7e1;padding-top:12px;flex-wrap:wrap">
+                <span onClick="{{ openEdit }}" style="font:600 12px 'Space Grotesk';color:#fbfbf9;background:#22251f;border-radius:8px;padding:9px 14px;cursor:pointer">Düzenle</span>
+                <span onClick="{{ openVade }}" style="font:600 12px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:8px;padding:9px 14px;cursor:pointer">Vade / limit</span>
+                <span onClick="{{ openMerge }}" style="font:600 12px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:9px 14px;cursor:pointer">Birleştir</span>
+                <span onClick="{{ openGdpr }}" style="font:600 12px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:8px;padding:9px 14px;cursor:pointer">GDPR sil</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBİL -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Müşteriler — mobil</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">En sık: WhatsApp yazışırken telefonla müşteri bulma, vadeli karar öncesi karneye bakma, limit değiştirme.</span>
+    </div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+
+      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;flex-direction:column;gap:10px">
+          <span style="font:600 17px 'Space Grotesk';color:#22251f">Müşteriler</span>
+          <div style="display:flex;align-items:center;gap:8px;background:#eef0ea;border:1px solid #e0e2da;border-radius:9px;padding:9px 12px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <span style="font:400 13px 'Karla';color:#9aa094">Telefon veya ad…</span>
+          </div>
+        </div>
+        <div style="padding:8px 16px;display:flex;flex-direction:column">
+          <sc-for list="{{ mobList }}" as="m" hint-placeholder-count="5">
+            <div style="padding:11px 0;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:11px">
+              <span style="width:38px;height:38px;border-radius:9px;background:{{ m.avBg }};color:#fff;font:600 13px 'Space Grotesk';display:grid;place-items:center;flex:none">{{ m.initials }}</span>
+              <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 13.5px 'Karla';color:#22251f">{{ m.name }}</span><span style="font:400 11px 'IBM Plex Mono';color:#8b9086">{{ m.phone }}</span></div>
+              <span style="font:600 10px 'Space Grotesk';color:{{ m.stFg }};background:{{ m.stBg }};border-radius:6px;padding:2px 8px">{{ m.status }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:11px">
+          <span style="width:40px;height:40px;border-radius:10px;background:#9a6416;color:#fff;font:600 14px 'Space Grotesk';display:grid;place-items:center">CM</span>
+          <div style="display:flex;flex-direction:column;gap:1px"><span style="font:600 15px 'Space Grotesk';color:#22251f">Café Marceau</span><span style="font:400 11px 'IBM Plex Mono';color:#8b9086">+33 3 88 12 …</span></div>
+          <span style="margin-left:auto;font:600 10px 'Space Grotesk';color:#a5443c;background:#fbe9e7;border-radius:6px;padding:2px 8px">Gecikmiş</span>
+        </div>
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+          <div style="border:1px solid #e2c4c0;background:#fbe9e7;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+            <span style="font:600 12px 'Space Grotesk';color:#8a3a33">Ödeme karnesi</span>
+            <div style="display:flex;gap:14px">
+              <div style="display:flex;flex-direction:column"><span style="font:400 10px 'Karla';color:#a5443c">Ort. ödeme</span><span style="font:500 14px 'IBM Plex Mono';color:#a5443c">+8 gün</span></div>
+              <div style="display:flex;flex-direction:column"><span style="font:400 10px 'Karla';color:#a5443c">Gecikme</span><span style="font:500 14px 'IBM Plex Mono';color:#a5443c">3 kez</span></div>
+              <div style="display:flex;flex-direction:column"><span style="font:400 10px 'Karla';color:#8b9086">Açık bakiye</span><span style="font:500 14px 'IBM Plex Mono';color:#22251f">312 €</span></div>
+            </div>
+          </div>
+          <span style="font:400 11px/1.5 'Karla';color:#8b9086">Karne karar desteğidir — limit puana göre otomatik belirlenmez.</span>
+          <div style="border:1px solid #d9dbd2;border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between"><span style="font:500 12.5px 'Karla';color:#22251f">Vade limiti</span><div style="display:flex;align-items:center;gap:10px"><span style="font:500 15px 'IBM Plex Mono';color:#22251f">500 €</span><span style="width:26px;height:26px;border-radius:7px;background:#f4f5f1;border:1px solid #e0e2da;display:grid;place-items:center;color:#6a7065;font:600 15px 'Space Grotesk'">−</span><span style="width:26px;height:26px;border-radius:7px;background:#f4f5f1;border:1px solid #e0e2da;display:grid;place-items:center;color:#6a7065;font:600 15px 'Space Grotesk'">+</span></div></div>
+          <span style="background:#5f7a2c;color:#fff;font:600 14px 'Space Grotesk';padding:13px;border-radius:11px;text-align:center">Limiti kaydet</span>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+        <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+          <li><strong>Web</strong> → tam detay, birleştirme, GDPR silme, indirim/kupon, izin görüntüleme, sipariş geçmişi.</li>
+          <li><strong>Mobil</strong> → telefonla bulma, karneye bakma, limit değiştirme; geri dönüşsüz işlemler yanlışlıkla tetiklenmeden.</li>
+          <li><strong>Kural</strong> → vade/limit/karne başka role görünmez; pazarlama izni salt görünüm; türetilmiş değerler elle düzeltilmez.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- VADE DIALOG -->
+  <sc-if value="{{ vadeOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:460px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f;max-height:86vh">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px"><div style="display:flex;flex-direction:column;gap:1px;margin-right:auto"><span style="font:600 18px 'Space Grotesk'">Vade / limit</span><span style="font:400 12px 'Karla';color:#8b9086">Café Marceau · karne karar desteğidir</span></div><span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span></div>
+        <div style="overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+          <div style="border:1px solid #e2c4c0;background:#fbe9e7;border-radius:9px;padding:12px 14px;display:flex;gap:16px"><div style="display:flex;flex-direction:column"><span style="font:400 10px 'Karla';color:#a5443c">Ort. ödeme</span><span style="font:500 15px 'IBM Plex Mono';color:#a5443c">+8 gün</span></div><div style="display:flex;flex-direction:column"><span style="font:400 10px 'Karla';color:#a5443c">Gecikme</span><span style="font:500 15px 'IBM Plex Mono';color:#a5443c">3 kez</span></div><div style="display:flex;flex-direction:column"><span style="font:400 10px 'Karla';color:#8b9086">Açık bakiye</span><span style="font:500 15px 'IBM Plex Mono';color:#22251f">312 €</span></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px"><span style="font:500 12.5px 'Karla';color:#22251f">Vade yetkisi</span><span style="width:42px;height:24px;border-radius:12px;background:#5f7a2c;position:relative"><span style="position:absolute;top:2px;left:20px;width:20px;height:20px;border-radius:50%;background:#fff"></span></span></div>
+          <div style="display:flex;gap:12px"><div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Limit (€)</span><div style="border:1.5px solid #5f7a2c;border-radius:9px;padding:11px 13px;font:500 15px 'IBM Plex Mono';background:#fff">500</div></div><div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Vade süresi (gün)</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 15px 'IBM Plex Mono';background:#fff">30</div></div></div>
+          <span style="font:400 11.5px/1.5 'Karla';color:#8b9086">Sistem karneyi gösterir, kararı siz verirsiniz. Gecikmiş müşteride vadeli seçenek checkout'ta zaten otomatik kapanır.</span>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5"><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer;margin-left:auto">İptal</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer">Kaydet</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- GDPR / BİRLEŞTİR DIALOG -->
+  <sc-if value="{{ dangerOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:440px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px"><span style="color:{{ dangerIcon }};flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span><span style="font:600 18px 'Space Grotesk';margin-right:auto">{{ dangerTitle }}</span><span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span></div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+          <span style="font:400 13px/1.6 'Karla';color:#3a3f37">{{ dangerBody }}</span>
+          <div style="background:#f8f9f5;border:1px solid #e6e7e1;border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:6px">
+            <sc-for list="{{ dangerPoints }}" as="p" hint-placeholder-count="3"><span style="font:500 12px 'Karla';color:#6a7065">• {{ p }}</span></sc-for>
+          </div>
+          <span style="font:600 12px 'Karla';color:#a5443c">Bu işlem geri alınamaz. Devam etmek için onaylayın.</span>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5"><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer;margin-left:auto">Vazgeç</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:{{ dangerBtn }};border-radius:8px;padding:10px 20px;cursor:pointer">{{ dangerCta }}</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { visible: 14, sel: 0, chip: 'all', vadeOpen: false, dangerOpen: false, dangerKind: 'gdpr' };
+  onScroll = (e) => {
+    const el = e.target;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 90 && this.state.visible < this._total) {
+      this.setState(s => ({ visible: Math.min(s.visible + 10, this._total) }));
+    }
+  };
+  renderVals() {
+    const b2c=['#5f7a2c','#eef4e2'], b2b=['#9a6416','#fdf1e3'];
+    const stMap = { ok:['#4a6121','#eef4e2'], vade:['#3a6b8a','#e6eef3'], gecik:['#a5443c','#fbe9e7'], taslak:['#6a7065','#eef0ea'] };
+    const mk = (name,phone,type,stKey,status,extra) => {
+      const [tFg,tBg] = type==='B2B'?b2b:b2c; const [stFg,stBg]=stMap[stKey];
+      return { name,phone,type,tFg,tBg,status,stFg,stBg,stKey,...extra };
+    };
+    const base = [
+      mk('Café Marceau','+33 3 88 12 …','B2B','gecik','Gecikmiş'),
+      mk('Restaurant Anatolie','+33 3 90 44 …','B2B','vade','Vadeli'),
+      mk('Ayşe Kaya','+33 6 51 22 …','B2C','ok','Aktif'),
+      mk('Traiteur Yıldız','+33 3 88 76 …','B2B','vade','Vadeli'),
+      mk('M. Leroy','+33 6 12 09 …','B2C','ok','Aktif'),
+      mk('WhatsApp +33 7 88 …','+33 7 88 34 …','B2C','taslak','Taslak'),
+    ];
+    const names=['J. Bernard','L. Petit','N. Aydın','C. Roux','H. Öz','P. Girard','E. Yılmaz','Bistrot du Rhin','Brasserie Kléber','Snack Bosphore','Épicerie du Port','S. Meunier'];
+    let seed=21; const rnd=()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
+    const all = base.slice();
+    for (let i=0;i<42;i++){
+      const isB2B=rnd()<0.35;
+      const r=rnd(); const stKey = isB2B ? (r<0.2?'gecik':(r<0.5?'vade':'ok')) : 'ok';
+      const status = {ok:'Aktif',vade:'Vadeli',gecik:'Gecikmiş',taslak:'Taslak'}[stKey];
+      all.push(mk(names[Math.floor(rnd()*names.length)], '+33 '+(6+Math.floor(rnd()*2))+' '+(10+Math.floor(rnd()*80))+' … ', isB2B?'B2B':'B2C', stKey, status));
+    }
+    this._total = all.length;
+    const sel = this.state.sel;
+    const shown = all.slice(0, this.state.visible).map((c,i) => ({
+      ...c, rowBg: i===sel ? '#eef4e2' : 'transparent', select: () => this.setState({ sel:i }) }));
+    const more = this.state.visible < all.length;
+
+    const cur = all[Math.min(sel, all.length-1)];
+    const isB2B = cur.type==='B2B';
+    const overdue = cur.stKey==='gecik';
+    const initials = cur.name.replace('WhatsApp','WA').split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    const perm = (on) => on ? { fg:'#4a6121', bg:'#eef4e2', label:'açık' } : { fg:'#6a7065', bg:'#eef0ea', label:'kapalı' };
+    const ep = perm(true), wp = perm(cur.type==='B2C');
+    const det = {
+      initials, name: cur.name, phone: cur.phone, country:'FR', type: cur.type, tFg:cur.tFg, tBg:cur.tBg, status:cur.status, stFg:cur.stFg, stBg:cur.stBg,
+      ciro: isB2B ? '8.400 €' : '640 €', orders: isB2B ? '38' : '9',
+      payDay: overdue ? '+8 gün' : (isB2B?'+2 gün':'peşin'), payDayFg: overdue ? '#a5443c' : '#22251f',
+      isB2B,
+      vadeState: overdue ? 'Gecikmiş' : 'Açık', vadeFg: overdue ? '#a5443c' : '#4a6121',
+      vadeBd: overdue ? '#e2c4c0' : '#cdd8b6', vadeBg: overdue ? '#fbe9e7' : '#eef4e2',
+      limit:'500 €', balance: overdue ? '312 €' : '0 €', balFg: overdue ? '#a5443c' : '#22251f', term:'30 gün', overdue,
+      cod: overdue ? 'Kapalı' : 'Açık', codFg: overdue ? '#a5443c' : '#4a6121', codBg: overdue ? '#fbe9e7' : '#eef4e2',
+      discount: isB2B ? '%8' : '—',
+      recentOrders: [
+        { no:'#2451', date:'22 Tem', amt:'312,00 €', pay:'Vade geçti', pFg:'#a5443c', pBg:'#fbe9e7' },
+        { no:'#2418', date:'8 Tem', amt:'188,00 €', pay:'Ödendi', pFg:'#4a6121', pBg:'#eef4e2' },
+        { no:'#2377', date:'26 Haz', amt:'240,00 €', pay:'Ödendi', pFg:'#4a6121', pBg:'#eef4e2' },
+      ],
+      emailPerm: ep.label, emailFg: ep.fg, emailBg: ep.bg, waPerm: wp.label, waFg: wp.fg, waBg: wp.bg,
+    };
+
+    const chipDefs = [ {k:'all',l:'Tümü'},{k:'B2C',l:'B2C'},{k:'B2B',l:'B2B'},{k:'vade',l:'Vadeli'},{k:'taslak',l:'Taslak'} ];
+    const chips = chipDefs.map(c => {
+      const act = this.state.chip===c.k;
+      return { label:c.l, fg: act?'#fff':'#5f7a2c', bg: act?'#5f7a2c':'transparent', bd: act?'transparent':'#cdd8b6',
+        select: () => this.setState({ chip:c.k }) };
+    });
+
+    const mobList = base.map(c => ({ name:c.name, phone:c.phone, status:c.status, stFg:c.stFg, stBg:c.stBg,
+      initials: c.name.replace('WhatsApp','WA').split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase().slice(0,2),
+      avBg: c.type==='B2B' ? '#9a6416' : '#5f7a2c' }));
+
+    const dk = this.state.dangerKind;
+    const dangerCfg = dk==='gdpr' ? {
+      title:'GDPR silme', icon:'#a5443c', body:'Café Marceau müşterisinin tüm kişisel verisi silinir/anonimleştirilir. E-posta talebi üzerine, elle yetkiyle yapılır.',
+      points:['Kişisel veri (ad, telefon, e-posta, adres) kaldırılır','Geçmiş siparişler muhasebe bütünlüğü için anonim kalır','Puan ve konuşma geçmişi silinir'],
+      cta:'Kalıcı olarak sil', btn:'#a5443c'
+    } : {
+      title:'Müşteri birleştirme', icon:'#9a6416', body:'Taslak kayıt hedef kayda taşınır ve kaynak kapanır. Hangi kaydın hedef olduğunu ve neyin taşınacağını onaylayın.',
+      points:['Siparişler ve ödemeler hedefe taşınır','Puanlar ve konuşmalar birleştirilir','Kaynak kayıt kapatılır — geri alınamaz'],
+      cta:'Birleştir', btn:'#9a6416'
+    };
+
+    return {
+      shown, more, onScroll: this.onScroll, chips, det, mobList,
+      vadeOpen: this.state.vadeOpen, dangerOpen: this.state.dangerOpen,
+      dangerTitle: dangerCfg.title, dangerIcon: dangerCfg.icon, dangerBody: dangerCfg.body,
+      dangerPoints: dangerCfg.points, dangerCta: dangerCfg.cta, dangerBtn: dangerCfg.btn,
+      openEdit: () => this.setState({ vadeOpen:true }),
+      openVade: () => this.setState({ vadeOpen:true }),
+      openMerge: () => this.setState({ dangerOpen:true, dangerKind:'merge' }),
+      openGdpr: () => this.setState({ dangerOpen:true, dangerKind:'gdpr' }),
+      closeModal: () => this.setState({ vadeOpen:false, dangerOpen:false }), stop: (e)=>e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#e9e6df; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-wrap:wrap;gap:56px;padding:48px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:1100px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Siparişlerim · Web (aktif + geçmiş; B2B rutini: tek tuş tekrar sipariş)</span>
+    <div data-screen-label="Siparisler Web" style="width:1100px;background:#faf6ec;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);color:#3a3f35">
+      <div style="display:flex;align-items:center;gap:36px;padding:18px 48px;border-bottom:1px solid #e6dfcd">
+        <img src="assets/logo.jpg" style="height:52px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+        <nav style="display:flex;gap:24px;font:600 14px 'Karla';color:#8a8270">
+          <span>Hesabım</span><span style="color:#5f7a2c;border-bottom:2px solid #5f7a2c;padding-bottom:2px">Siparişlerim</span><span>Taleplerim</span>
+        </nav>
+        <span style="margin-left:auto;font:700 14px 'Karla';color:#5f7a2c">← Kataloğa dön</span>
+      </div>
+      <div style="padding:32px 48px 48px;display:flex;flex-direction:column;gap:14px">
+        <h1 style="margin:0;font:600 34px 'Lora';color:#343b41">Siparişlerim</h1>
+
+        <div style="background:#fff;border:1.5px solid #5f7a2c;border-radius:18px;padding:18px 24px;display:flex;align-items:center;gap:20px">
+          <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font:700 16px 'Karla';color:#3a4147">LZA-2451</span>
+              <span style="background:#eef2e2;color:#5f7a2c;font:700 12px 'Karla';padding:3px 12px;border-radius:12px">● Yolda</span>
+            </div>
+            <span style="font:400 13.5px 'Karla';color:#8a8270">22 Temmuz 2026 · 3 kalem · Baklava, Gözleme, Bayram Sofrası…</span>
+          </div>
+          <span style="font:700 18px 'Karla';color:#343b41">103,20 €</span>
+          <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 13.5px 'Karla';padding:9px 18px;border-radius:20px">↻ Tekrar sipariş</span>
+          <span style="font:700 14px 'Karla';color:#5f7a2c">Detay →</span>
+        </div>
+
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:18px 24px;display:flex;align-items:center;gap:20px">
+          <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font:700 16px 'Karla';color:#3a4147">LZA-2417</span>
+              <span style="background:#e9e4d4;color:#3a4147;font:700 12px 'Karla';padding:3px 12px;border-radius:12px">Teslim edildi</span>
+            </div>
+            <span style="font:400 13.5px 'Karla';color:#8a8270">8 Temmuz 2026 · 12 kalem · 24,5 kg toplu sipariş</span>
+          </div>
+          <span style="font:700 18px 'Karla';color:#343b41">286,40 €</span>
+          <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 13.5px 'Karla';padding:9px 18px;border-radius:20px">↻ Tekrar sipariş</span>
+          <span style="font:700 14px 'Karla';color:#5f7a2c">Detay →</span>
+        </div>
+
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:18px 24px;display:flex;align-items:center;gap:20px">
+          <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font:700 16px 'Karla';color:#3a4147">LZA-2389</span>
+              <span style="background:#fbeee8;color:#c25e3a;font:700 12px 'Karla';padding:3px 12px;border-radius:12px">İptal edildi</span>
+            </div>
+            <span style="font:400 13.5px 'Karla';color:#8a8270">29 Haziran 2026 · 2 kalem</span>
+          </div>
+          <span style="font:700 18px 'Karla';color:#8a8270">41,70 €</span>
+          <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 13.5px 'Karla';padding:9px 18px;border-radius:20px">↻ Tekrar sipariş</span>
+          <span style="font:700 14px 'Karla';color:#5f7a2c">Detay →</span>
+        </div>
+
+        <span style="font:700 14px 'Karla';color:#5f7a2c;text-align:center;padding:8px">Daha eski siparişler ↓</span>
+      </div>
+    </div>
+
+    <span style="font:600 15px 'Karla';color:#3a4147;margin-top:12px">Durumlar</span>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:22px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270;align-self:flex-start">Boş liste</span>
+        <span style="font-size:34px">📦</span>
+        <span style="font:600 19px 'Lora';color:#343b41">Henüz siparişiniz yok</span>
+        <span style="font:400 13.5px 'Karla';color:#6d7261">İlk siparişinizi vermek için kataloğa göz atın.</span>
+        <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:12px 26px;border-radius:24px">Kataloğa göz at</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:22px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Tekrar sipariş — bazı kalemler eklenemedi</span>
+        <div style="background:#eef2e2;border-radius:12px;padding:12px 14px;font:600 13px/1.6 'Karla';color:#5f7a2c">10 kalem sepete eklendi ✓</div>
+        <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:12px;padding:12px 14px;font:600 13px/1.6 'Karla';color:#8a6b2a">2 kalem eklenemedi: Tel Kadayıf (tükendi), Şöbiyet (satışta değil).</div>
+        <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:12px;border-radius:24px;text-align:center">Sepete git</span>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">Kalemler <strong>güncel fiyatlarla</strong> kopyalanır; fiyat farkı sepette zaten görünür, ayrı uyarı yok.</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:22px;display:flex;flex-direction:column;gap:8px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Durum rozetleri (kapalı liste)</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="background:#eef2e2;color:#5f7a2c;font:700 12px 'Karla';padding:4px 12px;border-radius:12px">Alındı</span>
+          <span style="background:#eef2e2;color:#5f7a2c;font:700 12px 'Karla';padding:4px 12px;border-radius:12px">Hazırlanıyor</span>
+          <span style="background:#eef2e2;color:#5f7a2c;font:700 12px 'Karla';padding:4px 12px;border-radius:12px">● Yolda</span>
+          <span style="background:#e9e4d4;color:#3a4147;font:700 12px 'Karla';padding:4px 12px;border-radius:12px">Teslim edildi</span>
+          <span style="background:#fbeee8;color:#c25e3a;font:700 12px 'Karla';padding:4px 12px;border-radius:12px">İptal edildi</span>
+          <span style="background:#fdf3e0;color:#8a6b2a;font:700 12px 'Karla';padding:4px 12px;border-radius:12px">İade sürecinde</span>
+        </div>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">Aktif durumlar yeşil ailede; iç durum adları asla sızmaz.</span>
+      </div>
+    </div>
+
+    <div style="width:1100px;background:#fff;border:1.5px dashed #cdc4a8;border-radius:16px;padding:24px 32px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:700 16px 'Karla';color:#3a4147">Etkileşim sözleşmesi (kodlayan ajan için)</span>
+      <ul style="margin:0;padding-left:20px;font:400 14px/1.8 'Karla';color:#6d7261">
+        <li><strong>↻ Tekrar sipariş</strong> → detaya girmeden: kalemler güncel fiyatlarla sepete kopyalanır → sonuç bildirimi (eklenen/eklenemeyen) → "Sepete git". İptal edilmiş sipariş de tekrar sipariş edilebilir.</li>
+        <li><strong>Satıra dokunma / Detay →</strong> → sipariş detay sayfası.</li>
+        <li><strong>Aktif sipariş</strong> → listenin en üstünde, yeşil çerçeveyle ayrışır.</li>
+        <li><strong>Daha eski siparişler</strong> → kaydırdıkça yüklenir (sayfalama düğmesi yok); mobilde otomatik.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Siparişlerim · Mobil</span>
+    <div data-screen-label="Siparisler Mobil" style="width:390px;background:#faf6ec;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e6dfcd">
+        <span style="font:700 14px 'Karla';color:#5f7a2c">← Hesabım</span>
+        <span style="font:600 17px 'Lora';color:#343b41">Siparişlerim</span>
+        <span style="width:40px"></span>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+        <div style="background:#fff;border:1.5px solid #5f7a2c;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font:700 14px 'Karla';color:#3a4147">LZA-2451</span>
+            <span style="background:#eef2e2;color:#5f7a2c;font:700 11px 'Karla';padding:3px 10px;border-radius:11px">● Yolda</span>
+          </div>
+          <span style="font:400 12.5px 'Karla';color:#8a8270">22 Tem · 3 kalem · 103,20 €</span>
+          <div style="display:flex;gap:8px">
+            <span style="flex:1;border:2px solid #5f7a2c;color:#5f7a2c;font:700 12.5px 'Karla';padding:9px;border-radius:16px;text-align:center">↻ Tekrar sipariş</span>
+            <span style="flex:1;background:#5f7a2c;color:#fff;font:700 12.5px 'Karla';padding:9px;border-radius:16px;text-align:center">Detay</span>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font:700 14px 'Karla';color:#3a4147">LZA-2417</span>
+            <span style="background:#e9e4d4;color:#3a4147;font:700 11px 'Karla';padding:3px 10px;border-radius:11px">Teslim edildi</span>
+          </div>
+          <span style="font:400 12.5px 'Karla';color:#8a8270">8 Tem · 12 kalem · 286,40 €</span>
+          <div style="display:flex;gap:8px">
+            <span style="flex:1;border:2px solid #5f7a2c;color:#5f7a2c;font:700 12.5px 'Karla';padding:9px;border-radius:16px;text-align:center">↻ Tekrar sipariş</span>
+            <span style="flex:1;background:#fff;border:1.5px solid #d8cfb6;color:#3a4147;font:700 12.5px 'Karla';padding:9px;border-radius:16px;text-align:center">Detay</span>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font:700 14px 'Karla';color:#3a4147">LZA-2389</span>
+            <span style="background:#fbeee8;color:#c25e3a;font:700 11px 'Karla';padding:3px 10px;border-radius:11px">İptal edildi</span>
+          </div>
+          <span style="font:400 12.5px 'Karla';color:#8a8270">29 Haz · 2 kalem · 41,70 €</span>
+        </div>
+        <span style="font:700 13px 'Karla';color:#5f7a2c;text-align:center;padding:6px">Daha eski siparişler ↓</span>
+      </div>
+    </div>
+    <span style="font:400 13px 'Karla';color:#8a8270;max-width:390px">Not: B2B rutini — mobilde "↻ Tekrar sipariş" 44px+ dokunma hedefi, kartın en erişilebilir aksiyonu; tek elle: listeye gir → tekrar sipariş → sepete git.</span>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

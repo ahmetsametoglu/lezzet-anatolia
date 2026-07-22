@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Ayarlar &amp; kullanıcı/rol · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Her değer buradan değişir (koda gömülü yok). Genel değer + istisnalar (kanal/bölge/ülke). Değişiklik geleceğe uygulanır.</span>
+    </div>
+
+    <div data-screen-label="Ayarlar Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="ayarlar" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">Ayarlar</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">Sistem-geneli parametreler · her değişiklik iz kaydına yazılır</span>
+          </div>
+          <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 12px;display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Ayar ara</span>
+        </div>
+        <div style="padding:0 24px;border-bottom:1px solid #e6e7e1;display:flex;gap:2px;background:#f8f9f5;flex-wrap:wrap">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+            <span onClick="{{ t.select }}" style="font:600 12.5px 'Space Grotesk';color:{{ t.fg }};border-bottom:2px solid {{ t.edge }};padding:11px 13px;margin-bottom:-1px;cursor:pointer">{{ t.label }}</span>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:11px">
+            <sc-for list="{{ settings }}" as="s" hint-placeholder-count="6">
+              <div onClick="{{ s.edit }}" style="border:1px solid #e6e7e1;background:#fff;border-radius:10px;padding:13px 16px;display:flex;align-items:center;gap:14px;cursor:pointer">
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:8px"><span style="font:600 13.5px 'Karla';color:#22251f">{{ s.name }}</span><sc-if value="{{ s.hasException }}" hint-placeholder-val="{{ false }}"><span style="font:600 9.5px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:6px;padding:2px 7px;flex:none">istisnalı</span></sc-if></div>
+                  <span style="font:400 11.5px 'Karla';color:#8b9086">{{ s.desc }}</span>
+                  <sc-if value="{{ s.hasException }}" hint-placeholder-val="{{ false }}"><span style="font:400 11px 'Karla';color:#9a6416">{{ s.exceptionText }}</span></sc-if>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex:none"><span style="font:500 15px 'IBM Plex Mono';color:#22251f">{{ s.value }}</span><span style="font:400 10px 'Karla';color:#9aa094">varsayılan {{ s.default }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isUsers }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+            <div style="padding:11px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:10px"><span style="font:400 12px 'Karla';color:#8b9086;flex:1;min-width:0">Roller sabit kalıp: depo fiyat görmez, kurye yalnız kendi teslimatını görür. Burada rol atanır.</span><span onClick="{{ openUser }}" style="font:600 12px 'Space Grotesk';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 14px;cursor:pointer;flex:none">+ Kullanıcı</span></div>
+            <div style="overflow-y:auto;flex:1;min-height:0">
+              <sc-for list="{{ users }}" as="u" hint-placeholder-count="4">
+                <div onClick="{{ openUser }}" style="padding:13px 24px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:14px;cursor:pointer">
+                  <span style="width:38px;height:38px;border-radius:10px;background:{{ u.avBg }};color:#fff;font:600 13px 'Space Grotesk';display:grid;place-items:center;flex:none">{{ u.initials }}</span>
+                  <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 13.5px 'Karla';color:#22251f">{{ u.name }}</span><span style="font:400 11px 'Karla';color:#8b9086">{{ u.contact }}</span></div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex:none"><sc-for list="{{ u.roles }}" as="r" hint-placeholder-count="2"><span style="font:600 10px 'Space Grotesk';color:{{ r.fg }};background:{{ r.bg }};border-radius:6px;padding:3px 8px">{{ r.label }}</span></sc-for></div>
+                  <span style="font:600 10px 'Space Grotesk';color:{{ u.stFg }};background:{{ u.stBg }};border-radius:6px;padding:3px 8px;flex:none">{{ u.status }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBİL -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Ayarlar — mobil</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Seyrek ama bazen acil ("bugün minimum sepeti düşür"). Tek ayarı arayıp değiştirmek hızlı olmalı.</span>
+    </div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;flex-direction:column;gap:10px">
+          <span style="font:600 17px 'Space Grotesk';color:#22251f">Ayarlar</span>
+          <div style="display:flex;align-items:center;gap:8px;background:#eef0ea;border:1px solid #e0e2da;border-radius:9px;padding:9px 12px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="font:400 13px 'Karla';color:#9aa094">Ayar ara…</span></div>
+        </div>
+        <div style="padding:10px 16px;display:flex;flex-direction:column;gap:9px">
+          <sc-for list="{{ mobSettings }}" as="s" hint-placeholder-count="4">
+            <div style="border:1px solid #e6e7e1;border-radius:11px;padding:11px 13px;display:flex;align-items:center;gap:12px">
+              <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 12.5px 'Karla';color:#22251f">{{ s.name }}</span><span style="font:400 10.5px 'Karla';color:#8b9086">{{ s.desc }}</span></div>
+              <span style="font:500 14px 'IBM Plex Mono';color:#22251f;flex:none">{{ s.value }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="width:340px;background:rgba(34,39,43,.35);border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14);display:flex;flex-direction:column;justify-content:flex-end;min-height:560px">
+        <div style="background:#fbfbf9;border-radius:20px 20px 26px 26px;padding:16px;display:flex;flex-direction:column;gap:13px">
+          <div style="width:42px;height:5px;border-radius:3px;background:#d4d7ce;align-self:center"></div>
+          <div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 16px 'Space Grotesk';color:#22251f">Minimum sepet tutarı</span><span style="font:400 11.5px 'Karla';color:#8b9086">Bu tutarın altında sipariş tamamlanamaz.</span></div>
+          <div style="display:flex;align-items:center;gap:12px;border:1.5px solid #5f7a2c;border-radius:11px;padding:12px 14px"><span style="font:500 20px 'IBM Plex Mono';color:#22251f;flex:1">25,00 €</span><span style="width:30px;height:30px;border-radius:8px;background:#f4f5f1;border:1px solid #e0e2da;display:grid;place-items:center;color:#6a7065;font:600 17px 'Space Grotesk'">−</span><span style="width:30px;height:30px;border-radius:8px;background:#f4f5f1;border:1px solid #e0e2da;display:grid;place-items:center;color:#6a7065;font:600 17px 'Space Grotesk'">+</span></div>
+          <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:10px 13px;display:flex;flex-direction:column;gap:6px"><span style="font:500 11px/1.5 'Karla';color:#8a6410">İstisna: B2B için 100,00 € (ayrı değer).</span></div>
+          <span style="font:400 11px 'Karla';color:#8b9086">Genel değer + istisnalar. Değişiklik geleceğe uygulanır; verilmiş siparişleri etkilemez.</span>
+          <span style="background:#5f7a2c;color:#fff;font:600 15px 'Space Grotesk';padding:14px;border-radius:12px;text-align:center">Kaydet</span>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+        <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+          <li><strong>Web</strong> → tüm parametre grupları, istisna ekleme, kullanıcı/rol yönetimi.</li>
+          <li><strong>Mobil</strong> → ara + tek ayarı hızlı değiştir (acil senaryolar).</li>
+          <li><strong>Kural</strong> → iç anahtar adı yok (insan dili); rol izin matrisi düzenlenmez (sabit kalıp); değişiklik geçmişe etki etmez; sınırlı değerler reddedilir.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- AYAR DÜZENLE DIALOG -->
+  <sc-if value="{{ settingOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:460px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f;max-height:86vh">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px"><div style="display:flex;flex-direction:column;gap:1px;margin-right:auto"><span style="font:600 18px 'Space Grotesk'">Minimum sepet tutarı</span><span style="font:400 12px 'Karla';color:#8b9086">Bu tutarın altında sipariş tamamlanamaz</span></div><span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span></div>
+        <div style="overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 11.5px 'Karla';color:#6a7065">Genel değer</span><div style="border:1.5px solid #5f7a2c;border-radius:9px;padding:11px 13px;font:500 16px 'IBM Plex Mono';background:#fff;display:flex;justify-content:space-between"><span>25,00</span><span style="color:#9aa094">€</span></div><span style="font:400 10.5px 'Karla';color:#9aa094">Varsayılan: 20,00 €</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:500 11.5px 'Karla';color:#6a7065">İstisnalar</span><span style="font:600 11px 'Karla';color:#5f7a2c">+ istisna ekle</span></div>
+            <div style="border:1px solid #ecd9b4;background:#fdf7ec;border-radius:9px;padding:10px 13px;display:flex;align-items:center;gap:10px"><span style="font:600 10px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:6px;padding:2px 8px">Kanal: B2B</span><span style="font:500 13px 'IBM Plex Mono';color:#22251f;flex:1;text-align:right">100,00 €</span><span style="color:#9aa094;font:500 14px 'Space Grotesk'">✕</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px;background:#fbe9e7;border:1px solid #e2c4c0;border-radius:9px;padding:11px 14px"><span style="color:#a5443c;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span><span style="font:500 11.5px/1.5 'Karla';color:#8a3a33">Geniş etkili ayar: bunu yükseltmek küçük sepetli müşterilerin siparişini engeller. Değişiklik geleceğe uygulanır.</span></div>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5"><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 16px;cursor:pointer">Varsayılana dön</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer;margin-left:auto">Kaydet</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- KULLANICI DIALOG -->
+  <sc-if value="{{ userOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:440px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px"><span style="font:600 18px 'Space Grotesk';margin-right:auto">Kullanıcı &amp; rol</span><span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span></div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:12px"><div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Ad</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';background:#fff">Murat Y.</div></div><div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Telefon</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13px 'IBM Plex Mono';background:#fff">+33 6 …</div></div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 11.5px 'Karla';color:#6a7065">Roller (birden çok olabilir)</span><div style="display:flex;gap:7px;flex-wrap:wrap"><span style="font:600 12px 'Space Grotesk';color:#6a7065;border:1px solid #d9dbd2;border-radius:8px;padding:7px 12px">Yönetici</span><span style="font:600 12px 'Space Grotesk';color:#6a7065;border:1px solid #d9dbd2;border-radius:8px;padding:7px 12px">Depo sorumlusu</span><span style="font:600 12px 'Space Grotesk';color:#fff;background:#5f7a2c;border:1px solid #5f7a2c;border-radius:8px;padding:7px 12px">Kurye ✓</span></div></div>
+          <span style="font:500 11.5px/1.5 'Karla';color:#8b9086;background:#f8f9f5;border:1px solid #e6e7e1;border-radius:8px;padding:10px 12px">Rolün ne görebildiği sabittir — kurye yalnız kendi teslimatını görür, fiyat/marj görmez. İzin detayı burada icat edilmez.</span>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5"><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:8px;padding:10px 16px;cursor:pointer;margin-right:auto">Pasifleştir</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer">İptal</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;cursor:pointer">Kaydet</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: 'siparis', settingOpen: false, userOpen: false };
+  renderVals() {
+    const tab = this.state.tab;
+    const tabDefs = [
+      { key:'siparis', label:'Sipariş & teslimat' }, { key:'odeme', label:'Ödeme' },
+      { key:'stok', label:'Stok & tazelik' }, { key:'puan', label:'Puan' },
+      { key:'maliyet', label:'Birim maliyet' }, { key:'users', label:'Kullanıcı & rol' },
+    ];
+    const tabs = tabDefs.map(t => ({ label:t.label, select:()=>this.setState({tab:t.key}),
+      fg: tab===t.key?'#22251f':'#8b9086', edge: tab===t.key?'#5f7a2c':'transparent' }));
+
+    const edit = () => this.setState({ settingOpen:true });
+    const S = (name,desc,value,def,exc) => ({ name, desc, value, default:def,
+      hasException: !!exc, exceptionText: exc||'', edit });
+    const byTab = {
+      siparis: [
+        S('Minimum sepet tutarı','Bu tutarın altında sipariş tamamlanamaz','25,00 €','20,00 €','İstisna: B2B için 100,00 €'),
+        S('Ücretsiz kargo eşiği','Bu tutar üstü kargo ücretsiz','60,00 €','50,00 €',null),
+        S('Sipariş kesim saati','Sonrası ertesi rota gününe yazılır','17:00','16:00',null),
+        S('Teslim onayı kapsamı','İmza/foto kimden istenir','B2B zorunlu','B2B zorunlu',null),
+        S('Teslimat özeti e-postası','Otomatik gönderim','Açık','Açık',null),
+      ],
+      odeme: [
+        S('Online ödeme stok bekletme','Ödeme tamamlanmazsa stok serbest kalır','30 dk','30 dk','Alt sınır: 30 dk (sağlayıcı asgarisi)'),
+        S('Kapıda ödeme tavanı','Kötüye-kullanım tavanı','500,00 €','500,00 €',null),
+        S('Nakit yasal uyarı eşiği','Bu tutar üstü nakitte uyarı','1.000,00 €','1.000,00 €',null),
+        S('Vade süresi varsayılanı','Vadeli müşteride varsayılan gün','30 gün','30 gün',null),
+      ],
+      stok: [
+        S('Yaklaşan son tarih eşiği','Kalan ömür bu %’nin altındaysa uyarı','%25','%25',null),
+        S('Önerilen indirim oranı','Near-expiry teklif öneri indirimi','%30','%30',null),
+        S('Girişte tazelik kabul eşiği','Kalan ömür bu %’nin altında uyarı','%75','%75',null),
+        S('KDV varsayılanı','Yeni üründe önerilen','%5,5','%5,5',null),
+      ],
+      puan: [
+        S('Yorum puanı','Onaylı yorum başına','20 puan','20 puan',null),
+        S('Beğeni anketi puanı','Swipe/anket başına','5 puan','5 puan',null),
+        S('Sipariş puanı','Her 1 € için','1 puan','1 puan',null),
+        S('Kupona çevrim eşiği','Bu bakiyeden sonra çevrilebilir','200 puan','200 puan',null),
+        S('Çevrim oranı','100 puan = ? €','5,00 €','5,00 €',null),
+      ],
+      maliyet: [
+        S('Rota teslimat birim maliyeti','Sipariş başı rota içi','1,80 €','1,80 €','İstisna: Güney bölge 2,20 €'),
+        S('Paketleme (soğuk zincir) maliyeti','Soğuk zincir sipariş başı','0,90 €','0,90 €',null),
+        S('Ödeme komisyon oranı','Online tahsilat komisyonu','%1,4 + 0,25 €','%1,4 + 0,25 €',null),
+      ],
+    };
+    const settings = byTab[tab] || byTab.siparis;
+    const mobSettings = [
+      { name:'Minimum sepet', desc:'genel + B2B istisna', value:'25,00 €' },
+      { name:'Kesim saati', desc:'sonrası ertesi gün', value:'17:00' },
+      { name:'Ücretsiz kargo', desc:'üstü ücretsiz', value:'60,00 €' },
+      { name:'Tazelik eşiği', desc:'kalan ömür %', value:'%25' },
+    ];
+
+    const rolePal = { 'Yönetici':['#3a6b8a','#e6eef3'], 'Depo':['#9a6416','#fdf1e3'], 'Kurye':['#5a4a8a','#ece8f5'] };
+    const role = l => ({ label:l, fg:rolePal[l][0], bg:rolePal[l][1] });
+    const uStat = on => on ? ['#4a6121','#eef4e2'] : ['#6a7065','#eef0ea'];
+    const U = (name,contact,roles,active,avBg) => ({ name, contact, roles:roles.map(role),
+      status: active?'Aktif':'Pasif', stFg:uStat(active)[0], stBg:uStat(active)[1],
+      initials: name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2), avBg });
+    const users = [
+      U('Selim A.',' selim@lezzet.fr','Yönetici,Depo,Kurye'.split(','),true,'#5f7a2c'),
+      U('Murat Y.','+33 6 51 …','Kurye'.split(','),true,'#5a4a8a'),
+      U('Elif K.','+33 6 22 …','Depo'.split(','),true,'#9a6416'),
+      U('Eski Personel','—','Depo'.split(','),false,'#9aa094'),
+    ];
+
+    return {
+      tabs, isSettings: tab!=='users', isUsers: tab==='users',
+      settings, mobSettings, users,
+      settingOpen: this.state.settingOpen, userOpen: this.state.userOpen,
+      openUser: () => this.setState({ userOpen:true }),
+      closeModal: () => this.setState({ settingOpen:false, userOpen:false }), stop: (e)=>e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

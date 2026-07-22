@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-wrap:wrap;gap:40px;padding:48px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <span style="font:600 15px 'Space Grotesk';color:#3a4147">Kurye — Günün Teslimat Listesi · mobil (araçta, tek elle, güneş altında)</span>
+    <div data-screen-label="Kurye Gun Liste" style="width:380px;background:#f4f5f2;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+      <div style="background:#fbfbf9;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;padding:13px 16px">
+        <span style="width:28px;height:28px;border-radius:7px;background:#22251f;color:#a9c46b;font:700 13px 'Space Grotesk';display:grid;place-items:center">L</span>
+        <span style="font:600 14px 'Space Grotesk';color:#22251f;flex:1">Kurye</span>
+        <span style="font:500 12px 'Karla';color:#8b9086">Murat · Perş 24 Tem</span>
+      </div>
+      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:12px">
+        <div style="background:#fff;border:1px solid #e6e7e1;border-radius:13px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span style="font:600 16px 'Space Grotesk';color:#22251f">Gün ilerlemesi</span>
+            <span style="font:500 14px 'IBM Plex Mono';color:#4a6121">3 / 8 durak</span>
+          </div>
+          <div style="height:9px;border-radius:5px;background:#eceee8;overflow:hidden"><div style="width:37%;height:100%;background:#5f7a2c"></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;font:400 12.5px 'Karla';color:#6a7065;border-top:1px solid #f0f1ec;padding-top:9px">
+            <span>Kapıda toplanan</span>
+            <span style="font:500 14px 'IBM Plex Mono';color:#22251f">248,60 €</span>
+          </div>
+        </div>
+
+        <sc-for list="{{ stops }}" as="s" hint-placeholder-count="5">
+          <div style="background:#fff;border:1px solid #e6e7e1;border-left:3px solid {{ s.edge }};border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;opacity:{{ s.dim }}">
+            <div style="display:flex;gap:11px;align-items:flex-start">
+              <span style="width:28px;height:28px;border-radius:8px;background:{{ s.seqBg }};color:{{ s.seqFg }};font:600 14px 'IBM Plex Mono';display:grid;place-items:center;flex:none">{{ s.seq }}</span>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <span style="font:600 14.5px 'Space Grotesk';color:#22251f">{{ s.name }}</span>
+                  <span style="background:{{ s.tagBg }};color:{{ s.tagFg }};font:600 10px 'Space Grotesk';padding:3px 8px;border-radius:6px;flex:none">{{ s.tag }}</span>
+                </div>
+                <span style="font:400 12.5px 'Karla';color:#6a7065">{{ s.addr }}</span>
+                <span style="font:400 12px 'Karla';color:#8b9086">{{ s.content }}</span>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f0f1ec;padding-top:8px">
+              <span style="font:500 12.5px 'Karla';color:{{ s.payFg }}">{{ s.pay }}</span>
+              <span style="background:{{ s.stBg }};color:{{ s.stFg }};font:600 11px 'Space Grotesk';padding:4px 10px;border-radius:7px">{{ s.status }}</span>
+            </div>
+          </div>
+        </sc-for>
+
+        <span style="font:400 11.5px/1.5 'Karla';color:#8b9086;text-align:center;padding:2px 8px">Ulaşılamayan duraklar listede kalır — gün içinde geri dönebilirsiniz. Listeyi aşağı çekerek yenileyin.</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <span style="font:600 15px 'Space Grotesk';color:#3a4147">Duraka dokununca — hızlı aksiyonlar (tek dokunuş)</span>
+    <div data-screen-label="Kurye Gun Durak Aksiyon" style="width:380px;background:rgba(34,37,31,.4);border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14);display:flex;flex-direction:column;justify-content:flex-end;min-height:540px">
+      <div style="background:#f4f5f2;border-radius:20px 20px 26px 26px;padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div style="width:44px;height:5px;border-radius:3px;background:#d4d7ce;align-self:center"></div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <span style="font:600 18px 'Space Grotesk';color:#22251f">4 · Restaurant Anatolie</span>
+          <span style="font:400 13px 'Karla';color:#6a7065">8 Rue du Fossé, 67000 Strasbourg</span>
+          <span style="font:500 13px 'Karla';color:#9a6416">Kapıda 466,00 € · nakit bekleniyor · 6 koli</span>
+        </div>
+        <span style="background:#5f7a2c;color:#fff;font:600 16px 'Space Grotesk';padding:16px;border-radius:12px;text-align:center">Teslimatı aç →</span>
+        <div style="display:flex;gap:9px">
+          <span style="flex:1;background:#22251f;color:#fff;font:600 12.5px 'Space Grotesk';padding:14px 6px;border-radius:11px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>Navigasyon</span>
+          <span style="flex:1;background:#fff;border:1px solid #d4d7ce;color:#3a4147;font:600 12.5px 'Space Grotesk';padding:14px 6px;border-radius:11px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>Ara</span>
+          <span style="flex:1;background:#128c4b;color:#fff;font:600 12.5px 'Space Grotesk';padding:14px 6px;border-radius:11px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-11.6 7.7L3 21l1.9-6.4A8.5 8.5 0 1 1 21 11.5z"></path></svg>WhatsApp</span>
+        </div>
+        <span style="font:400 11.5px/1.5 'Karla';color:#8b9086;text-align:center">Navigasyon/arama harici uygulamaya açılır; dönünce kaldığınız durak korunur.</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <span style="font:600 15px 'Space Grotesk';color:#3a4147">Boş durum — bugün atanmış teslimat yok</span>
+    <div data-screen-label="Kurye Gun Bos" style="width:380px;height:540px;background:#f4f5f2;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14);display:flex;flex-direction:column">
+      <div style="background:#fbfbf9;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;padding:13px 16px">
+        <span style="width:28px;height:28px;border-radius:7px;background:#22251f;color:#a9c46b;font:700 13px 'Space Grotesk';display:grid;place-items:center">L</span>
+        <span style="font:600 14px 'Space Grotesk';color:#22251f;flex:1">Kurye</span>
+        <span style="font:500 12px 'Karla';color:#8b9086">Murat · Cum 25 Tem</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;padding:32px">
+        <span style="width:60px;height:60px;border-radius:50%;background:#eceee8;color:#8b9086;display:grid;place-items:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg></span>
+        <span style="font:600 18px 'Space Grotesk';color:#22251f;text-align:center">Bugün için teslimat atanmadı</span>
+        <span style="font:400 13.5px/1.6 'Karla';color:#6a7065;text-align:center">Rota planı hazırlandığında duraklar buraya düşer. Yenilemek için aşağı çekin.</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="width:100%;max-width:820px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:22px 30px;display:flex;flex-direction:column;gap:9px">
+    <span style="font:700 15px 'Space Grotesk';color:#3a4147">Etkileşim sözleşmesi (kodlayan ajan için)</span>
+    <ul style="margin:0;padding-left:20px;font:400 13.5px/1.75 'Karla';color:#6a7065">
+      <li><strong>Yalnız kendi atamaları</strong> → başka kuryenin durağı asla render edilmez. Liste rota sırasıyla ve sabittir; kurye sıralamayı değiştirmez.</li>
+      <li><strong>Rol duvarı</strong> → maliyet/kâr/marj, müşteri vade/limit/borç ve sipariş geçmişi görünmez. Kurye yalnız <em>tahsil edeceği tutarı</em> görür; tutar salt-okunur.</li>
+      <li><strong>Ödeme beklentisi durakta net</strong> → "kapıda + tutar + yöntem" (amber) ya da "ödendi" (yeşil). Gün ilerlemesi biriken nakiti taşır; kapanışta sürpriz olmaz.</li>
+      <li><strong>Durum tonları</strong> → bekliyor (nötr) · teslim edildi (yeşil/gri) · ulaşılamadı (amber, listede kalır) · reddedildi (kırmızımsı). Tamamlanan durak listenin altına iner.</li>
+      <li><strong>Hedef ekran</strong> → "Teslimatı aç" → Kurye Teslimat Ekranı. Son durak sonuçlanınca "Gün Kapanışı" CTA'sı belirir.</li>
+    </ul>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      stops: [
+        { seq:'1', name:'Ayşe Kaya', tag:'B2C', tagBg:'#eef4e2', tagFg:'#4a6121', addr:'12 Rue de la Nuée Bleue', content:'2 paket · soğuk zincir',
+          edge:'#c9ccc3', dim:'.55', seqBg:'#eceee8', seqFg:'#8b9086', pay:'Ödendi · online', payFg:'#4a6121',
+          status:'Teslim edildi', stBg:'#eef4e2', stFg:'#4a6121' },
+        { seq:'2', name:'Café Marceau', tag:'B2B', tagBg:'#fdf1e3', tagFg:'#9a6416', addr:'3 Place Broglie', content:'4 koli',
+          edge:'#c9ccc3', dim:'.55', seqBg:'#eceee8', seqFg:'#8b9086', pay:'Ödendi · havale', payFg:'#4a6121',
+          status:'Teslim edildi', stBg:'#eef4e2', stFg:'#4a6121' },
+        { seq:'3', name:'M. Leroy', tag:'B2C', tagBg:'#eef4e2', tagFg:'#4a6121', addr:'27 Quai des Bateliers', content:'1 paket',
+          edge:'#c2571f', dim:'1', seqBg:'#fdf1e3', seqFg:'#9a6416', pay:'Ulaşılamadı — tekrar denenecek', payFg:'#9a6416',
+          status:'Ulaşılamadı', stBg:'#fdf1e3', stFg:'#9a6416' },
+        { seq:'4', name:'Restaurant Anatolie', tag:'B2B', tagBg:'#fdf1e3', tagFg:'#9a6416', addr:'8 Rue du Fossé', content:'6 koli · hacimli',
+          edge:'#5f7a2c', dim:'1', seqBg:'#5f7a2c', seqFg:'#fff', pay:'Kapıda 466,00 € · nakit', payFg:'#9a6416',
+          status:'Sıradaki', stBg:'#22251f', stFg:'#fff' },
+        { seq:'5', name:'B. Meunier', tag:'B2C', tagBg:'#eef4e2', tagFg:'#4a6121', addr:'5 Rue des Juifs', content:'3 paket',
+          edge:'#c9ccc3', dim:'1', seqBg:'#eceee8', seqFg:'#8b9086', pay:'Kapıda 38,50 € · kart', payFg:'#9a6416',
+          status:'Bekliyor', stBg:'#eceee8', stFg:'#6a7065' },
+        { seq:'6', name:'Épicerie du Port', tag:'B2B', tagBg:'#fdf1e3', tagFg:'#9a6416', addr:'19 Rue de Zurich', content:'2 koli',
+          edge:'#c9ccc3', dim:'1', seqBg:'#eceee8', seqFg:'#8b9086', pay:'Ödendi · havale', payFg:'#4a6121',
+          status:'Bekliyor', stBg:'#eceee8', stFg:'#6a7065' },
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

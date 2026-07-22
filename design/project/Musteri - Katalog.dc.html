@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+  body { margin:0; background:#e9e6df; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-wrap:wrap;gap:56px;padding:48px;align-items:flex-start">
+
+  <!-- WEB -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Katalog · Web</span>
+    <div data-screen-label="Katalog Web" style="width:1360px;background:#faf6ec;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);color:#3a3f35">
+      <div style="background:#5f7a2c;color:#f3efe2;font:500 13px 'Karla';display:flex;justify-content:center;gap:28px;padding:8px 0">
+        <span>❄ Soğuk zincirle teslim</span><span>Strasbourg &amp; çevresinde kapıya teslim</span><span>Fransa geneline kargo</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:36px;padding:18px 48px;border-bottom:1px solid #e6dfcd">
+        <img src="assets/logo.jpg" style="height:58px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+        <nav style="display:flex;gap:28px;font:600 15px 'Karla';color:#3a4147">
+          <span style="color:#5f7a2c;border-bottom:2px solid #5f7a2c;padding-bottom:2px">Katalog</span><span>Paketler</span><span style="color:#b05c2e">Fırsatlar</span><span>Keşif</span><span>Professionnels</span>
+        </nav>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:18px">
+          <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e0d8c2;border-radius:24px;padding:9px 18px;width:250px;color:#9a917c;font:400 14px 'Karla'">🔍 Ürün ara…</div>
+          <span style="font:600 14px 'Karla';color:#8a8270">TR ▾</span>
+          <div style="position:relative;font-size:22px">🧺<span style="position:absolute;top:-6px;right:-10px;background:#b05c2e;color:#fff;font:700 11px 'Karla';border-radius:10px;padding:1px 6px">3</span></div>
+        </div>
+      </div>
+      <div style="padding:36px 48px 20px;display:flex;flex-direction:column;gap:20px">
+        <h1 style="margin:0;font:600 38px 'Lora';color:#343b41">Katalog</h1>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <sc-for list="{{ chips }}" as="ch" hint-placeholder-count="7">
+            <span style="font:700 14px 'Karla';padding:10px 20px;border-radius:22px;background:{{ ch.bg }};color:{{ ch.fg }};border:1.5px solid {{ ch.bd }}">{{ ch.name }}</span>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font:400 14px 'Karla';color:#8a8270">24 ürün</span>
+          <span style="flex:1"></span>
+          <span style="font:700 13.5px 'Karla';color:#b05c2e;border:1.5px solid #e8c9b3;background:#f9ede2;padding:8px 16px;border-radius:20px">% Yalnız indirimliler</span>
+          <span style="font:700 13.5px 'Karla';color:#3a4147;border:1.5px solid #d8cfb6;padding:8px 16px;border-radius:20px;background:#fff">Sırala: Öne çıkanlar ▾</span>
+        </div>
+      </div>
+      <div style="padding:4px 48px 48px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px">
+        <sc-for list="{{ products }}" as="p" hint-placeholder-count="8">
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="height:170px;position:relative">
+              <div style="height:170px;filter:{{ p.imgFilter }}"><image-slot id="ktl-{{ $index }}" shape="rect" placeholder="{{ p.name }}"></image-slot></div>
+              <sc-if value="{{ p.sold }}" hint-placeholder-val="{{ false }}">
+                <span style="position:absolute;top:12px;left:12px;background:#3a4147;color:#fff;font:700 12px 'Karla';padding:5px 12px;border-radius:14px;pointer-events:none">Tükendi — yakında yeniden</span>
+              </sc-if>
+              <sc-if value="{{ p.was }}" hint-placeholder-val="{{ false }}">
+                <span style="position:absolute;top:12px;left:12px;background:#b05c2e;color:#fff;font:700 12px 'Karla';padding:5px 12px;border-radius:14px;pointer-events:none">Fırsat</span>
+              </sc-if>
+            </div>
+            <div style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px">
+              <span style="font:700 16px 'Karla';color:{{ p.nameColor }}">{{ p.name }}</span>
+              <span style="font:400 13px 'Karla';color:#8a8270">{{ p.weight }} · {{ p.unit }}</span>
+              <sc-if value="{{ p.limit }}" hint-placeholder-val="{{ false }}">
+                <span style="font:600 12px 'Karla';color:#b05c2e;background:#f9ede2;border-radius:10px;padding:2px 8px;width:max-content">{{ p.limit }}</span>
+              </sc-if>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;min-height:36px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font:700 18px 'Karla';color:{{ p.priceColor }}">{{ p.price }}</span>
+                  <sc-if value="{{ p.was }}" hint-placeholder-val="{{ false }}"><span style="font:400 14px 'Karla';color:#b3ab97;text-decoration:line-through">{{ p.was }}</span></sc-if>
+                </div>
+                <sc-if value="{{ p.plain }}" hint-placeholder-val="{{ true }}">
+                  <span style="background:#5f7a2c;color:#fff;font:700 13px 'Karla';padding:8px 14px;border-radius:18px">Sepete ekle</span>
+                </sc-if>
+                <sc-if value="{{ p.multi }}" hint-placeholder-val="{{ false }}">
+                  <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 13px 'Karla';padding:6px 14px;border-radius:18px">Seçenekler →</span>
+                </sc-if>
+                <sc-if value="{{ p.added }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:flex;align-items:center;gap:0;border:2px solid #5f7a2c;border-radius:18px;overflow:hidden">
+                    <span style="font:700 16px 'Karla';color:#5f7a2c;padding:5px 12px">−</span>
+                    <span style="font:700 14px 'Karla';color:#3a4147;min-width:26px;text-align:center">{{ p.qty }}</span>
+                    <span style="font:700 16px 'Karla';color:#fff;background:#5f7a2c;padding:5px 12px">+</span>
+                  </span>
+                </sc-if>
+                <sc-if value="{{ p.sold }}" hint-placeholder-val="{{ false }}">
+                  <span style="background:#c9c3b0;color:#fff;font:700 13px 'Karla';padding:8px 14px;border-radius:18px">Sepete ekle</span>
+                </sc-if>
+              </div>
+              <sc-if value="{{ p.from }}" hint-placeholder-val="{{ false }}"><span style="font:400 12px 'Karla';color:#8a8270">başlangıç fiyatı — boy detayda seçilir</span></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="background:#343b41;color:#c9cdc2;padding:28px 48px;display:flex;justify-content:space-between;font:400 14px 'Karla'">
+        <span style="font:600 17px 'Lora';color:#f3efe2">Lezzet Anatolia</span>
+        <div style="display:flex;gap:28px"><span>Hakkımızda</span><span>SSS</span><span>Professionnels</span><span>TR · FR · DE</span></div>
+      </div>
+    </div>
+
+    <div style="width:1360px;background:#fff;border:1.5px dashed #cdc4a8;border-radius:16px;padding:24px 32px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:700 16px 'Karla';color:#3a4147">Etkileşim sözleşmesi (kodlayan ajan için)</span>
+      <ul style="margin:0;padding-left:20px;font:400 14px/1.8 'Karla';color:#6d7261">
+        <li><strong>Sepete ekle / +</strong> → ürünü 1 adet ekler; buton yerinde K19 adet seçicisine dönüşür (Kayseri Mantısı kartındaki gibi); mobil sepet özet çubuğu (K21) canlı güncellenir. Sayfadan ayrılma olmaz.</li>
+        <li><strong>Seçenekler</strong> → ürün detay sayfasına götürür; varyant seçimi listeden yapılamaz, atlanamaz (kural: çok varyantlıda hızlı ekleme yok). Detay sayfası varyant bölümü görünür şekilde açılır.</li>
+        <li><strong>İndirimli kartta +</strong> → normal ekleme; adet, fırsat limitine ulaşınca K19'un + ucu pasifleşir.</li>
+        <li><strong>Tükendi</strong> → aksiyon pasif; kartın kendisi yine detaya tıklanabilir (ürün geri gelecek beklentisi).</li>
+        <li><strong>Kart görseli / adı</strong> → her durumda ürün detaya gider.</li>
+      </ul>
+    </div>
+
+    <span style="font:600 15px 'Karla';color:#3a4147;margin-top:12px">Durum: koleksiyon görünümü (başlık bandı değişir, gerisi aynı)</span>
+    <div style="width:1360px;background:#faf6ec;border-radius:8px;box-shadow:0 8px 40px rgba(58,65,71,.12);padding:32px 48px;display:flex;flex-direction:column;gap:12px">
+      <span style="font:600 13px 'Karla';letter-spacing:.12em;text-transform:uppercase;color:#5f7a2c">Koleksiyon</span>
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <h1 style="margin:0;font:600 38px 'Lora';color:#343b41">Bayram Seçkisi</h1>
+        <span style="font:700 14px 'Karla';color:#5f7a2c">Tüm kataloğa dön ✕</span>
+      </div>
+      <span style="font:400 14px 'Karla';color:#8a8270">9 ürün · Bu görünümde kategori çipleri gizlenir, filtre/sıralama satırı aynen kalır</span>
+    </div>
+  </div>
+
+  <!-- MOBILE -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Katalog · Mobil (açılmış tam akış)</span>
+    <div data-screen-label="Katalog Mobil" style="width:390px;background:#faf6ec;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15)">
+      <div style="background:#5f7a2c;color:#f3efe2;font:500 11px 'Karla';text-align:center;padding:7px">❄ Soğuk zincirle kapıya teslim</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px">
+        <span style="font-size:20px">☰</span>
+        <img src="assets/logo.jpg" style="height:40px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+        <div style="position:relative;font-size:20px">🧺<span style="position:absolute;top:-5px;right:-8px;background:#b05c2e;color:#fff;font:700 10px 'Karla';border-radius:9px;padding:1px 5px">3</span></div>
+      </div>
+      <div style="margin:0 16px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e0d8c2;border-radius:22px;padding:10px 16px;color:#9a917c;font:400 14px 'Karla'">🔍 Ürün ara…</div>
+      <div style="padding:16px 16px 4px"><h1 style="margin:0;font:600 26px 'Lora';color:#343b41">Katalog</h1></div>
+      <div style="padding:10px 16px 0;display:flex;gap:8px;overflow:hidden">
+        <sc-for list="{{ chips }}" as="ch" hint-placeholder-count="4">
+          <span style="flex:none;font:700 13px 'Karla';padding:9px 16px;border-radius:20px;background:{{ ch.bg }};color:{{ ch.fg }};border:1.5px solid {{ ch.bd }}">{{ ch.name }}</span>
+        </sc-for>
+      </div>
+      <div style="padding:12px 16px 4px;display:flex;align-items:center;gap:8px">
+        <span style="font:400 13px 'Karla';color:#8a8270">24 ürün</span>
+        <span style="flex:1"></span>
+        <span style="font:700 12px 'Karla';color:#b05c2e;border:1.5px solid #e8c9b3;background:#f9ede2;padding:7px 12px;border-radius:17px">% İndirimli</span>
+        <span style="font:700 12px 'Karla';color:#3a4147;border:1.5px solid #d8cfb6;background:#fff;padding:7px 12px;border-radius:17px">Sırala ▾</span>
+      </div>
+      <div style="padding:10px 16px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <sc-for list="{{ products }}" as="p" hint-placeholder-count="8">
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="height:110px;position:relative">
+              <div style="height:110px;filter:{{ p.imgFilter }}"><image-slot id="ktl-m-{{ $index }}" shape="rect" placeholder=""></image-slot></div>
+              <sc-if value="{{ p.sold }}" hint-placeholder-val="{{ false }}">
+                <span style="position:absolute;top:8px;left:8px;background:#3a4147;color:#fff;font:700 10.5px 'Karla';padding:4px 9px;border-radius:11px;pointer-events:none">Tükendi</span>
+              </sc-if>
+              <sc-if value="{{ p.was }}" hint-placeholder-val="{{ false }}">
+                <span style="position:absolute;top:8px;left:8px;background:#b05c2e;color:#fff;font:700 10.5px 'Karla';padding:4px 9px;border-radius:11px;pointer-events:none">Fırsat</span>
+              </sc-if>
+            </div>
+            <div style="padding:10px;display:flex;flex-direction:column;gap:4px">
+              <span style="font:700 13px 'Karla';color:{{ p.nameColor }}">{{ p.name }}</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">{{ p.weight }} · {{ p.unit }}</span>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px;min-height:28px">
+                <div style="display:flex;flex-direction:column">
+                  <span style="font:700 15px 'Karla';color:{{ p.priceColor }}">{{ p.price }}</span>
+                  <sc-if value="{{ p.was }}" hint-placeholder-val="{{ false }}"><span style="font:400 12px 'Karla';color:#b3ab97;text-decoration:line-through">{{ p.was }}</span></sc-if>
+                </div>
+                <sc-if value="{{ p.plain }}" hint-placeholder-val="{{ true }}">
+                  <span style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';width:28px;height:28px;border-radius:14px;display:grid;place-items:center">+</span>
+                </sc-if>
+                <sc-if value="{{ p.multi }}" hint-placeholder-val="{{ false }}">
+                  <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 11px 'Karla';padding:5px 9px;border-radius:14px">Seçenekler →</span>
+                </sc-if>
+                <sc-if value="{{ p.added }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:flex;align-items:center;border:1.5px solid #5f7a2c;border-radius:14px;overflow:hidden">
+                    <span style="font:700 14px 'Karla';color:#5f7a2c;padding:3px 8px">−</span>
+                    <span style="font:700 12px 'Karla';color:#3a4147;min-width:18px;text-align:center">{{ p.qty }}</span>
+                    <span style="font:700 14px 'Karla';color:#fff;background:#5f7a2c;padding:3px 8px">+</span>
+                  </span>
+                </sc-if>
+                <sc-if value="{{ p.sold }}" hint-placeholder-val="{{ false }}">
+                  <span style="background:#c9c3b0;color:#fff;font:700 15px 'Karla';width:28px;height:28px;border-radius:14px;display:grid;place-items:center">+</span>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin:0 12px 12px;background:#3a4147;color:#f3efe2;border-radius:20px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;flex-direction:column"><span style="font:700 14px 'Karla'">3 ürün · 26,30 €</span><span style="font:400 11.5px 'Karla';color:#c9cdc2">Kapıya teslim seçenekleri sepette</span></div>
+        <span style="background:#a9c46b;color:#343b41;font:700 13px 'Karla';padding:10px 18px;border-radius:16px">Sepete git</span>
+      </div>
+      <div style="background:#343b41;color:#c9cdc2;padding:16px;display:flex;justify-content:space-between;font:400 12px 'Karla'">
+        <span style="font:600 14px 'Lora';color:#f3efe2">Lezzet Anatolia</span><span>TR · FR · DE</span>
+      </div>
+    </div>
+    <span style="font:400 13px 'Karla';color:#8a8270;max-width:390px">Not: koyu "Sepete git" çubuğu gerçek uygulamada ekranın altına sabitlenir (sepet doluyken görünür); akışta son konumda gösterildi.</span>
+
+    <span style="font:600 15px 'Karla';color:#3a4147;margin-top:12px">Durum: arama sıfır-sonuç</span>
+    <div data-screen-label="Katalog Sifir Sonuc" style="width:390px;background:#faf6ec;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px">
+        <span style="font-size:20px">☰</span>
+        <img src="assets/logo.jpg" style="height:40px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+        <span style="font-size:20px">🧺</span>
+      </div>
+      <div style="margin:0 16px;display:flex;align-items:center;gap:8px;background:#fff;border:2px solid #5f7a2c;border-radius:22px;padding:9px 16px;color:#3a4147;font:400 14px 'Karla'">🔍 lahmacun mix <span style="margin-left:auto;color:#9a917c">✕</span></div>
+      <div style="padding:48px 32px 56px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center">
+        <span style="font-size:40px">🍽</span>
+        <span style="font:600 22px 'Lora';color:#343b41">Aradığınızı bulamadık</span>
+        <span style="font:400 14px/1.6 'Karla';color:#6d7261">"lahmacun mix" için sonuç yok. Yazımı kontrol edebilir ya da kategorilere göz atabilirsiniz.</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px">
+          <span style="font:700 13px 'Karla';color:#3a4147;border:1.5px solid #d8cfb6;background:#fff;padding:8px 16px;border-radius:20px">Börekler</span>
+          <span style="font:700 13px 'Karla';color:#3a4147;border:1.5px solid #d8cfb6;background:#fff;padding:8px 16px;border-radius:20px">Tatlılar</span>
+          <span style="font:700 13px 'Karla';color:#3a4147;border:1.5px solid #d8cfb6;background:#fff;padding:8px 16px;border-radius:20px">Çerezler</span>
+        </div>
+        <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:12px 24px;border-radius:24px;margin-top:8px">Tüm kataloğa dön</span>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const on = { bg: "#5f7a2c", fg: "#fff", bd: "#5f7a2c" };
+    const off = { bg: "#fff", fg: "#3a4147", bd: "#d8cfb6" };
+    return {
+      chips: [
+        { name: "Tümü", ...on }, { name: "Börekler", ...off }, { name: "Mantı & Hamur İşi", ...off },
+        { name: "Tatlılar", ...off }, { name: "Kebap & Köfte", ...off }, { name: "Çerezler", ...off }, { name: "Sebze & Dolma", ...off },
+      ],
+      products: [
+        { name: "El Açması Su Böreği", weight: "1 kg", unit: "12,90 €/kg", price: "12,90 €", plain: true, nameColor: "#3a4147", priceColor: "#343b41", imgFilter: "none" },
+        { name: "Kayseri Mantısı", weight: "500 g", unit: "15,00 €/kg", price: "7,50 €", added: true, qty: 3, nameColor: "#3a4147", priceColor: "#343b41", imgFilter: "none" },
+        { name: "Ispanaklı Gözleme", weight: "4 adet", unit: "1,48 €/adet", price: "5,90 €", was: "7,90 €", limit: "En fazla 5 adet", plain: true, nameColor: "#3a4147", priceColor: "#b05c2e", imgFilter: "none" },
+        { name: "Fıstıklı Baklava", weight: "2 boy", unit: "700 g / 1 kg", price: "16,90 €", multi: true, from: true, nameColor: "#3a4147", priceColor: "#343b41", imgFilter: "none" },
+        { name: "İçli Köfte", weight: "6 adet · 540 g", unit: "18,33 €/kg", price: "9,90 €", plain: true, nameColor: "#3a4147", priceColor: "#343b41", imgFilter: "none" },
+        { name: "Yaprak Sarma", weight: "1 kg", unit: "9,90 €/kg", price: "9,90 €", was: "12,50 €", limit: "En fazla 4 adet", plain: true, nameColor: "#3a4147", priceColor: "#b05c2e", imgFilter: "none" },
+        { name: "Tel Kadayıf", weight: "500 g", unit: "11,80 €/kg", price: "5,90 €", sold: true, nameColor: "#8a8270", priceColor: "#8a8270", imgFilter: "grayscale(1) opacity(.7)" },
+        { name: "Antep Fıstığı", weight: "250 g", unit: "35,60 €/kg", price: "8,90 €", plain: true, nameColor: "#3a4147", priceColor: "#343b41", imgFilter: "none" },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
