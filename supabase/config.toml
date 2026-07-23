@@ -58,10 +58,10 @@ enabled = true
 schema_paths = []
 
 [db.seed]
-# If enabled, seeds the database after migrations during a db reset.
-enabled = true
-# Specifies an ordered list of seed files to load during db reset.
-# Supports glob patterns relative to supabase directory: "./seeds/*.sql"
+# SQL seed hook kapalı — seed'i TS ile sürüyoruz (scripts/seed.ts → `pnpm db:seed`).
+# Neden TS: admin gibi auth kullanıcılarını admin API ile temiz yaratmak + ileride storage
+# upload'ları; SQL'de auth.users elle kurmak kırılgan. Tek yol karışıklığı önler.
+enabled = false
 sql_paths = ["./seed.sql"]
 
 [db.network_restrictions]

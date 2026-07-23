@@ -28,6 +28,8 @@
     "db:reset": "supabase db reset",
     "db:migrate": "supabase migration up",
     "db:new": "supabase migration new",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:refresh": "supabase db reset && tsx scripts/seed.ts",
     "set-role": "tsx scripts/set-role.ts"
   },
   "devDependencies": {
