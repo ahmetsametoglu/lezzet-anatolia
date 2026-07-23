@@ -20,18 +20,27 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "boundaries": "depcruise apps packages",
+    "knip": "knip",
     "test": "turbo run test",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:migrate": "supabase migration up",
+    "db:new": "supabase migration new",
+    "set-role": "tsx scripts/set-role.ts"
   },
   "devDependencies": {
-    "@eslint/js": "^9.17.0",
+    "@lezzet/database": "workspace:*",
     "@lezzet/eslint-config": "workspace:*",
+    "@lezzet/types": "workspace:*",
     "@lezzet/typescript-config": "workspace:*",
     "dependency-cruiser": "^16.8.0",
     "eslint": "^9.17.0",
+    "knip": "^5.30.0",
     "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
     "turbo": "^2.3.3",
-    "typescript": "^5.7.2",
-    "typescript-eslint": "^8.19.0"
+    "typescript": "^5.7.2"
   }
 }

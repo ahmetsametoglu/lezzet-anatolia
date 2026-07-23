@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreBinaries": ["supabase"],
+  "ignore": ["design/**"],
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.ts"]
+    },
+    "apps/web": {
+      "entry": ["lib/guard.ts", "components/form/**"]
+    }
+  }
+}

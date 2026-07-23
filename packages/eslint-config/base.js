@@ -16,5 +16,3 @@ export const baseConfig = [
     },
   },
 ];
-
-export default baseConfig;
