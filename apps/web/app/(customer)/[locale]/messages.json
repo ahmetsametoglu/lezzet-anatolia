@@ -1,0 +1,14 @@
+{
+  "tr": {
+    "tagline": "İskelet ayakta. Modül modül inşa başlıyor.",
+    "loginCta": "Giriş"
+  },
+  "fr": {
+    "tagline": "La structure est en place. La construction démarre, module par module.",
+    "loginCta": "Connexion"
+  },
+  "de": {
+    "tagline": "Das Grundgerüst steht. Der Aufbau beginnt, Modul für Modul.",
+    "loginCta": "Anmelden"
+  }
+}

@@ -1,3 +1,47 @@
 @import 'tailwindcss';
 
-/* Marka token'ları (kesin palet Claude Design çıktısıyla gelecek) burada @theme ile tanımlanır. */
+/*
+  Müşteri evreni — "Aile Sofrası" tasarım token'ları.
+  Kaynak: design/project/Komponent Envanteri - Musteri.dc.html §0.
+  Operasyon evreni ("Veri Masası") tokenları o yüzey kodlanınca eklenecek.
+*/
+@theme {
+  /* Fontlar — next/font değişkenlerine bağlanır (layout.tsx) */
+  --font-sans: var(--font-karla), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-lora), ui-serif, Georgia, serif;
+
+  /* Renkler */
+  --color-olive: #5f7a2c; /* birincil aksiyon, marka */
+  --color-olive-dark: #4a6121; /* hover / basılı */
+  --color-olive-light: #a9c46b; /* koyu zeminde vurgu */
+  --color-ink: #343b41; /* başlık, koyu blok */
+  --color-slate: #3a4147; /* koyu blok (kart/footer) */
+  --color-orange: #b05c2e; /* fırsat / indirim vurgusu */
+  --color-cream: #faf6ec; /* sayfa zemini */
+  --color-cream-deep: #f0e9d6; /* vurgulu bölüm zemini */
+  --color-mint: #eef2e2; /* açık yeşil bant */
+  --color-line: #ece5d2; /* kart kenarı, ayırıcı */
+  --color-line-strong: #d8cfb6; /* girdi/çerçeve (koyu) */
+  --color-line-soft: #e0d8c2; /* ince ayraç */
+
+  --color-body: #6d7261; /* gövde metni */
+  --color-muted: #8a8270; /* ikincil metin */
+  --color-faint: #b3ab97; /* soluk / placeholder */
+
+  --color-danger: #c25e3a; /* hata */
+  --color-warn: #8a6b2a; /* uyarı metni */
+  --color-warn-bg: #fdf3e0; /* uyarı zemini */
+  --color-star: #d99a2b; /* yıldız puanı */
+
+  /* Köşe yarıçapları */
+  --radius-card: 18px;
+  --radius-soft: 14px;
+  --radius-pill: 26px;
+}
+
+/* Sayfa varsayılanı — müşteri evreni zemini + gövde fontu */
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}

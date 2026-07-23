@@ -1,0 +1,62 @@
+{
+  "tr": {
+    "back": "← Geri",
+    "title": "Birkaç saniyede doğrulanın",
+    "googleCta": "Google ile devam et",
+    "orEmail": "veya e-posta ile",
+    "emailPlaceholder": "E-posta adresiniz",
+    "sendCta": "Tek kullanımlık kod gönder",
+    "sending": "Gönderiliyor…",
+    "codeTitle": "Kodu girin",
+    "consentBefore": "Hangi yolla doğrulanırsanız doğrulanın aynı hesabınıza ulaşırsınız. Devam ederek ",
+    "consentLink": "gizlilik politikasını",
+    "consentAfter": " kabul etmiş olursunuz.",
+    "reasons": {
+      "default": "Devam etmek için birkaç saniye. Şifre yok — hiç olmadı.",
+      "checkout": "Siparişinizi tamamlamak için. Şifre yok — hiç olmadı.",
+      "talepler": "Taleplerinizi görmek için. Şifre yok — hiç olmadı.",
+      "hesap": "Hesabınıza ulaşmak için. Şifre yok — hiç olmadı.",
+      "geribildirim": "Değerlendirmenizi kaydetmek için. Şifre yok — hiç olmadı."
+    }
+  },
+  "fr": {
+    "back": "← Retour",
+    "title": "Vérifiez-vous en quelques secondes",
+    "googleCta": "Continuer avec Google",
+    "orEmail": "ou par e-mail",
+    "emailPlaceholder": "Votre adresse e-mail",
+    "sendCta": "Recevoir un code à usage unique",
+    "sending": "Envoi…",
+    "codeTitle": "Saisissez le code",
+    "consentBefore": "Quelle que soit la méthode, vous accédez au même compte. En continuant, vous acceptez ",
+    "consentLink": "la politique de confidentialité",
+    "consentAfter": ".",
+    "reasons": {
+      "default": "Quelques secondes pour continuer. Pas de mot de passe — jamais.",
+      "checkout": "Pour finaliser votre commande. Pas de mot de passe — jamais.",
+      "talepler": "Pour voir vos demandes. Pas de mot de passe — jamais.",
+      "hesap": "Pour accéder à votre compte. Pas de mot de passe — jamais.",
+      "geribildirim": "Pour enregistrer votre avis. Pas de mot de passe — jamais."
+    }
+  },
+  "de": {
+    "back": "← Zurück",
+    "title": "In wenigen Sekunden bestätigen",
+    "googleCta": "Mit Google fortfahren",
+    "orEmail": "oder per E-Mail",
+    "emailPlaceholder": "Ihre E-Mail-Adresse",
+    "sendCta": "Einmalcode anfordern",
+    "sending": "Wird gesendet…",
+    "codeTitle": "Code eingeben",
+    "consentBefore": "Egal welchen Weg Sie wählen, Sie erreichen dasselbe Konto. Mit dem Fortfahren akzeptieren Sie ",
+    "consentLink": "die Datenschutzrichtlinie",
+    "consentAfter": ".",
+    "reasons": {
+      "default": "Nur ein paar Sekunden, um fortzufahren. Kein Passwort — nie.",
+      "checkout": "Um Ihre Bestellung abzuschließen. Kein Passwort — nie.",
+      "talepler": "Um Ihre Anfragen zu sehen. Kein Passwort — nie.",
+      "hesap": "Um auf Ihr Konto zuzugreifen. Kein Passwort — nie.",
+      "geribildirim": "Um Ihre Bewertung zu speichern. Kein Passwort — nie."
+    }
+  }
+}
