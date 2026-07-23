@@ -21,10 +21,12 @@ Kataloğun veri ve iş katmanı: `Category / Collection / Product / ProductVaria
 
 ## Görevler
 
-- [ ] **Category + Collection servisleri:** CRUD, sıralama, aktif/pasif, `product_collections` çoklu bağı + Server Action'lar
+- [x] **Category + Collection servisleri:** CRUD, sıralama, aktif/pasif, `product_collections` çoklu bağı + Server Action'lar
   - *Bitti:* oluştur–güncelle–pasifle akışı testte; bir ürün iki koleksiyona girip çıkabiliyor
-- [ ] **Slug üretici (`packages/helper`):** addan dil-bağımsız slug (Türkçe karakter temizliği) + benzersizlik (çakışmada ek); kategori/ürün/koleksiyon/paket hepsi aynı üreticiyi kullanır
+  - **Durum:** `CategoryService` + `CollectionService` (0004 migration, `LocalizedText` jsonb, slug addan türer + rename'de sabit) yazıldı; oluştur–güncelle–pasifle + slug çakışması entegrasyon testinde yeşil. **Sapmalar (bildirildi):** `product_collections` çoklu bağı Product FK'sine muhtaç → task 3'e (Product) ertelendi; Server Action'lar çağıranı olan admin ekranıyla birlikte 09'a bırakıldı (knip ölü kod).
+- [x] **Slug üretici (`packages/helper`):** addan dil-bağımsız slug (Türkçe karakter temizliği) + benzersizlik (çakışmada ek); kategori/ürün/koleksiyon/paket hepsi aynı üreticiyi kullanır
   - *Bitti:* "Su Böreği" → `su-boregi`; aynı adla ikinci kayıt farklı slug alıyor (birim test)
+  - **Durum:** `slugify` (çok-dilli, petit'in FR-only sürümünün genişletmesi) + `uniqueSlug` helper; birim testte yeşil. Servis tarafı benzersizlik `uniqueSlugForTable` (database utils, prefix sorgusu) ile paylaşımlı.
 - [ ] **Product + ProductVariant servisleri:** paylaşılan alanlar üründe, satılabilir birim varyantta; varyantsız üründe **varsayılan varyant otomatik** açılır; `is_candidate` ürün satış sorgularının dışında
   - *Bitti:* tek varyantlı ürün oluşturunca varsayılan varyant kendiliğinden yazılıyor; aday ürün vitrin sorgusunda görünmüyor
 - [ ] **Price servisi:** kanal fiyatı (b2b/b2c) + müşteriye özel fiyat satırları + `valid_from`; okuma tarafında 03'ün çözüm sırasını kullanan "bu müşteri bu varyantı kaça alır" servisi
