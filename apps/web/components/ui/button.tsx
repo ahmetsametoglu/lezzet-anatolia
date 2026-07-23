@@ -33,7 +33,7 @@ interface ButtonClassOptions {
 
 export function buttonClass({ variant = 'primary', size = 'md', fullWidth, className }: ButtonClassOptions = {}): string {
   return [
-    'inline-flex items-center justify-center gap-2 font-sans font-bold outline-none transition-colors disabled:cursor-not-allowed',
+    'inline-flex cursor-pointer items-center justify-center gap-2 font-sans font-bold outline-none transition-colors disabled:cursor-not-allowed',
     VARIANT[variant],
     variant === 'ghost' ? GHOST_SIZE[size] : PADDED_SIZE[size],
     fullWidth ? 'w-full' : '',
