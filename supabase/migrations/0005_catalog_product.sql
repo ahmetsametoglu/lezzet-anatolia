@@ -1,0 +1,50 @@
+-- Modül 05 — Katalog: ürün + varyant + ürün-koleksiyon bağı.
+-- Paylaşılan alanlar Product'ta; satılabilir birim ProductVariant (DATA_MODEL, DOMAIN §13).
+-- product_collections = task 1'de ertelenen çoklu bağ (artık Product FK'si var). RLS deny-by-default.
+-- Incremental: ingredients/nutrition/allergens + target_margin_percent/auto_price alanları ilgili
+-- özellikleriyle (ürün sayfası / oto-fiyat) eklenecek — şimdi Task 3 davranışı için gerekmiyor.
+
+create type product_date_type as enum ('DLC', 'DDM');
+
+create table public.product (
+  id uuid primary key default gen_random_uuid(),
+  name jsonb not null,                               -- LocalizedText
+  description jsonb,                                 -- LocalizedText, opsiyonel
+  slug text not null,                                -- dil-bağımsız (SEO_I18N)
+  category_id uuid references public.category (id) on delete set null,
+  image_key text,                                    -- depo anahtarı, tam URL değil (STACK §5)
+  vat_rate numeric(4, 2) not null default 5.5,       -- 5.5 / 20
+  date_type product_date_type not null default 'DDM',
+  shelf_life_days int,
+  shippable boolean not null default true,           -- false = yalnız rota/kapı (soğuk zincir)
+  is_candidate boolean not null default false,       -- aday: keşifte gösterilir, satılamaz (DOMAIN §13)
+  is_active boolean not null default true,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+create unique index product_slug_key on public.product (slug);
+create index product_category_idx on public.product (category_id);
+
+create table public.product_variant (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references public.product (id) on delete cascade,
+  label text not null,                               -- "70gr"/"500gr"; tek varyantlıda varsayılan
+  net_weight_g int,
+  min_stock_qty int,                                 -- asgari eşik (DOMAIN §16); null = öneri yok
+  sku text,
+  is_active boolean not null default true,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+create index product_variant_product_idx on public.product_variant (product_id);
+
+-- Ürün ↔ koleksiyon çoklu bağı (bir ürün birçok koleksiyona girer)
+create table public.product_collections (
+  product_id uuid not null references public.product (id) on delete cascade,
+  collection_id uuid not null references public.collection (id) on delete cascade,
+  primary key (product_id, collection_id)
+);
+
+alter table public.product enable row level security;
+alter table public.product_variant enable row level security;
+alter table public.product_collections enable row level security;

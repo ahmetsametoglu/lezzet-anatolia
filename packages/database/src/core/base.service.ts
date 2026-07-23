@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { ZodSchema } from 'zod';
+import type { ZodType, ZodTypeDef } from 'zod';
 import { appToDb, camelToSnake, dbToApp } from '../utils/case-transformers';
 
 // Filtre seçenekleri — base'in iç sözleşmesi (dışa verilmez; servisler nesne literaliyle geçer).
@@ -32,9 +32,11 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
   constructor(
     protected supabase: SupabaseClient,
     protected tableName: string,
-    protected dbSchema: ZodSchema<TDb>,
-    protected insertSchema: ZodSchema<TInsert>,
-    protected updateSchema: ZodSchema<TUpdate>,
+    // Girdi `unknown`: şemalar DB'den gelen bilinmeyen satırı / app girdisini parse eder. Transform'lu
+    // şemalarda (ör. numeric string→number) girdi tipi çıktıdan ayrılabilir; bu yüzden TDb sabitlenmez.
+    protected dbSchema: ZodType<TDb, ZodTypeDef, unknown>,
+    protected insertSchema: ZodType<TInsert, ZodTypeDef, unknown>,
+    protected updateSchema: ZodType<TUpdate, ZodTypeDef, unknown>,
     protected allowDelete: boolean = true,
   ) {}
 
