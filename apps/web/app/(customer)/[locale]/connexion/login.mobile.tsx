@@ -2,7 +2,7 @@ import { OtpCodeInput } from '@/components/auth/otp-code-input';
 import { FormInputField } from '@/components/form/form-input-field';
 import { Button } from '@/components/ui/button';
 import { GoogleIcon, WhatsAppIcon } from './login-icons';
-import type { LoginViewProps } from './login-client';
+import type { LoginViewProps } from './login-types';
 
 // Sıcak degrade — tasarımdaki hero image-slot yerine geçici placeholder (gerçek foto gelince değişir).
 const HERO_BG = 'linear-gradient(150deg,#8a6b2a 0%,#6f7d3f 45%,#3a4147 100%)';

@@ -1,17 +1,13 @@
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import type { Locale, LocalizedCopy } from '@lezzet/i18n';
+import type { Locale } from '@lezzet/i18n';
 import { authErrorMessage } from '@/lib/auth/errors';
 import { detectDevice } from '@/lib/device';
 import { routing } from '@/i18n/routing';
 import { LoginClient } from './login-client';
+import type { Messages } from './login-types';
 import messages from './messages.json';
-
-// Arayüz metinleri messages.json'dan (tek kaynak); `Messages` tipi ondan TÜRETİLİR (elle
-// interface yok). Türetme burada, çünkü JSON değerini yalnız server okur (client bundle'a
-// girmesin); sunum bileşenleri tipi `import type` ile alır.
-export type Messages = LocalizedCopy<typeof messages>;
 
 interface LoginPageProps {
   params: Promise<{ locale: string }>;

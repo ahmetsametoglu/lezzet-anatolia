@@ -2,15 +2,14 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState, useTransition } from 'react';
-import type { FormEventHandler } from 'react';
-import { useForm, type UseFormRegisterReturn } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { Locale } from '@lezzet/i18n';
 import { createClient } from '@/lib/supabase/client';
 import type { Device } from '@/lib/device';
 import type { OtpResendResult, OtpVerifyResult } from '@/components/auth/otp-code-input';
 import { sendEmailOtp, verifyEmailOtp } from './actions';
-import type { Messages } from './page';
+import type { LoginErrors, LoginViewProps, Messages, Stage } from './login-types';
 import { LoginDesktop } from './login.desktop';
 import { LoginMobile } from './login.mobile';
 
@@ -19,35 +18,6 @@ const LoginEmailSchema = z.object({
   email: z.string().trim().email(),
 });
 type LoginEmailValues = z.infer<typeof LoginEmailSchema>;
-
-/** Auth hata metinleri (lib/auth/errors.ts kaynaklı, seçili dilde). */
-export type LoginErrors = { invalidEmail: string; googleUnavailable: string };
-
-export type Stage = { kind: 'email' } | { kind: 'code'; email: string };
-
-/**
- * Masaüstü ve mobil sunum varyantlarının paylaştığı sözleşme — tüm state + handler'lar burada
- * üretilir, yalnız DÜZEN varyanta göre değişir (Sapma 3: çatallanma client sınırında).
- */
-export interface LoginViewProps {
-  t: Messages;
-  errors: LoginErrors;
-  subtitle: string;
-  locale: Locale;
-  stage: Stage;
-  error: string | null;
-  notice: string | null;
-  isSending: boolean;
-  emailInvalid: boolean;
-  emailRef: UseFormRegisterReturn['ref'];
-  emailField: Omit<UseFormRegisterReturn, 'ref'>;
-  onSubmit: FormEventHandler<HTMLFormElement>;
-  onBack: () => void;
-  onGoogle: () => void;
-  onWhatsApp: () => void;
-  onVerify: (code: string) => Promise<OtpVerifyResult>;
-  onResend: () => Promise<OtpResendResult>;
-}
 
 interface LoginClientProps {
   next: string | null;

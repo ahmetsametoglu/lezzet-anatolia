@@ -2,7 +2,7 @@ import { OtpCodeInput } from '@/components/auth/otp-code-input';
 import { FormInputField } from '@/components/form/form-input-field';
 import { Button } from '@/components/ui/button';
 import { GoogleIcon, WhatsAppIcon } from './login-icons';
-import type { LoginViewProps } from './login-client';
+import type { LoginViewProps } from './login-types';
 
 // Sıcak degrade — tasarımdaki hero image-slot (aile sofrası fotoğrafı) yerine geçici placeholder.
 // Gerçek foto gelince bu arka planı kaldırıp <img>/next<Image> ile değiştir.
