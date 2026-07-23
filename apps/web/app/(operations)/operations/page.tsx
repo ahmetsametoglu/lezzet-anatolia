@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { serviceDb, StaffRoleService } from '@lezzet/database';
 import { AuthError, requireStaff } from '@/lib/guard';
+import { getPathname } from '@/i18n/navigation';
 
 // Operasyon karşılama noktası — yalnız personel. Tam yüzey (Veri Masası) sonraki dilimde;
 // şimdilik yönlendirme kapısının hedefi olarak asgari, guard'lı bir stub.
@@ -10,7 +11,8 @@ export default async function OperationsPage() {
     user = await requireStaff();
   } catch (e) {
     if (e instanceof AuthError) {
-      if (e.code === 'auth_required') redirect('/connexion?next=/operations');
+      // Personel Türkçe → Türkçe girişe yönlendir (yerelleştirilmiş dış URL: /tr/giris).
+      if (e.code === 'auth_required') redirect(`${getPathname({ locale: 'tr', href: '/login' })}?next=/operations`);
       redirect('/'); // müşteri Operasyon'a giremez → market'e
     }
     throw e;

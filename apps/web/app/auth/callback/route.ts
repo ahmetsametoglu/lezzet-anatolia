@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import { DEFAULT_LOCALE } from '@lezzet/i18n';
 import { createClient } from '@/lib/supabase/server';
 import { resolvePostLoginRedirect } from '@/lib/auth/redirect';
+import { getPathname } from '@/i18n/navigation';
 
 // Google (OAuth) dönüş noktası: kodu oturuma çevirir, müşteriyi bağlar, role göre yönlendirir.
 // Not: proxy arkasında (Caddy) request.url origin'i yanlış olur; gerçek origin forwarded
@@ -14,21 +16,24 @@ export async function GET(request: Request): Promise<Response> {
   const code = url.searchParams.get('code');
   const next = url.searchParams.get('next');
 
+  // OAuth hata dönüşü — yerelleştirilmiş girişe (locale bilinmiyor → varsayılan fr: /fr/connexion).
+  const loginErrorUrl = `${origin}${getPathname({ locale: DEFAULT_LOCALE, href: '/login' })}?error=oauth`;
+
   if (!code) {
-    return NextResponse.redirect(`${origin}/connexion?error=oauth`);
+    return NextResponse.redirect(loginErrorUrl);
   }
 
   const supabase = await createClient();
   const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
   if (exchangeErr) {
-    return NextResponse.redirect(`${origin}/connexion?error=oauth`);
+    return NextResponse.redirect(loginErrorUrl);
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.redirect(`${origin}/connexion?error=oauth`);
+    return NextResponse.redirect(loginErrorUrl);
   }
 
   const target = await resolvePostLoginRedirect(user.id, next);

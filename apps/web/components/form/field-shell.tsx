@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 /**
  * Form alanlarının ortak iskeleti (base): etiket (+`*`/aside) → kontrol → hata metni.
  * Tüm `*Field` primitifleri (input/textarea/select) bunu sarar → etiket/hata markup'ı tek kaynak.
- * `hideLabel` etiketi görsel gizler (sr-only) — placeholder-yalnız tasarımlar için (ör. /connexion).
+ * `hideLabel` etiketi görsel gizler (sr-only) — placeholder-yalnız tasarımlar için (ör. login).
  */
 interface FieldShellProps {
   fieldId: string;

@@ -21,7 +21,7 @@ export default async function Home({ params }: HomeProps) {
     <main className="flex min-h-screen flex-col items-center justify-center gap-3 p-8">
       <h1 className="font-serif text-3xl font-semibold text-ink">{brand.name}</h1>
       <p className="font-sans text-sm text-body">{t.tagline}</p>
-      <Link href="/connexion" className={buttonClass({ size: 'sm', className: 'mt-2' })}>
+      <Link href="/login" className={buttonClass({ size: 'sm', className: 'mt-2' })}>
         {t.loginCta}
       </Link>
     </main>
