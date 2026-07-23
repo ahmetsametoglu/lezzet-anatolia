@@ -1,4 +1,4 @@
 {
-  "extends": "@lezzet/typescript-config/base.json",
+  "extends": "@lezzet/typescript-config/node.json",
   "include": ["src"]
 }
