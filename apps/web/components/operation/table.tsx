@@ -24,14 +24,32 @@ interface TableProps<Row> {
   empty?: ReactNode;
   /** Gövde sonuna eklenir — infinite scroll "yükleniyor" satırı vb. */
   footer?: ReactNode;
+  /** Satır seçimi/tıklaması — verilirse satır tıklanabilir olur. */
+  onRowClick?: (row: Row) => void;
+  onRowDoubleClick?: (row: Row) => void;
+  /** Seçili satır vurgusu (olive zemin). */
+  isRowActive?: (row: Row) => boolean;
+  /** Gövde kaydırma olayı — infinite scroll için. */
+  onScroll?: (e: UIEvent) => void;
 }
 
 const SELF = { left: 'justify-self-start', center: 'justify-self-center', right: 'justify-self-end' } as const;
 
-export function Table<Row>({ columns, rows, rowKey, empty, footer }: TableProps<Row>) {
+export function Table<Row>({
+  columns,
+  rows,
+  rowKey,
+  empty,
+  footer,
+  onRowClick,
+  onRowDoubleClick,
+  isRowActive,
+  onScroll,
+}: TableProps<Row>) {
   if (rows.length === 0 && empty) return <>{empty}</>;
 
   const template = columns.map((c) => c.width).join(' ');
+  const clickable = Boolean(onRowClick || onRowDoubleClick);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -48,20 +66,34 @@ export function Table<Row>({ columns, rows, rowKey, empty, footer }: TableProps<
       </div>
 
       {/* Gövde (kaydırılır) */}
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {rows.map((row) => (
-          <div
-            key={rowKey(row)}
-            style={{ gridTemplateColumns: template }}
-            className="grid items-center gap-x-2.5 border-b border-ops-line-soft px-5 py-3 last:border-b-0"
-          >
-            {columns.map((c) => (
-              <div key={c.key} className={c.align && c.align !== 'left' ? SELF[c.align] : 'min-w-0'}>
-                {c.cell(row)}
-              </div>
-            ))}
-          </div>
-        ))}
+      <div
+        className="min-h-0 flex-1 overflow-y-auto"
+        onScroll={onScroll ? (e) => onScroll(e.nativeEvent) : undefined}
+      >
+        {rows.map((row) => {
+          const active = isRowActive?.(row) ?? false;
+          return (
+            <div
+              key={rowKey(row)}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              onDoubleClick={onRowDoubleClick ? () => onRowDoubleClick(row) : undefined}
+              style={{ gridTemplateColumns: template }}
+              className={[
+                'grid items-center gap-x-2.5 border-b border-ops-line-soft px-5 py-3 last:border-b-0',
+                active ? 'bg-ops-olive-bg' : clickable ? 'hover:bg-ops-subtle' : '',
+                clickable ? 'cursor-pointer' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {columns.map((c) => (
+                <div key={c.key} className={c.align && c.align !== 'left' ? SELF[c.align] : 'min-w-0'}>
+                  {c.cell(row)}
+                </div>
+              ))}
+            </div>
+          );
+        })}
         {footer}
       </div>
     </div>
