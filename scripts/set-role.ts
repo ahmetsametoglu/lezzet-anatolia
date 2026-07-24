@@ -1,10 +1,10 @@
 /**
- * Personel rolü atar (ilk admin dahil). Auth kullanıcısı yoksa oluşturur, sonra rolü verir.
- * Kullanım:  pnpm set-role <email> <admin|warehouse|courier>
- * Örn:       pnpm set-role admin@lezzet.local admin
+ * Kullanıcı rolü atar. Auth kullanıcısı yoksa oluşturur (0002 trigger profili açar), sonra rolü yazar.
+ * İlk admin için gerekmez (ilk giriş yapan otomatik admin) — depo/kurye atamak veya rol değiştirmek için.
+ * Kullanım:  pnpm set-role <email> <customer|admin|warehouse|courier>
  */
-import { createServiceRoleClient, StaffRoleService } from '@lezzet/database';
-import { StaffRoleEnum } from '@lezzet/types';
+import { createServiceRoleClient, UserProfileService } from '@lezzet/database';
+import { UserRoleEnum } from '@lezzet/types';
 
 // .env'i yükle (Node 22 process.loadEnvFile).
 try {
@@ -16,10 +16,10 @@ try {
 async function main(): Promise<void> {
   const [email, roleArg] = process.argv.slice(2);
   if (!email || !roleArg) {
-    console.error('Kullanım: pnpm set-role <email> <admin|warehouse|courier>');
+    console.error('Kullanım: pnpm set-role <email> <customer|admin|warehouse|courier>');
     process.exit(1);
   }
-  const role = StaffRoleEnum.parse(roleArg);
+  const role = UserRoleEnum.parse(roleArg);
   const supabase = createServiceRoleClient();
 
   // Auth kullanıcısını bul ya da oluştur.
@@ -35,7 +35,10 @@ async function main(): Promise<void> {
     userId = data.user.id;
   }
 
-  await new StaffRoleService(supabase).assign(userId, role);
+  const profiles = new UserProfileService(supabase);
+  const profile = await profiles.findByAuthUserId(userId);
+  if (!profile) throw new Error('Profil bulunamadı — 0002 trigger çalışmadı mı?');
+  await profiles.setRole(profile.id, role);
   console.log(`✓ ${email} → ${role}  (user ${userId})`);
 }
 

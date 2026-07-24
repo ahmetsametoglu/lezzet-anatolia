@@ -1,10 +1,12 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
+import { serviceDb, UserProfileService } from '@lezzet/database';
 import { brand } from '@lezzet/brand';
+import { getSessionUser } from '@/lib/guard';
 import { Link } from '@/i18n/navigation';
 import { routing } from '@/i18n/routing';
-import { buttonClass } from '@/components/ui/button';
+import { buttonClass } from '@/components/customer/ui/button';
 import messages from './messages.json';
 
 interface HomeProps {
@@ -15,6 +17,14 @@ export default async function Home({ params }: HomeProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+
+  // İki-yüzey kuralı: personel ana sayfada karşılanmaz → Operasyon'a. (Vitrini görmek isterse
+  // kataloğa doğrudan gidebilir; yalnız kök `/` yönlendirir.)
+  const user = await getSessionUser();
+  if (user && (await new UserProfileService(serviceDb()).isStaff(user.id))) {
+    redirect('/operations');
+  }
+
   const t = messages[locale];
 
   return (

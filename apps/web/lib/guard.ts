@@ -1,11 +1,11 @@
 import 'server-only';
-import { serviceDb, StaffRoleService } from '@lezzet/database';
-import type { StaffRole } from '@lezzet/types';
+import { serviceDb, UserProfileService } from '@lezzet/database';
+import type { UserRole } from '@lezzet/types';
 import { createClient } from './supabase/server';
 
-// Tek yetki kapısı (DOMAIN §2). Oturum çerezden okunur; personel rolü RLS deny-by-default
-// olduğu için service-role ile okunur. Guard'lar hata FIRLATIR; API/action için {ok} saran
-// yardımcı ayrıdır — böylece izin kuralı tek yerde yaşar.
+// Tek yetki kapısı (DOMAIN §2). Oturum çerezden okunur; rol RLS deny-by-default olduğu için
+// service-role ile `user_profiles.role`'dan okunur. Guard'lar hata FIRLATIR; API/action için {ok}
+// saran yardımcı ayrıdır — böylece izin kuralı tek yerde yaşar.
 
 export type AuthErrorCode = 'auth_required' | 'forbidden';
 
@@ -37,18 +37,16 @@ export async function requireAuth(): Promise<AuthUser> {
   return user;
 }
 
-async function requireRole(role: StaffRole): Promise<AuthUser> {
+async function requireRole(role: UserRole): Promise<AuthUser> {
   const user = await requireAuth();
-  const roles = new StaffRoleService(serviceDb());
-  if (!(await roles.hasRole(user.id, role))) throw new AuthError('forbidden');
+  if (!(await new UserProfileService(serviceDb()).hasRole(user.id, role))) throw new AuthError('forbidden');
   return user;
 }
 
-/** Herhangi bir personel rolü şart (Operasyon yüzeyine giriş kapısı). */
+/** Herhangi bir personel rolü (customer dışı) şart (Operasyon yüzeyine giriş kapısı). */
 export async function requireStaff(): Promise<AuthUser> {
   const user = await requireAuth();
-  const roles = new StaffRoleService(serviceDb());
-  if ((await roles.getRoles(user.id)).length === 0) throw new AuthError('forbidden');
+  if (!(await new UserProfileService(serviceDb()).isStaff(user.id))) throw new AuthError('forbidden');
   return user;
 }
 

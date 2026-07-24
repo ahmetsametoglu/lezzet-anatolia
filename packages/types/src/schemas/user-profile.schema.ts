@@ -1,7 +1,13 @@
 import { z } from 'zod';
 
-// Customer (kimlik altkümesi) — 0001 migration ile birebir; alanlar modüller ilerledikçe büyür.
-// Konvansiyon (referans): app modeli camelCase; Schema / InsertSchema / UpdateSchema türetilir.
+// Kullanıcı profili (kimlik) — 0001 migration ile birebir. TEK tablo: müşteri + personel; ROL ayırır.
+// Çok-rol yok (kullanıcı tek rol). "customer" bir roldür, ayrı tablo değil (referans: user_profiles).
+
+export const UserRoleEnum = z.enum(['customer', 'admin', 'warehouse', 'courier']);
+export type UserRole = z.infer<typeof UserRoleEnum>;
+
+/** Personel rolleri (guard/operasyon yüzeyi). Müşteri hariç. */
+export const STAFF_ROLES = ['admin', 'warehouse', 'courier'] as const;
 
 export const CustomerTypeEnum = z.enum(['individual', 'company']);
 export type CustomerType = z.infer<typeof CustomerTypeEnum>;
@@ -12,8 +18,9 @@ export type PreferredLanguage = z.infer<typeof PreferredLanguageEnum>;
 export const CountryEnum = z.enum(['FR', 'DE']);
 export type Country = z.infer<typeof CountryEnum>;
 
-export const CustomerSchema = z.object({
+export const UserProfileSchema = z.object({
   id: z.string().uuid(),
+  role: UserRoleEnum,
   type: CustomerTypeEnum,
   name: z.string(),
   email: z.string().email().nullable(),
@@ -25,17 +32,17 @@ export const CustomerSchema = z.object({
   isDraft: z.boolean(),
   createdAt: z.string(),
 });
-export type Customer = z.infer<typeof CustomerSchema>;
+export type UserProfile = z.infer<typeof UserProfileSchema>;
 
-// id DB-üretimli (gen_random_uuid) → insert'te opsiyonel; createdAt'i DB koyar.
-export const CustomerInsertSchema = CustomerSchema.omit({ createdAt: true }).partial();
-export type CustomerInsert = z.infer<typeof CustomerInsertSchema>;
+// id/role/createdAt DB-üretimli/varsayılanlı → insert'te opsiyonel.
+export const UserProfileInsertSchema = UserProfileSchema.omit({ createdAt: true }).partial();
+export type UserProfileInsert = z.infer<typeof UserProfileInsertSchema>;
 
 // Update: id zorunlu, kalanı opsiyonel (yalnız verilen alanlar yazılır).
-export const CustomerUpdateSchema = CustomerSchema.partial().required({ id: true });
-export type CustomerUpdate = z.infer<typeof CustomerUpdateSchema>;
+export const UserProfileUpdateSchema = UserProfileSchema.partial().required({ id: true });
+export type UserProfileUpdate = z.infer<typeof UserProfileUpdateSchema>;
 
-// Bul-veya-oluştur girişi: en az bir kimlik anahtarı (telefon veya e-posta).
+// Bul-veya-oluştur girişi (taslak müşteri): en az bir kimlik anahtarı (telefon veya e-posta).
 // Normalizasyon (E.164, lowercase) servis içinde helper ile yapılır.
 export const FindOrCreateInputSchema = z
   .object({

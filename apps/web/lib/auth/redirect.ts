@@ -1,5 +1,5 @@
 import 'server-only';
-import { serviceDb, StaffRoleService } from '@lezzet/database';
+import { serviceDb, UserProfileService } from '@lezzet/database';
 
 /**
  * Açık yönlendirme (open redirect) koruması: yalnız site-içi mutlak yol kabul edilir.
@@ -17,7 +17,6 @@ function safeNext(next: string | null | undefined): string {
  * (handle_new_auth_user); burada yalnız yönlendirme kararı kalır.
  */
 export async function resolvePostLoginRedirect(userId: string, next?: string | null): Promise<string> {
-  const staffRoles = await new StaffRoleService(serviceDb()).getRoles(userId);
-  if (staffRoles.length > 0) return '/operations';
+  if (await new UserProfileService(serviceDb()).isStaff(userId)) return '/operations';
   return safeNext(next);
 }
