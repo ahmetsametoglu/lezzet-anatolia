@@ -53,6 +53,15 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     super(supabase, 'product', ProductSchema, ProductInsertSchema, ProductUpdateSchema);
   }
 
+  /**
+   * Admin listesi: tüm ürünler (aktif/pasif/aday), sırayla. Vitrin değil — yönetim ekranı hepsini
+   * görür. Not: liste büyüyünce keyset paginasyonuna geçilir (bkz. infinite-scroll kuralı); şimdilik
+   * sınırlı sayı için tam liste.
+   */
+  async listAll(): Promise<Product[]> {
+    return this.getAll(undefined, { orderBy: 'sortOrder' });
+  }
+
   /** Satılabilir katalog: aktif + aday DEĞİL (aday yalnız keşifte). */
   async listSellable(): Promise<Product[]> {
     return this.getAll({ isActive: true, isCandidate: false }, { orderBy: 'sortOrder' });

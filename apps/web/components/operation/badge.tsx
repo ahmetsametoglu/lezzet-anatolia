@@ -1,0 +1,37 @@
+import type { ReactNode } from 'react';
+
+/**
+ * Operasyon rozeti — Komponent Envanteri O6 (durum/kanal). Ton KAPALI listedir; renk anlam taşır:
+ * olive=yolunda, amber=dikkat/karar, kırmızı=hata/gecikme, mavi=onay/aday, gri=kapalı/nötr.
+ * Türetilmiş bilgidir — yalnız gösterir, buradan değiştirilmez. `dot` durum noktası ekler.
+ */
+type Tone = 'neutral' | 'olive' | 'amber' | 'red' | 'blue';
+
+const TONE: Record<Tone, { cls: string; dot: string }> = {
+  neutral: { cls: 'text-ops-body bg-ops-line-soft', dot: 'bg-ops-faint' },
+  olive: { cls: 'text-ops-olive-dark bg-ops-olive-bg', dot: 'bg-ops-olive' },
+  amber: { cls: 'text-ops-amber bg-ops-amber-bg', dot: 'bg-[#c98a2e]' },
+  red: { cls: 'text-ops-red bg-ops-red-bg', dot: 'bg-[#c2571f]' },
+  blue: { cls: 'text-[#3a6b8a] bg-[#e6eef3]', dot: 'bg-[#3a6b8a]' },
+};
+
+interface BadgeProps {
+  tone?: Tone;
+  dot?: boolean;
+  className?: string;
+  children: ReactNode;
+}
+
+export function Badge({ tone = 'neutral', dot = false, className, children }: BadgeProps) {
+  const t = TONE[tone];
+  return (
+    <span
+      className={['inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 font-ops-display text-[10.5px] font-semibold', t.cls, className]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {dot ? <span className={`h-1.5 w-1.5 rounded-full ${t.dot}`} /> : null}
+      {children}
+    </span>
+  );
+}

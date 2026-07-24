@@ -37,6 +37,50 @@
   --radius-card: 18px;
   --radius-soft: 14px;
   --radius-pill: 26px;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     Operasyon evreni — "Veri Masası" token'ları (admin + depo + kurye).
+     Kaynak: design/project/Komponent Envanteri - Operasyon.dc.html §0.
+     Müşteri evreninden AYRI settir (ops- öneki); ortak renk (olive) bilerek eş değerdedir.
+     ───────────────────────────────────────────────────────────────────────── */
+
+  /* Fontlar — next/font değişkenlerine bağlanır ((operations)/layout.tsx) */
+  --font-ops-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif; /* başlık/etiket/buton */
+  --font-ops-mono: var(--font-ibm-plex-mono), ui-monospace, 'Courier New', monospace; /* rakam/fiyat/saat */
+  --font-ops-body: var(--font-karla), ui-sans-serif, system-ui, sans-serif; /* gövde */
+
+  /* Renkler — anlam taşır: olive=yolunda, amber=dikkat/karar, kırmızı=hata/gecikme, mor=AI, gri=kapalı */
+  --color-ops-ink: #22251f; /* başlık, koyu buton, "L" */
+  --color-ops-bg: #dedbd3; /* sayfa zemini */
+  --color-ops-panel: #f3f4f0; /* sidebar zemini */
+  --color-ops-card: #fbfbf9; /* kart/tablo zemini */
+  --color-ops-subtle: #f8f9f5; /* tablo başlığı / alt bar zemini */
+  --color-ops-line: #e6e7e1; /* kenarlık */
+  --color-ops-line-soft: #f0f1ec; /* ince ayraç */
+  --color-ops-line-strong: #d9dbd2; /* girdi çerçevesi */
+
+  --color-ops-olive: #5f7a2c; /* birincil aksiyon, marka */
+  --color-ops-olive-dark: #4a6121; /* hover / aktif metin */
+  --color-ops-olive-light: #a9c46b; /* koyu zeminde vurgu */
+  --color-ops-olive-bg: #eef4e2; /* olive açık zemin (aktif/onay) */
+
+  --color-ops-amber: #9a6416; /* dikkat/karar */
+  --color-ops-amber-bg: #fdf1e3;
+  --color-ops-red: #a5443c; /* hata/gecikme */
+  --color-ops-red-bg: #fbe9e7;
+  --color-ops-violet: #5a4a8a; /* AI ajanı */
+  --color-ops-violet-bg: #ece8f5;
+
+  --color-ops-body: #6a7065; /* gövde metni */
+  --color-ops-muted: #8b9086; /* ikincil / etiket */
+  --color-ops-faint: #9aa094; /* placeholder / ikon */
+  --color-ops-strong: #3a3f37; /* koyu gövde */
+
+  /* Köşe yarıçapları (operasyon) */
+  --radius-ops-card: 8px;
+  --radius-ops-dialog: 14px;
+  --radius-ops-chip: 14px;
+  --radius-ops-btn: 8px;
 }
 
 /* Sayfa varsayılanı — müşteri evreni zemini + gövde fontu */
