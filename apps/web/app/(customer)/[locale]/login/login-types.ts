@@ -1,7 +1,7 @@
 import type { FormEventHandler } from 'react';
 import type { UseFormRegisterReturn } from 'react-hook-form';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
-import type { OtpResendResult, OtpVerifyResult } from '@/components/auth/otp-code-input';
+import type { OtpResendResult, OtpVerifyResult } from '@/components/customer/auth/otp-code-input';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir) — bu yüzden `import type` değil.
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import messages from './messages.json';

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import type { Locale } from '@lezzet/i18n';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/customer/ui/button';
 
 const CODE_LENGTH = 6;
 

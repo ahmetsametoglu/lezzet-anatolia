@@ -1,6 +1,6 @@
-import { OtpCodeInput } from '@/components/auth/otp-code-input';
-import { FormInputField } from '@/components/form/form-input-field';
-import { Button } from '@/components/ui/button';
+import { OtpCodeInput } from '@/components/customer/auth/otp-code-input';
+import { FormInputField } from '@/components/customer/form/form-input-field';
+import { Button } from '@/components/customer/ui/button';
 import { GoogleIcon, WhatsAppIcon } from './login-icons';
 import type { LoginViewProps } from './login-types';
 

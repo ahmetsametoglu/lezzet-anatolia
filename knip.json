@@ -7,7 +7,7 @@
       "entry": ["scripts/*.ts"]
     },
     "apps/web": {
-      "entry": ["lib/guard.ts", "components/form/**"]
+      "entry": ["lib/guard.ts", "components/customer/form/**"]
     }
   }
 }

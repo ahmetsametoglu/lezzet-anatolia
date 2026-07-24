@@ -7,7 +7,7 @@ import { z } from 'zod';
 import type { Locale } from '@lezzet/i18n';
 import { createClient } from '@/lib/supabase/client';
 import type { Device } from '@/lib/device';
-import type { OtpResendResult, OtpVerifyResult } from '@/components/auth/otp-code-input';
+import type { OtpResendResult, OtpVerifyResult } from '@/components/customer/auth/otp-code-input';
 import { sendEmailOtp, verifyEmailOtp } from './actions';
 import type { LoginErrors, LoginViewProps, Messages, Stage } from './login-types';
 import { LoginDesktop } from './login.desktop';
