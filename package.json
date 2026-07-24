@@ -36,8 +36,10 @@
   "devDependencies": {
     "@lezzet/database": "workspace:*",
     "@lezzet/eslint-config": "workspace:*",
+    "@lezzet/storage": "workspace:*",
     "@lezzet/types": "workspace:*",
     "@lezzet/typescript-config": "workspace:*",
+    "@types/node": "^22.10.5",
     "dependency-cruiser": "^16.8.0",
     "eslint": "^9.17.0",
     "knip": "^5.30.0",
