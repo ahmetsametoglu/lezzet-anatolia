@@ -42,12 +42,12 @@ interface SeedProduct {
  * temp/<file> görselini R2'ye yükler ve saklanacak RELATIVE key'i döner. R2 ayarsızsa (local'de creds
  * yoksa) sessizce null döner → ürün görselsiz oluşur (graceful degradation, petit deseni).
  */
-async function uploadImage(file: string, filename: string): Promise<string | null> {
+async function uploadImage(file: string, slug: string): Promise<string | null> {
   const r2 = getR2();
   if (!r2) return null;
   try {
     const bytes = readFileSync(join(process.cwd(), 'temp', file));
-    const key = r2Keys.productImage(filename);
+    const key = r2Keys.productImage(slug, file); // deterministik: catalog/products/{slug}.{ext}
     await r2.uploadFile(key, bytes, 'image/jpeg');
     return key;
   } catch (err) {
@@ -131,7 +131,7 @@ async function seedCatalog(supabase: ReturnType<typeof createServiceRoleClient>)
   ];
 
   for (const p of productDefs) {
-    const imageKey = await uploadImage(p.image, `${p.slug}.jpeg`);
+    const imageKey = await uploadImage(p.image, p.slug);
     const { product, variants } = await products.create({
       name: p.name,
       description: p.description ?? null,
