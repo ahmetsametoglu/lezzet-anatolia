@@ -1,10 +1,15 @@
 -- Modül 05 — Katalog: ürün + varyant + ürün-koleksiyon bağı.
 -- Paylaşılan alanlar Product'ta; satılabilir birim ProductVariant (DATA_MODEL, DOMAIN §13).
 -- product_collections = task 1'de ertelenen çoklu bağ (artık Product FK'si var). RLS deny-by-default.
--- Incremental: ingredients/nutrition/allergens + target_margin_percent/auto_price alanları ilgili
--- özellikleriyle (ürün sayfası / oto-fiyat) eklenecek — şimdi Task 3 davranışı için gerekmiyor.
+-- Incremental: ingredients/nutrition alanları ilgili özellikleriyle sonra.
 
 create type product_date_type as enum ('DLC', 'DDM');
+
+-- AB 14 alerjeni (FR/DE'de yasal beyan zorunlu). Enum anahtarı ASCII; görünen ad (TR/FR/DE) UI'da.
+create type product_allergen as enum (
+  'gluten', 'kabuklu', 'yumurta', 'balik', 'yer_fistigi', 'soya', 'sut',
+  'sert_kabuklu', 'kereviz', 'hardal', 'susam', 'sulfit', 'aci_bakla', 'yumusaka'
+);
 
 create table public.product (
   id uuid primary key default gen_random_uuid(),
@@ -13,12 +18,15 @@ create table public.product (
   slug text not null,                                -- dil-bağımsız (SEO_I18N)
   category_id uuid references public.category (id) on delete set null,
   image_key text,                                    -- depo anahtarı, tam URL değil (STACK §5)
+  allergens product_allergen[] not null default '{}', -- AB 14 yasal beyan (manuel seçim)
   vat_rate numeric(4, 2) not null default 5.5,       -- 5.5 / 20
   date_type product_date_type not null default 'DDM',
-  shelf_life_days int,
+  shelf_life_days int,                               -- toplam raf ömrü (gün); kalan % = (parti.dlc − bugün) ÷ bu
   shippable boolean not null default true,           -- false = yalnız rota/kapı (soğuk zincir)
   is_candidate boolean not null default false,       -- aday: keşifte gösterilir, satılamaz (DOMAIN §13)
   is_active boolean not null default true,
+  target_margin_percent numeric(5, 2),              -- hedef kâr marjı (markup %); marj uyarısı / oto-fiyat
+  auto_price boolean not null default false,         -- açıksa fiyat hedef marja göre otomatik (motor sonraki modül)
   sort_order int not null default 0,
   created_at timestamptz not null default now()
 );

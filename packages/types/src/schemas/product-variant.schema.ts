@@ -28,3 +28,13 @@ export type ProductVariantInsert = z.infer<typeof ProductVariantInsertSchema>;
 
 export const ProductVariantUpdateSchema = ProductVariantSchema.partial().required({ id: true });
 export type ProductVariantUpdate = z.infer<typeof ProductVariantUpdateSchema>;
+
+// Form varyant satırı (düzenleme senkronu): `id` varsa güncelle, yoksa yeni ekle. ProductVariantSchema'dan
+// TÜRETİLİR (id opsiyonel; net/sku nullable). productId ve sortOrder servis tarafından yönetilir.
+export const ProductVariantEntrySchema = ProductVariantSchema.pick({
+  label: true,
+  netWeightG: true,
+  sku: true,
+  isActive: true,
+}).extend({ id: z.string().uuid().optional() });
+export type ProductVariantEntry = z.infer<typeof ProductVariantEntrySchema>;
