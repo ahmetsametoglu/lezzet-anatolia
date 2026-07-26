@@ -1,11 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { Chip } from '@/components/operation/chip';
-import { CameraIcon, ImageIcon } from '@/components/operation/icons';
-import { SearchInput } from '@/components/operation/search-input';
-import { Toggle, ToggleField } from '@/components/operation/toggle';
-import type { ProductView, ProductsViewProps } from './products-types';
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { Chip } from '@/components/operation/ui/chip';
+import { CameraIcon } from '@/components/operation/ui/icons';
+import { Input } from '@/components/operation/form/input';
+import { SearchInput } from '@/components/operation/ui/search-input';
+import { Thumbnail } from '@/components/operation/ui/thumbnail';
+import { Toggle, ToggleField } from '@/components/operation/form/toggle';
+import { resolveLocalizedText } from '@lezzet/types';
+import { updateProductNameAction } from './actions/actions';
+import { ImageUploadButton } from './components/image-upload-button';
+import { productStatus, type ProductView, type ProductsViewProps } from './products-types';
 
 // Ürünler — mobil: sahada en sık iş. Liste (arama · süzgeç · aktiflik) + satıra dokununca hızlı
 // düzenleme bottom-sheet'i (ad · aktiflik · koleksiyon · kameradan görsel). Aktiflik toggle'ı KALICI
@@ -21,40 +27,54 @@ function QuickEditSheet({
   onToggleActive: (id: string, isActive: boolean) => void;
   onClose: () => void;
 }) {
-  const [name, setName] = useState(product.name);
-  const [active, setActive] = useState(product.status === 'active');
+  const displayName = resolveLocalizedText(product.name);
+  const [name, setName] = useState(displayName);
+  const [active, setActive] = useState(productStatus(product) === 'active');
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const save = () => {
+    setError(null);
+    startTransition(async () => {
+      if (name.trim() && name.trim() !== displayName) {
+        const { error: actionError } = await updateProductNameAction(product.id, name);
+        if (actionError) {
+          setError(actionError);
+          return;
+        }
+      }
+      router.refresh();
+      onClose();
+    });
+  };
 
   return (
     <div onClick={onClose} className="fixed inset-0 z-50 flex flex-col justify-end bg-[rgba(34,39,43,0.35)]">
       <div onClick={(e) => e.stopPropagation()} className="flex flex-col gap-3.5 rounded-t-[20px] bg-ops-card p-4">
         <span className="mx-auto h-[5px] w-[42px] rounded-[3px] bg-[#d4d7ce]" />
         <div className="flex items-center gap-3">
-          <div className="grid h-14 w-14 flex-none place-items-center rounded-[10px] border border-[#e0e2da] bg-[#e9eae4] text-[#b3b7ac]">
-            <ImageIcon size={22} />
-          </div>
+          <Thumbnail src={product.imageUrl} alt={displayName} size={56} iconSize={22} />
           <div className="flex flex-col gap-0.5">
-            <span className="font-ops-display text-[16px] font-semibold text-ops-ink">{product.name}</span>
+            <span className="font-ops-display text-[16px] font-semibold text-ops-ink">{displayName}</span>
             <span className="font-ops-body text-[12px] text-ops-muted">
-              {product.category} · {product.variantCount} varyant
+              {product.categoryName} · {product.variants.length} varyant
             </span>
           </div>
         </div>
 
-        <button
-          type="button"
-          className="flex items-center justify-center gap-2 rounded-[11px] border border-[#cdd8b6] bg-[#f2f6ea] px-3 py-3 font-ops-display text-[12.5px] font-semibold text-ops-olive-dark"
+        <ImageUploadButton
+          productId={product.id}
+          camera
+          className="flex items-center justify-center gap-2 rounded-[11px] border border-[#cdd8b6] bg-[#f2f6ea] px-3 py-3 font-ops-display text-[12.5px] font-semibold text-ops-olive-dark disabled:opacity-60"
         >
           <CameraIcon />
           Kameradan görsel çek / değiştir
-        </button>
+        </ImageUploadButton>
 
         <div className="flex flex-col gap-1.5">
           <span className="font-ops-display text-[11px] font-medium uppercase tracking-[0.06em] text-ops-muted">Ürün adı</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="rounded-[9px] border border-ops-line-strong px-[13px] py-[11px] font-ops-body text-[13.5px] text-ops-ink outline-none focus:border-ops-olive"
-          />
+          <Input value={name} onChange={(e) => setName(e.target.value)} />
         </div>
 
         {/* Aktiflik KALICI — anında server action */}
@@ -70,10 +90,10 @@ function QuickEditSheet({
         <div className="flex flex-col gap-1.5">
           <span className="font-ops-display text-[11px] font-medium uppercase tracking-[0.06em] text-ops-muted">Koleksiyonlar</span>
           <div className="flex flex-wrap gap-[7px]">
-            {product.collections.length === 0 ? (
+            {product.collectionNames.length === 0 ? (
               <span className="font-ops-body text-[12px] text-ops-faint">Koleksiyon yok</span>
             ) : (
-              product.collections.map((c) => (
+              product.collectionNames.map((c) => (
                 <Chip key={c} active tone="olive" className="!bg-ops-olive-bg !text-ops-olive-dark">
                   {c} ✕
                 </Chip>
@@ -83,15 +103,17 @@ function QuickEditSheet({
           </div>
         </div>
 
+        {error ? <span className="text-center font-ops-body text-[11px] text-ops-red">{error}</span> : null}
         <span className="text-center font-ops-body text-[11px] leading-[1.5] text-ops-muted">
           Fiyat, çok dilli metin ve paket kurma web&apos;de — burada yalnız hızlı düzeltme.
         </span>
         <button
           type="button"
-          onClick={onClose}
-          className="rounded-xl bg-ops-ink px-4 py-3.5 text-center font-ops-display text-[15px] font-semibold text-ops-card"
+          onClick={save}
+          disabled={pending}
+          className="rounded-xl bg-ops-ink px-4 py-3.5 text-center font-ops-display text-[15px] font-semibold text-ops-card disabled:opacity-60"
         >
-          Kapat
+          {pending ? 'Kaydediliyor…' : 'Kaydet'}
         </button>
       </div>
     </div>
@@ -135,7 +157,7 @@ export function ProductsMobile({
           </Chip>
           {data.categories.map((c) => (
             <Chip key={c.id} active={catFilter === c.id} onClick={() => onCatFilter(c.id)}>
-              {c.name}
+              {resolveLocalizedText(c.name)}
             </Chip>
           ))}
         </div>
@@ -149,18 +171,16 @@ export function ProductsMobile({
             onClick={() => setSheetId(p.id)}
             className="flex w-full cursor-pointer items-center gap-3 border-b border-ops-line-soft py-2.5 text-left"
           >
-            <div className="grid h-[42px] w-[42px] flex-none place-items-center rounded-[9px] border border-[#e0e2da] bg-[#e9eae4] text-[#b3b7ac]">
-              <ImageIcon size={17} />
-            </div>
+            <Thumbnail src={p.imageUrl} alt={resolveLocalizedText(p.name)} size={42} iconSize={17} className="!rounded-[9px]" />
             <div className="flex min-w-0 flex-1 flex-col gap-px">
-              <span className="truncate font-ops-body text-[13.5px] font-semibold text-ops-ink">{p.name}</span>
+              <span className="truncate font-ops-body text-[13.5px] font-semibold text-ops-ink">{resolveLocalizedText(p.name)}</span>
               <span className="font-ops-body text-[11px] text-ops-muted">
-                {p.category} · {p.variantCount} varyant
+                {p.categoryName} · {p.variants.length} varyant
               </span>
             </div>
             {/* Satır sheet açar; toggle ayrı iş → yayılımı durdur */}
             <span onClick={(e) => e.stopPropagation()}>
-              <Toggle on={p.status === 'active'} onChange={(next) => onToggleActive(p.id, next)} label={`${p.name} satışta`} />
+              <Toggle on={productStatus(p) === 'active'} onChange={(next) => onToggleActive(p.id, next)} label={`${resolveLocalizedText(p.name)} satışta`} />
             </span>
           </div>
         ))}

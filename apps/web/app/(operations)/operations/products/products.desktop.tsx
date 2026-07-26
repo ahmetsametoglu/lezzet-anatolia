@@ -1,23 +1,27 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Badge } from '@/components/operation/badge';
-import { Chip } from '@/components/operation/chip';
-import { PackageIcon, PlusIcon } from '@/components/operation/icons';
-import { PageHeader } from '@/components/operation/page-header';
-import { SearchInput } from '@/components/operation/search-input';
-import { Table, type Column } from '@/components/operation/table';
-import { Tabs } from '@/components/operation/tabs';
-import { ProductPreview } from './product-preview';
-import type {
-  CategoryView,
-  CollectionView,
-  LangCode,
-  ProductStatus,
-  ProductTab,
-  ProductView,
-  ProductsViewProps,
-  StatusFilter,
+import { Badge } from '@/components/operation/ui/badge';
+import { Chip } from '@/components/operation/ui/chip';
+import { PackageIcon, PlusIcon } from '@/components/operation/ui/icons';
+import { PageHeader } from '@/components/operation/ui/page-header';
+import { SearchInput } from '@/components/operation/ui/search-input';
+import { Table, type Column } from '@/components/operation/ui/table';
+import { Tabs } from '@/components/operation/ui/tabs';
+import { resolveLocalizedText } from '@lezzet/types';
+import type { Locale } from '@lezzet/i18n';
+import { CatalogCreateDialog } from './components/catalog-create-dialog';
+import { ProductPreview } from './components/product-preview';
+import {
+  filledContentLangs,
+  productStatus,
+  type CategoryView,
+  type CollectionView,
+  type ProductStatus,
+  type ProductTab,
+  type ProductView,
+  type ProductsViewProps,
+  type StatusFilter,
 } from './products-types';
 
 // Ürünler — web ("Veri Masası"): PageHeader (ortak üst bar) + O2 sekmeler. Ürünler sekmesi liste +
@@ -40,9 +44,9 @@ function StatusBadge({ status }: { status: ProductStatus }) {
   return <Badge tone="olive" dot>Aktif</Badge>;
 }
 
-function LangBadge({ langs }: { langs: LangCode[] }) {
+function LangBadge({ langs }: { langs: Locale[] }) {
   if (langs.length === 0) return <Badge tone="amber">—</Badge>;
-  return <Badge tone={langs.length === 3 ? 'olive' : 'amber'}>{langs.join('·')}</Badge>;
+  return <Badge tone={langs.length === 3 ? 'olive' : 'amber'}>{langs.map((l) => l.toUpperCase()).join('·')}</Badge>;
 }
 
 const COLUMNS: Column<ProductView>[] = [
@@ -52,8 +56,8 @@ const COLUMNS: Column<ProductView>[] = [
     width: 'minmax(120px,1fr)',
     cell: (r) => (
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate font-ops-body text-[13px] font-semibold text-ops-ink">{r.name}</span>
-        <span className="font-ops-body text-[11px] text-ops-muted">{r.category}</span>
+        <span className="truncate font-ops-body text-[13px] font-semibold text-ops-ink">{resolveLocalizedText(r.name)}</span>
+        <span className="font-ops-body text-[11px] text-ops-muted">{r.categoryName}</span>
       </div>
     ),
   },
@@ -62,10 +66,10 @@ const COLUMNS: Column<ProductView>[] = [
     header: 'Varyant',
     width: '60px',
     align: 'center',
-    cell: (r) => <span className="font-ops-mono text-[12.5px] text-ops-strong">{r.variantCount}</span>,
+    cell: (r) => <span className="font-ops-mono text-[12.5px] text-ops-strong">{r.variants.length}</span>,
   },
-  { key: 'langs', header: 'Diller', width: '82px', align: 'center', cell: (r) => <LangBadge langs={r.filledLangs} /> },
-  { key: 'status', header: 'Durum', width: '74px', align: 'right', cell: (r) => <StatusBadge status={r.status} /> },
+  { key: 'langs', header: 'Diller', width: '82px', align: 'center', cell: (r) => <LangBadge langs={filledContentLangs(r.name)} /> },
+  { key: 'status', header: 'Durum', width: '74px', align: 'right', cell: (r) => <StatusBadge status={productStatus(r)} /> },
 ];
 
 // "+ durum" — dashed çip açılır durum menüsü; seçilince aktif çip + ✕ ile temizlenir (İşlevsel süzgeç).
@@ -104,7 +108,7 @@ function StatusFilterChip({ value, onChange }: { value: StatusFilter; onChange: 
                 onChange(s);
                 setOpen(false);
               }}
-              className="px-[13px] py-2.5 text-left font-ops-body text-[13px] text-ops-strong hover:bg-ops-subtle"
+              className="cursor-pointer px-[13px] py-2.5 text-left font-ops-body text-[13px] text-ops-strong hover:bg-ops-subtle"
             >
               {STATUS_LABEL[s]}
             </button>
@@ -119,7 +123,7 @@ function StatusFilterChip({ value, onChange }: { value: StatusFilter; onChange: 
 function ProductsTab(props: ProductsViewProps) {
   const { data, visibleProducts, catFilter, onCatFilter, statusFilter, onStatusFilter, onlyIncomplete, onToggleIncomplete, selectedId, onSelect, openEdit } = props;
   const selected = data.products.find((p) => p.id === selectedId) ?? null;
-  const missingCount = data.products.filter((p) => p.filledLangs.length < 3).length;
+  const missingCount = data.products.filter((p) => filledContentLangs(p.name).length < 3 || p.allergens.length === 0).length;
 
   return (
     <>
@@ -130,7 +134,7 @@ function ProductsTab(props: ProductsViewProps) {
         </Chip>
         {data.categories.map((c) => (
           <Chip key={c.id} active={catFilter === c.id} onClick={() => onCatFilter(c.id)}>
-            {c.name}
+            {resolveLocalizedText(c.name)}
           </Chip>
         ))}
         <span className="mx-1 h-[18px] w-px bg-[#dfe1d9]" />
@@ -179,12 +183,14 @@ function categoryStatus(c: CategoryView): { label: string; tone: 'olive' | 'neut
   return c.isActive ? { label: 'Aktif', tone: 'olive' } : { label: 'Pasif', tone: 'neutral' };
 }
 
-function CategoriesTab({ data }: ProductsViewProps) {
+function CategoriesTab({ data, onCreate }: ProductsViewProps & { onCreate: () => void }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center border-b border-ops-line-soft px-6 py-[11px]">
         <span className="mr-auto font-ops-body text-[12px] text-ops-muted">Düz liste · iç içe yok · sürükle-sırala</span>
-        <span className="rounded-ops-btn bg-ops-ink px-3.5 py-2 font-ops-display text-[12px] font-semibold text-ops-card">+ Kategori</span>
+        <button type="button" onClick={onCreate} className="cursor-pointer rounded-ops-btn bg-ops-ink px-3.5 py-2 font-ops-display text-[12px] font-semibold text-ops-card hover:bg-[#33372e]">
+          + Kategori
+        </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {data.categories.map((c) => {
@@ -193,7 +199,7 @@ function CategoriesTab({ data }: ProductsViewProps) {
             <div key={c.id} className="flex items-center gap-3 border-b border-ops-line-soft px-6 py-3">
               <span className="flex-none text-[#c9ccc3]">⠿</span>
               <div className="flex min-w-0 flex-1 flex-col gap-px">
-                <span className="font-ops-body text-[13.5px] font-semibold text-ops-ink">{c.name}</span>
+                <span className="font-ops-body text-[13.5px] font-semibold text-ops-ink">{resolveLocalizedText(c.name)}</span>
                 <span className="font-ops-body text-[11px] text-ops-muted">slug: {c.slug}</span>
               </div>
               <span className="font-ops-mono text-[12px] text-ops-body">{c.count} ürün</span>
@@ -207,14 +213,16 @@ function CategoriesTab({ data }: ProductsViewProps) {
 }
 
 // ── Koleksiyonlar sekmesi ────────────────────────────────────────────────────
-function CollectionsTab({ data }: ProductsViewProps) {
+function CollectionsTab({ data, onCreate }: ProductsViewProps & { onCreate: () => void }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center border-b border-ops-line-soft px-6 py-[11px]">
         <span className="mr-auto font-ops-body text-[12px] text-ops-muted">
           Esnek pazarlama grupları · bir ürün birden çok koleksiyonda olabilir
         </span>
-        <span className="rounded-ops-btn bg-ops-ink px-3.5 py-2 font-ops-display text-[12px] font-semibold text-ops-card">+ Koleksiyon</span>
+        <button type="button" onClick={onCreate} className="cursor-pointer rounded-ops-btn bg-ops-ink px-3.5 py-2 font-ops-display text-[12px] font-semibold text-ops-card hover:bg-[#33372e]">
+          + Koleksiyon
+        </button>
       </div>
       {data.collections.length === 0 ? (
         <EmptyTab text="Henüz koleksiyon yok." />
@@ -223,7 +231,7 @@ function CollectionsTab({ data }: ProductsViewProps) {
           {data.collections.map((k: CollectionView) => (
             <div key={k.id} className="flex flex-col gap-1.5 rounded-[10px] border border-ops-line p-4">
               <div className="flex items-center justify-between">
-                <span className="font-ops-display text-[14px] font-semibold text-ops-ink">{k.name}</span>
+                <span className="font-ops-display text-[14px] font-semibold text-ops-ink">{resolveLocalizedText(k.name)}</span>
                 <Badge tone={k.isActive ? 'olive' : 'amber'}>{k.isActive ? 'Aktif' : 'Taslak'}</Badge>
               </div>
               <span className="font-ops-body text-[11.5px] text-ops-muted">slug: {k.slug} · sosyal paylaşım linki</span>
@@ -263,8 +271,9 @@ function EmptyTab({ text }: { text: string }) {
 // ── Kabuk ────────────────────────────────────────────────────────────────────
 export function ProductsDesktop(props: ProductsViewProps) {
   const { data, tab, onTab, search, onSearch, openCreate } = props;
-  const candidateCount = data.products.filter((p) => p.status === 'candidate').length;
-  const missingCount = data.products.filter((p) => p.filledLangs.length < 3).length;
+  const [catalogCreate, setCatalogCreate] = useState<'category' | 'collection' | null>(null);
+  const candidateCount = data.products.filter((p) => productStatus(p) === 'candidate').length;
+  const missingCount = data.products.filter((p) => filledContentLangs(p.name).length < 3 || p.allergens.length === 0).length;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -286,9 +295,11 @@ export function ProductsDesktop(props: ProductsViewProps) {
       <Tabs items={TABS} active={tab} onSelect={onTab} />
 
       {tab === 'products' && <ProductsTab {...props} />}
-      {tab === 'categories' && <CategoriesTab {...props} />}
-      {tab === 'collections' && <CollectionsTab {...props} />}
+      {tab === 'categories' && <CategoriesTab {...props} onCreate={() => setCatalogCreate('category')} />}
+      {tab === 'collections' && <CollectionsTab {...props} onCreate={() => setCatalogCreate('collection')} />}
       {tab === 'packages' && <PackagesTab />}
+
+      {catalogCreate ? <CatalogCreateDialog kind={catalogCreate} onClose={() => setCatalogCreate(null)} /> : null}
     </div>
   );
 }

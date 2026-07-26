@@ -17,6 +17,7 @@
     "@lezzet/email": "workspace:*",
     "@lezzet/helper": "workspace:*",
     "@lezzet/i18n": "workspace:*",
+    "@lezzet/storage": "workspace:*",
     "@lezzet/types": "workspace:*",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.48.1",

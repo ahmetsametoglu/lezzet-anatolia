@@ -1,54 +1,31 @@
 // Ürünler ekranı view-model'leri — RSC (page.tsx) DB'den okur, serileştirilebilir bu tiplere indirger;
-// client (products-client + desktop/mobile) yalnız bunları görür. Servis/DB tipleri client'a sızmaz.
+// client yalnız bunları görür. TİPLER ŞEMADAN TÜRETİLİR: ProductView = Product & {türetilen}; alanlar
+// yeniden yazılmaz (no-duplication, schemas-single-source). Durum/dolu-dil gibi saf türevler client'ta
+// yardımcıyla hesaplanır (taşınmaz). Dil yapısı @lezzet/i18n'de, alerjen packages/types'ta.
+import type { Category, Collection, LocalizedText, Product, ProductVariant } from '@lezzet/types';
+import { LOCALES, type Locale } from '@lezzet/i18n';
 
 export type ProductStatus = 'active' | 'passive' | 'candidate';
-export type LangCode = 'TR' | 'FR' | 'DE';
 
-export const ALL_LANGS: LangCode[] = ['TR', 'FR', 'DE'];
+/** Ürün view-model — DB `Product`'ı türetir; yalnız türetilmiş/join alanlar eklenir. */
+export type ProductView = Product & {
+  imageUrl: string | null; // R2 signed okuma URL'i (yoksa placeholder)
+  categoryName: string; // çözülmüş kategori adı ya da '—' (join)
+  variants: ProductVariant[]; // ürünün varyantları
+  collectionNames: string[]; // girdiği koleksiyon adları (join)
+};
 
-export interface VariantView {
-  id: string;
-  label: string;
-  netWeightG: number | null;
-  sku: string | null;
-  isActive: boolean;
+export type CategoryView = Category & { count: number }; // bu kategorideki ürün sayısı
+export type CollectionView = Collection & { count: number }; // koleksiyondaki ürün sayısı
+
+// ── Saf türevler (client-güvenli) — Product'tan hesaplanır, taşınmaz ──
+export function productStatus(p: { isCandidate: boolean; isActive: boolean }): ProductStatus {
+  if (p.isCandidate) return 'candidate';
+  return p.isActive ? 'active' : 'passive';
 }
-
-/** Bir ürünün tüm ekran ihtiyacı: liste satırı + seçili panel + düzenle formu tek nesnede. */
-export interface ProductView {
-  id: string;
-  name: string; // çözülmüş görünen ad (TR öncelikli)
-  slug: string;
-  categoryId: string | null;
-  category: string; // çözülmüş kategori adı ya da '—'
-  status: ProductStatus;
-  variantCount: number;
-  /** Adı DOLU olan diller — "diller" göstergesi (TR·FR·DE). */
-  filledLangs: LangCode[];
-  descriptionText: string; // TR açıklama (modal metin alanı)
-  vatRate: number;
-  dateType: 'DLC' | 'DDM';
-  shelfLifeDays: number | null;
-  shippable: boolean;
-  netWeightG: number | null; // varsayılan (ilk) varyantın net ağırlığı
-  collections: string[]; // ürünün girdiği koleksiyon adları
-  variants: VariantView[];
-}
-
-export interface CategoryView {
-  id: string;
-  name: string;
-  slug: string;
-  count: number; // bu kategorideki ürün sayısı
-  isActive: boolean;
-}
-
-export interface CollectionView {
-  id: string;
-  name: string;
-  slug: string;
-  count: number; // koleksiyondaki ürün sayısı
-  isActive: boolean;
+/** Adı DOLU olan içerik dilleri — "diller" göstergesi. */
+export function filledContentLangs(name: LocalizedText): Locale[] {
+  return LOCALES.filter((l) => name[l]?.trim());
 }
 
 /** RSC'nin client'a geçirdiği tüm veri. */
@@ -70,16 +47,13 @@ export interface ProductsViewProps {
   visibleProducts: ProductView[];
   tab: ProductTab;
   onTab: (t: ProductTab) => void;
-  /** Arama metni (ada göre süzer). */
   search: string;
   onSearch: (q: string) => void;
   /** Kategori süzgeci: kategori id'si ya da 'all'. */
   catFilter: string;
   onCatFilter: (id: string) => void;
-  /** Durum süzgeci ('+ durum' çipi). */
   statusFilter: StatusFilter;
   onStatusFilter: (s: StatusFilter) => void;
-  /** Yalnız beyan/dil eksik olanları göster ('beyan eksik' çipi). */
   onlyIncomplete: boolean;
   onToggleIncomplete: () => void;
   selectedId: string | null;

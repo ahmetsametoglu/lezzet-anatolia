@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { resolveLocalizedText } from '@lezzet/types';
 import type { Device } from '@/lib/device';
-import { setProductActiveAction } from './actions';
-import { ProductFormDialog } from './product-form-dialog';
+import { setProductActiveAction } from './actions/actions';
+import { ProductFormDialog } from './components/product-form-dialog';
 import { ProductsDesktop } from './products.desktop';
 import { ProductsMobile } from './products.mobile';
-import type { ProductTab, ProductsData, StatusFilter } from './products-types';
+import { filledContentLangs, productStatus, type ProductTab, type ProductsData, type StatusFilter } from './products-types';
 
 // Ürünler ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
 // İlk boya sunucu cihaz ipucuyla; mount sonrası viewport'a göre düzeltilir. Modal her iki yüzeyin üstünde.
@@ -48,17 +49,17 @@ export function ProductsClient({ data, device }: ProductsClientProps) {
   const q = search.trim().toLowerCase();
   const visibleProducts = data.products.filter((p) => {
     if (catFilter !== 'all' && p.categoryId !== catFilter) return false;
-    if (statusFilter !== 'all' && p.status !== statusFilter) return false;
-    if (onlyIncomplete && p.filledLangs.length >= 3) return false;
-    if (q && !p.name.toLowerCase().includes(q)) return false;
+    if (statusFilter !== 'all' && productStatus(p) !== statusFilter) return false;
+    if (onlyIncomplete && filledContentLangs(p.name).length >= 3 && p.allergens.length > 0) return false;
+    if (q && !resolveLocalizedText(p.name).toLowerCase().includes(q)) return false;
     return true;
   });
 
-  // Aktiflik geçişi kalıcı (server action) — başarınca RSC listeyi tazeler.
+  // Aktiflik geçişi kalıcı (server action) — başarınca RSC listeyi tazeler (hata sessiz; sunucu = gerçek).
   const onToggleActive = (id: string, isActive: boolean) => {
     startTransition(async () => {
-      await setProductActiveAction(id, isActive);
-      router.refresh();
+      const { error } = await setProductActiveAction(id, isActive);
+      if (!error) router.refresh();
     });
   };
 
