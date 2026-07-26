@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ALLERGEN_LABELS, ProductAllergenEnum, resolveLocalizedText, type LocalizedText } from '@lezzet/types';
+import { type Locale } from '@lezzet/i18n';
+import type { Device } from '@/lib/device';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
-import { Thumbnail } from '@/components/operation/ui/thumbnail';
+import { LocaleTabs } from '@/components/operation/form/locale-tabs';
 import { FormNumber } from '@/components/operation/form/form-input';
 import { FormSelect } from '@/components/operation/form/form-select';
 import { FormSegment } from '@/components/operation/form/form-segment';
@@ -15,30 +17,51 @@ import { FormSwitch } from '@/components/operation/form/form-switch';
 import { FormMultiSelect } from '@/components/operation/form/form-multi-select';
 import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
 import { createProductAction, suggestTranslationAction, updateProductAction } from '../actions/actions';
-import { ImageUploadButton } from './image-upload-button';
+import { ProductImageField } from './product-image-field';
 import { VariantEditor } from './variant-editor';
+import { ProductFormDesktop } from './product-form.desktop';
+import { ProductFormMobile } from './product-form.mobile';
 import { ProductFormSchema, buildDefaults, toActionPayload, type ProductFormValues } from './product-form-schema';
 import type { CategoryView, ProductView } from '../products-types';
 
-// Ürün oluştur/düzenle formu (Envanter O9) — RHF + zodResolver, tüm alanlar paylaşılan operasyon
-// Form* adaptörleriyle (customer deseninin ikizi). Çok dilli ad/açıklama FormLocalizedText (TR/FR/DE
-// + AI); alerjen FormMultiSelect; varyantlar VariantEditor (field-array). Kaydetme action'a bağlı.
+// Ürün oluştur/düzenle — KAP (container): RHF + zodResolver, action'lar, Dialog kabuğu ve footer burada.
+// Dil TEK bağlam: header'daki LocaleTabs form genelini yönetir (name/description sekmesiz, o dili gösterir).
+// Alan ELEMANLARI bir kez kurulur (fields), sunum cihaza göre çatallanır (Sapma 3): masaüstü çok bölgeli
+// (.desktop), mobil tek sütun (.mobile). Aynı alanlar, farklı düzen → tekrar yok.
 
-const SECTION = 'font-ops-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ops-muted';
 const FORM_ID = 'product-form';
-const ALLERGEN_OPTIONS = ProductAllergenEnum.options.map((a) => ({ value: a, label: resolveLocalizedText(ALLERGEN_LABELS[a], 'tr') }));
+
+/** Kurulmuş alan elemanları — .desktop/.mobile sunumları bunları yalnız YERLEŞTİRİR (tek kaynak). */
+export interface ProductFormFields {
+  image: ReactNode;
+  name: ReactNode;
+  category: ReactNode;
+  vat: ReactNode;
+  dateType: ReactNode;
+  shelfLife: ReactNode;
+  description: ReactNode;
+  allergens: ReactNode;
+  variants: ReactNode;
+  shippable: ReactNode;
+  isActive: ReactNode;
+  autoPrice: ReactNode;
+  margin: ReactNode;
+  priceNote: ReactNode;
+}
 
 interface ProductFormDialogProps {
   mode: 'create' | 'edit';
   product: ProductView | null;
   categories: CategoryView[];
+  device: Device;
   onClose: () => void;
 }
 
-export function ProductFormDialog({ mode, product, categories, onClose }: ProductFormDialogProps) {
+export function ProductFormDialog({ mode, product, categories, device, onClose }: ProductFormDialogProps) {
   const editing = mode === 'edit' && product !== null;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [lang, setLang] = useState<Locale>('tr');
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(ProductFormSchema),
@@ -62,6 +85,37 @@ export function ProductFormDialog({ mode, product, categories, onClose }: Produc
     onClose();
   });
 
+  // Alan elemanları tek kez — name/description form geneli dille (sekmesiz), sunumlar yalnız yerleştirir.
+  const fields: ProductFormFields = {
+    image: <ProductImageField product={editing ? product : null} />,
+    name: <FormLocalizedText control={control} name="name" label="Ürün adı" required placeholder="Ürün adı" lang={lang} onAiTranslate={aiTranslate} />,
+    category: <FormSelect control={control} name="categoryId" label="Kategori" required placeholder="Kategori seç" options={categories.map((c) => ({ value: c.id, label: resolveLocalizedText(c.name, lang) }))} />,
+    vat: <FormSegment control={control} name="vatRate" label="KDV" required options={[{ key: '5.5', label: '%5,5' }, { key: '20', label: '%20' }]} />,
+    dateType: <FormSegment control={control} name="dateType" label="Son tarih tipi" required options={[{ key: 'DLC', label: 'DLC · güvenlik' }, { key: 'DDM', label: 'DDM · kalite' }]} />,
+    shelfLife: <FormNumber control={control} name="shelfLifeDays" label="Toplam raf ömrü (gün)" integer placeholder="ör. 180" />,
+    description: <FormLocalizedText control={control} name="description" label="Ürün açıklaması" multiline placeholder="Açıklama" lang={lang} onAiTranslate={aiTranslate} />,
+    allergens: <FormMultiSelect control={control} name="allergens" label="Alerjenler" labelAside="AB 14 listesinden seçilir" options={ProductAllergenEnum.options.map((a) => ({ value: a, label: resolveLocalizedText(ALLERGEN_LABELS[a], lang) }))} addLabel="+ alerjen seç" searchPlaceholder="Alerjen ara…" />,
+    variants: <VariantEditor control={control} />,
+    shippable: <FormSwitch control={control} name="shippable" label="Kargo izni" />,
+    isActive: <FormSwitch control={control} name="isActive" label="Satışta (aktif)" />,
+    autoPrice: <FormSwitch control={control} name="autoPrice" label="Otomatik fiyat" />,
+    margin: <FormNumber control={control} name="targetMarginPercent" label="Hedef marj (%)" placeholder="ör. 42" />,
+    priceNote: (
+      <span className="font-ops-body text-[11px] leading-[1.5] text-ops-muted">
+        Fiyatın kendisi kanala/müşteriye göre Fiyatlar ekranında çözülür — burada yalnız marj hedefi ve otomatik davranış tanımlanır.
+      </span>
+    ),
+  };
+
+  const headerAction = (
+    <div className="flex items-center gap-2">
+      {device !== 'mobile' ? (
+        <span className="font-ops-display text-[10px] font-medium uppercase tracking-[0.08em] text-ops-muted">İçerik dili</span>
+      ) : null}
+      <LocaleTabs value={lang} onChange={setLang} />
+    </div>
+  );
+
   const footer = (
     <>
       <span className="mr-auto font-ops-body text-[11.5px]">
@@ -80,78 +134,14 @@ export function ProductFormDialog({ mode, product, categories, onClose }: Produc
     <Dialog
       open
       onClose={onClose}
+      maxWidth={device === 'mobile' ? 520 : 1180}
       title={editing ? 'Ürün düzenle' : 'Yeni ürün'}
       subtitle={editing ? (resolveLocalizedText(product.name) || 'Ürün') : 'Zorunlu alanları doldurun; beyanlar sonradan tamamlanabilir'}
+      headerAction={headerAction}
       footer={footer}
     >
-      <form id={FORM_ID} onSubmit={onSubmit} className="flex flex-col gap-5">
-        {/* Görsel (yalnız düzenlemede) */}
-        {editing ? (
-          <section className="flex items-center gap-3">
-            <Thumbnail src={product.imageUrl} alt={resolveLocalizedText(product.name)} size={64} iconSize={24} />
-            <div className="flex flex-col items-start gap-1">
-              <ImageUploadButton
-                productId={product.id}
-                className="cursor-pointer rounded-ops-btn border border-ops-line-strong px-3 py-2 font-ops-display text-[12px] font-semibold text-ops-strong hover:border-ops-olive disabled:opacity-60"
-              >
-                {product.imageUrl ? 'Görsel değiştir' : 'Görsel yükle'}
-              </ImageUploadButton>
-              <span className="font-ops-body text-[10.5px] text-ops-faint">JPG/PNG · R2&apos;ye yüklenir</span>
-            </div>
-          </section>
-        ) : null}
-
-        {/* Temel */}
-        <section className="flex flex-col gap-[11px]">
-          <span className={SECTION}>Temel</span>
-          <FormLocalizedText control={control} name="name" label="Ürün adı" required placeholder="Ürün adı" onAiTranslate={aiTranslate} />
-          <div className="grid grid-cols-2 gap-2.5">
-            <FormSelect control={control} name="categoryId" label="Kategori" required placeholder="Kategori seç" options={categories.map((c) => ({ value: c.id, label: resolveLocalizedText(c.name) }))} />
-            <FormSegment control={control} name="vatRate" label="KDV" required options={[{ key: '5.5', label: '%5,5' }, { key: '20', label: '%20' }]} />
-          </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            <FormSegment control={control} name="dateType" label="Son tarih tipi" required options={[{ key: 'DLC', label: 'DLC · güvenlik' }, { key: 'DDM', label: 'DDM · kalite' }]} />
-            <FormNumber control={control} name="shelfLifeDays" label="Toplam raf ömrü (gün)" integer placeholder="ör. 180" />
-          </div>
-          <div className="flex gap-2.5">
-            <FormSwitch control={control} name="shippable" label="Kargo izni" />
-            <FormSwitch control={control} name="isActive" label="Satışta (aktif)" />
-          </div>
-        </section>
-
-        {/* İçerik */}
-        <section className="flex flex-col gap-[11px]">
-          <span className={SECTION}>Açıklama</span>
-          <FormLocalizedText control={control} name="description" label="Ürün açıklaması" multiline placeholder="Açıklama" onAiTranslate={aiTranslate} />
-        </section>
-
-        {/* Yasal beyan */}
-        <section className="flex flex-col gap-[11px]">
-          <span className={SECTION}>Yasal beyan</span>
-          <FormMultiSelect
-            control={control}
-            name="allergens"
-            label="Alerjenler"
-            labelAside="AB 14 listesinden seçilir"
-            options={ALLERGEN_OPTIONS}
-            addLabel="+ alerjen seç"
-            searchPlaceholder="Alerjen ara…"
-          />
-        </section>
-
-        <VariantEditor control={control} />
-
-        {/* Fiyatlandırma tanımı */}
-        <section className="flex flex-col gap-2.5">
-          <span className={SECTION}>Fiyatlandırma tanımı</span>
-          <div className="flex items-end gap-2.5">
-            <FormNumber control={control} name="targetMarginPercent" label="Hedef marj (%)" placeholder="ör. 42" fieldClassName="flex-1" />
-            <FormSwitch control={control} name="autoPrice" label="Otomatik fiyat" />
-          </div>
-          <span className="font-ops-body text-[11px] text-ops-muted">
-            Fiyatın kendisi kanala/müşteriye göre Fiyatlar ekranında çözülür — burada yalnız marj hedefi ve otomatik davranış tanımlanır.
-          </span>
-        </section>
+      <form id={FORM_ID} onSubmit={onSubmit}>
+        {device === 'mobile' ? <ProductFormMobile fields={fields} /> : <ProductFormDesktop fields={fields} />}
       </form>
     </Dialog>
   );

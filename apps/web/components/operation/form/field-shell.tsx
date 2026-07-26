@@ -43,7 +43,7 @@ export function errorIdFor(fieldId: string, error?: string): string | undefined 
 
 type ControlSize = 'md' | 'sm';
 const CONTROL_SIZE: Record<ControlSize, string> = {
-  md: 'rounded-[9px] px-[13px] py-[11px] text-[13.5px]',
+  md: 'rounded-[9px] px-[13px] py-[7px] text-[13.5px]',
   sm: 'rounded-md px-2 py-1.5 text-[12.5px]',
 };
 

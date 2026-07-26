@@ -14,12 +14,14 @@ interface DialogProps {
   subtitle?: string;
   /** Alt bar içeriği (aksiyonlar). Verilmezse alt bar çizilmez. */
   footer?: ReactNode;
+  /** Header sağ üstte, kapat butonunun ALTINDA render edilir (ör. form geneli dil sekmeleri). */
+  headerAction?: ReactNode;
   /** Panel genişliği (CSS max-width). Varsayılan 640px. */
   maxWidth?: number;
   children: ReactNode;
 }
 
-export function Dialog({ open, onClose, title, subtitle, footer, maxWidth = 640, children }: DialogProps) {
+export function Dialog({ open, onClose, title, subtitle, footer, headerAction, maxWidth = 640, children }: DialogProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -41,19 +43,22 @@ export function Dialog({ open, onClose, title, subtitle, footer, maxWidth = 640,
         style={{ maxWidth }}
         className="flex max-h-[86vh] w-full flex-col overflow-hidden rounded-ops-dialog bg-ops-card text-ops-ink shadow-[0_24px_70px_rgba(20,22,18,0.4)]"
       >
-        <div className="flex items-center gap-3 border-b border-ops-line px-6 py-[18px]">
+        <div className="flex items-start gap-3 border-b border-ops-line px-6 py-[18px]">
           <div className="mr-auto flex flex-col gap-px">
             <span className="font-ops-display text-[18px] font-semibold">{title}</span>
             {subtitle ? <span className="font-ops-body text-xs text-ops-muted">{subtitle}</span> : null}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Kapat"
-            className="grid h-[30px] w-[30px] cursor-pointer place-items-center rounded-ops-btn bg-ops-line-soft font-ops-display text-base text-ops-body hover:bg-ops-line"
-          >
-            ✕
-          </button>
+          <div className="flex flex-col items-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Kapat"
+              className="grid h-[30px] w-[30px] cursor-pointer place-items-center rounded-ops-btn bg-ops-line-soft font-ops-display text-base text-ops-body hover:bg-ops-line"
+            >
+              ✕
+            </button>
+            {headerAction}
+          </div>
         </div>
 
         <div className="flex flex-col gap-5 overflow-y-auto px-6 py-5">{children}</div>

@@ -30,7 +30,9 @@ export function Toggle({ on, onChange, size = 'md', label }: ToggleProps) {
         'relative flex-none rounded-full transition-colors',
         s.track,
         on ? 'bg-ops-olive' : 'bg-[#cfd2c9]',
-        onChange ? 'cursor-pointer' : 'cursor-default',
+        // onChange'siz = dekoratif (ör. ToggleField içindeki iç anahtar): pointer olaylarını yutMA →
+        // hover/tıklama dıştaki tıklanabilir karta geçer, el işareti kaybolmaz.
+        onChange ? 'cursor-pointer' : 'pointer-events-none',
       ].join(' ')}
     >
       <span className={['absolute top-0.5 rounded-full bg-white transition-all', s.knob, on ? s.on : s.off].join(' ')} />
@@ -60,7 +62,7 @@ export function ToggleField({ label, on, onChange, size = 'md', stop = false }: 
         if (stop) e.stopPropagation();
         onChange(!on);
       }}
-      className="flex flex-1 cursor-pointer items-center justify-between rounded-[9px] border border-ops-line-strong px-[13px] py-2.5 text-left"
+      className="flex flex-1 cursor-pointer items-center justify-between rounded-[9px] border border-ops-line-strong px-[13px] py-1.5 text-left"
     >
       <span className="font-ops-body text-[12.5px] text-ops-ink">{label}</span>
       {/* İç anahtar salt görsel — tıklama dıştaki button'da işlenir (çift toggle olmasın). */}

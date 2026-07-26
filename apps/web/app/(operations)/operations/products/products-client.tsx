@@ -92,6 +92,7 @@ export function ProductsClient({ data, device }: ProductsClientProps) {
           mode={modal.mode}
           product={selected}
           categories={data.categories}
+          device={resolvedDevice}
           onClose={() => setModal(null)}
         />
       ) : null}

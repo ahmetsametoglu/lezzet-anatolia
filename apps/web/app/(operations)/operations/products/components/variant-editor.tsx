@@ -9,14 +9,15 @@ import type { ProductFormValues } from './product-form-schema';
 // components). Satır içi girdiler operasyon form kontrolleri (Input/Toggle); ham <input> yok. Son
 // varyant silinemez (ürün her zaman ≥1 varyant; syncVariants boş listede dokunmaz).
 
-const CELL = 'grid grid-cols-[1fr_84px_92px_48px_32px] items-center gap-x-2';
+// Sütun düzeni: SKU (en başta, en geniş — kodlar uzun) · Etiket (dar) · Net · Aktif · sil.
+const CELL = 'grid grid-cols-[minmax(0,1fr)_120px_84px_48px_32px] items-center gap-x-2';
 
 export function VariantEditor({ control }: { control: Control<ProductFormValues> }) {
   const { fields, append, remove } = useFieldArray({ control, name: 'variants' });
 
   return (
     <section className="flex flex-col gap-[11px]">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-ops-line-soft pb-[7px]">
         <span className="font-ops-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ops-muted">Varyantlar</span>
         <button
           type="button"
@@ -28,14 +29,21 @@ export function VariantEditor({ control }: { control: Control<ProductFormValues>
       </div>
       <div className="overflow-hidden rounded-[9px] border border-ops-line">
         <div className={`${CELL} border-b border-ops-line bg-ops-subtle px-[13px] py-2 font-ops-display text-[10px] font-medium uppercase tracking-[0.05em] text-ops-muted`}>
+          <span>SKU</span>
           <span>Etiket</span>
           <span>Net (g)</span>
-          <span>SKU</span>
           <span className="text-center">Aktif</span>
           <span />
         </div>
         {fields.map((f, i) => (
           <div key={f.id} className={`${CELL} border-b border-ops-line-soft px-[13px] py-2 last:border-b-0`}>
+            <Controller
+              control={control}
+              name={`variants.${i}.sku`}
+              render={({ field }) => (
+                <Input inputSize="sm" mono value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value || null)} onBlur={field.onBlur} placeholder="ör. BAK-500" />
+              )}
+            />
             <Controller
               control={control}
               name={`variants.${i}.label`}
@@ -54,13 +62,6 @@ export function VariantEditor({ control }: { control: Control<ProductFormValues>
                   onBlur={field.onBlur}
                   placeholder="—"
                 />
-              )}
-            />
-            <Controller
-              control={control}
-              name={`variants.${i}.sku`}
-              render={({ field }) => (
-                <Input inputSize="sm" mono value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value || null)} onBlur={field.onBlur} placeholder="—" className="text-ops-muted" />
               )}
             />
             <span className="justify-self-center">
