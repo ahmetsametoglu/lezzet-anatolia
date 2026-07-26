@@ -21,6 +21,24 @@ export interface AuthUser {
   email: string | null;
 }
 
+// ─── Dev-only auth bypass ──────────────────────────────────────────────────────
+// Operasyon guard'larını (requireStaff/requireRole) atlayıp sahte admin enjekte eder — böylece
+// geliştirmede admin girişi olmadan operasyon ekranları test edilebilir. GÜVENLİK: yalnız
+// NODE_ENV !== 'production' iken çalışır; production build'de env ne olursa olsun ASLA aktif olmaz.
+// Dev'de VARSAYILAN AÇIK; gerçek auth akışını dev'de test etmek için DEV_AUTH_BYPASS=false.
+// Kapsam dar: yalnız personel kapıları — müşteri oturum/login akışına (getSessionUser) dokunmaz.
+const DEV_BYPASS_USER: AuthUser = { id: '00000000-0000-0000-0000-0000000000ad', email: 'dev-admin@lezzet.local' };
+
+let bypassWarned = false;
+function devBypassActive(): boolean {
+  const active = process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS !== 'false';
+  if (active && !bypassWarned) {
+    bypassWarned = true;
+    console.warn('[guard] DEV auth bypass AKTİF — operasyon guard atlanıyor (kapatmak için DEV_AUTH_BYPASS=false).');
+  }
+  return active;
+}
+
 /** Oturumdaki kullanıcı (yoksa null). */
 export async function getSessionUser(): Promise<AuthUser | null> {
   const supabase = await createClient();
@@ -38,6 +56,7 @@ export async function requireAuth(): Promise<AuthUser> {
 }
 
 async function requireRole(role: UserRole): Promise<AuthUser> {
+  if (devBypassActive()) return DEV_BYPASS_USER;
   const user = await requireAuth();
   if (!(await new UserProfileService(serviceDb()).hasRole(user.id, role))) throw new AuthError('forbidden');
   return user;
@@ -45,6 +64,7 @@ async function requireRole(role: UserRole): Promise<AuthUser> {
 
 /** Herhangi bir personel rolü (customer dışı) şart (Operasyon yüzeyine giriş kapısı). */
 export async function requireStaff(): Promise<AuthUser> {
+  if (devBypassActive()) return DEV_BYPASS_USER;
   const user = await requireAuth();
   if (!(await new UserProfileService(serviceDb()).isStaff(user.id))) throw new AuthError('forbidden');
   return user;
