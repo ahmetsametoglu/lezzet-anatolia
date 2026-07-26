@@ -18,9 +18,13 @@ function supabaseOrigins(): { http: string; ws: string } {
   }
 }
 
+// R2 host'ları (referans proje deseni): signed okuma URL'i *.r2.cloudflarestorage.com, public/dev
+// bucket *.r2.dev. Görsel <img>=img-src; ileride tarayıcıdan doğrudan yükleme/fetch için connect-src.
+const R2_HOSTS = 'https://*.r2.cloudflarestorage.com https://*.r2.dev';
+
 /**
  * Güvenlik başlıkları (referans deseninden uyarlandı). CSP host'ları modül geldikçe genişler
- * (Stripe 07, R2/storage görselleri ilgili modülde eklenir). Şimdilik: self + Supabase + next/font (self-hosted).
+ * (Stripe 07 ilgili modülde eklenir). Şimdilik: self + Supabase + R2 görselleri + next/font (self-hosted).
  */
 function securityHeaders(): Array<{ key: string; value: string }> {
   const { http: sbHttp, ws: sbWs } = supabaseOrigins();
@@ -32,8 +36,8 @@ function securityHeaders(): Array<{ key: string; value: string }> {
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
-    `connect-src 'self' ${sbHttp} ${sbWs}`.replace(/\s+/g, ' ').trim(),
-    `img-src 'self' data: blob: ${sbHttp}`.replace(/\s+/g, ' ').trim(),
+    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS}`.replace(/\s+/g, ' ').trim(),
+    `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS}`.replace(/\s+/g, ' ').trim(),
     "font-src 'self' data:",
     "frame-src 'self'",
     "object-src 'none'",
