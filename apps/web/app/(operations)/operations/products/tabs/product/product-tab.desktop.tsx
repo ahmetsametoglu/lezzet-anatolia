@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { AnchoredMenu } from '@/components/operation/ui/anchored-menu';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
 import { Table, type Column } from '@/components/operation/ui/table';
@@ -59,16 +60,7 @@ const COLUMNS: Column<ProductView>[] = [
 // "+ durum" — dashed çip açılır durum menüsü; seçilince aktif çip + ✕ ile temizlenir (İşlevsel süzgeç).
 function StatusFilterChip({ value, onChange }: { value: StatusFilter; onChange: (s: StatusFilter) => void }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
+  const anchorRef = useRef<HTMLDivElement>(null);
 
   if (value !== 'all') {
     return (
@@ -78,28 +70,28 @@ function StatusFilterChip({ value, onChange }: { value: StatusFilter; onChange: 
     );
   }
   return (
-    <div ref={ref} className="relative">
-      <Chip dashed onClick={() => setOpen((v) => !v)}>
-        + durum
-      </Chip>
-      {open ? (
-        <div className="absolute left-0 top-[calc(100%+4px)] z-20 flex min-w-[120px] flex-col overflow-hidden rounded-[9px] border-[1.5px] border-ops-olive bg-white shadow-[0_8px_24px_rgba(20,22,18,0.12)]">
-          {STATUS_ORDER.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => {
-                onChange(s);
-                setOpen(false);
-              }}
-              className="cursor-pointer px-[13px] py-2.5 text-left font-ops-body text-[13px] text-ops-strong hover:bg-ops-subtle"
-            >
-              {STATUS_LABEL[s]}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
+    <>
+      <div ref={anchorRef} className="inline-flex">
+        <Chip dashed onClick={() => setOpen((v) => !v)}>
+          + durum
+        </Chip>
+      </div>
+      <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width={140} className="flex flex-col">
+        {STATUS_ORDER.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => {
+              onChange(s);
+              setOpen(false);
+            }}
+            className="cursor-pointer px-[13px] py-2.5 text-left font-ops-body text-[13px] text-ops-strong hover:bg-ops-subtle"
+          >
+            {STATUS_LABEL[s]}
+          </button>
+        ))}
+      </AnchoredMenu>
+    </>
   );
 }
 

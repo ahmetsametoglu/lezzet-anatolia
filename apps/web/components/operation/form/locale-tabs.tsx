@@ -1,10 +1,19 @@
 'use client';
 
+import type { LocalizedText } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 
-// Dil sekmeleri (TR/FR/DE) — çok dilli metin için ortak switcher. FormLocalizedText'in kendi sekmesi
-// (tek alan) ve form geneli dil bağlamı (dialog header) AYNI komponenti kullanır (no-duplication).
+// Dil sekmeleri (TR/FR/DE) — çok dilli metin için ortak switcher. Alanın kendi sekmesi (FormLocalizedText),
+// dil kartı (LocaleCard) ve form geneli dil bağlamı AYNI komponenti kullanır (no-duplication).
 // `filled` verilirse dolu olmayan diller (TR hariç) "öneri" ile işaretlenir.
+
+/** Hangi dillerin dolu olduğu — sekme "öneri" ipucunun TEK kaynağı (alan ve kart aynısını kullanır). */
+export function filledLocales(text: LocalizedText): Partial<Record<Locale, boolean>> {
+  return LOCALES.reduce<Partial<Record<Locale, boolean>>>((acc, l) => {
+    acc[l] = Boolean(text[l]?.trim());
+    return acc;
+  }, {});
+}
 
 interface LocaleTabsProps {
   value: Locale;
@@ -30,7 +39,11 @@ export function LocaleTabs({ value, onChange, filled }: LocaleTabsProps) {
             ].join(' ')}
           >
             {l.toUpperCase()}
-            {showHint ? <span className="ml-0.5 text-ops-amber">öneri</span> : null}
+            {/* Eksik dil işareti: KELİME değil küçük nokta — dil kodunun yanındaki metin ("öneri")
+                ne demek istediğini söylemiyordu. Anlam ipucu title'da. TR kaynak olduğu için hariç. */}
+            {showHint ? (
+              <span title="Bu dilde metin yok" className="ml-1 inline-block h-[5px] w-[5px] rounded-full bg-ops-amber align-middle" />
+            ) : null}
           </button>
         );
       })}

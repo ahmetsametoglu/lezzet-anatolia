@@ -46,12 +46,17 @@ create table public.product_variant (
 );
 create index product_variant_product_idx on public.product_variant (product_id);
 
--- Ürün ↔ koleksiyon çoklu bağı (bir ürün birçok koleksiyona girer)
+-- Ürün ↔ koleksiyon çoklu bağı (bir ürün birçok koleksiyona girer).
+-- position: koleksiyon İÇİNDEKİ vitrin sırası — admin sürükle-bırakla kürasyon yapar.
 create table public.product_collections (
   product_id uuid not null references public.product (id) on delete cascade,
   collection_id uuid not null references public.collection (id) on delete cascade,
+  position int not null default 0,
   primary key (product_id, collection_id)
 );
+-- Üyeler koleksiyon başına sıralı okunur; PK'nın baş kolonu product_id olduğu için collection_id ile
+-- filtreleyen sorgular o indeksten yararlanamaz.
+create index product_collections_order_idx on public.product_collections (collection_id, position);
 
 alter table public.product enable row level security;
 alter table public.product_variant enable row level security;

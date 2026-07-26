@@ -15,10 +15,14 @@ create table public.category (
 create unique index category_slug_key on public.category (slug);
 
 -- ── collection — esnek pazarlama grubu (Bayram/Yeni/İndirimde); ürün çok koleksiyona girer ──
+-- Koleksiyon aynı zamanda KENDİ bağlantısıyla paylaşılan bir vitrin sayfasıdır (DOMAIN §13) →
+-- sosyal paylaşım OG kartı için başlık yetmez: description + image_key de taşınır.
 create table public.collection (
   id uuid primary key default gen_random_uuid(),
-  name jsonb not null,
-  slug text not null,
+  name jsonb not null,                          -- LocalizedText {tr?,fr?,de?}
+  description jsonb,                            -- LocalizedText, opsiyonel (OG açıklaması)
+  slug text not null,                           -- paylaşım linki (SEO_I18N)
+  image_key text,                               -- kapak: depo anahtarı, tam URL değil (STACK §5)
   sort_order int not null default 0,
   is_active boolean not null default true,
   created_at timestamptz not null default now()

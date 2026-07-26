@@ -3,9 +3,16 @@ import type { ReactNode } from 'react';
 // Ürün formunun sunum sözleşmesi. Kendi dosyasında: kabı (product-form-dialog) düzenleri import eder,
 // düzenler de bu tipi — tip dialogda kalsa döngüsel bağımlılık olurdu (depcruise no-circular).
 
-/** Kurulmuş alan elemanları — .desktop/.mobile sunumları bunları yalnız YERLEŞTİRİR (tek kaynak). */
+/**
+ * Kurulmuş alan elemanları — .desktop/.mobile sunumları bunları yalnız YERLEŞTİRİR (tek kaynak).
+ * Her sunum kendi alt kümesini kullanır: çok dilli içerik web'de tek dil kartında (`content`), mobilde
+ * ayrı bölümlerde (`name` + `description`); `priceNote` yalnız mobilde.
+ */
 export interface ProductFormFields {
   image: ReactNode;
+  /** Web: ad + açıklama tek dil kartında (dil sekmesi kartın başlığında). */
+  content: ReactNode;
+  /** Mobil: ad ve açıklama ayrı bölümlerde, her biri kendi dil sekmesiyle. */
   name: ReactNode;
   category: ReactNode;
   vat: ReactNode;
@@ -15,7 +22,6 @@ export interface ProductFormFields {
   allergens: ReactNode;
   variants: ReactNode;
   shippable: ReactNode;
-  isActive: ReactNode;
   autoPrice: ReactNode;
   margin: ReactNode;
   priceNote: ReactNode;

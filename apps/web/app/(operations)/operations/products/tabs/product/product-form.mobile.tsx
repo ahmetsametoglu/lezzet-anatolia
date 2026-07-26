@@ -25,7 +25,6 @@ export function ProductFormMobile({ fields }: { fields: ProductFormFields }) {
 
       <FormSection title="Durum ve fiyatlandırma" className="gap-3">
         {fields.shippable}
-        {fields.isActive}
         {fields.autoPrice}
         {fields.margin}
         {fields.priceNote}

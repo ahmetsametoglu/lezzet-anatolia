@@ -1,16 +1,24 @@
 import { z } from 'zod';
 
-// Çok dilli metin (jsonb). Diller sabit TR/FR/DE (bkz. @lezzet/i18n LOCALES). Hepsi opsiyonel
-// ama en az biri dolu olmalı. Gösterim/slug yedek zinciri TR → FR → DE (SEO_I18N "Kalıcı kararlar").
-export const LocalizedTextSchema = z
-  .object({
-    tr: z.string().optional(),
-    fr: z.string().optional(),
-    de: z.string().optional(),
-  })
-  .refine((v) => Boolean(v.tr?.trim() || v.fr?.trim() || v.de?.trim()), {
-    message: 'En az bir dilde metin gerekli (tr/fr/de)',
-  });
+// Çok dilli metin (jsonb). Diller sabit TR/FR/DE (bkz. @lezzet/i18n LOCALES).
+// Gösterim/slug yedek zinciri TR → FR → DE (SEO_I18N "Kalıcı kararlar").
+
+/**
+ * Boş OLABİLEN çok dilli metin — opsiyonel alanlar için (açıklama gibi). "En az bir dil" kuralı YOK:
+ * kullanıcı yazıp sildiğinde değer `{tr:''}` olur; zorunlu şemayla doğrulanırsa form haksızca geçersiz
+ * olurdu. Zorunlu alanlar `LocalizedTextSchema` kullanır (bu şemadan türer — alanlar tek yerde).
+ */
+export const LocalizedTextDraftSchema = z.object({
+  tr: z.string().optional(),
+  fr: z.string().optional(),
+  de: z.string().optional(),
+});
+
+/** Zorunlu çok dilli metin: en az bir dil dolu olmalı (ör. ad). */
+export const LocalizedTextSchema = LocalizedTextDraftSchema.refine(
+  (v) => Boolean(v.tr?.trim() || v.fr?.trim() || v.de?.trim()),
+  { message: 'En az bir dilde metin gerekli (tr/fr/de)' },
+);
 export type LocalizedText = z.infer<typeof LocalizedTextSchema>;
 
 /**

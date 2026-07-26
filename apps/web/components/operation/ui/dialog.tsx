@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, type ReactNode } from 'react';
+import { Button } from './button';
 
 /**
  * Operasyon dialogu — Komponent Envanteri O9. Ortalanmış panel: koyu örtü + başlık (başlık/alt +
@@ -14,14 +15,12 @@ interface DialogProps {
   subtitle?: string;
   /** Alt bar içeriği (aksiyonlar). Verilmezse alt bar çizilmez. */
   footer?: ReactNode;
-  /** Header sağ üstte, kapat butonunun ALTINDA render edilir (ör. form geneli dil sekmeleri). */
-  headerAction?: ReactNode;
   /** Panel genişliği (CSS max-width). Varsayılan 640px. */
   maxWidth?: number;
   children: ReactNode;
 }
 
-export function Dialog({ open, onClose, title, subtitle, footer, headerAction, maxWidth = 640, children }: DialogProps) {
+export function Dialog({ open, onClose, title, subtitle, footer, maxWidth = 640, children }: DialogProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -48,17 +47,14 @@ export function Dialog({ open, onClose, title, subtitle, footer, headerAction, m
             <span className="font-ops-display text-[18px] font-semibold">{title}</span>
             {subtitle ? <span className="font-ops-body text-xs text-ops-muted">{subtitle}</span> : null}
           </div>
-          <div className="flex flex-col items-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Kapat"
-              className="grid h-[30px] w-[30px] cursor-pointer place-items-center rounded-ops-btn bg-ops-line-soft font-ops-display text-base text-ops-body hover:bg-ops-line"
-            >
-              ✕
-            </button>
-            {headerAction}
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Kapat"
+            className="grid h-[30px] w-[30px] flex-none cursor-pointer place-items-center rounded-ops-btn bg-ops-line-soft font-ops-display text-base text-ops-body hover:bg-ops-line"
+          >
+            ✕
+          </button>
         </div>
 
         <div className="flex flex-col gap-5 overflow-y-auto px-6 py-5">{children}</div>
@@ -68,5 +64,38 @@ export function Dialog({ open, onClose, title, subtitle, footer, headerAction, m
         ) : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * Form dialoglarının ortak alt barı: SOLDA aksiyon bölgesi (kayda eşlik eden kontroller — ör. aktif/pasif
+ * anahtarı) + varsa hata; SAĞDA İptal/Kaydet. Her dialogda elle kurulmaz (no-duplication) → ürün,
+ * katalog ve ileride paket dialogları aynı yerleşimi paylaşır. Kaydet, `formId` ile gövdedeki formu submit eder.
+ */
+interface DialogFooterProps {
+  /** Kayda eşlik eden aksiyonlar (solda). Zorunlu-alan metni yerine buraya kontrol konur. */
+  actions?: ReactNode;
+  error?: string | null;
+  submitting?: boolean;
+  /** Kaydet butonunun submit edeceği `<form id>`. */
+  formId: string;
+  onCancel: () => void;
+  submitLabel?: string;
+}
+
+export function DialogFooter({ actions, error, submitting = false, formId, onCancel, submitLabel = 'Kaydet' }: DialogFooterProps) {
+  return (
+    <>
+      <div className="mr-auto flex min-w-0 items-center gap-3">
+        {actions}
+        {error ? <span className="truncate font-ops-body text-[11.5px] font-semibold text-ops-red">{error}</span> : null}
+      </div>
+      <Button variant="secondary" onClick={onCancel} disabled={submitting}>
+        İptal
+      </Button>
+      <Button variant="primary" type="submit" form={formId} disabled={submitting}>
+        {submitting ? 'Kaydediliyor…' : submitLabel}
+      </Button>
+    </>
   );
 }

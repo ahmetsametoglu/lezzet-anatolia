@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { CategoryService, CollectionService, serviceDb } from '@lezzet/database';
+import { getR2, r2Keys } from '@lezzet/storage';
 import { resolveLocalizedText, type LocalizedText } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -24,11 +25,37 @@ function requireCatalogName(kind: CatalogKind, name: LocalizedText): LocalizedTe
   return name;
 }
 
-/** Yeni kategori/koleksiyon (slug servis addan türetir). */
-export async function createCatalogAction(kind: CatalogKind, name: LocalizedText): Promise<ActionResult> {
+/**
+ * Formun gönderdiği katalog girdisi. `description` / `slug` / `productIds` yalnız KOLEKSİYONDA
+ * anlamlıdır (koleksiyon = paylaşılabilir vitrin sayfası + ürün listesi); kategoride yok sayılır.
+ */
+interface CatalogInput {
+  name: LocalizedText;
+  isActive: boolean;
+  description?: LocalizedText | null;
+  /** Paylaşım linki — yalnız OLUŞTURMADA; boşsa addan türetilir. */
+  slug?: string;
+  /** Üyelik; dizinin SIRASI vitrin sırasıdır (kürasyon). */
+  productIds?: string[];
+}
+
+/** Yeni kategori/koleksiyon. Koleksiyon içeriğiyle (ve istenen slug'la) birlikte doğabilir. */
+export async function createCatalogAction(kind: CatalogKind, input: CatalogInput): Promise<ActionResult> {
   try {
     await requireStaff();
-    await catalogService(kind).create({ name: requireCatalogName(kind, name) });
+    const db = serviceDb();
+    const name = requireCatalogName(kind, input.name);
+    if (kind === 'category') {
+      await new CategoryService(db).create({ name, isActive: input.isActive });
+    } else {
+      await new CollectionService(db).create({
+        name,
+        description: input.description,
+        slug: input.slug,
+        isActive: input.isActive,
+        productIds: input.productIds,
+      });
+    }
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
   } catch (err) {
@@ -37,15 +64,11 @@ export async function createCatalogAction(kind: CatalogKind, name: LocalizedText
 }
 
 /**
- * Kategori/koleksiyonu düzenler (çok dilli ad + aktiflik); slug SABİT kalır. `productIds` yalnız
- * KOLEKSİYONDA anlamlıdır (koleksiyon = ürün listesi, DOMAIN §13): verilirse üyelik ona eşitlenir.
- * Tek kaydet = ad + aktiflik + üyelik (tek tur, tek revalidate).
+ * Kategori/koleksiyonu düzenler. slug SABİT kalır (paylaşılmış link kırılmasın — bu yüzden `slug`
+ * girdisi düzenlemede yok sayılır). Koleksiyonda tek kaydet = ad + açıklama + aktiflik + ÜYELİK/SIRA
+ * (tek tur, tek revalidate).
  */
-export async function updateCatalogAction(
-  kind: CatalogKind,
-  id: string,
-  input: { name: LocalizedText; isActive: boolean; productIds?: string[] },
-): Promise<ActionResult> {
+export async function updateCatalogAction(kind: CatalogKind, id: string, input: CatalogInput): Promise<ActionResult> {
   try {
     await requireStaff();
     const db = serviceDb();
@@ -54,9 +77,30 @@ export async function updateCatalogAction(
       await new CategoryService(db).edit(id, { name, isActive: input.isActive });
     } else {
       const svc = new CollectionService(db);
-      await svc.edit(id, { name, isActive: input.isActive });
+      await svc.edit(id, { name, description: input.description, isActive: input.isActive });
       if (input.productIds) await svc.setProducts(id, input.productIds);
     }
+    revalidatePath(PRODUCTS_PATH);
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/** Koleksiyon kapak görselini R2'ye yükler ve imageKey'i günceller (paylaşım/OG kartı görseli). */
+export async function uploadCollectionImageAction(id: string, form: FormData): Promise<ActionResult> {
+  try {
+    await requireStaff();
+    const file = form.get('file');
+    if (!(file instanceof File) || file.size === 0) throw new Error('Görsel dosyası bulunamadı.');
+    const r2 = getR2();
+    if (!r2) throw new Error('Depolama (R2) ayarlı değil.');
+    const svc = new CollectionService(serviceDb());
+    const collection = await svc.getById(id);
+    if (!collection) throw new Error('Koleksiyon bulunamadı.');
+    const key = r2Keys.collectionImage(collection.slug, file.name);
+    await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type || 'image/jpeg');
+    await svc.setImageKey(id, key);
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
   } catch (err) {

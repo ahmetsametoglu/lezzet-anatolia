@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { AnchoredMenu } from '../ui/anchored-menu';
 import { CheckIcon } from '../ui/icons';
 
 /**
@@ -28,27 +29,11 @@ interface SelectProps {
 
 export function Select({ value, onChange, options, placeholder = 'Seç', className }: SelectProps) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
   const selected = options.find((o) => o.value === value) ?? null;
 
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDoc);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
   return (
-    <div ref={ref} className={['relative', className].filter(Boolean).join(' ')}>
+    <div ref={anchorRef} className={className}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -64,11 +49,8 @@ export function Select({ value, onChange, options, placeholder = 'Seç', classNa
         <span className="flex-none text-ops-faint">{open ? '▴' : '▾'}</span>
       </button>
 
-      {open ? (
-        <div
-          role="listbox"
-          className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 max-h-64 overflow-y-auto rounded-[9px] border-[1.5px] border-ops-olive bg-white shadow-[0_8px_24px_rgba(20,22,18,0.12)]"
-        >
+      <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} className="max-h-64 overflow-y-auto">
+        <div role="listbox">
           {options.map((o) => {
             const on = o.value === value;
             return (
@@ -96,7 +78,7 @@ export function Select({ value, onChange, options, placeholder = 'Seç', classNa
             );
           })}
         </div>
-      ) : null}
+      </AnchoredMenu>
     </div>
   );
 }

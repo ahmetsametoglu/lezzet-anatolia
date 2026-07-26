@@ -13,10 +13,22 @@ import { BaseDbService } from '../core/base.service';
 import { uniqueSlugForTable } from '../utils/slug';
 import { ProductCollectionService } from './product-collection.service';
 
-// Yeni koleksiyon girişi — slug servis tarafından addan türetilir.
+// Yeni koleksiyon girişi. `slug` VERİLİRSE o kullanılır (paylaşım linkini admin belirler), verilmezse
+// addan türetilir; ikisinde de tablo genelinde benzersizleştirilir. `productIds` verilirse koleksiyon
+// İÇERİĞİYLE birlikte doğar (koleksiyon = ürün listesi; boş doğup sonra doldurmak zorunlu değil).
 export interface CreateCollectionInput {
   name: LocalizedText;
+  description?: LocalizedText | null;
+  slug?: string;
   sortOrder?: number;
+  isActive?: boolean;
+  productIds?: string[];
+}
+
+// Düzenlenebilir alanlar — slug YOK (paylaşılmış link kırılmasın; DOMAIN §13).
+interface EditCollectionInput {
+  name?: LocalizedText;
+  description?: LocalizedText | null;
   isActive?: boolean;
 }
 
@@ -37,10 +49,21 @@ export class CollectionService extends BaseDbService<Collection, CollectionInser
     return this.getAll(opts?.activeOnly ? { isActive: true } : undefined, { orderBy: 'sortOrder' });
   }
 
-  /** Yeni koleksiyon; slug addan türetilip benzersizleştirilir. */
+  /**
+   * Yeni koleksiyon. slug: verilen (admin'in paylaşım linki) ya da addan türetilen — her hâlde tablo
+   * genelinde benzersizleştirilir. `productIds` verilirse üyelik de (verilen sırayla) kurulur.
+   */
   async create(input: CreateCollectionInput): Promise<Collection> {
-    const slug = await uniqueSlugForTable(this.supabase, this.tableName, resolveLocalizedText(input.name));
-    return this.insert({ name: input.name, slug, sortOrder: input.sortOrder, isActive: input.isActive });
+    const slug = await uniqueSlugForTable(this.supabase, this.tableName, input.slug?.trim() || resolveLocalizedText(input.name));
+    const created = await this.insert({
+      name: input.name,
+      description: input.description,
+      slug,
+      sortOrder: input.sortOrder,
+      isActive: input.isActive,
+    });
+    if (input.productIds?.length) await this.links.setProductsIn(created.id, input.productIds);
+    return created;
   }
 
   /** Aktif/pasif (soft). */
@@ -48,9 +71,14 @@ export class CollectionService extends BaseDbService<Collection, CollectionInser
     return this.update({ id, isActive });
   }
 
-  /** Ad ve/veya aktiflik günceller; slug SABİT kalır (paylaşım linki korunur). */
-  async edit(id: string, input: { name?: LocalizedText; isActive?: boolean }): Promise<Collection> {
+  /** Ad/açıklama/aktiflik günceller; slug SABİT kalır (paylaşılmış link korunur). */
+  async edit(id: string, input: EditCollectionInput): Promise<Collection> {
     return this.update({ id, ...input });
+  }
+
+  /** Kapak görseli anahtarı (R2'ye yükleme sonrası). */
+  async setImageKey(id: string, imageKey: string): Promise<Collection> {
+    return this.update({ id, imageKey });
   }
 
   /** Sürükle-bırak sırası: verilen id dizisine göre sortOrder'ı 0..n-1 yazar. */
@@ -60,9 +88,11 @@ export class CollectionService extends BaseDbService<Collection, CollectionInser
 
   // ── Üyelik (koleksiyon = ürün listesi, DOMAIN §13). product_collections junction servisine devreder. ──
 
-  /** Koleksiyona ürün ekler (idempotent). */
+  /** Koleksiyona ürün ekler (idempotent) — listenin SONUNA. */
   async addProduct(collectionId: string, productId: string): Promise<void> {
-    await this.links.link(collectionId, productId);
+    const current = await this.links.productIdsIn(collectionId);
+    if (current.includes(productId)) return;
+    await this.links.link(collectionId, productId, current.length);
   }
 
   /** Koleksiyondan ürün çıkarır. */
@@ -70,12 +100,12 @@ export class CollectionService extends BaseDbService<Collection, CollectionInser
     await this.links.unlink(collectionId, productId);
   }
 
-  /** Koleksiyondaki ürün id'leri. */
+  /** Koleksiyondaki ürün id'leri — vitrin sırasında. */
   async productIds(collectionId: string): Promise<string[]> {
     return this.links.productIdsIn(collectionId);
   }
 
-  /** Üyeliği verilen listeye eşitler (ekleme/çıkarmayı fark alarak yapar). */
+  /** Üyeliği verilen listeye eşitler; dizinin SIRASI vitrin sırasıdır (kürasyon). */
   async setProducts(collectionId: string, productIds: string[]): Promise<void> {
     await this.links.setProductsIn(collectionId, productIds);
   }

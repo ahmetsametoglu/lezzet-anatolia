@@ -32,10 +32,12 @@ export default async function ProductsPage() {
   // Varyantlar (ürün başına), koleksiyon üyelikleri ve görsel signed URL'leri paralel çekilir.
   // Görseller R2 private bucket'ta → okuma için imzalı URL. R2 ayarsızsa (getR2 null) placeholder.
   const r2 = getR2();
-  const [variantLists, collectionMembers, imageUrls] = await Promise.all([
+  const signed = (key: string | null): Promise<string | null> => (r2 && key ? r2.getSignedReadUrl(key) : Promise.resolve(null));
+  const [variantLists, collectionMembers, imageUrls, collectionImageUrls] = await Promise.all([
     Promise.all(products.map((p) => variantSvc.listByProduct(p.id))),
     Promise.all(collections.map((c) => collectionSvc.productIds(c.id))),
-    Promise.all(products.map((p) => (r2 && p.imageKey ? r2.getSignedReadUrl(p.imageKey) : Promise.resolve(null)))),
+    Promise.all(products.map((p) => signed(p.imageKey))),
+    Promise.all(collections.map((c) => signed(c.imageKey))),
   ]);
 
   const variantsByProduct = new Map(products.map((p, i) => [p.id, variantLists[i] ?? []]));
@@ -70,7 +72,7 @@ export default async function ProductsPage() {
   // Üyelik id'leri view-model'de taşınır (üyelik dialogu ön-doldurur); count ondan türer.
   const collectionViews: CollectionView[] = collections.map((c, i) => {
     const productIds = collectionMembers[i] ?? [];
-    return { ...c, productIds, count: productIds.length };
+    return { ...c, productIds, count: productIds.length, imageUrl: collectionImageUrls[i] ?? null };
   });
 
   const device = await detectDevice();

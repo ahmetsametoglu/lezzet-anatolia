@@ -19,9 +19,9 @@ export class ProductCollectionService extends BaseDbService<ProductCollectionRow
     super(supabase, 'product_collections', ProductCollectionRowSchema, ProductCollectionInsertSchema, ProductCollectionUpdateSchema);
   }
 
-  /** Bağ ekler (idempotent). */
-  async link(collectionId: string, productId: string): Promise<void> {
-    await this.upsert({ productId, collectionId }, 'product_id,collection_id');
+  /** Bağ ekler/günceller (idempotent). `position` verilmezse DB default'u (0) kalır. */
+  async link(collectionId: string, productId: string, position?: number): Promise<void> {
+    await this.upsert({ productId, collectionId, position }, 'product_id,collection_id');
   }
 
   /** Bağı kaldırır. */
@@ -29,22 +29,23 @@ export class ProductCollectionService extends BaseDbService<ProductCollectionRow
     await this.deleteWhere({ productId, collectionId });
   }
 
-  /** Koleksiyondaki ürün id'leri. */
+  /** Koleksiyondaki ürün id'leri — vitrin SIRASINDA (position). */
   async productIdsIn(collectionId: string): Promise<string[]> {
-    const rows = await this.getAll({ collectionId });
+    const rows = await this.getAll({ collectionId }, { orderBy: 'position' });
     return rows.map((row) => row.productId);
   }
 
   /**
-   * Üyeliği verilen listeye EŞİTLER: eksikleri bağlar, fazlaları çözer. Fark alınarak çalışır —
-   * "hepsini sil, baştan ekle" yapılmaz (dokunulmayan bağların kimliği/zaman damgası korunur).
+   * Üyeliği verilen listeye EŞİTLER: eksikleri bağlar, fazlaları çözer, kalanların SIRASINI (position)
+   * dizideki indekse yazar. Fark alınarak çalışır — "hepsini sil, baştan ekle" yapılmaz; ama sırası
+   * değişen mevcut bağlar da güncellenir (upsert), yoksa yeni kürasyon kaybolurdu.
    */
   async setProductsIn(collectionId: string, productIds: string[]): Promise<void> {
     const current = await this.productIdsIn(collectionId);
-    const currentSet = new Set(current);
     const nextSet = new Set(productIds);
     await Promise.all([
-      ...productIds.filter((id) => !currentSet.has(id)).map((id) => this.link(collectionId, id)),
+      // Sıra listeden gelir: her üye kendi indeksini alır (yeni de olsa, yerinde kalan da olsa).
+      ...productIds.map((id, index) => this.link(collectionId, id, index)),
       ...current.filter((id) => !nextSet.has(id)).map((id) => this.unlink(collectionId, id)),
     ]);
   }

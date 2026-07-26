@@ -1,27 +1,31 @@
 'use client';
 
-import { useRef, useState, useTransition, type ReactNode } from 'react';
+import { useRef, useState, useTransition, type ChangeEvent, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { uploadProductImageAction } from './actions';
+import type { ActionResult } from '@/lib/error';
 
-// Ürün görseli yükleme — gizli file input + tetikleyici. Web modalında "Görsel değiştir", mobilde
-// `capture` ile "Kameradan çek". Tek bileşen (no-duplication). Yükleme R2'ye action ile; sonra refresh.
-
+/**
+ * Görsel yükleme tetikleyicisi — gizli file input + görünüşü çağırana bırakılmış buton. Web modalında
+ * "Görsel değiştir", mobilde `capture` ile "Kameradan çek". Yükleme hedefini BİLMEZ: `upload` callback'i
+ * FormData'yı ilgili server action'a taşır (ürün görseli, koleksiyon kapağı…) → tek bileşen, çok tüketici
+ * (no-duplication). Başarıdan sonra `router.refresh()` ile sunucu verisi tazelenir.
+ */
 interface ImageUploadButtonProps {
-  productId: string;
+  /** Seçilen dosyayı ilgili action'a taşır (FormData'da `file` alanı). */
+  upload: (form: FormData) => Promise<ActionResult>;
   /** Mobilde arka kamerayı aç (capture="environment"). */
   camera?: boolean;
   className?: string;
   children: ReactNode;
 }
 
-export function ImageUploadButton({ productId, camera = false, className, children }: ImageUploadButtonProps) {
+export function ImageUploadButton({ upload, camera = false, className, children }: ImageUploadButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPick = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ''; // aynı dosya tekrar seçilebilsin
     if (!file) return;
@@ -29,7 +33,7 @@ export function ImageUploadButton({ productId, camera = false, className, childr
     const form = new FormData();
     form.set('file', file);
     startTransition(async () => {
-      const { error: actionError } = await uploadProductImageAction(productId, form);
+      const { error: actionError } = await upload(form);
       if (actionError) {
         setError(actionError);
         return;

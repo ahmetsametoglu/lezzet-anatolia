@@ -7,9 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ALLERGEN_LABELS, ProductAllergenEnum, resolveLocalizedText, type LocalizedText } from '@lezzet/types';
 import { type Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
-import { Button } from '@/components/operation/ui/button';
-import { Dialog } from '@/components/operation/ui/dialog';
-import { LocaleTabs } from '@/components/operation/form/locale-tabs';
+import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
+import { LocaleCard } from '@/components/operation/form/locale-card';
 import { FormNumber } from '@/components/operation/form/form-input';
 import { FormSelect } from '@/components/operation/form/form-select';
 import { FormSegment } from '@/components/operation/form/form-segment';
@@ -27,9 +26,14 @@ import type { ProductFormFields } from './product-form-types';
 import type { CategoryView, ProductView } from '../../products-types';
 
 // Ürün oluştur/düzenle — KAP (container): RHF + zodResolver, action'lar, Dialog kabuğu ve footer burada.
-// Dil TEK bağlam: header'daki LocaleTabs form genelini yönetir (name/description sekmesiz, o dili gösterir).
 // Alan ELEMANLARI bir kez kurulur (fields), sunum cihaza göre çatallanır (Sapma 3): masaüstü çok bölgeli
 // (.desktop), mobil tek sütun (.mobile). Aynı alanlar, farklı düzen → tekrar yok.
+//
+// DİL: form geneli görünmez kip YOK (eski header sekmesi kaldırıldı) — dil, çok dilli alanların
+// yanında GÖRÜNÜR. Cihaza göre çatallanır, çünkü alanların komşuluğu farklı:
+//   · web   → ad + açıklama aynı sütunda yan yana ⇒ TEK dil kartı (`content`) ikisini sarar
+//   · mobil → ad "Temel", açıklama "Açıklama" bölümünde (tasarımın bölüm sırası) ⇒ her alan KENDİ sekmesiyle
+// Alan tanımları tek yerde (nameField/descriptionField); iki şekle de aynı tanım verilir (tekrar yok).
 
 const FORM_ID = 'product-form';
 
@@ -45,7 +49,6 @@ export function ProductFormDialog({ mode, product, categories, device, onClose }
   const editing = mode === 'edit' && product !== null;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [lang, setLang] = useState<Locale>('tr');
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(ProductFormSchema),
@@ -69,19 +72,37 @@ export function ProductFormDialog({ mode, product, categories, device, onClose }
     onClose();
   });
 
-  // Alan elemanları tek kez — name/description form geneli dille (sekmesiz), sunumlar yalnız yerleştirir.
+  // Çok dilli alan tanımları TEK yerde; `lang` verilmezse alan kendi sekmesini gösterir (mobil),
+  // verilirse dilini dışarıdan alır (web'de dil kartının içi).
+  const nameField = (lang?: Locale) => (
+    <FormLocalizedText control={control} name="name" label="Ürün adı" required placeholder="Ürün adı" lang={lang} onAiTranslate={aiTranslate} />
+  );
+  const descriptionField = (lang?: Locale) => (
+    <FormLocalizedText control={control} name="description" label="Ürün açıklaması" multiline placeholder="Açıklama" lang={lang} onAiTranslate={aiTranslate} />
+  );
+
+  // Alan elemanları tek kez kurulur; sunumlar yalnız YERLEŞTİRİR (web `content`, mobil `name`+`description`).
   const fields: ProductFormFields = {
     image: <ProductImageField product={editing ? product : null} />,
-    name: <FormLocalizedText control={control} name="name" label="Ürün adı" required placeholder="Ürün adı" lang={lang} onAiTranslate={aiTranslate} />,
-    category: <FormSelect control={control} name="categoryId" label="Kategori" required placeholder="Kategori seç" options={categories.map((c) => ({ value: c.id, label: resolveLocalizedText(c.name, lang) }))} />,
+    name: nameField(),
+    description: descriptionField(),
+    content: (
+      <LocaleCard title="İçerik" completenessOf={form.watch('name')}>
+        {(lang) => (
+          <>
+            {nameField(lang)}
+            {descriptionField(lang)}
+          </>
+        )}
+      </LocaleCard>
+    ),
+    category: <FormSelect control={control} name="categoryId" label="Kategori" required placeholder="Kategori seç" options={categories.map((c) => ({ value: c.id, label: resolveLocalizedText(c.name) }))} />,
     vat: <FormSegment control={control} name="vatRate" label="KDV" required options={[{ key: '5.5', label: '%5,5' }, { key: '20', label: '%20' }]} />,
     dateType: <FormSegment control={control} name="dateType" label="Son tarih tipi" required options={[{ key: 'DLC', label: 'DLC · güvenlik' }, { key: 'DDM', label: 'DDM · kalite' }]} />,
     shelfLife: <FormNumber control={control} name="shelfLifeDays" label="Toplam raf ömrü (gün)" integer placeholder="ör. 180" />,
-    description: <FormLocalizedText control={control} name="description" label="Ürün açıklaması" multiline placeholder="Açıklama" lang={lang} onAiTranslate={aiTranslate} />,
-    allergens: <FormMultiSelect control={control} name="allergens" label="Alerjenler" labelAside="AB 14 listesinden seçilir" options={ProductAllergenEnum.options.map((a) => ({ value: a, label: resolveLocalizedText(ALLERGEN_LABELS[a], lang) }))} addLabel="+ alerjen seç" searchPlaceholder="Alerjen ara…" />,
+    allergens: <FormMultiSelect control={control} name="allergens" label="Alerjenler" labelAside="AB 14 listesinden seçilir" options={ProductAllergenEnum.options.map((a) => ({ value: a, label: resolveLocalizedText(ALLERGEN_LABELS[a]) }))} addLabel="+ alerjen seç" searchPlaceholder="Alerjen ara…" />,
     variants: <VariantEditor control={control} />,
     shippable: <FormSwitch control={control} name="shippable" label="Kargo izni" />,
-    isActive: <FormSwitch control={control} name="isActive" label="Satışta (aktif)" />,
     autoPrice: <FormSwitch control={control} name="autoPrice" label="Otomatik fiyat" />,
     margin: <FormNumber control={control} name="targetMarginPercent" label="Hedef marj (%)" placeholder="ör. 42" />,
     priceNote: (
@@ -91,27 +112,16 @@ export function ProductFormDialog({ mode, product, categories, device, onClose }
     ),
   };
 
-  const headerAction = (
-    <div className="flex items-center gap-2">
-      {device !== 'mobile' ? (
-        <span className="font-ops-display text-[10px] font-medium uppercase tracking-[0.08em] text-ops-muted">İçerik dili</span>
-      ) : null}
-      <LocaleTabs value={lang} onChange={setLang} />
-    </div>
-  );
-
+  // Alt bar SOL tarafı = aksiyon bölgesi (zorunlu-alan metni değil): satışa açma kararı kaydetmenin
+  // hemen yanında durur — katalog/paket dialoglarıyla aynı desen.
   const footer = (
-    <>
-      <span className="mr-auto font-ops-body text-[11.5px]">
-        {error ? <span className="text-ops-red">{error}</span> : <span className="text-ops-muted">Zorunlu: ad (TR), kategori, KDV, tarih tipi</span>}
-      </span>
-      <Button variant="secondary" onClick={onClose} disabled={formState.isSubmitting}>
-        İptal
-      </Button>
-      <Button variant="primary" type="submit" form={FORM_ID} disabled={formState.isSubmitting}>
-        {formState.isSubmitting ? 'Kaydediliyor…' : 'Kaydet'}
-      </Button>
-    </>
+    <DialogFooter
+      formId={FORM_ID}
+      onCancel={onClose}
+      submitting={formState.isSubmitting}
+      error={error}
+      actions={<FormSwitch control={control} name="isActive" label="Satışta (aktif)" bare />}
+    />
   );
 
   return (
@@ -121,7 +131,6 @@ export function ProductFormDialog({ mode, product, categories, device, onClose }
       maxWidth={device === 'mobile' ? 520 : 1180}
       title={editing ? 'Ürün düzenle' : 'Yeni ürün'}
       subtitle={editing ? (resolveLocalizedText(product.name) || 'Ürün') : 'Zorunlu alanları doldurun; beyanlar sonradan tamamlanabilir'}
-      headerAction={headerAction}
       footer={footer}
     >
       <form id={FORM_ID} onSubmit={onSubmit}>

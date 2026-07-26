@@ -3,9 +3,9 @@ import type { ProductFormFields } from './product-form-types';
 // Ürün formu — MASAÜSTÜ sunumu (Sapma 3).
 //   ANA ALAN (sol): üst [görsel (geniş) | içerik: ad · açıklama · kategori · (tarih | raf)] +
 //     ALTINDA Varyantlar (tam genişlik).
-//   SAĞ RAIL (dar, boydan boya): üst küme (Kargo · Satışta · Otomatik fiyat · KDV · Hedef marj) DOĞAL
-//     yükseklikte + EN ALTTA Alerjenler. Üst küme auto-height → içindeki toggle kartları (ToggleField'de
-//     flex-1) rail'in boş dikey alanına yayılıp UZAMAZ.
+//   SAĞ RAIL (dar): tek küme — Kargo · Satışta · Otomatik fiyat · KDV · Hedef marj · Alerjenler; akış
+//     sırasında ve DOĞAL yükseklikte (Alerjenler marjın hemen altında, rail'in dibine YASLANMAZ).
+//     Toggle kartları sabit (ToggleField'de flex-none) → rail gerilse bile boş alana yayılıp UZAMAZLAR.
 // Yalnız yerleştirir — alan elemanları kapta (product-form-dialog) kurulur, burada tekrarlanmaz.
 
 export function ProductFormDesktop({ fields }: { fields: ProductFormFields }) {
@@ -18,8 +18,8 @@ export function ProductFormDesktop({ fields }: { fields: ProductFormFields }) {
           <div className="pr-6">{fields.image}</div>
           <div className="flex flex-col gap-5 border-l border-ops-line pl-7">
             {fields.category}
-            {fields.name}
-            {fields.description}
+            {/* Çok dilli içerik (ad + açıklama) tek dil kartında — dil sekmesi kartın başlığında */}
+            {fields.content}
             <div className="grid grid-cols-2 gap-2.5">
               {fields.dateType}
               {fields.shelfLife}
@@ -31,18 +31,13 @@ export function ProductFormDesktop({ fields }: { fields: ProductFormFields }) {
         <div className="mt-8 border-t border-ops-line pt-6">{fields.variants}</div>
       </div>
 
-      {/* Sağ rail — dar, boydan boya */}
-      <div className="flex h-full flex-col border-l border-ops-line pl-7">
-        {/* Üst küme: auto-height → komponentler uzamaz */}
-        <div className="flex flex-col gap-4">
-          {fields.shippable}
-          {fields.isActive}
-          {fields.autoPrice}
-          {fields.vat}
-          {fields.margin}
-        </div>
-        {/* Alerjenler — rail'in dibinde */}
-        <div className="mt-auto">{fields.allergens}</div>
+      {/* Sağ rail — dar; tek akış, auto-height → komponentler uzamaz */}
+      <div className="flex flex-col gap-4 border-l border-ops-line pl-7">
+        {fields.shippable}
+        {fields.autoPrice}
+        {fields.vat}
+        {fields.margin}
+        {fields.allergens}
       </div>
     </div>
   );

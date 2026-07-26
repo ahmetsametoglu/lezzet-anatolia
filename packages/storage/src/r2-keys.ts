@@ -3,7 +3,8 @@
  * DB RELATIVE key tutar; prefix (dev/prod) R2 çağrısında eklenir. Artımlı: yeni klasörler
  * (temalar, siparişler, kargo etiketi…) ilgili özellikleriyle eklenir.
  *
- *   catalog/products/{slug}.{ext}   ürün katalog görseli (ürüne bağlı TEK görsel)
+ *   catalog/products/{slug}.{ext}      ürün katalog görseli (ürüne bağlı TEK görsel)
+ *   catalog/collections/{slug}.{ext}   koleksiyon kapak görseli (paylaşım/OG kartı)
  */
 const sanitize = (s: string): string =>
   s.replace(/[^a-zA-Z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').toLowerCase();
@@ -22,4 +23,8 @@ export const r2Keys = {
    */
   productImage: (slug: string, sourceFilename: string): string =>
     `catalog/products/${sanitize(slug)}.${extOf(sourceFilename)}`,
+
+  /** Koleksiyon kapak görseli — aynı deterministik desen (slug'a bağlı, timestamp yok). */
+  collectionImage: (slug: string, sourceFilename: string): string =>
+    `catalog/collections/${sanitize(slug)}.${extOf(sourceFilename)}`,
 } as const;

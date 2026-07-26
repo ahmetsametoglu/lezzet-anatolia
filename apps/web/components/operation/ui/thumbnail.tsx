@@ -11,19 +11,25 @@ interface ThumbnailProps {
   alt: string;
   /** Sabit kenar (px). `fluid` verildiğinde yok sayılır. */
   size?: number;
-  /** Kapsayıcıyı doldur: `w-full` + kare (form görsel önizlemesi gibi). */
+  /** Kapsayıcıyı doldur: `w-full` + `ratio` en-boy oranı (form görsel önizlemesi gibi). */
   fluid?: boolean;
+  /**
+   * `fluid` en-boy oranı (genişlik ÷ yükseklik); varsayılan 1 = kare. Görsel `object-cover` ile
+   * kırpıldığı için oran ÖNEMLİ: kutu oranı kaynaktan çok saparsa görselin büyük kısmı kesilir.
+   * Ör. paylaşım (OG) kartı önizlemesi ≈ 1.91 → kartta gerçekte ne görüneceğini gösterir.
+   */
+  ratio?: number;
   iconSize?: number;
   className?: string;
 }
 
-export function Thumbnail({ src, alt, size, fluid = false, iconSize, className }: ThumbnailProps) {
+export function Thumbnail({ src, alt, size, fluid = false, ratio = 1, iconSize, className }: ThumbnailProps) {
   return (
     <div
-      style={fluid ? undefined : { width: size, height: size }}
+      style={fluid ? { aspectRatio: ratio } : { width: size, height: size }}
       className={[
         'grid place-items-center overflow-hidden rounded-[10px] border border-[#e0e2da] bg-[#e9eae4] text-[#b3b7ac]',
-        fluid ? 'aspect-square w-full' : 'flex-none',
+        fluid ? 'w-full' : 'flex-none',
         className,
       ]
         .filter(Boolean)

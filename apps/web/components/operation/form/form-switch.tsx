@@ -9,10 +9,16 @@ interface FormSwitchProps<T extends FieldValues> {
   control: Control<T, any, any>;
   name: FieldPath<T>;
   label: string;
+  /** Çerçevesiz/kompakt satır içi kontrol (ör. dialog alt barı) — kart yerine. */
+  bare?: boolean;
 }
 
-export function FormSwitch<T extends FieldValues>({ control, name, label }: FormSwitchProps<T>) {
+export function FormSwitch<T extends FieldValues>({ control, name, label, bare }: FormSwitchProps<T>) {
   return (
-    <Controller control={control} name={name} render={({ field }) => <ToggleField label={label} on={Boolean(field.value)} onChange={field.onChange} />} />
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => <ToggleField label={label} on={Boolean(field.value)} onChange={field.onChange} bare={bare} />}
+    />
   );
 }

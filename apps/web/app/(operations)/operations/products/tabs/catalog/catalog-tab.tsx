@@ -111,7 +111,7 @@ export function CatalogTab({ kind, rows, products }: CatalogTabProps) {
         }
       />
 
-      {creating ? <CatalogFormDialog kind={kind} onClose={() => setCreating(false)} /> : null}
+      {creating ? <CatalogFormDialog kind={kind} products={products} onClose={() => setCreating(false)} /> : null}
       {editing ? (
         <CatalogFormDialog
           kind={kind}
@@ -119,9 +119,12 @@ export function CatalogTab({ kind, rows, products }: CatalogTabProps) {
           edit={{
             id: editing.id,
             name: editing.name,
+            slug: editing.slug,
             isActive: editing.isActive,
-            // Üyelik yalnız koleksiyon satırında vardır (kategoride alan yok).
-            productIds: 'productIds' in editing ? editing.productIds : undefined,
+            // Açıklama/kapak/üyelik yalnız koleksiyon satırında vardır (kategoride bu alanlar yok).
+            description: 'description' in editing ? editing.description : null,
+            imageUrl: 'imageUrl' in editing ? editing.imageUrl : null,
+            productIds: 'productIds' in editing ? editing.productIds : [],
           }}
           onClose={() => setEditing(null)}
         />

@@ -9,8 +9,8 @@ import { SearchInput } from '@/components/operation/ui/search-input';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { Toggle, ToggleField } from '@/components/operation/form/toggle';
 import { resolveLocalizedText } from '@lezzet/types';
-import { updateProductNameAction } from './tabs/product/actions';
-import { ImageUploadButton } from './tabs/product/image-upload-button';
+import { ImageUploadButton } from '@/components/operation/ui/image-upload-button';
+import { updateProductNameAction, uploadProductImageAction } from './tabs/product/actions';
 import { productStatus, type ProductView, type ProductsViewProps } from './products-types';
 
 // Ürünler — mobil: sahada en sık iş. Liste (arama · süzgeç · aktiflik) + satıra dokununca hızlı
@@ -64,7 +64,7 @@ function QuickEditSheet({
         </div>
 
         <ImageUploadButton
-          productId={product.id}
+          upload={(form) => uploadProductImageAction(product.id, form)}
           camera
           className="flex items-center justify-center gap-2 rounded-[11px] border border-[#cdd8b6] bg-[#f2f6ea] px-3 py-3 font-ops-display text-[12.5px] font-semibold text-ops-olive-dark disabled:opacity-60"
         >

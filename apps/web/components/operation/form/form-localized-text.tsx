@@ -6,7 +6,7 @@ import type { LocalizedText } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 import { FieldShell } from './field-shell';
 import { Input, Textarea } from './input';
-import { LocaleTabs } from './locale-tabs';
+import { LocaleTabs, filledLocales } from './locale-tabs';
 
 /**
  * RHF çok dilli metin alanı (operasyon) — tek satır/çok satır + opsiyonel "✦ AI çeviri". Değer
@@ -88,10 +88,6 @@ export function FormLocalizedText<T extends FieldValues>({ control, name, label,
         const aside: ReactNode = stacked || lang === 'tr' || !onAiTranslate ? undefined : aiButton(() => runAi((s) => ({ ...value, ...s })));
 
         const placeholderText = placeholder ? `${placeholder} (${lang.toUpperCase()})…` : undefined;
-        const filled = LOCALES.reduce<Partial<Record<Locale, boolean>>>((acc, l) => {
-          acc[l] = Boolean(value[l]?.trim());
-          return acc;
-        }, {});
 
         return (
           <FieldShell label={label} required={required} labelAside={aside} error={fieldState.error?.message}>
@@ -121,7 +117,7 @@ export function FormLocalizedText<T extends FieldValues>({ control, name, label,
               </div>
             ) : (
               <>
-                {controlled ? null : <LocaleTabs value={lang} onChange={setLangState} filled={filled} />}
+                {controlled ? null : <LocaleTabs value={lang} onChange={setLangState} filled={filledLocales(value)} />}
                 {multiline ? (
                   <Textarea value={value[lang] ?? ''} onChange={(e) => setLangValue(e.target.value)} rows={rows} placeholder={placeholderText} onBlur={field.onBlur} />
                 ) : (

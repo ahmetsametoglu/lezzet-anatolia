@@ -1,8 +1,9 @@
 'use client';
 
 import { resolveLocalizedText } from '@lezzet/types';
+import { ImageUploadButton } from '@/components/operation/ui/image-upload-button';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
-import { ImageUploadButton } from './image-upload-button';
+import { uploadProductImageAction } from './actions';
 import type { ProductView } from '../../products-types';
 
 // Ürün formu görsel bloğu: büyük önizleme (Thumbnail fluid → sütunu doldurur). Düzenlemede "Görseli
@@ -26,7 +27,7 @@ export function ProductImageField({ product }: { product: ProductView | null }) 
       <Thumbnail src={product.imageUrl} alt={resolveLocalizedText(product.name)} fluid iconSize={48} />
       {/* Örtü buton: normalde şeffaf, hover'da koyu örtü + yazı belirir; tıklama dosya seçtirir. */}
       <ImageUploadButton
-        productId={product.id}
+        upload={(form) => uploadProductImageAction(product.id, form)}
         className="absolute inset-0 flex cursor-pointer items-center justify-center bg-[rgba(30,33,27,0)] font-ops-display text-[12.5px] font-semibold text-transparent transition-colors duration-150 group-hover:bg-[rgba(30,33,27,0.5)] group-hover:text-white"
       >
         {product.imageUrl ? 'Görseli değiştir' : 'Görsel yükle'}
