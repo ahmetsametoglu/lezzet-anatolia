@@ -1,5 +1,5 @@
 import { FormSection } from './form-section';
-import type { ProductFormFields } from './product-form-dialog';
+import type { ProductFormFields } from './product-form-types';
 
 // Ürün formu — MOBİL sunumu (Sapma 3): tek sütun, alanlar alt alta (uygulama hissi). Görsel üstte
 // (ortalanmış, ölçülü), sonra Temel → Açıklama → Yasal beyan → Varyantlar → Durum/fiyat. Yalnız

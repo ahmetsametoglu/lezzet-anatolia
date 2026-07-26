@@ -1,4 +1,4 @@
-import type { ProductFormFields } from './product-form-dialog';
+import type { ProductFormFields } from './product-form-types';
 
 // Ürün formu — MASAÜSTÜ sunumu (Sapma 3).
 //   ANA ALAN (sol): üst [görsel (geniş) | içerik: ad · açıklama · kategori · (tarih | raf)] +

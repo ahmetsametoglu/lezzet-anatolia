@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,13 +16,15 @@ import { FormSegment } from '@/components/operation/form/form-segment';
 import { FormSwitch } from '@/components/operation/form/form-switch';
 import { FormMultiSelect } from '@/components/operation/form/form-multi-select';
 import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
-import { createProductAction, suggestTranslationAction, updateProductAction } from '../actions/actions';
+import { suggestTranslationAction } from '../../actions/translate';
+import { createProductAction, updateProductAction } from './actions';
 import { ProductImageField } from './product-image-field';
 import { VariantEditor } from './variant-editor';
 import { ProductFormDesktop } from './product-form.desktop';
 import { ProductFormMobile } from './product-form.mobile';
 import { ProductFormSchema, buildDefaults, toActionPayload, type ProductFormValues } from './product-form-schema';
-import type { CategoryView, ProductView } from '../products-types';
+import type { ProductFormFields } from './product-form-types';
+import type { CategoryView, ProductView } from '../../products-types';
 
 // Ürün oluştur/düzenle — KAP (container): RHF + zodResolver, action'lar, Dialog kabuğu ve footer burada.
 // Dil TEK bağlam: header'daki LocaleTabs form genelini yönetir (name/description sekmesiz, o dili gösterir).
@@ -30,24 +32,6 @@ import type { CategoryView, ProductView } from '../products-types';
 // (.desktop), mobil tek sütun (.mobile). Aynı alanlar, farklı düzen → tekrar yok.
 
 const FORM_ID = 'product-form';
-
-/** Kurulmuş alan elemanları — .desktop/.mobile sunumları bunları yalnız YERLEŞTİRİR (tek kaynak). */
-export interface ProductFormFields {
-  image: ReactNode;
-  name: ReactNode;
-  category: ReactNode;
-  vat: ReactNode;
-  dateType: ReactNode;
-  shelfLife: ReactNode;
-  description: ReactNode;
-  allergens: ReactNode;
-  variants: ReactNode;
-  shippable: ReactNode;
-  isActive: ReactNode;
-  autoPrice: ReactNode;
-  margin: ReactNode;
-  priceNote: ReactNode;
-}
 
 interface ProductFormDialogProps {
   mode: 'create' | 'edit';

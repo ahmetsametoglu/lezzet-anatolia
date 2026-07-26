@@ -48,6 +48,16 @@ export class CollectionService extends BaseDbService<Collection, CollectionInser
     return this.update({ id, isActive });
   }
 
+  /** Ad ve/veya aktiflik günceller; slug SABİT kalır (paylaşım linki korunur). */
+  async edit(id: string, input: { name?: LocalizedText; isActive?: boolean }): Promise<Collection> {
+    return this.update({ id, ...input });
+  }
+
+  /** Sürükle-bırak sırası: verilen id dizisine göre sortOrder'ı 0..n-1 yazar. */
+  async reorder(orderedIds: string[]): Promise<void> {
+    return this.reorderBy(orderedIds, 'sortOrder');
+  }
+
   // ── Üyelik (koleksiyon = ürün listesi, DOMAIN §13). product_collections junction servisine devreder. ──
 
   /** Koleksiyona ürün ekler (idempotent). */

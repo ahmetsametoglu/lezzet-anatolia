@@ -3,7 +3,7 @@
 import { resolveLocalizedText } from '@lezzet/types';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { ImageUploadButton } from './image-upload-button';
-import type { ProductView } from '../products-types';
+import type { ProductView } from '../../products-types';
 
 // Ürün formu görsel bloğu: büyük önizleme (Thumbnail fluid → sütunu doldurur). Düzenlemede "Görseli
 // değiştir" yalnız HOVER'da resmin üzerinde koyu örtüyle belirir (hep durmaz). Yeni üründe

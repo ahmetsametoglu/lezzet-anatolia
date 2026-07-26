@@ -18,6 +18,9 @@ export type ProductView = Product & {
 export type CategoryView = Category & { count: number }; // bu kategorideki ürün sayısı
 export type CollectionView = Collection & { count: number }; // koleksiyondaki ürün sayısı
 
+/** Katalog satırı — kategori ve koleksiyon aynı alanları taşır; tek tablo/dialog bunu tüketir. */
+export type CatalogRow = CategoryView | CollectionView;
+
 // ── Saf türevler (client-güvenli) — Product'tan hesaplanır, taşınmaz ──
 export function productStatus(p: { isCandidate: boolean; isActive: boolean }): ProductStatus {
   if (p.isCandidate) return 'candidate';
@@ -36,6 +39,12 @@ export interface ProductsData {
 }
 
 export type ProductTab = 'products' | 'categories' | 'collections' | 'packages';
+
+/**
+ * Katalog varlığı türü — kategori ve koleksiyon aynı düz/sıralı deseni paylaşır (çok dilli ad · slug ·
+ * sortOrder · isActive), bu yüzden tek action seti + tek dialog `kind` ile çatallanır (no-duplication).
+ */
+export type CatalogKind = 'category' | 'collection';
 
 /** Durum süzgeci: bir durum ya da 'all' (tümü). */
 export type StatusFilter = ProductStatus | 'all';

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ProductInsertSchema, ProductVariantEntrySchema, type LocalizedText } from '@lezzet/types';
-import { productStatus, type ProductView } from '../products-types';
+import { productStatus, type ProductView } from '../../products-types';
 
 // Ürün formu şeması — ProductInsertSchema'dan TÜRETİLİR (referans deseni: .omit().extend()). Formda
 // olmayan alanlar çıkarılır (slug servis türetir; imageKey ayrı yükleme; isCandidate/sortOrder yok).

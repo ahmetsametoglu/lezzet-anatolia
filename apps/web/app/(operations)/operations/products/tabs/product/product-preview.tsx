@@ -5,7 +5,7 @@ import { AlertIcon, CheckIcon, InfoIcon } from '@/components/operation/ui/icons'
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { resolveLocalizedText } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
-import { filledContentLangs, productStatus, type ProductView } from '../products-types';
+import { filledContentLangs, productStatus, type ProductView } from '../../products-types';
 
 // Seçili ürün paneli — Ürünler ekranının sağ sütunu. SALT görünüm: türetilmiş bilgi gösterir,
 // düzenleme modal'da (Düzenle) yapılır. Fiyat/stok burada düzenlenmez, kendi ekranlarına köprü verir.

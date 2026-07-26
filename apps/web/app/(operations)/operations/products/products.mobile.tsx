@@ -9,8 +9,8 @@ import { SearchInput } from '@/components/operation/ui/search-input';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { Toggle, ToggleField } from '@/components/operation/form/toggle';
 import { resolveLocalizedText } from '@lezzet/types';
-import { updateProductNameAction } from './actions/actions';
-import { ImageUploadButton } from './components/image-upload-button';
+import { updateProductNameAction } from './tabs/product/actions';
+import { ImageUploadButton } from './tabs/product/image-upload-button';
 import { productStatus, type ProductView, type ProductsViewProps } from './products-types';
 
 // Ürünler — mobil: sahada en sık iş. Liste (arama · süzgeç · aktiflik) + satıra dokununca hızlı

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { uploadProductImageAction } from '../actions/actions';
+import { uploadProductImageAction } from './actions';
 
 // Ürün görseli yükleme — gizli file input + tetikleyici. Web modalında "Görsel değiştir", mobilde
 // `capture` ile "Kameradan çek". Tek bileşen (no-duplication). Yükleme R2'ye action ile; sonra refresh.

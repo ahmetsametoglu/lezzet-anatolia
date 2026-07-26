@@ -44,6 +44,11 @@ export class CategoryService extends BaseDbService<Category, CategoryInsert, Cat
     return this.update({ id, isActive });
   }
 
+  /** Ad ve/veya aktiflik günceller; slug SABİT kalır (URL korunur, addan yeniden türetilmez). */
+  async edit(id: string, input: { name?: LocalizedText; isActive?: boolean }): Promise<Category> {
+    return this.update({ id, ...input });
+  }
+
   /** Sürükle-bırak sırası: verilen id dizisine göre sortOrder'ı 0..n-1 yazar. */
   async reorder(orderedIds: string[]): Promise<void> {
     return this.reorderBy(orderedIds, 'sortOrder');
