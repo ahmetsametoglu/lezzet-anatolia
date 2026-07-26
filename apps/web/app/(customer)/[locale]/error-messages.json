@@ -1,0 +1,59 @@
+{
+  "tr": {
+    "nav": { "catalog": "Katalog", "packages": "Paketler", "deals": "Fırsatlar", "discover": "Keşif", "pro": "Professionnels" },
+    "announcement": "❄ Soğuk zincirle teslim",
+    "home": "Ana sayfa",
+    "notFound": {
+      "eyebrow": "404 · Sayfa bulunamadı",
+      "title": "Aradığınız sayfa sofrada yok",
+      "description": "Bağlantı eskimiş ya da yazım hatalı olabilir. Kataloğumuz yerinde duruyor — buradan devam edin.",
+      "primaryCta": "Kataloğa dön"
+    },
+    "serverError": {
+      "eyebrow": "Bir şeyler ters gitti",
+      "title": "Mutfakta küçük bir aksilik oldu",
+      "description": "Sorun bizde, sizde değil. Birkaç saniye sonra yeniden denerseniz büyük olasılıkla yolunda gidecek.",
+      "retryCta": "Yeniden dene",
+      "cart": "🧺 Sepetiniz olduğu gibi duruyor",
+      "orders": "✓ Verdiğiniz siparişler etkilenmedi"
+    }
+  },
+  "fr": {
+    "nav": { "catalog": "Catalogue", "packages": "Paniers", "deals": "Offres", "discover": "Découvrir", "pro": "Professionnels" },
+    "announcement": "❄ Livraison en chaîne du froid",
+    "home": "Accueil",
+    "notFound": {
+      "eyebrow": "404 · Page introuvable",
+      "title": "La page que vous cherchez n'est pas au menu",
+      "description": "Le lien est peut-être obsolète ou mal orthographié. Notre catalogue est bien là — continuez ici.",
+      "primaryCta": "Retour au catalogue"
+    },
+    "serverError": {
+      "eyebrow": "Une erreur s'est produite",
+      "title": "Un petit contretemps en cuisine",
+      "description": "Le problème vient de nous, pas de vous. Réessayez dans quelques secondes, tout devrait rentrer dans l'ordre.",
+      "retryCta": "Réessayer",
+      "cart": "🧺 Votre panier est intact",
+      "orders": "✓ Vos commandes ne sont pas affectées"
+    }
+  },
+  "de": {
+    "nav": { "catalog": "Katalog", "packages": "Pakete", "deals": "Angebote", "discover": "Entdecken", "pro": "Professionnels" },
+    "announcement": "❄ Lieferung per Kühlkette",
+    "home": "Startseite",
+    "notFound": {
+      "eyebrow": "404 · Seite nicht gefunden",
+      "title": "Die gesuchte Seite ist nicht im Angebot",
+      "description": "Der Link ist vielleicht veraltet oder falsch geschrieben. Unser Katalog ist da — machen Sie hier weiter.",
+      "primaryCta": "Zurück zum Katalog"
+    },
+    "serverError": {
+      "eyebrow": "Etwas ist schiefgelaufen",
+      "title": "Ein kleines Missgeschick in der Küche",
+      "description": "Das Problem liegt bei uns, nicht bei Ihnen. Versuchen Sie es in ein paar Sekunden erneut, meist läuft dann alles wieder rund.",
+      "retryCta": "Erneut versuchen",
+      "cart": "🧺 Ihr Warenkorb bleibt unverändert",
+      "orders": "✓ Ihre Bestellungen sind nicht betroffen"
+    }
+  }
+}

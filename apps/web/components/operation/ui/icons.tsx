@@ -215,3 +215,24 @@ export function CameraIcon({ size = 17 }: { size?: number }) {
     </Svg>
   );
 }
+
+/** Aramada-bulunamadı ikonu — 404 ekranı ("bu adreste bir şey yok"). */
+export function SearchOffIcon({ size = 21 }: { size?: number }) {
+  return (
+    <Svg size={size} strokeWidth={2}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+      <path d="M8.7 8.7l4.6 4.6m0-4.6-4.6 4.6" />
+    </Svg>
+  );
+}
+
+/** Kopyala ikonu — referans kodunu panoya al (500 ekranı). */
+export function CopyIcon({ size = 12 }: { size?: number }) {
+  return (
+    <Svg size={size} strokeWidth={2}>
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 15V5a2 2 0 0 1 2-2h8" />
+    </Svg>
+  );
+}

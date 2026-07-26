@@ -28,8 +28,8 @@ interface ButtonClassOptions {
   className?: string;
 }
 
-// Buton-olmayan öğelere (Link/span) aynı görünümü vermek için — dışa ihtiyaç olunca export edilir.
-function buttonClass({ variant = 'primary', size = 'md', fullWidth, className }: ButtonClassOptions = {}): string {
+// Buton-olmayan öğelere (Link/span) aynı görünümü vermek için (ör. hata sayfası "Panele dön" linki).
+export function buttonClass({ variant = 'primary', size = 'md', fullWidth, className }: ButtonClassOptions = {}): string {
   return [
     'inline-flex cursor-pointer items-center justify-center gap-2 rounded-ops-btn font-ops-display font-semibold outline-none transition-colors disabled:cursor-not-allowed',
     VARIANT[variant],

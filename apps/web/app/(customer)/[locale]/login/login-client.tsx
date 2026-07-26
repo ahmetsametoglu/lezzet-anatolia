@@ -1,12 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { Locale } from '@lezzet/i18n';
 import { createClient } from '@/lib/supabase/client';
 import type { Device } from '@/lib/device';
+import { useDevice } from '@/lib/use-device';
 import type { OtpResendResult, OtpVerifyResult } from '@/components/customer/auth/otp-code-input';
 import { sendEmailOtp, verifyEmailOtp } from './actions';
 import type { LoginErrors, LoginViewProps, Messages, Stage } from './login-types';
@@ -27,19 +28,6 @@ interface LoginClientProps {
   errors: LoginErrors;
   initialError?: string | null;
   device: Device;
-}
-
-/** İlk boya sunucu ipucuyla; mount sonrası viewport ölçüsüne göre düzeltilir (tek render ağacı). */
-function useDevice(initial: Device): Device {
-  const [device, setDevice] = useState<Device>(initial);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
-    const sync = () => setDevice(mq.matches ? 'mobile' : 'desktop');
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  }, []);
-  return device;
 }
 
 export function LoginClient({ next, subtitle, locale, t, errors: copyErrors, initialError = null, device }: LoginClientProps) {
