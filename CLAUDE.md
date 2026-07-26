@@ -43,6 +43,7 @@
 - **Sade ve açık yaz;** teknik terimin yanına düz Türkçe karşılığı.
 - **Petit referans:** `~/dev/petitcigogne` kanonik; işe başlamadan karşılığına bak, saptığında (ne/neden) bildir.
 - Her tasarım/modül implementinden sonra **kural-uygunluk kontrolü** yap.
+- **Dev server'ı KULLANICI yönetir** (başlatır/durdurur). Dev çalışırken `next build` **çalıştırma** — aynı `.next`'i bozar (webpack "Cannot find module './vendor-chunks/…'" runtime hataları). Doğrulamayı dev'e dokunmayan `typecheck`/`lint`/`knip`/`boundaries` ile yap; gerçek build şartsa dev'i durdurmasını iste. Bozulursa çare: `rm -rf apps/web/.next` + kullanıcı dev'i yeniden başlatır.
 
 ## 5. docs haritası
 Kurallar + kod dizilimi → `STACK` · Disiplin (migration/deploy/git) → `WORKFLOW` · İş kuralları → `DOMAIN` ·
