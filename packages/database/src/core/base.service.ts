@@ -164,6 +164,20 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     return this.dbSchema.parse(dbToApp(data));
   }
 
+  /**
+   * Verilen id sırasına göre bir sıra-alanını 0..n-1 olarak toplu yazar (sürükle-bırak sonrası).
+   * Küçük listeler için ardışık update; ilk hata fırlatılır. Alan camelCase verilir (ör. 'sortOrder').
+   */
+  protected async reorderBy(orderedIds: string[], field: string): Promise<void> {
+    if (orderedIds.length === 0) return;
+    const col = camelToSnake(field);
+    const results = await Promise.all(
+      orderedIds.map((id, index) => this.supabase.from(this.tableName).update({ [col]: index }).eq('id', id)),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) throw failed.error;
+  }
+
   // ─── Silme ───────────────────────────────────────────
 
   async delete(id: string): Promise<void> {

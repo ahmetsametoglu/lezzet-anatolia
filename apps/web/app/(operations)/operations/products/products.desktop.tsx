@@ -6,10 +6,12 @@ import { Chip } from '@/components/operation/ui/chip';
 import { PackageIcon, PlusIcon } from '@/components/operation/ui/icons';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { SearchInput } from '@/components/operation/ui/search-input';
+import { SortableList } from '@/components/operation/ui/sortable-list';
 import { Table, type Column } from '@/components/operation/ui/table';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
+import { reorderCategoriesAction } from './actions/actions';
 import { CatalogCreateDialog } from './components/catalog-create-dialog';
 import { ProductPreview } from './components/product-preview';
 import {
@@ -184,6 +186,19 @@ function categoryStatus(c: CategoryView): { label: string; tone: 'olive' | 'neut
 }
 
 function CategoriesTab({ data, onCreate }: ProductsViewProps & { onCreate: () => void }) {
+  // İyimser yerel sıra: sürüklerken anında güncellenir, action arka planda kalıcılaştırır.
+  // Sunucu verisi değişince (yeni kategori · revalidate) yerel sırayı eşitle.
+  const [ordered, setOrdered] = useState<CategoryView[]>(data.categories);
+  useEffect(() => setOrdered(data.categories), [data.categories]);
+
+  const handleReorder = async (ids: string[]) => {
+    const byId = new Map(ordered.map((c) => [c.id, c]));
+    const prev = ordered;
+    setOrdered(ids.map((id) => byId.get(id)).filter((c): c is CategoryView => Boolean(c)));
+    const { error } = await reorderCategoriesAction(ids);
+    if (error) setOrdered(prev); // başarısızsa eski sıraya geri dön
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center border-b border-ops-line-soft px-6 py-[11px]">
@@ -193,20 +208,25 @@ function CategoriesTab({ data, onCreate }: ProductsViewProps & { onCreate: () =>
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {data.categories.map((c) => {
-          const st = categoryStatus(c);
-          return (
-            <div key={c.id} className="flex items-center gap-3 border-b border-ops-line-soft px-6 py-3">
-              <span className="flex-none text-[#c9ccc3]">⠿</span>
-              <div className="flex min-w-0 flex-1 flex-col gap-px">
-                <span className="font-ops-body text-[13.5px] font-semibold text-ops-ink">{resolveLocalizedText(c.name)}</span>
-                <span className="font-ops-body text-[11px] text-ops-muted">slug: {c.slug}</span>
+        <SortableList
+          items={ordered}
+          getId={(c) => c.id}
+          onReorder={handleReorder}
+          renderItem={(c, handle) => {
+            const st = categoryStatus(c);
+            return (
+              <div className="flex items-center gap-3 border-b border-ops-line-soft px-6 py-3">
+                {handle}
+                <div className="flex min-w-0 flex-1 flex-col gap-px">
+                  <span className="font-ops-body text-[13.5px] font-semibold text-ops-ink">{resolveLocalizedText(c.name)}</span>
+                  <span className="font-ops-body text-[11px] text-ops-muted">slug: {c.slug}</span>
+                </div>
+                <span className="font-ops-mono text-[12px] text-ops-body">{c.count} ürün</span>
+                <Badge tone={st.tone}>{st.label}</Badge>
               </div>
-              <span className="font-ops-mono text-[12px] text-ops-body">{c.count} ürün</span>
-              <Badge tone={st.tone}>{st.label}</Badge>
-            </div>
-          );
-        })}
+            );
+          }}
+        />
       </div>
     </div>
   );

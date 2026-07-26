@@ -43,4 +43,9 @@ export class CategoryService extends BaseDbService<Category, CategoryInsert, Cat
   async setActive(id: string, isActive: boolean): Promise<Category> {
     return this.update({ id, isActive });
   }
+
+  /** Sürükle-bırak sırası: verilen id dizisine göre sortOrder'ı 0..n-1 yazar. */
+  async reorder(orderedIds: string[]): Promise<void> {
+    return this.reorderBy(orderedIds, 'sortOrder');
+  }
 }

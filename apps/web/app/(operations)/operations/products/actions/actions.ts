@@ -118,6 +118,18 @@ export async function createCategoryAction(name: LocalizedText): Promise<ActionR
   }
 }
 
+/** Kategori sırasını sürükle-bırak sonucuna göre kalıcılaştırır (verilen id dizisi = yeni sıra). */
+export async function reorderCategoriesAction(orderedIds: string[]): Promise<ActionResult> {
+  try {
+    await requireStaff();
+    await new CategoryService(serviceDb()).reorder(orderedIds);
+    revalidatePath(PATH);
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
 /** Yeni koleksiyon (slug servis türetir). */
 export async function createCollectionAction(name: LocalizedText): Promise<ActionResult> {
   try {
