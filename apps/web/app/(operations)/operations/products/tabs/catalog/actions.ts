@@ -36,11 +36,27 @@ export async function createCatalogAction(kind: CatalogKind, name: LocalizedText
   }
 }
 
-/** Kategori/koleksiyonu düzenler (çok dilli ad + aktiflik); slug SABİT kalır. */
-export async function updateCatalogAction(kind: CatalogKind, id: string, input: { name: LocalizedText; isActive: boolean }): Promise<ActionResult> {
+/**
+ * Kategori/koleksiyonu düzenler (çok dilli ad + aktiflik); slug SABİT kalır. `productIds` yalnız
+ * KOLEKSİYONDA anlamlıdır (koleksiyon = ürün listesi, DOMAIN §13): verilirse üyelik ona eşitlenir.
+ * Tek kaydet = ad + aktiflik + üyelik (tek tur, tek revalidate).
+ */
+export async function updateCatalogAction(
+  kind: CatalogKind,
+  id: string,
+  input: { name: LocalizedText; isActive: boolean; productIds?: string[] },
+): Promise<ActionResult> {
   try {
     await requireStaff();
-    await catalogService(kind).edit(id, { name: requireCatalogName(kind, input.name), isActive: input.isActive });
+    const db = serviceDb();
+    const name = requireCatalogName(kind, input.name);
+    if (kind === 'category') {
+      await new CategoryService(db).edit(id, { name, isActive: input.isActive });
+    } else {
+      const svc = new CollectionService(db);
+      await svc.edit(id, { name, isActive: input.isActive });
+      if (input.productIds) await svc.setProducts(id, input.productIds);
+    }
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
   } catch (err) {

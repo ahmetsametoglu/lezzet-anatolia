@@ -6,7 +6,7 @@ import { Table, type Column } from '@/components/operation/ui/table';
 import { resolveLocalizedText } from '@lezzet/types';
 import { reorderCatalogAction } from './actions';
 import { CatalogFormDialog } from './catalog-form-dialog';
-import type { CatalogKind, CatalogRow } from '../../products-types';
+import type { CatalogKind, CatalogRow, ProductView } from '../../products-types';
 
 // Katalog sekmesi — Kategoriler VE Koleksiyonlar. İkisi de aynı düz/sıralı desen (çok dilli ad · slug ·
 // sortOrder · isActive + ürün sayısı): tek tablo, tek sıralama akışı, tek dialog; yalnız `kind` ve
@@ -65,9 +65,11 @@ const CATALOG_COPY: Record<CatalogKind, { hint: string; createLabel: string; emp
 interface CatalogTabProps {
   kind: CatalogKind;
   rows: CatalogRow[];
+  /** Üyelik düzenlemesi için ürün havuzu — yalnız koleksiyonda verilir. */
+  products?: ProductView[];
 }
 
-export function CatalogTab({ kind, rows }: CatalogTabProps) {
+export function CatalogTab({ kind, rows, products }: CatalogTabProps) {
   const copy = CATALOG_COPY[kind];
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<CatalogRow | null>(null);
@@ -113,7 +115,14 @@ export function CatalogTab({ kind, rows }: CatalogTabProps) {
       {editing ? (
         <CatalogFormDialog
           kind={kind}
-          edit={{ id: editing.id, name: editing.name, isActive: editing.isActive }}
+          products={products}
+          edit={{
+            id: editing.id,
+            name: editing.name,
+            isActive: editing.isActive,
+            // Üyelik yalnız koleksiyon satırında vardır (kategoride alan yok).
+            productIds: 'productIds' in editing ? editing.productIds : undefined,
+          }}
           onClose={() => setEditing(null)}
         />
       ) : null}

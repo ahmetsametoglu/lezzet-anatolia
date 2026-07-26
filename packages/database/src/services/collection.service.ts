@@ -74,4 +74,9 @@ export class CollectionService extends BaseDbService<Collection, CollectionInser
   async productIds(collectionId: string): Promise<string[]> {
     return this.links.productIdsIn(collectionId);
   }
+
+  /** Üyeliği verilen listeye eşitler (ekleme/çıkarmayı fark alarak yapar). */
+  async setProducts(collectionId: string, productIds: string[]): Promise<void> {
+    await this.links.setProductsIn(collectionId, productIds);
+  }
 }

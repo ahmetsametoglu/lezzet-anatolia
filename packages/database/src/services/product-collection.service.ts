@@ -34,4 +34,18 @@ export class ProductCollectionService extends BaseDbService<ProductCollectionRow
     const rows = await this.getAll({ collectionId });
     return rows.map((row) => row.productId);
   }
+
+  /**
+   * Üyeliği verilen listeye EŞİTLER: eksikleri bağlar, fazlaları çözer. Fark alınarak çalışır —
+   * "hepsini sil, baştan ekle" yapılmaz (dokunulmayan bağların kimliği/zaman damgası korunur).
+   */
+  async setProductsIn(collectionId: string, productIds: string[]): Promise<void> {
+    const current = await this.productIdsIn(collectionId);
+    const currentSet = new Set(current);
+    const nextSet = new Set(productIds);
+    await Promise.all([
+      ...productIds.filter((id) => !currentSet.has(id)).map((id) => this.link(collectionId, id)),
+      ...current.filter((id) => !nextSet.has(id)).map((id) => this.unlink(collectionId, id)),
+    ]);
+  }
 }

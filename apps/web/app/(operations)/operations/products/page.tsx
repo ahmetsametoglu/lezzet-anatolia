@@ -67,7 +67,11 @@ export default async function ProductsPage() {
   }
 
   const categoryViews: CategoryView[] = categories.map((c) => ({ ...c, count: countByCategory.get(c.id) ?? 0 }));
-  const collectionViews: CollectionView[] = collections.map((c, i) => ({ ...c, count: (collectionMembers[i] ?? []).length }));
+  // Üyelik id'leri view-model'de taşınır (üyelik dialogu ön-doldurur); count ondan türer.
+  const collectionViews: CollectionView[] = collections.map((c, i) => {
+    const productIds = collectionMembers[i] ?? [];
+    return { ...c, productIds, count: productIds.length };
+  });
 
   const device = await detectDevice();
 

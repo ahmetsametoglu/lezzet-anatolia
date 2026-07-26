@@ -46,7 +46,7 @@ export function ProductsDesktop(props: ProductsViewProps) {
 
       {tab === 'products' && <ProductsTab {...props} />}
       {tab === 'categories' && <CatalogTab kind="category" rows={data.categories} />}
-      {tab === 'collections' && <CatalogTab kind="collection" rows={data.collections} />}
+      {tab === 'collections' && <CatalogTab kind="collection" rows={data.collections} products={data.products} />}
       {tab === 'packages' && <PackagesTab />}
     </div>
   );

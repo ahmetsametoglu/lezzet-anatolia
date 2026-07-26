@@ -16,7 +16,10 @@ export type ProductView = Product & {
 };
 
 export type CategoryView = Category & { count: number }; // bu kategorideki ürün sayısı
-export type CollectionView = Collection & { count: number }; // koleksiyondaki ürün sayısı
+// Koleksiyon = adı olan ürün listesi (DOMAIN §13) → üyelik id'leri view-model'in parçası; üyelik
+// düzenleme dialogu bunlarla ön-dolar. `count` bağımsız bir sayaç DEĞİL, productIds.length'ten türer
+// (RSC'de bir kez); katalog tablosunun ortak alanı olduğu için ayrıca taşınır.
+export type CollectionView = Collection & { count: number; productIds: string[] };
 
 /** Katalog satırı — kategori ve koleksiyon aynı alanları taşır; tek tablo/dialog bunu tüketir. */
 export type CatalogRow = CategoryView | CollectionView;
