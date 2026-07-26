@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; color:#22251f; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-wrap:wrap;gap:48px;padding:44px;align-items:flex-start">
+
+  <div style="width:1360px;display:flex;flex-direction:column;gap:14px">
+    <span style="font:600 15px 'Space Grotesk';color:#22251f">Operasyon — Genel Sayfalar · Admin · 404 (sayfa bulunamadı)</span>
+
+    <div data-screen-label="404 Admin" style="width:100%;box-sizing:border-box;height:560px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="yok" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px">
+          <span style="font:600 17px 'Space Grotesk'">Sayfa bulunamadı</span>
+          <span style="font:500 11px 'IBM Plex Mono';color:#8b9086;background:#f2f3ee;border:1px solid #e6e7e1;border-radius:6px;padding:3px 8px">404</span>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;text-align:center">
+          <span style="width:44px;height:44px;border-radius:10px;background:#eef0ea;color:#6a7065;display:grid;place-items:center">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path><path d="M8.7 8.7l4.6 4.6m0-4.6-4.6 4.6"></path></svg>
+          </span>
+          <div style="display:flex;flex-direction:column;gap:7px;align-items:center">
+            <span style="font:600 21px 'Space Grotesk'">Bu adreste bir ekran yok</span>
+            <span style="font:400 13.5px/1.6 'Karla';color:#6a7065;max-width:420px;text-wrap:pretty">Bağlantı eski olabilir ya da kayıt taşınmış/silinmiş olabilir. Aşağıdan devam edin.</span>
+            <span style="font:500 12px 'IBM Plex Mono';color:#8b9086;background:#f2f3ee;border:1px solid #e6e7e1;border-radius:6px;padding:5px 10px;margin-top:2px">/admin/siparisler/2451x</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:2px">
+            <span style="background:#5f7a2c;color:#fff;font:600 13px 'Space Grotesk';padding:9px 16px;border-radius:8px">Panele dön</span>
+            <span style="background:#fff;border:1px solid #d9dbd2;color:#3a3f37;font:600 13px 'Space Grotesk';padding:9px 16px;border-radius:8px">Geri</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:center;margin-top:12px">
+            <span style="font:500 10.5px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Son çalıştığınız ekranlar</span>
+            <div style="display:flex;gap:8px">
+              <span style="border:1px solid #d9dbd2;background:#fff;color:#4a4f45;font:600 12px 'Space Grotesk';border-radius:14px;padding:5px 12px">Siparişler</span>
+              <span style="border:1px solid #d9dbd2;background:#fff;color:#4a4f45;font:600 12px 'Space Grotesk';border-radius:14px;padding:5px 12px">Stok</span>
+              <span style="border:1px solid #d9dbd2;background:#fff;color:#4a4f45;font:600 12px 'Space Grotesk';border-radius:14px;padding:5px 12px">Rotalar</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <span style="font:600 15px 'Space Grotesk';color:#22251f;margin-top:10px">Admin · 500 (beklenmeyen hata) — referans kodu + kayıt güvencesi</span>
+    <div data-screen-label="500 Admin" style="width:100%;box-sizing:border-box;height:560px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="siparisler" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px">
+          <span style="font:600 17px 'Space Grotesk'">Siparişler</span>
+          <span style="font:600 10.5px 'Space Grotesk';color:#a5443c;background:#fbe9e7;border-radius:7px;padding:4px 10px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#c2571f"></span>Yüklenemedi</span>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;text-align:center">
+          <span style="width:44px;height:44px;border-radius:10px;background:#fbe9e7;color:#a5443c;display:grid;place-items:center">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 2.5 20h19L12 3Z"></path><path d="M12 9.5v4.5"></path><path d="M12 17.2h.01"></path></svg>
+          </span>
+          <div style="display:flex;flex-direction:column;gap:7px;align-items:center">
+            <span style="font:600 21px 'Space Grotesk'">Bu ekran şu an yüklenemedi</span>
+            <span style="font:400 13.5px/1.6 'Karla';color:#6a7065;max-width:440px;text-wrap:pretty">Sunucu tarafında beklenmeyen bir hata oluştu. Yeniden deneyin; sürerse referans kodunu ileterek bildirin.</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;border:1px solid #e6e7e1;background:#f8f9f5;border-radius:8px;padding:8px 10px 8px 14px;margin-top:2px">
+            <div style="display:flex;flex-direction:column;align-items:flex-start;gap:1px">
+              <span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Referans</span>
+              <span style="font:500 13px 'IBM Plex Mono';color:#22251f">ERR-7f3a2c91</span>
+            </div>
+            <span style="width:1px;height:26px;background:#e0e2da"></span>
+            <span style="font:500 11.5px 'IBM Plex Mono';color:#6a7065">26.07.2026 14:12:07</span>
+            <span style="background:#fff;border:1px solid #d9dbd2;color:#3a3f37;font:600 12px 'Space Grotesk';padding:6px 11px;border-radius:7px;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h8"></path></svg>Kopyala</span>
+          </div>
+          <div style="background:#fbe9e7;border:1px solid #e2c4c0;border-radius:9px;padding:10px 14px;font:500 12px/1.5 'Karla';color:#8f3a33;max-width:520px;text-align:left;margin-top:2px">Kaydedilmiş veriler etkilenmedi. Bu ekranda henüz kaydetmediğiniz değişiklik varsa yeniden girilmesi gerekir — yeniden denemek mükerrer kayıt oluşturmaz.</div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <span style="background:#5f7a2c;color:#fff;font:600 13px 'Space Grotesk';padding:9px 16px;border-radius:8px">Yeniden dene</span>
+            <span style="background:#fff;border:1px solid #d9dbd2;color:#3a3f37;font:600 13px 'Space Grotesk';padding:9px 16px;border-radius:8px">Panele dön</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 403 + OTURUM + BAKIM -->
+  <div style="width:660px;display:flex;flex-direction:column;gap:14px">
+    <span style="font:600 15px 'Space Grotesk';color:#22251f">403 · yetkisiz erişim (rol duvarı — O12'nin sayfa hali)</span>
+    <div data-screen-label="403 Admin" style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;padding:34px 30px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+      <span style="width:42px;height:42px;border-radius:10px;background:#fdf1e3;color:#9a6416;display:grid;place-items:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
+      </span>
+      <div style="display:flex;flex-direction:column;gap:7px;align-items:center">
+        <span style="font:600 19px 'Space Grotesk'">Bu ekran rolünüzde yok</span>
+        <span style="font:400 13.5px/1.6 'Karla';color:#6a7065;max-width:420px;text-wrap:pretty">Adrese doğrudan gelinmiş. Yetkilendirme yöneticide; ekran açılana kadar veri gösterilmez.</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:2px">
+        <span style="font:500 11.5px 'IBM Plex Mono';color:#6a7065;background:#f2f3ee;border:1px solid #e6e7e1;border-radius:6px;padding:4px 9px">Rol: Depo</span>
+        <span style="font:500 11.5px 'IBM Plex Mono';color:#6a7065;background:#f2f3ee;border:1px solid #e6e7e1;border-radius:6px;padding:4px 9px">Gereken: Yönetici</span>
+      </div>
+      <span style="background:#5f7a2c;color:#fff;font:600 13px 'Space Grotesk';padding:9px 16px;border-radius:8px;margin-top:4px">Kendi ekranıma dön</span>
+    </div>
+
+    <span style="font:600 15px 'Space Grotesk';color:#22251f;margin-top:10px">Oturum süresi doldu — dialogda (O9), sayfa arkada durur</span>
+    <div data-screen-label="Oturum Doldu" style="background:#eceee8;border:1px solid #e2e3dd;border-radius:8px;padding:30px;display:grid;place-items:center">
+      <div style="width:400px;background:#fbfbf9;border:1px solid #e6e7e1;border-radius:12px;overflow:hidden;box-shadow:0 10px 30px rgba(20,22,18,.12)">
+        <div style="padding:14px 18px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px">
+          <span style="width:26px;height:26px;border-radius:7px;background:#eef0ea;color:#6a7065;display:grid;place-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5V12l3 2"></path></svg></span>
+          <span style="font:600 16px 'Space Grotesk';flex:1">Oturumunuz sona erdi</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+          <span style="font:400 13px/1.6 'Karla';color:#6a7065">Güvenlik için 30 dakika işlem yapılmayan oturum kapanır. Yeniden doğrulandığınızda <strong>bulunduğunuz ekrana</strong> dönersiniz.</span>
+          <div style="background:#eef4e2;border:1px solid #d8e4bf;border-radius:9px;padding:10px 13px;font:500 12px/1.5 'Karla';color:#4a6121">Açık dialogdaki doldurulmuş alanlar korunur — kaydetmeye kaldığınız yerden devam edersiniz.</div>
+        </div>
+        <div style="padding:12px 18px;border-top:1px solid #e6e7e1;background:#f8f9f5;display:flex;gap:8px;justify-content:flex-end">
+          <span style="font:600 12.5px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;background:#fff;border-radius:8px;padding:8px 14px">Çıkış yap</span>
+          <span style="font:600 12.5px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:8px;padding:8px 16px">Yeniden doğrula</span>
+        </div>
+      </div>
+    </div>
+
+    <span style="font:600 15px 'Space Grotesk';color:#22251f;margin-top:10px">Planlı bakım — hata değil, uyarı bandı (O10); ekran çalışmaya devam eder</span>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:10px 13px;font:500 12px/1.5 'Karla';color:#8a6410;display:flex;align-items:center;gap:9px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex:none"><path d="M12 3 2.5 20h19L12 3Z"></path><path d="M12 9.5v4.5"></path><path d="M12 17.2h.01"></path></svg>
+        Bakım penceresi bu gece 23:00–23:20. Bu aralıkta kaydetme kısa süre kesilebilir — açık işlerinizi öncesinde kaydedin.
+      </div>
+      <div style="background:#fbe9e7;border:1px solid #e2c4c0;border-radius:9px;padding:10px 13px;font:500 12px/1.5 'Karla';color:#8f3a33;display:flex;align-items:center;gap:9px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex:none"><path d="M5 12.5a10 10 0 0 1 14 0"></path><path d="M8.5 16a5.5 5.5 0 0 1 7 0"></path><path d="M12 19.5h.01"></path><path d="M3 3l18 18"></path></svg>
+        Sunucu bağlantısı koptu — veriler <strong>26.07.2026 14:12</strong> itibarıyla. Yeniden bağlanılıyor…
+      </div>
+    </div>
+  </div>
+
+  <!-- SAHA -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <span style="font:600 15px 'Space Grotesk';color:#22251f">Saha (kurye/depo) · bağlantı yok — sıradaki işlemler</span>
+    <div data-screen-label="Saha Cevrimdisi" style="width:380px;background:#fbfbf9;border-radius:26px;overflow:hidden;border:1px solid #e2e3dd">
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #e6e7e1">
+        <span style="width:26px;height:26px;border-radius:7px;background:#5f7a2c;color:#fff;font:600 14px 'Space Grotesk';display:grid;place-items:center">L</span>
+        <span style="font:600 15px 'Space Grotesk'">Teslimat · Bugün</span>
+      </div>
+      <div style="background:#fbe9e7;border-bottom:1px solid #e2c4c0;padding:12px 18px;display:flex;align-items:center;gap:10px">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#a5443c" stroke-width="2" stroke-linecap="round" style="flex:none"><path d="M5 12.5a10 10 0 0 1 14 0"></path><path d="M8.5 16a5.5 5.5 0 0 1 7 0"></path><path d="M12 19.5h.01"></path><path d="M3 3l18 18"></path></svg>
+        <div style="display:flex;flex-direction:column">
+          <span style="font:600 13.5px 'Space Grotesk';color:#8f3a33">Bağlantı yok</span>
+          <span style="font:400 11.5px 'Karla';color:#a5443c">Son eşitleme 13:58</span>
+        </div>
+      </div>
+      <div style="padding:18px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font:600 16px 'Space Grotesk'">Çalışmaya devam edin</span>
+          <span style="font:400 13px/1.6 'Karla';color:#6a7065">İşlemleriniz telefonda güvende. Bağlantı gelince kendiliğinden gönderilir — hiçbir şeyi yeniden girmeniz gerekmez.</span>
+        </div>
+        <div style="border:1px solid #e6e7e1;border-radius:10px;overflow:hidden">
+          <div style="padding:9px 14px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;justify-content:space-between">
+            <span style="font:500 10px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Gönderilmeyi bekleyen</span>
+            <span style="font:500 11.5px 'IBM Plex Mono';color:#9a6416;background:#fdf1e3;border-radius:9px;padding:1px 7px">3</span>
+          </div>
+          <div style="padding:11px 14px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;flex-direction:column"><span style="font:600 13px 'Karla'">Teslim onayı</span><span style="font:400 11.5px 'Karla';color:#8b9086">Durak 4 · imza alındı</span></div>
+            <span style="font:500 11px 'IBM Plex Mono';color:#8b9086">14:02</span>
+          </div>
+          <div style="padding:11px 14px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;flex-direction:column"><span style="font:600 13px 'Karla'">Teslim onayı</span><span style="font:400 11.5px 'Karla';color:#8b9086">Durak 5 · fotoğraf</span></div>
+            <span style="font:500 11px 'IBM Plex Mono';color:#8b9086">14:09</span>
+          </div>
+          <div style="padding:11px 14px;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;flex-direction:column"><span style="font:600 13px 'Karla'">Tahsilat kaydı</span><span style="font:400 11.5px 'Karla';color:#8b9086">Durak 5 · nakit</span></div>
+            <span style="font:500 11px 'IBM Plex Mono';color:#8b9086">14:10</span>
+          </div>
+        </div>
+        <span style="background:#5f7a2c;color:#fff;font:600 14px 'Space Grotesk';padding:14px;border-radius:8px;text-align:center">Şimdi eşitlemeyi dene</span>
+        <span style="font:400 11.5px/1.5 'Karla';color:#8b9086;text-align:center">Rota listeniz çevrimdışı da açılır; yalnız yeni sipariş görünmez.</span>
+      </div>
+    </div>
+
+    <span style="font:600 15px 'Space Grotesk';color:#22251f;margin-top:10px">Saha · bağlantı geldi (eşitleniyor)</span>
+    <div data-screen-label="Saha Esitleniyor" style="width:380px;background:#fbfbf9;border-radius:26px;overflow:hidden;border:1px solid #e2e3dd">
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #e6e7e1">
+        <span style="width:26px;height:26px;border-radius:7px;background:#5f7a2c;color:#fff;font:600 14px 'Space Grotesk';display:grid;place-items:center">L</span>
+        <span style="font:600 15px 'Space Grotesk'">Teslimat · Bugün</span>
+      </div>
+      <div style="background:#eef4e2;border-bottom:1px solid #d8e4bf;padding:12px 18px;display:flex;align-items:center;gap:10px">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4a6121" stroke-width="2" stroke-linecap="round" style="flex:none"><path d="M21 12a9 9 0 1 1-3.2-6.9"></path><path d="M21 4v5h-5"></path></svg>
+        <div style="display:flex;flex-direction:column;flex:1">
+          <span style="font:600 13.5px 'Space Grotesk';color:#4a6121">Eşitleniyor — 1 / 3</span>
+          <span style="font:400 11.5px 'Karla';color:#5f7a2c">Bekleyen işlemler gönderiliyor</span>
+        </div>
+        <span style="font:500 12px 'IBM Plex Mono';color:#4a6121">%33</span>
+      </div>
+      <div style="padding:18px;display:flex;flex-direction:column;gap:10px">
+        <div style="border:1px solid #e6e7e1;border-radius:10px;overflow:hidden">
+          <div style="padding:11px 14px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;flex-direction:column"><span style="font:600 13px 'Karla'">Teslim onayı</span><span style="font:400 11.5px 'Karla';color:#8b9086">Durak 4</span></div>
+            <span style="font:600 10.5px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:7px;padding:4px 9px">Gönderildi</span>
+          </div>
+          <div style="padding:11px 14px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;flex-direction:column"><span style="font:600 13px 'Karla'">Teslim onayı</span><span style="font:400 11.5px 'Karla';color:#8b9086">Durak 5</span></div>
+            <span style="font:600 10.5px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:7px;padding:4px 9px">Gönderiliyor</span>
+          </div>
+          <div style="padding:11px 14px;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;flex-direction:column"><span style="font:600 13px 'Karla'">Tahsilat kaydı</span><span style="font:400 11.5px 'Karla';color:#8b9086">Durak 5</span></div>
+            <span style="font:500 11px 'IBM Plex Mono';color:#8b9086">Sırada</span>
+          </div>
+        </div>
+        <span style="font:400 11.5px/1.5 'Karla';color:#8b9086;text-align:center">Eşitleme bitince bu şerit kendiliğinden kalkar.</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="width:860px;background:#22251f;color:#f2f3ee;border-radius:12px;padding:24px 30px;display:flex;flex-direction:column;gap:10px">
+    <span style="font:600 19px 'Space Grotesk'">Etkileşim sözleşmesi (kodlayan ajan için)</span>
+    <ul style="margin:0;padding-left:20px;font:400 13.5px/1.75 'Karla';color:#c8ccc2">
+      <li><strong>Çerçeve korunur:</strong> admin hatası AdminSidebar içinde, pane'in ortasında gösterilir — ray ve arama çalışır durumda kalır, kullanıcı boş sayfaya atılmaz. 404'te hiçbir ray öğesi aktif işaretlenmez (hiçbir bölümle eşleşmeyen <code>active</code> değeri geçilir; AdminSidebar'ın varsayılanı değiştirilmez).</li>
+      <li><strong>500 referans kodu taşır</strong> (mono, kopyalanabilir) + zaman damgası. Yığın izi, SQL, dosya yolu, sunucu adı <strong>hiç gösterilmez</strong>; destek konuşması kodla yürür.</li>
+      <li><strong>Kayıt güvencesi zorunlu:</strong> neyin kaydedildiği/kaydedilmediği ve yeniden denemenin mükerrer kayıt oluşturmadığı yazılır — operatörün ilk sorusu budur.</li>
+      <li><strong>403 rol duvarının sayfa halidir</strong> (O12): yetkisiz ekranın verisi yüklenmez, yalnız rol ve gereken rol gösterilir. İzinsiz aksiyon gri değil, hiç yok; sayfa yalnız kullanıcının kendi ekranına götürür.</li>
+      <li><strong>Oturum bitişi dialogdur</strong>, tam sayfa değil: arkadaki ekran ve doldurulmuş alanlar korunur, doğrulama sonrası aynı yere dönülür.</li>
+      <li><strong>Sahada hata ekranı yoktur, kuyruk vardır:</strong> kurye/depo çevrimdışıyken çalışmaya devam eder; işlemler cihazda birikir, bağlantıda otomatik eşitlenir. Sıradaki işlem sayısı ve son eşitleme saati her zaman görünür.</li>
+      <li>Saha yüzeyinde tutar/adres/borç <strong>hata ekranlarında da</strong> render edilmez (O12); yalnız durak numarası ve işlem türü görünür.</li>
+      <li><strong>Renk anlam taşır:</strong> kırmızı = kopmuş/başarısız, amber = bekliyor/dikkat, olive = eşitlendi/yolunda. Emoji ve dekoratif illüstrasyon yok — ikonlar çizgi SVG.</li>
+      <li>Bakım penceresi hata değildir: ekran çalışır, üstte amber bant zaman aralığını duyurur.</li>
+      <li>Otomatik yeniden bağlanma artan aralıkla denenir (2s → 30s); operatör "şimdi dene" ile her an zorlayabilir. Sessiz sonsuz döngü yok.</li>
+    </ul>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

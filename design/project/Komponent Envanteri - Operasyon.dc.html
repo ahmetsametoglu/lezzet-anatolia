@@ -184,6 +184,34 @@
     </div>
   </div>
 
+  <!-- §5 -->
+  <div style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:22px">
+    <h2 style="margin:0;font:600 21px 'Space Grotesk'">§5 · Genel sayfalar (hata &amp; kesinti)</h2>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O13 · Hata / durum ekranı</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Pane ortasında: 44px ikon kutusu (çizgi SVG) + Space Grotesk başlık + Karla açıklama + mono bağlam (yol / referans / rol) + O8 buton çifti. <strong>AdminSidebar içinde kalır</strong>; 404'te hiçbir ray öğesi aktif değildir (hiçbir bölümle eşleşmeyen <code>active</code> değeri geçilir — boş dize varsayılana düşer). Varyantlar: 404 (yol + son ekranlar) · 500 (kopyalanabilir <code>ERR-…</code> referansı + zaman damgası + kayıt güvencesi) · 403 (rol duvarı: rol + gereken rol, veri yüklenmez) · oturum bitişi (tam sayfa değil, O9 dialogu — arkadaki iş korunur).</span>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <span style="font:500 12px 'IBM Plex Mono';color:#8b9086;background:#f2f3ee;border:1px solid #e6e7e1;border-radius:6px;padding:5px 10px">/admin/siparisler/2451x</span>
+        <span style="font:500 12px 'IBM Plex Mono';color:#22251f;background:#f8f9f5;border:1px solid #e6e7e1;border-radius:6px;padding:5px 10px">ERR-7f3a2c91</span>
+        <span style="font:500 11.5px 'IBM Plex Mono';color:#6a7065;background:#f2f3ee;border:1px solid #e6e7e1;border-radius:6px;padding:4px 9px">Rol: Depo → Gereken: Yönetici</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Yığın izi/SQL/sunucu adı gösterilmez; destek konuşması referans koduyla yürür. Canlı: <a href="Operasyon - Hata Sayfalari.dc.html">Genel Sayfalar</a></span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 16px 'Space Grotesk'">O14 · Çevrimdışı kuyruk şeridi (saha)</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Sahada hata ekranı yoktur, <strong>kuyruk</strong> vardır: kırmızı "bağlantı yok" şeridi + son eşitleme saati, bekleyen işlem listesi (tür + durak + saat, mono sayaç), "şimdi eşitlemeyi dene" (≥44px). Bağlantı dönünce şerit olive "eşitleniyor n/m"e döner ve satırlar Gönderildi/Gönderiliyor/Sırada rozetleri alır; bitince kendiliğinden kalkar. O12 burada da geçerli — tutar/adres/borç render edilmez.</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font:600 10.5px 'Space Grotesk';color:#a5443c;background:#fbe9e7;border-radius:7px;padding:4px 10px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#c2571f"></span>Bağlantı yok</span>
+        <span style="font:600 10.5px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:7px;padding:4px 10px">Gönderiliyor</span>
+        <span style="font:600 10.5px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:7px;padding:4px 10px">Gönderildi</span>
+        <span style="font:500 11.5px 'IBM Plex Mono';color:#9a6416;background:#fdf1e3;border-radius:9px;padding:2px 8px">3 sırada</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Kurye Gün · Kurye Teslimat · Kurye Kapanış · Depo Hazırlık · Depo Stok Giriş · Depo İmha/Sayım</span>
+    </div>
+  </div>
+
   <div style="background:#22251f;color:#f2f3ee;border-radius:12px;padding:24px 30px;display:flex;flex-direction:column;gap:10px">
     <h2 style="margin:0;font:600 19px 'Space Grotesk'">Evren kuralları (kodlayan ajan için)</h2>
     <ul style="margin:0;padding-left:20px;font:400 13.5px/1.75 'Karla';color:#c8ccc2">

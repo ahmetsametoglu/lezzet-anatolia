@@ -4,6 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#5f7a2c">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#5f7a2c"/>
+    <rect x="330" y="230" width="540" height="340" rx="24" fill="#faf6ec"/>
+    <rect x="380" y="290" width="440" height="34" rx="8" fill="#343b41"/>
+    <rect x="380" y="356" width="440" height="52" rx="26" fill="#fff" stroke="#d8cfb6" stroke-width="3"/>
+    <rect x="380" y="424" width="440" height="52" rx="26" fill="#fff" stroke="#d8cfb6" stroke-width="3"/>
+    <rect x="380" y="500" width="440" height="52" rx="26" fill="#5f7a2c"/>
+  </svg>
+</template>
 </head>
 <body>
 <x-dc>
@@ -11,6 +21,7 @@
 <meta name="design_doc_mode" content="canvas">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
 <style>
   body { margin:0; background:#e9e6df; font-family:'Karla',sans-serif; }
   a { color:#5f7a2c; text-decoration:none; }
@@ -20,16 +31,96 @@
 
 <section style="display:flex;flex-wrap:wrap;gap:56px;padding:48px;align-items:flex-start">
 
+  <!-- WEB — kavuşma odaklı bölünmüş ekran -->
   <div style="display:flex;flex-direction:column;gap:16px">
-    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Hızlı Doğrulama · Mobil (birincil biçim; checkout'tan gelinmiş)</span>
-    <div data-screen-label="Giris Mobil" style="width:390px;background:#faf6ec;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15)">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px">
-        <span style="font:700 14px 'Karla';color:#5f7a2c">← Geri</span>
-        <img src="assets/logo.jpg" style="height:38px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
-        <span style="width:40px"></span>
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Hızlı Doğrulama · Web (checkout'tan gelinmiş; markanın sıcaklığıyla)</span>
+    <div data-screen-label="Giris Web" style="width:1120px;background:#faf6ec;border-radius:10px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);display:flex;color:#3a3f35">
+
+      <!-- SOL: sofra fotoğrafı + marka sözü -->
+      <div style="position:relative;width:468px;flex:none">
+        <image-slot id="giris-hero" shape="rect" placeholder="Sıcak, buğulu bir aile sofrası — börek, sarma, çay; anne mutfağı"></image-slot>
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(52,59,65,.42) 0%,rgba(52,59,65,0) 34%,rgba(52,59,65,.72) 100%);pointer-events:none"></div>
+        <div style="position:absolute;top:26px;left:26px;background:rgba(250,246,236,.92);color:#5f7a2c;font:600 12px 'Karla';letter-spacing:.06em;text-transform:uppercase;padding:7px 14px;border-radius:20px">❄ Soğuk zincirle taptaze</div>
+        <div style="position:absolute;left:34px;right:34px;bottom:34px;display:flex;flex-direction:column;gap:10px">
+          <span style="font:500 27px/1.32 'Lora';color:#f5f1e6">"Tıpkı anne sofrasından çıkmış gibi — kapımıza kadar geldi."</span>
+          <span style="font:600 13px 'Karla';letter-spacing:.04em;color:#dfe3cf">Ayşe · Strasbourg</span>
+        </div>
       </div>
-      <div style="padding:28px 24px 40px;display:flex;flex-direction:column;gap:18px">
+
+      <!-- SAĞ: doğrulama -->
+      <div style="flex:1;min-width:0;padding:40px 52px;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font:700 14px 'Karla';color:#5f7a2c">← Geri</span>
+          <img src="assets/logo.jpg" style="height:46px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+          <span style="width:44px"></span>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:18px;max-width:392px;margin:0 auto;width:100%;padding:28px 0">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <h1 style="margin:0;font:600 30px/1.2 'Lora';color:#343b41">Birkaç saniyede doğrulanın</h1>
+            <span style="font:400 15px/1.6 'Karla';color:#6d7261">Siparişinizi tamamlamak için. Şifre yok — hiç olmadı.</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span style="background:#fff;border:1.5px solid #d8cfb6;font:700 15px 'Karla';color:#3a4147;padding:14px;border-radius:26px;text-align:center">🇬 Google ile devam et</span>
+            <span style="background:#fff;border:1.5px solid #d8cfb6;font:700 15px 'Karla';color:#3a4147;padding:14px;border-radius:26px;text-align:center">💬 WhatsApp ile devam et</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;color:#b3ab97;font:400 13px 'Karla'"><span style="flex:1;border-top:1px solid #e0d8c2"></span>veya e-posta ile<span style="flex:1;border-top:1px solid #e0d8c2"></span></div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="background:#fff;border:2px solid #5f7a2c;border-radius:16px;padding:14px 16px;font:400 15px 'Karla';color:#3a4147">ayse@example.com</div>
+            <span style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';padding:14px;border-radius:26px;text-align:center">Tek kullanımlık kod gönder</span>
+          </div>
+          <span style="font:400 12px/1.6 'Karla';color:#8a8270;text-align:center">Hangi yolla doğrulanırsanız doğrulanın aynı hesabınıza ulaşırsınız. Devam ederek <span style="color:#5f7a2c">gizlilik politikasını</span> kabul etmiş olursunuz.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- WEB kod girişi durumu (aynı bölünmüş çerçeve) -->
+    <span style="font:600 15px 'Karla';color:#3a4147;margin-top:12px">Durum: kod girişi</span>
+    <div data-screen-label="Giris Kod Web" style="width:1120px;background:#faf6ec;border-radius:10px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);display:flex;color:#3a3f35">
+      <div style="position:relative;width:468px;flex:none">
+        <image-slot id="giris-hero-2" shape="rect" placeholder="Sofra fotoğrafı — buğusu üstünde börek"></image-slot>
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(52,59,65,.35) 0%,rgba(52,59,65,0) 40%,rgba(52,59,65,.6) 100%);pointer-events:none"></div>
+        <div style="position:absolute;left:34px;right:34px;bottom:34px;font:500 24px/1.35 'Lora';color:#f5f1e6">Neredeyse hazır — kod yolda.</div>
+      </div>
+      <div style="flex:1;min-width:0;padding:40px 52px;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font:700 14px 'Karla';color:#5f7a2c">← Geri</span>
+          <img src="assets/logo.jpg" style="height:46px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+          <span style="width:44px"></span>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:18px;max-width:392px;margin:0 auto;width:100%;text-align:center;padding:28px 0">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <h1 style="margin:0;font:600 28px/1.2 'Lora';color:#343b41">Kodu girin</h1>
+            <span style="font:400 15px/1.6 'Karla';color:#6d7261"><strong>ayse@example.com</strong> adresine 6 haneli kod gönderdik.</span>
+          </div>
+          <div style="display:flex;gap:9px;justify-content:center">
+            <span style="width:48px;height:58px;background:#fff;border:2px solid #5f7a2c;border-radius:13px;display:grid;place-items:center;font:700 24px 'Karla';color:#343b41">4</span>
+            <span style="width:48px;height:58px;background:#fff;border:2px solid #5f7a2c;border-radius:13px;display:grid;place-items:center;font:700 24px 'Karla';color:#343b41">7</span>
+            <span style="width:48px;height:58px;background:#fff;border:2px solid #5f7a2c;border-radius:13px;display:grid;place-items:center;font:700 24px 'Karla';color:#343b41">2</span>
+            <span style="width:48px;height:58px;background:#fff;border:2px solid #5f7a2c;border-radius:13px;display:grid;place-items:center;font:700 24px 'Karla';color:#b3ab97">|</span>
+            <span style="width:48px;height:58px;background:#fff;border:1.5px solid #e0d8c2;border-radius:13px"></span>
+            <span style="width:48px;height:58px;background:#fff;border:1.5px solid #e0d8c2;border-radius:13px"></span>
+          </div>
+          <span style="font:400 13px 'Karla';color:#8a8270">Kod gelmedi mi? <span style="color:#5f7a2c;font-weight:700">Yeniden gönder</span> (0:42)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBİL — birincil biçim -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Mobil (birincil biçim; checkout'tan gelinmiş)</span>
+    <div data-screen-label="Giris Mobil" style="width:390px;background:#faf6ec;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15)">
+      <div style="position:relative;height:150px">
+        <image-slot id="giris-hero-m" shape="rect" placeholder="Sofra fotoğrafı — sıcak, buğulu"></image-slot>
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(52,59,65,.34) 0%,rgba(52,59,65,0) 55%,rgba(250,246,236,.96) 100%);pointer-events:none"></div>
+        <div style="position:absolute;top:14px;left:16px;right:16px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font:700 14px 'Karla';color:#f5f1e6">← Geri</span>
+          <span style="background:rgba(250,246,236,.92);color:#5f7a2c;font:600 11px 'Karla';letter-spacing:.05em;text-transform:uppercase;padding:5px 11px;border-radius:16px">❄ Taptaze</span>
+        </div>
+      </div>
+      <div style="padding:4px 24px 40px;display:flex;flex-direction:column;gap:18px;margin-top:-4px">
         <div style="display:flex;flex-direction:column;gap:8px;text-align:center">
+          <img src="assets/logo.jpg" style="height:44px;mix-blend-mode:multiply;align-self:center" alt="Lezzet Anatolia">
           <h1 style="margin:0;font:600 26px/1.25 'Lora';color:#343b41">Birkaç saniyede doğrulanın</h1>
           <span style="font:400 14px/1.6 'Karla';color:#6d7261">Siparişinizi tamamlamak için. Şifre yok — hiç olmadı.</span>
         </div>
@@ -53,7 +144,7 @@
         <img src="assets/logo.jpg" style="height:38px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
         <span style="width:40px"></span>
       </div>
-      <div style="padding:28px 24px 40px;display:flex;flex-direction:column;gap:16px;text-align:center">
+      <div style="padding:22px 24px 40px;display:flex;flex-direction:column;gap:16px;text-align:center">
         <h1 style="margin:0;font:600 24px/1.25 'Lora';color:#343b41">Kodu girin</h1>
         <span style="font:400 14px/1.6 'Karla';color:#6d7261"><strong>ayse@example.com</strong> adresine 6 haneli kod gönderdik.</span>
         <div style="display:flex;gap:8px;justify-content:center">
@@ -69,26 +160,10 @@
     </div>
   </div>
 
+  <!-- DURUMLAR + BAĞLAM + SÖZLEŞME -->
   <div style="display:flex;flex-direction:column;gap:16px">
-    <span style="font:600 16px 'Karla';color:#3a4147">Web (aynı akış, ortalanmış kart)</span>
-    <div data-screen-label="Giris Web" style="width:900px;background:#faf6ec;border-radius:8px;box-shadow:0 8px 40px rgba(58,65,71,.15);padding:56px;display:grid;place-items:center">
-      <div style="width:420px;background:#fff;border:1px solid #ece5d2;border-radius:22px;padding:36px;display:flex;flex-direction:column;gap:16px">
-        <img src="assets/logo.jpg" style="height:52px;mix-blend-mode:multiply;align-self:center" alt="Lezzet Anatolia">
-        <div style="display:flex;flex-direction:column;gap:6px;text-align:center">
-          <h1 style="margin:0;font:600 24px 'Lora';color:#343b41">Birkaç saniyede doğrulanın</h1>
-          <span style="font:400 13.5px/1.6 'Karla';color:#6d7261">Taleplerinizi görmek için. Şifre yok — hiç olmadı.</span>
-        </div>
-        <span style="background:#faf6ec;border:1.5px solid #d8cfb6;font:700 14px 'Karla';color:#3a4147;padding:13px;border-radius:24px;text-align:center">🇬 Google ile devam et</span>
-        <span style="background:#faf6ec;border:1.5px solid #d8cfb6;font:700 14px 'Karla';color:#3a4147;padding:13px;border-radius:24px;text-align:center">💬 WhatsApp ile devam et</span>
-        <div style="display:flex;align-items:center;gap:12px;color:#b3ab97;font:400 12.5px 'Karla'"><span style="flex:1;border-top:1px solid #e0d8c2"></span>veya e-posta ile<span style="flex:1;border-top:1px solid #e0d8c2"></span></div>
-        <div style="background:#faf6ec;border:1px solid #e0d8c2;border-radius:14px;padding:12px 15px;font:400 14px 'Karla';color:#9a917c">E-posta adresiniz</div>
-        <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px;border-radius:24px;text-align:center">Tek kullanımlık kod gönder</span>
-        <span style="font:400 11.5px/1.5 'Karla';color:#8a8270;text-align:center">Devam ederek <span style="color:#5f7a2c">gizlilik politikasını</span> kabul etmiş olursunuz.</span>
-      </div>
-    </div>
-
-    <span style="font:600 15px 'Karla';color:#3a4147;margin-top:12px">Durumlar</span>
-    <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <span style="font:600 15px 'Karla';color:#3a4147">Durumlar</span>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;max-width:640px">
       <div style="width:300px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
         <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Kod hatalı</span>
         <div style="display:flex;gap:6px;justify-content:center">
@@ -110,7 +185,7 @@
       </div>
     </div>
 
-    <div style="width:900px;background:#fff;border:1.5px dashed #cdc4a8;border-radius:16px;padding:24px 32px;display:flex;flex-direction:column;gap:10px">
+    <div style="width:640px;background:#fff;border:1.5px dashed #cdc4a8;border-radius:16px;padding:24px 32px;display:flex;flex-direction:column;gap:10px">
       <span style="font:700 16px 'Karla';color:#3a4147">Etkileşim sözleşmesi (kodlayan ajan için)</span>
       <ul style="margin:0;padding-left:20px;font:400 14px/1.8 'Karla';color:#6d7261">
         <li><strong>Tek akış</strong> — "kayıt ol / giriş yap" ayrımı yok; yeni müşteride hesap arka planda kendiliğinden oluşur, ek form sorulmaz.</li>
@@ -118,6 +193,7 @@
         <li><strong>Kod girişi</strong> → 6 hane, otomatik ilerleyen kutular; SMS/e-posta kodu cihazca algılanırsa otomatik dolar ve akış kendiliğinden devam eder. Yapıştırma desteklenir.</li>
         <li><strong>Yeniden gönder</strong> → geri sayım bitince aktifleşir; hatalı kodda alan kırmızı + sade tek cümle.</li>
         <li><strong>Vazgeç / ←</strong> → müşteri gelinen sayfaya döner; katalog ve sepet girişsiz gezilebilir olduğundan doğrulama duvar değildir.</li>
+        <li><strong>Görsel</strong> → sol/üst sofra fotoğrafı markanın sıcaklığını taşır ama akışı geciktirmez; asıl aksiyon her zaman ilk ekranda görünür.</li>
         <li>"OAuth, OTP, oturum" gibi terimler hiçbir metinde geçmez — "tek kullanımlık kod" denir.</li>
       </ul>
     </div>
