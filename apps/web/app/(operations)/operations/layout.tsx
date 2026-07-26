@@ -6,7 +6,7 @@ import { serviceDb, UserProfileService } from '@lezzet/database';
 import { AuthError, requireStaff } from '@/lib/guard';
 import { getPathname } from '@/i18n/navigation';
 import { RootShell } from '@/components/root-shell';
-import { AdminSidebar } from '@/components/operation/admin-sidebar';
+import { AdminSidebar } from '@/components/operation/ui/admin-sidebar';
 
 // Operasyon evreni ("Veri Masası") fontları. latin-ext → Türkçe (ş ğ ı) doğru gösterilir.
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin', 'latin-ext'], variable: '--font-space-grotesk', display: 'swap' });

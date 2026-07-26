@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CheckIcon } from './icons';
+import { CheckIcon } from '../ui/icons';
 
 /**
  * Operasyon select'i — Komponent Envanteri O8 (girdi kontrolleri). Basit tek-seçim açılır liste;
@@ -12,7 +12,7 @@ import { CheckIcon } from './icons';
  * component olarak duruyor — gerçek tüketicileri (ürün seçici / alerjen listesi) geldiğinde ayrı
  * dosya olarak eklenecek; bu dosya yalnız basit select'i taşır.
  */
-interface SelectOption {
+export interface SelectOption {
   value: string;
   label: string;
 }
@@ -82,7 +82,7 @@ export function Select({ value, onChange, options, placeholder = 'Seç', classNa
                   setOpen(false);
                 }}
                 className={[
-                  'flex w-full items-center justify-between gap-2 px-[13px] py-2.5 text-left font-ops-body text-[13px] transition-colors',
+                  'flex w-full cursor-pointer items-center justify-between gap-2 px-[13px] py-2.5 text-left font-ops-body text-[13px] transition-colors',
                   on ? 'bg-ops-olive-bg font-medium text-ops-ink' : 'text-ops-strong hover:bg-ops-subtle',
                 ].join(' ')}
               >

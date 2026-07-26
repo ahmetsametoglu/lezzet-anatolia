@@ -1,4 +1,4 @@
-import { Card } from '@/components/operation/card';
+import { Card } from '@/components/operation/ui/card';
 
 // Operasyon ana sayfası (Panel). Guard + kabuk layout'ta; burası içerik. Tam gösterge tablosu
 // (KPI bandı, karar kuyruğu) sonraki dilimde — şimdilik kataloğa köprü veren asgari karşılama.
