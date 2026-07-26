@@ -227,7 +227,16 @@ export function SearchOffIcon({ size = 21 }: { size?: number }) {
   );
 }
 
-/** Kopyala ikonu — referans kodunu panoya al (500 ekranı). */
+/** Aşağı ok — açılır blok (`<details>`) başlığında; açıkken çağıran taraf döndürür. */
+export function ChevronDownIcon({ size = 12 }: { size?: number }) {
+  return (
+    <Svg size={size} strokeWidth={2}>
+      <path d="m6 9 6 6 6-6" />
+    </Svg>
+  );
+}
+
+/** Kopyala ikonu — referans kodunu / hata mesajını panoya al (500 ekranı). */
 export function CopyIcon({ size = 12 }: { size?: number }) {
   return (
     <Svg size={size} strokeWidth={2}>
