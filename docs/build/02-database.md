@@ -8,7 +8,7 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
 
 - `STACK.md §6` (BaseDbService), `§13` (veri erişim güvenliği + migration — **taslak, netleşecek**)
 - `WORKFLOW.md §2-3` (additive-only migration, deploy sırası)
-- `DATA_MODEL.md` (tablolar, kısıtlar için)
+- `DATA_MODEL.md` + `data-model/*.md` (tablolar, kısıtlar için)
 
 ## Bağımlılık
 
@@ -20,21 +20,27 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
 
 ## Görevler
 
-- [ ] **[Önce netleştir]** Migration aracı ve veri erişim modeli konuşması (aşağıdaki "Netleşecekler") — kod bu karardan sonra
-- [ ] Supabase projesi + env kurulumu (`.env.example` güncellenir; anahtarlar yalnız sunucu tarafında)
+- [x] (02.1) **[Önce netleştir]** Migration aracı ve veri erişim modeli konuşması (aşağıdaki "Netleşecekler") — kod bu karardan sonra
+- [x] (02.2) Supabase projesi + env kurulumu (`.env.example` güncellenir; anahtarlar yalnız sunucu tarafında)
   - *Bitti:* lokal bağlantı smoke testi geçiyor
-- [ ] Migration altyapısı: numaralı SQL, tek transaction'da uygulama, `schema_migrations` kaydı, hata durumunda durma
+- [x] (02.3) Migration altyapısı: numaralı SQL, tek transaction'da uygulama, `schema_migrations` kaydı, hata durumunda durma
   - *Bitti:* boş projeye sıfırdan kurulum tek komutla; ikinci çalıştırma no-op
-- [ ] İlk şema migration'ları — tüm tablolar + enum tipleri + kısıtlar: FK'lar, unique'ler (`Product.slug`, `Category.slug`, `WebhookEvent(provider, provider_event_id)`, `Cart.customer_id`), temel index'ler (sipariş/stok/hareket sorgu yolları)
+- [~] (02.4) İlk şema migration'ları — tüm tablolar + enum tipleri + kısıtlar: FK'lar, unique'ler (`Product.slug`, `Category.slug`, `WebhookEvent(provider, provider_event_id)`, `Cart.customer_id`), temel index'ler (sipariş/stok/hareket sorgu yolları)
   - *Bitti:* `DATA_MODEL.md`'deki her varlığın tablosu var; kısıt ihlali testle doğrulanmış (örnek: aynı webhook event iki kez yazılamıyor)
-- [ ] `BaseDbService`: jsonb-güvenli case dönüştürücüler (LocalizedText içleri dönüşmez), `{data, error}` deseni, `toRpcParams` yardımcısı
+- [x] (02.5) `BaseDbService`: jsonb-güvenli case dönüştürücüler (LocalizedText içleri dönüşmez), `{data, error}` deseni, `toRpcParams` yardımcısı
   - *Bitti:* dönüştürücü birim testleri (jsonb alanı bozulmuyor) geçiyor
-- [ ] İlk somut servisler (okuma/yazma smoke): `SettingsService` (kapsamlı çözücü: özgül → global) + bir örnek CRUD servisi
+- [~] (02.6) İlk somut servisler (okuma/yazma smoke): `SettingsService` (kapsamlı çözücü: özgül → global) + bir örnek CRUD servisi
   - *Bitti:* Setting çözücüsü "bölge değeri globali ezer" birim testini geçiyor
-- [ ] Seed: `Setting` varsayılanları (TTL 30 dk, eşikler, tavanlar — `DATA_MODEL.md` Setting listesi) + bir test kategorisi/ürünü
+- [~] (02.7) Seed: `Setting` varsayılanları (TTL 30 dk, eşikler, tavanlar — `DATA_MODEL.md` Setting listesi) + bir test kategorisi/ürünü
   - *Bitti:* temiz kurulum + seed sonrası vitrin sorgusu veri dönüyor
 
 ## Netleşecekler
 
 - **Migration aracı:** Supabase CLI mi, kendi küçük runner'ımız mı — artı/eksi masaya konup karar verilecek (STACK §13 statü notu gereği).
 - **Veri erişim modeli:** service-role + guard (tek kat) mı, + RLS ikinci hat mı; RLS'nin ilk kapsamı hangi tablolar. Aynı konuşmada karar.
+
+---
+
+**Modül durumu (26.07.2026):** altyapı tamam, şema kapsamı artımlı.
+- **Var:** Supabase CLI + numaralı SQL migration'lar (`supabase/migrations/0001–0005`), `pnpm db:migrate/db:reset/db:new/db:seed`, `BaseDbService` (jsonb-güvenli case dönüşümü, `{data,error}`), servisler: `UserProfile`, `StaffRole`, `EmailVerification`, `Category`, `Collection`, `Product`, `ProductVariant`, `ProductCollection`; entegrasyon testleri (`catalog.test.ts`, `product.test.ts`).
+- **Yok:** `DATA_MODEL`'deki tabloların çoğu (sipariş, stok, para, mesajlaşma, geri bildirim) — ilgili modülleriyle gelir; `SettingsService` ve `Setting` varsayılan seed'i; seed bugün yalnız kategori/ürün yazıyor.

@@ -21,40 +21,47 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
 
 ## Görevler
 
-- [ ] **[Önce netleştir]** Route izolasyonu: `(admin)` route group + `/admin` middleware'de toptan oturum+rol kontrolü (sayfa içi guard tekrarıyla çift kat) + `noindex` — STACK §13 taslak notu gereği seçenekler konuşulup karar alınır, sonra kodlanır
+- [ ] (09.1) **[Önce netleştir]** Route izolasyonu: `(admin)` route group + `/admin` middleware'de toptan oturum+rol kontrolü (sayfa içi guard tekrarıyla çift kat) + `noindex` — STACK §13 taslak notu gereği seçenekler konuşulup karar alınır, sonra kodlanır
   - *Bitti:* oturumsuz/rolsüz istek middleware'de dönüyor; `/admin` yanıtları noindex başlığı taşıyor
-- [ ] **Operasyon evreni komponent envanteri** — envanterdeki her komponent varyant ve durumlarıyla (normal/devre dışı/yükleniyor/hata/boş) `components/ui` + `components/form` katmanında kodlanır; iç galeri sayfasında hepsi görülür
+- [~] (09.2) **Operasyon evreni komponent envanteri** — envanterdeki her komponent varyant ve durumlarıyla (normal/devre dışı/yükleniyor/hata/boş) `components/ui` + `components/form` katmanında kodlanır; iç galeri sayfasında hepsi görülür
   - *Bitti:* envanter listesi ile kodlanan komponentler birebir; galeri sayfasında her varyant/durum görsel olarak duruyor
-- [ ] **Dashboard** — bugünün siparişleri, bekleyen işler (B2B başvuru, limit aşan vadeli, açık talep, yaklaşan tarihli parti), kritik göstergeler, gecikmiş vade, uyuşmayan kapanış; hepsi ilgili ekrana köprü
+- [ ] (09.3) **Dashboard** — bugünün siparişleri, bekleyen işler (B2B başvuru, limit aşan vadeli, açık talep, yaklaşan tarihli parti), kritik göstergeler, gecikmiş vade, uyuşmayan kapanış; hepsi ilgili ekrana köprü
   - *Bitti:* her bekleyen iş sayacı gerçek sorgudan geliyor; boş kuyruk "temiz" halini gösteriyor
-- [ ] **Ürünler** — ürün/varyant/kategori/koleksiyon/paket CRUD; çok dilli giriş + AI çeviri önerisi (öneri düzenlenebilir/reddedilebilir); yasal beyanlar (alerjen sabit liste, besin değerleri); aday ürün etkinleştirme; paket kalem fiyat doğrulaması
-  - *Bitti:* atanmış fiyat toplamı ≠ paket fiyatı kaydı reddediliyor; AI önerisi onaysız yayına gitmiyor
-- [ ] **Fiyatlar** — kanal fiyatları + güncel maliyet/marj görünümü, marj-altı uyarı listesi, auto_price aç/kapa, müşteriye özel fiyat, müşteri indirim oranları görünümü
+- [~] (09.4) **Ürünler** — ürün/varyant/kategori/koleksiyon/paket CRUD; çok dilli giriş + AI çeviri önerisi (öneri düzenlenebilir/reddedilebilir); **yasal beyanların tamamı** (içindekiler · alerjen sabit listesi · çapraz bulaşma · besin değerleri · saklama-hazırlama) + kapak ve galeri görselleri; aday ürün etkinleştirme; paket kalem fiyat doğrulaması
+  - *Bitti:* atanmış fiyat toplamı ≠ paket fiyatı kaydı reddediliyor; AI önerisi onaysız yayına gitmiyor; müşteri ürün detay sayfasının **her** bölümünün girildiği bir yer var — "beyan eksik" göstergesi bu alanların hepsini sayar
+- [ ] (09.5) **Fiyatlar** — kanal fiyatları + güncel maliyet/marj görünümü, marj-altı uyarı listesi, auto_price aç/kapa, müşteriye özel fiyat, müşteri indirim oranları görünümü
   - *Bitti:* fiyatı eksik varyant görünür; auto_price açık üründe elle fiyat yerine hedef marj düzenleniyor
-- [ ] **Fiyatlar: indirim/kupon + near-expiry teklif** — kupon/otomatik kampanya CRUD (koşullar, tek-en-büyük bilgisi), kişisel kuponlar; teklif önerisi listesi → teklif açma/güncelleme/kapatma (önerilen %30 parametrik; karar admin'in)
+- [ ] (09.6) **Fiyatlar: indirim/kupon + near-expiry teklif** — kupon/otomatik kampanya CRUD (koşullar, tek-en-büyük bilgisi), kişisel kuponlar; teklif önerisi listesi → teklif açma/güncelleme/kapatma (önerilen %30 parametrik; karar admin'in)
   - *Bitti:* teklif açılan parti müşteri tarafında tek fiyat + miktar tavanıyla görünüyor; parti tükenince teklif kalkıyor
-- [ ] **Siparişler: liste + detay** — filtre/arama (durum, ödeme, kanal, kaynak, gün), dikkat isteyenler; detayda kalemler (paket gruplu), yalnız izinli durum geçişleri, ödeme/tahsilat görünümü, teslim kanıtı, bağlı talepler, iade başlatma
+- [ ] (09.7) **Siparişler: liste + detay** — filtre/arama (durum, ödeme, kanal, kaynak, gün), dikkat isteyenler; detayda kalemler (paket gruplu), yalnız izinli durum geçişleri, ödeme/tahsilat görünümü, teslim kanıtı, bağlı talepler, iade başlatma
   - *Bitti:* izin verilmeyen geçiş hiç sunulmuyor; iptalde otomatik iade bilgisiyle akıyor
-- [ ] **Siparişler: elle giriş** — müşteri bul-veya-oluştur; kalem fiyatı liste fiyatıyla dolu gelir, **pazarlıklı fiyat üstüne yazılır** (yalnız admin; liste fiyatı + kim/ne girdi iz kaydı); marj-altı uyarı engelsiz; door hızlı satış (`draft → completed`); hediye işareti
+- [ ] (09.8) **Siparişler: elle giriş** — müşteri bul-veya-oluştur; kalem fiyatı liste fiyatıyla dolu gelir, **pazarlıklı fiyat üstüne yazılır** (yalnız admin; liste fiyatı + kim/ne girdi iz kaydı); marj-altı uyarı engelsiz; door hızlı satış (`draft → completed`); hediye işareti
   - *Bitti:* pazarlık iz kaydından "kapıda verilen indirim" türetilebiliyor; hızlı satışta stok fiiliden anında düşüyor
-- [ ] **Müşteriler: liste + detay** — telefon/ad arama, daraltmalar; detayda kimlik/adresler, sipariş geçmişi, **vade/limit yönetimi** (açık bakiye ve gecikme türetilmiş), **ödeme karnesi** (ciro, ort. ödeme günü, gecikme — karar admin'in), cod_allowed, fiyat ilişkisi, izin görüntüleme (salt-okunur), edinim bilgisi
+- [ ] (09.9) **Müşteriler: liste + detay** — telefon/ad arama, daraltmalar; detayda kimlik/adresler, sipariş geçmişi, **vade/limit yönetimi** (açık bakiye ve gecikme türetilmiş), **ödeme karnesi** (ciro, ort. ödeme günü, gecikme — karar admin'in), cod_allowed, fiyat ilişkisi, izin görüntüleme (salt-okunur), edinim bilgisi
   - *Bitti:* limit/vade değişiklikleri anında checkout kararına yansıyor; karne alanları sipariş verisinden hesaplanıyor
-- [ ] **Müşteriler: birleştirme + GDPR silme** — birleştirmede hedef/kaynak ve taşınacaklar onaydan önce net; RPC ile siparişler/puanlar/konuşmalar taşınır, kaynak kapanır. GDPR silme: kişisel veri silinir/anonimleşir, sipariş kayıtları muhasebe bütünlüğü için kalır; iki işlem de bilinçli onaylı
+- [ ] (09.10) **Müşteriler: birleştirme + GDPR silme** — birleştirmede hedef/kaynak ve taşınacaklar onaydan önce net; RPC ile siparişler/puanlar/konuşmalar taşınır, kaynak kapanır. GDPR silme: kişisel veri silinir/anonimleşir, sipariş kayıtları muhasebe bütünlüğü için kalır; iki işlem de bilinçli onaylı
   - *Bitti:* birleştirme sonrası kaynak müşteriyle hiçbir aktif bağ kalmıyor; silinen müşterinin siparişleri anonim duruyor
-- [ ] **B2B onay** — kuyruk + kontrol kartı: Sirene/Annuaire verisi (aktiflik, faaliyet kodu, kuruluş yılı), adres-rota uyumu, mükerrer kontrolü, DE'de VIES sonucu, `packages/ai` tek cümle özet, Google/Haritalar linki; tek dokunuş onay/ret (yanlışlıkla tetiklenmez)
+- [ ] (09.11) **B2B onay** — kuyruk + kontrol kartı: Sirene/Annuaire verisi (aktiflik, faaliyet kodu, kuruluş yılı), adres-rota uyumu, mükerrer kontrolü, DE'de VIES sonucu, `packages/ai` tek cümle özet, Google/Haritalar linki; tek dokunuş onay/ret (yanlışlıkla tetiklenmez)
   - *Bitti:* onay toptan fiyatı açıyor ama vade açmıyor; API ulaşılamazsa kart "doğrulanamadı" halini gösteriyor
-- [ ] **Talepler** — kuyruk (durum/tip daraltma, AI'nın yanıtladıkları ayırt edilir) + detay (sipariş bağı, kalemler, fotoğraflar, yazışma); cevap → e-posta bildirimi; iade tetikleme köprüsü; AI'dan devralma; elle talep açma
+- [ ] (09.12) **Talepler** — kuyruk (durum/tip daraltma, AI'nın yanıtladıkları ayırt edilir) + detay (sipariş bağı, kalemler, fotoğraflar, yazışma); cevap → e-posta bildirimi; iade tetikleme köprüsü; AI'dan devralma; elle talep açma
   - *Bitti:* durum döngüsü `open → in_progress → resolved` (yeniden açılabilir) çalışıyor; devralınan talepte AI susuyor
-- [ ] **Stok görünümü** — varyant bazında fiili/ayrılmış/kullanılabilir; parti listesi (kalan raf ömrü %, lot, konum, alış fiyatı); yaklaşan tarihli uyarılar + teklif kararı (fiyatlar sayfasıyla aynı karara çıkar); **lot/geri çağırma sorgusu** ("bu parti kimlere gitti" — OrderItemBatch'ten); imha/fire geçmişi
+- [ ] (09.13) **Stok görünümü** — varyant bazında fiili/ayrılmış/kullanılabilir; parti listesi (kalan raf ömrü %, lot, konum, alış fiyatı); yaklaşan tarihli uyarılar + teklif kararı (fiyatlar sayfasıyla aynı karara çıkar); **lot/geri çağırma sorgusu** ("bu parti kimlere gitti" — OrderItemBatch'ten); imha/fire geçmişi
   - *Bitti:* lot numarasından sipariş+müşteri listesine tek sorguda ulaşılıyor; DLC'si geçmiş partide yalnız imha yolu görünüyor
-- [ ] **Tedarik / satın alma** — tedarikçi kartları (vade, türetilen borç), ürün-kod eşlemesi, "sipariş zamanı" önerisi (eşik altı, tedarikçiye gruplu) → tek dokunuş PO taslağı → temiz liste/PDF (gönderim insana ait) → durum takibi; satın alma kaydı (fiyatlı stok girişi, paketleme hesabı, PO'dan dolu form + fark)
+- [ ] (09.14) **Tedarik / satın alma** — tedarikçi kartları (vade, türetilen borç), ürün-kod eşlemesi, "sipariş zamanı" önerisi (eşik altı, tedarikçiye gruplu) → tek dokunuş PO taslağı → temiz liste/PDF (gönderim insana ait) → durum takibi; satın alma kaydı (fiyatlı stok girişi, paketleme hesabı, PO'dan dolu form + fark)
   - *Bitti:* öneri → taslak → gönderildi → kabul zinciri uçtan uca; eksik gelen kalem fark olarak görünüyor
-- [ ] **Rotalar** — bölge CRUD (posta kodları + haftalık günler; bir kod tek bölge), günün rota listesi (hazırlık durumu bağlamıyla), kurye atama, siparişi başka güne taşıma, kesim saati etkisi görünümü
+- [ ] (09.15) **Rotalar** — bölge CRUD (posta kodları + haftalık günler; bir kod tek bölge), günün rota listesi (hazırlık durumu bağlamıyla), kurye atama, siparişi başka güne taşıma, kesim saati etkisi görünümü
   - *Bitti:* bölge değişikliği checkout gün hesabına yansıyor; atanmamış sipariş listede ayırt ediliyor
-- [ ] **Ayarlar** — kapsamlı Setting yönetimi (genel değer + kanal/bölge/ülke istisnaları; anlaşılır ad/açıklama; alt sınır kontrolü — TTL 30 dk altına inemez; değişiklik izi) + kullanıcı/rol yönetimi (çoklu rol, pasifleştirme)
+- [ ] (09.16) **Ayarlar** — kapsamlı Setting yönetimi (genel değer + kanal/bölge/ülke istisnaları; anlaşılır ad/açıklama; alt sınır kontrolü — TTL 30 dk altına inemez; değişiklik izi) + kullanıcı/rol yönetimi (çoklu rol, pasifleştirme)
   - *Bitti:* istisna eklenen ayar çözücüde globali eziyor; sınır ihlali anlaşılır reddediliyor
 
 ## Netleşecekler
 
 - **Admin izolasyon ayrıntısı (STACK §13 taslak):** middleware kapsamı, anon key'in tarayıcı kapsamı, RLS'nin admin tablolarındaki rolü — ilk görevden önce tek konuşmada karar.
 - **Sirene tarafında hangi uç:** Annuaire des Entreprises / Sirene API seçimi ve alan eşlemesi (ücretsiz uçlar; kayıt akışı 04/08'de kuruluysa aynı istemci kullanılır).
+
+---
+
+**Modül durumu (26.07.2026):** ürün/katalog ekranları çalışıyor, gerisi açık.
+- **Var:** `/operations/products` — ürün listesi + form (RHF, çok dilli sekmeler, alerjen, varyant düzenleyici, görsel yükleme), kategori/koleksiyon CRUD + sürükle-bırak sıralama + koleksiyon üyeliği, cihaz çatallı düzen (desktop/mobile), operasyon komponent kütüphanesi (`components/operation/ui` + `form`), 404/500 ekranları.
+- **Kısmi:** komponent envanteri — kullanılan komponentler yazıldı, iç galeri sayfası yok. Ürünler — paket (Bundle) CRUD ve aday ürün etkinleştirme yok; AI çeviri önerisi UI'da bağlı ama arka ucu bilinçli stub (`packages/ai` boş).
+- **Engel:** yasal beyan alanları (içindekiler/besin/saklama/çapraz bulaşma) ve galeri — veri modeli 26.07'de `DATA_MODEL`'e yazıldı, migration + şema + form tasarımı bekliyor (bkz. `BACKLOG §3`).

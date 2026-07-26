@@ -21,29 +21,33 @@ Sistemin bütün ticari kuralları — **saf fonksiyonlar** olarak (veritabanı 
 
 ## Görevler
 
-- [ ] **Durum makinesi:** izinli geçiş tablosu (`ORDER_LIFECYCLE.md` birebir: tam yol + hızlı satış + ek geçişler) + geçiş doğrulama fonksiyonu
+- [ ] (03.1) **Durum makinesi:** izinli geçiş tablosu (`ORDER_LIFECYCLE.md` birebir: tam yol + hızlı satış + ek geçişler) + geçiş doğrulama fonksiyonu
   - *Bitti:* her izinli geçiş ve en az 5 yasak geçiş birim testli; `returned → completed` ve iptalde "karşılanan = 0" kuralları dahil
-- [ ] **Kanal ve kaynak:** `company_info` → channel türetimi; order_source ekseninin bağımsızlığı
+- [ ] (03.2) **Kanal ve kaynak:** `company_info` → channel türetimi; order_source ekseninin bağımsızlığı
   - *Bitti:* şirketli müşteri → b2b, bireysel → b2c testleri
-- [ ] **Fiyat çözümü:** özel fiyat → müşteri indirimi % → kanal fiyatı sırası; near-expiry teklif istisnası (tek fiyat + miktar tavanı); bundle açılımı (atanmış kalem fiyatları, hediye=0, genel indirim muafiyeti)
+- [ ] (03.3) **Fiyat çözümü:** özel fiyat → müşteri indirimi % → kanal fiyatı sırası; near-expiry teklif istisnası (tek fiyat + miktar tavanı); bundle açılımı (atanmış kalem fiyatları, hediye=0, genel indirim muafiyeti)
   - *Bitti:* çözüm sırasının her basamağı + bundle/teklif istisnaları birim testli
-- [ ] **İndirim motoru:** kupon/otomatik, kapsamlar, **tek-en-büyük** kuralı, koşullar (min sepet, ilk sipariş, tarih, kullanım sınırı), sepet indirimini kalemlere **oransal dağıtma**
+- [ ] (03.4) **İndirim motoru:** kupon/otomatik, kapsamlar, **tek-en-büyük** kuralı, koşullar (min sepet, ilk sipariş, tarih, kullanım sınırı), sepet indirimini kalemlere **oransal dağıtma**
   - *Bitti:* iki uygun indirimde büyüğün seçildiği + dağıtım toplamının indirime eşit olduğu testler
-- [ ] **Rezervasyon kararları:** kullanılabilir = fiili − aktif rezervasyon hesabı; TTL/geç-ödeme dallanması (yeniden ayır → olmazsa iade kararı); batch-pinned kural (FEFO önerisinden pinned düşülür)
+- [ ] (03.5) **Rezervasyon kararları:** kullanılabilir = fiili − aktif rezervasyon hesabı; TTL/geç-ödeme dallanması (yeniden ayır → olmazsa iade kararı); batch-pinned kural (FEFO önerisinden pinned düşülür)
   - *Bitti:* geç webhook senaryosu (stok var / yok) iki dalıyla test edilmiş
-- [ ] **Ödeme türetimi:** karşılanan tutar (`fulfilled_qty × (unit_price − birim indirim payı)` + kargo ücreti kuralı) → `payment_status` (pending/paid/partial/refunded); kısmi karşılamada fark hesabı (peşin → iade; kapıda → düşür)
+- [ ] (03.6) **Ödeme türetimi:** karşılanan tutar (`fulfilled_qty × (unit_price − birim indirim payı)` + kargo ücreti kuralı) → `payment_status` (pending/paid/partial/refunded); kısmi karşılamada fark hesabı (peşin → iade; kapıda → düşür)
   - *Bitti:* kısmi + kuponlu + kargolu kombinasyon senaryosu doğru tutarı döndürüyor
-- [ ] **Vade freni:** açık bakiye + limit + gecikme → "hesaba" seçeneği açık/kapalı kararı; limit aşımının admin onayına düşmesi
+- [ ] (03.7) **Vade freni:** açık bakiye + limit + gecikme → "hesaba" seçeneği açık/kapalı kararı; limit aşımının admin onayına düşmesi
   - *Bitti:* limit içinde otomatik, aşımda `requires_approval` testleri
-- [ ] **Kapıda ödeme kararları:** değer tavanı (engel) + nakit yasal sınırı (uyarı, engel değil) + `cod_allowed`
+- [ ] (03.8) **Kapıda ödeme kararları:** değer tavanı (engel) + nakit yasal sınırı (uyarı, engel değil) + `cod_allowed`
   - *Bitti:* üç kural ayrı ayrı ve birlikte test edilmiş
-- [ ] **Kimlik çözümü:** telefon (E.164 normalize) + e-posta ile bul-veya-oluştur kararı (saf: eşleşme sonucu döner, DB işini çağıran yapar)
+- [ ] (03.9) **Kimlik çözümü:** telefon (E.164 normalize) + e-posta ile bul-veya-oluştur kararı (saf: eşleşme sonucu döner, DB işini çağıran yapar)
   - *Bitti:* telefon/e-posta eşleşme kombinasyon testleri
-- [ ] **KDV işleme:** vat_treatment kararı (FR domestic / DE B2B geçerli vergi no → reverse charge / DE B2C domestic) 
+- [ ] (03.10) **KDV işleme:** vat_treatment kararı (FR domestic / DE B2B geçerli vergi no → reverse charge / DE B2C domestic) 
   - *Bitti:* üç dal testli
-- [ ] **Referans numarası:** marka+yıl+rastgele üretici + "ilk kalıcı durumda üret" kuralı
+- [ ] (03.11) **Referans numarası:** marka+yıl+rastgele üretici + "ilk kalıcı durumda üret" kuralı
   - *Bitti:* biçim ve benzersizlik (çakışma yeniden deneme) testli
 
 ## Netleşecekler
 
 - **TS ↔ SQL sınırı:** hangi kurallar burada (saf TS), hangileri atomiklik gereği Postgres fonksiyonunda (RPC) yaşar; ör. rezervasyon *kararı* burada, *atomik yazımı* RPC'de. Kısa bir sınır konuşması — 06/07 modüllerine girmeden netleşir.
+
+---
+
+**Modül durumu (26.07.2026):** başlamadı. `packages/domain-core` kabuk (yalnız paket sabiti). 04/05'te yazılan servisler bugün domain-core'a bağımlı değil — fiyat çözümü, rezervasyon ve durum makinesi buraya geldiğinde 05/06/07'nin ilgili görevleri bu pakete devreder.

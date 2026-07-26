@@ -3,6 +3,10 @@
 > Bağlayıcı kurallar. Her oturum yüklenir, varsayılan davranışı ezer. Detay `docs/`'ta; bu dosya
 > "her zaman aklımda olması gereken"ler + haritadır. **Kod ile doküman çelişirse KOD haklı.**
 
+> **Proje evresi: greenfield.** Canlı yok, müşteri yok, veri yok. Migration dosyaları **doğrudan düzenlenir**
+> (yama migration'ı yazılmaz), geriye uyum gözetilmez — temiz şema > legacy nezaketi. `pnpm db:reset` serbest.
+> İlk üretim dağıtımında bu not silinir, `WORKFLOW §2` (ileri-doğru) yürürlüğe girer.
+
 ## 0. Kırmızı çizgiler
 - **Onaysız `git commit`/`push` YOK.** Onay her commit için ayrı; "commitle" bir sonrakini kapsamaz. → WORKFLOW §5
 - Canlı DB'ye bağlanma / prod env dosyası okuma yok. → WORKFLOW §4
@@ -45,8 +49,16 @@
 - Her tasarım/modül implementinden sonra **kural-uygunluk kontrolü** yap.
 - **Dev server'ı KULLANICI yönetir** (başlatır/durdurur). Dev çalışırken `next build` **çalıştırma** — aynı `.next`'i bozar (webpack "Cannot find module './vendor-chunks/…'" runtime hataları). Doğrulamayı dev'e dokunmayan `typecheck`/`lint`/`knip`/`boundaries` ile yap; gerçek build şartsa dev'i durdurmasını iste. Bozulursa çare: `rm -rf apps/web/.next` + kullanıcı dev'i yeniden başlatır.
 
-## 5. docs haritası
-Kurallar + kod dizilimi → `STACK` · Disiplin (migration/deploy/git) → `WORKFLOW` · İş kuralları → `DOMAIN` ·
-Veri → `DATA_MODEL` · Sipariş durum makinesi → `ORDER_LIFECYCLE` · i18n/SEO → `SEO_I18N` ·
-Blueprint'ten sapmalar → `ARCHITECTURE_DECISIONS` · Modül planı → `docs/build/NN-*.md` · Açık işler → `BACKLOG`.
+## 5. Doküman senkronu (her ajan için bağlayıcı)
+- **Durumun tek sahibi `docs/build/NN-*.md` görev satırıdır.** İş ilerlediyse aynı oturumda o satır `[x]`/`[~]` olur + altına **Durum** notu yazılır. `BACKLOG` kapsam tutar, ilerleme tutmaz; `build/README` özet tablosu **türetilir** (`pnpm docs:sync`), elle yazılmaz.
+- **Kod ve doküman aynı commit'te gider.** Ayrı commit "sonra yazarım"dır, o da yazmamaktır.
+- **Görev kimliği `(NN.k)`** — iş bu kimlikle üstlenilir. Paralel ajan varsa görev satırına `touches:` (dokunulacak yollar) yazılır; kesişen iki görev aynı anda başlamaz, her ajan kendi dalında çalışır (`WORKFLOW §7`).
+- **Doğrulama:** `pnpm docs:check` — veri modeli ↔ migration ↔ Zod alan karşılaştırması, anılan paketlerin varlığı, görev kimlikleri, özet tazeliği. `pnpm hooks:install` ile commit öncesi otomatik koşar.
+- Veri modeli konu dosyalarına bölüktür (`docs/architecture/data-model/`): **alan** oraya, **karar** ana `DATA_MODEL.md`'ye yazılır.
+
+## 6. docs haritası
+Kurallar + kod dizilimi → `STACK` · Disiplin (migration/deploy/git/ajan) → `WORKFLOW` · İş kuralları → `DOMAIN` ·
+Veri: ortak ilke + kalıcı kararlar → `DATA_MODEL`, varlık tabloları → `data-model/{katalog,stok-tedarik,musteri-siparis,para,iletisim-geribildirim}.md` ·
+Sipariş durum makinesi → `ORDER_LIFECYCLE` · i18n/SEO → `SEO_I18N` ·
+Blueprint'ten sapmalar → `ARCHITECTURE_DECISIONS` · Modül planı + durum → `docs/build/NN-*.md` · Kapsam listesi → `BACKLOG`.
 Tam navigasyon: `docs/architecture/README.md`.

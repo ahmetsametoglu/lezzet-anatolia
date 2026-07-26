@@ -19,17 +19,17 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
 
 ## Görevler
 
-- [ ] **Gün listesi:** kuryenin o günkü teslimatları rota sırasıyla (adres, müşteri, ödeme beklentisi + tutar, içerik özeti); yalnız kendi teslimatları
+- [ ] (11.1) **Gün listesi:** kuryenin o günkü teslimatları rota sırasıyla (adres, müşteri, ödeme beklentisi + tutar, içerik özeti); yalnız kendi teslimatları
   - *Bitti:* başka kuryenin teslimatı görünmüyor; ulaşılamayanlar listede kalıyor
-- [ ] **Teslimat ekranı — onay:** kalem listesi + eksik/reddedilen işaretleme (tutar kendiliğinden düşer); B2B'de imza/foto zorunlu (parametrik) → `Order.delivery_proof`
+- [ ] (11.2) **Teslimat ekranı — onay:** kalem listesi + eksik/reddedilen işaretleme (tutar kendiliğinden düşer); B2B'de imza/foto zorunlu (parametrik) → `Order.delivery_proof`
   - *Bitti:* B2B teslimatı imzasız kapanmıyor; eksik işareti tutarı düşürüyor
-- [ ] **Teslimat ekranı — tahsilat:** nakit/kart/çek + tutar; nakit yasal sınır aşımında uyarı (engel yok); kapıda tavan/`cod_allowed` zaten checkout'ta uygulandı
+- [ ] (11.3) **Teslimat ekranı — tahsilat:** nakit/kart/çek + tutar; nakit yasal sınır aşımında uyarı (engel yok); kapıda tavan/`cod_allowed` zaten checkout'ta uygulandı
   - *Bitti:* nakit sınır uyarısı çıkıyor ama tahsilat tamamlanabiliyor
-- [ ] **Ulaşılamadı / reddedildi:** iki ayrı işaret; ulaşılamadı → `ready` (mal ayrılmış kalır), reddedildi → `returned` (depoya döner); `wa.me` "yoldayım" tek tık
+- [ ] (11.4) **Ulaşılamadı / reddedildi:** iki ayrı işaret; ulaşılamadı → `ready` (mal ayrılmış kalır), reddedildi → `returned` (depoya döner); `wa.me` "yoldayım" tek tık
   - *Bitti:* iki durumun stok sonucu 07/06 kurallarına uygun
-- [ ] **Teslimat özeti PDF:** teslimde e-postalı müşteriye otomatik (parametrik); kurye isterse çıktı ("resmî fatura değildir")
+- [ ] (11.5) **Teslimat özeti PDF:** teslimde e-postalı müşteriye otomatik (parametrik); kurye isterse çıktı ("resmî fatura değildir")
   - *Bitti:* teslimde PDF üretiliyor + gönderiliyor; çıktı alınabiliyor
-- [ ] **Gün kapanışı (RPC):** `CourierDayClose` — teslim edilenler, yöntem bazında toplam, iadeler; beklenen vs sayılan farkı aynı gün; kapanmış gün salt-okunur
+- [ ] (11.6) **Gün kapanışı (RPC):** `CourierDayClose` — teslim edilenler, yöntem bazında toplam, iadeler; beklenen vs sayılan farkı aynı gün; kapanmış gün salt-okunur
   - *Bitti:* fark hesabı doğru; kapanan gün değiştirilemiyor
 
 ## Netleşecekler

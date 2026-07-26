@@ -9,7 +9,7 @@ WhatsApp'ın satış yüzeyi olarak kurulması — **iki adımda, ikisi de Faz 1
 - `CHANNELS.md` — tamamı (eksenler, kimlik, inbound/outbound, ajan sınırı, faz yerleşimi)
 - `ADR_WHATSAPP.md` (ADR-001…005)
 - `DOMAIN.md §10-11` (kimlik birleştirme, servis penceresi, opt-in)
-- `DATA_MODEL.md` (`Conversation`, `Message`, `WebhookEvent`)
+- `data-model/iletisim-geribildirim.md` (`Conversation`, `Message`, `WebhookEvent`)
 - `INTEGRATIONS.md` (360dialog notları, sürücü tablosu)
 
 ## Bağımlılık
@@ -24,35 +24,35 @@ WhatsApp'ın satış yüzeyi olarak kurulması — **iki adımda, ikisi de Faz 1
 
 ### Adım 1 — Zemin (elle işleme)
 
-- [ ] `Conversation` + `Message` servisleri ve elle konuşma/mesaj kaydı (admin, gelen DM'i işler)
+- [ ] (15.1) `Conversation` + `Message` servisleri ve elle konuşma/mesaj kaydı (admin, gelen DM'i işler)
   - *Bitti:* konuşma açılıyor, mesajlar yön/tür ile kaydediliyor; alanlar `DATA_MODEL.md` ile birebir
-- [ ] **Telefon kimlik çözümü bağlanması:** E.164 normalize + bul-veya-oluştur (03'teki saf fonksiyon) gerçek akışta — eşleşmeyen numara `is_draft` taslak müşteri açar, konuşma müşteriye bağlanır
+- [ ] (15.2) **Telefon kimlik çözümü bağlanması:** E.164 normalize + bul-veya-oluştur (03'teki saf fonksiyon) gerçek akışta — eşleşmeyen numara `is_draft` taslak müşteri açar, konuşma müşteriye bağlanır
   - *Bitti:* bilinen numara mevcut müşteriye bağlanıyor; yeni numara taslak açıyor; aynı numara ikinci kez taslak açmıyor
-- [ ] **`wa.me` click-to-chat girişleri:** sitede buton (çok dilli önceden yazılı mesaj), QR üretimi; IG bio linki operasyon notu olarak
+- [ ] (15.3) **`wa.me` click-to-chat girişleri:** sitede buton (çok dilli önceden yazılı mesaj), QR üretimi; IG bio linki operasyon notu olarak
   - *Bitti:* buton doğru numara + dile uygun mesajla WhatsApp'ı açıyor
-- [ ] **Admin elle sipariş köprüsü:** konuşmadan "sipariş oluştur" → müşteri önseçili admin sipariş girişi, `order_source=whatsapp`
+- [ ] (15.4) **Admin elle sipariş köprüsü:** konuşmadan "sipariş oluştur" → müşteri önseçili admin sipariş girişi, `order_source=whatsapp`
   - *Bitti:* köprüden girilen sipariş kaynak=whatsapp ile normal yaşam döngüsünde akıyor
-- [ ] **Admin konuşma izleme:** konuşma listesi + detay (mesaj geçmişi, bağlı müşteri/sipariş)
+- [ ] (15.5) **Admin konuşma izleme:** konuşma listesi + detay (mesaj geçmişi, bağlı müşteri/sipariş)
   - *Bitti:* admin tüm konuşmaları görüyor; müşteri kartından konuşmasına geçilebiliyor
 
 ### Adım 2 — Canlı (webhook + AI ajanı)
 
-- [ ] **[Önce netleştir]** 360dialog onboarding (aşağıdaki "Netleşecekler") — hesap kurulmadan kod yazılmaz
-- [ ] **Webhook alıcısı (`apps/backend`):** imza doğrulama + `WebhookEvent` idempotency (provider+event_id unique, tekrar = no-op) + gelen mesajın `Conversation`/`Message`'a yazımı + 24s pencere güncellemesi (`window_expires_at`)
+- [ ] (15.6) **[Önce netleştir]** 360dialog onboarding (aşağıdaki "Netleşecekler") — hesap kurulmadan kod yazılmaz
+- [ ] (15.7) **Webhook alıcısı (`apps/backend`):** imza doğrulama + `WebhookEvent` idempotency (provider+event_id unique, tekrar = no-op) + gelen mesajın `Conversation`/`Message`'a yazımı + 24s pencere güncellemesi (`window_expires_at`)
   - *Bitti:* aynı olay iki kez gönderilince tek kayıt; pencere bitişi doğru hesaplanıyor; imzasız istek reddediliyor
-- [ ] **AI ajanı (`packages/ai`):** çok dilli sohbet; stok/fiyat/sipariş durumunu **domain-core'dan okur** — cevap + kart/aksiyon kararı üretir, ticari değer uydurmaz
+- [ ] (15.8) **AI ajanı (`packages/ai`):** çok dilli sohbet; stok/fiyat/sipariş durumunu **domain-core'dan okur** — cevap + kart/aksiyon kararı üretir, ticari değer uydurmaz
   - *Bitti:* test sohbetinde fiyat/stok cevapları domain-core ile birebir; stokta olmayan ürüne satış sözü verilmiyor
-- [ ] **İnteraktif kartlar:** buton/liste/carousel/ürün kartı gönderimi (içerik ajandan, render 360dialog/Cloud API)
+- [ ] (15.9) **İnteraktif kartlar:** buton/liste/carousel/ürün kartı gönderimi (içerik ajandan, render 360dialog/Cloud API)
   - *Bitti:* örnek ürün carousel'i telefonda görünüyor, buton cevabı webhook'tan geri okunuyor
-- [ ] **Sohbette sipariş kapatma:** ajan sepeti kurar → rezervasyon (önce ayır) → **Stripe payment link, süresi rezervasyon TTL'ine eşit** → ödeme webhook'unda `confirmed`
+- [ ] (15.10) **Sohbette sipariş kapatma:** ajan sepeti kurar → rezervasyon (önce ayır) → **Stripe payment link, süresi rezervasyon TTL'ine eşit** → ödeme webhook'unda `confirmed`
   - *Bitti:* link süresi = TTL; süre dolunca stok serbest + link geçersiz; geç ödeme dallanması (03) işliyor
-- [ ] **Utility template'ler:** sipariş onayı / kargo bildirimi şablonları onaylatılır; `packages/notify` WhatsApp API sürücüsü doldurulur; pencere içi serbest mesaj / pencere dışı template kararı `Conversation`'dan
+- [ ] (15.11) **Utility template'ler:** sipariş onayı / kargo bildirimi şablonları onaylatılır; `packages/notify` WhatsApp API sürücüsü doldurulur; pencere içi serbest mesaj / pencere dışı template kararı `Conversation`'dan
   - *Bitti:* pencere içinde serbest mesaj, dışında onaylı template seçiliyor (birim test + gerçek gönderim)
-- [ ] **Sohbet sonunda opt-in sorma:** ajan uygun anda pazarlama iznini sorar → `Conversation.opt_in` + `Customer.marketing_consent.whatsapp` (`{granted, at, source}`)
+- [ ] (15.12) **Sohbet sonunda opt-in sorma:** ajan uygun anda pazarlama iznini sorar → `Conversation.opt_in` + `Customer.marketing_consent.whatsapp` (`{granted, at, source}`)
   - *Bitti:* onay kaydı zaman + kaynakla düşüyor; reddedene tekrar sorulmuyor
-- [ ] **Ajan → insan devri:** ajan çözemediğinde/müşteri istediğinde konuşma "insanda" işaretlenir + admin'e bildirim; devirdeyken ajan susar
+- [ ] (15.13) **Ajan → insan devri:** ajan çözemediğinde/müşteri istediğinde konuşma "insanda" işaretlenir + admin'e bildirim; devirdeyken ajan susar
   - *Bitti:* devir sonrası gelen mesaja ajan otomatik cevap vermiyor; admin cevabı konuşmaya düşüyor
-- [ ] **Ajanın Ticket açması:** şikâyette hangi sipariş → hangi ürün → birkaç netleştirme sorusu → `Ticket` (`conversation_id` bağlı; 16 servisleri)
+- [ ] (15.14) **Ajanın Ticket açması:** şikâyette hangi sipariş → hangi ürün → birkaç netleştirme sorusu → `Ticket` (`conversation_id` bağlı; 16 servisleri)
   - *Bitti:* sohbetten açılan talep admin kuyruğunda, sipariş/kalem bağıyla görünüyor
 
 ## Netleşecekler

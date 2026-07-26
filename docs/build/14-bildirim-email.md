@@ -22,22 +22,22 @@ Sistemin dışarıya konuşan sesi: `packages/email` (mail istemcisi + default �
 
 ## Görevler
 
-- [ ] **[Önce netleştir]** E-posta sağlayıcı seçimi (aşağıdaki "Netleşecekler") — istemci kodu bu karardan sonra
-- [ ] `packages/email`: sağlayıcı-agnostik gönderim arayüzü + seçilen sağlayıcı sürücüsü + default şablon altyapısı (çok dilli — müşterinin `preferred_language`'ı; marka sabitleri `packages/brand`'ten)
+- [ ] (14.1) **[Önce netleştir]** E-posta sağlayıcı seçimi (aşağıdaki "Netleşecekler") — istemci kodu bu karardan sonra
+- [ ] (14.2) `packages/email`: sağlayıcı-agnostik gönderim arayüzü + seçilen sağlayıcı sürücüsü + default şablon altyapısı (çok dilli — müşterinin `preferred_language`'ı; marka sabitleri `packages/brand`'ten)
   - *Bitti:* test adresine örnek şablon üç dilde de doğru render edilip gönderiliyor
-- [ ] **Supabase Auth send-email hook:** doğrulama/OTP mailleri `packages/email` default şablonuyla çıkar; Supabase'in yerleşik mail yapısı devre dışı
+- [ ] (14.3) **Supabase Auth send-email hook:** doğrulama/OTP mailleri `packages/email` default şablonuyla çıkar; Supabase'in yerleşik mail yapısı devre dışı
   - *Bitti:* kayıt/OTP maili bizim şablonla geliyor; Supabase şablonundan giden sıfır mail
-- [ ] `packages/notify`: tek arayüz (olay + müşteri + veri) + sürücü kaydı — e-posta ve `wa.me` sürücüleri çalışır; WhatsApp API sürücüsü boş arayüzle hazır (15'te dolar)
+- [ ] (14.4) `packages/notify`: tek arayüz (olay + müşteri + veri) + sürücü kaydı — e-posta ve `wa.me` sürücüleri çalışır; WhatsApp API sürücüsü boş arayüzle hazır (15'te dolar)
   - *Bitti:* aynı olay çağrısı sürücüye göre e-posta gönderiyor / wa.me linki üretiyor (birim test)
-- [ ] **İşlem bildirimleri temel set** — sipariş durum geçişlerine bağlanır: onay (`→ confirmed`), yola çıktı (`→ out_for_delivery`), teslim + fiş (`→ delivered`), iptal/iade (`→ cancelled`/`→ returned`/para iadesi)
+- [ ] (14.5) **İşlem bildirimleri temel set** — sipariş durum geçişlerine bağlanır: onay (`→ confirmed`), yola çıktı (`→ out_for_delivery`), teslim + fiş (`→ delivered`), iptal/iade (`→ cancelled`/`→ returned`/para iadesi)
   - *Bitti:* her geçişte doğru şablon, müşteri dilinde; geçiş başına en fazla bir mail (tekrar tetikte no-op)
-- [ ] **Teslimat özeti PDF:** kalemler + karşılanan miktarlar + `reference_no` + "resmî fatura değildir" ibaresi; teslimde e-postası olan müşteriye **otomatik** gönderim (parametrik `Setting`, varsayılan açık); kurye için indirilebilir/yazdırılabilir hâli
+- [ ] (14.6) **Teslimat özeti PDF:** kalemler + karşılanan miktarlar + `reference_no` + "resmî fatura değildir" ibaresi; teslimde e-postası olan müşteriye **otomatik** gönderim (parametrik `Setting`, varsayılan açık); kurye için indirilebilir/yazdırılabilir hâli
   - *Bitti:* `delivered` geçişinde PDF ekli mail gidiyor; Setting kapalıyken gitmiyor; kısmi karşılamada miktarlar doğru
-- [ ] **Talep cevap bildirimi:** ticket olayları için notify olayı + şablon (admin cevabı / durum değişimi) — tetikleme `16-talep-sikayet`'te bağlanır
+- [ ] (14.7) **Talep cevap bildirimi:** ticket olayları için notify olayı + şablon (admin cevabı / durum değişimi) — tetikleme `16-talep-sikayet`'te bağlanır
   - *Bitti:* örnek ticket cevabı şablondan müşteri dilinde çıkıyor
-- [ ] **Kampanya e-postası elle gönderim aracı (admin):** alıcı listesi yalnız `marketing_consent.email` izinlilerden; içerik elle hazırlanır, önizleme + gönder; otomasyon/zamanlama **yok**
+- [ ] (14.8) **Kampanya e-postası elle gönderim aracı (admin):** alıcı listesi yalnız `marketing_consent.email` izinlilerden; içerik elle hazırlanır, önizleme + gönder; otomasyon/zamanlama **yok**
   - *Bitti:* izinsiz müşteri listeye giremiyor; test gönderimi yalnız izinli kayıtlara ulaşıyor
-- [ ] **Bülten kayıt kutusu (site) + `marketing_consent` yazımı:** kutu baştan işaretsiz (AB açık eylem şartı); kayıtta `{granted, at, source}` yazılır — checkout/kayıt kutuları da aynı yazım fonksiyonunu kullanır
+- [ ] (14.9) **Bülten kayıt kutusu (site) + `marketing_consent` yazımı:** kutu baştan işaretsiz (AB açık eylem şartı); kayıtta `{granted, at, source}` yazılır — checkout/kayıt kutuları da aynı yazım fonksiyonunu kullanır
   - *Bitti:* kayıt sonrası consent jsonb'de zaman + kaynak dolu; aynı e-postayla ikinci kayıt idempotent
 
 ## Netleşecekler

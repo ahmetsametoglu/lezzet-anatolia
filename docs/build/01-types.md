@@ -6,7 +6,7 @@ Tüm veri modelinin **tek kaynak** Zod şemaları: varlıklar, enum'lar, `Locali
 
 ## Okunacaklar
 
-- `DATA_MODEL.md` — tamamı (varlıklar, enum listesi, "Kalıcı kararlar")
+- `DATA_MODEL.md` (ortak ilkeler, enum listesi, "Kalıcı kararlar") + `data-model/*.md` (varlık tabloları — beş konu dosyası)
 - `STACK.md §5` (şema tek kaynaktır; camelCase ↔ snake_case kuralı)
 
 ## Bağımlılık
@@ -19,21 +19,26 @@ Tüm veri modelinin **tek kaynak** Zod şemaları: varlıklar, enum'lar, `Locali
 
 ## Görevler
 
-- [ ] `LocalizedText` şeması (`{fr?, de?, tr?}` + en az bir dil zorunlu) + `language`/`country` enum'ları
+- [x] (01.1) `LocalizedText` şeması (`{fr?, de?, tr?}` + en az bir dil zorunlu) + `language`/`country` enum'ları
   - *Bitti:* geçersiz (üç dil de boş) girdi parse'da reddediliyor (birim test)
-- [ ] Tüm enum'lar — `DATA_MODEL.md` "Enum'lar (özet)" listesi birebir (channel, order_source, order_status, payment_*, ticket_*, po_status, adjustment_reason, movement_*, analytics_event_type...)
+- [~] (01.2) Tüm enum'lar — `DATA_MODEL.md` "Enum'lar (özet)" listesi birebir (channel, order_source, order_status, payment_*, ticket_*, po_status, adjustment_reason, movement_*, analytics_event_type...)
   - *Bitti:* enum sayısı ve değerleri dokümanla birebir; tek dosyadan export
-- [ ] Katalog şemaları: `Category`, `Collection`, `Product`, `ProductVariant`, `Price`, `Discount`, `Bundle`, `BundleItem`
-- [ ] Stok/tedarik şemaları: `Stock`, `Reservation`, `StockAdjustment`, `TemperatureLog`, `Supplier`, `SupplierProduct`, `PurchaseOrder(+Item)`, `StockIntake`
-- [ ] Sipariş şemaları: `Order`, `OrderItem`, `OrderItemBatch`, `OrderStatusLog`, `Cart`
-- [ ] Müşteri/kimlik şemaları: `Customer`, `Address`, `DeliveryZone`
-- [ ] Para şemaları: `Account`, `MoneyMovement`, `BankImportProfile`, `CourierDayClose`
-- [ ] Mesajlaşma/talep şemaları: `Conversation`, `Message`, `Ticket`, `TicketMessage`, `WebhookEvent`
-- [ ] Geri bildirim/analitik şemaları: `Review`, `FeedbackRequest`, `PointsEntry`, `AnalyticsEvent`, `Setting`
+- [~] (01.3) Katalog şemaları: `Category`, `Collection`, `Product`, `ProductVariant`, `Price`, `Discount`, `Bundle`, `BundleItem`
+- [ ] (01.4) Stok/tedarik şemaları: `Stock`, `Reservation`, `StockAdjustment`, `TemperatureLog`, `Supplier`, `SupplierProduct`, `PurchaseOrder(+Item)`, `StockIntake`
+- [ ] (01.5) Sipariş şemaları: `Order`, `OrderItem`, `OrderItemBatch`, `OrderStatusLog`, `Cart`
+- [~] (01.6) Müşteri/kimlik şemaları: `Customer`, `Address`, `DeliveryZone`
+- [ ] (01.7) Para şemaları: `Account`, `MoneyMovement`, `BankImportProfile`, `CourierDayClose`
+- [ ] (01.8) Mesajlaşma/talep şemaları: `Conversation`, `Message`, `Ticket`, `TicketMessage`, `WebhookEvent`
+- [ ] (01.9) Geri bildirim/analitik şemaları: `Review`, `FeedbackRequest`, `PointsEntry`, `AnalyticsEvent`, `Setting`
   - *Ortak bitti kriteri (tüm şema görevleri):* her şema `DATA_MODEL.md`'deki alan listesiyle birebir; `z.infer` ile tip export ediliyor; örnek geçerli/geçersiz kayıtlarla parse birim testleri geçiyor
-- [ ] Insert/Update türevleri (id/created_at hariç tutan `.omit()/.partial()` türevleri) — servis katmanının kullanacağı biçimler
+- [~] (01.10) Insert/Update türevleri (id/created_at hariç tutan `.omit()/.partial()` türevleri) — servis katmanının kullanacağı biçimler
   - *Bitti:* en az Order/Customer/Product için türev tipler derleniyor
-- [ ] `README` (paket içi): şema ekleme kuralı — "önce DATA_MODEL, sonra şema; çelişkide doküman güncellenir"
+- [ ] (01.11) `README` (paket içi): şema ekleme kuralı — "önce DATA_MODEL, sonra şema; çelişkide doküman güncellenir"
+
+**Modül durumu (26.07.2026):** artımlı ilerliyor — şemalar ihtiyaç duyan modülle birlikte yazılıyor (toptan değil, CLAUDE.md §1).
+- **Var:** `LocalizedText`, `UserProfile`, `EmailVerification`, `Category`, `Collection`, `Product`, `ProductVariant`, `ProductCollection` + hepsinin Insert/Update türevleri; enum'lardan `ProductAllergen`, `ProductDateType`.
+- **Yok:** `Price`, `Discount`, `Bundle(+Item)`, tüm stok/tedarik · sipariş · para · mesajlaşma · geri bildirim şemaları; sipariş/ödeme/ticket/hareket enum'ları; paket içi README.
+- `Customer`/`Address`/`DeliveryZone` henüz yok — bugünkü kimlik `UserProfile` üzerinden yürüyor (04'ün `Customer` görevleri açık).
 
 ## Netleşecekler
 

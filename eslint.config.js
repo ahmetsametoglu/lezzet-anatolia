@@ -7,8 +7,9 @@ export default [
   },
   ...baseConfig,
   {
-    // CLI/seed script'leri kullanıcıya konsoldan konuşur.
-    files: ['scripts/**/*.ts'],
+    // CLI/seed script'leri kullanıcıya konsoldan konuşur; Node ortamında koşarlar.
+    files: ['scripts/**/*.{ts,mjs}'],
+    languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
     rules: { 'no-console': 'off' },
   },
 ];

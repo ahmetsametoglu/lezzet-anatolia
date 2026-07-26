@@ -10,6 +10,9 @@ Bu klasör, sistemi **hangi sırayla ve hangi parçalar halinde** kodlayacağım
 2. **Netleşmemiş konu masaya gelir:** `STACK.md §13`'teki gibi "taslak" işaretli konulara gelindiğinde kod yazılmadan önce seçenekler artı/eksileriyle sunulur, net karar alınır, sonra kodlanır.
 3. **Modül dosyasındaki sıraya uyulur;** görevler tek oturumluk boydadır; her görev bitti-kriterine ulaşınca işaretlenir (`[x]`).
 4. **Doküman senkronu:** kod, dokümandan saparsa (haklı sebeple) ilgili mimari dosya aynı oturumda güncellenir.
+5. **Durumun tek sahibi bu klasördür.** Bir işin nerede olduğu YALNIZ modül dosyasındaki görev satırında yazar. `BACKLOG.md` ne yapılacağını (kapsam) tutar, ne kadar yapıldığını değil; aşağıdaki özet tablo da elle yazılmaz — `pnpm docs:sync` görev satırlarından üretir. Aynı gerçeği iki yere yazmak, ikisini de güvenilmez yapar.
+6. **Görev işaretleri:** `[ ]` başlanmadı · `[~]` kısmen yapıldı (neyin eksik olduğu görev altındaki **Durum** notunda yazılı olmalı) · `[x]` bitti-kriteri karşılandı, kanıtı görüldü.
+7. **Görev kimliği ve dokunma alanı:** her görev satırı `(NN.k)` kimliğiyle başlar — ajan bir işi bu kimlikle üstlenir. Birden çok ajan çalışıyorsa üstlenen ajan görev satırına `touches:` ile dokunacağı yolları yazar; `touches` kümesi kesişen iki görev aynı anda başlamaz (bkz. `WORKFLOW.md §7`).
 
 ## Modül dosyası şablonu
 
@@ -17,26 +20,30 @@ Her `NN-modul.md` dosyası şunları taşır: **Kapsam** (bu modül ne, ne deği
 
 ## Sıra ve durum
 
-| # | Dosya | Kapsam | Durum |
-| --- | --- | --- | --- |
-| 00 | `00-iskelet.md` | Monorepo iskeleti: pnpm + Turborepo, paket kabukları, tooling | bekliyor |
-| 01 | `01-types.md` | `packages/types`: Zod şemaları, enum'lar, LocalizedText | bekliyor |
-| 02 | `02-database.md` | `packages/database`: BaseDbService, migration altyapısı, ilk şema | bekliyor |
-| 03 | `03-domain-core.md` | Durum makinesi, fiyat çözümü, rezervasyon, kanal/kaynak kuralları (saf fonksiyonlar + birim test) | bekliyor |
-| 04 | `04-auth-kimlik.md` | Supabase Auth, guard'lar, müşteri bul-veya-oluştur, misafir hızlı doğrulama | bekliyor |
-| 05 | `05-katalog.md` | Ürün/varyant/kategori/koleksiyon/paket + fiyat yönetimi (admin CRUD + vitrin okuma) | bekliyor |
-| 06 | `06-stok.md` | Parti, rezervasyon (RPC), stok girişi, tedarik (tedarikçi kartı, kod eşlemesi, tedarik siparişi, eşik önerisi), imha/fire, sıcaklık | bekliyor |
-| 07 | `07-siparis.md` | Checkout, sipariş yaşam döngüsü, Stripe, kısmi karşılama, iade | bekliyor |
-| 08 | `08-musteri-app.md` | Vitrin sayfaları (komponentlerden inşa), sepet, hesap, çok dillilik | bekliyor |
-| 09 | `09-admin.md` | Admin sayfaları (komponentlerden inşa), B2B onay, ayarlar | bekliyor |
-| 10 | `10-depo.md` | Hazırlık ekranı (FEFO + parti kaydı), mal kabul | bekliyor |
-| 11 | `11-kurye-rota.md` | Rota listesi, teslimat ekranı, teslim onayı, gün kapanışı | bekliyor |
-| 12 | `12-para-muhasebe.md` | Hesaplar, para hareketleri, banka import, export, kârlılık | bekliyor |
-| 13 | `13-analitik.md` | Olay toplama, raporlar, AI içgörü | bekliyor |
-| 14 | `14-bildirim-email.md` | `packages/email` + `notify`, işlem bildirimleri, teslimat özeti PDF | bekliyor |
-| 15 | `15-whatsapp.md` | Zemin (elle işleme) + canlı (webhook, AI ajanı, kartlar, payment link) | bekliyor |
-| 16 | `16-talep-sikayet.md` | Ticket akışı + AI destekli işletme | bekliyor |
-| 17 | `17-geri-bildirim-puan.md` | Swipe, yorum, puan/kupon, ürün skoru | bekliyor |
-| 18 | `18-operasyon-guvenlik.md` | Deploy, yedekleme, log/alarm, CI/staging — **tamamı önce netleşecek** (STACK §13) | bekliyor |
+Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül dosyalarındaki görev satırlarıdır; `pnpm docs:sync` yeniden üretir, `pnpm docs:check` bayatlamışsa uyarır.
+
+<!-- durum:başlangıç -->
+| # | Dosya | Kapsam | Durum | Görev |
+| --- | --- | --- | --- | --- |
+| 00 | `00-iskelet.md` | Monorepo İskeleti | tamam | 8/8 |
+| 01 | `01-types.md` | `packages/types`: Şemalar ve Enum'lar | sürüyor | 1/11 (+4 kısmi) |
+| 02 | `02-database.md` | `packages/database`: Taban Servis ve İlk Şema | sürüyor | 4/7 (+3 kısmi) |
+| 03 | `03-domain-core.md` | `packages/domain-core`: İş Kuralları Motoru | bekliyor | 0/11 |
+| 04 | `04-auth-kimlik.md` | Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama | sürüyor | 3/8 (+1 kısmi) |
+| 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 3/9 |
+| 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | bekliyor | 0/11 |
+| 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | bekliyor | 0/10 |
+| 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | bekliyor | 0/9 |
+| 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 0/16 (+2 kısmi) |
+| 10 | `10-depo.md` | Depo Yüzeyi | bekliyor | 0/6 |
+| 11 | `11-kurye-rota.md` | Kurye ve Rota Teslimat | bekliyor | 0/6 |
+| 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | bekliyor | 0/7 |
+| 13 | `13-analitik.md` | Analitik | bekliyor | 0/7 |
+| 14 | `14-bildirim-email.md` | Bildirim ve E-posta: `packages/email` + `packages/notify` | bekliyor | 0/9 |
+| 15 | `15-whatsapp.md` | WhatsApp: Zemin ve Canlı Kanal | bekliyor | 0/14 |
+| 16 | `16-talep-sikayet.md` | Talep / Şikâyet | bekliyor | 0/6 |
+| 17 | `17-geri-bildirim-puan.md` | Geri Bildirim, Yorum ve Puan | bekliyor | 0/7 |
+| 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | bekliyor | 0/10 |
+<!-- durum:son -->
 
 Sıra katı değildir ama bağımlılıklar bağlayıcıdır (her dosyada yazılı). 08–09, tasarımdan gelen **komponent envanterinin kodlanmasıyla** başlar: önce komponentler, sonra sayfalar.

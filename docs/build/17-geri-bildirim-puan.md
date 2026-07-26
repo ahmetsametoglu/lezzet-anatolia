@@ -7,7 +7,7 @@ Değerli veri toplarken müşteriyi ödüllendiren döngü: yorum + ürün skoru
 ## Okunacaklar
 
 - `DOMAIN.md §14` (geri bildirim/yorum/puan/ürün skoru — tamamı)
-- `DATA_MODEL.md` (Review/FeedbackRequest/PointsEntry/AnalyticsEvent product_swipe)
+- `data-model/iletisim-geribildirim.md` (Review/FeedbackRequest/PointsEntry/AnalyticsEvent product_swipe)
 
 ## Bağımlılık
 
@@ -19,19 +19,19 @@ Değerli veri toplarken müşteriyi ödüllendiren döngü: yorum + ürün skoru
 
 ## Görevler
 
-- [ ] **Yorum (Review):** yalnız satın alan; moderasyon (onay/ret) → ürün sayfasında gösterim; **ürün skoru türetimi** (yorum ortalaması + beğen/beğenme oranı)
+- [ ] (17.1) **Yorum (Review):** yalnız satın alan; moderasyon (onay/ret) → ürün sayfasında gösterim; **ürün skoru türetimi** (yorum ortalaması + beğen/beğenme oranı)
   - *Bitti:* onaysız yorum görünmüyor; ürün skoru türeniyor (05 ürün sayfasına besleniyor)
-- [ ] **FeedbackRequest cron:** teslim +10 gün (taramalı-idempotent); WhatsApp/e-posta link'iyle davet; tamamlanma izlenir
+- [ ] (17.2) **FeedbackRequest cron:** teslim +10 gün (taramalı-idempotent); WhatsApp/e-posta link'iyle davet; tamamlanma izlenir
   - *Bitti:* teslimden 10 gün sonra davet gidiyor; tekrar tetiklenmiyor
-- [ ] **Swipe akışları:** alım-sonrası memnuniyet + aday ürün keşif (`AnalyticsEvent product_swipe`, `dwell_ms`); sinyal kalite ağırlığı domain-core'da (13)
+- [ ] (17.3) **Swipe akışları:** alım-sonrası memnuniyet + aday ürün keşif (`AnalyticsEvent product_swipe`, `dwell_ms`); sinyal kalite ağırlığı domain-core'da (13)
   - *Bitti:* swipe olayı kaydediliyor; düşük kaliteli swipe analizde zayıf
-- [ ] **Puan (PointsEntry):** aksiyonlara puan (yorum/swipe/sipariş); bakiye **türetilir** (Σ points); tavanlar (aynı ürüne bir kez + günlük), B2C-only, süresiz; puan tamamlamaya bağlı (beğeniye değil)
+- [ ] (17.4) **Puan (PointsEntry):** aksiyonlara puan (yorum/swipe/sipariş); bakiye **türetilir** (Σ points); tavanlar (aynı ürüne bir kez + günlük), B2C-only, süresiz; puan tamamlamaya bağlı (beğeniye değil)
   - *Bitti:* bakiye ledger'dan türeniyor; istismar tavanları çalışıyor
-- [ ] **Redemption:** müşteri isteyince puan → kişisel `Discount` (`customer_id`) RPC (PointsEntry negatif + kupon tek transaction)
+- [ ] (17.5) **Redemption:** müşteri isteyince puan → kişisel `Discount` (`customer_id`) RPC (PointsEntry negatif + kupon tek transaction)
   - *Bitti:* çevirme atomik; puan düşüyor, kişisel kupon oluşuyor
-- [ ] **Google yorum köprüsü:** anket sonunda memnun müşteri Google işletme yorumuna tek-tık yönlendirilir
+- [ ] (17.6) **Google yorum köprüsü:** anket sonunda memnun müşteri Google işletme yorumuna tek-tık yönlendirilir
   - *Bitti:* yüksek memnuniyette Google linki sunuluyor
-- [ ] **Referral zemini:** `referred_by` yazımı (kayıtta); `PointsEntry.reason=referral` hazır (bağ ileride)
+- [ ] (17.7) **Referral zemini:** `referred_by` yazımı (kayıtta); `PointsEntry.reason=referral` hazır (bağ ileride)
   - *Bitti:* getiren müşteri kaydediliyor
 
 ## Netleşecekler

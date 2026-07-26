@@ -7,7 +7,7 @@ Tüm finans tek mantıkla: para bir hesapta durur, hareketlerle girer/çıkar. H
 ## Okunacaklar
 
 - `DOMAIN.md §9` (para hareketleri/hesaplar/satın alma), `§12` (kârlılık ürün vs şirket), `§16` (tedarikçi borcu)
-- `DATA_MODEL.md` (Account/MoneyMovement/BankImportProfile/StockIntake)
+- `data-model/para.md` + `data-model/stok-tedarik.md` (`StockIntake`)
 - `FEATURES.md` (Ön muhasebe), `INTEGRATIONS.md` (muhasebe export hedefi)
 
 ## Bağımlılık
@@ -20,19 +20,19 @@ Tüm finans tek mantıkla: para bir hesapta durur, hareketlerle girer/çıkar. H
 
 ## Görevler
 
-- [ ] **Hesaplar + hareketler:** `Account` (kasa/banka/Stripe) + `MoneyMovement` servisleri; elle giriş (tip/kategori/hesap); transferler (karşı hesap); bakiye **türetilir**
+- [ ] (12.1) **Hesaplar + hareketler:** `Account` (kasa/banka/Stripe) + `MoneyMovement` servisleri; elle giriş (tip/kategori/hesap); transferler (karşı hesap); bakiye **türetilir**
   - *Bitti:* hesap bakiyesi hareketlerden doğru; transfer iki hesaba simetrik yansıyor
-- [ ] **Sipariş para bağları:** tahsilat/iade hareketleri (`order_payment`/`order_refund`) → `Order.amount_*` cache güncellemesi (kaynak hareketler); kurye gün kapanışı tahsilatları buraya düşer
+- [ ] (12.2) **Sipariş para bağları:** tahsilat/iade hareketleri (`order_payment`/`order_refund`) → `Order.amount_*` cache güncellemesi (kaynak hareketler); kurye gün kapanışı tahsilatları buraya düşer
   - *Bitti:* sipariş tahsilat toplamı hareketlerle birebir; cache tutarlı
-- [ ] **Tedarik para bağları:** stok alımı → `purchase` hareketi (StockIntake bağı); tedarikçiye ödeme (`supplier_id`) → **tedarikçi borcu türetilir** (girişler − ödemeler)
+- [ ] (12.3) **Tedarik para bağları:** stok alımı → `purchase` hareketi (StockIntake bağı); tedarikçiye ödeme (`supplier_id`) → **tedarikçi borcu türetilir** (girişler − ödemeler)
   - *Bitti:* tedarikçi kartında borç doğru türeniyor
-- [ ] **Banka import:** Excel yükle → AI sütun şablonu çıkar (`BankImportProfile`, hesaba özel) → satırlar hareket olarak → sipariş/gider/transfer eşleştirme (öneri + elle onay)
+- [ ] (12.4) **Banka import:** Excel yükle → AI sütun şablonu çıkar (`BankImportProfile`, hesaba özel) → satırlar hareket olarak → sipariş/gider/transfer eşleştirme (öneri + elle onay)
   - *Bitti:* ikinci import aynı bankada şablonu otomatik uyguluyor; eşleşme onaya düşüyor
-- [ ] **Reklam gideri:** `category=advertising` + `meta.campaign` etiketi (13 ROI raporuna besleme)
+- [ ] (12.5) **Reklam gideri:** `category=advertising` + `meta.campaign` etiketi (13 ROI raporuna besleme)
   - *Bitti:* kampanya etiketli gider analitikte ciroyla yan yana gelebiliyor
-- [ ] **Kârlılık raporları:** ürün/sipariş kârı (katkı payı: COGS/teslimat/komisyon/paketleme snapshot) + **fire düşülmüş net marj** (`StockAdjustment`); şirket kârı (genel gider bir kez düşülür); kanal bazlı
+- [ ] (12.6) **Kârlılık raporları:** ürün/sipariş kârı (katkı payı: COGS/teslimat/komisyon/paketleme snapshot) + **fire düşülmüş net marj** (`StockAdjustment`); şirket kârı (genel gider bir kez düşülür); kanal bazlı
   - *Bitti:* ürün kârı snapshot'lardan; fire ayrı satır; şirket P&L genel giderle
-- [ ] **Muhasebe export:** dönem seçimi + `is_gift_order` hariç + `reference_no ↔ invoice_no` eşleştirme kuyruğu; temiz veri dosyası
+- [ ] (12.7) **Muhasebe export:** dönem seçimi + `is_gift_order` hariç + `reference_no ↔ invoice_no` eşleştirme kuyruğu; temiz veri dosyası
   - *Bitti:* hediye siparişler export dışı; export dosyası dönem toplamlarıyla tutuyor
 
 ## Netleşecekler

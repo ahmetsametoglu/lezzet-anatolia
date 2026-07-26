@@ -20,23 +20,23 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
 
 ## Görevler
 
-- [ ] **i18n altyapısı:** dil başına URL yapısı (`/fr`, `/de`, `/tr`), arayüz i18n dosyaları, LocalizedText gösterimi + yedek zinciri (TR→FR→DE), dil değiştirici; hreflang + çok dilli sitemap + `Product`/`LocalBusiness` schema.org
+- [ ] (08.1) **i18n altyapısı:** dil başına URL yapısı (`/fr`, `/de`, `/tr`), arayüz i18n dosyaları, LocalizedText gösterimi + yedek zinciri (TR→FR→DE), dil değiştirici; hreflang + çok dilli sitemap + `Product`/`LocalBusiness` schema.org
   - *Bitti:* aynı sayfa üç dilde açılıyor; sitemap ve hreflang doğrulayıcıdan geçiyor
-- [ ] **Müşteri komponent envanteri:** onaylı tasarımdan ortak komponentler (buton/kart/form alanı/liste/durum göstergesi/boş durum/uyarı/miktar seçici...) — her biri varyant ve durumlarıyla, tek yerde
+- [ ] (08.2) **Müşteri komponent envanteri:** onaylı tasarımdan ortak komponentler (buton/kart/form alanı/liste/durum göstergesi/boş durum/uyarı/miktar seçici...) — her biri varyant ve durumlarıyla, tek yerde
   - *Bitti:* envanterdeki her komponent izole kullanılabilir; sayfalar bunları tüketiyor
-- [ ] **Katalog grubu:** ana sayfa, katalog (arama/filtre + sıfır-sonuç → `search` olayı), ürün detay, paket detay
+- [ ] (08.3) **Katalog grubu:** ana sayfa, katalog (arama/filtre + sıfır-sonuç → `search` olayı), ürün detay, paket detay
   - *Bitti:* her sayfa `design/pages` envanterini eksiksiz karşılıyor; fiyat girene göre çözülüyor; iç terim sızmıyor
-- [ ] **Satın alma grubu:** sepet, checkout (07 akışına bağlanır), giriş/hızlı doğrulama
+- [ ] (08.4) **Satın alma grubu:** sepet, checkout (07 akışına bağlanır), giriş/hızlı doğrulama
   - *Bitti:* misafir son adımda doğrulanıp sipariş kapatabiliyor; üç dilde
-- [ ] **Hesap grubu:** hesap (profil/adres/dil/izinler/puan), siparişler (+ tek tuş tekrar sipariş), sipariş detay (+ "bir sorun mu var?")
+- [ ] (08.5) **Hesap grubu:** hesap (profil/adres/dil/izinler/puan), siparişler (+ tek tuş tekrar sipariş), sipariş detay (+ "bir sorun mu var?")
   - *Bitti:* tekrar sipariş güncel fiyatla sepet oluşturuyor; sipariş durumu sade dille görünüyor
-- [ ] **Talep grubu:** talep oluşturma (sipariş kalemi/tip/foto + genel "bize yaz" yönlendirmesi), talep listesi + yazışma (16'ya bağlanır)
+- [ ] (08.6) **Talep grubu:** talep oluşturma (sipariş kalemi/tip/foto + genel "bize yaz" yönlendirmesi), talep listesi + yazışma (16'ya bağlanır)
   - *Bitti:* siparişli ve siparişsiz talep açılıyor; durum takip ediliyor
-- [ ] **Geri bildirim grubu:** keşif/swipe (aday ürün), alım-sonrası anket (link ile), Professionnels (B2B self-servis kayıt)
+- [ ] (08.7) **Geri bildirim grubu:** keşif/swipe (aday ürün), alım-sonrası anket (link ile), Professionnels (B2B self-servis kayıt)
   - *Bitti:* swipe olayı `dwell_ms` ile kaydediliyor; SIRET ile kayıt formu doluyor
-- [ ] **Statik sayfalar:** yasal/statik şablon (mentions légales/CGV/gizlilik/teslimat-iade/SSS), çok dilli
+- [ ] (08.8) **Statik sayfalar:** yasal/statik şablon (mentions légales/CGV/gizlilik/teslimat-iade/SSS), çok dilli
   - *Bitti:* statik rotalar üç dilde açılıyor
-- [ ] **Analitik olay atma:** sunucu tarafı `page_view/product_view/add_to_cart/checkout_start/order_placed/search/product_swipe/share`; UTM yakalama (13'e besleme)
+- [ ] (08.9) **Analitik olay atma:** sunucu tarafı `page_view/product_view/add_to_cart/checkout_start/order_placed/search/product_swipe/share`; UTM yakalama (13'e besleme)
   - *Bitti:* olaylar çerezsiz kaydediliyor; UTM oturuma bağlanıyor
 
 ## Netleşecekler

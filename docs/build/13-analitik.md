@@ -6,7 +6,7 @@
 
 ## Okunacaklar
 
-- `FEATURES.md` (Analitik — cookie'siz hibrit kural), `DATA_MODEL.md` (AnalyticsEvent)
+- `FEATURES.md` (Analitik — cookie'siz hibrit kural), `data-model/iletisim-geribildirim.md` (AnalyticsEvent)
 - `DOMAIN.md §14` (swipe sinyal kalitesi/ağırlık), `SCOPE.md` (tek faz, izin sınırı)
 
 ## Bağımlılık
@@ -19,19 +19,19 @@
 
 ## Görevler
 
-- [ ] **Olay toplama:** sunucu-tarafı `AnalyticsEvent` (page_view/product_view/add_to_cart/checkout_start/order_placed/search/product_swipe/share); çerezsiz oturum anahtarı; kişisel kimlik yok, giriş varsa opsiyonel `customer_id`
+- [ ] (13.1) **Olay toplama:** sunucu-tarafı `AnalyticsEvent` (page_view/product_view/add_to_cart/checkout_start/order_placed/search/product_swipe/share); çerezsiz oturum anahtarı; kişisel kimlik yok, giriş varsa opsiyonel `customer_id`
   - *Bitti:* olaylar cihaza yazmadan kaydediliyor; parmak izi yok
-- [ ] **UTM → sipariş eşleşmesi:** link UTM → sunucu oturumu → sipariş; `acquisition_source` ilk siparişte (07 ile); kampanya ROI raporu (ciro + gider yan yana, 12'den)
+- [ ] (13.2) **UTM → sipariş eşleşmesi:** link UTM → sunucu oturumu → sipariş; `acquisition_source` ilk siparişte (07 ile); kampanya ROI raporu (ciro + gider yan yana, 12'den)
   - *Bitti:* "kampanya X → N sipariş / € ciro / € gider" tablosu çıkıyor
-- [ ] **Huni + sepette bırakma:** ziyaret → ürün → sepet → checkout → sipariş dönüşüm oranları; terk noktası
+- [ ] (13.3) **Huni + sepette bırakma:** ziyaret → ürün → sepet → checkout → sipariş dönüşüm oranları; terk noktası
   - *Bitti:* huni her aşamada sayı/oran veriyor
-- [ ] **Talep sinyalleri:** ürün-ilgi (çok bakılıp az alınan), site içi arama + **sıfır-sonuç** (talep/çeşit sinyali), aday ürün swipe panosu
+- [ ] (13.4) **Talep sinyalleri:** ürün-ilgi (çok bakılıp az alınan), site içi arama + **sıfır-sonuç** (talep/çeşit sinyali), aday ürün swipe panosu
   - *Bitti:* sıfır-sonuç aramalar listeleniyor; ürün-ilgi sıralaması çıkıyor
-- [ ] **Segmentler:** edinim kaynağı kohortu (tekrar sipariş), RFM + uyuyan müşteri (siparişten türetilir), export'lu
+- [ ] (13.5) **Segmentler:** edinim kaynağı kohortu (tekrar sipariş), RFM + uyuyan müşteri (siparişten türetilir), export'lu
   - *Bitti:* "90 gündür sipariş vermeyenler" listesi türetiliyor; export çalışıyor
-- [ ] **Swipe sinyal kalitesi:** `dwell_ms` + desen ile düşük kaliteli swipe zayıflatma (domain-core ağırlık); ödül müşteriye tam, analiz korunur
+- [ ] (13.6) **Swipe sinyal kalitesi:** `dwell_ms` + desen ile düşük kaliteli swipe zayıflatma (domain-core ağırlık); ödül müşteriye tam, analiz korunur
   - *Bitti:* hep-aynı/çok-hızlı swipe analizde zayıf ağırlıkta
-- [ ] **AI içgörü:** `packages/ai` toplu veriden anlatı/anormallik ("X kaynağı düştü", "Y çok bakılıp az alınıyor")
+- [ ] (13.7) **AI içgörü:** `packages/ai` toplu veriden anlatı/anormallik ("X kaynağı düştü", "Y çok bakılıp az alınıyor")
   - *Bitti:* haftalık özet anlatısı üretiliyor
 
 ## Netleşecekler

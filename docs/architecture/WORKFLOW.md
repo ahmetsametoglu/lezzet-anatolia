@@ -22,6 +22,8 @@ Rapor dürüstlüğü: test düştüyse çıktısıyla birlikte söyle; adım at
 
 ## 2. Migration: yalnız ileri doğru
 
+> **Şu an istisna — greenfield.** Proje canlıya çıkmadı: üretim ortamı, gerçek müşteri, gerçek sipariş yok. Bu süre boyunca **mevcut migration dosyaları doğrudan düzenlenir** — alan eklemek/yeniden adlandırmak/kaldırmak için üstüne yama migration'ı yazılmaz. Şema temiz ve okunur kalsın; `pnpm db:reset` ile sıfırdan kurulur. Aşağıdaki "donar" kuralı **ilk üretim dağıtımından itibaren** yürürlüğe girer; o gün bu not silinir. Geriye uyum kaygısı (eski kayıt/eski kolon) bugün için yoktur.
+
 Bir migration canlıya indiği an **donar**. Sonraki her değişiklik yeni numaralı dosyadır.
 
 - ✅ Yeni dosya: `028_add_item_status.sql` → `alter table ... add column`, `create or replace function`
@@ -106,11 +108,25 @@ Aynı mantıkla: ihtiyaç doğmadan çoklu dil, özellik bayrağı, eklenti mima
 
 ## 7. Ajanla çalışma
 
-- **İstenmedikçe alt ajan açma.** Paralel ajanlar aynı çalışma dizinini paylaşır; dosya yarışı üretirler
+### Her ajan için (tek ya da çok, fark etmez)
+
 - **Kapsamı önce konuş.** Ne yapılacağı ve **nasıl test edileceği** kararlaştırılmadan koda girme
 - Belirsizlik varsa ve iki yorum farklı işe götürüyorsa **sor**. Rutin kararları kendin ver, sorma
 - İstenmeyen şeyi kendiliğinden ekleme. İyileştirme fikri varsa **söyle**, sessizce yapma
 - Geri döndürülemez veya dışa dönük eylemlerden önce onay al
+- **İş bitince görev satırı güncellenir** — `docs/build/NN-*.md` içindeki `(NN.k)` satırı `[x]`/`[~]` olur ve altına **Durum** notu düşülür. Kod ve doküman **aynı commit'te** gider; ayrı commit "sonra yazarım" demektir, o da yazmamak demektir (§8)
+
+### Paralel çalışma (birden çok ajan)
+
+Varsayılan tek ajandır. Paralel çalışma **istenirse** şu üç kural bağlayıcıdır — yoksa ajanlar aynı dosyaya yazıp birbirinin işini ezer:
+
+1. **Görev kimliğiyle üstlenme.** Ajan işi `(NN.k)` kimliğiyle alır ve görev satırına `touches:` ile dokunacağı yolları yazar. Kimliksiz iş başlatılmaz — kimlik yoksa iki ajanın aynı işi yaptığı ancak birleştirmede anlaşılır
+2. **`touches` kesişmesi = sıraya girme.** Dokunma kümeleri çakışan iki görev aynı anda başlamaz. Çakışma kaçınılmazsa işler bölünür ya da biri bekler
+3. **Ajan başına ayrı dal/çalışma ağacı.** Aynı çalışma dizininde iki ajan koşmaz (dosya yarışı); her ajan kendi dalında çalışır, birleştirme sırası bağımlılık sırasıdır
+
+**Doküman yazımında da aynı kural geçerlidir.** Veri modeli konu dosyalarına bölünmüştür (`docs/architecture/data-model/`) — iki ajan farklı konuya paralel yazabilir; ortak ilkeler ve "Kalıcı kararlar" tek dosyada (`DATA_MODEL.md`) olduğundan oraya **sırayla** yazılır.
+
+**Birleştirmeden önce** `pnpm docs:check` — doküman/kod sapmasını ve bayat durum özetini yakalar; `pnpm docs:sync` özet tabloyu tazeler.
 
 ### Testleri kim çalıştırır
 
@@ -123,12 +139,14 @@ Aynı mantıkla: ihtiyaç doğmadan çoklu dil, özellik bayrağı, eklenti mima
 ## 8. Dokümantasyon bakımı
 
 - **Tek dil.** Doküman hangi dilde yazılıyorsa tamamı o dilde; yalnız dile bağlı özel adlar yabancı kalır. Kod tanımlayıcıları ve commit mesajları teknik kalabilir
-- **Rol ayrımı** (bu üçünün karışması dokümanı öldürür):
-  - `ARCHITECTURE.md` — ne var, nerede, neden öyle
-  - `BACKLOG.md` — ne yapılacak
+- **Rol ayrımı** (bunların karışması dokümanı öldürür):
+  - `DATA_MODEL.md` + `data-model/*.md` · `DOMAIN.md` · `STACK.md` · `ARCHITECTURE_DECISIONS.md` — ne var, nerede, neden öyle
+  - `BACKLOG.md` — ne yapılacak (kapsam; **ilerleme değil**)
+  - `docs/build/NN-*.md` — nerede kaldık (görev satırı = durumun **tek** kaynağı)
   - `WORKFLOW.md` / `STACK.md` — nasıl çalışılır, nasıl kurulur
 - Kalıcı bir karar aldığında ("bu böyle kalacak, sebebi şu") o an ilgili dokümana yaz. Sonra yazmak, yazmamak demektir
 - Doküman koddan farklıysa **kod haklıdır** — dokümanı düzelt. Ajana yanlış bilgi veren doküman, bilgisiz ajandan daha tehlikelidir
+- **`pnpm docs:check` bunu makine işi yapar:** veri modeli tablosu ↔ migration kolonu ↔ Zod alanı karşılaştırması, anılan paketlerin varlığı, görev kimliklerinin bütünlüğü, durum özetinin tazeliği. Birleştirmeden önce koşar; `pnpm docs:sync` türetilmiş özeti yeniden yazar
 
 ---
 
