@@ -83,6 +83,32 @@ Düzenleme gerekiyorsa değeri ekrana basmayan yerinde komut kullanılır (`sed 
 
 ---
 
+## 4b. Yerel veritabanı: erişim serbest, yıkım onaya bağlı
+
+Yukarıdaki yasak **üretim** içindir. Yerel Supabase'e ajan doğrudan bağlanabilir — şema bakmak, satır saymak, bir sorguyu denemek için izin istemeye gerek yok.
+
+**Bağlantı bilgileri** (Supabase CLI yerel varsayılanları — gizli değildir, üretim anahtarı ASLA dokümana yazılmaz):
+
+| Ne | Adres |
+| --- | --- |
+| Postgres | `postgresql://postgres:postgres@127.0.0.1:54322/postgres` |
+| API (REST/Auth) | `http://127.0.0.1:54321` |
+| Studio (tarayıcı) | `http://127.0.0.1:54323` |
+| Mailpit (giden e-posta) | `http://127.0.0.1:54324` |
+
+Canlı değerler `npx supabase status -o env` ile alınır (servis ayakta olmalı). Psql örneği:
+`psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -c '\d product'`
+
+**Yıkıcı komutlar kullanıcının kararıdır — ajan kendiliğinden çalıştırmaz:**
+
+- ❌ `pnpm db:reset` · `pnpm db:refresh` · `supabase db reset` — veritabanını siler, migration'ları sıfırdan uygular, seed'i yeniden basar
+- ❌ `pnpm db:stop` / `db:start` — kullanıcının çalışan ortamını durdurur (dev sunucusu kuralıyla aynı gerekçe)
+- ✅ Okuma, `supabase migration up`, tek seferlik `alter/insert` denemesi — serbest
+
+Gerekçe: yereldeki veri "değersiz" değildir. Kullanıcı elle ürün girmiş, görsel yüklemiş, hesap açmış olabilir; ajanın bir `reset`'i saatlerce süren kurgu işini siler. Şema değişikliği reset gerektiriyorsa **söylenir, kullanıcı çalıştırır.**
+
+---
+
 ## 5. Sürüm kontrolü
 
 - **Açık onay olmadan commit veya push yok.** Kod yazmak ayrı, tarihe yazmak ayrı iştir

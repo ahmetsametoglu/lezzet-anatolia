@@ -42,5 +42,24 @@ pnpm dev              # web + backend
 | `pnpm lint`       | ESLint (kök, tüm repo)                     |
 | `pnpm format`     | Prettier                                   |
 | `pnpm boundaries` | paket sınırı kontrolü (dependency-cruiser) |
+| `pnpm knip`       | ölü kod / kullanılmayan export taraması       |
+| `pnpm test`       | vitest (birim + entegrasyon)               |
+| `pnpm docs:check` | doküman ↔ kod tutarlılığı (bkz. WORKFLOW §8) |
+| `pnpm docs:sync`  | türetilmiş durum özetini yeniden yazar     |
+| `pnpm hooks:install` | commit öncesi doküman denetimini kurar  |
+
+### Veritabanı (yerel Supabase)
+
+| Komut               | Ne yapar                                             |
+| ------------------- | ---------------------------------------------------- |
+| `pnpm db:start/stop`| yerel Supabase yığınını başlatır / durdurur          |
+| `pnpm db:migrate`   | bekleyen migration'ları uygular                      |
+| `pnpm db:new`       | yeni numaralı migration dosyası açar                 |
+| `pnpm db:seed`      | örnek kategori/ürün + ilk admin                      |
+| `pnpm db:reset`     | **yıkıcı** — sıfırlar, migration'ları baştan uygular |
+| `pnpm db:refresh`   | **yıkıcı** — reset + seed                            |
+
+Servisler: Postgres `54322` (`postgres:postgres`) · API `54321` · Studio `54323` · Mailpit (giden e-posta) `54324`.
+Ayrıntı ve ajan kuralları: [`WORKFLOW.md §4b`](docs/architecture/WORKFLOW.md) — okuma serbest, **yıkıcı komutları kullanıcı çalıştırır**.
 
 Node ≥ 22, pnpm 9.

@@ -4,8 +4,10 @@
 > "her zaman aklımda olması gereken"ler + haritadır. **Kod ile doküman çelişirse KOD haklı.**
 
 > **Proje evresi: greenfield.** Canlı yok, müşteri yok, veri yok. Migration dosyaları **doğrudan düzenlenir**
-> (yama migration'ı yazılmaz), geriye uyum gözetilmez — temiz şema > legacy nezaketi. `pnpm db:reset` serbest.
+> (yama migration'ı yazılmaz), geriye uyum gözetilmez — temiz şema > legacy nezaketi.
 > İlk üretim dağıtımında bu not silinir, `WORKFLOW §2` (ileri-doğru) yürürlüğe girer.
+> **Ama `db:reset`/`db:refresh` yine de KULLANICININ kararıdır** — yereldeki elle girilmiş veriyi siler.
+> Şema değişikliği reset istiyorsa söyle, o çalıştırsın. Yerel DB'ye **okumak için** bağlanmak serbest → `WORKFLOW §4b`.
 
 ## 0. Kırmızı çizgiler
 - **Onaysız `git commit`/`push` YOK.** Onay her commit için ayrı; "commitle" bir sonrakini kapsamaz. → WORKFLOW §5
