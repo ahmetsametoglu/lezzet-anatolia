@@ -1,0 +1,51 @@
+# CLAUDE.md — Lezzet Anatolia
+
+> Bağlayıcı kurallar. Her oturum yüklenir, varsayılan davranışı ezer. Detay `docs/`'ta; bu dosya
+> "her zaman aklımda olması gereken"ler + haritadır. **Kod ile doküman çelişirse KOD haklı.**
+
+## 0. Kırmızı çizgiler
+- **Onaysız `git commit`/`push` YOK.** Onay her commit için ayrı; "commitle" bir sonrakini kapsamaz. → WORKFLOW §5
+- Canlı DB'ye bağlanma / prod env dosyası okuma yok. → WORKFLOW §4
+- Kanıtsız "oldu/geçti" deme; çıktıyı göster. → WORKFLOW §1
+
+## 1. Mimari değişmezler
+- **Hiçbir türde duplication yok** — kod/tip/komponent/sabit. Önce "var mı, türetebilir miyim?" diye bak. → STACK §10, WORKFLOW §6
+- **Şema tek kaynak:** tüm tipler `packages/types` Zod şeması; `z.infer` + `.pick/.omit/.partial/.extend` ile türet, elle interface yazma. → STACK §5
+- **View-model'i şemadan türet:** `View = Entity & { extra }`; DB alanlarını görünüm için elle yeniden yazma.
+- **Proje-geneli tip sayfa altına konmaz** (dil/alerjen/domain enum → `packages/types`). Sayfaya-özel tip onu kullanan dosyada / `-types.ts`.
+- **Tipler artımlı** yazılır, toptan değil.
+- **Servis ham `this.supabase` yazmaz** — `BaseDbService` metodları; junction tablosu = kendi alt sınıfı. → STACK §6
+- **domain-core = saf karar** (DB'siz, testli); **database = I/O + orkestrasyon** (domain-core'u çağırabilir). → STACK §8
+- **Bağımlılık tek yönlü.** → STACK §4
+- **Tüm listeler infinite scroll** → servis okumaları keyset (cursor) paginasyonlu.
+
+## 2. Web & i18n (apps/web)
+- **İki yüzey:** müşteri (i18n, `/…`) + operasyon (personel, Türkçe, `/operations`); girişte `staff_role`'e göre yönlenir (tek `/connexion`). → DOMAIN, build/04-auth-kimlik
+- **Cihaz forku, responsive DEĞİL:** `page → *-client (useDevice) → *.desktop/*.mobile`. `md:` ile akışkan responsive YAPMA. → ADR Sapma 3
+- **Dosya adları:** `page` · `<f>-client` · `<f>.desktop/.mobile` · `<f>-types.ts` (tip dosyası "view" değil).
+- **Komponent yerleşimi:** paylaşılan → `components/{customer,operation}/` (`ui/`+`form/`); sayfaya-özel → `<sayfa>/components/`. Ham `<input>/<select>` son çare, form kitini kullan. → STACK §7,§9
+- **URL:** iç yol İngilizce, dış URL dile göre (fr/de/tr); operasyon öneksiz ama segment yine İngilizce (`/operations/products`). Yeni müşteri rotası → `routing.ts` pathnames. → SEO_I18N
+- **i18n:** global JSON yok; her sayfa kendi `messages.json`'u; metin tipi `LocalizedCopy`'den türer (elle interface değil). Operasyon yüzeyi yalnız Türkçe.
+- **Server action'lar sayfa klasöründe kolokasyon;** `{ data, error }` döner (throw yok); guard (`requireStaff`) ilk. Paylaşılan yardımcı `lib/`.
+- Kod İngilizce, yorum Türkçe. Props tipi her zaman fonksiyon üstünde adlı `interface`. Ayrı hook → `use-x.hook.ts`.
+- Etkileşimli her öğe `cursor-pointer` + hover geri bildirimi. **Ölü kod yok — `knip`.**
+
+## 3. Tasarım
+- **Altın kural: sade & sezgisel;** sistemin karmaşıklığı arayüze yansımaz.
+- `design/` per-sayfa markdown: *hangi bilgi, hangi amaçla* — **stil verme**, Claude Design'a bırak.
+- **İmplement ederken improvise ETME:** görsel karar `.dc.html`'de verili (web/mobil ayrı bölüm); birebir uygula.
+- **Statik ≠ işlevsiz:** öğenin içeriğinden işlevini çıkar; bağımlılığı olmayanı TAM yap (UI+backend); dış-modül bekleyende UI tam, arka uç stub.
+- `.dc.html` dış çerçeve = canvas chrome (UI değil). İmplementten önce güncel tasarımı **claude_design MCP**'den çek (yerel kopya bayat olabilir).
+
+## 4. Çalışma disiplini & kullanıcı
+- **Tek seferde tek kritik konu** çöz-geç; uzun liste dökme.
+- **Parametrik değer** (eşik/oran/süre) **sorma** — makul varsayılan koy, parametrik yap, bildir. "Sistem + bize ne kazandırır" ekseninde konuş.
+- **Sade ve açık yaz;** teknik terimin yanına düz Türkçe karşılığı.
+- **Petit referans:** `~/dev/petitcigogne` kanonik; işe başlamadan karşılığına bak, saptığında (ne/neden) bildir.
+- Her tasarım/modül implementinden sonra **kural-uygunluk kontrolü** yap.
+
+## 5. docs haritası
+Kurallar + kod dizilimi → `STACK` · Disiplin (migration/deploy/git) → `WORKFLOW` · İş kuralları → `DOMAIN` ·
+Veri → `DATA_MODEL` · Sipariş durum makinesi → `ORDER_LIFECYCLE` · i18n/SEO → `SEO_I18N` ·
+Blueprint'ten sapmalar → `ARCHITECTURE_DECISIONS` · Modül planı → `docs/build/NN-*.md` · Açık işler → `BACKLOG`.
+Tam navigasyon: `docs/architecture/README.md`.
