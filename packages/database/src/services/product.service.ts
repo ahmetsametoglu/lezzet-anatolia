@@ -7,9 +7,9 @@ import {
   type Product,
   type ProductInsert,
   type ProductUpdate,
+  type ProductVariantInsert,
+  type ProductDetailsUpdate,
   type ProductVariant,
-  type LocalizedText,
-  type ProductDateType,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { uniqueSlugForTable } from '../utils/slug';
@@ -18,30 +18,11 @@ import { ProductVariantService } from './product-variant.service';
 // Varyantsız üründe otomatik açılan tek varyantın etiketi (müşteriye gösterilmez — seçici gizli).
 const DEFAULT_VARIANT_LABEL = 'default';
 
-// Yeni varyant girişi (ProductService.create içinden).
-export interface CreateVariantInput {
-  label: string;
-  netWeightG?: number | null;
-  minStockQty?: number | null;
-  sku?: string | null;
-  sortOrder?: number;
-}
+// Yeni varyant girişi — insert şemasından türer (productId create içinde bağlanır). No-duplication.
+export type CreateVariantInput = Omit<ProductVariantInsert, 'productId'>;
 
-// Yeni ürün girişi — slug servis türetir. `variants` boşsa varsayılan varyant otomatik açılır.
-export interface CreateProductInput {
-  name: LocalizedText;
-  description?: LocalizedText | null;
-  categoryId?: string | null;
-  imageKey?: string | null;
-  vatRate?: number;
-  dateType?: ProductDateType;
-  shelfLifeDays?: number | null;
-  shippable?: boolean;
-  isCandidate?: boolean;
-  isActive?: boolean;
-  sortOrder?: number;
-  variants?: CreateVariantInput[];
-}
+// Yeni ürün girişi — insert şemasından türer (slug servis türetir) + varyantlar. No-duplication.
+export type CreateProductInput = Omit<ProductInsert, 'slug'> & { variants?: CreateVariantInput[] };
 
 /**
  * Ürün CRUD + varyant orkestrasyonu + koleksiyon bağı. Satılabilir birim her zaman varyant
@@ -93,5 +74,18 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   /** Aktif/pasif (soft). */
   async setActive(id: string, isActive: boolean): Promise<Product> {
     return this.update({ id, isActive });
+  }
+
+  /** Görsel anahtarını yazar (R2 yüklemesinden sonra). Relative key; prefix R2 çağrısında eklenir. */
+  async setImageKey(id: string, imageKey: string): Promise<Product> {
+    return this.update({ id, imageKey });
+  }
+
+  /**
+   * Ürün alanlarını günceller (yalnız verilenler). Slug rename'de sabit kalır. Görsel ve varyant
+   * düzenleme ayrı akışlarda — bu, düzenleme formunun "Temel + içerik + beyan" alanlarını yazar.
+   */
+  async updateDetails(id: string, input: ProductDetailsUpdate): Promise<Product> {
+    return this.update({ id, ...input });
   }
 }

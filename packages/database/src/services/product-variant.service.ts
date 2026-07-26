@@ -4,6 +4,7 @@ import {
   ProductVariantInsertSchema,
   ProductVariantUpdateSchema,
   type ProductVariant,
+  type ProductVariantEntry,
   type ProductVariantInsert,
   type ProductVariantUpdate,
 } from '@lezzet/types';
@@ -26,5 +27,27 @@ export class ProductVariantService extends BaseDbService<ProductVariant, Product
   /** Aktif/pasif (soft). */
   async setActive(id: string, isActive: boolean): Promise<ProductVariant> {
     return this.update({ id, isActive });
+  }
+
+  /**
+   * Formdan gelen varyant listesini ürüne senkronlar: `id`'li satır güncellenir, id'siz satır eklenir,
+   * mevcutta olup listede olmayan satır silinir. sortOrder liste sırasından yazılır. Boş liste GELİRSE
+   * dokunmaz (kazara tüm varyantları silmeyi önler; UI son varyantın silinmesini engeller).
+   */
+  async syncVariants(productId: string, entries: ProductVariantEntry[]): Promise<ProductVariant[]> {
+    if (entries.length === 0) return this.listByProduct(productId);
+
+    const existing = await this.listByProduct(productId);
+    const keepIds = new Set(entries.filter((e) => e.id).map((e) => e.id));
+    for (const ex of existing) {
+      if (!keepIds.has(ex.id)) await this.delete(ex.id);
+    }
+
+    const result: ProductVariant[] = [];
+    for (const [i, e] of entries.entries()) {
+      const fields = { label: e.label, netWeightG: e.netWeightG, sku: e.sku, isActive: e.isActive, sortOrder: i };
+      result.push(e.id ? await this.update({ id: e.id, ...fields }) : await this.insert({ productId, ...fields }));
+    }
+    return result;
   }
 }
