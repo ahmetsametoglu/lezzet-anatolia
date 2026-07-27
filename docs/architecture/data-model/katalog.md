@@ -71,10 +71,9 @@ Esnek pazarlama grubu (Bayram, Yeni, İndirimde). Bir ürün birden çok koleksi
 | date_type | enum(`DLC`,`DDM`) | son tarih tipi — güvenlik/kalite (varsayılan `DDM`) |
 | shelf_life_days | int \| null | toplam raf ömrü (gün); kalan % hesabı için |
 | shippable | boolean | kargoyla gönderilebilir mi (varsayılan true); false = yalnız rota/kapı teslim (soğuk zincir) |
-| is_candidate | boolean | aday ürün (stokta yok, tedarik edilebilir) — keşif/tinder bölümünde gösterilir, satılamaz (bkz. `DOMAIN.md §13`); varsayılan false |
+| status | product_status | satış durumu TEK alanda: `active` (satışta) · `passive` (satışa kapalı) · `candidate` (aday ürün — stokta yok, tedarik edilebilir; keşif bölümünde gösterilir, SATILAMAZ, bkz. `DOMAIN.md §13`). Önce `is_candidate` + `is_active` ikilisiydi: iki bayrak üç durum için dört bileşim üretiyordu ve "aday + pasif" gibi anlamsız bir hâl mümkündü — enum bunu kapatır; varsayılan `active` |
 | target_margin_percent | number \| null | hedef kâr marjı (maliyet üzerine markup %); marj uyarısı / otomatik fiyat için |
 | auto_price | boolean | otomatik fiyatlandırma açık mı (varsayılan false) — açıksa fiyat hedef marja göre otomatik güncellenir, kapalıysa sistem uyarır |
-| is_active | boolean | |
 | sort_order | int | |
 | created_at | timestamptz | |
 
