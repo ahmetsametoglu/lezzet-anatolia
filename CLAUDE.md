@@ -21,7 +21,7 @@
 - **Proje-geneli tip sayfa altına konmaz** (dil/alerjen/domain enum → `packages/types`). Sayfaya-özel tip onu kullanan dosyada / `-types.ts`.
 - **Tipler artımlı** yazılır, toptan değil.
 - **Servis ham `this.supabase` yazmaz** — `BaseDbService` metodları; junction tablosu = kendi alt sınıfı. → STACK §6
-- **domain-core = saf karar** (DB'siz, testli); **database = I/O + orkestrasyon** (domain-core'u çağırabilir). → STACK §8
+- **domain-core = saf karar** (DB'siz, testli); **database = saf I/O** (satır getirir/yazar). Birbirlerini BİLMEZLER; ikisini birleştiren yer uygulama katmanıdır — ama uygulama iş kuralını kendi içinde hesaplayamaz, motora sorar. → STACK §4, §13
 - **Bağımlılık tek yönlü.** → STACK §4
 - **Tüm listeler infinite scroll** → servis okumaları keyset (cursor) paginasyonlu.
 

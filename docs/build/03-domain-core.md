@@ -25,8 +25,11 @@ Sistemin bütün ticari kuralları — **saf fonksiyonlar** olarak (veritabanı 
   - *Bitti:* her izinli geçiş ve en az 5 yasak geçiş birim testli; `returned → completed` ve iptalde "karşılanan = 0" kuralları dahil
 - [ ] (03.2) **Kanal ve kaynak:** `company_info` → channel türetimi; order_source ekseninin bağımsızlığı
   - *Bitti:* şirketli müşteri → b2b, bireysel → b2c testleri
-- [ ] (03.3) **Fiyat çözümü:** özel fiyat → müşteri indirimi % → kanal fiyatı sırası; near-expiry teklif istisnası (tek fiyat + miktar tavanı); bundle açılımı (atanmış kalem fiyatları, hediye=0, genel indirim muafiyeti)
+- [~] (03.3) **Fiyat çözümü:** özel fiyat → kanal fiyatı sırası; onaysız şirket → B2C; near-expiry teklif çakışması (düşük olan + miktar tavanı); bundle açılımı (atanmış kalem fiyatları, hediye=0, genel indirim muafiyeti) · `touches: packages/domain-core/src/pricing/**, packages/types/src/schemas/price.schema.ts, packages/helper/src/money.ts`
   - *Bitti:* çözüm sırasının her basamağı + bundle/teklif istisnaları birim testli
+  - **Durum (27.07):** `resolvePrice()` + `priceIn()` + `vatBaseOf()` yazıldı, 15 birim test yeşil — kanal/onay dalları, özel fiyat, teklif çakışmasının dört hali (teklif ucuz · özel ucuz · eşitlik · kanal fiyatı yok), taban çevrimi (TTC↔HT, reverse charge %0). Para katmanı `packages/helper/money.ts`: cent dönüşümü, `distributeDiscount` (artan kuruş en büyük kaleme, Σ=indirim garantili), KDV ekle/ayır — 14 test yeşil. `PriceSchema` (kanal tabanlı `amount`) eklendi.
+  - **Kapsam değişikliği:** `Customer.discount_percent` bu görevden ÇIKTI — artık fiyat değil indirim sayılıyor (kupon/kampanyayla aynı havuz, istiflenmez), yeri **03.4**.
+  - **Kalan:** bundle açılımı — `Bundle`/`BundleItem` şemaları henüz yok (05.5); onlar gelince buraya eklenir. Kapsamı 27.07'de daraldı: **paket yalnız B2C ve TTC** (DOMAIN §13), yani açılım kanal/taban çözmez — yalnız `allocated_unit_price`'ları `OrderItem`'lara aktarır, hediye kalemi 0 fiyatla girer ve genel indirim binmez. Motorun kontrol edeceği tek şey: etkin kanal `b2c` değilse paket satılamaz.
 - [ ] (03.4) **İndirim motoru:** kupon/otomatik, kapsamlar, **tek-en-büyük** kuralı, koşullar (min sepet, ilk sipariş, tarih, kullanım sınırı), sepet indirimini kalemlere **oransal dağıtma**
   - *Bitti:* iki uygun indirimde büyüğün seçildiği + dağıtım toplamının indirime eşit olduğu testler
 - [ ] (03.5) **Rezervasyon kararları:** kullanılabilir = fiili − aktif rezervasyon hesabı; TTL/geç-ödeme dallanması (yeniden ayır → olmazsa iade kararı); batch-pinned kural (FEFO önerisinden pinned düşülür)
@@ -46,7 +49,8 @@ Sistemin bütün ticari kuralları — **saf fonksiyonlar** olarak (veritabanı 
 
 ## Netleşecekler
 
-- **TS ↔ SQL sınırı:** hangi kurallar burada (saf TS), hangileri atomiklik gereği Postgres fonksiyonunda (RPC) yaşar; ör. rezervasyon *kararı* burada, *atomik yazımı* RPC'de. Kısa bir sınır konuşması — 06/07 modüllerine girmeden netleşir.
+- ~~**Motor ↔ servis sınırı**~~ — 27.07'de karara bağlandı: `domain-core` ile `database` birbirini bilmez; satırları servis getirir, kararı motor verir, ikisini uygulama katmanı birleştirir. Uygulama iş kuralını kendi hesaplayamaz — motora sorar (STACK §4, §13).
+- **TS ↔ SQL sınırı (açık):** hangi kurallar saf TS'te, hangileri atomiklik gereği Postgres fonksiyonunda (RPC) yaşar; ör. rezervasyon *kararı* burada, *atomik yazımı* RPC'de. 06/07'ye girmeden netleşir.
 
 ---
 

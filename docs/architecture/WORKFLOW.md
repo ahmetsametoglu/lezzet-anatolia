@@ -114,6 +114,7 @@ Gerekçe: yereldeki veri "değersiz" değildir. Kullanıcı elle ürün girmiş,
 - **Açık onay olmadan commit veya push yok.** Kod yazmak ayrı, tarihe yazmak ayrı iştir
 - `git add -A` **kullanma.** Daima kendi dokunduğun dosyaları adla: `git commit -m "..." -- path/a path/b`
 - Sebebi: paralel çalışan başka bir işlem (veya kullanıcının açık düzenlemesi) aynı çalışma dizinindedir; `-A` onların yarım işini de yutar
+- **Yaşandı (27.07.2026):** paralel ajan `-A` ile stage'ledi; fiyat motoru doküman kararları ilgisiz bir görsel-kırpma commit'inin içinde kaldı. İçerik kaybolmadı ama tarihçe okunamaz oldu — kural teoride değil, pratikte kırılıyor
 - Yarış durumu oluştuysa **düzeltmeye kalkışma** — durumu bildir, kararı kullanıcıya bırak. Geçmişi düzeltme denemesi neredeyse her zaman durumu kötüleştirir
 
 ---

@@ -429,6 +429,7 @@ Yalnızca siparişin **doğrudan** (o sipariş yüzünden var olan) giderleri d�
 Amaç: birkaç ürünü bir arada tek pakette, kendi fiyatıyla sunmak (sosyal medyada paylaşınca müşteri tek tıkla seçsin). **Yeni ürün yaratmaz.**
 
 - Paketin **kendi toplam fiyatı** vardır — içindeki ürünlerin normal fiyatları toplamı olmak zorunda değil. **Genel indirim/kupon paketlere uygulanmaz** (fiyatı sabittir).
+- **Paket yalnız B2C kanalındadır.** Fiyatı tek sayıdır ve **TTC** tabanındadır (B2C tabanı); paketin kanal listesi, müşteriye özel fiyatı ya da `Price` satırı yoktur. Toptan müşteri vitrininde paket **görünmez** — toptan alışverişte pazarlık kalem üzerinden yürür, paket ise sosyal medyaya yönelik bir pazarlama kısayoludur. Etkin kanalı `b2c`'ye düşen müşteri (onaysız şirket, §10) paketi görür — kural etkin kanala bakar, kayıt tipine değil.
 - Paket sepete eklenince **içindeki her ürün ayrı `OrderItem` olur** (variant + qty + o kaleme **atanmış birim fiyat**). Sistem, müşteri her ürünü tek tek atmış gibi akar: stok, hazırlık, kâr, **fatura hep kalem kalem**.
 - **Atanmış fiyatların toplamı = paket toplam fiyatı** (admin her kaleme fiyat verir, sistem toplamı doğrular). Müşteri **yalnız paket toplamını** görür; kalem fiyatları arka planda (fatura + her ürünün KDV'si kendi oranından doğru işlensin diye gerekli).
 - **Hediye = fiyatı 0 bir paket kalemi.** Faturada 0€ satır, stoktan normal düşer (gerçek mal), maliyeti kâra yansır. Ayrı "paket + hediye" kuralına gerek yok.

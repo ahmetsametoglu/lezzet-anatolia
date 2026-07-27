@@ -11,7 +11,10 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .turbo node_modules"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@lezzet/types": "workspace:*",
+    "@lezzet/helper": "workspace:*"
+  },
   "devDependencies": {
     "@lezzet/typescript-config": "workspace:*",
     "typescript": "^5.7.2"

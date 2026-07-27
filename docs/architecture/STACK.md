@@ -96,6 +96,7 @@ helper    brand / i18n / storage / email / notify / domain-core
 - `database` yalnız `types` + `helper` bilir.
 - `domain-core` `types` + `helper` bilir; uygulamayı bilmez.
 - Uygulamalar paketleri bilir; paketler uygulamaları **asla** bilmez.
+- `domain-core` ↮ `database`: **birbirini bilmezler.** Motor saf kalsın (birim testi DB'siz koşsun), servis I/O'da kalsın diye; ikisini birleştiren yer uygulama katmanıdır (Server Action / RSC). Bkz. §13.
 - Döngü yasak; ortak parça `types` veya `helper`'a iner.
 
 ---
@@ -250,6 +251,7 @@ Açık iş kalemleri buraya **girmez**; `BACKLOG.md`'ye gider (WORKFLOW.md §8 r
 
 - **Veri erişimi — çift kat savunma:** tüm okuma/yazma sunucu tarafında service-role + `lib/guard.ts` rol kapılarından geçer; RLS (satır seviyesi güvenlik) **ikinci savunma hattı** olarak temel tablolara yazılır (müşteri kendi satırı, kurye kendi teslimatı). Anon key'in tarayıcıya hangi kapsamla çıktığı netleştirilecek.
 - **Çok-tablolu yazım = tek Postgres fonksiyonu (RPC):** birden çok tabloya yazan her iş akışı tek transaction'da koşar. Bilinen akışlar: sipariş onayı (Order+Reservation), teslim (Reservation+Stock+OrderItemBatch+snapshot), hızlı satış, kurye gün kapanışı, StockIntake, puan redemption, müşteri birleştirme.
+- **Okumada RPC eşiği (karar 27.07):** okuma için Postgres fonksiyonu **istisnadır, kural değil.** Üç koşul BİRLİKTE sağlanmadıkça yazılmaz: (1) veri **birden fazla tablodan** birleşiyor, (2) işi veritabanı sunucusunda yapmak **toplam** performansı iyileştiriyor (tur sayısı + uygulamaya taşınan satır hacmi dâhil), (3) fark **bariz** — "belki daha hızlıdır" yetmez. Her küçük okuma için yazılmaz; tek tablolu ve küçük okumalar servis sorgu kurucusunda kalır. N+1 kırmanın **ilk** aracı RPC değil, PostgREST'in gömülü `select`'idir (ilişkiyi zaten sunucuda join'ler); RPC ancak kurucunun ifade **edemediği** hâllerde gerekir: çok dilli tam-metin arama + sıralama, tek turda çok koşullu toplama, pencere fonksiyonu. Okuma RPC'si **iş kuralı taşımaz** (eşik/sıra/izin motorun işi — §4); yalnız veri toplar ve süzer. Dönen satırlar servis okumalarıyla aynı disiplinle **Zod'dan geçer**; fonksiyon `create or replace` ile migration'a yazılır (WORKFLOW §2).
 - **Migration mekanizması:** numaralı SQL dosyaları tek transaction içinde uygulanır; uygulandı bilgisi `schema_migrations`'ta; deploy hattı migration hatasında durur (araç: Supabase CLI veya basit runner — seçim netleşecek).
 - **Webhook güvenliği:** imza doğrulanmadan gövde işlenmez; her olay `WebhookEvent`'e yazılır (provider+event_id unique) — aynı olay ikinci kez gelirse no-op (idempotent).
 - **Yedekleme/felaket kurtarma:** Supabase planında günlük yedek/PITR doğrulanır + haftalık `pg_dump` off-site + Storage senkronu + yılda bir **geri yükleme provası** ("provası yapılmamış yedek, yedek değildir"); Caddyfile/PM2 konfigürasyonu repo'da.
@@ -257,5 +259,5 @@ Açık iş kalemleri buraya **girmez**; `BACKLOG.md`'ye gider (WORKFLOW.md §8 r
 - **Cron disiplini:** `apps/backend` tek instance (fork mode); her zamanlanmış iş **taramalı ve idempotent** yazılır (kaçan tik bir sonraki taramada telafi olur); kritik işler `last_run` bırakır, gecikince alarm.
 - **Deploy atomikliği:** yeni sürüm ayrı dizine derlenir → symlink değişimi → `pm2 reload`; derleme düşük trafik saatinde.
 - **Test/CI/staging:** her push'ta typecheck+lint+birim test (GitHub Actions); yerel Supabase üzerinde entegrasyon testleri — özellikle **paralel rezervasyon yarışı** ve para-akışı RPC'leri; staging = ikinci (ücretsiz) Supabase projesi + aynı VPS'te ikinci PM2 app; migration provası önce staging'de.
-- **Paket sınırı araçla zorlanır:** `apps/*` sipariş/stok/para yazımlarını yalnız domain-core'un dışa verdiği fonksiyonlar üzerinden yapar; ilgili database servislerini doğrudan import edemez (eslint-boundaries/dependency-cruiser kuralı). §4'teki bağımlılık şeması tabloya çevrilecek.
+- **Paket sınırı araçla zorlanır** (karar 27.07 — §4'teki şema bağlayıcıdır): `domain-core` DB bilmez, `database` motoru bilmez; ikisi de yalnız `types`+`helper`'a bağlanır. `apps/*` **her ikisini de** çağırabilir, AMA sipariş/stok/para/fiyat **kararını** kendi içinde hesaplayamaz — kararı domain-core'a sorar, servisi yalnız o kararı yazmak/okumak için kullanır. Kural sızması testi: bir `if` içinde iş kuralı varsa (eşik, sıra, izin) yeri motordur.
 - **Admin yüzey izolasyonu:** `(admin)`/`(shop)` route group ayrımı + `/admin` altı middleware'de toptan oturum+rol kontrolü (sayfa içi guard yine tekrarlanır — çift kat) + `noindex`.

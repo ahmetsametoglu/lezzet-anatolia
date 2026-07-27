@@ -211,6 +211,13 @@ importers:
         version: 5.9.3
 
   packages/domain-core:
+    dependencies:
+      '@lezzet/helper':
+        specifier: workspace:*
+        version: link:../helper
+      '@lezzet/types':
+        specifier: workspace:*
+        version: link:../types
     devDependencies:
       '@lezzet/typescript-config':
         specifier: workspace:*
