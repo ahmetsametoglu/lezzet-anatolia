@@ -27,7 +27,6 @@ import {
   type CloseResult,
   type DeliverResult,
   type PaymentMethod,
-  type PaymentStatus,
   type PreparationPick,
   type PreparationResult,
   type QuickSaleResult,
@@ -173,11 +172,14 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
 
   /**
    * **Hızlı satış** (07.10): kapı önü tek adım — `draft → completed`. Rezervasyon yok, stok
-   * fiiliden anında düşer; referans, tahsilat ve kâr kalemleri aynı transaction'da yazılır.
+   * fiiliden anında düşer; referans ve kâr kalemleri aynı transaction'da yazılır.
    *
-   * Karar vermez: geçişin izinli olduğuna motor, ödeme durumuna motor (03.6), referansa motor
-   * karar verir — hepsi parametre olarak gelir. RPC yalnız fiziksel gerçeği korur (olmayan mal
-   * satılmaz).
+   * **Tahsilat BURADA YAZILMAZ** (12.2): paranın kaynağı hareket tablosudur. Çağıran satıştan
+   * hemen sonra `recordForOrder` ile tahsilatı yazar — böylece kapı önü nakdi kasanın bakiyesine
+   * de düşer.
+   *
+   * Karar vermez: geçişin izinli olduğuna motor, referansa motor karar verir — parametre olarak
+   * gelirler. RPC yalnız fiziksel gerçeği korur (olmayan mal satılmaz).
    */
   async quickSale(input: {
     orderId: string;
@@ -185,8 +187,6 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     actorId?: string | null;
     referenceNo?: string | null;
     paymentMethod?: PaymentMethod | null;
-    amountCollected?: number;
-    paymentStatus?: PaymentStatus;
     packagingUnitCost?: number;
   }): Promise<QuickSaleResult> {
     if (input.picks.length === 0) throw new Error('order: kalem seçimi boş olamaz');
@@ -200,8 +200,6 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       p_actor_id: input.actorId ?? null,
       p_reference_no: input.referenceNo ?? null,
       p_payment_method: input.paymentMethod ?? null,
-      p_amount_collected: input.amountCollected ?? 0,
-      p_payment_status: input.paymentStatus ?? 'pending',
       p_packaging_unit_cost: input.packagingUnitCost ?? 0,
     });
     return QuickSaleResultSchema.parse(dbToApp(raw));

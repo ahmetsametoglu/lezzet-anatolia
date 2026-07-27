@@ -1,12 +1,7 @@
 import { OrderService, SettingsService, serviceDb } from '@lezzet/database';
-import {
-  canTransition,
-  derivePaymentStatus,
-  generateReferenceNo,
-  producesReferenceNo,
-  stockEffectOf,
-} from '@lezzet/domain-core';
+import { canTransition, generateReferenceNo, producesReferenceNo, stockEffectOf } from '@lezzet/domain-core';
 import type { OrderStatus, PaymentMethod, PreparationPick } from '@lezzet/types';
+import { recordOrderPayment } from '../money/order-payment';
 import { suggestPicksForVariant } from '../stock/fefo';
 
 /**
@@ -17,12 +12,23 @@ import { suggestPicksForVariant } from '../stock/fefo';
  * tam yoldakiyle aynı yerlere yazılır.
  *
  * Kararların hepsi motorda: geçiş izinli mi (`status-machine`), bu yol gerçekten hızlı satış mı
- * (`stockEffectOf → consume_direct`), referans üretilir mi, ödeme durumu ne (`derivePaymentStatus`).
- * Bu dosya onları gerçek girdilere bağlar; yazımı tek transaction'da RPC yapar.
+ * (`stockEffectOf → consume_direct`), referans üretilir mi. Bu dosya onları gerçek girdilere
+ * bağlar; yazımı tek transaction'da RPC yapar.
+ *
+ * **Mal ile para iki ayrı yazımdır** (12.2): satış RPC'si stoğu düşürüp siparişi kapatır, tahsilat
+ * ardından hareket tablosuna yazılır (`recordOrderPayment`) — kapı önü nakdi kasanın bakiyesine de
+ * düşsün diye. Sıra bilinçlidir: mal zaten gitti, para kaydı onu geri alamaz.
  */
 
 type QuickSaleOutcome =
-  | { status: 'ok'; referenceNo: string | null; consumedQty: number; cogsAmount: number }
+  | {
+      status: 'ok';
+      referenceNo: string | null;
+      consumedQty: number;
+      cogsAmount: number;
+      /** Tahsilat hareketi yazıldı mı — hesap belirsizse satış kapanır ama para kayıtsız kalır. */
+      paymentRecorded: boolean;
+    }
   /** Kurallara aykırı — sipariş taslak değil (kapanmış siparişi kapıda yeniden satamazsın). */
   | { status: 'forbidden'; reason: 'same_status' | 'terminal' | 'not_allowed' | 'not_fast_sale_path' }
   /** Araya biri girdi: sipariş bu arada ilerletilmiş. */
@@ -38,6 +44,11 @@ interface QuickSaleInput {
   paymentMethod: PaymentMethod;
   /** Tahsil edilen tutar (euro). Verilmezse siparişin toplamı tahsil edilmiş sayılır. */
   collectedAmount?: number;
+  /**
+   * Paranın girdiği hesap (kasadaki çekmece). Verilmezse `door_cash_account_id` ayarına düşülür;
+   * o da yoksa tahsilat KAYDEDİLMEZ — satış yine kapanır, para kayıtsız görünür.
+   */
+  paymentAccountId?: string;
   /**
    * Hangi kalemden hangi parti çıktı. Verilmezse **FEFO ile türetilir** — kapıda hazırlık ekranı
    * yoktur, önce süresi dolan çıkar (DOMAIN §4).
@@ -86,24 +97,9 @@ export async function quickSale(input: QuickSaleInput): Promise<QuickSaleOutcome
       ? generateReferenceNo({ year: new Date(order.createdAt).getFullYear() })
       : null;
 
-  // 4) Ödeme durumu TÜRETİLİR (DOMAIN §7): tahsilat, gerçekten giden malın tutarıyla karşılaştırılır.
-  //    Kapıda eksik verilirse (bir kalem çıkmadı) tahsilat tam olsa bile durum kendiliğinden doğru olur.
-  const collectedAmount = input.collectedAmount ?? order.total;
-  const verilen = new Map(picks.map((p) => [p.orderItemId, p.batches.reduce((s, b) => s + b.qty, 0)]));
-  const payment = derivePaymentStatus({
-    lines: items.map((item) => ({
-      fulfilledQty: verilen.get(item.id) ?? 0,
-      orderedQty: item.qty,
-      unitPriceCents: Math.round(item.unitPrice * 100),
-      lineDiscountCents: Math.round(item.lineDiscountAmount * 100),
-    })),
-    collectedCents: Math.round(collectedAmount * 100),
-    refundedCents: Math.round(order.amountRefunded * 100),
-    shippingFeeCents: Math.round(order.shippingFee * 100),
-  });
-
-  // 5) Paketleme maliyeti ayardan; kapı önünde varsayılan 0 — mal elden gidiyor, soğuk zincir paketi yok.
-  const packagingCents = await new SettingsService(db).getNumber('door_packaging_unit_cost_cents', 0);
+  // 4) Paketleme maliyeti ayardan; kapı önünde varsayılan 0 — mal elden gidiyor, soğuk zincir paketi yok.
+  const settings = new SettingsService(db);
+  const packagingCents = await settings.getNumber('door_packaging_unit_cost_cents', 0);
 
   const result = await orders.quickSale({
     orderId: order.id,
@@ -111,8 +107,6 @@ export async function quickSale(input: QuickSaleInput): Promise<QuickSaleOutcome
     actorId: input.actorId,
     referenceNo,
     paymentMethod: input.paymentMethod,
-    amountCollected: collectedAmount,
-    paymentStatus: payment.status,
     // Ayarlar cent'te tutulur (STACK §8); sipariş tablosundaki para kolonları euro numeric.
     packagingUnitCost: packagingCents / 100,
   });
@@ -125,10 +119,26 @@ export async function quickSale(input: QuickSaleInput): Promise<QuickSaleOutcome
     return { status: 'stale', currentStatus: result.currentStatus };
   }
 
+  // 5) Tahsilat AYRI bir gerçektir (12.2): para bir hesaba girer, sipariş cache'i ondan türer.
+  //    Satışın kendisi bu adıma bağlı DEĞİLDİR — mal çoktan gitti, stok düştü. Hesap belirsizse
+  //    satış yine kapanır, tahsilat kaydedilmemiş olarak görünür: uydurulmuş bir "ödendi"den iyidir.
+  const accountId = input.paymentAccountId ?? (await settings.get<string | null>('door_cash_account_id', null));
+  let paymentRecorded = false;
+  if (accountId) {
+    const collected = await recordOrderPayment({
+      orderId: order.id,
+      accountId,
+      amount: input.collectedAmount ?? order.total,
+      description: 'Kapı önü satış',
+    });
+    paymentRecorded = collected.status === 'ok';
+  }
+
   return {
     status: 'ok',
     referenceNo: result.referenceNo ?? null,
     consumedQty: result.consumedQty ?? 0,
     cogsAmount: result.cogsAmount ?? 0,
+    paymentRecorded,
   };
 }

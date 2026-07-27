@@ -68,6 +68,7 @@ Siparişin doğuşundan kapanışına kadar tüm akış: sepet, checkout (teslim
   - **Kapıda hazırlık ekranı yok → partiler FEFO ile türetilir** (06.5 önerisi yeniden kullanılır); operatör isterse elle geçer. FEFO önerisi parti bazında baktığı için varyant-toplamı rezervasyonunu görmez; **son söz RPC'nindir** — emniyet, öneriyi üretenin değil, yazımın olduğu katmanda durur.
   - **`delivery_cost = 0`:** kapı önünde teslimat yapılmadı; rota birim maliyeti bu satışa yazılamaz. **Nakitte `payment_fee = 0`** — bu uydurma değil, olgudur (DOMAIN §12); kart/online oranları modül 12'de, o zamana kadar null.
   - **Ödeme durumu yine TÜRETİLİR** (03.6): kapıda bir kalem eksik verilirse tahsilat tam olsa bile durum kendiliğinden doğru çıkar. Yeni ayar: `door_packaging_unit_cost_cents` (varsayılan **0** — mal elden gidiyor, soğuk zincir paketi yok).
+  - **Güncelleme (28.07, 12.2 ile):** tahsilat artık RPC'de yazılmıyor. `p_amount_collected`/`p_payment_status` kaldırıldı; kapı, satıştan sonra `recordOrderPayment` çağırıyor — kapı önü nakdi gerçekten kasanın bakiyesine düşüyor, sipariş cache'i ondan türüyor. Hesap yoksa satış yine kapanır (`paymentRecorded:false`): mal gitmişken satışı bloke etmek de, olmayan parayı "ödendi" yazmak da yanlış olurdu.
 
 ## Netleşecekler
 

@@ -8,6 +8,7 @@ import {
   MoneyMovementSchema,
   MoneyMovementInsertSchema,
   MoneyMovementUpdateSchema,
+  OrderAmountsSchema,
   DEFAULT_PAGE_SIZE,
   type Account,
   type AccountBalance,
@@ -19,6 +20,7 @@ import {
   type MoneyMovementInsert,
   type MoneyMovementUpdate,
   type MovementType,
+  type OrderAmounts,
   type Page,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
@@ -142,6 +144,44 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   /** Siparişin para hareketleri — tahsilat/iade toplamı (`amount_*` cache'inin kaynağı, 12.2). */
   listByOrder(orderId: string): Promise<MoneyMovement[]> {
     return this.getAll({ orderId }, { orderBy: 'valueDate' });
+  }
+
+  /**
+   * **Sipariş tahsilatı / iadesi** (12.2) — hareket + siparişin `amount_*` cache'i tek transaction'da
+   * (`record_order_movement`). Yön sebepten türer: tahsilat içeri, iade dışarı.
+   *
+   * Cache ARTIRILMAZ, hareketlerden yeniden hesaplanır — kaçırılan ya da tekrarlanan çağrı kalıcı
+   * bir sapma bırakmasın.
+   */
+  async recordForOrder(input: {
+    orderId: string;
+    accountId: string;
+    amount: number;
+    type: 'order_payment' | 'order_refund';
+    valueDate?: string;
+    description?: string | null;
+    source?: 'manual' | 'bank_import';
+  }): Promise<OrderAmounts> {
+    const raw = await this.executeRpc('record_order_movement', {
+      p_order_id: input.orderId,
+      p_account_id: input.accountId,
+      p_amount: input.amount,
+      p_type: input.type,
+      p_value_date: input.valueDate ?? new Date().toISOString().slice(0, 10),
+      p_description: input.description ?? null,
+      p_source: input.source ?? 'manual',
+    });
+    return OrderAmountsSchema.parse(dbToApp(raw));
+  }
+
+  /**
+   * Cache'i kaynaktan yeniden kurar. Hareket silinir/düzeltilirse ya da kayma şüphesi olursa tek
+   * çağrıyla gerçeğe dönülür — cache'in kendini düzeltebilmesi, saklanan sayının kabul edilebilir
+   * olmasının şartıdır.
+   */
+  async resyncOrder(orderId: string): Promise<OrderAmounts> {
+    const raw = await this.executeRpc('resync_order_amounts', { p_order_id: orderId });
+    return OrderAmountsSchema.parse(dbToApp(raw));
   }
 
   /** Tedarikçiye yapılan ödemeler — borç türetimi (Σ giriş − Σ ödeme, 12.3). */

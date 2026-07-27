@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
+  AccountService, CategoryService, OrderService, ProductService, ReservationService, SettingsService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { quickSale } from './quick-sale';
@@ -22,6 +22,7 @@ let productId: string;
 let categoryId: string;
 let partiA: string;
 let partiB: string;
+let kasa: string;
 const acilanProfiller: string[] = [];
 
 const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
@@ -35,6 +36,8 @@ beforeAll(async () => {
   const profile = await new UserProfileService(db).insert({ name: `Kapı müşterisi ${damga}` });
   customerId = profile.id;
   acilanProfiller.push(profile.id);
+  // Kapı önü nakdinin gireceği çekmece — tahsilat artık bir HAREKETTİR (12.2).
+  kasa = (await new AccountService(db).insert({ name: `Kapı kasası ${damga}`, type: 'cash' })).id;
 });
 
 beforeEach(async () => {
@@ -47,7 +50,9 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  await db.from('money_movement').delete().eq('account_id', kasa);
   await db.from('order').delete().eq('customer_id', customerId);
+  await db.from('account').delete().eq('id', kasa);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: acilanProfiller });
 });
 
@@ -63,22 +68,26 @@ describe('hızlı satış (07.10)', () => {
   it('tek çağrıda kapanır: stok fiiliden düşer, referans doğar, para yazılır', async () => {
     const { order } = await kapidaTaslak(4);
 
-    const sonuc = await quickSale({ orderId: order.id, paymentMethod: 'cash' });
+    const sonuc = await quickSale({ orderId: order.id, paymentMethod: 'cash', paymentAccountId: kasa });
     expect(sonuc.status).toBe('ok');
     if (sonuc.status !== 'ok') return;
 
     expect(sonuc.referenceNo).toMatch(/^LA-\d{2}-/); // ilk kalıcı durum `completed`
     expect(sonuc.consumedQty).toBe(4);
+    expect(sonuc.paymentRecorded).toBe(true);
 
     const kapanan = await orders.getById(order.id);
     expect(kapanan).toMatchObject({
       status: 'completed',
-      paymentStatus: 'paid',
+      paymentStatus: 'paid', // tahsilat hareketinden TÜRETİLDİ
       paymentMethod: 'cash',
       amountCollected: 40,
       deliveryCost: 0, // kapıda teslimat yapılmadı — rota birim maliyeti yazılamaz
       paymentFee: 0, // nakitte komisyon sıfırdır (uydurma değil, olgu)
     });
+
+    // Para uydurulmadı: nakit gerçekten kasanın bakiyesine girdi.
+    expect((await new AccountService(db).balance(kasa)).balance).toBe(40);
 
     // FEFO: önce süresi dolan çıktı — 3 × A (2 €) + 1 × B (3 €) = 9 €.
     expect((await stocks.getById(partiA))?.physicalQty).toBe(0);
@@ -157,6 +166,7 @@ describe('hızlı satış (07.10)', () => {
     const sonuc = await quickSale({
       orderId: order.id,
       paymentMethod: 'cash',
+      paymentAccountId: kasa,
       collectedAmount: 20,
       picks: [{ orderItemId: items[0]!.id, batches: [{ stockId: partiA, qty: 2 }] }],
     });
@@ -167,6 +177,31 @@ describe('hızlı satış (07.10)', () => {
     expect((await stocks.getById(partiA))?.physicalQty).toBe(1);
     const kalem = (await orders.getWithItems(order.id))!.items[0]!;
     expect(kalem.fulfilledQty).toBe(2);
+  });
+
+  it('hesap belirsizse satış YİNE kapanır — mal gitti, para kayıtsız görünür', async () => {
+    // Uydurulmuş bir "ödendi"den, kaydedilmemiş ama görünür bir tahsilat iyidir.
+    // Ayar seed'de dolu olabilir; bu senaryo tam da onun BOŞ olduğu hâli sınıyor → geçici olarak kaldır.
+    const settings = new SettingsService(db);
+    const onceki = await settings.get<string | null>('door_cash_account_id', null);
+    await db.from('settings').delete().eq('key', 'door_cash_account_id');
+    SettingsService.invalidate('door_cash_account_id');
+
+    try {
+      const { order } = await kapidaTaslak(1);
+      const sonuc = await quickSale({ orderId: order.id, paymentMethod: 'cash' }); // hesap yok, ayar da yok
+      expect(sonuc.status).toBe('ok');
+      if (sonuc.status !== 'ok') return;
+      expect(sonuc.paymentRecorded).toBe(false);
+
+      const kapanan = await orders.getById(order.id);
+      expect(kapanan?.status).toBe('completed'); // mal gitti, satış kapandı
+      expect(kapanan?.amountCollected).toBe(0); // para kaydı yok — uydurulmadı
+      expect(kapanan?.paymentStatus).toBe('pending');
+    } finally {
+      if (onceki) await settings.set('door_cash_account_id', onceki);
+      SettingsService.invalidate('door_cash_account_id');
+    }
   });
 
   it('iki kez satılamaz — stok bir kez düşer', async () => {

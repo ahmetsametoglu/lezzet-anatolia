@@ -1,4 +1,4 @@
-import type { PaymentStatus } from '@lezzet/types';
+import type { Order, OrderItem, PaymentStatus } from '@lezzet/types';
 
 /**
  * Ödeme durumu türetimi (03.6) — DOMAIN §7/§8. `payment_status` **elle set edilmez**, iki
@@ -49,6 +49,39 @@ export interface PaymentDerivation {
   refundDueCents: number;
   /** Kapıda ödenecekse tahsil edilecek kalan (0 ise tahsilat yok). */
   amountToCollectCents: number;
+}
+
+/**
+ * Siparişin kendisinden türetim — girdi EŞLEMESİ burada durur, çağıranlarda değil.
+ *
+ * Sebebi: aynı eşlemeyi web kapısı da (`lib/money/order-payment`) seed script'i de yapıyor. İki
+ * yerde yazılsaydı biri kargoyu unutur ya da indirim payını atlar, iki ekran farklı sayı gösterirdi.
+ * Motor DB'yi bilmez ama **şemayı bilir** (`@lezzet/types`) — bu yüzden `Order`/`OrderItem` alması
+ * sınırı bozmaz.
+ *
+ * Tutarlar dışarıdan gelir: siparişteki `amount_*` bir CACHE'tir, doğrusu para hareketlerindedir
+ * (12.2) — çağıran taze toplamı verir.
+ */
+export function derivePaymentStatusForOrder(
+  order: Pick<Order, 'shippingFee' | 'status'>,
+  items: readonly Pick<OrderItem, 'fulfilledQty' | 'qty' | 'unitPrice' | 'lineDiscountAmount'>[],
+  amounts: { collected: number; refunded: number },
+): PaymentDerivation {
+  const cent = (v: number) => Math.round(v * 100);
+  return derivePaymentStatus({
+    lines: items.map((item) => ({
+      fulfilledQty: item.fulfilledQty,
+      orderedQty: item.qty,
+      unitPriceCents: cent(item.unitPrice),
+      lineDiscountCents: cent(item.lineDiscountAmount),
+    })),
+    collectedCents: cent(amounts.collected),
+    refundedCents: cent(amounts.refunded),
+    shippingFeeCents: cent(order.shippingFee),
+    // İptal edilen siparişte karşılanan tutar 0 sayılır (ORDER_LIFECYCLE): tahsil edilmişse tamamı
+    // iade borcudur.
+    cancelled: order.status === 'cancelled',
+  });
 }
 
 export function derivePaymentStatus(input: PaymentDerivationInput): PaymentDerivation {

@@ -24,8 +24,6 @@ create or replace function public.quick_sale(
   p_actor_id uuid default null,
   p_reference_no text default null,                  -- motor üretir; mevcut numarayı EZMEZ
   p_payment_method payment_method default null,
-  p_amount_collected numeric default 0,
-  p_payment_status payment_status default 'pending', -- motor türetir (03.6), burada hesaplanmaz
   p_packaging_unit_cost numeric default 0
 ) returns jsonb
 language plpgsql
@@ -183,8 +181,10 @@ begin
      set status          = 'completed',
          reference_no    = coalesce(reference_no, p_reference_no),
          payment_method  = coalesce(p_payment_method, payment_method),
-         payment_status  = p_payment_status,
-         amount_collected = p_amount_collected,
+         -- `payment_status` ve `amount_collected` BURADA YAZILMAZ (12.2): ikisinin de kaynağı para
+         -- hareketleridir. Buradan yazsaydık kapı önü satışının nakdi hiçbir hesabın bakiyesine
+         -- düşmez, sipariş "ödendi" görünürken kasa boş kalırdı. Tahsilatı kapı, satıştan hemen
+         -- sonra `record_order_movement` ile yazar.
          cogs_amount     = v_cogs,
          -- Kapı önünde teslimat YAPILMADI: rota birim maliyeti bu satışa yazılamaz.
          delivery_cost   = 0,
@@ -204,5 +204,5 @@ begin
 end;
 $$;
 
-revoke execute on function public.quick_sale(uuid, jsonb, uuid, text, payment_method, numeric, payment_status, numeric)
+revoke execute on function public.quick_sale(uuid, jsonb, uuid, text, payment_method, numeric)
   from public, anon, authenticated;

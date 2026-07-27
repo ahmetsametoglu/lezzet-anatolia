@@ -122,6 +122,18 @@ export const AccountLedgerRowSchema = MoneyMovementSchema.extend({
 });
 export type AccountLedgerRow = z.infer<typeof AccountLedgerRowSchema>;
 
+/**
+ * `record_order_movement` / `resync_order_amounts` dönüşü (12.2). Tutarlar **hareketlerden yeniden
+ * hesaplanır**, artırılmaz — kaçırılan/tekrarlanan çağrı kalıcı sapma bırakmasın.
+ */
+export const OrderAmountsSchema = z.object({
+  ok: z.boolean(),
+  movementId: z.string().uuid().optional(),
+  amountCollected: dbNumeric,
+  amountRefunded: dbNumeric,
+});
+export type OrderAmounts = z.infer<typeof OrderAmountsSchema>;
+
 /** `account_balance` görünümü — bakiye SAKLANMAZ, defter satırlarından toplanır. */
 export const AccountBalanceSchema = z.object({
   accountId: z.string().uuid(),
