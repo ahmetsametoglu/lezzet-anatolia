@@ -79,7 +79,13 @@ export async function createProductAction(input: ProductFormInput): Promise<Acti
     await new ProductService(serviceDb()).create({
       ...fields,
       name,
-      variants: variants.map((v) => ({ label: v.label, netWeightG: v.netWeightG, sku: v.sku, isActive: v.isActive })),
+      variants: variants.map((v) => ({
+        label: v.label,
+        netWeightG: v.netWeightG,
+        minStockQty: v.minStockQty,
+        sku: v.sku,
+        isActive: v.isActive,
+      })),
     });
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };

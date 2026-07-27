@@ -163,7 +163,7 @@ export function ProductFormDialog({ mode, product, categories, device, onClose }
         )}
       </LocaleCard>
     ),
-    variants: <VariantEditor control={control} />,
+    variants: <VariantEditor control={control} onAiTranslate={aiTranslate} />,
     shippable: <FormSwitch control={control} name="shippable" label="Kargo izni" />,
     autoPrice: <FormSwitch control={control} name="autoPrice" label="Otomatik fiyat" />,
     margin: <FormNumber control={control} name="targetMarginPercent" label="Hedef marj (%)" placeholder="ör. 42" />,

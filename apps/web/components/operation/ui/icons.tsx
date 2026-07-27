@@ -186,6 +186,20 @@ export function TrashIcon({ size = 14 }: { size?: number }) {
   );
 }
 
+/**
+ * Kıvılcım — AI önerisi. Metinde `✦` glifi kullanılıyordu; ikon-only düğmede glif satır yüksekliğine
+ * göre kayıyor ve boyutu denetlenemiyordu. Büyük kıvılcım + küçük eşlikçi: "öneri" fikri tek şekilden
+ * daha okunur çıkıyor.
+ */
+export function SparkleIcon({ size = 14 }: { size?: number }) {
+  return (
+    <Svg size={size} strokeWidth={1.6}>
+      <path d="M13 3.5l1.5 4L18.5 9l-4 1.5L13 14.5l-1.5-4L7.5 9l4-1.5z" />
+      <path d="M6.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8L4 18l1.8-.7z" />
+    </Svg>
+  );
+}
+
 /** Görsel yer tutucu ikonu — ürün görseli yokken (liste + önizleme). */
 export function ImageIcon({ size = 24 }: { size?: number }) {
   return (

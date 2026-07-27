@@ -34,7 +34,7 @@ beforeAll(async () => {
     name: { tr: `İçli köfte ${damga}` },
     categoryId: category.id,
     shelfLifeDays: 300,
-    variants: [{ label: '500gr', minStockQty: 20 }],
+    variants: [{ label: { tr: '500gr' }, minStockQty: 20 }],
   });
   categoryId = category.id;
   productId = product.id;

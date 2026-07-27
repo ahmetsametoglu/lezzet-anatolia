@@ -59,7 +59,11 @@ create index product_category_idx on public.product (category_id);
 create table public.product_variant (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references public.product (id) on delete cascade,
-  label text not null,                               -- "70gr"/"500gr"; tek varyantlıda varsayılan
+  -- Müşteriye GÖRÜNEN boy etiketi ("700 g tepsi" / "plateau 700 g") → çok dilli. Üç dilli vitrinde
+  -- tek dil kalamazdı: ürünün adı/açıklaması/beyanı çevriliyken boy seçicisi Türkçe kalıyordu.
+  -- Boş olabilir ({}): tek boylu üründe etiket yoktur, müşteri seçici görmez. Birden çok varyantta
+  -- en az bir dilin dolu olması FORM kuralıdır (boy'ları ayırt edilemez bırakmamak için).
+  label jsonb not null default '{}'::jsonb,          -- LocalizedText
   net_weight_g int,
   min_stock_qty int,                                 -- asgari eşik (DOMAIN §16); null = öneri yok
   sku text,

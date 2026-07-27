@@ -42,16 +42,25 @@ export function errorIdFor(fieldId: string, error?: string): string | undefined 
 }
 
 type ControlSize = 'md' | 'sm';
-const CONTROL_SIZE: Record<ControlSize, string> = {
-  md: 'rounded-[9px] px-[13px] py-[7px] text-[13.5px]',
-  sm: 'rounded-md px-2 py-1.5 text-[12.5px]',
+// `trailing`: kutunun İÇİNE bir eylem oturduğunda sağ dolgu — boyutla birlikte yaşar, çağıran
+// kendi payını uydurmaz. Yazı düğmenin altına girmesin diye dolgu HER ZAMAN ayrılır (düğme gizliyken de).
+// Sağ dolgu KARE eylemi taşır: kutunun iç yüksekliği kadar genişlik + kenar boşluğu.
+const CONTROL_SIZE: Record<ControlSize, { base: string; trailing: string }> = {
+  md: { base: 'rounded-[9px] px-[13px] py-[7px] text-[13.5px]', trailing: 'pr-[38px]' },
+  sm: { base: 'rounded-md px-2 py-1.5 text-[12.5px]', trailing: 'pr-[32px]' },
 };
 
 /** Input/textarea/select ortak görünümü (ops token'ları). `error` çerçeveyi kırmızıya çeker. TEK KAYNAK. */
-export function controlClass(error?: string, opts?: { size?: ControlSize; mono?: boolean; extra?: string }): string {
+export function controlClass(
+  error?: string,
+  opts?: { size?: ControlSize; mono?: boolean; extra?: string; trailing?: boolean },
+): string {
+  const size = CONTROL_SIZE[opts?.size ?? 'md'];
   return [
     'w-full border bg-ops-white text-ops-ink outline-none transition-colors focus:border-ops-olive disabled:cursor-not-allowed disabled:opacity-60',
-    CONTROL_SIZE[opts?.size ?? 'md'],
+    size.base,
+    // `pr-*` üretilen CSS'te `px-*`'tan sonra gelir → sağ dolguyu o kazanır (Tailwind'in kanonik sırası).
+    opts?.trailing ? size.trailing : undefined,
     error ? 'border-ops-red' : 'border-ops-line-strong',
     opts?.mono ? 'font-ops-mono' : 'font-ops-body',
     opts?.extra,

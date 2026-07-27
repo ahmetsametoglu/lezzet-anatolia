@@ -25,20 +25,24 @@ describe('ProductService', () => {
     expect(variants).toHaveLength(1);
     const [defaultVariant] = variants;
     expect(defaultVariant?.productId).toBe(product.id);
-    expect(defaultVariant?.label).toBe('default');
+    // Varsayılan varyantın etiketi BOŞ: tek boylu üründe gösterilecek bir boy adı yok.
+    expect(defaultVariant?.label).toEqual({});
   });
 
   it('verilen varyantlarla açılır (sıralı)', async () => {
     const { product, variants } = await products.create({
       name: { tr: 'Maraş Dondurma' },
       variants: [
-        { label: '70gr', netWeightG: 70 },
-        { label: '500gr', netWeightG: 500 },
+        { label: { tr: '70 gr', fr: '70 g' }, netWeightG: 70 },
+        { label: { tr: '500 gr', fr: '500 g' }, netWeightG: 500 },
       ],
     });
     productIds.push(product.id);
     expect(variants).toHaveLength(2);
-    expect(variants.map((v) => v.label)).toEqual(['70gr', '500gr']);
+    expect(variants.map((v) => v.label)).toEqual([
+      { tr: '70 gr', fr: '70 g' },
+      { tr: '500 gr', fr: '500 g' },
+    ]);
     expect(variants.map((v) => v.sortOrder)).toEqual([0, 1]);
   });
 

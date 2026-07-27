@@ -8,6 +8,7 @@ import {
   ProductInsertSchema,
   ProductStatusEnum,
   ProductVariantEntrySchema,
+  resolveLocalizedText,
   type LocalizedText,
 } from '@lezzet/types';
 import { type ProductView } from '../../products-types';
@@ -31,7 +32,21 @@ export const ProductFormSchema = ProductInsertSchema.omit({
     status: ProductStatusEnum,
     variants: z.array(ProductVariantEntrySchema),
   })
-  .merge(ImageCropFieldsSchema);
+  .merge(ImageCropFieldsSchema)
+  // Boy etiketi TEK varyantta boş kalabilir (müşteri seçici görmez), ama İKİ boydan sonra ayırt edici
+  // olmak zorunda: etiketsiz iki satır müşteriye aynı görünen iki seçenek demektir. Kural burada, DB'de
+  // değil — DB tek boylu ürünü de tutuyor ve orada boşluk doğru cevap.
+  .superRefine((v, ctx) => {
+    if (v.variants.length < 2) return;
+    v.variants.forEach((variant, i) => {
+      if (resolveLocalizedText(variant.label)) return;
+      ctx.addIssue({
+        code: 'custom',
+        path: ['variants', i, 'label'],
+        message: 'Birden çok boy varsa etiket gerekli',
+      });
+    });
+  });
 export type ProductFormValues = z.infer<typeof ProductFormSchema>;
 
 // Boş dilleri atar (kaydederken temiz jsonb).
@@ -63,7 +78,7 @@ export function buildDefaults(p: ProductView | null): ProductFormValues {
       targetMarginPercent: null,
       autoPrice: false,
       ...DEFAULT_CROP_FIELDS,
-      variants: [{ label: '', netWeightG: null, sku: null, isActive: true }],
+      variants: [{ label: {}, netWeightG: null, minStockQty: null, sku: null, isActive: true }],
     };
   }
   return {
@@ -83,7 +98,14 @@ export function buildDefaults(p: ProductView | null): ProductFormValues {
     targetMarginPercent: p.targetMarginPercent,
     autoPrice: p.autoPrice,
     ...pickCropFields(p),
-    variants: p.variants.map((v) => ({ id: v.id, label: v.label, netWeightG: v.netWeightG, sku: v.sku, isActive: v.isActive })),
+    variants: p.variants.map((v) => ({
+      id: v.id,
+      label: v.label,
+      netWeightG: v.netWeightG,
+      minStockQty: v.minStockQty,
+      sku: v.sku,
+      isActive: v.isActive,
+    })),
   };
 }
 
@@ -108,8 +130,18 @@ export function toActionPayload(values: ProductFormValues) {
     targetMarginPercent: values.targetMarginPercent ?? null,
     autoPrice: values.autoPrice ?? false,
     ...pickCropFields(values),
+    // KAYITLI satır (id'li) her zaman gider: listeden çıkmasının TEK yolu silme düğmesidir. Eskiden
+    // ölçüt "etiketi boş olanı at"tı — etiketi silinen kayıtlı varyant sessizce silinirdi. Yeni satır
+    // (id'siz) ise hiçbir alanı doldurulmamışsa atılır: "+ varyant"a basıp vazgeçmek boş satır bırakmaz.
     variants: values.variants
-      .filter((v) => v.label.trim())
-      .map((v) => ({ id: v.id, label: v.label.trim(), netWeightG: v.netWeightG, sku: v.sku?.trim() || null, isActive: v.isActive })),
+      .filter((v) => v.id || resolveLocalizedText(v.label) || v.sku?.trim() || v.netWeightG != null || v.minStockQty != null)
+      .map((v) => ({
+        id: v.id,
+        label: cleanLocalized(v.label),
+        netWeightG: v.netWeightG,
+        minStockQty: v.minStockQty,
+        sku: v.sku?.trim() || null,
+        isActive: v.isActive,
+      })),
   };
 }

@@ -13,10 +13,31 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   inputSize?: InputSize;
   mono?: boolean;
   error?: string;
+  /**
+   * Kutunun İÇİNE, sağ kenara oturan eylem (ör. AI çeviri düğmesi). Verilirse sağ dolgu ona ayrılır →
+   * yazı düğmenin altına girmez. Sarmalayıcı `group` sınıfını taşır: eylem kendi görünürlüğünü
+   * `group-hover` / `group-focus-within` ile kutunun hâline bağlayabilir.
+   */
+  trailing?: ReactNode;
 }
 
-export function Input({ inputSize = 'md', mono = false, error, className, ...rest }: InputProps) {
-  return <input className={controlClass(error, { size: inputSize, mono, extra: className })} aria-invalid={error ? 'true' : undefined} {...rest} />;
+export function Input({ inputSize = 'md', mono = false, error, trailing, className, ...rest }: InputProps) {
+  const input = (
+    <input
+      className={controlClass(error, { size: inputSize, mono, extra: className, trailing: Boolean(trailing) })}
+      aria-invalid={error ? 'true' : undefined}
+      {...rest}
+    />
+  );
+  if (!trailing) return input;
+  return (
+    <div className="group relative flex items-center">
+      {input}
+      {/* Çerçevenin İÇİNDE, 2px içeri: köşe yarıçapı boyutla değişiyor (sm 6px / md 9px), içeri
+          oturan eylem kendi yarıçapıyla bunu takip etmek zorunda kalmaz. */}
+      <span className="absolute inset-y-[2px] right-[2px] flex items-center">{trailing}</span>
+    </div>
+  );
 }
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {

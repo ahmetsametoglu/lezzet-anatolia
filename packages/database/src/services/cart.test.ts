@@ -28,7 +28,7 @@ beforeAll(async () => {
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Sigara böreği ${damga}` },
     categoryId: category.id,
-    variants: [{ label: '500gr' }, { label: '1kg' }],
+    variants: [{ label: { tr: '500gr' } }, { label: { tr: '1kg' } }],
   });
   categoryId = category.id;
   productId = product.id;

@@ -118,9 +118,13 @@ async function uploadImage(file: string, key: string): Promise<string | null> {
 // ── Katalog: kategori + ürün + varyant (05) ──────────────────────────────────────────────────────
 
 interface SeedVariant {
-  label: string;
+  /** Müşteriye görünen boy etiketi — çok dilli (0005: `product_variant.label` jsonb). */
+  label: LocalizedText;
   netWeightG?: number;
   sku?: string;
+  // `minStockQty` BURADA verilmez: ticari zemin bölümü (aşağıda) onu senaryoya göre yazıyor — bir
+  // kısmı bilinçli olarak eşiğin altında kalsın diye. İki yerden yazılsaydı sonradan koşan kazanır,
+  // buradaki değer hiç görünmezdi (tek sahip kuralı).
 }
 interface SeedProduct {
   slug: string; // görsel anahtarı için (catalog/products/<slug>.jpeg)
@@ -181,8 +185,8 @@ const PRODUCTS: SeedProduct[] = [
     targetMarginPercent: 42,
     autoPrice: true,
     variants: [
-      { label: '1 kg', netWeightG: 1000, sku: 'BAK-F-1000' },
-      { label: '500 g', netWeightG: 500, sku: 'BAK-F-500' },
+      { label: { tr: '1 kg', fr: '1 kg', de: '1 kg' }, netWeightG: 1000, sku: 'BAK-F-1000' },
+      { label: { tr: '500 g', fr: '500 g', de: '500 g' }, netWeightG: 500, sku: 'BAK-F-500' },
     ],
   },
   {
@@ -193,7 +197,7 @@ const PRODUCTS: SeedProduct[] = [
     allergens: ['gluten', 'sert_kabuklu', 'sut'],
     shelfLifeDays: 180,
     targetMarginPercent: 38,
-    variants: [{ label: '1 kg', netWeightG: 1000, sku: 'BAK-C-1000' }],
+    variants: [{ label: { tr: '1 kg', fr: '1 kg' }, netWeightG: 1000, sku: 'BAK-C-1000' }],
   },
   {
     slug: 'su-boregi',
@@ -204,7 +208,8 @@ const PRODUCTS: SeedProduct[] = [
     allergens: ['gluten', 'yumurta', 'sut'],
     shelfLifeDays: 5,
     shippable: false, // soğuk zincir → yalnız rota/kapı teslim
-    variants: [{ label: 'Tepsi', netWeightG: 1500, sku: 'BOR-SU-1500' }],
+    // Etiket YALNIZ TR — varyant editöründeki "eksik dil" noktasını örnekler.
+    variants: [{ label: { tr: 'Tepsi' }, netWeightG: 1500, sku: 'BOR-SU-1500' }],
   },
   {
     slug: 'kunefe',
@@ -220,7 +225,7 @@ const PRODUCTS: SeedProduct[] = [
     shelfLifeDays: 3,
     shippable: false,
     targetMarginPercent: 45,
-    variants: [{ label: '2 kişilik', netWeightG: 600, sku: 'SER-KUN-600' }],
+    variants: [{ label: { tr: '2 kişilik', fr: '2 personnes', de: 'für 2' }, netWeightG: 600, sku: 'SER-KUN-600' }],
   },
   {
     slug: 'antep-fistigi',
@@ -372,7 +377,15 @@ async function seedBulkProducts(
         // Tek alan → çakışma imkânsız (eskiden iki bayrak birbirini ezebiliyordu).
         status: i % 9 === 0 ? 'passive' : i % 11 === 0 ? 'candidate' : 'active',
         sortOrder: startOrder + i,
-        variants: i % 3 === 0 ? [{ label: '700 g tepsi', netWeightG: 700 }, { label: '1 kg tepsi', netWeightG: 1000 }] : [{ label: '500 g', netWeightG: 500 }],
+        // Çok boylu ürünlerde etiket üç dilli; tek boylularda 4'te 1'i bilinçli TR-only kalır ki
+        // varyant editörünün "eksik dil" göstergesi toplu veride de görünsün.
+        variants:
+          i % 3 === 0
+            ? [
+                { label: { tr: '700 g tepsi', fr: 'plateau 700 g', de: 'Platte 700 g' }, netWeightG: 700 },
+                { label: { tr: '1 kg tepsi', fr: 'plateau 1 kg', de: 'Platte 1 kg' }, netWeightG: 1000 },
+              ]
+            : [{ label: i % 4 === 0 ? { tr: '500 g' } : { tr: '500 g', fr: '500 g', de: '500 g' }, netWeightG: 500 }],
       });
       made += 1;
 
@@ -762,7 +775,7 @@ async function katalogVaryantlari(db: Db): Promise<VaryantRef[]> {
     p.variants.map((v) => ({
       id: v.id,
       productId: p.id,
-      ad: `${resolveLocalizedText(p.name)} · ${v.label}`,
+      ad: [resolveLocalizedText(p.name), resolveLocalizedText(v.label)].filter(Boolean).join(' · '),
       vatRate: p.vatRate,
       status: p.status,
       shelfLifeDays: p.shelfLifeDays,

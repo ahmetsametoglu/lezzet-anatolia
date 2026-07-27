@@ -49,8 +49,10 @@ interface ProductListOptions {
 // değil burada yaşar (domain şeması değil, sorgu çıktısı sözleşmesi).
 const CategoryCountRowSchema = z.object({ categoryId: z.string().uuid() });
 
-// Varyantsız üründe otomatik açılan tek varyantın etiketi (müşteriye gösterilmez — seçici gizli).
-const DEFAULT_VARIANT_LABEL = 'default';
+// Varyantsız üründe otomatik açılan tek varyantın etiketi: BOŞ çok dilli metin. Eskiden `'default'`
+// yazıyordu ve tek boylu ürünün vitrin kartında birim etiketi olarak "default" görünüyordu. Boş etiket
+// doğrusu: tek boylu üründe gösterilecek bir boy adı yoktur (resolveLocalizedText '' döner).
+const DEFAULT_VARIANT_LABEL = {};
 
 // Yeni varyant girişi — insert şemasından türer (productId create içinde bağlanır). No-duplication.
 export type CreateVariantInput = Omit<ProductVariantInsert, 'productId'>;
