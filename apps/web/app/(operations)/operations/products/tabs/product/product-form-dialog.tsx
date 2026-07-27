@@ -15,9 +15,9 @@ import { FormSegment } from '@/components/operation/form/form-segment';
 import { FormSwitch } from '@/components/operation/form/form-switch';
 import { FormMultiSelect } from '@/components/operation/form/form-multi-select';
 import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
+import { ImageCropField } from '@/components/operation/form/image-crop-field';
 import { suggestTranslationAction } from '../../actions/translate';
-import { createProductAction, updateProductAction } from './actions';
-import { ProductImageField } from './product-image-field';
+import { createProductAction, updateProductAction, uploadProductImageAction } from './actions';
 import { VariantEditor } from './variant-editor';
 import { ProductFormDesktop } from './product-form.desktop';
 import { ProductFormMobile } from './product-form.mobile';
@@ -81,9 +81,28 @@ export function ProductFormDialog({ mode, product, categories, device, onClose }
     <FormLocalizedText control={control} name="description" label="Ürün açıklaması" multiline placeholder="Açıklama" lang={lang} onAiTranslate={aiTranslate} />
   );
 
+  // Görsel: kaynak 3:2, odak + zoom kırpması form değeri; düzenleme ayrı diyalogda. Kayıt yoksa yükleme
+  // yapılamaz (R2 anahtarı slug'a bağlı) → istem gösterilir. Alt metin AYRI alan değil: boşsa müşteri
+  // yüzeyinde ürün adına düşer (kopya tutulmaz) — bu yüzden formda alt-metin alanı yok.
+  const crop = { x: form.watch('imageFocalX'), y: form.watch('imageFocalY'), zoom: form.watch('imageZoom') };
+  const imageField = (
+    <ImageCropField
+      role="product"
+      src={editing ? product.imageUrl : null}
+      crop={crop}
+      onCropChange={(c) => {
+        form.setValue('imageFocalX', c.x, { shouldDirty: true });
+        form.setValue('imageFocalY', c.y, { shouldDirty: true });
+        form.setValue('imageZoom', c.zoom, { shouldDirty: true });
+      }}
+      upload={editing ? (fd) => uploadProductImageAction(product.id, fd) : undefined}
+      uploadDisabledHint="Ürünü kaydedince görsel eklenebilir — R2 anahtarı slug'a bağlı."
+    />
+  );
+
   // Alan elemanları tek kez kurulur; sunumlar yalnız YERLEŞTİRİR (web `content`, mobil `name`+`description`).
   const fields: ProductFormFields = {
-    image: <ProductImageField product={editing ? product : null} />,
+    image: imageField,
     name: nameField(),
     description: descriptionField(),
     content: (

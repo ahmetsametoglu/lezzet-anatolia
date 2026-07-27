@@ -53,11 +53,28 @@ function tableColumns(sql, table) {
     .filter(Boolean);
 }
 
-/** Zod şemasındaki `z.object({...})` gövdesinden alan adları (camelCase). */
-function zodFields(src, name) {
-  const m = src.match(new RegExp(`export const ${name} = z\\.object\\(\\{([\\s\\S]*?)\\n\\}\\)`));
+/**
+ * Zod şemasındaki `z.object({...})` gövdesinden alan adları (camelCase). `.merge(OtherSchema)` zinciri
+ * de İZLENİR — ortak alan grupları ayrı şemada tutulup merge'lenebildiği için (no-duplication; ör.
+ * ImageMetaSchema). Merge edilen şema aynı dizindeki başka dosyada olabilir → `src` tüm şema dosyaları.
+ */
+function zodFields(src, name, seen = new Set()) {
+  if (seen.has(name)) return [];
+  seen.add(name);
+  const m = src.match(new RegExp(`export const ${name} = z\\.object\\(\\{([\\s\\S]*?)\\n\\}\\)((?:\\.merge\\([A-Za-z0-9]+\\))*)`));
   if (!m) return null;
-  return [...m[1].matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9]*):/gm)].map((x) => x[1]);
+  const own = [...m[1].matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9]*):/gm)].map((x) => x[1]);
+  const merged = [...m[2].matchAll(/\.merge\(([A-Za-z0-9]+)\)/g)].flatMap((x) => zodFields(src, x[1], seen) ?? []);
+  return [...own, ...merged];
+}
+
+/** Tüm şema dosyalarını birleştirir — `.merge()` başka dosyadaki şemayı işaret edebilir. */
+function allSchemaSrc() {
+  const dir = 'packages/types/src/schemas';
+  return readdirSync(join(ROOT, dir))
+    .filter((f) => f.endsWith('.ts'))
+    .map((f) => read(`${dir}/${f}`))
+    .join('\n');
 }
 
 const migrations = readdirSync(join(ROOT, 'supabase/migrations'))
@@ -72,7 +89,7 @@ for (const f of readdirSync(join(ROOT, 'docs/architecture/data-model'))) {
 for (const e of ENTITIES) {
   const doc = docFields(parts.get(e.part) ?? '', e.doc);
   const cols = tableColumns(migrations, e.table);
-  const zod = zodFields(read(`packages/types/src/schemas/${e.schema}`), e.zod);
+  const zod = zodFields(allSchemaSrc(), e.zod);
   if (!doc) { note(`data-model/${e.part}.md: "## ${e.doc}" başlığı ya da tablosu bulunamadı`); continue; }
   if (!cols || !zod) continue; // henüz kodlanmamış varlık — artımlı inşa, hata değil
 

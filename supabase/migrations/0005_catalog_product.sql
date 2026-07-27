@@ -17,7 +17,13 @@ create table public.product (
   description jsonb,                                 -- LocalizedText, opsiyonel
   slug text not null,                                -- dil-bağımsız (SEO_I18N)
   category_id uuid references public.category (id) on delete set null,
+  -- Görsel künyesi (Komponent Envanteri §0B): tek kaynak 3:2 dosya + odak noktası; her müşteri
+  -- çerçevesi (3:2 kart, 1:1 sepet, daire) buradan object-position ile türer, kırpılmış kopya yok.
   image_key text,                                    -- depo anahtarı, tam URL değil (STACK §5)
+  image_focal_x smallint not null default 50,        -- odak %, 0-100 (object-position X)
+  image_focal_y smallint not null default 50,        -- odak %, 0-100 (object-position Y)
+  image_zoom smallint not null default 100,          -- zoom %, 100-400 (dikey/kare kaynağı yatay banda kırpar)
+  image_alt jsonb,                                   -- LocalizedText; erişilebilirlik + SEO, kart görselinde zorunlu
   allergens product_allergen[] not null default '{}', -- AB 14 yasal beyan (manuel seçim)
   vat_rate numeric(4, 2) not null default 5.5,       -- 5.5 / 20
   date_type product_date_type not null default 'DDM',

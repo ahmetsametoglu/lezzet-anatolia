@@ -1,7 +1,11 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Button } from './button';
+
+// Açık dialogların yığını (üst üste açılabilir: ör. ürün formu → görsel düzenleme). Esc yalnız EN
+// ÜSTTEKİ dialogu kapatır; yoksa iç dialog Esc'i dış dialogu da kapatırdı (AnchoredMenu ile aynı dert).
+const dialogStack: object[] = [];
 
 /**
  * Operasyon dialogu — Komponent Envanteri O9. Ortalanmış panel: koyu örtü + başlık (başlık/alt +
@@ -25,13 +29,21 @@ interface DialogProps {
 }
 
 export function Dialog({ open, onClose, title, subtitle, footer, maxWidth = 640, children }: DialogProps) {
+  const tokenRef = useRef<object>({});
   useEffect(() => {
     if (!open) return;
+    const token = tokenRef.current;
+    dialogStack.push(token);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      // Yalnız yığının tepesindeki dialog Esc'e yanıt verir.
+      if (e.key === 'Escape' && dialogStack[dialogStack.length - 1] === token) onClose();
     };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      const i = dialogStack.indexOf(token);
+      if (i >= 0) dialogStack.splice(i, 1);
+    };
   }, [open, onClose]);
 
   if (!open) return null;

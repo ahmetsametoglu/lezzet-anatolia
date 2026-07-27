@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { LocalizedTextSchema, type LocalizedText } from './localized-text.schema';
+import { ImageMetaInsertSchema, ImageMetaSchema } from './image.schema';
 
 // Ürün — paylaşılan alanlar (satılabilir birim ProductVariant'ta). 0005 migration, DATA_MODEL.
 export const ProductDateTypeEnum = z.enum(['DLC', 'DDM']);
@@ -56,7 +57,6 @@ export const ProductSchema = z.object({
   description: LocalizedTextSchema.nullable(),
   slug: z.string(),
   categoryId: z.string().uuid().nullable(),
-  imageKey: z.string().nullable(),
   allergens: z.array(ProductAllergenEnum),
   vatRate: dbNumeric,
   dateType: ProductDateTypeEnum,
@@ -68,7 +68,7 @@ export const ProductSchema = z.object({
   autoPrice: z.boolean(),
   sortOrder: z.number().int(),
   createdAt: z.string(),
-});
+}).merge(ImageMetaSchema); // görsel alanları (anahtar + odak + alt metin) ortak şemadan gelir
 export type Product = z.infer<typeof ProductSchema>;
 
 // name/slug zorunlu; kalanı DB default'lu/nullable → opsiyonel. slug servis türetir.
@@ -77,7 +77,6 @@ export const ProductInsertSchema = z.object({
   slug: z.string(),
   description: LocalizedTextSchema.nullish(),
   categoryId: z.string().uuid().nullish(),
-  imageKey: z.string().nullish(),
   allergens: z.array(ProductAllergenEnum).optional(),
   vatRate: z.number().optional(),
   dateType: ProductDateTypeEnum.optional(),
@@ -88,19 +87,24 @@ export const ProductInsertSchema = z.object({
   targetMarginPercent: z.number().nullish(),
   autoPrice: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
-});
+}).merge(ImageMetaInsertSchema);
 export type ProductInsert = z.infer<typeof ProductInsertSchema>;
 
 export const ProductUpdateSchema = ProductSchema.partial().required({ id: true });
 export type ProductUpdate = z.infer<typeof ProductUpdateSchema>;
 
-// Ürün düzenleme formunun yazdığı alanlar (Temel + içerik + beyan) — id/slug/imageKey/sortOrder/
-// createdAt hariç, hepsi opsiyonel (yalnız verilenler yazılır). ProductSchema'dan TÜRETİLİR (tek
-// kaynak; alan tekrarı yok). Görsel ve varyant düzenleme ayrı akışlarda.
+// Ürün düzenleme formunun yazdığı alanlar (Temel + içerik + beyan + görsel künyesi) — id/slug/
+// imageKey/sortOrder/createdAt hariç, hepsi opsiyonel (yalnız verilenler yazılır). ProductSchema'dan
+// TÜRETİLİR (tek kaynak; alan tekrarı yok). Dosyanın kendisi ayrı yükleme akışında (imageKey), ama
+// ODAK ve ALT METİN forma aittir: "kaydeden yayınlar" (envanter §0B kaydetme kapısı).
 export const ProductDetailsUpdateSchema = ProductSchema.pick({
   name: true,
   description: true,
   categoryId: true,
+  imageFocalX: true,
+  imageFocalY: true,
+  imageZoom: true,
+  imageAlt: true,
   allergens: true,
   vatRate: true,
   dateType: true,

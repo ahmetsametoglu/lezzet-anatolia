@@ -50,7 +50,11 @@ Esnek pazarlama grubu (Bayram, Yeni, İndirimde). Bir ürün birden çok koleksi
 | traces | string[] | AB 14'ten **çapraz bulaşma** riski olanlar ("aynı tesiste … işlenir"); cümle bu listeden i18n şablonuyla kurulur, serbest metin tutulmaz |
 | storage_instructions | LocalizedText (jsonb) \| null | saklama ve hazırlama metni (çözdürme, yeniden dondurmama, ısıtma) — müşteri ürün sayfasında ayrı bölüm; `shelf_life_days` sayısaldır, bu ise müşteriye gösterilen metindir |
 | category_id | uuid | |
-| image_key | string \| null | depo anahtarı, tam URL değil (blueprint STACK §5) |
+| image_key | string \| null | kapak görseli; depo anahtarı, tam URL değil (blueprint STACK §5) |
+| image_focal_x | smallint | kapak odak noktası %, 0-100 (object-position X); tek kaynak 3:2'den tüm çerçeveler bununla türer (Komponent Envanteri §0B) |
+| image_focal_y | smallint | kapak odak noktası %, 0-100 (object-position Y) |
+| image_zoom | smallint | kapak zoom %, 100-400; dikey/kare kaynağı yatay banda kırpar (yeniden çektirmeden) |
+| image_alt | LocalizedText (jsonb) \| null | kapak alternatif metni (erişilebilirlik + SEO); **boşsa müşteride ürün adına düşer** (kopya tutulmaz) |
 | vat_rate | number | ürün bazında KDV (5.5 / 20) |
 | date_type | enum(`DLC`,`DDM`) | son tarih tipi — güvenlik/kalite (varsayılan `DDM`) |
 | shelf_life_days | int \| null | toplam raf ömrü (gün); kalan % hesabı için |
