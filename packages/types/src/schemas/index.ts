@@ -15,6 +15,8 @@ export * from './product-collection.schema';
 export * from './address.schema';
 export * from './cart.schema';
 export * from './order.schema';
+export * from './setting.schema';
+export * from './delivery-zone.schema';
 export * from './stock.schema';
 export * from './stock-adjustment.schema';
 export * from './supply.schema';

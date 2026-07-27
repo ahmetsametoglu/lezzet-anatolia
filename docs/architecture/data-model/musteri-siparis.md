@@ -70,9 +70,12 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | --- | --- | --- |
 | id | uuid | |
 | name | string | iç etiket (ör. "Strasbourg Kuzey") |
-| postal_codes | string[] | bölgeye dahil posta kodları (FR + DE/Baden dahil) |
-| weekdays | int[] | haftalık teslimat günleri (1=Pzt … 7=Paz) |
-| active | boolean | |
+| postal_codes | string[] | bölgeye dahil posta kodları (FR + DE/Baden dahil); karşılaştırma biçimden bağımsızdır ("67 000" = "67000") |
+| weekdays | int[] | haftalık teslimat günleri, **ISO**: 1=Pzt … 7=Paz |
+| is_active | boolean | kapatılan bölge rota sayılmaz — adres kargoya düşer |
+| created_at | timestamptz | |
+
+**Rota içi/dışı SAKLANMAZ** (07.2): adresin posta kodu aktif bir bölgeye düşüyorsa rota içi. Bölge sınırı admin tarafından değiştirilebildiği için saklanan değer ertesi gün yalan olur. Teslimat günü hesabı da (kesim saati dâhil) motordadır — `domain-core/delivery`.
 
 ## Order (sipariş)
 

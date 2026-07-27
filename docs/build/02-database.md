@@ -29,10 +29,13 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
   - *Bitti:* `DATA_MODEL.md`'deki her varlığın tablosu var; kısıt ihlali testle doğrulanmış (örnek: aynı webhook event iki kez yazılamıyor)
 - [x] (02.5) `BaseDbService`: jsonb-güvenli case dönüştürücüler (LocalizedText içleri dönüşmez), `{data, error}` deseni, `toRpcParams` yardımcısı
   - *Bitti:* dönüştürücü birim testleri (jsonb alanı bozulmuyor) geçiyor
-- [~] (02.6) İlk somut servisler (okuma/yazma smoke): `SettingsService` (kapsamlı çözücü: özgül → global) + bir örnek CRUD servisi
+- [x] (02.6) İlk somut servisler (okuma/yazma smoke): `SettingsService` (kapsamlı çözücü: özgül → global) + bir örnek CRUD servisi
   - *Bitti:* Setting çözücüsü "bölge değeri globali ezer" birim testini geçiyor
-- [~] (02.7) Seed: `Setting` varsayılanları (TTL 30 dk, eşikler, tavanlar — `DATA_MODEL.md` Setting listesi) + bir test kategorisi/ürünü
+  - **Durum (27.07):** `0016_setting.sql` + `SettingService`. Özgüllük sırası **bölge > kanal > ülke > global**; hiç satır yoksa çağıranın verdiği varsayılana düşer — kodda sabit kalmaz, varsayılan çağrı yerinde görünür. Süreç içi önbellek (ayarlar her checkout'ta okunur, neredeyse hiç değişmez); yazmada düşer. Bozuk değer akışı kilitlemez, varsayılana döner. 9 test.
+  - **Kapsam anahtarı metin:** `scope_id` üç farklı tipi taşıyor (kanal 'b2b', ülke 'FR', bölge uuid) — tip başına ayrı kolon açmak tabloyu boş kolonlarla doldururdu.
+- [x] (02.7) Seed: `Setting` varsayılanları (TTL 30 dk, eşikler, tavanlar — `DATA_MODEL.md` Setting listesi) + bir test kategorisi/ürünü
   - *Bitti:* temiz kurulum + seed sonrası vitrin sorgusu veri dönüyor
+  - **Durum (27.07):** 15 varsayılan migration'ın kendisinde (`insert`) — seed script'inde değil. Sebep: bunlar test verisi değil, **sistemin çalışması için gereken zemin**; `db:reset` sonrası seed çalıştırılmasa da kesim saati ve TTL yerinde olmalı. Para değerleri cent (STACK §8), yüzdeler tam sayı.
 
 ## Netleşecekler
 
