@@ -18,7 +18,15 @@ import type { CatalogSort, StorefrontCatalog } from './storefront-types';
  * Bugünkü kaynak durumu:
  *   kategori süzgeci · ad araması · sayfalama · toplam sayı → GERÇEK
  *   fiyat · tükendi · satın alma yolu · "yalnız indirimliler" → GERÇEK (`map.ts`, near-expiry teklifi)
- *   fiyat sıralaması                                        → STUB(→05.4)
+ *   fiyat sıralaması                                        → STUB(→05.4 DEĞİL; bkz. aşağı)
+ *
+ * **Fiyat sıralaması neden hâlâ yok:** stub bir süre `→05.4` etiketliydi ama 05.4 (fiyat) indi ve
+ * sıralama yine açılmadı — etiket yanlış hedefi gösteriyordu (aynı hata fırsat rozetinde yaşandı).
+ * Gerçek engel şu: uygulanabilir fiyat AYRI tablodadır (kanal + geçerlilik tarihi + müşteriye özel
+ * satır) ve "bu ürünün b2c fiyatı" tek bir kolon değil, bir SEÇİMDİR. Ürünleri o seçime göre
+ * sıralamak ve aynı anda keyset sayfalamak, `available_stock` gibi bir OKUMA GÖRÜNÜMÜ ister —
+ * yani bir migration. Sıralamayı sayfa çekildikten sonra yapmak seçenek değil: sayfalamayı bozar,
+ * "artan fiyat" yalnız o 30 satır içinde artan olur.
  */
 
 interface CatalogQuery {

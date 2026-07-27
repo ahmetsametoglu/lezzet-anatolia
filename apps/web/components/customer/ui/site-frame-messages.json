@@ -23,7 +23,8 @@
       "about": "Hakkımızda",
       "faq": "SSS"
     },
-    "share": "WhatsApp ile paylaş"
+    "share": "WhatsApp ile paylaş",
+    "searchClear": "Aramayı temizle"
   },
   "fr": {
     "announcement": {
@@ -49,7 +50,8 @@
       "about": "Qui sommes-nous",
       "faq": "FAQ"
     },
-    "share": "Partager sur WhatsApp"
+    "share": "Partager sur WhatsApp",
+    "searchClear": "Effacer la recherche"
   },
   "de": {
     "announcement": {
@@ -75,6 +77,7 @@
       "about": "Über uns",
       "faq": "FAQ"
     },
-    "share": "Über WhatsApp teilen"
+    "share": "Über WhatsApp teilen",
+    "searchClear": "Suche löschen"
   }
 }

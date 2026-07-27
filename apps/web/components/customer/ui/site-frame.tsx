@@ -28,6 +28,8 @@ interface SiteFrameProps {
   locale: Locale;
   /** Başlıkta arama kutusu görünsün mü — vitrin sayfalarında evet, hata ekranlarında hayır. */
   showSearch?: boolean;
+  /** Adresteki güncel arama — kutu katalogda ne arandığını göstersin. */
+  search?: string;
   /**
    * Gezinmede hangi öğe AKTİF — tasarımda aktif sayfa zeytin rengi + 2px alt çizgi taşır (Katalog
    * ve Ürün Detay ekranlarında "Katalog", Hesap ekranında "Hesabım"). Ziyaretçi nerede olduğunu
@@ -65,7 +67,7 @@ function navClass(key: NavKey, active: NavKey | undefined, base = ''): string {
   return [base, 'border-b-2 pb-0.5', active === key ? 'border-olive text-olive' : 'border-transparent'].filter(Boolean).join(' ');
 }
 
-export function SiteFrame({ device, locale, showSearch = false, activeNav, mobileChrome = 'default', back, children }: SiteFrameProps) {
+export function SiteFrame({ device, locale, showSearch = false, search, activeNav, mobileChrome = 'default', back, children }: SiteFrameProps) {
   const t = messages[locale];
   const isMobile = device === 'mobile';
   // Mobil detayda çerçevenin tamamı sadeleşir: şerit yok, arama yok, footer tek satır.
@@ -114,7 +116,7 @@ export function SiteFrame({ device, locale, showSearch = false, activeNav, mobil
           </header>
           {showSearch && (
             <div className="mx-4 mt-3">
-              <SearchField placeholder={t.search} fullWidth />
+              <SearchField placeholder={t.search} clearLabel={t.searchClear} defaultValue={search} fullWidth />
             </div>
           )}
         </>
@@ -135,7 +137,7 @@ export function SiteFrame({ device, locale, showSearch = false, activeNav, mobil
             <span className={navClass('pro', activeNav)}>{t.nav.pro}</span>
           </nav>
           <div className="ml-auto flex items-center gap-4.5 font-sans text-body-sm font-semibold text-muted">
-            {showSearch && <SearchField placeholder={t.search} />}
+            {showSearch && <SearchField placeholder={t.search} clearLabel={t.searchClear} defaultValue={search} />}
             <LocaleSwitch locale={locale} />
             <span className="text-icon text-ink">🧺</span>
           </div>
