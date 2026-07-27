@@ -3,6 +3,8 @@
     "title": "Katalog",
     "all": "Tümü",
     "count": "{n} ürün",
+    "loadMore": "Daha fazla ürün",
+    "loading": "Yükleniyor…",
     "onlyOffers": "% Yalnız indirimliler",
     "sortLabel": "Sırala:",
     "sort": {
@@ -27,6 +29,8 @@
     "title": "Catalogue",
     "all": "Tout",
     "count": "{n} produits",
+    "loadMore": "Voir plus de produits",
+    "loading": "Chargement…",
     "onlyOffers": "% Uniquement les offres",
     "sortLabel": "Trier :",
     "sort": {
@@ -51,6 +55,8 @@
     "title": "Katalog",
     "all": "Alle",
     "count": "{n} Produkte",
+    "loadMore": "Mehr Produkte",
+    "loading": "Wird geladen…",
     "onlyOffers": "% Nur Angebote",
     "sortLabel": "Sortieren:",
     "sort": {

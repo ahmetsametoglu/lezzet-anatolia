@@ -2,6 +2,7 @@ import { CATALOG_SORTS } from '@/lib/storefront/storefront-types';
 import { EmptyState, FilterChip } from '@/components/customer/ui/filter-controls';
 import { SortSelect } from '@/components/customer/ui/sort-select';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
+import { LoadMore } from '@/components/customer/ui/load-more';
 import type { CatalogViewProps } from './catalog-types';
 
 /**
@@ -16,7 +17,7 @@ import type { CatalogViewProps } from './catalog-types';
  * Koleksiyon görünümü (tasarımdaki "Durum: koleksiyon görünümü" varyantı — üstbaşlıklı başlık bandı)
  * HENÜZ YOK: koleksiyon rotası açılmadı. Geldiğinde yalnız başlık bloğu değişir, gerisi aynı kalır.
  */
-export function CatalogDesktop({ t, locale, data, active, hrefFor }: CatalogViewProps) {
+export function CatalogDesktop({ t, locale, data, products, hasMore, loadingMore, onLoadMore, active, hrefFor }: CatalogViewProps) {
   return (
     <div className="flex flex-col">
       <section className="flex flex-col gap-5 px-12 pt-9 pb-5">
@@ -41,17 +42,21 @@ export function CatalogDesktop({ t, locale, data, active, hrefFor }: CatalogView
         </div>
       </section>
 
-      {data.products.length === 0 ? (
+      {products.length === 0 ? (
         <div className="px-12 pb-12">
           <EmptyState title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} icon="🔍" />
         </div>
       ) : (
         <section className="grid grid-cols-4 gap-[18px] px-12 pt-1 pb-12">
-          {data.products.map((p) => (
+          {products.map((p) => (
             <ProductCard key={p.id} product={p} locale={locale} labels={{ ...t.card, limit: null }} />
           ))}
         </section>
       )}
+
+      <div className="px-12">
+        <LoadMore hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} label={t.loadMore} loadingLabel={t.loading} />
+      </div>
     </div>
   );
 }

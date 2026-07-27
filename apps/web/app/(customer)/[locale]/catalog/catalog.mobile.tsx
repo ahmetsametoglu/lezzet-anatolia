@@ -2,6 +2,7 @@ import { CATALOG_SORTS } from '@/lib/storefront/storefront-types';
 import { EmptyState, FilterChip } from '@/components/customer/ui/filter-controls';
 import { SortSelect } from '@/components/customer/ui/sort-select';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
+import { LoadMore } from '@/components/customer/ui/load-more';
 import type { CatalogViewProps } from './catalog-types';
 
 /**
@@ -10,7 +11,7 @@ import type { CatalogViewProps } from './catalog-types';
  * kullanımdır (`musteri-katalog.md §7`) — bu yüzden süzgeçler başparmağın erişebildiği üst şeritte,
  * sıralama sonuç satırının hemen altında kalır.
  */
-export function CatalogMobile({ t, locale, data, active, hrefFor }: CatalogViewProps) {
+export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore, onLoadMore, active, hrefFor }: CatalogViewProps) {
   return (
     <div className="flex flex-col">
       <section className="flex flex-col gap-3 px-4 pt-5 pb-3">
@@ -36,17 +37,21 @@ export function CatalogMobile({ t, locale, data, active, hrefFor }: CatalogViewP
         />
       </div>
 
-      {data.products.length === 0 ? (
+      {products.length === 0 ? (
         <div className="px-4 pb-8">
           <EmptyState title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} icon="🔍" />
         </div>
       ) : (
         <section className="grid grid-cols-2 gap-3 px-4 pt-1 pb-8">
-          {data.products.map((p) => (
+          {products.map((p) => (
             <ProductCard key={p.id} product={p} locale={locale} labels={{ ...t.card, limit: null }} compact />
           ))}
         </section>
       )}
+
+      <div className="px-4">
+        <LoadMore hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} label={t.loadMore} loadingLabel={t.loading} />
+      </div>
     </div>
   );
 }

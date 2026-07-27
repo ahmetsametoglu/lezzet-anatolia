@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useLoadMore } from '@/lib/use-load-more.hook';
 
 /**
- * Sona-yaklaşınca yükleme (infinite scroll) tetikleyicisi — TEK KAYNAK. Listenin sonuna konur; görünür
- * alana girdiğinde bir sonraki sayfayı ister. `Table`'ın `footer` slotuna geçirilir (Komponent Envanteri
- * O4: "sona yaklaşınca yükleme footer'a bağlanır") ama tabloya bağımlı değildir — mobil kart listesi
- * de aynı bileşeni kullanır.
+ * OPERASYON yüzeyinin sona-yaklaşınca yükleme tetikleyicisi. Listenin sonuna konur; görünür alana
+ * girdiğinde bir sonraki sayfayı ister. `Table`'ın `footer` slotuna geçirilir (Komponent Envanteri
+ * O4) ama tabloya bağımlı değildir — mobil kart listesi de aynı bileşeni kullanır.
  *
- * Kaydırma olayı dinlemek yerine IntersectionObserver: her karede hesap yapmaz, eşiğe girince bir kez
- * tetikler. `loading` sırasında yeniden tetiklenmez (aynı sayfa iki kez istenmesin).
+ * Gözlemci `useLoadMore` hook'unda (müşteri yüzeyiyle PAYLAŞILIR); burada kalan yalnız operasyon
+ * görünümü: Türkçe metin ve `ops-*` token'ları. Bileşenin tamamı paylaşılsaydı operasyon metni
+ * müşteri sayfasına sızardı.
  *
  * Gözlemci beklenmedik bir yerleşimde hiç tetiklenmezse kullanıcı kilitlenmesin diye AÇIK bir buton da
  * durur — aynı eylemi çağırır, sessiz kilit yerine görünür çıkış.
@@ -23,25 +23,8 @@ interface LoadMoreSentinelProps {
   rootMargin?: string;
 }
 
-export function LoadMoreSentinel({ hasMore, loading, onLoadMore, rootMargin = '240px' }: LoadMoreSentinelProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  // Callback'i ref'te tutuyoruz: her render'da yeni fonksiyon gelse de gözlemci yeniden kurulmasın.
-  const cb = useRef(onLoadMore);
-  cb.current = onLoadMore;
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !hasMore || loading) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) cb.current();
-      },
-      { rootMargin },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasMore, loading, rootMargin]);
-
+export function LoadMoreSentinel({ hasMore, loading, onLoadMore, rootMargin }: LoadMoreSentinelProps) {
+  const ref = useLoadMore({ hasMore, loading, onLoadMore, rootMargin });
   if (!hasMore) return null;
 
   return (

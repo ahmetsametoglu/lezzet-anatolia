@@ -23,7 +23,7 @@
 - **Servis ham `this.supabase` yazmaz** — `BaseDbService` metodları; junction tablosu = kendi alt sınıfı. → STACK §6
 - **domain-core = saf karar** (DB'siz, testli); **database = saf I/O** (satır getirir/yazar). Birbirlerini BİLMEZLER; ikisini birleştiren yer uygulama katmanıdır — ama uygulama iş kuralını kendi içinde hesaplayamaz, motora sorar. → STACK §4, §13
 - **Bağımlılık tek yönlü.** → STACK §4
-- **Tüm listeler infinite scroll** → servis okumaları keyset (cursor) paginasyonlu.
+- **Sayfalama ölçütü liste olmak değil, SINIRSIZ büyümek.** Veriyle büyüyen küme (ürün, sipariş, müşteri, stok partisi, hareket) → keyset (cursor) + infinite scroll; **imleç URL'e yazılmaz** (süzgeç yazılır). Doğal tavanı olan, operatörün elle kurduğu küme (kategori, koleksiyon, alerjen, dil, rota, ayar) → **tek turda** çekilir. Editoryal seçki (vitrin şeridi, benzer ürünler) → sayfalama yok ama **sabit sınır** var; liste değil, tıklatma davetidir. Sayfalayan her okumanın tüketeni de olmalı: `nextCursor` üretip kullanmayan ekran, listenin kuyruğunu sessizce yutar.
 
 ## 2. Web & i18n (apps/web)
 - **İki yüzey:** müşteri (i18n, `/…`) + operasyon (personel, Türkçe, `/operations`); girişte `staff_role`'e göre yönlenir (tek `/connexion`). → DOMAIN, build/04-auth-kimlik

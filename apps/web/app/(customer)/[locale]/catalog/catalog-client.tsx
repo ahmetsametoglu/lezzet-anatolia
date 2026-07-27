@@ -1,16 +1,23 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
-import type { CatalogSort, StorefrontCatalog } from '@/lib/storefront/storefront-types';
+import type { CatalogSort, StorefrontCatalog, StorefrontProduct } from '@/lib/storefront/storefront-types';
+import { loadMoreCatalogAction } from './actions';
 import type { CatalogHref, Messages } from './catalog-types';
 import { CatalogDesktop } from './catalog.desktop';
 import { CatalogMobile } from './catalog.mobile';
 
 /**
- * Katalogun cihaz çatalı. Süzme sunucuda çözüldüğü ve seçim URL'de yaşadığı için burada state YOK —
- * bu katman yalnız `useDevice` içindir (UA tahmini yanlışsa mount sonrası düzeltilir).
+ * Katalogun cihaz çatalı ve SAYFALAMA sahibi.
+ *
+ * Süzme sunucuda çözülür ve seçim URL'de yaşar — o yüzden süzgeç state'i burada YOK. Burada olan tek
+ * durum, kaydırdıkça eklenen sayfalar: ürün listesi sınırsız büyüyen bir kümedir, tamamı tek turda
+ * çekilemez (`CLAUDE.md`: tüm listeler sonsuz kaydırma → okumalar keyset imleçli).
+ *
+ * Süzgeç değişince eklenen sayfalar SIFIRLANIR; yoksa eski süzgecin ürünleri yeni listede kalır.
  */
 interface CatalogClientProps {
   t: Messages;
@@ -18,10 +25,35 @@ interface CatalogClientProps {
   data: StorefrontCatalog;
   active: { category?: string; sort: CatalogSort; onlyOffers: boolean };
   device: Device;
+  /** Arama kutusundaki sorgu — sonraki sayfa isteği aynı süzgeci taşımalı. */
+  search?: string;
 }
 
-export function CatalogClient({ t, locale, data, active, device }: CatalogClientProps) {
+export function CatalogClient({ t, locale, data, active, device, search }: CatalogClientProps) {
   const resolved = useDevice(device);
+
+  const [extraPages, setExtraPages] = useState<StorefrontProduct[]>([]);
+  const [cursor, setCursor] = useState(data.nextCursor);
+  const [loadingMore, setLoadingMore] = useState(false);
+  useEffect(() => {
+    setExtraPages([]);
+    setCursor(data.nextCursor);
+  }, [data.products, data.nextCursor]);
+
+  const products = [...data.products, ...extraPages];
+
+  const onLoadMore = () => {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    void loadMoreCatalogAction(locale, { category: active.category, search, sort: active.sort, onlyOffers: active.onlyOffers }, cursor)
+      .then(({ data: page, error }) => {
+        // Hata sessiz: liste olduğu yerde kalır, tetikleyici yeniden denenebilir (sunucu = gerçek).
+        if (error || !page) return;
+        setExtraPages((prev) => [...prev, ...page.products]);
+        setCursor(page.nextCursor);
+      })
+      .finally(() => setLoadingMore(false));
+  };
 
   /**
    * Bir süzgeci değiştirir, diğerlerini KORUR — çipe basmak sıralamayı sıfırlamaz. `null` kategori
@@ -35,9 +67,11 @@ export function CatalogClient({ t, locale, data, active, device }: CatalogClient
     if (category) query.category = category;
     if (sort !== 'featured') query.sort = sort;
     if (onlyOffers) query.offers = '1';
+    // Arama da bir süzgeçtir: kategoriye basmak yazılmış aramayı silmemeli.
+    if (search) query.q = search;
     return { pathname: '/catalog', query };
   };
 
-  const view = { t, locale, data, active, hrefFor };
+  const view = { t, locale, data, products, hasMore: cursor !== null, loadingMore, onLoadMore, active, hrefFor };
   return resolved === 'mobile' ? <CatalogMobile {...view} /> : <CatalogDesktop {...view} />;
 }

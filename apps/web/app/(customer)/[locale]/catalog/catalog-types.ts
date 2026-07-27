@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type { Link } from '@/i18n/navigation';
-import type { CatalogSort, StorefrontCatalog } from '@/lib/storefront/storefront-types';
+import type { CatalogSort, StorefrontCatalog, StorefrontProduct } from '@/lib/storefront/storefront-types';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir) — bu yüzden `import type` değil.
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import messages from './messages.json';
@@ -17,6 +17,15 @@ export interface CatalogViewProps {
   t: Messages;
   locale: Locale;
   data: StorefrontCatalog;
+  /**
+   * Gösterilecek ürünler — ilk sayfa sunucudan, sonrakiler kaydırdıkça EKLENİR. `data.products`
+   * yalnız ilk sayfadır; görünüm bunu değil bunu kullanır.
+   */
+  products: StorefrontProduct[];
+  /** Devam eden sayfa var mı — yoksa tetikleyici hiç çizilmez. */
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
   /** Etkin süzgeçler — çip ve sıralama seçimlerinin işaretlenmesi için. */
   active: { category?: string; sort: CatalogSort; onlyOffers: boolean };
   /** Bir süzgeci değiştirip diğerlerini koruyan URL üretir (süzgeçler birbirini silmez). */
