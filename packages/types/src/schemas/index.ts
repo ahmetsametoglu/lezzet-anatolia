@@ -12,4 +12,6 @@ export * from './product-variant.schema';
 export * from './price.schema';
 export * from './product-collection.schema';
 export * from './stock.schema';
+export * from './stock-adjustment.schema';
+export * from './supply.schema';
 export * from './job-run.schema';

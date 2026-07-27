@@ -14,6 +14,10 @@ create table public.stock (
   -- Stok VARYANT seviyesindedir (satılabilir birim varyanttır). Parti silinmez → restrict.
   variant_id uuid not null references public.product_variant (id) on delete restrict,
   physical_qty int not null default 0 check (physical_qty >= 0),
+  -- Partiye GİRİŞTE yazılan miktar — tarihtir, değişmez. `physical_qty` satış/fire ile erirken bu
+  -- durur: "sipariş ettiğim kadar geldi mi" (DOMAIN §16 fark raporu) ve "bu partiden ne kadar
+  -- tüketildi" soruları buna dayanır. Türetilemez: satış, fire ve iade ayrı yerlerde yaşar.
+  initial_qty int not null default 0 check (initial_qty >= 0),
   -- Partinin son tarihi. TİPİ üründedir (`product.date_type`): DLC = güvenlik (geçince satılamaz),
   -- DDM = kalite (geçse de satılır). Kolon adı bu yüzden tipten bağımsız: `expiry_date`.
   expiry_date date not null,
@@ -29,6 +33,21 @@ create table public.stock (
   location text,                                     -- depo konumu (dolap/raf)
   created_at timestamptz not null default now()
 );
+
+-- Giriş miktarı uygulamada elle yazılmaz — kaynağı fiili miktardır, iki yerde tutulup kaymasın.
+create or replace function public.stock_set_initial_qty() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  new.initial_qty := new.physical_qty;
+  return new;
+end;
+$$;
+
+create trigger stock_initial_qty_trg
+  before insert on public.stock
+  for each row execute function public.stock_set_initial_qty();
 
 -- FEFO'nun tek okuma yolu: varyantın partileri son tarihe göre artan. Kullanılabilir hesabı da
 -- varyant üzerinden toplanır, o yüzden baş kolon variant_id.

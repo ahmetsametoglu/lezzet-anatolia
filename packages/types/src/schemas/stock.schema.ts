@@ -14,6 +14,8 @@ export const StockSchema = z.object({
   id: z.string().uuid(),
   variantId: z.string().uuid(),
   physicalQty: z.number().int(),
+  /** Girişte yazılan miktar — tarihtir, değişmez. Fiili erirken bu durur (fark raporu, tüketim). */
+  initialQty: z.number().int(),
   expiryDate: z.string(),
   lotNumber: z.string().nullable(), // geri çağırmada (rappel) eşleşme anahtarı
   purchasePrice: dbNumeric.nullable(), // birim (paket) başına alış — gerçek COGS

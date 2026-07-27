@@ -17,6 +17,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@lezzet/brand": "workspace:*",
     "@lezzet/database": "workspace:*",
+    "@lezzet/domain-core": "workspace:*",
     "@lezzet/email": "workspace:*",
     "@lezzet/helper": "workspace:*",
     "@lezzet/i18n": "workspace:*",

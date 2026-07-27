@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
 import { CategoryService } from './category.service';
 import { ProductService } from './product.service';
@@ -16,19 +16,35 @@ import { StockService } from './stock.service';
 const db = serviceDb();
 const stocks = new StockService(db);
 const reservations = new ReservationService(db);
+const products = new ProductService(db);
+const categories = new CategoryService(db);
 
 let variantId: string;
+let productId: string;
+let categoryId: string;
 const orderId = () => crypto.randomUUID();
 
 beforeAll(async () => {
-  const category = await new CategoryService(db).create({ name: { tr: `Stok testi ${Date.now()}` } });
-  const { variants } = await new ProductService(db).create({
+  const category = await categories.create({ name: { tr: `Stok testi ${Date.now()}` } });
+  const { product, variants } = await products.create({
     name: { tr: `Mantı ${Date.now()}` },
     categoryId: category.id,
     dateType: 'DLC',
     shelfLifeDays: 360,
   });
+  categoryId = category.id;
+  productId = product.id;
   variantId = variants[0]!.id;
+});
+
+// Test kendi zeminini toplar: aksi hâlde her koşuş yerel veritabanına kalıcı bir ürün bırakır ve
+// operasyon listesinde çöp satır olarak görünür. Sıra zorunlu: `stock`/`reservation` varyanta
+// RESTRICT ile bağlı, önce onlar silinmezse ürün silinemez (varyant CASCADE'i engellenir).
+afterAll(async () => {
+  await db.from('reservation').delete().eq('variant_id', variantId);
+  await db.from('stock').delete().eq('variant_id', variantId);
+  await products.delete(productId).catch(() => {});
+  await categories.delete(categoryId).catch(() => {});
 });
 
 /** Her testin kendi zemini: varyantın partileri ve rezervasyonları sıfırlanır. */

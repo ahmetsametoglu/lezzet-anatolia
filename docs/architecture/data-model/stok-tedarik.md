@@ -12,7 +12,8 @@ Parti, rezervasyon, düzeltme, sıcaklık; tedarikçi ve satın alma zinciri.
 | --- | --- | --- |
 | id | uuid | |
 | variant_id | uuid | stok varyant seviyesinde |
-| physical_qty | number | fiili |
+| physical_qty | number | fiili (satış/fire ile erir) |
+| initial_qty | number | **girişte** yazılan miktar — tarihtir, değişmez; trigger yazar. "Sipariş ettiğim kadar geldi mi" (§16 fark raporu) ve "bu partiden ne kadar tüketildi" buna dayanır |
 | expiry_date | date | partinin son tarihi; **tipi üründedir** (`Product.date_type`: DLC güvenlik / DDM kalite) — bu yüzden kolon adı tipten bağımsız |
 | lot_number | string \| null | tedarikçinin lot numarası — geri çağırma (rappel) eşleşmesi; girişte istenir |
 | purchase_price | number \| null | **birim (paket) başına** alış maliyeti — kâr/marj için; toptan alınıp paketlenirse giriş paket adediyle yapılır (ör. 1kg → 10×100gr), maliyet pakete bölünür |
@@ -51,11 +52,13 @@ Stok azalışının satış dışı her sebebi kayıt altına alınır — "bu �
 | --- | --- | --- |
 | id | uuid | |
 | stock_id | uuid | hangi parti |
-| qty | number | düşülen adet |
-| reason | enum(`expired`,`damaged`,`count_diff`,`lost`) | DLC imhası / hasar / sayım farkı / kayıp |
-| unit_cost | number \| null | partinin alış fiyatı (snapshot) — fire maliyeti |
-| note | string \| null | teslim-sonrası iade restoku gibi istisnalarda sebep |
+| qty | number | **işaretli**: + stoktan düşüm, − stoğa geri ekleme. Tek alanda iki yön → "net kayıp" tek toplamla çıkar; rapor şişmez |
+| reason | enum(`expired`,`damaged`,`count_diff`,`lost`,`return_restock`) | DLC imhası / hasar / sayım farkı / kayıp / teslim-sonrası iade restoku |
+| unit_cost | number \| null | partinin alış fiyatı (snapshot) — fire maliyeti; parti sonradan düzeltilse kaymaz |
+| note | string \| null | teslim-sonrası iade restoku gibi istisnalarda sebep — **geri eklemede zorunlu** (DB seviyesinde) |
 | created_by / created_at | uuid / timestamptz | |
+
+**`adjust_stock` fonksiyonu (06.6):** düzeltme kaydı + partinin fiili düşümü tek transaction'da — yarısı yazılırsa ya kaydı olmayan kayıp ya da karşılığı olmayan kayıt kalır. Partide olmayan miktar düşülemez; geri ekleme sebep notu ister.
 
 ## TemperatureLog (sıcaklık kaydı)
 
@@ -131,5 +134,7 @@ Mal alımının envanter tarafı; oluşturduğu partiler buna bağlanır (`Stock
 | supplier_id | uuid \| null | tedarikçi (bkz. `Supplier`) — lot izlenebilirliğinin "bir adım geri" halkası |
 | purchase_order_id | uuid \| null | bağlı tedarik siparişi — mal kabul formu PO kalemleriyle önceden dolu gelir; kabulle PO `received` olur |
 | date | date | |
-| total_amount | number | |
+| total_amount | number | kalemlerden hesaplanır (Σ birim maliyet × adet) |
 | note | string \| null | |
+
+**`receive_intake` fonksiyonu (06.10):** giriş kaydı + partiler + PO `received` + `last_purchase_price` tazelemesi tek transaction'da — yarısı yazılırsa "partiler girdi ama sipariş açık kaldı" tutarsızlığı doğar. MLOR uyarısı burada hesaplanmaz (motorun işi, kabulü engellemez).
