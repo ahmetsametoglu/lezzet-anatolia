@@ -31,6 +31,13 @@ Tasarım, tekrar eden **komponentlerden** kurulur — buton, kart, form alanı, 
 - **Neden:** biz önce komponentleri kodlayacağız, sayfaları bu kodlanmış parçalarla inşa edeceğiz. Admin/operasyon tarafında bu yaklaşım kesindir; müşteri tarafında da mümkün olduğunca aynı disiplin uygulanır (sayfaya özgü serbest bölgeler olabilir, ama form/liste/kart gibi parçalar ortak kalır).
 - İki stil evreni (müşteri / admin) **ayrı komponent setleri** olabilir; her evrenin kendi envanteri çıkar.
 
+## Tasarım ile kod arasındaki açık
+
+Çizilmiş ama kodlanamayan işler `BACKLOG.md`'de (bu klasörde): neyi bilerek yapmadık, neyi hangi
+modül yüzünden bekliyoruz, neyi tasarımdan bilinçli saparak yaptık. Kapsam listesi
+(`docs/architecture/BACKLOG.md`) ve ilerleme (`docs/build/NN-*.md`) ayrı dosyalardır; burası ikisi
+de değil, aradaki farkın envanteridir.
+
 ## Çalışma sırası — sayfa sayfa, onaylı ilerleme
 
 - Tasarım **tek seferde her şey üretilerek yapılmaz.** Sayfa sayfa ilerlenir: bir sayfa tasarlanır → kullanıcıya sunulur → beğenilmezse revize edilir → **onaydan sonra** sıradaki sayfaya geçilir.
