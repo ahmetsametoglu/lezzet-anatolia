@@ -145,16 +145,25 @@ Muhasebe programı değiliz; beyan/OSS/VIES-yönetimi muhasebenindir. Ama KDV **
 
 Kısaca: müşteri-yüzü doğru KDV = bizim işimiz (fiyat); beyan/OSS/iade = muhasebenin, biz temiz veriyi veririz.
 
+### Fiyat tabanı: B2C dahil (TTC), B2B hariç (HT)
+
+`Price.amount` **kanalın tabanında** saklanır: B2C satırları KDV **dahil**, B2B satırları KDV **hariç**. Fransız piyasa alışkanlığı budur — tüketici etiketi TTC görür, işletme müşterisi HT konuşur; DE B2B reverse charge (%0) da doğrudan HT tabanına oturur.
+
+- Fiyat motoru iki yöne de çevirir; **çevrim yalnız gösterim içindir**, saklanan değer kanal tabanıdır.
+- `OrderItem.unit_price` siparişin kanal tabanında sabitlenir; `vat_rate` kalemde durur, `Order.total` aynı tabandadır. Fatura/export tabanı belirsiz kalmaz.
+- Para **tamsayı cent** olarak hesaplanır (kayan nokta yok); yuvarlama kuralı `STACK §8`'de.
+
 ### Fiyat çözüm sırası
 
-Bir müşteriye ürün fiyatı şu sırayla belirlenir (ilk bulunan kazanır):
+Bir müşteriye ürünün **birim fiyatı** şu sırayla belirlenir (ilk bulunan kazanır):
 
-1. **Müşteriye özel ürün fiyatı** (varsa) — o müşteri+ürün için elle girilmiş fiyat (`Price` satırı, customer_id dolu).
-2. **Müşteri indirim oranı** (varsa) — müşterinin kanal fiyatına uygulanan genel % indirim (`Customer.discount_percent`).
-3. **Kanal fiyatı** — B2B veya B2C liste fiyatı.
+1. **Müşteriye özel ürün fiyatı** (varsa) — o müşteri+varyant için elle girilmiş `Price` satırı (customer_id dolu).
+2. **Kanal fiyatı** — B2B veya B2C liste fiyatı.
 
 - Giriş yapmamış ziyaretçi B2C fiyatını görür. Ürünün ilgili kanalda fiyatı yoksa satışa kapalı görünür.
-- Near-expiry teklif (aşağıda) bu sıranın dışındadır: açıksa ürün o teklif fiyatı + miktar tavanıyla gösterilir.
+- **Şirket kaydı onaylanana kadar B2C fiyatı geçerlidir** (`b2b_approved=false` → kanal `b2b` olsa da perakende fiyat çözülür; gerekçe §10: toptan liste doğrulanmamış kayda açılmaz).
+- **`Customer.discount_percent` bu sıraya girmez** — o bir *indirimdir*, fiyat değil; kupon/kampanyayla aynı havuzda değerlendirilir (aşağıda "İndirim ve kupon").
+- **Near-expiry teklif çakışması — müşteri lehine:** üründe hem açık teklif hem müşteriye özel fiyat varsa **düşük olan** uygulanır. Teklif kazanırsa miktar tavanı ve batch-pinned rezervasyon devreye girer; özel fiyat kazanırsa normal (ürün-toplamı) rezervasyon yürür, tavan yoktur. Özel fiyatlı B2B müşteri kendi anlaşmasından pahalıya almaz.
 
 > **Özel fiyatın teknik yükü düşük:** genel indirim tek alan; ürün-bazlı istisna yalnızca gereken yerde bir satır (her ürüne satır gerekmez). Tek maliyet: fiyat "herkese tek sayı" değil, giren müşteriye göre çözülür — zaten B2B/B2C'de öyleydi.
 
@@ -179,6 +188,7 @@ Toptanda "bugün 10 koli alırsan şu fiyat" gündeliktir; kalıcı `Price` sat�
 
 - **İki tetik:** **kupon** (müşteri kod girer, daima **sepet** düzeyi) ve **otomatik indirim/kampanya** (kod yok; kapsam = sepet / kategori / koleksiyon). Yüzde veya sabit tutar.
 - **Üst üste binmez:** birden çok indirim uygun olsa bile **en büyüğü** uygulanır (birleşmez); domain-core müşteriye en iyi tekini seçer.
+- **Müşterinin genel indirim oranı da bu havuzdadır** (`Customer.discount_percent`): kupon/kampanya ile karşılaştırılır, yalnız büyük olan uygulanır — istiflenmez. Gösterim: müşteri ürün sayfasında kendi oranı uygulanmış fiyatı görür (B2B "benim fiyatım" beklentisi); sepette daha büyük bir kupon girilirse motor onu seçer ve müşteri oranını **kaldırır**, sepet özeti hangisinin uygulandığını tek satırda yazar.
 - **Paketler hariç:** `Bundle` fiyatı sabittir — hiçbir genel indirim/kupon uygulanmaz. Near-expiry teklif satırı da kendi özel fiyatındadır; genel indirim binmez.
 - **Koşullar (parametrik):** asgari sepet, ilk sipariş, geçerlilik tarihi, kullanım sınırı.
 - Uygulanan indirim siparişe yazılır (`Order.discount_id` + `discount_amount`); net tutar para hareketine yansır, kâr buna göre türetilir.
@@ -190,6 +200,7 @@ Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, �
 
 - Sistem, kalan raf ömrü % eşiğin (varsayılan %25) altına inen partiyi işaretler ve indirim **önerir** (önerilen indirim varsayılan %30, parametrik). **Son fiyatı ve kararı admin verir** — depo fiyat görmediği için bu bir admin işidir (§2).
 - Teklif açıkken ürün müşteriye **tek fiyatla** (indirimli teklif) gösterilir — normal fiyat ve teklif fiyatı **aynı anda gösterilmez** (kafa karışmasın).
+- Müşteriye özel fiyatla çakışırsa **düşük olan** uygulanır (bkz. "Fiyat çözüm sırası").
 - **Miktar tavanı:** müşteri teklif fiyatından **partide kalan miktardan fazlasını alamaz.** Fazlası bir sonraki (normal fiyatlı) partiye taşacağı için engellenir.
 - **Batch-pinned rezervasyon:** teklif satırının rezervasyonu **tam o partiden** yapılır (normal satışın ürün-toplamı seviyesinden farklı). Sipariş kalemi bağlı partiyi tutar (`OrderItem.stock_id`).
 - Parti tükenince teklif otomatik kalkar, ürün normal fiyatına döner.

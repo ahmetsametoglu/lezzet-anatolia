@@ -162,7 +162,23 @@ export type ImageMeta = z.infer<typeof ImageMetaSchema>;
 /** Insert tarafı: anahtar/odak/zoom/alt hepsi DB default'lu ya da nullable → opsiyonel. */
 export const ImageMetaInsertSchema = ImageMetaSchema.partial();
 
-/** İki+bir kolonu bileşene verilen tek değere indirger — çağrı yerlerinde elle kurulmaz. */
-export function cropOf(entity: Pick<ImageMeta, 'imageFocalX' | 'imageFocalY' | 'imageZoom'>): ImageCrop {
-  return { x: entity.imageFocalX, y: entity.imageFocalY, zoom: entity.imageZoom };
+/**
+ * DÜZENLENEBİLİR kırpma alanları — dosyanın kendisi (imageKey) ve alt metin AYRI akışlardadır; form,
+ * action ve servis katmanları görsel künyesinden yalnız BUNLARI taşır. TEK KAYNAK: `imageFocalX/Y/Zoom`
+ * hiçbir form şemasında, action/servis girdisinde elle yazılmaz — bu şema `.merge()` ile enjekte edilir.
+ */
+export const ImageCropFieldsSchema = ImageMetaSchema.pick({ imageFocalX: true, imageFocalY: true, imageZoom: true });
+export type ImageCropFields = z.infer<typeof ImageCropFieldsSchema>;
+
+/** Yeni nesnenin varsayılan kırpması (merkez, zoom yok) — form defaultları bunu SPREAD eder. */
+export const DEFAULT_CROP_FIELDS: ImageCropFields = { imageFocalX: 50, imageFocalY: 50, imageZoom: IMAGE_ZOOM_MIN };
+
+/** Bir varlıktan yalnız kırpma alanlarını seçer — form/action geçişlerinde tek satırla taşınır. */
+export function pickCropFields(e: ImageCropFields): ImageCropFields {
+  return { imageFocalX: e.imageFocalX, imageFocalY: e.imageFocalY, imageZoom: e.imageZoom };
+}
+
+/** Kırpma alanlarını (flat) bileşenin beklediği {x,y,zoom} biçimine indirger. */
+export function cropOf(e: ImageCropFields): ImageCrop {
+  return { x: e.imageFocalX, y: e.imageFocalY, zoom: e.imageZoom };
 }
