@@ -45,6 +45,16 @@ export type UserRole = z.infer<typeof UserRoleEnum>;
 /** Personel rolleri (guard/operasyon yüzeyi). Müşteri hariç. */
 export const STAFF_ROLES = ['admin', 'warehouse', 'courier', 'accounting'] as const;
 
+/**
+ * Dev auth bypass'ının kimliği (`apps/web/lib/guard.ts`) — **seed bu id ile gerçek bir admin
+ * profili açar.** İkisi aynı olmak ZORUNDA: `order_status_log.actor_id` gibi alanlar
+ * `user_profiles`'a FK'lidir; profili olmayan sahte bir kullanıcı ilk geçişte FK ihlali verirdi.
+ *
+ * Burada durmasının sebebi sınır: `guard.ts` `server-only`dir, seed script'i onu import edemez —
+ * sabitin iki yere kopyalanmaması için ortak pakette yaşar.
+ */
+export const DEV_ADMIN_PROFILE_ID = '00000000-0000-0000-0000-0000000000ad';
+
 export const UserProfileSchema = z.object({
   id: z.string().uuid(),
   /**

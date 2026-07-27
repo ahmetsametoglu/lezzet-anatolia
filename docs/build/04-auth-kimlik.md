@@ -57,6 +57,7 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
 - [x] (04.8) **Rol atama zemini:** admin'in bir kullanıcıya rol verdiği/aldığı servis + action (ekranı 09'da); ilk admin'in seed/script ile atanması
   - *Bitti:* script ile atanan ilk admin `requireAdmin`'den geçiyor; rol alınan kullanıcı geçemiyor
   - **Durum:** servis (`StaffRoleService.assign/remove/getRoles/hasRole`) + seed script (`scripts/set-role.ts` → `pnpm set-role <email> <rol>`) yazıldı ve canlı doğrulandı (atanan admin guard'dan geçer, rol alınınca geçemez). **Admin assign/remove Server Action'ı, çağıranı olan ayar ekranıyla birlikte 09'da yazılır** (şimdi çağıransız yazılırsa ölü kod).
+  - **Yerelde artık `set-role` ZORUNLU (27.07):** seed dev bypass kimliğiyle bir admin profili açtığı için 0002'nin "ilk giriş yapan admin olur" bootstrap'ı tetiklenmez — kendi hesabınız `customer` açılır, `pnpm set-role <e-posta> admin` ile yükseltilir. Üretimde bootstrap olduğu gibi (seed atılmıyor). Ayrıntı: `build/02-database.md` (02.7).
 
 ## Netleşecekler
 

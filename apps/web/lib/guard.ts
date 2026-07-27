@@ -1,6 +1,6 @@
 import 'server-only';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import type { UserRole } from '@lezzet/types';
+import { DEV_ADMIN_PROFILE_ID, type UserRole } from '@lezzet/types';
 import { createClient } from './supabase/server';
 
 // Tek yetki kapısı (DOMAIN §2). Oturum çerezden okunur; rol RLS deny-by-default olduğu için
@@ -27,7 +27,11 @@ export interface AuthUser {
 // NODE_ENV !== 'production' iken çalışır; production build'de env ne olursa olsun ASLA aktif olmaz.
 // Dev'de VARSAYILAN AÇIK; gerçek auth akışını dev'de test etmek için DEV_AUTH_BYPASS=false.
 // Kapsam dar: yalnız personel kapıları — müşteri oturum/login akışına (getSessionUser) dokunmaz.
-const DEV_BYPASS_USER: AuthUser = { id: '00000000-0000-0000-0000-0000000000ad', email: 'dev-admin@lezzet.local' };
+//
+// Kimlik UYDURMA DEĞİL: seed aynı id ile gerçek bir admin profili açar (`DEV_ADMIN_PROFILE_ID`).
+// Gerekli, çünkü `actor_id` gibi alanlar `user_profiles`'a FK'lidir — profilsiz sahte bir kullanıcı
+// ilk durum geçişinde FK ihlali verirdi. Seed atılmamışsa aktör yazan ekranlar bu yüzden düşer.
+const DEV_BYPASS_USER: AuthUser = { id: DEV_ADMIN_PROFILE_ID, email: 'dev-admin@lezzet.local' };
 
 let bypassWarned = false;
 function devBypassActive(): boolean {
