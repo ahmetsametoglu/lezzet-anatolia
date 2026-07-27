@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CountryEnum, CustomerTypeEnum, PreferredLanguageEnum } from './enums.schema';
 
 // Kullanıcı profili (kimlik) — 0001 migration ile birebir. TEK tablo: müşteri + personel; ROL ayırır.
 // Çok-rol yok (kullanıcı tek rol). "customer" bir roldür, ayrı tablo değil (referans: user_profiles).
@@ -8,15 +9,6 @@ export type UserRole = z.infer<typeof UserRoleEnum>;
 
 /** Personel rolleri (guard/operasyon yüzeyi). Müşteri hariç. */
 export const STAFF_ROLES = ['admin', 'warehouse', 'courier'] as const;
-
-export const CustomerTypeEnum = z.enum(['individual', 'company']);
-export type CustomerType = z.infer<typeof CustomerTypeEnum>;
-
-export const PreferredLanguageEnum = z.enum(['tr', 'fr', 'de']);
-export type PreferredLanguage = z.infer<typeof PreferredLanguageEnum>;
-
-export const CountryEnum = z.enum(['FR', 'DE']);
-export type Country = z.infer<typeof CountryEnum>;
 
 export const UserProfileSchema = z.object({
   id: z.string().uuid(),
