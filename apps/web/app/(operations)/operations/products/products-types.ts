@@ -44,7 +44,16 @@ export interface ProductsData {
   collections: CollectionView[];
 }
 
-export type ProductTab = 'products' | 'categories' | 'collections' | 'packages';
+// Sekme kimlikleri TEK KAYNAK: tip bu listeden TÜRETİLİR (elle union yazılmaz) ve aynı liste URL
+// parametresini doğrulamak için çalışma anında da kullanılır (`?tab=` → yenilemede doğru sekme).
+export const PRODUCT_TABS = ['products', 'categories', 'collections', 'packages'] as const;
+export type ProductTab = (typeof PRODUCT_TABS)[number];
+
+/** URL'den gelen ham değeri güvenli sekmeye çevirir (tanınmayan/boş → 'products'). */
+export function parseProductTab(raw: string | string[] | undefined): ProductTab {
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  return PRODUCT_TABS.find((t) => t === v) ?? 'products';
+}
 
 /**
  * Katalog varlığı türü — kategori ve koleksiyon aynı düz/sıralı deseni paylaşır (çok dilli ad · slug ·

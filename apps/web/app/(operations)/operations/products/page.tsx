@@ -9,14 +9,21 @@ import { resolveLocalizedText } from '@lezzet/types';
 import { getR2 } from '@lezzet/storage';
 import { detectDevice } from '@/lib/device';
 import { ProductsClient } from './products-client';
-import type { CategoryView, CollectionView, ProductView } from './products-types';
+import { parseProductTab, type CategoryView, type CollectionView, type ProductView } from './products-types';
 
 // Admin katalog yönetimi — Ürünler. ProductService/CategoryService/CollectionService'in ilk uçtan uca
 // tüketicisi: veri burada (RSC) okunur, DB Product'ı TÜRETEN view-model'e (& ile) indirilir; yalnız
 // türetilmiş/join alanlar eklenir (resolved kategori adı, signed görsel, varyantlar, koleksiyon adları).
 // Durum/dolu-dil gibi saf türevler client'ta (productStatus/filledContentLangs) hesaplanır.
 
-export default async function ProductsPage() {
+// Aktif sekme URL'de taşınır (`?tab=categories`) → yenileme/paylaşımda doğru sekme açılır. Sunucu
+// ham değeri doğrular (parseProductTab), client ilk durumu buradan alır.
+interface ProductsPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+  const initialTab = parseProductTab((await searchParams).tab);
   const db = serviceDb();
   const productSvc = new ProductService(db);
   const categorySvc = new CategoryService(db);
@@ -86,6 +93,7 @@ export default async function ProductsPage() {
     <ProductsClient
       data={{ products: productViews, categories: categoryViews, collections: collectionViews }}
       device={device}
+      initialTab={initialTab}
     />
   );
 }

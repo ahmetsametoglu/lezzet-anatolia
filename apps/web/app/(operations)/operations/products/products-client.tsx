@@ -8,7 +8,8 @@ import { setProductActiveAction } from './tabs/product/actions';
 import { ProductFormDialog } from './tabs/product/product-form-dialog';
 import { ProductsDesktop } from './products.desktop';
 import { ProductsMobile } from './products.mobile';
-import { filledContentLangs, productStatus, type ProductTab, type ProductsData, type StatusFilter } from './products-types';
+import { PRODUCTS_PATH } from './products-paths';
+import { filledContentLangs, parseProductTab, productStatus, type ProductTab, type ProductsData, type StatusFilter } from './products-types';
 
 // Ürünler ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
 // İlk boya sunucu cihaz ipucuyla; mount sonrası viewport'a göre düzeltilir. Modal her iki yüzeyin üstünde.
@@ -29,14 +30,31 @@ function useDevice(initial: Device): Device {
 interface ProductsClientProps {
   data: ProductsData;
   device: Device;
+  /** URL'den (`?tab=`) çözülmüş açılış sekmesi — yenilemede/paylaşımda doğru sekme açılsın. */
+  initialTab: ProductTab;
 }
 
-export function ProductsClient({ data, device }: ProductsClientProps) {
+export function ProductsClient({ data, device, initialTab }: ProductsClientProps) {
   const resolvedDevice = useDevice(device);
   const router = useRouter();
   const [, startTransition] = useTransition();
 
-  const [tab, setTab] = useState<ProductTab>('products');
+  const [tab, setTab] = useState<ProductTab>(initialTab);
+
+  /**
+   * Sekme değişimi URL'e YAZILIR ama sunucuya gidilmez: `history.replaceState` (App Router'ın
+   * desteklediği sığ güncelleme) — `router.replace` her sekmede RSC'yi yeniden çekerdi. Varsayılan
+   * sekmede parametre hiç yazılmaz (temiz URL). Geri/ileri tuşu için `popstate` dinlenir.
+   */
+  const onTab = (next: ProductTab) => {
+    setTab(next);
+    window.history.replaceState(null, '', next === 'products' ? PRODUCTS_PATH : `${PRODUCTS_PATH}?tab=${next}`);
+  };
+  useEffect(() => {
+    const onPop = () => setTab(parseProductTab(new URLSearchParams(window.location.search).get('tab') ?? undefined));
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -67,7 +85,7 @@ export function ProductsClient({ data, device }: ProductsClientProps) {
     data,
     visibleProducts,
     tab,
-    onTab: setTab,
+    onTab,
     search,
     onSearch: setSearch,
     catFilter,
