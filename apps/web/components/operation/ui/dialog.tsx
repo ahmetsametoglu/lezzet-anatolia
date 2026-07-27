@@ -6,7 +6,11 @@ import { Button } from './button';
 /**
  * Operasyon dialogu — Komponent Envanteri O9. Ortalanmış panel: koyu örtü + başlık (başlık/alt +
  * kapat) + kaydırılır gövde + sabit alt bar (footer). Örtüye tıklama / Esc kapatır; panele tıklama
- * yayılmaz. Yıkıcı olmayan formlar (ürün oluştur/düzenle) burada açılır. Gölge yalnız yüzen katmanda.
+ * yayılmaz. Yıkıcı olmayan formlar (ürün oluştur/düzenle) burada açılır.
+ *
+ * Ayrışma ÜÇ katmanla kurulur — koyu temada gölge tek başına görünmez: örtü (`ops-scrim`, temayla
+ * koyulaşır) + panel zemini (`ops-white` = envanterin "dialog ve girdi zemini"; koyuda kart-altı,
+ * yani sayfa ve kart zemininden AÇIK) + 1px kenarlık. Gölge yalnız açık temada iş görür.
  */
 interface DialogProps {
   open: boolean;
@@ -35,12 +39,12 @@ export function Dialog({ open, onClose, title, subtitle, footer, maxWidth = 640,
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(34,37,31,0.42)] p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ops-scrim p-6"
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{ maxWidth }}
-        className="flex max-h-[86vh] w-full flex-col overflow-hidden rounded-ops-dialog bg-ops-card text-ops-ink shadow-[0_24px_70px_rgba(20,22,18,0.4)]"
+        className="flex max-h-[86vh] w-full flex-col overflow-hidden rounded-ops-dialog border border-ops-line bg-ops-white text-ops-ink shadow-[0_24px_70px_rgba(20,22,18,0.4)]"
       >
         <div className="flex items-start gap-3 border-b border-ops-line px-6 py-[18px]">
           <div className="mr-auto flex flex-col gap-px">
