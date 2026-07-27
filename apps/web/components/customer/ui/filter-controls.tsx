@@ -2,7 +2,8 @@ import type { ComponentProps, ReactNode } from 'react';
 import { Link } from '@/i18n/navigation';
 
 /**
- * §4 · Katalog süzgeç parçaları — K17 Filtre Çipi · K18 Sıralama Seçici · K20 Boş Durum.
+ * §4 · Katalog süzgeç parçaları — K17 Filtre Çipi · K20 Boş Durum. (K18 Sıralama ayrı dosyada:
+ * gerçek açılır menü dışarı-tıklama dinleyicisi ister, o yüzden client bileşendir.)
  *
  * Üçü de LINK tabanlıdır, client state değil: süzme sunucuda çözülüyor (`catalog.ts`), seçim URL'de
  * yaşıyor. Böylece filtreli liste paylaşılabilir, geri tuşu çalışır ve ilk boya sunucudan tam gelir.
@@ -42,48 +43,14 @@ export function FilterChip({ label, href, active = false, tone = 'neutral', size
         ? 'border-olive bg-olive text-white'
         : 'border-sand-400 bg-card text-ink hover:border-olive';
   return (
-    <Link href={href} className={['cursor-pointer rounded-pill border-[1.5px] font-sans transition-colors', SIZE[size], style].join(' ')}>
+    <Link
+      href={href}
+      // Süzgeç değiştirmek sayfayı BAŞA FIRLATMAZ — kullanıcı listenin ortasındaysa orada kalır.
+      scroll={false}
+      className={['cursor-pointer rounded-pill border-[1.5px] font-sans transition-colors', SIZE[size], style].join(' ')}
+    >
       {label}
     </Link>
-  );
-}
-
-interface SortSelectProps {
-  /** "Sırala:" — düğme metninin sabit ön eki. */
-  label: string;
-  /** Seçili seçeneğin adı — düğmenin üstünde görünen değer. */
-  currentLabel: string;
-  options: Array<{ label: string; href: ChipHref; active: boolean }>;
-}
-
-/**
- * K18 · Sıralama Seçici — tasarımdaki gibi TEK açılır düğme ("Sırala: Öne çıkanlar ▾").
- *
- * `details/summary` ile kurulur: açılma yerel bir tarayıcı davranışıdır, client state ve JS
- * gerekmez — sayfa sunucu bileşeni kalır. Menü İÇERİĞİNİN görünümü tasarımda çizilmemiş (yalnız
- * kapalı hâli var); liste token'lara sadık, en sade biçimde kuruldu.
- */
-export function SortSelect({ label, currentLabel, options }: SortSelectProps) {
-  return (
-    <details className="relative">
-      <summary className="flex cursor-pointer list-none items-center gap-1 rounded-pill border-[1.5px] border-sand-400 bg-card px-4 py-2 font-sans text-control text-ink transition-colors hover:border-olive">
-        {label} {currentLabel} <span aria-hidden>▾</span>
-      </summary>
-      <div className="absolute right-0 z-10 mt-2 flex min-w-52 flex-col overflow-hidden rounded-soft border border-sand-200 bg-card">
-        {options.map((o) => (
-          <Link
-            key={o.label}
-            href={o.href}
-            className={[
-              'cursor-pointer px-4 py-2.5 font-sans text-control transition-colors hover:bg-hover-bg',
-              o.active ? 'text-olive' : 'text-ink',
-            ].join(' ')}
-          >
-            {o.label}
-          </Link>
-        ))}
-      </div>
-    </details>
   );
 }
 
