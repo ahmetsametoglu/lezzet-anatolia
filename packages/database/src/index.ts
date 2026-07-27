@@ -15,7 +15,7 @@ export { ProductVariantService } from './services/product-variant.service';
 export { ProductImageService } from './services/product-image.service';
 export { PriceService } from './services/price.service';
 export { AddressService } from './services/address.service';
-export { SettingService } from './services/setting.service';
+export { SettingsService } from './services/settings.service';
 export { DeliveryZoneService } from './services/delivery-zone.service';
 export { CartService } from './services/cart.service';
 export { OrderService, OrderItemService, OrderStatusLogService, type CreateOrderItemInput } from './services/order.service';

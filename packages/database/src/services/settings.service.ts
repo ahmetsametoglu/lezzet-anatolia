@@ -25,12 +25,12 @@ const SCOPE_PRIORITY: readonly SettingScope[] = ['zone', 'channel', 'country', '
  * Süreç içi olduğu için çok instance'ta gecikmeli yayılır — ayar değişimi saniyeler içinde her
  * yere ulaşmak zorunda değil, `apps/backend` de tek instance (STACK §13).
  */
-export class SettingService extends BaseDbService<Setting, SettingInsert, SettingUpdate> {
+export class SettingsService extends BaseDbService<Setting, SettingInsert, SettingUpdate> {
   /** key → o anahtarın TÜM kapsam satırları. Çözüm bellekte yapılır, sorgu anahtar başına tek. */
   private static cache = new Map<string, Setting[]>();
 
   constructor(supabase: SupabaseClient) {
-    super(supabase, 'setting', SettingSchema, SettingInsertSchema, SettingUpdateSchema);
+    super(supabase, 'settings', SettingSchema, SettingInsertSchema, SettingUpdateSchema);
   }
 
   /**
@@ -67,7 +67,7 @@ export class SettingService extends BaseDbService<Setting, SettingInsert, Settin
       ? await this.update({ id: existing.id, value, updatedAt: new Date().toISOString() })
       : await this.insert({ key, value, scopeType, scopeId, description: opts.description });
 
-    SettingService.cache.delete(key);
+    SettingsService.cache.delete(key);
     return saved;
   }
 
@@ -78,16 +78,16 @@ export class SettingService extends BaseDbService<Setting, SettingInsert, Settin
 
   /** Süreç içi önbelleği düşürür — testler ve dış kaynaklı değişiklik sonrası. */
   static invalidate(key?: string): void {
-    if (key) SettingService.cache.delete(key);
-    else SettingService.cache.clear();
+    if (key) SettingsService.cache.delete(key);
+    else SettingsService.cache.clear();
   }
 
   private async rowsFor(key: string): Promise<Setting[]> {
-    const cached = SettingService.cache.get(key);
+    const cached = SettingsService.cache.get(key);
     if (cached) return cached;
 
     const rows = await this.getAll({ key });
-    SettingService.cache.set(key, rows);
+    SettingsService.cache.set(key, rows);
     return rows;
   }
 }

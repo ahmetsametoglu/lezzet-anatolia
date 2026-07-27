@@ -30,15 +30,61 @@ const ENTITIES = [
   { doc: 'Collection (koleksiyon)', part: 'katalog', table: 'collection', schema: 'collection.schema.ts', zod: 'CollectionSchema' },
   { doc: 'Product (ürün)', part: 'katalog', table: 'product', schema: 'product.schema.ts', zod: 'ProductSchema' },
   { doc: 'ProductVariant (ürün varyantı)', part: 'katalog', table: 'product_variant', schema: 'product-variant.schema.ts', zod: 'ProductVariantSchema' },
+  { doc: 'Price (fiyat)', part: 'katalog', table: 'price', schema: 'price.schema.ts', zod: 'PriceSchema' },
+  // Stok ve tedarik (modül 06)
+  { doc: 'Stock (stok partisi)', part: 'stok-tedarik', table: 'stock', schema: 'stock.schema.ts', zod: 'StockSchema' },
+  { doc: 'Reservation (rezervasyon)', part: 'stok-tedarik', table: 'reservation', schema: 'stock.schema.ts', zod: 'ReservationSchema' },
+  { doc: 'StockAdjustment (imha / fire / sayım düzeltmesi)', part: 'stok-tedarik', table: 'stock_adjustment', schema: 'stock-adjustment.schema.ts', zod: 'StockAdjustmentSchema' },
+  { doc: 'TemperatureLog (sıcaklık kaydı)', part: 'stok-tedarik', table: 'temperature_log', schema: 'stock-adjustment.schema.ts', zod: 'TemperatureLogSchema' },
+  { doc: 'Supplier (tedarikçi)', part: 'stok-tedarik', table: 'supplier', schema: 'supply.schema.ts', zod: 'SupplierSchema' },
+  { doc: 'SupplierProduct (ürün–tedarikçi eşlemesi)', part: 'stok-tedarik', table: 'supplier_product', schema: 'supply.schema.ts', zod: 'SupplierProductSchema' },
+  { doc: 'PurchaseOrder (tedarik siparişi)', part: 'stok-tedarik', table: 'purchase_order', schema: 'supply.schema.ts', zod: 'PurchaseOrderSchema' },
+  { doc: 'PurchaseOrderItem (tedarik siparişi kalemi)', part: 'stok-tedarik', table: 'purchase_order_item', schema: 'supply.schema.ts', zod: 'PurchaseOrderItemSchema' },
+  { doc: 'StockIntake (stok girişi / satın alma)', part: 'stok-tedarik', table: 'stock_intake', schema: 'supply.schema.ts', zod: 'StockIntakeSchema' },
+  // Müşteri ve sipariş (modül 04/07)
+  { doc: 'Address (adres)', part: 'musteri-siparis', table: 'address', schema: 'address.schema.ts', zod: 'AddressSchema' },
+  { doc: 'DeliveryZone (rota / teslimat bölgesi)', part: 'musteri-siparis', table: 'delivery_zone', schema: 'delivery-zone.schema.ts', zod: 'DeliveryZoneSchema' },
+  { doc: 'Order (sipariş)', part: 'musteri-siparis', table: 'order', schema: 'order.schema.ts', zod: 'OrderSchema' },
+  { doc: 'OrderItem (sipariş kalemi)', part: 'musteri-siparis', table: 'order_item', schema: 'order.schema.ts', zod: 'OrderItemSchema' },
+  { doc: 'OrderItemBatch (kalem–parti eşlemesi)', part: 'musteri-siparis', table: 'order_item_batch', schema: 'order.schema.ts', zod: 'OrderItemBatchSchema' },
+  { doc: 'OrderStatusLog (durum geçiş kaydı)', part: 'musteri-siparis', table: 'order_status_log', schema: 'order.schema.ts', zod: 'OrderStatusLogSchema' },
+  { doc: 'Cart (sunucu sepeti)', part: 'musteri-siparis', table: 'cart', schema: 'cart.schema.ts', zod: 'CartSchema' },
+  // İşletme ayarı (modül 02)
+  { doc: 'Setting (işletme ayarı)', part: 'iletisim-geribildirim', table: 'settings', schema: 'setting.schema.ts', zod: 'SettingSchema' },
 ];
 
-/** Veri modeli parçasındaki `## Başlık` altındaki ilk markdown tablosunun alan adları. */
+/**
+ * Veri modeli parçasındaki `## Başlık` altındaki **İLK** markdown tablosunun alan adları.
+ *
+ * Yalnız ilki: bir bölüm alan tablosundan sonra başka tablolar da taşıyabilir (ör. `Setting`
+ * bölümündeki varsayılanlar listesi) — hepsi okunursa o satırlar "eksik kolon" diye raporlanır.
+ * Bu yüzden tablo, ilk boş satırda biter.
+ *
+ * SAKLANMAYAN alanlar atlanır: modelde bilerek yazılıp veritabanında bilerek olmayan satırlardır
+ * (ör. `Address.in_route`). Ölçüt "türetilir" DEĞİL — `Order.payment_status` da türetilir ama
+ * SAKLANIR. Ayrım: tip sütununda `(türetilir)` yazması ya da notta "saklanmaz" geçmesi.
+ */
 function docFields(md, heading) {
   const start = md.indexOf(`## ${heading}`);
   if (start === -1) return null;
-  const block = md.slice(start, md.indexOf('\n## ', start + 1) === -1 ? undefined : md.indexOf('\n## ', start + 1));
-  const rows = block.split('\n').filter((l) => l.startsWith('| ') && !l.startsWith('| Alan') && !l.startsWith('| ---'));
-  return rows.map((r) => r.split('|')[1].trim()).filter(Boolean);
+  const end = md.indexOf('\n## ', start + 1);
+  const block = md.slice(start, end === -1 ? undefined : end);
+
+  const lines = block.split('\n');
+  const first = lines.findIndex((l) => l.startsWith('| Alan'));
+  if (first === -1) return [];
+  const rest = lines.slice(first);
+  const stop = rest.findIndex((l, i) => i > 0 && !l.startsWith('|'));
+  const table = stop === -1 ? rest : rest.slice(0, stop);
+
+  return table
+    .filter((l) => l.startsWith('| ') && !l.startsWith('| Alan') && !l.startsWith('| ---'))
+    .filter((l) => {
+      const cols = l.split('|');
+      return !/\(türetilir\)/i.test(cols[2] ?? '') && !/saklanmaz/i.test(cols[3] ?? '');
+    })
+    .map((r) => r.split('|')[1].trim())
+    .filter(Boolean);
 }
 
 /** Migration dosyalarındaki `create table public.X (...)` gövdesinden kolon adları. */

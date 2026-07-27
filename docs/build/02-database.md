@@ -46,4 +46,8 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
 
 **Modül durumu (26.07.2026):** altyapı tamam, şema kapsamı artımlı.
 - **Var:** Supabase CLI + numaralı SQL migration'lar (`supabase/migrations/0001–0005`), `pnpm db:migrate/db:reset/db:new/db:seed`, `BaseDbService` (jsonb-güvenli case dönüşümü, `{data,error}`), servisler: `UserProfile`, `StaffRole`, `EmailVerification`, `Category`, `Collection`, `Product`, `ProductVariant`, `ProductCollection`; entegrasyon testleri (`catalog.test.ts`, `product.test.ts`).
-- **Yok:** `DATA_MODEL`'deki tabloların çoğu (sipariş, stok, para, mesajlaşma, geri bildirim) — ilgili modülleriyle gelir; `SettingsService` ve `Setting` varsayılan seed'i; seed bugün yalnız kategori/ürün yazıyor.
+- **Yok:** `DATA_MODEL`'deki tabloların bir kısmı (para, mesajlaşma, geri bildirim) — ilgili modülleriyle gelir.
+
+**Adlandırma (27.07, kullanıcı kararı):** ayar tarafı **çoğuldur** — tablo `settings`, servis `SettingsService`. Gerekçe: orada bir ayar değil, ayarlar tutulur. Satır tipi tekil kalır (`Setting`) — bir satır bir ayardır; aynı desen `user_profiles` → `UserProfile`'da zaten var.
+
+> **Açık kalan tutarsızlık:** tabloların 23'ü tekil (`product`, `order`, `stock`…), 4'ü çoğul (`settings`, `user_profiles`, `email_verifications`, `product_collections`). "Tabloda çoğul şey durur" argümanı hepsi için geçerli; yani ya hepsi çoğul olmalı ya da ayrım bilinçli sayılmalı. Toptan yeniden adlandırma greenfield'da mümkün ama `user_profiles` her yerde geçiyor ve `product_collections` başka ajanın aktif alanında — ürün tarafı boşaldığında tek seferde konuşulacak.

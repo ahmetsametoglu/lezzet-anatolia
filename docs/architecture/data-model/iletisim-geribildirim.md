@@ -141,6 +141,40 @@ Basit yaşam döngüsü; siparişe ve ürünlere isteğe bağlı bağlanır (bkz
 
 ## Setting (işletme ayarı)
 
-Parametrik değerler (minimum sepet, ücretsiz kargo eşiği, **yaklaşan son tarih eşiği — kalan %, varsayılan %25**, **önerilen near-expiry indirim — varsayılan %30**, **MLOR kabul eşiği — kalan %, varsayılan %75**, KDV varsayılanları, **checkout rezervasyon TTL — varsayılan 30 dk (Stripe oturum asgarisi; ödeme penceresiyle eşit)**, **kapıda ödeme tavanı — yöntem bazında: nakit varsayılanı yasal sınır ~1.000€, uyarı verir engellemez; genel kötüye-kullanım tavanı ayrı**, **sipariş kesim saati (cut-off)**, **teslim onayı kapsamı — B2B zorunlu / B2C kapalı varsayılanı**, **teslimat özeti otomatik e-posta — varsayılan açık**, **vade süresi varsayılanı — 30 gün**, **oyunlaştırma: aksiyon puan değerleri + puan→kupon eşiği/oranı**, **kâr hesabı için: rota teslimat birim maliyeti, paketleme birim maliyeti, ödeme komisyon oranları**). Yapı **kapsamlıdır (scoped)**: `key + scope_type(global/channel/zone/country) + scope_id + value` — minimum sepet gibi değerler kanala/bölgeye/ülkeye göre farklılaşabilir; çözücü en özgül kapsamı seçer, yoksa global'e düşer. Önbellekli çözücü (blueprint STACK §10). Env'e veya koda gömülmez.
+**Tablo adı `settings`** (çoğul — orada bir ayar değil, ayarlar durur; satır tipi tekil: `Setting`).
 
----
+Parametrik değerler **env'e veya koda gömülmez** (blueprint STACK §10): kesim saati, eşikler ve tavanlar işin sahibinin kararıdır ve dağıtım beklemeden değişebilmelidir.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| key | string | ör. `order_cutoff_time` |
+| scope_type | enum(`global`,`channel`,`zone`,`country`) | |
+| scope_id | string \| null | kanal `b2b`, ülke `FR`, bölge uuid; global'de null. Üç farklı tipi taşıdığı için metin |
+| value | jsonb | ayar sayı, metin, saat, bayrak ya da nesne olabilir |
+| description | string \| null | admin ekranında ne işe yaradığı |
+| updated_at | timestamptz | |
+
+**Kapsamlı (scoped) çözüm:** aynı anahtar kanala/bölgeye/ülkeye göre farklılaşabilir; çözücü **en özgül** kapsamı seçer (bölge > kanal > ülke > global), yoksa global'e düşer. Hiç satır yoksa **çağıranın verdiği varsayılana** düşülür — varsayılan koda gömülü kalmaz, çağrı yerinde görünür. Aynı anahtar + aynı kapsam iki kez tanımlanamaz (kısmi unique indeks). Önbellekli çözücü; yazmada önbellek düşer.
+
+**Yüklü varsayılanlar** (migration'ın kendisinde — test verisi değil, sistemin zemini; `db:reset` sonrası seed çalışmasa da yerinde olmalı). Para değerleri **cent**, yüzdeler tam sayı:
+
+| Anahtar | Varsayılan | Ne işe yarar |
+| --- | --- | --- |
+| `reservation_ttl_minutes` | 30 | Checkout rezervasyon + ödeme + fiyat penceresi (Stripe oturum asgarisi; altına inilemez) |
+| `order_cutoff_time` | `"16:00"` | Sonrasında gelen sipariş bir SONRAKİ rota gününe yazılır |
+| `min_basket_cents` | 0 | Minimum sepet; 0 = alt sınır yok |
+| `free_shipping_threshold_cents` | 6000 | Ücretsiz kargo eşiği |
+| `shipping_fee_cents` | 790 | Eşik altı kargo ücreti (KDV'ye tabi) |
+| `cod_max_cents` | 30000 | Kapıda ödeme genel tavanı (kötüye kullanım freni) |
+| `cash_legal_limit_cents` | 100000 | Nakit yasal sınırı — aşımda UYARI, engel değil |
+| `payment_term_days` | 30 | Vade süresi varsayılanı |
+| `near_expiry_percent` | 25 | Yaklaşan son tarih eşiği (kalan raf ömrü %) |
+| `near_expiry_discount_percent` | 30 | Önerilen near-expiry indirimi — karar insanın |
+| `mlor_percent` | 75 | Mal kabulde asgari kalan raf ömrü %; altında uyarır, engellemez |
+| `delivery_proof_required` | `{"b2b":true,"b2c":false}` | Teslim onayı kapsamı |
+| `delivery_summary_email` | true | Teslimde özet e-postası otomatik gitsin mi |
+| `route_delivery_unit_cost_cents` | 250 | Rota teslimat birim maliyeti (kâr hesabı) |
+| `packaging_unit_cost_cents` | 120 | Paketleme birim maliyeti (kâr hesabı) |
+
+Oyunlaştırma (puan değerleri, puan→kupon eşiği) ve ödeme komisyon oranları ilgili modülleriyle eklenir.

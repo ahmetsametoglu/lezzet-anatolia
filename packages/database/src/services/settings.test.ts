@@ -1,25 +1,25 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
-import { SettingService } from './setting.service';
+import { SettingsService } from './settings.service';
 
 /**
  * İşletme ayarı (02.6) — kapsamlı çözüm: EN ÖZGÜL kapsam kazanır, yoksa global'e düşer.
  * Ayarların env'e/koda gömülmemesinin karşılığı budur (STACK §10).
  */
 const db = serviceDb();
-const settings = new SettingService(db);
+const settings = new SettingsService(db);
 const damga = Date.now();
 const anahtar = `test_min_basket_${damga}`;
 
 // Her senaryo kendi zeminini kurar: testler aynı anahtarı kullanıyor, satırlar birikirse
 // "kaç kapsam tanımlı" ölçen assertion'lar birbirini etkiler.
 afterEach(async () => {
-  await db.from('setting').delete().eq('key', anahtar);
-  SettingService.invalidate();
+  await db.from('settings').delete().eq('key', anahtar);
+  SettingsService.invalidate();
 });
 
 afterAll(async () => {
-  await db.from('setting').delete().eq('key', anahtar);
+  await db.from('settings').delete().eq('key', anahtar);
 });
 
 describe('kapsamlı çözüm', () => {

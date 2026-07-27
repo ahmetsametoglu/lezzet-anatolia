@@ -1,4 +1,4 @@
-import { DeliveryZoneService, SettingService, serviceDb } from '@lezzet/database';
+import { DeliveryZoneService, SettingsService, serviceDb } from '@lezzet/database';
 import { findZoneForPostalCode, upcomingDeliveryDates } from '@lezzet/domain-core';
 import type { DeliveryType } from '@lezzet/types';
 
@@ -44,7 +44,7 @@ export async function resolveDelivery(input: ResolveDeliveryInput): Promise<Deli
   const db = serviceDb();
   const [zones, cutoffTime] = await Promise.all([
     new DeliveryZoneService(db).list({ activeOnly: true }),
-    new SettingService(db).get<string>('order_cutoff_time', '16:00'),
+    new SettingsService(db).get<string>('order_cutoff_time', '16:00'),
   ]);
 
   const zone = findZoneForPostalCode(input.postalCode, zones);

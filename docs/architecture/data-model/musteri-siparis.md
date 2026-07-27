@@ -54,7 +54,10 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | --- | --- | --- |
 | id | uuid | |
 | customer_id | uuid | |
-| line1, line2, postal_code, city | string | `line2` opsiyonel |
+| line1 | string | |
+| line2 | string \| null | |
+| postal_code | string | |
+| city | string | |
 | country | enum(`FR`,`DE`) | |
 | is_default | boolean | müşterinin varsayılan adresi — checkout onu önceden seçer; **tekildir** (yenisi seçilince eskisi düşer). İlk adres otomatik varsayılan olur |
 | created_at | timestamptz | |
@@ -151,9 +154,12 @@ Hazırlıkta fiilen çıkan parti(ler)in kaydı — depocu FEFO önerisini onayl
 | --- | --- | --- |
 | id | uuid | |
 | order_id | uuid | |
-| from_status / to_status | enum | |
+| from_status | enum \| null | ilk kayıtta null (siparişin doğuşu) |
+| to_status | enum | |
 | actor_id | uuid \| null | kim (sistem olayında null) |
 | created_at | timestamptz | |
+
+**`transition_order_status` fonksiyonu (07.6):** durum güncellemesi + log satırı tek transaction'da ve **yalnız beklenen kaynaktan** (koşullu). Araya biri girmişse yazmaz, güncel durumu bildirir — depocu "hazır" derken kurye "yolda" dediğinde biri diğerini sessizce ezmez. Geçişin izinli olup olmadığına fonksiyon KARAR VERMEZ; o motorun işidir (`domain-core/order/status-machine`).
 
 ## Cart (sunucu sepeti)
 
@@ -161,9 +167,15 @@ Giriş yapmış müşterinin sepeti sunucuda kalıcıdır — cihaz değişse de
 
 | Alan | Tip | Not |
 | --- | --- | --- |
-| customer_id | uuid | tek satır / müşteri |
-| items | jsonb | varyant + adet + eklenme fiyatı |
-| updated_at | timestamptz | |
+| customer_id | uuid | **birincil anahtar** — "tek satır / müşteri" kuralı şemada zorlanır |
+| items | jsonb | `[{ variantId, qty, unitPrice, stockId, addedAt }]` |
+| updated_at | timestamptz | her dokunuşta tazelenir (sepet kurtarma zamanlaması buna bakar) |
+
+**Sepetteki `unitPrice` BAĞLAYICI DEĞİLDİR** (DOMAIN §5): gösterim ve değişiklik tespiti içindir. Bağlayıcı fiyat **checkout başlangıcında** çözülür ve orada sabitlenir — stok ayırma + ödeme oturumuyla aynı 30 dk'lık pencerede. Sepet aylarca bekleyebilir; oradaki fiyatı bağlayıcı saymak maliyeti oynayan üründe zarar, fiyat düştüğünde müşteriye haksızlık olurdu.
+
+**`stockId` dolu satır** partiye çıpalı teklif kalemidir ve normal satırdan **ayrı yaşar** — aynı ürün hem indirimli partiden hem normal fiyattan sepette olabilir. İndirim partiye aittir; parti tükenirse başka partiye taşınmaz.
+
+**Sepette stok ayrılmaz** (DOMAIN §4): sepet bir niyet kaydıdır, rezervasyon checkout'ta yapılır.
 
 ## CourierDayClose (kurye gün kapanışı)
 

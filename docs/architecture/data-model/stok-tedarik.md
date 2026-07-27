@@ -20,6 +20,7 @@ Parti, rezervasyon, düzeltme, sıcaklık; tedarikçi ve satın alma zinciri.
 | intake_id | uuid \| null | bağlı stok girişi/satın alma (bkz. `StockIntake`) |
 | offer_price | number \| null | partiye bağlı indirimli teklif fiyatı; doluysa bu parti indirimli satışta (bkz. `DOMAIN.md §5`) |
 | location | string \| null | depo konumu |
+| created_at | timestamptz | |
 
 Ayrılmış miktar **saklanmaz** — aktif `Reservation` satırlarından türetilir. `available = Σ physical − Σ aktif rezervasyon` (bkz. `DOMAIN.md §4`).
 Kalan raf ömrü % = (expiry_date − bugün) ÷ `Product.shelf_life_days` — türetilir; yaklaşan-son-tarih ve MLOR kararları buna göre (`domain-core/stock/shelf-life`).
@@ -56,7 +57,8 @@ Stok azalışının satış dışı her sebebi kayıt altına alınır — "bu �
 | reason | enum(`expired`,`damaged`,`count_diff`,`lost`,`return_restock`) | DLC imhası / hasar / sayım farkı / kayıp / teslim-sonrası iade restoku |
 | unit_cost | number \| null | partinin alış fiyatı (snapshot) — fire maliyeti; parti sonradan düzeltilse kaymaz |
 | note | string \| null | teslim-sonrası iade restoku gibi istisnalarda sebep — **geri eklemede zorunlu** (DB seviyesinde) |
-| created_by / created_at | uuid / timestamptz | |
+| created_by | uuid \| null | kaydı giren personel |
+| created_at | timestamptz | |
 
 **`adjust_stock` fonksiyonu (06.6):** düzeltme kaydı + partinin fiili düşümü tek transaction'da — yarısı yazılırsa ya kaydı olmayan kayıp ya da karşılığı olmayan kayıt kalır. Partide olmayan miktar düşülemez; geri ekleme sebep notu ister.
 
@@ -68,8 +70,9 @@ Hijyen denetiminin ilk istediği veri; günde bir-iki **elle** giriş yeter (sen
 | --- | --- | --- |
 | id | uuid | |
 | location | string | dolap adı / araç |
-| temperature_c | number | |
-| recorded_by / recorded_at | uuid / timestamptz | |
+| temperature_c | number | −18.5 gibi; donukta negatif normaldir |
+| recorded_by | uuid \| null | ölçümü giren personel |
+| recorded_at | timestamptz | |
 
 ## Supplier (tedarikçi)
 
@@ -84,6 +87,7 @@ Müşteri kartının simetriği (bkz. `DOMAIN.md §16`). **Tedarikçiye borç t�
 | payment_term_days | number \| null | bize tanıdığı vade (gün); null = peşin |
 | note | string \| null | |
 | is_active | boolean | |
+| created_at | timestamptz | |
 
 ## SupplierProduct (ürün–tedarikçi eşlemesi)
 
@@ -98,7 +102,8 @@ Tedarik siparişi **tedarikçinin diliyle** yazılabilsin diye: bizim varyantım
 | name_at_supplier | string \| null | üründeki adı (farklıysa) |
 | pack_qty | number \| null | koli içi adet (sipariş koliyle verilirse çeviri) |
 | last_purchase_price | number \| null | son alış (girişte otomatik güncellenir) — "geçen sefer kaçtı" |
-| is_preferred | boolean | varsayılan tedarikçi işareti |
+| is_preferred | boolean | varsayılan tedarikçi işareti; **tekildir** — ikinci kaynak tercihli yapılınca ilki düşer |
+| created_at | timestamptz | |
 
 ## PurchaseOrder (tedarik siparişi)
 
@@ -136,5 +141,6 @@ Mal alımının envanter tarafı; oluşturduğu partiler buna bağlanır (`Stock
 | date | date | |
 | total_amount | number | kalemlerden hesaplanır (Σ birim maliyet × adet) |
 | note | string \| null | |
+| created_at | timestamptz | |
 
 **`receive_intake` fonksiyonu (06.10):** giriş kaydı + partiler + PO `received` + `last_purchase_price` tazelemesi tek transaction'da — yarısı yazılırsa "partiler girdi ama sipariş açık kaldı" tutarsızlığı doğar. MLOR uyarısı burada hesaplanmaz (motorun işi, kabulü engellemez).

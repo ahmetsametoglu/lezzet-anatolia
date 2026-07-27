@@ -11,7 +11,7 @@
 
 create type setting_scope as enum ('global', 'channel', 'zone', 'country');
 
-create table public.setting (
+create table public.settings (
   id uuid primary key default gen_random_uuid(),
   key text not null,
   scope_type setting_scope not null default 'global',
@@ -25,14 +25,14 @@ create table public.setting (
 
 -- Aynı anahtar + aynı kapsam iki kez tanımlanamaz: hangisinin geçerli olduğu belirsiz kalmamalı.
 -- Global satırda `scope_id` null olduğu için iki ayrı kısmi indeks gerekir (null'lar unique'te çakışmaz).
-create unique index setting_scoped_key on public.setting (key, scope_type, scope_id) where scope_id is not null;
-create unique index setting_global_key on public.setting (key) where scope_id is null;
+create unique index settings_scoped_key on public.settings (key, scope_type, scope_id) where scope_id is not null;
+create unique index settings_global_key on public.settings (key) where scope_id is null;
 
-alter table public.setting enable row level security;
+alter table public.settings enable row level security;
 
 -- Varsayılanlar — `DATA_MODEL` Setting listesi. Hepsi global; özgül kapsam admin ekranından eklenir.
 -- Para değerleri CENT (STACK §8: para tamsayı cent'te taşınır), yüzdeler tam sayı.
-insert into public.setting (key, value, description) values
+insert into public.settings (key, value, description) values
   ('reservation_ttl_minutes',      '30',     'Checkout rezervasyon penceresi (dk). Stripe oturum asgarisi 30 dk — altına inilemez; ödeme penceresi buna eşitlenir.'),
   ('order_cutoff_time',            '"16:00"','Sipariş kesim saati. Sonrasında gelen sipariş bir SONRAKİ rota gününe yazılır.'),
   ('min_basket_cents',             '0',      'Minimum sepet tutarı (cent). 0 = alt sınır yok.'),

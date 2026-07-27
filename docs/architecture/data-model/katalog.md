@@ -129,9 +129,12 @@ Paylaşılan alanlar (ad, açıklama, kategori, görsel, `date_type`, `shelf_lif
 | variant_id | uuid | fiyat varyant seviyesinde |
 | channel | enum(`b2b`,`b2c`) | kanal fiyatı |
 | customer_id | uuid \| null | doluysa müşteriye özel fiyat |
-| amount | number | |
+| amount | number | **KANAL TABANINDA**: b2c satırları KDV dahil (TTC), b2b satırları hariç (HT) — bkz. `DOMAIN.md §5` |
 | currency | enum(`EUR`) | |
-| valid_from | timestamptz | |
+| valid_from | timestamptz | tarihli geçerlilik; "geçmiş ve en yeni" kazanır, gelecek tarihli satır zammı önceden hazırlar |
+| created_at | timestamptz | |
+
+`customer_id` tek kimlik tablosunu (`user_profiles`) işaret eder — "müşteri rolüyle davranan profil".
 
 ## Discount (indirim / kupon)
 

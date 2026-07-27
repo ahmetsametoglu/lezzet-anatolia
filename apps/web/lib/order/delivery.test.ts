@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { DeliveryZoneService, SettingService, serviceDb } from '@lezzet/database';
+import { DeliveryZoneService, SettingsService, serviceDb } from '@lezzet/database';
 import { resolveDelivery } from './delivery';
 
 /**
@@ -21,12 +21,12 @@ beforeAll(async () => {
     weekdays: [2, 5], // Salı, Cuma
   });
   acilanBolgeler.push(zone.id);
-  SettingService.invalidate();
+  SettingsService.invalidate();
 });
 
 afterAll(async () => {
   await db.from('delivery_zone').delete().in('id', acilanBolgeler);
-  SettingService.invalidate();
+  SettingsService.invalidate();
 });
 
 const pazartesiSabah = new Date(2026, 6, 27, 9, 0);
@@ -48,7 +48,7 @@ describe('rota içi teslimat (07.2)', () => {
   });
 
   it('kesim saati AYARDAN okunur — değiştirince gün hesabı değişir', async () => {
-    const settings = new SettingService(db);
+    const settings = new SettingsService(db);
     const saliOgle = new Date(2026, 6, 28, 12, 0); // Salı 12:00, teslimat günü
 
     // Varsayılan kesim 16:00 → bugün hâlâ yetişir.
