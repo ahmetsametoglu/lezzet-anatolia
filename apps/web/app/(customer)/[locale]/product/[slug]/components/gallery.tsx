@@ -38,19 +38,39 @@ export function Gallery({ images, alt, compact = false }: GalleryProps) {
   if (images.length === 0) return <FramedImage src={null} alt={alt} ratio={RATIO} className="!rounded-card" />;
 
   if (compact) {
-    // Nokta göstergesi kaydırma KONUMUNDAN türer, ayrı bir state'ten değil: parmakla kaydırma ve
-    // noktalar tek gerçeğe bakar, birbirinden kaymaz.
+    /**
+     * Etkin görsel kaydırma KONUMUNDAN türer, ayrı bir state'ten değil: parmak ve noktalar tek
+     * gerçeğe bakar, birbirinden kayamaz.
+     *
+     * Ölçü, slaytların GERÇEK konumundan okunur (`offsetLeft`), `scrollLeft / clientWidth`
+     * bölmesinden değil: slaytlar arasında boşluk var, o bölme boşluğu saymadığı için birkaç
+     * slayt sonra bir tam kayar. Merkeze en yakın slayt kazanır.
+     */
     const onScroll = () => {
       const el = track.current;
       if (!el) return;
-      setActiveIndex(Math.round(el.scrollLeft / el.clientWidth));
+      const center = el.scrollLeft + el.clientWidth / 2;
+      const slides = Array.from(el.children) as HTMLElement[];
+      let nearest = 0;
+      let best = Infinity;
+      slides.forEach((slide, i) => {
+        const distance = Math.abs(slide.offsetLeft + slide.offsetWidth / 2 - center);
+        if (distance < best) {
+          best = distance;
+          nearest = i;
+        }
+      });
+      setActiveIndex(nearest);
     };
     return (
       <div className="relative">
+        {/* Slaytlar arasında boşluk ŞART: bitişik olunca geçiş sırasında iki fotoğraf tek bir
+            görüntü gibi birleşiyor, hangisinin nerede bittiği anlaşılmıyor. Boşluk, kaydırmanın
+            iki ayrı görsel arasında olduğunu söyler. */}
         <div
           ref={track}
           onScroll={onScroll}
-          className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex snap-x snap-mandatory gap-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {images.map((img, i) => (
             <div key={i} className="w-full flex-none snap-center">
