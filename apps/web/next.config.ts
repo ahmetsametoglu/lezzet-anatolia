@@ -18,9 +18,11 @@ function supabaseOrigins(): { http: string; ws: string } {
   }
 }
 
-// R2 host'ları (referans proje deseni): signed okuma URL'i *.r2.cloudflarestorage.com, public/dev
-// bucket *.r2.dev. Görsel <img>=img-src; ileride tarayıcıdan doğrudan yükleme/fetch için connect-src.
-const R2_HOSTS = 'https://*.r2.cloudflarestorage.com https://*.r2.dev';
+// R2 host'u: public okuma adresi (05.11) — bugün r2.dev geliştirme adresi, alan adı gelince
+// cdn.<domain> buraya eklenir. S3 API host'u (*.r2.cloudflarestorage.com) BİLEREK yok: imzalı okuma
+// kalktı, yükleme sunucu tarafında — tarayıcı o host'a hiç gitmiyor, izin vermek gereksiz yüzey.
+// Görsel <img>=img-src; ileride tarayıcıdan doğrudan yükleme/fetch için connect-src.
+const R2_HOSTS = 'https://*.r2.dev';
 
 /**
  * Güvenlik başlıkları (referans deseninden uyarlandı). CSP host'ları modül geldikçe genişler

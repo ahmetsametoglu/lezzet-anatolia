@@ -33,7 +33,7 @@ import type { CatalogKind, ProductView } from '../../products-types';
 // GÖRSEL her iki türde de aynı bileşenle yönetilir; yalnız `role` (oran) ve bağlam etiketi değişir.
 
 // Dialogun öndolduracağı alanlar — ŞEMADAN TÜRETİLİR (elle interface yazılmaz, no-duplication): kimlik/
-// içerik/aktiflik/kapak-künyesi Collection'dan pick'lenir. `imageUrl` (imzalı URL) ve `productIds`
+// içerik/aktiflik/kapak-künyesi Collection'dan pick'lenir. `imageUrl` (public URL) ve `productIds`
 // (join) şemada değil, yalnızca view'a ait türev alanlardır → ayrıca eklenir.
 type CatalogEditTarget = Pick<Collection, 'id' | 'name' | 'description' | 'slug' | 'isActive' | 'imageFocalX' | 'imageFocalY' | 'imageZoom'> & {
   imageUrl: string | null;

@@ -14,7 +14,7 @@ import { FramePreviews, ImageCropDialog } from './image-crop-dialog';
  */
 interface ImageCropFieldProps {
   role: ImageRole;
-  /** Yüklenmiş görselin imzalı okuma URL'i (yoksa null). */
+  /** Yüklenmiş görselin okuma URL'i (yoksa null). */
   src: string | null;
   crop: ImageCrop;
   onCropChange: (crop: ImageCrop) => void;
