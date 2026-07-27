@@ -29,17 +29,46 @@ interface DeclarationCardProps {
   title: string;
   /** Başlığın sağındaki not (besin tablosunda "100 g için · Net ağırlık: 700 g"). */
   note?: string;
+  /** Başlığın yanındaki uyarı işareti — alerjen taşıyan bölüm kapalıyken de fark edilsin. */
+  warn?: boolean;
   compact?: boolean;
   children: ReactNode;
 }
 
-function DeclarationCard({ title, note, compact = false, children }: DeclarationCardProps) {
+/**
+ * Beyan bölümü. MASAÜSTÜNDE açık kart, MOBİLDE akordeon (`<details>`) — tasarımın kararı: dar
+ * ekranda üç uzun beyan, satın alma çubuğunu ekranlarca aşağı iter.
+ *
+ * `<details>` bilinçli: yerli öğe, klavyeyle çalışır, JavaScript istemez ve **kapalıyken de içerik
+ * DOM'da durur**. INCO gereği beyanın satın alma öncesi erişilebilir olması gerekiyor; içeriği
+ * koşullu render eden bir akordeon bunu bozardı. Başlıklar kapalıyken de görünür.
+ */
+function DeclarationCard({ title, note, warn = false, compact = false, children }: DeclarationCardProps) {
+  const heading = (
+    <>
+      <span className="flex items-baseline gap-2">
+        <h2 className={['font-serif text-ink', compact ? 'text-body font-bold' : 'text-card-title'].join(' ')}>{title}</h2>
+        {warn && <span className="font-sans text-note text-terracotta">⚠</span>}
+      </span>
+      {note && <span className="font-sans text-note text-muted">{note}</span>}
+    </>
+  );
+
+  if (compact) {
+    return (
+      <details className="group rounded-soft border border-sand-200 bg-card px-4 [&[open]]:pb-3.5">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3.5 [&::-webkit-details-marker]:hidden">
+          <span className="flex flex-1 items-baseline justify-between gap-3">{heading}</span>
+          <span className="font-sans text-note text-muted transition-transform group-open:rotate-180">▾</span>
+        </summary>
+        <div className="flex flex-col gap-2.5">{children}</div>
+      </details>
+    );
+  }
+
   return (
-    <section className={['flex flex-col gap-3 rounded-card border border-sand-100 bg-card', compact ? 'p-5' : 'px-7 py-6'].join(' ')}>
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-card-title'].join(' ')}>{title}</h2>
-        {note && <span className="font-sans text-note text-muted">{note}</span>}
-      </div>
+    <section className="flex flex-col gap-3 rounded-card border border-sand-100 bg-card px-7 py-6">
+      <div className="flex items-baseline justify-between gap-3">{heading}</div>
       {children}
     </section>
   );
@@ -68,9 +97,9 @@ export function Declaration({ t, locale, declaration, netWeightG, compact = fals
   const hasIngredientsBlock = ingredients !== null || allergens.length > 0 || traces.length > 0;
 
   return (
-    <div className="flex flex-col gap-5.5">
+    <div className={['flex flex-col', compact ? 'gap-2' : 'gap-5.5'].join(' ')}>
       {hasIngredientsBlock && (
-        <DeclarationCard title={t.declaration.ingredients} compact={compact}>
+        <DeclarationCard title={t.declaration.ingredients} warn={allergens.length > 0} compact={compact}>
           {ingredients && (
             <p className="font-sans text-body-sm leading-relaxed text-body">
               <Emphasized segments={ingredients} />

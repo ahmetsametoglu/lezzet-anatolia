@@ -25,9 +25,14 @@ interface SortSelectProps {
   /** Seçili seçeneğin adı — düğmenin üstünde görünen değer. */
   currentLabel: string;
   options: SortOption[];
+  /**
+   * Mobil: düğme yalnız SEÇİLİ değeri gösterir ("Önerilen ▾"), "Sırala:" ön eki düşer. Tasarımın
+   * kararı — dar ekranda süzgeç satırı tek satır kalmalı, ön ek o satırı taşırır.
+   */
+  compact?: boolean;
 }
 
-export function SortSelect({ label, currentLabel, options }: SortSelectProps) {
+export function SortSelect({ label, currentLabel, options, compact = false }: SortSelectProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -54,9 +59,13 @@ export function SortSelect({ label, currentLabel, options }: SortSelectProps) {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex cursor-pointer items-center gap-1 rounded-pill border-[1.5px] border-sand-400 bg-card px-4 py-2 font-sans text-control text-ink transition-colors hover:border-olive"
+        aria-label={`${label} ${currentLabel}`}
+        className={[
+          'flex cursor-pointer items-center gap-1 rounded-pill border-[1.5px] border-sand-400 bg-card font-sans text-control text-ink transition-colors hover:border-olive',
+          compact ? 'px-3 py-1.5' : 'px-4 py-2',
+        ].join(' ')}
       >
-        {label} {currentLabel} <span aria-hidden>▾</span>
+        {compact ? currentLabel : `${label} ${currentLabel}`} <span aria-hidden>▾</span>
       </button>
       {open && (
         <div className="absolute right-0 z-10 mt-2 flex min-w-52 flex-col overflow-hidden rounded-soft border border-sand-200 bg-card">

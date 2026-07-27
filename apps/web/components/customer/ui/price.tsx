@@ -27,13 +27,19 @@ interface PriceProps {
   size?: PriceSize;
   /** Koyu blok üstünde (paket kartı) fiyat krem renktedir. */
   tone?: PriceTone;
+  /**
+   * Eski fiyat YAN YANA değil ALT ALTA. Dar mobil kartta iki fiyat yan yana satırı şişirir ve
+   * aksiyon düğmesini kartın dışına iter (yaşandı — 28.07). Tasarım da mobil kartta fiyat sütununu
+   * `flex-direction:column` çiziyor.
+   */
+  stacked?: boolean;
 }
 
-export function Price({ cents, locale, wasCents, size = 'md', tone = 'default' }: PriceProps) {
+export function Price({ cents, locale, wasCents, size = 'md', tone = 'default', stacked = false }: PriceProps) {
   if (cents === null) return null;
   const color = tone === 'onDark' ? 'text-cream' : wasCents ? 'text-terracotta' : 'text-ink';
   return (
-    <span className="flex items-center gap-2">
+    <span className={stacked ? 'flex flex-col' : 'flex items-center gap-2'}>
       <span className={['font-sans font-bold', SIZE[size], color].join(' ')}>{formatPrice(cents, locale)}</span>
       {wasCents !== undefined && (
         <span className="font-sans text-note text-sand-600 line-through">{formatPrice(wasCents, locale)}</span>

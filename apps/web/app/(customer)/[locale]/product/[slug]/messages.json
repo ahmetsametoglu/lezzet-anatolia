@@ -14,7 +14,9 @@
       "coldChain": "❄ Soğuk zincirle gelir",
       "doorstep": "🚚 Bölge içi kapıya teslim",
       "shippable": "📦 Kargoya uygun",
-      "notShippable": "🚚 Yalnız Strasbourg & bölge içi kapıya teslim — bu ürün kargoya verilemez."
+      "notShippable": "🚚 Yalnız Strasbourg & bölge içi kapıya teslim — bu ürün kargoya verilemez.",
+      "coldChainShort": "❄ Soğuk zincir",
+      "doorstepShort": "🚚 Kapıya teslim"
     },
     "declaration": {
       "ingredients": "İçindekiler ve alerjenler",
@@ -66,7 +68,9 @@
       "coldChain": "❄ Livré en chaîne du froid",
       "doorstep": "🚚 Livraison à domicile dans la zone",
       "shippable": "📦 Expédiable",
-      "notShippable": "🚚 Uniquement livraison à domicile à Strasbourg & environs — ce produit ne peut pas être expédié."
+      "notShippable": "🚚 Uniquement livraison à domicile à Strasbourg & environs — ce produit ne peut pas être expédié.",
+      "coldChainShort": "❄ Chaîne du froid",
+      "doorstepShort": "🚚 Livraison à domicile"
     },
     "declaration": {
       "ingredients": "Ingrédients et allergènes",
@@ -118,7 +122,9 @@
       "coldChain": "❄ Lieferung in der Kühlkette",
       "doorstep": "🚚 Lieferung an die Haustür im Liefergebiet",
       "shippable": "📦 Versandfähig",
-      "notShippable": "🚚 Nur Lieferung an die Haustür in Straßburg & Umgebung — dieses Produkt kann nicht versandt werden."
+      "notShippable": "🚚 Nur Lieferung an die Haustür in Straßburg & Umgebung — dieses Produkt kann nicht versandt werden.",
+      "coldChainShort": "❄ Kühlkette",
+      "doorstepShort": "🚚 Lieferung an die Haustür"
     },
     "declaration": {
       "ingredients": "Zutaten und Allergene",

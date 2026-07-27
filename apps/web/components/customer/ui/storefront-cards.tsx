@@ -135,7 +135,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
           </Badge>
         )}
         <div className={['flex items-center justify-between gap-2', compact ? 'mt-0.5' : 'mt-1'].join(' ')}>
-          <Price cents={product.priceCents} wasCents={product.wasCents} locale={locale} size={compact ? 'sm' : 'lg'} />
+          <Price cents={product.priceCents} wasCents={product.wasCents} locale={locale} size={compact ? 'sm' : 'lg'} stacked={compact} />
           {/* Sepete ekleme 07'ye bağlı — buton görünümü TAM, eylemi henüz yok. STUB(08.10 → 07) */}
           {product.soldOut ? (
             <span
@@ -145,7 +145,20 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               {labels.addToCart}
             </span>
           ) : product.purchaseMode === 'options' ? (
-            <Link href={productHref(product.slug)} className={buttonClass({ variant: 'secondary', size: 'sm', className: '!border-olive !text-olive !px-3.5 !py-2 !text-note' })}>
+            /* Mobilde düğme belirgin şekilde küçülür (tasarım: 11px · 5/9 ped): dar kartta fiyatla
+               aynı satırı paylaşıyor, masaüstü ölçüsüyle kalınca kartın dışına taşıyordu. `nowrap`
+               şart — "Seçenekler" ile "→" iki satıra bölününce düğme kartı dikey olarak da şişiriyordu. */
+            <Link
+              href={productHref(product.slug)}
+              className={buttonClass({
+                variant: 'secondary',
+                size: 'sm',
+                className: [
+                  '!border-olive !text-olive flex-none whitespace-nowrap',
+                  compact ? '!px-2.5 !py-1 !text-micro' : '!px-3.5 !py-2 !text-note',
+                ].join(' '),
+              })}
+            >
               {labels.options}
             </Link>
           ) : compact ? (
@@ -159,7 +172,9 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
             <span className={buttonClass({ size: 'sm', className: '!px-3.5 !py-2 !text-note' })}>{labels.addToCart}</span>
           )}
         </div>
-        {product.purchaseMode === 'options' && !product.soldOut && (
+        {/* "başlangıç fiyatı" notu tasarımda YALNIZ masaüstü kartında var: mobilde kart zaten dar,
+            iki satırlık bir açıklama ızgarayı düzensizleştirir ve "Seçenekler →" aynı şeyi söyler. */}
+        {!compact && product.purchaseMode === 'options' && !product.soldOut && (
           <span className="font-sans text-micro text-muted">{labels.priceFrom}</span>
         )}
       </div>

@@ -25,15 +25,18 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
         ))}
       </div>
 
-      <div className="flex items-center justify-between px-4 pb-2">
-        <span className="font-sans text-body-sm text-muted">{t.count.replace('{n}', String(data.total))}</span>
-        <FilterChip label={t.onlyOffers} href={hrefFor({ onlyOffers: !active.onlyOffers })} active={active.onlyOffers} tone="offer" size="control" />
-      </div>
-      <div className="flex gap-2 overflow-x-auto px-4 pb-3">
+      {/* Sonuç sayısı + süzgeç + sıralama TEK SATIR (tasarım). İki satıra bölmek dar ekranda
+          ürünleri katlama aşağı iter; mobilde dikey yer en kıt kaynaktır. Bölünmesinin sebebi
+          uzun etiketti — çare yerleşimi değiştirmek değil, mobilin kendi kısa metnini kullanmaktı. */}
+      <div className="flex items-center gap-2 px-4 pb-3">
+        <span className="font-sans text-note text-muted">{t.count.replace('{n}', String(data.total))}</span>
+        <span className="flex-1" />
+        <FilterChip label={t.onlyOffersShort} href={hrefFor({ onlyOffers: !active.onlyOffers })} active={active.onlyOffers} tone="offer" size="control" />
         <SortSelect
           label={t.sortLabel}
           currentLabel={t.sort[active.sort]}
           options={CATALOG_SORTS.map((s) => ({ label: t.sort[s], href: hrefFor({ sort: s }), active: active.sort === s }))}
+          compact
         />
       </div>
 

@@ -4,7 +4,7 @@ import { SectionHeading } from '@/components/customer/ui/section';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { Declaration } from './components/declaration';
 import { Gallery } from './components/gallery';
-import { PurchasePanel } from './components/purchase-panel';
+import { PurchaseBar, VariantPicker } from './components/purchase-panel';
 import { Reviews } from './components/reviews';
 import type { ProductViewProps } from './product-types';
 
@@ -44,7 +44,10 @@ export function ProductDesktop({ t, locale, product, selected, onSelect }: Produ
           {product.description && <p className="font-sans text-lead text-body">{product.description}</p>}
 
           {selected && (
-            <PurchasePanel t={t} locale={locale} variants={product.variants} selected={selected} onSelect={onSelect} />
+            <>
+              <VariantPicker t={t} locale={locale} variants={product.variants} selected={selected} onSelect={onSelect} />
+              <PurchaseBar t={t} locale={locale} selected={selected} />
+            </>
           )}
 
           {/* Kargo kısıtı sepete eklemeden ÖNCE görünür (`musteri-urun-detay.md §2`). */}

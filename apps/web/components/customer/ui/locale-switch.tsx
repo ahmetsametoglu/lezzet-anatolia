@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import type { Locale } from '@lezzet/i18n';
 import { LOCALES } from '@lezzet/i18n';
@@ -39,25 +39,29 @@ interface LocaleLinksProps {
   className: string;
   /** Seçili dilin sınıfı (menüde yeşil metin; footer'da fark yok). */
   activeClassName?: string;
+  /** Verilirse bağlantılar arasına konur — footer'ın mobil satırı "Türkçe ✓ · Français · Deutsch". */
+  separator?: string;
   onNavigate?: () => void;
 }
 
 /** Üç dilin bağlantı listesi — sunum çağıranın, hedef burasının işi. */
-export function LocaleLinks({ locale, className, activeClassName = '', onNavigate }: LocaleLinksProps) {
+export function LocaleLinks({ locale, className, activeClassName = '', separator, onNavigate }: LocaleLinksProps) {
   const href = useSamePageHref();
   return (
     <>
-      {LOCALES.map((l) => (
-        <Link
-          key={l}
-          href={href}
-          locale={l}
-          onClick={onNavigate}
-          className={[className, l === locale ? activeClassName : ''].filter(Boolean).join(' ')}
-        >
-          {LOCALE_LABEL[l]}
-          {l === locale ? ' ✓' : ''}
-        </Link>
+      {LOCALES.map((l, i) => (
+        <Fragment key={l}>
+          {separator && i > 0 && <span aria-hidden>{separator}</span>}
+          <Link
+            href={href}
+            locale={l}
+            onClick={onNavigate}
+            className={[className, l === locale ? activeClassName : ''].filter(Boolean).join(' ')}
+          >
+            {LOCALE_LABEL[l]}
+            {l === locale ? ' ✓' : ''}
+          </Link>
+        </Fragment>
       ))}
     </>
   );

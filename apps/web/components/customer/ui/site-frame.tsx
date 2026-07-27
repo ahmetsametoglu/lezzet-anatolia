@@ -1,9 +1,11 @@
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import { LOCALES } from '@lezzet/i18n';
 import { brand } from '@lezzet/brand';
 import { Link } from '@/i18n/navigation';
 import { LocaleLinks, LocaleSwitch } from './locale-switch';
 import { SearchField } from './search-field';
+import { ShareButton } from './share-button';
 import messages from './site-frame-messages.json';
 
 /**
@@ -32,6 +34,16 @@ interface SiteFrameProps {
    * başlıktan görmeli; verilmezse hiçbiri işaretlenmez (ana sayfa).
    */
   activeNav?: NavKey;
+  /**
+   * MOBİL çerçeve varyantı (K11/K12/K16). `detail` ürün ve paket detayları içindir: duyuru şeridi
+   * gösterilmez ("yerini üst bar alır"), başlık gezinme yerine GERİ + paylaş taşır ve footer tek
+   * satıra iner. Sebep davranışsal: detay sayfası sosyal/WhatsApp trafiğinin indiği yerdir —
+   * ziyaretçi siteye baştan girmemiştir, ekranın üstü onu geldiği yere döndürmeye ayrılır.
+   * Masaüstünde fark YOKTUR; tasarım orada normal başlığı gösterir.
+   */
+  mobileChrome?: 'default' | 'detail';
+  /** `detail` başlığındaki geri bağlantısı ("← Katalog"). Metin sayfaya aittir, çerçeveye değil. */
+  back?: { label: string; href: ComponentProps<typeof Link>['href'] };
   children: ReactNode;
 }
 
@@ -53,14 +65,17 @@ function navClass(key: NavKey, active: NavKey | undefined, base = ''): string {
   return [base, 'border-b-2 pb-0.5', active === key ? 'border-olive text-olive' : 'border-transparent'].filter(Boolean).join(' ');
 }
 
-export function SiteFrame({ device, locale, showSearch = false, activeNav, children }: SiteFrameProps) {
+export function SiteFrame({ device, locale, showSearch = false, activeNav, mobileChrome = 'default', back, children }: SiteFrameProps) {
   const t = messages[locale];
   const isMobile = device === 'mobile';
+  // Mobil detayda çerçevenin tamamı sadeleşir: şerit yok, arama yok, footer tek satır.
+  const isMobileDetail = isMobile && mobileChrome === 'detail';
   const bandItems = isMobile ? [t.announcement.mobile] : [t.announcement.cold, t.announcement.local, t.announcement.shipping];
 
   return (
     <div className="flex min-h-screen flex-col bg-cream text-ink">
-      {/* K11 · Duyuru şeridi */}
+      {/* K11 · Duyuru şeridi — mobil detayda gösterilmez, yerini üst bar alır. */}
+      {!isMobileDetail && (
       <div className="bg-olive px-4 py-2 font-sans text-note font-medium text-cream">
         <div className={`${SHELL} flex justify-center gap-7 text-center`}>
           {bandItems.map((item) => (
@@ -68,9 +83,27 @@ export function SiteFrame({ device, locale, showSearch = false, activeNav, child
           ))}
         </div>
       </div>
+      )}
 
       {/* K12 · Site başlığı */}
-      {isMobile ? (
+      {isMobileDetail ? (
+        <header className="flex items-center justify-between px-4 py-3">
+          {back ? (
+            <Link href={back.href} className="cursor-pointer font-sans text-body font-bold text-olive hover:text-olive-dark">
+              {back.label}
+            </Link>
+          ) : (
+            <span />
+          )}
+          <Link href="/" className="cursor-pointer">
+            <img src="/logo.jpg" alt={brand.name} className="h-9 mix-blend-multiply" />
+          </Link>
+          <div className="flex items-center gap-3.5">
+            <ShareButton label={t.share} />
+            <span className="font-sans text-icon-sm text-ink">🧺</span>
+          </div>
+        </header>
+      ) : isMobile ? (
         <>
           <header className="flex items-center justify-between border-b border-sand-300 px-4 py-3">
             <span className="font-sans text-icon-sm font-bold text-ink">☰</span>
@@ -111,8 +144,16 @@ export function SiteFrame({ device, locale, showSearch = false, activeNav, child
 
       <main className={`${SHELL} flex flex-1 flex-col`}>{children}</main>
 
-      {/* K16 · Footer — zemin tam genişlikte, içerik kabuk içinde (geniş ekranda zemin kesilmez). */}
+      {/* K16 · Footer — zemin tam genişlikte, içerik kabuk içinde (geniş ekranda zemin kesilmez).
+          Mobil detayda tek satıra iner: o ekranın altı sabit satın alma çubuğuna ayrılmıştır,
+          altına üç sütunluk bir footer yığmak çubuğu ekranın dışına iter. */}
       <footer className="bg-ink text-neutral-400">
+        {isMobileDetail ? (
+          <div className="flex items-center justify-between px-4 py-4 font-sans text-micro">
+            <span className="font-serif text-body font-semibold text-cream">{brand.name}</span>
+            <span className="uppercase">{LOCALES.join(' · ')}</span>
+          </div>
+        ) : (
         <div className={[SHELL, 'flex gap-8', isMobile ? 'flex-col px-4 py-6' : 'justify-between px-12 py-9'].join(' ')}>
           <div className="flex flex-col gap-1.5 font-sans text-body-sm">
             <span className="font-serif text-card-title-sm text-cream">{brand.name}</span>
@@ -120,18 +161,27 @@ export function SiteFrame({ device, locale, showSearch = false, activeNav, child
             <span>{t.footer.whatsapp}</span>
           </div>
 
-          <div className={['flex gap-8 font-sans text-body-sm', isMobile ? 'flex-wrap' : 'gap-12'].join(' ')}>
+          <div className={['flex font-sans text-body-sm', isMobile ? 'gap-8' : 'gap-12'].join(' ')}>
             <FooterColumn title={t.footer.shopping} items={[t.nav.catalog, t.nav.packages, t.nav.deals]} />
             <FooterColumn title={t.footer.corporate} items={[t.footer.about, t.nav.pro, t.footer.faq]} />
-            {/* Dil sütunu tek gerçek bağlantı grubudur: diğer sütunların rotaları henüz açılmadı.
-                Hedef başlıktakiyle AYNI parçadan gelir (`LocaleLinks`) — burada ayrı bir liste
-                yazılmıştı ve sabit `/`'a gidiyordu, yani dil değiştiren herkes ana sayfaya düşüyordu. */}
-            <div className="flex flex-col gap-1.5">
-              <span className="font-bold text-cream">{t.footer.language}</span>
-              <LocaleLinks locale={locale} className="cursor-pointer transition-colors hover:text-cream" />
-            </div>
+            {/* Dil MASAÜSTÜNDE üçüncü sütun, MOBİLDE alttaki ayrı satır (aşağıda) — tasarımın kararı:
+                dar ekranda üç sütun yan yana sığmıyor, üçüncüsü alta kaçıp hizayı bozuyor. */}
+            {!isMobile && (
+              <div className="flex flex-col gap-1.5">
+                <span className="font-bold text-cream">{t.footer.language}</span>
+                <LocaleLinks locale={locale} className="cursor-pointer transition-colors hover:text-cream" />
+              </div>
+            )}
           </div>
+
+          {isMobile && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-neutral-400/25 pt-2.5 font-sans text-body-sm">
+              <span>{t.footer.language}:</span>
+              <LocaleLinks locale={locale} className="cursor-pointer transition-colors hover:text-cream" separator="·" />
+            </div>
+          )}
         </div>
+        )}
       </footer>
     </div>
   );

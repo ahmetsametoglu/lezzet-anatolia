@@ -22,7 +22,8 @@
       "language": "Dil",
       "about": "Hakkımızda",
       "faq": "SSS"
-    }
+    },
+    "share": "WhatsApp ile paylaş"
   },
   "fr": {
     "announcement": {
@@ -47,7 +48,8 @@
       "language": "Langue",
       "about": "Qui sommes-nous",
       "faq": "FAQ"
-    }
+    },
+    "share": "Partager sur WhatsApp"
   },
   "de": {
     "announcement": {
@@ -72,6 +74,7 @@
       "language": "Sprache",
       "about": "Über uns",
       "faq": "FAQ"
-    }
+    },
+    "share": "Über WhatsApp teilen"
   }
 }

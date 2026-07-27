@@ -6,6 +6,7 @@
     "loadMore": "Daha fazla ürün",
     "loading": "Yükleniyor…",
     "onlyOffers": "% Yalnız indirimliler",
+    "onlyOffersShort": "% İndirimli",
     "sortLabel": "Sırala:",
     "sort": {
       "featured": "Öne çıkanlar",
@@ -32,6 +33,7 @@
     "loadMore": "Voir plus de produits",
     "loading": "Chargement…",
     "onlyOffers": "% Uniquement les offres",
+    "onlyOffersShort": "% En promo",
     "sortLabel": "Trier :",
     "sort": {
       "featured": "En vedette",
@@ -58,6 +60,7 @@
     "loadMore": "Mehr Produkte",
     "loading": "Wird geladen…",
     "onlyOffers": "% Nur Angebote",
+    "onlyOffersShort": "% Im Angebot",
     "sortLabel": "Sortieren:",
     "sort": {
       "featured": "Empfohlen",
