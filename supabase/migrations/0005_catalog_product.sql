@@ -5,6 +5,14 @@
 
 create type product_date_type as enum ('DLC', 'DDM');
 
+-- Ürün satış durumu TEK alanda. Önce iki bayrak (is_candidate + is_active) vardı; üç durum için dört
+-- kombinasyon doğuruyordu ve ikisi ("aday + aktif", "aday + pasif") davranışta AYNI şeydi — imkânsız
+-- durum temsil edilebilir kalıyordu. Enum bunu kapatır: her satır tam olarak bir durumdadır.
+--   active    → satışta
+--   passive   → satışta değil (arşiv değil; katalogda gizli)
+--   candidate → aday: satılamaz, yalnız keşif akışında görünür (DOMAIN §13)
+create type product_status as enum ('active', 'passive', 'candidate');
+
 -- AB 14 alerjeni (FR/DE'de yasal beyan zorunlu). Enum anahtarı ASCII; görünen ad (TR/FR/DE) UI'da.
 create type product_allergen as enum (
   'gluten', 'kabuklu', 'yumurta', 'balik', 'yer_fistigi', 'soya', 'sut',
@@ -25,13 +33,21 @@ create table public.product (
   image_zoom smallint not null default 100,          -- zoom %, 100-400 (dikey/kare kaynağı yatay banda kırpar)
   image_alt jsonb,                                   -- LocalizedText; erişilebilirlik + SEO, kart görselinde zorunlu
   image_updated_at timestamptz,                      -- görsel dosyasının sürüm damgası (gerekçe: 0004 kategori satırı)
+  -- Yasal beyan (INCO) — müşteri ürün sayfasının zorunlu bölümleri.
+  -- ingredients/storage_instructions DÜZ METİN'dir; içinde yalnız `**vurgu**` işareti taşır. HTML
+  -- SAKLANMAZ: temizleme (sanitize) yükü, XSS yüzeyi ve AI çevirinin etiketleri bozması buradan gelirdi.
+  -- Vurgu otomatik türetilemez — INCO alerjenin listede YAZILDIĞI hâlinin ("buğday unu") vurgulanmasını
+  -- ister, kategori adının ("Gluten") değil; üstelik saklama metnindeki vurgu hiçbir alerjene bağlı değil.
+  ingredients jsonb,                                 -- LocalizedText, çok dilli içindekiler
+  nutrition jsonb,                                   -- SABİT kalemli (100 g başına) — NutritionSchema
+  storage_instructions jsonb,                        -- LocalizedText; saklama/hazırlama metni
   allergens product_allergen[] not null default '{}', -- AB 14 yasal beyan (manuel seçim)
+  traces product_allergen[] not null default '{}',   -- çapraz bulaşma; cümle i18n şablonuyla kurulur
   vat_rate numeric(4, 2) not null default 5.5,       -- 5.5 / 20
   date_type product_date_type not null default 'DDM',
   shelf_life_days int,                               -- toplam raf ömrü (gün); kalan % = (parti.dlc − bugün) ÷ bu
   shippable boolean not null default true,           -- false = yalnız rota/kapı (soğuk zincir)
-  is_candidate boolean not null default false,       -- aday: keşifte gösterilir, satılamaz (DOMAIN §13)
-  is_active boolean not null default true,
+  status product_status not null default 'active',   -- satışta / pasif / aday (tek alan, yukarıdaki enum)
   target_margin_percent numeric(5, 2),              -- hedef kâr marjı (markup %); marj uyarısı / oto-fiyat
   auto_price boolean not null default false,         -- açıksa fiyat hedef marja göre otomatik (motor sonraki modül)
   sort_order int not null default 0,

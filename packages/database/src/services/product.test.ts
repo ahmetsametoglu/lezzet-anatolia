@@ -43,7 +43,7 @@ describe('ProductService', () => {
   });
 
   it('aday ürün satılabilir listede YOK, aday listesinde VAR', async () => {
-    const { product: candidate } = await products.create({ name: { tr: 'Deneme Aday' }, isCandidate: true });
+    const { product: candidate } = await products.create({ name: { tr: 'Deneme Aday' }, status: 'candidate' });
     productIds.push(candidate.id);
     const sellable = await products.listSellable();
     const candidates = await products.listCandidates();

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LocalizedTextSchema, type LocalizedText } from './localized-text.schema';
+import { LOCALIZED_TEXT_KEYS, LocalizedTextSchema, type LocalizedText } from './localized-text.schema';
 import { ImageMetaInsertSchema, ImageMetaSchema } from './image.schema';
 import { ProductVariantSchema } from './product-variant.schema';
 
@@ -45,6 +45,19 @@ export const ALLERGEN_LABELS: Record<ProductAllergen, LocalizedText> = {
   yumusaka: { tr: 'Yumuşakça', fr: 'Mollusques', de: 'Weichtiere' },
 };
 
+/**
+ * Ürünün satış durumu — DB'de TEK kolon (`product_status` enum'u), türetme yok.
+ *
+ * Önce `is_candidate` + `is_active` ikilisiyle tutuluyordu: üç durum için dört kombinasyon doğuruyor,
+ * ikisi ("aday+aktif", "aday+pasif") davranışta aynı şeye çıkıyordu. Bu yüzden formda "Satışta"yı
+ * açmak aday üründe hiçbir şeyi değiştirmiyordu — imkânsız durum temsil edilebilir kaldığı sürece
+ * arayüz de tutarsız kalıyor. Tek alan bunu kapatır; süzgeç de artık düz bir eşitlik.
+ *
+ * Aday satılamaz, yalnız keşif akışında görünür (DOMAIN §13).
+ */
+export const ProductStatusEnum = z.enum(['active', 'passive', 'candidate']);
+export type ProductStatus = z.infer<typeof ProductStatusEnum>;
+
 // PG numeric supabase-js'te string dönebilir → number'a indir (okuma tarafı).
 const dbNumeric = z.union([z.number(), z.string()]).transform((v) => Number(v));
 const dbNumericNullable = z
@@ -52,19 +65,77 @@ const dbNumericNullable = z
   .nullable()
   .transform((v) => (v == null ? null : Number(v)));
 
+/**
+ * Besin değerleri — INCO'nun zorunlu beyan seti, **100 g başına**, SABİT kalemli. Serbest anahtarlı
+ * jsonb değil: müşteri tablosu, operasyon formu ve çeviri aynı listeden üretilir (satır adları arayüz
+ * i18n'inde, veride değil). Kalem `null` bırakılabilir → bilinmiyor, o satır gösterilmez.
+ */
+export const NutritionSchema = z.object({
+  energyKj: z.number().nullable(),
+  energyKcal: z.number().nullable(),
+  fatG: z.number().nullable(),
+  saturatedFatG: z.number().nullable(),
+  carbohydrateG: z.number().nullable(),
+  sugarsG: z.number().nullable(),
+  proteinG: z.number().nullable(),
+  saltG: z.number().nullable(),
+});
+export type Nutrition = z.infer<typeof NutritionSchema>;
+
+/** Tablo sırası TEK KAYNAK — INCO'nun beyan sırası; hem form hem müşteri tablosu bunu izler. */
+export const NUTRITION_KEYS = Object.keys(NutritionSchema.shape) as Array<keyof Nutrition>;
+
+/** Hiçbir kalemi girilmemiş boş künye — form varsayılanı bunu SPREAD eder. */
+export const EMPTY_NUTRITION: Nutrition = Object.fromEntries(NUTRITION_KEYS.map((k) => [k, null])) as Nutrition;
+
+/** En az bir kalem girilmiş mi — "beyan eksik" ölçütü boş künyeyi dolu saymamalı. */
+export function hasNutrition(n: Nutrition | null): boolean {
+  return n !== null && NUTRITION_KEYS.some((k) => n[k] !== null);
+}
+
+/** Beyanı eksik bırakan alanlar — ekran göstergesi ve sunucu süzgeci AYNI listeyi izler. */
+export type DeclarationGap = 'lang' | 'ingredients' | 'nutrition' | 'storage' | 'allergens';
+
+/**
+ * Yasal beyanın hangi parçaları eksik. TEK KAYNAK: operasyon önizlemesindeki uyarı kutusu bunu
+ * kullanır; `ProductService.buildQuery` aynı ölçütü PostgREST süzgecine çevirir (ikisi ayrışırsa
+ * "24 beyan eksik" yazıp süzgeçte 12 satır gösteren ekran doğar — orada bu fonksiyona atıf var).
+ *
+ * Ölçüt: müşteri ürün sayfasının ZORUNLU bölümlerinden biri boşsa eksiktir. `traces` (çapraz bulaşma)
+ * bilerek dışarıda — boş olması "risk yok" demektir, eksik beyan değil.
+ */
+export function missingDeclarations(
+  p: Pick<Product, 'name' | 'ingredients' | 'nutrition' | 'storageInstructions' | 'allergens'>,
+): DeclarationGap[] {
+  const gaps: DeclarationGap[] = [];
+  if (LOCALIZED_TEXT_KEYS.some((l) => !p.name[l]?.trim())) gaps.push('lang');
+  if (!p.ingredients || !LOCALIZED_TEXT_KEYS.some((l) => p.ingredients?.[l]?.trim())) gaps.push('ingredients');
+  if (!hasNutrition(p.nutrition)) gaps.push('nutrition');
+  if (!p.storageInstructions || !LOCALIZED_TEXT_KEYS.some((l) => p.storageInstructions?.[l]?.trim())) gaps.push('storage');
+  if (p.allergens.length === 0) gaps.push('allergens');
+  return gaps;
+}
+
 export const ProductSchema = z.object({
   id: z.string().uuid(),
   name: LocalizedTextSchema,
   description: LocalizedTextSchema.nullable(),
   slug: z.string(),
   categoryId: z.string().uuid().nullable(),
+  // Yasal beyan (INCO) — müşteri ürün sayfasının zorunlu bölümlerini besler.
+  // `ingredients`/`storageInstructions` düz metin + `**vurgu**` işareti taşır (bkz. @lezzet/helper).
+  ingredients: LocalizedTextSchema.nullable(),
+  nutrition: NutritionSchema.nullable(),
+  storageInstructions: LocalizedTextSchema.nullable(),
   allergens: z.array(ProductAllergenEnum),
+  /** Çapraz bulaşma — cümle bu listeden i18n şablonuyla kurulur, serbest metin tutulmaz. */
+  traces: z.array(ProductAllergenEnum),
   vatRate: dbNumeric,
   dateType: ProductDateTypeEnum,
   shelfLifeDays: z.number().int().nullable(),
   shippable: z.boolean(),
-  isCandidate: z.boolean(),
-  isActive: z.boolean(),
+  /** Satış durumu — TEK alan (DB'de `product_status` enum'u). Bkz. ProductStatusEnum. */
+  status: ProductStatusEnum,
   targetMarginPercent: dbNumericNullable,
   autoPrice: z.boolean(),
   sortOrder: z.number().int(),
@@ -78,13 +149,16 @@ export const ProductInsertSchema = z.object({
   slug: z.string(),
   description: LocalizedTextSchema.nullish(),
   categoryId: z.string().uuid().nullish(),
+  ingredients: LocalizedTextSchema.nullish(),
+  nutrition: NutritionSchema.nullish(),
+  storageInstructions: LocalizedTextSchema.nullish(),
   allergens: z.array(ProductAllergenEnum).optional(),
+  traces: z.array(ProductAllergenEnum).optional(),
   vatRate: z.number().optional(),
   dateType: ProductDateTypeEnum.optional(),
   shelfLifeDays: z.number().int().nullish(),
   shippable: z.boolean().optional(),
-  isCandidate: z.boolean().optional(),
-  isActive: z.boolean().optional(),
+  status: ProductStatusEnum.optional(),
   targetMarginPercent: z.number().nullish(),
   autoPrice: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
@@ -106,24 +180,6 @@ export const ProductWithRelationsSchema = ProductSchema.extend({
 });
 export type ProductWithRelations = z.infer<typeof ProductWithRelationsSchema>;
 
-/**
- * Ürünün görünür durumu — `is_candidate` + `is_active` ikilisinden TÜRETİLİR, saklanmaz (DATA_MODEL
- * "türetme ilkesi"). Burada yaşar çünkü İKİ taraf da kullanır: operasyon ekranı gösterir, servis
- * süzgeç olarak sorguya çevirir (STACK §6 — süzme sunucuda). Aday satılamaz (DOMAIN §13).
- */
-export const ProductStatusEnum = z.enum(['active', 'passive', 'candidate']);
-export type ProductStatus = z.infer<typeof ProductStatusEnum>;
-
-export function productStatusOf(p: Pick<Product, 'isCandidate' | 'isActive'>): ProductStatus {
-  if (p.isCandidate) return 'candidate';
-  return p.isActive ? 'active' : 'passive';
-}
-
-/** Durumun DB karşılığı — süzgeç ve sorgu tek yerden türer (elle `is_active`/`is_candidate` yazılmaz). */
-export function statusToFlags(status: ProductStatus): { isActive?: boolean; isCandidate: boolean } {
-  if (status === 'candidate') return { isCandidate: true };
-  return { isCandidate: false, isActive: status === 'active' };
-}
 
 // Ürün düzenleme formunun yazdığı alanlar (Temel + içerik + beyan + görsel künyesi) — id/slug/
 // imageKey/sortOrder/createdAt hariç, hepsi opsiyonel (yalnız verilenler yazılır). ProductSchema'dan
@@ -137,13 +193,16 @@ export const ProductDetailsUpdateSchema = ProductSchema.pick({
   imageFocalY: true,
   imageZoom: true,
   imageAlt: true,
+  ingredients: true,
+  nutrition: true,
+  storageInstructions: true,
   allergens: true,
+  traces: true,
   vatRate: true,
   dateType: true,
   shelfLifeDays: true,
   shippable: true,
-  isActive: true,
-  isCandidate: true,
+  status: true,
   targetMarginPercent: true,
   autoPrice: true,
 }).partial();

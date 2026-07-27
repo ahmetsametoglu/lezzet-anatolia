@@ -7,7 +7,6 @@ import {
   ProductWithRelationsSchema,
   pickImageMeta,
   resolveLocalizedText,
-  statusToFlags,
   LOCALIZED_TEXT_KEYS,
   DEFAULT_PAGE_SIZE,
   type KeysetCursor,
@@ -59,7 +58,7 @@ export type CreateProductInput = Omit<ProductInsert, 'slug'> & { variants?: Crea
 
 /**
  * Ürün CRUD + varyant orkestrasyonu + koleksiyon bağı. Satılabilir birim her zaman varyant
- * olduğundan varyantsız üründe otomatik varsayılan varyant açılır. Aday ürün (is_candidate)
+ * olduğundan varyantsız üründe otomatik varsayılan varyant açılır. Aday ürün (status='candidate')
  * satış/vitrin sorgularının dışında (DOMAIN §13).
  */
 export class ProductService extends BaseDbService<Product, ProductInsert, ProductUpdate> {
@@ -74,7 +73,7 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
    * Süzgeçler ve DB karşılıkları:
    *  · `query`      → ad (jsonb) ÜÇ dilde `ilike` — tek `or` grubu
    *  · `categoryId` → eq
-   *  · `status`     → is_candidate/is_active ikilisi (`statusToFlags`, tek kaynak)
+   *  · `status`     → tek kolon (`product_status` enum'u) — düz eşitlik
    *  · `onlyIncomplete` → beyanı eksik: ad dillerinden biri YOK **veya** alerjen listesi boş
    */
   async list(opts: ProductListOptions = {}): Promise<Page<Product>> {
@@ -148,7 +147,7 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     const filters: Record<string, unknown> = {};
     const orFilters: string[] = [];
     if (f?.categoryId) filters.categoryId = f.categoryId;
-    if (f?.status) Object.assign(filters, statusToFlags(f.status));
+    if (f?.status) filters.status = f.status; // tek kolon → düz eşitlik (eski ikili bayrak çevrimi kalktı)
 
     const q = f?.query?.trim();
     if (q) {
@@ -159,9 +158,15 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     }
 
     if (f?.onlyIncomplete) {
+      // Ölçüt `missingDeclarations` ile AYNI olmalı (types/product.schema) — ikisi ayrışırsa ekran
+      // "24 beyan eksik" yazıp süzgeçte 12 satır gösterir. Oradaki kural burada SQL'e çevrilir:
+      //   · ad dillerinden biri yok        · içindekiler / saklama hiç girilmemiş (jsonb null)
+      //   · besin değerleri girilmemiş     · alerjen listesi boş
       // Boş dil DB'ye yazılmaz (form kaydederken boş diller atılır) → eksik dil = anahtarın YOKLUĞU.
-      const missingLang = LOCALIZED_TEXT_KEYS.map((l) => `name->>${l}.is.null`).join(',');
-      orFilters.push(`${missingLang},allergens.eq.{}`);
+      const missingLang = LOCALIZED_TEXT_KEYS.map((l) => `name->>${l}.is.null`);
+      orFilters.push(
+        [...missingLang, 'ingredients.is.null', 'nutrition.is.null', 'storage_instructions.is.null', 'allergens.eq.{}'].join(','),
+      );
     }
     return { filters, orFilters };
   }
@@ -175,14 +180,14 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     return this.getAll(undefined, { orderBy: 'sortOrder' });
   }
 
-  /** Satılabilir katalog: aktif + aday DEĞİL (aday yalnız keşifte). */
+  /** Satılabilir katalog: yalnız satışta olanlar (aday ve pasif hariç). */
   async listSellable(): Promise<Product[]> {
-    return this.getAll({ isActive: true, isCandidate: false }, { orderBy: 'sortOrder' });
+    return this.getAll({ status: 'active' }, { orderBy: 'sortOrder' });
   }
 
   /** Aday ürünler (keşif/tinder bölümü). */
   async listCandidates(): Promise<Product[]> {
-    return this.getAll({ isCandidate: true }, { orderBy: 'sortOrder' });
+    return this.getAll({ status: 'candidate' }, { orderBy: 'sortOrder' });
   }
 
   /**
@@ -207,9 +212,9 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     return { product, variants: created };
   }
 
-  /** Aktif/pasif (soft). */
-  async setActive(id: string, isActive: boolean): Promise<Product> {
-    return this.update({ id, isActive });
+  /** Satış durumunu yazar (satışta / pasif / aday). */
+  async setStatus(id: string, status: ProductStatus): Promise<Product> {
+    return this.update({ id, status });
   }
 
   /** Görsel anahtarını + sürüm damgasını yazar (R2 yüklemesinden sonra). Relative key; prefix R2'de. */

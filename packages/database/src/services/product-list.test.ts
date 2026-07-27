@@ -37,15 +37,23 @@ beforeAll(async () => {
   otherCategoryId = other.id;
   createdCategoryIds.push(cat.id, other.id);
 
-  // Bilinçli çeşitlilik: üç dili tam + alerjenli (beyanı TAM), tek dilli (dil eksik), alerjensiz,
-  // pasif, aday. Süzgeçlerin her biri farklı bir satırı hedefliyor.
+  // Bilinçli çeşitlilik: beyanı TAM olan iki kayıt + her biri TEK bir eksikliği örnekleyen kayıtlar.
+  // "Tam" olmak artık ad dilleri + alerjen DEĞİL; içindekiler, besin değerleri ve saklama da gerekiyor
+  // (05.10 — ölçüt `missingDeclarations`'ta). Bu yüzden tam kayıtlar dörtlüyü de taşır.
+  const DECL = {
+    ingredients: { tr: 'Un, su, tuz.', fr: 'Farine, eau, sel.', de: 'Mehl, Wasser, Salz.' },
+    storageInstructions: { tr: 'Serin yerde saklayın.', fr: 'Conserver au frais.', de: 'Kühl lagern.' },
+    nutrition: { energyKj: 1600, energyKcal: 380, fatG: 18, saturatedFatG: 7, carbohydrateG: 45, sugarsG: 22, proteinG: 6, saltG: 0.3 },
+  };
   const seed: Array<{ name: Record<string, string>; extra?: Record<string, unknown> }> = [
-    { name: { tr: `${STAMP} tam bir`, fr: `${STAMP} complet un`, de: `${STAMP} voll eins` }, extra: { allergens: ['gluten'] } },
-    { name: { tr: `${STAMP} tam iki`, fr: `${STAMP} complet deux`, de: `${STAMP} voll zwei` }, extra: { allergens: ['sut'] } },
-    { name: { tr: `${STAMP} dil eksik` }, extra: { allergens: ['gluten'] } }, // fr/de YOK → beyan eksik
-    { name: { tr: `${STAMP} alerjen yok`, fr: `${STAMP} sans`, de: `${STAMP} ohne` } }, // allergens boş → beyan eksik
-    { name: { tr: `${STAMP} pasif`, fr: `${STAMP} passif`, de: `${STAMP} passiv` }, extra: { allergens: ['soya'], isActive: false } },
-    { name: { tr: `${STAMP} aday`, fr: `${STAMP} candidat`, de: `${STAMP} kandidat` }, extra: { allergens: ['susam'], isCandidate: true } },
+    { name: { tr: `${STAMP} tam bir`, fr: `${STAMP} complet un`, de: `${STAMP} voll eins` }, extra: { allergens: ['gluten'], ...DECL } },
+    { name: { tr: `${STAMP} tam iki`, fr: `${STAMP} complet deux`, de: `${STAMP} voll zwei` }, extra: { allergens: ['sut'], ...DECL } },
+    { name: { tr: `${STAMP} dil eksik` }, extra: { allergens: ['gluten'], ...DECL } }, // fr/de YOK → beyan eksik
+    { name: { tr: `${STAMP} alerjen yok`, fr: `${STAMP} sans`, de: `${STAMP} ohne` }, extra: { ...DECL } }, // allergens boş → beyan eksik
+    // İçindekiler YOK: yeni ölçütün kendi başına yakalaması gereken durum (diller ve alerjen tam).
+    { name: { tr: `${STAMP} icindekiler yok`, fr: `${STAMP} sans compo`, de: `${STAMP} ohne zutaten` }, extra: { allergens: ['soya'], storageInstructions: DECL.storageInstructions, nutrition: DECL.nutrition } },
+    { name: { tr: `${STAMP} pasif`, fr: `${STAMP} passif`, de: `${STAMP} passiv` }, extra: { allergens: ['soya'], status: 'passive', ...DECL } },
+    { name: { tr: `${STAMP} aday`, fr: `${STAMP} candidat`, de: `${STAMP} kandidat` }, extra: { allergens: ['susam'], status: 'candidate', ...DECL } },
   ];
   for (const s of seed) {
     const { product } = await products.create({ name: s.name, categoryId, ...s.extra });
@@ -77,7 +85,7 @@ describe('ProductService.list — süzme', () => {
 
   it('kategori süzgeci listeyi daraltır', async () => {
     const inCat = await products.list({ filters: { query: STAMP, categoryId }, limit: 50 });
-    expect(mine(inCat.rows)).toHaveLength(6);
+    expect(mine(inCat.rows)).toHaveLength(7);
     expect(mine(inCat.rows).every((p) => p.categoryId === categoryId)).toBe(true);
 
     const outside = await products.list({ filters: { query: STAMP, categoryId: otherCategoryId }, limit: 50 });
@@ -93,18 +101,20 @@ describe('ProductService.list — süzme', () => {
     expect(mine(passive.rows)[0]?.name.tr).toContain('pasif');
     expect(mine(candidate.rows)).toHaveLength(1);
     expect(mine(candidate.rows)[0]?.name.tr).toContain('aday');
-    // Aktif = aday DEĞİL + is_active: 7 kaydın 1'i pasif, 1'i aday, 1'i diğer kategoride → 5 kalır.
-    expect(mine(active.rows)).toHaveLength(5);
-    expect(mine(active.rows).every((p) => p.isActive && !p.isCandidate)).toBe(true);
+    // Durum TEK alan: 8 kaydın 1'i pasif, 1'i aday → 6 satışta kalır (diğer kategorideki dâhil).
+    expect(mine(active.rows)).toHaveLength(6);
+    expect(mine(active.rows).every((p) => p.status === 'active')).toBe(true);
   });
 
-  it('beyan-eksik süzgeci: dili eksik VEYA alerjeni boş olanlar', async () => {
+  it('beyan-eksik süzgeci: dil, alerjen VEYA beyan metinlerinden biri eksikse yakalar', async () => {
     const incomplete = await products.list({ filters: { query: STAMP, onlyIncomplete: true }, limit: 50 });
     const names = mine(incomplete.rows).map((p) => p.name.tr ?? '');
-    // "dil eksik" (fr/de yok) + "alerjen yok" (boş dizi) + "baska kategori" (fr/de ve alerjen yok)
+    // Her biri FARKLI bir eksiklikle listeye girer — süzgeç dördünü de görmeli.
     expect(names.some((n) => n.includes('dil eksik'))).toBe(true);
     expect(names.some((n) => n.includes('alerjen yok'))).toBe(true);
-    // Üç dili tam VE alerjenli olanlar listede OLMAMALI.
+    expect(names.some((n) => n.includes('icindekiler yok'))).toBe(true);
+    expect(names.some((n) => n.includes('baska kategori'))).toBe(true);
+    // Beyanı TAM olanlar listede OLMAMALI.
     expect(names.some((n) => n.includes('tam bir'))).toBe(false);
     expect(names.some((n) => n.includes('tam iki'))).toBe(false);
   });
@@ -122,9 +132,9 @@ describe('ProductService.list — keyset sayfalama', () => {
       cursor = page.nextCursor;
     } while (cursor && ++guard < 20);
 
-    // Bu testin 7 kaydı; tekrar YOK (Set boyutu = uzunluk) ve hepsi geldi.
+    // Bu testin 8 kaydı; tekrar YOK (Set boyutu = uzunluk) ve hepsi geldi.
     expect(new Set(seen).size).toBe(seen.length);
-    expect(seen).toHaveLength(7);
+    expect(seen).toHaveLength(8);
   });
 
   it('son sayfada nextCursor null döner', async () => {
@@ -137,7 +147,7 @@ describe('ProductService.listWithRelations — N+1 kırma', () => {
   it('varyantlar ve koleksiyon üyelikleri TEK sorguda gelir', async () => {
     const page = await products.listWithRelations({ filters: { query: STAMP }, limit: 50 });
     const rows = mine(page.rows);
-    expect(rows).toHaveLength(7);
+    expect(rows).toHaveLength(8);
 
     // Her ürün en az bir varyant taşır (varyantsız üründe varsayılan varyant otomatik açılır, 05.3)
     // ve varyantlar GÖMÜLÜ geldi — ürün başına ayrı sorgu atılmadı.
@@ -180,7 +190,7 @@ describe('ProductService.countsByCategory', () => {
   it('kategori başına sayı TEK gruplu sorguda gelir', async () => {
     // PostgREST toplama (`count()` seçimi → örtük group by) sürüme bağlıdır: bu test onu doğrular.
     const byCategory = await products.countsByCategory();
-    expect(byCategory.get(categoryId)).toBe(6);
+    expect(byCategory.get(categoryId)).toBe(7);
     expect(byCategory.get(otherCategoryId)).toBe(1);
   });
 });
@@ -188,9 +198,9 @@ describe('ProductService.countsByCategory', () => {
 describe('ProductService.counts', () => {
   it('sayaçlar listeyle AYNI süzgeci kullanır', async () => {
     const c = await products.counts({ query: STAMP });
-    expect(c.total).toBe(7);
+    expect(c.total).toBe(8);
     expect(c.candidate).toBe(1);
-    // beyanı eksik: "dil eksik", "alerjen yok", "baska kategori" → 3
-    expect(c.incomplete).toBe(3);
+    // beyanı eksik: "dil eksik", "alerjen yok", "icindekiler yok", "baska kategori" → 4
+    expect(c.incomplete).toBe(4);
   });
 });

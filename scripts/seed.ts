@@ -37,7 +37,7 @@ import {
   UserProfileService,
 } from '@lezzet/database';
 import { getR2, r2Keys } from '@lezzet/storage';
-import { PRODUCT_GALLERY_MAX, resolveLocalizedText, type LocalizedText, type ProductAllergen } from '@lezzet/types';
+import { PRODUCT_GALLERY_MAX, resolveLocalizedText, type LocalizedText, type Nutrition, type ProductAllergen, type ProductStatus } from '@lezzet/types';
 
 // Seed Next.js dışında çalışır — .env'i elle yükle (Node 22 process.loadEnvFile).
 try {
@@ -83,13 +83,17 @@ interface SeedProduct {
   name: LocalizedText;
   description?: LocalizedText;
   allergens?: ProductAllergen[];
+  traces?: ProductAllergen[];
+  /** Yasal beyan metinleri — `**vurgu**` işareti TAŞIR (alerjen listede yazdığı hâliyle vurgulanır). */
+  ingredients?: LocalizedText;
+  storageInstructions?: LocalizedText;
+  nutrition?: Nutrition;
   vatRate?: number;
   shelfLifeDays?: number;
   shippable?: boolean;
   targetMarginPercent?: number;
   autoPrice?: boolean;
-  isActive?: boolean;
-  isCandidate?: boolean;
+  status?: ProductStatus;
   variants?: SeedVariant[];
 }
 
@@ -115,6 +119,18 @@ const PRODUCTS: SeedProduct[] = [
       de: 'Traditionelles Baklava mit Antep-Pistazien und dünnem Teig.',
     },
     allergens: ['gluten', 'sert_kabuklu', 'sut'],
+    traces: ['yer_fistigi'],
+    ingredients: {
+      tr: 'El açması yufka (**buğday unu**, su, tuz), Antep fıstığı (%28), **tereyağı**, şeker, su, limon suyu.',
+      fr: 'Pâte étirée à la main (**farine de blé**, eau, sel), pistaches d’Antep (28 %), **beurre**, sucre, eau, jus de citron.',
+      de: 'Handgezogener Teig (**Weizenmehl**, Wasser, Salz), Antep-Pistazien (28 %), **Butter**, Zucker, Wasser, Zitronensaft.',
+    },
+    storageInstructions: {
+      tr: 'Dondurucuda (−18 °C) paket üzerindeki tarihe kadar saklayın. Buzdolabında 4-5 saatte çözünür; çözdükten sonra 3 gün içinde tüketin, **tekrar dondurmayın**.',
+      fr: 'À conserver au congélateur (−18 °C) jusqu’à la date indiquée. Décongélation au réfrigérateur en 4-5 h ; à consommer sous 3 jours, **ne pas recongeler**.',
+      de: 'Im Gefrierschrank (−18 °C) bis zum angegebenen Datum lagern. Im Kühlschrank in 4-5 Std. auftauen; innerhalb von 3 Tagen verzehren, **nicht wieder einfrieren**.',
+    },
+    nutrition: { energyKj: 1980, energyKcal: 473, fatG: 27.4, saturatedFatG: 11.2, carbohydrateG: 49.8, sugarsG: 31.5, proteinG: 7.1, saltG: 0.2 },
     shelfLifeDays: 180,
     targetMarginPercent: 42,
     autoPrice: true,
@@ -137,7 +153,7 @@ const PRODUCTS: SeedProduct[] = [
     slug: 'su-boregi',
     image: '3.jpeg',
     category: 'borek',
-    isActive: false, // pasif örneği
+    status: 'passive', // pasif örneği
     name: { tr: 'Su Böreği' }, // yalnız TR
     allergens: ['gluten', 'yumurta', 'sut'],
     shelfLifeDays: 5,
@@ -164,7 +180,7 @@ const PRODUCTS: SeedProduct[] = [
     slug: 'antep-fistigi',
     image: '5.jpeg',
     category: 'malzeme',
-    isCandidate: true, // aday örneği (varyant verilmez → varsayılan varyant otomatik)
+    status: 'candidate', // aday örneği (varyant verilmez → varsayılan varyant otomatik)
     name: { tr: 'Antep Fıstığı' },
     allergens: ['sert_kabuklu'],
     vatRate: 20, // malzeme → %20 (tatlılar %5,5)
@@ -267,6 +283,7 @@ async function seedBulkProducts(
     for (const [q, qual] of BULK_QUALIFIERS.entries()) {
       const i = b * BULK_QUALIFIERS.length + q;
       const trOnly = i % 5 === 0; // dil eksik → "beyan eksik" süzgecine düşer
+      const beyanTam = i % 3 !== 0; // içindekiler + besin + saklama dolu mu
       const imageKey = i % 6 === 0 ? null : (sharedKeys[i % sharedKeys.length] ?? null);
       const name: LocalizedText = trOnly
         ? { tr: `${base.tr} ${qual.tr}` }
@@ -281,13 +298,33 @@ async function seedBulkProducts(
         // görselsiz kayıtta damga olmayan bir dosyanın tarihi olurdu.
         imageUpdatedAt: imageKey ? NOW : null,
         allergens: i % 7 === 0 ? [] : i % 2 === 0 ? ['gluten', 'sert_kabuklu'] : ['gluten', 'sut'],
+        traces: i % 4 === 0 ? ['yer_fistigi'] : [],
+        // Beyan dörtlüsü ~her 3'ten 2'sinde DOLU: ölçüt bunları da saydığı için hepsi boş bırakılsaydı
+        // 69 ürünün 69'u "beyan eksik" çıkar, süzgeç ayırt etmez olurdu.
+        ingredients: beyanTam
+          ? {
+              tr: `**Buğday unu**, su, tuz, ${base.tr.toLocaleLowerCase('tr')}, şeker.`,
+              fr: `**Farine de blé**, eau, sel, ${base.fr.toLocaleLowerCase('fr')}, sucre.`,
+              de: `**Weizenmehl**, Wasser, Salz, ${base.de.toLocaleLowerCase('de')}, Zucker.`,
+            }
+          : null,
+        storageInstructions: beyanTam
+          ? {
+              tr: 'Serin ve kuru yerde saklayın; açtıktan sonra 3 gün içinde tüketin, **tekrar dondurmayın**.',
+              fr: 'Conserver au frais et au sec ; à consommer sous 3 jours après ouverture, **ne pas recongeler**.',
+              de: 'Kühl und trocken lagern; nach dem Öffnen innerhalb von 3 Tagen verzehren, **nicht wieder einfrieren**.',
+            }
+          : null,
+        nutrition: beyanTam
+          ? { energyKj: 1600 + i * 5, energyKcal: 380 + i, fatG: 18 + (i % 7), saturatedFatG: 7 + (i % 4), carbohydrateG: 45 + (i % 9), sugarsG: 22 + (i % 6), proteinG: 6 + (i % 3), saltG: 0.3 }
+          : null,
         vatRate: base.cat === 'malzeme' ? 20 : 5.5,
         shelfLifeDays: base.cat === 'borek' ? 120 : 180,
         shippable: i % 13 !== 0, // bazıları yalnız rota/kapı teslim (soğuk zincir)
         targetMarginPercent: 35 + (i % 5) * 3,
         autoPrice: i % 4 === 0,
-        isActive: i % 9 !== 0,
-        isCandidate: i % 11 === 0 && i % 9 !== 0, // aday ve pasif aynı kayıtta çakışmasın
+        // Tek alan → çakışma imkânsız (eskiden iki bayrak birbirini ezebiliyordu).
+        status: i % 9 === 0 ? 'passive' : i % 11 === 0 ? 'candidate' : 'active',
         sortOrder: startOrder + i,
         variants: i % 3 === 0 ? [{ label: '700 g tepsi', netWeightG: 700 }, { label: '1 kg tepsi', netWeightG: 1000 }] : [{ label: '500 g', netWeightG: 500 }],
       });
@@ -335,13 +372,16 @@ async function seedCatalog(db: Db): Promise<void> {
       imageKey,
       imageUpdatedAt: imageKey ? NOW : null, // sürüm damgası (bkz. seedBulkProducts)
       allergens: p.allergens,
+      traces: p.traces ?? [],
+      ingredients: p.ingredients ?? null,
+      storageInstructions: p.storageInstructions ?? null,
+      nutrition: p.nutrition ?? null,
       vatRate: p.vatRate,
       shelfLifeDays: p.shelfLifeDays,
       shippable: p.shippable,
       targetMarginPercent: p.targetMarginPercent,
       autoPrice: p.autoPrice,
-      isActive: p.isActive ?? true,
-      isCandidate: p.isCandidate ?? false,
+      status: p.status ?? 'active',
       sortOrder: i, // elle yazılanlar listenin BAŞINDA dursun (durum örnekleri kolay bulunsun)
       variants: p.variants,
     });
@@ -462,7 +502,7 @@ async function seedDraftCustomers(db: Db): Promise<void> {
       console.log(`  · ${c.name} (zaten var)`);
       continue;
     }
-    await profiles.insert({ ...c, type: 'type' in c ? c.type : 'individual', role: 'customer', isDraft: true });
+    await profiles.insert({ ...c, type: 'type' in c ? c.type : 'individual', roles: ['customer'], isDraft: true });
     created += 1;
     console.log(`  ✓ ${c.name} (taslak açıldı)`);
   }
