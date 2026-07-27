@@ -8,6 +8,13 @@ create table public.category (
   id uuid primary key default gen_random_uuid(),
   name jsonb not null,                          -- LocalizedText {tr?,fr?,de?}
   slug text not null,                           -- dil-bağımsız URL parçası (SEO_I18N)
+  -- Kategori görseli: anasayfa kategori şeridinde görünür — web 3:2 kart, MOBİL DAİRE (aynı kare
+  -- kırpma + yuvarlak maske). Tek kaynak 3:2 yüklenir; çerçeveler odak+zoom ile türer (§0B).
+  image_key text,                               -- depo anahtarı, tam URL değil (STACK §5)
+  image_focal_x smallint not null default 50,   -- odak %, 0-100 (object-position X)
+  image_focal_y smallint not null default 50,   -- odak %, 0-100 (object-position Y)
+  image_zoom smallint not null default 100,     -- zoom %, 100-400
+  image_alt jsonb,                              -- LocalizedText; boşsa kategori adına düşer
   sort_order int not null default 0,
   is_active boolean not null default true,
   created_at timestamptz not null default now()

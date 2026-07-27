@@ -57,11 +57,14 @@ export class CollectionService extends BaseDbService<Collection, CollectionInser
    */
   async create(input: CreateCollectionInput): Promise<Collection> {
     const slug = await uniqueSlugForTable(this.supabase, this.tableName, input.slug?.trim() || resolveLocalizedText(input.name));
+    // sortOrder verilmezse listenin SONUNA eklenir (DB default'u 0 olduğundan aksi hâlde yeni kayıt
+    // mevcutların arasına karışır — sıralama sortOrder'a göre ve eşitlikte sıra belirsiz).
+    const sortOrder = input.sortOrder ?? (await this.count());
     const created = await this.insert({
       name: input.name,
       description: input.description,
       slug,
-      sortOrder: input.sortOrder,
+      sortOrder,
       isActive: input.isActive,
     });
     if (input.productIds?.length) await this.links.setProductsIn(created.id, input.productIds);

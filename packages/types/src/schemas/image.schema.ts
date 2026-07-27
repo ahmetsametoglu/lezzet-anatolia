@@ -173,9 +173,23 @@ export type ImageCropFields = z.infer<typeof ImageCropFieldsSchema>;
 /** Yeni nesnenin varsayılan kırpması (merkez, zoom yok) — form defaultları bunu SPREAD eder. */
 export const DEFAULT_CROP_FIELDS: ImageCropFields = { imageFocalX: 50, imageFocalY: 50, imageZoom: IMAGE_ZOOM_MIN };
 
+const IMAGE_CROP_KEYS = ['imageFocalX', 'imageFocalY', 'imageZoom'] as const;
+
 /** Bir varlıktan yalnız kırpma alanlarını seçer — form/action geçişlerinde tek satırla taşınır. */
 export function pickCropFields(e: ImageCropFields): ImageCropFields {
   return { imageFocalX: e.imageFocalX, imageFocalY: e.imageFocalY, imageZoom: e.imageZoom };
+}
+
+/**
+ * KISMİ kırpma künyesi — tanımsız alanlar atlanır. Action→servis geçişinde kullanılır ("yalnız
+ * verilen alan yazılır" sözleşmesi): girdinin adı/üyeliği gibi kolon-olmayan alanları taşımaz.
+ */
+export function pickCropFieldsPartial(e: Partial<ImageCropFields>): Partial<ImageCropFields> {
+  const out: Partial<ImageCropFields> = {};
+  for (const k of IMAGE_CROP_KEYS) {
+    if (e[k] !== undefined) out[k] = e[k];
+  }
+  return out;
 }
 
 /** Kırpma alanlarını (flat) bileşenin beklediği {x,y,zoom} biçimine indirger. */

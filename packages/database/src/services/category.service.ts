@@ -7,6 +7,7 @@ import {
   type Category,
   type CategoryInsert,
   type CategoryUpdate,
+  type ImageCropFields,
   type LocalizedText,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
@@ -16,6 +17,12 @@ import { uniqueSlugForTable } from '../utils/slug';
 export interface CreateCategoryInput {
   name: LocalizedText;
   sortOrder?: number;
+  isActive?: boolean;
+}
+
+// Düzenlenebilir alanlar — slug YOK (URL korunur). Görsel kırpma künyesi ortak ImageCropFields'ten.
+interface EditCategoryInput extends Partial<ImageCropFields> {
+  name?: LocalizedText;
   isActive?: boolean;
 }
 
@@ -33,10 +40,15 @@ export class CategoryService extends BaseDbService<Category, CategoryInsert, Cat
     return this.getAll(opts?.activeOnly ? { isActive: true } : undefined, { orderBy: 'sortOrder' });
   }
 
-  /** Yeni kategori; slug addan türetilip benzersizleştirilir. */
+  /**
+   * Yeni kategori; slug addan türetilip benzersizleştirilir. `sortOrder` verilmezse listenin SONUNA
+   * eklenir (mevcut sayı) — DB default'u 0 olduğundan aksi hâlde yeni kayıt mevcutların arasına
+   * karışır (sıralama sortOrder'a göredir ve eşitlikte sıra belirsizdir).
+   */
   async create(input: CreateCategoryInput): Promise<Category> {
     const slug = await uniqueSlugForTable(this.supabase, this.tableName, resolveLocalizedText(input.name));
-    return this.insert({ name: input.name, slug, sortOrder: input.sortOrder, isActive: input.isActive });
+    const sortOrder = input.sortOrder ?? (await this.count());
+    return this.insert({ name: input.name, slug, sortOrder, isActive: input.isActive });
   }
 
   /** Aktif/pasif (soft). */
@@ -44,9 +56,18 @@ export class CategoryService extends BaseDbService<Category, CategoryInsert, Cat
     return this.update({ id, isActive });
   }
 
-  /** Ad ve/veya aktiflik günceller; slug SABİT kalır (URL korunur, addan yeniden türetilmez). */
-  async edit(id: string, input: { name?: LocalizedText; isActive?: boolean }): Promise<Category> {
+  /**
+   * Ad, aktiflik ve/veya görsel kırpma künyesi günceller; slug SABİT kalır (URL korunur, addan
+   * yeniden türetilmez). Kırpma alanları ortak `ImageCropFields`'ten gelir (tek tip); dosyanın
+   * kendisi ayrı yükleme akışında (`setImageKey`).
+   */
+  async edit(id: string, input: EditCategoryInput): Promise<Category> {
     return this.update({ id, ...input });
+  }
+
+  /** Görsel anahtarını yazar (R2 yüklemesinden sonra). Relative key; prefix R2 çağrısında eklenir. */
+  async setImageKey(id: string, imageKey: string): Promise<Category> {
+    return this.update({ id, imageKey });
   }
 
   /** Sürükle-bırak sırası: verilen id dizisine göre sortOrder'ı 0..n-1 yazar. */

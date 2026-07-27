@@ -53,19 +53,53 @@ function tableColumns(sql, table) {
     .filter(Boolean);
 }
 
+/** `export const NAME = …` bildiriminin kaynağı (bir sonraki top-level `export`'a kadar). */
+function declSource(src, name) {
+  const at = src.search(new RegExp(`export const ${name}\\b[^=]*=`));
+  if (at < 0) return null;
+  const rest = src.slice(at);
+  const end = rest.slice(1).search(/\nexport /);
+  return end < 0 ? rest : rest.slice(0, end + 1);
+}
+
+/** `.object({ … })` gövdesi — parantez DENGELENEREK (iç içe object'ler kesilmesin). */
+function objectBody(decl) {
+  const at = decl.search(/\.object\(\s*\{/);
+  if (at < 0) return null;
+  const open = decl.indexOf('{', at);
+  let depth = 0;
+  for (let i = open; i < decl.length; i++) {
+    if (decl[i] === '{') depth++;
+    else if (decl[i] === '}' && --depth === 0) return decl.slice(open + 1, i);
+  }
+  return null;
+}
+
+/** Gövdedeki EN ÜST seviye alan adları — girinti derinliğine bakılır (iç içe object alanları hariç). */
+function topLevelKeys(body) {
+  const rows = [...body.matchAll(/^([ \t]*)([a-zA-Z][a-zA-Z0-9]*)\s*:/gm)].map((m) => ({ indent: m[1].length, key: m[2] }));
+  if (rows.length === 0) return [];
+  const min = Math.min(...rows.map((r) => r.indent));
+  return rows.filter((r) => r.indent === min).map((r) => r.key);
+}
+
 /**
- * Zod şemasındaki `z.object({...})` gövdesinden alan adları (camelCase). `.merge(OtherSchema)` zinciri
- * de İZLENİR — ortak alan grupları ayrı şemada tutulup merge'lenebildiği için (no-duplication; ör.
- * ImageMetaSchema). Merge edilen şema aynı dizindeki başka dosyada olabilir → `src` tüm şema dosyaları.
+ * Zod şemasındaki alan adları (camelCase). `.merge(OtherSchema)` zinciri de İZLENİR — ortak alan
+ * grupları ayrı şemada tutulup merge'lenebildiği için (no-duplication; ör. ImageMetaSchema). Merge
+ * edilen şema başka dosyada olabilir → `src` tüm şema dosyalarının birleşimidir.
+ *
+ * Biçime dayanıklı olmalı: `z.object({` ile `z\n  .object({` aynı şeydir ve girinti değişebilir —
+ * aksi hâlde şema BULUNAMAZ ve denetim sessizce atlanır (bu kusur bir kez yaşandı).
  */
 function zodFields(src, name, seen = new Set()) {
   if (seen.has(name)) return [];
   seen.add(name);
-  const m = src.match(new RegExp(`export const ${name} = z\\.object\\(\\{([\\s\\S]*?)\\n\\}\\)((?:\\.merge\\([A-Za-z0-9]+\\))*)`));
-  if (!m) return null;
-  const own = [...m[1].matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9]*):/gm)].map((x) => x[1]);
-  const merged = [...m[2].matchAll(/\.merge\(([A-Za-z0-9]+)\)/g)].flatMap((x) => zodFields(src, x[1], seen) ?? []);
-  return [...own, ...merged];
+  const decl = declSource(src, name);
+  if (!decl) return null;
+  const body = objectBody(decl);
+  if (body === null) return null;
+  const merged = [...decl.matchAll(/\.merge\(\s*([A-Za-z0-9_]+)\s*\)/g)].flatMap((m) => zodFields(src, m[1], seen) ?? []);
+  return [...topLevelKeys(body), ...merged];
 }
 
 /** Tüm şema dosyalarını birleştirir — `.merge()` başka dosyadaki şemayı işaret edebilir. */

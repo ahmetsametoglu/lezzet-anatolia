@@ -15,6 +15,11 @@ Düz (tek seviye), iç içe ağaç yok. Her ürün tek kategoride (bkz. `DOMAIN.
 | id | uuid | |
 | name | LocalizedText (jsonb) | çok dilli |
 | slug | string | dil-bağımsız URL parçası; benzersiz |
+| image_key | string \| null | kategori görseli; depo anahtarı, tam URL değil (STACK §5). Anasayfa kategori şeridinde görünür: **web 3:2 kart, mobil daire** (aynı kare kırpma + yuvarlak maske) |
+| image_focal_x | smallint | odak %, 0-100 (object-position X); tek kaynak 3:2'den tüm çerçeveler bununla türer (Komponent Envanteri §0B) |
+| image_focal_y | smallint | odak %, 0-100 (object-position Y) |
+| image_zoom | smallint | zoom %, 100-400; dikey/kare kaynağı yatay çerçeveye kırpar (yeniden çektirmeden) |
+| image_alt | LocalizedText (jsonb) \| null | alternatif metin; **boşsa müşteride kategori adına düşer** (kopya tutulmaz) |
 | sort_order | int | |
 | is_active | boolean | |
 | created_at | timestamptz | |
@@ -145,6 +150,8 @@ Tek varlık; hem kupon (kod) hem otomatik kampanya. Kupon daima sepet düzeyi (b
 
 Birden çok ürünü tek fiyata sunan katalog kısayolu; sepete eklenince tek tek `OrderItem`'lara açılır (bkz. `DOMAIN.md §13`). Yeni ürün yaratmaz.
 
+**Paket yalnız B2C'dedir** (karar 27.07): `total_price` ve kalemlerin `allocated_unit_price`'ı **KDV dahil (TTC)** — B2C kanal tabanı. Paketin kanal listesi, müşteriye özel fiyatı ve `Price` satırı YOKTUR; bu yüzden tek sayı yeter. Toptan müşteri paketi görmez, kalem kalem alır (gerekçe: paket bir pazarlama aracıdır, toptan pazarlık kalem üzerinden yürür).
+
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
@@ -152,7 +159,7 @@ Birden çok ürünü tek fiyata sunan katalog kısayolu; sepete eklenince tek te
 | description | LocalizedText (jsonb) | çok dilli |
 | image_key | string \| null | |
 | slug | string | sosyal paylaşım / direkt seçim bağlantısı |
-| total_price | number | müşterinin gördüğü paket fiyatı (= atanmış fiyatların toplamı) |
+| total_price | number | müşterinin gördüğü paket fiyatı, **TTC** (= atanmış fiyatların toplamı); yalnız B2C |
 | is_active | boolean | |
 | sort_order | int | |
 
@@ -164,4 +171,4 @@ Birden çok ürünü tek fiyata sunan katalog kısayolu; sepete eklenince tek te
 | bundle_id | uuid | |
 | variant_id | uuid | pakete dahil satılabilir birim |
 | qty | number | |
-| allocated_unit_price | number | bu kaleme atanmış birim fiyat (müşteri görmez); Σ(allocated×qty)=`Bundle.total_price`; **hediye = 0** |
+| allocated_unit_price | number | bu kaleme atanmış birim fiyat, **TTC** (müşteri görmez); Σ(allocated×qty)=`Bundle.total_price`; **hediye = 0** |

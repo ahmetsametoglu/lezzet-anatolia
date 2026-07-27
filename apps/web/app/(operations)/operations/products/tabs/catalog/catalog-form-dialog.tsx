@@ -18,16 +18,19 @@ import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { LocaleCard } from '@/components/operation/form/locale-card';
 import { MultiSelect } from '@/components/operation/form/multi-select';
 import { suggestTranslationAction } from '../../actions/translate';
-import { createCatalogAction, updateCatalogAction, uploadCollectionImageAction } from './actions';
+import { createCatalogAction, updateCatalogAction, uploadCatalogImageAction } from './actions';
 import type { CatalogKind, ProductView } from '../../products-types';
 
 // Kategori/Koleksiyon oluştur + düzenle — tek dialog, `kind` ile çatallanır (no-duplication).
 //
-// KATEGORİ tek kısa alan (ad) → diller doğrudan alt alta (`layout="stacked"`), sekme yok.
+// KATEGORİ tek kısa alan (ad) → diller doğrudan alt alta (`layout="stacked"`), sekme yok. Görseli
+// anasayfa kategori şeridinde görünür (web 3:2 kart, mobil daire) → kaynak 3:2 (`role="category"`).
 // KOLEKSİYON çok dilli İKİ alan taşır (ad + açıklama) → ikisi bir DİL KARTINDA toplanır: kartın içi
 // seçili dilin alanı, dışı dilden bağımsız (slug/kapak/aktiflik). Kip görünür olur.
-// Koleksiyon ayrıca paylaşılabilir bir vitrin sayfasıdır (DOMAIN §13): slug + kapak görseli + açıklama
-// OG kartını besler. Üyeler sağ bölmede GÖRSELLİ ve SÜRÜKLE-SIRALANIR liste — sıra vitrin kürasyonudur.
+// Koleksiyon ayrıca paylaşılabilir bir vitrin sayfasıdır (DOMAIN §13): slug + kapak + açıklama OG
+// kartını besler — kapak müşteri SAYFASINDA render edilmez (`role="collection"`, 16:9).
+// Üyeler sağ bölmede GÖRSELLİ ve SÜRÜKLE-SIRALANIR liste — sıra vitrin kürasyonudur.
+// GÖRSEL her iki türde de aynı bileşenle yönetilir; yalnız `role` (oran) ve bağlam etiketi değişir.
 
 // Dialogun öndolduracağı alanlar — ŞEMADAN TÜRETİLİR (elle interface yazılmaz, no-duplication): kimlik/
 // içerik/aktiflik/kapak-künyesi Collection'dan pick'lenir. `imageUrl` (imzalı URL) ve `productIds`
@@ -103,10 +106,13 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null);
     const { name, description, slug, isActive, productIds: ids } = values;
+    // Kırpma künyesi İKİ türde de gider (kategori görseli + koleksiyon OG kapağı); açıklama/üyelik
+    // yalnız koleksiyonda anlamlı.
     const payload = {
       name,
       isActive,
-      ...(isCollection ? { description: description ?? null, ...pickCropFields(values) } : {}),
+      ...pickCropFields(values),
+      ...(isCollection ? { description: description ?? null } : {}),
       ...(showMembers ? { productIds: ids } : {}),
     };
     const { error: actionError } = isEdit
@@ -119,6 +125,21 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
     router.refresh();
     onClose();
   });
+
+  // Görsel alanı TEK yerde kurulur; yerleşim `kind`'a göre farklı yere koyar (tekrar yok). Rol oranı
+  // belirler: kategori 3:2 (anasayfa şeridi · mobilde daire), koleksiyon 16:9 (yalnız OG kartı).
+  // Yükleme kayıt gerektirir (R2 anahtarı slug'a bağlı) → oluşturmada istem gösterilir.
+  const imageField = (
+    <ImageCropField
+      role={isCollection ? 'collection' : 'category'}
+      src={isEdit ? edit.imageUrl : null}
+      crop={crop}
+      onCropChange={setCrop}
+      upload={isEdit ? (fd) => uploadCatalogImageAction(kind, edit.id, fd) : undefined}
+      uploadDisabledHint="Kaydedince eklenebilir — depo anahtarı slug'a bağlı."
+      caption={isCollection ? 'paylaşım kartı (OG)' : 'müşteride görünüm'}
+    />
+  );
 
   // Alt bar SOL tarafı = aksiyon bölgesi: aktiflik anahtarı (kayda eşlik eden karar), zorunlu-alan
   // metni değil. Oluşturmada da görünür — pasif (taslak) olarak yaratmak mümkün.
@@ -141,22 +162,12 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
       footer={footer}
       maxWidth={showMembers ? 1140 : 460}
     >
-      {/* Üç sütun (koleksiyon): kapak+link · içerik · üyeler. Kategoride tek sütun (yalnız ad). */}
+      {/* Üç sütun (koleksiyon): kapak+link · içerik · üyeler. Kategoride tek sütun: görsel + ad. */}
       <form id={FORM_ID} onSubmit={onSubmit} className={showMembers ? 'grid grid-cols-[300px_minmax(0,1fr)_290px] gap-6' : 'flex flex-col gap-4'}>
-        {/* ── 1. Paylaşım kimliği: kapak görseli + link (ikisi de OG kartını tanımlar) ── */}
+        {/* ── 1. Görsel (+ koleksiyonda paylaşım linki) ── */}
         {showMembers ? (
           <div className="flex flex-col gap-4">
-            {/* Kapak = paylaşım (OG) kartı görseli (16:9). Müşteri sayfasında render EDİLMEZ; odak/zoom
-                ile dikey/kare kaynak da yatay banda kırpılır. Düzenleme ayrı diyalogda (ImageCropField). */}
-            <ImageCropField
-              role="collection"
-              src={isEdit ? edit.imageUrl : null}
-              crop={crop}
-              onCropChange={setCrop}
-              upload={isEdit ? (fd) => uploadCollectionImageAction(edit.id, fd) : undefined}
-              uploadDisabledHint="Kaydedince eklenebilir — depo anahtarı slug'a bağlı."
-              caption="paylaşım kartı (OG)"
-            />
+            {imageField}
 
             {/* Paylaşım linki: oluşturmada seçilebilir, düzenlemede SABİT (paylaşılmış link kırılmasın) */}
             {isEdit ? (
@@ -167,7 +178,9 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
               <FormInput control={form.control} name="slug" label="Paylaşım linki (slug)" labelAside="boşsa addan üretilir" placeholder="ör. bayram-sofrasi" mono />
             )}
           </div>
-        ) : null}
+        ) : (
+          imageField
+        )}
 
         {/* ── 2. İçerik bölmesi ── */}
         <div className="flex flex-col gap-4">

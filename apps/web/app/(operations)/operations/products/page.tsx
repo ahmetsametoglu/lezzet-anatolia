@@ -33,11 +33,12 @@ export default async function ProductsPage() {
   // Görseller R2 private bucket'ta → okuma için imzalı URL. R2 ayarsızsa (getR2 null) placeholder.
   const r2 = getR2();
   const signed = (key: string | null): Promise<string | null> => (r2 && key ? r2.getSignedReadUrl(key) : Promise.resolve(null));
-  const [variantLists, collectionMembers, imageUrls, collectionImageUrls] = await Promise.all([
+  const [variantLists, collectionMembers, imageUrls, collectionImageUrls, categoryImageUrls] = await Promise.all([
     Promise.all(products.map((p) => variantSvc.listByProduct(p.id))),
     Promise.all(collections.map((c) => collectionSvc.productIds(c.id))),
     Promise.all(products.map((p) => signed(p.imageKey))),
     Promise.all(collections.map((c) => signed(c.imageKey))),
+    Promise.all(categories.map((c) => signed(c.imageKey))),
   ]);
 
   const variantsByProduct = new Map(products.map((p, i) => [p.id, variantLists[i] ?? []]));
@@ -68,7 +69,11 @@ export default async function ProductsPage() {
     if (p.categoryId) countByCategory.set(p.categoryId, (countByCategory.get(p.categoryId) ?? 0) + 1);
   }
 
-  const categoryViews: CategoryView[] = categories.map((c) => ({ ...c, count: countByCategory.get(c.id) ?? 0 }));
+  const categoryViews: CategoryView[] = categories.map((c, i) => ({
+    ...c,
+    count: countByCategory.get(c.id) ?? 0,
+    imageUrl: categoryImageUrls[i] ?? null,
+  }));
   // Üyelik id'leri view-model'de taşınır (üyelik dialogu ön-doldurur); count ondan türer.
   const collectionViews: CollectionView[] = collections.map((c, i) => {
     const productIds = collectionMembers[i] ?? [];

@@ -15,7 +15,9 @@ export type ProductView = Product & {
   collectionNames: string[]; // girdiği koleksiyon adları (join)
 };
 
-export type CategoryView = Category & { count: number }; // bu kategorideki ürün sayısı
+// Kategori view-model — `count` bu kategorideki ürün sayısı; `imageUrl` görselin imzalı okuma URL'i
+// (kategori görseli anasayfa şeridinde görünür: web 3:2 kart, mobil daire).
+export type CategoryView = Category & { count: number; imageUrl: string | null };
 // Koleksiyon = adı olan ürün listesi (DOMAIN §13) → üyelik id'leri view-model'in parçası (vitrin
 // sırasında); üyelik dialogu bunlarla ön-dolar. `count` bağımsız sayaç DEĞİL, productIds.length'ten
 // türer (RSC'de bir kez); katalog tablosunun ortak alanı olduğu için ayrıca taşınır. `imageUrl` kapak

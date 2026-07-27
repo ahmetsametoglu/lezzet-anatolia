@@ -5,6 +5,7 @@
  *
  *   catalog/products/{slug}.{ext}      ürün katalog görseli (ürüne bağlı TEK görsel)
  *   catalog/collections/{slug}.{ext}   koleksiyon kapak görseli (paylaşım/OG kartı)
+ *   catalog/categories/{slug}.{ext}    kategori görseli (anasayfa kategori şeridi)
  */
 const sanitize = (s: string): string =>
   s.replace(/[^a-zA-Z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').toLowerCase();
@@ -27,4 +28,8 @@ export const r2Keys = {
   /** Koleksiyon kapak görseli — aynı deterministik desen (slug'a bağlı, timestamp yok). */
   collectionImage: (slug: string, sourceFilename: string): string =>
     `catalog/collections/${sanitize(slug)}.${extOf(sourceFilename)}`,
+
+  /** Kategori görseli — aynı deterministik desen (slug'a bağlı, timestamp yok). */
+  categoryImage: (slug: string, sourceFilename: string): string =>
+    `catalog/categories/${sanitize(slug)}.${extOf(sourceFilename)}`,
 } as const;

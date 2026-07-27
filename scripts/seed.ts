@@ -5,7 +5,7 @@
  * Görseller Cloudflare R2'ye yüklenir (R2 env yoksa atlanır). Giriş: OTP kodu Mailpit'e düşer (54324).
  *
  * TABLO KAPSAMI — hangi tabloya veri girer, girmeyenin sebebi:
- *   ✓ category            4 kategori
+ *   ✓ category            4 kategori — 3'ü görselli (anasayfa şeridi), 1'i görselsiz (boş durum)
  *   ✓ product             5 ürün — yasal beyan/KDV/raf ömrü/marj alanları dolu; farklı durumlar örneklenir
  *   ✓ product_variant     ürün başına 1-2 varyant (varyantsız üründe servis varsayılan varyant açar)
  *   ✓ collection          4 koleksiyon — açıklama + kapak görseli (paylaşım/OG), aktif+pasif, dolu+boş
@@ -80,10 +80,12 @@ interface SeedProduct {
   variants?: SeedVariant[];
 }
 
+// Kategori görseli anasayfa şeridinde görünür (web 3:2 kart · mobil daire). `image` verilmeyen kategori
+// görselsiz durumu örnekler (müşteride ad baş harfiyle çıkar, boş gri kutu çizilmez).
 const CATEGORIES = [
-  { key: 'baklava', name: { tr: 'Baklava', fr: 'Baklava', de: 'Baklava' } },
-  { key: 'serbetli', name: { tr: 'Şerbetli Tatlılar', fr: 'Desserts au sirop', de: 'Sirup-Süßspeisen' } },
-  { key: 'borek', name: { tr: 'Börek', fr: 'Böreks', de: 'Börek' } },
+  { key: 'baklava', image: '1.jpeg', name: { tr: 'Baklava', fr: 'Baklava', de: 'Baklava' } },
+  { key: 'serbetli', image: '3.jpeg', name: { tr: 'Şerbetli Tatlılar', fr: 'Desserts au sirop', de: 'Sirup-Süßspeisen' } },
+  { key: 'borek', image: '4.jpeg', name: { tr: 'Börek', fr: 'Böreks', de: 'Börek' } },
   { key: 'malzeme', name: { tr: 'Malzeme', fr: 'Ingrédients', de: 'Zutaten' } },
 ];
 
@@ -170,6 +172,10 @@ async function seedCatalog(db: Db): Promise<void> {
   for (const c of CATEGORIES) {
     const created = await categories.create({ name: c.name });
     catId.set(c.key, created.id);
+    if (c.image) {
+      const key = await uploadImage(c.image, r2Keys.categoryImage(created.slug, c.image));
+      if (key) await categories.setImageKey(created.id, key);
+    }
   }
 
   for (const p of PRODUCTS) {

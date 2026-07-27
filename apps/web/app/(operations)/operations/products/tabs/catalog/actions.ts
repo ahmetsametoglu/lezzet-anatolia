@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { CategoryService, CollectionService, serviceDb } from '@lezzet/database';
 import { getR2, r2Keys } from '@lezzet/storage';
-import { resolveLocalizedText, type ImageCropFields, type LocalizedText } from '@lezzet/types';
+import { pickCropFieldsPartial, resolveLocalizedText, type ImageCropFields, type LocalizedText } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { PRODUCTS_PATH } from '../../products-paths';
@@ -74,18 +74,14 @@ export async function updateCatalogAction(kind: CatalogKind, id: string, input: 
     await requireStaff();
     const db = serviceDb();
     const name = requireCatalogName(kind, input.name);
+    // Kırpma künyesi İKİ türde de var (kategori görseli + koleksiyon OG kapağı) → ortak seçiciyle
+    // taşınır; alan adları burada yazılmaz (no-duplication).
+    const crop = pickCropFieldsPartial(input);
     if (kind === 'category') {
-      await new CategoryService(db).edit(id, { name, isActive: input.isActive });
+      await new CategoryService(db).edit(id, { name, isActive: input.isActive, ...crop });
     } else {
       const svc = new CollectionService(db);
-      await svc.edit(id, {
-        name,
-        description: input.description,
-        isActive: input.isActive,
-        imageFocalX: input.imageFocalX,
-        imageFocalY: input.imageFocalY,
-        imageZoom: input.imageZoom,
-      });
+      await svc.edit(id, { name, description: input.description, isActive: input.isActive, ...crop });
       if (input.productIds) await svc.setProducts(id, input.productIds);
     }
     revalidatePath(PRODUCTS_PATH);
@@ -95,18 +91,22 @@ export async function updateCatalogAction(kind: CatalogKind, id: string, input: 
   }
 }
 
-/** Koleksiyon kapak görselini R2'ye yükler ve imageKey'i günceller (paylaşım/OG kartı görseli). */
-export async function uploadCollectionImageAction(id: string, form: FormData): Promise<ActionResult> {
+/**
+ * Katalog görselini R2'ye yükler ve imageKey'i günceller — kategori görseli (anasayfa şeridi) ve
+ * koleksiyon kapağı (paylaşım/OG kartı) aynı akış: yalnız depo anahtarı deseni farklı → tek action
+ * `kind` ile çatallanır (no-duplication). Dosya HAM saklanır; kırpma görüntüleme anında (odak+zoom).
+ */
+export async function uploadCatalogImageAction(kind: CatalogKind, id: string, form: FormData): Promise<ActionResult> {
   try {
     await requireStaff();
     const file = form.get('file');
     if (!(file instanceof File) || file.size === 0) throw new Error('Görsel dosyası bulunamadı.');
     const r2 = getR2();
     if (!r2) throw new Error('Depolama (R2) ayarlı değil.');
-    const svc = new CollectionService(serviceDb());
-    const collection = await svc.getById(id);
-    if (!collection) throw new Error('Koleksiyon bulunamadı.');
-    const key = r2Keys.collectionImage(collection.slug, file.name);
+    const svc = catalogService(kind);
+    const row = await svc.getById(id);
+    if (!row) throw new Error(`${CATALOG_LABEL[kind]} bulunamadı.`);
+    const key = kind === 'category' ? r2Keys.categoryImage(row.slug, file.name) : r2Keys.collectionImage(row.slug, file.name);
     await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type || 'image/jpeg');
     await svc.setImageKey(id, key);
     revalidatePath(PRODUCTS_PATH);
