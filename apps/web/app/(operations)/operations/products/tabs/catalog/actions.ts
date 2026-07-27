@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { CategoryService, CollectionService, serviceDb } from '@lezzet/database';
 import { getR2, r2Keys } from '@lezzet/storage';
-import { resolveLocalizedText, type LocalizedText } from '@lezzet/types';
+import { resolveLocalizedText, type ImageCropFields, type LocalizedText } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { PRODUCTS_PATH } from '../../products-paths';
@@ -29,7 +29,8 @@ function requireCatalogName(kind: CatalogKind, name: LocalizedText): LocalizedTe
  * Formun gönderdiği katalog girdisi. `description` / `slug` / `productIds` yalnız KOLEKSİYONDA
  * anlamlıdır (koleksiyon = paylaşılabilir vitrin sayfası + ürün listesi); kategoride yok sayılır.
  */
-interface CatalogInput {
+// Kapak (OG kartı) odak/zoom künyesi ortak ImageCropFields'ten gelir (Partial — yalnız koleksiyonda).
+interface CatalogInput extends Partial<ImageCropFields> {
   name: LocalizedText;
   isActive: boolean;
   description?: LocalizedText | null;
@@ -77,7 +78,14 @@ export async function updateCatalogAction(kind: CatalogKind, id: string, input: 
       await new CategoryService(db).edit(id, { name, isActive: input.isActive });
     } else {
       const svc = new CollectionService(db);
-      await svc.edit(id, { name, description: input.description, isActive: input.isActive });
+      await svc.edit(id, {
+        name,
+        description: input.description,
+        isActive: input.isActive,
+        imageFocalX: input.imageFocalX,
+        imageFocalY: input.imageFocalY,
+        imageZoom: input.imageZoom,
+      });
       if (input.productIds) await svc.setProducts(id, input.productIds);
     }
     revalidatePath(PRODUCTS_PATH);

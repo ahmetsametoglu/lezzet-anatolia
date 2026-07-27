@@ -62,11 +62,13 @@ Bu yolda `confirmed/preparing/ready/out_for_delivery` durumlarına uğranmaz. Te
 
 | Geçiş | Stok etkisi |
 | --- | --- |
-| `→ confirmed` | Ayrılmışa ekle (rezervasyon) |
+| `→ confirmed` | Ayrılmışa ekle (rezervasyon) — **yalnız kapıda/vadeli ödemede**; online ödemede stok zaten checkout başında ayrılmıştır (aşağıya bkz.) |
 | `→ delivered` (tam yol) | Ayrılmıştan düş + fiiliden düş |
 | `→ completed` (hızlı satış) | Fiiliden doğrudan düş |
 | `→ cancelled` | Ayrılmıştan geri bırak |
 | `→ returned` | Karara göre fiiliye geri ekle veya imha işaretle |
+
+> **Rezervasyon ne zaman yapılır — ödeme yöntemine bağlıdır** (`DOMAIN.md §4`): **online** ödemede stok **checkout başlarken** ayrılır (sipariş hâlâ `draft`, rezervasyon TTL'li) ve `confirmed` yalnız ödeme onayında olur — "önce ayır, sonra tahsil et" kuralı budur. **Kapıda / vadeli** ödemede rezervasyon `confirmed` geçişindedir. **Hızlı satışta** rezervasyon yoktur, fiiliden düşülür. Yani `confirmed` her zaman "stok şimdi ayrıldı" demek değildir; ayrılmış olabilir.
 
 > **Rezervasyon serbest bırakma depoya çıpalıdır:** `cancelled`/`returned` stok etkisi mal **fiziksel olarak depoya geri girdiğinde** işler — kapıda değil. `out_for_delivery → ready` (ulaşılamadı) stoğu değiştirmez; mal ayrılmış kalır. Ayrıntı: `DOMAIN.md §4`.
 

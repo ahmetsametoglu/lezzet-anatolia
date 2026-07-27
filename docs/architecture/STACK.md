@@ -178,6 +178,13 @@ Hepsi UI'sız, saf fonksiyon + gerekiyorsa Zustand deposu + **birim test**. Her 
 
 ---
 
+### Para: tamsayı cent + tek yuvarlama kuralı
+
+- **Motor içinde para `number` (kayan nokta) değildir — tamsayı cent'tir.** `0.1 + 0.2` sapması indirim dağıtımında ve KDV'de kuruş kaçırır; DB'de `numeric`, sınırda (servis katmanında) cent'e çevrilir.
+- **KDV tabanı kanala bağlıdır** (B2C dahil / B2B hariç, `DOMAIN §5`); motor iki yöne de çevirir ama sakladığı değer kanal tabanıdır.
+- **Yuvarlama tek kuralla yapılır:** sepet indirimi kalemlere **oransal** dağıtılırken her kalem aşağı yuvarlanır, artan kuruş **en büyük kaleme** eklenir → `Σ line_discount_amount = discount_amount` her zaman tutar. Kalem KDV'si **indirimli birim fiyattan** hesaplanır.
+- Bu üçü motorun sözleşmesidir; çağıran katman kendi yuvarlamasını yapmaz.
+
 ## 9. UI: Tailwind + primitif/adaptör
 
 **Stil mekanizması Tailwind** (genel blueprint CSS Modules diyor; burada değişti — Sapma 2). Ama §9'un yapısal kuralları **aynen geçerli**:

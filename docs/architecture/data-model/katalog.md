@@ -29,7 +29,11 @@ Esnek pazarlama grubu (Bayram, Yeni, İndirimde). Bir ürün birden çok koleksi
 | name | LocalizedText (jsonb) | çok dilli |
 | description | LocalizedText (jsonb) \| null | koleksiyon tanıtım metni — paylaşım/OG açıklaması |
 | slug | string | sosyal paylaşım/direkt bağlantı |
-| image_key | string \| null | kapak görseli; depo anahtarı, tam URL değil (STACK §5) |
+| image_key | string \| null | kapak = paylaşım (OG) kartı görseli (16:9); depo anahtarı, tam URL değil (STACK §5). **Müşteri sayfasında render edilmez** — yalnız link önizleme kartını besler |
+| image_focal_x | smallint | OG kartı odak %, 0-100 (object-position X); dikey/kare kaynak odak+zoom ile 16:9'a kırpılır (§0B) |
+| image_focal_y | smallint | OG kartı odak %, 0-100 (object-position Y) |
+| image_zoom | smallint | OG kartı zoom %, 100-400 |
+| image_alt | LocalizedText (jsonb) \| null | OG kartı alt metni; boşsa ada düşer |
 | is_active | boolean | |
 | sort_order | int | |
 | created_at | timestamptz | |

@@ -22,7 +22,13 @@ create table public.collection (
   name jsonb not null,                          -- LocalizedText {tr?,fr?,de?}
   description jsonb,                            -- LocalizedText, opsiyonel (OG açıklaması)
   slug text not null,                           -- paylaşım linki (SEO_I18N)
+  -- Kapak = paylaşım (OG) kartı görseli (16:9); müşteri sayfasında bant olarak render EDİLMEZ, yalnız
+  -- link önizleme kartını besler. Odak/zoom ile dikey/kare kaynak da yatay banda kırpılır (§0B).
   image_key text,                               -- kapak: depo anahtarı, tam URL değil (STACK §5)
+  image_focal_x smallint not null default 50,   -- odak %, 0-100 (object-position X)
+  image_focal_y smallint not null default 50,   -- odak %, 0-100 (object-position Y)
+  image_zoom smallint not null default 100,     -- zoom %, 100-400
+  image_alt jsonb,                              -- LocalizedText; OG kartı alt metni (boşsa ada düşer)
   sort_order int not null default 0,
   is_active boolean not null default true,
   created_at timestamptz not null default now()

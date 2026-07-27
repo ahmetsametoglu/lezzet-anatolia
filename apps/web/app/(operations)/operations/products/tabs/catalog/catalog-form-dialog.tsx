@@ -5,15 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CollectionInsertSchema, resolveLocalizedText, type LocalizedText } from '@lezzet/types';
+import { CollectionInsertSchema, DEFAULT_CROP_FIELDS, ImageCropFieldsSchema, pickCropFields, resolveLocalizedText, type Collection } from '@lezzet/types';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
-import { ImageUploadButton } from '@/components/operation/ui/image-upload-button';
 import { SortableList } from '@/components/operation/ui/sortable-list';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { FormInput } from '@/components/operation/form/form-input';
 import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
 import { FormSwitch } from '@/components/operation/form/form-switch';
+import { ImageCropField } from '@/components/operation/form/image-crop-field';
+import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { LocaleCard } from '@/components/operation/form/locale-card';
 import { MultiSelect } from '@/components/operation/form/multi-select';
 import { suggestTranslationAction } from '../../actions/translate';
@@ -28,24 +29,22 @@ import type { CatalogKind, ProductView } from '../../products-types';
 // Koleksiyon ayrıca paylaşılabilir bir vitrin sayfasıdır (DOMAIN §13): slug + kapak görseli + açıklama
 // OG kartını besler. Üyeler sağ bölmede GÖRSELLİ ve SÜRÜKLE-SIRALANIR liste — sıra vitrin kürasyonudur.
 
-interface CatalogEditTarget {
-  id: string;
-  name: LocalizedText;
-  description: LocalizedText | null;
-  slug: string;
-  isActive: boolean;
-  /** Kapak görselinin imzalı okuma URL'i (yoksa null). */
+// Dialogun öndolduracağı alanlar — ŞEMADAN TÜRETİLİR (elle interface yazılmaz, no-duplication): kimlik/
+// içerik/aktiflik/kapak-künyesi Collection'dan pick'lenir. `imageUrl` (imzalı URL) ve `productIds`
+// (join) şemada değil, yalnızca view'a ait türev alanlardır → ayrıca eklenir.
+type CatalogEditTarget = Pick<Collection, 'id' | 'name' | 'description' | 'slug' | 'isActive' | 'imageFocalX' | 'imageFocalY' | 'imageZoom'> & {
   imageUrl: string | null;
-  /** Mevcut üyelik, vitrin sırasında. */
   productIds: string[];
-}
+};
 
 // Form şeması koleksiyon insert şemasından TÜRETİLİR (tek kaynak): formda olmayanlar çıkarılır,
-// slug/isActive daraltılır, üyelik eklenir. Tip elle yazılmaz — z.infer.
-const FormSchema = CollectionInsertSchema.omit({ imageKey: true, sortOrder: true }).extend({
-  isActive: z.boolean(),
-  productIds: z.array(z.string()),
-});
+// isActive daraltılır, üyelik + kapak odak/zoom eklenir. Tip elle yazılmaz — z.infer.
+const FormSchema = CollectionInsertSchema.omit({ imageKey: true, imageAlt: true, sortOrder: true })
+  .extend({
+    isActive: z.boolean(),
+    productIds: z.array(z.string()),
+  })
+  .merge(ImageCropFieldsSchema); // kapak odak/zoom alanları ortak şemadan (elle yazılmaz)
 type FormValues = z.infer<typeof FormSchema>;
 
 const COPY: Record<CatalogKind, { createTitle: string; editTitle: string; sub: string }> = {
@@ -87,6 +86,7 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
       slug: edit?.slug ?? '',
       isActive: edit?.isActive ?? true,
       productIds: edit?.productIds ?? [],
+      ...(edit ? pickCropFields(edit) : DEFAULT_CROP_FIELDS),
     },
     mode: 'onChange',
   });
@@ -95,16 +95,18 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
   const nameValue = form.watch('name');
   const productIds = form.watch('productIds');
   const setProductIds = (ids: string[]) => form.setValue('productIds', ids, { shouldDirty: true });
+  const [crop, setCrop] = useImageCrop(form);
 
   const productById = new Map((products ?? []).map((p) => [p.id, p]));
   const members = productIds.map((id) => productById.get(id)).filter((p): p is ProductView => Boolean(p));
 
-  const onSubmit = form.handleSubmit(async ({ name, description, slug, isActive, productIds: ids }) => {
+  const onSubmit = form.handleSubmit(async (values) => {
     setError(null);
+    const { name, description, slug, isActive, productIds: ids } = values;
     const payload = {
       name,
       isActive,
-      ...(isCollection ? { description: description ?? null } : {}),
+      ...(isCollection ? { description: description ?? null, ...pickCropFields(values) } : {}),
       ...(showMembers ? { productIds: ids } : {}),
     };
     const { error: actionError } = isEdit
@@ -144,27 +146,17 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
         {/* ── 1. Paylaşım kimliği: kapak görseli + link (ikisi de OG kartını tanımlar) ── */}
         {showMembers ? (
           <div className="flex flex-col gap-4">
-            {/* Oran ≈ OG kartı (1.91): kare kutu 1.73:1 kaynağın ~%42'sini kırpıyordu. */}
-            <FieldShell label="Kapak" labelAside="OG kartı">
-              {isEdit ? (
-                <div className="group relative w-full overflow-hidden rounded-[10px]">
-                  <Thumbnail src={edit.imageUrl} alt="" fluid ratio={1.91} iconSize={26} />
-                  <ImageUploadButton
-                    upload={(fd) => uploadCollectionImageAction(edit.id, fd)}
-                    className="absolute inset-0 flex cursor-pointer items-center justify-center bg-transparent font-ops-display text-[11.5px] font-semibold text-transparent transition-colors duration-150 group-hover:bg-ops-image-scrim group-hover:text-ops-card"
-                  >
-                    {edit.imageUrl ? 'Değiştir' : 'Yükle'}
-                  </ImageUploadButton>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <Thumbnail src={null} alt="" fluid ratio={1.91} iconSize={26} />
-                  <span className="font-ops-body text-[10.5px] leading-[1.5] text-ops-faint">
-                    Kaydedince eklenebilir — depo anahtarı slug&apos;a bağlı.
-                  </span>
-                </div>
-              )}
-            </FieldShell>
+            {/* Kapak = paylaşım (OG) kartı görseli (16:9). Müşteri sayfasında render EDİLMEZ; odak/zoom
+                ile dikey/kare kaynak da yatay banda kırpılır. Düzenleme ayrı diyalogda (ImageCropField). */}
+            <ImageCropField
+              role="collection"
+              src={isEdit ? edit.imageUrl : null}
+              crop={crop}
+              onCropChange={setCrop}
+              upload={isEdit ? (fd) => uploadCollectionImageAction(edit.id, fd) : undefined}
+              uploadDisabledHint="Kaydedince eklenebilir — depo anahtarı slug'a bağlı."
+              caption="paylaşım kartı (OG)"
+            />
 
             {/* Paylaşım linki: oluşturmada seçilebilir, düzenlemede SABİT (paylaşılmış link kırılmasın) */}
             {isEdit ? (

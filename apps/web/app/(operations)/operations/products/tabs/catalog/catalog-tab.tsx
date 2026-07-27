@@ -124,6 +124,9 @@ export function CatalogTab({ kind, rows, products }: CatalogTabProps) {
             // Açıklama/kapak/üyelik yalnız koleksiyon satırında vardır (kategoride bu alanlar yok).
             description: 'description' in editing ? editing.description : null,
             imageUrl: 'imageUrl' in editing ? editing.imageUrl : null,
+            imageFocalX: 'imageFocalX' in editing ? editing.imageFocalX : 50,
+            imageFocalY: 'imageFocalY' in editing ? editing.imageFocalY : 50,
+            imageZoom: 'imageZoom' in editing ? editing.imageZoom : 100,
             productIds: 'productIds' in editing ? editing.productIds : [],
           }}
           onClose={() => setEditing(null)}

@@ -7,6 +7,7 @@ import {
   type Collection,
   type CollectionInsert,
   type CollectionUpdate,
+  type ImageCropFields,
   type LocalizedText,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
@@ -25,8 +26,9 @@ export interface CreateCollectionInput {
   productIds?: string[];
 }
 
-// Düzenlenebilir alanlar — slug YOK (paylaşılmış link kırılmasın; DOMAIN §13).
-interface EditCollectionInput {
+// Düzenlenebilir alanlar — slug YOK (paylaşılmış link kırılmasın; DOMAIN §13). Kapak (OG kartı) odak/
+// zoom künyesi ortak ImageCropFields'ten gelir; dosyanın kendisi ayrı yükleme akışında (setImageKey).
+interface EditCollectionInput extends Partial<ImageCropFields> {
   name?: LocalizedText;
   description?: LocalizedText | null;
   isActive?: boolean;

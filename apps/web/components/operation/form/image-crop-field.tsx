@@ -22,10 +22,12 @@ interface ImageCropFieldProps {
   upload?: (form: FormData) => Promise<ActionResult>;
   /** Yükleme yapılamıyorken (kayıt öncesi) gösterilecek not. */
   uploadDisabledHint?: string;
+  /** Başlık yanındaki bağlam etiketi (varsayılan "müşteride görünüm"; koleksiyonda "paylaşım kartı"). */
+  caption?: string;
   camera?: boolean;
 }
 
-export function ImageCropField({ role, src, crop, onCropChange, upload, uploadDisabledHint, camera }: ImageCropFieldProps) {
+export function ImageCropField({ role, src, crop, onCropChange, upload, uploadDisabledHint, caption = 'müşteride görünüm', camera }: ImageCropFieldProps) {
   const [open, setOpen] = useState(false);
   const spec = IMAGE_ROLES[role];
   // Kayıt yoksa (upload verilmemiş) ve görsel de yoksa düzenleme kilitli — dosya R2 anahtarı için kayıt gerekir.
@@ -35,7 +37,7 @@ export function ImageCropField({ role, src, crop, onCropChange, upload, uploadDi
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline gap-2">
         <span className="font-ops-display text-[10px] font-medium uppercase tracking-[0.08em] text-ops-muted">Fotoğraf</span>
-        {src ? <span className="ml-auto font-ops-body text-[10px] text-ops-faint">müşteride görünüm</span> : null}
+        {src ? <span className="ml-auto font-ops-body text-[10px] text-ops-faint">{caption}</span> : null}
       </div>
 
       {/* Kap: önizleme (ya da boş kare) + HOVER'da beliren düzenle/ekle örtüsü */}
