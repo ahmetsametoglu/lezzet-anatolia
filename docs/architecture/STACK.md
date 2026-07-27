@@ -132,6 +132,11 @@ export type LocalizedText = z.infer<typeof LocalizedText>;
 
 Ölçüt aynı: yeni entity = 1 şema + ~20 satır servis + 1 migration.
 
+**Süzme nerede yapılır (karar 27.07):** ölçüt **listenin doğal tavanı** ve arayüzün tamamına ihtiyacı olup olmadığıdır.
+- **Sunucuda süz + sayfala:** üretimde ~200 satırı geçebilen her liste — ürün, sipariş, müşteri, parti, fatura, para hareketi. Süzgeçler **URL'de** taşınır (paylaşılabilir + yenilemeye dayanıklı + RSC okuyabilir), servise parametre olarak iner ve okuma **keyset (cursor)** paginasyonludur (CLAUDE.md: tüm listeler infinite scroll). Sayaç/özet de sunucuda hesaplanır — client tam listeye sahip olmadığı için türetemez.
+- **Client'ta süz (tamamını çek):** onlarla sınırlı, tavanı belli ve arayüzün **zaten tamamını** istediği kümeler — kategori, koleksiyon, enum listeleri (alerjen/KDV). Bunlar açılır menü ve filtre çipini beslediği için parça parça çekmek anlamsızdır.
+- **Ölçüt sızması:** "şimdilik az kayıt var" gerekçesiyle büyüyecek bir listeyi client'ta süzmek, sonradan **ikinci bir iş** doğurur (ekran + servis + URL birlikte değişir). Yeni bir liste ekranı yazılırken bu karar **baştan** verilir.
+
 **Bu projeye özgü not — jsonb ve eşzamanlılık:**
 - `LocalizedText` jsonb alanları taban sınıfta özel işlem gerektirmez; sıradan kolon gibi geçer (camelCase dönüşümü nesne içine inmez, değer olduğu gibi saklanır — dönüştürücünün jsonb değerini **çevirmemesi** sağlanır).
 - Stok düşürme/ayırma **atomik** olmalı (bkz. `DOMAIN.md §4`): "oku-sonra-yaz" değil, koşullu update veya kilitli RPC. Bu mantık `domain-core` + bir DB fonksiyonu olarak yazılır, serviste değil.

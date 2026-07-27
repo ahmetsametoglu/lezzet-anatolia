@@ -100,12 +100,13 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | order_id | uuid | |
 | variant_id | uuid | sipariş edilen varyant |
 | qty | number | sipariş edilen |
-| fulfilled_qty | number | gerçekten karşılanan (varsayılan = qty; eksikte düşer, 0 olabilir) |
+| fulfilled_qty | number | **fiziksel olarak müşteriye giden** miktar (varsayılan = qty; eksikte düşer, 0 olabilir). Mal geri döndüyse düşer; `goodwill` iadesinde düşmez — mal müşteride kalmıştır |
 | stock_id | uuid \| null | partiye bağlı teklif satırıysa hangi parti (batch-pinned); normal satırda null. Fiilen çıkan parti(ler) `OrderItemBatch`'te |
 | bundle_id | uuid \| null | bu kalem bir paketten geldiyse hangi paket; normal satırda null |
 | unit_price | number | **sabitlenmiş** fiyat (sepete eklenince) |
 | line_discount_amount | number | sepet/kupon indiriminin bu kaleme **oransal payı** (varsayılan 0) — kısmi iade ve kalem KDV'si indirimli birimden hesaplanır (bkz. `DOMAIN.md §5`) |
 | vat_rate | number | o anki oran |
+| return_disposition | enum(`restock`,`discard`,`goodwill`) \| null | kalem iade edildiyse **mala ne oldu** (DOMAIN §8). `goodwill` = mal müşteride kaldı: `fulfilled_qty` ve stok DEĞİŞMEZ, yalnız para iade edilir — jestin maliyeti kârda görünür |
 
 ## OrderItemBatch (kalem–parti eşlemesi)
 

@@ -290,7 +290,10 @@ Kurallar birlikte netleşecek (iş kararı), ama sistem şunları desteklemeli:
 
 - Müşteri "bozuk/eksik geldi" bildirimi
 - **Para iadesi** — online Stripe'tan, nakit kuryeyle. Muhasebe açısından para iadesi daha temiz (gerçek, simetrik hareket, KDV temiz döner). **Mağaza alacağı (store credit) belki gelecekte** — faza sabitlenmedi, muallak; gelirse taşınan borç + avoir/KDV takibi gerektirir.
-- Ürünün stoğa geri girmesi **veya** imha olarak işaretlenmesi
+- **İade edilen mala ne olduğu üç yoldan biridir** (`OrderItem.return_disposition`) — para tarafı üçünde de aynı (iade hareketi), ayrışan stok ve maliyet:
+  - `restock` — mal depoya girdi, tekrar satılabilir (kapıda reddedilip frigo araçtan hiç çıkmamış mal).
+  - `discard` — mal döndü ama satılamaz; imha kaydı (`StockAdjustment`). Teslim edilmiş donuk üründe **varsayılan** budur (soğuk zincir belgelenemez).
+  - `goodwill` — **mal müşteride kaldı**: "paranızı iade ettik, ürün sizde kalsın". Stok ve `fulfilled_qty` **değişmez**; mal tüketilmiştir, maliyeti kayıtlarda kalır ve kâr raporunda **jest gideri** olarak görünür. `fulfilled_qty`'yi düşürmek burada YANLIŞTIR — malın hiç gitmediğini söyler, stok ve COGS bozulur.
 - İade/hasarın kâr ve kasa mutabakatına yansıması
 
 Bu alan Faz 1'de temel haliyle bulunur; detay kuralları parametrik ve genişletilebilir tasarlanır.
