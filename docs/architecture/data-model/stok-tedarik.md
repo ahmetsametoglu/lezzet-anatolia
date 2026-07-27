@@ -13,7 +13,7 @@ Parti, rezervasyon, düzeltme, sıcaklık; tedarikçi ve satın alma zinciri.
 | id | uuid | |
 | variant_id | uuid | stok varyant seviyesinde |
 | physical_qty | number | fiili |
-| dlc | date | partinin son tarihi (tipi `Product.date_type`) |
+| expiry_date | date | partinin son tarihi; **tipi üründedir** (`Product.date_type`: DLC güvenlik / DDM kalite) — bu yüzden kolon adı tipten bağımsız |
 | lot_number | string \| null | tedarikçinin lot numarası — geri çağırma (rappel) eşleşmesi; girişte istenir |
 | purchase_price | number \| null | **birim (paket) başına** alış maliyeti — kâr/marj için; toptan alınıp paketlenirse giriş paket adediyle yapılır (ör. 1kg → 10×100gr), maliyet pakete bölünür |
 | intake_id | uuid \| null | bağlı stok girişi/satın alma (bkz. `StockIntake`) |
@@ -21,7 +21,11 @@ Parti, rezervasyon, düzeltme, sıcaklık; tedarikçi ve satın alma zinciri.
 | location | string \| null | depo konumu |
 
 Ayrılmış miktar **saklanmaz** — aktif `Reservation` satırlarından türetilir. `available = Σ physical − Σ aktif rezervasyon` (bkz. `DOMAIN.md §4`).
-Kalan raf ömrü % = (dlc − bugün) ÷ `Product.shelf_life_days` — türetilir; yaklaşan-son-tarih ve MLOR kararları buna göre.
+Kalan raf ömrü % = (expiry_date − bugün) ÷ `Product.shelf_life_days` — türetilir; yaklaşan-son-tarih ve MLOR kararları buna göre (`domain-core/stock/shelf-life`).
+
+**`available_stock` görünümü (06.2):** kullanılabilir hesabı SQL görünümünde yaşar — `fiili − aktif rezervasyon` (süresi geçmiş rezervasyon sayılmaz, görünüm cron'u beklemez). Görünüm **karar vermez**: `expired_dlc_qty` bir olgudur ("tarihi geçmiş DLC partilerde ne kadar var"), "satma" kararı motorundur.
+
+**`reserve_stock` fonksiyonu (06.3):** ayırma tek transaction'da, varyantın parti satırları kilitliyken yapılır — iki müşteri son birimi aynı anda isterse yalnız biri kazanır. Kısmi ayırma yok: yetmezse satır yazılmaz. Yazma RPC eşiği `STACK.md §13`.
 
 ## Reservation (rezervasyon)
 

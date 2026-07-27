@@ -8,5 +8,6 @@ export * from './order/reference-no';
 export * from './identity/resolve-identity';
 export * from './tax/vat-treatment';
 export * from './stock/reservation';
+export * from './stock/shelf-life';
 export * from './payment/checkout-options';
 export * from './payment/payment-status';

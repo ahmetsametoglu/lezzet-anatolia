@@ -56,6 +56,12 @@ importers:
       '@hono/node-server':
         specifier: ^1.13.7
         version: 1.19.14(hono@4.12.31)
+      '@lezzet/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@lezzet/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       hono:
         specifier: ^4.6.15
         version: 4.12.31

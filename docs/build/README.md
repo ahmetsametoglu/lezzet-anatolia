@@ -30,8 +30,8 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 02 | `02-database.md` | `packages/database`: Taban Servis ve İlk Şema | sürüyor | 4/7 (+3 kısmi) |
 | 03 | `03-domain-core.md` | `packages/domain-core`: İş Kuralları Motoru | sürüyor | 10/11 (+1 kısmi) |
 | 04 | `04-auth-kimlik.md` | Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama | sürüyor | 3/8 (+1 kısmi) |
-| 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 4/12 (+1 kısmi) |
-| 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | bekliyor | 0/11 |
+| 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 5/12 (+1 kısmi) |
+| 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | sürüyor | 4/11 |
 | 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | bekliyor | 0/10 |
 | 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 0/9 (+1 kısmi) |
 | 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 0/16 (+2 kısmi) |

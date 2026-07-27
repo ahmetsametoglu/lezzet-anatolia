@@ -65,7 +65,7 @@ Sistemin bütün ticari kuralları — **saf fonksiyonlar** olarak (veritabanı 
 ## Netleşecekler
 
 - ~~**Motor ↔ servis sınırı**~~ — 27.07'de karara bağlandı: `domain-core` ile `database` birbirini bilmez; satırları servis getirir, kararı motor verir, ikisini uygulama katmanı birleştirir. Uygulama iş kuralını kendi hesaplayamaz — motora sorar (STACK §4, §13).
-- **TS ↔ SQL sınırı (açık):** hangi kurallar saf TS'te, hangileri atomiklik gereği Postgres fonksiyonunda (RPC) yaşar; ör. rezervasyon *kararı* burada, *atomik yazımı* RPC'de. 06/07'ye girmeden netleşir.
+- ~~**TS ↔ SQL sınırı**~~ — 27.07'de karara bağlandı (06.1): RPC yalnız **yarım kalırsa veri bozulan** yazımlara ödenir — eşzamanlılık yarışı ya da bölünemez çok-tablolu yazım. Karar hep TS'te (motorda) kalır; SQL yalnız koşullu yazar. Eşik ve modül 06 RPC listesi `STACK.md §13`'te.
 
 ---
 
