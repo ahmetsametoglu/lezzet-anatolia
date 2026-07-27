@@ -5,6 +5,7 @@ import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { Declaration } from './components/declaration';
 import { Gallery } from './components/gallery';
 import { PurchasePanel } from './components/purchase-panel';
+import { Reviews } from './components/reviews';
 import type { ProductViewProps } from './product-types';
 
 /**
@@ -19,9 +20,7 @@ import type { ProductViewProps } from './product-types';
  * Kapanma davranışı, sayfa uzayınca (yorum bölümü geldiğinde) eklenir — başlıklar zaten görünür
  * olduğu için erişilebilirlik o zaman da bozulmaz.
  */
-export function ProductMobile({ t, locale, product }: ProductViewProps) {
-  const soldOut = product.variants.every((v) => v.soldOut);
-
+export function ProductMobile({ t, locale, product, selected, onSelect }: ProductViewProps) {
   return (
     <div className="flex flex-col">
       <nav className="px-4 pt-4">
@@ -38,12 +37,15 @@ export function ProductMobile({ t, locale, product }: ProductViewProps) {
             <span className="font-sans text-eyebrow-sm text-olive uppercase">{product.category.name}</span>
           )}
           <h1 className="font-serif text-page-title-sm text-ink">{product.name}</h1>
-          <Badge tone={soldOut ? 'closed' : 'positive'}>{soldOut ? t.soldOut : t.inStock}</Badge>
+          {/* Stok rozeti SEÇİLİ boyu anlatır — butonla çelişmemesi için. */}
+          {selected && <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>}
         </div>
 
         {product.description && <p className="font-sans text-body text-body">{product.description}</p>}
 
-        <PurchasePanel t={t} locale={locale} variants={product.variants} compact />
+        {selected && (
+          <PurchasePanel t={t} locale={locale} variants={product.variants} selected={selected} onSelect={onSelect} compact />
+        )}
 
         <div className="flex flex-col gap-1.5 rounded-soft bg-sand-100 px-4 py-3 font-sans text-note text-body">
           {product.shippable ? (
@@ -57,7 +59,9 @@ export function ProductMobile({ t, locale, product }: ProductViewProps) {
           )}
         </div>
 
-        <Declaration t={t} locale={locale} declaration={product.declaration} compact />
+        <Declaration t={t} locale={locale} declaration={product.declaration} netWeightG={selected?.netWeightG ?? null} compact />
+
+        <Reviews t={t} compact />
       </section>
 
       {product.similar.length > 0 && (

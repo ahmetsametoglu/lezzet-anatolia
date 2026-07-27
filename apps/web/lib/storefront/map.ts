@@ -85,6 +85,7 @@ export function toVariant(variant: ProductVariant, locale: Locale, ctx: ProductC
     id: variant.id,
     // Boy etiketi ÇOK DİLLİ ("700 g tepsi" / "plateau 700 g") — burada çözülür, sayfa dil bilmez.
     label: resolveLocalizedText(variant.label, locale),
+    netWeightG: variant.netWeightG,
     priceCents: selling.priceCents,
     wasCents: selling.wasCents,
     comparisonCents: selling.comparisonCents,

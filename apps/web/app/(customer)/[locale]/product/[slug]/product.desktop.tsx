@@ -5,20 +5,18 @@ import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { Declaration } from './components/declaration';
 import { Gallery } from './components/gallery';
 import { PurchasePanel } from './components/purchase-panel';
+import { Reviews } from './components/reviews';
 import type { ProductViewProps } from './product-types';
 
 /**
  * Ürün detay — masaüstü düzeni (tasarım: `Musteri - Urun Detay.dc.html`, "Web").
- * Breadcrumb → iki sütun (galeri | satın alma) → beyan bölümleri → benzer ürünler.
+ * Breadcrumb → iki sütun (galeri | satın alma) → beyan + yorumlar (1.2fr/1fr) → benzer ürünler.
  *
- * Yorum ve puan bloğu tasarımda sağ sütunda duruyor ama HENÜZ YOK (17-geri-bildirim): model
- * kurulmadan sahte yorum basmak, sosyal kanıtı kanıt olmaktan çıkarır. Bölüm geldiğinde beyan
- * ızgarası tasarımdaki 1.2fr/1fr oranına döner; bugün beyan tek sütunda tam genişlik almaz,
- * okunabilir bir ölçüde kalır.
+ * Alt ızgara tasarımdaki oranı korur. Yorum bölümü bugün yalnız boş hâliyle var ama YİNE DE çizilir:
+ * kaldırılırsa beyan sütunu tek başına uzar, sağ taraf boşluk olarak kalır ve sayfa dengesizleşir —
+ * tasarımın iki sütunlu ritmi de bozulur.
  */
-export function ProductDesktop({ t, locale, product }: ProductViewProps) {
-  const soldOut = product.variants.every((v) => v.soldOut);
-
+export function ProductDesktop({ t, locale, product, selected, onSelect }: ProductViewProps) {
   return (
     <div className="flex flex-col">
       <nav className="flex gap-1.5 px-12 pt-5 font-sans text-body-sm text-muted">
@@ -38,16 +36,16 @@ export function ProductDesktop({ t, locale, product }: ProductViewProps) {
               <span className="font-sans text-eyebrow text-olive uppercase">{product.category.name}</span>
             )}
             <h1 className="font-serif text-page-title text-ink">{product.name}</h1>
-            <div className="flex items-center gap-2.5">
-              <Badge tone={soldOut ? 'closed' : 'positive'}>{soldOut ? t.soldOut : t.inStock}</Badge>
-            </div>
+            {/* Stok rozeti SEÇİLİ boyu anlatır: bir boy tükenmişken "Stokta" yazmak, butonu
+                "Tükendi" gösteren aynı ekranda kendi kendini yalanlar. */}
+            {selected && <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>}
           </div>
 
-          {product.description && (
-            <p className="font-sans text-lead text-body">{product.description}</p>
-          )}
+          {product.description && <p className="font-sans text-lead text-body">{product.description}</p>}
 
-          <PurchasePanel t={t} locale={locale} variants={product.variants} />
+          {selected && (
+            <PurchasePanel t={t} locale={locale} variants={product.variants} selected={selected} onSelect={onSelect} />
+          )}
 
           {/* Kargo kısıtı sepete eklemeden ÖNCE görünür (`musteri-urun-detay.md §2`). */}
           <div className="flex flex-wrap gap-5 rounded-soft bg-sand-100 px-4.5 py-3.5 font-sans text-control font-normal text-body">
@@ -64,8 +62,9 @@ export function ProductDesktop({ t, locale, product }: ProductViewProps) {
         </div>
       </section>
 
-      <section className="max-w-[720px] px-12 pb-11">
-        <Declaration t={t} locale={locale} declaration={product.declaration} />
+      <section className="grid grid-cols-[1.2fr_1fr] gap-10 px-12 pb-11">
+        <Declaration t={t} locale={locale} declaration={product.declaration} netWeightG={selected?.netWeightG ?? null} />
+        <Reviews t={t} />
       </section>
 
       {product.similar.length > 0 && (

@@ -2,7 +2,7 @@ import 'server-only';
 import { CategoryService, ProductImageService, ProductService, serviceDb } from '@lezzet/database';
 import { parseEmphasis } from '@lezzet/helper';
 import { hasNutrition, resolveLocalizedText } from '@lezzet/types';
-import type { LocalizedText, ProductVariant } from '@lezzet/types';
+import type { LocalizedText } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Locale } from '@lezzet/i18n';
 import { EMPTY_PRODUCT_CONTEXT, imageOf, toCategory, toProduct, toVariant } from './map';
@@ -53,12 +53,12 @@ function galleryOf(cover: StorefrontImage, extras: StorefrontImage[]): Storefron
 }
 
 /**
- * Beyan bloğu. Net ağırlık İLK varyanttan gelir — besin tablosu "100 g için" sabitidir, net ağırlık
- * yalnız başlıkta bilgi olarak durur; varyant seçimi değişince istemci onu kendi günceller.
+ * Beyan bloğu. Net ağırlık BURADA YOK: paket ağırlığı boya göre değişir, dolayısıyla varyanta aittir
+ * ve seçimle birlikte güncellenir (`StorefrontVariant.netWeightG`). Beyanın kendisi 100 g üzerinden
+ * sabittir — ürüne aittir, boya değil.
  */
 function declarationOf(
   product: { ingredients: LocalizedText | null; storageInstructions: LocalizedText | null; nutrition: StorefrontDeclaration['nutrition']; allergens: StorefrontDeclaration['allergens']; traces: StorefrontDeclaration['traces'] },
-  variants: ProductVariant[],
   locale: Locale,
 ): StorefrontDeclaration {
   return {
@@ -67,7 +67,6 @@ function declarationOf(
     traces: product.traces,
     // Hiçbir kalemi girilmemiş künye boş tablo çizdirmesin — "beyan var" izlenimi yanlış olur.
     nutrition: hasNutrition(product.nutrition) ? product.nutrition : null,
-    netWeightG: variants[0]?.netWeightG ?? null,
     storage: segmentsOf(product.storageInstructions, locale),
   };
 }
@@ -118,7 +117,7 @@ export async function getProductDetail(locale: Locale, slug: string): Promise<St
     gallery: galleryOf(cover, images.map(imageOf)),
     category: category ? toCategory(category, locale) : null,
     variants: variants.map((v) => toVariant(v, locale, ctx)),
-    declaration: declarationOf(product, variants, locale),
+    declaration: declarationOf(product, locale),
     shippable: product.shippable,
     similar,
   };

@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
 import type { Locale } from '@lezzet/i18n';
-import { LOCALES } from '@lezzet/i18n';
 import { brand } from '@lezzet/brand';
 import { Link } from '@/i18n/navigation';
-import { LocaleSwitch } from './locale-switch';
+import { LocaleLinks, LocaleSwitch } from './locale-switch';
 import { SearchField } from './search-field';
 import messages from './site-frame-messages.json';
 
@@ -42,9 +41,6 @@ interface SiteFrameProps {
  * şeridi, footer) tam genişlikte kalır; yalnız İÇERİK bu kabın içine girer.
  */
 const SHELL = 'mx-auto w-full max-w-[1360px]';
-
-/** Footer'ın dil sütunu — geçerli dil ✓ ile işaretli; diğerleri aynı sayfanın o dildeki hâline gider. */
-const LOCALE_LABEL: Record<Locale, string> = { tr: 'Türkçe', fr: 'Français', de: 'Deutsch' };
 
 /**
  * Aktif gezinme öğesi: zeytin metin + 2px alt çizgi (tasarım K12).
@@ -127,15 +123,12 @@ export function SiteFrame({ device, locale, showSearch = false, activeNav, child
           <div className={['flex gap-8 font-sans text-body-sm', isMobile ? 'flex-wrap' : 'gap-12'].join(' ')}>
             <FooterColumn title={t.footer.shopping} items={[t.nav.catalog, t.nav.packages, t.nav.deals]} />
             <FooterColumn title={t.footer.corporate} items={[t.footer.about, t.nav.pro, t.footer.faq]} />
-            {/* Dil sütunu tek gerçek bağlantı grubudur: diğer sütunların rotaları henüz açılmadı. */}
+            {/* Dil sütunu tek gerçek bağlantı grubudur: diğer sütunların rotaları henüz açılmadı.
+                Hedef başlıktakiyle AYNI parçadan gelir (`LocaleLinks`) — burada ayrı bir liste
+                yazılmıştı ve sabit `/`'a gidiyordu, yani dil değiştiren herkes ana sayfaya düşüyordu. */}
             <div className="flex flex-col gap-1.5">
               <span className="font-bold text-cream">{t.footer.language}</span>
-              {LOCALES.map((l) => (
-                <Link key={l} href="/" locale={l} className="cursor-pointer transition-colors hover:text-cream">
-                  {LOCALE_LABEL[l]}
-                  {l === locale ? ' ✓' : ''}
-                </Link>
-              ))}
+              <LocaleLinks locale={locale} className="cursor-pointer transition-colors hover:text-cream" />
             </div>
           </div>
         </div>

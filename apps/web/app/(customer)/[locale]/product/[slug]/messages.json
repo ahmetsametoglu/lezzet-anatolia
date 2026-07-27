@@ -34,6 +34,11 @@
       "proteinG": "Protein",
       "saltG": "Tuz"
     },
+    "reviews": {
+      "title": "Yorumlar",
+      "emptyTitle": "Henüz yorum yok",
+      "emptyBody": "Bu ürünü satın aldıysanız ilk yorumu siz yazabilirsiniz."
+    },
     "similar": "Bunları da sevebilirsiniz",
     "cart": {
       "pending": "Sepet yakında açılıyor"
@@ -81,6 +86,11 @@
       "proteinG": "Protéines",
       "saltG": "Sel"
     },
+    "reviews": {
+      "title": "Avis",
+      "emptyTitle": "Pas encore d’avis",
+      "emptyBody": "Si vous avez acheté ce produit, vous pouvez écrire le premier avis."
+    },
     "similar": "Vous aimerez aussi",
     "cart": {
       "pending": "Le panier arrive bientôt"
@@ -127,6 +137,11 @@
       "sugarsG": "— davon Zucker",
       "proteinG": "Eiweiß",
       "saltG": "Salz"
+    },
+    "reviews": {
+      "title": "Bewertungen",
+      "emptyTitle": "Noch keine Bewertungen",
+      "emptyBody": "Wenn Sie dieses Produkt gekauft haben, können Sie die erste Bewertung schreiben."
     },
     "similar": "Das könnte Ihnen auch gefallen",
     "cart": {

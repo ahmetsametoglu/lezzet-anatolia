@@ -54,11 +54,17 @@ interface DeclarationProps {
   t: Messages;
   locale: Locale;
   declaration: StorefrontDeclaration;
+  /**
+   * SEÇİLİ boyun net ağırlığı — beyanın kendisi 100 g üzerinden sabittir ve ürüne aittir, ama
+   * paketin ağırlığı boya göre değişir. Sabit kalsaydı 1 kg'lık boyu seçen müşteri tabloda hâlâ
+   * "Net ağırlık: 700 g" görürdü.
+   */
+  netWeightG: number | null;
   compact?: boolean;
 }
 
-export function Declaration({ t, locale, declaration, compact = false }: DeclarationProps) {
-  const { ingredients, allergens, traces, nutrition, netWeightG, storage } = declaration;
+export function Declaration({ t, locale, declaration, netWeightG, compact = false }: DeclarationProps) {
+  const { ingredients, allergens, traces, nutrition, storage } = declaration;
   const hasIngredientsBlock = ingredients !== null || allergens.length > 0 || traces.length > 0;
 
   return (

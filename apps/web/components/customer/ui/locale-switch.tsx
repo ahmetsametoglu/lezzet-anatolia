@@ -7,28 +7,70 @@ import { LOCALES } from '@lezzet/i18n';
 import { Link, usePathname } from '@/i18n/navigation';
 
 /**
- * Başlıktaki dil seçici ("TR ▾"). Client bileşen: açılır menü dışarı-tıklama ve Escape dinleyicisi
- * ister (K18 sıralama seçicisiyle aynı gerekçe).
+ * Dil seçimi — başlıktaki açılır menü (K12) ve footer'daki liste (K16) AYNI parçayı kullanır.
  *
- * Seçenekler AYNI SAYFANIN o dildeki hâline gider — `usePathname` locale'siz iç yolu verir, `Link`
- * hedef dile göre yerelleştirir (`/catalog` → `/fr/catalogue`). Ana sayfaya atmaz: dil değiştiren
- * kullanıcı okuduğu sayfada kalmalı.
+ * Her ikisi de AYNI SAYFANIN o dildeki hâline gider: `usePathname` locale'siz iç yolu verir, `Link`
+ * hedef dile göre yerelleştirir (`/catalog` → `/fr/catalogue`). Dil değiştiren kullanıcı okuduğu
+ * sayfada kalmalı — ana sayfaya atmak, okuduğu şeyi bulmak için kullanıcıyı yeniden gezdirir.
  *
  * DİNAMİK rotada (`/product/[slug]`) yol tek başına yetmez, segment değerleri de gerekir; bunlar
  * `useParams`'tan gelir. Slug dil-bağımsız olduğu için değer aynen taşınır — dil değiştiren müşteri
  * aynı ürünün sayfasında kalır.
+ *
+ * Bileşen client olmak ZORUNDA (`usePathname`), bu yüzden sunucu bileşeni olan `SiteFrame` footer'ı
+ * da buradan besleniyor. Footer'da ayrı bir liste yazılmıştı ve hedefi sabit `/` idi — dil
+ * değiştiren herkes ana sayfaya düşüyordu. Kopyalanan ikinci liste, kaymanın kendisiydi.
  */
 const LOCALE_LABEL: Record<Locale, string> = { tr: 'Türkçe', fr: 'Français', de: 'Deutsch' };
+
+/** Etkin sayfanın başka dildeki hâli. Yol + segment değerleri ayrı kaynaklardan gelir. */
+function useSamePageHref() {
+  const pathname = usePathname();
+  const params = useParams();
+  // Yol ve segment değerlerinin BİRBİRİNE ait olduğunu TypeScript doğrulayamaz: `pathname` çalışma
+  // anında belli olan bir rota şablonu, `params` de ondan bağımsız gelen değerler. Etkin rotada
+  // eşleşmeleri garanti olduğu için tip burada çağrı yerine değil, TEK noktada sabitlenir.
+  return { pathname, params } as Parameters<typeof Link>[0]['href'];
+}
+
+interface LocaleLinksProps {
+  locale: Locale;
+  /** Bağlantı sınıfı çağırandan gelir: açık zeminde menü, koyu zeminde footer. */
+  className: string;
+  /** Seçili dilin sınıfı (menüde yeşil metin; footer'da fark yok). */
+  activeClassName?: string;
+  onNavigate?: () => void;
+}
+
+/** Üç dilin bağlantı listesi — sunum çağıranın, hedef burasının işi. */
+export function LocaleLinks({ locale, className, activeClassName = '', onNavigate }: LocaleLinksProps) {
+  const href = useSamePageHref();
+  return (
+    <>
+      {LOCALES.map((l) => (
+        <Link
+          key={l}
+          href={href}
+          locale={l}
+          onClick={onNavigate}
+          className={[className, l === locale ? activeClassName : ''].filter(Boolean).join(' ')}
+        >
+          {LOCALE_LABEL[l]}
+          {l === locale ? ' ✓' : ''}
+        </Link>
+      ))}
+    </>
+  );
+}
 
 interface LocaleSwitchProps {
   locale: Locale;
 }
 
+/** K12 · Başlıktaki dil seçici ("TR ▾"). Açılır menü dışarı-tıklama ve Escape dinleyicisi ister. */
 export function LocaleSwitch({ locale }: LocaleSwitchProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const pathname = usePathname();
-  const params = useParams();
 
   useEffect(() => {
     if (!open) return;
@@ -58,25 +100,12 @@ export function LocaleSwitch({ locale }: LocaleSwitchProps) {
       </button>
       {open && (
         <div className="absolute right-0 z-10 mt-2 flex min-w-36 flex-col overflow-hidden rounded-soft border border-sand-200 bg-card">
-          {LOCALES.map((l) => (
-            <Link
-              key={l}
-              // Yol ve segment değerleri ayrı kaynaklardan gelir; TypeScript ikisinin BİRBİRİNE ait
-              // olduğunu doğrulayamaz (rota şablonu çalışma anında belli). Etkin rotada eşleşmeleri
-              // garanti olduğu için denetim burada bilinçli olarak susturulur.
-              // @ts-expect-error -- pathname ↔ params eşleşmesi çalışma anında garanti
-              href={{ pathname, params }}
-              locale={l}
-              onClick={() => setOpen(false)}
-              className={[
-                'cursor-pointer px-4 py-2.5 font-sans text-body-sm transition-colors hover:bg-hover-bg',
-                l === locale ? 'text-olive' : 'text-ink',
-              ].join(' ')}
-            >
-              {LOCALE_LABEL[l]}
-              {l === locale ? ' ✓' : ''}
-            </Link>
-          ))}
+          <LocaleLinks
+            locale={locale}
+            className="cursor-pointer px-4 py-2.5 font-sans text-body-sm text-ink transition-colors hover:bg-hover-bg"
+            activeClassName="!text-olive"
+            onNavigate={() => setOpen(false)}
+          />
         </div>
       )}
     </div>

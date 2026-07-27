@@ -1,5 +1,5 @@
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
-import type { StorefrontProductDetail } from '@/lib/storefront/storefront-types';
+import type { StorefrontProductDetail, StorefrontVariant } from '@/lib/storefront/storefront-types';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir) — bu yüzden `import type` değil.
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import messages from './messages.json';
@@ -12,4 +12,7 @@ export interface ProductViewProps {
   t: Messages;
   locale: Locale;
   product: StorefrontProductDetail;
+  /** Seçili boy — stok rozeti, fiyat ve besin tablosunun net ağırlığı bundan türer. Varyantsız ürün yok. */
+  selected: StorefrontVariant | null;
+  onSelect: (variantId: string) => void;
 }

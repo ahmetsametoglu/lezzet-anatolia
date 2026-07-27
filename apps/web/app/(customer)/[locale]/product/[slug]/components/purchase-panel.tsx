@@ -10,47 +10,57 @@ import { buttonClass } from '@/components/customer/ui/button';
 import type { Messages } from '../product-types';
 
 /**
- * Satın alma paneli — sayfanın TEK durum taşıyan parçası (varyant seçimi + adet).
+ * Satın alma paneli — boy seçimi + adet + ana aksiyon.
  *
- * Fiyat, kıyas fiyatı ve butondaki toplam AYNI seçili varyanttan türer; üçü ayrı kaynaktan gelseydi
- * seçim değişince biri geride kalır ve müşteri yanlış tutar görürdü.
+ * Seçim SAHİBİ burası değil (`product-client`): boy değişince başlıktaki stok rozeti ve besin
+ * tablosundaki net ağırlık da değişir. Panel yalnız adet tutar.
+ *
+ * Fiyatın nerede gösterildiği varyant SAYISINA bağlıdır ve bu tasarımın kararıdır:
+ *   çok boylu → fiyat her boy kartının içinde (kıyas kartlar arasında yapılır)
+ *   tek boylu → seçilecek bir şey yok, fiyat panelde tek başına durur ("7,50 € / 500 g · 15,00 €/kg")
+ * İkisini birden göstermek fiyatı iki kez yazardı; hiçbirini göstermemek tek boylu ürünü fiyatsız
+ * bırakırdı (ilk kodlamada bu oldu).
  *
  * Sepete ekleme henüz YOK (07-siparis). Buton sahte "eklendi" göstermez — çalışıyor izlenimi vermek,
- * hiç çalışmamaktan kötüdür; aksiyon pasif ve gerekçesi yazılı.
+ * hiç çalışmamaktan kötüdür; aksiyon pasif ve gerekçesi başlıkta yazılı.
  */
 interface PurchasePanelProps {
   t: Messages;
   locale: Locale;
   variants: StorefrontVariant[];
+  selected: StorefrontVariant;
+  onSelect: (variantId: string) => void;
   compact?: boolean;
 }
 
 /** Adet tavanı: teklifte partide kalan miktar, aksi halde makul bir üst sınır (B2B hacmi sığar). */
 const MAX_QTY = 99;
 
-export function PurchasePanel({ t, locale, variants, compact = false }: PurchasePanelProps) {
-  // Varsayılan: EN KÜÇÜK boy seçili (tasarım etkileşim sözleşmesi) — liste zaten sortOrder'da gelir.
-  const [selectedId, setSelectedId] = useState(variants[0]?.id ?? '');
+const capOf = (v: StorefrontVariant) => (v.limitLabel ? Number(v.limitLabel) : MAX_QTY);
+
+export function PurchasePanel({ t, locale, variants, selected, onSelect, compact = false }: PurchasePanelProps) {
   const [qty, setQty] = useState(1);
 
-  const selected = variants.find((v) => v.id === selectedId) ?? variants[0];
-  if (!selected) return null;
-
-  const cap = selected.limitLabel ? Number(selected.limitLabel) : MAX_QTY;
+  const cap = capOf(selected);
   const sellable = selected.priceCents !== null && !selected.soldOut;
   const totalCents = selected.priceCents !== null ? selected.priceCents * qty : null;
+  const multi = variants.length > 1;
 
-  /** Varyant değişince adet tavanı da değişir — eski adet yeni tavanı aşıyorsa aşağı çekilir. */
+  /** Boy değişince adet tavanı da değişir — eski adet yeni tavanı aşıyorsa aşağı çekilir. */
   const selectVariant = (v: StorefrontVariant) => {
-    setSelectedId(v.id);
-    const nextCap = v.limitLabel ? Number(v.limitLabel) : MAX_QTY;
-    setQty((q) => Math.min(q, nextCap));
+    onSelect(v.id);
+    setQty((q) => Math.min(q, capOf(v)));
   };
+
+  /** "500 g · 15,00 €/kg" — boy adı ve kıyas fiyatı; ikisi de yoksa satır hiç çizilmez. */
+  const unitLine = [selected.label, selected.comparisonCents !== null ? `${formatPrice(selected.comparisonCents, locale)}/kg` : null]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <div className="flex flex-col gap-4.5">
-      {/* Tek varyantlı üründe seçim adımı HİÇ gösterilmez (`musteri-urun-detay.md §2`). */}
-      {variants.length > 1 && (
+      {/* Tek boylu üründe seçim adımı HİÇ gösterilmez (`musteri-urun-detay.md §2`) — yerine fiyat. */}
+      {multi ? (
         <div className="flex flex-col gap-2.5">
           <span className="font-sans text-body font-bold text-ink">{t.chooseSize}</span>
           <div className={['flex gap-3', compact ? 'flex-col' : 'flex-wrap'].join(' ')}>
@@ -74,6 +84,11 @@ export function PurchasePanel({ t, locale, variants, compact = false }: Purchase
               </button>
             ))}
           </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-0.5">
+          <Price cents={selected.priceCents} wasCents={selected.wasCents} locale={locale} size="lg" />
+          {unitLine && <span className="font-sans text-micro text-muted">{unitLine}</span>}
         </div>
       )}
 

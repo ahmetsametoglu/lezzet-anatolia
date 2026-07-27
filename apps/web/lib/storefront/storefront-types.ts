@@ -114,8 +114,13 @@ export const CATALOG_SORTS: CatalogSort[] = ['featured', 'priceAsc', 'priceDesc'
  */
 export interface StorefrontVariant {
   id: string;
-  /** Operatörün girdiği etiket ("700 g tepsi") — çevrilmez, ölçü ifadesidir. */
+  /** Boy etiketi ("700 g tepsi"); tek boylu üründe boş olabilir — gösterilecek bir boy adı yoktur. */
   label: string;
+  /**
+   * Net ağırlık (g). Besin tablosunun başlığı SEÇİLİ varyantınkini gösterir ("Net ağırlık: 700 g"):
+   * beyan 100 g üzerinden sabittir ama paketin ağırlığı boya göre değişir, sabit kalırsa yanlış olur.
+   */
+  netWeightG: number | null;
   /** null = bu kanalda fiyatı yok → varyant seçilebilir ama satın alınamaz (DOMAIN §5). */
   priceCents: number | null;
   /** Teklif kazandıysa üstü çizilecek referans; yoksa tanımsız. */
@@ -141,16 +146,16 @@ export interface StorefrontDeclaration {
   traces: ProductAllergen[];
   /** Beyan tablosu; hiçbir kalemi girilmemişse null (boş tablo gösterilmez). */
   nutrition: Nutrition | null;
-  /** Seçili varyantın net ağırlığı — besin tablosunun başlığında "Net ağırlık: 700 g". */
-  netWeightG: number | null;
+  /** Net ağırlık BURADA DEĞİL: varyanta aittir (`StorefrontVariant.netWeightG`), seçime göre değişir. */
   storage: TextSegment[] | null;
 }
 
 /**
  * Ürün detay okumasının sonucu. Sayfanın tüm bölümleri TEK turda gelir — bölüm başına çağrı yok.
  *
- * `reviews` bilerek YOK: yorum ve puan 17-geri-bildirim'e ait, henüz model bile kurulmadı. Sahte
- * yorum basmak yerine bölüm hiç render edilmez — uydurma sosyal kanıt, eksik sosyal kanıttan kötüdür.
+ * `reviews` alanı YOK ama BÖLÜM VAR: yorum ve puan 17-geri-bildirim'e ait, model henüz kurulmadı —
+ * yani bugün her ürünün yorum sayısı GERÇEKTEN sıfırdır. Tasarımın "yorum yok" boş hâli bu durumun
+ * doğru karşılığıdır; uydurma yorum basmakla bölümü hiç çizmemek arasında üçüncü ve doğru yol budur.
  */
 export interface StorefrontProductDetail {
   id: string;
