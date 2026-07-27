@@ -9,6 +9,7 @@ export * from './category.schema';
 export * from './collection.schema';
 export * from './product.schema';
 export * from './product-variant.schema';
+export * from './product-image.schema';
 export * from './price.schema';
 export * from './product-collection.schema';
 export * from './stock.schema';

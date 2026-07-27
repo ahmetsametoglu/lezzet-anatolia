@@ -89,11 +89,19 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
-| product_id | uuid | |
-| image_key | string | depo anahtarı, tam URL değil (kapakla aynı desen) |
-| alt | LocalizedText (jsonb) \| null | erişilebilirlik/SEO; boşsa ürün adı kullanılır |
-| sort_order | int | galeri sırası |
+| product_id | uuid | ürüne CASCADE bağlı |
+| image_key | string | depo anahtarı, tam URL değil (kapakla aynı desen). Kapaktan farklı olarak **zorunlu**: anahtarsız galeri satırı yoktur |
+| image_focal_x | smallint | odak %, 0-100 — her fotoğrafın KENDİ odağı vardır |
+| image_focal_y | smallint | odak %, 0-100 |
+| image_zoom | smallint | zoom %, 100-400 |
+| image_alt | LocalizedText (jsonb) \| null | erişilebilirlik/SEO; boşsa ürün adı kullanılır |
+| image_updated_at | timestamptz \| null | görsel dosyasının sürüm damgası (gerekçe: Category satırı) |
+| sort_order | int | galeri sırası (sürükle-bırak) |
 | created_at | timestamptz | |
+
+**Kapak ↔ galeri takası:** "bunu kapak yap" silme değil yer değiştirmedir — seçilen fotoğraf kapağa geçerken eski kapak onun galerideki sırasına oturur, künye (dosya + odak + zoom + alt + damga) bütün hâlinde taşınır. Odak fotoğrafın özelliğidir, çerçevenin değil. Ürünün kapağı yoksa satır galeriden çıkar (aynı dosya iki yerde görünmez).
+
+**Çerçeve farkı:** kapak dört çerçeveye türer (kart 3:2, sepet 1:1, kategori dairesi, paylaşım kartı); galeri fotoğrafı **tek** çerçevede görünür (detay galerisi, 3:2). Fark veride değil, kırpma editörünün gösterdiği önizlemededir (`gallery` rolü).
 
 ## ProductVariant (ürün varyantı)
 

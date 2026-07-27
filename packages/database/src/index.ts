@@ -12,6 +12,7 @@ export { CategoryService, type CreateCategoryInput } from './services/category.s
 export { CollectionService, type CreateCollectionInput } from './services/collection.service';
 export { ProductService, type CreateProductInput, type CreateVariantInput } from './services/product.service';
 export { ProductVariantService } from './services/product-variant.service';
+export { ProductImageService } from './services/product-image.service';
 export { PriceService } from './services/price.service';
 export { StockService } from './services/stock.service';
 export { ReservationService, type ReserveInput } from './services/reservation.service';

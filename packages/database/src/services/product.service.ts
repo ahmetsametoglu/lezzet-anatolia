@@ -5,6 +5,7 @@ import {
   ProductInsertSchema,
   ProductUpdateSchema,
   ProductWithRelationsSchema,
+  pickImageMeta,
   resolveLocalizedText,
   statusToFlags,
   LOCALIZED_TEXT_KEYS,
@@ -23,6 +24,7 @@ import {
 import { BaseDbService } from '../core/base.service';
 import { uniqueSlugForTable } from '../utils/slug';
 import { ProductVariantService } from './product-variant.service';
+import { ProductImageService } from './product-image.service';
 
 // Ürün listesi süzgeçleri — operasyon ekranının URL parametreleriyle birebir (tek kaynak). Şimdilik
 // iç sözleşme: çağıranlar nesne literaliyle geçiyor (tip çıkarımı yeter). Ekran URL'den süzgeç kurmaya
@@ -213,6 +215,30 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   /** Görsel anahtarını + sürüm damgasını yazar (R2 yüklemesinden sonra). Relative key; prefix R2'de. */
   async setImageKey(id: string, imageKey: string): Promise<Product> {
     return this.writeImageKey(id, imageKey);
+  }
+
+  /**
+   * Galerideki bir fotoğrafı KAPAK yapar. Silme değil TAKAS: eski kapak, seçilen fotoğrafın galerideki
+   * yerine geçer (sırası korunur) — operatör "aslında üçüncüsü daha iyi" dediğinde hiçbir dosya
+   * kaybolmaz, yeniden yükleme gerekmez. Ürünün henüz kapağı yoksa satır galeriden çıkar.
+   *
+   * Künye (dosya + odak + zoom + alt + damga) bir BÜTÜN olarak el değiştirir (`pickImageMeta`):
+   * odak noktası fotoğrafın kendisine aittir, çerçeveye değil — takasta korunmalı.
+   *
+   * İki tabloya yazar ama RPC eşiğini karşılamaz (STACK §13): yarıda kalırsa veri bozulmaz, en kötü
+   * ihtimalle aynı dosya hem kapakta hem galeride görünür — operatör tekrar tıklayınca düzelir.
+   */
+  async makeCover(productId: string, imageId: string): Promise<Product> {
+    const imageSvc = new ProductImageService(this.supabase);
+    const [product, image] = await Promise.all([this.getById(productId), imageSvc.getById(imageId)]);
+    if (!product) throw new Error('Ürün bulunamadı.');
+    if (!image || image.productId !== productId) throw new Error('Fotoğraf bu ürüne ait değil.');
+
+    const oldCover = pickImageMeta(product);
+    if (oldCover.imageKey) await imageSvc.update({ id: imageId, ...oldCover, imageKey: oldCover.imageKey });
+    else await imageSvc.delete(imageId);
+
+    return this.update({ id: productId, ...pickImageMeta(image) });
   }
 
   /**

@@ -54,8 +54,16 @@ const OBJECT_FRAMES: ImageFrame[] = [
 
 const BAND_FRAMES: ImageFrame[] = [{ ratio: RATIO_BAND, label: '16:9', where: 'vitrin bandı · paylaşım kartı' }];
 
+/**
+ * Galeri fotoğrafı TEK çerçevede görünür: ürün detay galerisi, 3:2. Kapaktan farkı burada — kapak
+ * dört ayrı çerçeveye (kart, sepet karesi, kategori dairesi, paylaşım kartı) türediği için odak
+ * ayarı orada kritiktir; galeri fotoğrafında soru yalnız "bu karede neresi ortada kalsın".
+ * Editör bu yüzden galeri için üç türev önizleme göstermez.
+ */
+const GALLERY_FRAMES: ImageFrame[] = [{ ratio: RATIO_SOURCE, label: '3:2', where: 'ürün detay galerisi' }];
+
 /** Görselin ait olduğu nesne — kaynak oranını ve türev çerçeveleri belirler (envanter O15 tablosu). */
-export const ImageRoleEnum = z.enum(['product', 'category', 'package', 'collection', 'banner']);
+export const ImageRoleEnum = z.enum(['product', 'gallery', 'category', 'package', 'collection', 'banner']);
 export type ImageRole = z.infer<typeof ImageRoleEnum>;
 
 interface ImageRoleSpec {
@@ -72,14 +80,20 @@ interface ImageRoleSpec {
 
 const OBJECT_SPEC: ImageRoleSpec = { ratio: RATIO_SOURCE, label: '3:2', minWidth: 2000, minHeight: 1333, frames: OBJECT_FRAMES };
 const BAND_SPEC: ImageRoleSpec = { ratio: RATIO_BAND, label: '16:9', minWidth: 2400, minHeight: 1350, frames: BAND_FRAMES };
+// Kaynak beklentisi kapakla aynı, yalnız türev çerçevesi tek → OBJECT_SPEC'ten türer, kopyalanmaz.
+const GALLERY_SPEC: ImageRoleSpec = { ...OBJECT_SPEC, frames: GALLERY_FRAMES };
 
 export const IMAGE_ROLES: Record<ImageRole, ImageRoleSpec> = {
   product: OBJECT_SPEC,
+  gallery: GALLERY_SPEC,
   category: OBJECT_SPEC,
   package: OBJECT_SPEC,
   collection: BAND_SPEC,
   banner: BAND_SPEC,
 };
+
+/** Kapak + galeride tutulabilecek EN ÇOK fotoğraf sayısı (parametrik — tek yerden değişir). */
+export const PRODUCT_GALLERY_MAX = 5;
 
 // ── Yükleme (yalnız kullanılamaz dosyayı ele: biçim). Oran/yön KIRPMAYLA çözülür ────────────────
 /** Kabul edilen biçimler — animasyon/vektör dışı yaygın raster. Şeffaflık kırpma sonrası önemsiz. */
@@ -197,6 +211,22 @@ export function pickCropFieldsPartial(e: Partial<ImageCropFields>): Partial<Imag
     if (e[k] !== undefined) out[k] = e[k];
   }
   return out;
+}
+
+/**
+ * TÜM görsel künyesini (dosya + kırpma + alt + damga) tek parça taşır. Kapak ile galeri fotoğrafının
+ * yerini değiştirirken (`makeCover`) künye bir bütün olarak el değiştirmeli — alan alan kopyalamak
+ * hem tekrar hem de "birini unutma" hatasıdır.
+ */
+export function pickImageMeta(e: ImageMeta): ImageMeta {
+  return {
+    imageKey: e.imageKey,
+    imageFocalX: e.imageFocalX,
+    imageFocalY: e.imageFocalY,
+    imageZoom: e.imageZoom,
+    imageAlt: e.imageAlt,
+    imageUpdatedAt: e.imageUpdatedAt,
+  };
 }
 
 /** Kırpma alanlarını (flat) bileşenin beklediği {x,y,zoom} biçimine indirger. */
