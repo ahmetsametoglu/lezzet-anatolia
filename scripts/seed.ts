@@ -6,7 +6,11 @@
  *
  * TABLO KAPSAMI — hangi tabloya veri girer, girmeyenin sebebi:
  *   ✓ category            4 kategori — 3'ü görselli (anasayfa şeridi), 1'i görselsiz (boş durum)
- *   ✓ product             5 ürün — yasal beyan/KDV/raf ömrü/marj alanları dolu; farklı durumlar örneklenir
+ *   ✓ product             69 ürün — 5'i elle (yasal beyan/KDV/raf ömrü/marj dolu, farklı durumlar
+ *                         örneklenir), 64'ü taban×niteleme çarpımından türetilir (16×4): sayfalama ve
+ *                         sonsuz kaydırma ancak gerçekçi hacimde denenebilir — 30'luk sayfada 3 sayfa.
+ *                         Görseller 5 PAYLAŞILAN anahtara işaret eder (64 yükleme yerine 5); bir kısmı
+ *                         bilinçli görselsiz. Süzgeç dağılımı: 21 beyan eksik · 8 pasif · 5 aday.
  *   ✓ product_variant     ürün başına 1-2 varyant (varyantsız üründe servis varsayılan varyant açar)
  *   ✓ collection          4 koleksiyon — açıklama + kapak görseli (paylaşım/OG), aktif+pasif, dolu+boş
  *   ✓ product_collections üyelik + `position` (vitrin kürasyon sırası)
@@ -159,6 +163,85 @@ const PRODUCTS: SeedProduct[] = [
   },
 ];
 
+// ── Toplu ürün üretimi ───────────────────────────────────────────────────────────────────────────
+// Elle yazılan 6 ürün belirli DURUMLARI örnekler (eksik dil, alerjensiz, pasif, aday, kargolanamaz).
+// Ama sayfalama/sonsuz kaydırma ve süzgeçler ancak GERÇEKÇİ HACİMDE denenebilir: ~30'luk sayfa boyutu
+// birkaç sayfa doldurmalı. Bu yüzden aşağıdaki taban adlar × nitelemeler çarpımından ürün türetilir —
+// adlar üç dilde kurulur (elle 60×3 metin yazmadan), durumlar indise göre serpiştirilir.
+
+const BULK_BASES: Array<{ cat: string; tr: string; fr: string; de: string }> = [
+  { cat: 'baklava', tr: 'Baklava', fr: 'Baklava', de: 'Baklava' },
+  { cat: 'baklava', tr: 'Kuru Baklava', fr: 'Baklava sec', de: 'Trockenes Baklava' },
+  { cat: 'baklava', tr: 'Şöbiyet', fr: 'Şöbiyet', de: 'Schöbiyet' },
+  { cat: 'baklava', tr: 'Bülbül Yuvası', fr: 'Nid de rossignol', de: 'Nachtigallnest' },
+  { cat: 'baklava', tr: 'Havuç Dilimi', fr: 'Tranche carotte', de: 'Karottenschnitte' },
+  { cat: 'serbetli', tr: 'Kadayıf', fr: 'Kadaïf', de: 'Kadayif' },
+  { cat: 'serbetli', tr: 'Künefe', fr: 'Künefe', de: 'Künefe' },
+  { cat: 'serbetli', tr: 'Şekerpare', fr: 'Şekerpare', de: 'Şekerpare' },
+  { cat: 'serbetli', tr: 'Revani', fr: 'Revani', de: 'Revani' },
+  { cat: 'serbetli', tr: 'Tulumba', fr: 'Tulumba', de: 'Tulumba' },
+  { cat: 'borek', tr: 'Su Böreği', fr: 'Börek à l’eau', de: 'Wasser-Börek' },
+  { cat: 'borek', tr: 'Sigara Böreği', fr: 'Börek cigare', de: 'Zigarren-Börek' },
+  { cat: 'borek', tr: 'Kol Böreği', fr: 'Börek roulé', de: 'Rollen-Börek' },
+  { cat: 'borek', tr: 'Talaş Böreği', fr: 'Börek feuilleté', de: 'Blätter-Börek' },
+  { cat: 'malzeme', tr: 'Antep Fıstığı', fr: 'Pistache d’Antep', de: 'Antep-Pistazie' },
+  { cat: 'malzeme', tr: 'Tahin', fr: 'Tahini', de: 'Tahin' },
+];
+
+const BULK_QUALIFIERS: Array<{ tr: string; fr: string; de: string }> = [
+  { tr: 'fıstıklı', fr: 'aux pistaches', de: 'mit Pistazien' },
+  { tr: 'cevizli', fr: 'aux noix', de: 'mit Walnüssen' },
+  { tr: 'sade', fr: 'nature', de: 'natur' },
+  { tr: 'özel tepsi', fr: 'plateau spécial', de: 'Spezialblech' },
+];
+
+/** Görselleri PAYLAŞILAN anahtarlar: 5 dosya bir kez yüklenir, tüm toplu ürünler bunlara işaret eder. */
+const SHARED_IMAGE_FILES = ['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg', '5.jpeg'];
+
+/**
+ * Toplu ürünleri oluşturur. Durum çeşitliliği İNDİSE göre serpiştirilir ki her süzgeç gerçekten
+ * sonuç döndürsün: ~her 9'uncu pasif, ~her 11'inci aday, ~her 7'nci alerjensiz (beyan eksik),
+ * ~her 5'incinin yalnız TR adı var (dil eksik), ~her 6'ncısı görselsiz.
+ * `sortOrder` açıkça verilir → servis sona-ekleme için sayım sorgusu atmaz.
+ */
+async function seedBulkProducts(products: ProductService, catId: Map<string, string>, startOrder: number): Promise<number> {
+  // Paylaşılan görseller: 5 yükleme (R2 ayarsızsa hepsi null → ürünler görselsiz kurulur).
+  const sharedKeys: Array<string | null> = [];
+  for (const [i, file] of SHARED_IMAGE_FILES.entries()) {
+    sharedKeys.push(await uploadImage(file, r2Keys.productImage(`katalog-ornek-${i + 1}`, file)));
+  }
+
+  let made = 0;
+  for (const [b, base] of BULK_BASES.entries()) {
+    for (const [q, qual] of BULK_QUALIFIERS.entries()) {
+      const i = b * BULK_QUALIFIERS.length + q;
+      const trOnly = i % 5 === 0; // dil eksik → "beyan eksik" süzgecine düşer
+      const name: LocalizedText = trOnly
+        ? { tr: `${base.tr} ${qual.tr}` }
+        : { tr: `${base.tr} ${qual.tr}`, fr: `${base.fr} ${qual.fr}`, de: `${base.de} ${qual.de}` };
+
+      await products.create({
+        name,
+        description: trOnly ? null : { tr: `${base.tr} — ${qual.tr}.`, fr: `${base.fr} — ${qual.fr}.`, de: `${base.de} — ${qual.de}.` },
+        categoryId: catId.get(base.cat) ?? null,
+        imageKey: i % 6 === 0 ? null : (sharedKeys[i % sharedKeys.length] ?? null),
+        allergens: i % 7 === 0 ? [] : i % 2 === 0 ? ['gluten', 'sert_kabuklu'] : ['gluten', 'sut'],
+        vatRate: base.cat === 'malzeme' ? 20 : 5.5,
+        shelfLifeDays: base.cat === 'borek' ? 120 : 180,
+        shippable: i % 13 !== 0, // bazıları yalnız rota/kapı teslim (soğuk zincir)
+        targetMarginPercent: 35 + (i % 5) * 3,
+        autoPrice: i % 4 === 0,
+        isActive: i % 9 !== 0,
+        isCandidate: i % 11 === 0 && i % 9 !== 0, // aday ve pasif aynı kayıtta çakışmasın
+        sortOrder: startOrder + i,
+        variants: i % 3 === 0 ? [{ label: '700 g tepsi', netWeightG: 700 }, { label: '1 kg tepsi', netWeightG: 1000 }] : [{ label: '500 g', netWeightG: 500 }],
+      });
+      made += 1;
+    }
+  }
+  return made;
+}
+
 async function seedCatalog(db: Db): Promise<void> {
   const products = new ProductService(db);
   if ((await products.listAll()).length > 0) {
@@ -178,7 +261,7 @@ async function seedCatalog(db: Db): Promise<void> {
     }
   }
 
-  for (const p of PRODUCTS) {
+  for (const [i, p] of PRODUCTS.entries()) {
     const imageKey = await uploadImage(p.image, r2Keys.productImage(p.slug, p.image));
     const { product, variants } = await products.create({
       name: p.name,
@@ -193,11 +276,16 @@ async function seedCatalog(db: Db): Promise<void> {
       autoPrice: p.autoPrice,
       isActive: p.isActive ?? true,
       isCandidate: p.isCandidate ?? false,
+      sortOrder: i, // elle yazılanlar listenin BAŞINDA dursun (durum örnekleri kolay bulunsun)
       variants: p.variants,
     });
     console.log(`  ✓ ${resolveLocalizedText(product.name)} · ${variants.length} varyant · görsel: ${imageKey ?? 'yok (R2 ayarsız)'}`);
   }
-  console.log(`✓ katalog: ${CATEGORIES.length} kategori, ${PRODUCTS.length} ürün`);
+
+  // Hacim: sayfalama ve sonsuz kaydırma ancak birkaç sayfa dolunca denenebilir.
+  const bulk = await seedBulkProducts(products, catId, PRODUCTS.length);
+  console.log(`  ✓ ${bulk} toplu ürün (sayfalama/süzgeç denemesi için)`);
+  console.log(`✓ katalog: ${CATEGORIES.length} kategori, ${PRODUCTS.length + bulk} ürün`);
 }
 
 // ── Koleksiyon + üyelik (05) ─────────────────────────────────────────────────────────────────────

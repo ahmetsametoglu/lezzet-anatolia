@@ -7,6 +7,7 @@ import { CameraIcon } from '@/components/operation/ui/icons';
 import { Input } from '@/components/operation/form/input';
 import { SearchInput } from '@/components/operation/ui/search-input';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
+import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Toggle, ToggleField } from '@/components/operation/form/toggle';
 import { resolveLocalizedText } from '@lezzet/types';
 import { ImageUploadButton } from '@/components/operation/ui/image-upload-button';
@@ -123,16 +124,20 @@ function QuickEditSheet({
 // ── Mobil liste ──────────────────────────────────────────────────────────────
 export function ProductsMobile({
   data,
-  visibleProducts,
+  products,
   search,
   onSearch,
   catFilter,
   onCatFilter,
   openCreate,
   onToggleActive,
+  hasMore,
+  loadingMore,
+  onLoadMore,
 }: ProductsViewProps) {
   const [sheetId, setSheetId] = useState<string | null>(null);
-  const sheetProduct = data.products.find((p) => p.id === sheetId) ?? null;
+  // Sheet kaydı GÖRÜNEN listeden çözülür (eklenen sayfalar dahil) — ilk sayfayla sınırlı kalmasın.
+  const sheetProduct = products.find((p) => p.id === sheetId) ?? null;
 
   return (
     <div className="flex h-full flex-col bg-ops-card">
@@ -165,7 +170,7 @@ export function ProductsMobile({
 
       {/* Liste */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4">
-        {visibleProducts.map((p) => (
+        {products.map((p) => (
           <div
             key={p.id}
             onClick={() => setSheetId(p.id)}
@@ -184,9 +189,11 @@ export function ProductsMobile({
             </span>
           </div>
         ))}
-        {visibleProducts.length === 0 ? (
+        {products.length === 0 ? (
           <div className="p-10 text-center font-ops-body text-[13px] text-ops-faint">Bu süzgeçte ürün yok.</div>
         ) : null}
+        {/* Sona-yaklaşınca yükleme — masaüstü tablosuyla AYNI bileşen (tek kaynak). */}
+        <LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />
       </div>
 
       {sheetProduct ? (

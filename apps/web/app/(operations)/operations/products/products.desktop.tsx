@@ -7,7 +7,8 @@ import { Tabs } from '@/components/operation/ui/tabs';
 import { CatalogTab } from './tabs/catalog/catalog-tab';
 import { PackagesTab } from './tabs/package/package-tab';
 import { ProductsTab } from './tabs/product/product-tab.desktop';
-import { filledContentLangs, productStatus, type ProductTab, type ProductsViewProps } from './products-types';
+import type { ProductTab } from './products-paths';
+import type { ProductsViewProps } from './products-types';
 
 // Ürünler — web ("Veri Masası") KABUĞU: ortak üst bar (PageHeader) + O2 sekmeler; sekme içerikleri
 // kendi klasörlerinde (tabs/product · tabs/catalog · tabs/package) — bu dosya yalnız yönlendirir.
@@ -22,14 +23,15 @@ const TABS: Array<{ key: ProductTab; label: string }> = [
 
 export function ProductsDesktop(props: ProductsViewProps) {
   const { data, tab, onTab, search, onSearch, openCreate } = props;
-  const candidateCount = data.products.filter((p) => productStatus(p) === 'candidate').length;
-  const missingCount = data.products.filter((p) => filledContentLangs(p.name).length < 3 || p.allergens.length === 0).length;
+  // Sayaçlar SUNUCUDAN gelir: liste sayfalı olduğu için client görünen satırlardan türetemez
+  // (türetse "12 ürün" yazıp 30 satır gösterirdi). Süzgeç uygulanmışsa sayaçlar da süzülmüştür.
+  const { total, candidate, incomplete } = data.counts;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader
         title="Ürünler"
-        subtitle={`${data.products.length} ürün · ${candidateCount} aday · ${missingCount} beyan eksik`}
+        subtitle={`${total} ürün · ${candidate} aday · ${incomplete} beyan eksik`}
       >
         <SearchInput value={search} onChange={onSearch} placeholder="Ürün ara…" className="w-56" />
         <button

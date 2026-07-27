@@ -1,99 +1,88 @@
-import {
-  CategoryService,
-  CollectionService,
-  ProductService,
-  ProductVariantService,
-  serviceDb,
-} from '@lezzet/database';
-import { resolveLocalizedText } from '@lezzet/types';
+import { CategoryService, CollectionService, ProductService, serviceDb } from '@lezzet/database';
+import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { getR2 } from '@lezzet/storage';
 import { detectDevice } from '@/lib/device';
 import { ProductsClient } from './products-client';
-import { parseProductTab, type CategoryView, type CollectionView, type ProductView } from './products-types';
+import { toProductViews } from './products-read';
+import { parseProductsUrl, toProductFilters } from './products-url';
+import type { CategoryView, CollectionView } from './products-types';
 
-// Admin katalog yönetimi — Ürünler. ProductService/CategoryService/CollectionService'in ilk uçtan uca
-// tüketicisi: veri burada (RSC) okunur, DB Product'ı TÜRETEN view-model'e (& ile) indirilir; yalnız
-// türetilmiş/join alanlar eklenir (resolved kategori adı, signed görsel, varyantlar, koleksiyon adları).
-// Durum/dolu-dil gibi saf türevler client'ta (productStatus/filledContentLangs) hesaplanır.
+// Admin katalog yönetimi — Ürünler. Okuma burada (RSC) yapılır, DB satırları serileştirilebilir
+// view-model'e (& ile TÜRETİLEREK) indirilir; yalnız türetilmiş/join alanlar eklenir.
+//
+// SÜZME VE SAYFALAMA SUNUCUDA (STACK §6): süzgeçler URL'den okunur ve servise parametre olarak iner;
+// client tam listeyi çekip filtrelemez. Ürünler keyset sayfalı gelir (ilk sayfa + imleç), devamını
+// client action ile ekler. Kategori ve koleksiyon TAM gelir — tavanı onlarla sınırlı ve açılır
+// menüleri besliyor.
+//
+// N+1 YOK: varyantlar ve koleksiyon üyelikleri gömülü `select` ile aynı turda gelir (ürün başına ayrı
+// sorgu değil). Sayfa açılışı SABİT sayıda sorgu atar; ürün sayısıyla artmaz.
 
-// Aktif sekme URL'de taşınır (`?tab=categories`) → yenileme/paylaşımda doğru sekme açılır. Sunucu
-// ham değeri doğrular (parseProductTab), client ilk durumu buradan alır.
 interface ProductsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
-  const initialTab = parseProductTab((await searchParams).tab);
+  const urlState = parseProductsUrl(await searchParams);
+  const filters = toProductFilters(urlState);
+
   const db = serviceDb();
   const productSvc = new ProductService(db);
   const categorySvc = new CategoryService(db);
   const collectionSvc = new CollectionService(db);
-  const variantSvc = new ProductVariantService(db);
 
-  const [products, categories, collections] = await Promise.all([
-    productSvc.listAll(),
+  // Hepsi paralel ve hiçbiri satır sayısıyla ÇOĞALMIYOR (sabit sayıda sorgu).
+  const [productPage, counts, categoryCounts, categories, collectionRows] = await Promise.all([
+    productSvc.listWithRelations({ filters, limit: DEFAULT_PAGE_SIZE }),
+    productSvc.counts(filters),
+    productSvc.countsByCategory(),
     categorySvc.list(),
-    collectionSvc.list(),
+    collectionSvc.listWithProductIds(),
   ]);
 
-  // Varyantlar (ürün başına), koleksiyon üyelikleri ve görsel signed URL'leri paralel çekilir.
-  // Görseller R2 private bucket'ta → okuma için imzalı URL. R2 ayarsızsa (getR2 null) placeholder.
+  // Görseller R2 private bucket'ta → okuma için imzalı URL (imzalama yerel; ağ turu değil).
+  // Not: (05.11) public bucket'a geçince bu katman saf string birleştirmeye iner.
   const r2 = getR2();
   const signed = (key: string | null): Promise<string | null> => (r2 && key ? r2.getSignedReadUrl(key) : Promise.resolve(null));
-  const [variantLists, collectionMembers, imageUrls, collectionImageUrls, categoryImageUrls] = await Promise.all([
-    Promise.all(products.map((p) => variantSvc.listByProduct(p.id))),
-    Promise.all(collections.map((c) => collectionSvc.productIds(c.id))),
-    Promise.all(products.map((p) => signed(p.imageKey))),
-    Promise.all(collections.map((c) => signed(c.imageKey))),
+  const [categoryImageUrls, collectionImageUrls] = await Promise.all([
     Promise.all(categories.map((c) => signed(c.imageKey))),
+    Promise.all(collectionRows.map((c) => signed(c.imageKey))),
   ]);
 
-  const variantsByProduct = new Map(products.map((p, i) => [p.id, variantLists[i] ?? []]));
-  const categoryName = new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)]));
+  // Ürün indirgemesi action ile PAYLAŞILIR (products-read) — ilk sayfa ve sonraki sayfalar aynı şekli
+  // üretsin diye. Koleksiyon ADLARI üyelik id'lerinden çözülür; id'ler ürünle gömülü geldi (join yok).
+  const names = {
+    category: new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)])),
+    collection: new Map(collectionRows.map((c) => [c.id, resolveLocalizedText(c.name)])),
+  };
+  const productViews = await toProductViews(productPage.rows, names);
 
-  // productId → girdiği koleksiyon adları
-  const productCollections = new Map<string, string[]>();
-  collections.forEach((c, i) => {
-    const name = resolveLocalizedText(c.name);
-    for (const pid of collectionMembers[i] ?? []) {
-      const list = productCollections.get(pid) ?? [];
-      list.push(name);
-      productCollections.set(pid, list);
-    }
-  });
-
-  // DB Product'ı TÜRET (& ile) — alanlar yeniden yazılmaz; yalnız türetilmiş/join alanlar eklenir.
-  const productViews: ProductView[] = products.map((p, i) => ({
-    ...p,
-    imageUrl: imageUrls[i] ?? null,
-    categoryName: p.categoryId ? (categoryName.get(p.categoryId) ?? '—') : '—',
-    variants: variantsByProduct.get(p.id) ?? [],
-    collectionNames: productCollections.get(p.id) ?? [],
-  }));
-
-  const countByCategory = new Map<string, number>();
-  for (const p of products) {
-    if (p.categoryId) countByCategory.set(p.categoryId, (countByCategory.get(p.categoryId) ?? 0) + 1);
-  }
-
+  // Kategori başına ürün sayısı: liste sayfalı olduğu için client'ta türetilemez → sunucudan gelir.
   const categoryViews: CategoryView[] = categories.map((c, i) => ({
     ...c,
-    count: countByCategory.get(c.id) ?? 0,
+    count: categoryCounts.get(c.id) ?? 0,
     imageUrl: categoryImageUrls[i] ?? null,
   }));
-  // Üyelik id'leri view-model'de taşınır (üyelik dialogu ön-doldurur); count ondan türer.
-  const collectionViews: CollectionView[] = collections.map((c, i) => {
-    const productIds = collectionMembers[i] ?? [];
-    return { ...c, productIds, count: productIds.length, imageUrl: collectionImageUrls[i] ?? null };
-  });
+
+  const collectionViews: CollectionView[] = collectionRows.map((c, i) => ({
+    ...c,
+    count: c.productIds.length,
+    imageUrl: collectionImageUrls[i] ?? null,
+  }));
 
   const device = await detectDevice();
 
   return (
     <ProductsClient
-      data={{ products: productViews, categories: categoryViews, collections: collectionViews }}
+      data={{
+        products: productViews,
+        nextCursor: productPage.nextCursor,
+        counts,
+        categories: categoryViews,
+        collections: collectionViews,
+      }}
       device={device}
-      initialTab={initialTab}
+      urlState={urlState}
     />
   );
 }

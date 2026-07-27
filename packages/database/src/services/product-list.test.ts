@@ -176,6 +176,15 @@ describe('CollectionService.listWithProductIds — N+1 kırma', () => {
   });
 });
 
+describe('ProductService.countsByCategory', () => {
+  it('kategori başına sayı TEK gruplu sorguda gelir', async () => {
+    // PostgREST toplama (`count()` seçimi → örtük group by) sürüme bağlıdır: bu test onu doğrular.
+    const byCategory = await products.countsByCategory();
+    expect(byCategory.get(categoryId)).toBe(6);
+    expect(byCategory.get(otherCategoryId)).toBe(1);
+  });
+});
+
 describe('ProductService.counts', () => {
   it('sayaçlar listeyle AYNI süzgeci kullanır', async () => {
     const c = await products.counts({ query: STAMP });

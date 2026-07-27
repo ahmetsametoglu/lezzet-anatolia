@@ -2,8 +2,9 @@
 // client yalnız bunları görür. TİPLER ŞEMADAN TÜRETİLİR: ProductView = Product & {türetilen}; alanlar
 // yeniden yazılmaz (no-duplication, schemas-single-source). Durum/dolu-dil gibi saf türevler client'ta
 // yardımcıyla hesaplanır (taşınmaz). Dil yapısı @lezzet/i18n'de, alerjen packages/types'ta.
-import type { Category, Collection, LocalizedText, Product, ProductStatus, ProductVariant } from '@lezzet/types';
+import type { Category, Collection, KeysetCursor, LocalizedText, Product, ProductStatus, ProductVariant } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
+import type { ProductTab } from './products-paths';
 
 // Durum tipi ve türetimi `@lezzet/types`'ta (servis de aynı türetimi süzgeç olarak sorguya çeviriyor)
 // — burada yalnız yeniden dışa verilir ki sayfa dosyaları tek yerden (products-types) alsın.
@@ -37,20 +38,15 @@ export function filledContentLangs(name: LocalizedText): Locale[] {
 
 /** RSC'nin client'a geçirdiği tüm veri. */
 export interface ProductsData {
+  /** Ürünlerin İLK SAYFASI — süzgeçler sunucuda uygulanmıştır (STACK §6). Devamı action ile eklenir. */
   products: ProductView[];
+  /** Sonraki sayfanın imleci; null ise liste bitti. */
+  nextCursor: KeysetCursor | null;
+  /** Başlık sayaçları — liste sayfalandığı için client türetemez, sunucudan gelir. */
+  counts: { total: number; candidate: number; incomplete: number };
+  /** Kategori ve koleksiyon TAM gelir: tavanı onlarla sınırlı, açılır menüyü besliyor (STACK §6). */
   categories: CategoryView[];
   collections: CollectionView[];
-}
-
-// Sekme kimlikleri TEK KAYNAK: tip bu listeden TÜRETİLİR (elle union yazılmaz) ve aynı liste URL
-// parametresini doğrulamak için çalışma anında da kullanılır (`?tab=` → yenilemede doğru sekme).
-export const PRODUCT_TABS = ['products', 'categories', 'collections', 'packages'] as const;
-export type ProductTab = (typeof PRODUCT_TABS)[number];
-
-/** URL'den gelen ham değeri güvenli sekmeye çevirir (tanınmayan/boş → 'products'). */
-export function parseProductTab(raw: string | string[] | undefined): ProductTab {
-  const v = Array.isArray(raw) ? raw[0] : raw;
-  return PRODUCT_TABS.find((t) => t === v) ?? 'products';
 }
 
 /**
@@ -62,11 +58,17 @@ export type CatalogKind = 'category' | 'collection';
 /** Durum süzgeci: bir durum ya da 'all' (tümü). */
 export type StatusFilter = ProductStatus | 'all';
 
-/** products-client'ın tuttuğu durum + eylemler; desktop/mobile görünümleri bunu tüketir. */
+/**
+ * products-client'ın tuttuğu durum + eylemler; desktop/mobile görünümleri bunu tüketir.
+ *
+ * Süzgeçler artık SUNUCUDA uygulanıyor (STACK §6): `visibleProducts` diye ayrı bir client-süzülmüş
+ * liste YOK — `products` zaten süzülmüş gelir, kullanıcı süzgeci değiştirince URL yazılır ve RSC
+ * yeniden okur. Liste sayfa sayfa büyür (`onLoadMore`).
+ */
 export interface ProductsViewProps {
   data: ProductsData;
-  /** Süzgeçlerden (arama + kategori + durum + beyan-eksik) geçmiş ürünler — listelerde bu gösterilir. */
-  visibleProducts: ProductView[];
+  /** Görünen ürünler: ilk sayfa + eklenmiş sayfalar (hepsi sunucu süzgecinden geçmiş). */
+  products: ProductView[];
   tab: ProductTab;
   onTab: (t: ProductTab) => void;
   search: string;
@@ -78,6 +80,10 @@ export interface ProductsViewProps {
   onStatusFilter: (s: StatusFilter) => void;
   onlyIncomplete: boolean;
   onToggleIncomplete: () => void;
+  /** Devam eden sayfa var mı + yükleyici; infinite scroll tetikleyicisi bunları kullanır. */
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
   selectedId: string | null;
   onSelect: (id: string) => void;
   openCreate: () => void;

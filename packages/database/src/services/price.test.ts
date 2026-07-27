@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
 import { CategoryService } from './category.service';
 import { PriceService } from './price.service';
@@ -15,14 +15,27 @@ import { ProductService } from './product.service';
  */
 const db = serviceDb();
 const prices = new PriceService(db);
+const products = new ProductService(db);
+const categories = new CategoryService(db);
 let variantId: string;
+let productId: string;
+let categoryId: string;
 const CUSTOMER_ID = '00000000-0000-4000-8000-0000000000c1';
 
 beforeAll(async () => {
-  const category = await new CategoryService(db).create({ name: { tr: `Fiyat testi ${Date.now()}` } });
+  const category = await categories.create({ name: { tr: `Fiyat testi ${Date.now()}` } });
   // create → { product, variants }: varyantsız üründe varsayılan varyant otomatik açılır (05.3).
-  const { variants } = await new ProductService(db).create({ name: { tr: `Baklava ${Date.now()}` }, categoryId: category.id });
+  const { product, variants } = await products.create({ name: { tr: `Baklava ${Date.now()}` }, categoryId: category.id });
+  categoryId = category.id;
+  productId = product.id;
   variantId = variants[0]!.id;
+});
+
+// Test kendi zeminini toplar: aksi hâlde her koşuş yerel veritabanına kalıcı bir ürün bırakır ve
+// operasyon listesinde çöp satır olarak görünür. Varyant ve fiyat satırları ürüne CASCADE bağlı.
+afterAll(async () => {
+  await products.delete(productId).catch(() => {});
+  await categories.delete(categoryId).catch(() => {});
 });
 
 describe('PriceService — satır getirme', () => {

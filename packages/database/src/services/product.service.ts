@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { z } from 'zod';
 import {
   ProductSchema,
   ProductInsertSchema,
@@ -40,6 +41,10 @@ interface ProductListOptions {
   cursor?: KeysetCursor;
   limit?: number;
 }
+
+// Gruplu sayım satırı — bir ENTITY değil, tek sorguya özgü projeksiyon; bu yüzden packages/types'ta
+// değil burada yaşar (domain şeması değil, sorgu çıktısı sözleşmesi).
+const CategoryCountRowSchema = z.object({ categoryId: z.string().uuid() });
 
 // Varyantsız üründe otomatik açılan tek varyantın etiketi (müşteriye gösterilmez — seçici gizli).
 const DEFAULT_VARIANT_LABEL = 'default';
@@ -115,6 +120,25 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   }
 
   /**
+   * Kategori başına ürün sayısı — TEK sorgu, TEK kolon. Kategori başına ayrı sayım atmak N+1 doğurur;
+   * bu yüzden tüm ürünlerin yalnız `category_id`'si çekilip burada gruplanır (satır başına bir uuid;
+   * ekranın kendisi sayfalı kalır — taşınan yük listenin kendisi değil).
+   *
+   * Neden SQL toplaması değil: PostgREST'te toplama fonksiyonları (`count()` + örtük group by) bu
+   * kurulumda kapalı ("Use of aggregate functions is not allowed" — güvenlik varsayılanı). Hacim
+   * büyürse iki seçenek var: Supabase config'inde toplamayı açmak ya da bir okuma görünümü (view).
+   */
+  async countsByCategory(): Promise<Map<string, number>> {
+    const rows = await this.getAllAs(CategoryCountRowSchema, undefined, {
+      select: 'categoryId:category_id',
+      isNotNullFields: ['categoryId'],
+    });
+    const counts = new Map<string, number>();
+    for (const { categoryId } of rows) counts.set(categoryId, (counts.get(categoryId) ?? 0) + 1);
+    return counts;
+  }
+
+  /**
    * Süzgeçleri eq-filtrelerine ve `or` gruplarına çevirir — liste ve sayaçlar AYNI çeviriyi
    * kullanır (yoksa "12 sonuç" yazıp 5 satır gösteren ekran doğar).
    */
@@ -166,7 +190,11 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   async create(input: CreateProductInput): Promise<{ product: Product; variants: ProductVariant[] }> {
     const { variants, ...productFields } = input;
     const slug = await uniqueSlugForTable(this.supabase, this.tableName, resolveLocalizedText(input.name));
-    const product = await this.insert({ ...productFields, slug });
+    // sortOrder verilmezse listenin SONUNA eklenir (kategori/koleksiyonla aynı davranış): DB default'u
+    // 0 olduğundan aksi hâlde her yeni ürün mevcutların arasına karışır. Toplu işler (seed) sırayı
+    // kendisi verir → fazladan sayım sorgusu atılmaz.
+    const sortOrder = productFields.sortOrder ?? (await this.count());
+    const product = await this.insert({ ...productFields, sortOrder, slug });
 
     const variantSvc = new ProductVariantService(this.supabase);
     const toCreate: CreateVariantInput[] = variants && variants.length > 0 ? variants : [{ label: DEFAULT_VARIANT_LABEL }];

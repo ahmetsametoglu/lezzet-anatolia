@@ -1,18 +1,26 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { resolveLocalizedText } from '@lezzet/types';
 import type { Device } from '@/lib/device';
+import { loadMoreProductsAction } from './actions/list';
 import { setProductActiveAction } from './tabs/product/actions';
 import { ProductFormDialog } from './tabs/product/product-form-dialog';
 import { ProductsDesktop } from './products.desktop';
 import { ProductsMobile } from './products.mobile';
-import { PRODUCTS_PATH } from './products-paths';
-import { filledContentLangs, parseProductTab, productStatus, type ProductTab, type ProductsData, type StatusFilter } from './products-types';
+import { productsUrl, type ProductsUrlState } from './products-url';
+import type { ProductTab } from './products-paths';
+import type { ProductsData, ProductView, StatusFilter } from './products-types';
 
 // Ürünler ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
 // İlk boya sunucu cihaz ipucuyla; mount sonrası viewport'a göre düzeltilir. Modal her iki yüzeyin üstünde.
+//
+// SÜZGEÇ AKIŞI: süzgeç bir client durumu DEĞİL, URL durumudur (STACK §6). Kullanıcı süzgeci değiştirince
+// URL yazılır → RSC yeniden okur → süzülmüş İLK SAYFA gelir. Burada client-side filtreleme YOK.
+// Arama yazarken her tuşta sunucuya gitmemek için giriş yerel tutulur ve URL'e GECİKMELİ yazılır.
+
+/** Arama kutusunun URL'e yazılma gecikmesi (ms) — parametrik; yazarken her tuşta sunucuya gidilmesin. */
+const SEARCH_DEBOUNCE_MS = 350;
 
 /** İlk boya sunucu ipucuyla; mount sonrası viewport ölçüsüne göre düzeltilir (tek render ağacı). */
 function useDevice(initial: Device): Device {
@@ -30,48 +38,75 @@ function useDevice(initial: Device): Device {
 interface ProductsClientProps {
   data: ProductsData;
   device: Device;
-  /** URL'den (`?tab=`) çözülmüş açılış sekmesi — yenilemede/paylaşımda doğru sekme açılsın. */
-  initialTab: ProductTab;
+  /** URL'den çözülmüş ekran durumu (sekme + süzgeçler) — sunucu doğrulamış hâlde verir. */
+  urlState: ProductsUrlState;
 }
 
-export function ProductsClient({ data, device, initialTab }: ProductsClientProps) {
+export function ProductsClient({ data, device, urlState }: ProductsClientProps) {
   const resolvedDevice = useDevice(device);
   const router = useRouter();
   const [, startTransition] = useTransition();
 
-  const [tab, setTab] = useState<ProductTab>(initialTab);
+  // Sekme SUNUCUYA GİTMEZ (yalnız hangi panelin çizildiğini değiştirir) → sığ yazım (replaceState).
+  // Süzgeçler ise RSC'yi yeniden okutur (router.replace), çünkü veriyi sunucu süzüyor.
+  const [tab, setTab] = useState<ProductTab>(urlState.tab);
+  useEffect(() => setTab(urlState.tab), [urlState.tab]);
 
-  /**
-   * Sekme değişimi URL'e YAZILIR ama sunucuya gidilmez: `history.replaceState` (App Router'ın
-   * desteklediği sığ güncelleme) — `router.replace` her sekmede RSC'yi yeniden çekerdi. Varsayılan
-   * sekmede parametre hiç yazılmaz (temiz URL). Geri/ileri tuşu için `popstate` dinlenir.
-   */
   const onTab = (next: ProductTab) => {
     setTab(next);
-    window.history.replaceState(null, '', next === 'products' ? PRODUCTS_PATH : `${PRODUCTS_PATH}?tab=${next}`);
+    window.history.replaceState(null, '', productsUrl({ ...urlState, tab: next }));
+  };
+
+  /** Süzgeç değişimi: URL'e yaz + RSC'yi yeniden okut (süzülmüş ilk sayfa gelir). */
+  const applyFilters = (patch: Partial<ProductsUrlState>) => {
+    router.replace(productsUrl({ ...urlState, ...patch, tab }), { scroll: false });
+  };
+
+  // Arama: giriş yerel (anında yazılır), URL'e gecikmeli. Sunucu değeri değişince yerel giriş eşitlenir.
+  const [search, setSearch] = useState(urlState.q);
+  useEffect(() => setSearch(urlState.q), [urlState.q]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onSearch = (q: string) => {
+    setSearch(q);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => applyFilters({ q: q.trim() }), SEARCH_DEBOUNCE_MS);
   };
   useEffect(() => {
-    const onPop = () => setTab(parseProductTab(new URLSearchParams(window.location.search).get('tab') ?? undefined));
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, []);
-  const [search, setSearch] = useState('');
-  const [catFilter, setCatFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [onlyIncomplete, setOnlyIncomplete] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(data.products[0]?.id ?? null);
+
+  // ── Sayfalama: ilk sayfa sunucudan, devamı action ile EKLENİR ──
+  // Sunucu verisi değişince (süzgeç/revalidate) eklenen sayfalar SIFIRLANIR; yoksa eski süzgecin
+  // satırları yeni listede kalır.
+  const [extraPages, setExtraPages] = useState<ProductView[]>([]);
+  const [cursor, setCursor] = useState(data.nextCursor);
+  const [loadingMore, setLoadingMore] = useState(false);
+  useEffect(() => {
+    setExtraPages([]);
+    setCursor(data.nextCursor);
+  }, [data.products, data.nextCursor]);
+
+  const products = [...data.products, ...extraPages];
+
+  const onLoadMore = () => {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    void loadMoreProductsAction(window.location.search, cursor)
+      .then(({ data: page, error }) => {
+        // Hata sessiz: liste olduğu yerde kalır, tetikleyici yeniden denenebilir (sunucu = gerçek).
+        if (error || !page) return;
+        setExtraPages((prev) => [...prev, ...page.products]);
+        setCursor(page.nextCursor);
+      })
+      .finally(() => setLoadingMore(false));
+  };
+
+  // Seçim KİMLİKLE tutulur, kayıt taze listeden türetilir (kopya tutulursa güncelleme yansımaz).
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [modal, setModal] = useState<{ mode: 'create' | 'edit' } | null>(null);
-
-  const selected = data.products.find((p) => p.id === selectedId) ?? null;
-
-  const q = search.trim().toLowerCase();
-  const visibleProducts = data.products.filter((p) => {
-    if (catFilter !== 'all' && p.categoryId !== catFilter) return false;
-    if (statusFilter !== 'all' && productStatus(p) !== statusFilter) return false;
-    if (onlyIncomplete && filledContentLangs(p.name).length >= 3 && p.allergens.length > 0) return false;
-    if (q && !resolveLocalizedText(p.name).toLowerCase().includes(q)) return false;
-    return true;
-  });
+  const selected = products.find((p) => p.id === selectedId) ?? products[0] ?? null;
 
   // Aktiflik geçişi kalıcı (server action) — başarınca RSC listeyi tazeler (hata sessiz; sunucu = gerçek).
   const onToggleActive = (id: string, isActive: boolean) => {
@@ -83,18 +118,21 @@ export function ProductsClient({ data, device, initialTab }: ProductsClientProps
 
   const view = {
     data,
-    visibleProducts,
+    products,
     tab,
     onTab,
     search,
-    onSearch: setSearch,
-    catFilter,
-    onCatFilter: setCatFilter,
-    statusFilter,
-    onStatusFilter: setStatusFilter,
-    onlyIncomplete,
-    onToggleIncomplete: () => setOnlyIncomplete((v) => !v),
-    selectedId,
+    onSearch,
+    catFilter: urlState.cat,
+    onCatFilter: (cat: string) => applyFilters({ cat }),
+    statusFilter: urlState.status,
+    onStatusFilter: (status: StatusFilter) => applyFilters({ status }),
+    onlyIncomplete: urlState.incomplete,
+    onToggleIncomplete: () => applyFilters({ incomplete: !urlState.incomplete }),
+    hasMore: cursor !== null,
+    loadingMore,
+    onLoadMore,
+    selectedId: selected?.id ?? null,
     onSelect: setSelectedId,
     openCreate: () => setModal({ mode: 'create' }),
     openEdit: () => setModal({ mode: 'edit' }),

@@ -5,6 +5,7 @@ import { AnchoredMenu } from '@/components/operation/ui/anchored-menu';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
 import { Table, type Column } from '@/components/operation/ui/table';
+import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { ProductPreview } from './product-preview';
@@ -96,9 +97,11 @@ function StatusFilterChip({ value, onChange }: { value: StatusFilter; onChange: 
 }
 
 export function ProductsTab(props: ProductsViewProps) {
-  const { data, visibleProducts, catFilter, onCatFilter, statusFilter, onStatusFilter, onlyIncomplete, onToggleIncomplete, selectedId, onSelect, openEdit } = props;
-  const selected = data.products.find((p) => p.id === selectedId) ?? null;
-  const missingCount = data.products.filter((p) => filledContentLangs(p.name).length < 3 || p.allergens.length === 0).length;
+  const { data, products, catFilter, onCatFilter, statusFilter, onStatusFilter, onlyIncomplete, onToggleIncomplete, selectedId, onSelect, openEdit } = props;
+  const { hasMore, loadingMore, onLoadMore } = props;
+  // Seçili kayıt GÖRÜNEN listeden çözülür (eklenen sayfalar dahil); sayaç sunucudan gelir.
+  const selected = products.find((p) => p.id === selectedId) ?? null;
+  const missingCount = data.counts.incomplete;
 
   return (
     <>
@@ -131,7 +134,7 @@ export function ProductsTab(props: ProductsViewProps) {
         <div className="flex min-h-0 flex-col border-r border-ops-line">
           <Table
             columns={COLUMNS}
-            rows={visibleProducts}
+            rows={products}
             rowKey={(r) => r.id}
             onRowClick={(r) => onSelect(r.id)}
             onRowDoubleClick={(r) => {
@@ -144,6 +147,7 @@ export function ProductsTab(props: ProductsViewProps) {
                 Bu süzgeçte ürün yok.
               </div>
             }
+            footer={<LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />}
           />
         </div>
         <ProductPreview product={selected} onEdit={openEdit} />
