@@ -2,9 +2,11 @@ import { CategorySchema, DEFAULT_CROP_FIELDS, ProductSchema } from '@lezzet/type
 import type { ImageMeta } from '@lezzet/types';
 
 /**
- * Vitrin fixture'ları — katalog HENÜZ BOŞKEN (seed atılmamış yerel ortam) sayfanın görünür kalması
- * için (08.10). Gerçek servis veri döndürdüğü anda bunlar devre dışı kalır; `home.ts` önce servisi
- * çağırır, yalnız sonuç boşsa buraya düşer.
+ * Vitrin fixture'ları — kaynağı HENÜZ OLMAYAN bölümler için (08.10): fırsatlar (05.6 indirim
+ * tanımı) ve paketler (05.5 Bundle servisi). Ürün, fiyat ve stok artık GERÇEK okunuyor; onların
+ * fixture'ları düştü.
+ *
+ * Kategoriler yalnız katalog tamamen boşken (seed atılmamış yerel ortam) yedeğe düşer.
  *
  * KURAL: veriler elle yazılmış nesne DEĞİL, şemadan `parse` edilir. Alan adı uydurmak ya da tip
  * kaydırmak böylece imkânsızlaşır — şema değişirse fixture derleme/çalışma anında patlar, sessizce
@@ -36,21 +38,6 @@ export const FIXTURE_CATEGORIES = [
   { id: uuid(5), slug: 'cerezler', name: { tr: 'Çerezler', fr: 'Fruits secs', de: 'Knabbereien' } },
   { id: uuid(6), slug: 'sebze-dolma', name: { tr: 'Sebze & Dolma', fr: 'Légumes & dolma', de: 'Gemüse & Dolma' } },
 ].map((c) => ({ ...CategoryFixture.parse(c), ...NO_IMAGE_META }));
-
-export const FIXTURE_PRODUCTS = [
-  { id: uuid(11), slug: 'su-boregi', name: { tr: 'El Açması Su Böreği', fr: 'Börek feuilleté maison', de: 'Handgezogener Su Börek' } },
-  { id: uuid(12), slug: 'kayseri-mantisi', name: { tr: 'Kayseri Mantısı', fr: 'Mantı de Kayseri', de: 'Kayseri Mantı' } },
-  { id: uuid(13), slug: 'fistikli-baklava', name: { tr: 'Fıstıklı Baklava', fr: 'Baklava à la pistache', de: 'Baklava mit Pistazien' } },
-  { id: uuid(14), slug: 'icli-kofte', name: { tr: 'İçli Köfte', fr: 'İçli köfte', de: 'İçli Köfte' } },
-].map((p) => ({ ...ProductFixture.parse(p), ...NO_IMAGE_META }));
-
-/** Vitrin kartının ürün başına gösterdiği ölçü/fiyat — STUB(08.10 → 05.4 fiyat · 05.10 varyant etiketi). */
-export const FIXTURE_PRODUCT_DETAILS: Record<string, { unitLabel: string; comparisonCents: number; priceCents: number }> = {
-  [uuid(11)]: { unitLabel: '1 kg', comparisonCents: 1290, priceCents: 1290 },
-  [uuid(12)]: { unitLabel: '500 g', comparisonCents: 1500, priceCents: 750 },
-  [uuid(13)]: { unitLabel: '700 g', comparisonCents: 2414, priceCents: 1690 },
-  [uuid(14)]: { unitLabel: '6 adet · 540 g', comparisonCents: 1833, priceCents: 990 },
-};
 
 /** İndirimli teklifler — STUB(08.10 → 05.6 indirim tanımı). Sebep taşınmaz, yalnız fiyat ve sınır. */
 export const FIXTURE_OFFERS = [

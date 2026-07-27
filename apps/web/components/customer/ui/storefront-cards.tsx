@@ -119,7 +119,9 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
           {product.name}
         </Link>
         <span className={['font-sans text-muted', compact ? 'text-micro' : 'text-note'].join(' ')}>
-          {product.unitLabel} · {formatComparison(product.comparisonCents, locale)}
+          {[product.unitLabel, product.comparisonCents !== null ? formatComparison(product.comparisonCents, locale) : null]
+            .filter(Boolean)
+            .join(' · ')}
         </span>
         {labels.limit && (
           <Badge tone="offer" plain={compact}>

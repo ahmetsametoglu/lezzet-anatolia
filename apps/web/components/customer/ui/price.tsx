@@ -19,7 +19,8 @@ const SIZE: Record<PriceSize, string> = {
 };
 
 interface PriceProps {
-  cents: number;
+  /** null → fiyat yok (satışa kapalı); blok hiç render edilmez. */
+  cents: number | null;
   locale: Locale;
   /** İndirim öncesi fiyat — verilirse üstü çizili gösterilir ve ana fiyat fırsat rengine döner. */
   wasCents?: number;
@@ -29,6 +30,7 @@ interface PriceProps {
 }
 
 export function Price({ cents, locale, wasCents, size = 'md', tone = 'default' }: PriceProps) {
+  if (cents === null) return null;
   const color = tone === 'onDark' ? 'text-cream' : wasCents ? 'text-terracotta' : 'text-ink';
   return (
     <span className="flex items-center gap-2">

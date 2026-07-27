@@ -2,7 +2,8 @@ import 'server-only';
 import { CategoryService, ProductService, serviceDb } from '@lezzet/database';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
-import { FIXTURE_CATEGORIES, FIXTURE_OFFERS, FIXTURE_PACKAGES, FIXTURE_PRODUCTS, NO_IMAGE_META } from './fixtures';
+import { FIXTURE_CATEGORIES, FIXTURE_OFFERS, FIXTURE_PACKAGES, NO_IMAGE_META } from './fixtures';
+import { loadProductContext } from './read-context';
 import { imageOf, toCategory, toProduct } from './map';
 import type { StorefrontHome, StorefrontOffer, StorefrontPackage } from './storefront-types';
 
@@ -21,9 +22,11 @@ import type { StorefrontHome, StorefrontOffer, StorefrontPackage } from './store
  * görünür kalması için. Gerçek katalog dolunca bu yedek kendiliğinden devre dışı kalır.
  */
 
+const EMPTY_CONTEXT = { variants: [], prices: new Map(), stock: new Map() };
+
 function fixtureOffers(locale: Locale): StorefrontOffer[] {
-  return FIXTURE_OFFERS.map((o, i) => ({
-    ...toProduct(o.product, locale, i),
+  return FIXTURE_OFFERS.map((o) => ({
+    ...toProduct(o.product, locale, EMPTY_CONTEXT),
     unitLabel: o.unitLabel,
     comparisonCents: o.comparisonCents,
     priceCents: o.priceCents,
@@ -47,16 +50,15 @@ function fixturePackages(locale: Locale): StorefrontPackage[] {
 /** Anasayfanın tüm bölümleri tek turda — bölüm başına ayrı çağrı yapılmaz. */
 export async function getHomeData(locale: Locale): Promise<StorefrontHome> {
   const db = serviceDb();
-  const [categoryRows, productRows] = await Promise.all([
+  const [categoryRows, page] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
-    new ProductService(db).listSellable(),
+    // Vitrin seçkisi: bugün ilk dörtlü (öne çıkarma bayrağı katalogda yok).
+    new ProductService(db).listWithRelations({ filters: { status: 'active' }, limit: 4 }),
   ]);
+  const context = await loadProductContext(db, page.rows);
 
   const categories = (categoryRows.length ? categoryRows : FIXTURE_CATEGORIES).map((c) => toCategory(c, locale));
-  // Vitrin seçkisi: bugün ilk dörtlü. Gerçek seçki alanı (öne çıkarma bayrağı) katalogda yok —
-  // geldiğinde sorgu burada değişir, kart aynı kalır.
-  const featuredRows = productRows.length ? productRows.slice(0, 4) : FIXTURE_PRODUCTS;
-  const featured = featuredRows.map((p, i) => toProduct(p, locale, i));
+  const featured = page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_CONTEXT));
 
   return { categories, featured, offers: fixtureOffers(locale), packages: fixturePackages(locale) };
 }

@@ -3,7 +3,8 @@ import { CategoryService, ProductService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE } from '@lezzet/types';
 import type { KeysetCursor } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
-import { FIXTURE_CATEGORIES, FIXTURE_PRODUCTS } from './fixtures';
+import { FIXTURE_CATEGORIES } from './fixtures';
+import { loadProductContext } from './read-context';
 import { toCategory, toProduct } from './map';
 import type { CatalogSort, StorefrontCatalog } from './storefront-types';
 
@@ -30,6 +31,8 @@ interface CatalogQuery {
   cursor?: KeysetCursor;
 }
 
+const EMPTY_CONTEXT = { variants: [], prices: new Map(), stock: new Map() };
+
 export async function getCatalogData(locale: Locale, q: CatalogQuery = {}): Promise<StorefrontCatalog> {
   const db = serviceDb();
   const categoryRows = await new CategoryService(db).list({ activeOnly: true });
@@ -40,20 +43,16 @@ export async function getCatalogData(locale: Locale, q: CatalogQuery = {}): Prom
   const filters = { query: q.search, categoryId: activeCategory?.id, status: 'active' as const };
   const productSvc = new ProductService(db);
   const [page, counts] = await Promise.all([
-    productSvc.list({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE }),
+    productSvc.listWithRelations({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE }),
     productSvc.counts(filters),
   ]);
-
-  // Katalog boşken (seed atılmamış) fixture'a düşülür — yalnız süzgeçsiz ilk sayfada, yoksa
-  // "sonuç yok" durumu hiç görünmezdi ve sıfır-sonuç ekranı test edilemezdi.
-  const noFilter = !q.search && !q.categorySlug;
-  const rows = page.rows.length || !noFilter ? page.rows : FIXTURE_PRODUCTS;
+  const context = await loadProductContext(db, page.rows);
 
   return {
     categories,
     activeCategory,
-    products: rows.map((p, i) => toProduct(p, locale, i)),
-    total: page.rows.length ? counts.total : rows.length,
+    products: page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_CONTEXT)),
+    total: counts.total,
     nextCursor: page.nextCursor,
   };
 }

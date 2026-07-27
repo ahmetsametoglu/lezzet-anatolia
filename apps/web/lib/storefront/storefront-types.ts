@@ -51,9 +51,10 @@ export interface StorefrontProduct {
   image: StorefrontImage;
   /** Satılabilir birimin etiketi ("1 kg", "6 adet · 540 g") — varyanttan gelir. */
   unitLabel: string;
-  /** Kilogram başına fiyat (ham cent) — INCO gereği raf fiyatının yanında gösterilir. */
-  comparisonCents: number;
-  priceCents: number;
+  /** Kilogram başına fiyat (ham cent) — INCO gereği raf fiyatının yanında; net ağırlık yoksa null. */
+  comparisonCents: number | null;
+  /** null = bu kanalda fiyatı yok → ürün SATIŞA KAPALI (DOMAIN §5); kart fiyat göstermez. */
+  priceCents: number | null;
   /** İndirim öncesi fiyat — verilirse "Fırsat" rozeti + üstü çizili eski fiyat. */
   wasCents?: number;
   /** Kişi başı sınır ("En fazla 5 adet" şablonuna girecek sayı); sınırsızsa null. */
