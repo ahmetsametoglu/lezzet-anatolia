@@ -3,6 +3,7 @@ import type { Locale } from '@lezzet/i18n';
 import { LOCALES } from '@lezzet/i18n';
 import { brand } from '@lezzet/brand';
 import { Link } from '@/i18n/navigation';
+import { LocaleSwitch } from './locale-switch';
 import { SearchField } from './search-field';
 import messages from './site-frame-messages.json';
 
@@ -19,11 +20,19 @@ import messages from './site-frame-messages.json';
  * Cihaz forku (Sapma 3): masaüstünde açık gezinme, mobilde sadeleşmiş başlık — `md:` akışkan
  * responsive DEĞİL, `device` ile çatallanır.
  */
+type NavKey = 'catalog' | 'packages' | 'deals' | 'discover' | 'pro';
+
 interface SiteFrameProps {
   device: 'mobile' | 'desktop';
   locale: Locale;
   /** Başlıkta arama kutusu görünsün mü — vitrin sayfalarında evet, hata ekranlarında hayır. */
   showSearch?: boolean;
+  /**
+   * Gezinmede hangi öğe AKTİF — tasarımda aktif sayfa zeytin rengi + 2px alt çizgi taşır (Katalog
+   * ve Ürün Detay ekranlarında "Katalog", Hesap ekranında "Hesabım"). Ziyaretçi nerede olduğunu
+   * başlıktan görmeli; verilmezse hiçbiri işaretlenmez (ana sayfa).
+   */
+  activeNav?: NavKey;
   children: ReactNode;
 }
 
@@ -37,7 +46,12 @@ const SHELL = 'mx-auto w-full max-w-[1360px]';
 /** Footer'ın dil sütunu — geçerli dil ✓ ile işaretli; diğerleri aynı sayfanın o dildeki hâline gider. */
 const LOCALE_LABEL: Record<Locale, string> = { tr: 'Türkçe', fr: 'Français', de: 'Deutsch' };
 
-export function SiteFrame({ device, locale, showSearch = false, children }: SiteFrameProps) {
+/** Aktif gezinme öğesi: zeytin metin + 2px alt çizgi (tasarım K12). */
+function navClass(key: NavKey, active: NavKey | undefined, base = ''): string {
+  return [base, active === key ? 'border-b-2 border-olive pb-0.5 text-olive' : ''].filter(Boolean).join(' ');
+}
+
+export function SiteFrame({ device, locale, showSearch = false, activeNav, children }: SiteFrameProps) {
   const t = messages[locale];
   const isMobile = device === 'mobile';
   const bandItems = isMobile ? [t.announcement.mobile] : [t.announcement.cold, t.announcement.local, t.announcement.shipping];
@@ -75,17 +89,19 @@ export function SiteFrame({ device, locale, showSearch = false, children }: Site
             <img src="/logo.jpg" alt={brand.name} className="h-[58px] mix-blend-multiply" />
           </Link>
           <nav className="flex gap-7 font-sans text-body font-semibold text-ink">
-            <Link href="/catalog" className="cursor-pointer transition-colors hover:text-olive">
+            {/* Katalog dışındaki rotalar henüz açılmadı → düz metin; açıldıkça `<Link>`e döner. */}
+            <Link href="/catalog" className={navClass('catalog', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
               {t.nav.catalog}
             </Link>
-            <span>{t.nav.packages}</span>
-            <span className="text-terracotta">{t.nav.deals}</span>
-            <span>{t.nav.discover}</span>
-            <span>{t.nav.pro}</span>
+            <span className={navClass('packages', activeNav)}>{t.nav.packages}</span>
+            {/* Fırsatlar her sayfada terracotta — kampanya vurgusu sabittir, aktiflikten bağımsız. */}
+            <span className={navClass('deals', activeNav, 'text-terracotta')}>{t.nav.deals}</span>
+            <span className={navClass('discover', activeNav)}>{t.nav.discover}</span>
+            <span className={navClass('pro', activeNav)}>{t.nav.pro}</span>
           </nav>
           <div className="ml-auto flex items-center gap-4.5 font-sans text-body-sm font-semibold text-muted">
             {showSearch && <SearchField placeholder={t.search} />}
-            <span className="uppercase">{locale} ▾</span>
+            <LocaleSwitch locale={locale} />
             <span className="text-icon text-ink">🧺</span>
           </div>
         </header>

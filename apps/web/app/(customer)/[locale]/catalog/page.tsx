@@ -39,7 +39,7 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
   ]);
 
   return (
-    <SiteFrame device={device} locale={locale} showSearch>
+    <SiteFrame device={device} locale={locale} showSearch activeNav="catalog">
       <CatalogClient t={t} locale={locale} data={data} active={{ category, sort: activeSort, onlyOffers }} device={device} />
     </SiteFrame>
   );
