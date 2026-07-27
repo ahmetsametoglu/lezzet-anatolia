@@ -2,6 +2,7 @@ import type { Locale } from '@lezzet/i18n';
 import { RATIO_SOURCE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Price } from '@/components/customer/ui/price';
+import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
 import { Link } from '@/i18n/navigation';
 import type { StorefrontProduct } from '@/lib/storefront/storefront-types';
 
@@ -21,7 +22,7 @@ interface SimilarStripProps {
 
 export function SimilarStrip({ products, locale }: SimilarStripProps) {
   return (
-    <div className="flex gap-2.5 overflow-x-auto">
+    <div className={`${SCROLL_STRIP} gap-2.5`}>
       {products.map((p) => (
         <Link
           key={p.id}

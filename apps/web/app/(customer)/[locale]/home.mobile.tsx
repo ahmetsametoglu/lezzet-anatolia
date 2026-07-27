@@ -3,6 +3,7 @@ import { FramedImage } from '@/components/media/framed-image';
 import { buttonClass } from '@/components/customer/ui/button';
 import { CtaBand, InviteBand, SectionHeading } from '@/components/customer/ui/section';
 import { CategoryCard, OfferCard, PackageCard, ProductCard } from '@/components/customer/ui/storefront-cards';
+import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
 import { Link } from '@/i18n/navigation';
 import { limitText, type HomeViewProps } from './home-types';
 
@@ -30,7 +31,7 @@ export function HomeMobile({ t, locale, data }: HomeViewProps) {
       </section>
 
       {/* Kategoriler — yatay şerit, daire maskeli */}
-      <section className="flex gap-2.5 overflow-x-auto px-4 pb-1">
+      <section className={`${SCROLL_STRIP} gap-2.5 px-4`}>
         {data.categories.map((c) => (
           <CategoryCard key={c.id} category={c} circle />
         ))}

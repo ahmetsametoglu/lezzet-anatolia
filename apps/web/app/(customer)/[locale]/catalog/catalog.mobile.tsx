@@ -3,6 +3,7 @@ import { EmptyState, FilterChip } from '@/components/customer/ui/filter-controls
 import { SortSelect } from '@/components/customer/ui/sort-select';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { LoadMore } from '@/components/customer/ui/load-more';
+import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
 import type { CatalogViewProps } from './catalog-types';
 
 /**
@@ -18,7 +19,7 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
         <h1 className="font-serif text-page-title-sm text-ink">{data.activeCategory?.name ?? t.title}</h1>
       </section>
 
-      <div className="flex gap-2 overflow-x-auto px-4 pb-3">
+      <div className={`${SCROLL_STRIP} gap-2 px-4`}>
         <FilterChip label={t.all} href={hrefFor({ category: null })} active={!active.category} compact />
         {data.categories.map((c) => (
           <FilterChip key={c.id} label={c.name} href={hrefFor({ category: c.slug })} active={active.category === c.slug} compact />
