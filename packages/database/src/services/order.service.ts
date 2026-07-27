@@ -6,9 +6,11 @@ import {
   OrderItemSchema,
   OrderItemInsertSchema,
   OrderItemUpdateSchema,
+  OrderItemBatchSchema,
   OrderStatusLogSchema,
   OrderStatusLogInsertSchema,
   OrderStatusLogUpdateSchema,
+  PreparationResultSchema,
   TransitionResultSchema,
   DEFAULT_PAGE_SIZE,
   type KeysetCursor,
@@ -17,7 +19,10 @@ import {
   type OrderItem,
   type OrderItemInsert,
   type OrderItemUpdate,
+  type OrderItemBatch,
   type OrderStatus,
+  type PreparationPick,
+  type PreparationResult,
   type OrderStatusLog,
   type OrderStatusLogInsert,
   type OrderStatusLogUpdate,
@@ -104,6 +109,39 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       await this.delete(created.id).catch(() => {});
       throw error;
     }
+  }
+
+  /**
+   * **Hazırlık onayı** (06.5): depocunun onayladığı partiler yazılır ve her kalemin
+   * `fulfilled_qty`'si Σ parti olur — ikisi `record_preparation` RPC'sinde bölünemez şekilde.
+   *
+   * Fiili stok BURADA DÜŞMEZ: mal hâlâ depoda/araçta, "ayrılmış" durumdadır. Düşüm teslimde (07.7).
+   * Sipariş edilenden fazlası hazırlanamaz; eksik olabilir (kısmi karşılama).
+   */
+  async recordPreparation(orderId: string, picks: readonly PreparationPick[]): Promise<PreparationResult> {
+    if (picks.length === 0) throw new Error('order: kalem seçimi boş olamaz');
+
+    const raw = await this.executeRpc('record_preparation', {
+      p_order_id: orderId,
+      p_picks: picks.map((pick) => ({
+        order_item_id: pick.orderItemId,
+        batches: pick.batches.map((b) => ({ stock_id: b.stockId, qty: b.qty })),
+      })),
+    });
+    return PreparationResultSchema.parse(dbToApp(raw));
+  }
+
+  /** Siparişin kalem–parti eşlemesi — geri çağırma ve gerçek COGS bunun üstünde durur. */
+  async listBatches(orderId: string): Promise<OrderItemBatch[]> {
+    const { data, error } = await this.supabase
+      .from('order_item_batch')
+      .select('*,order_item!inner(order_id)')
+      .eq('order_item.order_id', orderId);
+    if (error) throw error;
+    return (data ?? []).map((row) => {
+      const { orderItem: _ignored, ...batch } = dbToApp<Record<string, unknown>>(row);
+      return OrderItemBatchSchema.parse(batch);
+    });
   }
 
   /** Sipariş + kalemleri TEK sorguda — kalem başına ayrı sorgu (N+1) yerine gömülü select. */

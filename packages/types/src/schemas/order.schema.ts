@@ -168,6 +168,17 @@ export type OrderStatusLogInsert = z.infer<typeof OrderStatusLogInsertSchema>;
 export const OrderStatusLogUpdateSchema = OrderStatusLogSchema.partial().required({ id: true });
 export type OrderStatusLogUpdate = z.infer<typeof OrderStatusLogUpdateSchema>;
 
+/** Hazırlıkta bir kalemin hangi partilerden çıktığı — `record_preparation` girdisi (06.5). */
+export const PreparationPickSchema = z.object({
+  orderItemId: z.string().uuid(),
+  /** Boş dizi = kalem hiç hazırlanamadı (kısmi karşılama, `fulfilled_qty` 0 olur). */
+  batches: z.array(z.object({ stockId: z.string().uuid(), qty: z.number().int().positive() })),
+});
+export type PreparationPick = z.infer<typeof PreparationPickSchema>;
+
+export const PreparationResultSchema = z.object({ ok: z.boolean(), items: z.number().int() });
+export type PreparationResult = z.infer<typeof PreparationResultSchema>;
+
 /** `transition_order_status` RPC'sinin dönüşü — `ok:false` + `stale` = araya biri girdi (07.6). */
 export const TransitionResultSchema = z.object({
   ok: z.boolean(),
