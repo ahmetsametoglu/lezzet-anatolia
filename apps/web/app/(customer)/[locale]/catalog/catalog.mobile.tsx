@@ -13,7 +13,6 @@ export function CatalogMobile({ t, locale, data, active, hrefFor }: CatalogViewP
   return (
     <div className="flex flex-col">
       <section className="flex flex-col gap-3 px-4 pt-5 pb-3">
-        {data.activeCategory && <span className="font-sans text-eyebrow-sm text-olive uppercase">{t.collection}</span>}
         <h1 className="font-serif text-page-title-sm text-ink">{data.activeCategory?.name ?? t.title}</h1>
       </section>
 

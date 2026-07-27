@@ -15,7 +15,6 @@
       "body": "Farklı bir kelime deneyin ya da kategorilere göz atın.",
       "cta": "Tüm kataloğa dön"
     },
-    "collection": "Koleksiyon",
     "card": {
       "addToCart": "Sepete ekle",
       "options": "Seçenekler →",
@@ -40,7 +39,6 @@
       "body": "Essayez un autre mot ou parcourez les catégories.",
       "cta": "Revenir au catalogue"
     },
-    "collection": "Collection",
     "card": {
       "addToCart": "Ajouter",
       "options": "Options →",
@@ -65,7 +63,6 @@
       "body": "Versuchen Sie ein anderes Wort oder stöbern Sie in den Kategorien.",
       "cta": "Zurück zum Katalog"
     },
-    "collection": "Kollektion",
     "card": {
       "addToCart": "In den Korb",
       "options": "Optionen →",

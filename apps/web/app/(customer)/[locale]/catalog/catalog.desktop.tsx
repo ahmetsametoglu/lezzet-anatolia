@@ -7,14 +7,18 @@ import type { CatalogViewProps } from './catalog-types';
  * Katalog — masaüstü düzeni (tasarım: `Musteri - Katalog.dc.html`, "Katalog Web").
  * Başlık → kategori çipleri → sonuç sayısı + süzgeç/sıralama → 4 sütun ürün ızgarası.
  *
- * Koleksiyon görünümünde yalnız BAŞLIK BANDI değişir, gerisi aynıdır (tasarımdaki "Durum:
- * koleksiyon görünümü" varyantı) — ayrı sayfa açılmaz.
+ * Süzgeç değişince sayfanın ÜST BLOĞU sabit kalır: başlık yalnız metnini değiştirir, beliren/kaybolan
+ * öğe yoktur. Filtrelerken içeriğin aşağı kayması (layout shift) kullanıcıya "ekran zıplıyor" hissi
+ * verir — seçili kategori zaten iki yerde görünür (başlık metni + işaretli çip), üçüncü bir gösterge
+ * eklenmez.
+ *
+ * Koleksiyon görünümü (tasarımdaki "Durum: koleksiyon görünümü" varyantı — üstbaşlıklı başlık bandı)
+ * HENÜZ YOK: koleksiyon rotası açılmadı. Geldiğinde yalnız başlık bloğu değişir, gerisi aynı kalır.
  */
 export function CatalogDesktop({ t, locale, data, active, hrefFor }: CatalogViewProps) {
   return (
     <div className="flex flex-col">
       <section className="flex flex-col gap-5 px-12 pt-9 pb-5">
-        {data.activeCategory && <span className="font-sans text-eyebrow text-olive uppercase">{t.collection}</span>}
         <h1 className="font-serif text-page-title text-ink">{data.activeCategory?.name ?? t.title}</h1>
 
         <div className="flex flex-wrap gap-2.5">
