@@ -56,12 +56,12 @@ export function SiteFrame({ device, locale, showSearch = false, children }: Site
       {/* K12 · Site başlığı */}
       {isMobile ? (
         <>
-          <header className="flex items-center justify-between border-b border-sand-300 px-5 py-3">
-            <span className="font-sans text-xl font-bold text-ink">☰</span>
+          <header className="flex items-center justify-between border-b border-sand-300 px-4 py-3">
+            <span className="font-sans text-icon-sm font-bold text-ink">☰</span>
             <Link href="/" className="cursor-pointer">
               <img src="/logo.jpg" alt={brand.name} className="h-10 mix-blend-multiply" />
             </Link>
-            <span className="font-sans text-base text-ink">🧺</span>
+            <span className="font-sans text-icon-sm text-ink">🧺</span>
           </header>
           {showSearch && (
             <div className="mx-4 mt-3">
@@ -70,7 +70,7 @@ export function SiteFrame({ device, locale, showSearch = false, children }: Site
           )}
         </>
       ) : (
-        <header className={`${SHELL} flex items-center gap-9 border-b border-sand-300 px-12 py-4`}>
+        <header className={`${SHELL} flex items-center gap-9 border-b border-sand-300 px-12 py-4.5`}>
           <Link href="/" className="cursor-pointer">
             <img src="/logo.jpg" alt={brand.name} className="h-[58px] mix-blend-multiply" />
           </Link>
@@ -83,10 +83,10 @@ export function SiteFrame({ device, locale, showSearch = false, children }: Site
             <span>{t.nav.discover}</span>
             <span>{t.nav.pro}</span>
           </nav>
-          <div className="ml-auto flex items-center gap-5 font-sans text-body font-semibold text-muted">
+          <div className="ml-auto flex items-center gap-4.5 font-sans text-body-sm font-semibold text-muted">
             {showSearch && <SearchField placeholder={t.search} />}
             <span className="uppercase">{locale} ▾</span>
-            <span className="text-ink">🧺</span>
+            <span className="text-icon text-ink">🧺</span>
           </div>
         </header>
       )}
@@ -95,9 +95,9 @@ export function SiteFrame({ device, locale, showSearch = false, children }: Site
 
       {/* K16 · Footer — zemin tam genişlikte, içerik kabuk içinde (geniş ekranda zemin kesilmez). */}
       <footer className="bg-ink text-neutral-400">
-        <div className={[SHELL, 'flex gap-8 py-9', isMobile ? 'flex-col px-4 py-6' : 'justify-between px-12'].join(' ')}>
+        <div className={[SHELL, 'flex gap-8', isMobile ? 'flex-col px-4 py-6' : 'justify-between px-12 py-9'].join(' ')}>
           <div className="flex flex-col gap-1.5 font-sans text-body-sm">
-            <span className={['font-serif text-cream', isMobile ? 'text-card-title-sm' : 'text-card-title-sm'].join(' ')}>{brand.name}</span>
+            <span className="font-serif text-card-title-sm text-cream">{brand.name}</span>
             <span>{t.footer.address}</span>
             <span>{t.footer.whatsapp}</span>
           </div>

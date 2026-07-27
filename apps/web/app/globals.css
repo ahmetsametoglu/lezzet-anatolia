@@ -125,6 +125,11 @@
   --text-control: 13.5px; /* süzgeç ve sıralama düğmesi (K17 küçük · K18) */
   --text-control--font-weight: 700;
 
+  /* İkon/emoji ölçüleri — metin hiyerarşisinin parçası DEĞİL (başlık kurmazlar), ama ham yazılırsa
+     başlıkta sepet 22, mobilde 20 gibi değerler koda dağılır. Kendi kademesi olarak durur. */
+  --text-icon: 22px;
+  --text-icon-sm: 20px;
+
   /* Üstbaşlık (eyebrow): büyük harf + harf aralığı; aralık token'a gömülüdür, elle yazılmaz. */
   --text-eyebrow: 14px;
   --text-eyebrow--font-weight: 600;

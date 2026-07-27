@@ -14,8 +14,8 @@ export function SearchField({ placeholder, fullWidth = false }: SearchFieldProps
   return (
     <div
       className={[
-        'flex cursor-pointer items-center gap-2 rounded-pill border border-sand-300 bg-card font-sans text-body text-sand-600 transition-colors hover:border-olive-line',
-        fullWidth ? 'w-full px-4 py-2.5' : 'w-[250px] px-[18px] py-2.5',
+        'flex cursor-pointer items-center gap-2 rounded-pill border border-sand-300 bg-card font-sans text-body-sm text-sand-600 transition-colors hover:border-olive-line',
+        fullWidth ? 'w-full px-4 py-2.25' : 'w-[250px] px-4.5 py-2.25',
       ].join(' ')}
     >
       <span aria-hidden>🔍</span>
