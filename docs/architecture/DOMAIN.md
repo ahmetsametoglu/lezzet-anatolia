@@ -272,6 +272,14 @@ Kurye gün sonunda sistemde kapanış yapar: teslim ettiği siparişler, tahsil 
 
 Her siparişin ödeme durumu **ayrı bir eksendir** ve **türetilir**: `amount_collected` − `amount_refunded` (net) ile karşılanan tutar karşılaştırılarak `pending/paid/partial/refunded` domain-core'da hesaplanır — elle set edilmez (bkz. `DATA_MODEL.md` Kalıcı kararlar). Ödeme yöntemi ve anı siparişe yazılır.
 
+**Karşılanan tutar** = Σ `fulfilled_qty` × (birim fiyat − o miktara düşen indirim payı) [+ kargo ücreti]. Kurallar:
+
+- **`partial` para eksenidir** — net, karşılanandan az demektir. "Sipariş eksik karşılandı" ayrı bir eksendir (`fulfilled_qty`) ve bu alana karışmaz: 2 adet sipariş edilip 1 adet gitmişse ve o 1 adedin parası ödenmişse durum **`paid`**'dir, borç yoktur.
+- **Fazla tahsilat yeni durum açmaz** — durum `paid` kalır, fark **iade borcu** olarak türetilir ve panelde "iade bekliyor" görünür. Enum dört değerde kalır.
+- **Kargo ücreti:** hiçbir kalem gitmediyse (Σ `fulfilled_qty` = 0) kargo hizmeti de verilmemiştir → karşılanan tutara girmez, iade edilir. En az bir kalem gittiyse iade edilmez.
+- **İade** kalem bazından türer: iade edilen kalemin `fulfilled_qty`'si düşünce karşılanan kendiliğinden iner. **İstisnası jest iadesi** (`return_disposition='goodwill'` — "ürün sizde kalsın"): mal müşteride kaldığı için miktar düşmez, ama net 0'a indiği için durum yine `refunded` olur (bkz. §8).
+- **İptal edilen siparişte karşılanan 0'dır** — tahsil edilmişse tamamı iade borcudur.
+
 ### B2B vadeli satış (hesaba) — istisna, varsayılan değil
 
 - **Varsayılan peşin.** Hem B2C hem B2B siparişleri kural olarak peşin ödenir (online / kart / nakit / çek / havale). Vadeli tahsilat operasyonel olarak dertli olduğu için **standart değildir** — ilke: "ödeyebilen alır."

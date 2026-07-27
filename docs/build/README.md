@@ -28,7 +28,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 00 | `00-iskelet.md` | Monorepo İskeleti | tamam | 8/8 |
 | 01 | `01-types.md` | `packages/types`: Şemalar ve Enum'lar | sürüyor | 1/11 (+4 kısmi) |
 | 02 | `02-database.md` | `packages/database`: Taban Servis ve İlk Şema | sürüyor | 4/7 (+3 kısmi) |
-| 03 | `03-domain-core.md` | `packages/domain-core`: İş Kuralları Motoru | sürüyor | 9/11 (+1 kısmi) |
+| 03 | `03-domain-core.md` | `packages/domain-core`: İş Kuralları Motoru | sürüyor | 10/11 (+1 kısmi) |
 | 04 | `04-auth-kimlik.md` | Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama | sürüyor | 3/8 (+1 kısmi) |
 | 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 4/12 (+1 kısmi) |
 | 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | bekliyor | 0/11 |

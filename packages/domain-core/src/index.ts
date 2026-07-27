@@ -9,3 +9,4 @@ export * from './identity/resolve-identity';
 export * from './tax/vat-treatment';
 export * from './stock/reservation';
 export * from './payment/checkout-options';
+export * from './payment/payment-status';

@@ -38,8 +38,14 @@ Sistemin bütün ticari kuralları — **saf fonksiyonlar** olarak (veritabanı 
 - [x] (03.5) **Rezervasyon kararları:** kullanılabilir = fiili − aktif rezervasyon hesabı; TTL/geç-ödeme dallanması (yeniden ayır → olmazsa iade kararı); batch-pinned kural (FEFO önerisinden pinned düşülür)
   - *Bitti:* geç webhook senaryosu (stok var / yok) iki dalıyla test edilmiş
   - **Durum (27.07):** `reservation.ts` — `availableQty` (süresi dolmuş rezervasyon sayılmaz), `availableInBatch` (teklife söz verilen stok normal hazırlığa görünmez), `decideReservation` (kısmi ayırma YOK, TTL hesabı), `decideLatePayment` (proceed → reserve_again → refund dallanması), `suggestFefoPicks` (önce süresi dolan, satılamaz parti hiç önerilmez, eksik miktar bildirilir). 15 test.
-- [ ] (03.6) **Ödeme türetimi:** karşılanan tutar (`fulfilled_qty × (unit_price − birim indirim payı)` + kargo ücreti kuralı) → `payment_status` (pending/paid/partial/refunded); kısmi karşılamada fark hesabı (peşin → iade; kapıda → düşür)
+- [x] (03.6) **Ödeme türetimi:** karşılanan tutar (`fulfilled_qty × (unit_price − birim indirim payı)` + kargo ücreti kuralı) → `payment_status` (pending/paid/partial/refunded); kısmi karşılamada fark hesabı (peşin → iade; kapıda → düşür)
   - *Bitti:* kısmi + kuponlu + kargolu kombinasyon senaryosu doğru tutarı döndürüyor
+  - **Durum (27.07):** `payment-status.ts` — `derivePaymentStatus` iki sayıdan türetir: net tahsilat (tahsil − iade) ile karşılanan tutar. Dört karar (kullanıcı onaylı):
+    1. **`partial` para eksenidir** — net, karşılanandan az. "Sipariş eksik karşılandı" ayrı eksendir (`fulfilled_qty`), bu alana karışmaz: 2 sipariş edilip 1 gitmiş ve o 1'in parası ödenmişse durum `paid`'dir.
+    2. **Fazla tahsilat yeni durum açmaz** — `paid` kalır, fark `refundDueCents` olarak türetilir (panelde "iade bekliyor"). Enum dört değerde kalır.
+    3. **İade `returned`** kalem bazından türer (`fulfilled_qty` düşer → karşılanan iner). **İstisna `goodwill`** (mal müşteride kalır): miktar düşmez ama net 0'a indiği için durum yine `refunded`; muhasebe farkı `amountToCollectCents`'te görünür kalır.
+    4. **Kargo ücreti:** Σ `fulfilled_qty` = 0 ise karşılanan tutara girmez → iade edilir. En az bir kalem gittiyse hizmet verilmiştir, iade edilmez.
+    - İndirim payı karşılanan orana bölünür (yarısı gittiyse indirimin yarısı düşer) — aksi halde kısmi iade tutarı yanlış çıkar. İptal edilen siparişte karşılanan 0 (ORDER_LIFECYCLE). 14 test.
 - [x] (03.7) **Vade freni:** açık bakiye + limit + gecikme → "hesaba" seçeneği açık/kapalı kararı; limit aşımının admin onayına düşmesi
   - *Bitti:* limit içinde otomatik, aşımda `requires_approval` testleri
   - **Durum (27.07):** `checkout-options.ts` içinde — vade varsayılan kapalı, limit içinde otomatik onay, limit aşımı reddetmez **admin onayına düşer**, gecikmede vade kapanır peşin yollar açık kalır.
