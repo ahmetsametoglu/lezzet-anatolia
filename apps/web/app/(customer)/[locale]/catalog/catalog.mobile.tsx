@@ -24,12 +24,13 @@ export function CatalogMobile({ t, locale, data, active, hrefFor }: CatalogViewP
       </div>
 
       <div className="flex items-center justify-between px-4 pb-2">
-        <span className="font-sans text-note text-muted">{t.count.replace('{n}', String(data.total))}</span>
-        <FilterChip label={t.onlyOffers} href={hrefFor({ onlyOffers: !active.onlyOffers })} active={active.onlyOffers} tone="offer" />
+        <span className="font-sans text-body-sm text-muted">{t.count.replace('{n}', String(data.total))}</span>
+        <FilterChip label={t.onlyOffers} href={hrefFor({ onlyOffers: !active.onlyOffers })} active={active.onlyOffers} tone="offer" size="control" />
       </div>
       <div className="flex gap-2 overflow-x-auto px-4 pb-3">
         <SortSelect
           label={t.sortLabel}
+          currentLabel={t.sort[active.sort]}
           options={CATALOG_SORTS.map((s) => ({ label: t.sort[s], href: hrefFor({ sort: s }), active: active.sort === s }))}
         />
       </div>

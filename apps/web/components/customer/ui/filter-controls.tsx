@@ -6,9 +6,21 @@ import { Link } from '@/i18n/navigation';
  *
  * Üçü de LINK tabanlıdır, client state değil: süzme sunucuda çözülüyor (`catalog.ts`), seçim URL'de
  * yaşıyor. Böylece filtreli liste paylaşılabilir, geri tuşu çalışır ve ilk boya sunucudan tam gelir.
+ *
+ * ÖLÇÜLER TASARIMDAN BİREBİR (`Musteri - Katalog.dc.html`): kategori çipi 14/700 ped 10-20; süzgeç
+ * ve sıralama düğmesi 13.5/700 ped 8-16. İkisi AYNI DEĞİL — aynı komponente aynı ölçüyle bağlanınca
+ * indirim düğmesi çip kadar büyüyor ve satırın dengesi bozuluyor (yaşandı, 27.07).
  */
 
 type ChipHref = ComponentProps<typeof Link>['href'];
+
+/** `chip`: kategori seçimi (büyük). `control`: sonuç satırındaki süzgeç düğmesi (küçük). */
+type ChipSize = 'chip' | 'control';
+
+const SIZE: Record<ChipSize, string> = {
+  chip: 'px-5 py-2.5 text-chip',
+  control: 'px-4 py-2 text-control',
+};
 
 interface FilterChipProps {
   label: string;
@@ -16,10 +28,11 @@ interface FilterChipProps {
   active?: boolean;
   /** Fırsat çipi ("Yalnız indirimliler") — nötr süzgeçlerden ayrı renkte durur. */
   tone?: 'neutral' | 'offer';
+  size?: ChipSize;
 }
 
 /** K17 · Filtre Çipi — kategori seçimi ve indirim süzgeci. */
-export function FilterChip({ label, href, active = false, tone = 'neutral' }: FilterChipProps) {
+export function FilterChip({ label, href, active = false, tone = 'neutral', size = 'chip' }: FilterChipProps) {
   const style =
     tone === 'offer'
       ? active
@@ -29,45 +42,48 @@ export function FilterChip({ label, href, active = false, tone = 'neutral' }: Fi
         ? 'border-olive bg-olive text-white'
         : 'border-sand-400 bg-card text-ink hover:border-olive';
   return (
-    <Link
-      href={href}
-      className={[
-        'cursor-pointer rounded-pill border-[1.5px] px-5 py-2.5 font-sans text-note font-bold transition-colors',
-        style,
-      ].join(' ')}
-    >
+    <Link href={href} className={['cursor-pointer rounded-pill border-[1.5px] font-sans transition-colors', SIZE[size], style].join(' ')}>
       {label}
     </Link>
   );
 }
 
 interface SortSelectProps {
+  /** "Sırala:" — düğme metninin sabit ön eki. */
   label: string;
+  /** Seçili seçeneğin adı — düğmenin üstünde görünen değer. */
+  currentLabel: string;
   options: Array<{ label: string; href: ChipHref; active: boolean }>;
 }
 
 /**
- * K18 · Sıralama Seçici — açılır menü yerine yan yana bağlantılar. Seçenek sayısı üç olduğu için
- * menü açmak fazladan bir dokunuş olurdu; sade ve sezgisel kuralı (CLAUDE.md §3) doğrudan seçimi
- * tercih ettiriyor. Seçenek artarsa gerçek bir menüye döner.
+ * K18 · Sıralama Seçici — tasarımdaki gibi TEK açılır düğme ("Sırala: Öne çıkanlar ▾").
+ *
+ * `details/summary` ile kurulur: açılma yerel bir tarayıcı davranışıdır, client state ve JS
+ * gerekmez — sayfa sunucu bileşeni kalır. Menü İÇERİĞİNİN görünümü tasarımda çizilmemiş (yalnız
+ * kapalı hâli var); liste token'lara sadık, en sade biçimde kuruldu.
  */
-export function SortSelect({ label, options }: SortSelectProps) {
+export function SortSelect({ label, currentLabel, options }: SortSelectProps) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="font-sans text-note text-muted">{label}</span>
-      {options.map((o) => (
-        <Link
-          key={o.label}
-          href={o.href}
-          className={[
-            'cursor-pointer rounded-pill border-[1.5px] px-4 py-2 font-sans text-note font-bold transition-colors',
-            o.active ? 'border-ink bg-card text-ink' : 'border-sand-300 bg-card text-muted hover:border-olive hover:text-ink',
-          ].join(' ')}
-        >
-          {o.label}
-        </Link>
-      ))}
-    </div>
+    <details className="relative">
+      <summary className="flex cursor-pointer list-none items-center gap-1 rounded-pill border-[1.5px] border-sand-400 bg-card px-4 py-2 font-sans text-control text-ink transition-colors hover:border-olive">
+        {label} {currentLabel} <span aria-hidden>▾</span>
+      </summary>
+      <div className="absolute right-0 z-10 mt-2 flex min-w-52 flex-col overflow-hidden rounded-soft border border-sand-200 bg-card">
+        {options.map((o) => (
+          <Link
+            key={o.label}
+            href={o.href}
+            className={[
+              'cursor-pointer px-4 py-2.5 font-sans text-control transition-colors hover:bg-hover-bg',
+              o.active ? 'text-olive' : 'text-ink',
+            ].join(' ')}
+          >
+            {o.label}
+          </Link>
+        ))}
+      </div>
+    </details>
   );
 }
 

@@ -29,11 +29,12 @@ export function CatalogDesktop({ t, locale, data, active, hrefFor }: CatalogView
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="font-sans text-note text-muted">{t.count.replace('{n}', String(data.total))}</span>
+          <span className="font-sans text-body-sm text-muted">{t.count.replace('{n}', String(data.total))}</span>
           <span className="flex-1" />
-          <FilterChip label={t.onlyOffers} href={hrefFor({ onlyOffers: !active.onlyOffers })} active={active.onlyOffers} tone="offer" />
+          <FilterChip label={t.onlyOffers} href={hrefFor({ onlyOffers: !active.onlyOffers })} active={active.onlyOffers} tone="offer" size="control" />
           <SortSelect
             label={t.sortLabel}
+            currentLabel={t.sort[active.sort]}
             options={CATALOG_SORTS.map((s) => ({ label: t.sort[s], href: hrefFor({ sort: s }), active: active.sort === s }))}
           />
         </div>
