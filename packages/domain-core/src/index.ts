@@ -14,3 +14,4 @@ export * from './delivery/delivery-days';
 export * from './delivery/shipping-fee';
 export * from './payment/checkout-options';
 export * from './payment/payment-status';
+export * from './money/movement';

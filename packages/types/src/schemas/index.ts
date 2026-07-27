@@ -20,4 +20,5 @@ export * from './delivery-zone.schema';
 export * from './stock.schema';
 export * from './stock-adjustment.schema';
 export * from './supply.schema';
+export * from './money.schema';
 export * from './job-run.schema';
