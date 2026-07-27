@@ -53,6 +53,7 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 - **Yasal beyan alanları (tek migration turu):** `ingredients` · `nutrition` (sabit kalemli, 100 g) · `traces` (çapraz bulaşma) · `storage_instructions` — dördü de müşteri ürün detayının zorunlu bölümleri; operasyon formunda giriş yeri yok, bu yüzden bugün girilemiyor
 - `ProductVariant.label` → LocalizedText (müşteriye görünen boy etiketi; bugün tek dil)
 - Görsel yükleme (`packages/storage`, image_key deseni)
+- **Görsel okuma URL'i public'e iner:** bugün her render'da 30 dk'lık imzalı (signed) URL üretiliyor; katalog görselleri gizli olmadığı için imzanın koruma değeri yok, bedeli var — tarayıcı/CDN cache'i ölü, paylaşım (OG) kartı imza dolunca görselsiz kalıyor, vitrin statik cache'lenemiyor. R2 public okuma + `R2_PUBLIC_BASE_URL` + `?v=<updated_at>` sürüm damgası. Başlangıç: r2.dev geliştirme adresi (alan adı yok); özel alan (`cdn.<domain>`) sonra, yalnız env değeri değişir. → `build/05-katalog.md (05.11)`
 - `ProductImage` (galeri): ek görseller + sıralama; kapak üründe kalır
 - **Operasyon ürün formu tasarımının güncellenmesi (claude_design):** bugünkü "Yasal beyan" bölümü yalnız alerjen çipleri — içindekiler/besin/saklama/çapraz bulaşma alanları ve galeri yönetimi tasarımda yok; kodlamadan önce tasarım müşteri ürün detayıyla hizalanmalı
 - Ürün skoru okuma önbelleği (`rating_avg`/`rating_count` ya da materialized view) — kaynak `Review`, katalog/detay/benzer listelerinde agregasyon tekrarlanmasın
