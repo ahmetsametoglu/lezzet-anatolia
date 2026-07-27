@@ -22,7 +22,7 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
 
 - [ ] (08.1) **i18n altyapısı:** dil başına URL yapısı (`/fr`, `/de`, `/tr`), arayüz i18n dosyaları, LocalizedText gösterimi + yedek zinciri (TR→FR→DE), dil değiştirici; hreflang + çok dilli sitemap + `Product`/`LocalBusiness` schema.org
   - *Bitti:* aynı sayfa üç dilde açılıyor; sitemap ve hreflang doğrulayıcıdan geçiyor
-- [ ] (08.2) **Müşteri komponent envanteri:** onaylı tasarımdan ortak komponentler (buton/kart/form alanı/liste/durum göstergesi/boş durum/uyarı/miktar seçici...) — her biri varyant ve durumlarıyla, tek yerde
+- [~] (08.2) **Müşteri komponent envanteri:** onaylı tasarımdan ortak komponentler (buton/kart/form alanı/liste/durum göstergesi/boş durum/uyarı/miktar seçici...) — her biri varyant ve durumlarıyla, tek yerde
   - *Bitti:* envanterdeki her komponent izole kullanılabilir; sayfalar bunları tüketiyor
 - [ ] (08.3) **Katalog grubu:** ana sayfa, katalog (arama/filtre + sıfır-sonuç → `search` olayı), ürün detay, paket detay
   - *Bitti:* her sayfa `design/pages` envanterini eksiksiz karşılıyor; fiyat girene göre çözülüyor; iç terim sızmıyor
@@ -42,3 +42,10 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
 ## Netleşecekler
 
 - **Tasarım onay ritmi:** hangi sayfa hangi sırada tasarlanıp onaylanacak (design/README: müşteri evreni ürün detayla başlar) — kodlama bu ritme uyar, toplu üretim yapılmaz.
+
+---
+
+**Modül durumu (27.07.2026):** yalnız §0 token katmanı kuruldu.
+- **Var:** `globals.css` müşteri bloğu envanterin §0'ıyla birebir — kum skalası (9 kademe), semantik aileler (zeytin · terracotta · bal · nötr) dört katmanıyla, etkileşim durumları, odak halkası. Kullanımdaki komponentler (buton K1-K3, site çerçevesi K11/K12/K16, durum ekranı K20/K27, form kiti) token'a taşındı; **müşteri yüzeyinde ham hex kalmadı** (yalnız Google/WhatsApp marka renkleri ve `global-error.tsx` — o kök layout yerine geçtiği için globals'a güvenemez).
+- **Kararlar (kullanıcı onaylı):** tek mürekkep — `#3a4147`/`#3a3f35` ve diğer dört koyu ton `ink`'e indi, ayrı `slate` token'ı yok. Terracotta ailesi hem fırsat hem hata taşımaya devam eder (ayrı kırmızı aile açılmadı).
+- **Yok:** K4-K10, K13-K19, K21-K26 — sayfaları kodlanınca. Karanlık mod müşteri yüzeyinde **planlanmıyor** (envanter §0.5: vitrin gündüz krem zemin üstünde kurulu).

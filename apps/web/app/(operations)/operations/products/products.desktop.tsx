@@ -35,7 +35,7 @@ export function ProductsDesktop(props: ProductsViewProps) {
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-ops-btn bg-ops-ink px-3.5 py-2 font-ops-mono text-[12.5px] font-medium text-ops-card hover:bg-[#33372e]"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-ops-btn bg-ops-ink px-3.5 py-2 font-ops-mono text-[12.5px] font-medium text-ops-card hover:bg-ops-ink-hover"
         >
           <PlusIcon />
           Ürün

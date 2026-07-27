@@ -43,7 +43,7 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
   const role = (await new UserProfileService(serviceDb()).getRole(user.id)) ?? 'admin';
 
   return (
-    <RootShell lang="tr" className={`${spaceGrotesk.variable} ${ibmPlexMono.variable} ${karla.variable}`}>
+    <RootShell lang="tr" surface="operations" className={`${spaceGrotesk.variable} ${ibmPlexMono.variable} ${karla.variable}`}>
       {/* Uygulama kabuğu: viewport yüksekliği sabit; sidebar ve içerik kendi içinde kaydırılır (Veri Masası). */}
       <div className="flex h-screen overflow-hidden bg-ops-bg font-ops-body text-ops-ink">
         <AdminSidebar user={{ email: user.email ?? '', role }} />

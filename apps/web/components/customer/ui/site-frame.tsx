@@ -37,28 +37,28 @@ export function SiteFrame({ device, locale, announcement, nav, children }: SiteF
 
       {/* Başlık (K12) */}
       {device === 'mobile' ? (
-        <header className="flex items-center justify-between border-b border-line-soft px-5 py-3">
-          <span className="font-sans text-xl font-bold text-slate">☰</span>
+        <header className="flex items-center justify-between border-b border-sand-300 px-5 py-3">
+          <span className="font-sans text-xl font-bold text-ink">☰</span>
           <Link href="/" className="cursor-pointer font-serif text-[22px] font-semibold text-ink transition-colors hover:text-olive">
             {brand.name}
           </Link>
-          <span className="font-sans text-base text-slate">🧺</span>
+          <span className="font-sans text-base text-ink">🧺</span>
         </header>
       ) : (
-        <header className="flex items-center gap-9 border-b border-line-soft px-12 py-4">
+        <header className="flex items-center gap-9 border-b border-sand-300 px-12 py-4">
           <Link href="/" className="cursor-pointer font-serif text-2xl font-semibold text-ink transition-colors hover:text-olive">
             {brand.name}
           </Link>
-          <nav className="flex gap-7 font-sans text-[15px] font-semibold text-slate">
+          <nav className="flex gap-7 font-sans text-[15px] font-semibold text-ink">
             <span>{nav.catalog}</span>
             <span>{nav.packages}</span>
-            <span className="text-orange">{nav.deals}</span>
+            <span className="text-terracotta">{nav.deals}</span>
             <span>{nav.discover}</span>
             <span>{nav.pro}</span>
           </nav>
           <div className="ml-auto flex items-center gap-5 font-sans text-sm font-semibold text-muted">
             <span className="uppercase">{locale} ▾</span>
-            <span className="text-slate">🧺</span>
+            <span className="text-ink">🧺</span>
           </div>
         </header>
       )}
@@ -69,7 +69,7 @@ export function SiteFrame({ device, locale, announcement, nav, children }: SiteF
       {/* Footer (K16) — cihaza göre düzen (mobilde alt alta, masaüstünde yan yana) */}
       <footer
         className={[
-          'flex gap-3 bg-slate py-6 text-[#c9cdc2]',
+          'flex gap-3 bg-ink py-6 text-neutral-400',
           device === 'mobile' ? 'flex-col px-6' : 'items-center justify-between px-12',
         ].join(' ')}
       >

@@ -5,13 +5,15 @@ import type { ButtonHTMLAttributes } from 'react';
  * yazmak yerine `<Button variant size fullWidth>` kullanılır. `<Link>`/`<a>` gibi buton-olmayan
  * öğeler için aynı görünümü `buttonClass(...)` verir. Tasarım büyüdükçe varyant eklenir.
  */
-type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'secondaryOnDark' | 'ghost';
 type ButtonSize = 'md' | 'sm';
 
 const VARIANT: Record<ButtonVariant, string> = {
-  primary: 'rounded-pill bg-olive text-white hover:bg-olive-dark disabled:bg-[#c9c3b0]',
-  secondary: 'rounded-pill border-[1.5px] border-line-strong bg-white text-ink hover:border-olive',
-  ghost: 'text-olive hover:text-olive-dark disabled:text-faint',
+  primary: 'rounded-pill bg-olive text-white hover:bg-olive-dark disabled:bg-disabled-fill disabled:text-disabled-text',
+  secondary: 'rounded-pill border-[1.5px] border-sand-400 bg-card text-ink hover:border-olive',
+  // K2 koyu zemin varyantı — antrasit blok üstünde açık yeşil çerçeve/metin (envanter §2).
+  secondaryOnDark: 'rounded-pill border-[1.5px] border-olive-light bg-transparent text-olive-light hover:bg-olive-light/10',
+  ghost: 'text-olive hover:text-olive-dark disabled:text-sand-600',
 };
 
 // Dolgulu varyantlar (primary/secondary) ped alır; ghost yalnız metin boyutu (inline link-buton).
@@ -33,7 +35,9 @@ interface ButtonClassOptions {
 
 export function buttonClass({ variant = 'primary', size = 'md', fullWidth, className }: ButtonClassOptions = {}): string {
   return [
-    'inline-flex cursor-pointer items-center justify-center gap-2 font-sans font-bold outline-none transition-colors disabled:cursor-not-allowed',
+    // Odak halkası envanter §0.4: 2px zeytin outline, 3px offset — ayrı renk taşımaz.
+    'inline-flex cursor-pointer items-center justify-center gap-2 font-sans font-bold transition-colors disabled:cursor-not-allowed',
+    'outline-none focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-olive',
     VARIANT[variant],
     variant === 'ghost' ? GHOST_SIZE[size] : PADDED_SIZE[size],
     fullWidth ? 'w-full' : '',

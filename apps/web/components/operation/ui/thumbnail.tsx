@@ -28,7 +28,7 @@ export function Thumbnail({ src, alt, size, fluid = false, ratio = 1, iconSize, 
     <div
       style={fluid ? { aspectRatio: ratio } : { width: size, height: size }}
       className={[
-        'grid place-items-center overflow-hidden rounded-[10px] border border-[#e0e2da] bg-[#e9eae4] text-[#b3b7ac]',
+        'grid place-items-center overflow-hidden rounded-[10px] border border-ops-gray-300 bg-ops-line text-ops-gray-700',
         fluid ? 'w-full' : 'flex-none',
         className,
       ]

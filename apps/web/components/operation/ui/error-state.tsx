@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
 type ErrorTone = 'neutral' | 'danger' | 'warn';
 
 const TONE: Record<ErrorTone, string> = {
-  neutral: 'bg-[#eef0ea] text-ops-body',
+  neutral: 'bg-ops-gray-100 text-ops-body',
   danger: 'bg-ops-red-bg text-ops-red',
   warn: 'bg-ops-amber-bg text-ops-amber',
 };

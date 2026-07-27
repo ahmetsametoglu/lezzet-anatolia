@@ -42,6 +42,7 @@
 - **İmplement ederken improvise ETME:** görsel karar `.dc.html`'de verili (web/mobil ayrı bölüm); birebir uygula.
 - **Statik ≠ işlevsiz:** öğenin içeriğinden işlevini çıkar; bağımlılığı olmayanı TAM yap (UI+backend); dış-modül bekleyende UI tam, arka uç stub.
 - `.dc.html` dış çerçeve = canvas chrome (UI değil). İmplementten önce güncel tasarımı **claude_design MCP**'den çek (yerel kopya bayat olabilir).
+- **Ham hex YASAK** — renk `globals.css` token'ından gelir (envanter §0). Token yoksa kodlama, envantere ekletme. Tailwind'in sabit renkleri (`bg-white`, `*-gray-500`) operasyonda kullanılmaz: karanlık modda dönmezler. → STACK §9
 
 ## 4. Çalışma disiplini & kullanıcı
 - **Tek seferde tek kritik konu** çöz-geç; uzun liste dökme.

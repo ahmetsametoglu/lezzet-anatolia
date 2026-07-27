@@ -203,12 +203,12 @@ export function OtpCodeInput({ email, locale, initialCooldownSec = 45, onVerify,
             onFocus={(e) => e.target.select()}
             className={`h-14 w-11 rounded-xl border-2 bg-white text-center font-sans text-[22px] font-bold outline-none transition-colors disabled:opacity-60 ${
               isError
-                ? 'border-danger text-danger'
+                ? 'border-terracotta-bright text-terracotta-bright'
                 : isSuccess
                   ? 'border-olive text-olive'
                   : d
                     ? 'border-olive text-ink'
-                    : 'border-line-strong text-ink focus:border-olive'
+                    : 'border-sand-400 text-ink focus:border-olive'
             }`}
           />
         ))}
@@ -216,7 +216,7 @@ export function OtpCodeInput({ email, locale, initialCooldownSec = 45, onVerify,
 
       <div className="min-h-5 text-center" aria-live="polite">
         {feedback.kind === 'verifying' && <span className="font-sans text-[13px] text-muted">{t.verifying}</span>}
-        {feedback.kind === 'error' && <span className="font-sans text-[13px] font-semibold text-danger">{feedback.message}</span>}
+        {feedback.kind === 'error' && <span className="font-sans text-[13px] font-semibold text-terracotta-bright">{feedback.message}</span>}
         {feedback.kind === 'success' && <span className="font-sans text-[13px] font-semibold text-olive">{t.success}</span>}
       </div>
 
@@ -224,7 +224,7 @@ export function OtpCodeInput({ email, locale, initialCooldownSec = 45, onVerify,
         <p className="text-center font-sans text-[13px] text-muted">
           {t.resendPrompt}{' '}
           {cooldownSec > 0 ? (
-            <span className="text-faint">
+            <span className="text-sand-600">
               {t.resend} ({cooldownSec}s)
             </span>
           ) : (
@@ -232,7 +232,7 @@ export function OtpCodeInput({ email, locale, initialCooldownSec = 45, onVerify,
               {isResending ? t.resending : t.resend}
             </Button>
           )}
-          {resendFeedback && <span className="mt-1 block text-faint">{resendFeedback}</span>}
+          {resendFeedback && <span className="mt-1 block text-sand-600">{resendFeedback}</span>}
         </p>
       )}
     </div>

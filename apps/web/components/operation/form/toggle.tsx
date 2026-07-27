@@ -29,13 +29,13 @@ export function Toggle({ on, onChange, size = 'md', label }: ToggleProps) {
       className={[
         'relative flex-none rounded-full transition-colors',
         s.track,
-        on ? 'bg-ops-olive' : 'bg-[#cfd2c9]',
+        on ? 'bg-ops-olive' : 'bg-ops-gray-600',
         // onChange'siz = dekoratif (ör. ToggleField içindeki iç anahtar): pointer olaylarını yutMA →
         // hover/tıklama dıştaki tıklanabilir karta geçer, el işareti kaybolmaz.
         onChange ? 'cursor-pointer' : 'pointer-events-none',
       ].join(' ')}
     >
-      <span className={['absolute top-0.5 rounded-full bg-white transition-all', s.knob, on ? s.on : s.off].join(' ')} />
+      <span className={['absolute top-0.5 rounded-full bg-ops-white transition-all', s.knob, on ? s.on : s.off].join(' ')} />
     </button>
   );
 }

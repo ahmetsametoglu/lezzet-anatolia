@@ -27,7 +27,7 @@ function SortableRow<T>({ id, item, renderItem }: { id: string; item: T; renderI
   };
   const handle = (
     <span
-      className="flex-none cursor-grab select-none text-[#c9ccc3] hover:text-ops-muted active:cursor-grabbing"
+      className="flex-none cursor-grab select-none text-ops-gray-600 hover:text-ops-muted active:cursor-grabbing"
       title="Sürükleyerek sırala"
       {...attributes}
       {...listeners}

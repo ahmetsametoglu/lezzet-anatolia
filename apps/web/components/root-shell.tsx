@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import '../app/globals.css';
+import { ThemeScript } from './operation/ui/theme-toggle';
 
 /**
  * İki yüzeyin ortak kök kabuğu (base). `<html lang>`/`<body>` + global stil TEK yerde;
@@ -12,12 +13,24 @@ import '../app/globals.css';
 interface RootShellProps {
   lang: string;
   className?: string;
+  /**
+   * Hangi evren — `<html data-surface>` olarak yazılır. Sayfa zemini ve KARANLIK MOD buna bağlıdır:
+   * koyu palet yalnız `operations` ağacında ve yalnız işletim sistemi koyu temadayken devreye girer
+   * (globals.css). Müşteri vitrini bilerek tek temalıdır.
+   */
+  surface: 'customer' | 'operations';
   children: ReactNode;
 }
 
-export function RootShell({ lang, className, children }: RootShellProps) {
+export function RootShell({ lang, className, surface, children }: RootShellProps) {
   return (
-    <html lang={lang} className={className}>
+    <html lang={lang} className={className} data-surface={surface}>
+      {/* Tema yalnız operasyonda seçilebilir; müşteri vitrini tek temalıdır (envanter kararı). */}
+      {surface === 'operations' ? (
+        <head>
+          <ThemeScript />
+        </head>
+      ) : null}
       <body>{children}</body>
     </html>
   );

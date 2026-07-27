@@ -10,10 +10,10 @@ type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'danger';
 type ButtonSize = 'md' | 'sm';
 
 const VARIANT: Record<ButtonVariant, string> = {
-  primary: 'bg-ops-olive text-ops-card hover:bg-ops-olive-dark disabled:bg-[#c1c6b8]',
-  dark: 'bg-ops-ink text-ops-card hover:bg-[#33372e] disabled:bg-[#c1c6b8]',
+  primary: 'bg-ops-olive text-ops-card hover:bg-ops-olive-dark disabled:bg-ops-gray-600',
+  dark: 'bg-ops-ink text-ops-card hover:bg-ops-ink-hover disabled:bg-ops-gray-600',
   secondary: 'border border-ops-line-strong bg-ops-card text-ops-strong hover:border-ops-olive',
-  danger: 'border border-[#e2c4c0] bg-ops-card text-ops-red hover:bg-ops-red-bg',
+  danger: 'border border-ops-red-line bg-ops-card text-ops-red hover:bg-ops-red-bg',
 };
 
 const SIZE: Record<ButtonSize, string> = {

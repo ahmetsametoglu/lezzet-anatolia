@@ -112,7 +112,7 @@ export function ProductsTab(props: ProductsViewProps) {
             {resolveLocalizedText(c.name)}
           </Chip>
         ))}
-        <span className="mx-1 h-[18px] w-px bg-[#dfe1d9]" />
+        <span className="mx-1 h-[18px] w-px bg-ops-gray-300" />
         <StatusFilterChip value={statusFilter} onChange={onStatusFilter} />
         {missingCount > 0 ? (
           <Chip

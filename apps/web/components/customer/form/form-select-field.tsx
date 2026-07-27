@@ -76,7 +76,7 @@ export function FormSelectField({
                 aria-pressed={on}
                 className={[
                   'cursor-pointer rounded-pill border px-3 py-1.5 font-sans text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-                  on ? 'border-olive bg-olive text-white' : 'border-line-strong bg-white text-body hover:border-olive',
+                  on ? 'border-olive bg-olive text-white' : 'border-sand-400 bg-white text-body hover:border-olive',
                 ].join(' ')}
               >
                 {opt.label}

@@ -20,7 +20,7 @@ export default function OperationsNotFound() {
       {/* Üst bar — çerçeve pane içinde de korunur */}
       <div className="flex items-center gap-3.5 border-b border-ops-line px-6 py-4">
         <span className="font-ops-display text-[17px] font-semibold text-ops-ink">Sayfa bulunamadı</span>
-        <span className="rounded-md border border-ops-line bg-[#f2f3ee] px-2 py-[3px] font-ops-mono text-[11px] font-medium text-ops-muted">
+        <span className="rounded-md border border-ops-line bg-ops-gray-25 px-2 py-[3px] font-ops-mono text-[11px] font-medium text-ops-muted">
           404
         </span>
       </div>
@@ -32,7 +32,7 @@ export default function OperationsNotFound() {
         description="Bağlantı eski olabilir ya da kayıt taşınmış/silinmiş olabilir. Aşağıdan devam edin."
       >
         {/* Denenen yol — teknik ayrıntı değil, yalnız adres */}
-        <span className="rounded-md border border-ops-line bg-[#f2f3ee] px-2.5 py-[5px] font-ops-mono text-xs text-ops-muted">
+        <span className="rounded-md border border-ops-line bg-ops-gray-25 px-2.5 py-[5px] font-ops-mono text-xs text-ops-muted">
           {pathname}
         </span>
 

@@ -16,7 +16,7 @@ export function SearchInput({ value, onChange, placeholder = 'Ara…', className
   return (
     <label
       className={[
-        'inline-flex items-center gap-2 rounded-ops-btn border border-ops-line-strong bg-white px-3 py-2 text-ops-faint focus-within:border-ops-olive',
+        'inline-flex items-center gap-2 rounded-ops-btn border border-ops-line-strong bg-ops-white px-3 py-2 text-ops-faint focus-within:border-ops-olive',
         className,
       ]
         .filter(Boolean)

@@ -5,7 +5,8 @@ import { GoogleIcon, WhatsAppIcon } from './login-icons';
 import type { LoginViewProps } from './login-types';
 
 // Sıcak degrade — tasarımdaki hero image-slot yerine geçici placeholder (gerçek foto gelince değişir).
-const HERO_BG = 'linear-gradient(150deg,#8a6b2a 0%,#6f7d3f 45%,#3a4147 100%)';
+// Kahraman gradyanı — token'lardan kurulur (envanter §0: bal · ara durak · mürekkep).
+const HERO_BG = 'linear-gradient(150deg,var(--color-honey) 0%,var(--color-hero-mid) 45%,var(--color-ink) 100%)';
 
 // Mobil sunumu (birincil biçim) — tasarım "Giris Mobil" (üstte hero'lu e-posta adımı) ve "Giris Kod"
 // (hero'suz başlık barlı kod adımı). Canvas çerçevesi (390px kart/rounded/shadow) chrome, atıldı;
@@ -35,7 +36,7 @@ export function LoginMobile({ t, errors, subtitle, locale, stage, error, notice,
       <div className="relative h-[150px] flex-none" style={{ background: HERO_BG }}>
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,rgba(52,59,65,.34) 0%,rgba(52,59,65,0) 55%,rgba(250,246,236,.96) 100%)' }} />
         <div className="absolute inset-x-4 top-3.5 flex items-center justify-between">
-          <button type="button" onClick={onBack} className="cursor-pointer font-sans text-sm font-bold text-[#f5f1e6]">
+          <button type="button" onClick={onBack} className="cursor-pointer font-sans text-sm font-bold text-on-image">
             {t.back}
           </button>
           <span className="rounded-2xl bg-[rgba(250,246,236,.92)] px-[11px] py-[5px] font-sans text-[11px] font-semibold uppercase tracking-[.05em] text-olive">❄ {t.heroPillShort}</span>
@@ -58,10 +59,10 @@ export function LoginMobile({ t, errors, subtitle, locale, stage, error, notice,
           </Button>
         </div>
 
-        <div className="flex items-center gap-3 font-sans text-[13px] text-faint">
-          <span className="h-px flex-1 bg-line-soft" />
+        <div className="flex items-center gap-3 font-sans text-[13px] text-sand-600">
+          <span className="h-px flex-1 bg-sand-300" />
           {t.orEmail}
-          <span className="h-px flex-1 bg-line-soft" />
+          <span className="h-px flex-1 bg-sand-300" />
         </div>
 
         <div className="flex flex-col gap-2.5">
@@ -81,7 +82,7 @@ export function LoginMobile({ t, errors, subtitle, locale, stage, error, notice,
           </Button>
         </div>
 
-        {error && <p className="text-center font-sans text-[13px] font-semibold text-danger">{error}</p>}
+        {error && <p className="text-center font-sans text-[13px] font-semibold text-terracotta-bright">{error}</p>}
         {notice && <p className="text-center font-sans text-[13px] font-semibold text-olive">{notice}</p>}
 
         <p className="text-center font-sans text-xs leading-[1.6] text-muted">

@@ -151,7 +151,7 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
                   <Thumbnail src={edit.imageUrl} alt="" fluid ratio={1.91} iconSize={26} />
                   <ImageUploadButton
                     upload={(fd) => uploadCollectionImageAction(edit.id, fd)}
-                    className="absolute inset-0 flex cursor-pointer items-center justify-center bg-[rgba(30,33,27,0)] font-ops-display text-[11.5px] font-semibold text-transparent transition-colors duration-150 group-hover:bg-[rgba(30,33,27,0.5)] group-hover:text-white"
+                    className="absolute inset-0 flex cursor-pointer items-center justify-center bg-transparent font-ops-display text-[11.5px] font-semibold text-transparent transition-colors duration-150 group-hover:bg-ops-image-scrim group-hover:text-ops-card"
                   >
                     {edit.imageUrl ? 'Değiştir' : 'Yükle'}
                   </ImageUploadButton>

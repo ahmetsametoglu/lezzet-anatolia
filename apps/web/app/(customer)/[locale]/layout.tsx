@@ -33,7 +33,7 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
   setRequestLocale(locale);
 
   return (
-    <RootShell lang={locale} className={`${lora.variable} ${karla.variable}`}>
+    <RootShell lang={locale} surface="customer" className={`${lora.variable} ${karla.variable}`}>
       {/* Client component'ler (Link vb.) için locale bağlamı; mesajlar boş — metinler sayfa JSON'undan. */}
       <NextIntlClientProvider>{children}</NextIntlClientProvider>
     </RootShell>

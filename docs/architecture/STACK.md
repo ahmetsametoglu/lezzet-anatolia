@@ -188,7 +188,12 @@ Hepsi UI'sız, saf fonksiyon + gerekiyorsa Zustand deposu + **birim test**. Her 
 - Ham `<input>`/`<select>` son çare, gerekçesi yorumda.
 - Tekrarlayan görsel dil (rozet, durum) için **tek render kaynağı**.
 
-**Tasarım token'ları:** renk/spacing/tipografi `tailwind.config` `theme.extend`'de; kaynak değerler `packages/brand`. Mobil/masaüstü ortak katman burasıdır; padding/margin standartları cihaza göre değişse de token tek yerden gelir.
+**Tasarım token'ları:** Tailwind v4 → `apps/web/app/globals.css` `@theme` bloğu (config dosyası yok). İki ayrı set: müşteri (`--color-*`) ve operasyon (`--color-ops-*`); kaynak, Claude Design komponent envanterlerinin §0'ıdır.
+
+- **Ham hex yasak.** Bir ton envanterde yoksa kodlanmaz — önce envantere eklenir (envanterin kendi kuralı; kodlayan ajanın "birebir uygula" kuralıyla çarpışmasın diye bağlayıcıdır). İstisna: marka renkleri (Google/WhatsApp butonları) ve `global-error.tsx` — o kök layout yerine geçtiği için globals'a güvenemez.
+- **Her semantik aile dört katman taşır:** metin · koyu (zemin üstünde başlık/gövde) · zemin · kenarlık (+ aileye göre grafik/nokta). İki katmanla bırakılan aile, sayfa tasarımlarının envanter dışına çıkmasına yol açar.
+- **Karanlık mod yalnız operasyon yüzeyindedir.** `<html data-surface="operations">` altında `prefers-color-scheme: dark` ile devreye girer; token **adları** değişmez, yalnız değerleri yeniden tanımlanır — bileşenlere dokunulmaz. Müşteri vitrini tek temalıdır (envanter kararı: vitrin gündüz krem zemin üstünde kurulu). `data-theme="light"` koyu temayı bir ağaçta kapatır.
+- Tailwind'in kendi sabit renkleri (`bg-white`, `text-black`, `*-gray-500`…) tema ile dönmediği için operasyon yüzeyinde kullanılmaz; karşılığı token'dır (`bg-ops-white`, `text-ops-card`).
 
 ---
 

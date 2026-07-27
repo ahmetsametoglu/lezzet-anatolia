@@ -23,13 +23,13 @@ function LangCard({ code, filled }: { code: Locale; filled: boolean }) {
     <div
       className={[
         'flex flex-1 flex-col gap-0.5 rounded-ops-card border px-2.5 py-2',
-        filled ? 'border-[#cdd8b6] bg-[#f2f6ea]' : 'border-[#ecd9b4] bg-[#fdf7ec]',
+        filled ? 'border-ops-olive-line bg-ops-olive-bg' : 'border-ops-amber-line bg-ops-amber-bg',
       ].join(' ')}
     >
       <span className={['font-ops-display text-[11px] font-semibold', filled ? 'text-ops-olive-dark' : 'text-ops-amber'].join(' ')}>
         {code.toUpperCase()}
       </span>
-      <span className={['font-ops-body text-[10.5px]', filled ? 'text-[#6a8a3a]' : 'text-[#b98a3a]'].join(' ')}>
+      <span className={['font-ops-body text-[10.5px]', filled ? 'text-ops-olive' : 'text-ops-amber-dot'].join(' ')}>
         {filled ? 'dolu' : 'eksik — öneri hazır'}
       </span>
     </div>
@@ -38,7 +38,7 @@ function LangCard({ code, filled }: { code: Locale; filled: boolean }) {
 
 function Spec({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
-    <div className="flex flex-col gap-0.5 rounded-ops-card border border-ops-line bg-white px-[11px] py-[9px]">
+    <div className="flex flex-col gap-0.5 rounded-ops-card border border-ops-line bg-ops-white px-[11px] py-[9px]">
       <span className="font-ops-display text-[10px] font-medium uppercase tracking-[0.06em] text-ops-muted">{label}</span>
       <span className={['font-ops-body text-[13px] font-medium', warn ? 'text-ops-amber' : 'text-ops-ink'].join(' ')}>{value}</span>
     </div>
@@ -55,18 +55,18 @@ function DeclarationNote({ product }: { product: ProductView }) {
   let icon: ReactNode;
   let text: string;
   if (productStatus(product) === 'candidate') {
-    cls = 'border-[#bcd0e0] bg-[#eef4f9] text-[#2f5a78] [--ic:#3a6b8a]';
+    cls = 'border-ops-blue-line bg-ops-blue-bg text-ops-blue-dark [--ic:var(--color-ops-blue)]';
     icon = <InfoIcon />;
     text = 'Aday ürün — satılamaz, yalnız keşifte görünür. Varyant · stok · fiyat tamamlanınca "Etkinleştir" ile satılabilir yapılır.';
   } else if (missingLangs.length > 0 || missingAllergen) {
     const parts: string[] = [];
     if (missingLangs.length > 0) parts.push(`${missingLangs.map((l) => l.toUpperCase()).join(', ')} içeriği`);
     if (missingAllergen) parts.push('alerjen beyanı');
-    cls = 'border-[#ecd9b4] bg-[#fdf7ec] text-[#8a6410] [--ic:#9a6416]';
+    cls = 'border-ops-amber-line bg-ops-amber-bg text-ops-amber-dark [--ic:var(--color-ops-amber)]';
     icon = <AlertIcon />;
     text = `Yasal beyan eksik — ${parts.join(' ve ')} boş. Müşteri sayfasındaki zorunlu beyanları besler; tamamlanana dek işaretli kalır.`;
   } else {
-    cls = 'border-[#cdd8b6] bg-[#f2f6ea] text-[#3f5a2a] [--ic:#4a6121]';
+    cls = 'border-ops-olive-line bg-ops-olive-bg text-ops-olive-dark [--ic:var(--color-ops-olive-dark)]';
     icon = <CheckIcon />;
     text = 'İçerik tam, üç dil dolu, satışta. Fiyat kanala göre Fiyatlar ekranında, partiler Stok ekranında yönetilir.';
   }
@@ -143,20 +143,20 @@ export function ProductPreview({ product, onEdit }: ProductPreviewProps) {
           <div className="flex gap-2 border-t border-ops-line pt-3">
             <Link
               href={`/operations/prices?productId=${product.id}`}
-              className="flex-1 rounded-ops-btn border border-[#cdd8b6] py-[9px] text-center font-ops-display text-[12px] font-semibold text-ops-olive hover:bg-ops-olive-bg"
+              className="flex-1 rounded-ops-btn border border-ops-olive-line py-[9px] text-center font-ops-display text-[12px] font-semibold text-ops-olive hover:bg-ops-olive-bg"
             >
               Fiyatlar →
             </Link>
             <Link
               href={`/operations/stock?productId=${product.id}`}
-              className="flex-1 rounded-ops-btn border border-[#cdd8b6] py-[9px] text-center font-ops-display text-[12px] font-semibold text-ops-olive hover:bg-ops-olive-bg"
+              className="flex-1 rounded-ops-btn border border-ops-olive-line py-[9px] text-center font-ops-display text-[12px] font-semibold text-ops-olive hover:bg-ops-olive-bg"
             >
               Stok →
             </Link>
             <button
               type="button"
               onClick={onEdit}
-              className="flex-1 cursor-pointer rounded-ops-btn bg-ops-ink py-[9px] text-center font-ops-display text-[12px] font-semibold text-ops-card hover:bg-[#33372e]"
+              className="flex-1 cursor-pointer rounded-ops-btn bg-ops-ink py-[9px] text-center font-ops-display text-[12px] font-semibold text-ops-card hover:bg-ops-ink-hover"
             >
               Düzenle
             </button>

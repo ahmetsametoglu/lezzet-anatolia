@@ -26,7 +26,7 @@ export function FieldShell({ fieldId, label, hideLabel, required, labelAside, er
       >
         <span>
           {label}
-          {required && <span className="text-danger"> *</span>}
+          {required && <span className="text-terracotta-bright"> *</span>}
         </span>
         {labelAside && <span className="text-[13px] font-normal text-muted">{labelAside}</span>}
       </label>
@@ -34,7 +34,7 @@ export function FieldShell({ fieldId, label, hideLabel, required, labelAside, er
       {children}
 
       {error && (
-        <p className="font-sans text-[13px] font-semibold text-danger" id={`${fieldId}-error`} role="alert">
+        <p className="font-sans text-[13px] font-semibold text-terracotta-bright" id={`${fieldId}-error`} role="alert">
           {error}
         </p>
       )}
@@ -50,8 +50,8 @@ export function errorIdFor(fieldId: string, error?: string): string | undefined 
 /** Input/textarea/select ortak görünümü (Lezzet token'ları). `error` çerçeveyi kırmızıya çeker. */
 export function controlClass(error?: string, extra?: string): string {
   return [
-    'w-full rounded-2xl border-2 bg-white px-4 py-3 font-sans text-[15px] text-ink outline-none transition-colors placeholder:text-faint focus:border-olive disabled:cursor-not-allowed disabled:opacity-60',
-    error ? 'border-danger' : 'border-line-strong',
+    'w-full rounded-2xl border-2 bg-white px-4 py-3 font-sans text-[15px] text-ink outline-none transition-colors placeholder:text-sand-600 focus:border-olive disabled:cursor-not-allowed disabled:opacity-60',
+    error ? 'border-terracotta-bright' : 'border-sand-400',
     extra,
   ]
     .filter(Boolean)

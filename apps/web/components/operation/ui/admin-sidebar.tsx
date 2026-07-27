@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NavIcon, SearchIcon, type NavIconName } from './icons';
+import { ThemeToggle } from './theme-toggle';
 
 /**
  * AdminSidebar — Komponent Envanteri O1. Tüm admin sayfalarının TEK gezinme kaynağı (nav kopyalanmaz):
@@ -94,7 +95,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
       </div>
 
       {/* Arama — görsel yer tutucu; işlev sonraki dilimde */}
-      <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg border border-[#e0e2da] bg-[#e9eae4] px-2.5 py-[7px] text-ops-faint">
+      <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg border border-ops-gray-300 bg-ops-line px-2.5 py-[7px] text-ops-faint">
         <SearchIcon />
         <span className="flex-1 font-ops-body text-xs">Ara…</span>
         <span className="rounded border border-ops-line-strong px-1 font-ops-mono text-[10px]">⌘K</span>
@@ -116,7 +117,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
                   aria-current={on ? 'page' : undefined}
                   className={[
                     'flex items-center gap-[11px] border-l-2 px-[15px] py-[7px] no-underline transition-colors',
-                    on ? 'border-ops-olive bg-ops-olive-bg text-ops-olive-dark' : 'border-transparent text-ops-faint hover:bg-[#e9eae4]',
+                    on ? 'border-ops-olive bg-ops-olive-bg text-ops-olive-dark' : 'border-transparent text-ops-faint hover:bg-ops-line',
                   ].join(' ')}
                 >
                   <NavIcon name={item.key} />
@@ -132,9 +133,9 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
         ))}
       </nav>
 
-      {/* Kullanıcı bloğu */}
+      {/* Kullanıcı bloğu — `mt-auto` ile alt kümeyi rayın dibine iter */}
       <div className="mx-[15px] mt-auto flex items-center gap-2.5 border-t border-ops-line pt-3">
-        <span className="grid h-[30px] w-[30px] flex-none place-items-center rounded-lg bg-ops-olive font-ops-display text-xs font-semibold text-white">
+        <span className="grid h-[30px] w-[30px] flex-none place-items-center rounded-lg bg-ops-olive font-ops-display text-xs font-semibold text-ops-card">
           {initials}
         </span>
         <div className="flex min-w-0 flex-1 flex-col">
@@ -142,6 +143,9 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
           <span className="font-ops-body text-[10.5px] text-ops-muted">{roleLabel}</span>
         </div>
       </div>
+
+      {/* Tema anahtarı — rayın en altı; karanlık palet yalnız bu yüzeyde geçerlidir */}
+      <ThemeToggle />
     </aside>
   );
 }

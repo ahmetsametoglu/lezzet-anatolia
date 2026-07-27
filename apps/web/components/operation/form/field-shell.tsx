@@ -22,7 +22,7 @@ export function FieldShell({ fieldId, label, required, labelAside, error, childr
       <label htmlFor={fieldId} className="flex items-center justify-between font-ops-body text-[11.5px] text-ops-body">
         <span>
           {label}
-          {required ? <span className="text-[#b0561f]"> *</span> : null}
+          {required ? <span className="text-ops-red-dot"> *</span> : null}
         </span>
         {labelAside ? <span className="font-ops-body text-[11px] text-ops-faint">{labelAside}</span> : null}
       </label>
@@ -50,7 +50,7 @@ const CONTROL_SIZE: Record<ControlSize, string> = {
 /** Input/textarea/select ortak görünümü (ops token'ları). `error` çerçeveyi kırmızıya çeker. TEK KAYNAK. */
 export function controlClass(error?: string, opts?: { size?: ControlSize; mono?: boolean; extra?: string }): string {
   return [
-    'w-full border bg-white text-ops-ink outline-none transition-colors focus:border-ops-olive disabled:cursor-not-allowed disabled:opacity-60',
+    'w-full border bg-ops-white text-ops-ink outline-none transition-colors focus:border-ops-olive disabled:cursor-not-allowed disabled:opacity-60',
     CONTROL_SIZE[opts?.size ?? 'md'],
     error ? 'border-ops-red' : 'border-ops-line-strong',
     opts?.mono ? 'font-ops-mono' : 'font-ops-body',

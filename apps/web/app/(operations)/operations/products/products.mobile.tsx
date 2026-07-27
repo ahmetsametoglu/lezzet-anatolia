@@ -50,9 +50,9 @@ function QuickEditSheet({
   };
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-50 flex flex-col justify-end bg-[rgba(34,39,43,0.35)]">
+    <div onClick={onClose} className="fixed inset-0 z-50 flex flex-col justify-end bg-ops-scrim">
       <div onClick={(e) => e.stopPropagation()} className="flex flex-col gap-3.5 rounded-t-[20px] bg-ops-card p-4">
-        <span className="mx-auto h-[5px] w-[42px] rounded-[3px] bg-[#d4d7ce]" />
+        <span className="mx-auto h-[5px] w-[42px] rounded-[3px] bg-ops-gray-500" />
         <div className="flex items-center gap-3">
           <Thumbnail src={product.imageUrl} alt={displayName} size={56} iconSize={22} />
           <div className="flex flex-col gap-0.5">
@@ -66,7 +66,7 @@ function QuickEditSheet({
         <ImageUploadButton
           upload={(form) => uploadProductImageAction(product.id, form)}
           camera
-          className="flex items-center justify-center gap-2 rounded-[11px] border border-[#cdd8b6] bg-[#f2f6ea] px-3 py-3 font-ops-display text-[12.5px] font-semibold text-ops-olive-dark disabled:opacity-60"
+          className="flex items-center justify-center gap-2 rounded-[11px] border border-ops-olive-line bg-ops-olive-bg px-3 py-3 font-ops-display text-[12.5px] font-semibold text-ops-olive-dark disabled:opacity-60"
         >
           <CameraIcon />
           Kameradan görsel çek / değiştir

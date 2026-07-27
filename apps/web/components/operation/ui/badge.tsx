@@ -10,9 +10,9 @@ type Tone = 'neutral' | 'olive' | 'amber' | 'red' | 'blue';
 const TONE: Record<Tone, { cls: string; dot: string }> = {
   neutral: { cls: 'text-ops-body bg-ops-line-soft', dot: 'bg-ops-faint' },
   olive: { cls: 'text-ops-olive-dark bg-ops-olive-bg', dot: 'bg-ops-olive' },
-  amber: { cls: 'text-ops-amber bg-ops-amber-bg', dot: 'bg-[#c98a2e]' },
-  red: { cls: 'text-ops-red bg-ops-red-bg', dot: 'bg-[#c2571f]' },
-  blue: { cls: 'text-[#3a6b8a] bg-[#e6eef3]', dot: 'bg-[#3a6b8a]' },
+  amber: { cls: 'text-ops-amber bg-ops-amber-bg', dot: 'bg-ops-amber-dot' },
+  red: { cls: 'text-ops-red bg-ops-red-bg', dot: 'bg-ops-red-dot' },
+  blue: { cls: 'text-ops-blue bg-ops-blue-bg', dot: 'bg-ops-blue' },
 };
 
 interface BadgeProps {

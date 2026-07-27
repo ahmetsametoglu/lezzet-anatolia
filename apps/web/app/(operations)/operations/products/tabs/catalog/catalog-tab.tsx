@@ -93,7 +93,7 @@ export function CatalogTab({ kind, rows, products }: CatalogTabProps) {
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="cursor-pointer rounded-ops-btn bg-ops-ink px-3.5 py-2 font-ops-display text-[12px] font-semibold text-ops-card hover:bg-[#33372e]"
+          className="cursor-pointer rounded-ops-btn bg-ops-ink px-3.5 py-2 font-ops-display text-[12px] font-semibold text-ops-card hover:bg-ops-ink-hover"
         >
           {copy.createLabel}
         </button>

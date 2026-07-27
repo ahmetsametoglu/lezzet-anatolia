@@ -40,7 +40,7 @@ export function Select({ value, onChange, options, placeholder = 'Seç', classNa
         aria-haspopup="listbox"
         aria-expanded={open}
         className={[
-          'flex w-full cursor-pointer items-center justify-between gap-3 rounded-[9px] border bg-white px-[13px] py-[7px] font-ops-body text-[13.5px] font-medium outline-none transition-colors',
+          'flex w-full cursor-pointer items-center justify-between gap-3 rounded-[9px] border bg-ops-white px-[13px] py-[7px] font-ops-body text-[13.5px] font-medium outline-none transition-colors',
           open ? 'border-[1.5px] border-ops-olive' : 'border border-ops-line-strong hover:border-ops-olive',
           selected ? 'text-ops-ink' : 'text-ops-faint',
         ].join(' ')}

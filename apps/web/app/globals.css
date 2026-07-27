@@ -1,39 +1,80 @@
 @import 'tailwindcss';
 
 /*
-  Müşteri evreni — "Aile Sofrası" tasarım token'ları.
-  Kaynak: design/project/Komponent Envanteri - Musteri.dc.html §0.
-  Operasyon evreni ("Veri Masası") tokenları o yüzey kodlanınca eklenecek.
+  İki evrenin tasarım token'ları — kaynak: design/project/Komponent Envanteri - {Musteri,Operasyon}.dc.html §0.
+  Her semantik aile DÖRT katman taşır: metin · koyu · zemin · kenarlık (+ grafik/nokta).
+  KURAL (envanter §0): ham hex yasak — bir ton burada yoksa kodlanmaz, envantere eklenir.
+  Karanlık mod yalnız operasyon yüzeyindedir (dosyanın sonu); müşteri vitrini tek temalıdır.
 */
 @theme {
   /* Fontlar — next/font değişkenlerine bağlanır (layout.tsx) */
   --font-sans: var(--font-karla), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-lora), ui-serif, Georgia, serif;
 
-  /* Renkler */
-  --color-olive: #5f7a2c; /* birincil aksiyon, marka */
-  --color-olive-dark: #4a6121; /* hover / basılı */
-  --color-olive-light: #a9c46b; /* koyu zeminde vurgu */
-  --color-ink: #343b41; /* başlık, koyu blok */
-  --color-slate: #3a4147; /* koyu blok (kart/footer) */
-  --color-orange: #b05c2e; /* fırsat / indirim vurgusu */
-  --color-cream: #faf6ec; /* sayfa zemini */
-  --color-cream-deep: #f0e9d6; /* vurgulu bölüm zemini */
-  --color-mint: #eef2e2; /* açık yeşil bant */
-  --color-line: #ece5d2; /* kart kenarı, ayırıcı */
-  --color-line-strong: #d8cfb6; /* girdi/çerçeve (koyu) */
-  --color-line-soft: #e0d8c2; /* ince ayraç */
+  /* ── §0.1 Yüzey ve mürekkep ────────────────────────────────────────────────
+     TEK MÜREKKEP kararı (envanter §0.5): #3a4147 · #3a3f35 · #333a3e · #4a5257 ·
+     #3c4448 · #454d54 → hepsi `ink`. Ayrı bir `slate` token'ı YOK. */
+  --color-ink: #343b41; /* başlık, koyu blok zemini, birincil metin */
+  --color-body: #6d7261; /* gövde açıklaması, kart alt satırı */
+  --color-muted: #8a8270; /* etiket, yardımcı satır, placeholder */
+  --color-card: #ffffff; /* kart, dialog, girdi zemini */
+  --color-cream: #faf6ec; /* sayfa zemini (= sand-25) */
+  --color-cream-deep: #f0e9d6; /* vurgulu bölüm bandı (= sand-100) */
+  --color-on-image: #f5f1e6; /* fotoğraf üstünde başlık, alıntı */
+  --color-on-image-soft: #dfe3cf; /* fotoğraf üstünde imza, altyazı */
 
-  --color-body: #6d7261; /* gövde metni */
-  --color-muted: #8a8270; /* ikincil metin */
-  --color-faint: #b3ab97; /* soluk / placeholder */
+  /* ── §0.2 Kum skalası — çerçeve, ayraç, pasif ──────────────────────────────
+     Skala SICAKtır; tek soğuk ton `neutral-400`, yalnız kapanmış/pasif durumda
+     (krem zeminde sararmış görünmesin diye). */
+  --color-sand-25: #faf6ec; /* sayfa zemini */
+  --color-sand-50: #f3efe2; /* ara zemin, gömülü panel, hover */
+  --color-sand-100: #f0e9d6; /* vurgulu bölüm, iç ayraç */
+  --color-sand-200: #ece5d2; /* standart çerçeve, kart kenarı */
+  --color-sand-300: #e0d8c2; /* girdi kenarı, 2. çerçeve */
+  --color-sand-400: #d8cfb6; /* belirgin çerçeve */
+  --color-sand-500: #cdc4a8; /* kesikli çerçeve, boş durum */
+  --color-sand-600: #b3ab97; /* pasif ikon, pasif metin */
+  --color-neutral-400: #c9cdc2; /* kapanmış/pasif rozet çerçevesi (soğuk) */
 
-  --color-danger: #c25e3a; /* hata */
-  --color-warn: #8a6b2a; /* uyarı metni */
-  --color-warn-bg: #fdf3e0; /* uyarı zemini */
-  --color-star: #d99a2b; /* yıldız puanı */
+  /* ── §0.3 Semantik aileler — her biri metin · koyu · zemin · kenarlık ──────
+     Zeytin: birincil aksiyon, olumlu, yolunda */
+  --color-olive: #5f7a2c; /* birincil buton, bağlantı, ikon */
+  --color-olive-dark: #4a6121; /* kutu başlığı, hover, basılı */
+  --color-olive-bg: #eef2e2; /* yeşil bant, olumlu rozet */
+  --color-olive-line: #d7e3bd; /* kutu ve seçili kart çerçevesi */
+  --color-olive-light: #a9c46b; /* koyu blok üstünde vurgu, ikon */
 
-  /* Köşe yarıçapları */
+  /* Terracotta: fırsat/indirim — ve (bugünkü karar) hata/iptal. Ayrı koyu katman
+     yok; `bright` hata metni için. Anlam ayrımı ton farkıyla kurulur. */
+  --color-terracotta: #b05c2e; /* fırsat/indirim vurgusu, eski fiyat üstü */
+  --color-terracotta-bg: #f9ede2; /* fırsat kutusu, indirim rozeti */
+  --color-terracotta-line: #e8c9b3; /* kutu çerçevesi, hatalı girdi */
+  --color-terracotta-bright: #c25e3a; /* hata/iptal metni, geçersiz kod */
+
+  /* Bal: bekliyor, iade sürecinde, puan */
+  --color-honey: #8a6b2a; /* bekleyen durum etiketi, ikon */
+  --color-honey-bg: #fdf3e0; /* bekleyen rozet, bilgi kutusu */
+  --color-honey-line: #ecd9b4; /* kutu çerçevesi */
+  --color-star: #d99a2b; /* dolu yıldız, puan göstergesi */
+
+  /* Nötr: kapanmış, teslim edildi, pasif — kendi tonu yok, skaladan türer */
+  --color-closed: #6d7261; /* kapanmış durum etiketi (= body) */
+  --color-closed-bg: #f0e9d6; /* kapanmış rozet arkası (= sand-100) */
+  --color-closed-line: #c9cdc2; /* pasif çerçeve (= neutral-400) */
+
+  /* ── §0.4 Etkileşim durumları ─────────────────────────────────────────────
+     Odak halkası ayrı renk taşımaz: 2px zeytin outline, 3px offset. */
+  --color-hover-bg: #f3efe2; /* liste/kart hover (= sand-50) */
+  --color-disabled-fill: #c9c3b0; /* tükendi/disabled buton zemini */
+  --color-disabled-line: #c9cdc2; /* pasif girdi ve çip çerçevesi */
+  --color-disabled-text: #8a8270; /* disabled buton ve girdi metni (= muted) */
+
+  /* Giriş ekranı kahraman gradyanı — bal → zeytin-kavı → mürekkep. Ara durak
+     (#6f7d3f) envanterde bir aile tonu değil, yalnız bu geçişin orta noktası;
+     ham hex koda dağılmasın diye tek yerde durur. */
+  --color-hero-mid: #6f7d3f;
+
+  /* Köşe yarıçapları — §0.4: kart 18 · küçük kart 14-16 · buton/hap tam yuvarlak */
   --radius-card: 18px;
   --radius-soft: 14px;
   --radius-pill: 26px;
@@ -49,32 +90,76 @@
   --font-ops-mono: var(--font-ibm-plex-mono), ui-monospace, 'Courier New', monospace; /* rakam/fiyat/saat */
   --font-ops-body: var(--font-karla), ui-sans-serif, system-ui, sans-serif; /* gövde */
 
-  /* Renkler — anlam taşır: olive=yolunda, amber=dikkat/karar, kırmızı=hata/gecikme, mor=AI, gri=kapalı */
-  --color-ops-ink: #22251f; /* başlık, koyu buton, "L" */
-  --color-ops-bg: #dedbd3; /* sayfa zemini */
-  --color-ops-panel: #f3f4f0; /* sidebar zemini */
-  --color-ops-card: #fbfbf9; /* kart/tablo zemini */
-  --color-ops-subtle: #f8f9f5; /* tablo başlığı / alt bar zemini */
-  --color-ops-line: #e6e7e1; /* kenarlık */
-  --color-ops-line-soft: #f0f1ec; /* ince ayraç */
-  --color-ops-line-strong: #d9dbd2; /* girdi çerçevesi */
+  /* §0.1 Yüzey ve mürekkep */
+  --color-ops-ink: #22251f; /* başlık, koyu buton, birincil metin, "L" */
+  --color-ops-strong: #3a3f37; /* mürekkep yumuşak: ikincil başlık, nötr tutar/tarih */
+  --color-ops-body: #6a7065; /* gövde açıklaması, tablo alt satırı */
+  --color-ops-muted: #8b9086; /* etiket, yardımcı satır, placeholder */
+  --color-ops-faint: #9aa094; /* placeholder ikonu */
+  --color-ops-bg: #dedbd3; /* sayfa zemini (pane arkası) */
+  --color-ops-card: #fbfbf9; /* kart, tablo, sidebar zemini */
+  --color-ops-white: #ffffff; /* dialog ve girdi zemini, dolu çip metni */
 
-  --color-ops-olive: #5f7a2c; /* birincil aksiyon, marka */
-  --color-ops-olive-dark: #4a6121; /* hover / aktif metin */
-  --color-ops-olive-light: #a9c46b; /* koyu zeminde vurgu */
-  --color-ops-olive-bg: #eef4e2; /* olive açık zemin (aktif/onay) */
+  /* §0.2 Nötr gri skalası — kademe atlanmaz; iki komşu adım aynı kartta yan yana kullanılmaz */
+  --color-ops-gray-25: #f8f9f5; /* sekme çubuğu, tablo başlığı */
+  --color-ops-gray-50: #f0f1ec; /* iç ayraç, satır ayracı */
+  --color-ops-gray-100: #eef0ea; /* kapanmış rozet zemini, satır hover */
+  --color-ops-gray-200: #e6e7e1; /* standart kenarlık (kart, tablo) */
+  --color-ops-gray-300: #e0e2da; /* iç kart kenarlığı, 2. ayraç */
+  --color-ops-gray-400: #d9dbd2; /* girdi/select kenarı, nötr çip */
+  --color-ops-gray-500: #d4d7ce; /* kesikli çerçeve, boş durum */
+  --color-ops-gray-600: #c9ccc3; /* pasif buton dolgusu/çerçevesi */
+  --color-ops-gray-700: #b3b7ac; /* pasif ikon, pasif metin */
 
-  --color-ops-amber: #9a6416; /* dikkat/karar */
-  --color-ops-amber-bg: #fdf1e3;
-  --color-ops-red: #a5443c; /* hata/gecikme */
-  --color-ops-red-bg: #fbe9e7;
-  --color-ops-violet: #5a4a8a; /* AI ajanı */
-  --color-ops-violet-bg: #ece8f5;
+  /* Skala takma adları — kullanımdaki adlar korunur (envanter §0.5 eşlemesi) */
+  --color-ops-subtle: #f8f9f5; /* = gray-25 */
+  --color-ops-panel: #f8f9f5; /* = gray-25; sidebar zemini (#f3f4f0 kalktı) */
+  --color-ops-line-soft: #f0f1ec; /* = gray-50 */
+  --color-ops-line: #e6e7e1; /* = gray-200 */
+  --color-ops-line-strong: #d9dbd2; /* = gray-400 */
 
-  --color-ops-body: #6a7065; /* gövde metni */
-  --color-ops-muted: #8b9086; /* ikincil / etiket */
-  --color-ops-faint: #9aa094; /* placeholder / ikon */
-  --color-ops-strong: #3a3f37; /* koyu gövde */
+  /* §0.3 Semantik aileler — metin · koyu · zemin · kenarlık (+ grafik/nokta) */
+  --color-ops-olive: #5f7a2c; /* ikon, etiket, bağlantı, dolu çip */
+  --color-ops-olive-dark: #4a6121; /* kutu başlığı, olumlu tutar, hover */
+  --color-ops-olive-bg: #eef4e2; /* başarı kutusu, rozet arkası */
+  --color-ops-olive-line: #cdd8b6; /* kutu çerçevesi, seçili çip */
+  --color-ops-olive-light: #a9c46b; /* grafik dolgusu, ilerleme çubuğu */
+
+  --color-ops-amber: #9a6416; /* ikon, uyarı etiketi, sayaç */
+  --color-ops-amber-dark: #8a6410; /* kutu başlığı ve gövdesi */
+  --color-ops-amber-bg: #fdf1e3; /* uyarı kutusu, rozet arkası */
+  --color-ops-amber-line: #ecd9b4; /* kutu çerçevesi, amber çip */
+  --color-ops-amber-dot: #c98a2e; /* durum noktası, eşleşmedi işareti */
+
+  --color-ops-red: #a5443c; /* hata etiketi, ikon, eksi tutar */
+  --color-ops-red-dark: #8a3a33; /* kutu başlığı ve gövdesi */
+  --color-ops-red-bg: #fbe9e7; /* hata kutusu, rozet arkası */
+  --color-ops-red-line: #e2c4c0; /* kutu çerçevesi, hatalı girdi */
+  --color-ops-red-dot: #c2571f; /* bağlantı yok noktası, iade tutarı */
+
+  /* Mavi — YENİ aile (bilgi, nötr bildirim, aday kayıt) */
+  --color-ops-blue: #3a6b8a; /* bilgi ikonu, etiket, vade rozeti */
+  --color-ops-blue-dark: #2f5a78; /* kutu başlığı ve gövdesi */
+  --color-ops-blue-bg: #e6eef3; /* bilgi kutusu, rozet arkası */
+  --color-ops-blue-line: #bcd0e0; /* bilgi kutusu çerçevesi */
+
+  --color-ops-violet: #5a4a8a; /* ajan ikonu, etiket (ayrı koyu katman yok) */
+  --color-ops-violet-bg: #ece8f5; /* öneri kutusu, rozet arkası */
+  --color-ops-violet-line: #d8d0ec; /* öneri kutusu çerçevesi */
+  --color-ops-violet-dot: #6a5acd; /* yolda/işliyor durum noktası */
+
+  /* Yüzen katman — dialog örtüsü (scrim). Temayla döner: koyuda daha koyu, çünkü panel
+     zemini de koyudur ve ayrışma yalnız örtü + kenarlıkla kurulur (gölge işe yaramaz). */
+  --color-ops-scrim: rgba(34, 37, 31, 0.42);
+  /* Görsel ÜSTÜ örtü (yükleme/değiştirme hover'ı) — fotoğrafın üstünde durur, bu yüzden
+     temayla dönmez: her iki temada da koyu kalır ki üstündeki açık metin okunsun. */
+  --color-ops-image-scrim: rgba(30, 33, 27, 0.5);
+
+  /* §0.4 Etkileşim durumları — odak halkası ayrı renk taşımaz (2px olive, 2px offset) */
+  --color-ops-ink-hover: #33372e; /* koyu butonun hover/active durumu */
+  --color-ops-disabled-fill: #c9ccc3; /* disabled buton zemini (= gray-600) */
+  --color-ops-disabled-text: #8b9086; /* disabled buton/girdi metni (= muted) */
+  --color-ops-row-selected: #eef0ea; /* tablo satırı hover ve seçim (= gray-100) */
 
   /* Köşe yarıçapları (operasyon) */
   --radius-ops-card: 8px;
@@ -88,4 +173,92 @@ body {
   background: var(--color-cream);
   color: var(--color-ink);
   font-family: var(--font-sans);
+}
+
+/* Operasyon gövdesi kendi zeminini taşır — token'lar tema ile değiştiği için koyu modda
+   otomatik döner (kabuk `h-screen` olsa da lastik-bant kaydırmada altı görünür). */
+[data-surface='operations'] body {
+  background: var(--color-ops-bg);
+  color: var(--color-ops-ink);
+  font-family: var(--font-ops-body);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KARANLIK MOD — yalnız OPERASYON yüzeyi.
+   Kaynak: Komponent Envanteri - Operasyon §0.6. Token ADLARI değişmez, yalnız
+   değerleri yeniden tanımlanır — hiçbir bileşene dokunulmaz (envanterin kuralı).
+   Müşteri yüzeyi bilerek dışarıda: vitrin gündüz krem zemin üstünde kurulu
+   (Komponent Envanteri - Musteri §0.5), karanlık palet tasarlanmadı.
+
+   Uygulama: `<html data-surface="operations" data-theme="dark|light">`. Tercih üç
+   değerlidir (sistem · açık · koyu) ve sidebar'daki anahtarla seçilir; `system` seçili
+   iken işletim sisteminin teması izlenir. Çözüm JS tarafında yapılır (ThemeScript, FOUC
+   olmadan) — CSS burada TEK blok tutar, koyu değerler iki kez yazılmaz.
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-surface='operations'][data-theme='dark'] {
+  color-scheme: dark;
+
+  /* §0.6 Yüzey ve mürekkep — ters çevrilir */
+  --color-ops-ink: #e9ebe3;
+  --color-ops-strong: #c8ccc2;
+  --color-ops-body: #b4b9ad;
+  --color-ops-muted: #8f9688;
+  --color-ops-faint: #757c6d;
+  --color-ops-bg: #1b1e18;
+  --color-ops-card: #23261f;
+  --color-ops-white: #2a2e26; /* dialog/girdi zemini — koyuda "beyaz" kart altıdır */
+
+  /* §0.6 Gri skalası — aynı kademeler, koyu yönde */
+  --color-ops-gray-25: #23261f;
+  --color-ops-gray-50: #2a2e26;
+  --color-ops-gray-100: #31352c;
+  --color-ops-gray-200: #3c4038;
+  --color-ops-gray-300: #464b41;
+  --color-ops-gray-400: #545a4e;
+  --color-ops-gray-500: #646a5d;
+  --color-ops-gray-600: #757c6d;
+  --color-ops-gray-700: #8f9688;
+
+  --color-ops-subtle: #23261f;
+  --color-ops-panel: #23261f;
+  --color-ops-line-soft: #2a2e26;
+  --color-ops-line: #3c4038;
+  --color-ops-line-strong: #545a4e;
+
+  /* §0.6 Semantik aileler — koyu zeminde okunur kalacak şekilde açılır */
+  --color-ops-olive: #a9c46b;
+  --color-ops-olive-dark: #cdd8b6;
+  --color-ops-olive-bg: #2a3a1c;
+  --color-ops-olive-line: #46592a;
+  --color-ops-olive-light: #8fb04f;
+
+  --color-ops-amber: #dfa94f;
+  --color-ops-amber-dark: #f0d7ab;
+  --color-ops-amber-bg: #38290f;
+  --color-ops-amber-line: #5c4520;
+  --color-ops-amber-dot: #c98a2e;
+
+  --color-ops-red: #e08d84;
+  --color-ops-red-dark: #f2c8c3;
+  --color-ops-red-bg: #351d1a;
+  --color-ops-red-line: #5c322d;
+  --color-ops-red-dot: #e07a3a;
+
+  --color-ops-blue: #82b2d0;
+  --color-ops-blue-dark: #c3d6e4;
+  --color-ops-blue-bg: #1a2a36;
+  --color-ops-blue-line: #34505f;
+
+  --color-ops-violet: #a99adf;
+  --color-ops-violet-bg: #241f38;
+  --color-ops-violet-line: #3e3560;
+  --color-ops-violet-dot: #8a7ae0;
+
+  --color-ops-scrim: rgba(8, 9, 7, 0.74);
+
+  /* §0.6 Etkileşim — koyu buton açık zemine döner (mürekkep ters) */
+  --color-ops-ink-hover: #d3d8ca;
+  --color-ops-disabled-fill: #3c4038;
+  --color-ops-disabled-text: #757c6d;
+  --color-ops-row-selected: #31352c;
 }

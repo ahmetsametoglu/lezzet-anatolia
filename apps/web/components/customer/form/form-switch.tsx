@@ -34,7 +34,7 @@ export function FormSwitch<TFieldValues extends FieldValues>({
         const toggle = () => {
           if (!disabled) field.onChange(!checked);
         };
-        const trackOn = variant === 'accent' ? 'bg-orange' : 'bg-olive';
+        const trackOn = variant === 'accent' ? 'bg-terracotta' : 'bg-olive';
 
         return (
           <div
@@ -50,7 +50,7 @@ export function FormSwitch<TFieldValues extends FieldValues>({
               }
             }}
             className={[
-              'flex select-none items-center justify-between gap-3 rounded-2xl border-2 border-line-strong bg-white px-4 py-3 outline-none transition-colors focus-visible:border-olive',
+              'flex select-none items-center justify-between gap-3 rounded-2xl border-2 border-sand-400 bg-white px-4 py-3 outline-none transition-colors focus-visible:border-olive',
               disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
             ].join(' ')}
           >
@@ -59,7 +59,7 @@ export function FormSwitch<TFieldValues extends FieldValues>({
               {hint && <div className="mt-0.5 font-sans text-[13px] text-muted">{hint}</div>}
             </div>
             <span
-              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${checked ? trackOn : 'bg-line-strong'}`}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${checked ? trackOn : 'bg-sand-400'}`}
               aria-hidden
             >
               <span

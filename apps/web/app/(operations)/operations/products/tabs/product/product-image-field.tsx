@@ -28,7 +28,7 @@ export function ProductImageField({ product }: { product: ProductView | null }) 
       {/* Örtü buton: normalde şeffaf, hover'da koyu örtü + yazı belirir; tıklama dosya seçtirir. */}
       <ImageUploadButton
         upload={(form) => uploadProductImageAction(product.id, form)}
-        className="absolute inset-0 flex cursor-pointer items-center justify-center bg-[rgba(30,33,27,0)] font-ops-display text-[12.5px] font-semibold text-transparent transition-colors duration-150 group-hover:bg-[rgba(30,33,27,0.5)] group-hover:text-white"
+        className="absolute inset-0 flex cursor-pointer items-center justify-center bg-transparent font-ops-display text-[12.5px] font-semibold text-transparent transition-colors duration-150 group-hover:bg-ops-image-scrim group-hover:text-ops-card"
       >
         {product.imageUrl ? 'Görseli değiştir' : 'Görsel yükle'}
       </ImageUploadButton>

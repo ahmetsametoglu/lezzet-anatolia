@@ -22,7 +22,7 @@ export function Segment<T extends string>({ value, options, onChange, className 
             onClick={() => onChange(o.key)}
             className={[
               'flex-1 cursor-pointer rounded-ops-btn py-[7px] text-center font-ops-display text-[12.5px] font-semibold transition-colors',
-              on ? 'bg-ops-olive text-white' : 'border border-ops-line-strong text-ops-strong hover:border-ops-olive',
+              on ? 'bg-ops-olive text-ops-card' : 'border border-ops-line-strong text-ops-strong hover:border-ops-olive',
             ].join(' ')}
           >
             {o.label}
