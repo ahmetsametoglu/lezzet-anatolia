@@ -1,5 +1,6 @@
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
+import { purgeTestData } from '../testing/cleanup';
 import { CategoryService } from './category.service';
 import { ProductService } from './product.service';
 import { PurchaseOrderService } from './purchase-order.service';
@@ -22,25 +23,36 @@ const reorder = new ReorderService(db);
 
 let supplierId: string;
 let variantId: string;
+let productId: string;
+let categoryId: string;
+const tedarikciler: string[] = [];
 
 beforeAll(async () => {
   const damga = Date.now();
   const category = await new CategoryService(db).create({ name: { tr: `Tedarik testi ${damga}` } });
-  const { variants } = await new ProductService(db).create({
+  const { product, variants } = await new ProductService(db).create({
     name: { tr: `İçli köfte ${damga}` },
     categoryId: category.id,
     shelfLifeDays: 300,
     variants: [{ label: '500gr', minStockQty: 20 }],
   });
+  categoryId = category.id;
+  productId = product.id;
   variantId = variants[0]!.id;
 
   const supplier = await suppliers.insert({ name: `Anadolu Gıda ${damga}`, paymentTermDays: 30 });
   supplierId = supplier.id;
+  tedarikciler.push(supplier.id);
   await mappings.setMapping({ supplierId, variantId, supplierCode: 'AG-1234', nameAtSupplier: 'Icli kofte 500g', packQty: 12 });
 });
 
 beforeEach(async () => {
   await db.from('stock').delete().eq('variant_id', variantId);
+});
+
+// Tedarik grafiği `restrict` FK'lerle bağlı: giriş → sipariş → tedarikçi sırasıyla toplanır.
+afterAll(async () => {
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], supplierIds: tedarikciler });
 });
 
 const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
@@ -57,6 +69,7 @@ describe('tedarikçi ve kod eşlemesi (06.8)', () => {
 
   it('tercihli işareti tekildir — ikinci tedarikçi tercihli olunca ilki düşer', async () => {
     const ikinci = await suppliers.insert({ name: `Alternatif Gıda ${Date.now()}` });
+    tedarikciler.push(ikinci.id);
     const a = await mappings.setMapping({ supplierId, variantId, supplierCode: 'AG-1234', isPreferred: true });
     const b = await mappings.setMapping({ supplierId: ikinci.id, variantId, supplierCode: 'ALT-77' });
 

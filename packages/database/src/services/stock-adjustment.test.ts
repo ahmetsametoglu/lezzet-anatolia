@@ -1,5 +1,6 @@
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
+import { purgeTestData } from '../testing/cleanup';
 import { CategoryService } from './category.service';
 import { ProductService } from './product.service';
 import { StockAdjustmentService } from './stock-adjustment.service';
@@ -16,15 +17,25 @@ const adjustments = new StockAdjustmentService(db);
 const temps = new TemperatureLogService(db);
 
 let variantId: string;
+let productId: string;
+let categoryId: string;
+const dolaplar: string[] = [];
 
 beforeAll(async () => {
   const category = await new CategoryService(db).create({ name: { tr: `Fire testi ${Date.now()}` } });
-  const { variants } = await new ProductService(db).create({
+  const { product, variants } = await new ProductService(db).create({
     name: { tr: `Su böreği ${Date.now()}` },
     categoryId: category.id,
     shelfLifeDays: 180,
   });
+  categoryId = category.id;
+  productId = product.id;
   variantId = variants[0]!.id;
+});
+
+// Test kendi zeminini toplar — yerel veritabanında çöp satır bırakmaz (silme sırası: cleanup.ts).
+afterAll(async () => {
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], temperatureLocations: dolaplar });
 });
 
 beforeEach(async () => {
@@ -95,6 +106,7 @@ describe('stok düzeltmesi (06.6)', () => {
 
 describe('sıcaklık kaydı (06.7)', () => {
   const dolap = `Dolap-${Date.now()}`;
+  dolaplar.push(dolap, `${dolap}-arac`);
 
   it('kayıt girilir, konum + tarih aralığıyla listelenir (en yeni önce)', async () => {
     await temps.insert({ location: dolap, temperatureC: -18.5 });

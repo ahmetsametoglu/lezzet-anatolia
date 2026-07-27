@@ -8,6 +8,15 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 
 ## Customer (müşteri)
 
+> **Tablo adı `user_profiles`.** Müşteri ayrı bir varlık değil, kimliğin bir **ROLÜDÜR**: müşteri ve
+> personel tek tabloda yaşar, `role` ayırır (bkz. `0001`). Aşağıdaki alanların kimlik kısmı `0001`'de,
+> ticari kısmı `0013`'te eklenmiştir. `customer_id` diye geçen her FK (`address`, `price`, `order`)
+> bu tabloyu işaret eder — "müşteri rolüyle davranan profil" demektir.
+>
+> 1:1 uzantı tablosu (`customer_profile`) bilinçli olarak açılmadı: alanlar küçük skaler, satır dar,
+> güvenlik sınırı bizde tabloda değil (okuma sunucudan `service_role` + guard'dan geçer). Bölmek her
+> sepet/checkout okumasına join, kimlik kurulumuna ikinci satır, birleştirmeye ikinci taşıma eklerdi.
+
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
@@ -25,7 +34,8 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | payment_term_days | number \| null | vade süresi (gün) — boşsa `Setting` varsayılanı (30); gecikme bundan türetilir |
 | discount_percent | number \| null | müşteriye genel özel indirim oranı; kanal fiyatına uygulanır (bkz. `DOMAIN.md §5`) |
 | cod_allowed | boolean | kapıda ödeme izni (varsayılan true); kötüye kullanımda kapatılır (bkz. `DOMAIN.md §7`) |
-| auth_user_id | uuid \| null | Supabase Auth kullanıcısı; doğrulanınca bağlanır (bkz. `DOMAIN.md §10`) |
+| role | enum(`customer`,`admin`,`warehouse`,`courier`) | kimliği müşteri/personel diye ayıran alan; müşteri varsayılan |
+| auth_user_id | uuid \| null | Supabase Auth kullanıcısı; doğrulanınca bağlanır (bkz. `DOMAIN.md §10`). **Üçüncü kimlik anahtarıdır** — `0002` trigger'ı girişte profili e-postayla bulup bağlar |
 | marketing_consent | jsonb | kanal bazlı pazarlama izni: `{email: {granted, at, source}, whatsapp: {...}}` — GDPR kanıtı (ne zaman, nereden); **Faz 1'de yalnız toplanır, gönderim yok** (bkz. `DOMAIN.md §11`) |
 | acquisition_source | jsonb \| null | edinim kaynağı — **ilk siparişte bir kez** yazılır (UTM snapshot + order_source), sonra değişmez; "kaynağa göre tekrar sipariş" raporunun temeli |
 | referred_by | uuid \| null | bu müşteriyi getiren müşteri (arkadaşını getir) — kayıtta bir kez |
@@ -34,14 +44,23 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | addresses | (ayrı tablo) | |
 | created_at | timestamptz | |
 
+**Kimlik anahtarları tekildir (04.5):** `phone`, `email` (küçük harfe indirgenmiş) ve `auth_user_id` kısmi unique indekslidir — aynı anahtar iki profile yazılamaz, boş anahtarlar çakışmaz. Kopya kayıt birleştirme gerektiren bir **istisnadır**; veritabanı engellemezse sessizce çoğalır. Çözüm kararı (bağlan / oluştur / çakışma) motorundur (`domain-core/identity`), kapısı `apps/web/lib/identity` — servis yalnız aday getirir.
+
+**Trigger ile kapının iş bölümü:** `0002` trigger'ı `auth.users` insert'inde çalışır ve **yalnız e-postayla** eşleştirir — Google OAuth'ta sunucu kodumuz devrede olmayabilir, bağlama atomik olmalıdır. Sadece telefonu olan WhatsApp taslağı girişte eşleşmez, ikinci profil doğar; kapı bunu `conflict` olarak görünür kılar, birleştirme (04.7) çözer.
+
 ## Address (adres)
 
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
 | customer_id | uuid | |
-| line1, line2, postal_code, city, country | string | |
-| in_route | boolean (türetilir) | posta kodu aktif bir `DeliveryZone`'a düşüyor mu |
+| line1, line2, postal_code, city | string | `line2` opsiyonel |
+| country | enum(`FR`,`DE`) | |
+| is_default | boolean | müşterinin varsayılan adresi — checkout onu önceden seçer; **tekildir** (yenisi seçilince eskisi düşer). İlk adres otomatik varsayılan olur |
+| created_at | timestamptz | |
+| in_route | boolean (türetilir) | posta kodu aktif bir `DeliveryZone`'a düşüyor mu — **saklanmaz** |
+
+Müşteri silinince adresleri de gider (CASCADE) — yetim adres kalmaz.
 
 ## DeliveryZone (rota / teslimat bölgesi)
 

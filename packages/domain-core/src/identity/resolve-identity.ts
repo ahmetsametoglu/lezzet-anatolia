@@ -15,45 +15,57 @@ import { normalizePhone } from '@lezzet/helper';
 
 /** Çağıranın DB'den getirdiği eşleşme — yoksa `null`. */
 export interface IdentityCandidates {
-  /** Normalize telefonla eşleşen müşteri kimliği. */
+  /** Normalize telefonla eşleşen profil kimliği. */
   byPhone?: string | null;
-  /** E-posta ile eşleşen müşteri kimliği. */
+  /** E-posta ile eşleşen profil kimliği. */
   byEmail?: string | null;
+  /**
+   * Auth kullanıcısına BAĞLI profil. Üçüncü anahtardır: giriş anında veritabanı trigger'ı
+   * (0002) profili zaten açmış/bağlamış olabilir — kapı ondan habersiz davranırsa aynı auth
+   * kullanıcısını ikinci profile yazmaya çalışır ve tekillik kısıtına çarpar.
+   */
+  byAuthUser?: string | null;
 }
 
 export interface IdentityInput {
   phone?: string | null;
   email?: string | null;
+  /** Doğrulanmış oturum sahibi — kendi başına bir kimlik anahtarıdır (telefon/e-posta olmasa da). */
+  authUserId?: string | null;
   /** Telefon ülkesi varsayılanı (pazar FR/DE). */
   defaultCountry?: Country;
 }
 
 export type IdentityResolution =
-  /** Tek müşteri eşleşti (ya da iki anahtar aynı müşteriye çıktı) — ona bağlan. */
+  /** Tek profil eşleşti (ya da anahtarların hepsi aynı profile çıktı) — ona bağlan. */
   | { action: 'attach'; customerId: string; normalizedPhone: string | null; email: string | null }
-  /** Hiç eşleşme yok — yeni (WhatsApp'tan geliyorsa taslak) müşteri aç. */
+  /** Hiç eşleşme yok — yeni (WhatsApp'tan geliyorsa taslak) profil aç. */
   | { action: 'create'; normalizedPhone: string | null; email: string | null }
-  /** İki anahtar İKİ FARKLI müşteriye çıktı — sessizce seçim yapılmaz, admin birleştirir. */
-  | { action: 'conflict'; phoneCustomerId: string; emailCustomerId: string }
-  /** Ne telefon ne e-posta verilmiş — kimlik kurulamaz. */
+  /**
+   * Anahtarlar BİRDEN ÇOK profile çıktı — sessizce seçim yapılmaz, admin birleştirir (DOMAIN §10).
+   * `customerIds` çakışan profillerin tümü: üç anahtar üç ayrı kayda düşebilir, iki adlı alan bunu
+   * ifade edemez.
+   */
+  | { action: 'conflict'; customerIds: string[] }
+  /** Hiçbir kimlik anahtarı verilmemiş — kimlik kurulamaz. */
   | { action: 'insufficient' };
 
 export function resolveIdentity(input: IdentityInput, candidates: IdentityCandidates = {}): IdentityResolution {
   const normalizedPhone = input.phone ? normalizePhone(input.phone, input.defaultCountry ?? 'FR') : null;
   const email = input.email?.trim().toLowerCase() || null;
 
-  // Geçersiz telefon (normalize edilemedi) verilen tek anahtarsa kimlik kurulamaz.
-  if (!normalizedPhone && !email) return { action: 'insufficient' };
+  // Geçersiz telefon (normalize edilemedi) tek anahtarsa kimlik kurulamaz. Oturum sahibi de
+  // tek başına bir anahtardır: Google ile giren kullanıcının telefonu olmayabilir.
+  if (!normalizedPhone && !email && !input.authUserId) return { action: 'insufficient' };
 
-  const byPhone = candidates.byPhone ?? null;
-  const byEmail = candidates.byEmail ?? null;
+  // Farklı profillere çıkan anahtarlar — sıra korunur (tekrarlar elenir).
+  const matches = [candidates.byAuthUser, candidates.byPhone, candidates.byEmail].filter(
+    (id): id is string => Boolean(id),
+  );
+  const distinct = [...new Set(matches)];
 
-  if (byPhone && byEmail && byPhone !== byEmail) {
-    return { action: 'conflict', phoneCustomerId: byPhone, emailCustomerId: byEmail };
-  }
-
-  const matched = byPhone ?? byEmail;
-  if (matched) return { action: 'attach', customerId: matched, normalizedPhone, email };
+  if (distinct.length > 1) return { action: 'conflict', customerIds: distinct };
+  if (distinct.length === 1) return { action: 'attach', customerId: distinct[0]!, normalizedPhone, email };
 
   return { action: 'create', normalizedPhone, email };
 }

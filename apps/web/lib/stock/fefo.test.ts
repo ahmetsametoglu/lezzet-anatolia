@@ -1,5 +1,6 @@
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, ProductService, ReservationService, StockService, serviceDb } from '@lezzet/database';
+import { purgeTestData } from '@lezzet/database/testing';
 import { suggestPicksForVariant } from './fefo';
 
 /**
@@ -11,16 +12,24 @@ const stocks = new StockService(db);
 const reservations = new ReservationService(db);
 
 let variantId: string;
+let productId: string;
+let categoryId: string;
 
 beforeAll(async () => {
   const category = await new CategoryService(db).create({ name: { tr: `FEFO testi ${Date.now()}` } });
-  const { variants } = await new ProductService(db).create({
+  const { product, variants } = await new ProductService(db).create({
     name: { tr: `Lahmacun ${Date.now()}` },
     categoryId: category.id,
     dateType: 'DLC',
     shelfLifeDays: 200,
   });
+  categoryId = category.id;
+  productId = product.id;
   variantId = variants[0]!.id;
+});
+
+afterAll(async () => {
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId] });
 });
 
 beforeEach(async () => {

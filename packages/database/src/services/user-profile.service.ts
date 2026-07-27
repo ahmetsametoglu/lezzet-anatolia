@@ -1,10 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { normalizeEmail, normalizePhone } from '@lezzet/helper';
+import { normalizeEmail } from '@lezzet/helper';
 import {
   UserProfileInsertSchema,
   UserProfileSchema,
   UserProfileUpdateSchema,
-  type FindOrCreateInput,
+  DEFAULT_PAGE_SIZE,
+  type KeysetCursor,
+  type Page,
   type UserProfile,
   type UserProfileInsert,
   type UserProfileUpdate,
@@ -12,30 +14,30 @@ import {
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 
-export interface FindOrCreateResult {
-  profile: UserProfile;
-  /** Yeni taslak profil açıldıysa true; mevcut profile bağlandıysa false. */
-  created: boolean;
-  /** Telefon ve e-posta FARKLI profillere düşüyorsa, e-posta eşleşen id (birleştirme adayı). */
-  conflictWithId?: string;
-}
-
 /**
  * Kullanıcı profili erişimi (kimlik) — TEK tablo `user_profiles`; müşteri + personel, ROL ayırır.
- * Kimlik anahtarları telefon/e-posta (DOMAIN §10); silme kapalı. Tüm erişim BaseDbService üzerinden
- * (ham supabase sorgusu yok). Personel rolleri artık ayrı tabloda değil — `role` alanında (getRole/isStaff).
+ * "customer" bir ROLDÜR, ayrı tablo değil. Kimlik anahtarları telefon/e-posta (DOMAIN §10);
+ * silme kapalı.
+ *
+ * **Karar vermez, satır getirir/yazar** (STACK §4). "Bu kişi kim, bağlanmalı mı yeni mi açılmalı,
+ * iki anahtar farklı profillere düşerse ne olur" kararı saf motordadır
+ * (`domain-core/identity.resolveIdentity`); ikisini birleştiren kapı uygulama katmanındadır
+ * (`apps/web/lib/identity`). Kural daha önce bu servisin içindeydi ("telefon birincildir") —
+ * motora taşındı.
  */
 export class UserProfileService extends BaseDbService<UserProfile, UserProfileInsert, UserProfileUpdate> {
   constructor(supabase: SupabaseClient) {
     super(supabase, 'user_profiles', UserProfileSchema, UserProfileInsertSchema, UserProfileUpdateSchema, false);
   }
 
+  /** Telefonla arar — anahtar E.164 NORMALİZE gelmeli (normalize eden motordur). */
   findByPhone(phone: string): Promise<UserProfile | null> {
     return this.getOneBy({ phone });
   }
 
+  /** E-postayla arar — küçük harfe indirgenmiş gelmeli (DB indeksi de öyle). */
   findByEmail(email: string): Promise<UserProfile | null> {
-    return this.getOneBy({ email });
+    return this.getOneBy({ email: normalizeEmail(email) });
   }
 
   findByAuthUserId(authUserId: string): Promise<UserProfile | null> {
@@ -43,34 +45,38 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }
 
   /**
-   * Kimlik anahtarıyla profili bulur; yoksa TASLAK müşteri açar (DOMAIN §10). Telefon/e-posta normalize
-   * edilir; ikisi farklı profillere düşerse telefon birincildir ve `conflictWithId` ile birleştirme
-   * adayı işaretlenir. WhatsApp/web/manuel girişlerin tümünün kullandığı tek kapı. Rol varsayılan customer.
+   * Kimlik çözümünün DB yarısı: iki anahtar TEK turda aranır. Motor bu iki adaya bakıp
+   * bağlan/oluştur/çakışma kararını verir — servis hangisinin kazandığını bilmez.
    */
-  async findOrCreate(input: FindOrCreateInput): Promise<FindOrCreateResult> {
-    const country = input.country ?? 'FR';
-    const phone = input.phone ? normalizePhone(input.phone, country) : null;
-    const email = input.email ? normalizeEmail(input.email) : null;
+  async findIdentityCandidates(phone?: string | null, email?: string | null): Promise<{ byPhone: string | null; byEmail: string | null; byAuthUser?: string | null }> {
+    const [byPhone, byEmail] = await Promise.all([
+      phone ? this.findByPhone(phone) : Promise.resolve(null),
+      email ? this.findByEmail(email) : Promise.resolve(null),
+    ]);
+    return { byPhone: byPhone?.id ?? null, byEmail: byEmail?.id ?? null };
+  }
 
-    const phoneMatch = phone ? await this.findByPhone(phone) : null;
-    const emailMatch = email ? await this.findByEmail(email) : null;
+  /** Profil listesi (admin) — en yeni önce, sonsuz kaydırma. */
+  async list(opts: { role?: UserRole; isDraft?: boolean; b2bPending?: boolean; cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<UserProfile>> {
+    const filters: Record<string, unknown> = {};
+    if (opts.role) filters.role = opts.role;
+    if (opts.isDraft !== undefined) filters.isDraft = opts.isDraft;
+    if (opts.b2bPending) filters.b2bApproved = false;
 
-    if (phoneMatch && emailMatch && phoneMatch.id !== emailMatch.id) {
-      return { profile: phoneMatch, created: false, conflictWithId: emailMatch.id };
-    }
-    const matched = phoneMatch ?? emailMatch;
-    if (matched) return { profile: matched, created: false };
-
-    const profile = await this.insert({
-      type: input.type ?? 'individual',
-      name: input.name ?? '',
-      email,
-      phone,
-      preferredLanguage: input.preferredLanguage ?? 'fr',
-      country,
-      isDraft: true,
+    return this.getPage(filters, {
+      orderBy: 'createdAt',
+      orderDirection: 'desc',
+      keysetAfter: opts.cursor,
+      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
     });
-    return { profile, created: true };
+  }
+
+  /**
+   * B2B başvurusunu onaylar/reddeder (DOMAIN §10). Onaya kadar toptan fiyat görünmez; reddedilen
+   * kayıt B2C olarak kalır — silinmez.
+   */
+  setB2bApproval(profileId: string, approved: boolean): Promise<UserProfile> {
+    return this.update({ id: profileId, b2bApproved: approved });
   }
 
   /** Auth kullanıcısını mevcut profile bağlar (giriş doğrulandığında); taslağı kapatır. */

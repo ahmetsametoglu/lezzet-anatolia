@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
 import { CategoryService } from './category.service';
+import { UserProfileService } from './user-profile.service';
 import { PriceService } from './price.service';
 import { ProductService } from './product.service';
 
@@ -10,17 +11,18 @@ import { ProductService } from './product.service';
  * değildir — o karar motorun birim testinde (`domain-core/pricing`), ikisinin birleşimi ise
  * uygulama katmanında (vitrin okuma, 05.9) doğrulanır.
  *
- * Not: `customer` tablosu henüz yok (modül 04) — müşteriye özel fiyat satırı rastgele bir uuid ile
- * yazılır (FK yok, migration'da gerekçesi var).
+ * Not: müşteriye özel fiyat satırı GERÇEK bir profile bağlıdır — `price.customer_id` FK'li (0013)
+ * ve tek kimlik tablosunu (`user_profiles`) işaret eder. Uydurma uuid yazılamaz.
  */
 const db = serviceDb();
 const prices = new PriceService(db);
 const products = new ProductService(db);
 const categories = new CategoryService(db);
+const profiles = new UserProfileService(db);
 let variantId: string;
 let productId: string;
 let categoryId: string;
-const CUSTOMER_ID = '00000000-0000-4000-8000-0000000000c1';
+let CUSTOMER_ID: string;
 
 beforeAll(async () => {
   const category = await categories.create({ name: { tr: `Fiyat testi ${Date.now()}` } });
@@ -29,6 +31,7 @@ beforeAll(async () => {
   categoryId = category.id;
   productId = product.id;
   variantId = variants[0]!.id;
+  CUSTOMER_ID = (await profiles.insert({ name: `Fiyat müşterisi ${Date.now()}` })).id;
 });
 
 // Test kendi zeminini toplar: aksi hâlde her koşuş yerel veritabanına kalıcı bir ürün bırakır ve
@@ -36,6 +39,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await products.delete(productId).catch(() => {});
   await categories.delete(categoryId).catch(() => {});
+  await db.from('user_profiles').delete().eq('id', CUSTOMER_ID);
 });
 
 describe('PriceService — satır getirme', () => {

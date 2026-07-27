@@ -19,12 +19,32 @@ describe('kimlik çözümü (03.9)', () => {
 
   it('iki anahtar FARKLI müşteriye çıkarsa sessizce seçim yapılmaz — admin birleştirir', () => {
     const r = resolveIdentity({ phone: '0612345678', email: 'a@b.fr' }, { byPhone: 'c1', byEmail: 'c2' });
-    expect(r).toEqual({ action: 'conflict', phoneCustomerId: 'c1', emailCustomerId: 'c2' });
+    expect(r).toEqual({ action: 'conflict', customerIds: ['c1', 'c2'] });
   });
 
   it('eşleşme yoksa yeni kayıt açılır; telefon normalize edilmiş döner', () => {
     const r = resolveIdentity({ phone: '+33 6 12 34 56 78' });
     expect(r).toEqual({ action: 'create', normalizedPhone: '+33612345678', email: null });
+  });
+
+  it('oturum sahibi ÜÇÜNCÜ anahtardır — trigger profili açmışsa ona bağlanılır', () => {
+    // Google ile giren kullanıcının telefonu/e-postası elimizde olmayabilir; auth bağı yeter.
+    const r = resolveIdentity({ authUserId: 'u1' }, { byAuthUser: 'c9' });
+    expect(r).toMatchObject({ action: 'attach', customerId: 'c9' });
+  });
+
+  it('oturum sahibi BAŞKA profile bağlıysa çakışmadır — aynı auth iki profile yazılamaz', () => {
+    // Telefonla açılmış WhatsApp taslağı + trigger'ın e-postayla açtığı profil: iki ayrı kayıt.
+    const r = resolveIdentity({ phone: '0612345678', authUserId: 'u1' }, { byPhone: 'c1', byAuthUser: 'c2' });
+    expect(r).toEqual({ action: 'conflict', customerIds: ['c2', 'c1'] });
+  });
+
+  it('üç anahtar üç ayrı kayda düşebilir — hepsi bildirilir', () => {
+    const r = resolveIdentity(
+      { phone: '0612345678', email: 'a@b.fr', authUserId: 'u1' },
+      { byPhone: 'c1', byEmail: 'c2', byAuthUser: 'c3' },
+    );
+    expect(r).toEqual({ action: 'conflict', customerIds: ['c3', 'c1', 'c2'] });
   });
 
   it('anahtar yoksa kimlik kurulamaz', () => {
