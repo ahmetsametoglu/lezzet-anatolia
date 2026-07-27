@@ -61,8 +61,8 @@ export function SortSelect({ label, currentLabel, options, compact = false }: So
         onClick={() => setOpen((v) => !v)}
         aria-label={`${label} ${currentLabel}`}
         className={[
-          'flex cursor-pointer items-center gap-1 rounded-pill border-[1.5px] border-sand-400 bg-card font-sans text-control text-ink transition-colors hover:border-olive',
-          compact ? 'px-3 py-1.5' : 'px-4 py-2',
+          'flex flex-none cursor-pointer items-center gap-1 rounded-pill border-[1.5px] border-sand-400 bg-card font-sans text-control whitespace-nowrap text-ink transition-colors hover:border-olive',
+          compact ? 'px-3 py-1.5 !text-micro font-bold' : 'px-4 py-2',
         ].join(' ')}
       >
         {compact ? currentLabel : `${label} ${currentLabel}`} <span aria-hidden>▾</span>

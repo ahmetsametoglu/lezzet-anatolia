@@ -19,9 +19,9 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
       </section>
 
       <div className="flex gap-2 overflow-x-auto px-4 pb-3">
-        <FilterChip label={t.all} href={hrefFor({ category: null })} active={!active.category} />
+        <FilterChip label={t.all} href={hrefFor({ category: null })} active={!active.category} compact />
         {data.categories.map((c) => (
-          <FilterChip key={c.id} label={c.name} href={hrefFor({ category: c.slug })} active={active.category === c.slug} />
+          <FilterChip key={c.id} label={c.name} href={hrefFor({ category: c.slug })} active={active.category === c.slug} compact />
         ))}
       </div>
 
@@ -31,7 +31,7 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
       <div className="flex items-center gap-2 px-4 pb-3">
         <span className="font-sans text-note text-muted">{t.count.replace('{n}', String(data.total))}</span>
         <span className="flex-1" />
-        <FilterChip label={t.onlyOffersShort} href={hrefFor({ onlyOffers: !active.onlyOffers })} active={active.onlyOffers} tone="offer" size="control" />
+        <FilterChip label={t.onlyOffersShort} href={hrefFor({ onlyOffers: !active.onlyOffers })} active={active.onlyOffers} tone="offer" size="control" compact />
         <SortSelect
           label={t.sortLabel}
           currentLabel={t.sort[active.sort]}

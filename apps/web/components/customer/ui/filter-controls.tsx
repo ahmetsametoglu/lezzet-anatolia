@@ -8,9 +8,11 @@ import { Link } from '@/i18n/navigation';
  * Üçü de LINK tabanlıdır, client state değil: süzme sunucuda çözülüyor (`catalog.ts`), seçim URL'de
  * yaşıyor. Böylece filtreli liste paylaşılabilir, geri tuşu çalışır ve ilk boya sunucudan tam gelir.
  *
- * ÖLÇÜLER TASARIMDAN BİREBİR (`Musteri - Katalog.dc.html`): kategori çipi 14/700 ped 10-20; süzgeç
- * ve sıralama düğmesi 13.5/700 ped 8-16. İkisi AYNI DEĞİL — aynı komponente aynı ölçüyle bağlanınca
- * indirim düğmesi çip kadar büyüyor ve satırın dengesi bozuluyor (yaşandı, 27.07).
+ * ÖLÇÜLER TASARIMDAN BİREBİR (`Musteri - Katalog.dc.html`) ve İKİ EKSENDE değişir:
+ *   rol   → kategori çipi (büyük) · sonuç satırı düğmesi (küçük). Aynı ölçüyle bağlanınca indirim
+ *           düğmesi çip kadar büyüyor ve satırın dengesi bozuluyor (yaşandı, 27.07).
+ *   cihaz → masaüstü 14/700 ped 10-20 · mobil 13/700 ped 9-16 (düğmede 13.5 → 12). Mobil ölçü
+ *           atlanınca çipler dar ekranda şişiyor ve şeridin yarısını üç çip yiyor (yaşandı, 28.07).
  */
 
 type ChipHref = ComponentProps<typeof Link>['href'];
@@ -18,9 +20,9 @@ type ChipHref = ComponentProps<typeof Link>['href'];
 /** `chip`: kategori seçimi (büyük). `control`: sonuç satırındaki süzgeç düğmesi (küçük). */
 type ChipSize = 'chip' | 'control';
 
-const SIZE: Record<ChipSize, string> = {
-  chip: 'px-5 py-2.5 text-chip',
-  control: 'px-4 py-2 text-control',
+const SIZE: Record<ChipSize, { wide: string; compact: string }> = {
+  chip: { wide: 'px-5 py-2.5 text-chip', compact: 'px-4 py-2 text-note font-bold' },
+  control: { wide: 'px-4 py-2 text-control', compact: 'px-3 py-1.5 text-micro font-bold' },
 };
 
 interface FilterChipProps {
@@ -30,10 +32,12 @@ interface FilterChipProps {
   /** Fırsat çipi ("Yalnız indirimliler") — nötr süzgeçlerden ayrı renkte durur. */
   tone?: 'neutral' | 'offer';
   size?: ChipSize;
+  /** Mobil ölçü. */
+  compact?: boolean;
 }
 
 /** K17 · Filtre Çipi — kategori seçimi ve indirim süzgeci. */
-export function FilterChip({ label, href, active = false, tone = 'neutral', size = 'chip' }: FilterChipProps) {
+export function FilterChip({ label, href, active = false, tone = 'neutral', size = 'chip', compact = false }: FilterChipProps) {
   const style =
     tone === 'offer'
       ? active
@@ -47,7 +51,14 @@ export function FilterChip({ label, href, active = false, tone = 'neutral', size
       href={href}
       // Süzgeç değiştirmek sayfayı BAŞA FIRLATMAZ — kullanıcı listenin ortasındaysa orada kalır.
       scroll={false}
-      className={['cursor-pointer rounded-pill border-[1.5px] font-sans transition-colors', SIZE[size], style].join(' ')}
+      // `flex-none` + `nowrap`: şerit yatay kaydırmalı, çipler SIKIŞMAMALI. Sıkışınca uzun ad
+      // ("Şerbetli Tatlılar") çipin içinde iki satıra bölünüyor, o çip diğerlerinden yüksek kalıyor
+      // ve şeridin hizası bozuluyor (yaşandı, 28.07).
+      className={[
+        'flex-none cursor-pointer rounded-pill border-[1.5px] font-sans whitespace-nowrap transition-colors',
+        compact ? SIZE[size].compact : SIZE[size].wide,
+        style,
+      ].join(' ')}
     >
       {label}
     </Link>
