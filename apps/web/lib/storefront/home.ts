@@ -1,25 +1,10 @@
 import 'server-only';
 import { CategoryService, ProductService, serviceDb } from '@lezzet/database';
-import { publicImageUrl } from '@lezzet/storage';
-import { cropOf, resolveLocalizedText } from '@lezzet/types';
-import type { Category, ImageMeta, Product } from '@lezzet/types';
+import { resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
-import {
-  FIXTURE_CATEGORIES,
-  FIXTURE_OFFERS,
-  FIXTURE_PACKAGES,
-  FIXTURE_PRODUCTS,
-  FIXTURE_PRODUCT_DETAILS,
-  NO_IMAGE_META,
-} from './fixtures';
-import type {
-  StorefrontCategory,
-  StorefrontHome,
-  StorefrontImage,
-  StorefrontOffer,
-  StorefrontPackage,
-  StorefrontProduct,
-} from './storefront-types';
+import { FIXTURE_CATEGORIES, FIXTURE_OFFERS, FIXTURE_PACKAGES, FIXTURE_PRODUCTS, NO_IMAGE_META } from './fixtures';
+import { imageOf, toCategory, toProduct } from './map';
+import type { StorefrontHome, StorefrontOffer, StorefrontPackage } from './storefront-types';
 
 /**
  * Anasayfa okuması — vitrinin veri KAPISI (08.10). Sayfa servisi doğrudan çağırmaz, buradan okur.
@@ -35,39 +20,6 @@ import type {
  * Katalog boşken (seed atılmamış yerel ortam) fixture'a düşülür — geliştirme sırasında vitrinin
  * görünür kalması için. Gerçek katalog dolunca bu yedek kendiliğinden devre dışı kalır.
  */
-
-/** Görsel künyesini karta indirger — anahtar→URL ve odak/zoom çözümü TEK yerde. */
-function imageOf(row: ImageMeta): StorefrontImage {
-  return { url: publicImageUrl(row.imageKey, row.imageUpdatedAt), crop: cropOf(row) };
-}
-
-/** Fixture ve gerçek satır aynı şekli taşır (`NO_IMAGE_META`) → tek indirgeme ikisine de uyar. */
-type CategoryRow = Pick<Category, 'id' | 'slug' | 'name'> & ImageMeta;
-type ProductRow = Pick<Product, 'id' | 'slug' | 'name'> & ImageMeta;
-
-function toCategory(row: CategoryRow, locale: Locale): StorefrontCategory {
-  return { id: row.id, slug: row.slug, name: resolveLocalizedText(row.name, locale), image: imageOf(row) };
-}
-
-/**
- * Ürünü vitrin kartına indirger. Fiyat ve ölçü etiketi henüz üretilemediği için sıra numarasına
- * göre sabit bir stub künyeye eşlenir — kart gerçekçi görünsün diye. 05.4 gelince bu eşleme kalkar,
- * kartın kendisi değişmez.
- */
-const STUB_DETAILS = Object.values(FIXTURE_PRODUCT_DETAILS);
-
-function toProduct(row: ProductRow, locale: Locale, index: number): StorefrontProduct {
-  const stub = STUB_DETAILS[index % STUB_DETAILS.length];
-  return {
-    id: row.id,
-    slug: row.slug,
-    name: resolveLocalizedText(row.name, locale),
-    image: imageOf(row),
-    unitLabel: stub?.unitLabel ?? '',
-    comparisonCents: stub?.comparisonCents ?? 0,
-    priceCents: stub?.priceCents ?? 0,
-  };
-}
 
 function fixtureOffers(locale: Locale): StorefrontOffer[] {
   return FIXTURE_OFFERS.map((o, i) => ({

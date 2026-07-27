@@ -30,8 +30,19 @@ export interface StorefrontCategory {
 }
 
 /**
+ * Satın alma yolu — kart aksiyonunu belirler. `quick`: tek varyantlı, listeden doğrudan eklenir.
+ * `options`: çok varyantlı, ekleme listeden YAPILAMAZ (varyant seçimi atlanamaz — `musteri-katalog.md §3`),
+ * kart detaya götürür.
+ */
+export type PurchaseMode = 'quick' | 'options';
+
+/**
  * Ürün kartı. `priceCents` HAM değerdir — biçimlendirme görünüm katmanının işi (`format.ts`),
  * çünkü para gösterimi dile bağlıdır ve sözleşme dil-bağımsız veri taşımalıdır.
+ *
+ * İndirim alanları (`wasCents`, `limitLabel`) BURADA, ayrı bir "fırsat tipi"nde değil: katalogda
+ * indirimli ve normal ürün aynı listede akar, kart ikisini de render eder. İndirimin SEBEBİ (tarih
+ * yaklaşması, near-expiry) hiçbir zaman taşınmaz ki yanlışlıkla ekrana çıkamasın (`§6`).
  */
 export interface StorefrontProduct {
   id: string;
@@ -43,16 +54,21 @@ export interface StorefrontProduct {
   /** Kilogram başına fiyat (ham cent) — INCO gereği raf fiyatının yanında gösterilir. */
   comparisonCents: number;
   priceCents: number;
+  /** İndirim öncesi fiyat — verilirse "Fırsat" rozeti + üstü çizili eski fiyat. */
+  wasCents?: number;
+  /** Kişi başı sınır ("En fazla 5 adet" şablonuna girecek sayı); sınırsızsa null. */
+  limitLabel?: string | null;
+  purchaseMode: PurchaseMode;
+  /**
+   * Tükendi. Ürün listede KALIR (tekrar gelecek beklentisi doğru kurulsun) ama sepete eklenemez;
+   * kartın kendisi yine detaya tıklanabilir (`musteri-katalog.md §2`).
+   */
+  soldOut: boolean;
 }
 
-/**
- * İndirimli teklif. Müşteriye yalnız "fırsat"tır — indirimin SEBEBİ (tarih yaklaşması, near-expiry)
- * bu tipte taşınmaz ki yanlışlıkla ekrana çıkamasın (`musteri-anasayfa.md §6`).
- */
+/** Anasayfanın fırsat bölümü — indirim alanları zorunlu daraltma. */
 export interface StorefrontOffer extends StorefrontProduct {
-  /** İndirim öncesi fiyat — üstü çizili gösterilir. */
   wasCents: number;
-  /** Kişi başı sınır metni ("En fazla 5 adet"); sınırsızsa null. */
   limitLabel: string | null;
 }
 

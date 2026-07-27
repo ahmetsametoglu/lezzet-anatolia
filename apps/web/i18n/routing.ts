@@ -19,5 +19,6 @@ export const routing = defineRouting({
   pathnames: {
     '/': '/',
     '/login': { fr: '/connexion', de: '/anmelden', tr: '/giris' },
+    '/catalog': { fr: '/catalogue', de: '/katalog', tr: '/katalog' },
   },
 });

@@ -23,7 +23,9 @@
       "ctaDeals": "Bu haftanın fırsatları",
       "imageAlt": "Buğusu üstünde börek ve dolu bir aile sofrası"
     },
-    "categories": { "title": "Ne arıyorsunuz?" },
+    "categories": {
+      "title": "Ne arıyorsunuz?"
+    },
     "offers": {
       "title": "Bu haftanın fırsatları",
       "note": "Stokla sınırlı",
@@ -32,7 +34,11 @@
     "featured": {
       "title": "Vitrindekiler",
       "all": "Tüm katalog →",
-      "addToCart": "Sepete ekle"
+      "addToCart": "Sepete ekle",
+      "options": "Seçenekler →",
+      "priceFrom": "başlangıç fiyatı — boy detayda seçilir",
+      "offer": "Fırsat",
+      "soldOut": "Tükendi — yakında yeniden"
     },
     "packages": {
       "badge": "Hazır Paket",
@@ -75,7 +81,9 @@
       "ctaDeals": "Les offres de la semaine",
       "imageAlt": "Böreks fumants et une table familiale généreuse"
     },
-    "categories": { "title": "Que cherchez-vous ?" },
+    "categories": {
+      "title": "Que cherchez-vous ?"
+    },
     "offers": {
       "title": "Les offres de la semaine",
       "note": "Dans la limite des stocks",
@@ -84,7 +92,11 @@
     "featured": {
       "title": "Notre sélection",
       "all": "Tout le catalogue →",
-      "addToCart": "Ajouter"
+      "addToCart": "Ajouter",
+      "options": "Options →",
+      "priceFrom": "prix de départ — le format se choisit en détail",
+      "offer": "Offre",
+      "soldOut": "Épuisé — bientôt de retour"
     },
     "packages": {
       "badge": "Coffret",
@@ -127,7 +139,9 @@
       "ctaDeals": "Angebote der Woche",
       "imageAlt": "Dampfender Börek und eine reich gedeckte Familientafel"
     },
-    "categories": { "title": "Wonach suchen Sie?" },
+    "categories": {
+      "title": "Wonach suchen Sie?"
+    },
     "offers": {
       "title": "Angebote der Woche",
       "note": "Solange der Vorrat reicht",
@@ -136,7 +150,11 @@
     "featured": {
       "title": "Unsere Auswahl",
       "all": "Ganzer Katalog →",
-      "addToCart": "In den Korb"
+      "addToCart": "In den Korb",
+      "options": "Optionen →",
+      "priceFrom": "Startpreis — Größe wird im Detail gewählt",
+      "offer": "Angebot",
+      "soldOut": "Ausverkauft — bald wieder da"
     },
     "packages": {
       "badge": "Paket",

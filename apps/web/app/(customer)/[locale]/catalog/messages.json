@@ -1,0 +1,77 @@
+{
+  "tr": {
+    "title": "Katalog",
+    "all": "Tümü",
+    "count": "{n} ürün",
+    "onlyOffers": "% Yalnız indirimliler",
+    "sortLabel": "Sırala:",
+    "sort": {
+      "featured": "Öne çıkanlar",
+      "priceAsc": "Artan fiyat",
+      "priceDesc": "Azalan fiyat"
+    },
+    "empty": {
+      "title": "Aradığınızı bulamadık",
+      "body": "Farklı bir kelime deneyin ya da kategorilere göz atın.",
+      "cta": "Tüm kataloğa dön"
+    },
+    "collection": "Koleksiyon",
+    "card": {
+      "addToCart": "Sepete ekle",
+      "options": "Seçenekler →",
+      "priceFrom": "başlangıç fiyatı — boy detayda seçilir",
+      "offer": "Fırsat",
+      "soldOut": "Tükendi — yakında yeniden"
+    }
+  },
+  "fr": {
+    "title": "Catalogue",
+    "all": "Tout",
+    "count": "{n} produits",
+    "onlyOffers": "% Uniquement les offres",
+    "sortLabel": "Trier :",
+    "sort": {
+      "featured": "En vedette",
+      "priceAsc": "Prix croissant",
+      "priceDesc": "Prix décroissant"
+    },
+    "empty": {
+      "title": "Nous n'avons rien trouvé",
+      "body": "Essayez un autre mot ou parcourez les catégories.",
+      "cta": "Revenir au catalogue"
+    },
+    "collection": "Collection",
+    "card": {
+      "addToCart": "Ajouter",
+      "options": "Options →",
+      "priceFrom": "prix de départ — le format se choisit en détail",
+      "offer": "Offre",
+      "soldOut": "Épuisé — bientôt de retour"
+    }
+  },
+  "de": {
+    "title": "Katalog",
+    "all": "Alle",
+    "count": "{n} Produkte",
+    "onlyOffers": "% Nur Angebote",
+    "sortLabel": "Sortieren:",
+    "sort": {
+      "featured": "Empfohlen",
+      "priceAsc": "Preis aufsteigend",
+      "priceDesc": "Preis absteigend"
+    },
+    "empty": {
+      "title": "Nichts gefunden",
+      "body": "Versuchen Sie ein anderes Wort oder stöbern Sie in den Kategorien.",
+      "cta": "Zurück zum Katalog"
+    },
+    "collection": "Kollektion",
+    "card": {
+      "addToCart": "In den Korb",
+      "options": "Optionen →",
+      "priceFrom": "Startpreis — Größe wird im Detail gewählt",
+      "offer": "Angebot",
+      "soldOut": "Ausverkauft — bald wieder da"
+    }
+  }
+}

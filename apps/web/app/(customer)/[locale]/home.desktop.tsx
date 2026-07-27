@@ -32,7 +32,7 @@ export function HomeDesktop({ t, locale, data }: HomeViewProps) {
           </h1>
           <p className="font-sans text-lead text-body">{t.hero.body}</p>
           <div className="flex gap-3.5">
-            <Link href="/" className={buttonClass({ className: '!px-[30px]' })}>
+            <Link href="/catalog" className={buttonClass({ className: '!px-[30px]' })}>
               {t.hero.ctaCatalog}
             </Link>
             <Link href="/" className={buttonClass({ variant: 'secondary' })}>
@@ -67,10 +67,10 @@ export function HomeDesktop({ t, locale, data }: HomeViewProps) {
 
       {/* Vitrindekiler */}
       <section className="flex flex-col gap-4 px-12 py-11">
-        <SectionHeading title={t.featured.title} action={{ label: t.featured.all, href: '/' }} />
+        <SectionHeading title={t.featured.title} action={{ label: t.featured.all, href: '/catalog' }} />
         <div className="grid grid-cols-4 gap-[18px]">
           {data.featured.map((p) => (
-            <ProductCard key={p.id} product={p} locale={locale} addToCartLabel={t.featured.addToCart} />
+            <ProductCard key={p.id} product={p} locale={locale} labels={{ ...t.featured, limit: null }} />
           ))}
         </div>
       </section>

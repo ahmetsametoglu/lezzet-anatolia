@@ -88,6 +88,13 @@
   --text-h1-sm--line-height: 1.2;
   --text-h1-sm--font-weight: 600;
 
+  /* Sayfa başlığı ("Katalog") — kahraman h1'i ile bölüm h2'si arasında ayrı bir kademe; liste
+     sayfalarının tepesinde durur. Envanter §0.4'te yoktu, Katalog tasarımından geldi (web 38 · mobil 26). */
+  --text-page-title: 38px;
+  --text-page-title--font-weight: 600;
+  --text-page-title-sm: 26px;
+  --text-page-title-sm--font-weight: 600;
+
   --text-h2: 28px;
   --text-h2--font-weight: 600;
   --text-h2-sm: 20px;

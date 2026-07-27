@@ -24,7 +24,7 @@ export function HomeMobile({ t, locale, data }: HomeViewProps) {
           {t.hero.titleLead} <em className="text-olive">{t.hero.titleAccent}</em>
         </h1>
         <FramedImage src={null} alt={t.hero.imageAlt} ratio={RATIO_BAND} />
-        <Link href="/" className={buttonClass({ fullWidth: true })}>
+        <Link href="/catalog" className={buttonClass({ fullWidth: true })}>
           {t.hero.ctaCatalog}
         </Link>
       </section>
@@ -48,11 +48,11 @@ export function HomeMobile({ t, locale, data }: HomeViewProps) {
 
       {/* Vitrindekiler */}
       <section className="px-4 pb-1.5">
-        <SectionHeading title={t.featured.title} action={{ label: t.featured.all, href: '/' }} compact />
+        <SectionHeading title={t.featured.title} action={{ label: t.featured.all, href: '/catalog' }} compact />
       </section>
       <section className="grid grid-cols-2 gap-3 px-4 pt-2 pb-5">
         {data.featured.map((p) => (
-          <ProductCard key={p.id} product={p} locale={locale} addToCartLabel={t.featured.addToCart} compact />
+          <ProductCard key={p.id} product={p} locale={locale} labels={{ ...t.featured, limit: null }} compact />
         ))}
       </section>
 

@@ -35,7 +35,8 @@ interface CategoryCardProps {
 export function CategoryCard({ category, circle = false }: CategoryCardProps) {
   return (
     <Link
-      href={PENDING_HREF}
+      // Kategori kartı kataloğu SÜZGEÇLİ açar; seçim URL'de yaşar (paylaşılabilir, geri tuşu çalışır).
+      href={{ pathname: '/catalog', query: { category: category.slug } }}
       className={[
         'flex cursor-pointer flex-col items-center gap-2.5 text-center transition-colors',
         circle ? 'w-[86px] flex-none' : 'rounded-card border border-sand-200 bg-card p-3.5 hover:border-olive-line',
@@ -54,43 +55,105 @@ export function CategoryCard({ category, circle = false }: CategoryCardProps) {
   );
 }
 
+/** Kart etiketleri — çağıran sayfa `messages.json`'undan geçer; komponent metin taşımaz. */
+interface ProductCardLabels {
+  addToCart: string;
+  /** Çok varyantlı ürün: listeden eklenemez, detayda seçilir. */
+  options: string;
+  /** Çok varyantlıda fiyatın altındaki not ("başlangıç fiyatı — boy detayda seçilir"). */
+  priceFrom: string;
+  offer: string;
+  soldOut: string;
+  /** "En fazla {n} adet" — sayısı yerleştirilmiş hâli. */
+  limit?: string | null;
+}
+
 interface ProductCardProps {
   product: StorefrontProduct;
   locale: Locale;
-  addToCartLabel: string;
+  labels: ProductCardLabels;
   compact?: boolean;
 }
 
-export function ProductCard({ product, locale, addToCartLabel, compact = false }: ProductCardProps) {
+/**
+ * K7 · Ürün Kartı — vitrin ve katalog listesinin ortak parçası. Dört durumu vardır ve dördü de
+ * tasarımın "Etkileşim sözleşmesi" bölümünden gelir:
+ *   normal        → "Sepete ekle" (tek varyant, listeden eklenir)
+ *   çok varyantlı → "Seçenekler →" (varyant seçimi ATLANAMAZ, detaya götürür)
+ *   fırsat        → "Fırsat" rozeti + üstü çizili eski fiyat + varsa adet sınırı
+ *   tükendi       → aksiyon pasif, görsel soluk; KART yine detaya tıklanabilir (geri gelecek beklentisi)
+ */
+export function ProductCard({ product, locale, labels, compact = false }: ProductCardProps) {
+  const isOffer = product.wasCents !== undefined;
   return (
     <div className="flex flex-col overflow-hidden rounded-card border border-sand-200 bg-card">
-      <Link href={PENDING_HREF} className="cursor-pointer">
-        <FramedImage src={product.image.url} alt={product.name} ratio={RATIO_SOURCE} crop={product.image.crop} className="!rounded-none" />
+      <Link href={PENDING_HREF} className="relative cursor-pointer">
+        <FramedImage
+          src={product.image.url}
+          alt={product.name}
+          ratio={RATIO_SOURCE}
+          crop={product.image.crop}
+          className={['!rounded-none', product.soldOut ? 'opacity-60 grayscale' : ''].join(' ')}
+        />
+        {/* Durum rozeti — tükendi fırsatı ezer: satın alınamayan üründe indirim vurgusu yanıltır. */}
+        {(product.soldOut || isOffer) && (
+          <span
+            className={[
+              'pointer-events-none absolute top-3 left-3 rounded-soft px-3 py-1 font-sans text-micro font-bold text-white',
+              product.soldOut ? 'bg-ink' : 'bg-terracotta',
+            ].join(' ')}
+          >
+            {product.soldOut ? labels.soldOut : labels.offer}
+          </span>
+        )}
       </Link>
       <div className={['flex flex-col gap-1.5', compact ? 'p-2.5' : 'px-4 pt-3.5 pb-4'].join(' ')}>
         <Link
           href={PENDING_HREF}
-          className={['cursor-pointer font-sans font-bold text-ink transition-colors hover:text-olive', compact ? 'text-note' : 'text-body'].join(' ')}
+          className={[
+            'cursor-pointer font-sans font-bold transition-colors hover:text-olive',
+            compact ? 'text-note' : 'text-body',
+            product.soldOut ? 'text-muted' : 'text-ink',
+          ].join(' ')}
         >
           {product.name}
         </Link>
         <span className={['font-sans text-muted', compact ? 'text-micro' : 'text-note'].join(' ')}>
           {product.unitLabel} · {formatComparison(product.comparisonCents, locale)}
         </span>
-        <div className={['flex items-center justify-between', compact ? 'mt-0.5' : 'mt-1'].join(' ')}>
-          <Price cents={product.priceCents} locale={locale} size={compact ? 'sm' : 'lg'} />
+        {labels.limit && (
+          <Badge tone="offer" plain={compact}>
+            {labels.limit}
+          </Badge>
+        )}
+        <div className={['flex items-center justify-between gap-2', compact ? 'mt-0.5' : 'mt-1'].join(' ')}>
+          <Price cents={product.priceCents} wasCents={product.wasCents} locale={locale} size={compact ? 'sm' : 'lg'} />
           {/* Sepete ekleme 07'ye bağlı — buton görünümü TAM, eylemi henüz yok. STUB(08.10 → 07) */}
-          {compact ? (
+          {product.soldOut ? (
             <span
-              aria-label={addToCartLabel}
-              className="grid size-7 cursor-pointer place-items-center rounded-full bg-olive font-sans text-body font-bold text-white transition-colors hover:bg-olive-dark"
+              aria-disabled
+              className={buttonClass({ size: 'sm', className: '!bg-disabled-fill !text-white !px-3.5 !py-2 !text-note cursor-not-allowed' })}
+            >
+              {labels.addToCart}
+            </span>
+          ) : product.purchaseMode === 'options' ? (
+            <Link href={PENDING_HREF} className={buttonClass({ variant: 'secondary', size: 'sm', className: '!border-olive !text-olive !px-3.5 !py-2 !text-note' })}>
+              {labels.options}
+            </Link>
+          ) : compact ? (
+            <span
+              aria-label={labels.addToCart}
+              className="grid size-7 flex-none cursor-pointer place-items-center rounded-full bg-olive font-sans text-body font-bold text-white transition-colors hover:bg-olive-dark"
             >
               +
             </span>
           ) : (
-            <span className={buttonClass({ size: 'sm', className: '!px-3.5 !py-2 !text-note' })}>{addToCartLabel}</span>
+            <span className={buttonClass({ size: 'sm', className: '!px-3.5 !py-2 !text-note' })}>{labels.addToCart}</span>
           )}
         </div>
+        {product.purchaseMode === 'options' && !product.soldOut && (
+          <span className="font-sans text-micro text-muted">{labels.priceFrom}</span>
+        )}
       </div>
     </div>
   );
