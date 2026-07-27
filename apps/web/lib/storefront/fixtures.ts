@@ -1,10 +1,9 @@
-import { CategorySchema, DEFAULT_CROP_FIELDS, ProductSchema } from '@lezzet/types';
+import { CategorySchema, DEFAULT_CROP_FIELDS } from '@lezzet/types';
 import type { ImageMeta } from '@lezzet/types';
 
 /**
- * Vitrin fixture'ları — kaynağı HENÜZ OLMAYAN bölümler için (08.10): fırsatlar (05.6 indirim
- * tanımı) ve paketler (05.5 Bundle servisi). Ürün, fiyat ve stok artık GERÇEK okunuyor; onların
- * fixture'ları düştü.
+ * Vitrin fixture'ları — kaynağı HENÜZ OLMAYAN tek bölüm için (08.10): paketler (05.5 Bundle
+ * servisi). Ürün, fiyat, stok ve fırsatlar artık GERÇEK okunuyor; onların fixture'ları düştü.
  *
  * Kategoriler yalnız katalog tamamen boşken (seed atılmamış yerel ortam) yedeğe düşer.
  *
@@ -18,7 +17,6 @@ import type { ImageMeta } from '@lezzet/types';
  */
 
 const CategoryFixture = CategorySchema.pick({ id: true, slug: true, name: true });
-const ProductFixture = ProductSchema.pick({ id: true, slug: true, name: true });
 
 // Sabit UUID'ler — fixture'ın kimliği koşudan koşuya değişmesin (React anahtarları sabit kalır).
 const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -38,34 +36,6 @@ export const FIXTURE_CATEGORIES = [
   { id: uuid(5), slug: 'cerezler', name: { tr: 'Çerezler', fr: 'Fruits secs', de: 'Knabbereien' } },
   { id: uuid(6), slug: 'sebze-dolma', name: { tr: 'Sebze & Dolma', fr: 'Légumes & dolma', de: 'Gemüse & Dolma' } },
 ].map((c) => ({ ...CategoryFixture.parse(c), ...NO_IMAGE_META }));
-
-/** İndirimli teklifler — STUB(08.10 → 05.6 indirim tanımı). Sebep taşınmaz, yalnız fiyat ve sınır. */
-export const FIXTURE_OFFERS = [
-  {
-    product: { id: uuid(21), slug: 'ispanakli-gozleme', name: { tr: 'Ispanaklı Gözleme', fr: 'Gözleme aux épinards', de: 'Gözleme mit Spinat' } },
-    unitLabel: '4 adet',
-    comparisonCents: 1475,
-    priceCents: 590,
-    wasCents: 790,
-    limitPerCustomer: 5,
-  },
-  {
-    product: { id: uuid(22), slug: 'cevizli-sucuk', name: { tr: 'Cevizli Sucuk Tatlısı', fr: 'Sucuk aux noix', de: 'Walnuss-Sucuk' } },
-    unitLabel: '400 g',
-    comparisonCents: 1625,
-    priceCents: 650,
-    wasCents: 890,
-    limitPerCustomer: 3,
-  },
-  {
-    product: { id: uuid(23), slug: 'yaprak-sarma', name: { tr: 'Yaprak Sarma', fr: 'Feuilles de vigne farcies', de: 'Gefüllte Weinblätter' } },
-    unitLabel: '1 kg',
-    comparisonCents: 990,
-    priceCents: 990,
-    wasCents: 1250,
-    limitPerCustomer: 4,
-  },
-].map((o) => ({ ...o, product: { ...ProductFixture.parse(o.product), ...NO_IMAGE_META } }));
 
 /** Paketler — STUB(08.10 → 05.5 Bundle servisi). Model henüz yok, şema doğrulaması uygulanamıyor. */
 export const FIXTURE_PACKAGES = [

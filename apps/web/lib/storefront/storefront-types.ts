@@ -57,8 +57,11 @@ export interface StorefrontProduct {
   priceCents: number | null;
   /** İndirim öncesi fiyat — verilirse "Fırsat" rozeti + üstü çizili eski fiyat. */
   wasCents?: number;
-  /** Kişi başı sınır ("En fazla 5 adet" şablonuna girecek sayı); sınırsızsa null. */
-  limitLabel?: string | null;
+  /**
+   * Adet sınırı ("En fazla 5 adet" şablonuna girecek sayı); sınırsızsa null. Yalnız teklifte doğar:
+   * teklif fiyatı partiye bağlıdır, o partide kalandan fazlası normal fiyata taşar (DOMAIN §5).
+   */
+  limitLabel: string | null;
   purchaseMode: PurchaseMode;
   /**
    * Tükendi. Ürün listede KALIR (tekrar gelecek beklentisi doğru kurulsun) ama sepete eklenemez;

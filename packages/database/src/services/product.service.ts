@@ -33,6 +33,8 @@ interface ProductFilters {
   query?: string;
   categoryId?: string;
   status?: ProductStatus;
+  /** Belirli ürünler — çağıran kimlikleri başka bir okumadan türetmişse (ör. teklifli partiler). */
+  ids?: string[];
   /** Yalnız beyanı eksik olanlar (ad dili eksik veya alerjen boş). */
   onlyIncomplete?: boolean;
 }
@@ -147,6 +149,7 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     const filters: Record<string, unknown> = {};
     const orFilters: string[] = [];
     if (f?.categoryId) filters.categoryId = f.categoryId;
+    if (f?.ids) filters.id = f.ids; // dizi → IN (base sorgu kurucusu çevirir)
     if (f?.status) filters.status = f.status; // tek kolon → düz eşitlik (eski ikili bayrak çevrimi kalktı)
 
     const q = f?.query?.trim();

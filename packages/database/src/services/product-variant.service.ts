@@ -24,6 +24,15 @@ export class ProductVariantService extends BaseDbService<ProductVariant, Product
     return this.getAll({ productId }, { orderBy: 'sortOrder' });
   }
 
+  /**
+   * Verilen varyantlar TEK sorguda. Varyanttan ürüne çıkmak gerektiğinde kullanılır: teklife açık
+   * partiler varyant kimliği taşır, vitrin ise ürün gösterir — bu okuma o köprüdür.
+   */
+  async listByIds(ids: string[]): Promise<ProductVariant[]> {
+    if (ids.length === 0) return [];
+    return this.getAll({ id: ids }, { orderBy: 'sortOrder' });
+  }
+
   /** Aktif/pasif (soft). */
   async setActive(id: string, isActive: boolean): Promise<ProductVariant> {
     return this.update({ id, isActive });

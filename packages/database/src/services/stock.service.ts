@@ -53,8 +53,14 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
     });
   }
 
-  /** İndirimli teklife açılmış partiler (offer_price dolu) — near-expiry vitrini. */
-  async listOfferBatches(variantId?: string): Promise<Stock[]> {
+  /**
+   * İndirimli teklife açılmış partiler (offer_price dolu) — near-expiry vitrini.
+   *
+   * Varyant listesi de kabul eder: vitrin bir sayfadaki tüm ürünlerin teklifini TEK sorguda okur,
+   * kart başına sorgu atmaz (N+1). Süzgeçsiz çağrı katalogdaki tüm açık teklifleri verir — teklif
+   * sayısı doğası gereği küçüktür (partiyi insan teklife açar, DOMAIN §5).
+   */
+  async listOfferBatches(variantId?: string | string[]): Promise<Stock[]> {
     return this.getAll(variantId ? { variantId } : undefined, {
       isNotNullFields: ['offer_price'],
       rangeFilters: [{ field: 'physical_qty', operator: 'gt', value: 0 }],
