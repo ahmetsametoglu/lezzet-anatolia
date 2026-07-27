@@ -156,6 +156,13 @@ export const ImageMetaSchema = z.object({
   imageFocalY: z.number().int().min(0).max(100),
   imageZoom: z.number().int().min(IMAGE_ZOOM_MIN).max(IMAGE_ZOOM_MAX),
   imageAlt: LocalizedTextDraftSchema.nullable(),
+  /**
+   * Görsel DOSYASININ son değişme anı — okuma URL'inin sürüm damgası (`?v=…`). Anahtar deterministik
+   * olduğu için (aynı slug → aynı obje, üzerine yazılır) dosya değişse de URL değişmez; public
+   * `immutable` cache bunu bir yıl eski gösterir. Damga o cache'i kırar. Kırpma (odak/zoom) dosyayı
+   * DEĞİŞTİRMEZ — CSS'te uygulanır — bu yüzden damga yalnız yükleme akışında yazılır.
+   */
+  imageUpdatedAt: z.string().nullable(),
 });
 export type ImageMeta = z.infer<typeof ImageMetaSchema>;
 

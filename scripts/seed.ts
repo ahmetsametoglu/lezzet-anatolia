@@ -43,6 +43,10 @@ try {
 
 type Db = ReturnType<typeof createServiceRoleClient>;
 
+// Görsel sürüm damgası — seed bu koşuşta yüklüyor. Public okuma URL'i `?v=<damga>` ile kurulur
+// (05.11); damgasız kayıtta yeni dosya CDN'in eski kopyasının arkasında kalırdı.
+const NOW = new Date().toISOString();
+
 /**
  * temp/<file> görselini R2'ye verilen key ile yükler ve saklanacak RELATIVE key'i döner. R2 ayarsızsa
  * (local'de creds yoksa) sessizce null döner → kayıt görselsiz oluşur (graceful degradation).
@@ -216,6 +220,7 @@ async function seedBulkProducts(products: ProductService, catId: Map<string, str
     for (const [q, qual] of BULK_QUALIFIERS.entries()) {
       const i = b * BULK_QUALIFIERS.length + q;
       const trOnly = i % 5 === 0; // dil eksik → "beyan eksik" süzgecine düşer
+      const imageKey = i % 6 === 0 ? null : (sharedKeys[i % sharedKeys.length] ?? null);
       const name: LocalizedText = trOnly
         ? { tr: `${base.tr} ${qual.tr}` }
         : { tr: `${base.tr} ${qual.tr}`, fr: `${base.fr} ${qual.fr}`, de: `${base.de} ${qual.de}` };
@@ -224,7 +229,10 @@ async function seedBulkProducts(products: ProductService, catId: Map<string, str
         name,
         description: trOnly ? null : { tr: `${base.tr} — ${qual.tr}.`, fr: `${base.fr} — ${qual.fr}.`, de: `${base.de} — ${qual.de}.` },
         categoryId: catId.get(base.cat) ?? null,
-        imageKey: i % 6 === 0 ? null : (sharedKeys[i % sharedKeys.length] ?? null),
+        imageKey,
+        // Sürüm damgası public okuma URL'ini `?v=` ile sürümler — DOSYASI olan kayda yazılır;
+        // görselsiz kayıtta damga olmayan bir dosyanın tarihi olurdu.
+        imageUpdatedAt: imageKey ? NOW : null,
         allergens: i % 7 === 0 ? [] : i % 2 === 0 ? ['gluten', 'sert_kabuklu'] : ['gluten', 'sut'],
         vatRate: base.cat === 'malzeme' ? 20 : 5.5,
         shelfLifeDays: base.cat === 'borek' ? 120 : 180,
@@ -268,6 +276,7 @@ async function seedCatalog(db: Db): Promise<void> {
       description: p.description ?? null,
       categoryId: catId.get(p.category) ?? null,
       imageKey,
+      imageUpdatedAt: imageKey ? NOW : null, // sürüm damgası (bkz. seedBulkProducts)
       allergens: p.allergens,
       vatRate: p.vatRate,
       shelfLifeDays: p.shelfLifeDays,

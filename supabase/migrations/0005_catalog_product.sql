@@ -24,6 +24,7 @@ create table public.product (
   image_focal_y smallint not null default 50,        -- odak %, 0-100 (object-position Y)
   image_zoom smallint not null default 100,          -- zoom %, 100-400 (dikey/kare kaynağı yatay banda kırpar)
   image_alt jsonb,                                   -- LocalizedText; erişilebilirlik + SEO, kart görselinde zorunlu
+  image_updated_at timestamptz,                      -- görsel dosyasının sürüm damgası (gerekçe: 0004 kategori satırı)
   allergens product_allergen[] not null default '{}', -- AB 14 yasal beyan (manuel seçim)
   vat_rate numeric(4, 2) not null default 5.5,       -- 5.5 / 20
   date_type product_date_type not null default 'DDM',

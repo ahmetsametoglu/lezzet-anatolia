@@ -261,6 +261,20 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
   }
 
   /**
+   * Görsel dosyasını varlığa bağlar: anahtar **ve sürüm damgası** aynı yazımda gider. Damga public
+   * okuma URL'inin cache'ini kırar (`publicImageUrl` — 05.11); anahtar deterministik olduğu için
+   * damga olmadan yeni yüklenen dosya bir yıl eski cache'in arkasında kalır. Kuralın üç ayrı
+   * serviste (kategori/koleksiyon/ürün) tekrarlanmaması için burada durur.
+   *
+   * Yalnız görsel taşıyan varlıklarda anlamlı → `protected`; alt sınıf `setImageKey` olarak açar.
+   * Tek `as TUpdate`: alan adları jenerik imzada görünmez, ama üç Update şeması da tam varlık
+   * şemasından türediği için (`.partial()`) alanlar orada MEVCUT — eksik olsa Zod sessizce atardı.
+   */
+  protected async writeImageKey(id: string, imageKey: string): Promise<TDb> {
+    return this.update({ id, imageKey, imageUpdatedAt: new Date().toISOString() } as TUpdate);
+  }
+
+  /**
    * Verilen id sırasına göre bir sıra-alanını 0..n-1 olarak toplu yazar (sürükle-bırak sonrası).
    * Küçük listeler için ardışık update; ilk hata fırlatılır. Alan camelCase verilir (ör. 'sortOrder').
    */

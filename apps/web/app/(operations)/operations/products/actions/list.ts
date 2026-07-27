@@ -43,7 +43,7 @@ export async function loadMoreProductsAction(search: string, cursor: KeysetCurso
     };
 
     // İndirgeme page.tsx ile PAYLAŞILIR → ilk sayfa ve sonraki sayfalar aynı şekli üretir.
-    const products = await toProductViews(page.rows, names);
+    const products = toProductViews(page.rows, names);
     return { data: { products, nextCursor: page.nextCursor }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };

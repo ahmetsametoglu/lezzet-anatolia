@@ -65,9 +65,9 @@ export class CategoryService extends BaseDbService<Category, CategoryInsert, Cat
     return this.update({ id, ...input });
   }
 
-  /** Görsel anahtarını yazar (R2 yüklemesinden sonra). Relative key; prefix R2 çağrısında eklenir. */
+  /** Görsel anahtarını + sürüm damgasını yazar (R2 yüklemesinden sonra). Relative key; prefix R2'de. */
   async setImageKey(id: string, imageKey: string): Promise<Category> {
-    return this.update({ id, imageKey });
+    return this.writeImageKey(id, imageKey);
   }
 
   /** Sürükle-bırak sırası: verilen id dizisine göre sortOrder'ı 0..n-1 yazar. */

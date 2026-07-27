@@ -20,6 +20,7 @@ Düz (tek seviye), iç içe ağaç yok. Her ürün tek kategoride (bkz. `DOMAIN.
 | image_focal_y | smallint | odak %, 0-100 (object-position Y) |
 | image_zoom | smallint | zoom %, 100-400; dikey/kare kaynağı yatay çerçeveye kırpar (yeniden çektirmeden) |
 | image_alt | LocalizedText (jsonb) \| null | alternatif metin; **boşsa müşteride kategori adına düşer** (kopya tutulmaz) |
+| image_updated_at | timestamptz \| null | görsel DOSYASININ son değişme anı; public okuma URL'inin sürüm damgası (`?v=`). Anahtar deterministik + cache `immutable` olduğu için damgasız yeni dosya bir yıl görünmez. Kırpma (odak/zoom) dosyayı değiştirmez → damgayı yalnız yükleme yazar |
 | sort_order | int | |
 | is_active | boolean | |
 | created_at | timestamptz | |
@@ -39,6 +40,7 @@ Esnek pazarlama grubu (Bayram, Yeni, İndirimde). Bir ürün birden çok koleksi
 | image_focal_y | smallint | OG kartı odak %, 0-100 (object-position Y) |
 | image_zoom | smallint | OG kartı zoom %, 100-400 |
 | image_alt | LocalizedText (jsonb) \| null | OG kartı alt metni; boşsa ada düşer |
+| image_updated_at | timestamptz \| null | görsel dosyasının sürüm damgası (gerekçe: Category satırı) |
 | is_active | boolean | |
 | sort_order | int | |
 | created_at | timestamptz | |
@@ -64,6 +66,7 @@ Esnek pazarlama grubu (Bayram, Yeni, İndirimde). Bir ürün birden çok koleksi
 | image_focal_y | smallint | kapak odak noktası %, 0-100 (object-position Y) |
 | image_zoom | smallint | kapak zoom %, 100-400; dikey/kare kaynağı yatay banda kırpar (yeniden çektirmeden) |
 | image_alt | LocalizedText (jsonb) \| null | kapak alternatif metni (erişilebilirlik + SEO); **boşsa müşteride ürün adına düşer** (kopya tutulmaz) |
+| image_updated_at | timestamptz \| null | görsel dosyasının sürüm damgası (gerekçe: Category satırı) |
 | vat_rate | number | ürün bazında KDV (5.5 / 20) |
 | date_type | enum(`DLC`,`DDM`) | son tarih tipi — güvenlik/kalite (varsayılan `DDM`) |
 | shelf_life_days | int \| null | toplam raf ömrü (gün); kalan % hesabı için |

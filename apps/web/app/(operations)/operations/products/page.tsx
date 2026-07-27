@@ -1,6 +1,6 @@
 import { CategoryService, CollectionService, ProductService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
-import { getR2 } from '@lezzet/storage';
+import { publicImageUrl } from '@lezzet/storage';
 import { detectDevice } from '@/lib/device';
 import { ProductsClient } from './products-client';
 import { toProductViews } from './products-read';
@@ -40,34 +40,27 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     collectionSvc.listWithProductIds(),
   ]);
 
-  // Görseller R2 private bucket'ta → okuma için imzalı URL (imzalama yerel; ağ turu değil).
-  // Not: (05.11) public bucket'a geçince bu katman saf string birleştirmeye iner.
-  const r2 = getR2();
-  const signed = (key: string | null): Promise<string | null> => (r2 && key ? r2.getSignedReadUrl(key) : Promise.resolve(null));
-  const [categoryImageUrls, collectionImageUrls] = await Promise.all([
-    Promise.all(categories.map((c) => signed(c.imageKey))),
-    Promise.all(collectionRows.map((c) => signed(c.imageKey))),
-  ]);
-
   // Ürün indirgemesi action ile PAYLAŞILIR (products-read) — ilk sayfa ve sonraki sayfalar aynı şekli
   // üretsin diye. Koleksiyon ADLARI üyelik id'lerinden çözülür; id'ler ürünle gömülü geldi (join yok).
   const names = {
     category: new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)])),
     collection: new Map(collectionRows.map((c) => [c.id, resolveLocalizedText(c.name)])),
   };
-  const productViews = await toProductViews(productPage.rows, names);
+  const productViews = toProductViews(productPage.rows, names);
 
+  // Görsel URL'i public bucket'tan saf birleştirmeyle kurulur (05.11) — ne async çağrı ne ağ turu;
+  // `?v=<damga>` sayesinde dosya değişince adres de değişir, arada tam cache.
   // Kategori başına ürün sayısı: liste sayfalı olduğu için client'ta türetilemez → sunucudan gelir.
-  const categoryViews: CategoryView[] = categories.map((c, i) => ({
+  const categoryViews: CategoryView[] = categories.map((c) => ({
     ...c,
     count: categoryCounts.get(c.id) ?? 0,
-    imageUrl: categoryImageUrls[i] ?? null,
+    imageUrl: publicImageUrl(c.imageKey, c.imageUpdatedAt),
   }));
 
-  const collectionViews: CollectionView[] = collectionRows.map((c, i) => ({
+  const collectionViews: CollectionView[] = collectionRows.map((c) => ({
     ...c,
     count: c.productIds.length,
-    imageUrl: collectionImageUrls[i] ?? null,
+    imageUrl: publicImageUrl(c.imageKey, c.imageUpdatedAt),
   }));
 
   const device = await detectDevice();

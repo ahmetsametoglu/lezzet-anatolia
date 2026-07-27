@@ -15,6 +15,10 @@ create table public.category (
   image_focal_y smallint not null default 50,   -- odak %, 0-100 (object-position Y)
   image_zoom smallint not null default 100,     -- zoom %, 100-400
   image_alt jsonb,                              -- LocalizedText; boşsa kategori adına düşer
+  -- Görsel DOSYASININ son değişme anı. Anahtar deterministik (slug'a bağlı, üzerine yazılır) ve
+  -- okuma URL'i public+immutable → sürüm damgası olmadan CDN/tarayıcı bir yıl eskiyi gösterir.
+  -- Yalnız dosya değişince yazılır; odak/zoom değişimi dosyayı değiştirmez (kırpma CSS'te).
+  image_updated_at timestamptz,
   sort_order int not null default 0,
   is_active boolean not null default true,
   created_at timestamptz not null default now()
@@ -36,6 +40,7 @@ create table public.collection (
   image_focal_y smallint not null default 50,   -- odak %, 0-100 (object-position Y)
   image_zoom smallint not null default 100,     -- zoom %, 100-400
   image_alt jsonb,                              -- LocalizedText; OG kartı alt metni (boşsa ada düşer)
+  image_updated_at timestamptz,                 -- görsel dosyasının sürüm damgası (kategoridekiyle aynı gerekçe)
   sort_order int not null default 0,
   is_active boolean not null default true,
   created_at timestamptz not null default now()

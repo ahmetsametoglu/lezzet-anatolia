@@ -97,9 +97,9 @@ export class CollectionService extends BaseDbService<Collection, CollectionInser
     return this.update({ id, ...input });
   }
 
-  /** Kapak görseli anahtarı (R2'ye yükleme sonrası). */
+  /** Kapak görseli anahtarı + sürüm damgası (R2'ye yükleme sonrası). */
   async setImageKey(id: string, imageKey: string): Promise<Collection> {
-    return this.update({ id, imageKey });
+    return this.writeImageKey(id, imageKey);
   }
 
   /** Sürükle-bırak sırası: verilen id dizisine göre sortOrder'ı 0..n-1 yazar. */

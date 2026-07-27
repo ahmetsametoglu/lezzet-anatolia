@@ -210,9 +210,9 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     return this.update({ id, isActive });
   }
 
-  /** Görsel anahtarını yazar (R2 yüklemesinden sonra). Relative key; prefix R2 çağrısında eklenir. */
+  /** Görsel anahtarını + sürüm damgasını yazar (R2 yüklemesinden sonra). Relative key; prefix R2'de. */
   async setImageKey(id: string, imageKey: string): Promise<Product> {
-    return this.update({ id, imageKey });
+    return this.writeImageKey(id, imageKey);
   }
 
   /**
