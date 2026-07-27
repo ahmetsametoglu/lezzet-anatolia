@@ -10,6 +10,12 @@ import type { StorefrontImage } from '@/lib/storefront/storefront-types';
  * Tek görselli üründe şerit HİÇ gösterilmez: tek seçenekli bir seçici, seçenek olmadığını gizler.
  * Kırpma künyesi her görselde kendi odağını taşır (`FramedImage`) — kapak için verilen odak, ek
  * görselin odağı yerine geçmez.
+ *
+ * Şerit tasarımda TEK SIRA ve dört sütundur; sığmayan görseller son kutuda "+N" olarak toplanır.
+ * O kutu bir SAYAÇ DEĞİL, DÜĞMEdir: basınca kalan görseller açılır. Sayaç olarak bırakılmıştı ve
+ * altı görselli üründe üç görsel hiçbir şekilde açılamıyordu — "+3" yazan ama içini gösteremeyen
+ * bir kutu, olmayan bir vaat. Tasarım bu kutunun davranışını yazmıyor; sığdığı yerde kalan en sade
+ * çözüm şeridi büyütmek (yeni bir katman/ışık kutusu açmak değil).
  */
 interface GalleryProps {
   images: StorefrontImage[];
@@ -20,22 +26,24 @@ interface GalleryProps {
 
 const RATIO = 3 / 2;
 
-/** Şeritte en çok kaç küçük görsel — fazlası "+N" kutusunda toplanır (tasarım dörtlü ızgara). */
-const THUMB_LIMIT = 3;
-
 export function Gallery({ images, alt, compact = false }: GalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   if (images.length === 0) return <FramedImage src={null} alt={alt} ratio={RATIO} className="!rounded-card" />;
 
   const active = images[activeIndex] ?? images[0]!;
-  const thumbs = images.slice(0, THUMB_LIMIT);
-  const overflow = images.length - thumbs.length;
+  const columns = compact ? 3 : 4;
+  // Tam sığıyorsa sayaç kutusuna gerek yok — dört görsel dört slota girer, "+0" diye bir şey olmaz.
+  // Sığmıyorsa son slot düğmeye ayrılır, o yüzden bir eksik görsel gösterilir.
+  const fits = images.length <= columns;
+  const thumbs = expanded || fits ? images : images.slice(0, columns - 1);
+  const hidden = images.length - thumbs.length;
 
   return (
     <div className="flex flex-col gap-3">
       <FramedImage src={active.url} alt={alt} ratio={RATIO} crop={active.crop} className="!rounded-card" />
       {images.length > 1 && (
-        <div className={['grid gap-2.5', compact ? 'grid-cols-3' : 'grid-cols-4'].join(' ')}>
+        <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
           {thumbs.map((img, i) => (
             <button
               key={i}
@@ -51,8 +59,16 @@ export function Gallery({ images, alt, compact = false }: GalleryProps) {
               <FramedImage src={img.url} alt="" ratio={RATIO} crop={img.crop} />
             </button>
           ))}
-          {overflow > 0 && (
-            <span className="grid place-items-center rounded-soft bg-sand-100 font-sans text-body-sm font-bold text-muted">+{overflow}</span>
+          {hidden > 0 && (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              aria-label={`${alt} +${hidden}`}
+              className="cursor-pointer rounded-soft border-2 border-transparent bg-sand-100 font-sans text-body-sm font-bold text-muted transition-colors hover:border-sand-400 hover:text-ink"
+              style={{ aspectRatio: RATIO }}
+            >
+              +{hidden}
+            </button>
           )}
         </div>
       )}
