@@ -15,6 +15,8 @@ export { ProductVariantService } from './services/product-variant.service';
 export { ProductImageService } from './services/product-image.service';
 export { PriceService } from './services/price.service';
 export { AddressService } from './services/address.service';
+export { CartService } from './services/cart.service';
+export { OrderService, OrderItemService, OrderStatusLogService, type CreateOrderItemInput } from './services/order.service';
 export { StockService } from './services/stock.service';
 export { ReservationService, type ReserveInput } from './services/reservation.service';
 export { StockAdjustmentService, type AdjustInput } from './services/stock-adjustment.service';

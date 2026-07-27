@@ -128,7 +128,11 @@ Rezervasyonun serbest bırakılması **yalnızca mal fiziksel olarak depoya geri
 
 ## 5. Fiyat kuralları
 
-- **Fiyat sabitleme:** Müşteri ürünü sepete eklediği andaki fiyat geçerlidir. Sipariş boyunca o fiyat korunur; sonradan fiyat değişse bile verilmiş sipariş etkilenmez.
+- **Fiyat sabitleme anı = checkout başlangıcı** (karar 27.07). Sipariş boyunca o fiyat korunur; sonradan fiyat değişse bile **verilmiş sipariş etkilenmez**. Sepetteki fiyat **bağlayıcı değildir**: gösterim ve değişiklik tespiti içindir.
+  - *Neden sepet değil:* sepet sunucuda kalıcıdır ve aylarca bekleyebilir. Sepet fiyatını süresiz dondurmak, tedarikçi maliyeti oynayan donuk gıdada doğrudan zarardır; fiyat düşmüşse de müşteriye fazla ödetir. Piyasa normu da budur (Amazon ve market e-ticaretinde bağlayıcı fiyat sipariş/checkout anındakidir); FR tüketici hukuku açısından belirleyici olan **onay adımında gösterilen tutardır**, sepetteki değil. Sessiz zam sorundur, bildirilmiş zam değil.
+  - *Tek pencere:* checkout başlarken stok ayrılır ve 30 dk'lık pencere açılır (§4); ödeme oturumu da aynı anda sona erer. **Fiyat da aynı anda sabitlenir** — stok, ödeme ve fiyat tek ve aynı pencerede yaşar, ayrı bir süre/cron/kavram yoktur.
+  - *Değişiklik davranışı:* fiyat **arttıysa** müşteriye açıkça bildirilir ve onay istenir (kabul et / sepetten çıkar); **düştüyse** sessizce uygulanır — müşteri lehine olan sorulmaz.
+  - *Tükenen teklif partisi aynı akıştan geçer:* near-expiry indirimi **partiye** aittir (indirimin sebebi o partinin tarihidir), başka partiye taşınmaz. Çıpalı parti checkout'a kadar tükenmişse kalem sessizce normal fiyata dönmez — aynı bildirim/onay akışıyla normal fiyat teklif edilir (bkz. §4 batch-pinned, §5 teklif çakışması).
 - **B2B fiyatı** ayrı liste; ayrıca **müşteriye özel fiyat** olabilir.
 - **B2C fiyatı** ayrı.
 - Fiyatlar arası ilişki (perakende fiyatının toptan müşteriyi rahatsız etmemesi) bir iş kararıdır; sistem farklı fiyat seviyelerini destekler, politikayı admin belirler.

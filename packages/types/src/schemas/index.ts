@@ -13,6 +13,8 @@ export * from './product-image.schema';
 export * from './price.schema';
 export * from './product-collection.schema';
 export * from './address.schema';
+export * from './cart.schema';
+export * from './order.schema';
 export * from './stock.schema';
 export * from './stock-adjustment.schema';
 export * from './supply.schema';
