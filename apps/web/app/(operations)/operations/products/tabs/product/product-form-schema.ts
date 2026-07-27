@@ -1,6 +1,16 @@
 import { z } from 'zod';
-import { DEFAULT_CROP_FIELDS, ImageCropFieldsSchema, pickCropFields, ProductInsertSchema, ProductVariantEntrySchema, type LocalizedText } from '@lezzet/types';
-import { productStatus, type ProductView } from '../../products-types';
+import {
+  DEFAULT_CROP_FIELDS,
+  EMPTY_NUTRITION,
+  hasNutrition,
+  ImageCropFieldsSchema,
+  pickCropFields,
+  ProductInsertSchema,
+  ProductStatusEnum,
+  ProductVariantEntrySchema,
+  type LocalizedText,
+} from '@lezzet/types';
+import { type ProductView } from '../../products-types';
 
 // Ürün formu şeması — ProductInsertSchema'dan TÜRETİLİR (referans deseni: .omit().extend()). Formda
 // olmayan alanlar çıkarılır (slug servis türetir; imageKey ayrı yükleme; isCandidate/sortOrder yok;
@@ -11,12 +21,14 @@ export const ProductFormSchema = ProductInsertSchema.omit({
   slug: true,
   imageKey: true,
   imageAlt: true,
-  isCandidate: true,
   sortOrder: true,
   vatRate: true,
 })
   .extend({
     vatRate: z.enum(['5.5', '20']),
+    // Durum ZORUNLU'ya daraltılır: insert şemasında opsiyonel (DB default'u var), formda ise her zaman
+    // bir seçim vardır — alt bardaki üçlü seçici. DB'de de tek kolon (`product_status`).
+    status: ProductStatusEnum,
     variants: z.array(ProductVariantEntrySchema),
   })
   .merge(ImageCropFieldsSchema);
@@ -39,11 +51,15 @@ export function buildDefaults(p: ProductView | null): ProductFormValues {
       description: null,
       categoryId: null,
       allergens: [],
+      traces: [],
+      ingredients: null,
+      nutrition: EMPTY_NUTRITION,
+      storageInstructions: null,
       vatRate: '5.5',
       dateType: 'DDM',
       shelfLifeDays: null,
       shippable: true,
-      isActive: true,
+      status: 'active',
       targetMarginPercent: null,
       autoPrice: false,
       ...DEFAULT_CROP_FIELDS,
@@ -55,11 +71,15 @@ export function buildDefaults(p: ProductView | null): ProductFormValues {
     description: p.description,
     categoryId: p.categoryId,
     allergens: p.allergens,
+    traces: p.traces,
+    ingredients: p.ingredients,
+    nutrition: p.nutrition ?? EMPTY_NUTRITION,
+    storageInstructions: p.storageInstructions,
     vatRate: p.vatRate === 20 ? '20' : '5.5',
     dateType: p.dateType,
     shelfLifeDays: p.shelfLifeDays,
     shippable: p.shippable,
-    isActive: productStatus(p) === 'active',
+    status: p.status,
     targetMarginPercent: p.targetMarginPercent,
     autoPrice: p.autoPrice,
     ...pickCropFields(p),
@@ -74,11 +94,17 @@ export function toActionPayload(values: ProductFormValues) {
     description: values.description ? cleanLocalized(values.description) : null,
     categoryId: values.categoryId ?? null,
     allergens: values.allergens ?? [],
+    traces: values.traces ?? [],
+    // Beyan metinleri `**vurgu**` işaretini KORUYARAK gider — düz metin, HTML değil (rich-text).
+    ingredients: values.ingredients ? cleanLocalized(values.ingredients) : null,
+    // Hiçbir kalemi girilmemiş künye null yazılır: boş bir nesne "beyan var" gibi görünürdü.
+    nutrition: hasNutrition(values.nutrition ?? null) ? values.nutrition : null,
+    storageInstructions: values.storageInstructions ? cleanLocalized(values.storageInstructions) : null,
     vatRate: Number(values.vatRate),
     dateType: values.dateType ?? 'DDM',
     shelfLifeDays: values.shelfLifeDays ?? null,
     shippable: values.shippable ?? true,
-    isActive: values.isActive ?? true,
+    status: values.status,
     targetMarginPercent: values.targetMarginPercent ?? null,
     autoPrice: values.autoPrice ?? false,
     ...pickCropFields(values),

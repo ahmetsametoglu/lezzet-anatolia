@@ -1,13 +1,12 @@
 import type { ReactNode } from 'react';
+import type { OpsTone } from './tone';
 
 /**
- * Operasyon rozeti — Komponent Envanteri O6 (durum/kanal). Ton KAPALI listedir; renk anlam taşır:
- * olive=yolunda, amber=dikkat/karar, kırmızı=hata/gecikme, mavi=onay/aday, gri=kapalı/nötr.
+ * Operasyon rozeti — Komponent Envanteri O6 (durum/kanal). Ton sözlüğü ortaktır (OpsTone); renk anlam
+ * taşır: olive=yolunda, amber=dikkat/karar, kırmızı=hata/gecikme, mavi=onay/aday, gri=kapalı/nötr.
  * Türetilmiş bilgidir — yalnız gösterir, buradan değiştirilmez. `dot` durum noktası ekler.
  */
-type Tone = 'neutral' | 'olive' | 'amber' | 'red' | 'blue';
-
-const TONE: Record<Tone, { cls: string; dot: string }> = {
+const TONE: Record<OpsTone, { cls: string; dot: string }> = {
   neutral: { cls: 'text-ops-body bg-ops-line-soft', dot: 'bg-ops-faint' },
   olive: { cls: 'text-ops-olive-dark bg-ops-olive-bg', dot: 'bg-ops-olive' },
   amber: { cls: 'text-ops-amber bg-ops-amber-bg', dot: 'bg-ops-amber-dot' },
@@ -16,7 +15,7 @@ const TONE: Record<Tone, { cls: string; dot: string }> = {
 };
 
 interface BadgeProps {
-  tone?: Tone;
+  tone?: OpsTone;
   dot?: boolean;
   className?: string;
   children: ReactNode;

@@ -23,12 +23,18 @@ interface DialogProps {
   subtitle?: string;
   /** Alt bar içeriği (aksiyonlar). Verilmezse alt bar çizilmez. */
   footer?: ReactNode;
+  /**
+   * Başlık satırının SAĞINDA duran sekmeler/kontroller. Uzun formlar tek kolonda duvara döndüğünde
+   * alanlar sekmelere bölünür (ör. ürün: Ürün ↔ Beyan) — sekme başlıkta durur ki gövde kaydırılırken
+   * kaybolmasın. Kapatma düğmesi her koşulda en sağda kalır.
+   */
+  headerAside?: ReactNode;
   /** Panel genişliği (CSS max-width). Varsayılan 640px. */
   maxWidth?: number;
   children: ReactNode;
 }
 
-export function Dialog({ open, onClose, title, subtitle, footer, maxWidth = 640, children }: DialogProps) {
+export function Dialog({ open, onClose, title, subtitle, footer, headerAside, maxWidth = 640, children }: DialogProps) {
   const tokenRef = useRef<object>({});
   useEffect(() => {
     if (!open) return;
@@ -63,6 +69,7 @@ export function Dialog({ open, onClose, title, subtitle, footer, maxWidth = 640,
             <span className="font-ops-display text-[18px] font-semibold">{title}</span>
             {subtitle ? <span className="font-ops-body text-xs text-ops-muted">{subtitle}</span> : null}
           </div>
+          {headerAside}
           <button
             type="button"
             onClick={onClose}

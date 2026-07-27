@@ -12,7 +12,7 @@ import { Toggle, ToggleField } from '@/components/operation/form/toggle';
 import { resolveLocalizedText } from '@lezzet/types';
 import { ImageUploadButton } from '@/components/operation/ui/image-upload-button';
 import { updateProductNameAction, uploadProductImageAction } from './tabs/product/actions';
-import { productStatus, type ProductView, type ProductsViewProps } from './products-types';
+import { type ProductView, type ProductsViewProps } from './products-types';
 
 // Ürünler — mobil: sahada en sık iş. Liste (arama · süzgeç · aktiflik) + satıra dokununca hızlı
 // düzenleme bottom-sheet'i (ad · aktiflik · koleksiyon · kameradan görsel). Aktiflik toggle'ı KALICI
@@ -30,7 +30,7 @@ function QuickEditSheet({
 }) {
   const displayName = resolveLocalizedText(product.name);
   const [name, setName] = useState(displayName);
-  const [active, setActive] = useState(productStatus(product) === 'active');
+  const [active, setActive] = useState(product.status === 'active');
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -185,7 +185,7 @@ export function ProductsMobile({
             </div>
             {/* Satır sheet açar; toggle ayrı iş → yayılımı durdur */}
             <span onClick={(e) => e.stopPropagation()}>
-              <Toggle on={productStatus(p) === 'active'} onChange={(next) => onToggleActive(p.id, next)} label={`${resolveLocalizedText(p.name)} satışta`} />
+              <Toggle on={p.status === 'active'} onChange={(next) => onToggleActive(p.id, next)} label={`${resolveLocalizedText(p.name)} satışta`} />
             </span>
           </div>
         ))}

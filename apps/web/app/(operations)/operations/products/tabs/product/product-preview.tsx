@@ -3,15 +3,15 @@ import Link from 'next/link';
 import { Badge } from '@/components/operation/ui/badge';
 import { AlertIcon, CheckIcon, InfoIcon } from '@/components/operation/ui/icons';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
-import { resolveLocalizedText } from '@lezzet/types';
+import { missingDeclarations, resolveLocalizedText } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
-import { filledContentLangs, productStatus, type ProductView } from '../../products-types';
+import { filledContentLangs, type ProductView } from '../../products-types';
 
 // Seçili ürün paneli — Ürünler ekranının sağ sütunu. SALT görünüm: türetilmiş bilgi gösterir,
 // düzenleme modal'da (Düzenle) yapılır. Fiyat/stok burada düzenlenmez, kendi ekranlarına köprü verir.
 
 function StatusBadge({ product }: { product: ProductView }) {
-  const status = productStatus(product);
+  const status = product.status;
   if (status === 'candidate') return <Badge tone="blue">Aday</Badge>;
   if (status === 'passive') return <Badge tone="neutral">Pasif</Badge>;
   return <Badge tone="olive">Aktif</Badge>;
@@ -49,19 +49,28 @@ function Spec({ label, value, warn }: { label: string; value: string; warn?: boo
 function DeclarationNote({ product }: { product: ProductView }) {
   const filled = filledContentLangs(product.name);
   const missingLangs = LOCALES.filter((l) => !filled.includes(l));
-  const missingAllergen = product.allergens.length === 0;
+  // Neyin eksik sayıldığı TEK KAYNAKTA (types/missingDeclarations) — sunucu süzgeci de onu izler.
+  const gaps = missingDeclarations(product);
+  const GAP_LABELS: Record<string, string> = {
+    ingredients: 'içindekiler',
+    nutrition: 'besin değerleri',
+    storage: 'saklama koşulları',
+    allergens: 'alerjen beyanı',
+  };
 
   let cls: string;
   let icon: ReactNode;
   let text: string;
-  if (productStatus(product) === 'candidate') {
+  if (product.status === 'candidate') {
     cls = 'border-ops-blue-line bg-ops-blue-bg text-ops-blue-dark [--ic:var(--color-ops-blue)]';
     icon = <InfoIcon />;
     text = 'Aday ürün — satılamaz, yalnız keşifte görünür. Varyant · stok · fiyat tamamlanınca "Etkinleştir" ile satılabilir yapılır.';
-  } else if (missingLangs.length > 0 || missingAllergen) {
+  } else if (gaps.length > 0) {
     const parts: string[] = [];
-    if (missingLangs.length > 0) parts.push(`${missingLangs.map((l) => l.toUpperCase()).join(', ')} içeriği`);
-    if (missingAllergen) parts.push('alerjen beyanı');
+    if (gaps.includes('lang')) parts.push(`${missingLangs.map((l) => l.toUpperCase()).join(', ')} içeriği`);
+    for (const g of gaps) {
+      if (GAP_LABELS[g]) parts.push(GAP_LABELS[g]);
+    }
     cls = 'border-ops-amber-line bg-ops-amber-bg text-ops-amber-dark [--ic:var(--color-ops-amber)]';
     icon = <AlertIcon />;
     text = `Yasal beyan eksik — ${parts.join(' ve ')} boş. Müşteri sayfasındaki zorunlu beyanları besler; tamamlanana dek işaretli kalır.`;

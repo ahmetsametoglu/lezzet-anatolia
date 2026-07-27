@@ -4,6 +4,7 @@ import { useState, useTransition, type ReactNode } from 'react';
 import { Controller, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
 import type { LocalizedText } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
+import { EmphasisTextarea } from './emphasis-textarea';
 import { FieldShell } from './field-shell';
 import { Input, Textarea } from './input';
 import { LocaleTabs, filledLocales } from './locale-tabs';
@@ -32,9 +33,16 @@ interface FormLocalizedTextProps<T extends FieldValues> {
   lang?: Locale;
   /** Düzen: 'tabs' (varsayılan, dil sekmesi) | 'stacked' (tüm diller ayrı input). `lang` verilince yok sayılır. */
   layout?: 'tabs' | 'stacked';
+  /**
+   * Metin içi VURGU (yasal beyan alanları): "B" düğmesi + müşteri görünümü önizlemesi. `multiline`
+   * gerektirir. Değer yine DÜZ METİN kalır — yalnız `**…**` işareti taşır (gerekçe: rich-text).
+   */
+  emphasis?: boolean;
+  /** Vurgu düğmesinin yanındaki kısa açıklama (alana özgü). */
+  emphasisHint?: string;
 }
 
-export function FormLocalizedText<T extends FieldValues>({ control, name, label, required, multiline, rows = 3, placeholder, onAiTranslate, lang: langProp, layout = 'tabs' }: FormLocalizedTextProps<T>) {
+export function FormLocalizedText<T extends FieldValues>({ control, name, label, required, multiline, rows = 3, placeholder, onAiTranslate, lang: langProp, layout = 'tabs', emphasis, emphasisHint }: FormLocalizedTextProps<T>) {
   const [langState, setLangState] = useState<Locale>('tr');
   const [aiPending, startAi] = useTransition();
   const [aiNote, setAiNote] = useState<string | null>(null);
@@ -118,7 +126,9 @@ export function FormLocalizedText<T extends FieldValues>({ control, name, label,
             ) : (
               <>
                 {controlled ? null : <LocaleTabs value={lang} onChange={setLangState} filled={filledLocales(value)} />}
-                {multiline ? (
+                {multiline && emphasis ? (
+                  <EmphasisTextarea value={value[lang] ?? ''} onChange={setLangValue} rows={rows} placeholder={placeholderText} onBlur={field.onBlur} hint={emphasisHint} />
+                ) : multiline ? (
                   <Textarea value={value[lang] ?? ''} onChange={(e) => setLangValue(e.target.value)} rows={rows} placeholder={placeholderText} onBlur={field.onBlur} />
                 ) : (
                   <Input value={value[lang] ?? ''} onChange={(e) => setLangValue(e.target.value)} placeholder={placeholderText} onBlur={field.onBlur} />

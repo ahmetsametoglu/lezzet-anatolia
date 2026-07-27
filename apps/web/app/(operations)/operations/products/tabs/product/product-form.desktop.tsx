@@ -31,13 +31,15 @@ export function ProductFormDesktop({ fields }: { fields: ProductFormFields }) {
         <div className="mt-8 border-t border-ops-line pt-6">{fields.variants}</div>
       </div>
 
-      {/* Sağ rail — dar; tek akış, auto-height → komponentler uzamaz */}
+      {/* Sağ rail — dar; tek akış, auto-height → komponentler uzamaz.
+          Alerjenler BURADAN ÇIKTI: yasal beyan alanlarıyla birlikte "Beyan" sekmesinde toplandı (05.10),
+          çünkü alerjen listesi içindekiler metniyle birlikte doldurulur — ikisi ayrı sekmede olursa
+          operatör vurguladığı alerjeni çipe eklemeyi unutur. */}
       <div className="flex flex-col gap-4 border-l border-ops-line pl-7">
         {fields.shippable}
         {fields.autoPrice}
         {fields.vat}
         {fields.margin}
-        {fields.allergens}
       </div>
     </div>
   );

@@ -15,8 +15,16 @@ export type ProductPhotoView = ProductImage & { imageUrl: string | null };
  * Her sunum kendi alt kümesini kullanır: çok dilli içerik web'de tek dil kartında (`content`), mobilde
  * ayrı bölümlerde (`name` + `description`); `priceNote` yalnız mobilde.
  */
+/** Form sekmeleri — uzun form tek kolonda duvara döndüğü için ikiye bölündü (05.10). */
+export type ProductFormTab = 'product' | 'declaration';
+
 export interface ProductFormFields {
   image: ReactNode;
+  /** Yasal beyan (INCO) alanları — kendi sekmesinde. */
+  nutrition: ReactNode;
+  traces: ReactNode;
+  /** İçindekiler + saklama TEK dil kartında: ikisi de çok dilli, dil bir kez seçilir (ad/açıklama gibi). */
+  declarationTexts: ReactNode;
   /** Web: ad + açıklama tek dil kartında (dil sekmesi kartın başlığında). */
   content: ReactNode;
   /** Mobil: ad ve açıklama ayrı bölümlerde, her biri kendi dil sekmesiyle. */

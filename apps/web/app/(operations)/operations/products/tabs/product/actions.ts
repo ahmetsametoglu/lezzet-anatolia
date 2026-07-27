@@ -12,6 +12,7 @@ import {
   type LocalizedText,
   type ProductDetailsUpdate,
   type ProductImage,
+  type ProductStatus,
   type ProductVariantEntry,
 } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
@@ -38,11 +39,14 @@ function requireName(name: LocalizedText | undefined): LocalizedText {
   return name;
 }
 
-/** Ürünü satışa aç/kapa. */
-export async function setProductActiveAction(id: string, isActive: boolean): Promise<ActionResult> {
+/**
+ * Ürünün satış durumunu yazar. Listedeki hızlı anahtar yalnız satışta ↔ pasif arasında gidip gelir;
+ * ADAY'a geçiş formdaki durum seçicisinden yapılır (keşiften kataloğa çıkış bir karar, kaza değil).
+ */
+export async function setProductStatusAction(id: string, status: ProductStatus): Promise<ActionResult> {
   try {
     await requireStaff();
-    await new ProductService(serviceDb()).setActive(id, isActive);
+    await new ProductService(serviceDb()).setStatus(id, status);
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
   } catch (err) {

@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
  * Operasyon form iskeleti — Komponent Envanteri O8. Customer `FieldShell` deseninin operasyon ikizi
  * (Veri Masası token'ları): etiket (+ `*`/`labelAside`) → kontrol → hata `<p role="alert">`. Etiket/
  * hata/aria markup'ı TEK KAYNAK; tüm `*Field` primitive'leri (input/textarea) bunu sarar. Select/
- * Segment/MultiSelect gibi custom kontroller de `label`+`error` için bununla sarılabilir.
+ * MultiToggle/MultiSelect gibi custom kontroller de `label`+`error` için bununla sarılabilir.
  */
 interface FieldShellProps {
   fieldId?: string;

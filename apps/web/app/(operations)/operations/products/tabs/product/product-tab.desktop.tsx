@@ -11,7 +11,6 @@ import type { Locale } from '@lezzet/i18n';
 import { ProductPreview } from './product-preview';
 import {
   filledContentLangs,
-  productStatus,
   type ProductStatus,
   type ProductView,
   type ProductsViewProps,
@@ -55,7 +54,7 @@ const COLUMNS: Column<ProductView>[] = [
     cell: (r) => <span className="font-ops-mono text-[12.5px] text-ops-strong">{r.variants.length}</span>,
   },
   { key: 'langs', header: 'Diller', width: '82px', align: 'center', cell: (r) => <LangBadge langs={filledContentLangs(r.name)} /> },
-  { key: 'status', header: 'Durum', width: '74px', align: 'right', cell: (r) => <StatusBadge status={productStatus(r)} /> },
+  { key: 'status', header: 'Durum', width: '74px', align: 'right', cell: (r) => <StatusBadge status={r.status} /> },
 ];
 
 // "+ durum" — dashed çip açılır durum menüsü; seçilince aktif çip + ✕ ile temizlenir (İşlevsel süzgeç).

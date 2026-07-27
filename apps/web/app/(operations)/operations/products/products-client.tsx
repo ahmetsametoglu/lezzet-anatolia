@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Device } from '@/lib/device';
 import { loadMoreProductsAction } from './actions/list';
-import { setProductActiveAction } from './tabs/product/actions';
+import { setProductStatusAction } from './tabs/product/actions';
 import { ProductFormDialog } from './tabs/product/product-form-dialog';
 import { ProductsDesktop } from './products.desktop';
 import { ProductsMobile } from './products.mobile';
@@ -109,9 +109,10 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
   const selected = products.find((p) => p.id === selectedId) ?? products[0] ?? null;
 
   // Aktiflik geçişi kalıcı (server action) — başarınca RSC listeyi tazeler (hata sessiz; sunucu = gerçek).
+  // Anahtar iki durumlu, durum alanı üç: aday'a geçiş formdaki seçicide (kazayla adaylığa düşmesin).
   const onToggleActive = (id: string, isActive: boolean) => {
     startTransition(async () => {
-      const { error } = await setProductActiveAction(id, isActive);
+      const { error } = await setProductStatusAction(id, isActive ? 'active' : 'passive');
       if (!error) router.refresh();
     });
   };

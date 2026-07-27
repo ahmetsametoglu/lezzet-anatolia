@@ -8,7 +8,7 @@ import type { ProductTab } from './products-paths';
 
 // Durum tipi ve türetimi `@lezzet/types`'ta (servis de aynı türetimi süzgeç olarak sorguya çeviriyor)
 // — burada yalnız yeniden dışa verilir ki sayfa dosyaları tek yerden (products-types) alsın.
-export { productStatusOf as productStatus, type ProductStatus } from '@lezzet/types';
+export { type ProductStatus } from '@lezzet/types';
 
 /** Ürün view-model — DB `Product`'ı türetir; yalnız türetilmiş/join alanlar eklenir. */
 export type ProductView = Product & {

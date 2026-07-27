@@ -22,11 +22,14 @@ export function Input({ inputSize = 'md', mono = false, error, className, ...res
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   mono?: boolean;
   error?: string;
+  /** Ham eleman erişimi — seçim aralığı okumak gerekiyorsa (vurgu düğmesi). `inputRef` ile aynı desen. */
+  textareaRef?: Ref<HTMLTextAreaElement>;
 }
 
-export function Textarea({ mono = false, error, className, ...rest }: TextareaProps) {
+export function Textarea({ mono = false, error, className, textareaRef, ...rest }: TextareaProps) {
   return (
     <textarea
+      ref={textareaRef}
       className={controlClass(error, { mono, extra: ['resize-none leading-[1.5]', className].filter(Boolean).join(' ') })}
       aria-invalid={error ? 'true' : undefined}
       {...rest}

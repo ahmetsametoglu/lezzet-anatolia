@@ -2,8 +2,12 @@ import { FormSection } from './form-section';
 import type { ProductFormFields } from './product-form-types';
 
 // Ürün formu — MOBİL sunumu (Sapma 3): tek sütun, alanlar alt alta (uygulama hissi). Görsel üstte
-// (ortalanmış, ölçülü), sonra Temel → Açıklama → Yasal beyan → Varyantlar → Durum/fiyat. Yalnız
-// yerleştirir — alan elemanları kapta (product-form-dialog) kurulur, burada tekrarlanmaz.
+// (ortalanmış, ölçülü), sonra Temel → Açıklama → Varyantlar → Durum/fiyat. Yalnız yerleştirir — alan
+// elemanları kapta (product-form-dialog) kurulur, burada tekrarlanmaz.
+//
+// Yasal beyan BU DOSYADA DEĞİL: masaüstüyle aynı sekme bölünmesini paylaşıyor (Ürün ↔ Beyan) — dört
+// beyan alanı bu sütuna eklenseydi mobil form iyice uzardı. Beyan sekmesinin mobil düzeni
+// `ProductFormDeclaration`'ın `stacked` kipinde.
 
 export function ProductFormMobile({ fields }: { fields: ProductFormFields }) {
   return (
@@ -19,7 +23,6 @@ export function ProductFormMobile({ fields }: { fields: ProductFormFields }) {
       </FormSection>
 
       <FormSection title="Açıklama">{fields.description}</FormSection>
-      <FormSection title="Yasal beyan">{fields.allergens}</FormSection>
 
       {fields.variants}
 
