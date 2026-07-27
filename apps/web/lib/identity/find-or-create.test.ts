@@ -18,6 +18,10 @@ const authKullanicilari: string[] = [];
 const tel = (n: number) => `+3360000${String(damga).slice(-4)}${n}`;
 const posta = (n: number) => `kimlik${damga}-${n}@ornek.fr`;
 
+/** Fransız yerel biçimi (boşluklu) — normalize edilince `+336…` olmalı. Damgalı: sabit numara koşular arasında sızar. */
+const hane = String(damga).slice(-8);
+const yerelTel = `06 ${hane.slice(0, 2)} ${hane.slice(2, 4)} ${hane.slice(4, 6)} ${hane.slice(6, 8)}`;
+
 async function bulVeyaOlustur(input: Parameters<typeof findOrCreateCustomer>[0]) {
   const result = await findOrCreateCustomer(input);
   if (result.status === 'created' || result.status === 'attached') acilanlar.push(result.profile.id);
@@ -36,12 +40,11 @@ describe('kimlik kurulumu', () => {
   });
 
   it('hiç eşleşme yoksa yeni müşteri açılır; telefon E.164 normalize yazılır', async () => {
-    const sonuc = await bulVeyaOlustur({ phone: '06 12 34 56 78', name: 'Ayşe' });
+    const sonuc = await bulVeyaOlustur({ phone: yerelTel, name: 'Ayşe' });
     expect(sonuc.status).toBe('created');
     if (sonuc.status !== 'created') return;
-    expect(sonuc.profile.phone).toBe('+33612345678');
+    expect(sonuc.profile.phone).toBe(`+336${hane}`); // boşluklar ve baştaki 0 gitti
     expect(sonuc.profile.isDraft).toBe(false);
-    await db.from('customer').delete().eq('id', sonuc.profile.id);
   });
 
   it('WhatsApp taslağı işaretli açılır; adı yoksa numarasıyla anılır', async () => {

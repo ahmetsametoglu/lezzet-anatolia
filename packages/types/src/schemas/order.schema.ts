@@ -200,6 +200,24 @@ export const CloseResultSchema = z.object({
 });
 export type CloseResult = z.infer<typeof CloseResultSchema>;
 
+/**
+ * `quick_sale` dönüşü (07.10) — kapı önü tek adım. İki "hayır" ayrıdır: `stale` (sipariş artık
+ * taslak değil) ve `insufficient_stock` (mal yok — kasiyer ekranına kalan miktar yazılır).
+ */
+export const QuickSaleResultSchema = z.object({
+  ok: z.boolean(),
+  reason: z.enum(['stale', 'insufficient_stock']).optional(),
+  currentStatus: OrderStatusEnum,
+  /** Hızlı satışta referans BURADA üretilir — ilk kalıcı durum `completed`'dır. */
+  referenceNo: z.string().nullish(),
+  consumedQty: z.number().int().optional(),
+  cogsAmount: dbNumeric.optional(),
+  /** `insufficient_stock`'ta: hangi varyant ve elde ne kadar var. */
+  variantId: z.string().uuid().optional(),
+  available: z.number().int().optional(),
+});
+export type QuickSaleResult = z.infer<typeof QuickSaleResultSchema>;
+
 /** `transition_order_status` RPC'sinin dönüşü — `ok:false` + `stale` = araya biri girdi (07.6). */
 export const TransitionResultSchema = z.object({
   ok: z.boolean(),

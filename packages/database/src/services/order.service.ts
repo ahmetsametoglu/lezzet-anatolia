@@ -13,6 +13,7 @@ import {
   CloseResultSchema,
   DeliverResultSchema,
   PreparationResultSchema,
+  QuickSaleResultSchema,
   TransitionResultSchema,
   DEFAULT_PAGE_SIZE,
   type KeysetCursor,
@@ -25,8 +26,11 @@ import {
   type OrderStatus,
   type CloseResult,
   type DeliverResult,
+  type PaymentMethod,
+  type PaymentStatus,
   type PreparationPick,
   type PreparationResult,
+  type QuickSaleResult,
   type OrderStatusLog,
   type OrderStatusLogInsert,
   type OrderStatusLogUpdate,
@@ -167,6 +171,42 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     return CloseResultSchema.parse(dbToApp(raw));
   }
 
+  /**
+   * **Hızlı satış** (07.10): kapı önü tek adım — `draft → completed`. Rezervasyon yok, stok
+   * fiiliden anında düşer; referans, tahsilat ve kâr kalemleri aynı transaction'da yazılır.
+   *
+   * Karar vermez: geçişin izinli olduğuna motor, ödeme durumuna motor (03.6), referansa motor
+   * karar verir — hepsi parametre olarak gelir. RPC yalnız fiziksel gerçeği korur (olmayan mal
+   * satılmaz).
+   */
+  async quickSale(input: {
+    orderId: string;
+    picks: readonly PreparationPick[];
+    actorId?: string | null;
+    referenceNo?: string | null;
+    paymentMethod?: PaymentMethod | null;
+    amountCollected?: number;
+    paymentStatus?: PaymentStatus;
+    packagingUnitCost?: number;
+  }): Promise<QuickSaleResult> {
+    if (input.picks.length === 0) throw new Error('order: kalem seçimi boş olamaz');
+
+    const raw = await this.executeRpc('quick_sale', {
+      p_order_id: input.orderId,
+      p_picks: input.picks.map((pick) => ({
+        order_item_id: pick.orderItemId,
+        batches: pick.batches.map((b) => ({ stock_id: b.stockId, qty: b.qty })),
+      })),
+      p_actor_id: input.actorId ?? null,
+      p_reference_no: input.referenceNo ?? null,
+      p_payment_method: input.paymentMethod ?? null,
+      p_amount_collected: input.amountCollected ?? 0,
+      p_payment_status: input.paymentStatus ?? 'pending',
+      p_packaging_unit_cost: input.packagingUnitCost ?? 0,
+    });
+    return QuickSaleResultSchema.parse(dbToApp(raw));
+  }
+
   /** Siparişin kalem–parti eşlemesi — geri çağırma ve gerçek COGS bunun üstünde durur. */
   async listBatches(orderId: string): Promise<OrderItemBatch[]> {
     const { data, error } = await this.supabase
@@ -174,10 +214,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       .select('*,order_item!inner(order_id)')
       .eq('order_item.order_id', orderId);
     if (error) throw error;
-    return (data ?? []).map((row) => {
-      const { orderItem: _ignored, ...batch } = dbToApp<Record<string, unknown>>(row);
-      return OrderItemBatchSchema.parse(batch);
-    });
+    // Süzme için gömülen `order_item` şemada yok — Zod fazla anahtarı zaten eler.
+    return (data ?? []).map((row) => OrderItemBatchSchema.parse(dbToApp(row)));
   }
 
   /** Sipariş + kalemleri TEK sorguda — kalem başına ayrı sorgu (N+1) yerine gömülü select. */

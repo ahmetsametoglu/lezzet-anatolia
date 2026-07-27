@@ -176,5 +176,6 @@ Parametrik değerler **env'e veya koda gömülmez** (blueprint STACK §10): kesi
 | `delivery_summary_email` | true | Teslimde özet e-postası otomatik gitsin mi |
 | `route_delivery_unit_cost_cents` | 250 | Rota teslimat birim maliyeti (kâr hesabı) |
 | `packaging_unit_cost_cents` | 120 | Paketleme birim maliyeti (kâr hesabı) |
+| `door_packaging_unit_cost_cents` | 0 | Kapı önü satışta paketleme birim maliyeti — mal elden gidiyor, soğuk zincir paketi yok |
 
 Oyunlaştırma (puan değerleri, puan→kupon eşiği) ve ödeme komisyon oranları ilgili modülleriyle eklenir.

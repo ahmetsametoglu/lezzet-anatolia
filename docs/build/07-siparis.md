@@ -60,10 +60,16 @@ Siparişin doğuşundan kapanışına kadar tüm akış: sepet, checkout (teslim
   - *Bitti:* eksik + kuponlu sipariş doğru iade tutarını üretiyor
 - [ ] (07.9) **İptal ve iade:** ödenmiş iptal → tam otomatik iade; `returned → completed` kapanışı; iade hareketleri `order_refund` tipiyle; `amount_*` cache güncellemesi (kaynak MoneyMovement)
   - *Bitti:* iptal sonrası `payment_status=refunded`; cache ile hareket toplamı tutuyor
-- [ ] (07.10) **Hızlı satış yolu (door):** `draft → completed` tek adım; rezervasyon atlanır, fiiliden düşülür; ödeme anında; `reference_no` `completed`'de üretilir
+- [x] (07.10) **Hızlı satış yolu (door):** `draft → completed` tek adım; rezervasyon atlanır, fiiliden düşülür; ödeme anında; `reference_no` `completed`'de üretilir
   - *Bitti:* kapı önü satış tek işlemde kapanıyor, stok anında düşüyor
+  - **Durum (27.07):** `0020_quick_sale.sql` (`quick_sale`) · `OrderService.quickSale` · kapı `apps/web/lib/order/quick-sale.ts`. 8 test.
+  - **Adım atlanır, İZ atlanmaz.** Tam yolun yedi adımı burada bir adım; ama kalem–parti kaydı, `reference_no`, geçiş logu ve kâr kalemleri tam yoldakiyle **aynı yerlere** yazılır. Geri çağırma ("bu parti kime gitti") ve gerçek COGS hızlı satışta da çalışır.
+  - **Önce kontrol, sonra yazım.** Yetersiz stok bir hata değil, bir **cevaptır** (kasiyer ekranında kalan miktar yazar) — bu yüzden `return` ile bildirilir, `return` transaction'ı geri almadığı için kullanılabilirlik kontrolü tek satır yazılmadan önce biter. Kontrol iki katmanlı: **varyant toplamında** (başkasına ayrılmış mal kapıda satılamaz) ve **parti bazında** (seçilen parti tükenmiş olabilir).
+  - **Kapıda hazırlık ekranı yok → partiler FEFO ile türetilir** (06.5 önerisi yeniden kullanılır); operatör isterse elle geçer. FEFO önerisi parti bazında baktığı için varyant-toplamı rezervasyonunu görmez; **son söz RPC'nindir** — emniyet, öneriyi üretenin değil, yazımın olduğu katmanda durur.
+  - **`delivery_cost = 0`:** kapı önünde teslimat yapılmadı; rota birim maliyeti bu satışa yazılamaz. **Nakitte `payment_fee = 0`** — bu uydurma değil, olgudur (DOMAIN §12); kart/online oranları modül 12'de, o zamana kadar null.
+  - **Ödeme durumu yine TÜRETİLİR** (03.6): kapıda bir kalem eksik verilirse tahsilat tam olsa bile durum kendiliğinden doğru çıkar. Yeni ayar: `door_packaging_unit_cost_cents` (varsayılan **0** — mal elden gidiyor, soğuk zincir paketi yok).
 
 ## Netleşecekler
 
 - **Stripe hesap/ürün kurulumu:** hesap, webhook imza anahtarı, ödeme yöntemleri (kart + Apple/Google Pay), SEPA/ödeme tipleri kullanıcıyla kurulur (dış hesap işlemi).
-- **Çok-tablolu RPC listesinin son hali:** teslim/onay/hızlı satış RPC sınırları 03/06'daki TS↔SQL konuşmasının çıktısına göre kesinleşir.
+- **Çok-tablolu RPC listesinin son hali:** teslim (07.7) ve hızlı satış (07.10) sınırları kesinleşti — ölçüt 06.1'in "dar liste"si: eşzamanlılık yarışı **veya** bölünemez çok-tablolu yazım. Geriye checkout onayı (07.4) kaldı.
