@@ -14,3 +14,4 @@ dağıtımdan itibaren bu serbestlik biter.
 | 0003 | `0003_email_verification_otp.sql` | E-posta doğrulama OTP tablosu (Supabase mail göndermez; Resend ile OTP akışı) |
 | 0004 | `0004_catalog_category_collection.sql` | `category` + `collection` (düz gruplama, `LocalizedText` ad, benzersiz slug, sort_order, is_active); koleksiyonda ayrıca `description` + `image_key` — paylaşılabilir vitrin sayfası / OG kartı |
 | 0005 | `0005_catalog_product.sql` | `product` + `product_variant` + `product_collections` çoklu bağı (`position` ile koleksiyon içi kürasyon sırası + sıralı okuma indeksi); alerjen/tarih-tipi enum'ları |
+| 0006 | `0006_price.sql` | `price` (varyant fiyatı: kanal listesi + müşteriye özel + tarihli geçerlilik, kanal tabanlı tutar) + `channel`/`currency` enum tipleri; çözüm sorgusu için `(variant_id, channel, customer_id, valid_from desc)` indeksi
