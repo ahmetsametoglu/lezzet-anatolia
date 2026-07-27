@@ -3,6 +3,7 @@ import {
   CollectionSchema,
   CollectionInsertSchema,
   CollectionUpdateSchema,
+  CollectionWithProductsSchema,
   resolveLocalizedText,
   type Collection,
   type CollectionInsert,
@@ -49,6 +50,21 @@ export class CollectionService extends BaseDbService<Collection, CollectionInser
   /** Sıralı liste; `activeOnly` ile yalnız aktifler. */
   async list(opts?: { activeOnly?: boolean }): Promise<Collection[]> {
     return this.getAll(opts?.activeOnly ? { isActive: true } : undefined, { orderBy: 'sortOrder' });
+  }
+
+  /**
+   * Sıralı liste + her koleksiyonun ÜYE ürün id'leri, TEK sorguda (gömülü select) — koleksiyon başına
+   * ayrı üyelik sorgusu (N+1) atılmaz. id'ler `position`'a göre sıralanır: bu sıra vitrin kürasyonudur.
+   */
+  async listWithProductIds(opts?: { activeOnly?: boolean }): Promise<Array<Collection & { productIds: string[] }>> {
+    const rows = await this.getAllAs(CollectionWithProductsSchema, opts?.activeOnly ? { isActive: true } : undefined, {
+      select: '*,products:product_collections(product_id,position)',
+      orderBy: 'sortOrder',
+    });
+    return rows.map(({ products, ...collection }) => ({
+      ...collection,
+      productIds: [...products].sort((a, b) => a.position - b.position).map((p) => p.productId),
+    }));
   }
 
   /**

@@ -14,6 +14,13 @@ export const LocalizedTextDraftSchema = z.object({
   de: z.string().optional(),
 });
 
+/**
+ * `LocalizedText`'in dil anahtarları — ŞEMADAN türetilir, elle liste yazılmaz. `@lezzet/i18n`'in
+ * `LOCALES`'i ile aynı kümedir ama `types` i18n'e bağlanamaz (STACK §4); `database` de i18n'i bilmez.
+ * Çok dilli alan üzerinde dil dil sorgu kuran katmanlar (ör. ürün adı araması) bunu kullanır.
+ */
+export const LOCALIZED_TEXT_KEYS = Object.keys(LocalizedTextDraftSchema.shape) as Array<keyof z.infer<typeof LocalizedTextDraftSchema>>;
+
 /** Zorunlu çok dilli metin: en az bir dil dolu olmalı (ör. ad). */
 export const LocalizedTextSchema = LocalizedTextDraftSchema.refine(
   (v) => Boolean(v.tr?.trim() || v.fr?.trim() || v.de?.trim()),

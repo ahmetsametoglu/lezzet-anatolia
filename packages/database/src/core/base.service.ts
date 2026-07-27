@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ZodType, ZodTypeDef } from 'zod';
+import type { KeysetCursor, Page } from '@lezzet/types';
 import { appToDb, camelToSnake, dbToApp } from '../utils/case-transformers';
 
 // Filtre seçenekleri — base'in iç sözleşmesi (dışa verilmez; servisler nesne literaliyle geçer).
@@ -13,7 +14,11 @@ interface FilterOptions {
   isNotNullFields?: string[];
   rangeFilters?: RangeFilter[];
   searchFilters?: Array<{ field: string; query: string }>;
-  orFilter?: string;
+  /**
+   * PostgREST `or=(…)` grupları. Her grup AYRI filtredir ve gruplar birbirine VE ile bağlanır —
+   * bu yüzden dizi: arama grubu + keyset grubu aynı sorguda yaşayabilir (biri diğerini ezmez).
+   */
+  orFilters?: string[];
 }
 interface GetAllOptions extends FilterOptions {
   orderBy?: string;
@@ -21,6 +26,18 @@ interface GetAllOptions extends FilterOptions {
   limit?: number;
   offset?: number;
   select?: string;
+  /**
+   * Keyset sayfalama: bu imleçten SONRAKİ satırlar. `orderBy` ile aynı alanı işaret eder; `id`
+   * ikinci sıralama anahtarı olarak eklenir (eşit değerlerde belirleyici). Offset ile birlikte
+   * kullanılmaz — offset satır atlar/tekrarlar, keyset kaymaz.
+   */
+  keysetAfter?: KeysetCursor;
+  /**
+   * `id`'yi ikinci sıralama anahtarı yap. Keyset sayfalamanın ŞARTI (eşit sıralama değerlerinde satır
+   * sırası belirsizse imleç kayar), ama her tabloda `id` yoktur — junction tabloları bileşik anahtarlı
+   * (ör. `product_collections`). Bu yüzden zorunlu değil, `getPage` açar.
+   */
+  tiebreakById?: boolean;
 }
 
 /**
@@ -53,8 +70,21 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     for (const f of options.isNotNullFields ?? []) query = query.not(camelToSnake(f), 'is', null);
     for (const rf of options.rangeFilters ?? []) query = query[rf.operator](camelToSnake(rf.field), rf.value);
     for (const sf of options.searchFilters ?? []) query = query.ilike(camelToSnake(sf.field), `%${sf.query}%`);
-    if (options.orFilter) query = query.or(options.orFilter);
+    for (const group of options.orFilters ?? []) query = query.or(group);
     return query;
+  }
+
+  /**
+   * Keyset koşulunu PostgREST `or=(…)` grubuna çevirir:
+   *   `alan > v  VEYA  (alan = v VE id > lastId)`
+   * Artan sırada `gt`, azalanda `lt`. Değer PostgREST filtre dizesine gömüldüğü için metinse
+   * çift tırnakla sarılır (virgül/parantez ayrıştırmayı bozmasın).
+   */
+  private keysetGroup(orderBy: string, cursor: KeysetCursor, descending: boolean): string {
+    const col = camelToSnake(orderBy);
+    const op = descending ? 'lt' : 'gt';
+    const v = typeof cursor.value === 'number' ? String(cursor.value) : `"${cursor.value}"`;
+    return `${col}.${op}.${v},and(${col}.eq.${v},id.${op}.${cursor.id})`;
   }
 
   protected async executeRpc<T = unknown>(rpcName: string, params: Record<string, unknown>): Promise<T> {
@@ -81,7 +111,8 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     return this.parseRows(data);
   }
 
-  protected async getAll(filters?: Record<string, unknown>, options?: GetAllOptions): Promise<TDb[]> {
+  /** Sorguyu kurar ve HAM satırları döner (doğrulama çağırana ait) — okuma uçlarının tek gövdesi. */
+  private async selectRows(filters?: Record<string, unknown>, options?: GetAllOptions): Promise<unknown[]> {
     let query = this.supabase.from(this.tableName).select(options?.select ?? '*');
     for (const [key, value] of Object.entries(filters ?? {})) {
       if (value === undefined || value === null) continue;
@@ -92,9 +123,16 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
         query = query.eq(camelToSnake(key), value);
       }
     }
+    const ascending = options?.orderDirection !== 'desc';
+    // Keyset imleci varsa koşulu `or` grubu olarak eklenir (mevcut or gruplarını ezmez).
+    if (options?.keysetAfter && options.orderBy) {
+      const group = this.keysetGroup(options.orderBy, options.keysetAfter, !ascending);
+      options = { ...options, orFilters: [...(options.orFilters ?? []), group] };
+    }
     query = this.applyFilterOptions(query, options);
     if (options?.orderBy) {
-      query = query.order(camelToSnake(options.orderBy), { ascending: options.orderDirection !== 'desc' });
+      query = query.order(camelToSnake(options.orderBy), { ascending });
+      if (options.tiebreakById) query = query.order('id', { ascending });
     }
     if (options?.offset !== undefined && options?.limit !== undefined) {
       query = query.range(options.offset, options.offset + options.limit - 1);
@@ -103,7 +141,21 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     }
     const { data, error } = await query;
     if (error) throw error;
-    return this.parseRows(data as unknown[]);
+    return (data ?? []) as unknown[];
+  }
+
+  protected async getAll(filters?: Record<string, unknown>, options?: GetAllOptions): Promise<TDb[]> {
+    return this.parseRows(await this.selectRows(filters, options));
+  }
+
+  /**
+   * PROJEKSİYONLU okuma: `select` gömülü ilişki (`alias:tablo(...)`) içerdiğinde satır artık `TDb`
+   * değildir → kendi şemasıyla doğrulanır. İlişkileri satır başına ayrı sorguyla çekmek (N+1) yerine
+   * TEK sorguda getirmenin yolu budur — STACK §13: N+1'i kırmanın ilk aracı gömülü select, RPC değil.
+   */
+  protected async getAllAs<T>(rowSchema: ZodType<T, ZodTypeDef, unknown>, filters?: Record<string, unknown>, options?: GetAllOptions): Promise<T[]> {
+    const rows = await this.selectRows(filters, options);
+    return rows.map((row) => rowSchema.parse(dbToApp(row)));
   }
 
   /** Tek satır getirir (verilen alanlara göre) ya da null. Kimlik anahtarı aramaları için. */
@@ -112,7 +164,50 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     return rows[0] ?? null;
   }
 
-  protected async count(filters?: Record<string, unknown>): Promise<number> {
+  /**
+   * `limit + 1` satırdan sayfayı ve imleci keser — `getPage`/`getPageAs` bunu paylaşır (tekrar yok).
+   * Fazla satır varsa devamı vardır; imleç son DÖNEN satırdan kurulur.
+   */
+  private static pageOf<T>(rows: T[], limit: number, orderBy: string): Page<T> {
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const last = page[page.length - 1] as Record<string, unknown> | undefined;
+    const nextCursor = hasMore && last ? { value: last[orderBy] as string | number, id: last.id as string } : null;
+    return { rows: page, nextCursor };
+  }
+
+  /**
+   * Keyset sayfası — infinite scroll'un tek okuma primitifi (CLAUDE.md: tüm listeler infinite scroll).
+   * `limit + 1` satır çeker: fazlası varsa devam eden sayfa vardır → EKSTRA "toplam sayı" sorgusu yok.
+   * `nextCursor` son DÖNEN satırdan kurulur; çağıran onu bir sonraki turda geri verir.
+   *
+   * `orderBy` zorunlu: imleç bir sıralama alanına dayanır. Sıra deterministiktir (alan + id).
+   */
+  protected async getPage(
+    filters: Record<string, unknown> | undefined,
+    options: GetAllOptions & { orderBy: string; limit: number },
+  ): Promise<Page<TDb>> {
+    // tiebreakById: imleç `id` ikilisine dayanır → sıra deterministik OLMALI (bkz. GetAllOptions).
+    const rows = await this.getAll(filters, { ...options, limit: options.limit + 1, tiebreakById: true });
+    return BaseDbService.pageOf(rows, options.limit, options.orderBy);
+  }
+
+  /** `getPage`'in projeksiyonlu ikizi — gömülü ilişkili satırlar (bkz. `getAllAs`). */
+  protected async getPageAs<T>(
+    rowSchema: ZodType<T, ZodTypeDef, unknown>,
+    filters: Record<string, unknown> | undefined,
+    options: GetAllOptions & { orderBy: string; limit: number; select: string },
+  ): Promise<Page<T>> {
+    const rows = await this.getAllAs(rowSchema, filters, { ...options, limit: options.limit + 1, tiebreakById: true });
+    return BaseDbService.pageOf(rows, options.limit, options.orderBy);
+  }
+
+  /**
+   * Satır sayısı — `head: true` ile satır TAŞINMADAN sayılır (indeks taraması). `options` ile eq
+   * dışındaki süzgeçler de uygulanabilir: sayaçlar listeyle AYNI süzgeci kullanmak zorundadır,
+   * yoksa "12 sonuç" yazıp 5 satır gösteren ekranlar doğar.
+   */
+  protected async count(filters?: Record<string, unknown>, options?: FilterOptions): Promise<number> {
     let query = this.supabase.from(this.tableName).select('*', { count: 'exact', head: true });
     for (const [key, value] of Object.entries(filters ?? {})) {
       if (value === undefined || value === null) continue;
@@ -123,6 +218,7 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
         query = query.eq(camelToSnake(key), value);
       }
     }
+    query = this.applyFilterOptions(query, options);
     const { count, error } = await query;
     if (error) throw error;
     return count ?? 0;

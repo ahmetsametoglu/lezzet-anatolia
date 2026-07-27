@@ -21,7 +21,12 @@ describe('CategoryService', () => {
     createdCategoryIds.push(created.id);
     expect(created.slug).toBe('su-boregi'); // slug TR adından türer (yedek zinciri TR→FR→DE)
     expect(created.isActive).toBe(true);
-    expect(created.sortOrder).toBe(0);
+
+    // Yeni kayıt listenin SONUNA eklenir (DB default'u 0 olsaydı mevcutların arasına karışırdı):
+    // ikinci kayıt daima birincinin ardında. Mutlak değer beklenmez — tabloda başka satırlar var.
+    const second = await categories.create({ name: { tr: 'Su Böreği İkinci' } });
+    createdCategoryIds.push(second.id);
+    expect(second.sortOrder).toBeGreaterThan(created.sortOrder);
 
     const renamed = await categories.update({ id: created.id, name: { tr: 'Su Böreği (güncel)', fr: 'Börek à l’eau' } });
     expect(renamed.name.tr).toContain('güncel');

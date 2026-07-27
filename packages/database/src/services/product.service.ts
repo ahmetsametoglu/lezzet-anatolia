@@ -3,8 +3,16 @@ import {
   ProductSchema,
   ProductInsertSchema,
   ProductUpdateSchema,
+  ProductWithRelationsSchema,
   resolveLocalizedText,
+  statusToFlags,
+  LOCALIZED_TEXT_KEYS,
+  DEFAULT_PAGE_SIZE,
+  type KeysetCursor,
+  type Page,
+  type ProductStatus,
   type Product,
+  type ProductWithRelations,
   type ProductInsert,
   type ProductUpdate,
   type ProductVariantInsert,
@@ -14,6 +22,24 @@ import {
 import { BaseDbService } from '../core/base.service';
 import { uniqueSlugForTable } from '../utils/slug';
 import { ProductVariantService } from './product-variant.service';
+
+// Ürün listesi süzgeçleri — operasyon ekranının URL parametreleriyle birebir (tek kaynak). Şimdilik
+// iç sözleşme: çağıranlar nesne literaliyle geçiyor (tip çıkarımı yeter). Ekran URL'den süzgeç kurmaya
+// başlayınca dışa verilir — tipler artımlı büyür (CLAUDE.md §1).
+interface ProductFilters {
+  /** Ad araması; üç dilde birden aranır. */
+  query?: string;
+  categoryId?: string;
+  status?: ProductStatus;
+  /** Yalnız beyanı eksik olanlar (ad dili eksik veya alerjen boş). */
+  onlyIncomplete?: boolean;
+}
+
+interface ProductListOptions {
+  filters?: ProductFilters;
+  cursor?: KeysetCursor;
+  limit?: number;
+}
 
 // Varyantsız üründe otomatik açılan tek varyantın etiketi (müşteriye gösterilmez — seçici gizli).
 const DEFAULT_VARIANT_LABEL = 'default';
@@ -35,9 +61,89 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   }
 
   /**
-   * Admin listesi: tüm ürünler (aktif/pasif/aday), sırayla. Vitrin değil — yönetim ekranı hepsini
-   * görür. Not: liste büyüyünce keyset paginasyonuna geçilir (bkz. infinite-scroll kuralı); şimdilik
-   * sınırlı sayı için tam liste.
+   * Admin listesi: SÜZÜLMÜŞ ve SAYFALANMIŞ (keyset). Süzme sunucuda yapılır — client tam listeyi
+   * çekip filtrelemez (STACK §6). Sıra `sortOrder` + `id` (deterministik, imleç kaymaz).
+   *
+   * Süzgeçler ve DB karşılıkları:
+   *  · `query`      → ad (jsonb) ÜÇ dilde `ilike` — tek `or` grubu
+   *  · `categoryId` → eq
+   *  · `status`     → is_candidate/is_active ikilisi (`statusToFlags`, tek kaynak)
+   *  · `onlyIncomplete` → beyanı eksik: ad dillerinden biri YOK **veya** alerjen listesi boş
+   */
+  async list(opts: ProductListOptions = {}): Promise<Page<Product>> {
+    const { filters, orFilters } = this.buildQuery(opts.filters);
+    return this.getPage(filters, {
+      orderBy: 'sortOrder',
+      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+      keysetAfter: opts.cursor,
+      orFilters,
+    });
+  }
+
+  /**
+   * `list()` ile aynı süzme/sayfalama, AMA varyantlar ve koleksiyon üyelikleri de aynı turda gelir.
+   * Operasyon ekranı bunu kullanır: ürün başına ayrı varyant sorgusu + koleksiyon başına ayrı üyelik
+   * sorgusu (N+1) yerine TEK sorgu. Takma adlar (`variants:` / `collections:`) sayesinde PostgREST
+   * tablo adları domain tipine sızmaz (STACK §13 — N+1'i kırmanın ilk aracı gömülü select).
+   */
+  async listWithRelations(opts: ProductListOptions = {}): Promise<Page<ProductWithRelations>> {
+    const { filters, orFilters } = this.buildQuery(opts.filters);
+    return this.getPageAs(ProductWithRelationsSchema, filters, {
+      select: '*,variants:product_variant(*),collections:product_collections(collection_id)',
+      orderBy: 'sortOrder',
+      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+      keysetAfter: opts.cursor,
+      orFilters,
+    });
+  }
+
+  /**
+   * Ekran başlığındaki sayaçlar — liste sayfalandığı için client artık türetemez. Tek tablo
+   * olduğundan okuma-RPC eşiğini karşılamaz (STACK §13) → `head: true` sayım sorguları; satır
+   * taşınmaz, indeks taranır. `filters` verilirse sayaçlar da AYNI süzgeçten geçer.
+   */
+  async counts(filters?: ProductFilters): Promise<{ total: number; candidate: number; incomplete: number }> {
+    const base = this.buildQuery(filters);
+    const incomplete = this.buildQuery({ ...filters, onlyIncomplete: true });
+    const candidate = this.buildQuery({ ...filters, status: 'candidate' });
+    const [total, candidateCount, incompleteCount] = await Promise.all([
+      this.count(base.filters, { orFilters: base.orFilters }),
+      this.count(candidate.filters, { orFilters: candidate.orFilters }),
+      this.count(incomplete.filters, { orFilters: incomplete.orFilters }),
+    ]);
+    return { total, candidate: candidateCount, incomplete: incompleteCount };
+  }
+
+  /**
+   * Süzgeçleri eq-filtrelerine ve `or` gruplarına çevirir — liste ve sayaçlar AYNI çeviriyi
+   * kullanır (yoksa "12 sonuç" yazıp 5 satır gösteren ekran doğar).
+   */
+  private buildQuery(f?: ProductFilters): { filters: Record<string, unknown>; orFilters: string[] } {
+    const filters: Record<string, unknown> = {};
+    const orFilters: string[] = [];
+    if (f?.categoryId) filters.categoryId = f.categoryId;
+    if (f?.status) Object.assign(filters, statusToFlags(f.status));
+
+    const q = f?.query?.trim();
+    if (q) {
+      // PostgREST filtre dizesine gömülüyor: değeri çift tırnakla sar ve tırnağı ayıkla ki
+      // virgül/parantez ayrıştırmayı bozmasın. `*` PostgREST'in ilike joker karakteri.
+      const safe = q.replace(/"/g, '').replace(/[(),]/g, ' ');
+      orFilters.push(LOCALIZED_TEXT_KEYS.map((l) => `name->>${l}.ilike."*${safe}*"`).join(','));
+    }
+
+    if (f?.onlyIncomplete) {
+      // Boş dil DB'ye yazılmaz (form kaydederken boş diller atılır) → eksik dil = anahtarın YOKLUĞU.
+      const missingLang = LOCALIZED_TEXT_KEYS.map((l) => `name->>${l}.is.null`).join(',');
+      orFilters.push(`${missingLang},allergens.eq.{}`);
+    }
+    return { filters, orFilters };
+  }
+
+  /**
+   * TÜM ürünler, sayfalamasız. **Ekranlar kullanmaz** (STACK §6: ~200 satırı geçebilen liste sunucuda
+   * süzülür ve sayfalanır → `list()`); bu uç yalnız tamamına ihtiyaç duyan toplu işler içindir: seed,
+   * bakım betikleri, dışa aktarma.
    */
   async listAll(): Promise<Product[]> {
     return this.getAll(undefined, { orderBy: 'sortOrder' });

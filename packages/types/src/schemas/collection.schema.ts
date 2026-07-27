@@ -30,5 +30,15 @@ export const CollectionInsertSchema = z
   .merge(ImageMetaInsertSchema);
 export type CollectionInsert = z.infer<typeof CollectionInsertSchema>;
 
+/**
+ * Koleksiyon + üyelik satırları TEK sorguda (gömülü select). Koleksiyon başına ayrı üyelik sorgusu
+ * (N+1) yerine aynı turda gelir. `position` vitrin kürasyon sırasıdır — çağıran ona göre sıralar
+ * (gömülü ilişkinin sırası sorguda değil, okuma sonrası verilir; küme koleksiyon başına onlarla sınırlı).
+ */
+export const CollectionWithProductsSchema = CollectionSchema.extend({
+  products: z.array(z.object({ productId: z.string().uuid(), position: z.number().int() })),
+});
+export type CollectionWithProducts = z.infer<typeof CollectionWithProductsSchema>;
+
 export const CollectionUpdateSchema = CollectionSchema.partial().required({ id: true });
 export type CollectionUpdate = z.infer<typeof CollectionUpdateSchema>;

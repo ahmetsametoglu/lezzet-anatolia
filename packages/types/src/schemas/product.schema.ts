@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { LocalizedTextSchema, type LocalizedText } from './localized-text.schema';
 import { ImageMetaInsertSchema, ImageMetaSchema } from './image.schema';
+import { ProductVariantSchema } from './product-variant.schema';
 
 // Ürün — paylaşılan alanlar (satılabilir birim ProductVariant'ta). 0005 migration, DATA_MODEL.
 export const ProductDateTypeEnum = z.enum(['DLC', 'DDM']);
@@ -92,6 +93,37 @@ export type ProductInsert = z.infer<typeof ProductInsertSchema>;
 
 export const ProductUpdateSchema = ProductSchema.partial().required({ id: true });
 export type ProductUpdate = z.infer<typeof ProductUpdateSchema>;
+
+/**
+ * Ürün + TEK sorguda gelen ilişkileri. Varyantlar ve koleksiyon üyelikleri ürün başına ayrı sorguyla
+ * çekilirse N+1 doğar; gömülü `select` ile aynı turda gelirler (STACK §13). Şema `ProductSchema`'yı
+ * TÜRETİR — alanlar yeniden yazılmaz. Anahtar adları sorgudaki takma adlarla eşleşir (`variants:…`,
+ * `collections:…`), böylece PostgREST tablo adları domain tipine sızmaz.
+ */
+export const ProductWithRelationsSchema = ProductSchema.extend({
+  variants: z.array(ProductVariantSchema),
+  collections: z.array(z.object({ collectionId: z.string().uuid() })),
+});
+export type ProductWithRelations = z.infer<typeof ProductWithRelationsSchema>;
+
+/**
+ * Ürünün görünür durumu — `is_candidate` + `is_active` ikilisinden TÜRETİLİR, saklanmaz (DATA_MODEL
+ * "türetme ilkesi"). Burada yaşar çünkü İKİ taraf da kullanır: operasyon ekranı gösterir, servis
+ * süzgeç olarak sorguya çevirir (STACK §6 — süzme sunucuda). Aday satılamaz (DOMAIN §13).
+ */
+export const ProductStatusEnum = z.enum(['active', 'passive', 'candidate']);
+export type ProductStatus = z.infer<typeof ProductStatusEnum>;
+
+export function productStatusOf(p: Pick<Product, 'isCandidate' | 'isActive'>): ProductStatus {
+  if (p.isCandidate) return 'candidate';
+  return p.isActive ? 'active' : 'passive';
+}
+
+/** Durumun DB karşılığı — süzgeç ve sorgu tek yerden türer (elle `is_active`/`is_candidate` yazılmaz). */
+export function statusToFlags(status: ProductStatus): { isActive?: boolean; isCandidate: boolean } {
+  if (status === 'candidate') return { isCandidate: true };
+  return { isCandidate: false, isActive: status === 'active' };
+}
 
 // Ürün düzenleme formunun yazdığı alanlar (Temel + içerik + beyan + görsel künyesi) — id/slug/
 // imageKey/sortOrder/createdAt hariç, hepsi opsiyonel (yalnız verilenler yazılır). ProductSchema'dan

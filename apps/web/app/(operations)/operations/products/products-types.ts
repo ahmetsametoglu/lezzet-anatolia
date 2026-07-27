@@ -2,10 +2,12 @@
 // client yalnız bunları görür. TİPLER ŞEMADAN TÜRETİLİR: ProductView = Product & {türetilen}; alanlar
 // yeniden yazılmaz (no-duplication, schemas-single-source). Durum/dolu-dil gibi saf türevler client'ta
 // yardımcıyla hesaplanır (taşınmaz). Dil yapısı @lezzet/i18n'de, alerjen packages/types'ta.
-import type { Category, Collection, LocalizedText, Product, ProductVariant } from '@lezzet/types';
+import type { Category, Collection, LocalizedText, Product, ProductStatus, ProductVariant } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 
-export type ProductStatus = 'active' | 'passive' | 'candidate';
+// Durum tipi ve türetimi `@lezzet/types`'ta (servis de aynı türetimi süzgeç olarak sorguya çeviriyor)
+// — burada yalnız yeniden dışa verilir ki sayfa dosyaları tek yerden (products-types) alsın.
+export { productStatusOf as productStatus, type ProductStatus } from '@lezzet/types';
 
 /** Ürün view-model — DB `Product`'ı türetir; yalnız türetilmiş/join alanlar eklenir. */
 export type ProductView = Product & {
@@ -28,10 +30,6 @@ export type CollectionView = Collection & { count: number; productIds: string[];
 export type CatalogRow = CategoryView | CollectionView;
 
 // ── Saf türevler (client-güvenli) — Product'tan hesaplanır, taşınmaz ──
-export function productStatus(p: { isCandidate: boolean; isActive: boolean }): ProductStatus {
-  if (p.isCandidate) return 'candidate';
-  return p.isActive ? 'active' : 'passive';
-}
 /** Adı DOLU olan içerik dilleri — "diller" göstergesi. */
 export function filledContentLangs(name: LocalizedText): Locale[] {
   return LOCALES.filter((l) => name[l]?.trim());
