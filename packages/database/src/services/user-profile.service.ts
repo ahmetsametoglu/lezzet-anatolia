@@ -57,9 +57,8 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }
 
   /** Profil listesi (admin) — en yeni önce, sonsuz kaydırma. */
-  async list(opts: { role?: UserRole; isDraft?: boolean; b2bPending?: boolean; cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<UserProfile>> {
+  async list(opts: { isDraft?: boolean; b2bPending?: boolean; cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<UserProfile>> {
     const filters: Record<string, unknown> = {};
-    if (opts.role) filters.role = opts.role;
     if (opts.isDraft !== undefined) filters.isDraft = opts.isDraft;
     if (opts.b2bPending) filters.b2bApproved = false;
 
@@ -84,26 +83,36 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
     return this.update({ id: profileId, authUserId, isDraft: false });
   }
 
-  // ── Rol (staff_role tablosu yerine `role` alanı; çok-rol yok) ──────────────────────────────────
+  // ── Roller (dizi; kural DB kısıtında + motorda — bkz. domain-core/identity/roles) ──────────────
 
-  /** Auth kullanıcısının rolü (profil yoksa null). */
-  async getRole(authUserId: string): Promise<UserRole | null> {
+  /** Auth kullanıcısının rol kümesi (profil yoksa boş). */
+  async getRoles(authUserId: string): Promise<UserRole[]> {
     const profile = await this.findByAuthUserId(authUserId);
-    return profile?.role ?? null;
+    return profile?.roles ?? [];
   }
 
-  /** Personel mi (customer dışı herhangi bir rol) — Operasyon yüzeyi giriş kapısı. */
+  /** Personel mi (operasyon rollerinden en az biri) — Operasyon yüzeyi giriş kapısı. */
   async isStaff(authUserId: string): Promise<boolean> {
-    const role = await this.getRole(authUserId);
-    return role !== null && role !== 'customer';
+    return (await this.getRoles(authUserId)).some((r) => r !== 'customer');
   }
 
   async hasRole(authUserId: string, role: UserRole): Promise<boolean> {
-    return (await this.getRole(authUserId)) === role;
+    return (await this.getRoles(authUserId)).includes(role);
   }
 
-  /** Rolü ayarlar (dev/admin işlemi; ekranı modül 09). */
-  setRole(profileId: string, role: UserRole): Promise<UserProfile> {
-    return this.update({ id: profileId, role });
+  /**
+   * Rol kümesini yazar. **Kümenin geçerliliğini SERVİS denetlemez** (STACK §4) — kuralı motor
+   * bilir (`validateRoleSet`), son emniyet DB kısıtındadır: geçersiz küme yazılamaz, yazılmaya
+   * çalışılırsa hata döner.
+   */
+  setRoles(profileId: string, roles: UserRole[]): Promise<UserProfile> {
+    return this.update({ id: profileId, roles });
+  }
+
+  /** Bir role sahip tüm profiller (personel listesi, kurye ataması) — dizi araması GIN indeksli. */
+  async listByRole(role: UserRole): Promise<UserProfile[]> {
+    const { data, error } = await this.supabase.from('user_profiles').select('*').contains('roles', [role]);
+    if (error) throw error;
+    return this.parseRows(data ?? []);
   }
 }

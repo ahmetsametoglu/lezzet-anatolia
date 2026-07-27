@@ -9,7 +9,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 ## Customer (müşteri)
 
 > **Tablo adı `user_profiles`.** Müşteri ayrı bir varlık değil, kimliğin bir **ROLÜDÜR**: müşteri ve
-> personel tek tabloda yaşar, `role` ayırır (bkz. `0001`). Aşağıdaki alanların kimlik kısmı `0001`'de,
+> personel tek tabloda yaşar, `roles` ayırır (bkz. `0001`). Aşağıdaki alanların kimlik kısmı `0001`'de,
 > ticari kısmı `0013`'te eklenmiştir. `customer_id` diye geçen her FK (`address`, `price`, `order`)
 > bu tabloyu işaret eder — "müşteri rolüyle davranan profil" demektir.
 >
@@ -34,7 +34,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | payment_term_days | number \| null | vade süresi (gün) — boşsa `Setting` varsayılanı (30); gecikme bundan türetilir |
 | discount_percent | number \| null | müşteriye genel özel indirim oranı; kanal fiyatına uygulanır (bkz. `DOMAIN.md §5`) |
 | cod_allowed | boolean | kapıda ödeme izni (varsayılan true); kötüye kullanımda kapatılır (bkz. `DOMAIN.md §7`) |
-| role | enum(`customer`,`admin`,`warehouse`,`courier`) | kimliği müşteri/personel diye ayıran alan; müşteri varsayılan |
+| roles | enum[] (`customer`,`admin`,`warehouse`,`courier`,`accounting`) | **dizi**: personel içinde çoklu rol olağandır (depo + muhasebe). `customer` yalnız BAŞINA durabilir — müşteri ↔ personel keskin ayrım, DB kısıtıyla zorlanır (`DOMAIN.md §2`) |
 | auth_user_id | uuid \| null | Supabase Auth kullanıcısı; doğrulanınca bağlanır (bkz. `DOMAIN.md §10`). **Üçüncü kimlik anahtarıdır** — `0002` trigger'ı girişte profili e-postayla bulup bağlar |
 | marketing_consent | jsonb | kanal bazlı pazarlama izni: `{email: {granted, at, source}, whatsapp: {...}}` — GDPR kanıtı (ne zaman, nereden); **Faz 1'de yalnız toplanır, gönderim yok** (bkz. `DOMAIN.md §11`) |
 | acquisition_source | jsonb \| null | edinim kaynağı — **ilk siparişte bir kez** yazılır (UTM snapshot + order_source), sonra değişmez; "kaynağa göre tekrar sipariş" raporunun temeli |

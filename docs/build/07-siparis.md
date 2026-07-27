@@ -31,8 +31,12 @@ Siparişin doğuşundan kapanışına kadar tüm akış: sepet, checkout (teslim
   - **Kesim saati sınırı dâhil:** tam 16:00'da gelen sipariş de kaçırmış sayılır (araç yükleniyor). Kesim saati `Setting`'ten okunur; bozuk değer akışı kilitlemez, kesim uygulanmaz.
   - **Tek tarih varsa seçim sunulmaz** (`requiresDateChoice`) — arayüz kararı veriden türüyor, ekranda `if` yazılmıyor.
   - **Soğuk zincir kuralı yönlü:** kargolanamayan ürün yalnız ROTA DIŞI adreste engel; rota içinde kapı teslimi zaten mümkün olduğu için sorun değil.
-- [ ] (07.3) **Checkout — ödeme seçenekleri:** bağlama göre (online/kapıda/vadeli); kapıda tavan + nakit uyarısı + `cod_allowed`; vade freni (03 kararı) uygulanır; `shipping_fee` hesabı + KDV
+- [x] (07.3) **Checkout — ödeme seçenekleri:** bağlama göre (online/kapıda/vadeli); kapıda tavan + nakit uyarısı + `cod_allowed`; vade freni (03 kararı) uygulanır; `shipping_fee` hesabı + KDV
   - *Bitti:* tavan aşan sipariş kapıda seçeneğini gizliyor; vadesi dolu müşteride "hesaba" kapalı
+  - **Durum (27.07):** motor `domain-core/delivery/shipping-fee.ts` (yeni) + `payment/checkout-options.ts` (03.7/03.8'den) · kapı `apps/web/lib/order/checkout-options.ts`. 10 birim + 14 entegrasyon testi. Tavanlar, eşikler ve ücret artık `settings`'ten okunuyor — kodda sabit yok.
+  - **Açık bakiye ve gecikme TÜRETİLİYOR** (DOMAIN §7): ödenmemiş vadeli siparişlerden hesaplanıyor, hiçbir yerde saklanmıyor. İptal edilen sipariş bakiyeye sayılmıyor (testli). Saklanan bakiye kayarsa fark edilmez; türetilen kayamaz.
+  - **Kargo ücretinin KDV'si tek orana bağlanmadı:** taşıma bedeli **taşıdığı malın oranını izler** (FR uygulaması). Sepette hem %5,5 hem %20 ürün varsa ücret kalem tutarlarına oransal bölünüyor ve her parça kendi oranından vergileniyor; kuruş kaybı yok (Σ parça = ücret). Tek oranlı sepette sonuç tek parça. **Bu bir vergi işlemi kararıdır — muhasebenizle teyit etmekte fayda var**, kod tek satırda tek orana çevrilebilir.
+  - **Ücretsiz kargoya kalan tutar** dönüyor (`remainingForFreeShippingCents`) — "20 € daha ekleyin" mesajını arayüz hesaplamıyor, veriden alıyor.
 - [ ] (07.4) **Rezervasyon → ödeme sırası:** atomik ayır (06 RPC) → Stripe checkout session (TTL = rezervasyon süresi, session expiry eşit); ayrılamazsa ödeme hiç başlamaz; `acquisition_source` ilk siparişte yazılır; izin kutusu (`marketing_consent`)
   - *Bitti:* stok yetmezse ödeme açılmıyor; session süresi Setting TTL'iyle eşit
 - [ ] (07.5) **Stripe webhook (apps/backend):** imza doğrulama + `WebhookEvent` idempotency (aynı olay no-op) + ödeme onayı → `confirmed` + `reference_no` üretimi; geç ödeme dallanması (yeniden ayır / olmazsa otomatik iade)

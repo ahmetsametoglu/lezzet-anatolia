@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Space_Grotesk, IBM_Plex_Mono, Karla } from 'next/font/google';
 import { serviceDb, UserProfileService } from '@lezzet/database';
+import { STAFF_ROLES } from '@lezzet/types';
 import { AuthError, requireStaff } from '@/lib/guard';
 import { getPathname } from '@/i18n/navigation';
 import { RootShell } from '@/components/root-shell';
@@ -39,8 +40,10 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
     throw e;
   }
 
-  // requireStaff geçtiğine göre rol customer değil; sidebar için rolü çek.
-  const role = (await new UserProfileService(serviceDb()).getRole(user.id)) ?? 'admin';
+  // requireStaff geçtiğine göre en az bir operasyon rolü var. Bir kişi birden çok rol taşıyabilir
+  // (depo + muhasebe); sidebar tek etiket gösterdiği için yetkisi EN GENİŞ olanı seçilir.
+  const roles = await new UserProfileService(serviceDb()).getRoles(user.id);
+  const role = STAFF_ROLES.find((r) => roles.includes(r)) ?? 'admin';
 
   return (
     <RootShell lang="tr" surface="operations" className={`${spaceGrotesk.variable} ${ibmPlexMono.variable} ${karla.variable}`}>

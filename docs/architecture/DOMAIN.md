@@ -29,14 +29,22 @@ Bu dosya sistemin **kalbidir**. İş mantığına dokunan her görevde okunur. "
 
 ## 2. Roller ve izinler
 
-Bir kullanıcının **birden fazla rolü** olabilir. Başlangıçta tüm roller tek kişide toplanabilir; işe eleman alındıkça ayrışır.
+**İki eksen, tek alan** (karar 27.07):
+
+- **Müşteri ↔ personel keskin ayrımdır.** Aynı kişi ikisi birden olamaz: müşteri rolü operasyon rolleriyle bir arada duramaz.
+- **Personel içinde çoklu rol olağandır.** Başlangıçta tüm roller tek kişide toplanabilir, işe eleman alındıkça ayrışır: depo + muhasebe aynı kişide olabilir, patron aynı zamanda admin olabilir.
+
+Kural `user_profiles.roles` dizisinde yaşar ve **veritabanı kısıtıyla zorlanır** (uygulama unutsa da geçmez); saf hâli `domain-core/identity/roles`'ta (arayüz "neden veremiyorum"u oradan yazar).
 
 | Rol | Yetki |
 | --- | --- |
 | **Yönetici (admin)** | Tam yetki: ürün, fiyat, kullanıcı, ayarlar, tüm raporlar. |
 | **Depo sorumlusu** | Stok girişi, DLC, sipariş hazırlama. Fiyat ve ayar göremez. |
 | **Kurye** | Kendine atanan teslimatlar, gün kapanışı, kasa teslimi. |
-| **Müşteri** | Kendi siparişleri, katalog, sepet, kendi profili. |
+| **Muhasebe** | Para hareketleri, kasa mutabakatı, muhasebe export'u. Ürün/fiyat/ayar yönetimi yok. |
+| **Müşteri** | Kendi siparişleri, katalog, sepet, kendi profili. **Operasyon rolleriyle birleşmez.** |
+
+**Rol geçişleri sessiz değildir:** müşteriye operasyon rolü verilince `customer` düşer (kişi artık personeldir); personele müşteri rolü verilince tüm operasyon rolleri düşer. Son operasyon rolü alınan kişi **müşteriye düşer** — hesabı silinmez, siparişleri ortada kalmaz.
 
 Yetki kapısı blueprint STACK §7'deki `requireAdmin` / `requireAuth` desenini izler. Yeni roller aynı desende eklenir (`requireWarehouse`, `requireCourier` gibi). Rol kontrolü tek yerden (`lib/guard.ts`) akar.
 

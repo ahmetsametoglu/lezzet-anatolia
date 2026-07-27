@@ -1,9 +1,14 @@
 /**
- * Kullanıcı rolü atar. Auth kullanıcısı yoksa oluşturur (0002 trigger profili açar), sonra rolü yazar.
- * İlk admin için gerekmez (ilk giriş yapan otomatik admin) — depo/kurye atamak veya rol değiştirmek için.
- * Kullanım:  pnpm set-role <email> <customer|admin|warehouse|courier>
+ * Kullanıcı rolü EKLER. Auth kullanıcısı yoksa oluşturur (0002 trigger profili açar), sonra rolü yazar.
+ * İlk admin için gerekmez (ilk giriş yapan otomatik admin) — depo/kurye/muhasebe atamak için.
+ *
+ * Rol kümesi kuralı motordadır (`withRole`): operasyon rolü verilince `customer` düşer, personel
+ * içinde roller birikir (depo + muhasebe aynı kişide olabilir). `--only` ile küme sıfırlanır.
+ *
+ * Kullanım:  pnpm set-role <email> <customer|admin|warehouse|courier|accounting> [--only]
  */
 import { createServiceRoleClient, UserProfileService } from '@lezzet/database';
+import { withRole } from '@lezzet/domain-core';
 import { UserRoleEnum } from '@lezzet/types';
 
 // .env'i yükle (Node 22 process.loadEnvFile).
@@ -15,8 +20,9 @@ try {
 
 async function main(): Promise<void> {
   const [email, roleArg] = process.argv.slice(2);
+  const only = process.argv.includes('--only'); // mevcut rolleri koru değil, KÜMEYİ bu role indir
   if (!email || !roleArg) {
-    console.error('Kullanım: pnpm set-role <email> <customer|admin|warehouse|courier>');
+    console.error('Kullanım: pnpm set-role <email> <customer|admin|warehouse|courier|accounting> [--only]');
     process.exit(1);
   }
   const role = UserRoleEnum.parse(roleArg);
@@ -38,8 +44,9 @@ async function main(): Promise<void> {
   const profiles = new UserProfileService(supabase);
   const profile = await profiles.findByAuthUserId(userId);
   if (!profile) throw new Error('Profil bulunamadı — 0002 trigger çalışmadı mı?');
-  await profiles.setRole(profile.id, role);
-  console.log(`✓ ${email} → ${role}  (user ${userId})`);
+  const roles = only ? [role] : withRole(profile.roles, role);
+  await profiles.setRoles(profile.id, roles);
+  console.log(`✓ ${email} → ${roles.join(', ')}  (user ${userId})`);
 }
 
 main().catch((err: unknown) => {

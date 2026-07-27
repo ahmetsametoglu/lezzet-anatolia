@@ -4,7 +4,7 @@ import type { UserRole } from '@lezzet/types';
 import { createClient } from './supabase/server';
 
 // Tek yetki kapısı (DOMAIN §2). Oturum çerezden okunur; rol RLS deny-by-default olduğu için
-// service-role ile `user_profiles.role`'dan okunur. Guard'lar hata FIRLATIR; API/action için {ok}
+// service-role ile `user_profiles.roles`'dan okunur. Guard'lar hata FIRLATIR; API/action için {ok}
 // saran yardımcı ayrıdır — böylece izin kuralı tek yerde yaşar.
 
 export type AuthErrorCode = 'auth_required' | 'forbidden';
@@ -62,7 +62,10 @@ async function requireRole(role: UserRole): Promise<AuthUser> {
   return user;
 }
 
-/** Herhangi bir personel rolü (customer dışı) şart (Operasyon yüzeyine giriş kapısı). */
+/**
+ * Herhangi bir personel rolü şart (Operasyon yüzeyine giriş kapısı). Müşteri ↔ personel keskin
+ * ayrımdır: müşteri rolü olan kişi buradan geçemez (DOMAIN §2).
+ */
 export async function requireStaff(): Promise<AuthUser> {
   if (devBypassActive()) return DEV_BYPASS_USER;
   const user = await requireAuth();
@@ -73,6 +76,8 @@ export async function requireStaff(): Promise<AuthUser> {
 export const requireAdmin = (): Promise<AuthUser> => requireRole('admin');
 export const requireWarehouse = (): Promise<AuthUser> => requireRole('warehouse');
 export const requireCourier = (): Promise<AuthUser> => requireRole('courier');
+/** Muhasebe: para/muhasebe ekranları ve export. Bir kişi hem depo hem muhasebe olabilir. */
+export const requireAccounting = (): Promise<AuthUser> => requireRole('accounting');
 
 // ─── Sarıcı: Server Action / route handler için throw yerine {ok} döndürür ──────
 

@@ -39,7 +39,7 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 ## 2. Kimlik ve roller
 
 - Kullanıcı/oturum (Supabase Auth)
-- `user_profiles` + rol alanı, çoklu rol desteği
+- `user_profiles` + `roles` dizisi: personel içinde çoklu rol, müşteri ↔ personel keskin ayrım
 - Rol bazlı yetki kapıları ve yönlendirme
 
 ## 3. Katalog (ürün/kategori)

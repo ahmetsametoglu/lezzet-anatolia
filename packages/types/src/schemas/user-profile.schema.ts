@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { CountryEnum, CustomerTypeEnum, PreferredLanguageEnum } from './enums.schema';
 
 // Kullanıcı profili (kimlik) — 0001 + 0013 migration ile birebir. TEK tablo: müşteri + personel;
-// ROL ayırır. Çok-rol yok (kullanıcı tek rol). "customer" bir ROLDÜR, ayrı tablo değil.
+// ROL ayırır. "customer" bir ROLDÜR, ayrı tablo değil.
 //
 // Ticari alanlar (vade, indirim, kapıda ödeme, şirket künyesi, pazarlama izni) aynı satırdadır:
 // müşteri rolüyle davranan profilin alanlarıdır, personel satırında boş dururlar. 1:1 uzantı tablosu
@@ -39,15 +39,20 @@ export const MarketingConsentSchema = z.object({
 });
 export type MarketingConsent = z.infer<typeof MarketingConsentSchema>;
 
-export const UserRoleEnum = z.enum(['customer', 'admin', 'warehouse', 'courier']);
+export const UserRoleEnum = z.enum(['customer', 'admin', 'warehouse', 'courier', 'accounting']);
 export type UserRole = z.infer<typeof UserRoleEnum>;
 
 /** Personel rolleri (guard/operasyon yüzeyi). Müşteri hariç. */
-export const STAFF_ROLES = ['admin', 'warehouse', 'courier'] as const;
+export const STAFF_ROLES = ['admin', 'warehouse', 'courier', 'accounting'] as const;
 
 export const UserProfileSchema = z.object({
   id: z.string().uuid(),
-  role: UserRoleEnum,
+  /**
+   * İki eksen, tek alan (DOMAIN §2): `customer` müşteri eksenidir, diğerleri operasyon rolleri.
+   * Müşteri ↔ personel keskin ayrım (bir arada olamaz); personel içinde çoklu rol olağandır.
+   * Kural DB'de check kısıtıyla zorlanır, saf hâli `domain-core/identity/roles`'ta.
+   */
+  roles: z.array(UserRoleEnum),
   type: CustomerTypeEnum,
   name: z.string(),
   email: z.string().email().nullable(),

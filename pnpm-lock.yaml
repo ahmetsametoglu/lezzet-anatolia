@@ -11,6 +11,9 @@ importers:
       '@lezzet/database':
         specifier: workspace:*
         version: link:packages/database
+      '@lezzet/domain-core':
+        specifier: workspace:*
+        version: link:packages/domain-core
       '@lezzet/eslint-config':
         specifier: workspace:*
         version: link:packages/eslint-config

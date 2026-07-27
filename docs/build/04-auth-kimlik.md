@@ -26,8 +26,13 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
   - *Bitti:* test kullanıcısı iki yöntemle de giriş yapıp sunucuda oturumu okunabiliyor
 - [x] (04.2) **Send-email hook → `packages/email`:** Auth'un mail gönderimi hook'a devredilir; OTP/doğrulama maili `packages/email` default şablonuyla çıkar, Supabase yerleşik şablonları devre dışı
   - *Bitti:* OTP maili bizim şablonla geliyor; Supabase'in kendi mailinden hiçbir şey gitmiyor
-- [~] (04.3) **Rol saklama + guard katmanı (`lib/guard.ts`):** rolün tek kaynak yeri (aşağıda netleşecek) + `requireAuth/requireAdmin/requireWarehouse/requireCourier` tek dosyadan; korunan örnek bir Server Action
+- [x] (04.3) **Rol saklama + guard katmanı (`lib/guard.ts`):** rolün tek kaynak yeri (aşağıda netleşecek) + `requireAuth/requireAdmin/requireWarehouse/requireCourier` tek dosyadan; korunan örnek bir Server Action
   - *Bitti:* rolsüz kullanıcı korumalı action'dan `{error}` alıyor; dört guard da aynı dosyadan export
+  - **Durum (27.07):** rol modeli karara bağlandı ve uygulandı. `user_profiles.role` → **`roles user_role[]`**; `accounting` rolü eklendi; guard'a `requireAccounting`. Motor `domain-core/identity/roles.ts` (12 test), DB kısıtları (6 test).
+  - **İki eksen, tek alan:** müşteri ↔ personel keskin ayrım (DB kısıtı `customer`ın yalnız başına durmasını zorlar), personel içinde çoklu rol serbest. Ayrı bağ tablosuna çıkarılmadı: rol okuması guard'ın **sıcak yolu** (her korumalı istekte), dizi tek satırda gelir; bağ tablosu her istekte join demekti.
+  - **Kısıt tuzağı:** `array_length(roles,1) >= 1` boş dizide **NULL** döner ve NULL'a düşen CHECK "ihlal edilmedi" sayılır — kısıt sessizce delinirdi. `cardinality()` ile düzeltildi (testli).
+  - **Rol geçişi sessiz değil:** operasyon rolü verilince `customer` düşer, müşteri yapılınca tüm operasyon rolleri düşer, son rol alınınca kişi müşteriye düşer (hesap silinmez). `pnpm set-role` artık rol EKLER; `--only` ile kümeyi sıfırlar.
+  - **Kalan:** `requireAdmin/requireWarehouse/requireCourier/requireAccounting` yazıldı ama çağıranları ilgili modüllerin ekranlarıyla gelir (bugün yalnız `requireStaff` kullanımda).
 - [x] (04.4) **`Customer.auth_user_id` bağlama:** girişte Auth kullanıcısı e-postayla mevcut `Customer`'a bağlanır; yoksa yeni müşteri açılır (03'ün bul-veya-oluştur kararı + DB yazımı)
   - *Bitti:* aynı e-postayla önce müşteri kaydı sonra giriş → tek Customer, `auth_user_id` dolu
   - **Durum (27.07):** `0013_customer_fields.sql` — müşterinin ticari alanları (`company_info`, vergi no + VIES, vade üçlüsü, `discount_percent`, `cod_allowed`, pazarlama izni, edinim kaynağı, `referred_by`) **`user_profiles`'a eklendi**; `address` tablosu açıldı; `price.customer_id` FK'si bağlandı. `AddressService` + `UserProfileService`'e kimlik/liste/B2B uçları.
@@ -56,7 +61,7 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
 ## Netleşecekler
 
 - **Rolün saklandığı yer:** Auth `app_metadata` mı, kendi tablomuz mu — 02'de netleşen veri erişim modeliyle (RLS kapsamı) birlikte karara bağlanır; artı/eksi masaya konur, sonra kodlanır.
-- **Tek rol mü, çok rol mü (açık):** `DOMAIN §2` "bir kullanıcının birden fazla rolü olabilir" diyor; kodda tek `user_profiles.role` kolonu var ve `0001` "çok-rol YOK" diye yazıyor. `BACKLOG` da "çoklu rol desteği" listeliyor. Çelişki 27.07'de görünür kılındı, karara bağlanmadı — 04.3 ile birlikte çözülür. Bugünkü akışları (guard, yönlendirme) bloke etmiyor.
+- ~~**Tek rol mü, çok rol mü**~~ — 27.07'de karara bağlandı (kullanıcı): **iki eksen, tek alan.** Müşteri ↔ personel keskin ayrım (bir arada olamaz); personel içinde çoklu rol olağan (depo + muhasebe, patron + admin). `user_profiles.roles` dizisi + DB check kısıtı; saf kural `domain-core/identity/roles`. `accounting` rolü eklendi. Ayrıntı `DOMAIN §2`.
 - **Google OAuth konsol kurulumu:** Google Cloud tarafındaki uygulama kaydı ve anahtarlar kullanıcıyla birlikte yapılır (dış hesap işlemi).
 
 ---

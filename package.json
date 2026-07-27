@@ -38,6 +38,7 @@
   },
   "devDependencies": {
     "@lezzet/database": "workspace:*",
+    "@lezzet/domain-core": "workspace:*",
     "@lezzet/eslint-config": "workspace:*",
     "@lezzet/storage": "workspace:*",
     "@lezzet/types": "workspace:*",
