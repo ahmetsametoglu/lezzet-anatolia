@@ -18,11 +18,11 @@ const VARIANT: Record<ButtonVariant, string> = {
 
 // Dolgulu varyantlar (primary/secondary) ped alır; ghost yalnız metin boyutu (inline link-buton).
 const PADDED_SIZE: Record<ButtonSize, string> = {
-  md: 'px-6 py-3.5 text-[15px]',
+  md: 'px-6 py-3.5 text-body',
   sm: 'px-4 py-2 text-sm',
 };
 const GHOST_SIZE: Record<ButtonSize, string> = {
-  md: 'text-[15px]',
+  md: 'text-body',
   sm: 'text-sm',
 };
 

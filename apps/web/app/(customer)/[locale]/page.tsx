@@ -2,17 +2,24 @@ import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import { brand } from '@lezzet/brand';
+import type { Locale } from '@lezzet/i18n';
 import { getSessionUser } from '@/lib/guard';
-import { Link } from '@/i18n/navigation';
+import { detectDevice } from '@/lib/device';
+import { getHomeData } from '@/lib/storefront/home';
+import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { routing } from '@/i18n/routing';
-import { buttonClass } from '@/components/customer/ui/button';
+import { HomeClient } from './home-client';
+import type { Messages } from './home-types';
 import messages from './messages.json';
 
 interface HomeProps {
   params: Promise<{ locale: string }>;
 }
 
+/**
+ * Vitrin ana sayfası (08.10). Veri `lib/storefront` KAPISINDAN okunur — servis burada doğrudan
+ * çağrılmaz; bugün fiyat/fırsat/paket stub, kaynak geldiğinde bu sayfa değişmez.
+ */
 export default async function Home({ params }: HomeProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
@@ -25,15 +32,19 @@ export default async function Home({ params }: HomeProps) {
     redirect('/operations');
   }
 
-  const t = messages[locale];
+  const t: Messages = messages[locale];
+  const [data, device] = await Promise.all([getHomeData(locale), detectDevice()]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-3 p-8">
-      <h1 className="font-serif text-3xl font-semibold text-ink">{brand.name}</h1>
-      <p className="font-sans text-sm text-body">{t.tagline}</p>
-      <Link href="/login" className={buttonClass({ size: 'sm', className: 'mt-2' })}>
-        {t.loginCta}
-      </Link>
-    </main>
+    <SiteFrame
+      device={device}
+      locale={locale}
+      announcement={t.announcement.mobile}
+      announcements={[t.announcement.cold, t.announcement.local, t.announcement.shipping]}
+      searchPlaceholder={t.search}
+      nav={t.nav}
+    >
+      <HomeClient t={t} locale={locale as Locale} data={data} device={device} />
+    </SiteFrame>
   );
 }

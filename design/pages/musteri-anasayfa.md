@@ -9,6 +9,9 @@ Markayı tanıtan ve müşteriyi kataloğa/ürüne en kısa yoldan götüren vit
 - **Marka tanıtımı** — Strasbourg merkezli donuk Türk gıdası; ilk gelen ziyaretçi "burası ne satar, güvenilir mi" sorusunun cevabını hızla almalı. Donuk gıdada iştah ve güven görselle kurulur
 - **Kategoriler** — kataloğa ana giriş (Börekler, Tatlılar, Çerezler…); müşterinin zihnindeki "ne arıyorum" sorusuyla eşleşir
 - **Koleksiyonlar** — aktif pazarlama grupları (Bayram, Yeni…); mevsimlik/güncel olanı öne çıkarır. Koleksiyon sayısı değişkendir (sıfır da olabilir)
+  > **AÇIK (27.07.2026 — karar bekliyor):** bu madde `Musteri - Anasayfa.dc.html` tasarımında **karşılıksız** — web ve mobil ekranların ikisinde de koleksiyon bölümü yok (kategoriler, fırsatlar, vitrin, paketler var). Sayfa kodlanırken improvize edilmedi, tasarım birebir uygulandı; bugün anasayfada koleksiyon **görünmüyor**.
+  > İki yoldan biri seçilmeli: (a) tasarıma koleksiyon bandı eklenir — kategorilerden ayrı bir bölüm olarak, çünkü ikisi farklı sorulara cevap verir ("ne arıyorum" ≠ "bu mevsim ne var"); (b) madde envanterden düşülür ve koleksiyonlar yalnız kendi vitrin sayfasında + paylaşım (OG) kartında yaşar.
+  > Bağlam: koleksiyon veri modeli ve operasyon yönetimi HAZIR (`build/05-katalog.md` 05.1, kapak görseli 05.7) — eksik olan yalnız bu sayfadaki yeri. Kodlama tarafı `build/08-musteri-app.md (08.10)` Durum notunda.
 - **Öne çıkan ürünler** — vitrin seçkisi; ziyaretçinin katalogda kaybolmadan somut ürünle buluşması
 - **İndirimli fırsatlar girişi** — o an indirimli teklifte olan ürünler; müşteri için "fırsat" hissi, işletme için hızlı satış. Ürünler tek (indirimli) fiyatla görünür; teklif yoksa bu bölüm hiç var olmamalı
 - **Paketler** — aktif paketler tek fiyatlı hazır seçimler olarak; sosyal medyadan gelen trafiğin hedefi çoğu zaman bir pakettir

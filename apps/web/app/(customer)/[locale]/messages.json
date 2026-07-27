@@ -1,14 +1,158 @@
 {
   "tr": {
-    "tagline": "İskelet ayakta. Modül modül inşa başlıyor.",
-    "loginCta": "Giriş"
+    "announcement": {
+      "cold": "❄ Soğuk zincirle teslim",
+      "local": "Strasbourg & çevresinde kapıya teslim",
+      "shipping": "Fransa geneline kargo",
+      "mobile": "❄ Soğuk zincirle kapıya teslim"
+    },
+    "nav": {
+      "catalog": "Katalog",
+      "packages": "Paketler",
+      "deals": "Fırsatlar",
+      "discover": "Keşif",
+      "pro": "Professionnels"
+    },
+    "search": "Ürün ara…",
+    "hero": {
+      "eyebrow": "Strasbourg'dan sofranıza",
+      "titleLead": "Anadolu'nun lezzeti,",
+      "titleAccent": "kapınızda.",
+      "body": "El emeğiyle hazırlanan Türk lezzetleri, soğuk zincir bozulmadan taptaze evinize gelir. Tıpkı anne sofrasından çıkmış gibi.",
+      "ctaCatalog": "Kataloğa göz at",
+      "ctaDeals": "Bu haftanın fırsatları",
+      "imageAlt": "Buğusu üstünde börek ve dolu bir aile sofrası"
+    },
+    "categories": { "title": "Ne arıyorsunuz?" },
+    "offers": {
+      "title": "Bu haftanın fırsatları",
+      "note": "Stokla sınırlı",
+      "limit": "En fazla {n} adet"
+    },
+    "featured": {
+      "title": "Vitrindekiler",
+      "all": "Tüm katalog →",
+      "addToCart": "Sepete ekle"
+    },
+    "packages": {
+      "badge": "Hazır Paket",
+      "items": "{n} ürün",
+      "cta": "Paketi incele",
+      "ctaShort": "İncele"
+    },
+    "discover": {
+      "title": "Yeni lezzetleri ilk siz deneyin",
+      "body": "Aday ürünlere göz atın, beğendiklerinizi söyleyin — her katkı size puan kazandırır.",
+      "cta": "Keşfe başla ✦"
+    },
+    "pro": {
+      "title": "Restoran ya da market misiniz?",
+      "body": "Toptan fiyatlar ve düzenli teslimat için profesyonel hesap açın.",
+      "cta": "Professionnels →"
+    }
   },
   "fr": {
-    "tagline": "La structure est en place. La construction démarre, module par module.",
-    "loginCta": "Connexion"
+    "announcement": {
+      "cold": "❄ Livraison en chaîne du froid",
+      "local": "Livraison à domicile à Strasbourg et alentours",
+      "shipping": "Expédition dans toute la France",
+      "mobile": "❄ Livraison à domicile en chaîne du froid"
+    },
+    "nav": {
+      "catalog": "Catalogue",
+      "packages": "Coffrets",
+      "deals": "Offres",
+      "discover": "Découverte",
+      "pro": "Professionnels"
+    },
+    "search": "Rechercher un produit…",
+    "hero": {
+      "eyebrow": "De Strasbourg à votre table",
+      "titleLead": "La saveur d'Anatolie,",
+      "titleAccent": "à votre porte.",
+      "body": "Des spécialités turques préparées à la main, livrées chez vous en toute fraîcheur grâce à la chaîne du froid. Comme sorties de la table familiale.",
+      "ctaCatalog": "Découvrir le catalogue",
+      "ctaDeals": "Les offres de la semaine",
+      "imageAlt": "Böreks fumants et une table familiale généreuse"
+    },
+    "categories": { "title": "Que cherchez-vous ?" },
+    "offers": {
+      "title": "Les offres de la semaine",
+      "note": "Dans la limite des stocks",
+      "limit": "{n} maximum"
+    },
+    "featured": {
+      "title": "Notre sélection",
+      "all": "Tout le catalogue →",
+      "addToCart": "Ajouter"
+    },
+    "packages": {
+      "badge": "Coffret",
+      "items": "{n} produits",
+      "cta": "Voir le coffret",
+      "ctaShort": "Voir"
+    },
+    "discover": {
+      "title": "Découvrez les nouveautés en avant-première",
+      "body": "Parcourez les produits candidats et dites-nous ce qui vous plaît — chaque avis vous rapporte des points.",
+      "cta": "Commencer ✦"
+    },
+    "pro": {
+      "title": "Vous êtes restaurateur ou commerçant ?",
+      "body": "Ouvrez un compte professionnel pour des tarifs de gros et des livraisons régulières.",
+      "cta": "Professionnels →"
+    }
   },
   "de": {
-    "tagline": "Das Grundgerüst steht. Der Aufbau beginnt, Modul für Modul.",
-    "loginCta": "Anmelden"
+    "announcement": {
+      "cold": "❄ Lieferung in der Kühlkette",
+      "local": "Hauslieferung in Straßburg und Umgebung",
+      "shipping": "Versand in ganz Frankreich",
+      "mobile": "❄ Hauslieferung in der Kühlkette"
+    },
+    "nav": {
+      "catalog": "Katalog",
+      "packages": "Pakete",
+      "deals": "Angebote",
+      "discover": "Entdecken",
+      "pro": "Professionnels"
+    },
+    "search": "Produkt suchen…",
+    "hero": {
+      "eyebrow": "Von Straßburg auf Ihren Tisch",
+      "titleLead": "Anatoliens Geschmack,",
+      "titleAccent": "vor Ihrer Tür.",
+      "body": "Handgemachte türkische Spezialitäten, dank durchgehender Kühlkette taufrisch bei Ihnen zu Hause. Wie von Mutters Tisch.",
+      "ctaCatalog": "Zum Katalog",
+      "ctaDeals": "Angebote der Woche",
+      "imageAlt": "Dampfender Börek und eine reich gedeckte Familientafel"
+    },
+    "categories": { "title": "Wonach suchen Sie?" },
+    "offers": {
+      "title": "Angebote der Woche",
+      "note": "Solange der Vorrat reicht",
+      "limit": "max. {n} Stück"
+    },
+    "featured": {
+      "title": "Unsere Auswahl",
+      "all": "Ganzer Katalog →",
+      "addToCart": "In den Korb"
+    },
+    "packages": {
+      "badge": "Paket",
+      "items": "{n} Produkte",
+      "cta": "Paket ansehen",
+      "ctaShort": "Ansehen"
+    },
+    "discover": {
+      "title": "Neue Sorten als Erste probieren",
+      "body": "Sehen Sie sich neue Produkte an und sagen Sie uns, was Ihnen gefällt — jeder Beitrag bringt Punkte.",
+      "cta": "Entdecken ✦"
+    },
+    "pro": {
+      "title": "Restaurant oder Markt?",
+      "body": "Eröffnen Sie ein Geschäftskonto für Großhandelspreise und regelmäßige Lieferungen.",
+      "cta": "Professionnels →"
+    }
   }
 }
