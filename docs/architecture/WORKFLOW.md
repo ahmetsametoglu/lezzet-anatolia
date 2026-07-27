@@ -174,6 +174,7 @@ Varsayılan tek ajandır. Paralel çalışma **istenirse** şu üç kural bağla
 - Kalıcı bir karar aldığında ("bu böyle kalacak, sebebi şu") o an ilgili dokümana yaz. Sonra yazmak, yazmamak demektir
 - Doküman koddan farklıysa **kod haklıdır** — dokümanı düzelt. Ajana yanlış bilgi veren doküman, bilgisiz ajandan daha tehlikelidir
 - **`pnpm docs:check` bunu makine işi yapar:** veri modeli tablosu ↔ migration kolonu ↔ Zod alanı karşılaştırması, anılan paketlerin varlığı, görev kimliklerinin bütünlüğü, durum özetinin tazeliği. Birleştirmeden önce koşar; `pnpm docs:sync` türetilmiş özeti yeniden yazar
+- **`pnpm hooks:install` bunu her commit'te koşturur** ve denetim **çalışma ağacına değil, commit'e giren içeriğe** uygulanır. Ayrım paralel çalışmada belirleyicidir: ağaçta duran ama commit'e girmeyen dosya — yarım işin ya da **başka ajanın kodu** — denetimi yanlış yeşile boyar. Bir kez yaşandı: yalnız dokümanı taşıyan commit, ağaçtaki diğer ajanın enum kodu sayesinde "tutarlı" göründü; oysa o commit tek başına tutarsızdı. Bekçi, tam da "kod ve doküman aynı commit'te gider" kuralının çiğnendiği hâle kördü
 
 ---
 

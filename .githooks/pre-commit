@@ -6,17 +6,35 @@
 #   1) docs:check — doküman/kod sapması varsa commit'i durdurur (kod haklıdır, dokümanı düzelt)
 #   2) Kod değişip modül dosyası hiç güncellenmediyse UYARIR (durdurmaz — her commit bir görevi
 #      bitirmez; ama "sonra yazarım" alışkanlığı burada görünür olur)
+#
+# Denetim ÇALIŞMA AĞACINA DEĞİL, COMMIT'E GİREN İÇERİĞE koşar. Fark önemli: ağaçta duran ama
+# commit'e girmeyen dosya (yarım iş ya da PARALEL AJANIN kodu) denetimi yanlış yeşile boyar.
+# Yaşandı: yalnız dokümanı taşıyan bir commit, ağaçtaki başka ajanın enum kodu sayesinde "tutarlı"
+# göründü; oysa o commit tek başına tutarsızdı — yani tam da "kod ve doküman aynı commit'te gider"
+# (CLAUDE.md §5) kuralının çiğnendiği hâl, bekçinin kör noktasıydı.
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
 
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
-echo "$staged" | grep -qE '^(apps|packages|supabase)/' || exit 0   # kod dokunulmadıysa karışma
+[ -n "$staged" ] || exit 0
 
-if ! pnpm -s docs:check; then
+# İndeksi geçici dizine açar — çalışma ağacına DOKUNMAZ (stash yok: paralel ajanların yarım işini
+# kaybettirme riski taşır). `checkout-index -a` tüm izlenen dosyaları staged hâliyle yazar, yani
+# commit sonrası ağacın birebir aynısını. docs-check yalnız node builtin'i kullandığı için bu
+# node_modules'suz kopyada doğrudan çalışır.
+tmp=$(mktemp -d) || exit 1
+trap 'rm -rf "$tmp"' EXIT
+git checkout-index -a --prefix="$tmp/" || exit 1
+
+if ! node "$tmp/scripts/docs-check.mjs"; then
   echo ""
   echo "✗ Doküman/kod tutarsız — düzelt ya da bilinçliyse 'git commit --no-verify'."
+  echo "  Not: denetim COMMIT'E GİREN içeriğe koştu; düzeltmeyi 'git add' ile sahnelemeyi unutma."
   exit 1
 fi
 
-if ! echo "$staged" | grep -q '^docs/build/'; then
+# Modül dosyası uyarısı yalnız kod dokunulduğunda anlamlı — doküman içi düzeltme görev ilerletmez.
+if echo "$staged" | grep -qE '^(apps|packages|supabase)/' && ! echo "$staged" | grep -q '^docs/build/'; then
   echo ""
   echo "· Uyarı: kod değişti ama hiçbir modül dosyası (docs/build/NN-*.md) güncellenmedi."
   echo "  Bir görev ilerlediyse satırını işaretle + Durum notunu yaz (WORKFLOW §7)."
