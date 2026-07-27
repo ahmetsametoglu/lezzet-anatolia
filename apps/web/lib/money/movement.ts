@@ -37,6 +37,31 @@ export async function recordMovement(input: MoneyMovementInsert): Promise<Moveme
 }
 
 /**
+ * **Tedarikçiye ödeme** (12.3) — mal bedelinin ödenmesi. `supplierId` bağı zorunludur: tedarikçi
+ * borcu (Σ giriş − Σ ödeme) o bağdan TÜRETİLİR, hiçbir yerde saklanmaz. `stockIntakeId` verilirse
+ * ödeme hangi mal kabule ait olduğunu da taşır — kısmi ödemelerde hangi girişin kapandığı görünür.
+ */
+export function recordSupplierPayment(input: {
+  supplierId: string;
+  accountId: string;
+  amount: number;
+  stockIntakeId?: string | null;
+  valueDate?: string;
+  description?: string | null;
+}): Promise<MovementOutcome> {
+  return recordMovement({
+    accountId: input.accountId,
+    direction: 'out',
+    amount: input.amount,
+    type: 'purchase',
+    supplierId: input.supplierId,
+    stockIntakeId: input.stockIntakeId,
+    valueDate: input.valueDate,
+    description: input.description ?? 'Tedarikçi ödemesi',
+  });
+}
+
+/**
  * Hesaplar arası transfer — nakit→banka, Stripe→banka payout. TEK satır yazılır; para karşı hesaba
  * ters işaretle yansır (`account_movement` görünümü). Yön gönderenin gözündendir: `out`.
  */

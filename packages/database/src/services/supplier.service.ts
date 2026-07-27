@@ -32,20 +32,31 @@ export class SupplierService extends BaseDbService<Supplier, SupplierInsert, Sup
   }
 
   /**
-   * Tedarikçiye borç — **türetilir**: Σ girişler − Σ ödemeler.
-   * `paid` şu an 0: para hareketleri modül 12'de açılıyor. Alan yapısı bugünden doğru ki tüketiciler
-   * (admin kartı, muhasebe özeti) sonradan değişmesin.
+   * Tedarikçiye borç — **türetilir, saklanmaz**: Σ girişler − Σ ödemeler (12.3).
+   *
+   * `paid`, o tedarikçiye ÇIKAN paranın toplamıdır — tipine bakılmaz. Ölçüt hareketin `supplier_id`
+   * bağıdır: mal bedeli (`purchase`) da, sonradan yapılan bir düzeltme ödemesi de aynı borcu kapatır.
+   * Tipe göre süzseydik, doğru bağlanmış ama farklı tipteki bir ödeme borçta görünmezdi.
+   *
+   * İki tur okur: girişler ve ödemeler ayrı tablolarda. Tedarikçi başına çağrılır (kart ekranı),
+   * liste ekranı gerekirse toplu okuma ayrıca eklenir.
    */
   async debt(supplierId: string): Promise<{ intakeTotal: number; paid: number; balance: number }> {
-    const { data, error } = await this.supabase
-      .from('stock_intake')
-      .select('total_amount')
-      .eq('supplier_id', supplierId);
-    if (error) throw error;
+    const [girisler, odemeler] = await Promise.all([
+      this.supabase.from('stock_intake').select('total_amount').eq('supplier_id', supplierId),
+      this.supabase.from('money_movement').select('amount').eq('supplier_id', supplierId).eq('direction', 'out'),
+    ]);
+    if (girisler.error) throw girisler.error;
+    if (odemeler.error) throw odemeler.error;
 
-    const intakeTotal = (data ?? []).reduce((sum, row) => sum + Number((row as { total_amount: string | number }).total_amount), 0);
-    const paid = 0; // TODO(modül 12): Σ MoneyMovement(out, supplier_id)
-    return { intakeTotal, paid, balance: intakeTotal - paid };
+    const topla = (rows: unknown[], field: string) =>
+      rows.reduce<number>((sum, row) => sum + Number((row as Record<string, string | number>)[field]), 0);
+
+    // Para 2 ondalıktır; kayan nokta artığı borç rakamında görünmesin.
+    const yuvarla = (v: number) => Math.round(v * 100) / 100;
+    const intakeTotal = yuvarla(topla(girisler.data ?? [], 'total_amount'));
+    const paid = yuvarla(topla(odemeler.data ?? [], 'amount'));
+    return { intakeTotal, paid, balance: yuvarla(intakeTotal - paid) };
   }
 }
 

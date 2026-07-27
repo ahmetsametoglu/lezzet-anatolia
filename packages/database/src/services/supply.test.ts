@@ -80,15 +80,17 @@ describe('tedarikçi ve kod eşlemesi (06.8)', () => {
     await mappings.setPreferred(a.id); // sonraki testler için tercihliyi geri al
   });
 
-  it('borç türetilir: girişler toplamı (ödemeler modül 12 ile gelecek)', async () => {
+  it('borç türetilir: girişler − ödemeler', async () => {
     await intakes.receive({
       supplierId,
       lines: [{ variantId, qty: 10, expiryDate: gun(250), unitCost: 4 }],
     });
 
+    // Ödeme tarafı 12.3'te bağlandı; buradaki sözleşme yalnız denklemin kendisidir
+    // (ödemenin borcu gerçekten kapattığı `apps/web/lib/money/supplier-debt.test.ts`'te).
     const borc = await suppliers.debt(supplierId);
     expect(borc.intakeTotal).toBeGreaterThanOrEqual(40);
-    expect(borc.balance).toBe(borc.intakeTotal - borc.paid);
+    expect(borc.balance).toBe(Math.round((borc.intakeTotal - borc.paid) * 100) / 100);
   });
 });
 
