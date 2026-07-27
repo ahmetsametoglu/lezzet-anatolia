@@ -71,5 +71,5 @@ Siparişin doğuşundan kapanışına kadar tüm akış: sepet, checkout (teslim
 
 ## Netleşecekler
 
-- **Stripe hesap/ürün kurulumu:** hesap, webhook imza anahtarı, ödeme yöntemleri (kart + Apple/Google Pay), SEPA/ödeme tipleri kullanıcıyla kurulur (dış hesap işlemi).
+- **Stripe hesap/ürün kurulumu:** hesap, webhook imza anahtarı, ödeme yöntemleri (kart + Apple/Google Pay), SEPA/ödeme tipleri kullanıcıyla kurulur (dış hesap işlemi). Anahtarlar hazır — **env yer tutucuları 07.4/07.5 ile eklenir** (karar 27.07): `.env.example`'ın kendi kuralı uygulama-özel anahtarın özelliğiyle birlikte eklenmesidir; erken eklenen değişken, karşılığı olmayan ölü kayıt olur. Yeri: `apps/web` (checkout oturumu + publishable), `apps/backend` (webhook imza sırrı).
 - **Çok-tablolu RPC listesinin son hali:** teslim (07.7) ve hızlı satış (07.10) sınırları kesinleşti — ölçüt 06.1'in "dar liste"si: eşzamanlılık yarışı **veya** bölünemez çok-tablolu yazım. Geriye checkout onayı (07.4) kaldı.
