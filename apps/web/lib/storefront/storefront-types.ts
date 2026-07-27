@@ -1,4 +1,4 @@
-import type { ImageCrop } from '@lezzet/types';
+import type { ImageCrop, KeysetCursor } from '@lezzet/types';
 
 /**
  * Vitrin görünüm tipleri — müşteri yüzeyinin TEK veri sözleşmesi (08.10).
@@ -91,4 +91,24 @@ export interface StorefrontHome {
   /** Boşsa fırsat bölümü HİÇ render edilmez (envanter: "teklif yoksa bu bölüm var olmamalı"). */
   offers: StorefrontOffer[];
   packages: StorefrontPackage[];
+}
+
+/**
+ * Katalog sıralama seçenekleri (K18). Sözleşme dosyasında durur, okuma dosyasında değil: seçenek
+ * listesi bir DEĞER olduğu için süzgeç bileşenleri onu import eder ve o bileşenler client ağacında
+ * çalışır — `server-only` işaretli okuma modülünden gelseydi derleme kırılırdı.
+ */
+export type CatalogSort = 'featured' | 'priceAsc' | 'priceDesc';
+export const CATALOG_SORTS: CatalogSort[] = ['featured', 'priceAsc', 'priceDesc'];
+
+/** Katalog okumasının sonucu — sayfa ve süzgeç bileşenlerinin paylaştığı şekil. */
+export interface StorefrontCatalog {
+  categories: StorefrontCategory[];
+  /** Seçili kategori (yoksa tüm katalog) — başlık bandı ve çip seçimi bunu kullanır. */
+  activeCategory: StorefrontCategory | null;
+  products: StorefrontProduct[];
+  /** Sonuç sayısı — "24 ürün" satırı. Süzgeçle birlikte değişir. */
+  total: number;
+  /** null ise liste bitti; istemci "daha fazla"yı kapatır. */
+  nextCursor: KeysetCursor | null;
 }

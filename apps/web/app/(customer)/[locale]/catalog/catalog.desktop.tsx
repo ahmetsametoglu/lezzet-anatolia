@@ -1,4 +1,4 @@
-import { CATALOG_SORTS } from '@/lib/storefront/catalog';
+import { CATALOG_SORTS } from '@/lib/storefront/storefront-types';
 import { EmptyState, FilterChip, SortSelect } from '@/components/customer/ui/filter-controls';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import type { CatalogViewProps } from './catalog-types';

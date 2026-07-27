@@ -3,7 +3,7 @@
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
-import type { CatalogSort, StorefrontCatalog } from '@/lib/storefront/catalog';
+import type { CatalogSort, StorefrontCatalog } from '@/lib/storefront/storefront-types';
 import type { CatalogHref, Messages } from './catalog-types';
 import { CatalogDesktop } from './catalog.desktop';
 import { CatalogMobile } from './catalog.mobile';
