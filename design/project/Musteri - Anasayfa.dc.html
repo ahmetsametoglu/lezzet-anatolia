@@ -48,14 +48,14 @@
             <span style="border:2px solid #d8cfb6;color:#3a4147;font:700 16px 'Karla';padding:13px 26px;border-radius:28px">Bu haftanın fırsatları</span>
           </div>
         </div>
-        <div style="height:380px"><image-slot id="hero-1a" radius="24" placeholder="Sofra fotoğrafı — buğusu üstünde börek / dolu bir aile sofrası"></image-slot></div>
+        <div style="aspect-ratio:16/9"><image-slot id="hero-1a" radius="24" placeholder="Sofra fotoğrafı — buğusu üstünde börek / dolu bir aile sofrası"></image-slot></div>
       </div>
       <div style="padding:8px 48px 48px;display:flex;flex-direction:column;gap:18px">
         <h2 style="margin:0;font:600 28px 'Lora';color:#343b41">Ne arıyorsunuz?</h2>
         <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
           <sc-for list="{{ categories }}" as="c" hint-placeholder-count="6">
             <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center">
-              <div style="width:100%;height:110px"><image-slot id="kat-1a-{{ $index }}" radius="12" placeholder="{{ c.name }}"></image-slot></div>
+              <div style="width:100%;aspect-ratio:3/2"><image-slot id="kat-1a-{{ $index }}" radius="12" placeholder="{{ c.name }}"></image-slot></div>
               <span style="font:700 15px 'Karla';color:#3a4147">{{ c.name }}</span>
             </div>
           </sc-for>
@@ -91,7 +91,7 @@
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px">
           <sc-for list="{{ products }}" as="p" hint-placeholder-count="4">
             <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;overflow:hidden;display:flex;flex-direction:column">
-              <div style="height:170px"><image-slot id="urn-1a-{{ $index }}" shape="rect" placeholder="{{ p.name }}"></image-slot></div>
+              <div style="aspect-ratio:3/2"><image-slot id="urn-1a-{{ $index }}" shape="rect" placeholder="{{ p.name }}"></image-slot></div>
               <div style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px">
                 <span style="font:700 16px 'Karla';color:#3a4147">{{ p.name }}</span>
                 <span style="font:400 13px 'Karla';color:#8a8270">{{ p.weight }} · {{ p.unit }}</span>
@@ -162,7 +162,7 @@
       <div style="margin:0 16px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e0d8c2;border-radius:22px;padding:10px 16px;color:#9a917c;font:400 14px 'Karla'">🔍 Ürün ara…</div>
       <div style="padding:20px 16px;display:flex;flex-direction:column;gap:14px">
         <h1 style="margin:0;font:600 30px/1.2 'Lora';color:#343b41">Anadolu'nun lezzeti, <em style="color:#5f7a2c">kapınızda.</em></h1>
-        <div style="height:190px"><image-slot id="hero-1a-m" radius="18" placeholder="Sofra fotoğrafı"></image-slot></div>
+        <div style="aspect-ratio:16/9"><image-slot id="hero-1a-m" radius="18" placeholder="Sofra fotoğrafı"></image-slot></div>
         <span style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';padding:14px;border-radius:26px;text-align:center">Kataloğa göz at</span>
       </div>
       <div style="padding:0 16px;display:flex;gap:10px;overflow:hidden">
@@ -196,7 +196,7 @@
       <div style="padding:8px 16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <sc-for list="{{ products }}" as="p" hint-placeholder-count="4">
           <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;overflow:hidden;display:flex;flex-direction:column">
-            <div style="height:110px"><image-slot id="urn-1a-m-{{ $index }}" shape="rect" placeholder=""></image-slot></div>
+            <div style="aspect-ratio:3/2"><image-slot id="urn-1a-m-{{ $index }}" shape="rect" placeholder=""></image-slot></div>
             <div style="padding:10px;display:flex;flex-direction:column;gap:4px">
               <span style="font:700 13px 'Karla';color:#3a4147">{{ p.name }}</span>
               <span style="font:400 11.5px 'Karla';color:#8a8270">{{ p.weight }} · {{ p.unit }}</span>

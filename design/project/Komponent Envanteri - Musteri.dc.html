@@ -26,17 +26,92 @@
 
   <!-- §0 STIL SABITLERI -->
   <div style="background:#fff;border:1px solid #e3dcc8;border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:20px">
-    <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">§0 · Stil sabitleri (design tokens)</h2>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
-      <sc-for list="{{ tokens }}" as="t" hint-placeholder-count="8">
-        <div style="display:flex;align-items:center;gap:12px;border:1px solid #ece5d2;border-radius:12px;padding:10px 12px">
-          <span style="width:44px;height:44px;border-radius:10px;background:{{ t.hex }};border:1px solid rgba(0,0,0,.08);flex:none"></span>
-          <div style="display:flex;flex-direction:column">
-            <span style="font:700 13px 'Karla'">{{ t.name }}</span>
-            <span style="font:400 12px 'Karla';color:#8a8270">{{ t.hex }} — {{ t.use }}</span>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">§0 · Stil sabitleri (design tokens)</h2>
+      <p style="margin:0;font:400 14px/1.65 'Karla';color:#6d7261;max-width:840px">Her semantik aile <strong>4 katman</strong> taşır: <code>metin</code> (ikon, etiket, vurgu) · <code>koyu</code> (zemin üstünde başlık/gövde) · <code>zemin</code> (kutu, rozet arkası) · <code>kenarlık</code>. Değerler onaylı sayfa tasarımlarında hâlihazırda geçen tonlardır; yeni renk üretilmedi, ailelere yerleştirilip adlandırıldı. <strong>Ham hex yasak</strong> — bir ton burada yoksa kodlanmaz, envantere eklenir. Token adı <code>--mus-*</code>. Operasyon evreni ayrı settir; ortak olan yalnız zeytin ailesidir.</p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:600 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270">0.1 · Yüzey ve mürekkep</span>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+        <sc-for list="{{ surfaces }}" as="t" hint-placeholder-count="8">
+          <div style="display:flex;align-items:center;gap:12px;border:1px solid #ece5d2;border-radius:12px;padding:10px 12px">
+            <span style="width:40px;height:40px;border-radius:10px;background:{{ t.hex }};border:1px solid rgba(0,0,0,.10);flex:none"></span>
+            <div style="display:flex;flex-direction:column;min-width:0;gap:1px">
+              <span style="font:700 13px 'Karla'">{{ t.name }}</span>
+              <span style="font:400 11.5px 'Karla';color:#6d7261">{{ t.hex }} · <span style="color:#b3ab97">{{ t.token }}</span></span>
+              <span style="font:400 11.5px/1.4 'Karla';color:#8a8270">{{ t.use }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:600 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270">0.2 · Kum skalası — çerçeve, ayraç, pasif</span>
+      <div style="display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:9px">
+        <sc-for list="{{ sands }}" as="g" hint-placeholder-count="9">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="height:48px;border-radius:10px;background:{{ g.hex }};border:1px solid rgba(0,0,0,.08)"></span>
+            <span style="font:700 11px 'Karla'">{{ g.name }}</span>
+            <span style="font:400 10.5px 'Karla';color:#6d7261">{{ g.hex }}</span>
+            <span style="font:400 10.5px/1.35 'Karla';color:#8a8270">{{ g.use }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <span style="font:400 13px/1.6 'Karla';color:#8a8270">Skala sıcaktır; tek soğuk ton <strong>nötr-400</strong>, yalnız kapanmış/pasif durumda kullanılır (krem zeminde sararmış görünmemesi için). Standart çerçeve <strong>kum-200</strong>, girdi kenarı <strong>kum-300</strong>, iç ayraç <strong>kum-100</strong>.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <span style="font:600 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270">0.3 · Semantik aileler ve durum katmanları</span>
+      <sc-for list="{{ families }}" as="f" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid #f0e9d6;padding-top:14px">
+          <span style="font:700 15px 'Karla';color:{{ f.fg }}">{{ f.name }} <span style="font:400 13px 'Karla';color:#8a8270">— {{ f.mean }} · <code>{{ f.token }}</code></span></span>
+          <div style="display:flex;gap:14px;align-items:stretch">
+            <div style="flex:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px">
+              <sc-for list="{{ f.layers }}" as="l" hint-placeholder-count="5">
+                <div style="border:1px solid #ece5d2;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
+                  <span style="height:28px;background:{{ l.hex }}"></span>
+                  <span style="padding:7px 9px 9px;display:flex;flex-direction:column;gap:1px">
+                    <span style="font:700 10.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#343b41">{{ l.k }}</span>
+                    <span style="font:400 10.5px 'Karla';color:#6d7261">{{ l.hex }}</span>
+                    <span style="font:400 10.5px/1.35 'Karla';color:#8a8270">{{ l.use }}</span>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="width:262px;flex:none;background:{{ f.bg }};border:1px solid {{ f.bd }};border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:6px">
+              <span style="font:700 14px 'Karla';color:{{ f.dk }}">{{ f.exTitle }}</span>
+              <span style="font:400 12.5px/1.5 'Karla';color:{{ f.dk }}">{{ f.exBody }}</span>
+              <span style="align-self:flex-start;font:700 11px 'Karla';color:{{ f.fg }};background:#fff;border:1px solid {{ f.bd }};border-radius:12px;padding:3px 11px">{{ f.exBadge }}</span>
+            </div>
           </div>
         </div>
       </sc-for>
+      <span style="font:400 13px/1.6 'Karla';color:#8a8270">Müşteri yüzeyinde <strong>mavi bilgi ailesi yoktur</strong> — bilgilendirme kutusu zeytin ya da krem zeminle kurulur; mavi yalnız operasyon evreninde geçer. AI/mor müşteride kullanılmaz.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:600 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270">0.4 · Etkileşim durumları</span>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <sc-for list="{{ states }}" as="s" hint-placeholder-count="6">
+          <div style="display:flex;align-items:center;gap:11px;border:1px solid #ece5d2;border-radius:12px;padding:9px 11px">
+            <span style="width:34px;height:34px;border-radius:8px;background:{{ s.hex }};border:1px solid rgba(0,0,0,.10);flex:none"></span>
+            <div style="display:flex;flex-direction:column;min-width:0;gap:1px">
+              <span style="font:700 12px 'Karla'">{{ s.name }} <span style="font:400 10.5px 'Karla';color:#b3ab97">{{ s.token }}</span></span>
+              <span style="font:400 11px 'Karla';color:#6d7261">{{ s.hex }}</span>
+              <span style="font:400 11px/1.35 'Karla';color:#8a8270">{{ s.use }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <span style="font:700 14px 'Karla';color:#fff;background:#5f7a2c;border-radius:22px;padding:11px 22px">Sepete ekle</span>
+        <span style="font:700 14px 'Karla';color:#fff;background:#4a6121;border-radius:22px;padding:11px 22px">Sepete ekle <span style="font:400 11.5px 'Karla';opacity:.75">hover</span></span>
+        <span style="font:700 14px 'Karla';color:#fff;background:#5f7a2c;border-radius:22px;padding:11px 22px;outline:2px solid #5f7a2c;outline-offset:3px">Sepete ekle <span style="font:400 11.5px 'Karla';opacity:.75">odak</span></span>
+        <span style="font:700 14px 'Karla';color:#8a8270;background:#c9c3b0;border-radius:22px;padding:11px 22px">Tükendi</span>
+        <span style="font:700 14px 'Karla';color:#5f7a2c;background:#fff;border:1.5px solid #d8cfb6;border-radius:22px;padding:10px 22px">İkincil</span>
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div style="border:1px solid #ece5d2;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px">
@@ -48,7 +123,67 @@
         <span style="font:400 13px 'Karla';color:#8a8270">gövde 14-18/400 · etiket/buton 13-16/700 · üstbaşlık 13-14/600 harf aralıklı büyük harf</span>
       </div>
     </div>
-    <span style="font:400 14px 'Karla';color:#6d7261">Köşe yarıçapları: kart 18px · küçük kart 14-16px · buton/hap tam yuvarlak (radius ≥ 22px) · görsel 12-24px. Gölge: yalnız sayfa mokabı düzeyinde; kartlar gölgesiz, 1px #ece5d2 çerçeveli. Zeminler: sayfa #faf6ec · vurgulu bölüm #f0e9d6 · açık yeşil bant #eef2e2 · koyu blok #3a4147.</span>
+    <span style="font:400 14px 'Karla';color:#6d7261">Köşe yarıçapları: kart 18px · küçük kart 14-16px · buton/hap tam yuvarlak (radius ≥ 22px) · görsel 12-24px. Gölge: yalnız sayfa mokabı düzeyinde; kartlar gölgesiz, 1px <code>kum-200</code> çerçeveli. Zeminler: sayfa <code>kum-25</code> · vurgulu bölüm <code>kum-100</code> · açık yeşil bant <code>zeytin-zemin</code> · koyu blok <code>antrasit</code>.</span>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid #f0e9d6;padding-top:18px">
+      <span style="font:600 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270">0.5 · Birleştirilenler — kalkan tonlar</span>
+      <span style="font:400 13px/1.6 'Karla';color:#6d7261">Sol taraf <strong>artık kullanılmıyor</strong>, sağdaki token'a taşınır. <em>Anasayfa · Görsel Yönler</em> dosyası (onaylanmayan yön denemeleri) bu sayıma dahil değildir.</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px">
+        <sc-for list="{{ merges }}" as="m" hint-placeholder-count="12">
+          <div style="display:flex;gap:8px;align-items:baseline;border-bottom:1px solid #f3efe2;padding-bottom:6px">
+            <span style="font:400 11.5px/1.5 'Karla';color:#c25e3a;text-decoration:line-through;flex:1">{{ m.drop }}</span>
+            <span style="font:400 11.5px 'Karla';color:#b3ab97;flex:none">→</span>
+            <span style="font:700 11.5px 'Karla';color:#4a6121;flex:none;width:158px">{{ m.keep }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:7px">
+        <span style="font:700 13.5px 'Karla';color:#8a6b2a">İki karar onay bekliyor</span>
+        <span style="font:400 12.5px/1.6 'Karla';color:#8a6b2a"><strong>1 · Tek mürekkep.</strong> Sayfalarda üç ayırt edilemez koyu ton dolaşıyor: <code>#343b41</code> (token), <code>#3a4147</code> (367 kullanım), <code>#3a3f35</code> (48 kullanım). Üçü tek token'a — <strong>antrasit #343b41</strong> — indirildi. Müşteri yüzeyi henüz kodlanmadığı için bu değişimin maliyeti yok; onaylanırsa koyu blok zemini de aynı tondur. <strong>2 · Terracotta çift görev.</strong> Aynı aile hem fırsat/indirim hem hata/iptal taşıyor (<code>#b05c2e</code> ↔ <code>#c25e3a</code>); anlam çakışması riski var. Öneri: hata/iptal için operasyon kırmızısı <code>#a5443c</code> ödünç alınsın, terracotta yalnız fırsata kalsın — <strong>karar sizde</strong>, şu an tasarımdaki hâli korundu.</span>
+      </div>
+      <span style="font:400 12.5px/1.6 'Karla';color:#8a8270">Karanlık mod müşteri yüzeyinde planlanmıyor (vitrin, gündüz krem zemin üstünde kurulu). Gerekirse operasyon envanteri §0.6'daki yapı birebir uygulanır: aynı token adları, koyu seçici altında yeni değerler.</span>
+    </div>
+  </div>
+
+  <!-- §0B GÖRSEL ORANLARI -->
+  <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">§0B · Görsel oranları ve odak noktası</h2>
+      <p style="margin:0;font:400 14px/1.65 'Karla';color:#6d7261;max-width:840px">Vitrin fotoğrafla satıyor; oran sistemi yoksa aynı fotoğraf her ekranda başka yerinden kesilir. Kural: <strong>tek kaynak 3:2 yüklenir</strong> — her görsel operasyon tarafında <strong>kendi nesnesinin formunda</strong> (ürün dialogu, kategori satırı, koleksiyon kartı, paket satırı; sayfa görselleri Ayarlar › Vitrin görselleri) — ve müşteri yüzeyindeki her çerçeve ondan <strong>odak noktasına göre</strong> türetilir. Çerçeveler <code>aspect-ratio</code> ile kurulur — sabit px yükseklik yazılmaz.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+      <sc-for list="{{ ratioCards }}" as="c" hint-placeholder-count="4">
+        <div style="border:1px solid #ece5d2;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:9px">
+          <div style="aspect-ratio:{{ c.ar }};width:{{ c.w }};border-radius:{{ c.radius }};background:{{ c.bg }};border:1px {{ c.style }} {{ c.bd }};display:grid;place-items:center">
+            <span style="font:700 12px 'Karla';color:{{ c.fg }}">{{ c.ratio }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span style="font:700 13px 'Karla';color:#343b41">{{ c.label }}</span>
+            <span style="font:400 11.5px/1.45 'Karla';color:#8a8270">{{ c.where }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <span style="font:600 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270">Ekran ekran çerçeveler</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 22px">
+        <sc-for list="{{ screenFrames }}" as="s" hint-placeholder-count="10">
+          <div style="display:flex;gap:10px;align-items:baseline;border-bottom:1px solid #f3efe2;padding-bottom:6px">
+            <span style="font:400 12.5px/1.5 'Karla';color:#3a3f35;flex:1">{{ s.screen }}</span>
+            <span style="font:700 11.5px 'Karla';color:{{ s.fg }};flex:none">{{ s.ratio }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="background:#eef2e2;border:1px solid #d7e3bd;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px">
+      <span style="font:700 13.5px 'Karla';color:#4a6121">Hizalama tamamlandı</span>
+      <span style="font:400 12.5px/1.6 'Karla';color:#4a6121">Önceki kodlanmış ekranlarda aynı ürün fotoğrafı dokuz farklı orana giriyordu (1,09 · 1,11 · 1,28 · 1,3 · 1,43 · 1,57 · 1,61 · 1,88 · 1:1). Ara oranlar kaldırıldı; ürün ve paket görselleri artık <strong>3:2</strong>, hero'lar <strong>16:9</strong>, sepet/paket/kategori <strong>1:1</strong>. Kırpma <code>object-fit:cover</code> + odak noktası; letterbox ve beyaz dolgu kullanılmaz.</span>
+    </div>
+
+    <span style="font:400 12.5px/1.6 'Karla';color:#8a8270">İstisna: <strong>giriş ve editoryal sahne fotoğrafları</strong> (dikey 3:4 / tam yüksek kolon) ayrı çekimdir, ürün fotoğrafı bu çerçeveye girmez. Fotoğrafı olmayan ürün kartı: krem zemin + ürün adı baş harfi; boş gri kutu ya da yer tutucu ikon <strong>çizilmez</strong>. Onaysız fotoğraf hiç render edilmez.</span>
   </div>
 
   <!-- §1 TEMEL -->
@@ -413,15 +548,115 @@
 class Component extends DCLogic {
   renderVals() {
     return {
-      tokens: [
-        { name: "Zeytin", hex: "#5f7a2c", use: "birincil aksiyon, marka" },
-        { name: "Zeytin koyu", hex: "#4a6121", use: "hover/basılı" },
-        { name: "Zeytin açık", hex: "#a9c46b", use: "koyu zeminde vurgu" },
-        { name: "Antrasit", hex: "#343b41", use: "başlık, koyu blok" },
-        { name: "Turuncu", hex: "#b05c2e", use: "fırsat/indirim vurgusu" },
-        { name: "Krem zemin", hex: "#faf6ec", use: "sayfa zemini" },
-        { name: "Krem koyu", hex: "#f0e9d6", use: "vurgulu bölüm zemini" },
-        { name: "Çerçeve", hex: "#ece5d2", use: "kart kenarı, ayırıcı" },
+      ratioCards: [
+        { ratio:'3:2', ar:'3/2', w:'100%', radius:'10px', bg:'#eef2e2', bd:'#d7e3bd', style:'solid', fg:'#4a6121', label:'Kaynak ve ürün çerçevesi', where:'Katalog kartı · ürün/paket detay ana görseli · benzer ürünler · keşif kartı · mobil kart' },
+        { ratio:'1:1', ar:'1/1', w:'64%', radius:'10px', bg:'#f3efe2', bd:'#e0d8c2', style:'solid', fg:'#6d7261', label:'Kare', where:'Sepet satırı 72px · paket içeriği 64px · paket kartı 130px' },
+        { ratio:'1:1', ar:'1/1', w:'64%', radius:'50%', bg:'#f3efe2', bd:'#e0d8c2', style:'solid', fg:'#6d7261', label:'Daire', where:'Mobil kategori şeridi 86px — kategori görseli' },
+        { ratio:'16:9', ar:'16/9', w:'100%', radius:'10px', bg:'#f9ede2', bd:'#e8c9b3', style:'solid', fg:'#b05c2e', label:'Bant / hero', where:'Anasayfa hero (web + mobil) · Professionnels hero · kampanya bandı' },
+      ],
+      screenFrames: [
+        { screen:'Anasayfa · hero (web + mobil)', ratio:'16:9', fg:'#b05c2e' },
+        { screen:'Anasayfa · kategori kartı (web)', ratio:'3:2', fg:'#4a6121' },
+        { screen:'Anasayfa · kategori şeridi (mobil)', ratio:'1:1 daire', fg:'#6d7261' },
+        { screen:'Anasayfa · ürün kartı (web + mobil)', ratio:'3:2', fg:'#4a6121' },
+        { screen:'Anasayfa · paket kartı görseli', ratio:'1:1', fg:'#6d7261' },
+        { screen:'Katalog · ürün kartı (web + mobil)', ratio:'3:2', fg:'#4a6121' },
+        { screen:'Ürün detay · ana görsel + küçükler', ratio:'3:2', fg:'#4a6121' },
+        { screen:'Ürün detay · benzer ürünler', ratio:'3:2', fg:'#4a6121' },
+        { screen:'Paket detay · ana görsel', ratio:'3:2', fg:'#4a6121' },
+        { screen:'Paket detay · içerik satırı', ratio:'1:1', fg:'#6d7261' },
+        { screen:'Sepet · satır görseli (web + mobil)', ratio:'1:1', fg:'#6d7261' },
+        { screen:'Keşif · aday kart (web + mobil)', ratio:'3:2', fg:'#4a6121' },
+        { screen:'Geri bildirim · ürün kartı', ratio:'3:2', fg:'#4a6121' },
+        { screen:'Professionnels · hero', ratio:'16:9', fg:'#b05c2e' },
+        { screen:'Giriş · sahne fotoğrafı', ratio:'dikey sahne (istisna)', fg:'#8a6b2a' },
+      ],
+      surfaces: [
+        { name:'Antrasit', token:'--mus-antrasit', hex:'#343b41', use:'başlık, koyu blok zemini, birincil metin' },
+        { name:'Metin ikincil', token:'--mus-metin-ikincil', hex:'#6d7261', use:'gövde açıklaması, kart alt satırı' },
+        { name:'Metin pasif', token:'--mus-metin-pasif', hex:'#8a8270', use:'etiket, yardımcı satır, placeholder' },
+        { name:'Kart', token:'--mus-kart', hex:'#ffffff', use:'kart, dialog, girdi zemini' },
+        { name:'Krem zemin', token:'--mus-zemin', hex:'#faf6ec', use:'sayfa zemini (= kum-25)' },
+        { name:'Krem koyu', token:'--mus-zemin-vurgu', hex:'#f0e9d6', use:'vurgulu bölüm bandı (= kum-100)' },
+        { name:'Görsel üstü metin', token:'--mus-gorsel-metin', hex:'#f5f1e6', use:'fotoğraf üstünde başlık, alıntı' },
+        { name:'Görsel üstü ikincil', token:'--mus-gorsel-ikincil', hex:'#dfe3cf', use:'fotoğraf üstünde imza, altyazı' },
+      ],
+      sands: [
+        { name:'kum-25', hex:'#faf6ec', use:'sayfa zemini' },
+        { name:'kum-50', hex:'#f3efe2', use:'ara zemin, gömülü panel, hover' },
+        { name:'kum-100', hex:'#f0e9d6', use:'vurgulu bölüm, iç ayraç' },
+        { name:'kum-200', hex:'#ece5d2', use:'standart çerçeve, kart kenarı' },
+        { name:'kum-300', hex:'#e0d8c2', use:'girdi kenarı, 2. çerçeve' },
+        { name:'kum-400', hex:'#d8cfb6', use:'belirgin çerçeve, dolu yıldız dışı' },
+        { name:'kum-500', hex:'#cdc4a8', use:'kesikli çerçeve, boş durum' },
+        { name:'kum-600', hex:'#b3ab97', use:'pasif ikon, pasif metin' },
+        { name:'nötr-400', hex:'#c9cdc2', use:'kapanmış/pasif rozet çerçevesi' },
+      ],
+      families: [
+        { name:'Zeytin', mean:'birincil aksiyon, olumlu, yolunda', token:'--mus-zeytin-*',
+          fg:'#5f7a2c', dk:'#4a6121', bg:'#eef2e2', bd:'#d7e3bd',
+          exTitle:'Kargo hazırlanıyor', exBody:'Siparişiniz bugün 14:00 rotasına alındı, kuryeye veriliyor.', exBadge:'● Yolda',
+          layers:[
+            { k:'metin', hex:'#5f7a2c', use:'birincil buton, bağlantı, ikon' },
+            { k:'koyu', hex:'#4a6121', use:'kutu başlığı, hover, basılı' },
+            { k:'zemin', hex:'#eef2e2', use:'yeşil bant, olumlu rozet' },
+            { k:'kenarlık', hex:'#d7e3bd', use:'kutu ve seçili kart çerçevesi' },
+            { k:'açık', hex:'#a9c46b', use:'koyu blok üstünde vurgu, ikon' },
+          ] },
+        { name:'Terracotta', mean:'fırsat, indirim — ve bugün hata/iptal', token:'--mus-terracotta-*',
+          fg:'#b05c2e', dk:'#b05c2e', bg:'#f9ede2', bd:'#e8c9b3',
+          exTitle:'Bayram fırsatı · %15', exBody:'Fıstıklı baklava 1 kg — 28 Temmuz akşamına kadar geçerli.', exBadge:'Fırsat',
+          layers:[
+            { k:'metin', hex:'#b05c2e', use:'fırsat/indirim vurgusu, eski fiyat üstü' },
+            { k:'koyu', hex:'#b05c2e', use:'ayrı koyu katman yok — zeminde 5,1:1' },
+            { k:'zemin', hex:'#f9ede2', use:'fırsat kutusu, indirim rozeti' },
+            { k:'kenarlık', hex:'#e8c9b3', use:'kutu çerçevesi, hatalı girdi' },
+            { k:'parlak', hex:'#c25e3a', use:'hata/iptal metni, geçersiz kod' },
+          ] },
+        { name:'Bal', mean:'bekliyor, iade sürecinde, puan', token:'--mus-bal-*',
+          fg:'#8a6b2a', dk:'#8a6b2a', bg:'#fdf3e0', bd:'#ecd9b4',
+          exTitle:'İade sürecinde', exBody:'Talebiniz alındı; kurye 2 iş günü içinde adresinizden alacak.', exBadge:'Bekliyor',
+          layers:[
+            { k:'metin', hex:'#8a6b2a', use:'bekleyen durum etiketi, ikon' },
+            { k:'koyu', hex:'#8a6b2a', use:'ayrı koyu katman yok — zeminde 5,4:1' },
+            { k:'zemin', hex:'#fdf3e0', use:'bekleyen rozet, bilgi kutusu' },
+            { k:'kenarlık', hex:'#ecd9b4', use:'kutu çerçevesi' },
+            { k:'yıldız', hex:'#d99a2b', use:'dolu yıldız, puan göstergesi' },
+          ] },
+        { name:'Nötr', mean:'kapanmış, teslim edildi, pasif', token:'--mus-notr-*',
+          fg:'#6d7261', dk:'#343b41', bg:'#f0e9d6', bd:'#c9cdc2',
+          exTitle:'Teslim edildi', exBody:'24 Temmuz 2026 · 2 kalem · kapıda teslim alındı.', exBadge:'Kapandı',
+          layers:[
+            { k:'metin', hex:'#6d7261', use:'kapanmış durum etiketi' },
+            { k:'koyu', hex:'#343b41', use:'kutu başlığı, tutar' },
+            { k:'zemin', hex:'#f0e9d6', use:'kapanmış rozet arkası (= kum-100)' },
+            { k:'kenarlık', hex:'#c9cdc2', use:'pasif çerçeve (= nötr-400)' },
+            { k:'—', hex:'#b3ab97', use:'pasif ikon (= kum-600)' },
+          ] },
+      ],
+      states: [
+        { name:'Buton hover', token:'--mus-zeytin-koyu', hex:'#4a6121', use:'birincil buton hover ve basılı hâli' },
+        { name:'Kart hover zemini', token:'--mus-hover-zemin', hex:'#f3efe2', use:'liste/kart hover (= kum-50)' },
+        { name:'Pasif dolgu', token:'--mus-pasif-dolgu', hex:'#c9c3b0', use:'tükendi/disabled buton zemini' },
+        { name:'Pasif çerçeve', token:'--mus-pasif-cerceve', hex:'#c9cdc2', use:'pasif girdi ve çip çerçevesi' },
+        { name:'Pasif metin', token:'--mus-pasif-metin', hex:'#8a8270', use:'disabled buton ve girdi metni' },
+        { name:'Odak halkası', token:'--mus-odak', hex:'#5f7a2c', use:'2px zeytin outline, 3px offset — ayrı renk yok' },
+      ],
+      merges: [
+        { drop:'#3a4147 · #3a3f35 · #333a3e · #4a5257 · #3c4448 · #454d54', keep:'antrasit #343b41' },
+        { drop:'#9a917c', keep:'metin-pasif #8a8270' },
+        { drop:'#f6f2e6 · #f7f2e4 · #f1ecdd · #efece3', keep:'kum-50 #f3efe2' },
+        { drop:'#f0ead9', keep:'kum-100 #f0e9d6' },
+        { drop:'#e9e4d4 · #e6dfcd · #e9e6df · #e3dcc8', keep:'kum-200 #ece5d2' },
+        { drop:'#d5d0bf', keep:'kum-400 #d8cfb6' },
+        { drop:'#b9b4a3', keep:'kum-600 #b3ab97' },
+        { drop:'#d5d8d0 · #c3c9b8', keep:'nötr-400 #c9cdc2' },
+        { drop:'#f2f5ea · #e8ebe0 · #e4eecf', keep:'zeytin-zemin #eef2e2' },
+        { drop:'#c9d8a8', keep:'zeytin-kenarlık #d7e3bd' },
+        { drop:'#6f9a2f', keep:'zeytin-metin #5f7a2c' },
+        { drop:'#c4441c', keep:'terracotta-parlak #c25e3a' },
+        { drop:'#e0a884', keep:'terracotta-kenarlık #e8c9b3' },
+        { drop:'#c9a35c · #ffde59', keep:'bal-yıldız #d99a2b' },
       ],
     };
   }

@@ -42,11 +42,11 @@
       <div style="padding:20px 48px 0;font:400 14px 'Karla';color:#8a8270"><span style="color:#5f7a2c;font-weight:700">← Katalog</span> · Tatlılar · Fıstıklı Baklava</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;padding:24px 48px 44px">
         <div style="display:flex;flex-direction:column;gap:12px">
-          <div style="height:440px"><image-slot id="prd-main" radius="20" placeholder="Ana ürün fotoğrafı — dilimlenmiş baklava, fıstık dokusu yakın çekim"></image-slot></div>
+          <div style="aspect-ratio:3/2"><image-slot id="prd-main" radius="20" placeholder="Ana ürün fotoğrafı — dilimlenmiş baklava, fıstık dokusu yakın çekim"></image-slot></div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-            <div style="height:90px;border:2px solid #5f7a2c;border-radius:12px;overflow:hidden"><image-slot id="prd-thumb-0" radius="10" placeholder="1"></image-slot></div>
-            <div style="height:90px"><image-slot id="prd-thumb-1" radius="12" placeholder="2"></image-slot></div>
-            <div style="height:90px"><image-slot id="prd-thumb-2" radius="12" placeholder="3"></image-slot></div>
+            <div style="aspect-ratio:3/2;border:2px solid #5f7a2c;border-radius:12px;overflow:hidden"><image-slot id="prd-thumb-0" radius="10" placeholder="1"></image-slot></div>
+            <div style="aspect-ratio:3/2"><image-slot id="prd-thumb-1" radius="12" placeholder="2"></image-slot></div>
+            <div style="aspect-ratio:3/2"><image-slot id="prd-thumb-2" radius="12" placeholder="3"></image-slot></div>
             <div style="height:90px;background:#f0e9d6;border-radius:12px;display:grid;place-items:center;font:700 14px 'Karla';color:#8a8270">+2</div>
           </div>
         </div>
@@ -160,7 +160,7 @@
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px">
           <sc-for list="{{ similar }}" as="p" hint-placeholder-count="4">
             <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;overflow:hidden;display:flex;flex-direction:column">
-              <div style="height:150px"><image-slot id="prd-sim-{{ $index }}" shape="rect" placeholder="{{ p.name }}"></image-slot></div>
+              <div style="aspect-ratio:3/2"><image-slot id="prd-sim-{{ $index }}" shape="rect" placeholder="{{ p.name }}"></image-slot></div>
               <div style="padding:12px 14px 14px;display:flex;flex-direction:column;gap:5px">
                 <span style="font:700 15px 'Karla';color:#3a4147">{{ p.name }}</span>
                 <span style="font:400 12.5px 'Karla';color:#8a8270">{{ p.weight }} · {{ p.unit }}</span>
@@ -256,7 +256,7 @@
         <img src="assets/logo.jpg" style="height:36px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
         <div style="display:flex;gap:14px;align-items:center"><span style="font-size:18px">↗</span><div style="position:relative;font-size:19px">🧺<span style="position:absolute;top:-5px;right:-8px;background:#b05c2e;color:#fff;font:700 10px 'Karla';border-radius:9px;padding:1px 5px">3</span></div></div>
       </div>
-      <div style="position:relative;height:300px;margin:0 12px">
+      <div style="position:relative;aspect-ratio:3/2;margin:0 12px">
         <image-slot id="prd-m-main" radius="18" placeholder="Ürün fotoğrafı (kaydırmalı galeri)"></image-slot>
         <div style="position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px;pointer-events:none">
           <span style="width:8px;height:8px;border-radius:4px;background:#5f7a2c"></span><span style="width:8px;height:8px;border-radius:4px;background:#fff;opacity:.8"></span><span style="width:8px;height:8px;border-radius:4px;background:#fff;opacity:.8"></span>
@@ -322,7 +322,7 @@
         <div style="display:flex;gap:10px;overflow:hidden">
           <sc-for list="{{ similar }}" as="p" hint-placeholder-count="3">
             <div style="flex:none;width:140px;background:#fff;border:1px solid #ece5d2;border-radius:14px;overflow:hidden">
-              <div style="height:90px"><image-slot id="prd-m-sim-{{ $index }}" shape="rect" placeholder=""></image-slot></div>
+              <div style="aspect-ratio:3/2"><image-slot id="prd-m-sim-{{ $index }}" shape="rect" placeholder=""></image-slot></div>
               <div style="padding:9px;display:flex;flex-direction:column;gap:3px">
                 <span style="font:700 12px 'Karla';color:#3a4147">{{ p.name }}</span>
                 <span style="font:700 13px 'Karla';color:#343b41">{{ p.price }}</span>

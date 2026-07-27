@@ -10,6 +10,7 @@
 <helmet>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
 <style>
   body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
   a { color:#5f7a2c; text-decoration:none; }
@@ -69,6 +70,41 @@
                   <span style="font:600 10px 'Space Grotesk';color:{{ u.stFg }};background:{{ u.stBg }};border-radius:6px;padding:3px 8px;flex:none">{{ u.status }}</span>
                 </div>
               </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isVitrin }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+            <div style="padding:11px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:10px">
+              <span style="font:400 12px 'Karla';color:#8b9086;flex:1;min-width:0">Ürüne ait olmayan sayfa görselleri. Ürün, kategori, koleksiyon ve paket fotoğrafları burada değil — kendi formlarında yüklenir (Katalog › Ürünler).</span>
+              <span style="font:500 11px 'IBM Plex Mono';color:#8b9086;flex:none">kaynak oran satırda yazılı</span>
+            </div>
+            <div style="flex:1;min-height:0;overflow-y:auto">
+              <sc-for list="{{ vitrin }}" as="v" hint-placeholder-count="6">
+                <div style="padding:13px 24px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:14px">
+                  <span style="width:104px;flex:none;aspect-ratio:{{ v.ar }};border:1px {{ v.bdStyle }} #e0e2da;border-radius:8px;overflow:hidden;background:#f0f1ec;display:grid;place-items:center">
+                    <sc-if value="{{ v.editable }}" hint-placeholder-val="{{ true }}">
+                      <image-slot id="{{ v.slotId }}" radius="7" placeholder="{{ v.ratio }}"></image-slot>
+                    </sc-if>
+                    <sc-if value="{{ v.static }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:500 10px 'IBM Plex Mono';color:#b3b7ac">{{ v.ratio }}</span>
+                    </sc-if>
+                  </span>
+                  <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="font:600 13.5px 'Karla';color:#22251f">{{ v.name }}</span>
+                      <span style="font:600 9.5px 'Space Grotesk';color:{{ v.tagFg }};background:{{ v.tagBg }};border-radius:6px;padding:2px 7px;flex:none">{{ v.tag }}</span>
+                    </div>
+                    <span style="font:400 11.5px 'Karla';color:#8b9086">{{ v.where }}</span>
+                    <span style="font:400 11px 'Karla';color:#9aa094">{{ v.note }}</span>
+                  </div>
+                  <span style="font:500 12px 'IBM Plex Mono';color:#6a7065;flex:none">{{ v.ratio }} · {{ v.min }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="padding:11px 24px;border-top:1px solid #e6e7e1;background:#f8f9f5">
+              <span style="font:400 11.5px/1.6 'Karla';color:#8b9086">Panelden düzenlenen görsel yayına anında girer, sürüm geçmişi tutulur. <strong>Statik</strong> işaretli görseller koda gömülüdür (marka sahnesi, hata sayfası çizimi); değişimi geliştirme işidir — panelde yanlışlıkla bozulmasın diye kilitli.</span>
             </div>
           </div>
         </sc-if>
@@ -163,7 +199,7 @@ class Component extends DCLogic {
     const tabDefs = [
       { key:'siparis', label:'Sipariş & teslimat' }, { key:'odeme', label:'Ödeme' },
       { key:'stok', label:'Stok & tazelik' }, { key:'puan', label:'Puan' },
-      { key:'maliyet', label:'Birim maliyet' }, { key:'users', label:'Kullanıcı & rol' },
+      { key:'maliyet', label:'Birim maliyet' }, { key:'vitrin', label:'Vitrin görselleri' }, { key:'users', label:'Kullanıcı & rol' },
     ];
     const tabs = tabDefs.map(t => ({ label:t.label, select:()=>this.setState({tab:t.key}),
       fg: tab===t.key?'#22251f':'#8b9086', edge: tab===t.key?'#5f7a2c':'transparent' }));
@@ -225,8 +261,30 @@ class Component extends DCLogic {
       U('Eski Personel','—','Depo'.split(','),false,'#9aa094'),
     ];
 
+    const vitrin = [
+      { name:'Ana sayfa hero', slotId:'vitrin-hero', ar:'16/9', ratio:'16:9', min:'2400×1350', editable:true,
+        where:'Müşteri ana sayfa · web ve mobil (aynı dosya)', note:'Metin katmanı üstüne biner; sol üçte bir sakin kalmalı.' },
+      { name:'Haftanın fırsatları bandı', slotId:'vitrin-firsat', ar:'16/9', ratio:'16:9', min:'2400×1350', editable:true,
+        where:'Ana sayfa fırsat bölümü · kampanya e-postası', note:'Kampanya bitince otomatik gizlenir; görsel kalır.' },
+      { name:'Professionnels hero', slotId:'vitrin-pro', ar:'16/9', ratio:'16:9', min:'2400×1350', editable:true,
+        where:'Professionnels (B2B) sayfası başı', note:'Mutfak / teslimat aracı — ürün yakın çekimi değil.' },
+      { name:'Hakkımızda görselleri', slotId:'vitrin-hakkimizda', ar:'3/2', ratio:'3:2', min:'2000×1333', editable:true,
+        where:'Statik sayfalar · Hakkımızda, SSS başı', note:'Sayfa başına en fazla iki görsel.' },
+      { name:'Giriş sahnesi', slotId:'vitrin-giris', ar:'3/4', ratio:'dikey 3:4', min:'1600×2133', editable:false,
+        where:'Giriş / kayıt ekranı yan sahnesi', note:'Marka sahnesi — kod içinde sabit, alıntı metniyle birlikte kurgulanmış.' },
+      { name:'Hata sayfası çizimi', slotId:'vitrin-hata', ar:'3/2', ratio:'3:2', min:'—', editable:false,
+        where:'404 · 500 · bakım sayfaları', note:'Vektör çizim; fotoğraf değil, panelden değiştirilmez.' },
+    ].map(v => Object.assign({}, v, {
+      static: !v.editable,
+      bdStyle: v.editable ? 'solid' : 'dashed',
+      tag: v.editable ? 'panelden' : 'statik',
+      tagFg: v.editable ? '#4a6121' : '#6a7065',
+      tagBg: v.editable ? '#eef4e2' : '#eef0ea',
+    }));
+
     return {
-      tabs, isSettings: tab!=='users', isUsers: tab==='users',
+      vitrin, isVitrin: tab==='vitrin',
+      tabs, isSettings: tab!=='users' && tab!=='vitrin', isUsers: tab==='users',
       settings, mobSettings, users,
       settingOpen: this.state.settingOpen, userOpen: this.state.userOpen,
       openUser: () => this.setState({ userOpen:true }),

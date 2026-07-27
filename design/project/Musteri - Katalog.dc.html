@@ -56,8 +56,8 @@
       <div style="padding:4px 48px 48px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px">
         <sc-for list="{{ products }}" as="p" hint-placeholder-count="8">
           <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;overflow:hidden;display:flex;flex-direction:column">
-            <div style="height:170px;position:relative">
-              <div style="height:170px;filter:{{ p.imgFilter }}"><image-slot id="ktl-{{ $index }}" shape="rect" placeholder="{{ p.name }}"></image-slot></div>
+            <div style="aspect-ratio:3/2;position:relative">
+              <div style="height:100%;filter:{{ p.imgFilter }}"><image-slot id="ktl-{{ $index }}" shape="rect" placeholder="{{ p.name }}"></image-slot></div>
               <sc-if value="{{ p.sold }}" hint-placeholder-val="{{ false }}">
                 <span style="position:absolute;top:12px;left:12px;background:#3a4147;color:#fff;font:700 12px 'Karla';padding:5px 12px;border-radius:14px;pointer-events:none">Tükendi — yakında yeniden</span>
               </sc-if>
@@ -152,8 +152,8 @@
       <div style="padding:10px 16px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <sc-for list="{{ products }}" as="p" hint-placeholder-count="8">
           <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;overflow:hidden;display:flex;flex-direction:column">
-            <div style="height:110px;position:relative">
-              <div style="height:110px;filter:{{ p.imgFilter }}"><image-slot id="ktl-m-{{ $index }}" shape="rect" placeholder=""></image-slot></div>
+            <div style="aspect-ratio:3/2;position:relative">
+              <div style="height:100%;filter:{{ p.imgFilter }}"><image-slot id="ktl-m-{{ $index }}" shape="rect" placeholder=""></image-slot></div>
               <sc-if value="{{ p.sold }}" hint-placeholder-val="{{ false }}">
                 <span style="position:absolute;top:8px;left:8px;background:#3a4147;color:#fff;font:700 10.5px 'Karla';padding:4px 9px;border-radius:11px;pointer-events:none">Tükendi</span>
               </sc-if>

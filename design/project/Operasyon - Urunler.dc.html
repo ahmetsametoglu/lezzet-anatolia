@@ -10,6 +10,7 @@
 <helmet>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
 <style>
   body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
   a { color:#5f7a2c; text-decoration:none; }
@@ -142,6 +143,7 @@
               <sc-for list="{{ categories }}" as="c" hint-placeholder-count="5">
                 <div style="padding:12px 24px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:12px;cursor:pointer">
                   <span style="color:#c9ccc3;flex:none">⠿</span>
+                  <span style="width:64px;flex:none;aspect-ratio:3/2;border:1px solid #e0e2da;border-radius:7px;overflow:hidden;background:#f0f1ec"><image-slot id="{{ c.slotId }}" radius="6" placeholder=""></image-slot></span>
                   <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 13.5px 'Karla';color:#22251f">{{ c.name }}</span><span style="font:400 11px 'Karla';color:#8b9086">slug: {{ c.slug }}</span></div>
                   <span style="font:500 12px 'IBM Plex Mono';color:#6a7065">{{ c.count }} ürün</span>
                   <span style="font:600 10.5px 'Space Grotesk';color:{{ c.stFg }};background:{{ c.stBg }};border-radius:7px;padding:3px 9px">{{ c.status }}</span>
@@ -156,7 +158,8 @@
             <div style="padding:11px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center"><span style="font:400 12px 'Karla';color:#8b9086;margin-right:auto">Esnek pazarlama grupları · bir ürün birden çok koleksiyonda olabilir</span><span onClick="{{ openCreate }}" style="font:600 12px 'Space Grotesk';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 14px;cursor:pointer">+ Koleksiyon</span></div>
             <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 24px;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:start">
               <sc-for list="{{ collections }}" as="k" hint-placeholder-count="4">
-                <div style="border:1px solid #e6e7e1;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;cursor:pointer">
+                <div style="border:1px solid #e6e7e1;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;cursor:pointer">
+                  <div style="aspect-ratio:16/9;border:1px solid #e0e2da;border-radius:8px;overflow:hidden;background:#f0f1ec"><image-slot id="{{ k.slotId }}" radius="7" placeholder="Koleksiyon bandı — 16:9"></image-slot></div>
                   <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 14px 'Space Grotesk';color:#22251f">{{ k.name }}</span><span style="font:600 10.5px 'Space Grotesk';color:{{ k.stFg }};background:{{ k.stBg }};border-radius:7px;padding:3px 9px">{{ k.status }}</span></div>
                   <span style="font:400 11.5px 'Karla';color:#8b9086">slug: {{ k.slug }} · sosyal paylaşım linki</span>
                   <span style="font:500 12px 'IBM Plex Mono';color:#5f7a2c">{{ k.count }} ürün →</span>
@@ -172,7 +175,7 @@
             <div style="flex:1;min-height:0;overflow-y:auto">
               <sc-for list="{{ packages }}" as="pk" hint-placeholder-count="4">
                 <div style="padding:13px 24px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:14px;cursor:pointer">
-                  <div style="width:40px;height:40px;border-radius:9px;background:#e9eae4;border:1px solid #e0e2da;flex:none;display:grid;place-items:center;color:#b3b7ac"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M21 8v8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg></div>
+                  <span style="width:76px;flex:none;aspect-ratio:3/2;border:1px solid #e0e2da;border-radius:8px;overflow:hidden;background:#f0f1ec"><image-slot id="{{ pk.slotId }}" radius="7" placeholder=""></image-slot></span>
                   <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 13.5px 'Karla';color:#22251f">{{ pk.name }}</span><span style="font:400 11px 'Karla';color:#8b9086">{{ pk.items }} kalem · {{ pk.slug }}</span></div>
                   <span style="font:500 13px 'IBM Plex Mono';color:#22251f">{{ pk.price }}</span>
                   <span style="font:600 10.5px 'Space Grotesk';color:{{ pk.okFg }};background:{{ pk.okBg }};border-radius:7px;padding:3px 9px">{{ pk.okLabel }}</span>
@@ -237,6 +240,78 @@
                   <span style="font:500 12.5px 'Karla'">Satışta (aktif)</span>
                   <span style="width:40px;height:23px;border-radius:12px;background:#5f7a2c;position:relative"><span style="position:absolute;top:2px;left:19px;width:19px;height:19px;border-radius:50%;background:#fff"></span></span>
                 </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:baseline;gap:10px">
+                <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Fotoğraflar</span>
+                <span style="font:400 11px 'Karla';color:#8b9086">1. sıra kart görselidir · sürükle-sırala</span>
+                <span style="font:500 10.5px 'IBM Plex Mono';color:#8b9086;margin-left:auto">kaynak 3:2 · min 2000×1333</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px">
+                <sc-for list="{{ fotos }}" as="ph" hint-placeholder-count="4">
+                  <div style="display:flex;flex-direction:column;gap:5px">
+                    <div style="position:relative;aspect-ratio:3/2;border:2px solid {{ ph.edge }};border-radius:9px;overflow:hidden;background:#f0f1ec">
+                      <image-slot id="{{ ph.slotId }}" radius="7" placeholder="{{ ph.hint }}"></image-slot>
+                      <span style="position:absolute;top:4px;left:4px;font:600 9px 'Space Grotesk';color:{{ ph.tagFg }};background:{{ ph.tagBg }};border-radius:5px;padding:2px 6px;pointer-events:none">{{ ph.tag }}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;white-space:nowrap">
+                      <span onClick="{{ ph.pick }}" style="font:600 10px 'Space Grotesk';color:{{ ph.focalFg }};border:1px solid {{ ph.focalBd }};background:{{ ph.focalBg }};border-radius:6px;padding:2px 6px;cursor:pointer">odak</span>
+                      <span style="font:500 9.5px 'IBM Plex Mono';color:#8b9086">{{ ph.focalRead }}</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ focal.open }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid #bcd0e0;background:#e6eef3;border-radius:10px;padding:12px 13px;display:flex;gap:13px">
+                  <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">
+                    <span style="font:600 11.5px 'Space Grotesk';color:#2f5a78">{{ focal.title }} — tıklayarak odak seçin</span>
+                    <div onClick="{{ focal.set }}" style="position:relative;aspect-ratio:3/2;border:1px solid #bcd0e0;border-radius:8px;overflow:hidden;background:#fff;cursor:crosshair">
+                      <sc-if value="{{ focal.url }}" hint-placeholder-val="{{ false }}">
+                        <img src="{{ focal.imgSrc }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none" />
+                      </sc-if>
+                      <sc-if value="{{ focal.empty }}" hint-placeholder-val="{{ true }}">
+                        <span style="position:absolute;inset:0;display:grid;place-items:center;font:400 11px 'Karla';color:#2f5a78;text-align:center;padding:0 16px">Önce yukarıdaki kareye fotoğraf sürükleyin</span>
+                      </sc-if>
+                      <span style="position:absolute;left:0;right:0;top:{{ focal.top }};height:1px;background:rgba(255,255,255,.8);pointer-events:none"></span>
+                      <span style="position:absolute;top:0;bottom:0;left:{{ focal.left }};width:1px;background:rgba(255,255,255,.8);pointer-events:none"></span>
+                      <span style="position:absolute;left:{{ focal.left }};top:{{ focal.top }};width:16px;height:16px;margin:-8px 0 0 -8px;border:2px solid #fbfbf9;border-radius:50%;box-shadow:0 0 0 1px rgba(34,37,31,.5);pointer-events:none"></span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;white-space:nowrap">
+                      <span style="font:500 10.5px 'IBM Plex Mono';color:#2f5a78">{{ focal.read }}</span>
+                      <span onClick="{{ focal.center }}" style="font:600 10px 'Space Grotesk';color:#2f5a78;border:1px solid #bcd0e0;border-radius:6px;padding:2px 7px;cursor:pointer;margin-left:auto;flex:none">merkeze al</span>
+                      <span onClick="{{ focal.close }}" style="font:600 10px 'Space Grotesk';color:#6a7065;border:1px solid #d9dbd2;background:#fff;border-radius:6px;padding:2px 7px;cursor:pointer;flex:none">kapat</span>
+                    </div>
+                  </div>
+                  <div style="width:132px;flex:none;display:flex;flex-direction:column;gap:7px">
+                    <span style="font:600 10px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#2f5a78">Türev kırpma</span>
+                    <sc-for list="{{ focal.frames }}" as="fr" hint-placeholder-count="3">
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <span style="width:56px;flex:none;aspect-ratio:{{ fr.ar }};border:1px solid #bcd0e0;border-radius:{{ fr.radius }};overflow:hidden;background:#fff;display:grid;place-items:center">
+                          <sc-if value="{{ fr.url }}" hint-placeholder-val="{{ false }}">
+                            <img src="{{ fr.imgSrc }}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:{{ fr.focalCss }};display:block" />
+                          </sc-if>
+                          <sc-if value="{{ fr.empty }}" hint-placeholder-val="{{ true }}">
+                            <span style="font:500 8.5px 'IBM Plex Mono';color:#b3b7ac">{{ fr.ratio }}</span>
+                          </sc-if>
+                        </span>
+                        <div style="display:flex;flex-direction:column;min-width:0">
+                          <span style="font:500 10px 'IBM Plex Mono';color:#2f5a78">{{ fr.ratio }}</span>
+                          <span style="font:400 9.5px/1.3 'Karla';color:#2f5a78">{{ fr.where }}</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <div style="background:{{ fotoVerdict.bg }};border:1px solid {{ fotoVerdict.bd }};border-radius:9px;padding:9px 12px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:600 11.5px 'Space Grotesk';color:{{ fotoVerdict.fg }}">{{ fotoVerdict.title }}</span>
+                <span style="font:400 11px/1.5 'Karla';color:{{ fotoVerdict.fg }}">{{ fotoVerdict.body }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <span style="font:500 11.5px 'Karla';color:#6a7065">Alternatif metin <span style="color:#b0561f">*</span> <span style="font:400 11px 'Karla';color:#9aa094">· kart görseli için zorunlu; erişilebilirlik ve SEO</span></span>
+                <div style="border:1px solid #d9dbd2;border-radius:9px;padding:10px 13px;font:400 12.5px 'Karla';color:#3a3f37;background:#fff">Dilimlenmiş fıstıklı baklava, üstten yakın çekim</div>
               </div>
             </div>
 
@@ -388,7 +463,31 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { visible: 14, sel: 0, modalOpen: false, modalMode: 'edit', tab: 'products' };
+  state = { visible: 14, sel: 0, modalOpen: false, modalMode: 'edit', tab: 'products', focalFor: null, focals: {}, slots: {}, dims: {} };
+
+  componentDidMount() { this.pull(); this._t = setInterval(() => this.pull(), 1500); }
+  componentWillUnmount() { clearInterval(this._t); }
+  pull() {
+    fetch('.image-slots.state.json', { cache:'no-store' })
+      .then(r => (r.ok ? r.json() : {}))
+      .then(j => {
+        const next = {};
+        Object.keys(j || {}).forEach(k => {
+          const v = j[k]; const u = typeof v === 'string' ? v : (v && v.u);
+          if (u && /^data:image\//i.test(u)) next[k] = u;
+        });
+        if (JSON.stringify(next) !== JSON.stringify(this.state.slots)) this.setState({ slots: next });
+        Object.values(next).forEach(u => this.measure(u));
+      })
+      .catch(() => {});
+  }
+  measure(url) {
+    if (this.state.dims[url] || (this._p && this._p[url])) return;
+    this._p = this._p || {}; this._p[url] = 1;
+    const im = new Image();
+    im.onload = () => this.setState(s => ({ dims: Object.assign({}, s.dims, { [url]: im.naturalWidth / im.naturalHeight }) }));
+    im.src = url;
+  }
   onScroll = (e) => {
     const el = e.target;
     if (el.scrollHeight - el.scrollTop - el.clientHeight < 90 && this.state.visible < this._total) {
@@ -484,24 +583,76 @@ class Component extends DCLogic {
       { name:'Börek', slug:'borek', count:'9', status:'Aktif', st:okB },
       { name:'Kurabiye', slug:'kurabiye', count:'7', status:'Aktif', st:okB },
       { name:'Malzeme', slug:'malzeme', count:'0', status:'Boş', st:pasB },
-    ].map(c => ({ ...c, stFg:c.st[0], stBg:c.st[1] }));
+    ].map(c => ({ ...c, stFg:c.st[0], stBg:c.st[1], slotId:'kategori-'+c.slug }));
     const collections = [
       { name:'Bayram', slug:'bayram', count:'14', status:'Aktif', st:okB },
       { name:'Yeni Sezon', slug:'yeni-sezon', count:'8', status:'Aktif', st:okB },
       { name:'Fıstıklılar', slug:'fistiklilar', count:'11', status:'Aktif', st:okB },
       { name:'Hediyelik', slug:'hediyelik', count:'6', status:'Taslak', st:warnB },
-    ].map(k => ({ ...k, stFg:k.st[0], stBg:k.st[1] }));
+    ].map(k => ({ ...k, stFg:k.st[0], stBg:k.st[1], slotId:'koleksiyon-'+k.slug }));
     const packages = [
       { name:'Bayram Sofrası 2kg', items:'4', slug:'bayram-sofrasi', price:'64,00 €', ok:true },
       { name:'Karışık Baklava 1kg', items:'3', slug:'karisik-baklava', price:'32,00 €', ok:true },
       { name:'Fıstık Şöleni', items:'5', slug:'fistik-soleni', price:'88,00 €', ok:true },
       { name:'Kahvaltılık Börek Seti', items:'3', slug:'borek-seti', price:'—', ok:false },
-    ].map(pk => ({ ...pk,
+    ].map(pk => ({ ...pk, slotId:'paket-'+pk.slug,
       okLabel: pk.ok ? 'Toplam tutar' : 'Toplam tutmuyor',
       okFg: pk.ok ? '#4a6121' : '#a5443c', okBg: pk.ok ? '#eef4e2' : '#fbe9e7' }));
 
     const isCreate = this.state.modalMode === 'create';
+
+    const fbase = 'urun-' + det.slug + '-';
+    const url = id => this.state.slots[id] || null;
+    const fc = id => this.state.focals[id] || { x:50, y:50 };
+    const fotoDefs = [
+      { n:1, tag:'1 · kart', hint:'Kart görseli — 3:2' },
+      { n:2, tag:'2', hint:'Ek açı — 3:2' },
+      { n:3, tag:'3', hint:'Ek açı — 3:2' },
+      { n:4, tag:'+ ek', hint:'Sürükleyerek ekle' },
+    ];
+    const fotos = fotoDefs.map(d => {
+      const id = fbase + d.n; const fv = fc(id); const first = d.n === 1;
+      const open = this.state.focalFor === id;
+      return { slotId:id, hint:d.hint, tag:d.tag,
+        tagFg: first ? '#4a6121' : '#6a7065', tagBg: first ? '#eef4e2' : '#eef0ea',
+        edge: first ? '#5f7a2c' : (d.n === 4 ? '#d4d7ce' : '#e6e7e1'),
+        focalRead: fv.x + '/' + fv.y,
+        focalFg: open ? '#2f5a78' : '#6a7065', focalBd: open ? '#bcd0e0' : '#d9dbd2', focalBg: open ? '#e6eef3' : '#fff',
+        pick: () => this.setState(s => ({ focalFor: s.focalFor === id ? null : id })) };
+    });
+    const PX = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    const fid = this.state.focalFor;
+    const fu = fid ? url(fid) : null;
+    const ff = fid ? fc(fid) : { x:50, y:50 };
+    const focalCss = ff.x + '% ' + ff.y + '%';
+    const focal = {
+      open: !!fid, url: fu, imgSrc: fu || PX, empty: !fu,
+      title: fid ? (fid.slice(-1) === '1' ? 'Kart görseli' : 'Fotoğraf ' + fid.slice(-1)) : '',
+      left: ff.x + '%', top: ff.y + '%', read: 'x ' + ff.x + '% · y ' + ff.y + '%',
+      frames: [
+        { ratio:'3:2', ar:'3/2', radius:'6px', where:'katalog kartı · detay', url:fu, imgSrc: fu || PX, empty:!fu, focalCss },
+        { ratio:'1:1', ar:'1/1', radius:'6px', where:'sepet · paket satırı', url:fu, imgSrc: fu || PX, empty:!fu, focalCss },
+        { ratio:'1:1', ar:'1/1', radius:'50%', where:'kategori dairesi', url:fu, imgSrc: fu || PX, empty:!fu, focalCss },
+      ],
+      set: (e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        const cl = v => Math.max(0, Math.min(100, Math.round(v)));
+        const x = cl(((e.clientX - r.left) / r.width) * 100), y = cl(((e.clientY - r.top) / r.height) * 100);
+        this.setState(s => ({ focals: Object.assign({}, s.focals, { [fid]: { x, y } }) }));
+      },
+      center: () => this.setState(s => ({ focals: Object.assign({}, s.focals, { [fid]: { x:50, y:50 } }) })),
+      close: () => this.setState({ focalFor: null }),
+    };
+    const filled = fotoDefs.map(d => fbase + d.n).filter(id => url(id));
+    const offRatio = filled.filter(id => { const ar = this.state.dims[url(id)]; return ar && Math.abs(ar - 1.5) > 0.02; });
+    const fotoVerdict = !url(fbase + '1')
+      ? { title:'Kart görseli yok', body:'Ürün kartı baş harfle çıkar; katalogda dikkat çekmez. Kart görseli olmadan satışa açmak önerilmez.', fg:'#8a6410', bg:'#fdf1e3', bd:'#ecd9b4' }
+      : (offRatio.length
+        ? { title: offRatio.length + ' fotoğraf 3:2 değil', body:'Kaynak oran tutmayan fotoğraf her çerçevede kırpılır — odak noktasını kontrol edin ya da yatay kadrajla yeniden yükleyin.', fg:'#8a6410', bg:'#fdf1e3', bd:'#ecd9b4' }
+        : { title: filled.length + ' fotoğraf · kaynak oran 3:2', body:'Katalog kartı, detay galerisi, sepet karesi ve kategori dairesi bu dosyalardan odak noktasına göre türetilir; ayrı yükleme yok.', fg:'#4a6121', bg:'#eef4e2', bd:'#cdd8b6' });
+
     return {
+      fotos, focal, fotoVerdict,
       tabs, isProducts: tab==='products', isCategories: tab==='categories',
       isCollections: tab==='collections', isPackages: tab==='packages',
       categories, collections, packages,

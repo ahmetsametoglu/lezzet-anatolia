@@ -25,25 +25,241 @@
   </div>
 
   <!-- §0 -->
-  <div style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:18px">
-    <h2 style="margin:0;font:600 21px 'Space Grotesk'">§0 · Stil sabitleri</h2>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
-      <sc-for list="{{ tokens }}" as="t" hint-placeholder-count="8">
-        <div style="display:flex;align-items:center;gap:11px;border:1px solid #eceee8;border-radius:10px;padding:9px 11px">
-          <span style="width:38px;height:38px;border-radius:8px;background:{{ t.hex }};border:1px solid rgba(0,0,0,.08);flex:none"></span>
-          <div style="display:flex;flex-direction:column;min-width:0">
-            <span style="font:600 12.5px 'Space Grotesk'">{{ t.name }}</span>
-            <span style="font:400 11px 'Karla';color:#8b9086">{{ t.hex }} · {{ t.use }}</span>
+  <div style="background:#fbfbf9;border:1px solid #e6e7e1;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:26px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h2 style="margin:0;font:600 21px 'Space Grotesk'">§0 · Stil sabitleri</h2>
+      <p style="margin:0;font:400 13.5px/1.65 'Karla';color:#6a7065;max-width:900px">Her semantik aile <strong>4 katman</strong> taşır: <code>metin</code> (ikon, etiket, vurgu metni) · <code>koyu</code> (zemin üstünde kutu başlığı/gövdesi) · <code>zemin</code> (bilgi kutusu, rozet arkası) · <code>kenarlık</code> (kutu çerçevesi). Aşağıdaki değerler sayfa tasarımlarında hâlihazırda geçen tonlardır — yeni renk üretilmedi, yalnız ailelere yerleştirilip adlandırıldı. <strong>Ham hex yasak</strong>: bir ton burada yoksa kodlanmaz, envantere eklenir. Token adı <code>--ops-*</code>; karanlık mod aynı adları 0.6'daki değerlerle yeniden tanımlar, bileşene dokunmaz.</p>
+    </div>
+
+    <!-- 0.1 -->
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <span style="font:600 11px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#8b9086">0.1 · Yüzey ve mürekkep</span>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <sc-for list="{{ surfaces }}" as="t" hint-placeholder-count="8">
+          <div style="display:flex;align-items:center;gap:11px;border:1px solid #eceee8;border-radius:10px;padding:9px 11px;background:#fff">
+            <span style="width:38px;height:38px;border-radius:8px;background:{{ t.hex }};border:1px solid rgba(0,0,0,.10);flex:none"></span>
+            <div style="display:flex;flex-direction:column;min-width:0;gap:1px">
+              <span style="font:600 12.5px 'Space Grotesk'">{{ t.name }}</span>
+              <span style="font:500 11px 'IBM Plex Mono';color:#6a7065">{{ t.hex }} <span style="font:400 10px 'IBM Plex Mono';color:#b3b7ac">{{ t.token }}</span></span>
+              <span style="font:400 10.5px/1.35 'Karla';color:#8b9086">{{ t.use }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- 0.2 -->
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <span style="font:600 11px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#8b9086">0.2 · Nötr gri skalası — kenarlık, ayraç, pasif</span>
+      <div style="display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:8px">
+        <sc-for list="{{ grays }}" as="g" hint-placeholder-count="9">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="height:46px;border-radius:8px;background:{{ g.hex }};border:1px solid rgba(0,0,0,.08)"></span>
+            <span style="font:600 10.5px 'Space Grotesk'">{{ g.name }}</span>
+            <span style="font:500 10px 'IBM Plex Mono';color:#6a7065">{{ g.hex }}</span>
+            <span style="font:400 10px/1.35 'Karla';color:#8b9086">{{ g.use }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <span style="font:400 12.5px/1.6 'Karla';color:#8b9086">Skala tek yönlüdür: <strong>çizgi = gri-200</strong>, <strong>ayraç = gri-50</strong>, <strong>girdi kenarı = gri-400</strong>. Kademe atlanmaz; iki komşu adım aynı kartta yan yana kullanılmaz.</span>
+    </div>
+
+    <!-- 0.3 -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <span style="font:600 11px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#8b9086">0.3 · Semantik aileler ve durum katmanları</span>
+      <sc-for list="{{ families }}" as="f" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:9px;border-top:1px solid #f0f1ec;padding-top:13px">
+          <span style="font:600 14px 'Space Grotesk';color:{{ f.fg }}">{{ f.name }} <span style="font:400 12.5px 'Karla';color:#8b9086">— {{ f.mean }} · <code>{{ f.token }}</code></span></span>
+          <div style="display:flex;gap:12px;align-items:stretch">
+            <div style="flex:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px">
+              <sc-for list="{{ f.layers }}" as="l" hint-placeholder-count="5">
+                <div style="border:1px solid #eceee8;border-radius:8px;overflow:hidden;background:#fff;display:flex;flex-direction:column">
+                  <span style="height:26px;background:{{ l.hex }}"></span>
+                  <span style="padding:6px 8px 8px;display:flex;flex-direction:column;gap:1px">
+                    <span style="font:600 10px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#22251f">{{ l.k }}</span>
+                    <span style="font:500 10px 'IBM Plex Mono';color:#6a7065">{{ l.hex }}</span>
+                    <span style="font:400 10px/1.35 'Karla';color:#8b9086">{{ l.use }}</span>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="width:258px;flex:none;background:{{ f.bg }};border:1px solid {{ f.bd }};border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:5px">
+              <span style="font:600 12.5px 'Space Grotesk';color:{{ f.dk }}">{{ f.exTitle }}</span>
+              <span style="font:400 11.5px/1.5 'Karla';color:{{ f.dk }}">{{ f.exBody }}</span>
+              <span style="align-self:flex-start;font:600 10px 'Space Grotesk';color:{{ f.fg }};background:{{ f.chipBg }};border:1px solid {{ f.bd }};border-radius:6px;padding:3px 8px">{{ f.exBadge }}</span>
+            </div>
           </div>
         </div>
       </sc-for>
     </div>
-    <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:center;border-top:1px solid #eef0ea;padding-top:16px">
+
+    <!-- 0.4 -->
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <span style="font:600 11px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#8b9086">0.4 · Etkileşim durumları</span>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <sc-for list="{{ states }}" as="s" hint-placeholder-count="6">
+          <div style="display:flex;align-items:center;gap:11px;border:1px solid #eceee8;border-radius:10px;padding:9px 11px;background:#fff">
+            <span style="width:34px;height:34px;border-radius:7px;background:{{ s.hex }};border:1px solid rgba(0,0,0,.10);flex:none"></span>
+            <div style="display:flex;flex-direction:column;min-width:0;gap:1px">
+              <span style="font:600 11.5px 'Space Grotesk'">{{ s.name }} <span style="font:400 10px 'IBM Plex Mono';color:#b3b7ac">{{ s.token }}</span></span>
+              <span style="font:500 10.5px 'IBM Plex Mono';color:#6a7065">{{ s.hex }}</span>
+              <span style="font:400 10.5px/1.35 'Karla';color:#8b9086">{{ s.use }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding-top:2px">
+        <span style="font:600 12.5px 'Space Grotesk';color:#fff;background:#22251f;border-radius:8px;padding:9px 15px">Kaydet</span>
+        <span style="font:600 12.5px 'Space Grotesk';color:#fff;background:#33372e;border-radius:8px;padding:9px 15px">Kaydet <span style="font:400 10.5px 'Karla';opacity:.7">hover</span></span>
+        <span style="font:600 12.5px 'Space Grotesk';color:#fff;background:#22251f;border-radius:8px;padding:9px 15px;outline:2px solid #5f7a2c;outline-offset:2px">Kaydet <span style="font:400 10.5px 'Karla';opacity:.7">odak</span></span>
+        <span style="font:600 12.5px 'Space Grotesk';color:#8b9086;background:#c9ccc3;border-radius:8px;padding:9px 15px">Kaydet <span style="font:400 10.5px 'Karla'">pasif</span></span>
+        <span style="font:600 12.5px 'Space Grotesk';color:#5f7a2c;background:#fff;border:1px solid #cdd8b6;border-radius:8px;padding:9px 15px">İkincil</span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:center;border-top:1px solid #f0f1ec;padding-top:16px">
       <span style="font:600 22px 'Space Grotesk';color:#22251f">Space Grotesk <span style="font:400 12px 'Karla';color:#8b9086">— başlık, etiket, buton</span></span>
       <span style="font:500 22px 'IBM Plex Mono';color:#22251f">1.240,00 € <span style="font:400 12px 'Karla';color:#8b9086">— IBM Plex Mono rakam/fiyat</span></span>
       <span style="font:400 15px 'Karla';color:#22251f">Karla gövde metni <span style="font:400 12px 'Karla';color:#8b9086">— açıklama, satır</span></span>
     </div>
-    <span style="font:400 13.5px/1.7 'Karla';color:#6a7065">Yarıçap: kart 8px · dialog 14px · çip 14px · buton 7-8px · mobil kart 26px. Kenarlık <code>#e6e7e1</code>, iç ayraç <code>#f0f1ec</code>; <strong>gölge yok</strong> (mobil kartlarda tek hafif katman serbest). Kart yüksekliği 640px, iç tablo gövdesi kaydırılır (başlık sabit) — uzun listeler infinite scroll. Renk <strong>anlam taşır</strong>: olive=yolunda, amber=dikkat/karar, kırmızı=hata/gecikme, gri=kapanmış. Tüm kartlar <code>max-width:1360px</code> ile pane'e sığar.</span>
+    <span style="font:400 13.5px/1.7 'Karla';color:#6a7065">Yarıçap: kart 8px · dialog 14px · çip 14px · buton 7-8px · mobil kart 26px. Kenarlık <code>gri-200</code>, iç ayraç <code>gri-50</code>; <strong>gölge yok</strong> (mobil kartlarda tek hafif katman serbest). Kart yüksekliği 640px, iç tablo gövdesi kaydırılır (başlık sabit) — uzun listeler infinite scroll. Renk <strong>anlam taşır</strong>: olive=yolunda, amber=dikkat/karar, kırmızı=hata/gecikme, <strong>mavi=bilgi</strong>, mor=AI, gri=kapanmış/pasif. Tüm kartlar <code>max-width:1360px</code> ile pane'e sığar.</span>
+
+    <!-- 0.5 -->
+    <div style="display:flex;flex-direction:column;gap:11px;border-top:1px solid #f0f1ec;padding-top:16px">
+      <span style="font:600 11px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#8b9086">0.5 · Birleştirilenler — kalkan tonlar</span>
+      <span style="font:400 12.5px/1.6 'Karla';color:#6a7065">Aynı anlamın birden çok tonu vardı; her satırın solu <strong>artık kullanılmıyor</strong>, sağdaki token'a taşınır. Kodlayan ajan için birebir eşleme tablosudur.</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 18px">
+        <sc-for list="{{ merges }}" as="m" hint-placeholder-count="10">
+          <div style="display:flex;gap:8px;align-items:baseline;border-bottom:1px solid #f4f5f2;padding-bottom:6px">
+            <span style="font:500 10.5px/1.5 'IBM Plex Mono';color:#a5443c;text-decoration:line-through;flex:1">{{ m.drop }}</span>
+            <span style="font:400 11px 'Karla';color:#b3b7ac;flex:none">→</span>
+            <span style="font:500 10.5px 'IBM Plex Mono';color:#4a6121;flex:none;width:150px">{{ m.keep }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:6px">
+        <span style="font:600 12.5px 'Space Grotesk';color:#8a6410">Değer değişimi gerektiren üç istisna (gerekçeli)</span>
+        <span style="font:400 12px/1.6 'Karla';color:#8a6410"><strong>1 · <code>#e2e3dd</code> → gri-200 <code>#e6e7e1</code></strong> (60 kullanım): ikisi de kart çerçevesi; çizgi token'ı zaten #e6e7e1, iki kenarlık tonunu ayrı tutmanın anlamı yok. <strong>2 · <code>#3a4147</code> → mürekkep <code>#22251f</code></strong> (59 kullanım, 22 dosya): bu müşteri evreninin mavi-gri mürekkebi, operasyona sızmış — Veri Masası'nda nötr sıcak mürekkep kullanılır. <strong>3 · <code>#9aa094</code> → metin-pasif <code>#8b9086</code></strong> (76 kullanım): iki pasif gri metin ayırt edilemiyor. Bunlar dışında mevcut 8 renk ve türevleri <strong>değişmedi</strong>.</span>
+      </div>
+      <span style="font:400 12px/1.6 'Karla';color:#8b9086">Marka istisnası (semantik değil, dokunulmaz): WhatsApp <code>#25d366</code> / <code>#128c4b</code> — yalnız kanal ikonu ve WhatsApp panelinde.</span>
+    </div>
+
+    <!-- 0.6 karanlık mod -->
+    <div style="background:#1b1e18;border:1px solid #3c4038;border-radius:11px;padding:22px 24px;display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <span style="font:600 11px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#8f9688">0.6 · Karanlık mod karşılıkları</span>
+        <span style="font:400 12.5px/1.65 'Karla';color:#b4b9ad;max-width:880px">Aynı token adları, <code>[data-tema="koyu"]</code> altında yeniden tanımlanır — <strong>bileşen tasarımı değişmez</strong>, yalnız değer seti. Yüzey/çizgi ters çevrilir; semantik renkler koyu zeminde okunur kalacak şekilde açılır (metin katmanı açık ton, koyu katmanı en açık ton olur — ışık yönü tersine döner). Rozet noktaları ve grafik dolguları aynı kalır.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+        <sc-for list="{{ darkSurfaces }}" as="t" hint-placeholder-count="8">
+          <div style="display:flex;align-items:center;gap:10px;border:1px solid #3c4038;border-radius:9px;padding:8px 10px;background:#23261f">
+            <span style="width:34px;height:34px;border-radius:7px;background:{{ t.hex }};border:1px solid rgba(255,255,255,.14);flex:none"></span>
+            <div style="display:flex;flex-direction:column;min-width:0;gap:1px">
+              <span style="font:600 11.5px 'Space Grotesk';color:#e9ebe3">{{ t.name }}</span>
+              <span style="font:500 10.5px 'IBM Plex Mono';color:#b4b9ad">{{ t.hex }}</span>
+              <span style="font:400 10px/1.35 'Karla';color:#8f9688">{{ t.use }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:7px">
+        <sc-for list="{{ darkGrays }}" as="g" hint-placeholder-count="9">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <span style="height:38px;border-radius:7px;background:{{ g.hex }};border:1px solid rgba(255,255,255,.10)"></span>
+            <span style="font:600 10px 'Space Grotesk';color:#e9ebe3">{{ g.name }}</span>
+            <span style="font:500 9.5px 'IBM Plex Mono';color:#8f9688">{{ g.hex }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <sc-for list="{{ darkFamilies }}" as="f" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid #2a2e26;padding-top:12px">
+          <span style="font:600 13px 'Space Grotesk';color:{{ f.fg }}">{{ f.name }} <span style="font:400 11.5px 'Karla';color:#8f9688">— {{ f.token }}</span></span>
+          <div style="display:flex;gap:10px;align-items:stretch">
+            <div style="flex:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px">
+              <sc-for list="{{ f.layers }}" as="l" hint-placeholder-count="5">
+                <div style="border:1px solid #3c4038;border-radius:7px;overflow:hidden;background:#23261f;display:flex;flex-direction:column">
+                  <span style="height:22px;background:{{ l.hex }}"></span>
+                  <span style="padding:5px 7px 7px;display:flex;flex-direction:column;gap:1px">
+                    <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#b4b9ad">{{ l.k }}</span>
+                    <span style="font:500 9.5px 'IBM Plex Mono';color:#8f9688">{{ l.hex }}</span>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="width:258px;flex:none;background:{{ f.bg }};border:1px solid {{ f.bd }};border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:5px">
+              <span style="font:600 12px 'Space Grotesk';color:{{ f.dk }}">{{ f.exTitle }}</span>
+              <span style="font:400 11px/1.5 'Karla';color:{{ f.dk }}">{{ f.exBody }}</span>
+              <span style="align-self:flex-start;font:600 10px 'Space Grotesk';color:{{ f.fg }};background:{{ f.chipBg }};border:1px solid {{ f.bd }};border-radius:6px;padding:3px 8px">{{ f.exBadge }}</span>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-top:1px solid #2a2e26;padding-top:14px">
+        <span style="font:600 12.5px 'Space Grotesk';color:#1b1e18;background:#e9ebe3;border-radius:8px;padding:9px 15px">Kaydet</span>
+        <span style="font:600 12.5px 'Space Grotesk';color:#1b1e18;background:#d3d8ca;border-radius:8px;padding:9px 15px">Kaydet <span style="font:400 10.5px 'Karla';opacity:.65">hover</span></span>
+        <span style="font:600 12.5px 'Space Grotesk';color:#1b1e18;background:#e9ebe3;border-radius:8px;padding:9px 15px;outline:2px solid #a9c46b;outline-offset:2px">Kaydet <span style="font:400 10.5px 'Karla';opacity:.65">odak</span></span>
+        <span style="font:600 12.5px 'Space Grotesk';color:#757c6d;background:#3c4038;border-radius:8px;padding:9px 15px">Kaydet <span style="font:400 10.5px 'Karla'">pasif</span></span>
+        <span style="font:600 12.5px 'Space Grotesk';color:#a9c46b;background:#23261f;border:1px solid #46592a;border-radius:8px;padding:9px 15px">İkincil</span>
+        <span style="font:500 12.5px 'IBM Plex Mono';color:#e9ebe3;background:#23261f;border:1px solid #545a4e;border-radius:7px;padding:8px 12px">1.240,00 €</span>
+      </div>
+      <span style="font:400 12px/1.6 'Karla';color:#8f9688">Koyu temada da <strong>gölge yok</strong>: katman ayrımı zemin → kart → kart-alt sırasıyla açılan yüzeyle yapılır. Beyaz (<code>#fff</code>) kullanılmaz; dialog/girdi zemini kart-alt'tır. Mono rakamlar mürekkep tonunda kalır, semantik renk yalnız durum taşıdığında girer.</span>
+    </div>
+  </div>
+
+  <!-- §0B GÖRSEL ORANLARI -->
+  <div style="background:#fbfbf9;border:1px solid #e6e7e1;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h2 style="margin:0;font:600 21px 'Space Grotesk'">§0B · Görsel oranları ve odak noktası</h2>
+      <p style="margin:0;font:400 13.5px/1.65 'Karla';color:#6a7065;max-width:900px">Operasyon yüzeyinde dekoratif fotoğraf yoktur; fotoğraf <strong>veridir</strong> ve müşteri yüzeyinde yayınlanır. İki kural: (1) görsel <strong>düzenlendiği nesnenin formunda</strong> yüklenir — ürün fotoğrafı ürün dialogunda, kategori görseli kategori satırında, paket görseli pakette, sayfa görseli Ayarlar › Vitrin görsellerinde; ayrı bir "fotoğraflar" modülü <strong>yoktur</strong>. (2) Her nesne için <strong>tek kaynak yüklenir</strong> (ürün/kategori/paket 3:2, bant 16:9) ve tüm çerçeveler odak noktasına göre ondan türetilir — ikinci oran yüklenmez, kırpılmış kopya saklanmaz.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <div style="border:1px solid #cdd8b6;background:#eef4e2;border-radius:10px;padding:13px 15px;display:flex;flex-direction:column;gap:4px">
+        <span style="font:600 12.5px 'Space Grotesk';color:#4a6121">Kaynak dosya</span>
+        <span style="font:500 12px 'IBM Plex Mono';color:#4a6121">3:2 · min 2000×1333</span>
+        <span style="font:400 11.5px/1.5 'Karla';color:#4a6121">JPEG veya WebP · hedef ≤ 600 KB (sunucuda yeniden kodlanır) · sRGB · yatay kadraj zorunlu.</span>
+      </div>
+      <div style="border:1px solid #bcd0e0;background:#e6eef3;border-radius:10px;padding:13px 15px;display:flex;flex-direction:column;gap:4px">
+        <span style="font:600 12.5px 'Space Grotesk';color:#2f5a78">Odak noktası</span>
+        <span style="font:500 12px 'IBM Plex Mono';color:#2f5a78">x% · y% (varsayılan 50/50)</span>
+        <span style="font:400 11.5px/1.5 'Karla';color:#2f5a78">Yüklerken seçilir, kayıtla birlikte saklanır; her türev <code>object-position</code> olarak bunu kullanır. Merkez kırpma tek başına yetmez — tabak kenarı kaçar.</span>
+      </div>
+      <div style="border:1px solid #ecd9b4;background:#fdf1e3;border-radius:10px;padding:13px 15px;display:flex;flex-direction:column;gap:4px">
+        <span style="font:600 12.5px 'Space Grotesk';color:#8a6410">Kaydetme kapısı</span>
+        <span style="font:500 12px 'IBM Plex Mono';color:#8a6410">oran + çözünürlük + alt metin</span>
+        <span style="font:400 11.5px/1.5 'Karla';color:#8a6410">Denetim kaydetme anında, formun içinde: kart görseli veya alt metni eksikse şerit amber kalır ve ürün satışa açılmaz. Ayrı onay kuyruğu yok — kaydeden yayınlar. Fotoğrafı olmayan ürün kartı baş harfle çıkar, boş gri kutu <strong>çizilmez</strong>.</span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <span style="font:600 11px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#8b9086">Türev çerçeveler — kaynaktan üretilir</span>
+      <div style="display:grid;grid-template-columns:88px 1fr 1fr;gap:1px;background:#eef0ea;border:1px solid #e6e7e1;border-radius:9px;overflow:hidden">
+        <span style="background:#f8f9f5;font:600 10px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#8b9086;padding:8px 11px">Oran</span>
+        <span style="background:#f8f9f5;font:600 10px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#8b9086;padding:8px 11px">Nerede</span>
+        <span style="background:#f8f9f5;font:600 10px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#8b9086;padding:8px 11px">Not</span>
+        <sc-for list="{{ ratios }}" as="r" hint-placeholder-count="6">
+          <span style="background:#fbfbf9;font:500 11.5px 'IBM Plex Mono';color:{{ r.fg }};padding:9px 11px">{{ r.ratio }}</span>
+          <span style="background:#fbfbf9;font:400 12px/1.5 'Karla';color:#22251f;padding:9px 11px">{{ r.where }}</span>
+          <span style="background:#fbfbf9;font:400 11.5px/1.5 'Karla';color:#8b9086;padding:9px 11px">{{ r.note }}</span>
+        </sc-for>
+      </div>
+      <span style="font:400 12.5px/1.6 'Karla';color:#8b9086">Çerçeveler <code>aspect-ratio</code> ile kurulur, <strong>sabit px yükseklik yazılmaz</strong> — kart genişliği değişince oran bozulmaz. Kırpma <code>object-fit:cover</code> + odak noktası; <code>contain</code> ve harf kutusu (letterbox) kullanılmaz.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid #f0f1ec;padding-top:16px">
+      <span style="font:600 16px 'Space Grotesk'">O15 · Fotoğraf bloğu <span style="font:400 12px 'Karla';color:#5f7a2c">— merkezî fotoğraf ekranı YOK; görsel, düzenlendiği nesnenin formunda yaşar</span></span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Tek tekrar eden blok: <strong>3:2 kare ızgarası</strong> (1. sıra kart görselidir, sürükle-sırala) + kare başına <strong>odak</strong> düğmesi → satır içi odak paneli (tıkla-koy, x%/y% mono okuma, üç türev kırpmanın canlı önizlemesi) + oran/çözünürlük denetim şeridi (amber = kırpılacak, kayıp yüzdesi yazılır) + kart görseli için zorunlu alternatif metin. Onay kuyruğu, ayrı modül, ikinci yükleme yok — kaydet dediğinde yayında.</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px">
+        <sc-for list="{{ fotoYerleri }}" as="y" hint-placeholder-count="6">
+          <div style="display:flex;gap:9px;align-items:baseline;border-bottom:1px solid #f4f5f2;padding-bottom:6px">
+            <span style="font:600 12px 'Space Grotesk';color:#22251f;flex:1">{{ y.nesne }}</span>
+            <span style="font:500 10.5px 'IBM Plex Mono';color:#4a6121;flex:none">{{ y.oran }}</span>
+            <span style="font:400 11px 'Karla';color:#8b9086;flex:none;width:186px">{{ y.nerede }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Canlı: <a href="Operasyon - Urunler.dc.html">Ürünler</a> (ürün dialogu · kategori satırı · koleksiyon kartı · paket satırı) ve <a href="Operasyon - Ayarlar.dc.html">Ayarlar › Vitrin görselleri</a> (ürüne ait olmayan sayfa görselleri; <strong>statik</strong> işaretliler koda gömülü, panelde kilitli).</span>
+    </div>
   </div>
 
   <!-- §1 -->
@@ -229,15 +445,158 @@
 class Component extends DCLogic {
   renderVals() {
     return {
-      tokens: [
-        { name:'Mürekkep', hex:'#22251f', use:'başlık, koyu buton, "L"' },
-        { name:'Zemin', hex:'#dedbd3', use:'sayfa zemini' },
-        { name:'Kart', hex:'#fbfbf9', use:'kart/tablo zemini' },
-        { name:'Çizgi', hex:'#e6e7e1', use:'kenarlık; ayraç #f0f1ec' },
-        { name:'Olive', hex:'#5f7a2c', use:'birincil; açık #eef4e2' },
-        { name:'Amber', hex:'#9a6416', use:'dikkat; zemin #fdf1e3' },
-        { name:'Kırmızı', hex:'#a5443c', use:'hata/gecikme; zemin #fbe9e7' },
-        { name:'Mor', hex:'#5a4a8a', use:'AI ajanı; zemin #ece8f5' },
+      fotoYerleri: [
+        { nesne:'Ürün (1 kart + 3 ek)', oran:'3:2', nerede:'Ürün dialogu · Fotoğraflar bloğu' },
+        { nesne:'Kategori', oran:'3:2', nerede:'Kategoriler sekmesi · satır içi' },
+        { nesne:'Koleksiyon / seçki', oran:'16:9', nerede:'Koleksiyonlar sekmesi · kart üstü bant' },
+        { nesne:'Paket', oran:'3:2', nerede:'Paketler sekmesi · satır içi' },
+        { nesne:'Sayfa görselleri (hero, bant)', oran:'16:9', nerede:'Ayarlar › Vitrin görselleri' },
+        { nesne:'Marka sahnesi, hata çizimi', oran:'statik', nerede:'Koda gömülü — panelde kilitli' },
+      ],
+      ratios: [
+        { ratio:'3:2', fg:'#4a6121', where:'Kaynak dosya · katalog kartı · ürün ve paket detay ana görseli · benzer ürünler · keşif kartı · mobil kart ve küçük galeri', note:'Ana oran. Yükleme yalnız bunda; diğer her şey buradan kırpılır.' },
+        { ratio:'1:1', fg:'#22251f', where:'Sepet satırı (72px) · paket içeriği (64px) · sipariş satırı · paket kartı (130px)', note:'Kare kırpma; odak noktası burada en kritik — ürün ortadan kaçmamalı.' },
+        { ratio:'1:1 daire', fg:'#22251f', where:'Mobil kategori şeridi (86px)', note:'Aynı kare kırpma + tam yuvarlak maske. Kategori görseli, ürün fotoğrafı değil.' },
+        { ratio:'16:9', fg:'#22251f', where:'Anasayfa hero (web + mobil) · Professionnels hero · kampanya bandı', note:'Geniş bant; kaynağın üst/altı kırpılır, metin katmanı üstüne biner.' },
+        { ratio:'3:4 (dikey)', fg:'#9a6416', where:'Yalnız giriş sahnesi ve editoryal sahne fotoğrafı', note:'Ürün fotoğrafı bu çerçeveye girmez — ayrı çekim, ayrı yükleme.' },
+        { ratio:'Yasak', fg:'#a5443c', where:'Dikey ürün fotoğrafı · 4:3 kaynak · 2000 px altı uzun kenar · şeffaf PNG', note:'Yükleme reddedilir; sebep ekranda yazılır ve yeniden çekim istenir.' },
+      ],
+      surfaces: [
+        { name:'Mürekkep', token:'--ops-murekkep', hex:'#22251f', use:'başlık, koyu buton, birincil metin, "L"' },
+        { name:'Mürekkep yumuşak', token:'--ops-murekkep-yumusak', hex:'#3a3f37', use:'ikincil başlık, nötr tutar/tarih metni' },
+        { name:'Metin ikincil', token:'--ops-metin-ikincil', hex:'#6a7065', use:'gövde açıklaması, tablo alt satırı' },
+        { name:'Metin pasif', token:'--ops-metin-pasif', hex:'#8b9086', use:'etiket, yardımcı satır, placeholder' },
+        { name:'Zemin', token:'--ops-zemin', hex:'#dedbd3', use:'sayfa zemini (pane arkası)' },
+        { name:'Kart', token:'--ops-kart', hex:'#fbfbf9', use:'kart, tablo, sidebar zemini' },
+        { name:'Kart alt', token:'--ops-kart-alt', hex:'#f8f9f5', use:'= gri-25; tablo başlık satırı, gömülü panel' },
+        { name:'Beyaz', token:'--ops-beyaz', hex:'#ffffff', use:'dialog ve girdi zemini, dolu çip metni' },
+      ],
+      grays: [
+        { name:'gri-25', hex:'#f8f9f5', use:'sekme çubuğu, tablo başlığı' },
+        { name:'gri-50', hex:'#f0f1ec', use:'iç ayraç, satır ayracı' },
+        { name:'gri-100', hex:'#eef0ea', use:'kapanmış rozet zemini, satır hover' },
+        { name:'gri-200', hex:'#e6e7e1', use:'standart kenarlık (kart, tablo)' },
+        { name:'gri-300', hex:'#e0e2da', use:'iç kart kenarlığı, 2. ayraç' },
+        { name:'gri-400', hex:'#d9dbd2', use:'girdi/select kenarı, nötr çip' },
+        { name:'gri-500', hex:'#d4d7ce', use:'kesikli çerçeve, boş durum' },
+        { name:'gri-600', hex:'#c9ccc3', use:'pasif buton dolgusu/çerçevesi' },
+        { name:'gri-700', hex:'#b3b7ac', use:'pasif ikon, pasif metin' },
+      ],
+      families: [
+        { name:'Olive', mean:'yolunda, olumlu, birincil eylem', token:'--ops-olive-*',
+          fg:'#5f7a2c', dk:'#4a6121', bg:'#eef4e2', bd:'#cdd8b6', chipBg:'#ffffff',
+          exTitle:'TS-042 · dolu geldi', exBody:'Baklavacı Usta sevkiyatı sayıldı, 5 kalem stoğa işlendi.', exBadge:'Gönderildi',
+          layers:[
+            { k:'metin', hex:'#5f7a2c', use:'ikon, etiket, bağlantı, dolu çip' },
+            { k:'koyu', hex:'#4a6121', use:'kutu başlığı, olumlu tutar, hover' },
+            { k:'zemin', hex:'#eef4e2', use:'başarı kutusu, rozet arkası' },
+            { k:'kenarlık', hex:'#cdd8b6', use:'kutu çerçevesi, seçili çip' },
+            { k:'grafik', hex:'#a9c46b', use:'grafik dolgusu, ilerleme çubuğu' },
+          ] },
+        { name:'Amber', mean:'dikkat, karar bekliyor, eşleşmedi', token:'--ops-amber-*',
+          fg:'#9a6416', dk:'#8a6410', bg:'#fdf1e3', bd:'#ecd9b4', chipBg:'#ffffff',
+          exTitle:'Near-expiry · 4 kalem', exBody:'Son kullanma tarihine 5 gün kaldı; indirim veya imha kararı bekliyor.', exBadge:'Karar bekliyor',
+          layers:[
+            { k:'metin', hex:'#9a6416', use:'ikon, uyarı etiketi, sayaç' },
+            { k:'koyu', hex:'#8a6410', use:'kutu başlığı ve gövdesi' },
+            { k:'zemin', hex:'#fdf1e3', use:'uyarı kutusu, rozet arkası' },
+            { k:'kenarlık', hex:'#ecd9b4', use:'kutu çerçevesi, amber çip' },
+            { k:'nokta', hex:'#c98a2e', use:'durum noktası, eşleşmedi işareti' },
+          ] },
+        { name:'Kırmızı', mean:'hata, gecikme, iptal, engel', token:'--ops-kirmizi-*',
+          fg:'#a5443c', dk:'#8a3a33', bg:'#fbe9e7', bd:'#e2c4c0', chipBg:'#ffffff',
+          exTitle:'Vade geçti · 8 gün', exBody:'Café Marceau · 312 € · yeni sipariş kapıda ödemeye düşer.', exBadge:'Gecikmiş',
+          layers:[
+            { k:'metin', hex:'#a5443c', use:'hata etiketi, ikon, eksi tutar' },
+            { k:'koyu', hex:'#8a3a33', use:'kutu başlığı ve gövdesi' },
+            { k:'zemin', hex:'#fbe9e7', use:'hata kutusu, rozet arkası' },
+            { k:'kenarlık', hex:'#e2c4c0', use:'kutu çerçevesi, hatalı girdi' },
+            { k:'nokta', hex:'#c2571f', use:'bağlantı yok noktası, iade tutarı' },
+          ] },
+        { name:'Mavi', mean:'bilgi, nötr bildirim, aday kayıt (yeni aile)', token:'--ops-mavi-*',
+          fg:'#3a6b8a', dk:'#2f5a78', bg:'#e6eef3', bd:'#bcd0e0', chipBg:'#ffffff',
+          exTitle:'Aday ürün', exBody:'Fatura satırı katalogla eşleşmedi; ürün olarak açılabilir.', exBadge:'Bilgi',
+          layers:[
+            { k:'metin', hex:'#3a6b8a', use:'bilgi ikonu, etiket, vade rozeti' },
+            { k:'koyu', hex:'#2f5a78', use:'kutu başlığı ve gövdesi' },
+            { k:'zemin', hex:'#e6eef3', use:'bilgi kutusu, rozet arkası' },
+            { k:'kenarlık', hex:'#bcd0e0', use:'bilgi kutusu çerçevesi' },
+            { k:'—', hex:'#e6eef3', use:'ayrı rozet zemini yok, tek ton' },
+          ] },
+        { name:'Mor', mean:'AI ajanı, otomatik öneri', token:'--ops-mor-*',
+          fg:'#5a4a8a', dk:'#5a4a8a', bg:'#ece8f5', bd:'#d8d0ec', chipBg:'#ffffff',
+          exTitle:'Ajan önerisi', exBody:'Rota 2 durak fazla; Neudorf sonrası sıralama değişebilir.', exBadge:'Öneri',
+          layers:[
+            { k:'metin', hex:'#5a4a8a', use:'ajan ikonu, etiket' },
+            { k:'koyu', hex:'#5a4a8a', use:'ayrı koyu katman yok — zeminde 7,3:1' },
+            { k:'zemin', hex:'#ece8f5', use:'öneri kutusu, rozet arkası' },
+            { k:'kenarlık', hex:'#d8d0ec', use:'öneri kutusu çerçevesi' },
+            { k:'nokta', hex:'#6a5acd', use:'yolda/işliyor durum noktası' },
+          ] },
+      ],
+      states: [
+        { name:'Buton hover', token:'--ops-murekkep-hover', hex:'#33372e', use:'koyu butonun hover/active durumu' },
+        { name:'Olive hover', token:'--ops-olive-koyu', hex:'#4a6121', use:'bağlantı ve olive buton hover (= olive-koyu)' },
+        { name:'Pasif dolgu', token:'--ops-pasif-dolgu', hex:'#c9ccc3', use:'disabled buton zemini (= gri-600)' },
+        { name:'Pasif metin', token:'--ops-pasif-metin', hex:'#8b9086', use:'disabled buton/girdi metni' },
+        { name:'Odak halkası', token:'--ops-odak', hex:'#5f7a2c', use:'2px olive outline, 2px offset — ayrı renk yok' },
+        { name:'Satır seçimi', token:'--ops-satir-secili', hex:'#eef0ea', use:'tablo satırı hover ve seçim (= gri-100)' },
+      ],
+      merges: [
+        { drop:'#3f5a2a · #2f6b3a', keep:'olive-koyu #4a6121' },
+        { drop:'#6a8a3a · #7f9a4a', keep:'olive-metin #5f7a2c' },
+        { drop:'#f2f6ea · #e9ede0', keep:'olive-zemin #eef4e2' },
+        { drop:'#dcf0c8 · #d8e4bf · #c3e39f · #e0ebcc · #c5d3a3', keep:'olive-grafik #a9c46b' },
+        { drop:'#fdf7ec · #fdf3e4 · #fdfaf3', keep:'amber-zemin #fdf1e3' },
+        { drop:'#e6d3bf', keep:'amber-kenarlık #ecd9b4' },
+        { drop:'#b98a3a · #a5652f', keep:'amber-nokta #c98a2e' },
+        { drop:'#8f3a33', keep:'kırmızı-koyu #8a3a33' },
+        { drop:'#fdf7f6 · #fbeae2 · #f0e0dd', keep:'kırmızı-zemin #fbe9e7' },
+        { drop:'#e0b7a2 · #e8c0aa', keep:'kırmızı-kenarlık #e2c4c0' },
+        { drop:'#b0561f · #b04a2a · #c07a4a', keep:'kırmızı-nokta #c2571f' },
+        { drop:'#eef4f9', keep:'mavi-zemin #e6eef3' },
+        { drop:'#f2f3ee · #f4f5f2 · #f4f5f1 · #f3f4f0 · #f1f2ee', keep:'gri-25 #f8f9f5' },
+        { drop:'#eef0ee', keep:'gri-50 #f0f1ec' },
+        { drop:'#eceee8 · #e9eae4 · #e4e6de · #e2e3dd', keep:'gri-200 #e6e7e1' },
+        { drop:'#dfe1d9', keep:'gri-300 #e0e2da' },
+        { drop:'#d2d4cb', keep:'gri-500 #d4d7ce' },
+        { drop:'#cfd2c9 · #c9cdc2 · #c8ccc2 · #c3c8ba · #c1c6b8 · #c9c3b0 · #cdd0c8', keep:'gri-600 #c9ccc3' },
+        { drop:'#b9b4a4 · #b9beb4 · #a7ac9f', keep:'gri-700 #b3b7ac' },
+        { drop:'#4a4f45 · #5c6157', keep:'mürekkep-yumuşak #3a3f37' },
+        { drop:'#cfcabb · #e6ddd3', keep:'gri-400 #d9dbd2' },
+        { drop:'#9aa094', keep:'metin-pasif #8b9086' },
+      ],
+      darkSurfaces: [
+        { name:'Mürekkep', hex:'#e9ebe3', use:'birincil metin, başlık' },
+        { name:'Mürekkep yumuşak', hex:'#c8ccc2', use:'ikincil başlık, nötr tutar' },
+        { name:'Metin ikincil', hex:'#b4b9ad', use:'gövde açıklaması' },
+        { name:'Metin pasif', hex:'#8f9688', use:'etiket, yardımcı satır' },
+        { name:'Zemin', hex:'#1b1e18', use:'sayfa zemini' },
+        { name:'Kart', hex:'#23261f', use:'kart, tablo, sidebar' },
+        { name:'Kart alt', hex:'#2a2e26', use:'tablo başlığı, dialog, girdi' },
+        { name:'Çizgi', hex:'#3c4038', use:'standart kenarlık (= gri-200)' },
+      ],
+      darkGrays: [
+        { name:'gri-25', hex:'#23261f' }, { name:'gri-50', hex:'#2a2e26' }, { name:'gri-100', hex:'#31352c' },
+        { name:'gri-200', hex:'#3c4038' }, { name:'gri-300', hex:'#464b41' }, { name:'gri-400', hex:'#545a4e' },
+        { name:'gri-500', hex:'#646a5d' }, { name:'gri-600', hex:'#757c6d' }, { name:'gri-700', hex:'#8f9688' },
+      ],
+      darkFamilies: [
+        { name:'Olive', token:'--ops-olive-*', fg:'#a9c46b', dk:'#cdd8b6', bg:'#2a3a1c', bd:'#46592a', chipBg:'#23261f',
+          exTitle:'TS-042 · dolu geldi', exBody:'Sevkiyat sayıldı, 5 kalem stoğa işlendi.', exBadge:'Gönderildi',
+          layers:[{k:'metin',hex:'#a9c46b'},{k:'koyu',hex:'#cdd8b6'},{k:'zemin',hex:'#2a3a1c'},{k:'kenarlık',hex:'#46592a'},{k:'grafik',hex:'#8fb04f'}] },
+        { name:'Amber', token:'--ops-amber-*', fg:'#dfa94f', dk:'#f0d7ab', bg:'#38290f', bd:'#5c4520', chipBg:'#23261f',
+          exTitle:'Near-expiry · 4 kalem', exBody:'5 gün kaldı; indirim veya imha kararı bekliyor.', exBadge:'Karar bekliyor',
+          layers:[{k:'metin',hex:'#dfa94f'},{k:'koyu',hex:'#f0d7ab'},{k:'zemin',hex:'#38290f'},{k:'kenarlık',hex:'#5c4520'},{k:'nokta',hex:'#c98a2e'}] },
+        { name:'Kırmızı', token:'--ops-kirmizi-*', fg:'#e08d84', dk:'#f2c8c3', bg:'#351d1a', bd:'#5c322d', chipBg:'#23261f',
+          exTitle:'Vade geçti · 8 gün', exBody:'Café Marceau · 312 € · kapıda ödemeye düşer.', exBadge:'Gecikmiş',
+          layers:[{k:'metin',hex:'#e08d84'},{k:'koyu',hex:'#f2c8c3'},{k:'zemin',hex:'#351d1a'},{k:'kenarlık',hex:'#5c322d'},{k:'nokta',hex:'#e07a3a'}] },
+        { name:'Mavi', token:'--ops-mavi-*', fg:'#82b2d0', dk:'#c3d6e4', bg:'#1a2a36', bd:'#34505f', chipBg:'#23261f',
+          exTitle:'Aday ürün', exBody:'Fatura satırı katalogla eşleşmedi.', exBadge:'Bilgi',
+          layers:[{k:'metin',hex:'#82b2d0'},{k:'koyu',hex:'#c3d6e4'},{k:'zemin',hex:'#1a2a36'},{k:'kenarlık',hex:'#34505f'},{k:'—',hex:'#1a2a36'}] },
+        { name:'Mor', token:'--ops-mor-*', fg:'#a99adf', dk:'#d8d0ec', bg:'#241f38', bd:'#3e3560', chipBg:'#23261f',
+          exTitle:'Ajan önerisi', exBody:'Rota 2 durak fazla; sıralama değişebilir.', exBadge:'Öneri',
+          layers:[{k:'metin',hex:'#a99adf'},{k:'koyu',hex:'#d8d0ec'},{k:'zemin',hex:'#241f38'},{k:'kenarlık',hex:'#3e3560'},{k:'nokta',hex:'#8a7ae0'}] },
       ],
     };
   }
