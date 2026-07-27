@@ -19,6 +19,18 @@ export function fromCents(cents: number): number {
 }
 
 /**
+ * Kilogram başına karşılaştırma fiyatı (cent). Farklı gramajlı paketleri kıyaslanabilir kılar ve
+ * uzaktan satışta raf fiyatının yanında bulunması beklenir (INCO birim fiyat iyi uygulaması).
+ *
+ * Net ağırlık yoksa ya da sıfırsa `null` — uydurma bir kıyas, hiç kıyas olmamasından kötüdür.
+ * Sonuç gösterim içindir; hiçbir tahsilat bu sayıdan hesaplanmaz, bu yüzden en yakına yuvarlanır.
+ */
+export function pricePerKg(cents: number, netWeightG: number | null): number | null {
+  if (!netWeightG || netWeightG <= 0) return null;
+  return Math.round((cents * 1000) / netWeightG);
+}
+
+/**
  * Oransal indirim — aşağı yuvarlar (müşteri lehine değil, İŞLETME lehine değil: tutarlılık lehine).
  * Artan kuruşun nereye gideceğini `distributeDiscount` çözer; tek kalemde kalan kuruş kaybolmaz.
  */

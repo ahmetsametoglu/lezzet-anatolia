@@ -6,7 +6,7 @@ import type { ButtonHTMLAttributes } from 'react';
  * öğeler için aynı görünümü `buttonClass(...)` verir. Tasarım büyüdükçe varyant eklenir.
  */
 type ButtonVariant = 'primary' | 'secondary' | 'secondaryOnDark' | 'ghost';
-type ButtonSize = 'md' | 'sm';
+type ButtonSize = 'lg' | 'md' | 'sm';
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary: 'rounded-pill bg-olive text-white hover:bg-olive-dark disabled:bg-disabled-fill disabled:text-disabled-text',
@@ -18,10 +18,14 @@ const VARIANT: Record<ButtonVariant, string> = {
 
 // Dolgulu varyantlar (primary/secondary) ped alır; ghost yalnız metin boyutu (inline link-buton).
 const PADDED_SIZE: Record<ButtonSize, string> = {
+  // `lg` yalnız ürün detayın ana aksiyonunda: sayfanın tek satın alma butonu, toplam tutarı taşır
+  // ve mobilde ekran altına sabitlenir — kart butonlarıyla aynı ağırlıkta olamaz.
+  lg: 'px-10 py-4 text-lead',
   md: 'px-6 py-3.5 text-body',
   sm: 'px-4 py-2 text-sm',
 };
 const GHOST_SIZE: Record<ButtonSize, string> = {
+  lg: 'text-lead',
   md: 'text-body',
   sm: 'text-sm',
 };

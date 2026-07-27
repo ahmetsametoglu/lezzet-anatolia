@@ -1,4 +1,5 @@
-import type { ImageCrop, KeysetCursor } from '@lezzet/types';
+import type { TextSegment } from '@lezzet/helper';
+import type { ImageCrop, KeysetCursor, Nutrition, ProductAllergen } from '@lezzet/types';
 
 /**
  * Vitrin görünüm tipleri — müşteri yüzeyinin TEK veri sözleşmesi (08.10).
@@ -104,6 +105,72 @@ export interface StorefrontHome {
  */
 export type CatalogSort = 'featured' | 'priceAsc' | 'priceDesc';
 export const CATALOG_SORTS: CatalogSort[] = ['featured', 'priceAsc', 'priceDesc'];
+
+/**
+ * Satılabilir varyant — detay sayfasındaki "Boy seçin" kartı (K22).
+ *
+ * Fiyat KART düzeyinde değil VARYANT düzeyinde taşınır: seçim değişince fiyat, kıyas fiyatı ve
+ * butondaki toplam güncellenir; üçü de aynı satırdan gelmezse ekranda tutarsız kalırlar.
+ */
+export interface StorefrontVariant {
+  id: string;
+  /** Operatörün girdiği etiket ("700 g tepsi") — çevrilmez, ölçü ifadesidir. */
+  label: string;
+  /** null = bu kanalda fiyatı yok → varyant seçilebilir ama satın alınamaz (DOMAIN §5). */
+  priceCents: number | null;
+  /** Teklif kazandıysa üstü çizilecek referans; yoksa tanımsız. */
+  wasCents?: number;
+  comparisonCents: number | null;
+  /** Teklifin adet tavanı ("En fazla 5 adet"); tavan yoksa null. */
+  limitLabel: string | null;
+  soldOut: boolean;
+}
+
+/**
+ * Yasal beyan (INCO) — uzaktan satışta satın alma ÖNCESİ erişilebilir olmak zorundadır, bu yüzden
+ * sözleşmede opsiyonel bir süs değil, sayfanın taşıdığı asıl yüktür.
+ *
+ * Metinler `TextSegment[]` olarak gelir: operatörün `**vurgu**` işareti SUNUCUDA çözülür. Ham metni
+ * tarayıcıya gönderip orada ayrıştırmak, işaretin kullanıcıya sızma ihtimalini açık bırakırdı.
+ * Alerjen ve çapraz bulaşma listeleri KOD taşır (`gluten`), görünen ad dile göre komponentte çözülür.
+ */
+export interface StorefrontDeclaration {
+  ingredients: TextSegment[] | null;
+  allergens: ProductAllergen[];
+  /** Çapraz bulaşma — cümle bu listeden i18n şablonuyla kurulur, serbest metin taşınmaz. */
+  traces: ProductAllergen[];
+  /** Beyan tablosu; hiçbir kalemi girilmemişse null (boş tablo gösterilmez). */
+  nutrition: Nutrition | null;
+  /** Seçili varyantın net ağırlığı — besin tablosunun başlığında "Net ağırlık: 700 g". */
+  netWeightG: number | null;
+  storage: TextSegment[] | null;
+}
+
+/**
+ * Ürün detay okumasının sonucu. Sayfanın tüm bölümleri TEK turda gelir — bölüm başına çağrı yok.
+ *
+ * `reviews` bilerek YOK: yorum ve puan 17-geri-bildirim'e ait, henüz model bile kurulmadı. Sahte
+ * yorum basmak yerine bölüm hiç render edilmez — uydurma sosyal kanıt, eksik sosyal kanıttan kötüdür.
+ */
+export interface StorefrontProductDetail {
+  id: string;
+  slug: string;
+  name: string;
+  /** Sayfa hangi dildeyse o dilde tek metin; çeviri eksikse yedek dilden gelir (sayfa bunu bilmez). */
+  description: string | null;
+  image: StorefrontImage;
+  /** Galeri — ilk öğe kapak. Tek görselli üründe küçük görsel şeridi gösterilmez. */
+  gallery: StorefrontImage[];
+  /** Breadcrumb ve "benzer ürünler" başlığı için; kategorisiz üründe null. */
+  category: StorefrontCategory | null;
+  /** En az bir öğe. Tek varyantlı üründe seçim adımı HİÇ gösterilmez (`§2`). */
+  variants: StorefrontVariant[];
+  declaration: StorefrontDeclaration;
+  /** false → "yalnız bölge içi kapıya teslim" uyarısı, sepete eklemeden ÖNCE görünür. */
+  shippable: boolean;
+  /** Aynı kategoriden başka ürünler; boşsa bölüm render edilmez. */
+  similar: StorefrontProduct[];
+}
 
 /** Katalog okumasının sonucu — sayfa ve süzgeç bileşenlerinin paylaştığı şekil. */
 export interface StorefrontCatalog {

@@ -20,5 +20,8 @@ export const routing = defineRouting({
     '/': '/',
     '/login': { fr: '/connexion', de: '/anmelden', tr: '/giris' },
     '/catalog': { fr: '/catalogue', de: '/katalog', tr: '/katalog' },
+    // Slug dil-bağımsızdır (içerikten türer) — yalnız segment kelimesi çevrilir. Böylece paylaşılan
+    // link hangi dilde açılırsa açılsın aynı ürüne düşer; sosyal/WhatsApp trafiği bu sayfaya gelir.
+    '/product/[slug]': { fr: '/produit/[slug]', de: '/produkt/[slug]', tr: '/urun/[slug]' },
   },
 });

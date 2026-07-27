@@ -23,7 +23,13 @@ import { Price } from './price';
  * kırpmasını uydurmaz; görsel yoksa placeholder zemin kalır (05.11 · envanter §0B).
  */
 
-/** Kartlar henüz gerçek hedefe bağlanmıyor — rotalar (08.3+) açılınca `href` gerçek yola döner. */
+/**
+ * Ürün kartının hedefi — detay sayfası (08.11 ile açıldı). Slug dil-bağımsızdır, `Link` segment
+ * kelimesini dile göre çevirir (`/urun/...` · `/produit/...` · `/produkt/...`).
+ */
+const productHref = (slug: string) => ({ pathname: '/product/[slug]' as const, params: { slug } });
+
+/** Paket rotası HENÜZ YOK (05.5 Bundle modeli) — açılınca `productHref`'in eşi buraya gelir. */
 const PENDING_HREF = '/';
 
 interface CategoryCardProps {
@@ -87,7 +93,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
   const isOffer = product.wasCents !== undefined;
   return (
     <div className="flex flex-col overflow-hidden rounded-card border border-sand-200 bg-card">
-      <Link href={PENDING_HREF} className="relative cursor-pointer">
+      <Link href={productHref(product.slug)} className="relative cursor-pointer">
         <FramedImage
           src={product.image.url}
           alt={product.name}
@@ -109,7 +115,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
       </Link>
       <div className={['flex flex-col gap-1.5', compact ? 'p-2.5' : 'px-4 pt-3.5 pb-4'].join(' ')}>
         <Link
-          href={PENDING_HREF}
+          href={productHref(product.slug)}
           className={[
             'cursor-pointer font-sans font-bold transition-colors hover:text-olive',
             compact ? 'text-note' : 'text-body',
@@ -139,7 +145,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               {labels.addToCart}
             </span>
           ) : product.purchaseMode === 'options' ? (
-            <Link href={PENDING_HREF} className={buttonClass({ variant: 'secondary', size: 'sm', className: '!border-olive !text-olive !px-3.5 !py-2 !text-note' })}>
+            <Link href={productHref(product.slug)} className={buttonClass({ variant: 'secondary', size: 'sm', className: '!border-olive !text-olive !px-3.5 !py-2 !text-note' })}>
               {labels.options}
             </Link>
           ) : compact ? (
@@ -172,7 +178,7 @@ interface OfferCardProps {
 export function OfferCard({ offer, locale, limitLabel, compact = false }: OfferCardProps) {
   return (
     <Link
-      href={PENDING_HREF}
+      href={productHref(offer.slug)}
       className={['flex cursor-pointer items-center bg-card', compact ? 'gap-3 rounded-soft p-3' : 'gap-4 rounded-card p-4'].join(' ')}
     >
       <FramedImage

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addVat, distributeDiscount, fromCents, percentOf, removeVat, toCents, vatPortion } from './money';
+import { addVat, distributeDiscount, fromCents, percentOf, pricePerKg, removeVat, toCents, vatPortion } from './money';
 
 describe('cent dönüşümü', () => {
   it('kayan nokta sapmasını yutar', () => {
@@ -69,5 +69,18 @@ describe('percentOf', () => {
   it('aşağı yuvarlar — artan kuruş dağıtıcıya bırakılır', () => {
     expect(percentOf(1690, 15)).toBe(253); // 253,5 → 253
     expect(percentOf(1000, 10)).toBe(100);
+  });
+});
+
+describe('pricePerKg — kıyas fiyatı', () => {
+  it('gramajı kilograma ölçekler', () => {
+    expect(pricePerKg(1690, 700)).toBe(2414); // 16,90 € / 700 g → 24,14 €/kg (tasarımdaki değer)
+    expect(pricePerKg(2290, 1000)).toBe(2290); // 1 kg'lık pakette kıyas fiyatı fiyatın kendisidir
+  });
+
+  it('net ağırlık yoksa kıyas KURULMAZ', () => {
+    // Uydurma bir kıyas, hiç kıyas olmamasından kötüdür: müşteri yanlış paketi ucuz sanır.
+    expect(pricePerKg(1690, null)).toBeNull();
+    expect(pricePerKg(1690, 0)).toBeNull();
   });
 });

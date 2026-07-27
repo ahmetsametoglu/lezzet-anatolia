@@ -1,11 +1,11 @@
 import { resolvePrice } from '@lezzet/domain-core';
 import type { ActiveOffer } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
+import { pricePerKg, toCents } from '@lezzet/helper';
 import { publicImageUrl } from '@lezzet/storage';
 import { cropOf, resolveLocalizedText } from '@lezzet/types';
 import type { AvailableStock, Category, ImageMeta, Price, Product, ProductVariant } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
-import type { StorefrontCategory, StorefrontImage, StorefrontProduct } from './storefront-types';
+import type { StorefrontCategory, StorefrontImage, StorefrontProduct, StorefrontVariant } from './storefront-types';
 
 /**
  * DB satırı → vitrin kartı indirgemesi. Anasayfa ve katalog AYNI indirgemeyi kullanır; ayrı yazılsa
@@ -41,6 +41,58 @@ export interface ProductContext {
  */
 export const EMPTY_PRODUCT_CONTEXT: ProductContext = { variants: [], prices: new Map(), stock: new Map(), offers: new Map() };
 
+/**
+ * Tek varyantın satış künyesi — fiyat, kıyas fiyatı, indirim referansı, adet tavanı ve tükendi.
+ *
+ * Kart da (ilk varyanttan) detay sayfası da (her varyant için) BU indirgemeyi kullanır. Ayrı
+ * yazılsalar aynı ürün iki ekranda farklı fiyatlanabilirdi — kartta indirimli, detayda normal gibi.
+ *
+ * Karar bu katmanda VERİLMEZ: satırlar servisten toplu gelir, fiyatı saf motor çözer
+ * (`domain-core/resolvePrice`), burada yalnız motorun cevabı görünüm alanlarına dağıtılır.
+ */
+function sellingOf(variant: ProductVariant, ctx: ProductContext) {
+  const priceRows = ctx.prices.get(variant.id);
+  // Motor euro değil cent ister (para hesabı tamsayıda yapılır) — `Price.amount` euro cinsindendir.
+  const listCents = priceRows?.channelPrice ? toCents(priceRows.channelPrice.amount) : null;
+  const customerCents = priceRows?.customerPrice ? toCents(priceRows.customerPrice.amount) : null;
+
+  const resolved = resolvePrice({
+    channel: 'b2c',
+    b2bApproved: false,
+    channelPrices: listCents != null ? [{ channel: 'b2c', amountCents: listCents }] : [],
+    customerPriceCents: customerCents,
+    offer: ctx.offers.get(variant.id) ?? null,
+  });
+
+  const priceCents = resolved.sellable ? resolved.unitPriceCents : null;
+  return {
+    priceCents,
+    // Teklif kazandıysa üstü çizilen, teklifin YERİNE GEÇTİĞİ fiyattır: özel fiyat varsa o, yoksa liste.
+    wasCents: resolved.sellable && resolved.source === 'offer' ? (customerCents ?? listCents ?? undefined) : undefined,
+    // Kıyas fiyatı ÖDENEN fiyattan hesaplanır (teklif kazandıysa indirimli olandan) — müşteri
+    // karşılaştırırken bugün ödeyeceği tutarı kıyaslar. Net ağırlık girilmemişse satır düşer.
+    comparisonCents: priceCents != null ? pricePerKg(priceCents, variant.netWeightG) : null,
+    // Adet tavanı yalnız teklifte vardır (partide kalan miktar); normal satışta tavan yoktur.
+    limitLabel: resolved.sellable && resolved.quantityCap != null ? String(resolved.quantityCap) : null,
+    availableQty: ctx.stock.get(variant.id)?.availableQty ?? 0,
+  };
+}
+
+/** Varyantı detay sayfasının "Boy seçin" kartına indirger (K22). */
+export function toVariant(variant: ProductVariant, locale: Locale, ctx: ProductContext): StorefrontVariant {
+  const selling = sellingOf(variant, ctx);
+  return {
+    id: variant.id,
+    // Boy etiketi ÇOK DİLLİ ("700 g tepsi" / "plateau 700 g") — burada çözülür, sayfa dil bilmez.
+    label: resolveLocalizedText(variant.label, locale),
+    priceCents: selling.priceCents,
+    wasCents: selling.wasCents,
+    comparisonCents: selling.comparisonCents,
+    limitLabel: selling.limitLabel,
+    soldOut: selling.availableQty <= 0,
+  };
+}
+
 type ProductRow = Pick<Product, 'id' | 'slug' | 'name'> & ImageMeta;
 
 /**
@@ -62,41 +114,23 @@ type ProductRow = Pick<Product, 'id' | 'slug' | 'name'> & ImageMeta;
  * (DOMAIN §5, komponent envanteri K6).
  */
 export function toProduct(row: ProductRow, locale: Locale, ctx: ProductContext): StorefrontProduct {
-  // Fiyat ve stok, ürünün İLK aktif varyantından okunur — çok varyantlıda bu "başlangıç fiyatı"dır.
+  // Fiyat, ürünün İLK aktif varyantından okunur — çok varyantlıda bu "başlangıç fiyatı"dır.
   const variants = ctx.variants.filter((v) => v.isActive);
   const primary = variants[0];
-  const priceRows = primary ? ctx.prices.get(primary.id) : undefined;
-  // Motor euro değil cent ister (para hesabı tamsayıda yapılır) — `Price.amount` euro cinsindendir.
-  const listCents = priceRows?.channelPrice ? toCents(priceRows.channelPrice.amount) : null;
-  const customerCents = priceRows?.customerPrice ? toCents(priceRows.customerPrice.amount) : null;
-
-  const resolved = primary
-    ? resolvePrice({
-        channel: 'b2c',
-        b2bApproved: false,
-        channelPrices: listCents != null ? [{ channel: 'b2c', amountCents: listCents }] : [],
-        customerPriceCents: customerCents,
-        offer: ctx.offers.get(primary.id) ?? null,
-      })
-    : null;
-
+  const selling = primary ? sellingOf(primary, ctx) : null;
+  // Tükendi kararı kartta ÜRÜN düzeyindedir: bir boyu biten ürün listede tükenmiş görünmemeli.
   const availableQty = variants.reduce((sum, v) => sum + (ctx.stock.get(v.id)?.availableQty ?? 0), 0);
-  // Teklif kazandıysa üstü çizilen, teklifin YERİNE GEÇTİĞİ fiyattır: özel fiyat varsa o, yoksa liste.
-  const isOffer = resolved?.sellable === true && resolved.source === 'offer';
-  const wasCents = isOffer ? (customerCents ?? listCents ?? undefined) : undefined;
 
   return {
     id: row.id,
     slug: row.slug,
     name: resolveLocalizedText(row.name, locale),
     image: imageOf(row),
-    unitLabel: primary?.label ?? '',
-    // Karşılaştırma fiyatı (kg başına) net ağırlık ister; varyantta o alan yok. STUB(08.10 → 05.10)
-    comparisonCents: null,
-    priceCents: resolved?.sellable ? resolved.unitPriceCents : null,
-    wasCents,
-    // Adet sınırı yalnız teklifte vardır (partide kalan miktar); normal satışta tavan yoktur.
-    limitLabel: resolved?.sellable && resolved.quantityCap != null ? String(resolved.quantityCap) : null,
+    unitLabel: primary ? resolveLocalizedText(primary.label, locale) : '',
+    comparisonCents: selling?.comparisonCents ?? null,
+    priceCents: selling?.priceCents ?? null,
+    wasCents: selling?.wasCents,
+    limitLabel: selling?.limitLabel ?? null,
     purchaseMode: variants.length > 1 ? 'options' : 'quick',
     soldOut: availableQty <= 0,
   };

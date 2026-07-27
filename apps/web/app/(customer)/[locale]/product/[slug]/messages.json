@@ -1,0 +1,143 @@
+{
+  "tr": {
+    "back": "← Katalog",
+    "share": "WhatsApp ile paylaş",
+    "inStock": "● Stokta",
+    "soldOut": "Tükendi — yakında yeniden",
+    "chooseSize": "Boy seçin",
+    "addToCart": "Sepete ekle",
+    "addToCartTotal": "Sepete ekle — {total}",
+    "offer": "Fırsat",
+    "limit": "En fazla {n} adet",
+    "closed": "Bu ürün şu an satışa kapalı",
+    "assurance": {
+      "coldChain": "❄ Soğuk zincirle gelir",
+      "doorstep": "🚚 Bölge içi kapıya teslim",
+      "shippable": "📦 Kargoya uygun",
+      "notShippable": "🚚 Yalnız Strasbourg & bölge içi kapıya teslim — bu ürün kargoya verilemez."
+    },
+    "declaration": {
+      "ingredients": "İçindekiler ve alerjenler",
+      "traces": "Aynı tesiste {list} işlenmektedir.",
+      "nutrition": "Besin değerleri",
+      "per100g": "100 g için",
+      "netWeight": "Net ağırlık: {weight}",
+      "storage": "Saklama ve hazırlama"
+    },
+    "nutrition": {
+      "energyKj": "Enerji (kJ)",
+      "energyKcal": "Enerji (kcal)",
+      "fatG": "Yağ",
+      "saturatedFatG": "— doymuş yağ",
+      "carbohydrateG": "Karbonhidrat",
+      "sugarsG": "— şeker",
+      "proteinG": "Protein",
+      "saltG": "Tuz"
+    },
+    "similar": "Bunları da sevebilirsiniz",
+    "cart": {
+      "pending": "Sepet yakında açılıyor"
+    },
+    "card": {
+      "addToCart": "Sepete ekle",
+      "options": "Seçenekler →",
+      "priceFrom": "başlangıç fiyatı — boy detayda seçilir",
+      "offer": "Fırsat",
+      "soldOut": "Tükendi — yakında yeniden"
+    }
+  },
+  "fr": {
+    "back": "← Catalogue",
+    "share": "Partager sur WhatsApp",
+    "inStock": "● En stock",
+    "soldOut": "Épuisé — bientôt de retour",
+    "chooseSize": "Choisissez le format",
+    "addToCart": "Ajouter au panier",
+    "addToCartTotal": "Ajouter au panier — {total}",
+    "offer": "Offre",
+    "limit": "{n} maximum",
+    "closed": "Ce produit n'est pas en vente actuellement",
+    "assurance": {
+      "coldChain": "❄ Livré en chaîne du froid",
+      "doorstep": "🚚 Livraison à domicile dans la zone",
+      "shippable": "📦 Expédiable",
+      "notShippable": "🚚 Uniquement livraison à domicile à Strasbourg & environs — ce produit ne peut pas être expédié."
+    },
+    "declaration": {
+      "ingredients": "Ingrédients et allergènes",
+      "traces": "Fabriqué dans un atelier qui manipule également {list}.",
+      "nutrition": "Valeurs nutritionnelles",
+      "per100g": "pour 100 g",
+      "netWeight": "Poids net : {weight}",
+      "storage": "Conservation et préparation"
+    },
+    "nutrition": {
+      "energyKj": "Énergie (kJ)",
+      "energyKcal": "Énergie (kcal)",
+      "fatG": "Matières grasses",
+      "saturatedFatG": "— dont acides gras saturés",
+      "carbohydrateG": "Glucides",
+      "sugarsG": "— dont sucres",
+      "proteinG": "Protéines",
+      "saltG": "Sel"
+    },
+    "similar": "Vous aimerez aussi",
+    "cart": {
+      "pending": "Le panier arrive bientôt"
+    },
+    "card": {
+      "addToCart": "Ajouter",
+      "options": "Options →",
+      "priceFrom": "prix de départ — le format se choisit en détail",
+      "offer": "Offre",
+      "soldOut": "Épuisé — bientôt de retour"
+    }
+  },
+  "de": {
+    "back": "← Katalog",
+    "share": "Über WhatsApp teilen",
+    "inStock": "● Auf Lager",
+    "soldOut": "Ausverkauft — bald wieder da",
+    "chooseSize": "Größe wählen",
+    "addToCart": "In den Korb",
+    "addToCartTotal": "In den Korb — {total}",
+    "offer": "Angebot",
+    "limit": "Maximal {n} Stück",
+    "closed": "Dieses Produkt ist derzeit nicht im Verkauf",
+    "assurance": {
+      "coldChain": "❄ Lieferung in der Kühlkette",
+      "doorstep": "🚚 Lieferung an die Haustür im Liefergebiet",
+      "shippable": "📦 Versandfähig",
+      "notShippable": "🚚 Nur Lieferung an die Haustür in Straßburg & Umgebung — dieses Produkt kann nicht versandt werden."
+    },
+    "declaration": {
+      "ingredients": "Zutaten und Allergene",
+      "traces": "Wird im selben Betrieb verarbeitet wie {list}.",
+      "nutrition": "Nährwerte",
+      "per100g": "pro 100 g",
+      "netWeight": "Nettogewicht: {weight}",
+      "storage": "Aufbewahrung und Zubereitung"
+    },
+    "nutrition": {
+      "energyKj": "Energie (kJ)",
+      "energyKcal": "Energie (kcal)",
+      "fatG": "Fett",
+      "saturatedFatG": "— davon gesättigte Fettsäuren",
+      "carbohydrateG": "Kohlenhydrate",
+      "sugarsG": "— davon Zucker",
+      "proteinG": "Eiweiß",
+      "saltG": "Salz"
+    },
+    "similar": "Das könnte Ihnen auch gefallen",
+    "cart": {
+      "pending": "Der Warenkorb kommt bald"
+    },
+    "card": {
+      "addToCart": "In den Korb",
+      "options": "Optionen →",
+      "priceFrom": "Startpreis — Größe wird im Detail gewählt",
+      "offer": "Angebot",
+      "soldOut": "Ausverkauft — bald wieder da"
+    }
+  }
+}

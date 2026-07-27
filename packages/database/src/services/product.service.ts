@@ -183,6 +183,22 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     return this.getAll(undefined, { orderBy: 'sortOrder' });
   }
 
+  /**
+   * Slug ile TEK ürün + varyantları. Müşteri ürün sayfasının girişidir: URL slug taşır, slug
+   * dil-bağımsızdır (içerikten türer), bu yüzden paylaşılan link her dilde aynı ürüne düşer.
+   *
+   * Bulunamazsa `null` — çağıran 404'e çevirir. Durum süzgeci ÇAĞIRANA bırakılır: vitrin yalnız
+   * `active` ister, operasyon önizlemesi pasif ürünü de açabilmelidir.
+   */
+  async findBySlug(slug: string): Promise<ProductWithRelations | null> {
+    const page = await this.getPageAs(ProductWithRelationsSchema, { slug }, {
+      select: '*,variants:product_variant(*),collections:product_collections(collection_id)',
+      orderBy: 'sortOrder',
+      limit: 1,
+    });
+    return page.rows[0] ?? null;
+  }
+
   /** Satılabilir katalog: yalnız satışta olanlar (aday ve pasif hariç). */
   async listSellable(): Promise<Product[]> {
     return this.getAll({ status: 'active' }, { orderBy: 'sortOrder' });

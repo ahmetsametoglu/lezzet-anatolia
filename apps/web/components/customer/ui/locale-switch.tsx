@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useParams } from 'next/navigation';
 import type { Locale } from '@lezzet/i18n';
 import { LOCALES } from '@lezzet/i18n';
 import { Link, usePathname } from '@/i18n/navigation';
@@ -12,6 +13,10 @@ import { Link, usePathname } from '@/i18n/navigation';
  * Seçenekler AYNI SAYFANIN o dildeki hâline gider — `usePathname` locale'siz iç yolu verir, `Link`
  * hedef dile göre yerelleştirir (`/catalog` → `/fr/catalogue`). Ana sayfaya atmaz: dil değiştiren
  * kullanıcı okuduğu sayfada kalmalı.
+ *
+ * DİNAMİK rotada (`/product/[slug]`) yol tek başına yetmez, segment değerleri de gerekir; bunlar
+ * `useParams`'tan gelir. Slug dil-bağımsız olduğu için değer aynen taşınır — dil değiştiren müşteri
+ * aynı ürünün sayfasında kalır.
  */
 const LOCALE_LABEL: Record<Locale, string> = { tr: 'Türkçe', fr: 'Français', de: 'Deutsch' };
 
@@ -23,6 +28,7 @@ export function LocaleSwitch({ locale }: LocaleSwitchProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const params = useParams();
 
   useEffect(() => {
     if (!open) return;
@@ -55,7 +61,11 @@ export function LocaleSwitch({ locale }: LocaleSwitchProps) {
           {LOCALES.map((l) => (
             <Link
               key={l}
-              href={pathname}
+              // Yol ve segment değerleri ayrı kaynaklardan gelir; TypeScript ikisinin BİRBİRİNE ait
+              // olduğunu doğrulayamaz (rota şablonu çalışma anında belli). Etkin rotada eşleşmeleri
+              // garanti olduğu için denetim burada bilinçli olarak susturulur.
+              // @ts-expect-error -- pathname ↔ params eşleşmesi çalışma anında garanti
+              href={{ pathname, params }}
               locale={l}
               onClick={() => setOpen(false)}
               className={[
