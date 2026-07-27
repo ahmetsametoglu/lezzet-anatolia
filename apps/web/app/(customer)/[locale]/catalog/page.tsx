@@ -6,7 +6,6 @@ import { getCatalogData } from '@/lib/storefront/catalog';
 import { CATALOG_SORTS, type CatalogSort } from '@/lib/storefront/storefront-types';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { routing } from '@/i18n/routing';
-import homeMessages from '../messages.json';
 import { CatalogClient } from './catalog-client';
 import type { Messages } from './catalog-types';
 import messages from './messages.json';
@@ -34,21 +33,13 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
   const onlyOffers = offers === '1';
 
   const t: Messages = messages[locale];
-  const frame = homeMessages[locale];
   const [data, device] = await Promise.all([
     getCatalogData(locale, { categorySlug: category, search: q, sort: activeSort, onlyOffers }),
     detectDevice(),
   ]);
 
   return (
-    <SiteFrame
-      device={device}
-      locale={locale}
-      announcement={frame.announcement.mobile}
-      announcements={[frame.announcement.cold, frame.announcement.local, frame.announcement.shipping]}
-      searchPlaceholder={frame.search}
-      nav={frame.nav}
-    >
+    <SiteFrame device={device} locale={locale} showSearch>
       <CatalogClient t={t} locale={locale} data={data} active={{ category, sort: activeSort, onlyOffers }} device={device} />
     </SiteFrame>
   );

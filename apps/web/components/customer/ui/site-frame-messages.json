@@ -1,0 +1,77 @@
+{
+  "tr": {
+    "announcement": {
+      "cold": "❄ Soğuk zincirle teslim",
+      "local": "Strasbourg & çevresinde kapıya teslim",
+      "shipping": "Fransa geneline kargo",
+      "mobile": "❄ Soğuk zincirle kapıya teslim"
+    },
+    "nav": {
+      "catalog": "Katalog",
+      "packages": "Paketler",
+      "deals": "Fırsatlar",
+      "discover": "Keşif",
+      "pro": "Professionnels"
+    },
+    "search": "Ürün ara…",
+    "footer": {
+      "address": "Strasbourg, Fransa · www.lezzetanatolie.com",
+      "whatsapp": "WhatsApp ile sipariş: +33 6 XX XX XX XX",
+      "shopping": "Alışveriş",
+      "corporate": "Kurumsal",
+      "language": "Dil",
+      "about": "Hakkımızda",
+      "faq": "SSS"
+    }
+  },
+  "fr": {
+    "announcement": {
+      "cold": "❄ Livraison en chaîne du froid",
+      "local": "Livraison à domicile à Strasbourg et alentours",
+      "shipping": "Expédition dans toute la France",
+      "mobile": "❄ Livraison à domicile en chaîne du froid"
+    },
+    "nav": {
+      "catalog": "Catalogue",
+      "packages": "Coffrets",
+      "deals": "Offres",
+      "discover": "Découverte",
+      "pro": "Professionnels"
+    },
+    "search": "Rechercher un produit…",
+    "footer": {
+      "address": "Strasbourg, France · www.lezzetanatolie.com",
+      "whatsapp": "Commander sur WhatsApp : +33 6 XX XX XX XX",
+      "shopping": "Boutique",
+      "corporate": "À propos",
+      "language": "Langue",
+      "about": "Qui sommes-nous",
+      "faq": "FAQ"
+    }
+  },
+  "de": {
+    "announcement": {
+      "cold": "❄ Lieferung in der Kühlkette",
+      "local": "Hauslieferung in Straßburg und Umgebung",
+      "shipping": "Versand in ganz Frankreich",
+      "mobile": "❄ Hauslieferung in der Kühlkette"
+    },
+    "nav": {
+      "catalog": "Katalog",
+      "packages": "Pakete",
+      "deals": "Angebote",
+      "discover": "Entdecken",
+      "pro": "Professionnels"
+    },
+    "search": "Produkt suchen…",
+    "footer": {
+      "address": "Straßburg, Frankreich · www.lezzetanatolie.com",
+      "whatsapp": "Bestellen per WhatsApp: +33 6 XX XX XX XX",
+      "shopping": "Einkaufen",
+      "corporate": "Unternehmen",
+      "language": "Sprache",
+      "about": "Über uns",
+      "faq": "FAQ"
+    }
+  }
+}

@@ -1,56 +1,50 @@
 import type { ReactNode } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import { LOCALES } from '@lezzet/i18n';
 import { brand } from '@lezzet/brand';
 import { Link } from '@/i18n/navigation';
 import { SearchField } from './search-field';
+import messages from './site-frame-messages.json';
 
 /**
- * Müşteri site çerçevesi — duyuru şeridi + marka başlığı + footer. Hata sayfalarında (404/500)
- * müşteri "çıkmaz sokakta" bırakılmaz: marka ve ana sayfaya dönüş her zaman elinin altında kalır.
+ * Müşteri site çerçevesi — K11 duyuru şeridi · K12 site başlığı · K16 footer. Hata sayfalarında
+ * (404/500) müşteri "çıkmaz sokakta" bırakılmaz: marka ve ana sayfaya dönüş her zaman elinin
+ * altında kalır.
+ *
+ * METİNLERİ KENDİ TAŞIR (`site-frame-messages.json`). Sayfa `messages.json`'undan geçirilseydi aynı
+ * duyuru/gezinme/footer metni dört dosyada tekrarlanır, diller zamanla birbirinden kayardı — nitekim
+ * katalog sayfası bir süre anasayfanın metinlerini import etti (27.07 düzeltildi). Çerçeve her
+ * sayfada aynı olduğu için metni de tek yerde.
+ *
  * Cihaz forku (Sapma 3): masaüstünde açık gezinme, mobilde sadeleşmiş başlık — `md:` akışkan
  * responsive DEĞİL, `device` ile çatallanır.
- *
- * Not: gezinme etiketleri (Katalog/Paketler…) şimdilik görsel çerçevedir; ilgili müşteri rotaları
- * (`/catalog` vb.) inince `<Link>`'e bağlanır (routing.ts pathnames). Gerçek site başlığı/footer
- * komponentleri (Envanter K11/K12/K16) kodlanınca bu çerçeve onlarla değişir.
  */
-interface SiteFrameNav {
-  catalog: string;
-  packages: string;
-  deals: string;
-  discover: string;
-  pro: string;
-}
-
 interface SiteFrameProps {
   device: 'mobile' | 'desktop';
   locale: Locale;
-  /** Tek satırlık duyuru — mobilde ve `announcements` verilmediğinde kullanılır. */
-  announcement: string;
-  /**
-   * Masaüstü duyuru şeridinin maddeleri (soğuk zincir · bölge teslimi · kargo). Verilmezse tek
-   * satıra düşer: hata sayfaları tek mesaj gösterir, vitrin üç madde (tasarım: Anasayfa Web).
-   */
-  announcements?: string[];
-  /** Verilirse başlıkta arama kutusu görünür. Arama İŞLEVİ 08.3'te — burada yalnız giriş noktası. */
-  searchPlaceholder?: string;
-  nav: SiteFrameNav;
+  /** Başlıkta arama kutusu görünsün mü — vitrin sayfalarında evet, hata ekranlarında hayır. */
+  showSearch?: boolean;
   children: ReactNode;
 }
 
 /**
  * Sayfa gövdesinin azami genişliği. Tasarımın masaüstü ekranı 1360 px çizilmiştir — bu bir viewport
  * temsili DEĞİL, düzenin kendisidir: içerik daha geniş ekranda yayılmaz, ortalanır. Zeminler (duyuru
- * şeridi, footer) tam genişlikte kalır; yalnız İÇERİK bu kabın içine girer. Tek sabit — üç yerde
- * (başlık · gövde · footer) tekrar yazılmaz.
+ * şeridi, footer) tam genişlikte kalır; yalnız İÇERİK bu kabın içine girer.
  */
 const SHELL = 'mx-auto w-full max-w-[1360px]';
 
-export function SiteFrame({ device, locale, announcement, announcements, searchPlaceholder, nav, children }: SiteFrameProps) {
-  const bandItems = device === 'desktop' && announcements?.length ? announcements : [announcement];
+/** Footer'ın dil sütunu — geçerli dil ✓ ile işaretli; diğerleri aynı sayfanın o dildeki hâline gider. */
+const LOCALE_LABEL: Record<Locale, string> = { tr: 'Türkçe', fr: 'Français', de: 'Deutsch' };
+
+export function SiteFrame({ device, locale, showSearch = false, children }: SiteFrameProps) {
+  const t = messages[locale];
+  const isMobile = device === 'mobile';
+  const bandItems = isMobile ? [t.announcement.mobile] : [t.announcement.cold, t.announcement.local, t.announcement.shipping];
+
   return (
     <div className="flex min-h-screen flex-col bg-cream text-ink">
-      {/* Duyuru şeridi (K11) — hata sayfasında da render edilir */}
+      {/* K11 · Duyuru şeridi */}
       <div className="bg-olive px-4 py-2 font-sans text-note font-medium text-cream">
         <div className={`${SHELL} flex justify-center gap-7 text-center`}>
           {bandItems.map((item) => (
@@ -59,63 +53,87 @@ export function SiteFrame({ device, locale, announcement, announcements, searchP
         </div>
       </div>
 
-      {/* Başlık (K12) */}
-      {device === 'mobile' ? (
-        <header className="flex items-center justify-between border-b border-sand-300 px-5 py-3">
-          <span className="font-sans text-xl font-bold text-ink">☰</span>
-          <Link href="/" className="cursor-pointer">
-            <img src="/logo.jpg" alt={brand.name} className="h-10 mix-blend-multiply" />
-          </Link>
-          <span className="font-sans text-base text-ink">🧺</span>
-        </header>
-      ) : null}
-      {device === 'mobile' && searchPlaceholder && (
-        <div className="mx-4 mt-3">
-          <SearchField placeholder={searchPlaceholder} fullWidth />
-        </div>
-      )}
-      {device === 'desktop' && (
+      {/* K12 · Site başlığı */}
+      {isMobile ? (
+        <>
+          <header className="flex items-center justify-between border-b border-sand-300 px-5 py-3">
+            <span className="font-sans text-xl font-bold text-ink">☰</span>
+            <Link href="/" className="cursor-pointer">
+              <img src="/logo.jpg" alt={brand.name} className="h-10 mix-blend-multiply" />
+            </Link>
+            <span className="font-sans text-base text-ink">🧺</span>
+          </header>
+          {showSearch && (
+            <div className="mx-4 mt-3">
+              <SearchField placeholder={t.search} fullWidth />
+            </div>
+          )}
+        </>
+      ) : (
         <header className={`${SHELL} flex items-center gap-9 border-b border-sand-300 px-12 py-4`}>
           <Link href="/" className="cursor-pointer">
             <img src="/logo.jpg" alt={brand.name} className="h-[58px] mix-blend-multiply" />
           </Link>
           <nav className="flex gap-7 font-sans text-body font-semibold text-ink">
-            <span>{nav.catalog}</span>
-            <span>{nav.packages}</span>
-            <span className="text-terracotta">{nav.deals}</span>
-            <span>{nav.discover}</span>
-            <span>{nav.pro}</span>
+            <Link href="/catalog" className="cursor-pointer transition-colors hover:text-olive">
+              {t.nav.catalog}
+            </Link>
+            <span>{t.nav.packages}</span>
+            <span className="text-terracotta">{t.nav.deals}</span>
+            <span>{t.nav.discover}</span>
+            <span>{t.nav.pro}</span>
           </nav>
           <div className="ml-auto flex items-center gap-5 font-sans text-body font-semibold text-muted">
-            {searchPlaceholder && <SearchField placeholder={searchPlaceholder} />}
+            {showSearch && <SearchField placeholder={t.search} />}
             <span className="uppercase">{locale} ▾</span>
             <span className="text-ink">🧺</span>
           </div>
         </header>
       )}
 
-      {/* İçerik — hata gövdesi */}
       <main className={`${SHELL} flex flex-1 flex-col`}>{children}</main>
 
-      {/* Footer (K16) — cihaza göre düzen (mobilde alt alta, masaüstünde yan yana) */}
-      {/* Zemin tam genişlikte, içerik kabuk içinde — sayfa geniş ekranda ortalanır, zemin kesilmez. */}
-      <footer className="bg-ink py-6 text-neutral-400">
-        <div
-          className={[
-            SHELL,
-            'flex gap-3',
-            device === 'mobile' ? 'flex-col px-6' : 'items-center justify-between px-12',
-          ].join(' ')}
-        >
-          <span className="font-serif text-card-title-sm text-cream">{brand.name}</span>
-          <div className="flex flex-wrap gap-x-7 gap-y-2 font-sans text-sm">
-            <span>Mentions légales</span>
-            <span>CGV</span>
-            <span>Gizlilik</span>
-            <span>SSS</span>
+      {/* K16 · Footer — zemin tam genişlikte, içerik kabuk içinde (geniş ekranda zemin kesilmez). */}
+      <footer className="bg-ink text-neutral-400">
+        <div className={[SHELL, 'flex gap-8 py-9', isMobile ? 'flex-col px-4 py-6' : 'justify-between px-12'].join(' ')}>
+          <div className="flex flex-col gap-1.5 font-sans text-body-sm">
+            <span className={['font-serif text-cream', isMobile ? 'text-card-title-sm' : 'text-card-title-sm'].join(' ')}>{brand.name}</span>
+            <span>{t.footer.address}</span>
+            <span>{t.footer.whatsapp}</span>
+          </div>
+
+          <div className={['flex gap-8 font-sans text-body-sm', isMobile ? 'flex-wrap' : 'gap-12'].join(' ')}>
+            <FooterColumn title={t.footer.shopping} items={[t.nav.catalog, t.nav.packages, t.nav.deals]} />
+            <FooterColumn title={t.footer.corporate} items={[t.footer.about, t.nav.pro, t.footer.faq]} />
+            {/* Dil sütunu tek gerçek bağlantı grubudur: diğer sütunların rotaları henüz açılmadı. */}
+            <div className="flex flex-col gap-1.5">
+              <span className="font-bold text-cream">{t.footer.language}</span>
+              {LOCALES.map((l) => (
+                <Link key={l} href="/" locale={l} className="cursor-pointer transition-colors hover:text-cream">
+                  {LOCALE_LABEL[l]}
+                  {l === locale ? ' ✓' : ''}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+interface FooterColumnProps {
+  title: string;
+  items: string[];
+}
+
+function FooterColumn({ title, items }: FooterColumnProps) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="font-bold text-cream">{title}</span>
+      {items.map((item) => (
+        <span key={item}>{item}</span>
+      ))}
     </div>
   );
 }

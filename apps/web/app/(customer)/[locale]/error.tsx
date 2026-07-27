@@ -28,7 +28,7 @@ export default function CustomerError({ error, reset }: { error: Error & { diges
   }, [error]);
 
   return (
-    <SiteFrame device={device} locale={locale} announcement={errorMessages[locale].announcement} nav={errorMessages[locale].nav}>
+    <SiteFrame device={device} locale={locale}>
       <MessageScreen
         device={device}
         emoji="🍳"

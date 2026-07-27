@@ -1,7 +1,5 @@
 {
   "tr": {
-    "nav": { "catalog": "Katalog", "packages": "Paketler", "deals": "Fırsatlar", "discover": "Keşif", "pro": "Professionnels" },
-    "announcement": "❄ Soğuk zincirle teslim",
     "home": "Ana sayfa",
     "notFound": {
       "eyebrow": "404 · Sayfa bulunamadı",
@@ -19,8 +17,6 @@
     }
   },
   "fr": {
-    "nav": { "catalog": "Catalogue", "packages": "Paniers", "deals": "Offres", "discover": "Découvrir", "pro": "Professionnels" },
-    "announcement": "❄ Livraison en chaîne du froid",
     "home": "Accueil",
     "notFound": {
       "eyebrow": "404 · Page introuvable",
@@ -38,8 +34,6 @@
     }
   },
   "de": {
-    "nav": { "catalog": "Katalog", "packages": "Pakete", "deals": "Angebote", "discover": "Entdecken", "pro": "Professionnels" },
-    "announcement": "❄ Lieferung per Kühlkette",
     "home": "Startseite",
     "notFound": {
       "eyebrow": "404 · Seite nicht gefunden",

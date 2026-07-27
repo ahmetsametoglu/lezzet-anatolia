@@ -21,7 +21,7 @@ export default async function CustomerNotFound() {
   const t = errorMessages[locale];
 
   return (
-    <SiteFrame device={device} locale={locale} announcement={t.announcement} nav={t.nav}>
+    <SiteFrame device={device} locale={locale}>
       <MessageScreen
         device={device}
         emoji="🍽"
