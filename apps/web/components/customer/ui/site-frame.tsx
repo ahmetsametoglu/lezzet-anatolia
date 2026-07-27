@@ -46,9 +46,15 @@ const SHELL = 'mx-auto w-full max-w-[1360px]';
 /** Footer'ın dil sütunu — geçerli dil ✓ ile işaretli; diğerleri aynı sayfanın o dildeki hâline gider. */
 const LOCALE_LABEL: Record<Locale, string> = { tr: 'Türkçe', fr: 'Français', de: 'Deutsch' };
 
-/** Aktif gezinme öğesi: zeytin metin + 2px alt çizgi (tasarım K12). */
+/**
+ * Aktif gezinme öğesi: zeytin metin + 2px alt çizgi (tasarım K12).
+ *
+ * Alt çizgi HER öğede vardır, aktif olmayanda ŞEFFAFtır. Yalnız aktif öğeye verilirse o öğe 4px
+ * uzar, satır yüksekliği büyür ve sayfa değiştikçe tüm menü yukarı-aşağı oynar (yaşandı — 27.07).
+ * Yer baştan ayrılır, değişen tek şey renk olur.
+ */
 function navClass(key: NavKey, active: NavKey | undefined, base = ''): string {
-  return [base, active === key ? 'border-b-2 border-olive pb-0.5 text-olive' : ''].filter(Boolean).join(' ');
+  return [base, 'border-b-2 pb-0.5', active === key ? 'border-olive text-olive' : 'border-transparent'].filter(Boolean).join(' ');
 }
 
 export function SiteFrame({ device, locale, showSearch = false, activeNav, children }: SiteFrameProps) {
