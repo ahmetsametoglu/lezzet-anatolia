@@ -49,8 +49,13 @@ Siparişin doğuşundan kapanışına kadar tüm akış: sepet, checkout (teslim
   - **Zaman damgaları türetilir:** siparişte `delivered_at`/`completed_at` kolonu YOK; teslim anı, kapanış anı ve geri bildirim zamanlaması (~10 gün) `order_status_log`'dan okunur (`firstEntryAt`). Aynı gerçeği iki yere yazmamak için.
   - **Referans numarası bir kez üretilir:** ilk kalıcı durumda (motor karar verir), RPC de `coalesce` ile mevcut numarayı ezmez — çift emniyet.
   - **Kalemsiz sipariş kalmaz:** kalem yazımı düşerse taslak sipariş geri alınır. Rezervasyon ve tahsilatın da girdiği tam checkout akışı 07.4'te tek RPC'ye alınacak.
-- [ ] (07.7) **Teslim RPC'si:** tek transaction — Reservation düş + Stock fiiliden düş + `OrderItemBatch` (06'daki FEFO onayından) + kâr snapshot'ları (COGS/teslimat/komisyon/paketleme) + `delivery_proof`
+- [x] (07.7) **Teslim RPC'si:** tek transaction — Reservation düş + Stock fiiliden düş + `OrderItemBatch` (06'daki FEFO onayından) + kâr snapshot'ları (COGS/teslimat/komisyon/paketleme) + `delivery_proof`
   - *Bitti:* teslim sonrası tüm kayıtlar tutarlı; yarıda kesme testi rollback yapıyor
+  - **Durum (27.07):** `0019_deliver_order.sql` (`deliver_order` + `close_order`) · `OrderService.deliver/close` · kapı `apps/web/lib/order/fulfillment.ts`. 7 test.
+  - **Görev satırından SAPMA — kâr snapshot'ı teslimde değil, KAPANIŞTA.** `DOMAIN §12` birebir şöyle diyor: *"doğrudan gider kalemleri sipariş kapanışında sabitlenir; kapanış = `completed`'a geçiş anıdır"*. Teslim ile kapanış arasında iade/kısmi düzeltme olabilir; maliyeti teslimde dondurmak o düzeltmeleri kârın dışında bırakırdı. Bu yüzden iki fonksiyon: teslim malın **fiziksel gerçeğini** değiştirir, kapanış **parayı sabitler**. (Mimari kazanır — build/README kuralı.)
+  - **COGS gerçek maliyettir:** tüketilen partilerin KENDİ alış fiyatından, ortalamadan değil. Testte 4×2 € + 2×3 € = 14 € çıkıyor; ortalama alınsaydı 15 € olurdu.
+  - **Stok tam bir kez düşer:** teslim yalnız `out_for_delivery`'den olur (koşullu), ikinci çağrı `stale` döner ve stoğa dokunmaz (testli). Hiç hazırlanmamış sipariş teslim edilirse stok düşmez, teslim kaydı yine yazılır (kısmi karşılama).
+  - **`payment_fee` yazılmıyor:** komisyon oranları para modülüyle (12) gelir. Uydurma oranla doldurmak kârı sessizce yanlış gösterirdi — null kalıyor.
 - [ ] (07.8) **Kısmi karşılama:** `fulfilled_qty` düşümü + para dallanması (peşin → `order_refund` hareketi; kapıda → tahsilat düşer); `payment_status` türetimi (03) uygulanır
   - *Bitti:* eksik + kuponlu sipariş doğru iade tutarını üretiyor
 - [ ] (07.9) **İptal ve iade:** ödenmiş iptal → tam otomatik iade; `returned → completed` kapanışı; iade hareketleri `order_refund` tipiyle; `amount_*` cache güncellemesi (kaynak MoneyMovement)

@@ -10,6 +10,8 @@ import {
   OrderStatusLogSchema,
   OrderStatusLogInsertSchema,
   OrderStatusLogUpdateSchema,
+  CloseResultSchema,
+  DeliverResultSchema,
   PreparationResultSchema,
   TransitionResultSchema,
   DEFAULT_PAGE_SIZE,
@@ -21,6 +23,8 @@ import {
   type OrderItemUpdate,
   type OrderItemBatch,
   type OrderStatus,
+  type CloseResult,
+  type DeliverResult,
   type PreparationPick,
   type PreparationResult,
   type OrderStatusLog,
@@ -129,6 +133,38 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       })),
     });
     return PreparationResultSchema.parse(dbToApp(raw));
+  }
+
+  /**
+   * **Teslim** (07.7): ayrılmış düşer, fiili stok kayıtlı partilerden düşer, `delivery_proof`
+   * yazılır ve durum `delivered` olur — hepsi tek transaction'da. Sipariş artık yolda değilse
+   * yazmaz, `stale` döner.
+   */
+  async deliver(orderId: string, opts: { actorId?: string | null; deliveryProof?: Record<string, unknown> | null } = {}): Promise<DeliverResult> {
+    const raw = await this.executeRpc('deliver_order', {
+      p_order_id: orderId,
+      p_actor_id: opts.actorId ?? null,
+      p_delivery_proof: opts.deliveryProof ?? null,
+    });
+    return DeliverResultSchema.parse(dbToApp(raw));
+  }
+
+  /**
+   * **Kapanış** (07.7): kâr kalemleri SABİTLENİR (DOMAIN §12 — "kapanış = `completed`'a geçiş anı").
+   * COGS gerçek maliyettir: tüketilen partilerin kendi alış fiyatından, ortalamadan değil.
+   *
+   * `payment_fee` burada yazılmaz — komisyon oranları para modülüyle (12) gelir; uydurma oranla
+   * doldurmak kârı sessizce yanlış gösterirdi.
+   */
+  async close(orderId: string, costs: { actorId?: string | null; deliveryCost?: number | null; routeUnitCost?: number; packagingUnitCost?: number } = {}): Promise<CloseResult> {
+    const raw = await this.executeRpc('close_order', {
+      p_order_id: orderId,
+      p_actor_id: costs.actorId ?? null,
+      p_delivery_cost: costs.deliveryCost ?? null,
+      p_route_unit_cost: costs.routeUnitCost ?? 0,
+      p_packaging_unit_cost: costs.packagingUnitCost ?? 0,
+    });
+    return CloseResultSchema.parse(dbToApp(raw));
   }
 
   /** Siparişin kalem–parti eşlemesi — geri çağırma ve gerçek COGS bunun üstünde durur. */

@@ -179,6 +179,27 @@ export type PreparationPick = z.infer<typeof PreparationPickSchema>;
 export const PreparationResultSchema = z.object({ ok: z.boolean(), items: z.number().int() });
 export type PreparationResult = z.infer<typeof PreparationResultSchema>;
 
+/** `deliver_order` dönüşü (07.7) — `ok:false` + `stale` = sipariş artık yolda değil. */
+export const DeliverResultSchema = z.object({
+  ok: z.boolean(),
+  reason: z.literal('stale').optional(),
+  currentStatus: OrderStatusEnum,
+  /** Fiiliden düşülen toplam adet (kayıtlı partilerden). */
+  consumedQty: z.number().int().optional(),
+});
+export type DeliverResult = z.infer<typeof DeliverResultSchema>;
+
+/** `close_order` dönüşü (07.7) — kâr kalemleri kapanışta SABİTLENİR (DOMAIN §12). */
+export const CloseResultSchema = z.object({
+  ok: z.boolean(),
+  reason: z.literal('stale').optional(),
+  currentStatus: OrderStatusEnum,
+  cogsAmount: dbNumeric.optional(),
+  deliveryCost: dbNumeric.optional(),
+  packagingCost: dbNumeric.optional(),
+});
+export type CloseResult = z.infer<typeof CloseResultSchema>;
+
 /** `transition_order_status` RPC'sinin dönüşü — `ok:false` + `stale` = araya biri girdi (07.6). */
 export const TransitionResultSchema = z.object({
   ok: z.boolean(),
