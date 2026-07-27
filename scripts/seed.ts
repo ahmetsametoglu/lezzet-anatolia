@@ -12,6 +12,10 @@
  *                         Görseller 5 PAYLAŞILAN anahtara işaret eder (64 yükleme yerine 5); bir kısmı
  *                         bilinçli görselsiz. Süzgeç dağılımı: 21 beyan eksik · 8 pasif · 5 aday.
  *   ✓ product_variant     ürün başına 1-2 varyant (varyantsız üründe servis varsayılan varyant açar)
+ *   ✓ product_image       galeri (ek fotoğraflar) — YENİ DOSYA YÜKLENMEZ, aynı 5 anahtara işaret eder.
+ *                         Sayılar arayüzün her durumunu kapsar: dolu (sınır notu) · 2'li · tek · boş;
+ *                         kapaksız ürünlere de galeri verilir ("Kapak yap" takası orada denenir).
+ *                         Kırpma değerleri bilinçli farklı — odak/zoom etkisi ekranda görünsün.
  *   ✓ collection          4 koleksiyon — açıklama + kapak görseli (paylaşım/OG), aktif+pasif, dolu+boş
  *   ✓ product_collections üyelik + `position` (vitrin kürasyon sırası)
  *   ✓ user_profiles       taslak müşteriler (DOMAIN §10 WhatsApp/manuel; auth'suz, is_draft=true)
@@ -28,11 +32,12 @@ import {
   CategoryService,
   CollectionService,
   createServiceRoleClient,
+  ProductImageService,
   ProductService,
   UserProfileService,
 } from '@lezzet/database';
 import { getR2, r2Keys } from '@lezzet/storage';
-import { resolveLocalizedText, type LocalizedText, type ProductAllergen } from '@lezzet/types';
+import { PRODUCT_GALLERY_MAX, resolveLocalizedText, type LocalizedText, type ProductAllergen } from '@lezzet/types';
 
 // Seed Next.js dışında çalışır — .env'i elle yükle (Node 22 process.loadEnvFile).
 try {
@@ -202,20 +207,62 @@ const BULK_QUALIFIERS: Array<{ tr: string; fr: string; de: string }> = [
 /** Görselleri PAYLAŞILAN anahtarlar: 5 dosya bir kez yüklenir, tüm toplu ürünler bunlara işaret eder. */
 const SHARED_IMAGE_FILES = ['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg', '5.jpeg'];
 
+/** Paylaşılan görselleri bir kez yükler; R2 ayarsızsa boş dizi (kayıtlar görselsiz kurulur). */
+async function uploadSharedImages(): Promise<string[]> {
+  const keys: string[] = [];
+  for (const [i, file] of SHARED_IMAGE_FILES.entries()) {
+    const key = await uploadImage(file, r2Keys.productImage(`katalog-ornek-${i + 1}`, file));
+    if (key) keys.push(key);
+  }
+  return keys;
+}
+
+/**
+ * Ürüne galeri (ek fotoğraf) satırları ekler. Yeni DOSYA yüklenmez — paylaşılan anahtarlara işaret
+ * eder; galeri tablosunda önemli olan satırın kendisi, dosyanın tekilliği değil.
+ *
+ * Kırpma değerleri bilinçli FARKLI: hepsi merkez/zoom-100 olsaydı odak ve zoom'un çerçeveye etkisi
+ * ekranda hiç görünmezdi — kırpma editörünün doğru çalıştığı ancak farklı değerlerle anlaşılır.
+ * `sortOrder` açıkça verilir → servisin sona-ekleme sayımı seed'de gereksiz sorgu doğurmaz.
+ */
+async function seedGallery(images: ProductImageService, productId: string, keys: string[], count: number, offset: number): Promise<number> {
+  if (keys.length === 0) return 0;
+  for (let n = 0; n < count; n += 1) {
+    const step = offset + n;
+    await images.insert({
+      productId,
+      imageKey: keys[step % keys.length]!,
+      sortOrder: n,
+      imageUpdatedAt: NOW,
+      imageFocalX: 20 + (step % 5) * 15, // 20·35·50·65·80
+      imageFocalY: 20 + ((step * 2) % 5) * 15,
+      imageZoom: 100 + (step % 3) * 50, // 100·150·200
+    });
+  }
+  return count;
+}
+
+/**
+ * Elle yazılmış 5 ürünün galeri sayıları — arayüzün HER durumu denenebilsin diye seçildi:
+ * dolu (sınır notu çıkar) · normal · boş (ekleme karesi tek başına) · tek · orta.
+ */
+const HAND_GALLERY_COUNTS = [PRODUCT_GALLERY_MAX, 2, 0, 1, 3];
+
 /**
  * Toplu ürünleri oluşturur. Durum çeşitliliği İNDİSE göre serpiştirilir ki her süzgeç gerçekten
  * sonuç döndürsün: ~her 9'uncu pasif, ~her 11'inci aday, ~her 7'nci alerjensiz (beyan eksik),
  * ~her 5'incinin yalnız TR adı var (dil eksik), ~her 6'ncısı görselsiz.
  * `sortOrder` açıkça verilir → servis sona-ekleme için sayım sorgusu atmaz.
  */
-async function seedBulkProducts(products: ProductService, catId: Map<string, string>, startOrder: number): Promise<number> {
-  // Paylaşılan görseller: 5 yükleme (R2 ayarsızsa hepsi null → ürünler görselsiz kurulur).
-  const sharedKeys: Array<string | null> = [];
-  for (const [i, file] of SHARED_IMAGE_FILES.entries()) {
-    sharedKeys.push(await uploadImage(file, r2Keys.productImage(`katalog-ornek-${i + 1}`, file)));
-  }
-
+async function seedBulkProducts(
+  products: ProductService,
+  images: ProductImageService,
+  catId: Map<string, string>,
+  sharedKeys: string[],
+  startOrder: number,
+): Promise<{ made: number; photos: number }> {
   let made = 0;
+  let photos = 0;
   for (const [b, base] of BULK_BASES.entries()) {
     for (const [q, qual] of BULK_QUALIFIERS.entries()) {
       const i = b * BULK_QUALIFIERS.length + q;
@@ -225,7 +272,7 @@ async function seedBulkProducts(products: ProductService, catId: Map<string, str
         ? { tr: `${base.tr} ${qual.tr}` }
         : { tr: `${base.tr} ${qual.tr}`, fr: `${base.fr} ${qual.fr}`, de: `${base.de} ${qual.de}` };
 
-      await products.create({
+      const { product } = await products.create({
         name,
         description: trOnly ? null : { tr: `${base.tr} — ${qual.tr}.`, fr: `${base.fr} — ${qual.fr}.`, de: `${base.de} — ${qual.de}.` },
         categoryId: catId.get(base.cat) ?? null,
@@ -245,9 +292,15 @@ async function seedBulkProducts(products: ProductService, catId: Map<string, str
         variants: i % 3 === 0 ? [{ label: '700 g tepsi', netWeightG: 700 }, { label: '1 kg tepsi', netWeightG: 1000 }] : [{ label: '500 g', netWeightG: 500 }],
       });
       made += 1;
+
+      // Galeri dağılımı — arayüzün her durumu listede bulunabilsin diye: ~her 13'ü DOLU (sınır notu),
+      // ~her 4'ü iki fotoğraflı, ~her 6'sı tek. Kapaksız ürünler de (i%6) galeri alıyor: "Kapak yap"
+      // takası ancak kapağı olmayan bir üründe denendiğinde satırın galeriden çıktığı görülür.
+      const galleryCount = i % 13 === 0 ? PRODUCT_GALLERY_MAX : i % 4 === 0 ? 2 : i % 6 === 0 ? 1 : 0;
+      photos += await seedGallery(images, product.id, sharedKeys, galleryCount, i);
     }
   }
-  return made;
+  return { made, photos };
 }
 
 async function seedCatalog(db: Db): Promise<void> {
@@ -258,6 +311,10 @@ async function seedCatalog(db: Db): Promise<void> {
   }
 
   console.log('▸ KATALOG seed');
+  const images = new ProductImageService(db);
+  // Paylaşılan görseller EN BAŞTA yüklenir: hem toplu ürünlerin kapağı hem de tüm galeriler bunlara
+  // işaret eder (yükleme sayısı 5'te kalır, ürün sayısıyla artmaz).
+  const sharedKeys = await uploadSharedImages();
   const categories = new CategoryService(db);
   const catId = new Map<string, string>();
   for (const c of CATEGORIES) {
@@ -288,13 +345,16 @@ async function seedCatalog(db: Db): Promise<void> {
       sortOrder: i, // elle yazılanlar listenin BAŞINDA dursun (durum örnekleri kolay bulunsun)
       variants: p.variants,
     });
-    console.log(`  ✓ ${resolveLocalizedText(product.name)} · ${variants.length} varyant · görsel: ${imageKey ?? 'yok (R2 ayarsız)'}`);
+    const gallery = await seedGallery(images, product.id, sharedKeys, HAND_GALLERY_COUNTS[i] ?? 0, i);
+    console.log(
+      `  ✓ ${resolveLocalizedText(product.name)} · ${variants.length} varyant · görsel: ${imageKey ?? 'yok (R2 ayarsız)'} · galeri: ${gallery}`,
+    );
   }
 
   // Hacim: sayfalama ve sonsuz kaydırma ancak birkaç sayfa dolunca denenebilir.
-  const bulk = await seedBulkProducts(products, catId, PRODUCTS.length);
-  console.log(`  ✓ ${bulk} toplu ürün (sayfalama/süzgeç denemesi için)`);
-  console.log(`✓ katalog: ${CATEGORIES.length} kategori, ${PRODUCTS.length + bulk} ürün`);
+  const bulk = await seedBulkProducts(products, images, catId, sharedKeys, PRODUCTS.length);
+  console.log(`  ✓ ${bulk.made} toplu ürün (sayfalama/süzgeç denemesi için) · ${bulk.photos} galeri fotoğrafı`);
+  console.log(`✓ katalog: ${CATEGORIES.length} kategori, ${PRODUCTS.length + bulk.made} ürün`);
 }
 
 // ── Koleksiyon + üyelik (05) ─────────────────────────────────────────────────────────────────────
@@ -395,9 +455,16 @@ async function seedDraftCustomers(db: Db): Promise<void> {
   console.log('▸ TASLAK MÜŞTERİ seed');
   let created = 0;
   for (const c of DRAFT_CUSTOMERS) {
-    const result = await profiles.findOrCreate(c);
-    if (result.created) created += 1;
-    console.log(`  ${result.created ? '✓' : '·'} ${c.name} (${result.created ? 'taslak açıldı' : 'zaten var'})`);
+    // Kimlik ÇÖZÜMÜ (bağlan / oluştur / çakışma) motorun işidir — servis yalnız aday getirir. Seed'in
+    // ona ihtiyacı yok: telefonlar zaten E.164 yazılı ve tek beklenti "varsa dokunma, yoksa taslak aç"
+    // (idempotent). Bu yüzden doğrudan arama + ekleme; iş kuralı burada hesaplanmıyor (STACK §4).
+    if (await profiles.findByPhone(c.phone)) {
+      console.log(`  · ${c.name} (zaten var)`);
+      continue;
+    }
+    await profiles.insert({ ...c, type: 'type' in c ? c.type : 'individual', role: 'customer', isDraft: true });
+    created += 1;
+    console.log(`  ✓ ${c.name} (taslak açıldı)`);
   }
   console.log(`✓ taslak müşteri: ${created} yeni / ${DRAFT_CUSTOMERS.length} tanım`);
 }

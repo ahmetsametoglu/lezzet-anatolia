@@ -25,6 +25,14 @@ export const r2Keys = {
   productImage: (slug: string, sourceFilename: string): string =>
     `catalog/products/${sanitize(slug)}.${extOf(sourceFilename)}`,
 
+  /**
+   * Galeri (ek) fotoğrafı — kapaktan farklı olarak ürün başına ÇOK dosya var, dolayısıyla anahtar
+   * yalnız slug'dan türeyemez. `photoToken` fotoğrafa özgü tek kullanımlık bir kimliktir: aynı
+   * fotoğraf yeniden yüklenmez, silinince nesnesi de silinir → yetim obje kalmaz.
+   */
+  productGalleryImage: (slug: string, photoToken: string, sourceFilename: string): string =>
+    `catalog/products/${sanitize(slug)}-${sanitize(photoToken)}.${extOf(sourceFilename)}`,
+
   /** Koleksiyon kapak görseli — aynı deterministik desen (slug'a bağlı, timestamp yok). */
   collectionImage: (slug: string, sourceFilename: string): string =>
     `catalog/collections/${sanitize(slug)}.${extOf(sourceFilename)}`,

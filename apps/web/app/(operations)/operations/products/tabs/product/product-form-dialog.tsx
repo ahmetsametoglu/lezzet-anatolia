@@ -15,8 +15,8 @@ import { FormSegment } from '@/components/operation/form/form-segment';
 import { FormSwitch } from '@/components/operation/form/form-switch';
 import { FormMultiSelect } from '@/components/operation/form/form-multi-select';
 import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
-import { ImageCropField } from '@/components/operation/form/image-crop-field';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
+import { ProductPhotos } from './product-photos';
 import { suggestTranslationAction } from '../../actions/translate';
 import { createProductAction, updateProductAction, uploadProductImageAction } from './actions';
 import { VariantEditor } from './variant-editor';
@@ -85,15 +85,17 @@ export function ProductFormDialog({ mode, product, categories, device, onClose }
   // Görsel: kaynak 3:2, odak + zoom kırpması form değeri; düzenleme ayrı diyalogda. Kayıt yoksa yükleme
   // yapılamaz (R2 anahtarı slug'a bağlı) → istem gösterilir. Alt metin AYRI alan değil: boşsa müşteri
   // yüzeyinde ürün adına düşer (kopya tutulmaz) — bu yüzden formda alt-metin alanı yok.
+  // Galeri (ek fotoğraflar) aynı blokta: kapak büyük, altında şerit. Galeri CANLI yönetilir —
+  // gerekçesi ProductPhotos'ta.
   const [crop, setCrop] = useImageCrop(form);
   const imageField = (
-    <ImageCropField
-      role="product"
-      src={editing ? product.imageUrl : null}
-      crop={crop}
-      onCropChange={setCrop}
-      upload={editing ? (fd) => uploadProductImageAction(product.id, fd) : undefined}
-      uploadDisabledHint="Ürünü kaydedince görsel eklenebilir — R2 anahtarı slug'a bağlı."
+    <ProductPhotos
+      productId={editing ? product.id : null}
+      coverUrl={editing ? product.imageUrl : null}
+      coverCrop={crop}
+      onCoverCropChange={setCrop}
+      uploadCover={editing ? (fd) => uploadProductImageAction(product.id, fd) : undefined}
+      camera={device === 'mobile'}
     />
   );
 

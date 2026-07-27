@@ -1,7 +1,14 @@
+import type { ProductImage } from '@lezzet/types';
 import type { ReactNode } from 'react';
 
 // Ürün formunun sunum sözleşmesi. Kendi dosyasında: kabı (product-form-dialog) düzenleri import eder,
 // düzenler de bu tipi — tip dialogda kalsa döngüsel bağımlılık olurdu (depcruise no-circular).
+
+/**
+ * Galeri fotoğrafının form/görünüm hâli — varlıktan TÜRER, alanları yeniden yazılmaz. Tek ek:
+ * çözülmüş okuma URL'i (`imageKey` ham anahtar; adres sunucuda kurulur).
+ */
+export type ProductPhotoView = ProductImage & { imageUrl: string | null };
 
 /**
  * Kurulmuş alan elemanları — .desktop/.mobile sunumları bunları yalnız YERLEŞTİRİR (tek kaynak).

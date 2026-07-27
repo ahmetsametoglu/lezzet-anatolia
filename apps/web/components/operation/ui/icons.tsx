@@ -166,6 +166,26 @@ export function PackageIcon({ size = 26 }: { size?: number }) {
   );
 }
 
+/** Yıldız — "bunu kapak yap" (galeri karesi). Dolu değil çizgi: henüz kapak DEĞİL demek. */
+export function StarIcon({ size = 14 }: { size?: number }) {
+  return (
+    <Svg size={size} strokeWidth={1.8}>
+      <path d="m12 3.5 2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z" />
+    </Svg>
+  );
+}
+
+/** Çöp kutusu — silme (galeri karesi). */
+export function TrashIcon({ size = 14 }: { size?: number }) {
+  return (
+    <Svg size={size} strokeWidth={1.8}>
+      <path d="M4 7h16" />
+      <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+      <path d="M6.5 7l.8 12a1 1 0 0 0 1 1h7.4a1 1 0 0 0 1-1l.8-12" />
+    </Svg>
+  );
+}
+
 /** Görsel yer tutucu ikonu — ürün görseli yokken (liste + önizleme). */
 export function ImageIcon({ size = 24 }: { size?: number }) {
   return (

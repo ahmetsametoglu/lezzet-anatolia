@@ -11,32 +11,44 @@ import type { ActionResult } from '@/lib/error';
  * (no-duplication). Başarıdan sonra `router.refresh()` ile sunucu verisi tazelenir.
  */
 interface ImageUploadButtonProps {
-  /** Seçilen dosyayı ilgili action'a taşır (FormData'da `file` alanı). */
-  upload: (form: FormData) => Promise<ActionResult>;
+  /**
+   * Seçilen dosyayı ilgili action'a taşır (FormData'da `file` alanı). Dönüş `unknown` yüklü:
+   * buton yalnız `error` alanına bakar, action'ın ne döndürdüğü onu ilgilendirmez (galeri eklemesi
+   * oluşan satırı döner, kapak yüklemesi null).
+   */
+  upload: (form: FormData) => Promise<ActionResult<unknown>>;
   /** Mobilde arka kamerayı aç (capture="environment"). */
   camera?: boolean;
+  /**
+   * Birden çok dosya seçilebilsin (galeri). Dosyalar SIRAYLA yüklenir — eşzamanlı gönderim sırayı
+   * belirsizleştirir; operatör seçtiği sırayı galeride görmeyi bekler. İlk hatada durur, kalanlar
+   * gönderilmez; kısmen yüklenmiş olanlar kalır (yüklenen dosya geri alınmaz).
+   */
+  multiple?: boolean;
   className?: string;
   children: ReactNode;
 }
 
-export function ImageUploadButton({ upload, camera = false, className, children }: ImageUploadButtonProps) {
+export function ImageUploadButton({ upload, camera = false, multiple = false, className, children }: ImageUploadButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const onPick = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files ?? []);
     e.target.value = ''; // aynı dosya tekrar seçilebilsin
-    if (!file) return;
+    if (files.length === 0) return;
     setError(null);
-    const form = new FormData();
-    form.set('file', file);
     startTransition(async () => {
-      const { error: actionError } = await upload(form);
-      if (actionError) {
-        setError(actionError);
-        return;
+      for (const file of files) {
+        const form = new FormData();
+        form.set('file', file);
+        const { error: actionError } = await upload(form);
+        if (actionError) {
+          setError(actionError);
+          break; // sırayı bozmamak için dur; yüklenenler kalır
+        }
       }
       router.refresh();
     });
@@ -51,6 +63,7 @@ export function ImageUploadButton({ upload, camera = false, className, children 
         ref={inputRef}
         type="file"
         accept="image/*"
+        multiple={multiple}
         {...(camera ? { capture: 'environment' as const } : {})}
         onChange={onPick}
         className="hidden"
