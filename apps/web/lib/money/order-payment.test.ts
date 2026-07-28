@@ -15,40 +15,40 @@ const orders = new OrderService(db);
 const movements = new MoneyMovementService(db);
 const accounts = new AccountService(db);
 
-const damga = Date.now();
+const stamp = Date.now();
 let customerId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
-let kasa: string;
+let cashAccount: string;
 const acilanProfiller: string[] = [];
 
 beforeAll(async () => {
-  const category = await new CategoryService(db).create({ name: { tr: `Para testi ${damga}` } });
-  const { product, variants } = await new ProductService(db).create({ name: { tr: `Tulumba ${damga}` }, categoryId: category.id });
+  const category = await new CategoryService(db).create({ name: { tr: `Para testi ${stamp}` } });
+  const { product, variants } = await new ProductService(db).create({ name: { tr: `Tulumba ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
   productId = product.id;
   variantId = variants[0]!.id;
-  const profile = await new UserProfileService(db).insert({ name: `Para müşterisi ${damga}` });
+  const profile = await new UserProfileService(db).insert({ name: `Para müşterisi ${stamp}` });
   customerId = profile.id;
   acilanProfiller.push(profile.id);
-  kasa = (await accounts.insert({ name: `Test kasası ${damga}`, type: 'cash' })).id;
+  cashAccount = (await accounts.insert({ name: `Test kasası ${stamp}`, type: 'cash' })).id;
 });
 
 beforeEach(async () => {
-  await db.from('money_movement').delete().eq('account_id', kasa);
+  await db.from('money_movement').delete().eq('account_id', cashAccount);
   await db.from('order').delete().eq('customer_id', customerId);
 });
 
 afterAll(async () => {
-  await db.from('money_movement').delete().eq('account_id', kasa);
+  await db.from('money_movement').delete().eq('account_id', cashAccount);
   await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('account').delete().eq('id', kasa);
+  await db.from('account').delete().eq('id', cashAccount);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: acilanProfiller });
 });
 
 /** 2 × 25 € = 50 € tutarında, tamamı karşılanmış sipariş. */
-async function siparisAc(qty = 2, unitPrice = 25, shippingFee = 0) {
+async function createOrder(qty = 2, unitPrice = 25, shippingFee = 0) {
   const { order, items } = await orders.create(
     { customerId, channel: 'b2c', total: qty * unitPrice + shippingFee, shippingFee },
     [{ variantId, qty, unitPrice, vatRate: 5.5, fulfilledQty: qty }],
@@ -58,94 +58,94 @@ async function siparisAc(qty = 2, unitPrice = 25, shippingFee = 0) {
 
 describe('tahsilat → cache → ödeme durumu', () => {
   it('tahsilat cache\'i besler ve durumu `paid` yapar', async () => {
-    const { order } = await siparisAc();
+    const { order } = await createOrder();
 
-    const sonuc = await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 50, description: 'Kapıda nakit' });
-    expect(sonuc).toMatchObject({ status: 'ok', amountCollected: 50, paymentStatus: 'paid' });
+    const result = await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 50, description: 'Kapıda nakit' });
+    expect(result).toMatchObject({ status: 'ok', amountCollected: 50, paymentStatus: 'paid' });
 
-    const guncel = await orders.getById(order.id);
-    expect(guncel).toMatchObject({ amountCollected: 50, paymentStatus: 'paid' });
+    const current = await orders.getById(order.id);
+    expect(current).toMatchObject({ amountCollected: 50, paymentStatus: 'paid' });
   });
 
   it('eksik tahsilat `partial` bırakır; kalan tutar türetilir', async () => {
-    const { order } = await siparisAc();
+    const { order } = await createOrder();
 
-    const sonuc = await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 20 });
-    expect(sonuc.status).toBe('ok');
-    if (sonuc.status !== 'ok') return;
-    expect(sonuc.paymentStatus).toBe('partial');
-    expect(sonuc.derivation.amountToCollectCents).toBe(3000); // 50 − 20
+    const result = await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 20 });
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.paymentStatus).toBe('partial');
+    expect(result.derivation.amountToCollectCents).toBe(3000); // 50 − 20
   });
 
   it('iki tahsilat toplanır — cache ARTIRILMAZ, kaynaktan yeniden hesaplanır', async () => {
-    const { order } = await siparisAc();
-    await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 20 });
-    const sonuc = await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 30 });
+    const { order } = await createOrder();
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 20 });
+    const result = await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 30 });
 
-    expect(sonuc).toMatchObject({ amountCollected: 50, paymentStatus: 'paid' });
+    expect(result).toMatchObject({ amountCollected: 50, paymentStatus: 'paid' });
     expect((await movements.listByOrder(order.id))).toHaveLength(2);
   });
 
   it('iade net tahsilatı düşürür; tamamı geri dönerse durum `refunded` olur', async () => {
-    const { order } = await siparisAc();
-    await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 50 });
+    const { order } = await createOrder();
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 50 });
 
-    const sonuc = await recordOrderRefund({ orderId: order.id, accountId: kasa, amount: 50, description: 'Ürün beğenilmedi' });
-    expect(sonuc).toMatchObject({ amountCollected: 50, amountRefunded: 50, paymentStatus: 'refunded' });
+    const result = await recordOrderRefund({ orderId: order.id, accountId: cashAccount, amount: 50, description: 'Ürün beğenilmedi' });
+    expect(result).toMatchObject({ amountCollected: 50, amountRefunded: 50, paymentStatus: 'refunded' });
   });
 
   it('fazla tahsilat yeni durum AÇMAZ: `paid` kalır, fark iade borcu olarak türetilir', async () => {
-    const { order } = await siparisAc();
+    const { order } = await createOrder();
 
-    const sonuc = await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 60 });
-    expect(sonuc.status).toBe('ok');
-    if (sonuc.status !== 'ok') return;
-    expect(sonuc.paymentStatus).toBe('paid');
-    expect(sonuc.derivation.refundDueCents).toBe(1000); // 60 − 50
+    const result = await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 60 });
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.paymentStatus).toBe('paid');
+    expect(result.derivation.refundDueCents).toBe(1000); // 60 − 50
   });
 
   it('kargo ücreti karşılanan tutara girer', async () => {
-    const { order } = await siparisAc(1, 25, 7.9);
+    const { order } = await createOrder(1, 25, 7.9);
 
-    expect(await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 25 })).toMatchObject({ paymentStatus: 'partial' });
-    expect(await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 7.9 })).toMatchObject({ paymentStatus: 'paid' });
+    expect(await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 25 })).toMatchObject({ paymentStatus: 'partial' });
+    expect(await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 7.9 })).toMatchObject({ paymentStatus: 'paid' });
   });
 });
 
 describe('durum TÜRETİLİR — tahsilat değişmeden de değişir', () => {
   it('kalem eksik karşılanınca tam ödenmiş sipariş FAZLA ödenmiş olur', async () => {
-    const { order, items } = await siparisAc(); // 2 × 25 = 50
-    await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 50 });
+    const { order, items } = await createOrder(); // 2 × 25 = 50
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 50 });
 
     // Kapıda bir adet eksik çıktı: para hiç değişmedi ama karşılanan tutar yarıya indi.
     await new OrderItemService(db).setFulfilled(items[0]!.id, 1);
 
-    const sonuc = await syncOrderPaymentStatus(order.id);
-    expect(sonuc.status).toBe('ok');
-    if (sonuc.status !== 'ok') return;
-    expect(sonuc.paymentStatus).toBe('paid'); // net (50) ≥ karşılanan (25)
-    expect(sonuc.derivation.refundDueCents).toBe(2500); // müşteriye 25 € borç
+    const result = await syncOrderPaymentStatus(order.id);
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.paymentStatus).toBe('paid'); // net (50) ≥ karşılanan (25)
+    expect(result.derivation.refundDueCents).toBe(2500); // müşteriye 25 € borç
   });
 
   it('iptal edilen siparişte karşılanan 0 sayılır — tahsilatın tamamı iade borcudur', async () => {
-    const { order } = await siparisAc();
-    await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 50 });
+    const { order } = await createOrder();
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 50 });
     await db.from('order').update({ status: 'cancelled' }).eq('id', order.id);
 
-    const sonuc = await syncOrderPaymentStatus(order.id);
-    expect(sonuc.status).toBe('ok');
-    if (sonuc.status !== 'ok') return;
-    expect(sonuc.derivation.fulfilledAmountCents).toBe(0);
-    expect(sonuc.derivation.refundDueCents).toBe(5000);
+    const result = await syncOrderPaymentStatus(order.id);
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.derivation.fulfilledAmountCents).toBe(0);
+    expect(result.derivation.refundDueCents).toBe(5000);
   });
 
   it('hareket elle silinirse cache kendini düzeltir', async () => {
-    const { order } = await siparisAc();
-    await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 50 });
+    const { order } = await createOrder();
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 50 });
     await db.from('money_movement').delete().eq('order_id', order.id);
 
-    const sonuc = await syncOrderPaymentStatus(order.id);
-    expect(sonuc).toMatchObject({ amountCollected: 0, paymentStatus: 'pending' });
+    const result = await syncOrderPaymentStatus(order.id);
+    expect(result).toMatchObject({ amountCollected: 0, paymentStatus: 'pending' });
     expect((await orders.getById(order.id))?.amountCollected).toBe(0);
   });
 
@@ -156,27 +156,27 @@ describe('durum TÜRETİLİR — tahsilat değişmeden de değişir', () => {
 
 describe('hareket tablosuyla birebir', () => {
   it('sipariş tahsilat toplamı hareketlerin toplamına eşittir', async () => {
-    const { order } = await siparisAc(4, 12.5); // 50 €
-    await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 12.5 });
-    await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 17.5 });
-    await recordOrderRefund({ orderId: order.id, accountId: kasa, amount: 5 });
+    const { order } = await createOrder(4, 12.5); // 50 €
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 12.5 });
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 17.5 });
+    await recordOrderRefund({ orderId: order.id, accountId: cashAccount, amount: 5 });
 
     const hareketler = await movements.listByOrder(order.id);
     const tahsilat = hareketler.filter((h) => h.type === 'order_payment').reduce((s, h) => s + h.amount, 0);
-    const iade = hareketler.filter((h) => h.type === 'order_refund').reduce((s, h) => s + h.amount, 0);
+    const refund = hareketler.filter((h) => h.type === 'order_refund').reduce((s, h) => s + h.amount, 0);
 
-    const guncel = await orders.getById(order.id);
-    expect(guncel?.amountCollected).toBe(tahsilat);
-    expect(guncel?.amountRefunded).toBe(iade);
+    const current = await orders.getById(order.id);
+    expect(current?.amountCollected).toBe(tahsilat);
+    expect(current?.amountRefunded).toBe(refund);
   });
 
   it('sipariş parası hesabın bakiyesine de düşer — tek defter', async () => {
-    const { order } = await siparisAc();
-    const once = (await accounts.balance(kasa)).balance;
+    const { order } = await createOrder();
+    const before = (await accounts.balance(cashAccount)).balance;
 
-    await recordOrderPayment({ orderId: order.id, accountId: kasa, amount: 50 });
-    await recordOrderRefund({ orderId: order.id, accountId: kasa, amount: 10 });
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 50 });
+    await recordOrderRefund({ orderId: order.id, accountId: cashAccount, amount: 10 });
 
-    expect((await accounts.balance(kasa)).balance).toBe(once + 40);
+    expect((await accounts.balance(cashAccount)).balance).toBe(before + 40);
   });
 });

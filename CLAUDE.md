@@ -11,6 +11,7 @@
 
 ## 0. Kırmızı çizgiler
 - **Onaysız `git commit`/`push` YOK.** Onay her commit için ayrı; "commitle" bir sonrakini kapsamaz. → WORKFLOW §5
+- **Çalışma ağacını topluca silen komut YOK** — `git checkout -- .`, `git restore .`, `git reset --hard`, `git clean`, yolsuz `git stash`. Bunlar KULLANICININ komutudur. Geri alma daima **yol adı vererek** ve önce doğrulanarak yapılır. → WORKFLOW §5
 - Canlı DB'ye bağlanma / prod env dosyası okuma yok. → WORKFLOW §4
 - Kanıtsız "oldu/geçti" deme; çıktıyı göster. → WORKFLOW §1
 

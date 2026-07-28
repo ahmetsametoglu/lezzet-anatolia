@@ -15,23 +15,23 @@ const suppliers = new SupplierService(db);
 const intakes = new StockIntakeService(db);
 const accounts = new AccountService(db);
 
-const damga = Date.now();
+const stamp = Date.now();
 let supplierId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
-let banka: string;
+let bankAccount: string;
 
 const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
-  const category = await new CategoryService(db).create({ name: { tr: `Borç testi ${damga}` } });
-  const { product, variants } = await new ProductService(db).create({ name: { tr: `Un ${damga}` }, categoryId: category.id });
+  const category = await new CategoryService(db).create({ name: { tr: `Borç testi ${stamp}` } });
+  const { product, variants } = await new ProductService(db).create({ name: { tr: `Un ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
   productId = product.id;
   variantId = variants[0]!.id;
-  supplierId = (await suppliers.insert({ name: `Borç tedarikçisi ${damga}` })).id;
-  banka = (await accounts.insert({ name: `Borç bankası ${damga}`, type: 'bank' })).id;
+  supplierId = (await suppliers.insert({ name: `Borç tedarikçisi ${stamp}` })).id;
+  bankAccount = (await accounts.insert({ name: `Borç bankası ${stamp}`, type: 'bank' })).id;
 });
 
 beforeEach(async () => {
@@ -44,7 +44,7 @@ afterAll(async () => {
   await db.from('money_movement').delete().eq('supplier_id', supplierId);
   await db.from('stock').delete().eq('variant_id', variantId);
   await db.from('stock_intake').delete().eq('supplier_id', supplierId);
-  await db.from('account').delete().eq('id', banka);
+  await db.from('account').delete().eq('id', bankAccount);
   await db.from('supplier').delete().eq('id', supplierId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId] });
 });
@@ -63,46 +63,46 @@ describe('tedarikçi borcu TÜRETİLİR', () => {
   it('ödeme borcu kapatır; kalan doğru türetilir', async () => {
     await malKabul();
 
-    const sonuc = await recordSupplierPayment({ supplierId, accountId: banka, amount: 25, description: 'Kısmi ödeme' });
-    expect(sonuc.status).toBe('ok');
+    const result = await recordSupplierPayment({ supplierId, accountId: bankAccount, amount: 25, description: 'Kısmi ödeme' });
+    expect(result.status).toBe('ok');
 
     expect(await suppliers.debt(supplierId)).toMatchObject({ intakeTotal: 40, paid: 25, balance: 15 });
   });
 
   it('tamamı ödenince borç sıfırlanır', async () => {
     await malKabul();
-    await recordSupplierPayment({ supplierId, accountId: banka, amount: 40 });
+    await recordSupplierPayment({ supplierId, accountId: bankAccount, amount: 40 });
     expect((await suppliers.debt(supplierId)).balance).toBe(0);
   });
 
   it('birden çok giriş ve ödeme toplanır', async () => {
     await malKabul(10, 4); // 40
     await malKabul(5, 6); // 30
-    await recordSupplierPayment({ supplierId, accountId: banka, amount: 20 });
-    await recordSupplierPayment({ supplierId, accountId: banka, amount: 15.5 });
+    await recordSupplierPayment({ supplierId, accountId: bankAccount, amount: 20 });
+    await recordSupplierPayment({ supplierId, accountId: bankAccount, amount: 15.5 });
 
     expect(await suppliers.debt(supplierId)).toMatchObject({ intakeTotal: 70, paid: 35.5, balance: 34.5 });
   });
 
   it('ödeme mal kabule bağlanabilir — hangi girişin kapandığı görünür', async () => {
-    const giris = await malKabul();
-    const sonuc = await recordSupplierPayment({ supplierId, accountId: banka, amount: 40, stockIntakeId: giris.intakeId });
+    const intake = await malKabul();
+    const result = await recordSupplierPayment({ supplierId, accountId: bankAccount, amount: 40, stockIntakeId: intake.intakeId });
 
-    expect(sonuc.status).toBe('ok');
-    if (sonuc.status !== 'ok') return;
-    expect(sonuc.movement.stockIntakeId).toBe(giris.intakeId);
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.movement.stockIntakeId).toBe(intake.intakeId);
   });
 
   it('ödeme hesabın bakiyesinden de düşer — tek defter', async () => {
-    const once = (await accounts.balance(banka)).balance;
+    const before = (await accounts.balance(bankAccount)).balance;
     await malKabul();
-    await recordSupplierPayment({ supplierId, accountId: banka, amount: 40 });
+    await recordSupplierPayment({ supplierId, accountId: bankAccount, amount: 40 });
 
-    expect((await accounts.balance(banka)).balance).toBe(once - 40);
+    expect((await accounts.balance(bankAccount)).balance).toBe(before - 40);
   });
 
   it('bağsız alım reddedilir — borç bu bağın üstünde duruyor', async () => {
-    expect(await recordMovement({ accountId: banka, direction: 'out', amount: 10, type: 'purchase' })).toMatchObject({
+    expect(await recordMovement({ accountId: bankAccount, direction: 'out', amount: 10, type: 'purchase' })).toMatchObject({
       status: 'invalid',
       reason: 'supply_link_missing',
     });

@@ -117,6 +117,25 @@ Gerekçe: yereldeki veri "değersiz" değildir. Kullanıcı elle ürün girmiş,
 - **Yaşandı (27.07.2026):** paralel ajan `-A` ile stage'ledi; fiyat motoru doküman kararları ilgisiz bir görsel-kırpma commit'inin içinde kaldı. İçerik kaybolmadı ama tarihçe okunamaz oldu — kural teoride değil, pratikte kırılıyor
 - Yarış durumu oluştuysa **düzeltmeye kalkışma** — durumu bildir, kararı kullanıcıya bırak. Geçmişi düzeltme denemesi neredeyse her zaman durumu kötüleştirir
 
+### Geri alma: yıkıcı komutlar kullanıcınındır
+
+**Ajan çalışma ağacını topluca geri alan hiçbir komutu çalıştırmaz.** Yasak liste (kapsamı `.` ya da kapsamsız olanlar):
+
+| Komut | Ne siler |
+| --- | --- |
+| `git checkout -- .` · `git restore .` | İzlenen tüm dosyalardaki commit'lenmemiş değişiklikler |
+| `git reset --hard` | Aynısı + index |
+| `git clean -fd` | İzlenmeyen tüm dosyalar (başka ajanın yeni dosyaları dahil) |
+| `git stash` (yolsuz) | Tüm ağacı rafa kaldırır; başkasının işi de gider |
+
+**Neden bu kadar sert:** git'in "bu değişikliği kim yaptı" kavramı **yoktur**. Çalışma ağacında commit'lenmemiş ne varsa, kimin yazdığına bakmadan üzerine yazılır. Ve bu içerik hiç nesne veritabanına girmediği için **geri alınamaz** — reflog commit'leri kurtarır, kaydedilmemiş dosya içeriğini değil.
+
+**Kural:** düzenlemenin yarıçapı geniş olabilir, **geri almanınki asla olmamalı.** Kendi işini geri alacaksan yol ver: `git checkout -- path/a path/b` ya da `git stash push -- path/a`.
+
+**Geri almadan önce doğrula.** Dosyada senden başka değişiklik olmadığını programla kanıtla: `HEAD`'deki içeriğe kendi düzenlemeni yeniden uygula; sonuç çalışma kopyasıyla **birebir aynıysa** o dosyadaki tek fark senindir, güvenle geri alınır. Aynı değilse **dokunma** — orada başkasının işi var.
+
+**Yaşandı (28.07.2026):** ajan depo genelinde kimlik adı değiştirme çalıştırdı, aracı çok satırlı şablon dizgilerinde kodu bozdu ve **kendi** hatasını geri almak için `git checkout -- .` çalıştırdı — iki kez. Paralel ajanın commit'lenmemiş şema düzenlemesi silindi; kanıtı, `order.service.ts`'in var olmayan bir `RecallHitSchema`'yı import eder hâlde kalmasıydı. İzlenmeyen yeni dosyalar hayatta kaldı, mevcut dosyalara yapılan düzenlemeler kayboldu. **Asıl hata geri almada değil, ondan öncesindeydi:** ortak bir çalışma ağacında kapsamı sınırsız bir düzenleme başlatmak. Böyle bir işi ayrı dalda/çalışma ağacında yap (§7).
+
 ---
 
 ## 6. Önce mevcut olanı kullan

@@ -10,15 +10,15 @@ const db = serviceDb();
 const accounts = new AccountService(db);
 const movements = new MoneyMovementService(db);
 
-const damga = Date.now();
+const stamp = Date.now();
 const acilanlar: string[] = [];
-let kasa: string;
-let banka: string;
+let cashAccount: string;
+let bankAccount: string;
 
 beforeAll(async () => {
-  kasa = (await accounts.insert({ name: `Kapı kasası ${damga}`, type: 'cash' })).id;
-  banka = (await accounts.insert({ name: `Kapı bankası ${damga}`, type: 'bank' })).id;
-  acilanlar.push(kasa, banka);
+  cashAccount = (await accounts.insert({ name: `Kapı kasası ${stamp}`, type: 'cash' })).id;
+  bankAccount = (await accounts.insert({ name: `Kapı bankası ${stamp}`, type: 'bank' })).id;
+  acilanlar.push(cashAccount, bankAccount);
 });
 
 afterAll(async () => {
@@ -31,30 +31,30 @@ afterAll(async () => {
 
 describe('elle hareket girişi', () => {
   it('geçerli gider yazılır', async () => {
-    const sonuc = await recordMovement({ accountId: kasa, direction: 'out', amount: 120, type: 'expense', category: 'akaryakıt' });
-    expect(sonuc.status).toBe('ok');
-    if (sonuc.status !== 'ok') return;
-    expect(sonuc.movement.category).toBe('akaryakıt');
+    const result = await recordMovement({ accountId: cashAccount, direction: 'out', amount: 120, type: 'expense', category: 'akaryakıt' });
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.movement.category).toBe('akaryakıt');
   });
 
   it('tipin yönüne uymayan hareket YAZILMADAN reddedilir', async () => {
-    const once = (await accounts.balance(kasa)).movementCount;
+    const before = (await accounts.balance(cashAccount)).movementCount;
     // "Gider" deyip parayı içeri almak: veritabanı için geçerli, rapor için yalan.
-    const sonuc = await recordMovement({ accountId: kasa, direction: 'in', amount: 50, type: 'expense' });
+    const result = await recordMovement({ accountId: cashAccount, direction: 'in', amount: 50, type: 'expense' });
 
-    expect(sonuc).toMatchObject({ status: 'invalid', reason: 'direction_mismatch' });
-    expect((await accounts.balance(kasa)).movementCount).toBe(once); // tek satır bile yazılmadı
+    expect(result).toMatchObject({ status: 'invalid', reason: 'direction_mismatch' });
+    expect((await accounts.balance(cashAccount)).movementCount).toBe(before); // tek satır bile yazılmadı
   });
 
   it('siparişsiz sipariş tahsilatı reddedilir — cache o bağdan türetilecek (12.2)', async () => {
-    expect(await recordMovement({ accountId: kasa, direction: 'in', amount: 30, type: 'order_payment' })).toMatchObject({
+    expect(await recordMovement({ accountId: cashAccount, direction: 'in', amount: 30, type: 'order_payment' })).toMatchObject({
       status: 'invalid',
       reason: 'order_link_missing',
     });
   });
 
   it('bağsız stok alımı reddedilir — tedarikçi borcu bu bağdan türetilecek (12.3)', async () => {
-    expect(await recordMovement({ accountId: kasa, direction: 'out', amount: 300, type: 'purchase' })).toMatchObject({
+    expect(await recordMovement({ accountId: cashAccount, direction: 'out', amount: 300, type: 'purchase' })).toMatchObject({
       status: 'invalid',
       reason: 'supply_link_missing',
     });
@@ -63,20 +63,20 @@ describe('elle hareket girişi', () => {
 
 describe('transfer', () => {
   it('tek satır yazar, iki hesabı simetrik etkiler', async () => {
-    const kasaOnce = (await accounts.balance(kasa)).balance;
-    const bankaOnce = (await accounts.balance(banka)).balance;
+    const cashBefore = (await accounts.balance(cashAccount)).balance;
+    const bankBefore = (await accounts.balance(bankAccount)).balance;
 
-    const sonuc = await transfer({ fromAccountId: kasa, toAccountId: banka, amount: 200, description: 'Günlük yatırma' });
-    expect(sonuc.status).toBe('ok');
+    const result = await transfer({ fromAccountId: cashAccount, toAccountId: bankAccount, amount: 200, description: 'Günlük yatırma' });
+    expect(result.status).toBe('ok');
 
-    expect((await accounts.balance(kasa)).balance).toBe(kasaOnce - 200);
-    expect((await accounts.balance(banka)).balance).toBe(bankaOnce + 200);
-    if (sonuc.status !== 'ok') return;
-    expect(await movements.getById(sonuc.movement.id)).toMatchObject({ type: 'transfer', direction: 'out', counterAccountId: banka });
+    expect((await accounts.balance(cashAccount)).balance).toBe(cashBefore - 200);
+    expect((await accounts.balance(bankAccount)).balance).toBe(bankBefore + 200);
+    if (result.status !== 'ok') return;
+    expect(await movements.getById(result.movement.id)).toMatchObject({ type: 'transfer', direction: 'out', counterAccountId: bankAccount });
   });
 
   it('kendine transfer reddedilir', async () => {
-    expect(await transfer({ fromAccountId: kasa, toAccountId: kasa, amount: 10 })).toMatchObject({
+    expect(await transfer({ fromAccountId: cashAccount, toAccountId: cashAccount, amount: 10 })).toMatchObject({
       status: 'invalid',
       reason: 'transfer_same_account',
     });

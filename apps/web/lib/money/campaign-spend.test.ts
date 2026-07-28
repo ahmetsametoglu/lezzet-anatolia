@@ -13,64 +13,64 @@ const db = serviceDb();
 const accounts = new AccountService(db);
 const movements = new MoneyMovementService(db);
 
-const damga = Date.now();
+const stamp = Date.now();
 /** Kampanya adları damgalı, dönem de seed'in dokunmadığı geçmişte — rapor şirket geneli okur. */
-const BAYRAM = `bayram-${damga}`;
-const YILBASI = `yilbasi-${damga}`;
-let banka: string;
+const BAYRAM = `bayram-${stamp}`;
+const YILBASI = `yilbasi-${stamp}`;
+let bankAccount: string;
 
 const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
-const DONEM = { from: gun(-200), to: gun(-180) };
+const PERIOD = { from: gun(-200), to: gun(-180) };
 
 beforeAll(async () => {
-  banka = (await accounts.insert({ name: `Reklam bankası ${damga}`, type: 'bank' })).id;
+  bankAccount = (await accounts.insert({ name: `Reklam bankası ${stamp}`, type: 'bank' })).id;
 });
 
 beforeEach(async () => {
-  await db.from('money_movement').delete().eq('account_id', banka);
+  await db.from('money_movement').delete().eq('account_id', bankAccount);
 });
 
 afterAll(async () => {
-  await db.from('money_movement').delete().eq('account_id', banka);
-  await db.from('account').delete().eq('id', banka);
+  await db.from('money_movement').delete().eq('account_id', bankAccount);
+  await db.from('account').delete().eq('id', bankAccount);
 });
 
 /** Dönemdeki kampanya kırılımı — testin açtığı satırlar dışındakiler bu pencereye düşmez. */
-const rapor = () => movements.campaignSpend(DONEM.from, DONEM.to);
+const rapor = () => movements.campaignSpend(PERIOD.from, PERIOD.to);
 
 describe('reklam gideri kampanya etiketiyle girer', () => {
   it('etiket `meta.campaign`e, kategori `advertising`e yazılır', async () => {
-    const sonuc = await recordAdvertisingExpense({ accountId: banka, amount: 250, campaign: BAYRAM, valueDate: gun(-190) });
+    const result = await recordAdvertisingExpense({ accountId: bankAccount, amount: 250, campaign: BAYRAM, valueDate: gun(-190) });
 
-    expect(sonuc.status).toBe('ok');
-    if (sonuc.status !== 'ok') return;
-    expect(sonuc.movement).toMatchObject({ type: 'expense', direction: 'out', category: 'advertising', meta: { campaign: BAYRAM } });
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.movement).toMatchObject({ type: 'expense', direction: 'out', category: 'advertising', meta: { campaign: BAYRAM } });
   });
 
   it('aynı kampanyanın birden çok ödemesi tek satırda toplanır', async () => {
-    await recordAdvertisingExpense({ accountId: banka, amount: 250, campaign: BAYRAM, valueDate: gun(-195) });
-    await recordAdvertisingExpense({ accountId: banka, amount: 130.5, campaign: BAYRAM, valueDate: gun(-185) });
+    await recordAdvertisingExpense({ accountId: bankAccount, amount: 250, campaign: BAYRAM, valueDate: gun(-195) });
+    await recordAdvertisingExpense({ accountId: bankAccount, amount: 130.5, campaign: BAYRAM, valueDate: gun(-185) });
 
     expect(await rapor()).toEqual([{ campaign: BAYRAM, total: 380.5, count: 2 }]);
   });
 
   it('kampanyalar ayrı satırdır, büyük gider önce gelir', async () => {
-    await recordAdvertisingExpense({ accountId: banka, amount: 90, campaign: YILBASI, valueDate: gun(-190) });
-    await recordAdvertisingExpense({ accountId: banka, amount: 400, campaign: BAYRAM, valueDate: gun(-190) });
+    await recordAdvertisingExpense({ accountId: bankAccount, amount: 90, campaign: YILBASI, valueDate: gun(-190) });
+    await recordAdvertisingExpense({ accountId: bankAccount, amount: 400, campaign: BAYRAM, valueDate: gun(-190) });
 
     expect((await rapor()).map((s) => s.campaign)).toEqual([BAYRAM, YILBASI]);
   });
 
   it('dönem dışı reklam gideri raporda yoktur — ROI dönemi kendi giderini görür', async () => {
-    await recordAdvertisingExpense({ accountId: banka, amount: 500, campaign: BAYRAM, valueDate: gun(-300) });
+    await recordAdvertisingExpense({ accountId: bankAccount, amount: 500, campaign: BAYRAM, valueDate: gun(-300) });
     expect(await rapor()).toEqual([]);
   });
 });
 
 describe('hiçbir reklam parası rapordan düşmez', () => {
   it('etiketsiz reklam gideri ATILMAZ, `null` kovasında görünür', async () => {
-    await recordAdvertisingExpense({ accountId: banka, amount: 200, campaign: BAYRAM, valueDate: gun(-190) });
-    await recordAdvertisingExpense({ accountId: banka, amount: 75, valueDate: gun(-190) }); // ajans faturası, kampanyası belirsiz
+    await recordAdvertisingExpense({ accountId: bankAccount, amount: 200, campaign: BAYRAM, valueDate: gun(-190) });
+    await recordAdvertisingExpense({ accountId: bankAccount, amount: 75, valueDate: gun(-190) }); // ajans faturası, kampanyası belirsiz
 
     const satirlar = await rapor();
     expect(satirlar).toHaveLength(2);
@@ -80,17 +80,17 @@ describe('hiçbir reklam parası rapordan düşmez', () => {
   });
 
   it('boş etiket kendi kovasını açmaz — etiketsizle aynı yere düşer', async () => {
-    await recordAdvertisingExpense({ accountId: banka, amount: 40, campaign: '   ', valueDate: gun(-190) });
-    await recordAdvertisingExpense({ accountId: banka, amount: 60, valueDate: gun(-190) });
+    await recordAdvertisingExpense({ accountId: bankAccount, amount: 40, campaign: '   ', valueDate: gun(-190) });
+    await recordAdvertisingExpense({ accountId: bankAccount, amount: 60, valueDate: gun(-190) });
 
     expect(await rapor()).toEqual([{ campaign: null, total: 100, count: 2 }]);
   });
 
   it('süzgeç TİP değil KATEGORİ: reklam kategorili başka tipteki ödeme de sayılır', async () => {
-    await recordAdvertisingExpense({ accountId: banka, amount: 100, campaign: BAYRAM, valueDate: gun(-190) });
+    await recordAdvertisingExpense({ accountId: bankAccount, amount: 100, campaign: BAYRAM, valueDate: gun(-190) });
     // Ajansa yapılan sınıflandırılmamış ödeme — tipe göre süzseydik gider eksik, ROI şişkin çıkardı.
     await movements.insert({
-      accountId: banka, direction: 'out', amount: 50, type: 'misc',
+      accountId: bankAccount, direction: 'out', amount: 50, type: 'misc',
       category: 'advertising', meta: { campaign: BAYRAM }, valueDate: gun(-190),
     });
 
@@ -98,9 +98,9 @@ describe('hiçbir reklam parası rapordan düşmez', () => {
   });
 
   it('geri gelen reklam parası gideri AZALTIR — iptal edilen reklam gider olarak kalmaz', async () => {
-    await recordAdvertisingExpense({ accountId: banka, amount: 300, campaign: BAYRAM, valueDate: gun(-195) });
+    await recordAdvertisingExpense({ accountId: bankAccount, amount: 300, campaign: BAYRAM, valueDate: gun(-195) });
     await movements.insert({
-      accountId: banka, direction: 'in', amount: 120, type: 'misc',
+      accountId: bankAccount, direction: 'in', amount: 120, type: 'misc',
       category: 'advertising', meta: { campaign: BAYRAM }, description: 'Meta reklam kredisi', valueDate: gun(-185),
     });
 
@@ -108,7 +108,7 @@ describe('hiçbir reklam parası rapordan düşmez', () => {
   });
 
   it('reklam DIŞI gider kampanya raporuna karışmaz', async () => {
-    await recordExpense({ accountId: banka, amount: 1450, category: 'kira', valueDate: gun(-190) });
+    await recordExpense({ accountId: bankAccount, amount: 1450, category: 'kira', valueDate: gun(-190) });
     expect(await rapor()).toEqual([]);
   });
 });
