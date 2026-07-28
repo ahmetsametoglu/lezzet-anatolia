@@ -1,7 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { BundleService, PriceService, ProductService, StockService, VARIANT_POOL_LIMIT, serviceDb } from '@lezzet/database';
+import {
+  BundleService,
+  PriceService,
+  ProductService,
+  ProductVariantService,
+  StockService,
+  VARIANT_POOL_LIMIT,
+  serviceDb,
+} from '@lezzet/database';
 import { bundleBalance } from '@lezzet/domain-core';
 import { fromCents, toCents } from '@lezzet/helper';
 import { getR2, r2Keys } from '@lezzet/storage';
@@ -64,42 +72,86 @@ function requireBalanced(items: BundleItemEntry[], totalPrice: number | undefine
 interface BundleFormData {
   /** Düzenlenen paketin kalemleri (yeni pakette boş) — sıralı. */
   items: BundleItemEntry[];
-  /** Seçicinin ve hesabın havuzu: ad · görsel · birim fiyat · maliyet · KDV · hedef marj. */
-  pool: VariantOption[];
+  /**
+   * YALNIZ paketteki kalemlerin seçenek verisi (ad · görsel · birim fiyat · maliyet · KDV · marj).
+   * Seçicinin havuzu DEĞİL: eklenecek ürünler aramayla gelir (`searchBundleVariantsAction`).
+   */
+  options: VariantOption[];
+}
+
+/** Aramada kaç ürün döner — seçici bir liste değil, daralt-ve-seç aracıdır. */
+const VARIANT_SEARCH_LIMIT = 20;
+
+/**
+ * Verilen ürünlerin seçenek verisi: havuz satırı + b2c liste fiyatı + birim maliyet.
+ *
+ * İki çağıranı var (form açılışı ve arama) ve ikisi de AYNI üç okumayı ister; ayrı yazılsalardı
+ * kalemin formda gördüğü fiyatla aramada gördüğü fiyat bir gün ayrışırdı.
+ */
+async function optionsForProducts(db: ReturnType<typeof serviceDb>, productIds: string[]): Promise<VariantOption[]> {
+  if (productIds.length === 0) return [];
+  const poolRows = await new ProductService(db).listPool(VARIANT_POOL_LIMIT, productIds);
+
+  // Fiyat ve maliyet havuz kimliklerini bekler; ikisi de TEK turda (varyant başına sorgu yok).
+  const variantIds = poolRows.flatMap((p) => p.variants.map((v) => v.id));
+  const [priceRows, unitCosts] = await Promise.all([
+    new PriceService(db).findApplicableMap(variantIds, 'b2c'),
+    new StockService(db).unitCostMap(variantIds),
+  ]);
+  const listPrices = new Map(
+    [...priceRows].flatMap(([id, { channelPrice }]) => (channelPrice ? [[id, channelPrice.amount] as const] : [])),
+  );
+  return toVariantOptions(poolRows, listPrices, unitCosts);
 }
 
 /**
- * Diyalog açılışının TEK okuması: bu paketin kalemleri + varyant havuzu (fiyat ve maliyetle).
+ * Kalem seçicisinin kaynağı — **arama SUNUCUDA**, katalog forma indirilmez.
+ *
+ * Havuz eskiden tek seferde çekiliyordu (500 ürün tavanı): katalog o tavanı aştığı gün seçici,
+ * eksik olduğunu söylemeden eksik liste gösterirdi (CLAUDE.md §1). Arama ürün adında yapılır ve
+ * eşleşen ürünün tüm boyları döner.
+ */
+export async function searchBundleVariantsAction(term: string): Promise<ActionResult<VariantOption[]>> {
+  try {
+    await requireStaff();
+    const query = term.trim();
+    if (!query) return { data: [], error: null };
+
+    const db = serviceDb();
+    const page = await new ProductService(db).listPriceRows({ filters: { query }, limit: VARIANT_SEARCH_LIMIT });
+    return { data: await optionsForProducts(db, page.rows.map((p) => p.id)), error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Diyalog açılışı: bu paketin kalemleri + YALNIZ o kalemlerin seçenek verisi (fiyat ve maliyetle).
  *
  * Bu veri sayfa açılışında ÇEKİLMEZ. Liste satırının ihtiyacı özet sayılar (`bundle_list_rows()`) ve
  * onları katalogun tamamını taşıyarak hesaplamak yanlıştı: Ürünler sekmesine bakan operatör hiç
- * açmayacağı bir formun havuzunu ödüyordu. Havuz ancak form açılınca, bir kez okunur.
+ * açmayacağı bir formun havuzunu ödüyordu.
+ *
+ * Katalogun tamamı ARTIK BURADA DA okunmuyor: form açılışı paketin kendi kalemlerini bilmek
+ * zorundadır (adı, fiyatı, maliyeti satırda yazıyor), eklenecek ürünler ise aramayla gelir. Boş bir
+ * paket formu açmak artık sıfır ürün okur.
  */
 export async function loadBundleFormAction(bundleId: string | null): Promise<ActionResult<BundleFormData>> {
   try {
     await requireStaff();
     const db = serviceDb();
-    const [items, poolRows] = await Promise.all([
-      bundleId ? new BundleService(db).listItems(bundleId) : Promise.resolve([]),
-      new ProductService(db).listPool(VARIANT_POOL_LIMIT),
-    ]);
+    const items = bundleId ? await new BundleService(db).listItems(bundleId) : [];
 
-    // Fiyat ve maliyet havuz kimliklerini bekler; ikisi de TEK turda (varyant başına sorgu yok).
-    const variantIds = poolRows.flatMap((p) => p.variants.map((v) => v.id));
-    const [priceRows, unitCosts] = await Promise.all([
-      new PriceService(db).findApplicableMap(variantIds, 'b2c'),
-      new StockService(db).unitCostMap(variantIds),
-    ]);
-    const listPrices = new Map(
-      [...priceRows].flatMap(([id, { channelPrice }]) => (channelPrice ? [[id, channelPrice.amount] as const] : [])),
-    );
+    // Kalemlerin ürünleri: varyanttan ürüne çıkmak tek okuma, oradan seçenek verisi türetilir.
+    const itemVariants = await new ProductVariantService(db).listByIds(items.map((i) => i.variantId));
+    const options = await optionsForProducts(db, [...new Set(itemVariants.map((v) => v.productId))]);
 
     return {
       data: {
         items: [...items]
           .sort((a, b) => a.sortOrder - b.sortOrder)
           .map((i) => ({ id: i.id, variantId: i.variantId, qty: i.qty, allocatedUnitPrice: i.allocatedUnitPrice })),
-        pool: toVariantOptions(poolRows, listPrices, unitCosts),
+        options,
       },
       error: null,
     };

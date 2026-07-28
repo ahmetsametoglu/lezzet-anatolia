@@ -204,8 +204,11 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
    * Satır sayısı değil satır GENİŞLİĞİ pahalıydı. Süzgeç yok: havuz hem "eklenebilirler" hem "pakette
    * duran kalemin adı" sorusuna hizmet ediyor (pasif ürün de adıyla görünmeli).
    */
-  async listPool(limit: number): Promise<ProductPool[]> {
-    return this.getAllAs(ProductPoolSchema, undefined, {
+  async listPool(limit: number, productIds?: readonly string[]): Promise<ProductPool[]> {
+    // Kimlik verilirse havuz o ürünlere daralır: aramalı seçicide önce eşleşme bulunur, havuz
+    // yalnız BULUNANLAR için okunur — katalogun tamamını çekmenin yerini bu alır.
+    if (productIds && productIds.length === 0) return [];
+    return this.getAllAs(ProductPoolSchema, productIds ? { id: [...productIds] } : undefined, {
       select: 'id,name,image_key,image_updated_at,status,vat_rate,target_margin_percent,variants:product_variant(id,label,is_active)',
       orderBy: 'sortOrder',
       limit,

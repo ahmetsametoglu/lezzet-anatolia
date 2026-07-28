@@ -17,7 +17,13 @@ import { ImageCropField } from '@/components/operation/form/image-crop-field';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { FormSection } from '../product/form-section';
 import { suggestTranslationAction } from '../../actions/translate';
-import { createBundleAction, loadBundleFormAction, updateBundleAction, uploadBundleImageAction } from './actions';
+import {
+  createBundleAction,
+  loadBundleFormAction,
+  searchBundleVariantsAction,
+  updateBundleAction,
+  uploadBundleImageAction,
+} from './actions';
 import { BundleItemsEditor } from './bundle-items-editor';
 import { bundlePricing, priceFromDiscount } from './bundle-pricing';
 import { BundleFormSchema, buildBundleDefaults, bundleBlock, toBundlePayload, type BundleFormValues } from './bundle-form-schema';
@@ -57,7 +63,24 @@ export function BundleFormDialog({ bundle, device, onClose }: BundleFormDialogPr
    * düştüğünde otomatik dağıtım tetiklenir ve kayıtlı payları üzerine yazardı — formu açmak veriyi
    * değiştirmemeli.
    */
+  // Bilinen seçenekler: açılışta paketin KENDİ kalemleri, sonra arama sonuçlarıyla birikir.
+  // Katalogun tamamı hiç indirilmez; ama bir kez görülen boy (kalem satırında adı/fiyatı yazan)
+  // arama değişse de unutulmaz — yoksa yeni bir terim yazınca satırlar adsız kalırdı.
   const [pool, setPool] = useState<VariantOption[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const mergeOptions = (incoming: VariantOption[]) =>
+    setPool((current) => {
+      const byId = new Map((current ?? []).map((o) => [o.variantId, o]));
+      for (const option of incoming) byId.set(option.variantId, option);
+      return [...byId.values()];
+    });
+  const searchVariants = (term: string) => {
+    if (!term.trim()) return;
+    setSearching(true);
+    void searchBundleVariantsAction(term)
+      .then(({ data }) => mergeOptions(data ?? []))
+      .finally(() => setSearching(false));
+  };
   useEffect(() => {
     let alive = true;
     void loadBundleFormAction(bundle?.id ?? null).then((res) => {
@@ -66,7 +89,7 @@ export function BundleFormDialog({ bundle, device, onClose }: BundleFormDialogPr
         setError(res.error);
         return;
       }
-      setPool(res.data.pool);
+      setPool(res.data.options);
       form.reset(buildBundleDefaults(bundle, res.data.items));
     });
     return () => {
@@ -243,7 +266,13 @@ export function BundleFormDialog({ bundle, device, onClose }: BundleFormDialogPr
             </FormSection>
   
             {/* Paylar burada TÜRETİLİR: editör yalnız alan yazar (`setValue`), formun sahibi bu dialog. */}
-            <BundleItemsEditor control={control} pool={pool} setValue={setValue} />
+            <BundleItemsEditor
+              control={control}
+              pool={pool}
+              setValue={setValue}
+              onSearch={searchVariants}
+              searching={searching}
+            />
           </div>
         </form>
       )}

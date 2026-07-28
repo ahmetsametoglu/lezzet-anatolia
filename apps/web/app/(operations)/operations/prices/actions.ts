@@ -7,7 +7,6 @@ import {
   PriceService,
   ProductService,
   UserProfileService,
-  VARIANT_POOL_LIMIT,
   serviceDb,
 } from '@lezzet/database';
 import { fromCents } from '@lezzet/helper';
@@ -167,19 +166,35 @@ export async function removeCustomerPriceAction(
 }
 
 /**
- * Özel fiyat formunun boy havuzu — DİYALOG AÇILINCA okunur (paket formunun deseni). Sayfa açılışında
- * okunsaydı, kanal sekmesine bakan admin hiç açmayacağı bir formun katalogunu da öderdi.
+ * Boy seçicisinin kaynağı — **arama SUNUCUDA**, katalogun tamamı indirilmez.
+ *
+ * Önce havuz tek seferde çekiliyordu (500 ürün tavanıyla): katalog o tavanı aşınca seçici, eksik
+ * olduğunu söylemeden eksik liste gösterirdi — CLAUDE.md §1'in "veriyle büyüyen küme" kuralına
+ * aykırı sessiz bir kırpma. Artık yazılan terim aranır; boş terimde hiçbir şey okunmaz.
+ *
+ * Okuma `listPriceRows`: dar alanlı (beyan/besin metinleri gelmez) ve zaten sorgu süzgecini
+ * destekliyor — seçici için ayrı bir okuma yolu açmak, aynı işin ikinci kopyası olurdu.
+ * Arama ÜRÜN ADINDA yapılır ve eşleşen ürünün tüm boyları döner; "baklava" yazan, baklavanın
+ * boylarını arıyordur.
  */
-export async function loadVariantPoolAction(): Promise<ActionResult<VariantOption[]>> {
+const VARIANT_SEARCH_LIMIT = 20;
+
+export async function searchVariantsAction(term: string): Promise<ActionResult<VariantOption[]>> {
   try {
     await requireAdmin();
-    const pool = await new ProductService(serviceDb()).listPool(VARIANT_POOL_LIMIT);
-    const options = pool.flatMap((product) =>
+    const query = term.trim();
+    if (!query) return { data: [], error: null };
+
+    const page = await new ProductService(serviceDb()).listPriceRows({
+      filters: { query },
+      limit: VARIANT_SEARCH_LIMIT,
+    });
+    const options = page.rows.flatMap((product) =>
       product.variants.map((variant) => ({
         variantId: variant.id,
         title: titleOf(resolveLocalizedText(product.name), resolveLocalizedText(variant.label)),
         // Pasif/aday ürün ya da kapalı boy: seçilebilir ama ekran söyler — özel fiyat, satışa
-        // açılmadan önce hazırlanabilen bir anlaşmadır.
+        // açılmadan önce de hazırlanabilen bir anlaşmadır.
         sellable: product.status === 'active' && variant.isActive,
       })),
     );
@@ -189,7 +204,6 @@ export async function loadVariantPoolAction(): Promise<ActionResult<VariantOptio
   }
 }
 
-/** Müşteri arama (özel fiyat seçicisi) — ad · telefon · e-posta; sonuç tavanlı. */
 export async function searchCustomersAction(term: string): Promise<ActionResult<CustomerOption[]>> {
   try {
     await requireAdmin();

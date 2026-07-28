@@ -64,6 +64,9 @@ interface BundleItemsEditorProps {
   control: Control<BundleFormValues>;
   /** Katalogdaki TÜM birimler: adlandırma hepsinden, ekleme menüsü yalnız `addable` olanlardan. */
   pool: VariantOption[];
+  /** Kalem seçicisinin ASENKRON kaynağı — katalog forma indirilmez (bkz. `searchBundleVariantsAction`). */
+  onSearch: (term: string) => void;
+  searching: boolean;
   /**
    * Alan yazımı — dağıtım payları TEK TEK yazar, diziyi baştan kurmaz. `replace()` alanların
    * kimliklerini yeniler, yani satır yeniden mount olur ve o an ADET hücresine yazan operatörün odağı
@@ -72,7 +75,7 @@ interface BundleItemsEditorProps {
   setValue: UseFormSetValue<BundleFormValues>;
 }
 
-export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditorProps) {
+export function BundleItemsEditor({ control, pool, setValue, onSearch, searching }: BundleItemsEditorProps) {
   const { fields, append, remove, replace } = useFieldArray({ control, name: 'items' });
   // Canlı değerler: mutabakat her tuş vuruşunda yeniden hesaplanmalı; `fields` yalnız dizi yapısı
   // değişince yenilenir ve yazılanı geride bırakır.
@@ -202,11 +205,13 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
           // Menüde yalnız EKLENEBİLİR olanlar: pasif/aday ürünü pakete yeni koymak istemezsin. Ama
           // pakette duran pasif kalem yine adıyla görünür (havuz onu da taşıyor).
           options={pool.filter((p) => p.addable).map((p) => ({ value: p.variantId, label: p.label, imageUrl: p.imageUrl }))}
+          onSearch={onSearch}
+          loading={searching}
           selected={selected}
           onChange={onPick}
           hideSelected
           addLabel="+ kalem"
-          searchPlaceholder="Ürün ya da boy ara…"
+          searchPlaceholder="Ürün adı ara…"
         />
       </div>
 

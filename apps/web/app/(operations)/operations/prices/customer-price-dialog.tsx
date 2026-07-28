@@ -1,20 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { vatBaseOf } from '@lezzet/domain-core';
 import { fromCents, toCents } from '@lezzet/helper';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
-import { Input } from '@/components/operation/form/input';
+import { Combobox } from '@/components/operation/form/combobox';
+import { FieldShell } from '@/components/operation/form/field-shell';
 import { MoneyField } from '@/components/operation/form/money-input';
-import { MultiSelect } from '@/components/operation/form/multi-select';
 import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { money, percent } from '@/components/operation/ui/format';
 import {
-  loadVariantPoolAction,
   removeCustomerPriceAction,
   searchCustomersAction,
+  searchVariantsAction,
   setCustomerPriceAction,
 } from './actions';
 import type { Channel } from '@lezzet/types';
@@ -27,9 +27,6 @@ import type { CustomerOption, CustomerPriceRow, VariantOption } from './prices-t
 //
 // Kanal seçimi zorunlu ve tabanı ekranda yazılı: B2C fiyatı KDV DAHİL, B2B hariç (DOMAIN §5). Aynı
 // müşteriye iki kanalda iki ayrı özel fiyat verilebilir — ikisi ayrı satırdır.
-
-/** Müşteri araması URL'e değil, doğrudan sunucuya gider; yazarken her tuşta gitmesin. */
-const SEARCH_DEBOUNCE_MS = 300;
 
 interface CustomerPriceDialogProps {
   /** Dolu → düzenleme (müşteri ve boy kilitli); boş → yeni özel fiyat. */
@@ -44,20 +41,47 @@ export function CustomerPriceDialog({ editing, onClose }: CustomerPriceDialogPro
   const [customer, setCustomer] = useState<CustomerOption | null>(
     editing ? { id: editing.customerId, name: editing.customerName, hint: '', isCompany: editing.isCompany } : null,
   );
-  const [variantId, setVariantId] = useState<string>(editing?.variantId ?? '');
+  const [picked, setPicked] = useState<VariantOption | null>(null);
   const [channel, setChannel] = useState<Channel>(editing?.channel ?? 'b2b');
   const [amount, setAmount] = useState<number | null>(editing ? fromCents(editing.specialCents) : null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Boy havuzu diyalog açılınca okunur; düzenlemede de okunur çünkü boyun ADI gösterilecek.
+  // Boy araması da SUNUCUDA (müşteri aramasıyla aynı gerekçe): katalog veriyle büyür, tamamını
+  // diyaloga indirmek bir gün sessizce eksik liste gösterirdi. Düzenlemede seçici hiç açılmaz —
+  // boy kilitlidir ve adı satırdan gelir, yani bu okuma yalnız YENİ kayıtta yapılır.
   const [pool, setPool] = useState<VariantOption[]>([]);
-  useEffect(() => {
-    void loadVariantPoolAction().then(({ data }) => setPool(data ?? []));
-  }, []);
+  const [poolLoading, setPoolLoading] = useState(false);
+  const searchVariants = (term: string) => {
+    if (!term.trim()) {
+      setPool([]);
+      return;
+    }
+    setPoolLoading(true);
+    void searchVariantsAction(term)
+      .then(({ data }) => setPool(data ?? []))
+      .finally(() => setPoolLoading(false));
+  };
 
-  const selectedVariant = pool.find((v) => v.variantId === variantId) ?? null;
-  const variantTitle = selectedVariant?.title ?? editing?.variantTitle ?? '';
+  // Müşteri araması SUNUCUDA: liste veriyle büyür, tamamını diyaloga indirmek yanlış olurdu.
+  // Gecikme (debounce) `Combobox`'ın içinde — burada yalnız sonuç ve bekleme durumu tutulur.
+  const [results, setResults] = useState<CustomerOption[]>([]);
+  const [searching, setSearching] = useState(false);
+  const search = (term: string) => {
+    if (!term.trim()) {
+      setResults([]);
+      return;
+    }
+    setSearching(true);
+    void searchCustomersAction(term)
+      .then(({ data }) => setResults(data ?? []))
+      .finally(() => setSearching(false));
+  };
+
+  // Seçim KENDİ durumunda durur, arama sonuçlarından türetilmez: her yeni terim listeyi
+  // değiştirir ve seçili boy ekrandan silinirdi (müşteri seçicisinin deseni).
+  const selectedVariant = picked;
+  const variantId = editing?.variantId ?? picked?.variantId ?? '';
 
   const listCents = editing?.listCents ?? null;
   const amountCents = amount === null ? null : toCents(amount);
@@ -133,36 +157,54 @@ export function CustomerPriceDialog({ editing, onClose }: CustomerPriceDialogPro
       {isEdit ? (
         <LockedRow label="Müşteri" value={editing.customerName} note={editing.isCompany ? 'B2B' : 'B2C'} />
       ) : (
-        <CustomerPicker selected={customer} onSelect={setCustomer} />
+        <FieldShell label="Müşteri" required>
+          <Combobox
+            value={customer?.id ?? ''}
+            selectedLabel={customer?.name}
+            onChange={(id) => setCustomer(results.find((c) => c.id === id) ?? null)}
+            options={results.map((c) => ({
+              value: c.id,
+              label: c.name,
+              meta: c.hint,
+              trailing: c.isCompany ? 'B2B' : 'B2C',
+            }))}
+            onSearch={search}
+            loading={searching}
+            placeholder="Müşteri seç"
+            searchPlaceholder="Ad, telefon ya da e-posta ara…"
+            emptyText="Eşleşen müşteri yok. Kaydı olmayan müşteri önce Müşteriler ekranından açılmalı."
+          />
+        </FieldShell>
       )}
 
       {isEdit ? (
         <LockedRow label="Boy" value={editing.variantTitle} note={editing.channel === 'b2b' ? 'B2B' : 'B2C'} />
       ) : (
-        <div className="flex flex-col gap-1.5">
-          <span className="font-ops-body text-ops-xs font-medium text-ops-body">Boy</span>
-          <div className="flex items-center gap-2.5">
-            {/* Aramalı seçici TEK kaynak (`MultiSelect`): burada tek seçim gibi kullanılıyor — son
-                seçilen kazanır. Katalog seçicisi için ikinci bir bileşen yazılmadı. */}
-            <MultiSelect
-              options={pool.map((v) => ({ value: v.variantId, label: v.title }))}
-              selected={variantId ? [variantId] : []}
-              onChange={(next) => setVariantId(next[next.length - 1] ?? '')}
-              hideSelected
-              addLabel={variantId ? '+ değiştir' : '+ boy seç'}
-              searchPlaceholder="Ürün ya da boy ara…"
-            />
-            <span className={`truncate font-ops-body text-ops-sm ${variantId ? 'text-ops-ink' : 'text-ops-faint'}`}>
-              {variantTitle || 'boy seçilmedi'}
-            </span>
-          </div>
+        <FieldShell label="Boy" required>
+          <Combobox
+            value={variantId}
+            onChange={(id) => setPicked(pool.find((v) => v.variantId === id) ?? null)}
+            options={pool.map((v) => ({
+              value: v.variantId,
+              label: v.title,
+              // Satışa kapalı boy GİZLENMEZ, işaretlenir: özel fiyat satışa açılmadan önce de
+              // hazırlanabilir (aşağıdaki uyarı bunu söyler).
+              meta: v.sellable ? undefined : 'satışa kapalı',
+            }))}
+            onSearch={searchVariants}
+            loading={poolLoading}
+            selectedLabel={selectedVariant?.title}
+            placeholder="Boy seç"
+            searchPlaceholder="Ürün adı ara…"
+            emptyText="Eşleşen ürün yok"
+          />
           {selectedVariant && !selectedVariant.sellable ? (
             <span className="font-ops-body text-ops-xs text-ops-amber-dark">
               Bu boy şu an satışa kapalı (ürün pasif/aday ya da boy kapalı). Özel fiyat yine de yazılabilir — satışa
               açıldığında yürürlükte olur.
             </span>
           ) : null}
-        </div>
+        </FieldShell>
       )}
 
       {!isEdit ? (
@@ -232,86 +274,3 @@ function LockedRow({ label, value, note }: LockedRowProps) {
   );
 }
 
-interface CustomerPickerProps {
-  selected: CustomerOption | null;
-  onSelect: (customer: CustomerOption | null) => void;
-}
-
-/**
- * Müşteri seçici — arama SUNUCUDA. Müşteri kümesi veriyle sınırsız büyür; havuzu diyaloga indirmek
- * katalogla aynı şey değil, listenin tavanı yok. Bu yüzden yazdıkça aranır, sonuç tavanlıdır.
- */
-function CustomerPicker({ selected, onSelect }: CustomerPickerProps) {
-  const [term, setTerm] = useState('');
-  const [results, setResults] = useState<CustomerOption[]>([]);
-  const [searching, setSearching] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-  }, []);
-
-  const onTerm = (next: string) => {
-    setTerm(next);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!next.trim()) {
-      setResults([]);
-      return;
-    }
-    setSearching(true);
-    debounceRef.current = setTimeout(() => {
-      void searchCustomersAction(next)
-        .then(({ data }) => setResults(data ?? []))
-        .finally(() => setSearching(false));
-    }, SEARCH_DEBOUNCE_MS);
-  };
-
-  if (selected) {
-    return (
-      <div className="flex items-center justify-between gap-3 rounded-ops-card border border-ops-olive-line bg-ops-olive-bg px-3.5 py-2.5">
-        <div className="flex min-w-0 flex-col gap-px">
-          <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-olive-dark">
-            Müşteri
-          </span>
-          <span className="truncate font-ops-body text-ops-sm font-medium text-ops-ink">{selected.name}</span>
-        </div>
-        <Button variant="secondary" size="sm" onClick={() => onSelect(null)}>
-          Değiştir
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="font-ops-body text-ops-xs font-medium text-ops-body">Müşteri</span>
-      <Input value={term} onChange={(e) => onTerm(e.target.value)} placeholder="Ad, telefon ya da e-posta ara…" />
-      {term.trim() ? (
-        <div className="max-h-[168px] overflow-y-auto rounded-ops-card border border-ops-line">
-          {searching && results.length === 0 ? (
-            <span className="block px-3.5 py-2.5 font-ops-body text-ops-xs text-ops-muted">Aranıyor…</span>
-          ) : results.length === 0 ? (
-            <span className="block px-3.5 py-2.5 font-ops-body text-ops-xs text-ops-muted">
-              Eşleşen müşteri yok. Müşteri kaydı yoksa önce Müşteriler ekranından açılmalı.
-            </span>
-          ) : (
-            results.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => onSelect(c)}
-                className="flex w-full cursor-pointer flex-col items-start gap-px border-b border-ops-line-soft px-3.5 py-2 text-left transition-colors last:border-b-0 hover:bg-ops-subtle"
-              >
-                <span className="font-ops-body text-ops-sm font-medium text-ops-ink">
-                  {c.name}
-                  {c.isCompany ? <span className="ml-1.5 font-ops-mono text-ops-micro text-ops-blue">B2B</span> : null}
-                </span>
-                <span className="font-ops-body text-ops-xs text-ops-muted">{c.hint}</span>
-              </button>
-            ))
-          )}
-        </div>
-      ) : null}
-    </div>
-  );
-}

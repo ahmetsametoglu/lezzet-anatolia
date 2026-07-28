@@ -1,0 +1,178 @@
+'use client';
+
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { AnchoredMenu } from '../ui/anchored-menu';
+import { SearchIcon } from '../ui/icons';
+import { useOptionSearch } from './use-option-search.hook';
+
+/**
+ * ARANABILIR TEKİL SEÇİCİ (combobox) — Komponent Envanteri O8'in "gelişmiş" varyantı; tasarımda
+ * arama satırı + iki satırlı öğe (ad/meta) + sağda değer olarak çizili.
+ *
+ * `Select` bunu baştan beri kendi yorumunda erteliyordu ("gerçek tüketicisi gelince ayrı dosya
+ * olarak eklenecek"). Tüketici üç taneymiş ve üçü de kendi çözümünü uydurmuştu: boy seçicisi
+ * `MultiSelect`'i tek seçim gibi kullanıp seçileni YANINDA bir `<span>`'de gösteriyordu (form alanı
+ * gibi durmuyordu), müşteri seçicisi diyalogun içine gömülü ayrı bir arama+liste yazmıştı, süzgeç
+ * şeridi ise aramasız `Select`'le idare ediyordu. Üç arama arayüzü, tek ekranda.
+ *
+ * İKİ KİP: yerel (seçenekler elde) ve uzak (`onSearch` — kaynak sunucuda). İkisinin davranışı
+ * `useOptionSearch`'te, çoklu seçiciyle ORTAK: gecikme, süzme ve sıfırlama tek yerde.
+ */
+
+// Dışa verilmez: çağıranlar nesne literali geçiyor, tipi adıyla anan yok.
+interface ComboOption {
+  value: string;
+  label: string;
+  /** İkinci satır — telefon/e-posta, kategori, durum notu. */
+  meta?: string;
+  /** Sağa hizalı değer (fiyat, rozet metni) — tasarımdaki mono sütun. */
+  trailing?: string;
+  /** Sol görsel — ürün seçicide küçük resim; yoksa yer de tutulmaz. */
+  thumb?: ReactNode;
+}
+
+interface ComboboxProps {
+  value: string;
+  onChange: (value: string) => void;
+  /** Yerel kipte tüm seçenekler; uzak kipte sunucudan dönen SON sonuç kümesi. */
+  options: ComboOption[];
+  /** Seçili değerin etiketi seçenek listesinde YOKSA (uzak kip, kapalı hâl) dışarıdan verilir. */
+  selectedLabel?: string;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  /** Verilirse UZAK kip: yazılan terim gecikmeli olarak buraya gelir, sonuçları çağıran doldurur. */
+  onSearch?: (term: string) => void;
+  loading?: boolean;
+  /** Sonuç yokken gösterilecek cümle — "neden yok ve ne yapmalı" burada söylenir. */
+  emptyText?: string;
+  disabled?: boolean;
+  className?: string;
+}
+
+export function Combobox({
+  value,
+  onChange,
+  options,
+  selectedLabel,
+  placeholder = 'Seç',
+  searchPlaceholder = 'Ara…',
+  onSearch,
+  loading = false,
+  emptyText = 'Eşleşen kayıt yok',
+  disabled,
+  className,
+}: ComboboxProps) {
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const { query, onQuery, reset, visible, remote } = useOptionSearch({ options, onSearch, match: matches });
+
+  const selected = options.find((o) => o.value === value) ?? null;
+  const triggerText = selected?.label ?? selectedLabel ?? '';
+
+  // Açılınca imleç arama kutusuna: seçici zaten "arayarak bul" için var, fareyle ikinci bir tık
+  // istemek o vaadi bozardı.
+  useEffect(() => {
+    if (open) searchRef.current?.focus();
+  }, [open]);
+
+  return (
+    <div ref={anchorRef} className={className}>
+      <button
+        type="button"
+        onClick={() => {
+          reset();
+          setOpen((v) => !v);
+        }}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={[
+          'flex w-full cursor-pointer items-center justify-between gap-3 rounded-ops-card border bg-ops-white px-[13px] py-[7px] font-ops-body text-ops-base font-medium outline-none transition-colors',
+          open ? 'border-[1.5px] border-ops-olive' : 'border border-ops-line-strong hover:border-ops-olive',
+          triggerText ? 'text-ops-ink' : 'text-ops-faint',
+          disabled ? 'cursor-not-allowed opacity-60' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <span className="truncate">{triggerText || placeholder}</span>
+        <span className="flex-none text-ops-faint">{open ? '▴' : '▾'}</span>
+      </button>
+
+      <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width="anchor">
+        <div className="flex items-center gap-2 border-b border-ops-line px-[13px] py-2.5 text-ops-faint">
+          <SearchIcon size={14} />
+          <input
+            ref={searchRef}
+            value={query}
+            onChange={(e) => onQuery(e.target.value)}
+            placeholder={searchPlaceholder}
+            className="w-full bg-transparent font-ops-body text-ops-sm text-ops-ink outline-none placeholder:text-ops-faint"
+          />
+        </div>
+
+        <div role="listbox" className="max-h-[264px] overflow-y-auto">
+          {loading && visible.length === 0 ? (
+            <Note text="Aranıyor…" />
+          ) : visible.length === 0 ? (
+            <Note text={remote && !query.trim() ? searchPlaceholder : emptyText} />
+          ) : (
+            visible.map((o) => (
+              <Row
+                key={o.value}
+                option={o}
+                selected={o.value === value}
+                onPick={() => {
+                  onChange(o.value);
+                  setOpen(false);
+                }}
+              />
+            ))
+          )}
+        </div>
+      </AnchoredMenu>
+    </div>
+  );
+}
+
+/** Yerel süzme etiketin YANINDA meta'yı da tarar: "0612…" yazan kişi telefonla arıyordur. */
+function matches(option: ComboOption, q: string): boolean {
+  return option.label.toLowerCase().includes(q) || (option.meta?.toLowerCase().includes(q) ?? false);
+}
+
+function Note({ text }: { text: string }) {
+  return <span className="block px-[13px] py-2.5 font-ops-body text-ops-xs text-ops-muted">{text}</span>;
+}
+
+interface RowProps {
+  option: ComboOption;
+  selected: boolean;
+  onPick: () => void;
+}
+
+function Row({ option, selected, onPick }: RowProps) {
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={selected}
+      onClick={onPick}
+      className={[
+        'flex w-full cursor-pointer items-center gap-2.5 px-[13px] py-2 text-left transition-colors',
+        selected ? 'bg-ops-olive-bg' : 'hover:bg-ops-subtle',
+      ].join(' ')}
+    >
+      {option.thumb ? <span className="flex-none">{option.thumb}</span> : null}
+      <span className="flex min-w-0 flex-1 flex-col gap-px">
+        <span className={`truncate font-ops-body text-ops-sm ${selected ? 'font-semibold text-ops-ink' : 'text-ops-strong'}`}>
+          {option.label}
+        </span>
+        {option.meta ? <span className="truncate font-ops-body text-ops-xs text-ops-muted">{option.meta}</span> : null}
+      </span>
+      {option.trailing ? (
+        <span className="flex-none font-ops-mono text-ops-xs text-ops-body">{option.trailing}</span>
+      ) : null}
+    </button>
+  );
+}
