@@ -36,7 +36,7 @@ export default async function Home({ params }: HomeProps) {
   const [data, device] = await Promise.all([getHomeData(locale), detectDevice()]);
 
   return (
-    <SiteFrame device={device} locale={locale} showSearch>
+    <SiteFrame device={device} locale={locale}>
       <HomeClient t={t} locale={locale as Locale} data={data} device={device} />
     </SiteFrame>
   );

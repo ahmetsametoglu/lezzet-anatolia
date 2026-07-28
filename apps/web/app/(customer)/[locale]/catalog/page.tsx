@@ -12,7 +12,7 @@ import messages from './messages.json';
 
 interface CatalogPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ category?: string; sort?: string; offers?: string; q?: string }>;
+  searchParams: Promise<{ category?: string; sort?: string; offers?: string; shippable?: string; q?: string }>;
 }
 
 /**
@@ -28,19 +28,21 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
 
-  const { category, sort, offers, q } = await searchParams;
+  const { category, sort, offers, shippable, q } = await searchParams;
   const activeSort: CatalogSort = CATALOG_SORTS.includes(sort as CatalogSort) ? (sort as CatalogSort) : 'featured';
   const onlyOffers = offers === '1';
+  // Kargo çipi URL'de yaşar: süzülmüş liste paylaşılabilir ve geri tuşu çalışır (offers ile aynı desen).
+  const onlyShippable = shippable === '1';
 
   const t: Messages = messages[locale];
   const [data, device] = await Promise.all([
-    getCatalogData(locale, { categorySlug: category, search: q, sort: activeSort, onlyOffers }),
+    getCatalogData(locale, { categorySlug: category, search: q, sort: activeSort, onlyOffers, onlyShippable }),
     detectDevice(),
   ]);
 
   return (
-    <SiteFrame device={device} locale={locale} showSearch search={q} activeNav="catalog">
-      <CatalogClient t={t} locale={locale} data={data} active={{ category, sort: activeSort, onlyOffers }} device={device} search={q} />
+    <SiteFrame device={device} locale={locale} activeNav="catalog">
+      <CatalogClient t={t} locale={locale} data={data} active={{ category, sort: activeSort, onlyOffers, onlyShippable }} device={device} search={q} />
     </SiteFrame>
   );
 }

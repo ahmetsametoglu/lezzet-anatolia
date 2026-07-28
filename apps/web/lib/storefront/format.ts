@@ -35,6 +35,14 @@ export function formatWeight(grams: number, locale: Locale): string {
   return `${formatDecimal(grams / 1000, locale, Number.isInteger(grams / 1000) ? 0 : 1)} kg`;
 }
 
+/**
+ * Teslimat günü ("Perşembe, 24 Temmuz") — gün ADI yazılır çünkü müşteri teslimatı haftanın gününe
+ * göre planlar, ayın kaçı olduğuna göre değil. Yıl yok: teslimat günleri hep birkaç gün içinde.
+ */
+export function formatDeliveryDate(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(iso));
+}
+
 /** Karşılaştırma fiyatı ("12,90 €/kg") — INCO gereği raf fiyatının yanında bulunur. */
 export function formatComparison(cents: number, locale: Locale): string {
   return `${formatPrice(cents, locale)}/kg`;

@@ -23,7 +23,7 @@ interface CatalogClientProps {
   t: Messages;
   locale: Locale;
   data: StorefrontCatalog;
-  active: { category?: string; sort: CatalogSort; onlyOffers: boolean };
+  active: { category?: string; sort: CatalogSort; onlyOffers: boolean; onlyShippable: boolean };
   device: Device;
   /** Arama kutusundaki sorgu — sonraki sayfa isteği aynı süzgeci taşımalı. */
   search?: string;
@@ -59,19 +59,21 @@ export function CatalogClient({ t, locale, data, active, device, search }: Catal
    * Bir süzgeci değiştirir, diğerlerini KORUR — çipe basmak sıralamayı sıfırlamaz. `null` kategori
    * süzgeci kaldırır ("Tümü"). Sayfa imleci bilerek taşınmaz: süzgeç değişince liste baştan başlar.
    */
-  const hrefFor = (patch: { category?: string | null; sort?: CatalogSort; onlyOffers?: boolean }): CatalogHref => {
+  const hrefFor = (patch: { category?: string | null; sort?: CatalogSort; onlyOffers?: boolean; onlyShippable?: boolean }): CatalogHref => {
     const category = patch.category === null ? undefined : (patch.category ?? active.category);
     const sort = patch.sort ?? active.sort;
     const onlyOffers = patch.onlyOffers ?? active.onlyOffers;
+    const onlyShippable = patch.onlyShippable ?? active.onlyShippable;
     const query: Record<string, string> = {};
     if (category) query.category = category;
     if (sort !== 'featured') query.sort = sort;
     if (onlyOffers) query.offers = '1';
+    if (onlyShippable) query.shippable = '1';
     // Arama da bir süzgeçtir: kategoriye basmak yazılmış aramayı silmemeli.
     if (search) query.q = search;
     return { pathname: '/catalog', query };
   };
 
-  const view = { t, locale, data, products, hasMore: cursor !== null, loadingMore, onLoadMore, active, hrefFor };
+  const view = { t, locale, data, products, hasMore: cursor !== null, loadingMore, onLoadMore, active, hrefFor, search };
   return resolved === 'mobile' ? <CatalogMobile {...view} /> : <CatalogDesktop {...view} />;
 }

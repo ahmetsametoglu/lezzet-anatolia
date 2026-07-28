@@ -92,6 +92,7 @@ export async function getCartView(locale: Locale, entries: readonly CartEntry[])
       // Satışa kapalı ya da tükendi → çıkarılmadan devam edilemez.
       blocked: unitPriceCents === null || view.soldOut,
       contents: [],
+      shippable: product.shippable,
     });
   }
 
@@ -124,6 +125,9 @@ function orphanLine(entry: CartEntry): CartLine {
     lineTotalCents: null,
     blocked: true,
     contents: [],
+    // Kaynağı kayboldu: kargolanıp kargolanamayacağı da bilinmiyor. `true` demek kısıt uyarısını
+    // yutmak olurdu; satır zaten engelli, çıkarılmadan devam edilemiyor.
+    shippable: false,
   };
 }
 
@@ -150,5 +154,7 @@ function bundleLine(bundleId: string, qty: number, pack: StorefrontPackageDetail
     lineTotalCents: pack.priceCents * qty,
     blocked: pack.soldOut,
     contents: pack.items.map((item) => ({ name: item.name, qty: item.qty })),
+    // Pakette TEK bir soğuk zincir kalemi bile varsa paketin tamamı rota içi kalır (05.5).
+    shippable: !pack.inRouteOnly,
   };
 }

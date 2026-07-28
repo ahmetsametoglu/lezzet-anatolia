@@ -1,4 +1,6 @@
 import { Link } from '@/i18n/navigation';
+import { buttonClass } from '@/components/customer/ui/button';
+import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
 import { Badge } from '@/components/customer/ui/badge';
 import { SectionHeading } from '@/components/customer/ui/section';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
@@ -50,18 +52,18 @@ export function ProductDesktop({ t, locale, product, selected, onSelect }: Produ
             </>
           )}
 
-          {/* Kargo kısıtı sepete eklemeden ÖNCE görünür (`musteri-urun-detay.md §2`). */}
-          <div className="flex flex-wrap gap-5 rounded-soft bg-sand-100 px-4.5 py-3.5 font-sans text-control font-normal text-body">
-            {product.shippable ? (
-              <>
-                <span>{t.assurance.coldChain}</span>
-                <span>{t.assurance.doorstep}</span>
-                <span>{t.assurance.shippable}</span>
-              </>
-            ) : (
-              <span>{t.assurance.notShippable}</span>
-            )}
-          </div>
+          {/* Kargo kısıtı sepete eklemeden ÖNCE görünür (`musteri-urun-detay.md §2`). Teslimat yeri
+              biliniyorsa somut konuşur; bilinmiyorsa tasarımın genel vaatleri kalır. */}
+          <DeliveryLine
+            locale={locale}
+            shippable={product.shippable}
+            fallback={t.assurance}
+            blockedActions={
+              <Link href={{ pathname: '/catalog', query: { shippable: '1' } }} className={buttonClass({ size: 'sm', className: '!text-note' })}>
+                {t.assurance.seeShippable}
+              </Link>
+            }
+          />
         </div>
       </section>
 

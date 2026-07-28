@@ -24,4 +24,16 @@ export class DeliveryZoneService extends BaseDbService<DeliveryZone, DeliveryZon
   list(opts: { activeOnly?: boolean } = {}): Promise<DeliveryZone[]> {
     return this.getAll(opts.activeOnly ? { isActive: true } : undefined, { orderBy: 'name' });
   }
+
+  /**
+   * "Nereye getirelim" sorulan posta kodunu TALEP olarak sayar (0029).
+   *
+   * Toplu sayaçtır: kim sorduğu tutulmaz, tekilleştirme yapılmaz (tekilleştirmek kimlik saklamak
+   * demekti). Bölge içi kodlar da sayılır — talebin nerede yoğunlaştığı rota sıklığının girdisidir.
+   *
+   * Artırma RPC'de çünkü okuyup-yazan iki adım aynı anda gelen iki istekte birini kaybeder.
+   */
+  async recordDemand(postalCode: string): Promise<void> {
+    await this.executeRpc('record_postal_code_demand', { p_postal_code: postalCode });
+  }
 }

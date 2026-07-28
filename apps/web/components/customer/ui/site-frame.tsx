@@ -4,8 +4,8 @@ import { LOCALES } from '@lezzet/i18n';
 import { brand } from '@lezzet/brand';
 import { Link } from '@/i18n/navigation';
 import { LocaleLinks, LocaleSwitch } from './locale-switch';
-import { SearchField } from './search-field';
 import { ShareButton } from './share-button';
+import { PlaceChip } from '@/components/customer/delivery/place-chip';
 import { CartBadge } from '@/components/customer/cart/cart-badge';
 import messages from './site-frame-messages.json';
 
@@ -21,16 +21,17 @@ import messages from './site-frame-messages.json';
  *
  * Cihaz forku (Sapma 3): masaüstünde açık gezinme, mobilde sadeleşmiş başlık — `md:` akışkan
  * responsive DEĞİL, `device` ile çatallanır.
+ *
+ * **Arama BURADA DEĞİL, KATALOGDA** (28.07). Başlıkta duruyordu ve her sayfada görünüyordu; teslimat
+ * yeri hapı gelince satır kalabalıklaştı. Arama zaten yalnız kataloğu süzüyor — sonucunu gösteren
+ * sayfada durması hem satırı boşaltıyor hem de "ne aradığım" bilgisini sonucun yanında tutuyor.
+ * Diğer sayfalardan aramaya giden yol menüdeki "Katalog".
  */
 type NavKey = 'catalog' | 'packages' | 'deals' | 'discover' | 'pro';
 
 interface SiteFrameProps {
   device: 'mobile' | 'desktop';
   locale: Locale;
-  /** Başlıkta arama kutusu görünsün mü — vitrin sayfalarında evet, hata ekranlarında hayır. */
-  showSearch?: boolean;
-  /** Adresteki güncel arama — kutu katalogda ne arandığını göstersin. */
-  search?: string;
   /**
    * Gezinmede hangi öğe AKTİF — tasarımda aktif sayfa zeytin rengi + 2px alt çizgi taşır (Katalog
    * ve Ürün Detay ekranlarında "Katalog", Hesap ekranında "Hesabım"). Ziyaretçi nerede olduğunu
@@ -68,7 +69,7 @@ function navClass(key: NavKey, active: NavKey | undefined, base = ''): string {
   return [base, 'border-b-2 pb-0.5', active === key ? 'border-olive text-olive' : 'border-transparent'].filter(Boolean).join(' ');
 }
 
-export function SiteFrame({ device, locale, showSearch = false, search, activeNav, mobileChrome = 'default', back, children }: SiteFrameProps) {
+export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default', back, children }: SiteFrameProps) {
   const t = messages[locale];
   const isMobile = device === 'mobile';
   // Mobil detayda çerçevenin tamamı sadeleşir: şerit yok, arama yok, footer tek satır.
@@ -115,11 +116,12 @@ export function SiteFrame({ device, locale, showSearch = false, search, activeNa
             </Link>
             <CartBadge label={t.cart} compact />
           </header>
-          {showSearch && (
-            <div className="mx-4 mt-3">
-              <SearchField placeholder={t.search} clearLabel={t.searchClear} defaultValue={search} fullWidth />
-            </div>
-          )}
+          {/* Mobilde hap başlık satırına SIĞMAZ (☰ · logo · sepet zaten üç öğe) — kendi satırında,
+              aramanın üstünde durur. Detay başlığında hiç yoktur: orada geri bağlantısı ve paylaş
+              var, dördüncü bir öğe satırı kırıyor; kısıt bilgisini o sayfada teslimat satırı verir. */}
+          <div className="mx-4 mt-3 flex">
+            <PlaceChip locale={locale} compact />
+          </div>
         </>
       ) : (
         <header className={`${SHELL} flex items-center gap-9 border-b border-sand-300 px-12 py-4.5`}>
@@ -140,7 +142,9 @@ export function SiteFrame({ device, locale, showSearch = false, search, activeNa
             <span className={navClass('pro', activeNav)}>{t.nav.pro}</span>
           </nav>
           <div className="ml-auto flex items-center gap-4.5 font-sans text-body-sm font-semibold text-muted">
-            {showSearch && <SearchField placeholder={t.search} clearLabel={t.searchClear} defaultValue={search} />}
+            {/* K32 · Teslimat yeri — dil ve sepetin SOLUNDA: sepete girmeden önce cevaplanan bir
+                soru, sepet rozetinin sağında dursa alışverişin sonuna ait gibi okunurdu. */}
+            <PlaceChip locale={locale} />
             <LocaleSwitch locale={locale} />
             <CartBadge label={t.cart} />
           </div>

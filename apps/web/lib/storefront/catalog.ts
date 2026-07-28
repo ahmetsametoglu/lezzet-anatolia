@@ -36,6 +36,12 @@ interface CatalogQuery {
   sort?: CatalogSort;
   /** "Yalnız indirimliler" — açık teklifi olan ürünlere daraltır (DOMAIN §5). */
   onlyOffers?: boolean;
+  /**
+   * Yalnız kargolanabilenler — "adresime gönderilebilir" çipi. Çip VARSAYILAN KAPALIDIR (tasarım):
+   * bölge dışı bir posta kodunda soğuk zincir ürünleri gizlenmez, kartta etiketiyle durur. Katalogu
+   * kendiliğinden küçültmek, müşteriye sormadan seçim yapmak olurdu.
+   */
+  onlyShippable?: boolean;
   cursor?: KeysetCursor;
 }
 
@@ -61,7 +67,7 @@ export async function getCatalogData(locale: Locale, q: CatalogQuery = {}): Prom
   if (offerIds && !offerIds.length) return noProducts(categories, activeCategory);
 
   // Aday ürün katalogda GÖRÜNMEZ (`musteri-katalog.md §6`) — `status: 'active'` bunu sağlar.
-  const filters = { query: q.search, categoryId: activeCategory?.id, status: 'active' as const, ids: offerIds };
+  const filters = { query: q.search, categoryId: activeCategory?.id, status: 'active' as const, ids: offerIds, onlyShippable: q.onlyShippable };
   const productSvc = new ProductService(db);
   const [page, counts] = await Promise.all([
     productSvc.listWithRelations({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE }),

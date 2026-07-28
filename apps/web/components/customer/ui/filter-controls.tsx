@@ -29,8 +29,12 @@ interface FilterChipProps {
   label: string;
   href: ChipHref;
   active?: boolean;
-  /** Fırsat çipi ("Yalnız indirimliler") — nötr süzgeçlerden ayrı renkte durur. */
-  tone?: 'neutral' | 'offer';
+  /**
+   * Çipin ANLAMI (rengi değil): `offer` indirim süzgeci, `place` teslimat yeri süzgeci
+   * ("adresime gönderilebilir"). İkisi de nötr süzgeçlerden ayrı durur ve birbirinden de ayrılır —
+   * yan yana dururken aynı renkte olsalar hangisinin ne süzdüğü ancak metin okununca anlaşılırdı.
+   */
+  tone?: 'neutral' | 'offer' | 'place';
   size?: ChipSize;
   /** Mobil ölçü. */
   compact?: boolean;
@@ -43,9 +47,13 @@ export function FilterChip({ label, href, active = false, tone = 'neutral', size
       ? active
         ? 'border-terracotta bg-terracotta text-white'
         : 'border-terracotta-line bg-terracotta-bg text-terracotta hover:border-terracotta'
-      : active
-        ? 'border-olive bg-olive text-white'
-        : 'border-sand-400 bg-card text-ink hover:border-olive';
+      : tone === 'place'
+        ? active
+          ? 'border-olive bg-olive text-white'
+          : 'border-olive-line bg-olive-bg text-olive-dark hover:border-olive'
+        : active
+          ? 'border-olive bg-olive text-white'
+          : 'border-sand-400 bg-card text-ink hover:border-olive';
   return (
     <Link
       href={href}

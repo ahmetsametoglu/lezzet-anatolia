@@ -94,6 +94,15 @@ interface CartLineView {
    * çıkarmak diye bir şey yok. Fiyat da taşımaz (tek fiyat kuralı).
    */
   contents: { name: string; qty: number }[];
+  /**
+   * Bu kalem KARGOYA verilebilir mi (`Product.shippable`; pakette `!inRouteOnly`).
+   *
+   * Kısıtın kendisi burada DEĞİL: "gönderilebilir mi" sorusunun cevabı teslimat yerine bağlıdır ve
+   * yer istemcide yaşar (`PlaceProvider`). Satır yalnız kendi gerçeğini taşır; ikisini birleştiren
+   * yer ekrandır. Sunucu okuması müşterinin posta kodunu bilmez ve bilmemelidir — bilseydi sepet
+   * okuması yer değiştikçe yeniden çalışmak zorunda kalırdı.
+   */
+  shippable: boolean;
 }
 
 /**

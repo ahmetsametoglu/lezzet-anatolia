@@ -46,7 +46,21 @@ const CATEGORIES = [
   { key: 'malzeme', name: { tr: 'Malzeme', fr: 'Ingrédients', de: 'Zutaten' } },
 ];
 
-// Farklı durumlar bilinçli örneklenir: çok/tek varyant, eksik dil, pasif, aday, kargolanamaz.
+/**
+ * Elle yazılan ürünlerde İŞ BÖLÜMÜ (28.07): eskiden bu beş kayıt hem "vitrin örneği" hem "eksik veri
+ * örneği" idi ve ikisi birbirini yiyordu — müşteri tarafında açılan her ürünün sekmeleri yarı boştu,
+ * çünkü boşluklar operasyonun süzgeçlerini denemek için bilinçli bırakılmıştı.
+ *
+ * Ayrım artık DURUMA bağlı:
+ *   **aktif** kayıtlar (müşteri görür) → BEYAN DÖRTLÜSÜ TAM, üç dil tam, galeri dolu. Vitrin ancak
+ *     tam veriyle denenebilir; yarım veriyle "boş görünen sekme mi, bozuk kod mu" ayırt edilemez.
+ *   **pasif/aday** kayıtlar (müşteri görmez) → eksik dil / eksik beyan örneği burada yaşar.
+ * Toplu üretim (aşağıda) zaten her boşluğu indise göre serpiştiriyor; operasyon süzgeçleri oradan
+ * beslenir, vitrin buradan.
+ *
+ * Çeşitlilik ise ÖZELLİKTE aranır, eksiklikte değil: çok/tek varyant · kargolanır/soğuk zincir ·
+ * aktif/pasif/aday · yüksek/düşük KDV · uzun/kısa raf ömrü.
+ */
 const PRODUCTS: SeedProduct[] = [
   {
     slug: 'fistikli-baklava',
@@ -80,28 +94,68 @@ const PRODUCTS: SeedProduct[] = [
     ],
   },
   {
+    // AKTİF + kargolanır + TEK varyant — "tek boy" hâlinin tam veriyle görünümü.
     slug: 'cevizli-baklava',
     image: '2.jpeg',
     category: 'baklava',
-    name: { tr: 'Cevizli Baklava', fr: 'Baklava aux noix' }, // DE eksik — "diller" göstergesini örnekler
+    name: { tr: 'Cevizli Baklava', fr: 'Baklava aux noix', de: 'Walnuss-Baklava' },
+    description: {
+      tr: 'İç Anadolu cevizi, kat kat yufka ve az şerbet — fıstıklıya göre daha ağır bir tat.',
+      fr: 'Noix d’Anatolie centrale, pâte en couches et sirop léger — un goût plus corsé que la pistache.',
+      de: 'Zentralanatolische Walnüsse, Teigschichten und wenig Sirup — kräftiger als die Pistazienvariante.',
+    },
     allergens: ['gluten', 'sert_kabuklu', 'sut'],
+    traces: ['yer_fistigi'],
+    ingredients: {
+      tr: 'El açması yufka (**buğday unu**, su, tuz), ceviz (%24), **tereyağı**, şeker, su, limon suyu.',
+      fr: 'Pâte étirée à la main (**farine de blé**, eau, sel), noix (24 %), **beurre**, sucre, eau, jus de citron.',
+      de: 'Handgezogener Teig (**Weizenmehl**, Wasser, Salz), Walnüsse (24 %), **Butter**, Zucker, Wasser, Zitronensaft.',
+    },
+    storageInstructions: {
+      tr: 'Dondurucuda (−18 °C) paket üzerindeki tarihe kadar saklayın. Buzdolabında 4-5 saatte çözünür; çözdükten sonra 3 gün içinde tüketin, **tekrar dondurmayın**.',
+      fr: 'À conserver au congélateur (−18 °C) jusqu’à la date indiquée. Décongélation au réfrigérateur en 4-5 h ; à consommer sous 3 jours, **ne pas recongeler**.',
+      de: 'Im Gefrierschrank (−18 °C) bis zum angegebenen Datum lagern. Im Kühlschrank in 4-5 Std. auftauen; innerhalb von 3 Tagen verzehren, **nicht wieder einfrieren**.',
+    },
+    nutrition: { energyKj: 1925, energyKcal: 460, fatG: 25.8, saturatedFatG: 10.4, carbohydrateG: 51.2, sugarsG: 33.1, proteinG: 6.4, saltG: 0.2 },
     shelfLifeDays: 180,
     targetMarginPercent: 38,
-    variants: [{ label: { tr: '1 kg', fr: '1 kg' }, netWeightG: 1000, sku: 'BAK-C-1000' }],
+    variants: [{ label: { tr: '1 kg', fr: '1 kg', de: '1 kg' }, netWeightG: 1000, sku: 'BAK-C-1000' }],
   },
   {
-    slug: 'su-boregi',
+    // AKTİF + SOĞUK ZİNCİR + ÇOK varyant — teslimat kısıtı ekranlarının ana denek taşı. Künefe tek
+    // başınayken sepete iki FARKLI kısıtlı kalem koyup çoğul hâli denemek mümkün değildi.
+    slug: 'kazandibi',
     image: '3.jpeg',
-    category: 'borek',
-    status: 'passive', // pasif örneği
-    name: { tr: 'Su Böreği' }, // yalnız TR
-    allergens: ['gluten', 'yumurta', 'sut'],
-    shelfLifeDays: 5,
-    shippable: false, // soğuk zincir → yalnız rota/kapı teslim
-    // Etiket YALNIZ TR — varyant editöründeki "eksik dil" noktasını örnekler.
-    variants: [{ label: { tr: 'Tepsi' }, netWeightG: 1500, sku: 'BOR-SU-1500' }],
+    category: 'serbetli',
+    name: { tr: 'Kazandibi', fr: 'Kazandibi', de: 'Kazandibi' },
+    description: {
+      tr: 'Tabanı bilerek karamelize edilmiş sütlü tatlı; soğuk servis edilir.',
+      fr: 'Dessert au lait dont le fond est volontairement caramélisé ; se sert frais.',
+      de: 'Milchdessert mit absichtlich karamellisiertem Boden; kalt serviert.',
+    },
+    allergens: ['sut'],
+    traces: ['gluten'],
+    ingredients: {
+      tr: 'Tam yağlı **süt**, şeker, pirinç unu, buğday nişastası, **tavuk göğsü**, damla sakızı.',
+      fr: '**Lait** entier, sucre, farine de riz, amidon de blé, **blanc de poulet**, mastic.',
+      de: 'Voll**milch**, Zucker, Reismehl, Weizenstärke, **Hähnchenbrust**, Mastix.',
+    },
+    storageInstructions: {
+      tr: 'Buzdolabında (0-4 °C) saklayın, **dondurmayın**. Teslim tarihinden itibaren 4 gün içinde tüketin.',
+      fr: 'À conserver au réfrigérateur (0-4 °C), **ne pas congeler**. À consommer sous 4 jours après la livraison.',
+      de: 'Im Kühlschrank (0-4 °C) lagern, **nicht einfrieren**. Innerhalb von 4 Tagen nach Lieferung verzehren.',
+    },
+    nutrition: { energyKj: 640, energyKcal: 153, fatG: 3.1, saturatedFatG: 1.9, carbohydrateG: 27.4, sugarsG: 19.8, proteinG: 4.2, saltG: 0.1 },
+    shelfLifeDays: 4,
+    shippable: false,
+    targetMarginPercent: 40,
+    variants: [
+      { label: { tr: '2 kişilik', fr: '2 personnes', de: 'für 2' }, netWeightG: 400, sku: 'SER-KAZ-400' },
+      { label: { tr: '6 kişilik tepsi', fr: 'plateau 6 personnes', de: 'Platte für 6' }, netWeightG: 1200, sku: 'SER-KAZ-1200' },
+    ],
   },
   {
+    // AKTİF + SOĞUK ZİNCİR + tek varyant + kısa raf ömrü.
     slug: 'kunefe',
     image: '4.jpeg',
     category: 'serbetli',
@@ -112,16 +166,42 @@ const PRODUCTS: SeedProduct[] = [
       de: 'Käse zwischen Kadayıf-Fäden, im Ofen gebacken, mit Sirup serviert.',
     },
     allergens: ['gluten', 'sut'],
+    traces: ['sert_kabuklu'],
+    ingredients: {
+      tr: 'Tel kadayıf (**buğday unu**, su), taze **peynir** (%35), **tereyağı**, şeker, su, limon suyu, Antep fıstığı.',
+      fr: 'Kadayıf (**farine de blé**, eau), **fromage** frais (35 %), **beurre**, sucre, eau, jus de citron, pistaches d’Antep.',
+      de: 'Kadayıf (**Weizenmehl**, Wasser), frischer **Käse** (35 %), **Butter**, Zucker, Wasser, Zitronensaft, Antep-Pistazien.',
+    },
+    storageInstructions: {
+      tr: 'Buzdolabında (0-4 °C) saklayın. Servisten önce 180 °C fırında 12-15 dakika ısıtın, şerbeti sıcakken dökün. **Tekrar ısıtmayın.**',
+      fr: 'À conserver au réfrigérateur (0-4 °C). Réchauffer 12-15 min à 180 °C avant de servir, verser le sirop chaud. **Ne pas réchauffer deux fois.**',
+      de: 'Im Kühlschrank (0-4 °C) lagern. Vor dem Servieren 12-15 Min. bei 180 °C erhitzen, Sirup heiß darübergeben. **Nicht erneut erwärmen.**',
+    },
+    nutrition: { energyKj: 1310, energyKcal: 313, fatG: 16.2, saturatedFatG: 9.7, carbohydrateG: 33.9, sugarsG: 24.6, proteinG: 8.8, saltG: 0.6 },
     shelfLifeDays: 3,
     shippable: false,
     targetMarginPercent: 45,
     variants: [{ label: { tr: '2 kişilik', fr: '2 personnes', de: 'für 2' }, netWeightG: 600, sku: 'SER-KUN-600' }],
   },
   {
+    // PASİF → müşteri görmez, "eksik dil + eksik beyan" örneği burada yaşar (operasyon süzgeçleri).
+    slug: 'su-boregi',
+    image: '3.jpeg',
+    category: 'borek',
+    status: 'passive',
+    name: { tr: 'Su Böreği' }, // yalnız TR
+    allergens: ['gluten', 'yumurta', 'sut'],
+    shelfLifeDays: 5,
+    shippable: false, // soğuk zincir → yalnız rota/kapı teslim
+    // Etiket YALNIZ TR — varyant editöründeki "eksik dil" noktasını örnekler.
+    variants: [{ label: { tr: 'Tepsi' }, netWeightG: 1500, sku: 'BOR-SU-1500' }],
+  },
+  {
+    // ADAY → müşteri görmez; varyantsız (varsayılan varyant otomatik) + yüksek KDV örneği.
     slug: 'antep-fistigi',
     image: '5.jpeg',
     category: 'malzeme',
-    status: 'candidate', // aday örneği (varyant verilmez → varsayılan varyant otomatik)
+    status: 'candidate',
     name: { tr: 'Antep Fıstığı' },
     allergens: ['sert_kabuklu'],
     vatRate: 20, // malzeme → %20 (tatlılar %5,5)
@@ -130,7 +210,8 @@ const PRODUCTS: SeedProduct[] = [
 ];
 
 // ── Toplu ürün üretimi ───────────────────────────────────────────────────────────────────────────
-// Elle yazılan 6 ürün belirli DURUMLARI örnekler (eksik dil, alerjensiz, pasif, aday, kargolanamaz).
+// Elle yazılanlar VİTRİNİN tam-veri örnekleridir; BOŞLUK örnekleri buradadır (eksik dil, alerjensiz,
+// beyansız, görselsiz, pasif, aday, kargolanamaz).
 // Ama sayfalama/sonsuz kaydırma ve süzgeçler ancak GERÇEKÇİ HACİMDE denenebilir: ~30'luk sayfa boyutu
 // birkaç sayfa doldurmalı. Bu yüzden aşağıdaki taban adlar × nitelemeler çarpımından ürün türetilir —
 // adlar üç dilde kurulur (elle 60×3 metin yazmadan), durumlar indise göre serpiştirilir.
@@ -200,10 +281,12 @@ async function seedGallery(images: ProductImageService, productId: string, keys:
 }
 
 /**
- * Elle yazılmış 5 ürünün galeri sayıları — arayüzün HER durumu denenebilsin diye seçildi:
- * dolu (sınır notu çıkar) · normal · boş (ekleme karesi tek başına) · tek · orta.
+ * Elle yazılmış ürünlerin galeri sayıları — `PRODUCTS` ile AYNI SIRADA.
+ * Aktif (vitrine düşen) dördü dolu: müşteri galerisi ancak birden fazla fotoğrafla denenebilir.
+ * Boş galeri örneği pasif kayda düşer — orada eksiklik zaten kasıtlı.
+ * [fıstıklı, cevizli, kazandibi, künefe, su böreği(pasif), antep fıstığı(aday)]
  */
-const HAND_GALLERY_COUNTS = [PRODUCT_GALLERY_MAX, 2, 0, 1, 3];
+const HAND_GALLERY_COUNTS = [PRODUCT_GALLERY_MAX, 3, 4, 2, 0, 1];
 
 /**
  * Toplu ürünleri oluşturur. Durum çeşitliliği İNDİSE göre serpiştirilir ki her süzgeç gerçekten
@@ -370,7 +453,7 @@ const COLLECTIONS: SeedCollection[] = [
       de: 'Klassiker für die Festtage — von Pistazien-Baklava bis Künefe.',
     },
     image: '1.jpeg',
-    products: ['fistikli-baklava', 'kunefe', 'cevizli-baklava'], // kürasyon sırası
+    products: ['fistikli-baklava', 'kunefe', 'cevizli-baklava', 'kazandibi'], // kürasyon sırası
   },
   {
     slug: 'yeni-gelenler',
@@ -381,7 +464,9 @@ const COLLECTIONS: SeedCollection[] = [
       de: 'Neu im Katalog.',
     },
     image: '4.jpeg',
-    products: ['kunefe', 'su-boregi'],
+    // `su-boregi` PASİF: aktif bir koleksiyonun içinde pasif üye durumunu örnekler — vitrin onu
+    // elemeli, operasyon listesi göstermeli.
+    products: ['kazandibi', 'kunefe', 'su-boregi'],
   },
   {
     slug: 'indirimde',
@@ -452,7 +537,10 @@ interface SeedBundle {
 
 /**
  * Paketler arayüzün her durumunu örnekler: görselli/görselsiz · kişilik dolu/boş · hediye kalemi ·
- * aktif/pasif · MUTABAKATI TUTMAYAN bir satır.
+ * aktif/pasif · MUTABAKATI TUTMAYAN bir satır · soğuk zincirli/tamamı kargolanır.
+ *
+ * Aktif paket sayısı bilinçli DÖRT: paket liste sayfası iki kartla denenemez ve sepetteki teslimat
+ * kısıtı hem "gönderilemeyen" hem "kalan" tarafını aynı anda gerektiriyor.
  *
  * FİYAT ELLE YAZILMAZ, birim fiyatlardan TÜRETİLİR (formun yaptığı işin aynısı: `rebalanceAllocations`
  * ağırlık olarak birim fiyatı alır). Eskiden paylar elle yazılıydı ve seed'in fiyat listesiyle hiç
@@ -486,6 +574,40 @@ const BUNDLES: Array<SeedBundle & { items: SeedBundleItem[] }> = [
     items: [
       { sku: 'BAK-F-500', qty: 2 },
       { sku: 'BAK-C-1000', qty: 1, gift: true },
+    ],
+  },
+  {
+    // İKİNCİ soğuk zincir paketi. Tek kısıtlı paket varken sepete iki farklı "gönderilemez" paket
+    // koyup kısıt bloğunun ÇOĞUL hâlini (satır içi tekil kaydetme) denemek mümkün değildi.
+    name: { tr: 'Sütlü Tatlı Seti', fr: 'Coffret desserts au lait', de: 'Milchdessert-Set' },
+    description: {
+      tr: 'Soğuk servis edilen iki klasik: kazandibi ve künefe. Yalnız kapıya teslim edilir.',
+      fr: 'Deux classiques servis frais : kazandibi et künefe. Livraison à domicile uniquement.',
+      de: 'Zwei kalt servierte Klassiker: Kazandibi und Künefe. Nur Lieferung an die Tür.',
+    },
+    image: '3.jpeg',
+    serves: 4,
+    discountPercent: 10,
+    items: [
+      { sku: 'SER-KAZ-400', qty: 2 },
+      { sku: 'SER-KUN-600', qty: 1 },
+    ],
+  },
+  {
+    // TAMAMI KARGOLANIR + büyük indirim: kısıt bloğunun "kalanı" tarafı ancak gönderilebilen bir
+    // paket sepette dururken denenebilir (ayır → kalanla asgari sepeti/ücretsiz kargoyu aş).
+    name: { tr: 'Baklava İkilisi', fr: 'Duo de baklavas', de: 'Baklava-Duo' },
+    description: {
+      tr: 'Bir kilo fıstıklı, bir kilo cevizli — kalabalık sofranın iki klasiği bir arada.',
+      fr: 'Un kilo à la pistache, un kilo aux noix — les deux classiques des grandes tablées.',
+      de: 'Ein Kilo mit Pistazien, ein Kilo mit Walnüssen — die zwei Klassiker für große Tafeln.',
+    },
+    image: '2.jpeg',
+    serves: 10,
+    discountPercent: 15,
+    items: [
+      { sku: 'BAK-F-1000', qty: 1 },
+      { sku: 'BAK-C-1000', qty: 1 },
     ],
   },
   {

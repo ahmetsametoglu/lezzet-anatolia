@@ -32,7 +32,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   if (!product) notFound();
 
   return (
-    <SiteFrame device={device} locale={locale} showSearch activeNav="catalog" mobileChrome="detail" back={{ label: t.back, href: '/catalog' }}>
+    <SiteFrame device={device} locale={locale} activeNav="catalog" mobileChrome="detail" back={{ label: t.back, href: '/catalog' }}>
       <ProductClient t={t} locale={locale} product={product} device={device} />
     </SiteFrame>
   );

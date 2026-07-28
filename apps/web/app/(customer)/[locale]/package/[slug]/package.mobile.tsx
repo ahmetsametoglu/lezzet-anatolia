@@ -1,6 +1,9 @@
 import { RATIO_SOURCE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Badge } from '@/components/customer/ui/badge';
+import { Link } from '@/i18n/navigation';
+import { buttonClass } from '@/components/customer/ui/button';
+import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
 import { formatPrice } from '@/lib/storefront/format';
 import { ContentCard } from './components/content-card';
 import { PackageFacts } from './components/package-facts';
@@ -40,17 +43,19 @@ export function PackageMobile({ t, locale, pack }: PackageViewProps) {
 
         {pack.description && <p className="font-sans text-note leading-relaxed text-body">{pack.description}</p>}
 
-        {pack.inRouteOnly ? (
-          <p className="rounded-soft border border-honey-line bg-honey-bg px-3.5 py-2.5 font-sans text-micro leading-relaxed font-semibold text-honey">
-            {t.assurance.inRouteOnly}
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-4 rounded-soft bg-sand-100 px-3.5 py-2.5 font-sans text-micro text-body">
-            <span>{t.assurance.coldChain}</span>
-            <span>{t.assurance.doorstep}</span>
-            <span>{t.assurance.shippable}</span>
-          </div>
-        )}
+        {/* Paket kargoya çıkamıyorsa kısıt YERE göre konuşur: bölge içindeki müşteriye
+            "gönderemiyoruz" demek yanlış olurdu — onun için bu bir kısıt değil. */}
+        <DeliveryLine
+          locale={locale}
+          shippable={!pack.inRouteOnly}
+          fallback={{ ...t.assurance, notShippable: t.assurance.inRouteOnly }}
+          blockedActions={
+            <Link href="/packages" className={buttonClass({ size: "xs", className: '!text-micro' })}>
+              {t.seeShippablePackages}
+            </Link>
+          }
+          compact
+        />
 
         <PackageFacts t={t} locale={locale} pack={pack} compact />
       </div>

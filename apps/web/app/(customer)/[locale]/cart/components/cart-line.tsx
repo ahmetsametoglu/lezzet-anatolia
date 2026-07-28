@@ -10,6 +10,8 @@ import { QtyStepper } from '@/components/customer/ui/qty-stepper';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
 import { useCart } from '@/components/customer/cart/cart-context';
+import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
+import placeMessages from '@/components/customer/delivery/place-messages.json';
 import type { CartLine as Line, CartRef } from '@/lib/cart/cart-types';
 import type { Messages } from '../cart-types';
 
@@ -29,6 +31,12 @@ import type { Messages } from '../cart-types';
  *
  * Görsel KARE çerçevededir (`RATIO_SQUARE`) — görsel künyesi sepet satırını böyle tanımlar
  * (`image.schema`: "1:1 · sepet · paket satırı"); katalog kartının 3:2'si burada satırı şişirir.
+ *
+ * **Satırda "sonraya kaydet" YOKTUR** ve bu bilinçli bir sapma (28.07 · kullanıcı geri bildirimi).
+ * Tasarım K35 onu her satıra koyuyordu ("kısıt olmadan da kullanılabilir"), ama kısıt yokken kontrol
+ * hiçbir şeyi açıklamıyordu: çöp kutusunun yanında ikinci bir eylem, gideceği yer görünmüyor (liste
+ * boşken çizilmiyor), ve müşterinin o an yaptığı işle — adet ayarla, devam et — yarışıyor. Ertelemek
+ * ancak bir SEBEBİ varken anlam taşır; sebebi de kısıt bloğu veriyor. Kaydetme oraya taşındı.
  */
 interface CartLineProps {
   line: Line;
@@ -39,6 +47,8 @@ interface CartLineProps {
 
 export function CartLineRow({ line, t, locale, compact = false }: CartLineProps) {
   const { setQty } = useCart();
+  const { place } = useDeliveryPlace();
+  const pt = placeMessages[locale];
   // Satırın kimliği türüne göre doğar: pakette paketin kendisi, varyantta varyant + parti.
   const key: CartRef =
     line.kind === 'bundle' ? { kind: 'bundle', bundleId: line.bundleId } : { kind: 'variant', variantId: line.variantId, stockId: line.stockId };
@@ -203,6 +213,28 @@ export function CartLineRow({ line, t, locale, compact = false }: CartLineProps)
     </span>
   );
 
+  /**
+   * **Bu kalem BU ADRESE nasıl gider?** Kararın verildiği yer sepet olduğu için bilgi de burada,
+   * kalem kalem duruyor (28.07 · kullanıcı geri bildirimi). Başlıktaki hap yalnız yeri söyler.
+   *
+   * Yer bilinmiyorsa satır SESSİZ kalır: kime gönderileceğini bilmeden "kapıya getiriyoruz" ya da
+   * "gönderemiyoruz" demek, ikisi de uydurma olurdu. Soruyu sepetin üstündeki şerit soruyor.
+   *
+   * Üç hâl: rota içi → kapıya · rota dışı ve kargolanabilir → kargo · rota dışı ve soğuk zincir →
+   * gönderilemez (bal tonu). Üçüncüsü uyarıdır ama satırı engellemez — çıkışı kısıt bloğu verir.
+   */
+  const deliveryNote = place ? (
+    <span
+      className={[
+        'font-sans font-semibold',
+        compact ? 'text-micro' : 'text-note',
+        place.inRoute ? 'text-olive-dark' : line.shippable ? 'text-muted' : 'text-honey',
+      ].join(' ')}
+    >
+      {place.inRoute ? pt.lineInRoute : line.shippable ? pt.lineShipping : pt.lineBlocked}
+    </span>
+  ) : null;
+
   // Tavana ulaşıldığında sebep YAZILIR; "+" sessizce pasifleşirse müşteri arızalı sanır.
   const capNote =
     line.limitCap !== null && line.qty >= line.limitCap ? (
@@ -261,6 +293,7 @@ export function CartLineRow({ line, t, locale, compact = false }: CartLineProps)
             {trash}
           </div>
           {meta}
+          {deliveryNote}
           {capNote}
           <div className="mt-0.5 flex items-center justify-between gap-3">
             {stepper}
@@ -274,6 +307,7 @@ export function CartLineRow({ line, t, locale, compact = false }: CartLineProps)
         <div className="flex flex-1 flex-col gap-1">
           {name}
           {meta}
+          {deliveryNote}
           {capNote}
         </div>
         {stepper}

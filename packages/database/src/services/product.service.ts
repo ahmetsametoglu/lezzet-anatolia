@@ -44,6 +44,13 @@ interface ProductFilters {
   ids?: string[];
   /** Yalnız beyanı eksik olanlar (ad dili eksik veya alerjen boş). */
   onlyIncomplete?: boolean;
+  /**
+   * Yalnız kargolanabilenler — vitrindeki "adresime gönderilebilir" çipi (K32 akışı).
+   *
+   * Süzgeç SUNUCUDA olmak zorunda: liste keyset ile sayfalanıyor, istemcide süzmek "30 satırın
+   * içinde kargolanabilenler" demek olurdu ve sonraki sayfalar sessizce eksik gelirdi.
+   */
+  onlyShippable?: boolean;
 }
 
 interface ProductListOptions {
@@ -245,6 +252,7 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     // gerçeği okur. Önce burada bir `or` dizesi olarak kuruluyordu ve sayaç tarafıyla ayrışma riski
     // yorumla uyarılıyordu — kural veritabanına taşınınca risk ortadan kalktı (ve indekslendi).
     if (f?.onlyIncomplete) filters.isIncomplete = true;
+    if (f?.onlyShippable) filters.shippable = true;
     return { filters, orFilters };
   }
 

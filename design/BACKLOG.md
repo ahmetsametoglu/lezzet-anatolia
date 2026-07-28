@@ -33,6 +33,9 @@ değişecek yer parantezde.
 | **Ürün detay yorum bölümü** — puan satırı, ortalama kartı, "N yorumun tümü →" | çizili; **boş hâli kodlandı** (bugün her ürünün yorum sayısı gerçekten sıfır) | `17` |
 | **"Yorum yaz"** — yalnız o ürünü satın almış girişli müşteride | çizili | `17` + `04-auth` + `07` |
 | **Fiyat sıralaması** (K18'in "Artan/Azalan fiyat" seçenekleri) | çizili, seçenekler görünüyor ama sonucu değiştirmiyor | **okuma görünümü (migration)** — aşağıda §1a |
+| **Bölge haberi tetikleyicisi** — bölge genişleyince bekleyenlere TEK e-posta | `zone_notice` kaydı alınıyor, ekran "not aldık" diyor (söz vermiyor) | bölge kaydedilince kontrol eden iş + gönderim (`14-bildirim`) |
+| **Hesap sayfasında "sonraya kaydedilenler" + bölge haberi kartı** | çizili (`Musteri - Hesap.dc.html`) | hesap sayfası (`04-auth`); veri hazır (`cart.saved_items`, `zone_notice`) |
+| **Operasyon → Analitik "bölge dışı talep" listesi** | tasarımda anıldı | `postal_code_demand` doluyor; ekran operasyon yüzeyinin işi |
 | **Menü: Fırsatlar · Keşif · Professionnels** | K12'de çizili, bugün düz metin (Paketler bağlandı) | kendi sayfaları (`08.7`) |
 | **Menü: Hesabım** | K12'de tanımlı | `04-auth` |
 | **İmha geçmişi: "Kayıt" sütunu** | `Operasyon - Stok.dc.html` imha tablosunda çizili | `stock_adjustment`'ta referans alanı yok; numara **yazma akışında** doğar (`10` depo) — aşağıda §1c |
@@ -116,6 +119,12 @@ teklifler stok ekranında" diyerek kullanıcıyı çalışan yüzeye gönderiyor
 ---
 
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
+
+- **Sepet satırında "sonraya kaydet" YOK.** K35 onu her satıra koyuyor ("kısıt olmadan da
+  kullanılabilir"); kaldırıldı. Kısıt yokken kontrol hiçbir şeyi açıklamıyordu: gideceği yer
+  görünmüyor (liste boşken çizilmiyor), çöp kutusunun yanında ikinci bir eylem duruyor ve müşterinin
+  o an yaptığı işle yarışıyordu. **Ertelemek ancak bir SEBEBİ varken anlam taşır** — sebebi kısıt
+  bloğu (K34) veriyor, kaydetme oraya taşındı. Liste böylece kendi kendini açıklıyor.
 
 Bunlar eksik değil, **verilmiş karar**. Not düşülüyor ki bir sonraki denetimde "tasarımdan sapma"
 diye yeniden açılmasın; itiraz gelirse madde §2'ye taşınır.

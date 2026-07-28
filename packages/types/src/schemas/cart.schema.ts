@@ -41,6 +41,13 @@ export type CartItem = z.infer<typeof CartItemSchema>;
 export const CartSchema = z.object({
   customerId: z.string().uuid(),
   items: z.array(CartItemSchema),
+  /**
+   * Sonraya kaydedilenler (K35) — sepetten çıkmış ama VAZGEÇİLMEMİŞ kalemler. Teslimat yerine
+   * gönderilemeyen ürün silinmez, buraya taşınır: alışveriş ölmez, sepet bölünür.
+   *
+   * Aynı şekli taşır çünkü aynı şeyin iki hâli; ayrımları yalnız BUGÜN alınıp alınamayacağı.
+   */
+  savedItems: z.array(CartItemSchema).default([]),
   updatedAt: z.string(),
 });
 export type Cart = z.infer<typeof CartSchema>;
@@ -48,12 +55,14 @@ export type Cart = z.infer<typeof CartSchema>;
 export const CartInsertSchema = z.object({
   customerId: z.string().uuid(),
   items: z.array(CartItemSchema).optional(),
+  savedItems: z.array(CartItemSchema).optional(),
 });
 export type CartInsert = z.infer<typeof CartInsertSchema>;
 
 export const CartUpdateSchema = z.object({
   customerId: z.string().uuid(),
   items: z.array(CartItemSchema).optional(),
+  savedItems: z.array(CartItemSchema).optional(),
   updatedAt: z.string().optional(),
 });
 export type CartUpdate = z.infer<typeof CartUpdateSchema>;

@@ -3,6 +3,9 @@ import { Gallery } from './components/gallery';
 import { PurchaseBar, VariantPicker } from './components/purchase-panel';
 import { Reviews } from './components/reviews';
 import { SimilarStrip } from './components/similar-strip';
+import { Link } from '@/i18n/navigation';
+import { buttonClass } from '@/components/customer/ui/button';
+import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
 import type { ProductViewProps } from './product-types';
 
 /**
@@ -48,17 +51,20 @@ export function ProductMobile({ t, locale, product, selected, onSelect }: Produc
 
         {/* Kargo kısıtı sepete eklemeden ÖNCE görünür (`musteri-urun-detay.md §2`). Mobilde etiketler
             kısalır — tasarım dar ekranda üç güvenceyi tek satırda tutuyor. */}
-        <div className="flex flex-wrap gap-4 rounded-soft bg-sand-100 px-3.5 py-2.5 font-sans text-micro text-body">
-          {product.shippable ? (
-            <>
-              <span>{t.assurance.coldChainShort}</span>
-              <span>{t.assurance.doorstepShort}</span>
-              <span>{t.assurance.shippable}</span>
-            </>
-          ) : (
-            <span>{t.assurance.notShippable}</span>
-          )}
-        </div>
+        <DeliveryLine
+          locale={locale}
+          shippable={product.shippable}
+          fallback={{ ...t.assurance, coldChain: t.assurance.coldChainShort, doorstep: t.assurance.doorstepShort }}
+          blockedActions={
+            <Link
+              href={{ pathname: '/catalog', query: { shippable: '1' } }}
+              className={buttonClass({ size: 'xs', className: '!text-micro' })}
+            >
+              {t.assurance.seeShippable}
+            </Link>
+          }
+          compact
+        />
       </section>
 
       <div className="px-4 pt-4">

@@ -18,6 +18,15 @@ create table public.cart (
   -- bekleyebildiği için buradaki fiyatı bağlayıcı saymak, maliyeti oynayan donuk gıdada doğrudan
   -- zarardır; fiyat düşmüşse de müşteriye fazla ödetir.
   items jsonb not null default '[]'::jsonb,
+  -- **Sonraya kaydedilenler** (K35) — sepetten çıkarılmış ama VAZGEÇİLMEMİŞ kalemler.
+  --
+  -- Teslimat yerine gönderilemeyen ürün sepetten silinmez, buraya taşınır: alışveriş ölmez, sepet
+  -- bölünür (tasarım §7). Müşteri yerini değiştirdiğinde ya da bölge genişlediğinde geri alınır.
+  --
+  -- Aynı satırda ve aynı biçimde duruyor çünkü aynı şeyin iki hâli: ikisi de "bu ürünü istiyorum"
+  -- kaydı, ayrımları yalnız BUGÜN alınıp alınamayacağı. Ayrı tablo, aynı kalemi iki yapıda tutmak
+  -- ve aralarında taşırken iki yazma yolu açmak olurdu.
+  saved_items jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now()
 );
 

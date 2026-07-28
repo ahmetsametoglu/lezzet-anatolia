@@ -3,7 +3,7 @@
     "announcement": {
       "cold": "❄ Soğuk zincirle teslim",
       "local": "Strasbourg & çevresinde kapıya teslim",
-      "shipping": "Fransa geneline kargo",
+      "shipping": "Fransa geneline kargo — soğuk zincir hariç",
       "mobile": "❄ Soğuk zincirle kapıya teslim"
     },
     "nav": {
@@ -13,7 +13,6 @@
       "discover": "Keşif",
       "pro": "Professionnels"
     },
-    "search": "Ürün ara…",
     "footer": {
       "address": "Strasbourg, Fransa · www.lezzetanatolie.com",
       "whatsapp": "WhatsApp ile sipariş: +33 6 XX XX XX XX",
@@ -24,14 +23,13 @@
       "faq": "SSS"
     },
     "share": "WhatsApp ile paylaş",
-    "searchClear": "Aramayı temizle",
     "cart": "Sepetim"
   },
   "fr": {
     "announcement": {
       "cold": "❄ Livraison en chaîne du froid",
       "local": "Livraison à domicile à Strasbourg et alentours",
-      "shipping": "Expédition dans toute la France",
+      "shipping": "Expédition dans toute la France — hors chaîne du froid",
       "mobile": "❄ Livraison à domicile en chaîne du froid"
     },
     "nav": {
@@ -41,7 +39,6 @@
       "discover": "Découverte",
       "pro": "Professionnels"
     },
-    "search": "Rechercher un produit…",
     "footer": {
       "address": "Strasbourg, France · www.lezzetanatolie.com",
       "whatsapp": "Commander sur WhatsApp : +33 6 XX XX XX XX",
@@ -52,14 +49,13 @@
       "faq": "FAQ"
     },
     "share": "Partager sur WhatsApp",
-    "searchClear": "Effacer la recherche",
     "cart": "Mon panier"
   },
   "de": {
     "announcement": {
       "cold": "❄ Lieferung in der Kühlkette",
       "local": "Hauslieferung in Straßburg und Umgebung",
-      "shipping": "Versand in ganz Frankreich",
+      "shipping": "Versand in ganz Frankreich — außer Kühlkette",
       "mobile": "❄ Hauslieferung in der Kühlkette"
     },
     "nav": {
@@ -69,7 +65,6 @@
       "discover": "Entdecken",
       "pro": "Professionnels"
     },
-    "search": "Produkt suchen…",
     "footer": {
       "address": "Straßburg, Frankreich · www.lezzetanatolie.com",
       "whatsapp": "Bestellen per WhatsApp: +33 6 XX XX XX XX",
@@ -80,7 +75,6 @@
       "faq": "FAQ"
     },
     "share": "Über WhatsApp teilen",
-    "searchClear": "Suche löschen",
     "cart": "Mein Warenkorb"
   }
 }

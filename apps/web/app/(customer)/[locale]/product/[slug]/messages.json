@@ -15,7 +15,8 @@
       "shippable": "📦 Kargoya uygun",
       "notShippable": "🚚 Yalnız Strasbourg & bölge içi kapıya teslim — bu ürün kargoya verilemez.",
       "coldChainShort": "❄ Soğuk zincir",
-      "doorstepShort": "🚚 Kapıya teslim"
+      "doorstepShort": "🚚 Kapıya teslim",
+      "seeShippable": "Kargolanabilir benzerleri gör"
     },
     "declaration": {
       "ingredients": "İçindekiler ve alerjenler",
@@ -66,7 +67,8 @@
       "shippable": "📦 Expédiable",
       "notShippable": "🚚 Uniquement livraison à domicile à Strasbourg & environs — ce produit ne peut pas être expédié.",
       "coldChainShort": "❄ Chaîne du froid",
-      "doorstepShort": "🚚 Livraison à domicile"
+      "doorstepShort": "🚚 Livraison à domicile",
+      "seeShippable": "Voir des produits expédiables"
     },
     "declaration": {
       "ingredients": "Ingrédients et allergènes",
@@ -117,7 +119,8 @@
       "shippable": "📦 Versandfähig",
       "notShippable": "🚚 Nur Lieferung an die Haustür in Straßburg & Umgebung — dieses Produkt kann nicht versandt werden.",
       "coldChainShort": "❄ Kühlkette",
-      "doorstepShort": "🚚 Lieferung an die Haustür"
+      "doorstepShort": "🚚 Lieferung an die Haustür",
+      "seeShippable": "Versandfähige Alternativen"
     },
     "declaration": {
       "ingredients": "Zutaten und Allergene",

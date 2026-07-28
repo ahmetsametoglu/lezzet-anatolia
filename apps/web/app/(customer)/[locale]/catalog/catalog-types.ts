@@ -27,7 +27,9 @@ export interface CatalogViewProps {
   loadingMore: boolean;
   onLoadMore: () => void;
   /** Etkin süzgeçler — çip ve sıralama seçimlerinin işaretlenmesi için. */
-  active: { category?: string; sort: CatalogSort; onlyOffers: boolean };
+  active: { category?: string; sort: CatalogSort; onlyOffers: boolean; onlyShippable: boolean };
   /** Bir süzgeci değiştirip diğerlerini koruyan URL üretir (süzgeçler birbirini silmez). */
-  hrefFor: (patch: { category?: string | null; sort?: CatalogSort; onlyOffers?: boolean }) => CatalogHref;
+  /** Adresteki güncel arama — kutu ne arandığını göstersin (çerçeveden buraya indi). */
+  search?: string;
+  hrefFor: (patch: { category?: string | null; sort?: CatalogSort; onlyOffers?: boolean; onlyShippable?: boolean }) => CatalogHref;
 }

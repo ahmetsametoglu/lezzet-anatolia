@@ -15,6 +15,10 @@ import type { CartEntry, CartView } from './cart-types';
  * ziyaretçininki tarayıcıda yaşar ve girişte devralınır (`takeOver`). Ekran bu ayrımı bilmez:
  * her iki yolda da niyet listesi gönderilir, çözülmüş görünüm döner.
  *
+ * **İKİ LİSTE birlikte taşınır:** sepet ve sonraya kaydedilenler (K35). Ayrı uçlardan gitselerdi
+ * "kalemi sepetten listeye taşı" iki ayrı tura bölünür ve arada biri başarısız olursa kalem ya iki
+ * yerde birden ya da hiçbir yerde kalırdı. Tek tur, tek karar.
+ *
  * Guard YOK ve olmamalı: sepet ziyaretçiye de açıktır. Ama oturum VARSA yazma sunucuya gider —
  * yani "kimin sepeti" sorusunu istemci değil oturum cevaplar; istemciden gelen bir müşteri kimliği
  * asla kabul edilmez.
@@ -24,6 +28,13 @@ import type { CartEntry, CartView } from './cart-types';
  * burada sunucunun kendi çözdüğü değer yazılır.
  */
 
+/** İki listenin çözülmüş hâli — ekran ikisini de aynı anda gösterir (sepet + altındaki liste). */
+interface CartPayload {
+  view: CartView;
+  /** Sonraya kaydedilenlerin çözülmüş görünümü; `lines` dışındaki toplamları anlamsızdır. */
+  saved: CartView;
+}
+
 /**
  * Sepetin ilk okunması — ve **misafir sepetinin devralınması**.
  *
@@ -32,48 +43,73 @@ import type { CartEntry, CartView } from './cart-types';
  * yapıldıysa `merged` döner ve istemci tarayıcı deposunu boşaltır — yoksa aynı kalemler her
  * açılışta yeniden eklenir ve adet katlanır.
  */
-export async function readCartAction(locale: string, entries: CartEntry[]): Promise<ActionResult<{ view: CartView; merged: boolean }>> {
+export async function readCartAction(
+  locale: string,
+  entries: CartEntry[],
+  saved: CartEntry[] = [],
+): Promise<ActionResult<CartPayload & { merged: boolean }>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     const user = await getSessionUser();
-    if (!user) return { data: { view: await getCartView(locale, entries), merged: false }, error: null };
+    if (!user) return { data: { ...(await resolveBoth(locale, entries, saved)), merged: false }, error: null };
 
     const cart = new CartService(serviceDb());
-    const merged = entries.length > 0;
+    const merged = entries.length > 0 || saved.length > 0;
     if (merged) {
       // Fiyat sunucunun çözdüğüdür; istemciden gelen fiyat kabul edilmez (0 yazılır, checkout çözer).
-      await cart.takeOver(user.id, entries.map(toItem));
+      if (entries.length > 0) await cart.takeOver(user.id, entries.map(toItem));
+      // Liste devralınırken BİRLEŞTİRİLİR: sunucudakiler korunur, ziyaretçininkiler eklenir.
+      if (saved.length > 0) {
+        const current = (await cart.get(user.id)).savedItems;
+        const incoming = saved.map(toItem).filter((row) => !current.some((c) => sameKey(c, row)));
+        await cart.replaceSaved(user.id, [...current, ...incoming]);
+      }
     }
-    const items = (await cart.get(user.id)).items.map(toEntry);
-    return { data: { view: await getCartView(locale, items), merged }, error: null };
+    const stored = await cart.get(user.id);
+    return {
+      data: { ...(await resolveBoth(locale, stored.items.map(toEntry), stored.savedItems.map(toEntry))), merged },
+      error: null,
+    };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
 }
 
 /**
- * Sepeti verilen niyet listesine EŞİTLER (ekleme, adet değişimi ve çıkarma aynı uç).
+ * İki listeyi verilen niyete EŞİTLER (ekleme, adet değişimi, çıkarma ve "sonraya kaydet" aynı uç).
  *
- * Tek uç olmasının sebebi: istemci zaten tam listeyi tutuyor. Ayrı `add`/`setQty`/`remove` uçları,
- * iki tarafın listesinin ayrışabildiği üç ayrı yol açardı; eşitleme tek yön bırakır.
+ * Tek uç olmasının sebebi: istemci zaten tam listeleri tutuyor. Ayrı uçlar, iki tarafın listelerinin
+ * ayrışabildiği birden çok yol açardı; eşitleme tek yön bırakır.
  */
-export async function writeCartAction(locale: string, entries: CartEntry[]): Promise<ActionResult<CartView>> {
+export async function writeCartAction(locale: string, entries: CartEntry[], saved: CartEntry[] = []): Promise<ActionResult<CartPayload>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     const user = await getSessionUser();
-    // Ziyaretçide yazacak yer yok — liste tarayıcıda kalır, burada yalnız çözülür.
-    if (!user) return { data: await getCartView(locale, entries), error: null };
+    const payload = await resolveBoth(locale, entries, saved);
+    // Ziyaretçide yazacak yer yok — listeler tarayıcıda kalır, burada yalnız çözülür.
+    if (!user) return { data: payload, error: null };
 
     // Sunucuya yazılacak fiyat SUNUCUNUN çözdüğüdür; istemciden fiyat kabul edilmez.
-    const view = await getCartView(locale, entries);
-    await new CartService(serviceDb()).replace(
+    const cart = new CartService(serviceDb());
+    await cart.replace(
       user.id,
-      view.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })),
+      payload.view.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })),
     );
-    return { data: view, error: null };
+    await cart.replaceSaved(user.id, payload.saved.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })));
+    return { data: payload, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
+}
+
+/**
+ * İki listeyi TEK turda çözer. Sepetin okuması ayarları ve fiyat bağlamını zaten getiriyor; ikinci
+ * bir çağrı aynı işi tekrar yapardı — ama listeler ayrı çözülmek zorunda, çünkü toplam ve asgari
+ * sepet kararı yalnız SEPETE ait.
+ */
+async function resolveBoth(locale: 'tr' | 'fr' | 'de', entries: CartEntry[], saved: CartEntry[]): Promise<CartPayload> {
+  const [view, savedView] = await Promise.all([getCartView(locale, entries), getCartView(locale, saved)]);
+  return { view, saved: savedView };
 }
 
 /**
@@ -94,4 +130,12 @@ function toEntry(item: { variantId?: string | null; bundleId?: string | null; qt
   return item.bundleId
     ? { kind: 'bundle', bundleId: item.bundleId, qty: item.qty }
     : { kind: 'variant', variantId: item.variantId ?? '', qty: item.qty, stockId: item.stockId ?? null };
+}
+
+/** Devralmada çakışma kontrolü — `CartService.sameLine` ile aynı kural (paket kendi kimliğiyle). */
+type LineKey = { variantId?: string | null; bundleId?: string | null; stockId?: string | null };
+
+function sameKey(a: LineKey, b: LineKey): boolean {
+  if (a.bundleId || b.bundleId) return (a.bundleId ?? null) === (b.bundleId ?? null);
+  return (a.variantId ?? null) === (b.variantId ?? null) && (a.stockId ?? null) === (b.stockId ?? null);
 }

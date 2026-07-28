@@ -24,7 +24,11 @@
       "priceFrom": "başlangıç fiyatı — boy detayda seçilir",
       "offer": "Fırsat",
       "soldOut": "Tükendi — yakında yeniden"
-    }
+    },
+    "onlyShippable": "📍 Adresime gönderilebilir",
+    "onlyShippableShort": "📍 Adresime",
+    "searchPlaceholder": "Ürün ara…",
+    "searchClear": "Aramayı temizle"
   },
   "fr": {
     "title": "Catalogue",
@@ -51,7 +55,11 @@
       "priceFrom": "prix de départ — le format se choisit en détail",
       "offer": "Offre",
       "soldOut": "Épuisé — bientôt de retour"
-    }
+    },
+    "onlyShippable": "📍 Livrable chez moi",
+    "onlyShippableShort": "📍 Chez moi",
+    "searchPlaceholder": "Rechercher un produit…",
+    "searchClear": "Effacer la recherche"
   },
   "de": {
     "title": "Katalog",
@@ -78,6 +86,10 @@
       "priceFrom": "Startpreis — Größe wird im Detail gewählt",
       "offer": "Angebot",
       "soldOut": "Ausverkauft — bald wieder da"
-    }
+    },
+    "onlyShippable": "📍 An meine Adresse",
+    "onlyShippableShort": "📍 Zu mir",
+    "searchPlaceholder": "Produkt suchen…",
+    "searchClear": "Suche löschen"
   }
 }

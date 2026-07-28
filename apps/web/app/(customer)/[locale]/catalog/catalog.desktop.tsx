@@ -1,5 +1,6 @@
 import { CATALOG_SORTS } from '@/lib/storefront/storefront-types';
 import { EmptyState, FilterChip } from '@/components/customer/ui/filter-controls';
+import { SearchField } from '@/components/customer/ui/search-field';
 import { SortSelect } from '@/components/customer/ui/sort-select';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { LoadMore } from '@/components/customer/ui/load-more';
@@ -17,11 +18,16 @@ import type { CatalogViewProps } from './catalog-types';
  * Koleksiyon görünümü (tasarımdaki "Durum: koleksiyon görünümü" varyantı — üstbaşlıklı başlık bandı)
  * HENÜZ YOK: koleksiyon rotası açılmadı. Geldiğinde yalnız başlık bloğu değişir, gerisi aynı kalır.
  */
-export function CatalogDesktop({ t, locale, data, products, hasMore, loadingMore, onLoadMore, active, hrefFor }: CatalogViewProps) {
+export function CatalogDesktop({ t, locale, data, products, hasMore, loadingMore, onLoadMore, active, hrefFor, search }: CatalogViewProps) {
   return (
     <div className="flex flex-col">
       <section className="flex flex-col gap-5 px-12 pt-9 pb-5">
-        <h1 className="font-serif text-page-title text-ink">{data.activeCategory?.name ?? t.title}</h1>
+        {/* Arama BAŞLIKLA aynı satırda: çerçeveden buraya indi (28.07) — sonucu gösteren sayfada
+            durması hem üst çubuğu boşaltıyor hem "ne aradığım"ı sonucun yanında tutuyor. */}
+        <div className="flex items-center justify-between gap-6">
+          <h1 className="font-serif text-page-title text-ink">{data.activeCategory?.name ?? t.title}</h1>
+          <SearchField placeholder={t.searchPlaceholder} clearLabel={t.searchClear} defaultValue={search} />
+        </div>
 
         <div className="flex flex-wrap gap-2.5">
           <FilterChip label={t.all} href={hrefFor({ category: null })} active={!active.category} />
@@ -33,6 +39,15 @@ export function CatalogDesktop({ t, locale, data, products, hasMore, loadingMore
         <div className="flex items-center gap-3">
           <span className="font-sans text-body-sm text-muted">{t.count.replace('{n}', String(data.total))}</span>
           <span className="flex-1" />
+          {/* Kargo çipi fırsat çipinin SOLUNDA: "nereye gidecek" sorusu "hangisi indirimli"den önce
+              gelir. Varsayılan kapalı — katalog kendiliğinden küçülmez (tasarım). */}
+          <FilterChip
+            label={t.onlyShippable}
+            href={hrefFor({ onlyShippable: !active.onlyShippable })}
+            active={active.onlyShippable}
+            tone="place"
+            size="control"
+          />
           <FilterChip label={t.onlyOffers} href={hrefFor({ onlyOffers: !active.onlyOffers })} active={active.onlyOffers} tone="offer" size="control" />
           <SortSelect
             label={t.sortLabel}

@@ -3,6 +3,9 @@
 import { Link } from '@/i18n/navigation';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { cartKey } from '@/lib/cart/cart-types';
+import { PlacePrompt } from '@/components/customer/delivery/place-prompt';
+import { PlaceRestriction } from '@/components/customer/delivery/place-restriction';
+import { SavedList } from '@/components/customer/delivery/saved-list';
 import { CartLineRow } from './components/cart-line';
 import { CartSummary } from './components/cart-summary';
 import { CartCoupon } from './components/cart-coupon';
@@ -48,9 +51,20 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
           </div>
         )}
 
+        {/* K34 · Teslimat kısıtı — satırların ÜSTÜNDE: hangi kalemlerin etkilendiğini ve çıkışı,
+            müşteri listeyi gezmeden görmeli. Kısıt yoksa (ya da yer bilinmiyorsa) hiç çizilmez. */}
+        {/* Yer BİLİNMİYORSA soru burada sorulur, biliniyorsa kısıt bloğu konuşur — ikisi birbirini
+            dışlar. Sepet, checkout'tan önceki son duraktır: soruyu buraya koymamak, mekanizmayı
+            kurup duvarı yine checkout'ta bırakmak olurdu. */}
+        <PlacePrompt locale={locale} scope="cart" />
+        <PlaceRestriction locale={locale} lines={view.lines} minBasketCents={view.minBasketCents} freeShippingCents={view.freeShippingCents} />
+
         {view.lines.map((line) => (
           <CartLineRow key={cartKey(line)} line={line} t={t} locale={locale} />
         ))}
+
+        {/* K35 · Sonraya kaydedilenler — sepetin ALTINDA, boşken hiç çizilmez. */}
+        <SavedList locale={locale} />
       </div>
 
       <div className="sticky top-5 flex flex-col gap-3.5">

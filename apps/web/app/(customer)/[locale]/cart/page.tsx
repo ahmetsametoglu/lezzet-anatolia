@@ -32,7 +32,7 @@ export default async function CartPage({ params }: CartPageProps) {
   const [device, emptyContext] = await Promise.all([detectDevice(), getEmptyCartContext(locale)]);
 
   return (
-    <SiteFrame device={device} locale={locale} showSearch>
+    <SiteFrame device={device} locale={locale}>
       <CartClient t={t} locale={locale} device={device} emptyContext={emptyContext} />
     </SiteFrame>
   );

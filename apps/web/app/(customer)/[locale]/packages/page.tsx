@@ -32,7 +32,7 @@ export default async function PackagesPage({ params }: PackagesPageProps) {
   const [packages, device] = await Promise.all([listStorefrontPackages(locale), detectDevice()]);
 
   return (
-    <SiteFrame device={device} locale={locale} activeNav="packages" showSearch>
+    <SiteFrame device={device} locale={locale} activeNav="packages">
       <PackagesClient t={t} locale={locale} packages={packages} device={device} />
     </SiteFrame>
   );

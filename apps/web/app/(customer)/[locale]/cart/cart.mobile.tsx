@@ -3,6 +3,9 @@
 import { Link } from '@/i18n/navigation';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { cartKey } from '@/lib/cart/cart-types';
+import { PlacePrompt } from '@/components/customer/delivery/place-prompt';
+import { PlaceRestriction } from '@/components/customer/delivery/place-restriction';
+import { SavedList } from '@/components/customer/delivery/saved-list';
 import { CartLineRow } from './components/cart-line';
 import { CartSummary } from './components/cart-summary';
 import { CartCoupon } from './components/cart-coupon';
@@ -49,9 +52,21 @@ export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
             </div>
           )}
           <div className="flex flex-col gap-2.5 px-4 py-3.5">
+            {/* K34 · Teslimat kısıtı satırların ÜSTÜNDE — masaüstüyle aynı sıra, aynı bileşen. */}
+            {/* Yer bilinmiyorsa soru, biliniyorsa kısıt — ikisi birbirini dışlar. */}
+            <PlacePrompt locale={locale} scope="cart" />
+            <PlaceRestriction
+              locale={locale}
+              lines={view.lines}
+              minBasketCents={view.minBasketCents}
+              freeShippingCents={view.freeShippingCents}
+              compact
+            />
             {view.lines.map((line) => (
               <CartLineRow key={cartKey(line)} line={line} t={t} locale={locale} compact />
             ))}
+            {/* K35 · Sonraya kaydedilenler; boşken hiç çizilmez. */}
+            <SavedList locale={locale} compact />
             {/* Mobilde kupon özetin ÜSTÜNDE (tasarım): indirim uygulanınca özet zaten onun sonucunu
                 gösteriyor — sonucu sebebinden önce okutmak sırayı tersine çevirirdi. */}
             <CartCoupon t={t} />

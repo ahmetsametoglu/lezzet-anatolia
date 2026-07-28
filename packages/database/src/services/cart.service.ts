@@ -31,7 +31,7 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
   /** Müşterinin sepeti; hiç açılmamışsa boş sepet döner — çağıranın `null` kontrolü gerekmez. */
   async get(customerId: string): Promise<Cart> {
     const cart = await this.getOneBy({ customerId });
-    return cart ?? { customerId, items: [], updatedAt: new Date().toISOString() };
+    return cart ?? { customerId, items: [], savedItems: [], updatedAt: new Date().toISOString() };
   }
 
   /**
@@ -106,9 +106,31 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
     return this.write(customerId, merged);
   }
 
-  /** Tek yazma yolu — `updatedAt` her dokunuşta tazelenir (sepet kurtarma zamanlaması buna bakar). */
-  private write(customerId: string, items: CartItem[]): Promise<Cart> {
-    return this.upsert({ customerId, items, updatedAt: new Date().toISOString() } as CartInsert, 'customer_id');
+  /**
+   * Sonraya kaydedilenleri (K35) verilen listeye EŞİTLER. Sepetle aynı desen: istemci tam listeyi
+   * tutar, tek yönlü eşitleme iki tarafın ayrışmasını imkânsız kılar.
+   */
+  async replaceSaved(customerId: string, saved: readonly Omit<CartItem, 'addedAt'>[]): Promise<Cart> {
+    const cart = await this.get(customerId);
+    const next = saved.map((item) => ({
+      ...item,
+      stockId: item.stockId ?? null,
+      // `addedAt` KORUNUR: kalem sepetten buraya taşınırken ilk eklenme anı da taşınır — "iki
+      // haftadır bekliyor" bilgisi sepet ile liste arasında gidip gelirken sıfırlanmamalı.
+      addedAt: [...cart.items, ...cart.savedItems].find((row) => sameLine(row, item))?.addedAt ?? new Date().toISOString(),
+    }));
+    return this.write(customerId, cart.items, next);
+  }
+
+  /**
+   * Tek yazma yolu — `updatedAt` her dokunuşta tazelenir (sepet kurtarma zamanlaması buna bakar).
+   *
+   * İki liste birlikte yazılır: `saved` verilmezse MEVCUDU korunur. Verilmediğinde boş dizi
+   * yazılsaydı, sepete bir kalem eklemek sonraya kaydedilenleri sessizce silerdi.
+   */
+  private async write(customerId: string, items: CartItem[], saved?: CartItem[]): Promise<Cart> {
+    const savedItems = saved ?? (await this.get(customerId)).savedItems;
+    return this.upsert({ customerId, items, savedItems, updatedAt: new Date().toISOString() } as CartInsert, 'customer_id');
   }
 }
 

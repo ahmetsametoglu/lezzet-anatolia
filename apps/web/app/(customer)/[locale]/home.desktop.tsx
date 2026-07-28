@@ -1,5 +1,6 @@
 import { RATIO_BAND } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
+import { PlacePrompt } from '@/components/customer/delivery/place-prompt';
 import { buttonClass } from '@/components/customer/ui/button';
 import { CtaBand, InviteBand, SectionHeading } from '@/components/customer/ui/section';
 import { CategoryCard, OfferCard, PackageCard, ProductCard } from '@/components/customer/ui/storefront-cards';
@@ -42,6 +43,12 @@ export function HomeDesktop({ t, locale, data }: HomeViewProps) {
         </div>
         <FramedImage src={null} alt={t.hero.imageAlt} ratio={RATIO_BAND} className="!rounded-[24px]" />
       </section>
+
+      {/* K33 · Posta kodu sorma şeridi — kahramanın HEMEN ALTINDA (tasarım). Yer biliniyorsa ya da
+          "şimdi değil" denmişse kendini hiç çizmez; kesmez, kilitlemez. */}
+      <div className="px-12 pb-8">
+        <PlacePrompt locale={locale} />
+      </div>
 
       {/* Kategoriler */}
       <section className="flex flex-col gap-4 px-12 pt-2 pb-12">

@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { readCartAction, writeCartAction } from '@/lib/cart/actions';
 import { clearGuestCart, mergeEntry, readGuestCart, setEntryQty, writeGuestCart } from '@/lib/cart/cart-store';
+import { clearSaved, readSaved, writeSaved } from '@/lib/cart/saved-store';
 import { EMPTY_CART, cartKey, entryOf, viewWithEntries, type CartEntry, type CartRef, type CartView } from '@/lib/cart/cart-types';
 import { CartUndo } from './cart-undo';
 
@@ -56,6 +57,17 @@ interface CartContextValue {
    * müşterinin az önce yaptığı işin sonucu.
    */
   justRemoved: boolean;
+  /** Sonraya kaydedilenler (K35) — çözülmüş satırlar; toplamları anlamsızdır, liste gösterilir. */
+  saved: CartView;
+  /**
+   * Kalemi sepetten listeye TAŞIR. Silmez: teslimat yerine gönderilemeyen ürün vazgeçilmiş değildir,
+   * yalnız bugün alınamıyordur (tasarım §7: "alışveriş ölmez, sepet bölünür").
+   *
+   * Geri alma şeridi AÇILMAZ — silme değil taşıma; kalem gözden kaybolmuyor, hemen altta duruyor.
+   */
+  saveForLater: (refs: readonly CartRef[]) => void;
+  /** Listeden sepete geri alır (aynı adetle). Liste tarafındaki tek aksiyon budur. */
+  restoreToCart: (ref: CartRef) => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -73,7 +85,9 @@ interface CartProviderProps {
 
 export function CartProvider({ locale, children }: CartProviderProps) {
   const [entries, setEntries] = useState<CartEntry[]>([]);
+  const [savedEntries, setSavedEntries] = useState<CartEntry[]>([]);
   const [view, setView] = useState<CartView>(EMPTY_CART);
+  const [savedView, setSavedView] = useState<CartView>(EMPTY_CART);
   const [ready, setReady] = useState(false);
   // Silinen kalem, geri alınana ya da pencere kapanana kadar burada bekler.
   const [undo, setUndo] = useState<{ entry: CartEntry; name: string } | null>(null);
@@ -83,17 +97,21 @@ export function CartProvider({ locale, children }: CartProviderProps) {
 
   /** Niyeti yazar ve çözülmüş görünümü alır. Ziyaretçide tarayıcıya, girişlide sunucuya gider. */
   const sync = useCallback(
-    (next: CartEntry[]) => {
+    (next: CartEntry[], nextSaved: CartEntry[]) => {
       setEntries(next);
+      setSavedEntries(nextSaved);
       writeGuestCart(next);
+      writeSaved(nextSaved);
       const ticket = ++seq.current;
-      void writeCartAction(locale, next).then(({ data }) => {
+      void writeCartAction(locale, next, nextSaved).then(({ data }) => {
         // Bilet eskiyse kullanıcı bu arada bir şey daha yaptı: eski cevap YOK SAYILIR. Kilide gerek
         // bırakmayan şey bu — arayüz açık kalır, sonuncu yazma kazanır.
         if (ticket !== seq.current || !data) return;
-        setView(data);
-        // Sunucu satırı düşürdüyse (ürün silinmiş) niyet listesi de ona uyar.
-        setEntries(data.lines.map(entryOf));
+        setView(data.view);
+        setSavedView(data.saved);
+        // Sunucu satırı düşürdüyse (ürün silinmiş) niyet listeleri de ona uyar.
+        setEntries(data.view.lines.map(entryOf));
+        setSavedEntries(data.saved.lines.map(entryOf));
       });
     },
     [locale],
@@ -115,16 +133,23 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   // üstüne EKLENİR (devralma) — action oturuma bakar, istemci "kimin sepeti" sorusunu cevaplamaz.
   useEffect(() => {
     const guest = readGuestCart();
+    const guestSaved = readSaved();
     setEntries(guest);
+    setSavedEntries(guestSaved);
     const ticket = ++seq.current;
-    void readCartAction(locale, guest)
+    void readCartAction(locale, guest, guestSaved)
       .then(({ data }) => {
         if (ticket !== seq.current || !data) return;
-        // Devralma yapıldıysa tarayıcı deposu boşaltılır; yoksa aynı kalemler her açılışta
+        // Devralma yapıldıysa tarayıcı depoları boşaltılır; yoksa aynı kalemler her açılışta
         // yeniden eklenir ve adet katlanır.
-        if (data.merged) clearGuestCart();
+        if (data.merged) {
+          clearGuestCart();
+          clearSaved();
+        }
         setView(data.view);
+        setSavedView(data.saved);
         setEntries(data.view.lines.map(entryOf));
+        setSavedEntries(data.saved.lines.map(entryOf));
       })
       .finally(() => {
         if (ticket === seq.current) setReady(true);
@@ -140,11 +165,11 @@ export function CartProvider({ locale, children }: CartProviderProps) {
       ready,
       add: (entry) => {
         closeUndo();
-        sync(mergeEntry(entries, entry));
+        sync(mergeEntry(entries, entry), savedEntries);
       },
       addMany: (incoming) => {
         closeUndo();
-        sync(incoming.reduce<CartEntry[]>((acc, entry) => mergeEntry(acc, entry), entries));
+        sync(incoming.reduce<CartEntry[]>((acc, entry) => mergeEntry(acc, entry), entries), savedEntries);
       },
       justRemoved: undo !== null,
       // Adet NİYETTEN okunur (katalogdan yeni eklenen ürünün henüz çözülmüş satırı yok, ama düğme
@@ -155,6 +180,26 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         if (!entry) return null;
         const line = view.lines.find(match);
         return { qty: entry.qty, stockId: entry.stockId ?? null, limitCap: line?.limitCap ?? null };
+      },
+      saved: savedView,
+      // Birden çok kalem TEK turda taşınır: döngüyle tek tek çağırmak her seferinde aynı (bayat)
+      // listeyi okur ve yalnız sonuncusu uygulanırdı — "hepsini ayır" düğmesi tek kalem taşırdı.
+      saveForLater: (refs) => {
+        const keys = new Set(refs.map(cartKey));
+        const moving = entries.filter((e) => keys.has(cartKey(e)));
+        if (moving.length === 0) return;
+        // Geri alma şeridi KAPANIR ama açılmaz: bu bir silme değil taşıma, kalem gözden kaybolmuyor.
+        closeUndo();
+        sync(
+          entries.filter((e) => !keys.has(cartKey(e))),
+          moving.reduce<CartEntry[]>((acc, entry) => mergeEntry(acc, entry), savedEntries),
+        );
+      },
+      restoreToCart: (ref) => {
+        const key = cartKey(ref);
+        const moving = savedEntries.find((e) => cartKey(e) === key);
+        if (!moving) return;
+        sync(mergeEntry(entries, moving), savedEntries.filter((e) => cartKey(e) !== key));
       },
       setQty: (ref, qty) => {
         if (qty <= 0) {
@@ -170,10 +215,10 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         } else {
           closeUndo();
         }
-        sync(setEntryQty(entries, ref, qty));
+        sync(setEntryQty(entries, ref, qty), savedEntries);
       },
     }),
-    [displayView, view, ready, entries, sync, closeUndo, undo],
+    [displayView, view, savedView, ready, entries, savedEntries, sync, closeUndo, undo],
   );
 
   return (
@@ -189,7 +234,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
           if (!undo) return;
           const entry = undo.entry;
           closeUndo();
-          sync(mergeEntry(entries, entry));
+          sync(mergeEntry(entries, entry), savedEntries);
         }}
         onClose={closeUndo}
       />

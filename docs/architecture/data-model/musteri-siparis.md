@@ -177,7 +177,8 @@ Giriş yapmış müşterinin sepeti sunucuda kalıcıdır — cihaz değişse de
 | Alan | Tip | Not |
 | --- | --- | --- |
 | customer_id | uuid | **birincil anahtar** — "tek satır / müşteri" kuralı şemada zorlanır |
-| items | jsonb | `[{ variantId, qty, unitPrice, stockId, addedAt }]` |
+| items | jsonb | `[{ kind, variantId, bundleId, qty, unitPrice, stockId, addedAt }]` |
+| saved_items | jsonb | **sonraya kaydedilenler** (K35) — aynı biçim, aynı satır |
 | updated_at | timestamptz | her dokunuşta tazelenir (sepet kurtarma zamanlaması buna bakar) |
 
 **Sepetteki `unitPrice` BAĞLAYICI DEĞİLDİR** (DOMAIN §5): gösterim ve değişiklik tespiti içindir. Bağlayıcı fiyat **checkout başlangıcında** çözülür ve orada sabitlenir — stok ayırma + ödeme oturumuyla aynı 30 dk'lık pencerede. Sepet aylarca bekleyebilir; oradaki fiyatı bağlayıcı saymak maliyeti oynayan üründe zarar, fiyat düştüğünde müşteriye haksızlık olurdu.
@@ -185,6 +186,10 @@ Giriş yapmış müşterinin sepeti sunucuda kalıcıdır — cihaz değişse de
 **`stockId` dolu satır** partiye çıpalı teklif kalemidir ve normal satırdan **ayrı yaşar** — aynı ürün hem indirimli partiden hem normal fiyattan sepette olabilir. İndirim partiye aittir; parti tükenirse başka partiye taşınmaz.
 
 **Sepette stok ayrılmaz** (DOMAIN §4): sepet bir niyet kaydıdır, rezervasyon checkout'ta yapılır.
+
+**İKİ TÜR satır vardır** ve `kind` bunu açıkça taşır: varyant satırı (`variantId` + `stockId`) ve **paket satırı** (`bundleId`, 05.5). Paketin varyantı ya da partisi yoktur — satılan şey paketin kendisidir ve sepette bütün olarak artırılır/silinir (DOMAIN §13). Türü kimlik alanının varlığından çıkarmak yerine açıkça yazmanın sebebi kod tarafında: TypeScript yalnız birim tipli alanlarla daraltma yapar, `string` birim tip değildir.
+
+**`saved_items` — sonraya kaydedilenler.** Teslimat yerine gönderilemeyen kalem sepetten SİLİNMEZ, buraya taşınır: alışveriş ölmez, sepet bölünür. Ayrı tablo açılmadı çünkü ikisi aynı şeyin iki hâli — ikisi de "bu ürünü istiyorum" kaydı, ayrımları yalnız BUGÜN alınıp alınamayacağı. Ayrı yapılarda tutmak, aralarında taşırken iki yazma yolu açardı. `addedAt` taşınırken korunur: "iki haftadır bekliyor" sinyali listeye geçerken sıfırlanmamalı.
 
 ## CourierDayClose (kurye gün kapanışı)
 

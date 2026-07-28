@@ -3,6 +3,8 @@ import { FramedImage } from '@/components/media/framed-image';
 import { Badge } from '@/components/customer/ui/badge';
 import { ShareButton } from '@/components/customer/ui/share-button';
 import { Link } from '@/i18n/navigation';
+import { buttonClass } from '@/components/customer/ui/button';
+import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
 import { formatPrice } from '@/lib/storefront/format';
 import { ContentCard } from './components/content-card';
 import { PackageFacts } from './components/package-facts';
@@ -60,17 +62,19 @@ export function PackageDesktop({ t, locale, pack }: PackageViewProps) {
 
           {/* Kargolanamayan pakette şerit UYARIYA döner: üç ferah vaat yerine tek kısıt cümlesi —
               "kargoya uygun" ile "kargoya verilemez" aynı kutuda yan yana duramaz. */}
-          {pack.inRouteOnly ? (
-            <p className="rounded-soft border border-honey-line bg-honey-bg px-4 py-3 font-sans text-note leading-relaxed font-semibold text-honey">
-              {t.assurance.inRouteOnly}
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-5 rounded-soft bg-sand-100 px-4.5 py-3.5 font-sans text-note text-body">
-              <span>{t.assurance.coldChain}</span>
-              <span>{t.assurance.doorstep}</span>
-              <span>{t.assurance.shippable}</span>
-            </div>
-          )}
+          {/* Paket kargoya çıkamıyorsa kısıt YERE göre konuşur: bölge içindeki müşteriye
+              "gönderemiyoruz" demek yanlış olurdu — onun için bu bir kısıt değil. */}
+          <DeliveryLine
+            locale={locale}
+            shippable={!pack.inRouteOnly}
+            fallback={{ ...t.assurance, notShippable: t.assurance.inRouteOnly }}
+            blockedActions={
+              <Link href="/packages" className={buttonClass({ size: "sm", className: '!text-note' })}>
+                {t.seeShippablePackages}
+              </Link>
+            }
+            
+          />
 
           <PackageFacts t={t} locale={locale} pack={pack} />
 
