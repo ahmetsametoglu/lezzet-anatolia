@@ -80,14 +80,27 @@ function OfferCard({ batch, onOpen }: OfferCardProps) {
         <span className="truncate font-ops-body text-ops-xs text-ops-body">{suggestionText(batch)}</span>
       </div>
 
-      {/* Liste fiyatı ÜSTÜ ÇİZİLİ, teklif fiyatı yanında: indirimin ne kadar olduğu okunsun.
-          Fiyatı girilmemiş boyda ikisi de tire — sayı uydurulmaz. */}
-      <div className="flex items-center gap-3">
-        <span className="font-ops-mono text-ops-sm text-ops-faint line-through">{money(batch.listPriceCents)}</span>
-        <span className="font-ops-mono text-ops-base font-semibold text-ops-olive-dark">
-          {money(batch.offerPriceCents ?? batch.suggestedOfferCents)}
-        </span>
-      </div>
+      {/* SATILAMAZ partide satış fiyatı GÖSTERİLMEZ: DLC geçmiş mal imha edilir, ona indirimli fiyat
+          önermek olmayan bir kararı varmış gibi gösterirdi. Oradaki anlamlı sayı kayıptır —
+          maliyet × kalan adet; imhanın bilançoya yazacağı tutar.
+
+          Satılabilir partide liste fiyatı ÜSTÜ ÇİZİLİ, teklif fiyatı yanında: indirimin ne kadar
+          olduğu okunsun. Fiyatı girilmemiş boyda ikisi de tire — sayı uydurulmaz. */}
+      {blocked ? (
+        <div className="flex items-baseline gap-1.5">
+          <span className="font-ops-body text-ops-xs text-ops-muted">kayıp</span>
+          <span className="font-ops-mono text-ops-base font-semibold text-ops-red">
+            {money(batch.purchasePriceCents === null ? null : batch.purchasePriceCents * batch.physicalQty)}
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <span className="font-ops-mono text-ops-sm text-ops-faint line-through">{money(batch.listPriceCents)}</span>
+          <span className="font-ops-mono text-ops-base font-semibold text-ops-olive-dark">
+            {money(batch.offerPriceCents ?? batch.suggestedOfferCents)}
+          </span>
+        </div>
+      )}
 
       {/* Satılamaz partide düğme YOK, bilgi var: imha kaydı depo akışının işidir (DOMAIN §4). */}
       {blocked ? (
