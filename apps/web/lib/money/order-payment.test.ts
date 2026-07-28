@@ -21,7 +21,7 @@ let variantId: string;
 let productId: string;
 let categoryId: string;
 let cashAccount: string;
-const acilanProfiller: string[] = [];
+const createdProfiles: string[] = [];
 
 beforeAll(async () => {
   const category = await new CategoryService(db).create({ name: { tr: `Para testi ${stamp}` } });
@@ -31,7 +31,7 @@ beforeAll(async () => {
   variantId = variants[0]!.id;
   const profile = await new UserProfileService(db).insert({ name: `Para müşterisi ${stamp}` });
   customerId = profile.id;
-  acilanProfiller.push(profile.id);
+  createdProfiles.push(profile.id);
   cashAccount = (await accounts.insert({ name: `Test kasası ${stamp}`, type: 'cash' })).id;
 });
 
@@ -44,7 +44,7 @@ afterAll(async () => {
   await db.from('money_movement').delete().eq('account_id', cashAccount);
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('account').delete().eq('id', cashAccount);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: acilanProfiller });
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
 });
 
 /** 2 × 25 € = 50 € tutarında, tamamı karşılanmış sipariş. */

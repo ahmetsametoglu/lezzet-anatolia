@@ -13,18 +13,18 @@ const accounts = new AccountService(db);
 const movements = new MoneyMovementService(db);
 
 const stamp = Date.now();
-const acilanHesaplar: string[] = [];
+const createdAccounts: string[] = [];
 let counter = 0;
 
 /** Test hesabı — hesap adı BENZERSİZDİR (unique index `lower(name)`), o yüzden her açılış sayaçlı. */
 async function openAccount(ad: string, type: 'cash' | 'bank' | 'provider' = 'bank') {
   counter += 1;
   const account = await accounts.insert({ name: `${ad} ${stamp}-${counter}`, type });
-  acilanHesaplar.push(account.id);
+  createdAccounts.push(account.id);
   return account;
 }
 
-const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 /** Kayan nokta artığını kırp — para 2 ondalıktır (1020.4000000000001 gibi farklar karşılaştırmayı bozar). */
 const euro = (v: number) => Math.round(v * 100) / 100;
 
@@ -32,17 +32,17 @@ let cashAccount: Awaited<ReturnType<typeof openAccount>>;
 let bankAccount: Awaited<ReturnType<typeof openAccount>>;
 
 beforeEach(async () => {
-  for (const id of acilanHesaplar) await db.from('money_movement').delete().eq('account_id', id);
+  for (const id of createdAccounts) await db.from('money_movement').delete().eq('account_id', id);
   cashAccount = await openAccount('Kasa', 'cash');
   bankAccount = await openAccount('Revolut');
 });
 
 afterAll(async () => {
-  for (const id of acilanHesaplar) {
+  for (const id of createdAccounts) {
     await db.from('money_movement').delete().eq('account_id', id);
     await db.from('money_movement').delete().eq('counter_account_id', id);
   }
-  for (const id of acilanHesaplar) await db.from('account').delete().eq('id', id);
+  for (const id of createdAccounts) await db.from('account').delete().eq('id', id);
 });
 
 describe('hesap', () => {
@@ -120,14 +120,14 @@ describe('transfer — tek satır, iki hesap', () => {
 
 describe('ekstre ve dönem', () => {
   it('değer tarihine göre en yeni önce; tarih aralığı süzülür', async () => {
-    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 10, type: 'misc', valueDate: gun(-20) });
-    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 20, type: 'misc', valueDate: gun(-5) });
-    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 30, type: 'misc', valueDate: gun(-1) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 10, type: 'misc', valueDate: dayOffset(-20) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 20, type: 'misc', valueDate: dayOffset(-5) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 30, type: 'misc', valueDate: dayOffset(-1) });
 
     const all = await movements.ledger(cashAccount.id);
     expect(all.rows.map((r) => r.amount)).toEqual([30, 20, 10]);
 
-    const aralik = await movements.ledger(cashAccount.id, { from: gun(-10), to: gun(0) });
+    const aralik = await movements.ledger(cashAccount.id, { from: dayOffset(-10), to: dayOffset(0) });
     expect(aralik.rows.map((r) => r.amount)).toEqual([30, 20]);
   });
 
@@ -145,15 +145,15 @@ describe('ekstre ve dönem', () => {
     // bakılır: test kendi eklediğinin toplama ne kattığını ölçer, veritabanındaki diğer
     // hareketlerden (seed, paralel test) etkilenmez.
     const oku = async (tip: 'expense' | 'capital') =>
-      (await movements.periodTotals(gun(-10), gun(0))).find((t) => t.type === tip) ?? { total: 0, count: 0 };
+      (await movements.periodTotals(dayOffset(-10), dayOffset(0))).find((t) => t.type === tip) ?? { total: 0, count: 0 };
     const expenseBefore = await oku('expense');
     const capitalBefore = await oku('capital');
 
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 900, type: 'expense', category: 'kira', valueDate: gun(-3) });
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 120.4, type: 'expense', category: 'akaryakıt', valueDate: gun(-2) });
-    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 60, type: 'capital', valueDate: gun(-2) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 900, type: 'expense', category: 'kira', valueDate: dayOffset(-3) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 120.4, type: 'expense', category: 'akaryakıt', valueDate: dayOffset(-2) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 60, type: 'capital', valueDate: dayOffset(-2) });
     // Dönem DIŞI — toplama girmemeli.
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 5000, type: 'expense', valueDate: gun(-90) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 5000, type: 'expense', valueDate: dayOffset(-90) });
 
     const expenseAfter = await oku('expense');
     expect(euro(expenseAfter.total - expenseBefore.total)).toBe(1020.4); // 5000'lik satır dönem dışı
@@ -164,8 +164,8 @@ describe('ekstre ve dönem', () => {
   });
 
   it('değer tarihi kayıt tarihinden AYRIDIR: dünkü nakit bugün girilebilir', async () => {
-    const movement = await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 75, type: 'misc', valueDate: gun(-7) });
-    expect(movement.valueDate).toBe(gun(-7));
-    expect(movement.createdAt.slice(0, 10)).toBe(gun(0));
+    const movement = await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 75, type: 'misc', valueDate: dayOffset(-7) });
+    expect(movement.valueDate).toBe(dayOffset(-7));
+    expect(movement.createdAt.slice(0, 10)).toBe(dayOffset(0));
   });
 });

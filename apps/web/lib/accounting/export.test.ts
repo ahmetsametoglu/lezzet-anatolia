@@ -19,7 +19,7 @@ let customerId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
-const acilanProfiller: string[] = [];
+const createdProfiles: string[] = [];
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 /** Seed'in ve diğer testlerin dokunmadığı geçmiş bir pencere — export şirket genelini okur. */
@@ -33,7 +33,7 @@ beforeAll(async () => {
   variantId = variants[0]!.id;
   const profile = await new UserProfileService(db).insert({ name: `Export müşterisi ${stamp}` });
   customerId = profile.id;
-  acilanProfiller.push(profile.id);
+  createdProfiles.push(profile.id);
 });
 
 beforeEach(async () => {
@@ -42,7 +42,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: acilanProfiller });
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
 });
 
 let counter = 0;

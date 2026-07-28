@@ -22,7 +22,7 @@ let productId: string;
 let categoryId: string;
 let bankAccount: string;
 
-const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
   const category = await new CategoryService(db).create({ name: { tr: `Borç testi ${stamp}` } });
@@ -51,7 +51,7 @@ afterAll(async () => {
 
 /** 10 × 4 € = 40 €'luk mal kabul. */
 async function malKabul(qty = 10, unitCost = 4) {
-  return intakes.receive({ supplierId, lines: [{ variantId, qty, expiryDate: gun(250), unitCost }] });
+  return intakes.receive({ supplierId, lines: [{ variantId, qty, expiryDate: dayOffset(250), unitCost }] });
 }
 
 describe('tedarikçi borcu TÜRETİLİR', () => {

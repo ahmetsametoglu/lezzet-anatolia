@@ -11,22 +11,22 @@ const accounts = new AccountService(db);
 const movements = new MoneyMovementService(db);
 
 const stamp = Date.now();
-const acilanlar: string[] = [];
+const createdAccounts: string[] = [];
 let cashAccount: string;
 let bankAccount: string;
 
 beforeAll(async () => {
   cashAccount = (await accounts.insert({ name: `Kapı kasası ${stamp}`, type: 'cash' })).id;
   bankAccount = (await accounts.insert({ name: `Kapı bankası ${stamp}`, type: 'bank' })).id;
-  acilanlar.push(cashAccount, bankAccount);
+  createdAccounts.push(cashAccount, bankAccount);
 });
 
 afterAll(async () => {
-  for (const id of acilanlar) {
+  for (const id of createdAccounts) {
     await db.from('money_movement').delete().eq('account_id', id);
     await db.from('money_movement').delete().eq('counter_account_id', id);
   }
-  for (const id of acilanlar) await db.from('account').delete().eq('id', id);
+  for (const id of createdAccounts) await db.from('account').delete().eq('id', id);
 });
 
 describe('elle hareket girişi', () => {
