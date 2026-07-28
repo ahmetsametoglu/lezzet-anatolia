@@ -56,7 +56,7 @@ export function ChannelsTab({ rows, hasMore, loadingMore, onLoadMore, onEdit, sc
           title={
             r.costCents === null
               ? 'Fiyatlı parti yok — maliyet bilinmiyor (sıfır değil)'
-              : 'Eldeki partilerin ağırlıklı ortalama alış fiyatı (KDV hariç)'
+              : 'Son alış fiyatı — yeniden almanın bedeli (KDV hariç)'
           }
         >
           {amount(r.costCents)}

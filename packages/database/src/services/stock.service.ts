@@ -164,6 +164,41 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    * Hiç fiyatlı partisi olmayan varyant haritada YER ALMAZ: "bilmiyorum" ile "sıfır" farklı şeyler —
    * çağıran eksikliği söyleyebilsin diye ayrımı koruyoruz.
    */
+  /**
+   * Varyant başına SON alışlar — en yeniden eskiye, en fazla `limit` tane (EURO).
+   *
+   * `unitCostMap`'ten iki farkı var ve ikisi de bilinçli:
+   * - **Tükenmiş parti de sayılır.** Soru "elimde ne var" değil, "bunu yeniden almak kaça" — alış
+   *   geçmişi stok bitince silinmez, fiyat kararı da stoksuz kalmaz.
+   * - **Ortalama alınmaz, sıra korunur.** Aykırı alım ancak komşularıyla karşılaştırılınca
+   *   anlaşılır; ortalama onu zaten içine alıp saklardı (karar `domain-core/replacementCost`).
+   */
+  async purchaseHistoryMap(variantIds: string[], limit: number): Promise<Map<string, number[]>> {
+    const map = new Map<string, number[]>();
+    if (variantIds.length === 0) return map;
+
+    // Üç kolon (bkz. `unitCostMap`). Sıralama SUNUCUDA: varyant başına ayrı sorgu N+1 olurdu,
+    // hepsini çekip JS'te sıralamak ise büyük katalogda gereksiz veri taşırdı.
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select('variant_id,purchase_price,created_at')
+      .in('variant_id', variantIds)
+      .not('purchase_price', 'is', null)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    for (const raw of data ?? []) {
+      const row = raw as { variant_id: string; purchase_price: number | string };
+      const price = Number(row.purchase_price);
+      if (!Number.isFinite(price) || price <= 0) continue;
+      const list = map.get(row.variant_id) ?? [];
+      if (list.length >= limit) continue;
+      list.push(price);
+      map.set(row.variant_id, list);
+    }
+    return map;
+  }
+
   async unitCostMap(variantIds: string[]): Promise<Map<string, number>> {
     if (variantIds.length === 0) return new Map();
     // ÜÇ KOLON okunur, satırın tamamı değil: parti satırı geniş (lot, konum, tarihler, teklif fiyatı,

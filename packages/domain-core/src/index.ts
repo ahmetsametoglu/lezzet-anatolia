@@ -5,6 +5,8 @@ export * from './pricing/apply-discount';
 export * from './pricing/bundle-allocation';
 export * from './pricing/bundle-economics';
 export * from './pricing/margin';
+export * from './pricing/auto-price';
+export * from './pricing/replacement-cost';
 export * from './order/status-machine';
 export * from './order/channel';
 export * from './order/reference-no';

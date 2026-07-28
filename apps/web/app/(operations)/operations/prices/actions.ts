@@ -6,7 +6,6 @@ import {
   DiscountService,
   PriceService,
   ProductService,
-  StockService,
   UserProfileService,
   VARIANT_POOL_LIMIT,
   serviceDb,
@@ -15,6 +14,8 @@ import { fromCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Channel, type KeysetCursor, type Price } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { repriceAllAuto, repriceProduct } from '@/lib/pricing/auto-price';
+import { readCostBasis } from '@/lib/pricing/cost-basis';
 import { toPriceRows, type ChannelPriceMaps } from './prices-read';
 import { parsePricesUrl, toPriceFilters, PRICES_PATH } from './prices-url';
 import { titleOf, type CustomerOption, type DiscountFormInput, type PriceRow, type VariantOption } from './prices-types';
@@ -65,14 +66,16 @@ export async function setChannelPriceAction(
  * fiyat açıksa hedef marj zorunlu girdidir — açıp hedefi boş bırakmak, motoru hesaplayamayacağı bir
  * durumda bırakırdı.
  *
- * **Bu action fiyatı YENİDEN HESAPLAMAZ.** Otomatik fiyatın tetikleyicisi maliyet değişimidir ve o
- * stok girişine bağlıdır (modül 10) — bugün anahtar niyeti kaydeder, uyarıyı besler.
+ * **Anahtar açıksa fiyat AYNI ANDA hedefe çekilir.** Niyeti kaydedip hesabı bir sonraki mal kabule
+ * bırakmak, "otomatik" dediğimiz ürünü stok girene kadar donmuş fiyatta bırakırdı — bayrağın
+ * motorsuz yaşadığı dönemin hatası buydu. Dönen sayı kaç fiyatın değiştiğidir; ekran onu söyler,
+ * çünkü otomatik de olsa fiyat değişimi sürpriz olmamalı (tasarım notu).
  */
 export async function setAutoPriceAction(
   productId: string,
   autoPrice: boolean,
   targetMarginPercent: number | null,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ changed: number; held: number }>> {
   try {
     await requireAdmin();
     if (autoPrice && (targetMarginPercent === null || !Number.isFinite(targetMarginPercent))) {
@@ -82,9 +85,30 @@ export async function setAutoPriceAction(
       throw new Error('Hedef marj negatif olamaz.');
     }
 
-    await new ProductService(serviceDb()).updateDetails(productId, { autoPrice, targetMarginPercent });
+    const db = serviceDb();
+    await new ProductService(db).updateDetails(productId, { autoPrice, targetMarginPercent });
+    // Anahtar kapatıldıysa fiyata dokunulmaz: elle yönetime dönen ürünün son otomatik fiyatı
+    // geçerli fiyatıdır, "eski elle fiyata dön" diye bir kayıt yoktur.
+    const outcome = autoPrice ? await repriceProduct(db, productId) : null;
     revalidatePath(PRICES_PATH);
-    return { data: null, error: null };
+    return { data: { changed: outcome?.changes.length ?? 0, held: outcome?.heldVariantIds.length ?? 0 }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Katalogdaki tüm otomatik ürünleri hedefe çeker — elle toplu hizalama.
+ *
+ * Diğer iki tetik olaya bağlıdır (mal kabul, diyalog kaydı); bu, olay beklemeden çalıştırılan
+ * bakım eylemidir. Maliyeti değişmiş ama henüz kimsenin açmadığı ürünler burada hizalanır.
+ */
+export async function repriceAutoAction(): Promise<ActionResult<{ changed: number; held: number; truncated: boolean }>> {
+  try {
+    await requireAdmin();
+    const { changes, heldVariantIds, truncated } = await repriceAllAuto(serviceDb());
+    revalidatePath(PRICES_PATH);
+    return { data: { changed: changes.length, held: heldVariantIds.length, truncated }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
@@ -208,7 +232,7 @@ export async function loadMorePricesAction(
     const [b2c, b2b, costs] = await Promise.all([
       priceSvc.findApplicableMap(variantIds, 'b2c'),
       priceSvc.findApplicableMap(variantIds, 'b2b'),
-      new StockService(db).unitCostMap(variantIds),
+      readCostBasis(db, variantIds),
     ]);
 
     const pick = (map: Map<string, { channelPrice: Price | null }>): Map<string, Price> =>

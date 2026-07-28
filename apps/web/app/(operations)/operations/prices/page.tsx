@@ -15,6 +15,7 @@ import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Price } from '@lezzet/types';
 import { detectDevice } from '@/lib/device';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
+import { readCostBasis } from '@/lib/pricing/cost-basis';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { ErrorState } from '@/components/operation/ui/error-state';
 import { AlertIcon } from '@/components/operation/ui/icons';
@@ -119,7 +120,7 @@ async function readChannelTab(
   const [b2cMap, b2bMap, costs] = await Promise.all([
     priceSvc.findApplicableMap(variantIds, 'b2c'),
     priceSvc.findApplicableMap(variantIds, 'b2b'),
-    new StockService(db).unitCostMap(variantIds),
+    readCostBasis(db, variantIds),
   ]);
 
   return {

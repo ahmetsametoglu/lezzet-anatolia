@@ -170,6 +170,16 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   }
 
   /**
+   * Otomatik fiyatlı ürünler — hedef marjı OLANLAR (hedefsizde hesaplanacak bir fiyat yoktur).
+   *
+   * Katalog süzgeci değil, bir İŞİN girdisi: toplu fiyat hizalaması bu kümeyi dolaşır. Sayfalama
+   * yerine üst sınır alır; çağıran sınırın aşıldığını görür (`repriceAllAuto`), sessiz kırpma yok.
+   */
+  async listAutoPriced(limit: number): Promise<Product[]> {
+    return this.getAll({ autoPrice: true }, { isNotNullFields: ['target_margin_percent'], orderBy: 'sortOrder', limit });
+  }
+
+  /**
    * `list()` ile aynı süzme/sayfalama, AMA varyantlar ve koleksiyon üyelikleri de aynı turda gelir.
    * Operasyon ekranı bunu kullanır: ürün başına ayrı varyant sorgusu + koleksiyon başına ayrı üyelik
    * sorgusu (N+1) yerine TEK sorgu. Takma adlar (`variants:` / `collections:`) sayesinde PostgREST

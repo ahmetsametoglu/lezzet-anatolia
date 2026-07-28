@@ -71,7 +71,9 @@ export const SCOPE_LABEL: Record<PriceScope, string> = {
   all: 'Tümü',
   below: 'Marj-altı',
   missing: 'Fiyatı eksik',
-  auto: 'auto_price açık',
+  // Kolon adı (`auto_price`) ekrana YAZILMAZ: operatörün gördüğü şey veritabanı alanı değil,
+  // ürünün davranışıdır. Süzgeç zaten "açık olanlar" demek — sıfat da gereksiz.
+  auto: 'Otomatik fiyatlandırma',
 };
 
 export const TAB_LABEL: Record<PriceTab, string> = {

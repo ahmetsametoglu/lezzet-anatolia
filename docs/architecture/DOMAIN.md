@@ -190,11 +190,22 @@ Toptanda "bugün 10 koli alırsan şu fiyat" gündeliktir; kalıcı `Price` sat�
 
 ### Maliyet ve hedef marj
 
-- Her stok partisinin alış fiyatı (`Stock.purchase_price`) tutulur; **güncel maliyet = en son partinin alış fiyatı**.
+- Her stok partisinin alış fiyatı (`Stock.purchase_price`) tutulur.
+- **Fiyat kararının maliyet tabanı = YENİLEME MALİYETİ** (son alış fiyatı; hiç parti yoksa tedarikçi eşlemesindeki son alış). Soru "depoda ne duruyor" değil, **"bunu yeniden almak kaça"**: elde kalmış ucuz eski parti yüzünden fiyatı düşürürsek stok bitince zam yapmak zorunda kalırız; pahalı bir partinin parasını rafın fiyatından geri almaya çalışırsak mal hiç satılmaz. **Kötü alımın parası zaten harcanmıştır** (batık maliyet) ve onun görüneceği yer rapordur: gerçek kâr, sipariş kapanışında SATILAN PARTİNİN kendi maliyetinden hesaplanır.
+- **Aykırı freni:** son alış, kendinden önceki alımların **ortancasından** %25'ten fazla saparsa otomatik fiyat o boyda **durur** ve ekran sebebini yazar. Gerçek bir zam da olabilir, tek seferlik/acil bir alım da; ikisini ayıran bilgi sistemde yok, admin'de var. Ortanca (ortalama değil) seçildi: ortalama, ölçmeye çalıştığımız aykırılığın kendisinden etkilenirdi. Eşik ve pencere parametriktir.
+- **Ekran ve motor AYNI tabanı kullanır.** Ayrılsalardı, sistemin kendi yazdığı otomatik fiyat, ekranın marj hesabına göre "marj-altı" görünebilirdi.
 - Ürüne bir **hedef kâr marjı** (`Product.target_margin_percent`) yazılabilir — maliyet üzerine markup (ör. maliyet 10€, hedef %40 → hedef fiyat ≥ 14€).
 - **Otomatik fiyatlandırma kapalıysa** (varsayılan): maliyet artıp mevcut satış fiyatı hedef marjın altına düşerse sistem **uyarır** ("şu ürün marjın altında") — son kararı admin verir.
 - **Otomatik fiyatlandırma açıksa** (`Product.auto_price=true`): sistem fiyatı hedef marjı sağlayacak şekilde **otomatik günceller** (uyarı yerine aksiyon).
 - Tek mekanizma, ürün başına bir düğmeyle iki davranış: elle kontrol (uyar) ya da otomatik (güncelle).
+
+**Otomatik fiyatın kuralları** (üç tetik — mal kabulde maliyet değişimi, anahtar/hedef değişimi, elle toplu hizalama — hepsi aynı hesaba iner):
+
+- **İki yönlüdür:** maliyet artınca fiyat yükselir, düşünce iner. Tek yönlü olsaydı "otomatik" ürün zamanla hedefin üstüne demirler, indirimi de admin'in elle kovalaması gerekirdi.
+- **Yuvarlama 5 kuruşa ve YUKARI.** Aşağı yuvarlamak hedefi kılpayı ıskalar ve ürün, otomatik olduğu hâlde marj-altı uyarısına düşerdi — sistemin kendi kuralını bozması. Adım parametriktir.
+- **Fiyatı olmayan kanal AÇILMAZ.** Fiyat satırının yokluğu "o kanalda satışa kapalı" demektir; otomatik hesap kapalı kanalı kendiliğinden açsaydı ürün, kimsenin kararı olmadan toptan listesine düşerdi.
+- **Maliyet yoksa fiyat uydurulmaz:** elde alış fiyatlı parti yoksa ürünün fiyatı olduğu gibi kalır.
+- **Anahtar kapatılınca fiyata dokunulmaz:** son otomatik fiyat, ürünün geçerli fiyatıdır ("eski elle fiyata dön" diye bir kayıt yoktur).
 
 ### İndirim ve kupon
 

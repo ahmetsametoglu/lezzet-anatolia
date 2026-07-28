@@ -48,5 +48,8 @@ export function rowStateNote(row: PriceRow): string {
   if (row.status === 'passive') notes.push('ürün pasif');
   if (row.status === 'candidate') notes.push('aday ürün');
   if (!row.variantActive) notes.push('boy kapalı');
+  // Maliyet sıçraması yalnız OTOMATİK üründe bir eylem çağrısıdır: orada fiyat beklemektedir.
+  // Elle yönetilen üründe aynı sıçrama bir bilgidir, marj sütunu zaten yeni tabana göre konuşuyor.
+  if (row.costJump && row.autoPrice) notes.push(`maliyet %${row.costJump.deviationPercent} sıçradı — otomatik fiyat bekliyor`);
   return notes.length ? ` · ${notes.join(' · ')}` : '';
 }

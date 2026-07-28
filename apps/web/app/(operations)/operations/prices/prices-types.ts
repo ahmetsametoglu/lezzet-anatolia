@@ -36,7 +36,7 @@ export interface PriceRow {
   b2c: ChannelPriceCell;
   b2b: ChannelPriceCell;
   /**
-   * Eldeki partilerin ağırlıklı ortalama alış fiyatı (KDV hariç). `null` = hiç fiyatlı parti yok —
+   * Yenileme maliyeti: SON alış fiyatı (KDV hariç) — "bunu yeniden almak kaça". `null` = hiç alış yok —
    * "bilmiyorum", sıfır değil: maliyeti sıfır saymak marjı sonsuz gösterirdi.
    */
   costCents: number | null;
@@ -48,6 +48,11 @@ export interface PriceRow {
   /** Hedefin altında mı; maliyet ya da hedef bilinmiyorsa karar YOKTUR (`null`). */
   belowTarget: boolean | null;
   autoPrice: boolean;
+  /**
+   * Son alış geçmişten belirgin saptıysa dolu — otomatik fiyat bu satırda BEKLER, karar admin'in.
+   * `null` = taban güvenilir (ya da hiç maliyet yok; onu `costCents` söyler).
+   */
+  costJump: { medianCents: number; deviationPercent: number } | null;
   /** Ürünün KDV oranı (yüzde) — diyalog marjı bu tabana göre çevirir. */
   vatRate: number;
   /** En az bir kanalda fiyat yok — "o kanalda satışa kapalı" göstergesi. */

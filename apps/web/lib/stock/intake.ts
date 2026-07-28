@@ -8,6 +8,7 @@ import {
 } from '@lezzet/database';
 import { meetsMlor } from '@lezzet/domain-core';
 import { resolveLocalizedText, type ReceiveIntakeResult } from '@lezzet/types';
+import { repriceVariants } from '@/lib/pricing/auto-price';
 
 /**
  * Mal kabul kapısı (10.4) — **uygulama katmanı orkestrasyonu**.
@@ -84,6 +85,11 @@ type IntakeOutcome =
       warnings: IntakeWarning[];
       /** PO'ya göre eksik/fazla — fark olarak işaretlenir, iş durmaz. */
       differences: IntakeDifference[];
+      /**
+       * Yeni maliyet yüzünden hedefe çekilen fiyat sayısı (otomatik fiyatlı ürünler).
+       * Depocuya gösterilmez — fiyat onun işi değil; kabul kaydında görünür kalması içindir.
+       */
+      repricedCount: number;
     }
   | { status: 'empty' };
 
@@ -117,11 +123,19 @@ export async function receiveGoods(input: {
     lines: input.lines.map((line) => ({ ...line, unitCost: costs.get(line.variantId) ?? null })),
   });
 
+  // MALİYET DEĞİŞTİ → otomatik fiyatlı ürünlerin fiyatı hedef marja çekilir (DOMAIN §"Maliyet ve
+  // hedef marj"). Otomatik fiyatın asıl tetikleyicisi burasıdır: yeni parti ortalama maliyeti
+  // değiştirir ve `auto_price` açık ürün, o değişimi beklemeden zaten eski fiyatındadır.
+  // Kabulü BOZMAZ: fiyat hizalaması bu noktada zaten yazılmış bir partinin ardından gelir, hata
+  // verirse mal kabul geri alınmaz — fiyat bir sonraki tetikte hizalanır.
+  const repriced = await repriceVariants(db, input.lines.map((line) => line.variantId)).catch(() => null);
+
   return {
     status: 'ok',
     result,
     warnings: await mlorWarnings(db, input.lines),
     differences: differencesOf(input.lines, expected),
+    repricedCount: repriced?.changes.length ?? 0,
   };
 }
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { markupPercent, priceForMargin, vatBaseOf } from '@lezzet/domain-core';
+import { autoPriceCents, markupPercent, priceForMargin, vatBaseOf } from '@lezzet/domain-core';
 import { addVat, fromCents, removeVat, toCents } from '@lezzet/helper';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
@@ -61,6 +61,22 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
 
   const b2cMargin = cost === null ? null : markupPercent(htOf('b2c', b2c) ?? 0, cost);
   const b2bMargin = cost === null ? null : markupPercent(htOf('b2b', b2b) ?? 0, cost);
+
+  /**
+   * Otomatik hesabın YAZACAĞI fiyatlar. Yalnız fiyatı OLAN kanal listelenir: motor da kapalı bir
+   * kanalı açmaz (fiyat satırının yokluğu "o kanalda satışa kapalı" demektir).
+   */
+  const autoPreviewText =
+    cost === null || target === null
+      ? ''
+      : (['b2c', 'b2b'] as const)
+          .filter((channel) => row[channel].amountCents !== null)
+          .map((channel) => {
+            const next = autoPriceCents({ channel, costCents: cost, targetMarginPercent: target, vatRate: row.vatRate });
+            return next === null ? null : `${channel.toUpperCase()} ${money(next)}`;
+          })
+          .filter(Boolean)
+          .join(' · ');
 
   const submit = async () => {
     setBusy(true);
@@ -127,7 +143,7 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
       }
     >
       <div className="grid grid-cols-3 gap-2.5">
-        <Metric label="Maliyet" value={money(cost)} hint="Eldeki partilerin ağırlıklı ortalama alışı (KDV hariç)" />
+        <Metric label="Maliyet" value={money(cost)} hint="Son alış — yeniden almanın bedeli (KDV hariç)" />
         <Metric
           label="Marj (şimdi)"
           value={row.marginPercent === null ? '—' : percent(row.marginPercent)}
@@ -222,14 +238,28 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
           placeholder="ör. 42"
         />
 
-        {/* DÜRÜSTLÜK NOTU: anahtar bugün NİYETİ kaydeder. Fiyatı maliyet değişince yeniden hesaplayan
-            tetikleyici stok girişine bağlı (modül 10) — söylenmezse açık anahtar, olmayan bir
-            otomatiği varmış gibi gösterirdi. */}
+        {/* SÜRPRİZ FİYAT OLMAZ (tasarım): otomatik hesap kaydederken çalışır, o yüzden sonucu
+            ÖNCEDEN gösteriyoruz. Önizleme motorun kendi fonksiyonundan çıkar — ayrı bir formülle
+            yazılsaydı ekranın vaat ettiği fiyatla yazılan fiyat bir gün ayrışırdı. */}
         {autoPrice ? (
-          <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-amber-dark">
-            Otomatik hesap, maliyet değiştiğinde stok girişiyle birlikte çalışacak (depo modülü). Bugün bu anahtar
-            kararı kaydeder ve marj-altı uyarısını besler; fiyatı kendiliğinden değiştirmez.
-          </span>
+          cost === null ? (
+            <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-amber-dark">
+              Maliyet bilinmiyor (alış fiyatlı parti yok) — otomatik hesap çalışmaz, fiyat olduğu gibi kalır.
+            </span>
+          ) : row.costJump ? (
+            // Önizleme burada YANLIŞ olurdu: fren devrede, kaydetmek fiyatı hedefe ÇEKMEZ.
+            <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-amber-dark">
+              Son alış, önceki alımların ortancasından <strong>%{row.costJump.deviationPercent}</strong> sapıyor
+              ({money(row.costJump.medianCents)} → {money(cost)}). Otomatik fiyat bu boyda BEKLİYOR: gerçek bir zam mı,
+              tek seferlik bir alım mı — bunu sistem bilemez. Maliyet doğrulanınca fiyat kendiliğinden hizalanır.
+            </span>
+          ) : target === null ? null : (
+            <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
+              Kaydedince fiyat hedefe çekilir:{' '}
+              <span className="font-ops-mono text-ops-body">{autoPreviewText}</span>. Maliyet değiştikçe (mal kabul)
+              kendiliğinden güncellenir.
+            </span>
+          )
         ) : (
           <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
             Kapalıyken sistem yalnız UYARIR: marj hedefin altına düşerse satır “marj-altı” listesine girer, fiyata

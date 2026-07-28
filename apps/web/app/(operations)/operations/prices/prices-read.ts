@@ -1,5 +1,5 @@
-import { isBelowTargetMargin, tightestMargin, vatBaseOf } from '@lezzet/domain-core';
-import { removeVat, toCents } from '@lezzet/helper';
+import { costOf, isBelowTargetMargin, revenueHtOf, tightestMargin, type CostBasis } from '@lezzet/domain-core';
+import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText, type Channel, type Discount, type Price, type ProductPriceRow, type UserProfile } from '@lezzet/types';
 import {
   titleOf,
@@ -27,20 +27,15 @@ export interface ChannelPriceMaps {
 const cellOf = (price: Price | undefined): ChannelPriceCell =>
   price ? { amountCents: toCents(price.amount), validFrom: price.validFrom } : { amountCents: null, validFrom: null };
 
-/**
- * Kanal fiyatını KDV HARİÇ tabana indirger — marj karşılaştırmasının tek geçerli tabanı.
- * b2b zaten HT'dir, b2c'den KDV düşülür. `vatBaseOf` tek kaynak: kanalın tabanı burada da,
- * vitrinde de aynı yerden okunur.
- */
-function revenueHtCents(channel: Channel, amountCents: number, vatRate: number): number {
-  return vatBaseOf(channel) === 'ttc' ? removeVat(amountCents, vatRate) : amountCents;
-}
-
 interface PriceRowInput {
   products: ProductPriceRow[];
   prices: ChannelPriceMaps;
-  /** Varyant başına ağırlıklı ortalama alış fiyatı (EURO — `unitCostMap`'in çıktısı). */
-  costs: Map<string, number>;
+  /**
+   * Varyant başına maliyet TABANI (kuruş) — yenileme maliyeti + aykırı freni (`readCostBasis`).
+   * Otomatik fiyatın kullandığı tabanın AYNISI: ayrılsalardı ekran, sistemin kendi yazdığı fiyatı
+   * "marj-altı" diye işaretleyebilirdi.
+   */
+  costs: Map<string, CostBasis>;
   categoryNames: Map<string, string>;
 }
 
@@ -62,13 +57,13 @@ export function toPriceRows({ products, prices, costs, categoryNames }: PriceRow
     return variants.map((variant): PriceRow => {
       const b2c = cellOf(prices.b2c.get(variant.id));
       const b2b = cellOf(prices.b2b.get(variant.id));
-      const costEuros = costs.get(variant.id);
-      const costCents = costEuros === undefined ? null : toCents(costEuros);
+      const basis = costs.get(variant.id);
+      const costCents = basis ? costOf(basis) : null;
 
       // Marj her kanal için ayrı çıkar; ekran TEK sayı gösterir → en darı (bkz. `tightestMargin`).
       const entries: Array<{ channel: Channel; revenueHtCents: number }> = [];
-      if (b2c.amountCents !== null) entries.push({ channel: 'b2c', revenueHtCents: revenueHtCents('b2c', b2c.amountCents, product.vatRate) });
-      if (b2b.amountCents !== null) entries.push({ channel: 'b2b', revenueHtCents: revenueHtCents('b2b', b2b.amountCents, product.vatRate) });
+      if (b2c.amountCents !== null) entries.push({ channel: 'b2c', revenueHtCents: revenueHtOf('b2c', b2c.amountCents, product.vatRate) });
+      if (b2b.amountCents !== null) entries.push({ channel: 'b2b', revenueHtCents: revenueHtOf('b2b', b2b.amountCents, product.vatRate) });
 
       const tightest = tightestMargin(entries, costCents);
       const tightestRevenue = entries.find((e) => e.channel === tightest?.channel)?.revenueHtCents ?? null;
@@ -91,6 +86,12 @@ export function toPriceRows({ products, prices, costs, categoryNames }: PriceRow
         belowTarget:
           tightestRevenue === null ? null : isBelowTargetMargin(tightestRevenue, costCents, product.targetMarginPercent),
         autoPrice: product.autoPrice,
+        // Maliyet sıçraması satırla birlikte taşınır: otomatik fiyatın neden beklediğini ekran
+        // ancak bu bilgiyle söyleyebilir (sessiz duran otomatik, bozuk otomatiktir).
+        costJump:
+          basis?.status === 'outlier'
+            ? { medianCents: basis.medianCents, deviationPercent: Math.round(basis.deviationPercent) }
+            : null,
         vatRate: product.vatRate,
         missingPrice: b2c.amountCents === null || b2b.amountCents === null,
       };

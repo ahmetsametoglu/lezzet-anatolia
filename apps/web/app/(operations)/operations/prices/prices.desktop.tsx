@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/operation/ui/page-header';
 import { SearchInput } from '@/components/operation/ui/search-input';
 import { Select } from '@/components/operation/form/select';
 import { Tabs } from '@/components/operation/ui/tabs';
+import { AutoRepriceButton } from './auto-reprice-button';
 import { ChannelsTab } from './tabs/channels-tab';
 import { CustomersTab } from './tabs/customers-tab';
 import { CouponsTab } from './tabs/coupons-tab';
@@ -56,7 +57,10 @@ export function PricesDesktop(props: PricesViewProps) {
         {/* Arama YALNIZ kanal listesinde: özel fiyat ve kupon listeleri kısa, süzgeç istemiyor.
             Kutunun her sekmede durması "aradığım şey burada aranıyor" yanılgısı yaratırdı. */}
         {tab === 'channels' ? (
-          <SearchInput value={search} onChange={onSearch} placeholder="Ürün veya boy ara" className="w-[210px]" />
+          <>
+            <AutoRepriceButton />
+            <SearchInput value={search} onChange={onSearch} placeholder="Ürün veya boy ara" className="w-[210px]" />
+          </>
         ) : null}
       </PageHeader>
 

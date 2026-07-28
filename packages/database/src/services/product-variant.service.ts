@@ -34,6 +34,15 @@ export class ProductVariantService extends BaseDbService<ProductVariant, Product
     return this.getAll({ id: ids }, { orderBy: 'sortOrder' });
   }
 
+  /**
+   * Birden çok ürünün boyları, TEK sorguda — toplu işler için (otomatik fiyat hizalaması).
+   * Ürün başına ayrı `listByProduct` çağrısı, katalog boyu kadar gidiş-dönüş demekti.
+   */
+  async listByProducts(productIds: readonly string[]): Promise<ProductVariant[]> {
+    if (productIds.length === 0) return [];
+    return this.getAll({ productId: [...productIds] }, { orderBy: 'sortOrder' });
+  }
+
   /** Aktif/pasif (soft). */
   async setActive(id: string, isActive: boolean): Promise<ProductVariant> {
     return this.update({ id, isActive });
