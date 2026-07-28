@@ -120,11 +120,25 @@
         <div style="background:#eef2e2;border-radius:12px;padding:12px 16px;font:600 14px 'Karla';color:#3a4147">📅 Perşembe, 24 Temmuz günü kapınızda</div>
         <span style="font:400 12.5px 'Karla';color:#8a8270">Tek gün varsa kart hiç gösterilmez; sonuç düz cümledir. Kesim saati kavramı anlatılmaz — uygun günler zaten hesaplı gelir.</span>
       </div>
+      <div style="width:520px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:22px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Adım 1'de bölge dışı adres seçildi · sepette 2 bölge içi kalem</span>
+        <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+          <span style="font:600 18px 'Lora';color:#343b41">2 kalem bu adrese gönderilemiyor</span>
+          <span style="font:400 13px/1.6 'Karla';color:#6d7261">Fıstıklı Baklava ve Ispanaklı Gözleme soğuk zincirle taşınıyor; 75011 Paris teslimat bölgemizin dışında. Sepetin kalanı kargoyla gidiyor.</span>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:12px;border-radius:24px;text-align:center">Bu 2 kalemi sonraya kaydet, kalanını kargoyla sipariş et</span>
+            <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 13.5px 'Karla';padding:10px;border-radius:24px;text-align:center">Bölge içi bir adres seç (kayıtlı: 12 Rue des Orfèvres)</span>
+            <span style="font:700 13px 'Karla';color:#5f7a2c;text-align:center;text-decoration:underline">Bölgeye gelince haber ver</span>
+          </div>
+        </div>
+        <span style="font:400 12.5px/1.7 'Karla';color:#8a8270">Sepetteki blokla <strong>aynı bileşen</strong>: aynı sıra, aynı dil, aynı üç çıkış. Müşteri sepete geri gönderilmez — çözüm checkout içinde biter, adım 2 çözüm verilene kadar sadece bekler (kilit ya da hata değil).</span>
+        <span style="font:400 12.5px/1.7 'Karla';color:#8a8270">Sepette çözüldüyse bu blok checkout'ta hiç görünmez; buraya gelen sepet zaten temizdir. Blok yalnız müşteri burada adresi değiştirirse doğar.</span>
+      </div>
       <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
         <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Bölge dışı adres — kargo</span>
         <div style="display:flex;justify-content:space-between;font:400 14px 'Karla';color:#3a3f35"><span>📦 Kargo ile teslimat</span><span style="font-weight:700">6,90 €</span></div>
-        <span style="font:400 13px 'Karla';color:#6d7261">2-3 iş gününde soğuk zincir paketiyle. 80 € üzeri ücretsiz.</span>
-        <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:12px;padding:10px 14px;font:600 12.5px/1.5 'Karla';color:#8a6b2a">Sepetinizdeki "Yaprak Sarma" yalnız teslimat bölgemizde teslim edilebilir — kargolu siparişte bu kalemi çıkarmanız gerekir.</div>
+        <span style="font:400 13px 'Karla';color:#6d7261">2-3 iş gününde, kargoya uygun ürünlerle. 80 € üzeri ücretsiz. Soğuk zincir gerektiren ürünler kargoya verilemez.</span>
+        <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:12px;padding:10px 14px;font:600 12.5px/1.6 'Karla';color:#8a6b2a">Sepetinizdeki "Yaprak Sarma" bu adrese gönderilemiyor — aşağıdaki blokta üç çıkış sunulur, adım kilitlenmez.</div>
         <span style="font:400 12.5px 'Karla';color:#8a8270">Ödemede yalnız "Online öde" görünür (kargoda kapıda ödeme hiç listelenmez).</span>
       </div>
       <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
@@ -161,7 +175,7 @@
       <span style="font:700 16px 'Karla';color:#3a4147">Etkileşim sözleşmesi (kodlayan ajan için)</span>
       <ul style="margin:0;padding-left:20px;font:400 14px/1.8 'Karla';color:#6d7261">
         <li><strong>Adım zinciri</strong> → (0: girişsizse hızlı doğrulama) → adres → gün → ödeme → onay; tek sayfada dikey bölümler, tamamlanan adım seçili haliyle kalır (akordeon daraltma yok — az adım, tam görünürlük).</li>
-        <li><strong>Adres seçimi</strong> → posta kodu teslimat şeklini belirler: bölge içi = kapıya teslim (ücretsiz, gün kartları); bölge dışı = kargo (ücret + eşik). Adım 2'nin içeriği adrese göre yeniden kurulur.</li>
+        <li><strong>Adres seçimi</strong> → posta kodu teslimat şeklini belirler: bölge içi = kapıya teslim (ücretsiz, gün kartları); bölge dışı = kargo (ücret + eşik). Sepette soğuk zincir kalemi varken bölge dışı adres seçilirse teslimat kısıtı bloğu (sepetteki bileşenin aynısı) açılır: sonraya kaydet / adres değiştir / haber ver. Kargo yolu hiç mümkün değilse yöntem seçici render edilmez, tek satır "Kapıya teslim" kalır. Adım 2'nin içeriği adrese göre yeniden kurulur.</li>
         <li><strong>Ödeme kartları</strong> → yalnız bağlamda geçerli olanlar render edilir; geçersiz yol DOM'da hiç yoktur. Kural sonuçları tek sade cümleyle verilir.</li>
         <li><strong>Siparişi onayla</strong> → online yolda dış ödeme sayfasına gider; dönüşte başarılı/başarısız net sonuç ekranı. Kapıda/havale/vadelide doğrudan onay ekranı.</li>
         <li><strong>Pazarlama kutusu</strong> → daima işaretsiz başlar; durumu siparişi hiçbir biçimde etkilemez.</li>

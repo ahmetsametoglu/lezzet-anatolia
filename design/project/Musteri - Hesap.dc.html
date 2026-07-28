@@ -42,7 +42,7 @@
             </div>
           </div>
           <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:22px 26px;display:flex;flex-direction:column;gap:12px">
-            <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 19px 'Lora';color:#343b41">Adresler</span><span style="font:700 13px 'Karla';color:#5f7a2c">+ Yeni adres</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 19px 'Lora';color:#343b41">Adresler <span style="font:400 12.5px 'Karla';color:#8a8270">· varsayılan adres teslimat yeri göstergesini besler</span></span><span style="font:700 13px 'Karla';color:#5f7a2c">+ Yeni adres</span></div>
             <div style="border:1.5px solid #5f7a2c;background:#eef2e2;border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
               <div style="display:flex;flex-direction:column;gap:2px"><span style="font:700 14px 'Karla';color:#3a4147">Ev · varsayılan</span><span style="font:400 13px 'Karla';color:#6d7261">12 Rue des Orfèvres, 67000 Strasbourg</span></div>
               <span style="font:400 13px 'Karla';color:#8a8270">Düzenle · Sil</span>
@@ -85,6 +85,31 @@
               <div style="display:flex;justify-content:space-between"><span>Yorum yayınlandı — Baklava</span><span style="color:#a9c46b;font-weight:700">+20</span></div>
               <div style="display:flex;justify-content:space-between"><span>Sipariş LZA-2417</span><span style="color:#a9c46b;font-weight:700">+45</span></div>
               <div style="display:flex;justify-content:space-between"><span>Kupona çevrildi (Haziran)</span><span style="color:#e0a884;font-weight:700">−300</span></div>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:20px 26px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span style="font:600 17px 'Lora';color:#343b41">Sonraya kaydedilenler</span>
+              <span style="font:700 13px 'Karla';color:#5f7a2c">Sepete al</span>
+            </div>
+            <span style="font:400 12.5px/1.6 'Karla';color:#8a8270">Teslimat yerinize gönderemediğimiz ya da sonraya bıraktığınız kalemler burada durur.</span>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="background:#faf6ec;border:1px solid #ece5d2;border-radius:12px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;flex-direction:column;gap:2px"><span style="font:700 13.5px 'Karla';color:#3a4147">Fıstıklı Baklava · 700 g</span><span style="font:400 12px 'Karla';color:#8a8270">yalnız bölge içi · 16,90 €</span></div>
+                <span style="font:700 12.5px 'Karla';color:#5f7a2c">Sepete al</span>
+              </div>
+              <div style="background:#faf6ec;border:1px solid #ece5d2;border-radius:12px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;flex-direction:column;gap:2px"><span style="font:700 13.5px 'Karla';color:#3a4147">Ispanaklı Gözleme · 4 adet</span><span style="font:400 12px 'Karla';color:#8a8270">yalnız bölge içi · 5,90 €</span></div>
+                <span style="font:700 12.5px 'Karla';color:#5f7a2c">Sepete al</span>
+              </div>
+            </div>
+            <div style="border-top:1px solid #f0ead8;padding-top:10px;display:flex;flex-direction:column;gap:8px">
+              <span style="font:700 14px 'Karla';color:#3a4147">Bölge haberi</span>
+              <div style="background:#eef2e2;border:1px solid #cddbb0;border-radius:12px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;flex-direction:column;gap:2px"><span style="font:700 13px 'Karla';color:#4a6121">75011 Paris için haber bekliyorsunuz</span><span style="font:400 12px 'Karla';color:#6d7261">Bölge açılırsa tek bir e-posta göndeririz</span></div>
+                <span style="font:700 12.5px 'Karla';color:#8a8270">Vazgeç</span>
+              </div>
+              <span style="font:400 12px/1.6 'Karla';color:#8a8270">Bu kayıt kampanya izni değildir; yalnız bir kez, bölge açıldığında kullanılır.</span>
             </div>
           </div>
           <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:20px 26px;display:flex;flex-direction:column;gap:10px">
@@ -144,6 +169,8 @@
         <li><strong>İzin anahtarları</strong> → anında kaydedilir (ayrı kaydet yok); kapatma onay istemez.</li>
         <li><strong>Puanı kupona çevir</strong> → eşik üstünde aktif; onay diyaloğu ("300 puan → 5 € kupon") → kupon "Kuponlarım"a düşer, döküme −300 işlenir. Eşik altında buton pasif + kalan puan yazılı.</li>
         <li><strong>Adres silme</strong> → onay ister; varsayılan adres silinirse en yeni adres varsayılan olur.</li>
+        <li><strong>Sonraya kaydedilenler</strong> → sepetteki liste ile aynı veridir, iki ayrı yer yoktur; "Sepete al" kalemi güncel fiyatla sepete taşır ve listeden düşer. Bölge dışı kalem sepete alınırsa kısıt bloğu sepette yine görünür.</li>
+        <li><strong>Bölge haberi</strong> → tek seferlik; bölge açıldığında ya da müşteri vazgeçtiğinde kayıt silinir. Pazarlama izinlerinden bağımsızdır ve o anahtarlarla karışmaz.</li>
         <li>B2C'de şirket bölümü, B2B'de puan/kupon bölümü DOM'da hiç yoktur. Vade/limit hesapta hiçbir yerde görünmez.</li>
       </ul>
     </div>

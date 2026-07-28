@@ -572,6 +572,52 @@
       <li>Mobil dokunma hedefleri en az 44px.</li>
     </ul>
   </div>
+
+  <!-- §7 TESLİMAT BÖLGESİ -->
+  <div style="background:#fff;border:1px solid #e3dcc8;border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">§7 · Teslimat bölgesi kısıtı için eklenen parçalar</h2>
+    <span style="font:400 14px/1.7 'Karla';color:#6d7261">Kısıt ürünün değil <strong>adresin</strong> özelliğidir: müşteri teslimat yerini bir kez söyler, her yüzey buna göre konuşur. Kısıt hiçbir yerde kırmızı hata değildir; her göründüğü yerde çıkış yolu vardır ve checkout asla kilitlenmez.</span>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K28 · Teslimat Yeri Göstergesi <span style="font:400 13px 'Karla';color:#8a8270">(K12 içinde)</span></span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Başlıkta kalıcı hap: posta kodu + teslimat şekli. Üç hali: <strong>bölge içi</strong> (yeşil, "kapıya teslim") · <strong>bölge dışı</strong> (nötr, "kargo") · <strong>boş</strong> ("Teslimat yerinizi seçin"). Tıklanınca posta kodu düzenlenir. Adres değil yalnız posta kodu tutulur; girişli müşteride varsayılan adresten okunur.</span>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <span style="display:inline-flex;align-items:center;gap:8px;background:#eef2e2;border:1px solid #cddbb0;border-radius:20px;padding:7px 14px;font:700 13px 'Karla';color:#4a6121">📍 67000 Strasbourg · kapıya teslim<span style="font:600 12px 'Karla';color:#5f7a2c;text-decoration:underline">değiştir</span></span>
+        <span style="display:inline-flex;align-items:center;gap:8px;background:#f0e9d6;border:1px solid #e0d8c2;border-radius:20px;padding:7px 14px;font:700 13px 'Karla';color:#6d7261">📍 75011 Paris · kargo<span style="font:600 12px 'Karla';color:#5f7a2c;text-decoration:underline">değiştir</span></span>
+        <span style="display:inline-flex;align-items:center;gap:8px;background:#fff;border:1.5px dashed #d8cfb6;border-radius:20px;padding:7px 14px;font:700 13px 'Karla';color:#8a8270">📍 Teslimat yerinizi seçin</span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K29 · Posta Kodu Sorma Şeridi</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Ana sayfada hero'nun altında ince krem şerit — modal değil, kapatılabilir, atlanabilir ("şimdi değil"). Atlanırsa hiçbir şey kilitlenmez; uyarılar "muhtemel" tonunda kalır. Girilen her kod işletme için talep verisidir: bölge dışı kodlar Operasyon → Analitik'te "bölge dışı talep" listesine düşer ve bölge genişletme kararını besler.</span>
+      <div style="background:#f0e9d6;border:1px solid #e6dfcd;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <span style="font:600 15px 'Karla';color:#3a4147">Nereye getirelim?</span>
+        <span style="font:400 13px 'Karla';color:#6d7261">Posta kodunuzu girin — ne gönderebileceğimizi baştan gösterelim.</span>
+        <span style="margin-left:auto;display:flex;gap:10px;align-items:center"><span style="background:#fff;border:1.5px solid #d8cfb6;border-radius:22px;padding:9px 16px;font:600 13.5px 'Karla';color:#9a917c">67000</span><span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:10px 20px;border-radius:22px">Göster</span></span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K30 · Teslimat Kısıtı Bloğu</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Tek bileşen, üç yerde aynı: <strong>ürün/paket detay</strong> (tek ürün için), <strong>sepet</strong> (kalem listesiyle), <strong>checkout</strong> (adres değişince). Yapısı sabit: amber gövde + tek cümle sebep ("soğuk zincirle taşınıyor") + üç çıkış <em>hep aynı sırada</em> — <strong>sonraya kaydet & kalanını sipariş et</strong> · <strong>teslimat yerini değiştir</strong> · <strong>bölgeye gelince haber ver</strong>. Ürün detayda ilk çıkışın yerini "kargolanabilir benzerleri gör" alır. Kırmızı yok; sepete ekle ve checkout butonu pasifleştirilmez.</span>
+      <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;max-width:520px">
+        <span style="font:600 18px 'Lora';color:#343b41">2 kalem bu adrese gönderilemiyor</span>
+        <span style="font:400 13px/1.6 'Karla';color:#6d7261">Soğuk zincirle taşınıyor; yalnız Strasbourg ve çevresinde kapıya teslim ediyoruz.</span>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <span style="background:#5f7a2c;color:#fff;font:700 13px 'Karla';padding:11px 18px;border-radius:24px">Sonraya kaydet, kalanını sipariş et</span>
+          <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 13px 'Karla';padding:9px 16px;border-radius:24px">Teslimat yerimi değiştir</span>
+          <span style="font:700 12.5px 'Karla';color:#5f7a2c;text-decoration:underline">Haber ver</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:700 17px 'Karla'">K31 · Sonraya Kaydedildi Listesi</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Sepetin altında ve hesapta yaşayan kalıcı liste. Bölge dışı kalemler silinmez, buraya taşınır — alışveriş ölmez, sepet bölünür. Ürün detaydaki "haber ver" kaydı aynı listeye düşer; iki ayrı yer yoktur. Teslimat yeri bölge içine girdiğinde ya da bölge genişlediğinde <strong>tek</strong> hatırlatma gider (izin varsa). Sepet satırında da bir "sonraya kaydet" bağlantısı vardır: kısıt olmadan da kullanılabilir.</span>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Sepet · Hesap · Ürün detay (kayıt noktası) · Canlı örnek: <a href="Musteri - Sepet.dc.html">Sepet</a></span>
+    </div>
+  </div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script>
