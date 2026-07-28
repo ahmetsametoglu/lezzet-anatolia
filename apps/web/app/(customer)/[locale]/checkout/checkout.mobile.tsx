@@ -4,6 +4,7 @@ import { Link } from '@/i18n/navigation';
 import { AccountLine, AddressStep, DeliveryStep, LockedStep, OrderSummary, PaymentStep } from './components/checkout-steps';
 import { CheckoutProgress } from './components/checkout-progress';
 import { GuestVerify } from './components/guest-verify';
+import { CheckoutStepsSkeleton } from './components/checkout-skeleton';
 import type { CheckoutViewProps } from './checkout-types';
 
 /**
@@ -31,9 +32,18 @@ export function CheckoutMobile(props: CheckoutViewProps) {
       {props.authenticated ? (
         <>
           <AccountLine t={t} email={props.customerEmail} compact={props.compact} />
-          <AddressStep {...props} />
-          <DeliveryStep {...props} />
-          <PaymentStep {...props} />
+          {/* Adım verisi istemcide çözülüyor: bitmeden adımlar çizilmez. Önce hiç çizilmiyordu
+              (sayfa yarım görünüyordu) ve adres adımı veri gelmeden "kayıtlı adresiniz yok"
+              diyordu — henüz bilinmeyen, üstelik yanlış olabilen bir hüküm. */}
+          {props.snapshotReady ? (
+            <>
+              <AddressStep {...props} />
+              <DeliveryStep {...props} />
+              <PaymentStep {...props} />
+            </>
+          ) : (
+            <CheckoutStepsSkeleton t={t} compact={props.compact} />
+          )}
         </>
       ) : (
         <>

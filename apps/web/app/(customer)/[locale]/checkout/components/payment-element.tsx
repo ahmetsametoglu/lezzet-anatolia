@@ -5,6 +5,7 @@ import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-
 import type { Appearance, Stripe as StripeClient, StripeElementsOptions } from '@stripe/stripe-js';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
+import { Skeleton } from '@/components/customer/ui/skeleton';
 import { formatPrice } from '@/lib/storefront/format';
 
 /**
@@ -42,7 +43,7 @@ interface PaymentSectionProps {
   onPrepare: () => Promise<{ ok: true; clientSecret: string; orderId: string } | { ok: false; error: string }>;
   onError: (message: string) => void;
   disabled: boolean;
-  labels: { submit: string; validating: string; preparing: string; confirming: string };
+  labels: { submit: string; validating: string; preparing: string; confirming: string; secureBy: string; secureNote: string };
 }
 
 interface BillingDetails {
@@ -198,7 +199,23 @@ function PayForm({ locale, amountCents, billing, returnUrlBase, onPrepare, onErr
 
   return (
     <div className="flex flex-col gap-4">
-      {!ready && <div className="h-40 animate-pulse rounded-card bg-sand-50" aria-hidden />}
+      {/**
+       * GÜVENCE ALANIN ÜSTÜNDE, altında değil: müşteri kart numarasını yazmadan ÖNCE nereye
+       * yazdığını bilmeli. Altta dursaydı okuduğunda karar çoktan verilmiş olurdu.
+       *
+       * Sağlayıcı ADIYLA anılıyor ("Stripe"): tanınan bir ad, "güvenli ödeme" gibi kimsenin
+       * doğrulayamadığı bir slogandan daha çok güven verir. Cümle de bir vaat değil, bir olgu —
+       * alan gerçekten Stripe'ın kendi çerçevesinde açılıyor ve kart numarası bu sayfaya hiç
+       * girmiyor (ADR Sapma 6).
+       */}
+      <div className="flex flex-col gap-1 rounded-soft bg-sand-50 px-4 py-3">
+        <span className="font-sans text-note font-semibold text-body">🔒 {labels.secureBy}</span>
+        <span className="font-sans text-micro leading-relaxed text-muted">{labels.secureNote}</span>
+      </div>
+
+      {/* Alan Stripe'tan yükleniyor: boş bırakmak yerine iskelet — gelen çerçeveyle aynı yeri
+          kaplar, kutu sonradan belirince sayfa zıplamaz (ortak primitif). */}
+      {!ready && <Skeleton className="h-40 rounded-card" />}
       <div style={{ display: ready ? 'block' : 'none' }}>
         <PaymentElement
           onReady={() => setReady(true)}

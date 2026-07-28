@@ -42,6 +42,7 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
     marketingConsent: false,
   });
   const [busy, setBusy] = useState(false);
+  const [snapshotReady, setSnapshotReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const cartEntries = useMemo(() => view.lines.map(entryOf), [view.lines]);
@@ -50,6 +51,9 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
   const refresh = useCallback(
     async (addressId: string | null) => {
       const { data, error: failure } = await loadCheckoutAction(locale, cartEntries, addressId);
+      // Okuma düşse de bayrak kalkar: sonsuza kadar iskelet göstermek, hatayı gizlemenin bir
+      // başka biçimi olurdu — ekran hata satırını gösterebilmeli.
+      setSnapshotReady(true);
       if (failure || !data) {
         setError(failure);
         return;
@@ -146,7 +150,14 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
           onPrepare={prepare}
           onError={setError}
           disabled={busy || !snapshot.payment.minBasketOk || Boolean(snapshot.delivery?.blocked)}
-          labels={{ submit: t.summary.submit, validating: t.pay.validating, preparing: t.pay.preparing, confirming: t.pay.confirming }}
+          labels={{
+            submit: t.summary.submit,
+            validating: t.pay.validating,
+            preparing: t.pay.preparing,
+            confirming: t.pay.confirming,
+            secureBy: t.pay.secureBy,
+            secureNote: t.pay.secureNote,
+          }}
         />
       ) : (
         // Anahtar yok: sessiz başarısızlık yerine açık cevap — kapıda ödeme hâlâ seçilebilir.
@@ -160,6 +171,7 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
     compact: device === 'mobile',
     cart: view,
     cartReady,
+    snapshotReady,
     snapshot,
     state,
     authenticated,

@@ -47,6 +47,12 @@ export interface CheckoutViewProps extends StepProps {
    * boş bir kutu göstermek "sipariş özetiniz yok" gibi okunuyordu — iskelet çizilir.
    */
   cartReady: boolean;
+  /**
+   * Adım verisinin (adres · teslimat · ödeme) ilk okuması bitti mi. Üçü de seçili adresin cevabı ve
+   * istemcide çözülüyor; bitmeden adım çizmek "kayıtlı adresiniz yok" gibi HENÜZ BİLİNMEYEN bir
+   * hüküm verdiriyordu.
+   */
+  snapshotReady: boolean;
   onAddAddress: (input: NewAddressInput) => Promise<void>;
   onConfirm: () => void;
   /** Adım 0 doğrulandı — sayfa tazelenir, adımlar açılır. */
