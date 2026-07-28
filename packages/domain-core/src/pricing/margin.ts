@@ -21,6 +21,30 @@ export function priceForMargin(costCents: number, targetMarginPercent: number): 
   return Math.round(costCents * (1 + targetMarginPercent / 100));
 }
 
+/**
+ * Kanal başına gerçekleşen marjlar içinde **EN DARI** — çok kanallı marj-altı uyarısının ölçütü.
+ *
+ * Bir varyantın iki fiyatı (b2c/b2b) iki ayrı marj demektir ve ekran tek sayı gösterir. Hangisi?
+ * En dar olanı: uyarının işi riski göstermektir, ortalama almak zararına satan kanalı kârlı olanın
+ * arkasına gizlerdi. Fiyatı olmayan kanal hesaba GİRMEZ (fiyatsızlık ayrı bir durumdur — "o kanalda
+ * satışa kapalı" — sıfır marj değildir).
+ *
+ * Girdi KDV HARİÇ (HT) gelir: dönüşüm çağıranın işi, çünkü taban kanala göre değişir (`vatBaseOf`).
+ */
+export function tightestMargin(
+  entries: ReadonlyArray<{ channel: string; revenueHtCents: number }>,
+  costCents: number | null,
+): { channel: string; percent: number } | null {
+  if (costCents == null || costCents <= 0) return null;
+  let tightest: { channel: string; percent: number } | null = null;
+  for (const entry of entries) {
+    const percent = markupPercent(entry.revenueHtCents, costCents);
+    if (percent === null) continue;
+    if (tightest === null || percent < tightest.percent) tightest = { channel: entry.channel, percent };
+  }
+  return tightest;
+}
+
 /** Gerçekleşen markup hedefin altında mı? Maliyet ya da hedef bilinmiyorsa karar YOKTUR (`null`). */
 export function isBelowTargetMargin(
   revenueHtCents: number,

@@ -226,6 +226,33 @@ export const ProductStockRowSchema = ProductSchema.pick({
 });
 export type ProductStockRow = z.infer<typeof ProductStockRowSchema>;
 
+/**
+ * Fiyat ekranının ürün SATIRI — havuzun/stok satırının kardeşi, aynı gerekçeyle dar (09.5).
+ *
+ * Fiyat kararının ürün tarafından istediği dört şey var: kimin fiyatı (ad, kategori), hangi KDV
+ * tabanı (`vatRate` — b2c fiyatı KDV DAHİL, maliyet hariç; marj bu oran bilinmeden hesaplanamaz),
+ * hedef marj ve otomatik fiyat anahtarı. Son ikisi ÜRÜNDE durur, fiyat ise varyantta: satır tek
+ * başına "marj-altında mı" sorusunu yanıtlayamaz, bu okuma o eksiği kapatır.
+ *
+ * `status` gelir çünkü aday ürünün de fiyatı girilebilir (satışa açılmadan hazırlanır); ekran bunu
+ * söyler, saklamaz.
+ */
+export const ProductPriceRowSchema = ProductSchema.pick({
+  id: true,
+  name: true,
+  categoryId: true,
+  vatRate: true,
+  targetMarginPercent: true,
+  autoPrice: true,
+  status: true,
+}).extend({
+  // `sortOrder` boyla gelir: fiyat tablosunda aynı ürünün boyları alt alta ve HER ZAMAN aynı sırada
+  // durmalı. Gömülü seçim sırayı garanti etmez — iki yenilemede satırların yer değiştirdiği bir
+  // fiyat listesi, karşılaştırma yapılamayan bir listedir.
+  variants: z.array(ProductVariantSchema.pick({ id: true, label: true, isActive: true, sortOrder: true })),
+});
+export type ProductPriceRow = z.infer<typeof ProductPriceRowSchema>;
+
 
 // Ürün düzenleme formunun yazdığı alanlar (Temel + içerik + beyan + görsel künyesi) — id/slug/
 // imageKey/sortOrder/createdAt hariç, hepsi opsiyonel (yalnız verilenler yazılır). ProductSchema'dan

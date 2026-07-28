@@ -1,0 +1,166 @@
+import {
+  CategoryService,
+  PriceService,
+  ProductService,
+  ProductVariantService,
+  StockService,
+  UserProfileService,
+  serviceDb,
+} from '@lezzet/database';
+import { toCents } from '@lezzet/helper';
+import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Price } from '@lezzet/types';
+import { detectDevice } from '@/lib/device';
+import { guarded, requireAdmin } from '@/lib/guard';
+import { ErrorState } from '@/components/operation/ui/error-state';
+import { AlertIcon } from '@/components/operation/ui/icons';
+import { PricesClient } from './prices-client';
+import { toCustomerPriceRows, toDiscountRows, toPriceRows, type ChannelPriceMaps } from './prices-read';
+import { parsePricesUrl, toPriceFilters } from './prices-url';
+import { titleOf, type CustomerPriceRow, type DiscountCustomerRow, type PriceRow } from './prices-types';
+import type { KeysetCursor } from '@lezzet/types';
+
+// Fiyat ekranı (09.5) — yalnız ADMİN. Depo ve kurye maliyet/marj görmez (brief §6); guard bu yüzden
+// `requireAdmin`, sayfa içi bir gizleme değil.
+//
+// OKUMA SEKMEYE BAĞLI: iki sekmenin veri ihtiyacı ortak DEĞİL (kanal fiyatları katalog sayfasını,
+// müşteriye özel ise özel fiyat kümesini okur). Tek okumada birleştirmek, kanal sekmesini açan
+// admin'e hiç bakmadığı müşteri fiyatlarını da ödetirdi — ürünler ekranında ölçülüp düzeltilen
+// hatanın aynısı (09.4 üçüncü durum notu). Sekme değişimi bu yüzden GERÇEK gezinmedir.
+
+interface PricesPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function PricesPage({ searchParams }: PricesPageProps) {
+  // Rol kapısı SAYFADA: layout personeli içeri aldı, bu ekran personelin bir ALT KÜMESİNE açık.
+  // Depocu/kurye buraya gelirse kabuk korunur ve sebep yazılır — sessiz yönlendirme, gezinmede
+  // gördüğü bir bağlantının neden çalışmadığını söylemezdi.
+  const access = await guarded(requireAdmin);
+  if (!access.ok) return <NoAccessPane />;
+
+  const urlState = parsePricesUrl(await searchParams);
+  const db = serviceDb();
+
+  const categories = await new CategoryService(db).list();
+  const categoryNames = new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)]));
+
+  const channels = urlState.tab === 'channels' ? await readChannelTab(db, urlState, categoryNames) : null;
+  const customers = urlState.tab === 'customers' ? await readCustomerTab(db) : null;
+
+  const device = await detectDevice();
+
+  return (
+    <PricesClient
+      data={{
+        rows: channels?.rows ?? [],
+        nextCursor: channels?.nextCursor ?? null,
+        customerPrices: customers?.prices ?? [],
+        discountCustomers: customers?.discounts ?? [],
+        categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
+      }}
+      device={device}
+      urlState={urlState}
+    />
+  );
+}
+
+/** Personel ama admin değil — kabuk (sidebar) korunur, yalnız pane kapanır. */
+function NoAccessPane() {
+  return (
+    <>
+      <div className="flex items-center gap-3.5 border-b border-ops-line px-6 py-4">
+        <span className="font-ops-display text-ops-section font-semibold text-ops-ink">Fiyatlar</span>
+        <span className="rounded-md border border-ops-line bg-ops-gray-25 px-2 py-[3px] font-ops-mono text-ops-xs font-medium text-ops-muted">
+          kapalı
+        </span>
+      </div>
+      <ErrorState
+        tone="warn"
+        icon={<AlertIcon />}
+        title="Bu ekran yalnız yöneticiye açık"
+        description="Fiyat, maliyet ve marj bilgisi operasyonun geri kalanına kapalıdır. Bir düzeltme gerekiyorsa yöneticinize iletin."
+      />
+    </>
+  );
+}
+
+type Db = ReturnType<typeof serviceDb>;
+
+/**
+ * Kanal fiyatları sekmesi — üç okuma, hiçbiri satır sayısıyla ÇARPMAZ (N+1 yok):
+ * dar ürün sayfası (keyset) · sayfadaki boyların iki kanal fiyatı · aynı boyların birim maliyeti.
+ *
+ * Fiyat ve maliyet okumaları SAYFAYA bağlıdır: katalogun tamamının fiyatını taşımanın gerekçesi yok,
+ * ekran otuz satır gösteriyor.
+ */
+async function readChannelTab(
+  db: Db,
+  urlState: ReturnType<typeof parsePricesUrl>,
+  categoryNames: Map<string, string>,
+): Promise<{ rows: PriceRow[]; nextCursor: KeysetCursor | null }> {
+  const page = await new ProductService(db).listPriceRows({
+    filters: toPriceFilters(urlState),
+    limit: DEFAULT_PAGE_SIZE,
+  });
+  const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
+
+  const priceSvc = new PriceService(db);
+  const [b2cMap, b2bMap, costs] = await Promise.all([
+    priceSvc.findApplicableMap(variantIds, 'b2c'),
+    priceSvc.findApplicableMap(variantIds, 'b2b'),
+    new StockService(db).unitCostMap(variantIds),
+  ]);
+
+  return {
+    rows: toPriceRows({ products: page.rows, prices: toChannelMaps(b2cMap, b2bMap), costs, categoryNames }),
+    nextCursor: page.nextCursor,
+  };
+}
+
+/** İki kanalın çözüm haritasını satır haritasına indirger — özel fiyat burada aranmaz (kanal listesi). */
+function toChannelMaps(
+  b2c: Map<string, { channelPrice: Price | null }>,
+  b2b: Map<string, { channelPrice: Price | null }>,
+): ChannelPriceMaps {
+  const pick = (map: Map<string, { channelPrice: Price | null }>): Map<string, Price> =>
+    new Map([...map].flatMap(([id, { channelPrice }]) => (channelPrice ? [[id, channelPrice] as const] : [])));
+  return { b2c: pick(b2c), b2b: pick(b2b) };
+}
+
+/**
+ * Müşteriye özel sekmesi. Özel fiyat, sayfadaki ürünlerin DIŞINDA bir boya da bağlı olabilir —
+ * bu yüzden boy adları ve liste fiyatları, özel fiyat satırlarının işaret ettiği kimliklerden
+ * türetilir (katalog sayfasından değil).
+ */
+async function readCustomerTab(db: Db): Promise<{ prices: CustomerPriceRow[]; discounts: DiscountCustomerRow[] }> {
+  const priceSvc = new PriceService(db);
+  const profileSvc = new UserProfileService(db);
+
+  const [rows, discountProfiles] = await Promise.all([priceSvc.listCustomerPricesNow(), profileSvc.listWithDiscount()]);
+
+  const variantIds = [...new Set(rows.map((r) => r.variantId))];
+  const customerIds = [...new Set(rows.flatMap((r) => (r.customerId ? [r.customerId] : [])))];
+
+  const [variants, profiles, b2cMap, b2bMap] = await Promise.all([
+    new ProductVariantService(db).listByIds(variantIds),
+    profileSvc.listByIds(customerIds),
+    priceSvc.findApplicableMap(variantIds, 'b2c'),
+    priceSvc.findApplicableMap(variantIds, 'b2b'),
+  ]);
+
+  // Boy adı ÜRÜNDEN gelir; boy listesi yalnız etiketi taşır. Ürün kimlikleri tek turda çözülür.
+  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
+  const productNames = new Map(products.map((p) => [p.id, resolveLocalizedText(p.name)]));
+  const variantTitles = new Map(
+    variants.map((v) => [v.id, titleOf(productNames.get(v.productId) ?? '—', resolveLocalizedText(v.label))]),
+  );
+
+  const listCents = new Map<string, number>();
+  for (const [variantId, { channelPrice }] of b2cMap) if (channelPrice) listCents.set(`${variantId}·b2c`, toCents(channelPrice.amount));
+  for (const [variantId, { channelPrice }] of b2bMap) if (channelPrice) listCents.set(`${variantId}·b2b`, toCents(channelPrice.amount));
+
+  return {
+    prices: toCustomerPriceRows({ rows, profiles: new Map(profiles.map((p) => [p.id, p])), variantTitles, listCents }),
+    discounts: toDiscountRows(discountProfiles),
+  };
+}

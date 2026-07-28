@@ -144,4 +144,34 @@ export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate>
   async setPrice(input: PriceInsert): Promise<Price> {
     return this.insert(input);
   }
+
+  /**
+   * ŞU AN geçerli müşteriye özel fiyatların tamamı (09.5 yönetim listesi) — (varyant, kanal,
+   * müşteri) üçlüsü başına en yeni satır.
+   *
+   * Tekilleştirme ŞART: `setPrice` her değişiklikte yeni satır yazar, tablo geçmişi taşır. Ham
+   * liste "aynı müşteriye aynı varyanttan üç özel fiyat" gösterirdi — üçü de doğru, ama ikisi
+   * geçmiş. Ekranın sorusu "bugün kim kaça alıyor".
+   *
+   * Sayfalanmaz: bu küme veriyle değil, **admin'in eliyle** büyür (her satır ayrı bir pazarlık) —
+   * doğal tavanı vardır (CLAUDE.md §1). Tavan aşınırsa (yüzlerce özel fiyat) burası keyset'e döner
+   * ve ekrana müşteri süzgeci gerekir.
+   */
+  async listCustomerPricesNow(at: Date = new Date()): Promise<Price[]> {
+    const rows = await this.getAll(
+      {},
+      {
+        isNotNullFields: ['customer_id'],
+        rangeFilters: [{ field: 'valid_from', operator: 'lte', value: at.toISOString() }],
+        orderBy: 'validFrom',
+        orderDirection: 'desc',
+      },
+    );
+    const newest = new Map<string, Price>();
+    for (const row of rows) {
+      const key = `${row.variantId}·${row.channel}·${row.customerId}`;
+      if (!newest.has(key)) newest.set(key, row);
+    }
+    return [...newest.values()];
+  }
 }

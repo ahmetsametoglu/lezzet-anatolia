@@ -36,6 +36,8 @@ değişecek yer parantezde.
 | **Menü: Fırsatlar · Keşif · Professionnels** | K12'de çizili, bugün düz metin (Paketler bağlandı) | kendi sayfaları (`08.7`) |
 | **Menü: Hesabım** | K12'de tanımlı | `04-auth` |
 | **İmha geçmişi: "Kayıt" sütunu** | `Operasyon - Stok.dc.html` imha tablosunda çizili | `stock_adjustment`'ta referans alanı yok; numara **yazma akışında** doğar (`10` depo) — aşağıda §1c |
+| **Fiyatlar: "Kupon & kampanya" sekmesi** | `Operasyon - Fiyatlar.dc.html` içinde tam çizili (kart listesi + tek-en-büyük uyarısı) | `05.6` indirim tanım servisi — sekme bugün kuralı yazan bir boş hâl gösteriyor, kaydedilemeyen form kurulmadı |
+| **Fiyatlar: "Near-expiry" sekmesi** | çizili (parti kartları + teklif aç/imha) | ARKA UÇ HAZIR, sekme yine de çizilmedi — aşağıda §1d |
 
 ### 1a. Fiyat sıralaması neden ayrı bir engel
 
@@ -80,6 +82,19 @@ kâğıda yazmayacağı bir şey. Numara ancak **doğduğu yerde** anlamlı olur
 
 **Karar:** sütun tasarımdan düşürülmedi, `10`'a **park edildi**. 10 yazılırken üretilecek şey satır
 referansı değil olay referansıdır; stok ekranı o alanı okuyup sütunu açar.
+
+### 1d. Fiyat ekranının near-expiry sekmesi neden bu turda çizilmedi (28.07)
+
+Bu sekmenin arka ucu **var**: teklif karar motoru, önerilen fiyat ve teklif yazma yolu 09.13'te
+yazıldı ve stok ekranında çalışıyor. Engel veri değil, **kararın tek kaynakta kalması**.
+
+Sekmenin ihtiyacı olan şey ham parti satırı değil, karara bağlanmış parti GÖRÜNÜMÜ
+(`toBatchViews` + eşik okuması) ve o türetme bugün stok ekranının klasöründe yaşıyor. İki seçenek
+vardı: kopyalamak (aynı karar iki yerde — eşik değişince ekranlar ayrışır) ya da türetmeyi
+paylaşılan bir yere taşımak. İkincisi doğru, ama stok ekranının dosyalarına dokunan ayrı bir tur.
+
+Ölü bir sekme çizmek yerine sekme HİÇ çizilmedi; kupon sekmesindeki bağlantı "yaklaşan tarihli
+teklifler stok ekranında" diyerek kullanıcıyı çalışan yüzeye gönderiyor. Taşıma turunda sekme açılır.
 
 ---
 
@@ -207,6 +222,34 @@ tek yer sekme yokluğu (paketin alanı çok daha az, ürün formunu ikiye bölen
   kilitlenmez — yanlışlıkla açılmış bir teklif her zaman geri alınabilmeli.
 - **Mobil stok ekranı "Karar" sekmesiyle açılır**, seviyelerle değil. Tasarımın kendi notu: telefonda
   günlük iş "yaklaşan tarihliye bakıp teklif açmak", acil iş lot sorgusu — ikisi de başta durur.
+
+### Fiyat ekranı — yazılmış kararlar (28.07)
+
+- **Marj tek sayı ama İKİ kanaldan en darı.** Satırın b2c ve b2b diye iki marjı var; ekran tekini
+  gösteriyor. Ortalama almak zararına satan kanalı kârlı olanın arkasına gizlerdi — uyarının işi
+  riski göstermek. Hangi kanaldan geldiği rozetin ipucunda yazılı.
+- **Fiyatı olmayan kanal AMBER tire.** Sıfır değil, eksiklik: sonucu "o kanalda satışa kapalı" ve
+  ürünün neden satılmadığı sorusunun cevabı. Marj hesabına da girmez.
+- **Maliyeti bilinmeyen satırda marj NÖTR, yeşil değil.** "Bilmiyorum" ile "iyi" farklı şeyler;
+  hedefi yazılmamış üründe de uyarı verilmez (uydurulmuş bir hedefe göre alarm çalmaz).
+- **Tasarımın örnek sayıları ölçüt alınmadı.** `.dc.html` içindeki mock satırlarda marj ne markup ne
+  brüt marj tanımına uyuyor (18,00 fiyat · 9,20 maliyet → "%28"). Proje TEK tanım kullanır: maliyet
+  üzerine markup, KDV hariç tabanda (DOMAIN). Tasarım sayısı örnek veridir, spesifikasyon değil.
+- **Başlık sayaçları SAYFA kapsamlıdır ve metin bunu söyler** ("40 boy yüklendi · 0 marj-altı").
+  Tasarım "128 fiyatlı varyant · 3 marj-altı" diyor, yani katalog geneli; ama marj bir karardır ve
+  SQL süzgecine çevrilemez — tam sayım, katalogun tamamının fiyat+maliyetini taşımak ya da bir okuma
+  fonksiyonu (STACK §13) demek. Ölçüm yapılmadan ikisinden biri seçilmedi; o güne kadar sayaç
+  kapsamını yazıyor, katalogu temsil ediyormuş gibi davranmıyor.
+- **auto_price anahtarı bugün NİYETİ kaydeder.** Fiyatı maliyet değişince yeniden hesaplayan
+  tetikleyici stok girişine bağlı (modül `10`). Diyalog bunu açıkça yazar; yazmasaydı açık anahtar
+  olmayan bir otomatiği varmış gibi gösterirdi.
+- **Fiyat alanları auto_price açıkken kilitli** (tasarımın kuralı). Kilit bir engel değil açıklama:
+  elle yazılan fiyat bir sonraki otomatik hesapta silinecekti.
+- **Yalnız DEĞİŞEN kanal yazılır.** `setPrice` her çağrıda yeni satır ekler (fiyat geçmişi); değişmemiş
+  fiyatı yeniden yazmak geçmişi aynı tutarın kopyalarıyla şişirirdi.
+- **Ekran yalnız admin'e açık** ve engel sayfada: depo/kurye maliyet/marj görmez (brief §6). Kabuk
+  korunur, pane kapanır ve sebebi yazılır — sessiz yönlendirme, gördüğü bağlantının neden
+  çalışmadığını söylemezdi.
 
 ### Stok ekranı — tasarım güncellemesi uygulandı (28.07)
 

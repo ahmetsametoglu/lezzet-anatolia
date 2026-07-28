@@ -66,6 +66,17 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
     return this.getAll({ id: [...ids] });
   }
 
+  /**
+   * Genel indirim oranı TANIMLI müşteriler (09.5). Oran müşteri kaydında yaşar; fiyat ekranı onu
+   * yazmaz, **kimlerde olduğunu** izler — özel fiyatla aynı ekranda görünmesi gerekir, çünkü ikisi
+   * fiyat çözümünde arka arkaya gelen iki basamaktır (özel fiyat → indirim oranı → kanal fiyatı).
+   *
+   * Sayfalanmaz: oran elle verilir, küme admin'in eliyle büyür (CLAUDE.md §1).
+   */
+  async listWithDiscount(): Promise<UserProfile[]> {
+    return this.getAll({}, { isNotNullFields: ['discount_percent'], orderBy: 'createdAt', orderDirection: 'desc' });
+  }
+
   /** Profil listesi (admin) — en yeni önce, sonsuz kaydırma. */
   async list(opts: { isDraft?: boolean; b2bPending?: boolean; cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<UserProfile>> {
     const filters: Record<string, unknown> = {};

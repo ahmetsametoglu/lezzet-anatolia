@@ -6,6 +6,7 @@ import {
   ProductUpdateSchema,
   ProductPoolSchema,
   ProductStockRowSchema,
+  ProductPriceRowSchema,
   ProductWithRelationsSchema,
   pickImageMeta,
   resolveLocalizedText,
@@ -23,6 +24,7 @@ import {
   type ProductVariant,
   type ProductPool,
   type ProductStockRow,
+  type ProductPriceRow,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
@@ -126,6 +128,26 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     return this.getPageAs(ProductStockRowSchema, filters, {
       select:
         'id,name,category_id,date_type,shelf_life_days,status,variants:product_variant(id,label,is_active,min_stock_qty,sku)',
+      orderBy: 'sortOrder',
+      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+      keysetAfter: opts.cursor,
+      orFilters,
+    });
+  }
+
+  /**
+   * Fiyat ekranının ürün sayfası (09.5) — `listStockRows` ile aynı süzme/sayfalama, farklı dar satır.
+   *
+   * Ayrı bir okuma olmasının gerekçesi stok satırınınkiyle aynı: taşınan alanlar farklı. Fiyat
+   * ekranı tarih rejimini ve eşiği hiç okumaz; okuduğu dört alanın (KDV oranı, hedef marj,
+   * `auto_price`, kategori) üçü stok satırında YOK. İkisini tek geniş okumada birleştirmek her iki
+   * ekrana da öbürünün alanlarını ödetirdi.
+   */
+  async listPriceRows(opts: ProductListOptions = {}): Promise<Page<ProductPriceRow>> {
+    const { filters, orFilters } = this.buildQuery(opts.filters);
+    return this.getPageAs(ProductPriceRowSchema, filters, {
+      select:
+        'id,name,category_id,vat_rate,target_margin_percent,auto_price,status,variants:product_variant(id,label,is_active,sort_order)',
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
