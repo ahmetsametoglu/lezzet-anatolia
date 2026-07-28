@@ -41,6 +41,14 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 - Kullanıcı/oturum (Supabase Auth)
 - `user_profiles` + `roles` dizisi: personel içinde çoklu rol, müşteri ↔ personel keskin ayrım
 - Rol bazlı yetki kapıları ve yönlendirme
+- **Kenarda (middleware) oturum ön elemesi** — ERTELENDİ (28.07 kullanıcı kararı): operasyon
+  yüzeyi tamamlansın, sonra bakılır. Bugünkü kapı layout'ta (`(operations)/operations/layout.tsx`)
+  ve tüm alt sayfaları kapsıyor; eksik olan, sayfa kodu çalışmadan **önce** dönen ucuz bir eleme.
+  Karar noktası: rol `user_profiles`'tan service-role ile okunuyor (RLS deny-by-default) ve o
+  anahtar kenar paketine sokulmak istenmiyor → ya yalnız oturum çerezi bakılır (ucuz, girişli
+  müşteriyi durdurmaz), ya rol JWT talebine gömülür (sorgusuz ama rol iptali bir sonraki girişe
+  kadar bayat kalır), ya da kenar Node çalışma zamanına alınır. Ölçülecek: gezinme başına ek
+  gecikme.
 
 ## 3. Katalog (ürün/kategori)
 

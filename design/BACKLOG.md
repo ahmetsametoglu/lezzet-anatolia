@@ -35,6 +35,7 @@ değişecek yer parantezde.
 | **Fiyat sıralaması** (K18'in "Artan/Azalan fiyat" seçenekleri) | çizili, seçenekler görünüyor ama sonucu değiştirmiyor | **okuma görünümü (migration)** — aşağıda §1a |
 | **Menü: Fırsatlar · Keşif · Professionnels** | K12'de çizili, bugün düz metin (Paketler bağlandı) | kendi sayfaları (`08.7`) |
 | **Menü: Hesabım** | K12'de tanımlı | `04-auth` |
+| **İmha geçmişi: "Kayıt" sütunu** | `Operasyon - Stok.dc.html` imha tablosunda çizili | `stock_adjustment`'ta referans alanı yok; numara **yazma akışında** doğar (`10` depo) — aşağıda §1c |
 
 ### 1a. Fiyat sıralaması neden ayrı bir engel
 
@@ -59,6 +60,26 @@ yoksa alan tamamen kaldırılır, ekran yalnız başlık + iki butonla kalır (b
 > Aynı hata bir kez daha yaşandı: "Fırsat" rozeti `→05.6` (genel indirim motoru) etiketliyken,
 > gerçekte beklediği şey `05.6` değil zaten var olan near-expiry teklifiydi — kablo eksikti, modül
 > değil. **Ders:** stub'a bağımlılık yazarken "hangi modül" kadar "gerçekten o modül mü" da sorulur.
+
+### 1c. "Kayıt" sütunu — faydalı, ama satır başına DEĞİL (28.07 kullanıcı kararı)
+
+Sütunun arkasında gerçek bir ihtiyaç var, üç yerde çıkıyor: **kâğıt ↔ kayıt eşleşmesi** (imha
+tutanağı fiziksel tutulur; denetmenin elindeki kâğıdın ekranda karşılığı bulunmalı), **tedarikçiye
+talep** (hasarlı teslimat / soğuk zincir kaybında alacak yazışması bir numara anar), **sayım
+oturumu** (tek sayımda düşen onlarca satırı muhasebeye giden tek cümlede toplamak).
+
+Üçüncüsü tasarımın çizdiği şekli çürütüyor: ihtiyaç **satır başına** değil **olay başına**
+numaradır. Bir imhada üç ayrı parti çöpe gidebilir; üçüne üç numara vermek, eşleştirmek istenen
+kâğıdı üçe böler. Doğru şekli `IMH-26-0012` / `SAY-26-0043` gibi, aynı operasyonun bütün
+satırlarının **paylaştığı** bir referans.
+
+Bugün eklenirse sütun ya boş durur ya UUID'nin son altı hanesini gösterir — okunabilir ama kimsenin
+kâğıda yazmayacağı bir şey. Numara ancak **doğduğu yerde** anlamlı olur: `Order` deseninde
+`reference_no` ilk kalıcı durumda RPC içinde üretilir, tabloya sonradan iliştirilmez. Karşılığı
+`adjust_stock` yazma akışıdır ve orası depo modülünün (`10`) alanı.
+
+**Karar:** sütun tasarımdan düşürülmedi, `10`'a **park edildi**. 10 yazılırken üretilecek şey satır
+referansı değil olay referansıdır; stok ekranı o alanı okuyup sütunu açar.
 
 ---
 
