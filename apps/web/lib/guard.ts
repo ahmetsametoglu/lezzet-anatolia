@@ -52,6 +52,25 @@ export async function getSessionUser(): Promise<AuthUser | null> {
   return user ? { id: user.id, email: user.email ?? null } : null;
 }
 
+/**
+ * Oturumdaki kişinin **müşteri kimliği** (`user_profiles.id`); oturum ya da profil yoksa null.
+ *
+ * **Auth kimliği ≠ müşteri kimliği.** Profil satırını auth trigger'ı açar ve kendi `id`'sini üretir;
+ * auth kullanıcısının kimliği `auth_user_id` sütununda AYRI durur. `user_profiles`'a FK veren her
+ * tablo (`cart`, `order`, `address`, `zone_notice`) profil kimliğini bekler — oraya auth kimliği
+ * yazmak FK ihlalidir.
+ *
+ * Bu dönüşümün tek yerde durması bu yüzden şart: yerel bir kopya olarak yazıldığında üç ayrı çağrı
+ * yeri (sepet, boş sepet önerisi, bölge haberi) çeviriyi hiç yapmadı ve giriş yapan müşterinin
+ * sepeti **sessizce kayboldu** (28.07). Rol soran guard'lar tersine auth kimliğiyle çalışır
+ * (`isStaff`/`hasRole` içeride `auth_user_id`'den arar) — ikisi karıştırılmamalı.
+ */
+export async function currentCustomerId(): Promise<string | null> {
+  const user = await getSessionUser();
+  if (!user) return null;
+  return (await new UserProfileService(serviceDb()).findByAuthUserId(user.id))?.id ?? null;
+}
+
 /** Girişli kullanıcı şart; değilse AuthError('auth_required'). */
 export async function requireAuth(): Promise<AuthUser> {
   const user = await getSessionUser();
