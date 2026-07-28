@@ -34,6 +34,15 @@ interface CartPayload {
   view: CartView;
   /** Sonraya kaydedilenlerin çözülmüş görünümü; `lines` dışındaki toplamları anlamsızdır. */
   saved: CartView;
+  /**
+   * Sepet SUNUCUDA mı yaşıyor (girişli müşteri) — istemci tarayıcı deposunu ona göre yönetir.
+   *
+   * Şart, çünkü istemci "kimin sepeti" sorusunu kendi cevaplayamaz. Bu bayrak yokken sağlayıcı
+   * her yazmada tarayıcı deposunu da dolduruyordu; girişli müşteride depo yeniden doluyor, bir
+   * sonraki açılışta `readCartAction` onu misafir sepeti sanıp sunucudakinin ÜSTÜNE ekliyordu.
+   * Sonuç: her yenilemede adetler katlanıyordu — 4 kalem 8 oluyordu (29.07).
+   */
+  serverCart: boolean;
 }
 
 /**
@@ -56,7 +65,7 @@ export async function readCartAction(
     // sessizce kayboluyordu — devralma FK ihlaliyle düşüyor, action `{data:null}` dönüyor, ekran
     // boş sepet çiziyordu (28.07).
     const customerId = await currentCustomerId();
-    if (!customerId) return { data: { ...(await resolveBoth(locale, entries, saved)), merged: false }, error: null };
+    if (!customerId) return { data: { ...(await resolveBoth(locale, entries, saved)), merged: false, serverCart: false }, error: null };
 
     const cart = new CartService(serviceDb());
     const merged = entries.length > 0 || saved.length > 0;
@@ -80,6 +89,7 @@ export async function readCartAction(
           storedPrices(stored.items),
         )),
         merged,
+        serverCart: true,
       },
       error: null,
     };
@@ -99,7 +109,7 @@ export async function writeCartAction(locale: string, entries: CartEntry[], save
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     const customerId = await currentCustomerId();
     // Ziyaretçide yazacak yer yok — listeler tarayıcıda kalır, burada yalnız çözülür.
-    if (!customerId) return { data: await resolveBoth(locale, entries, saved), error: null };
+    if (!customerId) return { data: { ...(await resolveBoth(locale, entries, saved)), serverCart: false }, error: null };
 
     // Sunucuya yazılacak fiyat SUNUCUNUN çözdüğüdür; istemciden fiyat kabul edilmez.
     const cart = new CartService(serviceDb());
@@ -111,7 +121,7 @@ export async function writeCartAction(locale: string, entries: CartEntry[], save
       payload.view.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })),
     );
     await cart.replaceSaved(customerId, payload.saved.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })));
-    return { data: payload, error: null };
+    return { data: { ...payload, serverCart: true }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
@@ -127,7 +137,7 @@ async function resolveBoth(
   entries: CartEntry[],
   saved: CartEntry[],
   previousPrices?: ReadonlyMap<string, number>,
-): Promise<CartPayload> {
+): Promise<Omit<CartPayload, 'serverCart'>> {
   const [view, savedView] = await Promise.all([
     getCartView(locale, entries, { previousPrices }),
     // Sonraya kaydedilenlerde zam işareti gösterilmez: o liste bir satın alma niyeti değil, bir

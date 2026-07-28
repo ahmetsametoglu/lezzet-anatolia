@@ -56,7 +56,9 @@
       "cta": "WhatsApp'tan yaz"
     },
     "track": "Siparişi takip et",
-    "soon": "yakında"
+    "soon": "yakında",
+    "incomplete": "Siparişiniz tamamlanmadı",
+    "incompleteBody": "Sipariş kaydedildi ama kesinleşmedi. Sepetiniz duruyor — checkout'a dönüp yeniden deneyebilirsiniz."
   },
   "fr": {
     "title": "Votre commande est confirmée, {name}",
@@ -115,7 +117,9 @@
       "cta": "Écrire sur WhatsApp"
     },
     "track": "Suivre ma commande",
-    "soon": "bientôt"
+    "soon": "bientôt",
+    "incomplete": "Votre commande n'a pas abouti",
+    "incompleteBody": "La commande a été enregistrée mais non confirmée. Votre panier est intact — revenez au paiement pour réessayer."
   },
   "de": {
     "title": "Ihre Bestellung ist eingegangen, {name}",
@@ -174,6 +178,8 @@
       "cta": "Über WhatsApp schreiben"
     },
     "track": "Bestellung verfolgen",
-    "soon": "bald"
+    "soon": "bald",
+    "incomplete": "Ihre Bestellung wurde nicht abgeschlossen",
+    "incompleteBody": "Die Bestellung wurde gespeichert, aber nicht bestätigt. Ihr Warenkorb ist erhalten — gehen Sie zurück zur Kasse und versuchen Sie es erneut."
   }
 }

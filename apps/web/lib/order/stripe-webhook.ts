@@ -1,4 +1,4 @@
-import { OrderService, ReservationService, StockService, WebhookEventService, serviceDb } from '@lezzet/database';
+import { CartService, OrderService, ReservationService, StockService, WebhookEventService, serviceDb } from '@lezzet/database';
 import { decideLatePayment } from '@lezzet/domain-core';
 import type { OrderItem } from '@lezzet/types';
 import { recordOrderPayment } from '../money/order-payment';
@@ -131,6 +131,11 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null): P
 
   // Referans numarası ve `confirmed` geçişi burada doğar (07.6 kapısı; motor karar verir).
   await transitionOrder({ orderId: order.id, to: 'confirmed' });
+
+  // Ödeme geçtiğine göre sepet boşalır. Kart yolunda sepeti burada temizlemek ŞART: taslak
+  // açılırken temizlenseydi ödeme başarısız olan müşteri sepetini de kaybederdi. Temizlik
+  // siparişin kesinleştiği ana bağlı, açıldığı ana değil.
+  await new CartService(serviceDb()).replace(order.customerId, []);
 
   return { status: 'ok', action: decision.action === 'reserve_again' ? 'reserved_again' : 'confirmed' };
 }

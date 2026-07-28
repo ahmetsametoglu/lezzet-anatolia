@@ -32,7 +32,7 @@ const EMPTY: CheckoutSnapshot = { addresses: [], delivery: null, payment: null }
 
 export function CheckoutClient({ t, locale, device, authenticated, customer }: CheckoutClientProps) {
   const router = useRouter();
-  const { view, ready: cartReady } = useCart();
+  const { view, ready: cartReady, reload: reloadCart } = useCart();
   const [snapshot, setSnapshot] = useState<CheckoutSnapshot>(EMPTY);
   const [state, setState] = useState<CheckoutState>({
     addressId: null,
@@ -94,6 +94,9 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
 
     if (failure || !data) return setError(failure);
     if (data.status === 'rejected') return setError(rejectionMessage(t, data.reason, data.detail));
+    // Sipariş kesinleşti: sunucudaki sepet boşaldı, ekrandaki sayaç da onu görmeli. Tazelemeden
+    // gidilirse müşteri onay sayfasında başlıkta hâlâ dolu bir sepet rozeti görüyordu.
+    reloadCart();
     router.push(`/checkout/${data.orderId}`);
   };
 

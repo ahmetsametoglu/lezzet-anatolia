@@ -1,6 +1,6 @@
 'use server';
 
-import { AddressService, serviceDb } from '@lezzet/database';
+import { AddressService, CartService, OrderService, ReservationService, serviceDb } from '@lezzet/database';
 import { hasLocale } from 'next-intl';
 import type { Address, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
@@ -9,6 +9,8 @@ import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { getCartView } from '@/lib/cart/read';
 import type { CartEntry } from '@/lib/cart/cart-types';
 import { createCheckoutDraft } from '@/lib/order/checkout-draft';
+import { reserveOrderStock } from '@/lib/order/reserve';
+import { transitionOrder } from '@/lib/order/transition';
 import { createCheckoutSession } from '@/lib/order/checkout-session';
 import { resolveCheckoutPayment } from '@/lib/order/checkout-options';
 import { resolveDelivery } from '@/lib/order/delivery';
@@ -140,9 +142,10 @@ export async function addCheckoutAddressAction(
  * **Tek turda** olması bilinçli: taslağı ayrı bir çağrıda açsaydık, ödeme adımına hiç gelmeyen
  * müşteriler ardında yetim taslaklar bırakırdı. Burada üçü tek karar: ya hepsi olur ya hiçbiri.
  *
- * Online ödemede `clientSecret` döner ve kart onayı **istemcide** verilir (Stripe iframe'i).
- * Kapıda/vadeli ödemede sağlayıcıya hiç gidilmez — ödeme niyeti yoktur, sipariş taslak olarak
- * kalır ve onayı 07.6 akışı yapar.
+ * Online ödemede `clientSecret` döner ve kart onayı **istemcide** verilir (Stripe iframe'i);
+ * sipariş ödeme onayına kadar `draft` kalır ("önce ayır, sonra tahsil et").
+ * Kapıda/vadeli ödemede sağlayıcıya hiç gidilmez ve sipariş BURADA kesinleşir (`confirmed`):
+ * beklenen bir ödeme yok, bekletmenin de anlamı yok.
  */
 type ConfirmOutcome =
   | { status: 'payment_required'; orderId: string; clientSecret: string; totalCents: number }
@@ -178,8 +181,35 @@ export async function confirmCheckoutAction(input: {
       return { data: { status: 'rejected', reason: draft.status, detail }, error: null };
     }
 
-    // Kapıda ya da vadeli: para şimdi geçmiyor, sağlayıcıya hiç gidilmiyor.
+    /**
+     * Kapıda ya da vadeli: para şimdi geçmiyor, sağlayıcıya hiç gidilmiyor — ama sipariş
+     * **KESİNLEŞİR**. Önce yalnız taslak açılıp öyle bırakılıyordu; müşteri "tamamla" dediği hâlde
+     * sipariş `draft` kalıyor, referans numarası doğmuyor ve onay sayfası siparişi ödemesi
+     * beklenen bir kart siparişi sanıp "Ödemeniz onaylanıyor · bankanızdan onay bekliyoruz"
+     * diyordu (29.07). Kapıda ödemede beklenen bir banka yok.
+     *
+     * Sıra ORDER_LIFECYCLE'ın kuralı: kapıda/vadeli ödemede rezervasyon `confirmed` geçişinde
+     * yapılır ve **süresizdir** — düşmesini bekleyeceğimiz bir ödeme penceresi yok. Referans
+     * numarası da ilk kalıcı durumda (`confirmed`) doğar.
+     */
     if (input.paymentMethod !== 'online') {
+      const reserved = await reserveOrderStock({ orderId: draft.orderId, items: draft.items, expiring: false });
+      if (!reserved.ok) {
+        // Ayrılamadıysa sipariş taslak kalır ve kapatılır: müşteriye söz verilmemiş olur.
+        await cancelDraft(draft.orderId);
+        return { data: { status: 'rejected', reason: 'insufficient_stock' }, error: null };
+      }
+
+      const moved = await transitionOrder({ orderId: draft.orderId, to: 'confirmed' });
+      if (moved.status !== 'ok') {
+        await releaseOrderStock(draft.orderId);
+        await cancelDraft(draft.orderId);
+        return { data: { status: 'rejected', reason: 'order_not_placed' }, error: null };
+      }
+
+      // Sipariş kesinleşti → sepet boşalır. Aksi hâlde müşteri sipariş verdikten sonra sepetini
+      // hâlâ dolu buluyor ve aynı kalemleri ikinci kez sipariş edebiliyordu.
+      await clearCustomerCart(customerId);
       return { data: { status: 'placed', orderId: draft.orderId, totalCents: draft.totalCents }, error: null };
     }
 
@@ -194,4 +224,18 @@ export async function confirmCheckoutAction(input: {
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
+}
+
+/** Sipariş kesinleşince sepet boşalır — aynı kalemler ikinci kez sipariş edilmesin. */
+async function clearCustomerCart(customerId: string): Promise<void> {
+  await new CartService(serviceDb()).replace(customerId, []);
+}
+
+/** Ayrılamayan siparişin taslağı kapatılır: ortada söz verilmemiş yarım bir sipariş kalmaz. */
+async function cancelDraft(orderId: string): Promise<void> {
+  await new OrderService(serviceDb()).cancel(orderId, 'draft');
+}
+
+async function releaseOrderStock(orderId: string): Promise<void> {
+  await new ReservationService(serviceDb()).releaseByOrder(orderId);
 }

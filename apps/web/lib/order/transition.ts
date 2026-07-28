@@ -61,7 +61,13 @@ export async function transitionOrder(input: TransitionInput): Promise<Transitio
 
   // 4) Haber müşteriye — YALNIZ geçiş gerçekten olduysa (14.5). Gönderim hatası geçişi geri almaz:
   //    sipariş ilerledi, mail gitmediyse tekrar gönderilir; tersi (ilerlemeyi iptal etmek) veriyi bozar.
-  await notifyOrderStatus(order.id, input.to);
+  //    Bu YAKALANMAK zorunda: yorum böyle diyordu ama hata yukarı fırlıyor ve çağıran (checkout)
+  //    ilerlemiş bir siparişi başarısız sanıyordu. Sağlayıcı anahtarı yokken tam da bu oluyor.
+  try {
+    await notifyOrderStatus(order.id, input.to);
+  } catch (err) {
+    console.error('[transitionOrder] bildirim gönderilemedi:', err);
+  }
 
   return { status: 'ok', from: order.status, to: input.to, referenceNo: referenceNo ?? order.referenceNo };
 }

@@ -114,7 +114,8 @@
       "insufficient_stock": "Ürünlerden biri bu arada tükendi. Sepetinizi kontrol edin.",
       "provider_unavailable": "Ödeme sağlayıcısına ulaşılamıyor. Kapıda ödemeyi seçebilirsiniz.",
       "stale": "Bu sipariş zaten işleme alınmış.",
-      "customer_not_found": "Hesabınız çözümlenemedi, lütfen tekrar giriş yapın."
+      "customer_not_found": "Hesabınız çözümlenemedi, lütfen tekrar giriş yapın.",
+      "order_not_placed": "Sipariş kesinleştirilemedi. Lütfen tekrar deneyin."
     },
     "eyebrow": "sepetiniz · ödeme",
     "secure": "Stripe · 3D Secure · şifreli bağlantı",
@@ -247,7 +248,8 @@
       "insufficient_stock": "Un article vient d'être épuisé. Vérifiez votre panier.",
       "provider_unavailable": "Le prestataire de paiement est injoignable. Vous pouvez choisir le paiement à la livraison.",
       "stale": "Cette commande est déjà en cours de traitement.",
-      "customer_not_found": "Votre compte n'a pas pu être identifié, reconnectez-vous."
+      "customer_not_found": "Votre compte n'a pas pu être identifié, reconnectez-vous.",
+      "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer."
     },
     "eyebrow": "votre panier · commande",
     "secure": "Stripe · 3D Secure · connexion chiffrée",
@@ -380,7 +382,8 @@
       "insufficient_stock": "Ein Artikel ist gerade ausverkauft. Bitte prüfen Sie den Warenkorb.",
       "provider_unavailable": "Der Zahlungsanbieter ist nicht erreichbar. Sie können bei Lieferung zahlen.",
       "stale": "Diese Bestellung wird bereits bearbeitet.",
-      "customer_not_found": "Ihr Konto konnte nicht ermittelt werden, bitte erneut anmelden."
+      "customer_not_found": "Ihr Konto konnte nicht ermittelt werden, bitte erneut anmelden.",
+      "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut."
     },
     "eyebrow": "Ihr Warenkorb · Kasse",
     "secure": "Stripe · 3D Secure · verschlüsselt",

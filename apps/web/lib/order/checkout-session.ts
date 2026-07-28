@@ -1,5 +1,6 @@
-import { OrderService, ReservationService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
+import { OrderService, UserProfileService, serviceDb } from '@lezzet/database';
 import { stripeClient } from '../stripe';
+import { reserveOrderStock } from './reserve';
 
 /**
  * **Rezervasyon → ödeme sırası** (07.4) — uygulama katmanı orkestrasyonu. DOMAIN §4/§5.
@@ -77,28 +78,14 @@ export async function createCheckoutSession(
   // Sağlayıcı yoksa STOK AYRILMADAN dönülür — açılamayacak bir ödeme için mal kilitlenmemeli.
   if (!createSession) return { status: 'provider_unavailable' };
 
-  const ttlMinutes = await new SettingsService(db).getNumber('reservation_ttl_minutes', 30);
-  const reservations = new ReservationService(db);
-
-  for (const item of items) {
-    const result = await reservations.reserve({
-      orderId: order.id,
-      variantId: item.variantId,
-      qty: item.qty,
-      ttlMinutes,
-      stockId: item.stockId,
-    });
-    if (!result.ok) {
-      // Yarıda kalan ayırmalar geri bırakılır — bu siparişe ait olduğu için toplu silmek güvenli.
-      await reservations.releaseByOrder(order.id);
-      return { status: 'insufficient_stock', variantId: item.variantId, available: result.available };
-    }
-  }
+  // Ayırma TTL'li: ödeme gelmezse mal geri açılmalı ("önce ayır, sonra tahsil et" — DOMAIN §4).
+  const reserved = await reserveOrderStock({ orderId: order.id, items, expiring: true });
+  if (!reserved.ok) return { status: 'insufficient_stock', variantId: reserved.variantId, available: reserved.available };
 
   // Edinim kaynağı ve izin, ödeme açılırken yazılır: müşteri buraya kadar geldiyse niyet bellidir.
   await recordCustomerContext(order.customerId, input);
 
-  const expiresAt = new Date(Date.now() + ttlMinutes * 60_000).toISOString();
+  const expiresAt = reserved.expiresAt ?? new Date().toISOString();
   // Tahsil edilecek tutar siparişin TOPLAMIDIR: kalem toplamı + kargo − indirim, hepsi
   // `resolveCheckoutPayment` tarafından hesaplanıp siparişe yazılmış hâliyle. Burada yeniden
   // toplamak, iki hesabın ayrışabildiği ikinci bir kaynak yaratırdı.

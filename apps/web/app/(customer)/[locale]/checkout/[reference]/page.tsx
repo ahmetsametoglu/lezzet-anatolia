@@ -44,8 +44,19 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
   if (!found || !profile || found.order.customerId !== profile.id) notFound();
 
   const { order, items } = found;
-  const paid = order.status !== 'draft' && order.status !== 'cancelled';
+  /**
+   * Sipariş KESİNLEŞTİ mi (taslak değil, iptal değil). "Ödendi" ile aynı şey DEĞİL: ödeme ayrı bir
+   * eksendir (DOMAIN §7) — kapıda ödenecek bir sipariş de kesinleşmiştir. Değişken adı önce `paid`
+   * idi ve ekranın dili o yüzden her siparişi bir kart ödemesi gibi anlatıyordu.
+   */
+  const placed = order.status !== 'draft' && order.status !== 'cancelled';
   const cancelled = order.status === 'cancelled';
+  /**
+   * "Ödemeniz onaylanıyor · bankanızdan onay bekliyoruz" YALNIZ kart ödemesinde doğru. Kapıda
+   * ödemede beklenen bir banka yok; havalede de öyle — orada beklenen müşterinin transferi.
+   * Bekleme hâli artık yönteme bağlı okunuyor (29.07 kullanıcı geri bildirimi).
+   */
+  const awaitingCard = !placed && !cancelled && order.paymentMethod === 'online';
 
   // Kalem adları: sipariş varyant kalemlerinden oluşuyor, müşteri ürün adını görmeli.
   const variants = await new ProductVariantService(db).listByIds([...new Set(items.map((i) => i.variantId))]);
@@ -79,14 +90,28 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
         <section
           className={[
             'flex flex-col gap-2 rounded-card px-6 py-6',
-            cancelled ? 'bg-terracotta-bg' : paid ? 'bg-olive-bg' : 'bg-honey-bg',
+            cancelled ? 'bg-terracotta-bg' : placed ? 'bg-olive-bg' : 'bg-honey-bg',
           ].join(' ')}
         >
           <span className={['font-serif', compact ? 'text-h1-sm' : 'text-h1', cancelled ? 'text-terracotta' : 'text-ink'].join(' ')}>
-            {cancelled ? t.failed : paid ? (profile.name ? t.title.replace('{name}', profile.name.split(' ')[0] ?? '') : t.titleAnon) : t.pending}
+            {cancelled
+              ? t.failed
+              : placed
+                ? profile.name
+                  ? t.title.replace('{name}', profile.name.split(' ')[0] ?? '')
+                  : t.titleAnon
+                : awaitingCard
+                  ? t.pending
+                  : t.incomplete}
           </span>
           <p className="font-sans text-note leading-relaxed text-body">
-            {cancelled ? t.failedBody : paid ? t.mailed.replace('{email}', profile.email ?? '') : t.pendingBody}
+            {cancelled
+              ? t.failedBody
+              : placed
+                ? t.mailed.replace('{email}', profile.email ?? '')
+                : awaitingCard
+                  ? t.pendingBody
+                  : t.incompleteBody}
           </p>
           <span className="font-sans text-micro text-muted">
             {order.referenceNo ? `${t.orderNo.replace('{reference}', order.referenceNo)} · ` : ''}
@@ -124,7 +149,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
                 {order.onAccount
                   ? t.payment.onAccount.replace('{amount}', total)
                   : order.paymentMethod === 'online'
-                    ? (paid ? t.payment.paid : t.pending).replace('{amount}', total)
+                    ? (placed ? t.payment.paid : t.pending).replace('{amount}', total)
                     : t.payment.due.replace('{amount}', total)}
               </span>
               <span className="font-sans text-note text-muted">
@@ -132,7 +157,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
               </span>
               {/* Kart künyesi: son dört hane ödeme sağlayıcısından çekilecek (12) — bugün
                   saklamıyoruz, uydurma rakam yazmaktansa yalnız aracı söyleriz. */}
-              {order.paymentMethod === 'online' && paid && <span className="font-sans text-micro text-muted">{t.payment.card}</span>}
+              {order.paymentMethod === 'online' && placed && <span className="font-sans text-micro text-muted">{t.payment.card}</span>}
               <span className="font-sans text-micro leading-relaxed text-muted">{t.payment.invoiceSoon}</span>
               {/* Fatura düğmesi tasarımda var; üretimi modül 12'nin işi. Düğme YERİNDE durur ve
                   neden basılamadığını söyler — silmek, tasarımın bu bloğunu kaybetmek olurdu. */}

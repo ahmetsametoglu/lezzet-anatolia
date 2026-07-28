@@ -49,8 +49,12 @@ interface CartContextValue {
    * Boş sepet ile ULAŞILAMAYAN sepet farklı şeylerdir: birincisi bir durum, ikincisi bir arıza.
    */
   failed: boolean;
-  /** Başarısız okumayı tekrar dener — müşterinin tek çaresi sayfayı yenilemek olmasın. */
-  retry: () => void;
+  /**
+   * Sepeti sunucudan YENİDEN okur. İki yerde kullanılır: başarısız okumanın "tekrar dene"si ve
+   * sipariş verildikten sonra tazeleme — sipariş kesinleşince sunucudaki sepet boşalıyor, ekrandaki
+   * sayaç da onu görmeli. Yoksa müşteri sipariş verip sepetinde hâlâ kalem görüyordu.
+   */
+  reload: () => void;
   add: (entry: CartEntry) => void;
   /** Tekrar sipariş: birçok kalem TEK turda girer — tek tek eklemek N sunucu turu demekti. */
   addMany: (entries: readonly CartEntry[]) => void;
@@ -103,6 +107,12 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   const [savedView, setSavedView] = useState<CartView>(EMPTY_CART);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  /**
+   * Sepet sunucuda mı yaşıyor. Sunucu söyler (`serverCart`) — istemci "kimin sepeti" sorusunu
+   * kendi cevaplayamaz. `ref`, çünkü `sync` içinde OKUNUYOR ve state olsaydı her yazmada
+   * yeniden kurulan bir bağımlılık zinciri doğardı.
+   */
+  const serverCart = useRef(false);
   // Silinen kalem, geri alınana ya da pencere kapanana kadar burada bekler.
   const [undo, setUndo] = useState<{ entry: CartEntry; name: string } | null>(null);
   // Yarışı kesmek için: geç dönen eski yanıt yeni durumu ezmesin.
@@ -114,8 +124,13 @@ export function CartProvider({ locale, children }: CartProviderProps) {
     (next: CartEntry[], nextSaved: CartEntry[]) => {
       setEntries(next);
       setSavedEntries(nextSaved);
-      writeGuestCart(next);
-      writeSaved(nextSaved);
+      // Tarayıcı deposu YALNIZ ziyaretçide yazılır. Girişli müşteride de yazılıyordu: depo
+      // yeniden doluyor, bir sonraki açılışta `readCartAction` onu misafir sepeti sanıp
+      // sunucudakinin ÜSTÜNE ekliyordu — her yenilemede adetler katlanıyordu (29.07).
+      if (!serverCart.current) {
+        writeGuestCart(next);
+        writeSaved(nextSaved);
+      }
       const ticket = ++seq.current;
       void writeCartAction(locale, next, nextSaved).then(({ data }) => {
         // Bilet eskiyse kullanıcı bu arada bir şey daha yaptı: eski cevap YOK SAYILIR. Kilide gerek
@@ -159,9 +174,11 @@ export function CartProvider({ locale, children }: CartProviderProps) {
       .then(({ data }) => {
         if (ticket !== seq.current) return;
         if (!data) return setFailed(true);
-        // Devralma yapıldıysa tarayıcı depoları boşaltılır; yoksa aynı kalemler her açılışta
-        // yeniden eklenir ve adet katlanır.
-        if (data.merged) {
+        serverCart.current = data.serverCart;
+        // Sepet sunucuda yaşıyorsa tarayıcı deposu BOŞALTILIR — devralma yapılmış olsun ya da
+        // olmasın. Yalnız `merged` hâlinde temizlemek yetmiyordu: sonraki yazmalar depoyu
+        // yeniden dolduruyor ve bir sonraki açılışta o kalemler ikinci kez devralınıyordu.
+        if (data.serverCart) {
           clearGuestCart();
           clearSaved();
         }
@@ -188,7 +205,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
       view: displayView,
       ready,
       failed,
-      retry: load,
+      reload: load,
       add: (entry) => {
         closeUndo();
         sync(mergeEntry(entries, entry), savedEntries);
