@@ -11,7 +11,15 @@ import { WEEKDAYS, monthGrid, monthLabel, shiftMonth, type CalendarCell } from '
  * çözmek olurdu.
  *
  * Hücre 42 sabittir (bkz. `monthGrid`): ay değişince kutu zıplamaz.
+ *
+ * Izgara SABİT genişlikli sütun kullanır (`1fr` değil, tasarımdaki gibi piksel): esnek sütun,
+ * takvim geniş bir kutuya (aralık kipinde iki ay + önayar sütunu) konduğunda günleri yatay
+ * yayar ve hücre yayvan bir dikdörtgene döner — gün ızgarası kare okunmalı.
  */
+
+/** Bir gün hücresinin kenarı (px) — genişlik = 7 × CELL + 6 × 2px boşluk. */
+const CELL = 28;
+const GRID_WIDTH = 7 * CELL + 6 * 2;
 
 interface CalendarProps {
   /** Görünen ay — dışarıdan yönetilir ki aralık kipinde iki ay yan yana durabilsin. */
@@ -31,37 +39,66 @@ interface CalendarProps {
   onNext?: () => void;
   /** Bugünün günü — dışarıdan verilir (test edilebilirlik + tek "şimdi"). */
   today: string;
+  /**
+   * Komşu ayın dolgu günleri gösterilsin mi (varsayılan evet).
+   *
+   * İKİ AY YAN YANAYKEN KAPATILIR: 6 Ağustos hem Temmuz ızgarasının kuyruğunda hem Ağustos'un
+   * kendi hücresinde duruyor. Tek ayda bu zararsız bir kestirme, aralık boyandığında ise aynı gün
+   * iki yerde birden — üstelik bitiş kapağı da çift — görünüyor; hangisinin gerçek olduğu
+   * belirsizleşiyor. Komşu ay zaten yanı başında olduğu için kestirmeye de gerek yok.
+   */
+  outsideDays?: boolean;
 }
 
-export function Calendar({ year, month, selected, from, to, hovered, onHover, onPick, onPrev, onNext, today }: CalendarProps) {
+export function Calendar({
+  year,
+  month,
+  selected,
+  from,
+  to,
+  hovered,
+  onHover,
+  onPick,
+  onPrev,
+  onNext,
+  today,
+  outsideDays = true,
+}: CalendarProps) {
   const cells = monthGrid(year, month);
   // Aralık henüz kapanmadıysa fare nereye gelirse orası geçici ikinci uçtur.
   const end = to || (from && hovered && hovered > from ? hovered : null);
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-none flex-col gap-2.5" style={{ width: GRID_WIDTH }}>
       <div className="flex items-center justify-between">
         {onPrev ? <NavButton dir="prev" onClick={onPrev} /> : <span className="w-5" />}
         <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">{monthLabel(year, month)}</span>
         {onNext ? <NavButton dir="next" onClick={onNext} /> : <span className="w-5" />}
       </div>
 
-      <div className="grid grid-cols-7 gap-0.5">
+      <div className="grid gap-[2px]" style={{ gridTemplateColumns: `repeat(7, ${CELL}px)` }}>
         {WEEKDAYS.map((d) => (
-          <span key={d} className="py-0.5 text-center font-ops-display text-ops-micro font-medium text-ops-faint">
+          <span key={d} className="pb-0.5 text-center font-ops-display text-ops-micro font-medium text-ops-faint">
             {d}
           </span>
         ))}
-        {cells.map((cell) => (
-          <DayCell
-            key={cell.day}
-            cell={cell}
-            state={stateOf(cell.day, { selected, from, end })}
-            isToday={cell.day === today}
-            onPick={() => onPick(cell.day)}
-            onHover={onHover}
-          />
-        ))}
+        {cells.map((cell) =>
+          cell.outside && !outsideDays ? (
+            // Boş yer tutucu: hücre çizilmez ama ızgara 42 kalır — ay değişince kutu zıplamaz.
+            <span key={cell.day} style={{ height: CELL }} />
+          ) : (
+            <DayCell
+              key={cell.day}
+              cell={cell}
+              state={stateOf(cell.day, { selected, from, end })}
+              // Bugün işareti YALNIZ ayın kendi gününde: aynı gün komşu ayın dolgusunda da
+              // göründüğünde iki ay yan yanayken aynı tarih iki kez çerçeveli çıkıyordu.
+              isToday={cell.day === today && !cell.outside}
+              onPick={() => onPick(cell.day)}
+              onHover={onHover}
+            />
+          ),
+        )}
       </div>
     </div>
   );
@@ -103,8 +140,11 @@ function DayCell({ cell, state, isToday, onPick, onHover }: DayCellProps) {
       type="button"
       onClick={onPick}
       onMouseEnter={onHover ? () => onHover(cell.day) : undefined}
+      style={{ height: CELL }}
       className={[
-        'cursor-pointer py-[5px] text-center font-ops-mono text-ops-xs font-medium transition-colors',
+        // Kare hücre: sütun sabit genişlikte, yükseklik de aynı ölçüde — gün ızgarası
+        // dolgudan (padding) değil ölçüden doğar, satırlar her ayda aynı yüksekliktedir.
+        'grid cursor-pointer place-items-center font-ops-mono text-ops-xs font-medium transition-colors',
         STATE_CLASS[state],
         // Komşu ayın günü seçilebilir ama SOLGUN: ayın sonundan başına geçmek tek tıklama olsun,
         // ama hangi ayda olduğunuz da görünsün.

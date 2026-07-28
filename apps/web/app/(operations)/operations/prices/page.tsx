@@ -172,7 +172,7 @@ async function readCouponsTab(
 }
 
 /**
- * Near-expiry sekmesi — karar bekleyen partiler. Türetme STOK EKRANIYLA ORTAK (`toBatchViews`):
+ * "Yaklaşan tarihli" sekmesi — karar bekleyen partiler. Türetme STOK EKRANIYLA ORTAK (`toBatchViews`):
  * aynı eşik, aynı karar, tek kaynak. Kopyalansaydı eşik değişince iki ekran farklı şey söylerdi.
  *
  * Partiler SAYFALANMAZ: elde ne varsa o kadar (fiziksel sınır) ve uyarının TAM olması gerekiyor.

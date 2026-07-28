@@ -42,12 +42,22 @@ function Trigger({ text, placeholder, disabled, onClick, triggerRef, onClear }: 
           'flex w-full cursor-pointer items-center justify-between gap-3 rounded-ops-card border border-ops-line bg-ops-white px-3 py-2.5 text-left transition-colors',
           'hover:border-ops-line-strong focus-visible:border-ops-olive focus-visible:outline-none',
           disabled ? 'cursor-not-allowed opacity-60' : '',
-          onClear ? 'pr-9' : '',
         ]
           .filter(Boolean)
           .join(' ')}
       >
-        <span className={`truncate font-ops-body text-ops-sm ${text ? 'text-ops-ink' : 'text-ops-faint'}`}>
+        {/* Temizleme düğmesi metinle takvim ikonunun ARASINA konumlanır; metnin sağ payı onun
+            yerini açar — paysız bırakıldığında uzun tarih ✕'in altından geçer, ✕ de ikonun
+            üstüne binip takvimi "üzeri çizili" gösterir. */}
+        <span
+          className={[
+            'truncate font-ops-body text-ops-sm',
+            text ? 'text-ops-ink' : 'text-ops-faint',
+            onClear ? 'me-4' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
           {text || placeholder}
         </span>
         <span className="flex-none text-ops-faint">
@@ -61,7 +71,7 @@ function Trigger({ text, placeholder, disabled, onClick, triggerRef, onClear }: 
           type="button"
           onClick={onClear}
           aria-label="Tarihi temizle"
-          className="absolute right-8 top-1/2 -translate-y-1/2 cursor-pointer rounded px-1 font-ops-display text-ops-sm text-ops-faint transition-colors hover:text-ops-red"
+          className="absolute right-9 top-1/2 -translate-y-1/2 cursor-pointer rounded px-1 font-ops-display text-ops-sm text-ops-faint transition-colors hover:text-ops-red"
         >
           ✕
         </button>
@@ -118,7 +128,8 @@ export function DateField({
         }}
         onClear={clearable && value ? () => onChange('') : undefined}
       />
-      <AnchoredMenu anchorRef={triggerRef} open={open} onClose={() => setOpen(false)} width={252}>
+      {/* 236 = 3 kenarlık + 24 dolgu + 208 ızgara (7×28 hücre + 6×2 boşluk) — tasarımın ölçüsü. */}
+      <AnchoredMenu anchorRef={triggerRef} open={open} onClose={() => setOpen(false)} width={236}>
         <div className="p-3">
           <Calendar
             year={view.year}
@@ -204,10 +215,12 @@ export function DateRangeField({
         }}
         onClear={from || to ? () => onChange('', '') : undefined}
       />
-      <AnchoredMenu anchorRef={triggerRef} open={open} onClose={() => setOpen(false)} width={presets ? 560 : 420}>
+      {/* Genişlik ızgaradan TÜRETİLİR: 3 kenarlık + [130 önayar] + 24 dolgu + 2×208 + 18 ara.
+          Sabit sayı uydurmak, hücreleri esneten ya da ayı alta kaydıran bir kutu üretiyordu. */}
+      <AnchoredMenu anchorRef={triggerRef} open={open} onClose={() => setOpen(false)} width={presets ? 592 : 462}>
         <div className="flex flex-wrap" onMouseLeave={() => setHovered(null)}>
           {presets ? (
-            <div className="flex flex-none flex-col gap-0.5 border-r border-ops-line bg-ops-subtle p-2.5">
+            <div className="flex w-[130px] flex-none flex-col gap-0.5 self-stretch border-r border-ops-line bg-ops-subtle p-2.5">
               {RANGE_PRESETS.map((preset) => {
                 const active = activePreset === preset.key;
                 return (
@@ -240,7 +253,7 @@ export function DateRangeField({
             </div>
           ) : null}
 
-          <div className="flex flex-1 flex-wrap gap-5 p-3">
+          <div className="flex flex-1 flex-wrap gap-[18px] p-3">
             <Calendar
               year={view.year}
               month={view.month}
@@ -249,6 +262,7 @@ export function DateRangeField({
               hovered={hovered}
               onHover={setHovered}
               today={toDay(today)}
+              outsideDays={false}
               onPrev={() => setView((v) => shiftMonth(v.year, v.month, -1))}
               onPick={pick}
             />
@@ -260,6 +274,7 @@ export function DateRangeField({
               hovered={hovered}
               onHover={setHovered}
               today={toDay(today)}
+              outsideDays={false}
               onNext={() => setView((v) => shiftMonth(v.year, v.month, 1))}
               onPick={pick}
             />
@@ -269,7 +284,10 @@ export function DateRangeField({
         <div className="border-t border-ops-line bg-ops-subtle px-3.5 py-2 font-ops-body text-ops-xs text-ops-muted">
           {from && to ? (
             <>
-              Seçili: <span className="font-ops-mono text-ops-body">{`${formatDay(from)} – ${formatDay(to)}`}</span>
+              {/* Tarih metni GÖVDE yazı tipiyle (tasarımın alt yazısı da öyle): mono, sabit genişlikli
+                  boşluklarıyla "15  Tem  2026" gibi gerilmiş okunuyordu. Mono hizalanan sütunlar
+                  içindir, cümle içindeki tarih için değil. */}
+              Seçili: <span className="font-ops-body font-semibold text-ops-ink">{`${formatDay(from)} – ${formatDay(to)}`}</span>
             </>
           ) : from ? (
             <>Bitiş gününü seçin — başlangıçtan önceki bir gün yeni başlangıç olur.</>

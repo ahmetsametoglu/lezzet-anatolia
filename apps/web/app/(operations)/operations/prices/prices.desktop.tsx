@@ -16,7 +16,7 @@ import type { PricesViewProps } from './prices-types';
 // dosyalarında. Kabuk veriyi bilmez, yalnız yönlendirir (stok ve ürünler ekranlarının deseni).
 
 /**
- * Sekmeler. Near-expiry rozeti karar bekleyen parti SAYISINI taşır — sekmeye girmeden "bugün bir iş
+ * Sekmeler. "Yaklaşan tarihli" rozeti karar bekleyen parti SAYISINI taşır — sekmeye girmeden "bugün bir iş
  * var mı" sorusu yanıtlanabilsin. Sayı yalnız o sekme okunduğunda dolu; başka sekmedeyken rozet
  * gösterilmez, çünkü okunmamış bir sayıyı "0" diye yazmak yanlış haber olurdu.
  */

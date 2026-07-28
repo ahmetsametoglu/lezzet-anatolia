@@ -78,5 +78,8 @@ export const TAB_LABEL: Record<PriceTab, string> = {
   channels: 'Kanal fiyatları',
   customers: 'Müşteriye özel',
   coupons: 'Kupon & kampanya',
-  offers: 'Near-expiry',
+  // Tasarım bu sekmeye "Near-expiry" diyor; operasyon yüzeyi TÜRKÇEDİR ve aynı kuyruk stok
+  // ekranında zaten "Yaklaşan tarihli" adıyla duruyor. İki ekranda iki ad, tek kuyruğu iki iş
+  // gibi gösterirdi.
+  offers: 'Yaklaşan tarihli',
 };
