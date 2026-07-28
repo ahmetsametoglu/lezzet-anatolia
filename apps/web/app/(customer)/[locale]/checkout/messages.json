@@ -102,8 +102,7 @@
       "preparing": "Siparişiniz hazırlanıyor…",
       "confirming": "Ödeme onaylanıyor…",
       "error": "Ödeme tamamlanamadı",
-      "secureBy": "Kart bilgileriniz Stripe tarafından şifrelenir",
-      "secureNote": "Alan Stripe’ın kendi güvenli çerçevesinde açılır — kart numaranız ne bu sayfaya ne sunucumuza ulaşır, biz hiçbir zaman göremeyiz."
+      "secureBy": "Kart bilgileriniz Stripe tarafından şifrelenir"
     },
     "rejected": {
       "empty_cart": "Sepetiniz boş görünüyor.",
@@ -238,8 +237,7 @@
       "preparing": "Préparation de votre commande…",
       "confirming": "Confirmation du paiement…",
       "error": "Le paiement n'a pas abouti",
-      "secureBy": "Vos données de carte sont chiffrées par Stripe",
-      "secureNote": "Le champ s'ouvre dans le cadre sécurisé de Stripe — votre numéro de carte n'atteint ni cette page ni nos serveurs, nous ne le voyons jamais."
+      "secureBy": "Vos données de carte sont chiffrées par Stripe"
     },
     "rejected": {
       "empty_cart": "Votre panier semble vide.",
@@ -374,8 +372,7 @@
       "preparing": "Bestellung wird vorbereitet…",
       "confirming": "Zahlung wird bestätigt…",
       "error": "Zahlung nicht abgeschlossen",
-      "secureBy": "Ihre Kartendaten werden von Stripe verschlüsselt",
-      "secureNote": "Das Feld öffnet sich in Stripes eigenem sicheren Rahmen — Ihre Kartennummer erreicht weder diese Seite noch unsere Server, wir sehen sie nie."
+      "secureBy": "Ihre Kartendaten werden von Stripe verschlüsselt"
     },
     "rejected": {
       "empty_cart": "Ihr Warenkorb scheint leer zu sein.",

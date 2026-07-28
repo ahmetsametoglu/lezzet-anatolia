@@ -156,7 +156,6 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
             preparing: t.pay.preparing,
             confirming: t.pay.confirming,
             secureBy: t.pay.secureBy,
-            secureNote: t.pay.secureNote,
           }}
         />
       ) : (

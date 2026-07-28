@@ -43,7 +43,7 @@ interface PaymentSectionProps {
   onPrepare: () => Promise<{ ok: true; clientSecret: string; orderId: string } | { ok: false; error: string }>;
   onError: (message: string) => void;
   disabled: boolean;
-  labels: { submit: string; validating: string; preparing: string; confirming: string; secureBy: string; secureNote: string };
+  labels: { submit: string; validating: string; preparing: string; confirming: string; secureBy: string };
 }
 
 interface BillingDetails {
@@ -203,30 +203,36 @@ function PayForm({ locale, amountCents, billing, returnUrlBase, onPrepare, onErr
        * GÜVENCE ALANIN ÜSTÜNDE, altında değil: müşteri kart numarasını yazmadan ÖNCE nereye
        * yazdığını bilmeli. Altta dursaydı okuduğunda karar çoktan verilmiş olurdu.
        *
-       * Sağlayıcı ADIYLA anılıyor ("Stripe"): tanınan bir ad, "güvenli ödeme" gibi kimsenin
-       * doğrulayamadığı bir slogandan daha çok güven verir. Cümle de bir vaat değil, bir olgu —
-       * alan gerçekten Stripe'ın kendi çerçevesinde açılıyor ve kart numarası bu sayfaya hiç
-       * girmiyor (ADR Sapma 6).
+       * TEK SATIR ve sağlayıcının ADIYLA. Uzun bir güvenlik açıklaması ("sunucumuz görmez, biz
+       * hiçbir zaman göremeyiz") tersine çalışıyor: kimsenin sormadığı bir soruyu cevaplamak,
+       * olmayan bir riski akla getirir. Tanınan bir ad zaten yeterli güvence.
        */}
-      <div className="flex flex-col gap-1 rounded-soft bg-sand-50 px-4 py-3">
-        <span className="font-sans text-note font-semibold text-body">🔒 {labels.secureBy}</span>
-        <span className="font-sans text-micro leading-relaxed text-muted">{labels.secureNote}</span>
-      </div>
+      <span className="font-sans text-note font-semibold text-body">🔒 {labels.secureBy}</span>
 
-      {/* Alan Stripe'tan yükleniyor: boş bırakmak yerine iskelet — gelen çerçeveyle aynı yeri
-          kaplar, kutu sonradan belirince sayfa zıplamaz (ortak primitif). */}
-      {!ready && <Skeleton className="h-40 rounded-card" />}
-      <div style={{ display: ready ? 'block' : 'none' }}>
-        <PaymentElement
-          onReady={() => setReady(true)}
-          options={{
-            layout: 'tabs',
-            fields: { billingDetails: 'never' },
-            // Link kapalı: "bilgilerimi kaydet" bloğu kendi hesabına davet ediyor ve checkout'un
-            // ortasında ikinci bir karar çıkarıyor. Cüzdanlar açık kalır.
-            wallets: { applePay: 'auto', googlePay: 'auto', link: 'never' },
-          }}
-        />
+      {/**
+       * Kart çerçevesi YERİNDE DURUR, gizlenirken bile yer kaplar (`invisible`, `display:none`
+       * DEĞİL) — iskelet onun üstüne serilir.
+       *
+       * Fark görünmez değil: `display:none` verilen bir iframe kendini ÖLÇEMEZ. Stripe "hazırım"
+       * diyor, biz kutuyu açıyoruz, iframe ancak o an yerleşimini kuruyordu — iskelet kayboluyor,
+       * bir süre boşluk kalıyor, sonra alanlar beliriyordu (kullanıcı geri bildirimi, 29.07).
+       * `invisible` ile yerleşim baştan doğru kurulur; hazır olunca yalnız görünürlük değişir,
+       * yeniden ölçüm olmaz. `min-h-40` yalnız beklerken: iskeletin serileceği bir yükseklik lazım.
+       */}
+      <div className={['relative', ready ? '' : 'min-h-40'].join(' ')}>
+        <div className={ready ? undefined : 'invisible'}>
+          <PaymentElement
+            onReady={() => setReady(true)}
+            options={{
+              layout: 'tabs',
+              fields: { billingDetails: 'never' },
+              // Link kapalı: "bilgilerimi kaydet" bloğu kendi hesabına davet ediyor ve checkout'un
+              // ortasında ikinci bir karar çıkarıyor. Cüzdanlar açık kalır.
+              wallets: { applePay: 'auto', googlePay: 'auto', link: 'never' },
+            }}
+          />
+        </div>
+        {!ready && <Skeleton className="absolute inset-0 h-full rounded-card" />}
       </div>
 
       <Button size="md" fullWidth onClick={() => void submit()} disabled={!stripe || busy || disabled}>
