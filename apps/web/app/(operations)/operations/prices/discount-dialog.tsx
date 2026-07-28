@@ -7,6 +7,8 @@ import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { Input } from '@/components/operation/form/input';
 import { MoneyField, PercentField } from '@/components/operation/form/money-input';
+import { DateRangeField } from '@/components/operation/form/date-field';
+import { parseDay, toDay } from '@/components/operation/form/calendar-math';
 import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { Select } from '@/components/operation/form/select';
 import { Toggle } from '@/components/operation/form/toggle';
@@ -52,8 +54,8 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
     editing?.minBasketCents == null ? null : fromCents(editing.minBasketCents),
   );
   const [firstOrderOnly, setFirstOrderOnly] = useState(editing?.firstOrderOnly ?? false);
-  const [validFrom, setValidFrom] = useState(toDateInput(editing?.validFrom ?? null));
-  const [validTo, setValidTo] = useState(toDateInput(editing?.validTo ?? null));
+  const [validFrom, setValidFrom] = useState(toDayValue(editing?.validFrom ?? null));
+  const [validTo, setValidTo] = useState(toDayValue(editing?.validTo ?? null));
   const [maxUses, setMaxUses] = useState<string>(editing?.maxUses?.toString() ?? '');
   const [perCustomerLimit, setPerCustomerLimit] = useState<string>(editing?.perCustomerLimit?.toString() ?? '');
   const [isActive, setIsActive] = useState(editing?.isActive ?? true);
@@ -222,14 +224,19 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Başlangıç" hint="boş = hemen">
-          <Input type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
-        </Field>
-        <Field label="Bitiş" hint="boş = süresiz · gün sonuna kadar">
-          <Input type="date" value={validTo} onChange={(e) => setValidTo(e.target.value)} />
-        </Field>
-      </div>
+      {/* Geçerlilik TEK alan: başlangıç ve bitiş ayrı kutularda dururken ikisi arasındaki ilişki
+          (ters aralık) ancak kaydederken görülüyordu. Aralık seçicide ters seçim zaten kurulamaz. */}
+      <DateRangeField
+        label="Geçerlilik"
+        labelAside="boş = hemen başlar, süresiz"
+        from={validFrom}
+        to={validTo}
+        onChange={(nextFrom, nextTo) => {
+          setValidFrom(nextFrom);
+          setValidTo(nextTo);
+        }}
+        placeholder="Süresiz"
+      />
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Toplam kullanım sınırı" hint="boş = sınırsız">
@@ -284,11 +291,13 @@ function Field({ label, hint, children }: FieldProps) {
   );
 }
 
-/** ISO damgayı `<input type="date">` biçimine indirger (UTC gün). */
-function toDateInput(iso: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+/**
+ * DB'deki ISO damgadan takvim GÜNÜNÜ alır. Ayrıştırma tek yerde (`calendar-math`): burada ikinci
+ * bir dönüşüm yazmak, kaydedilen gün ile gösterilen günü ayrı dilimlerde farklı gösterebilirdi.
+ */
+function toDayValue(iso: string | null): string {
+  const date = parseDay(iso);
+  return date ? toDay(date) : '';
 }
 
 /** Sayı alanına yalnız rakam: "3 adet" gibi bir metin sessizce NaN'a dönerdi. */

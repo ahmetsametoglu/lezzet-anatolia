@@ -297,3 +297,13 @@ export function CopyIcon({ size = 12 }: { size?: number }) {
     </Svg>
   );
 }
+
+/** Takvim — tarih ve tarih aralığı seçicilerinin tetikleyicisi (envanter O8). */
+export function CalendarIcon({ size = 15 }: { size?: number }) {
+  return (
+    <Svg size={size}>
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M3 9h18M8 2v4M16 2v4" />
+    </Svg>
+  );
+}

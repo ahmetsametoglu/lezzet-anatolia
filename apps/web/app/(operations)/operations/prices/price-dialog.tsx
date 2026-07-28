@@ -7,6 +7,7 @@ import { addVat, fromCents, removeVat, toCents } from '@lezzet/helper';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { Toggle } from '@/components/operation/form/toggle';
+import { DateField } from '@/components/operation/form/date-field';
 import { MoneyField, PercentField } from '@/components/operation/form/money-input';
 import { money, percent } from '@/components/operation/ui/format';
 import { setAutoPriceAction, setChannelPriceAction } from './actions';
@@ -36,6 +37,9 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
   const [b2c, setB2c] = useState<number | null>(row.b2c.amountCents === null ? null : fromCents(row.b2c.amountCents));
   const [b2b, setB2b] = useState<number | null>(row.b2b.amountCents === null ? null : fromCents(row.b2b.amountCents));
   const [autoPrice, setAutoPrice] = useState(row.autoPrice);
+  // Boş = "şimdi geçerli". İleri tarih, zammı bugünden hazırlamak için (05.4 baştan destekliyordu,
+  // ekranı yoktu): o güne kadar eski fiyat satılmaya devam eder.
+  const [effectiveFrom, setEffectiveFrom] = useState('');
   const [target, setTarget] = useState<number | null>(row.targetMarginPercent);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -74,11 +78,14 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
     // YALNIZ DEĞİŞENLER yazılır: `setPrice` her çağrıda yeni satır ekler (fiyat geçmişi). Değişmemiş
     // fiyatı yeniden yazmak, geçmişi aynı tutarın kopyalarıyla şişirirdi.
     const writes: Array<Promise<{ error: string | null }>> = [];
+    // Tarih GÜN başı olarak yazılır: "1 Ağustos'tan itibaren" diyen operatör o günün başını
+    // kasteder. Boşsa `undefined` → servis "şimdi" yazar.
+    const startsAt = effectiveFrom ? new Date(`${effectiveFrom}T00:00:00`).toISOString() : null;
     if (!autoPrice && b2c !== null && toCents(b2c) !== row.b2c.amountCents) {
-      writes.push(setChannelPriceAction(row.variantId, 'b2c', toCents(b2c)));
+      writes.push(setChannelPriceAction(row.variantId, 'b2c', toCents(b2c), startsAt));
     }
     if (!autoPrice && b2b !== null && toCents(b2b) !== row.b2b.amountCents) {
-      writes.push(setChannelPriceAction(row.variantId, 'b2b', toCents(b2b)));
+      writes.push(setChannelPriceAction(row.variantId, 'b2b', toCents(b2b), startsAt));
     }
     const results = await Promise.all(writes);
     setBusy(false);
@@ -178,6 +185,22 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
           }}
         />
       </div>
+
+      <DateField
+        label="Ne zamandan geçerli"
+        labelAside="boş = hemen"
+        value={effectiveFrom}
+        onChange={setEffectiveFrom}
+        placeholder="Hemen"
+        disabled={autoPrice}
+      />
+      {effectiveFrom ? (
+        // İleri tarihli yazım SESSİZ olmamalı: kaydeden kişi fiyatın bugün değişmeyeceğini bilmeli,
+        // yoksa "kaydettim ama vitrinde eski fiyat" diye geri döner.
+        <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-amber-dark">
+          Yeni fiyat o güne kadar YÜRÜRLÜĞE GİRMEZ; bugünkü satışlar eski fiyattan devam eder.
+        </span>
+      ) : null}
 
       <div className="flex flex-col gap-3 rounded-ops-card border border-ops-line px-3.5 py-3">
         <div className="flex items-center justify-between gap-3">

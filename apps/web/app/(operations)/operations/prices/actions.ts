@@ -32,11 +32,15 @@ import { titleOf, type CustomerOption, type DiscountFormInput, type PriceRow, ty
  * `null` tutar "bu kanalda fiyat yok" demektir ve bugün DESTEKLENMEZ: fiyat satırı silmek geçmişi de
  * silerdi, "satışa kapat" ise boyun kendi anahtarıdır (`is_active`). Ekran bu yüzden sıfır/boş
  * tutarı reddeder.
+ *
+ * `validFrom` İLERİ tarihli yazmayı açar (05.4'ün baştan beri desteklediği ama ekranı olmayan
+ * yetenek): zam bugünden hazırlanır, o güne kadar eski fiyat geçerli kalır. Boşsa "şimdi".
  */
 export async function setChannelPriceAction(
   variantId: string,
   channel: Channel,
   amountCents: number,
+  validFrom?: string | null,
 ): Promise<ActionResult> {
   try {
     await requireAdmin();
@@ -47,6 +51,7 @@ export async function setChannelPriceAction(
       channel,
       amount: fromCents(Math.round(amountCents)),
       customerId: null,
+      validFrom: validFrom ?? undefined,
     });
     revalidatePath(PRICES_PATH);
     return { data: null, error: null };
