@@ -20,9 +20,8 @@ değişecek yer parantezde.
 
 | Ne | Tasarım | Bekleyen |
 | --- | --- | --- |
-| **Sepet kupon kartı — bağlanması** | **UI çizildi** (alan + "Uygula" + sebep satırı); uygulanmış çip + ✕, dört ret hâli ("süresi dolmuş" · "geçersiz" · "40 € üzeri" · "otomatik indirim daha büyük") ve özetteki yeşil indirim satırı motorla gelir | indirim/kupon motoru (`BACKLOG §15`) |
 | **Sepet teslimat satırı** ("Teslimat: Ücretsiz" / "6,90 €") | çizili, **kodlanmadı** | ücret teslimat türüne, tür ADRESE bağlı → checkout adres adımı. Ücretsiz kargo ilerleme çubuğu bundan AYRI ve yapıldı (eşik `Setting`'ten, ilerleme ara toplamdan) |
-| **"Checkout'a geç" düğmesi** — girişli müşteri doğrudan, ziyaretçi önce hızlı doğrulamaya | çizili, tam görünür ve pasif | `07.4`/`07.5` |
+| **"Checkout'a geç" düğmesi** — girişli müşteri doğrudan, ziyaretçi önce hızlı doğrulamaya | çizili, tam görünür ve pasif | **ENGEL KALKTI (28.07):** `07.4`/`07.5` indi. Kapı hazır — `lib/order/checkout-session.ts` `createCheckoutSession` (rezervasyon → Stripe oturumu, TTL'li), webhook `api/webhooks/stripe`. Kalan iş yüzeyin: düğmeyi kapıya bağlamak + ziyaretçi doğrulama adımı |
 | **"Fiyat değişti" bildirimi** — `DOMAIN §5`: fiyat arttıysa müşteriye açıkça söylenir ve onay istenir (kabul et / çıkar); düştüyse sessizce uygulanır | tasarımda yok (yalnız stok uyarısı çizili) | `CartItem.unitPrice` okuma tarafına bağlanmalı — alan yazılıyor, karşılaştırılmıyor |
 | **Boş sepet: "Bu hafta çok sevilenler"** — 4'lü ürün ızgarası (web) / 2'li (mobil), kart üstünde "Sepete ekle" | `Musteri - Sepet.dc.html` → `Bos Sepet Web/Mobil` | **popülerlik sinyali yok** — aşağıda §1b |
 | **Boş sepet: B2B sipariş şablonları** ("Haftalık standart · 14 kalem" + "Yükle") | aynı tasarım, durum kartı | şablon modeli yok (`07`); B2B müşteri bugün "son siparişi tekrarla" bloğunu görür |
@@ -32,22 +31,23 @@ değişecek yer parantezde.
 | **Tüm Yorumlar paneli** (web modal · mobil tam ekran, yıldız süzgeci, 10'ar sayfalama, `?yorumlar=1`) | `Musteri - Urun Detay.dc.html` → `Tum Yorumlar Web/Mobil` | `17-geri-bildirim` |
 | **Ürün detay yorum bölümü** — puan satırı, ortalama kartı, "N yorumun tümü →" | çizili; **boş hâli kodlandı** (bugün her ürünün yorum sayısı gerçekten sıfır) | `17` |
 | **"Yorum yaz"** — yalnız o ürünü satın almış girişli müşteride | çizili | `17` + `04-auth` + `07` |
-| **Fiyat sıralaması** (K18'in "Artan/Azalan fiyat" seçenekleri) | çizili, seçenekler görünüyor ama sonucu değiştirmiyor | **okuma görünümü (migration)** — aşağıda §1a |
 | **Bölge haberi tetikleyicisi** — bölge genişleyince bekleyenlere TEK e-posta | `zone_notice` kaydı alınıyor, ekran "not aldık" diyor (söz vermiyor) | bölge kaydedilince kontrol eden iş + gönderim (`14-bildirim`) |
 | **Hesap sayfasında "sonraya kaydedilenler" + bölge haberi kartı** | çizili (`Musteri - Hesap.dc.html`) | hesap sayfası (`04-auth`); veri hazır (`cart.saved_items`, `zone_notice`) |
 | **Operasyon → Analitik "bölge dışı talep" listesi** | tasarımda anıldı | `postal_code_demand` doluyor; ekran operasyon yüzeyinin işi |
 | **Menü: Fırsatlar · Keşif · Professionnels** | K12'de çizili, bugün düz metin (Paketler bağlandı) | kendi sayfaları (`08.7`) |
 | **Menü: Hesabım** | K12'de tanımlı | `04-auth` |
-| **İmha geçmişi: "Kayıt" sütunu** | `Operasyon - Stok.dc.html` imha tablosunda çizili | `stock_adjustment`'ta referans alanı yok; numara **yazma akışında** doğar (`10` depo) — aşağıda §1c |
 
-### 1a. Fiyat sıralaması neden ayrı bir engel
+### 1a. Fiyat sıralaması — KAPANDI (28.07)
 
-Stub bir süre `→05.4` etiketliydi; 05.4 (fiyat) indi ve sıralama yine açılmadı — **etiket yanlış
-hedefi gösteriyordu.** Gerçek engel şu: uygulanabilir fiyat ayrı tablodadır (kanal + geçerlilik
-tarihi + müşteriye özel satır) ve "bu ürünün b2c fiyatı" tek bir kolon değil bir **seçimdir**.
-Ürünleri o seçime göre sıralayıp aynı anda keyset sayfalamak `available_stock` gibi bir okuma
-görünümü ister. Sayfa çekildikten sonra sıralamak seçenek değil: "artan fiyat" yalnız o 30 satır
-içinde artan olur.
+Engel bir modül değildi (stub bir süre yanlışlıkla `→05.4` etiketliydi): uygulanabilir fiyat ayrı
+tablodadır ve "bu ürünün b2c fiyatı" tek bir kolon değil bir **seçimdir**. Sayfa çekildikten sonra
+sıralamak seçenek değildi — "artan fiyat" yalnız o 30 satır içinde artan olur.
+
+Çözüm `available_stock` desenindedir: `product_listing` okuma görünümü (`0034`) seçimi SQL'de çözer,
+sıralama ve keyset imleci onun üstünde çalışır. Görünüm motorun (`resolvePrice`) **ziyaretçi dalını**
+SQL'de yeniden ifade eder; bu bilinçli bir ödünleşmedir ve ayrışma riski yorumla değil **testle**
+tutulur (`catalog-sort.test.ts`: teklif kazanır / kaybeder / eşittir / partisi boştur hâllerinde
+sıralamanın kullandığı fiyat ile kartta yazan fiyat karşılaştırılır).
 
 ### 1b. "Çok sevilenler" neden bugün çizilmiyor
 
@@ -64,25 +64,15 @@ yoksa alan tamamen kaldırılır, ekran yalnız başlık + iki butonla kalır (b
 > gerçekte beklediği şey `05.6` değil zaten var olan near-expiry teklifiydi — kablo eksikti, modül
 > değil. **Ders:** stub'a bağımlılık yazarken "hangi modül" kadar "gerçekten o modül mü" da sorulur.
 
-### 1c. "Kayıt" sütunu — faydalı, ama satır başına DEĞİL (28.07 kullanıcı kararı)
+### 1c. "Kayıt" sütunu — KAPANDI (28.07)
 
-Sütunun arkasında gerçek bir ihtiyaç var, üç yerde çıkıyor: **kâğıt ↔ kayıt eşleşmesi** (imha
-tutanağı fiziksel tutulur; denetmenin elindeki kâğıdın ekranda karşılığı bulunmalı), **tedarikçiye
-talep** (hasarlı teslimat / soğuk zincir kaybında alacak yazışması bir numara anar), **sayım
-oturumu** (tek sayımda düşen onlarca satırı muhasebeye giden tek cümlede toplamak).
+Park edilmişti: sütun çiziliydi ama arkasında numara yoktu. Kararı verilen şekil kuruldu ve
+`10.5`'te indi — numara **satır başına değil olay başına**: aynı imhanın/sayımın bütün satırları
+`IMH-26-0012` gibi tek bir referansı paylaşır, çünkü kâğıt tutanakla eşleşen şey satır değil olaydır.
 
-Üçüncüsü tasarımın çizdiği şekli çürütüyor: ihtiyaç **satır başına** değil **olay başına**
-numaradır. Bir imhada üç ayrı parti çöpe gidebilir; üçüne üç numara vermek, eşleştirmek istenen
-kâğıdı üçe böler. Doğru şekli `IMH-26-0012` / `SAY-26-0043` gibi, aynı operasyonun bütün
-satırlarının **paylaştığı** bir referans.
-
-Bugün eklenirse sütun ya boş durur ya UUID'nin son altı hanesini gösterir — okunabilir ama kimsenin
-kâğıda yazmayacağı bir şey. Numara ancak **doğduğu yerde** anlamlı olur: `Order` deseninde
-`reference_no` ilk kalıcı durumda RPC içinde üretilir, tabloya sonradan iliştirilmez. Karşılığı
-`adjust_stock` yazma akışıdır ve orası depo modülünün (`10`) alanı.
-
-**Karar:** sütun tasarımdan düşürülmedi, `10`'a **park edildi**. 10 yazılırken üretilecek şey satır
-referansı değil olay referansıdır; stok ekranı o alanı okuyup sütunu açar.
+Numara **sıralıdır** (sipariş referansının tersi ve bilerek: o dışarı gider, bu içeride kalır) ve
+**doğduğu yerde** üretilir — `adjust_stock_batch` RPC'si içinde, `Order.reference_no` deseniyle aynı.
+Stok ekranı `stock_adjustment.reference_no` alanını okuyup sütunu açabilir.
 
 ### 1d. Near-expiry sekmesi — KAPANDI (28.07)
 
@@ -114,11 +104,37 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
 
-- **Sepet satırında "sonraya kaydet" YOK.** K35 onu her satıra koyuyor ("kısıt olmadan da
+- **~~Adres formu çizili değil~~ — ÇİZİLİYMİŞ (28.07 düzeltmesi).** Envanter güncellenmiş: **K34 ·
+  Form Alanı** ve **K35 · Adres Formu** eklenmiş, ben eski kopyaya bakıyordum. `CLAUDE.md §3`
+  "yerel kopya bayat olabilir, claude_design MCP'den çek" diyor; MCP bu oturumda yok, dosya elle
+  tazelenmeli. Ders: bileşen yoksa **önce envanterin güncelliği** sorgulanmalı, uydurmadan önce.
+  Kod K34/K35'e göre yeniden kuruldu. Kalan: mobil 52px gövde (primitif cihazı bilmiyor,
+  `size` desteği ayrı iş) · posta kodu yazılırken **anlık teslimat cevabı** · alan terk edilince
+  doğrulama (`onBlur`).
+
+- ~~**Adres formu HİÇBİR tasarımda çizili değil.**~~ Checkout'ta yalnız "+ Yeni adres" düğmesi var,
+  basınca ne açılacağı yok; hesap sayfasında da yok. Kodlanan form **improvisedir** (CLAUDE.md §3
+  ihlali, bilerek ve geçici): dar sütun (520 px), görünür etiketler, posta kodu + şehir aynı satırda.
+  **Claude Design'dan istenecek** — alan sırası, gruplama, ülke seçici, doğrulama metinleri ve
+  "varsayılan yap" kutusu tasarım kararıdır, koddan türetilmemeli.
+
+- **Genel form girdisi envanterde YOK — ama K4 yol gösteriyor.** K1-K31 arasında yalnız K4 (Arama
+  Alanı) çizili. Ölçü ilk turda yanlışlıkla giriş sayfasının BUTONUNDAN türetilmişti (14px ped,
+  2px kenar, 15px punto → ~51px yükseklik); K4'ün kendisi `1px kum-300` kenar · `9px 18px` ped ·
+  `400 14px` · odakta `2px zeytin` ve ped 1px azalma diyor → ~37px. Girdi çizilenin bir buçuk katıydı.
+  `controlClass` K4'e göre yeniden kuruldu: punto 14, ince kenar, dar ped, odakta `ring-inset`
+  (kutu zıplamadan kenar iki katı görünür). Yarıçap K4'ün 24'ü DEĞİL, envanter §0.4'ün "küçük kart
+  14-16" aralığı — K4 bir arama hapıdır, form alanı değil; hap biçimi beş alan üst üste dizilince
+  tekrarlayan bir ritim yaratıyordu.
+  **Yine de K30 olarak çizilmesi isteniyor:** hata/yardım metni yerleşimi, zorunlu alan işareti,
+  çok satırlı alan ve seçici (select) hâlleri K4'ten türetilemiyor.
+
+
+- **Sepet satırında "sonraya kaydet" YOK.** K33 onu her satıra koyuyor ("kısıt olmadan da
   kullanılabilir"); kaldırıldı. Kısıt yokken kontrol hiçbir şeyi açıklamıyordu: gideceği yer
   görünmüyor (liste boşken çizilmiyor), çöp kutusunun yanında ikinci bir eylem duruyor ve müşterinin
   o an yaptığı işle yarışıyordu. **Ertelemek ancak bir SEBEBİ varken anlam taşır** — sebebi kısıt
-  bloğu (K34) veriyor, kaydetme oraya taşındı. Liste böylece kendi kendini açıklıyor.
+  bloğu (K32) veriyor, kaydetme oraya taşındı. Liste böylece kendi kendini açıklıyor.
 
 Bunlar eksik değil, **verilmiş karar**. Not düşülüyor ki bir sonraki denetimde "tasarımdan sapma"
 diye yeniden açılmasın; itiraz gelirse madde §2'ye taşınır.
