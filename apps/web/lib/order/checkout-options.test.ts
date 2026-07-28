@@ -13,34 +13,34 @@ const db = serviceDb();
 const profiles = new UserProfileService(db);
 const orders = new OrderService(db);
 
-const damga = Date.now();
+const stamp = Date.now();
 let customerId: string;
-let vadeliMusteriId: string;
+let creditCustomerId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
-const acilanProfiller: string[] = [];
+const createdProfiles: string[] = [];
 
 const LINES = [{ totalCents: 4000, vatRate: 5.5 }];
 
 beforeAll(async () => {
-  const category = await new CategoryService(db).create({ name: { tr: `Checkout testi ${damga}` } });
-  const { product, variants } = await new ProductService(db).create({ name: { tr: `Baklava ${damga}` }, categoryId: category.id });
+  const category = await new CategoryService(db).create({ name: { tr: `Checkout testi ${stamp}` } });
+  const { product, variants } = await new ProductService(db).create({ name: { tr: `Baklava ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
   productId = product.id;
   variantId = variants[0]!.id;
 
-  const musteri = await profiles.insert({ name: `Peşin müşteri ${damga}` });
-  customerId = musteri.id;
-  const vadeli = await profiles.insert({ name: `Vadeli müşteri ${damga}`, creditEnabled: true, creditLimit: 100 });
-  vadeliMusteriId = vadeli.id;
-  acilanProfiller.push(musteri.id, vadeli.id);
+  const customer = await profiles.insert({ name: `Peşin müşteri ${stamp}` });
+  customerId = customer.id;
+  const vadeli = await profiles.insert({ name: `Vadeli müşteri ${stamp}`, creditEnabled: true, creditLimit: 100 });
+  creditCustomerId = vadeli.id;
+  createdProfiles.push(customer.id, vadeli.id);
   SettingsService.invalidate();
 });
 
 afterAll(async () => {
-  await db.from('order').delete().in('customer_id', acilanProfiller);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: acilanProfiller });
+  await db.from('order').delete().in('customer_id', createdProfiles);
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
   SettingsService.invalidate();
 });
 
@@ -114,7 +114,7 @@ describe('vade freni — açık bakiye TÜRETİLİR', () => {
   });
 
   it('limit içinde vade OTOMATİK açılır', async () => {
-    const r = await resolveCheckoutPayment({ customerId: vadeliMusteriId, deliveryType: 'route', basketCents: 4000, lines: LINES });
+    const r = await resolveCheckoutPayment({ customerId: creditCustomerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r.creditAvailable).toBe(true);
     expect(r.creditBlockedReason).toBeNull();
   });
@@ -122,11 +122,11 @@ describe('vade freni — açık bakiye TÜRETİLİR', () => {
   it('ödenmemiş vadeli sipariş açık bakiyeye girer; limit aşımı admin onayına düşer', async () => {
     // 80 € ödenmemiş vadeli sipariş + 40 € yeni sipariş = 120 € > 100 € limit
     await orders.create(
-      { customerId: vadeliMusteriId, channel: 'b2b', onAccount: true, total: 80 },
+      { customerId: creditCustomerId, channel: 'b2b', onAccount: true, total: 80 },
       [{ variantId, qty: 1, unitPrice: 80, vatRate: 5.5 }],
     );
 
-    const r = await resolveCheckoutPayment({ customerId: vadeliMusteriId, deliveryType: 'route', basketCents: 4000, lines: LINES });
+    const r = await resolveCheckoutPayment({ customerId: creditCustomerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r.creditAvailable).toBe(false);
     expect(r.creditBlockedReason).toBe('limit_exceeded');
     expect(r.creditRequiresApproval).toBe(true); // reddedilmez, admin'e düşer
@@ -134,14 +134,14 @@ describe('vade freni — açık bakiye TÜRETİLİR', () => {
 
   it('iptal edilen vadeli sipariş açık bakiyeye SAYILMAZ', async () => {
     const { order } = await orders.create(
-      { customerId: vadeliMusteriId, channel: 'b2b', onAccount: true, total: 500, status: 'cancelled' },
+      { customerId: creditCustomerId, channel: 'b2b', onAccount: true, total: 500, status: 'cancelled' },
       [{ variantId, qty: 1, unitPrice: 500, vatRate: 5.5 }],
     );
     expect(order.status).toBe('cancelled');
 
     // Yukarıdaki 80 € hâlâ açık; iptal edilen 500 € eklenmediği için sebep hâlâ limit aşımı,
     // "gecikme" değil ve bakiye patlamış görünmüyor.
-    const r = await resolveCheckoutPayment({ customerId: vadeliMusteriId, deliveryType: 'route', basketCents: 100, lines: [{ totalCents: 100, vatRate: 5.5 }] });
+    const r = await resolveCheckoutPayment({ customerId: creditCustomerId, deliveryType: 'route', basketCents: 100, lines: [{ totalCents: 100, vatRate: 5.5 }] });
     expect(r.creditAvailable).toBe(true); // 80 + 1 = 81 € < 100 € limit
   });
 });

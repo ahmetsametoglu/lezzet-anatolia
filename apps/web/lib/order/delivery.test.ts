@@ -10,22 +10,22 @@ import { resolveDelivery } from './delivery';
 const db = serviceDb();
 const zones = new DeliveryZoneService(db);
 
-const damga = Date.now();
-const rotaKodu = `67${String(damga).slice(-3)}`;
-const acilanBolgeler: string[] = [];
+const stamp = Date.now();
+const rotaKodu = `67${String(stamp).slice(-3)}`;
+const createdZones: string[] = [];
 
 beforeAll(async () => {
   const zone = await zones.insert({
-    name: `Test bölgesi ${damga}`,
+    name: `Test bölgesi ${stamp}`,
     postalCodes: [rotaKodu],
     weekdays: [2, 5], // Salı, Cuma
   });
-  acilanBolgeler.push(zone.id);
+  createdZones.push(zone.id);
   SettingsService.invalidate();
 });
 
 afterAll(async () => {
-  await db.from('delivery_zone').delete().in('id', acilanBolgeler);
+  await db.from('delivery_zone').delete().in('id', createdZones);
   SettingsService.invalidate();
 });
 
@@ -33,18 +33,18 @@ const pazartesiSabah = new Date(2026, 6, 27, 9, 0);
 
 describe('rota içi teslimat (07.2)', () => {
   it('posta kodu bölgeye düşüyorsa rota içi + yaklaşan günler gelir', async () => {
-    const sonuc = await resolveDelivery({ postalCode: rotaKodu, now: pazartesiSabah });
+    const outcome = await resolveDelivery({ postalCode: rotaKodu, now: pazartesiSabah });
 
-    expect(sonuc.deliveryType).toBe('route');
-    expect(sonuc.zoneId).toBe(acilanBolgeler[0]);
-    expect(sonuc.availableDates).toEqual(['2026-07-28', '2026-07-31', '2026-08-04']);
-    expect(sonuc.requiresDateChoice).toBe(true);
+    expect(outcome.deliveryType).toBe('route');
+    expect(outcome.zoneId).toBe(createdZones[0]);
+    expect(outcome.availableDates).toEqual(['2026-07-28', '2026-07-31', '2026-08-04']);
+    expect(outcome.requiresDateChoice).toBe(true);
   });
 
   it('tek tarih önerildiğinde seçim sunulmaz', async () => {
-    const sonuc = await resolveDelivery({ postalCode: rotaKodu, now: pazartesiSabah, dateCount: 1 });
-    expect(sonuc.requiresDateChoice).toBe(false);
-    expect(sonuc.availableDates).toHaveLength(1);
+    const outcome = await resolveDelivery({ postalCode: rotaKodu, now: pazartesiSabah, dateCount: 1 });
+    expect(outcome.requiresDateChoice).toBe(false);
+    expect(outcome.availableDates).toHaveLength(1);
   });
 
   it('kesim saati AYARDAN okunur — değiştirince gün hesabı değişir', async () => {
@@ -66,27 +66,27 @@ describe('rota içi teslimat (07.2)', () => {
 
 describe('rota dışı — kargo', () => {
   it('bölgeye düşmeyen adres kargodur, gün seçimi yoktur', async () => {
-    const sonuc = await resolveDelivery({ postalCode: '75001', now: pazartesiSabah });
-    expect(sonuc).toMatchObject({ deliveryType: 'shipping', zoneId: null, availableDates: [], shippingBlockedReason: null });
+    const outcome = await resolveDelivery({ postalCode: '75001', now: pazartesiSabah });
+    expect(outcome).toMatchObject({ deliveryType: 'shipping', zoneId: null, availableDates: [], shippingBlockedReason: null });
   });
 
   it('sepette kargolanamayan ürün varsa kargo KAPANIR (soğuk zincir)', async () => {
-    const sonuc = await resolveDelivery({ postalCode: '75001', now: pazartesiSabah, hasNonShippableItem: true });
-    expect(sonuc.shippingBlockedReason).toBe('cold_chain');
+    const outcome = await resolveDelivery({ postalCode: '75001', now: pazartesiSabah, hasNonShippableItem: true });
+    expect(outcome.shippingBlockedReason).toBe('cold_chain');
   });
 
   it('rota içindeyse kargolanamayan ürün sorun DEĞİL — kapı teslimi zaten mümkün', async () => {
-    const sonuc = await resolveDelivery({ postalCode: rotaKodu, now: pazartesiSabah, hasNonShippableItem: true });
-    expect(sonuc.deliveryType).toBe('route');
-    expect(sonuc.shippingBlockedReason).toBeNull();
+    const outcome = await resolveDelivery({ postalCode: rotaKodu, now: pazartesiSabah, hasNonShippableItem: true });
+    expect(outcome.deliveryType).toBe('route');
+    expect(outcome.shippingBlockedReason).toBeNull();
   });
 
   it('kapatılan bölge rota sayılmaz — adres kargoya düşer', async () => {
-    await zones.update({ id: acilanBolgeler[0]!, isActive: false });
+    await zones.update({ id: createdZones[0]!, isActive: false });
     try {
       expect((await resolveDelivery({ postalCode: rotaKodu, now: pazartesiSabah })).deliveryType).toBe('shipping');
     } finally {
-      await zones.update({ id: acilanBolgeler[0]!, isActive: true });
+      await zones.update({ id: createdZones[0]!, isActive: true });
     }
   });
 });

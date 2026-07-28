@@ -20,35 +20,35 @@ const orders = new OrderService(db);
 const logs = new OrderStatusLogService(db);
 const profiles = new UserProfileService(db);
 
-const damga = Date.now();
+const stamp = Date.now();
 let customerId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
-const acilanProfiller: string[] = [];
+const createdProfiles: string[] = [];
 
 beforeAll(async () => {
-  const category = await new CategoryService(db).create({ name: { tr: `Sipariş testi ${damga}` } });
+  const category = await new CategoryService(db).create({ name: { tr: `Sipariş testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
-    name: { tr: `Kadayıf ${damga}` },
+    name: { tr: `Kadayıf ${stamp}` },
     categoryId: category.id,
   });
   categoryId = category.id;
   productId = product.id;
   variantId = variants[0]!.id;
 
-  const profile = await profiles.insert({ name: `Sipariş müşterisi ${damga}` });
+  const profile = await profiles.insert({ name: `Sipariş müşterisi ${stamp}` });
   customerId = profile.id;
-  acilanProfiller.push(profile.id);
+  createdProfiles.push(profile.id);
 });
 
 afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId); // kalemler + log CASCADE
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: acilanProfiller });
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
 });
 
 /** Taslak sipariş + tek kalem. */
-async function siparisAc() {
+async function createOrder() {
   const { order } = await orders.create(
     { customerId, channel: 'b2c' },
     [{ variantId, qty: 2, unitPrice: 12.5, vatRate: 5.5 }],
@@ -58,16 +58,16 @@ async function siparisAc() {
 
 describe('izinli geçişler ve iz (07.6)', () => {
   it('draft → confirmed ilerletir, referans üretir ve log yazar', async () => {
-    const order = await siparisAc();
+    const order = await createOrder();
     expect(order.referenceNo).toBeNull(); // taslakta numara yok
 
-    const sonuc = await transitionOrder({ orderId: order.id, to: 'confirmed' });
-    expect(sonuc.status).toBe('ok');
-    if (sonuc.status !== 'ok') return;
-    expect(sonuc.referenceNo).toMatch(/^LA-\d{2}-[A-Z0-9]{6}$/);
+    const outcome = await transitionOrder({ orderId: order.id, to: 'confirmed' });
+    expect(outcome.status).toBe('ok');
+    if (outcome.status !== 'ok') return;
+    expect(outcome.referenceNo).toMatch(/^LA-\d{2}-[A-Z0-9]{6}$/);
 
-    const guncel = await orders.getById(order.id);
-    expect(guncel).toMatchObject({ status: 'confirmed', referenceNo: sonuc.referenceNo });
+    const current = await orders.getById(order.id);
+    expect(current).toMatchObject({ status: 'confirmed', referenceNo: outcome.referenceNo });
 
     const iz = await logs.listByOrder(order.id);
     expect(iz).toHaveLength(1);
@@ -75,7 +75,7 @@ describe('izinli geçişler ve iz (07.6)', () => {
   });
 
   it('referans BİR KEZ üretilir — sonraki geçişler numarayı değiştirmez', async () => {
-    const order = await siparisAc();
+    const order = await createOrder();
     const ilk = await transitionOrder({ orderId: order.id, to: 'confirmed' });
     if (ilk.status !== 'ok') return;
 
@@ -84,10 +84,10 @@ describe('izinli geçişler ve iz (07.6)', () => {
   });
 
   it('teslim anı log tablosundan TÜRETİLİR — siparişte ayrı kolon yok', async () => {
-    const order = await siparisAc();
-    for (const durum of ['confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'] as const) {
-      const sonuc = await transitionOrder({ orderId: order.id, to: durum });
-      expect(sonuc.status).toBe('ok');
+    const order = await createOrder();
+    for (const status of ['confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'] as const) {
+      const outcome = await transitionOrder({ orderId: order.id, to: status });
+      expect(outcome.status).toBe('ok');
     }
 
     expect(await logs.firstEntryAt(order.id, 'delivered')).not.toBeNull();
@@ -95,7 +95,7 @@ describe('izinli geçişler ve iz (07.6)', () => {
   });
 
   it('geçişi yapan personel ize yazılır; sistem olayında null kalır', async () => {
-    const order = await siparisAc();
+    const order = await createOrder();
     await transitionOrder({ orderId: order.id, to: 'confirmed', actorId: customerId });
 
     expect((await logs.listByOrder(order.id))[0]?.actorId).toBe(customerId);
@@ -104,21 +104,21 @@ describe('izinli geçişler ve iz (07.6)', () => {
 
 describe('reddedilen geçişler', () => {
   it('kurallara aykırı geçiş yazılmaz — sebebiyle reddedilir', async () => {
-    const order = await siparisAc();
+    const order = await createOrder();
 
-    const sonuc = await transitionOrder({ orderId: order.id, to: 'delivered' });
-    expect(sonuc).toEqual({ status: 'forbidden', reason: 'not_allowed' });
+    const outcome = await transitionOrder({ orderId: order.id, to: 'delivered' });
+    expect(outcome).toEqual({ status: 'forbidden', reason: 'not_allowed' });
     expect((await orders.getById(order.id))?.status).toBe('draft');
     expect(await logs.listByOrder(order.id)).toHaveLength(0); // iz de yazılmaz
   });
 
   it('aynı duruma geçiş reddedilir (tekrarlanan tıklama iz üretmez)', async () => {
-    const order = await siparisAc();
+    const order = await createOrder();
     expect(await transitionOrder({ orderId: order.id, to: 'draft' })).toMatchObject({ reason: 'same_status' });
   });
 
   it('kapanmış siparişten ilerletilemez', async () => {
-    const order = await siparisAc();
+    const order = await createOrder();
     await transitionOrder({ orderId: order.id, to: 'cancelled' });
 
     expect(await transitionOrder({ orderId: order.id, to: 'confirmed' })).toMatchObject({ reason: 'terminal' });
@@ -131,17 +131,17 @@ describe('reddedilen geçişler', () => {
 
 describe('eşzamanlılık', () => {
   it('araya biri girdiyse ÜZERİNE YAZMAZ — güncel durumu bildirir', async () => {
-    const order = await siparisAc();
+    const order = await createOrder();
     await transitionOrder({ orderId: order.id, to: 'confirmed' });
 
     // Elimizdeki "draft" bilgisi bayat: başkası çoktan confirmed yapmış.
-    const bayat = await orders.transition({ orderId: order.id, from: 'draft', to: 'cancelled' });
-    expect(bayat).toMatchObject({ ok: false, reason: 'stale', currentStatus: 'confirmed' });
+    const staleOrder = await orders.transition({ orderId: order.id, from: 'draft', to: 'cancelled' });
+    expect(staleOrder).toMatchObject({ ok: false, reason: 'stale', currentStatus: 'confirmed' });
     expect((await orders.getById(order.id))?.status).toBe('confirmed');
   });
 
   it('aynı anda iki ilerletme: yalnız biri yazar', async () => {
-    const order = await siparisAc();
+    const order = await createOrder();
 
     const [a, b] = await Promise.all([
       orders.transition({ orderId: order.id, from: 'draft', to: 'confirmed' }),

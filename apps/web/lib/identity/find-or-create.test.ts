@@ -10,56 +10,56 @@ import { findOrCreateCustomer } from './find-or-create';
  */
 const db = serviceDb();
 const profiles = new UserProfileService(db);
-const damga = Date.now();
-const acilanlar: string[] = [];
+const stamp = Date.now();
+const createdIds: string[] = [];
 const authKullanicilari: string[] = [];
 
 /** Testler birbirinin anahtarını kirletmesin diye her senaryo kendi numarasını/e-postasını alır. */
-const tel = (n: number) => `+3360000${String(damga).slice(-4)}${n}`;
-const posta = (n: number) => `kimlik${damga}-${n}@ornek.fr`;
+const phone = (n: number) => `+3360000${String(stamp).slice(-4)}${n}`;
+const emailFor = (n: number) => `kimlik${stamp}-${n}@ornek.fr`;
 
 /** Fransız yerel biçimi (boşluklu) — normalize edilince `+336…` olmalı. Damgalı: sabit numara koşular arasında sızar. */
-const hane = String(damga).slice(-8);
-const yerelTel = `06 ${hane.slice(0, 2)} ${hane.slice(2, 4)} ${hane.slice(4, 6)} ${hane.slice(6, 8)}`;
+const digits = String(stamp).slice(-8);
+const localPhone = `06 ${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4, 6)} ${digits.slice(6, 8)}`;
 
-async function bulVeyaOlustur(input: Parameters<typeof findOrCreateCustomer>[0]) {
+async function findOrCreate(input: Parameters<typeof findOrCreateCustomer>[0]) {
   const result = await findOrCreateCustomer(input);
-  if (result.status === 'created' || result.status === 'attached') acilanlar.push(result.profile.id);
+  if (result.status === 'created' || result.status === 'attached') createdIds.push(result.profile.id);
   return result;
 }
 
 afterAll(async () => {
   // Auth kullanıcısı silinince profil satırı `set null` ile YETİM kalır — trigger'ın açtığı satırın
   // sahibi test olduğu için o da toplanır (silme sırası: cleanup.ts).
-  await purgeTestData(db, { profileIds: [...new Set(acilanlar)], authUserIds: authKullanicilari });
+  await purgeTestData(db, { profileIds: [...new Set(createdIds)], authUserIds: authKullanicilari });
 });
 
 describe('kimlik kurulumu', () => {
   it('anahtarsız gelen kimlik kuramaz — "hesapsız sipariş yok" burada başlar', async () => {
-    expect(await bulVeyaOlustur({ name: 'Kimliksiz' })).toEqual({ status: 'insufficient' });
+    expect(await findOrCreate({ name: 'Kimliksiz' })).toEqual({ status: 'insufficient' });
   });
 
   it('hiç eşleşme yoksa yeni müşteri açılır; telefon E.164 normalize yazılır', async () => {
-    const sonuc = await bulVeyaOlustur({ phone: yerelTel, name: 'Ayşe' });
-    expect(sonuc.status).toBe('created');
-    if (sonuc.status !== 'created') return;
-    expect(sonuc.profile.phone).toBe(`+336${hane}`); // boşluklar ve baştaki 0 gitti
-    expect(sonuc.profile.isDraft).toBe(false);
+    const outcome = await findOrCreate({ phone: localPhone, name: 'Ayşe' });
+    expect(outcome.status).toBe('created');
+    if (outcome.status !== 'created') return;
+    expect(outcome.profile.phone).toBe(`+336${digits}`); // boşluklar ve baştaki 0 gitti
+    expect(outcome.profile.isDraft).toBe(false);
   });
 
   it('WhatsApp taslağı işaretli açılır; adı yoksa numarasıyla anılır', async () => {
-    const sonuc = await bulVeyaOlustur({ phone: tel(1), asDraft: true });
-    expect(sonuc.status).toBe('created');
-    if (sonuc.status !== 'created') return;
-    expect(sonuc.profile.isDraft).toBe(true);
-    expect(sonuc.profile.name).toBe(sonuc.profile.phone);
+    const outcome = await findOrCreate({ phone: phone(1), asDraft: true });
+    expect(outcome.status).toBe('created');
+    if (outcome.status !== 'created') return;
+    expect(outcome.profile.isDraft).toBe(true);
+    expect(outcome.profile.name).toBe(outcome.profile.phone);
   });
 });
 
 describe('aynı kişi tek müşteride birleşir', () => {
   it('telefon eşleşirse ona bağlanır — ikinci kayıt AÇILMAZ', async () => {
-    const ilk = await bulVeyaOlustur({ phone: tel(2), name: 'Mehmet' });
-    const ikinci = await bulVeyaOlustur({ phone: tel(2), name: 'Mehmet Y.' });
+    const ilk = await findOrCreate({ phone: phone(2), name: 'Mehmet' });
+    const ikinci = await findOrCreate({ phone: phone(2), name: 'Mehmet Y.' });
 
     expect(ikinci.status).toBe('attached');
     if (ilk.status !== 'created' || ikinci.status !== 'attached') return;
@@ -68,8 +68,8 @@ describe('aynı kişi tek müşteride birleşir', () => {
   });
 
   it('e-posta eşleşirse ona bağlanır (büyük/küçük harf kimlik ayırmaz)', async () => {
-    const ilk = await bulVeyaOlustur({ email: posta(3), name: 'Fatma' });
-    const ikinci = await bulVeyaOlustur({ email: posta(3).toUpperCase(), name: 'Fatma' });
+    const ilk = await findOrCreate({ email: emailFor(3), name: 'Fatma' });
+    const ikinci = await findOrCreate({ email: emailFor(3).toUpperCase(), name: 'Fatma' });
 
     expect(ikinci.status).toBe('attached');
     if (ilk.status !== 'created' || ikinci.status !== 'attached') return;
@@ -77,22 +77,22 @@ describe('aynı kişi tek müşteride birleşir', () => {
   });
 
   it('ikinci anahtar eksikse tamamlanır — bir sonraki gelişte tek sorguda bulunur', async () => {
-    const ilk = await bulVeyaOlustur({ phone: tel(4), name: 'Ali' });
+    const ilk = await findOrCreate({ phone: phone(4), name: 'Ali' });
     // Aynı kişi bu kez web'den, e-postasıyla geliyor: telefon eşleşiyor, e-posta karta yazılır.
-    const ikinci = await bulVeyaOlustur({ phone: tel(4), email: posta(4) });
+    const ikinci = await findOrCreate({ phone: phone(4), email: emailFor(4) });
 
     expect(ikinci.status).toBe('attached');
     if (ilk.status !== 'created' || ikinci.status !== 'attached') return;
     expect(ikinci.profile.id).toBe(ilk.profile.id);
-    expect(ikinci.profile.email).toBe(posta(4));
+    expect(ikinci.profile.email).toBe(emailFor(4));
   });
 
   it('iki anahtar İKİ FARKLI müşteriye çıkarsa sessizce seçim yapılmaz — çakışma bildirilir', async () => {
-    await bulVeyaOlustur({ phone: tel(5), name: 'Telefonlu' });
-    await bulVeyaOlustur({ email: posta(5), name: 'Postalı' });
+    await findOrCreate({ phone: phone(5), name: 'Telefonlu' });
+    await findOrCreate({ email: emailFor(5), name: 'Postalı' });
 
-    const sonuc = await bulVeyaOlustur({ phone: tel(5), email: posta(5) });
-    expect(sonuc.status).toBe('conflict'); // admin birleştirir (DOMAIN §10)
+    const outcome = await findOrCreate({ phone: phone(5), email: emailFor(5) });
+    expect(outcome.status).toBe('conflict'); // admin birleştirir (DOMAIN §10)
   });
 });
 
@@ -106,44 +106,44 @@ describe('Auth bağlama (04.4)', () => {
   }
 
   it('E-POSTAYLA açılmış kayıt: giriş yapınca aynı profile bağlanır, taslak düşer (04.4 kriteri)', async () => {
-    const email = posta(6);
-    const once = await bulVeyaOlustur({ email, name: 'Önce kayıt', asDraft: true });
-    expect(once.status).toBe('created');
-    if (once.status !== 'created') return;
+    const email = emailFor(6);
+    const before = await findOrCreate({ email, name: 'Önce kayıt', asDraft: true });
+    expect(before.status).toBe('created');
+    if (before.status !== 'created') return;
 
     // Giriş: DB trigger'ı (0002) e-postayla eşleşen profili bulup Auth'a bağlar, taslağı kapatır.
     const authUserId = await authKullanicisiAc(email);
-    const girdi = await bulVeyaOlustur({ email, authUserId });
+    const input = await findOrCreate({ email, authUserId });
 
-    expect(girdi.status).toBe('attached');
-    if (girdi.status !== 'attached') return;
-    expect(girdi.profile.id).toBe(once.profile.id); // tek profil
-    expect(girdi.profile.authUserId).toBe(authUserId);
-    expect(girdi.profile.isDraft).toBe(false);
+    expect(input.status).toBe('attached');
+    if (input.status !== 'attached') return;
+    expect(input.profile.id).toBe(before.profile.id); // tek profil
+    expect(input.profile.authUserId).toBe(authUserId);
+    expect(input.profile.isDraft).toBe(false);
   });
 
   it('TELEFONLA açılmış taslak + e-postayla giriş İKİ kayıt üretir → çakışma bildirilir', async () => {
     // Trigger yalnız e-postayla eşleştirir; sadece telefonu olan taslağı göremez ve yeni profil açar.
     // Bu gerçek bir kopya durumudur (DOMAIN §10) — kapı sessizce birine yazmaz, admin birleştirir.
-    const taslak = await bulVeyaOlustur({ phone: tel(6), asDraft: true });
-    if (taslak.status !== 'created') return;
+    const draft = await findOrCreate({ phone: phone(6), asDraft: true });
+    if (draft.status !== 'created') return;
 
-    const authUserId = await authKullanicisiAc(posta(8));
-    const girdi = await bulVeyaOlustur({ phone: tel(6), authUserId });
+    const authUserId = await authKullanicisiAc(emailFor(8));
+    const input = await findOrCreate({ phone: phone(6), authUserId });
 
-    expect(girdi.status).toBe('conflict');
-    if (girdi.status !== 'conflict') return;
-    expect(girdi.profileIds).toContain(taslak.profile.id);
-    expect(girdi.profileIds).toHaveLength(2);
+    expect(input.status).toBe('conflict');
+    if (input.status !== 'conflict') return;
+    expect(input.profileIds).toContain(draft.profile.id);
+    expect(input.profileIds).toHaveLength(2);
   });
 
   it('bir Auth kullanıcısı iki profile bağlanamaz', async () => {
-    const authUserId = await authKullanicisiAc(posta(7));
+    const authUserId = await authKullanicisiAc(emailFor(7));
     const triggerProfili = await profiles.findByAuthUserId(authUserId);
     expect(triggerProfili).not.toBeNull(); // trigger girişte profili açtı
-    acilanlar.push(triggerProfili!.id);
+    createdIds.push(triggerProfili!.id);
 
-    const baskasi = await bulVeyaOlustur({ phone: tel(7), name: 'Başkası' });
+    const baskasi = await findOrCreate({ phone: phone(7), name: 'Başkası' });
     if (baskasi.status !== 'created') return;
 
     await expect(profiles.linkAuthUser(baskasi.profile.id, authUserId)).rejects.toThrow();

@@ -15,29 +15,29 @@ const orders = new OrderService(db);
 const stocks = new StockService(db);
 const reservations = new ReservationService(db);
 
-const damga = Date.now();
+const stamp = Date.now();
 let customerId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
-let partiA: string;
-let partiB: string;
-let kasa: string;
-const acilanProfiller: string[] = [];
+let batchA: string;
+let batchB: string;
+let cashAccount: string;
+const createdProfiles: string[] = [];
 
-const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
-  const category = await new CategoryService(db).create({ name: { tr: `Kapı satışı testi ${damga}` } });
-  const { product, variants } = await new ProductService(db).create({ name: { tr: `Mantı ${damga}` }, categoryId: category.id });
+  const category = await new CategoryService(db).create({ name: { tr: `Kapı satışı testi ${stamp}` } });
+  const { product, variants } = await new ProductService(db).create({ name: { tr: `Mantı ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
   productId = product.id;
   variantId = variants[0]!.id;
-  const profile = await new UserProfileService(db).insert({ name: `Kapı müşterisi ${damga}` });
+  const profile = await new UserProfileService(db).insert({ name: `Kapı müşterisi ${stamp}` });
   customerId = profile.id;
-  acilanProfiller.push(profile.id);
+  createdProfiles.push(profile.id);
   // Kapı önü nakdinin gireceği çekmece — tahsilat artık bir HAREKETTİR (12.2).
-  kasa = (await new AccountService(db).insert({ name: `Kapı kasası ${damga}`, type: 'cash' })).id;
+  cashAccount = (await new AccountService(db).insert({ name: `Kapı kasası ${stamp}`, type: 'cash' })).id;
 });
 
 beforeEach(async () => {
@@ -45,19 +45,19 @@ beforeEach(async () => {
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
   // A önce doluyor (yakın tarih) — FEFO onu önce çıkarmalı.
-  partiA = (await stocks.insert({ variantId, physicalQty: 3, expiryDate: gun(10), purchasePrice: 2 })).id;
-  partiB = (await stocks.insert({ variantId, physicalQty: 10, expiryDate: gun(300), purchasePrice: 3 })).id;
+  batchA = (await stocks.insert({ variantId, physicalQty: 3, expiryDate: dayOffset(10), purchasePrice: 2 })).id;
+  batchB = (await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(300), purchasePrice: 3 })).id;
 });
 
 afterAll(async () => {
-  await db.from('money_movement').delete().eq('account_id', kasa);
+  await db.from('money_movement').delete().eq('account_id', cashAccount);
   await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('account').delete().eq('id', kasa);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: acilanProfiller });
+  await db.from('account').delete().eq('id', cashAccount);
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
 });
 
 /** Kapıda açılan taslak: kaynak `door`, teslimat yok. */
-async function kapidaTaslak(qty: number, unitPrice = 10) {
+async function doorDraft(qty: number, unitPrice = 10) {
   return orders.create(
     { customerId, channel: 'b2c', orderSource: 'door', total: qty * unitPrice },
     [{ variantId, qty, unitPrice, vatRate: 5.5 }],
@@ -66,15 +66,15 @@ async function kapidaTaslak(qty: number, unitPrice = 10) {
 
 describe('hızlı satış (07.10)', () => {
   it('tek çağrıda kapanır: stok fiiliden düşer, referans doğar, para yazılır', async () => {
-    const { order } = await kapidaTaslak(4);
+    const { order } = await doorDraft(4);
 
-    const sonuc = await quickSale({ orderId: order.id, paymentMethod: 'cash', paymentAccountId: kasa });
-    expect(sonuc.status).toBe('ok');
-    if (sonuc.status !== 'ok') return;
+    const outcome = await quickSale({ orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
+    expect(outcome.status).toBe('ok');
+    if (outcome.status !== 'ok') return;
 
-    expect(sonuc.referenceNo).toMatch(/^LA-\d{2}-/); // ilk kalıcı durum `completed`
-    expect(sonuc.consumedQty).toBe(4);
-    expect(sonuc.paymentRecorded).toBe(true);
+    expect(outcome.referenceNo).toMatch(/^LA-\d{2}-/); // ilk kalıcı durum `completed`
+    expect(outcome.consumedQty).toBe(4);
+    expect(outcome.paymentRecorded).toBe(true);
 
     const kapanan = await orders.getById(order.id);
     expect(kapanan).toMatchObject({
@@ -87,55 +87,55 @@ describe('hızlı satış (07.10)', () => {
     });
 
     // Para uydurulmadı: nakit gerçekten kasanın bakiyesine girdi.
-    expect((await new AccountService(db).balance(kasa)).balance).toBe(40);
+    expect((await new AccountService(db).balance(cashAccount)).balance).toBe(40);
 
     // FEFO: önce süresi dolan çıktı — 3 × A (2 €) + 1 × B (3 €) = 9 €.
-    expect((await stocks.getById(partiA))?.physicalQty).toBe(0);
-    expect((await stocks.getById(partiB))?.physicalQty).toBe(9);
-    expect(sonuc.cogsAmount).toBe(9);
+    expect((await stocks.getById(batchA))?.physicalQty).toBe(0);
+    expect((await stocks.getById(batchB))?.physicalQty).toBe(9);
+    expect(outcome.cogsAmount).toBe(9);
   });
 
   it('adım atlandı diye İZ atlanmaz: parti kaydı ve geçiş logu yazılır', async () => {
-    const { order } = await kapidaTaslak(2);
+    const { order } = await doorDraft(2);
     await quickSale({ orderId: order.id, paymentMethod: 'card' });
 
     // Geri çağırma ("bu parti kime gitti") hızlı satışta da çalışır.
     const partiler = await orders.listBatches(order.id);
     expect(partiler).toHaveLength(1);
-    expect(partiler[0]).toMatchObject({ stockId: partiA, qty: 2 });
+    expect(partiler[0]).toMatchObject({ stockId: batchA, qty: 2 });
 
     const gecisler = await db.from('order_status_log').select('from_status,to_status').eq('order_id', order.id);
     expect(gecisler.data).toEqual([{ from_status: 'draft', to_status: 'completed' }]);
   });
 
   it('rezervasyon adımı YOK: satış sonrası siparişin ayrılmışı kalmaz', async () => {
-    const { order } = await kapidaTaslak(2);
+    const { order } = await doorDraft(2);
     // Online sepetini açmış, kapıya gelip almış: kendi ayırdığı mal kendisini engellemez.
     await reservations.reserve({ orderId: order.id, variantId, qty: 2 });
 
     expect((await quickSale({ orderId: order.id, paymentMethod: 'cash' })).status).toBe('ok');
     expect(await reservations.listActiveByOrder(order.id)).toHaveLength(0);
-    expect((await stocks.getById(partiA))?.physicalQty).toBe(1);
+    expect((await stocks.getById(batchA))?.physicalQty).toBe(1);
   });
 
   it('BAŞKASINA ayrılmış mal kapıda satılamaz — tek satır yazılmadan reddedilir', async () => {
-    const { order: baskasi } = await kapidaTaslak(1);
+    const { order: baskasi } = await doorDraft(1);
     await reservations.reserve({ orderId: baskasi.id, variantId, qty: 12 }); // 13'ün 12'si sözlü
 
     // FEFO önerisi parti bazında bakar (varyant-toplamı rezervasyonu görmez); son söz RPC'nindir —
     // emniyet, öneriyi üreten katmanda değil, yazımın olduğu yerde durur.
-    const { order } = await kapidaTaslak(3);
-    const sonuc = await quickSale({ orderId: order.id, paymentMethod: 'cash' });
-    expect(sonuc).toMatchObject({ status: 'insufficient_stock', variantId, available: 1 });
+    const { order } = await doorDraft(3);
+    const outcome = await quickSale({ orderId: order.id, paymentMethod: 'cash' });
+    expect(outcome).toMatchObject({ status: 'insufficient_stock', variantId, available: 1 });
 
     // Reddedilen satış hiçbir iz bırakmaz.
-    expect((await stocks.getById(partiA))?.physicalQty).toBe(3);
+    expect((await stocks.getById(batchA))?.physicalQty).toBe(3);
     expect((await orders.getById(order.id))?.status).toBe('draft');
     expect(await orders.listBatches(order.id)).toHaveLength(0);
   });
 
   it('taslak olmayan sipariş kapıda satılamaz', async () => {
-    const { order } = await kapidaTaslak(1);
+    const { order } = await doorDraft(1);
     await transitionOrder({ orderId: order.id, to: 'confirmed' });
 
     // `confirmed → completed` motorun geçiş tablosunda YOK: kural reddi, stok yarışı değil.
@@ -143,11 +143,11 @@ describe('hızlı satış (07.10)', () => {
       status: 'forbidden',
       reason: 'not_allowed',
     });
-    expect((await stocks.getById(partiA))?.physicalQty).toBe(3);
+    expect((await stocks.getById(batchA))?.physicalQty).toBe(3);
   });
 
   it('teslim edilmiş sipariş hızlı satış yolundan kapatılamaz — o kapanıştır (07.7)', async () => {
-    const { order } = await kapidaTaslak(1);
+    const { order } = await doorDraft(1);
     await db.from('order').update({ status: 'delivered' }).eq('id', order.id);
 
     // `delivered → completed` İZİNLİ ama hızlı satış değil: stoğu ikinci kez düşürmemeli.
@@ -155,61 +155,61 @@ describe('hızlı satış (07.10)', () => {
       status: 'forbidden',
       reason: 'not_fast_sale_path',
     });
-    expect((await stocks.getById(partiA))?.physicalQty).toBe(3);
+    expect((await stocks.getById(batchA))?.physicalQty).toBe(3);
   });
 
   it('kapıda eksik verilirse ödeme durumu kendiliğinden düzelir', async () => {
-    const { order, items } = await kapidaTaslak(4);
+    const { order, items } = await doorDraft(4);
 
     // 4 istendi, 2 verildi; para yine 4'ünki alınmış olsa durum `paid` kalır ama fazlalık görünür —
     // burada gerçekten verilen kadarı tahsil ediliyor.
-    const sonuc = await quickSale({
+    const outcome = await quickSale({
       orderId: order.id,
       paymentMethod: 'cash',
-      paymentAccountId: kasa,
+      paymentAccountId: cashAccount,
       collectedAmount: 20,
-      picks: [{ orderItemId: items[0]!.id, batches: [{ stockId: partiA, qty: 2 }] }],
+      picks: [{ orderItemId: items[0]!.id, batches: [{ stockId: batchA, qty: 2 }] }],
     });
-    expect(sonuc.status).toBe('ok');
+    expect(outcome.status).toBe('ok');
 
     const kapanan = await orders.getById(order.id);
     expect(kapanan?.paymentStatus).toBe('paid'); // 20 € tahsil, 20 € karşılandı
-    expect((await stocks.getById(partiA))?.physicalQty).toBe(1);
-    const kalem = (await orders.getWithItems(order.id))!.items[0]!;
-    expect(kalem.fulfilledQty).toBe(2);
+    expect((await stocks.getById(batchA))?.physicalQty).toBe(1);
+    const line = (await orders.getWithItems(order.id))!.items[0]!;
+    expect(line.fulfilledQty).toBe(2);
   });
 
   it('hesap belirsizse satış YİNE kapanır — mal gitti, para kayıtsız görünür', async () => {
     // Uydurulmuş bir "ödendi"den, kaydedilmemiş ama görünür bir tahsilat iyidir.
     // Ayar seed'de dolu olabilir; bu senaryo tam da onun BOŞ olduğu hâli sınıyor → geçici olarak kaldır.
     const settings = new SettingsService(db);
-    const onceki = await settings.get<string | null>('door_cash_account_id', null);
+    const previous = await settings.get<string | null>('door_cash_account_id', null);
     await db.from('settings').delete().eq('key', 'door_cash_account_id');
     SettingsService.invalidate('door_cash_account_id');
 
     try {
-      const { order } = await kapidaTaslak(1);
-      const sonuc = await quickSale({ orderId: order.id, paymentMethod: 'cash' }); // hesap yok, ayar da yok
-      expect(sonuc.status).toBe('ok');
-      if (sonuc.status !== 'ok') return;
-      expect(sonuc.paymentRecorded).toBe(false);
+      const { order } = await doorDraft(1);
+      const outcome = await quickSale({ orderId: order.id, paymentMethod: 'cash' }); // hesap yok, ayar da yok
+      expect(outcome.status).toBe('ok');
+      if (outcome.status !== 'ok') return;
+      expect(outcome.paymentRecorded).toBe(false);
 
       const kapanan = await orders.getById(order.id);
       expect(kapanan?.status).toBe('completed'); // mal gitti, satış kapandı
       expect(kapanan?.amountCollected).toBe(0); // para kaydı yok — uydurulmadı
       expect(kapanan?.paymentStatus).toBe('pending');
     } finally {
-      if (onceki) await settings.set('door_cash_account_id', onceki);
+      if (previous) await settings.set('door_cash_account_id', previous);
       SettingsService.invalidate('door_cash_account_id');
     }
   });
 
   it('iki kez satılamaz — stok bir kez düşer', async () => {
-    const { order } = await kapidaTaslak(2);
+    const { order } = await doorDraft(2);
     await quickSale({ orderId: order.id, paymentMethod: 'cash' });
 
     const ikinci = await quickSale({ orderId: order.id, paymentMethod: 'cash' });
     expect(ikinci.status).toBe('forbidden'); // `completed` terminal
-    expect((await stocks.getById(partiA))?.physicalQty).toBe(1);
+    expect((await stocks.getById(batchA))?.physicalQty).toBe(1);
   });
 });
