@@ -231,6 +231,41 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     return (data ?? []).map((row) => OrderItemBatchSchema.parse(dbToApp(row)));
   }
 
+  /**
+   * **Kalem başına gerçek maliyet** (cent) — fiilen çıkan partilerin alış fiyatından (12.6).
+   * Ortalama değil gerçek: hangi partiden çıktığı `OrderItemBatch`'te yazılı.
+   *
+   * Dönüş `null` = maliyet BİLİNMİYOR (partinin alış fiyatı girilmemiş). 0 ile karıştırılmaz:
+   * bilinmeyeni 0 saymak ürün marjını şişirir (DOMAIN §13). Hiç parti kaydı olmayan kalem haritada
+   * yer almaz — çağıran onu da "bilinmiyor" sayar.
+   */
+  async itemCosts(orderItemIds: readonly string[]): Promise<Map<string, number | null>> {
+    const OBEK = 200;
+    const maliyet = new Map<string, number | null>();
+
+    for (let i = 0; i < orderItemIds.length; i += OBEK) {
+      const { data, error } = await this.supabase
+        .from('order_item_batch')
+        .select('order_item_id,qty,stock:stock(purchase_price)')
+        .in('order_item_id', orderItemIds.slice(i, i + OBEK));
+      if (error) throw error;
+
+      type Row = { order_item_id: string; qty: number; stock: { purchase_price: string | number | null } | null };
+      for (const row of (data ?? []) as unknown as Row[]) {
+        const mevcut = maliyet.get(row.order_item_id);
+        const alis = row.stock?.purchase_price;
+        // Tek bir partinin fiyatı bile eksikse kalemin maliyeti bilinmiyordur — kalanı toplamak
+        // eksik bir sayıyı tam gibi gösterirdi.
+        if (alis === null || alis === undefined || mevcut === null) {
+          maliyet.set(row.order_item_id, null);
+          continue;
+        }
+        maliyet.set(row.order_item_id, (mevcut ?? 0) + Math.round(Number(alis) * 100) * row.qty);
+      }
+    }
+    return maliyet;
+  }
+
   /** Sipariş + kalemleri TEK sorguda — kalem başına ayrı sorgu (N+1) yerine gömülü select. */
   async getWithItems(id: string): Promise<{ order: Order; items: OrderItem[] } | null> {
     const order = await this.getById(id);

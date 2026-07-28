@@ -1,5 +1,6 @@
 import { distributeProportional, fromCents, removeVat, toCents } from '@lezzet/helper';
-import type { Channel, Country, OrderItem, OrderSale, PaymentMethod, VatTreatment } from '@lezzet/types';
+import type { Channel, Country, OrderSale, PaymentMethod, VatTreatment } from '@lezzet/types';
+import { lineGrossCents, type AccountingLine } from './line';
 
 /**
  * Muhasebe export'u (12.7) — DOMAIN §9. **Sistem resmî muhasebe değildir:** fatura kesmez, numara
@@ -95,17 +96,6 @@ export function exportEligibility(sale: Pick<OrderSale, 'isGiftOrder'>): ExportE
   return sale.isGiftOrder ? { included: false, reason: 'gift_order' } : { included: true };
 }
 
-type ExportItem = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPrice' | 'lineDiscountAmount' | 'vatRate'>;
-
-/** Kalemin gerçekten faturalanacak TTC tutarı (cent) — TESLİM EDİLEN miktar üzerinden. */
-function lineGrossCents(item: ExportItem): number {
-  const brut = toCents(item.unitPrice) * item.fulfilledQty;
-  // İndirim payı tüm miktar için yazılmıştır; eksik karşılanan kalemde (07.8) oransal düşer —
-  // yoksa yarısı gitmiş bir kalem indirimin tamamını taşır ve satır olduğundan ucuz görünürdü.
-  const indirim = item.qty > 0 ? Math.round((toCents(item.lineDiscountAmount) * item.fulfilledQty) / item.qty) : 0;
-  return Math.max(0, brut - indirim);
-}
-
 /**
  * Bir satışın export satırı.
  *
@@ -116,7 +106,7 @@ function lineGrossCents(item: ExportItem): number {
  * **Reverse charge'da KDV yoktur** (`Autoliquidation`): müşteri kendi ülkesinde beyan eder, satır
  * net = brüt olarak gider.
  */
-export function buildExportRow(sale: OrderSale, items: readonly ExportItem[]): AccountingExportRow {
+export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]): AccountingExportRow {
   const zeroRated = sale.vatTreatment === 'intra_eu_b2b_reverse_charge';
   const kalemler = items.map((item) => ({ vatRate: zeroRated ? 0 : item.vatRate, gross: lineGrossCents(item) }));
 
@@ -178,7 +168,7 @@ function topla<T>(rows: readonly T[], field: keyof T): number {
  */
 export function buildAccountingExport(
   period: { from: string; to: string },
-  sales: ReadonlyArray<{ sale: OrderSale; items: readonly ExportItem[] }>,
+  sales: ReadonlyArray<{ sale: OrderSale; items: readonly AccountingLine[] }>,
 ): AccountingExport {
   const rows: AccountingExportRow[] = [];
   let excludedGiftCount = 0;

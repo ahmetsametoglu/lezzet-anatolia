@@ -19,3 +19,5 @@ export * from './payment/checkout-options';
 export * from './payment/payment-status';
 export * from './money/movement';
 export * from './accounting/export';
+export * from './accounting/line';
+export * from './accounting/profit';
