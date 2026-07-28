@@ -1,12 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   AvailableStockSchema,
+  StockBatchDetailSchema,
   StockSchema,
   StockInsertSchema,
   StockUpdateSchema,
   StockWithProductDatesSchema,
   type AvailableStock,
   type Stock,
+  type StockBatchDetail,
   type StockInsert,
   type StockUpdate,
   type StockWithProductDates,
@@ -24,6 +26,17 @@ import { dbToApp } from '../utils/case-transformers';
  * Kullanılabilir stok SAKLANMAZ, `available_stock` görünümünden türetilir:
  * `fiili − aktif rezervasyon` (süresi dolmuş rezervasyon sayılmaz — görünüm cron'u beklemez).
  */
+
+/** Parti + kimin partisi olduğu — iki okumanın paylaştığı gömülü seçim (tek yerde yazılır). */
+const BATCH_DETAIL_SELECT =
+  '*,variant:product_variant(id,label,product:product(id,name,category_id,date_type,shelf_life_days))';
+
+/**
+ * Lot aramasının tavanı. Geri çağırma bir NUMARAYLA yapılır; onlarca eşleşme çıkıyorsa terim fazla
+ * geniştir ve cevap liste değil daraltma olmalıdır. Tavan SESSİZ değil: çağıran satır sayısını görür
+ * ve tavana dayanıldığını ekranda söyler.
+ */
+export const LOT_SEARCH_LIMIT = 50;
 export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate> {
   constructor(supabase: SupabaseClient) {
     super(supabase, 'stock', StockSchema, StockInsertSchema, StockUpdateSchema);
@@ -65,6 +78,45 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
       isNotNullFields: ['offer_price'],
       rangeFilters: [{ field: 'physical_qty', operator: 'gt', value: 0 }],
       orderBy: 'expiryDate',
+    });
+  }
+
+  /**
+   * **Eldeki TÜM partiler**, kimin partisi olduklarıyla birlikte (09.13 stok ekranının gövdesi).
+   *
+   * Sayfalanmaz ve bu bilinçlidir: küme fiziksel gerçekle sınırlı — depoda duran parti sayısı kadar.
+   * Zamanla büyümez, mal tükendikçe erir (`physical_qty > 0` süzgeci boşalanı düşürür). Sayfalasaydık
+   * "yaklaşan tarihli" uyarısı listenin kuyruğunda kalan partileri sessizce yutardı; oysa o uyarının
+   * TAM olması gerekir — bir partiyi kaçırmak imha edilecek malı satmak demektir.
+   *
+   * Kararı motor verir (`domain-core/stock/offer` + `shelf-life`): bu okuma yalnız ölçütün girdisini
+   * (tarih tipi, toplam raf ömrü, teklif fiyatı) tek turda toplar.
+   */
+  async listInStockDetailed(): Promise<StockBatchDetail[]> {
+    return this.getAllAs(StockBatchDetailSchema, undefined, {
+      select: BATCH_DETAIL_SELECT,
+      rangeFilters: [{ field: 'physical_qty', operator: 'gt', value: 0 }],
+      orderBy: 'expiryDate',
+    });
+  }
+
+  /**
+   * Lot numarasıyla parti arama — geri çağırmanın (rappel) ilk adımı. Tedarikçi "şu lotu topla"
+   * dediğinde elde yalnız o numara vardır; hangi varyantın hangi partisi olduğu buradan çıkar.
+   *
+   * Eşleşme PARÇA aramasıdır (`ilike`): operatör telefonda okunan numarayı eksik/parçalı girer.
+   * Stoğu bitmiş partiler de gelir — geri çağırmada asıl aranan zaten satılıp gitmiş maldır.
+   */
+  async findByLot(lot: string): Promise<StockBatchDetail[]> {
+    // `%`, `,` ve parantez PostgREST'in `or=()` gramerinde ayraçtır — terim temizlenmezse sorgu bozulur.
+    const term = lot.trim().replace(/[%,()*]/g, '');
+    if (!term) return [];
+    return this.getAllAs(StockBatchDetailSchema, undefined, {
+      select: BATCH_DETAIL_SELECT,
+      orFilters: [`lot_number.ilike.*${term}*`],
+      orderBy: 'expiryDate',
+      orderDirection: 'desc',
+      limit: LOT_SEARCH_LIMIT,
     });
   }
 

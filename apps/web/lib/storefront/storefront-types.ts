@@ -92,8 +92,20 @@ export interface StorefrontPackage {
   name: string;
   description: string;
   image: StorefrontImage;
+  /** Kalem SAYISI (adet toplamı değil) — "8 ürün". */
   itemCount: number;
   priceCents: number;
+  /** "6 kişilik" künyesi; girilmemişse rozet HİÇ basılmaz (tasarım). */
+  serves: number | null;
+  /**
+   * Kalemlerin net ağırlık toplamı. Bir kalemin ağırlığı bilinmiyorsa **null** — eksiği 0 saymak
+   * paketi olduğundan hafif gösterirdi; satır o zaman hiç basılmaz.
+   */
+  totalWeightG: number | null;
+  /** Kargolanamayan (soğuk zincir) BİR kalem varsa paketin tamamı yalnız rota içi. */
+  inRouteOnly: boolean;
+  /** BİR kalem bile yetmiyorsa paket tükendi — paket bütün satılır, "yarısı var" hâli yok. */
+  soldOut: boolean;
 }
 
 /** Anasayfanın tek okuma sonucu — bölümler ayrı ayrı çağrılmaz (tek turda toplanır). */

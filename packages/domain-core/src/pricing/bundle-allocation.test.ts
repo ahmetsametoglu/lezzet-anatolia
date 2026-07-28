@@ -82,15 +82,15 @@ describe('rebalanceAllocations', () => {
   // "hedefi liste oranında böl" demek oluyor — ayrı bir dağıtım fonksiyonu yazmaya gerek yok.
   describe('liste fiyatı ağırlığıyla dağıtım (paket formunun kipi)', () => {
     it('indirim yoksa paylar liste fiyatının AYNISI kalır', () => {
-      const liste = [{ qty: 1, allocatedUnitPriceCents: 2850 }, { qty: 1, allocatedUnitPriceCents: 1240 }, { qty: 1, allocatedUnitPriceCents: 900 }];
-      const r = rebalanceAllocations(liste, 4990); // Σ liste = 49,90
+      const list = [{ qty: 1, allocatedUnitPriceCents: 2850 }, { qty: 1, allocatedUnitPriceCents: 1240 }, { qty: 1, allocatedUnitPriceCents: 900 }];
+      const r = rebalanceAllocations(list, 4990); // Σ liste = 49,90
       expect(r.unitPricesCents).toEqual([2850, 1240, 900]);
       expect(r.residualCents).toBe(0);
     });
 
     it('indirim ORANSAL iner: pahalı kalem indirimin çoğunu taşır, toplam tam tutar', () => {
-      const liste = [{ qty: 1, allocatedUnitPriceCents: 3000 }, { qty: 1, allocatedUnitPriceCents: 1000 }];
-      const r = rebalanceAllocations(liste, 3600); // 40,00 → 36,00 (%10 indirim)
+      const list = [{ qty: 1, allocatedUnitPriceCents: 3000 }, { qty: 1, allocatedUnitPriceCents: 1000 }];
+      const r = rebalanceAllocations(list, 3600); // 40,00 → 36,00 (%10 indirim)
       expect(r.achievedTotalCents).toBe(3600);
       expect(r.residualCents).toBe(0);
       // Pahalı kalem 300, ucuz kalem 100 kuruş düşer (10'a 1 oranı korunur).
@@ -98,16 +98,16 @@ describe('rebalanceAllocations', () => {
     });
 
     it('adet çarpanı ağırlığa girer: 2 adetlik kalem indirimin iki katını taşır', () => {
-      const liste = [{ qty: 2, allocatedUnitPriceCents: 1000 }, { qty: 1, allocatedUnitPriceCents: 1000 }];
-      const r = rebalanceAllocations(liste, 2700); // 30,00 → 27,00
+      const list = [{ qty: 2, allocatedUnitPriceCents: 1000 }, { qty: 1, allocatedUnitPriceCents: 1000 }];
+      const r = rebalanceAllocations(list, 2700); // 30,00 → 27,00
       expect(r.achievedTotalCents).toBe(2700);
       // 2×1000 satırı 200, 1×1000 satırı 100 düşer → birim fiyatlar 900 ve 900.
       expect(r.unitPricesCents).toEqual([900, 900]);
     });
 
     it('hediye kalem (liste ağırlığı 0) dağıtımda 0 KALIR', () => {
-      const liste = [{ qty: 1, allocatedUnitPriceCents: 2000 }, { qty: 1, allocatedUnitPriceCents: 0 }];
-      const r = rebalanceAllocations(liste, 1800);
+      const list = [{ qty: 1, allocatedUnitPriceCents: 2000 }, { qty: 1, allocatedUnitPriceCents: 0 }];
+      const r = rebalanceAllocations(list, 1800);
       expect(r.unitPricesCents).toEqual([1800, 0]);
       expect(r.residualCents).toBe(0);
     });

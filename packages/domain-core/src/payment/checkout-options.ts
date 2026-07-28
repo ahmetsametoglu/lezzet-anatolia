@@ -80,8 +80,8 @@ export function resolveCheckoutOptions(input: CheckoutOptionsInput): CheckoutOpt
     creditBlockedReason = 'overdue';
   } else {
     const limit = input.creditLimitCents ?? 0;
-    const yeniBakiye = (input.openBalanceCents ?? 0) + input.orderTotalCents;
-    if (yeniBakiye > limit) {
+    const newBalance = (input.openBalanceCents ?? 0) + input.orderTotalCents;
+    if (newBalance > limit) {
       // Otomatik REDDEDİLMEZ: admin tek seferlik onay verebilir ya da limiti kalıcı artırabilir.
       creditBlockedReason = 'limit_exceeded';
       creditRequiresApproval = true;

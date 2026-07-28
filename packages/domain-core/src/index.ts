@@ -11,6 +11,7 @@ export * from './order/reference-no';
 export * from './identity/resolve-identity';
 export * from './identity/roles';
 export * from './tax/vat-treatment';
+export * from './stock/offer';
 export * from './stock/reservation';
 export * from './stock/shelf-life';
 export * from './delivery/delivery-days';

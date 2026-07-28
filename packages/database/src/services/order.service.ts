@@ -14,6 +14,7 @@ import {
   DeliverResultSchema,
   PreparationResultSchema,
   QuickSaleResultSchema,
+  RecallHitSchema,
   TransitionResultSchema,
   DEFAULT_PAGE_SIZE,
   type KeysetCursor,
@@ -35,6 +36,7 @@ import {
   type OrderStatusLogUpdate,
   type OrderUpdate,
   type Page,
+  type RecallHit,
   type TransitionResult,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
@@ -229,6 +231,70 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     if (error) throw error;
     // Süzme için gömülen `order_item` şemada yok — Zod fazla anahtarı zaten eler.
     return (data ?? []).map((row) => OrderItemBatchSchema.parse(dbToApp(row)));
+  }
+
+  /**
+   * **Geri çağırma (rappel) sorgusu** — "bu partilerden çıkan mal kime gitti" (09.13).
+   *
+   * `listBatches`'in TERS yönü: orada sipariş verilir partiler istenir, burada parti verilir siparişler.
+   * Zincir hazırlık kaydından gelir (`OrderItemBatch`), yani depocunun onayladığı gerçektir — tahmin
+   * değil. Tedarikçi bir lotu geri çağırdığında cevabın dakikalar içinde verilmesi gerekir; tek turda
+   * okunur (sipariş başına ayrı sorgu, tam da acele edilen anda ekranı yavaşlatırdı).
+   *
+   * **Sipariş başına TEK satır döner:** aynı siparişe aynı partiden iki kalem çıkmış olabilir (farklı
+   * ürün satırı, aynı parti); ham satırlar aynı müşteriyi iki kez listelerdi. Miktarlar toplanır —
+   * aranan "kaç sipariş, kime, ne kadar"dır.
+   *
+   * Müşteri ilişkisi FK adıyla ÇÖZÜLÜR: `order` tablosu `user_profiles`'a iki kez bakar (müşteri ve
+   * kurye), belirsiz bırakılırsa PostgREST hangi bağı izleyeceğini bilemez.
+   */
+  async recallByStocks(stockIds: readonly string[]): Promise<RecallHit[]> {
+    if (stockIds.length === 0) return [];
+    const { data, error } = await this.supabase
+      .from('order_item_batch')
+      .select(
+        'qty,order_item!inner(order:order!inner(id,reference_no,created_at,status,customer:user_profiles!order_customer_id_fkey(id,name,phone)))',
+      )
+      .in('stock_id', stockIds);
+    if (error) throw error;
+
+    type Row = {
+      qty: number;
+      order_item: {
+        order: {
+          id: string;
+          reference_no: string | null;
+          created_at: string;
+          status: OrderStatus;
+          customer: { id: string; name: string; phone: string | null };
+        };
+      };
+    };
+
+    const byOrder = new Map<string, RecallHit>();
+    for (const raw of (data ?? []) as unknown as Row[]) {
+      const o = raw.order_item.order;
+      const seen = byOrder.get(o.id);
+      if (seen) {
+        seen.qty += raw.qty;
+        continue;
+      }
+      byOrder.set(
+        o.id,
+        RecallHitSchema.parse({
+          orderId: o.id,
+          referenceNo: o.reference_no,
+          orderCreatedAt: o.created_at,
+          orderStatus: o.status,
+          customerId: o.customer.id,
+          customerName: o.customer.name,
+          customerPhone: o.customer.phone,
+          qty: raw.qty,
+        }),
+      );
+    }
+    // En yeni sipariş önce: geri çağırmada önce hâlâ müşterinin elinde olabilecek mal aranır.
+    return [...byOrder.values()].sort((a, b) => b.orderCreatedAt.localeCompare(a.orderCreatedAt));
   }
 
   /**

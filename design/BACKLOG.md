@@ -31,7 +31,6 @@ değişecek yer parantezde.
 | **Boş sepet kahraman görseli** (hasır sepet / tezgâh fotoğrafı, web 260×200 · mobil 180×140) | çizili | görsel künyesi yok; çerçeve tam boyutuyla duruyor, yer tutucu sepet işareti |
 | **Paketler listesi sayfası** (Web + Mobil, üç boş durum, etiket çipleri, `?etiket=` süzgeci) | `Musteri - Paketler.dc.html` | `05.5` Bundle modeli |
 | **Paket detay sayfası** | `Musteri - Paket Detay.dc.html` | `05.5` |
-| **Anasayfa paket bandı** | çizili, bugün fixture veriyle | `05.5` |
 | **Tüm Yorumlar paneli** (web modal · mobil tam ekran, yıldız süzgeci, 10'ar sayfalama, `?yorumlar=1`) | `Musteri - Urun Detay.dc.html` → `Tum Yorumlar Web/Mobil` | `17-geri-bildirim` |
 | **Ürün detay yorum bölümü** — puan satırı, ortalama kartı, "N yorumun tümü →" | çizili; **boş hâli kodlandı** (bugün her ürünün yorum sayısı gerçekten sıfır) | `17` |
 | **"Yorum yaz"** — yalnız o ürünü satın almış girişli müşteride | çizili | `17` + `04-auth` + `07` |

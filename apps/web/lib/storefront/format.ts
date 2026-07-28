@@ -26,6 +26,15 @@ export function formatDecimal(value: number, locale: Locale, fractionDigits: num
   }).format(value);
 }
 
+/**
+ * Ağırlık ("4,2 kg" · "850 g") — kilodan küçükse gram kalır. Paket künyesi bunu kullanır: 4200 g
+ * yazmak toplamı okunmaz yapıyor, 0,85 kg ise küçük ağırlığı gereksiz ondalıkla süslüyor.
+ */
+export function formatWeight(grams: number, locale: Locale): string {
+  if (grams < 1000) return `${formatDecimal(grams, locale, 0)} g`;
+  return `${formatDecimal(grams / 1000, locale, Number.isInteger(grams / 1000) ? 0 : 1)} kg`;
+}
+
 /** Karşılaştırma fiyatı ("12,90 €/kg") — INCO gereği raf fiyatının yanında bulunur. */
 export function formatComparison(cents: number, locale: Locale): string {
   return `${formatPrice(cents, locale)}/kg`;

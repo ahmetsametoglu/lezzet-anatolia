@@ -5,6 +5,7 @@ import {
   ProductInsertSchema,
   ProductUpdateSchema,
   ProductPoolSchema,
+  ProductStockRowSchema,
   ProductWithRelationsSchema,
   pickImageMeta,
   resolveLocalizedText,
@@ -21,6 +22,7 @@ import {
   type ProductDetailsUpdate,
   type ProductVariant,
   type ProductPool,
+  type ProductStockRow,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
@@ -99,6 +101,31 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   async list(opts: ProductListOptions = {}): Promise<Page<Product>> {
     const { filters, orFilters } = this.buildQuery(opts.filters);
     return this.getPage(filters, {
+      orderBy: 'sortOrder',
+      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+      keysetAfter: opts.cursor,
+      orFilters,
+    });
+  }
+
+  /**
+   * Stok ekranının ürün sayfası (09.13) — `list()` ile AYNI süzme/sayfalama, ama satır dar ve
+   * boylarla gelir.
+   *
+   * Neden ayrı bir okuma: stok listesinin satırı boydur ("Fıstıklı Baklava · 1 kg"), ama aradığı
+   * alanların yarısı (tarih tipi, raf ömrü, kategori) ÜRÜNDE durur. `listWithRelations` bunu da
+   * verirdi — beyan metinleri, besin künyesi ve alerjenlerle birlikte; oysa stok ekranı onların
+   * hiçbirine bakmaz. Havuzun (`listPool`) gerekçesiyle aynı: satır sayısı değil, satır GENİŞLİĞİ.
+   *
+   * Aday ürünler de gelir ve bu bilinçli: adayın stoğu girilmiş olabilir (numune, deneme partisi) —
+   * süzmek "depoda duran malı listede göremiyorum" demek olurdu. Satılamaz olması ekranın söyleyeceği
+   * bir şeydir, saklayacağı değil.
+   */
+  async listStockRows(opts: ProductListOptions = {}): Promise<Page<ProductStockRow>> {
+    const { filters, orFilters } = this.buildQuery(opts.filters);
+    return this.getPageAs(ProductStockRowSchema, filters, {
+      select:
+        'id,name,category_id,date_type,shelf_life_days,status,variants:product_variant(id,label,is_active,min_stock_qty,sku)',
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,

@@ -24,5 +24,8 @@ export const routing = defineRouting({
     // link hangi dilde açılırsa açılsın aynı ürüne düşer; sosyal/WhatsApp trafiği bu sayfaya gelir.
     '/product/[slug]': { fr: '/produit/[slug]', de: '/produkt/[slug]', tr: '/urun/[slug]' },
     '/cart': { fr: '/panier', de: '/warenkorb', tr: '/sepet' },
+    // Paket = "coffret" (FR) · "Paket" (DE) — kart ve menü metinleriyle aynı sözcük.
+    '/packages': { fr: '/coffrets', de: '/pakete', tr: '/paketler' },
+    '/package/[slug]': { fr: '/coffret/[slug]', de: '/paket/[slug]', tr: '/paket/[slug]' },
   },
 });

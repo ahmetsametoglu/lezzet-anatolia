@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { dbNumeric } from './db-numeric';
+import { LocalizedTextSchema } from './localized-text.schema';
 
 // StockAdjustment — stok azalışının SATIŞ DIŞI her sebebi (DOMAIN §4, §12). Kayıp görünmezse
 // yönetilemez: "bu üründen yılda ne kadar çöpe attım" sorusunun tek cevabı bu tablodur.
@@ -47,6 +48,27 @@ export const AdjustResultSchema = z.object({
   remainingQty: z.number().int(),
 });
 export type AdjustResult = z.infer<typeof AdjustResultSchema>;
+
+/**
+ * İmha/fire geçmişi SATIRI (09.13) — kayıt + hangi partinin, hangi ürünün (gömülü `select`, N+1 yok).
+ *
+ * Kaydın kendisi yalnız `stockId` taşır; ekranda "hangi üründen ne kadar çöpe gitti" okunacaksa parti
+ * ve ürün adı gerekir. Maliyet `unitCost`'tan gelir — o alan işlem anında KOPYALANMIŞTIR, yani parti
+ * sonradan düzeltilse bile fire maliyeti kaymaz.
+ */
+export const StockAdjustmentDetailSchema = StockAdjustmentSchema.extend({
+  stock: z.object({
+    id: z.string().uuid(),
+    lotNumber: z.string().nullable(),
+    expiryDate: z.string(),
+    variant: z.object({
+      id: z.string().uuid(),
+      label: LocalizedTextSchema,
+      product: z.object({ id: z.string().uuid(), name: LocalizedTextSchema }),
+    }),
+  }),
+});
+export type StockAdjustmentDetail = z.infer<typeof StockAdjustmentDetailSchema>;
 
 // TemperatureLog — hijyen denetiminin ilk istediği veri. Sensör yok, elle giriş (DOMAIN §4).
 

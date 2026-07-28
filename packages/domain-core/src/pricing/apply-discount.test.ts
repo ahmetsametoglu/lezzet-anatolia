@@ -74,10 +74,10 @@ describe('koşullar', () => {
   });
 
   it('kullanım sınırları (toplam ve müşteri başına)', () => {
-    const dolu = kupon({ maxUses: 10, usedCount: 10 });
-    const musteriDolu = kupon({ perCustomerLimit: 1, usedByCustomerCount: 1 });
-    expect(applyBestDiscount([line()], [dolu], { enteredCouponCode: 'BAYRAM15' })).toBeNull();
-    expect(applyBestDiscount([line()], [musteriDolu], { enteredCouponCode: 'BAYRAM15' })).toBeNull();
+    const filled = kupon({ maxUses: 10, usedCount: 10 });
+    const customersSeeded = kupon({ perCustomerLimit: 1, usedByCustomerCount: 1 });
+    expect(applyBestDiscount([line()], [filled], { enteredCouponCode: 'BAYRAM15' })).toBeNull();
+    expect(applyBestDiscount([line()], [customersSeeded], { enteredCouponCode: 'BAYRAM15' })).toBeNull();
   });
 
   it('kişisel kupon başkasına geçmez', () => {

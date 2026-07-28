@@ -59,8 +59,8 @@ export interface MovementInput {
 export function validateMovement(input: MovementInput): MovementCheck {
   if (!(input.amount > 0)) return { valid: false, reason: 'amount_not_positive' };
 
-  const beklenen = expectedDirection(input.type);
-  if (beklenen && input.direction !== beklenen) return { valid: false, reason: 'direction_mismatch' };
+  const expected = expectedDirection(input.type);
+  if (expected && input.direction !== expected) return { valid: false, reason: 'direction_mismatch' };
 
   if (input.type === 'transfer') {
     if (!input.counterAccountId) return { valid: false, reason: 'transfer_needs_counter' };

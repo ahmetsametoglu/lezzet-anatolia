@@ -22,9 +22,9 @@ describe('kaynak ekseni kanaldan bağımsızdır', () => {
   });
 
   it('aynı müşteri farklı kaynaklardan sipariş verir, kanalı değişmez', () => {
-    const musteri = { isCompany: false };
-    expect(deriveChannel(musteri)).toBe('b2c'); // siteden
-    expect(deriveChannel(musteri)).toBe('b2c'); // WhatsApp'tan — aynı
+    const customer = { isCompany: false };
+    expect(deriveChannel(customer)).toBe('b2c'); // siteden
+    expect(deriveChannel(customer)).toBe('b2c'); // WhatsApp'tan — aynı
   });
 });
 
@@ -44,8 +44,8 @@ describe('referans numarası (03.11)', () => {
   });
 
   it('rastgeledir — sıralı numara hacim sızdırır, o yüzden ardışık üretimler farklıdır', () => {
-    const kume = new Set(Array.from({ length: 500 }, () => generateReferenceNo({ year: 2026 })));
-    expect(kume.size).toBeGreaterThan(490); // çakışma olabilir ama nadir; benzersizliği DB garantiler
+    const set = new Set(Array.from({ length: 500 }, () => generateReferenceNo({ year: 2026 })));
+    expect(set.size).toBeGreaterThan(490); // çakışma olabilir ama nadir; benzersizliği DB garantiler
   });
 
   it('marka öneki değiştirilebilir', () => {

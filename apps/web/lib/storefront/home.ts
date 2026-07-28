@@ -1,12 +1,12 @@
 import 'server-only';
 import { CategoryService, ProductService, serviceDb } from '@lezzet/database';
-import { resolveLocalizedText } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Locale } from '@lezzet/i18n';
-import { FIXTURE_CATEGORIES, FIXTURE_PACKAGES, NO_IMAGE_META } from './fixtures';
+import { FIXTURE_CATEGORIES } from './fixtures';
 import { listOfferProductIds, loadProductContext } from './read-context';
-import { EMPTY_PRODUCT_CONTEXT, imageOf, toCategory, toProduct } from './map';
-import type { StorefrontHome, StorefrontOffer, StorefrontPackage, StorefrontProduct } from './storefront-types';
+import { EMPTY_PRODUCT_CONTEXT, toCategory, toProduct } from './map';
+import { HOME_PACKAGE_LIMIT, listStorefrontPackages } from './packages';
+import type { StorefrontHome, StorefrontOffer, StorefrontProduct } from './storefront-types';
 
 /**
  * Anasayfa okuması — vitrinin veri KAPISI (08.10). Sayfa servisi doğrudan çağırmaz, buradan okur.
@@ -14,7 +14,7 @@ import type { StorefrontHome, StorefrontOffer, StorefrontPackage, StorefrontProd
  * Bugünkü kaynak durumu:
  *   kategoriler · vitrin ürünleri → GERÇEK (`CategoryService`, `ProductService`, R2 görselleri)
  *   fiyat · stok · fırsatlar      → GERÇEK (`PriceService`, `StockService`, `domain-core`)
- *   paketler                      → STUB(08.10 → 05.5 Bundle servisi)
+ *   paketler                      → GERÇEK (05.5 indi; `listStorefrontPackages`, fixture kalktı)
  *
  * Kaynak geldiğinde değişen tek yer bu dosyadır; sayfa ve komponentler bugünkü hâliyle kalır.
  *
@@ -47,31 +47,22 @@ async function readOffers(db: SupabaseClient, locale: Locale): Promise<Storefron
   return page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)).filter(isOffer);
 }
 
-function fixturePackages(locale: Locale): StorefrontPackage[] {
-  return FIXTURE_PACKAGES.map((p) => ({
-    id: p.id,
-    slug: p.slug,
-    name: resolveLocalizedText(p.name, locale),
-    description: resolveLocalizedText(p.description, locale),
-    image: imageOf(NO_IMAGE_META),
-    itemCount: p.itemCount,
-    priceCents: p.priceCents,
-  }));
-}
-
 /** Anasayfanın tüm bölümleri tek turda — bölüm başına ayrı çağrı yapılmaz. */
 export async function getHomeData(locale: Locale): Promise<StorefrontHome> {
   const db = serviceDb();
-  const [categoryRows, page, offers] = await Promise.all([
+  const [categoryRows, page, offers, packages] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
     // Vitrin seçkisi: bugün ilk dörtlü (öne çıkarma bayrağı katalogda yok).
     new ProductService(db).listWithRelations({ filters: { status: 'active' }, limit: 4 }),
     readOffers(db, locale),
+    listStorefrontPackages(locale),
   ]);
   const context = await loadProductContext(db, page.rows);
 
   const categories = (categoryRows.length ? categoryRows : FIXTURE_CATEGORIES).map((c) => toCategory(c, locale));
   const featured = page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT));
 
-  return { categories, featured, offers, packages: fixturePackages(locale) };
+  // Bant bir SEÇKİ, liste değil: sabit sınırla kesilir (CLAUDE.md §1). Tükenmişler sona alınmış
+  // geldiği için sınır önce satılabilirleri alır.
+  return { categories, featured, offers, packages: packages.slice(0, HOME_PACKAGE_LIMIT) };
 }

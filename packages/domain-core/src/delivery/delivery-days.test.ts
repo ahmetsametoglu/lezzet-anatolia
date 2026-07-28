@@ -36,8 +36,8 @@ describe('teslimat günleri ve kesim saati', () => {
   const pazartesiSabah = new Date(2026, 6, 27, 9, 0);
 
   it('yaklaşan somut tarihler en yakından sıralanır', () => {
-    const gunler = upcomingDeliveryDates({ weekdays: [2, 5], now: pazartesiSabah, cutoffTime: '16:00' });
-    expect(gunler).toEqual(['2026-07-28', '2026-07-31', '2026-08-04']); // Salı, Cuma, Salı
+    const days = upcomingDeliveryDates({ weekdays: [2, 5], now: pazartesiSabah, cutoffTime: '16:00' });
+    expect(days).toEqual(['2026-07-28', '2026-07-31', '2026-08-04']); // Salı, Cuma, Salı
   });
 
   it('BUGÜN teslimat günüyse ve kesim saati geçmediyse aday olur', () => {

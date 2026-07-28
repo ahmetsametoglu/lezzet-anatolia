@@ -1,0 +1,53 @@
+{
+  "tr": {
+    "title": "Hazır paketler",
+    "subtitle": "Tek fiyata kurulmuş sofralar — içeriği belli, seçmekle uğraşmak yok.",
+    "serves": "{n} kişilik",
+    "items": "{n} ürün",
+    "weight": "Toplam {weight}",
+    "inRouteOnly": "🚚 Yalnız bölge içi",
+    "shippable": "📦 Kargoya uygun",
+    "soldOut": "Tükendi — yakında yeniden",
+    "cta": "Paketi incele",
+    "more": "Daha fazla paket",
+    "empty": {
+      "title": "Şu an hazır paket yok",
+      "body": "Yeni paketler hazırlanıyor. O zamana dek katalogdan kendi sofranızı kurabilirsiniz.",
+      "cta": "Kataloğa göz at"
+    }
+  },
+  "fr": {
+    "title": "Coffrets prêts",
+    "subtitle": "Des tables composées à prix unique — contenu connu, aucun choix à faire.",
+    "serves": "Pour {n} personnes",
+    "items": "{n} produits",
+    "weight": "Total {weight}",
+    "inRouteOnly": "🚚 Livraison en zone uniquement",
+    "shippable": "📦 Expédiable",
+    "soldOut": "Épuisé — bientôt de retour",
+    "cta": "Voir le coffret",
+    "more": "Plus de coffrets",
+    "empty": {
+      "title": "Aucun coffret pour le moment",
+      "body": "De nouveaux coffrets se préparent. En attendant, composez votre table depuis le catalogue.",
+      "cta": "Parcourir le catalogue"
+    }
+  },
+  "de": {
+    "title": "Fertige Pakete",
+    "subtitle": "Zusammengestellte Tafeln zum Festpreis — Inhalt bekannt, keine Auswahl nötig.",
+    "serves": "Für {n} Personen",
+    "items": "{n} Produkte",
+    "weight": "Gesamt {weight}",
+    "inRouteOnly": "🚚 Nur im Liefergebiet",
+    "shippable": "📦 Versandfähig",
+    "soldOut": "Ausverkauft — bald wieder",
+    "cta": "Paket ansehen",
+    "more": "Weitere Pakete",
+    "empty": {
+      "title": "Derzeit keine fertigen Pakete",
+      "body": "Neue Pakete sind in Vorbereitung. Bis dahin stellen Sie Ihre Tafel im Katalog zusammen.",
+      "cta": "Katalog ansehen"
+    }
+  }
+}
