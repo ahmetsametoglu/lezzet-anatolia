@@ -11,7 +11,7 @@ Her modül: ne yapar + hangi role açık. Faz bilgisi için `SCOPE.md`. Detay i�
 
 - Katalog: kategori, ürün, çok dilli içerik, görsel, fiyat (role/kanala göre)
 - Arama ve filtreleme
-- Sepet: fiyat sepete eklenince sabitlenir
+- Sepet: fiyat **checkout başlangıcında** sabitlenir; sepetteki fiyat bağlayıcı değildir (`DOMAIN §5`)
 - Sipariş oluşturma ve onay
 - Ödeme: online (kart) veya kapıda (nakit/kart/çek)
 - Teslimat seçimi: rota içi (bekle/ücretsiz/kapıda öde) veya kargo

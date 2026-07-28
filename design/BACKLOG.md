@@ -20,8 +20,16 @@ değişecek yer parantezde.
 
 | Ne | Tasarım | Bekleyen |
 | --- | --- | --- |
-| **Sepete ekleme** — ürün detay ana aksiyonu, katalog/vitrin kartı `+`, fırsat kartı | çizili, buton görünümü tam ve pasif | `07-siparis` |
-| **Sepet rozeti sayısı** (K12 başlıktaki 🧺 üstündeki sayı) | çizili | `07-siparis` |
+| **Sepet paket satırı** — antrasit çerçeveli grup, "Paket · N ürün" rozeti, kesikli ayraçla salt-okunur içerik listesi; adet/silme bütüne işler | `Musteri - Sepet.dc.html` (web + mobil) | `05.5` Bundle modeli |
+| **Sepet kupon kartı — bağlanması** | **UI çizildi** (alan + "Uygula" + sebep satırı); uygulanmış çip + ✕, dört ret hâli ("süresi dolmuş" · "geçersiz" · "40 € üzeri" · "otomatik indirim daha büyük") ve özetteki yeşil indirim satırı motorla gelir | indirim/kupon motoru (`BACKLOG §15`) |
+| **Sepet teslimat satırı** ("Teslimat: Ücretsiz" / "6,90 €") | çizili, **kodlanmadı** | ücret teslimat türüne, tür ADRESE bağlı → checkout adres adımı. Ücretsiz kargo ilerleme çubuğu bundan AYRI ve yapıldı (eşik `Setting`'ten, ilerleme ara toplamdan) |
+| **"Checkout'a geç" düğmesi** — girişli müşteri doğrudan, ziyaretçi önce hızlı doğrulamaya | çizili, tam görünür ve pasif | `07.4`/`07.5` |
+| **"Fiyat değişti" bildirimi** — `DOMAIN §5`: fiyat arttıysa müşteriye açıkça söylenir ve onay istenir (kabul et / çıkar); düştüyse sessizce uygulanır | tasarımda yok (yalnız stok uyarısı çizili) | `CartItem.unitPrice` okuma tarafına bağlanmalı — alan yazılıyor, karşılaştırılmıyor |
+| **K21 · Sepet Özet Çubuğu (mobil)** — ekran altına sabit "3 ürün · 26,30 € / Sepete git"; sepet boşken görünmez, ekleme yapıldıkça canlı güncellenir | `Komponent Envanteri - Musteri.dc.html` K21; katalog etkileşim sözleşmesi de anıyor | **hiçbir şeyi beklemiyor** — sepet durumu hazır (`useCart`), yalnız yapılmadı |
+| **Boş sepet: "Bu hafta çok sevilenler"** — 4'lü ürün ızgarası (web) / 2'li (mobil), kart üstünde "Sepete ekle" | `Musteri - Sepet.dc.html` → `Bos Sepet Web/Mobil` | **popülerlik sinyali yok** — aşağıda §1b |
+| **Boş sepet: B2B sipariş şablonları** ("Haftalık standart · 14 kalem" + "Yükle") | aynı tasarım, durum kartı | şablon modeli yok (`07`); B2B müşteri bugün "son siparişi tekrarla" bloğunu görür |
+| **Boş sepet: "Hazır paketleri gör" düğmesi** | çizili, tasarımdaki yerinde ve pasif | `05.5` + Paketler rotası |
+| **Boş sepet kahraman görseli** (hasır sepet / tezgâh fotoğrafı, web 260×200 · mobil 180×140) | çizili | görsel künyesi yok; çerçeve tam boyutuyla duruyor, yer tutucu sepet işareti |
 | **Paketler listesi sayfası** (Web + Mobil, üç boş durum, etiket çipleri, `?etiket=` süzgeci) | `Musteri - Paketler.dc.html` | `05.5` Bundle modeli |
 | **Paket detay sayfası** | `Musteri - Paket Detay.dc.html` | `05.5` |
 | **Anasayfa paket bandı** | çizili, bugün fixture veriyle | `05.5` |
@@ -40,6 +48,17 @@ tarihi + müşteriye özel satır) ve "bu ürünün b2c fiyatı" tek bir kolon d
 Ürünleri o seçime göre sıralayıp aynı anda keyset sayfalamak `available_stock` gibi bir okuma
 görünümü ister. Sayfa çekildikten sonra sıralamak seçenek değil: "artan fiyat" yalnız o 30 satır
 içinde artan olur.
+
+### 1b. "Çok sevilenler" neden bugün çizilmiyor
+
+Başlık bir POPÜLERLİK İDDİASIDIR. Elimizde popülerlik ölçüsü yok: satış sayısı `order_item`
+satırlarından çıkar ve gruplayarak saymak ya bir okuma görünümü (migration) ya da sınırsız
+büyüyen bir kümeyi uygulamada toplamak demek — ikincisi sipariş sayısı arttıkça sessizce yavaşlar.
+
+Anasayfanın `featured` seçkisi (bugün "ilk dört ürün") oraya konabilirdi ama **konmadı**: "çok
+sevilenler" diye etiketlenen rastgele dört ürün, uydurma sosyal kanıttır — projenin yorum
+tarafında reddettiği şeyin aynısı. Tasarımın kendi kuralı da bu boşluğu zaten çözüyor: *"Bağlam
+yoksa alan tamamen kaldırılır, ekran yalnız başlık + iki butonla kalır (boşluk doldurulmaz)."*
 
 > Aynı hata bir kez daha yaşandı: "Fırsat" rozeti `→05.6` (genel indirim motoru) etiketliyken,
 > gerçekte beklediği şey `05.6` değil zaten var olan near-expiry teklifiydi — kablo eksikti, modül
@@ -82,6 +101,30 @@ diye yeniden açılmasın; itiraz gelirse madde §2'ye taşınır.
   yeni bir katman yerine var olan şeridi genişletmek seçildi.
 - **Mobil beyan akordeonları `<details>` ile.** Yerli öğe: klavyeyle çalışır, JS istemez ve
   **kapalıyken de içerik DOM'da durur** — INCO gereği beyan satın alma öncesi erişilebilir olmalı.
+- **Sepette fiyat DONDURULMAZ.** Tasarımın etkileşim sözleşmesi "fiyatlar sepete eklendiği andaki
+  fiyattır, liste yenilense de satır fiyatı değişmez" diyor; `DOMAIN §5` (karar 27.07) bunun
+  tersini karara bağladı — bağlayıcı fiyat **checkout başlangıcında** sabitlenir, sepetteki fiyat
+  yalnız gösterim ve değişiklik tespiti içindir. Sepet aylarca bekleyebiliyor; orada donan fiyat
+  maliyeti oynayan üründe zarar, fiyat düştüğünde müşteriye haksızlık olur. Karar tasarım notundan
+  SONRA verildi ve onu ezer. **Not:** kararın ikinci yarısı (fiyat arttıysa müşteriye bildir ve
+  onay iste) henüz kablolanmadı — `CartItem.unitPrice` yazılıyor ama karşılaştırmada okunmuyor;
+  §1'de izleniyor.
+- **Geri alma şeridi ekranın ÜSTÜNDE.** Tasarım yerini yazmıyor. Altta iki sabit çubuk var (sepette
+  toplam, ürün detayda satın alma); şerit alta konsaydı "Geri al" düğmesi tam onların üstüne düşerdi.
+- **Ürün detayda TEK KONTROL** (28.07, kullanıcı kararı). Tasarım adet seçici + "Sepete ekle —
+  {toplam}" düğmesini YAN YANA gösteriyor; ekleme sonrası düğme 1,5 sn "Eklendi ✓" olup eski hâline
+  dönüyor. İki sorunu var: (1) dönen hâl yine "Sepete ekle" ve seçici aynı sayıda duruyor — ikinci
+  kez basan müşteri adedi **ikiye katlıyor** ve göremiyor (sepet adetleri toplar); "3 ekledim, hâlâ
+  3 yazıyor, olmadı galiba" refleksi tam buraya basıyor. (2) Sepette olmayan bir şeyin "3 adedi"
+  hiçbir yerde karşılığı olmayan bir sayıdır — ekleme öncesi adet sormak, henüz var olmayanı ölçmek.
+  Yerine katalog kartının modeli: önce yalnız "Sepete ekle" düğmesi vardır ve HER ZAMAN 1 ekler;
+  kalem sepete girince düğme yerini **aynı kutuyu dolduran** adet seçicisine bırakır, 0'a inmek
+  düğmeyi geri getirir. İki kontrol piksel piksel aynı kutudur (çerçeve farkı düğmeye şeffaf
+  kenarlıkla kapanır) — geçiş, bir düğmenin başka bir düğmeye dönüşmesi gibi görünür. "Sepete git"
+  konmaz (yol başlıkta zaten var); "Eklendi ✓" kaldırıldı (kalıcı mod değişimi daha güçlü onay).
+  Varyantlı üründe adet SEÇİLİ BOYA aittir: 500 g'dan 3 alıp 1 kg'a geçene hâlâ 3 göstermek yalan.
+- **Sepet satırı görseli kare (1:1).** Tasarımın 72×72 kutusuyla ve görsel künyesiyle
+  (`image.schema`: "1:1 · sepet · paket satırı") uyumlu; katalog kartının 3:2'si satırı şişirirdi.
 
 ---
 

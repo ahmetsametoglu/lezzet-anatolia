@@ -76,7 +76,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect }: Produc
         </section>
       )}
 
-      {selected && <PurchaseBar t={t} locale={locale} selected={selected} fixed />}
+      {selected && <PurchaseBar t={t} selected={selected} fixed />}
     </div>
   );
 }

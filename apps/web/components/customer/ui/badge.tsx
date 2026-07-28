@@ -5,35 +5,37 @@ import type { ReactNode } from 'react';
  * seçilir, tonlar envanterin dört katmanından gelir (metin · zemin · kenarlık); çağıran yer renk
  * seçmez, ANLAM seçer.
  *
- * `plain` varyantı zeminsizdir: dar mobil kartlarda rozet kutusu satırı şişirdiği için yalnız
- * renkli metin kalır — anlam aynı, ağırlık farklı (tasarım: Anasayfa Mobil fırsat kartı).
+ * ÜÇ AĞIRLIK vardır ve seçim ANLAMA değil, ROZETİN KOMŞUSUNA bağlıdır:
+ *   `tint`   — açık zeminli; ferah yerleşimde varsayılan.
+ *   `filled` — dolu zemin + beyaz metin: ADIN YANINDA, aynı satırda dururken. Açık ton orada
+ *              başlığın içinde erir, rozetin ayrı bir şey olduğu görünmez (tasarım: sepet satırı).
+ *   `plain`  — zeminsiz: dar mobil kartta rozet kutusu satırı şişirir, yalnız renkli metin kalır.
  */
 type BadgeTone = 'offer' | 'positive' | 'pending' | 'closed';
+type BadgeVariant = 'tint' | 'filled' | 'plain';
 
-const TONE: Record<BadgeTone, { solid: string; plain: string }> = {
-  offer: { solid: 'bg-terracotta-bg text-terracotta', plain: 'text-terracotta' },
-  positive: { solid: 'bg-olive-bg text-olive-dark', plain: 'text-olive-dark' },
-  pending: { solid: 'bg-honey-bg text-honey', plain: 'text-honey' },
-  closed: { solid: 'bg-closed-bg text-closed', plain: 'text-closed' },
+const TONE: Record<BadgeTone, Record<BadgeVariant, string>> = {
+  offer: { tint: 'bg-terracotta-bg text-terracotta', filled: 'bg-terracotta text-white', plain: 'text-terracotta' },
+  positive: { tint: 'bg-olive-bg text-olive-dark', filled: 'bg-olive text-white', plain: 'text-olive-dark' },
+  pending: { tint: 'bg-honey-bg text-honey', filled: 'bg-honey text-white', plain: 'text-honey' },
+  // Tükendi rozeti ANTRASİTtir (envanter K3): açık gri bir "kapalı" tonu, adın yanında kaybolur.
+  closed: { tint: 'bg-closed-bg text-closed', filled: 'bg-ink text-white', plain: 'text-closed' },
+};
+
+const SHAPE: Record<BadgeVariant, string> = {
+  tint: 'rounded-soft px-2 py-0.5 text-note',
+  filled: 'rounded-soft px-2 py-0.5 text-micro',
+  plain: 'text-micro',
 };
 
 interface BadgeProps {
   tone: BadgeTone;
-  /** Zeminsiz varyant (dar yerleşimde). */
-  plain?: boolean;
+  variant?: BadgeVariant;
   children: ReactNode;
 }
 
-export function Badge({ tone, plain = false, children }: BadgeProps) {
-  const style = TONE[tone];
+export function Badge({ tone, variant = 'tint', children }: BadgeProps) {
   return (
-    <span
-      className={[
-        'w-max font-sans font-semibold',
-        plain ? `text-micro ${style.plain}` : `rounded-soft px-2 py-0.5 text-note ${style.solid}`,
-      ].join(' ')}
-    >
-      {children}
-    </span>
+    <span className={['w-max font-sans font-semibold', SHAPE[variant], TONE[tone][variant]].join(' ')}>{children}</span>
   );
 }

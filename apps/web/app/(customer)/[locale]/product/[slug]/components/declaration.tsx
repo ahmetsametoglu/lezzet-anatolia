@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import type { TextSegment } from '@lezzet/helper';
-import { ALLERGEN_LABELS, NUTRITION_KEYS, resolveLocalizedText } from '@lezzet/types';
+import { ALLERGEN_LABELS, resolveLocalizedText } from '@lezzet/types';
 import type { Nutrition, ProductAllergen } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
+import { formatDecimal } from '@/lib/storefront/format';
 import type { StorefrontDeclaration } from '@/lib/storefront/storefront-types';
 import type { Messages } from '../product-types';
 
@@ -127,13 +128,11 @@ export function Declaration({ t, locale, declaration, netWeightG, compact = fals
           note={[t.declaration.per100g, netWeightG ? t.declaration.netWeight.replace('{weight}', `${netWeightG} g`) : null].filter(Boolean).join(' · ')}
           compact={compact}
         >
-          {/* Satır sırası INCO'nun beyan sırasıdır ve TEK KAYNAKTAN gelir (`NUTRITION_KEYS`) —
-              operasyon formu ile müşteri tablosu aynı sırayı izler. Girilmemiş kalem satır açmaz. */}
           <dl className="flex flex-col">
-            {NUTRITION_KEYS.filter((k) => nutrition[k] !== null).map((k) => (
-              <div key={k} className="flex justify-between border-b border-sand-100 py-2 font-sans text-body-sm text-ink last:border-b-0">
-                <dt>{t.nutrition[k]}</dt>
-                <dd className="font-bold">{formatNutrition(k, nutrition[k])}</dd>
+            {nutritionRows(nutrition, t, locale).map((row) => (
+              <div key={row.label} className="flex justify-between gap-4 border-b border-sand-100 py-2 font-sans text-body-sm text-ink last:border-b-0">
+                <dt>{row.label}</dt>
+                <dd className="text-right font-bold">{row.value}</dd>
               </div>
             ))}
           </dl>
@@ -151,8 +150,62 @@ export function Declaration({ t, locale, declaration, netWeightG, compact = fals
   );
 }
 
-/** Enerji birimsiz (başlıkta yazar), kalanı gram. Alan adındaki `G` soneki birimin tek kaynağıdır. */
-function formatNutrition(key: keyof Nutrition, value: number | null): string {
-  if (value === null) return '';
-  return key.endsWith('G') ? `${value} g` : String(value);
+/**
+ * Besin tablosu satırları — beyanın SEKİZ kalemi BEŞ satıra iner (tasarım: `Musteri - Urun Detay`).
+ *
+ * İki enerji birimi tek satırda ("1932 kJ / 462 kcal"), alt kalemler ana kalemin yanında parantezde
+ * ("Yağ (doymuş) — 24 g (9 g)"). Sekiz ayrı satır beyanı eksiksiz gösteriyordu ama tabloyu bir
+ * mevzuat çıktısına çeviriyordu; müşterinin okuduğu şey bir etiket, bir form değil.
+ *
+ * Hiçbir değer KAYBOLMAZ: ana kalem girilmemişse alt kalem kendi satırında, kendi adıyla görünür —
+ * beyan edilmiş bir değeri gizlemek, sadeleştirme değil eksiltmedir.
+ */
+interface NutritionRow {
+  label: string;
+  value: string;
+}
+
+/**
+ * Gram değeri. Basamak sayısı INCO'nun yuvarlama kılavuzunu izler: 10 g ve üstü tam sayı, altı tek
+ * ondalık; TUZ ayrıksıdır — 1 g'ın altında iki ondalıkla yazılır ("0,10 g"), çünkü orada üçüncü
+ * hane tüketicinin günlük alımını değerlendirmesini değiştirir.
+ */
+function gram(value: number, locale: Locale, isSalt = false): string {
+  const digits = isSalt && value < 1 ? 2 : Number.isInteger(value) ? 0 : 1;
+  return `${formatDecimal(value, locale, digits)} g`;
+}
+
+/** Ana kalem + parantezdeki alt kalem; ana kalem yoksa alt kalem kendi adıyla tek başına durur. */
+function nutrientPair(
+  main: number | null,
+  sub: number | null,
+  labels: { main: string; withSub: string; subAlone: string },
+  locale: Locale,
+): NutritionRow | null {
+  if (main !== null && sub !== null) {
+    return { label: labels.withSub, value: `${gram(main, locale)} (${gram(sub, locale)})` };
+  }
+  if (main !== null) return { label: labels.main, value: gram(main, locale) };
+  if (sub !== null) return { label: labels.subAlone, value: gram(sub, locale) };
+  return null;
+}
+
+function nutritionRows(n: Nutrition, t: Messages, locale: Locale): NutritionRow[] {
+  const energy = [
+    n.energyKj !== null ? `${formatDecimal(n.energyKj, locale, 0)} kJ` : null,
+    n.energyKcal !== null ? `${formatDecimal(n.energyKcal, locale, 0)} kcal` : null,
+  ].filter(Boolean);
+
+  return [
+    energy.length > 0 ? { label: t.nutrition.energy, value: energy.join(' / ') } : null,
+    nutrientPair(n.fatG, n.saturatedFatG, { main: t.nutrition.fat, withSub: t.nutrition.fatSat, subAlone: t.nutrition.saturated }, locale),
+    nutrientPair(
+      n.carbohydrateG,
+      n.sugarsG,
+      { main: t.nutrition.carbohydrate, withSub: t.nutrition.carbSugar, subAlone: t.nutrition.sugars },
+      locale,
+    ),
+    n.proteinG !== null ? { label: t.nutrition.protein, value: gram(n.proteinG, locale) } : null,
+    n.saltG !== null ? { label: t.nutrition.salt, value: gram(n.saltG, locale, true) } : null,
+  ].filter((row): row is NutritionRow => row !== null);
 }

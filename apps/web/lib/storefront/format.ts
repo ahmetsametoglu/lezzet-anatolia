@@ -14,7 +14,28 @@ export function formatPrice(cents: number, locale: Locale): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale], { style: 'currency', currency: 'EUR' }).format(cents / 100);
 }
 
+/**
+ * Ondalıklı sayı — ayraç DİLE göre değişir (tr/fr/de: virgül). Elle `String(value)` yazmak Türkçe
+ * bir sayfaya "0.3" basıyordu; besin beyanı gibi yasal bir tabloda bu, okuyanın alışık olmadığı
+ * bir gösterimdir. Basamak sayısı çağıran yerde kararlaştırılır (INCO'nun yuvarlama kuralı).
+ */
+export function formatDecimal(value: number, locale: Locale, fractionDigits: number): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(value);
+}
+
 /** Karşılaştırma fiyatı ("12,90 €/kg") — INCO gereği raf fiyatının yanında bulunur. */
 export function formatComparison(cents: number, locale: Locale): string {
   return `${formatPrice(cents, locale)}/kg`;
+}
+
+/**
+ * Kısa tarih ("22 Temmuz" · "22 juillet" · "22. Juli") — geçmiş siparişi TANITMAK için, kayıt
+ * tutmak için değil. Yıl yazılmaz: müşteri kendi siparişini gün+ay ile zaten tanır, yıl satırı
+ * uzatır. Ayın adı kısaltılmaz — "22 Tem" resmî bir belge tonudur, vitrinin dili değil.
+ */
+export function formatShortDate(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: 'numeric', month: 'long' }).format(new Date(iso));
 }

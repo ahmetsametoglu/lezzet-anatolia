@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { detectDevice } from '@/lib/device';
+import { getEmptyCartContext } from '@/lib/cart/empty-cart';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { routing } from '@/i18n/routing';
 import { CartClient } from './cart-client';
@@ -28,11 +29,11 @@ export default async function CartPage({ params }: CartPageProps) {
   setRequestLocale(locale);
 
   const t: Messages = messages[locale];
-  const device = await detectDevice();
+  const [device, emptyContext] = await Promise.all([detectDevice(), getEmptyCartContext(locale)]);
 
   return (
     <SiteFrame device={device} locale={locale} showSearch>
-      <CartClient t={t} locale={locale} device={device} />
+      <CartClient t={t} locale={locale} device={device} emptyContext={emptyContext} />
     </SiteFrame>
   );
 }

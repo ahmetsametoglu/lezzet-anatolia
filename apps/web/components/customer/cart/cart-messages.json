@@ -1,0 +1,20 @@
+{
+  "tr": {
+    "removed": "{name} sepetten çıkarıldı",
+    "removedFallback": "Kalem sepetten çıkarıldı",
+    "undo": "Geri al",
+    "dismiss": "Kapat"
+  },
+  "fr": {
+    "removed": "{name} retiré du panier",
+    "removedFallback": "Article retiré du panier",
+    "undo": "Annuler",
+    "dismiss": "Fermer"
+  },
+  "de": {
+    "removed": "{name} aus dem Warenkorb entfernt",
+    "removedFallback": "Artikel aus dem Warenkorb entfernt",
+    "undo": "Rückgängig",
+    "dismiss": "Schließen"
+  }
+}

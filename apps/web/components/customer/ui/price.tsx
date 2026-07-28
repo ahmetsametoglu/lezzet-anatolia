@@ -10,12 +10,15 @@ import { formatPrice } from '@/lib/storefront/format';
  * her kartta yeniden verilmez. İndirimin SEBEBİ hiçbir zaman burada değildir (musteri-anasayfa §6).
  */
 type PriceTone = 'default' | 'onDark';
-type PriceSize = 'sm' | 'md' | 'lg';
+type PriceSize = 'sm' | 'md' | 'lg' | 'xl';
 
 const SIZE: Record<PriceSize, string> = {
   sm: 'text-body',
   md: 'text-card-title-sm',
   lg: 'text-lead',
+  // Tek boylu üründe fiyat SAYFANIN ÇAPASIDIR: yanında seçilecek bir şey yok, kıyas edilecek ikinci
+  // kart yok. Buton etiketiyle aynı kademede kalırsa hiyerarşi kurulmuyor ve göz düğmeye kayıyor.
+  xl: 'text-card-title',
 };
 
 interface PriceProps {

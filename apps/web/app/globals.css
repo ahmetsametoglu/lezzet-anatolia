@@ -124,6 +124,12 @@
   --text-chip--font-weight: 700;
   --text-control: 13.5px; /* süzgeç ve sıralama düğmesi (K17 küçük · K18) */
   --text-control--font-weight: 700;
+  /* Adet seçicinin −/+ imleri. Kendi kademeleri: rakam gövde ölçeğinden (14/13) gelir ama imler bir
+     tık büyüktür — dokunma hedefi rakamdan geniş olmalı. Sepet tasarımından geldi (web 16 · mobil 15). */
+  --text-step: 16px;
+  --text-step--font-weight: 700;
+  --text-step-sm: 15px;
+  --text-step-sm--font-weight: 700;
 
   /* İkon/emoji ölçüleri — metin hiyerarşisinin parçası DEĞİL (başlık kurmazlar), ama ham yazılırsa
      başlıkta sepet 22, mobilde 20 gibi değerler koda dağılır. Kendi kademesi olarak durur. */

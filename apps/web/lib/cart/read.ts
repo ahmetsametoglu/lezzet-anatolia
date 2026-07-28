@@ -23,8 +23,18 @@ import { EMPTY_CART, type CartEntry, type CartLine, type CartView } from './cart
  */
 export async function getCartView(locale: Locale, entries: readonly CartEntry[]): Promise<CartView> {
   const db = serviceDb();
-  const minBasketCents = await new SettingsService(db).getNumber('min_basket_cents', 0);
-  if (entries.length === 0) return { ...EMPTY_CART, ...meets(0, minBasketCents) };
+  const settings = new SettingsService(db);
+  // İkisi de DOMAIN §6'ya göre PARAMETRİK — kod sabiti değil, işletme ayarı. Ayar satırı yoksa
+  // varsayılan burada, çağrı yerinde bildirilir (servis koda sabit yazdırmaz).
+  //
+  // Ücretsiz kargo varsayılanı 60,00 €: soğuk zincir kargosunun kendisi ~7-8 € tuttuğu için eşik
+  // onun belirgin üstünde olmalı, yoksa her sepet ücretsiz olur. Admin ayarı geldiğinde bu değer
+  // hiç okunmaz — burada durması, ayar girilmeden de ekranın doğru davranması içindir.
+  const [minBasketCents, freeShippingCents] = await Promise.all([
+    settings.getNumber('min_basket_cents', 0),
+    settings.getNumber('free_shipping_cents', 6000),
+  ]);
+  if (entries.length === 0) return { ...EMPTY_CART, freeShippingCents, ...meets(0, minBasketCents) };
 
   const variants = await new ProductVariantService(db).listByIds([...new Set(entries.map((e) => e.variantId))]);
   const byVariant = new Map(variants.map((v) => [v.id, v]));
@@ -72,6 +82,7 @@ export async function getCartView(locale: Locale, entries: readonly CartEntry[])
     subtotalCents,
     itemCount: lines.reduce((sum, l) => sum + l.qty, 0),
     hasBlocked: lines.some((l) => l.blocked),
+    freeShippingCents,
     ...meets(subtotalCents, minBasketCents),
   };
 }

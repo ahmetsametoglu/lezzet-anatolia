@@ -10,6 +10,7 @@ import { useCart } from '@/components/customer/cart/cart-context';
 import { Badge } from './badge';
 import { buttonClass } from './button';
 import { Price } from './price';
+import { QtyStepper } from './qty-stepper';
 
 /**
  * §2 · Kartlar — K7 Ürün · K8 Fırsat · K9 Kategori · K10 Paket. Anasayfada doğdular ama katalog ve
@@ -88,18 +89,24 @@ interface ProductCardProps {
  * K7 · Ürün Kartı — vitrin ve katalog listesinin ortak parçası. Dört durumu vardır ve dördü de
  * tasarımın "Etkileşim sözleşmesi" bölümünden gelir:
  *   normal        → "Sepete ekle" (tek varyant, listeden eklenir)
+ *   sepette       → buton YERİNDE K19 adet seçicisine dönüşür; 1'de "−" ürünü çıkarır, buton geri gelir
  *   çok varyantlı → "Seçenekler →" (varyant seçimi ATLANAMAZ, detaya götürür)
  *   fırsat        → "Fırsat" rozeti + üstü çizili eski fiyat + varsa adet sınırı
  *   tükendi       → aksiyon pasif, görsel soluk; KART yine detaya tıklanabilir (geri gelecek beklentisi)
+ *
+ * "Sepette" hâli süs değil, listeden alışverişin ta kendisi: müşteri kataloğu gezerken adet
+ * ayarlamak için sepete gidip geri dönmez. Buton kalıp "Eklendi ✓" deseydi ikinci tıklama ikinci
+ * adet mi, yoksa hiçbir şey mi belli olmazdı.
  */
 export function ProductCard({ product, locale, labels, compact = false }: ProductCardProps) {
   const isOffer = product.wasCents !== undefined;
-  const { add, pending } = useCart();
+  const { add, setQty, lineOf } = useCart();
   // Tek boylu ürün listeden eklenir; teklif kalemi ÇIPALI PARTİSİYLE girer (DOMAIN §5).
   const addToCart = () => {
     if (!product.variantId) return;
     add({ variantId: product.variantId, qty: 1, stockId: product.stockId });
   };
+  const inCart = product.variantId ? lineOf(product.variantId) : null;
   return (
     <div className="flex flex-col overflow-hidden rounded-card border border-sand-200 bg-card">
       <Link href={productHref(product.slug)} className="relative cursor-pointer">
@@ -139,13 +146,12 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
             .join(' · ')}
         </span>
         {labels.limit && (
-          <Badge tone="offer" plain={compact}>
+          <Badge tone="offer" variant={compact ? 'plain' : 'tint'}>
             {labels.limit}
           </Badge>
         )}
         <div className={['flex items-center justify-between gap-2', compact ? 'mt-0.5' : 'mt-1'].join(' ')}>
           <Price cents={product.priceCents} wasCents={product.wasCents} locale={locale} size={compact ? 'sm' : 'lg'} stacked={compact} />
-          {/* Sepete ekleme 07'ye bağlı — buton görünümü TAM, eylemi henüz yok. STUB(08.10 → 07) */}
           {product.soldOut ? (
             <span
               aria-disabled
@@ -170,11 +176,22 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
             >
               {labels.options}
             </Link>
+          ) : inCart ? (
+            /* K19 — buton yerine adet seçici. `min={0}`: 1'deyken "−" ürünü sepetten ÇIKARIR ve
+               düğme geri gelir (envanter K19: "1'de − sepetten çıkarır"). Tavan sunucunun çözdüğü
+               fırsat sınırıdır; dolunca "+" pasifleşir ve çerçeve nötrleşir. */
+            <QtyStepper
+              value={inCart.qty}
+              onChange={(next) => product.variantId && setQty({ variantId: product.variantId, stockId: inCart.stockId }, next)}
+              min={0}
+              max={inCart.limitCap}
+              size={compact ? 'xs' : 'md'}
+            />
           ) : compact ? (
             <button
               type="button"
               onClick={addToCart}
-              disabled={!product.variantId || pending}
+              disabled={!product.variantId}
               aria-label={labels.addToCart}
               className="grid size-7 flex-none cursor-pointer place-items-center rounded-full bg-olive font-sans text-body font-bold text-white transition-colors hover:bg-olive-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -184,7 +201,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
             <button
               type="button"
               onClick={addToCart}
-              disabled={!product.variantId || pending}
+              disabled={!product.variantId}
               className={buttonClass({ size: 'sm', className: '!px-3.5 !py-2 !text-note disabled:cursor-not-allowed disabled:opacity-50' })}
             >
               {labels.addToCart}
@@ -229,7 +246,7 @@ export function OfferCard({ offer, locale, limitLabel, compact = false }: OfferC
         {!compact && <span className="font-sans text-note text-muted">{offer.unitLabel}</span>}
         <Price cents={offer.priceCents} wasCents={offer.wasCents} locale={locale} size={compact ? 'sm' : 'lg'} />
         {limitLabel && (
-          <Badge tone="offer" plain={compact}>
+          <Badge tone="offer" variant={compact ? 'plain' : 'tint'}>
             {limitLabel}
           </Badge>
         )}

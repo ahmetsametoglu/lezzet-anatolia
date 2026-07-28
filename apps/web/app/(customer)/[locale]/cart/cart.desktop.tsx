@@ -1,53 +1,62 @@
 'use client';
 
 import { Link } from '@/i18n/navigation';
-import { EmptyState } from '@/components/customer/ui/filter-controls';
 import { useCart } from '@/components/customer/cart/cart-context';
+import { cartKey } from '@/lib/cart/cart-types';
 import { CartLineRow } from './components/cart-line';
 import { CartSummary } from './components/cart-summary';
+import { CartCoupon } from './components/cart-coupon';
+import { EmptyCart } from './components/empty-cart';
 import type { CartViewProps } from './cart-types';
 
 /**
  * Sepet — masaüstü düzeni (tasarım: `Musteri - Sepet.dc.html`, "Sepet Web").
- * Başlık + "alışverişe devam" → engel uyarısı → kalemler (sol) | özet (sağ).
+ * Başlık + "alışverişe devam" → engel uyarısı → kalemler (sol 1.6fr) | özet (sağ 1fr, yapışkan).
+ *
+ * Özet YAPIŞKANDIR: uzun sepette müşteri kalemleri gezerken toplam ve tek aksiyon ekrandan
+ * çıkmamalı — sepetin sorusu "ne var" değil, "ne tutuyor, devam edeyim mi".
  *
  * İlk okuma tamamlanmadan boş durum GÖSTERİLMEZ: sepette ürün varken bir an "sepetiniz boş" yazıp
  * sonra dolması, müşteriye sepetini kaybettiğini düşündürür.
  */
-export function CartDesktop({ t, locale }: CartViewProps) {
+export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
   const { view, ready } = useCart();
   if (!ready) return <div className="min-h-[40vh]" />;
 
+  // Boş sepet KENDİ ekranıdır: "Sepetim" başlığı ve "alışverişe devam" bağlantısı da düşer, çünkü
+  // kahramanın başlığı zaten sayfanın başlığıdır ve iki düğme zaten devam etme yoludur.
+  if (view.lines.length === 0) return <EmptyCart t={t} locale={locale} context={emptyContext} />;
+
   return (
-    <div className="flex flex-col px-12 py-9">
-      <div className="flex items-baseline justify-between gap-4">
-        <h1 className="font-serif text-page-title text-ink">{t.title}</h1>
-        <Link href="/catalog" className="cursor-pointer font-sans text-body font-bold text-olive hover:text-olive-dark">
-          {t.back}
-        </Link>
+    // Başlık ve uyarı SOL SÜTUNUN İÇİNDEDİR, ızgaranın üstünde değil (tasarım): özet kartı sayfanın
+    // en tepesinden başlar ve "Sepetim" ile aynı hizada durur. Üste alınınca sağ sütun başlık kadar
+    // aşağı kayıyor ve tepede boş bir şerit kalıyordu.
+    <section className="grid grid-cols-[1.6fr_1fr] items-start gap-10 px-12 pt-9 pb-12">
+      <div className="flex flex-col gap-3.5">
+        <div className="flex items-baseline justify-between gap-4">
+          <h1 className="font-serif text-page-title text-ink">{t.title}</h1>
+          <Link href="/catalog" className="cursor-pointer font-sans text-body-sm font-bold text-olive hover:text-olive-dark">
+            {t.back}
+          </Link>
+        </div>
+
+        {/* Stok uyarısı BAL tonundadır, terracotta değil: müşteri hata yapmadı, dünya değişti.
+            Kırmızı bir bant onu suçlu gösterir; asıl kırmızı, çıkarılacak satırın düğmesindedir. */}
+        {view.hasBlocked && (
+          <div className="rounded-soft border border-honey-line bg-honey-bg px-4.5 py-3 font-sans text-body-sm font-semibold text-honey">
+            {t.blockedNotice}
+          </div>
+        )}
+
+        {view.lines.map((line) => (
+          <CartLineRow key={cartKey(line)} line={line} t={t} locale={locale} />
+        ))}
       </div>
 
-      {view.lines.length === 0 ? (
-        <div className="pt-8">
-          <EmptyState title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} icon="🧺" />
-        </div>
-      ) : (
-        <>
-          {view.hasBlocked && (
-            <div className="mt-5 rounded-soft border border-terracotta-line bg-terracotta-bg px-4 py-3 font-sans text-body-sm text-terracotta">
-              {t.blockedNotice}
-            </div>
-          )}
-          <section className="mt-5 grid grid-cols-[1.6fr_1fr] items-start gap-8">
-            <div className="flex flex-col gap-3">
-              {view.lines.map((line) => (
-                <CartLineRow key={`${line.variantId}:${line.stockId ?? ''}`} line={line} t={t} locale={locale} />
-              ))}
-            </div>
-            <CartSummary view={view} t={t} locale={locale} />
-          </section>
-        </>
-      )}
-    </div>
+      <div className="sticky top-5 flex flex-col gap-3.5">
+        <CartSummary view={view} t={t} locale={locale} />
+        <CartCoupon t={t} />
+      </div>
+    </section>
   );
 }
