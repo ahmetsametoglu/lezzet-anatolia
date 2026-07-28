@@ -56,8 +56,8 @@ type PricingMap = Map<string, ReturnType<typeof pricingOf>>;
 function Stacked({ value, hint, alert, title }: { value: string; hint?: string; alert?: boolean; title?: string }) {
   return (
     <span className="flex min-w-0 flex-col items-end gap-px" title={title}>
-      <span className={`font-ops-mono text-[13px] ${alert ? 'font-semibold text-ops-amber' : 'text-ops-ink'}`}>{value}</span>
-      {hint ? <span className="truncate font-ops-body text-[10.5px] text-ops-muted">{hint}</span> : null}
+      <span className={`font-ops-mono text-ops-base ${alert ? 'font-semibold text-ops-amber' : 'text-ops-ink'}`}>{value}</span>
+      {hint ? <span className="truncate font-ops-body text-ops-micro text-ops-muted">{hint}</span> : null}
     </span>
   );
 }
@@ -90,21 +90,21 @@ function bundleColumns(pricingById: PricingMap, onToggle: (id: string, next: boo
         return (
           <div className="flex min-w-0 flex-col gap-px">
             <div className="flex min-w-0 items-center gap-1.5">
-              <span className="truncate font-ops-body text-[13.5px] font-semibold text-ops-ink">{resolveLocalizedText(b.name)}</span>
+              <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{resolveLocalizedText(b.name)}</span>
               {/* Paket ancak TÜM kalemleri satılabilirse satılabilir. Ürünü pasife alınan paket
                   "Satışta" görünmeye devam ederdi — anahtar operatörün NİYETİNİ tutuyor, gerçeği
                   değil. Niyeti ezmek yerine gerçeği söylüyoruz: ürün geri açılınca paket kendiliğinden
                   döner ve kimse "bunu neden kapatmıştım" diye düşünmez. */}
               {blocked > 0 ? (
                 <span
-                  className="shrink-0 rounded bg-ops-amber-bg px-1.5 py-px font-ops-display text-[9.5px] font-semibold uppercase tracking-[0.04em] text-ops-amber"
+                  className="shrink-0 rounded bg-ops-amber-bg px-1.5 py-px font-ops-display text-ops-micro font-semibold uppercase tracking-[0.04em] text-ops-amber"
                   title={`${blocked} kalemin ürünü/boyu satışta değil — paket vitrinde görünmez. Ürünü satışa alınca paket kendiliğinden döner.`}
                 >
                   vitrinde yok
                 </span>
               ) : null}
             </div>
-            <span className="truncate font-ops-body text-[11px] text-ops-muted">
+            <span className="truncate font-ops-body text-ops-xs text-ops-muted">
               {b.itemCount} kalem{b.serves ? ` · ${b.serves} kişilik` : ''} · slug: {b.slug}
             </span>
           </div>
@@ -116,7 +116,7 @@ function bundleColumns(pricingById: PricingMap, onToggle: (id: string, next: boo
       header: 'İçerik',
       width: 'minmax(160px,1.2fr)',
       cell: (b) => (
-        <span className="truncate font-ops-body text-[11.5px] text-ops-body" title={b.itemLabels.join(' · ')}>
+        <span className="truncate font-ops-body text-ops-xs text-ops-body" title={b.itemLabels.join(' · ')}>
           {b.itemLabels.length > 0 ? b.itemLabels.join(' · ') : '—'}
         </span>
       ),
@@ -238,7 +238,7 @@ export function PackagesTab({ bundles, device, creating, onCreateClose }: Packag
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center border-b border-ops-line-soft px-6 py-[11px]">
-        <span className="font-ops-body text-[12px] text-ops-muted">
+        <span className="font-ops-body text-ops-sm text-ops-muted">
           Paylar birim fiyatlara oransal dağıtılır · marj maliyetten türetilir · yeni ürün yaratmaz · sürükle-sırala
         </span>
       </div>
@@ -251,8 +251,8 @@ export function PackagesTab({ bundles, device, creating, onCreateClose }: Packag
         onRowDoubleClick={(b) => setEditingId(b.id)}
         empty={
           <div className="flex flex-1 flex-col items-center justify-center gap-2 p-10 text-center">
-            <span className="font-ops-body text-[13px] text-ops-body">Henüz paket yok.</span>
-            <span className="font-ops-body text-[12px] text-ops-faint">
+            <span className="font-ops-body text-ops-base text-ops-body">Henüz paket yok.</span>
+            <span className="font-ops-body text-ops-sm text-ops-faint">
               Paket birkaç ürünü tek fiyata sunar; sepete eklenince kalemlere açılır.
             </span>
           </div>

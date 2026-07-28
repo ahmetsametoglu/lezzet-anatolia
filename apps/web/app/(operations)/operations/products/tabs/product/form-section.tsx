@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 // section'ın flex boşluğu ayarlanır (varsayılan gap-[11px]).
 
 // Başlık, altında ince ayraç çizgisiyle (block → tam genişlik) → bölümün nerede başladığı net.
-const LABEL = 'block border-b border-ops-line-soft pb-[7px] font-ops-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ops-muted';
+const LABEL = 'block border-b border-ops-line-soft pb-[7px] font-ops-display text-ops-xs font-semibold uppercase tracking-[0.1em] text-ops-muted';
 
 interface FormSectionProps {
   title: string;

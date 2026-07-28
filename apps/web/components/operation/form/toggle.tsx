@@ -74,7 +74,7 @@ export function ToggleField({ label, on, onChange, size = 'md', stop = false, ba
           : 'flex w-full flex-none cursor-pointer items-center justify-between rounded-ops-card border border-ops-line-strong px-[13px] py-1.5 text-left'
       }
     >
-      <span className={bare ? 'whitespace-nowrap font-ops-body text-[12px] text-ops-body' : 'font-ops-body text-[12.5px] text-ops-ink'}>{label}</span>
+      <span className={bare ? 'whitespace-nowrap font-ops-body text-ops-sm text-ops-body' : 'font-ops-body text-ops-sm text-ops-ink'}>{label}</span>
       {/* İç anahtar salt görsel — tıklama dıştaki button'da işlenir (çift toggle olmasın). */}
       <Toggle on={on} size={size} label={label} />
     </button>

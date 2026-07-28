@@ -172,7 +172,7 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
             {/* Paylaşım linki: oluşturmada seçilebilir, düzenlemede SABİT (paylaşılmış link kırılmasın) */}
             {isEdit ? (
               <FieldShell label="Paylaşım linki" labelAside="sabit">
-                <span className="break-all font-ops-mono text-[12.5px] text-ops-body">/{edit.slug}</span>
+                <span className="break-all font-ops-mono text-ops-sm text-ops-body">/{edit.slug}</span>
               </FieldShell>
             ) : (
               <FormInput control={form.control} name="slug" label="Paylaşım linki (slug)" labelAside="boşsa addan üretilir" placeholder="ör. bayram-sofrasi" mono />
@@ -212,15 +212,15 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
         {showMembers ? (
           <div className="flex min-h-0 flex-col gap-2.5 border-l border-ops-line pl-6">
             <div className="flex items-baseline gap-2">
-              <span className="font-ops-display text-[10px] font-medium uppercase tracking-[0.08em] text-ops-muted">Ürünler</span>
-              <span className="font-ops-mono text-[12px] text-ops-strong">{members.length}</span>
-              <span className="ml-auto font-ops-body text-[10.5px] text-ops-faint">sıra = vitrin sırası</span>
+              <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.08em] text-ops-muted">Ürünler</span>
+              <span className="font-ops-mono text-ops-sm text-ops-strong">{members.length}</span>
+              <span className="ml-auto font-ops-body text-ops-micro text-ops-faint">sıra = vitrin sırası</span>
             </div>
 
             {/* Çerçeve YOK — satır ayraçları listeyi zaten okunur kılıyor, kutu içinde kutu olmasın. */}
             <div className="min-h-0 max-h-[340px] overflow-y-auto">
               {members.length === 0 ? (
-                <div className="py-6 text-center font-ops-body text-[12px] text-ops-faint">
+                <div className="py-6 text-center font-ops-body text-ops-sm text-ops-faint">
                   Henüz ürün yok — aşağıdan ekle.
                 </div>
               ) : (
@@ -233,14 +233,14 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
                       {handle}
                       <Thumbnail src={p.imageUrl} alt="" size={30} iconSize={13} className="!rounded-[6px]" />
                       <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate font-ops-body text-[12.5px] font-semibold text-ops-ink">{resolveLocalizedText(p.name)}</span>
-                        <span className="truncate font-ops-body text-[10.5px] text-ops-muted">{p.categoryName}</span>
+                        <span className="truncate font-ops-body text-ops-sm font-semibold text-ops-ink">{resolveLocalizedText(p.name)}</span>
+                        <span className="truncate font-ops-body text-ops-micro text-ops-muted">{p.categoryName}</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setProductIds(productIds.filter((id) => id !== p.id))}
                         aria-label="Koleksiyondan çıkar"
-                        className="flex-none cursor-pointer px-1 font-ops-body text-[13px] text-ops-faint hover:text-ops-red"
+                        className="flex-none cursor-pointer px-1 font-ops-body text-ops-base text-ops-faint hover:text-ops-red"
                       >
                         ✕
                       </button>

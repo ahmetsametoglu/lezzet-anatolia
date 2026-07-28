@@ -68,7 +68,7 @@ export function ImageUploadButton({ upload, camera = false, multiple = false, cl
         onChange={onPick}
         className="hidden"
       />
-      {error ? <span className="font-ops-body text-[11px] text-ops-red">{error}</span> : null}
+      {error ? <span className="font-ops-body text-ops-xs text-ops-red">{error}</span> : null}
     </>
   );
 }

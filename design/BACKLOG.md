@@ -185,14 +185,36 @@ tek yer sekme yokluğu (paketin alanı çok daha az, ürün formunu ikiye bölen
   başlığından buraya taşındı; arama hangi sekme açıksa onda arar (eskiden her sekmede üründe
   arıyordu).
 
+### Yazı ölçeği — karar (28.07)
+
+Envanter §0 yalnız font AİLELERİNİ veriyordu. Ölçüm şunu gösterdi: **ölçek tasarımda da yoktu** — 20
+operasyon `.dc.html` dosyası **18 farklı boy** kullanıyor (en sık: 12 · 13 · 11,5 · 12,5 · 11), çünkü
+ekranlar ayrı zamanlarda çizilmiş ve her biri kendi boyunu seçmiş. Yani "envanterden gelecek doğru
+cevap" diye beklenen şey aslında verilecek bir karardı; beklemek 175 ham değeri bir tur daha
+yaşatırdı. Yedi rol tanımlandı (`globals.css` §0), 18 boy bunlara indi, **her birleştirme ≤ 2 px**:
+
+| token | px | rol | yuttuğu ham boylar |
+|---|---|---|---|
+| `text-ops-title` | 22 | sayfa başlığı | 22 · 24 |
+| `text-ops-section` | 18 | bölüm/dialog başlığı | 17 · 18 · 20 |
+| `text-ops-lead` | 15 | öne çıkan sayı, kart adı | 15 · 16 |
+| `text-ops-base` | 13 | gövde, tablo hücresi | 13 · 13,5 · 14 |
+| `text-ops-sm` | 12,5 | ikincil satır, hücre alt bilgisi | 12 · 12,5 |
+| `text-ops-xs` | 11 | etiket, yardım metni | 11 · 11,5 |
+| `text-ops-micro` | 10 | tablo başlığı, rozet (uppercase + tracking) | 9 · 9,5 · 10 · 10,5 |
+
+- **Satır yüksekliği ve ağırlık token'a GÖMÜLMEDİ** (müşteri evreninde gömülü). Yoğun tabloda
+  `leading` yerel bir karar; token'a gömmek, hiç `leading` yazmayan yerlerin satır aralığını sessizce
+  değiştirirdi. Ayrı bir tur konusu.
+- **Ad çakışması tuzağı:** renk token'larında `body` ve `card` dolu (`text-ops-body` bir RENK
+  yardımcısı). Ölçek adları bu yüzden `base`/`sm` seçildi — `text-ops-body` yazan yer hâlâ renk demek.
+
 ### Açık kademeler (envanter kararı bekliyor)
 
 Operasyon envanteri (§0) yalnız renk, yarıçap ve font ailesi veriyor; **ölçü kademesi yok.** Bunlar
 uydurulmadı, envantere yazılması bekleniyor:
 
-- **Yazı ölçeği.** Kullanımda on iki kademe var (9 · 9,5 · 10 · 10,5 · 11 · 11,5 · 12 · 12,5 · 13 ·
-  13,5 · 15 · 17). Yarım adımlar yoğun tabloda bilinçli olabilir; sorun kademe sayısı değil, ilan
-  edilmemiş olması — aynı rolde 10 / 10,5 / 11'in yan yana durması karar değil kaza.
+- ~~Yazı ölçeği~~ → **KARARA BAĞLANDI (28.07), aşağıda.**
 - **Küçük (iç) yarıçap.** Kart 8 · diyalog/çip 14 token'ları var; iç öğeler (tablo satırındaki 3:2
   görsel 7 · küçük görsel 5 · anahtar dilimi 6) hiçbirine oturmuyor. Bir "iç öğe" kademesi (≈6 px)
   gerekiyor; o gelene kadar bu on yer ham kaldı.

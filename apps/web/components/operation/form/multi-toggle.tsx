@@ -26,8 +26,8 @@ import type { OpsTone } from '@/components/operation/ui/tone';
 type MultiToggleSize = 'sm' | 'md';
 
 const SIZE: Record<MultiToggleSize, string> = {
-  sm: 'py-[6px] text-[12px]',
-  md: 'py-[8px] text-[12.5px]',
+  sm: 'py-[6px] text-ops-sm',
+  md: 'py-[8px] text-ops-sm',
 };
 
 // Seçili hapın dolgusu + üstündeki metin. Her çift İKİ temada da aynı yönde çalışır: dolgu koyu

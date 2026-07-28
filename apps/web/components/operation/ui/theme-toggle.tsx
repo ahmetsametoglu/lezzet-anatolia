@@ -54,7 +54,7 @@ export function ThemeToggle() {
 
   return (
     <div className="mx-[15px] mt-3 flex flex-col gap-1.5 border-t border-ops-line pt-3">
-      <span className="font-ops-display text-[9.5px] font-semibold uppercase tracking-[0.15em] text-ops-faint">Tema</span>
+      <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.15em] text-ops-faint">Tema</span>
       <div className="flex gap-1 rounded-ops-btn bg-ops-line-soft p-[3px]" role="group" aria-label="Tema seçimi">
         {OPTIONS.map((o) => {
           const on = pref === o.value;
@@ -66,7 +66,7 @@ export function ThemeToggle() {
               aria-pressed={on}
               title={o.label}
               className={[
-                'flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-[6px] py-[5px] font-ops-display text-[10.5px] font-semibold transition-colors',
+                'flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-[6px] py-[5px] font-ops-display text-ops-micro font-semibold transition-colors',
                 on ? 'bg-ops-white text-ops-ink shadow-[0_1px_2px_rgba(20,22,18,0.12)]' : 'text-ops-muted hover:text-ops-body',
               ].join(' ')}
             >

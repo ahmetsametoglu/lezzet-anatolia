@@ -50,19 +50,19 @@ export function EmphasisTextarea({ value, onChange, rows = 4, placeholder, onBlu
           onMouseDown={(e) => e.preventDefault()} // odak textarea'da kalsın → seçim kaybolmasın
           onClick={apply}
           title="Seçili metni vurgula"
-          className="grid h-[20px] w-[20px] cursor-pointer place-items-center rounded-ops-btn border border-ops-line-strong font-ops-display text-[11.5px] font-bold text-ops-strong transition-colors hover:border-ops-olive hover:text-ops-olive"
+          className="grid h-[20px] w-[20px] cursor-pointer place-items-center rounded-ops-btn border border-ops-line-strong font-ops-display text-ops-xs font-bold text-ops-strong transition-colors hover:border-ops-olive hover:text-ops-olive"
         >
           B
         </button>
-        {hint ? <span className="font-ops-body text-[10.5px] text-ops-faint">{hint}</span> : null}
+        {hint ? <span className="font-ops-body text-ops-micro text-ops-faint">{hint}</span> : null}
       </div>
 
       <Textarea textareaRef={ref} value={value} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} onBlur={onBlur} />
 
       {value.trim() ? (
         <div className="rounded-ops-card border border-ops-line-soft bg-ops-subtle px-3 py-2">
-          <span className="font-ops-display text-[9.5px] font-medium uppercase tracking-[0.08em] text-ops-faint">Müşteride görünüm</span>
-          <RichText text={value} className="mt-1 font-ops-body text-[12px] leading-[1.6] text-ops-body" />
+          <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.08em] text-ops-faint">Müşteride görünüm</span>
+          <RichText text={value} className="mt-1 font-ops-body text-ops-sm leading-[1.6] text-ops-body" />
         </div>
       ) : null}
     </div>

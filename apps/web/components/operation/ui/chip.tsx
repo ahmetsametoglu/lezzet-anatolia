@@ -35,7 +35,7 @@ export function Chip({ active = false, dashed = false, tone = 'olive', onClick, 
       type="button"
       onClick={onClick}
       className={[
-        'inline-flex items-center gap-1.5 rounded-ops-chip border px-3 py-[5px] font-ops-display text-[12px] font-semibold transition-colors',
+        'inline-flex items-center gap-1.5 rounded-ops-chip border px-3 py-[5px] font-ops-display text-ops-sm font-semibold transition-colors',
         onClick ? 'cursor-pointer' : 'cursor-default',
         dashed ? 'border-dashed border-ops-gray-500 font-ops-body font-medium text-ops-body' : active ? t.active : t.idle,
         className,

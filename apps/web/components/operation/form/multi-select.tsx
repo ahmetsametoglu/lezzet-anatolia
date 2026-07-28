@@ -81,7 +81,7 @@ export function MultiSelect<T extends string>({ options, selected, onChange, add
             </div>
             <div className="max-h-52 overflow-y-auto">
               {remaining.length === 0 ? (
-                <div className="px-[13px] py-2.5 font-ops-body text-[12.5px] text-ops-faint">Sonuç yok</div>
+                <div className="px-[13px] py-2.5 font-ops-body text-ops-sm text-ops-faint">Sonuç yok</div>
               ) : (
                 remaining.map((o) => (
                   <button
@@ -91,7 +91,7 @@ export function MultiSelect<T extends string>({ options, selected, onChange, add
                       onChange([...selected, o.value]);
                       setQuery('');
                     }}
-                    className="flex w-full cursor-pointer items-center gap-2.5 px-[13px] py-2 text-left font-ops-body text-[13px] text-ops-strong hover:bg-ops-subtle"
+                    className="flex w-full cursor-pointer items-center gap-2.5 px-[13px] py-2 text-left font-ops-body text-ops-base text-ops-strong hover:bg-ops-subtle"
                   >
                     {o.imageUrl !== undefined ? <Thumbnail src={o.imageUrl} alt="" size={26} iconSize={12} className="!rounded-[6px]" /> : null}
                     <span className="min-w-0 flex-1 truncate">{o.label}</span>

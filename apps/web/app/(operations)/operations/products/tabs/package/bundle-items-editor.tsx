@@ -43,8 +43,8 @@ const money = (cents: number) => fromCents(cents).toFixed(2).replace('.', ',');
 function Metric({ label, title, alert, children }: { label: string; title?: string; alert?: boolean; children: ReactNode }) {
   return (
     <span className="flex items-baseline gap-1.5" title={title}>
-      <span className="font-ops-body text-[11px] text-ops-muted">{label}</span>
-      <span className={`font-ops-mono text-[12.5px] ${alert ? 'font-semibold text-ops-amber' : 'text-ops-body'}`}>{children}</span>
+      <span className="font-ops-body text-ops-xs text-ops-muted">{label}</span>
+      <span className={`font-ops-mono text-ops-sm ${alert ? 'font-semibold text-ops-amber' : 'text-ops-body'}`}>{children}</span>
     </span>
   );
 }
@@ -197,7 +197,7 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
   return (
     <section className="flex flex-col gap-[11px]">
       <div className="flex items-center justify-between border-b border-ops-line-soft pb-[7px]">
-        <span className="font-ops-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ops-muted">Paket kalemleri</span>
+        <span className="font-ops-display text-ops-xs font-semibold uppercase tracking-[0.1em] text-ops-muted">Paket kalemleri</span>
         <MultiSelect
           // Menüde yalnız EKLENEBİLİR olanlar: pasif/aday ürünü pakete yeni koymak istemezsin. Ama
           // pakette duran pasif kalem yine adıyla görünür (havuz onu da taşıyor).
@@ -211,7 +211,7 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
       </div>
 
       <div className="overflow-hidden rounded-ops-card border border-ops-line">
-        <div className={`${CELL} border-b border-ops-line bg-ops-subtle px-[13px] py-2 font-ops-display text-[10px] font-medium uppercase tracking-[0.05em] text-ops-muted`}>
+        <div className={`${CELL} border-b border-ops-line bg-ops-subtle px-[13px] py-2 font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-muted`}>
           <span />
           <span>Ürün · boy</span>
           <span className="text-center">Adet</span>
@@ -226,7 +226,7 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
         </div>
 
         {fields.length === 0 ? (
-          <div className="flex items-center justify-center px-4 py-8 text-center font-ops-body text-[12.5px] text-ops-faint">
+          <div className="flex items-center justify-center px-4 py-8 text-center font-ops-body text-ops-sm text-ops-faint">
             Henüz kalem yok — “+ kalem” ile ürün ve boy seçin.
           </div>
         ) : (
@@ -253,12 +253,12 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
                   {handle}
                   <div className="flex min-w-0 items-center gap-2">
                     <Thumbnail src={option?.imageUrl ?? null} alt="" size={26} iconSize={11} className="!rounded-[5px]" />
-                    <span className="truncate font-ops-body text-[12.5px] text-ops-ink">{labelOf(variantId)}</span>
+                    <span className="truncate font-ops-body text-ops-sm text-ops-ink">{labelOf(variantId)}</span>
                     {/* Pakette duran kalemin ürünü pasif/aday olabilir — bu SÖYLENİR: paket satıştaysa
                         içindekinin satışta olmaması gerçek bir çelişki, sessiz kalmak yanlış olurdu. */}
                     {option?.blockedReason ? (
                       <span
-                        className="shrink-0 rounded bg-ops-amber-bg px-1.5 py-px font-ops-display text-[9.5px] font-semibold uppercase tracking-[0.04em] text-ops-amber"
+                        className="shrink-0 rounded bg-ops-amber-bg px-1.5 py-px font-ops-display text-ops-micro font-semibold uppercase tracking-[0.04em] text-ops-amber"
                         title="Paket satıştaysa bu kalem vitrinde tükenmiş görünür — ürünü satışa alın ya da kalemi değiştirin"
                       >
                         {option.blockedReason}
@@ -281,7 +281,7 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
                     )}
                   />
                   <span
-                    className="text-right font-ops-mono text-[11.5px] text-ops-muted"
+                    className="text-right font-ops-mono text-ops-xs text-ops-muted"
                     title={option?.listPrice == null ? 'Bu varyanta birim fiyat (b2c liste) girilmemiş' : undefined}
                   >
                     {option?.listPrice == null ? '—' : `${money(toCents(option.listPrice))}`}
@@ -306,13 +306,13 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
                       />
                     )}
                   />
-                  <span className="justify-self-end text-right font-ops-mono text-[12px] text-ops-body">
+                  <span className="justify-self-end text-right font-ops-mono text-ops-sm text-ops-body">
                     {money(lineCents)}
                     {manual ? (
                       <button
                         type="button"
                         onClick={() => releaseManual(variantId)}
-                        className="ml-1 cursor-pointer font-ops-display text-[9.5px] font-semibold uppercase text-ops-amber hover:underline"
+                        className="ml-1 cursor-pointer font-ops-display text-ops-micro font-semibold uppercase text-ops-amber hover:underline"
                         title="Payı elle girdiniz. Otomatik dağıtıma bırakmak için tıklayın."
                       >
                         elle
@@ -348,7 +348,7 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
           ].join(' ')}
         >
           {pending ? (
-            <span className="font-ops-body text-[12px] text-ops-muted">
+            <span className="font-ops-body text-ops-sm text-ops-muted">
               {fields.length === 0
                 ? 'Kalem eklendikçe karşılaştırma ve marj burada hesaplanır.'
                 : 'Paket fiyatını girin — paylar tek fiyatlara oransal dağıtılacak.'}
@@ -362,21 +362,21 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
                 </Metric>
                 <span className="px-0.5 text-ops-faint">→</span>
                 <span className="flex items-baseline gap-1.5">
-                  <span className="font-ops-body text-[11px] text-ops-muted">Paket</span>
-                  <span className="font-ops-mono text-[13.5px] font-semibold text-ops-ink">{money(toCents(totalPrice))} €</span>
+                  <span className="font-ops-body text-ops-xs text-ops-muted">Paket</span>
+                  <span className="font-ops-mono text-ops-base font-semibold text-ops-ink">{money(toCents(totalPrice))} €</span>
                 </span>
                 {pricing.discountCents == null ? (
-                  <span className="text-[11.5px] text-ops-amber">
+                  <span className="text-ops-xs text-ops-amber">
                     {pricing.missingListPrice} kalemin tek fiyatı yok — karşılaştırma yapılamıyor
                   </span>
                 ) : pricing.discountCents > 0 ? (
-                  <span className="rounded bg-ops-olive-bg px-1.5 py-px font-ops-mono text-[11px] font-semibold text-ops-olive-dark">
+                  <span className="rounded bg-ops-olive-bg px-1.5 py-px font-ops-mono text-ops-xs font-semibold text-ops-olive-dark">
                     {money(pricing.discountCents)} € indirim
                   </span>
                 ) : pricing.discountCents === 0 ? (
-                  <span className="text-[11.5px] text-ops-muted">indirim yok</span>
+                  <span className="text-ops-xs text-ops-muted">indirim yok</span>
                 ) : (
-                  <span className="rounded bg-ops-amber-bg px-1.5 py-px font-ops-mono text-[11px] font-semibold text-ops-amber">
+                  <span className="rounded bg-ops-amber-bg px-1.5 py-px font-ops-mono text-ops-xs font-semibold text-ops-amber">
                     {money(-pricing.discountCents)} € pahalı
                   </span>
                 )}
@@ -387,7 +387,7 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
                   "Marj %415,7" gibi bir dizi tek bir sayı yığınına dönüşüp okunmuyordu. */}
               <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
                 {economics.costCents == null ? (
-                  <span className="font-ops-body text-[11.5px] text-ops-muted">
+                  <span className="font-ops-body text-ops-xs text-ops-muted">
                     {economics.unknownCostLines} kalemin maliyeti bilinmiyor — marj hesaplanamıyor
                   </span>
                 ) : (
@@ -409,7 +409,7 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
                   <>
                     <Separator />
                     <span
-                      className="font-ops-body text-[11.5px] text-ops-amber"
+                      className="font-ops-body text-ops-xs text-ops-amber"
                       title="Paketler marjı böyle sessizce yer: toplam tutsa da tek bir kalemin payı kendi hedefinin altına itilmiş olabilir"
                     >
                       {pricing.belowTargetLines} kalemin payı hedef marjının altında
@@ -423,26 +423,26 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
                   kalan kuruştur ve dağıtımı tekrarlamak aynı sonucu verir — tek çıkış fiyatı çekmek. */}
               {balance.balanced ? null : (
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="rounded-md bg-ops-amber px-2 py-0.5 font-ops-display text-[10.5px] font-semibold text-ops-card">
+                  <span className="rounded-md bg-ops-amber px-2 py-0.5 font-ops-display text-ops-micro font-semibold text-ops-card">
                     Paylar tutmuyor · {money(Math.abs(balance.diffCents))} € {balance.diffCents > 0 ? 'fazla' : 'eksik'}
                   </span>
                   {hasManual ? (
                     <button
                       type="button"
                       onClick={releaseAllManual}
-                      className="cursor-pointer font-ops-body text-[11.5px] text-ops-body underline decoration-dotted hover:text-ops-ink"
+                      className="cursor-pointer font-ops-body text-ops-xs text-ops-body underline decoration-dotted hover:text-ops-ink"
                     >
                       elle girilenleri bırak, otomatik dağıt
                     </button>
                   ) : pricing.missingListPrice > 0 ? (
-                    <span className="font-ops-body text-[11.5px] text-ops-muted">payları elle girin (tek fiyatı olmayan kalem var)</span>
+                    <span className="font-ops-body text-ops-xs text-ops-muted">payları elle girin (tek fiyatı olmayan kalem var)</span>
                   ) : (
                     <button
                       type="button"
                       onClick={() =>
                         setValue('totalPrice', fromCents(balance.allocatedTotalCents), { shouldValidate: true, shouldDirty: true })
                       }
-                      className="cursor-pointer font-ops-body text-[11.5px] text-ops-body underline decoration-dotted hover:text-ops-ink"
+                      className="cursor-pointer font-ops-body text-ops-xs text-ops-body underline decoration-dotted hover:text-ops-ink"
                     >
                       paket fiyatını {money(balance.allocatedTotalCents)} € yap
                     </button>
@@ -454,7 +454,7 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
         </div>
       </div>
 
-      <span className="font-ops-body text-[11px] leading-[1.5] text-ops-muted">
+      <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
         Paylar kalemlerin tek fiyatlarına oransal dağıtılır — sen yalnız paket fiyatını (ya da indirim yüzdesini)
         girersin. Bir paya elle yazarsan o satır korunur (“elle” işareti); geri bırakmak için işarete tıkla. Atanmış
         fiyatlar <strong className="font-semibold">müşteriye görünmez</strong>: faturada her kalemin KDV'sini kendi

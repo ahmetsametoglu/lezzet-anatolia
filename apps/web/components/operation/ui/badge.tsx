@@ -25,7 +25,7 @@ export function Badge({ tone = 'neutral', dot = false, className, children }: Ba
   const t = TONE[tone];
   return (
     <span
-      className={['inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 font-ops-display text-[10.5px] font-semibold', t.cls, className]
+      className={['inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 font-ops-display text-ops-micro font-semibold', t.cls, className]
         .filter(Boolean)
         .join(' ')}
     >

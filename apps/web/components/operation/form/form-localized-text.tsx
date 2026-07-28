@@ -85,7 +85,7 @@ export function FormLocalizedText<T extends FieldValues>({ control, name, label,
             disabled={aiPending || !trSource}
             onClick={onClick}
             title={aiTitle}
-            className="cursor-pointer whitespace-nowrap font-ops-body text-[11px] font-semibold text-ops-olive disabled:cursor-not-allowed disabled:opacity-60"
+            className="cursor-pointer whitespace-nowrap font-ops-body text-ops-xs font-semibold text-ops-olive disabled:cursor-not-allowed disabled:opacity-60"
           >
             {aiPending ? '✦ çeviriliyor…' : '✦ AI çeviri'}
           </button>
@@ -111,7 +111,7 @@ export function FormLocalizedText<T extends FieldValues>({ control, name, label,
                   return (
                     <FieldShell
                       key={l}
-                      label={<span className={`font-ops-display text-[11px] font-semibold ${isSource ? 'text-ops-ink' : 'text-ops-muted'}`}>{l.toUpperCase()}</span>}
+                      label={<span className={`font-ops-display text-ops-xs font-semibold ${isSource ? 'text-ops-ink' : 'text-ops-muted'}`}>{l.toUpperCase()}</span>}
                       labelAside={isSource || !onAiTranslate ? undefined : aiButton(() => runAi((s) => ({ ...value, [l]: s[l] ?? value[l] })))}
                     >
                       {multiline ? (
@@ -135,7 +135,7 @@ export function FormLocalizedText<T extends FieldValues>({ control, name, label,
                 )}
               </>
             )}
-            {aiNote ? <span className="font-ops-body text-[11px] text-ops-amber">{aiNote}</span> : null}
+            {aiNote ? <span className="font-ops-body text-ops-xs text-ops-amber">{aiNote}</span> : null}
           </FieldShell>
         );
       }}

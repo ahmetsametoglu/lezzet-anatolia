@@ -47,7 +47,7 @@ export function FormMultiToggle<T extends FieldValues, V extends string>({
         if (bare) {
           return (
             <div className="flex items-center gap-2.5">
-              <span className="font-ops-display text-[11.5px] font-semibold text-ops-muted">{label}</span>
+              <span className="font-ops-display text-ops-xs font-semibold text-ops-muted">{label}</span>
               {toggle}
             </div>
           );

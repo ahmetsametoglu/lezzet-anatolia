@@ -36,7 +36,7 @@ export function FramePreviews({ role, src, crop, height = 64 }: FramePreviewsPro
           <div style={{ width: height * f.ratio }}>
             <FramedImage src={src} alt="" ratio={f.ratio} crop={crop} circle={f.circle} placeholder={<ImageIcon size={16} />} />
           </div>
-          <span className="font-ops-mono text-[9px] text-ops-faint">{f.label}</span>
+          <span className="font-ops-mono text-ops-micro text-ops-faint">{f.label}</span>
         </div>
       ))}
     </div>
@@ -109,7 +109,7 @@ export function ImageCropDialog({ role, src, initialCrop, onConfirm, onClose, up
 
   const footer = (
     <>
-      <span className="mr-auto font-ops-body text-[11px] text-ops-faint">Kaynak {spec.label} · min {spec.minWidth}×{spec.minHeight}</span>
+      <span className="mr-auto font-ops-body text-ops-xs text-ops-faint">Kaynak {spec.label} · min {spec.minWidth}×{spec.minHeight}</span>
       <Button variant="secondary" onClick={onClose}>
         Vazgeç
       </Button>
@@ -155,7 +155,7 @@ export function ImageCropDialog({ role, src, initialCrop, onConfirm, onClose, up
               <ImageUploadButton
                 upload={upload}
                 camera={camera}
-                className="absolute right-2 top-2 cursor-pointer rounded-md bg-[rgba(30,33,27,0.6)] px-2.5 py-1 font-ops-display text-[10.5px] font-semibold text-white transition-colors hover:bg-[rgba(30,33,27,0.82)]"
+                className="absolute right-2 top-2 cursor-pointer rounded-md bg-[rgba(30,33,27,0.6)] px-2.5 py-1 font-ops-display text-ops-micro font-semibold text-white transition-colors hover:bg-[rgba(30,33,27,0.82)]"
               >
                 Değiştir
               </ImageUploadButton>
@@ -163,7 +163,7 @@ export function ImageCropDialog({ role, src, initialCrop, onConfirm, onClose, up
               <ImageUploadButton
                 upload={upload}
                 camera={camera}
-                className="absolute inset-0 flex cursor-pointer items-center justify-center font-ops-display text-[13px] font-semibold text-ops-muted transition-colors hover:text-ops-olive"
+                className="absolute inset-0 flex cursor-pointer items-center justify-center font-ops-display text-ops-base font-semibold text-ops-muted transition-colors hover:text-ops-olive"
               >
                 Görsel yükle
               </ImageUploadButton>
@@ -174,7 +174,7 @@ export function ImageCropDialog({ role, src, initialCrop, onConfirm, onClose, up
         {/* Zoom + merkeze al — yalnız görsel varken */}
         {src ? (
           <div className="flex items-center gap-3">
-            <span className="font-ops-body text-[11px] text-ops-muted">Zoom</span>
+            <span className="font-ops-body text-ops-xs text-ops-muted">Zoom</span>
             <input
               type="range"
               min={IMAGE_ZOOM_MIN}
@@ -185,11 +185,11 @@ export function ImageCropDialog({ role, src, initialCrop, onConfirm, onClose, up
               className="h-1 flex-1 cursor-pointer"
               aria-label="Zoom"
             />
-            <span className="w-10 shrink-0 text-right font-ops-mono text-[11px] text-ops-body">{crop.zoom}%</span>
+            <span className="w-10 shrink-0 text-right font-ops-mono text-ops-xs text-ops-body">{crop.zoom}%</span>
             <button
               type="button"
               onClick={() => setCrop({ x: 50, y: 50, zoom: 100 })}
-              className="shrink-0 cursor-pointer rounded-md border border-ops-line-strong px-2.5 py-1 font-ops-display text-[10.5px] font-semibold text-ops-muted transition-colors hover:border-ops-olive hover:text-ops-olive"
+              className="shrink-0 cursor-pointer rounded-md border border-ops-line-strong px-2.5 py-1 font-ops-display text-ops-micro font-semibold text-ops-muted transition-colors hover:border-ops-olive hover:text-ops-olive"
             >
               Merkeze al
             </button>
@@ -199,7 +199,7 @@ export function ImageCropDialog({ role, src, initialCrop, onConfirm, onClose, up
         {/* Türev kırpmalar — müşteride nerede nasıl görüneceği (canlı) */}
         {src ? (
           <div className="flex flex-col gap-2 rounded-ops-card border border-ops-line-soft bg-ops-subtle p-3">
-            <span className="font-ops-display text-[9.5px] font-semibold uppercase tracking-[0.08em] text-ops-muted">
+            <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.08em] text-ops-muted">
               Müşteride görünecek çerçeveler
             </span>
             <FramePreviews role={role} src={src} crop={crop} height={64} />
@@ -209,7 +209,7 @@ export function ImageCropDialog({ role, src, initialCrop, onConfirm, onClose, up
         {/* Kalite/kadraj uyarısı — RED değil, bilgi (amber) */}
         {advisory ? (
           <div className="rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-3 py-2">
-            <span className="font-ops-body text-[11px] leading-[1.5] text-ops-amber-dark">{advisory}</span>
+            <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">{advisory}</span>
           </div>
         ) : null}
       </div>

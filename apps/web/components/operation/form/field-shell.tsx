@@ -19,16 +19,16 @@ interface FieldShellProps {
 export function FieldShell({ fieldId, label, required, labelAside, error, children, className }: FieldShellProps) {
   return (
     <div className={['flex flex-col gap-1.5', className].filter(Boolean).join(' ')}>
-      <label htmlFor={fieldId} className="flex items-center justify-between font-ops-body text-[11.5px] text-ops-body">
+      <label htmlFor={fieldId} className="flex items-center justify-between font-ops-body text-ops-xs text-ops-body">
         <span>
           {label}
           {required ? <span className="text-ops-red-dot"> *</span> : null}
         </span>
-        {labelAside ? <span className="font-ops-body text-[11px] text-ops-faint">{labelAside}</span> : null}
+        {labelAside ? <span className="font-ops-body text-ops-xs text-ops-faint">{labelAside}</span> : null}
       </label>
       {children}
       {error ? (
-        <p id={fieldId ? `${fieldId}-error` : undefined} role="alert" className="font-ops-body text-[11px] font-semibold text-ops-red">
+        <p id={fieldId ? `${fieldId}-error` : undefined} role="alert" className="font-ops-body text-ops-xs font-semibold text-ops-red">
           {error}
         </p>
       ) : null}
@@ -46,8 +46,8 @@ type ControlSize = 'md' | 'sm';
 // kendi payını uydurmaz. Yazı düğmenin altına girmesin diye dolgu HER ZAMAN ayrılır (düğme gizliyken de).
 // Sağ dolgu KARE eylemi taşır: kutunun iç yüksekliği kadar genişlik + kenar boşluğu.
 const CONTROL_SIZE: Record<ControlSize, { base: string; trailing: string }> = {
-  md: { base: 'rounded-ops-card px-[13px] py-[7px] text-[13.5px]', trailing: 'pr-[38px]' },
-  sm: { base: 'rounded-md px-2 py-1.5 text-[12.5px]', trailing: 'pr-[32px]' },
+  md: { base: 'rounded-ops-card px-[13px] py-[7px] text-ops-base', trailing: 'pr-[38px]' },
+  sm: { base: 'rounded-md px-2 py-1.5 text-ops-sm', trailing: 'pr-[32px]' },
 };
 
 /** Input/textarea/select ortak görünümü (ops token'ları). `error` çerçeveyi kırmızıya çeker. TEK KAYNAK. */

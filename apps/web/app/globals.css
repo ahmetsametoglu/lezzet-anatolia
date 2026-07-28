@@ -160,6 +160,21 @@
   --font-ops-mono: var(--font-ibm-plex-mono), ui-monospace, 'Courier New', monospace; /* rakam/fiyat/saat */
   --font-ops-body: var(--font-karla), ui-sans-serif, system-ui, sans-serif; /* gövde */
 
+  /* §0 YAZI ÖLÇEĞİ (operasyon) — karar 28.07.
+     Envanter §0 yalnız font AİLELERİNİ veriyordu, boy vermiyordu; 20 operasyon tasarım dosyası
+     18 farklı boy kullanıyor (12 · 13 · 11,5 · 12,5 · 11 en sık olanlar). Yani ölçek tasarımda da
+     tek parça değildi: her ekran ayrı zamanda çizilmiş, her biri kendi boyunu seçmiş. 18 boy YEDİ
+     role indirgendi; her birleştirme en fazla 1-2 px (ayrıntı: design/BACKLOG §5).
+     Satır yüksekliği ve ağırlık BİLEREK gömülmedi: yoğun tablolarda `leading` yerel karar ve
+     token'a gömmek, hiç `leading` yazmayan yerlerin satır aralığını sessizce değiştirirdi. */
+  --text-ops-title: 22px;     /* sayfa başlığı            ← 22 · 24 */
+  --text-ops-section: 18px;   /* bölüm başlığı            ← 17 · 18 · 20 */
+  --text-ops-lead: 15px;      /* öne çıkan sayı/kart adı  ← 15 · 16 */
+  --text-ops-base: 13px;      /* gövde, tablo hücresi     ← 13 · 13,5 · 14 */
+  --text-ops-sm: 12.5px;      /* ikincil satır            ← 12 · 12,5 */
+  --text-ops-xs: 11px;        /* etiket, yardım metni     ← 11 · 11,5 */
+  --text-ops-micro: 10px;     /* tablo başlığı, rozet     ← 9 · 9,5 · 10 · 10,5 */
+
   /* §0.1 Yüzey ve mürekkep */
   --color-ops-ink: #22251f; /* başlık, koyu buton, birincil metin, "L" */
   --color-ops-strong: #3a3f37; /* mürekkep yumuşak: ikincil başlık, nötr tutar/tarih */

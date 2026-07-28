@@ -95,7 +95,7 @@ export function Table<Row>({
       {/* Sütun başlığı (sabit) */}
       <div
         style={{ gridTemplateColumns: template }}
-        className="grid gap-x-2.5 border-b border-ops-line bg-ops-subtle px-5 py-2.5 font-ops-display text-[10.5px] font-medium uppercase tracking-[0.06em] text-ops-muted"
+        className="grid gap-x-2.5 border-b border-ops-line bg-ops-subtle px-5 py-2.5 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted"
       >
         {sortable ? <span aria-hidden /> : null}
         {columns.map((c) => (

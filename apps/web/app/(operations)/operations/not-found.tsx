@@ -19,8 +19,8 @@ export default function OperationsNotFound() {
     <>
       {/* Üst bar — çerçeve pane içinde de korunur */}
       <div className="flex items-center gap-3.5 border-b border-ops-line px-6 py-4">
-        <span className="font-ops-display text-[17px] font-semibold text-ops-ink">Sayfa bulunamadı</span>
-        <span className="rounded-md border border-ops-line bg-ops-gray-25 px-2 py-[3px] font-ops-mono text-[11px] font-medium text-ops-muted">
+        <span className="font-ops-display text-ops-section font-semibold text-ops-ink">Sayfa bulunamadı</span>
+        <span className="rounded-md border border-ops-line bg-ops-gray-25 px-2 py-[3px] font-ops-mono text-ops-xs font-medium text-ops-muted">
           404
         </span>
       </div>
@@ -32,7 +32,7 @@ export default function OperationsNotFound() {
         description="Bağlantı eski olabilir ya da kayıt taşınmış/silinmiş olabilir. Aşağıdan devam edin."
       >
         {/* Denenen yol — teknik ayrıntı değil, yalnız adres */}
-        <span className="rounded-md border border-ops-line bg-ops-gray-25 px-2.5 py-[5px] font-ops-mono text-xs text-ops-muted">
+        <span className="rounded-md border border-ops-line bg-ops-gray-25 px-2.5 py-[5px] font-ops-mono text-ops-sm text-ops-muted">
           {pathname}
         </span>
 
@@ -47,7 +47,7 @@ export default function OperationsNotFound() {
 
         {/* Ana bölüm kısayolları (sidebar ile aynı hedefler) */}
         <div className="mt-3 flex flex-col items-center gap-1.5">
-          <span className="font-ops-display text-[10.5px] font-medium uppercase tracking-[0.06em] text-ops-muted">
+          <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
             Sık kullanılan ekranlar
           </span>
           <div className="flex gap-2">
@@ -59,7 +59,7 @@ export default function OperationsNotFound() {
               <Link
                 key={s.href}
                 href={s.href}
-                className="cursor-pointer rounded-ops-chip border border-ops-line-strong bg-ops-card px-3 py-[5px] font-ops-display text-xs font-semibold text-ops-strong transition-colors hover:border-ops-olive"
+                className="cursor-pointer rounded-ops-chip border border-ops-line-strong bg-ops-card px-3 py-[5px] font-ops-display text-ops-sm font-semibold text-ops-strong transition-colors hover:border-ops-olive"
               >
                 {s.label}
               </Link>

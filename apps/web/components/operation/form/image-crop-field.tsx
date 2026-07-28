@@ -36,8 +36,8 @@ export function ImageCropField({ role, src, crop, onCropChange, upload, uploadDi
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline gap-2">
-        <span className="font-ops-display text-[10px] font-medium uppercase tracking-[0.08em] text-ops-muted">Fotoğraf</span>
-        {src ? <span className="ml-auto font-ops-body text-[10px] text-ops-faint">{caption}</span> : null}
+        <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.08em] text-ops-muted">Fotoğraf</span>
+        {src ? <span className="ml-auto font-ops-body text-ops-micro text-ops-faint">{caption}</span> : null}
       </div>
 
       {/* Kap: önizleme (ya da boş kare) + HOVER'da beliren düzenle/ekle örtüsü */}
@@ -56,7 +56,7 @@ export function ImageCropField({ role, src, crop, onCropChange, upload, uploadDi
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="absolute inset-0 flex cursor-pointer items-center justify-center bg-[rgba(30,33,27,0)] font-ops-display text-[12px] font-semibold text-transparent transition-colors duration-150 group-hover:bg-[rgba(30,33,27,0.45)] group-hover:text-white"
+            className="absolute inset-0 flex cursor-pointer items-center justify-center bg-[rgba(30,33,27,0)] font-ops-display text-ops-sm font-semibold text-transparent transition-colors duration-150 group-hover:bg-[rgba(30,33,27,0.45)] group-hover:text-white"
           >
             {src ? 'Görseli düzenle' : 'Görsel ekle'}
           </button>
@@ -64,7 +64,7 @@ export function ImageCropField({ role, src, crop, onCropChange, upload, uploadDi
       </div>
 
       {!canEdit && uploadDisabledHint ? (
-        <span className="font-ops-body text-[10.5px] leading-[1.5] text-ops-faint">{uploadDisabledHint}</span>
+        <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">{uploadDisabledHint}</span>
       ) : null}
 
       {open ? (

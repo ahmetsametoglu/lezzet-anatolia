@@ -81,7 +81,7 @@ export function FormNutrition<T extends FieldValues>({ control, name }: FormNutr
                 className="text-right"
               />
             </div>
-            <span className="w-[26px] font-ops-mono text-[10.5px] text-ops-faint">{unit}</span>
+            <span className="w-[26px] font-ops-mono text-ops-micro text-ops-faint">{unit}</span>
           </div>
         );
 
@@ -89,7 +89,7 @@ export function FormNutrition<T extends FieldValues>({ control, name }: FormNutr
         // tek girdili satırlar enerji satırının son kutusuyla hizalanır. Etiket sütunu hiç ezilmez.
         const row = (label: ReactNode, right: ReactNode, sub = false) => (
           <div className="grid grid-cols-[minmax(0,1fr)_244px] items-center gap-3 py-[2px]">
-            <span className={`truncate font-ops-body text-[12px] ${sub ? 'pl-3.5 text-ops-muted' : 'text-ops-body'}`}>{label}</span>
+            <span className={`truncate font-ops-body text-ops-sm ${sub ? 'pl-3.5 text-ops-muted' : 'text-ops-body'}`}>{label}</span>
             <div className="flex items-center justify-end gap-2">{right}</div>
           </div>
         );
@@ -103,7 +103,7 @@ export function FormNutrition<T extends FieldValues>({ control, name }: FormNutr
           : null;
 
         return (
-          <FieldShell label="Besin değerleri" labelAside={<span className="font-ops-body text-[10.5px] text-ops-faint">100 g başına</span>}>
+          <FieldShell label="Besin değerleri" labelAside={<span className="font-ops-body text-ops-micro text-ops-faint">100 g başına</span>}>
             <div className="flex flex-col rounded-ops-card border border-ops-line-soft px-3 py-1.5">
               {/* Enerji: tek satır, iki birim (aynı ölçü) + boş olanı doldurma kısayolu */}
               {row(
@@ -114,7 +114,7 @@ export function FormNutrition<T extends FieldValues>({ control, name }: FormNutr
                       type="button"
                       onClick={convert.apply}
                       title="Diğer birimi bu değerden hesapla (1 kcal = 4,184 kJ)"
-                      className="cursor-pointer font-ops-body text-[10.5px] font-semibold text-ops-olive"
+                      className="cursor-pointer font-ops-body text-ops-micro font-semibold text-ops-olive"
                     >
                       {convert.label}
                     </button>
@@ -140,7 +140,7 @@ export function FormNutrition<T extends FieldValues>({ control, name }: FormNutr
                 {row(LABELS.saltG, cell('saltG', 'g'))}
               </div>
             </div>
-            <span className="font-ops-body text-[10.5px] leading-[1.5] text-ops-faint">
+            <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
               Boş bırakılan kalem müşteri tablosunda hiç görünmez. “0” bir beyandır, boş değildir.
             </span>
           </FieldShell>

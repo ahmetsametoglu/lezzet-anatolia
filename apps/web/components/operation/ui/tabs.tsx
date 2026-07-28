@@ -36,7 +36,7 @@ export function Tabs<K extends string>({ items, active, onSelect, action, classN
             onClick={() => onSelect(t.key)}
             aria-current={on ? 'page' : undefined}
             className={[
-              '-mb-px cursor-pointer border-b-2 px-3.5 py-[11px] font-ops-display text-[12.5px] font-semibold transition-colors',
+              '-mb-px cursor-pointer border-b-2 px-3.5 py-[11px] font-ops-display text-ops-sm font-semibold transition-colors',
               on ? 'border-ops-olive text-ops-ink' : 'border-transparent text-ops-muted hover:text-ops-strong',
             ].join(' ')}
           >

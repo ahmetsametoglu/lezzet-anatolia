@@ -151,7 +151,7 @@ export function BundleFormDialog({ bundle, device, onClose }: BundleFormDialogPr
            düştüğünde otomatik dağıtım kayıtlı payların üzerine yazardı. Formu açmak veriyi
            değiştirmemeli. */
         <div className="flex min-h-[320px] items-center justify-center">
-          <span className="font-ops-body text-[13px] text-ops-muted">Paket bilgileri yükleniyor…</span>
+          <span className="font-ops-body text-ops-base text-ops-muted">Paket bilgileri yükleniyor…</span>
         </div>
       ) : (
       <form id={FORM_ID} onSubmit={onSubmit} className="grid gap-5 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
@@ -235,7 +235,7 @@ export function BundleFormDialog({ bundle, device, onClose }: BundleFormDialogPr
                   labelAside="isteğe bağlı"
                 />
               </div>
-              <span className="font-ops-body text-[11px] leading-[1.5] text-ops-muted">
+              <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
                 Müşteri yalnız paket fiyatını görür (KDV dahil) ve o fiyat sabittir — kupon ve genel indirim pakete
                 uygulanmaz. İndirim yüzdesi kalemlerin tek fiyatları toplamına göre hesaplanır; birini yazarsan öbürü
                 dolar. “Kaç kişilik” boş bırakılırsa müşteri tarafında o künye satırı hiç çizilmez.

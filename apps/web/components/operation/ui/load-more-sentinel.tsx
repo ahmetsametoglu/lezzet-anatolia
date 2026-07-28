@@ -30,12 +30,12 @@ export function LoadMoreSentinel({ hasMore, loading, onLoadMore, rootMargin }: L
   return (
     <div ref={ref} className="flex items-center justify-center gap-3 px-6 py-4">
       {loading ? (
-        <span className="font-ops-body text-[12px] text-ops-muted">Yükleniyor…</span>
+        <span className="font-ops-body text-ops-sm text-ops-muted">Yükleniyor…</span>
       ) : (
         <button
           type="button"
           onClick={onLoadMore}
-          className="cursor-pointer rounded-ops-btn border border-ops-line-strong px-3 py-1.5 font-ops-display text-[11.5px] font-semibold text-ops-muted transition-colors hover:border-ops-olive hover:text-ops-olive"
+          className="cursor-pointer rounded-ops-btn border border-ops-line-strong px-3 py-1.5 font-ops-display text-ops-xs font-semibold text-ops-muted transition-colors hover:border-ops-olive hover:text-ops-olive"
         >
           Daha fazla yükle
         </button>

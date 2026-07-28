@@ -17,8 +17,8 @@ const VARIANT: Record<ButtonVariant, string> = {
 };
 
 const SIZE: Record<ButtonSize, string> = {
-  md: 'px-4 py-2.5 text-[13px]',
-  sm: 'px-3 py-2 text-xs',
+  md: 'px-4 py-2.5 text-ops-base',
+  sm: 'px-3 py-2 text-ops-sm',
 };
 
 interface ButtonClassOptions {

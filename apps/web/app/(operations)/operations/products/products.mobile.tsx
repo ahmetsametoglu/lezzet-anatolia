@@ -57,8 +57,8 @@ function QuickEditSheet({
         <div className="flex items-center gap-3">
           <Thumbnail src={product.imageUrl} alt={displayName} size={56} iconSize={22} />
           <div className="flex flex-col gap-0.5">
-            <span className="font-ops-display text-[16px] font-semibold text-ops-ink">{displayName}</span>
-            <span className="font-ops-body text-[12px] text-ops-muted">
+            <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">{displayName}</span>
+            <span className="font-ops-body text-ops-sm text-ops-muted">
               {product.categoryName} · {product.variants.length} varyant
             </span>
           </div>
@@ -67,14 +67,14 @@ function QuickEditSheet({
         <ImageUploadButton
           upload={(form) => uploadProductImageAction(product.id, form)}
           camera
-          className="flex items-center justify-center gap-2 rounded-[11px] border border-ops-olive-line bg-ops-olive-bg px-3 py-3 font-ops-display text-[12.5px] font-semibold text-ops-olive-dark disabled:opacity-60"
+          className="flex items-center justify-center gap-2 rounded-[11px] border border-ops-olive-line bg-ops-olive-bg px-3 py-3 font-ops-display text-ops-sm font-semibold text-ops-olive-dark disabled:opacity-60"
         >
           <CameraIcon />
           Kameradan görsel çek / değiştir
         </ImageUploadButton>
 
         <div className="flex flex-col gap-1.5">
-          <span className="font-ops-display text-[11px] font-medium uppercase tracking-[0.06em] text-ops-muted">Ürün adı</span>
+          <span className="font-ops-display text-ops-xs font-medium uppercase tracking-[0.06em] text-ops-muted">Ürün adı</span>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </div>
 
@@ -89,10 +89,10 @@ function QuickEditSheet({
         />
 
         <div className="flex flex-col gap-1.5">
-          <span className="font-ops-display text-[11px] font-medium uppercase tracking-[0.06em] text-ops-muted">Koleksiyonlar</span>
+          <span className="font-ops-display text-ops-xs font-medium uppercase tracking-[0.06em] text-ops-muted">Koleksiyonlar</span>
           <div className="flex flex-wrap gap-[7px]">
             {product.collectionNames.length === 0 ? (
-              <span className="font-ops-body text-[12px] text-ops-faint">Koleksiyon yok</span>
+              <span className="font-ops-body text-ops-sm text-ops-faint">Koleksiyon yok</span>
             ) : (
               product.collectionNames.map((c) => (
                 <Chip key={c} active tone="olive" className="!bg-ops-olive-bg !text-ops-olive-dark">
@@ -104,15 +104,15 @@ function QuickEditSheet({
           </div>
         </div>
 
-        {error ? <span className="text-center font-ops-body text-[11px] text-ops-red">{error}</span> : null}
-        <span className="text-center font-ops-body text-[11px] leading-[1.5] text-ops-muted">
+        {error ? <span className="text-center font-ops-body text-ops-xs text-ops-red">{error}</span> : null}
+        <span className="text-center font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
           Fiyat, çok dilli metin ve paket kurma web&apos;de — burada yalnız hızlı düzeltme.
         </span>
         <button
           type="button"
           onClick={save}
           disabled={pending}
-          className="rounded-xl bg-ops-ink px-4 py-3.5 text-center font-ops-display text-[15px] font-semibold text-ops-card disabled:opacity-60"
+          className="rounded-xl bg-ops-ink px-4 py-3.5 text-center font-ops-display text-ops-lead font-semibold text-ops-card disabled:opacity-60"
         >
           {pending ? 'Kaydediliyor…' : 'Kaydet'}
         </button>
@@ -143,11 +143,11 @@ export function ProductsMobile({
     <div className="flex h-full flex-col bg-ops-card">
       {/* Başlık */}
       <div className="flex items-center justify-between border-b border-ops-line px-4 py-3.5">
-        <span className="font-ops-display text-[17px] font-semibold text-ops-ink">Ürünler</span>
+        <span className="font-ops-display text-ops-section font-semibold text-ops-ink">Ürünler</span>
         <button
           type="button"
           onClick={openCreate}
-          className="grid h-[30px] w-[30px] cursor-pointer place-items-center rounded-ops-btn bg-ops-ink font-ops-display text-lg font-semibold text-ops-card"
+          className="grid h-[30px] w-[30px] cursor-pointer place-items-center rounded-ops-btn bg-ops-ink font-ops-display text-ops-section font-semibold text-ops-card"
         >
           +
         </button>
@@ -178,8 +178,8 @@ export function ProductsMobile({
           >
             <Thumbnail src={p.imageUrl} alt={resolveLocalizedText(p.name)} size={42} iconSize={17} className="!rounded-ops-card" />
             <div className="flex min-w-0 flex-1 flex-col gap-px">
-              <span className="truncate font-ops-body text-[13.5px] font-semibold text-ops-ink">{resolveLocalizedText(p.name)}</span>
-              <span className="font-ops-body text-[11px] text-ops-muted">
+              <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{resolveLocalizedText(p.name)}</span>
+              <span className="font-ops-body text-ops-xs text-ops-muted">
                 {p.categoryName} · {p.variants.length} varyant
               </span>
             </div>
@@ -190,7 +190,7 @@ export function ProductsMobile({
           </div>
         ))}
         {products.length === 0 ? (
-          <div className="p-10 text-center font-ops-body text-[13px] text-ops-faint">Bu süzgeçte ürün yok.</div>
+          <div className="p-10 text-center font-ops-body text-ops-base text-ops-faint">Bu süzgeçte ürün yok.</div>
         ) : null}
         {/* Sona-yaklaşınca yükleme — masaüstü tablosuyla AYNI bileşen (tek kaynak). */}
         <LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />

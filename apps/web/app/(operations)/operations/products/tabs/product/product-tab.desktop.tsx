@@ -41,8 +41,8 @@ const COLUMNS: Column<ProductView>[] = [
     width: 'minmax(120px,1fr)',
     cell: (r) => (
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate font-ops-body text-[13px] font-semibold text-ops-ink">{resolveLocalizedText(r.name)}</span>
-        <span className="font-ops-body text-[11px] text-ops-muted">{r.categoryName}</span>
+        <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{resolveLocalizedText(r.name)}</span>
+        <span className="font-ops-body text-ops-xs text-ops-muted">{r.categoryName}</span>
       </div>
     ),
   },
@@ -51,7 +51,7 @@ const COLUMNS: Column<ProductView>[] = [
     header: 'Varyant',
     width: '60px',
     align: 'center',
-    cell: (r) => <span className="font-ops-mono text-[12.5px] text-ops-strong">{r.variants.length}</span>,
+    cell: (r) => <span className="font-ops-mono text-ops-sm text-ops-strong">{r.variants.length}</span>,
   },
   { key: 'langs', header: 'Diller', width: '82px', align: 'center', cell: (r) => <LangBadge langs={filledContentLangs(r.name)} /> },
   { key: 'status', header: 'Durum', width: '74px', align: 'right', cell: (r) => <StatusBadge status={r.status} /> },
@@ -85,7 +85,7 @@ function StatusFilterChip({ value, onChange }: { value: StatusFilter; onChange: 
               onChange(s);
               setOpen(false);
             }}
-            className="cursor-pointer px-[13px] py-2.5 text-left font-ops-body text-[13px] text-ops-strong hover:bg-ops-subtle"
+            className="cursor-pointer px-[13px] py-2.5 text-left font-ops-body text-ops-base text-ops-strong hover:bg-ops-subtle"
           >
             {STATUS_LABEL[s]}
           </button>
@@ -142,7 +142,7 @@ export function ProductsTab(props: ProductsViewProps) {
             }}
             isRowActive={(r) => r.id === selectedId}
             empty={
-              <div className="flex flex-1 items-center justify-center p-10 text-center font-ops-body text-[13px] text-ops-faint">
+              <div className="flex flex-1 items-center justify-center p-10 text-center font-ops-body text-ops-base text-ops-faint">
                 Bu süzgeçte ürün yok.
               </div>
             }

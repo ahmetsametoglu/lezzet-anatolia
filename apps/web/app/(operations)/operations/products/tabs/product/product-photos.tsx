@@ -88,9 +88,9 @@ export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChang
       {productId ? (
         <div className="flex flex-col gap-2">
           <div className="flex items-baseline gap-2">
-            <span className="font-ops-display text-[10px] font-medium uppercase tracking-[0.08em] text-ops-muted">Galeri</span>
-            <span className="font-ops-body text-[10px] text-ops-faint">detay sayfasındaki ek fotoğraflar</span>
-            <span className="ml-auto font-ops-mono text-[10px] text-ops-faint">
+            <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.08em] text-ops-muted">Galeri</span>
+            <span className="font-ops-body text-ops-micro text-ops-faint">detay sayfasındaki ek fotoğraflar</span>
+            <span className="ml-auto font-ops-mono text-ops-micro text-ops-faint">
               {photos.length}/{PRODUCT_GALLERY_MAX}
             </span>
           </div>
@@ -115,7 +115,7 @@ export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChang
 
             {/* Ekleme karesi — sınıra gelince yerini bilgi notu alır (buton kaybolup şaşırtmasın) */}
             {full ? (
-              <span className="grid place-items-center rounded-ops-card border border-dashed border-ops-line-soft p-2 text-center font-ops-body text-[10px] leading-[1.4] text-ops-faint">
+              <span className="grid place-items-center rounded-ops-card border border-dashed border-ops-line-soft p-2 text-center font-ops-body text-ops-micro leading-[1.4] text-ops-faint">
                 Sınır doldu
               </span>
             ) : (
@@ -131,11 +131,11 @@ export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChang
           </div>
 
           {photos.length > 1 ? (
-            <span className="font-ops-body text-[10px] text-ops-faint">
+            <span className="font-ops-body text-ops-micro text-ops-faint">
               Kareyi sürükleyerek sırala — müşteri galeriyi bu sırada görür. Tıkla: odak ve zoom.
             </span>
           ) : null}
-          {error ? <span className="font-ops-body text-[11px] text-ops-red">{error}</span> : null}
+          {error ? <span className="font-ops-body text-ops-xs text-ops-red">{error}</span> : null}
         </div>
       ) : null}
 

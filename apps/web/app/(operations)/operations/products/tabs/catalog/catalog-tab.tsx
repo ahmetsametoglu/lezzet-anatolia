@@ -53,12 +53,12 @@ function catalogColumns(kind: CatalogKind, header: string): Column<CatalogRow>[]
       width: 'minmax(160px,1fr)',
       cell: (r) => (
         <div className="flex min-w-0 flex-col gap-px">
-          <span className="truncate font-ops-body text-[13.5px] font-semibold text-ops-ink">{resolveLocalizedText(r.name)}</span>
-          <span className="truncate font-ops-body text-[11px] text-ops-muted">slug: {r.slug}</span>
+          <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{resolveLocalizedText(r.name)}</span>
+          <span className="truncate font-ops-body text-ops-xs text-ops-muted">slug: {r.slug}</span>
         </div>
       ),
     },
-    { key: 'count', header: 'Ürün', width: '72px', align: 'right', cell: (r) => <span className="font-ops-mono text-[12px] text-ops-body">{r.count}</span> },
+    { key: 'count', header: 'Ürün', width: '72px', align: 'right', cell: (r) => <span className="font-ops-mono text-ops-sm text-ops-body">{r.count}</span> },
     {
       key: 'status',
       header: 'Durum',
@@ -147,7 +147,7 @@ export function CatalogTab({ kind, rows, products, filter, creating, onCreateClo
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Yalnız ipucu satırı — "+ Kategori" düğmesi sekme çubuğuna taşındı (kabuk). */}
       <div className="flex items-center border-b border-ops-line-soft px-6 py-[11px]">
-        <span className="font-ops-body text-[12px] text-ops-muted">{filtering ? copy.filtered : copy.hint}</span>
+        <span className="font-ops-body text-ops-sm text-ops-muted">{filtering ? copy.filtered : copy.hint}</span>
       </div>
       <Table
         columns={CATALOG_COLUMNS[kind]}
@@ -158,7 +158,7 @@ export function CatalogTab({ kind, rows, products, filter, creating, onCreateClo
         onReorder={filtering ? undefined : handleReorder}
         onRowDoubleClick={(r) => setEditingId(r.id)}
         empty={
-          <div className="flex flex-1 items-center justify-center p-10 text-center font-ops-body text-[13px] text-ops-faint">
+          <div className="flex flex-1 items-center justify-center p-10 text-center font-ops-body text-ops-base text-ops-faint">
             {filtering ? 'Bu aramada kayıt yok.' : copy.empty}
           </div>
         }

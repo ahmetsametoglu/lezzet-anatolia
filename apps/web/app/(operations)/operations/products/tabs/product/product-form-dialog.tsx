@@ -170,7 +170,7 @@ export function ProductFormDialog({ mode, product, categories, bundles, device, 
     autoPrice: <FormSwitch control={control} name="autoPrice" label="Otomatik fiyat" />,
     margin: <FormNumber control={control} name="targetMarginPercent" label="Hedef marj (%)" placeholder="ör. 42" />,
     priceNote: (
-      <span className="font-ops-body text-[11px] leading-[1.5] text-ops-muted">
+      <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
         Fiyatın kendisi kanala/müşteriye göre Fiyatlar ekranında çözülür — burada yalnız marj hedefi ve otomatik davranış tanımlanır.
       </span>
     ),
@@ -190,7 +190,7 @@ export function ProductFormDialog({ mode, product, categories, bundles, device, 
   const bundleNote =
     usedIn.length === 0 ? null : (
       <span
-        className={`truncate font-ops-body text-[11.5px] ${leavingSale && activeUsedIn.length > 0 ? 'font-semibold text-ops-amber' : 'text-ops-muted'}`}
+        className={`truncate font-ops-body text-ops-xs ${leavingSale && activeUsedIn.length > 0 ? 'font-semibold text-ops-amber' : 'text-ops-muted'}`}
         title={bundleNames(usedIn)}
       >
         {leavingSale && activeUsedIn.length > 0

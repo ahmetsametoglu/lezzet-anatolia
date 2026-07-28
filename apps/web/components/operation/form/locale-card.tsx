@@ -33,7 +33,7 @@ export function LocaleCard({ title = 'İçerik', completenessOf, children }: Loc
   return (
     <div className="flex flex-col overflow-hidden rounded-ops-card border border-ops-line">
       <div className="flex items-center gap-3 border-b border-ops-line-soft bg-ops-subtle px-3.5">
-        <span className="mr-auto font-ops-display text-[10px] font-medium uppercase tracking-[0.08em] text-ops-muted">
+        <span className="mr-auto font-ops-display text-ops-micro font-medium uppercase tracking-[0.08em] text-ops-muted">
           {title}
         </span>
         <LocaleTabs value={lang} onChange={setLang} filled={completenessOf ? filledLocales(completenessOf) : undefined} />

@@ -78,11 +78,11 @@ export function VariantEditor({ control, onAiTranslate }: VariantEditorProps) {
   return (
     <section className="flex flex-col gap-[11px]">
       <div className="flex items-center justify-between border-b border-ops-line-soft pb-[7px]">
-        <span className="font-ops-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ops-muted">Varyantlar</span>
+        <span className="font-ops-display text-ops-xs font-semibold uppercase tracking-[0.1em] text-ops-muted">Varyantlar</span>
         <button
           type="button"
           onClick={() => append({ label: {}, netWeightG: null, minStockQty: null, sku: null, isActive: true })}
-          className="cursor-pointer font-ops-body text-[11px] font-semibold text-ops-olive hover:text-ops-olive-dark"
+          className="cursor-pointer font-ops-body text-ops-xs font-semibold text-ops-olive hover:text-ops-olive-dark"
         >
           + varyant
         </button>
@@ -93,11 +93,11 @@ export function VariantEditor({ control, onAiTranslate }: VariantEditorProps) {
             dururken form geneli bir dil kipi sanılıyordu. */}
         <div className="flex items-center justify-between border-b border-ops-line bg-ops-subtle px-[13px]">
           <LocaleTabs value={lang} onChange={setLang} filled={filled} />
-          <span className="font-ops-body text-[10.5px] text-ops-muted">boy etiketi · {lang.toUpperCase()}</span>
+          <span className="font-ops-body text-ops-micro text-ops-muted">boy etiketi · {lang.toUpperCase()}</span>
         </div>
 
         <div
-          className={`${CELL} border-b border-ops-line bg-ops-subtle px-[13px] py-2 font-ops-display text-[10px] font-medium uppercase tracking-[0.05em] text-ops-muted`}
+          className={`${CELL} border-b border-ops-line bg-ops-subtle px-[13px] py-2 font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-muted`}
         >
           <span />
           <span>Etiket ({lang.toUpperCase()})</span>
@@ -202,7 +202,7 @@ export function VariantEditor({ control, onAiTranslate }: VariantEditorProps) {
                       setConfirmKey(null);
                     }}
                     onBlur={() => setConfirmKey(null)}
-                    className="cursor-pointer justify-self-center font-ops-display text-[9.5px] font-semibold text-ops-red"
+                    className="cursor-pointer justify-self-center font-ops-display text-ops-micro font-semibold text-ops-red"
                     title="Bu varyantın fiyat satırları da silinir. Onaylamak için tıklayın."
                   >
                     SİL?
@@ -225,7 +225,7 @@ export function VariantEditor({ control, onAiTranslate }: VariantEditorProps) {
         />
       </div>
 
-      <span className="font-ops-body text-[11px] leading-[1.5] text-ops-muted">
+      <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
         Sıra, müşterinin gördüğü boy sırasıdır — satırları tutamaktan sürükleyerek değiştirin. Min. stok, altına
         düşünce uyarı çıkacak eşiktir; boş bırakılırsa uyarı üretilmez.
       </span>

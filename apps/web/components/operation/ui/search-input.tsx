@@ -28,7 +28,7 @@ export function SearchInput({ value, onChange, placeholder = 'Ara…', className
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="min-w-0 flex-1 bg-transparent font-ops-body text-[12.5px] text-ops-ink outline-none placeholder:text-ops-faint"
+        className="min-w-0 flex-1 bg-transparent font-ops-body text-ops-sm text-ops-ink outline-none placeholder:text-ops-faint"
       />
     </label>
   );

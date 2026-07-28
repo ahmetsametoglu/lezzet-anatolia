@@ -66,15 +66,15 @@ export function Dialog({ open, onClose, title, subtitle, footer, headerAside, ma
       >
         <div className="flex items-start gap-3 border-b border-ops-line px-6 py-[18px]">
           <div className="mr-auto flex flex-col gap-px">
-            <span className="font-ops-display text-[18px] font-semibold">{title}</span>
-            {subtitle ? <span className="font-ops-body text-xs text-ops-muted">{subtitle}</span> : null}
+            <span className="font-ops-display text-ops-section font-semibold">{title}</span>
+            {subtitle ? <span className="font-ops-body text-ops-sm text-ops-muted">{subtitle}</span> : null}
           </div>
           {headerAside}
           <button
             type="button"
             onClick={onClose}
             aria-label="Kapat"
-            className="grid h-[30px] w-[30px] flex-none cursor-pointer place-items-center rounded-ops-btn bg-ops-line-soft font-ops-display text-base text-ops-body hover:bg-ops-line"
+            className="grid h-[30px] w-[30px] flex-none cursor-pointer place-items-center rounded-ops-btn bg-ops-line-soft font-ops-display text-ops-lead text-ops-body hover:bg-ops-line"
           >
             ✕
           </button>
@@ -127,10 +127,10 @@ export function DialogFooter({
     <>
       <div className="mr-auto flex min-w-0 items-center gap-3">
         {actions}
-        {error ? <span className="truncate font-ops-body text-[11.5px] font-semibold text-ops-red">{error}</span> : null}
+        {error ? <span className="truncate font-ops-body text-ops-xs font-semibold text-ops-red">{error}</span> : null}
       </div>
       {blockedReason && !error ? (
-        <span className="max-w-[320px] truncate font-ops-body text-[11.5px] text-ops-muted" title={blockedReason}>
+        <span className="max-w-[320px] truncate font-ops-body text-ops-xs text-ops-muted" title={blockedReason}>
           {blockedReason}
         </span>
       ) : null}

@@ -85,27 +85,27 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
     <aside className="sticky top-0 flex h-screen w-[214px] flex-none flex-col overflow-y-auto border-r border-ops-line bg-ops-panel py-4 font-ops-body">
       {/* Marka */}
       <div className="flex items-center gap-2.5 px-4 pb-3">
-        <span className="grid h-[30px] w-[30px] place-items-center rounded-lg bg-ops-ink font-ops-display text-[15px] font-bold text-ops-olive-light">
+        <span className="grid h-[30px] w-[30px] place-items-center rounded-lg bg-ops-ink font-ops-display text-ops-lead font-bold text-ops-olive-light">
           L
         </span>
         <div className="flex flex-col leading-tight">
-          <span className="font-ops-display text-[15px] font-semibold text-ops-ink">Lezzet</span>
-          <span className="font-ops-display text-[9px] font-medium tracking-[0.2em] text-ops-muted">OPERASYON</span>
+          <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Lezzet</span>
+          <span className="font-ops-display text-ops-micro font-medium tracking-[0.2em] text-ops-muted">OPERASYON</span>
         </div>
       </div>
 
       {/* Arama — görsel yer tutucu; işlev sonraki dilimde */}
       <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg border border-ops-gray-300 bg-ops-line px-2.5 py-[7px] text-ops-faint">
         <SearchIcon />
-        <span className="flex-1 font-ops-body text-xs">Ara…</span>
-        <span className="rounded border border-ops-line-strong px-1 font-ops-mono text-[10px]">⌘K</span>
+        <span className="flex-1 font-ops-body text-ops-sm">Ara…</span>
+        <span className="rounded border border-ops-line-strong px-1 font-ops-mono text-ops-micro">⌘K</span>
       </div>
 
       {/* Bölümler */}
       <nav className="flex flex-col">
         {SECTIONS.map((section) => (
           <div key={section.label} className="flex flex-col">
-            <span className="px-4 pb-1 pt-3 font-ops-display text-[9.5px] font-semibold uppercase tracking-[0.15em] text-ops-faint">
+            <span className="px-4 pb-1 pt-3 font-ops-display text-ops-micro font-semibold uppercase tracking-[0.15em] text-ops-faint">
               {section.label}
             </span>
             {section.items.map((item) => {
@@ -122,7 +122,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
                 >
                   <NavIcon name={item.key} />
                   <span
-                    className={['flex-1 font-ops-display text-[13px]', on ? 'font-semibold text-ops-ink' : 'font-medium text-ops-body'].join(' ')}
+                    className={['flex-1 font-ops-display text-ops-base', on ? 'font-semibold text-ops-ink' : 'font-medium text-ops-body'].join(' ')}
                   >
                     {item.label}
                   </span>
@@ -135,12 +135,12 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
 
       {/* Kullanıcı bloğu — `mt-auto` ile alt kümeyi rayın dibine iter */}
       <div className="mx-[15px] mt-auto flex items-center gap-2.5 border-t border-ops-line pt-3">
-        <span className="grid h-[30px] w-[30px] flex-none place-items-center rounded-lg bg-ops-olive font-ops-display text-xs font-semibold text-ops-card">
+        <span className="grid h-[30px] w-[30px] flex-none place-items-center rounded-lg bg-ops-olive font-ops-display text-ops-sm font-semibold text-ops-card">
           {initials}
         </span>
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate font-ops-display text-[12.5px] font-semibold text-ops-ink">{local}</span>
-          <span className="font-ops-body text-[10.5px] text-ops-muted">{roleLabel}</span>
+          <span className="truncate font-ops-display text-ops-sm font-semibold text-ops-ink">{local}</span>
+          <span className="font-ops-body text-ops-micro text-ops-muted">{roleLabel}</span>
         </div>
       </div>
 
