@@ -1,4 +1,11 @@
-import { bundleBalance, bundleEconomics, isBelowTargetMargin, type BundleBalance, type BundleEconomics } from '@lezzet/domain-core';
+import {
+  bundleBalance,
+  bundleEconomics,
+  discountPercentOf,
+  isBelowTargetMargin,
+  type BundleBalance,
+  type BundleEconomics,
+} from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import type { VariantOption } from '../../products-types';
 
@@ -31,17 +38,6 @@ interface BundlePricing {
   missingListPrice: number;
   /** Payı kendi hedef marjının altına düşen kalem sayısı (hedefi olmayan kalem sayılmaz). */
   belowTargetLines: number;
-}
-
-/** Paket fiyatından indirim yüzdesi — ikisi aynı kararın iki yazımı. */
-function discountPercentOf(listTotalCents: number | null, totalPriceCents: number): number | null {
-  if (listTotalCents == null || listTotalCents <= 0) return null;
-  return ((listTotalCents - totalPriceCents) / listTotalCents) * 100;
-}
-
-/** İndirim yüzdesinden paket fiyatı — yüzde alanına yazılınca fiyat bundan doğar. */
-export function priceFromDiscount(listTotalCents: number, percent: number): number {
-  return Math.max(0, Math.round(listTotalCents * (1 - percent / 100)));
 }
 
 export function bundlePricing(rows: BundlePricingRow[], pool: Map<string, VariantOption>, totalPrice: number): BundlePricing {

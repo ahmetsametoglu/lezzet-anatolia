@@ -25,7 +25,8 @@ import {
   uploadBundleImageAction,
 } from './actions';
 import { BundleItemsEditor } from './bundle-items-editor';
-import { bundlePricing, priceFromDiscount } from './bundle-pricing';
+import { priceFromDiscountPercent } from '@lezzet/domain-core';
+import { bundlePricing } from './bundle-pricing';
 import { BundleFormSchema, buildBundleDefaults, bundleBlock, toBundlePayload, type BundleFormValues } from './bundle-form-schema';
 import type { BundleView, VariantOption } from '../../products-types';
 
@@ -242,11 +243,12 @@ export function BundleFormDialog({ bundle, device, onClose }: BundleFormDialogPr
                   disabled={pricing.listTotalCents == null}
                   placeholder={pricing.listTotalCents == null ? '—' : 'ör. 10'}
                   onChange={(percent) => {
-                    if (pricing.listTotalCents == null || percent == null) return;
-                    setValue('totalPrice', fromCents(priceFromDiscount(pricing.listTotalCents, percent)), {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                    });
+                    if (percent == null) return;
+                    // Hesap MOTORDAN (`priceFromDiscountPercent`): aynı "%10", teklif ve özel fiyat
+                    // ekranlarıyla aynı kuruşu vermeli.
+                    const next = priceFromDiscountPercent(pricing.listTotalCents, percent);
+                    if (next === null) return;
+                    setValue('totalPrice', fromCents(next), { shouldValidate: true, shouldDirty: true });
                   }}
                 />
                 <FormNumber

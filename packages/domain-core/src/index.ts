@@ -4,6 +4,7 @@ export * from './pricing/resolve-price';
 export * from './pricing/apply-discount';
 export * from './pricing/bundle-allocation';
 export * from './pricing/bundle-economics';
+export * from './pricing/list-discount';
 export * from './pricing/margin';
 export * from './pricing/auto-price';
 export * from './pricing/replacement-cost';
