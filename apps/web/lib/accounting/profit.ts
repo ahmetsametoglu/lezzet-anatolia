@@ -18,15 +18,15 @@ interface ProfitPeriod {
 }
 
 /** Dönemin satışları + kalemleri — üç raporun ortak ham girdisi, tek okumada. */
-async function donem(period: ProfitPeriod): Promise<{ sales: OrderSale[]; itemsByOrder: Map<string, OrderItem[]> }> {
+async function loadPeriod(period: ProfitPeriod): Promise<{ sales: OrderSale[]; itemsByOrder: Map<string, OrderItem[]> }> {
   const db = serviceDb();
   const sales = await new OrderSaleService(db).listPeriod(period.from, period.to);
   const items = await new OrderItemService(db).listByOrders(sales.map((s) => s.id));
 
   const itemsByOrder = new Map<string, OrderItem[]>();
   for (const item of items) {
-    const liste = itemsByOrder.get(item.orderId);
-    if (liste) liste.push(item);
+    const list = itemsByOrder.get(item.orderId);
+    if (list) list.push(item);
     else itemsByOrder.set(item.orderId, [item]);
   }
   return { sales, itemsByOrder };
@@ -34,7 +34,7 @@ async function donem(period: ProfitPeriod): Promise<{ sales: OrderSale[]; itemsB
 
 /** Sipariş bazında katkı payı — en kârlıdan en kârsıza. Kapanmamışlar sonda (kârı yok). */
 export async function orderProfits(period: ProfitPeriod): Promise<OrderContribution[]> {
-  const { sales, itemsByOrder } = await donem(period);
+  const { sales, itemsByOrder } = await loadPeriod(period);
   return sales
     .map((sale) => orderContribution(sale, itemsByOrder.get(sale.id) ?? []))
     .sort((a, b) => (b.contribution ?? -Infinity) - (a.contribution ?? -Infinity));
@@ -48,22 +48,22 @@ export async function orderProfits(period: ProfitPeriod): Promise<OrderContribut
  */
 export async function productProfits(period: ProfitPeriod): Promise<VariantProfit[]> {
   const db = serviceDb();
-  const { sales, itemsByOrder } = await donem(period);
+  const { sales, itemsByOrder } = await loadPeriod(period);
 
-  const satisById = new Map(sales.map((s) => [s.id, s]));
-  const tumKalemler = [...itemsByOrder.values()].flat();
-  const maliyetler = await new OrderService(db).itemCosts(tumKalemler.map((i) => i.id));
+  const salesById = new Map(sales.map((s) => [s.id, s]));
+  const allItems = [...itemsByOrder.values()].flat();
+  const costs = await new OrderService(db).itemCosts(allItems.map((i) => i.id));
 
-  const lines: SoldLine[] = tumKalemler.map((item) => ({
+  const lines: SoldLine[] = allItems.map((item) => ({
     variantId: item.variantId,
     item,
     // Haritada yoksa parti kaydı hiç yok demektir → maliyet bilinmiyor (0 değil).
-    costCents: maliyetler.has(item.id) ? maliyetler.get(item.id)! : null,
-    zeroRated: satisById.get(item.orderId)?.vatTreatment === 'intra_eu_b2b_reverse_charge',
+    costCents: costs.has(item.id) ? costs.get(item.id)! : null,
+    zeroRated: salesById.get(item.orderId)?.vatTreatment === 'intra_eu_b2b_reverse_charge',
   }));
 
-  const fire = await new StockAdjustmentService(db).lossSummary(new Date(period.from), new Date(`${period.to}T23:59:59.999Z`));
-  return variantProfit(lines, fire);
+  const losses = await new StockAdjustmentService(db).lossSummary(new Date(period.from), new Date(`${period.to}T23:59:59.999Z`));
+  return variantProfit(lines, losses);
 }
 
 /**
@@ -75,16 +75,16 @@ export async function productProfits(period: ProfitPeriod): Promise<VariantProfi
  */
 export async function companyPnl(period: ProfitPeriod): Promise<CompanyProfit> {
   const db = serviceDb();
-  const [katkilar, urunler, hareketler] = await Promise.all([
+  const [contributions, products, totals] = await Promise.all([
     orderProfits(period),
     productProfits(period),
     new MoneyMovementService(db).periodTotals(period.from, period.to),
   ]);
 
-  const overhead = hareketler
+  const overhead = totals
     .filter((t) => t.type === 'expense')
     .reduce((sum, t) => sum + (t.direction === 'out' ? t.total : -t.total), 0);
-  const lossCost = urunler.reduce((sum, u) => sum + u.lossCost, 0);
+  const lossCost = products.reduce((sum, u) => sum + u.lossCost, 0);
 
-  return companyProfit(period, katkilar, { lossCost, overhead: Math.round(overhead * 100) / 100 });
+  return companyProfit(period, contributions, { lossCost, overhead: Math.round(overhead * 100) / 100 });
 }

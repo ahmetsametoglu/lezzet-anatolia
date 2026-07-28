@@ -133,11 +133,11 @@ export interface CampaignSpend {
  * RPC eşiğini o karşılar.
  */
 export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMovementInsert, MoneyMovementUpdate> {
-  private readonly defter: AccountLedgerService;
+  private readonly ledgerView: AccountLedgerService;
 
   constructor(supabase: SupabaseClient) {
     super(supabase, 'money_movement', MoneyMovementSchema, MoneyMovementInsertSchema, MoneyMovementUpdateSchema);
-    this.defter = new AccountLedgerService(supabase);
+    this.ledgerView = new AccountLedgerService(supabase);
   }
 
   /**
@@ -148,7 +148,7 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     accountId: string,
     opts: { cursor?: KeysetCursor; limit?: number; from?: string; to?: string; unreconciledOnly?: boolean } = {},
   ): Promise<Page<AccountLedgerRow>> {
-    return this.defter.page(accountId, opts);
+    return this.ledgerView.page(accountId, opts);
   }
 
   /** Siparişin para hareketleri — tahsilat/iade toplamı (`amount_*` cache'inin kaynağı, 12.2). */
@@ -211,15 +211,15 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
       .lte('value_date', to);
     if (error) throw error;
 
-    const kova = new Map<string, PeriodTotal>();
+    const buckets = new Map<string, PeriodTotal>();
     for (const row of (data ?? []) as Array<{ type: MovementType; direction: 'in' | 'out'; amount: string | number }>) {
       const key = `${row.type}:${row.direction}`;
-      const mevcut = kova.get(key) ?? { type: row.type, direction: row.direction, total: 0, count: 0 };
-      mevcut.total = Math.round((mevcut.total + Number(row.amount)) * 100) / 100;
-      mevcut.count += 1;
-      kova.set(key, mevcut);
+      const current = buckets.get(key) ?? { type: row.type, direction: row.direction, total: 0, count: 0 };
+      current.total = Math.round((current.total + Number(row.amount)) * 100) / 100;
+      current.count += 1;
+      buckets.set(key, current);
     }
-    return [...kova.values()];
+    return [...buckets.values()];
   }
 
   /**
@@ -242,23 +242,36 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
       .lte('value_date', to);
     if (error) throw error;
 
-    const kova = new Map<string | null, CampaignSpend>();
+    const buckets = new Map<string | null, CampaignSpend>();
     for (const row of (data ?? []) as Array<{ direction: 'in' | 'out'; amount: string | number; meta: Record<string, unknown> | null }>) {
-      const etiket = row.meta?.['campaign'];
-      const campaign = typeof etiket === 'string' && etiket.trim() ? etiket.trim() : null;
+      const tag = row.meta?.['campaign'];
+      const campaign = typeof tag === 'string' && tag.trim() ? tag.trim() : null;
       // Geri gelen para gideri AZALTIR — iptal edilen reklamın parası gider olarak kalmamalı.
       const net = row.direction === 'out' ? Number(row.amount) : -Number(row.amount);
 
-      const mevcut = kova.get(campaign) ?? { campaign, total: 0, count: 0 };
-      mevcut.total = Math.round((mevcut.total + net) * 100) / 100;
-      mevcut.count += 1;
-      kova.set(campaign, mevcut);
+      const current = buckets.get(campaign) ?? { campaign, total: 0, count: 0 };
+      current.total = Math.round((current.total + net) * 100) / 100;
+      current.count += 1;
+      buckets.set(campaign, current);
     }
-    return [...kova.values()].sort((a, b) => b.total - a.total);
+    return [...buckets.values()].sort((a, b) => b.total - a.total);
   }
 
   /** Banka ekstresiyle eşleşti işareti (12.4) — eşleşme kuyruğu bunu boşaltır. */
   markReconciled(id: string, reconciled = true): Promise<MoneyMovement> {
     return this.update({ id, reconciled });
+  }
+
+  /**
+   * **Banka satırlarını yazar; zaten var olanı ATLAR** (12.4).
+   *
+   * Mükerreri uygulamada aramayız — "önce sorgula, yoksa yaz" iki eşzamanlı yüklemede ikisini de
+   * yazar. Kararı VERİTABANI verir (`money_movement_import_key` tekil indeksi); `ignoreDuplicates`
+   * ile çakışan satır sessizce düşer ve dönüş yalnız GERÇEKTEN yazılanları taşır. Atlanan sayısı
+   * farktan çıkar ve ekranda gösterilir — sessiz eksilme olmaz.
+   */
+  async insertImported(rows: MoneyMovementInsert[]): Promise<MoneyMovement[]> {
+    if (rows.length === 0) return [];
+    return this.bulkUpsertIgnoring(rows, 'account_id,import_fingerprint');
   }
 }

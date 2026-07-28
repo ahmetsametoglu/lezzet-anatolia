@@ -21,3 +21,7 @@ export * from './money/movement';
 export * from './accounting/export';
 export * from './accounting/line';
 export * from './accounting/profit';
+export * from './bank/column-mapping';
+export * from './bank/parse';
+export * from './bank/fingerprint';
+export * from './bank/match';

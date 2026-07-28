@@ -89,6 +89,12 @@ export const MoneyMovementSchema = z.object({
   source: MovementSourceEnum,
   /** Banka ekstresiyle eşleşti mi (12.4). Elle girilen hareket eşleşmeyi bekler. */
   reconciled: z.boolean(),
+  /**
+   * Banka satırının üretilmiş kimliği (12.4) — aynı satır iki kez yazılmasın diye. Elle girilen
+   * harekette `null`: elle iki kez 20 € girmek meşrudur, kısıt ona takılmamalı.
+   */
+  importFingerprint: z.string().nullable(),
+  bankImportId: z.string().uuid().nullable(),
   createdAt: z.string(),
 });
 export type MoneyMovement = z.infer<typeof MoneyMovementSchema>;
@@ -108,6 +114,8 @@ export const MoneyMovementInsertSchema = z.object({
   description: z.string().nullish(),
   source: MovementSourceEnum.optional(),
   reconciled: z.boolean().optional(),
+  importFingerprint: z.string().nullish(),
+  bankImportId: z.string().uuid().nullish(),
 });
 export type MoneyMovementInsert = z.infer<typeof MoneyMovementInsertSchema>;
 

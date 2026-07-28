@@ -16,7 +16,7 @@ import type { KeysetCursor, OrderSale, Page } from '@lezzet/types';
  */
 
 /** Dosyanın sütunları — sıra ve başlıklar AÇIK yazılır; alan eklenince biçim habersiz kaymasın. */
-const SUTUNLAR: ReadonlyArray<{ key: keyof AccountingExportRow & string; label: string }> = [
+const COLUMNS: ReadonlyArray<{ key: keyof AccountingExportRow & string; label: string }> = [
   { key: 'saleDate', label: 'Satış tarihi' },
   { key: 'referenceNo', label: 'Referans' },
   { key: 'invoiceNo', label: 'Fatura no' },
@@ -48,19 +48,19 @@ interface ExportPeriod {
  */
 export async function buildExport(period: ExportPeriod): Promise<AccountingExport> {
   const db = serviceDb();
-  const satislar = await new OrderSaleService(db).listPeriod(period.from, period.to);
-  const kalemler = await new OrderItemService(db).listByOrders(satislar.map((s) => s.id));
+  const sales = await new OrderSaleService(db).listPeriod(period.from, period.to);
+  const items = await new OrderItemService(db).listByOrders(sales.map((summary) => summary.id));
 
-  const siparise = new Map<string, typeof kalemler>();
-  for (const kalem of kalemler) {
-    const liste = siparise.get(kalem.orderId);
-    if (liste) liste.push(kalem);
-    else siparise.set(kalem.orderId, [kalem]);
+  const byOrder = new Map<string, typeof items>();
+  for (const item of items) {
+    const list = byOrder.get(item.orderId);
+    if (list) list.push(item);
+    else byOrder.set(item.orderId, [item]);
   }
 
   return buildAccountingExport(
     period,
-    satislar.map((sale) => ({ sale, items: siparise.get(sale.id) ?? [] })),
+    sales.map((sale) => ({ sale, items: byOrder.get(sale.id) ?? [] })),
   );
 }
 
@@ -70,18 +70,18 @@ export async function buildExport(period: ExportPeriod): Promise<AccountingExpor
  * olduğu tartışılır.
  */
 export function toExportCsv(data: AccountingExport): string {
-  const govde = toCsv(data.rows as unknown as Array<Record<string, unknown>>, SUTUNLAR);
-  const s = data.summary;
-  const ozet = [
+  const body = toCsv(data.rows as unknown as Array<Record<string, unknown>>, COLUMNS);
+  const summary = data.summary;
+  const summaryLines = [
     '',
-    `TOPLAM;${s.orderCount} satış;HT ${s.net};KDV ${s.vat};TTC ${s.gross}`,
-    ...s.byVatRate.map((l) => `KDV %${l.vatRate};;HT ${l.net};KDV ${l.vat};TTC ${l.gross}`),
+    `TOPLAM;${summary.orderCount} satış;HT ${summary.net};KDV ${summary.vat};TTC ${summary.gross}`,
+    ...summary.byVatRate.map((line) => `KDV %${line.vatRate};;HT ${line.net};KDV ${line.vat};TTC ${line.gross}`),
     // Hediye siparişler dosyada YOK ama farkı açıklayan satır burada: sessiz dışlama, dönem cirosu
     // ile export toplamı arasındaki boşluğu açıklanamaz bırakırdı.
-    ...(s.excludedGiftCount > 0 ? [`HARİÇ (patron ikramı);${s.excludedGiftCount} satış;;;TTC ${s.excludedGiftGross}`] : []),
+    ...(summary.excludedGiftCount > 0 ? [`HARİÇ (patron ikramı);${summary.excludedGiftCount} satış;;;TTC ${summary.excludedGiftGross}`] : []),
   ].join('\n');
 
-  return `${govde}${ozet}\n`;
+  return `${body}${summaryLines}\n`;
 }
 
 /**
@@ -104,9 +104,9 @@ type InvoiceMatchOutcome =
  * eşleşmemiş satış görünmez olurdu.
  */
 export async function matchInvoiceNo(orderId: string, invoiceNo: string): Promise<InvoiceMatchOutcome> {
-  const no = invoiceNo.trim();
-  if (!no) return { status: 'invalid', reason: 'empty_invoice_no' };
+  const trimmed = invoiceNo.trim();
+  if (!trimmed) return { status: 'invalid', reason: 'empty_invoice_no' };
 
-  await new OrderService(serviceDb()).update({ id: orderId, invoiceNo: no });
-  return { status: 'ok', orderId, invoiceNo: no };
+  await new OrderService(serviceDb()).update({ id: orderId, invoiceNo: trimmed });
+  return { status: 'ok', orderId, invoiceNo: trimmed };
 }

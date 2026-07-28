@@ -241,6 +241,24 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     return this.parseRows(data ?? []);
   }
 
+  /**
+   * Toplu yazım, **çakışanı sessizce atlayarak**. Dönüş yalnız GERÇEKTEN yazılan satırlardır —
+   * atlanan sayısı çağıranda `girdi − dönüş` farkından çıkar.
+   *
+   * Mükerreri uygulamada aramak yerine (önce sorgula, yoksa yaz) kararı veritabanına bırakır: iki
+   * eşzamanlı yükleme aynı satırı sorguladığında ikisi de "yok" görür ve ikisi de yazardı.
+   */
+  protected async bulkUpsertIgnoring(rows: TInsert[], onConflict: string): Promise<TDb[]> {
+    if (rows.length === 0) return [];
+    const dbRows = rows.map((r) => appToDb(this.insertSchema.parse(r)));
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .upsert(dbRows, { onConflict, ignoreDuplicates: true })
+      .select();
+    if (error) throw error;
+    return this.parseRows(data ?? []);
+  }
+
   async upsert(data: TInsert, onConflict: string): Promise<TDb> {
     const dbData = appToDb(this.insertSchema.parse(data));
     const { data: result, error } = await this.supabase.from(this.tableName).upsert(dbData, { onConflict }).select().single();

@@ -10,7 +10,7 @@ import { buildAccountingExport, buildExportRow, exportEligibility } from './expo
  *    açıklanamaz bırakırdı.
  */
 
-const SATIS: OrderSale = {
+const BASE_SALE: OrderSale = {
   id: '11111111-1111-1111-1111-111111111111',
   saleDate: '2026-03-14',
   customerId: '22222222-2222-2222-2222-222222222222',
@@ -46,91 +46,91 @@ const SATIS: OrderSale = {
   createdAt: '2026-03-12T09:00:00.000Z',
 };
 
-type Kalem = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPrice' | 'lineDiscountAmount' | 'vatRate'>;
-const kalem = (over: Partial<Kalem> = {}): Kalem => ({
+type Line = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPrice' | 'lineDiscountAmount' | 'vatRate'>;
+const line = (over: Partial<Line> = {}): Line => ({
   qty: 1, fulfilledQty: 1, unitPrice: 10, lineDiscountAmount: 0, vatRate: 5.5, ...over,
 });
 
-const satis = (over: Partial<OrderSale> = {}): OrderSale => ({ ...SATIS, ...over });
+const sale = (over: Partial<OrderSale> = {}): OrderSale => ({ ...BASE_SALE, ...over });
 
 describe('KDV ayrıştırma — fiyat TTC, muhasebe HT ister', () => {
   it('tek oranlı satış: net + KDV = brüt', () => {
-    const satir = buildExportRow(satis(), [kalem({ unitPrice: 21.1, vatRate: 5.5 })]);
+    const row = buildExportRow(sale(), [line({ unitPrice: 21.1, vatRate: 5.5 })]);
 
-    expect(satir.gross).toBe(21.1);
-    expect(satir.net).toBe(20);
-    expect(satir.vat).toBe(1.1);
-    expect(satir.vatLines).toEqual([{ vatRate: 5.5, gross: 21.1, net: 20, vat: 1.1 }]);
+    expect(row.gross).toBe(21.1);
+    expect(row.net).toBe(20);
+    expect(row.vat).toBe(1.1);
+    expect(row.vatLines).toEqual([{ vatRate: 5.5, gross: 21.1, net: 20, vat: 1.1 }]);
   });
 
   it('karışık oranlı satış oran başına ayrışır — beyan bunun üstünde durur', () => {
-    const satir = buildExportRow(satis(), [
-      kalem({ unitPrice: 21.1, vatRate: 5.5 }), // gıda
-      kalem({ unitPrice: 12, vatRate: 20 }), // gıda dışı
+    const row = buildExportRow(sale(), [
+      line({ unitPrice: 21.1, vatRate: 5.5 }), // gıda
+      line({ unitPrice: 12, vatRate: 20 }), // gıda dışı
     ]);
 
-    expect(satir.vatLines.map((l) => l.vatRate)).toEqual([5.5, 20]);
-    expect(satir.gross).toBe(33.1);
-    expect(satir.net + satir.vat).toBe(satir.gross);
+    expect(row.vatLines.map((l) => l.vatRate)).toEqual([5.5, 20]);
+    expect(row.gross).toBe(33.1);
+    expect(row.net + row.vat).toBe(row.gross);
     // Her kova kendi içinde de tutar.
-    for (const line of satir.vatLines) expect(line.net + line.vat).toBe(line.gross);
+    for (const vatLine of row.vatLines) expect(vatLine.net + vatLine.vat).toBe(vatLine.gross);
   });
 
   it('adet ve kalem indirimi tutara girer', () => {
-    const satir = buildExportRow(satis(), [kalem({ qty: 3, fulfilledQty: 3, unitPrice: 10, lineDiscountAmount: 4.5 })]);
-    expect(satir.gross).toBe(25.5); // 30 − 4.5
+    const row = buildExportRow(sale(), [line({ qty: 3, fulfilledQty: 3, unitPrice: 10, lineDiscountAmount: 4.5 })]);
+    expect(row.gross).toBe(25.5); // 30 − 4.5
   });
 
   it('eksik karşılanan kalem TESLİM EDİLEN kadar faturalanır, indirim payı da oransal düşer', () => {
     // 07.8 kısmi karşılamanın muhasebe yüzü: gitmeyen mal faturalanmaz.
-    const satir = buildExportRow(satis(), [kalem({ qty: 4, fulfilledQty: 2, unitPrice: 10, lineDiscountAmount: 4 })]);
-    expect(satir.gross).toBe(18); // 2×10 − (4×2/4)
+    const row = buildExportRow(sale(), [line({ qty: 4, fulfilledQty: 2, unitPrice: 10, lineDiscountAmount: 4 })]);
+    expect(row.gross).toBe(18); // 2×10 − (4×2/4)
   });
 });
 
 describe('kargo — malın oranını izler', () => {
   it('tek oranlı satışta kargo o orana biner', () => {
-    const satir = buildExportRow(satis({ shippingFee: 7.9 }), [kalem({ unitPrice: 21.1, vatRate: 5.5 })]);
+    const row = buildExportRow(sale({ shippingFee: 7.9 }), [line({ unitPrice: 21.1, vatRate: 5.5 })]);
 
-    expect(satir.gross).toBe(29);
-    expect(satir.vatLines).toHaveLength(1);
-    expect(satir.vatLines[0]!.vatRate).toBe(5.5);
+    expect(row.gross).toBe(29);
+    expect(row.vatLines).toHaveLength(1);
+    expect(row.vatLines[0]!.vatRate).toBe(5.5);
   });
 
   it('karışık oranlı satışta kargo kalemlere ORANSAL dağılır — kuruş kaybolmaz', () => {
-    const satir = buildExportRow(satis({ shippingFee: 10 }), [
-      kalem({ unitPrice: 30, vatRate: 5.5 }),
-      kalem({ unitPrice: 10, vatRate: 20 }),
+    const row = buildExportRow(sale({ shippingFee: 10 }), [
+      line({ unitPrice: 30, vatRate: 5.5 }),
+      line({ unitPrice: 10, vatRate: 20 }),
     ]);
 
     // Kargo 3/4–1/4 dağılır: 7.50 + 2.50.
-    expect(satir.vatLines.find((l) => l.vatRate === 5.5)!.gross).toBe(37.5);
-    expect(satir.vatLines.find((l) => l.vatRate === 20)!.gross).toBe(12.5);
-    expect(satir.gross).toBe(50);
+    expect(row.vatLines.find((l) => l.vatRate === 5.5)!.gross).toBe(37.5);
+    expect(row.vatLines.find((l) => l.vatRate === 20)!.gross).toBe(12.5);
+    expect(row.gross).toBe(50);
   });
 
   it('dağıtılacak kalem yoksa kargo KENDİ satırını açar — export’tan düşmez', () => {
     // Tamamı hediye (0 fiyatlı) sepet: oransal dağıtım burada 0 döndürür, kargo kaybolurdu.
-    const satir = buildExportRow(satis({ shippingFee: 6 }), [kalem({ unitPrice: 0, vatRate: 5.5 })]);
+    const row = buildExportRow(sale({ shippingFee: 6 }), [line({ unitPrice: 0, vatRate: 5.5 })]);
 
-    expect(satir.gross).toBe(6);
-    expect(satir.vatLines).toEqual([{ vatRate: 20, gross: 6, net: 5, vat: 1 }]);
+    expect(row.gross).toBe(6);
+    expect(row.vatLines).toEqual([{ vatRate: 20, gross: 6, net: 5, vat: 1 }]);
   });
 });
 
 describe('reverse charge', () => {
   it('AB içi B2B satışta KDV yoktur; satır Autoliquidation ibaresi taşır', () => {
-    const satir = buildExportRow(
-      satis({ channel: 'b2b', deliveryCountry: 'DE', vatTreatment: 'intra_eu_b2b_reverse_charge', vatNumberSnapshot: 'DE811907980', shippingFee: 15 }),
-      [kalem({ unitPrice: 200, vatRate: 5.5 })],
+    const row = buildExportRow(
+      sale({ channel: 'b2b', deliveryCountry: 'DE', vatTreatment: 'intra_eu_b2b_reverse_charge', vatNumberSnapshot: 'DE811907980', shippingFee: 15 }),
+      [line({ unitPrice: 200, vatRate: 5.5 })],
     );
 
-    expect(satir.vat).toBe(0);
-    expect(satir.net).toBe(215);
-    expect(satir.gross).toBe(215);
-    expect(satir.invoiceNote).toBe('Autoliquidation');
-    expect(satir.vatNumber).toBe('DE811907980');
-    expect(satir.vatLines).toEqual([{ vatRate: 0, gross: 215, net: 215, vat: 0 }]);
+    expect(row.vat).toBe(0);
+    expect(row.net).toBe(215);
+    expect(row.gross).toBe(215);
+    expect(row.invoiceNote).toBe('Autoliquidation');
+    expect(row.vatNumber).toBe('DE811907980');
+    expect(row.vatLines).toEqual([{ vatRate: 0, gross: 215, net: 215, vat: 0 }]);
   });
 });
 
@@ -142,12 +142,12 @@ describe('hediye sipariş export dışıdır ama görünür', () => {
 
   it('hediye satır dosyaya girmez, özet onu SAYI ve TUTAR olarak gösterir', () => {
     const { rows, summary } = buildAccountingExport({ from: '2026-03-01', to: '2026-03-31' }, [
-      { sale: satis({ id: SATIS.id }), items: [kalem({ unitPrice: 21.1 })] },
-      { sale: satis({ id: '33333333-3333-3333-3333-333333333333', isGiftOrder: true }), items: [kalem({ unitPrice: 42.2 })] },
+      { sale: sale({ id: BASE_SALE.id }), items: [line({ unitPrice: 21.1 })] },
+      { sale: sale({ id: '33333333-3333-3333-3333-333333333333', isGiftOrder: true }), items: [line({ unitPrice: 42.2 })] },
     ]);
 
     expect(rows).toHaveLength(1);
-    expect(rows[0]!.orderId).toBe(SATIS.id);
+    expect(rows[0]!.orderId).toBe(BASE_SALE.id);
     expect(summary.orderCount).toBe(1);
     expect(summary.gross).toBe(21.1);
     // Dışlanan tutar açıkça duruyor: dönem cirosu ile export toplamı arasındaki fark açıklanabilir.
@@ -159,9 +159,9 @@ describe('hediye sipariş export dışıdır ama görünür', () => {
 describe('dönem özeti satırlardan TÜRETİLİR', () => {
   it('toplamlar satırların toplamıdır ve oran kovaları da tutar', () => {
     const { rows, summary } = buildAccountingExport({ from: '2026-03-01', to: '2026-03-31' }, [
-      { sale: satis({ shippingFee: 7.9 }), items: [kalem({ unitPrice: 21.1, vatRate: 5.5 })] },
-      { sale: satis({ id: '44444444-4444-4444-4444-444444444444' }), items: [kalem({ unitPrice: 12, vatRate: 20 })] },
-      { sale: satis({ id: '55555555-5555-5555-5555-555555555555', discountAmount: 3 }), items: [kalem({ unitPrice: 30, vatRate: 5.5, lineDiscountAmount: 3 })] },
+      { sale: sale({ shippingFee: 7.9 }), items: [line({ unitPrice: 21.1, vatRate: 5.5 })] },
+      { sale: sale({ id: '44444444-4444-4444-4444-444444444444' }), items: [line({ unitPrice: 12, vatRate: 20 })] },
+      { sale: sale({ id: '55555555-5555-5555-5555-555555555555', discountAmount: 3 }), items: [line({ unitPrice: 30, vatRate: 5.5, lineDiscountAmount: 3 })] },
     ]);
 
     expect(summary.orderCount).toBe(3);
@@ -170,9 +170,9 @@ describe('dönem özeti satırlardan TÜRETİLİR', () => {
     expect(summary.shippingFee).toBe(7.9);
     expect(summary.discountAmount).toBe(3);
 
-    const kovaToplam = summary.byVatRate.reduce((t, l) => t + l.gross, 0);
-    expect(kovaToplam).toBe(summary.gross);
-    for (const line of summary.byVatRate) expect(line.net + line.vat).toBe(line.gross);
+    const bucketTotal = summary.byVatRate.reduce((t, l) => t + l.gross, 0);
+    expect(bucketTotal).toBe(summary.gross);
+    for (const vatLine of summary.byVatRate) expect(vatLine.net + vatLine.vat).toBe(vatLine.gross);
   });
 
   it('satış yoksa özet sıfırdır, dosya yine üretilir', () => {

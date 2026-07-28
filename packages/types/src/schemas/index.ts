@@ -22,4 +22,5 @@ export * from './stock.schema';
 export * from './stock-adjustment.schema';
 export * from './supply.schema';
 export * from './money.schema';
+export * from './bank-import.schema';
 export * from './job-run.schema';

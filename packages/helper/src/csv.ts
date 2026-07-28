@@ -19,10 +19,10 @@ export interface CsvOptions {
  *
  * `null`/`undefined` BOŞ hücredir, "null" metni değil: muhasebe yazılımı onu değer sanırdı.
  */
-function hucre(value: unknown, separator: string): string {
+function escapeCell(value: unknown, separator: string): string {
   if (value === null || value === undefined) return '';
-  const metin = typeof value === 'boolean' ? (value ? 'true' : 'false') : String(value);
-  return /["\r\n]/.test(metin) || metin.includes(separator) ? `"${metin.replaceAll('"', '""')}"` : metin;
+  const text = typeof value === 'boolean' ? (value ? 'true' : 'false') : String(value);
+  return /["\r\n]/.test(text) || text.includes(separator) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
 /**
@@ -35,14 +35,14 @@ export function toCsv<T extends Record<string, unknown>>(
   options: CsvOptions = {},
 ): string {
   const separator = options.separator ?? ';';
-  const satirlar: string[] = [];
+  const lines: string[] = [];
 
   if (options.header !== false) {
-    satirlar.push(columns.map((c) => hucre(c.label ?? c.key, separator)).join(separator));
+    lines.push(columns.map((c) => escapeCell(c.label ?? c.key, separator)).join(separator));
   }
   for (const row of rows) {
-    satirlar.push(columns.map((c) => hucre(row[c.key], separator)).join(separator));
+    lines.push(columns.map((c) => escapeCell(row[c.key], separator)).join(separator));
   }
   // Sondaki satır sonu kasıtlı: satır-tabanlı okuyucular son satırı yarım görmesin.
-  return `${satirlar.join('\n')}\n`;
+  return `${lines.join('\n')}\n`;
 }

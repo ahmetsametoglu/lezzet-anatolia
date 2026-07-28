@@ -98,7 +98,7 @@ export interface CompanyProfit {
 }
 
 /** Yüzde marj — ciro 0 ise `null`; sıfıra bölmek yerine "hesaplanamaz" demek dürüsttür. */
-function marj(contributionCents: number, revenueCents: number): number | null {
+function marginOf(contributionCents: number, revenueCents: number): number | null {
   if (revenueCents === 0) return null;
   return Math.round((contributionCents / revenueCents) * 1000) / 10;
 }
@@ -120,7 +120,7 @@ function revenueCents(sale: OrderSale, items: readonly AccountingLine[]): number
  * rakamı sonradan değişen oran/birim maliyetten etkilenmesin (fiyat sabitlemeyle aynı mantık).
  */
 export function orderContribution(sale: OrderSale, items: readonly AccountingLine[]): OrderContribution {
-  const ciro = revenueCents(sale, items);
+  const revenue = revenueCents(sale, items);
   // `cogs_amount` kapanışta yazılır; null ise sipariş teslim edilmiş ama kapanmamıştır.
   const costsFixed = sale.cogsAmount !== null;
 
@@ -130,18 +130,18 @@ export function orderContribution(sale: OrderSale, items: readonly AccountingLin
     paymentFee: sale.paymentFee ?? 0,
     packaging: sale.packagingCost ?? 0,
   };
-  const giderCents = toCents(costs.cogs) + toCents(costs.delivery) + toCents(costs.paymentFee) + toCents(costs.packaging);
-  const katkiCents = ciro - giderCents;
+  const costCents = toCents(costs.cogs) + toCents(costs.delivery) + toCents(costs.paymentFee) + toCents(costs.packaging);
+  const contributionCents = revenue - costCents;
 
   return {
     orderId: sale.id,
     saleDate: sale.saleDate,
     channel: sale.channel,
     isGiftOrder: sale.isGiftOrder,
-    revenue: fromCents(ciro),
+    revenue: fromCents(revenue),
     costs,
-    contribution: costsFixed ? fromCents(katkiCents) : null,
-    marginPct: costsFixed ? marj(katkiCents, ciro) : null,
+    contribution: costsFixed ? fromCents(contributionCents) : null,
+    marginPct: costsFixed ? marginOf(contributionCents, revenue) : null,
     costsFixed,
   };
 }
@@ -173,39 +173,39 @@ export interface SoldLine {
  * marjı şişirir.
  */
 export function variantProfit(lines: readonly SoldLine[], losses: readonly VariantLoss[] = []): VariantProfit[] {
-  const kova = new Map<string, { qty: number; revenue: number; cogs: number }>();
+  const byVariant = new Map<string, { qty: number; revenue: number; cogs: number }>();
 
   for (const line of lines) {
     if (line.costCents === null) continue;
-    const mevcut = kova.get(line.variantId) ?? { qty: 0, revenue: 0, cogs: 0 };
-    mevcut.qty += line.item.fulfilledQty;
-    mevcut.revenue += lineNetCents(line.item, line.zeroRated ?? false);
-    mevcut.cogs += line.costCents;
-    kova.set(line.variantId, mevcut);
+    const current = byVariant.get(line.variantId) ?? { qty: 0, revenue: 0, cogs: 0 };
+    current.qty += line.item.fulfilledQty;
+    current.revenue += lineNetCents(line.item, line.zeroRated ?? false);
+    current.cogs += line.costCents;
+    byVariant.set(line.variantId, current);
   }
 
   // Fire, satışı olmayan üründe de raporlanır: hiç satılmadan çöpe giden mal en pahalı olandır.
   for (const loss of losses) {
-    if (!kova.has(loss.variantId)) kova.set(loss.variantId, { qty: 0, revenue: 0, cogs: 0 });
+    if (!byVariant.has(loss.variantId)) byVariant.set(loss.variantId, { qty: 0, revenue: 0, cogs: 0 });
   }
 
-  const fire = new Map(losses.map((l) => [l.variantId, l]));
+  const lossByVariant = new Map(losses.map((l) => [l.variantId, l]));
 
-  return [...kova.entries()]
-    .map(([variantId, t]) => {
-      const kayip = fire.get(variantId);
-      const brut = t.revenue - t.cogs;
-      const net = brut - (kayip?.costCents ?? 0);
+  return [...byVariant.entries()]
+    .map(([variantId, totals]) => {
+      const loss = lossByVariant.get(variantId);
+      const gross = totals.revenue - totals.cogs;
+      const net = gross - (loss?.costCents ?? 0);
       return {
         variantId,
-        qty: t.qty,
-        revenue: fromCents(t.revenue),
-        cogs: fromCents(t.cogs),
-        grossProfit: fromCents(brut),
-        lossQty: kayip?.qty ?? 0,
-        lossCost: fromCents(kayip?.costCents ?? 0),
+        qty: totals.qty,
+        revenue: fromCents(totals.revenue),
+        cogs: fromCents(totals.cogs),
+        grossProfit: fromCents(gross),
+        lossQty: loss?.qty ?? 0,
+        lossCost: fromCents(loss?.costCents ?? 0),
         netProfit: fromCents(net),
-        marginPct: marj(net, t.revenue),
+        marginPct: marginOf(net, totals.revenue),
       };
     })
     .sort((a, b) => b.netProfit - a.netProfit);
@@ -224,48 +224,48 @@ export function companyProfit(
   contributions: readonly OrderContribution[],
   input: { lossCost: number; overhead: number },
 ): CompanyProfit {
-  const fiyatli = contributions.filter((c) => c.costsFixed);
-  const fiyatsiz = contributions.filter((c) => !c.costsFixed);
+  const priced = contributions.filter((c) => c.costsFixed);
+  const unpriced = contributions.filter((c) => !c.costsFixed);
 
-  const ciroCents = fiyatli.reduce((s, c) => s + toCents(c.revenue), 0);
-  const giderCents = fiyatli.reduce(
+  const totalRevenueCents = priced.reduce((s, c) => s + toCents(c.revenue), 0);
+  const costCents = priced.reduce(
     (s, c) => s + toCents(c.costs.cogs) + toCents(c.costs.delivery) + toCents(c.costs.paymentFee) + toCents(c.costs.packaging),
     0,
   );
-  const katkiCents = ciroCents - giderCents;
-  const fireCents = toCents(input.lossCost);
-  const genelCents = toCents(input.overhead);
+  const contributionCents = totalRevenueCents - costCents;
+  const lossCents = toCents(input.lossCost);
+  const overheadCents = toCents(input.overhead);
 
-  const kanallar = new Map<Channel, { orderCount: number; revenue: number; costs: number }>();
-  for (const c of fiyatli) {
-    const mevcut = kanallar.get(c.channel) ?? { orderCount: 0, revenue: 0, costs: 0 };
-    mevcut.orderCount += 1;
-    mevcut.revenue += toCents(c.revenue);
-    mevcut.costs += toCents(c.costs.cogs) + toCents(c.costs.delivery) + toCents(c.costs.paymentFee) + toCents(c.costs.packaging);
-    kanallar.set(c.channel, mevcut);
+  const channelTotals = new Map<Channel, { orderCount: number; revenue: number; costs: number }>();
+  for (const c of priced) {
+    const current = channelTotals.get(c.channel) ?? { orderCount: 0, revenue: 0, costs: 0 };
+    current.orderCount += 1;
+    current.revenue += toCents(c.revenue);
+    current.costs += toCents(c.costs.cogs) + toCents(c.costs.delivery) + toCents(c.costs.paymentFee) + toCents(c.costs.packaging);
+    channelTotals.set(c.channel, current);
   }
 
   return {
     from: period.from,
     to: period.to,
-    revenue: fromCents(ciroCents),
-    directCosts: fromCents(giderCents),
-    contribution: fromCents(katkiCents),
-    lossCost: fromCents(fireCents),
-    overhead: fromCents(genelCents),
-    netProfit: fromCents(katkiCents - fireCents - genelCents),
-    orderCount: fiyatli.length,
-    unpricedCount: fiyatsiz.length,
-    unpricedRevenue: fromCents(fiyatsiz.reduce((s, c) => s + toCents(c.revenue), 0)),
-    byChannel: [...kanallar.entries()]
+    revenue: fromCents(totalRevenueCents),
+    directCosts: fromCents(costCents),
+    contribution: fromCents(contributionCents),
+    lossCost: fromCents(lossCents),
+    overhead: fromCents(overheadCents),
+    netProfit: fromCents(contributionCents - lossCents - overheadCents),
+    orderCount: priced.length,
+    unpricedCount: unpriced.length,
+    unpricedRevenue: fromCents(unpriced.reduce((s, c) => s + toCents(c.revenue), 0)),
+    byChannel: [...channelTotals.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([channel, t]) => ({
+      .map(([channel, totals]) => ({
         channel,
-        orderCount: t.orderCount,
-        revenue: fromCents(t.revenue),
-        directCosts: fromCents(t.costs),
-        contribution: fromCents(t.revenue - t.costs),
-        marginPct: marj(t.revenue - t.costs, t.revenue),
+        orderCount: totals.orderCount,
+        revenue: fromCents(totals.revenue),
+        directCosts: fromCents(totals.costs),
+        contribution: fromCents(totals.revenue - totals.costs),
+        marginPct: marginOf(totals.revenue - totals.costs, totals.revenue),
       })),
   };
 }

@@ -59,12 +59,12 @@ export class OrderItemService extends BaseDbService<OrderItem, OrderItemInsert, 
    * sunucu sınırını aşar. Öbek sayısı kadar sorgu, sipariş sayısı kadar değil.
    */
   async listByOrders(orderIds: readonly string[]): Promise<OrderItem[]> {
-    const OBEK = 200;
-    const hepsi: OrderItem[] = [];
-    for (let i = 0; i < orderIds.length; i += OBEK) {
-      hepsi.push(...(await this.getAll({ orderId: orderIds.slice(i, i + OBEK) })));
+    const BATCH_SIZE = 200;
+    const all: OrderItem[] = [];
+    for (let i = 0; i < orderIds.length; i += BATCH_SIZE) {
+      all.push(...(await this.getAll({ orderId: orderIds.slice(i, i + BATCH_SIZE) })));
     }
-    return hepsi;
+    return all;
   }
 
   addLines(rows: OrderItemInsert[]): Promise<OrderItem[]> {
@@ -240,30 +240,30 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    * yer almaz — çağıran onu da "bilinmiyor" sayar.
    */
   async itemCosts(orderItemIds: readonly string[]): Promise<Map<string, number | null>> {
-    const OBEK = 200;
-    const maliyet = new Map<string, number | null>();
+    const BATCH_SIZE = 200;
+    const costs = new Map<string, number | null>();
 
-    for (let i = 0; i < orderItemIds.length; i += OBEK) {
+    for (let i = 0; i < orderItemIds.length; i += BATCH_SIZE) {
       const { data, error } = await this.supabase
         .from('order_item_batch')
         .select('order_item_id,qty,stock:stock(purchase_price)')
-        .in('order_item_id', orderItemIds.slice(i, i + OBEK));
+        .in('order_item_id', orderItemIds.slice(i, i + BATCH_SIZE));
       if (error) throw error;
 
       type Row = { order_item_id: string; qty: number; stock: { purchase_price: string | number | null } | null };
       for (const row of (data ?? []) as unknown as Row[]) {
-        const mevcut = maliyet.get(row.order_item_id);
-        const alis = row.stock?.purchase_price;
+        const current = costs.get(row.order_item_id);
+        const purchasePrice = row.stock?.purchase_price;
         // Tek bir partinin fiyatı bile eksikse kalemin maliyeti bilinmiyordur — kalanı toplamak
         // eksik bir sayıyı tam gibi gösterirdi.
-        if (alis === null || alis === undefined || mevcut === null) {
-          maliyet.set(row.order_item_id, null);
+        if (purchasePrice === null || purchasePrice === undefined || current === null) {
+          costs.set(row.order_item_id, null);
           continue;
         }
-        maliyet.set(row.order_item_id, (mevcut ?? 0) + Math.round(Number(alis) * 100) * row.qty);
+        costs.set(row.order_item_id, (current ?? 0) + Math.round(Number(purchasePrice) * 100) * row.qty);
       }
     }
-    return maliyet;
+    return costs;
   }
 
   /** Sipariş + kalemleri TEK sorguda — kalem başına ayrı sorgu (N+1) yerine gömülü select. */

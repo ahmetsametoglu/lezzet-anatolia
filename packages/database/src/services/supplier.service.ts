@@ -42,21 +42,21 @@ export class SupplierService extends BaseDbService<Supplier, SupplierInsert, Sup
    * liste ekranı gerekirse toplu okuma ayrıca eklenir.
    */
   async debt(supplierId: string): Promise<{ intakeTotal: number; paid: number; balance: number }> {
-    const [girisler, odemeler] = await Promise.all([
+    const [intakes, payments] = await Promise.all([
       this.supabase.from('stock_intake').select('total_amount').eq('supplier_id', supplierId),
       this.supabase.from('money_movement').select('amount').eq('supplier_id', supplierId).eq('direction', 'out'),
     ]);
-    if (girisler.error) throw girisler.error;
-    if (odemeler.error) throw odemeler.error;
+    if (intakes.error) throw intakes.error;
+    if (payments.error) throw payments.error;
 
-    const topla = (rows: unknown[], field: string) =>
+    const sumOf = (rows: unknown[], field: string) =>
       rows.reduce<number>((sum, row) => sum + Number((row as Record<string, string | number>)[field]), 0);
 
     // Para 2 ondalıktır; kayan nokta artığı borç rakamında görünmesin.
-    const yuvarla = (v: number) => Math.round(v * 100) / 100;
-    const intakeTotal = yuvarla(topla(girisler.data ?? [], 'total_amount'));
-    const paid = yuvarla(topla(odemeler.data ?? [], 'amount'));
-    return { intakeTotal, paid, balance: yuvarla(intakeTotal - paid) };
+    const round = (v: number) => Math.round(v * 100) / 100;
+    const intakeTotal = round(sumOf(intakes.data ?? [], 'total_amount'));
+    const paid = round(sumOf(payments.data ?? [], 'amount'));
+    return { intakeTotal, paid, balance: round(intakeTotal - paid) };
   }
 }
 

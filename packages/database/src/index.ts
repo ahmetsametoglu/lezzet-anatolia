@@ -34,4 +34,5 @@ export { StockIntakeService, type ReceiveIntakeInput } from './services/stock-in
 export { ReorderService, type ReorderGroup, type ReorderLine } from './services/reorder.service';
 export { AccountService, MoneyMovementService, type CampaignSpend, type PeriodTotal } from './services/money.service';
 export { OrderSaleService } from './services/accounting.service';
+export { BankImportProfileService, BankImportService } from './services/bank-import.service';
 export { JobRunService } from './services/job-run.service';

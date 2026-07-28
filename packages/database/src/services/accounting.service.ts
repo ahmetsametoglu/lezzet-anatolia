@@ -32,28 +32,28 @@ export class OrderSaleService extends BaseDbService<OrderSale, never, never> {
    * ekran için değil, TAM okuma için — bu yüzden imleç dışarı sızmaz.
    */
   async listPeriod(from: string, to: string): Promise<OrderSale[]> {
-    const OBEK = 500;
-    const hepsi: OrderSale[] = [];
+    const BATCH_SIZE = 500;
+    const all: OrderSale[] = [];
     let cursor: KeysetCursor | undefined;
 
     do {
-      const sayfa = await this.getPage(
+      const page = await this.getPage(
         {},
         {
           orderBy: 'saleDate',
           keysetAfter: cursor,
-          limit: OBEK,
+          limit: BATCH_SIZE,
           rangeFilters: [
             { field: 'saleDate', operator: 'gte', value: from },
             { field: 'saleDate', operator: 'lte', value: to },
           ],
         },
       );
-      hepsi.push(...sayfa.rows);
-      cursor = sayfa.nextCursor ?? undefined;
+      all.push(...page.rows);
+      cursor = page.nextCursor ?? undefined;
     } while (cursor);
 
-    return hepsi;
+    return all;
   }
 
   /**

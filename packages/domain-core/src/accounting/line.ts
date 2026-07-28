@@ -17,11 +17,11 @@ export type AccountingLine = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPrice
  * gitmeyen mal ne faturalanır ne ciro sayılır.
  */
 export function lineGrossCents(item: AccountingLine): number {
-  const brut = toCents(item.unitPrice) * item.fulfilledQty;
+  const grossBeforeDiscount = toCents(item.unitPrice) * item.fulfilledQty;
   // İndirim payı tüm miktar için yazılmıştır; eksik karşılanan kalemde (07.8) oransal düşer —
   // yoksa yarısı gitmiş bir kalem indirimin tamamını taşır ve satır olduğundan ucuz görünürdü.
-  const indirim = item.qty > 0 ? Math.round((toCents(item.lineDiscountAmount) * item.fulfilledQty) / item.qty) : 0;
-  return Math.max(0, brut - indirim);
+  const discountShare = item.qty > 0 ? Math.round((toCents(item.lineDiscountAmount) * item.fulfilledQty) / item.qty) : 0;
+  return Math.max(0, grossBeforeDiscount - discountShare);
 }
 
 /**

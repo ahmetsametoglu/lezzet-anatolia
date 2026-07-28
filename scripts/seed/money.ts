@@ -1,4 +1,5 @@
-import { AccountService, MoneyMovementService, SettingsService } from '@lezzet/database';
+import { AccountService, BankImportProfileService, BankImportService, MoneyMovementService, SettingsService } from '@lezzet/database';
+import { fingerprintRows, heuristicColumnMapper, parseBankRows } from '@lezzet/domain-core';
 import { euro, gun, tabloDolu, type Db } from './shared';
 
 // ── Hesaplar + para hareketleri (12) ─────────────────────────────────────────────────────────────
@@ -119,9 +120,71 @@ export async function seedMoney(db: Db): Promise<void> {
     description: 'Kapı önü satış tahsilatının düştüğü hesap (12.2).',
   });
 
+  await seedBankImport(db, hesapId.get('cm')!);
+
   const bakiyeler = await accounts.balances();
   const ozet = HESAPLAR.map((h) => `${h.name}: ${bakiyeler.get(hesapId.get(h.key)!)?.balance ?? 0} €`).join(' · ');
   console.log(`  ✓ bakiye (türetilmiş) → ${ozet}`);
-  console.log(`✓ para: ${HESAPLAR.length} hesap · ${GIDERLER.length} gider · 2 transfer · tedarikçi ödemesi`);
+  console.log(`✓ para: ${HESAPLAR.length} hesap · ${GIDERLER.length} gider · 2 transfer · tedarikçi ödemesi · banka import`);
 }
 
+/**
+ * Banka ekstresi import'u (12.4) — şablon + bir yükleme. Amaç eşleştirme kuyruğunun DOLU olması:
+ * satırlar `misc`/`reconciled=false` girer, ekran onları önerileriyle gösterir.
+ *
+ * Satırlar gerçek ekstre gibi ham hâlde verilir ve **gerçek okuyucudan geçirilir** — seed kendi
+ * kestirmesini yazsaydı sütun tanıma ve mükerrer koruması yerelde hiç denenmemiş olurdu.
+ */
+async function seedBankImport(db: Db, accountId: string): Promise<void> {
+  const frDate = (daysAgo: number) => gun(-daysAgo).split('-').reverse().join('/');
+  const statement = [
+    { Date: frDate(9), 'Libellé': 'VIR SEPA DUPONT MARIE', Montant: '64,80', Solde: '12 470,30' },
+    { Date: frDate(7), 'Libellé': 'PRLV ORANGE FACTURE', Montant: '-39,99', Solde: '12 430,31' },
+    { Date: frDate(5), 'Libellé': 'VIR SEPA ANADOLU MARKT', Montant: '312,00', Solde: '12 742,31' },
+    { Date: frDate(3), 'Libellé': 'RETRAIT DAB REPUBLIQUE', Montant: '-50,00', Solde: '12 692,31' },
+    { Date: frDate(3), 'Libellé': 'RETRAIT DAB REPUBLIQUE', Montant: '-50,00', Solde: '12 642,31' },
+    { Date: frDate(1), 'Libellé': 'FRAIS TENUE DE COMPTE', Montant: '-4,50', Solde: '12 637,81' },
+  ];
+
+  const suggestion = heuristicColumnMapper(
+    [...new Set(statement.flatMap((row) => Object.keys(row)))].map((header) => ({
+      header,
+      values: statement.map((row) => (row as Record<string, string>)[header] ?? ''),
+    })),
+  );
+
+  const profile = await new BankImportProfileService(db).insert({
+    accountId,
+    name: 'Crédit Mutuel — CSV',
+    amountMode: suggestion.amountMode,
+    mapping: suggestion.mapping,
+    decimalSeparator: suggestion.decimalSeparator,
+    dateFormat: suggestion.dateFormat,
+  });
+
+  const { rows } = parseBankRows(statement, profile);
+  const batch = await new BankImportService(db).insert({
+    accountId,
+    profileId: profile.id,
+    fileName: 'releve_cm_2026.csv',
+    rowCount: statement.length,
+  });
+
+  const inserted = await new MoneyMovementService(db).insertImported(
+    fingerprintRows(accountId, rows).map((row) => ({
+      accountId,
+      direction: row.direction,
+      amount: row.amount,
+      // Tip sınıflandırma bekliyor: banka "para girdi" der, sebebini söylemez.
+      type: 'misc' as const,
+      description: row.label,
+      valueDate: row.valueDate,
+      source: 'bank_import' as const,
+      importFingerprint: row.fingerprint,
+      bankImportId: batch.id,
+    })),
+  );
+  await new BankImportService(db).update({ id: batch.id, insertedCount: inserted.length, duplicateCount: 0 });
+
+  console.log(`  ✓ banka import · ${inserted.length} satır eşleşme kuyruğunda (şablon: ${profile.name})`);
+}

@@ -55,6 +55,12 @@ create table public.money_movement (
   source movement_source not null default 'manual',
   -- Banka ekstresiyle eşleşti mi (12.4). Elle girilen hareket eşleşmeyi bekler.
   reconciled boolean not null default false,
+  -- Banka satırının KİMLİĞİ (12.4). Bankalar satır kimliği vermez; hesap+tarih+tutar+yön+açıklama
+  -- ve tekrar sırasından ÜRETİLİR (`domain-core/bank/fingerprint`). Aşağıdaki tekil indeks, aynı
+  -- ekstre iki kez yüklendiğinde ya da dönemler çakıştığında paranın iki kez yazılmasını engeller —
+  -- mükerrer yazım her bakiyeyi ve her kâr raporunu yalancı yapardı.
+  import_fingerprint text,
+  bank_import_id uuid,
   created_at timestamptz not null default now(),
 
   -- Transferin karşı ucu ZORUNLU ve kendisi olamaz; transfer olmayan harekette karşı hesap ANLAMSIZ.
@@ -80,6 +86,12 @@ create index money_movement_period_idx on public.money_movement (value_date desc
 -- Eşleşme kuyruğu (12.4): eşleşmemiş satırlar azınlıktır → kısmi indeks.
 create index money_movement_unreconciled_idx on public.money_movement (account_id, value_date)
   where not reconciled;
+-- Mükerrer koruması (12.4): aynı hesapta aynı banka satırı İKİ KEZ yazılamaz.
+-- KISMİ İNDEKS DEĞİL, bilerek: `on conflict` kısmi indeksi hedefleyemez ve import yazımı ona
+-- dayanıyor. Gereği de yok — NULL'lar tekil karşılaştırmada birbirine EŞİT SAYILMAZ, dolayısıyla
+-- parmak izi olmayan (elle girilen) hareketler bu indeksin kısıtına hiç takılmaz; elle iki kez
+-- 20 € girmek meşrudur ve meşru kalır.
+create unique index money_movement_import_key on public.money_movement (account_id, import_fingerprint);
 
 -- ── Defter satırı ────────────────────────────────────────────────────────────
 -- Bir hareket DOKUNDUĞU HER HESAPTA bir satır üretir: normal hareket bir, transfer iki. İşaret

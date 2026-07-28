@@ -108,24 +108,24 @@ export function exportEligibility(sale: Pick<OrderSale, 'isGiftOrder'>): ExportE
  */
 export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]): AccountingExportRow {
   const zeroRated = sale.vatTreatment === 'intra_eu_b2b_reverse_charge';
-  const kalemler = items.map((item) => ({ vatRate: zeroRated ? 0 : item.vatRate, gross: lineGrossCents(item) }));
+  const buckets = items.map((item) => ({ vatRate: zeroRated ? 0 : item.vatRate, gross: lineGrossCents(item) }));
 
-  const kargo = toCents(sale.shippingFee);
-  const kalemBrut = kalemler.reduce((sum, k) => sum + k.gross, 0);
-  if (kargo > 0 && kalemBrut > 0) {
-    distributeProportional(kalemler.map((k) => k.gross), kargo).forEach((pay, i) => {
-      kalemler[i]!.gross += pay;
+  const shippingCents = toCents(sale.shippingFee);
+  const bucketTotal = buckets.reduce((sum, b) => sum + b.gross, 0);
+  if (shippingCents > 0 && bucketTotal > 0) {
+    distributeProportional(buckets.map((b) => b.gross), shippingCents).forEach((share, i) => {
+      buckets[i]!.gross += share;
     });
-  } else if (kargo > 0) {
+  } else if (shippingCents > 0) {
     // Dağıtacak ağırlık yok: kalemsiz satış ya da tamamı 0 fiyatlı (hediye) sepet. Kargo kendi
     // satırını açar — oransal dağıtım burada sessizce 0 döndürürdü ve kargo export'tan DÜŞERDİ.
-    kalemler.push({ vatRate: zeroRated ? 0 : SHIPPING_VAT_RATE, gross: kargo });
+    buckets.push({ vatRate: zeroRated ? 0 : SHIPPING_VAT_RATE, gross: shippingCents });
   }
 
-  const kova = new Map<number, number>();
-  for (const k of kalemler) kova.set(k.vatRate, (kova.get(k.vatRate) ?? 0) + k.gross);
+  const byRate = new Map<number, number>();
+  for (const b of buckets) byRate.set(b.vatRate, (byRate.get(b.vatRate) ?? 0) + b.gross);
 
-  const vatLines: ExportVatLine[] = [...kova.entries()]
+  const vatLines: ExportVatLine[] = [...byRate.entries()]
     .filter(([, gross]) => gross > 0)
     .sort(([a], [b]) => a - b)
     .map(([vatRate, gross]) => {
@@ -145,9 +145,9 @@ export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]
     vatTreatment: sale.vatTreatment,
     vatNumber: sale.vatNumberSnapshot,
     invoiceNote: zeroRated ? 'Autoliquidation' : null,
-    gross: topla(vatLines, 'gross'),
-    net: topla(vatLines, 'net'),
-    vat: topla(vatLines, 'vat'),
+    gross: sumOf(vatLines, 'gross'),
+    net: sumOf(vatLines, 'net'),
+    vat: sumOf(vatLines, 'vat'),
     shippingFee: sale.shippingFee,
     discountAmount: sale.discountAmount,
     vatLines,
@@ -155,7 +155,7 @@ export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]
 }
 
 /** Euro toplamı — cent üstünden toplanır ki kuruş artığı birikmesin. */
-function topla<T>(rows: readonly T[], field: keyof T): number {
+function sumOf<T>(rows: readonly T[], field: keyof T): number {
   return fromCents(rows.reduce((sum, row) => sum + toCents(Number(row[field])), 0));
 }
 
@@ -175,23 +175,23 @@ export function buildAccountingExport(
   let excludedGiftGrossCents = 0;
 
   for (const { sale, items } of sales) {
-    const satir = buildExportRow(sale, items);
+    const exportRow = buildExportRow(sale, items);
     if (exportEligibility(sale).included) {
-      rows.push(satir);
+      rows.push(exportRow);
       continue;
     }
     excludedGiftCount += 1;
-    excludedGiftGrossCents += toCents(satir.gross);
+    excludedGiftGrossCents += toCents(exportRow.gross);
   }
 
-  const kova = new Map<number, { gross: number; net: number; vat: number }>();
-  for (const satir of rows) {
-    for (const line of satir.vatLines) {
-      const mevcut = kova.get(line.vatRate) ?? { gross: 0, net: 0, vat: 0 };
-      mevcut.gross += toCents(line.gross);
-      mevcut.net += toCents(line.net);
-      mevcut.vat += toCents(line.vat);
-      kova.set(line.vatRate, mevcut);
+  const byRate = new Map<number, { gross: number; net: number; vat: number }>();
+  for (const exportRow of rows) {
+    for (const line of exportRow.vatLines) {
+      const current = byRate.get(line.vatRate) ?? { gross: 0, net: 0, vat: 0 };
+      current.gross += toCents(line.gross);
+      current.net += toCents(line.net);
+      current.vat += toCents(line.vat);
+      byRate.set(line.vatRate, current);
     }
   }
 
@@ -200,12 +200,12 @@ export function buildAccountingExport(
       from: period.from,
       to: period.to,
       orderCount: rows.length,
-      gross: topla(rows, 'gross'),
-      net: topla(rows, 'net'),
-      vat: topla(rows, 'vat'),
-      shippingFee: topla(rows, 'shippingFee'),
-      discountAmount: topla(rows, 'discountAmount'),
-      byVatRate: [...kova.entries()]
+      gross: sumOf(rows, 'gross'),
+      net: sumOf(rows, 'net'),
+      vat: sumOf(rows, 'vat'),
+      shippingFee: sumOf(rows, 'shippingFee'),
+      discountAmount: sumOf(rows, 'discountAmount'),
+      byVatRate: [...byRate.entries()]
         .sort(([a], [b]) => a - b)
         .map(([vatRate, t]) => ({ vatRate, gross: fromCents(t.gross), net: fromCents(t.net), vat: fromCents(t.vat) })),
       excludedGiftCount,
