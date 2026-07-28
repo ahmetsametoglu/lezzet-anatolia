@@ -21,8 +21,8 @@
 <section style="padding:48px;display:flex;flex-direction:column;gap:28px">
   <div style="display:flex;flex-direction:column;gap:8px;max-width:820px">
     <span style="font:600 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270">Sipariş bildirimleri · E-posta şablonları</span>
-    <h1 style="margin:0;font:600 32px 'Lora';color:#343b41">Onay · Yolda · Teslim edildi</h1>
-    <p style="margin:0;font:400 15px/1.7 'Karla';color:#6d7261;text-wrap:pretty">Üç şablon da uygulamanın tasarım desenini birebir izliyor: krem gövde (#faf6ec), beyaz kart + #ece5d2 çerçeve, Sipariş Detay'daki dört adımlı zaman çizgisi, yeşil hap butonlar ve eksik karşılanma için amber uyarı bloğu. Dosyalar gönderime hazır tek parça HTML — e-posta aracınıza olduğu gibi yapıştırılabilir.</p>
+    <h1 style="margin:0;font:600 32px 'Lora';color:#343b41">Onay · Yolda · Teslim · İptal · İade · Eksik</h1>
+    <p style="margin:0;font:400 15px/1.7 'Karla';color:#6d7261;text-wrap:pretty">Altı şablon da uygulamanın tasarım desenini birebir izliyor: krem gövde (#faf6ec), beyaz kart + #ece5d2 çerçeve, yeşil hap butonlar, eksik karşılanma için amber uyarı bloğu. İlk üçü — akış bildirimleri — Sipariş Detay'daki dört adımlı zaman çizgisini taşır; iptal/iade/eksik bildirimlerinde çizgi yerine tek durum bloğu vardır. Dosyalar gönderime hazır tek parça HTML — e-posta aracınıza olduğu gibi yapıştırılabilir.</p>
   </div>
 
   <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
@@ -57,7 +57,53 @@
     </div>
   </div>
 
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:820px;margin-top:16px">
+    <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">İstisna bildirimleri</h2>
+    <p style="margin:0;font:400 15px/1.7 'Karla';color:#6d7261;text-wrap:pretty">İptal, iade ve eksik karşılanma. Üçünde de zaman çizgisi yok — Sipariş Detay'daki kuralla aynı: iptal/iade halinde çizgi yerine <strong>tek durum bloğu</strong> gösterilir. Para çözümü her zaman ilk kartta; sebep anlatılmaz, yalnız miktar ve tutar.</p>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+    <div data-screen-label="Email Iptal" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font:700 14px 'Karla';color:#3a4147">4 · Sipariş iptal edildi</span>
+        <span style="background:#f6e6e1;color:#9a4b3c;font:700 11px 'Karla';padding:3px 10px;border-radius:11px">hazırlık öncesi iptal</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8a8270">Konu: Siparişiniz iptal edildi — LZA-2451</span>
+      <iframe src="Email - Siparis Iptal.html" title="Sipariş iptal e-postası" style="width:640px;height:1180px;border:0;border-radius:14px;box-shadow:0 8px 40px rgba(58,65,71,.14);background:#e9e6df"></iframe>
+      <a href="Email - Siparis Iptal.html" target="_blank" style="font:700 13px 'Karla'">Tek başına aç ↗</a>
+    </div>
+
+    <div data-screen-label="Email Iade" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font:700 14px 'Karla';color:#3a4147">5 · İade işlendi</span>
+        <span style="background:#e9e4d4;color:#3a4147;font:700 11px 'Karla';padding:3px 10px;border-radius:11px">talep kapanınca</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8a8270">Konu: İadeniz işlendi — LZA-2451</span>
+      <iframe src="Email - Siparis Iade.html" title="İade e-postası" style="width:640px;height:1080px;border:0;border-radius:14px;box-shadow:0 8px 40px rgba(58,65,71,.14);background:#e9e6df"></iframe>
+      <a href="Email - Siparis Iade.html" target="_blank" style="font:700 13px 'Karla'">Tek başına aç ↗</a>
+    </div>
+
+    <div data-screen-label="Email Eksik" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font:700 14px 'Karla';color:#3a4147">6 · Eksik karşılanma</span>
+        <span style="background:#fdf3e0;color:#8a6b2a;font:700 11px 'Karla';padding:3px 10px;border-radius:11px">hazırlıkta fark çıkınca</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8a8270">Konu: Siparişinizde bir değişiklik var — LZA-2451</span>
+      <iframe src="Email - Siparis Eksik Karsilanma.html" title="Eksik karşılanma e-postası" style="width:640px;height:1160px;border:0;border-radius:14px;box-shadow:0 8px 40px rgba(58,65,71,.14);background:#e9e6df"></iframe>
+      <a href="Email - Siparis Eksik Karsilanma.html" target="_blank" style="font:700 13px 'Karla'">Tek başına aç ↗</a>
+    </div>
+  </div>
+
   <div style="display:flex;flex-wrap:wrap;gap:20px">
+    <div style="width:420px;background:#faf6ec;border:1px solid #ece5d2;border-radius:16px;padding:22px 26px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 18px 'Lora';color:#343b41">İstisna kuralları</span>
+      <ul style="margin:0;padding-left:20px;font:400 13.5px/1.8 'Karla';color:#6d7261">
+        <li>Eksik karşılanma e-postası <strong>teslimattan önce</strong> gider; "yolda" bildirimi zaten gitmişse tek e-postada birleştirilir, iki kez yazılmaz.</li>
+        <li>Kapıda ödemede iade satırı yerine "tahsilat güncel tutardan" cümlesi kurulur.</li>
+        <li>İade e-postası yalnız talep kapanınca gider — inceleme sürerken ara bildirim yok.</li>
+        <li>Sebep (stok, hasar, tedarik) müşteriye yazılmaz; yalnız miktar ve para sonucu.</li>
+      </ul>
+    </div>
     <div style="width:420px;background:#faf6ec;border:1px solid #ece5d2;border-radius:16px;padding:22px 26px;display:flex;flex-direction:column;gap:10px">
       <span style="font:600 18px 'Lora';color:#343b41">Şablon sistemi</span>
       <ul style="margin:0;padding-left:20px;font:400 13.5px/1.8 'Karla';color:#6d7261">
