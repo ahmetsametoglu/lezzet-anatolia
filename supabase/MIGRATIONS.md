@@ -4,6 +4,12 @@ Migration'lar **artımlı** ilerler: her modül/özellik yalnız ihtiyacı olan 
 Dosya öneki **zaman damgası değil, sıralı index**tir (`0001`, `0002`, …) — okunması ve sıralaması net.
 Yeni bir migration eklendiğinde buraya bir satır düşülür — hangi migration neyi getirdi, tek bakışta.
 
+> **Numara tekildir ve bu makineyle denetlenir** (`pnpm docs:check`, commit öncesi otomatik). Sebebi
+> 28.07.2026'da yaşandı: paralel çalışan iki ajan aynı anda `0024`'ü aldı. Supabase sürümü dosya
+> adının önekinden okur ve **uygulanmış** sayar — ikinci dosya sessizce atlandı, `db reset` o noktada
+> yarım kaldı, şema eksik kaldı ama hiçbir yerde hata görünmedi. Çakışma paralel çalışmada
+> kaçınılmazdır; ucuz olan onu commit anında yakalamaktır.
+
 | Index | Migration                    | Modül   | Ne ekledi                                                                                                                                                           |
 | ----- | ---------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0001  | `auth_customer_staff_role`   | 04-auth | `customer` (kimlik altkümesi), `staff_role`, `has_role()`, enum'lar (`customer_type`, `preferred_language`, `country_code`, `staff_role_kind`), RLS deny-by-default |

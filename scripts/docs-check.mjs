@@ -157,10 +157,23 @@ function allSchemaSrc() {
     .join('\n');
 }
 
-const migrations = readdirSync(join(ROOT, 'supabase/migrations'))
-  .filter((f) => f.endsWith('.sql'))
-  .map((f) => read(`supabase/migrations/${f}`))
-  .join('\n');
+const migrationFiles = readdirSync(join(ROOT, 'supabase/migrations')).filter((f) => f.endsWith('.sql'));
+
+// ── 0. Migration sürüm numarası TEKİL olmalı ─────────────────────────────────
+// Supabase sürümü dosya adının önekinden okur ve UYGULANMIŞ sayar. Aynı numarayı iki dosya
+// paylaşırsa ikincisi sessizce atlanır, `db reset` de o noktada yarım kalır — şema eksik kalır ama
+// hiçbir yerde "hata" görünmez. 28.07.2026'da iki ajan aynı anda `0024` alınca tam olarak bu oldu.
+// Paralel çalışmada numara çakışması kaçınılmazdır; ucuz olan onu commit anında yakalamaktır.
+const versions = new Map();
+for (const f of migrationFiles) {
+  const version = f.slice(0, f.indexOf('_'));
+  versions.set(version, [...(versions.get(version) ?? []), f]);
+}
+for (const [version, files] of versions) {
+  if (files.length > 1) note(`migration sürümü ÇAKIŞIYOR (${version}): ${files.join(', ')} — biri yeniden numaralandırılmalı`);
+}
+
+const migrations = migrationFiles.map((f) => read(`supabase/migrations/${f}`)).join('\n');
 const parts = new Map(); // slug -> içerik (varlık tabloları konu dosyalarına bölünmüştür)
 for (const f of readdirSync(join(ROOT, 'docs/architecture/data-model'))) {
   if (f.endsWith('.md')) parts.set(f.replace(/\.md$/, ''), read(`docs/architecture/data-model/${f}`));
