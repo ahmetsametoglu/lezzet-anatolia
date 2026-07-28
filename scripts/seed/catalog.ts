@@ -504,7 +504,7 @@ const BUNDLES: Array<SeedBundle & { items: SeedBundleItem[] }> = [
 ];
 
 /** Kuruşa çevrim — `toCents` burada yok (`@lezzet/helper` kökün bağımlısı değil), aritmetik tek satır. */
-const kurus = (v: number) => Math.round(v * 100);
+const cents = (v: number) => Math.round(v * 100);
 
 export async function seedBundles(db: Db): Promise<void> {
   const bundles = new BundleService(db);
@@ -521,35 +521,35 @@ export async function seedBundles(db: Db): Promise<void> {
   );
   // Birim fiyatlar (b2c TTC) tek turda: paket fiyatı bunlardan türeyecek.
   const priceMap = await new PriceService(db).findApplicableMap([...idBySku.values()], 'b2c');
-  const birimFiyat = (variantId: string) => priceMap.get(variantId)?.channelPrice?.amount ?? null;
+  const unitPriceOf = (variantId: string) => priceMap.get(variantId)?.channelPrice?.amount ?? null;
 
   console.log('▸ PAKET seed');
   for (const b of BUNDLES) {
-    const kalemler = b.items.map((i) => ({ ...i, variantId: idBySku.get(i.sku), fiyat: null as number | null }));
-    for (const k of kalemler) k.fiyat = k.variantId ? birimFiyat(k.variantId) : null;
-    if (kalemler.some((k) => !k.variantId || k.fiyat == null)) {
+    const lines = b.items.map((i) => ({ ...i, variantId: idBySku.get(i.sku), price: null as number | null }));
+    for (const l of lines) l.price = l.variantId ? unitPriceOf(l.variantId) : null;
+    if (lines.some((l) => !l.variantId || l.price == null)) {
       console.warn(`  ⚠ ${resolveLocalizedText(b.name)}: SKU ya da birim fiyat eksik — atlandı`);
       continue;
     }
 
     // Paket fiyatı = birim fiyatlar toplamının indirimlisi. Hediye kalem toplama GİRER (müşteri onu da
     // ayrı alsa parasını verirdi) ama payı 0 kalır — indirimin tamamını öbür kalemler taşır.
-    const listeToplam = kalemler.reduce((sum, k) => sum + kurus(k.fiyat!) * k.qty, 0);
-    const hedef = Math.round(listeToplam * (1 - b.discountPercent / 100));
+    const listTotalCents = lines.reduce((sum, l) => sum + cents(l.price!) * l.qty, 0);
+    const targetCents = Math.round(listTotalCents * (1 - b.discountPercent / 100));
 
-    const dagitilan = kalemler.filter((k) => !k.gift);
-    const sonuc = rebalanceAllocations(
-      dagitilan.map((k) => ({ qty: k.qty, allocatedUnitPriceCents: kurus(k.fiyat!) })),
-      hedef,
+    const shareable = lines.filter((l) => !l.gift);
+    const shares = rebalanceAllocations(
+      shareable.map((l) => ({ qty: l.qty, allocatedUnitPriceCents: cents(l.price!) })),
+      targetCents,
     );
-    let dagitimIndex = 0;
-    const items = kalemler.map((k) => ({
-      variantId: k.variantId!,
-      qty: k.qty,
-      allocatedUnitPrice: k.gift ? 0 : (sonuc.unitPricesCents[dagitimIndex++] ?? 0) / 100,
+    let shareIndex = 0;
+    const items = lines.map((l) => ({
+      variantId: l.variantId!,
+      qty: l.qty,
+      allocatedUnitPrice: l.gift ? 0 : (shares.unitPricesCents[shareIndex++] ?? 0) / 100,
     }));
 
-    const totalPrice = euro(sonuc.achievedTotalCents / 100 + (b.mismatch ?? 0));
+    const totalPrice = euro(shares.achievedTotalCents / 100 + (b.mismatch ?? 0));
     const { bundle } = await bundles.create({
       name: b.name,
       description: b.description ?? null,
@@ -566,12 +566,12 @@ export async function seedBundles(db: Db): Promise<void> {
 
     // "Tutuyor mu" kararı MOTORUN (`bundleBalance`) — seed kendi ölçütünü uydurmaz.
     const denge = bundleBalance(
-      items.map((i) => ({ qty: i.qty, allocatedUnitPriceCents: kurus(i.allocatedUnitPrice) })),
-      kurus(totalPrice),
+      items.map((i) => ({ qty: i.qty, allocatedUnitPriceCents: cents(i.allocatedUnitPrice) })),
+      cents(totalPrice),
     );
     const mutabakat = denge.balanced ? 'tutuyor' : `TUTMUYOR (${(denge.diffCents / 100).toFixed(2)} € fark)`;
     console.log(
-      `  ✓ ${resolveLocalizedText(bundle.name)} · ${items.length} kalem · ayrı ayrı ${(listeToplam / 100).toFixed(2)} € → paket ${totalPrice.toFixed(2)} € (%${b.discountPercent}) · ${mutabakat} · ${(b.isActive ?? true) ? 'aktif' : 'pasif'} · /${bundle.slug}`,
+      `  ✓ ${resolveLocalizedText(bundle.name)} · ${items.length} kalem · ayrı ayrı ${(listTotalCents / 100).toFixed(2)} € → paket ${totalPrice.toFixed(2)} € (%${b.discountPercent}) · ${mutabakat} · ${(b.isActive ?? true) ? 'aktif' : 'pasif'} · /${bundle.slug}`,
     );
   }
   console.log(`✓ paket: ${BUNDLES.length} kayıt`);

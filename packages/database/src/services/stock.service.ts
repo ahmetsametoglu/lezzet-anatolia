@@ -92,12 +92,21 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    * Kararı motor verir (`domain-core/stock/offer` + `shelf-life`): bu okuma yalnız ölçütün girdisini
    * (tarih tipi, toplam raf ömrü, teklif fiyatı) tek turda toplar.
    */
-  async listInStockDetailed(): Promise<StockBatchDetail[]> {
-    return this.getAllAs(StockBatchDetailSchema, undefined, {
+  async listInStockDetailed(variantIds?: readonly string[]): Promise<StockBatchDetail[]> {
+    // Boş dizi ile çağrı BOŞ döner: `in.()` süzgeci PostgREST'te "hiçbiri" değil sözdizimi hatasıdır,
+    // süzgeci hiç uygulamamak ise sessizce TÜM partileri getirirdi (sayfa okuması patlardı).
+    if (variantIds?.length === 0) return [];
+    return this.getAllAs(StockBatchDetailSchema, variantIds ? { variantId: [...variantIds] } : undefined, {
       select: BATCH_DETAIL_SELECT,
       rangeFilters: [{ field: 'physical_qty', operator: 'gt', value: 0 }],
       orderBy: 'expiryDate',
     });
+  }
+
+  /** Kimlikle parti okuma — sunucu tarafı kapıların girdisi (ör. "bu partiye teklif açılabilir mi"). */
+  async getBatchDetails(ids: readonly string[]): Promise<StockBatchDetail[]> {
+    if (ids.length === 0) return [];
+    return this.getAllAs(StockBatchDetailSchema, { id: [...ids] }, { select: BATCH_DETAIL_SELECT });
   }
 
   /**

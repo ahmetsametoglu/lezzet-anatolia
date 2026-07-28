@@ -45,9 +45,9 @@ as $$
     (select count(*) from scoped where is_incomplete)::int,
     coalesce(
       (
-        select jsonb_object_agg(category_id, adet)
+        select jsonb_object_agg(category_id, product_count)
         from (
-          select category_id, count(*)::int as adet
+          select category_id, count(*)::int as product_count
           from public.product
           where category_id is not null
           group by category_id

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Device } from '@/lib/device';
+import { useDevice } from '@/lib/use-device';
 import { loadMoreProductsAction } from './actions/list';
 import { setProductStatusAction } from './tabs/product/actions';
 import { ProductFormDialog } from './tabs/product/product-form-dialog';
@@ -21,19 +22,6 @@ import type { ProductsData, ProductView, StatusFilter } from './products-types';
 
 /** Arama kutusunun URL'e yazılma gecikmesi (ms) — parametrik; yazarken her tuşta sunucuya gidilmesin. */
 const SEARCH_DEBOUNCE_MS = 350;
-
-/** İlk boya sunucu ipucuyla; mount sonrası viewport ölçüsüne göre düzeltilir (tek render ağacı). */
-function useDevice(initial: Device): Device {
-  const [device, setDevice] = useState<Device>(initial);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
-    const sync = () => setDevice(mq.matches ? 'mobile' : 'desktop');
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  }, []);
-  return device;
-}
 
 interface ProductsClientProps {
   data: ProductsData;

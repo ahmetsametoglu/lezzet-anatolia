@@ -27,15 +27,14 @@ değişecek yer parantezde.
 | **"Fiyat değişti" bildirimi** — `DOMAIN §5`: fiyat arttıysa müşteriye açıkça söylenir ve onay istenir (kabul et / çıkar); düştüyse sessizce uygulanır | tasarımda yok (yalnız stok uyarısı çizili) | `CartItem.unitPrice` okuma tarafına bağlanmalı — alan yazılıyor, karşılaştırılmıyor |
 | **Boş sepet: "Bu hafta çok sevilenler"** — 4'lü ürün ızgarası (web) / 2'li (mobil), kart üstünde "Sepete ekle" | `Musteri - Sepet.dc.html` → `Bos Sepet Web/Mobil` | **popülerlik sinyali yok** — aşağıda §1b |
 | **Boş sepet: B2B sipariş şablonları** ("Haftalık standart · 14 kalem" + "Yükle") | aynı tasarım, durum kartı | şablon modeli yok (`07`); B2B müşteri bugün "son siparişi tekrarla" bloğunu görür |
-| **Boş sepet: "Hazır paketleri gör" düğmesi** | çizili, tasarımdaki yerinde ve pasif | `05.5` + Paketler rotası |
 | **Boş sepet kahraman görseli** (hasır sepet / tezgâh fotoğrafı, web 260×200 · mobil 180×140) | çizili | görsel künyesi yok; çerçeve tam boyutuyla duruyor, yer tutucu sepet işareti |
-| **Paketler listesi sayfası** (Web + Mobil, üç boş durum, etiket çipleri, `?etiket=` süzgeci) | `Musteri - Paketler.dc.html` | `05.5` Bundle modeli |
-| **Paket detay sayfası** | `Musteri - Paket Detay.dc.html` | `05.5` |
+| **Paketler listesi: etiket çipleri + `?etiket=` süzgeci** | çizili; sayfanın kendisi indi (kartlar, "Daha fazla", boş durum) | paketin etiket alanı yok — süzgeç uydurma bir sınıflandırma olurdu |
+| **Paket detayı: "Paketi sepete ekle"** | çizili, adet seçici ve canlı toplam çalışıyor; düğme pasif | sepet sözleşmesi paket satırını tanımalı (`CartEntry`/`CartItem`/`sameLine` bugün varyant kimliğine bağlı) |
 | **Tüm Yorumlar paneli** (web modal · mobil tam ekran, yıldız süzgeci, 10'ar sayfalama, `?yorumlar=1`) | `Musteri - Urun Detay.dc.html` → `Tum Yorumlar Web/Mobil` | `17-geri-bildirim` |
 | **Ürün detay yorum bölümü** — puan satırı, ortalama kartı, "N yorumun tümü →" | çizili; **boş hâli kodlandı** (bugün her ürünün yorum sayısı gerçekten sıfır) | `17` |
 | **"Yorum yaz"** — yalnız o ürünü satın almış girişli müşteride | çizili | `17` + `04-auth` + `07` |
 | **Fiyat sıralaması** (K18'in "Artan/Azalan fiyat" seçenekleri) | çizili, seçenekler görünüyor ama sonucu değiştirmiyor | **okuma görünümü (migration)** — aşağıda §1a |
-| **Menü: Paketler · Fırsatlar · Keşif · Professionnels** | K12'de çizili, bugün düz metin | kendi sayfaları (`05.5`, `08.7`) |
+| **Menü: Fırsatlar · Keşif · Professionnels** | K12'de çizili, bugün düz metin (Paketler bağlandı) | kendi sayfaları (`08.7`) |
 | **Menü: Hesabım** | K12'de tanımlı | `04-auth` |
 
 ### 1a. Fiyat sıralaması neden ayrı bir engel
@@ -183,6 +182,27 @@ tek yer sekme yokluğu (paketin alanı çok daha az, ürün formunu ikiye bölen
 - **Sekme çubuğunda eylem alanı + sekmeye bağlı arama.** "Yeni …" düğmesi ve arama kutusu sayfa
   başlığından buraya taşındı; arama hangi sekme açıksa onda arar (eskiden her sekmede üründe
   arıyordu).
+- **Teklif diyaloğu kendi alt barını kurar** (ortak `DialogFooter` yerine): "Teklifi kapat" İptal ve
+  Kaydet'in yanında ÜÇÜNCÜ bir yol ve ortak altlık iki düğme varsayıyor. Kapatma hiçbir koşulda
+  kilitlenmez — yanlışlıkla açılmış bir teklif her zaman geri alınabilmeli.
+- **Mobil stok ekranı "Karar" sekmesiyle açılır**, seviyelerle değil. Tasarımın kendi notu: telefonda
+  günlük iş "yaklaşan tarihliye bakıp teklif açmak", acil iş lot sorgusu — ikisi de başta durur.
+
+### Stok ekranı — sağ panel partiler oldu (28.07)
+
+`Operasyon - Stok.dc.html` web düzeninde sağ paneli **"Yaklaşan tarihli — teklif kararı"** olarak
+çiziyor; aynı içerik sekme çubuğunda da ayrı bir sekme olarak var. Yani karar kuyruğu ekranda **iki
+kez** duruyor, buna karşılık briefin (`design/pages/admin-stok.md §2`) açıkça istediği
+**"parti listesi (varyant altında)"** hiç çizilmemiş — kalan raf ömrü, lot, konum ve alış fiyatının
+görüneceği bir yer yok.
+
+**Karar:** sağ panel seçili boyun **partilerini** gösterir; karar kuyruğu tek yerde, kendi sekmesinde
+kalır. Gerekçe: aynı listeyi iki kez göstermek bir ekran alanı harcar, oysa briefin zorunlu tuttuğu
+içeriğin yeri yoktu. Mobilde ayrı bir panel yok — satır kendi partilerini altında açar (telefonda iki
+panel okunmaz).
+
+Tasarım tarafı "hayır, panel karar kuyruğu kalsın" derse parti listesine yeni bir yer çizilmeli;
+o hâlde bu madde §2'ye taşınır.
 
 ### Yazı ölçeği — karar (28.07)
 

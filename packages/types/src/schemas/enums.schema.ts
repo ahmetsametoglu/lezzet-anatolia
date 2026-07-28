@@ -28,6 +28,26 @@ export const OrderStatusEnum = z.enum([
 ]);
 export type OrderStatus = z.infer<typeof OrderStatusEnum>;
 
+/**
+ * Sipariş durumunun OPERASYON yüzeyindeki adı — personel ekranları yalnız Türkçedir (CLAUDE.md §2),
+ * bu yüzden düz metin (çok dilli değil). Enum'la aynı dosyada durur ki yeni bir durum eklenince
+ * karşılığının da yazılması unutulmasın: `Record` eksik anahtarda derlemeyi durdurur.
+ *
+ * Müşteri yüzeyi bu haritayı KULLANMAZ — orada durum adı i18n mesaj dosyasından gelir ve zaten daha
+ * az ayrıntılıdır (müşteri "hazırlanıyor" ile "hazır" arasındaki iç ayrımı görmez).
+ */
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  draft: 'Taslak',
+  confirmed: 'Onaylandı',
+  preparing: 'Hazırlanıyor',
+  ready: 'Hazır',
+  out_for_delivery: 'Yolda',
+  delivered: 'Teslim edildi',
+  completed: 'Tamamlandı',
+  cancelled: 'İptal',
+  returned: 'İade',
+};
+
 /** Sipariş kaynağı — *nereden kapandı*. Kanaldan BAĞIMSIZ eksen (DOMAIN §3, CHANNELS §2). */
 export const OrderSourceEnum = z.enum(['web', 'whatsapp', 'door', 'manual']);
 export type OrderSource = z.infer<typeof OrderSourceEnum>;

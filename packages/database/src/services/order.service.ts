@@ -247,6 +247,10 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    *
    * Müşteri ilişkisi FK adıyla ÇÖZÜLÜR: `order` tablosu `user_profiles`'a iki kez bakar (müşteri ve
    * kurye), belirsiz bırakılırsa PostgREST hangi bağı izleyeceğini bilemez.
+   *
+   * KURAL BORCU (STACK §6): `order_item_batch` bir junction tablosu, yani kendi alt sınıfını hak
+   * ediyor — burada üç ham okuma birikti (`listBatches`, `itemCosts`, bu). Üçü birden taşınmalı;
+   * yalnız bunu ayırmak aynı tabloyu iki eve bölerdi. Ayrı bir tur konusu, `09-admin` görev notunda.
    */
   async recallByStocks(stockIds: readonly string[]): Promise<RecallHit[]> {
     if (stockIds.length === 0) return [];

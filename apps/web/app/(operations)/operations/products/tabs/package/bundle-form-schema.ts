@@ -64,10 +64,10 @@ export function bundleBlock(v: BundleFormValues): BundleBlock | null {
     toCents(v.totalPrice),
   );
   if (balance.balanced) return null;
-  const fark = (Math.abs(balance.diffCents) / 100).toFixed(2).replace('.', ',');
+  const gap = (Math.abs(balance.diffCents) / 100).toFixed(2).replace('.', ',');
   return {
     path: 'items',
-    message: `Paylar tutmuyor: ${fark} € ${balance.diffCents > 0 ? 'fazla' : 'eksik'} — şeritteki çareyi kullanın`,
+    message: `Paylar tutmuyor: ${gap} € ${balance.diffCents > 0 ? 'fazla' : 'eksik'} — şeritteki çareyi kullanın`,
   };
 }
 

@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { bundleBalance, markupPercent } from '@lezzet/domain-core';
-import { fromCents, toCents } from '@lezzet/helper';
+import { toCents } from '@lezzet/helper';
 import { IMAGE_ROLES, cropOf, resolveLocalizedText } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Badge } from '@/components/operation/ui/badge';
+import { money, percent } from '@/components/operation/ui/format';
 import { ImageIcon } from '@/components/operation/ui/icons';
 import { Table, type Column } from '@/components/operation/ui/table';
 import { Toggle } from '@/components/operation/form/toggle';
@@ -22,8 +23,6 @@ import type { BundleView } from '../../products-types';
 // bir kalemin adedi ya da fiyatı başka bir yerden değişirse (ileride toplu işlem) satır bunu söyler.
 // Karar motorda (`bundleBalance`) — liste kendi ölçütünü uydurmaz.
 
-const money = (cents: number) => `${fromCents(cents).toFixed(2).replace('.', ',')} €`;
-const percent = (value: number) => `%${value.toFixed(1).replace('.', ',')}`;
 
 /**
  * Satırın parası — toplamlar SUNUCUDA yapıldı (`bundle_list_rows()`), burada yalnız KARAR veriliyor:
@@ -134,7 +133,7 @@ function bundleColumns(pricingById: PricingMap, onToggle: (id: string, next: boo
             hint={
               listTotalCents == null
                 ? 'birim fiyat eksik'
-                : `ayrı ayrı ${money(listTotalCents)}${discountPercent != null && discountPercent > 0 ? ` · ${percent(discountPercent)}` : ''}`
+                : `ayrı ayrı ${money(listTotalCents)}${discountPercent != null && discountPercent > 0 ? ` · ${percent(discountPercent, 1)}` : ''}`
             }
             title="Müşterinin ödediği tek fiyat (KDV dahil) · altında kalemler ayrı ayrı alınsaydı"
           />
@@ -162,7 +161,7 @@ function bundleColumns(pricingById: PricingMap, onToggle: (id: string, next: boo
         }
         return (
           <Stacked
-            value={percent(marginPercent)}
+            value={percent(marginPercent, 1)}
             hint={`kâr ${money(profitCents ?? 0)} · maliyet ${money(costCents ?? 0)}`}
             alert={(profitCents ?? 0) < 0}
             title="Maliyet üzerine markup · kâr KDV hariç satıştan hesaplanır"

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Controller, useFieldArray, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { rebalanceAllocations } from '@lezzet/domain-core';
 import { fromCents, toCents } from '@lezzet/helper';
+import { amount as money } from '@/components/operation/ui/format';
 import { Input } from '@/components/operation/form/input';
 import { MoneyInput } from '@/components/operation/form/money-input';
 import { MultiSelect } from '@/components/operation/form/multi-select';
@@ -34,7 +35,6 @@ import type { BundleFormValues } from './bundle-form-schema';
 // okunur, virgüller aynı sütunda durur.
 const CELL = 'grid grid-cols-[18px_minmax(0,1fr)_72px_92px_104px_92px_26px] items-center gap-x-3';
 
-const money = (cents: number) => fromCents(cents).toFixed(2).replace('.', ',');
 
 /**
  * Şeridin ölçü birimi: soluk etiket + mono değer. Etiket ve değer aynı boyutta ve bitişik yazılınca

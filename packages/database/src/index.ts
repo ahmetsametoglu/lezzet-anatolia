@@ -24,7 +24,7 @@ export { SettingsService } from './services/settings.service';
 export { DeliveryZoneService } from './services/delivery-zone.service';
 export { CartService } from './services/cart.service';
 export { OrderService, OrderItemService, OrderStatusLogService, type CreateOrderItemInput } from './services/order.service';
-export { StockService } from './services/stock.service';
+export { StockService, LOT_SEARCH_LIMIT } from './services/stock.service';
 export { ReservationService, type ReserveInput } from './services/reservation.service';
 export { StockAdjustmentService, type AdjustInput } from './services/stock-adjustment.service';
 export { TemperatureLogService } from './services/temperature-log.service';

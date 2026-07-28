@@ -78,7 +78,7 @@ interface MoneyFieldProps extends MoneyCoreProps {
 }
 
 // Yalnız `FormMoney` sarar — dışa açık değil (ölü ihracat yok).
-function MoneyField({ label, required, labelAside, error, placeholder, disabled, fieldClassName, id, ...core }: MoneyFieldProps) {
+export function MoneyField({ label, required, labelAside, error, placeholder, disabled, fieldClassName, id, ...core }: MoneyFieldProps) {
   const text = useNumericDraft(draftOptions(core));
   return (
     <InputField

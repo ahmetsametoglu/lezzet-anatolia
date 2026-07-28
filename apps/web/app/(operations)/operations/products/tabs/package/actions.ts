@@ -53,10 +53,10 @@ function requireBalanced(items: BundleItemEntry[], totalPrice: number | undefine
   if (balance.balanced) return;
 
   if (items.length === 0) throw new Error('Pakete en az bir kalem eklenmeli.');
-  const fark = fromCents(Math.abs(balance.diffCents)).toFixed(2).replace('.', ',');
-  const yon = balance.diffCents > 0 ? 'fazla' : 'eksik';
+  const gap = fromCents(Math.abs(balance.diffCents)).toFixed(2).replace('.', ',');
+  const direction = balance.diffCents > 0 ? 'fazla' : 'eksik';
   throw new Error(
-    `Kalem fiyatları toplamı paket fiyatını tutmuyor: ${fark} € ${yon}. ` +
+    `Kalem fiyatları toplamı paket fiyatını tutmuyor: ${gap} € ${direction}. ` +
       'Kalem fiyatlarını düzeltin ya da "Farkı dağıt" ile eşitleyin.',
   );
 }
