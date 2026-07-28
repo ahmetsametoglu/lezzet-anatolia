@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+  body { margin:0; background:#e9e6df; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-wrap:wrap;gap:56px;padding:48px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:1360px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Paketler · Web (liste sayfası)</span>
+    <div data-screen-label="Paketler Web" style="width:1360px;background:#faf6ec;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);color:#3a3f35">
+      <div style="background:#5f7a2c;color:#f3efe2;font:500 13px 'Karla';display:flex;justify-content:center;gap:28px;padding:8px 0">
+        <span>❄ Soğuk zincirle teslim</span><span>Strasbourg &amp; çevresinde kapıya teslim</span><span>Fransa geneline kargo</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:36px;padding:18px 48px;border-bottom:1px solid #e6dfcd">
+        <img src="assets/logo.jpg" style="height:58px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+        <nav style="display:flex;gap:28px;font:600 15px 'Karla';color:#3a4147">
+          <span>Katalog</span><span style="color:#5f7a2c;border-bottom:2px solid #5f7a2c;padding-bottom:2px">Paketler</span><span style="color:#b05c2e">Fırsatlar</span><span>Keşif</span><span>Professionnels</span>
+        </nav>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:18px">
+          <span style="font:600 14px 'Karla';color:#8a8270">TR ▾</span>
+          <div style="position:relative;font-size:22px">🧺<span style="position:absolute;top:-6px;right:-10px;background:#b05c2e;color:#fff;font:700 11px 'Karla';border-radius:10px;padding:1px 6px">3</span></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;padding:36px 48px 32px">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <span style="font:600 13px 'Karla';letter-spacing:.12em;text-transform:uppercase;color:#5f7a2c">Hazır paketler</span>
+          <h1 style="margin:0;font:600 44px/1.12 'Lora';color:#343b41">Sofrayı biz kuralım, siz buyur edin</h1>
+          <p style="margin:0;font:400 17px/1.65 'Karla';color:#6d7261;max-width:520px">Bayram, kahvaltı ya da kalabalık bir akşam — hazırladığımız paketler tek fiyata gelir, içeriği bellidir. Seçmekle uğraşmadan tam bir sofra.</p>
+          <div style="display:flex;gap:22px;font:400 13.5px 'Karla';color:#6d7261;background:#f0e9d6;border-radius:14px;padding:14px 18px;width:max-content">
+            <span>❄ Soğuk zincir</span><span>📦 Kargoya uygun paketler</span><span>🎁 Tek fiyat</span>
+          </div>
+        </div>
+        <div style="aspect-ratio:3/2"><image-slot id="pkl-hero" radius="20" placeholder="Paket sahnesi — kurulmuş sofra, birkaç paket bir arada (3:2)"></image-slot></div>
+      </div>
+
+      <div style="padding:0 48px 18px;display:flex;align-items:baseline;gap:12px">
+        <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">Satıştaki paketler</h2>
+        <span style="font:400 14px 'Karla';color:#8a8270">Her paket bütün olarak satılır; içeriği sabittir.</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:22px;padding:0 48px 44px">
+        <sc-for list="{{ packages }}" as="p" hint-placeholder-count="6">
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:20px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:relative;aspect-ratio:3/2">
+              <image-slot id="pkl-{{ $index }}" shape="rect" placeholder="{{ p.name }}"></image-slot>
+              <span style="position:absolute;top:12px;left:12px;font:700 12px 'Karla';color:#fff;background:rgba(58,59,65,.78);border-radius:12px;padding:4px 11px">{{ p.serves }}</span>
+            </div>
+            <div style="padding:16px 18px 18px;display:flex;flex-direction:column;gap:8px;flex:1">
+              <span style="font:600 21px 'Lora';color:#343b41">{{ p.name }}</span>
+              <span style="font:400 13.5px 'Karla';color:#8a8270">{{ p.items }}</span>
+              <span style="font:400 13.5px 'Karla';color:#8a8270">{{ p.weight }}</span>
+              <p style="margin:0;font:400 13.5px/1.55 'Karla';color:#6d7261;flex:1">{{ p.blurb }}</p>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <sc-for list="{{ p.badges }}" as="b" hint-placeholder-count="1">
+                  <span style="font:600 12px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:11px;padding:3px 10px;white-space:nowrap">{{ b }}</span>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+                <span style="font:700 22px 'Karla';color:#343b41">{{ p.price }}</span>
+                <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:10px 20px;border-radius:24px">Paketi incele</span>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;opacity:.72">
+          <div style="position:relative;aspect-ratio:3/2">
+            <image-slot id="pkl-5" shape="rect" placeholder="Yeni Yıl Sofrası"></image-slot>
+            <span style="position:absolute;top:12px;left:12px;font:700 12px 'Karla';color:#fff;background:rgba(58,59,65,.78);border-radius:12px;padding:4px 11px">8 kişilik</span>
+          </div>
+          <div style="padding:16px 18px 18px;display:flex;flex-direction:column;gap:8px;flex:1">
+            <span style="font:600 21px 'Lora';color:#8a8270">Yeni Yıl Sofrası</span>
+            <span style="font:400 13.5px 'Karla';color:#8a8270">10 ürün · kalabalık davet için</span>
+            <span style="font:400 13.5px 'Karla';color:#8a8270">Toplam 5,4 kg</span>
+            <p style="margin:0;font:400 13.5px/1.55 'Karla';color:#8a8270;flex:1">Kalabalık bir akşam için en geniş paket.</p>
+            <span style="font:600 12.5px 'Karla';color:#3a4147;background:#e9e4d4;border-radius:11px;padding:4px 10px;width:max-content">Tükendi — yakında yeniden</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+              <span style="font:700 22px 'Karla';color:#8a8270">59,90 €</span>
+              <span style="background:#c9c3b0;color:#fff;font:700 14px 'Karla';padding:10px 20px;border-radius:24px">Paketi incele</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:0 48px 40px;display:flex;justify-content:center">
+        <span style="font:700 14.5px 'Karla';color:#5f7a2c;border:1.5px solid #5f7a2c;border-radius:26px;padding:12px 30px">Daha fazla paket</span>
+      </div>
+
+      <div style="margin:0 48px 44px;background:#f0e9d6;border-radius:20px;padding:28px 32px;display:flex;align-items:center;gap:24px">
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+          <span style="font:600 24px 'Lora';color:#343b41">Kendi sofranızı kurmak isterseniz</span>
+          <span style="font:400 15px/1.6 'Karla';color:#6d7261">Katalogda 80'den fazla ürün var — istediğinizi tek tek seçebilirsiniz.</span>
+        </div>
+        <span style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';padding:14px 28px;border-radius:26px;flex:none">Kataloğa göz at</span>
+      </div>
+
+      <div style="background:#343b41;color:#c9cdc2;padding:28px 48px;display:flex;justify-content:space-between;font:400 14px 'Karla'">
+        <span style="font:600 17px 'Lora';color:#f3efe2">Lezzet Anatolia</span>
+        <div style="display:flex;gap:28px"><span>Hakkımızda</span><span>SSS</span><span>Professionnels</span><span>TR · FR · DE</span></div>
+      </div>
+    </div>
+
+    <span style="font:600 15px 'Karla';color:#3a4147;margin-top:12px">Durumlar</span>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div style="width:330px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Tükenmiş paket — sonda, soluk</span>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;overflow:hidden;opacity:.72">
+          <div style="aspect-ratio:3/2"><image-slot id="pkl-s-out" shape="rect" placeholder="Yeni Yıl Sofrası"></image-slot></div>
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:6px">
+            <span style="font:600 19px 'Lora';color:#8a8270">Yeni Yıl Sofrası</span>
+            <span style="font:600 12.5px 'Karla';color:#3a4147;background:#e9e4d4;border-radius:11px;padding:4px 10px;width:max-content">Tükendi — yakında yeniden</span>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font:700 20px 'Karla';color:#8a8270">59,90 €</span>
+              <span style="background:#c9c3b0;color:#fff;font:700 13.5px 'Karla';padding:9px 18px;border-radius:22px">Paketi incele</span>
+            </div>
+          </div>
+        </div>
+        <span style="font:400 13px/1.6 'Karla';color:#6d7261"><strong>Karar:</strong> tükenmiş paket gizlenmez, listenin sonuna düşer ve soluk görünür. Gerekçe: paket bir pazarlama aracı — sosyal medyada dolaşan linkin boşa düşmemesi, "bunu da yapıyorlar" izleniminin sürmesi ve müşterinin yakında yeniden geleceğini bilmesi gerekir. Kart tıklanabilir kalır (detay açılır), yalnız sepete ekleme kapalıdır.</span>
+      </div>
+
+      <div style="width:330px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Hiç aktif paket yok</span>
+        <div style="border:1px dashed #d8cfb6;border-radius:14px;padding:26px;display:flex;flex-direction:column;gap:7px;align-items:center;text-align:center">
+          <span style="font-size:26px">🎁</span>
+          <span style="font:700 15px 'Karla';color:#3a4147">Şu an hazır paket yok</span>
+          <span style="font:400 13px 'Karla';color:#8a8270">Yeni paketler hazırlanıyor. O zamana dek katalogdan kendi sofranızı kurabilirsiniz.</span>
+          <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:10px 20px;border-radius:22px;margin-top:4px">Kataloğa git</span>
+        </div>
+        <span style="font:400 13px 'Karla';color:#6d7261">Hero ve alt bant korunur, ızgara yerine tek boş durum kutusu gelir; menüdeki "Paketler" bağlantısı yerinde kalır.</span>
+      </div>
+
+      <div style="width:330px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Tek paket varken</span>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;overflow:hidden;display:flex">
+          <div style="width:150px;flex:none;aspect-ratio:3/2"><image-slot id="pkl-s-solo" shape="rect" placeholder="Bayram Sofrası"></image-slot></div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px">
+            <span style="font:600 17px 'Lora';color:#343b41">Bayram Sofrası</span>
+            <span style="font:400 12px 'Karla';color:#8a8270">6 kişilik · 8 ürün · 4,2 kg</span>
+            <span style="font:700 17px 'Karla';color:#343b41">49,90 €</span>
+          </div>
+        </div>
+        <span style="font:400 13px/1.6 'Karla';color:#6d7261">Tek paket kaldığında ızgara yerine <strong>tam genişlikte yatay kart</strong> kullanılır: 1/3 genişlikte yalnız kalan kart zayıf görünür. Açıklama metni kartın içinde uzun hâliyle yer alır.</span>
+      </div>
+
+      <div style="width:330px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Kargolanamayan paket · eksik ağırlık</span>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px">
+          <span style="font:600 19px 'Lora';color:#343b41">Kahvaltı Keyfi</span>
+          <span style="font:400 13px 'Karla';color:#8a8270">4 kişilik · 6 ürün</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <span style="font:600 12px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:11px;padding:3px 10px;white-space:nowrap">● Stokta</span>
+            <span style="font:600 12px 'Karla';color:#8a6b2a;background:#fdf3e0;border-radius:11px;padding:3px 10px;white-space:nowrap">🚚 Yalnız bölge içi</span>
+          </div>
+        </div>
+        <span style="font:400 13px/1.6 'Karla';color:#6d7261">Kargo kısıtı kartta rozet olarak görünür — müşteri teslimat yöntemini seçmeden önce bilir. Ağırlık hesaplanamıyorsa <strong>satır hiç basılmaz</strong>; "bilinmiyor" yazılmaz.</span>
+      </div>
+    </div>
+
+    <div style="width:1360px;background:#fff;border:1.5px dashed #cdc4a8;border-radius:16px;padding:24px 32px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:700 16px 'Karla';color:#3a4147">Etkileşim sözleşmesi (kodlayan ajan için)</span>
+      <ul style="margin:0;padding-left:20px;font:400 14px/1.8 'Karla';color:#6d7261">
+        <li>Üst menüdeki <strong>Paketler</strong> bu sayfaya gider. Kartın tamamı tıklanabilir ve <strong>Paket Detay</strong>'ı açar; listede "sepete ekle" <strong>yoktur</strong> — paket bütün olarak satıldığı için karar detayda verilir.</li>
+        <li><strong>Sıra yönetimden gelir</strong> (kürelenmiş seçki): müşteriye sıralama seçeneği, filtre ya da arama sunulmaz. Tek istisna: tükenmiş paketler sıranın sonuna alınır.</li>
+        <li>Karttaki bilgiler <strong>türetilmiştir</strong>, elle girilmez: kalem sayısı, stok durumu (bir kalem tükendiyse paket tükendi), kargo kısıtı (kargolanamayan kalem varsa paket bölge içi), toplam net ağırlık. Ağırlık ya da "kaç kişilik" hesaplanamıyorsa o satır/rozet basılmaz.</li>
+        <li>Liste <strong>sonu belirsiz</strong> kurgulanır: ilk 12 paket basılır, altında "Daha fazla paket" ile sayfalanır (mobilde sonsuz kaydırma). Onlarca pakete çıktığında düzen değişmez.</li>
+        <li>Sayfa <strong>yalnız B2C</strong>'dir: toptan (B2B) oturumda menüdeki bağlantı da bu sayfa da görünmez; doğrudan URL ile gelinirse kataloğa yönlendirilir.</li>
+        <li>Mobilde kartlar <strong>iki sütun</strong> dizilir — iki paketi yan yana tartmak birincil senaryo; kart yüksekliği eşitlenir, fiyat daima alt hizada durur.</li>
+        <li>Tek fiyat kuralı burada da geçerli: kalem fiyatı, "değeri X" kırılımı, indirim yüzdesi, stok adedi ve son tarih listede hiç görünmez.</li>
+        <li>Dil değişince (TR/FR/DE) ad ve açıklama uzar; kart başlığı 2, açıklama 3 satırda kesilir — kart yüksekliği ızgara boyunca eşit kalır.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Paketler · Mobil</span>
+    <div data-screen-label="Paketler Mobil" style="width:390px;background:#faf6ec;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px">
+        <span style="font:700 15px 'Karla';color:#5f7a2c">☰</span>
+        <img src="assets/logo.jpg" style="height:36px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+        <div style="position:relative;font-size:19px">🧺<span style="position:absolute;top:-5px;right:-8px;background:#b05c2e;color:#fff;font:700 10px 'Karla';border-radius:9px;padding:1px 5px">3</span></div>
+      </div>
+      <div style="padding:4px 16px 12px;display:flex;flex-direction:column;gap:8px">
+        <h1 style="margin:0;font:600 28px/1.15 'Lora';color:#343b41">Hazır paketler</h1>
+        <p style="margin:0;font:400 14.5px/1.6 'Karla';color:#6d7261">Tek fiyata kurulmuş sofralar — içeriği belli, seçmekle uğraşmak yok.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 20px">
+        <sc-for list="{{ mobilePackages }}" as="p" hint-placeholder-count="4">
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:relative;aspect-ratio:3/2">
+              <image-slot id="pkl-m-{{ $index }}" shape="rect" placeholder="{{ p.name }}"></image-slot>
+              <span style="position:absolute;top:8px;left:8px;font:700 11px 'Karla';color:#fff;background:rgba(58,59,65,.78);border-radius:10px;padding:2px 8px">{{ p.serves }}</span>
+            </div>
+            <div style="padding:11px 12px 13px;display:flex;flex-direction:column;gap:4px;flex:1">
+              <span style="font:600 16px/1.2 'Lora';color:#343b41">{{ p.name }}</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">{{ p.itemsShort }}</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">{{ p.weight }}</span>
+              <sc-if value="{{ p.shipRestricted }}" hint-placeholder-val="{{ true }}">
+                <span style="font:600 11px 'Karla';color:#8a6b2a;background:#fdf3e0;border:1px solid #ecd9b4;border-radius:10px;padding:2px 8px;width:max-content;white-space:nowrap">🚚 Yalnız bölge içi</span>
+              </sc-if>
+              <span style="font:700 17px 'Karla';color:#343b41;margin-top:auto;padding-top:6px">{{ p.price }}</span>
+            </div>
+          </div>
+        </sc-for>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;opacity:.72">
+          <div style="position:relative;aspect-ratio:3/2">
+            <image-slot id="pkl-m-out" shape="rect" placeholder="Yeni Yıl Sofrası"></image-slot>
+            <span style="position:absolute;top:8px;left:8px;font:700 11px 'Karla';color:#fff;background:rgba(58,59,65,.78);border-radius:10px;padding:2px 8px">8 kişilik</span>
+          </div>
+          <div style="padding:11px 12px 13px;display:flex;flex-direction:column;gap:4px;flex:1">
+            <span style="font:600 16px/1.2 'Lora';color:#8a8270">Yeni Yıl Sofrası</span>
+            <span style="font:600 11px 'Karla';color:#3a4147;background:#e9e4d4;border-radius:10px;padding:3px 8px;width:max-content">Tükendi</span>
+            <span style="font:700 17px 'Karla';color:#8a8270;margin-top:auto;padding-top:6px">59,90 €</span>
+          </div>
+        </div>
+      </div>
+      <div style="padding:0 16px 20px"><span style="display:block;font:700 13.5px 'Karla';color:#5f7a2c;border:1.5px solid #5f7a2c;border-radius:22px;padding:11px;text-align:center">Kataloğa göz at</span></div>
+      <div style="background:#343b41;color:#c9cdc2;padding:18px 16px;font:400 12.5px 'Karla';display:flex;justify-content:space-between">
+        <span style="font:600 14px 'Lora';color:#f3efe2">Lezzet Anatolia</span><span>TR · FR · DE</span>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1920,&quot;height&quot;:1400}}">
+class Component extends DCLogic {
+  renderVals() {
+    const packages = [
+      { name: "Bayram Sofrası", serves: "6 kişilik", items: "8 ürün", itemsShort: "8 ürün", weight: "Toplam 4,2 kg", price: "49,90 €", badges: ["● Stokta", "📦 Kargoya uygun"], blurb: "Bayram sabahı telaşsız olsun: börekten baklavaya tam bir sofra." },
+      { name: "Kahvaltı Keyfi", serves: "4 kişilik", items: "6 ürün", itemsShort: "6 ürün", weight: "Toplam 2,6 kg", price: "24,90 €", badges: ["● Stokta", "🚚 Yalnız bölge içi"], shipRestricted: true, blurb: "Pazar sabahına hazır kahvaltılık seçkisi." },
+      { name: "Mantı Akşamı", serves: "4 kişilik", items: "3 ürün", itemsShort: "3 ürün", weight: "Toplam 1,4 kg", price: "29,90 €", badges: ["● Stokta", "📦 Kargoya uygun"], blurb: "Kayseri mantısı ve yanına gideni bir arada." },
+      { name: "Tatlı Tabağı", serves: "6 kişilik", items: "4 ürün", itemsShort: "4 ürün", weight: "Toplam 1,9 kg", price: "22,50 €", badges: ["● Stokta", "📦 Kargoya uygun"], blurb: "Misafir gelince açılacak tatlı seçkisi." },
+      { name: "Börek Sepeti", serves: "5 kişilik", items: "5 ürün", itemsShort: "5 ürün", weight: "Toplam 2,1 kg", price: "19,90 €", badges: ["● Stokta", "📦 Kargoya uygun"], blurb: "Dondurucuda dursun, ihtiyaç oldukça fırına girsin." },
+    ];
+    return { packages, mobilePackages: packages.slice(0, 3) };
+  }
+}
+
+</script>
+</body>
+</html>

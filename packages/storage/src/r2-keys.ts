@@ -40,4 +40,8 @@ export const r2Keys = {
   /** Kategori görseli — aynı deterministik desen (slug'a bağlı, timestamp yok). */
   categoryImage: (slug: string, sourceFilename: string): string =>
     `catalog/categories/${sanitize(slug)}.${extOf(sourceFilename)}`,
+
+  /** Paket (bundle) görseli — 3:2 kaynak; aynı deterministik desen. */
+  bundleImage: (slug: string, sourceFilename: string): string =>
+    `catalog/bundles/${sanitize(slug)}.${extOf(sourceFilename)}`,
 } as const;

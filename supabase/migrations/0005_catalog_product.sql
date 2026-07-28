@@ -95,6 +95,61 @@ create table public.product_image (
 -- Galeri her zaman ürün başına ve SIRALI okunur.
 create index product_image_product_idx on public.product_image (product_id, sort_order);
 
+-- ── Paket (bundle) ───────────────────────────────────────────────────────────────────────────────
+-- Birden çok ürünü TEK fiyata sunan katalog kısayolu (DOMAIN §13). Yeni ürün YARATMAZ: sepete
+-- eklenince içindeki her kalem ayrı `order_item` olur, sistem müşteri hepsini tek tek almış gibi akar
+-- (stok, hazırlık, kâr, fatura kalem kalem). Bu yüzden paketin varyantı, stoğu ve KDV'si yoktur.
+--
+-- Burada, ürün migration'ında duruyor çünkü kalemleri `product_variant`'a bağlı ve `0015`'teki
+-- `order_item.bundle_id` bu tabloya FK verecek — paket ondan ÖNCE var olmak zorunda.
+--
+-- Paket YALNIZ B2C'dedir: `total_price` tek sayıdır ve **KDV dahil (TTC)** — b2c kanal tabanı. Kanal
+-- listesi, müşteriye özel fiyatı ve `price` satırı YOKTUR. Toptan müşteri paketi görmez; pazarlık
+-- kalem üzerinden yürür, paket ise sosyal medyaya yönelik bir pazarlama kısayoludur.
+create table public.bundle (
+  id uuid primary key default gen_random_uuid(),
+  name jsonb not null,                               -- LocalizedText
+  description jsonb,                                 -- LocalizedText; listede kısa, detayda tam
+  slug text not null,                                -- sosyal paylaşımın tek bağlantısı (dil-bağımsız)
+  -- Görsel künyesi ürünle AYNI alanlar (Komponent Envanteri §0B): tek 3:2 kaynak + odak; müşteri
+  -- çerçeveleri (liste kartı 3:2, detay 3:2, anasayfa koyu kart 1:1) buradan türer.
+  image_key text,
+  image_focal_x smallint not null default 50,
+  image_focal_y smallint not null default 50,
+  image_zoom smallint not null default 100,
+  image_alt jsonb,
+  image_updated_at timestamptz,
+  total_price numeric(10, 2) not null,               -- müşterinin gördüğü TEK fiyat, TTC
+  -- "6 kişilik" — tasarımda ad üstü künyede duruyor (Paket Detay + Paketler listesi). Serbest metne
+  -- gömülemez: künye olarak tutarlı basılması ve boş olduğunda satırın HİÇ çizilmemesi gerekiyor.
+  serves int,
+  is_active boolean not null default true,
+  sort_order int not null default 0,                 -- kürelenmiş vitrin sırası (müşteri sıralamaz)
+  created_at timestamptz not null default now()
+);
+create unique index bundle_slug_key on public.bundle (slug);
+
+-- Paket kalemi. `allocated_unit_price` MÜŞTERİYE GÖRÜNMEZ: iç muhasebe aracıdır — faturada her
+-- kalemin KDV'si kendi ürününün oranından işlensin diye gerekli (baklava %5,5, malzeme %20).
+-- Σ(allocated × qty) = bundle.total_price kuralını uygulama katmanı doğrular (motor: domain-core);
+-- SQL check'e konamaz, çünkü kural satır değil KÜME üzerindedir.
+create table public.bundle_item (
+  id uuid primary key default gen_random_uuid(),
+  bundle_id uuid not null references public.bundle (id) on delete cascade,
+  -- `restrict`: pakette duran varyant silinemez. Varyant silme zaten okunabilir hataya çevriliyor
+  -- (ProductVariantService.deleteVariant) — paket de o cümlenin kaynaklarından biri olur.
+  variant_id uuid not null references public.product_variant (id) on delete restrict,
+  qty int not null check (qty > 0),
+  allocated_unit_price numeric(10, 2) not null check (allocated_unit_price >= 0), -- 0 = hediye kalem
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+-- Kalemler paket başına ve SIRALI okunur.
+create index bundle_item_bundle_idx on public.bundle_item (bundle_id, sort_order);
+-- Aynı varyant bir pakete iki kez giremez — "iki tane" demek için adet artırılır. İki satır olsaydı
+-- müşteri aynı ürünü listede iki kez görürdü ve toplam doğrulaması sessizce iki yerden beslenirdi.
+create unique index bundle_item_variant_key on public.bundle_item (bundle_id, variant_id);
+
 -- Ürün ↔ koleksiyon çoklu bağı (bir ürün birçok koleksiyona girer).
 -- position: koleksiyon İÇİNDEKİ vitrin sırası — admin sürükle-bırakla kürasyon yapar.
 create table public.product_collections (
@@ -107,6 +162,8 @@ create table public.product_collections (
 -- filtreleyen sorgular o indeksten yararlanamaz.
 create index product_collections_order_idx on public.product_collections (collection_id, position);
 
+alter table public.bundle enable row level security;
+alter table public.bundle_item enable row level security;
 alter table public.product enable row level security;
 alter table public.product_variant enable row level security;
 alter table public.product_collections enable row level security;

@@ -91,7 +91,10 @@ create table public.order_item (
   fulfilled_qty int not null default 0 check (fulfilled_qty >= 0),
   -- Partiye çıpalı teklif satırıysa hangi parti; fiilen çıkan partiler `order_item_batch`'te.
   stock_id uuid references public.stock (id) on delete set null,
-  bundle_id uuid,                                    -- FK YOK: `bundle` tablosu 05.5'te
+  -- Kalem hangi paketten geldi (DOMAIN §13): müşteriye "Bayram Paketi" olarak gruplu göstermek ve
+  -- raporlamak için. `restrict` — sipariş görmüş paket SİLİNEMEZ, pasife alınır: geçmişin grup
+  -- etiketini sessizce boşaltmak, siparişi "tek tek alınmış" gibi göstermek olurdu.
+  bundle_id uuid references public.bundle (id) on delete restrict,
   unit_price numeric(10, 2) not null,                -- CHECKOUT BAŞLANGICINDA sabitlenir (DOMAIN §5)
   -- Sepet/kupon indiriminin bu kaleme ORANSAL payı — kısmi iade ve kalem KDV'si indirimli birimden
   -- hesaplanır, sonradan hesap belirsizliği kalmaz (DOMAIN §5).

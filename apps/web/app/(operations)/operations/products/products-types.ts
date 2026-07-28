@@ -2,7 +2,16 @@
 // client yalnız bunları görür. TİPLER ŞEMADAN TÜRETİLİR: ProductView = Product & {türetilen}; alanlar
 // yeniden yazılmaz (no-duplication, schemas-single-source). Durum/dolu-dil gibi saf türevler client'ta
 // yardımcıyla hesaplanır (taşınmaz). Dil yapısı @lezzet/i18n'de, alerjen packages/types'ta.
-import type { Category, Collection, KeysetCursor, LocalizedText, Product, ProductStatus, ProductVariant } from '@lezzet/types';
+import type {
+  BundleWithItems,
+  Category,
+  Collection,
+  KeysetCursor,
+  LocalizedText,
+  Product,
+  ProductStatus,
+  ProductVariant,
+} from '@lezzet/types';
 import { slugify } from '@lezzet/helper';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 import type { ProductTab } from './products-paths';
@@ -30,6 +39,40 @@ export type CollectionView = Collection & { count: number; productIds: string[];
 
 /** Katalog satırı — kategori ve koleksiyon aynı alanları taşır; tek tablo/dialog bunu tüketir. */
 export type CatalogRow = CategoryView | CollectionView;
+
+/**
+ * Paket view-model — `BundleWithItems`'ı türetir (kalemler gömülü geldi, N+1 yok). `itemLabels`
+ * kalemlerin "ürün · boy" adları: kalem yalnız `variantId` taşır, ad çözümü RSC'de yapılır ki client
+ * varyant havuzunu tarayarak ad aramasın (liste satırı içeriği özetliyor).
+ */
+export type BundleView = BundleWithItems & {
+  imageUrl: string | null;
+  itemLabels: string[];
+};
+
+/**
+ * Bir satılabilir birim — "Ürün · boy". Ürün listesi SAYFALI olduğu için paket seçicisi ona
+ * dayanamaz (ikinci sayfadaki ürün pakete eklenemezdi); bu havuz ayrı ve TAM okunur.
+ *
+ * HAVUZ İKİ İŞ GÖRÜR ve kümeleri AYNI DEĞİL: (a) pakete YENİ eklenebilecekler — yalnız aktif,
+ * (b) pakette DURAN kalemin adı — hepsi. Havuz aktifle sınırlıyken pasif ürünün kalemi adsız kalıyor
+ * ve ekran onu "silinmiş" sanıyordu; oysa `bundle_item.variant_id` FK'si `restrict`, yani pakette
+ * duran varyant SİLİNEMEZ. Bu yüzden havuz artık pasifi de taşır, eklenebilirliği `addable` söyler.
+ */
+export interface VariantOption {
+  variantId: string;
+  label: string;
+  imageUrl: string | null;
+  /**
+   * Liste fiyatı (b2c, KDV dahil €) — paketin verdiği indirim ancak buna göre görülebilir. `null` =
+   * o varyanta henüz fiyat girilmemiş; sayı UYDURULMAZ, ekran eksikliği söyler.
+   */
+  listPrice: number | null;
+  /** Pakete YENİ eklenebilir mi (ürün aktif + boy aktif). Pasif olan yine adıyla görünür. */
+  addable: boolean;
+  /** Eklenemiyorsa sebebi — "pasif ürün" · "aday ürün" · "pasif boy". Duran kalemde işaret olur. */
+  blockedReason: string | null;
+}
 
 // ── Saf türevler (client-güvenli) — Product'tan hesaplanır, taşınmaz ──
 /** Adı DOLU olan içerik dilleri — "diller" göstergesi. */
@@ -64,6 +107,10 @@ export interface ProductsData {
   /** Kategori ve koleksiyon TAM gelir: tavanı onlarla sınırlı, açılır menüyü besliyor (STACK §6). */
   categories: CategoryView[];
   collections: CollectionView[];
+  /** Paketler TAM gelir — kürelenmiş kısa bir seçki (müşteri tarafında da sıralama/filtre yok). */
+  bundles: BundleView[];
+  /** Pakete eklenebilecek birimlerin TAM havuzu — ürün listesi sayfalı olduğu için ayrı okunur. */
+  variantPool: VariantOption[];
 }
 
 /**

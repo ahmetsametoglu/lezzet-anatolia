@@ -530,6 +530,35 @@
     </div>
   </div>
 
+  <!-- §7 PAKET EVRENİ -->
+  <div style="background:#fff;border:1px solid #e3dcc8;border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">§7 · Paket evreni ile eklenen parçalar</h2>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K28 · Paket Liste Kartı <span style="font:600 12px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:10px;padding:2px 9px;margin-left:6px">yeni</span></span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Paketler listesinin birimi. K7 ürün kartının paket varyantı değil, <strong>ayrı komponent</strong>: fiyatı tek (K6 indirim/birim fiyat mantığı hiç çalışmaz), aksiyonu sepet değil detaya geçiş, üzerinde "kaç kişilik" örtü rozeti taşır. İçerik: 3:2 görsel + kişilik rozeti · ad (Lora) · kalem sayısı · toplam net ağırlık · kısa açıklama (3 satırda kesilir) · durum rozetleri (K5) · tek fiyat + "Paketi incele". Türetilmiş alanlar hesaplanamıyorsa satır <strong>basılmaz</strong>. Tükendi hâli: kart %72 opaklık, gri rozet, susturulmuş fiyat, pasif buton — listenin sonuna alınır.</span>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Paketler listesi (web 3 sütun · mobil 2 sütun) · Canlı örnek: <a href="Musteri - Paketler.dc.html">Paketler mokabı</a>. K10 (koyu zeminli vitrin paket kartı) ana sayfada olduğu gibi kalır — ikisi karıştırılmaz.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:700 17px 'Karla'">K29 · Güven Künyesi (türetilmiş bilgi ızgarası) <span style="font:600 12px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:10px;padding:2px 9px;margin-left:6px">yeni</span></span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Satın alma kararının yanında duran, kalemlerden <strong>türetilmiş</strong> bilgi ızgarası: toplam net ağırlık · en kısa tüketim süresi · toplu alerjen çipleri. Beyaz hücreler, 1px ayraç, K26 bilgi bandından ayrı bir ailedir: K26 teslimat/uyarı söyler, K29 içeriğin künyesidir. Web'de 2 sütun (alerjen satırı tam genişlik), mobilde alt alta satırlar. Alerjen çipi amber (#fdf3e0 / #8a6b2a) — uyarı değil, tanıma rengi. Boş alan hiç basılmaz; "bilinmiyor" yazılmaz.</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#ece5d2;border:1px solid #ece5d2;border-radius:14px;overflow:hidden;max-width:520px">
+        <div style="background:#fff;padding:13px 16px;display:flex;flex-direction:column;gap:2px"><span style="font:400 12px 'Karla';color:#8a8270">Toplam net ağırlık</span><span style="font:700 15px 'Karla';color:#3a4147">4,2 kg · 8 ürün</span></div>
+        <div style="background:#fff;padding:13px 16px;display:flex;flex-direction:column;gap:2px"><span style="font:400 12px 'Karla';color:#8a8270">Çözdükten sonra tüketim</span><span style="font:700 15px 'Karla';color:#3a4147">En geç 3 gün içinde</span></div>
+        <div style="background:#fff;padding:13px 16px;display:flex;flex-direction:column;gap:5px;grid-column:1/-1">
+          <span style="font:400 12px 'Karla';color:#8a8270">Pakette bulunan alerjenler</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <span style="font:600 12.5px 'Karla';color:#8a6b2a;background:#fdf3e0;border:1px solid #ecd9b4;border-radius:11px;padding:3px 10px">Gluten</span>
+            <span style="font:600 12.5px 'Karla';color:#8a6b2a;background:#fdf3e0;border:1px solid #ecd9b4;border-radius:11px;padding:3px 10px">Süt</span>
+            <span style="font:600 12.5px 'Karla';color:#8a6b2a;background:#fdf3e0;border:1px solid #ecd9b4;border-radius:11px;padding:3px 10px">Sert kabuklu</span>
+          </div>
+        </div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Paket detay (yeni) · Canlı örnek: <a href="Musteri - Paket Detay.dc.html">Paket Detay mokabı</a>. <strong>Etkilenen sayfa:</strong> ürün detayın yasal bölümleri (içindekiler/alerjen/besin) değişmez — yasal beyan ürün başına orada kalır; K29 yalnız pakette özet görevi görür.</span>
+    </div>
+  </div>
+
   <!-- KURALLAR -->
   <div style="background:#3a4147;color:#f3efe2;border-radius:16px;padding:26px 32px;display:flex;flex-direction:column;gap:12px">
     <h2 style="margin:0;font:600 24px 'Lora'">Evren kuralları (kodlayan ajan için)</h2>
@@ -537,6 +566,7 @@
       <li>Görseller: her görsel alanı içerik yönetiminden gelir; oranlar komponentte sabittir (ürün kartı web 170px / mobil 110px yükseklik).</li>
       <li>Fiyat her zaman K6'dan geçer; ziyaretçi/B2C perakende, onaylı B2B toptan görür — aynı komponent, farklı veri. İki fiyat tipi asla aynı anda görünmez.</li>
       <li>İç terimler (DLC, DDM, MLOR, FEFO, parti, rezervasyon, near-expiry) hiçbir müşteri metninde geçmez; indirim sebebi anlatılmaz.</li>
+      <li>Paketlerde <strong>tek fiyat kuralı</strong>: kalem fiyatı, "değeri X → Y ödüyorsunuz" kırılımı ve indirim yüzdesi hiçbir ekranda görünmez; kupon/indirim pakete uygulanmaz ve anılmaz. Paket sayfaları yalnız B2C'dir — B2B oturumda menü bağlantısı da sayfa da yoktur.</li>
       <li>Koşullu bölümler (fırsat, koleksiyon, paket): veri yoksa bölüm DOM'dan tamamen çıkar; boş kabuk bırakılmaz.</li>
       <li>Metinler TR/FR/DE tek dilli gelir; komponentler ~%35 daha uzun Almanca metne taşmadan dayanmalıdır (sabit yükseklik yerine min-height).</li>
       <li>Mobil dokunma hedefleri en az 44px.</li>
@@ -563,6 +593,7 @@ class Component extends DCLogic {
         { screen:'Katalog · ürün kartı (web + mobil)', ratio:'3:2', fg:'#4a6121' },
         { screen:'Ürün detay · ana görsel + küçükler', ratio:'3:2', fg:'#4a6121' },
         { screen:'Ürün detay · benzer ürünler', ratio:'3:2', fg:'#4a6121' },
+        { screen:'Paketler listesi · kart + hero', ratio:'3:2', fg:'#4a6121' },
         { screen:'Paket detay · ana görsel', ratio:'3:2', fg:'#4a6121' },
         { screen:'Paket detay · içerik satırı', ratio:'1:1', fg:'#6d7261' },
         { screen:'Sepet · satır görseli (web + mobil)', ratio:'1:1', fg:'#6d7261' },

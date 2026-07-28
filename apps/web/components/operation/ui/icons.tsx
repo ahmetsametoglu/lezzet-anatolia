@@ -155,17 +155,6 @@ export function PlusIcon({ size = 14 }: { size?: number }) {
   );
 }
 
-/** Paket/kutu ikonu — boş durum ve ürün yer tutucu. */
-export function PackageIcon({ size = 26 }: { size?: number }) {
-  return (
-    <Svg size={size} strokeWidth={1.6}>
-      <path d="M21 8v8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8" />
-      <path d="M3.3 7 12 12l8.7-5" />
-      <path d="M12 22V12" />
-    </Svg>
-  );
-}
-
 /** Yıldız — "bunu kapak yap" (galeri karesi). Dolu değil çizgi: henüz kapak DEĞİL demek. */
 export function StarIcon({ size = 14 }: { size?: number }) {
   return (

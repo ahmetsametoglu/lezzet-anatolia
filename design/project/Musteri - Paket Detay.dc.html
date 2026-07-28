@@ -59,8 +59,27 @@
             </span>
             <span style="background:#5f7a2c;color:#fff;font:700 17px 'Karla';padding:16px 40px;border-radius:30px;flex:1;text-align:center">Paketi sepete ekle — 49,90 €</span>
           </div>
-          <div style="display:flex;gap:20px;font:400 13.5px 'Karla';color:#6d7261;background:#f0e9d6;border-radius:14px;padding:14px 18px">
+          <div style="display:flex;gap:20px;font:400 13.5px 'Karla';color:#6d7261;background:#f0e9d6;border-radius:14px;padding:14px 18px;flex-wrap:wrap">
             <span>❄ Soğuk zincirle gelir</span><span>🚚 Bölge içi kapıya teslim</span><span>📦 Kargoya uygun</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#ece5d2;border:1px solid #ece5d2;border-radius:14px;overflow:hidden">
+            <div style="background:#fff;padding:13px 16px;display:flex;flex-direction:column;gap:2px">
+              <span style="font:400 12px 'Karla';color:#8a8270">Toplam net ağırlık</span>
+              <span style="font:700 15px 'Karla';color:#3a4147">4,2 kg · 8 ürün</span>
+            </div>
+            <div style="background:#fff;padding:13px 16px;display:flex;flex-direction:column;gap:2px">
+              <span style="font:400 12px 'Karla';color:#8a8270">Çözdükten sonra tüketim</span>
+              <span style="font:700 15px 'Karla';color:#3a4147">En geç 3 gün içinde</span>
+            </div>
+            <div style="background:#fff;padding:13px 16px;display:flex;flex-direction:column;gap:4px;grid-column:1/-1">
+              <span style="font:400 12px 'Karla';color:#8a8270">Pakette bulunan alerjenler</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <sc-for list="{{ allergens }}" as="a" hint-placeholder-count="4">
+                  <span style="font:600 12.5px 'Karla';color:#8a6b2a;background:#fdf3e0;border:1px solid #ecd9b4;border-radius:11px;padding:3px 10px;white-space:nowrap">{{ a }}</span>
+                </sc-for>
+              </div>
+              <span style="font:400 12px 'Karla';color:#8a8270">Kalem kalem içindekiler ve tam beyan, her ürünün kendi sayfasındadır.</span>
+            </div>
           </div>
           <span style="font:400 13px 'Karla';color:#8a8270">Paket bütün olarak satılır; içerik değiştirilemez. Ürünleri tek tek almak isterseniz kataloğa göz atın.</span>
         </div>
@@ -83,7 +102,7 @@
           </sc-for>
         </div>
         <div style="background:#fff;border:1px solid #ece5d2;border-radius:14px;padding:14px 20px;font:400 13.5px/1.6 'Karla';color:#6d7261">
-          ⚠ <strong>Alerjenler:</strong> içerikteki her ürünün alerjen ve içindekiler bilgisi kendi ürün sayfasındadır — satın almadan önce yukarıdaki bağlantılardan ulaşabilirsiniz. Pakette gluten, sert kabuklu meyve ve süt içeren ürünler bulunur.
+          ⚠ Yasal beyan ürün başına yapılır: her kalemin içindekiler, alerjen ve besin değeri bilgisi kendi ürün sayfasındadır — yukarıdaki kartlardan ulaşabilirsiniz. Paketin toplu alerjen listesi ve tüketim süresi satın alma alanında özetlenmiştir.
         </div>
       </div>
       <div style="background:#343b41;color:#c9cdc2;padding:28px 48px;display:flex;justify-content:space-between;font:400 14px 'Karla'">
@@ -121,6 +140,9 @@
         <li><strong>İçerik kartı / "Ürün bilgisi →"</strong> → ilgili ürün detay sayfasına gider (alerjen/yasal bilgi orada). Yeni sekme değil, aynı akış; geri dönüş pakete.</li>
         <li>İçerik kartlarında <strong>fiyat asla gösterilmez</strong> — tek fiyat kuralı. "Hediye/0€" etiketi yoktur; tüm kalemler sıradan içerik olarak eşit sunulur.</li>
         <li>Kupon/indirim pakete uygulanmaz — bu sayfada hiç söz edilmez; sepette kupon paket satırına binmeyince sade açıklama orada verilir.</li>
+        <li><strong>Türetilmiş güven bilgisi</strong> (ağırlık · en kısa tüketim süresi · toplu alerjen) kalemlerden hesaplanır: ağırlık = ağırlık × adet toplamı, süre = en kısa ömürlü kalem, alerjen = kalemlerin birleşimi. Yasal beyan ürün sayfasında kalır; burası özettir.</li>
+        <li>Bir kalemin ağırlığı girilmemişse toplam <strong>"8 ürün"</strong> olarak kalem sayısıyla gösterilir, yaklaşık ağırlık uydurulmaz. Alerjen listesi boşsa satır hiç basılmaz.</li>
+        <li>Ad üstündeki <strong>"· 6 kişilik"</strong> isteğe bağlıdır; girilmemişse künye yalnız "Hazır Paket" olur, yerine başka bilgi konmaz.</li>
         <li><strong>↗ paylaş</strong> → paketin tek paylaşım linki (sosyal medya birincil senaryo; sayfa tek başına ilk izlenim olabilir).</li>
       </ul>
     </div>
@@ -146,6 +168,22 @@
         <div style="display:flex;gap:16px;font:400 12px 'Karla';color:#6d7261;background:#f0e9d6;border-radius:12px;padding:11px 14px">
           <span>❄ Soğuk zincir</span><span>🚚 Kapıya teslim</span><span>📦 Kargoya uygun</span>
         </div>
+        <div style="border:1px solid #ece5d2;border-radius:12px;background:#fff;display:flex;flex-direction:column">
+          <div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #ece5d2">
+            <span style="font:400 12.5px 'Karla';color:#8a8270">Toplam net ağırlık</span><span style="font:700 12.5px 'Karla';color:#3a4147">4,2 kg · 8 ürün</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #ece5d2">
+            <span style="font:400 12.5px 'Karla';color:#8a8270">Çözdükten sonra</span><span style="font:700 12.5px 'Karla';color:#3a4147">En geç 3 gün</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;padding:10px 14px">
+            <span style="font:400 12.5px 'Karla';color:#8a8270">Pakette bulunan alerjenler</span>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              <sc-for list="{{ allergens }}" as="a" hint-placeholder-count="4">
+                <span style="font:600 11.5px 'Karla';color:#8a6b2a;background:#fdf3e0;border:1px solid #ecd9b4;border-radius:10px;padding:2px 9px;white-space:nowrap">{{ a }}</span>
+              </sc-for>
+            </div>
+          </div>
+        </div>
       </div>
       <div style="padding:0 16px 16px;display:flex;flex-direction:column;gap:10px">
         <span style="font:600 20px 'Lora';color:#343b41">Pakette neler var?</span>
@@ -159,7 +197,7 @@
             <span style="margin-left:auto;font:600 12.5px 'Karla';color:#5f7a2c">Bilgi →</span>
           </div>
         </sc-for>
-        <div style="background:#fff;border:1px solid #ece5d2;border-radius:12px;padding:12px 14px;font:400 12.5px/1.6 'Karla';color:#6d7261">⚠ <strong>Alerjenler:</strong> her içeriğin bilgisi kendi ürün sayfasında. Pakette gluten, sert kabuklu meyve ve süt bulunur.</div>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:12px;padding:12px 14px;font:400 12.5px/1.6 'Karla';color:#6d7261">⚠ Tam içindekiler ve yasal beyan her ürünün kendi sayfasında. Paketin toplu alerjen listesi yukarıda.</div>
       </div>
       <div style="margin:0 12px 12px;background:#3a4147;border-radius:20px;padding:12px 14px;display:flex;align-items:center;gap:12px">
         <span style="display:inline-flex;align-items:center;border:1.5px solid #a9c46b;border-radius:16px;overflow:hidden"><span style="font:700 16px 'Karla';color:#a9c46b;padding:6px 12px">−</span><span style="font:700 14px 'Karla';color:#f3efe2;min-width:26px;text-align:center">1</span><span style="font:700 16px 'Karla';color:#343b41;background:#a9c46b;padding:6px 12px">+</span></span>
@@ -176,6 +214,7 @@
 class Component extends DCLogic {
   renderVals() {
     return {
+      allergens: ["Gluten", "Süt", "Sert kabuklu (fıstık, ceviz)", "Yumurta", "Susam"],
       contents: [
         { name: "El Açması Su Böreği", qty: "1 kg · 1 adet" },
         { name: "Fıstıklı Baklava", qty: "700 g · 1 tepsi" },

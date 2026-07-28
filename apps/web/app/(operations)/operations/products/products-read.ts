@@ -1,6 +1,6 @@
 import { publicImageUrl } from '@lezzet/storage';
-import type { ProductWithRelations } from '@lezzet/types';
-import type { ProductView } from './products-types';
+import { resolveLocalizedText, type BundleWithItems, type ProductWithRelations } from '@lezzet/types';
+import type { BundleView, ProductView, VariantOption } from './products-types';
 
 // Sunucu-tarafı okuma yardımcıları. Ürün sayfası İKİ yerden okunur — ilk sayfa RSC'de (page.tsx),
 // devamı action'da (actions/list.ts) — ve ikisi de aynı indirgemeyi yapar: public görsel URL'i +
@@ -19,6 +19,54 @@ interface NameMaps {
  * Görsel URL'i public bucket'tan saf string birleştirmeyle kurulur (05.11) — async değil, ağ turu
  * yok, sonuç sabit ve cache'lenebilir. Sürüm damgası `imageUpdatedAt`'ten gelir.
  */
+/**
+ * Paket satırlarını view-model'e indirger. Kalemin adı ("Ürün · boy") BURADA çözülür: kalem yalnız
+ * `variantId` taşıyor, client varyant havuzunu tarayıp ad aramasın — liste satırı içeriği özetliyor.
+ * Sıra kalemin `sortOrder`'ıdır (müşterinin paket içeriğinde gördüğü sıra).
+ */
+export function toBundleViews(rows: BundleWithItems[], variantLabels: Map<string, string>): BundleView[] {
+  return rows.map((bundle) => ({
+    ...bundle,
+    imageUrl: publicImageUrl(bundle.imageKey, bundle.imageUpdatedAt),
+    itemLabels: [...bundle.items]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((i) => variantLabels.get(i.variantId) ?? '—'),
+  }));
+}
+
+/**
+ * Katalogdaki TÜM satılabilir birimler, "Ürün · boy" adıyla. Boy etiketi boşsa (tek boylu ürün)
+ * yalnız ürün adı kalır — "Baklava · " gibi sarkan bir ayraç bırakılmaz.
+ *
+ * PASİF OLAN DA GELİR: havuz hem "pakete ne eklenebilir" (yalnız aktif) hem "pakette duran kalemin adı
+ * ne" (hepsi) sorusuna hizmet ediyor. Aktifle sınırlıyken pasif ürünün kalemi adsız kalıyordu ve ekran
+ * onu "silinmiş" sanıyordu — oysa pakette duran varyant FK gereği (`restrict`) silinemez. Eklenebilirlik
+ * artık ayrı bir alan (`addable`), süzgeç değil.
+ *
+ * TEK KAYNAK: paket formunun seçicisi de, liste satırındaki kalem adları da bunu kullanır. İki yerde
+ * ayrı kurulsaydı biri "500 g" öbürü "Baklava 500 g" yazar, aynı kalem iki adla görünürdü.
+ */
+export function toVariantOptions(rows: ProductWithRelations[], listPrices: Map<string, number>): VariantOption[] {
+  return rows.flatMap((p) => {
+    const productName = resolveLocalizedText(p.name);
+    const imageUrl = publicImageUrl(p.imageKey, p.imageUpdatedAt);
+    // Ürün düzeyindeki engel varyantın hepsini kapsar; boy düzeyindeki yalnız o boyu.
+    const productBlock = p.status === 'active' ? null : p.status === 'candidate' ? 'aday ürün' : 'pasif ürün';
+    return p.variants.map((v) => {
+      const boy = resolveLocalizedText(v.label);
+      const blockedReason = productBlock ?? (v.isActive ? null : 'pasif boy');
+      return {
+        variantId: v.id,
+        label: boy ? `${productName} · ${boy}` : productName,
+        imageUrl,
+        listPrice: listPrices.get(v.id) ?? null,
+        addable: blockedReason === null,
+        blockedReason,
+      };
+    });
+  });
+}
+
 export function toProductViews(rows: ProductWithRelations[], names: NameMaps): ProductView[] {
   return rows.map((row) => {
     const { collections, ...product } = row;

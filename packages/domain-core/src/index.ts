@@ -2,6 +2,7 @@
 // Yalnız types + helper bilir; uygulamayı bilmez. İçerik: docs/build/03-domain-core.md
 export * from './pricing/resolve-price';
 export * from './pricing/apply-discount';
+export * from './pricing/bundle-allocation';
 export * from './order/status-machine';
 export * from './order/channel';
 export * from './order/reference-no';

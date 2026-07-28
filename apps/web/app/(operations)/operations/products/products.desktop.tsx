@@ -53,7 +53,7 @@ export function ProductsDesktop(props: ProductsViewProps) {
     products: `${total} ürün · ${candidate} aday · ${incomplete} beyan eksik`,
     categories: `${data.categories.length} kategori`,
     collections: `${data.collections.length} koleksiyon`,
-    packages: 'Paket modeli sonraki dilimde',
+    packages: `${data.bundles.length} paket`,
   };
 
   return (
@@ -93,7 +93,15 @@ export function ProductsDesktop(props: ProductsViewProps) {
           onCreateClose={closeCreate}
         />
       )}
-      {tab === 'packages' && <PackagesTab />}
+      {tab === 'packages' && (
+        <PackagesTab
+          bundles={data.bundles}
+          pool={data.variantPool}
+          device="desktop"
+          creating={creating}
+          onCreateClose={closeCreate}
+        />
+      )}
     </div>
   );
 }

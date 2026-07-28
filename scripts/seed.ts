@@ -18,6 +18,9 @@
  *                         Kırpma değerleri bilinçli farklı — odak/zoom etkisi ekranda görünsün.
  *   ✓ collection          4 koleksiyon — açıklama + kapak görseli (paylaşım/OG), aktif+pasif, dolu+boş
  *   ✓ product_collections üyelik + `position` (vitrin kürasyon sırası)
+ *   ✓ bundle · bundle_item 3 paket — görselli/kişilikli · görselsiz + HEDİYE kalemli (0 €) · pasif ve
+ *                         mutabakatı bilinçli TUTMAYAN (liste rozeti kırmızı görünsün). Kalem fiyatları
+ *                         toplamı paket fiyatını verir; kalemler SKU ile varyanta bağlanır
  *   ✓ user_profiles       taslak müşteriler + TİCARİ KARTLAR (B2B onaylı/bekleyen, B2C, DE) + personel
  *                         (dev admin + depo/kurye/muhasebe)
  *   ✓ price               varyant başına b2c TTC + b2b HT; bir kısmında geçmiş liste ve İLERİ TARİHLİ
@@ -62,7 +65,7 @@
  */
 
 import { createServiceRoleClient, waitForRest } from '@lezzet/database';
-import { seedCatalog, seedCollections } from './seed/catalog';
+import { seedBundles, seedCatalog, seedCollections } from './seed/catalog';
 import { seedDeliveryZones, seedAddresses } from './seed/delivery';
 import { seedJobRuns } from './seed/jobs';
 import { seedMoney } from './seed/money';
@@ -87,6 +90,8 @@ async function main(): Promise<void> {
   await waitForRest(db);
   await seedCatalog(db);
   await seedCollections(db);
+  // Paketler kataloğun ARDINDAN: kalemleri varyant kimliğine bağlı (SKU ile çözülür).
+  await seedBundles(db);
   await seedDraftCustomers(db);
 
   // Ticari zemin — SIRA BAĞLAYICIDIR: her bölüm bir öncekinin ürettiği kimliğe dayanır.
