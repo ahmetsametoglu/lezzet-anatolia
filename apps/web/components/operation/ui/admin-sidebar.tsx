@@ -35,7 +35,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { key: 'urunler', label: 'Ürünler', href: '/operations/products' },
       { key: 'fiyatlar', label: 'Fiyatlar', href: '/operations/prices' },
-      { key: 'stok', label: 'Stok', href: '/operations/stock' },
+      { key: 'stock', label: 'Stok', href: '/operations/stock' },
       { key: 'satinalma', label: 'Satın Alma', href: '/operations/purchasing' },
     ],
   },

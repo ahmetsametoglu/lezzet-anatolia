@@ -29,7 +29,7 @@ export type NavIconName =
   | 'rotalar'
   | 'urunler'
   | 'fiyatlar'
-  | 'stok'
+  | 'stock'
   | 'satinalma'
   | 'para'
   | 'raporlar'
@@ -77,7 +77,7 @@ const NAV_PATHS: Record<NavIconName, ReactNode> = {
       <circle cx="17.5" cy="17.5" r="2.5" />
     </>
   ),
-  stok: (
+  stock: (
     <>
       <path d="m12 2 9 5-9 5-9-5z" />
       <path d="m3 12 9 5 9-5" />
