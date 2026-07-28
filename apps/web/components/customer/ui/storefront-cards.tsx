@@ -1,9 +1,12 @@
+'use client';
+
 import { RATIO_SOURCE } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { FramedImage } from '@/components/media/framed-image';
 import { Link } from '@/i18n/navigation';
 import { formatComparison } from '@/lib/storefront/format';
 import type { StorefrontCategory, StorefrontOffer, StorefrontPackage, StorefrontProduct } from '@/lib/storefront/storefront-types';
+import { useCart } from '@/components/customer/cart/cart-context';
 import { Badge } from './badge';
 import { buttonClass } from './button';
 import { Price } from './price';
@@ -91,6 +94,12 @@ interface ProductCardProps {
  */
 export function ProductCard({ product, locale, labels, compact = false }: ProductCardProps) {
   const isOffer = product.wasCents !== undefined;
+  const { add, pending } = useCart();
+  // Tek boylu ürün listeden eklenir; teklif kalemi ÇIPALI PARTİSİYLE girer (DOMAIN §5).
+  const addToCart = () => {
+    if (!product.variantId) return;
+    add({ variantId: product.variantId, qty: 1, stockId: product.stockId });
+  };
   return (
     <div className="flex flex-col overflow-hidden rounded-card border border-sand-200 bg-card">
       <Link href={productHref(product.slug)} className="relative cursor-pointer">
@@ -162,14 +171,24 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               {labels.options}
             </Link>
           ) : compact ? (
-            <span
+            <button
+              type="button"
+              onClick={addToCart}
+              disabled={!product.variantId || pending}
               aria-label={labels.addToCart}
-              className="grid size-7 flex-none cursor-pointer place-items-center rounded-full bg-olive font-sans text-body font-bold text-white transition-colors hover:bg-olive-dark"
+              className="grid size-7 flex-none cursor-pointer place-items-center rounded-full bg-olive font-sans text-body font-bold text-white transition-colors hover:bg-olive-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
               +
-            </span>
+            </button>
           ) : (
-            <span className={buttonClass({ size: 'sm', className: '!px-3.5 !py-2 !text-note' })}>{labels.addToCart}</span>
+            <button
+              type="button"
+              onClick={addToCart}
+              disabled={!product.variantId || pending}
+              className={buttonClass({ size: 'sm', className: '!px-3.5 !py-2 !text-note disabled:cursor-not-allowed disabled:opacity-50' })}
+            >
+              {labels.addToCart}
+            </button>
           )}
         </div>
         {/* "başlangıç fiyatı" notu tasarımda YALNIZ masaüstü kartında var: mobilde kart zaten dar,

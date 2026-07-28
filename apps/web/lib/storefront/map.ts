@@ -74,6 +74,9 @@ function sellingOf(variant: ProductVariant, ctx: ProductContext) {
     comparisonCents: priceCents != null ? pricePerKg(priceCents, variant.netWeightG) : null,
     // Adet tavanı yalnız teklifte vardır (partide kalan miktar); normal satışta tavan yoktur.
     limitLabel: resolved.sellable && resolved.quantityCap != null ? String(resolved.quantityCap) : null,
+    // Teklif kazandıysa kalem O PARTİYE çıpalanır: indirimin sebebi partinin tarihidir, başka
+    // partiye taşınmaz (DOMAIN §5). Sepet ve rezervasyon bu kimliği taşır.
+    stockId: resolved.sellable ? resolved.stockId : null,
     availableQty: ctx.stock.get(variant.id)?.availableQty ?? 0,
   };
 }
@@ -90,6 +93,7 @@ export function toVariant(variant: ProductVariant, locale: Locale, ctx: ProductC
     wasCents: selling.wasCents,
     comparisonCents: selling.comparisonCents,
     limitLabel: selling.limitLabel,
+    stockId: selling.stockId,
     soldOut: selling.availableQty <= 0,
   };
 }
@@ -128,6 +132,8 @@ export function toProduct(row: ProductRow, locale: Locale, ctx: ProductContext):
     name: resolveLocalizedText(row.name, locale),
     image: imageOf(row),
     unitLabel: primary ? resolveLocalizedText(primary.label, locale) : '',
+    variantId: primary?.id ?? null,
+    stockId: selling?.stockId ?? null,
     comparisonCents: selling?.comparisonCents ?? null,
     priceCents: selling?.priceCents ?? null,
     wasCents: selling?.wasCents,

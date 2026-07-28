@@ -52,6 +52,14 @@ export interface StorefrontProduct {
   image: StorefrontImage;
   /** Satılabilir birimin etiketi ("1 kg", "6 adet · 540 g") — varyanttan gelir. */
   unitLabel: string;
+  /**
+   * Listeden sepete eklenecek varyant (tek boylu üründe o boy, çok boyluda İLK boy).
+   * `purchaseMode: 'options'` olduğunda kullanılmaz — çok boylu ürün listeden eklenmez, detaya gider.
+   * Aktif varyantı olmayan üründe `null`: satılacak bir birim yok.
+   */
+  variantId: string | null;
+  /** Teklif kalemi hangi partiye çıpalı — sepete o parti ile girer (DOMAIN §5). */
+  stockId: string | null;
   /** Kilogram başına fiyat (ham cent) — INCO gereği raf fiyatının yanında; net ağırlık yoksa null. */
   comparisonCents: number | null;
   /** null = bu kanalda fiyatı yok → ürün SATIŞA KAPALI (DOMAIN §5); kart fiyat göstermez. */
@@ -128,6 +136,8 @@ export interface StorefrontVariant {
   comparisonCents: number | null;
   /** Teklifin adet tavanı ("En fazla 5 adet"); tavan yoksa null. */
   limitLabel: string | null;
+  /** Teklif kazandıysa çıpalı parti — sepete o parti ile girer (DOMAIN §5). */
+  stockId: string | null;
   soldOut: boolean;
 }
 

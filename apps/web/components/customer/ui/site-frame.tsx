@@ -6,6 +6,7 @@ import { Link } from '@/i18n/navigation';
 import { LocaleLinks, LocaleSwitch } from './locale-switch';
 import { SearchField } from './search-field';
 import { ShareButton } from './share-button';
+import { CartBadge } from '@/components/customer/cart/cart-badge';
 import messages from './site-frame-messages.json';
 
 /**
@@ -102,7 +103,7 @@ export function SiteFrame({ device, locale, showSearch = false, search, activeNa
           </Link>
           <div className="flex items-center gap-3.5">
             <ShareButton label={t.share} />
-            <span className="font-sans text-icon-sm text-ink">🧺</span>
+            <CartBadge label={t.cart} compact />
           </div>
         </header>
       ) : isMobile ? (
@@ -112,7 +113,7 @@ export function SiteFrame({ device, locale, showSearch = false, search, activeNa
             <Link href="/" className="cursor-pointer">
               <img src="/logo.jpg" alt={brand.name} className="h-10 mix-blend-multiply" />
             </Link>
-            <span className="font-sans text-icon-sm text-ink">🧺</span>
+            <CartBadge label={t.cart} compact />
           </header>
           {showSearch && (
             <div className="mx-4 mt-3">
@@ -139,7 +140,7 @@ export function SiteFrame({ device, locale, showSearch = false, search, activeNa
           <div className="ml-auto flex items-center gap-4.5 font-sans text-body-sm font-semibold text-muted">
             {showSearch && <SearchField placeholder={t.search} clearLabel={t.searchClear} defaultValue={search} />}
             <LocaleSwitch locale={locale} />
-            <span className="text-icon text-ink">🧺</span>
+            <CartBadge label={t.cart} />
           </div>
         </header>
       )}

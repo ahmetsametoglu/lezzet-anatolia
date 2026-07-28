@@ -7,6 +7,7 @@
     "chooseSize": "Boy seçin",
     "addToCart": "Sepete ekle",
     "addToCartTotal": "Sepete ekle — {total}",
+    "added": "Eklendi ✓",
     "offer": "Fırsat",
     "limit": "En fazla {n} adet",
     "closed": "Bu ürün şu an satışa kapalı",
@@ -42,9 +43,6 @@
       "emptyBody": "Bu ürünü satın aldıysanız ilk yorumu siz yazabilirsiniz."
     },
     "similar": "Bunları da sevebilirsiniz",
-    "cart": {
-      "pending": "Sepet yakında açılıyor"
-    },
     "card": {
       "addToCart": "Sepete ekle",
       "options": "Seçenekler →",
@@ -61,6 +59,7 @@
     "chooseSize": "Choisissez le format",
     "addToCart": "Ajouter au panier",
     "addToCartTotal": "Ajouter au panier — {total}",
+    "added": "Ajouté ✓",
     "offer": "Offre",
     "limit": "{n} maximum",
     "closed": "Ce produit n'est pas en vente actuellement",
@@ -96,9 +95,6 @@
       "emptyBody": "Si vous avez acheté ce produit, vous pouvez écrire le premier avis."
     },
     "similar": "Vous aimerez aussi",
-    "cart": {
-      "pending": "Le panier arrive bientôt"
-    },
     "card": {
       "addToCart": "Ajouter",
       "options": "Options →",
@@ -115,6 +111,7 @@
     "chooseSize": "Größe wählen",
     "addToCart": "In den Korb",
     "addToCartTotal": "In den Korb — {total}",
+    "added": "Hinzugefügt ✓",
     "offer": "Angebot",
     "limit": "Maximal {n} Stück",
     "closed": "Dieses Produkt ist derzeit nicht im Verkauf",
@@ -150,9 +147,6 @@
       "emptyBody": "Wenn Sie dieses Produkt gekauft haben, können Sie die erste Bewertung schreiben."
     },
     "similar": "Das könnte Ihnen auch gefallen",
-    "cart": {
-      "pending": "Der Warenkorb kommt bald"
-    },
     "card": {
       "addToCart": "In den Korb",
       "options": "Optionen →",

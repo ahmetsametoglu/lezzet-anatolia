@@ -7,6 +7,7 @@ import type { StorefrontVariant } from '@/lib/storefront/storefront-types';
 import { Badge } from '@/components/customer/ui/badge';
 import { Price } from '@/components/customer/ui/price';
 import { buttonClass } from '@/components/customer/ui/button';
+import { useCart } from '@/components/customer/cart/cart-context';
 import type { Messages } from '../product-types';
 
 /**
@@ -21,8 +22,9 @@ import type { Messages } from '../product-types';
  * Seçim SAHİBİ burası değil (`product-client`): boy değişince başlıktaki stok rozeti ve besin
  * tablosundaki net ağırlık da değişir. Adet ise yalnız çubuğu ilgilendirir, orada durur.
  *
- * Sepete ekleme henüz YOK (07-siparis). Buton sahte "eklendi" göstermez — çalışıyor izlenimi vermek,
- * hiç çalışmamaktan kötüdür; aksiyon pasif ve gerekçesi başlıkta yazılı.
+ * Sepete ekleme GERÇEKTİR (08.4): sepet servisi ve niyet deposu hazır. Ödeme adımı hâlâ yok
+ * (07.4/07.5) ama o checkout'un işi — sepete atmak için ödemenin çalışması gerekmiyor. Buton
+ * 1,5 sn "Eklendi ✓" olur ve sayfada kalınır (tasarım: alışveriş kesintisiz).
  */
 
 /** Adet tavanı: teklifte partide kalan miktar, aksi halde makul bir üst sınır (B2B hacmi sığar). */
@@ -111,6 +113,8 @@ interface PurchaseBarProps {
 }
 
 export function PurchaseBar({ t, locale, selected, fixed = false }: PurchaseBarProps) {
+  const { add, pending } = useCart();
+  const [added, setAdded] = useState(false);
   const [wanted, setWanted] = useState(1);
   const cap = capOf(selected);
   // Boy değişince tavan da değişir. İstenen adet SAKLANIR, gösterilen adet tavana KIRPILIR: tavanı
@@ -120,13 +124,23 @@ export function PurchaseBar({ t, locale, selected, fixed = false }: PurchaseBarP
   const sellable = selected.priceCents !== null && !selected.soldOut;
   const totalCents = selected.priceCents !== null ? selected.priceCents * qty : null;
 
+  const onAdd = () => {
+    add({ variantId: selected.id, qty, stockId: selected.stockId });
+    // Onay butonun ÜSTÜNDE verilir, sayfa değişmez — tasarım: "ekler, buton 1,5 sn 'Eklendi ✓'
+    // olur, sayfada kalınır". Sepete zıplatmak alışverişi böler.
+    setAdded(true);
+    window.setTimeout(() => setAdded(false), 1500);
+  };
+
   const label = !sellable
     ? selected.priceCents === null
       ? t.closed
       : t.soldOut
-    : totalCents !== null
-      ? t.addToCartTotal.replace('{total}', formatPrice(totalCents, locale))
-      : t.addToCart;
+    : added
+      ? t.added
+      : totalCents !== null
+        ? t.addToCartTotal.replace('{total}', formatPrice(totalCents, locale))
+        : t.addToCart;
 
   const stepper = (
     <span
@@ -178,8 +192,8 @@ export function PurchaseBar({ t, locale, selected, fixed = false }: PurchaseBarP
   const action = (
     <button
       type="button"
-      disabled
-      title={t.cart.pending}
+      onClick={onAdd}
+      disabled={!sellable || pending}
       className={
         fixed
           ? 'flex-1 cursor-not-allowed rounded-soft bg-olive-light px-3 py-3 font-sans text-body-sm font-bold text-ink disabled:opacity-50'

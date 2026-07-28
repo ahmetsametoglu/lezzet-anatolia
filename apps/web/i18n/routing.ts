@@ -23,5 +23,6 @@ export const routing = defineRouting({
     // Slug dil-bağımsızdır (içerikten türer) — yalnız segment kelimesi çevrilir. Böylece paylaşılan
     // link hangi dilde açılırsa açılsın aynı ürüne düşer; sosyal/WhatsApp trafiği bu sayfaya gelir.
     '/product/[slug]': { fr: '/produit/[slug]', de: '/produkt/[slug]', tr: '/urun/[slug]' },
+    '/cart': { fr: '/panier', de: '/warenkorb', tr: '/sepet' },
   },
 });

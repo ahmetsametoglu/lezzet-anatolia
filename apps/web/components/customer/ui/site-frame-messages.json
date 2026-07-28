@@ -24,7 +24,8 @@
       "faq": "SSS"
     },
     "share": "WhatsApp ile paylaş",
-    "searchClear": "Aramayı temizle"
+    "searchClear": "Aramayı temizle",
+    "cart": "Sepetim"
   },
   "fr": {
     "announcement": {
@@ -51,7 +52,8 @@
       "faq": "FAQ"
     },
     "share": "Partager sur WhatsApp",
-    "searchClear": "Effacer la recherche"
+    "searchClear": "Effacer la recherche",
+    "cart": "Mon panier"
   },
   "de": {
     "announcement": {
@@ -78,6 +80,7 @@
       "faq": "FAQ"
     },
     "share": "Über WhatsApp teilen",
-    "searchClear": "Suche löschen"
+    "searchClear": "Suche löschen",
+    "cart": "Mein Warenkorb"
   }
 }

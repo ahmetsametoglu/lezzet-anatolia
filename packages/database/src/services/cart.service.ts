@@ -64,6 +64,26 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
     return this.setQty(customerId, variantId, 0, stockId);
   }
 
+  /**
+   * Sepeti verilen listeye **eşitler** — ekleme, adet değişimi ve çıkarma tek yoldan geçer.
+   *
+   * Vitrin bunu kullanır: istemci zaten tam listeyi tutuyor (ziyaretçininki tarayıcıda), ayrı
+   * `addItem`/`setQty`/`removeItem` çağırmak iki tarafın listesinin ayrışabildiği üç yol açardı.
+   * Tek yönlü eşitleme o ayrışmayı imkânsız kılar.
+   *
+   * `addedAt` KORUNUR: satır zaten varsa ilk eklenme anı taşınır. Sepet kurtarma ("iki gündür
+   * bekleyen sepet") bu zamana bakar; her adet değişiminde tazelenirse o sinyal ölür.
+   */
+  async replace(customerId: string, items: readonly Omit<CartItem, 'addedAt'>[]): Promise<Cart> {
+    const { items: current } = await this.get(customerId);
+    const next = items.map((item) => ({
+      ...item,
+      stockId: item.stockId ?? null,
+      addedAt: current.find((row) => sameLine(row, item))?.addedAt ?? new Date().toISOString(),
+    }));
+    return this.write(customerId, next);
+  }
+
   /** Sipariş kapandığında ya da müşteri boşalttığında — satır silinir, boş sepet satırı bırakılmaz. */
   async clear(customerId: string): Promise<void> {
     return this.deleteWhere({ customerId });

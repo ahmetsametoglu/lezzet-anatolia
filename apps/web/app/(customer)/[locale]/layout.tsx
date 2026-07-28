@@ -7,6 +7,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { brand } from '@lezzet/brand';
 import { routing } from '@/i18n/routing';
 import { RootShell } from '@/components/root-shell';
+import { CartProvider } from '@/components/customer/cart/cart-context';
 
 // Müşteri evreni fontları. latin-ext → Türkçe (ş ğ ı) ve Almanca (ä ö ü ß) doğru gösterilir.
 const lora = Lora({ subsets: ['latin', 'latin-ext'], variable: '--font-lora', display: 'swap' });
@@ -35,7 +36,11 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
   return (
     <RootShell lang={locale} surface="customer" className={`${lora.variable} ${karla.variable}`}>
       {/* Client component'ler (Link vb.) için locale bağlamı; mesajlar boş — metinler sayfa JSON'undan. */}
-      <NextIntlClientProvider>{children}</NextIntlClientProvider>
+      <NextIntlClientProvider>
+        {/* Sepet KÖKTE: sayaç başlıkta, aksiyonlar kartlarda ve ürün detayda — üçü de aynı durumu
+            görmeli. Sayfa başına ayrı sağlayıcı, ekle-çıkar sonrası sayaç ile sayfayı ayrıştırırdı. */}
+        <CartProvider locale={locale}>{children}</CartProvider>
+      </NextIntlClientProvider>
     </RootShell>
   );
 }
