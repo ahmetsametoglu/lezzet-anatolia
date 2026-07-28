@@ -88,7 +88,7 @@ export function VariantEditor({ control, onAiTranslate }: VariantEditorProps) {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-[9px] border border-ops-line">
+      <div className="overflow-hidden rounded-ops-card border border-ops-line">
         {/* Dil şeridi tablonun İÇİNDE: yalnız bu tablonun tek bir kolonunu yönetiyor — dışarıda
             dururken form geneli bir dil kipi sanılıyordu. */}
         <div className="flex items-center justify-between border-b border-ops-line bg-ops-subtle px-[13px]">

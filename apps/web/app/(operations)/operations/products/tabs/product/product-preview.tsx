@@ -80,7 +80,7 @@ function DeclarationNote({ product }: { product: ProductView }) {
     text = 'İçerik tam, üç dil dolu, satışta. Fiyat kanala göre Fiyatlar ekranında, partiler Stok ekranında yönetilir.';
   }
   return (
-    <div className={['flex items-start gap-2.5 rounded-[9px] border px-3.5 py-[11px]', cls].join(' ')}>
+    <div className={['flex items-start gap-2.5 rounded-ops-card border px-3.5 py-[11px]', cls].join(' ')}>
       <span className="flex-none text-[color:var(--ic)]">{icon}</span>
       <span className="font-ops-body text-[12px] leading-[1.5]">{text}</span>
     </div>

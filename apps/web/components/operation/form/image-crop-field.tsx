@@ -41,7 +41,7 @@ export function ImageCropField({ role, src, crop, onCropChange, upload, uploadDi
       </div>
 
       {/* Kap: önizleme (ya da boş kare) + HOVER'da beliren düzenle/ekle örtüsü */}
-      <div className="group relative overflow-hidden rounded-[10px] border border-ops-line-soft bg-ops-subtle">
+      <div className="group relative overflow-hidden rounded-ops-card border border-ops-line-soft bg-ops-subtle">
         {src ? (
           <div className="p-3">
             <FramePreviews role={role} src={src} crop={crop} height={64} />

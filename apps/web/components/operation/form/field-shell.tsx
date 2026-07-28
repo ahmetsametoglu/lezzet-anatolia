@@ -46,7 +46,7 @@ type ControlSize = 'md' | 'sm';
 // kendi payını uydurmaz. Yazı düğmenin altına girmesin diye dolgu HER ZAMAN ayrılır (düğme gizliyken de).
 // Sağ dolgu KARE eylemi taşır: kutunun iç yüksekliği kadar genişlik + kenar boşluğu.
 const CONTROL_SIZE: Record<ControlSize, { base: string; trailing: string }> = {
-  md: { base: 'rounded-[9px] px-[13px] py-[7px] text-[13.5px]', trailing: 'pr-[38px]' },
+  md: { base: 'rounded-ops-card px-[13px] py-[7px] text-[13.5px]', trailing: 'pr-[38px]' },
   sm: { base: 'rounded-md px-2 py-1.5 text-[12.5px]', trailing: 'pr-[32px]' },
 };
 

@@ -176,7 +176,7 @@ export function ProductsMobile({
             onClick={() => setSheetId(p.id)}
             className="flex w-full cursor-pointer items-center gap-3 border-b border-ops-line-soft py-2.5 text-left"
           >
-            <Thumbnail src={p.imageUrl} alt={resolveLocalizedText(p.name)} size={42} iconSize={17} className="!rounded-[9px]" />
+            <Thumbnail src={p.imageUrl} alt={resolveLocalizedText(p.name)} size={42} iconSize={17} className="!rounded-ops-card" />
             <div className="flex min-w-0 flex-1 flex-col gap-px">
               <span className="truncate font-ops-body text-[13.5px] font-semibold text-ops-ink">{resolveLocalizedText(p.name)}</span>
               <span className="font-ops-body text-[11px] text-ops-muted">

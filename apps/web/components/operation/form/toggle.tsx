@@ -71,7 +71,7 @@ export function ToggleField({ label, on, onChange, size = 'md', stop = false, ba
       className={
         bare
           ? 'flex flex-none cursor-pointer items-center gap-2 text-left'
-          : 'flex w-full flex-none cursor-pointer items-center justify-between rounded-[9px] border border-ops-line-strong px-[13px] py-1.5 text-left'
+          : 'flex w-full flex-none cursor-pointer items-center justify-between rounded-ops-card border border-ops-line-strong px-[13px] py-1.5 text-left'
       }
     >
       <span className={bare ? 'whitespace-nowrap font-ops-body text-[12px] text-ops-body' : 'font-ops-body text-[12.5px] text-ops-ink'}>{label}</span>

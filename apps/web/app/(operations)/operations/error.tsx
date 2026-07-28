@@ -107,7 +107,7 @@ export default function OperationsError({ error, reset }: { error: Error & { dig
         </div>
 
         {/* Kayıt güvencesi — mükerrer kayıt korkusunu bitirir */}
-        <div className="max-w-[520px] rounded-[9px] border border-ops-red-line bg-ops-red-bg px-3.5 py-2.5 text-left font-ops-body text-xs leading-relaxed text-ops-red-dark">
+        <div className="max-w-[520px] rounded-ops-card border border-ops-red-line bg-ops-red-bg px-3.5 py-2.5 text-left font-ops-body text-xs leading-relaxed text-ops-red-dark">
           Kaydedilmiş veriler etkilenmedi. Bu ekranda henüz kaydetmediğiniz değişiklik varsa yeniden girilmesi gerekir —
           yeniden denemek mükerrer kayıt oluşturmaz.
         </div>

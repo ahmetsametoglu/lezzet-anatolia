@@ -59,7 +59,7 @@ export default function OperationsNotFound() {
               <Link
                 key={s.href}
                 href={s.href}
-                className="cursor-pointer rounded-[14px] border border-ops-line-strong bg-ops-card px-3 py-[5px] font-ops-display text-xs font-semibold text-ops-strong transition-colors hover:border-ops-olive"
+                className="cursor-pointer rounded-ops-chip border border-ops-line-strong bg-ops-card px-3 py-[5px] font-ops-display text-xs font-semibold text-ops-strong transition-colors hover:border-ops-olive"
               >
                 {s.label}
               </Link>

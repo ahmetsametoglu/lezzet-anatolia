@@ -104,7 +104,7 @@ export function FormNutrition<T extends FieldValues>({ control, name }: FormNutr
 
         return (
           <FieldShell label="Besin değerleri" labelAside={<span className="font-ops-body text-[10.5px] text-ops-faint">100 g başına</span>}>
-            <div className="flex flex-col rounded-[8px] border border-ops-line-soft px-3 py-1.5">
+            <div className="flex flex-col rounded-ops-card border border-ops-line-soft px-3 py-1.5">
               {/* Enerji: tek satır, iki birim (aynı ölçü) + boş olanı doldurma kısayolu */}
               {row(
                 <span className="flex items-center gap-2">

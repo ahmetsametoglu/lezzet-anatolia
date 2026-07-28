@@ -198,7 +198,7 @@ export function ImageCropDialog({ role, src, initialCrop, onConfirm, onClose, up
 
         {/* Türev kırpmalar — müşteride nerede nasıl görüneceği (canlı) */}
         {src ? (
-          <div className="flex flex-col gap-2 rounded-[9px] border border-ops-line-soft bg-ops-subtle p-3">
+          <div className="flex flex-col gap-2 rounded-ops-card border border-ops-line-soft bg-ops-subtle p-3">
             <span className="font-ops-display text-[9.5px] font-semibold uppercase tracking-[0.08em] text-ops-muted">
               Müşteride görünecek çerçeveler
             </span>
@@ -208,7 +208,7 @@ export function ImageCropDialog({ role, src, initialCrop, onConfirm, onClose, up
 
         {/* Kalite/kadraj uyarısı — RED değil, bilgi (amber) */}
         {advisory ? (
-          <div className="rounded-[9px] border border-ops-amber-line bg-ops-amber-bg px-3 py-2">
+          <div className="rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-3 py-2">
             <span className="font-ops-body text-[11px] leading-[1.5] text-ops-amber-dark">{advisory}</span>
           </div>
         ) : null}

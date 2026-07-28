@@ -60,7 +60,7 @@ export function EmphasisTextarea({ value, onChange, rows = 4, placeholder, onBlu
       <Textarea textareaRef={ref} value={value} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} onBlur={onBlur} />
 
       {value.trim() ? (
-        <div className="rounded-[8px] border border-ops-line-soft bg-ops-subtle px-3 py-2">
+        <div className="rounded-ops-card border border-ops-line-soft bg-ops-subtle px-3 py-2">
           <span className="font-ops-display text-[9.5px] font-medium uppercase tracking-[0.08em] text-ops-faint">Müşteride görünüm</span>
           <RichText text={value} className="mt-1 font-ops-body text-[12px] leading-[1.6] text-ops-body" />
         </div>

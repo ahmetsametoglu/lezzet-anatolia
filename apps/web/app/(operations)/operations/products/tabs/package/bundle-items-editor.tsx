@@ -210,7 +210,7 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
         />
       </div>
 
-      <div className="overflow-hidden rounded-[9px] border border-ops-line">
+      <div className="overflow-hidden rounded-ops-card border border-ops-line">
         <div className={`${CELL} border-b border-ops-line bg-ops-subtle px-[13px] py-2 font-ops-display text-[10px] font-medium uppercase tracking-[0.05em] text-ops-muted`}>
           <span />
           <span>Ürün · boy</span>

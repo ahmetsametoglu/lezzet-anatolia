@@ -104,7 +104,7 @@ export function AnchoredMenu({ anchorRef, open, onClose, width = 'anchor', class
       style={pos ? { top: pos.top, left: pos.left, width: pos.width } : { top: -9999, left: -9999 }}
       className={[
         // z-[60]: Dialog z-50'nin üstünde — portal body'de olduğu için burada z-index GEREKLİ.
-        'fixed z-[60] overflow-hidden rounded-[9px] border-[1.5px] border-ops-olive bg-ops-white shadow-[0_8px_24px_rgba(20,22,18,0.12)]',
+        'fixed z-[60] overflow-hidden rounded-ops-card border-[1.5px] border-ops-olive bg-ops-white shadow-[0_8px_24px_rgba(20,22,18,0.12)]',
         className,
       ]
         .filter(Boolean)

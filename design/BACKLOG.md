@@ -135,5 +135,67 @@ diye yeniden açılmasın; itiraz gelirse madde §2'ye taşınır.
 ## 4. Tasarımı olmayan yüzeyler
 
 Müşteri evreninin 15 sayfasının hepsinde hem içerik envanteri hem görsel karar var (üstteki
-Paketler istisnası dışında). Operasyon, depo ve kurye yüzeylerinin tasarımları da mevcut; onların
-kod tarafındaki açıkları kendi `docs/build` dosyalarında izlenir, burada tekrarlanmaz.
+Paketler istisnası dışında). Operasyon, depo ve kurye yüzeylerinin **sayfa** tasarımları da mevcut;
+onların kod tarafındaki açıkları kendi `docs/build` dosyalarında izlenir, burada tekrarlanmaz.
+
+**İstisna — operasyonun diyalog formları.** `.dc.html` dosyaları sayfaları çiziyor; form
+diyaloglarının (ürün · katalog · paket) görsel kararı çizilmedi ve bilinçli olarak **bize** bırakıldı
+(kullanıcı kararı, 28.07: "operasyon tarafında özellikle diyalog formlarında kendi custom
+tasarımlarımızı yapıyoruz — bunlar sapma değil, bilinçli tercih"). Bu yüzden aşağıdaki §5 bir
+"sapma" listesi değil, **yazılmış kararlar** listesidir: sapılacak bir tasarım yok.
+
+---
+
+## 5. Operasyon evreni — yazılmış kararlar (yeniden tartışılmasın)
+
+Diyalog formlarında ve onların beslediği liste satırlarında verilmiş kararlar. Mekanik bir denetim
+(ör. ölçü/token turu) bunları "tasarıma çekilecek sapma" sanıp geri almasın: geri çekilecek bir
+tasarım yok, gerekçe burada yazılı. İtiraz gelirse madde §2'ye taşınır.
+
+**Paket formu (`tabs/package/`) — tümüyle yazılmış.** Referansı ürün form diyaloğu; ondan ayrılan
+tek yer sekme yokluğu (paketin alanı çok daha az, ürün formunu ikiye bölen yasal beyan yığını yok).
+
+- **Mutabakat şeridinin zemini NÖTR, yeşil değil.** Toplamın tutması olağan hâldir; her kayıtta
+  yeşil kutlamak dikkati ucuzlatır. Renk yalnız dikkat gerektiğinde (amber) girer.
+- **Şerit üç satır, her biri bir soru:** anlaşma (ayrı ayrı → paket → indirim) · bize ne kalıyor
+  (maliyet · kâr · marj) · varsa sorun ve TEK çare. Altı sayı yan yana yazılıyordu, hiçbiri
+  öbüründen önemli görünmüyordu.
+- **Mutabakat rozeti AMBER, kırmızı değil** (formda da listede de). Tutmayan paket satılabilir,
+  yalnız faturası eksik olur; kırmızı gerçekten satışı engelleyen durumlara saklı.
+- **Liste satırında rozet yalnız BOZUKKEN çıkar.** Olağan hâl sessizdir; kazanılan sütun paraya
+  (marj · kâr · maliyet) gitti.
+- **"Payları yeniden dağıt" düğmesi YOK.** Dağıtım otomatik olduğu için düğme kendiliğinden olanı
+  elle yapıyordu. Yerine duruma göre tek çare: elle girilen satır varsa "elle girilenleri bırak",
+  yoksa kalan kuruş durumudur ve "paket fiyatını X € yap".
+- **İndirim yüzdesi saklanan bir alan değil**, paket fiyatının ikinci yazımı — birini gir, öbürü
+  dolsun. Operatör kimi zaman "34,90 olsun", kimi zaman "%10 vereyim" diye düşünür.
+- **Diyalog genişliği 1160 px** (mobilde 520). Envanterde diyalog ölçüsü yok; kalem tablosu 1040'ta
+  sıkışıyor, 1240'ta diyalog ekranı yutuyordu.
+- **"vitrinde yok" işareti.** Kalemin ürünü satıştan çıkınca paket vitrine çıkamaz ama `is_active`
+  ÇEVRİLMEZ (o alan operatörün niyeti) — satır gerçeği söyler, niyeti bozmaz.
+
+**Ürün ve katalog formları — kabuk kararları.**
+
+- **Kaydet engellendiğinde SEBEBİ yazılır** (`DialogFooter.blockedReason`) ve düğme kilitlenir.
+  Önce düğme etkin görünüp submit sessizce yutuluyordu: basılıyor, hiçbir şey olmuyordu.
+- **Ürün formunun altlığı ürün ↔ paket bağını söyler** ("N pakette kullanılıyor"; satıştan
+  çıkarırken düşecek paketler adıyla).
+- **Para ve yüzde girdileri** odakta serbest yazım, odaktan çıkınca iki hane + virgül
+  (`MoneyInput`/`PercentField`). Aynı ekranda üç ayrı yazım görünüyordu.
+- **Sekme çubuğunda eylem alanı + sekmeye bağlı arama.** "Yeni …" düğmesi ve arama kutusu sayfa
+  başlığından buraya taşındı; arama hangi sekme açıksa onda arar (eskiden her sekmede üründe
+  arıyordu).
+
+### Açık kademeler (envanter kararı bekliyor)
+
+Operasyon envanteri (§0) yalnız renk, yarıçap ve font ailesi veriyor; **ölçü kademesi yok.** Bunlar
+uydurulmadı, envantere yazılması bekleniyor:
+
+- **Yazı ölçeği.** Kullanımda on iki kademe var (9 · 9,5 · 10 · 10,5 · 11 · 11,5 · 12 · 12,5 · 13 ·
+  13,5 · 15 · 17). Yarım adımlar yoğun tabloda bilinçli olabilir; sorun kademe sayısı değil, ilan
+  edilmemiş olması — aynı rolde 10 / 10,5 / 11'in yan yana durması karar değil kaza.
+- **Küçük (iç) yarıçap.** Kart 8 · diyalog/çip 14 token'ları var; iç öğeler (tablo satırındaki 3:2
+  görsel 7 · küçük görsel 5 · anahtar dilimi 6) hiçbirine oturmuyor. Bir "iç öğe" kademesi (≈6 px)
+  gerekiyor; o gelene kadar bu on yer ham kaldı.
+- **Kontrol yarıçapı.** Girdi kutuları (`field-shell`) kart token'ına bağlandı; ayrı bir kademe
+  isteniyorsa envanterde belirtilmeli.

@@ -115,7 +115,7 @@ export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChang
 
             {/* Ekleme karesi — sınıra gelince yerini bilgi notu alır (buton kaybolup şaşırtmasın) */}
             {full ? (
-              <span className="grid place-items-center rounded-[8px] border border-dashed border-ops-line-soft p-2 text-center font-ops-body text-[10px] leading-[1.4] text-ops-faint">
+              <span className="grid place-items-center rounded-ops-card border border-dashed border-ops-line-soft p-2 text-center font-ops-body text-[10px] leading-[1.4] text-ops-faint">
                 Sınır doldu
               </span>
             ) : (
@@ -123,7 +123,7 @@ export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChang
                 upload={(fd) => uploadGalleryPhotoAction(productId, fd)}
                 multiple
                 camera={camera}
-                className="grid aspect-[3/2] cursor-pointer place-items-center gap-1 rounded-[8px] border border-dashed border-ops-line-strong text-ops-muted transition-colors hover:border-ops-olive hover:text-ops-olive"
+                className="grid aspect-[3/2] cursor-pointer place-items-center gap-1 rounded-ops-card border border-dashed border-ops-line-strong text-ops-muted transition-colors hover:border-ops-olive hover:text-ops-olive"
               >
                 <PlusIcon />
               </ImageUploadButton>
@@ -176,7 +176,7 @@ const TILE_ACTION = 'pointer-events-auto grid h-[22px] w-[22px] cursor-pointer p
 
 function PhotoTile({ photo, disabled, onEdit, onMakeCover, onDelete }: PhotoTileProps) {
   return (
-    <div className="group relative overflow-hidden rounded-[8px] border border-ops-line-soft bg-ops-subtle">
+    <div className="group relative overflow-hidden rounded-ops-card border border-ops-line-soft bg-ops-subtle">
       <FramedImage src={photo.imageUrl} alt="" ratio={3 / 2} crop={cropOf(photo)} placeholder={<ImageIcon size={16} />} />
 
       {/* Karenin tamamı DÜZENLE — ikon düğmeleri bunun üstünde durur (olay onlara gider). */}
