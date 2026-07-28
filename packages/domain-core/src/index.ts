@@ -14,6 +14,7 @@ export * from './tax/vat-treatment';
 export * from './stock/offer';
 export * from './stock/reservation';
 export * from './stock/shelf-life';
+export * from './stock/shortfall';
 export * from './delivery/delivery-days';
 export * from './delivery/shipping-fee';
 export * from './payment/checkout-options';

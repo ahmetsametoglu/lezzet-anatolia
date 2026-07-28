@@ -19,14 +19,27 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
 
 ## Görevler
 
-- [ ] (10.1) **Hazırlık ekranı:** günün hazırlama listesi (FEFO sırası), sipariş kalemleri + sistem parti önerisi; "hazırlandı" onayı → `OrderItemBatch` otomatik yazılır (07 teslim akışına zemin)
+- [~] (10.1) **Hazırlık ekranı:** günün hazırlama listesi (FEFO sırası), sipariş kalemleri + sistem parti önerisi; "hazırlandı" onayı → `OrderItemBatch` otomatik yazılır (07 teslim akışına zemin)
   - *Bitti:* onayla parti kaydı düşüyor; ekranın hiçbir yerinde fiyat/kâr yok
-- [ ] (10.2) **Öneriden sapma:** depocu farklı partiden aldıysa yalnız o satırı değiştirir; partiye kilitli teklif kalemi değiştirilemez
+  - **Durum (28.07) — ARKA UÇ HAZIR, ekran yok.** Kapı `apps/web/lib/order/preparation.ts`: `listPreparationQueue` (gün süzgeci, kalem başına parti önerisi + konum + ilerleme) ve `confirmPreparation`. 11 test. Ekranı yüzey ajanı yazacak; bu kapı onun sözleşmesidir.
+  - **Altın kural YAPISAL hale getirildi:** "depocu fiyat/kâr/maliyet görmez" bir arayüz disiplini olarak bırakılsa er geç sızardı. Dönen görünüm modelinde para alanı YOK — ekran isteseydi bile gösteremez. Testte serileştirilmiş çıktıda `unitPrice`/`total`/`purchasePrice` aranıyor, bulunmaması şart. Müşteri e-postası ve adresi de yok; koli etiketi için yalnız ad var.
+  - **Yarım kalan iş kuyrukta kalır:** `confirmed` ve `preparing` birlikte listelenir, öneri KALAN adet için kurulur (toplanan tekrar toplanmaz). Teslim edilmiş sipariş hiç girmez — arşiv yığılmaz.
+- [~] (10.2) **Öneriden sapma:** depocu farklı partiden aldıysa yalnız o satırı değiştirir; partiye kilitli teklif kalemi değiştirilemez
   - *Bitti:* sapma kaydediliyor; pinned kalem sabit kalıyor
-- [ ] (10.3) **Eksik işaretleme:** karşılanamayan adet işaretlenir; sistem akıllı öneri sunar (müşteriye sor / kalanı gönder) ama karar depocuda; para hesabı depocuya görünmez
+  - **Durum (28.07) — arka uç hazır.** Sapma zaten serbest (`record_preparation` neyi verirsen onu yazar); eklenen şey **kilitli kalem kontrolü**: teklife çıpalı kalem başka partiden verilmek istenirse kapı `pinned_violation` döner ve HİÇBİR yazım yapılmaz (testli).
+  - **Kontrol neden kapıda, RPC'de değil:** RPC fiziksel gerçeği korur (olmayan mal yazılmaz); "bu kalem şu partiden çıkmalı" ise bir İŞ kuralıdır (DOMAIN §4) — yeri uygulama katmanıdır.
+- [~] (10.3) **Eksik işaretleme:** karşılanamayan adet işaretlenir; sistem akıllı öneri sunar (müşteriye sor / kalanı gönder) ama karar depocuda; para hesabı depocuya görünmez
   - *Bitti:* eksik işareti 07 kısmi karşılama akışını tetikliyor; tutar görünmüyor
-- [ ] (10.4) **Mal kabul:** bekleyen tedarik siparişinden dolu form (yoksa boş); ürün/varyant + adet + son tarih + lot + tedarikçi + konum; MLOR uyarısı (engelsiz); paketleme girişi; PO → `received`
+  - **Durum (28.07) — arka uç hazır.** Motor `domain-core/stock/shortfall.ts` (7 birim testi) + kapı eksik kalemler için tavsiyeyi döner. Para dallanması zaten 07.8'de: "kalanı gönder" seçilirse `adjustFulfillment` farkı çözüyor.
+  - **Ölçüt İKİLİ (oran + tutar), çünkü tek başına ikisi de yanılır:** yalnız oran, 40 €'luk kalemin yarısını "önemsiz" sayardı; yalnız tutar, ucuz ama siparişin tamamını oluşturan kalemi kaçırırdı. Biri eşiği aşarsa müşteriye sorulur — şüphede insana danışılır. Eşikler ayardan (`shortfall_ask_ratio_percent`, `shortfall_ask_value_cents`).
+  - **Kalemin tamamı eksikse oran hesaplanmaz:** müşteri sipariş ettiği şeyi hiç almayacak, doğrudan sorulur.
+  - **Tavsiye TUTAR TAŞIMAZ:** parasal ölçüt motora GİRDİ olarak verilir, dönen değerde yer almaz (testli) — tasarımın "fark iadesi bile tutar olarak gösterilmez" kuralı.
+- [~] (10.4) **Mal kabul:** bekleyen tedarik siparişinden dolu form (yoksa boş); ürün/varyant + adet + son tarih + lot + tedarikçi + konum; MLOR uyarısı (engelsiz); paketleme girişi; PO → `received`
   - *Bitti:* PO'lu kabul dolu formla açılıyor, eksik/fazla fark olarak işaretleniyor; alış fiyatı alanı yok
+  - **Durum (28.07) — arka uç hazır.** Kapı `apps/web/lib/stock/intake.ts`: `openIntakeForm` (PO'dan dolu form) + `receiveGoods` (kabul + MLOR uyarısı + fark). 7 test. Yazımın kendisi 06.10'un RPC'si.
+  - **"Alış fiyatı alanı yok" TİPTE zorlanıyor:** depocunun gönderdiği satırda (`IntakeFormLine`) `unitCost` alanı YOKTUR; maliyet PO'dan sunucu tarafında eşleşir. Testte depocu fiyat girmeden partinin alış fiyatı 6 € doğuyor — gördüğü bir sayı değil, admin'in girdiği.
+  - **Fark hata değildir:** eksik/fazla gelen mal işaretlenir, kabul yine tamamlanır ve mal fiilen girer. **PO'suz alımda fark üretilmez** — karşılaştırılacak sipariş yok, her satırı "beklenmedik" saymak gürültü olurdu (bu kusuru test yakaladı).
+  - **MLOR engellemez, uyarır:** ömrünün onda dokuzu geçmiş parti de kabul edilir, uyarı listelenir — karar mal kabul edende (DOMAIN §4).
 - [ ] (10.5) **İmha/sayım:** `StockAdjustment` (parti + adet + sebep: son tarih/hasar/sayım/kayıp); teslim-sonrası iade → varsayılan imha (restok admin istisnası, depocuya restok seçeneği sunulmaz)
   - *Bitti:* imha kaydı düşüyor; fire raporuna besleniyor (12)
 - [ ] (10.6) **Sıcaklık kaydı:** `TemperatureLog` (dolap/araç + derece), günde 1-2 elle giriş
