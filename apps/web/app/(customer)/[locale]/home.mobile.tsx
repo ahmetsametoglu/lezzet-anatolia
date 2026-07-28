@@ -30,7 +30,7 @@ export function HomeMobile({ t, locale, data }: HomeViewProps) {
         <Link href="/catalog" className={buttonClass({ fullWidth: true })}>
           {t.hero.ctaCatalog}
         </Link>
-        {/* K33 · Mobilde şerit kahramanın içinde kalır: ayrı bir bölüm açmak dar ekranda kategorileri
+        {/* K31 · Mobilde şerit kahramanın içinde kalır: ayrı bir bölüm açmak dar ekranda kategorileri
             katlamanın altına itiyordu. Metinler tek sütuna sarar, düğme tam genişliğe iner. */}
         <PlacePrompt locale={locale} />
       </section>

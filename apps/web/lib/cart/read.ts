@@ -1,13 +1,14 @@
 import 'server-only';
 import { ProductService, ProductVariantService, SettingsService, serviceDb } from '@lezzet/database';
-import { meetsMinBasket } from '@lezzet/domain-core';
+import { meetsMinBasket, type DiscountableLine } from '@lezzet/domain-core';
 import { CROP_CENTER, resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { EMPTY_PRODUCT_CONTEXT, imageOf, toVariant } from '@/lib/storefront/map';
 import { loadProductContext } from '@/lib/storefront/read-context';
 import { getPackagesByIds } from '@/lib/storefront/packages';
 import type { StorefrontPackageDetail } from '@/lib/storefront/storefront-types';
-import { EMPTY_CART, type CartEntry, type CartLine, type CartView } from './cart-types';
+import { resolveCartDiscount } from './discount';
+import { EMPTY_CART, cartKey, type CartDiscount, type CartEntry, type CartLine, type CartView } from './cart-types';
 
 /**
  * Sepet okuması (08.4) — NİYETİ bugünkü görünüme çevirir.
@@ -23,7 +24,25 @@ import { EMPTY_CART, type CartEntry, type CartLine, type CartView } from './cart
  * başka partiye TAŞINMAZ; satır bugünkü çözümde teklifsiz görünür ve fiyatı normale döner
  * (müşteriye checkout'ta bildirilir — 07.4'ün işi).
  */
-export async function getCartView(locale: Locale, entries: readonly CartEntry[]): Promise<CartView> {
+export async function getCartView(
+  locale: Locale,
+  entries: readonly CartEntry[],
+  /**
+   * İndirim bağlamı. Sepetin parası zaten burada hesaplandığı için indirim de burada çözülür:
+   * ayrı bir okumaya alınsaydı ürün/kategori/koleksiyon ikinci kez çekilir ve iki okuma arasında
+   * fiyat değiştiğinde ekran kendi toplamıyla çelişirdi.
+   */
+  opts: {
+    customerId?: string | null;
+    couponCode?: string | null;
+    /**
+     * Sunucu sepetinde SAKLANAN fiyatlar (`cartKey` → cent). Bugünkü çözümle karşılaştırılır;
+     * artış varsa satır `priceChange` taşır (DOMAIN §5). Verilmezse karşılaştırma yapılmaz —
+     * ziyaretçide saklanan fiyat yoktur.
+     */
+    previousPrices?: ReadonlyMap<string, number>;
+  } = {},
+): Promise<CartView> {
   const db = serviceDb();
   const settings = new SettingsService(db);
   // İkisi de DOMAIN §6'ya göre PARAMETRİK — kod sabiti değil, işletme ayarı. Ayar satırı yoksa
@@ -37,6 +56,8 @@ export async function getCartView(locale: Locale, entries: readonly CartEntry[])
     settings.getNumber('free_shipping_cents', 6000),
   ]);
   if (entries.length === 0) return { ...EMPTY_CART, freeShippingCents, ...meets(0, minBasketCents) };
+  // Motorun kalem sözleşmesi: satır çözülürken doldurulur (kategori/koleksiyon oradan gelir).
+  const discountable: DiscountableLine[] = [];
 
   // İki tür satır, iki okuma — ikisi de TOPLU. Paketler kendi kapısından gelir (`lib/storefront`),
   // türetme (stok, kargo, ağırlık) orada tek yerde durur; sepette ikinci kez yazılsaydı vitrindeki
@@ -61,7 +82,11 @@ export async function getCartView(locale: Locale, entries: readonly CartEntry[])
     // PAKET satırı ayrı bir kapıdan çözülür: fiyatı kendi alanından gelir (kalem toplamı değil),
     // stok kararı kalemlerinin en zayıfına bağlıdır ve teklif/parti kavramı hiç yoktur.
     if (entry.kind === 'bundle') {
-      lines.push(bundleLine(entry.bundleId, entry.qty, packages.get(entry.bundleId)));
+      const line = bundleLine(entry.bundleId, entry.qty, packages.get(entry.bundleId));
+      lines.push({ ...line, ...priceChangeOf(entry, line.unitPriceCents, opts.previousPrices) });
+      // Pakete indirim BİNMEZ (DOMAIN §13) — motor bunu `bundleId` dolu olduğu için kendisi eler;
+      // satır yine de gönderilir ki pay dizisi kalem sırasıyla hizalı kalsın.
+      discountable.push({ variantId: '', qty: entry.qty, unitPriceCents: line.unitPriceCents ?? 0, bundleId: entry.bundleId });
       continue;
     }
     const variant = byVariant.get(entry.variantId);
@@ -70,6 +95,8 @@ export async function getCartView(locale: Locale, entries: readonly CartEntry[])
     // kaybettiğini görmeli. Elimizdeki tek şey kimlik, o yüzden adsız ama engelleyen satır kurulur.
     if (!variant || !product) {
       lines.push(orphanLine(entry));
+      // Kaynağı kayboldu → fiyatı da yok; matraha 0 ile girer, payı 0 olur.
+      discountable.push({ variantId: entry.variantId, qty: entry.qty, unitPriceCents: 0 });
       continue;
     }
 
@@ -93,18 +120,66 @@ export async function getCartView(locale: Locale, entries: readonly CartEntry[])
       blocked: unitPriceCents === null || view.soldOut,
       contents: [],
       shippable: product.shippable,
+      vatRate: product.vatRate,
+      ...priceChangeOf(entry, unitPriceCents, opts.previousPrices),
+    });
+
+    discountable.push({
+      variantId: entry.variantId,
+      qty: entry.qty,
+      unitPriceCents: unitPriceCents ?? 0,
+      categoryId: product.categoryId,
+      collectionIds: product.collections?.map((row) => row.collectionId) ?? [],
+      // Teklif satırı kendi özel fiyatındadır: indirim matrahına GİRMEZ (DOMAIN §5).
+      offerStockId: offerHolds ? entry.stockId : null,
     });
   }
 
   const subtotalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
+  const discount = await resolveCartDiscount(db, {
+    lines: discountable,
+    customerId: opts.customerId,
+    couponCode: opts.couponCode,
+  });
+
   return {
     lines,
     subtotalCents,
+    discount,
+    // Sepetin ödenecek hâli — kargo HARİÇ (o adreste belli olur).
+    totalCents: Math.max(0, subtotalCents - appliedAmount(discount)),
     itemCount: lines.reduce((sum, l) => sum + l.qty, 0),
     hasBlocked: lines.some((l) => l.blocked),
     freeShippingCents,
     ...meets(subtotalCents, minBasketCents),
   };
+}
+
+/**
+ * Fiyat değişimi işareti (DOMAIN §5). **Yalnız ARTIŞ** döner: düşen fiyat sessizce uygulanır.
+ *
+ * Saklanan fiyat 0 ise karşılaştırma yapılmaz — o, fiyatın "henüz çözülmedi" hâlidir (niyet
+ * sunucuya yazılırken 0 girer, çözülen değeri `writeCartAction` üstüne yazar). Sıfırı geçerli bir
+ * "önceki fiyat" saymak, her yeni kalemi "zamlandı" diye işaretlerdi.
+ */
+function priceChangeOf(
+  entry: CartEntry,
+  currentCents: number | null,
+  previous?: ReadonlyMap<string, number>,
+): { priceChange?: { previousCents: number } } {
+  if (!previous || currentCents === null) return {};
+  const previousCents = previous.get(cartKey(entry));
+  if (!previousCents || currentCents <= previousCents) return {};
+  return { priceChange: { previousCents } };
+}
+
+/**
+ * Toplamdan düşen tutar. Reddedilen kuponda **kazanan indirim** düşer: kupon tutmadı diye müşteri
+ * hak ettiği otomatik indirimi kaybetmez (`appliedInsteadCents`).
+ */
+function appliedAmount(discount: CartDiscount): number {
+  if (discount.status === 'applied' || discount.status === 'automatic') return discount.amountCents;
+  return discount.status === 'rejected' ? discount.appliedInsteadCents : 0;
 }
 
 function meets(subtotalCents: number, minBasketCents: number) {
@@ -125,6 +200,7 @@ function orphanLine(entry: CartEntry): CartLine {
     lineTotalCents: null,
     blocked: true,
     contents: [],
+    vatRate: 0,
     // Kaynağı kayboldu: kargolanıp kargolanamayacağı da bilinmiyor. `true` demek kısıt uyarısını
     // yutmak olurdu; satır zaten engelli, çıkarılmadan devam edilemiyor.
     shippable: false,
@@ -154,6 +230,7 @@ function bundleLine(bundleId: string, qty: number, pack: StorefrontPackageDetail
     lineTotalCents: pack.priceCents * qty,
     blocked: pack.soldOut,
     contents: pack.items.map((item) => ({ name: item.name, qty: item.qty })),
+    vatRate: pack.vatRate,
     // Pakette TEK bir soğuk zincir kalemi bile varsa paketin tamamı rota içi kalır (05.5).
     shippable: !pack.inRouteOnly,
   };

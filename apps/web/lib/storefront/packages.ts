@@ -163,6 +163,9 @@ function toCard(bundle: BundleRow, locale: Locale, { byVariant, byProduct, avail
   // Kargo kısıtı ÜRÜNÜN alanı (`shippable`), varyantın değil — soğuk zincir ürünün özelliğidir.
   const inRouteOnly = items.some(({ variant }) => variant !== undefined && byProduct.get(variant.productId)?.shippable === false);
 
+  // KDV: karışık oranlı pakette EN YÜKSEĞİ taşınır (bkz. `StorefrontPackageDetail.vatRate`).
+  const vatRate = Math.max(0, ...items.map(({ variant }) => (variant ? (byProduct.get(variant.productId)?.vatRate ?? 0) : 0)));
+
   return {
     id: bundle.id,
     slug: bundle.slug,
@@ -174,6 +177,7 @@ function toCard(bundle: BundleRow, locale: Locale, { byVariant, byProduct, avail
     serves: bundle.serves,
     totalWeightG,
     inRouteOnly,
+    vatRate,
     soldOut: items.some(({ item }) => (available.get(item.variantId) ?? 0) < item.qty),
   };
 }

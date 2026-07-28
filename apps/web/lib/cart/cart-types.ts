@@ -1,5 +1,31 @@
 import { meetsMinBasket } from '@lezzet/domain-core';
+import type { CouponRejection } from '@lezzet/domain-core';
 import type { StorefrontImage } from '@/lib/storefront/storefront-types';
+
+/**
+ * Kuponun neden tutmadığı — motorun sebepleri (`CouponRejection`) + kapının iki kendi hâli.
+ *
+ * Sebep listesi motordan TÜRER, elle kopyalanmaz: motora yeni bir koşul eklendiğinde ekranın
+ * karşılaması gereken hâl de kendiliğinden büyür.
+ */
+export type CouponFailure =
+  | CouponRejection
+  /** Böyle bir kod yok. Kişisel kuponun başkasında olması da BURAYA düşer: varlığı sızdırılmaz. */
+  | 'unknown_code'
+  /** Kupon geçerli ama otomatik indirim / müşteri oranı daha büyük — sepete o uygulandı. */
+  | 'outranked';
+
+/**
+ * Sepete inen indirim ya da kuponun reddi. **Görünüm tipidir** — bu dosyada durur çünkü ekran onu
+ * okur; çözümü yapan kapı sunucudadır (`lib/cart/discount.ts`, `server-only`).
+ */
+export type CartDiscount =
+  | { status: 'applied'; source: 'coupon'; code: string; amountCents: number; lineShares: number[]; discountId: string | null }
+  /** Kupon girilmeden kazanan indirim (otomatik kampanya ya da müşterinin genel oranı). */
+  | { status: 'automatic'; amountCents: number; lineShares: number[]; discountId: string | null }
+  /** `appliedInsteadCents`: kupon tutmasa da sepete inen indirim — müşteri onu kaybetmez. */
+  | { status: 'rejected'; reason: CouponFailure; code: string; appliedInsteadCents: number }
+  | { status: 'none' };
 
 /**
  * Sepet sözleşmesi (08.4) — müşteri yüzeyinin ikinci veri kapısı.
@@ -79,6 +105,18 @@ interface CartLineView {
   wasCents?: number;
   /** Teklifin adet tavanı (partide kalan); tavan yoksa null. */
   limitCap: number | null;
+  /**
+   * **Fiyat ARTTI** — müşteriye açıkça söylenir ve onayı istenir (DOMAIN §5). Sepet aylarca
+   * bekleyebilir; oradaki fiyat bağlayıcı değildir ama sessizce yükseltmek de müşteriyi kasada
+   * sürprizle karşılamaktır.
+   *
+   * **Düşüşte bu alan DOLMAZ** ve bu bilinçlidir: düşen fiyat sessizce uygulanır — müşteriye
+   * "iyi haber, onaylıyor musunuz?" diye sormak, olmayan bir kararı ona yıkmaktır.
+   *
+   * Yalnız SUNUCU sepetinde doğar: ziyaretçinin niyet listesi fiyat taşımaz (`CartEntry` bilerek
+   * fiyatsızdır) — karşılaştırılacak bir "önceki" yoktur.
+   */
+  priceChange?: { previousCents: number };
   /** Satır toplamı — fiyat yoksa null. */
   lineTotalCents: number | null;
   /**
@@ -103,6 +141,16 @@ interface CartLineView {
    * okuması yer değiştikçe yeniden çalışmak zorunda kalırdı.
    */
   shippable: boolean;
+  /**
+   * KDV oranı (%). Sepet ekranı bunu GÖSTERMEZ — fiyatlar zaten KDV dahil (DOMAIN §5). Checkout'ta
+   * gerekiyor: kargo ücretinin KDV'si taşıdığı malın oranını izler ve karışık sepette oransal
+   * bölünür (`apportionShippingVat`). Satırın kendi gerçeği olduğu için burada durur; checkout'un
+   * ürünleri ikinci kez okuması, sepet okumasıyla ayrışabilen bir ikinci kaynak yaratırdı.
+   *
+   * Pakette kalemlerin oranı farklı olabilir; paket satırı **en yüksek** oranı taşır — kargo
+   * KDV'sini eksik hesaplamaktansa fazla hesaplamak, vergi tarafında güvenli olan yöndür.
+   */
+  vatRate: number;
 }
 
 /**
@@ -116,6 +164,13 @@ export interface CartView {
   lines: CartLine[];
   /** Kalem toplamı (cent) — kargo ve indirim HARİÇ. */
   subtotalCents: number;
+  /**
+   * Sepete inen indirim ya da kuponun neden inmediği (09.6). Ekranın dört ret hâli buradan çıkar;
+   * karar motorundur (`domain-core/pricing`), kapı yalnız taşır.
+   */
+  discount: CartDiscount;
+  /** Ara toplam − indirim. Kargo YOK: ücret teslimat türüne, tür adrese bağlıdır. */
+  totalCents: number;
   /** Toplam adet — başlıktaki sepet rozetinin sayısı. */
   itemCount: number;
   /** Çıkarılmadan devam edilemeyecek satır var mı — "Checkout'a geç" pasifleşir. */
@@ -138,6 +193,8 @@ export interface CartView {
 export const EMPTY_CART: CartView = {
   lines: [],
   subtotalCents: 0,
+  discount: { status: 'none' },
+  totalCents: 0,
   itemCount: 0,
   hasBlocked: false,
   minBasketOk: false,

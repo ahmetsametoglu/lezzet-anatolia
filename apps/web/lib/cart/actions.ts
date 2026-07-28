@@ -2,11 +2,12 @@
 
 import { CartService, serviceDb } from '@lezzet/database';
 import { hasLocale } from 'next-intl';
-import { getSessionUser } from '@/lib/guard';
+import { currentCustomerId } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { routing } from '@/i18n/routing';
+import type { CartItem } from '@lezzet/types';
 import { getCartView } from './read';
-import type { CartEntry, CartView } from './cart-types';
+import { cartKey, type CartEntry, type CartView } from './cart-types';
 
 /**
  * Sepet server action'ları (08.4).
@@ -15,7 +16,7 @@ import type { CartEntry, CartView } from './cart-types';
  * ziyaretçininki tarayıcıda yaşar ve girişte devralınır (`takeOver`). Ekran bu ayrımı bilmez:
  * her iki yolda da niyet listesi gönderilir, çözülmüş görünüm döner.
  *
- * **İKİ LİSTE birlikte taşınır:** sepet ve sonraya kaydedilenler (K35). Ayrı uçlardan gitselerdi
+ * **İKİ LİSTE birlikte taşınır:** sepet ve sonraya kaydedilenler (K33). Ayrı uçlardan gitselerdi
  * "kalemi sepetten listeye taşı" iki ayrı tura bölünür ve arada biri başarısız olursa kalem ya iki
  * yerde birden ya da hiçbir yerde kalırdı. Tek tur, tek karar.
  *
@@ -50,24 +51,36 @@ export async function readCartAction(
 ): Promise<ActionResult<CartPayload & { merged: boolean }>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
-    const user = await getSessionUser();
-    if (!user) return { data: { ...(await resolveBoth(locale, entries, saved)), merged: false }, error: null };
+    // Sepetin sahibi MÜŞTERİ kimliğidir, auth kimliği değil (`currentCustomerId`): `cart.customer_id`
+    // `user_profiles`'a FK'lidir. Burada auth kimliği yazılıyordu ve giriş yapan müşterinin sepeti
+    // sessizce kayboluyordu — devralma FK ihlaliyle düşüyor, action `{data:null}` dönüyor, ekran
+    // boş sepet çiziyordu (28.07).
+    const customerId = await currentCustomerId();
+    if (!customerId) return { data: { ...(await resolveBoth(locale, entries, saved)), merged: false }, error: null };
 
     const cart = new CartService(serviceDb());
     const merged = entries.length > 0 || saved.length > 0;
     if (merged) {
       // Fiyat sunucunun çözdüğüdür; istemciden gelen fiyat kabul edilmez (0 yazılır, checkout çözer).
-      if (entries.length > 0) await cart.takeOver(user.id, entries.map(toItem));
+      if (entries.length > 0) await cart.takeOver(customerId, entries.map(toItem));
       // Liste devralınırken BİRLEŞTİRİLİR: sunucudakiler korunur, ziyaretçininkiler eklenir.
       if (saved.length > 0) {
-        const current = (await cart.get(user.id)).savedItems;
+        const current = (await cart.get(customerId)).savedItems;
         const incoming = saved.map(toItem).filter((row) => !current.some((c) => sameKey(c, row)));
-        await cart.replaceSaved(user.id, [...current, ...incoming]);
+        await cart.replaceSaved(customerId, [...current, ...incoming]);
       }
     }
-    const stored = await cart.get(user.id);
+    const stored = await cart.get(customerId);
     return {
-      data: { ...(await resolveBoth(locale, stored.items.map(toEntry), stored.savedItems.map(toEntry))), merged },
+      data: {
+        ...(await resolveBoth(
+          locale,
+          stored.items.map(toEntry),
+          stored.savedItems.map(toEntry),
+          storedPrices(stored.items),
+        )),
+        merged,
+      },
       error: null,
     };
   } catch (err) {
@@ -84,18 +97,20 @@ export async function readCartAction(
 export async function writeCartAction(locale: string, entries: CartEntry[], saved: CartEntry[] = []): Promise<ActionResult<CartPayload>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
-    const user = await getSessionUser();
-    const payload = await resolveBoth(locale, entries, saved);
+    const customerId = await currentCustomerId();
     // Ziyaretçide yazacak yer yok — listeler tarayıcıda kalır, burada yalnız çözülür.
-    if (!user) return { data: payload, error: null };
+    if (!customerId) return { data: await resolveBoth(locale, entries, saved), error: null };
 
     // Sunucuya yazılacak fiyat SUNUCUNUN çözdüğüdür; istemciden fiyat kabul edilmez.
     const cart = new CartService(serviceDb());
+    // Saklanan fiyatlar YAZIMDAN ÖNCE okunur: yazım onları bugünkü değerle ezecek. Sonra okunsaydı
+    // karşılaştırma her zaman "değişmedi" derdi.
+    const payload = await resolveBoth(locale, entries, saved, storedPrices((await cart.get(customerId)).items));
     await cart.replace(
-      user.id,
+      customerId,
       payload.view.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })),
     );
-    await cart.replaceSaved(user.id, payload.saved.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })));
+    await cart.replaceSaved(customerId, payload.saved.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })));
     return { data: payload, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
@@ -107,9 +122,34 @@ export async function writeCartAction(locale: string, entries: CartEntry[], save
  * bir çağrı aynı işi tekrar yapardı — ama listeler ayrı çözülmek zorunda, çünkü toplam ve asgari
  * sepet kararı yalnız SEPETE ait.
  */
-async function resolveBoth(locale: 'tr' | 'fr' | 'de', entries: CartEntry[], saved: CartEntry[]): Promise<CartPayload> {
-  const [view, savedView] = await Promise.all([getCartView(locale, entries), getCartView(locale, saved)]);
+async function resolveBoth(
+  locale: 'tr' | 'fr' | 'de',
+  entries: CartEntry[],
+  saved: CartEntry[],
+  previousPrices?: ReadonlyMap<string, number>,
+): Promise<CartPayload> {
+  const [view, savedView] = await Promise.all([
+    getCartView(locale, entries, { previousPrices }),
+    // Sonraya kaydedilenlerde zam işareti gösterilmez: o liste bir satın alma niyeti değil, bir
+    // hatırlatmadır — orada onay istenecek bir karar yok.
+    getCartView(locale, saved),
+  ]);
   return { view, saved: savedView };
+}
+
+/**
+ * Sunucu sepetinde saklanan fiyatlar (`cartKey` → cent) — bugünkü çözümle karşılaştırılır (DOMAIN §5).
+ *
+ * Ziyaretçide böyle bir harita YOKTUR ve olmamalı: niyet listesi bilerek fiyatsızdır, tarayıcıdan
+ * gelen bir "önceki fiyat" da müşterinin belirlediği fiyat olurdu.
+ */
+function storedPrices(items: readonly CartItem[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const item of items) {
+    if (!item.unitPrice) continue; // 0 = henüz çözülmemiş, geçerli bir "önceki" değil
+    map.set(cartKey(toEntry(item)), Math.round(item.unitPrice * 100));
+  }
+  return map;
 }
 
 /**

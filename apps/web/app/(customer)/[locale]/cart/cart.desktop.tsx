@@ -10,6 +10,8 @@ import { CartLineRow } from './components/cart-line';
 import { CartSummary } from './components/cart-summary';
 import { CartCoupon } from './components/cart-coupon';
 import { EmptyCart } from './components/empty-cart';
+import { CartUnreachable } from './components/cart-unreachable';
+import { CartSkeleton } from './components/cart-skeleton';
 import type { CartViewProps } from './cart-types';
 
 /**
@@ -23,8 +25,12 @@ import type { CartViewProps } from './cart-types';
  * sonra dolması, müşteriye sepetini kaybettiğini düşündürür.
  */
 export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
-  const { view, ready } = useCart();
-  if (!ready) return <div className="min-h-[40vh]" />;
+  const { view, ready, failed } = useCart();
+  // İlk kare BOŞ bırakılmaz: iskelet gerçek yerleşimin ölçüsünü taşır, içerik gelince zıplama olmaz.
+  if (!ready) return <CartSkeleton t={t} />;
+
+  // Okuma DÜŞTÜYSE boş ekran çizilmez: sepet boş değil, ulaşılamıyor (`CartUnreachable`).
+  if (failed) return <CartUnreachable t={t} />;
 
   // Boş sepet KENDİ ekranıdır: "Sepetim" başlığı ve "alışverişe devam" bağlantısı da düşer, çünkü
   // kahramanın başlığı zaten sayfanın başlığıdır ve iki düğme zaten devam etme yoludur.
@@ -51,7 +57,7 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
           </div>
         )}
 
-        {/* K34 · Teslimat kısıtı — satırların ÜSTÜNDE: hangi kalemlerin etkilendiğini ve çıkışı,
+        {/* K32 · Teslimat kısıtı — satırların ÜSTÜNDE: hangi kalemlerin etkilendiğini ve çıkışı,
             müşteri listeyi gezmeden görmeli. Kısıt yoksa (ya da yer bilinmiyorsa) hiç çizilmez. */}
         {/* Yer BİLİNMİYORSA soru burada sorulur, biliniyorsa kısıt bloğu konuşur — ikisi birbirini
             dışlar. Sepet, checkout'tan önceki son duraktır: soruyu buraya koymamak, mekanizmayı
@@ -63,7 +69,7 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
           <CartLineRow key={cartKey(line)} line={line} t={t} locale={locale} />
         ))}
 
-        {/* K35 · Sonraya kaydedilenler — sepetin ALTINDA, boşken hiç çizilmez. */}
+        {/* K33 · Sonraya kaydedilenler — sepetin ALTINDA, boşken hiç çizilmez. */}
         <SavedList locale={locale} />
       </div>
 

@@ -10,14 +10,14 @@ import { useDeliveryPlace } from './place-context';
 import messages from './place-messages.json';
 
 /**
- * Teslimat yeri düzenleme paneli — hapa (K32) ya da şeride (K33) tıklayınca açılır.
+ * Teslimat yeri düzenleme paneli — hapa (K30) ya da şeride (K31) tıklayınca açılır.
  *
  * İki iş yapar: kodu girdirir ve **kapıya teslim ettiğimiz yerleri gösterir**. İkincisi olmadan
  * "kargo" cevabı bir çıkmaz gibi okunuyor; liste "benimki neden yok" sorusunu cevaplıyor ve
  * bölgenin gerçekten var olduğunu gösteriyor.
  *
  * Sonuç cümlesi kısıtı BURADA söylemez ("şu ürün gönderilemez"): panel sepeti bilmez. Yalnız kuralı
- * söyler — soğuk zincir kargoya verilemez. Hangi kalemin etkilendiğini kısıt bloğu (K34) söyler.
+ * söyler — soğuk zincir kargoya verilemez. Hangi kalemin etkilendiğini kısıt bloğu (K32) söyler.
  *
  * **Gönderince KAPANMAZ** (28.07 düzeltmesi). Önce kapanıyordu ve panelin bütün amacını boşa
  * çıkarıyordu: müşteri sorusunu soruyor, cevap yazılıyor, ama cevabı okumadan ekran kayboluyordu.

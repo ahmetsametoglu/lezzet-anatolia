@@ -11,6 +11,8 @@ import { CartSummary } from './components/cart-summary';
 import { CartCoupon } from './components/cart-coupon';
 import { CartCheckoutBar } from './components/cart-checkout-bar';
 import { EmptyCart } from './components/empty-cart';
+import { CartUnreachable } from './components/cart-unreachable';
+import { CartSkeleton } from './components/cart-skeleton';
 import type { CartViewProps } from './cart-types';
 
 /**
@@ -26,8 +28,12 @@ import type { CartViewProps } from './cart-types';
  * dökümü akıştaki özet kartında kalır. Boş sepette çubuk HİÇ YOKTUR — sabitlenecek tutar yok.
  */
 export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
-  const { view, ready } = useCart();
-  if (!ready) return <div className="min-h-[40vh]" />;
+  const { view, ready, failed } = useCart();
+  // İlk kare BOŞ bırakılmaz: iskelet gerçek yerleşimin ölçüsünü taşır, içerik gelince zıplama olmaz.
+  if (!ready) return <CartSkeleton t={t} compact />;
+
+  // Okuma DÜŞTÜYSE boş ekran çizilmez: sepet boş değil, ulaşılamıyor (`CartUnreachable`).
+  if (failed) return <CartUnreachable t={t} compact />;
 
   const empty = view.lines.length === 0;
 
@@ -52,7 +58,7 @@ export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
             </div>
           )}
           <div className="flex flex-col gap-2.5 px-4 py-3.5">
-            {/* K34 · Teslimat kısıtı satırların ÜSTÜNDE — masaüstüyle aynı sıra, aynı bileşen. */}
+            {/* K32 · Teslimat kısıtı satırların ÜSTÜNDE — masaüstüyle aynı sıra, aynı bileşen. */}
             {/* Yer bilinmiyorsa soru, biliniyorsa kısıt — ikisi birbirini dışlar. */}
             <PlacePrompt locale={locale} scope="cart" />
             <PlaceRestriction
@@ -65,7 +71,7 @@ export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
             {view.lines.map((line) => (
               <CartLineRow key={cartKey(line)} line={line} t={t} locale={locale} compact />
             ))}
-            {/* K35 · Sonraya kaydedilenler; boşken hiç çizilmez. */}
+            {/* K33 · Sonraya kaydedilenler; boşken hiç çizilmez. */}
             <SavedList locale={locale} compact />
             {/* Mobilde kupon özetin ÜSTÜNDE (tasarım): indirim uygulanınca özet zaten onun sonucunu
                 gösteriyor — sonucu sebebinden önce okutmak sırayı tersine çevirirdi. */}

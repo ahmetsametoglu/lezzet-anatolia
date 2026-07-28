@@ -2,6 +2,7 @@
 
 import type { Locale } from '@lezzet/i18n';
 import { buttonClass } from '@/components/customer/ui/button';
+import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CartView } from '@/lib/cart/cart-types';
 import type { Messages } from '../cart-types';
@@ -70,6 +71,11 @@ interface CartSummaryProps {
 }
 
 export function CartSummary({ view, t, locale, compact = false }: CartSummaryProps) {
+  // Devam etmeyi GERÇEKTEN engelleyen iki hâl: çıkarılmadan geçilemeyecek satır, ve asgari sepetin
+  // altı. İkisi de checkout'ta yeniden kontrol ediliyor; buradaki kilit müşteriyi boşuna bir adım
+  // ilerletmemek için (sunucu güvenliği ekranın kilidine dayanmaz).
+  const blocked = view.hasBlocked || !view.minBasketOk;
+  const reason = checkoutBlockReason(view, t, locale);
   return (
     <div className={['flex flex-col rounded-card border border-sand-200 bg-card', compact ? 'gap-2 p-3.5' : 'gap-3 p-6'].join(' ')}>
       {!compact && <h2 className="font-serif text-h2-sm text-ink">{t.summary}</h2>}
@@ -102,21 +108,24 @@ export function CartSummary({ view, t, locale, compact = false }: CartSummaryPro
 
       {!compact && (
         <>
-          {/* Ödeme adımı 07.4/07.5 bekliyor: düğme TAM görünür ama pasif. Sahte bir akış başlatmak,
-              müşteriyi ödeme yapamayacağı bir yola sokmaktır. */}
-          <button
-            type="button"
-            disabled
-            title={t.checkoutPending}
-            className={buttonClass({ variant: 'primary', size: 'md', fullWidth: true, className: 'disabled:cursor-not-allowed' })}
-          >
-            {t.checkout}
-          </button>
-          {view.hasBlocked ? (
-            <span className="text-center font-sans text-note font-semibold text-terracotta">{t.checkoutBlocked}</span>
+          {/* Checkout BAĞLANDI (08.13). Düğme yalnız gerçek bir engel varken pasifleşir:
+              tükenen/satıştan kalkan kalem ya da asgari sepetin altı. Engel yoksa düğme bir
+              bağlantıdır — `disabled` bir `<a>` diye bir şey olmadığı için iki dal ayrı çizilir. */}
+          {blocked ? (
+            <button
+              type="button"
+              disabled
+              title={reason ?? undefined}
+              className={buttonClass({ variant: 'primary', size: 'md', fullWidth: true, className: 'disabled:cursor-not-allowed' })}
+            >
+              {t.checkout}
+            </button>
           ) : (
-            <span className="text-center font-sans text-micro text-muted">{t.checkoutPending}</span>
+            <Link href="/checkout" className={buttonClass({ variant: 'primary', size: 'md', fullWidth: true })}>
+              {t.checkout}
+            </Link>
           )}
+          {view.hasBlocked && <span className="text-center font-sans text-note font-semibold text-terracotta">{t.checkoutBlocked}</span>}
         </>
       )}
     </div>

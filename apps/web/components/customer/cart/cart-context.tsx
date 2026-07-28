@@ -38,6 +38,19 @@ interface CartContextValue {
   view: CartView;
   /** İlk okuma tamamlanana kadar sayaç gösterilmez — yanlış sayı göstermektense hiç göstermemek. */
   ready: boolean;
+  /**
+   * İlk okuma BAŞARISIZ oldu mu (sunucu yanıtı gelmedi ya da hata döndü).
+   *
+   * Ayrı bir bayrak olması şart: `view` boş, `entries` dolu kalıyor — yani rozet niyetten sayıp
+   * "4" derken sayfa çözülmüş satır bulamayıp "sepetiniz boş" çiziyordu. İki ekran aynı durumdan
+   * iki farklı sonuç çıkarıyordu ve arada kimse hatayı görmüyordu; action `{data, error}` döndüğü
+   * için tarayıcı konsolunda da bir iz yoktu (28.07 — sepetin kaybolduğu hata).
+   *
+   * Boş sepet ile ULAŞILAMAYAN sepet farklı şeylerdir: birincisi bir durum, ikincisi bir arıza.
+   */
+  failed: boolean;
+  /** Başarısız okumayı tekrar dener — müşterinin tek çaresi sayfayı yenilemek olmasın. */
+  retry: () => void;
   add: (entry: CartEntry) => void;
   /** Tekrar sipariş: birçok kalem TEK turda girer — tek tek eklemek N sunucu turu demekti. */
   addMany: (entries: readonly CartEntry[]) => void;
@@ -57,7 +70,7 @@ interface CartContextValue {
    * müşterinin az önce yaptığı işin sonucu.
    */
   justRemoved: boolean;
-  /** Sonraya kaydedilenler (K35) — çözülmüş satırlar; toplamları anlamsızdır, liste gösterilir. */
+  /** Sonraya kaydedilenler (K33) — çözülmüş satırlar; toplamları anlamsızdır, liste gösterilir. */
   saved: CartView;
   /**
    * Kalemi sepetten listeye TAŞIR. Silmez: teslimat yerine gönderilemeyen ürün vazgeçilmiş değildir,
@@ -89,6 +102,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   const [view, setView] = useState<CartView>(EMPTY_CART);
   const [savedView, setSavedView] = useState<CartView>(EMPTY_CART);
   const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
   // Silinen kalem, geri alınana ya da pencere kapanana kadar burada bekler.
   const [undo, setUndo] = useState<{ entry: CartEntry; name: string } | null>(null);
   // Yarışı kesmek için: geç dönen eski yanıt yeni durumu ezmesin.
@@ -131,15 +145,20 @@ export function CartProvider({ locale, children }: CartProviderProps) {
 
   // İlk yükleme: tarayıcıdaki niyet sunucuya sorulur. Girişli müşteride kalemler sunucudakinin
   // üstüne EKLENİR (devralma) — action oturuma bakar, istemci "kimin sepeti" sorusunu cevaplamaz.
-  useEffect(() => {
+  //
+  // Okuma DÜŞERSE tarayıcı depoları KORUNUR ve `failed` kalkar: niyet elimizdeki tek gerçek, onu
+  // silmek müşterinin sepetini gerçekten kaybettirirdi. Ekran boş sepet değil arıza gösterir.
+  const load = useCallback(() => {
     const guest = readGuestCart();
     const guestSaved = readSaved();
     setEntries(guest);
     setSavedEntries(guestSaved);
+    setFailed(false);
     const ticket = ++seq.current;
     void readCartAction(locale, guest, guestSaved)
       .then(({ data }) => {
-        if (ticket !== seq.current || !data) return;
+        if (ticket !== seq.current) return;
+        if (!data) return setFailed(true);
         // Devralma yapıldıysa tarayıcı depoları boşaltılır; yoksa aynı kalemler her açılışta
         // yeniden eklenir ve adet katlanır.
         if (data.merged) {
@@ -151,10 +170,15 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         setEntries(data.view.lines.map(entryOf));
         setSavedEntries(data.saved.lines.map(entryOf));
       })
+      .catch(() => {
+        if (ticket === seq.current) setFailed(true);
+      })
       .finally(() => {
         if (ticket === seq.current) setReady(true);
       });
   }, [locale]);
+
+  useEffect(() => load(), [load]);
 
   // Görünüm sunucudan, adetler niyetten. İkisini birleştiren tek yer burası.
   const displayView = useMemo(() => viewWithEntries(view, entries), [view, entries]);
@@ -163,6 +187,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
     () => ({
       view: displayView,
       ready,
+      failed,
+      retry: load,
       add: (entry) => {
         closeUndo();
         sync(mergeEntry(entries, entry), savedEntries);
@@ -218,7 +244,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         sync(setEntryQty(entries, ref, qty), savedEntries);
       },
     }),
-    [displayView, view, savedView, ready, entries, savedEntries, sync, closeUndo, undo],
+    [displayView, view, savedView, ready, failed, load, entries, savedEntries, sync, closeUndo, undo],
   );
 
   return (

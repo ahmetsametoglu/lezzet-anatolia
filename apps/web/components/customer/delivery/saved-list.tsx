@@ -10,7 +10,7 @@ import { formatPrice } from '@/lib/storefront/format';
 import messages from './restriction-messages.json';
 
 /**
- * K35 · Sonraya Kaydedildi Listesi — sepetin altında yaşayan kalıcı liste.
+ * K33 · Sonraya Kaydedildi Listesi — sepetin altında yaşayan kalıcı liste.
  *
  * Teslimat yerine gönderilemeyen kalem SİLİNMEZ, buraya taşınır: alışveriş ölmez, sepet bölünür
  * (tasarım §7). Buraya YALNIZ kısıt bloğundan girilir — sepet satırındaki serbest "sonraya kaydet"

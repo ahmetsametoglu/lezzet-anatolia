@@ -44,7 +44,7 @@ export function HomeDesktop({ t, locale, data }: HomeViewProps) {
         <FramedImage src={null} alt={t.hero.imageAlt} ratio={RATIO_BAND} className="!rounded-[24px]" />
       </section>
 
-      {/* K33 · Posta kodu sorma şeridi — kahramanın HEMEN ALTINDA (tasarım). Yer biliniyorsa ya da
+      {/* K31 · Posta kodu sorma şeridi — kahramanın HEMEN ALTINDA (tasarım). Yer biliniyorsa ya da
           "şimdi değil" denmişse kendini hiç çizmez; kesmez, kilitlemez. */}
       <div className="px-12 pb-8">
         <PlacePrompt locale={locale} />

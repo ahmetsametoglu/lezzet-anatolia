@@ -21,10 +21,9 @@
     "total": "Genel toplam",
     "vatIncluded": "Fiyatlara KDV dahildir.",
     "vatShort": "KDV dahil",
-    "checkout": "Checkout'a geç",
+    "checkout": "Ödemeye geç",
     "checkoutBlocked": "Devam etmek için tükenen kalemi çıkarın",
     "minBasket": "Sipariş için en az {min} gerekir — {missing} daha ekleyin.",
-    "checkoutPending": "Ödeme adımı yakında açılıyor",
     "empty": {
       "title": "Sepetiniz şu an boş",
       "titleEmptied": "Sepetiniz boşaldı",
@@ -50,7 +49,12 @@
     "packageBadge": "Paket · {n} ürün",
     "packageContents": "İçerik:",
     "packagePrice": "paket fiyatı {price}",
-    "packageWhole": "bütün olarak artırılır/silinir"
+    "packageWhole": "bütün olarak artırılır/silinir",
+    "unreachable": {
+      "title": "Sepetiniz şu an getirilemedi",
+      "body": "Kalemleriniz duruyor — bağlantı kurulamadığı için gösteremiyoruz.",
+      "retry": "Tekrar dene"
+    }
   },
   "fr": {
     "title": "Mon panier",
@@ -77,7 +81,6 @@
     "checkout": "Passer à la commande",
     "checkoutBlocked": "Retirez l'article épuisé pour continuer",
     "minBasket": "Commande minimum {min} — ajoutez encore {missing}.",
-    "checkoutPending": "L'étape de paiement arrive bientôt",
     "empty": {
       "title": "Votre panier est vide",
       "titleEmptied": "Votre panier a été vidé",
@@ -103,7 +106,12 @@
     "packageBadge": "Coffret · {n} produits",
     "packageContents": "Contenu :",
     "packagePrice": "prix du coffret {price}",
-    "packageWhole": "s'ajuste et se retire en entier"
+    "packageWhole": "s'ajuste et se retire en entier",
+    "unreachable": {
+      "title": "Votre panier n’a pas pu être chargé",
+      "body": "Vos articles sont bien là — nous n’avons pas pu les afficher.",
+      "retry": "Réessayer"
+    }
   },
   "de": {
     "title": "Mein Warenkorb",
@@ -130,7 +138,6 @@
     "checkout": "Zur Kasse",
     "checkoutBlocked": "Entfernen Sie den ausverkauften Artikel, um fortzufahren",
     "minBasket": "Mindestbestellwert {min} — fügen Sie noch {missing} hinzu.",
-    "checkoutPending": "Der Bezahlschritt kommt bald",
     "empty": {
       "title": "Ihr Warenkorb ist leer",
       "titleEmptied": "Ihr Warenkorb wurde geleert",
@@ -156,6 +163,11 @@
     "packageBadge": "Paket · {n} Produkte",
     "packageContents": "Inhalt:",
     "packagePrice": "Paketpreis {price}",
-    "packageWhole": "wird als Ganzes geändert/entfernt"
+    "packageWhole": "wird als Ganzes geändert/entfernt",
+    "unreachable": {
+      "title": "Ihr Warenkorb konnte nicht geladen werden",
+      "body": "Ihre Artikel sind noch da — wir konnten sie nur nicht anzeigen.",
+      "retry": "Erneut versuchen"
+    }
   }
 }

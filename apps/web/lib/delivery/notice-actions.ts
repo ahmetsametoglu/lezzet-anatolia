@@ -1,7 +1,7 @@
 'use server';
 
 import { serviceDb } from '@lezzet/database';
-import { getSessionUser } from '@/lib/guard';
+import { currentCustomerId } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { isValidPostalCode, normalizePostalCode } from './place-types';
 
@@ -30,10 +30,12 @@ export async function recordZoneNoticeAction(rawPostalCode: string, rawEmail: st
     // burada amaç yazım hatasını değil boş/anlamsız girdiyi elemek.
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Geçerli bir e-posta adresi girin');
 
-    const user = await getSessionUser();
+    // `zone_notice.customer_id` de `user_profiles`'a FK'li: auth kimliği yazıldığında girişli
+    // müşterinin kaydı FK ihlaliyle düşüyordu (ziyaretçininki null geçtiği için sorunsuz görünüyordu).
+    const customerId = await currentCustomerId();
     const { error } = await serviceDb()
       .from('zone_notice')
-      .upsert({ postal_code: postalCode, email, customer_id: user?.id ?? null }, { onConflict: 'postal_code,email', ignoreDuplicates: true });
+      .upsert({ postal_code: postalCode, email, customer_id: customerId }, { onConflict: 'postal_code,email', ignoreDuplicates: true });
     if (error) throw error;
 
     return { data: true, error: null };

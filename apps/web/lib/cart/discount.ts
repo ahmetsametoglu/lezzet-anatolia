@@ -1,0 +1,158 @@
+import 'server-only';
+import { DiscountService, UserProfileService, type Db } from '@lezzet/database';
+import {
+  applyBestDiscount,
+  checkCouponEligibility,
+  type AppliedDiscount,
+  type DiscountRule,
+  type DiscountableLine,
+} from '@lezzet/domain-core';
+import type { Discount } from '@lezzet/types';
+import type { CartDiscount, CouponFailure } from './cart-types';
+
+/**
+ * Sepette indirim çözümü (09.6 müşteri tarafı) — **uygulama katmanı orkestrasyonu**. DOMAIN §5.
+ *
+ * Motor hazırdı, kablo yoktu: kuralları servis getirir, kararı `applyBestDiscount` verir, ikisini
+ * burası birleştirir (STACK §4). **Tek-en-büyük kuralı, matrah muafiyetleri ve pay dağıtımı burada
+ * TEKRARLANMAZ** — hepsi motorda yaşar.
+ *
+ * Ekranın dört ret hâli ("süresi dolmuş" · "geçersiz" · "40 € üzeri" · "otomatik indirim daha
+ * büyük") buradan çıkar. Sebep motorun kendi yükleminden türer (`checkCouponEligibility`); ayrı
+ * yazılsaydı ekranın söylediği sebeple motorun kararı bir gün ayrışırdı.
+ */
+
+export interface CartDiscountInput {
+  lines: readonly DiscountableLine[];
+  customerId?: string | null;
+  /** Müşterinin girdiği kod; boşsa yalnız otomatik adaylar değerlendirilir. */
+  couponCode?: string | null;
+  now?: Date;
+}
+
+/**
+ * Sepetin indirimi. Kupon girilmediyse otomatik adaylar (kampanya + müşteri oranı) değerlendirilir;
+ * girildiyse önce kuponun kendisi teşhis edilir, sonra havuzun tamamı yarıştırılır.
+ *
+ * **Kupon geçerli olsa bile kazanmayabilir** — o zaman ret değil, `outranked` döner ve sepete
+ * kazanan indirim uygulanır: müşteri hem sebebi görür hem parasını kaybetmez.
+ */
+export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Promise<CartDiscount> {
+  const discounts = new DiscountService(db);
+  const code = input.couponCode?.trim() ?? '';
+  const now = input.now ?? new Date();
+
+  const candidates = await discounts.listCandidates(input.customerId);
+  const coupon = code ? await discounts.findByCode(code) : null;
+
+  // Koda karşılık gelen kupon aday havuzunda olmayabilir (pasif ya da kişisel): motorun görmesi için
+  // havuza eklenir — "neden uygulanmadı" sorusunun cevabı da o zaman doğar.
+  const pool = coupon && !candidates.some((row) => row.id === coupon.id) ? [...candidates, coupon] : candidates;
+  const usage = await discounts.usageCounts(pool.map((row) => row.id));
+  const customerDiscountPercent = await customerRate(db, input.customerId);
+
+  const ctx = {
+    customerId: input.customerId,
+    customerDiscountPercent,
+    isFirstOrder: await isFirstOrder(db, input.customerId),
+    enteredCouponCode: code || null,
+    now,
+  };
+  const rules = pool.map((row) => toRule(row, usage.get(row.id), input.customerId));
+  const winner = applyBestDiscount(input.lines, rules, ctx);
+
+  if (!code) return winner ? automatic(winner) : { status: 'none' };
+
+  // Kod girildi: önce kuponun kendisi teşhis edilir.
+  const rejected = (reason: CouponFailure): CartDiscount => ({
+    status: 'rejected',
+    reason,
+    code,
+    // Kupon tutmasa da sepette bir indirim olabilir; müşteri onu kaybetmez.
+    appliedInsteadCents: winner?.amountCents ?? 0,
+  });
+
+  // Kupon olmayan bir kuralın kimliğiyle indirim alınamaz: kampanyanın kodu yoktur.
+  if (!coupon || coupon.trigger !== 'coupon') return rejected('unknown_code');
+
+  const rule = toRule(coupon, usage.get(coupon.id), input.customerId);
+  const eligibility = checkCouponEligibility(rule, ctx, basketOf(input.lines), now);
+  // Kişisel kupon başkasının elinde: varlığını doğrulamak, kodu paylaşmaya davet olurdu.
+  if (!eligibility.ok) return rejected(eligibility.reason === 'not_yours' ? 'unknown_code' : eligibility.reason);
+
+  if (winner?.discountId !== coupon.id) return rejected('outranked');
+
+  return {
+    status: 'applied',
+    source: 'coupon',
+    code: coupon.code ?? code,
+    amountCents: winner.amountCents,
+    lineShares: winner.lineShares,
+    discountId: winner.discountId,
+  };
+}
+
+function automatic(winner: AppliedDiscount): CartDiscount {
+  return {
+    status: 'automatic',
+    amountCents: winner.amountCents,
+    lineShares: winner.lineShares,
+    discountId: winner.discountId,
+  };
+}
+
+/**
+ * Matrah — muafiyetler motorun kuralıdır ve burada TEKRARLANIR, çünkü teşhis "asgari sepet tuttu
+ * mu" sorusunu motor karar vermeden önce sormak zorundadır. Yüklem tek satırdır ve motorunkiyle
+ * birebir aynı: paket ve teklif satırı matrahı büyütmez (DOMAIN §5/§13).
+ */
+function basketOf(lines: readonly DiscountableLine[]): number {
+  return lines.reduce((sum, line) => (line.bundleId || line.offerStockId ? sum : sum + line.unitPriceCents * line.qty), 0);
+}
+
+/** DB satırı → motorun sözleşmesi. Kullanım sayıları kayıttan türer, sayaç kolonundan değil. */
+function toRule(
+  row: Discount,
+  usage: { total: number; byCustomer: Map<string, number> } | undefined,
+  customerId?: string | null,
+): DiscountRule {
+  return {
+    id: row.id,
+    trigger: row.trigger,
+    code: row.code,
+    type: row.type,
+    // Saklanan değer EURO, motor KURUŞ bekler (STACK §8) — çeviri uygulama katmanında, tek yerde.
+    value: row.type === 'percent' ? row.value : Math.round(row.value * 100),
+    scope: row.scope,
+    categoryId: row.categoryId,
+    collectionId: row.collectionId,
+    minBasketCents: row.minBasket == null ? null : Math.round(row.minBasket * 100),
+    firstOrderOnly: row.firstOrderOnly,
+    validFrom: row.validFrom,
+    validTo: row.validTo,
+    customerId: row.customerId,
+    isActive: row.isActive,
+    maxUses: row.maxUses,
+    usedCount: usage?.total ?? 0,
+    perCustomerLimit: row.perCustomerLimit,
+    usedByCustomerCount: customerId ? (usage?.byCustomer.get(customerId) ?? 0) : 0,
+  };
+}
+
+/** Müşterinin genel indirim oranı — o da bir indirim adayıdır, fiyat değil (DOMAIN §5). */
+async function customerRate(db: Db, customerId?: string | null): Promise<number | null> {
+  if (!customerId) return null;
+  return (await new UserProfileService(db).getById(customerId))?.discountPercent ?? null;
+}
+
+/**
+ * İlk sipariş mi — "yalnız ilk siparişe" kuponunun ölçütü. Misafirde **true**: hesabı olmayan
+ * müşterinin geçmişi de yoktur; kuponu peşinen reddetmek yeni müşteriyi kapıda çevirmek olurdu.
+ * Sipariş oluşurken ölçüt yeniden bakılır (kupon kullanımı orada yazılır).
+ */
+async function isFirstOrder(db: Db, customerId?: string | null): Promise<boolean> {
+  if (!customerId) return true;
+  const { count, error } = await db.from('order').select('id', { count: 'exact', head: true }).eq('customer_id', customerId);
+  if (error) throw error;
+  return (count ?? 0) === 0;
+}

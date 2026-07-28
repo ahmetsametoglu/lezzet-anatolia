@@ -106,6 +106,12 @@ export interface StorefrontPackage {
   inRouteOnly: boolean;
   /** BİR kalem bile yetmiyorsa paket tükendi — paket bütün satılır, "yarısı var" hâli yok. */
   soldOut: boolean;
+  /**
+   * Kalemlerin EN YÜKSEK KDV oranı (%). Vitrin bunu göstermez (fiyat KDV dahil); checkout'ta
+   * kargo KDV'sinin oransal bölünmesi için gerekiyor. Karışık oranlı bir pakette en yükseği
+   * almak bilinçli: eksik hesaplamaktansa fazla hesaplamak vergi tarafında güvenli yön.
+   */
+  vatRate: number;
 }
 
 /**

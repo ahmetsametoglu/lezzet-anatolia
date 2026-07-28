@@ -7,7 +7,7 @@ import { resolveDelivery } from '@/lib/order/delivery';
 import { isValidPostalCode, normalizePostalCode, type DeliveryPlace } from './place-types';
 
 /**
- * Teslimat yeri çözümü (K32-K33) — posta kodu → "ne gönderebiliriz, ne zaman".
+ * Teslimat yeri çözümü (K30-K31) — posta kodu → "ne gönderebiliriz, ne zaman".
  *
  * Guard YOK ve olmamalı: soru ziyaretçiye de açıktır, zaten alışverişin önüne konmamak için var.
  *

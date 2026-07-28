@@ -33,7 +33,7 @@ import type { Messages } from '../cart-types';
  * (`image.schema`: "1:1 · sepet · paket satırı"); katalog kartının 3:2'si burada satırı şişirir.
  *
  * **Satırda "sonraya kaydet" YOKTUR** ve bu bilinçli bir sapma (28.07 · kullanıcı geri bildirimi).
- * Tasarım K35 onu her satıra koyuyordu ("kısıt olmadan da kullanılabilir"), ama kısıt yokken kontrol
+ * Tasarım K33 onu her satıra koyuyordu ("kısıt olmadan da kullanılabilir"), ama kısıt yokken kontrol
  * hiçbir şeyi açıklamıyordu: çöp kutusunun yanında ikinci bir eylem, gideceği yer görünmüyor (liste
  * boşken çizilmiyor), ve müşterinin o an yaptığı işle — adet ayarla, devam et — yarışıyor. Ertelemek
  * ancak bir SEBEBİ varken anlam taşır; sebebi de kısıt bloğu veriyor. Kaydetme oraya taşındı.

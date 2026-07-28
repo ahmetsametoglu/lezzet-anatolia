@@ -1,7 +1,7 @@
 import type { CartEntry } from './cart-types';
 
 /**
- * Sonraya kaydedilenlerin (K35) tarayıcı deposu.
+ * Sonraya kaydedilenlerin (K33) tarayıcı deposu.
  *
  * Sepetin deseninin aynısı ve bu bilinçli: ziyaretçide tarayıcı, girişli müşteride sunucu. "Sonraya
  * kaydet"in önüne giriş duvarı koymak, tam da müşterinin vazgeçmeye en yakın olduğu anda ikinci bir

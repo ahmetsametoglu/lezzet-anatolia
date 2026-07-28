@@ -7,7 +7,7 @@ import { PlaceDialog } from './place-dialog';
 import messages from './place-messages.json';
 
 /**
- * K32 · Teslimat Yeri Göstergesi — başlıkta duran kalıcı hap.
+ * K30 · Teslimat Yeri Göstergesi — başlıkta duran kalıcı hap.
  *
  * **Hap YALNIZ YERİ söyler:** posta kodu ve — biliniyorsa — yerin adı. Başka hiçbir metin taşımaz.
  *

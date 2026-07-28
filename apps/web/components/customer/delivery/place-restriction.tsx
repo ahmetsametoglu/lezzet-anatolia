@@ -13,7 +13,7 @@ import { ZoneNoticeDialog } from './zone-notice-dialog';
 import messages from './restriction-messages.json';
 
 /**
- * K34 · Teslimat Kısıtı Bloğu — sepette ve (sonra) checkout'ta AYNI bileşen.
+ * K32 · Teslimat Kısıtı Bloğu — sepette ve (sonra) checkout'ta AYNI bileşen.
  *
  * Aynı olması tasarımın kararı: müşteri aynı kısıtı iki farklı dille iki kez okumamalı. Üç çıkış
  * HEP AYNI SIRADA durur — sepeti böl · yeri değiştir · haber ver.

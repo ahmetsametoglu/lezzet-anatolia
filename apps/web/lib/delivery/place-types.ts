@@ -1,5 +1,5 @@
 /**
- * Teslimat yeri (K32-K35) — müşterinin "nereye getirelim" cevabı.
+ * Teslimat yeri (K30-K33) — müşterinin "nereye getirelim" cevabı.
  *
  * **Kısıt ürünün değil ADRESİN özelliğidir** (tasarım sözleşmesi §7). Soğuk zincirle taşınan ürün
  * kargoya verilemez; yani "bu ürünü alabilir miyim" sorusunun cevabı ürüne değil, teslimat yerine

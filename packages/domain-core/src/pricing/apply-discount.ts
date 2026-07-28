@@ -132,28 +132,63 @@ export function applyBestDiscount(
   }
 }
 
-/** Kuralın koşulları sağlanıyor mu (kod, tarih, asgari sepet, ilk sipariş, kullanım sınırı, kişisellik). */
-function isApplicable(rule: DiscountRule, ctx: DiscountContext, now: Date, basketCents: number): boolean {
-  if (rule.isActive === false) return false;
+/**
+ * Kuponun neden geçmediği. Müşteriye **sebep** söylenir, "geçersiz kod" denip geçilmez: süresi
+ * dolmuş kuponla asgari sepeti tutmayan kupon farklı şeylerdir ve ikincisinde müşteri sepetine
+ * ürün ekleyerek kuponu kullanabilir.
+ *
+ * `not_yours` dışarı **sızdırılmaz**: kişisel kupon başkasının elindeyse "bu kupon var ama senin
+ * değil" demek, kodun varlığını doğrulamak olurdu. Çağıran onu `unknown_code` gibi sunar.
+ */
+export type CouponRejection =
+  | 'inactive'
+  | 'not_started'
+  | 'expired'
+  | 'min_basket'
+  | 'first_order_only'
+  | 'used_up'
+  | 'not_yours';
 
+export type CouponEligibility = { ok: true } | { ok: false; reason: CouponRejection };
+
+/**
+ * Kupon bu sepete uygulanabilir mi ve değilse **neden**.
+ *
+ * Motorun kendi yüklemiyle AYNI kaynaktan gelir (`applyBestDiscount` bunu çağırır): ret sebepleri
+ * ayrı yazılsaydı bir gün ekranın söylediği sebeple motorun kararı ayrışırdı — "geçerli" diyen
+ * uyarı, indirimsiz kapanan sepet.
+ *
+ * Kod eşleşmesi burada SORULMAZ: çağıran kuponu zaten koddan buldu. Bu fonksiyon "kod doğru mu"
+ * değil, "doğru kod bu sepete yarıyor mu" sorusunu cevaplar.
+ */
+export function checkCouponEligibility(
+  rule: DiscountRule,
+  ctx: DiscountContext,
+  basketCents: number,
+  now: Date = new Date(),
+): CouponEligibility {
+  if (rule.isActive === false) return { ok: false, reason: 'inactive' };
+  if (rule.validFrom && new Date(rule.validFrom) > now) return { ok: false, reason: 'not_started' };
+  if (rule.validTo && new Date(rule.validTo) < now) return { ok: false, reason: 'expired' };
+  if (rule.minBasketCents != null && basketCents < rule.minBasketCents) return { ok: false, reason: 'min_basket' };
+  if (rule.firstOrderOnly && !ctx.isFirstOrder) return { ok: false, reason: 'first_order_only' };
+  // Kişisel kupon başkasına geçmez.
+  if (rule.customerId && rule.customerId !== ctx.customerId) return { ok: false, reason: 'not_yours' };
+  if (rule.maxUses != null && (rule.usedCount ?? 0) >= rule.maxUses) return { ok: false, reason: 'used_up' };
+  if (rule.perCustomerLimit != null && (rule.usedByCustomerCount ?? 0) >= rule.perCustomerLimit) {
+    return { ok: false, reason: 'used_up' };
+  }
+  return { ok: true };
+}
+
+/** Kuralın koşulları sağlanıyor mu (kod + `checkCouponEligibility`'nin tamamı). */
+function isApplicable(rule: DiscountRule, ctx: DiscountContext, now: Date, basketCents: number): boolean {
   // Kupon yalnız kodu girilirse; otomatik kampanya kod istemez.
   if (rule.trigger === 'coupon') {
     const entered = ctx.enteredCouponCode?.trim().toUpperCase();
     if (!entered || entered !== rule.code?.trim().toUpperCase()) return false;
   }
-
-  if (rule.validFrom && new Date(rule.validFrom) > now) return false;
-  if (rule.validTo && new Date(rule.validTo) < now) return false;
-  if (rule.minBasketCents != null && basketCents < rule.minBasketCents) return false;
-  if (rule.firstOrderOnly && !ctx.isFirstOrder) return false;
-
-  // Kişisel kupon başkasına geçmez.
-  if (rule.customerId && rule.customerId !== ctx.customerId) return false;
-
-  if (rule.maxUses != null && (rule.usedCount ?? 0) >= rule.maxUses) return false;
-  if (rule.perCustomerLimit != null && (rule.usedByCustomerCount ?? 0) >= rule.perCustomerLimit) return false;
-
-  return true;
+  return checkCouponEligibility(rule, ctx, basketCents, now).ok;
 }
 
 /** Kalem kuralın kapsamında mı — `cart` her uygun kalem, diğerleri süzülür. Matrah ve pay dağıtımı

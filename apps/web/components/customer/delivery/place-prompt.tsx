@@ -9,7 +9,7 @@ import { useDeliveryPlace } from './place-context';
 import messages from './place-messages.json';
 
 /**
- * K33 · Posta Kodu Sorma Şeridi — İKİ bağlamda, iki farklı gerekçeyle.
+ * K31 · Posta Kodu Sorma Şeridi — İKİ bağlamda, iki farklı gerekçeyle.
  *
  * **`home` · anasayfa daveti.** Kahramanın altında ince krem şerit; modal değil, atlanabilir.
  * Alışverişin önüne konan bir soru değil, sunulan bir kolaylık — atlanırsa hiçbir şey kilitlenmez.

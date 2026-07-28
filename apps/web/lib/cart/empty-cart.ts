@@ -5,7 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import { FIXTURE_CATEGORIES } from '@/lib/storefront/fixtures';
 import { toCategory } from '@/lib/storefront/map';
 import type { StorefrontCategory, StorefrontImage } from '@/lib/storefront/storefront-types';
-import { getSessionUser } from '@/lib/guard';
+import { currentCustomerId } from '@/lib/guard';
 import { getCartView } from './read';
 import type { CartEntry } from './cart-types';
 
@@ -71,11 +71,13 @@ export async function getEmptyCartContext(locale: Locale): Promise<EmptyCartCont
 }
 
 async function readLastOrder(locale: Locale): Promise<LastOrderSuggestion | null> {
-  const user = await getSessionUser();
-  if (!user) return null;
+  // Sipariş MÜŞTERİ kimliğine bağlıdır, auth kimliğine değil — auth kimliğiyle sorulduğunda hiçbir
+  // müşterinin son siparişi bulunamıyordu ve öneri alanı sessizce hep kategorilere düşüyordu.
+  const customerId = await currentCustomerId();
+  if (!customerId) return null;
 
   const orders = new OrderService(serviceDb());
-  const page = await orders.listByCustomer(user.id, { limit: 1 });
+  const page = await orders.listByCustomer(customerId, { limit: 1 });
   const order = page.rows[0];
   // Referansı olmayan sipariş henüz kalıcı değildir (taslak/iptal öncesi) — tekrarlanacak bir şey yok.
   if (!order?.referenceNo) return null;

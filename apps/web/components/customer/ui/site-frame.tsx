@@ -142,7 +142,7 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
             <span className={navClass('pro', activeNav)}>{t.nav.pro}</span>
           </nav>
           <div className="ml-auto flex items-center gap-4.5 font-sans text-body-sm font-semibold text-muted">
-            {/* K32 · Teslimat yeri — dil ve sepetin SOLUNDA: sepete girmeden önce cevaplanan bir
+            {/* K30 · Teslimat yeri — dil ve sepetin SOLUNDA: sepete girmeden önce cevaplanan bir
                 soru, sepet rozetinin sağında dursa alışverişin sonuna ait gibi okunurdu. */}
             <PlaceChip locale={locale} />
             <LocaleSwitch locale={locale} />
