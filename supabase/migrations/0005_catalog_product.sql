@@ -42,6 +42,12 @@ create table public.product (
   nutrition jsonb,                                   -- SABİT kalemli (100 g başına) — NutritionSchema
   storage_instructions jsonb,                        -- LocalizedText; saklama/hazırlama metni
   allergens product_allergen[] not null default '{}', -- AB 14 yasal beyan (manuel seçim)
+  -- "BEYAN EKSİK" TEK KAYNAKTA. Aynı ölçüt daha önce sorgu kurucusunda bir `or` dizesi olarak
+  -- yaşıyordu ve sayaç için ayrı, süzgeç için ayrı kuruluyordu — ikisi ayrışırsa ekran "24 beyan
+  -- eksik" yazıp süzgeçte 12 satır gösterir. Üretilmiş kolon: yazarken hesaplanır, indekslenebilir,
+  -- hem süzgeç hem sayaç aynı gerçeği okur. HANGİ beyanın eksik olduğu (rozet ayrıntısı) uygulamada
+  -- kalır; burada yalnız "eksik var mı" sorusu var.
+  is_incomplete boolean generated always as (name ->> 'tr' is null or name ->> 'fr' is null or name ->> 'de' is null or ingredients is null or nutrition is null or storage_instructions is null or allergens = '{}') stored,
   traces product_allergen[] not null default '{}',   -- çapraz bulaşma; cümle i18n şablonuyla kurulur
   vat_rate numeric(4, 2) not null default 5.5,       -- 5.5 / 20
   date_type product_date_type not null default 'DDM',
@@ -54,6 +60,7 @@ create table public.product (
   created_at timestamptz not null default now()
 );
 create unique index product_slug_key on public.product (slug);
+create index product_incomplete_idx on public.product (is_incomplete) where is_incomplete;
 create index product_category_idx on public.product (category_id);
 
 create table public.product_variant (

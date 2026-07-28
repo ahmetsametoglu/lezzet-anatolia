@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { bundleBalance, markupPercent } from '@lezzet/domain-core';
 import { fromCents, toCents } from '@lezzet/helper';
 import { IMAGE_ROLES, cropOf, resolveLocalizedText } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
@@ -11,8 +12,7 @@ import { Toggle } from '@/components/operation/form/toggle';
 import type { Device } from '@/lib/device';
 import { reorderBundlesAction, setBundleActiveAction } from './actions';
 import { BundleFormDialog } from './bundle-form-dialog';
-import { bundlePricing } from './bundle-pricing';
-import type { BundleView, VariantOption } from '../../products-types';
+import type { BundleView } from '../../products-types';
 
 // Paketler sekmesi — tasarımın liste satırı: 3:2 görsel + ad + "N kalem · slug" + fiyat + mutabakat
 // rozeti. Rozetin dili tasarımdan: "Toplam tutar" / "Toplam tutmuyor". Oluştur/düzenle dialogu bu
@@ -25,13 +25,29 @@ import type { BundleView, VariantOption } from '../../products-types';
 const money = (cents: number) => `${fromCents(cents).toFixed(2).replace('.', ',')} €`;
 const percent = (value: number) => `%${value.toFixed(1).replace('.', ',')}`;
 
-/** Satırın parası — formla AYNI hesap (`bundlePricing`); liste kendi ölçütünü uydurmaz. */
-function pricingOf(bundle: BundleView, pool: Map<string, VariantOption>) {
-  return bundlePricing(
-    bundle.items.map((i) => ({ variantId: i.variantId, qty: i.qty, allocatedUnitPrice: i.allocatedUnitPrice })),
-    pool,
-    bundle.totalPrice,
+/**
+ * Satırın parası — toplamlar SUNUCUDA yapıldı (`bundle_list_rows()`), burada yalnız KARAR veriliyor:
+ * mutabakat ve marj motorun (`domain-core`). Liste kendi ölçütünü uydurmaz, hesabı da tekrarlamaz.
+ */
+function pricingOf(bundle: BundleView) {
+  const balance = bundleBalance(
+    [{ qty: 1, allocatedUnitPriceCents: toCents(bundle.allocatedTotal) }],
+    toCents(bundle.totalPrice),
   );
+  // Toplam EKSİKSE gösterilmez: fiyatı/maliyeti girilmemiş kalem varsa yarım toplam tam sanılırdı.
+  const listTotalCents = bundle.missingPriceCount > 0 || bundle.listTotal == null ? null : toCents(bundle.listTotal);
+  const costCents = bundle.missingCostCount > 0 || bundle.costTotal == null ? null : toCents(bundle.costTotal);
+  const revenueHtCents = toCents(bundle.revenueHt);
+  return {
+    balance,
+    listTotalCents,
+    discountPercent: listTotalCents == null || listTotalCents <= 0
+      ? null
+      : ((listTotalCents - toCents(bundle.totalPrice)) / listTotalCents) * 100,
+    costCents,
+    profitCents: costCents == null ? null : revenueHtCents - costCents,
+    marginPercent: costCents == null ? null : markupPercent(revenueHtCents, costCents),
+  };
 }
 
 type PricingMap = Map<string, ReturnType<typeof pricingOf>>;
@@ -46,12 +62,7 @@ function Stacked({ value, hint, alert, title }: { value: string; hint?: string; 
   );
 }
 
-/** Satılamaz kalemi olan paket: içindeki ürün/boy satışta değilse paket de vitrine çıkamaz. */
-function blockedItemsOf(bundle: BundleView, pool: Map<string, VariantOption>): number {
-  return bundle.items.filter((i) => pool.get(i.variantId)?.addable === false).length;
-}
-
-function bundleColumns(pool: Map<string, VariantOption>, pricingById: PricingMap, onToggle: (id: string, next: boolean) => void): Column<BundleView>[] {
+function bundleColumns(pricingById: PricingMap, onToggle: (id: string, next: boolean) => void): Column<BundleView>[] {
   return [
     {
       key: 'image',
@@ -75,7 +86,7 @@ function bundleColumns(pool: Map<string, VariantOption>, pricingById: PricingMap
       header: 'Paket',
       width: 'minmax(180px,1fr)',
       cell: (b) => {
-        const blocked = blockedItemsOf(b, pool);
+        const blocked = b.blockedItemCount;
         return (
           <div className="flex min-w-0 flex-col gap-px">
             <div className="flex min-w-0 items-center gap-1.5">
@@ -94,7 +105,7 @@ function bundleColumns(pool: Map<string, VariantOption>, pricingById: PricingMap
               ) : null}
             </div>
             <span className="truncate font-ops-body text-[11px] text-ops-muted">
-              {b.items.length} kalem{b.serves ? ` · ${b.serves} kişilik` : ''} · slug: {b.slug}
+              {b.itemCount} kalem{b.serves ? ` · ${b.serves} kişilik` : ''} · slug: {b.slug}
             </span>
           </div>
         );
@@ -139,21 +150,21 @@ function bundleColumns(pool: Map<string, VariantOption>, pricingById: PricingMap
       width: '132px',
       align: 'right',
       cell: (b) => {
-        const { economics } = pricingById.get(b.id)!;
-        if (economics.marginPercent == null) {
+        const { marginPercent, profitCents, costCents } = pricingById.get(b.id)!;
+        if (marginPercent == null) {
           return (
             <Stacked
               value="—"
-              hint={`${economics.unknownCostLines} kalemin maliyeti yok`}
+              hint={`${b.missingCostCount} kalemin maliyeti yok`}
               title="Maliyeti bilinmeyen kalem var — marj hesaplanmaz, uydurulmaz"
             />
           );
         }
         return (
           <Stacked
-            value={percent(economics.marginPercent)}
-            hint={`kâr ${money(economics.profitCents ?? 0)} · maliyet ${money(economics.costCents ?? 0)}`}
-            alert={(economics.profitCents ?? 0) < 0}
+            value={percent(marginPercent)}
+            hint={`kâr ${money(profitCents ?? 0)} · maliyet ${money(costCents ?? 0)}`}
+            alert={(profitCents ?? 0) < 0}
             title="Maliyet üzerine markup · kâr KDV hariç satıştan hesaplanır"
           />
         );
@@ -187,14 +198,13 @@ function bundleColumns(pool: Map<string, VariantOption>, pricingById: PricingMap
 
 interface PackagesTabProps {
   bundles: BundleView[];
-  pool: VariantOption[];
   device: Device;
   /** Oluşturma niyeti kabuktan (sekme çubuğundaki "+ Paket"); diyalog burada. */
   creating: boolean;
   onCreateClose: () => void;
 }
 
-export function PackagesTab({ bundles, pool, device, creating, onCreateClose }: PackagesTabProps) {
+export function PackagesTab({ bundles, device, creating, onCreateClose }: PackagesTabProps) {
   // Düzenlenen kayıt KİMLİKLE tutulur, verisi taze listeden türetilir (katalog sekmesinin deseni):
   // kopya tutulursa dialog içindeki görsel yüklemesi `router.refresh()` sonrası görünmez.
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -206,11 +216,7 @@ export function PackagesTab({ bundles, pool, device, creating, onCreateClose }: 
 
   // Sözlük ve satır hesapları girdileri değişmedikçe yeniden kurulmaz; hesap satır başına BİR kez
   // yapılır (üç hücre de aynı sonucu okuyor, üç kez hesaplamıyor).
-  const poolById = useMemo(() => new Map(pool.map((p) => [p.variantId, p])), [pool]);
-  const pricingById = useMemo<PricingMap>(
-    () => new Map(bundles.map((b) => [b.id, pricingOf(b, poolById)])),
-    [bundles, poolById],
-  );
+  const pricingById = useMemo<PricingMap>(() => new Map(bundles.map((b) => [b.id, pricingOf(b)])), [bundles]);
   const byId = new Map(bundles.map((b) => [b.id, b]));
   const displayed = optimisticIds
     ? [
@@ -238,7 +244,7 @@ export function PackagesTab({ bundles, pool, device, creating, onCreateClose }: 
       </div>
 
       <Table
-        columns={bundleColumns(poolById, pricingById, onToggle)}
+        columns={bundleColumns(pricingById, onToggle)}
         rows={displayed}
         rowKey={(b) => b.id}
         onReorder={handleReorder}
@@ -253,15 +259,9 @@ export function PackagesTab({ bundles, pool, device, creating, onCreateClose }: 
         }
       />
 
-      {creating ? <BundleFormDialog bundle={null} pool={pool} device={device} onClose={onCreateClose} /> : null}
+      {creating ? <BundleFormDialog bundle={null} device={device} onClose={onCreateClose} /> : null}
       {editing ? (
-        <BundleFormDialog
-          key={editing.id}
-          bundle={editing}
-          pool={pool}
-          device={device}
-          onClose={() => setEditingId(null)}
-        />
+        <BundleFormDialog key={editing.id} bundle={editing} device={device} onClose={() => setEditingId(null)} />
       ) : null}
     </div>
   );

@@ -125,6 +125,12 @@ export const ProductSchema = z.object({
   /** Çapraz bulaşma — cümle bu listeden i18n şablonuyla kurulur, serbest metin tutulmaz. */
   traces: z.array(ProductAllergenEnum),
   vatRate: dbNumeric,
+  /**
+   * "Beyan eksik" — üretilmiş kolon (0005): ad dillerinden biri yok, içindekiler/besin/saklama hiç
+   * girilmemiş ya da alerjen listesi boş. Süzgeç ve sayaç AYNI gerçeği okusun diye veritabanında
+   * hesaplanır. HANGİ beyanın eksik olduğu `missingDeclarations` ile (rozet ayrıntısı).
+   */
+  isIncomplete: z.boolean(),
   dateType: ProductDateTypeEnum,
   shelfLifeDays: z.number().int().nullable(),
   shippable: z.boolean(),
@@ -159,7 +165,9 @@ export const ProductInsertSchema = z.object({
 }).merge(ImageMetaInsertSchema);
 export type ProductInsert = z.infer<typeof ProductInsertSchema>;
 
-export const ProductUpdateSchema = ProductSchema.partial().required({ id: true });
+// `isIncomplete` ÜRETİLMİŞ kolondur (0005) — yazılamaz, o yüzden güncelleme şemasından çıkarılır;
+// yoksa forma dokunmamış bir alan bile update'e sızıp "cannot insert into generated column" verir.
+export const ProductUpdateSchema = ProductSchema.omit({ isIncomplete: true }).partial().required({ id: true });
 export type ProductUpdate = z.infer<typeof ProductUpdateSchema>;
 
 /**

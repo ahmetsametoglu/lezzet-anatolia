@@ -23,6 +23,7 @@ import {
   type ProductPool,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+import { dbToApp } from '../utils/case-transformers';
 import { uniqueSlugForTable } from '../utils/slug';
 import { ProductVariantService } from './product-variant.service';
 import { ProductImageService } from './product-image.service';
@@ -47,9 +48,22 @@ interface ProductListOptions {
   limit?: number;
 }
 
-// Gruplu sayım satırı — bir ENTITY değil, tek sorguya özgü projeksiyon; bu yüzden packages/types'ta
-// değil burada yaşar (domain şeması değil, sorgu çıktısı sözleşmesi).
-const CategoryCountRowSchema = z.object({ categoryId: z.string().uuid() });
+// Sayaç satırı — bir ENTITY değil, tek okumaya özgü projeksiyon; bu yüzden packages/types'ta değil
+// burada yaşar (domain şeması değil, sorgu çıktısı sözleşmesi).
+const ProductCountsRowSchema = z.object({
+  total: z.number().int(),
+  candidate: z.number().int(),
+  incomplete: z.number().int(),
+  byCategory: z.record(z.string(), z.number().int()),
+});
+
+/** Başlık sayaçları + kategori başına ürün sayısı (tek okumadan). */
+interface ProductCounts {
+  total: number;
+  candidate: number;
+  incomplete: number;
+  byCategory: Map<string, number>;
+}
 
 // Varyantsız üründe otomatik açılan tek varyantın etiketi: BOŞ çok dilli metin. Eskiden `'default'`
 // yazıyordu ve tek boylu ürünün vitrin kartında birim etiketi olarak "default" görünüyordu. Boş etiket
@@ -126,39 +140,30 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   }
 
   /**
-   * Ekran başlığındaki sayaçlar — liste sayfalandığı için client artık türetemez. Tek tablo
-   * olduğundan okuma-RPC eşiğini karşılamaz (STACK §13) → `head: true` sayım sorguları; satır
-   * taşınmaz, indeks taranır. `filters` verilirse sayaçlar da AYNI süzgeçten geçer.
-   */
-  async counts(filters?: ProductFilters): Promise<{ total: number; candidate: number; incomplete: number }> {
-    const base = this.buildQuery(filters);
-    const incomplete = this.buildQuery({ ...filters, onlyIncomplete: true });
-    const candidate = this.buildQuery({ ...filters, status: 'candidate' });
-    const [total, candidateCount, incompleteCount] = await Promise.all([
-      this.count(base.filters, { orFilters: base.orFilters }),
-      this.count(candidate.filters, { orFilters: candidate.orFilters }),
-      this.count(incomplete.filters, { orFilters: incomplete.orFilters }),
-    ]);
-    return { total, candidate: candidateCount, incomplete: incompleteCount };
-  }
-
-  /**
-   * Kategori başına ürün sayısı — TEK sorgu, TEK kolon. Kategori başına ayrı sayım atmak N+1 doğurur;
-   * bu yüzden tüm ürünlerin yalnız `category_id`'si çekilip burada gruplanır (satır başına bir uuid;
-   * ekranın kendisi sayfalı kalır — taşınan yük listenin kendisi değil).
+   * Ekran başlığı ve kategori listesi sayaçları — TEK okuma (`product_counts()`).
    *
-   * Neden SQL toplaması değil: PostgREST'te toplama fonksiyonları (`count()` + örtük group by) bu
-   * kurulumda kapalı ("Use of aggregate functions is not allowed" — güvenlik varsayılanı). Hacim
-   * büyürse iki seçenek var: Supabase config'inde toplamayı açmak ya da bir okuma görünümü (view).
+   * Önce dört ayrı istek gidiyordu: üç `HEAD` sayım + kategori sayaçları için TÜM ürünlerin
+   * `category_id`'sini çeken bir okuma (katalog büyüdükçe büyüyen bir yük). Dört sayı için dört tur.
+   * Fonksiyon iş kuralı taşımaz: "beyan eksik" ölçütü `product.is_incomplete` üretilmiş kolonunda
+   * tek kaynakta, buradaki süzgeçler mekanik eşleşme.
+   *
+   * `byCategory` bilinçli olarak SÜZGEÇSİZ: kategori listesinin kendi sayısıdır, ürün süzgecinden
+   * bağımsız. Aday sayacı da durum süzgecini yok sayar (aday kuyruğu her hâlde görünmeli).
    */
-  async countsByCategory(): Promise<Map<string, number>> {
-    const rows = await this.getAllAs(CategoryCountRowSchema, undefined, {
-      select: 'categoryId:category_id',
-      isNotNullFields: ['categoryId'],
+  async counts(filters?: ProductFilters): Promise<ProductCounts> {
+    const rows = await this.executeRpc<unknown[]>('product_counts', {
+      p_query: filters?.query?.trim() || null,
+      p_category: filters?.categoryId ?? null,
+      p_status: filters?.status ?? null,
+      p_only_incomplete: filters?.onlyIncomplete ?? false,
     });
-    const counts = new Map<string, number>();
-    for (const { categoryId } of rows) counts.set(categoryId, (counts.get(categoryId) ?? 0) + 1);
-    return counts;
+    const row = ProductCountsRowSchema.parse(dbToApp(rows?.[0] ?? {}));
+    return {
+      total: row.total,
+      candidate: row.candidate,
+      incomplete: row.incomplete,
+      byCategory: new Map(Object.entries(row.byCategory)),
+    };
   }
 
   /**
@@ -180,17 +185,10 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
       orFilters.push(LOCALIZED_TEXT_KEYS.map((l) => `name->>${l}.ilike."*${safe}*"`).join(','));
     }
 
-    if (f?.onlyIncomplete) {
-      // Ölçüt `missingDeclarations` ile AYNI olmalı (types/product.schema) — ikisi ayrışırsa ekran
-      // "24 beyan eksik" yazıp süzgeçte 12 satır gösterir. Oradaki kural burada SQL'e çevrilir:
-      //   · ad dillerinden biri yok        · içindekiler / saklama hiç girilmemiş (jsonb null)
-      //   · besin değerleri girilmemiş     · alerjen listesi boş
-      // Boş dil DB'ye yazılmaz (form kaydederken boş diller atılır) → eksik dil = anahtarın YOKLUĞU.
-      const missingLang = LOCALIZED_TEXT_KEYS.map((l) => `name->>${l}.is.null`);
-      orFilters.push(
-        [...missingLang, 'ingredients.is.null', 'nutrition.is.null', 'storage_instructions.is.null', 'allergens.eq.{}'].join(','),
-      );
-    }
+    // "Beyan eksik" ölçütü artık ÜRETİLMİŞ KOLONDA (0005 `is_incomplete`): süzgeç de sayaç da aynı
+    // gerçeği okur. Önce burada bir `or` dizesi olarak kuruluyordu ve sayaç tarafıyla ayrışma riski
+    // yorumla uyarılıyordu — kural veritabanına taşınınca risk ortadan kalktı (ve indekslendi).
+    if (f?.onlyIncomplete) filters.isIncomplete = true;
     return { filters, orFilters };
   }
 

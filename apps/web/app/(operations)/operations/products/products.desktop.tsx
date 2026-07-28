@@ -94,13 +94,7 @@ export function ProductsDesktop(props: ProductsViewProps) {
         />
       )}
       {tab === 'packages' && (
-        <PackagesTab
-          bundles={data.bundles}
-          pool={data.variantPool}
-          device="desktop"
-          creating={creating}
-          onCreateClose={closeCreate}
-        />
+        <PackagesTab bundles={data.bundles} device="desktop" creating={creating} onCreateClose={closeCreate} />
       )}
     </div>
   );

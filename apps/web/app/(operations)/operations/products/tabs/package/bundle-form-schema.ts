@@ -8,6 +8,7 @@ import {
   ImageCropFieldsSchema,
   pickCropFields,
   resolveLocalizedText,
+  type BundleItemEntry,
   type LocalizedText,
 } from '@lezzet/types';
 import type { BundleView } from '../../products-types';
@@ -79,8 +80,11 @@ function cleanLocalized(t: LocalizedText): LocalizedText {
   return o;
 }
 
-/** RHF varsayılanları — düzenlemede BundleView'dan, oluşturmada boş şablon (kalemsiz). */
-export function buildBundleDefaults(b: BundleView | null): BundleFormValues {
+/**
+ * RHF varsayılanları — paket alanları liste satırından, KALEMLER dışarıdan (diyalog açılırken ayrı
+ * okunuyor; liste satırı kalem taşımıyor).
+ */
+export function buildBundleDefaults(b: BundleView | null, items: BundleItemEntry[] = []): BundleFormValues {
   if (!b) {
     return {
       name: {},
@@ -99,9 +103,7 @@ export function buildBundleDefaults(b: BundleView | null): BundleFormValues {
     serves: b.serves,
     status: b.isActive ? 'active' : 'passive',
     ...pickCropFields(b),
-    items: [...b.items]
-      .sort((a, c) => a.sortOrder - c.sortOrder)
-      .map((i) => ({ id: i.id, variantId: i.variantId, qty: i.qty, allocatedUnitPrice: i.allocatedUnitPrice })),
+    items,
   };
 }
 

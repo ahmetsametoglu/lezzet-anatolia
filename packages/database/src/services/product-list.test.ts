@@ -186,21 +186,33 @@ describe('CollectionService.listWithProductIds — N+1 kırma', () => {
   });
 });
 
-describe('ProductService.countsByCategory', () => {
-  it('kategori başına sayı TEK gruplu sorguda gelir', async () => {
-    // PostgREST toplama (`count()` seçimi → örtük group by) sürüme bağlıdır: bu test onu doğrular.
-    const byCategory = await products.countsByCategory();
-    expect(byCategory.get(categoryId)).toBe(7);
-    expect(byCategory.get(otherCategoryId)).toBe(1);
-  });
-});
-
-describe('ProductService.counts', () => {
+describe('ProductService.counts (tek okuma)', () => {
   it('sayaçlar listeyle AYNI süzgeci kullanır', async () => {
     const c = await products.counts({ query: STAMP });
     expect(c.total).toBe(8);
     expect(c.candidate).toBe(1);
     // beyanı eksik: "dil eksik", "alerjen yok", "icindekiler yok", "baska kategori" → 4
     expect(c.incomplete).toBe(4);
+  });
+
+  it('kategori sayaçları AYNI okumada gelir ve süzgeçten ETKİLENMEZ', async () => {
+    // Kategori listesinin kendi sayısıdır: ürün süzgeci daraltsa da kategori "7 ürün" demeye devam
+    // etmeli, yoksa arama yapan operatör kategorinin boşaldığını sanır.
+    const c = await products.counts({ query: STAMP });
+    expect(c.byCategory.get(categoryId)).toBe(7);
+    expect(c.byCategory.get(otherCategoryId)).toBe(1);
+  });
+
+  it('aday sayacı DURUM süzgecini yok sayar (aday kuyruğu görünmeye devam eder)', async () => {
+    const c = await products.counts({ query: STAMP, status: 'active' });
+    expect(c.candidate).toBe(1);
+    expect(c.total).toBeLessThan(8); // toplam süzgeçten etkilenir
+  });
+
+  it('"beyan eksik" süzgeci ile sayacı AYNI kaynaktan (üretilmiş kolon) okur', async () => {
+    const c = await products.counts({ query: STAMP, onlyIncomplete: true });
+    const page = await products.list({ filters: { query: STAMP, onlyIncomplete: true }, limit: 50 });
+    expect(c.total).toBe(page.rows.length);
+    expect(c.incomplete).toBe(page.rows.length);
   });
 });

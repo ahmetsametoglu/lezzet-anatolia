@@ -3,6 +3,7 @@ import {
   BundleSchema,
   BundleInsertSchema,
   BundleUpdateSchema,
+  BundleListRowSchema,
   BundleWithItemsSchema,
   resolveLocalizedText,
   type Bundle,
@@ -10,10 +11,12 @@ import {
   type BundleInsert,
   type BundleItem,
   type BundleItemEntry,
+  type BundleListRow,
   type BundleUpdate,
   type BundleWithItems,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+import { dbToApp } from '../utils/case-transformers';
 import { uniqueSlugForTable } from '../utils/slug';
 import { BundleItemService } from './bundle-item.service';
 
@@ -50,6 +53,20 @@ export class BundleService extends BaseDbService<Bundle, BundleInsert, BundleUpd
       select: '*,items:bundle_item(*)',
       orderBy: 'sortOrder',
     });
+  }
+
+  /**
+   * Operasyon listesinin TEK okuması — `bundle_list_rows()` (STACK §13 okuma-RPC eşiği).
+   *
+   * Liste satırının ihtiyacı kalemler değil, kalemlerden türeyen birkaç SAYI: kaç kalem, atanmış
+   * toplam, "ayrı ayrı alınsa", maliyet, KDV'siz gelir. Bunları uygulamada hesaplamak için katalogun
+   * fiyatlarını ve tüm parti satırlarını taşımak gerekiyordu (ölçüldü: 75 KB → ~4 KB).
+   *
+   * Fonksiyon KARAR VERMEZ, toplar: mutabakat ve marj kararı `domain-core`'da kalır.
+   */
+  async listRows(): Promise<BundleListRow[]> {
+    const rows = await this.executeRpc<unknown[]>('bundle_list_rows', {});
+    return (rows ?? []).map((row) => BundleListRowSchema.parse(dbToApp(row)));
   }
 
   /** Tek paket + kalemleri (form ön-dolgusu, müşteri detay sayfası). */

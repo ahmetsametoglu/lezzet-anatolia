@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,7 +17,7 @@ import { ImageCropField } from '@/components/operation/form/image-crop-field';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { FormSection } from '../product/form-section';
 import { suggestTranslationAction } from '../../actions/translate';
-import { createBundleAction, updateBundleAction, uploadBundleImageAction } from './actions';
+import { createBundleAction, loadBundleFormAction, updateBundleAction, uploadBundleImageAction } from './actions';
 import { BundleItemsEditor } from './bundle-items-editor';
 import { bundlePricing, priceFromDiscount } from './bundle-pricing';
 import { BundleFormSchema, buildBundleDefaults, bundleBlock, toBundlePayload, type BundleFormValues } from './bundle-form-schema';
@@ -33,12 +33,11 @@ const FORM_ID = 'bundle-form';
 
 interface BundleFormDialogProps {
   bundle: BundleView | null;
-  pool: VariantOption[];
   device: Device;
   onClose: () => void;
 }
 
-export function BundleFormDialog({ bundle, pool, device, onClose }: BundleFormDialogProps) {
+export function BundleFormDialog({ bundle, device, onClose }: BundleFormDialogProps) {
   const editing = bundle !== null;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +47,34 @@ export function BundleFormDialog({ bundle, pool, device, onClose }: BundleFormDi
     defaultValues: buildBundleDefaults(bundle),
     mode: 'onChange',
   });
+
+  /**
+   * Formun verisi DİYALOG AÇILINCA okunur: bu paketin kalemleri + varyant havuzu (birim fiyat ve
+   * maliyetle). Liste sayfası bunları taşımıyor — taşısaydı hiç form açmayacak operatör de katalogun
+   * tamamının fiyatlarını indirirdi.
+   *
+   * Gövde veri gelene kadar ÇİZİLMEZ: kalem editörü boş satırlarla mount olsaydı, veri sonradan
+   * düştüğünde otomatik dağıtım tetiklenir ve kayıtlı payları üzerine yazardı — formu açmak veriyi
+   * değiştirmemeli.
+   */
+  const [pool, setPool] = useState<VariantOption[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void loadBundleFormAction(bundle?.id ?? null).then((res) => {
+      if (!alive) return;
+      if (!res.data) {
+        setError(res.error);
+        return;
+      }
+      setPool(res.data.pool);
+      form.reset(buildBundleDefaults(bundle, res.data.items));
+    });
+    return () => {
+      alive = false;
+    };
+    // Bağımlılık yalnız paket kimliği: `form` her render'da aynı örnek, `bundle` nesnesi ise liste
+    // tazelendikçe kimliği değişmeden yeniden doğuyor — onu bağımlılığa koymak formu döngüye sokardı.
+  }, [bundle?.id]);
   const { control, handleSubmit, formState, setValue } = form;
 
   const aiTranslate = (text: LocalizedText): Promise<LocalizedText> => suggestTranslationAction(text);
@@ -70,7 +97,7 @@ export function BundleFormDialog({ bundle, pool, device, onClose }: BundleFormDi
 
   // TEK okuma: kaydetme engeli de fiyat türetmesi de aynı değerlerden beslenir.
   const values = form.watch();
-  const poolById = useMemo(() => new Map(pool.map((p) => [p.variantId, p])), [pool]);
+  const poolById = useMemo(() => new Map((pool ?? []).map((p) => [p.variantId, p])), [pool]);
   const pricing = bundlePricing(
     (values.items ?? []).map((i) => ({ variantId: i.variantId, qty: i.qty, allocatedUnitPrice: i.allocatedUnitPrice })),
     poolById,
@@ -88,7 +115,8 @@ export function BundleFormDialog({ bundle, pool, device, onClose }: BundleFormDi
       onCancel={onClose}
       submitting={formState.isSubmitting}
       error={error}
-      blockedReason={block?.message ?? null}
+      // Veri gelene kadar kaydetmek de yok: yarım form kaydedilirse kalemler boş yazılırdı.
+      blockedReason={pool === null ? 'Yükleniyor…' : (block?.message ?? null)}
       actions={
         <FormMultiToggle
           control={control}
@@ -118,98 +146,107 @@ export function BundleFormDialog({ bundle, pool, device, onClose }: BundleFormDi
       }
       footer={footer}
     >
+      {pool === null ? (
+        /* Yükleniyor — gövde ÇİZİLMEZ: kalem editörü boş satırlarla mount olsaydı, veri sonradan
+           düştüğünde otomatik dağıtım kayıtlı payların üzerine yazardı. Formu açmak veriyi
+           değiştirmemeli. */
+        <div className="flex min-h-[320px] items-center justify-center">
+          <span className="font-ops-body text-[13px] text-ops-muted">Paket bilgileri yükleniyor…</span>
+        </div>
+      ) : (
       <form id={FORM_ID} onSubmit={onSubmit} className="grid gap-5 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-        <div className="flex flex-col gap-4">
-          <FormSection title="İçerik">
-            <LocaleCard title="Ad ve açıklama" completenessOf={values.name}>
-              {(lang) => (
-                <>
-                  <FormLocalizedText
-                    control={control}
-                    name="name"
-                    label="Paket adı"
-                    required
-                    placeholder="ör. Bayram Sofrası"
-                    lang={lang}
-                    onAiTranslate={aiTranslate}
-                  />
-                  <FormLocalizedText
-                    control={control}
-                    name="description"
-                    label="Kısa açıklama"
-                    multiline
-                    rows={3}
-                    placeholder="Hangi durum için uygun"
-                    lang={lang}
-                    onAiTranslate={aiTranslate}
-                  />
-                </>
-              )}
-            </LocaleCard>
-          </FormSection>
-
-          <FormSection title="Görsel">
-            <ImageCropField
-              role="package"
-              src={bundle?.imageUrl ?? null}
-              crop={crop}
-              onCropChange={setCrop}
-              upload={editing ? (fd) => uploadBundleImageAction(bundle.id, fd) : undefined}
-              uploadDisabledHint="Görsel için paketi önce kaydedin (adres adından türüyor)."
-            />
-          </FormSection>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <FormSection title="Fiyat ve sunum">
-            <div className="grid grid-cols-3 gap-3">
-              <FormMoney
-                control={control}
-                name="totalPrice"
-                label="Paket fiyatı (€)"
-                required
-                placeholder="ör. 49,90"
+          <div className="flex flex-col gap-4">
+            <FormSection title="İçerik">
+              <LocaleCard title="Ad ve açıklama" completenessOf={values.name}>
+                {(lang) => (
+                  <>
+                    <FormLocalizedText
+                      control={control}
+                      name="name"
+                      label="Paket adı"
+                      required
+                      placeholder="ör. Bayram Sofrası"
+                      lang={lang}
+                      onAiTranslate={aiTranslate}
+                    />
+                    <FormLocalizedText
+                      control={control}
+                      name="description"
+                      label="Kısa açıklama"
+                      multiline
+                      rows={3}
+                      placeholder="Hangi durum için uygun"
+                      lang={lang}
+                      onAiTranslate={aiTranslate}
+                    />
+                  </>
+                )}
+              </LocaleCard>
+            </FormSection>
+  
+            <FormSection title="Görsel">
+              <ImageCropField
+                role="package"
+                src={bundle?.imageUrl ?? null}
+                crop={crop}
+                onCropChange={setCrop}
+                upload={editing ? (fd) => uploadBundleImageAction(bundle.id, fd) : undefined}
+                uploadDisabledHint="Görsel için paketi önce kaydedin (adres adından türüyor)."
               />
-              {/* İndirim yüzdesi AYNI kararın ikinci yazımı — saklanan bir alan değil, fiyattan türer
-                  ve yazılınca fiyatı doldurur. Operatör kimi zaman "34,90 olsun", kimi zaman "%10
-                  vereyim" diye düşünür; ikisini de yazabilmeli ve ikisi asla çelişmemeli. */}
-              <PercentField
-                label="İndirim (%)"
-                labelAside="fiyatla bağlı"
-                // EKSİ yüzde gösterilmez: paket ayrı ayrı almaktan pahalıysa ortada indirim YOKTUR,
-                // "-66,3" ise geçerli bir değermiş gibi durur (üstelik kutuya eksi yazılamıyor da).
-                // O hâli şerit anlatıyor: "19,90 € pahalı".
-                value={pricing.discountPercent != null && pricing.discountPercent >= 0 ? pricing.discountPercent : null}
-                disabled={pricing.listTotalCents == null}
-                placeholder={pricing.listTotalCents == null ? '—' : 'ör. 10'}
-                onChange={(percent) => {
-                  if (pricing.listTotalCents == null || percent == null) return;
-                  setValue('totalPrice', fromCents(priceFromDiscount(pricing.listTotalCents, percent)), {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  });
-                }}
-              />
-              <FormNumber
-                control={control}
-                name="serves"
-                label="Kaç kişilik"
-                integer
-                placeholder="ör. 6"
-                labelAside="isteğe bağlı"
-              />
-            </div>
-            <span className="font-ops-body text-[11px] leading-[1.5] text-ops-muted">
-              Müşteri yalnız paket fiyatını görür (KDV dahil) ve o fiyat sabittir — kupon ve genel indirim pakete
-              uygulanmaz. İndirim yüzdesi kalemlerin tek fiyatları toplamına göre hesaplanır; birini yazarsan öbürü
-              dolar. “Kaç kişilik” boş bırakılırsa müşteri tarafında o künye satırı hiç çizilmez.
-            </span>
-          </FormSection>
-
-          {/* Paylar burada TÜRETİLİR: editör yalnız alan yazar (`setValue`), formun sahibi bu dialog. */}
-          <BundleItemsEditor control={control} pool={pool} setValue={setValue} />
-        </div>
-      </form>
+            </FormSection>
+          </div>
+  
+          <div className="flex flex-col gap-4">
+            <FormSection title="Fiyat ve sunum">
+              <div className="grid grid-cols-3 gap-3">
+                <FormMoney
+                  control={control}
+                  name="totalPrice"
+                  label="Paket fiyatı (€)"
+                  required
+                  placeholder="ör. 49,90"
+                />
+                {/* İndirim yüzdesi AYNI kararın ikinci yazımı — saklanan bir alan değil, fiyattan türer
+                    ve yazılınca fiyatı doldurur. Operatör kimi zaman "34,90 olsun", kimi zaman "%10
+                    vereyim" diye düşünür; ikisini de yazabilmeli ve ikisi asla çelişmemeli. */}
+                <PercentField
+                  label="İndirim (%)"
+                  labelAside="fiyatla bağlı"
+                  // EKSİ yüzde gösterilmez: paket ayrı ayrı almaktan pahalıysa ortada indirim YOKTUR,
+                  // "-66,3" ise geçerli bir değermiş gibi durur (üstelik kutuya eksi yazılamıyor da).
+                  // O hâli şerit anlatıyor: "19,90 € pahalı".
+                  value={pricing.discountPercent != null && pricing.discountPercent >= 0 ? pricing.discountPercent : null}
+                  disabled={pricing.listTotalCents == null}
+                  placeholder={pricing.listTotalCents == null ? '—' : 'ör. 10'}
+                  onChange={(percent) => {
+                    if (pricing.listTotalCents == null || percent == null) return;
+                    setValue('totalPrice', fromCents(priceFromDiscount(pricing.listTotalCents, percent)), {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    });
+                  }}
+                />
+                <FormNumber
+                  control={control}
+                  name="serves"
+                  label="Kaç kişilik"
+                  integer
+                  placeholder="ör. 6"
+                  labelAside="isteğe bağlı"
+                />
+              </div>
+              <span className="font-ops-body text-[11px] leading-[1.5] text-ops-muted">
+                Müşteri yalnız paket fiyatını görür (KDV dahil) ve o fiyat sabittir — kupon ve genel indirim pakete
+                uygulanmaz. İndirim yüzdesi kalemlerin tek fiyatları toplamına göre hesaplanır; birini yazarsan öbürü
+                dolar. “Kaç kişilik” boş bırakılırsa müşteri tarafında o künye satırı hiç çizilmez.
+              </span>
+            </FormSection>
+  
+            {/* Paylar burada TÜRETİLİR: editör yalnız alan yazar (`setValue`), formun sahibi bu dialog. */}
+            <BundleItemsEditor control={control} pool={pool} setValue={setValue} />
+          </div>
+        </form>
+      )}
     </Dialog>
   );
 }

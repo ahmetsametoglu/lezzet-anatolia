@@ -1,5 +1,5 @@
 import { publicImageUrl } from '@lezzet/storage';
-import { resolveLocalizedText, type BundleWithItems, type ProductPool, type ProductWithRelations } from '@lezzet/types';
+import { resolveLocalizedText, type BundleListRow, type ProductPool, type ProductWithRelations } from '@lezzet/types';
 import type { BundleView, ProductView, VariantOption } from './products-types';
 
 // Sunucu-tarafı okuma yardımcıları. Ürün sayfası İKİ yerden okunur — ilk sayfa RSC'de (page.tsx),
@@ -19,18 +19,18 @@ interface NameMaps {
  * Görsel URL'i public bucket'tan saf string birleştirmeyle kurulur (05.11) — async değil, ağ turu
  * yok, sonuç sabit ve cache'lenebilir. Sürüm damgası `imageUpdatedAt`'ten gelir.
  */
-/**
- * Paket satırlarını view-model'e indirger. Kalemin adı ("Ürün · boy") BURADA çözülür: kalem yalnız
- * `variantId` taşıyor, client varyant havuzunu tarayıp ad aramasın — liste satırı içeriği özetliyor.
- * Sıra kalemin `sortOrder`'ıdır (müşterinin paket içeriğinde gördüğü sıra).
- */
-export function toBundleViews(rows: BundleWithItems[], variantLabels: Map<string, string>): BundleView[] {
+/** Paket ÖZET satırlarını view-model'e indirger (kalem taşımaz; bkz. `bundle_list_rows()`). */
+export function toBundleViews(rows: BundleListRow[]): BundleView[] {
   return rows.map((bundle) => ({
     ...bundle,
     imageUrl: publicImageUrl(bundle.imageKey, bundle.imageUpdatedAt),
-    itemLabels: [...bundle.items]
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((i) => variantLabels.get(i.variantId) ?? '—'),
+    // Ad çözümü BURADA: okuma fonksiyonu ham jsonb döndürüyor, dil yedek zinciri (TR→FR→DE) tek
+    // yerde kalsın diye SQL'e kopyalanmadı. Sıra kalemin `sortOrder`'ı (fonksiyon öyle topluyor).
+    itemLabels: bundle.itemNames.map(({ p, v }) => {
+      const productName = resolveLocalizedText(p);
+      const boy = v ? resolveLocalizedText(v) : '';
+      return boy ? `${productName} · ${boy}` : productName;
+    }),
   }));
 }
 

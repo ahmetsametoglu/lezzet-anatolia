@@ -3,7 +3,7 @@
 // yeniden yazılmaz (no-duplication, schemas-single-source). Durum/dolu-dil gibi saf türevler client'ta
 // yardımcıyla hesaplanır (taşınmaz). Dil yapısı @lezzet/i18n'de, alerjen packages/types'ta.
 import type {
-  BundleWithItems,
+  BundleListRow,
   Category,
   Collection,
   KeysetCursor,
@@ -41,18 +41,21 @@ export type CollectionView = Collection & { count: number; productIds: string[];
 export type CatalogRow = CategoryView | CollectionView;
 
 /**
- * Paket view-model — `BundleWithItems`'ı türetir (kalemler gömülü geldi, N+1 yok). `itemLabels`
- * kalemlerin "ürün · boy" adları: kalem yalnız `variantId` taşır, ad çözümü RSC'de yapılır ki client
- * varyant havuzunu tarayarak ad aramasın (liste satırı içeriği özetliyor).
+ * Paket LİSTE satırı — `BundleListRow`'u türetir: kalemleri değil, kalemlerden türeyen ÖZETİ taşır
+ * (sayılar veritabanında toplandı, bkz. `bundle_list_rows()`). Kalemlerin kendisi ancak diyalog
+ * açılınca okunur; liste için katalogun fiyatlarını ve parti satırlarını taşımaya gerek yok.
+ *
+ * `itemLabels` ham adlardan burada çözülür — dil yedek zinciri (TR→FR→DE) tek yerde kalsın.
  */
-export type BundleView = BundleWithItems & {
+export type BundleView = BundleListRow & {
   imageUrl: string | null;
   itemLabels: string[];
 };
 
 /**
  * Bir satılabilir birim — "Ürün · boy". Ürün listesi SAYFALI olduğu için paket seçicisi ona
- * dayanamaz (ikinci sayfadaki ürün pakete eklenemezdi); bu havuz ayrı ve TAM okunur.
+ * dayanamaz (ikinci sayfadaki ürün pakete eklenemezdi); bu havuz ayrı ve TAM okunur. Havuz sayfa
+ * açılışında DEĞİL, paket diyaloğu açılınca okunur (listenin ona ihtiyacı yok).
  *
  * HAVUZ İKİ İŞ GÖRÜR ve kümeleri AYNI DEĞİL: (a) pakete YENİ eklenebilecekler — yalnız aktif,
  * (b) pakette DURAN kalemin adı — hepsi. Havuz aktifle sınırlıyken pasif ürünün kalemi adsız kalıyor
@@ -115,7 +118,7 @@ export function matchesCatalogFilter(row: { name: LocalizedText; slug: string },
 export function bundlesUsingVariants(bundles: BundleView[], variantIds: string[]): BundleView[] {
   if (variantIds.length === 0) return [];
   const wanted = new Set(variantIds);
-  return bundles.filter((b) => b.items.some((i) => wanted.has(i.variantId)));
+  return bundles.filter((b) => b.variantIds.some((id) => wanted.has(id)));
 }
 
 /** RSC'nin client'a geçirdiği tüm veri. */
@@ -129,10 +132,8 @@ export interface ProductsData {
   /** Kategori ve koleksiyon TAM gelir: tavanı onlarla sınırlı, açılır menüyü besliyor (STACK §6). */
   categories: CategoryView[];
   collections: CollectionView[];
-  /** Paketler TAM gelir — kürelenmiş kısa bir seçki (müşteri tarafında da sıralama/filtre yok). */
+  /** Paketler TAM gelir ama ÖZET olarak — kalemler diyalog açılınca okunur. */
   bundles: BundleView[];
-  /** Pakete eklenebilecek birimlerin TAM havuzu — ürün listesi sayfalı olduğu için ayrı okunur. */
-  variantPool: VariantOption[];
 }
 
 /**

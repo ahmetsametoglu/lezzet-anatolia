@@ -58,6 +58,7 @@ Esnek pazarlama grubu (Bayram, Yeni, İndirimde). Bir ürün birden çok koleksi
 | ingredients | LocalizedText (jsonb) \| null | içindekiler (çok dilli) — INCO: alerjenler metin içinde vurgulanır |
 | nutrition | jsonb (`Nutrition`) \| null | besin değerleri, **100 g başına** — sabit kalemli (aşağıda); uzaktan satışta ürün sayfasında beyan (INCO) |
 | allergens | string[] | AB 14 alerjeninden ürünün **içerdikleri** (FR/DE yasal beyan) |
+| is_incomplete | boolean | **Üretilmiş kolon** — beyan eksik mi (ad dillerinden biri yok · içindekiler/besin/saklama girilmemiş · alerjen listesi boş). Süzgeç ve sayaç AYNI gerçeği okusun diye DB'de hesaplanır; hangi beyanın eksik olduğu uygulamada (`missingDeclarations`) |
 | traces | string[] | AB 14'ten **çapraz bulaşma** riski olanlar ("aynı tesiste … işlenir"); cümle bu listeden i18n şablonuyla kurulur, serbest metin tutulmaz |
 | storage_instructions | LocalizedText (jsonb) \| null | saklama ve hazırlama metni (çözdürme, yeniden dondurmama, ısıtma) — müşteri ürün sayfasında ayrı bölüm; `shelf_life_days` sayısaldır, bu ise müşteriye gösterilen metindir |
 | category_id | uuid | |

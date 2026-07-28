@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { dbNumeric } from './db-numeric';
+import { dbNumeric, dbNumericNullable } from './db-numeric';
 import { ImageMetaInsertSchema, ImageMetaSchema } from './image.schema';
 import { LocalizedTextDraftSchema, LocalizedTextSchema } from './localized-text.schema';
 
@@ -86,6 +86,35 @@ export type BundleItemEntry = z.infer<typeof BundleItemEntrySchema>;
 /** Paket + kalemleri TEK sorguda (gömülü select; N+1 yok). Şema BundleSchema'yı TÜRETİR. */
 export const BundleWithItemsSchema = BundleSchema.extend({ items: z.array(BundleItemSchema) });
 export type BundleWithItems = z.infer<typeof BundleWithItemsSchema>;
+
+/**
+ * Paket LİSTESİ satırı — `bundle_list_rows()` okuma fonksiyonunun çıktısı (STACK §13).
+ *
+ * Liste kalemleri TAŞIMAZ, kalemlerden türeyen ÖZETİ taşır: sayılar veritabanında toplanır, uygulama
+ * yalnız kararı verir (mutabakat ve marj motorun işi — burada ham toplamlar var). Kalemlerin kendisi
+ * ancak paket DİYALOGU açılınca okunur; liste için katalogun fiyatlarını ve parti satırlarını taşımak
+ * gerekmiyor.
+ *
+ * `listTotal`/`costTotal` EKSİK olabilir: fiyatı ya da maliyeti girilmemiş kalem varsa toplam yarımdır
+ * ve o hâlde sayı gösterilmez — `missing*Count` bunu söyler (yarım toplamı tam sanmak, yanlış marj).
+ */
+export const BundleListRowSchema = BundleSchema.extend({
+  itemCount: z.number().int(),
+  /** Kalemlerin varyant kimlikleri — ürün formundaki "bu ürün N pakette kullanılıyor" bağı. */
+  variantIds: z.array(z.string().uuid()),
+  /** Kalem adları ham hâlde: dil çözümü (TR→FR→DE) uygulamada, tek yerde. */
+  itemNames: z.array(z.object({ p: LocalizedTextSchema, v: LocalizedTextSchema.nullable() })),
+  allocatedTotal: dbNumeric,
+  listTotal: dbNumericNullable,
+  missingPriceCount: z.number().int(),
+  costTotal: dbNumericNullable,
+  missingCostCount: z.number().int(),
+  /** KDV hariç satış — kalem kalem indirildi (paketin tek KDV oranı yoktur). */
+  revenueHt: dbNumeric,
+  /** Ürünü/boyu satışta olmayan kalem sayısı — paket vitrine çıkamaz demektir. */
+  blockedItemCount: z.number().int(),
+});
+export type BundleListRow = z.infer<typeof BundleListRowSchema>;
 
 // Paket formunun yazdığı alanlar — id/slug/createdAt/sortOrder hariç. Slug addan türer (servis).
 export const BundleDetailsUpdateSchema = BundleSchema.pick({

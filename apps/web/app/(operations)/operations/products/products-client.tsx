@@ -45,7 +45,7 @@ interface ProductsClientProps {
 export function ProductsClient({ data, device, urlState }: ProductsClientProps) {
   const resolvedDevice = useDevice(device);
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   // Sekme SUNUCUYA GİTMEZ (yalnız hangi panelin çizildiğini değiştirir) → sığ yazım (replaceState).
   // Süzgeçler ise RSC'yi yeniden okutur (router.replace), çünkü veriyi sunucu süzüyor.
@@ -64,18 +64,18 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
   };
 
   const onTab = (next: ProductTab) => {
-    // Sekme değişimi GERÇEK gezinmedir (süzgeçlerle aynı yol): her sekme kendi verisini okur ve
-    // okumadığını ödemez. Sığ yazımdayken (`replaceState`) sunucuya hiç gidilmiyordu, dolayısıyla
-    // sayfa AÇILIŞTA dört sekmenin verisini birden çekmek zorundaydı — Ürünler'e bakan operatör
-    // paket havuzunu da ödüyordu. Yerel durum ANINDA güncellenir (sekme vurgusu beklemez), veri
-    // arkadan gelir; `isPending` ile içerik hafifçe soluklaşır ki bekleme görünsün.
+    // Sekme değişimi SIĞ yazılır: dört sekme de aynı okumadan besleniyor (paket özeti tek RPC ile
+    // geliyor), yani sunucuya gitmenin getireceği bir veri yok. Bir ara sekmeye bağlı okuma denendi
+    // ve gerçek gezinme gerekti; okuma özete inince o gerekçe ortadan kalktı — sekme yine anında.
+    //
+    // Sekme değişince oluşturma niyeti VE arama düşer. Niyet: "Kategori ekle"ye basıp Paketler'e geçen
+    // operatörün önünde kategori formu kalmaz. Arama: terim sekmeye bağlı ("börek" ürün araması,
+    // kategori listesinde anlamsız) — taşınsaydı yeni sekme sebebi görünmeyen bir süzgeçle açılırdı.
     setTab(next);
     setCreating(false);
     setSearch('');
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    startTransition(() => {
-      router.replace(productsUrl({ ...urlState, tab: next, creating: false, q: '' }), { scroll: false });
-    });
+    writeUrl({ tab: next, creating: false, q: '' });
   };
 
   const setCreatingIntent = (next: boolean) => {
@@ -176,11 +176,7 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
 
   return (
     <>
-      {/* Sekme geçişi sunucuya gidiyor: bekleme SÖYLENİR (soluklaşma + imleç), yoksa tıklamanın
-          işe yarayıp yaramadığı belli olmaz. */}
-      <div className={pending ? 'pointer-events-none flex min-h-0 flex-1 flex-col opacity-60 transition-opacity' : 'flex min-h-0 flex-1 flex-col'}>
-        {resolvedDevice === 'mobile' ? <ProductsMobile {...view} /> : <ProductsDesktop {...view} />}
-      </div>
+      {resolvedDevice === 'mobile' ? <ProductsMobile {...view} /> : <ProductsDesktop {...view} />}
       {productDialog ? (
         <ProductFormDialog
           key={`${productDialog}-${selected?.id ?? 'new'}`}

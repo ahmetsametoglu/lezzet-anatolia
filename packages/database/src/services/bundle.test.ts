@@ -6,7 +6,9 @@ import { serviceDb } from '../client';
 import { purgeTestData } from '../testing/cleanup';
 import { BundleService } from './bundle.service';
 import { CategoryService } from './category.service';
+import { PriceService } from './price.service';
 import { ProductService } from './product.service';
+import { StockService } from './stock.service';
 
 /**
  * Paket (05.5) — DB üstünde. Paket bir katalog kısayoludur: yeni ürün yaratmaz, kalemleri varyantlara
@@ -153,6 +155,52 @@ describe('BundleService', () => {
 
     await db.from('product_variant').update({ is_active: true }).eq('id', variantB);
     expect((await bundles.listSellable()).some((b) => b.id === bundle.id)).toBe(true);
+  });
+
+  it('LİSTE satırı kalemleri değil ÖZETİ döndürür — fiyat/maliyet yoksa toplam YARIM sayılmaz', async () => {
+    const bundle = await createBundle(`Özet ${damga}`, 30, [
+      { variantId: variantA, qty: 2, allocatedUnitPrice: 10 },
+      { variantId: variantB, qty: 1, allocatedUnitPrice: 10 },
+    ]);
+    const row = (await bundles.listRows()).find((r) => r.id === bundle.id);
+
+    expect(row).toBeDefined();
+    expect(row!.itemCount).toBe(2);
+    expect(row!.allocatedTotal).toBeCloseTo(30, 2);
+    expect(row!.variantIds).toHaveLength(2);
+    expect(row!.itemNames).toHaveLength(2); // ad çözümü uygulamada; ham jsonb burada
+    // Fiyatı/maliyeti girilmemiş kalem varsa toplam EKSİKTİR: sayı eksik sayısıyla birlikte döner ki
+    // ekran yarım toplamı tam sanmasın.
+    expect(row!.missingPriceCount).toBe(2);
+    expect(row!.missingCostCount).toBe(2);
+  });
+
+  it('fiyat ve parti girilince toplamlar dolar; KDV KALEM KALEM iner ve pasif ürün sayılır', async () => {
+    const prices = new PriceService(db);
+    const stocks = new StockService(db);
+    const bundle = await createBundle(`Dolu özet ${damga}`, 21.1, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 21.1 }]);
+
+    await prices.setPrice({ variantId: variantA, channel: 'b2c', amount: 25, validFrom: new Date(Date.now() - 86_400_000).toISOString() });
+    // İki parti: 10 adet × 4 € + 30 adet × 8 € → ağırlıklı ortalama 7 €.
+    const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+    await stocks.insert({ variantId: variantA, physicalQty: 10, purchasePrice: 4, expiryDate: gun(100) });
+    await stocks.insert({ variantId: variantA, physicalQty: 30, purchasePrice: 8, expiryDate: gun(120) });
+
+    const row = (await bundles.listRows()).find((r) => r.id === bundle.id)!;
+    expect(row.listTotal).toBeCloseTo(25, 2); // "ayrı ayrı alınsa"
+    expect(row.costTotal).toBeCloseTo(7, 2);
+    expect(row.missingPriceCount).toBe(0);
+    expect(row.missingCostCount).toBe(0);
+    // Ürünün KDV oranı %5,5 (varsayılan): 21,10 / 1,055 = 20,00 — paketin tek oranı yoktur, kalemin
+    // kendi oranıyla inilir.
+    expect(row.revenueHt).toBeCloseTo(20, 2);
+
+    // Ürünü satıştan çıkarınca kalem "engelli" sayılır — paket vitrine çıkamaz demektir.
+    await products.update({ id: productId, status: 'passive' });
+    expect((await bundles.listRows()).find((r) => r.id === bundle.id)!.blockedItemCount).toBe(1);
+    await products.update({ id: productId, status: 'active' });
+
+    await db.from('stock').delete().eq('variant_id', variantA);
   });
 
   it('slug ile bulunur (paylaşılan link) ve ad çok dilli döner', async () => {
