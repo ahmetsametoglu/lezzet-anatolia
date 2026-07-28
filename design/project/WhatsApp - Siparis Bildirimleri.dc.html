@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#e9e6df; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:32px">
+
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:820px">
+    <span style="font:600 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270">Sipariş bildirimleri · WhatsApp kalıp mesajları</span>
+    <h1 style="margin:0;font:600 32px 'Lora';color:#343b41">Onay · Yolda · Teslim edildi</h1>
+    <p style="margin:0;font:400 15px/1.7 'Karla';color:#6d7261;text-wrap:pretty">E-posta şablonlarının WhatsApp karşılığı: aynı üç tetikleyici, aynı bilgi sırası, mesaj diliyle kısaltılmış. Üçü de <strong>onaylı kalıp mesaj</strong> — cevap penceresi kapalı olsa da gönderilebilir; müşteri cevap yazınca 24 saatlik serbest yazışma penceresi açılır ve sohbet Operasyon → WhatsApp ekranına düşer.</p>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start">
+
+    <div data-screen-label="WhatsApp Sohbet" style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:700 14px 'Karla';color:#3a4147">Müşteri telefonunda — üç bildirim sırayla</span>
+      <div style="width:390px;background:#efe7de;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.16)">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#f6f5f3;border-bottom:1px solid #e2ded6">
+          <span style="font:700 18px 'Karla';color:#6d7261">←</span>
+          <span style="width:38px;height:38px;border-radius:19px;background:#3a4147;color:#a9c46b;display:grid;place-items:center;font:600 15px 'Lora'">LA</span>
+          <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:5px">
+              <span style="font:700 15px 'Karla';color:#111b21">Lezzet Anatolia</span>
+              <span style="width:14px;height:14px;border-radius:7px;background:#25d366;color:#fff;font:700 9px 'Karla';display:grid;place-items:center">✓</span>
+            </div>
+            <span style="font:400 11.5px 'Karla';color:#667781">İşletme hesabı · genelde birkaç dakikada yanıtlar</span>
+          </div>
+        </div>
+
+        <div style="padding:16px 14px 20px;display:flex;flex-direction:column;gap:12px">
+          <span style="align-self:center;background:#e2dbd1;color:#5b6a72;font:600 11px 'Karla';padding:4px 12px;border-radius:10px">22 Temmuz</span>
+
+          <div style="align-self:flex-start;max-width:305px;background:#fff;border-radius:10px 10px 10px 2px;box-shadow:0 1px 1px rgba(11,20,26,.13);overflow:hidden">
+            <div style="padding:9px 12px 7px;font:400 14px/1.5 'Karla';color:#111b21">
+              Merhaba Ayşe, siparişiniz alındı.<br><br>
+              <strong>LZA-2451</strong> · 3 kalem · <strong>103,20 €</strong><br>
+              Teslimat: Perşembe, 24 Temmuz · kapıya teslim<br>
+              12 Rue des Orfèvres, Strasbourg<br><br>
+              Kurye yola çıkınca saat aralığını yazacağız.
+              <span style="float:right;font:400 11px 'Karla';color:#667781;margin:6px 0 0 8px">09:16</span>
+            </div>
+            <div style="border-top:1px solid #e9edef;text-align:center;padding:9px;font:600 14px 'Karla';color:#027eb5">Siparişi gör</div>
+          </div>
+
+          <span style="align-self:center;background:#e2dbd1;color:#5b6a72;font:600 11px 'Karla';padding:4px 12px;border-radius:10px">24 Temmuz</span>
+
+          <div style="align-self:flex-start;max-width:305px;background:#fff;border-radius:10px 10px 10px 2px;box-shadow:0 1px 1px rgba(11,20,26,.13);overflow:hidden">
+            <div style="padding:9px 12px 7px;font:400 14px/1.5 'Karla';color:#111b21">
+              <strong>LZA-2451</strong> siparişiniz yola çıktı 🚚<br><br>
+              Kurye bugün <strong>12:00 – 18:00</strong> arasında kapınızda olacak.<br><br>
+              Ispanaklı Gözleme'den 5 yerine 4 adet gönderildi; 5,90 € kartınıza iade edilecek. Güncel toplam <strong>97,30 €</strong>.
+              <span style="float:right;font:400 11px 'Karla';color:#667781;margin:6px 0 0 8px">11:05</span>
+            </div>
+            <div style="border-top:1px solid #e9edef;display:flex">
+              <div style="flex:1;text-align:center;padding:9px;font:600 14px 'Karla';color:#027eb5">Takip et</div>
+              <div style="flex:1;text-align:center;padding:9px;border-left:1px solid #e9edef;font:600 14px 'Karla';color:#027eb5">Günü değiştir</div>
+            </div>
+          </div>
+
+          <div style="align-self:flex-start;max-width:305px;background:#fff;border-radius:10px 10px 10px 2px;box-shadow:0 1px 1px rgba(11,20,26,.13);overflow:hidden">
+            <div style="padding:9px 12px 7px;font:400 14px/1.5 'Karla';color:#111b21">
+              <strong>LZA-2451</strong> siparişiniz 14:20'de teslim edildi. Afiyet olsun!<br><br>
+              Toplam <strong>97,30 €</strong> · 5,90 € iade edildi.<br><br>
+              Eksik ya da beklediğiniz gibi olmayan bir şey varsa bu mesaja yazın.
+              <span style="float:right;font:400 11px 'Karla';color:#667781;margin:6px 0 0 8px">14:22</span>
+            </div>
+            <div style="border-top:1px solid #e9edef;display:flex">
+              <div style="flex:1;text-align:center;padding:9px;font:600 14px 'Karla';color:#027eb5">Tekrar sipariş</div>
+              <div style="flex:1;text-align:center;padding:9px;border-left:1px solid #e9edef;font:600 14px 'Karla';color:#027eb5">Sorun bildir</div>
+            </div>
+          </div>
+
+          <div style="align-self:flex-end;max-width:250px;background:#d9fdd3;border-radius:10px 10px 2px 10px;box-shadow:0 1px 1px rgba(11,20,26,.13);padding:9px 12px 7px;font:400 14px/1.5 'Karla';color:#111b21">
+            Gözleme harikaydı, teşekkürler!
+            <span style="float:right;font:400 11px 'Karla';color:#667781;margin:6px 0 0 8px">14:41 ✓✓</span>
+          </div>
+          <span style="align-self:center;font:400 11.5px/1.5 'Karla';color:#7d8a90;text-align:center;max-width:280px">Müşteri yazdı — 24 saatlik cevap penceresi açıldı, sohbet operasyona düştü.</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px;width:560px">
+      <span style="font:700 14px 'Karla';color:#3a4147">Kalıp mesaj metinleri (değişkenlerle)</span>
+
+      <div style="background:#faf6ec;border:1px solid #ece5d2;border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font:600 17px 'Lora';color:#343b41">siparis_onay</span>
+          <span style="background:#eef2e2;color:#5f7a2c;font:700 11px 'Karla';padding:3px 10px;border-radius:11px">ödeme sonrası anında</span>
+        </div>
+        <pre style="margin:0;white-space:pre-wrap;background:#fff;border:1px solid #ece5d2;border-radius:12px;padding:14px 16px;font:400 12.5px/1.7 'IBM Plex Mono';color:#3a4147">Merhaba {&#8203;{1}}, siparişiniz alındı.
+
+*{&#8203;{2}}* · {&#8203;{3}} kalem · *{&#8203;{4}}*
+Teslimat: {&#8203;{5}} · kapıya teslim
+{&#8203;{6}}
+
+Kurye yola çıkınca saat aralığını yazacağız.</pre>
+        <span style="font:400 12.5px/1.7 'Karla';color:#8a8270">{&#8203;{1}} ad · {&#8203;{2}} sipariş no · {&#8203;{3}} kalem sayısı · {&#8203;{4}} toplam · {&#8203;{5}} teslim günü · {&#8203;{6}} adres — Buton: <strong>Siparişi gör</strong> (URL)</span>
+      </div>
+
+      <div style="background:#faf6ec;border:1px solid #ece5d2;border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font:600 17px 'Lora';color:#343b41">siparis_yolda</span>
+          <span style="background:#eef2e2;color:#5f7a2c;font:700 11px 'Karla';padding:3px 10px;border-radius:11px">kurye rotaya çıkınca</span>
+        </div>
+        <pre style="margin:0;white-space:pre-wrap;background:#fff;border:1px solid #ece5d2;border-radius:12px;padding:14px 16px;font:400 12.5px/1.7 'IBM Plex Mono';color:#3a4147">*{&#8203;{1}}* siparişiniz yola çıktı 🚚
+
+Kurye bugün *{&#8203;{2}}* arasında kapınızda olacak.
+
+{&#8203;{3}}</pre>
+        <span style="font:400 12.5px/1.7 'Karla';color:#8a8270">{&#8203;{3}} yalnız eksik karşılanma varsa dolar: "X'ten 5 yerine 4 adet gönderildi; 5,90 € iade edilecek. Güncel toplam 97,30 €." Yoksa boş geçer. Kargolu siparişte aynı yere takip numarası girer — Butonlar: <strong>Takip et</strong> (URL) · <strong>Günü değiştir</strong> (hızlı cevap)</span>
+      </div>
+
+      <div style="background:#faf6ec;border:1px solid #ece5d2;border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font:600 17px 'Lora';color:#343b41">siparis_teslim</span>
+          <span style="background:#e9e4d4;color:#3a4147;font:700 11px 'Karla';padding:3px 10px;border-radius:11px">kurye teslimi işaretleyince</span>
+        </div>
+        <pre style="margin:0;white-space:pre-wrap;background:#fff;border:1px solid #ece5d2;border-radius:12px;padding:14px 16px;font:400 12.5px/1.7 'IBM Plex Mono';color:#3a4147">*{&#8203;{1}}* siparişiniz {&#8203;{2}} teslim edildi. Afiyet olsun!
+
+Toplam *{&#8203;{3}}*{&#8203;{4}}
+
+Eksik ya da beklediğiniz gibi olmayan bir şey varsa bu mesaja yazın.</pre>
+        <span style="font:400 12.5px/1.7 'Karla'">{&#8203;{4}} iade varsa " · 5,90 € iade edildi" olur — Butonlar: <strong>Tekrar sipariş</strong> (URL) · <strong>Sorun bildir</strong> (URL)</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:20px">
+    <div style="width:420px;background:#faf6ec;border:1px solid #ece5d2;border-radius:16px;padding:22px 26px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 18px 'Lora';color:#343b41">Kanal kuralları</span>
+      <ul style="margin:0;padding-left:20px;font:400 13.5px/1.8 'Karla';color:#6d7261">
+        <li>Üçü de sipariş bildirimi — kampanya izninden bağımsız gönderilir; müşteri numarayı siparişte kendisi verir.</li>
+        <li>Metinler müşterinin hesap dilinde (TR/FR/DE) onaylanır; değişken sırası üç dilde aynı kalır.</li>
+        <li>Kalıp mesaja gelen her cevap 24 saatlik pencere açar ve <a href="Operasyon - WhatsApp.dc.html">Operasyon → WhatsApp</a> listesinde "cevap bekliyor" olarak görünür.</li>
+        <li>"Günü değiştir" hızlı cevabı sohbeti insana yönlendirir; ajan kendi başına gün değiştirmez.</li>
+      </ul>
+    </div>
+    <div style="width:420px;background:#faf6ec;border:1px solid #ece5d2;border-radius:16px;padding:22px 26px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 18px 'Lora';color:#343b41">E-postadan farkı</span>
+      <ul style="margin:0;padding-left:20px;font:400 13.5px/1.8 'Karla';color:#6d7261">
+        <li>Kalem listesi ve tutar dökümü yok — tek satır özet + bağlantı; detay web sayfasında.</li>
+        <li>Zaman çizgisi, kart ve renk yok; hiyerarşi yalnız kalın metin ve satır arasıyla kurulur.</li>
+        <li>En fazla iki buton, üçüncü aksiyon metne yazılmaz.</li>
+        <li>Teslimat özeti belgesi yalnız e-postada ve web'de; WhatsApp'ta bağlantı verilmez.</li>
+      </ul>
+    </div>
+    <div style="width:420px;background:#f0e9d6;border-radius:16px;padding:22px 26px;display:flex;flex-direction:column;gap:8px">
+      <span style="font:600 18px 'Lora';color:#343b41">Göndermeden önce</span>
+      <span style="font:400 13.5px/1.8 'Karla';color:#6d7261">Üç kalıbın da WhatsApp tarafında onaylanması gerekir; onay öncesi metin değişirse yeniden onaya girer. Buton URL'leri örnek (<em>lezzetanatolia.fr/…</em>) — gerçek sipariş bağlantı şemasını verirsen yerleştiririm.</span>
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

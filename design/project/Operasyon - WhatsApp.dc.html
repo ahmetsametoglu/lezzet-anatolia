@@ -147,6 +147,28 @@
     </div>
   </div>
 
+  <!-- SİPARİŞ BİLDİRİM ŞABLONLARI -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Sipariş bildirim şablonları · onaylı kalıp mesajlar</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Sipariş yaşam döngüsünde otomatik gönderilir; içerik WhatsApp tarafından onaylı, admin serbest metin ekleyemez.</span>
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <sc-for list="{{ notifTemplates }}" as="n" hint-placeholder-count="3">
+        <div style="width:320px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:14px;overflow:hidden;display:flex;flex-direction:column">
+          <div style="padding:12px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:8px">
+            <span style="font:600 10.5px 'Space Grotesk';color:{{ n.fg }};background:{{ n.bg }};border-radius:7px;padding:3px 9px">{{ n.tag }}</span>
+            <span style="font:600 13.5px 'Space Grotesk';color:#22251f">{{ n.title }}</span>
+          </div>
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="background:#eef2e2;border-radius:11px;border-top-left-radius:2px;padding:10px 13px;font:400 12.5px/1.6 'Karla';color:#22251f">{{ n.body }}</div>
+            <span style="font:400 11px 'Karla';color:#8b9086">Tetik: {{ n.trigger }} · Kanal: WhatsApp + e-posta</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
   <!-- DEVRAL / SİPARİŞ / TALEP DIALOG -->
   <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
@@ -209,8 +231,14 @@ class Component extends DCLogic {
       : mk==='siparis' ? { title:'Sohbetten sipariş oluştur', body:`Müşteri eşleşmiş halde elle sipariş girişi açılır; kaynak WhatsApp olarak işlenir.`, note:'Ticari gerçek sipariş akışından gelir — stok/fiyat sohbette elle uydurulmaz.', cta:'Sipariş girişini aç', btn:'#5f7a2c' }
       : { title:'Talep (şikâyet) aç', body:'Bu konuşmadan talep kaydı açılır; müşteri ve varsa sipariş bağlanır.', note:'Talep, Talepler ekranından yürütülür ve iadeye bağlanabilir.', cta:'Talep oluştur', btn:'#a5443c' };
 
+    const notifTemplates = [
+      { tag:'ONAY', fg:'#4a6121', bg:'#eef4e2', title:'Sipariş onaylandı', body:'Merhaba Ayşe, LZA-2451 numaralı siparişiniz alındı ✓ Perşembe günü Strasbourg\'da kapınızda olacak. Detaylar: [bağlantı]', trigger:'Sipariş oluşturulunca, anında' },
+      { tag:'YOLDA', fg:'#9a6416', bg:'#fdf1e3', title:'Yola çıktı', body:'Siparişiniz LZA-2451 yola çıktı 🚚 Bugün 13:00–18:00 arası kapınızda, soğuk zincir korunuyor. Takip: [bağlantı]', trigger:'Rota kurye ile eşleşince' },
+      { tag:'TESLİM', fg:'#4a6121', bg:'#eef4e2', title:'Teslim edildi', body:'Afiyet olsun Ayşe! LZA-2451 bugün 14:20\'de teslim edildi. Bir sorun mu var? [bağlantı] · Deneyiminizi puanlayın: [bağlantı]', trigger:'Kurye teslim onayı verince' },
+    ];
+
     return {
-      convos, det,
+      convos, det, notifTemplates,
       modalOpen: this.state.modalOpen, modalTitle:cfg.title, modalBody:cfg.body, modalNote:cfg.note, modalCta:cfg.cta, modalBtn:cfg.btn,
       openDevral: () => this.setState({ modalOpen:true, modalKind:'devral' }),
       openSiparis: () => this.setState({ modalOpen:true, modalKind:'siparis' }),

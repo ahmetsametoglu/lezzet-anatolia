@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#e9e6df; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:28px">
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:820px">
+    <span style="font:600 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270">Sipariş bildirimleri · E-posta şablonları</span>
+    <h1 style="margin:0;font:600 32px 'Lora';color:#343b41">Onay · Yolda · Teslim edildi</h1>
+    <p style="margin:0;font:400 15px/1.7 'Karla';color:#6d7261;text-wrap:pretty">Üç şablon da uygulamanın tasarım desenini birebir izliyor: krem gövde (#faf6ec), beyaz kart + #ece5d2 çerçeve, Sipariş Detay'daki dört adımlı zaman çizgisi, yeşil hap butonlar ve eksik karşılanma için amber uyarı bloğu. Dosyalar gönderime hazır tek parça HTML — e-posta aracınıza olduğu gibi yapıştırılabilir.</p>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+    <div data-screen-label="Email Onaylandi" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font:700 14px 'Karla';color:#3a4147">1 · Sipariş onaylandı</span>
+        <span style="background:#eef2e2;color:#5f7a2c;font:700 11px 'Karla';padding:3px 10px;border-radius:11px">ödeme sonrası anında</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8a8270">Konu: Siparişiniz alındı — LZA-2451</span>
+      <iframe src="Email - Siparis Onaylandi.html" title="Sipariş onaylandı e-postası" style="width:640px;height:1560px;border:0;border-radius:14px;box-shadow:0 8px 40px rgba(58,65,71,.14);background:#e9e6df"></iframe>
+      <a href="Email - Siparis Onaylandi.html" target="_blank" style="font:700 13px 'Karla'">Tek başına aç ↗</a>
+    </div>
+
+    <div data-screen-label="Email Yolda" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font:700 14px 'Karla';color:#3a4147">2 · Yola çıktı</span>
+        <span style="background:#eef2e2;color:#5f7a2c;font:700 11px 'Karla';padding:3px 10px;border-radius:11px">kurye rotaya çıkınca</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8a8270">Konu: Siparişiniz yolda — LZA-2451</span>
+      <iframe src="Email - Siparis Yolda.html" title="Sipariş yolda e-postası" style="width:640px;height:1440px;border:0;border-radius:14px;box-shadow:0 8px 40px rgba(58,65,71,.14);background:#e9e6df"></iframe>
+      <a href="Email - Siparis Yolda.html" target="_blank" style="font:700 13px 'Karla'">Tek başına aç ↗</a>
+    </div>
+
+    <div data-screen-label="Email Teslim" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font:700 14px 'Karla';color:#3a4147">3 · Teslim edildi</span>
+        <span style="background:#e9e4d4;color:#3a4147;font:700 11px 'Karla';padding:3px 10px;border-radius:11px">kurye teslimi işaretleyince</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8a8270">Konu: Siparişiniz teslim edildi — LZA-2451</span>
+      <iframe src="Email - Siparis Teslim Edildi.html" title="Sipariş teslim edildi e-postası" style="width:640px;height:1300px;border:0;border-radius:14px;box-shadow:0 8px 40px rgba(58,65,71,.14);background:#e9e6df"></iframe>
+      <a href="Email - Siparis Teslim Edildi.html" target="_blank" style="font:700 13px 'Karla'">Tek başına aç ↗</a>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:20px">
+    <div style="width:420px;background:#faf6ec;border:1px solid #ece5d2;border-radius:16px;padding:22px 26px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 18px 'Lora';color:#343b41">Şablon sistemi</span>
+      <ul style="margin:0;padding-left:20px;font:400 13.5px/1.8 'Karla';color:#6d7261">
+        <li>Ortak iskelet: krem başlık (kelime markası + bölge), durum hapı, Lora başlık, zaman çizgisi kartı, yeşil hap CTA, krem alt bilgi.</li>
+        <li>Yazı: Lora yerine Georgia, Karla yerine Arial — e-postada web fontu yok, hiyerarşi aynı kalır.</li>
+        <li>Eksik karşılanma bloğu yalnız fark olan kalemde; sebep yazılmaz, yalnız miktar + para çözümü.</li>
+        <li>Teslimat özeti bağlantısı yalnız teslim e-postasında; "resmî fatura değildir" ibaresi korunur.</li>
+      </ul>
+    </div>
+    <div style="width:420px;background:#faf6ec;border:1px solid #ece5d2;border-radius:16px;padding:22px 26px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 18px 'Lora';color:#343b41">Gönderim kuralları</span>
+      <ul style="margin:0;padding-left:20px;font:400 13.5px/1.8 'Karla';color:#6d7261">
+        <li>Üçü de işlemsel bildirim — pazarlama iznine bağlı değil, alt bilgide yalnız <strong>Bildirim tercihleri</strong> bağlantısı var.</li>
+        <li>Dil müşterinin hesap tercihine göre TR/FR/DE; şablonun yapısı değişmez.</li>
+        <li>Kapıda ödemede "Genel toplam" satırı "Kapıda ödenecek" hapı ile gösterilir; eksik karşılanmada tahsilat güncel tutardan yapılır.</li>
+        <li>Kargolu siparişte "Yolda" e-postası kurye penceresi yerine takip numarası + takip bağlantısı gösterir.</li>
+      </ul>
+    </div>
+    <div style="width:420px;background:#f0e9d6;border-radius:16px;padding:22px 26px;display:flex;flex-direction:column;gap:8px">
+      <span style="font:600 18px 'Lora';color:#343b41">Göndermeden önce</span>
+      <span style="font:400 13.5px/1.8 'Karla';color:#6d7261">Bağlantılar örnek URL'lerle duruyor (<em>lezzetanatolia.fr/…</em>) ve WhatsApp numarası yer tutucu. Görsel kullanılmıyor; logo istenirse barındırılan bir https adresi gerekir.</span>
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>
