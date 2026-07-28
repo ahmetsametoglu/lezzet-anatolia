@@ -1,0 +1,197 @@
+'use server';
+
+import { AddressService, serviceDb } from '@lezzet/database';
+import { hasLocale } from 'next-intl';
+import type { Address, PaymentMethod } from '@lezzet/types';
+import type { Locale } from '@lezzet/i18n';
+import { currentCustomerId } from '@/lib/guard';
+import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { getCartView } from '@/lib/cart/read';
+import type { CartEntry } from '@/lib/cart/cart-types';
+import { createCheckoutDraft } from '@/lib/order/checkout-draft';
+import { createCheckoutSession } from '@/lib/order/checkout-session';
+import { resolveCheckoutPayment } from '@/lib/order/checkout-options';
+import { resolveDelivery } from '@/lib/order/delivery';
+import { routing } from '@/i18n/routing';
+
+/**
+ * Checkout server action'ları (08.13).
+ *
+ * **Müşteri kimliği TEK yerde çözülür** — burada, oturumdan. Girişli müşteride de misafirde de
+ * aynı yol: misafir "adım 0"da e-posta koduyla doğrulanınca giriş akışının kendisi (04) auth
+ * kullanıcısını açıp oturumu kuruyor, yani doğrulamadan sonra ortada misafir kalmıyor. DOMAIN §10
+ * "hesapsız sipariş yoktur" kuralının karşılığı budur: ayrı bir misafir kimliği taşımıyoruz.
+ *
+ * **İstemci hiçbir tutar göndermez.** Sepet niyeti (`entries`) ve seçimler (adres, gün, yöntem)
+ * gelir; fiyat, kargo ücreti, indirim ve toplam her turda sunucuda yeniden çözülür.
+ */
+
+/** Ekranın bir adımda ihtiyacı olan her şey — tek turda, çünkü üçü birbirine bağlı. */
+export interface CheckoutSnapshot {
+  addresses: Address[];
+  /** Seçili adrese göre çözülmüş teslimat; adres seçilmemişse null. */
+  delivery: {
+    deliveryType: 'route' | 'shipping';
+    availableDates: string[];
+    requiresDateChoice: boolean;
+    /** Rota dışı + soğuk zincir: sipariş verilemez, sepet bölünmeli (K32). */
+    blocked: boolean;
+  } | null;
+  /** Ödeme seçenekleri + kargo + toplam; adres seçilmemişse null. */
+  payment: {
+    methods: PaymentMethod[];
+    creditAvailable: boolean;
+    codBlockedReason: string | null;
+    cashWarning: boolean;
+    shippingFeeCents: number;
+    shippingFreeReason: 'route' | 'threshold' | null;
+    orderTotalCents: number;
+    minBasketOk: boolean;
+    missingForMinBasketCents: number;
+  } | null;
+}
+
+/**
+ * Adım verisini çözer. Adres seçilmeden de çağrılır (liste gelsin diye) — o zaman teslimat ve
+ * ödeme null döner, çünkü ikisi de adresin cevabıdır ve adres yokken uydurulamaz.
+ */
+export async function loadCheckoutAction(
+  locale: string,
+  entries: CartEntry[],
+  addressId: string | null,
+): Promise<ActionResult<CheckoutSnapshot>> {
+  try {
+    if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
+    const customerId = await currentCustomerId();
+    if (!customerId) return { data: { addresses: [], delivery: null, payment: null }, error: null };
+
+    const db = serviceDb();
+    const addresses = await new AddressService(db).listByCustomer(customerId);
+    const selected = addresses.find((a) => a.id === addressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0];
+    if (!selected) return { data: { addresses, delivery: null, payment: null }, error: null };
+
+    const cart = await getCartView(locale as Locale, entries, { customerId });
+    const delivery = await resolveDelivery({
+      postalCode: selected.postalCode,
+      hasNonShippableItem: cart.lines.some((l) => !l.shippable),
+    });
+
+    const options = await resolveCheckoutPayment({
+      customerId,
+      deliveryType: delivery.deliveryType,
+      basketCents: cart.totalCents,
+      // Oran satırın kendi gerçeğinden gelir (paketse kalemlerin en yükseği) — sabit yazmak
+      // malzeme gibi %20'lik kalemlerde kargo KDV'sini yanlış bölerdi.
+      lines: cart.lines.map((l) => ({ totalCents: l.lineTotalCents ?? 0, vatRate: l.vatRate })),
+    });
+
+    return {
+      data: {
+        addresses,
+        delivery: {
+          deliveryType: delivery.deliveryType,
+          availableDates: delivery.availableDates,
+          requiresDateChoice: delivery.requiresDateChoice,
+          blocked: delivery.shippingBlockedReason === 'cold_chain',
+        },
+        payment: {
+          methods: options.methods,
+          creditAvailable: options.creditAvailable,
+          codBlockedReason: options.codBlockedReason,
+          cashWarning: options.cashWarning,
+          shippingFeeCents: options.shippingFeeCents,
+          shippingFreeReason: options.shippingFreeReason,
+          orderTotalCents: options.orderTotalCents,
+          minBasketOk: options.minBasketOk,
+          missingForMinBasketCents: options.missingForMinBasketCents,
+        },
+      },
+      error: null,
+    };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/** Yeni adres — checkout'tan çıkmadan. Adres MÜŞTERİYE bağlanır, kimlik oturumdan gelir. */
+export async function addCheckoutAddressAction(
+  // Alıcı ve telefon ADRESİN alanları (0013): form ikisini de soruyor ve kurye ikisini de kullanıyor.
+  // Burada eksiktiler — form topluyor, action tipi görmüyor, servis yazmıyordu; iki alan sessizce
+  // düşüyordu (28.07). Sipariş anlık görüntüsü adresi olduğu gibi kopyaladığı için düzeltme oraya da yürür.
+  input: { label?: string; recipient?: string; line1: string; line2?: string; postalCode: string; city: string; phone?: string; makeDefault?: boolean },
+): Promise<ActionResult<Address>> {
+  try {
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new Error('Oturum gerekli');
+    const addresses = new AddressService(serviceDb());
+    const { makeDefault, ...fields } = input;
+    const created = await addresses.addForCustomer({ ...fields, customerId });
+    // Varsayılan TEKİLDİR (0013): servis eskisini düşürür, ekran o kuralı bilmez.
+    if (makeDefault) await addresses.setDefault(created.id);
+    return { data: created, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * "Siparişi onayla" — taslağı açar, stoğu ayırır, ödeme niyetini doğurur.
+ *
+ * **Tek turda** olması bilinçli: taslağı ayrı bir çağrıda açsaydık, ödeme adımına hiç gelmeyen
+ * müşteriler ardında yetim taslaklar bırakırdı. Burada üçü tek karar: ya hepsi olur ya hiçbiri.
+ *
+ * Online ödemede `clientSecret` döner ve kart onayı **istemcide** verilir (Stripe iframe'i).
+ * Kapıda/vadeli ödemede sağlayıcıya hiç gidilmez — ödeme niyeti yoktur, sipariş taslak olarak
+ * kalır ve onayı 07.6 akışı yapar.
+ */
+type ConfirmOutcome =
+  | { status: 'payment_required'; orderId: string; clientSecret: string; totalCents: number }
+  /** Kapıda/vadeli: ödeme sağlayıcısı yok, sipariş açıldı. */
+  | { status: 'placed'; orderId: string; totalCents: number }
+  | { status: 'rejected'; reason: string; detail?: string[] | string };
+
+export async function confirmCheckoutAction(input: {
+  locale: string;
+  entries: CartEntry[];
+  addressId: string;
+  deliveryDate: string | null;
+  paymentMethod: PaymentMethod;
+  onAccount?: boolean;
+  marketingConsent?: boolean;
+}): Promise<ActionResult<ConfirmOutcome>> {
+  try {
+    if (!hasLocale(routing.locales, input.locale)) throw new Error('Geçersiz dil');
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new Error('Oturum gerekli');
+
+    const draft = await createCheckoutDraft({
+      locale: input.locale as Locale,
+      customerId,
+      entries: input.entries,
+      addressId: input.addressId,
+      deliveryDate: input.deliveryDate,
+      paymentMethod: input.paymentMethod,
+      onAccount: input.onAccount,
+    });
+    if (draft.status !== 'ok') {
+      const detail = draft.status === 'blocked_lines' ? draft.lines : draft.status === 'date_unavailable' ? draft.availableDates : undefined;
+      return { data: { status: 'rejected', reason: draft.status, detail }, error: null };
+    }
+
+    // Kapıda ya da vadeli: para şimdi geçmiyor, sağlayıcıya hiç gidilmiyor.
+    if (input.paymentMethod !== 'online') {
+      return { data: { status: 'placed', orderId: draft.orderId, totalCents: draft.totalCents }, error: null };
+    }
+
+    const session = await createCheckoutSession({ orderId: draft.orderId, marketingConsent: input.marketingConsent });
+    if (session.status !== 'ok' || !session.clientSecret) {
+      return { data: { status: 'rejected', reason: session.status }, error: null };
+    }
+    return {
+      data: { status: 'payment_required', orderId: draft.orderId, clientSecret: session.clientSecret, totalCents: draft.totalCents },
+      error: null,
+    };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}

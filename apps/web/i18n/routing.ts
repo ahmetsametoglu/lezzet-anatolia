@@ -24,6 +24,13 @@ export const routing = defineRouting({
     // link hangi dilde açılırsa açılsın aynı ürüne düşer; sosyal/WhatsApp trafiği bu sayfaya gelir.
     '/product/[slug]': { fr: '/produit/[slug]', de: '/produkt/[slug]', tr: '/urun/[slug]' },
     '/cart': { fr: '/panier', de: '/warenkorb', tr: '/sepet' },
+    // Checkout = "commande" (FR) · "Kasse" (DE) · "ödeme" (TR) — sepetteki düğmenin sözcüğüyle aynı
+    // ("Passer à la commande" · "Zur Kasse" · "Ödemeye geç"). URL ile düğme ayrı kelime kullansaydı
+    // müşteri adres çubuğunda başka bir yere geldiğini sanardı.
+    '/checkout': { fr: '/commande', de: '/kasse', tr: '/odeme' },
+    // Ödeme dönüşünün indiği sayfa. Sipariş numarası YOLDA taşınır: dönüş adresi Stripe'ta oturum
+    // açılırken yazılıyor ve sorgu dizesiyle taşınan referans paylaşılan bir linkte kaybolur.
+    '/checkout/[reference]': { fr: '/commande/[reference]', de: '/kasse/[reference]', tr: '/odeme/[reference]' },
     // Paket = "coffret" (FR) · "Paket" (DE) — kart ve menü metinleriyle aynı sözcük.
     '/packages': { fr: '/coffrets', de: '/pakete', tr: '/paketler' },
     '/package/[slug]': { fr: '/coffret/[slug]', de: '/paket/[slug]', tr: '/paket/[slug]' },

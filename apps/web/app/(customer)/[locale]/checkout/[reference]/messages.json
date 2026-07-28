@@ -1,0 +1,179 @@
+{
+  "tr": {
+    "title": "Siparişiniz alındı, {name}",
+    "titleAnon": "Siparişiniz alındı",
+    "mailed": "Onay e-postasını {email} adresine gönderdik. Hazırlığa başladığımızda haber vereceğiz.",
+    "orderNo": "Sipariş no · {reference}",
+    "pending": "Ödemeniz onaylanıyor",
+    "pendingBody": "Bankanızdan onay bekliyoruz. Bu genelde birkaç saniye sürer — sayfayı kapatabilirsiniz, sonucu e-posta ile bildireceğiz.",
+    "failed": "Ödeme tamamlanmadı",
+    "failedBody": "Kartınızdan tahsilat yapılmadı. Sepetiniz duruyor; dilerseniz başka bir kartla ya da kapıda ödeme ile tekrar deneyebilirsiniz.",
+    "retry": "Ödemeyi tekrar dene",
+    "delivery": {
+      "title": "Teslimat",
+      "route": "Kapıya teslim · ücretsiz",
+      "shipping": "Kargo",
+      "coldChain": "❄ Soğuk zincir bozulmadan kapınıza gelir. Kurye yola çıkınca saat aralığını bildiririz.",
+      "shippingNote": "📦 Kargoya verildiğinde takip numarasını e-posta ile göndeririz."
+    },
+    "payment": {
+      "title": "Ödeme",
+      "paid": "Ödendi · {amount}",
+      "due": "Kapıda ödenecek · {amount}",
+      "onAccount": "Hesaba yazıldı · {amount}",
+      "online": "💳 Online ödeme",
+      "cod": "🚪 Kapıda ödeme",
+      "credit": "🧾 Vadeli",
+      "invoiceSoon": "Fatura hazır olduğunda e-postanıza eklenecek.",
+      "card": "Kart ile",
+      "invoice": "Faturayı indir (PDF) ↓"
+    },
+    "timeline": {
+      "title": "Sırada ne var",
+      "placed": "Sipariş alındı",
+      "preparing": "Hazırlanıyor",
+      "onTheWay": "Yolda",
+      "delivered": "Teslim edildi",
+      "note": "Değişiklik veya iptal için hazırlığa girmeden önce bize yazabilirsiniz — hazırlık başladıktan sonra kalemler kilitlenir.",
+      "placedAt": "Bugün {time}",
+      "preparingAt": "Teslimattan bir gün önce mutfakta",
+      "onTheWayAt": "{date} sabah",
+      "deliveredAt": "{date}"
+    },
+    "summary": {
+      "title": "Sipariş özeti",
+      "discount": "İndirim",
+      "delivery": "Teslimat",
+      "free": "Ücretsiz",
+      "total": "Genel toplam",
+      "vatIncluded": "Fiyatlara KDV dahildir."
+    },
+    "continue": "Alışverişe devam et",
+    "notFound": "Bu siparişi bulamadık.",
+    "help": {
+      "title": "Bir sorunuz mu var?",
+      "body": "Sipariş numaranızla WhatsApp'tan yazın, aynı gün dönüyoruz.",
+      "cta": "WhatsApp'tan yaz"
+    },
+    "track": "Siparişi takip et",
+    "soon": "yakında"
+  },
+  "fr": {
+    "title": "Votre commande est confirmée, {name}",
+    "titleAnon": "Votre commande est confirmée",
+    "mailed": "Nous avons envoyé la confirmation à {email}. Nous vous préviendrons dès le début de la préparation.",
+    "orderNo": "N° de commande · {reference}",
+    "pending": "Paiement en cours de validation",
+    "pendingBody": "Nous attendons la confirmation de votre banque. Cela prend généralement quelques secondes — vous pouvez fermer cette page, nous vous informerons par e-mail.",
+    "failed": "Paiement non abouti",
+    "failedBody": "Aucun montant n'a été débité. Votre panier est intact ; réessayez avec une autre carte ou choisissez le paiement à la livraison.",
+    "retry": "Réessayer le paiement",
+    "delivery": {
+      "title": "Livraison",
+      "route": "Livraison à domicile · offerte",
+      "shipping": "Envoi postal",
+      "coldChain": "❄ Livraison sans rupture de la chaîne du froid. Nous vous indiquerons le créneau au départ du livreur.",
+      "shippingNote": "📦 Nous vous enverrons le numéro de suivi dès l'expédition."
+    },
+    "payment": {
+      "title": "Paiement",
+      "paid": "Payé · {amount}",
+      "due": "À payer à la livraison · {amount}",
+      "onAccount": "Porté au compte · {amount}",
+      "online": "💳 Paiement en ligne",
+      "cod": "🚪 Paiement à la livraison",
+      "credit": "🧾 Différé",
+      "invoiceSoon": "La facture vous sera envoyée par e-mail dès qu'elle sera prête.",
+      "card": "Par carte",
+      "invoice": "Télécharger la facture (PDF) ↓"
+    },
+    "timeline": {
+      "title": "La suite",
+      "placed": "Commande reçue",
+      "preparing": "En préparation",
+      "onTheWay": "En route",
+      "delivered": "Livrée",
+      "note": "Pour modifier ou annuler, écrivez-nous avant le début de la préparation — ensuite les articles sont verrouillés.",
+      "placedAt": "Aujourd'hui {time}",
+      "preparingAt": "En cuisine la veille",
+      "onTheWayAt": "{date} au matin",
+      "deliveredAt": "{date}"
+    },
+    "summary": {
+      "title": "Récapitulatif",
+      "discount": "Remise",
+      "delivery": "Livraison",
+      "free": "Offerte",
+      "total": "Total",
+      "vatIncluded": "Prix TTC."
+    },
+    "continue": "Continuer mes achats",
+    "notFound": "Commande introuvable.",
+    "help": {
+      "title": "Une question ?",
+      "body": "Écrivez-nous sur WhatsApp avec votre numéro de commande, nous répondons le jour même.",
+      "cta": "Écrire sur WhatsApp"
+    },
+    "track": "Suivre ma commande",
+    "soon": "bientôt"
+  },
+  "de": {
+    "title": "Ihre Bestellung ist eingegangen, {name}",
+    "titleAnon": "Ihre Bestellung ist eingegangen",
+    "mailed": "Wir haben die Bestätigung an {email} gesendet. Sobald die Zubereitung beginnt, melden wir uns.",
+    "orderNo": "Bestellnummer · {reference}",
+    "pending": "Zahlung wird bestätigt",
+    "pendingBody": "Wir warten auf die Bestätigung Ihrer Bank. Das dauert meist wenige Sekunden — Sie können die Seite schließen, wir melden uns per E-Mail.",
+    "failed": "Zahlung nicht abgeschlossen",
+    "failedBody": "Es wurde nichts abgebucht. Ihr Warenkorb bleibt bestehen; versuchen Sie es mit einer anderen Karte oder wählen Sie Zahlung bei Lieferung.",
+    "retry": "Zahlung erneut versuchen",
+    "delivery": {
+      "title": "Lieferung",
+      "route": "Lieferung an die Tür · kostenlos",
+      "shipping": "Versand",
+      "coldChain": "❄ Ohne Unterbrechung der Kühlkette bis zu Ihrer Tür. Das Zeitfenster nennen wir, sobald der Fahrer losfährt.",
+      "shippingNote": "📦 Die Sendungsnummer senden wir Ihnen beim Versand."
+    },
+    "payment": {
+      "title": "Zahlung",
+      "paid": "Bezahlt · {amount}",
+      "due": "Bei Lieferung zu zahlen · {amount}",
+      "onAccount": "Auf Rechnung · {amount}",
+      "online": "💳 Online-Zahlung",
+      "cod": "🚪 Zahlung bei Lieferung",
+      "credit": "🧾 Zahlungsziel",
+      "invoiceSoon": "Die Rechnung senden wir per E-Mail, sobald sie fertig ist.",
+      "card": "Mit Karte",
+      "invoice": "Rechnung herunterladen (PDF) ↓"
+    },
+    "timeline": {
+      "title": "Wie es weitergeht",
+      "placed": "Bestellung eingegangen",
+      "preparing": "In Zubereitung",
+      "onTheWay": "Unterwegs",
+      "delivered": "Geliefert",
+      "note": "Für Änderungen oder Stornierung schreiben Sie uns vor Beginn der Zubereitung — danach sind die Artikel fixiert.",
+      "placedAt": "Heute {time}",
+      "preparingAt": "Am Vortag in der Küche",
+      "onTheWayAt": "{date} morgens",
+      "deliveredAt": "{date}"
+    },
+    "summary": {
+      "title": "Bestellübersicht",
+      "discount": "Rabatt",
+      "delivery": "Lieferung",
+      "free": "Kostenlos",
+      "total": "Gesamtsumme",
+      "vatIncluded": "Preise inkl. MwSt."
+    },
+    "continue": "Weiter einkaufen",
+    "notFound": "Bestellung nicht gefunden.",
+    "help": {
+      "title": "Noch Fragen?",
+      "body": "Schreiben Sie uns mit Ihrer Bestellnummer über WhatsApp, wir antworten am selben Tag.",
+      "cta": "Über WhatsApp schreiben"
+    },
+    "track": "Bestellung verfolgen",
+    "soon": "bald"
+  }
+}
