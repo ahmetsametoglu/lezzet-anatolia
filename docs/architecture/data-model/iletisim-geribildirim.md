@@ -80,8 +80,14 @@ Yalnız satın alan müşteri; moderasyondan sonra ürün sayfasında görünür
 | order_id | uuid \| null | doğrulanmış alışveriş |
 | rating | int \| null | 1–5 |
 | comment | text \| null | |
-| is_approved | boolean | moderasyon (görünmeden önce) |
+| language | enum(`tr`,`fr`,`de`) | yorumun yazıldığı dil — **çevrilmez**, yazıldığı dilde yayınlanır |
+| status | enum(`pending`,`approved`,`rejected`) | moderasyon; yayınlanan geri çekilebilir (`approved` → `rejected`) |
+| moderated_at / moderated_by | timestamptz \| null / uuid \| null | kim ne zaman karar verdi (iz) |
 | created_at | timestamptz | |
+
+**`status` neden boolean değil:** kuyruğun üç hâli var — bekliyor, onaylandı, reddedildi. `is_approved=false` bu üçünden ikisini aynı kovaya atardı: reddedilmiş yorum her açılışta yeniden karar bekliyormuş gibi kuyruğa düşer, moderatör aynı yorumu ikinci kez okurdu.
+
+**Dil saklanır, çevrilmez:** yorum müşterinin kendi cümlesidir; makine çevirisi onu müşterinin söylemediği bir hâle sokar. Alan, moderatörün "bu hangi dilde" sorusunu ve ürün sayfasının dil süzgecini karşılar.
 
 ## FeedbackRequest (geri bildirim daveti)
 
@@ -92,10 +98,15 @@ Teslim sonrası (~10 gün) swipe/yorum daveti; tamamlayınca ödül kuponu (bkz.
 | id | uuid | |
 | order_id | uuid | |
 | customer_id | uuid | |
+| token | text | **unique** — davet bağlantısının anahtarı; tahmin edilemez (rastgele), oturum yerine geçer |
 | channel | enum(`email`,`whatsapp`) | davetin gittiği kanal |
 | sent_at | timestamptz \| null | |
 | completed_at | timestamptz \| null | |
 | points_awarded | int \| null | tamamlayınca verilen puan (`PointsEntry`); puanlar sonra kişisel kupona çevrilir |
+
+**Token neden var:** davet e-posta/WhatsApp'tan gelir ve telefonda tek elle açılır — araya giriş ekranı koymak akışı kırar. Bağlantının kendisi kimlik taşır. Bu yüzden `reference_no` ile aynı kural geçerlidir: **rastgele**, sıralı değil — sıralı olsaydı bir davet linkinden komşusunun siparişine geçilebilirdi.
+
+**Yarıda bırakma ayrı alan istemez:** "2/5" ilerlemesi tamamlanmış değerlendirmelerden türetilir (siparişin kalemleri ↔ o kalemler için düşmüş beğeni/yorum). `completed_at` yalnız akışın sonuna basılır ve puanın **tek kez** verilmesini o sağlar.
 
 ## PointsEntry (puan hareketi)
 
@@ -108,9 +119,15 @@ Oyunlaştırma/sadakat: müşteri aksiyonları puan kazandırır, biriken puan k
 | points | int | +kazanım / −harcama (delta) |
 | reason | enum(`review`,`swipe_candidate`,`swipe_post_purchase`,`order`,`redemption`,`manual`) | |
 | ref_id | uuid \| null | ilgili kayıt (review/order/discount…) |
+| note | text \| null | serbest sebep — **yalnız `manual`'da**: "gecikme telafisi — jest" |
+| created_by | uuid \| null | elle girişte personel; sistemin verdiği puanda boş |
 | created_at | timestamptz | |
 
 Puan bakiyesi = Σ `points` (saklanmaz, türetilir). Kupona çevirme: `redemption` (negatif) + kişisel `Discount` (`customer_id`).
+
+**Elle düzeltme iz bırakır:** operasyon ekranı "± puan + sebep" ister; sebep yazılmadan kayıt olmaz. `reason` neden verildiğinin **sınıfıdır**, `note` o tek olayın hikâyesidir — ikisi ayrı sorular, biri diğerinin yerini tutmaz.
+
+**İstismar tavanı defterin kendisinde:** "aynı ürüne bir kez" kuralı `(customer_id, reason, ref_id)` üzerinde kısmi unique indeksle durur — uygulama katmanı unutsa bile ikinci puan yazılamaz. Günlük tavan sayımla bakılır (aynı gün, aynı sebep).
 
 ## Ticket (müşteri talebi / şikâyet)
 
@@ -123,10 +140,21 @@ Basit yaşam döngüsü; siparişe ve ürünlere isteğe bağlı bağlanır (bkz
 | order_id | uuid \| null | siparişle ilgiliyse |
 | order_item_ids | uuid[] | ilgili sipariş kalemleri (boş olabilir) |
 | conversation_id | uuid \| null | WhatsApp'tan açıldıysa |
+| source | enum(`order`,`form`,`whatsapp`,`admin`) | **geliş yolu**: sipariş detayından / genel formdan / WhatsApp'tan / personelin elle açtığı |
 | type | enum(`damaged`,`missing`,`question`,`other`) | bozuk / eksik / soru / diğer |
 | status | enum(`open`,`in_progress`,`resolved`) | yeniden açılabilir → `open` |
+| handled_by | enum(`human`,`ai`) | talebi kim yürütüyor; devralmada `human`'a döner ve AI o talepte susar |
 | subject | text \| null | kısa başlık |
+| return_triggered_at | timestamptz \| null | admin bu talepten iade akışını başlattı |
 | created_at / resolved_at | timestamptz | |
+
+**Geliş yolu `conversation_id`'den türetilemez:** konuşma bağı yalnız WhatsApp'ı ayırır; "sipariş detayından geldi" ile "genel formdan gelip sipariş seçti" ikisi de `order_id` dolu bırakır, ama admin için farklı şeylerdir — birincisinde müşteri neyden şikâyet ettiğini biliyordu, ikincisinde aradı buldu.
+
+**`handled_by` Faz 1'de de var, AI olmadan.** Alan bugün hep `human`'dır; ama kuyruk ekranı "AI yürütüyor / devralındı" ayrımını **baştan** çizer (`16.5` sonra gelir). Alanı sonra eklemek, o güne kadar yazılmış her talebin geçmişini belirsiz bırakırdı.
+
+**İade sonucu SAKLANMAZ, türetilir:** tutar ve durum siparişin iade hareketlerinden okunur (`MoneyMovement.order_refund`, `OrderItem.fulfilled_qty`). Talepte duran tek şey **tetiğin çekildiği an**dır — o da türetilemez, çünkü bir siparişe birden çok talep açılabilir ve iadeyi hangisinin doğurduğu ancak yazılırsa bilinir. İade **siparişte yaşar**, talep ona bağlanır (DOMAIN §8, §15).
+
+**Kuyruk sırası (`son mesaj: bugün`) saklanmaz:** `max(ticket_message.created_at)` tam ve tek-anlamlıdır → okuma görünümünde türetilir (`ticket_queue`), tabloya kopyalanmaz. Aynı desen: `available_stock`, `order_sale`, `product_listing`.
 
 ## TicketMessage (talep yazışması)
 
@@ -134,10 +162,15 @@ Basit yaşam döngüsü; siparişe ve ürünlere isteğe bağlı bağlanır (bkz
 | --- | --- | --- |
 | id | uuid | |
 | ticket_id | uuid | |
-| sender | enum(`customer`,`admin`) | |
+| sender | enum(`customer`,`admin`,`ai`) | **`ai` ayrı bir göndericidir** — insanınkinden ayırt edilmeden gösterilemez |
+| author_id | uuid \| null | yazan personel (`admin`); müşteri ve AI mesajında boş |
 | body | text | |
 | attachments | text[] | storage yolu (fotoğraf vb.) |
 | created_at | timestamptz | |
+
+**Neden `ai` üçüncü bir gönderici:** "AI yazdı" bilgisini `admin` içine gömmek, sonradan "bunu kim söyledi" sorusunu cevapsız bırakırdı. Müşteriye giden metin aynıdır; ayrım **iç izlenebilirlik** içindir ve admin ekranında görünür (tasarım: "AI'nın yanıtları admin'e kendi yazmış gibi gösterilmez").
+
+**İç not yok — bilerek.** Yazılan her şey müşteriye aynen görünür; ekran bunu söyler ("aynen müşteriye görünür"). İç notu aynı diziye koymak, bir gün yanlış kutuya yazılmış bir marj cümlesinin müşteriye gitmesi demektir. İç değerlendirme gerekiyorsa ayrı bir mekanizma ister, bu dizi değil.
 
 ## Setting (işletme ayarı)
 

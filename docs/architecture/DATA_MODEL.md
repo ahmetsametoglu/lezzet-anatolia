@@ -64,9 +64,12 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `analytics_event_type`: page_view, product_view, add_to_cart, checkout_start, order_placed, product_swipe, share, search
 - `feedback_channel`: email, whatsapp
 - `points_reason`: review, swipe_candidate, swipe_post_purchase, order, redemption, manual
+- `review_status`: pending, approved, rejected
 - `ticket_type`: damaged, missing, question, other
 - `ticket_status`: open, in_progress, resolved
-- `ticket_sender`: customer, admin
+- `ticket_source`: order, form, whatsapp, admin
+- `ticket_handler`: human, ai
+- `ticket_sender`: customer, admin, ai
 - `adjustment_reason`: expired, damaged, count_diff, lost
 - `po_status`: draft, sent, received, cancelled
 
@@ -97,3 +100,8 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - **Ürün kârı doğrudan giderlerden, sipariş kapanışında sabitlenir** (COGS/teslimat/komisyon/paketleme snapshot); şirket kârı ayrı, genel giderle (bkz. `DOMAIN.md §12`).
 - **unit_price sipariş kalemine kopyalanır** — fiyat sabitleme; ana fiyat değişse de sipariş etkilenmez.
 - **reference_no ≠ invoice_no** — resmî fatura numarası dış sistemde üretilir. reference_no **rastgele** (hacim sızdırmaz), ilk kalıcı duruma geçişte üretilir (`confirmed`, hızlı satışta `completed`).
+- **İade talepte değil siparişte yaşar** — talep iadeyi **tetikler ve izler**, sonuçlandırmaz. `Ticket.return_triggered_at` yalnız tetiğin anını yazar; tutar ve durum siparişin iade hareketlerinden türetilir. İkinci bir iade kaydı, para ve stok gerçeğinin iki yerde birden yazıldığı bir sistem olurdu (bkz. `DOMAIN.md §8`, §15).
+- **Kim yazdı sorusu her yazışmada cevaplı** — `TicketMessage.sender` müşteri/personel/AI ayrımını taşır (`ticket_sender`), personel mesajı ayrıca `author_id` ile kişiye bağlanır. AI'ın yazdığı metin müşteriye insanınkiyle aynı görünür; ayrım iç izlenebilirlik içindir ve sonradan eklenemez.
+- **Moderasyon üç hâllidir** — `Review.status` (`pending`/`approved`/`rejected`); reddedilen yorum kuyruğa geri düşmez, yayınlanan geri çekilebilir. Yorum metni **düzenlenmez** — onay/ret vardır, yeniden yazım yoktur (bkz. `DOMAIN.md §14`).
+- **Token'lı davet bağlantısı oturum yerine geçer** — `FeedbackRequest.token` rastgeledir; kişisel link telefonda tek elle açılır ve araya giriş ekranı konmaz. Sıralı üretilseydi bir davetten komşusunun siparişine geçilebilirdi (`reference_no` ile aynı gerekçe).
+- **Puan defteri istismar tavanını kendi taşır** — "aynı ürüne bir kez" kısmi unique indeks (`customer_id, reason, ref_id`); uygulama unutsa da ikinci puan yazılamaz. Bakiye yine Σ ile türetilir, saklanmaz.

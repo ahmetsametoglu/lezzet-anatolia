@@ -114,3 +114,43 @@ export type PaymentStatus = z.infer<typeof PaymentStatusEnum>;
  */
 export const ReturnDispositionEnum = z.enum(['restock', 'discard', 'goodwill']);
 export type ReturnDisposition = z.infer<typeof ReturnDispositionEnum>;
+
+/**
+ * Talebin türü (DOMAIN §15). Müşteri kendi dilinde seçer; ikisi iade kararına gider
+ * (`damaged`/`missing`), `question` çoğu zaman tek cevapla kapanır.
+ */
+export const TicketTypeEnum = z.enum(['damaged', 'missing', 'question', 'other']);
+export type TicketType = z.infer<typeof TicketTypeEnum>;
+
+/**
+ * Talebin durumu — üç hâl, karmaşık ticket mekaniği YOK (atama/öncelik/SLA yok). Çözülen talep
+ * müşteri dönerse yeniden açılır (`resolved → open`).
+ *
+ * Bu adlar **iç dildir**: müşteri "Aldık, sıradayız / İlgileniyoruz / Çözüldü" okur. Çeviri yüzeyin
+ * işidir — iki ayrı durum alanı, aynı gerçeği iki kez yazmak olurdu.
+ */
+export const TicketStatusEnum = z.enum(['open', 'in_progress', 'resolved']);
+export type TicketStatus = z.infer<typeof TicketStatusEnum>;
+
+/**
+ * Talebin geliş yolu. `conversationId`'den TÜRETİLEMEZ: konuşma bağı yalnız WhatsApp'ı ayırır —
+ * "sipariş detayından geldi" ile "genel formdan gelip sipariş seçti" ikisi de `orderId` dolu
+ * bırakır ama admin için farklı şeylerdir.
+ */
+export const TicketSourceEnum = z.enum(['order', 'form', 'whatsapp', 'admin']);
+export type TicketSource = z.infer<typeof TicketSourceEnum>;
+
+/**
+ * Talebi kim yürütüyor (16.5). Faz 1'de hep `human`; devralmada `ai → human` döner ve AI o talepte
+ * susar. Alan baştan var — sonradan eklenseydi o güne kadarki taleplerin geçmişi belirsiz kalırdı.
+ */
+export const TicketHandlerEnum = z.enum(['human', 'ai']);
+export type TicketHandler = z.infer<typeof TicketHandlerEnum>;
+
+/**
+ * Yazışmada kim konuştu. `ai` ÜÇÜNCÜ bir göndericidir: "AI yazdı" bilgisini `admin` içine gömmek,
+ * sonradan "bunu kim söyledi" sorusunu cevapsız bırakırdı. Müşteriye giden metin aynıdır; ayrım
+ * iç izlenebilirliktir ve operasyon ekranında görünür.
+ */
+export const TicketSenderEnum = z.enum(['customer', 'admin', 'ai']);
+export type TicketSender = z.infer<typeof TicketSenderEnum>;

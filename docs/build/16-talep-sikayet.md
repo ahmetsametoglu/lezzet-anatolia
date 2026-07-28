@@ -19,12 +19,15 @@ Müşteri talebinin doğuşundan çözümüne: `Ticket` + `TicketMessage`, müş
 
 ## Görevler
 
-- [ ] (16.1) **Ticket servisleri:** `Ticket` + `TicketMessage`; sipariş/kalem bağı (`order_id`/`order_item_ids`), tip (bozuk/eksik/soru/diğer), durum makinesi (open/in_progress/resolved, yeniden açılabilir)
+- [x] (16.1) **Ticket servisleri:** `Ticket` + `TicketMessage`; sipariş/kalem bağı (`order_id`/`order_item_ids`), tip (bozuk/eksik/soru/diğer), durum makinesi (open/in_progress/resolved, yeniden açılabilir)
   - *Bitti:* talep açılıp durum geçişleri işliyor; yazışma diziliyor
-- [ ] (16.2) **Müşteri girişleri:** sipariş kaleminden (tip + foto), genel "bize yaz" yönlendirmesi (siparişe bağlan / serbest); foto yükleme (`packages/storage`)
+  - **Durum (29.07):** `0035_ticket.sql` — `ticket` + `ticket_message` + `ticket_queue` görünümü + `create_ticket`/`reply_ticket` RPC'leri. Motor `domain-core/support/ticket-flow` (durum makinesi iki aktörlü: müşteri yalnız kapanmışı yeniden açar), servisler `TicketService`/`TicketQueueService`/`TicketMessageService`, kapılar `apps/web/lib/ticket/{read,write}.ts`. 32 test (16 motor + 16 entegrasyon). Tasarımın istediği ama veri modelinde olmayan **beş alan** eklendi: `source` (geliş yolu), `handled_by` (AI/insan), `return_triggered_at`, `TicketMessage.sender='ai'`, `author_id` — kararları `DATA_MODEL.md`'de.
+- [~] (16.2) **Müşteri girişleri:** sipariş kaleminden (tip + foto), genel "bize yaz" yönlendirmesi (siparişe bağlan / serbest); foto yükleme (`packages/storage`)
   - *Bitti:* siparişli ve siparişsiz talep aynı akışa çıkıyor
-- [ ] (16.3) **Admin kuyruk + yazışma:** durum/tip/sipariş bağıyla liste; cevap yazma; **iade tetikleme köprüsü** (talep → 07 iade akışı; talep sonuçlandırmaz, tetikler)
+  - **Durum (29.07):** **arka uç hazır** — `openTicket`/`replyAsCustomer`/`listCustomerTickets`/`getCustomerTicket` (`lib/ticket`). **Fotoğraf altyapısı da kuruldu:** `packages/storage` artık iki kova yönetiyor (STACK §10) — katalog public kalır, müşteri yüklemesi **private** kovaya gider; okuma süreli imzalı adresle (`privateReadUrl`, 15 dk), yükleme tarayıcıdan doğrudan R2'ye (`privateUploadUrl`, 10 dk). Anahtar: `r2Keys.ticketAttachment`. Eksik: (a) müşteri yüzeyi sayfaları (`/[locale]/tickets`, sipariş detayındaki "Bir sorun mu var?" girişi), (b) yükleme kapısı — `R2_PRIVATE_BUCKET_NAME` env'i dolunca açılır (kova kullanıcıda).
+- [~] (16.3) **Admin kuyruk + yazışma:** durum/tip/sipariş bağıyla liste; cevap yazma; **iade tetikleme köprüsü** (talep → 07 iade akışı; talep sonuçlandırmaz, tetikler)
   - *Bitti:* admin talepten iade başlatabiliyor; talep iadeyle ilişkileniyor
+  - **Durum (29.07):** **arka uç hazır** — `listTicketQueue` (son mesaja göre keyset, cevap-bekliyor işareti, müşteri adı + sipariş no tek turda), `getStaffTicketDetail` (müşteri bağlamı: kaç talebi olmuş), `replyAsStaff`, `changeTicketStatus`, `takeOverTicket`, `triggerReturnFromTicket`. İade **damgalanır, yürütülmez**: para/stok 07.9'da (`adjustFulfillment` + `recordForOrder`); tutar siparişin hareketlerinden türetilir. Eksik: `/operations/tickets` ekranı.
 - [ ] (16.4) **Bildirimler:** cevap gelince müşteriye e-posta; müşteri durumu + yazışmayı hesabından görür (08 talep sayfası)
   - *Bitti:* cevapta e-posta gidiyor; müşteri güncel durumu görüyor
 - [ ] (16.5) **AI destekli işletme:** `packages/ai` — otomatik karşılama, sıradan soruya yanıt, gerekince insana devir; AI cevaplarının izlenebilirliği (kim/ne yanıtladı)

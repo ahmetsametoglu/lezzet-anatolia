@@ -1,4 +1,5 @@
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePrefixedKey } from './r2-key-prefix';
 
 interface R2Config {
@@ -15,11 +16,20 @@ interface R2Config {
  * Storage YERİNE R2 kullanılır. DB her yerde RELATIVE key tutar; prefix (dev/prod izolasyonu) yalnız
  * R2 çağrısında uygulanır.
  *
- * Bu sınıf YALNIZ YAZMA yoludur (kimlik bilgisi ister). Okuma, public bucket üzerinden saf string
- * birleştirmeyle çözülür → `publicImageUrl` (05.11). İmzalı okuma bilinçli olarak SİLİNDİ: katalog
- * görseli gizli değil, imza cache'i ve paylaşım kartını kırıyordu. Gerçekten özel dosyalar
- * (teslim onayı fotoğrafı, şikayet eki, fatura) geldiğinde ikinci bir PRIVATE bucket'la döner —
- * o zaman ihtiyaç duyulan yetenek o modülde eklenir (paket artımlı büyür).
+ * ── İKİ KOVA, İKİ OKUMA YOLU ────────────────────────────────────────────────
+ *
+ * **Public kova** (`getR2()`): katalog, koleksiyon, paket görselleri. Okuma imzasızdır — saf string
+ * birleştirmeyle (`publicImageUrl`, 05.11). İmza katalogda ZARARLIDIR: her render'da değişen adres
+ * tarayıcı/CDN cache'ini öldürür, paylaşım (OG) kartı süre dolunca görselsiz kalır, Google Görseller
+ * devreye giremez. O görsel zaten birazdan anonim ziyaretçiye gösterilecek şeydir.
+ *
+ * **Private kova** (`getR2Private()`): müşterinin YÜKLEDİĞİ dosyalar — şikâyet fotoğrafı (16.2),
+ * ileride teslim onayı ve B2B belgesi. Bunların public adresi YOKTUR; okuma süreli imzalı adresle
+ * yapılır (`getSignedReadUrl`) ve adresi sunucu ancak yetkiyi doğruladıktan sonra üretir.
+ * SEO gerekçesi burada tersine döner: bu dosyaların aranabilir olması istenmez.
+ *
+ * R2'de "herkese açık" ayarı **kova düzeyindedir** — aynı kovanın içinde "şu klasör gizli"
+ * denemez. İki kova bu yüzden zorunlu, tercih değil.
  */
 // Dışa yalnız getR2() verilir; R2Service tipi ihtiyaç doğunca export edilir (artımlı).
 class R2Service {
@@ -65,11 +75,54 @@ class R2Service {
   async deleteFile(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: this.resolveKey(key) }));
   }
+
+  /**
+   * Süreli okuma adresi — **private kovanın tek okuma yolu** (referans proje `getSignedReadUrl`).
+   *
+   * Varsayılan 15 dakika: dosya bir ekranda açılıp okunacak kadar uzun, kopyalanıp paylaşılan bir
+   * adres olarak yaşayacak kadar kısa. Bu, public kovanın `?v=` sürümlü kalıcı adresinin tam
+   * tersidir — ve öyle olmalı: biri gösterilmek için vardır, öbürü gösterilmemek için.
+   */
+  async getSignedReadUrl(key: string, expiresInSeconds = 900): Promise<string> {
+    return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: this.resolveKey(key) }), {
+      expiresIn: expiresInSeconds,
+    });
+  }
+
+  /**
+   * Tarayıcının dosyayı DOĞRUDAN R2'ye göndermesi için süreli yükleme adresi.
+   *
+   * Fotoğraf sunucumuza hiç uğramaz: telefonda çekilen 4 MB'lık kare, Next.js action gövde
+   * sınırını da sunucu belleğini de meşgul etmez. Varsayılan 10 dakika — formu doldurup göndermeye
+   * fazlasıyla yeter, çalınan bir adresin ömrü olamayacak kadar kısadır.
+   *
+   * `contentType` imzaya DAHİLDİR: adres bir kez üretildikten sonra başka türde bir dosya
+   * yüklenemez (imzalı "jpeg" adresine script gönderilemez).
+   */
+  async getSignedUploadUrl(key: string, contentType: string, expiresInSeconds = 600): Promise<string> {
+    return getSignedUrl(
+      this.client,
+      new PutObjectCommand({ Bucket: this.bucket, Key: this.resolveKey(key), ContentType: contentType }),
+      { expiresIn: expiresInSeconds },
+    );
+  }
 }
 
 // ─── Env'den lazy singleton ──────────────────────────────
 
 let cached: R2Service | null | undefined;
+let cachedPrivate: R2Service | null | undefined;
+
+/** İki kovanın ortak ayarları — hesap aynı, değişen yalnız kova adı. */
+function baseConfig(): Omit<R2Config, 'bucket'> | null {
+  const endpoint = process.env.R2_ENDPOINT;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  if (!endpoint || !accessKeyId || !secretAccessKey) return null;
+  // Prefix HAM geçilir: varsayılanı (`dev`) `resolvePrefixedKey` uygular. Burada `|| 'dev'` yazmak
+  // okuma yolundan ayrışırdı (orada boş string = kök) → aynı anahtar iki farklı yere düşerdi.
+  return { endpoint, accessKeyId, secretAccessKey, pathPrefix: process.env.R2_PATH_PREFIX };
+}
 
 /**
  * Env değişkenlerinden R2Service üretir; eksikse `null` (graceful degradation — local'de R2 ayarsızsa
@@ -79,18 +132,25 @@ let cached: R2Service | null | undefined;
 export function getR2(): R2Service | null {
   if (cached !== undefined) return cached;
 
-  const endpoint = process.env.R2_ENDPOINT;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const base = baseConfig();
   const bucket = process.env.R2_BUCKET_NAME;
-
-  if (!endpoint || !accessKeyId || !secretAccessKey || !bucket) {
-    cached = null;
-    return null;
-  }
-
-  // Prefix HAM geçilir: varsayılanı (`dev`) `resolvePrefixedKey` uygular. Burada `|| 'dev'` yazmak
-  // okuma yolundan ayrışırdı (orada boş string = kök) → aynı anahtar iki farklı yere düşerdi.
-  cached = new R2Service({ endpoint, accessKeyId, secretAccessKey, bucket, pathPrefix: process.env.R2_PATH_PREFIX });
+  cached = base && bucket ? new R2Service({ ...base, bucket }) : null;
   return cached;
+}
+
+/**
+ * **Private kova** — müşterinin yüklediği dosyalar (şikâyet fotoğrafı, ileride belge/kanıt).
+ * Ayarsızsa `null`: yerelde ek olmadan da çalışılır, ekran fotoğrafsız çizer, çökmez.
+ *
+ * Kimlik bilgisi public kovayla AYNIDIR (aynı R2 hesabı); ayrışan tek şey kova adıdır
+ * (`R2_PRIVATE_BUCKET_NAME`). İkinci bir API token'ı gerekmez — ama istenirse ayrı token da
+ * kullanılabilir, o zaman yalnız env değişir.
+ */
+export function getR2Private(): R2Service | null {
+  if (cachedPrivate !== undefined) return cachedPrivate;
+
+  const base = baseConfig();
+  const bucket = process.env.R2_PRIVATE_BUCKET_NAME;
+  cachedPrivate = base && bucket ? new R2Service({ ...base, bucket }) : null;
+  return cachedPrivate;
 }

@@ -44,4 +44,16 @@ export const r2Keys = {
   /** Paket (bundle) görseli — 3:2 kaynak; aynı deterministik desen. */
   bundleImage: (slug: string, sourceFilename: string): string =>
     `catalog/bundles/${sanitize(slug)}.${extOf(sourceFilename)}`,
+
+  /**
+   * **Şikâyet fotoğrafı** (16.2) — PRIVATE kovaya yazılır (`getR2Private`), public adresi yoktur.
+   *
+   * Katalog anahtarlarının tersine **deterministik DEĞİL**: aynı talebe birden çok fotoğraf
+   * eklenebilir ve hiçbiri diğerinin üzerine yazmamalı — bozuk ürünün ikinci açısı, birincisinin
+   * yerine geçmez. `photoToken` çağıranın ürettiği tek kullanımlık kimliktir.
+   *
+   * Talep kimliğine göre klasörlenir: talep silinirse `support/tickets/{id}/` tek seferde temizlenir.
+   */
+  ticketAttachment: (ticketId: string, photoToken: string, sourceFilename: string): string =>
+    `support/tickets/${sanitize(ticketId)}/${sanitize(photoToken)}.${extOf(sourceFilename)}`,
 } as const;

@@ -223,6 +223,29 @@ Genel blueprint §10 ile aynı. Env'e yalnız sır + ortama göre değişen değ
 
 Marka adı/alan adı tek sabitten okunur, elle yazılmaz.
 
+### Dosya deposu: iki kova, iki okuma yolu
+
+`packages/storage` (Cloudflare R2) **iki ayrı kova** yönetir; ölçüt tek soru: *bu dosyanın
+görünmesi mi isteniyor, görünmemesi mi?*
+
+| | Public kova (`R2_BUCKET_NAME`) | Private kova (`R2_PRIVATE_BUCKET_NAME`) |
+| --- | --- | --- |
+| Ne durur | Katalog/koleksiyon/paket görselleri | Müşterinin yüklediği dosyalar: şikâyet fotoğrafı (16.2), ileride teslim onayı, B2B belgesi |
+| Okuma | İmzasız, kalıcı adres (`publicImageUrl`) | Süreli imzalı adres (`privateReadUrl`, 15 dk) |
+| Yükleme | Sunucudan (`getR2().uploadFile`) | Tarayıcıdan doğrudan, imzalı adresle (`privateUploadUrl`, 10 dk) |
+| Google görsün mü | **Evet** — amaç bu | **Hayır** — tam tersi |
+
+**Katalogda imza zararlıdır:** her render'da değişen adres tarayıcı/CDN cache'ini öldürür, paylaşım
+(OG) kartı süre dolunca görselsiz kalır, `next/image` ve Google Görseller devreye giremez. Müşteri
+yüklemesinde ise aynı özellik istenen şeydir.
+
+**Neden iki kova, tek kovada iki klasör değil:** R2'de "herkese açık" ayarı **kova düzeyindedir** —
+aynı kovanın içinde "şu klasör gizli" denemez. Zorunluluk, tercih değil.
+
+**Yetki kararı depoda değil kapıda:** `privateReadUrl` "adres üret" der, "kim görebilir" demez —
+onu dosyanın sahibini bilen uygulama kapısı söyler (ör. `lib/ticket/read.ts`). Yetkiyi depoya
+gömmek, her yeni dosya türünde aynı kararı yeniden yazmak olurdu.
+
 ---
 
 ## 11. Yeni projede kurulum sırası
