@@ -9,54 +9,54 @@ import { UserProfileService } from './user-profile.service';
  */
 const db = serviceDb();
 const profiles = new UserProfileService(db);
-const damga = Date.now();
-const acilanlar: string[] = [];
+const stamp = Date.now();
+const createdIds: string[] = [];
 
-async function profilAc(ad: string) {
-  const p = await profiles.insert({ name: `${ad} ${damga}` });
-  acilanlar.push(p.id);
+async function createProfile(ad: string) {
+  const p = await profiles.insert({ name: `${ad} ${stamp}` });
+  createdIds.push(p.id);
   return p;
 }
 
 beforeAll(async () => {
-  await profilAc('rol-testi');
+  await createProfile('rol-testi');
 });
 
 afterAll(async () => {
-  await purgeTestData(db, { profileIds: acilanlar });
+  await purgeTestData(db, { profileIds: createdIds });
 });
 
 describe('kural DB kısıtında zorlanır', () => {
   it('yeni profil varsayılan olarak yalnız müşteridir', async () => {
-    const p = await profilAc('varsayilan');
+    const p = await createProfile('varsayilan');
     expect(p.roles).toEqual(['customer']);
   });
 
   it('müşteri + personel BİR ARADA yazılamaz', async () => {
-    const p = await profilAc('cakisma');
+    const p = await createProfile('cakisma');
     await expect(profiles.setRoles(p.id, ['customer', 'warehouse'])).rejects.toThrow();
   });
 
   it('boş rol kümesi yazılamaz', async () => {
-    const p = await profilAc('bos');
+    const p = await createProfile('bos');
     await expect(profiles.setRoles(p.id, [])).rejects.toThrow();
   });
 
   it('personel içinde çoklu rol yazılabilir — depo + muhasebe', async () => {
-    const p = await profilAc('coklu');
-    const guncel = await profiles.setRoles(p.id, ['warehouse', 'accounting']);
-    expect(guncel.roles).toEqual(['warehouse', 'accounting']);
+    const p = await createProfile('coklu');
+    const updated = await profiles.setRoles(p.id, ['warehouse', 'accounting']);
+    expect(updated.roles).toEqual(['warehouse', 'accounting']);
   });
 });
 
 describe('okuma uçları', () => {
   it('hasRole dizide arar; isStaff operasyon rolü arar', async () => {
-    const p = await profilAc('okuma');
-    const authUser = await db.auth.admin.createUser({ email: `rol${damga}@ornek.fr`, email_confirm: true });
+    const p = await createProfile('okuma');
+    const authUser = await db.auth.admin.createUser({ email: `rol${stamp}@ornek.fr`, email_confirm: true });
     const authUserId = authUser.data.user!.id;
     // Trigger profili açtı; testin kendi profilini bağlamak yerine trigger'ınkini kullanıyoruz.
     const triggerProfili = await profiles.findByAuthUserId(authUserId);
-    acilanlar.push(triggerProfili!.id);
+    createdIds.push(triggerProfili!.id);
 
     await profiles.setRoles(triggerProfili!.id, ['warehouse', 'accounting']);
     expect(await profiles.hasRole(authUserId, 'accounting')).toBe(true);
@@ -71,7 +71,7 @@ describe('okuma uçları', () => {
   });
 
   it('role göre listeleme dizide arar', async () => {
-    const p = await profilAc('listeleme');
+    const p = await createProfile('listeleme');
     await profiles.setRoles(p.id, ['courier', 'accounting']);
 
     const kuryeler = await profiles.listByRole('courier');

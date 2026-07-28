@@ -8,62 +8,62 @@ import { SettingsService } from './settings.service';
  */
 const db = serviceDb();
 const settings = new SettingsService(db);
-const damga = Date.now();
-const anahtar = `test_min_basket_${damga}`;
+const stamp = Date.now();
+const key = `test_min_basket_${stamp}`;
 
 // Her senaryo kendi zeminini kurar: testler aynı anahtarı kullanıyor, satırlar birikirse
 // "kaç kapsam tanımlı" ölçen assertion'lar birbirini etkiler.
 afterEach(async () => {
-  await db.from('settings').delete().eq('key', anahtar);
+  await db.from('settings').delete().eq('key', key);
   SettingsService.invalidate();
 });
 
 afterAll(async () => {
-  await db.from('settings').delete().eq('key', anahtar);
+  await db.from('settings').delete().eq('key', key);
 });
 
 describe('kapsamlı çözüm', () => {
   it('hiç satır yoksa çağıranın verdiği varsayılana düşer (kodda sabit yok)', async () => {
-    expect(await settings.getNumber(anahtar, 2500)).toBe(2500);
+    expect(await settings.getNumber(key, 2500)).toBe(2500);
   });
 
   it('global değer okunur', async () => {
-    await settings.set(anahtar, 4000);
-    expect(await settings.getNumber(anahtar, 2500)).toBe(4000);
+    await settings.set(key, 4000);
+    expect(await settings.getNumber(key, 2500)).toBe(4000);
   });
 
   it('BÖLGE değeri globali ezer (02.6 bitti-kriteri)', async () => {
-    await settings.set(anahtar, 4000);
-    await settings.set(anahtar, 6000, { scopeType: 'zone', scopeId: 'zone-1' });
+    await settings.set(key, 4000);
+    await settings.set(key, 6000, { scopeType: 'zone', scopeId: 'zone-1' });
 
-    expect(await settings.getNumber(anahtar, 0, { zoneId: 'zone-1' })).toBe(6000);
-    expect(await settings.getNumber(anahtar, 0, { zoneId: 'zone-2' })).toBe(4000); // başka bölge globale düşer
-    expect(await settings.getNumber(anahtar, 0)).toBe(4000);
+    expect(await settings.getNumber(key, 0, { zoneId: 'zone-1' })).toBe(6000);
+    expect(await settings.getNumber(key, 0, { zoneId: 'zone-2' })).toBe(4000); // başka bölge globale düşer
+    expect(await settings.getNumber(key, 0)).toBe(4000);
   });
 
   it('özgüllük sırası: bölge > kanal > ülke > global', async () => {
-    await settings.set(anahtar, 1000);
-    await settings.set(anahtar, 2000, { scopeType: 'country', scopeId: 'DE' });
-    await settings.set(anahtar, 3000, { scopeType: 'channel', scopeId: 'b2b' });
-    await settings.set(anahtar, 4000, { scopeType: 'zone', scopeId: 'z1' });
+    await settings.set(key, 1000);
+    await settings.set(key, 2000, { scopeType: 'country', scopeId: 'DE' });
+    await settings.set(key, 3000, { scopeType: 'channel', scopeId: 'b2b' });
+    await settings.set(key, 4000, { scopeType: 'zone', scopeId: 'z1' });
 
-    expect(await settings.getNumber(anahtar, 0, { zoneId: 'z1', channel: 'b2b', country: 'DE' })).toBe(4000);
-    expect(await settings.getNumber(anahtar, 0, { channel: 'b2b', country: 'DE' })).toBe(3000);
-    expect(await settings.getNumber(anahtar, 0, { country: 'DE' })).toBe(2000);
-    expect(await settings.getNumber(anahtar, 0, { country: 'FR' })).toBe(1000);
+    expect(await settings.getNumber(key, 0, { zoneId: 'z1', channel: 'b2b', country: 'DE' })).toBe(4000);
+    expect(await settings.getNumber(key, 0, { channel: 'b2b', country: 'DE' })).toBe(3000);
+    expect(await settings.getNumber(key, 0, { country: 'DE' })).toBe(2000);
+    expect(await settings.getNumber(key, 0, { country: 'FR' })).toBe(1000);
   });
 
   it('aynı anahtar+kapsam ikinci kez açılmaz — üzerine yazılır', async () => {
-    await settings.set(anahtar, 1000);
-    await settings.set(anahtar, 1500);
+    await settings.set(key, 1000);
+    await settings.set(key, 1500);
 
-    expect(await settings.listByKey(anahtar)).toHaveLength(1);
-    expect(await settings.getNumber(anahtar, 0)).toBe(1500);
+    expect(await settings.listByKey(key)).toHaveLength(1);
+    expect(await settings.getNumber(key, 0)).toBe(1500);
   });
 
   it('sayısal olmayan değer varsayılana düşer (bozuk ayar akışı kilitlemez)', async () => {
-    await settings.set(anahtar, 'bozuk');
-    expect(await settings.getNumber(anahtar, 2500)).toBe(2500);
+    await settings.set(key, 'bozuk');
+    expect(await settings.getNumber(key, 2500)).toBe(2500);
   });
 });
 
