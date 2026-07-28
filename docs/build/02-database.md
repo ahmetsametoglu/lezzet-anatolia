@@ -29,6 +29,23 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
   - *Bitti:* `DATA_MODEL.md`'deki her varlığın tablosu var; kısıt ihlali testle doğrulanmış (örnek: aynı webhook event iki kez yazılamıyor)
 - [x] (02.5) `BaseDbService`: jsonb-güvenli case dönüştürücüler (LocalizedText içleri dönüşmez), `{data, error}` deseni, `toRpcParams` yardımcısı
   - *Bitti:* dönüştürücü birim testleri (jsonb alanı bozulmuyor) geçiyor
+  - **Durum (28.07 — yerel yığının aralıklı 502'si teşhis edildi ve kapatıldı):** Haftalardır rastgele
+    görünen `An invalid response was received from the upstream server` bir kod hatası değildi. Kong
+    günlüğü sebebi yazıyordu: `recv() failed (104: Connection reset by peer) while reading response
+    header from upstream`. PostgREST boşta duran keep-alive bağlantısını kapatıyor, Kong o bayat
+    bağlantıyı yeniden kullanıyor. **GET'i Kong kendiliğinden taze bağlantıyla yeniden deniyor** — bu
+    yüzden okumalar hiç düşmüyordu ve belirti "rastgele" görünüyordu; POST'u denemiyor (idempotent
+    değil), dolayısıyla hata HER ZAMAN bir yazmada çıkıyordu (testlerin `beforeAll` insert'leri,
+    seed'in ilk bölümü). İki katmanda kapatıldı: **(1)** `waitForRest` — `db reset`/`start`
+    konteynerleri yeniden başlatır ve komut VERİTABANI sağlıklı olur olmaz döner, PostgREST hâlâ şema
+    önbelleğini yüklüyor olabilir; seed ve test kurulumu ilk sorgudan önce hazır olmasını bekler
+    (tavana varınca sessizce devam etmez, hatayı yükseltir). **(2)** yerel istemcide bayat keep-alive
+    için TEK seferlik yeniden deneme — bağlantı istek okunmadan kapandığı için yazma hiç
+    gerçekleşmemiştir, tarayıcıların yaptığı da budur. `LOCAL_HOST` sınamasıyla **yalnız yerelde**
+    devrede: üretimde 502 işlemin ORTASINDA da doğabilir, orada sessiz yeniden deneme kaydı ikizler.
+    Ayrıca `purgeTestData` tanımsız kimlikleri ayıklıyor — `beforeAll` düşünce teardown
+    `invalid input syntax for uuid: "undefined"` diye İKİNCİ bir hata basıp asıl sebebi gömüyordu.
+    Sonuç: üç koşu üst üste 49/49 dosya · 491/491 test.
 - [x] (02.6) İlk somut servisler (okuma/yazma smoke): `SettingsService` (kapsamlı çözücü: özgül → global) + bir örnek CRUD servisi
   - *Bitti:* Setting çözücüsü "bölge değeri globali ezer" birim testini geçiyor
   - **Durum (27.07):** `0016_setting.sql` + `SettingService`. Özgüllük sırası **bölge > kanal > ülke > global**; hiç satır yoksa çağıranın verdiği varsayılana düşer — kodda sabit kalmaz, varsayılan çağrı yerinde görünür. Süreç içi önbellek (ayarlar her checkout'ta okunur, neredeyse hiç değişmez); yazmada düşer. Bozuk değer akışı kilitlemez, varsayılana döner. 9 test.

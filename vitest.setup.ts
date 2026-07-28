@@ -5,3 +5,12 @@ try {
 } catch {
   // .env yoksa (ör. CI) ortam değişkenleri zaten tanımlı olabilir.
 }
+
+// Entegrasyon testleri local Supabase'e vurur. Yığın yeni başlatıldıysa (ya da `db:reset`'ten hemen
+// sonra) PostgREST henüz hazır olmayabilir: ilk istek kapıdan 502 alır ve dosya `beforeAll`'da
+// yüklenemez — testin kendisi sağlamken suite kırmızı görünür. Bir kez, hepsi için bekleriz.
+// Env eksikse (birim testler; DB'ye hiç dokunmayanlar) sessizce atlanır.
+if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SECRET_KEY) {
+  const { serviceDb, waitForRest } = await import('@lezzet/database');
+  await waitForRest(serviceDb());
+}

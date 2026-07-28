@@ -61,7 +61,7 @@
  * Değerler DETERMİNİSTİK (indise göre) — rastgelelik yok: iki koşu aynı veriyi kurar.
  */
 
-import { createServiceRoleClient } from '@lezzet/database';
+import { createServiceRoleClient, waitForRest } from '@lezzet/database';
 import { seedCatalog, seedCollections } from './seed/catalog';
 import { seedDeliveryZones, seedAddresses } from './seed/delivery';
 import { seedJobRuns } from './seed/jobs';
@@ -82,6 +82,9 @@ try {
 
 async function main(): Promise<void> {
   const db = createServiceRoleClient();
+  // `db:refresh` = reset + seed. Reset, VERİTABANI sağlıklı olur olmaz döner ama PostgREST o anda hâlâ
+  // şema önbelleğini yüklüyor olabilir; ilk sorgu kapıdan 502 alıp seed'i ilk bölümde düşürüyordu.
+  await waitForRest(db);
   await seedCatalog(db);
   await seedCollections(db);
   await seedDraftCustomers(db);

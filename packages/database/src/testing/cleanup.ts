@@ -29,16 +29,29 @@ export interface PurgeTargets {
 }
 
 export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): Promise<void> {
+  // TANIMSIZ kimlikler AYIKLANIR. `beforeAll` yarıda düşerse (ör. yığın cevap vermezse) kimlikler hiç
+  // atanmamış olur ve teardown `invalid input syntax for uuid: "undefined"` ile İKİNCİ bir hata daha
+  // basar; asıl sebep o gürültünün altında kaybolur. Silinecek şey yoksa yapılacak şey de yoktur.
+  const clean = (ids?: (string | undefined | null)[]): string[] => (ids ?? []).filter((id): id is string => Boolean(id));
   const {
-    productIds = [],
-    categoryIds = [],
-    collectionIds = [],
-    supplierIds = [],
-    profileIds = [],
-    temperatureLocations = [],
-    verificationEmails = [],
-    authUserIds = [],
-  } = targets;
+    productIds,
+    categoryIds,
+    collectionIds,
+    supplierIds,
+    profileIds,
+    temperatureLocations,
+    verificationEmails,
+    authUserIds,
+  } = {
+    productIds: clean(targets.productIds),
+    categoryIds: clean(targets.categoryIds),
+    collectionIds: clean(targets.collectionIds),
+    supplierIds: clean(targets.supplierIds),
+    profileIds: clean(targets.profileIds),
+    temperatureLocations: clean(targets.temperatureLocations),
+    verificationEmails: clean(targets.verificationEmails),
+    authUserIds: clean(targets.authUserIds),
+  };
 
   // 1) Ürün grafiği: varyantlara `restrict` ile bağlı ne varsa ÖNCE gider.
   if (productIds.length > 0) {
