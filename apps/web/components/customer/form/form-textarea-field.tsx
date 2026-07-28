@@ -11,6 +11,9 @@ import { FieldShell, controlClass, errorIdFor } from './field-shell';
 interface FormTextareaFieldProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'> {
   label: string;
   hideLabel?: boolean;
+  /** K32: zorunluluk yıldızla değil, İSTEĞE BAĞLI olanı işaretleyerek anlatılır. */
+  optional?: boolean;
+  optionalLabel?: string;
   labelAside?: ReactNode;
   error?: string;
   id?: string;
@@ -20,7 +23,7 @@ interface FormTextareaFieldProps extends Omit<TextareaHTMLAttributes<HTMLTextAre
 export function FormTextareaField({
   label,
   hideLabel,
-  required,
+  optional, optionalLabel,
   labelAside,
   error,
   id,
@@ -33,10 +36,12 @@ export function FormTextareaField({
   const fieldId = id ?? reactId;
 
   return (
-    <FieldShell fieldId={fieldId} label={label} hideLabel={hideLabel} required={required} labelAside={labelAside} error={error}>
+    <FieldShell fieldId={fieldId} label={label} hideLabel={hideLabel} optional={optional} optionalLabel={optionalLabel} labelAside={labelAside} error={error}>
+      {/* Tek satırlık alanın sabit 48px'i burada `min-h-24` ile ezilir; dikey ped geri gelir
+          (input'ta metni tarayıcı ortalıyor, çok satırlıda ortalayacak bir şey yok). */}
       <textarea
         id={fieldId}
-        className={controlClass(error, ['min-h-24 resize-y', className].filter(Boolean).join(' '))}
+        className={controlClass(error, ['min-h-24 resize-y py-3', className].filter(Boolean).join(' '))}
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={errorIdFor(fieldId, error)}
         rows={rows}

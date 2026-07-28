@@ -15,7 +15,8 @@ interface FormInputProps<TFieldValues extends FieldValues> {
   label: string;
   type?: 'text' | 'email' | 'password' | 'tel' | 'url';
   placeholder?: string;
-  required?: boolean;
+  optional?: boolean;
+  optionalLabel?: string;
   autoComplete?: string;
   disabled?: boolean;
   hideLabel?: boolean;
@@ -30,7 +31,7 @@ export function FormInput<TFieldValues extends FieldValues>({
   label,
   type = 'text',
   placeholder,
-  required,
+  optional, optionalLabel,
   autoComplete,
   disabled,
   hideLabel,
@@ -46,7 +47,7 @@ export function FormInput<TFieldValues extends FieldValues>({
         <FormInputField
           label={label}
           hideLabel={hideLabel}
-          required={required}
+          optional={optional} optionalLabel={optionalLabel}
           labelAside={labelAside}
           type={type}
           placeholder={placeholder}

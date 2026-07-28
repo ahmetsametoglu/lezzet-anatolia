@@ -122,6 +122,11 @@
      hiyerarşi değil, görsel denge sorusudur — komşu öğeyle aynı hizada durup durmadığını belirler. */
   --text-chip: 14px; /* filtre çipi (K17) */
   --text-chip--font-weight: 700;
+  /* Form alanı etiketi (K34: "üstte etiket 12,5px kalın"). Kendi kademesi olarak durur çünkü gövde
+     ölçeğinin hiçbir durağı 12,5 değil ve alanın üstündeki künye ile içindeki değer aynı boyda
+     olamaz. Ağırlık 600: 700 etiketi girdinin içeriğinden daha yüksek sesli yapıyordu. */
+  --text-field-label: 12.5px;
+  --text-field-label--font-weight: 600;
   --text-control: 13.5px; /* süzgeç ve sıralama düğmesi (K17 küçük · K18) */
   --text-control--font-weight: 700;
   /* Adet seçicinin −/+ imleri. Kendi kademeleri: rakam gövde ölçeğinden (14/13) gelir ama imler bir

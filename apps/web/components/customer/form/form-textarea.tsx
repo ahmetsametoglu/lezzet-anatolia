@@ -11,7 +11,8 @@ interface FormTextareaProps<TFieldValues extends FieldValues> {
   name: FieldPath<TFieldValues>;
   label: string;
   placeholder?: string;
-  required?: boolean;
+  optional?: boolean;
+  optionalLabel?: string;
   disabled?: boolean;
   rows?: number;
   hideLabel?: boolean;
@@ -24,7 +25,7 @@ export function FormTextarea<TFieldValues extends FieldValues>({
   name,
   label,
   placeholder,
-  required,
+  optional, optionalLabel,
   disabled,
   rows = 4,
   hideLabel,
@@ -40,7 +41,7 @@ export function FormTextarea<TFieldValues extends FieldValues>({
           label={label}
           hideLabel={hideLabel}
           placeholder={placeholder}
-          required={required}
+          optional={optional} optionalLabel={optionalLabel}
           disabled={disabled}
           rows={rows}
           labelAside={labelAside}

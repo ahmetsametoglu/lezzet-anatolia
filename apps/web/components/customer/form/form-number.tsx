@@ -14,7 +14,8 @@ interface FormNumberProps<TFieldValues extends FieldValues> {
   control: Control<TFieldValues, any, any>;
   name: FieldPath<TFieldValues>;
   label: string;
-  required?: boolean;
+  optional?: boolean;
+  optionalLabel?: string;
   disabled?: boolean;
   placeholder?: string;
   min?: number;
@@ -34,7 +35,7 @@ export function FormNumber<TFieldValues extends FieldValues>({
   control,
   name,
   label,
-  required,
+  optional, optionalLabel,
   disabled,
   placeholder,
   min,
@@ -55,7 +56,7 @@ export function FormNumber<TFieldValues extends FieldValues>({
         <FormInputField
           label={label}
           hideLabel={hideLabel}
-          required={required}
+          optional={optional} optionalLabel={optionalLabel}
           labelAside={labelAside}
           type="number"
           inputMode={integer ? 'numeric' : 'decimal'}

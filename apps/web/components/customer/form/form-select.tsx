@@ -17,7 +17,8 @@ interface FormSelectProps<TFieldValues extends FieldValues> {
   label: string;
   options: FormSelectOption[];
   placeholder?: string;
-  required?: boolean;
+  optional?: boolean;
+  optionalLabel?: string;
   disabled?: boolean;
   hideLabel?: boolean;
   labelAside?: ReactNode;
@@ -31,7 +32,7 @@ export function FormSelect<TFieldValues extends FieldValues>({
   label,
   options,
   placeholder,
-  required,
+  optional, optionalLabel,
   disabled,
   hideLabel,
   labelAside,
@@ -47,7 +48,7 @@ export function FormSelect<TFieldValues extends FieldValues>({
           label={label}
           options={options}
           placeholder={placeholder}
-          required={required}
+          optional={optional} optionalLabel={optionalLabel}
           disabled={disabled}
           hideLabel={hideLabel}
           labelAside={labelAside}

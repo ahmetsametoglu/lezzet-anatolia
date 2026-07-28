@@ -18,7 +18,8 @@ export interface FormSelectFieldOption {
 interface FormSelectFieldProps {
   label: string;
   options: FormSelectFieldOption[];
-  required?: boolean;
+  optional?: boolean;
+  optionalLabel?: string;
   hideLabel?: boolean;
   labelAside?: ReactNode;
   error?: string;
@@ -37,7 +38,7 @@ interface FormSelectFieldProps {
 export function FormSelectField({
   label,
   options,
-  required,
+  optional, optionalLabel,
   hideLabel,
   labelAside,
   error,
@@ -62,7 +63,7 @@ export function FormSelectField({
       onChange?.(isOn ? selected.filter((x) => x !== v) : [...selected, v]);
     };
     return (
-      <FieldShell fieldId={fieldId} label={label} hideLabel={hideLabel} required={required} labelAside={labelAside} error={error}>
+      <FieldShell fieldId={fieldId} label={label} hideLabel={hideLabel} optional={optional} optionalLabel={optionalLabel} labelAside={labelAside} error={error}>
         <div className="flex flex-wrap gap-1.5">
           {options.map((opt) => {
             const on = selected.includes(opt.value);
@@ -89,7 +90,7 @@ export function FormSelectField({
   }
 
   return (
-    <FieldShell fieldId={fieldId} label={label} hideLabel={hideLabel} required={required} labelAside={labelAside} error={error}>
+    <FieldShell fieldId={fieldId} label={label} hideLabel={hideLabel} optional={optional} optionalLabel={optionalLabel} labelAside={labelAside} error={error}>
       <select
         id={fieldId}
         className={controlClass(error, ['cursor-pointer', className].filter(Boolean).join(' '))}

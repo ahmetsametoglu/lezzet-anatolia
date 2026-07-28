@@ -26,15 +26,22 @@ const VARIANT: Record<ButtonVariant, string> = {
   ghost: 'text-olive hover:text-olive-dark disabled:text-sand-600',
 };
 
-// Dolgulu varyantlar (primary/secondary) ped alır; ghost yalnız metin boyutu (inline link-buton).
+/**
+ * Dolgulu varyantlar (primary/secondary) SABİT YÜKSEKLİK alır; ghost yalnız metin boyutu.
+ *
+ * Yükseklikler envanterin **dokunma hedefi tablosundan** gelir — K1 birincil buton `48px` (mobil 52),
+ * K2 ikincil `44px` (mobil 48), yatay ped `26-30px`. Ped hesabıyla yükseklik "yaklaşık" tutturmak
+ * yerine `h-*` verilmesi bilinçli: punto ya da satır aralığı değiştiğinde yükseklik kaymaz, komşu
+ * öğeyle hizası bozulmaz. (Ped hesabı üç turda üç farklı sonuç vermişti.)
+ */
 const PADDED_SIZE: Record<ButtonSize, string> = {
   // `lg` yalnız ürün detayın ana aksiyonunda: sayfanın tek satın alma butonu, toplam tutarı taşır
   // ve mobilde ekran altına sabitlenir — kart butonlarıyla aynı ağırlıkta olamaz.
-  lg: 'px-10 py-4 text-lead',
-  md: 'px-6 py-3.5 text-body',
-  sm: 'px-4 py-2 text-sm',
+  lg: 'h-14 px-10 text-lead',
+  md: 'h-12 px-7 text-body',
+  sm: 'h-11 px-5 text-body-sm',
   // Satır içi eylem (sepet satırının "çıkar" düğmesi, mobil kartlar) — kartın yüksekliğini belirlemez.
-  xs: 'px-3 py-1.5 text-micro',
+  xs: 'h-9 px-3.5 text-micro',
 };
 const GHOST_SIZE: Record<ButtonSize, string> = {
   lg: 'text-lead',
@@ -53,7 +60,10 @@ interface ButtonClassOptions {
 export function buttonClass({ variant = 'primary', size = 'md', fullWidth, className }: ButtonClassOptions = {}): string {
   return [
     // Odak halkası envanter §0.4: 2px zeytin outline, 3px offset — ayrı renk taşımaz.
-    'inline-flex cursor-pointer items-center justify-center gap-2 font-sans font-bold transition-colors disabled:cursor-not-allowed',
+    // `leading-tight`: tip token'ları satır yüksekliği taşımıyor, kontrol o zaman gövde metninin
+    // 1.5 aralığını miras alıp çizilenden ~4 px uzuyor (tasarım md butonu 46 px, biz 50,5 idik).
+    // Aynı tuzak adet seçicide ve girdilerde de yaşandı — kontrolün satır aralığı kutunun sorunudur.
+    'inline-flex cursor-pointer items-center justify-center gap-2 font-sans font-bold leading-tight transition-colors disabled:cursor-not-allowed',
     'outline-none focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-olive',
     VARIANT[variant],
     variant === 'ghost' ? GHOST_SIZE[size] : PADDED_SIZE[size],
