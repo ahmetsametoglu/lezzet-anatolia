@@ -40,10 +40,22 @@ create index user_profiles_draft_idx on public.user_profiles (created_at desc) w
 create table public.address (
   id uuid primary key default gen_random_uuid(),
   customer_id uuid not null references public.user_profiles (id) on delete cascade,
+  -- Müşterinin kendi verdiği ad ("Ev", "İş", "Annem"). Checkout adres kartının başlığı budur:
+  -- iki adres arasında seçim yapan müşteri sokak adını okuyarak değil, adıyla ayırt eder.
+  -- Boş bırakılabilir — o zaman ekran şehri başlık yapar, uydurma bir etiket yazılmaz.
+  label text,
+  -- Alıcı: adrese GİDEN kişi. Hesap sahibiyle aynı olmak ZORUNDA DEĞİL — hediye gönderimi, iş
+  -- adresi, aile büyüğüne sipariş. Kurye kapıda kimi soracağını buradan bilir; hesabın adını
+  -- kullanmak "Ayşe'nin siparişi" yazan bir paketi annesinin kapısına götürmek olurdu.
+  recipient text,
   line1 text not null,
   line2 text,
   postal_code text not null,
   city text not null,
+  -- Teslimat telefonu — ADRESE aittir, hesaba değil (`user_profiles.phone` hesabın numarasıdır).
+  -- Kapıya teslimde kurye zili çalmadan önce arar; hediye adresinde aranacak numara müşterinin
+  -- kendi numarası değil, alıcınınkidir. Tek numara tutulsaydı bu iki hâl birbirini ezerdi.
+  phone text,
   country country_code not null default 'FR',
   -- Checkout'un önceden seçtiği adres; TEKİLDİR (yenisi seçilince eskisi düşer).
   is_default boolean not null default false,

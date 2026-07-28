@@ -33,18 +33,33 @@ export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
   }
   console.log('▸ ADRES seed');
   const addresses = new AddressService(db);
-  const tanimlar: Array<{ kisi: string; line1: string; line2?: string; postalCode: string; city: string; country?: 'FR' | 'DE'; isDefault?: boolean }> = [
+  // `label` = müşterinin kendi verdiği ad; checkout adres kartının başlığı odur. Bir adres
+  // BİLİNÇLİ etiketsiz, alıcısız ve telefonsuz: ekranın "boş alanı hiç çizme" hâlleri denenebilsin.
+  // Kalanlar TAM DOLU — kurye ekranı ve fatura, eksik alanla test edilirse yalancı bir sonuç verir.
+  const tanimlar: Array<{
+    kisi: string;
+    label?: string;
+    recipient?: string;
+    line1: string;
+    line2?: string;
+    postalCode: string;
+    city: string;
+    phone?: string;
+    country?: 'FR' | 'DE';
+    isDefault?: boolean;
+  }> = [
     // Rota içi (aktif bölge posta kodları)
-    { kisi: 'b2bOnayli', line1: '12 rue du Faubourg de Pierre', postalCode: '67000', city: 'Strasbourg', isDefault: true },
-    { kisi: 'b2bOnayli', line1: '4 quai Kléber', line2: 'Dépôt arrière', postalCode: '67000', city: 'Strasbourg' }, // ikinci adres
-    { kisi: 'b2cSadik', line1: '8 rue de Bischwiller', postalCode: '67300', city: 'Schiltigheim', isDefault: true },
-    { kisi: 'b2cKapaliKapida', line1: '31 route de Lyon', postalCode: '67400', city: 'Illkirch-Graffenstaden', isDefault: true },
+    { kisi: 'b2bOnayli', label: 'Dükkân', recipient: 'Mehmet Aydın', line1: '12 rue du Faubourg de Pierre', postalCode: '67000', city: 'Strasbourg', phone: '+33 3 88 12 34 56', isDefault: true },
+    { kisi: 'b2bOnayli', label: 'Depo', recipient: 'Depo görevlisi', line1: '4 quai Kléber', line2: 'Dépôt arrière', postalCode: '67000', city: 'Strasbourg', phone: '+33 3 88 12 34 57' }, // ikinci adres
+    { kisi: 'b2cSadik', label: 'Ev', recipient: 'Ayşe Yılmaz', line1: '8 rue de Bischwiller', line2: '3. kat, zil: Yılmaz', postalCode: '67300', city: 'Schiltigheim', phone: '+33 6 12 34 56 78', isDefault: true },
+    { kisi: 'b2cKapaliKapida', label: 'Ev', recipient: 'Fatma Demir', line1: '31 route de Lyon', postalCode: '67400', city: 'Illkirch-Graffenstaden', phone: '+33 6 98 76 54 32', isDefault: true },
     // Rota DIŞI — hiçbir aktif bölgeye düşmez → kargo yolu
-    { kisi: 'b2cSadik', line1: '17 avenue Jean Jaurès', postalCode: '69007', city: 'Lyon' },
-    { kisi: 'b2cAlman', line1: 'Hauptstraße 45', postalCode: '77652', city: 'Offenburg', country: 'DE', isDefault: true },
+        // ALICI hesabın sahibi DEĞİL — hediye/iş adresi hâli (kurye kapıda bu adı sorar).
+    { kisi: 'b2cSadik', label: 'İş', recipient: 'Zeynep Kaya', line1: '17 avenue Jean Jaurès', postalCode: '69007', city: 'Lyon', phone: '+33 7 45 22 11 09' },
+    { kisi: 'b2cAlman', line1: 'Hauptstraße 45', postalCode: '77652', city: 'Offenburg', country: 'DE', isDefault: true }, // etiketsiz + alıcısız/telefonsuz: üç boş alanın da ekran hâli denenebilsin
     // Pasif bölgeye düşen adres: bölge açılınca rota içi olacak, bugün değil
-    { kisi: 'b2bAlman', line1: 'Marktplatz 3', postalCode: '77694', city: 'Kehl', country: 'DE', isDefault: true },
-    { kisi: 'b2bBekleyen', line1: '22 rue de la Krutenau', postalCode: '67000', city: 'Strasbourg', isDefault: true },
+    { kisi: 'b2bAlman', label: 'Marktplatz', recipient: 'Stefan Weber', line1: 'Marktplatz 3', postalCode: '77694', city: 'Kehl', country: 'DE', phone: '+49 7851 44 55 66', isDefault: true },
+    { kisi: 'b2bBekleyen', label: 'Ev', recipient: 'Ali Şahin', line1: '22 rue de la Krutenau', postalCode: '67000', city: 'Strasbourg', phone: '+33 6 55 44 33 22', isDefault: true },
   ];
 
   let sayi = 0;

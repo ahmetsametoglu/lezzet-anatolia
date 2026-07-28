@@ -54,10 +54,13 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | --- | --- | --- |
 | id | uuid | |
 | customer_id | uuid | |
+| label | string? | müşterinin kendi verdiği ad ("Ev", "İş"). Checkout adres kartının **başlığı** budur: iki adres arasında seçim yapan müşteri sokak adını okuyarak değil adıyla ayırt eder. Boş bırakılabilir — ekran o zaman şehri başlık yapar, uydurma etiket yazılmaz |
+| recipient | string? | adrese **giden** kişi — hesap sahibiyle aynı olmak zorunda değil (hediye, iş adresi, aile büyüğü). Kurye kapıda kimi soracağını buradan bilir |
 | line1 | string | |
 | line2 | string \| null | |
 | postal_code | string | |
 | city | string | |
+| phone | string? | **teslimat** telefonu; `user_profiles.phone` hesabın numarasıdır, bu adresin. Kapıya teslimde kurye zili çalmadan önce arar — hediye adresinde aranacak numara alıcınınkidir |
 | country | enum(`FR`,`DE`) | |
 | is_default | boolean | müşterinin varsayılan adresi — checkout onu önceden seçer; **tekildir** (yenisi seçilince eskisi düşer). İlk adres otomatik varsayılan olur |
 | created_at | timestamptz | |
@@ -178,7 +181,7 @@ Giriş yapmış müşterinin sepeti sunucuda kalıcıdır — cihaz değişse de
 | --- | --- | --- |
 | customer_id | uuid | **birincil anahtar** — "tek satır / müşteri" kuralı şemada zorlanır |
 | items | jsonb | `[{ kind, variantId, bundleId, qty, unitPrice, stockId, addedAt }]` |
-| saved_items | jsonb | **sonraya kaydedilenler** (K35) — aynı biçim, aynı satır |
+| saved_items | jsonb | **sonraya kaydedilenler** (K33) — aynı biçim, aynı satır |
 | updated_at | timestamptz | her dokunuşta tazelenir (sepet kurtarma zamanlaması buna bakar) |
 
 **Sepetteki `unitPrice` BAĞLAYICI DEĞİLDİR** (DOMAIN §5): gösterim ve değişiklik tespiti içindir. Bağlayıcı fiyat **checkout başlangıcında** çözülür ve orada sabitlenir — stok ayırma + ödeme oturumuyla aynı 30 dk'lık pencerede. Sepet aylarca bekleyebilir; oradaki fiyatı bağlayıcı saymak maliyeti oynayan üründe zarar, fiyat düştüğünde müşteriye haksızlık olurdu.
