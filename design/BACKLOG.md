@@ -25,7 +25,6 @@ değişecek yer parantezde.
 | **Sepet teslimat satırı** ("Teslimat: Ücretsiz" / "6,90 €") | çizili, **kodlanmadı** | ücret teslimat türüne, tür ADRESE bağlı → checkout adres adımı. Ücretsiz kargo ilerleme çubuğu bundan AYRI ve yapıldı (eşik `Setting`'ten, ilerleme ara toplamdan) |
 | **"Checkout'a geç" düğmesi** — girişli müşteri doğrudan, ziyaretçi önce hızlı doğrulamaya | çizili, tam görünür ve pasif | `07.4`/`07.5` |
 | **"Fiyat değişti" bildirimi** — `DOMAIN §5`: fiyat arttıysa müşteriye açıkça söylenir ve onay istenir (kabul et / çıkar); düştüyse sessizce uygulanır | tasarımda yok (yalnız stok uyarısı çizili) | `CartItem.unitPrice` okuma tarafına bağlanmalı — alan yazılıyor, karşılaştırılmıyor |
-| **K21 · Sepet Özet Çubuğu (mobil)** — ekran altına sabit "3 ürün · 26,30 € / Sepete git"; sepet boşken görünmez, ekleme yapıldıkça canlı güncellenir | `Komponent Envanteri - Musteri.dc.html` K21; katalog etkileşim sözleşmesi de anıyor | **hiçbir şeyi beklemiyor** — sepet durumu hazır (`useCart`), yalnız yapılmadı |
 | **Boş sepet: "Bu hafta çok sevilenler"** — 4'lü ürün ızgarası (web) / 2'li (mobil), kart üstünde "Sepete ekle" | `Musteri - Sepet.dc.html` → `Bos Sepet Web/Mobil` | **popülerlik sinyali yok** — aşağıda §1b |
 | **Boş sepet: B2B sipariş şablonları** ("Haftalık standart · 14 kalem" + "Yükle") | aynı tasarım, durum kartı | şablon modeli yok (`07`); B2B müşteri bugün "son siparişi tekrarla" bloğunu görür |
 | **Boş sepet: "Hazır paketleri gör" düğmesi** | çizili, tasarımdaki yerinde ve pasif | `05.5` + Paketler rotası |

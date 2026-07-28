@@ -5,6 +5,7 @@ import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { LoadMore } from '@/components/customer/ui/load-more';
 import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
 import type { CatalogViewProps } from './catalog-types';
+import { CartBar } from '@/components/customer/cart/cart-bar';
 
 /**
  * Katalog — mobil düzeni (tasarım: `Musteri - Katalog.dc.html`, "Katalog Mobil").
@@ -14,7 +15,7 @@ import type { CatalogViewProps } from './catalog-types';
  */
 export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore, onLoadMore, active, hrefFor }: CatalogViewProps) {
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col pb-24">
       <section className="flex flex-col gap-3 px-4 pt-5 pb-3">
         <h1 className="font-serif text-page-title-sm text-ink">{data.activeCategory?.name ?? t.title}</h1>
       </section>
@@ -56,6 +57,9 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
       <div className="px-4">
         <LoadMore hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} label={t.loadMore} loadingLabel={t.loading} />
       </div>
+
+      {/* K21 — listeden ekleme yapıldıkça toplam burada canlı güncellenir. */}
+      <CartBar locale={locale} />
     </div>
   );
 }

@@ -3,18 +3,27 @@
     "removed": "{name} sepetten çıkarıldı",
     "removedFallback": "Kalem sepetten çıkarıldı",
     "undo": "Geri al",
-    "dismiss": "Kapat"
+    "dismiss": "Kapat",
+    "summary": "{n} ürün · {total}",
+    "deliveryNote": "Kapıya teslim seçenekleri sepette",
+    "goToCart": "Sepete git"
   },
   "fr": {
     "removed": "{name} retiré du panier",
     "removedFallback": "Article retiré du panier",
     "undo": "Annuler",
-    "dismiss": "Fermer"
+    "dismiss": "Fermer",
+    "summary": "{n} produits · {total}",
+    "deliveryNote": "Options de livraison dans le panier",
+    "goToCart": "Voir le panier"
   },
   "de": {
     "removed": "{name} aus dem Warenkorb entfernt",
     "removedFallback": "Artikel aus dem Warenkorb entfernt",
     "undo": "Rückgängig",
-    "dismiss": "Schließen"
+    "dismiss": "Schließen",
+    "summary": "{n} Produkte · {total}",
+    "deliveryNote": "Lieferoptionen im Warenkorb",
+    "goToCart": "Zum Warenkorb"
   }
 }
