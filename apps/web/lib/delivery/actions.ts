@@ -57,18 +57,3 @@ async function recordDemand(postalCode: string): Promise<void> {
     // Sessiz: sayaç bir yan kayıt, müşterinin gördüğü hiçbir şeyi değiştirmez.
   }
 }
-
-/**
- * Kapıya teslim ettiğimiz posta kodları — hapa tıklayan müşteri "benimki var mı" diye bakabilsin.
- *
- * Liste operatörün elle kurduğu bir küme (CLAUDE.md §1: doğal tavanı olan), tek turda okunur.
- * Guard yok: hangi bölgelere gittiğimiz zaten vitrinde söylenen bir şey, sır değil.
- */
-export async function listDeliveryZonesAction(): Promise<ActionResult<{ name: string; postalCodes: string[] }[]>> {
-  try {
-    const zones = await new DeliveryZoneService(serviceDb()).list({ activeOnly: true });
-    return { data: zones.map((z) => ({ name: z.name, postalCodes: z.postalCodes })), error: null };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
-}

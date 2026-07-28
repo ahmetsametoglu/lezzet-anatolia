@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import { resolvePlaceAction } from '@/lib/delivery/actions';
 import { readPlace, readSkipped, writePlace, writeSkipped } from '@/lib/delivery/place-store';
-import type { DeliveryPlace } from '@/lib/delivery/place-types';
+import type { DeliveryPlace, DeliveryZoneSummary } from '@/lib/delivery/place-types';
 
 /**
  * Teslimat yeri bağlamı — "nereye getirelim" cevabının TEK sahibi.
@@ -34,6 +34,16 @@ interface PlaceContextValue {
    */
   skipped: (scope: 'home' | 'cart') => boolean;
   skip: (scope: 'home' | 'cart') => void;
+  /**
+   * Kapıya teslim ettiğimiz yerler — **sayfa açılırken sunucuda okunmuş** hâlde gelir
+   * (`layout` → `getDeliveryZones`), burada bekletilir.
+   *
+   * Panel bunu kendi açılışında istemciden çekiyordu ve liste birkaç yüz milisaniye sonra alttan
+   * beliriyordu: müşteri sorusunu sorarken cevabın yarısı henüz yoktu. Liste operatörün elle
+   * kurduğu, veriyle büyümeyen bir küme (CLAUDE.md §1) — bir kez okunup burada durması hem
+   * beklemeyi hem de her panel açılışında tekrarlanan turu ortadan kaldırıyor.
+   */
+  zones: DeliveryZoneSummary[];
 }
 
 const PlaceContext = createContext<PlaceContextValue | null>(null);
@@ -44,7 +54,13 @@ export function useDeliveryPlace(): PlaceContextValue {
   return ctx;
 }
 
-export function PlaceProvider({ children }: { children: ReactNode }) {
+interface PlaceProviderProps {
+  children: ReactNode;
+  /** Sunucuda okunmuş bölge listesi; istemci bunu bir daha sormaz. */
+  zones: DeliveryZoneSummary[];
+}
+
+export function PlaceProvider({ children, zones }: PlaceProviderProps) {
   const [place, setPlace] = useState<DeliveryPlace | null>(null);
   const [ready, setReady] = useState(false);
   const [skipped, setSkipped] = useState<Record<'home' | 'cart', boolean>>({ home: false, cart: false });
@@ -85,13 +101,14 @@ export function PlaceProvider({ children }: { children: ReactNode }) {
         setPlace(null);
         writePlace(null);
       },
+      zones,
       skipped: (scope) => skipped[scope],
       skip: (scope) => {
         setSkipped((prev) => ({ ...prev, [scope]: true }));
         writeSkipped(scope);
       },
     }),
-    [place, ready, setPostalCode, skipped],
+    [place, ready, setPostalCode, skipped, zones],
   );
 
   return <PlaceContext.Provider value={value}>{children}</PlaceContext.Provider>;

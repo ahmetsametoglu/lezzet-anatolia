@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
-import { listDeliveryZonesAction } from '@/lib/delivery/actions';
 import { isValidPostalCode } from '@/lib/delivery/place-types';
 import { formatDeliveryDate } from '@/lib/storefront/format';
 import { useDeliveryPlace } from './place-context';
@@ -30,15 +29,13 @@ interface PlaceDialogProps {
 
 export function PlaceDialog({ locale, onClose }: PlaceDialogProps) {
   const t = messages[locale];
-  const { place, setPostalCode, clear } = useDeliveryPlace();
+  // Bölge listesi BAĞLAMDAN gelir — sayfa açılırken sunucuda okundu. Burada `useEffect` ile
+  // çekiliyordu ve panel açıldıktan bir süre SONRA alttan beliriyordu: müşteri "benimki var mı"
+  // diye bakarken listenin yarısı henüz yoktu.
+  const { place, setPostalCode, clear, zones } = useDeliveryPlace();
   const [value, setValue] = useState(place?.postalCode ?? '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [zones, setZones] = useState<{ name: string; postalCodes: string[] }[]>([]);
-
-  useEffect(() => {
-    void listDeliveryZonesAction().then(({ data }) => data && setZones(data));
-  }, []);
 
   // Escape ile kapanır: panel bir karar noktası değil, bir yardımcı — kapatmak serbest olmalı.
   useEffect(() => {

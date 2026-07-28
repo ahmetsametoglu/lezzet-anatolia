@@ -40,6 +40,21 @@ export interface DeliveryPlace {
   nextDate: string | null;
 }
 
+/**
+ * Kapıya teslim edilen bir bölgenin ekranda görünen künyesi.
+ *
+ * Sunucu okumasıyla (`read.ts`) ekran arasındaki sözleşme. Burada durur çünkü **istemci de**
+ * okuyor (bağlam, panel) ve `read.ts` `server-only` — tipi oraya koymak istemci tarafını
+ * sunucu modülüne bağlardı.
+ *
+ * `id` ve `weekdays` TAŞINMAZ: panelin tek işi "benimki listede var mı" sorusunu cevaplamak.
+ * Hangi gün gidildiği yerin kendi cevabında (`DeliveryPlace.nextDate`) zaten var.
+ */
+export interface DeliveryZoneSummary {
+  name: string;
+  postalCodes: string[];
+}
+
 /** Posta kodu normalizasyonu — kullanıcı "67 000" ya da " 67000 " yazabilir; kimlik tek biçimdir. */
 export function normalizePostalCode(raw: string): string {
   return raw.replace(/\s+/g, '').toUpperCase();
