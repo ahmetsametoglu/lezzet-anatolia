@@ -17,6 +17,7 @@ export * from './stock/shelf-life';
 export * from './stock/shortfall';
 export * from './delivery/delivery-days';
 export * from './delivery/shipping-fee';
+export * from './delivery/on-the-way';
 export * from './payment/checkout-options';
 export * from './payment/payment-status';
 export * from './money/movement';

@@ -193,14 +193,27 @@ Giriş yapmış müşterinin sepeti sunucuda kalıcıdır — cihaz değişse de
 
 ## CourierDayClose (kurye gün kapanışı)
 
+Kapanış bir **mutabakattır**, para hareketi değil: para kapıda tahsil edilirken yazıldı (`money_movement`, 12.2). Bu tablo beklenen ile sayılanı yan yana koyar ve farkı **aynı gün** görünür kılar (DOMAIN §7).
+
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
-| courier_id | uuid | |
-| date | date | |
-| delivered_orders | uuid[] / ilişki | |
-| collected_cash | number | |
-| collected_card | number | |
-| collected_cheque | number | |
-| returns | ilişki | |
-| reconciled | boolean | fark var/yok |
+| courier_id | uuid | `restrict` — kapanışı olan kişi silinemez |
+| date | date | `(courier_id, date)` **tekil**: bir gün bir kez kapanır |
+| expected_cash / expected_card / expected_cheque | numeric | sistemin hesabı — kapanış anında DONDURULUR |
+| counted_cash / counted_card / counted_cheque | numeric | kuryenin fiilen teslim ettiği (sayım / cihaz raporu / yapraklar) |
+| delivered_orders | uuid[] | günün teslim edilenleri (`delivered` + `completed`) |
+| returned_orders | uuid[] | reddedilenler — getirilen mal |
+| pending_orders | uuid[] | sonuçlanmamışlar; yarına devrolur |
+| note | text \| null | fark açıklaması — fark gizlenmez, açıklanır |
+| closed_by | uuid \| null | |
+| closed_at | timestamptz | |
+| reconciled | boolean | **generated** — beklenen = sayılan mı |
+
+**`expected_*` türetilebilir olduğu hâlde SAKLANIR.** Kaynağı `courier_day_collection` görünümüdür (kapıda toplanan üç yöntemin sipariş hareketleri); ama kapanış o anın fotoğrafıdır — sonradan bir hareket düzeltilirse geçmiş mutabakat değişmemeli, "o gün ne konuşuldu" sabit kalmalı. Türetim ile snapshot çelişmez: canlı hesap görünümde, donmuş hesap burada.
+
+**`reconciled` ise saklanmaz, generated kolondur.** Beklenen ve sayılan zaten yan yana duruyorken "fark var/yok" ayrıca yazılsaydı bir gün ikisi çelişirdi (DATA_MODEL kalıcı kararlar: türetilebilen sayaç tutulmaz). Generated kolon hem sorgulanabilir (mutabık olmayan günler listesi) hem kayamaz.
+
+**Fark ayrı kolon değildir:** `counted − expected`. İşaret anlamlıdır — eksi eksik teslim, artı fazla para; ikisi de açıklanmayı hak eder, mutlak değere indirilmez.
+
+**`close_courier_day` fonksiyonu (11.6):** beklenen toplamlar + günün üç listesi + kapanış satırı tek transaction'da. Kapanmış gün salt-okunurdur; ikinci çağrı ezmez, `already_closed` döner. Sonuçlanmamış durak kapanışı **engellemez** — kurye depoya döndüyse günü kapatabilmeli, ulaşılamayan sipariş yarına kalır.

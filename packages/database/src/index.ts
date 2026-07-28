@@ -38,3 +38,4 @@ export { OrderSaleService } from './services/accounting.service';
 export { BankImportProfileService, BankImportService } from './services/bank-import.service';
 export { JobRunService } from './services/job-run.service';
 export { WebhookEventService } from './services/webhook-event.service';
+export { CourierDayCloseService, CourierDayCollectionService } from './services/courier-day-close.service';

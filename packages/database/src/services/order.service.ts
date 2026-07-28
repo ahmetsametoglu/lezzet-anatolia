@@ -97,6 +97,12 @@ export class OrderStatusLogService extends BaseDbService<OrderStatusLog, OrderSt
     return this.getAll({ orderId }, { orderBy: 'createdAt' });
   }
 
+  /** Birden çok siparişin geçiş geçmişi — kurye gün listesi gibi toplu okumalar için (N+1 yerine). */
+  async listByOrders(orderIds: readonly string[]): Promise<OrderStatusLog[]> {
+    if (orderIds.length === 0) return [];
+    return this.getAll({ orderId: [...orderIds] }, { orderBy: 'createdAt' });
+  }
+
   /**
    * Bir duruma İLK geçiş anı — teslim anı, kapanış anı ve geri bildirim zamanlaması (~10 gün)
    * buradan TÜRETİLİR; siparişte ayrı `delivered_at`/`completed_at` kolonu tutulmaz.
@@ -401,6 +407,14 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       { status: Array.isArray(status) ? status : [status], deliveryDate: opts.deliveryDate },
       { orderBy: 'createdAt', limit: opts.limit },
     );
+  }
+
+  /**
+   * **Kuryenin günü** (11.1) — `courierId` ZORUNLUDUR, seçenek değil: "yalnız kendi teslimatları"
+   * kuralı böylece imzada durur, çağıranın süzmeyi hatırlamasına bağlı kalmaz.
+   */
+  listByCourier(courierId: string, opts: { deliveryDate?: string; limit?: number } = {}): Promise<Order[]> {
+    return this.getAll({ courierId, deliveryDate: opts.deliveryDate }, { orderBy: 'createdAt', limit: opts.limit });
   }
 
   /**
