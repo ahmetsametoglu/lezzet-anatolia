@@ -19,6 +19,7 @@ export { ProductImageService } from './services/product-image.service';
 export { BundleService, type CreateBundleInput } from './services/bundle.service';
 export { BundleItemService } from './services/bundle-item.service';
 export { PriceService } from './services/price.service';
+export { DiscountService } from './services/discount.service';
 export { AddressService } from './services/address.service';
 export { SettingsService } from './services/settings.service';
 export { DeliveryZoneService } from './services/delivery-zone.service';

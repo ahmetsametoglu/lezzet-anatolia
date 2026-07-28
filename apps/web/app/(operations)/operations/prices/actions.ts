@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import {
   CategoryService,
+  DiscountService,
   PriceService,
   ProductService,
   StockService,
@@ -16,7 +17,7 @@ import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { toPriceRows, type ChannelPriceMaps } from './prices-read';
 import { parsePricesUrl, toPriceFilters, PRICES_PATH } from './prices-url';
-import { titleOf, type CustomerOption, type PriceRow, type VariantOption } from './prices-types';
+import { titleOf, type CustomerOption, type DiscountFormInput, type PriceRow, type VariantOption } from './prices-types';
 
 // Fiyat ekranı server action'ları — 'use server' + requireAdmin ilk + servise devret +
 // `{ data, error }` DÖNER (throw yok) + revalidatePath.
@@ -216,6 +217,69 @@ export async function loadMorePricesAction(
       categoryNames: new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)])),
     });
     return { data: { rows, nextCursor: page.nextCursor }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * İndirim/kupon yazar ya da günceller. `id` doluysa güncelleme.
+ *
+ * Doğrulamanın SON EMNİYETİ veritabanındadır (0031 kısıtları: kodsuz kupon, hedefsiz kapsam, ters
+ * tarih, %100 üstü yüzde, tekil kod). Burada yalnız operatöre okunur hata verecek kadarı kontrol
+ * edilir — kuralı iki yerde tam olarak yazmak, ikisinin ayrışması demektir.
+ *
+ * Sabit tutar KURUŞTAN euroya çevrilir (STACK §8: ekranda cent, DB'de euro).
+ */
+export async function saveDiscountAction(input: DiscountFormInput): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const svc = new DiscountService(serviceDb());
+
+    const payload = {
+      name: input.name.trim(),
+      trigger: input.trigger,
+      code: input.trigger === 'coupon' ? input.code.trim().toUpperCase() : null,
+      type: input.type,
+      value: input.type === 'fixed' ? fromCents(Math.round(input.valueCents)) : input.valueCents,
+      scope: input.scope,
+      categoryId: input.scope === 'category' ? input.targetId : null,
+      collectionId: input.scope === 'collection' ? input.targetId : null,
+      minBasket: input.minBasketCents === null ? null : fromCents(Math.round(input.minBasketCents)),
+      firstOrderOnly: input.firstOrderOnly,
+      validFrom: input.validFrom,
+      validTo: input.validTo,
+      customerId: input.customerId,
+      maxUses: input.maxUses,
+      perCustomerLimit: input.perCustomerLimit,
+      isActive: input.isActive,
+    };
+
+    if (!payload.name) throw new Error('Ad girilmeli — listede kuralı bu adla tanıyacaksınız.');
+    if (payload.trigger === 'coupon' && !payload.code) throw new Error('Kupon kodu girilmeli.');
+    if (!Number.isFinite(input.valueCents) || input.valueCents <= 0) throw new Error('İndirim değeri sıfırdan büyük olmalı.');
+    if (payload.scope !== 'cart' && !input.targetId) throw new Error('Kapsam hedefi seçilmeli (kategori ya da koleksiyon).');
+
+    if (input.id) await svc.update({ id: input.id, ...payload });
+    else await svc.insert(payload);
+
+    revalidatePath(PRICES_PATH);
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Aktiflik anahtarı. Kural SİLİNMEZ, kapatılır: süresi dolmuş kuponun geçmişi (kimin kullandığı,
+ * ne kadar indirim dağıtıldığı) raporun malıdır.
+ */
+export async function setDiscountActiveAction(id: string, isActive: boolean): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    await new DiscountService(serviceDb()).setActive(id, isActive);
+    revalidatePath(PRICES_PATH);
+    return { data: null, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

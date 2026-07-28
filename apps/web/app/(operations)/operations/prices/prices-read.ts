@@ -1,7 +1,14 @@
 import { isBelowTargetMargin, tightestMargin, vatBaseOf } from '@lezzet/domain-core';
 import { removeVat, toCents } from '@lezzet/helper';
-import { resolveLocalizedText, type Channel, type Price, type ProductPriceRow, type UserProfile } from '@lezzet/types';
-import { titleOf, type ChannelPriceCell, type CustomerPriceRow, type DiscountCustomerRow, type PriceRow } from './prices-types';
+import { resolveLocalizedText, type Channel, type Discount, type Price, type ProductPriceRow, type UserProfile } from '@lezzet/types';
+import {
+  titleOf,
+  type ChannelPriceCell,
+  type CustomerPriceRow,
+  type DiscountCustomerRow,
+  type DiscountRow,
+  type PriceRow,
+} from './prices-types';
 
 // DB satırı → view-model indirgemesi. RSC ve server action'lar bunu PAYLAŞIR: ilk sayfa ile sonraki
 // sayfalar aynı şekli üretsin diye tek yerde durur.
@@ -128,7 +135,7 @@ export function toCustomerPriceRows({ rows, profiles, variantTitles, listCents }
 }
 
 /** Genel indirim oranı tanımlı müşteriler — oran müşteri kaydında yaşar, burada yalnız izlenir. */
-export function toDiscountRows(profiles: UserProfile[]): DiscountCustomerRow[] {
+export function toDiscountCustomerRows(profiles: UserProfile[]): DiscountCustomerRow[] {
   return profiles
     .flatMap((profile) =>
       profile.discountPercent === null || profile.discountPercent === undefined
@@ -143,4 +150,67 @@ export function toDiscountRows(profiles: UserProfile[]): DiscountCustomerRow[] {
           ],
     )
     .sort((a, b) => b.discountPercent - a.discountPercent);
+}
+
+interface DiscountRowInput {
+  rules: Discount[];
+  usage: Map<string, { total: number; byCustomer: Map<string, number> }>;
+  categoryNames: Map<string, string>;
+  collectionNames: Map<string, string>;
+  customerNames: Map<string, string>;
+  now: Date;
+}
+
+/**
+ * İndirim kurallarını satıra indirger: kimlikler adlara, tutarlar kuruşa, koşullar tek cümleye.
+ *
+ * **"Yürürlükte mi" KARARI burada verilir ve bu bilinçli bir sınır:** motorun `isApplicable`'ı
+ * SEPETE bakar (kod girildi mi, matrah eşiği geçti mi, bu müşteri kaç kez kullandı) — sepetsiz
+ * yanıtlanamaz. Ekranın sorusu daha dar: "bu kural bugün hiç uygulanabilir mi". Pasiflik, tarih
+ * penceresi ve TOPLAM kullanım tavanı sepetten bağımsızdır; ekran yalnız onları söyler ve
+ * söylemediğini iddia etmez.
+ */
+export function toDiscountRows({ rules, usage, categoryNames, collectionNames, customerNames, now }: DiscountRowInput): DiscountRow[] {
+  return rules.map((rule): DiscountRow => {
+    const usedCount = usage.get(rule.id)?.total ?? 0;
+    const scopeName =
+      rule.scope === 'category'
+        ? (categoryNames.get(rule.categoryId ?? '') ?? 'silinmiş kategori')
+        : rule.scope === 'collection'
+          ? (collectionNames.get(rule.collectionId ?? '') ?? 'silinmiş koleksiyon')
+          : '';
+
+    const dormantReason = !rule.isActive
+      ? 'kapalı'
+      : rule.validFrom && new Date(rule.validFrom) > now
+        ? 'henüz başlamadı'
+        : rule.validTo && new Date(rule.validTo) < now
+          ? 'süresi doldu'
+          : rule.maxUses !== null && usedCount >= rule.maxUses
+            ? 'kullanım sınırı doldu'
+            : '';
+
+    return {
+      id: rule.id,
+      name: rule.name,
+      trigger: rule.trigger,
+      code: rule.code,
+      type: rule.type,
+      // Sabit tutar KURUŞA çevrilir (STACK §8); yüzde olduğu gibi taşınır.
+      value: rule.type === 'fixed' ? toCents(rule.value) : rule.value,
+      scope: rule.scope,
+      scopeName,
+      minBasketCents: rule.minBasket === null ? null : toCents(rule.minBasket),
+      firstOrderOnly: rule.firstOrderOnly,
+      validFrom: rule.validFrom,
+      validTo: rule.validTo,
+      customerName: rule.customerId ? (customerNames.get(rule.customerId) ?? 'silinmiş müşteri') : null,
+      maxUses: rule.maxUses,
+      perCustomerLimit: rule.perCustomerLimit,
+      usedCount,
+      isActive: rule.isActive,
+      liveNow: dormantReason === '',
+      dormantReason,
+    };
+  });
 }

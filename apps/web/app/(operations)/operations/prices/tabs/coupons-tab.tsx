@@ -1,45 +1,149 @@
 'use client';
 
-import Link from 'next/link';
-import { buttonClass } from '@/components/operation/ui/button';
-import { ErrorState } from '@/components/operation/ui/error-state';
-import { InfoIcon } from '@/components/operation/ui/icons';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Badge } from '@/components/operation/ui/badge';
+import { Button } from '@/components/operation/ui/button';
+import { Toggle } from '@/components/operation/form/toggle';
+import { money, percent, shortDate } from '@/components/operation/ui/format';
+import { setDiscountActiveAction } from '../actions';
+import type { DiscountRow, PricesViewProps } from '../prices-types';
 
-// Kupon & kampanya — TASARIMI HAZIR, ARKA UCU YOK.
+// Kupon & otomatik kampanya — TEK liste, çünkü tek varlık. Ayrımları rozetle görünür (tetik), geri
+// kalan her şey ortak: kapsam, koşullar, değer, sınırlar.
 //
-// Sekme boş duruyor ve bu bilinçli: kupon/kampanya bir VARLIKTIR (kapsam, koşul, tarih, kullanım
-// sınırı) ve tanım servisi henüz yazılmadı (`05.6`). Arayüzü şimdi kurmak, kaydedilemeyen bir form
-// ve hiçbir siparişe uygulanmayan bir liste demekti — çalışıyormuş gibi duran bir ekran, olmayan bir
-// ekrandan kötüdür.
-//
-// Kuralın kendisi YAZILI: tek-en-büyük kuralı kampanya kurulurken bilinmeli, o yüzden metin şimdiden
-// burada (tasarımın uyarı kartı).
+// SATIRIN İKİ DURUMU AYRI: "aktif" operatörün niyeti, "yürürlükte" ise bugünkü gerçek. Süresi dolmuş
+// ya da kullanım tavanına dayanmış bir kural AKTİF kalabilir — ekran ikisini karıştırmaz, yoksa
+// "aktif" yazan ama hiç uygulanmayan kupon operatörü yanıltırdı.
 
-export function CouponsTab() {
+export function CouponsTab({ data, onEditDiscount }: PricesViewProps) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <ErrorState
-        tone="warn"
-        icon={<InfoIcon />}
-        title="Kupon ve kampanya henüz açılmadı"
-        description="İndirim tanımı bir varlıktır: kapsam, koşullar, geçerlilik ve kullanım sınırı. Motor bağlanana kadar burada kaydedilemeyen bir form durmuyor."
-      >
-        <div className="flex w-full max-w-[520px] flex-col gap-2 rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-4 py-3 text-left">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-ops-line bg-ops-subtle px-6 py-2.5">
+        <span className="font-ops-body text-ops-xs text-ops-muted">
+          Kupon kodla, kampanya kendiliğinden çalışır. Satıra tıkla → düzenle.
+        </span>
+        <Button variant="primary" size="sm" className="ml-auto" onClick={() => onEditDiscount(null)}>
+          + İndirim / kupon
+        </Button>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-6 py-4">
+        {data.discounts.length === 0 ? (
+          <EmptyState onCreate={() => onEditDiscount(null)} />
+        ) : (
+          data.discounts.map((rule) => <DiscountCard key={rule.id} rule={rule} onEdit={() => onEditDiscount(rule)} />)
+        )}
+
+        {/* Kural kartı — tasarımın uyarı bloğu. Kampanya kurarken bilinmesi gerekenler burada durur:
+            kurulduktan sonra öğrenilen bir kural, yanlış kurulmuş bir kampanyadır. */}
+        <div className="mt-1 flex flex-col gap-1.5 rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-4 py-3">
           <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-amber">
-            Kurulurken bilinmesi gerekenler
+            Kurarken bilinmesi gerekenler
           </span>
-          <ul className="flex list-disc flex-col gap-1.5 pl-4 font-ops-body text-ops-sm leading-[1.7] text-ops-amber-dark">
+          <ul className="flex list-disc flex-col gap-1 pl-4 font-ops-body text-ops-xs leading-[1.7] text-ops-amber-dark">
             <li>
-              <strong>Tek-en-büyük kuralı:</strong> indirimler üst üste binmez, müşteriye en büyüğü uygulanır.
+              <strong>Tek-en-büyük:</strong> indirimler üst üste binmez, müşteriye en büyüğü uygulanır — müşterinin
+              genel indirim oranı da aynı havuzda yarışır.
             </li>
-            <li>Paketlere ve yaklaşan tarihli teklife hiçbir genel indirim binmez.</li>
-            <li>Kupon daima sepet kapsamlıdır; otomatik kampanya kategori ya da koleksiyona da bağlanabilir.</li>
+            <li>Paketlere ve yaklaşan tarihli teklife hiçbir genel indirim binmez; onlar kendi özel fiyatındadır.</li>
+            <li>Kupon daima sepet kapsamlıdır; kategori/koleksiyon kapsamı yalnız otomatik kampanyada anlamlıdır.</li>
           </ul>
         </div>
-        <Link href="/operations/stock?tab=attention" className={buttonClass({ variant: 'secondary' })}>
-          Yaklaşan tarihli teklifler stok ekranında
-        </Link>
-      </ErrorState>
+      </div>
     </div>
   );
+}
+
+function EmptyState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-2.5 p-10">
+      <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Tanımlı indirim yok</span>
+      <span className="max-w-[440px] text-center font-ops-body text-ops-sm leading-relaxed text-ops-muted">
+        Kupon müşterinin kod yazarak kullandığı indirimdir; otomatik kampanya koşulları tutunca kendiliğinden
+        uygulanır. İkisi de aynı formdan açılır.
+      </span>
+      <Button variant="primary" onClick={onCreate}>
+        + İndirim / kupon
+      </Button>
+    </div>
+  );
+}
+
+interface DiscountCardProps {
+  rule: DiscountRow;
+  onEdit: () => void;
+}
+
+function DiscountCard({ rule, onEdit }: DiscountCardProps) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  const toggle = async (next: boolean) => {
+    setBusy(true);
+    await setDiscountActiveAction(rule.id, next);
+    setBusy(false);
+    router.refresh();
+  };
+
+  return (
+    <div
+      className={`flex flex-wrap items-center gap-3.5 rounded-ops-card border bg-ops-white px-4 py-3 ${
+        rule.liveNow ? 'border-ops-line' : 'border-ops-line-soft'
+      }`}
+    >
+      <Badge tone={rule.trigger === 'coupon' ? 'blue' : 'amber'}>{rule.trigger === 'coupon' ? 'Kupon' : 'Kampanya'}</Badge>
+
+      <button
+        type="button"
+        onClick={onEdit}
+        className="flex min-w-0 flex-1 cursor-pointer flex-col items-start gap-px text-left"
+      >
+        <span className="flex items-baseline gap-2">
+          <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{rule.name}</span>
+          {rule.code ? <span className="font-ops-mono text-ops-xs text-ops-olive-dark">{rule.code}</span> : null}
+        </span>
+        <span className="truncate font-ops-body text-ops-xs text-ops-muted">{conditionLine(rule)}</span>
+      </button>
+
+      <span className="font-ops-mono text-ops-base font-medium text-ops-ink">
+        {rule.type === 'percent' ? percent(rule.value) : money(rule.value)}
+      </span>
+
+      {/* Kullanım sayısı KAYITTAN gelir. Tavan varsa "3/100", yoksa yalnız kullanım adedi — sıfır da
+          bilgidir ("hiç kullanılmamış"). */}
+      <span className="font-ops-mono text-ops-xs text-ops-muted" title="Bugüne kadar kaç siparişte kullanıldı">
+        {rule.maxUses === null ? `${rule.usedCount} kullanım` : `${rule.usedCount}/${rule.maxUses}`}
+      </span>
+
+      {/* İki ayrı bilgi, iki ayrı gösterge: anahtar NİYETİ (aktif mi), rozet GERÇEĞİ (bugün
+          uygulanıyor mu) söyler. Aynı yere sıkıştırmak ikisini karıştırırdı. */}
+      {rule.liveNow ? (
+        <Badge tone="olive" dot>
+          Yürürlükte
+        </Badge>
+      ) : (
+        <Badge tone="neutral">{rule.dormantReason}</Badge>
+      )}
+
+      <span className={busy ? 'opacity-50' : undefined}>
+        <Toggle on={rule.isActive} onChange={busy ? undefined : (next) => void toggle(next)} label="Aktif" size="sm" />
+      </span>
+    </div>
+  );
+}
+
+/** Koşulları TEK cümlede toplar — kartın ikinci satırı: "Sepet · asgari 50 € · müşteri başı 1". */
+function conditionLine(rule: DiscountRow): string {
+  const parts: string[] = [
+    rule.scope === 'cart' ? 'Sepet' : rule.scope === 'category' ? `Kategori: ${rule.scopeName}` : `Koleksiyon: ${rule.scopeName}`,
+  ];
+  if (rule.minBasketCents !== null) parts.push(`asgari ${money(rule.minBasketCents)}`);
+  if (rule.firstOrderOnly) parts.push('yalnız ilk sipariş');
+  if (rule.customerName) parts.push(`kişisel: ${rule.customerName}`);
+  if (rule.perCustomerLimit !== null) parts.push(`müşteri başı ${rule.perCustomerLimit}`);
+  if (rule.validFrom || rule.validTo) {
+    parts.push(`${rule.validFrom ? shortDate(rule.validFrom) : '…'} – ${rule.validTo ? shortDate(rule.validTo) : '…'}`);
+  }
+  return parts.join(' · ');
 }

@@ -89,7 +89,7 @@ export function PricesDesktop(props: PricesViewProps) {
 
       {tab === 'channels' && <ChannelsTab {...props} rows={rows} />}
       {tab === 'customers' && <CustomersTab {...props} />}
-      {tab === 'coupons' && <CouponsTab />}
+      {tab === 'coupons' && <CouponsTab {...props} />}
       {tab === 'offers' && <OffersTab {...props} />}
     </div>
   );

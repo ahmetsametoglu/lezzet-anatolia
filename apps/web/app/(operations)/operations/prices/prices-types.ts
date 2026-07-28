@@ -7,7 +7,7 @@
 //
 // Para ekranda hep KURUŞ (cent) taşınır (STACK §8). Kanalın tabanı farklıdır ve bu bilgi satırda
 // yazılıdır: b2c KDV DAHİL, b2b hariç — ikisini aynı sayı sanmak marjı kaydırır.
-import type { Channel, KeysetCursor, ProductStatus } from '@lezzet/types';
+import type { Channel, DiscountScope, DiscountTrigger, DiscountType, KeysetCursor, ProductStatus } from '@lezzet/types';
 import type { BatchView } from '@/lib/stock/batch-types';
 import type { PriceScope, PriceTab } from './prices-url';
 
@@ -81,6 +81,67 @@ export interface DiscountCustomerRow {
   discountPercent: number;
 }
 
+/**
+ * İndirim satırı — kural + ÇÖZÜLMÜŞ bağlam. Kapsam hedefinin adı, kişisel kuponun sahibi ve kullanım
+ * sayısı satırla birlikte gelir: liste "kategori: <uuid>" ya da "3/10 kullanıldı" diye yazamıyorsa
+ * operatör kuralı okumak için başka ekrana gitmek zorunda kalır.
+ */
+export interface DiscountRow {
+  id: string;
+  name: string;
+  trigger: DiscountTrigger;
+  code: string | null;
+  type: DiscountType;
+  /** `percent` → yüzde · `fixed` → KURUŞ (ekranda para biçimlenir; DB euro tutar). */
+  value: number;
+  scope: DiscountScope;
+  /** Kapsam hedefinin adı ("Baklava"); sepet kapsamında boş. */
+  scopeName: string;
+  minBasketCents: number | null;
+  firstOrderOnly: boolean;
+  validFrom: string | null;
+  validTo: string | null;
+  /** Kişisel kuponun sahibi — herkese açıksa `null`. */
+  customerName: string | null;
+  maxUses: number | null;
+  perCustomerLimit: number | null;
+  usedCount: number;
+  isActive: boolean;
+  /**
+   * Kural BUGÜN uygulanabilir mi — pasiflik, tarih aralığı ve kullanım tavanı birlikte. Ekran
+   * "Aktif" yazıp uygulanmayan bir kupon göstermemeli: operatör sorunu ancak müşteri şikâyet
+   * edince öğrenirdi.
+   */
+  liveNow: boolean;
+  /** Neden yürürlükte değil — tek cümle ("kullanım sınırı doldu"). Yürürlükteyse boş. */
+  dormantReason: string;
+}
+
+/**
+ * İndirim formunun sunucuya gönderdiği hâl — client'ın topladığı alanlar. Para KURUŞTA (STACK §8);
+ * action euroya çevirip yazar. `id` doluysa güncelleme.
+ */
+export interface DiscountFormInput {
+  id: string | null;
+  name: string;
+  trigger: DiscountTrigger;
+  code: string;
+  type: DiscountType;
+  /** `percent` → yüzde değeri; `fixed` → KURUŞ. Tek alanda iki taban, çünkü tek girdi kutusu var. */
+  valueCents: number;
+  scope: DiscountScope;
+  /** Kapsam hedefi (kategori ya da koleksiyon kimliği); sepet kapsamında `null`. */
+  targetId: string | null;
+  minBasketCents: number | null;
+  firstOrderOnly: boolean;
+  validFrom: string | null;
+  validTo: string | null;
+  customerId: string | null;
+  maxUses: number | null;
+  perCustomerLimit: number | null;
+  isActive: boolean;
+}
+
 /** Kategori seçeneği — süzgeç menüsünü besler (tavanı sınırlı, tek turda gelir). */
 export interface CategoryOption {
   id: string;
@@ -134,7 +195,11 @@ export interface PricesData {
    * bir partiyi kaçırmak imhalık malı satmaktır.
    */
   offers: BatchView[];
+  /** Kupon ve otomatik kampanyalar — sayfalanmaz (operatörün eliyle büyüyen küme). */
+  discounts: DiscountRow[];
   categories: CategoryOption[];
+  /** Kapsam seçicisinin koleksiyon seçenekleri — yalnız kupon sekmesi okunduğunda dolu. */
+  collections: CategoryOption[];
 }
 
 /** prices-client'ın tuttuğu durum + eylemler; desktop/mobile görünümleri bunu tüketir. */
@@ -160,6 +225,8 @@ export interface PricesViewProps {
   onEditCustomerPrice: (row: CustomerPriceRow | null) => void;
   /** Teklif diyaloğunu bu parti için aç — stok ekranıyla aynı diyalog, aynı karar. */
   onOpenOffer: (stockId: string) => void;
+  /** İndirim formu: satır verilirse düzenleme, `null` ise yeni kural. */
+  onEditDiscount: (row: DiscountRow | null) => void;
 }
 
 /**

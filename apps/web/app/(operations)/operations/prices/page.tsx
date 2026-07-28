@@ -1,5 +1,7 @@
 import {
   CategoryService,
+  CollectionService,
+  DiscountService,
   PriceService,
   ProductService,
   ProductVariantService,
@@ -17,9 +19,9 @@ import { guarded, requireAdmin } from '@/lib/guard';
 import { ErrorState } from '@/components/operation/ui/error-state';
 import { AlertIcon } from '@/components/operation/ui/icons';
 import { PricesClient } from './prices-client';
-import { toCustomerPriceRows, toDiscountRows, toPriceRows, type ChannelPriceMaps } from './prices-read';
+import { toCustomerPriceRows, toDiscountCustomerRows, toDiscountRows, toPriceRows, type ChannelPriceMaps } from './prices-read';
 import { parsePricesUrl, toPriceFilters } from './prices-url';
-import { titleOf, type CustomerPriceRow, type DiscountCustomerRow, type PriceRow } from './prices-types';
+import { titleOf, type CustomerPriceRow, type DiscountCustomerRow, type DiscountRow, type PriceRow } from './prices-types';
 import type { BatchView } from '@/lib/stock/batch-types';
 import type { KeysetCursor } from '@lezzet/types';
 
@@ -51,6 +53,7 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
   const channels = urlState.tab === 'channels' ? await readChannelTab(db, urlState, categoryNames) : null;
   const customers = urlState.tab === 'customers' ? await readCustomerTab(db) : null;
   const offers = urlState.tab === 'offers' ? await readOffersTab(db) : null;
+  const coupons = urlState.tab === 'coupons' ? await readCouponsTab(db, categoryNames) : null;
 
   const device = await detectDevice();
 
@@ -62,7 +65,9 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
         customerPrices: customers?.prices ?? [],
         discountCustomers: customers?.discounts ?? [],
         offers: offers ?? [],
+        discounts: coupons?.rows ?? [],
         categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
+        collections: coupons?.collections ?? [],
       }}
       device={device}
       urlState={urlState}
@@ -134,6 +139,39 @@ function toChannelMaps(
 }
 
 /**
+ * Kupon & kampanya sekmesi. Kurallar sayfalanmaz (operatörün eliyle büyüyen küme); yanlarında
+ * kullanım sayıları, kapsam hedeflerinin adları ve kişisel kuponların sahipleri gelir — satır
+ * kendi başına okunabilsin diye.
+ *
+ * Koleksiyonlar YALNIZ bu sekmede okunur: kapsam seçicisinin ikinci seçeneği, başka sekmenin işi değil.
+ */
+async function readCouponsTab(
+  db: Db,
+  categoryNames: Map<string, string>,
+): Promise<{ rows: DiscountRow[]; collections: Array<{ id: string; name: string }> }> {
+  const discountSvc = new DiscountService(db);
+  const [rules, collections] = await Promise.all([discountSvc.list(), new CollectionService(db).list()]);
+
+  const customerIds = [...new Set(rules.flatMap((r) => (r.customerId ? [r.customerId] : [])))];
+  const [usage, customers] = await Promise.all([
+    discountSvc.usageCounts(rules.map((r) => r.id)),
+    new UserProfileService(db).listByIds(customerIds),
+  ]);
+
+  return {
+    rows: toDiscountRows({
+      rules,
+      usage,
+      categoryNames,
+      collectionNames: new Map(collections.map((c) => [c.id, resolveLocalizedText(c.name)])),
+      customerNames: new Map(customers.map((c) => [c.id, c.name])),
+      now: new Date(),
+    }),
+    collections: collections.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
+  };
+}
+
+/**
  * Near-expiry sekmesi — karar bekleyen partiler. Türetme STOK EKRANIYLA ORTAK (`toBatchViews`):
  * aynı eşik, aynı karar, tek kaynak. Kopyalansaydı eşik değişince iki ekran farklı şey söylerdi.
  *
@@ -199,6 +237,6 @@ async function readCustomerTab(db: Db): Promise<{ prices: CustomerPriceRow[]; di
 
   return {
     prices: toCustomerPriceRows({ rows, profiles: new Map(profiles.map((p) => [p.id, p])), variantTitles, listCents }),
-    discounts: toDiscountRows(discountProfiles),
+    discounts: toDiscountCustomerRows(discountProfiles),
   };
 }

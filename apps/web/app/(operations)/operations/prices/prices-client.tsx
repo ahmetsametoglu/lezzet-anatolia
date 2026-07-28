@@ -7,11 +7,12 @@ import { useDevice } from '@/lib/use-device';
 import { loadMorePricesAction } from './actions';
 import { OfferDialog } from '@/components/operation/stock/offer-dialog';
 import { CustomerPriceDialog } from './customer-price-dialog';
+import { DiscountDialog } from './discount-dialog';
 import { PriceDialog } from './price-dialog';
 import { PricesDesktop } from './prices.desktop';
 import { PricesMobile } from './prices.mobile';
 import { pricesUrl, type PriceScope, type PriceTab, type PricesUrlState } from './prices-url';
-import type { CustomerPriceRow, PriceRow, PricesData } from './prices-types';
+import type { CustomerPriceRow, DiscountRow, PriceRow, PricesData } from './prices-types';
 
 // Fiyat ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
 // Fiyat diyaloğu iki yüzeyin de üstünde — ikisinde de aynı iş yapılır.
@@ -123,6 +124,17 @@ export function PricesClient({ data, device, urlState }: PricesClientProps) {
     if (offerStockId && !offerBatch) setOfferStockId(null);
   }, [offerStockId, offerBatch]);
 
+  // İndirim formu: kapalı · yeni (`'new'`) · düzenleme (kural kimliği) — özel fiyat diyaloğuyla
+  // aynı desen, aynı gerekçe.
+  const [discountState, setDiscountState] = useState<'closed' | 'new' | string>('closed');
+  const editingDiscount =
+    discountState === 'closed' || discountState === 'new'
+      ? null
+      : (data.discounts.find((d) => d.id === discountState) ?? null);
+  useEffect(() => {
+    if (discountState !== 'closed' && discountState !== 'new' && !editingDiscount) setDiscountState('closed');
+  }, [discountState, editingDiscount]);
+
   const view = {
     data,
     rows,
@@ -141,6 +153,7 @@ export function PricesClient({ data, device, urlState }: PricesClientProps) {
     onEdit: setEditingId,
     onEditCustomerPrice: (row: CustomerPriceRow | null) => setCustomerPriceState(row ? row.priceId : 'new'),
     onOpenOffer: setOfferStockId,
+    onEditDiscount: (row: DiscountRow | null) => setDiscountState(row ? row.id : 'new'),
   };
 
   return (
@@ -149,6 +162,15 @@ export function PricesClient({ data, device, urlState }: PricesClientProps) {
       {editing ? <PriceDialog key={editing.variantId} row={editing} onClose={() => setEditingId(null)} /> : null}
       {offerBatch ? (
         <OfferDialog key={offerBatch.id} batch={offerBatch} onClose={() => setOfferStockId(null)} />
+      ) : null}
+      {discountState !== 'closed' ? (
+        <DiscountDialog
+          key={discountState}
+          editing={editingDiscount}
+          categories={data.categories}
+          collections={data.collections}
+          onClose={() => setDiscountState('closed')}
+        />
       ) : null}
       {customerPriceState !== 'closed' ? (
         <CustomerPriceDialog

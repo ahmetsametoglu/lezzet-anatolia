@@ -55,7 +55,7 @@ export function PricesMobile(props: PricesViewProps) {
 
       {tab === 'customers' && <CustomersTab {...props} />}
       {tab === 'offers' && <OffersTab {...props} />}
-      {tab === 'coupons' && <CouponsTab />}
+      {tab === 'coupons' && <CouponsTab {...props} />}
     </div>
   );
 }

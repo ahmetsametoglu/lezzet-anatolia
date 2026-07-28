@@ -39,8 +39,6 @@ değişecek yer parantezde.
 | **Menü: Fırsatlar · Keşif · Professionnels** | K12'de çizili, bugün düz metin (Paketler bağlandı) | kendi sayfaları (`08.7`) |
 | **Menü: Hesabım** | K12'de tanımlı | `04-auth` |
 | **İmha geçmişi: "Kayıt" sütunu** | `Operasyon - Stok.dc.html` imha tablosunda çizili | `stock_adjustment`'ta referans alanı yok; numara **yazma akışında** doğar (`10` depo) — aşağıda §1c |
-| **Fiyatlar: "Kupon & kampanya" sekmesi** | `Operasyon - Fiyatlar.dc.html` içinde tam çizili (kart listesi + tek-en-büyük uyarısı) | `05.6` indirim tanım servisi — sekme bugün kuralı yazan bir boş hâl gösteriyor, kaydedilemeyen form kurulmadı |
-| **Fiyatlar: "Near-expiry" sekmesi** | çizili (parti kartları + teklif aç/imha) | ARKA UÇ HAZIR, sekme yine de çizilmedi — aşağıda §1d |
 
 ### 1a. Fiyat sıralaması neden ayrı bir engel
 
@@ -86,18 +84,14 @@ kâğıda yazmayacağı bir şey. Numara ancak **doğduğu yerde** anlamlı olur
 **Karar:** sütun tasarımdan düşürülmedi, `10`'a **park edildi**. 10 yazılırken üretilecek şey satır
 referansı değil olay referansıdır; stok ekranı o alanı okuyup sütunu açar.
 
-### 1d. Fiyat ekranının near-expiry sekmesi neden bu turda çizilmedi (28.07)
+### 1d. Near-expiry sekmesi — KAPANDI (28.07)
 
-Bu sekmenin arka ucu **var**: teklif karar motoru, önerilen fiyat ve teklif yazma yolu 09.13'te
-yazıldı ve stok ekranında çalışıyor. Engel veri değil, **kararın tek kaynakta kalması**.
+Bir tur açık kaldı ve gerekçesi şuydu: sekmenin ihtiyacı olan şey ham parti satırı değil, karara
+bağlanmış parti GÖRÜNÜMÜ (`toBatchViews` + eşik okuması) ve o türetme stok ekranının klasöründe
+yaşıyordu. Kopyalamak, eşik değişince iki ekranın farklı karar göstermesi demekti.
 
-Sekmenin ihtiyacı olan şey ham parti satırı değil, karara bağlanmış parti GÖRÜNÜMÜ
-(`toBatchViews` + eşik okuması) ve o türetme bugün stok ekranının klasöründe yaşıyor. İki seçenek
-vardı: kopyalamak (aynı karar iki yerde — eşik değişince ekranlar ayrışır) ya da türetmeyi
-paylaşılan bir yere taşımak. İkincisi doğru, ama stok ekranının dosyalarına dokunan ayrı bir tur.
-
-Ölü bir sekme çizmek yerine sekme HİÇ çizilmedi; kupon sekmesindeki bağlantı "yaklaşan tarihli
-teklifler stok ekranında" diyerek kullanıcıyı çalışan yüzeye gönderiyor. Taşıma turunda sekme açılır.
+Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere taşındı (`lib/stock` +
+`components/operation/stock`); sekme açıldı. Kanıt: iki ekran da aynı anda 21 parti sayıyor.
 
 ---
 
@@ -259,6 +253,26 @@ tek yer sekme yokluğu (paketin alanı çok daha az, ürün formunu ikiye bölen
 - **Ekran yalnız admin'e açık** ve engel sayfada: depo/kurye maliyet/marj görmez (brief §6). Kabuk
   korunur, pane kapanır ve sebebi yazılır — sessiz yönlendirme, gördüğü bağlantının neden
   çalışmadığını söylemezdi.
+
+### Kupon & kampanya — yazılmış kararlar (28.07)
+
+- **Kupon ve kampanya TEK varlık, TEK form.** Ayrımları yalnız tetik; koşullar, kapsam, değer,
+  tarih ve sınırlar ikisinde de aynı. İki ayrı form aynı sekiz alanı iki kez sorardı.
+- **Değer tek kutu, iki taban.** Yüzde mi sabit tutar mı olduğunu tip anahtarı söyler; iki ayrı kutu
+  "hangisini doldurayım" sorusunu ve boş kalan bir kutuyu doğururdu.
+- **"Aktif" ile "yürürlükte" AYRI gösterilir.** Anahtar operatörün NİYETİ, rozet bugünkü GERÇEK:
+  süresi dolmuş ya da kullanım tavanına dayanmış kural aktif kalabilir. Tek göstergeye sıkıştırmak,
+  "aktif" yazan ama hiç uygulanmayan kuponu görünmez kılardı.
+- **Kural silinmez, kapatılır.** Süresi dolmuş kuponun geçmişi (kim kullandı, ne kadar indirim
+  dağıtıldı) raporun malıdır.
+- **Boş koşul YOKTUR, sıfır DEĞİLDİR.** Asgari sepet boş bırakılırsa koşul yok demektir; 0 yazmak
+  başka bir şeydir. Alanlar bu yüzden boş başlar, yer tutucular "sınırsız" der.
+- **Kişisel kupon bu formdan açılmaz.** Sahibi puan kullanımıdır (modül 16); elle açma gerekirse
+  müşteri ekranından bağlanacak. Form onu sessizce `null` bırakır, uydurma bir seçici koymaz.
+- **Bitiş tarihi GÜNÜN SONU.** "31 Tem'e kadar" yazan operatör akşamı kasteder, sabahı değil.
+- **Doğrulamanın sahibi DB.** Kodsuz kupon, kodlu "otomatik" kampanya, hedefsiz kapsam, ters tarih,
+  %100 üstü yüzde ve tekrarlanan kod veritabanında reddedilir (0031). Form aynı kuralı gösterir ama
+  gerçeğin sahibi tektir; altı test kısıtları sabitliyor.
 
 ### Stok ekranı — tasarım güncellemesi uygulandı (28.07)
 
