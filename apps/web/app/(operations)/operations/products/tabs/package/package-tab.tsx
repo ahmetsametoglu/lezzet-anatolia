@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { bundleBalance } from '@lezzet/domain-core';
+import { useEffect, useMemo, useState } from 'react';
 import { fromCents, toCents } from '@lezzet/helper';
 import { IMAGE_ROLES, cropOf, resolveLocalizedText } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
@@ -12,6 +11,7 @@ import { Toggle } from '@/components/operation/form/toggle';
 import type { Device } from '@/lib/device';
 import { reorderBundlesAction, setBundleActiveAction } from './actions';
 import { BundleFormDialog } from './bundle-form-dialog';
+import { bundlePricing } from './bundle-pricing';
 import type { BundleView, VariantOption } from '../../products-types';
 
 // Paketler sekmesi — tasarımın liste satırı: 3:2 görsel + ad + "N kalem · slug" + fiyat + mutabakat
@@ -23,15 +23,35 @@ import type { BundleView, VariantOption } from '../../products-types';
 // Karar motorda (`bundleBalance`) — liste kendi ölçütünü uydurmaz.
 
 const money = (cents: number) => `${fromCents(cents).toFixed(2).replace('.', ',')} €`;
+const percent = (value: number) => `%${value.toFixed(1).replace('.', ',')}`;
 
-function balanceOf(bundle: BundleView) {
-  return bundleBalance(
-    bundle.items.map((i) => ({ qty: i.qty, allocatedUnitPriceCents: toCents(i.allocatedUnitPrice) })),
-    toCents(bundle.totalPrice),
+/** Satırın parası — formla AYNI hesap (`bundlePricing`); liste kendi ölçütünü uydurmaz. */
+function pricingOf(bundle: BundleView, pool: Map<string, VariantOption>) {
+  return bundlePricing(
+    bundle.items.map((i) => ({ variantId: i.variantId, qty: i.qty, allocatedUnitPrice: i.allocatedUnitPrice })),
+    pool,
+    bundle.totalPrice,
   );
 }
 
-function bundleColumns(onToggle: (id: string, next: boolean) => void): Column<BundleView>[] {
+type PricingMap = Map<string, ReturnType<typeof pricingOf>>;
+
+/** İki satırlı hücre: üstte karar veren sayı, altında onu açan bağlam. */
+function Stacked({ value, hint, alert, title }: { value: string; hint?: string; alert?: boolean; title?: string }) {
+  return (
+    <span className="flex min-w-0 flex-col items-end gap-px" title={title}>
+      <span className={`font-ops-mono text-[13px] ${alert ? 'font-semibold text-ops-amber' : 'text-ops-ink'}`}>{value}</span>
+      {hint ? <span className="truncate font-ops-body text-[10.5px] text-ops-muted">{hint}</span> : null}
+    </span>
+  );
+}
+
+/** Satılamaz kalemi olan paket: içindeki ürün/boy satışta değilse paket de vitrine çıkamaz. */
+function blockedItemsOf(bundle: BundleView, pool: Map<string, VariantOption>): number {
+  return bundle.items.filter((i) => pool.get(i.variantId)?.addable === false).length;
+}
+
+function bundleColumns(pool: Map<string, VariantOption>, pricingById: PricingMap, onToggle: (id: string, next: boolean) => void): Column<BundleView>[] {
   return [
     {
       key: 'image',
@@ -54,14 +74,31 @@ function bundleColumns(onToggle: (id: string, next: boolean) => void): Column<Bu
       key: 'name',
       header: 'Paket',
       width: 'minmax(180px,1fr)',
-      cell: (b) => (
-        <div className="flex min-w-0 flex-col gap-px">
-          <span className="truncate font-ops-body text-[13.5px] font-semibold text-ops-ink">{resolveLocalizedText(b.name)}</span>
-          <span className="truncate font-ops-body text-[11px] text-ops-muted">
-            {b.items.length} kalem{b.serves ? ` · ${b.serves} kişilik` : ''} · slug: {b.slug}
-          </span>
-        </div>
-      ),
+      cell: (b) => {
+        const blocked = blockedItemsOf(b, pool);
+        return (
+          <div className="flex min-w-0 flex-col gap-px">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate font-ops-body text-[13.5px] font-semibold text-ops-ink">{resolveLocalizedText(b.name)}</span>
+              {/* Paket ancak TÜM kalemleri satılabilirse satılabilir. Ürünü pasife alınan paket
+                  "Satışta" görünmeye devam ederdi — anahtar operatörün NİYETİNİ tutuyor, gerçeği
+                  değil. Niyeti ezmek yerine gerçeği söylüyoruz: ürün geri açılınca paket kendiliğinden
+                  döner ve kimse "bunu neden kapatmıştım" diye düşünmez. */}
+              {blocked > 0 ? (
+                <span
+                  className="shrink-0 rounded bg-ops-amber-bg px-1.5 py-px font-ops-display text-[9.5px] font-semibold uppercase tracking-[0.04em] text-ops-amber"
+                  title={`${blocked} kalemin ürünü/boyu satışta değil — paket vitrinde görünmez. Ürünü satışa alınca paket kendiliğinden döner.`}
+                >
+                  vitrinde yok
+                </span>
+              ) : null}
+            </div>
+            <span className="truncate font-ops-body text-[11px] text-ops-muted">
+              {b.items.length} kalem{b.serves ? ` · ${b.serves} kişilik` : ''} · slug: {b.slug}
+            </span>
+          </div>
+        );
+      },
     },
     {
       key: 'items',
@@ -76,21 +113,61 @@ function bundleColumns(onToggle: (id: string, next: boolean) => void): Column<Bu
     {
       key: 'price',
       header: 'Fiyat',
-      width: '92px',
+      width: '124px',
       align: 'right',
-      cell: (b) => <span className="font-ops-mono text-[13px] text-ops-ink">{money(toCents(b.totalPrice))}</span>,
+      cell: (b) => {
+        const { listTotalCents, discountPercent } = pricingById.get(b.id)!;
+        return (
+          <Stacked
+            value={money(toCents(b.totalPrice))}
+            hint={
+              listTotalCents == null
+                ? 'birim fiyat eksik'
+                : `ayrı ayrı ${money(listTotalCents)}${discountPercent != null && discountPercent > 0 ? ` · ${percent(discountPercent)}` : ''}`
+            }
+            title="Müşterinin ödediği tek fiyat (KDV dahil) · altında kalemler ayrı ayrı alınsaydı"
+          />
+        );
+      },
     },
     {
-      key: 'balance',
-      header: 'Mutabakat',
+      // MARJ liste satırının en çok aranan sayısı: hangi paket kazandırıyor, hangisi taşıyor.
+      // Kâr ve maliyet altında bağlam olarak durur — üçü ayrı sütun olsaydı tablo sayı tarlasına
+      // dönerdi ve hiçbiri okunmazdı.
+      key: 'margin',
+      header: 'Marj',
       width: '132px',
+      align: 'right',
       cell: (b) => {
-        const balance = balanceOf(b);
-        if (balance.balanced) return <Badge tone="olive">Toplam tutar</Badge>;
-        // Fark rozetin İÇİNDE yazılı: ipucu (title) rozete geçirilemiyor ve farkı görmek için
-        // formu açmak gerekmesi, listenin "neyi söylediğini" yarım bırakırdı.
-        // Renk AMBER, kırmızı değil — formdaki şeritle aynı olgu aynı renkte görünsün; kırmızı
-        // gerçekten satışı engelleyen durumlara saklı (tutmayan paket satılabilir, faturası eksik olur).
+        const { economics } = pricingById.get(b.id)!;
+        if (economics.marginPercent == null) {
+          return (
+            <Stacked
+              value="—"
+              hint={`${economics.unknownCostLines} kalemin maliyeti yok`}
+              title="Maliyeti bilinmeyen kalem var — marj hesaplanmaz, uydurulmaz"
+            />
+          );
+        }
+        return (
+          <Stacked
+            value={percent(economics.marginPercent)}
+            hint={`kâr ${money(economics.profitCents ?? 0)} · maliyet ${money(economics.costCents ?? 0)}`}
+            alert={(economics.profitCents ?? 0) < 0}
+            title="Maliyet üzerine markup · kâr KDV hariç satıştan hesaplanır"
+          />
+        );
+      },
+    },
+    {
+      // Mutabakat rozeti YALNIZ bozukken çıkar. Her satırda yeşil "Toplam tutar" yazmak olağan hâli
+      // kutlamaktı ve bir sütunu gürültüye harcıyordu; o yer artık paraya gidiyor.
+      key: 'balance',
+      header: '',
+      width: '116px',
+      cell: (b) => {
+        const { balance } = pricingById.get(b.id)!;
+        if (balance.balanced) return null;
         return <Badge tone="amber">Tutmuyor · {money(Math.abs(balance.diffCents))}</Badge>;
       },
     },
@@ -127,6 +204,13 @@ export function PackagesTab({ bundles, pool, device, creating, onCreateClose }: 
   const [optimisticIds, setOptimisticIds] = useState<string[] | null>(null);
   useEffect(() => setOptimisticIds(null), [bundles]);
 
+  // Sözlük ve satır hesapları girdileri değişmedikçe yeniden kurulmaz; hesap satır başına BİR kez
+  // yapılır (üç hücre de aynı sonucu okuyor, üç kez hesaplamıyor).
+  const poolById = useMemo(() => new Map(pool.map((p) => [p.variantId, p])), [pool]);
+  const pricingById = useMemo<PricingMap>(
+    () => new Map(bundles.map((b) => [b.id, pricingOf(b, poolById)])),
+    [bundles, poolById],
+  );
   const byId = new Map(bundles.map((b) => [b.id, b]));
   const displayed = optimisticIds
     ? [
@@ -149,12 +233,12 @@ export function PackagesTab({ bundles, pool, device, creating, onCreateClose }: 
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center border-b border-ops-line-soft px-6 py-[11px]">
         <span className="font-ops-body text-[12px] text-ops-muted">
-          Kalem fiyatları toplamı = paket fiyatı · sistem doğrular · yeni ürün yaratmaz · sürükle-sırala
+          Paylar birim fiyatlara oransal dağıtılır · marj maliyetten türetilir · yeni ürün yaratmaz · sürükle-sırala
         </span>
       </div>
 
       <Table
-        columns={bundleColumns(onToggle)}
+        columns={bundleColumns(poolById, pricingById, onToggle)}
         rows={displayed}
         rowKey={(b) => b.id}
         onReorder={handleReorder}

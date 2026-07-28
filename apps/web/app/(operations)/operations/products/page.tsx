@@ -1,4 +1,4 @@
-import { BundleService, CategoryService, CollectionService, PriceService, ProductService, serviceDb } from '@lezzet/database';
+import { BundleService, CategoryService, CollectionService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { publicImageUrl } from '@lezzet/storage';
 import { detectDevice } from '@/lib/device';
@@ -35,20 +35,29 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const categorySvc = new CategoryService(db);
   const collectionSvc = new CollectionService(db);
 
+  // OKUMA SEKMEYE BAĞLI. Sayfa dört sekme taşıyor ama hepsi aynı veriye ihtiyaç duymuyor: paket
+  // havuzu + fiyat + maliyet okumaları YALNIZ Paketler sekmesinde gerekiyor ve toplamı ~195 KB.
+  // Koşulsuz çekilirken Ürünler sekmesini açan operatör hiç kullanmayacağı veriyi ödüyordu. Sorgu
+  // SAYISI zaten sabitti (paket başına sorgu yok, kalemler gömülü) — pahalı olan satır GENİŞLİĞİYDİ.
+  const needsBundleData = urlState.tab === 'packages';
+  // Paketler ürün formunda da gerekli ("bu ürün N pakette kullanılıyor" + pasife alma uyarısı), o
+  // yüzden katalog sekmelerinde değil ama Ürünler'de de okunur. Küçük tablo: kürelenmiş kısa bir seçki.
+  const needsBundles = needsBundleData || urlState.tab === 'products';
+
   // Hepsi paralel ve hiçbiri satır sayısıyla ÇOĞALMIYOR (sabit sayıda sorgu).
-  const [productPage, counts, categoryCounts, categories, collectionRows, bundleRows, variantPoolRows] = await Promise.all([
+  const [productPage, counts, categoryCounts, categories, collectionRows, bundleRows, poolRows] = await Promise.all([
     productSvc.listWithRelations({ filters, limit: DEFAULT_PAGE_SIZE }),
     productSvc.counts(filters),
     productSvc.countsByCategory(),
     categorySvc.list(),
     collectionSvc.listWithProductIds(),
-    // Paket kalemleri GÖMÜLÜ gelir: liste satırı "N kalem" ve mutabakat rozetini onlardan hesaplıyor.
-    new BundleService(db).listWithItems(),
-    // Varyant havuzu — TÜM katalog, süzgeçsiz. Ürün listesi SÜZGEÇLİ ve SAYFALI olduğu için ondan
-    // türetilemez: aramada "börek" yazan operatör pakete baklava ekleyemezdi. Durum süzgeci de YOK:
-    // havuz aynı zamanda pakette DURAN kalemin adını çözüyor ve pasif ürünün kalemi de adıyla
-    // görünmeli (aktifle sınırlıyken "silinmiş birim" yazıyordu). Eklenebilirlik `addable` alanında.
-    productSvc.listWithRelations({ limit: VARIANT_POOL_LIMIT }),
+    // Paket kalemleri GÖMÜLÜ gelir: liste satırı "N kalem", mutabakat ve marjı onlardan hesaplıyor.
+    needsBundles ? new BundleService(db).listWithItems() : Promise.resolve([]),
+    // Varyant havuzu — TÜM katalog, süzgeçsiz ama DAR alanlarla (`listPool`). Ürün listesi SÜZGEÇLİ ve
+    // SAYFALI olduğu için ondan türetilemez: aramada "börek" yazan operatör pakete baklava ekleyemezdi.
+    // Durum süzgeci de YOK: havuz aynı zamanda pakette DURAN kalemin adını çözüyor ve pasif ürünün
+    // kalemi de adıyla görünmeli (aktifle sınırlıyken "silinmiş birim" yazıyordu) — `addable` söyler.
+    needsBundleData ? productSvc.listPool(VARIANT_POOL_LIMIT) : Promise.resolve([]),
   ]);
 
   // Ürün indirgemesi action ile PAYLAŞILIR (products-read) — ilk sayfa ve sonraki sayfalar aynı şekli
@@ -74,18 +83,21 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     imageUrl: publicImageUrl(c.imageKey, c.imageUpdatedAt),
   }));
 
-  // Liste fiyatları (b2c, KDV dahil): paketin verdiği indirim ancak bunlara göre gösterilebilir —
-  // operatör 34,90'ı neyin üstünden verdiğini görmeden yazıyordu. Havuz kimliklerini beklediği için
-  // paralel bloğun ARDINDAN okunur, ama tek turda: `findApplicableMap` varyant başına sorgu atmaz.
-  const poolVariantIds = variantPoolRows.rows.flatMap((p) => p.variants.map((v) => v.id));
-  const priceRows = await new PriceService(db).findApplicableMap(poolVariantIds, 'b2c');
+  // Fiyat ve MALİYET: paket kurulurken "neyin üstünden indirim veriyorum" ve "bana kaça mal oluyor"
+  // sorularının ikisi de cevaplanabilsin. Havuz kimliklerini bekledikleri için paralel bloğun
+  // ARDINDAN, ama kendi aralarında paralel ve ikisi de TEK turda (varyant başına sorgu yok).
+  const poolVariantIds = poolRows.flatMap((p) => p.variants.map((v) => v.id));
+  const [priceRows, unitCosts] = await Promise.all([
+    new PriceService(db).findApplicableMap(poolVariantIds, 'b2c'),
+    new StockService(db).unitCostMap(poolVariantIds),
+  ]);
   const listPrices = new Map(
     [...priceRows].flatMap(([variantId, { channelPrice }]) => (channelPrice ? [[variantId, channelPrice.amount] as const] : [])),
   );
 
   // Paket kalemi yalnız `variantId` taşır; adı ("Ürün · boy") burada çözülür — client varyant havuzunu
   // tarayıp ad aramaz. İki tüketici de (liste satırı + form seçicisi) AYNI sözlükten okur.
-  const variantPool = toVariantOptions(variantPoolRows.rows, listPrices);
+  const variantPool = toVariantOptions(poolRows, listPrices, unitCosts);
   const variantLabels = new Map(variantPool.map((v) => [v.variantId, v.label]));
   const bundleViews = toBundleViews(bundleRows, variantLabels);
 

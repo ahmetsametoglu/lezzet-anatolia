@@ -4,6 +4,7 @@ import {
   ProductSchema,
   ProductInsertSchema,
   ProductUpdateSchema,
+  ProductPoolSchema,
   ProductWithRelationsSchema,
   pickImageMeta,
   resolveLocalizedText,
@@ -19,6 +20,7 @@ import {
   type ProductVariantInsert,
   type ProductDetailsUpdate,
   type ProductVariant,
+  type ProductPool,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { uniqueSlugForTable } from '../utils/slug';
@@ -104,6 +106,22 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
       orFilters,
+    });
+  }
+
+  /**
+   * Paket seçicisinin havuzu: TÜM katalog ama DAR alanlarla (kimlik · durum · KDV · hedef marj · boylar).
+   *
+   * `listWithRelations` ile okunuyordu ve ürün başına beyan metinleri, besin değerleri, alerjenler de
+   * geliyordu — 500 ürünlük katalogda 113 KB'lık bir yükün neredeyse tamamı kullanılmadan atılıyordu.
+   * Satır sayısı değil satır GENİŞLİĞİ pahalıydı. Süzgeç yok: havuz hem "eklenebilirler" hem "pakette
+   * duran kalemin adı" sorusuna hizmet ediyor (pasif ürün de adıyla görünmeli).
+   */
+  async listPool(limit: number): Promise<ProductPool[]> {
+    return this.getAllAs(ProductPoolSchema, undefined, {
+      select: 'id,name,image_key,image_updated_at,status,vat_rate,target_margin_percent,variants:product_variant(id,label,is_active)',
+      orderBy: 'sortOrder',
+      limit,
     });
   }
 

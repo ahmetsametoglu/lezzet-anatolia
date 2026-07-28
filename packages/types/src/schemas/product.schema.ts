@@ -174,6 +174,26 @@ export const ProductWithRelationsSchema = ProductSchema.extend({
 });
 export type ProductWithRelations = z.infer<typeof ProductWithRelationsSchema>;
 
+/**
+ * Paket seçicisinin HAVUZU — ürünün yalnız kimlik/fiyat/durum alanları + boyların adı.
+ *
+ * Tam ürün okumak bu iş için 113 KB taşıyordu (besin değerleri, beyan metinleri, alerjenler,
+ * saklama koşulları…) ve hepsi çöpe gidiyordu: havuz yedi alan kullanıyor. Dar okuma aynı listeyi
+ * ~15 KB'a indiriyor — satır sayısı değil, SATIR GENİŞLİĞİ pahalıydı.
+ */
+export const ProductPoolSchema = ProductSchema.pick({
+  id: true,
+  name: true,
+  imageKey: true,
+  imageUpdatedAt: true,
+  status: true,
+  vatRate: true,
+  targetMarginPercent: true,
+}).extend({
+  variants: z.array(ProductVariantSchema.pick({ id: true, label: true, isActive: true })),
+});
+export type ProductPool = z.infer<typeof ProductPoolSchema>;
+
 
 // Ürün düzenleme formunun yazdığı alanlar (Temel + içerik + beyan + görsel künyesi) — id/slug/
 // imageKey/sortOrder/createdAt hariç, hepsi opsiyonel (yalnız verilenler yazılır). ProductSchema'dan

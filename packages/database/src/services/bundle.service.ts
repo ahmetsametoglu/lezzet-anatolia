@@ -58,12 +58,46 @@ export class BundleService extends BaseDbService<Bundle, BundleInsert, BundleUpd
     return rows[0] ?? null;
   }
 
-  /** Vitrin: yalnız satıştaki paketler, kürelenmiş sırada. Stok/kargo türevi uygulama katmanında. */
+  /**
+   * Vitrin: satılabilir paketler, kürelenmiş sırada. Stok türevi uygulama katmanında.
+   *
+   * SATILABİLİRLİK TÜRETİLİR, saklanmaz: paket ancak kendisi satıştaysa VE tüm kalemlerinin ürünü/boyu
+   * satıştaysa vitrine çıkar (DOMAIN §13). Ürün pasife alındığında `bundle.is_active`'i çevirmiyoruz —
+   * o alan operatörün NİYETİ; üstüne yazsaydık ürün geri açıldığında paket pasif kalır ve geri
+   * açılması gerektiğini kimse bilemezdi. Niyet korunur, gerçek hesaplanır.
+   *
+   * İki sorgu, N+1 yok: paketler kalemleriyle, kalemlerin varyant/ürün durumu tek turda.
+   */
   async listSellable(): Promise<BundleWithItems[]> {
-    return this.getAllAs(BundleWithItemsSchema, { isActive: true }, {
+    const rows = await this.getAllAs(BundleWithItemsSchema, { isActive: true }, {
       select: '*,items:bundle_item(*)',
       orderBy: 'sortOrder',
     });
+    const variantIds = [...new Set(rows.flatMap((b) => b.items.map((i) => i.variantId)))];
+    if (variantIds.length === 0) return rows.filter((b) => b.items.length > 0);
+
+    // Ham sorgu, gerekçesi belli: durum bilgisi İKİ tablodan geliyor (varyant + ürün) ve `bundle`
+    // üzerinden gömülü okunamıyor — `bundle_item` ile `product_variant` arasındaki ilişki paketin
+    // kendi seçiminde değil. Alternatif, kalem başına sorgu atmaktı (N+1).
+    const { data, error } = await this.supabase
+      .from('product_variant')
+      .select('id,is_active,product:product(status)')
+      .in('id', variantIds);
+    if (error) throw error;
+
+    const sellableVariants = new Set(
+      (data ?? [])
+        .filter((row) => {
+          const variant = row as { is_active: boolean; product: { status: string } | { status: string }[] | null };
+          const product = Array.isArray(variant.product) ? variant.product[0] : variant.product;
+          return variant.is_active && product?.status === 'active';
+        })
+        .map((row) => (row as { id: string }).id),
+    );
+
+    // Kalemsiz paket de düşer: müşteriye "paket" diye boş bir kart göstermek satın alınamayan bir
+    // vaat olurdu.
+    return rows.filter((b) => b.items.length > 0 && b.items.every((i) => sellableVariants.has(i.variantId)));
   }
 
   async findBySlug(slug: string): Promise<Bundle | null> {

@@ -91,6 +91,49 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
+   * Varyant başına **tahmini birim maliyet** (KDV hariç): eldeki partilerin alış fiyatlarının, fiili
+   * adetle **ağırlıklı ortalaması**. Tek sorgu — varyant başına okuma N+1 doğururdu.
+   *
+   * Gerçek COGS parti başına bellidir ve sipariş anında FEFO ile kesinleşir; bu okuma **planlama**
+   * içindir: fiyat verirken (paket kurarken, marj-altı uyarısında) "bana kaça mal oluyor" sorusunun
+   * bugünkü en iyi cevabı. İki tahmin arasında ağırlıklı ortalamayı seçtik: son alış fiyatı tek bir
+   * pazarlığın sapmasını tüm stoğa yayardı, en ucuz/en pahalı parti ise uçları gösterirdi.
+   *
+   * Alış fiyatı GİRİLMEMİŞ parti hesaba KATILMAZ (0 saymak maliyeti düşük gösterip marjı şişirirdi).
+   * Hiç fiyatlı partisi olmayan varyant haritada YER ALMAZ: "bilmiyorum" ile "sıfır" farklı şeyler —
+   * çağıran eksikliği söyleyebilsin diye ayrımı koruyoruz.
+   */
+  async unitCostMap(variantIds: string[]): Promise<Map<string, number>> {
+    if (variantIds.length === 0) return new Map();
+    // ÜÇ KOLON okunur, satırın tamamı değil: parti satırı geniş (lot, konum, tarihler, teklif fiyatı,
+    // damgalar) ve yüz varyantlık bir okumada 58 KB taşıyordu — hesap için gereken üç sayı. Ham sorgu,
+    // çünkü dar seçim `StockSchema`'yı doğrulayamaz (zorunlu alanlar gelmiyor); şema yerine burada
+    // sayıya indiriyoruz. `numeric` string dönebilir (bkz. dbNumeric) → Number() ile normalize.
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select('variant_id,physical_qty,purchase_price')
+      .in('variant_id', variantIds)
+      .not('purchase_price', 'is', null)
+      .gt('physical_qty', 0);
+    if (error) throw error;
+
+    const acc = new Map<string, { qty: number; total: number }>();
+    for (const raw of data ?? []) {
+      const row = raw as { variant_id: string; physical_qty: number; purchase_price: number | string };
+      const price = Number(row.purchase_price);
+      const qty = Number(row.physical_qty);
+      if (!Number.isFinite(price) || qty <= 0) continue;
+      const cur = acc.get(row.variant_id) ?? { qty: 0, total: 0 };
+      cur.qty += qty;
+      cur.total += qty * price;
+      acc.set(row.variant_id, cur);
+    }
+    // Yuvarlama YAPILMAZ: tüketici kuruşa çevirirken yuvarlar. Burada yuvarlamak, çok kalemli bir
+    // pakette her kalemde bir kuruş kaybettirip maliyeti sistematik olarak eksik gösterirdi.
+    return new Map([...acc].flatMap(([id, { qty, total }]) => (qty > 0 ? [[id, total / qty] as const] : [])));
+  }
+
+  /**
    * Eşik altı varyantlar ("sipariş zamanı" önerisinin girdisi, 06.11). İki turda okur — görünüm
    * PostgREST'te tabloya gömülemez (ilişki tanımı yok). Varyant başına sorgu YOK: eşiği olan
    * varyantlar tek sorguda, kullanılabilirleri tek sorguda gelir.

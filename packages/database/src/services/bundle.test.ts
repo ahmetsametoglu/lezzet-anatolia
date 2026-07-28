@@ -130,6 +130,31 @@ describe('BundleService', () => {
     expect((await bundles.listAll()).some((b) => b.id === bundle.id)).toBe(true);
   });
 
+  it('ÜRÜNÜ pasife alınan paket vitrinden düşer ama niyeti (is_active) korunur', async () => {
+    // Paket ancak tüm kalemleri satılabilirse satılabilir. `is_active`'i sistemin çevirmesi yerine
+    // satılabilirliği TÜRETİYORUZ: ürün geri açıldığında paket kendiliğinden döner — aksi hâlde
+    // pasifte kalır ve geri açılması gerektiğini kimse bilmez.
+    const bundle = await createBundle(`Pasif ürün ${damga}`, 20, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 20 }]);
+    expect((await bundles.listSellable()).some((b) => b.id === bundle.id)).toBe(true);
+
+    await products.update({ id: productId, status: 'passive' });
+    const kapali = await bundles.listSellable();
+    expect(kapali.some((b) => b.id === bundle.id)).toBe(false);
+    expect((await bundles.getById(bundle.id))!.isActive).toBe(true); // niyet bozulmadı
+
+    await products.update({ id: productId, status: 'active' });
+    expect((await bundles.listSellable()).some((b) => b.id === bundle.id)).toBe(true); // kendiliğinden döndü
+  });
+
+  it('BOYU pasife alınan kalem de paketi düşürür', async () => {
+    const bundle = await createBundle(`Pasif boy ${damga}`, 15, [{ variantId: variantB, qty: 1, allocatedUnitPrice: 15 }]);
+    await db.from('product_variant').update({ is_active: false }).eq('id', variantB);
+    expect((await bundles.listSellable()).some((b) => b.id === bundle.id)).toBe(false);
+
+    await db.from('product_variant').update({ is_active: true }).eq('id', variantB);
+    expect((await bundles.listSellable()).some((b) => b.id === bundle.id)).toBe(true);
+  });
+
   it('slug ile bulunur (paylaşılan link) ve ad çok dilli döner', async () => {
     const bundle = await createBundle(`Paylaşım ${damga}`, 12, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 12 }]);
     const found = await bundles.findBySlug(bundle.slug);

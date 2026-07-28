@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Controller, useFieldArray, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
-import { bundleBalance, rebalanceAllocations } from '@lezzet/domain-core';
+import { rebalanceAllocations } from '@lezzet/domain-core';
 import { fromCents, toCents } from '@lezzet/helper';
 import { Input } from '@/components/operation/form/input';
 import { MoneyInput } from '@/components/operation/form/money-input';
@@ -11,6 +11,7 @@ import { TrashIcon } from '@/components/operation/ui/icons';
 import { SortableList } from '@/components/operation/ui/sortable-list';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import type { VariantOption } from '../../products-types';
+import { bundlePricing } from './bundle-pricing';
 import type { BundleFormValues } from './bundle-form-schema';
 
 // Paket kalemleri — pakete giren birimler, adetleri ve ATANMIŞ birim fiyatları. Atanmış fiyat müşteriye
@@ -27,9 +28,29 @@ import type { BundleFormValues } from './bundle-form-schema';
 // (koleksiyon üyeliğinin aynı deseni). Zaten eklenmiş varyant menüde ÇIKMAZ → DB'deki
 // `unique(bundle_id, variant_id)` kuralı arayüzde de görünür, operatör reddedilecek bir şey denemez.
 
-const CELL = 'grid grid-cols-[18px_minmax(0,1fr)_52px_74px_82px_78px_24px] items-center gap-x-2';
+// Sütunlar: tutamak · ad · adet · birim fiyat · atanmış · satır · sil. Girdi sütunları kutunun
+// genişliğine göre ölçülür; başlıklar da o kutunun üstünde ORTALANIR (metnin değil, kutunun üstünde),
+// okuma sırası "başlık → kutu" olsun. Salt-okunur sayı sütunları SAĞA yaslı: rakamlar alt alta hizalı
+// okunur, virgüller aynı sütunda durur.
+const CELL = 'grid grid-cols-[18px_minmax(0,1fr)_72px_92px_104px_92px_26px] items-center gap-x-3';
 
 const money = (cents: number) => fromCents(cents).toFixed(2).replace('.', ',');
+
+/**
+ * Şeridin ölçü birimi: soluk etiket + mono değer. Etiket ve değer aynı boyutta ve bitişik yazılınca
+ * satır bir sayı yığınına dönüşüyor ve hiçbiri okunmuyordu; ayrım boyut ve renkle kuruluyor.
+ */
+function Metric({ label, title, alert, children }: { label: string; title?: string; alert?: boolean; children: ReactNode }) {
+  return (
+    <span className="flex items-baseline gap-1.5" title={title}>
+      <span className="font-ops-body text-[11px] text-ops-muted">{label}</span>
+      <span className={`font-ops-mono text-[12.5px] ${alert ? 'font-semibold text-ops-amber' : 'text-ops-body'}`}>{children}</span>
+    </span>
+  );
+}
+
+/** Ölçüler arası ayraç — boşluk tek başına yetmiyor, göz nerede bittiğini bilemiyor. */
+const Separator = () => <span className="text-ops-line-strong">·</span>;
 
 /** Satır şekli — `replace()` her yazımda tam satır ister (RHF alanı kısmen güncellenemez). */
 interface ItemRow {
@@ -67,21 +88,18 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
   /** Elle girilen paylar — kimliğe göre. Otomatik dağıtım bunlara DOKUNMAZ. */
   const [manualIds, setManualIds] = useState<Set<string>>(new Set());
 
-  const lines = rows.map((r) => ({ qty: r?.qty ?? 0, allocatedUnitPriceCents: toCents(r?.allocatedUnitPrice ?? 0) }));
-  const balance = bundleBalance(lines, toCents(totalPrice));
+  // Hesabın TEK yeri `bundlePricing`: fiyat alanının yanındaki indirim yüzdesi de aynı fonksiyondan
+  // okuyor. İki yerde hesaplansaydı yuvarlama farkı ikisini çelişkiye düşürürdü.
+  const pricing = bundlePricing(
+    rows.map((r) => ({ variantId: r?.variantId ?? '', qty: r?.qty ?? 0, allocatedUnitPrice: r?.allocatedUnitPrice ?? 0 })),
+    byId,
+    totalPrice,
+  );
+  const { balance, economics } = pricing;
 
   // Şerit henüz bir şey İDDİA ETMİYOR: kalem yokken ya da paket fiyatı girilmemişken "0 = 0" hesabı
-  // teknik olarak tutar, ama yeşil yanıp "toplam tutar" demek kurulumu bitmiş göstermek olurdu.
+  // teknik olarak tutar, ama "toplam tutar" demek kurulumu bitmiş göstermek olurdu.
   const pending = fields.length === 0 || toCents(totalPrice) <= 0;
-
-  // ── Liste fiyatı ve indirim ───────────────────────────────────────────────────────────────────
-  const missingPrice = rows.filter((r) => byId.get(r?.variantId ?? '')?.listPrice == null).length;
-  const listTotalCents = rows.reduce((sum, r) => {
-    const listPrice = byId.get(r?.variantId ?? '')?.listPrice;
-    return sum + (listPrice == null ? 0 : toCents(listPrice) * (r?.qty ?? 0));
-  }, 0);
-  const discountCents = listTotalCents - toCents(totalPrice);
-  const discountPercent = listTotalCents > 0 ? (discountCents / listTotalCents) * 100 : 0;
 
   // ── Otomatik dağıtım ──────────────────────────────────────────────────────────────────────────
   /**
@@ -168,7 +186,13 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
     allocate(next);
   };
 
-  const canRedistribute = rows.some((r) => !manualIds.has(r?.variantId ?? ''));
+  const hasManual = rows.some((r) => manualIds.has(r?.variantId ?? ''));
+
+  /** Tüm elle girilenleri bırakır ve payları yeniden hesaplar — tutmayan toplamın tek gerçek çaresi. */
+  const releaseAllManual = () => {
+    setManualIds(new Set());
+    allocate(new Set());
+  };
 
   return (
     <section className="flex flex-col gap-[11px]">
@@ -190,9 +214,13 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
         <div className={`${CELL} border-b border-ops-line bg-ops-subtle px-[13px] py-2 font-ops-display text-[10px] font-medium uppercase tracking-[0.05em] text-ops-muted`}>
           <span />
           <span>Ürün · boy</span>
-          <span>Adet</span>
-          <span title="Ürünün kendi satış fiyatı (b2c, KDV dahil) — paket indirimi bunun üstünden">Liste</span>
-          <span title="Müşteriye GÖRÜNMEZ — faturada kalemin KDV'si bu fiyattan işlenir">Atanmış (€)</span>
+          <span className="text-center">Adet</span>
+          <span className="text-right" title="Kalemin tek başına satıldığı fiyat (KDV dahil) — paket indirimi bunun üstünden. Alış fiyatı DEĞİL.">
+            Birim fiyat
+          </span>
+          <span className="text-center" title="Müşteriye GÖRÜNMEZ — faturada kalemin KDV'si bu fiyattan işlenir">
+            Atanmış (€)
+          </span>
           <span className="text-right">Satır</span>
           <span />
         </div>
@@ -245,13 +273,17 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
                         inputSize="sm"
                         mono
                         inputMode="numeric"
+                        className="text-center"
                         value={field.value ?? 1}
                         onChange={(e) => field.onChange(Math.max(1, Number(e.target.value) || 1))}
                         onBlur={field.onBlur}
                       />
                     )}
                   />
-                  <span className="font-ops-mono text-[11.5px] text-ops-muted" title={option?.listPrice == null ? 'Bu varyanta liste fiyatı girilmemiş' : undefined}>
+                  <span
+                    className="text-right font-ops-mono text-[11.5px] text-ops-muted"
+                    title={option?.listPrice == null ? 'Bu varyanta birim fiyat (b2c liste) girilmemiş' : undefined}
+                  >
                     {option?.listPrice == null ? '—' : `${money(toCents(option.listPrice))}`}
                   </span>
                   <Controller
@@ -268,6 +300,7 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
                         }}
                         onBlur={field.onBlur}
                         ariaLabel="Atanmış birim fiyat"
+                        className="text-right"
                         // Hediye kalem ayrı bir işaret taşımaz: fiyatın kendisi söyler.
                         title={field.value === 0 ? 'Hediye kalem — faturada 0 € satır, stoktan normal düşer' : undefined}
                       />
@@ -303,86 +336,107 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
           />
         )}
 
-        {/* FİYAT ŞERİDİ — üç sayı bir arada: neyin üstünden, ne kadara, ne indirimle. Eskiden yalnız
-            "atanmış toplam" ve bir fark yazıyordu; karşılaştırılan sayı (paket fiyatı) başka bir
-            bölümde durduğu için cümle keyfi görünüyordu. */}
+        {/* ŞERİT — her satır AYRI bir soruyu cevaplar: (1) anlaşma ne, (2) bize ne kalıyor,
+            (3) varsa sorun ve TEK çaresi. Önceki hâlde altı sayı ve iki eylem tek kutuda yan yanaydı;
+            hiçbiri öbüründen önemli görünmüyordu, o yüzden hepsi birden karmaşık görünüyordu.
+            Zemin NÖTR: mutabakatın tutması olağan hâldir, kutlanacak bir şey değil — renk yalnız
+            dikkat gerektiğinde girer. */}
         <div
           className={[
-            'flex flex-col gap-1.5 border-t px-[13px] py-2.5',
-            pending
-              ? 'border-ops-line bg-ops-subtle'
-              : balance.balanced
-                ? 'border-ops-olive-line bg-ops-olive-bg'
-                : 'border-ops-amber-line bg-ops-amber-bg',
+            'flex flex-col gap-1 border-t px-[13px] py-2.5',
+            pending || balance.balanced ? 'border-ops-line bg-ops-subtle' : 'border-ops-amber-line bg-ops-amber-bg',
           ].join(' ')}
         >
           {pending ? (
             <span className="font-ops-body text-[12px] text-ops-muted">
               {fields.length === 0
-                ? 'Kalem eklendikçe liste toplamı ve indirim burada hesaplanır.'
-                : 'Paket fiyatını girin — paylar liste fiyatlarına oransal dağıtılacak.'}
+                ? 'Kalem eklendikçe karşılaştırma ve marj burada hesaplanır.'
+                : 'Paket fiyatını girin — paylar tek fiyatlara oransal dağıtılacak.'}
             </span>
           ) : (
             <>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-ops-body text-[12px]">
-                <span className="text-ops-muted">
-                  Liste toplamı{' '}
-                  <span className="font-ops-mono text-[12.5px] font-medium text-ops-ink">
-                    {missingPrice > 0 ? '—' : `${money(listTotalCents)} €`}
-                  </span>
+              {/* 1 — ANLAŞMA: soldan sağa okunan tek cümle. */}
+              <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                <Metric label="Ayrı ayrı alınsa">
+                  {pricing.listTotalCents == null ? '—' : `${money(pricing.listTotalCents)} €`}
+                </Metric>
+                <span className="px-0.5 text-ops-faint">→</span>
+                <span className="flex items-baseline gap-1.5">
+                  <span className="font-ops-body text-[11px] text-ops-muted">Paket</span>
+                  <span className="font-ops-mono text-[13.5px] font-semibold text-ops-ink">{money(toCents(totalPrice))} €</span>
                 </span>
-                <span className="text-ops-muted">
-                  Paket fiyatı <span className="font-ops-mono text-[12.5px] font-medium text-ops-ink">{money(toCents(totalPrice))} €</span>
-                </span>
-                {missingPrice > 0 ? (
-                  <span className="text-ops-amber">
-                    {missingPrice} kalemin liste fiyatı yok — indirim hesaplanamıyor, paylar elle girilmeli
+                {pricing.discountCents == null ? (
+                  <span className="text-[11.5px] text-ops-amber">
+                    {pricing.missingListPrice} kalemin tek fiyatı yok — karşılaştırma yapılamıyor
                   </span>
-                ) : discountCents > 0 ? (
-                  <span className="text-ops-olive-dark">
-                    İndirim{' '}
-                    <span className="font-ops-mono font-medium">
-                      {money(discountCents)} € (%{discountPercent.toFixed(1).replace('.', ',')})
-                    </span>
+                ) : pricing.discountCents > 0 ? (
+                  <span className="rounded bg-ops-olive-bg px-1.5 py-px font-ops-mono text-[11px] font-semibold text-ops-olive-dark">
+                    {money(pricing.discountCents)} € indirim
                   </span>
-                ) : discountCents === 0 ? (
-                  <span className="text-ops-muted">İndirim yok — kalemler ayrı ayrı alınsa aynı tutar</span>
+                ) : pricing.discountCents === 0 ? (
+                  <span className="text-[11.5px] text-ops-muted">indirim yok</span>
                 ) : (
-                  <span className="text-ops-amber">
-                    Liste toplamının <span className="font-ops-mono font-medium">{money(-discountCents)} €</span> ÜSTÜNDE
+                  <span className="rounded bg-ops-amber-bg px-1.5 py-px font-ops-mono text-[11px] font-semibold text-ops-amber">
+                    {money(-pricing.discountCents)} € pahalı
                   </span>
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="font-ops-body text-[11.5px] text-ops-muted">
-                  Atanmış toplam <span className="font-ops-mono text-[12px] text-ops-body">{money(balance.allocatedTotalCents)} €</span>
-                </span>
-                <span
-                  className={[
-                    'rounded-md px-2 py-0.5 font-ops-display text-[10.5px] font-semibold',
-                    balance.balanced ? 'bg-ops-olive text-ops-card' : 'bg-ops-amber text-ops-card',
-                  ].join(' ')}
-                >
-                  {balance.balanced
-                    ? 'Toplam tutar'
-                    : `Toplam tutmuyor · ${money(Math.abs(balance.diffCents))} € ${balance.diffCents > 0 ? 'fazla' : 'eksik'}`}
-                </span>
-                {balance.balanced ? null : (
-                  <span className="ml-auto flex items-center gap-2">
-                    {/* İki ayrı çare, ikisi de bir şey YAPAR: payları yeniden dağıt (elle girilenler
-                        korunur) ya da paket fiyatını ulaşılan toplama çek. İkincisi kalan kuruş
-                        durumunda tek çıkış yoludur: adetler yüzünden hedef tutturulamıyorsa dağıtımı
-                        tekrarlamak işe yaramaz. */}
-                    {canRedistribute ? (
-                      <button
-                        type="button"
-                        onClick={() => allocate()}
-                        className="cursor-pointer rounded-ops-btn border border-ops-line-strong bg-ops-card px-3 py-1.5 font-ops-display text-[11.5px] font-semibold text-ops-strong hover:border-ops-olive"
-                      >
-                        Payları yeniden dağıt
-                      </button>
-                    ) : null}
+              {/* 2 — BİZE NE KALIYOR: kâr KDV hariç satıştan hesaplanır (maliyet KDV'siz bir tutar).
+                  Üç ölçü etiket+değer çifti olarak ve ARALARINDA ayraçla durur; bitişik yazıldıklarında
+                  "Marj %415,7" gibi bir dizi tek bir sayı yığınına dönüşüp okunmuyordu. */}
+              <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                {economics.costCents == null ? (
+                  <span className="font-ops-body text-[11.5px] text-ops-muted">
+                    {economics.unknownCostLines} kalemin maliyeti bilinmiyor — marj hesaplanamıyor
+                  </span>
+                ) : (
+                  <>
+                    <Metric label="Maliyet" title="Eldeki partilerin ağırlıklı ortalama alış fiyatı (KDV hariç)">
+                      {money(economics.costCents)} €
+                    </Metric>
+                    <Separator />
+                    <Metric label="Kâr" title="KDV hariç satıştan maliyet düşülerek" alert={(economics.profitCents ?? 0) < 0}>
+                      {money(economics.profitCents ?? 0)} €
+                    </Metric>
+                    <Separator />
+                    <Metric label="Marj" title="Maliyet üzerine markup (DOMAIN tanımı)" alert={(economics.marginPercent ?? 0) < 0}>
+                      %{(economics.marginPercent ?? 0).toFixed(1).replace('.', ',')}
+                    </Metric>
+                  </>
+                )}
+                {pricing.belowTargetLines > 0 ? (
+                  <>
+                    <Separator />
+                    <span
+                      className="font-ops-body text-[11.5px] text-ops-amber"
+                      title="Paketler marjı böyle sessizce yer: toplam tutsa da tek bir kalemin payı kendi hedefinin altına itilmiş olabilir"
+                    >
+                      {pricing.belowTargetLines} kalemin payı hedef marjının altında
+                    </span>
+                  </>
+                ) : null}
+              </div>
+
+              {/* 3 — SORUN: yalnız tutmadığında görünür ve TEK çare sunar. Duruma göre farklı çare:
+                  elle girilen satır varsa onları bırakmak yeter; hiç yoksa fark adetlerden doğan
+                  kalan kuruştur ve dağıtımı tekrarlamak aynı sonucu verir — tek çıkış fiyatı çekmek. */}
+              {balance.balanced ? null : (
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="rounded-md bg-ops-amber px-2 py-0.5 font-ops-display text-[10.5px] font-semibold text-ops-card">
+                    Paylar tutmuyor · {money(Math.abs(balance.diffCents))} € {balance.diffCents > 0 ? 'fazla' : 'eksik'}
+                  </span>
+                  {hasManual ? (
+                    <button
+                      type="button"
+                      onClick={releaseAllManual}
+                      className="cursor-pointer font-ops-body text-[11.5px] text-ops-body underline decoration-dotted hover:text-ops-ink"
+                    >
+                      elle girilenleri bırak, otomatik dağıt
+                    </button>
+                  ) : pricing.missingListPrice > 0 ? (
+                    <span className="font-ops-body text-[11.5px] text-ops-muted">payları elle girin (tek fiyatı olmayan kalem var)</span>
+                  ) : (
                     <button
                       type="button"
                       onClick={() =>
@@ -392,19 +446,20 @@ export function BundleItemsEditor({ control, pool, setValue }: BundleItemsEditor
                     >
                       paket fiyatını {money(balance.allocatedTotalCents)} € yap
                     </button>
-                  </span>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
       </div>
 
       <span className="font-ops-body text-[11px] leading-[1.5] text-ops-muted">
-        Paylar liste fiyatlarına oransal dağıtılır — sen yalnız paket fiyatını girersin. Bir paya elle yazarsan o satır
-        korunur (“elle” işareti); geri bırakmak için işarete tıkla. Atanmış fiyatlar{' '}
-        <strong className="font-semibold">müşteriye görünmez</strong>: faturada her kalemin KDV'sini kendi oranından
-        hesaplamak için tutulur. 0 yazılan kalem hediyedir — faturada 0 € satır olur, stoktan normal düşer.
+        Paylar kalemlerin tek fiyatlarına oransal dağıtılır — sen yalnız paket fiyatını (ya da indirim yüzdesini)
+        girersin. Bir paya elle yazarsan o satır korunur (“elle” işareti); geri bırakmak için işarete tıkla. Atanmış
+        fiyatlar <strong className="font-semibold">müşteriye görünmez</strong>: faturada her kalemin KDV'sini kendi
+        oranından hesaplamak ve paketin marjını görmek için tutulur. 0 yazılan kalem hediyedir — faturada 0 € satır
+        olur, stoktan normal düşer, maliyeti marja yansır.
       </span>
     </section>
   );

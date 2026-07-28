@@ -90,14 +90,15 @@ async function main(): Promise<void> {
   await waitForRest(db);
   await seedCatalog(db);
   await seedCollections(db);
-  // Paketler kataloğun ARDINDAN: kalemleri varyant kimliğine bağlı (SKU ile çözülür).
-  await seedBundles(db);
   await seedDraftCustomers(db);
 
   // Ticari zemin — SIRA BAĞLAYICIDIR: her bölüm bir öncekinin ürettiği kimliğe dayanır.
   const kisiler = await seedKisiler(db);
   const varyantlar = await katalogVaryantlari(db);
   await seedPrices(db, varyantlar, kisiler);
+  // Paketler FİYATLARDAN SONRA: paket fiyatı kalemlerin birim fiyatlarından türetiliyor (elle yazılan
+  // bir sayı değil). Sıra bozulursa paketler fiyatsız kalemlerle kurulur ve seed anlamsız veri üretir.
+  await seedBundles(db);
   await seedDeliveryZones(db);
   await seedAddresses(db, kisiler);
   const tedarik = await seedSupply(db, varyantlar);

@@ -1,5 +1,5 @@
 import { publicImageUrl } from '@lezzet/storage';
-import { resolveLocalizedText, type BundleWithItems, type ProductWithRelations } from '@lezzet/types';
+import { resolveLocalizedText, type BundleWithItems, type ProductPool, type ProductWithRelations } from '@lezzet/types';
 import type { BundleView, ProductView, VariantOption } from './products-types';
 
 // Sunucu-tarafı okuma yardımcıları. Ürün sayfası İKİ yerden okunur — ilk sayfa RSC'de (page.tsx),
@@ -46,7 +46,11 @@ export function toBundleViews(rows: BundleWithItems[], variantLabels: Map<string
  * TEK KAYNAK: paket formunun seçicisi de, liste satırındaki kalem adları da bunu kullanır. İki yerde
  * ayrı kurulsaydı biri "500 g" öbürü "Baklava 500 g" yazar, aynı kalem iki adla görünürdü.
  */
-export function toVariantOptions(rows: ProductWithRelations[], listPrices: Map<string, number>): VariantOption[] {
+export function toVariantOptions(
+  rows: ProductPool[],
+  listPrices: Map<string, number>,
+  unitCosts: Map<string, number>,
+): VariantOption[] {
   return rows.flatMap((p) => {
     const productName = resolveLocalizedText(p.name);
     const imageUrl = publicImageUrl(p.imageKey, p.imageUpdatedAt);
@@ -60,6 +64,10 @@ export function toVariantOptions(rows: ProductWithRelations[], listPrices: Map<s
         label: boy ? `${productName} · ${boy}` : productName,
         imageUrl,
         listPrice: listPrices.get(v.id) ?? null,
+        // Maliyet ve KDV oranı ÜRÜNDEN gelir; marj ikisi olmadan hesaplanamaz.
+        unitCost: unitCosts.get(v.id) ?? null,
+        vatRate: p.vatRate,
+        targetMarginPercent: p.targetMarginPercent ?? null,
         addable: blockedReason === null,
         blockedReason,
       };

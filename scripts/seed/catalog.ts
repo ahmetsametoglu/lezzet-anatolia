@@ -1,7 +1,7 @@
-import { BundleService, CategoryService, CollectionService, ProductImageService, ProductService } from '@lezzet/database';
-import { bundleBalance } from '@lezzet/domain-core';
+import { BundleService, CategoryService, CollectionService, PriceService, ProductImageService, ProductService } from '@lezzet/database';
+import { bundleBalance, rebalanceAllocations } from '@lezzet/domain-core';
 import { PRODUCT_GALLERY_MAX, resolveLocalizedText, type LocalizedText, type Nutrition, type ProductAllergen, type ProductStatus } from '@lezzet/types';
-import { NOW, r2Keys, uploadImage, type Db } from './shared';
+import { NOW, euro, r2Keys, uploadImage, type Db } from './shared';
 
 // Katalog (05): kategori · ürün · varyant · galeri · koleksiyon.
 
@@ -434,8 +434,8 @@ interface SeedBundleItem {
   /** Varyant SKU'su — seed'de deterministik yazılı; kimlik DB'den çözülür (sıra bağımsız). */
   sku: string;
   qty: number;
-  /** Kaleme ATANMIŞ birim fiyat (€, KDV dahil). Hediye = 0. Σ (adet × fiyat) = paket fiyatı. */
-  allocatedUnitPrice: number;
+  /** Hediye kalem: payı 0 kalır, dağıtıma girmez ama maliyeti marja yansır. */
+  gift?: boolean;
 }
 
 interface SeedBundle {
@@ -443,19 +443,23 @@ interface SeedBundle {
   description?: LocalizedText;
   image?: string; // temp/ dosya adı (3:2 kaynak)
   serves?: number; // "kaç kişilik" künyesi — boşsa müşteride o satır HİÇ çizilmez
-  totalPrice: number;
   isActive?: boolean;
-  items: SeedBundleItem[];
+  /** Kalemlerin BİRİM FİYATLARI toplamına göre indirim — paket fiyatı bundan doğar. */
+  discountPercent: number;
+  /** Bilinçli mutabakatsızlık (€): liste rozetinin uyarı hâli ekranda görülebilsin. */
+  mismatch?: number;
 }
 
 /**
- * Paketler bilinçli olarak arayüzün her durumunu örnekler: görselli/görselsiz · kişilik dolu/boş ·
- * hediye kalemi (0 €) · aktif/pasif · MUTABAKATI TUTMAYAN bir satır (liste rozeti kırmızıya döner).
+ * Paketler arayüzün her durumunu örnekler: görselli/görselsiz · kişilik dolu/boş · hediye kalemi ·
+ * aktif/pasif · MUTABAKATI TUTMAYAN bir satır.
  *
- * Fiyatlar toplamı tutacak biçimde SEÇİLİ — atanmış paylar paket fiyatını verir, çünkü kısmi iade ve
- * kalem KDV'si bu paylardan hesaplanıyor.
+ * FİYAT ELLE YAZILMAZ, birim fiyatlardan TÜRETİLİR (formun yaptığı işin aynısı: `rebalanceAllocations`
+ * ağırlık olarak birim fiyatı alır). Eskiden paylar elle yazılıydı ve seed'in fiyat listesiyle hiç
+ * ilgisi yoktu — ekranda "paket ayrı ayrı almaktan %66 pahalı" gibi anlamsız bir tablo çıkıyordu.
+ * Seed gerçekçi değilse ekranın doğru çalıştığı da anlaşılmaz.
  */
-const BUNDLES: SeedBundle[] = [
+const BUNDLES: Array<SeedBundle & { items: SeedBundleItem[] }> = [
   {
     name: { tr: 'Bayram Sofrası Paketi', fr: 'Coffret Table de fête', de: 'Festtafel-Paket' },
     description: {
@@ -465,36 +469,36 @@ const BUNDLES: SeedBundle[] = [
     },
     image: '1.jpeg',
     serves: 6,
-    totalPrice: 49.9,
+    discountPercent: 12,
     // Künefe KARGOLANAMAZ (soğuk zincir) — paket bu yüzden bilinçli olarak "yalnız rota/kapı teslim"
     // örneği: türetilmiş kargo bilgisi kalemlerin en kısıtlayıcısından gelir.
     items: [
-      { sku: 'BAK-F-1000', qty: 1, allocatedUnitPrice: 28.5 },
-      { sku: 'SER-KUN-600', qty: 1, allocatedUnitPrice: 12.4 },
-      { sku: 'BAK-C-1000', qty: 1, allocatedUnitPrice: 9.0 },
+      { sku: 'BAK-F-1000', qty: 1 },
+      { sku: 'SER-KUN-600', qty: 1 },
+      { sku: 'BAK-C-1000', qty: 1 },
     ],
   },
   {
     // Görselsiz + kişilik boş + HEDİYE kalemi: üç boş/sınır durum bir arada.
     name: { tr: 'Fıstık Sevenler', fr: 'Amateurs de pistache', de: 'Für Pistazienliebhaber' },
     description: { tr: 'İki kutu fıstıklı baklava; yanında hediye cevizli baklava.' }, // yalnız TR — eksik dil örneği
-    totalPrice: 31.9,
+    discountPercent: 8,
     items: [
-      { sku: 'BAK-F-500', qty: 2, allocatedUnitPrice: 15.95 },
-      { sku: 'BAK-C-1000', qty: 1, allocatedUnitPrice: 0 }, // hediye — 0 fiyatlı kalem
+      { sku: 'BAK-F-500', qty: 2 },
+      { sku: 'BAK-C-1000', qty: 1, gift: true },
     ],
   },
   {
-    // MUTABAKATI TUTMAYAN paket: 33,95 atanmış · 34,90 istenmiş → listede kırmızı "Tutmuyor · 0,95 €".
-    // Bilinçli bozuk veri (seed'in "sınır durum" alışkanlığı): form bu paketi düzeltilmeden
-    // kaydetmez, ama liste satırının bozulmuş bir paketi SÖYLEDİĞİ görülebilsin. Pasif tutuluyor ki
-    // vitrine düşmesin.
+    // MUTABAKATI TUTMAYAN paket: paylar doğru dağıtılır, sonra paket fiyatı 0,95 € kaydırılır.
+    // Bilinçli bozuk veri (seed'in "sınır durum" alışkanlığı): form bu paketi düzeltilmeden kaydetmez,
+    // ama liste satırının bozulmuş bir paketi SÖYLEDİĞİ görülebilsin. Pasif ki vitrine düşmesin.
     name: { tr: 'Kış İkramları', fr: 'Douceurs d’hiver', de: 'Winter-Leckereien' },
     isActive: false,
-    totalPrice: 34.9,
+    discountPercent: 10,
+    mismatch: 0.95,
     items: [
-      { sku: 'BOR-SU-1500', qty: 1, allocatedUnitPrice: 18.0 },
-      { sku: 'BAK-F-500', qty: 1, allocatedUnitPrice: 15.95 },
+      { sku: 'BOR-SU-1500', qty: 1 },
+      { sku: 'BAK-F-500', qty: 1 },
     ],
   },
 ];
@@ -515,21 +519,41 @@ export async function seedBundles(db: Db): Promise<void> {
   const idBySku = new Map(
     products.rows.flatMap((p) => p.variants.filter((v) => v.sku).map((v) => [v.sku as string, v.id] as const)),
   );
+  // Birim fiyatlar (b2c TTC) tek turda: paket fiyatı bunlardan türeyecek.
+  const priceMap = await new PriceService(db).findApplicableMap([...idBySku.values()], 'b2c');
+  const birimFiyat = (variantId: string) => priceMap.get(variantId)?.channelPrice?.amount ?? null;
 
   console.log('▸ PAKET seed');
   for (const b of BUNDLES) {
-    const items = b.items
-      .map((i) => ({ variantId: idBySku.get(i.sku), qty: i.qty, allocatedUnitPrice: i.allocatedUnitPrice }))
-      .filter((i): i is { variantId: string; qty: number; allocatedUnitPrice: number } => Boolean(i.variantId));
-    if (items.length !== b.items.length) {
-      console.warn(`  ⚠ ${resolveLocalizedText(b.name)}: bazı SKU'lar bulunamadı — atlandı`);
+    const kalemler = b.items.map((i) => ({ ...i, variantId: idBySku.get(i.sku), fiyat: null as number | null }));
+    for (const k of kalemler) k.fiyat = k.variantId ? birimFiyat(k.variantId) : null;
+    if (kalemler.some((k) => !k.variantId || k.fiyat == null)) {
+      console.warn(`  ⚠ ${resolveLocalizedText(b.name)}: SKU ya da birim fiyat eksik — atlandı`);
       continue;
     }
 
+    // Paket fiyatı = birim fiyatlar toplamının indirimlisi. Hediye kalem toplama GİRER (müşteri onu da
+    // ayrı alsa parasını verirdi) ama payı 0 kalır — indirimin tamamını öbür kalemler taşır.
+    const listeToplam = kalemler.reduce((sum, k) => sum + kurus(k.fiyat!) * k.qty, 0);
+    const hedef = Math.round(listeToplam * (1 - b.discountPercent / 100));
+
+    const dagitilan = kalemler.filter((k) => !k.gift);
+    const sonuc = rebalanceAllocations(
+      dagitilan.map((k) => ({ qty: k.qty, allocatedUnitPriceCents: kurus(k.fiyat!) })),
+      hedef,
+    );
+    let dagitimIndex = 0;
+    const items = kalemler.map((k) => ({
+      variantId: k.variantId!,
+      qty: k.qty,
+      allocatedUnitPrice: k.gift ? 0 : (sonuc.unitPricesCents[dagitimIndex++] ?? 0) / 100,
+    }));
+
+    const totalPrice = euro(sonuc.achievedTotalCents / 100 + (b.mismatch ?? 0));
     const { bundle } = await bundles.create({
       name: b.name,
       description: b.description ?? null,
-      totalPrice: b.totalPrice,
+      totalPrice,
       serves: b.serves ?? null,
       isActive: b.isActive ?? true,
       items,
@@ -543,14 +567,12 @@ export async function seedBundles(db: Db): Promise<void> {
     // "Tutuyor mu" kararı MOTORUN (`bundleBalance`) — seed kendi ölçütünü uydurmaz.
     const denge = bundleBalance(
       items.map((i) => ({ qty: i.qty, allocatedUnitPriceCents: kurus(i.allocatedUnitPrice) })),
-      kurus(b.totalPrice),
+      kurus(totalPrice),
     );
     const mutabakat = denge.balanced ? 'tutuyor' : `TUTMUYOR (${(denge.diffCents / 100).toFixed(2)} € fark)`;
-    const state = (b.isActive ?? true) ? 'aktif' : 'pasif';
     console.log(
-      `  ✓ ${resolveLocalizedText(bundle.name)} · ${items.length} kalem · ${b.totalPrice.toFixed(2)} € · ${mutabakat} · ${state} · /${bundle.slug}`,
+      `  ✓ ${resolveLocalizedText(bundle.name)} · ${items.length} kalem · ayrı ayrı ${(listeToplam / 100).toFixed(2)} € → paket ${totalPrice.toFixed(2)} € (%${b.discountPercent}) · ${mutabakat} · ${(b.isActive ?? true) ? 'aktif' : 'pasif'} · /${bundle.slug}`,
     );
   }
   console.log(`✓ paket: ${BUNDLES.length} kayıt`);
 }
-

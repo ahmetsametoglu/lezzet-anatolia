@@ -45,15 +45,15 @@ interface ProductsClientProps {
 export function ProductsClient({ data, device, urlState }: ProductsClientProps) {
   const resolvedDevice = useDevice(device);
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
 
   // Sekme SUNUCUYA GİTMEZ (yalnız hangi panelin çizildiğini değiştirir) → sığ yazım (replaceState).
   // Süzgeçler ise RSC'yi yeniden okutur (router.replace), çünkü veriyi sunucu süzüyor.
   const [tab, setTab] = useState<ProductTab>(urlState.tab);
   useEffect(() => setTab(urlState.tab), [urlState.tab]);
 
-  // Oluşturma niyeti de ADRESTE (`new=1`) ve sekmeyle AYNI desende taşınır: sığ yazım + yerel ayna.
-  // Neden sığ — `router.replace` RSC'yi yeniden okutur, yani bir form açmak için veritabanına gidilir.
+  // Oluşturma niyeti de ADRESTE (`new=1`) ama SIĞ yazılır (sekmeden farklı olarak): bir form açmak
+  // yeni veri gerektirmez — `router.replace` RSC'yi yeniden okutur, yani boşuna veritabanına gidilir.
   // Neden adres — yenilemede form açık kalır, link doğrudan forma düşer ve sekme değişince niyet
   // ayrı bir sıfırlama etkisine gerek kalmadan TEK yerde düşer (aşağıda, onTab'da).
   const [creating, setCreating] = useState(urlState.creating);
@@ -64,14 +64,18 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
   };
 
   const onTab = (next: ProductTab) => {
+    // Sekme değişimi GERÇEK gezinmedir (süzgeçlerle aynı yol): her sekme kendi verisini okur ve
+    // okumadığını ödemez. Sığ yazımdayken (`replaceState`) sunucuya hiç gidilmiyordu, dolayısıyla
+    // sayfa AÇILIŞTA dört sekmenin verisini birden çekmek zorundaydı — Ürünler'e bakan operatör
+    // paket havuzunu da ödüyordu. Yerel durum ANINDA güncellenir (sekme vurgusu beklemez), veri
+    // arkadan gelir; `isPending` ile içerik hafifçe soluklaşır ki bekleme görünsün.
     setTab(next);
-    // Sekme değişince oluşturma niyeti VE arama düşer. Niyet: "Kategori ekle"ye basıp Paketler'e geçen
-    // operatörün önünde kategori formu kalmaz. Arama: terim sekmeye bağlı ("börek" ürün araması,
-    // kategori listesinde anlamsız) — taşınsaydı yeni sekme sebebi görünmeyen bir süzgeçle açılırdı.
     setCreating(false);
     setSearch('');
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    writeUrl({ tab: next, creating: false, q: '' });
+    startTransition(() => {
+      router.replace(productsUrl({ ...urlState, tab: next, creating: false, q: '' }), { scroll: false });
+    });
   };
 
   const setCreatingIntent = (next: boolean) => {
@@ -172,13 +176,18 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
 
   return (
     <>
-      {resolvedDevice === 'mobile' ? <ProductsMobile {...view} /> : <ProductsDesktop {...view} />}
+      {/* Sekme geçişi sunucuya gidiyor: bekleme SÖYLENİR (soluklaşma + imleç), yoksa tıklamanın
+          işe yarayıp yaramadığı belli olmaz. */}
+      <div className={pending ? 'pointer-events-none flex min-h-0 flex-1 flex-col opacity-60 transition-opacity' : 'flex min-h-0 flex-1 flex-col'}>
+        {resolvedDevice === 'mobile' ? <ProductsMobile {...view} /> : <ProductsDesktop {...view} />}
+      </div>
       {productDialog ? (
         <ProductFormDialog
           key={`${productDialog}-${selected?.id ?? 'new'}`}
           mode={productDialog}
           product={selected}
           categories={data.categories}
+          bundles={data.bundles}
           device={resolvedDevice}
           onClose={() => (productDialog === 'create' ? setCreatingIntent(false) : setEditing(false))}
         />

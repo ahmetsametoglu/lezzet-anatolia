@@ -64,10 +64,20 @@ export interface VariantOption {
   label: string;
   imageUrl: string | null;
   /**
-   * Liste fiyatı (b2c, KDV dahil €) — paketin verdiği indirim ancak buna göre görülebilir. `null` =
-   * o varyanta henüz fiyat girilmemiş; sayı UYDURULMAZ, ekran eksikliği söyler.
+   * Kalemin TEK BAŞINA satıldığı fiyat (b2c, KDV dahil €) — paketin verdiği indirim ancak buna göre
+   * görülebilir. `null` = o varyanta henüz fiyat girilmemiş; sayı UYDURULMAZ, ekran eksikliği söyler.
    */
   listPrice: number | null;
+  /**
+   * Tahmini birim maliyet (KDV hariç €) — eldeki partilerin ağırlıklı ortalama alış fiyatı. Gerçek
+   * COGS parti başına belli ve sipariş anında kesinleşir; bu, fiyat verirken bakılan tahmindir.
+   * `null` = fiyatlı parti yok → marj hesaplanmaz (0 saymak marjı şişirirdi).
+   */
+  unitCost: number | null;
+  /** Ürünün KDV oranı — paketin tek oranı yoktur, HT'ye iniş kalem kalem yapılır. */
+  vatRate: number;
+  /** Ürünün hedef kâr marjı (%) — kalemin payı bunun altına düşerse şerit sayar. */
+  targetMarginPercent: number | null;
   /** Pakete YENİ eklenebilir mi (ürün aktif + boy aktif). Pasif olan yine adıyla görünür. */
   addable: boolean;
   /** Eklenemiyorsa sebebi — "pasif ürün" · "aday ürün" · "pasif boy". Duran kalemde işaret olur. */
@@ -94,6 +104,18 @@ export function matchesCatalogFilter(row: { name: LocalizedText; slug: string },
   if (!needle) return true;
   const haystack = [...LOCALES.map((l) => row.name[l] ?? ''), row.slug].map((s) => slugify(s)).join(' ');
   return haystack.includes(needle);
+}
+
+/**
+ * Bu ürünün kalemi olduğu paketler. Ürünü pasife almak paketi doğrudan bozar (paket ancak tüm
+ * kalemleri satılabilirse satılabilir), ama ilişki ekranda hiç görünmüyordu: operatör ürünü kapatıp
+ * paketin sessizce vitrinden düştüğünü sonradan öğreniyordu. Türetme saf ve client'ta — paketler
+ * kalemleriyle birlikte zaten gelmiş durumda (ek sorgu yok).
+ */
+export function bundlesUsingVariants(bundles: BundleView[], variantIds: string[]): BundleView[] {
+  if (variantIds.length === 0) return [];
+  const wanted = new Set(variantIds);
+  return bundles.filter((b) => b.items.some((i) => wanted.has(i.variantId)));
 }
 
 /** RSC'nin client'a geçirdiği tüm veri. */

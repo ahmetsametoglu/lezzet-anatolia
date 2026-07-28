@@ -27,7 +27,7 @@ import { ProductFormDesktop } from './product-form.desktop';
 import { ProductFormMobile } from './product-form.mobile';
 import { ProductFormSchema, buildDefaults, toActionPayload, type ProductFormValues } from './product-form-schema';
 import type { ProductFormFields, ProductFormTab } from './product-form-types';
-import type { CategoryView, ProductView } from '../../products-types';
+import { bundlesUsingVariants, type BundleView, type CategoryView, type ProductView } from '../../products-types';
 
 // Ürün oluştur/düzenle — KAP (container): RHF + zodResolver, action'lar, Dialog kabuğu ve footer burada.
 // Alan ELEMANLARI bir kez kurulur (fields), sunum cihaza göre çatallanır (Sapma 3): masaüstü çok bölgeli
@@ -45,11 +45,13 @@ interface ProductFormDialogProps {
   mode: 'create' | 'edit';
   product: ProductView | null;
   categories: CategoryView[];
+  /** Paketler — bu ürünün hangilerinde kullanıldığını göstermek için (ek sorgu yok, zaten gelmiş). */
+  bundles: BundleView[];
   device: Device;
   onClose: () => void;
 }
 
-export function ProductFormDialog({ mode, product, categories, device, onClose }: ProductFormDialogProps) {
+export function ProductFormDialog({ mode, product, categories, bundles, device, onClose }: ProductFormDialogProps) {
   const editing = mode === 'edit' && product !== null;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +179,26 @@ export function ProductFormDialog({ mode, product, categories, device, onClose }
   // Alt bar SOL tarafı = aksiyon bölgesi (zorunlu-alan metni değil): satış durumu kaydetmenin hemen
   // yanında durur — katalog/paket dialoglarıyla aynı desen.
   //
+  // ÜRÜN ↔ PAKET BAĞI görünür kılınır. Paket ancak tüm kalemleri satılabilirse satılabilir; ürünü
+  // pasife almak, o ürünü içeren paketleri de vitrinden düşürür. Bağ ekranda hiç yazmıyordu, yani
+  // operatör sonucu ancak sonradan (satış durunca) öğreniyordu. Sayı HER ZAMAN görünür, uyarı ise
+  // yalnız gerçekten zarar verecek anda: satıştaki bir paketi olan ürünü satıştan çıkarırken.
+  const usedIn = bundlesUsingVariants(bundles, (product?.variants ?? []).map((v) => v.id));
+  const activeUsedIn = usedIn.filter((b) => b.isActive);
+  const leavingSale = form.watch('status') !== 'active' && (product?.status ?? 'active') === 'active';
+  const bundleNames = (list: BundleView[]) => list.map((b) => resolveLocalizedText(b.name)).join(' · ');
+  const bundleNote =
+    usedIn.length === 0 ? null : (
+      <span
+        className={`truncate font-ops-body text-[11.5px] ${leavingSale && activeUsedIn.length > 0 ? 'font-semibold text-ops-amber' : 'text-ops-muted'}`}
+        title={bundleNames(usedIn)}
+      >
+        {leavingSale && activeUsedIn.length > 0
+          ? `Satıştan çıkarırsan ${activeUsedIn.length} paket de satılamaz: ${bundleNames(activeUsedIn)}`
+          : `${usedIn.length} pakette kullanılıyor`}
+      </span>
+    );
+
   // Üç durum TEK seçicide: "Satışta / Pasif / Aday" aynı bilginin değerleri. Önceden yalnız aktiflik
   // anahtarı vardı ve aday ürün çıkmazdaydı — anahtarı açmak `isActive` yazıyordu ama adaylık onu
   // ezdiği için ekranda hiçbir şey değişmiyordu. Vaat edilen "Etkinleştir" düğmesinin yerini bu alıyor.
@@ -187,18 +209,21 @@ export function ProductFormDialog({ mode, product, categories, device, onClose }
       submitting={formState.isSubmitting}
       error={error}
       actions={
-        <FormMultiToggle
-          control={control}
-          name="status"
-          label="Durum"
-          bare
-          className="w-[248px]"
-          options={[
-            { key: 'active', label: 'Satışta', tone: 'olive', title: 'Katalogda görünür ve satılabilir' },
-            { key: 'passive', label: 'Pasif', tone: 'neutral', title: 'Katalogda gizli — arşiv değil, geri açılabilir' },
-            { key: 'candidate', label: 'Aday', tone: 'blue', title: 'Satılamaz; yalnız keşif akışında görünür' },
-          ]}
-        />
+        <>
+          <FormMultiToggle
+            control={control}
+            name="status"
+            label="Durum"
+            bare
+            className="w-[248px]"
+            options={[
+              { key: 'active', label: 'Satışta', tone: 'olive', title: 'Katalogda görünür ve satılabilir' },
+              { key: 'passive', label: 'Pasif', tone: 'neutral', title: 'Katalogda gizli — arşiv değil, geri açılabilir' },
+              { key: 'candidate', label: 'Aday', tone: 'blue', title: 'Satılamaz; yalnız keşif akışında görünür' },
+            ]}
+          />
+          {bundleNote}
+        </>
       }
     />
   );

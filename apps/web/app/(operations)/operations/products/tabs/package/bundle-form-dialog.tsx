@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { fromCents } from '@lezzet/helper';
 import { resolveLocalizedText, type LocalizedText } from '@lezzet/types';
 import type { Device } from '@/lib/device';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
@@ -11,13 +12,14 @@ import { LocaleCard } from '@/components/operation/form/locale-card';
 import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
 import { FormMultiToggle } from '@/components/operation/form/form-multi-toggle';
 import { FormNumber } from '@/components/operation/form/form-input';
-import { FormMoney } from '@/components/operation/form/money-input';
+import { FormMoney, PercentField } from '@/components/operation/form/money-input';
 import { ImageCropField } from '@/components/operation/form/image-crop-field';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { FormSection } from '../product/form-section';
 import { suggestTranslationAction } from '../../actions/translate';
 import { createBundleAction, updateBundleAction, uploadBundleImageAction } from './actions';
 import { BundleItemsEditor } from './bundle-items-editor';
+import { bundlePricing, priceFromDiscount } from './bundle-pricing';
 import { BundleFormSchema, buildBundleDefaults, bundleBlock, toBundlePayload, type BundleFormValues } from './bundle-form-schema';
 import type { BundleView, VariantOption } from '../../products-types';
 
@@ -46,7 +48,7 @@ export function BundleFormDialog({ bundle, pool, device, onClose }: BundleFormDi
     defaultValues: buildBundleDefaults(bundle),
     mode: 'onChange',
   });
-  const { control, handleSubmit, formState } = form;
+  const { control, handleSubmit, formState, setValue } = form;
 
   const aiTranslate = (text: LocalizedText): Promise<LocalizedText> => suggestTranslationAction(text);
 
@@ -66,10 +68,19 @@ export function BundleFormDialog({ bundle, pool, device, onClose }: BundleFormDi
   // bağlı, slug da kayıtla doğuyor.
   const [crop, setCrop] = useImageCrop(form);
 
+  // TEK okuma: kaydetme engeli de fiyat türetmesi de aynı değerlerden beslenir.
+  const values = form.watch();
+  const poolById = useMemo(() => new Map(pool.map((p) => [p.variantId, p])), [pool]);
+  const pricing = bundlePricing(
+    (values.items ?? []).map((i) => ({ variantId: i.variantId, qty: i.qty, allocatedUnitPrice: i.allocatedUnitPrice })),
+    poolById,
+    values.totalPrice ?? 0,
+  );
+
   // Kaydetmenin engeli ŞEMANIN sorduğu soruyla aynı fonksiyondan gelir — düğme kilitlenir ve sebebi
   // yanında yazar. Eskiden düğme etkin görünüyordu ama şema geçersiz olduğu için submit yutuluyordu:
   // basılıyor, hiçbir şey olmuyordu. Ölü tıklama, hatayı hiç göstermemekten daha kötüdür.
-  const block = bundleBlock(form.watch());
+  const block = bundleBlock(values);
 
   const footer = (
     <DialogFooter
@@ -98,7 +109,7 @@ export function BundleFormDialog({ bundle, pool, device, onClose }: BundleFormDi
     <Dialog
       open
       onClose={onClose}
-      maxWidth={device === 'mobile' ? 520 : 1040}
+      maxWidth={device === 'mobile' ? 520 : 1160}
       title={editing ? 'Paket düzenle' : 'Yeni paket'}
       subtitle={
         editing
@@ -107,10 +118,10 @@ export function BundleFormDialog({ bundle, pool, device, onClose }: BundleFormDi
       }
       footer={footer}
     >
-      <form id={FORM_ID} onSubmit={onSubmit} className="grid gap-4 md:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+      <form id={FORM_ID} onSubmit={onSubmit} className="grid gap-5 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
         <div className="flex flex-col gap-4">
           <FormSection title="İçerik">
-            <LocaleCard title="Ad ve açıklama" completenessOf={form.watch('name')}>
+            <LocaleCard title="Ad ve açıklama" completenessOf={values.name}>
               {(lang) => (
                 <>
                   <FormLocalizedText
@@ -151,13 +162,33 @@ export function BundleFormDialog({ bundle, pool, device, onClose }: BundleFormDi
 
         <div className="flex flex-col gap-4">
           <FormSection title="Fiyat ve sunum">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <FormMoney
                 control={control}
                 name="totalPrice"
-                label="Paket fiyatı (€, KDV dahil)"
+                label="Paket fiyatı (€)"
                 required
                 placeholder="ör. 49,90"
+              />
+              {/* İndirim yüzdesi AYNI kararın ikinci yazımı — saklanan bir alan değil, fiyattan türer
+                  ve yazılınca fiyatı doldurur. Operatör kimi zaman "34,90 olsun", kimi zaman "%10
+                  vereyim" diye düşünür; ikisini de yazabilmeli ve ikisi asla çelişmemeli. */}
+              <PercentField
+                label="İndirim (%)"
+                labelAside="fiyatla bağlı"
+                // EKSİ yüzde gösterilmez: paket ayrı ayrı almaktan pahalıysa ortada indirim YOKTUR,
+                // "-66,3" ise geçerli bir değermiş gibi durur (üstelik kutuya eksi yazılamıyor da).
+                // O hâli şerit anlatıyor: "19,90 € pahalı".
+                value={pricing.discountPercent != null && pricing.discountPercent >= 0 ? pricing.discountPercent : null}
+                disabled={pricing.listTotalCents == null}
+                placeholder={pricing.listTotalCents == null ? '—' : 'ör. 10'}
+                onChange={(percent) => {
+                  if (pricing.listTotalCents == null || percent == null) return;
+                  setValue('totalPrice', fromCents(priceFromDiscount(pricing.listTotalCents, percent)), {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  });
+                }}
               />
               <FormNumber
                 control={control}
@@ -169,13 +200,14 @@ export function BundleFormDialog({ bundle, pool, device, onClose }: BundleFormDi
               />
             </div>
             <span className="font-ops-body text-[11px] leading-[1.5] text-ops-muted">
-              Müşteri yalnız bu fiyatı görür. Paket fiyatı sabittir — kupon ve genel indirim pakete uygulanmaz.
-              “Kaç kişilik” boş bırakılırsa müşteri tarafında o künye satırı hiç çizilmez.
+              Müşteri yalnız paket fiyatını görür (KDV dahil) ve o fiyat sabittir — kupon ve genel indirim pakete
+              uygulanmaz. İndirim yüzdesi kalemlerin tek fiyatları toplamına göre hesaplanır; birini yazarsan öbürü
+              dolar. “Kaç kişilik” boş bırakılırsa müşteri tarafında o künye satırı hiç çizilmez.
             </span>
           </FormSection>
 
           {/* Paylar burada TÜRETİLİR: editör yalnız alan yazar (`setValue`), formun sahibi bu dialog. */}
-          <BundleItemsEditor control={control} pool={pool} setValue={form.setValue} />
+          <BundleItemsEditor control={control} pool={pool} setValue={setValue} />
         </div>
       </form>
     </Dialog>

@@ -218,3 +218,40 @@ describe('eşik altı varyantlar (06.11 girdisi)', () => {
     expect(ustunde.find((r) => r.variantId === variantId)).toBeUndefined();
   });
 });
+
+describe('tahmini birim maliyet (fiyat kararının girdisi)', () => {
+  it('eldeki partilerin alış fiyatını ADETLE ağırlıklı ortalar', async () => {
+    // 10 adet × 4 € + 30 adet × 8 € → ortalama 7 €. Düz ortalama 6 € derdi: az kalan pahalı partiyi
+    // ucuz göstermek marjı olduğundan yüksek hesaplattırır.
+    await stocks.insert({ variantId, physicalQty: 10, purchasePrice: 4, expiryDate: gun(100) });
+    await stocks.insert({ variantId, physicalQty: 30, purchasePrice: 8, expiryDate: gun(120) });
+
+    const costs = await stocks.unitCostMap([variantId]);
+    expect(costs.get(variantId)).toBeCloseTo(7, 6);
+  });
+
+  it('alış fiyatı GİRİLMEMİŞ parti hesaba katılmaz (0 sayılsa maliyet düşük görünürdü)', async () => {
+    await stocks.insert({ variantId, physicalQty: 10, purchasePrice: 5, expiryDate: gun(100) });
+    await stocks.insert({ variantId, physicalQty: 90, expiryDate: gun(120) }); // fiyatsız parti
+
+    expect((await stocks.unitCostMap([variantId])).get(variantId)).toBeCloseTo(5, 6);
+  });
+
+  it('tükenmiş parti maliyeti sürüklemez — elde olmayan mal fiyat kararına girmez', async () => {
+    await stocks.insert({ variantId, physicalQty: 0, purchasePrice: 100, expiryDate: gun(50) });
+    await stocks.insert({ variantId, physicalQty: 5, purchasePrice: 6, expiryDate: gun(100) });
+
+    expect((await stocks.unitCostMap([variantId])).get(variantId)).toBeCloseTo(6, 6);
+  });
+
+  it('fiyatlı partisi olmayan varyant haritada YER ALMAZ — "bilmiyorum" ile "sıfır" ayrı şeyler', async () => {
+    await stocks.insert({ variantId, physicalQty: 7, expiryDate: gun(100) });
+
+    const costs = await stocks.unitCostMap([variantId]);
+    expect(costs.has(variantId)).toBe(false);
+  });
+
+  it('boş kimlik listesinde sorgu ATILMAZ', async () => {
+    expect((await stocks.unitCostMap([])).size).toBe(0);
+  });
+});

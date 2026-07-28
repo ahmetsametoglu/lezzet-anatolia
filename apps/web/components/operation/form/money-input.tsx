@@ -1,22 +1,22 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Controller, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
 import { Input, InputField } from './input';
+import { useNumericDraft } from './use-numeric-draft.hook';
 
 /**
  * Para girdisi — Komponent Envanteri O8'in para kipi. `MoneyInput` etiketsiz (tablo hücresi),
  * `MoneyField` etiketli, `FormMoney` bunun RHF adaptörü.
  *
- * NEDEN AYRI BİR KONTROL: aynı formda üç ayrı yazım görünüyordu — `34,9` (paket fiyatı, `type=number`
- * tarayıcı biçimi), `15.95` (kalem payı, ham sayı) ve `15,95` (hesaplanan sütun). Para iki ondalıklı ve
- * virgüllü TEK bir yazımla görünmeli; yoksa operatör aynı ekranda üç farklı dil okur.
+ * NEDEN AYRI BİR KONTROL: aynı formda üç ayrı yazım görünüyordu — `34,9` (type=number tarayıcı
+ * biçimi), `15.95` (ham sayı) ve `15,95` (hesaplanan sütun). Para iki ondalıklı ve virgüllü TEK bir
+ * yazımla görünmeli; yoksa operatör aynı ekranda üç farklı dil okur.
  *
- * ODAK AYRIMI kasıtlı: yazarken serbest metin (yoksa "15," yazılamaz, ondalık hiç girilemez), odaktan
- * çıkınca daima iki hane. Dışarıdan gelen değişiklik (paket formunda payların otomatik dağıtımı) odakta
- * OLMAYAN hücrede anında görünür — o hâlde gösterim değerin kendisinden türüyor.
+ * Odak-taslak davranışı ortak kancada (`useNumericDraft`) — yüzde girdisi de aynı davranışı kullanır.
  */
 const format = (value: number | null): string => (value == null ? '' : value.toFixed(2).replace('.', ','));
+const toDraft = (value: number | null): string => (value == null ? '' : String(value).replace('.', ','));
 
 /** Serbest yazımı sayıya indirir: virgül/nokta ikisi de ondalık ayracı, boş → null. */
 function parse(raw: string): number | null {
@@ -29,32 +29,15 @@ function parse(raw: string): number | null {
 /** Yazarken izin verilen karakterler — harf ve İKİNCİ bir ayraç kutuya hiç girmez. */
 const sanitize = (raw: string): string => raw.replace(/[^\d.,]/g, '').replace(/([.,])(?=.*[.,])/g, '');
 
-interface MoneyTextOptions {
+interface MoneyCoreProps {
   value: number | null;
   onChange: (value: number | null) => void;
   onBlur?: () => void;
 }
 
-/** Odak durumuna göre gösterim + serbest yazım — etiketli ve etiketsiz sürümün paylaştığı davranış. */
-function useMoneyText({ value, onChange, onBlur }: MoneyTextOptions) {
-  // `null` = odakta değil → gösterim değerden türer (iki hane). Dolu = yazılmakta olan taslak.
-  const [draft, setDraft] = useState<string | null>(null);
-  return {
-    value: draft ?? format(value),
-    onFocus: () => setDraft(value == null ? '' : String(value).replace('.', ',')),
-    onChange: (raw: string) => {
-      const next = sanitize(raw);
-      setDraft(next);
-      onChange(parse(next));
-    },
-    onBlur: () => {
-      setDraft(null);
-      onBlur?.();
-    },
-  };
-}
+const draftOptions = (core: MoneyCoreProps) => ({ ...core, format, toDraft, sanitize, parse });
 
-interface MoneyInputProps extends MoneyTextOptions {
+interface MoneyInputProps extends MoneyCoreProps {
   inputSize?: 'md' | 'sm';
   className?: string;
   disabled?: boolean;
@@ -64,7 +47,7 @@ interface MoneyInputProps extends MoneyTextOptions {
 }
 
 export function MoneyInput({ inputSize = 'sm', className, disabled, placeholder, title, ariaLabel, ...core }: MoneyInputProps) {
-  const text = useMoneyText(core);
+  const text = useNumericDraft(draftOptions(core));
   return (
     <Input
       inputSize={inputSize}
@@ -83,7 +66,7 @@ export function MoneyInput({ inputSize = 'sm', className, disabled, placeholder,
   );
 }
 
-interface MoneyFieldProps extends MoneyTextOptions {
+interface MoneyFieldProps extends MoneyCoreProps {
   label: ReactNode;
   required?: boolean;
   labelAside?: ReactNode;
@@ -96,7 +79,7 @@ interface MoneyFieldProps extends MoneyTextOptions {
 
 // Yalnız `FormMoney` sarar — dışa açık değil (ölü ihracat yok).
 function MoneyField({ label, required, labelAside, error, placeholder, disabled, fieldClassName, id, ...core }: MoneyFieldProps) {
-  const text = useMoneyText(core);
+  const text = useNumericDraft(draftOptions(core));
   return (
     <InputField
       label={label}
@@ -152,6 +135,48 @@ export function FormMoney<T extends FieldValues>({ control, name, label, require
           onBlur={field.onBlur}
         />
       )}
+    />
+  );
+}
+
+/**
+ * Yüzde girdisi (etiketli) — para alanıyla AYNI odak-taslak davranışı, farklı biçim: tek ondalık,
+ * `%` işareti etikette. Formda saklanan bir alan değil de türetilmiş bir değer olabilir (paket
+ * formunda indirim yüzdesi fiyatın ikinci yazımıdır), o yüzden RHF adaptörü yok — değer ve yazıcı
+ * dışarıdan verilir.
+ */
+const formatPercent = (value: number | null): string => (value == null ? '' : value.toFixed(1).replace('.', ','));
+// Yüzde TÜRETİLMİŞ bir değer olabilir (fiyattan hesaplanır) ve ham hâli `4.255319148936170` gibi
+// gelir; odaklanınca düzenlenecek metin de yuvarlanmış olmalı, yoksa kutuya on beş hane dökülür.
+const toPercentDraft = (value: number | null): string =>
+  value == null ? '' : String(Number(value.toFixed(1))).replace('.', ',');
+
+interface PercentFieldProps extends MoneyCoreProps {
+  label: ReactNode;
+  labelAside?: ReactNode;
+  placeholder?: string;
+  disabled?: boolean;
+  fieldClassName?: string;
+  id?: string;
+}
+
+export function PercentField({ label, labelAside, placeholder, disabled, fieldClassName, id, ...core }: PercentFieldProps) {
+  const text = useNumericDraft({ ...core, format: formatPercent, toDraft: toPercentDraft, sanitize, parse });
+  return (
+    <InputField
+      label={label}
+      labelAside={labelAside}
+      mono
+      inputMode="decimal"
+      placeholder={placeholder}
+      disabled={disabled}
+      fieldClassName={fieldClassName}
+      id={id}
+      name={id}
+      value={text.value}
+      onFocus={text.onFocus}
+      onChange={(e) => text.onChange(e.target.value)}
+      onBlur={text.onBlur}
     />
   );
 }
