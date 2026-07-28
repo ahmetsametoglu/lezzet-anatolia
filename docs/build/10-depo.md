@@ -40,8 +40,13 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
   - **"Alış fiyatı alanı yok" TİPTE zorlanıyor:** depocunun gönderdiği satırda (`IntakeFormLine`) `unitCost` alanı YOKTUR; maliyet PO'dan sunucu tarafında eşleşir. Testte depocu fiyat girmeden partinin alış fiyatı 6 € doğuyor — gördüğü bir sayı değil, admin'in girdiği.
   - **Fark hata değildir:** eksik/fazla gelen mal işaretlenir, kabul yine tamamlanır ve mal fiilen girer. **PO'suz alımda fark üretilmez** — karşılaştırılacak sipariş yok, her satırı "beklenmedik" saymak gürültü olurdu (bu kusuru test yakaladı).
   - **MLOR engellemez, uyarır:** ömrünün onda dokuzu geçmiş parti de kabul edilir, uyarı listelenir — karar mal kabul edende (DOMAIN §4).
-- [ ] (10.5) **İmha/sayım:** `StockAdjustment` (parti + adet + sebep: son tarih/hasar/sayım/kayıp); teslim-sonrası iade → varsayılan imha (restok admin istisnası, depocuya restok seçeneği sunulmaz)
+- [~] (10.5) **İmha/sayım:** `StockAdjustment` (parti + adet + sebep: son tarih/hasar/sayım/kayıp); teslim-sonrası iade → varsayılan imha (restok admin istisnası, depocuya restok seçeneği sunulmaz)
   - *Bitti:* imha kaydı düşüyor; fire raporuna besleniyor (12)
+  - **Durum (28.07) — ARKA UÇ HAZIR, ekran yok.** `0033_adjustment_document.sql` (sayaç + `adjust_stock_batch`), motor `domain-core/stock/document-no.ts`, kapı `apps/web/lib/stock/adjustment.ts`. 14 test. Bu iş **stok ekranının çizili ama park edilmiş "Kayıt" sütununu açar** (`design/BACKLOG.md §1c`).
+  - **Numara OLAY başınadır, satır başına değil:** bir imhada üç parti çöpe gidebilir; üçüne üç numara vermek eşleştirilmek istenen kâğıdı üçe bölerdi. `adjust_stock`'a dokunulmadı — o tek partiyi düzeltir ve 07.8/11.4 onu tek tek çağırır; çok satırlı olay AYRI RPC'dir çünkü N parti + paylaşılan numara birlikte bölünemez. Bir satır tutmazsa HİÇBİRİ yazılmaz (testli): yarım tutanak, hiç tutanak olmamasından kötüdür.
+  - **SIRALI, rastgele değil** — `Order.reference_no`'nun tersi ve bilerek: sipariş numarası dışarı gider, sıralı olsaydı sipariş hacmini sızdırırdı. Bu numara içeride kalır; denetmenin okuyup yazacağı şey `IMH-26-0012`'dir. Sıra atomik artar (`document_counter`), `max(...)+1` iki eşzamanlı imhada aynı numarayı verirdi.
+  - **Sınıflandırma motorda, numara veritabanında:** hangi sebebin hangi kâğıda düştüğü bir iş kuralıdır (imha / sayım / iade — üç ayrı tutanak); benzersizlik ve atomiklik DB'nin işidir. Motor onu garanti edemez.
+  - **"Depocuya restok seçeneği sunulmaz" TİPTE zorlanıyor:** kapının sebep tipi `return_restock`'u kabul etmez (admin istisnası, DOMAIN §4/§8) — arayüz disiplini olarak bırakılsaydı er geç bir ekranda o seçenek belirirdi.
 - [ ] (10.6) **Sıcaklık kaydı:** `TemperatureLog` (dolap/araç + derece), günde 1-2 elle giriş
   - *Bitti:* kayıt tutuluyor, geçmiş görünüyor
 

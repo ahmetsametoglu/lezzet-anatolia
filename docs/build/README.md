@@ -35,7 +35,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | tamam | 10/10 |
 | 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 0/12 (+4 kısmi) |
 | 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 1/16 (+5 kısmi) |
-| 10 | `10-depo.md` | Depo Yüzeyi | sürüyor | 0/6 (+4 kısmi) |
+| 10 | `10-depo.md` | Depo Yüzeyi | sürüyor | 0/6 (+5 kısmi) |
 | 11 | `11-kurye-rota.md` | Kurye ve Rota Teslimat | sürüyor | 1/6 (+4 kısmi) |
 | 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | tamam | 7/7 |
 | 13 | `13-analitik.md` | Analitik | bekliyor | 0/7 |

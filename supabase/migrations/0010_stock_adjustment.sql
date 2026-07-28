@@ -26,10 +26,17 @@ create table public.stock_adjustment (
   unit_cost numeric(10, 2),
   note text,
   created_by uuid,                                   -- FK yok: personel kimliği auth şemasında
+  -- OLAY belgesi (10.5, `0033`): `IMH-26-0012`. Aynı imhanın/sayımın BÜTÜN satırları aynı numarayı
+  -- paylaşır — kâğıt tutanakla eşleşen şey satır değil olaydır. Tek partilik `adjust_stock`
+  -- çağrılarında null: kısmi karşılama ve kurye akışları tutanak üretmez, stoğu düzeltir.
+  reference_no text,
   created_at timestamptz not null default now()
 );
 
 create index stock_adjustment_stock_idx on public.stock_adjustment (stock_id);
+-- "Elimdeki kâğıdın karşılığı" araması — numara başına birkaç satır döner.
+create index stock_adjustment_reference_idx on public.stock_adjustment (reference_no)
+  where reference_no is not null;
 -- Dönemsel fire raporu (DOMAIN §12): tarih aralığı + sebep kırılımı.
 create index stock_adjustment_date_idx on public.stock_adjustment (created_at desc);
 

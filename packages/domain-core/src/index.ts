@@ -17,6 +17,7 @@ export * from './stock/offer';
 export * from './stock/reservation';
 export * from './stock/shelf-life';
 export * from './stock/shortfall';
+export * from './stock/document-no';
 export * from './delivery/delivery-days';
 export * from './delivery/shipping-fee';
 export * from './delivery/on-the-way';

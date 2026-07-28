@@ -1,11 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  AdjustBatchResultSchema,
   AdjustResultSchema,
   StockAdjustmentDetailSchema,
   StockAdjustmentSchema,
   StockAdjustmentInsertSchema,
   StockAdjustmentUpdateSchema,
   DEFAULT_PAGE_SIZE,
+  type AdjustBatchResult,
   type AdjustResult,
   type KeysetCursor,
   type Page,
@@ -62,6 +64,34 @@ export class StockAdjustmentService extends BaseDbService<StockAdjustment, Stock
       p_created_by: input.createdBy ?? null,
     });
     return AdjustResultSchema.parse(dbToApp(raw));
+  }
+
+  /**
+   * **Çok partili tek olay** (10.5): N satır + PAYLAŞILAN bir belge numarası, hepsi bölünemez.
+   *
+   * `adjust()`'ı N kez çağırmak aynı şey değildir: üçüncü satır düştüğünde elde yarım bir tutanak
+   * kalır ve kâğıtla eşleşmez. Öneki motor seçer (`documentPrefixFor`), numarayı DB üretir.
+   */
+  async adjustBatch(input: {
+    lines: ReadonlyArray<{ stockId: string; qty: number }>;
+    reason: StockAdjustmentReason;
+    prefix: string;
+    note?: string | null;
+    createdBy?: string | null;
+  }): Promise<AdjustBatchResult> {
+    const raw = await this.executeRpc('adjust_stock_batch', {
+      p_lines: input.lines.map((line) => ({ stock_id: line.stockId, qty: line.qty })),
+      p_reason: input.reason,
+      p_prefix: input.prefix,
+      p_note: input.note ?? null,
+      p_created_by: input.createdBy ?? null,
+    });
+    return AdjustBatchResultSchema.parse(dbToApp(raw));
+  }
+
+  /** Bir olayın bütün satırları — "elimdeki kâğıdın karşılığı" araması. */
+  listByReference(referenceNo: string): Promise<StockAdjustment[]> {
+    return this.getAll({ referenceNo }, { orderBy: 'createdAt' });
   }
 
   /** Bir partinin düzeltme geçmişi — en yeni önce. */

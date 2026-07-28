@@ -99,6 +99,75 @@ export const VARIANT_POOL_LIMIT = 500;
  * olduğundan varyantsız üründe otomatik varsayılan varyant açılır. Aday ürün (status='candidate')
  * satış/vitrin sorgularının dışında (DOMAIN §13).
  */
+/**
+ * Süzgeçleri eq-filtrelerine ve `or` gruplarına çevirir — liste, sayaçlar ve fiyat sıralı okuma
+ * AYNI çeviriyi kullanır (yoksa "12 sonuç" yazıp 5 satır gösteren ekran doğar).
+ *
+ * Sınıfın dışında: `ProductListingService` de bunu kullanır ve süzgeç mantığı iki yerde yaşayamaz —
+ * kategori süzgeci sıralamaya göre farklı davranırsa katalog kendi kendisiyle çelişir.
+ */
+function buildProductQuery(f?: ProductFilters): { filters: Record<string, unknown>; orFilters: string[] } {
+  const filters: Record<string, unknown> = {};
+  const orFilters: string[] = [];
+  if (f?.categoryId) filters.categoryId = f.categoryId;
+  if (f?.ids) filters.id = f.ids; // dizi → IN (base sorgu kurucusu çevirir)
+  if (f?.status) filters.status = f.status; // tek kolon → düz eşitlik (eski ikili bayrak çevrimi kalktı)
+
+  const q = f?.query?.trim();
+  if (q) {
+    // PostgREST filtre dizesine gömülüyor: değeri çift tırnakla sar ve tırnağı ayıkla ki
+    // virgül/parantez ayrıştırmayı bozmasın. `*` PostgREST'in ilike joker karakteri.
+    const safe = q.replace(/"/g, '').replace(/[(),]/g, ' ');
+    orFilters.push(LOCALIZED_TEXT_KEYS.map((l) => `name->>${l}.ilike."*${safe}*"`).join(','));
+  }
+
+  // "Beyan eksik" ölçütü ÜRETİLMİŞ KOLONDA (0005 `is_incomplete`): süzgeç de sayaç da aynı gerçeği
+  // okur. Kural veritabanına taşınınca ayrışma riski ortadan kalktı (ve indekslendi).
+  if (f?.onlyIncomplete) filters.isIncomplete = true;
+  if (f?.onlyShippable) filters.shippable = true;
+  return { filters, orFilters };
+}
+
+/**
+ * **Fiyata göre sıralı katalog** (08.10) — `product_listing` görünümü (0034).
+ *
+ * Kendi sınıfı olmasının sebebi teknik: keyset sayfalama `tableName`'e bağlıdır ve sıralama anahtarı
+ * (`sort_price`) yalnız görünümde vardır (`OrderSaleService` ile aynı gerekçe). Süzgeçler paylaşılır
+ * (`buildProductQuery`), satır şeması paylaşılır (`ProductWithRelationsSchema`) — ayrışan tek şey
+ * hangi kaynaktan ve hangi sıraya göre okunduğu.
+ *
+ * **Sıralamanın kullandığı fiyat, kartta yazan fiyattır.** Görünüm motorun ziyaretçi dalını yeniden
+ * ifade eder (0034 başlığındaki ödünleşme); ikisinin ayrışmadığı testle tutulur.
+ */
+export class ProductListingService extends BaseDbService<ProductWithRelations, never, never> {
+  constructor(supabase: SupabaseClient) {
+    super(
+      supabase,
+      'product_listing',
+      ProductWithRelationsSchema,
+      ProductWithRelationsSchema as never,
+      ProductWithRelationsSchema as never,
+      false,
+    );
+  }
+
+  /**
+   * Fiyata göre sayfa. Fiyatı olmayan ürün (kanal fiyatı girilmemiş → satışa kapalı) listeden
+   * DÜŞMEZ, sonda durur — görünümdeki `sort_price` sonsuzdur (0034).
+   */
+  async listByPrice(opts: ProductListOptions & { direction: 'asc' | 'desc' }): Promise<Page<ProductWithRelations>> {
+    const { filters, orFilters } = buildProductQuery(opts.filters);
+    return this.getPageAs(ProductWithRelationsSchema, filters, {
+      select: '*,variants:product_variant(*),collections:product_collections(collection_id)',
+      orderBy: 'sortPrice',
+      orderDirection: opts.direction,
+      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+      keysetAfter: opts.cursor,
+      orFilters,
+    });
+  }
+}
+
 export class ProductService extends BaseDbService<Product, ProductInsert, ProductUpdate> {
   constructor(supabase: SupabaseClient) {
     super(supabase, 'product', ProductSchema, ProductInsertSchema, ProductUpdateSchema);
@@ -242,31 +311,8 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     };
   }
 
-  /**
-   * Süzgeçleri eq-filtrelerine ve `or` gruplarına çevirir — liste ve sayaçlar AYNI çeviriyi
-   * kullanır (yoksa "12 sonuç" yazıp 5 satır gösteren ekran doğar).
-   */
   private buildQuery(f?: ProductFilters): { filters: Record<string, unknown>; orFilters: string[] } {
-    const filters: Record<string, unknown> = {};
-    const orFilters: string[] = [];
-    if (f?.categoryId) filters.categoryId = f.categoryId;
-    if (f?.ids) filters.id = f.ids; // dizi → IN (base sorgu kurucusu çevirir)
-    if (f?.status) filters.status = f.status; // tek kolon → düz eşitlik (eski ikili bayrak çevrimi kalktı)
-
-    const q = f?.query?.trim();
-    if (q) {
-      // PostgREST filtre dizesine gömülüyor: değeri çift tırnakla sar ve tırnağı ayıkla ki
-      // virgül/parantez ayrıştırmayı bozmasın. `*` PostgREST'in ilike joker karakteri.
-      const safe = q.replace(/"/g, '').replace(/[(),]/g, ' ');
-      orFilters.push(LOCALIZED_TEXT_KEYS.map((l) => `name->>${l}.ilike."*${safe}*"`).join(','));
-    }
-
-    // "Beyan eksik" ölçütü artık ÜRETİLMİŞ KOLONDA (0005 `is_incomplete`): süzgeç de sayaç da aynı
-    // gerçeği okur. Önce burada bir `or` dizesi olarak kuruluyordu ve sayaç tarafıyla ayrışma riski
-    // yorumla uyarılıyordu — kural veritabanına taşınınca risk ortadan kalktı (ve indekslendi).
-    if (f?.onlyIncomplete) filters.isIncomplete = true;
-    if (f?.onlyShippable) filters.shippable = true;
-    return { filters, orFilters };
+    return buildProductQuery(f);
   }
 
   /**

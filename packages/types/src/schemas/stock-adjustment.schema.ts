@@ -24,6 +24,12 @@ export const StockAdjustmentSchema = z.object({
   unitCost: dbNumeric.nullable(),
   note: z.string().nullable(),
   createdBy: z.string().uuid().nullable(),
+  /**
+   * OLAY belgesi (10.5) — `IMH-26-0012`. Aynı imhanın/sayımın bütün satırları AYNI numarayı
+   * paylaşır: kâğıt tutanakla eşleşen şey satır değil, olaydır. Geçmiş kayıtlarda `null` — sonradan
+   * numara uydurmak, hiç yazılmamış bir tutanağa atıf yapmak olurdu.
+   */
+  referenceNo: z.string().nullable(),
   createdAt: z.string(),
 });
 export type StockAdjustment = z.infer<typeof StockAdjustmentSchema>;
@@ -48,6 +54,20 @@ export const AdjustResultSchema = z.object({
   remainingQty: z.number().int(),
 });
 export type AdjustResult = z.infer<typeof AdjustResultSchema>;
+
+/**
+ * `adjust_stock_batch` dönüşü (10.5) — N parti, TEK belge. Ekranın kuryeye/depocuya göstereceği ve
+ * kâğıda yazacağı numara budur.
+ */
+export const AdjustBatchResultSchema = z.object({
+  ok: z.boolean(),
+  referenceNo: z.string(),
+  lines: z.number().int(),
+  totalQty: z.number().int(),
+  /** Olayın net maliyeti (euro); geri eklemeler toplamdan DÜŞER. */
+  costTotal: dbNumeric,
+});
+export type AdjustBatchResult = z.infer<typeof AdjustBatchResultSchema>;
 
 /**
  * İmha/fire geçmişi SATIRI (09.13) — kayıt + hangi partinin, hangi ürünün (gömülü `select`, N+1 yok).

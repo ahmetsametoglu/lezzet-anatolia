@@ -58,9 +58,26 @@ Stok azalışının satış dışı her sebebi kayıt altına alınır — "bu �
 | unit_cost | number \| null | partinin alış fiyatı (snapshot) — fire maliyeti; parti sonradan düzeltilse kaymaz |
 | note | string \| null | teslim-sonrası iade restoku gibi istisnalarda sebep — **geri eklemede zorunlu** (DB seviyesinde) |
 | created_by | uuid \| null | kaydı giren personel |
+| reference_no | string \| null | **OLAY belgesi** (`IMH-26-0012`) — aynı imhanın/sayımın bütün satırları paylaşır; geçmiş kayıtlarda null |
 | created_at | timestamptz | |
 
 **`adjust_stock` fonksiyonu (06.6):** düzeltme kaydı + partinin fiili düşümü tek transaction'da — yarısı yazılırsa ya kaydı olmayan kayıp ya da karşılığı olmayan kayıt kalır. Partide olmayan miktar düşülemez; geri ekleme sebep notu ister.
+
+**`adjust_stock_batch` fonksiyonu (10.5):** N parti + PAYLAŞILAN bir belge numarası, hepsi bölünemez. `adjust_stock`'un yerine geçmez — o tek partiyi düzeltir ve kısmi karşılama/kurye akışları onu tek tek çağırır. Bir satır tutmazsa hiçbiri yazılmaz: yarım tutanak kâğıtla eşleşmez ve stok da yarı düşmüş kalır.
+
+**Numara neden SATIR başına değil OLAY başına:** bir imhada üç parti çöpe gidebilir; üçüne üç numara vermek, eşleştirilmek istenen tutanağı üçe bölerdi. İhtiyaç üç yerde gerçek — kâğıt ↔ kayıt eşleşmesi (denetim), tedarikçiye alacak yazışması, sayım oturumu.
+
+**Numara SIRALIDIR** — `Order.reference_no`'nun tersi ve bilerek: sipariş numarası dışarı gider ve sıralı olsaydı sipariş hacmini sızdırırdı; bu numara içeride kalır ve denetmenin okuyup kâğıda yazacağı şeydir. Sıra `document_counter` tablosundan atomik artar (`max(...)+1` iki eşzamanlı imhada aynı numarayı verirdi); önek başına ve yıl başına ayrışır. Sınıflandırma (hangi sebep hangi kâğıda) motordadır (`domain-core/stock/document-no`), numaranın kendisi veritabanının işidir.
+
+## DocumentCounter (belge sayacı)
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| prefix | string | `IMH` / `SAY` / `IAD` — birincil anahtarın parçası |
+| year | int | birincil anahtarın parçası; yıl başında sıra yeniden 1'den başlar |
+| last_value | int | son verilen numara; sonraki `+1` |
+
+**Sayaç geriye alınmaz.** İptal edilen kayıt numarayı yakar ve bu doğrudur: atlanan numara "burada bir şey olmuş" der, yeniden kullanılan numara yalan söyler.
 
 ## TemperatureLog (sıcaklık kaydı)
 

@@ -20,7 +20,15 @@ export async function loadProductContext(db: SupabaseClient, rows: ProductWithRe
   const context = new Map<string, ProductContext>();
   if (!rows.length) return context;
 
-  const variantsByProduct = new Map(rows.map((r) => [r.id, r.variants]));
+  // Sıra BURADA sabitlenir. Kartın fiyatı ürünün İLK aktif varyantından okunur (`map.ts`) ve gömülü
+  // ilişkinin dönüş sırası PostgREST'te garantili DEĞİLDİR — sabitlenmezse aynı ürün iki istekte
+  // farklı "başlangıç fiyatı" gösterebilir. Ölçüt operatörün elindeki sıra, eşitlikte doğuş anı.
+  const variantsByProduct = new Map(
+    rows.map((r) => [
+      r.id,
+      [...r.variants].sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt)),
+    ]),
+  );
   const variantIds = rows.flatMap((r) => r.variants.filter((v) => v.isActive).map((v) => v.id));
 
   const [prices, stock, offerBatches] = await Promise.all([

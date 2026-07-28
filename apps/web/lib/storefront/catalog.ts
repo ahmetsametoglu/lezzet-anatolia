@@ -1,5 +1,5 @@
 import 'server-only';
-import { CategoryService, ProductService, serviceDb } from '@lezzet/database';
+import { CategoryService, ProductListingService, ProductService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE } from '@lezzet/types';
 import type { KeysetCursor } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
@@ -18,15 +18,13 @@ import type { CatalogSort, StorefrontCatalog } from './storefront-types';
  * Bugünkü kaynak durumu:
  *   kategori süzgeci · ad araması · sayfalama · toplam sayı → GERÇEK
  *   fiyat · tükendi · satın alma yolu · "yalnız indirimliler" → GERÇEK (`map.ts`, near-expiry teklifi)
- *   fiyat sıralaması                                        → STUB(→05.4 DEĞİL; bkz. aşağı)
+ *   fiyat sıralaması                                        → GERÇEK (28.07, `product_listing` görünümü)
  *
- * **Fiyat sıralaması neden hâlâ yok:** stub bir süre `→05.4` etiketliydi ama 05.4 (fiyat) indi ve
- * sıralama yine açılmadı — etiket yanlış hedefi gösteriyordu (aynı hata fırsat rozetinde yaşandı).
- * Gerçek engel şu: uygulanabilir fiyat AYRI tablodadır (kanal + geçerlilik tarihi + müşteriye özel
- * satır) ve "bu ürünün b2c fiyatı" tek bir kolon değil, bir SEÇİMDİR. Ürünleri o seçime göre
- * sıralamak ve aynı anda keyset sayfalamak, `available_stock` gibi bir OKUMA GÖRÜNÜMÜ ister —
- * yani bir migration. Sıralamayı sayfa çekildikten sonra yapmak seçenek değil: sayfalamayı bozar,
- * "artan fiyat" yalnız o 30 satır içinde artan olur.
+ * **Fiyat sıralaması neden bir migration istedi:** uygulanabilir fiyat AYRI tablodadır (kanal +
+ * geçerlilik tarihi + müşteriye özel satır) ve "bu ürünün b2c fiyatı" tek bir kolon değil bir
+ * SEÇİMDİR. Sayfa çekildikten sonra sıralamak seçenek değil — "artan fiyat" yalnız o 30 satır içinde
+ * artan olur ve keyset sayfalama bozulur. Çözüm `available_stock` deseninde bir okuma görünümü
+ * (`0034`): seçim SQL'de çözülür, sıralama ve imleç onun üstünde çalışır.
  */
 
 interface CatalogQuery {
@@ -69,8 +67,13 @@ export async function getCatalogData(locale: Locale, q: CatalogQuery = {}): Prom
   // Aday ürün katalogda GÖRÜNMEZ (`musteri-katalog.md §6`) — `status: 'active'` bunu sağlar.
   const filters = { query: q.search, categoryId: activeCategory?.id, status: 'active' as const, ids: offerIds, onlyShippable: q.onlyShippable };
   const productSvc = new ProductService(db);
+  // Fiyat sıralaması AYRI kaynaktan okunur (`product_listing` görünümü, 0034): sıralama anahtarı
+  // ürün tablosunda yoktur. Süzgeçler ve satır şeması ortaktır — ayrışan tek şey sıra.
+  const direction = q.sort === 'priceAsc' ? 'asc' : q.sort === 'priceDesc' ? 'desc' : null;
   const [page, counts] = await Promise.all([
-    productSvc.listWithRelations({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE }),
+    direction
+      ? new ProductListingService(db).listByPrice({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE, direction })
+      : productSvc.listWithRelations({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE }),
     productSvc.counts(filters),
   ]);
   const context = await loadProductContext(db, page.rows);
