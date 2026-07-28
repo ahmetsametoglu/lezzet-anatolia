@@ -6,9 +6,10 @@ import { Table, type Column } from '@/components/operation/ui/table';
 import { FramedImage } from '@/components/media/framed-image';
 import { ImageIcon } from '@/components/operation/ui/icons';
 import { cropOf, IMAGE_ROLES, pickCropFields, resolveLocalizedText, type ImageRole } from '@lezzet/types';
+import { slugify } from '@lezzet/helper';
 import { reorderCatalogAction } from './actions';
 import { CatalogFormDialog } from './catalog-form-dialog';
-import type { CatalogKind, CatalogRow, CollectionView, ProductView } from '../../products-types';
+import { matchesCatalogFilter, type CatalogKind, type CatalogRow, type CollectionView, type ProductView } from '../../products-types';
 
 // Katalog sekmesi — Kategoriler VE Koleksiyonlar. İkisi de aynı düz/sıralı desen (çok dilli ad · slug ·
 // sortOrder · isActive + ürün sayısı): tek tablo, tek sıralama akışı, tek dialog; yalnız `kind` ve
@@ -76,15 +77,18 @@ const CATALOG_COLUMNS: Record<CatalogKind, Column<CatalogRow>[]> = {
   collection: catalogColumns('collection', 'Koleksiyon'),
 };
 
-const CATALOG_COPY: Record<CatalogKind, { hint: string; createLabel: string; empty: string }> = {
+// Oluşturma etiketi burada DEĞİL: düğme sekme çubuğunda, kabukta yaşıyor (products.desktop).
+// `filtered`: arama açıkken ipucu değişir, çünkü o hâlde sürükleme kapalıdır — "sürükle-sırala" yazan
+// bir satırın altında sürüklenemeyen bir liste bırakmak sessiz bir yalan olurdu.
+const CATALOG_COPY: Record<CatalogKind, { hint: string; filtered: string; empty: string }> = {
   category: {
     hint: 'Düz liste · iç içe yok · sürükle-sırala · düzenlemek için çift tıkla',
-    createLabel: '+ Kategori',
+    filtered: 'Arama açık · sıralama için aramayı temizle · düzenlemek için çift tıkla',
     empty: 'Henüz kategori yok.',
   },
   collection: {
     hint: 'Esnek pazarlama grubu · bir ürün birçok koleksiyonda · slug = paylaşım linki',
-    createLabel: '+ Koleksiyon',
+    filtered: 'Arama açık · sıralama için aramayı temizle · düzenlemek için çift tıkla',
     empty: 'Henüz koleksiyon yok.',
   },
 };
@@ -94,11 +98,18 @@ interface CatalogTabProps {
   rows: CatalogRow[];
   /** Üyelik düzenlemesi için ürün havuzu — yalnız koleksiyonda verilir. */
   products?: ProductView[];
+  /** Sekme çubuğundaki arama terimi. Süzme BURADA (client): bu liste sayfalı değil, bütün geliyor. */
+  filter: string;
+  /**
+   * Oluşturma diyalogu açık mı. NİYET kabuktan gelir (sekme çubuğundaki "+ Kategori"), DİYALOG burada
+   * kalır: kabuk hangi formun açıldığını bilmez, sekme kendi formunu bilir.
+   */
+  creating: boolean;
+  onCreateClose: () => void;
 }
 
-export function CatalogTab({ kind, rows, products }: CatalogTabProps) {
+export function CatalogTab({ kind, rows, products, filter, creating, onCreateClose }: CatalogTabProps) {
   const copy = CATALOG_COPY[kind];
-  const [creating, setCreating] = useState(false);
   // Düzenlenen kayıt KİMLİKLE tutulur, verisi her render'da TAZE listeden türetilir (products-client'ın
   // `selectedId` deseni). Satır nesnesinin kopyası tutulursa dialog içindeki görsel yüklemesi
   // `router.refresh()` sonrası görünmez: sunucu verisi tazelenir ama elde eski nesne (imageUrl: null)
@@ -121,6 +132,11 @@ export function CatalogTab({ kind, rows, products }: CatalogTabProps) {
       ]
     : rows;
 
+  // Arama SÜZGECİ en sonda uygulanır (iyimser sıranın üstüne): sıra gerçek listenin sırasıdır, süzgeç
+  // yalnız ne göründüğünü değiştirir.
+  const filtering = slugify(filter).length > 0;
+  const visible = filtering ? displayed.filter((r) => matchesCatalogFilter(r, filter)) : displayed;
+
   const handleReorder = async (ids: string[]) => {
     setOptimisticIds(ids);
     const { error } = await reorderCatalogAction(kind, ids);
@@ -129,30 +145,26 @@ export function CatalogTab({ kind, rows, products }: CatalogTabProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {/* Yalnız ipucu satırı — "+ Kategori" düğmesi sekme çubuğuna taşındı (kabuk). */}
       <div className="flex items-center border-b border-ops-line-soft px-6 py-[11px]">
-        <span className="mr-auto font-ops-body text-[12px] text-ops-muted">{copy.hint}</span>
-        <button
-          type="button"
-          onClick={() => setCreating(true)}
-          className="cursor-pointer rounded-ops-btn bg-ops-ink px-3.5 py-2 font-ops-display text-[12px] font-semibold text-ops-card hover:bg-ops-ink-hover"
-        >
-          {copy.createLabel}
-        </button>
+        <span className="font-ops-body text-[12px] text-ops-muted">{filtering ? copy.filtered : copy.hint}</span>
       </div>
       <Table
         columns={CATALOG_COLUMNS[kind]}
-        rows={displayed}
+        rows={visible}
         rowKey={(r) => r.id}
-        onReorder={handleReorder}
+        // Süzgeç açıkken sürükleme KAPALI: görünen alt kümeyi taşımak, sunucuya listenin tamamı
+        // sanılan yanlış bir sıra yazardı (gizli satırlar sıradan düşerdi).
+        onReorder={filtering ? undefined : handleReorder}
         onRowDoubleClick={(r) => setEditingId(r.id)}
         empty={
           <div className="flex flex-1 items-center justify-center p-10 text-center font-ops-body text-[13px] text-ops-faint">
-            {copy.empty}
+            {filtering ? 'Bu aramada kayıt yok.' : copy.empty}
           </div>
         }
       />
 
-      {creating ? <CatalogFormDialog kind={kind} products={products} onClose={() => setCreating(false)} /> : null}
+      {creating ? <CatalogFormDialog kind={kind} products={products} onClose={onCreateClose} /> : null}
       {editing ? (
         <CatalogFormDialog
           kind={kind}

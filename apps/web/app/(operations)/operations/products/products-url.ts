@@ -15,9 +15,16 @@ export interface ProductsUrlState {
   cat: string;
   status: ProductStatus | 'all';
   incomplete: boolean;
+  /**
+   * Oluşturma formu açık mı (`new=1`). NE oluşturulacağını `tab` söyler — türü ayrıca tutmak
+   * çelişebilecek bir durum doğururdu (`tab=packages&new=category`). Adreste yaşıyor çünkü sekme de
+   * orada: yenilemede aynı form açık kalır, paylaşılan link doğrudan forma düşer ve sekme değişince
+   * niyet TEK yerde düşer (ayrı bir sıfırlama etkisine gerek yok).
+   */
+  creating: boolean;
 }
 
-const DEFAULT_URL_STATE: ProductsUrlState = { tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false };
+const DEFAULT_URL_STATE: ProductsUrlState = { tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false };
 
 type RawParams = Record<string, string | string[] | undefined>;
 const one = (raw: string | string[] | undefined): string => (Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? ''));
@@ -32,6 +39,7 @@ export function parseProductsUrl(params: RawParams): ProductsUrlState {
     cat: one(params.cat) || DEFAULT_URL_STATE.cat,
     status: ProductStatusEnum.options.find((s) => s === statusRaw) ?? DEFAULT_URL_STATE.status,
     incomplete: one(params.incomplete) === '1',
+    creating: one(params.new) === '1',
   };
 }
 
@@ -46,6 +54,7 @@ export function productsUrl(state: ProductsUrlState): string {
   if (state.cat !== DEFAULT_URL_STATE.cat) p.set('cat', state.cat);
   if (state.status !== DEFAULT_URL_STATE.status) p.set('status', state.status);
   if (state.incomplete) p.set('incomplete', '1');
+  if (state.creating) p.set('new', '1');
   const qs = p.toString();
   return qs ? `${PRODUCTS_PATH}?${qs}` : PRODUCTS_PATH;
 }

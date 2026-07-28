@@ -52,9 +52,31 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
   const [tab, setTab] = useState<ProductTab>(urlState.tab);
   useEffect(() => setTab(urlState.tab), [urlState.tab]);
 
+  // Oluşturma niyeti de ADRESTE (`new=1`) ve sekmeyle AYNI desende taşınır: sığ yazım + yerel ayna.
+  // Neden sığ — `router.replace` RSC'yi yeniden okutur, yani bir form açmak için veritabanına gidilir.
+  // Neden adres — yenilemede form açık kalır, link doğrudan forma düşer ve sekme değişince niyet
+  // ayrı bir sıfırlama etkisine gerek kalmadan TEK yerde düşer (aşağıda, onTab'da).
+  const [creating, setCreating] = useState(urlState.creating);
+  useEffect(() => setCreating(urlState.creating), [urlState.creating]);
+
+  const writeUrl = (patch: Partial<ProductsUrlState>) => {
+    window.history.replaceState(null, '', productsUrl({ ...urlState, tab, creating, ...patch }));
+  };
+
   const onTab = (next: ProductTab) => {
     setTab(next);
-    window.history.replaceState(null, '', productsUrl({ ...urlState, tab: next }));
+    // Sekme değişince oluşturma niyeti VE arama düşer. Niyet: "Kategori ekle"ye basıp Paketler'e geçen
+    // operatörün önünde kategori formu kalmaz. Arama: terim sekmeye bağlı ("börek" ürün araması,
+    // kategori listesinde anlamsız) — taşınsaydı yeni sekme sebebi görünmeyen bir süzgeçle açılırdı.
+    setCreating(false);
+    setSearch('');
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    writeUrl({ tab: next, creating: false, q: '' });
+  };
+
+  const setCreatingIntent = (next: boolean) => {
+    setCreating(next);
+    writeUrl({ creating: next });
   };
 
   /** Süzgeç değişimi: URL'e yaz + RSC'yi yeniden okut (süzülmüş ilk sayfa gelir). */
@@ -105,7 +127,9 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
 
   // Seçim KİMLİKLE tutulur, kayıt taze listeden türetilir (kopya tutulursa güncelleme yansımaz).
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [modal, setModal] = useState<{ mode: 'create' | 'edit' } | null>(null);
+  // DÜZENLEME adreste değil: seçili satıra bağlı, seçim de yerel. Yalnız düzenlemeyi adrese taşımak
+  // yarım iş olurdu (link açılır, hangi kaydın düzenlendiği bilinmez). Oluşturma ise satır gerektirmez.
+  const [editing, setEditing] = useState(false);
   const selected = products.find((p) => p.id === selectedId) ?? products[0] ?? null;
 
   // Aktiflik geçişi kalıcı (server action) — başarınca RSC listeyi tazeler (hata sessiz; sunucu = gerçek).
@@ -135,22 +159,28 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
     onLoadMore,
     selectedId: selected?.id ?? null,
     onSelect: setSelectedId,
-    openCreate: () => setModal({ mode: 'create' }),
-    openEdit: () => setModal({ mode: 'edit' }),
+    creating,
+    openCreate: () => setCreatingIntent(true),
+    closeCreate: () => setCreatingIntent(false),
+    openEdit: () => setEditing(true),
     onToggleActive,
   };
+
+  // ÜRÜN formu burada; kategori/koleksiyon formları kendi sekme modüllerinde. Kabuk yalnız niyeti
+  // taşır, hangi formun açıldığını bilmez.
+  const productDialog = tab === 'products' && creating ? 'create' : editing ? 'edit' : null;
 
   return (
     <>
       {resolvedDevice === 'mobile' ? <ProductsMobile {...view} /> : <ProductsDesktop {...view} />}
-      {modal ? (
+      {productDialog ? (
         <ProductFormDialog
-          key={`${modal.mode}-${selected?.id ?? 'new'}`}
-          mode={modal.mode}
+          key={`${productDialog}-${selected?.id ?? 'new'}`}
+          mode={productDialog}
           product={selected}
           categories={data.categories}
           device={resolvedDevice}
-          onClose={() => setModal(null)}
+          onClose={() => (productDialog === 'create' ? setCreatingIntent(false) : setEditing(false))}
         />
       ) : null}
     </>

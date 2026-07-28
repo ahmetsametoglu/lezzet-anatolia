@@ -3,6 +3,7 @@
 // yeniden yazılmaz (no-duplication, schemas-single-source). Durum/dolu-dil gibi saf türevler client'ta
 // yardımcıyla hesaplanır (taşınmaz). Dil yapısı @lezzet/i18n'de, alerjen packages/types'ta.
 import type { Category, Collection, KeysetCursor, LocalizedText, Product, ProductStatus, ProductVariant } from '@lezzet/types';
+import { slugify } from '@lezzet/helper';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 import type { ProductTab } from './products-paths';
 
@@ -34,6 +35,22 @@ export type CatalogRow = CategoryView | CollectionView;
 /** Adı DOLU olan içerik dilleri — "diller" göstergesi. */
 export function filledContentLangs(name: LocalizedText): Locale[] {
   return LOCALES.filter((l) => name[l]?.trim());
+}
+
+/**
+ * Katalog satırı arama terimine uyuyor mu — kategori/koleksiyon araması CLIENT'ta süzülür, çünkü bu
+ * listeler sayfalı değil, bütün hâlinde geliyor (küçük ve sürükle-sıralanabilir). Ürün araması ise
+ * sunucuda kalır: orası keyset paginasyonlu.
+ *
+ * Eşleşme `slugify` üzerinden: aksan ve Türkçe harf farkı yutulur ("boregi" → "su-boregi" bulur) ve
+ * ÜÇ dilin adı birden taranır — operatör FR adını yazsa da kaydı bulur. Yeni bir normalleştirici
+ * yazılmadı; slug üreticisi zaten bu işi tek yerde yapıyor.
+ */
+export function matchesCatalogFilter(row: { name: LocalizedText; slug: string }, term: string): boolean {
+  const needle = slugify(term);
+  if (!needle) return true;
+  const haystack = [...LOCALES.map((l) => row.name[l] ?? ''), row.slug].map((s) => slugify(s)).join(' ');
+  return haystack.includes(needle);
 }
 
 /** RSC'nin client'a geçirdiği tüm veri. */
@@ -86,7 +103,13 @@ export interface ProductsViewProps {
   onLoadMore: () => void;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /**
+   * Oluşturma niyeti — adreste yaşar (`new=1`), NE oluşturulacağını `tab` söyler. Sekme çubuğundaki
+   * tek düğme bunu açar; formu sekmenin kendi modülü çizer.
+   */
+  creating: boolean;
   openCreate: () => void;
+  closeCreate: () => void;
   openEdit: () => void;
   /** Ürünü satışa aç/kapa (kalıcı; mobil hızlı iş). */
   onToggleActive: (id: string, isActive: boolean) => void;

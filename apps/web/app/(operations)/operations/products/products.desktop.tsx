@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@/components/operation/ui/button';
 import { PlusIcon } from '@/components/operation/ui/icons';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { SearchInput } from '@/components/operation/ui/search-input';
@@ -21,34 +22,77 @@ const TABS: Array<{ key: ProductTab; label: string }> = [
   { key: 'packages', label: 'Paketler' },
 ];
 
+// "Yeni …" düğmesinin etiketi sekmeden gelir — düğme sekme çubuğunun sağında durur ve neyi
+// yarattığını sekme söyler. Etiketler TABS ile aynı sırayı izler ama ondan TÜRETİLEMEZ: sekme adı
+// çoğuldur ("Kategoriler"), eylem tekildir ("+ Kategori").
+const CREATE_LABEL: Record<ProductTab, string> = {
+  products: 'Ürün',
+  categories: 'Kategori',
+  collections: 'Koleksiyon',
+  packages: 'Paket',
+};
+
+// Arama da sekmeye BAĞLI: yer tutucu neyin arandığını söyler. Eskiden tek bir "Ürün ara…" kutusu
+// başlıkta duruyor ve hangi sekme açık olursa olsun ÜRÜNDE arıyordu — kutu yalan söylüyordu.
+const SEARCH_PLACEHOLDER: Record<ProductTab, string> = {
+  products: 'Ürün ara…',
+  categories: 'Kategori ara…',
+  collections: 'Koleksiyon ara…',
+  packages: 'Paket ara…',
+};
+
 export function ProductsDesktop(props: ProductsViewProps) {
-  const { data, tab, onTab, search, onSearch, openCreate } = props;
+  const { data, tab, onTab, search, onSearch, creating, openCreate, closeCreate } = props;
   // Sayaçlar SUNUCUDAN gelir: liste sayfalı olduğu için client görünen satırlardan türetemez
   // (türetse "12 ürün" yazıp 30 satır gösterirdi). Süzgeç uygulanmışsa sayaçlar da süzülmüştür.
   const { total, candidate, incomplete } = data.counts;
 
+  // Alt başlık da sekmeye ait: her sekmede "70 ürün · 6 aday" yazmak, kategori listesine bakarken
+  // ürün sayaçlarını okutmaktı. Katalog sayaçları client'ta doğru — o listeler bütün hâlinde geliyor.
+  const SUBTITLE: Record<ProductTab, string> = {
+    products: `${total} ürün · ${candidate} aday · ${incomplete} beyan eksik`,
+    categories: `${data.categories.length} kategori`,
+    collections: `${data.collections.length} koleksiyon`,
+    packages: 'Paket modeli sonraki dilimde',
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <PageHeader
-        title="Ürünler"
-        subtitle={`${total} ürün · ${candidate} aday · ${incomplete} beyan eksik`}
-      >
-        <SearchInput value={search} onChange={onSearch} placeholder="Ürün ara…" className="w-56" />
-        <button
-          type="button"
-          onClick={openCreate}
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-ops-btn bg-ops-ink px-3.5 py-2 font-ops-mono text-[12.5px] font-medium text-ops-card hover:bg-ops-ink-hover"
-        >
-          <PlusIcon />
-          Ürün
-        </button>
-      </PageHeader>
+      <PageHeader title="Ürünler" subtitle={SUBTITLE[tab]} />
 
-      <Tabs items={TABS} active={tab} onSelect={onTab} />
+      <Tabs
+        items={TABS}
+        active={tab}
+        onSelect={onTab}
+        action={
+          <>
+            {/* Paketlerde arama YOK: aranacak veri yok. Kutuyu kilitli göstermek "birazdan çalışır"
+                izlenimi verirdi. */}
+            {tab === 'packages' ? null : (
+              <SearchInput value={search} onChange={onSearch} placeholder={SEARCH_PLACEHOLDER[tab]} className="w-56" />
+            )}
+            <Button variant="dark" size="sm" onClick={openCreate}>
+              <PlusIcon />
+              {CREATE_LABEL[tab]}
+            </Button>
+          </>
+        }
+      />
 
       {tab === 'products' && <ProductsTab {...props} />}
-      {tab === 'categories' && <CatalogTab kind="category" rows={data.categories} />}
-      {tab === 'collections' && <CatalogTab kind="collection" rows={data.collections} products={data.products} />}
+      {tab === 'categories' && (
+        <CatalogTab kind="category" rows={data.categories} filter={search} creating={creating} onCreateClose={closeCreate} />
+      )}
+      {tab === 'collections' && (
+        <CatalogTab
+          kind="collection"
+          rows={data.collections}
+          products={data.products}
+          filter={search}
+          creating={creating}
+          onCreateClose={closeCreate}
+        />
+      )}
       {tab === 'packages' && <PackagesTab />}
     </div>
   );
