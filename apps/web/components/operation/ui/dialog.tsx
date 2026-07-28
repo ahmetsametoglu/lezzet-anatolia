@@ -104,19 +104,46 @@ interface DialogFooterProps {
   formId: string;
   onCancel: () => void;
   submitLabel?: string;
+  /**
+   * Kaydetmenin ENGELİ — dolu string engelin SEBEBİDİR ve düğmenin yanında yazılır.
+   *
+   * Şema geçersizken tarayıcı submit'i zaten yutuyor: düğme etkin görünür, basılır ve HİÇBİR ŞEY
+   * olmaz — geri bildirimin en kötü hâli. Engel varsa düğme kilitlenir ve sebebi söylenir; sebep
+   * gizlenip yalnız kilit gösterilirse operatör neyi düzelteceğini aramak zorunda kalır.
+   */
+  blockedReason?: string | null;
 }
 
-export function DialogFooter({ actions, error, submitting = false, formId, onCancel, submitLabel = 'Kaydet' }: DialogFooterProps) {
+export function DialogFooter({
+  actions,
+  error,
+  submitting = false,
+  formId,
+  onCancel,
+  submitLabel = 'Kaydet',
+  blockedReason = null,
+}: DialogFooterProps) {
   return (
     <>
       <div className="mr-auto flex min-w-0 items-center gap-3">
         {actions}
         {error ? <span className="truncate font-ops-body text-[11.5px] font-semibold text-ops-red">{error}</span> : null}
       </div>
+      {blockedReason && !error ? (
+        <span className="max-w-[320px] truncate font-ops-body text-[11.5px] text-ops-muted" title={blockedReason}>
+          {blockedReason}
+        </span>
+      ) : null}
       <Button variant="secondary" onClick={onCancel} disabled={submitting}>
         İptal
       </Button>
-      <Button variant="primary" type="submit" form={formId} disabled={submitting}>
+      <Button
+        variant="primary"
+        type="submit"
+        form={formId}
+        disabled={submitting || Boolean(blockedReason)}
+        title={blockedReason ?? undefined}
+      >
         {submitting ? 'Kaydediliyor…' : submitLabel}
       </Button>
     </>
