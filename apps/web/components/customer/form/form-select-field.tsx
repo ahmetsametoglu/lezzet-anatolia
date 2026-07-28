@@ -75,7 +75,7 @@ export function FormSelectField({
                 onClick={() => toggle(opt.value)}
                 aria-pressed={on}
                 className={[
-                  'cursor-pointer rounded-pill border px-3 py-1.5 font-sans text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+                  'cursor-pointer rounded-pill border px-3 py-1.5 font-sans text-note font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50',
                   on ? 'border-olive bg-olive text-white' : 'border-sand-400 bg-white text-body hover:border-olive',
                 ].join(' ')}
               >

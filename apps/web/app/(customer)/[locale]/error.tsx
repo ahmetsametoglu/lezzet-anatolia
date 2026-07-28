@@ -49,7 +49,7 @@ export default function CustomerError({ error, reset }: { error: Error & { diges
         {/* Güvence şeridi — mükerrer ödeme/sipariş korkusunu ilk cümlede bitirir */}
         <div
           className={[
-            'mt-2 flex gap-4 rounded-soft bg-cream-deep px-4 py-3 font-sans text-[13.5px] text-body',
+            'mt-2 flex gap-4 rounded-soft bg-cream-deep px-4 py-3 font-sans text-note text-body',
             device === 'mobile' ? 'flex-col text-left' : 'items-center',
           ].join(' ')}
         >

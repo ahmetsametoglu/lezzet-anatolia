@@ -18,17 +18,17 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, notice
       {/* SOL: hero — pencerenin sol panelini kaplar (tasarım 468/1120 ≈ %42) */}
       <div className="relative w-[42%] max-w-[560px] flex-none" style={{ background: HERO_BG }}>
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,rgba(52,59,65,.42) 0%,rgba(52,59,65,0) 34%,rgba(52,59,65,.72) 100%)' }} />
-        <span className="absolute left-[26px] top-[26px] rounded-[20px] bg-[rgba(250,246,236,.92)] px-3.5 py-[7px] font-sans text-xs font-semibold uppercase tracking-[.06em] text-olive">
+        <span className="absolute left-[26px] top-[26px] rounded-pill bg-cream/90 px-3.5 py-1.5 font-sans text-micro font-semibold uppercase tracking-wider text-olive">
           ❄ {t.heroPill}
         </span>
         <div className="absolute inset-x-[34px] bottom-[34px] flex flex-col gap-2.5">
           {stage.kind === 'email' ? (
             <>
-              <span className="font-serif text-[27px] font-medium leading-[1.32] text-on-image">“{t.testimonialQuote}”</span>
-              <span className="font-sans text-[13px] font-semibold tracking-[.04em] text-on-image-soft">{t.testimonialAuthor}</span>
+              <span className="font-serif text-h2 font-medium leading-snug text-on-image">“{t.testimonialQuote}”</span>
+              <span className="font-sans text-note font-semibold tracking-wider text-on-image-soft">{t.testimonialAuthor}</span>
             </>
           ) : (
-            <span className="font-serif text-2xl font-medium leading-[1.35] text-on-image">{t.heroCodeText}</span>
+            <span className="font-serif text-card-title font-medium leading-snug text-on-image">{t.heroCodeText}</span>
           )}
         </div>
       </div>
@@ -47,8 +47,8 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, notice
           {stage.kind === 'email' ? (
             <form onSubmit={onSubmit} className="flex flex-col gap-[18px]" noValidate>
               <div className="flex flex-col gap-2">
-                <h1 className="font-serif text-[30px] font-semibold leading-[1.2] text-ink">{t.title}</h1>
-                <p className="font-sans text-[15px] leading-[1.6] text-body">{subtitle}</p>
+                <h1 className="font-serif text-h1-sm text-ink">{t.title}</h1>
+                <p className="font-sans text-body leading-relaxed text-body">{subtitle}</p>
               </div>
 
               <div className="flex flex-col gap-2.5">
@@ -60,7 +60,7 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, notice
                 </Button>
               </div>
 
-              <div className="flex items-center gap-3 font-sans text-[13px] text-sand-600">
+              <div className="flex items-center gap-3 font-sans text-note text-sand-600">
                 <span className="h-px flex-1 bg-sand-300" />
                 {t.orEmail}
                 <span className="h-px flex-1 bg-sand-300" />
@@ -83,10 +83,10 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, notice
                 </Button>
               </div>
 
-              {error && <p className="text-center font-sans text-[13px] font-semibold text-terracotta-bright">{error}</p>}
-              {notice && <p className="text-center font-sans text-[13px] font-semibold text-olive">{notice}</p>}
+              {error && <p className="text-center font-sans text-note font-semibold text-terracotta-bright">{error}</p>}
+              {notice && <p className="text-center font-sans text-note font-semibold text-olive">{notice}</p>}
 
-              <p className="text-center font-sans text-xs leading-[1.6] text-muted">
+              <p className="text-center font-sans text-micro leading-relaxed text-muted">
                 {t.consentBefore}
                 <span className="text-olive">{t.consentLink}</span>
                 {t.consentAfter}
@@ -94,7 +94,7 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, notice
             </form>
           ) : (
             <div className="flex flex-col gap-[18px] text-center">
-              <h1 className="font-serif text-[28px] font-semibold leading-[1.2] text-ink">{t.codeTitle}</h1>
+              <h1 className="font-serif text-h2 leading-tight text-ink">{t.codeTitle}</h1>
               <OtpCodeInput email={stage.email} locale={locale} onVerify={onVerify} onResend={onResend} />
             </div>
           )}

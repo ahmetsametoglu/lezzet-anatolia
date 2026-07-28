@@ -76,11 +76,10 @@ yoksa alan tamamen kaldırılır, ekran yalnız başlık + iki butonla kalır (b
 - [ ] **Paketler listesinin içerik envanteri** — tasarımı var (`Musteri - Paketler.dc.html`) ama
       `pages/musteri-paketler.md` **yok**. Diğer 15 müşteri sayfasının hepsinde ikisi de var; bu
       sayfa envantersiz kaldı, "hangi bilgi neden" yazılı değil.
-- [ ] **Hata sayfası tipografisi** — `message-screen.tsx` hâlâ ham ölçü kullanıyor (42 · 40 · 27 px);
-      bu kademeler envanter §0.4 ölçeğinde yok. Kademe eklemek mi yuvarlamak mı — hata sayfası
-      tasarımının ayrı ele alınmasını gerektiriyor.
-- [ ] **Müşteri form komponentlerinin ölçüleri** — `components/customer/form/*` ham piksel taşıyor
-      (13 · 15 · 13.5 px). Giriş sayfasından kalma; ölçek kuralı (`08.2`) bunları da kapsamalı.
+- [ ] **Hata sayfası başlık ölçüleri** — `message-screen.tsx` üç ham kademe taşımaya devam ediyor
+      (emoji 42 · başlık 40/27 px); bunlar envanter §0.4 ölçeğinde yok. Kademe eklemek mi yuvarlamak
+      mı — hata sayfası tasarımının ayrı ele alınmasını gerektiriyor. **Dosyanın kalanı token'landı**
+      (üstbaşlık → `text-eyebrow`), yalnız bu üç değer kaldı.
 
 ---
 
@@ -123,6 +122,11 @@ diye yeniden açılmasın; itiraz gelirse madde §2'ye taşınır.
   kenarlıkla kapanır) — geçiş, bir düğmenin başka bir düğmeye dönüşmesi gibi görünür. "Sepete git"
   konmaz (yol başlıkta zaten var); "Eklendi ✓" kaldırıldı (kalıcı mod değişimi daha güçlü onay).
   Varyantlı üründe adet SEÇİLİ BOYA aittir: 500 g'dan 3 alıp 1 kg'a geçene hâlâ 3 göstermek yalan.
+- **Tasarımdan piksel alırken KUTU MODELİ toplanır.** Tasarım HTML'i `content-box` (reset yok),
+  Tailwind `border-box`. Tasarımda aynı öğede hem genişlik hem ped varsa gerçek genişlik
+  `genişlik + ped + çerçeve`dir; sayıyı olduğu gibi yazmak öğeyi dar bırakır. İki kez yaşandı:
+  boy kartı 44 px (150 → 194), arama alanı 38 px (250 → 288). Sabit genişliğin YANINDA ped yoksa
+  (görsel çerçevesi, kategori dairesi, benzer ürün şeridi) sayı doğrudan yazılır — onlar denetlendi.
 - **Sepet satırı görseli kare (1:1).** Tasarımın 72×72 kutusuyla ve görsel künyesiyle
   (`image.schema`: "1:1 · sepet · paket satırı") uyumlu; katalog kartının 3:2'si satırı şişirirdi.
 

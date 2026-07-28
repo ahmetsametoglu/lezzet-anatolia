@@ -125,7 +125,11 @@ export function Declaration({ t, locale, declaration, netWeightG, compact = fals
       {nutrition && (
         <DeclarationCard
           title={t.declaration.nutrition}
-          note={[t.declaration.per100g, netWeightG ? t.declaration.netWeight.replace('{weight}', `${netWeightG} g`) : null].filter(Boolean).join(' · ')}
+          // Net ağırlık da DİLE göre biçimlenir: 1500 g Türkçe/Fransızca'da binlik ayracı ister.
+          // Ham şablon değişkeni tablonun içindeki sayılarla tutarsız kalıyordu.
+          note={[t.declaration.per100g, netWeightG ? t.declaration.netWeight.replace('{weight}', gram(netWeightG, locale)) : null]
+            .filter(Boolean)
+            .join(' · ')}
           compact={compact}
         >
           <dl className="flex flex-col">

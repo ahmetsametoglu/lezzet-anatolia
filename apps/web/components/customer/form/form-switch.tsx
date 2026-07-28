@@ -55,8 +55,8 @@ export function FormSwitch<TFieldValues extends FieldValues>({
             ].join(' ')}
           >
             <div className="min-w-0">
-              <div className="font-sans text-[15px] font-semibold text-ink">{label}</div>
-              {hint && <div className="mt-0.5 font-sans text-[13px] text-muted">{hint}</div>}
+              <div className="font-sans text-body font-semibold text-ink">{label}</div>
+              {hint && <div className="mt-0.5 font-sans text-note text-muted">{hint}</div>}
             </div>
             <span
               className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${checked ? trackOn : 'bg-sand-400'}`}

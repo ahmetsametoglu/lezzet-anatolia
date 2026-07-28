@@ -181,7 +181,7 @@ export function OtpCodeInput({ email, locale, initialCooldownSec = 45, onVerify,
 
   return (
     <div className="flex flex-col gap-4" aria-busy={isPending}>
-      <p className="text-center font-sans text-sm leading-relaxed text-body">{t.sentTo(email)}</p>
+      <p className="text-center font-sans text-body-sm leading-relaxed text-body">{t.sentTo(email)}</p>
 
       <div className="flex justify-center gap-2" aria-label={t.sentTo(email)}>
         {digits.map((d, i) => (
@@ -201,7 +201,7 @@ export function OtpCodeInput({ email, locale, initialCooldownSec = 45, onVerify,
             onKeyDown={(e) => handleKeyDown(i, e)}
             onPaste={handlePaste}
             onFocus={(e) => e.target.select()}
-            className={`h-14 w-11 rounded-xl border-2 bg-white text-center font-sans text-[22px] font-bold outline-none transition-colors disabled:opacity-60 ${
+            className={`h-14 w-11 rounded-xl border-2 bg-white text-center font-sans text-card-title font-bold outline-none transition-colors disabled:opacity-60 ${
               isError
                 ? 'border-terracotta-bright text-terracotta-bright'
                 : isSuccess
@@ -215,13 +215,13 @@ export function OtpCodeInput({ email, locale, initialCooldownSec = 45, onVerify,
       </div>
 
       <div className="min-h-5 text-center" aria-live="polite">
-        {feedback.kind === 'verifying' && <span className="font-sans text-[13px] text-muted">{t.verifying}</span>}
-        {feedback.kind === 'error' && <span className="font-sans text-[13px] font-semibold text-terracotta-bright">{feedback.message}</span>}
-        {feedback.kind === 'success' && <span className="font-sans text-[13px] font-semibold text-olive">{t.success}</span>}
+        {feedback.kind === 'verifying' && <span className="font-sans text-note text-muted">{t.verifying}</span>}
+        {feedback.kind === 'error' && <span className="font-sans text-note font-semibold text-terracotta-bright">{feedback.message}</span>}
+        {feedback.kind === 'success' && <span className="font-sans text-note font-semibold text-olive">{t.success}</span>}
       </div>
 
       {!isSuccess && (
-        <p className="text-center font-sans text-[13px] text-muted">
+        <p className="text-center font-sans text-note text-muted">
           {t.resendPrompt}{' '}
           {cooldownSec > 0 ? (
             <span className="text-sand-600">
