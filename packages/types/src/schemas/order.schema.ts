@@ -96,6 +96,20 @@ export type OrderInsert = z.infer<typeof OrderInsertSchema>;
 export const OrderUpdateSchema = OrderSchema.partial().required({ id: true });
 export type OrderUpdate = z.infer<typeof OrderUpdateSchema>;
 
+/**
+ * `order_sale` görünümünün satırı (12.7) — **gerçekleşmiş satış**: teslim edilmiş ya da kapanmış
+ * sipariş + satışın olduğu gün. Sipariş kayıt anında değil, gerçekleştiği anda gelirdir.
+ *
+ * `saleDate` SAKLANMAZ: `OrderStatusLog`'un ilk `delivered`/`completed` kaydından türetilir (0015
+ * bunu bilerek böyle kurdu — ayrı `delivered_at` kolonu yok). Muhasebe export'u da (12.7) dönemsel
+ * kârlılık da (12.6) bu tarihi okur; iki rapor iki ayrı "satış günü" hesaplamaz.
+ */
+export const OrderSaleSchema = OrderSchema.extend({
+  /** Siparişin İLK gerçekleşme günü — tam yolda teslim, hızlı satışta kapanış. */
+  saleDate: z.string(),
+});
+export type OrderSale = z.infer<typeof OrderSaleSchema>;
+
 // OrderItem — kalem. `fulfilledQty` FİZİKSEL olarak giden miktardır (DOMAIN §8).
 
 export const OrderItemSchema = z.object({

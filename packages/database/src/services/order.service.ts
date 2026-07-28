@@ -52,6 +52,21 @@ export class OrderItemService extends BaseDbService<OrderItem, OrderItemInsert, 
     return this.getAll({ orderId });
   }
 
+  /**
+   * Çok siparişin kalemleri TEK turda (12.7 export'u) — sipariş başına ayrı sorgu N+1 olurdu.
+   *
+   * Kimlikler öbeklenir: `in(...)` listesi URL'e gömülür, binlerce uuid'lik dönemde istek satırı
+   * sunucu sınırını aşar. Öbek sayısı kadar sorgu, sipariş sayısı kadar değil.
+   */
+  async listByOrders(orderIds: readonly string[]): Promise<OrderItem[]> {
+    const OBEK = 200;
+    const hepsi: OrderItem[] = [];
+    for (let i = 0; i < orderIds.length; i += OBEK) {
+      hepsi.push(...(await this.getAll({ orderId: orderIds.slice(i, i + OBEK) })));
+    }
+    return hepsi;
+  }
+
   addLines(rows: OrderItemInsert[]): Promise<OrderItem[]> {
     return this.bulkInsert(rows);
   }

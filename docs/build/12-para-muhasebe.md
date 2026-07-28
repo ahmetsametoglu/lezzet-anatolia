@@ -55,9 +55,17 @@ Tüm finans tek mantıkla: para bir hesapta durur, hareketlerle girer/çıkar. H
   - Ciro sütunu bu görevin işi değil — UTM↔sipariş eşleşmesi 13.2'de. 12 tarafı hazır: rapor giderleri kampanya adıyla veriyor.
 - [ ] (12.6) **Kârlılık raporları:** ürün/sipariş kârı (katkı payı: COGS/teslimat/komisyon/paketleme snapshot) + **fire düşülmüş net marj** (`StockAdjustment`); şirket kârı (genel gider bir kez düşülür); kanal bazlı
   - *Bitti:* ürün kârı snapshot'lardan; fire ayrı satır; şirket P&L genel giderle
-- [ ] (12.7) **Muhasebe export:** dönem seçimi + `is_gift_order` hariç + `reference_no ↔ invoice_no` eşleştirme kuyruğu; temiz veri dosyası
+- [x] (12.7) **Muhasebe export:** dönem seçimi + `is_gift_order` hariç + `reference_no ↔ invoice_no` eşleştirme kuyruğu; temiz veri dosyası
   - *Bitti:* hediye siparişler export dışı; export dosyası dönem toplamlarıyla tutuyor
+  - **Durum (28.07):** `0023_accounting.sql` (`order_sale` görünümü) · motor `domain-core/accounting/export.ts` · `OrderSaleService` · CSV yazıcı `helper/csv.ts` · kapı `apps/web/lib/accounting/export.ts`. 30 test (12 motor + 7 CSV + 11 entegrasyon). Seed'e patron ikramı ve faturası eşleşmiş satış eklendi.
+  - **Satış tarihi SAKLANMAZ, log'dan türer.** Sipariş kayıt anında değil gerçekleştiği anda gelirdir; `order_sale.sale_date` = ilk `delivered`/`completed` geçişinin günü (0015 bunu bilerek böyle kurmuştu: ayrı `delivered_at` kolonu yok). `min(...)` şart — tam yolda sipariş önce teslim sonra kapanış olur, ikisi farklı aya düşebilir; kapanışı esas alsaydık ocakta teslim edilmiş satış şubat cirosuna yazılırdı. Görünüm 12.6'nın da zeminidir: iki rapor iki ayrı "satış günü" hesaplamaz.
+  - **Hediye siparişin dışlanması GÖRÜNÜR.** `is_gift_order` yalnız export filtresini etkiler (DOMAIN §9) — o yüzden görünüm değil, kapı süzer. Ve dışlama sessiz değil: özet "hariç tutulan: N satış, € X" yazar. Sessiz dışlasaydık dönem cirosu ile export toplamı arasındaki fark açıklanamaz kalırdı.
+  - **Kargo malın KDV oranını izler**, tek orana yazılmaz: Fransız kuralında teslimat bedeli satışın yan unsurudur, karışık oranlı sepette paylaştırılır (`distributeProportional` — yeni dağıtım fonksiyonu yazılmadı). %20'ye sabitleseydik gıda ağırlıklı siparişte KDV olduğundan fazla beyan edilirdi. Dağıtılacak kalem yoksa (tamamı hediye sepet) kargo kendi satırını açar — oransal dağıtım orada 0 döndürür ve kargo export'tan **düşerdi**.
+  - **Dönem sayfa sayfa okunur, imleç dışarı sızmaz.** Tek sorgu yazsaydık PostgREST'in satır tavanı (1000) dosyayı sessizce keser, toplam tutmaz ve kimse fark etmezdi. Burada sayfalama ekran için değil, TAM okuma için.
+  - **Biçim iki katmanda:** satırlar biçimden bağımsız, CSV yalnız onların bir sunumu (ayraç `;` — FR Excel virgülü ondalık sayar). Hedef yazılım netleşince değişen tek şey sütun eşlemesidir.
+  - **Fatura numarası burada ÜRETİLMEZ** — dış muhasebede doğar, sistem kendi referansıyla eşleştirir. Boş numara reddedilir: yazılsaydı satır kuyruktan düşer ama hiçbir faturaya bağlanmazdı. Hediye siparişler kuyruğa hiç girmez, yoksa kuyruk asla boşalmazdı.
 
 ## Netleşecekler
 
-- **Export hedef biçimi:** muhasebecinin yazılımı (Pennylane/Sage/EBP/Tiime…) netleşince biçimlenir — iş bağımlılığı, teknik değil. Adaptör deseniyle tek hedefle başlanır.
+- **Export hedef biçimi:** muhasebecinin yazılımı (Pennylane/Sage/EBP/Tiime…) netleşince biçimlenir — iş bağımlılığı, teknik değil. Adaptör deseniyle tek hedefle başlanır. **12.7 buna hazır çıktı:** satırlar (`AccountingExportRow`) biçimden bağımsız, CSV yalnız bir sunum; yeni hedefte değişen tek şey sütun eşlemesi.
+- **İade edilmiş satışın export'taki yüzü (07.9 ile):** bugün `returned` durumundaki sipariş `order_sale`'e girmiyor, `completed`'a dönünce orijinal teslim günüyle giriyor. Para iadesi akışı kurulunca iade satırının dosyada nasıl görüneceği (negatif satır mı, ayrı belge mi) muhasebeciyle netleşir.

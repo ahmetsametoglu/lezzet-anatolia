@@ -153,6 +153,10 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
     kargo?: number;
     tahsilat?: number;
     yasi?: number;
+    /** Patron ikramı — yalnız muhasebe export'undan düşer, gerisi tam normal (DOMAIN §9). */
+    hediye?: boolean;
+    /** Dış muhasebeden dönmüş resmî fatura numarası (12.7 eşleştirme kuyruğu boşalmış satır). */
+    faturaNo?: string;
     etiket: string;
   }): Promise<string | null> {
     const customerId = kisiler.get(opts.musteri);
@@ -175,6 +179,7 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
         courierId: ['out_for_delivery', 'delivered', 'completed', 'returned'].includes(opts.hedef) ? kurye : null,
         onAccount: opts.onAccount ?? false,
         paymentMethod: opts.paymentMethod ?? null,
+        isGiftOrder: opts.hediye ?? false,
         shippingFee: opts.kargo ?? 0,
         total: toplam(opts.kalemler, opts.kargo ?? 0),
       },
@@ -183,6 +188,8 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
 
     // Yaşlandırma: vade gecikmesi ve "eski sipariş" ancak geçmiş tarihli kayıtta görünür.
     if (opts.yasi) await orders.update({ id: order.id, createdAt: an(-opts.yasi) });
+    // Fatura numarası DIŞARIDA doğar, sistem yalnız eşleştirir (12.7) — burada eşleşmiş hâli kurulur.
+    if (opts.faturaNo) await orders.update({ id: order.id, invoiceNo: opts.faturaNo });
 
     // Hızlı satış AYRI YOLDUR: rezervasyon yok, fiiliden anında düşer (07.10).
     if (opts.kaynak === 'door' && opts.hedef === 'completed') {
@@ -281,7 +288,8 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
   await siparis({ musteri: 'b2cSadik', kalemler: [kalem(9, 2), kalem(10, 1)], hedef: 'delivered', channel: 'b2c', paymentMethod: 'cash', tahsilat: 0, etiket: 'Teslim edildi — kapıda tahsilat bekliyor' });
 
   // — Kapanmış siparişler (kâr raporunun girdisi)
-  await siparis({ musteri: 'b2cSadik', kalemler: [kalem(11, 3)], hedef: 'completed', channel: 'b2c', paymentMethod: 'online', tahsilat: toplam([kalem(11, 3)]), yasi: 12, etiket: 'Kapandı — online ödenmiş' });
+  // Fatura numarası eşleşmiş: 12.7 kuyruğunun BOŞALMIŞ hâli de ekranda görülebilsin.
+  await siparis({ musteri: 'b2cSadik', kalemler: [kalem(11, 3)], hedef: 'completed', channel: 'b2c', paymentMethod: 'online', tahsilat: toplam([kalem(11, 3)]), yasi: 12, faturaNo: 'FA-2026-0117', etiket: 'Kapandı — online ödenmiş (faturası eşleşti)' });
   await siparis({ musteri: 'b2cAlman', kalemler: [kalem(12, 2)], hedef: 'completed', channel: 'b2c', deliveryType: 'shipping', kargo: 7.9, paymentMethod: 'online', tahsilat: toplam([kalem(12, 2)], 7.9), yasi: 20, etiket: 'Kapandı — DE kargo (OSS izlemi)' });
 
   // — Vadeli: AÇIK BAKİYE ve GECİKME türetiminin öznesi (ödenmemiş, biri vadesi geçmiş)
@@ -292,6 +300,10 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
   // — Hızlı satış (kapı önü): tek adımda kapanır, rezervasyon yok
   await siparis({ musteri: 'b2cKapaliKapida', kalemler: [kalem(17, 2)], hedef: 'completed', channel: 'b2c', kaynak: 'door', paymentMethod: 'cash', etiket: 'Hızlı satış — kapı önü (nakit)' });
   await siparis({ musteri: 'b2cSadik', kalemler: [kalem(18, 1), kalem(19, 2)], hedef: 'completed', channel: 'b2c', kaynak: 'door', paymentMethod: 'card', etiket: 'Hızlı satış — kapı önü (kart)' });
+
+  // — Patron ikramı: parayı patron öder, gelir/kâr/kasa TAM normal — yalnız muhasebe export'una
+  // girmez (DOMAIN §9). Export özetinde "hariç tutulan" satırı bununla dolar.
+  await siparis({ musteri: 'b2cKapaliKapida', kalemler: [kalem(24, 2)], hedef: 'completed', channel: 'b2c', paymentMethod: 'cash', tahsilat: toplam([kalem(24, 2)]), yasi: 6, hediye: true, etiket: 'Patron ikramı (export dışı)' });
 
   // — İptal ve iade
   await siparis({ musteri: 'b2cSadik', kalemler: [kalem(20, 2)], hedef: 'cancelled', channel: 'b2c', paymentMethod: 'online', tahsilat: 0, etiket: 'İptal' });

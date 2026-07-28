@@ -161,6 +161,15 @@ Hazırlıkta fiilen çıkan parti(ler)in kaydı — depocu FEFO önerisini onayl
 
 **`transition_order_status` fonksiyonu (07.6):** durum güncellemesi + log satırı tek transaction'da ve **yalnız beklenen kaynaktan** (koşullu). Araya biri girmişse yazmaz, güncel durumu bildirir — depocu "hazır" derken kurye "yolda" dediğinde biri diğerini sessizce ezmez. Geçişin izinli olup olmadığına fonksiyon KARAR VERMEZ; o motorun işidir (`domain-core/order/status-machine`).
 
+## order_sale (görünüm — gerçekleşmiş satış)
+
+Sipariş kayıt anında değil, **gerçekleştiği anda** gelirdir. `order_sale`, teslim edilmiş ya da kapanmış siparişleri `sale_date` ile birlikte verir: `sale_date` = `OrderStatusLog`'un İLK `delivered`/`completed` kaydının günü. Muhasebe export'u (12.7) da dönemsel kârlılık (12.6) da bu tarihi okur — iki rapor iki ayrı "satış günü" hesaplamaz.
+
+- **`min(...)` şart:** tam yolda sipariş önce `delivered` sonra `completed` olur, ikisi farklı aya düşebilir. Kapanışı esas alsaydık ocakta teslim edilmiş satış şubat cirosuna yazılırdı.
+- **`o.*` seçilir:** görünüm siparişin alanlarını yeniden yazmaz, yalnız `sale_date` ekler. Şema da öyle türetilir (`OrderSaleSchema = OrderSchema.extend({saleDate})`); alan listesi kopyalansaydı `order`a eklenen kolon burada sessizce eksik kalırdı.
+- **Hediye sipariş DIŞLANMAZ:** patron ikramı gelirdir, kârdır, kasaya girer — yalnız dış muhasebeye gitmez. Süzgeç export kapısındadır (`domain-core/accounting`); burada dışlansaydı `is_gift_order` "yalnız export filtresini etkiler" kuralı sessizce genişlerdi.
+- **`returned` dışarıda:** mal geri gelmiş, para iadesi süreci açık (07.9). Sipariş `completed`'a dönünce satış yine görünür ve `sale_date` orijinal teslim günüdür — geçmiş dönemin raporu yeniden üretildiğinde satır doğru aya oturur.
+
 ## Cart (sunucu sepeti)
 
 Giriş yapmış müşterinin sepeti sunucuda kalıcıdır — cihaz değişse de durur; sepet kurtarma e-postasının (Faz 2 otomasyonu) zeminidir.
