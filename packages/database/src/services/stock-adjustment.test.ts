@@ -19,7 +19,7 @@ const temps = new TemperatureLogService(db);
 let variantId: string;
 let productId: string;
 let categoryId: string;
-const dolaplar: string[] = [];
+const shelves: string[] = [];
 
 beforeAll(async () => {
   const category = await new CategoryService(db).create({ name: { tr: `Fire testi ${Date.now()}` } });
@@ -35,7 +35,7 @@ beforeAll(async () => {
 
 // Test kendi zeminini toplar — yerel veritabanında çöp satır bırakmaz (silme sırası: cleanup.ts).
 afterAll(async () => {
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], temperatureLocations: dolaplar });
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], temperatureLocations: shelves });
 });
 
 beforeEach(async () => {
@@ -44,84 +44,84 @@ beforeEach(async () => {
   await db.from('stock').delete().eq('variant_id', variantId);
 });
 
-const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 describe('stok düzeltmesi (06.6)', () => {
   it('imha kaydı fiiliyi düşürür ve maliyeti o anda kopyalar', async () => {
-    const parti = await stocks.insert({ variantId, physicalQty: 10, expiryDate: gun(20), purchasePrice: 3.2 });
+    const batch = await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(20), purchasePrice: 3.2 });
 
-    const sonuc = await adjustments.adjust({ stockId: parti.id, qty: 4, reason: 'expired' });
-    expect(sonuc).toMatchObject({ ok: true, remainingQty: 6 });
+    const outcome = await adjustments.adjust({ stockId: batch.id, qty: 4, reason: 'expired' });
+    expect(outcome).toMatchObject({ ok: true, remainingQty: 6 });
 
-    expect((await stocks.getById(parti.id))?.physicalQty).toBe(6);
-    const kayitlar = await adjustments.listByStock(parti.id);
-    expect(kayitlar[0]).toMatchObject({ qty: 4, reason: 'expired', unitCost: 3.2 });
+    expect((await stocks.getById(batch.id))?.physicalQty).toBe(6);
+    const records = await adjustments.listByStock(batch.id);
+    expect(records[0]).toMatchObject({ qty: 4, reason: 'expired', unitCost: 3.2 });
   });
 
   it('maliyet SNAPSHOT: parti fiyatı sonradan değişse fire maliyeti kaymaz', async () => {
-    const parti = await stocks.insert({ variantId, physicalQty: 5, expiryDate: gun(20), purchasePrice: 2 });
-    await adjustments.adjust({ stockId: parti.id, qty: 1, reason: 'damaged' });
-    await stocks.update({ id: parti.id, purchasePrice: 9 });
+    const batch = await stocks.insert({ variantId, physicalQty: 5, expiryDate: dayOffset(20), purchasePrice: 2 });
+    await adjustments.adjust({ stockId: batch.id, qty: 1, reason: 'damaged' });
+    await stocks.update({ id: batch.id, purchasePrice: 9 });
 
-    expect((await adjustments.listByStock(parti.id))[0]?.unitCost).toBe(2);
+    expect((await adjustments.listByStock(batch.id))[0]?.unitCost).toBe(2);
   });
 
   it('partide olmayan miktar düşülemez — kayıt da yazılmaz (bölünmez)', async () => {
-    const parti = await stocks.insert({ variantId, physicalQty: 2, expiryDate: gun(20) });
+    const batch = await stocks.insert({ variantId, physicalQty: 2, expiryDate: dayOffset(20) });
 
-    await expect(adjustments.adjust({ stockId: parti.id, qty: 3, reason: 'lost' })).rejects.toThrow();
-    expect((await stocks.getById(parti.id))?.physicalQty).toBe(2);
-    expect(await adjustments.listByStock(parti.id)).toHaveLength(0);
+    await expect(adjustments.adjust({ stockId: batch.id, qty: 3, reason: 'lost' })).rejects.toThrow();
+    expect((await stocks.getById(batch.id))?.physicalQty).toBe(2);
+    expect(await adjustments.listByStock(batch.id)).toHaveLength(0);
   });
 
   it('stoğa geri ekleme sebep notu ister (iade restoku istisnadır)', async () => {
-    const parti = await stocks.insert({ variantId, physicalQty: 3, expiryDate: gun(20) });
+    const batch = await stocks.insert({ variantId, physicalQty: 3, expiryDate: dayOffset(20) });
 
-    await expect(adjustments.adjust({ stockId: parti.id, qty: -2, reason: 'return_restock' })).rejects.toThrow();
+    await expect(adjustments.adjust({ stockId: batch.id, qty: -2, reason: 'return_restock' })).rejects.toThrow();
 
-    const sonuc = await adjustments.adjust({
-      stockId: parti.id,
+    const outcome = await adjustments.adjust({
+      stockId: batch.id,
       qty: -2,
       reason: 'return_restock',
       note: 'Kapıda reddedildi, frigo araçtan hiç çıkmadı',
     });
-    expect(sonuc.remainingQty).toBe(5);
-    expect((await stocks.getById(parti.id))?.physicalQty).toBe(5);
+    expect(outcome.remainingQty).toBe(5);
+    expect((await stocks.getById(batch.id))?.physicalQty).toBe(5);
   });
 
   it('fire raporu NET kaybı verir — geri eklemeler toplamdan düşer', async () => {
-    const parti = await stocks.insert({ variantId, physicalQty: 10, expiryDate: gun(20), purchasePrice: 5 });
-    await adjustments.adjust({ stockId: parti.id, qty: 4, reason: 'expired' });
-    await adjustments.adjust({ stockId: parti.id, qty: -1, reason: 'count_diff', note: 'sayımda fazla çıktı' });
+    const batch = await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(20), purchasePrice: 5 });
+    await adjustments.adjust({ stockId: batch.id, qty: 4, reason: 'expired' });
+    await adjustments.adjust({ stockId: batch.id, qty: -1, reason: 'count_diff', note: 'sayımda fazla çıktı' });
 
-    const ozet = await adjustments.lossSummary(new Date(Date.now() - 60_000), new Date(Date.now() + 60_000));
-    expect(ozet.find((r) => r.variantId === variantId)).toMatchObject({ qty: 3, costCents: 1500 }); // 3 × 5 €
+    const summary = await adjustments.lossSummary(new Date(Date.now() - 60_000), new Date(Date.now() + 60_000));
+    expect(summary.find((r) => r.variantId === variantId)).toMatchObject({ qty: 3, costCents: 1500 }); // 3 × 5 €
   });
 
   it('sıfır miktar reddedilir', async () => {
-    const parti = await stocks.insert({ variantId, physicalQty: 1, expiryDate: gun(20) });
-    await expect(adjustments.adjust({ stockId: parti.id, qty: 0, reason: 'count_diff' })).rejects.toThrow();
+    const batch = await stocks.insert({ variantId, physicalQty: 1, expiryDate: dayOffset(20) });
+    await expect(adjustments.adjust({ stockId: batch.id, qty: 0, reason: 'count_diff' })).rejects.toThrow();
   });
 });
 
 describe('sıcaklık kaydı (06.7)', () => {
-  const dolap = `Dolap-${Date.now()}`;
-  dolaplar.push(dolap, `${dolap}-arac`);
+  const shelf = `Dolap-${Date.now()}`;
+  shelves.push(shelf, `${shelf}-arac`);
 
   it('kayıt girilir, konum + tarih aralığıyla listelenir (en yeni önce)', async () => {
-    await temps.insert({ location: dolap, temperatureC: -18.5 });
-    await temps.insert({ location: dolap, temperatureC: -19.2 });
-    await temps.insert({ location: `${dolap}-arac`, temperatureC: -15 });
+    await temps.insert({ location: shelf, temperatureC: -18.5 });
+    await temps.insert({ location: shelf, temperatureC: -19.2 });
+    await temps.insert({ location: `${shelf}-arac`, temperatureC: -15 });
 
-    const sayfa = await temps.list({ location: dolap, limit: 10 });
-    expect(sayfa.rows).toHaveLength(2);
-    expect(sayfa.rows[0]!.temperatureC).toBe(-19.2); // en yeni önce
+    const page = await temps.list({ location: shelf, limit: 10 });
+    expect(page.rows).toHaveLength(2);
+    expect(page.rows[0]!.temperatureC).toBe(-19.2); // en yeni önce
 
-    const gelecek = await temps.list({ location: dolap, from: new Date(Date.now() + 60_000) });
-    expect(gelecek.rows).toHaveLength(0);
+    const future = await temps.list({ location: shelf, from: new Date(Date.now() + 60_000) });
+    expect(future.rows).toHaveLength(0);
   });
 
   it('girilmiş konumlar seçim listesi olarak döner', async () => {
-    expect(await temps.listLocations()).toContain(dolap);
+    expect(await temps.listLocations()).toContain(shelf);
   });
 });

@@ -25,7 +25,7 @@ const bundles = new BundleService(db);
 const products = new ProductService(db);
 const categories = new CategoryService(db);
 
-const damga = Date.now();
+const stamp = Date.now();
 let categoryId: string;
 let productId: string;
 let variantA: string;
@@ -33,9 +33,9 @@ let variantB: string;
 const bundleIds: string[] = [];
 
 beforeAll(async () => {
-  const category = await categories.create({ name: { tr: `Paket testi ${damga}` } });
+  const category = await categories.create({ name: { tr: `Paket testi ${stamp}` } });
   const { product, variants } = await products.create({
-    name: { tr: `Paket ürünü ${damga}` },
+    name: { tr: `Paket ürünü ${stamp}` },
     categoryId: category.id,
     variants: [
       { label: { tr: '500 g' }, netWeightG: 500 },
@@ -63,7 +63,7 @@ async function createBundle(name: string, totalPrice: number, items: Array<{ var
 
 describe('BundleService', () => {
   it('paketi kalemleriyle açar; slug addan türer', async () => {
-    const bundle = await createBundle(`Bayram Sofrası ${damga}`, 49.9, [
+    const bundle = await createBundle(`Bayram Sofrası ${stamp}`, 49.9, [
       { variantId: variantA, qty: 2, allocatedUnitPrice: 10 },
       { variantId: variantB, qty: 1, allocatedUnitPrice: 29.9 },
     ]);
@@ -88,7 +88,7 @@ describe('BundleService', () => {
   });
 
   it('aynı varyant iki kez eklenemez — hata OKUNABİLİR', async () => {
-    const bundle = await createBundle(`Çift kalem ${damga}`, 20, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 20 }]);
+    const bundle = await createBundle(`Çift kalem ${stamp}`, 20, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 20 }]);
     await expect(
       bundles.syncItems(bundle.id, [
         { variantId: variantA, qty: 1, allocatedUnitPrice: 10 },
@@ -98,7 +98,7 @@ describe('BundleService', () => {
   });
 
   it('hediye kalem (0 fiyat) kaydedilebilir ve toplamı bozmaz', async () => {
-    const bundle = await createBundle(`Hediyeli ${damga}`, 30, [
+    const bundle = await createBundle(`Hediyeli ${stamp}`, 30, [
       { variantId: variantA, qty: 1, allocatedUnitPrice: 30 },
       { variantId: variantB, qty: 1, allocatedUnitPrice: 0 },
     ]);
@@ -110,7 +110,7 @@ describe('BundleService', () => {
   });
 
   it('senkron: listeden çıkan kalem silinir, sıra yeniden yazılır', async () => {
-    const bundle = await createBundle(`Sıra ${damga}`, 40, [
+    const bundle = await createBundle(`Sıra ${stamp}`, 40, [
       { variantId: variantA, qty: 1, allocatedUnitPrice: 20 },
       { variantId: variantB, qty: 1, allocatedUnitPrice: 20 },
     ]);
@@ -125,7 +125,7 @@ describe('BundleService', () => {
   });
 
   it('pasif paket vitrin listesinde YOK, operasyon listesinde VAR', async () => {
-    const bundle = await createBundle(`Pasif ${damga}`, 15, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 15 }]);
+    const bundle = await createBundle(`Pasif ${stamp}`, 15, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 15 }]);
     await bundles.setActive(bundle.id, false);
 
     expect((await bundles.listSellable()).some((b) => b.id === bundle.id)).toBe(false);
@@ -136,12 +136,12 @@ describe('BundleService', () => {
     // Paket ancak tüm kalemleri satılabilirse satılabilir. `is_active`'i sistemin çevirmesi yerine
     // satılabilirliği TÜRETİYORUZ: ürün geri açıldığında paket kendiliğinden döner — aksi hâlde
     // pasifte kalır ve geri açılması gerektiğini kimse bilmez.
-    const bundle = await createBundle(`Pasif ürün ${damga}`, 20, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 20 }]);
+    const bundle = await createBundle(`Pasif ürün ${stamp}`, 20, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 20 }]);
     expect((await bundles.listSellable()).some((b) => b.id === bundle.id)).toBe(true);
 
     await products.update({ id: productId, status: 'passive' });
-    const kapali = await bundles.listSellable();
-    expect(kapali.some((b) => b.id === bundle.id)).toBe(false);
+    const inactive = await bundles.listSellable();
+    expect(inactive.some((b) => b.id === bundle.id)).toBe(false);
     expect((await bundles.getById(bundle.id))!.isActive).toBe(true); // niyet bozulmadı
 
     await products.update({ id: productId, status: 'active' });
@@ -149,7 +149,7 @@ describe('BundleService', () => {
   });
 
   it('BOYU pasife alınan kalem de paketi düşürür', async () => {
-    const bundle = await createBundle(`Pasif boy ${damga}`, 15, [{ variantId: variantB, qty: 1, allocatedUnitPrice: 15 }]);
+    const bundle = await createBundle(`Pasif boy ${stamp}`, 15, [{ variantId: variantB, qty: 1, allocatedUnitPrice: 15 }]);
     await db.from('product_variant').update({ is_active: false }).eq('id', variantB);
     expect((await bundles.listSellable()).some((b) => b.id === bundle.id)).toBe(false);
 
@@ -158,7 +158,7 @@ describe('BundleService', () => {
   });
 
   it('LİSTE satırı kalemleri değil ÖZETİ döndürür — fiyat/maliyet yoksa toplam YARIM sayılmaz', async () => {
-    const bundle = await createBundle(`Özet ${damga}`, 30, [
+    const bundle = await createBundle(`Özet ${stamp}`, 30, [
       { variantId: variantA, qty: 2, allocatedUnitPrice: 10 },
       { variantId: variantB, qty: 1, allocatedUnitPrice: 10 },
     ]);
@@ -178,13 +178,13 @@ describe('BundleService', () => {
   it('fiyat ve parti girilince toplamlar dolar; KDV KALEM KALEM iner ve pasif ürün sayılır', async () => {
     const prices = new PriceService(db);
     const stocks = new StockService(db);
-    const bundle = await createBundle(`Dolu özet ${damga}`, 21.1, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 21.1 }]);
+    const bundle = await createBundle(`Dolu özet ${stamp}`, 21.1, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 21.1 }]);
 
     await prices.setPrice({ variantId: variantA, channel: 'b2c', amount: 25, validFrom: new Date(Date.now() - 86_400_000).toISOString() });
     // İki parti: 10 adet × 4 € + 30 adet × 8 € → ağırlıklı ortalama 7 €.
-    const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
-    await stocks.insert({ variantId: variantA, physicalQty: 10, purchasePrice: 4, expiryDate: gun(100) });
-    await stocks.insert({ variantId: variantA, physicalQty: 30, purchasePrice: 8, expiryDate: gun(120) });
+    const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+    await stocks.insert({ variantId: variantA, physicalQty: 10, purchasePrice: 4, expiryDate: dayOffset(100) });
+    await stocks.insert({ variantId: variantA, physicalQty: 30, purchasePrice: 8, expiryDate: dayOffset(120) });
 
     const row = (await bundles.listRows()).find((r) => r.id === bundle.id)!;
     expect(row.listTotal).toBeCloseTo(25, 2); // "ayrı ayrı alınsa"
@@ -204,15 +204,15 @@ describe('BundleService', () => {
   });
 
   it('slug ile bulunur (paylaşılan link) ve ad çok dilli döner', async () => {
-    const bundle = await createBundle(`Paylaşım ${damga}`, 12, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 12 }]);
+    const bundle = await createBundle(`Paylaşım ${stamp}`, 12, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 12 }]);
     const found = await bundles.findBySlug(bundle.slug);
     expect(found?.id).toBe(bundle.id);
     expect(resolveLocalizedText(found!.name)).toContain('Paylaşım');
   });
 
   it('kürasyon sırası sürüklenebilir', async () => {
-    const a = await createBundle(`Sıra A ${damga}`, 10, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 10 }]);
-    const b = await createBundle(`Sıra B ${damga}`, 10, [{ variantId: variantB, qty: 1, allocatedUnitPrice: 10 }]);
+    const a = await createBundle(`Sıra A ${stamp}`, 10, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 10 }]);
+    const b = await createBundle(`Sıra B ${stamp}`, 10, [{ variantId: variantB, qty: 1, allocatedUnitPrice: 10 }]);
 
     await bundles.reorder([b.id, a.id]);
     const sıralı = (await bundles.listAll()).filter((x) => x.id === a.id || x.id === b.id);
@@ -220,7 +220,7 @@ describe('BundleService', () => {
   });
 
   it('pakette kullanılan varyant SİLİNEMEZ — paket sessizce boşalmaz', async () => {
-    const bundle = await createBundle(`Kilit ${damga}`, 10, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 10 }]);
+    const bundle = await createBundle(`Kilit ${stamp}`, 10, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 10 }]);
     expect(bundle.id).toBeTruthy();
     // Varyantı silmeye kalkışmak `restrict` ile reddedilir; ürün silme de cascade orada durur.
     await expect(products.delete(productId)).rejects.toThrow();

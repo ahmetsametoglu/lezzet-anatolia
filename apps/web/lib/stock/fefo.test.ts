@@ -37,45 +37,45 @@ beforeEach(async () => {
   await db.from('stock').delete().eq('variant_id', variantId);
 });
 
-const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 describe('FEFO önerisi (06.5)', () => {
   it('önce süresi dolan parti çıkar; bir kalem birden çok partiden karşılanabilir', async () => {
-    const eski = await stocks.insert({ variantId, physicalQty: 3, expiryDate: gun(20), lotNumber: 'L-1' });
-    const yeni = await stocks.insert({ variantId, physicalQty: 10, expiryDate: gun(150) });
+    const older = await stocks.insert({ variantId, physicalQty: 3, expiryDate: dayOffset(20), lotNumber: 'L-1' });
+    const newer = await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(150) });
 
-    const oneri = await suggestPicksForVariant(variantId, 5);
-    expect(oneri.shortfall).toBe(0);
-    expect(oneri.picks).toEqual([
-      expect.objectContaining({ stockId: eski.id, qty: 3, lotNumber: 'L-1' }),
-      expect.objectContaining({ stockId: yeni.id, qty: 2 }),
+    const suggestion = await suggestPicksForVariant(variantId, 5);
+    expect(suggestion.shortfall).toBe(0);
+    expect(suggestion.picks).toEqual([
+      expect.objectContaining({ stockId: older.id, qty: 3, lotNumber: 'L-1' }),
+      expect.objectContaining({ stockId: newer.id, qty: 2 }),
     ]);
   });
 
   it('teklife söz verilmiş (çıpalı) miktar o partiden düşülür — normal hazırlık onu yiyemez', async () => {
-    const teklif = await stocks.insert({ variantId, physicalQty: 4, expiryDate: gun(10), offerPrice: 3 });
-    const normal = await stocks.insert({ variantId, physicalQty: 10, expiryDate: gun(150) });
-    await reservations.reserve({ orderId: crypto.randomUUID(), variantId, qty: 3, stockId: teklif.id });
+    const offerBatch = await stocks.insert({ variantId, physicalQty: 4, expiryDate: dayOffset(10), offerPrice: 3 });
+    const plain = await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(150) });
+    await reservations.reserve({ orderId: crypto.randomUUID(), variantId, qty: 3, stockId: offerBatch.id });
 
-    const oneri = await suggestPicksForVariant(variantId, 4);
+    const suggestion = await suggestPicksForVariant(variantId, 4);
     // Teklif partisinden yalnız 1 kaldı; kalan 3 sonraki partiden.
-    expect(oneri.picks).toEqual([
-      expect.objectContaining({ stockId: teklif.id, qty: 1 }),
-      expect.objectContaining({ stockId: normal.id, qty: 3 }),
+    expect(suggestion.picks).toEqual([
+      expect.objectContaining({ stockId: offerBatch.id, qty: 1 }),
+      expect.objectContaining({ stockId: plain.id, qty: 3 }),
     ]);
   });
 
   it('DLC geçmiş parti hiç önerilmez (satılamaz)', async () => {
-    await stocks.insert({ variantId, physicalQty: 8, expiryDate: gun(-1) });
-    const saglam = await stocks.insert({ variantId, physicalQty: 2, expiryDate: gun(100) });
+    await stocks.insert({ variantId, physicalQty: 8, expiryDate: dayOffset(-1) });
+    const intact = await stocks.insert({ variantId, physicalQty: 2, expiryDate: dayOffset(100) });
 
-    const oneri = await suggestPicksForVariant(variantId, 5);
-    expect(oneri.picks).toEqual([expect.objectContaining({ stockId: saglam.id, qty: 2 })]);
-    expect(oneri.shortfall).toBe(3); // eksik açıkça bildirilir, sessizce bayat mal verilmez
+    const suggestion = await suggestPicksForVariant(variantId, 5);
+    expect(suggestion.picks).toEqual([expect.objectContaining({ stockId: intact.id, qty: 2 })]);
+    expect(suggestion.shortfall).toBe(3); // eksik açıkça bildirilir, sessizce bayat mal verilmez
   });
 
   it('yaklaşan son tarih işaretlenir — ekran uyarıyı buradan çizer', async () => {
-    await stocks.insert({ variantId, physicalQty: 5, expiryDate: gun(20) }); // 200 günlük üründe %10
+    await stocks.insert({ variantId, physicalQty: 5, expiryDate: dayOffset(20) }); // 200 günlük üründe %10
 
     const [pick] = (await suggestPicksForVariant(variantId, 1)).picks;
     expect(pick?.flag).toBe('near_expiry');

@@ -25,14 +25,14 @@ const variants = new ProductVariantService(db);
 const prices = new PriceService(db);
 const stocks = new StockService(db);
 
-const damga = Date.now();
+const stamp = Date.now();
 let productId: string;
 let categoryId: string;
 
 beforeAll(async () => {
-  const category = await categories.create({ name: { tr: `Varyant testi ${damga}` } });
+  const category = await categories.create({ name: { tr: `Varyant testi ${stamp}` } });
   const { product } = await products.create({
-    name: { tr: `Varyant ürünü ${damga}` },
+    name: { tr: `Varyant ürünü ${stamp}` },
     categoryId: category.id,
     variants: [{ label: { tr: '500 g', fr: '500 g' }, netWeightG: 500, minStockQty: 10 }],
   });
@@ -50,7 +50,7 @@ afterAll(async () => {
 describe('ProductVariantService.syncVariants', () => {
   it('boy etiketini üç dilde saklar ve min. stok eşiğini yazar', async () => {
     const [mevcut] = await variants.listByProduct(productId);
-    const sonuc = await variants.syncVariants(productId, [
+    const outcome = await variants.syncVariants(productId, [
       {
         id: mevcut?.id,
         label: { tr: '700 g tepsi', fr: 'plateau 700 g', de: 'Platte 700 g' },
@@ -61,68 +61,68 @@ describe('ProductVariantService.syncVariants', () => {
       },
     ]);
 
-    expect(sonuc).toHaveLength(1);
-    expect(sonuc[0]?.label).toEqual({ tr: '700 g tepsi', fr: 'plateau 700 g', de: 'Platte 700 g' });
-    expect(sonuc[0]?.minStockQty).toBe(6);
+    expect(outcome).toHaveLength(1);
+    expect(outcome[0]?.label).toEqual({ tr: '700 g tepsi', fr: 'plateau 700 g', de: 'Platte 700 g' });
+    expect(outcome[0]?.minStockQty).toBe(6);
     // Yedek zinciri: Almanca istenince Almanca gelir (tek dile düşmüyor).
-    expect(resolveLocalizedText(sonuc[0]!.label, 'de')).toBe('Platte 700 g');
+    expect(resolveLocalizedText(outcome[0]!.label, 'de')).toBe('Platte 700 g');
   });
 
   it('etiketi yalnız bir dilde dolu bırakılabilir — eksik dil kayda engel değil', async () => {
     const [mevcut] = await variants.listByProduct(productId);
-    const sonuc = await variants.syncVariants(productId, [
+    const outcome = await variants.syncVariants(productId, [
       { id: mevcut?.id, label: { tr: 'Tepsi' }, netWeightG: 700, minStockQty: 6, sku: 'TST-700', isActive: true },
     ]);
-    expect(sonuc[0]?.label).toEqual({ tr: 'Tepsi' });
+    expect(outcome[0]?.label).toEqual({ tr: 'Tepsi' });
   });
 
   it('sıra form dizisinin KONUMUNDAN yazılır (müşterinin gördüğü boy sırası)', async () => {
     const [mevcut] = await variants.listByProduct(productId);
-    const ilk = { id: mevcut?.id, label: { tr: 'Tepsi' }, netWeightG: 700, minStockQty: 6, sku: 'TST-700', isActive: true };
-    const yeni = { label: { tr: '1 kg' }, netWeightG: 1000, minStockQty: null, sku: 'TST-1000', isActive: true };
+    const first = { id: mevcut?.id, label: { tr: 'Tepsi' }, netWeightG: 700, minStockQty: 6, sku: 'TST-700', isActive: true };
+    const created = { label: { tr: '1 kg' }, netWeightG: 1000, minStockQty: null, sku: 'TST-1000', isActive: true };
 
-    const eklendi = await variants.syncVariants(productId, [ilk, yeni]);
-    expect(eklendi.map((v) => resolveLocalizedText(v.label))).toEqual(['Tepsi', '1 kg']);
-    expect(eklendi.map((v) => v.sortOrder)).toEqual([0, 1]);
+    const added = await variants.syncVariants(productId, [first, created]);
+    expect(added.map((v) => resolveLocalizedText(v.label))).toEqual(['Tepsi', '1 kg']);
+    expect(added.map((v) => v.sortOrder)).toEqual([0, 1]);
 
     // Sürükle-bırak diziyi taşır; servis indeksi yeniden yazar.
     const taşındı = await variants.syncVariants(productId, [
-      { ...yeni, id: eklendi[1]?.id },
-      { ...ilk, id: eklendi[0]?.id },
+      { ...created, id: added[1]?.id },
+      { ...first, id: added[0]?.id },
     ]);
     expect(taşındı.map((v) => resolveLocalizedText(v.label))).toEqual(['1 kg', 'Tepsi']);
     expect(taşındı.map((v) => v.sortOrder)).toEqual([0, 1]);
     // Sıra listeye de yansır (okuma sortOrder'a göre).
-    const okunan = await variants.listByProduct(productId);
-    expect(okunan.map((v) => resolveLocalizedText(v.label))).toEqual(['1 kg', 'Tepsi']);
+    const loaded = await variants.listByProduct(productId);
+    expect(loaded.map((v) => resolveLocalizedText(v.label))).toEqual(['1 kg', 'Tepsi']);
   });
 
   it('listeden çıkan varyant silinir; fiyat satırı onunla birlikte gider (cascade)', async () => {
-    const okunan = await variants.listByProduct(productId);
-    const silinecek = okunan[1]!;
-    await prices.setPrice({ variantId: silinecek.id, channel: 'b2c', amount: 12.5 });
-    expect(await prices.listByVariant(silinecek.id)).toHaveLength(1);
+    const loaded = await variants.listByProduct(productId);
+    const toDelete = loaded[1]!;
+    await prices.setPrice({ variantId: toDelete.id, channel: 'b2c', amount: 12.5 });
+    expect(await prices.listByVariant(toDelete.id)).toHaveLength(1);
 
     await variants.syncVariants(productId, [
-      { id: okunan[0]!.id, label: okunan[0]!.label, netWeightG: null, minStockQty: null, sku: null, isActive: true },
+      { id: loaded[0]!.id, label: loaded[0]!.label, netWeightG: null, minStockQty: null, sku: null, isActive: true },
     ]);
 
-    expect((await variants.listByProduct(productId)).map((v) => v.id)).toEqual([okunan[0]!.id]);
-    expect(await prices.listByVariant(silinecek.id)).toHaveLength(0);
+    expect((await variants.listByProduct(productId)).map((v) => v.id)).toEqual([loaded[0]!.id]);
+    expect(await prices.listByVariant(toDelete.id)).toHaveLength(0);
   });
 
   it('stok partisi olan varyant silinemez — hata OKUNABİLİR cümleye çevrilir', async () => {
-    const eklendi = await variants.syncVariants(productId, [
+    const added = await variants.syncVariants(productId, [
       { id: (await variants.listByProduct(productId))[0]?.id, label: { tr: '1 kg' }, netWeightG: 1000, minStockQty: null, sku: null, isActive: true },
       { label: { tr: 'Kutu' }, netWeightG: 250, minStockQty: null, sku: null, isActive: true },
     ]);
-    const stoklu = eklendi[1]!;
-    await stocks.insert({ variantId: stoklu.id, physicalQty: 4, expiryDate: '2030-01-01' });
+    const withStock = added[1]!;
+    await stocks.insert({ variantId: withStock.id, physicalQty: 4, expiryDate: '2030-01-01' });
 
-    const kalan = [{ id: eklendi[0]!.id, label: eklendi[0]!.label, netWeightG: null, minStockQty: null, sku: null, isActive: true }];
-    await expect(variants.syncVariants(productId, kalan)).rejects.toThrow(/«Kutu» silinemedi.*stok partisi/s);
+    const remaining = [{ id: added[0]!.id, label: added[0]!.label, netWeightG: null, minStockQty: null, sku: null, isActive: true }];
+    await expect(variants.syncVariants(productId, remaining)).rejects.toThrow(/«Kutu» silinemedi.*stok partisi/s);
 
     // Engellenen varyant YERİNDE kalır — yarım kalan senkron veriyi bozmaz.
-    expect((await variants.listByProduct(productId)).some((v) => v.id === stoklu.id)).toBe(true);
+    expect((await variants.listByProduct(productId)).some((v) => v.id === withStock.id)).toBe(true);
   });
 });

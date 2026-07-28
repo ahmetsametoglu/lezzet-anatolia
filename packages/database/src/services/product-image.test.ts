@@ -73,11 +73,11 @@ describe('ProductService.makeCover — takas', () => {
   it('kapak varsa TAKAS olur: eski kapak galeride aynı sıraya oturur, künyesi korunur', async () => {
     await reset('catalog/products/kapak.jpeg');
     await products.update({ id: productId, imageFocalX: 10, imageFocalY: 90, imageZoom: 200 });
-    const ilk = await images.add(productId, 'catalog/products/g-1.jpeg');
-    const hedef = await images.add(productId, 'catalog/products/g-2.jpeg');
-    await images.setCrop(hedef.id, { imageFocalX: 30, imageFocalY: 70, imageZoom: 140 });
+    const first = await images.add(productId, 'catalog/products/g-1.jpeg');
+    const target = await images.add(productId, 'catalog/products/g-2.jpeg');
+    await images.setCrop(target.id, { imageFocalX: 30, imageFocalY: 70, imageZoom: 140 });
 
-    const after = await products.makeCover(productId, hedef.id);
+    const after = await products.makeCover(productId, target.id);
 
     // Yeni kapak = seçilen fotoğraf, ODAĞIYLA birlikte (odak fotoğrafa aittir, çerçeveye değil).
     expect(after).toMatchObject({ imageKey: 'catalog/products/g-2.jpeg', imageFocalX: 30, imageFocalY: 70, imageZoom: 140 });
@@ -85,8 +85,8 @@ describe('ProductService.makeCover — takas', () => {
     // Eski kapak kaybolmadı: hedefin sırasında, kendi künyesiyle duruyor.
     const gallery = await images.listByProduct(productId);
     expect(gallery.map((i) => i.imageKey)).toEqual(['catalog/products/g-1.jpeg', 'catalog/products/kapak.jpeg']);
-    expect(gallery[1]).toMatchObject({ id: hedef.id, imageFocalX: 10, imageFocalY: 90, imageZoom: 200 });
-    expect(ilk.sortOrder).toBeLessThan(gallery[1]!.sortOrder);
+    expect(gallery[1]).toMatchObject({ id: target.id, imageFocalX: 10, imageFocalY: 90, imageZoom: 200 });
+    expect(first.sortOrder).toBeLessThan(gallery[1]!.sortOrder);
   });
 
   it('kapak yoksa fotoğraf galeriden ÇIKAR (aynı dosya iki yerde görünmez)', async () => {
