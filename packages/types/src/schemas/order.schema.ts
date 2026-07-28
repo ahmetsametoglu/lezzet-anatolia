@@ -231,6 +231,45 @@ export const QuickSaleResultSchema = z.object({
 });
 export type QuickSaleResult = z.infer<typeof QuickSaleResultSchema>;
 
+/**
+ * Kalem düzeltmesi (07.8/07.9) — eksik çıkan ya da geri gelen adet. `fulfilledQty` **hedef**
+ * değerdir (kalan miktar), fark değil: çağıran ekranda gördüğü sayıyı gönderir, aradaki değişimi
+ * veritabanı hesaplar — iki ekran aynı anda düzeltirse farklar toplanıp mal buharlaşmaz.
+ */
+export const FulfillmentAdjustmentSchema = z.object({
+  orderItemId: z.string().uuid(),
+  fulfilledQty: z.number().int().nonnegative(),
+  /** Mal geri geldiyse ne olduğu; `goodwill`'de miktar DEĞİŞMEZ (mal müşteride kaldı, DOMAIN §8). */
+  returnDisposition: ReturnDispositionEnum.nullish(),
+  /** Stoğa dönüş/imha kaydına düşen sebep notu — geri ekleme sebepsiz yazılmaz (06). */
+  note: z.string().nullish(),
+});
+export type FulfillmentAdjustment = z.infer<typeof FulfillmentAdjustmentSchema>;
+
+/** `adjust_fulfillment` dönüşü (07.8) — malın gerçeğinde ne değişti; para tarafı kapıda türetilir. */
+export const FulfillmentResultSchema = z.object({
+  ok: z.boolean(),
+  reason: z.literal('stale').optional(),
+  currentStatus: OrderStatusEnum,
+  lines: z.number().int().optional(),
+  /** Teslim sonrası iadede depoya geri giren adet. */
+  restockedQty: z.number().int().optional(),
+  /** Hiç çıkmadan hasarlanıp fiiliden düşülen adet. */
+  discardedQty: z.number().int().optional(),
+  /** Ayrılmıştan geri bırakılan adet — başkasına satılabilir hâle gelen mal. */
+  releasedQty: z.number().int().optional(),
+});
+export type FulfillmentResult = z.infer<typeof FulfillmentResultSchema>;
+
+/** `cancel_order` dönüşü (07.9) — `stale` = sipariş artık o durumda değil. */
+export const CancelResultSchema = z.object({
+  ok: z.boolean(),
+  reason: z.literal('stale').optional(),
+  currentStatus: OrderStatusEnum,
+  releasedQty: z.number().int().optional(),
+});
+export type CancelResult = z.infer<typeof CancelResultSchema>;
+
 /** `transition_order_status` RPC'sinin dönüşü — `ok:false` + `stale` = araya biri girdi (07.6). */
 export const TransitionResultSchema = z.object({
   ok: z.boolean(),

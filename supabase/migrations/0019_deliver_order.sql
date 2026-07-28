@@ -97,11 +97,15 @@ begin
     raise exception 'close_order: sipariş bulunamadı (%)', p_order_id;
   end if;
 
-  if v_current <> 'delivered' then
+  -- İki kaynaktan kapanır: normal teslim (`delivered`) ve iade sürecinin bitişi (`returned` —
+  -- ORDER_LIFECYCLE: sipariş kalıcı `returned`'da kalmaz, depo aksiyonu + para iadesi bitince kapanır).
+  if v_current not in ('delivered', 'returned') then
     return jsonb_build_object('ok', false, 'reason', 'stale', 'current_status', v_current);
   end if;
 
-  -- Gerçek COGS: tüketilen partilerin kendi alış fiyatı (DOMAIN §12).
+  -- Gerçek COGS: tüketilen partilerin kendi alış fiyatı (DOMAIN §12). İade edilip stoğa dönen mal
+  -- kalem–parti kaydından düşüldüğü için (0026) buraya kendiliğinden girmez; imha/jest edilenin
+  -- maliyeti ise kaydı korunduğu için burada KALIR — kayıp o siparişin kârında görünür.
   select coalesce(sum(b.qty * coalesce(s.purchase_price, 0)), 0) into v_cogs
     from public.order_item_batch b
     join public.order_item i on i.id = b.order_item_id

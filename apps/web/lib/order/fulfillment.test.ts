@@ -51,7 +51,7 @@ afterAll(async () => {
 });
 
 /** Sipariş aç → ayır → hazırla → yola çıkar. Teslime hazır hâle getirir. */
-async function yolaCikar(picks: { stockId: string; qty: number }[]) {
+async function sendOut(picks: { stockId: string; qty: number }[]) {
   const total = picks.reduce((s, p) => s + p.qty, 0);
   const { order, items } = await orders.create(
     { customerId, channel: 'b2c', deliveryType: 'route' },
@@ -66,7 +66,7 @@ async function yolaCikar(picks: { stockId: string; qty: number }[]) {
 
 describe('teslim (07.7)', () => {
   it('fiili stok kayıtlı partilerden düşer, rezervasyon biter', async () => {
-    const order = await yolaCikar([{ stockId: batchA, qty: 4 }, { stockId: batchB, qty: 2 }]);
+    const order = await sendOut([{ stockId: batchA, qty: 4 }, { stockId: batchB, qty: 2 }]);
 
     const outcome = await deliverOrder(order.id, { deliveryProof: { by: 'Kurye', at: '2026-07-27' } });
     expect(outcome).toMatchObject({ ok: true, currentStatus: 'delivered', consumedQty: 6 });
@@ -86,11 +86,11 @@ describe('teslim (07.7)', () => {
   });
 
   it('iki kez teslim stoğu İKİ KEZ düşürmez', async () => {
-    const order = await yolaCikar([{ stockId: batchB, qty: 3 }]);
+    const order = await sendOut([{ stockId: batchB, qty: 3 }]);
     await deliverOrder(order.id);
 
-    const ikinci = await deliverOrder(order.id);
-    expect(ikinci.ok).toBe(false); // artık 'delivered', yolda değil
+    const second = await deliverOrder(order.id);
+    expect(second.ok).toBe(false); // artık 'delivered', yolda değil
     expect((await stocks.getById(batchB))?.physicalQty).toBe(7); // tek düşüm
   });
 
@@ -110,7 +110,7 @@ describe('teslim (07.7)', () => {
 
 describe('kapanış — kâr kalemleri sabitlenir (DOMAIN §12)', () => {
   it('COGS GERÇEK maliyettir: her parti kendi alış fiyatından', async () => {
-    const order = await yolaCikar([{ stockId: batchA, qty: 4 }, { stockId: batchB, qty: 2 }]);
+    const order = await sendOut([{ stockId: batchA, qty: 4 }, { stockId: batchB, qty: 2 }]);
     await deliverOrder(order.id);
 
     const outcome = await closeOrder(order.id);
@@ -119,20 +119,20 @@ describe('kapanış — kâr kalemleri sabitlenir (DOMAIN §12)', () => {
   });
 
   it('rota-içinde teslimat birim maliyeti, paketleme maliyeti ayardan gelir', async () => {
-    const order = await yolaCikar([{ stockId: batchB, qty: 1 }]);
+    const order = await sendOut([{ stockId: batchB, qty: 1 }]);
     await deliverOrder(order.id);
 
     const outcome = await closeOrder(order.id);
     expect(outcome.deliveryCost).toBe(2.5); // route_delivery_unit_cost_cents = 250
     expect(outcome.packagingCost).toBe(1.2); // packaging_unit_cost_cents = 120
 
-    const kapanan = await orders.getById(order.id);
-    expect(kapanan).toMatchObject({ status: 'completed', cogsAmount: 3, deliveryCost: 2.5 });
-    expect(kapanan?.paymentFee).toBeNull(); // komisyon oranları modül 12'de
+    const closed = await orders.getById(order.id);
+    expect(closed).toMatchObject({ status: 'completed', cogsAmount: 3, deliveryCost: 2.5 });
+    expect(closed?.paymentFee).toBeNull(); // komisyon oranları modül 12'de
   });
 
   it('teslim edilmemiş sipariş kapanamaz', async () => {
-    const order = await yolaCikar([{ stockId: batchB, qty: 1 }]);
+    const order = await sendOut([{ stockId: batchB, qty: 1 }]);
     expect(await closeOrder(order.id)).toMatchObject({ ok: false, reason: 'stale', currentStatus: 'out_for_delivery' });
   });
 });

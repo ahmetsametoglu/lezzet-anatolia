@@ -10,8 +10,10 @@ import {
   OrderStatusLogSchema,
   OrderStatusLogInsertSchema,
   OrderStatusLogUpdateSchema,
+  CancelResultSchema,
   CloseResultSchema,
   DeliverResultSchema,
+  FulfillmentResultSchema,
   PreparationResultSchema,
   QuickSaleResultSchema,
   RecallHitSchema,
@@ -25,8 +27,11 @@ import {
   type OrderItemUpdate,
   type OrderItemBatch,
   type OrderStatus,
+  type CancelResult,
   type CloseResult,
   type DeliverResult,
+  type FulfillmentAdjustment,
+  type FulfillmentResult,
   type PaymentMethod,
   type PreparationPick,
   type PreparationResult,
@@ -185,6 +190,43 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       p_packaging_unit_cost: costs.packagingUnitCost ?? 0,
     });
     return CloseResultSchema.parse(dbToApp(raw));
+  }
+
+  /**
+   * **Kalem düzeltmesi** (07.8/07.9): eksik çıkan ya da geri gelen adet. Kalemin `fulfilled_qty`'si,
+   * kalem–parti kaydı, ayrılmış stok ve (teslim sonrası iadede) fiili stok tek transaction'da
+   * tutarlı kalır — yarısı yazılırsa "para iade edildi ama mal ortada yok" hâli doğar.
+   *
+   * Para BURADA YAZILMAZ: iade borcu motorda türetilir, hareketi uygulama kapısı yazar (12.2).
+   */
+  async adjustFulfillment(orderId: string, lines: readonly FulfillmentAdjustment[], actorId?: string | null): Promise<FulfillmentResult> {
+    if (lines.length === 0) throw new Error('order: düzeltme listesi boş olamaz');
+
+    const raw = await this.executeRpc('adjust_fulfillment', {
+      p_order_id: orderId,
+      p_lines: lines.map((line) => ({
+        order_item_id: line.orderItemId,
+        fulfilled_qty: line.fulfilledQty,
+        return_disposition: line.returnDisposition ?? null,
+        note: line.note ?? null,
+      })),
+      p_actor_id: actorId ?? null,
+    });
+    return FulfillmentResultSchema.parse(dbToApp(raw));
+  }
+
+  /**
+   * **İptal** (07.9): ayrılmış geri bırakılır, hazırlanan mal "müşteride" sayılmaz, durum + log
+   * tek transaction'da yazılır. Geçişin izinli olduğuna motor karar verir; buradaki tek kural
+   * koşulludur — başkası ilerletmişse `stale` döner.
+   */
+  async cancel(orderId: string, from: OrderStatus, actorId?: string | null): Promise<CancelResult> {
+    const raw = await this.executeRpc('cancel_order', {
+      p_order_id: orderId,
+      p_from: from,
+      p_actor_id: actorId ?? null,
+    });
+    return CancelResultSchema.parse(dbToApp(raw));
   }
 
   /**
