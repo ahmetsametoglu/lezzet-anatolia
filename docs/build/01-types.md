@@ -24,10 +24,13 @@ Tüm veri modelinin **tek kaynak** Zod şemaları: varlıklar, enum'lar, `Locali
 - [~] (01.2) Tüm enum'lar — `DATA_MODEL.md` "Enum'lar (özet)" listesi birebir (channel, order_source, order_status, payment_*, ticket_*, po_status, adjustment_reason, movement_*, analytics_event_type...)
   - *Bitti:* enum sayısı ve değerleri dokümanla birebir; tek dosyadan export
 - [~] (01.3) Katalog şemaları: `Category`, `Collection`, `Product`, `ProductVariant`, `Price`, `Discount`, `Bundle`, `BundleItem`
-- [ ] (01.4) Stok/tedarik şemaları: `Stock`, `Reservation`, `StockAdjustment`, `TemperatureLog`, `Supplier`, `SupplierProduct`, `PurchaseOrder(+Item)`, `StockIntake`
-- [ ] (01.5) Sipariş şemaları: `Order`, `OrderItem`, `OrderItemBatch`, `OrderStatusLog`, `Cart`
+- [x] (01.4) Stok/tedarik şemaları: `Stock`, `Reservation`, `StockAdjustment`, `TemperatureLog`, `Supplier`, `SupplierProduct`, `PurchaseOrder(+Item)`, `StockIntake`
+  - **Durum (28.07):** hepsi yazılmış — `stock.schema.ts` (Stock, Reservation), `stock-adjustment.schema.ts` (StockAdjustment, TemperatureLog), `supply.schema.ts` (Supplier, SupplierProduct, PurchaseOrder+Item, StockIntake). Modül 06 ile birlikte doğdu; satır o oturumda işaretlenmemiş.
+- [x] (01.5) Sipariş şemaları: `Order`, `OrderItem`, `OrderItemBatch`, `OrderStatusLog`, `Cart`
+  - **Durum (28.07):** `order.schema.ts` (Order, OrderItem, OrderItemBatch, OrderStatusLog + RPC dönüş şemaları) · `cart.schema.ts`. Modül 07 ile büyüdü; 07.8/07.9'da düzeltme şemaları eklendi.
 - [~] (01.6) Müşteri/kimlik şemaları: `Customer`, `Address`, `DeliveryZone`
-- [ ] (01.7) Para şemaları: `Account`, `MoneyMovement`, `BankImportProfile`, `CourierDayClose`
+- [~] (01.7) Para şemaları: `Account`, `MoneyMovement`, `BankImportProfile`, `CourierDayClose`
+  - **Durum (28.07):** `money.schema.ts` (Account, MoneyMovement, defter/bakiye görünümleri) · `bank-import.schema.ts` (BankImportProfile, BankImport). **EKSİK: `CourierDayClose`** — kurye gün kapanışı modül 11'de doğar, o şema oraya bağlı.
 - [ ] (01.8) Mesajlaşma/talep şemaları: `Conversation`, `Message`, `Ticket`, `TicketMessage`, `WebhookEvent`
 - [ ] (01.9) Geri bildirim/analitik şemaları: `Review`, `FeedbackRequest`, `PointsEntry`, `AnalyticsEvent`, `Setting`
   - *Ortak bitti kriteri (tüm şema görevleri):* her şema `DATA_MODEL.md`'deki alan listesiyle birebir; `z.infer` ile tip export ediliyor; örnek geçerli/geçersiz kayıtlarla parse birim testleri geçiyor

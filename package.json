@@ -34,7 +34,9 @@
     "db:new": "supabase migration new",
     "db:seed": "tsx scripts/seed.ts",
     "db:refresh": "supabase db reset && tsx scripts/seed.ts",
-    "set-role": "tsx scripts/set-role.ts"
+    "set-role": "tsx scripts/set-role.ts",
+    "stripe:listen": "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
+    "stripe:smoke": "tsx scripts/stripe-smoke.ts"
   },
   "devDependencies": {
     "@lezzet/database": "workspace:*",

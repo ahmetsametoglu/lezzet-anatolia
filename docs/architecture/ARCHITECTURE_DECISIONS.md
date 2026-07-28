@@ -66,6 +66,30 @@ page.tsx                    → sunucu: veri çeker, yetki (blueprint aynen)
 
 ---
 
+## Sapma 5 — Ödeme webhook'u `apps/web`'de, `apps/backend`'de değil
+
+**Blueprint ne diyor:** `STACK §7` — "Webhook'lar (ödeme) `apps/backend`'e."
+
+**Ne yaptık (28.07, 07.5):** Stripe webhook'u `apps/web/app/api/webhooks/stripe/route.ts`'te; imza
+doğrulaması orada, karar ve yazım `apps/web/lib/order/stripe-webhook.ts`'te.
+
+**Neden:** Ödeme onayının yaptığı iş üç kapıyı birden çağırır — tahsilat hareketi (`lib/money`),
+durum geçişi (`lib/order/transition`), bildirim (`lib/order/notify`). Bu kapılar uygulama
+katmanındadır ve `apps/backend` onları göremez (paket değil, ayrı uygulama). Backend'e taşımanın iki
+yolu vardı: (a) aynı orkestrasyonu ikinci kez yazmak — **duplication yasağına** aykırı, üstelik para
+akışında iki kopya en tehlikelisi; (b) kapıları ortak bir pakete çıkarmak — doğru hamle ama ayrı bir
+iş, ve o dosyalar başka ajanların açık işleriyle kesişiyor.
+
+**Bedeli ve sınırı:** Backend'in webhook'a katacağı bir şey yoktu (tek katma değeri cron, webhook
+cron istemiyor). Karşılığında Next.js route handler ham gövdeyi verebiliyor — imza doğrulaması için
+gereken tek şey buydu. HTTP kabuğu **bilerek ince** tutuldu: doğrula, sadeleştir, işleyiciye ver.
+Kapılar bir gün pakete çıkarsa taşınacak olan tek dosyadır.
+
+**Ne zaman geri dönülür:** İkinci bir sağlayıcı webhook'u geldiğinde ya da ödeme akışı `apps/web`
+dışından da tetiklenmesi gerektiğinde — o noktada kapıları pakete çıkarmak zaten kaçınılmaz olur.
+
+---
+
 ## Değişmeyen omurga (hatırlatma)
 
 Aşağıdakiler blueprint'ten **birebir** alınır, tartışma yok:

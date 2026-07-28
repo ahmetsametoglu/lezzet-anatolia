@@ -25,3 +25,4 @@ export * from './money.schema';
 export * from './bank-import.schema';
 export * from './job-run.schema';
 export * from './notification.schema';
+export * from './webhook-event.schema';
