@@ -50,11 +50,9 @@ const { order } = await new OrderService(db).create(
   [{ variantId, qty: 2, unitPrice: 12, vatRate: 5.5 }],
 );
 
-const outcome = await createCheckoutSession({
-  orderId: order.id,
-  successUrl: 'https://lezzet-anatolia.fr/ok',
-  cancelUrl: 'https://lezzet-anatolia.fr/iptal',
-});
+// Dönüş adresi ARTIK GEREKMİYOR: ödeme sayfada alınıyor (Payment Element), Stripe'ın barındırdığı
+// checkout oturumuna yönlendirilmiyoruz. Kapı bir PaymentIntent açar ve `clientSecret` döner.
+const outcome = await createCheckoutSession({ orderId: order.id });
 
 console.warn('SONUÇ:', JSON.stringify(outcome, null, 2));
 
@@ -63,9 +61,9 @@ if (outcome.status === 'ok') {
   const minutes = Math.round((new Date(outcome.expiresAt).getTime() - Date.now()) / 60_000);
   console.warn(`AYRILAN: ${reserved} adet · PENCERE: ${minutes} dk (rezervasyon TTL'iyle eşit olmalı)`);
 
-  // Panelde açık oturum bırakmayız: duman testi iz bırakmamalı.
-  await stripeClient()?.checkout.sessions.expire(outcome.sessionId);
-  console.warn('OTURUM KAPATILDI');
+  // Panelde açık niyet bırakmayız: duman testi iz bırakmamalı.
+  await stripeClient()?.paymentIntents.cancel(outcome.paymentIntentId);
+  console.warn('ÖDEME NİYETİ İPTAL EDİLDİ');
 } else if (outcome.status === 'provider_unavailable') {
   console.warn('Anahtar okunamadı. Kökteki `.env` içinde BOŞ bir STRIPE_SECRET_KEY satırı olabilir — o satır gerçek anahtarı gölgeler.');
 }

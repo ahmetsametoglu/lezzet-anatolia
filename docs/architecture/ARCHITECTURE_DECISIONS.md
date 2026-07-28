@@ -90,6 +90,39 @@ dışından da tetiklenmesi gerektiğinde — o noktada kapıları pakete çıka
 
 ---
 
+## Sapma 6 — Stripe kart alanı SAYFA İÇİNDE, ham renk orada meşru
+
+**Karar (28.07, kullanıcı onaylı).** Ödeme önce Stripe'ın barındırdığı Checkout sayfasıyla
+kurulmuştu: müşteri siteden çıkıp `checkout.stripe.com`'da ödüyor, `success_url` ile dönüyordu.
+Artık kart alanı **kendi checkout sayfamızda**, Stripe'ın `PaymentElement` iframe'i içinde.
+
+**Neden.** Zor olan yön içeri almaktır; dışarı yönlendirmeye dönmek her zaman birkaç satır. Güvenlik
+tarafında bir ödün YOK: alanlar Stripe'ın kendi iframe'inde yaşar, kart numarası ne sunucumuza ne de
+istemci kodumuza uğrar — PCI kapsamı barındırılan Checkout ile aynı (SAQ A).
+
+**Ne değişti, ne değişmedi.** `CheckoutSessionCreator` bir PORT olduğu için değişim dar kaldı:
+`checkout.sessions.create` → `paymentIntents.create`, port `url` yerine `clientSecret` taşıyor.
+"Önce stok ayrılır, sonra ödeme açılır" sırası ve testleri aynen duruyor. Webhook normalize bir
+`VerifiedEvent` arkasında olduğu için yalnız olay adları büyüdü (`payment_intent.*`); eski
+`checkout.session.*` olayları da kabul edilmeye devam ediyor, çünkü geçişten önce açılmış bir oturum
+sağlayıcıda hâlâ duruyor olabilir.
+
+**Pencere eşitliği kuralı düştü — yerine daha iyisi geldi.** `PaymentIntent`'in son kullanma tarihi
+yok. Ama istemci **ertelenmiş Elements** kullanıyor: form açılışta monte olur, niyet ancak "öde"ye
+basınca doğar. Ayırma ile ödeme arasındaki mesafe dakikalar değil saniyeler. Gecikirse 07.5'in geç
+ödeme dalı zaten devrede.
+
+**Ham renk yasağına istisna (CLAUDE.md §3).** Stripe iframe'i bizim CSS değişkenlerimizi okuyamaz;
+`var(--color-olive)` orada çözülmez. Bu yüzden `Appearance` nesnesinde token DEĞERLERİ ham yazılır.
+Kural şu: yalnız `checkout/components/payment-element.tsx` içinde, ve her değerin yanında token adı
+yorumda. Palet değişirse burası da değişir — tek dosya, aranabilir.
+
+**Ne zaman geri dönülür:** Stripe'ın barındırdığı sayfanın verdiği bir şeye (yeni bir ödeme yöntemi,
+yerelleştirme, dolandırıcılık ekranı) ihtiyaç duyulur ve `PaymentElement` onu vermezse — port
+sayesinde dönüş tek dosyalık iş.
+
+---
+
 ## Değişmeyen omurga (hatırlatma)
 
 Aşağıdakiler blueprint'ten **birebir** alınır, tartışma yok:

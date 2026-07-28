@@ -62,17 +62,29 @@ export async function handleStripeEvent(event: VerifiedEvent, accountId: string 
   }
 }
 
+/**
+ * Olay adları `PaymentIntent` ailesinden (28.07 · ödeme sayfa içine alındı). Eski oturum olayları
+ * (`checkout.session.*`) DA kabul edilir: geçişten önce açılmış ve hâlâ ödenmemiş bir oturum
+ * kalmışsa onun onayı da doğru işlensin — sağlayıcıdaki eski olay bizim kod değişikliğimizi bilmez.
+ */
+const PAID_EVENTS = ['payment_intent.succeeded', 'checkout.session.completed', 'checkout.session.async_payment_succeeded'];
+const RELEASE_EVENTS = ['payment_intent.canceled', 'checkout.session.expired'];
+
 async function route(event: VerifiedEvent, accountId: string | null): Promise<WebhookOutcome> {
-  if (event.type === 'checkout.session.expired') return releaseExpired(event);
-  const paid = event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded';
-  if (!paid) return { status: 'ok', action: 'ignored' };
+  if (RELEASE_EVENTS.includes(event.type)) return releaseExpired(event);
+  if (!PAID_EVENTS.includes(event.type)) return { status: 'ok', action: 'ignored' };
 
   return confirmPayment(event, accountId);
 }
 
 /**
- * Oturum süresi doldu: ayrılmış mal geri bırakılır. Sipariş TASLAK kalır — müşteri aynı sepetle
- * tekrar deneyebilmeli; iptal etmek onun kararını bizim yerimize vermek olurdu.
+ * Ödeme penceresi kapandı (niyet iptal edildi ya da oturum süresi doldu): ayrılmış mal geri
+ * bırakılır. Sipariş TASLAK kalır — müşteri aynı sepetle tekrar deneyebilmeli; iptal etmek onun
+ * kararını bizim yerimize vermek olurdu.
+ *
+ * **Başarısız ödeme buraya DÜŞMEZ** (`payment_intent.payment_failed`): kart reddedildiğinde müşteri
+ * hâlâ sayfada, başka bir kart deneyecek. Malı o anda geri bırakmak, ikinci denemesinde "stok
+ * kalmadı" demek olurdu.
  */
 async function releaseExpired(event: VerifiedEvent): Promise<WebhookOutcome> {
   if (!event.orderId) return { status: 'not_found' };

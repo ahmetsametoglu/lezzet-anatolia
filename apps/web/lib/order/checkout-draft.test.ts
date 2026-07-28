@@ -1,0 +1,227 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  AddressService,
+  BundleService,
+  CategoryService,
+  DeliveryZoneService,
+  OrderService,
+  PriceService,
+  ProductService,
+  SettingsService,
+  StockService,
+  UserProfileService,
+  serviceDb,
+} from '@lezzet/database';
+import { purgeTestData } from '@lezzet/database/testing';
+import { createCheckoutDraft } from './checkout-draft';
+
+/**
+ * Sepet → taslak sipariş (07.4'ün eksik halkası).
+ *
+ * Burada sınanan şey "sipariş yazıldı mı" değil — **istemciden gelen seçimlerin yeniden
+ * doğrulandığı** ve **paketin doğru parçalandığı**. İkisi de sessizce yanlış olabilecek türden:
+ * ekran doğru davrandığı sürece hata hiç görünmez, ama tarayıcı konsolundan gönderilen bir gün ya
+ * da yanlış paylaştırılmış bir paket siparişi bozar.
+ */
+const db = serviceDb();
+const stamp = Date.now();
+const rotaKodu = `67${String(stamp).slice(-3)}`;
+
+let categoryId: string;
+let productId: string;
+let coldProductId: string;
+let variantId: string;
+let coldVariantId: string;
+let bundleId: string;
+let customerId: string;
+let addressId: string;
+let zoneId: string;
+let authUserId: string;
+const createdProfiles: string[] = [];
+
+beforeAll(async () => {
+  const category = await new CategoryService(db).create({ name: { tr: `Checkout testi ${stamp}` } });
+  categoryId = category.id;
+
+  const kargolanir = await new ProductService(db).create({
+    name: { tr: `Baklava ${stamp}` },
+    categoryId,
+    vatRate: 5.5,
+    variants: [{ label: { tr: '1 kg' }, sku: `CHK-B-${stamp}` }],
+  });
+  productId = kargolanir.product.id;
+  variantId = kargolanir.variants[0]!.id;
+
+  // Soğuk zincir: rota DIŞI adreste kargoya verilemez → sipariş açılamaz.
+  const soguk = await new ProductService(db).create({
+    name: { tr: `Künefe ${stamp}` },
+    categoryId,
+    vatRate: 5.5,
+    shippable: false,
+    variants: [{ label: { tr: '2 kişilik' }, sku: `CHK-K-${stamp}` }],
+  });
+  coldProductId = soguk.product.id;
+  coldVariantId = soguk.variants[0]!.id;
+
+  const prices = new PriceService(db);
+  await prices.setPrice({ variantId, channel: 'b2c', amount: 20 });
+  await prices.setPrice({ variantId: coldVariantId, channel: 'b2c', amount: 10 });
+
+  // Stok ŞART: sepet okuması stoksuz satırı "tükendi" işaretler ve kapı onu daha teslimat adımına
+  // varmadan reddeder — teslimat/ödeme doğrulamaları o zaman hiç sınanmazdı.
+  const stocks = new StockService(db);
+  const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+  await stocks.insert({ variantId, physicalQty: 50, expiryDate: gun(120), purchasePrice: 8 });
+  await stocks.insert({ variantId: coldVariantId, physicalQty: 50, expiryDate: gun(30), purchasePrice: 4 });
+
+  // Paket: iki kalem, payları BİLEREK katalog fiyatının altında — indirim tam da o farktır.
+  const bundle = await new BundleService(db).create({
+    name: { tr: `Test paketi ${stamp}` },
+    totalPrice: 27,
+    items: [
+      { variantId, qty: 1, allocatedUnitPrice: 18 },
+      { variantId: coldVariantId, qty: 1, allocatedUnitPrice: 9 },
+    ],
+  });
+  bundleId = bundle.bundle.id;
+
+  // Gerçek bir auth kullanıcısı: `user_profiles.auth_user_id` ona yabancı anahtarla bağlı ve kapı
+  // müşteriyi OTURUMDAN çözüyor — uydurma bir kimlikle o yol hiç sınanmazdı.
+  //
+  // Profili BURADA AÇMIYORUZ: auth kullanıcısı doğunca tetikleyici (04.4) `user_profiles` satırını
+  // kendisi kuruyor. İkinci bir insert benzersizlik kısıtına takılır — testin gerçek akışı taklit
+  // etmesi de zaten bunu gerektirir.
+  const authUser = await db.auth.admin.createUser({ email: `checkout${stamp}@ornek.fr`, email_confirm: true });
+  authUserId = authUser.data.user!.id;
+  const profile = await new UserProfileService(db).findByAuthUserId(authUserId);
+  if (!profile) throw new Error('auth→profil tetikleyicisi profil açmadı');
+  customerId = profile.id;
+  createdProfiles.push(profile.id);
+
+  zoneId = (await new DeliveryZoneService(db).insert({ name: `Test bölgesi ${stamp}`, postalCodes: [rotaKodu], weekdays: [1, 2, 3, 4, 5] })).id;
+  addressId = (await new AddressService(db).addForCustomer({ customerId, line1: '1 rue du Test', postalCode: rotaKodu, city: 'Strasbourg' })).id;
+  SettingsService.invalidate();
+});
+
+beforeEach(async () => {
+  await db.from('order').delete().eq('customer_id', customerId);
+});
+
+afterAll(async () => {
+  await db.from('order').delete().eq('customer_id', customerId);
+  await db.from('stock').delete().in('variant_id', [variantId, coldVariantId]);
+  await db.from('bundle').delete().eq('id', bundleId);
+  await db.from('address').delete().eq('customer_id', customerId);
+  await db.from('delivery_zone').delete().eq('id', zoneId);
+  await purgeTestData(db, {
+    productIds: [productId, coldProductId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    authUserIds: [authUserId],
+  });
+  SettingsService.invalidate();
+});
+
+/** O bölgenin yaklaşan ilk günü — testin tarihi elle yazması, günü geçince testi çürütürdü. */
+async function ilkUygunGun(): Promise<string> {
+  const { resolveDelivery } = await import('./delivery');
+  return (await resolveDelivery({ postalCode: rotaKodu })).availableDates[0]!;
+}
+
+const base = async () => ({
+  locale: 'tr' as const,
+  customerId,
+  addressId,
+  deliveryDate: await ilkUygunGun(),
+  paymentMethod: 'card' as const,
+});
+
+describe('sepet → taslak sipariş', () => {
+  it('varyant satırı bağlayıcı fiyatıyla yazılır', async () => {
+    const outcome = await createCheckoutDraft({
+      ...(await base()),
+      entries: [{ kind: 'variant', variantId, qty: 2, stockId: null }],
+    });
+
+    expect(outcome.status).toBe('ok');
+    if (outcome.status !== 'ok') return;
+    const { items } = (await new OrderService(db).getWithItems(outcome.orderId))!;
+    expect(items).toHaveLength(1);
+    // Fiyat İSTEMCİDEN gelmedi — sunucunun kendi çözümü.
+    expect(items[0]!.unitPrice).toBe(20);
+    expect(items[0]!.qty).toBe(2);
+    expect(items[0]!.bundleId).toBeNull();
+  });
+
+  it('PAKET varyant kalemlerine parçalanır; birim fiyat paketin PAYIDIR', async () => {
+    const outcome = await createCheckoutDraft({
+      ...(await base()),
+      entries: [{ kind: 'bundle', bundleId, qty: 2 }],
+    });
+
+    expect(outcome.status).toBe('ok');
+    if (outcome.status !== 'ok') return;
+    const { items } = (await new OrderService(db).getWithItems(outcome.orderId))!;
+
+    expect(items).toHaveLength(2);
+    // Nereden geldiği kaybolmaz: iade ve rapor paketi yeniden kurabilmeli.
+    expect(items.every((i) => i.bundleId === bundleId)).toBe(true);
+    // Paketin adedi kalemin adedini ÇARPAR.
+    expect(items.map((i) => i.qty).sort()).toEqual([2, 2]);
+    // Katalog fiyatı (20 + 10 = 30) DEĞİL, paylaştırılmış fiyat (18 + 9 = 27).
+    expect(items.reduce((sum, i) => sum + i.unitPrice, 0)).toBe(27);
+  });
+
+  it('istemcinin gönderdiği gün uygun günlerden biri değilse sipariş açılmaz', async () => {
+    const outcome = await createCheckoutDraft({
+      ...(await base()),
+      deliveryDate: '2030-01-01', // hiçbir bölgeye düşmeyen bir gün
+      entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }],
+    });
+
+    expect(outcome.status).toBe('date_unavailable');
+    expect(await siparisSayisi()).toBe(0);
+  });
+
+  it('başkasının adresine sipariş açılamaz', async () => {
+    const outcome = await createCheckoutDraft({
+      ...(await base()),
+      addressId: crypto.randomUUID(),
+      entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }],
+    });
+
+    expect(outcome.status).toBe('address_not_found');
+    expect(await siparisSayisi()).toBe(0);
+  });
+
+  it('rota DIŞI adreste soğuk zincir kalemi varsa sipariş açılmaz', async () => {
+    const disaridaki = await new AddressService(db).addForCustomer({
+      customerId,
+      line1: '17 avenue Jean Jaurès',
+      postalCode: '69007', // hiçbir bölgeye düşmez → kargo
+      city: 'Lyon',
+    });
+
+    const outcome = await createCheckoutDraft({
+      ...(await base()),
+      addressId: disaridaki.id,
+      deliveryDate: null, // kargoda gün yok
+      entries: [{ kind: 'variant', variantId: coldVariantId, qty: 1, stockId: null }],
+    });
+
+    expect(outcome.status).toBe('cold_chain_unshippable');
+    expect(await siparisSayisi()).toBe(0);
+  });
+
+  it('boş sepetle sipariş açılmaz', async () => {
+    const outcome = await createCheckoutDraft({ ...(await base()), entries: [] });
+    expect(outcome.status).toBe('empty_cart');
+    expect(await siparisSayisi()).toBe(0);
+  });
+});
+
+/** Reddedilen her denemeden sonra ORTADA SİPARİŞ KALMAMALI — yarım taslak da bir taslaktır. */
+async function siparisSayisi(): Promise<number> {
+  const { count } = await db.from('order').select('id', { count: 'exact', head: true }).eq('customer_id', customerId);
+  return count ?? 0;
+}

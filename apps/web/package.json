@@ -24,6 +24,8 @@
     "@lezzet/notify": "workspace:*",
     "@lezzet/storage": "workspace:*",
     "@lezzet/types": "workspace:*",
+    "@stripe/react-stripe-js": "^6.8.0",
+    "@stripe/stripe-js": "^9.12.1",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.48.1",
     "next": "^15.1.6",

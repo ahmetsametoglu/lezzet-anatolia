@@ -32,7 +32,8 @@ function paidEvent(orderId: string, amountCents: number, overrides: Partial<Veri
   eventSeq += 1;
   return {
     id: `evt_${stamp}_${eventSeq}`,
-    type: 'checkout.session.completed',
+    // Varsayılan olay adı artık niyet ailesinden: ödeme sayfa içine alındı (28.07).
+    type: 'payment_intent.succeeded',
     orderId,
     paymentIntentId: `pi_${stamp}_${eventSeq}`,
     amountTotalCents: amountCents,
@@ -146,6 +147,34 @@ describe('geç ödeme — rezervasyon düşmüşken onay gelirse (DOMAIN §4)', 
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'refunded' });
     expect((await orders.getById(orderId))?.status).toBe('cancelled');
+  });
+});
+
+describe('kart reddedilirse (sayfa içi ödeme)', () => {
+  it('mal GERİ BIRAKILMAZ — müşteri hâlâ sayfada, başka kart deneyecek', async () => {
+    const orderId = await pendingOrder(3);
+
+    const outcome = await handleStripeEvent(
+      paidEvent(orderId, 3000, { type: 'payment_intent.payment_failed' }),
+      stripeAccount,
+    );
+
+    expect(outcome).toMatchObject({ status: 'ok', action: 'ignored' });
+    // Bırakılsaydı ikinci denemesinde kendi malını "tükendi" diye bulurdu.
+    expect((await reservations.listActiveByOrder(orderId)).reduce((sum, row) => sum + row.qty, 0)).toBe(3);
+    expect((await orders.getById(orderId))?.status).toBe('draft');
+  });
+
+  it('niyet İPTAL edilirse mal geri bırakılır', async () => {
+    const orderId = await pendingOrder(3);
+
+    const outcome = await handleStripeEvent(
+      paidEvent(orderId, 3000, { type: 'payment_intent.canceled' }),
+      stripeAccount,
+    );
+
+    expect(outcome).toMatchObject({ status: 'ok', action: 'expired_released' });
+    expect(await reservations.listActiveByOrder(orderId)).toHaveLength(0);
   });
 });
 

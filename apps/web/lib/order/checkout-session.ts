@@ -1,5 +1,4 @@
 import { OrderService, ReservationService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
-import type { OrderItem } from '@lezzet/types';
 import { stripeClient } from '../stripe';
 
 /**
@@ -9,16 +8,26 @@ import { stripeClient } from '../stripe';
  * parayı ödedikten sonra "mal kalmamış" cevabını alırdı — sistemin en pahalı hatası budur.
  * Ayrılamayan tek kalem bile varsa ödeme HİÇ başlamaz.
  *
- * **Pencereler eşitlenir:** rezervasyon TTL'i ile Stripe oturumunun son kullanma anı aynı dakikadır.
- * Ayrı olsalardı iki kötü hâl doğardı: oturum daha uzunsa müşteri ödeme yapar ama stok çoktan
- * başkasına gitmiştir; oturum daha kısaysa stok boşuna kilitli kalır.
- *
  * **Yarıda kalan ayırma temizlenir:** üçüncü kalem ayrılamazsa ilk ikisi geri bırakılır. Bırakılmasa
  * stok, hiç doğmayacak bir sipariş için TTL boyunca kilitli kalırdı.
+ *
+ * ---
+ * **SAYFA İÇİ ÖDEMEYE GEÇİŞ (28.07 · kullanıcı kararı).** Önce Stripe'ın barındırdığı Checkout
+ * sayfası kullanılıyordu (`checkout.sessions.create` → müşteri siteden çıkar). Artık kart alanı
+ * kendi sayfamızda, Stripe'ın kendi iframe'i içinde (`PaymentElement`) — kart bilgisi ne sunucumuza
+ * ne de istemci kodumuza uğrar, PCI kapsamı aynı kalır. Bu yüzden port artık `url` değil
+ * **`clientSecret`** taşır.
+ *
+ * **Pencere eşitliği kuralı DÜŞTÜ ve düşmesi doğru.** Eskiden rezervasyon TTL'i ile oturumun
+ * `expires_at`'i aynı dakikaya kuruluyordu; `PaymentIntent`'in son kullanma tarihi yok. Yerine
+ * geçen şey daha iyisi: istemci **ertelenmiş** Elements kullanıyor (form açılışta monte olur ama
+ * niyet YARATILMAZ), niyet ancak "Öde"ye basınca doğuyor. Yani ayırma ile ödeme arasındaki mesafe
+ * dakikalar değil SANİYELER — müşteri formu bir saat açık bıraksa bile hiçbir mal kilitlenmemiş
+ * olur. Yine de gecikirse 07.5'in geç ödeme dalı devrede: mal yeniden ayrılır, olmazsa iade edilir.
  */
 
 type SessionOutcome =
-  | { status: 'ok'; sessionId: string; url: string | null; expiresAt: string }
+  | { status: 'ok'; paymentIntentId: string; clientSecret: string | null; expiresAt: string }
   /** Stok yetmedi — ödeme hiç açılmadı. Hangi varyanttan ne kadar kaldığı çağırana bildirilir. */
   | { status: 'insufficient_stock'; variantId: string; available: number }
   /** Sipariş artık taslak değil (araya biri girdi ya da ödeme zaten açılmış). */
@@ -28,21 +37,25 @@ type SessionOutcome =
   | { status: 'provider_unavailable' };
 
 /**
- * Ödeme oturumu açan taraf — **port**. Bugünkü uygulaması Stripe'tır; test sahte bir üreteç verir.
+ * Ödeme niyetini açan taraf — **port**. Bugünkü uygulaması Stripe'tır; test sahte bir üreteç verir.
  * Gerçek sağlayıcıya ağdan gitmeden, "önce ayır sonra öde" sırasının doğruluğu sınanabilsin diye.
+ *
+ * Kalem listesi GÖNDERİLMEZ: tahsil edilecek tutar siparişin toplamıdır (kargo dahil) ve o toplam
+ * `resolveCheckoutPayment` tarafından çoktan hesaplanmıştır. Kalemleri ikinci kez sağlayıcıya
+ * yazmak, iki toplamın ayrışabildiği bir yol açardı — üstelik `PaymentElement` onları göstermiyor,
+ * müşteri kalemleri bizim kendi özetimizde okuyor.
  */
 export type CheckoutSessionCreator = (params: {
-  lineItems: readonly { name: string; unitAmountCents: number; quantity: number }[];
-  successUrl: string;
-  cancelUrl: string;
-  expiresAtEpoch: number;
+  amountCents: number;
   orderId: string;
-}) => Promise<{ id: string; url: string | null }>;
+  /** Sağlayıcı panelinde siparişi tanımaya yarar; müşteriye kart ekstresinde de görünebilir. */
+  description: string;
+  /** Ayırmanın bittiği an — niyetin künyesine yazılır, geç ödeme dalı (07.5) bunu okuyabilir. */
+  reservationExpiresAt: string;
+}) => Promise<{ id: string; clientSecret: string | null }>;
 
 interface SessionInput {
   orderId: string;
-  successUrl: string;
-  cancelUrl: string;
   /** Bülten/pazarlama izni — checkout kutusundan gelir, baştan işaretsizdir (DOMAIN §11). */
   marketingConsent?: boolean;
   /** İlk siparişte yazılacak edinim kaynağı (UTM). Sonraki siparişlerde DOKUNULMAZ. */
@@ -85,35 +98,18 @@ export async function createCheckoutSession(
   // Edinim kaynağı ve izin, ödeme açılırken yazılır: müşteri buraya kadar geldiyse niyet bellidir.
   await recordCustomerContext(order.customerId, input);
 
-  const expiresAt = Math.floor(Date.now() / 1000) + ttlMinutes * 60;
-  const session = await createSession({
-    lineItems: items.map((item) => lineItem(item, order.referenceNo)),
-    successUrl: input.successUrl,
-    cancelUrl: input.cancelUrl,
-    expiresAtEpoch: expiresAt,
+  const expiresAt = new Date(Date.now() + ttlMinutes * 60_000).toISOString();
+  // Tahsil edilecek tutar siparişin TOPLAMIDIR: kalem toplamı + kargo − indirim, hepsi
+  // `resolveCheckoutPayment` tarafından hesaplanıp siparişe yazılmış hâliyle. Burada yeniden
+  // toplamak, iki hesabın ayrışabildiği ikinci bir kaynak yaratırdı.
+  const intent = await createSession({
+    amountCents: Math.round(order.total * 100),
     orderId: order.id,
+    description: order.referenceNo ?? `Sipariş ${order.id.slice(0, 8)} · ${items.length} kalem`,
+    reservationExpiresAt: expiresAt,
   });
 
-  return { status: 'ok', sessionId: session.id, url: session.url, expiresAt: new Date(expiresAt * 1000).toISOString() };
-}
-
-/**
- * Kalem satırı. Fiyat **sipariş anında sabitlenmiş** birimdir (DOMAIN §5) — Stripe'a katalogdan
- * değil, siparişten gider; aradaki fiyat değişikliği ödemeyi kaydırmaz.
- *
- * Kalem indirimi birime yansıtılır: Stripe'a ayrı bir "indirim satırı" göndermek toplamı
- * bozardı (negatif satır kabul edilmez).
- */
-function lineItem(item: OrderItem, referenceNo: string | null): { name: string; unitAmountCents: number; quantity: number } {
-  const grossCents = Math.round(item.unitPrice * 100) * item.qty;
-  const discountCents = Math.round(item.lineDiscountAmount * 100);
-
-  return {
-    // Ürün adı ödeme ekranında görünür; referans izi birlikte gider.
-    name: referenceNo ? `${referenceNo} · ${item.variantId.slice(0, 8)}` : item.variantId.slice(0, 8),
-    unitAmountCents: Math.max(0, Math.round((grossCents - discountCents) / item.qty)),
-    quantity: item.qty,
-  };
+  return { status: 'ok', paymentIntentId: intent.id, clientSecret: intent.clientSecret, expiresAt };
 }
 
 /** Portun bugünkü uygulaması. Anahtar yoksa `null` — çağıran `provider_unavailable` döner. */
@@ -122,21 +118,18 @@ function stripeSessionCreator(): CheckoutSessionCreator | null {
   if (!stripe) return null;
 
   return async (params) => {
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      line_items: params.lineItems.map((line) => ({
-        price_data: { currency: 'eur', unit_amount: line.unitAmountCents, product_data: { name: line.name } },
-        quantity: line.quantity,
-      })),
-      success_url: params.successUrl,
-      cancel_url: params.cancelUrl,
-      expires_at: params.expiresAtEpoch,
+    const intent = await stripe.paymentIntents.create({
+      amount: params.amountCents,
+      currency: 'eur',
+      description: params.description,
+      // Kart yeterli: cüzdanlar (Apple/Google Pay) da kart yöntemidir, ayrı tip gerektirmez.
+      // Otomatik yöntemler açık bırakılsaydı sepete uymayan (Klarna, taksit) seçenekler belirirdi.
+      payment_method_types: ['card'],
       // Siparişe geri dönüşün TEK yolu: webhook bu alanı okur. Ayrı eşleme tablosu tutmuyoruz —
       // sağlayıcının taşıdığı kimlik, bizim kopyamızdan güvenilirdir.
-      client_reference_id: params.orderId,
-      metadata: { order_id: params.orderId },
+      metadata: { order_id: params.orderId, reservation_expires_at: params.reservationExpiresAt },
     });
-    return { id: session.id, url: session.url };
+    return { id: intent.id, clientSecret: intent.client_secret };
   };
 }
 

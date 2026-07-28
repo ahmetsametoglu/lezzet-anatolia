@@ -20,18 +20,25 @@ async function stripeAccountId(): Promise<string | null> {
   return accounts.find((account) => account.type === 'provider')?.id ?? null;
 }
 
-/** Stripe olayını işleyicinin anladığı sade şekle indirger — SDK tipi kapının içinde kalır. */
+/**
+ * Stripe olayını işleyicinin anladığı sade şekle indirger — SDK tipi kapının içinde kalır.
+ *
+ * Ödeme sayfa İÇİNE alındığından (28.07) taşıyıcı nesne artık `Checkout.Session` değil
+ * **`PaymentIntent`**: kart onayı istemcide `confirmPayment` ile veriliyor, ortada oturum yok.
+ * Sipariş kimliği yine künyeden okunuyor — niyeti yaratırken oraya yazmıştık.
+ */
 function toVerifiedEvent(event: Stripe.Event): VerifiedEvent {
-  const session = event.data.object as Stripe.Checkout.Session;
-  const intent = session.payment_intent;
+  const intent = event.data.object as Stripe.PaymentIntent;
 
   return {
     id: event.id,
     type: event.type,
-    orderId: session.metadata?.order_id ?? session.client_reference_id ?? null,
-    paymentIntentId: typeof intent === 'string' ? intent : (intent?.id ?? null),
-    amountTotalCents: session.amount_total ?? null,
-    raw: { type: event.type, session: session.id },
+    orderId: intent.metadata?.order_id ?? null,
+    paymentIntentId: intent.id,
+    // Tahsil edilen GERÇEK tutar: kısmi tahsilat ya da tutar düzeltmesi olduysa `amount_received`
+    // doğruyu söyler, `amount` yalnız niyetti. Sipariş toplamına bakılmaz (12.2).
+    amountTotalCents: intent.amount_received || intent.amount || null,
+    raw: { type: event.type, paymentIntent: intent.id },
   };
 }
 

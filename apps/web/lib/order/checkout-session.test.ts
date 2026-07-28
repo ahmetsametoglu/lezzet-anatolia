@@ -26,12 +26,12 @@ const createdProfiles: string[] = [];
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
-/** Sahte oturum üreteci — çağrıldığını ve neyle çağrıldığını kaydeder. */
+/** Sahte niyet üreteci — çağrıldığını ve neyle çağrıldığını kaydeder. */
 function fakeCreator() {
   const calls: Parameters<CheckoutSessionCreator>[0][] = [];
   const creator: CheckoutSessionCreator = async (params) => {
     calls.push(params);
-    return { id: `cs_test_${calls.length}`, url: 'https://checkout.stripe.test/session' };
+    return { id: `pi_test_${calls.length}`, clientSecret: `pi_test_${calls.length}_secret` };
   };
   return { creator, calls };
 }
@@ -68,21 +68,22 @@ async function draftOrder(qty: number) {
   return order.id;
 }
 
-const urls = { successUrl: 'https://lezzet.test/ok', cancelUrl: 'https://lezzet.test/cancel' };
-
 describe('önce ayır, sonra öde (07.4)', () => {
-  it('stok ayrılır ve oturum TTL ile aynı anda biter', async () => {
+  it('stok ayrılır ve niyet siparişin TOPLAMIYLA açılır', async () => {
     const orderId = await draftOrder(2);
     const { creator, calls } = fakeCreator();
 
-    const outcome = await createCheckoutSession({ orderId, ...urls }, creator);
+    const outcome = await createCheckoutSession({ orderId }, creator);
 
-    expect(outcome).toMatchObject({ status: 'ok', sessionId: 'cs_test_1' });
+    expect(outcome).toMatchObject({ status: 'ok', paymentIntentId: 'pi_test_1', clientSecret: 'pi_test_1_secret' });
     const active = await reservations.listActiveByOrder(orderId);
     expect(active.reduce((sum, row) => sum + row.qty, 0)).toBe(2);
 
-    // Pencereler eşit: oturumun bitişi rezervasyon TTL'i (30 dk) kadar ileride.
-    const minutesAhead = (calls[0]!.expiresAtEpoch * 1000 - Date.now()) / 60_000;
+    // Tutar siparişin toplamından gelir, kalemlerden yeniden toplanmaz (2 × 10,00 €).
+    expect(calls[0]!.amountCents).toBe(2000);
+
+    // Ayırma penceresi niyetin künyesine yazılır: geç ödeme dalı (07.5) bunu okuyabilsin.
+    const minutesAhead = (Date.parse(calls[0]!.reservationExpiresAt) - Date.now()) / 60_000;
     expect(minutesAhead).toBeGreaterThan(29);
     expect(minutesAhead).toBeLessThanOrEqual(30);
   });
@@ -91,7 +92,7 @@ describe('önce ayır, sonra öde (07.4)', () => {
     const orderId = await draftOrder(9); // elde 5 var
     const { creator, calls } = fakeCreator();
 
-    const outcome = await createCheckoutSession({ orderId, ...urls }, creator);
+    const outcome = await createCheckoutSession({ orderId }, creator);
 
     expect(outcome).toMatchObject({ status: 'insufficient_stock', variantId, available: 5 });
     expect(calls).toHaveLength(0); // sağlayıcıya hiç gidilmedi
@@ -108,7 +109,7 @@ describe('önce ayır, sonra öde (07.4)', () => {
     );
     const { creator } = fakeCreator();
 
-    const outcome = await createCheckoutSession({ orderId: order.id, ...urls }, creator);
+    const outcome = await createCheckoutSession({ orderId: order.id }, creator);
 
     expect(outcome.status).toBe('insufficient_stock');
     // İlk kalemin ayırması geride kalsaydı stok 30 dakika boşuna kilitli olurdu.
@@ -121,13 +122,13 @@ describe('önce ayır, sonra öde (07.4)', () => {
     await transitionOrder({ orderId, to: 'confirmed' });
     const { creator } = fakeCreator();
 
-    expect(await createCheckoutSession({ orderId, ...urls }, creator)).toMatchObject({ status: 'stale', currentStatus: 'confirmed' });
+    expect(await createCheckoutSession({ orderId }, creator)).toMatchObject({ status: 'stale', currentStatus: 'confirmed' });
   });
 
   it('sağlayıcı yoksa stok AYRILMADAN dönülür', async () => {
     const orderId = await draftOrder(2);
 
-    const outcome = await createCheckoutSession({ orderId, ...urls }, null);
+    const outcome = await createCheckoutSession({ orderId }, null);
 
     expect(outcome).toMatchObject({ status: 'provider_unavailable' });
     expect(await reservations.listActiveByOrder(orderId)).toHaveLength(0);
@@ -138,13 +139,13 @@ describe('önce ayır, sonra öde (07.4)', () => {
     const { creator } = fakeCreator();
 
     await createCheckoutSession(
-      { orderId: await draftOrder(1), ...urls, marketingConsent: true, acquisitionSource: { utm_source: 'instagram' } },
+      { orderId: await draftOrder(1), marketingConsent: true, acquisitionSource: { utm_source: 'instagram' } },
       creator,
     );
     const first = await profiles.getById(customerId);
 
     await createCheckoutSession(
-      { orderId: await draftOrder(1), ...urls, acquisitionSource: { utm_source: 'google' } },
+      { orderId: await draftOrder(1), acquisitionSource: { utm_source: 'google' } },
       creator,
     );
     const second = await profiles.getById(customerId);
