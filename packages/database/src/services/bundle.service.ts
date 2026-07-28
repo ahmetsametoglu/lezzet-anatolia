@@ -44,6 +44,12 @@ export class BundleService extends BaseDbService<Bundle, BundleInsert, BundleUpd
     return this.getAll(undefined, { orderBy: 'sortOrder' });
   }
 
+  /** Verilen paketler TEK sorguda — sipariş kaleminden paket adına çıkmak için (bildirim, 14.5). */
+  async listByIds(ids: readonly string[]): Promise<Bundle[]> {
+    if (ids.length === 0) return [];
+    return this.getAll({ id: [...ids] }, { orderBy: 'sortOrder' });
+  }
+
   /**
    * Paketler + kalemleri TEK sorguda. Kalem başına ayrı sorgu atılırsa liste N+1 doğurur; operasyon
    * listesi "N kalem" ve mutabakat rozetini kalemlerden hesapladığı için onlara her satırda ihtiyaç var.

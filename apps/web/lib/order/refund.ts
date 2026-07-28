@@ -2,6 +2,7 @@ import { MoneyMovementService, OrderService, serviceDb } from '@lezzet/database'
 import { canTransition } from '@lezzet/domain-core';
 import type { FulfillmentAdjustment, OrderStatus, PaymentStatus } from '@lezzet/types';
 import { recordOrderRefund, syncOrderPaymentStatus } from '../money/order-payment';
+import { notifyOrderException } from './notify';
 
 /**
  * Kısmi karşılama (07.8) ve iptal/iade (07.9) kapısı — **uygulama katmanı orkestrasyonu**.
@@ -71,6 +72,11 @@ export async function adjustFulfillment(
   const settled = await settleRefund(orderId, opts);
   if (!settled) return { status: 'not_found' };
 
+  // Haberin hangisi olduğunu malın nerede olduğu belirler: mal daha çıkmadıysa bu bir EKSİK
+  // KARŞILANMA (müşteri kapıda sürprizle karşılaşmasın), çıktıysa bir İADE (para geri döndü).
+  const delivered = result.currentStatus === 'delivered' || result.currentStatus === 'completed';
+  await notifyOrderException(orderId, delivered ? 'order_refunded' : 'order_shortfall', { refundedAmount: settled.refundedAmount });
+
   return {
     status: 'ok',
     restockedQty: result.restockedQty ?? 0,
@@ -102,6 +108,8 @@ export async function cancelOrder(
 
   const settled = await settleRefund(orderId, { description: 'Sipariş iptali — iade', ...opts });
   if (!settled) return { status: 'not_found' };
+
+  await notifyOrderException(orderId, 'order_cancelled', { refundedAmount: settled.refundedAmount });
 
   return { status: 'ok', releasedQty: result.releasedQty ?? 0, ...settled };
 }

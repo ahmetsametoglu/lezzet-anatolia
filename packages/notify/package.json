@@ -11,8 +11,15 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .turbo node_modules"
   },
+  "dependencies": {
+    "@lezzet/email": "workspace:*",
+    "@lezzet/types": "workspace:*"
+  },
   "devDependencies": {
     "@lezzet/typescript-config": "workspace:*",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.7",
+    "react": "^19.0.0",
     "typescript": "^5.7.2"
   }
 }

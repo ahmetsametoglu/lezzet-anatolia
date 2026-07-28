@@ -1,4 +1,10 @@
 {
   "extends": "@lezzet/typescript-config/base.json",
+  "comment": "E-posta sürücüsü JSX şablonu döndürür (React Email) — jsx ayarı bu yüzden burada da gerekir.",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node", "react"]
+  },
   "include": ["src"]
 }

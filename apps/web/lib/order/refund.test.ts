@@ -57,6 +57,8 @@ beforeEach(async () => {
 afterAll(async () => {
   await db.from('money_movement').delete().eq('account_id', cashAccount);
   await db.from('order').delete().eq('customer_id', customerId);
+  // Rezervasyonun siparişe FK'sı yok (0007) — elle temizlenir, yoksa TTL süpürme testini yanıltır.
+  await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('account').delete().eq('id', cashAccount);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
 });

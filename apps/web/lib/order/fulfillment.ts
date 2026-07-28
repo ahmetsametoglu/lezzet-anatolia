@@ -1,5 +1,6 @@
 import { OrderService, SettingsService, serviceDb } from '@lezzet/database';
 import type { CloseResult, DeliverResult } from '@lezzet/types';
+import { notifyOrderStatus } from './notify';
 
 /**
  * Teslim ve kapanış kapısı (07.7) — **uygulama katmanı orkestrasyonu**.
@@ -13,12 +14,19 @@ import type { CloseResult, DeliverResult } from '@lezzet/types';
  * Maliyet oranları ayarlardan gelir — kapı onları toplar, hesabı RPC yapar.
  */
 
-/** Teslim: kurye ekranındaki onay. `deliveryProof` kapsamı parametriktir (B2B zorunlu, B2C kapalı). */
-export function deliverOrder(
+/**
+ * Teslim: kurye ekranındaki onay. `deliveryProof` kapsamı parametriktir (B2B zorunlu, B2C kapalı).
+ *
+ * Teslim `transition_order_status`'tan geçmez (kendi RPC'si vardır) — bu yüzden teslim haberi de
+ * burada tetiklenir. Gönderim yalnız teslim GERÇEKLEŞTİYSE olur; `stale` dönen çağrı haber üretmez.
+ */
+export async function deliverOrder(
   orderId: string,
   opts: { actorId?: string | null; deliveryProof?: Record<string, unknown> | null } = {},
 ): Promise<DeliverResult> {
-  return new OrderService(serviceDb()).deliver(orderId, opts);
+  const result = await new OrderService(serviceDb()).deliver(orderId, opts);
+  if (result.ok) await notifyOrderStatus(orderId, 'delivered');
+  return result;
 }
 
 /**

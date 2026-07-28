@@ -24,3 +24,4 @@ export * from './supply.schema';
 export * from './money.schema';
 export * from './bank-import.schema';
 export * from './job-run.schema';
+export * from './notification.schema';

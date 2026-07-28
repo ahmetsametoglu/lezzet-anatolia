@@ -1,6 +1,7 @@
 import { OrderService, serviceDb } from '@lezzet/database';
 import { canTransition, generateReferenceNo, producesReferenceNo } from '@lezzet/domain-core';
 import type { OrderStatus } from '@lezzet/types';
+import { notifyOrderStatus } from './notify';
 
 /**
  * Durum ilerletme kapısı (07.6) — **uygulama katmanı orkestrasyonu**.
@@ -57,5 +58,10 @@ export async function transitionOrder(input: TransitionInput): Promise<Transitio
   });
 
   if (!result.ok) return { status: 'stale', currentStatus: result.currentStatus };
+
+  // 4) Haber müşteriye — YALNIZ geçiş gerçekten olduysa (14.5). Gönderim hatası geçişi geri almaz:
+  //    sipariş ilerledi, mail gitmediyse tekrar gönderilir; tersi (ilerlemeyi iptal etmek) veriyi bozar.
+  await notifyOrderStatus(order.id, input.to);
+
   return { status: 'ok', from: order.status, to: input.to, referenceNo: referenceNo ?? order.referenceNo };
 }

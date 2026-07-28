@@ -39,7 +39,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 11 | `11-kurye-rota.md` | Kurye ve Rota Teslimat | bekliyor | 0/6 |
 | 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | tamam | 7/7 |
 | 13 | `13-analitik.md` | Analitik | bekliyor | 0/7 |
-| 14 | `14-bildirim-email.md` | Bildirim ve E-posta: `packages/email` + `packages/notify` | bekliyor | 0/9 |
+| 14 | `14-bildirim-email.md` | Bildirim ve E-posta: `packages/email` + `packages/notify` | sürüyor | 5/9 |
 | 15 | `15-whatsapp.md` | WhatsApp: Zemin ve Canlı Kanal | bekliyor | 0/14 |
 | 16 | `16-talep-sikayet.md` | Talep / Şikâyet | bekliyor | 0/6 |
 | 17 | `17-geri-bildirim-puan.md` | Geri Bildirim, Yorum ve Puan | bekliyor | 0/7 |
