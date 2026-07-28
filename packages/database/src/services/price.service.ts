@@ -146,6 +146,18 @@ export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate>
   }
 
   /**
+   * Müşteriye özel fiyatı KALDIRIR — o üçlünün (varyant, kanal, müşteri) TÜM satırlarını siler.
+   *
+   * Neden geçmişi de siliyoruz: özel fiyat bir ANLAŞMADIR, yayınlanmış bir liste değil. Anlaşma
+   * bitince "eskiden şu fiyattan alıyordu" kaydının tutulacağı yer sipariştir — orada fiyat zaten
+   * satır bazında sabitlenmiş durumda. Tek satır silmek ise daha kötüsü olurdu: altındaki eski özel
+   * fiyat yeniden yürürlüğe girer ve müşteri, kaldırıldığını sandığınız indirimi almaya devam ederdi.
+   */
+  async removeCustomerPrice(variantId: string, channel: Channel, customerId: string): Promise<void> {
+    await this.deleteWhere({ variantId, channel, customerId });
+  }
+
+  /**
    * ŞU AN geçerli müşteriye özel fiyatların tamamı (09.5 yönetim listesi) — (varyant, kanal,
    * müşteri) üçlüsü başına en yeni satır.
    *

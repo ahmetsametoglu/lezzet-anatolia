@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
 import { loadMoreLevelsAction, loadMoreLossesAction } from './actions';
-import { OfferDialog } from './offer-dialog';
+import { OfferDialog } from '@/components/operation/stock/offer-dialog';
 import { RecallDialog } from './recall-dialog';
 import { StockDesktop } from './stock.desktop';
 import { StockMobile } from './stock.mobile';

@@ -2,15 +2,12 @@
 
 import { Badge } from '@/components/operation/ui/badge';
 import { money, percent } from '@/components/operation/ui/format';
+import { batchAction, expiryBadge, expiryLine, suggestionText } from '@/lib/stock/batch-labels';
 import {
   EXPIRY_GROUPS,
-  batchAction,
   costLine,
-  expiryBadge,
-  expiryLine,
   groupOf,
   movedOutOf,
-  suggestionText,
   totalRiskCents,
   type ExpiryGroupKey,
 } from '../stock-labels';

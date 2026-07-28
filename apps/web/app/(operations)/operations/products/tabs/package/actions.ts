@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { BundleService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
+import { BundleService, PriceService, ProductService, StockService, VARIANT_POOL_LIMIT, serviceDb } from '@lezzet/database';
 import { bundleBalance } from '@lezzet/domain-core';
 import { fromCents, toCents } from '@lezzet/helper';
 import { getR2, r2Keys } from '@lezzet/storage';
@@ -60,12 +60,6 @@ function requireBalanced(items: BundleItemEntry[], totalPrice: number | undefine
       'Kalem fiyatlarını düzeltin ya da "Farkı dağıt" ile eşitleyin.',
   );
 }
-
-/**
- * Paket seçicisinin havuz tavanı. Katalog bunu aşarsa seçici aramalı bir sunucu okumasına dönüşür;
- * o gün gelene kadar tek sorgu yeterli.
- */
-const VARIANT_POOL_LIMIT = 500;
 
 interface BundleFormData {
   /** Düzenlenen paketin kalemleri (yeni pakette boş) — sıralı. */

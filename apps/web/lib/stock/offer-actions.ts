@@ -1,0 +1,61 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { SettingsService, StockService, serviceDb } from '@lezzet/database';
+import { offerDecisionOf } from '@lezzet/domain-core';
+import { requireStaff } from '@/lib/guard';
+import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { readExpiryThresholds } from './batch-view';
+
+// Teklif yazma yolu — İKİ ekranın ortak eylemi (stok 09.13 · fiyatlar 09.5). Server action'lar
+// kural gereği sayfa klasöründe kolokasyon eder; bu eylem artık tek bir sayfaya ait olmadığı için
+// `lib/`'e taşındı (CLAUDE.md §2: paylaşılan yardımcı lib'te).
+//
+// KARAR BURADA VERİLMEZ: "bu parti teklife açılabilir mi" sorusunu motor yanıtlar. Action yalnız o
+// cevabı UYGULAR — sunucu tarafında da uygular, çünkü ekranın düğmeyi gizlemesi bir güvence
+// değildir: eski bir sekme, tarihi bugün geçmiş bir partiye teklif açmayı deneyebilir.
+
+/** Teklif kararının göründüğü YOLLAR — biri tazelenip öbürü unutulursa iki ekran ayrışır. */
+const OFFER_PATHS = ['/operations/stock', '/operations/prices'] as const;
+
+/**
+ * Partiyi teklife açar / teklif fiyatını günceller. `null` fiyat teklifi KAPATIR.
+ *
+ * DLC'si geçmiş partide teklif açılamaz ve bu kapı sunucudadır: güvenlik kuralı ekranın iyi niyetine
+ * bırakılmaz. Kapatma her hâlde serbesttir — yanlışlıkla açılmış bir teklifin geri alınması hiçbir
+ * koşulda engellenmemeli.
+ */
+export async function setOfferPriceAction(stockId: string, offerPrice: number | null): Promise<ActionResult> {
+  try {
+    await requireStaff();
+    const db = serviceDb();
+    const stockSvc = new StockService(db);
+
+    if (offerPrice !== null) {
+      if (offerPrice <= 0) throw new Error('Teklif fiyatı sıfırdan büyük olmalı.');
+      const [[batch], thresholds] = await Promise.all([
+        stockSvc.getBatchDetails([stockId]),
+        readExpiryThresholds(new SettingsService(db)),
+      ]);
+      if (!batch) throw new Error('Parti bulunamadı — listeyi yenileyin (tükenmiş ya da silinmiş olabilir).');
+      const { decision } = offerDecisionOf({
+        dateType: batch.variant.product.dateType,
+        expiryDate: batch.expiryDate,
+        shelfLifeDays: batch.variant.product.shelfLifeDays,
+        // Açık teklifi YOK SAYARAK sorulur: burada sorulan "teklif var mı" değil, "bu partiye teklif
+        // açılabilir mi". Var olan teklif cevabı `offer_open`'a çevirir ve güncelleme imkânsızlaşırdı.
+        offerPriceCents: null,
+        nearExpiryPercent: thresholds.nearExpiryPercent,
+      });
+      if (decision === 'must_discard') {
+        throw new Error('Son tüketim tarihi (DLC) geçmiş parti satılamaz — teklif açılamaz, yalnız imha edilir.');
+      }
+    }
+
+    await stockSvc.setOfferPrice(stockId, offerPrice);
+    for (const path of OFFER_PATHS) revalidatePath(path);
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}

@@ -8,10 +8,13 @@ import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { MoneyField, PercentField } from '@/components/operation/form/money-input';
 import { daysLabel, money, percent, shortDate } from '@/components/operation/ui/format';
-import { setOfferPriceAction } from './actions';
-import type { BatchView } from './stock-types';
+import { setOfferPriceAction } from '@/lib/stock/offer-actions';
+import type { BatchView } from '@/lib/stock/batch-types';
 
 // Tarihi yaklaşan partiye teklif diyaloğu — "bu partiyi indirimli satışa aç".
+//
+// İKİ ekranın ortak diyaloğu (stok 09.13 · fiyatlar 09.5): aynı karar iki yerden verilebiliyor ama
+// TEK yerde yazılı. Kopyalansaydı biri KDV'yi düşerken öbürü unutabilirdi.
 //
 // BAŞLIK TÜRKÇE: tasarım "Near-expiry teklif aç" diyor ama operasyon yüzeyi Türkçedir ve "near-expiry"
 // operatörün diline girmemiş bir terim. Ekranın geri kalanı ("Yaklaşan tarihli" sekmesi) zaten Türkçe

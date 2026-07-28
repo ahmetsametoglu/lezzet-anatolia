@@ -13,7 +13,7 @@ export { UserProfileService } from './services/user-profile.service';
 export { EmailVerificationService, type RequestCodeResult, type VerifyCodeResult } from './services/email-verification.service';
 export { CategoryService, type CreateCategoryInput } from './services/category.service';
 export { CollectionService, type CreateCollectionInput } from './services/collection.service';
-export { ProductService, type CreateProductInput, type CreateVariantInput } from './services/product.service';
+export { ProductService, VARIANT_POOL_LIMIT, type CreateProductInput, type CreateVariantInput } from './services/product.service';
 export { ProductVariantService } from './services/product-variant.service';
 export { ProductImageService } from './services/product-image.service';
 export { BundleService, type CreateBundleInput } from './services/bundle.service';

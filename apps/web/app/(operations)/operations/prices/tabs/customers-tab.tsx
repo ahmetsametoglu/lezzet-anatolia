@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge } from '@/components/operation/ui/badge';
+import { Button } from '@/components/operation/ui/button';
 import { Table, type Column } from '@/components/operation/ui/table';
 import { money, percent, shortDate } from '@/components/operation/ui/format';
 import type { CustomerPriceRow, PricesViewProps } from '../prices-types';
@@ -13,7 +14,7 @@ import type { CustomerPriceRow, PricesViewProps } from '../prices-types';
 //
 // Liste SAYFALANMAZ: küme veriyle değil admin'in eliyle büyür (her satır ayrı bir pazarlık).
 
-export function CustomersTab({ data }: PricesViewProps) {
+export function CustomersTab({ data, onEditCustomerPrice }: PricesViewProps) {
   const columns: Column<CustomerPriceRow>[] = [
     {
       key: 'customer',
@@ -78,19 +79,28 @@ export function CustomersTab({ data }: PricesViewProps) {
         <Step order={1} label="Müşteriye özel fiyat" note={`${data.customerPrices.length} tanımlı`} active />
         <Step order={2} label="Müşteri indirim oranı" note={`${data.discountCustomers.length} müşteride`} />
         <Step order={3} label="Kanal liste fiyatı" note="taban" />
+        {/* Ekleme şeridin SAĞINDA (tasarım): kural okunduktan sonra gelen eylem — önce "sıra nasıl
+            işliyor", sonra "yeni bir anlaşma yaz". */}
+        <Button variant="primary" size="sm" className="ml-auto" onClick={() => onEditCustomerPrice(null)}>
+          + Özel fiyat
+        </Button>
       </div>
 
       <Table
         columns={columns}
         rows={data.customerPrices}
         rowKey={(r) => r.priceId}
+        onRowClick={onEditCustomerPrice}
         empty={
-          <div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-10">
+          <div className="flex flex-1 flex-col items-center justify-center gap-2.5 p-10">
             <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Özel fiyat tanımlı değil</span>
             <span className="max-w-[440px] text-center font-ops-body text-ops-sm leading-relaxed text-ops-muted">
               Herkes kanal liste fiyatından alıyor. Sürekli aynı pazarlığı yaptığınız müşteri için kalıcı özel
               fiyat doğru araçtır; tek seferlik pazarlık siparişin kendi işidir.
             </span>
+            <Button variant="primary" onClick={() => onEditCustomerPrice(null)}>
+              + Özel fiyat
+            </Button>
           </div>
         }
         footer={<DiscountStrip rows={data.discountCustomers} />}

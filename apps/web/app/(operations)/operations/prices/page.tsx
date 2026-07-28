@@ -3,13 +3,16 @@ import {
   PriceService,
   ProductService,
   ProductVariantService,
+  SettingsService,
   StockService,
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
+import { needsExpiryAttention } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Price } from '@lezzet/types';
 import { detectDevice } from '@/lib/device';
+import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { ErrorState } from '@/components/operation/ui/error-state';
 import { AlertIcon } from '@/components/operation/ui/icons';
@@ -17,6 +20,7 @@ import { PricesClient } from './prices-client';
 import { toCustomerPriceRows, toDiscountRows, toPriceRows, type ChannelPriceMaps } from './prices-read';
 import { parsePricesUrl, toPriceFilters } from './prices-url';
 import { titleOf, type CustomerPriceRow, type DiscountCustomerRow, type PriceRow } from './prices-types';
+import type { BatchView } from '@/lib/stock/batch-types';
 import type { KeysetCursor } from '@lezzet/types';
 
 // Fiyat ekranı (09.5) — yalnız ADMİN. Depo ve kurye maliyet/marj görmez (brief §6); guard bu yüzden
@@ -46,6 +50,7 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
 
   const channels = urlState.tab === 'channels' ? await readChannelTab(db, urlState, categoryNames) : null;
   const customers = urlState.tab === 'customers' ? await readCustomerTab(db) : null;
+  const offers = urlState.tab === 'offers' ? await readOffersTab(db) : null;
 
   const device = await detectDevice();
 
@@ -56,6 +61,7 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
         nextCursor: channels?.nextCursor ?? null,
         customerPrices: customers?.prices ?? [],
         discountCustomers: customers?.discounts ?? [],
+        offers: offers ?? [],
         categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
       }}
       device={device}
@@ -125,6 +131,38 @@ function toChannelMaps(
   const pick = (map: Map<string, { channelPrice: Price | null }>): Map<string, Price> =>
     new Map([...map].flatMap(([id, { channelPrice }]) => (channelPrice ? [[id, channelPrice] as const] : [])));
   return { b2c: pick(b2c), b2b: pick(b2b) };
+}
+
+/**
+ * Near-expiry sekmesi — karar bekleyen partiler. Türetme STOK EKRANIYLA ORTAK (`toBatchViews`):
+ * aynı eşik, aynı karar, tek kaynak. Kopyalansaydı eşik değişince iki ekran farklı şey söylerdi.
+ *
+ * Partiler SAYFALANMAZ: elde ne varsa o kadar (fiziksel sınır) ve uyarının TAM olması gerekiyor.
+ * Fiyat okuması dar — yalnız karar bekleyen boyların liste fiyatı, teklif önerisinin ihtiyacı bu.
+ */
+async function readOffersTab(db: Db): Promise<BatchView[]> {
+  const stockSvc = new StockService(db);
+  const [batchRows, thresholds] = await Promise.all([
+    stockSvc.listInStockDetailed(),
+    readExpiryThresholds(new SettingsService(db)),
+  ]);
+
+  // TEK "şimdi": okumanın tüm satırları aynı ana göre değerlendirilsin (istek ortasında gün dönerse
+  // listenin yarısı "yaklaşan", yarısı "geçmiş" görünürdü).
+  const now = new Date();
+  const undecided = toBatchViews(batchRows, { now, thresholds });
+  const attentionVariantIds = [
+    ...new Set(undecided.filter((b) => needsExpiryAttention(b.decision)).map((b) => b.variantId)),
+  ];
+
+  const priceMap = await new PriceService(db).findApplicableMap(attentionVariantIds, 'b2c');
+  const listPriceCents = new Map(
+    [...priceMap].flatMap(([variantId, { channelPrice }]) =>
+      channelPrice ? [[variantId, toCents(channelPrice.amount)] as const] : [],
+    ),
+  );
+
+  return toBatchViews(batchRows, { now, thresholds, listPriceCents }).filter((b) => needsExpiryAttention(b.decision));
 }
 
 /**

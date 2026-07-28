@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { dbNumeric } from './db-numeric';
 import { OrderStatusEnum } from './enums.schema';
-import { LocalizedTextSchema } from './localized-text.schema';
+import { ProductSchema } from './product.schema';
+import { ProductVariantSchema } from './product-variant.schema';
 
 // Stock — stok PARTİSİ (lot). Stok varyant seviyesinde tutulur; her partinin kendi son tarihi ve
 // alış maliyeti vardır (DOMAIN §4, data-model/stok-tedarik.md).
@@ -80,20 +81,22 @@ export type StockWithProductDates = z.infer<typeof StockWithProductDatesSchema>;
  * `productId` ekranın köprüsüdür: partiden ürüne (oradan fiyata, pakete) geçilir.
  */
 export const StockBatchDetailSchema = StockSchema.extend({
-  variant: z.object({
-    id: z.string().uuid(),
-    label: LocalizedTextSchema,
-    product: z.object({
-      id: z.string().uuid(),
-      name: LocalizedTextSchema,
-      categoryId: z.string().uuid().nullable(),
-      dateType: z.enum(['DLC', 'DDM']),
-      shelfLifeDays: z.number().int().nullable(),
+  // Gömülü satırlar VARLIK ŞEMASINDAN türetilir (CLAUDE.md §1), elle yazılmaz. Elle yazıldığında
+  // biri sıkı öbürü gevşek olabiliyor ve fark ancak ÇALIŞIRKEN görülüyor: boy etiketi tek boylu
+  // üründe bilinçli olarak BOŞTUR (`LocalizedTextDraftSchema`), burada `LocalizedTextSchema` yazılıydı
+  // ve o ürünün partisi okunduğu anda ekran Zod hatasıyla düşüyordu.
+  variant: ProductVariantSchema.pick({ id: true, label: true }).extend({
+    product: ProductSchema.pick({
+      id: true,
+      name: true,
+      categoryId: true,
+      dateType: true,
+      shelfLifeDays: true,
       /**
        * KDV oranı — teklif kararının KÂR yüzünde zorunlu. Teklif fiyatı b2c tabanındadır (KDV DAHİL),
        * alış fiyatı ise hariç: ikisini doğrudan karşılaştırmak marjı KDV oranı kadar şişirirdi.
        */
-      vatRate: dbNumeric,
+      vatRate: true,
     }),
   }),
 });

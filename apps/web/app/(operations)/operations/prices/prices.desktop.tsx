@@ -8,6 +8,7 @@ import { Tabs } from '@/components/operation/ui/tabs';
 import { ChannelsTab } from './tabs/channels-tab';
 import { CustomersTab } from './tabs/customers-tab';
 import { CouponsTab } from './tabs/coupons-tab';
+import { OffersTab } from './tabs/offers-tab';
 import { PRICE_SCOPES, SCOPE_LABEL, TAB_LABEL, type PriceScope, type PriceTab } from './prices-url';
 import type { PricesViewProps } from './prices-types';
 
@@ -15,14 +16,15 @@ import type { PricesViewProps } from './prices-types';
 // dosyalarında. Kabuk veriyi bilmez, yalnız yönlendirir (stok ve ürünler ekranlarının deseni).
 
 /**
- * Sekmeler. **Near-expiry sekmesi bu turda YOK** ve bu bilinçli: aynı karar stok ekranında tam
- * hâliyle çalışıyor (09.13), buraya kopyalamak kararı iki yerde tutmak olurdu. Ortak türetmeyi
- * paylaşılan bir yere taşıyan tur gelene kadar sekme çizilmiyor — ölü sekme, eksik sekmeden kötüdür.
+ * Sekmeler. Near-expiry rozeti karar bekleyen parti SAYISINI taşır — sekmeye girmeden "bugün bir iş
+ * var mı" sorusu yanıtlanabilsin. Sayı yalnız o sekme okunduğunda dolu; başka sekmedeyken rozet
+ * gösterilmez, çünkü okunmamış bir sayıyı "0" diye yazmak yanlış haber olurdu.
  */
 const TABS: Array<{ key: PriceTab; label: string }> = [
   { key: 'channels', label: TAB_LABEL.channels },
   { key: 'customers', label: TAB_LABEL.customers },
   { key: 'coupons', label: TAB_LABEL.coupons },
+  { key: 'offers', label: TAB_LABEL.offers },
 ];
 
 /**
@@ -45,7 +47,7 @@ export function PricesDesktop(props: PricesViewProps) {
     channels: `${counts.rows} boy yüklendi · ${counts.below} marj-altı · ${counts.missing} fiyatı eksik`,
     customers: `${data.customerPrices.length} özel fiyat · ${data.discountCustomers.length} müşteride genel indirim oranı`,
     coupons: 'Kupon ve otomatik kampanya — indirim motoruna bağlı',
-    offers: '',
+    offers: `${data.offers.length} parti karar bekliyor · teklif partiye bağlıdır, liste fiyatını değiştirmez`,
   };
 
   return (
@@ -58,7 +60,11 @@ export function PricesDesktop(props: PricesViewProps) {
         ) : null}
       </PageHeader>
 
-      <Tabs items={TABS} active={tab} onSelect={onTab} />
+      <Tabs
+        items={TABS.map((t) => (t.key === 'offers' && tab === 'offers' ? { ...t, badge: data.offers.length } : t))}
+        active={tab}
+        onSelect={onTab}
+      />
 
       {tab === 'channels' ? (
         <div className="flex flex-wrap items-center gap-2 border-b border-ops-line px-6 py-2.5">
@@ -84,6 +90,7 @@ export function PricesDesktop(props: PricesViewProps) {
       {tab === 'channels' && <ChannelsTab {...props} rows={rows} />}
       {tab === 'customers' && <CustomersTab {...props} />}
       {tab === 'coupons' && <CouponsTab />}
+      {tab === 'offers' && <OffersTab {...props} />}
     </div>
   );
 }

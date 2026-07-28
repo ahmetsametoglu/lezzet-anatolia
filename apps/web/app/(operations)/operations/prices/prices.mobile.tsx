@@ -10,6 +10,7 @@ import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { amount, money, percent } from '@/components/operation/ui/format';
 import { CustomersTab } from './tabs/customers-tab';
 import { CouponsTab } from './tabs/coupons-tab';
+import { OffersTab } from './tabs/offers-tab';
 import { marginText, marginTone, rowStateNote } from './prices-labels';
 import { PRICE_SCOPES, SCOPE_LABEL, type PriceTab } from './prices-url';
 import type { PriceRow, PricesViewProps } from './prices-types';
@@ -22,6 +23,7 @@ import type { PriceRow, PricesViewProps } from './prices-types';
 
 const TABS: Array<{ key: PriceTab; label: string }> = [
   { key: 'channels', label: 'Fiyatlar' },
+  { key: 'offers', label: 'Teklif' },
   { key: 'customers', label: 'Özel' },
   { key: 'coupons', label: 'Kupon' },
 ];
@@ -52,6 +54,7 @@ export function PricesMobile(props: PricesViewProps) {
       ) : null}
 
       {tab === 'customers' && <CustomersTab {...props} />}
+      {tab === 'offers' && <OffersTab {...props} />}
       {tab === 'coupons' && <CouponsTab />}
     </div>
   );

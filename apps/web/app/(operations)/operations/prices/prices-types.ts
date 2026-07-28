@@ -8,6 +8,7 @@
 // Para ekranda hep KURUŞ (cent) taşınır (STACK §8). Kanalın tabanı farklıdır ve bu bilgi satırda
 // yazılıdır: b2c KDV DAHİL, b2b hariç — ikisini aynı sayı sanmak marjı kaydırır.
 import type { Channel, KeysetCursor, ProductStatus } from '@lezzet/types';
+import type { BatchView } from '@/lib/stock/batch-types';
 import type { PriceScope, PriceTab } from './prices-url';
 
 /** Bir kanalın liste fiyatı — kendi tabanında. `null` = o kanalda fiyat YOK (satışa kapalı). */
@@ -87,6 +88,26 @@ export interface CategoryOption {
 }
 
 /**
+ * Özel fiyat formunun boy seçeneği — havuz DİYALOG AÇILINCA okunur, sayfa açılışında değil.
+ * Katalogun tamamını her sayfa yüklemesinde taşımanın karşılığı yok; seçici yalnız form açılınca
+ * gerekiyor (paket formunun deseni).
+ */
+export interface VariantOption {
+  variantId: string;
+  title: string;
+  /** Pasif/aday ürünün boyu — seçilebilir ama ekran bunu söyler. */
+  sellable: boolean;
+}
+
+/** Müşteri arama sonucu — seçicide gösterilen asgari kimlik. */
+export interface CustomerOption {
+  id: string;
+  name: string;
+  hint: string;
+  isCompany: boolean;
+}
+
+/**
  * Başlık sayaçları. **Yüklenmiş sayfa üzerinden** hesaplanır ve ekran bunu böyle söyler: marj bir
  * karardır, SQL süzgecine çevrilemez; tüm katalogun marjını saymak katalogun tamamını taşımak
  * demektir. Tam sayım ayrı bir tur (okuma fonksiyonu) — o gelene kadar sayaç, yalan söylemek
@@ -108,6 +129,11 @@ export interface PricesData {
   /** Şu an geçerli TÜM özel fiyatlar — sayfalanmaz (admin'in eliyle büyüyen küme). */
   customerPrices: CustomerPriceRow[];
   discountCustomers: DiscountCustomerRow[];
+  /**
+   * Karar bekleyen TÜM partiler — sayfalanmaz. Stok ekranıyla AYNI kaynaktan (`toBatchViews`) gelir;
+   * bir partiyi kaçırmak imhalık malı satmaktır.
+   */
+  offers: BatchView[];
   categories: CategoryOption[];
 }
 
@@ -130,6 +156,10 @@ export interface PricesViewProps {
   onLoadMore: () => void;
   /** Fiyat diyaloğunu bu boy için aç. */
   onEdit: (variantId: string) => void;
+  /** Özel fiyat diyaloğu: satır verilirse düzenleme, `null` ise yeni kayıt. */
+  onEditCustomerPrice: (row: CustomerPriceRow | null) => void;
+  /** Teklif diyaloğunu bu parti için aç — stok ekranıyla aynı diyalog, aynı karar. */
+  onOpenOffer: (stockId: string) => void;
 }
 
 /**

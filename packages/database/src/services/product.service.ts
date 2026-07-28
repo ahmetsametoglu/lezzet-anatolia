@@ -81,6 +81,13 @@ export type CreateVariantInput = Omit<ProductVariantInsert, 'productId'>;
 export type CreateProductInput = Omit<ProductInsert, 'slug'> & { variants?: CreateVariantInput[] };
 
 /**
+ * Varyant seçicilerinin havuz tavanı (paket kalemi · müşteriye özel fiyat). Katalog bunu aşarsa
+ * seçici aramalı bir sunucu okumasına döner; o gün gelene kadar tek sorgu yeterli. Tavan tek yerde:
+ * iki ekran ayrı sayı tutsaydı biri katalog büyüdüğünde sessizce eksik liste gösterirdi.
+ */
+export const VARIANT_POOL_LIMIT = 500;
+
+/**
  * Ürün CRUD + varyant orkestrasyonu + koleksiyon bağı. Satılabilir birim her zaman varyant
  * olduğundan varyantsız üründe otomatik varsayılan varyant açılır. Aday ürün (status='candidate')
  * satış/vitrin sorgularının dışında (DOMAIN §13).

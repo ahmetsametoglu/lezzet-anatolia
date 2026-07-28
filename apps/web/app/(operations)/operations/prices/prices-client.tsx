@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
 import { loadMorePricesAction } from './actions';
+import { OfferDialog } from '@/components/operation/stock/offer-dialog';
+import { CustomerPriceDialog } from './customer-price-dialog';
 import { PriceDialog } from './price-dialog';
 import { PricesDesktop } from './prices.desktop';
 import { PricesMobile } from './prices.mobile';
 import { pricesUrl, type PriceScope, type PriceTab, type PricesUrlState } from './prices-url';
-import type { PriceRow, PricesData } from './prices-types';
+import type { CustomerPriceRow, PriceRow, PricesData } from './prices-types';
 
 // Fiyat ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
 // Fiyat diyaloğu iki yüzeyin de üstünde — ikisinde de aynı iş yapılır.
@@ -99,6 +101,28 @@ export function PricesClient({ data, device, urlState }: PricesClientProps) {
     if (editingId && !editing) setEditingId(null);
   }, [editingId, editing]);
 
+  // Özel fiyat diyaloğu üç hâlli: kapalı · yeni kayıt (`'new'`) · düzenleme (satır kimliği). Tek
+  // durumda tutuluyor ki "hem yeni hem düzenleme açık" gibi imkânsız bir hâl doğmasın.
+  const [customerPriceState, setCustomerPriceState] = useState<'closed' | 'new' | string>('closed');
+  const editingCustomerPrice =
+    customerPriceState === 'closed' || customerPriceState === 'new'
+      ? null
+      : (data.customerPrices.find((r) => r.priceId === customerPriceState) ?? null);
+  useEffect(() => {
+    // Satır listeden düştüyse (kaldırıldı) diyalog kendiliğinden kapanır — boş forma bakılmaz.
+    if (customerPriceState !== 'closed' && customerPriceState !== 'new' && !editingCustomerPrice) {
+      setCustomerPriceState('closed');
+    }
+  }, [customerPriceState, editingCustomerPrice]);
+
+  // Teklif diyaloğu bir PARTİYE bağlı; kimlikle tutulur ki sunucu tazelendiğinde diyalog eski
+  // satırın kopyasını göstermesin. Parti listeden düşerse (tükendi) diyalog kendiliğinden kapanır.
+  const [offerStockId, setOfferStockId] = useState<string | null>(null);
+  const offerBatch = data.offers.find((b) => b.id === offerStockId) ?? null;
+  useEffect(() => {
+    if (offerStockId && !offerBatch) setOfferStockId(null);
+  }, [offerStockId, offerBatch]);
+
   const view = {
     data,
     rows,
@@ -115,12 +139,24 @@ export function PricesClient({ data, device, urlState }: PricesClientProps) {
     loadingMore,
     onLoadMore,
     onEdit: setEditingId,
+    onEditCustomerPrice: (row: CustomerPriceRow | null) => setCustomerPriceState(row ? row.priceId : 'new'),
+    onOpenOffer: setOfferStockId,
   };
 
   return (
     <>
       {resolvedDevice === 'mobile' ? <PricesMobile {...view} /> : <PricesDesktop {...view} />}
       {editing ? <PriceDialog key={editing.variantId} row={editing} onClose={() => setEditingId(null)} /> : null}
+      {offerBatch ? (
+        <OfferDialog key={offerBatch.id} batch={offerBatch} onClose={() => setOfferStockId(null)} />
+      ) : null}
+      {customerPriceState !== 'closed' ? (
+        <CustomerPriceDialog
+          key={customerPriceState}
+          editing={editingCustomerPrice}
+          onClose={() => setCustomerPriceState('closed')}
+        />
+      ) : null}
     </>
   );
 }

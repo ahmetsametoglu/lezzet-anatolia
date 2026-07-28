@@ -130,6 +130,29 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
     return this.update({ id: profileId, roles });
   }
 
+  /**
+   * Müşteri arama (operasyon seçicileri) — ad · telefon · e-posta üzerinde tek `or` grubu.
+   *
+   * Sonuç TAVANLIDIR ve tavan çağırana bildirilir: seçici bir liste değil, bir bulma aracıdır.
+   * Sayfalamak yerine sınırlamak doğru — operatör aradığını ilk on satırda görmüyorsa terimini
+   * daraltır, kaydırmaz.
+   */
+  async search(term: string, limit = 10): Promise<UserProfile[]> {
+    const q = term.trim();
+    if (!q) return [];
+    // PostgREST filtre dizesine gömülüyor: tırnak ayıklanır, ayraçlar boşluğa çevrilir ki
+    // virgül/parantez ayrıştırmayı bozmasın. `*` PostgREST'in ilike jokeri.
+    const safe = q.replace(/"/g, '').replace(/[(),]/g, ' ');
+    return this.getAll(
+      {},
+      {
+        orFilters: [`name.ilike."*${safe}*",phone.ilike."*${safe}*",email.ilike."*${safe}*"`],
+        orderBy: 'name',
+        limit,
+      },
+    );
+  }
+
   /** Bir role sahip tüm profiller (personel listesi, kurye ataması) — dizi araması GIN indeksli. */
   async listByRole(role: UserRole): Promise<UserProfile[]> {
     const { data, error } = await this.supabase.from('user_profiles').select('*').contains('roles', [role]);

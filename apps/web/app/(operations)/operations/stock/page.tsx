@@ -13,7 +13,8 @@ import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { detectDevice } from '@/lib/device';
 import { StockClient } from './stock-client';
-import { readActorNames, readExpiryThresholds, toBatchViews, toLevelRows, toLossRows } from './stock-read';
+import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
+import { readActorNames, toLevelRows, toLossRows } from './stock-read';
 import { parseStockUrl, periodStart, toStockFilters } from './stock-url';
 
 // Stok görünümü (09.13) — parti gözü ve tarihe bağlı kararların ekranı. Okuma burada (RSC).

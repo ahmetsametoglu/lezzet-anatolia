@@ -3,7 +3,9 @@
 //
 // İmleç adrese YAZILMAZ (CLAUDE.md §1): paylaşılan link listenin ortasından başlamamalı.
 
-export const STOCK_PATH = '/operations/stock';
+// Yol sabiti dışa VERİLMEZ: teklif eylemi `lib/stock/offer-actions`'a taşınınca tek tüketicisi
+// kalmadı; adres burada, `stockUrl()` içinde yaşıyor.
+const STOCK_PATH = '/operations/stock';
 
 export const STOCK_TABS = ['levels', 'attention', 'losses'] as const;
 export type StockTab = (typeof STOCK_TABS)[number];

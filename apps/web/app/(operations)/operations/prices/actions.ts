@@ -6,6 +6,8 @@ import {
   PriceService,
   ProductService,
   StockService,
+  UserProfileService,
+  VARIANT_POOL_LIMIT,
   serviceDb,
 } from '@lezzet/database';
 import { fromCents } from '@lezzet/helper';
@@ -14,7 +16,7 @@ import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { toPriceRows, type ChannelPriceMaps } from './prices-read';
 import { parsePricesUrl, toPriceFilters, PRICES_PATH } from './prices-url';
-import type { PriceRow } from './prices-types';
+import { titleOf, type CustomerOption, type PriceRow, type VariantOption } from './prices-types';
 
 // Fiyat ekranı server action'ları — 'use server' + requireAdmin ilk + servise devret +
 // `{ data, error }` DÖNER (throw yok) + revalidatePath.
@@ -77,6 +79,101 @@ export async function setAutoPriceAction(
     await new ProductService(serviceDb()).updateDetails(productId, { autoPrice, targetMarginPercent });
     revalidatePath(PRICES_PATH);
     return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Müşteriye özel fiyat yazar/günceller. Kanal fiyatıyla AYNI yol (`setPrice`): yeni satır eklenir,
+ * eskisi geçmişte kalır. Fark tek bir alanda — `customerId` dolu.
+ *
+ * Özel fiyatın liste fiyatından YÜKSEK olması engellenmez: nadir ama gerçek bir durum (küçük
+ * miktarlı özel üretim, taşıma zorluğu). Ekran uyarır, yol kapatmaz — kural uydurmak, operatörün
+ * bildiği bir istisnayı sisteme rağmen yapmasına yol açardı.
+ */
+export async function setCustomerPriceAction(
+  customerId: string,
+  variantId: string,
+  channel: Channel,
+  amountCents: number,
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    if (!customerId) throw new Error('Müşteri seçilmeli.');
+    if (!variantId) throw new Error('Boy seçilmeli.');
+    if (!Number.isFinite(amountCents) || amountCents <= 0) throw new Error('Fiyat sıfırdan büyük olmalı.');
+
+    await new PriceService(serviceDb()).setPrice({
+      variantId,
+      channel,
+      customerId,
+      amount: fromCents(Math.round(amountCents)),
+    });
+    revalidatePath(PRICES_PATH);
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Özel fiyatı kaldırır — müşteri o boyda kanal listesine döner. Servis o üçlünün TÜM satırlarını
+ * siler; tek satır silmek altındaki eski özel fiyatı yürürlüğe sokardı (bkz. `removeCustomerPrice`).
+ */
+export async function removeCustomerPriceAction(
+  customerId: string,
+  variantId: string,
+  channel: Channel,
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    await new PriceService(serviceDb()).removeCustomerPrice(variantId, channel, customerId);
+    revalidatePath(PRICES_PATH);
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Özel fiyat formunun boy havuzu — DİYALOG AÇILINCA okunur (paket formunun deseni). Sayfa açılışında
+ * okunsaydı, kanal sekmesine bakan admin hiç açmayacağı bir formun katalogunu da öderdi.
+ */
+export async function loadVariantPoolAction(): Promise<ActionResult<VariantOption[]>> {
+  try {
+    await requireAdmin();
+    const pool = await new ProductService(serviceDb()).listPool(VARIANT_POOL_LIMIT);
+    const options = pool.flatMap((product) =>
+      product.variants.map((variant) => ({
+        variantId: variant.id,
+        title: titleOf(resolveLocalizedText(product.name), resolveLocalizedText(variant.label)),
+        // Pasif/aday ürün ya da kapalı boy: seçilebilir ama ekran söyler — özel fiyat, satışa
+        // açılmadan önce hazırlanabilen bir anlaşmadır.
+        sellable: product.status === 'active' && variant.isActive,
+      })),
+    );
+    return { data: options, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/** Müşteri arama (özel fiyat seçicisi) — ad · telefon · e-posta; sonuç tavanlı. */
+export async function searchCustomersAction(term: string): Promise<ActionResult<CustomerOption[]>> {
+  try {
+    await requireAdmin();
+    const rows = await new UserProfileService(serviceDb()).search(term);
+    return {
+      data: rows.map((r) => ({
+        id: r.id,
+        name: r.name || r.phone || r.email || r.id.slice(0, 8),
+        // İkinci satır KİMLİĞİ ayırt eder: aynı adlı iki müşteri telefonuyla ayrılır.
+        hint: [r.phone, r.email].filter(Boolean).join(' · ') || 'iletişim bilgisi yok',
+        isCompany: Boolean(r.companyInfo),
+      })),
+      error: null,
+    };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

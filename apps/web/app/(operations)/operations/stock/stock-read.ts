@@ -1,17 +1,9 @@
-import {
-  MLOR_PERCENT,
-  NEAR_EXPIRY_PERCENT,
-  OFFER_DISCOUNT_PERCENT,
-  meetsMlor,
-  daysToExpiry,
-  needsExpiryAttention,
-  offerDecisionOf,
-  suggestedOfferPriceCents,
-} from '@lezzet/domain-core';
+import { needsExpiryAttention } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
-import { resolveLocalizedText, type ProductStockRow, type StockAdjustmentDetail, type StockBatchDetail } from '@lezzet/types';
-import type { SettingsService, UserProfileService } from '@lezzet/database';
-import { titleOf, type BatchView, type LossRow, type StockLevelRow } from './stock-types';
+import { resolveLocalizedText, type ProductStockRow, type StockAdjustmentDetail } from '@lezzet/types';
+import type { UserProfileService } from '@lezzet/database';
+import type { BatchView } from '@/lib/stock/batch-types';
+import { titleOf, type LossRow, type StockLevelRow } from './stock-types';
 
 // DB satırı → view-model indirgemesi. RSC ve server action'lar bunu PAYLAŞIR: ilk sayfa ile sonraki
 // sayfalar (ve lot sorgusunun sonucu) aynı şekli üretsin diye tek yerde durur.
@@ -19,22 +11,6 @@ import { titleOf, type BatchView, type LossRow, type StockLevelRow } from './sto
 // KARARLAR BURADA SORULUR, BURADA VERİLMEZ: her satır `domain-core/stock`'a danışır. Uygulama katmanı
 // motoru veriyle buluşturur (STACK §4) — eşiği kendi kurmaz, yüzdeyi kendi hesaplamaz.
 
-/**
- * Raf ömrü eşikleri — **işletmenin kararı, kodun sabiti değil** (`Setting`, 0016). Motor üçünü de
- * parametre olarak alıyordu ama ekran geçirmiyordu: ayarı değiştiren operatör, ekranın hâlâ eski
- * eşikle karar gösterdiğini fark edemezdi. Varsayılanlar motordan gelir, çağrı yerinde uydurulmaz.
- */
-interface ExpiryThresholds {
-  nearExpiryPercent: number;
-  offerDiscountPercent: number;
-  mlorPercent: number;
-}
-
-/**
- * Üç eşiği TEK yerde okur. `SettingsService` süreç içinde önbelleklidir — anahtar başına bir sorgu,
- * sonraki isteklerde sıfır. Kapsam verilmez: eşikler bugün global (kanala/bölgeye göre farklılaşan
- * bir raf ömrü ölçütü yok); gerekirse `SettingScopeContext` buradan geçirilir.
- */
 export async function readActorNames(db: UserProfileService, rows: StockAdjustmentDetail[]): Promise<Map<string, string>> {
   // `created_by` FK taşımıyor (0010), gömülü select ile gelemez → sayfadaki KİMLİKLER tek turda
   // çözülür. Satır başına sorgu (N+1) bir geçmiş listesinde en pahalı hatadır.
@@ -42,66 +18,6 @@ export async function readActorNames(db: UserProfileService, rows: StockAdjustme
   if (ids.length === 0) return new Map();
   const people = await db.listByIds(ids);
   return new Map(people.map((p) => [p.id, p.name]));
-}
-
-export async function readExpiryThresholds(settings: SettingsService): Promise<ExpiryThresholds> {
-  const [nearExpiryPercent, offerDiscountPercent, mlorPercent] = await Promise.all([
-    settings.getNumber('near_expiry_percent', NEAR_EXPIRY_PERCENT),
-    settings.getNumber('near_expiry_discount_percent', OFFER_DISCOUNT_PERCENT),
-    settings.getNumber('mlor_percent', MLOR_PERCENT),
-  ]);
-  return { nearExpiryPercent, offerDiscountPercent, mlorPercent };
-}
-
-/**
- * Partileri karara bağlar. `now` DIŞARIDAN verilir: aynı okumanın tüm satırları AYNI ana göre
- * değerlendirilsin (istek ortasında gün dönerse yarısı "yaklaşan", yarısı "geçmiş" görünürdü).
- *
- * Fiyat haritası isteğe bağlı — teklif önerisi yalnız karar bekleyen partiler için okunuyor, geri
- * kalanında `listPriceCents` null kalır ve o satır zaten öneri göstermiyor.
- */
-export function toBatchViews(
-  rows: StockBatchDetail[],
-  opts: { now: Date; thresholds: ExpiryThresholds; listPriceCents?: Map<string, number> },
-): BatchView[] {
-  return rows.map((row) => {
-    const product = row.variant.product;
-    const productName = resolveLocalizedText(product.name);
-    const variantLabel = resolveLocalizedText(row.variant.label);
-    const offerPriceCents = row.offerPrice === null ? null : toCents(row.offerPrice);
-
-    const { decision, flag, remainingPercent } = offerDecisionOf({
-      dateType: product.dateType,
-      expiryDate: row.expiryDate,
-      shelfLifeDays: product.shelfLifeDays,
-      offerPriceCents,
-      now: opts.now,
-      nearExpiryPercent: opts.thresholds.nearExpiryPercent,
-    });
-
-    // MLOR: partinin GİRİŞTEKİ ömrü değil, bugünkü ömrü ölçülüyor — giriş tarihi ayrıca tutulmuyor.
-    // Bu yüzden işaret "kısa ömürlü geldi" değil, "kısa ömürlü DURUYOR" der; teklif kararına bağlam
-    // olarak ikisi de aynı işi görür ve uydurma bir giriş anı varsaymaz.
-    const listPriceCents = opts.listPriceCents?.get(row.variantId) ?? null;
-
-    return {
-      ...row,
-      title: titleOf(productName, variantLabel),
-      productName,
-      variantLabel,
-      flag,
-      decision,
-      remainingPercent,
-      daysLeft: daysToExpiry(row.expiryDate, opts.now),
-      belowMlor: !meetsMlor(row.expiryDate, product.shelfLifeDays, opts.now, opts.thresholds.mlorPercent).ok,
-      listPriceCents,
-      suggestedOfferCents: suggestedOfferPriceCents(listPriceCents, opts.thresholds.offerDiscountPercent),
-      offerDiscountPercent: opts.thresholds.offerDiscountPercent,
-      mlorPercent: opts.thresholds.mlorPercent,
-      offerPriceCents,
-      purchasePriceCents: row.purchasePrice === null ? null : toCents(row.purchasePrice),
-    };
-  });
 }
 
 /**

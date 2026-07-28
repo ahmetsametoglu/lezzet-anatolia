@@ -9,7 +9,7 @@ import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { money, percent } from '@/components/operation/ui/format';
 import { AttentionTab } from './tabs/attention-tab';
 import { LossesTab } from './tabs/losses-tab';
-import { expiryBadge, expiryLine } from './stock-labels';
+import { expiryBadge, expiryLine } from '@/lib/stock/batch-labels';
 import type { StockLevelRow, StockViewProps } from './stock-types';
 import type { StockTab } from './stock-url';
 
