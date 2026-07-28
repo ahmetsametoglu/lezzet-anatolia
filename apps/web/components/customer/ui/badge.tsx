@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
  *              başlığın içinde erir, rozetin ayrı bir şey olduğu görünmez (tasarım: sepet satırı).
  *   `plain`  — zeminsiz: dar mobil kartta rozet kutusu satırı şişirir, yalnız renkli metin kalır.
  */
-type BadgeTone = 'offer' | 'positive' | 'pending' | 'closed';
+type BadgeTone = 'offer' | 'positive' | 'pending' | 'closed' | 'package';
 type BadgeVariant = 'tint' | 'filled' | 'plain';
 
 const TONE: Record<BadgeTone, Record<BadgeVariant, string>> = {
@@ -20,6 +20,9 @@ const TONE: Record<BadgeTone, Record<BadgeVariant, string>> = {
   pending: { tint: 'bg-honey-bg text-honey', filled: 'bg-honey text-white', plain: 'text-honey' },
   // Tükendi rozeti ANTRASİTtir (envanter K3): açık gri bir "kapalı" tonu, adın yanında kaybolur.
   closed: { tint: 'bg-closed-bg text-closed', filled: 'bg-ink text-white', plain: 'text-closed' },
+  // Paket rozeti: ANTRASİT zemin + AÇIK YEŞİL metin (tasarım). Dolu zeytin/beyaz olsaydı "olumlu
+  // durum" rozetleriyle karışırdı; paket bir durum değil, satırın TÜRÜ — kendi rengi olmalı.
+  package: { tint: 'bg-olive-bg text-olive-dark', filled: 'bg-ink text-olive-light', plain: 'text-olive-dark' },
 };
 
 const SHAPE: Record<BadgeVariant, string> = {

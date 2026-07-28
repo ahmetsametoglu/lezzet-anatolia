@@ -1,8 +1,9 @@
 'use client';
 
-import { EmptyState } from '@/components/customer/ui/filter-controls';
 import { PackageListCard } from '@/components/customer/ui/package-card';
 import { CartBar } from '@/components/customer/cart/cart-bar';
+import { buttonClass } from '@/components/customer/ui/button';
+import { Link } from '@/i18n/navigation';
 import type { PackagesViewProps } from './packages-types';
 
 /**
@@ -23,14 +24,29 @@ export function PackagesMobile({ t, locale, packages }: PackagesViewProps) {
       </div>
 
       {packages.length === 0 ? (
-        <div className="px-4 pt-2">
-          <EmptyState title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} icon="🎁" />
+        <div className="mx-4 mt-2 flex flex-col items-center gap-2 rounded-card border border-dashed border-sand-500 px-5 py-8 text-center">
+          <span className="text-icon">🎁</span>
+          <span className="font-sans text-note font-bold text-ink">{t.empty.title}</span>
+          <span className="font-sans text-micro text-muted">{t.empty.body}</span>
+          <Link href="/catalog" className={buttonClass({ size: 'sm', className: 'mt-1' })}>
+            {t.empty.cta}
+          </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 px-4 pb-6">
+        <div className="grid grid-cols-2 gap-3 px-4 pb-5">
           {packages.map((pack) => (
             <PackageListCard key={pack.id} pack={pack} locale={locale} labels={t} compact />
           ))}
+        </div>
+      )}
+
+      {/* Katalog çıkışı mobilde ızgaranın ALTINDA tek düğme (tasarım): masaüstündeki iki sütunlu
+          bant dar ekranda üç satıra yayılıp sayfayı uzatıyor, verdiği tek yön ise aynı. */}
+      {packages.length > 0 && (
+        <div className="px-4 pb-6">
+          <Link href="/catalog" className={buttonClass({ variant: 'outlineOlive', size: 'md', fullWidth: true })}>
+            {t.catalogBand.cta}
+          </Link>
         </div>
       )}
 

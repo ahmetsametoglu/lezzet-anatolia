@@ -154,13 +154,13 @@ export function PurchaseBar({ t, selected, fixed = false }: PurchaseBarProps) {
 
   // SEÇİLİ BOYUN sepetteki satırı — boy değişince bu da değişir. Varyantlı üründe "3 adet" bilgisi
   // ürüne değil BOYA aittir: 500 g'dan 3 alıp 1 kg'a geçen müşteriye hâlâ 3 göstermek yalan olur.
-  const inCart = sellable ? lineOf(selected.id) : null;
+  const inCart = sellable ? lineOf({ variantId: selected.id }) : null;
 
   // Ekleme HER ZAMAN 1 adettir; ayarlama eklendikten sonra yapılır. Öncesinde adet sormanın anlamı
   // yok: sepette olmayan bir şeyin "3 adedi" hiçbir yerde karşılığı olmayan bir sayıdır. Sepete
   // girdikten sonra ise aynı seçici gerçek adedi düzenler (B2B elle giriş orada da açık).
   const qty = inCart ? inCart.qty : 1;
-  const setQty = (next: number) => inCart && setCartQty({ variantId: selected.id, stockId: inCart.stockId }, next);
+  const setQty = (next: number) => inCart && setCartQty({ kind: 'variant', variantId: selected.id, stockId: inCart.stockId }, next);
 
   // Düğme TOPLAM YAZMAZ. Tasarımda yazıyordu çünkü ekleme öncesi adet seçilebiliyordu ("2 × 16,90"
   // gerçek bir hesaptı). Adet artık hep 1 olduğu için toplam birim fiyata eşit — yani düğme, hemen
@@ -182,7 +182,7 @@ export function PurchaseBar({ t, selected, fixed = false }: PurchaseBarProps) {
   ) : (
     <button
       type="button"
-      onClick={() => add({ variantId: selected.id, qty: 1, stockId: selected.stockId })}
+      onClick={() => add({ kind: 'variant', variantId: selected.id, qty: 1, stockId: selected.stockId })}
       disabled={!sellable}
       className={
         fixed

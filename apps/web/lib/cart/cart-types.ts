@@ -16,17 +16,58 @@ import type { StorefrontImage } from '@/lib/storefront/storefront-types';
  * Bu yüzden görünüm niyetten TÜRETİLİR, niyetin içinde saklanmaz.
  */
 
-/** Sepetteki bir satırın kimliği — aynı varyantın farklı partisi AYRI satırdır (teklif çıpası). */
-export interface CartEntry {
+/**
+ * Sepetteki niyet. **İKİ TÜR satır vardır** ve kimlikleri farklı doğar:
+ *   varyant satırı → `{variantId, stockId}`; aynı varyantın farklı partisi AYRI satırdır (teklif çıpası).
+ *   paket satırı   → `{bundleId}`; paketin varyantı YOKTUR, satılan şey paketin kendisidir (DOMAIN §13).
+ *
+ * Birleşim (union) olarak yazılması bilinçli: paketin partisi ya da varyantı olamaz, varyantın da
+ * paket kimliği. Tek düz nesnede dört alan tutulsaydı bu imkânsız hâller yazılabilir kalırdı ve
+ * "hangisi dolu" kontrolü her çağrı yerine dağılırdı.
+ */
+export type CartEntry = CartVariantEntry | CartBundleEntry;
+
+export interface CartVariantEntry {
+  /**
+   * Türü AÇIKÇA taşır. Kimlik alanının varlığından ("`bundleId` dolu mu") çıkarılamaz: TypeScript
+   * yalnız birim tipli alanlarla daraltma yapar, `string` birim tip değildir — o yoldan gidilseydi
+   * her okuma yerinde elle kontrol gerekirdi. Depoya da yazılır (tarayıcı + sunucu jsonb).
+   */
+  kind: 'variant';
   variantId: string;
   qty: number;
   /** Teklif kalemi hangi partiye çıpalı; normal satışta null (DOMAIN §5). */
   stockId: string | null;
+  bundleId?: never;
 }
 
-/** Sepet satırının bugünkü görünümü — niyetten her okumada yeniden çözülür. */
-export interface CartLine extends CartEntry {
-  /** Ürüne dönüş bağlantısı için. */
+export interface CartBundleEntry {
+  kind: 'bundle';
+  bundleId: string;
+  qty: number;
+  variantId?: never;
+  stockId?: never;
+}
+
+/**
+ * Bir satırı GÖSTEREN kimlik — ekranın "şunu şu adede getir" derken tuttuğu şey.
+ *
+ * `CartEntry`'den ayrı durur çünkü adet TAŞIMAZ: `setQty` zaten adedi ayrı alıyor, referansın içinde
+ * ikinci bir adet taşımak iki kaynağın ayrışabildiği bir yol açardı.
+ */
+export type CartRef = { kind: 'variant'; variantId: string; stockId: string | null; bundleId?: never } | { kind: 'bundle'; bundleId: string; variantId?: never; stockId?: never };
+
+/**
+ * Sepet satırının bugünkü görünümü — niyetten her okumada yeniden çözülür.
+ *
+ * Niyetin İKİ türü burada da korunur (`CartVariantEntry & …` / `CartBundleEntry & …`): birleşimin
+ * kendisiyle kesişim alınsaydı TypeScript "hangi tür" sorusunu daraltamaz, her okuma yerinde elle
+ * kontrol gerekirdi. Dağıtılmış hâlde `line.bundleId` tek başına türü belirler.
+ */
+export type CartLine = (CartVariantEntry & CartLineView) | (CartBundleEntry & CartLineView);
+
+interface CartLineView {
+  /** Ürüne dönüş bağlantısı için; paket satırında paketin slug'ı. */
   slug: string;
   name: string;
   image: StorefrontImage;
@@ -45,6 +86,14 @@ export interface CartLine extends CartEntry {
    * "Size ayrıldı" vaadi hiçbir yerde yoktur — sepet stok ayırmaz (DOMAIN §4).
    */
   blocked: boolean;
+  /**
+   * PAKET satırının salt-okunur içeriği (K27) — varyant satırında boş dizi.
+   *
+   * Sepette gösterilmesi tasarımın kararı: müşteri "Bayram Sofrası"nın ne olduğunu satın alma
+   * ekranında hatırlamak zorunda kalmasın. **Düzenlenemez** — paket bütün olarak satılır, kalem
+   * çıkarmak diye bir şey yok. Fiyat da taşımaz (tek fiyat kuralı).
+   */
+  contents: { name: string; qty: number }[];
 }
 
 /**
@@ -88,9 +137,24 @@ export const EMPTY_CART: CartView = {
   freeShippingCents: 0,
 };
 
-/** Satırın kimliği — aynı varyantın farklı partisi AYRI satır (React anahtarı da budur). */
-export function cartKey(line: Pick<CartEntry, 'variantId' | 'stockId'>): string {
-  return `${line.variantId}:${line.stockId ?? ''}`;
+/**
+ * Satırın kimliği — aynı varyantın farklı partisi AYRI satır (React anahtarı da budur).
+ * Paket kendi kimliğiyle anılır ve `b:` ile önlenir: bir paketin kimliği ile bir varyantınki
+ * teorik olarak çakışmaz ama iki farklı KÜMEDEN gelirler; önek bunu okuyana da söyler.
+ */
+export function cartKey(ref: CartRef | CartEntry): string {
+  return ref.kind === 'bundle' ? `b:${ref.bundleId}` : `${ref.variantId}:${ref.stockId ?? ''}`;
+}
+
+/**
+ * Çözülmüş satırdan NİYETE geri dönüş — sunucu yanıtı geldiğinde istemcinin listesi buna göre
+ * tazelenir. Tek yerde durur çünkü iki tür satırın hangi alanları taşıdığı bilgisi budur; her
+ * çağrı yerinde elle kurulsaydı paket satırı bir yerde varyant satırına dönüşürdü.
+ */
+export function entryOf(line: CartLine): CartEntry {
+  return line.kind === 'bundle'
+    ? { kind: 'bundle', bundleId: line.bundleId, qty: line.qty }
+    : { kind: 'variant', variantId: line.variantId, qty: line.qty, stockId: line.stockId };
 }
 
 /**

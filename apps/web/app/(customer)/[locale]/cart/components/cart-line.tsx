@@ -10,7 +10,7 @@ import { QtyStepper } from '@/components/customer/ui/qty-stepper';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
 import { useCart } from '@/components/customer/cart/cart-context';
-import type { CartLine as Line } from '@/lib/cart/cart-types';
+import type { CartLine as Line, CartRef } from '@/lib/cart/cart-types';
 import type { Messages } from '../cart-types';
 
 /**
@@ -39,7 +39,9 @@ interface CartLineProps {
 
 export function CartLineRow({ line, t, locale, compact = false }: CartLineProps) {
   const { setQty } = useCart();
-  const key = { variantId: line.variantId, stockId: line.stockId };
+  // Satırın kimliği türüne göre doğar: pakette paketin kendisi, varyantta varyant + parti.
+  const key: CartRef =
+    line.kind === 'bundle' ? { kind: 'bundle', bundleId: line.bundleId } : { kind: 'variant', variantId: line.variantId, stockId: line.stockId };
   const isOffer = line.wasCents !== undefined;
 
   // Engelin ÜÇ sebebi vardır ve müşteri hangisi olduğunu anlamalı: tükendi · satışa kapandı ·
@@ -52,19 +54,50 @@ export function CartLineRow({ line, t, locale, compact = false }: CartLineProps)
         : { badge: t.soldOutBadge, reason: t.soldOut }
     : null;
 
-  const card = (children: ReactNode) => (
-    <div
-      className={[
-        'flex rounded-card border border-sand-200 bg-card',
-        compact ? 'gap-3 p-3' : 'items-center gap-4 px-5 py-4',
-        blocked ? 'opacity-90' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
-      {children}
-    </div>
-  );
+  /**
+   * PAKET satırı bir GRUPTUR, satır değil (tasarım K27): antrasit çerçeve onu komşularından ayırır,
+   * gövdesi kum tonuna kaçar ve altına kesikli ayraçla içerik şeridi eklenir. Normal satırın ince
+   * kum çerçevesiyle çizilseydi "sekiz ürün tek fiyat" olduğu ancak rozeti okuyunca anlaşılırdı.
+   */
+  const isBundle = line.kind === 'bundle' && !blocked;
+
+  /**
+   * Paketin içeriği — SALT OKUNUR (tasarım K27). Kesikli ayraç bunun kartın gövdesinden ayrı, bilgi
+   * amaçlı bir bölüm olduğunu söyler: kalemler düzenlenemez, fiyatları YOKTUR (tek fiyat kuralı) ve
+   * adetleri de yazılmaz — burası bir fatura değil, "ne aldığımı hatırlat" satırı. Adet/silme
+   * paketin BÜTÜNÜNE işler; kalem kalem çıkarma diye bir şey yok (DOMAIN §13).
+   */
+  const contents =
+    line.kind === 'bundle' && line.contents.length > 0 ? (
+      <div
+        className={[
+          'border-t border-dashed font-sans text-muted',
+          compact ? 'mx-3 border-sand-400 pt-1.5 pb-3 text-micro leading-relaxed' : 'border-sand-200 px-5 py-2.5 text-note',
+        ].join(' ')}
+      >
+        {t.packageContents} {line.contents.map((item) => item.name).join(' · ')}
+      </div>
+    ) : null;
+
+  const card = (children: ReactNode) =>
+    isBundle ? (
+      <div className={['overflow-hidden rounded-card border-[1.5px] border-ink', compact ? 'bg-sand-50' : 'bg-card'].join(' ')}>
+        <div className={['flex', compact ? 'gap-3 p-3' : 'items-center gap-4 bg-sand-50 px-5 py-4'].join(' ')}>{children}</div>
+        {contents}
+      </div>
+    ) : (
+      <div
+        className={[
+          'flex rounded-card border border-sand-200 bg-card',
+          compact ? 'gap-3 p-3' : 'items-center gap-4 px-5 py-4',
+          blocked ? 'opacity-90' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        {children}
+      </div>
+    );
 
   const image = (
     <div className={compact ? 'w-[58px] flex-none' : 'w-[72px] flex-none'}>
@@ -82,7 +115,11 @@ export function CartLineRow({ line, t, locale, compact = false }: CartLineProps)
     <span className="flex flex-wrap items-center gap-2">
       {line.slug ? (
         <Link
-          href={{ pathname: '/product/[slug]', params: { slug: line.slug } }}
+          href={
+            line.kind === 'bundle'
+              ? { pathname: '/package/[slug]' as const, params: { slug: line.slug } }
+              : { pathname: '/product/[slug]' as const, params: { slug: line.slug } }
+          }
           className={[
             'cursor-pointer font-sans font-bold transition-colors hover:text-olive',
             compact ? 'text-note' : 'text-body',
@@ -95,6 +132,11 @@ export function CartLineRow({ line, t, locale, compact = false }: CartLineProps)
         <span className={['font-sans font-bold text-muted', compact ? 'text-note' : 'text-body'].join(' ')}>
           {line.name || '—'}
         </span>
+      )}
+      {line.kind === 'bundle' && !blocked && (
+        <Badge tone="package" variant="filled">
+          {t.packageBadge.replace('{n}', String(line.contents.length))}
+        </Badge>
       )}
       {blocked ? (
         <Badge tone="closed" variant="filled">
@@ -146,11 +188,17 @@ export function CartLineRow({ line, t, locale, compact = false }: CartLineProps)
     );
   }
 
+  // Paket satırının meta'sı BAŞKA bir cümledir: boyu ve birim fiyatı yoktur, tek fiyatı ve bütün
+  // olarak yönetildiği vardır (tasarım: "paket fiyatı 49,90 € · bütün olarak artırılır/silinir").
   const meta = (
     <span className={['font-sans text-muted', compact ? 'text-micro' : 'text-note'].join(' ')}>
-      {[line.unitLabel, line.unitPriceCents !== null ? t.unitPrice.replace('{price}', formatPrice(line.unitPriceCents, locale)) : null]
-        .filter(Boolean)
-        .join(' · ')}
+      {line.kind === 'bundle'
+        ? [line.unitPriceCents !== null ? t.packagePrice.replace('{price}', formatPrice(line.unitPriceCents, locale)) : null, t.packageWhole]
+            .filter(Boolean)
+            .join(' · ')
+        : [line.unitLabel, line.unitPriceCents !== null ? t.unitPrice.replace('{price}', formatPrice(line.unitPriceCents, locale)) : null]
+            .filter(Boolean)
+            .join(' · ')}
       {line.wasCents !== undefined && <span className="ml-2 text-sand-600 line-through">{formatPrice(line.wasCents, locale)}</span>}
     </span>
   );

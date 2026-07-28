@@ -108,6 +108,39 @@ export interface StorefrontPackage {
   soldOut: boolean;
 }
 
+/**
+ * Paket içeriğinin TEK kalemi — "Pakette neler var?" kartı.
+ *
+ * **Fiyat TAŞIMAZ ve taşımamalı.** Paketin tek fiyat kuralı (`musteri-paket-detay.md §6`) kalem
+ * kırılımını yasaklıyor: "toplam değeri X, sen Y ödüyorsun" gösterilmez, hediye kalem "0 €" olarak
+ * görünmez. Sözleşmede alan hiç olmayınca ekran onu yanlışlıkla basamaz.
+ */
+export interface StorefrontPackageItem {
+  variantId: string;
+  /** Ürün detayına bağ — yasal beyan (alerjen/içindekiler) ORADA, paket sayfası yalnız özetler. */
+  slug: string;
+  name: string;
+  /** Boy etiketi ("700 g tepsi"); tek boylu üründe boş. */
+  unitLabel: string;
+  qty: number;
+  image: StorefrontImage;
+}
+
+/**
+ * Paket detayının okuma sonucu — kart sözleşmesinin üstüne içerik + güven künyesi.
+ *
+ * Künyenin üç satırı da KALEMLERDEN türer, operatörden ayrıca istenmez: ağırlık = ağırlık × adet
+ * toplamı, süre = en kısa ömürlü kalem, alerjen = kalemlerin birleşimi. Hesaplanamayan satır
+ * BASILMAZ (uydurulmaz) — bu yüzden hepsi null/boş olabilir.
+ */
+export interface StorefrontPackageDetail extends StorefrontPackage {
+  items: StorefrontPackageItem[];
+  /** Kalemlerin alerjen birleşimi (kod); görünen ad dile göre komponentte çözülür. Boşsa satır yok. */
+  allergens: ProductAllergen[];
+  /** En KISA raf ömrü — paketin tamamı en çabuk bozulan kalemine göre tüketilir. Bilinmiyorsa null. */
+  shelfLifeDays: number | null;
+}
+
 /** Anasayfanın tek okuma sonucu — bölümler ayrı ayrı çağrılmaz (tek turda toplanır). */
 export interface StorefrontHome {
   categories: StorefrontCategory[];

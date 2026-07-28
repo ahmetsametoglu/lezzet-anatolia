@@ -42,7 +42,7 @@ export async function readCartAction(locale: string, entries: CartEntry[]): Prom
     const merged = entries.length > 0;
     if (merged) {
       // Fiyat sunucunun çözdüğüdür; istemciden gelen fiyat kabul edilmez (0 yazılır, checkout çözer).
-      await cart.takeOver(user.id, entries.map((e) => ({ variantId: e.variantId, qty: e.qty, unitPrice: 0, stockId: e.stockId })));
+      await cart.takeOver(user.id, entries.map(toItem));
     }
     const items = (await cart.get(user.id)).items.map(toEntry);
     return { data: { view: await getCartView(locale, items), merged }, error: null };
@@ -68,7 +68,7 @@ export async function writeCartAction(locale: string, entries: CartEntry[]): Pro
     const view = await getCartView(locale, entries);
     await new CartService(serviceDb()).replace(
       user.id,
-      view.lines.map((l) => ({ variantId: l.variantId, qty: l.qty, unitPrice: (l.unitPriceCents ?? 0) / 100, stockId: l.stockId })),
+      view.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })),
     );
     return { data: view, error: null };
   } catch (err) {
@@ -76,6 +76,22 @@ export async function writeCartAction(locale: string, entries: CartEntry[]): Pro
   }
 }
 
-function toEntry(item: { variantId: string; qty: number; stockId?: string | null }): CartEntry {
-  return { variantId: item.variantId, qty: item.qty, stockId: item.stockId ?? null };
+/**
+ * Niyet → sunucu sepeti kalemi. Fiyat 0 girer ve bu doğrudur: istemciden gelen fiyat kabul edilmez,
+ * çağıran gerekiyorsa kendi çözdüğü değeri üstüne yazar (`writeCartAction`).
+ */
+function toItem(entry: CartEntry): { variantId: string | null; bundleId: string | null; qty: number; unitPrice: number; stockId: string | null } {
+  return {
+    variantId: entry.variantId ?? null,
+    bundleId: entry.bundleId ?? null,
+    qty: entry.qty,
+    unitPrice: 0,
+    stockId: entry.stockId ?? null,
+  };
+}
+
+function toEntry(item: { variantId?: string | null; bundleId?: string | null; qty: number; stockId?: string | null }): CartEntry {
+  return item.bundleId
+    ? { kind: 'bundle', bundleId: item.bundleId, qty: item.qty }
+    : { kind: 'variant', variantId: item.variantId ?? '', qty: item.qty, stockId: item.stockId ?? null };
 }

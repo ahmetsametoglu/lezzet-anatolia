@@ -1,53 +1,101 @@
 {
   "tr": {
     "title": "Hazır paketler",
+    "heroTitle": "Sofrayı biz kuralım, siz buyur edin",
+    "heroBody": "Bayram, kahvaltı ya da kalabalık bir akşam — hazırladığımız paketler tek fiyata gelir, içeriği bellidir. Seçmekle uğraşmadan tam bir sofra.",
     "subtitle": "Tek fiyata kurulmuş sofralar — içeriği belli, seçmekle uğraşmak yok.",
+    "promise": {
+      "coldChain": "❄ Soğuk zincir",
+      "shippable": "📦 Kargoya uygun paketler",
+      "onePrice": "🎁 Tek fiyat"
+    },
+    "listTitle": "Satıştaki paketler",
+    "listNote": "Her paket bütün olarak satılır; içeriği sabittir.",
     "serves": "{n} kişilik",
     "items": "{n} ürün",
     "weight": "Toplam {weight}",
-    "inRouteOnly": "🚚 Yalnız bölge içi",
+    "inStock": "● Stokta",
     "shippable": "📦 Kargoya uygun",
+    "inRouteOnly": "🚚 Yalnız bölge içi",
     "soldOut": "Tükendi — yakında yeniden",
     "cta": "Paketi incele",
     "more": "Daha fazla paket",
+    "catalogBand": {
+      "title": "Kendi sofranızı kurmak isterseniz",
+      "body": "Katalogda onlarca ürün var — istediğinizi tek tek seçebilirsiniz.",
+      "cta": "Kataloğa göz at"
+    },
     "empty": {
       "title": "Şu an hazır paket yok",
       "body": "Yeni paketler hazırlanıyor. O zamana dek katalogdan kendi sofranızı kurabilirsiniz.",
-      "cta": "Kataloğa göz at"
-    }
+      "cta": "Kataloğa git"
+    },
+    "soldOutShort": "Tükendi"
   },
   "fr": {
     "title": "Coffrets prêts",
+    "heroTitle": "Nous dressons la table, vous n'avez qu'à servir",
+    "heroBody": "Une fête, un petit-déjeuner ou un dîner nombreux — nos coffrets arrivent à prix unique, contenu connu. Une table complète, sans avoir à choisir.",
     "subtitle": "Des tables composées à prix unique — contenu connu, aucun choix à faire.",
+    "promise": {
+      "coldChain": "❄ Chaîne du froid",
+      "shippable": "📦 Coffrets expédiables",
+      "onePrice": "🎁 Prix unique"
+    },
+    "listTitle": "Coffrets en vente",
+    "listNote": "Chaque coffret est vendu tel quel ; son contenu est fixe.",
     "serves": "Pour {n} personnes",
     "items": "{n} produits",
     "weight": "Total {weight}",
-    "inRouteOnly": "🚚 Livraison en zone uniquement",
+    "inStock": "● En stock",
     "shippable": "📦 Expédiable",
+    "inRouteOnly": "🚚 Livraison en zone uniquement",
     "soldOut": "Épuisé — bientôt de retour",
     "cta": "Voir le coffret",
     "more": "Plus de coffrets",
+    "catalogBand": {
+      "title": "Si vous préférez composer vous-même",
+      "body": "Des dizaines de produits au catalogue — choisissez-les un par un.",
+      "cta": "Parcourir le catalogue"
+    },
     "empty": {
       "title": "Aucun coffret pour le moment",
       "body": "De nouveaux coffrets se préparent. En attendant, composez votre table depuis le catalogue.",
-      "cta": "Parcourir le catalogue"
-    }
+      "cta": "Aller au catalogue"
+    },
+    "soldOutShort": "Épuisé"
   },
   "de": {
     "title": "Fertige Pakete",
+    "heroTitle": "Wir decken den Tisch, Sie bitten zu Tisch",
+    "heroBody": "Ob Fest, Frühstück oder ein Abend mit vielen Gästen — unsere Pakete kommen zum Festpreis, der Inhalt steht fest. Ein voller Tisch, ganz ohne Auswählen.",
     "subtitle": "Zusammengestellte Tafeln zum Festpreis — Inhalt bekannt, keine Auswahl nötig.",
+    "promise": {
+      "coldChain": "❄ Kühlkette",
+      "shippable": "📦 Versandfähige Pakete",
+      "onePrice": "🎁 Festpreis"
+    },
+    "listTitle": "Pakete im Verkauf",
+    "listNote": "Jedes Paket wird als Ganzes verkauft; sein Inhalt ist fest.",
     "serves": "Für {n} Personen",
     "items": "{n} Produkte",
     "weight": "Gesamt {weight}",
-    "inRouteOnly": "🚚 Nur im Liefergebiet",
+    "inStock": "● Auf Lager",
     "shippable": "📦 Versandfähig",
+    "inRouteOnly": "🚚 Nur im Liefergebiet",
     "soldOut": "Ausverkauft — bald wieder",
     "cta": "Paket ansehen",
     "more": "Weitere Pakete",
+    "catalogBand": {
+      "title": "Wenn Sie lieber selbst zusammenstellen",
+      "body": "Im Katalog gibt es Dutzende Produkte — wählen Sie einzeln aus.",
+      "cta": "Katalog ansehen"
+    },
     "empty": {
       "title": "Derzeit keine fertigen Pakete",
       "body": "Neue Pakete sind in Vorbereitung. Bis dahin stellen Sie Ihre Tafel im Katalog zusammen.",
-      "cta": "Katalog ansehen"
-    }
+      "cta": "Zum Katalog"
+    },
+    "soldOutShort": "Ausverkauft"
   }
 }

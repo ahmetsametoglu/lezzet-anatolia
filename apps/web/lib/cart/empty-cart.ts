@@ -93,7 +93,7 @@ async function readLastOrder(locale: Locale): Promise<LastOrderSuggestion | null
     locale,
     // Parti ÇIPASI taşınmaz: o günkü teklif partisi bugün tükenmiş olabilir; tekrar sipariş
     // "aynı ürünü yeniden al" demektir, "aynı indirimi yeniden al" değil.
-    items.map((i) => ({ variantId: i.variantId, qty: i.qty, stockId: null })),
+    items.map((i) => ({ kind: 'variant' as const, variantId: i.variantId, qty: i.qty, stockId: null })),
   );
 
   const available = view.lines.filter((l) => !l.blocked);
@@ -108,7 +108,9 @@ async function readLastOrder(locale: Locale): Promise<LastOrderSuggestion | null
     itemCount: available.length,
     totalCents: toCents(order.total),
     image: first.image,
-    entries: available.map((l) => ({ variantId: l.variantId, qty: l.qty, stockId: null })),
+    // Yalnız VARYANT satırları: paket kalemleri zaten yukarıda elendi, çözülmüş satırda da paket
+    // olamaz — süzgeç tipi daraltmak için, sessizce bir şey düşürmek için değil.
+    entries: available.flatMap((l) => (l.variantId ? [{ kind: 'variant' as const, variantId: l.variantId, qty: l.qty, stockId: null }] : [])),
     unavailable: view.lines.length - available.length,
   };
 }

@@ -112,7 +112,15 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
   }
 }
 
-/** Aynı sepet satırı mı: varyant VE parti eşleşmeli — teklif satırı normal satırdan ayrı yaşar. */
-function sameLine(a: { variantId: string; stockId?: string | null }, b: { variantId: string; stockId?: string | null }): boolean {
-  return a.variantId === b.variantId && (a.stockId ?? null) === (b.stockId ?? null);
+/**
+ * Aynı sepet satırı mı?
+ *   varyant satırı → varyant VE parti eşleşmeli; teklif satırı normal satırdan ayrı yaşar (DOMAIN §5).
+ *   paket satırı   → paketin kimliği yeter; paketin partisi ya da varyantı yoktur (DOMAIN §13).
+ * İki tür asla eşleşmez: biri paket, öbürü varyantsa aynı satır değildir.
+ */
+type LineKey = { variantId?: string | null; bundleId?: string | null; stockId?: string | null };
+
+function sameLine(a: LineKey, b: LineKey): boolean {
+  if (a.bundleId || b.bundleId) return (a.bundleId ?? null) === (b.bundleId ?? null);
+  return (a.variantId ?? null) === (b.variantId ?? null) && (a.stockId ?? null) === (b.stockId ?? null);
 }

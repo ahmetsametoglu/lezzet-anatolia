@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { readCartAction, writeCartAction } from '@/lib/cart/actions';
 import { clearGuestCart, mergeEntry, readGuestCart, setEntryQty, writeGuestCart } from '@/lib/cart/cart-store';
-import { EMPTY_CART, viewWithEntries, type CartEntry, type CartView } from '@/lib/cart/cart-types';
+import { EMPTY_CART, cartKey, entryOf, viewWithEntries, type CartEntry, type CartRef, type CartView } from '@/lib/cart/cart-types';
 import { CartUndo } from './cart-undo';
 
 /** Silinen kalemin geri alma penceresi (tasarım: "geri al snackbar'ı 5 sn görünür"). */
@@ -41,13 +41,15 @@ interface CartContextValue {
   /** Tekrar sipariş: birçok kalem TEK turda girer — tek tek eklemek N sunucu turu demekti. */
   addMany: (entries: readonly CartEntry[]) => void;
   /**
-   * Bu varyant sepette mi, kaç adet? Katalog/vitrin kartı buna bakar: sepetteyse "Sepete ekle"
-   * yerine adet seçicisi çizer (K19). Eşleşme YALNIZ varyantla kurulur — kartın sorusu "bu üründen
-   * sepette kaç var", "hangi partiden" değil; azaltma da o satırın kendi çıpasına gider.
+   * Bu varyant/paket sepette mi, kaç adet? Katalog kartı, ürün detayı ve paket detayı buna bakar:
+   * sepetteyse "Sepete ekle" yerine adet seçicisi çizer (K19).
+   *
+   * Varyantta eşleşme YALNIZ varyantla kurulur — sorusu "bu üründen sepette kaç var", "hangi
+   * partiden" değil; azaltma da o satırın kendi çıpasına gider. Pakette çıpa zaten yok.
    */
-  lineOf: (variantId: string) => { qty: number; stockId: string | null; limitCap: number | null } | null;
+  lineOf: (ref: { variantId: string } | { bundleId: string }) => { qty: number; stockId: string | null; limitCap: number | null } | null;
   /** 0 verilirse satır SİLİNİR ve 5 sn'lik geri alma penceresi açılır (tasarım: onay istenmez). */
-  setQty: (line: Pick<CartEntry, 'variantId' | 'stockId'>, qty: number) => void;
+  setQty: (ref: CartRef, qty: number) => void;
   /**
    * Az önce bir kalem çıkarıldı mı (geri alma penceresi açık). Sepet bu yüzden boşaldıysa boş ekran
    * başlığı "şu an boş" değil "boşaldı" olur — tasarım ikisini ayırıyor, çünkü biri durum, diğeri
@@ -91,7 +93,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         if (ticket !== seq.current || !data) return;
         setView(data);
         // Sunucu satırı düşürdüyse (ürün silinmiş) niyet listesi de ona uyar.
-        setEntries(data.lines.map((l) => ({ variantId: l.variantId, qty: l.qty, stockId: l.stockId })));
+        setEntries(data.lines.map(entryOf));
       });
     },
     [locale],
@@ -122,7 +124,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         // yeniden eklenir ve adet katlanır.
         if (data.merged) clearGuestCart();
         setView(data.view);
-        setEntries(data.view.lines.map((l) => ({ variantId: l.variantId, qty: l.qty, stockId: l.stockId })));
+        setEntries(data.view.lines.map(entryOf));
       })
       .finally(() => {
         if (ticket === seq.current) setReady(true);
@@ -147,17 +149,19 @@ export function CartProvider({ locale, children }: CartProviderProps) {
       justRemoved: undo !== null,
       // Adet NİYETTEN okunur (katalogdan yeni eklenen ürünün henüz çözülmüş satırı yok, ama düğme
       // hemen seçiciye dönmeli); tavan çözülmüş satırdan gelir — onu istemci bilemez.
-      lineOf: (variantId) => {
-        const entry = entries.find((e) => e.variantId === variantId);
+      lineOf: (ref) => {
+        const match = 'bundleId' in ref ? (e: CartEntry) => e.bundleId === ref.bundleId : (e: CartEntry) => e.variantId === ref.variantId;
+        const entry = entries.find(match);
         if (!entry) return null;
-        const line = view.lines.find((l) => l.variantId === variantId);
-        return { qty: entry.qty, stockId: entry.stockId, limitCap: line?.limitCap ?? null };
+        const line = view.lines.find(match);
+        return { qty: entry.qty, stockId: entry.stockId ?? null, limitCap: line?.limitCap ?? null };
       },
-      setQty: (line, qty) => {
+      setQty: (ref, qty) => {
         if (qty <= 0) {
           // Silmeden ÖNCE yakala: sync'ten sonra ne adet ne ad elimizde kalır.
-          const gone = entries.find((e) => e.variantId === line.variantId && e.stockId === line.stockId);
-          const named = view.lines.find((l) => l.variantId === line.variantId && l.stockId === line.stockId);
+          const key = cartKey(ref);
+          const gone = entries.find((e) => cartKey(e) === key);
+          const named = view.lines.find((l) => cartKey(l) === key);
           if (gone) {
             if (undoTimer.current) clearTimeout(undoTimer.current);
             setUndo({ entry: gone, name: named?.name ?? '' });
@@ -166,7 +170,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         } else {
           closeUndo();
         }
-        sync(setEntryQty(entries, line, qty));
+        sync(setEntryQty(entries, ref, qty));
       },
     }),
     [displayView, view, ready, entries, sync, closeUndo, undo],

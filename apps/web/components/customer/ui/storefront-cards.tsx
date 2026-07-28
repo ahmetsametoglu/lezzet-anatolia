@@ -33,8 +33,8 @@ import { QtyStepper } from './qty-stepper';
  */
 const productHref = (slug: string) => ({ pathname: '/product/[slug]' as const, params: { slug } });
 
-/** Paket rotası HENÜZ YOK (05.5 Bundle modeli) — açılınca `productHref`'in eşi buraya gelir. */
-const PENDING_HREF = '/';
+/** Paket detayının hedefi (05.5) — ürünle aynı kural: slug dil-bağımsız, segment kelimesi çevrilir. */
+const packageHref = (slug: string) => ({ pathname: '/package/[slug]' as const, params: { slug } });
 
 interface CategoryCardProps {
   category: StorefrontCategory;
@@ -104,9 +104,9 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
   // Tek boylu ürün listeden eklenir; teklif kalemi ÇIPALI PARTİSİYLE girer (DOMAIN §5).
   const addToCart = () => {
     if (!product.variantId) return;
-    add({ variantId: product.variantId, qty: 1, stockId: product.stockId });
+    add({ kind: 'variant', variantId: product.variantId, qty: 1, stockId: product.stockId });
   };
-  const inCart = product.variantId ? lineOf(product.variantId) : null;
+  const inCart = product.variantId ? lineOf({ variantId: product.variantId }) : null;
   return (
     <div className="flex flex-col overflow-hidden rounded-card border border-sand-200 bg-card">
       <Link href={productHref(product.slug)} className="relative cursor-pointer">
@@ -182,7 +182,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
                fırsat sınırıdır; dolunca "+" pasifleşir ve çerçeve nötrleşir. */
             <QtyStepper
               value={inCart.qty}
-              onChange={(next) => product.variantId && setQty({ variantId: product.variantId, stockId: inCart.stockId }, next)}
+              onChange={(next) => product.variantId && setQty({ kind: 'variant', variantId: product.variantId, stockId: inCart.stockId }, next)}
               min={0}
               max={inCart.limitCap}
               size={compact ? 'xs' : 'md'}
@@ -283,7 +283,7 @@ export function PackageCard({ pack, locale, badgeLabel, itemsLabel, ctaLabel, co
         <div className={['flex items-center', compact ? 'mt-0.5 gap-2.5' : 'mt-1 gap-3.5'].join(' ')}>
           <Price cents={pack.priceCents} locale={locale} tone="onDark" size={compact ? 'sm' : 'lg'} />
           <Link
-            href={PENDING_HREF}
+            href={packageHref(pack.slug)}
             className={buttonClass({
               variant: 'secondaryOnDark',
               size: 'sm',

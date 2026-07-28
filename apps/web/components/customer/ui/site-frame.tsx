@@ -127,11 +127,13 @@ export function SiteFrame({ device, locale, showSearch = false, search, activeNa
             <img src="/logo.jpg" alt={brand.name} className="h-[58px] mix-blend-multiply" />
           </Link>
           <nav className="flex gap-7 font-sans text-body font-semibold text-ink">
-            {/* Katalog dışındaki rotalar henüz açılmadı → düz metin; açıldıkça `<Link>`e döner. */}
+            {/* Açılmamış rotalar düz metin kalır; açıldıkça `<Link>`e döner. */}
             <Link href="/catalog" className={navClass('catalog', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
               {t.nav.catalog}
             </Link>
-            <span className={navClass('packages', activeNav)}>{t.nav.packages}</span>
+            <Link href="/packages" className={navClass('packages', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
+              {t.nav.packages}
+            </Link>
             {/* Fırsatlar her sayfada terracotta — kampanya vurgusu sabittir, aktiflikten bağımsız. */}
             <span className={navClass('deals', activeNav, 'text-terracotta')}>{t.nav.deals}</span>
             <span className={navClass('discover', activeNav)}>{t.nav.discover}</span>

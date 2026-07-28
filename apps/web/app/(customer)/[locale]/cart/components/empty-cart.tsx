@@ -70,11 +70,9 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
           <Link href="/catalog" className={buttonClass({ variant: 'primary', size: 'md', fullWidth: compact })}>
             {t.empty.cta}
           </Link>
-          {/* Paketler sayfası 05.5 (Bundle) bekliyor. Düğme tasarımdaki yerinde ve pasif: boş sepetin
-              işi yön vermek, o yüzden ikinci yön SİLİNMİYOR — nereye gideceği yazılı, henüz açık değil. */}
-          <Button variant="outlineOlive" size="md" fullWidth={compact} disabled title={t.empty.packagesPending}>
+          <Link href="/packages" className={buttonClass({ variant: 'outlineOlive', size: 'md', fullWidth: compact })}>
             {t.empty.packagesCta}
-          </Button>
+          </Link>
         </div>
 
         {/* Teslimat vaadi: satış cümlesi değil, KARAR bilgisi — "sipariş verirsem nasıl gelir".

@@ -10,7 +10,17 @@ import { z } from 'zod';
 // fiyatı bağlayıcı saymak maliyeti oynayan üründe zarar, fiyat düştüğünde müşteriye haksızlıktır.
 
 export const CartItemSchema = z.object({
-  variantId: z.string().uuid(),
+  /**
+   * Satılan birim. **Paket satırında null** — paketin varyantı yoktur, satılan şey paketin
+   * kendisidir (DOMAIN §13). İkisinden biri daima doludur; ikisi birden asla.
+   */
+  variantId: z.string().uuid().nullish(),
+  /**
+   * Paket satırı (05.5). Sepette paket TEK satırdır: kalemleri burada açılmaz, tek fiyatla durur —
+   * müşteri içeriğini düzenleyemez. Kalemlere ayrılma SİPARİŞTE olur (`order_item.bundle_id`),
+   * çünkü fatura her kalemin KDV'sini kendi ürününden almak zorunda.
+   */
+  bundleId: z.string().uuid().nullish(),
   qty: z.number().int().positive(),
   /**
    * Eklendiği andaki birim fiyat (kanal tabanında: b2c TTC, b2b HT). **Bağlayıcı değil** —

@@ -32,7 +32,6 @@
       "bodyShort": "Bu haftanın taze üretimi hazır — kataloğa göz atın ya da hazır bir paket seçin.",
       "cta": "Kataloğa göz at",
       "packagesCta": "Hazır paketleri gör",
-      "packagesPending": "Paketler sayfası yakında açılıyor",
       "delivery": "❄ Strasbourg ve çevresinde kapıya teslim ücretsiz · Fransa genelinde soğuk zincir kargo",
       "repeatTitle": "Son siparişinizi tekrarlayın",
       "repeatCta": "Aynısını sepete ekle",
@@ -47,7 +46,11 @@
     "freeShipping": {
       "reached": "🎉 Ücretsiz kargo eşiğini geçtiniz",
       "remaining": "Ücretsiz kargoya {amount} kaldı"
-    }
+    },
+    "packageBadge": "Paket · {n} ürün",
+    "packageContents": "İçerik:",
+    "packagePrice": "paket fiyatı {price}",
+    "packageWhole": "bütün olarak artırılır/silinir"
   },
   "fr": {
     "title": "Mon panier",
@@ -82,7 +85,6 @@
       "bodyShort": "La production fraîche de la semaine est prête — parcourez le catalogue ou choisissez un coffret.",
       "cta": "Parcourir le catalogue",
       "packagesCta": "Voir les coffrets",
-      "packagesPending": "La page Coffrets arrive bientôt",
       "delivery": "❄ Livraison à domicile offerte à Strasbourg et alentours · chaîne du froid partout en France",
       "repeatTitle": "Reprenez votre dernière commande",
       "repeatCta": "Tout remettre au panier",
@@ -97,7 +99,11 @@
     "freeShipping": {
       "reached": "🎉 Vous avez atteint la livraison offerte",
       "remaining": "Encore {amount} pour la livraison offerte"
-    }
+    },
+    "packageBadge": "Coffret · {n} produits",
+    "packageContents": "Contenu :",
+    "packagePrice": "prix du coffret {price}",
+    "packageWhole": "s'ajuste et se retire en entier"
   },
   "de": {
     "title": "Mein Warenkorb",
@@ -132,7 +138,6 @@
       "bodyShort": "Die frische Produktion dieser Woche ist fertig — Katalog ansehen oder ein fertiges Paket wählen.",
       "cta": "Katalog ansehen",
       "packagesCta": "Fertige Pakete ansehen",
-      "packagesPending": "Die Paket-Seite kommt bald",
       "delivery": "❄ Lieferung an die Haustür in Straßburg und Umgebung kostenlos · Kühlkettenversand in ganz Frankreich",
       "repeatTitle": "Letzte Bestellung wiederholen",
       "repeatCta": "Alles in den Warenkorb",
@@ -147,6 +152,10 @@
     "freeShipping": {
       "reached": "🎉 Sie haben die Grenze für kostenlosen Versand erreicht",
       "remaining": "Noch {amount} bis zum kostenlosen Versand"
-    }
+    },
+    "packageBadge": "Paket · {n} Produkte",
+    "packageContents": "Inhalt:",
+    "packagePrice": "Paketpreis {price}",
+    "packageWhole": "wird als Ganzes geändert/entfernt"
   }
 }

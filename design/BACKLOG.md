@@ -20,7 +20,6 @@ değişecek yer parantezde.
 
 | Ne | Tasarım | Bekleyen |
 | --- | --- | --- |
-| **Sepet paket satırı** — antrasit çerçeveli grup, "Paket · N ürün" rozeti, kesikli ayraçla salt-okunur içerik listesi; adet/silme bütüne işler | `Musteri - Sepet.dc.html` (web + mobil) | `05.5` Bundle modeli |
 | **Sepet kupon kartı — bağlanması** | **UI çizildi** (alan + "Uygula" + sebep satırı); uygulanmış çip + ✕, dört ret hâli ("süresi dolmuş" · "geçersiz" · "40 € üzeri" · "otomatik indirim daha büyük") ve özetteki yeşil indirim satırı motorla gelir | indirim/kupon motoru (`BACKLOG §15`) |
 | **Sepet teslimat satırı** ("Teslimat: Ücretsiz" / "6,90 €") | çizili, **kodlanmadı** | ücret teslimat türüne, tür ADRESE bağlı → checkout adres adımı. Ücretsiz kargo ilerleme çubuğu bundan AYRI ve yapıldı (eşik `Setting`'ten, ilerleme ara toplamdan) |
 | **"Checkout'a geç" düğmesi** — girişli müşteri doğrudan, ziyaretçi önce hızlı doğrulamaya | çizili, tam görünür ve pasif | `07.4`/`07.5` |
@@ -28,8 +27,8 @@ değişecek yer parantezde.
 | **Boş sepet: "Bu hafta çok sevilenler"** — 4'lü ürün ızgarası (web) / 2'li (mobil), kart üstünde "Sepete ekle" | `Musteri - Sepet.dc.html` → `Bos Sepet Web/Mobil` | **popülerlik sinyali yok** — aşağıda §1b |
 | **Boş sepet: B2B sipariş şablonları** ("Haftalık standart · 14 kalem" + "Yükle") | aynı tasarım, durum kartı | şablon modeli yok (`07`); B2B müşteri bugün "son siparişi tekrarla" bloğunu görür |
 | **Boş sepet kahraman görseli** (hasır sepet / tezgâh fotoğrafı, web 260×200 · mobil 180×140) | çizili | görsel künyesi yok; çerçeve tam boyutuyla duruyor, yer tutucu sepet işareti |
+| **Paketler kahraman görseli** (3:2, "kurulmuş sofra, birkaç paket bir arada") | çizili; çerçeve tam ölçüsüyle duruyor | görsel künyesi yok — paket sayfasının kendi kahramanı için ayrı bir varlık gerekiyor |
 | **Paketler listesi: etiket çipleri + `?etiket=` süzgeci** | çizili; sayfanın kendisi indi (kartlar, "Daha fazla", boş durum) | paketin etiket alanı yok — süzgeç uydurma bir sınıflandırma olurdu |
-| **Paket detayı: "Paketi sepete ekle"** | çizili, adet seçici ve canlı toplam çalışıyor; düğme pasif | sepet sözleşmesi paket satırını tanımalı (`CartEntry`/`CartItem`/`sameLine` bugün varyant kimliğine bağlı) |
 | **Tüm Yorumlar paneli** (web modal · mobil tam ekran, yıldız süzgeci, 10'ar sayfalama, `?yorumlar=1`) | `Musteri - Urun Detay.dc.html` → `Tum Yorumlar Web/Mobil` | `17-geri-bildirim` |
 | **Ürün detay yorum bölümü** — puan satırı, ortalama kartı, "N yorumun tümü →" | çizili; **boş hâli kodlandı** (bugün her ürünün yorum sayısı gerçekten sıfır) | `17` |
 | **"Yorum yaz"** — yalnız o ürünü satın almış girişli müşteride | çizili | `17` + `04-auth` + `07` |

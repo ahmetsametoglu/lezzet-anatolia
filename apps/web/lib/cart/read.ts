@@ -5,6 +5,8 @@ import { CROP_CENTER, resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { EMPTY_PRODUCT_CONTEXT, imageOf, toVariant } from '@/lib/storefront/map';
 import { loadProductContext } from '@/lib/storefront/read-context';
+import { getPackagesByIds } from '@/lib/storefront/packages';
+import type { StorefrontPackageDetail } from '@/lib/storefront/storefront-types';
 import { EMPTY_CART, type CartEntry, type CartLine, type CartView } from './cart-types';
 
 /**
@@ -36,7 +38,17 @@ export async function getCartView(locale: Locale, entries: readonly CartEntry[])
   ]);
   if (entries.length === 0) return { ...EMPTY_CART, freeShippingCents, ...meets(0, minBasketCents) };
 
-  const variants = await new ProductVariantService(db).listByIds([...new Set(entries.map((e) => e.variantId))]);
+  // İki tür satır, iki okuma — ikisi de TOPLU. Paketler kendi kapısından gelir (`lib/storefront`),
+  // türetme (stok, kargo, ağırlık) orada tek yerde durur; sepette ikinci kez yazılsaydı vitrindeki
+  // kartla sepetteki satır aynı paket için farklı "tükendi" diyebilirdi.
+  const bundleIds = [...new Set(entries.map((e) => e.bundleId).filter((id): id is string => id !== undefined))];
+  const variantIds = [...new Set(entries.map((e) => e.variantId).filter((id): id is string => id !== undefined))];
+
+  const [variants, packageRows] = await Promise.all([
+    new ProductVariantService(db).listByIds(variantIds),
+    getPackagesByIds(bundleIds, locale),
+  ]);
+  const packages = new Map(packageRows.map((p) => [p.id, p]));
   const byVariant = new Map(variants.map((v) => [v.id, v]));
   const productIds = [...new Set(variants.map((v) => v.productId))];
 
@@ -46,6 +58,12 @@ export async function getCartView(locale: Locale, entries: readonly CartEntry[])
 
   const lines: CartLine[] = [];
   for (const entry of entries) {
+    // PAKET satırı ayrı bir kapıdan çözülür: fiyatı kendi alanından gelir (kalem toplamı değil),
+    // stok kararı kalemlerinin en zayıfına bağlıdır ve teklif/parti kavramı hiç yoktur.
+    if (entry.kind === 'bundle') {
+      lines.push(bundleLine(entry.bundleId, entry.qty, packages.get(entry.bundleId)));
+      continue;
+    }
     const variant = byVariant.get(entry.variantId);
     const product = variant ? byProduct.get(variant.productId) : undefined;
     // Varyant ya da ürün kaybolduysa (silinmiş/pasifleşmiş) satır SESSİZCE DÜŞMEZ: müşteri neyi
@@ -73,6 +91,7 @@ export async function getCartView(locale: Locale, entries: readonly CartEntry[])
       lineTotalCents: unitPriceCents === null ? null : unitPriceCents * entry.qty,
       // Satışa kapalı ya da tükendi → çıkarılmadan devam edilemez.
       blocked: unitPriceCents === null || view.soldOut,
+      contents: [],
     });
   }
 
@@ -104,5 +123,32 @@ function orphanLine(entry: CartEntry): CartLine {
     limitCap: null,
     lineTotalCents: null,
     blocked: true,
+    contents: [],
+  };
+}
+
+/**
+ * Paket satırı. Fiyat paketin KENDİ alanından gelir — kalemlerin toplamı değil (tek fiyat kuralı,
+ * DOMAIN §13). Teklif/parti kavramı yok: indirim pakete uygulanmaz, bu yüzden `wasCents` ve
+ * `limitCap` daima boştur.
+ *
+ * Paket bu arada satıştan kalkmışsa (`packages` içinde yok) satır SESSİZCE DÜŞMEZ: kimliğiyle ve
+ * engelli olarak durur — müşteri sepetinden bir şeyin kaybolduğunu görmeli.
+ */
+function bundleLine(bundleId: string, qty: number, pack: StorefrontPackageDetail | undefined): CartLine {
+  if (!pack) return orphanLine({ kind: 'bundle', bundleId, qty });
+  return {
+    kind: 'bundle',
+    bundleId,
+    qty,
+    slug: pack.slug,
+    name: pack.name,
+    image: pack.image,
+    unitLabel: '',
+    unitPriceCents: pack.priceCents,
+    limitCap: null,
+    lineTotalCents: pack.priceCents * qty,
+    blocked: pack.soldOut,
+    contents: pack.items.map((item) => ({ name: item.name, qty: item.qty })),
   };
 }

@@ -5,7 +5,7 @@ import type { ButtonHTMLAttributes } from 'react';
  * yazmak yerine `<Button variant size fullWidth>` kullanılır. `<Link>`/`<a>` gibi buton-olmayan
  * öğeler için aynı görünümü `buttonClass(...)` verir. Tasarım büyüdükçe varyant eklenir.
  */
-type ButtonVariant = 'primary' | 'secondary' | 'secondaryOnDark' | 'outlineOlive' | 'outlineTerracotta' | 'ghost';
+type ButtonVariant = 'primary' | 'primaryOnDark' | 'secondary' | 'secondaryOnDark' | 'outlineOlive' | 'outlineTerracotta' | 'ghost';
 type ButtonSize = 'lg' | 'md' | 'sm' | 'xs';
 
 const VARIANT: Record<ButtonVariant, string> = {
@@ -13,6 +13,11 @@ const VARIANT: Record<ButtonVariant, string> = {
   secondary: 'rounded-pill border-[1.5px] border-sand-400 bg-card text-ink hover:border-olive',
   // K2 koyu zemin varyantı — antrasit blok üstünde açık yeşil çerçeve/metin (envanter §2).
   secondaryOnDark: 'rounded-pill border-[1.5px] border-olive-light bg-transparent text-olive-light hover:bg-olive-light/10',
+  // Koyu SABİT ÇUBUĞUN ana aksiyonu (mobil detay): zemin antrasit olduğu için dolgu açık yeşile,
+  // metin antrasite döner. Köşe `rounded-soft`tur, hap değil — çubuğun içinde hap fazla yuvarlak
+  // durup komşusu adet seçiciyle hizasını bozuyor. Şeffaf kenarlık seçiciyle aynı kutuyu verir.
+  primaryOnDark:
+    'rounded-soft border-[1.5px] border-transparent bg-olive-light text-ink hover:bg-olive-light/90 disabled:bg-disabled-fill disabled:text-disabled-text',
   // Birincilin YANINDA duran ikinci eylem: nötr `secondary` orada "geri/iptal" gibi okunur, oysa
   // ikisi de ileri gider (boş sepet: katalog · paketler). Aynı aile, farklı ağırlık.
   outlineOlive: 'rounded-pill border-2 border-olive bg-transparent text-olive hover:bg-olive-bg disabled:border-disabled-line disabled:text-disabled-text',

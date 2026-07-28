@@ -1,4 +1,4 @@
-import type { CartEntry } from './cart-types';
+import { cartKey, type CartEntry, type CartRef } from './cart-types';
 
 /**
  * Ziyaretçi sepetinin tarayıcı deposu (08.4).
@@ -25,7 +25,7 @@ export function readGuestCart(): CartEntry[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isEntry);
+    return parsed.map(migrate).filter(isEntry);
   } catch {
     return [];
   }
@@ -45,25 +45,44 @@ export function clearGuestCart(): void {
   window.localStorage.removeItem(KEY);
 }
 
+/**
+ * Depodaki eski kayıt → bugünkü şekil. `kind` alanı paket satırıyla birlikte geldi (05.5); ondan
+ * önce yazılmış kayıtlarda yok ve hepsi varyant satırıdır. Göç yapılmasaydı müşteri sürüm
+ * geçişinde sepetini SESSİZCE kaybederdi — kaybın kendisinden çok sessizliği kötü olurdu.
+ */
+function migrate(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value;
+  const row = value as Record<string, unknown>;
+  return row.kind === undefined && typeof row.variantId === 'string' ? { ...row, kind: 'variant' } : row;
+}
+
 function isEntry(value: unknown): value is CartEntry {
   if (typeof value !== 'object' || value === null) return false;
   const row = value as Record<string, unknown>;
-  return typeof row.variantId === 'string' && typeof row.qty === 'number' && row.qty > 0;
+  if (typeof row.qty !== 'number' || row.qty <= 0) return false;
+  // İki tür satırın İKİSİ de tanınır ama karışığı tanınmaz: hem varyant hem paket kimliği taşıyan
+  // bir kayıt bizim yazmadığımız bir şeydir (elle kurcalanmış depo) — sessizce atılır.
+  if (row.kind === 'bundle') return typeof row.bundleId === 'string';
+  return row.kind === 'variant' && typeof row.variantId === 'string';
 }
 
 /**
- * Satır ekleme/güncelleme — aynı satır (varyant + parti) varsa adet BİRLEŞİR, ikinci satır açılmaz.
- * Sunucu tarafındaki `sameLine` kuralıyla aynı: teklif satırı normal satırdan ayrı yaşar, çünkü
- * indirim partiye aittir (DOMAIN §5).
+ * Satır ekleme/güncelleme — aynı satır varsa adet BİRLEŞİR, ikinci satır açılmaz.
+ *
+ * "Aynı satır" kararı `cartKey`'dedir: varyantta varyant + parti, pakette paketin kendisi. Sunucu
+ * tarafındaki `sameLine` kuralıyla aynı — teklif satırı normal satırdan ayrı yaşar, çünkü indirim
+ * partiye aittir (DOMAIN §5).
  */
 export function mergeEntry(entries: readonly CartEntry[], incoming: CartEntry): CartEntry[] {
-  const index = entries.findIndex((e) => e.variantId === incoming.variantId && (e.stockId ?? null) === (incoming.stockId ?? null));
+  const key = cartKey(incoming);
+  const index = entries.findIndex((e) => cartKey(e) === key);
   if (index < 0) return [...entries, incoming];
   return entries.map((e, i) => (i === index ? { ...e, qty: e.qty + incoming.qty } : e));
 }
 
 /** Adet belirler; **0 ve altı satırı siler** (arayüzde "−" ile sıfıra inmek çıkarmak demektir). */
-export function setEntryQty(entries: readonly CartEntry[], line: Pick<CartEntry, 'variantId' | 'stockId'>, qty: number): CartEntry[] {
-  const same = (e: CartEntry) => e.variantId === line.variantId && (e.stockId ?? null) === (line.stockId ?? null);
+export function setEntryQty(entries: readonly CartEntry[], ref: CartRef, qty: number): CartEntry[] {
+  const key = cartKey(ref);
+  const same = (e: CartEntry) => cartKey(e) === key;
   return qty > 0 ? entries.map((e) => (same(e) ? { ...e, qty } : e)) : entries.filter((e) => !same(e));
 }
