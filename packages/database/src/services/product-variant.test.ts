@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { resolveLocalizedText } from '@lezzet/types';
 import { serviceDb } from '../client';
+import { purgeTestData } from '../testing/cleanup';
 import { CategoryService } from './category.service';
 import { PriceService } from './price.service';
 import { ProductService } from './product.service';
@@ -39,18 +40,11 @@ beforeAll(async () => {
   productId = product.id;
 });
 
+// Temizlik ORTAK yardımcıyla: silme sırası tek yerde yaşıyor (`restrict` FK'ler yüzünden parti duran
+// varyant silinemez → ürün silme cascade'i orada reddedilir). Bu testin son senaryosu bilerek stok
+// partisi bırakıyor, yani sıra burada gerçekten gerekiyor; ama sırayı kendimiz uydurmuyoruz.
 afterAll(async () => {
-  // Temizlik SIRALI olmak zorunda: bu testin son senaryosu bir varyanta stok partisi ekliyor ve parti
-  // varyant silmeyi ENGELLİYOR (`restrict`) — ürün silme, cascade varyanta çarptığı yerde reddediliyor.
-  // Sıra bozulunca temizlik ilk adımda patlıyor ve testin ürettiği satırlar veritabanında BİRİKİYOR
-  // (operasyon ekranında çöp ürün olarak görünürler).
-  if (productId) {
-    for (const v of await variants.listByProduct(productId)) {
-      for (const parti of await stocks.listByVariant(v.id)) await stocks.delete(parti.id);
-    }
-    await products.delete(productId);
-  }
-  if (categoryId) await categories.delete(categoryId);
+  await purgeTestData(db, { productIds: [productId].filter(Boolean), categoryIds: [categoryId].filter(Boolean) });
 });
 
 describe('ProductVariantService.syncVariants', () => {
