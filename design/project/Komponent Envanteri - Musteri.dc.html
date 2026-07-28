@@ -126,6 +126,64 @@
     <span style="font:400 14px 'Karla';color:#6d7261">Köşe yarıçapları: kart 18px · küçük kart 14-16px · buton/hap tam yuvarlak (radius ≥ 22px) · görsel 12-24px. Gölge: yalnız sayfa mokabı düzeyinde; kartlar gölgesiz, 1px <code>kum-200</code> çerçeveli. Zeminler: sayfa <code>kum-25</code> · vurgulu bölüm <code>kum-100</code> · açık yeşil bant <code>zeytin-zemin</code> · koyu blok <code>antrasit</code>.</span>
 
     <div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid #f0e9d6;padding-top:18px">
+      <span style="font:600 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270">0.6 · Kontrol yükseklikleri (referans)</span>
+      <span style="font:400 13px/1.7 'Karla';color:#6d7261">Yükseklik <strong>sabit verilmez, padding'den doğar</strong>: 20px satır yüksekliği + 2×14px iç boşluk = 48px. Değerler <em>min-height</em> olarak okunur — Almanca metin iki satıra taşarsa kontrol büyür, kırpılmaz. Aynı satırda duran kontroller aynı yüksekliği paylaşır (form alanı + buton = 48px).</span>
+      <div style="display:flex;flex-direction:column">
+        <div style="display:grid;grid-template-columns:1.4fr 90px 90px 2fr;gap:0 12px;padding:0 0 6px;font:600 11px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">
+          <span>Kontrol</span><span style="text-align:right">Web</span><span style="text-align:right">Mobil</span><span>Not</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1.4fr 90px 90px 2fr;gap:0 12px;padding:9px 0;border-top:1px solid #f0ead9;align-items:center">
+          <span style="font:700 13px 'Karla';color:#3a4147">K1 · Birincil buton</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">48px</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">52px</span>
+          <span style="font:400 12.5px 'Karla';color:#8a8270">Hap yarıçapı = yükseklik/2 · yatay 26–30px</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1.4fr 90px 90px 2fr;gap:0 12px;padding:9px 0;border-top:1px solid #f0ead9;align-items:center">
+          <span style="font:700 13px 'Karla';color:#3a4147">K2 · İkincil buton</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">44px</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">48px</span>
+          <span style="font:400 12.5px 'Karla';color:#8a8270">1.5–2px çerçeve içeriden sayılır</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1.4fr 90px 90px 2fr;gap:0 12px;padding:9px 0;border-top:1px solid #f0ead9;align-items:center">
+          <span style="font:700 13px 'Karla';color:#3a4147">K34 · Form alanı / seçim</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">48px</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">52px</span>
+          <span style="font:400 12.5px 'Karla';color:#8a8270">Yarıçap 14px · odakta 2px yeşil çerçeve</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1.4fr 90px 90px 2fr;gap:0 12px;padding:9px 0;border-top:1px solid #f0ead9;align-items:center">
+          <span style="font:700 13px 'Karla';color:#3a4147">K4 · Arama hapı</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">44px</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">44px</span>
+          <span style="font:400 12.5px 'Karla';color:#8a8270">Mobilde başlık altı tam genişlik</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1.4fr 90px 90px 2fr;gap:0 12px;padding:9px 0;border-top:1px solid #f0ead9;align-items:center">
+          <span style="font:700 13px 'Karla';color:#3a4147">Adet seçici</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">40px</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">44px</span>
+          <span style="font:400 12.5px 'Karla';color:#8a8270">− ve + dokunma alanı en az 44px kare</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1.4fr 90px 90px 2fr;gap:0 12px;padding:9px 0;border-top:1px solid #f0ead9;align-items:center">
+          <span style="font:700 13px 'Karla';color:#3a4147">Onay kutusu / radyo</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">22px</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">22px</span>
+          <span style="font:400 12.5px 'Karla';color:#8a8270">Dokunma alanı satırla birlikte 44px</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1.4fr 90px 90px 2fr;gap:0 12px;padding:9px 0;border-top:1px solid #f0ead9;align-items:center">
+          <span style="font:700 13px 'Karla';color:#3a4147">K3 · Metin bağlantısı</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">—</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">44px</span>
+          <span style="font:400 12.5px 'Karla';color:#8a8270">Metin küçük olsa da dokunma alanı 44px</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1.4fr 90px 90px 2fr;gap:0 12px;padding:9px 0;border-top:1px solid #f0ead9;align-items:center">
+          <span style="font:700 13px 'Karla';color:#3a4147">K5 · Rozet / durum hapı</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">26–28px</span>
+          <span style="font:700 13px 'Karla';color:#343b41;text-align:right">26–28px</span>
+          <span style="font:400 12.5px 'Karla';color:#8a8270">Dokunulmaz — hedef kuralı işlemez</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid #f0e9d6;padding-top:18px">
       <span style="font:600 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270">0.5 · Birleştirilenler — kalkan tonlar</span>
       <span style="font:400 13px/1.6 'Karla';color:#6d7261">Sol taraf <strong>artık kullanılmıyor</strong>, sağdaki token'a taşınır. <em>Anasayfa · Görsel Yönler</em> dosyası (onaylanmayan yön denemeleri) bu sayıma dahil değildir.</span>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px">
@@ -579,7 +637,7 @@
     <span style="font:400 14px/1.7 'Karla';color:#6d7261">Kısıt ürünün değil <strong>adresin</strong> özelliğidir: müşteri teslimat yerini bir kez söyler, her yüzey buna göre konuşur. Kısıt hiçbir yerde kırmızı hata değildir; her göründüğü yerde çıkış yolu vardır ve checkout asla kilitlenmez.</span>
 
     <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
-      <span style="font:700 17px 'Karla'">K28 · Teslimat Yeri Göstergesi <span style="font:400 13px 'Karla';color:#8a8270">(K12 içinde)</span></span>
+      <span style="font:700 17px 'Karla'">K30 · Teslimat Yeri Göstergesi <span style="font:400 13px 'Karla';color:#8a8270">(K12 içinde)</span></span>
       <span style="font:400 14px 'Karla';color:#6d7261">Başlıkta kalıcı hap: posta kodu + teslimat şekli. Üç hali: <strong>bölge içi</strong> (yeşil, "kapıya teslim") · <strong>bölge dışı</strong> (nötr, "kargo") · <strong>boş</strong> ("Teslimat yerinizi seçin"). Tıklanınca posta kodu düzenlenir. Adres değil yalnız posta kodu tutulur; girişli müşteride varsayılan adresten okunur.</span>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
         <span style="display:inline-flex;align-items:center;gap:8px;background:#eef2e2;border:1px solid #cddbb0;border-radius:20px;padding:7px 14px;font:700 13px 'Karla';color:#4a6121">📍 67000 Strasbourg · kapıya teslim<span style="font:600 12px 'Karla';color:#5f7a2c;text-decoration:underline">değiştir</span></span>
@@ -589,7 +647,7 @@
     </div>
 
     <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
-      <span style="font:700 17px 'Karla'">K29 · Posta Kodu Sorma Şeridi</span>
+      <span style="font:700 17px 'Karla'">K31 · Posta Kodu Sorma Şeridi</span>
       <span style="font:400 14px 'Karla';color:#6d7261">Ana sayfada hero'nun altında ince krem şerit — modal değil, kapatılabilir, atlanabilir ("şimdi değil"). Atlanırsa hiçbir şey kilitlenmez; uyarılar "muhtemel" tonunda kalır. Girilen her kod işletme için talep verisidir: bölge dışı kodlar Operasyon → Analitik'te "bölge dışı talep" listesine düşer ve bölge genişletme kararını besler.</span>
       <div style="background:#f0e9d6;border:1px solid #e6dfcd;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
         <span style="font:600 15px 'Karla';color:#3a4147">Nereye getirelim?</span>
@@ -599,7 +657,7 @@
     </div>
 
     <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
-      <span style="font:700 17px 'Karla'">K30 · Teslimat Kısıtı Bloğu</span>
+      <span style="font:700 17px 'Karla'">K32 · Teslimat Kısıtı Bloğu</span>
       <span style="font:400 14px 'Karla';color:#6d7261">Tek bileşen, üç yerde aynı: <strong>ürün/paket detay</strong> (tek ürün için), <strong>sepet</strong> (kalem listesiyle), <strong>checkout</strong> (adres değişince). Yapısı sabit: amber gövde + tek cümle sebep ("soğuk zincirle taşınıyor") + üç çıkış <em>hep aynı sırada</em> — <strong>sonraya kaydet & kalanını sipariş et</strong> · <strong>teslimat yerini değiştir</strong> · <strong>bölgeye gelince haber ver</strong>. Ürün detayda ilk çıkışın yerini "kargolanabilir benzerleri gör" alır. Kırmızı yok; sepete ekle ve checkout butonu pasifleştirilmez.</span>
       <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;max-width:520px">
         <span style="font:600 18px 'Lora';color:#343b41">2 kalem bu adrese gönderilemiyor</span>
@@ -613,10 +671,28 @@
     </div>
 
     <div style="display:flex;flex-direction:column;gap:12px">
-      <span style="font:700 17px 'Karla'">K31 · Sonraya Kaydedildi Listesi</span>
+      <span style="font:700 17px 'Karla'">K33 · Sonraya Kaydedildi Listesi</span>
       <span style="font:400 14px 'Karla';color:#6d7261">Sepetin altında ve hesapta yaşayan kalıcı liste. Bölge dışı kalemler silinmez, buraya taşınır — alışveriş ölmez, sepet bölünür. Ürün detaydaki "haber ver" kaydı aynı listeye düşer; iki ayrı yer yoktur. Teslimat yeri bölge içine girdiğinde ya da bölge genişlediğinde <strong>tek</strong> hatırlatma gider (izin varsa). Sepet satırında da bir "sonraya kaydet" bağlantısı vardır: kısıt olmadan da kullanılabilir.</span>
       <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Sepet · Hesap · Ürün detay (kayıt noktası) · Canlı örnek: <a href="Musteri - Sepet.dc.html">Sepet</a></span>
+  
+    <div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid #f0ead9;padding-top:22px">
+      <span style="font:700 17px 'Karla'">K34 · Form Alanı</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Tüm metin/seçim girişlerinin tek gövdesi: üstte etiket (12,5px kalın), 48px gövde (mobil 52), altta yardım ya da hata satırı. Halleri: <strong>boş</strong> (yer tutucu kum rengi) · <strong>dolu</strong> · <strong>odak</strong> (2px zeytin çerçeve) · <strong>hata</strong> (2px terracotta + tek cümle) · <strong>salt-okunur</strong> (krem zemin, ülke gibi sabit değerler). Zorunluluk yıldızla değil, <em>isteğe bağlı</em> olanları işaretleyerek anlatılır. Doğrulama alan terk edilince çalışır, kaydete basınca değil.</span>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;max-width:760px">
+        <div style="display:flex;flex-direction:column;gap:6px;width:230px"><span style="font:600 12.5px 'Karla';color:#6d7261">Sokak ve numara</span><div style="background:#fff;border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 15px/20px 'Karla';color:#b3ab97;min-height:48px;box-sizing:border-box">12 Rue des Orfèvres</div><span style="font:400 12px 'Karla';color:#8a8270">boş / yer tutucu</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;width:150px"><span style="font:600 12.5px 'Karla';color:#6d7261">Posta kodu</span><div style="background:#fff;border:2px solid #5f7a2c;border-radius:14px;padding:12px 16px;font:700 15px/20px 'Karla';color:#3a4147;min-height:48px;box-sizing:border-box">67000</div><span style="font:400 12px 'Karla';color:#8a8270">odak</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;width:150px"><span style="font:600 12.5px 'Karla';color:#6d7261">Posta kodu</span><div style="background:#fff;border:2px solid #c25e3a;border-radius:14px;padding:12px 16px;font:700 15px/20px 'Karla';color:#3a4147;min-height:48px;box-sizing:border-box">6700</div><span style="font:600 12px 'Karla';color:#c25e3a">5 hane girin.</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;width:150px"><span style="font:600 12.5px 'Karla';color:#6d7261">Ülke</span><div style="background:#f6f2e6;border:1.5px solid #e0d8c2;border-radius:14px;padding:13px 16px;font:400 15px/20px 'Karla';color:#8a8270;min-height:48px;box-sizing:border-box">Fransa</div><span style="font:400 12px 'Karla';color:#8a8270">salt-okunur</span></div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Checkout (adres formu, kupon) · Giriş (e-posta, kod) · Hesap (profil, adres) · Talep · Geri bildirim</span>
     </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid #f0ead9;padding-top:22px">
+      <span style="font:700 17px 'Karla'">K35 · Adres Formu <span style="font:400 13px 'Karla';color:#8a8270">(K34 bileşimi — yeni komponent değil)</span></span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Alan sırası sabit: <strong>başlık · alıcı adı · sokak ve numara · kapı/kat/zil (isteğe bağlı) · posta kodu + şehir · telefon · ülke (sabit) · varsayılan yap</strong>. Posta kodu yazıldığı an teslimat cevabı verir (yeşil "kapıya teslim + gün" / nötr "kargo") ve gerekiyorsa altında K32 açılır. Checkout'ta satır içi açılır, ayrı sayfa yoktur; Hesap'ta aynı form aynı sırayla kullanılır. Kaydetten sonra liste yenilenir ve yeni adres seçili gelir.</span>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Checkout · Hesap · Canlı örnek: <a href="Musteri - Checkout.dc.html">Checkout mokapları</a></span>
+    </div>
+  </div>
   </div>
 </div>
 </x-dc>
