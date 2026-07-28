@@ -1,9 +1,8 @@
 import { z } from 'zod';
+import { dbNumeric } from './db-numeric';
 
 // StockAdjustment — stok azalışının SATIŞ DIŞI her sebebi (DOMAIN §4, §12). Kayıp görünmezse
 // yönetilemez: "bu üründen yılda ne kadar çöpe attım" sorusunun tek cevabı bu tablodur.
-
-const dbNumeric = z.union([z.number(), z.string()]).transform((v) => Number(v));
 
 export const StockAdjustmentReasonEnum = z.enum([
   'expired', // DLC geçti → imha

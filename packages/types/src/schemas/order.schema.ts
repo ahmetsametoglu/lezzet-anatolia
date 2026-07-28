@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { dbNumeric } from './db-numeric';
 import {
   ChannelEnum,
   CountryEnum,
@@ -19,8 +20,6 @@ import {
 //
 // `channel` müşteri tipinden türetilip sipariş anında SABİTLENİR; `orderSource` ondan bağımsız
 // bir eksendir (*nereden kapandı*). Fiyatlar checkout başlangıcında sabitlenir (DOMAIN §5).
-
-const dbNumeric = z.union([z.number(), z.string()]).transform((v) => Number(v));
 
 export const OrderSchema = z.object({
   id: z.string().uuid(),

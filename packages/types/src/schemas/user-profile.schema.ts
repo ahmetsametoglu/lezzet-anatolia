@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { dbNumeric } from './db-numeric';
 import { CountryEnum, CustomerTypeEnum, PreferredLanguageEnum } from './enums.schema';
 
 // Kullanıcı profili (kimlik) — 0001 + 0013 migration ile birebir. TEK tablo: müşteri + personel;
@@ -10,9 +11,6 @@ import { CountryEnum, CustomerTypeEnum, PreferredLanguageEnum } from './enums.sc
 //
 // Kanal (b2b/b2c) SAKLANMAZ: `companyInfo` varlığından türetilir. Açık bakiye de saklanmaz
 // (ödenmemiş vadeli siparişlerden türetilir).
-
-// PG numeric supabase-js'te string dönebilir → number'a indir (okuma tarafı).
-const dbNumeric = z.union([z.number(), z.string()]).transform((v) => Number(v));
 
 /** Şirket künyesi — doluysa profil B2B'dir. SIRET ile resmî kayıttan dolar (FR). */
 export const CompanyInfoSchema = z.object({

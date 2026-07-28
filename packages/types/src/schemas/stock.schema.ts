@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { dbNumeric } from './db-numeric';
 
 // Stock — stok PARTİSİ (lot). Stok varyant seviyesinde tutulur; her partinin kendi son tarihi ve
 // alış maliyeti vardır (DOMAIN §4, data-model/stok-tedarik.md).
@@ -6,9 +7,6 @@ import { z } from 'zod';
 // Ayrılmış miktar burada YOK: `Reservation` satırlarından türetilir (sayaç tutulmaz).
 // Son tarihin TİPİ üründedir (`Product.date_type`) — bu yüzden alan adı tipten bağımsız:
 // `expiryDate`. DLC = güvenlik (geçince satılamaz), DDM = kalite (geçse de satılır).
-
-// PG numeric supabase-js'te string dönebilir → number'a indir (okuma tarafı).
-const dbNumeric = z.union([z.number(), z.string()]).transform((v) => Number(v));
 
 export const StockSchema = z.object({
   id: z.string().uuid(),

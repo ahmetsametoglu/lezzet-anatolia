@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { dbNumeric } from './db-numeric';
 import { CurrencyEnum } from './enums.schema';
 
 // Para ve ön muhasebe (DOMAIN §9, data-model/para.md).
@@ -8,9 +9,6 @@ import { CurrencyEnum } from './enums.schema';
 //
 // BAKİYE SAKLANMAZ, hareketlerden türetilir (DATA_MODEL kalıcı kararlar: sayaç tutulmaz, kayarsa izi
 // bulunamaz). Türetimin tek yeri `account_movement` görünümüdür — bkz. `AccountLedgerRow`.
-
-// PG numeric supabase-js'te string dönebilir → number'a indir (okuma tarafı).
-const dbNumeric = z.union([z.number(), z.string()]).transform((v) => Number(v));
 
 /** Paranın durduğu yer. "Online havuz" ayrı değil — o da bir hesap (Stripe). */
 export const AccountTypeEnum = z.enum(['cash', 'bank', 'provider']);

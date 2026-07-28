@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { dbNumeric, dbNumericNullable } from './db-numeric';
 import { LOCALIZED_TEXT_KEYS, LocalizedTextSchema, type LocalizedText } from './localized-text.schema';
 import { ImageMetaInsertSchema, ImageMetaSchema } from './image.schema';
 import { ProductVariantSchema } from './product-variant.schema';
@@ -57,13 +58,6 @@ export const ALLERGEN_LABELS: Record<ProductAllergen, LocalizedText> = {
  */
 export const ProductStatusEnum = z.enum(['active', 'passive', 'candidate']);
 export type ProductStatus = z.infer<typeof ProductStatusEnum>;
-
-// PG numeric supabase-js'te string dönebilir → number'a indir (okuma tarafı).
-const dbNumeric = z.union([z.number(), z.string()]).transform((v) => Number(v));
-const dbNumericNullable = z
-  .union([z.number(), z.string()])
-  .nullable()
-  .transform((v) => (v == null ? null : Number(v)));
 
 /**
  * Besin değerleri — INCO'nun zorunlu beyan seti, **100 g başına**, SABİT kalemli. Serbest anahtarlı

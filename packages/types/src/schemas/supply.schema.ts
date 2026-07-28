@@ -1,9 +1,8 @@
 import { z } from 'zod';
+import { dbNumeric } from './db-numeric';
 
 // Tedarik zinciri şemaları (DOMAIN §16, data-model/stok-tedarik.md): tedarikçi kartı,
 // ürün–kod eşlemesi, tedarik siparişi ve mal kabul. Müşteri tarafının simetriği.
-
-const dbNumeric = z.union([z.number(), z.string()]).transform((v) => Number(v));
 
 // ── Supplier ────────────────────────────────────────────────────────────────
 // Tedarikçiye borç SAKLANMAZ, türetilir: Σ girişler − Σ ödemeler.

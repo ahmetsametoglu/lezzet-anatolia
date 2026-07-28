@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { dbNumeric } from './db-numeric';
 import { ChannelEnum, CurrencyEnum } from './enums.schema';
 
 // Price — fiyat VARYANT seviyesindedir (satılabilir birim varyanttır). Aynı tablo üç işi görür:
@@ -7,9 +8,6 @@ import { ChannelEnum, CurrencyEnum } from './enums.schema';
 //
 // TABAN (DOMAIN §5): `amount` KANALIN tabanındadır — b2c satırları KDV **dahil** (TTC),
 // b2b satırları KDV **hariç** (HT). Motor iki yöne çevirir ama saklanan değer budur.
-
-// PG numeric supabase-js'te string dönebilir → number'a indir (okuma tarafı).
-const dbNumeric = z.union([z.number(), z.string()]).transform((v) => Number(v));
 
 export const PriceSchema = z.object({
   id: z.string().uuid(),
