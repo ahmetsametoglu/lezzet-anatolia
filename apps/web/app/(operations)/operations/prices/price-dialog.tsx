@@ -10,6 +10,7 @@ import { Toggle } from '@/components/operation/form/toggle';
 import { DateField } from '@/components/operation/form/date-field';
 import { MoneyField, PercentField } from '@/components/operation/form/money-input';
 import { money, percent } from '@/components/operation/ui/format';
+import { Metric } from '@/components/operation/ui/metric';
 import { setAutoPriceAction, setChannelPriceAction } from './actions';
 import type { PriceRow } from './prices-types';
 
@@ -276,32 +277,3 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
   );
 }
 
-interface MetricProps {
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: 'red';
-}
-
-/** Karar kutusu — üç sayı yan yana: maliyet · şimdiki marj · hedef. */
-function Metric({ label, value, hint, tone }: MetricProps) {
-  return (
-    <div
-      className={`flex flex-col gap-0.5 rounded-ops-card border px-3 py-2.5 ${
-        tone === 'red' ? 'border-ops-red-line bg-ops-red-bg' : 'border-ops-line bg-ops-white'
-      }`}
-      title={hint}
-    >
-      <span
-        className={`font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] ${
-          tone === 'red' ? 'text-ops-red' : 'text-ops-muted'
-        }`}
-      >
-        {label}
-      </span>
-      <span className={`font-ops-mono text-ops-lead font-medium ${tone === 'red' ? 'text-ops-red' : 'text-ops-ink'}`}>
-        {value}
-      </span>
-    </div>
-  );
-}

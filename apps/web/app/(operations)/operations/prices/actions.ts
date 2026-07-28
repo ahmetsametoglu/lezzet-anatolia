@@ -9,7 +9,8 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { fromCents } from '@lezzet/helper';
+import { costOf } from '@lezzet/domain-core';
+import { fromCents, toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Channel, type KeysetCursor, type Price } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -185,10 +186,24 @@ export async function searchVariantsAction(term: string): Promise<ActionResult<V
     const query = term.trim();
     if (!query) return { data: [], error: null };
 
-    const page = await new ProductService(serviceDb()).listPriceRows({
-      filters: { query },
-      limit: VARIANT_SEARCH_LIMIT,
-    });
+    const db = serviceDb();
+    const page = await new ProductService(db).listPriceRows({ filters: { query }, limit: VARIANT_SEARCH_LIMIT });
+    const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
+
+    // Liste fiyatları ve maliyet AYNI turda: özel fiyat verirken "indirim mi zam mı, ne kâr
+    // kalıyor" sorusu ancak bunlarla yanıtlanır ve seçim değiştikçe ayrı tur atmak, her tuşta
+    // sunucuya gitmek olurdu. Maliyet tabanı ekranın geri kalanıyla aynı (`readCostBasis`).
+    const priceSvc = new PriceService(db);
+    const [b2cMap, b2bMap, costs] = await Promise.all([
+      priceSvc.findApplicableMap(variantIds, 'b2c'),
+      priceSvc.findApplicableMap(variantIds, 'b2b'),
+      readCostBasis(db, variantIds),
+    ]);
+    const listOf = (map: Map<string, { channelPrice: Price | null }>, id: string): number | null => {
+      const price = map.get(id)?.channelPrice;
+      return price ? toCents(price.amount) : null;
+    };
+
     const options = page.rows.flatMap((product) =>
       product.variants.map((variant) => ({
         variantId: variant.id,
@@ -196,6 +211,10 @@ export async function searchVariantsAction(term: string): Promise<ActionResult<V
         // Pasif/aday ürün ya da kapalı boy: seçilebilir ama ekran söyler — özel fiyat, satışa
         // açılmadan önce de hazırlanabilen bir anlaşmadır.
         sellable: product.status === 'active' && variant.isActive,
+        listCents: { b2c: listOf(b2cMap, variant.id), b2b: listOf(b2bMap, variant.id) },
+        costCents: costOf(costs.get(variant.id) ?? { status: 'unknown' as const }),
+        vatRate: product.vatRate,
+        targetMarginPercent: product.targetMarginPercent,
       })),
     );
     return { data: options, error: null };

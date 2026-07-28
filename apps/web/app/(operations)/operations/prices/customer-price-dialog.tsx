@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { vatBaseOf } from '@lezzet/domain-core';
+import { isBelowTargetMargin, markupPercent, revenueHtOf, vatBaseOf } from '@lezzet/domain-core';
 import { fromCents, toCents } from '@lezzet/helper';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
@@ -11,6 +11,7 @@ import { FieldShell } from '@/components/operation/form/field-shell';
 import { MoneyField } from '@/components/operation/form/money-input';
 import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { money, percent } from '@/components/operation/ui/format';
+import { Metric } from '@/components/operation/ui/metric';
 import {
   removeCustomerPriceAction,
   searchCustomersAction,
@@ -83,12 +84,27 @@ export function CustomerPriceDialog({ editing, onClose }: CustomerPriceDialogPro
   const selectedVariant = picked;
   const variantId = editing?.variantId ?? picked?.variantId ?? '';
 
-  const listCents = editing?.listCents ?? null;
   const amountCents = amount === null ? null : toCents(amount);
-  // Liste fiyatına göre indirim — özel fiyatın ne kadar altında olduğunu söyler. Düzenlemede liste
-  // fiyatı elimizde; yeni kayıtta boy seçilene kadar bilinmiyor ve satır yazılmaz.
+
+  // KARAR BAĞLAMI — iki kaynaktan tek yere: düzenlemede satırın kendisi, yeni kayıtta seçilen boy.
+  // Ekranın sorusu ikisinde de aynı: "bu fiyata satarsam kâr mı ediyorum, indirim mi yapıyorum".
+  const context = editing
+    ? { listCents: editing.listCents, costCents: editing.costCents, vatRate: editing.vatRate, target: editing.targetMarginPercent }
+    : picked
+      ? { listCents: picked.listCents[channel], costCents: picked.costCents, vatRate: picked.vatRate, target: picked.targetMarginPercent }
+      : null;
+  const listCents = context?.listCents ?? null;
+
+  // Liste fiyatına göre indirim/zam — özel fiyatın listenin ne kadar altında (ya da üstünde) olduğu.
   const discountPercent =
     listCents === null || listCents === 0 || amountCents === null ? null : ((listCents - amountCents) / listCents) * 100;
+
+  // Gerçekleşen marj: KDV HARİÇ tabanda, ekranın geri kalanıyla AYNI tanım (maliyet üzerine markup).
+  // Client yeniden formül yazmaz — dönüşüm de karşılaştırma da motordan gelir.
+  const revenueHt = context && amountCents !== null ? revenueHtOf(channel, amountCents, context.vatRate) : null;
+  const marginPercent = revenueHt === null || !context ? null : markupPercent(revenueHt, context.costCents ?? 0);
+  const belowTarget = revenueHt === null || !context ? null : isBelowTargetMargin(revenueHt, context.costCents, context.target);
+  const underCost = revenueHt !== null && context?.costCents != null && revenueHt < context.costCents;
 
   const submit = async () => {
     if (!customer) return;
@@ -231,19 +247,54 @@ export function CustomerPriceDialog({ editing, onClose }: CustomerPriceDialogPro
         placeholder="ör. 13,50"
       />
 
-      {/* Liste fiyatıyla karşılaştırma yalnız DÜZENLEMEDE var: yeni kayıtta boyun liste fiyatını
-          okumak için ayrı bir tur gerekirdi ve seçim her değiştiğinde tekrarlanırdı. */}
-      {listCents !== null && amountCents !== null ? (
-        <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
-          Kanal listesi {money(listCents)} ·{' '}
-          {discountPercent !== null && discountPercent > 0 ? (
-            <span className="font-ops-mono text-ops-olive-dark">{percent(discountPercent, 1)} indirim</span>
-          ) : discountPercent !== null && discountPercent < 0 ? (
-            <span className="font-ops-mono text-ops-amber">liste fiyatının ÜSTÜNDE</span>
-          ) : (
-            <span className="font-ops-mono">listeyle aynı</span>
-          )}
-        </span>
+      {/* KARAR SATIRI — "bu fiyatı verirsem ne oluyor". Fiyat kutusunun ALTINDA, çünkü cevabı
+          değiştiren şey girilen tutar; üstte dursaydı operatör yazarken görmeyeceği bir sayıya
+          bakardı. Boy seçilene kadar hiçbir şey gösterilmez: sayı UYDURULMAZ. */}
+      {context && amountCents !== null ? (
+        <div className="flex flex-col gap-2 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3">
+          <div className="grid grid-cols-3 gap-2.5">
+            <Metric label="Kanal listesi" value={money(listCents)} />
+            <Metric label="Maliyet" value={money(context.costCents)} />
+            <Metric
+              label="Bu fiyatla marj"
+              value={marginPercent === null ? '—' : percent(marginPercent)}
+              tone={underCost || belowTarget === true ? 'red' : undefined}
+            />
+          </div>
+
+          <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
+            {discountPercent === null ? (
+              'Bu kanalda liste fiyatı yok — karşılaştırılacak bir tutar bulunmuyor.'
+            ) : discountPercent > 0 ? (
+              <>
+                Listeye göre <span className="font-ops-mono text-ops-olive-dark">{percent(discountPercent, 1)} indirim</span>
+              </>
+            ) : discountPercent < 0 ? (
+              <>
+                Listeye göre <span className="font-ops-mono text-ops-amber-dark">{percent(-discountPercent, 1)} ZAM</span>
+              </>
+            ) : (
+              'Liste fiyatıyla aynı.'
+            )}
+            {context.target !== null ? ` · hedef marj %${context.target}` : ''}
+          </span>
+
+          {/* İki ayrı uyarı, iki ayrı ağırlık: maliyetin altı ZARARDIR, hedefin altı bir tercihtir. */}
+          {underCost ? (
+            <span className="font-ops-body text-ops-xs font-semibold leading-[1.6] text-ops-red">
+              MALİYETİN ALTINDA — bu fiyattan her satış zarar yazar (maliyet {money(context.costCents)}, KDV hariç).
+            </span>
+          ) : belowTarget === true ? (
+            <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-amber-dark">
+              Hedef marjın altında. Engel değil — anlaşma bilinçliyse yazılabilir, ama kârın ne kadarından
+              vazgeçildiği burada görünür.
+            </span>
+          ) : context.costCents === null ? (
+            <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-amber-dark">
+              Maliyet bilinmiyor (bu boyda alış kaydı yok) — kâr hesaplanamıyor.
+            </span>
+          ) : null}
+        </div>
       ) : null}
 
       <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">

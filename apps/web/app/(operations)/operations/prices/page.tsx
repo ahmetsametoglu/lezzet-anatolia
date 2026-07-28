@@ -10,7 +10,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { needsExpiryAttention } from '@lezzet/domain-core';
+import { costOf, needsExpiryAttention } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Price } from '@lezzet/types';
 import { detectDevice } from '@/lib/device';
@@ -218,16 +218,26 @@ async function readCustomerTab(db: Db): Promise<{ prices: CustomerPriceRow[]; di
   const variantIds = [...new Set(rows.map((r) => r.variantId))];
   const customerIds = [...new Set(rows.flatMap((r) => (r.customerId ? [r.customerId] : [])))];
 
-  const [variants, profiles, b2cMap, b2bMap] = await Promise.all([
+  const [variants, profiles, b2cMap, b2bMap, costBasis] = await Promise.all([
     new ProductVariantService(db).listByIds(variantIds),
     profileSvc.listByIds(customerIds),
     priceSvc.findApplicableMap(variantIds, 'b2c'),
     priceSvc.findApplicableMap(variantIds, 'b2b'),
+    // Maliyet ve hedef marj DÜZENLEMEDE de gerekiyor: "bu fiyatla kâr mı ediyorum" sorusu, fiyatı
+    // ilk verirken ne kadar geçerliyse sonradan bakarken de o kadar geçerli.
+    readCostBasis(db, variantIds),
   ]);
 
   // Boy adı ÜRÜNDEN gelir; boy listesi yalnız etiketi taşır. Ürün kimlikleri tek turda çözülür.
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
   const productNames = new Map(products.map((p) => [p.id, resolveLocalizedText(p.name)]));
+  const productOf = new Map(products.map((p) => [p.id, p]));
+  const variantContext = new Map(
+    variants.flatMap((v) => {
+      const product = productOf.get(v.productId);
+      return product ? [[v.id, { vatRate: product.vatRate, targetMarginPercent: product.targetMarginPercent }] as const] : [];
+    }),
+  );
   const variantTitles = new Map(
     variants.map((v) => [v.id, titleOf(productNames.get(v.productId) ?? '—', resolveLocalizedText(v.label))]),
   );
@@ -237,7 +247,14 @@ async function readCustomerTab(db: Db): Promise<{ prices: CustomerPriceRow[]; di
   for (const [variantId, { channelPrice }] of b2bMap) if (channelPrice) listCents.set(`${variantId}·b2b`, toCents(channelPrice.amount));
 
   return {
-    prices: toCustomerPriceRows({ rows, profiles: new Map(profiles.map((p) => [p.id, p])), variantTitles, listCents }),
+    prices: toCustomerPriceRows({
+      rows,
+      profiles: new Map(profiles.map((p) => [p.id, p])),
+      variantTitles,
+      listCents,
+      costs: new Map([...costBasis].flatMap(([id, basis]) => (costOf(basis) === null ? [] : [[id, costOf(basis)!] as const]))),
+      products: variantContext,
+    }),
     discounts: toDiscountCustomerRows(discountProfiles),
   };
 }

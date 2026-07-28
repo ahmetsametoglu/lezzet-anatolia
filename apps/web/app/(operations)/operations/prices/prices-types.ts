@@ -72,6 +72,10 @@ export interface CustomerPriceRow {
   specialCents: number;
   /** Aynı kanalın liste fiyatı — özel fiyatın ne kadar altında olduğu görünsün. `null` = liste yok. */
   listCents: number | null;
+  /** Karar bağlamı (bkz. `VariantOption`): düzenlerken de "bu fiyatla ne kalıyor" görünmeli. */
+  costCents: number | null;
+  vatRate: number;
+  targetMarginPercent: number | null;
   validFrom: string;
 }
 
@@ -163,6 +167,16 @@ export interface VariantOption {
   title: string;
   /** Pasif/aday ürünün boyu — seçilebilir ama ekran bunu söyler. */
   sellable: boolean;
+  /**
+   * KARAR BAĞLAMI — özel fiyat verilirken "kâr mı zarar mı" sorusunun cevabı bu üç alandan çıkar:
+   * kanal listesi (indirim mi zam mı), maliyet ve hedef marj (bu fiyatla ne kalıyor).
+   * Seçicinin okuması zaten sunucuda; aynı turda gelmezlerse operatör sayısız karar verir.
+   */
+  listCents: Record<Channel, number | null>;
+  /** Yenileme maliyeti (kuruş) — ekranın geri kalanıyla AYNI taban (`readCostBasis`). */
+  costCents: number | null;
+  vatRate: number;
+  targetMarginPercent: number | null;
 }
 
 /** Müşteri arama sonucu — seçicide gösterilen asgari kimlik. */

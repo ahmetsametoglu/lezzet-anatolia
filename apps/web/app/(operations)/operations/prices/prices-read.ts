@@ -112,10 +112,14 @@ interface CustomerPriceInput {
   variantTitles: Map<string, string>;
   /** Kanal liste fiyatı (kuruş) — `${variantId}·${channel}` anahtarıyla. */
   listCents: Map<string, number>;
+  /** Varyant başına yenileme maliyeti (kuruş) — ekranın geri kalanıyla aynı taban. */
+  costs: Map<string, number>;
+  /** Boyun ürününden gelen karar girdileri (KDV oranı, hedef marj). */
+  products: Map<string, { vatRate: number; targetMarginPercent: number | null }>;
 }
 
 /** Özel fiyat satırları — kimlikler adlara, tutarlar kuruşa çevrilir; sıra müşteri adına göre. */
-export function toCustomerPriceRows({ rows, profiles, variantTitles, listCents }: CustomerPriceInput): CustomerPriceRow[] {
+export function toCustomerPriceRows({ rows, profiles, variantTitles, listCents, costs, products }: CustomerPriceInput): CustomerPriceRow[] {
   return rows
     .map((row): CustomerPriceRow => {
       const profile = row.customerId ? profiles.get(row.customerId) : undefined;
@@ -129,6 +133,9 @@ export function toCustomerPriceRows({ rows, profiles, variantTitles, listCents }
         channel: row.channel,
         specialCents: toCents(row.amount),
         listCents: listCents.get(`${row.variantId}·${row.channel}`) ?? null,
+        costCents: costs.get(row.variantId) ?? null,
+        vatRate: products.get(row.variantId)?.vatRate ?? 0,
+        targetMarginPercent: products.get(row.variantId)?.targetMarginPercent ?? null,
         validFrom: row.validFrom,
       };
     })
