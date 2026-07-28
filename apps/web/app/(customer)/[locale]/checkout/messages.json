@@ -53,7 +53,7 @@
       "route": "Kapıya teslim · ücretsiz",
       "routeBody": "Adresiniz teslimat bölgemizde — aracımız kapınıza getirir.",
       "shipping": "Kargo",
-      "shippingBody": "Adresiniz teslimat bölgemizin dışında; siparişiniz kargoyla yola çıkar.",
+      "shippingBody": "Bu adres teslimat bölgemizin dışında — kapıya teslim mümkün değil, sipariş kargoyla yola çıkar.",
       "shippingDays": "2-3 iş gününde kargoda",
       "single": "{date} günü kapınızda",
       "blocked": "Sepetinizdeki soğuk zincir ürünleri bu adrese gönderemiyoruz. Sepete dönüp o kalemleri sonraya kaydedebilir ya da teslimat adresinizi değiştirebilirsiniz.",
@@ -94,7 +94,8 @@
       "terms": "Onaylayarak satış koşullarını kabul etmiş olursunuz.",
       "coldChain": "❄ Siparişiniz soğuk zincir bozulmadan, {date} günü kapınıza gelir.",
       "minBasket": "Sipariş için en az {min} gerekir — {missing} daha ekleyin.",
-      "packageSuffix": "(paket)"
+      "packageSuffix": "(paket)",
+      "blockedTotal": "Toplam, gönderilemeyen kalemler yukarıda çözülünce netleşir."
     },
     "pay": {
       "validating": "Kart kontrol ediliyor…",
@@ -185,7 +186,7 @@
       "route": "Livraison à domicile · offerte",
       "routeBody": "Votre adresse est dans notre zone — notre véhicule vous livre en main propre.",
       "shipping": "Envoi postal",
-      "shippingBody": "Votre adresse est hors de notre zone ; votre commande part en colis.",
+      "shippingBody": "Cette adresse est hors de notre zone — la livraison à domicile n'est pas possible, la commande part par transporteur.",
       "shippingDays": "Expédition sous 2-3 jours ouvrés",
       "single": "Chez vous le {date}",
       "blocked": "Nous ne pouvons pas envoyer les articles en chaîne du froid à cette adresse. Retournez au panier pour les garder pour plus tard, ou changez d'adresse.",
@@ -226,7 +227,8 @@
       "terms": "En confirmant, vous acceptez les conditions de vente.",
       "coldChain": "❄ Votre commande arrive chez vous le {date}, chaîne du froid préservée.",
       "minBasket": "Minimum de commande {min} — ajoutez encore {missing}.",
-      "packageSuffix": "(coffret)"
+      "packageSuffix": "(coffret)",
+      "blockedTotal": "Le total sera définitif une fois les articles non livrables réglés ci-dessus."
     },
     "pay": {
       "validating": "Vérification de la carte…",
@@ -317,7 +319,7 @@
       "route": "Lieferung an die Tür · kostenlos",
       "routeBody": "Ihre Adresse liegt in unserem Liefergebiet — unser Fahrzeug bringt es zu Ihnen.",
       "shipping": "Versand",
-      "shippingBody": "Ihre Adresse liegt außerhalb unseres Gebiets; Ihre Bestellung geht als Paket raus.",
+      "shippingBody": "Diese Adresse liegt außerhalb unseres Liefergebiets — Lieferung frei Haus ist nicht möglich, die Bestellung geht per Spedition raus.",
       "shippingDays": "Versand in 2-3 Werktagen",
       "single": "Am {date} bei Ihnen",
       "blocked": "Kühlkettenartikel können wir nicht an diese Adresse senden. Gehen Sie zum Warenkorb, um sie für später zu merken, oder ändern Sie die Adresse.",
@@ -358,7 +360,8 @@
       "terms": "Mit der Bestätigung akzeptieren Sie die Verkaufsbedingungen.",
       "coldChain": "❄ Ihre Bestellung kommt am {date} ohne Unterbrechung der Kühlkette zu Ihnen.",
       "minBasket": "Mindestbestellwert {min} — fügen Sie noch {missing} hinzu.",
-      "packageSuffix": "(Paket)"
+      "packageSuffix": "(Paket)",
+      "blockedTotal": "Die Summe steht fest, sobald die nicht lieferbaren Artikel oben geklärt sind."
     },
     "pay": {
       "validating": "Karte wird geprüft…",

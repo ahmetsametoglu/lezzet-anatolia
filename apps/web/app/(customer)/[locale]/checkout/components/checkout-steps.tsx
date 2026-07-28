@@ -5,7 +5,7 @@ import type { PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
 import { FormInputField } from '@/components/customer/form/form-input-field';
-import { PlaceRestriction } from '@/components/customer/delivery/place-restriction';
+import { PlaceRestriction, restrictedLines } from '@/components/customer/delivery/place-restriction';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { signOutAction } from '@/lib/auth/actions';
 import { Skeleton } from '@/components/customer/ui/skeleton';
@@ -19,9 +19,10 @@ import type { CheckoutViewProps, NewAddressInput } from '../checkout-types';
  * ekran dosyası yalnız onları farklı düzenlerde sıralar.
  */
 
-export function StepShell({ step, title, hint, compact, muted, children }: { step: string; title: string; hint?: string; compact?: boolean; muted?: boolean; children: React.ReactNode }) {
+export function StepShell({ id, step, title, hint, compact, muted, children }: { id?: string; step: string; title: string; hint?: string; compact?: boolean; muted?: boolean; children: React.ReactNode }) {
   return (
     <section
+      id={id}
       // Tasarım künyesi: `bg #fff · 1px kum-200 kenar · radius 18 · ped 22/26 · gap 14`.
       className={[
         'flex flex-col gap-3.5 rounded-card border bg-card',
@@ -65,6 +66,12 @@ export function LockedStep({ step, title, hint, compact }: { step: string; title
     </StepShell>
   );
 }
+
+/**
+ * Adres adımının çıpası — kısıt bloğunun "bölge içi bir adres seç" çıkışı buraya götürür.
+ * Müşteri sepete geri GÖNDERİLMEZ, çözüm checkout içinde biter (tasarım).
+ */
+const ADDRESS_STEP_ID = 'checkout-address-step';
 
 /** Seçilebilir kart — adres, gün ve ödeme yöntemi aynı görsel dili konuşur (tasarım). */
 function ChoiceCard({
@@ -162,7 +169,7 @@ export function AddressStep({ t, locale, snapshot, state, compact, onSelectAddre
   const [adding, setAdding] = useState(false);
 
   return (
-    <StepShell step={t.address.step} title={t.address.title} compact={compact}>
+    <StepShell id={ADDRESS_STEP_ID} step={t.address.step} title={t.address.title} compact={compact}>
       {snapshot.addresses.length === 0 && !adding && (
         <p className="font-sans text-note leading-relaxed text-body">{t.address.empty}</p>
       )}
@@ -363,12 +370,25 @@ function AddressForm({ t, locale, onSave, onCancel }: { t: CheckoutViewProps['t'
 }
 
 export function DeliveryStep(props: CheckoutViewProps) {
-  const { t, locale, snapshot, state, compact, onSelectDate, cart } = props;
+  const { t, locale, snapshot, state, compact, onSelectDate, cart, selectedAddress } = props;
   const delivery = snapshot.delivery;
   const payment = snapshot.payment;
   if (!delivery) return null;
 
   const inRoute = delivery.deliveryType === 'route';
+
+  /**
+   * Kısıt bloğunun bakacağı yer: SEÇİLİ ADRES. Blok eskiden sitenin ortak cevabına (başlıktaki
+   * hap) bakıyordu ve checkout'ta neredeyse hiç doğmuyordu — müşteri sepette "şimdi değil" deyip
+   * kod vermemişse hap boştu, blok da yoktu. Geriye yalnız soluk bir cümle kalıyor, hangi kalemin
+   * gelemeyeceği hiçbir yerde yazmıyordu (29.07 kullanıcı geri bildirimi).
+   *
+   * Bölge adı ve gün TAŞINMAZ: blok ikisini de kullanmıyor, tek sorduğu "rota içinde mi".
+   */
+  const addressPlace = selectedAddress
+    ? { postalCode: selectedAddress.postalCode, zoneName: null, inRoute, nextDate: null }
+    : null;
+  const restricted = restrictedLines(addressPlace, cart.lines);
   // Eşik sepet okumasından gelir; ekran ayar okumaz (tek kaynak).
   const freeThresholdCents = cart.freeShippingCents;
 
@@ -408,8 +428,15 @@ export function DeliveryStep(props: CheckoutViewProps) {
         minBasketCents={cart.minBasketCents}
         freeShippingCents={cart.freeShippingCents}
         compact={compact}
+        place={addressPlace}
+        // Checkout'ta yer bir KODLA değil adresle değişir: çıkış adres adımına götürür.
+        onChangePlace={() => document.getElementById(ADDRESS_STEP_ID)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
       />
-      {delivery.blocked && <p className="font-sans text-note leading-relaxed font-semibold text-honey">{t.delivery.blocked}</p>}
+      {/* Sunucu "gönderilemez" diyor ama blok çizilmediyse (ör. kalem aynı zamanda tükendiği için
+          bloğun kapsamı dışında) müşteri sebepsiz kalmasın — cümle YEDEK olarak durur. */}
+      {delivery.blocked && restricted.length === 0 && (
+        <p className="font-sans text-note leading-relaxed font-semibold text-honey">{t.delivery.blocked}</p>
+      )}
 
       {/* Kargoda gün SEÇİLMEZ: tarih taşıyıcıya bağlı, söz vermiyoruz (DOMAIN §6). */}
       {inRoute && !delivery.blocked && (
@@ -571,6 +598,13 @@ export function OrderSummary(props: CheckoutViewProps) {
         </div>
         <span className="font-sans text-micro text-muted">{t.summary.vatIncluded}</span>
       </div>
+
+      {/* Sipariş bu hâliyle verilemiyor (gönderilemeyen kalem var): toplam da nihai değil. Tek
+          satır, kalem ADI YOK — hangi kalem olduğunu adım 2'deki blok söyler, özet dar bir yer ve
+          orada ikinci bir liste tutmak (kullanıcı geri bildirimi) doğru yöntem değil. */}
+      {snapshot.delivery?.blocked && (
+        <p className="font-sans text-note leading-relaxed font-semibold text-honey">{t.summary.blockedTotal}</p>
+      )}
 
       {payment && !payment.minBasketOk && (
         <p className="font-sans text-note leading-relaxed font-semibold text-honey">

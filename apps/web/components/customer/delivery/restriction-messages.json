@@ -18,7 +18,8 @@
     "noticeSubmit": "Not al",
     "noticeDone": "Not aldık. {code} bölgemize girdiğinde haber vereceğiz.",
     "noticeInvalid": "Geçerli bir e-posta adresi girin",
-    "close": "Kapat"
+    "close": "Kapat",
+    "changeAddressCta": "Bölge içi bir adres seç"
   },
   "fr": {
     "title": "{n} article(s) ne peuvent pas être envoyés à cette adresse",
@@ -39,7 +40,8 @@
     "noticeSubmit": "Noter",
     "noticeDone": "C'est noté. Nous vous préviendrons dès que {code} entre dans notre zone.",
     "noticeInvalid": "Saisissez une adresse e-mail valide",
-    "close": "Fermer"
+    "close": "Fermer",
+    "changeAddressCta": "Choisir une adresse dans la zone"
   },
   "de": {
     "title": "{n} Artikel können nicht an diese Adresse geliefert werden",
@@ -60,6 +62,7 @@
     "noticeSubmit": "Vormerken",
     "noticeDone": "Vorgemerkt. Wir melden uns, sobald {code} in unserem Gebiet liegt.",
     "noticeInvalid": "Geben Sie eine gültige E-Mail-Adresse ein",
-    "close": "Schließen"
+    "close": "Schließen",
+    "changeAddressCta": "Adresse im Liefergebiet wählen"
   }
 }

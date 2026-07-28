@@ -7,6 +7,7 @@ import { EMPTY_PRODUCT_CONTEXT, imageOf, toVariant } from '@/lib/storefront/map'
 import { loadProductContext } from '@/lib/storefront/read-context';
 import { getPackagesByIds } from '@/lib/storefront/packages';
 import type { StorefrontPackageDetail } from '@/lib/storefront/storefront-types';
+import { FREE_SHIPPING_THRESHOLD_DEFAULT, FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY } from '@/lib/settings-keys';
 import { resolveCartDiscount } from './discount';
 import { EMPTY_CART, cartKey, type CartDiscount, type CartEntry, type CartLine, type CartView } from './cart-types';
 
@@ -45,15 +46,14 @@ export async function getCartView(
 ): Promise<CartView> {
   const db = serviceDb();
   const settings = new SettingsService(db);
-  // İkisi de DOMAIN §6'ya göre PARAMETRİK — kod sabiti değil, işletme ayarı. Ayar satırı yoksa
-  // varsayılan burada, çağrı yerinde bildirilir (servis koda sabit yazdırmaz).
+  // İkisi de DOMAIN §6'ya göre PARAMETRİK — kod sabiti değil, işletme ayarı.
   //
-  // Ücretsiz kargo varsayılanı 60,00 €: soğuk zincir kargosunun kendisi ~7-8 € tuttuğu için eşik
-  // onun belirgin üstünde olmalı, yoksa her sepet ücretsiz olur. Admin ayarı geldiğinde bu değer
-  // hiç okunmaz — burada durması, ayar girilmeden de ekranın doğru davranması içindir.
+  // Anahtarlar ORTAK sabitten gelir (`lib/settings-keys`): burada `free_shipping_cents` yazıyordu
+  // ve öyle bir ayar hiç yoktu — okuma sessizce varsayılana düşüyor, checkout ise gerçek ayarı
+  // okuyordu. İkisi tesadüfen aynı değerde olduğu için görünmüyordu (29.07).
   const [minBasketCents, freeShippingCents] = await Promise.all([
-    settings.getNumber('min_basket_cents', 0),
-    settings.getNumber('free_shipping_cents', 6000),
+    settings.getNumber(MIN_BASKET_KEY, 0),
+    settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT),
   ]);
   if (entries.length === 0) return { ...EMPTY_CART, freeShippingCents, ...meets(0, minBasketCents) };
   // Motorun kalem sözleşmesi: satır çözülürken doldurulur (kategori/koleksiyon oradan gelir).

@@ -7,6 +7,7 @@ import { Button } from '@/components/customer/ui/button';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { cartKey, type CartLine, type CartRef } from '@/lib/cart/cart-types';
 import { formatPrice } from '@/lib/storefront/format';
+import type { DeliveryPlace } from '@/lib/delivery/place-types';
 import { useDeliveryPlace } from './place-context';
 import { PlaceDialog } from './place-dialog';
 import { ZoneNoticeDialog } from './zone-notice-dialog';
@@ -37,18 +38,50 @@ interface PlaceRestrictionProps {
   minBasketCents: number;
   freeShippingCents: number;
   compact?: boolean;
+  /**
+   * Yerin KAYNAĞI. Verilmezse sitenin ortak cevabı kullanılır (başlıktaki hap) — sepetin hâli.
+   *
+   * **Checkout SEÇİLİ ADRESİ verir** ve bu şart: orada "nereye getirelim" sorusunun cevabı hapta
+   * değil, müşterinin seçtiği adrestedir. İkisi ayrışabilir — müşteri sepette "şimdi değil" deyip
+   * hiç kod vermemiş olabilir (o zaman hap boş, blok hiç doğmaz) ya da hapta bölge içi bir kod
+   * varken bölge dışı bir adrese gönderiyor olabilir (blok yine doğmaz). İki hâlde de kısıt
+   * gerçekti ve ekranda yalnız soluk bir cümle kalıyordu (29.07).
+   */
+  place?: DeliveryPlace | null;
+  /**
+   * "Yeri değiştir" çıkışının davranışı. Verilmezse posta kodu paneli açılır (sepetin hâli).
+   * Checkout'ta yer bir kodla değil ADRESLE değişir — orada bu çıkış adres adımına götürür,
+   * yoksa müşteri kodu değiştirir ama seçili adresi olduğu yerde kalırdı.
+   */
+  onChangePlace?: () => void;
 }
 
-export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCents, compact = false }: PlaceRestrictionProps) {
+/**
+ * Bu ekranda gönderilemeyen satırlar. Bileşenin içinde ve dışında AYNI kural geçerli olsun diye
+ * dışarı açık: çağıran "blok çizilecek mi" sorusunu ikinci bir filtreyle cevaplamamalı — iki
+ * kopya, biri değiştiğinde sessizce ayrışır.
+ *
+ * Zaten engelli satır (tükendi/satıştan kalktı) SAYILMAZ: onun çıkışı bu blok değil, sepetten
+ * çıkarmaktır.
+ */
+export function restrictedLines(place: DeliveryPlace | null, lines: CartLine[]): CartLine[] {
+  if (!place || place.inRoute) return [];
+  return lines.filter((l) => !l.shippable && !l.blocked);
+}
+
+export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCents, compact = false, place: override, onChangePlace }: PlaceRestrictionProps) {
   const t = messages[locale];
-  const { place } = useDeliveryPlace();
+  const { place: chipPlace } = useDeliveryPlace();
   const { saveForLater } = useCart();
   const [placeOpen, setPlaceOpen] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
 
+  // Yer: çağıran verdiyse o (checkout → seçili adres), yoksa sitenin ortak cevabı (sepet → hap).
+  const place = override !== undefined ? override : chipPlace;
+
   // Kısıt YALNIZ rota dışı bir yer bilindiğinde doğar. Yer sorulmamışsa kimse "gönderemiyoruz"
   // diyemez: kime gönderileceği bilinmiyor (tasarım: atlanırsa uyarılar "muhtemel" tonunda kalır).
-  const blocked = place && !place.inRoute ? lines.filter((l) => !l.shippable && !l.blocked) : [];
+  const blocked = restrictedLines(place, lines);
   if (!place || blocked.length === 0) return null;
 
   const remaining = lines.filter((l) => !blocked.includes(l));
@@ -124,8 +157,8 @@ export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCe
             {t.splitCta}
           </Button>
         )}
-        <Button variant="outlineOlive" size="sm" onClick={() => setPlaceOpen(true)}>
-          {t.changeCta}
+        <Button variant="outlineOlive" size="sm" onClick={onChangePlace ?? (() => setPlaceOpen(true))}>
+          {onChangePlace ? t.changeAddressCta : t.changeCta}
         </Button>
         <Button variant="ghost" size="sm" onClick={() => setNoticeOpen(true)}>
           {t.noticeCta}
