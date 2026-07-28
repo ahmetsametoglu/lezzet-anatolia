@@ -2,8 +2,8 @@
 
 import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { OFFER_DISCOUNT_PERCENT, offerDiscountPercent, suggestedOfferPriceCents } from '@lezzet/domain-core';
-import { fromCents, toCents } from '@lezzet/helper';
+import { markupPercent, offerDiscountPercent, priceForMargin, suggestedOfferPriceCents } from '@lezzet/domain-core';
+import { addVat, fromCents, removeVat, toCents } from '@lezzet/helper';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { MoneyField, PercentField } from '@/components/operation/form/money-input';
@@ -11,11 +11,26 @@ import { daysLabel, money, percent, shortDate } from '@/components/operation/ui/
 import { setOfferPriceAction } from './actions';
 import type { BatchView } from './stock-types';
 
-// Near-expiry teklif diyaloğu — "bu partiyi indirimli satışa aç".
+// Tarihi yaklaşan partiye teklif diyaloğu — "bu partiyi indirimli satışa aç".
+//
+// BAŞLIK TÜRKÇE: tasarım "Near-expiry teklif aç" diyor ama operasyon yüzeyi Türkçedir ve "near-expiry"
+// operatörün diline girmemiş bir terim. Ekranın geri kalanı ("Yaklaşan tarihli" sekmesi) zaten Türkçe
+// söylüyordu; başlık tek başına İngilizce kalmıştı.
 //
 // EKRANIN SÖZÜ: sistem işaretledi ve bir fiyat ÖNERDİ; fiyatı da kararı da operatör verir. Bu yüzden
 // öneri bir kutu içinde durur ve alan öneriyle DOLU gelir ama kilitli değildir — "sistem indirime
 // soktu" izlenimi yaratmadan işi kolaylaştırır (design/pages/admin-stok §6).
+//
+// FİYATIN ÜÇ YÜZÜ, tek karar: tutar (€) · liste fiyatına göre indirim (%) · ALIŞ fiyatına göre kâr
+// marjı (%). Üçü aynı sayının farklı okunuşudur; birini yazan öbür ikisini doldurur.
+//
+// Üçüncüsü tasarımda YOK, bilinçli bir ekleme: elden çıkarma kararında asıl soru "listeden ne kadar
+// indirdim" değil, "bu maldan kâr mı ediyorum, ne kadar zarara razıyım". Liste fiyatı bir referans;
+// karar alış fiyatına göre verilir. Marj EKSİ girilebilir — zararına satmak da bir karardır ve elde
+// kalıp imha edilecek maldan iyidir.
+//
+// KDV: teklif fiyatı b2c tabanındadır (KDV DAHİL), alış fiyatı hariç. Marj HT gelir üzerinden
+// hesaplanır — ikisini doğrudan karşılaştırmak kârı KDV oranı kadar şişirirdi.
 //
 // Kendi düzenini kuran bir form (paylaşılan `DialogFooter` yerine kendi alt barı): teklif kapatma
 // yıkıcı olmayan ama geri döndürücü bir eylem ve İptal/Kaydet ikilisinin yanında üçüncü bir yol
@@ -40,6 +55,15 @@ export function OfferDialog({ batch, onClose }: OfferDialogProps) {
   const priceCents = price === null ? null : toCents(price);
   const discount = offerDiscountPercent(batch.listPriceCents, priceCents);
 
+  // Marj: KDV'siz gelir − alış maliyeti, maliyet üzerinden markup (DOMAIN'in marj tanımı).
+  const vatRate = batch.variant.product.vatRate;
+  const cost = batch.purchasePriceCents;
+  const revenueHtCents = priceCents === null ? null : removeVat(priceCents, vatRate);
+  const margin = revenueHtCents === null || cost === null ? null : markupPercent(revenueHtCents, cost);
+  /** Marj yazılınca fiyatı türetir: hedef HT fiyat → KDV eklenerek satış fiyatına döner. */
+  const priceFromMargin = (target: number): number | null =>
+    cost === null ? null : fromCents(addVat(priceForMargin(cost, target), vatRate));
+
   const submit = async (next: number | null) => {
     setBusy(true);
     setError(null);
@@ -63,7 +87,7 @@ export function OfferDialog({ batch, onClose }: OfferDialogProps) {
       open
       onClose={onClose}
       maxWidth={520}
-      title={editing ? 'Teklifi düzenle' : 'Near-expiry teklif aç'}
+      title={editing ? 'Teklifi düzenle' : 'Tarihi yaklaşan partiye teklif aç'}
       subtitle={`${batch.title}${batch.lotNumber ? ` · Lot ${batch.lotNumber}` : ''}`}
       footer={
         <>
@@ -106,7 +130,7 @@ export function OfferDialog({ batch, onClose }: OfferDialogProps) {
         <div className="flex items-start gap-2.5 rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-3.5 py-2.5">
           <span className="flex-none font-ops-display text-ops-sm font-bold text-ops-amber">MLOR</span>
           <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
-            Bu partinin kalan ömrü kabul eşiğinin (%75) altında — teklif kararına bağlam.
+            Bu partinin kalan ömrü kabul eşiğinin (%{batch.mlorPercent}) altında — teklif kararına bağlam.
           </span>
         </div>
       ) : null}
@@ -117,13 +141,13 @@ export function OfferDialog({ batch, onClose }: OfferDialogProps) {
             <>Bu boyun liste fiyatı girilmemiş — sistem öneri üretemiyor, fiyatı siz belirleyin.</>
           ) : (
             <>
-              Sistem önerisi: <strong className="text-ops-body">%{OFFER_DISCOUNT_PERCENT} indirim</strong> · liste{' '}
+              Sistem önerisi: <strong className="text-ops-body">%{batch.offerDiscountPercent} indirim</strong> · liste{' '}
               {money(batch.listPriceCents)} → önerilen {money(batch.suggestedOfferCents)}
             </>
           )}
         </span>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <MoneyField
             label="Teklif fiyatı (€)"
             required
@@ -140,7 +164,7 @@ export function OfferDialog({ batch, onClose }: OfferDialogProps) {
             id="offer-discount"
             value={discount != null && discount >= 0 ? discount : null}
             disabled={batch.listPriceCents === null}
-            placeholder={batch.listPriceCents === null ? '—' : `ör. ${OFFER_DISCOUNT_PERCENT}`}
+            placeholder={batch.listPriceCents === null ? '—' : `ör. ${batch.offerDiscountPercent}`}
             onChange={(pct) => {
               // Hesap MOTORDAN gelir (`suggestedOfferPriceCents` yüzdeyi parametre alır) — aynı
               // indirim iki farklı formülle hesaplanırsa öneri ile elle girilen yüzde ayrışırdı.
@@ -148,13 +172,25 @@ export function OfferDialog({ batch, onClose }: OfferDialogProps) {
               if (next !== null) setPrice(fromCents(next));
             }}
           />
+          {/* Kâr marjı: alış fiyatına göre. EKSİ girilebilir — zararına satmak da bir karardır. */}
+          <PercentField
+            label="Kâr marjı (%)"
+            labelAside="alışa göre"
+            id="offer-margin"
+            value={margin}
+            disabled={cost === null}
+            placeholder={cost === null ? '—' : 'ör. 10'}
+            onChange={(pct) => {
+              if (pct === null) return;
+              const next = priceFromMargin(pct);
+              if (next !== null) setPrice(next);
+            }}
+          />
         </div>
 
-        {batch.purchasePriceCents !== null && priceCents !== null && priceCents < batch.purchasePriceCents ? (
-          <span className="font-ops-body text-ops-xs text-ops-amber">
-            Bu fiyat alış maliyetinin ({money(batch.purchasePriceCents)}) altında — zararına satış. Engel değil, bilginiz olsun.
-          </span>
-        ) : null}
+        {/* KÂR EKSENİ — kararın asıl yüzü. Maliyet bilinmiyorsa alan kilitli ve sebebi yazılı:
+            uydurma bir maliyetle marj göstermek, olmayan bir hesabı doğruymuş gibi sunardı. */}
+        <MarginRow batch={batch} margin={margin} revenueHtCents={revenueHtCents} />
 
         <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
           Teklif bu PARTİYE bağlıdır: miktar tavanı partinin kalanı ({batch.physicalQty} ad.) ve parti tükenince teklif
@@ -163,6 +199,49 @@ export function OfferDialog({ batch, onClose }: OfferDialogProps) {
         </span>
       </div>
     </Dialog>
+  );
+}
+
+interface MarginRowProps {
+  batch: BatchView;
+  margin: number | null;
+  revenueHtCents: number | null;
+}
+
+/**
+ * Kâr satırı — girilen fiyatın ALIŞ fiyatına göre ne anlama geldiğini açık açık yazar.
+ *
+ * Üç hâl var ve üçü de farklı bir cümle hak ediyor: kâr var · başa baş · zarar. Zararı gizlemek ya da
+ * kırmızıyla korkutmak yerine TUTARIYLA söylüyoruz — "3,20 € zarar" bilinçli verilebilecek bir karar,
+ * "kırmızı bir uyarı" ise operatörü düşünmeden geri adım attırır. Elde kalıp imha edilecek maldan
+ * zararına satış iyidir ve ekran bu kararın önünü kesmez.
+ */
+function MarginRow({ batch, margin, revenueHtCents }: MarginRowProps): ReactNode {
+  const cost = batch.purchasePriceCents;
+  if (cost === null) {
+    return (
+      <span className="font-ops-body text-ops-xs text-ops-muted">
+        Bu partinin alış fiyatı girilmemiş — kâr hesaplanamıyor. Karar yalnız liste fiyatına göre verilebilir.
+      </span>
+    );
+  }
+  if (revenueHtCents === null || margin === null) {
+    return <span className="font-ops-body text-ops-xs text-ops-muted">Fiyat girilince kâr hesaplanır.</span>;
+  }
+
+  const profit = revenueHtCents - cost;
+  const tone = profit > 0 ? 'text-ops-olive-dark' : profit === 0 ? 'text-ops-body' : 'text-ops-amber';
+  const verdict = profit > 0 ? `${money(profit)} kâr` : profit === 0 ? 'başa baş' : `${money(-profit)} zarar`;
+
+  return (
+    <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
+      Adet başına <span className={`font-ops-mono ${tone}`}>{verdict}</span> ({percent(margin, 1)}) ·{' '}
+      {money(revenueHtCents)} KDV’siz gelir − {money(cost)} alış.{' '}
+      {/* Toplam etki: karar tek adet için değil, elde kalan tüm parti için veriliyor. */}
+      Parti tükenirse toplam{' '}
+      <span className={`font-ops-mono ${tone}`}>{money(Math.abs(profit) * batch.physicalQty)}</span>{' '}
+      {profit >= 0 ? 'kâr' : 'zarar'}.
+    </span>
   );
 }
 

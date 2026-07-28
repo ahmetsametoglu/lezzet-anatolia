@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
  * `active` dolu olive; pasif çerçeveli olive; `tone='amber'` dikkat çipi; `dashed` ekleme çipi ("+ …").
  * Rozetten (Badge) farkı: çip tıklanabilir/seçilebilir bir kontrol, rozet salt gösterimdir.
  */
-type ChipTone = 'olive' | 'amber';
+type ChipTone = 'olive' | 'amber' | 'red';
 
 interface ChipProps {
   active?: boolean;
@@ -25,6 +25,10 @@ const TONE: Record<ChipTone, { active: string; idle: string }> = {
   amber: {
     active: 'bg-ops-amber text-ops-card border-ops-amber',
     idle: 'text-ops-amber bg-ops-amber-bg border-ops-amber-line',
+  },
+  red: {
+    active: 'bg-ops-red text-ops-card border-ops-red',
+    idle: 'text-ops-red bg-ops-red-bg border-ops-red-line',
   },
 };
 

@@ -9,7 +9,7 @@ import { OfferDialog } from './offer-dialog';
 import { RecallDialog } from './recall-dialog';
 import { StockDesktop } from './stock.desktop';
 import { StockMobile } from './stock.mobile';
-import { stockUrl, type StockScope, type StockTab, type StockUrlState } from './stock-url';
+import { stockUrl, type LossPeriod, type StockScope, type StockTab, type StockUrlState } from './stock-url';
 import type { BatchView, StockData, StockLevelRow } from './stock-types';
 
 // Stok ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
@@ -101,7 +101,7 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
   const onLoadMoreLosses = () => {
     if (!lossCursor || loadingLosses) return;
     setLoadingLosses(true);
-    void loadMoreLossesAction(lossCursor)
+    void loadMoreLossesAction(window.location.search, lossCursor)
       .then(({ data: page }) => {
         if (!page) return;
         setExtraLosses((prev) => [...prev, ...page.losses]);
@@ -151,6 +151,10 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
     loadingLevels,
     onLoadMoreLevels,
     losses: [...data.losses, ...extraLosses],
+    period: urlState.period,
+    // Dönem SUNUCUDA süzülür: toplam ve sebep dağılımı dönemin tamamı üzerinden hesaplanıyor,
+    // client'ta süzmek yalnız görünen sayfayı daraltır ve toplamla çelişirdi.
+    onPeriod: (period: LossPeriod) => applyFilters({ period }),
     hasMoreLosses: lossCursor !== null,
     loadingLosses,
     onLoadMoreLosses,
@@ -178,8 +182,6 @@ function matchesScope(row: StockLevelRow, scope: StockScope): boolean {
       return row.attentionCount > 0;
     case 'offer':
       return row.batches.some((b) => b.offerPriceCents !== null);
-    case 'low':
-      return row.belowMin;
     default:
       return true;
   }

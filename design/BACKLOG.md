@@ -187,21 +187,34 @@ tek yer sekme yokluğu (paketin alanı çok daha az, ürün formunu ikiye bölen
 - **Mobil stok ekranı "Karar" sekmesiyle açılır**, seviyelerle değil. Tasarımın kendi notu: telefonda
   günlük iş "yaklaşan tarihliye bakıp teklif açmak", acil iş lot sorgusu — ikisi de başta durur.
 
-### Stok ekranı — sağ panel partiler oldu (28.07)
+### Stok ekranı — tasarım güncellemesi uygulandı (28.07)
 
-`Operasyon - Stok.dc.html` web düzeninde sağ paneli **"Yaklaşan tarihli — teklif kararı"** olarak
-çiziyor; aynı içerik sekme çubuğunda da ayrı bir sekme olarak var. Yani karar kuyruğu ekranda **iki
-kez** duruyor, buna karşılık briefin (`design/pages/admin-stok.md §2`) açıkça istediği
-**"parti listesi (varyant altında)"** hiç çizilmemiş — kalan raf ömrü, lot, konum ve alış fiyatının
-görüneceği bir yer yok.
+Tasarım güncellendi ve önceki sapmam **kapandı**: sağ panel artık "En acil partiler" (karar kuyruğunun
+ilk üçü + riskteki tutar + "N partinin tümü →"), yani karar kuyruğunun önizlemesi. Tasarımdaki hâliyle
+uygulandı; panel seçili satıra değil KUYRUĞA bağlı, çünkü aciliyet listeden bağımsızdır.
 
-**Karar:** sağ panel seçili boyun **partilerini** gösterir; karar kuyruğu tek yerde, kendi sekmesinde
-kalır. Gerekçe: aynı listeyi iki kez göstermek bir ekran alanı harcar, oysa briefin zorunlu tuttuğu
-içeriğin yeri yoktu. Mobilde ayrı bir panel yok — satır kendi partilerini altında açar (telefonda iki
-panel okunmaz).
+Karar sekmesi de yeniden kurgulandı ve birebir uygulandı: **üç grup** (satılamaz · DLC yaklaşıyor ·
+DDM yaklaşıyor), grup başına parti sayısı + riskteki tutar + kuralın bir cümlelik açıklaması; kartta
+MLOR rozeti, tarih satırı, maliyet satırı, açık teklif kutusu ("N / M çıktı") ve açık teklifte ikinci
+düğme ("Teklifi kapat"). İmha sekmesi dönem seçici + neden dağılımı + geniş tabloya döndü.
 
-Tasarım tarafı "hayır, panel karar kuyruğu kalsın" derse parti listesine yeni bir yer çizilmeli;
-o hâlde bu madde §2'ye taşınır.
+**Kalan açık — parti listesi (varyant altında).** Brief (`admin-stok.md §2`) bunu istiyor, güncellenmiş
+tasarım da çizmiyor: web seviyeler tablosunda satır açılmıyor ve sağ panel artık karar kuyruğu. Parti
+künyesi (lot · konum · alış fiyatı · kalan raf) bugün yalnız KARAR BEKLEYEN partiler için görünüyor;
+sağlıklı bir partinin lotuna bakmanın yolu yok. Mobilde satır açılıyor, webde açılmıyor — bu da ayrıca
+tuhaf. Ya seviyeler satırına açılır bir künye çizilmeli ya brief maddesi düşmeli.
+
+**Eklenen — kâr marjı alanı (tasarımda yok, bilinçli).** Teklif diyaloğunda fiyatın ÜÇÜNCÜ yüzü:
+alış fiyatına göre kâr marjı (%). Tasarım yalnız liste fiyatına göre indirimi çiziyor, ama elden
+çıkarma kararında asıl soru "listeden ne kadar indirdim" değil, "bu maldan kâr mı ediyorum, ne kadar
+zarara razıyım". Liste fiyatı bir referans; karar alış fiyatına göre verilir. Marj EKSİ girilebilir —
+zararına satmak da bir karardır ve elde kalıp imha edilecek maldan iyidir. Üç kutu tek sayının farklı
+okunuşu: birini yazan öbür ikisini doldurur.
+
+**Kalan açık — "Kayıt" sütunu (IM-118).** İmha tablosunda tasarım okunur bir kayıt numarası gösteriyor
+(`IM-118` · `SY-27`) ve kayda köprü kuruyor. `stock_adjustment`'ta böyle bir alan YOK; uuid'in ilk
+altı hanesini "IM-118" gibi göstermek uydurma olurdu. Sütun **çizilmedi**. Gerekiyorsa `Order`'ın
+`reference_no` deseni buraya da uygulanır (sıra + önek) — veri modeli kararı, ekranın değil.
 
 ### Yazı ölçeği — karar (28.07)
 
@@ -226,6 +239,40 @@ yaşatırdı. Yedi rol tanımlandı (`globals.css` §0), 18 boy bunlara indi, **
   değiştirirdi. Ayrı bir tur konusu.
 - **Ad çakışması tuzağı:** renk token'larında `body` ve `card` dolu (`text-ops-body` bir RENK
   yardımcısı). Ölçek adları bu yüzden `base`/`sm` seçildi — `text-ops-body` yazan yer hâlâ renk demek.
+
+### Ölçek bir kademe büyütüldü (28.07, kullanıcı kararı)
+
+Tasarım dosyalarındaki ham boylar (9–22px) ekranda küçük kalıyordu. **Tüm ölçek ~1px yukarı taşındı,
+oranlar korundu** — hiyerarşi aynı, yalnız taban yükseldi:
+
+| token | önce | sonra |
+|---|---|---|
+| `title` | 22 | **24** |
+| `section` | 18 | **19** |
+| `lead` | 15 | **16** |
+| `base` | 13 | **14** |
+| `sm` | 12,5 | **13** |
+| `xs` | 11 | **12** |
+| `micro` | 10 | **11** |
+
+Bu **tek dosyalık** bir değişiklikti (`globals.css`) — 186 kullanım yerinin tek tek dolaşılması
+gerekmedi. Token turunun asıl kazancı buydu ve ilk kez burada nakde çevrildi.
+
+Metin ~%8 genişlediği için **sabit px sütunlar** aynı oranda açıldı (18 sütun, beş tabloda); `fr`/
+`minmax` ile tanımlı sütunlar zaten esniyordu. Yan etki: `micro` 11px olunca rozetler tasarımın
+istediği boya OTURDU — daha önce 1px küçüktü.
+
+Bu bir tasarım sapmasıdır: `.dc.html` dosyaları eski boyları taşımaya devam ediyor. Tasarım tarafı
+ölçeği güncellerse bu madde kapanır; güncellemezse fark bilinçli olarak kalır.
+
+### Palete kurşuni ton eklendi (28.07)
+
+`slate` (#5a6472 / #eceff3, karanlıkta ters çevrilmiş) — **ölçüm/nötr kayıt** anlamı için. İmha
+geçmişindeki "Sayım farkı" tasarımda bu renkte; palette karşılığı yoktu ve mavi kullanılıyordu, oysa
+mavi bizde "onay/aday" demek ve sayım farkına yanlış anlam yüklüyordu. `OpsTone` kapalı liste olduğu
+için derleyici üç tüketiciyi de yakaladı (Badge · MultiToggle · dağılım çipi).
+
+Rozetin dolgusu ve yarıçapı da tasarımın değerlerine çekildi (3×9 · r7); önce 2×8 · r6 idi.
 
 ### Açık kademeler (envanter kararı bekliyor)
 

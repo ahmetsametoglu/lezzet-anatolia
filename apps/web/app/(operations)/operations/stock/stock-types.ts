@@ -10,10 +10,11 @@ import type {
   ProductStatus,
   RecallHit,
   StockAdjustmentDetail,
+  StockAdjustmentReason,
   StockBatchDetail,
 } from '@lezzet/types';
 import type { ExpiryFlag, OfferDecision } from '@lezzet/domain-core';
-import type { StockScope, StockTab } from './stock-url';
+import type { LossPeriod, StockScope, StockTab } from './stock-url';
 
 /**
  * Parti satırı — `StockBatchDetail`'i türetir, üstüne SUNUCUDA verilmiş kararları ekler.
@@ -39,6 +40,13 @@ export type BatchView = StockBatchDetail & {
   suggestedOfferCents: number | null;
   offerPriceCents: number | null;
   purchasePriceCents: number | null;
+  /**
+   * Kararın verildiği EŞİKLER, satırla birlikte taşınır (`Setting`, 0016). Ekran bunları yeniden
+   * okumaz ve sabit yazmaz: "%30 indirim öneriliyor" ile "MLOR eşiğinin (%75) altında" cümlelerinin,
+   * kararı üreten sayının aynısını söylemesi gerekir. Ayar değişince metin de değişir.
+   */
+  offerDiscountPercent: number;
+  mlorPercent: number;
 };
 
 /**
@@ -78,7 +86,20 @@ export type LossRow = StockAdjustmentDetail & {
   title: string;
   /** İşaretli miktarın işareti korunur: + düşüm, − geri ekleme. */
   costCents: number | null;
+  /**
+   * Kaydı giren personelin adı. `created_by` FK TAŞIMAZ (0010: "personel kimliği auth şemasında"),
+   * bu yüzden gömülü `select` ile gelemiyor — sayfadaki kimlikler tek turda ayrıca çözülür.
+   * `null` = kayıt kimin girdiği yazılmadan açılmış (eski/otomatik kayıt).
+   */
+  actorName: string | null;
 };
+
+/** Dönemin sebep dağılımı — "bu çeyrek ne kadar, neden". Sayfalı liste bu soruyu yanıtlayamaz. */
+export interface LossSummary {
+  byReason: Array<{ reason: StockAdjustmentReason; qty: number; costCents: number }>;
+  qty: number;
+  costCents: number;
+}
 
 /** Geri çağırma sonucu — sorgulanan partiler + onlardan çıkan siparişler. */
 export interface RecallResult {
@@ -114,8 +135,15 @@ export interface StockData {
   attention: BatchView[];
   losses: LossRow[];
   lossCursor: KeysetCursor | null;
+  /** Seçili dönemin toplamı ve sebep kırılımı — dönemin TAMAMI üzerinden, sayfadan değil. */
+  lossSummary: LossSummary;
   counts: StockCounts;
   categories: CategoryOption[];
+  /**
+   * Kararın verildiği eşik (`Setting`) — ekranda YAZILI durur. "Neden bu parti listede" sorusu
+   * ayarlara gitmeden yanıtlanabilmeli; ayrıca temiz hâlde "acaba uyarı mı çalışmıyor" şüphesini keser.
+   */
+  nearExpiryPercent: number;
 }
 
 /**
@@ -142,6 +170,8 @@ export interface StockViewProps {
   hasMoreLosses: boolean;
   loadingLosses: boolean;
   onLoadMoreLosses: () => void;
+  period: LossPeriod;
+  onPeriod: (p: LossPeriod) => void;
   selectedId: string | null;
   onSelect: (variantId: string) => void;
   /** Teklif diyaloğunu bu parti için aç. */

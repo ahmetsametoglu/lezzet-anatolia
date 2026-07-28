@@ -123,7 +123,7 @@ function bundleColumns(pricingById: PricingMap, onToggle: (id: string, next: boo
     {
       key: 'price',
       header: 'Fiyat',
-      width: '124px',
+      width: '142px',
       align: 'right',
       cell: (b) => {
         const { listTotalCents, discountPercent } = pricingById.get(b.id)!;
@@ -174,7 +174,7 @@ function bundleColumns(pricingById: PricingMap, onToggle: (id: string, next: boo
       // kutlamaktı ve bir sütunu gürültüye harcıyordu; o yer artık paraya gidiyor.
       key: 'balance',
       header: '',
-      width: '116px',
+      width: '124px',
       cell: (b) => {
         const { balance } = pricingById.get(b.id)!;
         if (balance.balanced) return null;
@@ -184,7 +184,7 @@ function bundleColumns(pricingById: PricingMap, onToggle: (id: string, next: boo
     {
       key: 'active',
       header: 'Satışta',
-      width: '64px',
+      width: '70px',
       align: 'center',
       cell: (b) => (
         <span className="justify-self-center">

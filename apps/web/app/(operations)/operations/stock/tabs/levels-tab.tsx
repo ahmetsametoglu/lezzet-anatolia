@@ -3,18 +3,22 @@
 import { Badge } from '@/components/operation/ui/badge';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Table, type Column } from '@/components/operation/ui/table';
-import { daysLabel, money, shortDate } from '@/components/operation/ui/format';
-import { batchAction, expiryBadge } from '../stock-labels';
+import { money, shortDate } from '@/components/operation/ui/format';
+import { expiryBadge, totalRiskCents } from '../stock-labels';
+import { DecisionCard } from './attention-tab';
 import type { BatchView, StockLevelRow, StockViewProps } from '../stock-types';
 
-// Stok seviyeleri — SOL tabloda boylar (fiili/ayrılmış/kullanılabilir + en yakın tarih), SAĞ panelde
-// seçili boyun partileri. İki panel bilinçli: "satabileceğim ne kadar" ile "hangi partiden" ayrı
-// sorulardır; birini tabloya sığdırmaya çalışmak ikisini de okunmaz yapardı.
-//
-// Satırı açmak yeni bir okuma İSTEMEZ: partiler zaten satırla birlikte geldi (elde ne varsa o kadar).
+/** Sağ panelin önizleme sınırı — kuyruğun tamamı kendi sekmesinde; burası "bugün ne bekliyor" bakışı. */
+const URGENT_PREVIEW = 3;
 
-export function LevelsTab({ levels, selectedId, onSelect, hasMoreLevels, loadingLevels, onLoadMoreLevels, onOpenOffer }: StockViewProps) {
-  const selected = levels.find((r) => r.variantId === selectedId) ?? null;
+// Stok seviyeleri — SOL tabloda boylar (fiili/ayrılmış/kullanılabilir + en yakın tarih), SAĞ panelde
+// KARAR KUYRUĞUNUN ilk üçü.
+//
+// Panel seçili satıra bağlı DEĞİL: aciliyet listeden bağımsızdır. Operatör hangi ürüne bakarsa baksın
+// aynı üç parti bekliyordur; paneli seçime bağlamak, kuyruğu ancak doğru satıra tıklayınca görünür
+// kılardı. Tam karar yüzeyi kendi sekmesinde, burası ona giden kapı.
+
+export function LevelsTab({ data, levels, selectedId, onSelect, hasMoreLevels, loadingLevels, onLoadMoreLevels, onOpenOffer, onTab }: StockViewProps) {
 
   const columns: Column<StockLevelRow>[] = [
     {
@@ -37,7 +41,7 @@ export function LevelsTab({ levels, selectedId, onSelect, hasMoreLevels, loading
     {
       key: 'available',
       header: 'Kullanılabilir',
-      width: '104px',
+      width: '112px',
       align: 'right',
       cell: (r) => (
         <div className="flex flex-col items-end gap-px">
@@ -58,7 +62,7 @@ export function LevelsTab({ levels, selectedId, onSelect, hasMoreLevels, loading
     {
       key: 'reserved',
       header: 'Ayrılmış',
-      width: '82px',
+      width: '88px',
       align: 'right',
       cell: (r) => (
         <span
@@ -72,14 +76,14 @@ export function LevelsTab({ levels, selectedId, onSelect, hasMoreLevels, loading
     {
       key: 'physical',
       header: 'Fiili',
-      width: '72px',
+      width: '78px',
       align: 'right',
       cell: (r) => <span className="font-ops-mono text-ops-sm text-ops-muted">{r.physicalQty}</span>,
     },
     {
       key: 'nearest',
       header: 'En yakın',
-      width: '132px',
+      width: '142px',
       align: 'right',
       cell: (r) => {
         if (!r.nearest) return <span className="font-ops-body text-ops-xs text-ops-faint">stok yok</span>;
@@ -114,128 +118,80 @@ export function LevelsTab({ levels, selectedId, onSelect, hasMoreLevels, loading
         />
       </div>
 
-      <BatchPanel row={selected} onOpenOffer={onOpenOffer} />
+      <UrgentPanel batches={data.attention} onOpenOffer={onOpenOffer} onSeeAll={() => onTab('attention')} />
     </div>
   );
 }
 
-interface BatchPanelProps {
-  row: StockLevelRow | null;
+interface UrgentPanelProps {
+  batches: BatchView[];
   onOpenOffer: (stockId: string) => void;
+  onSeeAll: () => void;
 }
 
 /**
- * Seçili boyun partileri — FEFO sırasında (önce süresi dolan). Sıra admin tarafından yönetilmez ve
- * bunu ekran söyler: hazırlıkta hangi partinin çıkacağı bir karar değil, kuraldır.
+ * **En acil partiler** — karar kuyruğunun ilk üçü, seviyelere bakarken görünen önizleme.
+ *
+ * Tam karar yüzeyi kendi sekmesinde (gruplu, filtreli); burası "bugün bir şey bekliyor mu" sorusunun
+ * cevabı. Panel BOYA değil KUYRUĞA bağlıdır: seçili satır değişince içeriği değişmez — aciliyet
+ * listeden bağımsızdır, operatör hangi ürüne bakarsa baksın aynı üç parti bekliyordur.
+ *
+ * Riskteki tutar başlıkta: "3 parti" ile "620 € çöpe gidecek" aynı cümle değildir ve ikincisi
+ * operatörü sekmeye götüren şeydir.
  */
-function BatchPanel({ row, onOpenOffer }: BatchPanelProps) {
-  if (!row) {
+function UrgentPanel({ batches, onOpenOffer, onSeeAll }: UrgentPanelProps) {
+  if (batches.length === 0) {
     return (
-      <div className="flex items-center justify-center bg-ops-subtle p-8">
-        <span className="font-ops-body text-ops-base text-ops-muted">Partilerini görmek için bir boy seçin.</span>
+      <div className="flex items-start justify-center bg-ops-subtle p-6">
+        <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-line bg-ops-white px-4 py-4">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-[26px] w-[26px] place-items-center rounded-full bg-ops-olive-bg font-ops-display text-ops-base font-semibold text-ops-olive-dark">
+              ✓
+            </span>
+            <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Tarih riski yok</span>
+          </div>
+          <span className="font-ops-body text-ops-sm leading-[1.6] text-ops-body">
+            Eşik altına inen parti yok. Bir parti eşiği geçtiğinde burada ve “Yaklaşan tarihli” sekmesinde görünür.
+          </span>
+        </div>
       </div>
     );
   }
 
+  // En az kalan üstte; ömrü bilinmeyen sona. Satılamazlar her hâlde önce — geri dönüşü yok.
+  const sorted = [...batches].sort((a, b) => {
+    const blocked = Number(b.decision === 'must_discard') - Number(a.decision === 'must_discard');
+    if (blocked !== 0) return blocked;
+    return (a.remainingPercent ?? Number.POSITIVE_INFINITY) - (b.remainingPercent ?? Number.POSITIVE_INFINITY);
+  });
+  const top = sorted.slice(0, URGENT_PREVIEW);
+  const risk = totalRiskCents(batches);
+
   return (
     <div className="flex min-h-0 flex-col bg-ops-subtle">
-      <div className="flex flex-col gap-px border-b border-ops-line px-5 py-3">
-        <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">{row.title}</span>
+      <div className="flex flex-none flex-col gap-0.5 border-b border-ops-line px-5 py-3">
+        <div className="flex items-baseline gap-2">
+          <span className="font-ops-display text-ops-base font-semibold text-ops-ink">En acil partiler</span>
+          {risk !== null ? <span className="font-ops-mono text-ops-xs text-ops-red">{money(risk)} riskte</span> : null}
+        </div>
         <span className="font-ops-body text-ops-xs text-ops-muted">
-          {row.batches.length === 0
-            ? 'Bu boyda elde parti yok'
-            : `${row.batches.length} parti · hazırlıkta önce süresi dolan çıkar (FEFO)`}
+          En az kalan üstte · tam karar yüzeyi “Yaklaşan tarihli” sekmesinde
         </span>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-5 py-4">
-        {row.batches.length === 0 ? (
-          <span className="font-ops-body text-ops-sm text-ops-muted">
-            Stok girişi depo ekranından yapılır — burası görünüm ve karar yeridir.
-          </span>
-        ) : (
-          row.batches.map((b) => <BatchCard key={b.id} batch={b} onOpenOffer={onOpenOffer} />)
-        )}
-      </div>
-    </div>
-  );
-}
-
-interface BatchCardProps {
-  batch: BatchView;
-  onOpenOffer: (stockId: string) => void;
-}
-
-/** Tek parti kartı — künye (lot, konum, alış fiyatı) + tarih durumu + teklif yolu. */
-function BatchCard({ batch, onOpenOffer }: BatchCardProps) {
-  const badge = expiryBadge(batch);
-  const action = batchAction(batch);
-
-  return (
-    <div className="flex flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-white p-3">
-      <div className="flex items-start gap-2">
-        <div className="mr-auto flex min-w-0 flex-col gap-px">
-          <span className="font-ops-mono text-ops-sm text-ops-ink">{batch.lotNumber ?? 'lot no yok'}</span>
-          <span className="font-ops-body text-ops-xs text-ops-muted">
-            {shortDate(batch.expiryDate)} · {daysLabel(batch.daysLeft)}
-          </span>
-        </div>
-        <Badge tone={badge.tone}>{badge.text}</Badge>
-      </div>
-
-      {/* Kalan raf ömrü ÇUBUK olarak: yüzde bir karar eşiği ve göz onu sayıdan hızlı okur. Ömür
-          girilmemişse çubuk hiç çizilmez — boş bir çubuk "%0" gibi görünürdü. */}
-      {batch.remainingPercent !== null ? (
-        <div className="flex items-center gap-2">
-          {/* Çubuk `rounded-full` — bir YARIÇAP kademesi değil, tam yuvarlak uç (token gerekmez). */}
-          <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-ops-line-soft">
-            <span
-              className={`block h-full ${badge.tone === 'red' ? 'bg-ops-red-dot' : badge.tone === 'amber' ? 'bg-ops-amber-dot' : 'bg-ops-olive'}`}
-              style={{ width: `${Math.max(2, Math.round(batch.remainingPercent))}%` }}
-            />
-          </span>
-          <span className="font-ops-mono text-ops-micro text-ops-muted">kalan %{Math.round(batch.remainingPercent)}</span>
-        </div>
-      ) : null}
-
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-ops-body text-ops-xs text-ops-muted">
-        <span>
-          <span className="text-ops-faint">elde</span> <span className="font-ops-mono text-ops-body">{batch.physicalQty}</span>
-          {batch.initialQty !== batch.physicalQty ? <span className="text-ops-faint"> / {batch.initialQty}</span> : null}
-        </span>
-        {batch.location ? <span>{batch.location}</span> : null}
-        {/* Alış fiyatı YALNIZ admin ekranında: depo maliyet görmez (design/pages/admin-stok §6). */}
-        <span>
-          <span className="text-ops-faint">alış</span>{' '}
-          <span className="font-ops-mono text-ops-body">{money(batch.purchasePriceCents)}</span>
-        </span>
-        {batch.belowMlor ? (
-          <span className="text-ops-amber" title="Kalan ömrü MLOR eşiğinin (%75) altında — teklif kararına bağlam">
-            kısa ömürlü
-          </span>
-        ) : null}
-      </div>
-
-      <div className="flex items-center gap-2 border-t border-ops-line-soft pt-2.5">
-        {batch.offerPriceCents !== null ? (
-          <span className="mr-auto font-ops-body text-ops-xs text-ops-olive-dark">
-            Teklif <span className="font-ops-mono text-ops-sm">{money(batch.offerPriceCents)}</span>
-            <span className="text-ops-muted"> · tavan {batch.physicalQty} ad.</span>
-          </span>
-        ) : (
-          <span className="mr-auto font-ops-body text-ops-xs text-ops-muted">
-            {action.kind === 'discard' ? 'Satılamaz — imha kaydı depo ekranından' : 'Teklif yok'}
-          </span>
-        )}
-        {action.kind === 'discard' ? null : (
-          <button
-            type="button"
-            onClick={() => onOpenOffer(batch.id)}
-            className="cursor-pointer rounded-ops-btn border border-ops-line bg-ops-white px-2.5 py-1.5 font-ops-display text-ops-xs font-semibold text-ops-body hover:border-ops-olive hover:text-ops-olive-dark"
-          >
-            {action.label}
-          </button>
-        )}
+      <div className="flex min-h-0 flex-1 flex-col gap-[11px] overflow-y-auto px-5 py-3.5">
+        {top.map((b) => (
+          <DecisionCard key={b.id} batch={b} onOpenOffer={onOpenOffer} />
+        ))}
+        {/* Kuyruğun tamamı sekmede: önizleme üçle sınırlı ve bunu SÖYLER — sessizce kesilen bir liste,
+            "hepsi bu kadarmış" sanılır. */}
+        <button
+          type="button"
+          onClick={onSeeAll}
+          className="cursor-pointer rounded-ops-btn border border-ops-olive-line px-3 py-2.5 font-ops-display text-ops-sm font-semibold text-ops-olive-dark hover:bg-ops-olive-bg"
+        >
+          {batches.length} partinin tümü →
+        </button>
       </div>
     </div>
   );

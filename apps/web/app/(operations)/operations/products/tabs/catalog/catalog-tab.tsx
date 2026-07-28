@@ -33,7 +33,7 @@ function catalogColumns(kind: CatalogKind, header: string): Column<CatalogRow>[]
     {
       key: 'image',
       header: '',
-      width: '76px',
+      width: '82px',
       cell: (r) => (
         <div className="w-16">
           <FramedImage
@@ -58,11 +58,11 @@ function catalogColumns(kind: CatalogKind, header: string): Column<CatalogRow>[]
         </div>
       ),
     },
-    { key: 'count', header: 'Ürün', width: '72px', align: 'right', cell: (r) => <span className="font-ops-mono text-ops-sm text-ops-body">{r.count}</span> },
+    { key: 'count', header: 'Ürün', width: '78px', align: 'right', cell: (r) => <span className="font-ops-mono text-ops-sm text-ops-body">{r.count}</span> },
     {
       key: 'status',
       header: 'Durum',
-      width: '84px',
+      width: '90px',
       align: 'right',
       cell: (r) => {
         const st = catalogStatus(r);

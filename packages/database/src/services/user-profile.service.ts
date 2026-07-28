@@ -56,6 +56,16 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
     return { byPhone: byPhone?.id ?? null, byEmail: byEmail?.id ?? null };
   }
 
+  /**
+   * Verilen kimlikler TEK sorguda — "bu kaydı kim girdi" gibi sorular için. FK taşımayan alanlar
+   * (ör. `stock_adjustment.created_by`) gömülü `select` ile çözülemez; satır başına sorgu atmak
+   * yerine sayfadaki kimlikler toplanıp bir kez okunur.
+   */
+  async listByIds(ids: readonly string[]): Promise<UserProfile[]> {
+    if (ids.length === 0) return [];
+    return this.getAll({ id: [...ids] });
+  }
+
   /** Profil listesi (admin) — en yeni önce, sonsuz kaydırma. */
   async list(opts: { isDraft?: boolean; b2bPending?: boolean; cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<UserProfile>> {
     const filters: Record<string, unknown> = {};

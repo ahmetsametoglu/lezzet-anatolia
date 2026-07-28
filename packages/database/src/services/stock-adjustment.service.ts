@@ -16,7 +16,20 @@ import {
   type StockAdjustmentUpdate,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+
 import { dbToApp } from '../utils/case-transformers';
+
+/** Kayıt + hangi partinin, hangi ürünün — iki okumanın paylaştığı gömülü seçim. */
+const DETAIL_SELECT =
+  '*,stock:stock(id,lot_number,expiry_date,variant:product_variant(id,label,product:product(id,name)))';
+
+/** Dönem süzgeci — verilmeyen uç sınırsızdır ("Tümü" iki ucu da vermez). */
+function periodFilters(from?: Date, to?: Date) {
+  const filters: Array<{ field: string; operator: 'gte' | 'lte'; value: string }> = [];
+  if (from) filters.push({ field: 'created_at', operator: 'gte', value: from.toISOString() });
+  if (to) filters.push({ field: 'created_at', operator: 'lte', value: to.toISOString() });
+  return filters;
+}
 
 export interface AdjustInput {
   stockId: string;
@@ -66,14 +79,51 @@ export class StockAdjustmentService extends BaseDbService<StockAdjustment, Stock
    * Ayrıntılı analiz burada DEĞİL (raporlar, DOMAIN §12): bu liste "ne oldu" sorusunu yanıtlar,
    * `lossSummary` ise "ne kadar" sorusunu.
    */
-  async listRecent(opts: { limit?: number; cursor?: KeysetCursor } = {}): Promise<Page<StockAdjustmentDetail>> {
+  async listRecent(opts: { from?: Date; to?: Date; limit?: number; cursor?: KeysetCursor } = {}): Promise<Page<StockAdjustmentDetail>> {
     return this.getPageAs(StockAdjustmentDetailSchema, undefined, {
-      select: '*,stock:stock(id,lot_number,expiry_date,variant:product_variant(id,label,product:product(id,name)))',
+      select: DETAIL_SELECT,
+      rangeFilters: periodFilters(opts.from, opts.to),
       orderBy: 'createdAt',
       orderDirection: 'desc',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
     });
+  }
+
+  /**
+   * Dönemin SEBEP DAĞILIMI ve toplamı — "bu çeyrek ne kadar çöpe gitti, neden".
+   *
+   * Sayfalı liste bu soruyu yanıtlayamaz: ilk 30 satır dönemin toplamı değildir. Toplam ancak dönemin
+   * TAMAMI üzerinden çıkar, o yüzden ayrı ve DAR bir okuma — üç kolon (`reason, qty, unit_cost`),
+   * satırın kalanı taşınmaz.
+   *
+   * RPC YAZILMADI: tek tablo üzerinde toplama, STACK §13'ün "çok tablolu + farkı bariz" eşiğini
+   * karşılamıyor. Dönem seçicisi de yükü sınırlıyor. "Tümü" seçildiğinde okuma geçmişle büyür —
+   * ölçülüp gerekirse RPC'ye alınır; bugün ölçüsüz bir migration yazmak erken karar olurdu.
+   */
+  async reasonSummary(from?: Date, to?: Date): Promise<{ byReason: Map<StockAdjustmentReason, { qty: number; costCents: number }>; qty: number; costCents: number }> {
+    let query = this.supabase.from(this.tableName).select('reason,qty,unit_cost');
+    if (from) query = query.gte('created_at', from.toISOString());
+    if (to) query = query.lte('created_at', to.toISOString());
+    const { data, error } = await query;
+    if (error) throw error;
+
+    type Row = { reason: StockAdjustmentReason; qty: number; unit_cost: string | number | null };
+    const byReason = new Map<StockAdjustmentReason, { qty: number; costCents: number }>();
+    let qty = 0;
+    let costCents = 0;
+    for (const row of (data ?? []) as unknown as Row[]) {
+      // Maliyet euro cinsinden numeric; para tamsayı cent'te taşınır (STACK §8). İşaret KORUNUR:
+      // geri ekleme (negatif) toplamdan düşer → rapor NET kaybı gösterir, şişmiş bir imha rakamı değil.
+      const rowCost = Math.round(Number(row.unit_cost ?? 0) * 100) * row.qty;
+      const entry = byReason.get(row.reason) ?? { qty: 0, costCents: 0 };
+      entry.qty += row.qty;
+      entry.costCents += rowCost;
+      byReason.set(row.reason, entry);
+      qty += row.qty;
+      costCents += rowCost;
+    }
+    return { byReason, qty, costCents };
   }
 
   /**

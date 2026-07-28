@@ -12,6 +12,7 @@ const TONE: Record<OpsTone, { cls: string; dot: string }> = {
   amber: { cls: 'text-ops-amber bg-ops-amber-bg', dot: 'bg-ops-amber-dot' },
   red: { cls: 'text-ops-red bg-ops-red-bg', dot: 'bg-ops-red-dot' },
   blue: { cls: 'text-ops-blue bg-ops-blue-bg', dot: 'bg-ops-blue' },
+  slate: { cls: 'text-ops-slate bg-ops-slate-bg', dot: 'bg-ops-slate' },
 };
 
 interface BadgeProps {
@@ -25,7 +26,7 @@ export function Badge({ tone = 'neutral', dot = false, className, children }: Ba
   const t = TONE[tone];
   return (
     <span
-      className={['inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 font-ops-display text-ops-micro font-semibold', t.cls, className]
+      className={['inline-flex items-center gap-1.5 rounded-[7px] px-[9px] py-[3px] font-ops-display text-ops-micro font-semibold', t.cls, className]
         .filter(Boolean)
         .join(' ')}
     >

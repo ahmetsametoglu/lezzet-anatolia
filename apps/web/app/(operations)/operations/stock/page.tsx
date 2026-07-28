@@ -2,8 +2,10 @@ import {
   CategoryService,
   PriceService,
   ProductService,
+  SettingsService,
   StockAdjustmentService,
   StockService,
+  UserProfileService,
   serviceDb,
 } from '@lezzet/database';
 import { needsExpiryAttention } from '@lezzet/domain-core';
@@ -11,8 +13,8 @@ import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { detectDevice } from '@/lib/device';
 import { StockClient } from './stock-client';
-import { toBatchViews, toLevelRows, toLossRows } from './stock-read';
-import { parseStockUrl, toStockFilters } from './stock-url';
+import { readActorNames, readExpiryThresholds, toBatchViews, toLevelRows, toLossRows } from './stock-read';
+import { parseStockUrl, periodStart, toStockFilters } from './stock-url';
 
 // Stok görünümü (09.13) — parti gözü ve tarihe bağlı kararların ekranı. Okuma burada (RSC).
 //
@@ -40,17 +42,26 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   const productSvc = new ProductService(db);
   const stockSvc = new StockService(db);
 
-  const [productPage, batchRows, categories, lossPage] = await Promise.all([
+  // Eşikler İŞLETMENİN kararıdır (`Setting`, 0016) — kod varsayılanı yalnız satır hiç yoksa geçerli.
+  // `SettingsService` süreç içinde önbelleklidir: ilk istekte üç okuma, sonrakilerde sıfır.
+  // İmha geçmişi DÖNEMLİDİR: liste sayfalı ama toplam dönemin TAMAMI üzerinden çıkar — ilk 30 satırın
+  // toplamı "bu çeyrek ne kadar çöpe gitti" sorusunu yanıtlamaz.
+  const lossSvc = new StockAdjustmentService(db);
+  const from = periodStart(urlState.period, new Date());
+
+  const [productPage, batchRows, categories, lossPage, lossTotals, thresholds] = await Promise.all([
     productSvc.listStockRows({ filters, limit: DEFAULT_PAGE_SIZE }),
     stockSvc.listInStockDetailed(),
     new CategoryService(db).list(),
-    new StockAdjustmentService(db).listRecent({ limit: DEFAULT_PAGE_SIZE }),
+    lossSvc.listRecent({ from, limit: DEFAULT_PAGE_SIZE }),
+    lossSvc.reasonSummary(from),
+    readExpiryThresholds(new SettingsService(db)),
   ]);
 
   // TEK "şimdi": okumanın tüm satırları aynı ana göre değerlendirilsin. İstek ortasında gün dönerse
   // listenin yarısı "yaklaşan", yarısı "geçmiş" görünürdü.
   const now = new Date();
-  const undecided = toBatchViews(batchRows, { now });
+  const undecided = toBatchViews(batchRows, { now, thresholds });
 
   // Fiyat YALNIZ karar bekleyen boylar için okunur — teklif önerisinin ihtiyacı bu kadar.
   const attentionVariantIds = [
@@ -58,9 +69,10 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   ];
   const pageVariantIds = productPage.rows.flatMap((p) => p.variants.map((v) => v.id));
 
-  const [available, priceMap] = await Promise.all([
+  const [available, priceMap, actorNames] = await Promise.all([
     stockSvc.getAvailableMap(pageVariantIds),
     new PriceService(db).findApplicableMap(attentionVariantIds, 'b2c'),
+    readActorNames(new UserProfileService(db), lossPage.rows),
   ]);
 
   // Liste fiyatı = b2c kanal fiyatı (KDV dahil). Müşteriye özel fiyat burada aranmaz: teklif herkese
@@ -70,7 +82,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
       channelPrice ? [[variantId, toCents(channelPrice.amount)] as const] : [],
     ),
   );
-  const batches = toBatchViews(batchRows, { now, listPriceCents });
+  const batches = toBatchViews(batchRows, { now, thresholds, listPriceCents });
 
   const categoryNames = new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)]));
   const levels = toLevelRows(productPage.rows, batches, available, categoryNames);
@@ -84,8 +96,16 @@ export default async function StockPage({ searchParams }: StockPageProps) {
         levels,
         nextCursor: productPage.nextCursor,
         attention,
-        losses: toLossRows(lossPage.rows),
+        losses: toLossRows(lossPage.rows, actorNames),
         lossCursor: lossPage.nextCursor,
+        lossSummary: {
+          // Sıra tutara göre: en pahalı sebep başta dursun — dağılıma bakan kişi onu arıyor.
+          byReason: [...lossTotals.byReason]
+            .map(([reason, v]) => ({ reason, ...v }))
+            .sort((a, b) => b.costCents - a.costCents),
+          qty: lossTotals.qty,
+          costCents: lossTotals.costCents,
+        },
         // Sayaçlar TÜM partiler üzerinden: liste sayfalı, uyarı değil. "6 karar bekliyor" yazıp
         // sayfada 2 göstermek, kalan dördünü görünmez kılardı.
         counts: {
@@ -94,6 +114,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
           blocked: batches.filter((b) => b.decision === 'must_discard').length,
         },
         categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
+        nearExpiryPercent: thresholds.nearExpiryPercent,
       }}
       device={device}
       urlState={urlState}

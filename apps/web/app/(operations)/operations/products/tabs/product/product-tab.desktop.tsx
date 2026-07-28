@@ -49,12 +49,12 @@ const COLUMNS: Column<ProductView>[] = [
   {
     key: 'variants',
     header: 'Varyant',
-    width: '60px',
+    width: '66px',
     align: 'center',
     cell: (r) => <span className="font-ops-mono text-ops-sm text-ops-strong">{r.variants.length}</span>,
   },
-  { key: 'langs', header: 'Diller', width: '82px', align: 'center', cell: (r) => <LangBadge langs={filledContentLangs(r.name)} /> },
-  { key: 'status', header: 'Durum', width: '74px', align: 'right', cell: (r) => <StatusBadge status={r.status} /> },
+  { key: 'langs', header: 'Diller', width: '88px', align: 'center', cell: (r) => <LangBadge langs={filledContentLangs(r.name)} /> },
+  { key: 'status', header: 'Durum', width: '80px', align: 'right', cell: (r) => <StatusBadge status={r.status} /> },
 ];
 
 // "+ durum" — dashed çip açılır durum menüsü; seçilince aktif çip + ✕ ile temizlenir (İşlevsel süzgeç).

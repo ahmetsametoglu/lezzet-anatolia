@@ -166,14 +166,22 @@
      tek parça değildi: her ekran ayrı zamanda çizilmiş, her biri kendi boyunu seçmiş. 18 boy YEDİ
      role indirgendi; her birleştirme en fazla 1-2 px (ayrıntı: design/BACKLOG §5).
      Satır yüksekliği ve ağırlık BİLEREK gömülmedi: yoğun tablolarda `leading` yerel karar ve
-     token'a gömmek, hiç `leading` yazmayan yerlerin satır aralığını sessizce değiştirirdi. */
-  --text-ops-title: 22px;     /* sayfa başlığı            ← 22 · 24 */
-  --text-ops-section: 18px;   /* bölüm başlığı            ← 17 · 18 · 20 */
-  --text-ops-lead: 15px;      /* öne çıkan sayı/kart adı  ← 15 · 16 */
-  --text-ops-base: 13px;      /* gövde, tablo hücresi     ← 13 · 13,5 · 14 */
-  --text-ops-sm: 12.5px;      /* ikincil satır            ← 12 · 12,5 */
-  --text-ops-xs: 11px;        /* etiket, yardım metni     ← 11 · 11,5 */
-  --text-ops-micro: 10px;     /* tablo başlığı, rozet     ← 9 · 9,5 · 10 · 10,5 */
+     token'a gömmek, hiç `leading` yazmayan yerlerin satır aralığını sessizce değiştirirdi.
+
+     BİR KADEME BÜYÜTÜLDÜ (28.07, kullanıcı kararı): tasarım dosyalarındaki ham boylar 9–22px
+     aralığındaydı ve ekranda küçük kalıyordu. Tüm ölçek ~1px yukarı taşındı; oranlar korundu, yani
+     hiyerarşi aynı. Ölçek TOKEN olduğu için bu tek dosyalık bir değişiklik — 186 yerin tek tek
+     dolaşılması gerekmedi, turun asıl kazancı buydu.
+
+     Yan etki: `micro` 10 → 11px oldu ve rozetler artık tasarımın istediği 11px'e OTURUYOR (eskiden
+     1px küçüktü). Tasarımdan bilinçli sapma; design/BACKLOG §5'te kayıtlı. */
+  --text-ops-title: 24px;     /* sayfa başlığı            ← 22 · 24 */
+  --text-ops-section: 19px;   /* bölüm başlığı            ← 17 · 18 · 20 */
+  --text-ops-lead: 16px;      /* öne çıkan sayı/kart adı  ← 15 · 16 */
+  --text-ops-base: 14px;      /* gövde, tablo hücresi     ← 13 · 13,5 · 14 */
+  --text-ops-sm: 13px;        /* ikincil satır            ← 12 · 12,5 */
+  --text-ops-xs: 12px;        /* etiket, yardım metni     ← 11 · 11,5 */
+  --text-ops-micro: 11px;     /* tablo başlığı, rozet     ← 9 · 9,5 · 10 · 10,5 */
 
   /* §0.1 Yüzey ve mürekkep */
   --color-ops-ink: #22251f; /* başlık, koyu buton, birincil metin, "L" */
@@ -227,6 +235,13 @@
   --color-ops-blue-dark: #2f5a78; /* kutu başlığı ve gövdesi */
   --color-ops-blue-bg: #e6eef3; /* bilgi kutusu, rozet arkası */
   --color-ops-blue-line: #bcd0e0; /* bilgi kutusu çerçevesi */
+
+  /* Kurşuni — ÖLÇÜM/nötr kayıt: sayım farkı gibi "kayıp da değil, kazanç da değil" olaylar.
+     Mavi bu işe uymuyordu: bizim palette mavi onay/aday demek ve sayım farkına yanlış anlam yükler. */
+  --color-ops-slate: #5a6472;
+  --color-ops-slate-dark: #47505c;
+  --color-ops-slate-bg: #eceff3;
+  --color-ops-slate-line: #dde2e8;
 
   --color-ops-violet: #5a4a8a; /* ajan ikonu, etiket (ayrı koyu katman yok) */
   --color-ops-violet-bg: #ece8f5; /* öneri kutusu, rozet arkası */
@@ -333,6 +348,13 @@ body {
   --color-ops-blue-dark: #c3d6e4;
   --color-ops-blue-bg: #1a2a36;
   --color-ops-blue-line: #34505f;
+
+  /* Kurşuni karanlıkta da nötr kalır: zemin koyulaşır, metin açılır — parlaklık tersine çevrilir
+     ki rozet gece "beyaz bir leke" olmasın. */
+  --color-ops-slate: #97a3b3;
+  --color-ops-slate-dark: #cbd4de;
+  --color-ops-slate-bg: #232a33;
+  --color-ops-slate-line: #3b4552;
 
   --color-ops-violet: #a99adf;
   --color-ops-violet-bg: #241f38;

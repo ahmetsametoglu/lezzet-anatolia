@@ -3,14 +3,13 @@
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { SearchInput } from '@/components/operation/ui/search-input';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { SearchIcon } from '@/components/operation/ui/icons';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
-import { money, percent, shortDate } from '@/components/operation/ui/format';
+import { money, percent } from '@/components/operation/ui/format';
 import { AttentionTab } from './tabs/attention-tab';
 import { LossesTab } from './tabs/losses-tab';
-import { expiryBadge } from './stock-labels';
+import { expiryBadge, expiryLine } from './stock-labels';
 import type { StockLevelRow, StockViewProps } from './stock-types';
 import type { StockTab } from './stock-url';
 
@@ -28,7 +27,7 @@ const TABS: Array<{ key: StockTab; label: string }> = [
 ];
 
 export function StockMobile(props: StockViewProps) {
-  const { data, tab, onTab, search, onSearch, onOpenRecall } = props;
+  const { data, tab, onTab, onOpenRecall } = props;
   const { attention, blocked } = data.counts;
 
   return (
@@ -43,11 +42,7 @@ export function StockMobile(props: StockViewProps) {
         </Button>
       </PageHeader>
 
-      <Tabs items={TABS} active={tab} onSelect={onTab} />
-
-      <div className="border-b border-ops-line px-4 py-2.5">
-        <SearchInput value={search} onChange={onSearch} placeholder="Ürün / boy ara…" />
-      </div>
+      <Tabs items={TABS.map((t) => (t.key === 'attention' ? { ...t, badge: attention } : t))} active={tab} onSelect={onTab} />
 
       {tab === 'attention' && <AttentionTab {...props} />}
       {tab === 'levels' && <MobileLevels {...props} />}
@@ -120,8 +115,12 @@ function LevelCard({ row, open, onToggle, onOpenOffer }: LevelCardProps) {
               <div className="mr-auto flex min-w-0 flex-col gap-px">
                 <span className="font-ops-mono text-ops-sm text-ops-ink">{b.lotNumber ?? 'lot no yok'}</span>
                 <span className="font-ops-body text-ops-xs text-ops-muted">
-                  {shortDate(b.expiryDate)} · {b.physicalQty} ad.
+                  {b.physicalQty} ad.
                   {b.remainingPercent !== null ? ` · kalan ${percent(b.remainingPercent)}` : ''}
+                </span>
+                {/* Tarih satırı TİPİYLE birlikte: DLC ile DDM'in sonucu farklı, yalnız tarih yetmez. */}
+                <span className={`font-ops-mono text-ops-xs ${b.decision === 'must_discard' ? 'text-ops-red' : 'text-ops-muted'}`}>
+                  {expiryLine(b)}
                 </span>
               </div>
               {b.decision === 'must_discard' ? (

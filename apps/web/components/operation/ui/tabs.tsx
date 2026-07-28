@@ -13,6 +13,12 @@ import type { ReactNode } from 'react';
 interface TabItem<K extends string> {
   key: K;
   label: string;
+  /**
+   * Sekmenin yanındaki sayaç — YALNIZ karar bekleyen iş için. Her sekmede satır sayısı yazmak rozeti
+   * dekora çevirir ve gerçek uyarı görünmez olur; rozet "burada senden bir şey bekleniyor" demektir.
+   * `0` ve `null` çizilmez: boş bir rozet, olmayan bir işi varmış gibi gösterir.
+   */
+  badge?: number | null;
 }
 
 interface TabsProps<K extends string> {
@@ -40,7 +46,14 @@ export function Tabs<K extends string>({ items, active, onSelect, action, classN
               on ? 'border-ops-olive text-ops-ink' : 'border-transparent text-ops-muted hover:text-ops-strong',
             ].join(' ')}
           >
-            {t.label}
+            <span className="flex items-center gap-1.5">
+              {t.label}
+              {t.badge ? (
+                <span className="rounded-full bg-ops-amber-bg px-1.5 py-px font-ops-mono text-ops-micro font-medium text-ops-amber">
+                  {t.badge}
+                </span>
+              ) : null}
+            </span>
           </button>
         );
       })}

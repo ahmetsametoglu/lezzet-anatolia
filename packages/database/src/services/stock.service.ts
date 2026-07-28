@@ -29,7 +29,7 @@ import { dbToApp } from '../utils/case-transformers';
 
 /** Parti + kimin partisi olduğu — iki okumanın paylaştığı gömülü seçim (tek yerde yazılır). */
 const BATCH_DETAIL_SELECT =
-  '*,variant:product_variant(id,label,product:product(id,name,category_id,date_type,shelf_life_days))';
+  '*,variant:product_variant(id,label,product:product(id,name,category_id,date_type,shelf_life_days,vat_rate))';
 
 /**
  * Lot aramasının tavanı. Geri çağırma bir NUMARAYLA yapılır; onlarca eşleşme çıkıyorsa terim fazla

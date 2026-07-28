@@ -229,6 +229,15 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   }
 
   /**
+   * Verilen ürünler TEK sorguda — kalem listesinden ada çıkmak için (sipariş bildirimi, 14.5).
+   * Kalem varyant taşır, ad üründedir; N kalem için N sorgu atmamak adına toplu okunur.
+   */
+  async listByIds(ids: readonly string[]): Promise<Product[]> {
+    if (ids.length === 0) return [];
+    return this.getAll({ id: [...ids] }, { orderBy: 'sortOrder' });
+  }
+
+  /**
    * Slug ile TEK ürün + varyantları. Müşteri ürün sayfasının girişidir: URL slug taşır, slug
    * dil-bağımsızdır (içerikten türer), bu yüzden paylaşılan link her dilde aynı ürüne düşer.
    *

@@ -7,8 +7,10 @@ import {
   OrderService,
   PriceService,
   ProductService,
+  SettingsService,
   StockAdjustmentService,
   StockService,
+  UserProfileService,
   serviceDb,
 } from '@lezzet/database';
 import { needsExpiryAttention, offerDecisionOf } from '@lezzet/domain-core';
@@ -16,8 +18,8 @@ import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type KeysetCursor } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
-import { toBatchViews, toLevelRows, toLossRows } from './stock-read';
-import { parseStockUrl, toStockFilters, STOCK_PATH } from './stock-url';
+import { readActorNames, readExpiryThresholds, toBatchViews, toLevelRows, toLossRows } from './stock-read';
+import { parseStockUrl, periodStart, toStockFilters, STOCK_PATH } from './stock-url';
 import type { LossRow, RecallResult, StockLevelRow } from './stock-types';
 
 // Stok ekranı server action'ları — 'use server' + requireStaff ilk + servise/motora devret +
@@ -42,7 +44,10 @@ export async function setOfferPriceAction(stockId: string, offerPrice: number | 
 
     if (offerPrice !== null) {
       if (offerPrice <= 0) throw new Error('Teklif fiyatı sıfırdan büyük olmalı.');
-      const [batch] = await stockSvc.getBatchDetails([stockId]);
+      const [[batch], thresholds] = await Promise.all([
+        stockSvc.getBatchDetails([stockId]),
+        readExpiryThresholds(new SettingsService(db)),
+      ]);
       if (!batch) throw new Error('Parti bulunamadı.');
       const { decision } = offerDecisionOf({
         dateType: batch.variant.product.dateType,
@@ -51,6 +56,7 @@ export async function setOfferPriceAction(stockId: string, offerPrice: number | 
         // Açık teklifi YOK SAYARAK sorulur: burada sorulan "teklif var mı" değil, "bu partiye teklif
         // açılabilir mi". Var olan teklif cevabı `offer_open`'a çevirir ve güncelleme imkânsızlaşırdı.
         offerPriceCents: null,
+        nearExpiryPercent: thresholds.nearExpiryPercent,
       });
       if (decision === 'must_discard') {
         throw new Error('Son tüketim tarihi (DLC) geçmiş parti satılamaz — teklif açılamaz, yalnız imha edilir.');
@@ -78,8 +84,11 @@ export async function recallByLotAction(lot: string): Promise<ActionResult<Recal
     if (!term) throw new Error('Lot numarası girilmeli.');
 
     const db = serviceDb();
-    const batchRows = await new StockService(db).findByLot(term);
-    const batches = toBatchViews(batchRows, { now: new Date() });
+    const [batchRows, thresholds] = await Promise.all([
+      new StockService(db).findByLot(term),
+      readExpiryThresholds(new SettingsService(db)),
+    ]);
+    const batches = toBatchViews(batchRows, { now: new Date(), thresholds });
     const hits = await new OrderService(db).recallByStocks(batches.map((b) => b.id));
 
     return {
@@ -108,9 +117,10 @@ export async function loadMoreLevelsAction(
 
     const db = serviceDb();
     const stockSvc = new StockService(db);
-    const [page, categories] = await Promise.all([
+    const [page, categories, thresholds] = await Promise.all([
       new ProductService(db).listStockRows({ filters: toStockFilters(urlState), cursor, limit: DEFAULT_PAGE_SIZE }),
       new CategoryService(db).list(),
+      readExpiryThresholds(new SettingsService(db)),
     ]);
 
     const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
@@ -120,7 +130,7 @@ export async function loadMoreLevelsAction(
     ]);
 
     const now = new Date();
-    const undecided = toBatchViews(batchRows, { now });
+    const undecided = toBatchViews(batchRows, { now, thresholds });
     const attentionVariantIds = [
       ...new Set(undecided.filter((b) => needsExpiryAttention(b.decision)).map((b) => b.variantId)),
     ];
@@ -133,7 +143,7 @@ export async function loadMoreLevelsAction(
 
     const levels = toLevelRows(
       page.rows,
-      toBatchViews(batchRows, { now, listPriceCents }),
+      toBatchViews(batchRows, { now, thresholds, listPriceCents }),
       available,
       new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)])),
     );
@@ -145,12 +155,19 @@ export async function loadMoreLevelsAction(
 
 /** İmha/fire geçmişinin sonraki sayfası — liste zamanla sınırsız büyür, imleçle ilerler. */
 export async function loadMoreLossesAction(
+  search: string,
   cursor: KeysetCursor,
 ): Promise<ActionResult<{ losses: LossRow[]; nextCursor: KeysetCursor | null }>> {
   try {
     await requireStaff();
-    const page = await new StockAdjustmentService(serviceDb()).listRecent({ cursor, limit: DEFAULT_PAGE_SIZE });
-    return { data: { losses: toLossRows(page.rows), nextCursor: page.nextCursor }, error: null };
+    // Dönem adresten okunur: devam eden sayfa ilk sayfayla AYNI aralığı görmezse liste ile toplam
+    // sessizce ayrışır — "bu çeyrek 366 €" yazan başlığın altına geçen yılın kayıtları eklenirdi.
+    const { period } = parseStockUrl(Object.fromEntries(new URLSearchParams(search)));
+    const db = serviceDb();
+    const svc = new StockAdjustmentService(db);
+    const page = await svc.listRecent({ from: periodStart(period, new Date()), cursor, limit: DEFAULT_PAGE_SIZE });
+    const actorNames = await readActorNames(new UserProfileService(db), page.rows);
+    return { data: { losses: toLossRows(page.rows, actorNames), nextCursor: page.nextCursor }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

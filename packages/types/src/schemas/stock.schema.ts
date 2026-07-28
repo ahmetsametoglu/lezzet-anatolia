@@ -89,6 +89,11 @@ export const StockBatchDetailSchema = StockSchema.extend({
       categoryId: z.string().uuid().nullable(),
       dateType: z.enum(['DLC', 'DDM']),
       shelfLifeDays: z.number().int().nullable(),
+      /**
+       * KDV oranı — teklif kararının KÂR yüzünde zorunlu. Teklif fiyatı b2c tabanındadır (KDV DAHİL),
+       * alış fiyatı ise hariç: ikisini doğrudan karşılaştırmak marjı KDV oranı kadar şişirirdi.
+       */
+      vatRate: dbNumeric,
     }),
   }),
 });
