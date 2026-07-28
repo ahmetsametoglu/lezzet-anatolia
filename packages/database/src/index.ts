@@ -32,5 +32,5 @@ export { SupplierService, SupplierProductService } from './services/supplier.ser
 export { PurchaseOrderService, PurchaseOrderItemService, type DraftLine, type PurchaseListLine } from './services/purchase-order.service';
 export { StockIntakeService, type ReceiveIntakeInput } from './services/stock-intake.service';
 export { ReorderService, type ReorderGroup, type ReorderLine } from './services/reorder.service';
-export { AccountService, MoneyMovementService, type PeriodTotal } from './services/money.service';
+export { AccountService, MoneyMovementService, type CampaignSpend, type PeriodTotal } from './services/money.service';
 export { JobRunService } from './services/job-run.service';

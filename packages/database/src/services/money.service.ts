@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  ADVERTISING_CATEGORY,
   AccountSchema,
   AccountInsertSchema,
   AccountUpdateSchema,
@@ -110,6 +111,15 @@ export interface PeriodTotal {
   count: number;
 }
 
+/** Kampanya başına reklam gideri (12.5) — 13.2'nin ROI tablosunda cironun yanına gelen sütun. */
+export interface CampaignSpend {
+  /** `meta.campaign` etiketi. **Etiketsiz reklam gideri `null` kovasında toplanır**, atılmaz. */
+  campaign: string | null;
+  /** NET gider: çıkışlar artı, geri gelen para (reklam iadesi/kredisi) eksi. */
+  total: number;
+  count: number;
+}
+
 /**
  * Para hareketi servisi (12.1) — DOMAIN §9. **Tüm finans tek tablo:** kasa hareketi ile banka
  * hareketi aynı şeydir, yalnız hesabı farklıdır.
@@ -210,6 +220,41 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
       kova.set(key, mevcut);
     }
     return [...kova.values()];
+  }
+
+  /**
+   * **Kampanya başına reklam gideri** (12.5) — 13.2'nin ROI tablosu bunu cironun yanına koyar.
+   *
+   * Süzgeç TİP değil KATEGORİDİR (`advertising`): reklam parası çoğu zaman `expense` olarak girer
+   * ama ajansa yapılan bir `misc` ödeme de reklam gideridir; tipe göre süzseydik ROI'nin gider
+   * tarafı olduğundan küçük, kampanya kârlı görünürdü.
+   *
+   * **Etiketsiz satır atılmaz**, `campaign: null` kovasında toplanır: kampanyaların toplamı ile
+   * dönemin gerçek reklam gideri BİRBİRİNİ TUTMALIDIR. Etiketsizi düşürseydik rapor eksik gideri
+   * hiç göstermez, ROI kendiliğinden şişerdi.
+   */
+  async campaignSpend(from: string, to: string): Promise<CampaignSpend[]> {
+    const { data, error } = await this.supabase
+      .from('money_movement')
+      .select('direction,amount,meta')
+      .eq('category', ADVERTISING_CATEGORY)
+      .gte('value_date', from)
+      .lte('value_date', to);
+    if (error) throw error;
+
+    const kova = new Map<string | null, CampaignSpend>();
+    for (const row of (data ?? []) as Array<{ direction: 'in' | 'out'; amount: string | number; meta: Record<string, unknown> | null }>) {
+      const etiket = row.meta?.['campaign'];
+      const campaign = typeof etiket === 'string' && etiket.trim() ? etiket.trim() : null;
+      // Geri gelen para gideri AZALTIR — iptal edilen reklamın parası gider olarak kalmamalı.
+      const net = row.direction === 'out' ? Number(row.amount) : -Number(row.amount);
+
+      const mevcut = kova.get(campaign) ?? { campaign, total: 0, count: 0 };
+      mevcut.total = Math.round((mevcut.total + net) * 100) / 100;
+      mevcut.count += 1;
+      kova.set(campaign, mevcut);
+    }
+    return [...kova.values()].sort((a, b) => b.total - a.total);
   }
 
   /** Banka ekstresiyle eşleşti işareti (12.4) — eşleşme kuyruğu bunu boşaltır. */

@@ -55,6 +55,13 @@ export const MovementTypeEnum = z.enum([
 ]);
 export type MovementType = z.infer<typeof MovementTypeEnum>;
 
+/**
+ * Reklam giderinin kategori etiketi (12.5) — kampanya ROI raporu (13.2) bu değeri süzer. Kategori
+ * serbest metin olduğu için tek kaçış yolu budur: kapı bunu yazar, rapor bunu okur. İki yerde
+ * yazılsaydı biri değişince rapor hata vermeden BOŞALIRDI — sessiz sıfır, yanlış cevabın en kötüsü.
+ */
+export const ADVERTISING_CATEGORY = 'advertising';
+
 /** Hareket elle mi girildi, banka dosyasından mı (12.4) — eşleştirme akışı bunu ayırır. */
 export const MovementSourceEnum = z.enum(['manual', 'bank_import']);
 export type MovementSource = z.infer<typeof MovementSourceEnum>;

@@ -45,8 +45,14 @@ Tüm finans tek mantıkla: para bir hesapta durur, hareketlerle girer/çıkar. H
   - **Bağsız alım motorda reddediliyor** (12.1'deki `supply_link_missing`): borç bu bağın üstünde durduğu için, bağı olmayan bir `purchase` hareketi kasayı azaltır ama hiçbir tedarikçinin borcunu kapatmazdı — parası kaybolan sessiz bir kayıt.
 - [ ] (12.4) **Banka import:** Excel yükle → AI sütun şablonu çıkar (`BankImportProfile`, hesaba özel) → satırlar hareket olarak → sipariş/gider/transfer eşleştirme (öneri + elle onay)
   - *Bitti:* ikinci import aynı bankada şablonu otomatik uyguluyor; eşleşme onaya düşüyor
-- [ ] (12.5) **Reklam gideri:** `category=advertising` + `meta.campaign` etiketi (13 ROI raporuna besleme)
+- [x] (12.5) **Reklam gideri:** `category=advertising` + `meta.campaign` etiketi (13 ROI raporuna besleme)
   - *Bitti:* kampanya etiketli gider analitikte ciroyla yan yana gelebiliyor
+  - **Durum (28.07):** kapı `recordExpense` + `recordAdvertisingExpense` · okuma `MoneyMovementService.campaignSpend(from, to)` → kampanya başına net gider. 9 test. Yeni tablo/kolon GEREKMEDİ — 12.1'in `category` + `meta` alanları zaten bunun içindi.
+  - **Kategori sabiti TEK yerde** (`ADVERTISING_CATEGORY`, `packages/types`): kategori serbest metin olduğu için yazan ile okuyan aynı dizeyi kullanmak zorunda. İki yere yazılsaydı biri değişince rapor hata vermeden **boşalırdı** — sessiz sıfır, yanlış cevabın en kötüsü.
+  - **Süzgeç TİP değil KATEGORİ** (12.3'teki bağ kuralının aynısı): reklam parası çoğu zaman `expense` girer ama ajansa yapılan bir `misc` ödeme de reklam gideridir. Tipe göre süzseydik ROI'nin gider tarafı olduğundan küçük, kampanya olduğundan kârlı görünürdü.
+  - **Etiketsiz satır ATILMAZ**, `campaign: null` kovasında toplanır: kampanyaların toplamı dönemin gerçek reklam gideriyle tutmalıdır. Etiket **zorunlu da değil** — ajans faturası aya yayılır, kampanyası sonra belli olur; reddetseydik operatör `misc` yazar, gider reklam toplamından tamamen düşerdi. Eksik bilgi, kayıp bilgiden iyidir.
+  - **Geri gelen para gideri azaltır** (reklam kredisi/iadesi): net gider okunur, aksi hâlde iptal edilmiş reklam kampanyanın sırtında kalırdı.
+  - Ciro sütunu bu görevin işi değil — UTM↔sipariş eşleşmesi 13.2'de. 12 tarafı hazır: rapor giderleri kampanya adıyla veriyor.
 - [ ] (12.6) **Kârlılık raporları:** ürün/sipariş kârı (katkı payı: COGS/teslimat/komisyon/paketleme snapshot) + **fire düşülmüş net marj** (`StockAdjustment`); şirket kârı (genel gider bir kez düşülür); kanal bazlı
   - *Bitti:* ürün kârı snapshot'lardan; fire ayrı satır; şirket P&L genel giderle
 - [ ] (12.7) **Muhasebe export:** dönem seçimi + `is_gift_order` hariç + `reference_no ↔ invoice_no` eşleştirme kuyruğu; temiz veri dosyası

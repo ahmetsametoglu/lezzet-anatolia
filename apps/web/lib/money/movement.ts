@@ -1,6 +1,6 @@
 import { MoneyMovementService, serviceDb } from '@lezzet/database';
 import { validateMovement, type MovementCheck } from '@lezzet/domain-core';
-import type { MoneyMovement, MoneyMovementInsert } from '@lezzet/types';
+import { ADVERTISING_CATEGORY, type MoneyMovement, type MoneyMovementInsert } from '@lezzet/types';
 
 /**
  * Para hareketi kapısı (12.1) — **uygulama katmanı orkestrasyonu**. DOMAIN §9.
@@ -58,6 +58,59 @@ export function recordSupplierPayment(input: {
     stockIntakeId: input.stockIntakeId,
     valueDate: input.valueDate,
     description: input.description ?? 'Tedarikçi ödemesi',
+  });
+}
+
+/**
+ * **Gider** (kira, akaryakıt, maaş, ambalaj…) — kategori SERBEST METİNDİR, enum değil: gider
+ * kalemleri işletmeyle büyür, enum olsaydı her yeni kalem migration isterdi.
+ */
+export function recordExpense(input: {
+  accountId: string;
+  amount: number;
+  category: string;
+  meta?: Record<string, unknown> | null;
+  valueDate?: string;
+  description?: string | null;
+}): Promise<MovementOutcome> {
+  return recordMovement({
+    accountId: input.accountId,
+    direction: 'out',
+    amount: input.amount,
+    type: 'expense',
+    category: input.category,
+    meta: input.meta,
+    valueDate: input.valueDate,
+    description: input.description,
+  });
+}
+
+/**
+ * **Reklam gideri** (12.5) — DOMAIN §350. Kampanya etiketiyle girer: `category=advertising` +
+ * `meta.campaign`. Analitik (13.2) kampanyanın **cirosunu ve giderini yan yana** koyar; gerçek ROI
+ * Excel'e taşınmaz.
+ *
+ * Etiket **zorlanmaz, boşsa yazılmaz**: kampanyası bilinmeyen bir reklam ödemesi de girilebilmelidir
+ * (ajans faturası aya yayılır, ekstre satırı sonra eşleşir). Reddetseydik operatör onu `misc`
+ * yazardı ve gider reklam toplamından tamamen düşerdi. Etiketsiz satır rapordaki `null` kovasında
+ * görünür — eksik bilgi, kayıp bilgiden iyidir.
+ */
+export function recordAdvertisingExpense(input: {
+  accountId: string;
+  amount: number;
+  campaign?: string | null;
+  valueDate?: string;
+  description?: string | null;
+}): Promise<MovementOutcome> {
+  const campaign = input.campaign?.trim();
+  return recordExpense({
+    accountId: input.accountId,
+    amount: input.amount,
+    category: ADVERTISING_CATEGORY,
+    // Boş etiket yazılmaz: `{campaign: ''}` raporda kendi kovasını açar, etiketsizden ayrı düşerdi.
+    meta: campaign ? { campaign } : null,
+    valueDate: input.valueDate,
+    description: input.description ?? 'Reklam gideri',
   });
 }
 
