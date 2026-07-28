@@ -24,9 +24,20 @@ function supabaseOrigins(): { http: string; ws: string } {
 // Görsel <img>=img-src; ileride tarayıcıdan doğrudan yükleme/fetch için connect-src.
 const R2_HOSTS = 'https://*.r2.dev';
 
+// Stripe host'ları (07.5) — kart alanı KENDİ checkout sayfamızda, Stripe'ın `PaymentElement`
+// iframe'i içinde (ADR Sapma 6). Barındırılan Checkout'a yönlendirseydik hiçbiri gerekmezdi;
+// içeri alınca üç yönün de açılması şart ve Stripe'ın belgelediği liste tam olarak bu:
+//   script-src  → `js.stripe.com` (Stripe.js'in kendisi; engellenince kart alanı HİÇ çizilmez)
+//   frame-src   → aynı host + `hooks.stripe.com` (kart alanı ve 3-D Secure doğrulaması iframe'de)
+//   connect-src → `api.stripe.com` (jeton ve ödeme onayı çağrıları)
+// Kart bilgisi bu iframe'in içinde kalır: bizim sayfamız da, sunucumuz da onu hiç görmez.
+const STRIPE_SCRIPT = 'https://js.stripe.com';
+const STRIPE_FRAME = 'https://js.stripe.com https://hooks.stripe.com';
+const STRIPE_API = 'https://api.stripe.com';
+
 /**
- * Güvenlik başlıkları (referans deseninden uyarlandı). CSP host'ları modül geldikçe genişler
- * (Stripe 07 ilgili modülde eklenir). Şimdilik: self + Supabase + R2 görselleri + next/font (self-hosted).
+ * Güvenlik başlıkları (referans deseninden uyarlandı). CSP host'ları modül geldikçe genişler.
+ * Bugün: self + Supabase + R2 görselleri + Stripe (kart alanı, 07.5) + next/font (self-hosted).
  */
 function securityHeaders(): Array<{ key: string; value: string }> {
   const { http: sbHttp, ws: sbWs } = supabaseOrigins();
@@ -36,12 +47,12 @@ function securityHeaders(): Array<{ key: string; value: string }> {
 
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${scriptExtra}`,
+    `script-src 'self' 'unsafe-inline' ${STRIPE_SCRIPT}${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
-    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS}`.replace(/\s+/g, ' ').trim(),
+    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${STRIPE_API}`.replace(/\s+/g, ' ').trim(),
     `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS}`.replace(/\s+/g, ' ').trim(),
     "font-src 'self' data:",
-    "frame-src 'self'",
+    `frame-src 'self' ${STRIPE_FRAME}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
