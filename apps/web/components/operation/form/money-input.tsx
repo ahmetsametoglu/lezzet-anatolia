@@ -29,6 +29,13 @@ function parse(raw: string): number | null {
 /** Yazarken izin verilen karakterler — harf ve İKİNCİ bir ayraç kutuya hiç girmez. */
 const sanitize = (raw: string): string => raw.replace(/[^\d.,]/g, '').replace(/([.,])(?=.*[.,])/g, '');
 
+/**
+ * İşaretli kip — yalnız yüzde alanları için. Eksi marj GERÇEK bir karardır (zararına satış) ve
+ * ekran onu gösteriyordu ama KUTUYA YAZILAMIYORDU: eksi işareti süzülüyor, operatör gösterilen
+ * değeri geri yazamıyordu. Para alanları bu kipe girmez — negatif fiyat diye bir şey yok.
+ */
+const sanitizeSigned = (raw: string): string => `${raw.startsWith('-') ? '-' : ''}${sanitize(raw)}`;
+
 interface MoneyCoreProps {
   value: number | null;
   onChange: (value: number | null) => void;
@@ -158,10 +165,18 @@ interface PercentFieldProps extends MoneyCoreProps {
   disabled?: boolean;
   fieldClassName?: string;
   id?: string;
+  /** Eksi değer yazılabilir mi — zararına satış / listenin üstünde fiyat gibi bilinçli kararlar için. */
+  signed?: boolean;
 }
 
-export function PercentField({ label, labelAside, placeholder, disabled, fieldClassName, id, ...core }: PercentFieldProps) {
-  const text = useNumericDraft({ ...core, format: formatPercent, toDraft: toPercentDraft, sanitize, parse });
+export function PercentField({ label, labelAside, placeholder, disabled, fieldClassName, id, signed, ...core }: PercentFieldProps) {
+  const text = useNumericDraft({
+    ...core,
+    format: formatPercent,
+    toDraft: toPercentDraft,
+    sanitize: signed ? sanitizeSigned : sanitize,
+    parse,
+  });
   return (
     <InputField
       label={label}

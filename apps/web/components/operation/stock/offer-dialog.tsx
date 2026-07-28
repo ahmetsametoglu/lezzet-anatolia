@@ -2,11 +2,11 @@
 
 import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { markupPercent, offerDiscountPercent, priceForMargin, suggestedOfferPriceCents } from '@lezzet/domain-core';
-import { addVat, fromCents, removeVat, toCents } from '@lezzet/helper';
+import { markupPercent } from '@lezzet/domain-core';
+import { fromCents, removeVat, toCents } from '@lezzet/helper';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
-import { MoneyField, PercentField } from '@/components/operation/form/money-input';
+import { PriceTriple } from '@/components/operation/form/price-triple';
 import { daysLabel, money, percent, shortDate } from '@/components/operation/ui/format';
 import { setOfferPriceAction } from '@/lib/stock/offer-actions';
 import type { BatchView } from '@/lib/stock/batch-types';
@@ -25,7 +25,8 @@ import type { BatchView } from '@/lib/stock/batch-types';
 // soktu" izlenimi yaratmadan işi kolaylaştırır (design/pages/admin-stok §6).
 //
 // FİYATIN ÜÇ YÜZÜ, tek karar: tutar (€) · liste fiyatına göre indirim (%) · ALIŞ fiyatına göre kâr
-// marjı (%). Üçü aynı sayının farklı okunuşudur; birini yazan öbür ikisini doldurur.
+// marjı (%). Üçü aynı sayının farklı okunuşudur; birini yazan öbür ikisini doldurur. Kontrolün
+// kendisi ORTAK (`PriceTriple`) — aynı üçlü müşteriye özel fiyat diyaloğunda da var.
 //
 // Üçüncüsü tasarımda YOK, bilinçli bir ekleme: elden çıkarma kararında asıl soru "listeden ne kadar
 // indirdim" değil, "bu maldan kâr mı ediyorum, ne kadar zarara razıyım". Liste fiyatı bir referans;
@@ -56,16 +57,13 @@ export function OfferDialog({ batch, onClose }: OfferDialogProps) {
   const [busy, setBusy] = useState(false);
 
   const priceCents = price === null ? null : toCents(price);
-  const discount = offerDiscountPercent(batch.listPriceCents, priceCents);
 
-  // Marj: KDV'siz gelir − alış maliyeti, maliyet üzerinden markup (DOMAIN'in marj tanımı).
+  // Marj: KDV'siz gelir − alış maliyeti, maliyet üzerinden markup (DOMAIN'in marj tanımı). Üçlünün
+  // içinde de aynı hesap var; buradaki, aşağıdaki KÂR CÜMLESİ için (tutarı da yazar, yalnız oranı değil).
   const vatRate = batch.variant.product.vatRate;
   const cost = batch.purchasePriceCents;
   const revenueHtCents = priceCents === null ? null : removeVat(priceCents, vatRate);
   const margin = revenueHtCents === null || cost === null ? null : markupPercent(revenueHtCents, cost);
-  /** Marj yazılınca fiyatı türetir: hedef HT fiyat → KDV eklenerek satış fiyatına döner. */
-  const priceFromMargin = (target: number): number | null =>
-    cost === null ? null : fromCents(addVat(priceForMargin(cost, target), vatRate));
 
   const submit = async (next: number | null) => {
     setBusy(true);
@@ -150,46 +148,23 @@ export function OfferDialog({ batch, onClose }: OfferDialogProps) {
           )}
         </span>
 
-        <div className="grid grid-cols-3 gap-3">
-          <MoneyField
-            label="Teklif fiyatı (€)"
-            required
-            id="offer-price"
-            value={price}
-            onChange={setPrice}
-            placeholder="ör. 12,60"
-          />
-          {/* İndirim yüzdesi fiyatın İKİNCİ yazımıdır (paket formundaki desen): türetilir ve yazılınca
-              fiyatı doldurur. Liste fiyatı yoksa oran hesaplanamaz — alan kilitli ve boş. */}
-          <PercentField
-            label="İndirim (%)"
-            labelAside="fiyatla bağlı"
-            id="offer-discount"
-            value={discount != null && discount >= 0 ? discount : null}
-            disabled={batch.listPriceCents === null}
-            placeholder={batch.listPriceCents === null ? '—' : `ör. ${batch.offerDiscountPercent}`}
-            onChange={(pct) => {
-              // Hesap MOTORDAN gelir (`suggestedOfferPriceCents` yüzdeyi parametre alır) — aynı
-              // indirim iki farklı formülle hesaplanırsa öneri ile elle girilen yüzde ayrışırdı.
-              const next = suggestedOfferPriceCents(batch.listPriceCents, pct ?? 0);
-              if (next !== null) setPrice(fromCents(next));
-            }}
-          />
-          {/* Kâr marjı: alış fiyatına göre. EKSİ girilebilir — zararına satmak da bir karardır. */}
-          <PercentField
-            label="Kâr marjı (%)"
-            labelAside="alışa göre"
-            id="offer-margin"
-            value={margin}
-            disabled={cost === null}
-            placeholder={cost === null ? '—' : 'ör. 10'}
-            onChange={(pct) => {
-              if (pct === null) return;
-              const next = priceFromMargin(pct);
-              if (next !== null) setPrice(next);
-            }}
-          />
-        </div>
+        {/* Fiyatın üç yüzü ORTAK komponentte: aynı üçlü müşteriye özel fiyat diyaloğunda da var ve
+            ikisi aynı hesabı kullanmak zorunda — teklifte %10 indirim, özel fiyatta başka bir kuruş
+            demesin. Teklif fiyatı b2c tabanındadır (KDV dahil). */}
+        <PriceTriple
+          valueCents={priceCents}
+          onChange={(cents) => setPrice(cents === null ? null : fromCents(cents))}
+          channel="b2c"
+          vatRate={vatRate}
+          listCents={batch.listPriceCents}
+          costCents={cost}
+          priceLabel="Teklif fiyatı (€)"
+          priceLabelAside="KDV dahil"
+          pricePlaceholder="ör. 12,60"
+          required
+          idPrefix="offer"
+          discountPlaceholder={`ör. ${batch.offerDiscountPercent}`}
+        />
 
         {/* KÂR EKSENİ — kararın asıl yüzü. Maliyet bilinmiyorsa alan kilitli ve sebebi yazılı:
             uydurma bir maliyetle marj göstermek, olmayan bir hesabı doğruymuş gibi sunardı. */}

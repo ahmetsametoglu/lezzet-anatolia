@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { OFFER_DISCOUNT_PERCENT, needsExpiryAttention, offerDecisionOf, offerDiscountPercent, suggestedOfferPriceCents } from './offer';
+import { OFFER_DISCOUNT_PERCENT, needsExpiryAttention, offerDecisionOf, suggestedOfferPriceCents } from './offer';
 
 // Sabit "bugün" — gerçek saate bağlı test, ertesi gün kendiliğinden kırılır.
 const NOW = new Date('2026-07-28T10:00:00Z');
@@ -25,20 +25,6 @@ describe('suggestedOfferPriceCents', () => {
     expect(suggestedOfferPriceCents(null)).toBeNull();
     expect(suggestedOfferPriceCents(undefined)).toBeNull();
     expect(suggestedOfferPriceCents(0)).toBeNull();
-  });
-});
-
-describe('offerDiscountPercent', () => {
-  it('açık teklifin oranını geri okur', () => {
-    expect(offerDiscountPercent(1800, 1260)).toBeCloseTo(30);
-  });
-
-  it('teklif listeden pahalıysa NEGATİF döner — hata görünmeli', () => {
-    expect(offerDiscountPercent(1000, 1200)).toBeCloseTo(-20);
-  });
-
-  it('liste fiyatı yoksa oran hesaplanamaz', () => {
-    expect(offerDiscountPercent(null, 1200)).toBeNull();
   });
 });
 

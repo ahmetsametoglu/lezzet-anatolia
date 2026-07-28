@@ -1,4 +1,4 @@
-import { percentOf } from '@lezzet/helper';
+import { priceFromDiscountPercent } from '../pricing/list-discount';
 import { expiryFlagOf, remainingShelfLifePercent, type ExpiryFlag } from './shelf-life';
 import type { ProductDateType } from '@lezzet/types';
 
@@ -19,29 +19,14 @@ export const OFFER_DISCOUNT_PERCENT = 30;
  * Önerilen teklif fiyatı (cent). Liste fiyatı bilinmiyorsa öneri de YOKTUR (`null`) — uydurma bir
  * taban üzerinden indirim önermek, operatöre olmayan bir hesabı doğruymuş gibi gösterirdi.
  *
- * Aşağı yuvarlanır: 12,857 € önerisi 12,85 € olur. Yukarı yuvarlamak "önerdiğin indirimden azını
- * verdim" demektir; indirimde eksik yönde yuvarlamak müşteri lehinedir ve sürprizi olmaz.
+ * Hesabın kendisi `priceFromDiscountPercent`'te: "listeden %X indir" teklife özgü bir iş değil,
+ * paket ve özel fiyat ekranlarının da sorusu. Teklifin buraya kattığı tek şey VARSAYILAN orandır.
  */
 export function suggestedOfferPriceCents(
   listPriceCents: number | null | undefined,
   discountPercent: number = OFFER_DISCOUNT_PERCENT,
 ): number | null {
-  if (listPriceCents == null || listPriceCents <= 0) return null;
-  const off = percentOf(listPriceCents, discountPercent);
-  return Math.max(0, Math.floor(listPriceCents - off));
-}
-
-/**
- * Açık bir teklifin liste fiyatına göre indirim yüzdesi — "%30 verdim" cümlesinin geriye okunuşu.
- * Liste fiyatı yoksa oran hesaplanamaz (`null`). Teklif listeden pahalıysa NEGATİF döner; onu
- * saklamak yerine göstermek doğrudur, çünkü o bir hatadır ve görülmelidir.
- */
-export function offerDiscountPercent(
-  listPriceCents: number | null | undefined,
-  offerPriceCents: number | null | undefined,
-): number | null {
-  if (listPriceCents == null || listPriceCents <= 0 || offerPriceCents == null) return null;
-  return ((listPriceCents - offerPriceCents) / listPriceCents) * 100;
+  return priceFromDiscountPercent(listPriceCents, discountPercent);
 }
 
 /** Partinin karar durumu — ekran bunu okur, kendi eşiğini kurmaz. */

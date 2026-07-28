@@ -2,13 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { isBelowTargetMargin, markupPercent, revenueHtOf, vatBaseOf } from '@lezzet/domain-core';
-import { fromCents, toCents } from '@lezzet/helper';
+import { discountPercentOf, isBelowTargetMargin, revenueHtOf, vatBaseOf } from '@lezzet/domain-core';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { Combobox } from '@/components/operation/form/combobox';
 import { FieldShell } from '@/components/operation/form/field-shell';
-import { MoneyField } from '@/components/operation/form/money-input';
+import { PriceTriple } from '@/components/operation/form/price-triple';
 import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { money, percent } from '@/components/operation/ui/format';
 import { Metric } from '@/components/operation/ui/metric';
@@ -44,7 +43,9 @@ export function CustomerPriceDialog({ editing, onClose }: CustomerPriceDialogPro
   );
   const [picked, setPicked] = useState<VariantOption | null>(null);
   const [channel, setChannel] = useState<Channel>(editing?.channel ?? 'b2b');
-  const [amount, setAmount] = useState<number | null>(editing ? fromCents(editing.specialCents) : null);
+  // Fiyat KURUŞTA tutulur (STACK §8): üçlü kutu da kuruş konuşur, euroya çevirip geri almak her
+  // yazışta bir kuruşluk gidiş-dönüş kaybı riskidir.
+  const [amountCents, setAmountCents] = useState<number | null>(editing?.specialCents ?? null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -84,8 +85,6 @@ export function CustomerPriceDialog({ editing, onClose }: CustomerPriceDialogPro
   const selectedVariant = picked;
   const variantId = editing?.variantId ?? picked?.variantId ?? '';
 
-  const amountCents = amount === null ? null : toCents(amount);
-
   // KARAR BAĞLAMI — iki kaynaktan tek yere: düzenlemede satırın kendisi, yeni kayıtta seçilen boy.
   // Ekranın sorusu ikisinde de aynı: "bu fiyata satarsam kâr mı ediyorum, indirim mi yapıyorum".
   const context = editing
@@ -95,14 +94,13 @@ export function CustomerPriceDialog({ editing, onClose }: CustomerPriceDialogPro
       : null;
   const listCents = context?.listCents ?? null;
 
-  // Liste fiyatına göre indirim/zam — özel fiyatın listenin ne kadar altında (ya da üstünde) olduğu.
-  const discountPercent =
-    listCents === null || listCents === 0 || amountCents === null ? null : ((listCents - amountCents) / listCents) * 100;
+  // Liste fiyatına göre indirim/zam — üçlü kutunun yüzdesiyle AYNI motor fonksiyonundan; cümle ile
+  // kutu ayrı hesaplansaydı biri %10 derken öteki %9,9 yazabilirdi.
+  const discountPercent = discountPercentOf(listCents, amountCents);
 
-  // Gerçekleşen marj: KDV HARİÇ tabanda, ekranın geri kalanıyla AYNI tanım (maliyet üzerine markup).
-  // Client yeniden formül yazmaz — dönüşüm de karşılaştırma da motordan gelir.
+  // Gerçekleşen marjı EKRAN hesaplamaz — üçlü kutunun içinde zaten var. Buradaki iki soru başka:
+  // "hedefin altında mı" ve "maliyetin altında mı". İkisi de KDV HARİÇ tabanda sorulur.
   const revenueHt = context && amountCents !== null ? revenueHtOf(channel, amountCents, context.vatRate) : null;
-  const marginPercent = revenueHt === null || !context ? null : markupPercent(revenueHt, context.costCents ?? 0);
   const belowTarget = revenueHt === null || !context ? null : isBelowTargetMargin(revenueHt, context.costCents, context.target);
   const underCost = revenueHt !== null && context?.costCents != null && revenueHt < context.costCents;
 
@@ -138,7 +136,7 @@ export function CustomerPriceDialog({ editing, onClose }: CustomerPriceDialogPro
     ? 'Müşteri seçilmeli'
     : !variantId
       ? 'Boy seçilmeli'
-      : amount === null || amount <= 0
+      : amountCents === null || amountCents <= 0
         ? 'Fiyat sıfırdan büyük olmalı'
         : null;
 
@@ -238,13 +236,21 @@ export function CustomerPriceDialog({ editing, onClose }: CustomerPriceDialogPro
         </div>
       ) : null}
 
-      <MoneyField
-        label={`Özel fiyat (€) · ${vatBaseOf(channel) === 'ttc' ? 'KDV dahil' : 'KDV hariç'}`}
+      {/* FİYATIN ÜÇ YÜZÜ (teklif diyaloğuyla ORTAK kontrol): anlaşma kimi zaman "13,50 €'ya vereyim",
+          kimi zaman "bu müşteriye hep %10 indirim", kimi zaman "%20 kârın altına inmeyeyim" diye
+          kurulur. Üçü de aynı fiyata çıkar; ekran hangisinden girileceğini dayatmaz. */}
+      <PriceTriple
+        valueCents={amountCents}
+        onChange={setAmountCents}
+        channel={channel}
+        vatRate={context?.vatRate ?? 0}
+        listCents={listCents}
+        costCents={context?.costCents ?? null}
+        priceLabel="Özel fiyat (€)"
+        priceLabelAside={vatBaseOf(channel) === 'ttc' ? 'KDV dahil' : 'KDV hariç'}
+        pricePlaceholder="ör. 13,50"
         required
-        id="customer-price"
-        value={amount}
-        onChange={setAmount}
-        placeholder="ör. 13,50"
+        idPrefix="customer-price"
       />
 
       {/* KARAR SATIRI — "bu fiyatı verirsem ne oluyor". Fiyat kutusunun ALTINDA, çünkü cevabı
@@ -252,12 +258,16 @@ export function CustomerPriceDialog({ editing, onClose }: CustomerPriceDialogPro
           bakardı. Boy seçilene kadar hiçbir şey gösterilmez: sayı UYDURULMAZ. */}
       {context && amountCents !== null ? (
         <div className="flex flex-col gap-2 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3">
+          {/* Gerçekleşen marj burada TEKRAR yazılmaz — kutunun kendisi onu gösteriyor ve yazılabilir
+              hâli duruyor. Panelin işi kutunun söyleyemediği bağlam: neye göre indirim, neyin
+              üstüne marj, hangi hedefe göre "düşük". */}
           <div className="grid grid-cols-3 gap-2.5">
-            <Metric label="Kanal listesi" value={money(listCents)} />
-            <Metric label="Maliyet" value={money(context.costCents)} />
+            <Metric label="Kanal listesi" value={money(listCents)} hint="Bu kanalın herkese açık fiyatı" />
+            <Metric label="Maliyet" value={money(context.costCents)} hint="Son alış — yeniden almanın bedeli (KDV hariç)" />
             <Metric
-              label="Bu fiyatla marj"
-              value={marginPercent === null ? '—' : percent(marginPercent)}
+              label="Hedef marj"
+              value={context.target === null ? '—' : percent(context.target)}
+              hint="Ürün genelinde geçerli uyarı eşiği"
               tone={underCost || belowTarget === true ? 'red' : undefined}
             />
           </div>
@@ -276,7 +286,6 @@ export function CustomerPriceDialog({ editing, onClose }: CustomerPriceDialogPro
             ) : (
               'Liste fiyatıyla aynı.'
             )}
-            {context.target !== null ? ` · hedef marj %${context.target}` : ''}
           </span>
 
           {/* İki ayrı uyarı, iki ayrı ağırlık: maliyetin altı ZARARDIR, hedefin altı bir tercihtir. */}

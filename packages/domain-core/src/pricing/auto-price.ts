@@ -1,5 +1,6 @@
 import type { Channel } from '@lezzet/types';
 import { addVat, removeVat } from '@lezzet/helper';
+import { priceForMargin } from './margin';
 import { vatBaseOf } from './resolve-price';
 
 /**
@@ -60,4 +61,29 @@ export function autoPriceCents(input: AutoPriceInput): number | null {
  */
 export function revenueHtOf(channel: Channel, amountCents: number, vatRate: number): number {
   return vatBaseOf(channel) === 'ttc' ? removeVat(amountCents, vatRate) : amountCents;
+}
+
+/**
+ * `revenueHtOf`'un TERSİ: verilen marjı sağlayan fiyat, kanalın KENDİ tabanında (b2c'ye KDV eklenir).
+ *
+ * Marj kutusunun fiyatı doldurduğu her yerde (fiyat · teklif · özel fiyat diyalogları) aynı hesap
+ * gerekiyordu ve her birinde elle yazılmıştı. Marj bir TANIMDIR (maliyet üzerine markup); tanımı
+ * ekranda yeniden yazan yer, bir gün uyarı eşiğinden başka bir sayı üretir.
+ *
+ * `autoPriceCents`'ten farkı YUVARLAMA: orası DB'ye yazılan fiyattır ve hedefi ıskalamamak için beş
+ * kuruşluk adıma YUKARI çıkar; burası operatörün yazdığı yüzdenin birebir karşılığıdır — "%30" yazana
+ * %30,4 döndürmek, girdisini görmezden gelmek olurdu.
+ *
+ * Marj EKSİ olabilir: zararına satmak da bir karardır (tarihi yaklaşan mal, müşteriye özel anlaşma).
+ * Fiyat yine de sıfırın altına inmez.
+ */
+export function channelPriceForMargin(
+  channel: Channel,
+  costCents: number | null,
+  marginPercent: number,
+  vatRate: number,
+): number | null {
+  if (costCents == null || costCents <= 0) return null;
+  const ht = Math.max(0, priceForMargin(costCents, marginPercent));
+  return vatBaseOf(channel) === 'ttc' ? addVat(ht, vatRate) : ht;
 }

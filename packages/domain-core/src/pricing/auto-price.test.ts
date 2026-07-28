@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isBelowTargetMargin, markupPercent } from './margin';
-import { AUTO_PRICE_STEP_CENTS, autoPriceCents, revenueHtOf } from './auto-price';
+import { AUTO_PRICE_STEP_CENTS, autoPriceCents, channelPriceForMargin, revenueHtOf } from './auto-price';
 
 /**
  * Otomatik fiyatın tek sözü var: yazdığı fiyat hedef marjı SAĞLAR. Testlerin çoğu bu sözü
@@ -30,7 +30,7 @@ describe('kanal tabanı', () => {
 describe('yuvarlama hedefi ISKALAMAZ', () => {
   it('yukarı yuvarlar — aşağı yuvarlamak marjı hedefin altına düşürürdü', () => {
     // 3,33 € maliyet, %35 → 4,4955 € HT → 4,50 (4,45 hedefin altında kalırdı).
-    expect(autoPriceCents({ channel: 'b2b', costCents: 333, targetMarginPercent: 35 })).toBe(450);
+    expect(autoPriceCents({ channel: 'b2b', costCents: 333, targetMarginPercent: 35, vatRate: 0 })).toBe(450);
   });
 
   it('geniş bir maliyet aralığında gerçekleşen marj HEP hedefin üstünde', () => {
@@ -50,10 +50,10 @@ describe('yuvarlama hedefi ISKALAMAZ', () => {
   });
 
   it('adım 1 kuruş verilirse kuruşa yuvarlar — kuruşun altı da YUKARI', () => {
-    expect(autoPriceCents({ channel: 'b2b', costCents: 333, targetMarginPercent: 35, stepCents: 1 })).toBe(450);
+    expect(autoPriceCents({ channel: 'b2b', costCents: 333, targetMarginPercent: 35, vatRate: 0, stepCents: 1 })).toBe(450);
     // 10,01 € × 1,40 = 14,014 → 14,02. `priceForMargin` burada 14,01 derdi (uyarı eşiği yuvarlar),
     // otomatik fiyat o kuruşu veremez: verirse ürün kendi hedefinin altında kalırdı.
-    expect(autoPriceCents({ channel: 'b2b', costCents: 1001, targetMarginPercent: 40, stepCents: 1 })).toBe(1402);
+    expect(autoPriceCents({ channel: 'b2b', costCents: 1001, targetMarginPercent: 40, vatRate: 0, stepCents: 1 })).toBe(1402);
     expect(AUTO_PRICE_STEP_CENTS).toBe(5);
   });
 
@@ -72,7 +72,7 @@ describe('maliyet yoksa karar da yok', () => {
   });
 
   it('hedef marj 0 ise fiyat maliyete eşitlenir — sıfır değil', () => {
-    expect(autoPriceCents({ channel: 'b2b', costCents: 1000, targetMarginPercent: 0 })).toBe(1000);
+    expect(autoPriceCents({ channel: 'b2b', costCents: 1000, targetMarginPercent: 0, vatRate: 0 })).toBe(1000);
   });
 });
 
@@ -80,5 +80,32 @@ describe('HT dönüşümü fiyat ekranıyla AYNI', () => {
   it('b2c gidiş-dönüş: yazılan fiyattan HT geri çıkar', () => {
     expect(revenueHtOf('b2c', 1480, 5.5)).toBe(1403);
     expect(revenueHtOf('b2b', 1400, 5.5)).toBe(1400);
+  });
+});
+
+/** Marj kutusunun fiyatı doldurduğu yön — `revenueHtOf`'un tersi. */
+describe('channelPriceForMargin', () => {
+  it('b2b hedefi doğrudan fiyattır', () => {
+    expect(channelPriceForMargin('b2b', 1000, 40, 5.5)).toBe(1400);
+  });
+
+  it('b2c fiyatına KDV eklenir', () => {
+    expect(channelPriceForMargin('b2c', 1000, 40, 5.5)).toBe(1477);
+  });
+
+  it('yazılan yüzdeyi geri verir — adıma yuvarlanmaz', () => {
+    for (const margin of [0, 12, 33.5, 41]) {
+      const price = channelPriceForMargin('b2c', 1237, margin, 20)!;
+      expect(markupPercent(revenueHtOf('b2c', price, 20), 1237)).toBeCloseTo(margin, 0);
+    }
+  });
+
+  it('EKSİ marj yazılabilir — zararına satmak da bir karardır', () => {
+    expect(channelPriceForMargin('b2b', 1000, -20, 20)).toBe(800);
+  });
+
+  it('maliyet yoksa fiyat da yok', () => {
+    expect(channelPriceForMargin('b2b', null, 40, 20)).toBeNull();
+    expect(channelPriceForMargin('b2b', 0, 40, 20)).toBeNull();
   });
 });
