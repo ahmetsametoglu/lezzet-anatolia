@@ -75,6 +75,10 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 - `Customer.discount_percent` (genel özel indirim)
 - Fiyat çözümü (domain-core): özel ürün fiyatı → müşteri indirim oranı → kanal fiyatı
 - Maliyet-bazlı: `Product.target_margin_percent` + `auto_price` (otomatik güncelle / marj altı uyarısı)
+- **Fiyat ekranı başlık sayaçlarının katalog geneline çıkması.** Bugün sayaçlar YÜKLENEN sayfaya
+  ait; masaüstü bunu söylüyor ("50 boy yüklendi · 3 marj-altı"), mobil söylemiyor. İki iş: (a) mobil
+  metnin dürüstleşmesi — bir satır, (b) sayacın gerçekten katalog geneli olması — ölçüm istiyor
+  (okuma fonksiyonu mu, ayrı geniş okuma mı; `product_counts()` deseni emsal). → operasyon şeridi.
 - KDV ürün bazında
 - Sınır ötesi KDV: `Customer.vat_number` + VIES doğrulama (açık API); `Order.vat_treatment`; DE B2B reverse charge %0 + "Autoliquidation"; DE B2C Fransız KDV (OSS eşiği aşılınca ele alınır)
 
@@ -193,6 +197,15 @@ Kararlar: `ADR_WHATSAPP.md`. Mimari: `CHANNELS.md`. Faz sınırları: `SCOPE.md`
 - Üst üste binmez → en büyük indirim uygulanır (domain-core)
 - Paketler ve near-expiry teklif genel indirimden muaf
 - `Order.discount_id` + `discount_amount`; koşullar (min sepet, ilk sipariş, tarih, kullanım sınırı)
+- **`discount_use` satırının YAZILMASI — sipariş kapanışında.** Tablo, okuması (`usageCounts`) ve
+  motorun sınır denetimi (`used_up`) hazır; **yazan yok**, yani sayaç kalıcı olarak sıfır ve
+  "toplam N kullanım" ile "müşteri başına N" koşulları **hiç bağlamıyor** — kupon fiilen sınırsız.
+  Fiyat ekranı bunu doğru gösteriyor (rozet "bugün yürürlükte mi"yi söyler), eksik olan kayıt.
+  → **MÜŞTERİ/UI ŞERİDİNDEKİ AJANIN İŞİ** (sepet + checkout): `apps/web/lib/cart/discount.ts`
+  kuralı çözüyor, `lib/order/checkout-draft.ts` `order.discount_id` ve `discount_amount`'ı
+  yazıyor; `discount_use` satırı da aynı noktada, aynı turda atılmalı. Sipariş iptal/iade
+  edilirse kullanımın geri düşüp düşmeyeceği o işin ilk kararıdır (öneri: düşmesin — kupon
+  harcanmıştır; aksi hâli suistimale açık).
 
 ## 16. Müşteri bağlılığı / etkileşim (Faz 1)
 

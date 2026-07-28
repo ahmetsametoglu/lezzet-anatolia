@@ -33,7 +33,14 @@ export function PricesMobile(props: PricesViewProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <PageHeader title="Fiyatlar" subtitle={`${counts.below} marj-altı · ${counts.missing} fiyatı eksik`} />
+      {/* Sayaçlar YÜKLENEN sayfaya ait (masaüstündeki gibi) ve metin bunu SÖYLER. Eskiden düpedüz
+          "3 marj-altı" yazıyordu; okuyan katalogun tamamını sanıyordu — telefonda bu, yanlış haberin
+          daha kötü hâli: operatör listenin sonuna inmeden "bugün üç işim var" diye karar veriyordu.
+          Sayacın gerçekten katalog geneli olması ayrı bir iş (BACKLOG §4). */}
+      <PageHeader
+        title="Fiyatlar"
+        subtitle={`${counts.rows} boy yüklendi · ${counts.below} marj-altı · ${counts.missing} fiyatı eksik`}
+      />
 
       <Tabs items={TABS.map((t) => (t.key === 'channels' && counts.below > 0 ? { ...t, badge: counts.below } : t))} active={tab} onSelect={onTab} />
 
