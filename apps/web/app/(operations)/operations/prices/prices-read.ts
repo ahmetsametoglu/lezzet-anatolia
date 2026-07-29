@@ -1,6 +1,7 @@
 import { costOf, isBelowTargetMargin, revenueHtOf, tightestMargin, type CostBasis } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
-import { resolveLocalizedText, type Channel, type Discount, type Price, type ProductPriceRow, type UserProfile } from '@lezzet/types';
+import { resolveLocalizedText, type Channel, type Discount, type DiscountCode, type Price, type ProductPriceRow, type UserProfile } from '@lezzet/types';
+import type { DiscountUsage } from '@lezzet/database';
 import { titleOf } from '@/lib/catalog/title';
 import {
   type ChannelPriceCell,
@@ -162,7 +163,9 @@ export function toDiscountCustomerRows(profiles: UserProfile[]): DiscountCustome
 
 interface DiscountRowInput {
   rules: Discount[];
-  usage: Map<string, { total: number; byCustomer: Map<string, number> }>;
+  usage: Map<string, DiscountUsage>;
+  /** Kural kimliği → kodları. Kupon dışı kurallarda boş. */
+  codes: Map<string, DiscountCode[]>;
   categoryNames: Map<string, string>;
   collectionNames: Map<string, string>;
   customerNames: Map<string, string>;
@@ -178,9 +181,10 @@ interface DiscountRowInput {
  * penceresi ve TOPLAM kullanım tavanı sepetten bağımsızdır; ekran yalnız onları söyler ve
  * söylemediğini iddia etmez.
  */
-export function toDiscountRows({ rules, usage, categoryNames, collectionNames, customerNames, now }: DiscountRowInput): DiscountRow[] {
+export function toDiscountRows({ rules, usage, codes, categoryNames, collectionNames, customerNames, now }: DiscountRowInput): DiscountRow[] {
   return rules.map((rule): DiscountRow => {
-    const usedCount = usage.get(rule.id)?.total ?? 0;
+    const ruleUsage = usage.get(rule.id);
+    const usedCount = ruleUsage?.total ?? 0;
     const scopeName =
       rule.scope === 'category'
         ? (categoryNames.get(rule.categoryId ?? '') ?? 'silinmiş kategori')
@@ -201,8 +205,15 @@ export function toDiscountRows({ rules, usage, categoryNames, collectionNames, c
     return {
       id: rule.id,
       name: rule.name,
+      publicLabel: rule.publicLabel,
       trigger: rule.trigger,
-      code: rule.code,
+      // Kod başına kullanım: kotanın kırılımı, kendisi değil — "hangi dil karşılık buldu".
+      codes: (codes.get(rule.id) ?? []).map((code) => ({
+        id: code.id,
+        code: code.code,
+        locale: code.locale,
+        usedCount: ruleUsage?.byCode.get(code.id) ?? 0,
+      })),
       type: rule.type,
       // Sabit tutar KURUŞA çevrilir (STACK §8); yüzde olduğu gibi taşınır.
       value: rule.type === 'fixed' ? toCents(rule.value) : rule.value,

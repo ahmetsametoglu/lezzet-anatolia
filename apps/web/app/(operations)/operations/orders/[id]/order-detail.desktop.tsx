@@ -367,15 +367,19 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               <div className="flex flex-col gap-1.5 px-3.5 py-[11px]">
                 {order.finance.rows.map((row) => (
                   <div key={row.label} className="flex items-baseline gap-2.5">
+                    {/* Tahmini maliyet SÖNÜK yazılır ve eksi işareti almaz: kâra girmiyor, bir
+                        çıkarma işleminin parçasıymış gibi görünmemeli. */}
                     <span
                       className={`mr-auto font-ops-body text-ops-xs ${
-                        row.kind === 'expense' ? 'text-ops-body' : 'font-medium text-ops-ink'
+                        row.kind === 'sale' ? 'font-medium text-ops-ink' : row.kind === 'estimate' ? 'text-ops-muted' : 'text-ops-body'
                       }`}
                     >
                       {row.label}
                     </span>
                     <span
-                      className={`font-ops-mono text-ops-xs ${row.kind === 'expense' ? 'text-ops-red' : 'text-ops-ink'}`}
+                      className={`font-ops-mono text-ops-xs ${
+                        row.kind === 'expense' ? 'text-ops-red' : row.kind === 'estimate' ? 'text-ops-muted' : 'text-ops-ink'
+                      }`}
                     >
                       {row.kind === 'expense' ? '−' : ''}
                       {money(row.amountCents)}
@@ -395,17 +399,17 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                         {money(order.finance.profitCents)}
                       </span>
                     </div>
-                    {order.finance.markupPercent !== null ? (
+                    {order.finance.marginPercent !== null ? (
                       <div className="flex items-baseline gap-2.5">
-                        {/* Tasarım "Kâr marjı" (kâr ÷ satış) yazıyor; proje TEK marj tanımı kullanır —
-                            maliyet üzerine markup (DOMAIN). Bilinçli sapma: ad da hesabı söylesin. */}
-                        <span className="mr-auto font-ops-body text-ops-xs text-ops-body">Marj (maliyet üzerine)</span>
+                        {/* Marj = katkı payı ÷ ciro — kârlılık raporunun (12.6) tanımının AYNISI.
+                            Aynı siparişin marjı iki ekranda iki sayı olamaz. */}
+                        <span className="mr-auto font-ops-body text-ops-xs text-ops-body">Kâr marjı</span>
                         <span
                           className={`font-ops-mono text-ops-xs ${
                             order.finance.profitCents > 0 ? 'text-ops-olive-dark' : 'text-ops-red'
                           }`}
                         >
-                          %{order.finance.markupPercent.toFixed(1)}
+                          %{order.finance.marginPercent.toFixed(1)}
                         </span>
                       </div>
                     ) : null}

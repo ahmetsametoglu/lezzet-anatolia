@@ -39,9 +39,13 @@ afterAll(async () => {
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [customerId] });
 });
 
-async function orderWith(status: 'confirmed' | 'delivered', fulfilledQty: number) {
+async function orderWith(
+  status: 'confirmed' | 'delivered',
+  fulfilledQty: number,
+  extra: Partial<Parameters<typeof orders.create>[0]> = {},
+) {
   const { order } = await orders.create(
-    { customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status, total: 20 },
+    { customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status, total: 20, ...extra },
     [{ variantId, qty: 2, unitPrice: 10, vatRate: 5.5 }],
   );
   createdOrders.push(order.id);
@@ -77,5 +81,50 @@ describe('kalem satırları', () => {
       qty: 2,
       shortfall: null,
     });
+  });
+});
+
+/**
+ * Mailin DİLİ (04.9) ve indirim satırının ADI (05.13).
+ *
+ * İkisi de aynı boşluktan doğdu: müşteriye görünen metnin kaynağı yoktu. Dil profilden okunuyordu ve
+ * o kolonu hiçbir akış yazmıyordu (herkes `'fr'`); indirim satırı da kampanyanın adını bilmiyordu.
+ * İkisinin de cevabı artık SİPARİŞTE — çünkü ikisi de sonradan değişmemesi gereken bilgiler.
+ */
+describe('siparişin dili ve indirim satırı', () => {
+  it('dil siparişten okunur — profil sonradan değişse de mail değişmez', async () => {
+    const orderId = await orderWith('confirmed', 0, { locale: 'de' });
+
+    const bundle = await buildOrderNotification(orderId, 'order_confirmed');
+    expect(bundle?.data.locale).toBe('de');
+    expect(bundle?.recipient.locale).toBe('de');
+    // Metin de o dilde kurulmuş olmalı, yalnız alan değil.
+    expect(bundle?.data.totals[0]?.label).toBe('Zwischensumme');
+  });
+
+  it('sipariş dilsizse profile düşülür — hızlı satışta okunan bir yüzey yoktur', async () => {
+    await new UserProfileService(db).update({ id: customerId, preferredLanguage: 'tr' });
+    const orderId = await orderWith('confirmed', 0);
+
+    expect((await buildOrderNotification(orderId, 'order_confirmed'))?.data.locale).toBe('tr');
+    await new UserProfileService(db).update({ id: customerId, preferredLanguage: 'fr' });
+  });
+
+  it('indirim satırı KOPYADAN gelen adı yazar, kampanya tanımından değil', async () => {
+    const orderId = await orderWith('confirmed', 0, {
+      locale: 'fr',
+      discountAmount: 3,
+      discountLabel: { tr: 'Hoş geldin indirimi', fr: 'Offre de bienvenue' },
+    });
+
+    const totals = (await buildOrderNotification(orderId, 'order_confirmed'))?.data.totals ?? [];
+    expect(totals.find((row) => row.label.startsWith('Remise'))?.label).toBe('Remise — Offre de bienvenue');
+  });
+
+  it('ad yoksa satır genel adında kalır — tür UYDURULMAZ', async () => {
+    const orderId = await orderWith('confirmed', 0, { locale: 'fr', discountAmount: 3 });
+
+    const totals = (await buildOrderNotification(orderId, 'order_confirmed'))?.data.totals ?? [];
+    expect(totals.some((row) => row.label === 'Remise')).toBe(true);
   });
 });

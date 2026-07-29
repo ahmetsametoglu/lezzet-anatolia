@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import {
   CategoryService,
+  DiscountCodeService,
   DiscountService,
   PriceService,
   ProductService,
@@ -11,7 +12,8 @@ import {
 } from '@lezzet/database';
 import { costOf } from '@lezzet/domain-core';
 import { fromCents, toCents } from '@lezzet/helper';
-import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Channel, type KeysetCursor, type Price } from '@lezzet/types';
+import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Channel, type KeysetCursor, type LocalizedText, type Price } from '@lezzet/types';
+import { LOCALES } from '@lezzet/i18n';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { repriceAllAuto, repriceProduct } from '@/lib/pricing/auto-price';
@@ -288,21 +290,28 @@ export async function loadMorePricesAction(
 /**
  * İndirim/kupon yazar ya da günceller. `id` doluysa güncelleme.
  *
- * Doğrulamanın SON EMNİYETİ veritabanındadır (0031 kısıtları: kodsuz kupon, hedefsiz kapsam, ters
- * tarih, %100 üstü yüzde, tekil kod). Burada yalnız operatöre okunur hata verecek kadarı kontrol
- * edilir — kuralı iki yerde tam olarak yazmak, ikisinin ayrışması demektir.
+ * Doğrulamanın SON EMNİYETİ veritabanındadır (0031 kısıtları: hedefsiz kapsam, ters tarih, %100
+ * üstü yüzde, tekil kod, kampanyaya kod yazılamaması). Burada yalnız operatöre okunur hata verecek
+ * kadarı kontrol edilir — kuralı iki yerde tam olarak yazmak, ikisinin ayrışması demektir.
+ *
+ * **Kod SATIRLARI ayrı yazılır** (`discount_code`): bir kuponun birden çok kapısı olur ve hepsi aynı
+ * kotayı açar. Kural yazıldıktan SONRA eşitlenir — kodun bağlanacağı kural henüz yoksa yazılamaz.
  *
  * Sabit tutar KURUŞTAN euroya çevrilir (STACK §8: ekranda cent, DB'de euro).
  */
 export async function saveDiscountAction(input: DiscountFormInput): Promise<ActionResult> {
   try {
     await requireAdmin();
-    const svc = new DiscountService(serviceDb());
+    const db = serviceDb();
+    const svc = new DiscountService(db);
 
     const payload = {
       name: input.name.trim(),
+      // Boş diller AYIKLANIR: form dokunulup silinen dili `''` olarak gönderir ve o boş metin
+      // "ad var" gibi okunup yüzeyde boş bir tire bırakırdı ("İndirim — "). Hiçbir dil kalmazsa
+      // alan `null` yazılır — ad verilmemiş demektir.
+      publicLabel: trimmedLabel(input.publicLabel),
       trigger: input.trigger,
-      code: input.trigger === 'coupon' ? input.code.trim().toUpperCase() : null,
       type: input.type,
       value: input.type === 'fixed' ? fromCents(Math.round(input.valueCents)) : input.valueCents,
       scope: input.scope,
@@ -318,19 +327,48 @@ export async function saveDiscountAction(input: DiscountFormInput): Promise<Acti
       isActive: input.isActive,
     };
 
+    // Kodlar: boş bırakılan dil kapı açmaz. Büyük harfe çevrilir — müşteri "bayram10" yazsa da aynı
+    // kupon bulunur (arama harf ayrımsız), ama listede tek bir yazım görünsün.
+    const codes =
+      payload.trigger === 'coupon'
+        ? LOCALES.flatMap((locale) => {
+            const code = input.codes[locale]?.trim().toUpperCase() ?? '';
+            return code ? [{ code, locale }] : [];
+          })
+        : [];
+
     if (!payload.name) throw new Error('Ad girilmeli — listede kuralı bu adla tanıyacaksınız.');
-    if (payload.trigger === 'coupon' && !payload.code) throw new Error('Kupon kodu girilmeli.');
+    // Kodsuz kupon hiç uygulanamaz: kapısı olmayan bir kural, kimsenin giremediği bir odadır.
+    // (Kural DB'de kısıt olarak DURAMAZ — kod ayrı tabloda ve kural yazılmadan satırı olamaz.)
+    if (payload.trigger === 'coupon' && codes.length === 0) throw new Error('En az bir kupon kodu girilmeli.');
     if (!Number.isFinite(input.valueCents) || input.valueCents <= 0) throw new Error('İndirim değeri sıfırdan büyük olmalı.');
     if (payload.scope !== 'cart' && !input.targetId) throw new Error('Kapsam hedefi seçilmeli (kategori ya da koleksiyon).');
 
-    if (input.id) await svc.update({ id: input.id, ...payload });
-    else await svc.insert(payload);
+    const rule = input.id ? await svc.update({ id: input.id, ...payload }) : await svc.insert(payload);
+    await new DiscountCodeService(db).replaceCodes(
+      rule.id,
+      codes.map((c) => ({ ...c, discountId: rule.id })),
+    );
 
     revalidatePath(PRICES_PATH);
     return { data: null, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
+}
+
+/**
+ * Müşteriye görünen adın temizlenmiş hâli. Formdan gelen `{tr:'Hoş geldin', fr:'', de:''}` gibi bir
+ * nesnede boş diller SAKLANMAZ: yüzey "dil dolu mu" diye bakıyor ve boş metin "ad var" gibi okunup
+ * satırda boş bir tire bırakırdı. Hiçbir dil kalmazsa `null` — "ad verilmedi".
+ */
+function trimmedLabel(label: LocalizedText | null | undefined): LocalizedText | null {
+  const cleaned = Object.fromEntries(
+    Object.entries(label ?? {})
+      .map(([lang, text]) => [lang, text?.trim() ?? ''])
+      .filter(([, text]) => text),
+  );
+  return Object.keys(cleaned).length > 0 ? cleaned : null;
 }
 
 /**

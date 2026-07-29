@@ -5,15 +5,20 @@ import { useRouter } from 'next/navigation';
 import { fromCents, toCents } from '@lezzet/helper';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
+import { FieldShell } from '@/components/operation/form/field-shell';
 import { Input } from '@/components/operation/form/input';
 import { MoneyField, PercentField } from '@/components/operation/form/money-input';
 import { DateRangeField } from '@/components/operation/form/date-field';
 import { parseDay, toDay } from '@/components/operation/form/calendar-math';
 import { MultiToggle } from '@/components/operation/form/multi-toggle';
+import { LocaleCard } from '@/components/operation/form/locale-card';
+import { LocalizedTextField } from '@/components/operation/form/localized-text-field';
 import { Select } from '@/components/operation/form/select';
 import { Toggle } from '@/components/operation/form/toggle';
+import { suggestTranslationAction } from '@/lib/ai/translate';
 import { saveDiscountAction } from './actions';
-import type { DiscountScope, DiscountTrigger, DiscountType } from '@lezzet/types';
+import { LOCALES, type Locale } from '@lezzet/i18n';
+import type { DiscountScope, DiscountTrigger, DiscountType, LocalizedText } from '@lezzet/types';
 import type { CategoryOption, DiscountRow } from './prices-types';
 
 // İndirim / kupon formu — kupon ve kampanya AYNI form. Ayrımları tek anahtarda (tetik) ve o anahtar
@@ -28,6 +33,27 @@ import type { CategoryOption, DiscountRow } from './prices-types';
 // Kaydetmenin son emniyeti DB kısıtlarıdır (0031): kodsuz kupon, hedefsiz kapsam, ters tarih ve
 // tekrarlanan kod veritabanında reddedilir. Form aynı kuralı gösterir ama gerçeğin sahibi tektir.
 
+/**
+ * Müşteriye görünen adın uzunluk tavanı. Kural teknik değil YERLEŞİMDEN geliyor: metin sepet ve mail
+ * özetinde para satırının etiketi olarak duruyor ("İndirim — …  −3,00 €"). Uzun bir cümle o satırı
+ * iki satıra kırar ve kartı okunmaz hâle getirir. Tavan bu yüzden formda, kaydederken değil:
+ * operatör yazarken görsün, sonradan kesilmiş bir metinle karşılaşmasın.
+ */
+const PUBLIC_LABEL_MAX = 40;
+
+const PUBLIC_LABEL_PLACEHOLDER: Record<Locale, string> = {
+  tr: 'ör. Hoş geldin indirimi',
+  fr: 'ör. Offre de bienvenue',
+  de: 'ör. Willkommensrabatt',
+};
+
+/** Kod örnekleri de DİLE göre: müşteri kendi dilinde okuyabildiği bir şey yazacak. */
+const CODE_PLACEHOLDER: Record<Locale, string> = {
+  tr: 'ör. HOSGELDIN',
+  fr: 'ör. BIENVENUE',
+  de: 'ör. WILLKOMMEN',
+};
+
 interface DiscountDialogProps {
   /** Dolu → düzenleme; boş → yeni kural. */
   editing: DiscountRow | null;
@@ -41,8 +67,11 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
   const isEdit = editing !== null;
 
   const [name, setName] = useState(editing?.name ?? '');
+  const [publicLabel, setPublicLabel] = useState<LocalizedText>(editing?.publicLabel ?? {});
   const [trigger, setTrigger] = useState<DiscountTrigger>(editing?.trigger ?? 'coupon');
-  const [code, setCode] = useState(editing?.code ?? '');
+  // Kodlar DİL BAŞINA: kayıttaki satırlar forma dile göre dağılır. Dili olmayan bir kod (matbu kart)
+  // TR kutusuna düşer — formun üç kutusu var ve kod bir yerde görünmek zorunda.
+  const [codes, setCodes] = useState<Partial<Record<Locale, string>>>(() => codeMapOf(editing));
   const [type, setType] = useState<DiscountType>(editing?.type ?? 'percent');
   // Tek alan, iki taban: yüzdede sayı, sabit tutarda KURUŞ tutulur.
   const [value, setValue] = useState<number | null>(
@@ -71,8 +100,9 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
     const { error: actionError } = await saveDiscountAction({
       id: editing?.id ?? null,
       name,
+      publicLabel,
       trigger,
-      code,
+      codes,
       type,
       valueCents: value === null ? 0 : type === 'fixed' ? toCents(value) : value,
       scope,
@@ -98,10 +128,26 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
     onClose();
   };
 
+  // Kuponun EN AZ BİR kapısı olmalı; hangi dilde olduğu operatörün kararı (matbu tek kod meşrudur).
+  const codeCount = LOCALES.filter((l) => (codes[l] ?? '').trim()).length;
+
+  /**
+   * O dildeki kapının kaç kez kullanıldığı — kotanın kırılımı, kendisi değil.
+   *
+   * Kod DEĞİŞTİRİLİRSE sayı düşer ve bu doğru: yeni kod yeni bir kapıdır, eskisinin geçmişini
+   * devralmaz. Etiketin sayı göstermesi kararı besliyor — hiç kullanılmamış bir kodu değiştirmek
+   * bedelsizdir, yüz kez kullanılmış olanı değiştirmek dolaşımdaki kodu kapatır.
+   */
+  const usedCountOf = (lang: Locale): number => {
+    const typed = (codes[lang] ?? '').trim().toUpperCase();
+    if (!typed) return 0;
+    return editing?.codes.find((c) => c.code.toUpperCase() === typed)?.usedCount ?? 0;
+  };
+
   const blocked = !name.trim()
     ? 'Ad girilmeli'
-    : trigger === 'coupon' && !code.trim()
-      ? 'Kupon kodu girilmeli'
+    : trigger === 'coupon' && codeCount === 0
+      ? 'En az bir dilde kupon kodu girilmeli'
       : value === null || value <= 0
         ? 'İndirim değeri girilmeli'
         : // Tavan DB kısıtında da var (%100 üstü yüzde yasak) ama oradan dönen mesaj ham Postgres
@@ -137,7 +183,7 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
         </>
       }
     >
-      <Field label="Tetik">
+      <FieldShell label="Tetik">
         <MultiToggle
           value={trigger}
           onChange={setTrigger}
@@ -147,28 +193,61 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
             { key: 'automatic', label: 'Otomatik kampanya' },
           ]}
         />
-      </Field>
+      </FieldShell>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Ad" hint="Listede tanıyacağınız ad">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ör. Bayram indirimi" />
-        </Field>
-        {trigger === 'coupon' ? (
-          <Field label="Kod" hint="Müşterinin yazacağı; harf ayrımsız tekil">
-            {/* Kod HER ZAMAN büyük harfe çevrilir: müşteri "bayram10" yazsa da aynı kupon bulunur,
-                ama listede tek bir yazım görünsün. */}
-            <Input
-              value={code}
-              mono
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="ör. BAYRAM10"
+      <FieldShell label="Ad" labelAside="Yalnız sizin listeniz için — müşteri görmez">
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ör. Bayram indirimi" />
+      </FieldShell>
+
+      {/* MÜŞTERİ METNİ TEK KARTTA, dil kartın SEKMESİNDEN gelir (ürün formunun deseni). İki alan da
+          aynı dile bağlı: Fransız müşteri "Offre de bienvenue" adını görür ve "BIENVENUE" kodunu
+          yazar. Ayrı kutulara bölünseydi hangi kodun hangi adla gittiği ekranda hiç görünmezdi.
+
+          Kart, tek alanlı bir değer için kurulmazdı — burada iki alan var ve ikisi tek dil bağlamını
+          paylaşıyor, kartın var olma sebebi tam bu.
+
+          KOD DİLE BAĞLIDIR ve bu keyfi değil: "HOSGELDIN" Türk müşteriye bir şey anlatır, Fransız'a
+          hiçbir şey. Üç kod TEK kuponun kapılarıdır — koşulları, değeri ve **kullanım tavanı ortaktır**.
+          Ayrı kupon açmak "toplam 100 kullanım" sınırını sessizce 300 yapardı. */}
+      <LocaleCard title="Müşteriye görünen" completenessOf={publicLabel}>
+        {(lang) => (
+          <>
+            <LocalizedTextField
+              value={publicLabel}
+              onChange={setPublicLabel}
+              lang={lang}
+              label="Ad"
+              placeholder={(l) => `${PUBLIC_LABEL_PLACEHOLDER[l]}…`}
+              maxLength={PUBLIC_LABEL_MAX}
+              onAiTranslate={suggestTranslationAction}
+              hint="Sepette ve mailde indirim satırının yanına yazılır (“İndirim — Hoş geldin indirimi”) — kısa tutun. Boş bırakılırsa müşteri yalnız “İndirim” görür."
             />
-          </Field>
-        ) : null}
-      </div>
+
+            {trigger === 'coupon' ? (
+              <FieldShell
+                label="Kupon kodu"
+                labelAside={usedCountOf(lang) > 0 ? `${usedCountOf(lang)} kez kullanıldı` : 'boş = bu dilde kod yok'}
+              >
+                {/* Kod HER ZAMAN büyük harfe çevrilir: müşteri "bayram10" yazsa da aynı kupon bulunur
+                    (arama harf ayrımsız), ama listede tek bir yazım görünsün. */}
+                <Input
+                  value={codes[lang] ?? ''}
+                  mono
+                  onChange={(e) => setCodes({ ...codes, [lang]: e.target.value.toUpperCase() })}
+                  placeholder={CODE_PLACEHOLDER[lang]}
+                />
+                <span className="font-ops-body text-ops-micro leading-[1.6] text-ops-faint">
+                  Bu dildeki kapı. Hepsi AYNI kuponu açar ve aynı kullanım tavanını paylaşır — kaç kez
+                  hangi kodla girildiği ayrı sayılır.
+                </span>
+              </FieldShell>
+            ) : null}
+          </>
+        )}
+      </LocaleCard>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="İndirim tipi">
+        <FieldShell label="İndirim tipi">
           <MultiToggle
             value={type}
             onChange={setType}
@@ -178,7 +257,7 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
               { key: 'fixed', label: 'Sabit tutar' },
             ]}
           />
-        </Field>
+        </FieldShell>
         {type === 'percent' ? (
           <PercentField label="Değer (%)" labelAside="zorunlu" id="discount-value" value={value} onChange={setValue} placeholder="ör. 10" />
         ) : (
@@ -187,7 +266,7 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Kapsam" hint="Kupon daima sepet kapsamındadır">
+        <FieldShell label="Kapsam" labelAside="Kupon daima sepet kapsamındadır">
           <Select
             value={scope}
             onChange={(next) => {
@@ -200,16 +279,16 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
               { value: 'collection', label: 'Koleksiyon' },
             ]}
           />
-        </Field>
+        </FieldShell>
         {scope !== 'cart' ? (
-          <Field label={scope === 'category' ? 'Kategori' : 'Koleksiyon'}>
+          <FieldShell label={scope === 'category' ? 'Kategori' : 'Koleksiyon'}>
             <Select
               value={targetId}
               onChange={setTargetId}
               placeholder="Seç"
               options={targets.map((t) => ({ value: t.id, label: t.name }))}
             />
-          </Field>
+          </FieldShell>
         ) : null}
       </div>
 
@@ -222,14 +301,14 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
           onChange={setMinBasket}
           placeholder="ör. 50,00"
         />
-        <Field label="Yalnız ilk sipariş">
+        <FieldShell label="Yalnız ilk sipariş">
           <div className="flex items-center gap-2.5 rounded-ops-card border border-ops-line px-3 py-2">
             <Toggle on={firstOrderOnly} onChange={setFirstOrderOnly} label="Yalnız ilk sipariş" />
             <span className="font-ops-body text-ops-xs text-ops-muted">
               {firstOrderOnly ? 'Yalnız ilk siparişte geçerli' : 'Her siparişte geçerli'}
             </span>
           </div>
-        </Field>
+        </FieldShell>
       </div>
 
       {/* Geçerlilik TEK alan: başlangıç ve bitiş ayrı kutularda dururken ikisi arasındaki ilişki
@@ -247,10 +326,10 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
       />
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Toplam kullanım sınırı" hint="boş = sınırsız">
+        <FieldShell label="Toplam kullanım sınırı" labelAside="boş = sınırsız">
           <Input value={maxUses} mono inputMode="numeric" onChange={(e) => setMaxUses(digits(e.target.value))} placeholder="ör. 100" />
-        </Field>
-        <Field label="Müşteri başına sınır" hint="boş = sınırsız">
+        </FieldShell>
+        <FieldShell label="Müşteri başına sınır" labelAside="boş = sınırsız">
           <Input
             value={perCustomerLimit}
             mono
@@ -258,7 +337,7 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
             onChange={(e) => setPerCustomerLimit(digits(e.target.value))}
             placeholder="ör. 1"
           />
-        </Field>
+        </FieldShell>
       </div>
 
       <div className="flex items-center justify-between gap-3 rounded-ops-card border border-ops-line px-3.5 py-2.5">
@@ -280,23 +359,21 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
   );
 }
 
-interface FieldProps {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}
-
-/** Etiket + ipucu + alan — form kitindeki `MoneyField` deseninin, serbest kontroller için karşılığı. */
-function Field({ label, hint, children }: FieldProps) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="flex items-baseline gap-2">
-        <span className="font-ops-body text-ops-xs font-medium text-ops-body">{label}</span>
-        {hint ? <span className="font-ops-body text-ops-micro text-ops-faint">{hint}</span> : null}
-      </span>
-      {children}
-    </div>
-  );
+/**
+ * Kayıttaki kod satırlarını formun dil kutularına dağıtır.
+ *
+ * **Dili olmayan kod TR kutusuna düşer** (`locale = null` — matbu bir kart üstündeki tek kod gibi):
+ * formun üç kutusu var ve kod bir yerde görünmek zorunda; görünmezse operatör onu silmediği hâlde
+ * kaydetme sırasında kaybederdi. Aynı dilde ikinci bir kod varsa yalnız ilki forma gelir — form dil
+ * başına bir kapı kuruyor, tablo bunu şart koşmuyor.
+ */
+function codeMapOf(editing: DiscountRow | null): Partial<Record<Locale, string>> {
+  const map: Partial<Record<Locale, string>> = {};
+  for (const row of editing?.codes ?? []) {
+    const lang = row.locale ?? 'tr';
+    map[lang] ??= row.code;
+  }
+  return map;
 }
 
 /**

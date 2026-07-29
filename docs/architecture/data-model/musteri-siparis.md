@@ -110,9 +110,11 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | delivery_proof | jsonb \| null | teslim onayı: imza görüntüsü/foto (storage yolu), onaylayan, zaman — B2B varsayılan zorunlu, B2C kapalı (parametrik; bkz. `DOMAIN.md §6`) |
 | invoice_no | string \| null | dış muhasebeden sonradan eşleşir |
 | vat_treatment | enum(`domestic`,`intra_eu_b2b_reverse_charge`) | KDV işleme tipi (export için); ileride `oss_destination` |
+| locale | enum(`tr`,`fr`,`de`) \| null | **siparişin dili** — müşterinin bu siparişi verirken okuduğu yüzeyin dili; sipariş maillerinin dili buradan gelir. `null` = bilinmiyor (hızlı satış, operasyon girişi) → profilin `preferred_language`'ına düşülür. Profilden okumamanın sebebi snapshot mantığı: profil sonradan değişebilir, siparişin metni değişmemeli |
 | total | number | **sipariş edilen** toplam = Σ kalem − indirim + `shipping_fee` (sabit, sipariş anı) |
 | discount_id | uuid \| null | uygulanan indirim/kupon (tek; üst üste binmez) |
 | discount_amount | number | uygulanan indirim tutarı; varsayılan 0 |
+| discount_label | jsonb \| null | inen indirimin **müşteriye görünen adının** sipariş anındaki kopyası (`{"fr":"Offre de bienvenue",…}`) — kampanya yeniden adlandırılsa/silinse de siparişin maili ve fişi aynı şeyi der; `address_snapshot` ile aynı gerekçe. `null` = ad verilmemiş → yüzey genel "İndirim"e düşer |
 | amount_collected | number | **cache** — kaynak `MoneyMovement` (siparişe bağlı girişler); toplam tahsil edilen |
 | amount_refunded | number | **cache** — kaynak `MoneyMovement` (`order_refund` çıkışları); toplam iade edilen |
 | cogs_amount | number \| null | malın maliyeti — tüketilen partilerin alışı; kapanışta sabitlenir |

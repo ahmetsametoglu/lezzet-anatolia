@@ -31,7 +31,10 @@ export function LocaleCard({ title = 'İçerik', completenessOf, children }: Loc
   const [lang, setLang] = useState<Locale>('tr');
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-ops-card border border-ops-line">
+    // `shrink-0` ŞART: `overflow-hidden`, flex öğesinin otomatik asgari boyunu (`min-height:auto`)
+    // iptal eder. Uzun bir diyalogda kart, kaydırılabilir gövdenin içinde ezilip yalnız başlık şeridi
+    // kalacak kadar kırpılıyordu — alanları görünmeyen bir kart, olmayan bir kart demektir.
+    <div className="flex shrink-0 flex-col overflow-hidden rounded-ops-card border border-ops-line">
       <div className="flex items-center gap-3 border-b border-ops-line-soft bg-ops-subtle px-3.5">
         <span className="mr-auto font-ops-display text-ops-micro font-medium uppercase tracking-[0.08em] text-ops-muted">
           {title}

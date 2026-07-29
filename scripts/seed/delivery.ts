@@ -1,5 +1,5 @@
 import { AddressService, DeliveryZoneService } from '@lezzet/database';
-import { tabloDolu, type Db, type Kisiler } from './shared';
+import { an, tabloDolu, type Db, type Kisiler } from './shared';
 
 // ── Teslimat bölgesi + adres (07) ────────────────────────────────────────────────────────────────
 // Rota içi/dışı SAKLANMAZ: adresin posta kodu aktif bir bölgeye düşüyorsa rota içidir. Bu yüzden
@@ -70,5 +70,86 @@ export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
     sayi += 1;
   }
   console.log(`✓ adres: ${sayi} kayıt (rota içi · rota dışı · pasif bölgede)`);
+}
+
+// ── Bölge dışı talep sayacı (0029) ───────────────────────────────────────────────────────────────
+// "Nereye getirelim" sorulan her posta kodu SAYILIR — kim sorduğu tutulmaz, tekilleştirilmez.
+// Panonun cevapladığı soru "yeni bölgeyi nereye açalım"dır; o cevap ancak talebin bir yerde
+// YOĞUNLAŞTIĞI görülebilirse verilebilir. Bu yüzden dağılım düz değil: bir kod açık ara önde, birkaçı
+// ortada, birkaçı tek tük — düz bir dağılımda pano hiçbir şey söylemez.
+//
+// Bölge İÇİ kodlar da sayılır (67000): talebin nerede yoğunlaştığı rota SIKLIĞININ da girdisidir,
+// yalnız yeni bölgenin değil.
+
+const POSTA_TALEPLERI: Array<{ kod: string; adet: number; not: string }> = [
+  { kod: '67500', adet: 47, not: 'Haguenau — açık ara önde, bölge açma adayı' },
+  { kod: '67200', adet: 31, not: 'Strasbourg batı — bölge İÇİ, rota sıklığı sinyali' },
+  { kod: '68000', adet: 18, not: 'Mulhouse — uzak, tek başına bölge açtırmaz' },
+  { kod: '67600', adet: 12, not: 'Sélestat' },
+  { kod: '77694', adet: 9, not: 'Kehl (DE) — bölge var ama PASİF; talep birikiyor' },
+  { kod: '54000', adet: 4, not: 'Nancy — tek tük' },
+  { kod: '75011', adet: 2, not: 'Paris — kargo müşterisi' },
+];
+
+export async function seedPostalDemand(db: Db): Promise<void> {
+  if (await tabloDolu(db, 'postal_code_demand')) {
+    console.log('▸ posta kodu talepleri zaten dolu — atlandı');
+    return;
+  }
+  console.log('▸ POSTA KODU TALEBİ seed');
+  const zones = new DeliveryZoneService(db);
+  let toplam = 0;
+  for (const t of POSTA_TALEPLERI) {
+    // Sayaç ATOMİK olarak artar (RPC) ve seed de tek tek artırır — toplu bir insert, sayacın
+    // gerçekte nasıl dolduğunu atlar ve normalleştirme (boşluk/büyük harf) kuralını denemeden bırakır.
+    for (let i = 0; i < t.adet; i += 1) await zones.recordDemand(t.kod);
+    toplam += t.adet;
+    console.log(`  ✓ ${t.kod} · ${t.adet} talep — ${t.not}`);
+  }
+  // İlk görülme tarihleri: "üç aydır birikiyor" ile "dün başladı" farklı kararlar doğurur.
+  const { error } = await db.from('postal_code_demand').update({ first_seen_at: an(-90) }).eq('postal_code', '67500');
+  if (error) throw error;
+  console.log(`✓ posta kodu talebi: ${POSTA_TALEPLERI.length} kod · ${toplam} istek`);
+}
+
+// ── "Bölge açılınca haber ver" (0030) ────────────────────────────────────────────────────────────
+// Talep sayacından FARKLI bir şeydir: sayaç anonimdir ve yalnız sayar; burada müşteri adını bırakır
+// ve bir SÖZ verilmiştir. Bölge açıldığında bu listeye haber gider (`notified_at` damgalanır).
+//
+// Kayıtlar posta kodu + e-posta çiftinde tekildir (DB indeksi, harf ayrımsız): aynı kişi iki kez
+// yazılınca iki mektup gitmemeli.
+
+export async function seedZoneNotices(db: Db, kisiler: Kisiler): Promise<void> {
+  if (await tabloDolu(db, 'zone_notice')) {
+    console.log('▸ bölge haber-ver kayıtları zaten dolu — atlandı');
+    return;
+  }
+  console.log('▸ BÖLGE HABER-VER seed');
+
+  const kayitlar: Array<{ postal_code: string; email: string; customer_id?: string | null; notified_at?: string | null; not: string }> = [
+    // En çok talep gören kodda BEKLEYEN liste — bölge açılınca gidecek mektupların kuyruğu.
+    { postal_code: '67500', email: 'nathalie.roux@example.fr', not: 'bekliyor · kayıtsız ziyaretçi' },
+    { postal_code: '67500', email: 'kemal.ozturk@example.fr', not: 'bekliyor · kayıtsız ziyaretçi' },
+    { postal_code: '67500', email: 'claire.weber@example.fr', customer_id: kisiler.get('b2cSadik') ?? null, not: 'bekliyor · KAYITLI müşteri' },
+    { postal_code: '68000', email: 'sophie.klein@example.fr', not: 'bekliyor' },
+    // PASİF bölgedeki kod: bölge tanımı var ama kapalı — açıldığında haber verilecekler.
+    { postal_code: '77694', email: 'einkauf@anadolu-markt.de', customer_id: kisiler.get('b2bAlman') ?? null, not: 'bekliyor · pasif bölge (Kehl)' },
+    // HABER VERİLMİŞ kayıt: bölge açıldı, mektup gitti. Listenin "bitmiş" ucu da görünsün —
+    // hepsi bekliyorsa gönderim akışının çalıştığı hiç görülmez.
+    { postal_code: '67400', email: 'julien.fischer@example.fr', customer_id: kisiler.get('b2cKapaliKapida') ?? null, notified_at: an(-15), not: 'HABER VERİLDİ (bölge açıldı)' },
+  ];
+
+  const { error } = await db.from('zone_notice').insert(
+    kayitlar.map((k) => ({
+      postal_code: k.postal_code,
+      email: k.email,
+      customer_id: k.customer_id ?? null,
+      notified_at: k.notified_at ?? null,
+      created_at: an(-30),
+    })),
+  );
+  if (error) throw error;
+  for (const k of kayitlar) console.log(`  ✓ ${k.postal_code} · ${k.email} — ${k.not}`);
+  console.log(`✓ haber-ver: ${kayitlar.length} kayıt (${kayitlar.filter((k) => !k.notified_at).length} bekliyor · 1 gönderildi · kayıtlı + kayıtsız)`);
 }
 

@@ -122,17 +122,25 @@ export interface OrderLinkView {
 export interface OrderFinanceRow {
   label: string;
   amountCents: number;
-  kind: 'sale' | 'expense';
+  /**
+   * `estimate` = henüz sabitlenmemiş, **kâra girmeyen** maliyet (parti alışından tahmin). Ayrı bir
+   * tür, çünkü kapanışta yazılacak sayıyla aynı güvende değil ve ekran ikisini aynı gösteremez.
+   */
+  kind: 'sale' | 'expense' | 'estimate';
 }
 
-/** Tek siparişin kâr okuması — motorun `orderProfit` çıktısının ekran karşılığı. */
+/**
+ * Tek siparişin kâr okuması — **merkezî kârlılık motorunun (`orderContribution`, 12.6) ekran
+ * karşılığı**. Sipariş detayı kendi kâr formülünü YAZMAZ: yazsaydı aynı siparişin kârı bu sayfada
+ * bir, kârlılık raporunda başka çıkardı ve hangisinin doğru olduğu tartışılırdı.
+ */
 export interface OrderFinanceView {
   rows: OrderFinanceRow[];
-  /** Satış − maliyet − iade; maliyet bilinmiyorsa `null`. */
+  /** Katkı payı: ciro − doğrudan giderler. Maliyetler kapanışta sabitlenmemişse `null`. */
   profitCents: number | null;
-  /** Maliyet üzerine markup (DOMAIN'in TEK marj tanımı); maliyet yoksa `null`. */
-  markupPercent: number | null;
-  /** Maliyet neden bilinmiyor — kart susmaz, bilmediğini söyler. Biliniyorsa `null`. */
+  /** Katkı payının ciroya oranı (%) — kârlılık raporuyla AYNI tanım. Kâr yoksa `null`. */
+  marginPercent: number | null;
+  /** Kâr neden hesaplanmıyor — kart susmaz, bilmediğini söyler. Hesaplanıyorsa `null`. */
   costNote: string | null;
 }
 

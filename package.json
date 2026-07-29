@@ -44,6 +44,7 @@
     "@lezzet/database": "workspace:*",
     "@lezzet/domain-core": "workspace:*",
     "@lezzet/eslint-config": "workspace:*",
+    "@lezzet/helper": "workspace:*",
     "@lezzet/storage": "workspace:*",
     "@lezzet/types": "workspace:*",
     "@lezzet/typescript-config": "workspace:*",

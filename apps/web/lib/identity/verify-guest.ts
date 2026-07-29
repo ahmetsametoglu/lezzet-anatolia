@@ -1,5 +1,5 @@
 import { EmailVerificationService, serviceDb } from '@lezzet/database';
-import type { UserProfile } from '@lezzet/types';
+import type { PreferredLanguage, UserProfile } from '@lezzet/types';
 import { findOrCreateCustomer } from './find-or-create';
 
 /**
@@ -32,6 +32,11 @@ interface VerifyGuestInput {
   /** Checkout formunda girilmişse — kimliğin ikinci anahtarı, aynı turda karta yazılır. */
   phone?: string | null;
   name?: string | null;
+  /**
+   * Müşterinin o an okuduğu dil. **Yalnız YENİ açılan karta** yazılır (04.9): var olan müşterinin
+   * dilini ezmeyiz — o tercih ona aittir, tarayıcısının o günkü hâline değil.
+   */
+  locale?: PreferredLanguage;
 }
 
 export async function verifyGuestAndAttach(input: VerifyGuestInput): Promise<VerifyGuestResult> {
@@ -44,6 +49,8 @@ export async function verifyGuestAndAttach(input: VerifyGuestInput): Promise<Ver
     name: input.name,
     // Doğrulanmış kimlik taslak değildir — WhatsApp'tan otomatik açılan kayıttan farkı budur.
     asDraft: false,
+    // `defaults` yalnız OLUŞTURMADA uygulanır (`find-or-create`) — var olan kart ezilmez.
+    defaults: input.locale ? { preferredLanguage: input.locale } : undefined,
   });
 
   switch (identity.status) {

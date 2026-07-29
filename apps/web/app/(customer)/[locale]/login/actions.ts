@@ -4,11 +4,12 @@ import { getLocale } from 'next-intl/server';
 import { normalizeEmail } from '@lezzet/helper';
 import { brand } from '@lezzet/brand';
 import type { Locale } from '@lezzet/i18n';
-import { createServiceRoleClient, EmailVerificationService } from '@lezzet/database';
+import { createServiceRoleClient, EmailVerificationService, UserProfileService } from '@lezzet/database';
 import { OtpCodeEmail, otpSubject, sendEmail } from '@lezzet/email';
 import { createClient } from '@/lib/supabase/server';
 import { resolvePostLoginRedirect } from '@/lib/auth/redirect';
 import { authErrorMessage } from '@/lib/auth/errors';
+import { seedPreferredLanguage } from '@/lib/identity/preferred-language';
 
 type SendResult = { ok: true } | { ok: false; error: string };
 type VerifyResult = { ok: true; redirect: string } | { ok: false; error: string };
@@ -63,6 +64,11 @@ export async function verifyEmailOtp(emailRaw: string, token: string, next?: str
     return { ok: false, error: authErrorMessage(key, locale) };
   }
 
+  // Kart ZATEN VAR MI — dili yalnız yeni açılana yazacağız (04.9). Ölçüm oturum açılmadan ÖNCE
+  // alınmak zorunda: `generateLink` kullanıcıyı yaratınca trigger profili de açar ve sonradan
+  // bakan biri "zaten vardı" diye okur.
+  const knownBefore = Boolean(await new UserProfileService(admin).findByEmail(email));
+
   // Oturum aç: generateLink kullanıcı yoksa yaratır (mailsiz), token_hash'i SSR client tüketir → cookie.
   const { data: link, error: linkErr } = await admin.auth.admin.generateLink({ type: 'magiclink', email });
   if (linkErr || !link.properties?.hashed_token || !link.user) {
@@ -76,6 +82,10 @@ export async function verifyEmailOtp(emailRaw: string, token: string, next?: str
     console.error('[verifyEmailOtp] verifyOtp hatası:', sessionErr);
     return { ok: false, error: authErrorMessage('send_failed', locale) };
   }
+
+  // Yeni müşteri: geldiği dil kartına yazılır. Başarısız olursa giriş bozulmaz — dil bir kolaylıktır,
+  // kimlik değil; müşteri Fransızca mail alır ve hesabından değiştirir.
+  if (!knownBefore) await seedPreferredLanguage(link.user.id, locale).catch(() => undefined);
 
   const redirect = await resolvePostLoginRedirect(link.user.id, next);
   return { ok: true, redirect };

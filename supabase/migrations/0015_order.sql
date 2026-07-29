@@ -49,6 +49,15 @@ create table public.order (
   vat_number_snapshot text,                          -- reverse charge'da o anki geçerli no (denetim kanıtı)
   vat_treatment vat_treatment not null default 'domestic',
 
+  -- SİPARİŞİN DİLİ — müşterinin bu siparişi verirken okuduğu dil (14.5). Sipariş maillerinin dili
+  -- buradan gelir, profilden DEĞİL: profil sonradan değişebilir (hesap ekranından, ya da aynı şirket
+  -- hesabından başka biri sipariş verince) ve o an eski siparişin maili dil değiştirirdi. Aynı gerekçe
+  -- `address_snapshot`'ta da geçerli: siparişe ait olan bilgi siparişte durur.
+  --
+  -- NULL = "bilinmiyor" → okuyan taraf profilin `preferred_language`'ına düşer. Web checkout dolduruyor;
+  -- hızlı satış ve operasyon girişi doldurmuyor — orada müşterinin okuduğu bir yüzey yok, tahmin de yok.
+  locale preferred_language,
+
   -- Sistemin ürettiği referans (LA-26-7K4M2P) — resmî fatura no DEĞİL. İLK KALICI DURUMDA üretilir
   -- (`confirmed`, hızlı satışta `completed`); draft'ta null olduğu için kısmi unique.
   reference_no text,
@@ -64,6 +73,12 @@ create table public.order (
   total numeric(10, 2) not null default 0,           -- Σ kalem − indirim + kargo
   discount_id uuid,                                  -- FK YOK: `discount` tablosu 09'da; tek indirim (üst üste binmez)
   discount_amount numeric(10, 2) not null default 0,
+  -- İnen indirimin MÜŞTERİYE GÖRÜNEN adı, sipariş anındaki hâliyle ({"fr":"Offre de bienvenue",...}).
+  -- Neden kopya: kampanya sonradan yeniden adlandırılabilir, süresi dolabilir, silinebilir; ama o
+  -- siparişin maili ve fişi ne dediyse onu demeye devam etmeli. `discount_id` üzerinden okusaydık
+  -- geçmiş bir belgenin metni bugünkü tanıma göre değişirdi. NULL = ad verilmemiş → yüzey genel
+  -- "İndirim / Remise / Rabatt"a düşer.
+  discount_label jsonb,
   -- CACHE — kaynak `MoneyMovement` (modül 12). Ödeme durumu bunlardan TÜRETİLİR.
   amount_collected numeric(10, 2) not null default 0,
   amount_refunded numeric(10, 2) not null default 0,

@@ -30,12 +30,15 @@ const BASE_SALE: OrderSale = {
   deliveryCountry: 'FR',
   vatNumberSnapshot: null,
   vatTreatment: 'domestic',
+  locale: null,
   referenceNo: 'LA-26-7K4M2P',
+  idempotencyKey: null,
   invoiceNo: null,
   deliveryProof: null,
   shippingFee: 0,
   total: 0,
   discountId: null,
+  discountLabel: null,
   discountAmount: 0,
   amountCollected: 0,
   amountRefunded: 0,
@@ -115,6 +118,28 @@ describe('kargo — malın oranını izler', () => {
 
     expect(row.gross).toBe(6);
     expect(row.vatLines).toEqual([{ vatRate: 20, gross: 6, net: 5, vat: 1 }]);
+  });
+});
+
+describe('KDV tabanı kanaldan gelir (DOMAIN §5)', () => {
+  it('yurtiçi B2B satırında tutar HT\'dir — KDV ÜSTÜNE eklenir, içinden çıkarılmaz', () => {
+    // Bu satır bir para hatasının nöbetçisidir: b2b fiyatı KDV hariç saklanır, ama export tek yön
+    // varsayıp `removeVat` uyguluyordu. Sonuç, beyan edilen KDV'nin ve cironun her b2b satırında
+    // düşük çıkmasıydı — hem muhasebe dosyasında hem kâr raporunda, aynı kökten.
+    const row = buildExportRow(sale({ channel: 'b2b' }), [line({ unitPrice: 100, vatRate: 5.5 })]);
+
+    expect(row.net).toBe(100); // tutarın kendisi
+    expect(row.vat).toBe(5.5);
+    expect(row.gross).toBe(105.5); // müşterinin ödeyeceği
+    expect(row.net + row.vat).toBe(row.gross);
+  });
+
+  it('aynı sayı B2C\'de TTC okunur — iki kanal aynı satırı farklı böler', () => {
+    const b2c = buildExportRow(sale({ channel: 'b2c' }), [line({ unitPrice: 100, vatRate: 5.5 })]);
+
+    expect(b2c.gross).toBe(100);
+    expect(b2c.net).toBe(94.79);
+    expect(b2c.vat).toBe(5.21);
   });
 });
 

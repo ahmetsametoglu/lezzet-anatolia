@@ -36,7 +36,8 @@
  *   ✓ temperature_log     4 nokta × 21 gün × 2 ölçüm; bir kısmı bilinçli ARALIK DIŞI
  *   ✓ cart                normal · toptan · BAYAT (1 yıllık) + partiye çıpalı teklif satırı
  *   ✓ order               9 durumun hepsi · 4 kaynak (web/whatsapp/door/manual) · tam yol + hızlı
- *                         satış · vadeli gecikmiş/kısmi ödenmiş (açık bakiye türetimi)
+ *                         satış · vadeli gecikmiş/kısmi ödenmiş (açık bakiye türetimi) · KUPONLU
+ *                         siparişler · KISMİ İADE (restock/discard/goodwill üçü de) · kurye günleri
  *   ✓ reservation         siparişlerle birlikte doğar (TTL'li checkout + süresiz kapıda/vadeli)
  *   ✓ order_item_batch    hazırlık onayında yazılır → geri çağırma ve gerçek COGS denenebilir
  *   ✓ order_status_log    her geçiş kaydedilir → teslim/kapanış anı buradan türetilir
@@ -44,9 +45,30 @@
  *   ✓ money_movement      açılış bakiyeleri (`capital`) · 9 gider (2'si kampanya etiketli reklam) ·
  *                         tedarikçiye KISMİ ödeme (borç açık kalsın) · 2 transfer (kasa→banka,
  *                         Stripe payout). Sipariş tahsilatları YOK — onlar 12.2'de siparişe bağlı doğar
- *   ✓ job_run             3 iş izi (biri HATALI — "koştu ama düştü" ile "hiç koşmadı" ayrımı)
- *   ✓ settings            migration 0016'da seed'li (16 varsayılan) — burada tekrarlanmaz
+ *   ✓ discount            11 tanım: 8 kupon (geçerli · ilk-sipariş · süresi dolmuş · başlamamış ·
+ *                         tek haklı · kişiye özel · pasif · kişi-başı sınırlı) + 3 otomatik kampanya
+ *                         (kategori · koleksiyon · asgari sepetli). Kupon kutusunun HER cevabı denenir
+ *   ✓ discount_use        kullanım kaydı siparişten doğar — "kaç hak kaldı" sayaçtan değil buradan
+ *   ✓ courier_day_close   2 gün kapalı (1 mutabık · 1 FARKLI + kuryenin açıklaması) · kalan gün AÇIK
+ *   ✓ ticket              8 talep: 3 durum · 4 kaynak · AI + insan devralma · iade tetikli ·
+ *   ✓ ticket_message      fotoğraflı · yeniden açılmış · sonu müşteride biten (kuyrukta cevap bekler)
+ *   ✓ product_feedback    yayında · moderasyon kuyruğunda · reddedilmiş · metinsiz yıldız · beğeni ·
+ *                         3 dilde yorum · çok yorumlu ürün (sayfalama) · düşük puanlı ürün ·
+ *                         aday kaydırmaları (kimlikli + ziyaretçi + eşik altı süre = sinyal kalitesi)
+ *   ✓ feedback_request    5 davet: tamamlanmış · yarım (ilerleme çubuğu) · hiç gönderilmemiş ·
+ *                         SÜRESİ DOLMUŞ token · WhatsApp kanallı. Kalan sipariş davetsiz (cron kuyruğu)
+ *   ✓ points_entry        7 sebebin hepsi · kazanım + harcama · elle düzeltme (+ ve −) ·
+ *                         kupona çevirme RPC ile (negatif satır + kişisel kupon aynı turda)
+ *   ✓ postal_code_demand  7 posta kodu, YOĞUNLAŞMIŞ dağılım (47 → 2) — "bölge nereye açılmalı"
+ *   ✓ zone_notice         6 kayıt: bekleyen + haber verilmiş · kayıtlı müşteri + kayıtsız ziyaretçi
+ *   ✓ webhook_event       işlenmiş · DÜŞMÜŞ (hata metinli) · bekleyen · dinlenmeyen tür
+ *   ✓ job_run             2 iz — adlar `apps/backend/src/jobs`'takilerle BİREBİR (uydurma ad, ekranda
+ *                         hiç tazelenmeyen hayalet satır bırakır). Biri HATALI; kayıtsız iş = hiç koşmadı
+ *   ✓ settings            migration 0016/0038'de seed'li — burada tekrarlanmaz
  *   ✗ email_verifications GEÇİCİ OTP kaydı — seed'lenmez (dakikalar içinde ölür, giriş akışı üretir)
+ *   ✓ bank_import         şablon + bir ekstre yüklemesi; satırlar GERÇEK okuyucudan geçer →
+ *                         eşleştirme kuyruğu dolu gelir (money bölümünde)
+ *   ✗ document_counter    numara VERİLDİKÇE dolar (0033) — önceden doldurmak sayacı yalanlar
  *   ✗ auth.users          seed auth hesabı AÇMAZ; profiller auth'suz durur (giriş yapılınca 0002
  *                         trigger'ı e-postadan eşleştirip bağlar)
  *
@@ -66,7 +88,10 @@
 
 import { createServiceRoleClient, waitForRest } from '@lezzet/database';
 import { seedBundles, seedCatalog, seedCollections } from './seed/catalog';
-import { seedDeliveryZones, seedAddresses } from './seed/delivery';
+import { seedCourierDayCloses } from './seed/courier';
+import { seedAddresses, seedDeliveryZones, seedPostalDemand, seedZoneNotices } from './seed/delivery';
+import { seedDiscounts } from './seed/discount';
+import { seedFeedbackRequests, seedPoints, seedProductFeedback } from './seed/feedback';
 import { seedJobRuns } from './seed/jobs';
 import { seedMoney } from './seed/money';
 import { seedCarts, seedOrders } from './seed/orders';
@@ -75,6 +100,7 @@ import { seedPrices } from './seed/pricing';
 import { katalogVaryantlari } from './seed/shared';
 import { seedStock, seedAdjustments, seedTemperatureLogs } from './seed/stock';
 import { seedSupply } from './seed/supply';
+import { seedTickets } from './seed/support';
 
 // Seed Next.js dışında çalışır — .env'i elle yükle (Node 22 process.loadEnvFile).
 try {
@@ -101,6 +127,8 @@ async function main(): Promise<void> {
   await seedBundles(db);
   await seedDeliveryZones(db);
   await seedAddresses(db, kisiler);
+  await seedPostalDemand(db);
+  await seedZoneNotices(db, kisiler);
   const tedarik = await seedSupply(db, varyantlar);
   await seedStock(db, varyantlar, tedarik);
   await seedAdjustments(db, kisiler);
@@ -108,7 +136,16 @@ async function main(): Promise<void> {
   await seedCarts(db, kisiler, varyantlar);
   // Para SİPARİŞLERDEN ÖNCE: sipariş tahsilatları bir hesaba yazılıyor (12.2), hesap hazır olmalı.
   await seedMoney(db);
-  await seedOrders(db, kisiler, varyantlar);
+  // Kuponlar SİPARİŞLERDEN ÖNCE: sipariş kuponu uygular ve kullanım kaydını yazar; tanım hazır olmalı.
+  const kuponlar = await seedDiscounts(db, kisiler);
+  await seedOrders(db, kisiler, varyantlar, kuponlar);
+
+  // Siparişten DOĞAN kayıtlar — hepsi sipariş kimliğine dayanır, sıra bağlayıcıdır.
+  await seedCourierDayCloses(db, kisiler); // kapanış, günün tahsilat görünümünü okur
+  await seedTickets(db, kisiler); // talep siparişe ve kalemine bağlanır
+  const davetler = await seedFeedbackRequests(db); // davet teslim edilmiş siparişe gider
+  const degerlendirmeler = await seedProductFeedback(db, kisiler, varyantlar, davetler);
+  await seedPoints(db, kisiler, degerlendirmeler); // puan, değerlendirmenin izine dayanır
   await seedJobRuns(db);
 
   // Seed bir admin açtığı için 0002'nin "ilk giren admin olur" bootstrap'ı artık tetiklenmez.

@@ -143,9 +143,9 @@ Tek varlık; hem kupon (kod) hem otomatik kampanya. Kupon daima sepet düzeyi (b
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
-| name | string | iç ad |
+| name | string | iç ad — operatörün listede tanıdığı ad, tek dilde (Türkçe); müşteriye GÖSTERİLMEZ |
+| public_label | jsonb \| null | **müşteriye görünen ad**, üç dilde (`{"fr":"Offre de bienvenue",…}`) — sepet/ödeme özetinde ve mailde indirim satırının yanına yazılır. `null`/boş = ad yok → yüzey genel "İndirim / Remise / Rabatt"a düşer. `name`'den ayrı, çünkü iki farklı okuyucusu var: biri operasyonun kendi dili, öbürü vitrinin cümlesi. Sipariş bu değerin ANLIK KOPYASINI tutar (`order.discount_label`) |
 | trigger | enum(`coupon`,`automatic`) | kod mu, otomatik mi |
-| code | string \| null | trigger=coupon ise müşterinin girdiği kod |
 | type | enum(`percent`,`fixed`) | oran / sabit tutar |
 | value | number | |
 | scope | enum(`cart`,`category`,`collection`) | kupon → daima `cart` |
@@ -159,6 +159,35 @@ Tek varlık; hem kupon (kod) hem otomatik kampanya. Kupon daima sepet düzeyi (b
 | per_customer_limit | int \| null | müşteri başına |
 | customer_id | uuid \| null | kişisel kupon (ör. geri bildirim ödülü) — yalnız o müşteri kullanır |
 | is_active | boolean | |
+
+**Kodlar burada DEĞİL, `DiscountCode`'da:** bir kuponun birden çok kodu olabilir (bkz. aşağı).
+
+## DiscountCode (kupon kodu)
+
+Kuponun **kapısı**. Bir kuralın birden çok kodu olur ve **hepsi aynı kuralı, aynı kotayı açar**.
+
+Sebep dildir: "HOSGELDIN" bir Türk müşteriye bir şey anlatır, Fransız'a hiçbir şey; aynı kampanya
+için "BIENVENUE" ve "WILLKOMMEN" de açılabilmeli. Ama bunlar üç ayrı kampanya DEĞİLDİR — koşulları,
+değeri, tarihi ve kullanım tavanı tektir. Üç ayrı `Discount` satırı açmak "toplam 100 kullanım"
+sınırını sessizce 300'e çıkarırdı.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| discount_id | uuid | bağlı olduğu kural (cascade) |
+| code | string | müşterinin yazdığı kod; **harf ayrımsız ve TÜM kurallar arasında tekil** (`upper(code)` indeksi) — bir kod tek bir kuralı göstermeli, yoksa hangisinin uygulandığı yazılma sırasına kalırdı |
+| locale | enum(`tr`,`fr`,`de`) \| null | kodun yazıldığı dil; `null` = dilden bağımsız (matbu kart üstündeki tek kod). Zorunlu değil, her kod bir dile ait olmak zorunda değil |
+| created_at | timestamptz | |
+
+**Yalnız kuponun kodu olur:** kampanyaya kod yazılması DB trigger'ıyla engellenir
+(`discount_code_requires_coupon`) — "otomatik" adının yalanı olan kodlu bir kampanya, kutuya
+yazılınca uygulanır ve kimse neden olduğunu anlamaz. **Kodsuz kupon** ise uygulama katmanında
+engellenir (kural yazılmadan kod satırı olamayacağı için DB kısıtı olarak duramaz).
+
+**Kota bölünmez.** `max_uses`/`per_customer_limit` kural seviyesinde kalır, sayım `DiscountUse`
+satırları üzerinden yapılır. Hangi kapıdan girildiği yalnız **kırılımdır**: `discount_use.
+discount_code_id` "TR kodu mu FR kodu mu tuttu" sorusunu yanıtlar ve kampanyanın hangi dilde
+karşılık bulduğunu söyler.
 
 ## Bundle (paket)
 

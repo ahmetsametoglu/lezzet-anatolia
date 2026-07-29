@@ -35,7 +35,7 @@ import {
   isOverdue,
   isTerminal,
   openAmountCents,
-  orderProfit,
+  orderContribution,
   skippedBetween,
 } from '@lezzet/domain-core';
 import { addVat, toCents, vatPortion } from '@lezzet/helper';
@@ -227,7 +227,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
         : null,
     },
     links: linksOf(tickets, lotByItem, lines, new Map(items.map((i) => [i.id, variantProducts.get(i.variantId) ?? '']))),
-    finance: financeOf(order, lines, cogsOf(batches, stocks)),
+    finance: financeOf(order, items, cogsOf(batches, stocks)),
   };
 }
 
@@ -254,56 +254,64 @@ function cogsOf(
 }
 
 /**
- * Finansal kart — motorun `orderProfit` çıktısının ekran satırlarına dökümü.
+ * Finansal kart — **merkezî kârlılık motorunun (`orderContribution`, 12.6) ekran dökümü.**
  *
- * **Maliyetin iki kaynağı var ve sırası önemli:** kapanışta sabitlenen `cogs_amount` (DOMAIN §12)
- * kesin kayıttır; henüz kapanmamış siparişte o alan boştur ve maliyet fiilen çıkan partilerin
- * alışından TAHMİN edilir. Kart hangisine baktığını söyler — sabitlenmiş bir sayı ile o günkü
- * partiden hesaplanmış bir sayı aynı güvende değildir.
+ * Burada ikinci bir kâr formülü YOK ve bu bilinçli: sipariş detayı bir zamanlar kendi hesabını
+ * yapıyordu (satış `qty` üzerinden, marj maliyete markup, kapanmamış siparişte de kâr) ve aynı
+ * siparişin kârı bu sayfada bir, kârlılık raporunda başka çıkıyordu. Ciro da marj da artık
+ * raporun kullandığı sayının aynısıdır — ikisi ayrışırsa hangisinin doğru olduğu tartışılırdı.
  *
- * **Marj burada HESAPLANMAZ**, motordan gelir; ve gelen sayı DOMAIN'in tek marj tanımıdır: maliyet
- * üzerine markup. (Tasarımın kartı "kâr ÷ satış" yazıyor — bilinçli sapma, iki tanım tek projede
- * yaşayamaz.)
+ * **Kâr yalnız maliyetler SABİTLENMİŞSE hesaplanır** (DOMAIN §12). Kapanmamış siparişte dağıtım
+ * payı, komisyon ve ambalaj henüz yazılmamıştır; onları 0 sayıp "kâr" demek, olmayan giderleri
+ * sıfırlayıp sayıyı şişirmek olurdu. Parti alışından çıkan maliyet yine de GÖSTERİLİR — ama
+ * tahmin olarak işaretlenir ve kâra girmez: bilgi vermek ile hesap uydurmak farklı şeylerdir.
  */
-function financeOf(order: Order, lines: OrderLineView[], batchCogsCents: number | null): OrderFinanceView {
-  const fixedCogs = order.cogsAmount === null ? null : toCents(order.cogsAmount);
-  const cogsCents = fixedCogs ?? batchCogsCents;
+function financeOf(order: Order, items: readonly OrderItem[], batchCogsCents: number | null): OrderFinanceView {
+  const contribution = orderContribution(
+    {
+      id: order.id,
+      // Satış günü: teslim günü varsa o, yoksa siparişin açıldığı gün. Katkı payı hesabına girmez,
+      // çıktıyı damgalar — rapor da aynı kaydı aynı günle görsün.
+      saleDate: order.deliveryDate ?? order.createdAt.slice(0, 10),
+      channel: order.channel,
+      vatTreatment: order.vatTreatment,
+      shippingFee: order.shippingFee,
+      isGiftOrder: order.isGiftOrder,
+      cogsAmount: order.cogsAmount,
+      deliveryCost: order.deliveryCost,
+      paymentFee: order.paymentFee,
+      packagingCost: order.packagingCost,
+    },
+    items,
+  );
 
-  // Malın dışındaki giderler: girilmemiş olan hiç toplanmaz (sıfır ≠ bilinmiyor).
-  const others: Array<[string, number | null]> = [
-    ['Dağıtım payı', order.deliveryCost === null ? null : toCents(order.deliveryCost)],
-    ['Ödeme komisyonu', order.paymentFee === null ? null : toCents(order.paymentFee)],
-    ['Ambalaj', order.packagingCost === null ? null : toCents(order.packagingCost)],
+  const rows: OrderFinanceView['rows'] = [
+    { label: 'Satış (KDV hariç)', amountCents: toCents(contribution.revenue), kind: 'sale' },
   ];
-  const otherCostCents = others.reduce((sum, [, value]) => sum + (value ?? 0), 0);
 
-  const profit = orderProfit({
-    channel: order.channel,
-    lines: lines.map((l) => ({ amountCents: l.lineTotalCents, vatRate: l.vatRate })),
-    shippingCents: toCents(order.shippingFee),
-    shippingVatRate: null,
-    cogsCents,
-    otherCostCents,
-    refundedCents: toCents(order.amountRefunded),
-  });
-
-  const rows: OrderFinanceView['rows'] = [{ label: 'Satış (KDV hariç)', amountCents: profit.revenueHtCents, kind: 'sale' }];
-  if (profit.cogsCents !== null) rows.push({ label: 'Mal maliyeti', amountCents: profit.cogsCents, kind: 'expense' });
-  for (const [label, value] of others) {
-    if (value !== null) rows.push({ label, amountCents: value, kind: 'expense' });
+  if (contribution.costsFixed) {
+    const costs: Array<[string, number]> = [
+      ['Mal maliyeti', contribution.costs.cogs],
+      ['Dağıtım payı', contribution.costs.delivery],
+      ['Ödeme komisyonu', contribution.costs.paymentFee],
+      ['Ambalaj', contribution.costs.packaging],
+    ];
+    for (const [label, value] of costs) {
+      if (value > 0) rows.push({ label, amountCents: toCents(value), kind: 'expense' });
+    }
+  } else if (batchCogsCents !== null) {
+    rows.push({ label: 'Mal maliyeti (tahmini)', amountCents: batchCogsCents, kind: 'estimate' });
   }
-  if (profit.refundHtCents > 0) rows.push({ label: 'İade gideri', amountCents: profit.refundHtCents, kind: 'expense' });
 
   return {
     rows,
-    profitCents: profit.profitCents,
-    markupPercent: profit.markupPercent,
-    costNote:
-      cogsCents === null
-        ? 'Mal maliyeti parti seçiminden sonra bilinir — hazırlıkta hangi partiden çıktığı yazılır.'
-        : fixedCogs === null
-          ? 'Maliyet çıkan partilerin alışından hesaplandı; kapanışta sabitlenecek.'
-          : null,
+    profitCents: contribution.costsFixed ? toCents(contribution.contribution ?? 0) : null,
+    marginPercent: contribution.marginPct,
+    costNote: contribution.costsFixed
+      ? null
+      : batchCogsCents === null
+        ? 'Mal maliyeti parti seçiminden sonra bilinir; kâr sipariş kapandığında hesaplanır.'
+        : 'Kâr sipariş kapandığında hesaplanır — dağıtım payı, komisyon ve ambalaj o an sabitlenir.',
   };
 }
 

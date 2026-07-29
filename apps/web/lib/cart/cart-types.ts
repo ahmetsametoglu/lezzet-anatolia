@@ -1,5 +1,6 @@
 import { meetsMinBasket } from '@lezzet/domain-core';
 import type { CouponRejection } from '@lezzet/domain-core';
+import type { LocalizedText } from '@lezzet/types';
 import type { StorefrontImage } from '@/lib/storefront/storefront-types';
 
 /**
@@ -22,10 +23,12 @@ export type CouponFailure =
  * indirimde müşterinin elinde hiçbir ipucu yoktu, satır yalnız "İndirim" diyordu. Sepetinden
  * habersizce para düşen müşteri "neden?" diye soruyor (29.07 geri bildirimi).
  *
- * **Kampanyanın ADI kullanılmaz:** `Discount.name` operatörün listede tanıdığı addır, tek dilde
+ * **Kampanyanın İÇ ADI kullanılmaz:** `Discount.name` operatörün listede tanıdığı addır, tek dilde
  * yazılır ve müşteriye gösterilmek üzere tasarlanmamıştır — Fransız müşteriye "Baklava haftası"
  * yazmak olurdu. Sebep bu yüzden TÜRDEN doğar ve metni sayfanın kendi sözlüğünden gelir.
- * BEKLEYEN(BACKLOG §2): kampanyaya müşteriye görünen çok dilli bir vitrin adı — tasarım kararı.
+ *
+ * Sebep, kampanyanın müşteriye görünen adının (`CartDiscount.label`) YEDEĞİDİR, alternatifi değil:
+ * ad verilmişse o yazılır ("Hoş geldin indirimi"), verilmemişse tür konuşur ("kampanya %15").
  */
 export type DiscountReason =
   /**
@@ -43,11 +46,25 @@ export type DiscountReason =
  * okur; çözümü yapan kapı sunucudadır (`lib/cart/discount.ts`, `server-only`).
  */
 export type CartDiscount =
-  | { status: 'applied'; source: 'coupon'; code: string; amountCents: number; lineShares: number[]; discountId: string | null }
+  /** `codeId`: hangi KAPIDAN girildi — kota kuralın tamamına aittir, bu yalnız kullanım kaydına iz. */
+  | { status: 'applied'; source: 'coupon'; code: string; codeId: string; amountCents: number; lineShares: number[]; discountId: string | null; label: LocalizedText | null }
   /** Kupon girilmeden kazanan indirim (otomatik kampanya ya da müşterinin genel oranı). */
-  | { status: 'automatic'; reason: DiscountReason; amountCents: number; lineShares: number[]; discountId: string | null }
-  /** `appliedInsteadCents`: kupon tutmasa da sepete inen indirim — müşteri onu kaybetmez. */
-  | { status: 'rejected'; reason: CouponFailure; code: string; appliedInsteadCents: number }
+  | { status: 'automatic'; reason: DiscountReason; amountCents: number; lineShares: number[]; discountId: string | null; label: LocalizedText | null }
+  /**
+   * `appliedInsteadCents`: kupon tutmasa da sepete inen indirim — müşteri onu kaybetmez.
+   *
+   * `appliedInstead` o indirimin KİMLİĞİDİR (adı + sebebi) ve taşınması şart: kupon reddedilince
+   * sepete inen indirim değişmiyor, yalnız kupon uygulanmıyor. Taşınmadığında özet satırı
+   * "İndirim — Baklava haftası" iken sırf bir kupon denendi diye "İndirim"e düşüyordu — aynı
+   * indirim, iki farklı ad (29.07 kullanıcı geri bildirimi).
+   */
+  | {
+      status: 'rejected';
+      reason: CouponFailure;
+      code: string;
+      appliedInsteadCents: number;
+      appliedInstead: { reason: DiscountReason; label: LocalizedText | null } | null;
+    }
   | { status: 'none' };
 
 /**

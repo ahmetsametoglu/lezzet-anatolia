@@ -19,7 +19,7 @@ import { FormLocalizedText } from '@/components/operation/form/form-localized-te
 import { FormNutrition } from '@/components/operation/form/form-nutrition';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { ProductPhotos } from './product-photos';
-import { suggestTranslationAction } from '../../actions/translate';
+import { suggestTranslationAction } from '@/lib/ai/translate';
 import { createProductAction, updateProductAction, uploadProductImageAction } from './actions';
 import { VariantEditor } from './variant-editor';
 import { ProductFormDeclaration } from './product-form-declaration';

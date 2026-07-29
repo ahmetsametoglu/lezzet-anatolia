@@ -10,9 +10,9 @@ import {
 } from '@lezzet/database';
 import { deriveChannel } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
-import type { DeliveryType, OrderItemInsert, PaymentMethod } from '@lezzet/types';
+import type { DeliveryType, LocalizedText, OrderItemInsert, PaymentMethod } from '@lezzet/types';
 import { getCartView } from '@/lib/cart/read';
-import type { CartEntry, CartLine } from '@/lib/cart/cart-types';
+import type { CartEntry, CartLine, CartView } from '@/lib/cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
 import { resolveDelivery } from './delivery';
 
@@ -138,6 +138,9 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
       total: options.orderTotalCents / 100,
       discountAmount: discountAmountOf(cart) / 100,
       discountId: discountIdOf(cart),
+      discountLabel: discountLabelOf(cart),
+      // Siparişin dili: müşteri bu siparişi hangi yüzeyde okuyorsa o. Mailler buradan konuşur.
+      locale: input.locale,
     },
     items,
   );
@@ -235,4 +238,15 @@ function discountAmountOf(cart: { discount: { status: string; amountCents?: numb
 
 function discountIdOf(cart: { discount: { status: string; discountId?: string | null } }): string | null {
   return cart.discount.status === 'applied' || cart.discount.status === 'automatic' ? (cart.discount.discountId ?? null) : null;
+}
+
+/**
+ * İndirimin müşteriye görünen adının SİPARİŞ ANINDAKİ kopyası (0015 `discount_label`).
+ *
+ * `discountId` üzerinden sonradan okumak yetmezdi: kampanya yeniden adlandırılabilir, süresi
+ * dolabilir, silinebilir. O zaman altı ay önce gönderilmiş mailin yeniden basımı başka bir şey
+ * derdi. Siparişe ait olan bilgi siparişte durur — `addressSnapshot` ile aynı kural.
+ */
+function discountLabelOf(cart: CartView): LocalizedText | null {
+  return cart.discount.status === 'applied' || cart.discount.status === 'automatic' ? cart.discount.label : null;
 }

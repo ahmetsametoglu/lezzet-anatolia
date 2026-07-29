@@ -1,6 +1,6 @@
 import {
-  AccountService, AddressService, CartService, DeliveryZoneService, MoneyMovementService, OrderService,
-  ReservationService, StockService,
+  AccountService, AddressService, CartService, DeliveryZoneService, DiscountService, MoneyMovementService,
+  OrderService, ReservationService, StockService, UserProfileService,
 } from '@lezzet/database';
 import { derivePaymentStatusForOrder, generateReferenceNo } from '@lezzet/domain-core';
 import { distributeDiscount } from '@lezzet/helper';
@@ -86,6 +86,17 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
   const addresses = new AddressService(db);
 
   const movements = new MoneyMovementService(db);
+  // İndirimin müşteriye görünen adı siparişe KOPYALANIR (0015 `discount_label`) — tanımdan sonradan
+  // okunmaz. Seed de aynı yolu izlemeli, yoksa yerelde kopyası olmayan siparişler doğar ve sepette
+  // görünen ad mailde kaybolur: bakan kişi bunu bir yüzey hatası sanır.
+  const kuralEtiketi = new Map((await new DiscountService(db).list()).map((d) => [d.id, d.publicLabel]));
+  // Siparişin dili müşterinin diliyle kurulur: seed'de "sipariş verirken okunan yüzey" yok, en
+  // yakın gerçek profilin tercihi. Böylece yerelde üç dilli mail de denenebilir. Okuma KİMLİKLE
+  // yapılır, sayfalı listeyle değil — tavanlı bir okuma, tavanı aşan kişilerin siparişini sessizce
+  // dilsiz bırakırdı.
+  const musteriDili = new Map(
+    (await new UserProfileService(db).listByIds([...new Set(kisiler.values())])).map((p) => [p.id, p.preferredLanguage]),
+  );
   const satilabilir = varyantlar.filter((v) => v.status !== 'candidate');
   const kurye = kisiler.get('kurye') ?? null;
   const depocu = kisiler.get('depocu') ?? null;
@@ -204,6 +215,8 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
         deliveryDate: deliveryType === 'route' && !kapiOnu ? gun(teslimKaydirma) : null,
         discountId: indirim,
         discountAmount: indirimTutari,
+        discountLabel: indirim ? (kuralEtiketi.get(indirim) ?? null) : null,
+        locale: musteriDili.get(customerId) ?? null,
         addressId: adres?.id ?? null,
         addressSnapshot: adres ? { line1: adres.line1, postalCode: adres.postalCode, city: adres.city, country: adres.country } : null,
         courierId: !kapiOnu && ['out_for_delivery', 'delivered', 'completed', 'returned'].includes(opts.hedef) ? kurye : null,

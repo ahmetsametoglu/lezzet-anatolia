@@ -11,7 +11,6 @@ export * from './pricing/replacement-cost';
 export * from './order/status-machine';
 export * from './order/channel';
 export * from './order/reference-no';
-export * from './order/profitability';
 export * from './order/decisions';
 export * from './identity/resolve-identity';
 export * from './identity/roles';

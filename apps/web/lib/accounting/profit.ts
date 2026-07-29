@@ -57,6 +57,8 @@ export async function productProfits(period: ProfitPeriod): Promise<VariantProfi
   const lines: SoldLine[] = allItems.map((item) => ({
     variantId: item.variantId,
     item,
+    // Kanal kalemde değil satışta durur; KDV tabanı ondan çözülür (b2c TTC, b2b HT).
+    channel: salesById.get(item.orderId)?.channel ?? 'b2c',
     // Haritada yoksa parti kaydı hiç yok demektir → maliyet bilinmiyor (0 değil).
     costCents: costs.has(item.id) ? costs.get(item.id)! : null,
     zeroRated: salesById.get(item.orderId)?.vatTreatment === 'intra_eu_b2b_reverse_charge',

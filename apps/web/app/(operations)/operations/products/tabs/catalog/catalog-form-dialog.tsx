@@ -17,7 +17,7 @@ import { ImageCropField } from '@/components/operation/form/image-crop-field';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { LocaleCard } from '@/components/operation/form/locale-card';
 import { MultiSelect } from '@/components/operation/form/multi-select';
-import { suggestTranslationAction } from '../../actions/translate';
+import { suggestTranslationAction } from '@/lib/ai/translate';
 import {
   createCatalogAction,
   loadCollectionMembersAction,

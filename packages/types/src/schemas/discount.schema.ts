@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { dbNumeric, dbNumericNullable } from './db-numeric';
-import { DiscountScopeEnum, DiscountTriggerEnum, DiscountTypeEnum } from './enums.schema';
+import { DiscountScopeEnum, DiscountTriggerEnum, DiscountTypeEnum, PreferredLanguageEnum } from './enums.schema';
+import { LocalizedTextDraftSchema } from './localized-text.schema';
 
 // Discount — kupon ve otomatik kampanya TEK varlıkta (0031). Ayrımları yalnız TETİK: kupon kodla
 // çalışır, kampanya kendiliğinden. DATA_MODEL: data-model/katalog.md.
@@ -16,9 +17,15 @@ export const DiscountSchema = z.object({
   id: z.string().uuid(),
   /** Operatörün listede tanıyacağı ad — kod değil ("Bayram indirimi"). Kampanyanın kodu yoktur. */
   name: z.string(),
+  /**
+   * Müşteriye görünen ad, üç dilde. `name`'den ayrıdır: o operasyonun iç etiketi (Türkçe), bu
+   * vitrinin ve mailin cümlesi. Boşsa yüzey genel "İndirim/Remise/Rabatt"a düşer — 0031.
+   */
+  publicLabel: LocalizedTextDraftSchema.nullable(),
   trigger: DiscountTriggerEnum,
-  /** Kupon kodu; kampanyada `null`. Harf ayrımsız tekildir (DB indeksi `upper(code)`). */
-  code: z.string().nullable(),
+  // Kupon KODLARI ayrı varlıktır (`DiscountCode`): bir kuponun birden çok kodu olur ve hepsi aynı
+  // kotayı paylaşır. Kural satırında kod kolonu YOK — olsaydı "asıl kod" diye ikinci bir kavram
+  // doğar ve kotanın hangi koda ait olduğu tartışılırdı.
   type: DiscountTypeEnum,
   value: dbNumeric,
   scope: DiscountScopeEnum,
@@ -46,8 +53,8 @@ export type Discount = z.infer<typeof DiscountSchema>;
 // form da aynı kuralı gösterir ama gerçeğin sahibi tek yerdir.
 export const DiscountInsertSchema = z.object({
   name: z.string().min(1),
+  publicLabel: LocalizedTextDraftSchema.nullish(),
   trigger: DiscountTriggerEnum,
-  code: z.string().nullish(),
   type: DiscountTypeEnum,
   value: z.number().positive(),
   scope: DiscountScopeEnum,
@@ -68,6 +75,33 @@ export const DiscountUpdateSchema = DiscountSchema.partial().required({ id: true
 export type DiscountUpdate = z.infer<typeof DiscountUpdateSchema>;
 
 /**
+ * Kuponun KAPISI — bir kuralın birden çok kodu olur, hepsi aynı kotadan yer (0031).
+ *
+ * Ayrı varlık olmasının sebebi dildir: "HOSGELDIN" Türk müşteriye bir şey anlatır, Fransız'a
+ * hiçbir şey. Üç ayrı `Discount` satırı açmak aynı kampanyanın kullanım tavanını üçe katlardı.
+ */
+export const DiscountCodeSchema = z.object({
+  id: z.string().uuid(),
+  discountId: z.string().uuid(),
+  /** Müşterinin yazdığı kod. Harf ayrımsız ve TÜM kurallar arasında tekildir (DB indeksi). */
+  code: z.string(),
+  /** Kodun yazıldığı dil; `null` = dilden bağımsız (matbu kart üstündeki tek kod gibi). */
+  locale: PreferredLanguageEnum.nullable(),
+  createdAt: z.string(),
+});
+export type DiscountCode = z.infer<typeof DiscountCodeSchema>;
+
+export const DiscountCodeInsertSchema = z.object({
+  discountId: z.string().uuid(),
+  code: z.string().min(1),
+  locale: PreferredLanguageEnum.nullish(),
+});
+export type DiscountCodeInsert = z.infer<typeof DiscountCodeInsertSchema>;
+
+export const DiscountCodeUpdateSchema = DiscountCodeSchema.partial().required({ id: true });
+export type DiscountCodeUpdate = z.infer<typeof DiscountCodeUpdateSchema>;
+
+/**
  * Kullanım KAYDI — sayaç değil. Sipariş tarafı yazar, tanım ekranı okur.
  *
  * `amount` kuralın değeri değil, o sepette GERÇEKTEN inen tutardır (matrah küçükse sabit tutar
@@ -76,6 +110,11 @@ export type DiscountUpdate = z.infer<typeof DiscountUpdateSchema>;
 export const DiscountUseSchema = z.object({
   id: z.string().uuid(),
   discountId: z.string().uuid(),
+  /**
+   * Hangi KAPIDAN girildi — kotayı bölmez, sayımı zenginleştirir ("TR kodu mu FR kodu mu tuttu").
+   * Otomatik kampanyada `null`: kod yoktur.
+   */
+  discountCodeId: z.string().uuid().nullable(),
   customerId: z.string().uuid().nullable(),
   orderId: z.string().uuid().nullable(),
   amount: dbNumeric,
@@ -85,6 +124,7 @@ export type DiscountUse = z.infer<typeof DiscountUseSchema>;
 
 export const DiscountUseInsertSchema = z.object({
   discountId: z.string().uuid(),
+  discountCodeId: z.string().uuid().nullish(),
   customerId: z.string().uuid().nullish(),
   orderId: z.string().uuid().nullish(),
   amount: z.number().nonnegative(),

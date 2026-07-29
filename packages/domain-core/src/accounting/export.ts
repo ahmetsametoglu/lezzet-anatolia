@@ -1,6 +1,6 @@
-import { distributeProportional, fromCents, removeVat, toCents } from '@lezzet/helper';
+import { distributeProportional, fromCents, toCents } from '@lezzet/helper';
 import type { Channel, Country, OrderSale, PaymentMethod, VatTreatment } from '@lezzet/types';
-import { lineGrossCents, type AccountingLine } from './line';
+import { lineAmountCents, vatSplitOf, type AccountingLine } from './line';
 
 /**
  * Muhasebe export'u (12.7) — DOMAIN §9. **Sistem resmî muhasebe değildir:** fatura kesmez, numara
@@ -107,31 +107,7 @@ export function exportEligibility(sale: Pick<OrderSale, 'isGiftOrder'>): ExportE
  * net = brüt olarak gider.
  */
 export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]): AccountingExportRow {
-  const zeroRated = sale.vatTreatment === 'intra_eu_b2b_reverse_charge';
-  const buckets = items.map((item) => ({ vatRate: zeroRated ? 0 : item.vatRate, gross: lineGrossCents(item) }));
-
-  const shippingCents = toCents(sale.shippingFee);
-  const bucketTotal = buckets.reduce((sum, b) => sum + b.gross, 0);
-  if (shippingCents > 0 && bucketTotal > 0) {
-    distributeProportional(buckets.map((b) => b.gross), shippingCents).forEach((share, i) => {
-      buckets[i]!.gross += share;
-    });
-  } else if (shippingCents > 0) {
-    // Dağıtacak ağırlık yok: kalemsiz satış ya da tamamı 0 fiyatlı (hediye) sepet. Kargo kendi
-    // satırını açar — oransal dağıtım burada sessizce 0 döndürürdü ve kargo export'tan DÜŞERDİ.
-    buckets.push({ vatRate: zeroRated ? 0 : SHIPPING_VAT_RATE, gross: shippingCents });
-  }
-
-  const byRate = new Map<number, number>();
-  for (const b of buckets) byRate.set(b.vatRate, (byRate.get(b.vatRate) ?? 0) + b.gross);
-
-  const vatLines: ExportVatLine[] = [...byRate.entries()]
-    .filter(([, gross]) => gross > 0)
-    .sort(([a], [b]) => a - b)
-    .map(([vatRate, gross]) => {
-      const net = removeVat(gross, vatRate);
-      return { vatRate, gross: fromCents(gross), net: fromCents(net), vat: fromCents(gross - net) };
-    });
+  const vatLines = vatLinesOf(sale, items);
 
   return {
     orderId: sale.id,
@@ -144,7 +120,7 @@ export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]
     deliveryCountry: sale.deliveryCountry,
     vatTreatment: sale.vatTreatment,
     vatNumber: sale.vatNumberSnapshot,
-    invoiceNote: zeroRated ? 'Autoliquidation' : null,
+    invoiceNote: sale.vatTreatment === 'intra_eu_b2b_reverse_charge' ? 'Autoliquidation' : null,
     gross: sumOf(vatLines, 'gross'),
     net: sumOf(vatLines, 'net'),
     vat: sumOf(vatLines, 'vat'),
@@ -157,6 +133,63 @@ export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]
 /** Euro toplamı — cent üstünden toplanır ki kuruş artığı birikmesin. */
 function sumOf<T>(rows: readonly T[], field: keyof T): number {
   return fromCents(rows.reduce((sum, row) => sum + toCents(Number(row[field])), 0));
+}
+
+/**
+ * KDV kırılımının tabanı: satışın kanalı ve vergi işlemi. Satırın geri kalanı (referans, müşteri,
+ * ülke) para hesabına girmez — bu yüzden ciro soranın tam bir `OrderSale` taşıması gerekmez.
+ */
+export type SaleVatBasis = Pick<OrderSale, 'channel' | 'vatTreatment' | 'shippingFee'>;
+
+/**
+ * Satışın oran bazında KDV kırılımı — **export satırının da kâr raporunun da tek zemini**.
+ *
+ * Kargo kalemlere oransal dağıtılır (yukarıdaki gerekçe); dağıtım kalemlerle AYNI tabanda yapılır,
+ * yani b2b'de HT tutarlar üstünde. Dönüşüm en sonda, oran başına bir kez uygulanır: her kalemi tek
+ * tek çevirip toplasaydık kuruş artıkları birikirdi.
+ */
+export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[]): ExportVatLine[] {
+  const zeroRated = sale.vatTreatment === 'intra_eu_b2b_reverse_charge';
+  const buckets = items.map((item) => ({ vatRate: zeroRated ? 0 : item.vatRate, amount: lineAmountCents(item) }));
+
+  const shippingCents = toCents(sale.shippingFee);
+  const bucketTotal = buckets.reduce((sum, b) => sum + b.amount, 0);
+  if (shippingCents > 0 && bucketTotal > 0) {
+    distributeProportional(buckets.map((b) => b.amount), shippingCents).forEach((share, i) => {
+      buckets[i]!.amount += share;
+    });
+  } else if (shippingCents > 0) {
+    // Dağıtacak ağırlık yok: kalemsiz satış ya da tamamı 0 fiyatlı (hediye) sepet. Kargo kendi
+    // satırını açar — oransal dağıtım burada sessizce 0 döndürürdü ve kargo export'tan DÜŞERDİ.
+    buckets.push({ vatRate: zeroRated ? 0 : SHIPPING_VAT_RATE, amount: shippingCents });
+  }
+
+  const byRate = new Map<number, number>();
+  for (const b of buckets) byRate.set(b.vatRate, (byRate.get(b.vatRate) ?? 0) + b.amount);
+
+  return [...byRate.entries()]
+    .filter(([, amount]) => amount > 0)
+    .sort(([a], [b]) => a - b)
+    .map(([vatRate, amount]) => {
+      const split = vatSplitOf(amount, sale.channel, vatRate, zeroRated);
+      return {
+        vatRate,
+        gross: fromCents(split.grossCents),
+        net: fromCents(split.netCents),
+        vat: fromCents(split.vatCents),
+      };
+    });
+}
+
+/**
+ * Satışın KDV hariç cirosu (cent) — kalemler + kargo.
+ *
+ * Kâr raporu (12.6) bunu çağırır ve **export satırının HT'siyle aynı sayıyı alır**, çünkü ikisi de
+ * `vatLinesOf`'tan doğar. Ayrı bir formül yazılsaydı aynı siparişin cirosu muhasebe dosyasında
+ * başka, kâr raporunda başka çıkardı — ve hangisinin doğru olduğu tartışılırdı.
+ */
+export function saleNetCents(sale: SaleVatBasis, items: readonly AccountingLine[]): number {
+  return vatLinesOf(sale, items).reduce((sum, line) => sum + toCents(line.net), 0);
 }
 
 /**

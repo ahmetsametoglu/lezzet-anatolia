@@ -1,6 +1,7 @@
 import {
   CategoryService,
   CollectionService,
+  DiscountCodeService,
   DiscountService,
   PriceService,
   ProductService,
@@ -155,8 +156,10 @@ async function readCouponsTab(
   const [rules, collections] = await Promise.all([discountSvc.list(), new CollectionService(db).list()]);
 
   const customerIds = [...new Set(rules.flatMap((r) => (r.customerId ? [r.customerId] : [])))];
-  const [usage, customers] = await Promise.all([
+  const [usage, codes, customers] = await Promise.all([
     discountSvc.usageCounts(rules.map((r) => r.id)),
+    // Kodlar tek turda: bir kuponun birden çok kapısı var ve satır hepsini gösteriyor.
+    new DiscountCodeService(db).listByDiscounts(rules.map((r) => r.id)),
     new UserProfileService(db).listByIds(customerIds),
   ]);
 
@@ -164,6 +167,7 @@ async function readCouponsTab(
     rows: toDiscountRows({
       rules,
       usage,
+      codes,
       categoryNames,
       collectionNames: new Map(collections.map((c) => [c.id, resolveLocalizedText(c.name)])),
       customerNames: new Map(customers.map((c) => [c.id, c.name])),

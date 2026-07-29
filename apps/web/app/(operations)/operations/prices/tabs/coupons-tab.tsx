@@ -107,9 +107,18 @@ function DiscountCard({ rule, onEdit }: DiscountCardProps) {
         onClick={onEdit}
         className="flex min-w-0 flex-1 cursor-pointer flex-col items-start gap-px text-left"
       >
-        <span className="flex items-baseline gap-2">
+        <span className="flex flex-wrap items-baseline gap-2">
           <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{rule.name}</span>
-          {rule.code ? <span className="font-ops-mono text-ops-xs text-ops-olive-dark">{rule.code}</span> : null}
+          {/* KODLARIN HEPSİ görünür — bir kuponun birden çok kapısı var ve hangi dilde hangisinin
+              tuttuğu operasyonel bir bilgi. Yalnız "ilk kod" gösterilseydi Fransızca kodu olan bir
+              kuponu operatör listede arayıp bulamazdı. Sayı yalnız KULLANILMIŞ kapıda yazılır:
+              sıfır, üç kodun yanına üç kez basıldığında satırı okunmaz yapardı. */}
+          {rule.codes.map((code) => (
+            <span key={code.id} className="font-ops-mono text-ops-xs text-ops-olive-dark">
+              {code.code}
+              {code.usedCount > 0 ? <span className="text-ops-faint"> ·{code.usedCount}</span> : null}
+            </span>
+          ))}
         </span>
         <span className="truncate font-ops-body text-ops-xs text-ops-muted">{conditionLine(rule)}</span>
       </button>

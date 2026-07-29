@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import { DiscountService, OrderService, ProductService, ProductVariantService, UserProfileService, serviceDb } from '@lezzet/database';
+import { OrderService, ProductService, ProductVariantService, UserProfileService, serviceDb } from '@lezzet/database';
 import { RATIO_SQUARE, resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { detectDevice } from '@/lib/device';
@@ -66,21 +66,18 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
   const awaitingCard = !placed && !cancelled && order.paymentMethod === 'online';
 
   /**
-   * İndirim satırının SEBEBİ. Sipariş yalnız tutarı ve `discount_id`yi saklar — sebep tanımdan okunur.
+   * İndirim satırının adı. Kaynak SİPARİŞTEKİ KOPYADIR (`discount_label`), tanım değil: kampanya o
+   * günden sonra yeniden adlandırılmış, süresi dolmuş ya da silinmiş olabilir — sipariş özeti geriye
+   * dönük dil değiştirmemeli. Bu yüzden tanımı okumak için ayrıca DB'ye de gidilmez.
    *
    * **Oran YAZILMAZ** ve bu bir eksik değil: siparişte saklanan şey inen TUTARDIR, oran değil.
-   * Tanımın bugünkü oranını sipariş satırına yazmak, kampanya sonradan değiştirildiğinde müşteriye
-   * o gün geçerli olmayan bir sayı göstermek olurdu. Sepette oran gösterilir çünkü orada karar
-   * ANLIK; siparişte karar geçmiştir.
+   * Sepette oran gösterilir çünkü orada karar ANLIK; siparişte karar geçmiştir.
    *
-   * `discountId` boş ama tutar varsa indirim müşterinin **kendi oranıdır** (`customer_rate` bir
-   * `discount` satırı değildir, profilin alanıdır) — motorun kuralı, burada da öyle okunur.
+   * Ad verilmemişse satır genel adında kalır ("Remise"): kupon kodunu ya da türü burada tahmin etmek,
+   * siparişte karşılığı olmayan bir bilgi uydurmak olurdu.
    */
-  const discountRule = order.discountId ? await new DiscountService(db).getById(order.discountId) : null;
-  const discountLabel =
-    discountRule?.trigger === 'coupon' && discountRule.code
-      ? `${t.summary.discount} — ${discountRule.code}`
-      : `${t.summary.discount} — ${discountRule ? t.summary.discountCampaign : t.summary.discountCustomerRate}`;
+  const discountName = order.discountLabel ? resolveLocalizedText(order.discountLabel, locale as Locale) : '';
+  const discountLabel = discountName ? `${t.summary.discount} — ${discountName}` : t.summary.discount;
 
   // Kalem künyesi: sipariş varyant satırlarından oluşuyor, müşteri ürün adını ve görselini görmeli.
   const variants = await new ProductVariantService(db).listByIds([...new Set(items.map((i) => i.variantId))]);

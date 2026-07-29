@@ -9,6 +9,7 @@ import {
 } from '@lezzet/database';
 import { derivePaymentStatusForOrder, isFulfillmentSettled } from '@lezzet/domain-core';
 import type { NotifyEventName, NotifyRecipient } from '@lezzet/notify';
+import { resolveLocalizedText } from '@lezzet/types';
 import type { Order, OrderItem, OrderNotification, NotificationStep, PreferredLanguage } from '@lezzet/types';
 import { localizedUrl } from '../notify';
 import { formatPrice, formatShortDate } from '../storefront/format';
@@ -62,7 +63,11 @@ export async function buildOrderNotification(
 
   const { order, items } = found;
   const customer = await new UserProfileService(db).getById(order.customerId);
-  const locale: PreferredLanguage = customer?.preferredLanguage ?? 'fr';
+  // **Dil ÖNCE siparişten** (0015 `locale`): müşteri bu siparişi hangi dilde verdiyse maili o dilde
+  // okumalı. Profil ikinci sıradadır çünkü sonradan değişebilir — hesap dilini değiştiren ya da aynı
+  // şirket hesabından başka biri sipariş veren müşteride, eski siparişin maili dil değiştirirdi.
+  // Web dışı kayıtta (hızlı satış, operasyon girişi) sipariş dilsizdir; orada profil doğru cevaptır.
+  const locale: PreferredLanguage = order.locale ?? customer?.preferredLanguage ?? 'fr';
 
   // Aynı ayrım hem kalem satırlarını hem para türetimini yönetir — iki yerde farklı okunursa
   // mailin listesi ile toplamı çelişir.
@@ -218,7 +223,7 @@ function buildTotals(order: Order, locale: PreferredLanguage, event: NotifyEvent
   return [
     { label: t.subtotal, value: formatPrice(Math.round(lineTotal * 100), locale) },
     ...(order.discountAmount > 0
-      ? [{ label: t.discount, value: `−${formatPrice(Math.round(order.discountAmount * 100), locale)}`, positive: true }]
+      ? [{ label: discountRowLabel(order, t.discount, locale), value: `−${formatPrice(Math.round(order.discountAmount * 100), locale)}`, positive: true }]
       : []),
     {
       label: t.delivery,
@@ -226,6 +231,19 @@ function buildTotals(order: Order, locale: PreferredLanguage, event: NotifyEvent
       positive: order.shippingFee === 0,
     },
   ];
+}
+
+/**
+ * İndirim satırının adı: "İndirim — Hoş geldin indirimi". Kampanyanın müşteriye görünen adı sipariş
+ * anında KOPYALANMIŞTIR (`discountLabel`); bugünkü tanıma bakılmaz, çünkü kampanya o günden beri
+ * yeniden adlandırılmış ya da silinmiş olabilir ve aynı mailin yeniden basımı başka şey derdi.
+ *
+ * Ad yoksa satır genel adında kalır — sepetteki tür-temelli açıklama ("kampanya %15") burada
+ * TEKRARLANMAZ: sipariş kaydında o türü söyleyecek bir bilgi yok, uydurmak yerine susulur.
+ */
+function discountRowLabel(order: Order, generic: string, locale: PreferredLanguage): string {
+  const named = order.discountLabel ? resolveLocalizedText(order.discountLabel, locale) : '';
+  return named ? `${generic} — ${named}` : generic;
 }
 
 /**

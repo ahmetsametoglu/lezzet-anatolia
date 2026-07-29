@@ -7,7 +7,8 @@
 //
 // Para ekranda hep KURUŞ (cent) taşınır (STACK §8). Kanalın tabanı farklıdır ve bu bilgi satırda
 // yazılıdır: b2c KDV DAHİL, b2b hariç — ikisini aynı sayı sanmak marjı kaydırır.
-import type { Channel, DiscountScope, DiscountTrigger, DiscountType, KeysetCursor, ProductStatus } from '@lezzet/types';
+import type { Channel, DiscountScope, DiscountTrigger, DiscountType, KeysetCursor, LocalizedText, ProductStatus } from '@lezzet/types';
+import type { Locale } from '@lezzet/i18n';
 import type { BatchView } from '@/lib/stock/batch-types';
 import type { PriceScope, PriceTab } from './prices-url';
 
@@ -90,6 +91,16 @@ export interface DiscountCustomerRow {
   discountPercent: number;
 }
 
+/** Kuponun bir kapısı: kod, hangi dil için yazıldığı ve kaç kez tuttuğu. */
+export interface DiscountCodeRow {
+  id: string;
+  code: string;
+  /** Kodun dili; `null` = dilden bağımsız. */
+  locale: Locale | null;
+  /** Bu kapıdan kaç kez girildi — kotayı BÖLMEZ, kuralın toplamının içindedir. */
+  usedCount: number;
+}
+
 /**
  * İndirim satırı — kural + ÇÖZÜLMÜŞ bağlam. Kapsam hedefinin adı, kişisel kuponun sahibi ve kullanım
  * sayısı satırla birlikte gelir: liste "kategori: <uuid>" ya da "3/10 kullanıldı" diye yazamıyorsa
@@ -98,8 +109,15 @@ export interface DiscountCustomerRow {
 export interface DiscountRow {
   id: string;
   name: string;
+  /** Müşteriye görünen ad — düzenleme formunu doldurur; verilmemişse `null`. */
+  publicLabel: LocalizedText | null;
   trigger: DiscountTrigger;
-  code: string | null;
+  /**
+   * Kuponun KAPILARI — bir kuralın birden çok kodu olur (dil başına bir tane gibi) ve hepsi aynı
+   * kotayı açar. Kampanyada boş dizi. Her kod kaç kez tuttuğunu da taşır: liste "hangi dil karşılık
+   * buldu" sorusunu ayrı bir ekrana gitmeden yanıtlar.
+   */
+  codes: DiscountCodeRow[];
   type: DiscountType;
   /** `percent` → yüzde · `fixed` → KURUŞ (ekranda para biçimlenir; DB euro tutar). */
   value: number;
@@ -133,8 +151,14 @@ export interface DiscountRow {
 export interface DiscountFormInput {
   id: string | null;
   name: string;
+  /** Müşteriye görünen ad, üç dilde. Boş diller aksiyonda ayıklanır; hepsi boşsa alan `null` yazılır. */
+  publicLabel: LocalizedText;
   trigger: DiscountTrigger;
-  code: string;
+  /**
+   * Kuponun kodları, DİL BAŞINA bir tane (boş bırakılan dil kod açmaz). Kampanyada hepsi boş.
+   * Action bunları `discount_code` satırlarına eşitler — kotayı bölmezler, aynı kuralı açarlar.
+   */
+  codes: Partial<Record<Locale, string>>;
   type: DiscountType;
   /** `percent` → yüzde değeri; `fixed` → KURUŞ. Tek alanda iki taban, çünkü tek girdi kutusu var. */
   valueCents: number;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyBestDiscount, type DiscountRule, type DiscountableLine } from './apply-discount';
+import { applyBestDiscount, matchedCode, type DiscountRule, type DiscountableLine } from './apply-discount';
 
 const TATLI = 'cat-tatli';
 const line = (over: Partial<DiscountableLine> = {}): DiscountableLine => ({
@@ -13,7 +13,7 @@ const line = (over: Partial<DiscountableLine> = {}): DiscountableLine => ({
 const kupon = (over: Partial<DiscountRule> = {}): DiscountRule => ({
   id: 'd1',
   trigger: 'coupon',
-  code: 'BAYRAM15',
+  codes: ['BAYRAM15'],
   type: 'percent',
   value: 15,
   scope: 'cart',
@@ -54,12 +54,32 @@ describe('koşullar', () => {
   });
 
   it('otomatik kampanya kod istemez', () => {
-    const r = applyBestDiscount([line()], [kupon({ trigger: 'automatic', code: null })], {});
+    const r = applyBestDiscount([line()], [kupon({ trigger: 'automatic', codes: [] })], {});
     expect(r).toMatchObject({ kind: 'automatic' });
   });
 
+  it('kuponun HER kodu aynı kuralı açar — çok dilli kampanya tek kuraldır', () => {
+    // "HOSGELDIN" Türk müşteriye bir şey anlatır, Fransız'a hiçbir şey. Üç kod, tek kural, tek kota:
+    // ayrı kurallar açılsaydı "toplam 100 kullanım" sınırı sessizce 300 olurdu.
+    const rule = kupon({ codes: ['HOSGELDIN', 'BIENVENUE', 'WILLKOMMEN'] });
+
+    for (const entered of ['HOSGELDIN', 'bienvenue', 'WillKommen']) {
+      expect(applyBestDiscount([line()], [rule], { enteredCouponCode: entered })).toMatchObject({ kind: 'coupon', discountId: 'd1' });
+    }
+    expect(applyBestDiscount([line()], [rule], { enteredCouponCode: 'BASKA' })).toBeNull();
+  });
+
+  it('eşleşen kodun KURALDAKİ yazılışı döner — kullanım kaydına giden odur', () => {
+    const rule = kupon({ codes: ['HOSGELDIN', 'BIENVENUE'] });
+
+    expect(matchedCode(rule, ' bienvenue ')).toBe('BIENVENUE');
+    expect(matchedCode(rule, 'YOK')).toBeNull();
+    expect(matchedCode(rule, '')).toBeNull();
+    expect(matchedCode(kupon({ codes: [] }), 'BAYRAM15')).toBeNull();
+  });
+
   it('asgari sepet ve ilk-sipariş koşulları', () => {
-    const rule = kupon({ trigger: 'automatic', code: null, minBasketCents: 5000, firstOrderOnly: true });
+    const rule = kupon({ trigger: 'automatic', codes: [], minBasketCents: 5000, firstOrderOnly: true });
     expect(applyBestDiscount([line({ unitPriceCents: 3000 })], [rule], { isFirstOrder: true })).toBeNull();
     expect(applyBestDiscount([line({ unitPriceCents: 9000 })], [rule], { isFirstOrder: false })).toBeNull();
     expect(applyBestDiscount([line({ unitPriceCents: 9000 })], [rule], { isFirstOrder: true })).not.toBeNull();
@@ -67,8 +87,8 @@ describe('koşullar', () => {
 
   it('tarih penceresi dışında uygulanmaz', () => {
     const now = new Date('2026-07-27T12:00:00Z');
-    const gecmis = kupon({ trigger: 'automatic', code: null, validTo: '2026-07-01T00:00:00Z' });
-    const gelecek = kupon({ trigger: 'automatic', code: null, validFrom: '2026-08-01T00:00:00Z' });
+    const gecmis = kupon({ trigger: 'automatic', codes: [], validTo: '2026-07-01T00:00:00Z' });
+    const gelecek = kupon({ trigger: 'automatic', codes: [], validFrom: '2026-08-01T00:00:00Z' });
     expect(applyBestDiscount([line()], [gecmis], { now })).toBeNull();
     expect(applyBestDiscount([line()], [gelecek], { now })).toBeNull();
   });
@@ -94,7 +114,7 @@ describe('koşullar', () => {
 describe('kapsam', () => {
   it('kategori kapsamı yalnız o kategorinin kalemlerine iner', () => {
     const lines = [line({ unitPriceCents: 4000 }), line({ variantId: 'v2', categoryId: 'cat-borek', unitPriceCents: 6000 })];
-    const rule = kupon({ trigger: 'automatic', code: null, scope: 'category', categoryId: TATLI, value: 10 });
+    const rule = kupon({ trigger: 'automatic', codes: [], scope: 'category', categoryId: TATLI, value: 10 });
     const r = applyBestDiscount(lines, [rule], {});
     expect(r?.amountCents).toBe(400); // yalnız 4000 üzerinden
     expect(r?.lineShares).toEqual([400, 0]);
@@ -102,12 +122,12 @@ describe('kapsam', () => {
 
   it('koleksiyon kapsamı üyelikten süzer', () => {
     const lines = [line({ collectionIds: ['col-bayram'] }), line({ variantId: 'v2', collectionIds: [] })];
-    const rule = kupon({ trigger: 'automatic', code: null, scope: 'collection', collectionId: 'col-bayram', value: 50 });
+    const rule = kupon({ trigger: 'automatic', codes: [], scope: 'collection', collectionId: 'col-bayram', value: 50 });
     expect(applyBestDiscount(lines, [rule], {})?.amountCents).toBe(500);
   });
 
   it('kapsamda hiç kalem yoksa indirim yok', () => {
-    const rule = kupon({ trigger: 'automatic', code: null, scope: 'category', categoryId: 'yok' });
+    const rule = kupon({ trigger: 'automatic', codes: [], scope: 'category', categoryId: 'yok' });
     expect(applyBestDiscount([line()], [rule], {})).toBeNull();
   });
 });
@@ -119,24 +139,24 @@ describe('muafiyetler ve dağıtım', () => {
       line({ variantId: 'paket', unitPriceCents: 9000, bundleId: 'b1' }),
       line({ variantId: 'teklif', unitPriceCents: 3000, offerStockId: 's1' }),
     ];
-    const r = applyBestDiscount(lines, [kupon({ trigger: 'automatic', code: null, value: 10 })], {});
+    const r = applyBestDiscount(lines, [kupon({ trigger: 'automatic', codes: [], value: 10 })], {});
     expect(r?.amountCents).toBe(500); // yalnız 5000 matrah
     expect(r?.lineShares).toEqual([500, 0, 0]);
   });
 
   it('yalnız muaf kalemlerden oluşan sepette indirim yok', () => {
     const lines = [line({ bundleId: 'b1' }), line({ variantId: 'v2', offerStockId: 's1' })];
-    expect(applyBestDiscount(lines, [kupon({ trigger: 'automatic', code: null })], {})).toBeNull();
+    expect(applyBestDiscount(lines, [kupon({ trigger: 'automatic', codes: [] })], {})).toBeNull();
   });
 
   it('dağıtım oransaldır ve toplamı indirime EŞİTTİR', () => {
     const lines = [line({ unitPriceCents: 1690 }), line({ variantId: 'v2', unitPriceCents: 800 }), line({ variantId: 'v3', unitPriceCents: 510 })];
-    const r = applyBestDiscount(lines, [kupon({ trigger: 'automatic', code: null, value: 15 })], {});
+    const r = applyBestDiscount(lines, [kupon({ trigger: 'automatic', codes: [], value: 15 })], {});
     expect(r!.lineShares.reduce((a, b) => a + b, 0)).toBe(r!.amountCents);
   });
 
   it('sabit tutarlı indirim sepetten büyük olamaz', () => {
-    const r = applyBestDiscount([line({ unitPriceCents: 500 })], [kupon({ trigger: 'automatic', code: null, type: 'fixed', value: 5000 })], {});
+    const r = applyBestDiscount([line({ unitPriceCents: 500 })], [kupon({ trigger: 'automatic', codes: [], type: 'fixed', value: 5000 })], {});
     expect(r?.amountCents).toBe(500);
   });
 });

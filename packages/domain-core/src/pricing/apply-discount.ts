@@ -34,8 +34,15 @@ export interface DiscountableLine {
 export interface DiscountRule {
   id: string;
   trigger: DiscountTrigger;
-  /** `trigger=coupon` ise müşterinin girdiği kod. */
-  code?: string | null;
+  /**
+   * `trigger=coupon` ise kuralın KAPILARI — bir kuponun birden çok kodu olur (dil başına bir tane
+   * gibi) ve **hepsi aynı kuralı, aynı kotayı açar**. Girilen kod herhangi biriyle eşleşirse kupon
+   * tutar; hangisiyle eşleştiği kararı değiştirmez, yalnız kullanım kaydına iz olarak düşer.
+   *
+   * Tek kodlu bir alan olsaydı çok dilli kampanya üç ayrı kural açmak zorunda kalır ve "toplam 100
+   * kullanım" sınırı sessizce 300 olurdu.
+   */
+  codes?: readonly string[];
   type: DiscountType;
   /** `percent` → yüzde (15 = %15); `fixed` → cent. */
   value: number;
@@ -184,11 +191,21 @@ export function checkCouponEligibility(
 /** Kuralın koşulları sağlanıyor mu (kod + `checkCouponEligibility`'nin tamamı). */
 function isApplicable(rule: DiscountRule, ctx: DiscountContext, now: Date, basketCents: number): boolean {
   // Kupon yalnız kodu girilirse; otomatik kampanya kod istemez.
-  if (rule.trigger === 'coupon') {
-    const entered = ctx.enteredCouponCode?.trim().toUpperCase();
-    if (!entered || entered !== rule.code?.trim().toUpperCase()) return false;
-  }
+  if (rule.trigger === 'coupon' && matchedCode(rule, ctx.enteredCouponCode) === null) return false;
   return checkCouponEligibility(rule, ctx, basketCents, now).ok;
+}
+
+/**
+ * Girilen kodun kuralın hangi kapısına denk düştüğü — eşleşme yoksa `null`.
+ *
+ * Karşılaştırma HARF AYRIMSIZ (DB'nin tekillik indeksi de öyle): müşteri "bayram10" yazdığında
+ * "BAYRAM10" tutmalı. Dönen değer kodun kuraldaki YAZILIŞIDIR, müşterinin yazdığı değil — kullanım
+ * kaydına ve rapora giden budur.
+ */
+export function matchedCode(rule: DiscountRule, entered: string | null | undefined): string | null {
+  const term = entered?.trim().toUpperCase();
+  if (!term) return null;
+  return (rule.codes ?? []).find((code) => code.trim().toUpperCase() === term) ?? null;
 }
 
 /** Kalem kuralın kapsamında mı — `cart` her uygun kalem, diğerleri süzülür. Matrah ve pay dağıtımı

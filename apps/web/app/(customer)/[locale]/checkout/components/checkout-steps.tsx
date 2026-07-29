@@ -590,7 +590,7 @@ export function OrderSummary(props: CheckoutViewProps) {
           ))}
         {discountCents > 0 && (
           // Etiket sepetle AYNI yardımcıdan: müşteri iki ekranda aynı indirimi iki türlü okumamalı.
-          <Row label={discountLabel(cart.discount, t.summary)} value={`−${formatPrice(discountCents, locale)}`} tone="olive" />
+          <Row label={discountLabel(cart.discount, t.summary, locale)} value={`−${formatPrice(discountCents, locale)}`} tone="olive" />
         )}
         <Row label={t.summary.delivery} value={shippingLabel} tone={payment?.shippingFeeCents ? 'ink' : 'olive'} />
         {/* Toplam satırı tasarımda **Karla 700/18** — serif DEĞİL. Serif yapmak onu bir başlığa

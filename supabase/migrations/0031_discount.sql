@@ -27,10 +27,20 @@ create table public.discount (
   -- ad işletmenin kendi dili. Kampanyanın kodu yoktur ama adı olmalıdır.
   name text not null,
 
+  -- MÜŞTERİYE GÖRÜNEN ad, üç dilde ({"tr":"Hoş geldin indirimi","fr":"Offre de bienvenue",...}).
+  --
+  -- `name`'den ayrı bir alan, çünkü iki farklı okuyucusu var: `name` operasyonun kendi diliyle
+  -- yazılmış iç etikettir (Türkçe, listede aranır, raporda geçer); bu ise vitrinde ve mailde
+  -- müşterinin gördüğü cümledir. Tek alan olsaydı ya Fransız müşteri "Bayram indirimi" görürdü ya
+  -- da operatör kendi listesini Fransızca aramak zorunda kalırdı.
+  --
+  -- NULL/boş = ad verilmemiş → yüzey genel "İndirim / Remise / Rabatt"a düşer. Zorunlu değil:
+  -- adsız bir kampanya çalışır, yalnız daha az şey anlatır.
+  public_label jsonb,
+
   trigger discount_trigger not null,
-  -- Kupon kodu — yalnız `trigger='coupon'` satırlarda dolu. Büyük/küçük harf AYRIMSIZ tekildir
-  -- (aşağıdaki indeks): müşteri "bayram10" yazdığında "BAYRAM10" bulunmalı.
-  code text,
+  -- Kupon KODLARI burada değil, `discount_code` tablosunda (aşağıda): bir kuponun birden çok kodu
+  -- olabilir ve hepsi aynı kotayı paylaşır.
 
   type discount_type not null,
   -- `percent` → yüzde (15 = %15) · `fixed` → EURO tutar. Uygulama katmanı motora verirken sabit
@@ -60,12 +70,6 @@ create table public.discount (
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
 
-  -- Kuponun kodu ZORUNLU, kampanyanın kodu OLAMAZ: kodsuz kupon hiç uygulanamaz, kodlu kampanya
-  -- ise "otomatik" adının yalanı olurdu.
-  constraint discount_code_matches_trigger check (
-    (trigger = 'coupon' and code is not null and length(trim(code)) > 0)
-    or (trigger = 'automatic' and code is null)
-  ),
   -- Kapsam hedefi tutarlı olmalı: kategori kapsamı kategori ister, koleksiyon koleksiyon; sepet
   -- kapsamı ikisini de istemez. Hedefsiz kapsam, hiçbir kaleme uymayan sessiz bir kural doğururdu.
   constraint discount_scope_target check (
@@ -81,14 +85,57 @@ create table public.discount (
 
 alter table public.discount enable row level security;
 
--- Kod tekilliği HARF AYRIMSIZ: iki farklı kampanya "BAYRAM10" ve "bayram10" olamaz, müşteri
--- hangisini kastettiğini bilemezdi.
-create unique index discount_code_key on public.discount (upper(code)) where code is not null;
-
 -- Sepet çözümünün okuması: aktif ve tarihi geçerli kurallar. Kupon adayları koda göre elenir,
 -- kampanyalar toptan gelir.
 create index discount_active_idx on public.discount (trigger) where is_active = true;
 create index discount_customer_idx on public.discount (customer_id) where customer_id is not null;
+
+-- ── Kupon kodları ─────────────────────────────────────────────────────────────
+-- **Bir kuponun BİRDEN ÇOK kodu olur; hepsi AYNI kuralın ve aynı kotanın kapısıdır.**
+--
+-- Sebep dildir: "HOSGELDIN" bir Türk müşteriye bir şey anlatır, Fransız'a hiçbir şey. Aynı kampanya
+-- için "BIENVENUE" ve "WILLKOMMEN" da açılabilmeli — ama bunlar üç ayrı kampanya DEĞİLDİR: koşulları,
+-- değeri, tarihi ve kullanım tavanı tektir. Üç ayrı `discount` satırı açmak, "toplam 100 kullanım"
+-- sınırını sessizce 300'e çıkarırdı.
+--
+-- Kod bu yüzden kuralın bir KOLONU değil, kurala bağlı satırlardır. Kota `discount.max_uses`'ta
+-- kalır ve `discount_use` sayımı kural üzerinden yapılır — hangi kapıdan girildiği kotayı bölmez.
+--
+-- `locale` kodun hangi dil için yazıldığıdır; **NULL = dilden bağımsız** (ör. matbu bir kart üstündeki
+-- tek kod). Zorunlu değil, çünkü her kod bir dile ait olmak zorunda değildir. Aynı dilde birden çok
+-- kod da mümkündür (A/B denemesi, basılı kupon) — form bugün dil başına bir kod üretiyor, tablo bunu
+-- şart koşmuyor.
+create table public.discount_code (
+  id uuid primary key default gen_random_uuid(),
+  discount_id uuid not null references public.discount (id) on delete cascade,
+  code text not null check (length(trim(code)) > 0),
+  locale preferred_language,
+  created_at timestamptz not null default now()
+);
+
+alter table public.discount_code enable row level security;
+
+-- Kod tekilliği HARF AYRIMSIZ ve **TÜM kurallar arasında GLOBAL**: müşteri kutuya bir kod yazar ve o
+-- kod tek bir kuralı göstermelidir. İki kampanya aynı kodu taşısaydı hangisinin uygulanacağı yazılma
+-- sırasına kalırdı — kimsenin göremediği bir kura.
+create unique index discount_code_key on public.discount_code (upper(code));
+create index discount_code_discount_idx on public.discount_code (discount_id);
+
+-- Kod YALNIZ kuponun olur. Kural uygulama katmanında da var ama son emniyet burada: "otomatik"
+-- adının yalanı olan kodlu bir kampanya, kutuya yazılınca uygulanır ve kimse neden olduğunu anlamaz.
+create or replace function public.discount_code_requires_coupon() returns trigger
+language plpgsql as $$
+begin
+  if (select d.trigger from public.discount d where d.id = new.discount_id) <> 'coupon' then
+    raise exception 'Otomatik kampanyanın kodu olamaz (discount %)', new.discount_id;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger discount_code_coupon_only
+  before insert or update on public.discount_code
+  for each row execute function public.discount_code_requires_coupon();
 
 -- ── Kullanım kaydı ────────────────────────────────────────────────────────────
 -- "Bu kupon kaç kez, kim tarafından kullanıldı" — sayacın kaynağı.
@@ -99,6 +146,11 @@ create index discount_customer_idx on public.discount (customer_id) where custom
 create table public.discount_use (
   id uuid primary key default gen_random_uuid(),
   discount_id uuid not null references public.discount (id) on delete cascade,
+  -- HANGİ KAPIDAN girildi — kotayı bölmez, sayımı zenginleştirir: "TR kodu mu FR kodu mu tuttu"
+  -- sorusunun cevabı budur ve kampanyanın hangi dilde karşılık bulduğunu söyler. Otomatik
+  -- kampanyada boş (kod yoktur). Kod silinirse kullanım kaydı KALIR (`set null`): geçmiş bir
+  -- kullanımı, kapısı kapandı diye silmek raporun geçmişini değiştirmek olurdu.
+  discount_code_id uuid references public.discount_code (id) on delete set null,
   customer_id uuid references public.user_profiles (id) on delete set null,
   order_id uuid references public.order (id) on delete cascade,
   -- Uygulanan tutar — kuralın değeri değil, o sepette GERÇEKTEN inen indirim (matrah küçükse sabit
@@ -114,3 +166,5 @@ create index discount_use_discount_idx on public.discount_use (discount_id);
 create index discount_use_customer_idx on public.discount_use (discount_id, customer_id) where customer_id is not null;
 -- Aynı sipariş bir kuralı iki kez tüketemez (tek-en-büyük zaten tek indirim uygular).
 create unique index discount_use_order_key on public.discount_use (discount_id, order_id) where order_id is not null;
+-- "Hangi kod ne kadar tuttu" sayımı — kod bazlı rapor bu indeksin üstünde durur.
+create index discount_use_code_idx on public.discount_use (discount_code_id) where discount_code_id is not null;

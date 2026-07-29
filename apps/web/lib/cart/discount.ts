@@ -1,5 +1,5 @@
 import 'server-only';
-import { DiscountService, UserProfileService, type Db } from '@lezzet/database';
+import { DiscountCodeService, DiscountService, UserProfileService, type Db, type DiscountUsage } from '@lezzet/database';
 import {
   applyBestDiscount,
   checkCouponEligibility,
@@ -7,7 +7,7 @@ import {
   type DiscountRule,
   type DiscountableLine,
 } from '@lezzet/domain-core';
-import type { Discount } from '@lezzet/types';
+import type { Discount, DiscountCode, LocalizedText } from '@lezzet/types';
 import type { CartDiscount, CouponFailure, DiscountReason } from './cart-types';
 
 /**
@@ -43,11 +43,15 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
   const now = input.now ?? new Date();
 
   const candidates = await discounts.listCandidates(input.customerId);
-  const coupon = code ? await discounts.findByCode(code) : null;
+  const hit = code ? await discounts.findByCode(code) : null;
+  const coupon = hit?.discount ?? null;
 
   // Koda karşılık gelen kupon aday havuzunda olmayabilir (pasif ya da kişisel): motorun görmesi için
   // havuza eklenir — "neden uygulanmadı" sorusunun cevabı da o zaman doğar.
   const pool = coupon && !candidates.some((row) => row.id === coupon.id) ? [...candidates, coupon] : candidates;
+  // Kurallar KODLARINI taşır: bir kuponun birden çok kapısı olur ve motor girilenle hepsini
+  // karşılaştırır. Tek turda okunur — kural başına sorgu N+1 olurdu.
+  const codesByDiscount = await new DiscountCodeService(db).listByDiscounts(pool.map((row) => row.id));
   const usage = await discounts.usageCounts(pool.map((row) => row.id));
   const customerDiscountPercent = await customerRate(db, input.customerId);
 
@@ -58,7 +62,7 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
     enteredCouponCode: code || null,
     now,
   };
-  const rules = pool.map((row) => toRule(row, usage.get(row.id), input.customerId));
+  const rules = pool.map((row) => toRule(row, codesByDiscount.get(row.id) ?? [], usage.get(row.id), input.customerId));
   const winner = applyBestDiscount(input.lines, rules, ctx);
 
   if (!code) return winner ? automatic(winner, pool, customerDiscountPercent) : { status: 'none' };
@@ -70,12 +74,16 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
     code,
     // Kupon tutmasa da sepette bir indirim olabilir; müşteri onu kaybetmez.
     appliedInsteadCents: winner?.amountCents ?? 0,
+    // Kazanan indirimin KİMLİĞİ de taşınır: kupon reddedildi diye sepetteki indirim adsız kalmaz.
+    appliedInstead: winner
+      ? { reason: reasonOf(winner, pool, customerDiscountPercent), label: publicLabelOf(pool.find((row) => row.id === winner.discountId)) }
+      : null,
   });
 
   // Kupon olmayan bir kuralın kimliğiyle indirim alınamaz: kampanyanın kodu yoktur.
-  if (!coupon || coupon.trigger !== 'coupon') return rejected('unknown_code');
+  if (!coupon || !hit || coupon.trigger !== 'coupon') return rejected('unknown_code');
 
-  const rule = toRule(coupon, usage.get(coupon.id), input.customerId);
+  const rule = toRule(coupon, codesByDiscount.get(coupon.id) ?? [], usage.get(coupon.id), input.customerId);
   const eligibility = checkCouponEligibility(rule, ctx, basketOf(input.lines), now);
   // Kişisel kupon başkasının elinde: varlığını doğrulamak, kodu paylaşmaya davet olurdu.
   if (!eligibility.ok) return rejected(eligibility.reason === 'not_yours' ? 'unknown_code' : eligibility.reason);
@@ -85,10 +93,15 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
   return {
     status: 'applied',
     source: 'coupon',
-    code: coupon.code ?? code,
+    // Kodun KURALDAKİ yazılışı taşınır, müşterinin yazdığı değil ("bienvenue" → "BIENVENUE").
+    code: hit.code,
+    // Hangi KAPIDAN girildiği kullanım kaydına düşer: kota tek ama "hangi dil karşılık buldu"
+    // sorusu ancak bu izle yanıtlanır.
+    codeId: hit.codeId,
     amountCents: winner.amountCents,
     lineShares: winner.lineShares,
     discountId: winner.discountId,
+    label: publicLabelOf(coupon),
   };
 }
 
@@ -99,7 +112,21 @@ function automatic(winner: AppliedDiscount, pool: readonly Discount[], customerP
     amountCents: winner.amountCents,
     lineShares: winner.lineShares,
     discountId: winner.discountId,
+    label: publicLabelOf(pool.find((row) => row.id === winner.discountId)),
   };
+}
+
+/**
+ * Kampanyanın MÜŞTERİYE görünen adı. İki durumda `null` döner ve yüzey sebebe düşer: kural
+ * bulunamadıysa (müşterinin genel oranı — ortada kampanya yoktur) ya da operatör adı yazmadıysa.
+ *
+ * Boş dilleri olan bir nesne (`{tr:''}`) form artığıdır, ad değildir: hiç yazılmamış gibi sayılır —
+ * yoksa yüzey boş bir tire basardı ("İndirim — ").
+ */
+function publicLabelOf(row: Discount | null | undefined): LocalizedText | null {
+  const label = row?.publicLabel;
+  if (!label) return null;
+  return label.tr?.trim() || label.fr?.trim() || label.de?.trim() ? label : null;
 }
 
 /**
@@ -128,13 +155,15 @@ function basketOf(lines: readonly DiscountableLine[]): number {
 /** DB satırı → motorun sözleşmesi. Kullanım sayıları kayıttan türer, sayaç kolonundan değil. */
 function toRule(
   row: Discount,
-  usage: { total: number; byCustomer: Map<string, number> } | undefined,
+  codes: readonly DiscountCode[],
+  usage: DiscountUsage | undefined,
   customerId?: string | null,
 ): DiscountRule {
   return {
     id: row.id,
     trigger: row.trigger,
-    code: row.code,
+    // Kuralın tüm kapıları: girilen kod herhangi biriyle eşleşirse kupon tutar (hepsi aynı kota).
+    codes: codes.map((c) => c.code),
     type: row.type,
     // Saklanan değer EURO, motor KURUŞ bekler (STACK §8) — çeviri uygulama katmanında, tek yerde.
     value: row.type === 'percent' ? row.value : Math.round(row.value * 100),

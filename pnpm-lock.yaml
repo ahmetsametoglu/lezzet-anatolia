@@ -17,6 +17,9 @@ importers:
       '@lezzet/eslint-config':
         specifier: workspace:*
         version: link:packages/eslint-config
+      '@lezzet/helper':
+        specifier: workspace:*
+        version: link:packages/helper
       '@lezzet/storage':
         specifier: workspace:*
         version: link:packages/storage

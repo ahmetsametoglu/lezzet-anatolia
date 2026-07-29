@@ -99,10 +99,11 @@ export function CartSummary({ view, t, locale, compact = false }: CartSummaryPro
 
         {discountCents > 0 && (
           <div className="flex items-center justify-between font-sans text-body-sm text-olive">
-            {/* Satır SEBEBİNİ söyler (tasarım: "İndirim — HOSGELDIN10"). Kodsuz inen indirimde de
-                sebep vardır — kampanya ya da müşterinin kendi oranı; cümleyi ortak yardımcı kurar
-                ki ödeme sayfası aynı indirimi başka türlü anlatmasın. */}
-            <span>{discountLabel(view.discount, t)}</span>
+            {/* Satır NEDEN indiğini söyler. Kampanyanın müşteriye görünen adı varsa o yazılır
+                ("İndirim — Hoş geldin indirimi"); yoksa kupon kodu ya da türün kendisi ("kampanya
+                %15"). Cümleyi ortak yardımcı kurar ki ödeme sayfası aynı indirimi başka türlü
+                anlatmasın. */}
+            <span>{discountLabel(view.discount, t, locale)}</span>
             <span className="font-bold">−{formatPrice(discountCents, locale)}</span>
           </div>
         )}

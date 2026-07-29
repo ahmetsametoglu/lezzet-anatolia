@@ -29,7 +29,7 @@ const toPhotoView = (row: ProductImage): ProductPhotoView => ({
 
 // Ürün sekmesi server action'ları (referans deseni: 'use server' + requireStaff + servise devret +
 // {data,error} DÖNER, throw etmez + revalidatePath). Form alanları ProductDetailsUpdate'ten türer
-// (no-duplication). Çok dilli çeviri önerisi sayfa seviyesindedir (actions/translate.ts).
+// (no-duplication). Çok dilli çeviri önerisi uygulama geneli paylaşılır (`lib/ai/translate`).
 
 // Formun gönderdiği tam girdi: düzenlenebilir ürün alanları (şemadan türer) + varyant satırları.
 type ProductFormInput = ProductDetailsUpdate & { variants: ProductVariantEntry[] };

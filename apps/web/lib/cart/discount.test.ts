@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CategoryService, DiscountService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
+import { CategoryService, DiscountCodeService, DiscountService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import type { DiscountableLine } from '@lezzet/domain-core';
 import { resolveCartDiscount, type CartDiscountInput } from './discount';
@@ -12,6 +12,7 @@ import { resolveCartDiscount, type CartDiscountInput } from './discount';
  */
 const db = serviceDb();
 const discounts = new DiscountService(db);
+const codes = new DiscountCodeService(db);
 
 const stamp = Date.now();
 let customerId: string;
@@ -67,16 +68,18 @@ async function makeDiscount(input: Parameters<DiscountService['insert']>[0]) {
  * yenebilir. Test o veriyi silemez (kullanıcının); onun yerine kuponu **baskın** yapıyoruz:
  * ölçülen şey kuponun uygulanıp uygulanmadığı, ortamda başka kural olup olmadığı değil.
  */
-function coupon(code: string, overrides: Record<string, unknown> = {}) {
-  return makeDiscount({
+async function coupon(code: string, overrides: Record<string, unknown> = {}) {
+  const rule = await makeDiscount({
     name: `Kupon ${code}`,
     trigger: 'coupon',
-    code,
     type: 'percent',
     value: 90,
     scope: 'cart',
     ...overrides,
   });
+  // Kod artık kuralın kolonu değil, kapısı: kural yazıldıktan sonra eklenir.
+  await codes.insert({ discountId: rule.id, code, locale: 'tr' });
+  return rule;
 }
 
 describe('kupon uygulanır', () => {

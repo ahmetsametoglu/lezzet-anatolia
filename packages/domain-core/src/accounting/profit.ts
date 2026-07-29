@@ -1,6 +1,6 @@
 import { fromCents, toCents } from '@lezzet/helper';
 import type { Channel, OrderSale } from '@lezzet/types';
-import { buildExportRow } from './export';
+import { saleNetCents, type SaleVatBasis } from './export';
 import { lineNetCents, type AccountingLine } from './line';
 
 /**
@@ -104,23 +104,21 @@ function marginOf(contributionCents: number, revenueCents: number): number | nul
 }
 
 /**
- * Siparişin KDV hariç cirosu (cent) — kalemler + kargo.
+ * Katkı payı hesabının istediği satış alanları — tam bir `OrderSale` DEĞİL.
  *
- * **Export satırının HT'si ile AYNI hesaptır, çünkü aynı fonksiyondan gelir.** Kargonun KDV oranı
- * malın oranını izler ve bu kural tek yerde (export satırı) yaşar. Burada ikinci bir formül
- * yazsaydık aynı siparişin cirosu muhasebe dosyasında başka, kâr raporunda başka çıkardı — ve
- * hangisinin doğru olduğu tartışılırdı.
+ * Sipariş detayı da bu hesabı soruyor (09.7) ama elindeki kayıt henüz `order_sale` görünümüne
+ * girmemiş olabilir: o görünüme yalnız teslim edilmiş/kapanmış siparişler düşer. Girdiyi
+ * daraltmak, açık bir siparişin kârını sormak için sahte bir satış kaydı uydurmayı gereksiz kılar.
  */
-function revenueCents(sale: OrderSale, items: readonly AccountingLine[]): number {
-  return toCents(buildExportRow(sale, items).net);
-}
+export type ContributionInput = SaleVatBasis &
+  Pick<OrderSale, 'id' | 'saleDate' | 'isGiftOrder' | 'cogsAmount' | 'deliveryCost' | 'paymentFee' | 'packagingCost'>;
 
 /**
  * Bir siparişin katkı payı. Maliyetler **kapanışta sabitlenmiş snapshot'lardır** — geçmiş kârın
  * rakamı sonradan değişen oran/birim maliyetten etkilenmesin (fiyat sabitlemeyle aynı mantık).
  */
-export function orderContribution(sale: OrderSale, items: readonly AccountingLine[]): OrderContribution {
-  const revenue = revenueCents(sale, items);
+export function orderContribution(sale: ContributionInput, items: readonly AccountingLine[]): OrderContribution {
+  const revenue = saleNetCents(sale, items);
   // `cogs_amount` kapanışta yazılır; null ise sipariş teslim edilmiş ama kapanmamıştır.
   const costsFixed = sale.cogsAmount !== null;
 
@@ -157,6 +155,8 @@ export interface VariantLoss {
 export interface SoldLine {
   variantId: string;
   item: AccountingLine;
+  /** Satışın kanalı — kalem tutarının KDV tabanı buradan belli olur (DOMAIN §5). */
+  channel: Channel;
   /** `OrderItemBatch` × `Stock.purchase_price`. Parti kaydı yoksa `null` — 0 DEĞİL. */
   costCents: number | null;
   zeroRated?: boolean;
@@ -179,7 +179,7 @@ export function variantProfit(lines: readonly SoldLine[], losses: readonly Varia
     if (line.costCents === null) continue;
     const current = byVariant.get(line.variantId) ?? { qty: 0, revenue: 0, cogs: 0 };
     current.qty += line.item.fulfilledQty;
-    current.revenue += lineNetCents(line.item, line.zeroRated ?? false);
+    current.revenue += lineNetCents(line.item, line.channel, line.zeroRated ?? false);
     current.cogs += line.costCents;
     byVariant.set(line.variantId, current);
   }

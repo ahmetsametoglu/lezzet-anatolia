@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
 import { CategoryService } from './category.service';
+import { DiscountCodeService } from './discount-code.service';
 import { DiscountService } from './discount.service';
 import { UserProfileService } from './user-profile.service';
 
@@ -14,6 +15,7 @@ import { UserProfileService } from './user-profile.service';
  */
 const db = serviceDb();
 const discounts = new DiscountService(db);
+const codes = new DiscountCodeService(db);
 const categories = new CategoryService(db);
 const profiles = new UserProfileService(db);
 
@@ -42,40 +44,64 @@ const track = <T extends { id: string }>(row: T): T => {
 
 describe('DiscountService — yazma ve okuma', () => {
   it('kupon koda göre HARF AYRIMSIZ bulunur', async () => {
-    track(
-      await discounts.insert({
-        name: 'Bayram kuponu',
-        trigger: 'coupon',
-        code: `BAYRAM${stamp}`,
-        type: 'percent',
-        value: 10,
-        scope: 'cart',
-      }),
+    const rule = track(
+      await discounts.insert({ name: 'Bayram kuponu', trigger: 'coupon', type: 'percent', value: 10, scope: 'cart' }),
     );
+    await codes.insert({ discountId: rule.id, code: `BAYRAM${stamp}`, locale: 'tr' });
 
     const found = await discounts.findByCode(`bayram${stamp}`);
     expect(found?.code).toBe(`BAYRAM${stamp}`);
-    expect(found?.value).toBe(10);
+    expect(found?.discount.value).toBe(10);
+  });
+
+  it('bir kuponun HER kodu aynı kurala açılır — kota tek', async () => {
+    const rule = track(
+      await discounts.insert({ name: 'Çok dilli kupon', trigger: 'coupon', type: 'percent', value: 20, scope: 'cart' }),
+    );
+    await codes.replaceCodes(rule.id, [
+      { discountId: rule.id, code: `HOSGELDIN${stamp}`, locale: 'tr' },
+      { discountId: rule.id, code: `BIENVENUE${stamp}`, locale: 'fr' },
+      { discountId: rule.id, code: `WILLKOMMEN${stamp}`, locale: 'de' },
+    ]);
+
+    for (const code of [`HOSGELDIN${stamp}`, `bienvenue${stamp}`, `WillKommen${stamp}`]) {
+      const found = await discounts.findByCode(code);
+      expect(found?.discount.id).toBe(rule.id);
+    }
+    expect((await codes.listByDiscount(rule.id))).toHaveLength(3);
+  });
+
+  it('kod eşitlemesi KALANLARA dokunmaz — kullanım geçmişi kodun kimliğinde yaşar', async () => {
+    const rule = track(
+      await discounts.insert({ name: 'Eşitleme kuponu', trigger: 'coupon', type: 'fixed', value: 4, scope: 'cart' }),
+    );
+    const first = await codes.replaceCodes(rule.id, [
+      { discountId: rule.id, code: `KALAN${stamp}`, locale: 'tr' },
+      { discountId: rule.id, code: `GIDEN${stamp}`, locale: 'fr' },
+    ]);
+    const survivorId = first.find((c) => c.code === `KALAN${stamp}`)!.id;
+
+    const second = await codes.replaceCodes(rule.id, [
+      { discountId: rule.id, code: `KALAN${stamp}`, locale: 'tr' },
+      { discountId: rule.id, code: `YENI${stamp}`, locale: 'de' },
+    ]);
+
+    expect(second.map((c) => c.code).sort()).toEqual([`KALAN${stamp}`, `YENI${stamp}`].sort());
+    // Kalan kodun KİMLİĞİ aynı: yeniden yazılsaydı ona bağlı kullanım kayıtları öksüz kalırdı.
+    expect(second.find((c) => c.code === `KALAN${stamp}`)!.id).toBe(survivorId);
   });
 
   it('kişisel kupon yalnız SAHİBİNE aday olur', async () => {
-    track(
-      await discounts.insert({
-        name: 'Kişisel kupon',
-        trigger: 'coupon',
-        code: `KISISEL${stamp}`,
-        type: 'fixed',
-        value: 5,
-        scope: 'cart',
-        customerId,
-      }),
+    const rule = track(
+      await discounts.insert({ name: 'Kişisel kupon', trigger: 'coupon', type: 'fixed', value: 5, scope: 'cart', customerId }),
     );
+    await codes.insert({ discountId: rule.id, code: `KISISEL${stamp}`, locale: 'tr' });
 
     const mine = await discounts.listCandidates(customerId);
-    expect(mine.some((d) => d.code === `KISISEL${stamp}`)).toBe(true);
+    expect(mine.some((d) => d.id === rule.id)).toBe(true);
 
     const others = await discounts.listCandidates('00000000-0000-4000-8000-000000000000');
-    expect(others.some((d) => d.code === `KISISEL${stamp}`)).toBe(false);
+    expect(others.some((d) => d.id === rule.id)).toBe(false);
   });
 
   it('pasif kural adaylar arasında YOK ama listede DURUR — geçmiş silinmez', async () => {
@@ -109,19 +135,44 @@ describe('DiscountService — yazma ve okuma', () => {
     expect(counts.get(rule.id)?.total).toBe(3);
     expect(counts.get(rule.id)?.byCustomer.get(customerId)).toBe(2);
   });
+
+  it('kod kırılımı kotayı BÖLMEZ — üç kapı, tek tavan', async () => {
+    const rule = track(
+      await discounts.insert({ name: 'Kapı sayımı', trigger: 'coupon', type: 'fixed', value: 2, scope: 'cart' }),
+    );
+    const [tr, fr] = await codes.replaceCodes(rule.id, [
+      { discountId: rule.id, code: `SAYIM-TR${stamp}`, locale: 'tr' },
+      { discountId: rule.id, code: `SAYIM-FR${stamp}`, locale: 'fr' },
+    ]);
+    await db.from('discount_use').insert([
+      { discount_id: rule.id, discount_code_id: tr!.id, amount: 2 },
+      { discount_id: rule.id, discount_code_id: tr!.id, amount: 2 },
+      { discount_id: rule.id, discount_code_id: fr!.id, amount: 2 },
+    ]);
+
+    const usage = (await discounts.usageCounts([rule.id])).get(rule.id);
+    // Tavan bunun üstünde durur: üç kullanım, hangi kapıdan girildiğine bakılmaksızın.
+    expect(usage?.total).toBe(3);
+    expect(usage?.byCode.get(tr!.id)).toBe(2);
+    expect(usage?.byCode.get(fr!.id)).toBe(1);
+  });
 });
 
 describe('DB kısıtları — tutarsız kural yazılamaz', () => {
-  it('kodsuz kupon reddedilir', async () => {
-    await expect(
-      discounts.insert({ name: 'Kodsuz', trigger: 'coupon', type: 'percent', value: 10, scope: 'cart' }),
-    ).rejects.toThrow();
+  it('aynı kod İKİ kurala verilemez — müşteri hangisini kastettiğini bilemezdi', async () => {
+    const first = track(await discounts.insert({ name: 'Tekillik A', trigger: 'coupon', type: 'percent', value: 5, scope: 'cart' }));
+    const second = track(await discounts.insert({ name: 'Tekillik B', trigger: 'coupon', type: 'percent', value: 7, scope: 'cart' }));
+    await codes.insert({ discountId: first.id, code: `TEKIL${stamp}` });
+
+    // Harf ayrımı da korumaz: indeks `upper(code)` üstünde.
+    await expect(codes.insert({ discountId: second.id, code: `tekil${stamp}` })).rejects.toThrow();
   });
 
   it('kodlu kampanya reddedilir — "otomatik" adının yalanı olurdu', async () => {
-    await expect(
-      discounts.insert({ name: 'Kodlu kampanya', trigger: 'automatic', code: 'X', type: 'percent', value: 10, scope: 'cart' }),
-    ).rejects.toThrow();
+    const rule = track(
+      await discounts.insert({ name: 'Kodlu kampanya', trigger: 'automatic', type: 'percent', value: 10, scope: 'cart' }),
+    );
+    await expect(codes.insert({ discountId: rule.id, code: `OTOMATIK${stamp}` })).rejects.toThrow();
   });
 
   it('hedefsiz kategori kapsamı reddedilir — hiçbir kaleme uymayan sessiz kural', async () => {
@@ -150,26 +201,4 @@ describe('DB kısıtları — tutarsız kural yazılamaz', () => {
     ).rejects.toThrow();
   });
 
-  it('aynı kod iki kez yazılamaz — harf farkı da kurtarmaz', async () => {
-    track(
-      await discounts.insert({
-        name: 'Tekil kod',
-        trigger: 'coupon',
-        code: `TEKIL${stamp}`,
-        type: 'percent',
-        value: 10,
-        scope: 'cart',
-      }),
-    );
-    await expect(
-      discounts.insert({
-        name: 'Aynı kod küçük harf',
-        trigger: 'coupon',
-        code: `tekil${stamp}`,
-        type: 'percent',
-        value: 10,
-        scope: 'cart',
-      }),
-    ).rejects.toThrow();
-  });
 });

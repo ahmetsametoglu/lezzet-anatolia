@@ -30,12 +30,15 @@ const BASE_SALE: OrderSale = {
   deliveryCountry: 'FR',
   vatNumberSnapshot: null,
   vatTreatment: 'domestic',
+  locale: null,
   referenceNo: 'LA-26-7K4M2P',
+  idempotencyKey: null,
   invoiceNo: null,
   deliveryProof: null,
   shippingFee: 0,
   total: 0,
   discountId: null,
+  discountLabel: null,
   discountAmount: 0,
   amountCollected: 0,
   amountRefunded: 0,
@@ -86,6 +89,28 @@ describe('sipariş katkı payı', () => {
     expect(withShipping.contribution!).toBeLessThan(withoutShipping.contribution! + 7.9);
   });
 
+  it('B2B fiyatı ZATEN HT\'dir — KDV bir daha çıkarılmaz', () => {
+    // DOMAIN §5: `Price.amount` kanalın tabanında saklanır — b2c TTC, b2b HT. Aynı sayı (100 €)
+    // iki kanalda iki ayrı şey demektir: b2c'de 94,79 HT, b2b'de 100 HT. Tek yön varsayıldığında
+    // b2b cirosu her satırda %5,5 eriyordu ve aynı hata muhasebe dosyasına da geçiyordu.
+    const b2b = orderContribution(closed({ channel: 'b2b', cogsAmount: 60 }), [line({ unitPrice: 100 })]);
+    const b2c = orderContribution(closed({ channel: 'b2c', cogsAmount: 60 }), [line({ unitPrice: 100 })]);
+
+    expect(b2b.revenue).toBe(100);
+    expect(b2b.contribution).toBe(40);
+    expect(b2c.revenue).toBe(94.79);
+    expect(b2c.revenue).toBeLessThan(b2b.revenue);
+  });
+
+  it('reverse charge\'da KDV yoktur — tutar olduğu gibi cirodur', () => {
+    const result = orderContribution(
+      closed({ channel: 'b2b', vatTreatment: 'intra_eu_b2b_reverse_charge', deliveryCountry: 'DE', cogsAmount: 60 }),
+      [line({ unitPrice: 100 })],
+    );
+
+    expect(result.revenue).toBe(100);
+  });
+
   it('patron ikramı kârda SAYILIR — parayı patron öder', () => {
     const result = orderContribution(closed({ cogsAmount: 8, isGiftOrder: true }), [line({ unitPrice: 21.1 })]);
 
@@ -123,6 +148,7 @@ describe('ürün kârlılığı — fire düşülmüş net marj', () => {
   const soldLine = (variantId: string, over: Partial<SoldLine> = {}): SoldLine => ({
     variantId,
     item: line({ unitPrice: 21.1 }),
+    channel: 'b2c',
     costCents: 800,
     ...over,
   });
@@ -171,7 +197,7 @@ describe('şirket kârlılığı — tam P&L', () => {
   it('genel gider ve fire BİR KEZ düşülür, ürüne dağıtılmaz', () => {
     const pnl = companyProfit({ from: '2026-03-01', to: '2026-03-31' }, [
       contribution('b2c', 8, 21.1), // 20 HT − 8 = 12
-      contribution('b2b', 30, 105.5), // 100 HT − 30 = 70
+      contribution('b2b', 30, 100), // b2b fiyatı HT: 100 − 30 = 70
     ], { lossCost: 15, overhead: 50 });
 
     expect(pnl.revenue).toBe(120);
@@ -183,7 +209,7 @@ describe('şirket kârlılığı — tam P&L', () => {
   it('kanal kırılımı katkı payı seviyesindedir — genel gider kanala dağıtılmaz', () => {
     const pnl = companyProfit({ from: '2026-03-01', to: '2026-03-31' }, [
       contribution('b2c', 8, 21.1),
-      contribution('b2b', 30, 105.5),
+      contribution('b2b', 30, 100),
     ], { lossCost: 0, overhead: 500 });
 
     const b2b = pnl.byChannel.find((c) => c.channel === 'b2b')!;

@@ -8,9 +8,11 @@ import {
   OrderStatusEnum,
   PaymentMethodEnum,
   PaymentStatusEnum,
+  PreferredLanguageEnum,
   ReturnDispositionEnum,
   VatTreatmentEnum,
 } from './enums.schema';
+import { LocalizedTextDraftSchema } from './localized-text.schema';
 
 // Order — sipariş omurgası (ORDER_LIFECYCLE, DOMAIN §5–§8).
 //
@@ -48,6 +50,13 @@ export const OrderSchema = z.object({
   vatNumberSnapshot: z.string().nullable(),
   vatTreatment: VatTreatmentEnum,
 
+  /**
+   * Siparişin dili — müşterinin bu siparişi verirken okuduğu dil. Sipariş maillerinin dili buradan
+   * gelir; profil sonradan değişse de bu siparişin metni değişmez (0015). `null` = bilinmiyor →
+   * okuyan taraf profilin `preferredLanguage`'ına düşer.
+   */
+  locale: PreferredLanguageEnum.nullable(),
+
   /** Sistemin ürettiği referans (LA-26-7K4M2P) — resmî fatura no DEĞİL; ilk kalıcı durumda üretilir. */
   referenceNo: z.string().nullable(),
   /** Çift sipariş kalkanı — aynı istek ikinci kez ulaşırsa var olan sipariş döner (0015). */
@@ -59,6 +68,12 @@ export const OrderSchema = z.object({
   total: dbNumeric,
   discountId: z.string().uuid().nullable(),
   discountAmount: dbNumeric,
+  /**
+   * İnen indirimin müşteriye görünen adı, sipariş anındaki hâliyle (`Discount.publicLabel` kopyası).
+   * Kampanya yeniden adlandırılır ya da silinirse geçmiş siparişin maili/fişi değişmesin diye
+   * KOPYA tutulur — `addressSnapshot` ile aynı gerekçe (0015).
+   */
+  discountLabel: LocalizedTextDraftSchema.nullable(),
   /** CACHE — kaynak `MoneyMovement` (modül 12); ödeme durumu bunlardan türetilir. */
   amountCollected: dbNumeric,
   amountRefunded: dbNumeric,
@@ -92,6 +107,8 @@ export const OrderInsertSchema = z.object({
   total: z.number().nonnegative().optional(),
   discountId: z.string().uuid().nullish(),
   discountAmount: z.number().nonnegative().optional(),
+  discountLabel: LocalizedTextDraftSchema.nullish(),
+  locale: PreferredLanguageEnum.nullish(),
   /** Çift sipariş kalkanı (0015) — checkout denemesinin anahtarı; yalnız web akışı yazar. */
   idempotencyKey: z.string().nullish(),
 });

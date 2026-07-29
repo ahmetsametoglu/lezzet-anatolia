@@ -116,6 +116,12 @@ on conflict (key) where scope_id is null do nothing;
 -- veritabanında. Çakışmada fonksiyon `unique_violation` fırlatır ve çağıran yeni kodla yeniden dener —
 -- SQL içinde kod üretmek, müşteriye okunacak alfabeyi ikinci bir yerde tanımlamak olurdu.
 --
+-- **Kod ayrı satırdır** (`discount_code`, 0031): bir kuponun birden çok kapısı olabilir. Puan
+-- çevriminin tek kapısı var ve o kapı DİLSİZ (`locale = null`) — üretilen dize bir dile ait değil,
+-- müşteriye özel bir anahtardır. Kod kuraldan SONRA yazılır: bağlanacağı satır olmadan yazılamaz,
+-- ve ikisi aynı transaction'da olduğu için yarım bir kupon (kodsuz, dolayısıyla kullanılamaz) ortada
+-- kalmaz.
+--
 -- KARAR BURADA DEĞİL: "çevirebilir mi, karşılığı ne" sorusunu motor yanıtlar (`canRedeem`);
 -- fonksiyon yalnız o kararı uygular ve son bir kez bakiyeyi doğrular — arada geçen sürede başka
 -- bir çevirme olmuş olabilir.
@@ -155,11 +161,10 @@ begin
   end if;
 
   insert into public.discount (
-    name, trigger, code, type, value, scope, customer_id, max_uses, per_customer_limit, is_active
+    name, trigger, type, value, scope, customer_id, max_uses, per_customer_limit, is_active
   ) values (
     'Puan çevrimi',
     'coupon',
-    p_code,
     -- Sabit tutar: puanın karşılığı EURO'dur, yüzde değil. Yüzde olsaydı aynı puan farklı
     -- sepetlerde farklı değer ederdi ve "500 puan = 5 €" cümlesi yalan olurdu.
     'fixed',
@@ -171,6 +176,11 @@ begin
     1,
     true
   ) returning id into v_discount_id;
+
+  -- Kuponun tek kapısı. Tekillik indeksi burada: çakışan kod `unique_violation` fırlatır ve
+  -- transaction'ın tamamı geri sarılır — puan da düşmemiş olur.
+  insert into public.discount_code (discount_id, code, locale)
+  values (v_discount_id, p_code, null);
 
   -- Harcama defterde NEGATİF satırdır; bakiye yine Σ ile türer.
   insert into public.points_entry (customer_id, points, reason, ref_id)
