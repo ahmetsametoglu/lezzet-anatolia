@@ -16,11 +16,16 @@ import {
   FulfillmentResultSchema,
   PreparationResultSchema,
   QuickSaleResultSchema,
+  OrderCountsRowSchema,
+  OrderStatusEnum,
   RecallHitSchema,
   TransitionResultSchema,
   DEFAULT_PAGE_SIZE,
+  type Channel,
+  type DeliveryType,
   type KeysetCursor,
   type Order,
+  type OrderSource,
   type OrderInsert,
   type OrderItem,
   type OrderItemInsert,
@@ -33,6 +38,7 @@ import {
   type FulfillmentAdjustment,
   type FulfillmentResult,
   type PaymentMethod,
+  type PaymentStatus,
   type PreparationPick,
   type PreparationResult,
   type QuickSaleResult,
@@ -46,6 +52,71 @@ import {
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
+
+/**
+ * Sipariş listesinin süzgeçleri (09.7). Liste ve sayaç AYNI tipi alır: iki ayrı süzgeç tanımı,
+ * "24 sipariş" yazan şeridin altında 19 satır göstermenin en kısa yoludur.
+ */
+export interface OrderListFilters {
+  /** Boşsa listenin kendi kümesi (taslak hariç tüm durumlar) geçerlidir. */
+  status?: OrderStatus[];
+  channel?: Channel;
+  source?: OrderSource;
+  deliveryType?: DeliveryType;
+  paymentStatus?: PaymentStatus;
+  /** Serbest arama — referans numarasında. Müşteri ekseni `customerIds` ile ayrı gelir. */
+  query?: string;
+  /** Aramanın müşteri ayağı: `UserProfileService.search` sonucu. */
+  customerIds?: string[];
+  /** Teslim günü aralığı (gün, dahil). */
+  deliveryFrom?: string;
+  deliveryTo?: string;
+}
+
+/** `order_counts()` çıktısı. Tutarlar EURO (DB tabanı); kuruşa çevirmek görünümün işi (STACK §8). */
+export interface OrderCounts {
+  /** Duruma göre adet — sıfır olan durum haritada HİÇ yoktur (ekran `?? 0` okur). */
+  byStatus: Map<OrderStatus, number>;
+  total: number;
+  sum: { total: number; collected: number; refunded: number };
+  cod: { count: number; total: number; collected: number; refunded: number };
+}
+
+/**
+ * Listede görünen durumlar — **taslak hariç**. `draft` yarım kalmış bir checkout'tur: referans
+ * numarası bile yoktur, kimse onu hazırlayamaz. Operasyon listesinde görünmesi, terk edilmiş
+ * sepetleri iş kuyruğuna karıştırmak olurdu (TTL süpürücüsü onları `cancelled`'a çeker).
+ */
+const LISTED_STATUSES = OrderStatusEnum.options.filter((s) => s !== 'draft');
+
+/** Eşitlik süzgeçleri — durum verilmediyse listenin kendi kümesi devreye girer. */
+function listedFilters(f: OrderListFilters): Record<string, unknown> {
+  return {
+    status: f.status?.length ? f.status : LISTED_STATUSES,
+    channel: f.channel,
+    orderSource: f.source,
+    deliveryType: f.deliveryType,
+    paymentStatus: f.paymentStatus,
+  };
+}
+
+/** Arama ve tarih aralığı — eşitliğe sığmayan süzgeçler. */
+function searchOptions(f: OrderListFilters): { orFilters?: string[]; rangeFilters?: Array<{ field: string; operator: 'gte' | 'lte'; value: string }> } {
+  const q = f.query?.trim() ?? '';
+  // PostgREST filtre dizesine gömülüyor: tırnak ayıklanır, ayraçlar boşluğa çevrilir (arama
+  // kutusuna yazılan virgül sorguyu bozmasın) — `UserProfileService.search` ile aynı kaçış.
+  const safe = q.replace(/"/g, '').replace(/[(),]/g, ' ');
+  const ids = f.customerIds ?? [];
+  const or = q
+    ? [[`reference_no.ilike."*${safe}*"`, ...(ids.length ? [`customer_id.in.(${ids.join(',')})`] : [])].join(',')]
+    : undefined;
+
+  const ranges: Array<{ field: string; operator: 'gte' | 'lte'; value: string }> = [];
+  if (f.deliveryFrom) ranges.push({ field: 'deliveryDate', operator: 'gte', value: f.deliveryFrom });
+  if (f.deliveryTo) ranges.push({ field: 'deliveryDate', operator: 'lte', value: f.deliveryTo });
+
+  return { orFilters: or, rangeFilters: ranges.length ? ranges : undefined };
+}
 
 /** Yeni kalem girişi — sipariş bağı `create` içinde kurulur. */
 export type CreateOrderItemInput = Omit<OrderItemInsert, 'orderId'>;
@@ -392,6 +463,17 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /** Müşterinin sipariş geçmişi — en yeni önce, sonsuz kaydırma. */
+  /**
+   * Çift sipariş kalkanı — aynı istek anahtarıyla açılmış sipariş var mı.
+   *
+   * Kısmi unique indeks eşzamanlı iki yazımdan birini zaten reddediyor; bu okuma **tekrar gelen**
+   * isteği (çift tıklama, ağın yeniden denemesi) ikinci sipariş açmadan cevaplamak için.
+   */
+  async findByIdempotencyKey(key: string): Promise<Order | null> {
+    const rows = await this.getAll({ idempotencyKey: key }, { limit: 1 });
+    return rows[0] ?? null;
+  }
+
   listByCustomer(customerId: string, opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<Order>> {
     return this.getPage({ customerId }, {
       orderBy: 'createdAt',
@@ -399,6 +481,58 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       keysetAfter: opts.cursor,
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
     });
+  }
+
+  /**
+   * **Sipariş ekranının listesi** (09.7) — süzgeçli, keyset sayfalı, en yeni önce.
+   *
+   * `listByStatus`'ten farkı sayfalanması ve süzgeç kümesi: o, depo/kurye kuyruğunun dar sorusunu
+   * ("şu durumdakiler, şu gün") yanıtlar; bu, operatörün serbest taramasını.
+   *
+   * ARAMA İKİ EKSENLİDİR ve müşteri ekseni DIŞARIDAN gelir: "müşterinin neyinde aranır" sorusunun
+   * cevabı `UserProfileService.search`'tedir. Buraya kopyalansaydı sipariş araması bir gün telefonu
+   * kapsar, müşteri araması kapsamaz olurdu.
+   */
+  listPage(filters: OrderListFilters = {}, opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<Order>> {
+    return this.getPage(listedFilters(filters), {
+      ...searchOptions(filters),
+      orderBy: 'createdAt',
+      orderDirection: 'desc',
+      keysetAfter: opts.cursor,
+      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+    });
+  }
+
+  /**
+   * Sekme sayaçları + alt şerit toplamı — TEK okuma (`order_counts()`).
+   *
+   * Sayılar SÜZGECİN TAMAMINA aittir, yüklenmiş sayfaya değil: sayfadan hesaplanan sekme sayacı
+   * listenin kuyruğunu yutar ve operatör "bugün altı işim var" diye yanlış karar verir. Altı sekme
+   * için altı `HEAD` sayım + üç toplam yerine bir tur.
+   */
+  async counts(filters: OrderListFilters = {}): Promise<OrderCounts> {
+    const rows = await this.executeRpc<unknown[]>('order_counts', {
+      p_reference: filters.query?.trim() || null,
+      p_customer_ids: filters.customerIds ?? null,
+      p_channel: filters.channel ?? null,
+      p_source: filters.source ?? null,
+      p_delivery_type: filters.deliveryType ?? null,
+      p_payment_status: filters.paymentStatus ?? null,
+      p_from: filters.deliveryFrom ?? null,
+      p_to: filters.deliveryTo ?? null,
+    });
+    // `by_status`'un ANAHTARLARI enum değeridir, alan adı değil: `dbToApp` onları da camelCase'e
+    // çevirip `out_for_delivery`'yi `outForDelivery` yapıyordu — sessizce hiçbir sekmeye denk
+    // gelmeyen bir anahtar. Bu yüzden o alan HAM hâliyle alınır.
+    const raw = (rows?.[0] ?? {}) as Record<string, unknown>;
+    const flat = dbToApp(raw) as Record<string, unknown>;
+    const row = OrderCountsRowSchema.parse({ ...flat, byStatus: raw.by_status ?? {} });
+    return {
+      byStatus: new Map(Object.entries(row.byStatus) as Array<[OrderStatus, number]>),
+      total: row.total,
+      sum: { total: row.sumTotal, collected: row.sumCollected, refunded: row.sumRefunded },
+      cod: { count: row.codCount, total: row.codTotal, collected: row.codCollected, refunded: row.codRefunded },
+    };
   }
 
   /** Operasyon kuyruğu: duruma (ve varsa güne) göre. Depo/kurye ekranlarının okuması. */

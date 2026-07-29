@@ -105,6 +105,24 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null): P
   if (!found) return { status: 'not_found' };
 
   const { order, items } = found;
+
+  /**
+   * Sipariş İPTAL EDİLMİŞSE para geri verilir ve iş burada biter.
+   *
+   * Dar ama gerçek bir ihtimal: müşteri kart reddi sonrası tekrar denerken önceki taslağı
+   * süpürülüyor (`supersedeOpenDrafts`) ve süpürülen taslağın ödeme niyeti iptal edilemiyor —
+   * siparişte sağlayıcı kimliği saklanmıyor. Onaylanmamış bir niyet kendiliğinden tahsil etmez,
+   * ama 3-D Secure penceresi açıkken sayfa yenilenirse o niyet sonradan onaylanabilir.
+   *
+   * Bu emniyet olmasaydı akış aşağıda `transitionOrder(cancelled → confirmed)`'a girip geçişi
+   * reddedilecek ve **para alınmış, siparişi olmayan** bir müşteri kalacaktı.
+   */
+  if (order.status === 'cancelled') {
+    const stripe = stripeClient();
+    if (stripe && event.paymentIntentId) await stripe.refunds.create({ payment_intent: event.paymentIntentId });
+    return { status: 'ok', action: 'refunded' };
+  }
+
   const decision = await decideForOrder(db, order.id, items);
 
   if (decision.action === 'refund') {

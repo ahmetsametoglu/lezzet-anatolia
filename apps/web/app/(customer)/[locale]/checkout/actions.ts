@@ -170,11 +170,35 @@ export async function confirmCheckoutAction(input: {
   marketingConsent?: boolean;
   /** Sepetteki kupon kodu; siparişin indirimi bunsuz hesaplanamaz. */
   couponCode?: string | null;
+  /**
+   * Çift sipariş kalkanı — istemcinin bu checkout denemesi için ürettiği anahtar.
+   *
+   * Kapsam BİLEREK dar: yalnız kart DIŞI yollarda işler. Orada sipariş bu çağrıda kesinleşiyor,
+   * yani ikinci bir çağrı **kalıcı ve gerçek** bir çift sipariş demek. Kart yolunda ise çağrı
+   * yalnız taslak açıyor; oradaki koruma `supersedeOpenDrafts` (açık taslak süpürülür) ve
+   * düğmenin gezinme bitene kadar kapalı kalması.
+   */
+  idempotencyKey?: string | null;
 }): Promise<ActionResult<ConfirmOutcome>> {
   try {
     if (!hasLocale(routing.locales, input.locale)) throw new Error('Geçersiz dil');
     const customerId = await currentCustomerId();
     if (!customerId) throw new Error('Oturum gerekli');
+
+    /**
+     * Aynı istek İKİNCİ kez geldiyse (çift tıklama, ağın yeniden denemesi) ikinci sipariş AÇILMAZ:
+     * var olanın kimliği döner. Kart dışı yollarda sipariş bu çağrıda kesinleştiği için buradaki
+     * tekrar, kalıcı bir çift sipariş demekti.
+     */
+    if (input.idempotencyKey) {
+      const already = await new OrderService(serviceDb()).findByIdempotencyKey(input.idempotencyKey);
+      if (already && already.status !== 'draft' && already.status !== 'cancelled') {
+        return { data: { status: 'placed', orderId: already.id, totalCents: Math.round(already.total * 100) }, error: null };
+      }
+    }
+
+    // Önceki deneme(ler)den kalan açık taslak KAPATILIR — yenisini açmadan önce.
+    await supersedeOpenDrafts(customerId);
 
     const draft = await createCheckoutDraft({
       locale: input.locale as Locale,
@@ -185,6 +209,7 @@ export async function confirmCheckoutAction(input: {
       paymentMethod: input.paymentMethod,
       onAccount: input.onAccount,
       couponCode: input.couponCode,
+      idempotencyKey: input.idempotencyKey,
     });
     if (draft.status !== 'ok') {
       const detail = draft.status === 'blocked_lines' ? draft.lines : draft.status === 'date_unavailable' ? draft.availableDates : undefined;
@@ -239,6 +264,36 @@ export async function confirmCheckoutAction(input: {
     };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Müşterinin ÖNCEKİ açık taslaklarını kapatır ve stoklarını geri bırakır.
+ *
+ * **Neden şart.** Kart reddedildiğinde ekran hatayı gösterip müşteriyi aynı sayfada bırakıyor;
+ * "tekrar dene" her seferinde YENİ bir taslak sipariş ve YENİ bir rezervasyon açıyordu. Eski
+ * rezervasyon TTL'i boyunca (30 dk) malı tutmaya devam ettiği için müşteri **kendi ilk denemesi
+ * yüzünden** ikinci denemede "stok yetersiz" alabiliyordu — az stoklu üründe ürünü hiç alamıyordu.
+ * Ve tutulan mal yalnız ona kapalı değildi: **başka müşterilere de yok görünüyordu** (29.07
+ * denetimi + kullanıcı tespiti).
+ *
+ * Kapsam bilerek geniş: yöntem değiştiren müşterinin (karttan kapıda ödemeye geçen) ardında da
+ * taslak kalmamalı. Yalnız `draft` olanlara dokunulur — kesinleşmiş sipariş buraya hiç girmez.
+ *
+ * **Süpürülen taslağın ödeme niyeti iptal EDİLEMİYOR** (siparişte sağlayıcı kimliği saklanmıyor).
+ * Onaylanmamış bir niyet kendiliğinden hiç tahsil etmez; yine de dar bir ihtimal için webhook
+ * tarafında emniyet var: iptal edilmiş bir siparişe ödeme gelirse para iade edilir.
+ */
+async function supersedeOpenDrafts(customerId: string): Promise<void> {
+  const orders = new OrderService(serviceDb());
+  // Taslaklar en yenilerdir: sayfanın başı yeter, tüm geçmişi taramaya gerek yok.
+  const recent = await orders.listByCustomer(customerId, { limit: 20 });
+  for (const order of recent.rows) {
+    if (order.status !== 'draft') continue;
+    // Sıra ÖNEMLİ: önce mal geri bırakılır, sonra sipariş kapanır. Tersi olsaydı iptal edilmiş bir
+    // siparişin rezervasyonu ortada kalabilirdi.
+    await releaseOrderStock(order.id);
+    await cancelDraft(order.id);
   }
 }
 

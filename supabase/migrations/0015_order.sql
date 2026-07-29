@@ -52,6 +52,10 @@ create table public.order (
   -- Sistemin ürettiği referans (LA-26-7K4M2P) — resmî fatura no DEĞİL. İLK KALICI DURUMDA üretilir
   -- (`confirmed`, hızlı satışta `completed`); draft'ta null olduğu için kısmi unique.
   reference_no text,
+  -- Çift sipariş kalkanı: aynı "Siparişi onayla" isteği ikinci kez ulaşırsa (çift tıklama, ağın
+  -- yeniden denemesi) ikinci SİPARİŞ açılmaz — anahtar aynıysa var olan sipariş döner. Kısmi unique:
+  -- anahtarsız satırlar (operasyon girişi, hızlı satış) birbirini engellemez.
+  idempotency_key text,
   invoice_no text,                                   -- dış muhasebeden sonradan eşleşir
   delivery_proof jsonb,                              -- imza/foto + onaylayan + zaman (DOMAIN §6)
 
@@ -74,6 +78,7 @@ create table public.order (
 
 -- Referans müşteriye söylenen numaradır: iki siparişte aynı olamaz. Draft'ta null (kısmi indeks).
 create unique index order_reference_key on public.order (reference_no) where reference_no is not null;
+create unique index order_idempotency_key on public.order (idempotency_key) where idempotency_key is not null;
 -- Müşteri sipariş geçmişi (sonsuz kaydırma).
 create index order_customer_idx on public.order (customer_id, created_at desc);
 -- Operasyon kuyruğu: "bugün hazırlanacaklar", "yolda olanlar".
@@ -186,3 +191,94 @@ $$;
 
 revoke execute on function public.transition_order_status(uuid, order_status, order_status, uuid, text)
   from public, anon, authenticated;
+
+
+-- Sipariş ekranının sekme sayaçları ve alt şerit toplamı — TEK okuma (09.7 · STACK §13).
+--
+-- Tasarım altı sekme gösteriyor ve her birinin yanında canlı bir sayı var ("Hazırlanıyor 6"), altta
+-- da özet şerit ("24 sipariş · toplam 3.842 € · kapıda tahsilat 504,50 €"). Bu sayılar SAYFANIN
+-- değil, süzgecin TAMAMININ sayılarıdır: yüklenmiş ilk sayfadan hesaplanan sekme sayacı, listenin
+-- kuyruğunu sessizce yutar ve operatör "bugün altı işim var" diye yanlış karar verir.
+--
+-- Altı sekme için altı `HEAD` sayım + üç toplam için ayrı okumalar = dokuz tur. Burada bir tur.
+--
+-- FONKSİYON İŞ KURALI TAŞIMAZ (`product_counts` ile aynı çizgi): yalnız mekanik eşleşme ve toplama
+-- yapar. Özellikle:
+--   · "Açık tutar" formülü (toplam − tahsil + iade) BURADA YOK — üç kolonun toplamı ayrı ayrı
+--     dönüyor, formülü motor uyguluyor (`openAmountCents`). Toplama doğrusal olduğu için sonuç
+--     birebir aynı; ama kural tek yerde kalıyor.
+--   · Vade gecikmesi de yok: o müşterinin `payment_term_days`'ine ve BUGÜNE bağlı bir karardır,
+--     satır satır motorda hesaplanır (checkout freniyle aynı tanım). SQL'e kopyalansaydı iki yer
+--     bir gün ayrışırdı.
+--
+-- TASLAK SİPARİŞ SAYILMAZ: `draft` yarım kalmış bir checkout'tur, sipariş değil — operasyon
+-- listesinde görünmez, sayacı da şişirmez. (TTL süpürücüsü onları `cancelled`'a çeker.)
+-- ARAMA BURADA TANIMLANMAZ: "müşterinin neyinde aranır" (ad · telefon · e-posta) sorusunun cevabı
+-- `UserProfileService.search`'te duruyor ve liste de sayaç da AYNI sonucu kullanmalı. Bu yüzden
+-- fonksiyon müşteri kimliklerini hazır alır; kendi başına `user_profiles`'a join atıp ölçütü
+-- kopyalasaydı sayaç ile listenin bir gün farklı sayı söylemesi kaçınılmazdı.
+create or replace function public.order_counts(
+  p_reference text default null,
+  p_customer_ids uuid[] default null,
+  p_channel text default null,
+  p_source text default null,
+  p_delivery_type text default null,
+  p_payment_status text default null,
+  p_from date default null,
+  p_to date default null
+)
+returns table (
+  by_status jsonb,
+  total int,
+  sum_total numeric,
+  sum_collected numeric,
+  sum_refunded numeric,
+  cod_count int,
+  cod_total numeric,
+  cod_collected numeric,
+  cod_refunded numeric
+)
+language sql
+stable
+as $$
+  with base as (
+    select o.status, o.total, o.amount_collected, o.amount_refunded, o.payment_method,
+           o.on_account, o.payment_status
+    from public.order o
+    where o.status <> 'draft'
+      and (p_channel is null or o.channel = p_channel::channel)
+      and (p_source is null or o.order_source = p_source::order_source)
+      and (p_delivery_type is null or o.delivery_type = p_delivery_type::delivery_type)
+      and (p_payment_status is null or o.payment_status = p_payment_status::payment_status)
+      and (p_from is null or o.delivery_date >= p_from)
+      and (p_to is null or o.delivery_date <= p_to)
+      and (
+        p_reference is null or p_reference = ''
+        or o.reference_no ilike '%' || p_reference || '%'
+        or (p_customer_ids is not null and o.customer_id = any (p_customer_ids))
+      )
+  ),
+  -- Kapıda tahsilat: peşin ödenmemiş, vadeye de yazılmamış, yöntemi kapı yöntemi olan sipariş.
+  -- Yöntem eşlemesi bir KURAL değil, enum'ın kendi anlamıdır (online = önceden ödendi).
+  cod as (
+    select * from base
+    where payment_status <> 'paid' and not on_account and payment_method in ('cash', 'card')
+  )
+  select
+    coalesce(
+      (select jsonb_object_agg(status, n) from (select status, count(*)::int as n from base group by status) s),
+      '{}'::jsonb
+    ),
+    (select count(*) from base)::int,
+    (select coalesce(sum(total), 0) from base),
+    (select coalesce(sum(amount_collected), 0) from base),
+    (select coalesce(sum(amount_refunded), 0) from base),
+    (select count(*) from cod)::int,
+    (select coalesce(sum(total), 0) from cod),
+    (select coalesce(sum(amount_collected), 0) from cod),
+    (select coalesce(sum(amount_refunded), 0) from cod);
+$$;
+
+-- Operasyon okumasıdır; müşteri yüzeyine açılmaz.
+revoke execute on function public.order_counts(text, uuid[], text, text, text, text, date, date) from public;
+grant execute on function public.order_counts(text, uuid[], text, text, text, text, date, date) to service_role;

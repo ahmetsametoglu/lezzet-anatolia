@@ -106,6 +106,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | vat_number_snapshot | string \| null | reverse charge siparişinde o anki geçerli vergi no (denetim kanıtı) |
 | shipping_fee | number | müşteriden alınan kargo ücreti (varsayılan 0); KDV'ye tabi (bkz. `DOMAIN.md §6`) |
 | reference_no | string | sistemin ürettiği referans — marka+yıl+**rastgele** (ör. `LA-26-7K4M2P`), hacim sızdırmaz; **ilk kalıcı duruma geçişte** üretilir (`confirmed`, hızlı satışta `completed`); resmî fatura no değil |
+| idempotency_key | string? | **çift sipariş kalkanı** — istemcinin o checkout denemesi için ürettiği anahtar; aynı istek ikinci kez ulaşırsa (çift tıklama, ağın yeniden denemesi) ikinci sipariş AÇILMAZ, var olan döner. Kısmi unique: anahtarsız satırlar (operasyon girişi, hızlı satış) birbirini engellemez |
 | delivery_proof | jsonb \| null | teslim onayı: imza görüntüsü/foto (storage yolu), onaylayan, zaman — B2B varsayılan zorunlu, B2C kapalı (parametrik; bkz. `DOMAIN.md §6`) |
 | invoice_no | string \| null | dış muhasebeden sonradan eşleşir |
 | vat_treatment | enum(`domestic`,`intra_eu_b2b_reverse_charge`) | KDV işleme tipi (export için); ileride `oss_destination` |

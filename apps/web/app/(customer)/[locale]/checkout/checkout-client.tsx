@@ -1,7 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+// Router next-intl'in kendisinden: `next/navigation`'ınki dilsiz bir yol üretiyordu
+// (`/checkout/<id>`) ve middleware onu her seferinde `/tr/odeme/<id>`'ye 307 ile yönlendiriyordu —
+// istemci-taraflı geçiş bir sunucu turuna dönüşüyor, `NEXT_LOCALE` çerezi URL diliyle ayrışırsa
+// yanlış dile düşme riski doğuyordu (proje kuralı: `@/i18n/navigation`).
+import { useRouter } from '@/i18n/navigation';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useCart } from '@/components/customer/cart/cart-context';
@@ -30,9 +34,14 @@ interface CheckoutClientProps {
 
 const EMPTY: CheckoutSnapshot = { addresses: [], delivery: null, payment: null };
 
+/** `crypto.randomUUID` sunucu render'ında da var (Node 19+); yine de eski tarayıcı için yedeği var. */
+function newAttemptKey(): string {
+  return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `k${Date.now()}${Math.random().toString(36).slice(2)}`;
+}
+
 export function CheckoutClient({ t, locale, device, authenticated, customer }: CheckoutClientProps) {
   const router = useRouter();
-  const { view, ready: cartReady, reload: reloadCart, coupon } = useCart();
+  const { view, ready: cartReady, failed: cartFailed, reload: reloadCart, coupon } = useCart();
   const [snapshot, setSnapshot] = useState<CheckoutSnapshot>(EMPTY);
   const [state, setState] = useState<CheckoutState>({
     addressId: null,
@@ -46,11 +55,28 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
   const [error, setError] = useState<string | null>(null);
 
   const cartEntries = useMemo(() => view.lines.map(entryOf), [view.lines]);
+  /**
+   * Anlık görüntü okumasının SIRA BİLETİ. Sepet bağlamında zaten vardı, burada yoktu: hızlıca A
+   * sonra B adresine tıklayan müşteride yanıtlar ters sırada dönerse geç gelen ESKİ cevap yeniyi
+   * eziyordu — ekran B'yi seçmişken A'ya geri atlıyor, kargo ücreti ve teslimat günleri o adresin
+   * oluyordu (29.07 denetimi). Kilit yerine bilet: arayüz açık kalır, sonuncu okuma kazanır.
+   */
+  const seq = useRef(0);
+  /**
+   * Bu checkout denemesinin kimliği — çift sipariş kalkanı (0015).
+   *
+   * Sayfa monte olurken bir kez üretilir: çift tıklama ve ağın yeniden denemesi AYNI anahtarla
+   * gider, sunucu ikinci siparişi açmaz. Sipariş verildikten sonra yenilenir — müşteri geri dönüp
+   * ikinci bir sipariş vermek İSTEYEBİLİR ve o artık farklı bir istektir.
+   */
+  const attemptKey = useRef(newAttemptKey());
 
   /** Adım verisini tazeler. Seçili adres değiştikçe ve sepet değiştikçe koşar. */
   const refresh = useCallback(
     async (addressId: string | null) => {
+      const ticket = ++seq.current;
       const { data, error: failure } = await loadCheckoutAction(locale, cartEntries, addressId, coupon);
+      if (ticket !== seq.current) return;
       // Okuma düşse de bayrak kalkar: sonsuza kadar iskelet göstermek, hatayı gizlemenin bir
       // başka biçimi olurdu — ekran hata satırını gösterebilmeli.
       setSnapshotReady(true);
@@ -94,6 +120,7 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
       onAccount: state.onAccount,
       marketingConsent: state.marketingConsent,
       couponCode: coupon,
+      idempotencyKey: attemptKey.current,
     });
 
     if (failure || !data) {
@@ -114,8 +141,10 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
      * `busy` de AÇIK bırakılır: yanıt döndükten sonra gezinme bitene kadar düğme yeniden
      * etkinleşiyordu ve sabırsız ikinci tıklama gerçek bir İKİNCİ sipariş açabiliyordu.
      */
-    router.push(`/checkout/${data.orderId}`);
+    router.push({ pathname: '/checkout/[reference]', params: { reference: data.orderId } });
     reloadCart();
+    // Sonraki sipariş AYRI bir istektir: anahtar tazelenir.
+    attemptKey.current = newAttemptKey();
   };
 
   /**
@@ -185,6 +214,7 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
     compact: device === 'mobile',
     cart: view,
     cartReady,
+    cartFailed,
     snapshotReady,
     snapshot,
     state,

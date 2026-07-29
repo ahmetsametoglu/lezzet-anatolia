@@ -538,7 +538,7 @@ export function PaymentStep({ t, snapshot, state, compact, onSelectPayment, onTo
 
 /** Sağdaki (mobilde alttaki) özet — kalemler, indirim, kargo, toplam ve onay düğmesi. */
 export function OrderSummary(props: CheckoutViewProps) {
-  const { t, locale, cart, cartReady, snapshot, state, compact, busy, error, onConfirm, selectedAddress } = props;
+  const { t, locale, cart, cartReady, cartFailed, snapshot, state, compact, busy, error, onConfirm, selectedAddress } = props;
   const payment = snapshot.payment;
   const delivery = snapshot.delivery;
 
@@ -550,7 +550,8 @@ export function OrderSummary(props: CheckoutViewProps) {
   // Onay düğmesi kart ödemesinde ÇİZİLMEZ: orada onayı Stripe formunun kendi düğmesi veriyor
   // (önce kartı valide etmesi gerekiyor). İki düğme müşteriye hangisinin bitirdiğini sordururdu.
   const showConfirm = state.paymentMethod !== null && state.paymentMethod !== 'online';
-  const blocked = delivery?.blocked || !payment?.minBasketOk || !state.addressId || cart.hasBlocked;
+  // Sepet OKUNAMADIYSA sipariş verilemez: ekrandaki 0,00 € bir toplam değil, cevapsızlıktır.
+  const blocked = cartFailed || delivery?.blocked || !payment?.minBasketOk || !state.addressId || cart.hasBlocked;
 
   return (
     // Tasarım künyesi: `radius 18 · ped 22/24 · gap 12` — adım kartlarıyla aynı aile, bir tık dar.
@@ -598,6 +599,10 @@ export function OrderSummary(props: CheckoutViewProps) {
         </div>
         <span className="font-sans text-micro text-muted">{t.summary.vatIncluded}</span>
       </div>
+
+      {/* Sepet okunamadı: kalemsiz bir özet ve 0,00 € toplam çizilmişken sessiz kalmak, müşteriye
+          sepetini kaybettiğini düşündürüyordu. Boş sepet bir DURUM, ulaşılamayan sepet bir ARIZA. */}
+      {cartFailed && <p className="font-sans text-note leading-relaxed font-semibold text-honey">{t.summary.cartUnreachable}</p>}
 
       {/* Sipariş bu hâliyle verilemiyor (gönderilemeyen kalem var): toplam da nihai değil. Tek
           satır, kalem ADI YOK — hangi kalem olduğunu adım 2'deki blok söyler, özet dar bir yer ve

@@ -50,6 +50,8 @@ export const OrderSchema = z.object({
 
   /** Sistemin ürettiği referans (LA-26-7K4M2P) — resmî fatura no DEĞİL; ilk kalıcı durumda üretilir. */
   referenceNo: z.string().nullable(),
+  /** Çift sipariş kalkanı — aynı istek ikinci kez ulaşırsa var olan sipariş döner (0015). */
+  idempotencyKey: z.string().nullable(),
   invoiceNo: z.string().nullable(),
   deliveryProof: z.record(z.unknown()).nullable(),
 
@@ -90,6 +92,8 @@ export const OrderInsertSchema = z.object({
   total: z.number().nonnegative().optional(),
   discountId: z.string().uuid().nullish(),
   discountAmount: z.number().nonnegative().optional(),
+  /** Çift sipariş kalkanı (0015) — checkout denemesinin anahtarı; yalnız web akışı yazar. */
+  idempotencyKey: z.string().nullish(),
 });
 export type OrderInsert = z.infer<typeof OrderInsertSchema>;
 
@@ -277,3 +281,24 @@ export const TransitionResultSchema = z.object({
   currentStatus: OrderStatusEnum,
 });
 export type TransitionResult = z.infer<typeof TransitionResultSchema>;
+
+/**
+ * `order_counts` RPC'sinin satırı (09.7) — sipariş ekranının sekme sayaçları ve alt şerit toplamı.
+ *
+ * Tutarlar HAM KOLON toplamıdır (euro): "açık tutar" formülü burada değil, motorda uygulanır
+ * (`openAmountCents`). Toplama doğrusal olduğu için sonuç birebir aynı, ama kural tek yerde kalır.
+ */
+export const OrderCountsRowSchema = z.object({
+  /** Duruma göre adet — listede görünmeyen durum anahtarı hiç gelmez (sıfırları yazmaz). */
+  byStatus: z.record(z.number().int()),
+  total: z.number().int(),
+  sumTotal: dbNumeric,
+  sumCollected: dbNumeric,
+  sumRefunded: dbNumeric,
+  /** Kapıda tahsilat bekleyen siparişler — peşin ödenmemiş, vadesiz, kapı yöntemli. */
+  codCount: z.number().int(),
+  codTotal: dbNumeric,
+  codCollected: dbNumeric,
+  codRefunded: dbNumeric,
+});
+export type OrderCountsRow = z.infer<typeof OrderCountsRowSchema>;

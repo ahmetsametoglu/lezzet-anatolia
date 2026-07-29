@@ -69,6 +69,8 @@ interface CheckoutDraftInput {
   /** Vadeli ("hesaba") satın alma — ödeme yöntemi değil, siparişin bayrağı. */
   onAccount?: boolean;
   couponCode?: string | null;
+  /** Çift sipariş kalkanı (0015) — istemcinin o checkout denemesi için ürettiği anahtar. */
+  idempotencyKey?: string | null;
 }
 
 export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<CheckoutDraftOutcome> {
@@ -123,6 +125,7 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
       channel: deriveChannel({ isCompany: customer.type === 'company' }),
       orderSource: 'web',
       status: 'draft',
+      idempotencyKey: input.idempotencyKey ?? null,
       paymentMethod: input.paymentMethod,
       onAccount: input.onAccount ?? false,
       deliveryType: delivery.deliveryType,

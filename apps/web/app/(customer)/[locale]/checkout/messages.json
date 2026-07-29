@@ -95,7 +95,8 @@
       "coldChain": "❄ Siparişiniz soğuk zincir bozulmadan, {date} günü kapınıza gelir.",
       "minBasket": "Sipariş için en az {min} gerekir — {missing} daha ekleyin.",
       "packageSuffix": "(paket)",
-      "blockedTotal": "Toplam, gönderilemeyen kalemler yukarıda çözülünce netleşir."
+      "blockedTotal": "Toplam, gönderilemeyen kalemler yukarıda çözülünce netleşir.",
+      "cartUnreachable": "Sepetiniz şu an okunamadı. Sayfayı yenileyip tekrar deneyin."
     },
     "pay": {
       "validating": "Kart kontrol ediliyor…",
@@ -229,7 +230,8 @@
       "coldChain": "❄ Votre commande arrive chez vous le {date}, chaîne du froid préservée.",
       "minBasket": "Minimum de commande {min} — ajoutez encore {missing}.",
       "packageSuffix": "(coffret)",
-      "blockedTotal": "Le total sera définitif une fois les articles non livrables réglés ci-dessus."
+      "blockedTotal": "Le total sera définitif une fois les articles non livrables réglés ci-dessus.",
+      "cartUnreachable": "Votre panier n’a pas pu être chargé. Actualisez la page et réessayez."
     },
     "pay": {
       "validating": "Vérification de la carte…",
@@ -363,7 +365,8 @@
       "coldChain": "❄ Ihre Bestellung kommt am {date} ohne Unterbrechung der Kühlkette zu Ihnen.",
       "minBasket": "Mindestbestellwert {min} — fügen Sie noch {missing} hinzu.",
       "packageSuffix": "(Paket)",
-      "blockedTotal": "Die Summe steht fest, sobald die nicht lieferbaren Artikel oben geklärt sind."
+      "blockedTotal": "Die Summe steht fest, sobald die nicht lieferbaren Artikel oben geklärt sind.",
+      "cartUnreachable": "Ihr Warenkorb konnte nicht geladen werden. Bitte Seite neu laden und erneut versuchen."
     },
     "pay": {
       "validating": "Karte wird geprüft…",
