@@ -5,7 +5,7 @@ import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-
 import type { Appearance, Stripe as StripeClient, StripeElementsOptions } from '@stripe/stripe-js';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
-import { Skeleton } from '@/components/customer/ui/skeleton';
+import { Skeleton, SkeletonBlock } from '@/components/customer/ui/skeleton';
 import { formatPrice } from '@/lib/storefront/format';
 
 /**
@@ -43,7 +43,7 @@ interface PaymentSectionProps {
   onPrepare: () => Promise<{ ok: true; clientSecret: string; orderId: string } | { ok: false; error: string }>;
   onError: (message: string) => void;
   disabled: boolean;
-  labels: { submit: string; validating: string; preparing: string; confirming: string; secureBy: string };
+  labels: { submit: string; validating: string; preparing: string; confirming: string; unavailable: string };
 }
 
 interface BillingDetails {
@@ -129,6 +129,33 @@ export function PaymentSection(props: PaymentSectionProps) {
   );
 }
 
+/**
+ * Kart alanının iskeleti — düz bir gri dikdörtgen DEĞİL, gelen formun kendisi kadar yer tutan bir
+ * kopya: bir satır kart numarası, altında ikiye bölünmüş son kullanma + CVC.
+ *
+ * Ölçüler yukarıdaki `APPEARANCE`'ın karşılığıdır ve rastgele değil: etiket 13px + 6px boşluk,
+ * girdi 15px metin + 10px iç boşluk + 1.5px kenar ≈ 40px, satır arası `spacingGridRow` 14px.
+ * Toplam, Stripe'ın çizdiği yükseklikle aynı — kutu alanlar gelince ne büyür ne küçülür
+ * (kullanıcı geri bildirimi, 29.07). Ölçü tutmazsa düzeltilecek yer `APPEARANCE` ile burasıdır.
+ */
+function CardFieldsSkeleton() {
+  const field = (
+    <div className="flex flex-col gap-1.5">
+      <Skeleton className="h-3.5 w-24" />
+      <SkeletonBlock className="h-10 rounded-soft" />
+    </div>
+  );
+  return (
+    <div className="flex flex-col gap-3.5" role="status" aria-busy="true">
+      {field}
+      <div className="grid grid-cols-2 gap-3.5">
+        {field}
+        {field}
+      </div>
+    </div>
+  );
+}
+
 type Stage = 'idle' | 'validating' | 'preparing' | 'confirming';
 
 function PayForm({ locale, amountCents, billing, returnUrlBase, onPrepare, onError, disabled, labels }: PaymentSectionProps) {
@@ -136,6 +163,7 @@ function PayForm({ locale, amountCents, billing, returnUrlBase, onPrepare, onErr
   const elements = useElements();
   const [stage, setStage] = useState<Stage>('idle');
   const [ready, setReady] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const busy = stage !== 'idle';
 
   const submit = async () => {
@@ -200,29 +228,30 @@ function PayForm({ locale, amountCents, billing, returnUrlBase, onPrepare, onErr
   return (
     <div className="flex flex-col gap-4">
       {/**
-       * GÜVENCE ALANIN ÜSTÜNDE, altında değil: müşteri kart numarasını yazmadan ÖNCE nereye
-       * yazdığını bilmeli. Altta dursaydı okuduğunda karar çoktan verilmiş olurdu.
+       * Kart çerçevesi ile iskeleti yer değiştirir: **yüksekliği bekleyen taraf belirler.**
        *
-       * TEK SATIR ve sağlayıcının ADIYLA. Uzun bir güvenlik açıklaması ("sunucumuz görmez, biz
-       * hiçbir zaman göremeyiz") tersine çalışıyor: kimsenin sormadığı bir soruyu cevaplamak,
-       * olmayan bir riski akla getirir. Tanınan bir ad zaten yeterli güvence.
+       * Üç kural birden gerekiyordu ve üçü de tek tek öğrenildi:
+       *  1. Çerçeve `display:none` ile GİZLENMEZ — öyle gizlenen bir iframe kendini ölçemez, "hazırım"
+       *     dedikten sonra yerleşimini ancak açılınca kurar ve arada boşluk kalırdı (29.07).
+       *  2. Bu yüzden `invisible` + `absolute`: görünmez ama tam genişlikte, ölçüsünü baştan alır;
+       *     akışta yer kaplamadığı için yüksekliği iskelet söyler.
+       *  3. İskelet gerçek formun ÖLÇÜLERİNİ taşır (aşağıdaki `CardFieldsSkeleton`) — düz bir gri
+       *     dikdörtgen doğru yüksekliği tutturamıyordu, alanlar gelince kutu zıplıyordu.
        */}
-      <span className="font-sans text-note font-semibold text-body">🔒 {labels.secureBy}</span>
-
-      {/**
-       * Kart çerçevesi YERİNDE DURUR, gizlenirken bile yer kaplar (`invisible`, `display:none`
-       * DEĞİL) — iskelet onun üstüne serilir.
-       *
-       * Fark görünmez değil: `display:none` verilen bir iframe kendini ÖLÇEMEZ. Stripe "hazırım"
-       * diyor, biz kutuyu açıyoruz, iframe ancak o an yerleşimini kuruyordu — iskelet kayboluyor,
-       * bir süre boşluk kalıyor, sonra alanlar beliriyordu (kullanıcı geri bildirimi, 29.07).
-       * `invisible` ile yerleşim baştan doğru kurulur; hazır olunca yalnız görünürlük değişir,
-       * yeniden ölçüm olmaz. `min-h-40` yalnız beklerken: iskeletin serileceği bir yükseklik lazım.
-       */}
-      <div className={['relative', ready ? '' : 'min-h-40'].join(' ')}>
-        <div className={ready ? undefined : 'invisible'}>
+      <div className="relative">
+        {!ready && !loadFailed && <CardFieldsSkeleton />}
+        <div className={ready ? undefined : 'invisible absolute inset-x-0 top-0'}>
           <PaymentElement
             onReady={() => setReady(true)}
+            // Yükleme HATASI sessiz kalmamalı: bu olmadan çerçeve hiç gelmiyor, iskelet sonsuza
+            // kadar dönüyor ve müşteri neyi beklediğini bilmiyordu — Stripe hatayı yalnız konsola
+            // yazıyordu (29.07, CSP joker eksikliği). Artık ekran cevap veriyor: kapıda ödeme açık.
+            onLoadError={({ error }) => {
+              // Sağlayıcının cümlesi müşteriye GİTMEZ: İngilizce ve entegrasyon diliyle yazılmış.
+              // Ekrana yönlendiren bir cevap gider, teknik sebep konsola — teşhisin tek yeri burası.
+              console.error('Stripe Payment Element yüklenemedi:', error?.message ?? error);
+              setLoadFailed(true);
+            }}
             options={{
               layout: 'tabs',
               fields: { billingDetails: 'never' },
@@ -232,10 +261,11 @@ function PayForm({ locale, amountCents, billing, returnUrlBase, onPrepare, onErr
             }}
           />
         </div>
-        {!ready && <Skeleton className="absolute inset-0 h-full rounded-card" />}
       </div>
 
-      <Button size="md" fullWidth onClick={() => void submit()} disabled={!stripe || busy || disabled}>
+      {loadFailed && <p className="font-sans text-note leading-relaxed font-semibold text-honey">{labels.unavailable}</p>}
+
+      <Button size="md" fullWidth onClick={() => void submit()} disabled={!stripe || busy || disabled || loadFailed}>
         {busy ? stageLabel : `${labels.submit} · ${formatPrice(amountCents, locale)}`}
       </Button>
 

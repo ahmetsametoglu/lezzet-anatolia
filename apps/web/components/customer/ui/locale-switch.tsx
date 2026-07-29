@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment } from 'react';
 import { useParams } from 'next/navigation';
 import type { Locale } from '@lezzet/i18n';
 import { LOCALES } from '@lezzet/i18n';
@@ -67,51 +67,16 @@ export function LocaleLinks({ locale, className, activeClassName = '', separator
   );
 }
 
-interface LocaleSwitchProps {
-  locale: Locale;
-}
-
-/** K12 · Başlıktaki dil seçici ("TR ▾"). Açılır menü dışarı-tıklama ve Escape dinleyicisi ister. */
-export function LocaleSwitch({ locale }: LocaleSwitchProps) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (e: MouseEvent | TouchEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="cursor-pointer font-sans text-body-sm font-semibold text-muted uppercase transition-colors hover:text-ink"
-      >
-        {locale} ▾
-      </button>
-      {open && (
-        <div className="absolute right-0 z-10 mt-2 flex min-w-36 flex-col overflow-hidden rounded-soft border border-sand-200 bg-card">
-          <LocaleLinks
-            locale={locale}
-            className="cursor-pointer px-4 py-2.5 font-sans text-body-sm text-ink transition-colors hover:bg-hover-bg"
-            activeClassName="!text-olive"
-            onNavigate={() => setOpen(false)}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
+/**
+ * **Başlıktaki dil seçici KALDIRILDI** (29.07 · kullanıcı geri bildirimi + tasarım denetimi).
+ *
+ * Başlığın sağ ucunda dört öğe birikmişti: teslimat yeri hapı · dil · hesap · sepet. Hesap girişi
+ * gelince satır kalabalıklaştı ve seçim yapılması gereken şey belli oldu. Tasarım bu soruyu zaten
+ * cevaplamış: **hiçbir ekranın başlığında dil seçici yok** — anasayfa, katalog ve sepet ekranlarının
+ * üçünde de dil yalnız footer'da, kendi sütununda duruyor ("Dil · Türkçe ✓ · Français · Deutsch").
+ *
+ * Kaybedilen bir şey de yok: footer'daki liste aynı `LocaleLinks`tir, aynı sayfanın o dildeki
+ * hâline gider ve masaüstünde de mobilde de var. Dilin kendisi zaten URL'de ve `hreflang`
+ * alternatifleri her sayfada yayımlanıyor — arama motoru da ziyaretçi de doğru dile yönlendiriliyor.
+ * Başlıktaki seçici, yılda bir kez kullanılan bir kontrolün her sayfada yer kaplaması demekti.
+ */

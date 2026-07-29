@@ -2,6 +2,7 @@ import { CartService, OrderService, ReservationService, StockService, WebhookEve
 import { decideLatePayment } from '@lezzet/domain-core';
 import type { OrderItem } from '@lezzet/types';
 import { recordOrderPayment } from '../money/order-payment';
+import { broadcastOrderChanged } from '../realtime/broadcast';
 import { stripeClient } from '../stripe';
 import { cancelOrder } from './refund';
 import { transitionOrder } from './transition';
@@ -137,6 +138,11 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null): P
   // siparişin kesinleştiği ana bağlı, açıldığı ana değil.
   await new CartService(serviceDb()).replace(order.customerId, []);
 
+  // Onay ekranı ZİLİ burada çalar: müşteri hâlâ "ödemeniz onaylanıyor" yazısına bakıyor olabilir ve
+  // bu çağrı onun tarayıcısından bağımsız geldi. Zil olmasaydı ekran ancak elle yenilenince doğruyu
+  // söylerdi (29.07 kullanıcı isteği).
+  await broadcastOrderChanged(order.id);
+
   return { status: 'ok', action: decision.action === 'reserve_again' ? 'reserved_again' : 'confirmed' };
 }
 
@@ -185,4 +191,6 @@ async function refundAndCancel(event: VerifiedEvent, orderId: string, accountId:
   // Tahsilat hiç yazılmadığı için kasada iz bırakmayız; iptal kapısı rezervasyonu bırakır ve
   // bildirimi gönderir. `refundAccountId` yalnız hareket yazılacaksa anlamlıdır.
   await cancelOrder(orderId, { refundAccountId: accountId, refundAmount: 0 });
+  // İptal de bir cevaptır: ekran "onaylanıyor"da asılı kalmaz, iadeyi öğrenir.
+  await broadcastOrderChanged(orderId);
 }

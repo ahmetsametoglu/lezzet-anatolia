@@ -30,10 +30,18 @@ const R2_HOSTS = 'https://*.r2.dev';
 //   script-src  → `js.stripe.com` (Stripe.js'in kendisi; engellenince kart alanı HİÇ çizilmez)
 //   frame-src   → aynı host + `hooks.stripe.com` (kart alanı ve 3-D Secure doğrulaması iframe'de)
 //   connect-src → `api.stripe.com` (jeton ve ödeme onayı çağrıları)
+//   img-src     → `*.stripe.com` (kart markası/ödeme yöntemi simgeleri)
 // Kart bilgisi bu iframe'in içinde kalır: bizim sayfamız da, sunucumuz da onu hiç görmez.
-const STRIPE_SCRIPT = 'https://js.stripe.com';
-const STRIPE_FRAME = 'https://js.stripe.com https://hooks.stripe.com';
+//
+// **`*.js.stripe.com` joker'i ŞART, süs değil.** Stripe kart çerçevesini başarım için değişken bir
+// alt kaynaktan (`b.js.stripe.com` gibi) açabiliyor ve hangisini seçeceği bize bağlı değil. Yalnız
+// çıplak `js.stripe.com`a izin verildiğinde alan bir açılıp bir açılmıyordu: seçim tuttuğunda
+// çalışıyor, kaydığında CSP çerçeveyi düşürüyor ve Payment Element `loaderror` veriyordu (29.07).
+// Stripe'ın kendi CSP belgesi de tam olarak bu yüzden joker'i listeliyor.
+const STRIPE_SCRIPT = 'https://js.stripe.com https://*.js.stripe.com';
+const STRIPE_FRAME = 'https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com';
 const STRIPE_API = 'https://api.stripe.com';
+const STRIPE_IMG = 'https://*.stripe.com';
 
 /**
  * Güvenlik başlıkları (referans deseninden uyarlandı). CSP host'ları modül geldikçe genişler.
@@ -50,7 +58,7 @@ function securityHeaders(): Array<{ key: string; value: string }> {
     `script-src 'self' 'unsafe-inline' ${STRIPE_SCRIPT}${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
     `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${STRIPE_API}`.replace(/\s+/g, ' ').trim(),
-    `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS}`.replace(/\s+/g, ' ').trim(),
+    `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS} ${STRIPE_IMG}`.replace(/\s+/g, ' ').trim(),
     "font-src 'self' data:",
     `frame-src 'self' ${STRIPE_FRAME}`,
     "object-src 'none'",

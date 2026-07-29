@@ -6,11 +6,14 @@ import type { ButtonHTMLAttributes } from 'react';
  * öğeler için aynı görünümü `buttonClass(...)` verir. Tasarım büyüdükçe varyant eklenir.
  */
 type ButtonVariant = 'primary' | 'primaryOnDark' | 'secondary' | 'secondaryOnDark' | 'outlineOlive' | 'outlineTerracotta' | 'ghost';
-type ButtonSize = 'lg' | 'md' | 'sm' | 'xs';
+type ButtonSize = 'lg' | 'md' | 'sm' | 'xs' | 'card' | 'cardSm';
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary: 'rounded-pill bg-olive text-white hover:bg-olive-dark disabled:bg-disabled-fill disabled:text-disabled-text',
-  secondary: 'rounded-pill border-[1.5px] border-sand-400 bg-card text-ink hover:border-olive',
+  // Devre dışı hâl SOLUKLAŞTIRMA değil kendi token'ıyla: `opacity-50` çerçeveli bir düğmeyi
+  // "biraz soluk ama basılabilir" gibi gösteriyor; kum yerine `disabled-line` net bir kapı diyor.
+  secondary:
+    'rounded-pill border-[1.5px] border-sand-400 bg-card text-ink hover:border-olive disabled:border-disabled-line disabled:text-disabled-text disabled:hover:border-disabled-line',
   // K2 koyu zemin varyantı — antrasit blok üstünde açık yeşil çerçeve/metin (envanter §2).
   secondaryOnDark: 'rounded-pill border-[1.5px] border-olive-light bg-transparent text-olive-light hover:bg-olive-light/10',
   // Koyu SABİT ÇUBUĞUN ana aksiyonu (mobil detay): zemin antrasit olduğu için dolgu açık yeşile,
@@ -42,12 +45,30 @@ const PADDED_SIZE: Record<ButtonSize, string> = {
   sm: 'h-11 px-5 text-body-sm',
   // Satır içi eylem (sepet satırının "çıkar" düğmesi, mobil kartlar) — kartın yüksekliğini belirlemez.
   xs: 'h-9 px-3.5 text-micro',
+  /**
+   * KART İÇİ kademe — vitrin kartlarının fiyat satırındaki düğme (katalog "Sepete ekle" ·
+   * "Seçenekler →" · paket "Paketi incele").
+   *
+   * Kendi kademesi olması şart, çünkü bu düğme **yerini K19 adet seçicisine bırakıyor**: müşteri
+   * ürünü ekleyince aynı kutuda seçici belirir. İkisi farklı yükseklikteyse kart o anda zıplar —
+   * nitekim zıplıyordu: düğme sayfa ölçüsü `sm` ile 44 px, seçici 32 px idi ve arada 12 px vardı
+   * (29.07 kullanıcı fark etti). Ped `!px-/!py-` ile ezilmeye çalışılmıştı ama sabit `h-*` yanında
+   * dikey ped ölü yazıdır; yükseklik hiç değişmiyordu.
+   *
+   * Ölçü tasarımın katalog kartından: 13 px metin, `8px/6px` dikey ped → **32 px**; K2'nin koyu
+   * zemin varyantı da (`7px 16px` + 1.5 çerçeve) aynı 32'yi veriyor. Mobilde 11 px metin → 26 px,
+   * seçicinin `xs` kademesiyle aynı kutu.
+   */
+  card: 'h-8 px-3.5 text-note',
+  cardSm: 'h-6.5 px-2.5 text-micro',
 };
 const GHOST_SIZE: Record<ButtonSize, string> = {
   lg: 'text-lead',
   md: 'text-body',
   sm: 'text-sm',
   xs: 'text-micro',
+  card: 'text-note',
+  cardSm: 'text-micro',
 };
 
 interface ButtonClassOptions {

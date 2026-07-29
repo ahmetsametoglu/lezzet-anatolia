@@ -12,7 +12,13 @@ declare
   v_profile_id uuid;
   v_first_admin boolean;
   v_roles user_role[];
+  v_name text;
 begin
+  -- AD, sağlayıcının verdiği künyeden alınır. Google/Apple ile girişte ad zaten elimizde
+  -- (`raw_user_meta_data`); almazsak müşteriye "Siparişiniz alındı, Ayşe" diyemiyor, adsız
+  -- selamlıyorduk (29.07). OTP ile e-posta girişinde künye boştur — o zaman ad boş kalır ve
+  -- ekranlar adsız varyanta düşer; uydurma bir ad yazılmaz.
+  v_name := trim(coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name', ''));
   -- İlk admin bootstrap: hiç admin yoksa bu hesap admin, değilse customer. Advisory lock ile
   -- yarış-güvenli (aynı anda iki kayıt olsa da tek admin). Taslak müşteriler (role=customer) engel değil.
   perform pg_advisory_xact_lock(hashtext('lezzet_first_admin_bootstrap'));
@@ -24,6 +30,9 @@ begin
     update public.user_profiles
       set auth_user_id = new.id,
           is_draft = false,
+          -- Taslakta ad varsa DOKUNULMAZ: onu operasyon elle girmiş olabilir ve sağlayıcının
+          -- künyesinden daha doğrudur. Yalnız boşsa doldurulur.
+          name = case when name = '' then v_name else name end,
           -- İlk hesapsa admin'e yükselt: `customer` ile birlikte duramaz (kısıt), o yüzden DEĞİŞTİRİLİR.
           roles = case when v_first_admin then array['admin']::user_role[] else roles end
       where lower(email) = lower(new.email) and auth_user_id is null
@@ -32,8 +41,8 @@ begin
 
   -- Eşleşen taslak yoksa yeni profil aç (rolüyle).
   if v_profile_id is null then
-    insert into public.user_profiles (email, auth_user_id, is_draft, roles)
-    values (case when new.email is not null then lower(new.email) else null end, new.id, false, v_roles)
+    insert into public.user_profiles (email, auth_user_id, is_draft, roles, name)
+    values (case when new.email is not null then lower(new.email) else null end, new.id, false, v_roles, v_name)
     on conflict do nothing;
   end if;
 

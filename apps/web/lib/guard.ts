@@ -71,6 +71,27 @@ export async function currentCustomerId(): Promise<string | null> {
   return (await new UserProfileService(serviceDb()).findByAuthUserId(user.id))?.id ?? null;
 }
 
+/**
+ * Oturumdaki müşterinin **ekranda gösterilecek künyesi** — ad ve e-posta. Yoksa null.
+ *
+ * `currentCustomerId`'den ayrı durur çünkü sorusu farklı: o "hangi satıra yazacağım", bu "kime
+ * sesleneceğim". Sorgu aynı olduğu için maliyeti de aynı; ayrı olması çağıranın niyetini
+ * okunur kılıyor. **Sırlar taşınmaz:** rol, taslak durumu, kredi limiti burada YOKTUR — bu künye
+ * tarayıcıya iniyor.
+ */
+export interface CustomerIdentity {
+  id: string;
+  name: string;
+  email: string | null;
+}
+
+export async function currentCustomer(): Promise<CustomerIdentity | null> {
+  const user = await getSessionUser();
+  if (!user) return null;
+  const profile = await new UserProfileService(serviceDb()).findByAuthUserId(user.id);
+  return profile ? { id: profile.id, name: profile.name ?? '', email: profile.email ?? null } : null;
+}
+
 /** Girişli kullanıcı şart; değilse AuthError('auth_required'). */
 export async function requireAuth(): Promise<AuthUser> {
   const user = await getSessionUser();

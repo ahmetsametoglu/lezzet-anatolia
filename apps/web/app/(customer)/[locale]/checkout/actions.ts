@@ -193,7 +193,13 @@ export async function confirmCheckoutAction(input: {
      * numarası da ilk kalıcı durumda (`confirmed`) doğar.
      */
     if (input.paymentMethod !== 'online') {
-      const reserved = await reserveOrderStock({ orderId: draft.orderId, items: draft.items, expiring: false });
+      // Kalemler TASLAKTAN değil SİPARİŞTEN okunur: paket açılımı, parti seçimi ve fiyat
+      // `createCheckoutDraft` içinde yapılıp satırlara yazıldı — ayırma da o yazılmış hâli
+      // ayırmalı. Online yolda `createCheckoutSession` zaten aynı kaynaktan okuyor.
+      const placed = await new OrderService(serviceDb()).getWithItems(draft.orderId);
+      if (!placed) return { data: { status: 'rejected', reason: 'order_not_placed' }, error: null };
+
+      const reserved = await reserveOrderStock({ orderId: draft.orderId, items: placed.items, expiring: false });
       if (!reserved.ok) {
         // Ayrılamadıysa sipariş taslak kalır ve kapatılır: müşteriye söz verilmemiş olur.
         await cancelDraft(draft.orderId);

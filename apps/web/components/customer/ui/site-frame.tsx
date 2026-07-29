@@ -3,10 +3,11 @@ import type { Locale } from '@lezzet/i18n';
 import { LOCALES } from '@lezzet/i18n';
 import { brand } from '@lezzet/brand';
 import { Link } from '@/i18n/navigation';
-import { LocaleLinks, LocaleSwitch } from './locale-switch';
+import { LocaleLinks } from './locale-switch';
 import { ShareButton } from './share-button';
 import { PlaceChip } from '@/components/customer/delivery/place-chip';
 import { CartBadge } from '@/components/customer/cart/cart-badge';
+import { AccountEntry } from '@/components/customer/account/account-entry';
 import messages from './site-frame-messages.json';
 
 /**
@@ -145,7 +146,9 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
             {/* K30 · Teslimat yeri — dil ve sepetin SOLUNDA: sepete girmeden önce cevaplanan bir
                 soru, sepet rozetinin sağında dursa alışverişin sonuna ait gibi okunurdu. */}
             <PlaceChip locale={locale} />
-            <LocaleSwitch locale={locale} />
+            {/* Hesap girişi sepetin SOLUNDA (tasarım): "kim olarak alışveriş yapıyorum" sorusu
+                sepete bakmadan önce cevaplanır. Misafirde tek bir "Giriş" bağlantısına iner. */}
+            <AccountEntry locale={locale} />
             <CartBadge label={t.cart} />
           </div>
         </header>

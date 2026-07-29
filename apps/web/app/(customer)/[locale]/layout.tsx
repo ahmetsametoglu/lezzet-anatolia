@@ -9,7 +9,9 @@ import { routing } from '@/i18n/routing';
 import { RootShell } from '@/components/root-shell';
 import { CartProvider } from '@/components/customer/cart/cart-context';
 import { PlaceProvider } from '@/components/customer/delivery/place-context';
+import { AccountProvider } from '@/components/customer/account/account-context';
 import { getDeliveryZones } from '@/lib/delivery/read';
+import { currentCustomer } from '@/lib/guard';
 
 // Müşteri evreni fontları. latin-ext → Türkçe (ş ğ ı) ve Almanca (ä ö ü ß) doğru gösterilir.
 const lora = Lora({ subsets: ['latin', 'latin-ext'], variable: '--font-lora', display: 'swap' });
@@ -39,6 +41,10 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
   // açıldığında liste zaten elinde olur, istemciden ikinci bir tur atılmaz. Okuma önbellekli ve
   // etiketli (`lib/delivery/read.ts`) — her sayfa render'ında sorgu gitmez.
   const zones = await getDeliveryZones();
+  // Oturum künyesi de KÖKTE okunur ve bağlama iner: başlıktaki hesap girişi bir istemci bileşeni
+  // (`SiteFrame` hata sayfasında da kullanılıyor, orası `'use client'`) ve kendi başına sunucuya
+  // soramaz. Her sayfada ayrı bir tur atmak yerine burada tek sorgu.
+  const account = await currentCustomer();
 
   return (
     <RootShell lang={locale} surface="customer" className={`${lora.variable} ${karla.variable}`}>
@@ -49,9 +55,12 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
         {/* Teslimat yeri de KÖKTE ve sepetin dışında: başlıktaki hap, ürün/paket detayının
             teslimat satırı ve sepetteki kısıt bloğu aynı cevabı görmeli. Sepetin içine konsaydı
             ürün sayfası onu okumak için sepete bağımlı olurdu — oysa ikisi ayrı sorular. */}
-        <PlaceProvider zones={zones}>
-          <CartProvider locale={locale}>{children}</CartProvider>
-        </PlaceProvider>
+        {/* Hesap künyesi de kökte: başlıktaki giriş her sayfada aynı kişiyi göstermeli. */}
+        <AccountProvider account={account}>
+          <PlaceProvider zones={zones}>
+            <CartProvider locale={locale}>{children}</CartProvider>
+          </PlaceProvider>
+        </AccountProvider>
       </NextIntlClientProvider>
     </RootShell>
   );

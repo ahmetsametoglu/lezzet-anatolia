@@ -14,10 +14,15 @@ import type { Messages } from '../cart-types';
  * eşiğe bakılır), teslimat türü ise ADRESTEN çıkar — adres checkout'ta sorulur. Sepette "Teslimat:
  * Ücretsiz" yazıp checkout'ta 6,90 € çıkarmak tutulmayan bir sözdür; satır orada, bilgi kesinken
  * gösterilir. Aynı sebeple "ücretsiz kargoya X kaldı" çubuğu da yok: eşik teslimat türüne bağlı.
- * Bugün ara toplam ile genel toplam bu yüzden aynıdır.
  *
- * **Kupon kartı da yok:** indirim/kupon motoru henüz kurulmadı (`BACKLOG §15`). Çalışmayan bir
- * kupon kutusu, denemesi başarısız olan müşteriyi kendinde hata aramaya iter.
+ * **İndirim satırı VAR ve genel toplam ondan sonra gelir.** Bir süre yoktu: kart, indirim motoru
+ * kurulmadan önce yazılmıştı ve "ara toplam = genel toplam" varsayımı kodun içinde kalmıştı —
+ * toplam satırı `totalCents` yerine `subtotalCents` basıyordu. Otomatik indirim inen sepette ekran
+ * indirimi hiç göstermiyor, üstelik **yanlış toplam** yazıyordu (29.07 · kullanıcı özet kartının
+ * tasarıma uymadığını fark edince çıktı).
+ *
+ * İndirim tutarı burada yeniden HESAPLANMAZ, `ara toplam − genel toplam` olarak okunur: kararı
+ * motor verdi, sunucu yazdı; ekranın ikinci bir hesabı olsaydı ikisi bir gün ayrışırdı (§1).
  *
  * Mobilde düğme BURADA DEĞİL, ekranın altındaki koyu çubuktadır (`CartCheckoutBar`) — tasarım
  * özet kartını akışta, aksiyonu sabit çubukta tutar.
@@ -76,25 +81,41 @@ export function CartSummary({ view, t, locale, compact = false }: CartSummaryPro
   // ilerletmemek için (sunucu güvenliği ekranın kilidine dayanmaz).
   const blocked = view.hasBlocked || !view.minBasketOk;
   const reason = checkoutBlockReason(view, t, locale);
+  // İndirim tutarı türetilir, yeniden hesaplanmaz — kararın sahibi motor, yazan sunucu.
+  const discountCents = view.subtotalCents - view.totalCents;
   return (
     <div className={['flex flex-col rounded-card border border-sand-200 bg-card', compact ? 'gap-2 p-3.5' : 'gap-3 p-6'].join(' ')}>
       {!compact && <h2 className="font-serif text-h2-sm text-ink">{t.summary}</h2>}
 
-      <div className="flex items-center justify-between font-sans text-body-sm">
-        <span className="text-body">{t.subtotal}</span>
-        <span className="font-bold text-ink">{formatPrice(view.subtotalCents, locale)}</span>
-      </div>
+      {/* Tutar satırları TEK BLOKTA ve kendi aralarında dar (8px). Kartın 12px'lik ana aralığı
+          bölümler arasındır — satırlara da uygulanınca "Fiyatlara KDV dahildir" toplamdan
+          kopuyor, toplamın dipnotu olmaktan çıkıp ayrı bir cümleye dönüşüyordu (tasarımda 8px). */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between font-sans text-body-sm">
+          <span className="text-body">{t.subtotal}</span>
+          <span className="font-bold text-ink">{formatPrice(view.subtotalCents, locale)}</span>
+        </div>
 
-      <div
-        className={[
-          'flex items-center justify-between border-t border-sand-200 font-sans font-bold text-ink',
-          compact ? 'pt-2 text-body' : 'pt-2.5 text-card-title-sm',
-        ].join(' ')}
-      >
-        <span>{t.total}</span>
-        <span>{formatPrice(view.subtotalCents, locale)}</span>
+        {discountCents > 0 && (
+          <div className="flex items-center justify-between font-sans text-body-sm text-olive">
+            {/* Kod VARSA yazılır (tasarım: "İndirim — HOSGELDIN10"): otomatik inen indirimin kodu
+                yoktur ve uydurma bir kod göstermek müşteriye kullanmadığı bir kupon atfetmek olurdu. */}
+            <span>{view.discount.status === 'applied' ? `${t.discount} — ${view.discount.code}` : t.discount}</span>
+            <span className="font-bold">−{formatPrice(discountCents, locale)}</span>
+          </div>
+        )}
+
+        <div
+          className={[
+            'flex items-center justify-between border-t border-sand-200 font-sans font-bold text-ink',
+            compact ? 'pt-2 text-body' : 'pt-2.5 text-card-title-sm',
+          ].join(' ')}
+        >
+          <span>{t.total}</span>
+          <span>{formatPrice(view.totalCents, locale)}</span>
+        </div>
+        <span className="font-sans text-micro text-muted">{t.vatIncluded}</span>
       </div>
-      <span className="font-sans text-micro text-muted">{t.vatIncluded}</span>
 
       <FreeShippingProgress view={view} t={t} locale={locale} />
 

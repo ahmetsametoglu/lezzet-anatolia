@@ -155,7 +155,10 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
           {product.soldOut ? (
             <span
               aria-disabled
-              className={buttonClass({ size: 'sm', className: '!bg-disabled-fill !text-white !px-3.5 !py-2 !text-note cursor-not-allowed' })}
+              className={buttonClass({
+                size: compact ? 'cardSm' : 'card',
+                className: '!bg-disabled-fill !text-white cursor-not-allowed',
+              })}
             >
               {labels.addToCart}
             </span>
@@ -167,11 +170,8 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               href={productHref(product.slug)}
               className={buttonClass({
                 variant: 'secondary',
-                size: 'sm',
-                className: [
-                  '!border-olive !text-olive flex-none whitespace-nowrap',
-                  compact ? '!px-2.5 !py-1 !text-micro' : '!px-3.5 !py-2 !text-note',
-                ].join(' '),
+                size: compact ? 'cardSm' : 'card',
+                className: '!border-olive !text-olive flex-none whitespace-nowrap',
               })}
             >
               {labels.options}
@@ -193,7 +193,9 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               onClick={addToCart}
               disabled={!product.variantId}
               aria-label={labels.addToCart}
-              className="grid size-7 flex-none cursor-pointer place-items-center rounded-full bg-olive font-sans text-body font-bold text-white transition-colors hover:bg-olive-dark disabled:cursor-not-allowed disabled:opacity-50"
+              // `size-6.5` = `cardSm` yüksekliği: bu düğme de yerini adet seçicisine bırakıyor,
+              // ikisi aynı kutuyu paylaşmazsa mobil kart eklemede zıplıyor.
+              className="grid size-6.5 flex-none cursor-pointer place-items-center rounded-full bg-olive font-sans text-body-sm font-bold text-white transition-colors hover:bg-olive-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
               +
             </button>
@@ -202,7 +204,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               type="button"
               onClick={addToCart}
               disabled={!product.variantId}
-              className={buttonClass({ size: 'sm', className: '!px-3.5 !py-2 !text-note disabled:cursor-not-allowed disabled:opacity-50' })}
+              className={buttonClass({ size: 'card', className: 'disabled:cursor-not-allowed disabled:opacity-50' })}
             >
               {labels.addToCart}
             </button>
@@ -284,11 +286,7 @@ export function PackageCard({ pack, locale, badgeLabel, itemsLabel, ctaLabel, co
           <Price cents={pack.priceCents} locale={locale} tone="onDark" size={compact ? 'sm' : 'lg'} />
           <Link
             href={packageHref(pack.slug)}
-            className={buttonClass({
-              variant: 'secondaryOnDark',
-              size: 'sm',
-              className: compact ? '!px-3 !py-[5px] !text-micro' : '!px-4 !py-[7px] !text-note',
-            })}
+            className={buttonClass({ variant: 'secondaryOnDark', size: compact ? 'cardSm' : 'card' })}
           >
             {ctaLabel}
           </Link>

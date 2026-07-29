@@ -43,6 +43,13 @@ export function DeliveryLine({ locale, shippable, fallback, blockedActions, comp
   const { place, ready } = useDeliveryPlace();
   const [open, setOpen] = useState(false);
 
+  /**
+   * "Teslimat yerini değiştir" bağlantısı METNİN AKIŞINDA durur, sağ kenara itilmez.
+   *
+   * Önce `ml-auto` ile sağa yaslanıyordu; şerit sarınca bağlantı tek başına ikinci satıra düşüyor ve
+   * orada da sağa yapışıyordu — hangi cümleye ait olduğu belirsiz, boşlukta duran bir bağ (29.07
+   * kullanıcı geri bildirimi). Akışta kaldığında sarsa bile söylediği şeyin hemen ardında kalır.
+   */
   const change = (
     <button
       type="button"
@@ -70,7 +77,7 @@ export function DeliveryLine({ locale, shippable, fallback, blockedActions, comp
           ) : (
             <span>{fallback.notShippable}</span>
           )}
-          <span className="ml-auto">{change}</span>
+          <span>{change}</span>
         </div>
         {open && <PlaceDialog locale={locale} onClose={() => setOpen(false)} />}
       </>
@@ -101,7 +108,7 @@ export function DeliveryLine({ locale, shippable, fallback, blockedActions, comp
               {place.nextDate && ` — ${t.nextDate.replace('{date}', formatDeliveryDate(place.nextDate, locale))}`}
             </span>
             <span>{fallback.coldChain}</span>
-            <span className="ml-auto">{change}</span>
+            <span>{change}</span>
           </>
         ) : (
           <>
@@ -109,7 +116,7 @@ export function DeliveryLine({ locale, shippable, fallback, blockedActions, comp
                 gelecek" değil, "gelebilir mi". Yöntem checkout'ta zaten adresten çıkacak. */}
             <span className="font-semibold text-olive-dark">📍 {place.postalCode}</span>
             <span>{t.canShipHere}</span>
-            <span className="ml-auto">{change}</span>
+            <span>{change}</span>
           </>
         )}
       </div>

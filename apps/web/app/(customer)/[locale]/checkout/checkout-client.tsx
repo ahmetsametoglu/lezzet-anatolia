@@ -155,7 +155,7 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
             validating: t.pay.validating,
             preparing: t.pay.preparing,
             confirming: t.pay.confirming,
-            secureBy: t.pay.secureBy,
+            unavailable: t.payment.unavailable,
           }}
         />
       ) : (
