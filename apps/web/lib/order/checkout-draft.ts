@@ -105,7 +105,7 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
 
   // 4) Ödeme seçenekleri + kargo ücreti + KDV kırılımı. Kalem oranları kalem kalem geçilir:
   //    kargonun KDV'si taşıdığı malın oranını izler, tek oran varsaymak karışık sepette yanlış.
-  const items = await expandToOrderItems(db, cart.lines);
+  const items = await expandToOrderItems(db, cart.lines, discountSharesOf(cart));
   const options = await resolveCheckoutPayment({
     customerId: customer.id,
     deliveryType: delivery.deliveryType,
@@ -155,8 +155,17 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
  *
  * **Birim fiyat paketin PAYIDIR, katalog fiyatı değil.** Katalog fiyatı yazılsaydı kalemler toplamı
  * paketin fiyatını aşar ve sipariş kendi toplamıyla çelişirdi — indirim tam da o farktır.
+ *
+ * **İndirim payı kaleme YAZILIR** (`shares`, kalem sırasıyla hizalı — bkz. `discountSharesOf`).
+ * Başlıktaki `discount_amount` tek başına yetmiyor: ödeme durumunu türeten motor "müşteri ne kadar
+ * borçlu" sorusunu KALEMLERDEN topluyor (`derivePaymentStatus`) ve payı 0 gördüğü sürece indirimi
+ * ödenmemiş bakiye sayıyor.
  */
-async function expandToOrderItems(db: ReturnType<typeof serviceDb>, lines: readonly CartLine[]): Promise<Omit<OrderItemInsert, 'orderId'>[]> {
+async function expandToOrderItems(
+  db: ReturnType<typeof serviceDb>,
+  lines: readonly CartLine[],
+  shares: readonly number[],
+): Promise<Omit<OrderItemInsert, 'orderId'>[]> {
   const items = new BundleItemService(db);
   const bundleItems = new Map(
     await Promise.all(
@@ -176,7 +185,7 @@ async function expandToOrderItems(db: ReturnType<typeof serviceDb>, lines: reado
   const vatByVariant = new Map(variants.map((v) => [v.id, vatByProduct.get(v.productId) ?? 0]));
 
   const rows: Omit<OrderItemInsert, 'orderId'>[] = [];
-  for (const line of lines) {
+  lines.forEach((line, index) => {
     if (line.kind === 'variant') {
       rows.push({
         variantId: line.variantId,
@@ -185,8 +194,9 @@ async function expandToOrderItems(db: ReturnType<typeof serviceDb>, lines: reado
         bundleId: null,
         unitPrice: (line.unitPriceCents ?? 0) / 100,
         vatRate: vatByVariant.get(line.variantId) ?? 0,
+        lineDiscountAmount: (shares[index] ?? 0) / 100,
       });
-      continue;
+      return;
     }
     for (const item of bundleItems.get(line.bundleId) ?? []) {
       rows.push({
@@ -197,10 +207,25 @@ async function expandToOrderItems(db: ReturnType<typeof serviceDb>, lines: reado
         bundleId: line.bundleId,
         unitPrice: item.allocatedUnitPrice,
         vatRate: vatByVariant.get(item.variantId) ?? 0,
+        // Pakete sepet indirimi BİNMEZ (DOMAIN §13) — motor da payını 0 dağıtır. Paketin kendi
+        // indirimi zaten birim fiyatın içinde.
+        lineDiscountAmount: 0,
       });
     }
-  }
+  });
   return rows;
+}
+
+/**
+ * İndirimin kalem payları — **sepet satırlarıyla index index hizalı** (`lib/cart/read.ts` her
+ * satır için tam bir kayıt gönderir, muaf olanı bile: dizi hizası bunun için korunuyor).
+ *
+ * İndirim yoksa boş dizi döner ve her kalem 0 pay alır. `Σ pay = discount_amount` motorun
+ * garantisidir (`distributeDiscount`) — burada yeniden bölüştürme YAPILMAZ, yapılsaydı kuruş
+ * artığı iki yerde farklı yuvarlanır ve sipariş kendi toplamıyla çelişirdi.
+ */
+function discountSharesOf(cart: { discount: { status: string; lineShares?: number[] } }): readonly number[] {
+  return cart.discount.status === 'applied' || cart.discount.status === 'automatic' ? (cart.discount.lineShares ?? []) : [];
 }
 
 /** İnen indirim (cent) — kupon da otomatik kampanya da aynı alana yazılır, ayrımı `discountId` taşır. */

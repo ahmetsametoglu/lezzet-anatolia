@@ -4,6 +4,7 @@ import {
   BundleService,
   CategoryService,
   DeliveryZoneService,
+  DiscountService,
   OrderService,
   PriceService,
   ProductService,
@@ -13,6 +14,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
+import { derivePaymentStatusForOrder } from '@lezzet/domain-core';
 import { createCheckoutDraft } from './checkout-draft';
 
 /**
@@ -170,6 +172,48 @@ describe('sepet → taslak sipariş', () => {
     expect(items.map((i) => i.qty).sort()).toEqual([2, 2]);
     // Katalog fiyatı (20 + 10 = 30) DEĞİL, paylaştırılmış fiyat (18 + 9 = 27).
     expect(items.reduce((sum, i) => sum + i.unitPrice, 0)).toBe(27);
+  });
+
+  /**
+   * İndirimin kalem PAYI yazılmazsa sipariş kendi parasıyla çelişir: başlıkta "3 € indirim" yazar,
+   * kalemler indirimsiz toplamı taşır ve ödeme motoru farkı **ödenmemiş bakiye** sanar. Yaşandı
+   * (29.07): tamamı online ödenmiş sipariş `partial` göründü ve müşteriye giden mail *"kapıda
+   * ödenecek: 3,00 €"* dedi.
+   *
+   * İndirim KATEGORİ kapsamlı kurulur, sepet kapsamlı değil: yerel veritabanı paylaşılıyor ve
+   * sepet kapsamlı aktif bir kampanya, o sırada koşan başka bir ajanın siparişine de inerdi
+   * (CLAUDE.md §4b). Kategori bu testin kendi damgalı kategorisi.
+   */
+  it('indirimin kalem PAYI yazılır — sipariş kendi toplamıyla çelişmez', async () => {
+    const kampanya = await new DiscountService(db).insert({
+      name: `Pay testi ${stamp}`,
+      trigger: 'automatic',
+      type: 'percent',
+      value: 10,
+      scope: 'category',
+      categoryId,
+    });
+    try {
+      const outcome = await createCheckoutDraft({
+        ...(await base()),
+        entries: [{ kind: 'variant', variantId, qty: 2, stockId: null }],
+      });
+
+      expect(outcome.status).toBe('ok');
+      if (outcome.status !== 'ok') return;
+      const { order, items } = (await new OrderService(db).getWithItems(outcome.orderId))!;
+
+      // 2 × 20 € = 40 €'nun %10'u.
+      expect(order.discountAmount).toBe(4);
+      // Payların toplamı başlıktaki indirime EŞİT — motorun `distributeDiscount` garantisi.
+      expect(items.reduce((sum, i) => sum + i.lineDiscountAmount, 0)).toBe(order.discountAmount);
+
+      // Asıl ölçülen: tamamı tahsil edilmiş sipariş `paid` olmalı, kapıda tahsilat kalmamalı.
+      const derived = derivePaymentStatusForOrder(order, items, { collected: order.total, refunded: 0 });
+      expect(derived).toMatchObject({ status: 'paid', amountToCollectCents: 0 });
+    } finally {
+      await db.from('discount').delete().eq('id', kampanya.id);
+    }
   });
 
   it('istemcinin gönderdiği gün uygun günlerden biri değilse sipariş açılmaz', async () => {
