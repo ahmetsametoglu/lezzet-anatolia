@@ -385,6 +385,52 @@
     </div>
   </div>
 
+  <!-- §3B KAYIT YÜZEYİ -->
+  <div style="background:#fbfbf9;border:1px solid #e6e7e1;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h2 style="margin:0;font:600 21px 'Space Grotesk'">§3B · Kayıt yüzeyi (tek varlığın tam sayfası)</h2>
+      <p style="margin:0;font:400 13.5px/1.65 'Karla';color:#6a7065;max-width:900px">Liste dağıtır, <strong>kayıt karar verir</strong>. Bir varlığın bütün kararı tek sayfada toplandığında dört blok tekrar eder. Şablon: sol kolon <em>kayıt</em> (künye → kalemler → para → zaman → kararlar), sağ 336px ray <em>bağlam</em> (ilgili kişi, teslimat/kanıt, bağlar, sınır notu); üstte künye barı, izinli geçişler şeridi. Canlı: <a href="Operasyon - Siparis Detay.dc.html">Sipariş Detayı</a>.</p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O16 · Kalem tablosu (paket gruplu, kısmi karşılamalı)</span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065">O4'ün kayıt içi hali: sipariş / karşılanan adet <strong>iki ayrı sütun</strong> (eksik olan kırmızı), sabitlenmiş birim fiyat, kalem indirim payı, KDV oranı, satır tutarı. Paketten gelen kalemler <strong>"Paket" başlık satırı</strong> altında girintili görünür ve grup toplamı taşır — tek tek alınmış gibi okunmaz. Kalem altı şerit iki halde çıkar: amber <em>EKSİK GİTTİ</em> (sebep + kim + ne zaman) ve kırmızı <em>İADE EDİLDİ</em> (adet + malın akıbeti: rafa döndü / imha / müşteride kaldı + parti no). Alt toplam bloğu düşülenleri satır satır gösterir; hiçbir tutar elle yazılmaz.</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font:600 10px 'Space Grotesk';color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6;border-radius:6px;padding:2px 7px">Paket</span>
+        <span style="font:600 10px 'Space Grotesk';color:#8a6410;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:6px;padding:3px 8px">EKSİK GİTTİ · 1 adet</span>
+        <span style="font:600 10px 'Space Grotesk';color:#8a3a33;background:#fbe9e7;border:1px solid #e2c4c0;border-radius:6px;padding:3px 8px">İADE EDİLDİ · rafa döndü</span>
+        <span style="font:500 11.5px 'IBM Plex Mono';color:#a5443c">2/3</span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O17 · Zaman çizelgesi (atlanan adım görünür)</span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065">Tek dikey ray, adım başına: nokta + Space Grotesk etiket + <strong>kim</strong> + mono zaman. Nokta rengi anlam taşır — olive tamamlandı, amber şu an / dikkat (kısmi karşılama, talep), gri <strong>atlandı</strong> (etiket ve gerekçe okunur kalır: "B2B onayı — atlandı, limit içinde"). Kısa kayıtta adımlar tek satırda birleşir ("Oluşturuldu · ödendi · teslim edildi"). Geri alma buradan yapılır, durum rozetinden değil.</span>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Sipariş Detayı · Talepler (mesaj akışı) · Stok (hareket geçmişi) · Para (eşleşme geçmişi)</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O18 · Karar dialogu — kalem seçici + sonuç paneli</span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065">O9 dialogunun karar hali; <strong>tek bileşen, iki kip</strong>. Üstte kipin rengini taşıyan bağlam kutusu (O10), ortada kalem tablosu (adet ±, kip başına ikinci sütun), altta <strong>sistemin hesapladığı</strong> sonuç paneli ve tutarı içeren onay butonu. Kip <em>kısmi karşılama</em> (amber, teslimden önce, ikinci sütun = stok etkisi, sonuç = tutardan düşülecek) · kip <em>iade</em> (kırmızı, teslimden sonra, ikinci sütun = malın akıbeti, ek olarak para yolu seçimi: karta geri / nakit / hesaba alacak). Operatör tutarı yazmaz, <strong>onaylar</strong>; buton etiketi tutarı taşır.</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font:600 12.5px 'Space Grotesk';color:#fff;background:#9a6416;border-radius:8px;padding:9px 15px">Kısmi karşılamayı kaydet</span>
+        <span style="font:600 12.5px 'Space Grotesk';color:#fff;background:#a5443c;border-radius:8px;padding:9px 15px">İadeyi onayla · 22,00 €</span>
+        <span style="font:600 12.5px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:8px;padding:9px 15px">Kuryeyi ata</span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 16px 'Space Grotesk'">O19 · İzinli geçiş şeridi &amp; rol kapılı finansal kart</span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065">Durum ilerletme <strong>pasif buton göstermez</strong>: birincil geçiş üst barda, diğerleri açılan şeritte; izinsiz geçiş hiç render edilmez. Finansal okuma (satış fiyatı → maliyet kalemleri → kâr → kâr marjı) sağ rayda <strong>kendi kartında</strong>, "Yönetici" rozetiyle ve açık durur; operatör rolünde kart <strong>hiç render edilmez</strong> (gizlenmez, çizilmez). O12 rol duvarının admin içindeki karşılığıdır: duvar ekran değil <strong>kart</strong> düzeyinde çizilir; dönem marjı Raporlar'da kalır, saha yüzeyine hiç inmez.</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font:500 10px 'IBM Plex Mono';color:#3a6b8a;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:2px 7px">Yönetici</span>
+        <span style="font:500 11.5px 'IBM Plex Mono';color:#22251f">Satış 464,50 €</span>
+        <span style="font:500 11.5px 'IBM Plex Mono';color:#8a3a33">Maliyet −212,40 €</span>
+        <span style="font:500 11.5px 'IBM Plex Mono';color:#4a6121">Kâr 216,10 € · %46,52</span>
+      </div>
+    </div>
+  </div>
+
   <!-- §4 -->
   <div style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:22px">
     <h2 style="margin:0;font:600 21px 'Space Grotesk'">§4 · Saha (kurye + depo) — telefon öncelikli</h2>
