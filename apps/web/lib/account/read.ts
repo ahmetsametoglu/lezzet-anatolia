@@ -1,10 +1,11 @@
 import 'server-only';
-import { AddressService, CartService, UserProfileService, serviceDb } from '@lezzet/database';
+import { AddressService, CartService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
 import type { Address, CartItem, CompanyInfo, PointsEntry, PreferredLanguage } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
 import type { CartEntry, CartLine } from '@/lib/cart/cart-types';
 import { getPointsBalance, listPointsHistory } from '@/lib/feedback/points';
+import { POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY } from '@/lib/settings-keys';
 
 /**
  * Hesap sayfasının TEK okuma kapısı (08.5).
@@ -28,7 +29,15 @@ export interface AccountView {
   addresses: Address[];
   /** Kampanya izinleri; kanal başına "verildi mi". Sipariş bildirimleri bundan BAĞIMSIZDIR. */
   consent: { email: boolean; whatsapp: boolean };
-  points: { balance: number; history: PointsEntry[] } | null;
+  points: {
+    balance: number;
+    history: PointsEntry[];
+    /**
+     * Kupona çevirme kuralı AYARDAN gelir, ekrana gömülmez: ekranın söylediği eşik ile motorun
+     * uyguladığı eşik ayrıştığında müşteri reddedilecek bir düğmeye basar (29.07 denetimi).
+     */
+    redeem: { minimumPoints: number; valueCents: number };
+  } | null;
   /** "Sonraya kaydedilenler" — sepetteki listeyle AYNI veri, ikinci bir yer yok. */
   saved: CartLine[];
 }
@@ -48,13 +57,7 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
   // orada zaten hesaplanıyor. İkinci bir çözüm yazmak, aynı satırın iki görünümü demekti.
   const savedView = await getCartView(locale, cart.savedItems.map(toEntry), { customerId });
 
-  const points = company
-    ? null
-    : {
-        balance: (await getPointsBalance(customerId)).balance,
-        // Dökümün ilk sayfası yeter: tasarım "son kazanımlar" diyor, tam geçmiş değil.
-        history: (await listPointsHistory(customerId, undefined, POINTS_HISTORY_SIZE)).rows,
-      };
+  const points = company ? null : await readPoints(db, customerId);
 
   return {
     profile: {
@@ -71,6 +74,26 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
     },
     points,
     saved: savedView.lines,
+  };
+}
+
+/**
+ * Puan bölümü — bakiye, son hareketler ve çevirme kuralı. **Yalnız B2C'de çağrılır**: B2B'de
+ * sonucu hiç çizilmeyecek üç sorgu atmanın anlamı yok.
+ */
+async function readPoints(db: ReturnType<typeof serviceDb>, customerId: string): Promise<NonNullable<AccountView['points']>> {
+  const settings = new SettingsService(db);
+  const [balance, history, minimumPoints, centValue] = await Promise.all([
+    getPointsBalance(customerId),
+    // Dökümün ilk sayfası yeter: tasarım "son kazanımlar" diyor, tam geçmiş değil.
+    listPointsHistory(customerId, undefined, POINTS_HISTORY_SIZE),
+    settings.getNumber(POINTS_REDEEM_MIN_KEY, 500),
+    settings.getNumber(POINTS_CENT_VALUE_KEY, 1),
+  ]);
+  return {
+    balance: balance.balance,
+    history: history.rows,
+    redeem: { minimumPoints, valueCents: minimumPoints * centValue },
   };
 }
 

@@ -12,7 +12,7 @@ import { Card, CardHead, ConsentSwitch, PointsCard, Row, SavedList } from './com
 export function AccountDesktop({ t, locale, account }: AccountViewProps) {
   const compact = false;
   return (
-    <div className="mx-auto flex w-full max-w-[1360px] flex-col gap-5 px-12 py-8">
+    <div className="flex flex-col gap-5 px-12 pt-8 pb-12">
       <h1 className="font-serif text-page-title leading-tight text-ink">{t.title}</h1>
 
       <div className="grid grid-cols-2 items-start gap-5">
@@ -72,8 +72,8 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
 
           <Card compact={compact}>
             <CardHead title={t.consentTitle} compact={compact} />
-            <ConsentSwitch label={t.consentEmail} on={account.consent.email} />
-            <ConsentSwitch label={t.consentWhatsapp} on={account.consent.whatsapp} />
+            <ConsentSwitch label={t.consentEmail} on={account.consent.email} onLabel={t.consentOn} offLabel={t.consentOff} />
+            <ConsentSwitch label={t.consentWhatsapp} on={account.consent.whatsapp} onLabel={t.consentOn} offLabel={t.consentOff} />
             <span className="font-sans text-micro leading-relaxed text-muted">{t.consentNote}</span>
           </Card>
 
@@ -88,9 +88,27 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
           {account.points && <PointsCard t={t} locale={locale} points={account.points} compact={compact} />}
 
           <Card compact={compact}>
-            <CardHead title={t.savedTitle} compact={compact} />
+            {/* BEKLEYEN(08.5): "hepsini sepete al" toplu eylemi — tasarımda başlığın sağında; bugün
+                yalnız satır başına taşıma var. */}
+            <CardHead title={t.savedTitle} compact={compact} action={<Stub label={`${t.savedAddAll} · ${t.soon}`} />} />
             <span className="font-sans text-micro leading-relaxed text-muted">{t.savedNote}</span>
             <SavedList t={t} locale={locale} saved={account.saved} compact={compact} />
+
+            {/* Bölge haberi, kaydedilenlerin ALT BLOĞU (tasarım) — ayrı kart değil: ikisi de
+                "bugün alamadığım şey" başlığı altında yaşıyor.
+                BEKLEYEN(08.5): bekleyen kayıtların okunması + "Vazgeç". Yazma tarafı hazır
+                (`lib/delivery/notice-actions.ts`), okuma kapısı yok. */}
+            <div className="flex flex-col gap-2 border-t border-sand-100 pt-2.5">
+              <span className="font-sans text-body-sm font-bold text-ink">{t.zoneNoticeTitle}</span>
+              <span className="font-sans text-micro leading-relaxed text-muted">{t.soon}</span>
+            </div>
+          </Card>
+
+          {/* BEKLEYEN(17.5): kişisel kuponlar — puanın varış noktası burası; çevirme akışıyla
+              birlikte dolacak. Kart YERİNDE durur ki puan zincirinin nereye çıktığı görünsün. */}
+          <Card compact={compact}>
+            <CardHead title={t.couponsTitle} compact={compact} />
+            <span className="font-sans text-note text-muted">{t.couponsEmpty}</span>
           </Card>
 
           <Card compact={compact}>

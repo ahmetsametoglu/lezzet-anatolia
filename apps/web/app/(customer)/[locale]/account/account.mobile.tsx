@@ -35,7 +35,7 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
 
       <Card compact={compact}>
         {/* BEKLEYEN(08.5): profil düzenleme (satır içi form). */}
-        <CardHead title={t.profileTitle} compact={compact} action={<Stub label={t.soon} />} />
+        <CardHead title={t.profileTitle} compact={compact} action={<Stub label={`${t.edit} · ${t.soon}`} />} />
         <Row label={t.name} value={account.profile.name || '—'} />
         <Row label={t.email} value={account.profile.email ?? '—'} />
         <Row label={t.phone} value={account.profile.phone ?? t.noPhone} />
@@ -59,7 +59,7 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
 
       <Card compact={compact}>
         {/* BEKLEYEN(08.5): adres ekleme/düzenleme/silme. */}
-        <CardHead title={t.addressesTitle} compact={compact} action={<Stub label={t.soon} />} />
+        <CardHead title={t.addressesTitle} compact={compact} action={<Stub label={`${t.addressAdd} · ${t.soon}`} />} />
         {account.addresses.length === 0 && <span className="font-sans text-note text-muted">{t.addressEmpty}</span>}
         {account.addresses.map((address) => (
           <div
@@ -87,8 +87,8 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
 
       <Card compact={compact}>
         <CardHead title={t.consentTitle} compact={compact} />
-        <ConsentSwitch label={t.consentEmail} on={account.consent.email} />
-        <ConsentSwitch label={t.consentWhatsapp} on={account.consent.whatsapp} />
+        <ConsentSwitch label={t.consentEmail} on={account.consent.email} onLabel={t.consentOn} offLabel={t.consentOff} />
+        <ConsentSwitch label={t.consentWhatsapp} on={account.consent.whatsapp} onLabel={t.consentOn} offLabel={t.consentOff} />
       </Card>
 
       {/* Veri notu mobilde KART DEĞİL, sayfanın altındaki ince satır (tasarım). */}

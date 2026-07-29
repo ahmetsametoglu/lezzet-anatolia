@@ -1,7 +1,6 @@
 {
   "tr": {
     "title": "Hesabım",
-    "signOut": "Çıkış yap",
     "edit": "Düzenle",
     "profileTitle": "Profil",
     "name": "Ad",
@@ -20,7 +19,6 @@
     "consentNote": "Kapalı kanaldan hiçbir kampanya iletişimi gitmez; sipariş bildirimleri bundan bağımsızdır.",
     "dataTitle": "Verileriniz",
     "dataBody": "Hangi verilerinizi tuttuğumuzu gizlilik politikasında bulabilirsiniz. Verilerinizin silinmesini {email} adresine yazarak talep edebilirsiniz.",
-    "privacyLink": "gizlilik politikası",
     "pointsTitle": "Puanlarım",
     "pointsRule": "{points} puan = {amount} indirim kuponu",
     "pointsRedeem": "Puanı kupona çevir",
@@ -40,11 +38,16 @@
     "linksTitle": "Hesabım",
     "linkOrders": "📦 Siparişlerim",
     "linkSupport": "💬 Taleplerim",
-    "soon": "yakında"
+    "soon": "yakında",
+    "consentOn": "açık",
+    "consentOff": "kapalı",
+    "couponsTitle": "Kuponlarım",
+    "couponsEmpty": "Kullanılabilir kuponunuz yok.",
+    "zoneNoticeTitle": "Bölge haberi",
+    "savedAddAll": "Sepete al"
   },
   "fr": {
     "title": "Mon compte",
-    "signOut": "Se déconnecter",
     "edit": "Modifier",
     "profileTitle": "Profil",
     "name": "Nom",
@@ -63,7 +66,6 @@
     "consentNote": "Aucune communication marketing n’est envoyée sur un canal désactivé ; les notifications de commande sont indépendantes.",
     "dataTitle": "Vos données",
     "dataBody": "Vous trouverez les données que nous conservons dans notre politique de confidentialité. Pour demander leur suppression, écrivez à {email}.",
-    "privacyLink": "politique de confidentialité",
     "pointsTitle": "Mes points",
     "pointsRule": "{points} points = bon de {amount}",
     "pointsRedeem": "Convertir en bon",
@@ -83,11 +85,16 @@
     "linksTitle": "Mon compte",
     "linkOrders": "📦 Mes commandes",
     "linkSupport": "💬 Mes demandes",
-    "soon": "bientôt"
+    "soon": "bientôt",
+    "consentOn": "activé",
+    "consentOff": "désactivé",
+    "couponsTitle": "Mes bons",
+    "couponsEmpty": "Vous n’avez aucun bon disponible.",
+    "zoneNoticeTitle": "Alerte de zone",
+    "savedAddAll": "Ajouter au panier"
   },
   "de": {
     "title": "Mein Konto",
-    "signOut": "Abmelden",
     "edit": "Bearbeiten",
     "profileTitle": "Profil",
     "name": "Name",
@@ -106,7 +113,6 @@
     "consentNote": "Über einen deaktivierten Kanal geht keine Marketing-Kommunikation raus; Bestellbenachrichtigungen sind davon unabhängig.",
     "dataTitle": "Ihre Daten",
     "dataBody": "Welche Daten wir speichern, steht in unserer Datenschutzerklärung. Die Löschung können Sie unter {email} anfordern.",
-    "privacyLink": "Datenschutzerklärung",
     "pointsTitle": "Meine Punkte",
     "pointsRule": "{points} Punkte = Gutschein über {amount}",
     "pointsRedeem": "In Gutschein umwandeln",
@@ -126,6 +132,12 @@
     "linksTitle": "Mein Konto",
     "linkOrders": "📦 Meine Bestellungen",
     "linkSupport": "💬 Meine Anfragen",
-    "soon": "bald"
+    "soon": "bald",
+    "consentOn": "aktiv",
+    "consentOff": "inaktiv",
+    "couponsTitle": "Meine Gutscheine",
+    "couponsEmpty": "Sie haben keine verfügbaren Gutscheine.",
+    "zoneNoticeTitle": "Gebiets-Benachrichtigung",
+    "savedAddAll": "In den Warenkorb"
   }
 }

@@ -35,7 +35,13 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
   - *Bitti:* her sayfa `design/pages` envanterini eksiksiz karşılıyor; fiyat girene göre çözülüyor; iç terim sızmıyor
 - [ ] (08.4) **Satın alma grubu:** sepet, checkout (07 akışına bağlanır), giriş/hızlı doğrulama
   - *Bitti:* misafir son adımda doğrulanıp sipariş kapatabiliyor; üç dilde
-- [ ] (08.5) **Hesap grubu:** hesap (profil/adres/dil/izinler/puan), siparişler (+ tek tuş tekrar sipariş), sipariş detay (+ "bir sorun mu var?")
+- [~] (08.5) **Hesap grubu:** hesap (profil/adres/dil/izinler/puan), siparişler (+ tek tuş tekrar sipariş), sipariş detay (+ "bir sorun mu var?")
+  - **Durum (29.07 · hesap sayfası indi, 1/3):** `/account` (`/tr/hesap` · `/fr/compte` · `/de/konto`). Düzen tasarımın kendisi: masaüstünde iki eşit sütun (solda kimlik/tercih, sağda hesabın içeriği), mobilde tek sütun ve **farklı SIRA** — puan kartı en üstte, ardından gezinme.
+    **Kanal SAKLANMAZ, şirket künyesinden türer:** B2C'de şirket bölümü, B2B'de puan bölümü DOM'da hiç yok; puan B2B'de okunmuyor bile. Girişsiz ziyaretçi 404 görmez, girişe yönlenir — sayfa sır değil, eksik olan kimlik.
+    **Bağlı olanlar:** profil künyesi · adresler (varsayılan zeytin vurgulu) · kampanya izinleri (okur) · puan bakiyesi + son hareketler · sonraya kaydedilenler (sepetle AYNI veri, "Sepete al" çalışıyor) · siparişlerim bağlantısı.
+    **Tasarım denetimi (ajan) sekiz sapma buldu, hepsi kapandı:** (1) **puan eşiği koda `300` gömülmüştü, ayar `500`** — ekran müşteriye sistemin uygulamadığı bir kural söylüyordu; kural artık ayardan okunuyor (`POINTS_REDEEM_MIN_KEY`). (2) `bg-neutral-700/600` Tailwind'in soğuk varsayılanıydı, paletimizde yok → `cream` saydam katmanı. (3) **Kuponlarım** ve (4) **bölge haberi** bölümleri sessizce atlanmıştı → yerine kondu, `BEKLEYEN` ile işaretlendi. (5) puan bakiyesi puntosu bir kademe küçüktü (30/26 token olarak zaten vardı). (6) **mobil puan kartı tasarımda yapıca farklı** (tek satır, iç panel ve döküm yok) — masaüstü kartını küçültmek improvise etmekti. (7) `role="switch"` etkileşimsiz öğedeydi; ekran okuyucuya çalışan bir denetim duyuruyordu. (8) ölü metin anahtarları (`signOut` başlıkta zaten var, `privacyLink` bağ verilmediği için kullanılmıyordu).
+    **Bağlanmamışlar `BEKLEYEN` ile kayıtlı:** profil düzenleme · adres CRUD · izin yazımı · toplu "sepete al" · bölge haberi okuması (08.5) · puanı kupona çevirme + Kuponlarım (17.5) · taleplerim (16.1) · gizlilik politikası (08.8).
+    **Sırada:** siparişlerim listesi ve sipariş detayı.
   - *Bitti:* tekrar sipariş güncel fiyatla sepet oluşturuyor; sipariş durumu sade dille görünüyor
 - [ ] (08.6) **Talep grubu:** talep oluşturma (sipariş kalemi/tip/foto + genel "bize yaz" yönlendirmesi), talep listesi + yazışma (16'ya bağlanır)
   - *Bitti:* siparişli ve siparişsiz talep açılıyor; durum takip ediliyor

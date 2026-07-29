@@ -25,3 +25,16 @@ export const MIN_BASKET_KEY = 'min_basket_cents';
  * yoksa her sepet ücretsiz olur. Admin ayarı girildiğinde bu değer hiç okunmaz.
  */
 export const FREE_SHIPPING_THRESHOLD_DEFAULT = 6_000;
+
+/**
+ * Puanı kupona çevirme kuralı — **hesap ekranı ile motor aynı sayıyı okumak zorunda.**
+ *
+ * Yaşandı (29.07 · tasarım denetimi): ekran eşiği koda `300` diye gömmüştü, ayar `500` idi. 340
+ * puanlı müşteri "300 puan = 5 € kuponu" cümlesini okuyup düğmeye basacak, motor reddedecekti —
+ * ekranın söylediği kural sistemin kuralı değildi.
+ *
+ * Anahtarlar `0037_points.sql`'de tanımlı; `lib/feedback/points.ts` de aynı satırları okur (bugün
+ * dize sabitiyle). İkisi buluşturulmalı — kapı 17.5 ile açılırken buradan okumalı.
+ */
+export const POINTS_REDEEM_MIN_KEY = 'points_redeem_min';
+export const POINTS_CENT_VALUE_KEY = 'points_cent_value';

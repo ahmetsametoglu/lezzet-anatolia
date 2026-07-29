@@ -51,14 +51,18 @@ export function Row({ label, value }: { label: string; value: ReactNode }) {
  * o yüzden anahtar gerçek izni GÖSTERİYOR, değiştirmiyor. Yanıltıcı değil: tıklanabilir görünmüyor.
  * BEKLEYEN(08.5): kampanya izni yazımı — anahtar okur, henüz yazmıyor.
  */
-export function ConsentSwitch({ label, on }: { label: string; on: boolean }) {
+export function ConsentSwitch({ label, on, onLabel, offLabel }: { label: string; on: boolean; onLabel: string; offLabel: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="font-sans text-body-sm text-ink">{label}</span>
+      <span className="font-sans text-body-sm text-ink">
+        {label}
+        <span className="sr-only"> — {on ? onLabel : offLabel}</span>
+      </span>
+      {/* `role="switch"` YOK: anahtar bugün yalnız GÖSTERİYOR, tıklanamıyor ve klavyeyle
+          odaklanamıyor. O rolü vermek ekran okuyucuya çalışan bir denetim duyurmak olurdu
+          (29.07 denetimi). Durum metinle de okunuyor. */}
       <span
-        role="switch"
-        aria-checked={on}
-        aria-label={label}
+        aria-hidden="true"
         className={['relative h-6.5 w-11.5 flex-none rounded-pill transition-colors', on ? 'bg-olive' : 'bg-sand-400'].join(' ')}
       >
         <span className={['absolute top-[3px] size-5 rounded-full bg-card transition-all', on ? 'right-[3px]' : 'left-[3px]'].join(' ')} />
@@ -84,29 +88,46 @@ export function PointsCard({
   points: NonNullable<AccountView['points']>;
   compact: boolean;
 }) {
-  const enough = points.balance >= REDEEM_THRESHOLD;
+  const { minimumPoints, valueCents } = points.redeem;
+  const enough = points.balance >= minimumPoints;
+  const rule = t.pointsRule.replace('{points}', String(minimumPoints)).replace('{amount}', formatPrice(valueCents, locale));
+
+  /**
+   * MOBİL YAPICA FARKLI ve bu tasarımın kararı: tek satır — solda başlık + kural, sağda rakam ve
+   * küçük hap. İç panel ve "son kazanımlar" listesi mobilde YOK. Masaüstü kartını küçültüp
+   * kullanmak improvise etmek olurdu (CLAUDE.md §3); dar ekranda dört satırlık bir döküm, bakılan
+   * tek sayıyı (bakiye) aşağı itiyor.
+   */
+  if (compact) {
+    return (
+      <section className="flex items-center justify-between gap-3 rounded-card bg-ink px-4 py-4 text-cream">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="font-serif text-card-title-sm leading-tight">{t.pointsTitle}</span>
+          <span className="font-sans text-micro leading-relaxed text-neutral-400">{rule}</span>
+        </div>
+        <div className="flex flex-none flex-col items-end gap-1.5">
+          <span className="font-sans text-page-title-sm font-bold text-olive-light">{points.balance}</span>
+          <RedeemButton t={t} enough={enough} compact />
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className={['flex flex-col gap-3.5 rounded-card bg-ink text-cream', compact ? 'px-4 py-4' : 'px-7 py-6'].join(' ')}>
+    <section className="flex flex-col gap-3.5 rounded-card bg-ink px-7 py-6 text-cream">
       <div className="flex items-baseline justify-between gap-3">
-        <span className={['font-serif leading-tight', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{t.pointsTitle}</span>
-        <span className={['font-sans font-bold text-olive-light', compact ? 'text-h2-sm' : 'text-page-title-sm'].join(' ')}>{points.balance}</span>
+        <span className="font-serif text-h2-sm leading-tight">{t.pointsTitle}</span>
+        <span className="font-sans text-h1-sm font-bold text-olive-light">{points.balance}</span>
       </div>
 
-      <div className="flex flex-col gap-1.5 rounded-soft bg-neutral-700 px-4 py-3">
+      {/* İç panel koyu kartın ÜSTÜNDE bir kademe açık. Ayrı bir gri token açmak yerine mevcut
+          `cream` saydamla katmanlanıyor — palet değişirse burası da onunla değişir; Tailwind'in
+          kendi `neutral-700`'ü ise soğuk ve paletimizin dışında (envanter §0, 29.07 denetimi). */}
+      <div className="flex flex-col gap-1.5 rounded-soft bg-cream/10 px-4 py-3">
         <span className="font-sans text-note leading-relaxed font-semibold text-olive-light">
-          {enough
-            ? t.pointsRule.replace('{points}', String(REDEEM_THRESHOLD)).replace('{amount}', formatPrice(REDEEM_VALUE_CENTS, locale))
-            : t.pointsShort.replace('{missing}', String(REDEEM_THRESHOLD - points.balance))}
+          {enough ? rule : `${t.pointsShort.replace('{missing}', String(minimumPoints - points.balance))} (${rule})`}
         </span>
-        {/* BEKLEYEN(17.5): puanı kupona çevirme akışı — kapı hazır (`redeemPoints`), onay diyaloğu
-            ve "Kuponlarım" listesi bekliyor. Eşik altında düğme zaten pasif olacaktı. */}
-        <button
-          type="button"
-          disabled
-          className="cursor-not-allowed rounded-pill bg-neutral-600 px-4 py-2.5 font-sans text-note font-bold text-neutral-400"
-        >
-          {t.pointsRedeem} · {t.soon}
-        </button>
+        <RedeemButton t={t} enough={enough} />
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -115,15 +136,36 @@ export function PointsCard({
         {points.history.map((entry) => (
           <div key={entry.id} className="flex items-baseline justify-between gap-3 font-sans text-note text-neutral-400">
             <span className="min-w-0 truncate">{entry.reason}</span>
-            {/* İşaret RENKTEN de okunur: kazanım açık yeşil, harcama terracotta. */}
+            {/* İşaret RENKTEN de okunur: kazanım açık yeşil, harcama sıcak ton. */}
             <span className={['flex-none font-bold', entry.points >= 0 ? 'text-olive-light' : 'text-terracotta-line'].join(' ')}>
-              {entry.points >= 0 ? '+' : '−'}
+              {entry.points >= 0 ? '+' : '\u2212'}
               {Math.abs(entry.points)}
             </span>
           </div>
         ))}
       </div>
     </section>
+  );
+}
+
+/**
+ * BEKLEYEN(17.5): puanı kupona çevirme akışı — kapı hazır (`redeemPoints`), onay diyaloğu ve
+ * "Kuponlarım" listesi bekliyor. Eşik altında düğme zaten pasif olacaktı; şimdilik her hâlde pasif
+ * ve sebebi yazılı.
+ */
+function RedeemButton({ t, enough, compact = false }: { t: Messages; enough: boolean; compact?: boolean }) {
+  return (
+    <button
+      type="button"
+      disabled
+      title={enough ? undefined : t.pointsRedeem}
+      className={[
+        'cursor-not-allowed rounded-pill bg-cream/10 font-sans font-bold text-cream/45',
+        compact ? 'px-3.5 py-2 text-micro' : 'px-4 py-2.5 text-note',
+      ].join(' ')}
+    >
+      {t.pointsRedeem} · {t.soon}
+    </button>
   );
 }
 
@@ -171,6 +213,3 @@ export function SavedList({ t, locale, saved, compact }: { t: Messages; locale: 
   );
 }
 
-/** Puan eşiği ve karşılığı — bugün sabit; 17.5 ayarı geldiğinde oradan okunacak. */
-const REDEEM_THRESHOLD = 300;
-const REDEEM_VALUE_CENTS = 500;
