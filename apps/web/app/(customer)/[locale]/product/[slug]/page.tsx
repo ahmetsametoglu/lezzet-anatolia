@@ -3,11 +3,16 @@ import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { detectDevice } from '@/lib/device';
 import { getProductDetail } from '@/lib/storefront/product';
+import { getProductScore, getReviewEligibility, listProductReviews } from '@/lib/feedback/product-feedback';
+import { currentCustomerId } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { routing } from '@/i18n/routing';
 import { ProductClient } from './product-client';
 import type { Messages } from './product-types';
 import messages from './messages.json';
+
+/** Tasarım: ürün detayda ilk ÜÇ yorum; fazlası "tümü" panelinde (design/BACKLOG §1). */
+const REVIEW_PAGE_SIZE = 3;
 
 interface ProductPageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -31,9 +36,36 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const [product, device] = await Promise.all([getProductDetail(locale, slug), detectDevice()]);
   if (!product) notFound();
 
+  /**
+   * Yorum bölümünün verisi (17.1). Ürün bulunduktan SONRA okunur — 404'e düşecek bir sayfa için
+   * yorum sorgusu atmanın anlamı yok. Üç okuma paralel: skor, ilk sayfa ve "bu müşteri yazabilir mi".
+   *
+   * `REVIEW_PAGE_SIZE` tasarımın kuralı: ürün detayda İLK ÜÇ yorum görünür, fazlası panele kalır.
+   */
+  const customerId = await currentCustomerId();
+  const [score, page, eligibility] = await Promise.all([
+    getProductScore(product.id),
+    listProductReviews(product.id, undefined, REVIEW_PAGE_SIZE),
+    getReviewEligibility(customerId, product.id),
+  ]);
+
   return (
     <SiteFrame device={device} locale={locale} activeNav="catalog" mobileChrome="detail" back={{ label: t.back, href: '/catalog' }}>
-      <ProductClient t={t} locale={locale} product={product} device={device} />
+      <ProductClient
+        t={t}
+        locale={locale}
+        product={product}
+        device={device}
+        reviews={{
+          score,
+          reviews: page.rows,
+          // Toplam YAZILI yorum sayısı skordan gelir: liste sayfalı, `rows.length` yalnız bu sayfayı
+          // söyler ve "tümü" bağlantısı ona bakarsa hiç görünmezdi.
+          total: score.ratingCount,
+          canReview: eligibility.canReview,
+          alreadyWrote: eligibility.existing !== null,
+        }}
+      />
     </SiteFrame>
   );
 }

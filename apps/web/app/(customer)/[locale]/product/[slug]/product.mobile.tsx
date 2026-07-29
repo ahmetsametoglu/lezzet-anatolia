@@ -20,7 +20,7 @@ import type { ProductViewProps } from './product-types';
  * yorumlar → benzer ürün şeridi. Adet + sepete ekle bu akışta DEĞİL: ekranın altına sabitlenir,
  * kaydırma boyunca yerinde kalır.
  */
-export function ProductMobile({ t, locale, product, selected, onSelect }: ProductViewProps) {
+export function ProductMobile({ t, locale, product, selected, onSelect , reviews }: ProductViewProps) {
   return (
     // Alt boşluk sabit çubuğun yüksekliği kadar: çubuk son bölümü ve footer'ı örtmesin.
     <div className="flex flex-col pb-24">
@@ -72,7 +72,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect }: Produc
       </div>
 
       <div className="px-4 pt-5">
-        <Reviews t={t} compact />
+        <Reviews t={t} locale={locale} productId={product.id} data={reviews} compact />
       </div>
 
       {product.similar.length > 0 && (

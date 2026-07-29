@@ -18,7 +18,7 @@ import type { ProductViewProps } from './product-types';
  * kaldırılırsa beyan sütunu tek başına uzar, sağ taraf boşluk olarak kalır ve sayfa dengesizleşir —
  * tasarımın iki sütunlu ritmi de bozulur.
  */
-export function ProductDesktop({ t, locale, product, selected, onSelect }: ProductViewProps) {
+export function ProductDesktop({ t, locale, product, selected, onSelect , reviews }: ProductViewProps) {
   return (
     <div className="flex flex-col">
       <nav className="flex gap-1.5 px-12 pt-5 font-sans text-body-sm text-muted">
@@ -69,7 +69,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect }: Produ
 
       <section className="grid grid-cols-[1.2fr_1fr] gap-10 px-12 pb-11">
         <Declaration t={t} locale={locale} declaration={product.declaration} netWeightG={selected?.netWeightG ?? null} />
-        <Reviews t={t} />
+        <Reviews t={t} locale={locale} productId={product.id} data={reviews} />
       </section>
 
       {product.similar.length > 0 && (

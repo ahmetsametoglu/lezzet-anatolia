@@ -39,8 +39,25 @@
     },
     "reviews": {
       "title": "Yorumlar",
+      "count": "{count} onaylı müşteri yorumu",
+      "all": "{count} yorumun tümü →",
+      "verified": "onaylı alışveriş",
+      "write": "Yorum yaz",
+      "rating": "Puanınız",
+      "placeholder": "Deneyiminizi birkaç cümleyle anlatın (isteğe bağlı)",
+      "send": "Gönder",
+      "sending": "Gönderiliyor…",
+      "cancel": "Vazgeç",
+      "moderationNote": "Yorumunuz yayınlanmadan önce gözden geçirilir.",
+      "submitted": "Yorumunuz alındı. Gözden geçirildikten sonra bu sayfada görünecek.",
       "emptyTitle": "Henüz yorum yok",
-      "emptyBody": "Bu ürünü satın aldıysanız ilk yorumu siz yazabilirsiniz."
+      "emptyBody": "Bu ürünü satın aldıysanız ilk yorumu siz yazabilirsiniz.",
+      "onlyBuyers": "Yorum yazma yalnız bu ürünü satın almış müşterilere açıktır.",
+      "formError": {
+        "empty_review": "Puan verin ya da birkaç cümle yazın.",
+        "not_purchased": "Yorum yazmak için bu ürünü satın almış olmanız gerekiyor.",
+        "failed": "Yorumunuz gönderilemedi. Biraz sonra tekrar deneyin."
+      }
     },
     "similar": "Bunları da sevebilirsiniz",
     "card": {
@@ -91,8 +108,25 @@
     },
     "reviews": {
       "title": "Avis",
+      "count": "{count} avis clients vérifiés",
+      "all": "Voir les {count} avis →",
+      "verified": "achat vérifié",
+      "write": "Écrire un avis",
+      "rating": "Votre note",
+      "placeholder": "Décrivez votre expérience en quelques mots (facultatif)",
+      "send": "Envoyer",
+      "sending": "Envoi…",
+      "cancel": "Annuler",
+      "moderationNote": "Votre avis est relu avant publication.",
+      "submitted": "Merci ! Votre avis apparaîtra ici après relecture.",
       "emptyTitle": "Pas encore d’avis",
-      "emptyBody": "Si vous avez acheté ce produit, vous pouvez écrire le premier avis."
+      "emptyBody": "Si vous avez acheté ce produit, écrivez le premier avis.",
+      "onlyBuyers": "Seuls les clients ayant acheté ce produit peuvent laisser un avis.",
+      "formError": {
+        "empty_review": "Donnez une note ou écrivez quelques mots.",
+        "not_purchased": "Vous devez avoir acheté ce produit pour laisser un avis.",
+        "failed": "Votre avis n’a pas pu être envoyé. Réessayez dans un instant."
+      }
     },
     "similar": "Vous aimerez aussi",
     "card": {
@@ -143,8 +177,25 @@
     },
     "reviews": {
       "title": "Bewertungen",
+      "count": "{count} geprüfte Kundenbewertungen",
+      "all": "Alle {count} Bewertungen →",
+      "verified": "geprüfter Kauf",
+      "write": "Bewertung schreiben",
+      "rating": "Ihre Bewertung",
+      "placeholder": "Beschreiben Sie Ihre Erfahrung in wenigen Sätzen (optional)",
+      "send": "Senden",
+      "sending": "Wird gesendet…",
+      "cancel": "Abbrechen",
+      "moderationNote": "Ihre Bewertung wird vor der Veröffentlichung geprüft.",
+      "submitted": "Vielen Dank! Ihre Bewertung erscheint hier nach der Prüfung.",
       "emptyTitle": "Noch keine Bewertungen",
-      "emptyBody": "Wenn Sie dieses Produkt gekauft haben, können Sie die erste Bewertung schreiben."
+      "emptyBody": "Wenn Sie dieses Produkt gekauft haben, schreiben Sie die erste Bewertung.",
+      "onlyBuyers": "Bewertungen können nur Kundinnen und Kunden schreiben, die dieses Produkt gekauft haben.",
+      "formError": {
+        "empty_review": "Vergeben Sie eine Note oder schreiben Sie ein paar Sätze.",
+        "not_purchased": "Sie müssen dieses Produkt gekauft haben, um es zu bewerten.",
+        "failed": "Ihre Bewertung konnte nicht gesendet werden. Bitte gleich noch einmal versuchen."
+      }
     },
     "similar": "Das könnte Ihnen auch gefallen",
     "card": {
