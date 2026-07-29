@@ -16,13 +16,36 @@ export type CouponFailure =
   | 'outranked';
 
 /**
+ * Kendiliğinden inen indirimin SEBEBİ — ekranın "neden indi" sorusunu cevaplayabilmesi için.
+ *
+ * Kuponda sebep zaten kodun kendisidir (tasarım: "İndirim — HOSGELDIN10"); kod girilmeden inen
+ * indirimde müşterinin elinde hiçbir ipucu yoktu, satır yalnız "İndirim" diyordu. Sepetinden
+ * habersizce para düşen müşteri "neden?" diye soruyor (29.07 geri bildirimi).
+ *
+ * **Kampanyanın ADI kullanılmaz:** `Discount.name` operatörün listede tanıdığı addır, tek dilde
+ * yazılır ve müşteriye gösterilmek üzere tasarlanmamıştır — Fransız müşteriye "Baklava haftası"
+ * yazmak olurdu. Sebep bu yüzden TÜRDEN doğar ve metni sayfanın kendi sözlüğünden gelir.
+ * BEKLEYEN(BACKLOG §2): kampanyaya müşteriye görünen çok dilli bir vitrin adı — tasarım kararı.
+ */
+export type DiscountReason =
+  /**
+   * Otomatik kampanya. `percent` YALNIZ oran bütün sepet için doğruysa dolar (kapsam `cart` +
+   * yüzde tipi): kategoriye bağlı bir %15, sepetin tamamına inmiş gibi okunursa müşteriye
+   * tutmayacağı bir söz verilir — 90 €'luk sepette 4,50 € indirim gören müşteri "%15 nerede"
+   * diye sorar. Oran bilinmiyorsa satır sebebi söyler, sayıyı uydurmaz.
+   */
+  | { kind: 'campaign'; percent: number | null }
+  /** Müşterinin genel indirim oranı — kapsamı tanım gereği bütün sepettir, oran her zaman doğrudur. */
+  | { kind: 'customer_rate'; percent: number };
+
+/**
  * Sepete inen indirim ya da kuponun reddi. **Görünüm tipidir** — bu dosyada durur çünkü ekran onu
  * okur; çözümü yapan kapı sunucudadır (`lib/cart/discount.ts`, `server-only`).
  */
 export type CartDiscount =
   | { status: 'applied'; source: 'coupon'; code: string; amountCents: number; lineShares: number[]; discountId: string | null }
   /** Kupon girilmeden kazanan indirim (otomatik kampanya ya da müşterinin genel oranı). */
-  | { status: 'automatic'; amountCents: number; lineShares: number[]; discountId: string | null }
+  | { status: 'automatic'; reason: DiscountReason; amountCents: number; lineShares: number[]; discountId: string | null }
   /** `appliedInsteadCents`: kupon tutmasa da sepete inen indirim — müşteri onu kaybetmez. */
   | { status: 'rejected'; reason: CouponFailure; code: string; appliedInsteadCents: number }
   | { status: 'none' };

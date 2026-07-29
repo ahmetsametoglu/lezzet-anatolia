@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import { OrderService, ProductService, ProductVariantService, UserProfileService, serviceDb } from '@lezzet/database';
+import { DiscountService, OrderService, ProductService, ProductVariantService, UserProfileService, serviceDb } from '@lezzet/database';
 import { RATIO_SQUARE, resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { detectDevice } from '@/lib/device';
@@ -64,6 +64,23 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
    * ödemede beklenen bir banka yok; havalede de öyle — orada beklenen müşterinin transferi.
    */
   const awaitingCard = !placed && !cancelled && order.paymentMethod === 'online';
+
+  /**
+   * İndirim satırının SEBEBİ. Sipariş yalnız tutarı ve `discount_id`yi saklar — sebep tanımdan okunur.
+   *
+   * **Oran YAZILMAZ** ve bu bir eksik değil: siparişte saklanan şey inen TUTARDIR, oran değil.
+   * Tanımın bugünkü oranını sipariş satırına yazmak, kampanya sonradan değiştirildiğinde müşteriye
+   * o gün geçerli olmayan bir sayı göstermek olurdu. Sepette oran gösterilir çünkü orada karar
+   * ANLIK; siparişte karar geçmiştir.
+   *
+   * `discountId` boş ama tutar varsa indirim müşterinin **kendi oranıdır** (`customer_rate` bir
+   * `discount` satırı değildir, profilin alanıdır) — motorun kuralı, burada da öyle okunur.
+   */
+  const discountRule = order.discountId ? await new DiscountService(db).getById(order.discountId) : null;
+  const discountLabel =
+    discountRule?.trigger === 'coupon' && discountRule.code
+      ? `${t.summary.discount} — ${discountRule.code}`
+      : `${t.summary.discount} — ${discountRule ? t.summary.discountCampaign : t.summary.discountCustomerRate}`;
 
   // Kalem künyesi: sipariş varyant satırlarından oluşuyor, müşteri ürün adını ve görselini görmeli.
   const variants = await new ProductVariantService(db).listByIds([...new Set(items.map((i) => i.variantId))]);
@@ -319,9 +336,9 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
             <div className="flex flex-col gap-1.5 border-t border-sand-200 pt-2.5">
               {order.discountAmount > 0 && (
                 <SummaryRow
-                  // Kodun kendisi tasarımda ("İndirim — HOSGELDIN10"); sipariş yalnız `discount_id`
-                  // taşıdığı için kod adı 09.6 kupon okumasıyla gelecek. Bugün yalnız etiket.
-                  label={t.summary.discount}
+                  // Kod tasarımda birebir yazılı ("İndirim — HOSGELDIN10"); kodsuz indirimde sebep
+                  // türden gelir (bkz. yukarıdaki `discountLabel`).
+                  label={discountLabel}
                   value={`−${formatPrice(Math.round(order.discountAmount * 100), locale as Locale)}`}
                   tone="olive"
                 />

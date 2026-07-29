@@ -202,6 +202,41 @@ describe('kupon girilmeden', () => {
   });
 });
 
+/**
+ * Sebep, ekranın "neden bu para düştü" sorusuna verdiği cevaptır — kod girilmeden inen indirimde
+ * müşterinin elinde başka ipucu yok. Sınanan asıl şey ORANIN ne zaman taşındığı: yalnız bütün
+ * sepete indiğinde. Kapsamı dar bir %95, sepetin tamamına inmiş gibi okunursa müşteriye tutmayacak
+ * bir söz verilir.
+ */
+describe('otomatik indirimin sebebi ekrana taşınır', () => {
+  it('sepet kapsamlı yüzde kampanyasında ORAN da taşınır', async () => {
+    await makeDiscount({ name: `Sebep-sepet ${stamp}`, trigger: 'automatic', type: 'percent', value: 85, scope: 'cart' });
+
+    const result = await resolveCartDiscount(db, { lines: basket, customerId });
+
+    expect(result).toMatchObject({ status: 'automatic', reason: { kind: 'campaign', percent: 85 } });
+  });
+
+  it('kategori kapsamlı kampanyada oran taşınmaz — sepetin tamamı için doğru değil', async () => {
+    await makeDiscount({ name: `Sebep-kategori ${stamp}`, trigger: 'automatic', type: 'percent', value: 95, scope: 'category', categoryId });
+    // Kalemlerin hepsi kapsamda: ölçülen şey kapsamın DARLIĞI değil, dar kapsamlı bir kuralın
+    // oranının müşteriye sepet oranı gibi gösterilmemesi.
+    const inCategory: DiscountableLine[] = [{ variantId: 'v1', qty: 2, unitPriceCents: 5_000, categoryId }];
+
+    const result = await resolveCartDiscount(db, { lines: inCategory, customerId });
+
+    expect(result).toMatchObject({ status: 'automatic', amountCents: 9_500, reason: { kind: 'campaign', percent: null } });
+  });
+
+  it('müşterinin genel oranında sebep "size özel" ve oran her zaman doğrudur', async () => {
+    await new UserProfileService(db).update({ id: customerId, discountPercent: 88 });
+
+    const result = await resolveCartDiscount(db, { lines: basket, customerId });
+
+    expect(result).toMatchObject({ status: 'automatic', reason: { kind: 'customer_rate', percent: 88 } });
+  });
+});
+
 describe('matrah muafiyetleri sepette de geçerli', () => {
   it('paket ve teklif satırı matrahı BÜYÜTMEZ, payı da 0 olur', async () => {
     await makeDiscount({ name: `Oto2 ${stamp}`, trigger: 'automatic', type: 'percent', value: 90, scope: 'cart' });

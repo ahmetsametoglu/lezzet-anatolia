@@ -8,7 +8,7 @@ import {
   type DiscountableLine,
 } from '@lezzet/domain-core';
 import type { Discount } from '@lezzet/types';
-import type { CartDiscount, CouponFailure } from './cart-types';
+import type { CartDiscount, CouponFailure, DiscountReason } from './cart-types';
 
 /**
  * Sepette indirim çözümü (09.6 müşteri tarafı) — **uygulama katmanı orkestrasyonu**. DOMAIN §5.
@@ -61,7 +61,7 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
   const rules = pool.map((row) => toRule(row, usage.get(row.id), input.customerId));
   const winner = applyBestDiscount(input.lines, rules, ctx);
 
-  if (!code) return winner ? automatic(winner) : { status: 'none' };
+  if (!code) return winner ? automatic(winner, pool, customerDiscountPercent) : { status: 'none' };
 
   // Kod girildi: önce kuponun kendisi teşhis edilir.
   const rejected = (reason: CouponFailure): CartDiscount => ({
@@ -92,13 +92,28 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
   };
 }
 
-function automatic(winner: AppliedDiscount): CartDiscount {
+function automatic(winner: AppliedDiscount, pool: readonly Discount[], customerPercent: number | null): CartDiscount {
   return {
     status: 'automatic',
+    reason: reasonOf(winner, pool, customerPercent),
     amountCents: winner.amountCents,
     lineShares: winner.lineShares,
     discountId: winner.discountId,
   };
+}
+
+/**
+ * Kazananın SEBEBİ — motorun `kind`ından türer, ayrıca teşhis edilmez. Sebep ile karar aynı yerden
+ * çıkmazsa bir gün ekran "size özel" derken sepete kampanya inmiş olur.
+ *
+ * Oran yalnız bütün sepete inen yüzde indirimlerde taşınır (`DiscountReason`): kategori/koleksiyon
+ * kapsamlı ya da sabit tutarlı kampanyanın "yüzdesi" sepetin tamamı için doğru değildir.
+ */
+function reasonOf(winner: AppliedDiscount, pool: readonly Discount[], customerPercent: number | null): DiscountReason {
+  if (winner.kind === 'customer_rate') return { kind: 'customer_rate', percent: customerPercent ?? 0 };
+  const rule = pool.find((row) => row.id === winner.discountId);
+  const wholeBasket = rule?.scope === 'cart' && rule.type === 'percent';
+  return { kind: 'campaign', percent: wholeBasket ? rule.value : null };
 }
 
 /**

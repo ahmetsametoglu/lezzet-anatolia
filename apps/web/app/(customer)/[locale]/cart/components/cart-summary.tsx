@@ -5,6 +5,7 @@ import { buttonClass } from '@/components/customer/ui/button';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CartView } from '@/lib/cart/cart-types';
+import { discountLabel } from '@/lib/cart/discount-label';
 import type { Messages } from '../cart-types';
 
 /**
@@ -98,9 +99,10 @@ export function CartSummary({ view, t, locale, compact = false }: CartSummaryPro
 
         {discountCents > 0 && (
           <div className="flex items-center justify-between font-sans text-body-sm text-olive">
-            {/* Kod VARSA yazılır (tasarım: "İndirim — HOSGELDIN10"): otomatik inen indirimin kodu
-                yoktur ve uydurma bir kod göstermek müşteriye kullanmadığı bir kupon atfetmek olurdu. */}
-            <span>{view.discount.status === 'applied' ? `${t.discount} — ${view.discount.code}` : t.discount}</span>
+            {/* Satır SEBEBİNİ söyler (tasarım: "İndirim — HOSGELDIN10"). Kodsuz inen indirimde de
+                sebep vardır — kampanya ya da müşterinin kendi oranı; cümleyi ortak yardımcı kurar
+                ki ödeme sayfası aynı indirimi başka türlü anlatmasın. */}
+            <span>{discountLabel(view.discount, t)}</span>
             <span className="font-bold">−{formatPrice(discountCents, locale)}</span>
           </div>
         )}

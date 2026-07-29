@@ -43,6 +43,8 @@
     "summary": {
       "title": "Sipariş özeti",
       "discount": "İndirim",
+      "discountCampaign": "kampanya",
+      "discountCustomerRate": "size özel",
       "delivery": "Teslimat",
       "free": "Ücretsiz",
       "total": "Genel toplam",
@@ -104,6 +106,8 @@
     "summary": {
       "title": "Récapitulatif",
       "discount": "Remise",
+      "discountCampaign": "promotion",
+      "discountCustomerRate": "votre remise",
       "delivery": "Livraison",
       "free": "Offerte",
       "total": "Total",
@@ -165,6 +169,8 @@
     "summary": {
       "title": "Bestellübersicht",
       "discount": "Rabatt",
+      "discountCampaign": "Aktion",
+      "discountCustomerRate": "Ihr Rabatt",
       "delivery": "Lieferung",
       "free": "Kostenlos",
       "total": "Gesamtsumme",

@@ -137,6 +137,14 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 - [ ] **Paketler listesinin içerik envanteri** — tasarımı var (`Musteri - Paketler.dc.html`) ama
       `pages/musteri-paketler.md` **yok**. Diğer 15 müşteri sayfasının hepsinde ikisi de var; bu
       sayfa envantersiz kaldı, "hangi bilgi neden" yazılı değil.
+- [ ] **Otomatik kampanyanın müşteriye görünen ADI** — sepet/ödeme/onaydaki indirim satırı kuponda
+      kodu yazıyor (tasarım: *"İndirim — HOSGELDIN10"*), kodsuz inen kampanyada ise türü:
+      *"İndirim — kampanya"*. Kampanyanın kendi adı yazılamıyor çünkü `Discount.name` şemada
+      **operatörün** adı olarak tanımlı ve tek dilde giriliyor — Fransız müşteriye "Baklava haftası"
+      yazmak olurdu. Müşteriye "İndirim — Baklava Haftası" göstermek istiyorsak tanıma çok dilli bir
+      **vitrin adı** alanı gerekir (`LocalizedCopy`), operasyon kupon formunda da karşılığı.
+      Tasarımda otomatik kampanya hâli hiç çizilmemiş; karar orada verilmeli. Kod tarafı hazır:
+      sebep zaten taşınıyor (`CartDiscount.reason`), yalnız yazılacak ad yok.
 - [ ] **Hata sayfası başlık ölçüleri** — `message-screen.tsx` üç ham kademe taşımaya devam ediyor
       (emoji 42 · başlık 40/27 px); bunlar envanter §0.4 ölçeğinde yok. Kademe eklemek mi yuvarlamak
       mı — hata sayfası tasarımının ayrı ele alınmasını gerektiriyor. **Dosyanın kalanı token'landı**
