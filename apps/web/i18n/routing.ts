@@ -34,6 +34,9 @@ export const routing = defineRouting({
     // Paket = "coffret" (FR) · "Paket" (DE) — kart ve menü metinleriyle aynı sözcük.
     '/packages': { fr: '/coffrets', de: '/pakete', tr: '/paketler' },
     '/package/[slug]': { fr: '/coffret/[slug]', de: '/paket/[slug]', tr: '/paket/[slug]' },
+    // Hesap grubu (08.5). Segment kelimeleri dile göre; iç yol İngilizce kalır.
+    '/account': { fr: '/compte', de: '/konto', tr: '/hesap' },
+    '/orders': { fr: '/commandes', de: '/bestellungen', tr: '/siparislerim' },
     // Sipariş bildirimi maillerinin hedefleri (14.5). Sayfaların kendisi modül 08'de doğar; adres
     // eşlemesi BURADA durur çünkü URL'in tek kaynağı bu tablodur — mail kendi yolunu kurmaz.
     '/orders/[reference]': { fr: '/commandes/[reference]', de: '/bestellungen/[reference]', tr: '/siparislerim/[reference]' },
