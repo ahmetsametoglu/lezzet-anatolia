@@ -1,4 +1,5 @@
 import type { TicketStatus, TicketType } from '@lezzet/types';
+import { readableCode } from '../order/reference-no';
 
 /**
  * Talep durum makinesi ve kapıları (16.1) — DOMAIN §15.
@@ -135,4 +136,39 @@ export const RETURN_BOUND_TYPES: readonly TicketType[] = ['damaged', 'missing'];
 
 export function isReturnBound(type: TicketType): boolean {
   return RETURN_BOUND_TYPES.includes(type);
+}
+
+/**
+ * Şikâyet fotoğrafı olarak kabul edilen dosya türleri (16.2).
+ *
+ * **Yalnız görsel.** Talep eki bir kanıttır: "bozuk geldi"nin fotoğrafı. PDF, arşiv ya da ofis
+ * dosyası bu işi görmez — ama private kovaya her şeyin yüklenebilmesi, kovayı bir dosya paylaşım
+ * alanına çevirir. Kural motorda, çünkü "neyi kanıt sayarız" bir iş kararıdır, depo ayarı değil.
+ *
+ * HEIC var: iPhone varsayılanı, ve müşteri dönüştürmekle uğraşmaz.
+ */
+export const ALLOWED_ATTACHMENT_EXTENSIONS: readonly string[] = ['jpg', 'jpeg', 'png', 'webp', 'heic'];
+
+/** Talep başına ek sayısı tavanı — birkaç açı yeterlidir; sınırsız yükleme kovayı doldurur. */
+export const MAX_ATTACHMENTS_PER_MESSAGE = 5;
+
+export type AttachmentCheck = { ok: true; extension: string } | { ok: false; reason: 'unsupported_type' | 'too_many' };
+
+export function checkAttachment(filename: string, alreadyRequested = 0): AttachmentCheck {
+  if (alreadyRequested >= MAX_ATTACHMENTS_PER_MESSAGE) return { ok: false, reason: 'too_many' };
+
+  const extension = filename.split('.').pop()?.toLowerCase() ?? '';
+  if (!ALLOWED_ATTACHMENT_EXTENSIONS.includes(extension)) return { ok: false, reason: 'unsupported_type' };
+  return { ok: true, extension };
+}
+
+/**
+ * Ek dosyanın anahtarındaki tek kullanımlık kimlik.
+ *
+ * Aynı talebe birden çok fotoğraf eklenebilir ve hiçbiri diğerinin üzerine yazmamalı — bozuk ürünün
+ * ikinci açısı, birincisinin yerine geçmez. Üreteç kriptografiktir (`readableCode` varsayılanı):
+ * tahmin edilebilir bir anahtar, imzalı adresi isteyebilen birine komşu fotoğrafı verirdi.
+ */
+export function attachmentToken(random?: () => number): string {
+  return readableCode(12, random);
 }

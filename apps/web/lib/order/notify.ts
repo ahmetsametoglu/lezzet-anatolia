@@ -1,7 +1,7 @@
 import { OrderStatusLogService, serviceDb } from '@lezzet/database';
-import { brand } from '@lezzet/brand';
-import { createNotifier, emailDriver, waLinkDriver, whatsappApiDriver, type NotifyEventName, type NotifyResult } from '@lezzet/notify';
+import type { NotifyEventName, NotifyResult } from '@lezzet/notify';
 import type { OrderStatus } from '@lezzet/types';
+import { notifier } from '../notify';
 import { buildOrderNotification } from './notification-data';
 
 /**
@@ -11,18 +11,6 @@ import { buildOrderNotification } from './notification-data';
  * karar verir. Bu dosya kanal bilmez, şablon bilmez — yalnız hangi geçişin hangi olay olduğunu bilir.
  */
 
-/** Yasal alt bilgi — mail her ülkede gönderenin adresini taşımak zorundadır. */
-const POSTAL_ADDRESS = `${brand.name} · 12 Rue du Marché, 67000 Strasbourg, France`;
-
-/**
- * Sürücü sırası TERCİH sırasıdır: e-posta önce denenir. WhatsApp API'si bağlanınca (modül 15) o
- * sürücünün `supports`'u dolar ve sıralama gözden geçirilir — çağıran taraf değişmez.
- */
-const notifier = createNotifier([
-  emailDriver({ brandName: brand.name, postalAddress: POSTAL_ADDRESS }),
-  waLinkDriver(),
-  whatsappApiDriver(),
-]);
 
 /** Hangi geçiş hangi haberi doğurur. Bildirimi olmayan geçiş burada yoktur — sessizlik de karardır. */
 const EVENT_OF_STATUS: Partial<Record<OrderStatus, NotifyEventName>> = {

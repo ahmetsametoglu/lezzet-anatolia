@@ -42,5 +42,8 @@ export const routing = defineRouting({
     '/orders/[reference]': { fr: '/commandes/[reference]', de: '/bestellungen/[reference]', tr: '/siparislerim/[reference]' },
     '/account/notifications': { fr: '/compte/notifications', de: '/konto/benachrichtigungen', tr: '/hesap/bildirim-tercihleri' },
     '/support': { fr: '/assistance', de: '/anfrage', tr: '/talep' },
+    // Talep detayı — cevap/durum maillerinin hedefi (14.7 · 16.4). Sayfanın kendisi 16.2'de doğar;
+    // adres eşlemesi burada durur çünkü URL'in tek kaynağı bu tablodur.
+    '/support/[ticket]': { fr: '/assistance/[ticket]', de: '/anfrage/[ticket]', tr: '/talep/[ticket]' },
   },
 });

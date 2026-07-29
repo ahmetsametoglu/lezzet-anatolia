@@ -10,7 +10,7 @@ import {
 import { derivePaymentStatusForOrder } from '@lezzet/domain-core';
 import type { NotifyEventName, NotifyRecipient } from '@lezzet/notify';
 import type { Order, OrderItem, OrderNotification, NotificationStep, PreferredLanguage } from '@lezzet/types';
-import { routing } from '../../i18n/routing';
+import { localizedUrl } from '../notify';
 import { formatPrice, formatShortDate } from '../storefront/format';
 
 /**
@@ -41,15 +41,6 @@ const EVENT_STEP: Partial<Record<NotifyEventName, NotificationStep['key']>> = {
 
 /** Zaman çizgisi taşımayan olaylar — bunlarda tek durum bloğu ve para çözümü vardır. */
 const EXCEPTION_EVENTS: readonly NotifyEventName[] = ['order_cancelled', 'order_shortfall', 'order_refunded'];
-
-/** `routing.pathnames`'ten dile göre yol — URL'in tek kaynağı o tablodur, burada tekrarlanmaz. */
-function localizedUrl(route: keyof typeof routing.pathnames, locale: PreferredLanguage, params: Record<string, string> = {}): string {
-  const entry = routing.pathnames[route] as string | Record<PreferredLanguage, string>;
-  const template = typeof entry === 'string' ? entry : entry[locale];
-  const path = Object.entries(params).reduce((acc, [key, value]) => acc.replace(`[${key}]`, encodeURIComponent(value)), template);
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.lezzetanatolia.fr';
-  return `${origin}/${locale}${path}`;
-}
 
 interface NotificationBundle {
   data: OrderNotification;

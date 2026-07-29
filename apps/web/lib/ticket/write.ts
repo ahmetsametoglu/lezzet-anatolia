@@ -9,6 +9,7 @@ import {
 } from '@lezzet/domain-core';
 import { ticketAttachmentScope } from '@lezzet/storage';
 import type { Ticket, TicketMessage, TicketStatus, TicketType } from '@lezzet/types';
+import { notifyTicketReplied, notifyTicketStatusChanged } from './notify';
 
 /**
  * Talep yazımları (16.1) — **kapı**: motora sorar, servise yazdırır (STACK §4).
@@ -169,6 +170,10 @@ export async function replyAsStaff(input: {
     attachments: input.attachments,
     newStatus: statusAfterStaffReply(ticket.status),
   });
+
+  // Haber SESSİZ gider (16.4): sağlayıcı düştü diye operatörün yazdığı cevabı geri almak yanlış
+  // olurdu. Talep taze okunur — cevap durumu değiştirmiş olabilir.
+  await notifyTicketReplied((await service.getById(ticket.id)) ?? ticket);
   return { ok: true, data: message };
 }
 
@@ -193,7 +198,11 @@ export async function changeTicketStatus(input: {
   const check = canTransitionTicket(ticket.status, input.to, input.by);
   if (!check.allowed) return { ok: false, reason: check.reason };
 
-  return { ok: true, data: await service.setStatus(ticket.id, input.to) };
+  const updated = await service.setStatus(ticket.id, input.to);
+  // Yalnız "çözüldü" ve "yeniden açıldı" haber doğurur, ve yalnız PERSONEL yaptığında — kararı
+  // bildirim katmanı verir (16.4), burası olayı bildirmekle yetinir.
+  await notifyTicketStatusChanged(updated, ticket.status, input.by);
+  return { ok: true, data: updated };
 }
 
 /**
