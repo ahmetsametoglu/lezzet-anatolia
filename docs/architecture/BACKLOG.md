@@ -35,6 +35,16 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 - `lib/error.ts`
 - i18n routing: `/tr` `/fr` `/de` + `packages/i18n` iskeleti + yedek zinciri çözücü (TR→FR→DE)
 - `scripts/deploy.sh` + PM2 + Caddy
+- **`scripts/` tip kontrolü dışında** (bulundu 29.07, seed işi sırasında) — kök `tsconfig.json` yalnız
+  `eslint.config.js`'i kapsıyor, `turbo run typecheck` de paket paket koşuyor. Seed ve bakım
+  betikleri hiç derlenmiyor: `Page<T>`'nin alanı `rows` iken `items` yazan bir satır sessizce
+  geçti, hatası ancak `db:seed` çalıştırılınca görülecekti. Kök tsconfig'e `scripts/**` eklenip
+  `typecheck`'e bağlanmalı.
+- **Gözlemleme (log · hata izleme · sistem sağlığı)** — tasarımı yazıldı, kodu yazılmadı:
+  [`OBSERVABILITY.md`](OBSERVABILITY.md), tablolar `data-model/operasyon.md`, ekran
+  `design/pages/admin-sistem.md`, görev `build/18-operasyon-guvenlik.md` (18.5). `pino` +
+  `error_log`/`capture_error` + `system_health_snapshot` + tek operasyon ekranı. **E-posta alarmı
+  bilinçli olarak yok** — izleme çekme modeliyle, ekran alarmın yerini tutar.
 
 ## 2. Kimlik ve roller
 

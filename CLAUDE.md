@@ -76,6 +76,7 @@
 Kurallar + kod dizilimi → `STACK` · Disiplin (migration/deploy/git/ajan) → `WORKFLOW` · İş kuralları → `DOMAIN` ·
 Veri: ortak ilke + kalıcı kararlar → `DATA_MODEL`, varlık tabloları → `data-model/{katalog,stok-tedarik,musteri-siparis,para,iletisim-geribildirim}.md` ·
 Sipariş durum makinesi → `ORDER_LIFECYCLE` · i18n/SEO → `SEO_I18N` ·
+Log / hata izleme / sistem sağlığı → `OBSERVABILITY` (iş kaydı DEĞİL — ayrım §1'de) ·
 Blueprint'ten sapmalar → `ARCHITECTURE_DECISIONS` · Modül planı + durum → `docs/build/NN-*.md` · Kapsam listesi → `BACKLOG` ·
 Tasarım ↔ kod açığı (çizili ama kodlanamayan, bilinçli sapmalar) → `design/BACKLOG.md`.
 Tam navigasyon: `docs/architecture/README.md`.

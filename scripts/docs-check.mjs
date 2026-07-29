@@ -51,6 +51,12 @@ const ENTITIES = [
   { doc: 'Cart (sunucu sepeti)', part: 'musteri-siparis', table: 'cart', schema: 'cart.schema.ts', zod: 'CartSchema' },
   // İşletme ayarı (modül 02)
   { doc: 'Setting (işletme ayarı)', part: 'iletisim-geribildirim', table: 'settings', schema: 'setting.schema.ts', zod: 'SettingSchema' },
+  // Operasyon ve gözlemleme (modül 06 · 18) — `error_log`/`system_health_snapshot` henüz kodlanmadı;
+  // liste onları BUGÜNDEN tutuyor çünkü kontrol tablo doğunca kendiliğinden devreye girsin (kodlanmamış
+  // varlıkta `cols` boş olur ve karşılaştırma atlanır — artımlı inşa, hata değil).
+  { doc: 'JobRun (zamanlanmış iş izi)', part: 'operasyon', table: 'job_run', schema: 'job-run.schema.ts', zod: 'JobRunSchema' },
+  { doc: 'ErrorLog (hata kaydı)', part: 'operasyon', table: 'error_log', schema: 'error-log.schema.ts', zod: 'ErrorLogSchema' },
+  { doc: 'SystemHealthSnapshot (sistem sağlığı anlık görüntüsü)', part: 'operasyon', table: 'system_health_snapshot', schema: 'system-health.schema.ts', zod: 'SystemHealthSnapshotSchema' },
 ];
 
 /**

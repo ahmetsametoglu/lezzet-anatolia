@@ -34,6 +34,7 @@ Bu klasör, projenin **ne yapacağını**, **nasıl kod dizileceğini** ve **bu 
 | `ARCHITECTURE_DECISIONS.md` | Blueprint'ten sapmalar ve gerekçeleri | Stack/yapı kararı sorgulanınca |
 | `INTEGRATIONS.md` | Dış servisler, agnostik arayüzler, fazları | Ödeme/kargo/muhasebe/bildirim işinde |
 | `SEO_I18N.md` | Çok dillilik, URL yapısı, çeviri akışı, SEO | i18n, rota, içerik gösterimi işinde |
+| `OBSERVABILITY.md` | Log, hata izleme, sistem sağlığı — üç katman, saklama süreleri, PII disiplini | Üretimde "ne oldu" sorusuna araç yazarken |
 | `BACKLOG.md` | Açık iş kalemleri, yapılacaklar | Ne yapılacağına bakarken |
 
 ## Rol ayrımı (WORKFLOW §8 ile uyumlu)
