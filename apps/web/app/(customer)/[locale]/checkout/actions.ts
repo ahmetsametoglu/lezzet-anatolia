@@ -61,6 +61,13 @@ export async function loadCheckoutAction(
   locale: string,
   entries: CartEntry[],
   addressId: string | null,
+  /**
+   * Sepette girilen kupon kodu — checkout'a KADAR taşınmalı. Taşınmadığında ekran kendisiyle
+   * çelişiyordu: kalem satırları ve indirim sepet bağlamından (kuponlu), toplam ise buradan
+   * (kuponsuz) geliyordu; üstelik siparişe yazılan tutar da kuponsuz oluyordu — müşteri kuponu
+   * kullanmış görünüp TAM FİYAT ödüyordu (29.07 denetimi).
+   */
+  couponCode: string | null = null,
 ): Promise<ActionResult<CheckoutSnapshot>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
@@ -72,7 +79,7 @@ export async function loadCheckoutAction(
     const selected = addresses.find((a) => a.id === addressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0];
     if (!selected) return { data: { addresses, delivery: null, payment: null }, error: null };
 
-    const cart = await getCartView(locale as Locale, entries, { customerId });
+    const cart = await getCartView(locale as Locale, entries, { customerId, couponCode });
     const delivery = await resolveDelivery({
       postalCode: selected.postalCode,
       hasNonShippableItem: cart.lines.some((l) => !l.shippable),
@@ -161,6 +168,8 @@ export async function confirmCheckoutAction(input: {
   paymentMethod: PaymentMethod;
   onAccount?: boolean;
   marketingConsent?: boolean;
+  /** Sepetteki kupon kodu; siparişin indirimi bunsuz hesaplanamaz. */
+  couponCode?: string | null;
 }): Promise<ActionResult<ConfirmOutcome>> {
   try {
     if (!hasLocale(routing.locales, input.locale)) throw new Error('Geçersiz dil');
@@ -175,6 +184,7 @@ export async function confirmCheckoutAction(input: {
       deliveryDate: input.deliveryDate,
       paymentMethod: input.paymentMethod,
       onAccount: input.onAccount,
+      couponCode: input.couponCode,
     });
     if (draft.status !== 'ok') {
       const detail = draft.status === 'blocked_lines' ? draft.lines : draft.status === 'date_unavailable' ? draft.availableDates : undefined;

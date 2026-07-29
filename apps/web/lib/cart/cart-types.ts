@@ -233,6 +233,18 @@ export function entryOf(line: CartLine): CartEntry {
  * Burada hesaplanan tek şey adet × BİLİNEN birim fiyat. Fiyatın kendisi, tükendi bilgisi ve teklif
  * tavanı sunucudan gelmeye devam eder — istemci fiyat ÇÖZMEZ, yalnız çarpar.
  */
+/**
+ * Toplamdan düşen tutar. Reddedilen kuponda **kazanan indirim** düşer: kupon tutmadı diye müşteri
+ * hak ettiği otomatik indirimi kaybetmez (`appliedInsteadCents`).
+ *
+ * Sunucu okuması da (`lib/cart/read.ts`) ekran da bunu kullanır — tek yerde, çünkü iki kopya
+ * ayrıştığında ekranın gösterdiği indirim ile tahsil edilen tutar farklılaşır.
+ */
+export function discountAmountOf(discount: CartDiscount): number {
+  if (discount.status === 'applied' || discount.status === 'automatic') return discount.amountCents;
+  return discount.status === 'rejected' ? discount.appliedInsteadCents : 0;
+}
+
 export function viewWithEntries(view: CartView, entries: readonly CartEntry[]): CartView {
   const wanted = new Map(entries.map((e) => [cartKey(e), e.qty]));
   const lines = view.lines
@@ -248,6 +260,16 @@ export function viewWithEntries(view: CartView, entries: readonly CartEntry[]): 
     ...view,
     lines,
     subtotalCents,
+    /**
+     * Toplam da BURADA yeniden kurulur. Kurulmazsa sunucunun ESKİ toplamı yerinde kalıyor ve
+     * özet kartı indirimi `ara toplam − toplam` farkından türettiği için ekranda **olmayan bir
+     * indirim** beliriyordu: 10 €'luk satırın adedini 2'ye çıkaran müşteri, sunucu turu dönene
+     * kadar "İndirim −10,00 €" ve yarı fiyat bir toplam görüyordu (29.07 denetimi).
+     *
+     * İndirim tutarı sunucunun son kararıdır ve bir sonraki turda tazelenir; burada yalnız
+     * TAŞINIR, yeniden hesaplanmaz — indirim kuralı istemcinin bilgisi değil.
+     */
+    totalCents: Math.max(0, subtotalCents - discountAmountOf(view.discount)),
     // Sayaç NİYETTEN sayılır, satırlardan değil: katalogdan yeni eklenen ürünün henüz çözülmüş
     // satırı yoktur ama sepette vardır — rozet onu beklemeden göstermeli.
     itemCount: entries.reduce((sum, e) => sum + e.qty, 0),

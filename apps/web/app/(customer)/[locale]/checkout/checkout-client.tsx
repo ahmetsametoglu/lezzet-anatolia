@@ -32,7 +32,7 @@ const EMPTY: CheckoutSnapshot = { addresses: [], delivery: null, payment: null }
 
 export function CheckoutClient({ t, locale, device, authenticated, customer }: CheckoutClientProps) {
   const router = useRouter();
-  const { view, ready: cartReady, reload: reloadCart } = useCart();
+  const { view, ready: cartReady, reload: reloadCart, coupon } = useCart();
   const [snapshot, setSnapshot] = useState<CheckoutSnapshot>(EMPTY);
   const [state, setState] = useState<CheckoutState>({
     addressId: null,
@@ -50,7 +50,7 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
   /** Adım verisini tazeler. Seçili adres değiştikçe ve sepet değiştikçe koşar. */
   const refresh = useCallback(
     async (addressId: string | null) => {
-      const { data, error: failure } = await loadCheckoutAction(locale, cartEntries, addressId);
+      const { data, error: failure } = await loadCheckoutAction(locale, cartEntries, addressId, coupon);
       // Okuma düşse de bayrak kalkar: sonsuza kadar iskelet göstermek, hatayı gizlemenin bir
       // başka biçimi olurdu — ekran hata satırını gösterebilmeli.
       setSnapshotReady(true);
@@ -68,7 +68,7 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
         return { ...prev, addressId: selected?.id ?? null, deliveryDate: keepDate };
       });
     },
-    [locale, cartEntries],
+    [locale, cartEntries, coupon],
   );
 
   useEffect(() => {
@@ -93,15 +93,29 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
       paymentMethod: state.paymentMethod,
       onAccount: state.onAccount,
       marketingConsent: state.marketingConsent,
+      couponCode: coupon,
     });
-    setBusy(false);
 
-    if (failure || !data) return setError(failure);
-    if (data.status === 'rejected') return setError(rejectionMessage(t, data.reason, data.detail));
-    // Sipariş kesinleşti: sunucudaki sepet boşaldı, ekrandaki sayaç da onu görmeli. Tazelemeden
-    // gidilirse müşteri onay sayfasında başlıkta hâlâ dolu bir sepet rozeti görüyordu.
-    reloadCart();
+    if (failure || !data) {
+      setBusy(false);
+      return setError(failure);
+    }
+    if (data.status === 'rejected') {
+      setBusy(false);
+      return setError(rejectionMessage(t, data.reason, data.detail));
+    }
+
+    /**
+     * **Önce GİT, sonra sepeti tazele.** Ters sırada yapılıyordu ve ekran gözümüzün önünde
+     * sıfırlanıyordu: `reloadCart` sunucudaki (artık boş) sepeti okuyor → `cartEntries` boşalıyor →
+     * `refresh` yeniden koşup kalemsiz bir anlık görüntü çekiyordu. Müşteri yönlendirme tamamlanana
+     * kadar kalemsiz bir özet ve 0,00 € toplam görüyordu (29.07 denetimi + kullanıcı bildirimi).
+     *
+     * `busy` de AÇIK bırakılır: yanıt döndükten sonra gezinme bitene kadar düğme yeniden
+     * etkinleşiyordu ve sabırsız ikinci tıklama gerçek bir İKİNCİ sipariş açabiliyordu.
+     */
     router.push(`/checkout/${data.orderId}`);
+    reloadCart();
   };
 
   /**
@@ -117,6 +131,7 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
       deliveryDate: state.deliveryDate,
       paymentMethod: 'online',
       marketingConsent: state.marketingConsent,
+      couponCode: coupon,
     });
     if (failure || !data) return { ok: false, error: failure ?? t.pay.error };
     if (data.status === 'rejected') return { ok: false, error: rejectionMessage(t, data.reason, data.detail) };

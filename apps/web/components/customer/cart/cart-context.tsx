@@ -178,9 +178,14 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   const load = useCallback(() => {
     const guest = readGuestCart();
     const guestSaved = readSaved();
-    // Kod depodan İLK okumada alınır; sonraki turlarda state'teki değer geçerlidir (müşteri
-    // az önce girmiş ya da kaldırmış olabilir).
+    /**
+     * Kod depodan İLK okumada alınır ve **state'e de yazılır**. Yazılmasaydı `sync` (adet değişimi)
+     * `coupon` state'ini `null` görüp sunucuya kodsuz gidiyordu: sayfayı yenileyen müşteri
+     * indirimini görüyor, sonra bir adet değiştirdiğinde indirim sessizce kayboluyordu (29.07
+     * denetimi). Değer aynıysa `setCoupon` çağrılmaz — aksi hâlde `load` kendini tetiklerdi.
+     */
     const code = coupon ?? readCoupon();
+    if (code !== coupon) setCoupon(code);
     setEntries(guest);
     setSavedEntries(guestSaved);
     setFailed(false);

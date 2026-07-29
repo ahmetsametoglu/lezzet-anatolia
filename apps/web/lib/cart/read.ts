@@ -9,7 +9,7 @@ import { getPackagesByIds } from '@/lib/storefront/packages';
 import type { StorefrontPackageDetail } from '@/lib/storefront/storefront-types';
 import { FREE_SHIPPING_THRESHOLD_DEFAULT, FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY } from '@/lib/settings-keys';
 import { resolveCartDiscount } from './discount';
-import { EMPTY_CART, cartKey, type CartDiscount, type CartEntry, type CartLine, type CartView } from './cart-types';
+import { EMPTY_CART, cartKey, discountAmountOf, type CartEntry, type CartLine, type CartView } from './cart-types';
 
 /**
  * Sepet okuması (08.4) — NİYETİ bugünkü görünüme çevirir.
@@ -147,7 +147,7 @@ export async function getCartView(
     subtotalCents,
     discount,
     // Sepetin ödenecek hâli — kargo HARİÇ (o adreste belli olur).
-    totalCents: Math.max(0, subtotalCents - appliedAmount(discount)),
+    totalCents: Math.max(0, subtotalCents - discountAmountOf(discount)),
     itemCount: lines.reduce((sum, l) => sum + l.qty, 0),
     hasBlocked: lines.some((l) => l.blocked),
     freeShippingCents,
@@ -171,15 +171,6 @@ function priceChangeOf(
   const previousCents = previous.get(cartKey(entry));
   if (!previousCents || currentCents <= previousCents) return {};
   return { priceChange: { previousCents } };
-}
-
-/**
- * Toplamdan düşen tutar. Reddedilen kuponda **kazanan indirim** düşer: kupon tutmadı diye müşteri
- * hak ettiği otomatik indirimi kaybetmez (`appliedInsteadCents`).
- */
-function appliedAmount(discount: CartDiscount): number {
-  if (discount.status === 'applied' || discount.status === 'automatic') return discount.amountCents;
-  return discount.status === 'rejected' ? discount.appliedInsteadCents : 0;
 }
 
 function meets(subtotalCents: number, minBasketCents: number) {
