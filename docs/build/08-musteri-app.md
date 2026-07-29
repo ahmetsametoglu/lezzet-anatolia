@@ -196,6 +196,12 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
     **Bilinçli eksikler `design/BACKLOG §1`'de:** "çok sevilenler" ızgarası (popülerlik sinyali yok — §1b'de neden anasayfanın `featured` seçkisinin oraya konmadığı yazılı), B2B sipariş şablonları (model yok; B2B bugün son-sipariş bloğunu görüyor), "Hazır paketleri gör" düğmesi (`05.5`; tasarımdaki yerinde ve pasif), kahraman görseli (künye yok; çerçeve tam boyutuyla duruyor ki fotoğraf gelince yerleşim kaymasın).
     **Maliyet notu:** `getEmptyCartContext` sepet DOLUYKEN de çalışır — sayfa boş olup olmadığını sunucuda bilemez (ziyaretçinin sepeti tarayıcıda). Ziyaretçide tek sorgu (kategoriler); sipariş geçmişi zinciri yalnız oturum varken kurulur. Tasarım boş ekranın tek adımda gelmesini istiyor, ikinci tura bırakılsa kahraman çizilip öneri sonradan patlardı.
     **Doğrulama:** `typecheck` · `lint` · `knip` · `docs:check` temiz. Görsel doğrulama kullanıcıda.
+  - **Durum (29.07 · kupon kutusu BAĞLANDI + özetteki para hatası):**
+    **Kupon kutusu çalışıyor.** Kutu çizilmişti, "Uygula" pasifti — ve arka uç ZATEN hazırdı: şema (0031), motor (`applyBestDiscount` · `checkCouponEligibility`) ve dört ret hâlini çözen sunucu kapısı (`lib/cart/discount.ts`) yerindeydi, `getCartView` `couponCode`'u çoktan alıyordu. Eksik olan tek şey ekranın kodu taşımasıydı. Ayrıntı ve kararlar `design/BACKLOG §1e`.
+    **Kod bir NİYETTİR** (`lib/cart/coupon-store.ts`): tarayıcıda yalnız "şu kodu denedim" durur, tutar ve indirim kimliği ASLA yazılmaz; kod değişince okuma yeniden koşar ve cevabı her seferinde sunucu verir. `cart` tablosuna kolon açılmadı — kod kalıcı veri değil.
+    **Sepet okuması `customerId` geçirmiyormuş:** kişisel kupon ve müşterinin genel oranı sepette görünmüyor, checkout'ta beliriyordu — aynı sepet iki ekranda iki farklı indirim gösteriyordu.
+    **Özetteki para hatası:** indirim satırı yoktu ve genel toplam `totalCents` yerine `subtotalCents` basıyordu; otomatik indirim inen sepette ekran indirimi hiç göstermeyip **indirimsiz toplamı** yazıyordu. KDV notu da toplamdan 12px uzaktı (tasarımda 8px), toplamın dipnotu olmaktan çıkıyordu.
+    **Doğrulama:** `typecheck` · `lint` · `knip` · `docs:check` temiz; `/tr/sepet`, `/fr/panier`, `/tr/odeme` 200. **Test için kupon gerekiyor:** seed'de kupon yok, `/operations/prices` ekranından açılabilir.
 
 ## Netleşecekler
 

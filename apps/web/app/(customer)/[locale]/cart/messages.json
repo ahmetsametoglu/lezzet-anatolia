@@ -41,7 +41,16 @@
       "title": "Kupon kodu",
       "placeholder": "Kodu girin",
       "apply": "Uygula",
-      "pending": "Kupon kodları yakında açılıyor."
+      "applied": "Uygulandı ✓",
+      "remove": "Kuponu kaldır",
+      "rejected": {
+        "invalid": "Bu kod geçerli değil.",
+        "expired": "Bu kuponun süresi dolmuş.",
+        "minBasket": "Bu kupon daha yüksek bir sepet tutarı istiyor.",
+        "firstOrderOnly": "Bu kupon yalnız ilk siparişte geçerli.",
+        "usedUp": "Bu kuponun kullanım hakkı dolmuş.",
+        "outranked": "Sepetinize zaten daha büyük bir indirim uygulandı."
+      }
     },
     "freeShipping": {
       "reached": "🎉 Ücretsiz kargo eşiğini geçtiniz",
@@ -97,9 +106,18 @@
     },
     "coupon": {
       "title": "Code promo",
-      "placeholder": "Saisir le code",
+      "placeholder": "Saisissez le code",
       "apply": "Appliquer",
-      "pending": "Les codes promo arrivent bientôt."
+      "applied": "Appliqué ✓",
+      "remove": "Retirer le code",
+      "rejected": {
+        "invalid": "Ce code n'est pas valable.",
+        "expired": "Ce code promo a expiré.",
+        "minBasket": "Ce code demande un panier plus élevé.",
+        "firstOrderOnly": "Ce code est réservé à la première commande.",
+        "usedUp": "Ce code a atteint sa limite d’utilisation.",
+        "outranked": "Une remise plus avantageuse est déjà appliquée à votre panier."
+      }
     },
     "freeShipping": {
       "reached": "🎉 Vous avez atteint la livraison offerte",
@@ -157,7 +175,16 @@
       "title": "Gutscheincode",
       "placeholder": "Code eingeben",
       "apply": "Einlösen",
-      "pending": "Gutscheincodes kommen bald."
+      "applied": "Eingelöst ✓",
+      "remove": "Code entfernen",
+      "rejected": {
+        "invalid": "Dieser Code ist ungültig.",
+        "expired": "Dieser Gutschein ist abgelaufen.",
+        "minBasket": "Dieser Gutschein erfordert einen höheren Warenkorbwert.",
+        "firstOrderOnly": "Dieser Gutschein gilt nur für die erste Bestellung.",
+        "usedUp": "Dieser Gutschein wurde bereits vollständig eingelöst.",
+        "outranked": "Auf Ihren Warenkorb wurde bereits ein größerer Rabatt angewendet."
+      }
     },
     "freeShipping": {
       "reached": "🎉 Sie haben die Grenze für kostenlosen Versand erreicht",

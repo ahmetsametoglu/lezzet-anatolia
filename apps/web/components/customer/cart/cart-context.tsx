@@ -6,6 +6,7 @@ import type { Locale } from '@lezzet/i18n';
 import { readCartAction, writeCartAction } from '@/lib/cart/actions';
 import { clearGuestCart, mergeEntry, readGuestCart, setEntryQty, writeGuestCart } from '@/lib/cart/cart-store';
 import { clearSaved, readSaved, writeSaved } from '@/lib/cart/saved-store';
+import { readCoupon, writeCoupon } from '@/lib/cart/coupon-store';
 import { EMPTY_CART, cartKey, entryOf, viewWithEntries, type CartEntry, type CartRef, type CartView } from '@/lib/cart/cart-types';
 import { CartUndo } from './cart-undo';
 
@@ -55,6 +56,11 @@ interface CartContextValue {
    * sayaç da onu görmeli. Yoksa müşteri sipariş verip sepetinde hâlâ kalem görüyordu.
    */
   reload: () => void;
+  /** Girilen kupon kodu (niyet). Sonucu `view.discount`tadır — ikisi karıştırılmamalı. */
+  coupon: string | null;
+  /** Kodu dener: yazar ve okumayı yeniden tetikler. Boş dize kodu KALDIRIR. */
+  applyCoupon: (code: string) => void;
+  clearCoupon: () => void;
   add: (entry: CartEntry) => void;
   /** Tekrar sipariş: birçok kalem TEK turda girer — tek tek eklemek N sunucu turu demekti. */
   addMany: (entries: readonly CartEntry[]) => void;
@@ -108,6 +114,12 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   /**
+   * Girilen kupon kodu. Sonucu (uygulandı / reddedildi / geçildi) BURADA tutulmaz — o `view.discount`
+   * ile sunucudan gelir. Burada yalnız niyet var; kodu değiştirmek okumayı yeniden tetikler
+   * (`load` bağımlılığı), yani ekran cevabı her zaman sunucudan alır.
+   */
+  const [coupon, setCoupon] = useState<string | null>(null);
+  /**
    * Sepet sunucuda mı yaşıyor. Sunucu söyler (`serverCart`) — istemci "kimin sepeti" sorusunu
    * kendi cevaplayamaz. `ref`, çünkü `sync` içinde OKUNUYOR ve state olsaydı her yazmada
    * yeniden kurulan bir bağımlılık zinciri doğardı.
@@ -132,7 +144,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         writeSaved(nextSaved);
       }
       const ticket = ++seq.current;
-      void writeCartAction(locale, next, nextSaved).then(({ data }) => {
+      void writeCartAction(locale, next, nextSaved, coupon).then(({ data }) => {
         // Bilet eskiyse kullanıcı bu arada bir şey daha yaptı: eski cevap YOK SAYILIR. Kilide gerek
         // bırakmayan şey bu — arayüz açık kalır, sonuncu yazma kazanır.
         if (ticket !== seq.current || !data) return;
@@ -143,7 +155,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         setSavedEntries(data.saved.lines.map(entryOf));
       });
     },
-    [locale],
+    [locale, coupon],
   );
 
   const closeUndo = useCallback(() => {
@@ -166,11 +178,14 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   const load = useCallback(() => {
     const guest = readGuestCart();
     const guestSaved = readSaved();
+    // Kod depodan İLK okumada alınır; sonraki turlarda state'teki değer geçerlidir (müşteri
+    // az önce girmiş ya da kaldırmış olabilir).
+    const code = coupon ?? readCoupon();
     setEntries(guest);
     setSavedEntries(guestSaved);
     setFailed(false);
     const ticket = ++seq.current;
-    void readCartAction(locale, guest, guestSaved)
+    void readCartAction(locale, guest, guestSaved, code)
       .then(({ data }) => {
         if (ticket !== seq.current) return;
         if (!data) return setFailed(true);
@@ -193,7 +208,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
       .finally(() => {
         if (ticket === seq.current) setReady(true);
       });
-  }, [locale]);
+  }, [locale, coupon]);
 
   useEffect(() => load(), [load]);
 
@@ -206,6 +221,18 @@ export function CartProvider({ locale, children }: CartProviderProps) {
       ready,
       failed,
       reload: load,
+      coupon,
+      // Kod DEĞİŞTİRİLİR, sonuç sorulmaz: state değişince `load` yeniden koşar ve cevabı sunucu
+      // verir. İstemcinin "bu kupon geçerli mi" diye bir görüşü yok.
+      applyCoupon: (code) => {
+        const next = code.trim().toUpperCase() || null;
+        writeCoupon(next);
+        setCoupon(next);
+      },
+      clearCoupon: () => {
+        writeCoupon(null);
+        setCoupon(null);
+      },
       add: (entry) => {
         closeUndo();
         sync(mergeEntry(entries, entry), savedEntries);
@@ -261,7 +288,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         sync(setEntryQty(entries, ref, qty), savedEntries);
       },
     }),
-    [displayView, view, savedView, ready, failed, load, entries, savedEntries, sync, closeUndo, undo],
+    [displayView, view, savedView, ready, failed, load, entries, savedEntries, sync, closeUndo, undo, coupon],
   );
 
   return (

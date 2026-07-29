@@ -57,6 +57,12 @@ export async function readCartAction(
   locale: string,
   entries: CartEntry[],
   saved: CartEntry[] = [],
+  /**
+   * Müşterinin girdiği kupon kodu — sepet kalemleri gibi bir NİYETTİR, tutar değil. İndirimin
+   * geçerli olup olmadığına, ne kadar indireceğine ve hatta kuponun kazanıp kazanmadığına sunucu
+   * karar verir (`resolveCartDiscount`); istemci yalnız "şu kodu denedim" der.
+   */
+  couponCode: string | null = null,
 ): Promise<ActionResult<CartPayload & { merged: boolean }>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
@@ -65,7 +71,9 @@ export async function readCartAction(
     // sessizce kayboluyordu — devralma FK ihlaliyle düşüyor, action `{data:null}` dönüyor, ekran
     // boş sepet çiziyordu (28.07).
     const customerId = await currentCustomerId();
-    if (!customerId) return { data: { ...(await resolveBoth(locale, entries, saved)), merged: false, serverCart: false }, error: null };
+    if (!customerId) {
+      return { data: { ...(await resolveBoth(locale, entries, saved, { couponCode })), merged: false, serverCart: false }, error: null };
+    }
 
     const cart = new CartService(serviceDb());
     const merged = entries.length > 0 || saved.length > 0;
@@ -82,12 +90,11 @@ export async function readCartAction(
     const stored = await cart.get(customerId);
     return {
       data: {
-        ...(await resolveBoth(
-          locale,
-          stored.items.map(toEntry),
-          stored.savedItems.map(toEntry),
-          storedPrices(stored.items),
-        )),
+        ...(await resolveBoth(locale, stored.items.map(toEntry), stored.savedItems.map(toEntry), {
+          previousPrices: storedPrices(stored.items),
+          customerId,
+          couponCode,
+        })),
         merged,
         serverCart: true,
       },
@@ -104,18 +111,27 @@ export async function readCartAction(
  * Tek uç olmasının sebebi: istemci zaten tam listeleri tutuyor. Ayrı uçlar, iki tarafın listelerinin
  * ayrışabildiği birden çok yol açardı; eşitleme tek yön bırakır.
  */
-export async function writeCartAction(locale: string, entries: CartEntry[], saved: CartEntry[] = []): Promise<ActionResult<CartPayload>> {
+export async function writeCartAction(
+  locale: string,
+  entries: CartEntry[],
+  saved: CartEntry[] = [],
+  couponCode: string | null = null,
+): Promise<ActionResult<CartPayload>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     const customerId = await currentCustomerId();
     // Ziyaretçide yazacak yer yok — listeler tarayıcıda kalır, burada yalnız çözülür.
-    if (!customerId) return { data: { ...(await resolveBoth(locale, entries, saved)), serverCart: false }, error: null };
+    if (!customerId) return { data: { ...(await resolveBoth(locale, entries, saved, { couponCode })), serverCart: false }, error: null };
 
     // Sunucuya yazılacak fiyat SUNUCUNUN çözdüğüdür; istemciden fiyat kabul edilmez.
     const cart = new CartService(serviceDb());
     // Saklanan fiyatlar YAZIMDAN ÖNCE okunur: yazım onları bugünkü değerle ezecek. Sonra okunsaydı
     // karşılaştırma her zaman "değişmedi" derdi.
-    const payload = await resolveBoth(locale, entries, saved, storedPrices((await cart.get(customerId)).items));
+    const payload = await resolveBoth(locale, entries, saved, {
+      previousPrices: storedPrices((await cart.get(customerId)).items),
+      customerId,
+      couponCode,
+    });
     await cart.replace(
       customerId,
       payload.view.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })),
@@ -136,10 +152,12 @@ async function resolveBoth(
   locale: 'tr' | 'fr' | 'de',
   entries: CartEntry[],
   saved: CartEntry[],
-  previousPrices?: ReadonlyMap<string, number>,
+  // `customerId` de buradan geçer: kişisel kupon ve müşterinin genel oranı onsuz görünmez —
+  // sepet checkout'tan farklı bir indirim gösterirdi.
+  opts: { previousPrices?: ReadonlyMap<string, number>; customerId?: string | null; couponCode?: string | null } = {},
 ): Promise<Omit<CartPayload, 'serverCart'>> {
   const [view, savedView] = await Promise.all([
-    getCartView(locale, entries, { previousPrices }),
+    getCartView(locale, entries, { previousPrices: opts.previousPrices, customerId: opts.customerId, couponCode: opts.couponCode }),
     // Sonraya kaydedilenlerde zam işareti gösterilmez: o liste bir satın alma niyeti değil, bir
     // hatırlatmadır — orada onay istenecek bir karar yok.
     getCartView(locale, saved),

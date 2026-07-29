@@ -22,7 +22,6 @@ değişecek yer parantezde.
 | --- | --- | --- |
 | **Sepet teslimat satırı** ("Teslimat: Ücretsiz" / "6,90 €") | çizili, **kodlanmadı** | ücret teslimat türüne, tür ADRESE bağlı → checkout adres adımı. Ücretsiz kargo ilerleme çubuğu bundan AYRI ve yapıldı (eşik `Setting`'ten, ilerleme ara toplamdan) |
 | **"Checkout'a geç" düğmesi** — girişli müşteri doğrudan, ziyaretçi önce hızlı doğrulamaya | çizili, tam görünür ve pasif | **ENGEL KALKTI (28.07):** `07.4`/`07.5` indi. Kapı hazır — `lib/order/checkout-session.ts` `createCheckoutSession` (rezervasyon → Stripe oturumu, TTL'li), webhook `api/webhooks/stripe`. Kalan iş yüzeyin: düğmeyi kapıya bağlamak + ziyaretçi doğrulama adımı |
-| **Sepet kupon kutusu** — kod alanı + "Uygula" + dört ret hâli (süresi dolmuş · geçersiz · alt sınır · otomatik indirim daha büyük) | `Musteri - Sepet.dc.html` → özetin altında; **kutu kodlandı, "Uygula" bağlanmadı** | kupon UYGULAMA akışı (`09.6` okuması + sepet kapısı). Şema ve motor hazır (`discount`/`discount_use`, 0031); **otomatik indirim zaten iniyor ve özette görünüyor** — eksik olan yalnız KODLA uygulama. Bu satır 29.07'ye kadar hiçbir envanterde yoktu: UI çizilmiş, kayıt düşülmemişti — `BEKLEYEN(...)` denetimi bu boşluk yüzünden kuruldu |
 | **Hediye kartı / hediye çeki** (bakiye taşıyan) | **tasarımda YOK, şemada YOK, kapsamda YOK** | kavramın kendisi kararlaştırılmadı. `order.is_gift_order` var ama o "siparişi hediye olarak gönder"dir — bakiye taşıyan bir enstrüman değil. İstenirse önce `architecture/BACKLOG` kapsamına girer (kupon `§15`'ten AYRI: kupon indirimdir, hediye kartı ön ödemedir ve muhasebede borç olarak durur) |
 | **"Fiyat değişti" bildirimi** — `DOMAIN §5`: fiyat arttıysa müşteriye açıkça söylenir ve onay istenir (kabul et / çıkar); düştüyse sessizce uygulanır | tasarımda yok (yalnız stok uyarısı çizili) | `CartItem.unitPrice` okuma tarafına bağlanmalı — alan yazılıyor, karşılaştırılmıyor |
 | **Boş sepet: "Bu hafta çok sevilenler"** — 4'lü ürün ızgarası (web) / 2'li (mobil), kart üstünde "Sepete ekle" | `Musteri - Sepet.dc.html` → `Bos Sepet Web/Mobil` | **popülerlik sinyali yok** — aşağıda §1b |
@@ -38,6 +37,31 @@ değişecek yer parantezde.
 | **Operasyon → Analitik "bölge dışı talep" listesi** | tasarımda anıldı | `postal_code_demand` doluyor; ekran operasyon yüzeyinin işi |
 | **Menü: Fırsatlar · Keşif · Professionnels** | K12'de çizili, bugün düz metin (Paketler bağlandı) | kendi sayfaları (`08.7`) |
 | **Menü: Hesabım** | K12'de tanımlı | `04-auth` |
+
+### 1e. Sepet kupon kutusu — KAPANDI (29.07)
+
+Kutu çizilmişti, "Uygula" bağlanmamıştı — ve bu satır **29.07'ye kadar hiçbir envanterde yoktu**:
+UI kodlandı, kayıt düşülmedi, hiçbir kontrol fark etmedi. `BEKLEYEN(<ref>)` denetimi (CLAUDE.md §5)
+tam bu boşluk yüzünden kuruldu.
+
+Kapanması küçük bir işti çünkü **arka uç zaten hazırdı**: `discount`/`discount_use` şeması (0031),
+motor (`applyBestDiscount` · `checkCouponEligibility`) ve sunucu kapısı (`lib/cart/discount.ts`,
+dört ret hâliyle birlikte) yerindeydi; hatta `getCartView` `couponCode`'u çoktan alıyordu. Eksik olan
+tek şey ekranın kodu taşımasıydı.
+
+- **Kod bir NİYETTİR** (`lib/cart/coupon-store.ts`), sepet kalemleriyle aynı katman: tarayıcıda
+  yalnız "şu kodu denedim" durur; geçerlilik, tutar ve kazanıp kazanmadığı her okumada sunucuda
+  yeniden çözülür. Tutar ya da indirim kimliği tarayıcıya YAZILMAZ. `cart` tablosuna kolon
+  açılmadı — kod kalıcı veri değil, sepet boşalınca anlamını yitiriyor.
+- **Kod değişince okuma yeniden koşar** (`load` bağımlılığı): istemcinin "bu kupon geçerli mi"
+  diye bir görüşü yok, cevabı her zaman sunucu verir.
+- **Aynı turda bulunan ikinci kusur:** sepet okuması `customerId` geçirmiyordu — kişisel kupon ve
+  müşterinin genel oranı sepette görünmüyor, checkout'ta beliriyordu. Aynı sepet iki ekranda iki
+  farklı indirim gösteriyordu.
+- **"Geçersiz" ile "kazanamadı" ayrı hâller:** kupon geçerli olup otomatik indirim daha büyük
+  olabilir (`outranked`) — o zaman terracotta ret değil, zeytin bilgi cümlesi çıkar ve sepete
+  kazanan indirim uygulanır. Sekiz sebep beş cümleye eşlenir: "pasif · başlamamış · bilinmeyen kod ·
+  senin değil" dördü de müşteri için "bu kod geçerli değil"dir (kişisel kuponun varlığı sızdırılmaz).
 
 ### 1a. Fiyat sıralaması — KAPANDI (28.07)
 
