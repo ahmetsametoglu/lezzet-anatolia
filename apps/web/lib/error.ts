@@ -1,3 +1,6 @@
+import 'server-only';
+import { captureError, SOURCES } from '@lezzet/observability';
+
 /**
  * Server Action hata normalizasyonu + sonuç sözleşmesi (referans deseni). Action'lar throw ETMEZ;
  * `{ data, error }` döner — UI hatayı bilinçli gösterir. `getErrorMessage` bilinen Error mesajını,
@@ -13,11 +16,20 @@
  * kaybolan bir arızadan ucuzdur. Kaydı burada tutmanın sebebi tek funnel olması — her `catch`'e
  * ayrı log yazılsaydı biri eksik kalırdı ve eksik kalan hep en çok gereken olurdu.
  *
- * Biçim projenin bugünkü uzlaşısı: `[etiket]` + hata (`lib/order/transition.ts`, `login/actions.ts`).
- * BEKLEYEN(18.5): yapılandırılmış JSON log + kritik hatada alarm — o geldiğinde bu satır ona bağlanır.
+ * **Gözlemlemeye bağlandı (18.5):** iz artık yapılandırılmış log'a VE `error_log` tablosuna gidiyor
+ * (`captureError` — önce stdout, sonra DB, asla fırlatmaz). Doğrulama hataları da yazılıyor ve bu
+ * listeyi boğmuyor, çünkü aynı parmak izli kayıtlar tek satırda gruplanıyor: bin "geçersiz dil" bir
+ * satır. Gruplama olmasaydı bu karar yanlış olurdu.
+ *
+ * `void` ile ateşlenir: bu fonksiyon SENKRON ve `catch` bloklarının içinde çağrılıyor — beklemek
+ * her action'ı hata kaydının hızına bağlardı.
+ *
+ * **`server-only`:** artık sunucu paketleri (`pino`, Supabase istemcisi) içeriyor. İşaret sınırı
+ * zorlar — bir istemci komponenti `getErrorMessage`'ı çağırmaya kalkarsa anlaşılır bir hata alır,
+ * paketleyiciden gelen anlaşılmaz bir hata değil. `ActionResult` tipi etkilenmez (tip import'ları silinir).
  */
 export function getErrorMessage(err: unknown): string {
-  console.error('[action]', err);
+  void captureError(err, { source: SOURCES.webAction });
   return err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu.';
 }
 

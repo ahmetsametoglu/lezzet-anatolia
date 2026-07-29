@@ -2,6 +2,7 @@ import { OrderService, serviceDb } from '@lezzet/database';
 import { canTransition, generateReferenceNo, producesReferenceNo } from '@lezzet/domain-core';
 import type { OrderStatus } from '@lezzet/types';
 import { notifyOrderStatus } from './notify';
+import { logger } from '@lezzet/observability';
 
 /**
  * Durum ilerletme kapısı (07.6) — **uygulama katmanı orkestrasyonu**.
@@ -66,7 +67,8 @@ export async function transitionOrder(input: TransitionInput): Promise<Transitio
   try {
     await notifyOrderStatus(order.id, input.to);
   } catch (err) {
-    console.error('[transitionOrder] bildirim gönderilemedi:', err);
+    // Bildirim yokluğu siparişi bozmaz (14.5) — ama sessizce kaybolmaz da.
+    logger.warn({ context: 'order/transition', orderId: order.id, err: err instanceof Error ? err.message : String(err) }, 'bildirim gönderilemedi');
   }
 
   return { status: 'ok', from: order.status, to: input.to, referenceNo: referenceNo ?? order.referenceNo };

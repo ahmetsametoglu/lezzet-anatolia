@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { Resend } from 'resend';
 import { brand } from '@lezzet/brand';
+import { logger } from '@lezzet/observability/logger';
 
 export interface SendEmailParams {
   to: string;
@@ -30,12 +31,12 @@ function getClient(): Resend | null {
 
 /**
  * React Email şablonunu Resend ile render edip gönderir. `RESEND_API_KEY` yoksa
- * (yerel geliştirme) mail atlanır ve `console.warn` düşülür — akış bloklanmaz.
+ * (yerel geliştirme) mail atlanır ve bir uyarı loglanır — akış bloklanmaz.
  */
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
   const client = getClient();
   if (!client) {
-    console.warn('[email] RESEND_API_KEY yok → mail atlandı:', { to: params.to, subject: params.subject });
+    logger.warn({ context: 'email/send', to: params.to, subject: params.subject }, 'RESEND_API_KEY yok → mail atlandı');
     return { data: null, error: null };
   }
 

@@ -18,3 +18,10 @@ dağıtımdan itibaren bu serbestlik biter.
 | 0029 | `0029_postal_code_demand.sql` | `postal_code_demand` — "nereye getirelim" sorusunun toplu sayacı (kod → talep adedi) + atomik artıran `record_postal_code_demand` RPC'si; ziyaretçi kimliği/IP/e-posta TUTULMAZ, tablo buna yer bırakmaz |
 | 0030 | `0030_zone_notice.sql` | `zone_notice` — "bölgeye gelince haber ver" kaydı (posta kodu + e-posta + izin, ziyaretçide hesapsız); `notified_at` ile **tek** hatırlatma sözü tutulur. 0029'un anonim sayacından ayrıdır ve birleştirilmez |
 | 0031 | `0031_discount.sql` | `discount` — kupon ve otomatik kampanya TEK varlıkta (ayrımları yalnız tetik); alanlar motorun `DiscountRule` sözleşmesiyle birebir, kısıtlar tutarsız kuralı DB'de reddeder (kodsuz kupon, hedefsiz kapsam, ters tarih, %100 üstü). `discount_use` kullanım KAYDI — sayaç tutulmaz, sayım ondan türetilir |
+| 0039 | `0039_error_log.sql` | `error_log` — sunucu tarafı hataların GRUPLANMIŞ kaydı (Sentry değil, kendi tablomuz) + atomik `capture_error` RPC'si (ekle-ya-da-say). Aynı parmak izli AKTİF hata tek satırda birikir; "çözüldü"den sonra tekrar gelen hata YENİ satır açar → regresyon görünür olur. Kısmi unique indeks `where resolved_at is null` bunu zorlar |
+| 0040 | `0040_system_health.sql` | `system_health_snapshot` — sunucu/süreç/servis/uygulama görüntüsü (backend cron `*/2 dk`); `status` eşiklerden TÜRETİLİR (`domain-core/observability`), `metrics` tek jsonb. Saklama 14 gün |
+
+> **Eksik satırlar (0032–0038):** bu tablo 0031'den sonra güncellenmemiş; aradaki migration'lar
+> (ticket, product_feedback, points, feedback_request…) kayda geçmedi. Dosyaların kendi başlıkları
+> tam, eksik olan yalnız bu özet. Yazan ajanlar tamamlar.
+

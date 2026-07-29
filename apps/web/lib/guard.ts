@@ -2,6 +2,7 @@ import 'server-only';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { DEV_ADMIN_PROFILE_ID, type UserRole } from '@lezzet/types';
 import { createClient } from './supabase/server';
+import { logger } from '@lezzet/observability';
 
 // Tek yetki kapısı (DOMAIN §2). Oturum çerezden okunur; rol RLS deny-by-default olduğu için
 // service-role ile `user_profiles.roles`'dan okunur. Guard'lar hata FIRLATIR; API/action için {ok}
@@ -38,7 +39,7 @@ function devBypassActive(): boolean {
   const active = process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS !== 'false';
   if (active && !bypassWarned) {
     bypassWarned = true;
-    console.warn('[guard] DEV auth bypass AKTİF — operasyon guard atlanıyor (kapatmak için DEV_AUTH_BYPASS=false).');
+    logger.warn({ context: 'guard' }, 'DEV auth bypass AKTİF — operasyon guard atlanıyor (kapatmak için DEV_AUTH_BYPASS=false)');
   }
   return active;
 }

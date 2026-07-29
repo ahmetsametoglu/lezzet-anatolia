@@ -32,3 +32,5 @@ export * from './ticket.schema';
 export * from './product-feedback.schema';
 export * from './points.schema';
 export * from './feedback-request.schema';
+export * from './error-log.schema';
+export * from './system-health.schema';

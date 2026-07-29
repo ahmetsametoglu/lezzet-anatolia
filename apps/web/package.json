@@ -22,6 +22,7 @@
     "@lezzet/helper": "workspace:*",
     "@lezzet/i18n": "workspace:*",
     "@lezzet/notify": "workspace:*",
+    "@lezzet/observability": "workspace:*",
     "@lezzet/storage": "workspace:*",
     "@lezzet/types": "workspace:*",
     "@stripe/react-stripe-js": "^6.8.0",

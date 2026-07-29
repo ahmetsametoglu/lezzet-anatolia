@@ -1,0 +1,75 @@
+// **ALT YOL İMPORT'U ŞART, barrel DEĞİL.** `@lezzet/database` kökü her servisi yeniden dışa açıyor ve
+// içlerinden biri (`email-verification.service`) `node:crypto` kullanıyor. Bu paket Next'in
+// `instrumentation.ts`'inden çağrılıyor, o dosya ise **edge çalışma zamanı için de derleniyor** —
+// orada `node:` şemalı modül yok ve derleme "UnhandledSchemeError: node:crypto" ile kırılıyor.
+// Yaşandı (30.07); referans projede aynı tuzak aynı gerekçeyle yazılıydı.
+import { serviceDb } from '@lezzet/database/client';
+import { ErrorLogService } from '@lezzet/database/services/error-log.service';
+import type { ErrorLogLevel } from '@lezzet/types';
+import { logger } from './logger';
+
+/**
+ * Hatayı iki yere yazar: **önce stdout, sonra veritabanı** (`OBSERVABILITY §2`).
+ *
+ * Sıra rastgele değil, iki gerekçesi var ve her biri tek başına yeterli:
+ *
+ * 1. **Hata kaydının kendisi çökerse orijinal hatayı maskelememeli.** Teşhis edilecek şeyin üstüne
+ *    teşhis edilemeyen bir şey koymak, elde hiç iz olmamasından kötüdür.
+ * 2. **Veritabanına erişilemezken de iz kalmalı.** DB'nin düştüğü an, iz tutmanın en gerekli olduğu
+ *    andır — o anda yalnız DB'ye yazan bir sistem sessiz kalır.
+ *
+ * Bu yüzden fonksiyon **asla fırlatmaz**. Çağıranın akışı hata kaydı yüzünden bozulamaz: mail
+ * gitmese sipariş geri alınmıyor (14.5 kuralı), hata kaydı düşse de öyle.
+ */
+
+export interface CaptureContext {
+  /** Nereden geldi: `SOURCES` sabitlerinden biri. */
+  source: string;
+  /** İstek yolu (varsa). */
+  path?: string | null;
+  /**
+   * Ek bağlam. **KİMLİK yazılır, İÇERİK yazılmaz** (`OBSERVABILITY §5`): `orderId` evet, müşterinin
+   * e-postası hayır. Teşhis için kimlik yeter — o kimlikle veritabanına bakılır; ham kopya taşımak
+   * süresi olan bir tabloya kişisel veri taşımak ve kaydı okunmaz kılmaktır.
+   */
+  context?: Record<string, unknown>;
+  level?: ErrorLogLevel;
+}
+
+/**
+ * Hatanın geldiği yer. Serbest metin yerine sabit: ekran bu değere göre süzüyor ve elle yazılan
+ * `'backend cron'` ile `'backend-cron'` iki ayrı kaynak gibi görünürdü.
+ */
+export const SOURCES = {
+  /** Next sunucu tarafı: RSC render, route handler (`instrumentation.ts` yakalar). */
+  webServer: 'web-server',
+  /** Server action'ın normalize edilmiş hatası (`lib/error.ts` funnel'ı). */
+  webAction: 'web-action',
+  /** Backend HTTP isteği. */
+  backendHttp: 'backend-http',
+  /** Zamanlanmış iş (`runJob` kabuğu). */
+  backendCron: 'backend-cron',
+  /** Sağlayıcı bildirimi (Stripe, 360dialog). */
+  webhook: 'webhook',
+} as const;
+
+export async function captureError(error: unknown, ctx: CaptureContext): Promise<void> {
+  const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? (error.stack ?? null) : null;
+
+  logger.error({ source: ctx.source, path: ctx.path, ctx: ctx.context, err: { message, stack } }, message);
+
+  try {
+    await new ErrorLogService(serviceDb()).capture({
+      source: ctx.source,
+      message,
+      stack,
+      level: ctx.level ?? 'error',
+      path: ctx.path ?? null,
+      context: ctx.context ?? {},
+    });
+  } catch {
+    // `capture` kendi içinde de yutuyor; buradaki ikinci kat istemci kurulumunun kendisi için
+    // (env eksikse `serviceDb()` fırlatır). Log ZATEN yazıldı.
+  }
+}

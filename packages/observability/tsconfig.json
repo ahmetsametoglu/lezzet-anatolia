@@ -1,0 +1,5 @@
+{
+  "extends": "@lezzet/typescript-config/node.json",
+  "comment": "Node hedefi: pino ve Supabase istemcisi sunucu tarafı. `database` ile AYNI taban — o paketin kaynaklarını import ettiği için ayrı bir katılık seviyesi, orada geçen kodu burada kıran yapay hatalar üretiyordu.",
+  "include": ["src"]
+}

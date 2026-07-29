@@ -222,6 +222,28 @@ süreç yöneticisinin işidir.**
 
 ---
 
+## 6b. Uygulamada netleşenler (kodlandı 30.07)
+
+Tasarım yazıldıktan sonra kodlarken beş şey somutlaştı; ikisi tasarımı değiştirdi:
+
+- **`packages/observability` — TEK paket, iki değil.** Referans projede web ve backend kendi `pino`
+  yapılandırmasını kuruyor; burada duplication yasak (CLAUDE.md §1). Paket `logger` + `captureError`
+  + `SOURCES` taşır.
+- **Alt yol dışa açımı: `@lezzet/observability/logger`.** Kök giriş `captureError`'ı da veriyor ve o
+  `@lezzet/database`'e bağlanıyor. `packages/email` gibi yaprak paketlerin veritabanıyla işi yok —
+  onlar yalnız logger alt yolunu çeker (bağımlılık grafiği **import'ları** izler, `package.json`'u değil).
+- **Eşik hesabı `domain-core`'a gitti** (`observability/health-status`), toplama işi `apps/backend`'de
+  kaldı. Ayrım STACK §4: "disk %84 uyarı mı" saf bir yüklemdir ve testlenir; `df`/`pm2` okumak I/O'dur
+  ve testlenemez. Tek dosyada yaşasalardı eşiği sınamak için sunucu taklidi kurmak gerekirdi.
+- **RLS politikası YAZILMADI** — tablolar `enable row level security` + politika yok (deny-by-default),
+  `job_run`/`webhook_event` ile aynı desen. Referans projede admin `SELECT` politikası var ama oradaki
+  `is_admin()` yardımcısının burada karşılığı yok ve RLS kapsamı hâlâ açık karar (18.1). Okuma
+  operasyon sayfasında `requireAdmin` kapısından geçecek.
+- **Normalize kuralında bir hata testle bulundu:** parmak izi `\b\d{4,}\b` kullanıyordu ve
+  *"timeout after 30000ms"* gibi **birime yapışık** sayıları sabitlemiyordu — rakam ile harf arasında
+  kelime sınırı oluşmuyor. Her zaman aşımı kendi satırını açardı, yani gruplamanın en çok gerektiği
+  yerde çalışmıyordu. Son sınır kaldırıldı (`\b\d{4,}`).
+
 ## 7. Kararlar özeti
 
 1. Üç katman birlikte kurulur, kademeli değil (kullanıcı kararı 29.07): yalnız logger yazmak, hatayı

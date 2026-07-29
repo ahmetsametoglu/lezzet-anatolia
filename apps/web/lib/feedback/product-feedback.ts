@@ -22,6 +22,7 @@ import {
 } from '@lezzet/domain-core';
 import type { FeedbackContext, FeedbackVote, KeysetCursor, Page, PreferredLanguage, ProductFeedback, ReviewStatus } from '@lezzet/types';
 import { awardFeedbackPoints } from './points';
+import { logger } from '@lezzet/observability';
 
 /**
  * Ürün geri bildirimi kapıları (17.1, 17.3) — motor karar verir, servisler satır getirir, burası
@@ -374,7 +375,7 @@ export async function listCandidateDemand(limit = 20): Promise<CandidateDemandRo
   const rows = await new ProductFeedbackService(db).listCandidateVotes(CANDIDATE_SAMPLE_SIZE);
   if (rows.length === 0) return [];
   if (rows.length === CANDIDATE_SAMPLE_SIZE) {
-    console.warn(`[aday panosu] örneklem tavana dayandı (${CANDIDATE_SAMPLE_SIZE}); sıralama en yeni kaydırmalara göre.`);
+    logger.warn({ context: 'feedback/candidateBoard', sampleSize: CANDIDATE_SAMPLE_SIZE }, 'örneklem tavana dayandı; sıralama en yeni kaydırmalara göre');
   }
 
   // Kaydıranın deseni: kimlik başına beğeni/geçme sayıları. Kimliksiz kaydırmalar tek bir havuzda

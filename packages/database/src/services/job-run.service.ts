@@ -24,4 +24,19 @@ export class JobRunService extends BaseDbService<JobRun, JobRunInsert, JobRunUpd
   async findByName(name: string): Promise<JobRun | null> {
     return this.getOneBy({ name });
   }
+
+  /**
+   * Son turu HATALI olan ve o turu verilen andan sonra koşan işlerin sayısı — sağlık görüntüsünün
+   * "son bir saatte düşen iş" alanı (18.5).
+   *
+   * Tarihçe tutulmadığı için bu "kaç tur düştü" değil, **"şu an hatalı duran kaç iş var"**. Soru
+   * yine yanıtlanıyor: bir şey düşmüş mü. Zaman koşulu şart — aylar önce düşüp bir daha koşmamış bir
+   * iş, bugünün sağlığı hakkında bir şey söylemez.
+   */
+  async countFailedSince(since: string): Promise<number> {
+    return this.count(undefined, {
+      isNotNullFields: ['lastError'],
+      rangeFilters: [{ field: 'lastRunAt', operator: 'gte', value: since }],
+    });
+  }
 }

@@ -5,6 +5,7 @@ import { normalizeEmail } from '@lezzet/helper';
 import { brand } from '@lezzet/brand';
 import type { Locale } from '@lezzet/i18n';
 import { createServiceRoleClient, EmailVerificationService, UserProfileService } from '@lezzet/database';
+import { logger } from '@lezzet/observability';
 import { OtpCodeEmail, otpSubject, sendEmail } from '@lezzet/email';
 import { createClient } from '@/lib/supabase/server';
 import { resolvePostLoginRedirect } from '@/lib/auth/redirect';
@@ -33,7 +34,8 @@ export async function sendEmailOtp(emailRaw: string): Promise<SendResult> {
     react: OtpCodeEmail({ code: requested.code, locale, brandName: brand.name }),
   });
   if (mail.error) {
-    console.error('[sendEmailOtp] mail gönderilemedi:', mail.error);
+    // Kod ASLA loglanmaz — kaydı okuyan biri o kodla giriş yapabilirdi.
+    logger.error({ context: 'auth/sendEmailOtp', err: mail.error }, 'OTP maili gönderilemedi');
     return { ok: false, error: authErrorMessage('send_failed', locale) };
   }
   return { ok: true };
@@ -72,14 +74,15 @@ export async function verifyEmailOtp(emailRaw: string, token: string, next?: str
   // Oturum aç: generateLink kullanıcı yoksa yaratır (mailsiz), token_hash'i SSR client tüketir → cookie.
   const { data: link, error: linkErr } = await admin.auth.admin.generateLink({ type: 'magiclink', email });
   if (linkErr || !link.properties?.hashed_token || !link.user) {
-    console.error('[verifyEmailOtp] generateLink hatası:', linkErr);
+    // `linkErr` null olabilir: bağlantı geldi ama jeton/kullanıcı eksik olan hâl de buraya düşer.
+    logger.error({ context: 'auth/verifyEmailOtp', err: linkErr?.message ?? 'jeton ya da kullanıcı boş' }, 'generateLink başarısız');
     return { ok: false, error: authErrorMessage('send_failed', locale) };
   }
 
   const supabase = await createClient();
   const { error: sessionErr } = await supabase.auth.verifyOtp({ token_hash: link.properties.hashed_token, type: 'email' });
   if (sessionErr) {
-    console.error('[verifyEmailOtp] verifyOtp hatası:', sessionErr);
+    logger.error({ context: 'auth/verifyEmailOtp', err: sessionErr.message }, 'oturum açılamadı');
     return { ok: false, error: authErrorMessage('send_failed', locale) };
   }
 
