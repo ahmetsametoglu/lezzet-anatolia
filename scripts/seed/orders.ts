@@ -3,7 +3,9 @@ import {
   ReservationService, StockService,
 } from '@lezzet/database';
 import { derivePaymentStatusForOrder, generateReferenceNo } from '@lezzet/domain-core';
+import { distributeDiscount } from '@lezzet/helper';
 import type { OrderStatus } from '@lezzet/types';
+import type { Kuponlar } from './discount';
 import { an, euro, gun, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
 
 // ── Sepet (07) ───────────────────────────────────────────────────────────────────────────────────
@@ -71,7 +73,7 @@ interface SiparisKalem {
 /** Tam yolun durakları — sırayla yürünür; hedef nerede ise orada durulur. */
 const TAM_YOL: OrderStatus[] = ['confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'completed'];
 
-export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRef[]): Promise<void> {
+export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRef[], kuponlar: Kuponlar): Promise<void> {
   if (await tabloDolu(db, 'order')) {
     console.log('▸ siparişler zaten dolu — atlandı');
     return;
@@ -157,6 +159,12 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
     hediye?: boolean;
     /** Dış muhasebeden dönmüş resmî fatura numarası (12.7 eşleştirme kuyruğu boşalmış satır). */
     faturaNo?: string;
+    /** Uygulanan kupon kodu — indirim siparişe yazılır, kullanım kaydı `discount_use`'a düşer. */
+    kupon?: string;
+    /** Kuponun bu sepette İNDİRDİĞİ tutar (motor hesaplar; seed geçmişi kurduğu için verili). */
+    kuponTutari?: number;
+    /** Teslim gününü bugüne göre kaydır — kurye gün kapanışı ancak farklı günlerle denenebilir. */
+    teslimGunu?: number;
     etiket: string;
   }): Promise<string | null> {
     const customerId = kisiler.get(opts.musteri);
@@ -165,6 +173,26 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
     const adres = await varsayilanAdres(customerId);
     const deliveryType = opts.deliveryType ?? 'route';
     const zone = deliveryType === 'route' ? zones.find((z) => adres && z.postalCodes.includes(adres.postalCode)) : undefined;
+    // Teslim günü siparişin yaşıyla TUTARLI olmalı: 45 gün önce açılmış bir siparişin teslimatı iki
+    // gün sonrasına düşemez. Geçmiş günler ayrıca kurye gün kapanışının zeminidir — hepsi aynı güne
+    // yığılırsa tek bir kapanış satırı çıkar ve mutabakat ekranı tek satırla denenir.
+    const teslimKaydirma = opts.teslimGunu ?? (opts.yasi ? -opts.yasi + 1 : 2);
+    const indirim = opts.kupon ? (kuponlar.get(opts.kupon) ?? null) : null;
+    const indirimTutari = indirim ? (opts.kuponTutari ?? 0) : 0;
+    // KAPI ÖNÜ satışında teslimat YOKTUR: müşteri malı elden aldı. Teslim günü ve kurye yazmak,
+    // o satışı kuryenin gün kapanışına sokar (`courier_day_collection` gün + kurye ile gruplar) ve
+    // kuryeden hiç taşımadığı bir paranın hesabı sorulur.
+    const kapiOnu = opts.kaynak === 'door';
+
+    // İNDİRİMİN KALEM PAYI (07.4 / d931a0e ile aynı kural). Yalnız başlığa yazmak yetmez: ödeme
+    // motoru "müşteri ne kadar borçlu" sorusunu kalemlerden topluyor ve payı 0 gördüğü sürece
+    // indirimi ödenmemiş bakiye sayıyor. Seed bunu atlayınca her `db:reset`, tamamı ödenmiş ama
+    // `payment_status='partial'` görünen siparişler üretiyordu — ve o siparişlerin maili müşteriye
+    // "kapıda şu kadar ödenecek" diyordu.
+    const paylar = distributeDiscount(
+      opts.kalemler.map((k) => Math.round(k.unitPrice * 100) * k.qty),
+      Math.round(indirimTutari * 100),
+    );
 
     const { order, items } = await orders.create(
       {
@@ -172,19 +200,33 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
         channel: opts.channel,
         orderSource: opts.kaynak ?? 'web',
         deliveryType,
-        deliveryZoneId: zone?.id ?? null,
-        deliveryDate: deliveryType === 'route' ? gun(2) : null,
+        deliveryZoneId: kapiOnu ? null : (zone?.id ?? null),
+        deliveryDate: deliveryType === 'route' && !kapiOnu ? gun(teslimKaydirma) : null,
+        discountId: indirim,
+        discountAmount: indirimTutari,
         addressId: adres?.id ?? null,
         addressSnapshot: adres ? { line1: adres.line1, postalCode: adres.postalCode, city: adres.city, country: adres.country } : null,
-        courierId: ['out_for_delivery', 'delivered', 'completed', 'returned'].includes(opts.hedef) ? kurye : null,
+        courierId: !kapiOnu && ['out_for_delivery', 'delivered', 'completed', 'returned'].includes(opts.hedef) ? kurye : null,
         onAccount: opts.onAccount ?? false,
         paymentMethod: opts.paymentMethod ?? null,
         isGiftOrder: opts.hediye ?? false,
         shippingFee: opts.kargo ?? 0,
-        total: toplam(opts.kalemler, opts.kargo ?? 0),
+        total: euro(toplam(opts.kalemler, opts.kargo ?? 0) - indirimTutari),
       },
-      opts.kalemler,
+      opts.kalemler.map((k, i) => ({ ...k, lineDiscountAmount: (paylar[i] ?? 0) / 100 })),
     );
+
+    // Kullanım KAYDI — sayaç değil (0031): "bu kupon kaç kez kullanıldı" bu satırlardan türetilir.
+    // Kaydı yazmadan yalnız siparişe indirim yazmak, kuponu sonsuz haklı gösterirdi.
+    if (indirim) {
+      const { error } = await db.from('discount_use').insert({
+        discount_id: indirim,
+        customer_id: customerId,
+        order_id: order.id,
+        amount: indirimTutari,
+      });
+      if (error) throw error;
+    }
 
     // Yaşlandırma: vade gecikmesi ve "eski sipariş" ancak geçmiş tarihli kayıtta görünür.
     if (opts.yasi) await orders.update({ id: order.id, createdAt: an(-opts.yasi) });
@@ -313,7 +355,89 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
   await siparis({ musteri: 'b2bBekleyen', kalemler: [kalem(22, 4)], hedef: 'confirmed', channel: 'b2c', kaynak: 'whatsapp', paymentMethod: 'cash', tahsilat: 0, etiket: 'WhatsApp siparişi' });
   await siparis({ musteri: 'b2cAlman', kalemler: [kalem(23, 3)], hedef: 'preparing', channel: 'b2c', kaynak: 'manual', deliveryType: 'shipping', kargo: 7.9, paymentMethod: 'bank_transfer', etiket: 'Telefondan elle girilen sipariş' });
 
+  // — KUPONLU siparişler (0031): indirim siparişe yazılır, kullanım kaydı `discount_use`'a düşer.
+  // Kuponun "kaç kez kullanıldı / hakkı kaldı mı" hâli ancak GERÇEK kullanım satırlarıyla görünür.
+  const kuponluKalemler = [kalem(25, 3), kalem(26, 2)];
+  await siparis({
+    musteri: 'b2cSadik', kalemler: kuponluKalemler, hedef: 'completed', channel: 'b2c', paymentMethod: 'online',
+    kupon: 'HOSGELDIN10', kuponTutari: euro(toplam(kuponluKalemler) * 0.1),
+    tahsilat: euro(toplam(kuponluKalemler) * 0.9), yasi: 9, etiket: 'Kuponlu — %10 sepet indirimi',
+  });
+  // TEK HAKLI kuponu tüketen sipariş: bundan sonra aynı kod "hakkınız kalmadı" demeli.
+  await siparis({
+    musteri: 'b2cAlman', kalemler: [kalem(27, 2)], hedef: 'delivered', channel: 'b2c', paymentMethod: 'card',
+    kupon: 'TEKSEFER', kuponTutari: 8, tahsilat: 0, teslimGunu: -1, etiket: 'Kuponlu — TEK HAKLI kupon tükendi',
+  });
+  // Kişiye özel kupon (puan çevriminden doğanların elle kurulmuş kardeşi).
+  await siparis({
+    musteri: 'b2cSadik', kalemler: [kalem(28, 2)], hedef: 'confirmed', channel: 'b2c', paymentMethod: 'online',
+    kupon: 'OZUR10', kuponTutari: 10, tahsilat: 0, etiket: 'Kuponlu — KİŞİYE ÖZEL kupon',
+  });
+
+  // — KISMİ İADE ve EKSİK TESLİM (0026 · 07.8/07.9) ─────────────────────────────────────────────
+  // `fulfilled_qty` her siparişte sipariş adedine eşitse, "eksik geldi / geri döndü" ekranları hiç
+  // denenemez. Üç akıbetin üçü de kurulur, çünkü üçü BAŞKA şeyler yapar:
+  //   · restock  → mal stoğa döner (teslim SONRASI iade)
+  //   · discard  → mal yok sayılır, hasar olarak düşülür (teslim ÖNCESİ eksik/hasar)
+  //   · goodwill → mal geri istenmez, kalem yalnız işaretlenir (jest)
+  /** Siparişin ilk kalemini kısmen karşılanmış hâle getirir. */
+  async function kalemDuzelt(
+    orderId: string | null,
+    disposition: 'restock' | 'discard' | 'goodwill',
+    eksik: number,
+    note: string,
+  ): Promise<void> {
+    if (!orderId) return;
+    const bulunan = await orders.getWithItems(orderId);
+    const kalemi = bulunan?.items[0];
+    if (!kalemi) return;
+    const sonuc = await orders.adjustFulfillment(
+      orderId,
+      // `goodwill` miktarı DEĞİŞTİRMEZ — mal müşteride kalır, yalnız akıbeti işaretlenir.
+      [{
+        orderItemId: kalemi.id,
+        fulfilledQty: disposition === 'goodwill' ? kalemi.fulfilledQty : Math.max(0, kalemi.fulfilledQty - eksik),
+        returnDisposition: disposition,
+        note,
+      }],
+      depocu,
+    );
+    // Kalem düzeltmesi PARAYI değiştirir: karşılanmayan kalem borcu düşürür, teslim sonrası iade
+    // alacak doğurur. Durum motordan yeniden sorulmazsa sipariş "ödendi" görünmeye devam eder.
+    await odemeDurumuTazele(orderId);
+    console.log(`  ✓ kalem düzeltmesi (${disposition}) · ${sonuc.ok ? `stoğa ${sonuc.restockedQty} · imha ${sonuc.discardedQty} · bırakılan ${sonuc.releasedQty}` : sonuc.reason}`);
+  }
+
+  const iadeli = await siparis({
+    musteri: 'b2cSadik', kalemler: [kalem(29, 4), kalem(30, 2)], hedef: 'delivered', channel: 'b2c',
+    paymentMethod: 'cash', tahsilat: 0, teslimGunu: -2, etiket: 'Teslim edildi — bir kalemi geri gelecek',
+  });
+  await kalemDuzelt(iadeli, 'restock', 1, 'Müşteri bir kutuyu iade etti — ambalaj açılmamış, stoğa döndü.');
+
+  const eksikCikan = await siparis({
+    musteri: 'b2bOnayli', kalemler: [kalem(31, 6), kalem(32, 4)], hedef: 'ready', channel: 'b2b',
+    onAccount: true, etiket: 'Hazır — bir kalem EKSİK çıktı (hazırlıkta hasar)',
+  });
+  await kalemDuzelt(eksikCikan, 'discard', 2, 'Hazırlıkta iki kutunun ambalajı yırtıldı — sevk edilemedi.');
+
+  const jest = await siparis({
+    musteri: 'b2cKapaliKapida', kalemler: [kalem(33, 2)], hedef: 'completed', channel: 'b2c',
+    paymentMethod: 'cash', tahsilat: toplam([kalem(33, 2)]), yasi: 4, etiket: 'Kapandı — şikâyete jest yapıldı',
+  });
+  await kalemDuzelt(jest, 'goodwill', 0, 'Müşteri memnun kalmadı; mal geri istenmedi, bedeli iade edildi.');
+
+  // — KURYE GÜNÜ: kapanış mutabakatı (0032) ancak AYNI GÜNE, AYNI KURYEYE düşen kapıda ödemeli
+  // siparişler varsa denenebilir. Aşağıdaki üç sipariş dünün gününü doldurur; biri kart, ikisi nakit.
+  await siparis({ musteri: 'b2cSadik', kalemler: [kalem(34, 2)], hedef: 'completed', channel: 'b2c', paymentMethod: 'cash', tahsilat: toplam([kalem(34, 2)]), teslimGunu: -1, yasi: 3, etiket: 'Kurye günü (dün) — nakit tahsil' });
+  await siparis({ musteri: 'b2bOnayli', kalemler: [kalem(35, 5)], hedef: 'completed', channel: 'b2b', paymentMethod: 'card', tahsilat: toplam([kalem(35, 5)]), teslimGunu: -1, yasi: 3, etiket: 'Kurye günü (dün) — kart tahsil' });
+  // ÇEK: kapanış ekranının üçüncü sütunu (nakit · kart · çek) ancak çekle ödenen bir teslimat varsa dolar.
+  await siparis({ musteri: 'b2bBekleyen', kalemler: [kalem(38, 4)], hedef: 'completed', channel: 'b2b', paymentMethod: 'cheque', tahsilat: toplam([kalem(38, 4)]), teslimGunu: -1, yasi: 3, etiket: 'Kurye günü (dün) — ÇEK tahsil' });
+  // Aynı güne düşen ama SONUÇLANMAMIŞ sipariş: kapanışın "devreden" listesi boş kalmasın.
+  await siparis({ musteri: 'b2cKapaliKapida', kalemler: [kalem(36, 1)], hedef: 'out_for_delivery', channel: 'b2c', paymentMethod: 'cash', tahsilat: 0, teslimGunu: -1, etiket: 'Kurye günü (dün) — DEVREDEN (ulaşılamadı)' });
+  // Bir gün öncesi: kapanışı yapılmamış İKİNCİ gün — "açık gün" uyarısı görünsün.
+  await siparis({ musteri: 'b2cSadik', kalemler: [kalem(37, 3)], hedef: 'completed', channel: 'b2c', paymentMethod: 'cash', tahsilat: toplam([kalem(37, 3)]), teslimGunu: -2, yasi: 4, etiket: 'Kurye günü (2 gün önce) — kapanış BEKLİYOR' });
+
   const { count } = await db.from('order').select('*', { count: 'exact', head: true });
-  console.log(`✓ sipariş: ${count ?? 0} kayıt (9 durumun hepsi · 4 kaynak · tam yol + hızlı satış)`);
+  console.log(`✓ sipariş: ${count ?? 0} kayıt (9 durumun hepsi · 4 kaynak · kuponlu · kısmi iade · kurye günleri)`);
 }
 

@@ -62,6 +62,11 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
   - *Bitti:* script ile atanan ilk admin `requireAdmin`'den geçiyor; rol alınan kullanıcı geçemiyor
   - **Durum:** servis (`StaffRoleService.assign/remove/getRoles/hasRole`) + seed script (`scripts/set-role.ts` → `pnpm set-role <email> <rol>`) yazıldı ve canlı doğrulandı (atanan admin guard'dan geçer, rol alınınca geçemez). **Admin assign/remove Server Action'ı, çağıranı olan ayar ekranıyla birlikte 09'da yazılır** (şimdi çağıransız yazılırsa ölü kod).
   - **Yerelde artık `set-role` ZORUNLU (27.07):** seed dev bypass kimliğiyle bir admin profili açtığı için 0002'nin "ilk giriş yapan admin olur" bootstrap'ı tetiklenmez — kendi hesabınız `customer` açılır, `pnpm set-role <e-posta> admin` ile yükseltilir. Üretimde bootstrap olduğu gibi (seed atılmıyor). Ayrıntı: `build/02-database.md` (02.7).
+- [ ] (04.9) **`preferred_language` kayıt anında yazılır** — bugün hiç yazılmıyor, herkes `'fr'` varsayılanında kalıyor
+  - *Bitti:* Türkçe siteden kaydolan müşterinin profilinde `tr` yazılı; ona giden mail Türkçe çıkıyor
+  - **Neden açık (29.07, gerçek olayla bulundu):** müşteriye giden mailin dili `customer.preferred_language`'dan okunuyor (`lib/order/notification-data.ts`) ve o kolonun **DB varsayılanı `'fr'`**. Kayıt/OTP/OAuth akışlarının hiçbiri onu yazmıyor — arandı, yalnız hesap sayfası OKUYOR. Sonuç: `/tr` ya da `/de` yüzeyinden sipariş veren müşteri de **Fransızca** mail alıyor.
+  - **Bilgi elimizde:** sipariş verilen dil URL segmentinde (`routing.ts` locale). Yazılması gereken tek şey, bul-veya-oluştur anında (04.5/04.6) aktif locale'i profile geçirmek. Sonradan hesap sayfasından değiştirilebilir olması yeterli — dil bir tercihtir, her siparişte yeniden sorulmaz.
+  - **Şablon tarafı HAZIR** (kontrol edildi 29.07): sipariş mailleri (6), OTP maili ve talep mailleri (14.7) üçü de üç dilde (`tr`/`fr`/`de`) metin tablosu taşıyor. Eksik olan tek şey, hangi dilin seçileceğini söyleyen veri.
 
 ## Netleşecekler
 

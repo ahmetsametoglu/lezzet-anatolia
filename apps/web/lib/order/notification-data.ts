@@ -7,7 +7,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { derivePaymentStatusForOrder } from '@lezzet/domain-core';
+import { derivePaymentStatusForOrder, isFulfillmentSettled } from '@lezzet/domain-core';
 import type { NotifyEventName, NotifyRecipient } from '@lezzet/notify';
 import type { Order, OrderItem, OrderNotification, NotificationStep, PreferredLanguage } from '@lezzet/types';
 import { localizedUrl } from '../notify';
@@ -64,7 +64,10 @@ export async function buildOrderNotification(
   const customer = await new UserProfileService(db).getById(order.customerId);
   const locale: PreferredLanguage = customer?.preferredLanguage ?? 'fr';
 
-  const [lines, steps] = await Promise.all([buildLines(db, items, locale), buildSteps(db, orderId, event)]);
+  // Aynı ayrım hem kalem satırlarını hem para türetimini yönetir — iki yerde farklı okunursa
+  // mailin listesi ile toplamı çelişir.
+  const settled = isFulfillmentSettled(order.status, items);
+  const [lines, steps] = await Promise.all([buildLines(db, items, locale, settled), buildSteps(db, orderId, event)]);
 
   const derivation = derivePaymentStatusForOrder(order, items, {
     collected: order.amountCollected,
@@ -114,8 +117,19 @@ export async function buildOrderNotification(
 /**
  * Kalem satırları. Ad üründen gelir (varyantın kendi adı yoktur), paket kaleminde paket adından.
  * Eksik karşılanan kalemde tasarımın kuralı uygulanır: **sebep yazılmaz**, yalnız miktar + para.
+ *
+ * **Ölçü, hazırlık kesinleşmişse karşılanan adet; kesinleşmemişse SİPARİŞ EDİLEN adettir**
+ * (`isFulfillmentSettled` — motorun zaten bildiği ayrım). Bu ayrım olmadan onaylanmış bir sipariş
+ * maili her kalemi "0 gönderildi, tamamı iade edilecek" diye anlatıyordu: `fulfilled_qty` o anda
+ * 0'dır ama bu "eksik gitti" değil, "daha hazırlanmadı" demektir. Müşteri, siparişini verir vermez
+ * hepsinin iptal edildiğini sanıyordu.
  */
-async function buildLines(db: ReturnType<typeof serviceDb>, items: readonly OrderItem[], locale: PreferredLanguage) {
+async function buildLines(
+  db: ReturnType<typeof serviceDb>,
+  items: readonly OrderItem[],
+  locale: PreferredLanguage,
+  fulfillmentSettled: boolean,
+) {
   const variants = await new ProductVariantService(db).listByIds(items.map((item) => item.variantId));
   const products = await new ProductService(db).listByIds([...new Set(variants.map((variant) => variant.productId))]);
   const bundleIds = [...new Set(items.map((item) => item.bundleId).filter((id): id is string => Boolean(id)))];
@@ -130,13 +144,15 @@ async function buildLines(db: ReturnType<typeof serviceDb>, items: readonly Orde
     const bundle = item.bundleId ? bundleOf.get(item.bundleId) : null;
     const name = bundle?.name?.[locale] ?? (variant ? productOf.get(variant.productId)?.name?.[locale] : null) ?? '—';
     const unit = formatPrice(Math.round(item.unitPrice * 100), locale);
-    const missing = item.qty - item.fulfilledQty;
+    const shown = fulfillmentSettled ? item.fulfilledQty : item.qty;
+    // Eksiklik ancak hazırlık kesinleştiyse BİLİNİR; öncesinde ortada bir fark yoktur.
+    const missing = fulfillmentSettled ? item.qty - item.fulfilledQty : 0;
 
     return {
       name,
       meta: `${item.qty} × ${unit}`,
-      qty: item.fulfilledQty,
-      amount: formatPrice(Math.round(item.unitPrice * item.fulfilledQty * 100), locale),
+      qty: shown,
+      amount: formatPrice(Math.round(item.unitPrice * shown * 100), locale),
       shortfall:
         missing > 0
           ? SHORTFALL[locale](item.qty, item.fulfilledQty, formatPrice(Math.round(item.unitPrice * missing * 100), locale))

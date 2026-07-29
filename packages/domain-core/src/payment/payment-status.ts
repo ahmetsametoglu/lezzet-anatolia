@@ -49,6 +49,19 @@ export interface PaymentDerivationInput {
    * görünüyordu. Varsayılan `true` — çağıran durumu bilmiyorsa bugünkü davranış sürer.
    */
   fulfillmentSettled?: boolean;
+  /**
+   * Siparişin ANLAŞILAN toplamı (cent) — indirim düşülmüş, kargo eklenmiş hâli.
+   *
+   * **Hazırlık kesinleşmeden beklenen tutar budur ve kalemlerden yeniden hesaplanmaz.** Sebebi bir
+   * kolaylık değil, yaşanmış bir hata: sepet indirimi kalem paylarına yazılmadığında (bir yol onu
+   * unutabilir, seed unutuyordu) kalemlerden toplanan tutar indirim kadar YÜKSEK çıkıyor ve tamamı
+   * ödenmiş bir sipariş "kısmi ödenmiş" oluyordu — müşteriye giden mail de "kapıda 3,00 € ödenecek"
+   * diyordu. Oysa o aşamada cevap zaten siparişin kendi toplamıdır; ikinci kez türetmek, aynı
+   * gerçeği iki yoldan hesaplayıp birinin bozulmasına açık kapı bırakmaktı.
+   *
+   * Verilmezse eski davranış sürer (kalemlerden sipariş edilen adetle) — çağıranı zorlamamak için.
+   */
+  orderTotalCents?: number;
 }
 
 export interface PaymentDerivation {
@@ -73,7 +86,7 @@ export interface PaymentDerivation {
  * (12.2) — çağıran taze toplamı verir.
  */
 export function derivePaymentStatusForOrder(
-  order: Pick<Order, 'shippingFee' | 'status'>,
+  order: Pick<Order, 'shippingFee' | 'status' | 'total'>,
   items: readonly Pick<OrderItem, 'fulfilledQty' | 'qty' | 'unitPrice' | 'lineDiscountAmount'>[],
   amounts: { collected: number; refunded: number },
 ): PaymentDerivation {
@@ -93,6 +106,8 @@ export function derivePaymentStatusForOrder(
     cancelled: order.status === 'cancelled',
     // Hazırlanmamış siparişin `fulfilled_qty`'si bir karar değil, henüz yazılmamış bir sayıdır.
     fulfillmentSettled: isFulfillmentSettled(order.status, items),
+    // O aşamada beklenen tutar siparişin kendi toplamıdır (bkz. `orderTotalCents`).
+    orderTotalCents: cent(order.total),
   });
 }
 
@@ -124,7 +139,11 @@ function statusOf(net: number, fulfilled: number, refunded: number): PaymentStat
  * İndirim payı kalemin TAMAMI için verildiğinden, karşılanan orana bölünür — yarısı gittiyse
  * indirimin yarısı düşülür. Aksi halde kısmi iade fazla/eksik hesaplanır.
  */
-function fulfilledAmount({ lines, shippingFeeCents = 0, fulfillmentSettled = true }: PaymentDerivationInput): number {
+function fulfilledAmount({ lines, shippingFeeCents = 0, fulfillmentSettled = true, orderTotalCents }: PaymentDerivationInput): number {
+  // Hazırlık kesinleşmediyse cevap siparişin ANLAŞILAN toplamıdır — indirim ve kargo zaten içinde.
+  // Kalemlerden yeniden toplamak, aynı gerçeği ikinci bir yoldan hesaplamak olurdu.
+  if (!fulfillmentSettled && orderTotalCents != null) return orderTotalCents;
+
   let total = 0;
   let anyFulfilled = false;
 

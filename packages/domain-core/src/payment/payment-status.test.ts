@@ -110,3 +110,45 @@ describe('iade senaryoları (03.6)', () => {
     expect(r.status).toBe('partial');
   });
 });
+
+/**
+ * **Hazırlık kesinleşmeden beklenen tutar siparişin KENDİ toplamıdır** (29.07 müdahalesi).
+ *
+ * Gerçek olay: sepet indiriminin kalem payı yazılmayınca (`line_discount_amount = 0`) kalemlerden
+ * toplanan tutar indirim kadar yüksek çıkıyordu. Sonuç: tamamı ödenmiş bir sipariş `partial`
+ * görünüyor, müşteriye giden mail "kapıda 3,00 € ödenecek" diyordu — LA-26-99C7YN.
+ *
+ * Yazım yolu düzeltildi; buradaki testler **motorun o hataya artık BAĞIŞIK olduğunu** sabitler.
+ * Aynı gerçeği iki yoldan hesaplamamak, birinin bozulmasına açık kapı bırakmamaktır.
+ */
+describe('hazırlık kesinleşmemişken beklenen tutar', () => {
+  const unsettled = { fulfillmentSettled: false, lines: [line({ fulfilledQty: 0 })] };
+
+  it('sipariş toplamı verilmişse o kullanılır — kalemler yeniden toplanmaz', () => {
+    // Kalemler 20 € eder; siparişin anlaşılan toplamı 17 € (3 € indirim düşülmüş).
+    const r = derivePaymentStatus(input({ ...unsettled, orderTotalCents: 1700, collectedCents: 1700 }));
+
+    expect(r.fulfilledAmountCents).toBe(1700);
+    expect(r.status).toBe('paid');
+    expect(r.amountToCollectCents).toBe(0); // "kapıda ödenecek" YOK: müşteri tamamını ödedi
+  });
+
+  it('kalem payı yazılmamış olsa bile sonuç değişmez — hata sınıfı motora ulaşmıyor', () => {
+    const bozuk = derivePaymentStatus(input({ ...unsettled, lines: [line({ fulfilledQty: 0, lineDiscountCents: 0 })], orderTotalCents: 1700, collectedCents: 1700 }));
+    const dogru = derivePaymentStatus(input({ ...unsettled, lines: [line({ fulfilledQty: 0, lineDiscountCents: 300 })], orderTotalCents: 1700, collectedCents: 1700 }));
+
+    expect(bozuk.status).toBe(dogru.status);
+    expect(bozuk.amountToCollectCents).toBe(dogru.amountToCollectCents);
+  });
+
+  it('sipariş toplamı verilmezse eski davranış sürer — çağıran zorlanmaz', () => {
+    const r = derivePaymentStatus(input({ ...unsettled }));
+    expect(r.fulfilledAmountCents).toBe(2000); // sipariş edilen adetten
+  });
+
+  it('hazırlık KESİNLEŞTİĞİNDE ölçü yine kalemlerdir — eksik giden mal borç yaratmaz', () => {
+    // Burada sipariş toplamı ARTIK cevap değil: yarısı gitmişse yarısı faturalanır.
+    const r = derivePaymentStatus(input({ lines: [line({ fulfilledQty: 1 })], orderTotalCents: 1700 }));
+    expect(r.fulfilledAmountCents).toBe(1000);
+  });
+});
