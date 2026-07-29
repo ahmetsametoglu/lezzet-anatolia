@@ -75,11 +75,14 @@ create index points_entry_daily_idx on public.points_entry (customer_id, created
 -- Türetilir. `earned`/`spent` ayrı gösterilir çünkü müşteri ekranı "topladın / harcadın" der;
 -- tek bir net sayı, kazanımın büyüklüğünü görünmez kılardı.
 create or replace view public.customer_points_balance as
+-- **Üç toplam da `coalesce`'lu.** `filter` hiçbir satır tutmazsa `sum` NULL döner, sıfır değil:
+-- yalnız harcaması olan bir müşteride (elle telafi kaydı gibi) `earned` NULL olur ve şema onu
+-- zorunlu sayı beklediği için puan sayfası tek satır yüzünden çöker.
 select p.customer_id,
-       sum(p.points)                                   as balance,
-       sum(p.points) filter (where p.points > 0)        as earned,
-       -abs(coalesce(sum(p.points) filter (where p.points < 0), 0)) as spent,
-       max(p.created_at)                               as last_activity_at
+       coalesce(sum(p.points), 0)                                   as balance,
+       coalesce(sum(p.points) filter (where p.points > 0), 0)        as earned,
+       -abs(coalesce(sum(p.points) filter (where p.points < 0), 0))  as spent,
+       max(p.created_at)                                            as last_activity_at
   from public.points_entry p
  group by p.customer_id;
 

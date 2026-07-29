@@ -22,11 +22,28 @@ const ALPHABET = READABLE_ALPHABET;
 const CODE_LENGTH = 6;
 
 /**
- * Okunabilir rastgele kod. Benzersizlik burada garanti EDİLMEZ (DB işi): çağıran, unique
- * ihlalinde yeniden üretir. Rastgelelik dışarıdan alınır — test aynı diziyi verip biçimi
- * doğrulayabilsin.
+ * Kriptografik rastgelelik — **varsayılan üreteç budur, `Math.random` DEĞİL.**
+ *
+ * Gerekçe tek bir kodda değil, kodların ORTAKLIĞINDA: sipariş referansı, puan kuponu ve davet
+ * token'ı aynı üreteci paylaşıyor. `Math.random` (V8'de xorshift128+) kriptografik değildir; kendi
+ * sipariş referansını ve kupon kodunu gören biri üretecin iç durumunu geri çıkarıp **sonraki
+ * token'ları öngörebilir**. Davet token'ı oturum yerine geçtiği için bu, başkasının siparişini
+ * okumak demektir.
+ *
+ * `crypto` global'dir (Node 19+ ve tarayıcı) — import gerekmez, motorun saflığı bozulmaz.
  */
-export function readableCode(length: number = CODE_LENGTH, random: () => number = Math.random): string {
+function secureRandom(): number {
+  const buffer = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(buffer);
+  return buffer[0]! / 2 ** 32;
+}
+
+/**
+ * Okunabilir rastgele kod. Benzersizlik burada garanti EDİLMEZ (DB işi): çağıran, unique
+ * ihlalinde yeniden üretir. Rastgelelik enjekte edilebilir — test aynı diziyi verip biçimi
+ * doğrulayabilsin; **varsayılan daima kriptografiktir** (test kolaylığı bir güvenlik ödünü olamaz).
+ */
+export function readableCode(length: number = CODE_LENGTH, random: () => number = secureRandom): string {
   let code = '';
   for (let i = 0; i < length; i += 1) {
     code += ALPHABET[Math.floor(random() * ALPHABET.length) % ALPHABET.length];

@@ -1,4 +1,4 @@
-import type { OrderNotification, PreferredLanguage } from '@lezzet/types';
+import type { OrderNotification, PreferredLanguage, TicketNotification } from '@lezzet/types';
 
 /**
  * Bildirim sözleşmesi (14.4). **İş kodu kanal bilmez**: "müşteriye haber ver" der, hangi kanaldan
@@ -20,6 +20,10 @@ export interface NotifyPayloads {
   order_cancelled: OrderNotification;
   order_shortfall: OrderNotification;
   order_refunded: OrderNotification;
+  // Talep bildirimleri (14.7 · 16.4) — olay başına ayrı veri şekli; hepsi `OrderNotification`
+  // olsaydı sürücüler "bu payload'da referenceNo var mı" diye tahmin etmek zorunda kalırdı.
+  ticket_replied: TicketNotification;
+  ticket_status_changed: TicketNotification;
 }
 export type NotifyEventName = keyof NotifyPayloads;
 

@@ -5,6 +5,8 @@ import {
   OrderOutForDeliveryEmail,
   OrderRefundedEmail,
   OrderShortfallEmail,
+  TicketRepliedEmail,
+  TicketStatusChangedEmail,
   orderCancelledSubject,
   orderConfirmedSubject,
   orderDeliveredSubject,
@@ -12,9 +14,10 @@ import {
   orderRefundedSubject,
   orderShortfallSubject,
   sendEmail,
+  ticketRepliedSubject,
+  ticketStatusChangedSubject,
 } from '@lezzet/email';
 import type { ReactElement } from 'react';
-import type { OrderNotification } from '@lezzet/types';
 import type { NotifyDriver, NotifyEventName, NotifyPayloads, NotifyRecipient, NotifyResult } from '../types';
 
 /**
@@ -30,18 +33,25 @@ interface EmailDriverOptions {
   postalAddress: string;
 }
 
-interface Template {
-  subject: (data: OrderNotification) => string;
-  render: (props: { data: OrderNotification; brandName: string; postalAddress: string }) => ReactElement;
+/**
+ * Şablon olayın KENDİ verisine bağlıdır (`NotifyPayloads[E]`), ortak bir "bildirim" tipine değil.
+ * Tek tipe bağlansaydı talep şablonu sipariş alanlarını da görür ve derleyici yanlış alanı okumayı
+ * yakalayamazdı.
+ */
+interface Template<E extends NotifyEventName> {
+  subject: (data: NotifyPayloads[E]) => string;
+  render: (props: { data: NotifyPayloads[E]; brandName: string; postalAddress: string }) => ReactElement;
 }
 
-const TEMPLATES: Record<NotifyEventName, Template> = {
+const TEMPLATES: { [E in NotifyEventName]: Template<E> } = {
   order_confirmed: { subject: orderConfirmedSubject, render: OrderConfirmedEmail },
   order_out_for_delivery: { subject: orderOutForDeliverySubject, render: OrderOutForDeliveryEmail },
   order_delivered: { subject: orderDeliveredSubject, render: OrderDeliveredEmail },
   order_cancelled: { subject: orderCancelledSubject, render: OrderCancelledEmail },
   order_shortfall: { subject: orderShortfallSubject, render: OrderShortfallEmail },
   order_refunded: { subject: orderRefundedSubject, render: OrderRefundedEmail },
+  ticket_replied: { subject: ticketRepliedSubject, render: TicketRepliedEmail },
+  ticket_status_changed: { subject: ticketStatusChangedSubject, render: TicketStatusChangedEmail },
 };
 
 export function emailDriver(options: EmailDriverOptions): NotifyDriver {
@@ -57,7 +67,7 @@ export function emailDriver(options: EmailDriverOptions): NotifyDriver {
     async send<E extends NotifyEventName>(event: E, recipient: NotifyRecipient, payload: NotifyPayloads[E]): Promise<NotifyResult> {
       if (!recipient.email) return { status: 'skipped', channel: 'email', reason: 'no_email' };
 
-      const template = TEMPLATES[event];
+      const template: Template<E> = TEMPLATES[event];
       const result = await sendEmail({
         to: recipient.email,
         subject: template.subject(payload),

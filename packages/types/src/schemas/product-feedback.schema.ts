@@ -37,8 +37,13 @@ export const ProductFeedbackSchema = z.object({
 export type ProductFeedback = z.infer<typeof ProductFeedbackSchema>;
 
 /**
- * Giriş. `status` YOK: metinli kayıt `pending`, metinsiz `approved` doğar ve bu KURAL kapının
- * işidir — yazanın kendi yorumunu yayına alabilmesi, moderasyonu dışarıdan atlatmak olurdu.
+ * Giriş. `status` VARDIR ve bilerek: metinli kayıt `pending`, metinsiz `approved` doğar; bu kararı
+ * motor verir (`initialFeedbackStatus`) ve kapı taşır. Şemadan çıkarsaydık kararı servis vermek
+ * zorunda kalırdı — servis karar vermez (STACK §4).
+ *
+ * **Kendi yorumunu yayına almanın yolu yine de kapalı:** `status='approved'` + metin + damgasız bir
+ * satır `feedback_moderation_stamp` kısıtını ihlal eder. Yani güvence uygulamanın nezaketinde değil,
+ * veritabanında.
  *
  * Üç biçimden **en az biri** gerekir (DB kısıtı da zorlar).
  */
@@ -84,18 +89,3 @@ export const ProductRatingSchema = z.object({
 });
 export type ProductRating = z.infer<typeof ProductRatingSchema>;
 
-/**
- * `candidate_demand` görünümü — aday ürün talep panosu (13.4).
- *
- * `identifiedLikeCount` ayrı durur: "kaç beğeni" ile "kaç KİŞİ beğendi" farklı sorulardır ve
- * ziyaretçi kaydırması tekilleştirilemez (kimlik tutulmuyor). Panonun güven göstergesi bu farktan
- * ve `avgDwellMs`'ten çıkar — çok kısa süre toplu savurma işaretidir.
- */
-export const CandidateDemandSchema = z.object({
-  productId: z.string().uuid(),
-  likeCount: z.number().int(),
-  dislikeCount: z.number().int(),
-  identifiedLikeCount: z.number().int(),
-  avgDwellMs: dbNumericNullable,
-});
-export type CandidateDemand = z.infer<typeof CandidateDemandSchema>;

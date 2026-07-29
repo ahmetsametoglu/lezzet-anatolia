@@ -17,9 +17,28 @@ export const FeedbackRequestSchema = z.object({
   /** Akışın SONLANDIĞI an. İlerleme türetilir ama bu damga saklanır — puanın tek kez verilmesini o sağlar. */
   completedAt: z.string().nullable(),
   pointsAwarded: z.number().int().nullable(),
+  /**
+   * Token'ın son kullanma anı (varsayılan +90 gün). Oturum yerine geçen bir anahtar sonsuza kadar
+   * geçerli olamaz: mail arşivinde ya da iletilmiş bir mesajda kalan bağlantı yıllar sonra açılırdı.
+   */
+  expiresAt: z.string(),
   createdAt: z.string(),
 });
 export type FeedbackRequest = z.infer<typeof FeedbackRequestSchema>;
+
+/**
+ * `feedback_due_order` görünümü — daveti bekleyen siparişler (17.2 tarama işi).
+ *
+ * Zaten davet edilmişler burada YOKTUR: süzgeç kaynakta olmasaydı tarama penceresi bir süre sonra
+ * davetlilerle dolar ve yeni siparişlere hiç sıra gelmezdi.
+ */
+export const FeedbackDueOrderSchema = z.object({
+  orderId: z.string().uuid(),
+  customerId: z.string().uuid(),
+  status: z.string(),
+  deliveredAt: z.string(),
+});
+export type FeedbackDueOrder = z.infer<typeof FeedbackDueOrderSchema>;
 
 export const FeedbackRequestInsertSchema = z.object({
   orderId: z.string().uuid(),

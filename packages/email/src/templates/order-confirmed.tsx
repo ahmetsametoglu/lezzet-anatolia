@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { OrderNotification, PreferredLanguage } from '@lezzet/types';
-import { CtaButton, Headline, InfoBlock, ItemsCard, OrderEmailLayout, OrderHeaderCard, StatusPill, Timeline, TotalsCard } from '../components/order-email-layout';
+import { CtaButton, Headline, InfoBlock, ItemsCard, EmailLayout, HeaderCard, StatusPill, Timeline, TotalsCard } from '../components/email-layout';
 import { SHARED_COPY } from './order-copy';
 
 void React;
@@ -79,7 +79,7 @@ export function OrderConfirmedEmail({ data, brandName, postalAddress }: OrderEma
   const shared = SHARED_COPY[data.locale];
 
   return (
-    <OrderEmailLayout
+    <EmailLayout
       preview={t.preview(data.referenceNo)}
       locale={data.locale}
       brandName={brandName}
@@ -93,12 +93,12 @@ export function OrderConfirmedEmail({ data, brandName, postalAddress }: OrderEma
     >
       <StatusPill label={t.pill} />
       <Headline title={t.title(data.customerName)} intro={t.intro(data.referenceNo)} />
-      <OrderHeaderCard referenceNo={data.referenceNo} orderedOn={data.orderedOn} statusLabel={t.status} />
+      <HeaderCard title={data.referenceNo} meta={data.orderedOn} statusLabel={t.status} />
       <Timeline steps={data.steps} labels={shared.steps} />
       {data.delivery && <InfoBlock icon={data.delivery.icon} headline={data.delivery.headline} detail={data.delivery.detail} />}
       <ItemsCard title={shared.itemsTitle} lines={data.lines} />
       <TotalsCard title={shared.totalsTitle} totals={data.totals} grandTotal={data.grandTotal} paymentNote={data.paymentNote} />
       <CtaButton label={shared.viewOrder} url={data.orderUrl} />
-    </OrderEmailLayout>
+    </EmailLayout>
   );
 }

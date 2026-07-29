@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { OrderNotification, PreferredLanguage } from '@lezzet/types';
-import { CtaButton, Headline, NoticeCard, OrderEmailLayout, PlainListCard, StatusBlock, StatusPill, TotalsCard } from '../components/order-email-layout';
+import { CtaButton, Headline, NoticeCard, EmailLayout, PlainListCard, StatusBlock, StatusPill, TotalsCard } from '../components/email-layout';
 import { SHARED_COPY } from './order-copy';
 import type { OrderEmailProps } from './order-confirmed';
 
@@ -122,7 +122,7 @@ export function OrderShortfallEmail({ data, brandName, postalAddress }: OrderEma
   const full = data.lines.filter((line) => !line.shortfall);
 
   return (
-    <OrderEmailLayout
+    <EmailLayout
       preview={t.preview(data.refund?.amount ?? null)}
       locale={data.locale}
       brandName={brandName}
@@ -171,6 +171,6 @@ export function OrderShortfallEmail({ data, brandName, postalAddress }: OrderEma
       {full.length > 0 && <PlainListCard title={t.fullItems} lines={full} />}
       <CtaButton label={t.cta} url={data.orderUrl} />
       <NoticeCard title={t.helpTitle} text={t.helpText} linkLabel={t.helpLink} linkUrl={data.supportUrl} />
-    </OrderEmailLayout>
+    </EmailLayout>
   );
 }

@@ -1,5 +1,6 @@
 import 'server-only';
 import {
+  FeedbackRequestService,
   OrderItemService,
   OrderService,
   ProductFeedbackService,
@@ -66,7 +67,30 @@ async function findPurchase(customerId: string, productId: string): Promise<stri
   return usable.find((o) => matched.has(o.id))?.id ?? null;
 }
 
-/** Ortak yazım: varsa güncelle, yoksa aç. Tekillik `(müşteri, ürün, bağlam)` üzerindedir. */
+/**
+ * Davet çağırandan gelir — **onun daveti mi.**
+ *
+ * Doğrulanmasaydı A, kendi yorumunu B'nin `feedbackRequestId`'siyle yazabilirdi: kayıt B'nin
+ * davetine düşer, B akışı açtığında A'nın metnini "senin değerlendirmen" diye görür, "2/5"
+ * ilerlemesi şişer ve akış sonu kararının (`feedbackOutcomeOf`) beğeni sayımı bozulur. DB'de FK
+ * bile yok; tek denetim yeri burası. Geçersiz bağ **sessizce düşürülür** — davet bir bağlamdır,
+ * yorumun kendisini geri çevirmesi orantısız olurdu.
+ */
+async function ownedRequestId(customerId: string, feedbackRequestId: string | null | undefined): Promise<string | null> {
+  if (!feedbackRequestId) return null;
+  const request = await new FeedbackRequestService(serviceDb()).getById(feedbackRequestId);
+  return request && request.customerId === customerId ? request.id : null;
+}
+
+/**
+ * Ortak yazım: varsa güncelle, yoksa aç. Tekillik `(müşteri, ürün, bağlam)` üzerindedir.
+ *
+ * **Güncelleme KISMİDİR — verilmeyen alan silinmez.** Tek satırda üç beyan yaşayabiliyor (yıldız,
+ * beğeni, metin) ve bunlar ayrı anlarda gelir: müşteri önce 👍 der, iki gün sonra yorum yazar.
+ * Her alanı `?? null` ile yazsaydık ikinci çağrı birincisini siler; beğeni ürün puanından düşer,
+ * ya da tersinde onaylanmış yorum metni yok olurdu. Motorun "ikisi bir arada yaşar" vaadi
+ * (`points.ts` — iki ayrı puan satırı) tam da bu yüzden yazımda da tutulmalı.
+ */
 async function upsertFeedback(input: {
   customerId: string;
   productId: string;
@@ -88,20 +112,28 @@ async function upsertFeedback(input: {
 
   const existing = await service.findByCustomerProduct(input.customerId, input.productId, input.context);
   if (existing) {
+    // Metin bu çağrıda GELDİ Mİ — "boş gönderdi" ile "bu çağrının konusu değil" ayrı şeyler.
+    const touchesComment = input.comment !== undefined;
     return service.update({
       id: existing.id,
-      rating: input.rating ?? null,
-      vote: input.vote ?? null,
-      comment,
-      language,
-      dwellMs: input.dwellMs ?? null,
+      ...(input.rating !== undefined ? { rating: input.rating } : {}),
+      ...(input.vote !== undefined ? { vote: input.vote } : {}),
+      ...(input.dwellMs !== undefined ? { dwellMs: input.dwellMs } : {}),
+      // Metne dokunulmadıysa moderasyon durumu da olduğu gibi kalır: bir beğeni, onaylanmış bir
+      // yorumu yeniden kuyruğa sokmamalı — okunacak yeni bir şey yok.
+      ...(touchesComment
+        ? {
+            comment,
+            language,
+            // Değişen metin yeniden kuyruğa girer: onaylanmış metni sonradan değiştirebilmek
+            // moderasyonu tamamen anlamsız kılardı.
+            status,
+            moderatedAt: null,
+            moderatedBy: null,
+          }
+        : {}),
       orderId: input.orderId ?? existing.orderId,
       feedbackRequestId: input.feedbackRequestId ?? existing.feedbackRequestId,
-      // Güncelleme yorumu yeniden kuyruğa sokar: onaylanmış metni sonradan değiştirebilmek
-      // moderasyonu tamamen anlamsız kılardı.
-      status,
-      moderatedAt: null,
-      moderatedBy: null,
     });
   }
 
@@ -141,7 +173,15 @@ export async function submitReview(input: {
   // Satın almayan yazamaz (DOMAIN §14) — doğrulanmamış yorum sosyal kanıt değil reklamdır.
   if (!orderId) return { ok: false, reason: 'not_purchased' };
 
-  const saved = await upsertFeedback({ ...input, comment, orderId, context: 'purchase' });
+  // Metin bu çağrının konusu değilse hiç geçirilmez — yalnız yıldız gönderen bir istek, daha önce
+  // yazılmış (ve onaylanmış) yorumu silmemeli.
+  const saved = await upsertFeedback({
+    ...input,
+    ...(input.comment !== undefined ? { comment } : {}),
+    feedbackRequestId: await ownedRequestId(input.customerId, input.feedbackRequestId),
+    orderId,
+    context: 'purchase',
+  });
   // Puan SESSİZ yazılır: tavana takılmak ya da B2B olmak yorumu geri çevirmez (DOMAIN §14).
   await awardFeedbackPoints(saved);
   return { ok: true, data: saved };
@@ -185,15 +225,17 @@ export async function recordVote(input: {
     return { ok: true, data: created };
   }
 
+  const feedbackRequestId = await ownedRequestId(input.customerId, input.feedbackRequestId);
+
   if (input.context === 'purchase') {
     const orderId = await findPurchase(input.customerId, input.productId);
     if (!orderId) return { ok: false, reason: 'not_purchased' };
-    const saved = await upsertFeedback({ ...input, customerId: input.customerId, orderId });
+    const saved = await upsertFeedback({ ...input, customerId: input.customerId, feedbackRequestId, orderId });
     await awardFeedbackPoints(saved);
     return { ok: true, data: saved };
   }
 
-  const saved = await upsertFeedback({ ...input, customerId: input.customerId });
+  const saved = await upsertFeedback({ ...input, customerId: input.customerId, feedbackRequestId });
   await awardFeedbackPoints(saved);
   return { ok: true, data: saved };
 }
@@ -320,10 +362,20 @@ export interface CandidateDemandRow {
  *
  * Sıralama ağırlıklı sayıya göredir; ham sayı da taşınır ki ekran ikisini yan yana gösterebilsin.
  */
+/**
+ * Ağırlıklandırmanın okuduğu kaydırma sayısı. Küme sınırsız büyür (ziyaretçi kaydırması
+ * tekilleştirilmiyor); pano en YENİ bu kadarını sayar. Sınıra dayanıldığında ekran bunu söyler —
+ * sessiz kırpma "her şey sayıldı" diye okunur.
+ */
+const CANDIDATE_SAMPLE_SIZE = 5000;
+
 export async function listCandidateDemand(limit = 20): Promise<CandidateDemandRow[]> {
   const db = serviceDb();
-  const rows = await new ProductFeedbackService(db).listCandidateVotes();
+  const rows = await new ProductFeedbackService(db).listCandidateVotes(CANDIDATE_SAMPLE_SIZE);
   if (rows.length === 0) return [];
+  if (rows.length === CANDIDATE_SAMPLE_SIZE) {
+    console.warn(`[aday panosu] örneklem tavana dayandı (${CANDIDATE_SAMPLE_SIZE}); sıralama en yeni kaydırmalara göre.`);
+  }
 
   // Kaydıranın deseni: kimlik başına beğeni/geçme sayıları. Kimliksiz kaydırmalar tek bir havuzda
   // toplanamaz — hangisinin aynı kişi olduğu bilinmiyor; onlar için desen ağırlığı uygulanmaz.

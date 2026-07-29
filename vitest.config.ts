@@ -21,7 +21,8 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['packages/*/src/**/*.test.ts', 'apps/*/**/*.test.ts'],
+    // `.tsx` de dahil: e-posta şablonları JSX'tir ve testleri onları gerçekten render eder.
+    include: ['packages/*/src/**/*.test.ts?(x)', 'apps/*/**/*.test.ts?(x)'],
     setupFiles: ['./vitest.setup.ts'],
     fileParallelism: false,
   },

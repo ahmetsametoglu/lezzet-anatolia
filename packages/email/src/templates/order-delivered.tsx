@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { OrderNotification, PreferredLanguage } from '@lezzet/types';
-import { Headline, NoticeCard, OrderEmailLayout, OrderHeaderCard, StatusPill, SummaryCard, Timeline } from '../components/order-email-layout';
+import { Headline, NoticeCard, EmailLayout, HeaderCard, StatusPill, SummaryCard, Timeline } from '../components/email-layout';
 import { SHARED_COPY } from './order-copy';
 import type { OrderEmailProps } from './order-confirmed';
 
@@ -103,7 +103,7 @@ export function OrderDeliveredEmail({ data, brandName, postalAddress }: OrderEma
   const shortfalls = data.lines.map((line) => line.shortfall).filter((note): note is string => Boolean(note));
 
   return (
-    <OrderEmailLayout
+    <EmailLayout
       preview={t.preview(data.referenceNo)}
       locale={data.locale}
       brandName={brandName}
@@ -117,7 +117,7 @@ export function OrderDeliveredEmail({ data, brandName, postalAddress }: OrderEma
     >
       <StatusPill label={t.pill} />
       <Headline title={t.title(data.customerName)} intro={t.intro(data.referenceNo)} />
-      <OrderHeaderCard referenceNo={data.referenceNo} orderedOn={data.orderedOn} statusLabel={t.status} />
+      <HeaderCard title={data.referenceNo} meta={data.orderedOn} statusLabel={t.status} />
       <Timeline steps={data.steps} labels={shared.steps} />
       <SummaryCard
         title={t.summaryTitle}
@@ -128,6 +128,6 @@ export function OrderDeliveredEmail({ data, brandName, postalAddress }: OrderEma
         linkUrl={data.deliverySummaryUrl ?? data.orderUrl}
       />
       <NoticeCard title={t.helpTitle} text={t.helpText} linkLabel={t.helpLink} linkUrl={data.supportUrl} />
-    </OrderEmailLayout>
+    </EmailLayout>
   );
 }

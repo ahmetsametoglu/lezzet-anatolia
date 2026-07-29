@@ -198,7 +198,9 @@ export async function getStaffTicketDetail(locale: Locale, ticketId: string): Pr
     orderRefOf(locale, row),
     new TicketMessageService(db).listByTicket(row.id),
     returnOutcomeOf(row),
-    new TicketService(db).listByCustomer(row.customerId, undefined, 100),
+    // SAYIM, sayfa değil: "sürekli şikâyet eden mi" ölçüsü iade kararının girdisi ve tam da tavanda
+    // anlamsızlaşır. Bir sayfanın satır sayısını "toplam" diye göstermek 300 talebi 100 gösterirdi.
+    new TicketService(db).countByCustomer(row.customerId),
   ]);
 
   return {
@@ -208,7 +210,7 @@ export async function getStaffTicketDetail(locale: Locale, ticketId: string): Pr
       name: customer?.name ?? '—',
       email: customer?.email ?? null,
       phone: customer?.phone ?? null,
-      totalTickets: customerTickets.rows.length,
+      totalTickets: customerTickets,
     },
     order,
     messages: await toMessageViews(messages),

@@ -219,6 +219,8 @@ Kararlar: `ADR_WHATSAPP.md`. Mimari: `CHANNELS.md`. Faz sınırları: `SCOPE.md`
 - Admin geri bildirim/puan analizi (yorum + swipe oranı + ürün skoru)
 - Aday ürün (`Product.is_candidate`) + keşif/beğeni bölümü (tinder-kart) + `product_swipe` sinyali → admin Talep/İlgi panosu
 - Google Business Profile kaydı (kategoriler, foto, wa.me linki) + NAP tutarlılığı — operasyon kalemi, sistem dışı
+  - **Platform kodda sabit DEĞİL (29.07):** köprü `review_platform_url` + `review_platform_name` ayarlarına bakar; Trustpilot'a geçiş iki satır güncelleme. Google varsayılan çünkü iş yereldir (rota/bölge) ve mağazasız işletme Google'ın "hizmet bölgesi" kaydına girer — Trustpilot bulunmayı değil, bulunduktan sonra güveni artırır. Gerekçe `DOMAIN §14`.
+- **Kimliksiz kaydırmanın istismar freni** — açık, kayıt altında (29.07 denetimi): ziyaretçi kaydırması bilinçli olarak tekilleştirilmiyor (kimlik tutmamak için), ama bunun bedeli var — oran sınırı yok, `dwell_ms` istemciden geliyor, ve ağırlıklandırmada ziyaretçi deseni "nötr" kabul ediliyor. Yani bir betiğin aday panosunu şişirmesinin en verimli yolu tam da kimliksiz yol. Puan tarafı korunuyor (kimliksiz kayıt puan doğurmaz); korunmayan şey **iş kararını besleyen sinyal**. Çare seçenekleri: kimliksiz kaydırmaya IP/oturum başına oran sınırı, `dwell_ms`'e sunucu tarafı üst sınır, ya da ziyaretçi sinyalini panoda ayrı bir sütun olarak bırakıp sıralamadan çıkarmak. Karar veri gelince verilir — bugün ölçecek trafiğimiz yok.
 - Sosyal paylaşım: ürün/koleksiyon slug + OG etiketleri + paylaş butonu
 
 ---

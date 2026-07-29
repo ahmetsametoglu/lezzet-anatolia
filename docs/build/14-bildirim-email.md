@@ -51,8 +51,16 @@ Sistemin dışarıya konuşan sesi: `packages/email` (mail istemcisi + default �
   - **Zaman çizgisi durum LOGUNDAN türer** — siparişte "hazırlandı" damgası tutulmaz, geçiş kaydı zaten var (07.6).
 - [ ] (14.6) **Teslimat özeti PDF:** kalemler + karşılanan miktarlar + `reference_no` + "resmî fatura değildir" ibaresi; teslimde e-postası olan müşteriye **otomatik** gönderim (parametrik `Setting`, varsayılan açık); kurye için indirilebilir/yazdırılabilir hâli
   - *Bitti:* `delivered` geçişinde PDF ekli mail gidiyor; Setting kapalıyken gitmiyor; kısmi karşılamada miktarlar doğru
-- [ ] (14.7) **Talep cevap bildirimi:** ticket olayları için notify olayı + şablon (admin cevabı / durum değişimi) — tetikleme `16-talep-sikayet`'te bağlanır
+- [x] (14.7) **Talep cevap bildirimi:** ticket olayları için notify olayı + şablon (admin cevabı / durum değişimi) — tetikleme `16-talep-sikayet`'te bağlanır
   - *Bitti:* örnek ticket cevabı şablondan müşteri dilinde çıkıyor
+  - **Durum (29.07):** iki olay (`ticket_replied` · `ticket_status_changed`), tek veri şekli `TicketNotification` (`types/notification.schema`), tek şablon dosyası `email/templates/ticket-notification.tsx` + üç dilli `ticket-copy.ts`. 12 test (10 şablon + 2 sürücü).
+    - **Enum ham geçer, etiket değil:** kapı `status`/`type` gönderir, "Çözüldü"/"Résolue" çevirisi şablonun yanındaki sözlükte. Kapı etiket üretseydi aynı sözlük iki yerde dururdu.
+    - **Cevabın TAM metni maildedir** (DOMAIN §15 — iç not yoktur): kırpsaydık müşteri okumak için tıklamak zorunda kalırdı, oysa mail zaten cevabı taşımak için gidiyor. Satır sonları korunur.
+    - **Çözülen talepte "yine yazabilirsin" daveti var:** kapanmış talebe yazılabildiği söylenmezse müşteri ikinci talep açar ve aynı konu iki yerde ilerler.
+    - `in_progress` bildirim DOĞURMAZ — "incelemeye aldık" müşteriye bir şey söylemez (iade mailindeki aynı gerekçe).
+    - **Ortak iskelet genelleşti:** `OrderEmailLayout` → `EmailLayout`, `OrderHeaderCard` → `HeaderCard` (`components/email-layout.tsx`). Talep maili marka iskeletini aynen kullanır — `design/project`'te `Email - Talep` çizimi yok, improvise edilmedi.
+    - **Ek düzeltme:** `wa-link` sürücüsündeki altı sipariş mesajı Türkçe sabitti; müşteriye giden metin müşterinin dilinde olmalı (DOMAIN §10) → üç dile açıldı. Talep mesajları talebin KONUSUNU taşımaz: WhatsApp önizlemesi kilit ekranında görünür, şikâyet başlığı oraya düşmemeli.
+    - Eksik: tetikleme (16.4 — cevap/durum kapılarına bağlanması).
 - [ ] (14.8) **Kampanya e-postası elle gönderim aracı (admin):** alıcı listesi yalnız `marketing_consent.email` izinlilerden; içerik elle hazırlanır, önizleme + gönder; otomasyon/zamanlama **yok**
   - *Bitti:* izinsiz müşteri listeye giremiyor; test gönderimi yalnız izinli kayıtlara ulaşıyor
 - [ ] (14.9) **Bülten kayıt kutusu (site) + `marketing_consent` yazımı:** kutu baştan işaretsiz (AB açık eylem şartı); kayıtta `{granted, at, source}` yazılır — checkout/kayıt kutuları da aynı yazım fonksiyonunu kullanır

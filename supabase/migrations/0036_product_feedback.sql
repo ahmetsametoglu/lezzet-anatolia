@@ -70,6 +70,10 @@ create table public.product_feedback (
   --   · metinli + karar → kim ne zaman karar verdi yazılı olmalı (iz)
   --   · metinsiz        → kendiliğinden yayına girdi; kimse karar vermedi, damgası da yok
   -- Damgayı üçüncü hâlde de zorunlu kılmak, olmayan bir moderatörü kayda geçirmek olurdu.
+  -- **Kısıt `moderated_by`'ı ZORLAMAZ ve bu bilinçlidir:** kolon `on delete set null`'dır (personel
+  -- profili silinince iz null'a döner). `not null` istenseydi bir moderatörü silmek, geçmişteki her
+  -- kararını ihlal hâline getirir ve silmeyi imkânsız kılardı. "Kim" bu yüzden en-iyi-çaba bir izdir;
+  -- YAZILDIĞINI garanti eden yer kapıdır (`moderate(id, status, moderatedBy)` — imzada zorunlu).
   constraint feedback_moderation_stamp check (
     case
       when status = 'pending' then moderated_at is null
@@ -120,6 +124,12 @@ create index product_feedback_request_idx on public.product_feedback (feedback_r
 --
 -- Moderasyon süzgeci reddedilmiş bir yorumun YILDIZINI da dışarıda bırakmak için gerekli — metinsiz
 -- kayıtlar zaten hep `approved` doğar.
+--
+-- **Yalnız `purchase` bağlamı sayılır.** Aday kaydırması bir SATIN ALMA beyanı değildir: ürünü
+-- görmemiş, tatmamış birinin "ilgimi çekti"si ile ürünü yiyip beğenenin sözü aynı kefeye konamaz.
+-- Üstelik ziyaretçi kaydırması tekilleştirilmiyor — aday evresinde toplanan yüzlerce savurma, ürün
+-- satışa geçtiğinde puanını hiç kimse almamışken 4.8 gösterirdi. Aday sinyali kendi panosunda ve
+-- kendi ağırlığıyla yaşar (`listCandidateDemand`).
 create or replace view public.product_rating as
 select f.product_id,
        round(avg(f.rating) filter (where f.rating is not null), 2) as rating_avg,
@@ -129,24 +139,14 @@ select f.product_id,
        count(*) filter (where length(btrim(coalesce(f.comment, ''))) > 0) as comment_count
   from public.product_feedback f
  where f.status = 'approved'
+   and f.context = 'purchase'
  group by f.product_id;
 
 comment on view public.product_rating is
   'Ürün skorunun HAM sayıları — yıldız + beğeni; tek puana çevirme motorda (17.1).';
 
--- ── Aday ürün talep panosu ──────────────────────────────────────────────────
--- "Sırada hangi ürünü getirmeliyim" (13.4 · DOMAIN §13). Kimliksiz kaydırmalar da sayılır ama AYRI
--- görünür: sinyal gücü değerlendirmesi "kaç kişi" ile "kaç kaydırma" arasındaki farkı ister.
-create or replace view public.candidate_demand as
-select f.product_id,
-       count(*) filter (where f.vote = 'like')                               as like_count,
-       count(*) filter (where f.vote = 'dislike')                            as dislike_count,
-       count(*) filter (where f.vote = 'like' and f.customer_id is not null) as identified_like_count,
-       -- Ortalama kart süresi: çok kısa süreler toplu savurma işaretidir (DOMAIN §14).
-       round(avg(f.dwell_ms) filter (where f.dwell_ms is not null))          as avg_dwell_ms
-  from public.product_feedback f
- where f.context = 'candidate'
- group by f.product_id;
-
-comment on view public.candidate_demand is
-  'Aday ürün talep panosu — keşif kaydırmalarından türetilir (13.4). Sinyal ağırlığı motorda.';
+-- ── Aday ürün talep panosu: GÖRÜNÜM YOK ─────────────────────────────────────
+-- Burada bir `candidate_demand` görünümü vardı ve KALDIRILDI. Sebebi duplication: panonun sayıları
+-- zaten uygulama katmanında hesaplanıyor (`listCandidateDemand`), çünkü sıralama ham beğeniye değil
+-- **ağırlıklı** sinyale göredir ve ağırlık kuralı motorda yaşar (`swipeWeight`). Görünüm aynı
+-- soruya ikinci ve ağırlıksız bir cevap veriyordu; ikisi bir gün ayrışırdı.

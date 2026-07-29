@@ -44,25 +44,77 @@ Değerli veri toplarken müşteriyi ödüllendiren döngü: yorum + beğeni + ü
     - **Sinyal kalitesi yazıldı** (`domain-core/feedback/signal-quality`): ağırlık = kart süresi × kaydıranın deseni. 400 ms altı kart görülmemiştir (sıfır ağırlık); hep aynı yöne savuran bilgi taşımaz (azınlık payı ölçüsü, 5 kaydırmadan az ise desen aranmaz). `listCandidateDemand` ham beğeniyi ve **ağırlıklı** beğeniyi yan yana verir, sıralama ağırlıklıya göre — 40 savurma beğenisi 8 gerçek beğeniyi geçemez. `trust` göstergesi tasarımın istediği "sade güven göstergesi".
     - **Müşterinin puanı bundan etkilenmez** (ödül ≠ güven): kalitesiz kaydırma da ödülünü alır.
     - Eksik: keşif ve alım-sonrası kart ekranları (müşteri UI).
-- [x] (17.4) **Puan (PointsEntry):** aksiyonlara puan (yorum/swipe/sipariş); bakiye **türetilir** (Σ points); tavanlar (aynı ürüne bir kez + günlük), B2C-only, süresiz; puan tamamlamaya bağlı (beğeniye değil)
+- [~] (17.4) **Puan (PointsEntry):** aksiyonlara puan (yorum/swipe/sipariş); bakiye **türetilir** (Σ points); tavanlar (aynı ürüne bir kez + günlük), B2C-only, süresiz; puan tamamlamaya bağlı (beğeniye değil)
   - *Bitti:* bakiye ledger'dan türeniyor; istismar tavanları çalışıyor
+  - **Eksik (29.07, denetimde çıktı):** `reason='order'` — **sipariş puanı yazan üretim kodu yok**, yalnız testte geçiyor. Defter, ayar ve tavan hazır; bağlanacağı yer sipariş durum geçişidir (07). Görev bu yüzden `[~]`; önceki `[x]` yanlıştı.
   - **Durum (29.07):** `0037_points.sql` (defter + `customer_points_balance` görünümü + 8 parametrik ayar), motor `domain-core/feedback/points`, servisler, kapılar `lib/feedback/points.ts`. 22 test.
     - **Defter, sayaç değil:** bakiye Σ ile türer; `MoneyMovement` ↔ hesap bakiyesiyle aynı desen. `update`/`delete` yok — defter satırı düzeltilmez, karşı kayıt yazılır.
     - **Tavan defterin kendisinde:** "aynı kaynaktan iki kez puan yok" `(müşteri, sebep, kaynak)` kısmi unique indeksiyle; uygulama unutsa da yazılamaz. Günlük tavan **kısmi uygulanmaz** — ya tamamı ya hiç, çünkü tekillik yüzünden müşteri yarın telafi edemezdi.
     - **Ödül asıl işlemi durdurmaz:** puan sessiz yazılır; B2B olmak ya da tavana takılmak yorumu geri çevirmez (DOMAIN §14).
     - Puan değerleri parametrik: yorum 20 · alım-sonrası beğeni 5 · keşif kaydırması 2 · sipariş 10 · getiren 50 · günlük tavan 100. Ölçek 1 puan = 1 cent ("500 puan = 5 €" anlatılabilir bir cümledir).
-- [x] (17.5) **Redemption:** müşteri isteyince puan → kişisel `Discount` (`customer_id`) RPC (PointsEntry negatif + kupon tek transaction)
+- [~] (17.5) **Redemption:** müşteri isteyince puan → kişisel `Discount` (`customer_id`) RPC (PointsEntry negatif + kupon tek transaction)
   - *Bitti:* çevirme atomik; puan düşüyor, kişisel kupon oluşuyor
+  - **Eksik:** kapı (`redeemPoints`) hazır ve testli ama **çağıranı yok** — müşteri puan sayfası (UI) gelince bağlanır. Önceki `[x]` bunu gizliyordu.
   - **Durum (29.07):** `redeem_points` RPC — puan düşümü ve kuponun doğuşu **tek transaction**; ayrı olsalardı ikincisi düştüğünde müşterinin puanı gider, kuponu doğmazdı. Bakiye bir SATIR değil TOPLAM olduğu için kilit **advisory**'dir (`for update` agregatla çalışmaz): müşteri başına serileştirme, farklı müşteriler birbirini beklemez.
     - Kupon **sabit tutarlı** (yüzde değil): aynı puan farklı sepetlerde farklı değer etseydi "500 puan = 5 €" yalan olurdu. Kişisel + tek kullanımlık.
     - Kod motorda üretilir (`PUAN-7K4M2P`, sipariş referansıyla **aynı okunabilir alfabe**), benzersizliği veritabanı söyler — çakışmada yeniden denenir.
-- [x] (17.6) **Dış değerlendirme köprüsü:** anket sonunda memnun müşteri halka açık değerlendirme sayfasına tek-tık yönlendirilir
+- [~] (17.6) **Dış değerlendirme köprüsü:** anket sonunda memnun müşteri halka açık değerlendirme sayfasına tek-tık yönlendirilir
   - *Bitti:* yüksek memnuniyette değerlendirme linki sunuluyor
   - **Durum (29.07):** `feedbackOutcomeOf` — üç çıkış: `review_invite` · `report_issue` · `thanks`. **Memnun olmayan dışarı yönlendirilmez** (tasarım §6): onun yolu talep girişidir. Ölçüt beğeni ORANIDIR (eşik %80, parametrik), tek bir yıldız değil — bir üründen hoşlanmamak siparişten memnun olmamak değildir. `review_platform_url` ayarı boşsa davet hiç gösterilmez; uydurma adrese yönlendirmektense teşekkürle biter. **Ekran tarafı müşteri UI'ında.**
   - **Platform ayarda, kodda değil (29.07, kullanıcı sorusu üzerine):** görev başta "Google" diyordu ve motor `google_review` döndürüyordu. Kullanıcı fiziksel mağaza olmadığı için Trustpilot'u sordu → doğru ayrım şu: **Google bulunmayı, Trustpilot güveni** artırır ve ikisi de aynı kuralın ucuna takılır. Vendor adı motordan çıkarıldı; `review_platform_url` + `review_platform_name` ayarlarıyla geçiş **iki satır güncelleme**. Varsayılan Google — teslimat Strasbourg bölgesine rota/bölge ile yapıldığı için iş yereldir ve Google'ın "hizmet bölgesi" (SAB) kaydı mağazasız işletme için tasarlanmıştır. Gerekçe `DOMAIN §14`'te.
 - [~] (17.7) **Referral zemini:** `referred_by` yazımı (kayıtta); `PointsEntry.reason=referral` hazır (bağ ileride)
   - *Bitti:* getiren müşteri kaydediliyor
   - **Durum (29.07):** `awardReferralPoints(newCustomerId)` hazır — `referred_by` doluysa getirene bir kez puan yazar. Kaynak (`ref_id`) YENİ müşterinin kimliğidir: tekillik "aynı kişiyi iki kez getiremezsin" demeli. Eksik: **kayıt akışında `referred_by` yazımı** (04) ve davet bağlantısı üretimi.
+
+## Denetim (29.07) — iki inceleme ajanı, bulunanlar ve yapılanlar
+
+İki bağımsız ajan bu modülün ve 16'nın arka ucunu okudu (biri doğruluk, biri yetki/kural ekseninde).
+Aşağıdakiler **doğrulanıp düzeltildi**; hepsi aynı gün kapandı.
+
+- **Davet taraması bir süre sonra sessizce ölüyordu:** iş, teslim edilmiş ilk 200 siparişi *en eskiden*
+  tarayıp her biri için "daveti var mı" diye soruyordu. 200 teslimattan sonra pencere hep davetlilerle
+  dolu kalır, yeni sipariş hiç davet almazdı — üstelik iş "başarılı" biter, ize `{created: 0}` yazardı.
+  → Süzgeç kaynağa taşındı: `feedback_due_order` görünümü (teslim edilmiş + daveti YOK). Sipariş başına
+  iki sorgu da tek tura indi.
+- **Beğeni ile yorum birbirini siliyordu:** güncellemede dört alan da `?? null` ile yazılıyordu. Motorun
+  "ikisi bir arada yaşar" vaadinin tersi; ürün skoru sessizce eksik sayardı. → Güncelleme **kısmi**;
+  metne dokunulmayan çağrı moderasyon damgasını da bozmuyor. 3 test.
+- **`customer_points_balance.earned` NULL dönebiliyordu** (yalnız harcaması olan müşteride) → Zod patlar,
+  puan sayfası çökerdi. → Üç toplam da `coalesce`'lu.
+- **Aday kaydırmaları ürün puanına karışıyordu:** `product_rating` bağlamı süzmüyordu. Aday evresinde
+  toplanan (ve tekilleştirilmeyen) yüzlerce savurma, ürün satışa geçince onu hiç kimse almamışken yüksek
+  puanlı gösterirdi. → Görünüm yalnız `purchase` sayıyor.
+- **Davet token'ı `Math.random` ile üretiliyordu.** Tehdit kaba kuvvet değil öngörülebilirlikti: sipariş
+  referansı, kupon kodu ve token aynı üreteci paylaşıyordu; kendi kodlarını gören biri iç durumu geri
+  çözüp komşu davetleri türetebilirdi. → `readableCode` varsayılanı **CSPRNG**; ayrıca token'a **90 gün
+  ömür** (`expires_at`) — oturum yerine geçen anahtar ölümsüz olamaz.
+- **`openTicket` siparişin sahibini doğrulamıyordu:** müşteri başkasının `orderId`'siyle talep açıp o
+  siparişin referansını, kalemlerini ve iade tutarını okuyabilirdi; operatör de yanlış siparişte iade
+  başlatırdı. → Sahiplik + kalem kimliği doğrulanıyor (personelin elle açtığı talep hariç: orada müşteri
+  adına açan operatördür).
+- **Ek dosya anahtarları doğrulanmıyordu:** imzalı okuma adresi *talep* üzerinden yetkilendiriliyor ama
+  *anahtar* denetlenmiyordu — private kovadaki herhangi bir dosya kendi talebine iliştirilip okutulabilirdi.
+  → `ticketAttachmentScope` ile anahtar sahibi kontrol ediliyor; talep açılmadan yüklenen fotoğraflar için
+  `ticketDraftAttachment` (müşteri klasörü). 4 test.
+- **`feedbackRequestId` sahipliği doğrulanmıyordu** (DB'de FK bile yok): A, yorumunu B'nin davetine
+  yazdırabilirdi → B'nin ilerlemesi şişer, akış sonu kararı bozulurdu. → Geçersiz bağ sessizce düşürülüyor.
+- **`awardPoints` tekillik ihlalini yutmuyordu:** çift tıkta yorum KAYDEDİLMİŞKEN ekrana hata düşerdi —
+  dosyanın kendi "sessiz başarısızlık" sözünün tersi. → `23505` yakalanıyor.
+- **`candidate_demand` görünümü ölüydü ve duplication'dı** (aynı sayılar TS'te ağırlıklı hesaplanıyor) →
+  kaldırıldı. `listCandidateVotes` artık **belirleyici sıralı** (en yeni önce) ve tavana dayanınca uyarıyor.
+- **Küçükler:** `totalTickets` sayfa uzunluğundan değil `count()`'tan; günlük puan tavanının "gün"ü
+  Europe/Paris'e sabitlendi (sunucu UTC'deyse gün Fransa'da 01:00'de dönüyordu); tautoloji bir test
+  (`listTicketsForOrder`'a `orderId` yerine talep kimliği geçiyordu) gerçek fikstürle düzeltildi.
+
+**Kabul edilmeyen bir bulgu:** "moderasyon kısıtı `moderated_by`'ı da zorlasın." Zorlayamaz — kolon
+`on delete set null`; `not null` istenseydi bir moderatörü silmek geçmişteki her kararını ihlal hâline
+getirir ve silmeyi imkânsız kılardı. "Kim" en-iyi-çaba bir izdir; yazıldığını garanti eden yer kapının
+imzasıdır. Gerekçe migration'a yazıldı.
+
+**Kapanmayan (kayıt altında):** kimliksiz kaydırma hâlâ frensiz — tekilleştirme yok, oran sınırı yok,
+`dwellMs` istemciden geliyor. Ağırlıklandırma kısmen koruyor ama ziyaretçi yolunda desen nötr kabul
+ediliyor. Puan tarafı korunuyor (kimliksiz kayıt puan doğurmaz); korunmayan şey iş kararını besleyen
+sinyal. Bilinçli bir kabuldü (kimlik tutmamak) ama bedeli artık yazılı → `architecture/BACKLOG §16`.
 
 ## Netleşecekler
 

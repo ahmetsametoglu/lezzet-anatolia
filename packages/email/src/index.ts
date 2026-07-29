@@ -12,3 +12,12 @@ export { OrderDeliveredEmail, orderDeliveredSubject } from './templates/order-de
 export { OrderCancelledEmail, orderCancelledSubject } from './templates/order-cancelled';
 export { OrderShortfallEmail, orderShortfallSubject } from './templates/order-shortfall';
 export { OrderRefundedEmail, orderRefundedSubject } from './templates/order-refunded';
+
+// Talep bildirimleri (14.7) — aynı iskelet; cevap maili yazışmanın kendisini taşır.
+export {
+  TicketRepliedEmail,
+  TicketStatusChangedEmail,
+  ticketRepliedSubject,
+  ticketStatusChangedSubject,
+  type TicketEmailProps,
+} from './templates/ticket-notification';

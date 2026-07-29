@@ -1,4 +1,4 @@
-import { FeedbackRequestService, OrderService, OrderStatusLogService, SettingsService, serviceDb } from '@lezzet/database';
+import { FeedbackDueOrderService, FeedbackRequestService, SettingsService, serviceDb } from '@lezzet/database';
 import { FEEDBACK_DELAY_DAYS, feedbackToken, isDueForFeedback } from '@lezzet/domain-core';
 import type { FeedbackChannel, FeedbackRequest } from '@lezzet/types';
 
@@ -17,28 +17,32 @@ export const CREATE_FEEDBACK_REQUESTS = 'create_feedback_requests';
  * gezilir; zaten daveti olan atlanır (sipariş başına tek davet DB indeksiyle de zorlanır). Kaçan
  * bir tik ertesi taramada telafi olur, ikinci tarama no-op'tur.
  *
- * Teslim anı `order_status_log`'dan TÜRETİLİR; siparişte `delivered_at` diye bir kolon yok ve
- * olmamalı (DATA_MODEL türetme ilkesi).
+ * **Kaynak `feedback_due_order` görünümüdür, `order` tablosu DEĞİL** — ve bu bir başarım tercihi
+ * değil, doğruluk şartı. İş önce teslim edilmiş ilk N siparişi çekip her biri için "daveti var mı"
+ * diye soruyordu: davet edilmişler pencereyi doldurunca yeni siparişlere sıra GELMİYORDU. Sessizdi
+ * de — iş başarılı biter, ize `{created: 0}` yazar, hiçbir alarm çalmaz. Süzgeç kaynağa taşındığında
+ * pencere yalnız gerçek adaylarla dolar; sipariş başına iki sorgu da (davet var mı + teslim anı)
+ * tek turda çözülür.
+ *
+ * Teslim anı `order_status_log`'dan TÜRETİLİR (görünümün içinde); siparişte `delivered_at` diye bir
+ * kolon yok ve olmamalı (DATA_MODEL türetme ilkesi).
  */
 export async function createDueFeedbackRequests(opts: { channel?: FeedbackChannel; limit?: number } = {}): Promise<FeedbackRequest[]> {
   const db = serviceDb();
-  const orders = new OrderService(db);
-  const logs = new OrderStatusLogService(db);
   const requests = new FeedbackRequestService(db);
 
   const delayDays = await new SettingsService(db).getNumber('feedback_delay_days', FEEDBACK_DELAY_DAYS);
-  const candidates = await orders.listByStatus(['delivered', 'completed'], { limit: opts.limit ?? 200 });
+  const candidates = await new FeedbackDueOrderService(db).listDue(opts.limit ?? 200);
   const created: FeedbackRequest[] = [];
 
-  for (const order of candidates) {
-    if (await requests.findByOrder(order.id)) continue; // zaten davet edilmiş
-    const deliveredAt = await logs.firstEntryAt(order.id, 'delivered');
-    if (!isDueForFeedback({ status: order.status, deliveredAt, delayDays })) continue;
+  for (const candidate of candidates) {
+    // "Zamanı geldi mi" kararı motorun; `feedback_delay_days` parametrik.
+    if (!isDueForFeedback({ status: candidate.status, deliveredAt: candidate.deliveredAt, delayDays })) continue;
 
     created.push(
       await requests.insert({
-        orderId: order.id,
-        customerId: order.customerId,
+        orderId: candidate.orderId,
+        customerId: candidate.customerId,
         token: feedbackToken(),
         channel: opts.channel ?? 'email',
       }),

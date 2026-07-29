@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FEEDBACK_DELAY_DAYS, feedbackOutcomeOf, feedbackToken, isDueForFeedback } from './invite';
 
 const daysAgo = (n: number): string => {
@@ -36,6 +36,22 @@ describe('davet anahtarı', () => {
 
   it('rastgelelik dışarıdan verilebilir — biçim sınanabilsin', () => {
     expect(feedbackToken(() => 0)).toBe('3'.repeat(16));
+  });
+
+  it('varsayılan üreteç `Math.random` DEĞİL — öngörülebilir token oturum çalar', () => {
+    // Token oturum yerine geçiyor. `Math.random` (xorshift128+) kriptografik değildir ve aynı
+    // üreteci paylaşan sipariş referansı + kupon kodu üzerinden iç durumu geri çözülebilir.
+    const spy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    const token = feedbackToken();
+    spy.mockRestore();
+
+    // `Math.random` kullanılsaydı sabitlenmiş 0 ile hepsi ilk harf olurdu.
+    expect(token).not.toBe('3'.repeat(16));
+    expect(token).toMatch(/^[34679ACDEFGHJKLMNPQRTUVWXY]{16}$/);
+  });
+
+  it('iki token aynı olmaz', () => {
+    expect(new Set(Array.from({ length: 50 }, () => feedbackToken())).size).toBe(50);
   });
 });
 

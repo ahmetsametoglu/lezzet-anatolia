@@ -40,13 +40,20 @@ export function isDueForFeedback(input: {
 }
 
 /**
- * Davet bağlantısının anahtarı — **oturum yerine geçer**, o yüzden uzun.
+ * Davet bağlantısının anahtarı — **oturum yerine geçer**, o yüzden uzun VE kriptografik.
  *
- * 16 karakter, sipariş referansıyla aynı okunabilir alfabeden: ~26^16 olasılık, kaba kuvvetle
- * bulunamaz. Referanstan uzun olması bilinçli — referans müşteriye okunur, bu ise yalnız
- * bağlantıda taşınır ve tahmin edilemez olması tek işidir.
+ * 16 karakter, sipariş referansıyla aynı okunabilir alfabeden (~75 bit). Referanstan uzun olması
+ * bilinçli — referans müşteriye okunur, bu ise yalnız bağlantıda taşınır.
+ *
+ * **Tehdit kaba kuvvet DEĞİL, öngörülebilirlik.** `readableCode` varsayılanı `Math.random` olsaydı
+ * (öyleydi), kendi sipariş referansını ve kupon kodunu gören biri üretecin iç durumunu geri çözüp
+ * komşu davetlerin token'ını türetebilirdi — yani başkasının siparişini okuyabilir, puanını
+ * yakabilirdi. Uzunluk bu saldırıya karşı hiçbir şey yapmaz; üretecin kendisi değişmeliydi.
+ *
+ * Ömrü de vardır (`feedback_request.expires_at`, +90 gün): mail arşivinde kalan bir bağlantı
+ * yıllar sonra açılamamalı.
  */
-export function feedbackToken(random: () => number = Math.random): string {
+export function feedbackToken(random?: () => number): string {
   return readableCode(16, random);
 }
 

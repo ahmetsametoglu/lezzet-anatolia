@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { OrderNotification, PreferredLanguage } from '@lezzet/types';
-import { CtaButton, Headline, InfoBlock, ItemsCard, NoticeCard, OrderEmailLayout, OrderHeaderCard, StatusPill, Timeline, TotalsCard } from '../components/order-email-layout';
+import { CtaButton, Headline, InfoBlock, ItemsCard, NoticeCard, EmailLayout, HeaderCard, StatusPill, Timeline, TotalsCard } from '../components/email-layout';
 import { SHARED_COPY } from './order-copy';
 import type { OrderEmailProps } from './order-confirmed';
 
@@ -111,7 +111,7 @@ export function OrderOutForDeliveryEmail({ data, brandName, postalAddress }: Ord
   const window = data.delivery?.headline ?? null;
 
   return (
-    <OrderEmailLayout
+    <EmailLayout
       preview={t.preview(window)}
       locale={data.locale}
       brandName={brandName}
@@ -125,7 +125,7 @@ export function OrderOutForDeliveryEmail({ data, brandName, postalAddress }: Ord
     >
       <StatusPill label={t.pill} />
       <Headline title={t.title} intro={t.intro(window)} />
-      <OrderHeaderCard referenceNo={data.referenceNo} orderedOn={data.orderedOn} statusLabel={t.status} />
+      <HeaderCard title={data.referenceNo} meta={data.orderedOn} statusLabel={t.status} />
       <Timeline steps={data.steps} labels={shared.steps} />
       {/* Kargoda kurye penceresi yoktur: yerine takip numarası + bağlantı (tasarım kuralı). */}
       {data.tracking ? (
@@ -137,6 +137,6 @@ export function OrderOutForDeliveryEmail({ data, brandName, postalAddress }: Ord
       <TotalsCard title={shared.totalsTitle} totals={[]} grandTotal={data.grandTotal} paymentNote={data.paymentNote} />
       <CtaButton label={t.track} url={data.orderUrl} />
       <NoticeCard title={t.helpTitle} text={t.helpText} linkLabel={t.helpLink} linkUrl={data.supportUrl} />
-    </OrderEmailLayout>
+    </EmailLayout>
   );
 }

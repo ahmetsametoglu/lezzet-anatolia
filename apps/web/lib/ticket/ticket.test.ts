@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { TicketService, UserProfileService, serviceDb } from '@lezzet/database';
+import { CategoryService, OrderItemService, OrderService, ProductService, TicketService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
+import { r2Keys } from '@lezzet/storage';
 import type { Ticket } from '@lezzet/types';
 import { countOpenTickets, getCustomerTicket, getStaffTicketDetail, listCustomerTickets, listTicketQueue, listTicketsForOrder } from './read';
 import { changeTicketStatus, openTicket, replyAsCustomer, replyAsStaff, takeOverTicket, triggerReturnFromTicket, type TicketWriteResult } from './write';
@@ -18,9 +19,17 @@ const profiles = new UserProfileService(db);
 const stamp = Date.now();
 const createdProfiles: string[] = [];
 const createdTickets: string[] = [];
+const createdOrders: string[] = [];
 let customerId: string;
 let otherCustomerId: string;
 let staffId: string;
+let categoryId: string;
+let productId: string;
+/** Müşterinin kendi siparişi + ona ait bir kalem. */
+let orderId: string;
+let orderItemId: string;
+/** BAŞKA müşterinin siparişi — sahiplik kontrolünün asıl sınandığı yer. */
+let otherOrderId: string;
 
 beforeAll(async () => {
   const customer = await profiles.insert({ name: 'Ayşe Kaya', email: `talep-${stamp}@example.test` });
@@ -30,11 +39,37 @@ beforeAll(async () => {
   otherCustomerId = other.id;
   staffId = staff.id;
   createdProfiles.push(customer.id, other.id, staff.id);
+
+  categoryId = (await new CategoryService(db).create({ name: { tr: `Talep testi ${stamp}` } })).id;
+  const created = await new ProductService(db).create({
+    name: { tr: `Talep ürünü ${stamp}` },
+    categoryId,
+    variants: [{ label: { tr: '1 kg' } }],
+  });
+  productId = created.product.id;
+  const variantId = created.variants[0]!.id;
+
+  const orders = new OrderService(db);
+  const line = { variantId, qty: 1, unitPrice: 12, vatRate: 5.5 };
+  const mine = await orders.create(
+    { customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
+    [line],
+  );
+  orderId = mine.order.id;
+  orderItemId = (await new OrderItemService(db).listByOrder(orderId))[0]!.id;
+
+  const theirs = await orders.create(
+    { customerId: otherCustomerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
+    [line],
+  );
+  otherOrderId = theirs.order.id;
+  createdOrders.push(orderId, otherOrderId);
 });
 
 afterAll(async () => {
   for (const id of createdTickets) await db.from('ticket').delete().eq('id', id);
-  await purgeTestData(db, { profileIds: createdProfiles });
+  for (const id of createdOrders) await db.from('order').delete().eq('id', id);
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
 });
 
 /** Siparişsiz genel talep — testlerin çoğu için yeterli zemin. */
@@ -74,6 +109,76 @@ describe('talep açma', () => {
   it('boş anlatımla talep açılmaz', async () => {
     const result = await openTicket({ customerId, source: 'form', type: 'other', body: '   ' });
     expect(result).toEqual({ ok: false, reason: 'empty_body' });
+  });
+});
+
+/**
+ * Talep açarken siparişe ve eke bağlanma, çağıranın KENDİ alanıyla sınırlıdır.
+ *
+ * Bu kontroller ne DB'de ne motorda olabilir: motor siparişleri görmez, DB'de `ticket.customer_id`
+ * ↔ `order.customer_id` kısıtı yoktur (olsaydı personelin müşteri adına açtığı talep kırılırdı).
+ */
+describe('yabancı sipariş ve ek bağlanamaz', () => {
+  it('başkasının siparişine talep açılamaz — sipariş referansı ve iade tutarı sızardı', async () => {
+    const result = await openTicket({ customerId, source: 'order', type: 'missing', body: 'Eksik geldi', orderId: otherOrderId });
+    // "Yok" ile "senin değil" aynı cevabı verir: olmayan bir siparişin varlığı doğrulanmaz.
+    expect(result).toEqual({ ok: false, reason: 'order_not_found' });
+  });
+
+  it('kendi siparişine açılabilir ve kalem işaretlenebilir', async () => {
+    const result = await openTicket({
+      customerId,
+      source: 'order',
+      type: 'missing',
+      body: 'Bir kalem eksik geldi',
+      orderId,
+      orderItemIds: [orderItemId],
+    });
+    if (!result.ok) throw new Error(result.reason);
+    createdTickets.push(result.data.id);
+    expect(result.data.orderItemIds).toEqual([orderItemId]);
+  });
+
+  it('o siparişe ait olmayan kalem işaretlenemez — sessizce yutulmaz', async () => {
+    const result = await openTicket({
+      customerId,
+      source: 'order',
+      type: 'missing',
+      body: 'Eksik geldi',
+      orderId,
+      orderItemIds: ['00000000-0000-0000-0000-000000000009'],
+    });
+    expect(result).toEqual({ ok: false, reason: 'items_not_in_order' });
+  });
+
+  it('başkasının klasöründeki ek iliştirilemez — imzalı adres yanlış nesneye açılırdı', async () => {
+    const foreign = r2Keys.ticketDraftAttachment(otherCustomerId, 'tok', 'bozuk.jpg');
+    const result = await openTicket({ customerId, source: 'form', type: 'damaged', body: 'Ezilmiş', attachments: [foreign] });
+    expect(result).toEqual({ ok: false, reason: 'attachment_not_yours' });
+  });
+
+  it('kendi taslak klasöründeki ek kabul edilir', async () => {
+    const own = r2Keys.ticketDraftAttachment(customerId, 'tok', 'bozuk.jpg');
+    const result = await openTicket({ customerId, source: 'form', type: 'damaged', body: 'Ezilmiş', attachments: [own] });
+    if (!result.ok) throw new Error(result.reason);
+    createdTickets.push(result.data.id);
+  });
+
+  it('cevaba iliştirilen ek O talebin klasöründen olmalı', async () => {
+    const ticket = await openPlainTicket();
+    const otherTicketKey = r2Keys.ticketAttachment('11111111-1111-1111-1111-111111111111', 'tok', 'foto.jpg');
+
+    expect(await replyAsCustomer({ customerId, ticketId: ticket.id, body: 'Foto ekledim', attachments: [otherTicketKey] })).toEqual({
+      ok: false,
+      reason: 'attachment_not_yours',
+    });
+    const ok = await replyAsCustomer({
+      customerId,
+      ticketId: ticket.id,
+      body: 'Foto ekledim',
+      attachments: [r2Keys.ticketAttachment(ticket.id, 'tok', 'foto.jpg')],
+    });
+    expect(ok.ok).toBe(true);
   });
 });
 
@@ -155,9 +260,15 @@ describe('iade tetiği', () => {
 
 describe('diğer yüzeylerin okumaları', () => {
   it('sipariş detayı kendi talebini bulur, başkasınınkini bulmaz', async () => {
-    // Siparişsiz talepte bağ yoktur — okuma yine de sahiplikle süzer.
-    const ticket = await openPlainTicket();
-    expect(await listTicketsForOrder(otherCustomerId, ticket.id)).toEqual([]);
+    const result = await openTicket({ customerId, source: 'order', type: 'question', body: 'Bu sipariş ne zaman gelir?', orderId });
+    if (!result.ok) throw new Error(result.reason);
+    createdTickets.push(result.data.id);
+
+    // Testin iki yarısı da gerçek: sahibi görür…
+    expect((await listTicketsForOrder(customerId, orderId)).map((t) => t.id)).toContain(result.data.id);
+    // …yabancı göremez. (Önceki hâli `orderId` yerine talep kimliği geçiyordu: sorgu zaten boş
+    // dönerdi, sahiplik süzgeci silinse bile test geçerdi.)
+    expect(await listTicketsForOrder(otherCustomerId, orderId)).toEqual([]);
   });
 
   it('dashboard rozeti kapanmamışları sayar', async () => {

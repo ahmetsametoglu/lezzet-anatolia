@@ -1,12 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  CandidateDemandSchema,
   DEFAULT_PAGE_SIZE,
   ProductFeedbackInsertSchema,
   ProductFeedbackSchema,
   ProductFeedbackUpdateSchema,
   ProductRatingSchema,
-  type CandidateDemand,
   type FeedbackContext,
   type KeysetCursor,
   type Page,
@@ -73,14 +71,23 @@ export class ProductFeedbackService extends BaseDbService<ProductFeedback, Produ
   }
 
   /**
-   * Keşif kaydırmalarının tamamı — aday panosunun ağırlıklandırma girdisi (13.4 · 17.3).
+   * Keşif kaydırmaları — aday panosunun ağırlıklandırma girdisi (13.4 · 17.3), **en yeniden eskiye.**
    *
    * Ağırlık SQL'de hesaplanamaz: kaydıranın deseni tüm kaydırmalarına bakmayı ister ve kural
-   * motorda yaşar (`swipeWeight`). Bu yüzden ham satırlar döner. Küme aday ürünlerle sınırlı
-   * olduğu için sayfalanmaz — tavanı operatörün kurduğu aday listesidir.
+   * motorda yaşar (`swipeWeight`). Bu yüzden ham satırlar döner.
+   *
+   * **Küme sınırsız büyür.** Burada bir zamanlar "tavanı operatörün kurduğu aday listesidir" yazıyordu
+   * — yanlıştı: satırlar aday başına değil KAYDIRMA başına doğar ve ziyaretçi kaydırması
+   * tekilleştirilmiyor. Sıralamasız bir `limit` her turda başka bir örneklem getirir ve pano sessizce
+   * yanlış sıralar. Sıralama bu yüzden belirleyicidir ve **en yeniler alınır**: "sırada hangi ürünü
+   * getirelim" güncel ilgiyi sorar. Kırpıldığında çağıran bunu bilir (`rows.length === limit`) ve
+   * ekrana söyler — sessiz tavan, "her şey sayıldı" gibi okunur.
    */
   listCandidateVotes(limit = 5000): Promise<ProductFeedback[]> {
-    return this.getAll({ context: 'candidate' }, { isNotNullFields: ['vote'], limit });
+    return this.getAll(
+      { context: 'candidate' },
+      { isNotNullFields: ['vote'], orderBy: 'createdAt', orderDirection: 'desc', limit },
+    );
   }
 
   /** Bir davetten doğan kayıtlar — "2/5 tamamlandı" ilerlemesi buradan türetilir (17.2). */
@@ -137,26 +144,5 @@ export class ProductRatingService extends BaseDbService<ProductRating, never, ne
    */
   listRanked(direction: 'asc' | 'desc', limit = 20): Promise<ProductRating[]> {
     return this.getAll(undefined, { orderBy: 'ratingAvg', orderDirection: direction, limit });
-  }
-}
-
-/**
- * `candidate_demand` görünümü — aday ürün talep panosu (13.4 · DOMAIN §13).
- *
- * "Sırada hangi ürünü getirmeliyim" sorusunun verisi. Kimliksiz kaydırmalar da sayılır ama ayrı
- * kolonda görünür: sinyal gücü değerlendirmesi "kaç kaydırma" ile "kaç kişi" farkını ister.
- */
-export class CandidateDemandService extends BaseDbService<CandidateDemand, never, never> {
-  constructor(supabase: SupabaseClient) {
-    super(supabase, 'candidate_demand', CandidateDemandSchema, CandidateDemandSchema as never, CandidateDemandSchema as never, false);
-  }
-
-  /** Talebe göre sıralı aday listesi — en çok beğenilen önce. */
-  listRanked(limit = 20): Promise<CandidateDemand[]> {
-    return this.getAll(undefined, { orderBy: 'likeCount', orderDirection: 'desc', limit });
-  }
-
-  getByProduct(productId: string): Promise<CandidateDemand | null> {
-    return this.getOneBy({ productId });
   }
 }

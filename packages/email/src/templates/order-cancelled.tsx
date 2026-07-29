@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { OrderNotification, PreferredLanguage } from '@lezzet/types';
-import { CtaButton, Headline, NoticeCard, OrderEmailLayout, PlainListCard, StatusBlock, StatusPill, TotalsCard } from '../components/order-email-layout';
+import { CtaButton, Headline, NoticeCard, EmailLayout, PlainListCard, StatusBlock, StatusPill, TotalsCard } from '../components/email-layout';
 import { SHARED_COPY } from './order-copy';
 import type { OrderEmailProps } from './order-confirmed';
 
@@ -118,7 +118,7 @@ export function OrderCancelledEmail({ data, brandName, postalAddress }: OrderEma
   const refunded = Boolean(data.refund);
 
   return (
-    <OrderEmailLayout
+    <EmailLayout
       preview={t.preview(data.referenceNo, data.refund?.amount ?? null)}
       locale={data.locale}
       brandName={brandName}
@@ -145,6 +145,6 @@ export function OrderCancelledEmail({ data, brandName, postalAddress }: OrderEma
       <PlainListCard title={t.itemsTitle} lines={data.lines} />
       <CtaButton label={t.reorder} url={data.orderUrl} />
       <NoticeCard title={t.helpTitle} text={t.helpText} linkLabel={t.helpLink} linkUrl={data.supportUrl} />
-    </OrderEmailLayout>
+    </EmailLayout>
   );
 }

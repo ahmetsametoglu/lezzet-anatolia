@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  CandidateDemandService,
   CategoryService,
   OrderService,
   ProductFeedbackService,
@@ -228,6 +227,33 @@ describe('beğen / geç', () => {
     expect(result.data.customerId).toBeNull();
   });
 
+  it('beğeni ile yorum TEK satırda birlikte yaşar — biri ötekini silmez', async () => {
+    // Müşteri önce beğenir, sonra (belki günler sonra) yorumunu yazar. İki beyan da o satırda durur:
+    // güncelleme kısmi değilse beğeni ürün puanından sessizce düşerdi.
+    await recordVote({ customerId: buyerId, productId, context: 'purchase', vote: 'like', dwellMs: 2400 });
+    const written = await submitReview({ customerId: buyerId, productId, language: 'tr', rating: 5, comment: 'Çok iyiydi.' });
+    if (!written.ok) throw new Error(written.reason);
+
+    expect(written.data).toMatchObject({ vote: 'like', rating: 5, comment: 'Çok iyiydi.', dwellMs: 2400 });
+  });
+
+  it('sonradan gelen beğeni ONAYLANMIŞ yorumu ne siler ne kuyruğa sokar', async () => {
+    const review = await approvedReview(5, 'Harika.');
+    await recordVote({ customerId: buyerId, productId, context: 'purchase', vote: 'like' });
+
+    // Metne dokunulmadı: yeniden okunacak bir şey yok, moderasyon damgası da yerinde kalmalı.
+    expect(await feedback.getById(review.id)).toMatchObject({ comment: 'Harika.', status: 'approved', vote: 'like' });
+    expect((await listProductReviews(productId)).rows).toHaveLength(1);
+  });
+
+  it('yalnız yıldız gönderen istek yazılmış yorumu silmez', async () => {
+    await approvedReview(4, 'İlk yorumum.');
+    await submitReview({ customerId: buyerId, productId, language: 'tr', rating: 2 });
+
+    const row = (await feedback.listByCustomer(buyerId)).find((r) => r.productId === productId);
+    expect(row).toMatchObject({ rating: 2, comment: 'İlk yorumum.' });
+  });
+
   it('aynı müşteri aynı ürünü ikinci kez kaydırırsa kayıt GÜNCELLENİR', async () => {
     const first = await recordVote({ customerId: strangerId, productId: candidateId, context: 'candidate', vote: 'like' });
     const second = await recordVote({ customerId: strangerId, productId: candidateId, context: 'candidate', vote: 'dislike' });
@@ -262,12 +288,26 @@ describe('ürün skoru — iki ayak', () => {
     expect(score.average).toBe(5); // %100 beğeni → 5
   });
 
-  it('yıldız ve beğeni sayı-ağırlıklı birleşir', async () => {
-    await approvedReview(5, 'Harika.');
-    await recordVote({ customerId: strangerId, productId: candidateId, context: 'candidate', vote: 'dislike' });
-    // Farklı ürünler — birbirine karışmamalı.
-    expect((await getProductScore(productId)).average).toBe(5);
-    expect((await getProductScore(candidateId)).average).toBe(1);
+  it('yıldız ve beğeni sayı-ağırlıklı birleşir; ürünler birbirine karışmaz', async () => {
+    // Aynı müşteri hem 1 yıldız verdi hem beğendi: iki ayak da tek satırda yaşar.
+    await approvedReview(1, 'Fena değil ama benlik değil.');
+    await recordVote({ customerId: buyerId, productId, context: 'purchase', vote: 'like' });
+
+    // Yıldız 1, beğeni oranı %100 → beğeni ayağı 5; iki beyan eşit sayıda → ortalama 3.
+    expect(await getProductScore(productId)).toMatchObject({ ratingAvg: 1, likeRatio: 1, average: 3 });
+    expect(await getProductScore(otherProductId)).toMatchObject({ average: null, totalCount: 0 });
+  });
+
+  it('ADAY kaydırması ürün puanına GİRMEZ — ilgi beyanı satın alma beyanı değildir', async () => {
+    await recordVote({ customerId: strangerId, productId: candidateId, context: 'candidate', vote: 'like' });
+    await recordVote({ productId: candidateId, context: 'candidate', vote: 'like' }); // ziyaretçi
+
+    // Aday evresinde toplanan savurmalar, ürün satışa geçtiğinde onu hiç kimse almamışken
+    // yüksek puanlı gösterirdi. Aday sinyali kendi panosunda, kendi ağırlığıyla yaşar.
+    expect(await getProductScore(candidateId)).toMatchObject({ average: null, totalCount: 0 });
+    const board = (await listCandidateDemand()).find((row) => row.productId === candidateId);
+    expect(board?.signal.rawLikes).toBe(2); // ikisi de panoda sayılır
+    expect(board?.identifiedLikeCount).toBe(1); // ama yalnız biri KİŞİ
   });
 
   it('hiç beyanı olmayan ürün boş skor döner', async () => {
@@ -289,16 +329,15 @@ describe('aday ürün talep panosu', () => {
     await recordVote({ productId: candidateId, context: 'candidate', vote: 'like', dwellMs: 500 }); // ziyaretçi
     await recordVote({ productId: candidateId, context: 'candidate', vote: 'dislike' }); // ziyaretçi
 
-    const demand = await new CandidateDemandService(db).getByProduct(candidateId);
-    expect(demand).toMatchObject({ likeCount: 3, dislikeCount: 1, identifiedLikeCount: 2 });
-    // Ortalama kart süresi: çok kısa süreler toplu savurma işaretidir (DOMAIN §14).
-    expect(demand?.avgDwellMs).toBe(1500);
+    const demand = (await listCandidateDemand(50)).find((r) => r.productId === candidateId);
+    // "Kaç kaydırma" ile "kaç KİŞİ" ayrı sorular: ziyaretçi tekilleştirilemez.
+    expect(demand).toMatchObject({ dislikeCount: 1, identifiedLikeCount: 2 });
+    expect(demand?.signal.rawLikes).toBe(3);
   });
 
   it('talebe göre sıralı liste aday ürünü içerir', async () => {
     await recordVote({ customerId: buyerId, productId: candidateId, context: 'candidate', vote: 'like' });
-    const ranked = await new CandidateDemandService(db).listRanked(50);
-    expect(ranked.some((r) => r.productId === candidateId)).toBe(true);
+    expect((await listCandidateDemand(50)).some((r) => r.productId === candidateId)).toBe(true);
   });
 
   it('savurma beğenileri panoyu şişirmez — sıralama AĞIRLIKLI sayıya bakar', async () => {
@@ -328,8 +367,7 @@ describe('aday ürün talep panosu', () => {
 
   it('satılabilir ürünün değerlendirmesi panoya karışmaz', async () => {
     await approvedReview(5);
-    const ranked = await new CandidateDemandService(db).listRanked(50);
-    expect(ranked.some((r) => r.productId === productId)).toBe(false);
+    expect((await listCandidateDemand(50)).some((r) => r.productId === productId)).toBe(false);
   });
 });
 

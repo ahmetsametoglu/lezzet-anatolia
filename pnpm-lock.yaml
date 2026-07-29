@@ -277,6 +277,9 @@ importers:
       '@lezzet/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@react-email/render':
+        specifier: ^1.4.0
+        version: 1.4.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@types/node':
         specifier: ^22.10.5
         version: 22.20.1

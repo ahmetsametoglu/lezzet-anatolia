@@ -30,8 +30,15 @@ create table public.feedback_request (
   order_id uuid not null references public.order (id) on delete cascade,
   customer_id uuid not null references public.user_profiles (id) on delete cascade,
 
-  -- Davet bağlantısının anahtarı; oturum yerine geçer. Rastgele üretilir (uygulama katmanı).
+  -- Davet bağlantısının anahtarı; oturum yerine geçer. **Kriptografik** rastgelelikle üretilir
+  -- (`readableCode` → `crypto.getRandomValues`): öngörülebilir bir token, komşu davetin siparişini
+  -- okumak demektir. Tehdit kaba kuvvet DEĞİL, üretecin iç durumunun geri çözülmesidir.
   token text not null unique,
+  -- **Token'ın ömrü vardır.** Oturum yerine geçen bir anahtar sonsuza kadar geçerli olamaz: mail
+  -- arşivinde, iletilmiş bir mesajda, tarayıcı geçmişinde kalan bağlantı yıllar sonra da açılırdı.
+  -- 90 gün cömerttir (davet 10. günde gider, akış bir dakika sürer) — amaç müşteriyi kısıtlamak
+  -- değil, sızan bir anahtarın ömrünü sınırlamak.
+  expires_at timestamptz not null default (now() + interval '90 days'),
 
   channel feedback_channel not null,
   sent_at timestamptz,
@@ -78,6 +85,37 @@ select r.id as feedback_request_id,
 
 comment on view public.feedback_request_progress is
   'Davetin ilerlemesi — "2/5" siparişten ve değerlendirmelerden TÜRETİLİR, saklanmaz (17.2).';
+
+-- ── Daveti bekleyen siparişler ──────────────────────────────────────────────
+-- Tarama işinin (cron) okuduğu küme: teslim edilmiş ve **henüz daveti olmayan** siparişler.
+--
+-- **Neden görünüm, neden uygulamada süzgeç değil:** iş önce "teslim edilmiş ilk N sipariş"i çekip
+-- her biri için "daveti var mı" diye soruyordu. Zaten davet edilmişler pencereyi doldurunca yeni
+-- siparişlere sıra GELMİYORDU — üstelik sessizce: iş başarılı biter, ize `{created: 0}` yazar,
+-- hiçbir alarm çalmaz. Süzgeç kaynağa taşındığında pencere yalnız GERÇEK adaylarla dolar.
+--
+-- Sipariş başına iki sorgu (davet var mı + teslim anı) da burada tek turda çözülür.
+--
+-- **Bekleme süresi burada YOK:** o parametrik bir iş kuralıdır (`feedback_delay_days`) ve motorun
+-- işidir (`isDueForFeedback`). Görünüm olguyu verir — "teslim edildi, daveti yok, şu an teslim
+-- edilmişti" — kararı vermez.
+create or replace view public.feedback_due_order as
+select o.id          as order_id,
+       o.customer_id,
+       o.status,
+       d.delivered_at
+  from public.order o
+  join lateral (
+    select min(l.created_at) as delivered_at
+      from public.order_status_log l
+     where l.order_id = o.id and l.to_status = 'delivered'
+  ) d on true
+ where o.status in ('delivered', 'completed')
+   and d.delivered_at is not null
+   and not exists (select 1 from public.feedback_request r where r.order_id = o.id);
+
+comment on view public.feedback_due_order is
+  'Daveti bekleyen siparişler — teslim edilmiş, daveti YOK (17.2). Bekleme süresi motorun kararı.';
 
 -- ── Ayarlar ─────────────────────────────────────────────────────────────────
 -- Bekleme süresi ve dış değerlendirme bağlantısı **parametrik**: ikisi de iş kararıdır ve dağıtım

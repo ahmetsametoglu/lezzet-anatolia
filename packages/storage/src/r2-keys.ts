@@ -56,4 +56,35 @@ export const r2Keys = {
    */
   ticketAttachment: (ticketId: string, photoToken: string, sourceFilename: string): string =>
     `support/tickets/${sanitize(ticketId)}/${sanitize(photoToken)}.${extOf(sourceFilename)}`,
+
+  /**
+   * **Talep AÇILMADAN önce yüklenen fotoğraf** — henüz bir talep kimliği yok.
+   *
+   * Müşteri formu doldururken fotoğrafı seçer; talep ancak "Gönder"de doğar. Bu yüzden taslak
+   * ekler MÜŞTERİ klasörüne yazılır. Yan faydası: müşteri silindiğinde (GDPR) taslak klasörü tek
+   * seferde temizlenir — kimsenin talebine bağlanmamış dosyalar ortada kalmaz.
+   */
+  ticketDraftAttachment: (customerId: string, photoToken: string, sourceFilename: string): string =>
+    `support/tickets/drafts/${sanitize(customerId)}/${sanitize(photoToken)}.${extOf(sourceFilename)}`,
 } as const;
+
+/**
+ * Bir ek anahtarının **kime ait olduğu** — yetki kapısının sorduğu tek soru.
+ *
+ * Neden gerekli: imzalı okuma adresi, sahipliği doğrulanmış bir TALEP üzerinden üretiliyordu; ama
+ * anahtarın o talebe ait olduğu hiç kontrol edilmiyordu. Müşteri kendi talebine private kovadaki
+ * başka bir anahtarı ek diye yazıp okutabilirdi — yetki doğrulanıyor ama YANLIŞ nesnenin.
+ *
+ * Anahtar biçimini bilen tek yer burasıdır; kapı biçimi yeniden ayrıştırmaz.
+ */
+export type TicketAttachmentScope = { kind: 'ticket'; ticketId: string } | { kind: 'draft'; customerId: string } | null;
+
+export function ticketAttachmentScope(key: string): TicketAttachmentScope {
+  const draft = /^support\/tickets\/drafts\/([^/]+)\/[^/]+$/.exec(key);
+  if (draft) return { kind: 'draft', customerId: draft[1]! };
+
+  const owned = /^support\/tickets\/([^/]+)\/[^/]+$/.exec(key);
+  if (owned && owned[1] !== 'drafts') return { kind: 'ticket', ticketId: owned[1]! };
+
+  return null;
+}

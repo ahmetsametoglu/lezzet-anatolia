@@ -1,9 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  FeedbackDueOrderSchema,
   FeedbackRequestInsertSchema,
   FeedbackRequestProgressSchema,
   FeedbackRequestSchema,
   FeedbackRequestUpdateSchema,
+  type FeedbackDueOrder,
   type FeedbackRequest,
   type FeedbackRequestInsert,
   type FeedbackRequestProgress,
@@ -27,9 +29,12 @@ export class FeedbackRequestService extends BaseDbService<FeedbackRequest, Feedb
    *
    * Token oturum yerine geçtiği için burada başka bir kimlik sorulmaz; sahiplik zaten token'ın
    * kendisindedir (tahmin edilemez olduğu sürece).
+   *
+   * **Süresi geçmiş token bulunmaz** ve bu bilinçli olarak "yok" ile aynı cevabı verir: süzgeç
+   * burada, tek yerde. Kapıya bırakılsaydı ikinci bir okuma yolu açıldığı gün unutulurdu.
    */
   findByToken(token: string): Promise<FeedbackRequest | null> {
-    return this.getOneBy({ token });
+    return this.getOneBy({ token }, { rangeFilters: [{ field: 'expiresAt', operator: 'gt', value: new Date().toISOString() }] });
   }
 
   /** Siparişin daveti — ikinci kez oluşturmadan önce sorulur (sipariş başına tek davet). */
@@ -65,6 +70,30 @@ export class FeedbackRequestService extends BaseDbService<FeedbackRequest, Feedb
    */
   markCompleted(id: string, pointsAwarded: number | null): Promise<FeedbackRequest> {
     return this.update({ id, completedAt: new Date().toISOString(), pointsAwarded });
+  }
+}
+
+/**
+ * `feedback_due_order` görünümü — daveti bekleyen siparişler (17.2 tarama işi).
+ *
+ * Ayrı servis, çünkü görünüm yazılmaz. Ve tarama bu görünümü okur, `order` tablosunu DEĞİL: zaten
+ * davet edilmişler kaynakta süzülmezse pencere bir süre sonra onlarla dolar ve yeni siparişlere
+ * hiç sıra gelmez — üstelik sessizce.
+ */
+export class FeedbackDueOrderService extends BaseDbService<FeedbackDueOrder, never, never> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'feedback_due_order', FeedbackDueOrderSchema, FeedbackDueOrderSchema as never, FeedbackDueOrderSchema as never, false);
+  }
+
+  /**
+   * Daveti bekleyenler, **en eski teslim önce** — en uzun bekleyen müşteri önce sorulur.
+   *
+   * Sıralama belirleyici olmalı: sırasız bir `limit` her turda başka bir örneklem getirir ve
+   * pencereye hiç girmeyen sipariş kalır. Küme bu görünümde doğal olarak küçülür (davet edilen
+   * çıkar), o yüzden sayfalama gerekmez — ama sınır yine de vardır.
+   */
+  listDue(limit = 200): Promise<FeedbackDueOrder[]> {
+    return this.getAll(undefined, { orderBy: 'deliveredAt', orderDirection: 'asc', limit });
   }
 }
 

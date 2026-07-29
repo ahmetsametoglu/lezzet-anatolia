@@ -69,7 +69,16 @@ export async function awardPoints(input: {
   // B2B, tavan ya da değersiz aksiyon — hiçbiri asıl işlemi durdurmaz.
   if (!check.allowed) return null;
 
-  return entries.insert({ customerId: input.customerId, points: check.points, reason: input.reason, refId: input.refId });
+  try {
+    return await entries.insert({ customerId: input.customerId, points: check.points, reason: input.reason, refId: input.refId });
+  } catch (error) {
+    // **Yarışta da sessiz.** Yukarıdaki `hasEntryFor` ile bu yazım arasında kilit yok: müşteri
+    // "Gönder"e iki kez basarsa iki istek de "puan yok" görür, biri yazar, öteki tekillik ihlaliyle
+    // (`23505`) düşer. Bu istisna yukarı çıksaydı yorum KAYDEDİLMİŞKEN ekrana hata gelirdi —
+    // dosyanın baştaki sözünün tam tersi. İkinci yazımın engellenmesi zaten doğru sonuçtur.
+    if ((error as { code?: string })?.code === '23505') return null;
+    throw error;
+  }
 }
 
 /**

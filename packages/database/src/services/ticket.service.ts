@@ -146,6 +146,16 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   countOpen(): Promise<number> {
     return this.count(undefined, { orFilters: ['status.eq.open,status.eq.in_progress'] });
   }
+
+  /**
+   * Müşterinin toplam talep sayısı — operatörün "sürekli şikâyet eden mi" bakışı.
+   *
+   * SAYIM'dır, sayfa uzunluğu değil: bir sayfanın satır sayısını "toplam" diye göstermek, sayıyı
+   * tam da anlam kazandığı yerde (çok talep açmış müşteride) yalancı yapardı.
+   */
+  countByCustomer(customerId: string): Promise<number> {
+    return this.count({ customerId });
+  }
 }
 
 /** Kuyruk süzgeci — hepsi opsiyonel; verilmeyen süzmez (varsayılan odak: kapanmamışlar). */

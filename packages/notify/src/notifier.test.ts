@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { OrderNotification } from '@lezzet/types';
+import type { OrderNotification, TicketNotification } from '@lezzet/types';
 import { createNotifier } from './notifier';
 import { emailDriver } from './drivers/email.driver';
 import { waLinkDriver } from './drivers/wa-link.driver';
@@ -88,5 +88,41 @@ describe('sürücü seçimi — çağıran kanal bilmez', () => {
     const results = await only.send('order_confirmed', withPhone, data);
 
     expect(results[0]).toMatchObject({ status: 'skipped', reason: 'no_reachable_channel' });
+  });
+});
+
+/**
+ * Talep bildirimleri (14.7) — sipariş bildirimlerinden farklı VERİ taşırlar ama aynı sözleşmeden
+ * geçerler. Sınanan iki şey: kanal seçimi bozulmuyor ve wa.me metni talebin konusunu sızdırmıyor.
+ */
+describe('talep bildirimleri', () => {
+  const ticket: TicketNotification = {
+    ticketId: '11111111-1111-1111-1111-111111111111',
+    subject: 'Bozuk et geldi',
+    type: 'damaged',
+    status: 'in_progress',
+    customerName: 'Ayşe',
+    locale: 'fr',
+    orderReferenceNo: 'LZA-1234',
+    openedOn: '22 juillet 2026',
+    replyBody: 'Nous avons vérifié le lot.',
+    repliedAt: '24 juillet, 10:40',
+    previousStatus: null,
+    ticketUrl: 'https://example.test/fr/demandes/11111111',
+    notificationPreferencesUrl: 'https://example.test/fr/preferences',
+  };
+
+  it('e-postası olan müşteriye mail sürücüsü bakar', async () => {
+    const results = await createNotifier(drivers).send('ticket_replied', { ...withEmail, locale: 'fr' }, ticket);
+
+    expect(results[0]?.channel).toBe('email');
+  });
+
+  it('wa.me metni müşterinin dilinde ve KONUYU taşımaz — önizleme kilit ekranında görünür', async () => {
+    const results = await createNotifier(drivers).send('ticket_replied', { ...withPhone, locale: 'fr' }, ticket);
+
+    const link = results[0]?.status === 'sent' ? decodeURIComponent(results[0].ref ?? '') : '';
+    expect(link).toContain('Nous avons répondu à votre demande');
+    expect(link).not.toContain('Bozuk et geldi');
   });
 });

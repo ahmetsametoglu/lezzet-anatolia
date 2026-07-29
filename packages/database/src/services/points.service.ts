@@ -16,6 +16,33 @@ import {
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
 
+/** İşletmenin saat dilimi — tek şube, Strasbourg. Gün sınırı buna göre çizilir. */
+const BUSINESS_TIME_ZONE = 'Europe/Paris';
+
+/**
+ * Verilen anın **işletme gününün** başlangıcı (yerel gece yarısı), UTC anı olarak.
+ *
+ * `setHours(0,0,0,0)` süreç saat dilimini kullanır ve sunucu UTC'deyse gün yanlış yerde döner.
+ * Bölgeyi açıkça söylemek, dağıtım ortamının sessiz bir parametreye dönüşmesini engeller.
+ */
+function startOfBusinessDay(now: Date): Date {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  // Yereldeki "şu an" ile gerçek an arasındaki fark = bölgenin o günkü ofseti (yaz saati dahil).
+  const asUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
+  const offsetMs = asUtc - Math.floor(now.getTime() / 1000) * 1000;
+  return new Date(Date.UTC(get('year'), get('month') - 1, get('day')) - offsetMs);
+}
+
 /**
  * Puan defteri (17.4) — **karar vermez, satır getirir/yazar** (STACK §4).
  *
@@ -38,10 +65,14 @@ export class PointsEntryService extends BaseDbService<PointsEntry, PointsEntryIn
    *
    * Yalnız pozitifler sayılır: harcama tavanı serbest bırakmamalı, yoksa kupona çevirip yeniden
    * kazanmak sınırsız bir döngü olurdu.
+   *
+   * **"Bugün" işletmenin günüdür, sunucununki değil.** `setHours(0,0,0,0)` süreç saat dilimine göre
+   * çalışır; sunucu UTC'de koşarsa gün Fransa'da 01:00/02:00'de döner ve müşteri gece yarısından
+   * sonraki aksiyonunda dünün tavanına takılır. Bölge sabittir çünkü işletme tektir (Strasbourg);
+   * müşterinin kendi saat dilimi burada ölçüt değil — tavan BİZİM günümüzün sınırıdır.
    */
   async earnedToday(customerId: string, now: Date = new Date()): Promise<number> {
-    const dayStart = new Date(now);
-    dayStart.setHours(0, 0, 0, 0);
+    const dayStart = startOfBusinessDay(now);
     const rows = await this.getAll(
       { customerId },
       { rangeFilters: [{ field: 'createdAt', operator: 'gte', value: dayStart.toISOString() }] },

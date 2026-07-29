@@ -1,5 +1,5 @@
 import 'server-only';
-import { TicketService, serviceDb } from '@lezzet/database';
+import { OrderItemService, OrderService, TicketService, serviceDb } from '@lezzet/database';
 import {
   canTransitionTicket,
   canTriggerReturn,
@@ -7,6 +7,7 @@ import {
   statusAfterCustomerReply,
   statusAfterStaffReply,
 } from '@lezzet/domain-core';
+import { ticketAttachmentScope } from '@lezzet/storage';
 import type { Ticket, TicketMessage, TicketStatus, TicketType } from '@lezzet/types';
 
 /**
@@ -22,6 +23,54 @@ import type { Ticket, TicketMessage, TicketStatus, TicketType } from '@lezzet/ty
  */
 
 export type TicketWriteResult<T> = { ok: true; data: T } | { ok: false; reason: string };
+
+/**
+ * **Ekler yalnız çağıranın kendi alanından gelebilir.**
+ *
+ * Anahtar istemciden geliyor ve okuma kapısı onu imzalı adrese çeviriyor. Sahiplik kontrolü TALEP
+ * üzerinde yapılıp anahtar üzerinde yapılmasaydı, müşteri private kovadaki herhangi bir dosyayı
+ * kendi talebine iliştirip okutabilirdi — yetki doğrulanmış olurdu ama yanlış nesnenin.
+ *
+ * `null` scope = biçimi tanınmayan anahtar; kabul edilmez.
+ */
+function attachmentsBelongTo(attachments: readonly string[] | undefined, owner: { customerId: string; ticketId?: string }): boolean {
+  return (attachments ?? []).every((key) => {
+    const scope = ticketAttachmentScope(key);
+    if (!scope) return false;
+    return scope.kind === 'draft' ? scope.customerId === owner.customerId : scope.ticketId === owner.ticketId;
+  });
+}
+
+/**
+ * Siparişin ve işaretli kalemlerin gerçekten bu müşteriye ait olduğu.
+ *
+ * Bunu ne DB ne motor bilebilir: motor siparişleri görmez, DB'de `ticket.customer_id` ile
+ * `order.customer_id` arasında bir kısıt yoktur (olsaydı personelin elle açtığı talep de bozulurdu).
+ * Kontrol edilmeseydi müşteri başkasının sipariş numarasını, ürünlerini ve iade tutarlarını kendi
+ * talebi üzerinden okurdu — üstelik operatör de yanlış siparişte iade başlatırdı.
+ *
+ * Uydurma kalem kimlikleri de burada elenir: sessizce yutulsalardı müşteri işaretlediği kalemi
+ * ekranda göremez, sebebini de öğrenemezdi.
+ */
+async function checkOrderOwnership(input: {
+  customerId: string;
+  orderId?: string | null;
+  orderItemIds?: string[];
+}): Promise<{ ok: true } | { ok: false; reason: 'order_not_found' | 'items_not_in_order' }> {
+  if (!input.orderId) return { ok: true };
+
+  const db = serviceDb();
+  const order = await new OrderService(db).getById(input.orderId);
+  // "Yok" ile "senin değil" ekrana aynı cümleyi kurar: olmayan bir siparişin varlığını doğrulamayız.
+  if (!order || order.customerId !== input.customerId) return { ok: false, reason: 'order_not_found' };
+
+  const itemIds = input.orderItemIds ?? [];
+  if (itemIds.length === 0) return { ok: true };
+
+  const items = await new OrderItemService(db).listByOrder(input.orderId);
+  const own = new Set(items.map((item) => item.id));
+  return itemIds.every((id) => own.has(id)) ? { ok: true } : { ok: false, reason: 'items_not_in_order' };
+}
 
 /**
  * Müşterinin talep açması (16.2'nin arka ucu). Talep ve ilk mesaj **tek turda** yazılır — açan
@@ -44,6 +93,17 @@ export async function openTicket(input: {
   const draft = checkTicketDraft(input);
   if (!draft.ok) return { ok: false, reason: draft.reason };
   if (input.body.trim().length === 0) return { ok: false, reason: 'empty_body' };
+  // Yeni talebin henüz kimliği yok: ekler ancak müşterinin kendi taslak klasöründen gelebilir.
+  if (!attachmentsBelongTo(input.attachments, { customerId: input.customerId })) {
+    return { ok: false, reason: 'attachment_not_yours' };
+  }
+
+  // **Personel elle açarken sahiplik aranmaz:** operatör müşteri adına talep açar ve siparişi o
+  // seçer; kendi kimliğiyle eşleşmesi beklenemez. Kontrol MÜŞTERİNİN açtığı talebe aittir.
+  if (!input.authorId) {
+    const owns = await checkOrderOwnership(input);
+    if (!owns.ok) return { ok: false, reason: owns.reason };
+  }
 
   const ticket = await new TicketService(serviceDb()).createWithMessage({
     ...input,
@@ -70,6 +130,9 @@ export async function replyAsCustomer(input: {
   const ticket = await service.getById(input.ticketId);
   // Başkasının talebine yazılamaz — ve "yok" ile "senin değil" ekrana aynı cümleyi kurar.
   if (!ticket || ticket.customerId !== input.customerId) return { ok: false, reason: 'not_found' };
+  if (!attachmentsBelongTo(input.attachments, { customerId: input.customerId, ticketId: ticket.id })) {
+    return { ok: false, reason: 'attachment_not_yours' };
+  }
 
   const message = await service.reply({
     ticketId: ticket.id,

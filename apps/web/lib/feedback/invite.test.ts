@@ -119,6 +119,15 @@ describe('davetin açılması', () => {
     expect(await openFeedbackInvite('tr', 'GECERSIZTOKEN123')).toBeNull();
   });
 
+  it('süresi geçmiş token de yok görünür — oturum yerine geçen anahtar ölümsüz olamaz', async () => {
+    const request = await inviteForOrder();
+    await db.from('feedback_request').update({ expires_at: new Date(Date.now() - 1000).toISOString() }).eq('id', request.id);
+
+    // Mail arşivinde ya da iletilmiş bir mesajda kalan bağlantı yıllar sonra açılmamalı.
+    expect(await openFeedbackInvite('tr', request.token)).toBeNull();
+    expect(await completeFeedbackInvite(request.token)).toBeNull();
+  });
+
   it('yarıda bırakılan akış kaldığı yerden devam eder', async () => {
     const request = await inviteForOrder();
     await recordVote({ customerId, productId, context: 'purchase', vote: 'like', feedbackRequestId: request.id });

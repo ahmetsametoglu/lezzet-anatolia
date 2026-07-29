@@ -159,8 +159,8 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
   }
 
   /** Tek satır getirir (verilen alanlara göre) ya da null. Kimlik anahtarı aramaları için. */
-  protected async getOneBy(filters: Record<string, unknown>): Promise<TDb | null> {
-    const rows = await this.getAll(filters, { limit: 1 });
+  protected async getOneBy(filters: Record<string, unknown>, options?: FilterOptions): Promise<TDb | null> {
+    const rows = await this.getAll(filters, { ...options, limit: 1 });
     return rows[0] ?? null;
   }
 

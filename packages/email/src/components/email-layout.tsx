@@ -6,10 +6,12 @@ import type { NotificationLine, NotificationStep, NotificationTotal, PreferredLa
 void React;
 
 /**
- * Sipariş e-postalarının ORTAK İSKELETİ ve blokları — `design/project/Email - *.html` birebir.
+ * TÜM e-postaların ortak iskeleti ve blokları — `design/project/Email - *.html` birebir.
  *
- * Üç şablon (onay / yolda / teslim) aynı gövdeyi paylaşır; farkları doldurdukları bloklardır.
- * Ortak iskelet olmasaydı başlık ve alt bilgi üç yerde dururdu — biri değişince ikisi eskirdi.
+ * Sipariş mailleri (onay / yolda / teslim / iptal / iade / eksik) ve talep mailleri aynı gövdeyi
+ * paylaşır; farkları doldurdukları bloklardır. Ortak iskelet olmasaydı başlık ve alt bilgi her
+ * şablonda ayrı dururdu — biri değişince ötekiler eskirdi. **Talep mailinin ayrı bir çizimi yok**
+ * (`design/project`'te `Email - Talep` yok); marka iskeleti aynen kullanılır, uydurulmaz.
  *
  * **Tasarımın iki bağlayıcı kararı burada uygulanır:**
  * - **Web fontu yok.** Lora yerine Georgia, Karla yerine Arial. Mail istemcileri web fontu
@@ -50,7 +52,7 @@ interface OrderEmailFooter {
   preferencesUrl: string;
 }
 
-interface OrderEmailLayoutProps {
+interface EmailLayoutProps {
   preview: string;
   locale: PreferredLanguage;
   brandName: string;
@@ -60,7 +62,7 @@ interface OrderEmailLayoutProps {
   children: React.ReactNode;
 }
 
-export function OrderEmailLayout({ preview, locale, brandName, region, footer, children }: OrderEmailLayoutProps) {
+export function EmailLayout({ preview, locale, brandName, region, footer, children }: EmailLayoutProps) {
   return (
     <Html lang={locale}>
       <Head />
@@ -214,8 +216,14 @@ export function Headline({ title, intro }: { title: string; intro: React.ReactNo
   );
 }
 
-/** Sipariş künyesi: referans + tarih + sağda durum hapı. */
-export function OrderHeaderCard({ referenceNo, orderedOn, statusLabel }: { referenceNo: string; orderedOn: string; statusLabel: string }) {
+/**
+ * Künye kartı: kalın başlık + soluk ikincil satır + sağda durum hapı.
+ *
+ * Siparişte "LZA-2451 · 22 Temmuz · Onaylandı", talepte "Eksik ürün · 22 Temmuz'da açıldı ·
+ * İnceleniyor". İki mailde aynı kutu, çünkü müşteri için ikisi de aynı soruyu cevaplıyor:
+ * *hangi kayıt, ne zaman, şu an ne durumda*.
+ */
+export function HeaderCard({ title, meta, statusLabel }: { title: string; meta: string; statusLabel: string }) {
   return (
     <Row padding="0 32px 18px">
       <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ width: '100%', backgroundColor: C.white, border: `1px solid ${C.innerBorder}`, borderRadius: 16 }}>
@@ -226,8 +234,8 @@ export function OrderHeaderCard({ referenceNo, orderedOn, statusLabel }: { refer
                 <tbody>
                   <tr>
                     <td valign="middle" style={{ fontFamily: SERIF, fontSize: 22, lineHeight: '28px', color: C.ink }}>
-                      {referenceNo}
-                      <span style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 'normal', color: C.faint }}>{`\u00A0\u00A0${orderedOn}`}</span>
+                      {title}
+                      <span style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 'normal', color: C.faint }}>{`\u00A0\u00A0${meta}`}</span>
                     </td>
                     <td valign="middle" align="right">
                       <table role="presentation" cellPadding={0} cellSpacing={0} border={0}>
@@ -516,6 +524,24 @@ export function SummaryCard({
           {linkLabel}
         </a>
       </div>
+    </Card>
+  );
+}
+
+/**
+ * Yazışma balonu — personelin cevabı (14.7). Beyaz kart, üstte kim yazdı satırı, altta metnin
+ * KENDİSİ.
+ *
+ * **Metin kırpılmaz:** personelin cevabı müşteriye aynen görünür (DOMAIN §15 — iç not yoktur).
+ * Kırpsaydık müşteri cevabı okumak için tıklamak zorunda kalırdı; oysa mail zaten cevabı taşımak
+ * için gidiyor. Satır sonları korunur (`whiteSpace: 'pre-line'`) — operatörün kurduğu paragraf
+ * düzeni tek bir bloğa çökmesin.
+ */
+export function MessageCard({ title, meta, body }: { title: string; meta: string | null; body: string }) {
+  return (
+    <Card title={title}>
+      {meta && <div style={{ fontFamily: SANS, fontSize: 12, lineHeight: '17px', color: C.faint, paddingBottom: 8 }}>{meta}</div>}
+      <div style={{ fontFamily: SANS, fontSize: 14, lineHeight: '22px', color: C.strong, whiteSpace: 'pre-line' }}>{body}</div>
     </Card>
   );
 }

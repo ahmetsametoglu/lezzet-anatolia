@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PreferredLanguageEnum } from './enums.schema';
+import { PreferredLanguageEnum, TicketStatusEnum, TicketTypeEnum } from './enums.schema';
 
 // Bildirim (modül 14) — müşteriye giden mesajın VERİ ŞEKLİ. DOMAIN §6, build/14.
 //
@@ -99,3 +99,41 @@ export const OrderNotificationSchema = z.object({
   notificationPreferencesUrl: z.string(),
 });
 export type OrderNotification = z.infer<typeof OrderNotificationSchema>;
+
+/**
+ * Talep bildiriminin verisi (14.7 · 16.4) — DOMAIN §15.
+ *
+ * **Enum'lar ham geçer, etiket değil.** Sipariş bildiriminde tutarlar biçimlenmiş gelir çünkü para
+ * biçimi bir uygulama kararıdır; ama "çözüldü" kelimesi bir ÇEVİRİDİR ve çevirinin yeri şablonun
+ * yanındaki metin tablosudur (`ticket-copy.ts`). Kapı etiket üretseydi aynı sözlük iki dilde iki
+ * yerde dururdu.
+ *
+ * **`replyBody` tam metindir, özet değil:** personelin cevabı müşteriye aynen görünür (DOMAIN §15,
+ * iç not yoktur). Kırpma bir sunum kararıdır ve şablona aittir.
+ */
+export const TicketNotificationSchema = z.object({
+  ticketId: z.string().uuid(),
+  /** Yüzeyin türettiği ya da personelin koyduğu başlık; yoksa şablon tipten bir başlık kurar. */
+  subject: z.string().nullable(),
+  type: TicketTypeEnum,
+  status: TicketStatusEnum,
+  customerName: z.string().nullable(),
+  locale: PreferredLanguageEnum,
+  /** Talep bir siparişe bağlıysa referansı — müşterinin "hangi sipariş" sorusunun cevabı. */
+  orderReferenceNo: z.string().nullable(),
+  /** Talebin açıldığı gün, biçimlenmiş ("22 Temmuz 2026"). */
+  openedOn: z.string(),
+
+  /** `ticket_replied` olayında dolu: personelin son cevabı ve zamanı. */
+  replyBody: z.string().nullable(),
+  repliedAt: z.string().nullable(),
+  /**
+   * `ticket_status_changed` olayında dolu — nereden gelindiği. Yalnız yeni durumu göstermek
+   * "çözüldü" ile "yeniden açıldı"yı ayırt edilemez kılardı.
+   */
+  previousStatus: TicketStatusEnum.nullable(),
+
+  ticketUrl: z.string(),
+  notificationPreferencesUrl: z.string(),
+});
+export type TicketNotification = z.infer<typeof TicketNotificationSchema>;
