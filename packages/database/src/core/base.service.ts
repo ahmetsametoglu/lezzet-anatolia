@@ -167,13 +167,34 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
   /**
    * `limit + 1` satırdan sayfayı ve imleci keser — `getPage`/`getPageAs` bunu paylaşır (tekrar yok).
    * Fazla satır varsa devamı vardır; imleç son DÖNEN satırdan kurulur.
+   *
+   * ── İMLEÇ HAM SATIRDAN KURULUR, doğrulanmıştan değil (09.17) ────────────────
+   * `getPageAs` dar bir şemayla doğruluyor ve Zod tanımadığı alanları DÜŞÜRÜYOR. Sıralama alanı o
+   * şemada yoksa imleç `{ value: undefined }` olarak doğuyordu; ikinci sayfa isteği PostgREST'te
+   * `invalid input syntax for type integer: "undefined"` ile düşüyor, çağıran hatayı yuttuğu için
+   * liste sessizce birinci sayfada kalıyor ve "Daha fazla yükle" sonsuza kadar ekranda duruyordu.
+   * Fiyat ve stok listeleri tam olarak bu yüzden ikinci sayfayı hiç yükleyemedi.
+   *
+   * Sıralama alanı bir GÖRÜNÜM alanı değil, sayfalamanın altyapısı: dar şemaya onu taşıtmak yükü
+   * yanlış yere bindirmek olurdu. Ham satırda okunur, `select`'te bulunması yeter.
+   *
+   * Eksikse SESSİZ geçilmez, fırlatılır. Eski hâl ikinci sayfada ve yalnız yeterince veri varken
+   * görünüyordu — yani hatanın kendisi, onu bulmayı en zor kılan yerde saklanıyordu.
    */
-  private static pageOf<T>(rows: T[], limit: number, orderBy: string): Page<T> {
+  private static pageOf<T>(rows: T[], rawRows: unknown[], limit: number, orderBy: string): Page<T> {
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;
-    const last = page[page.length - 1] as Record<string, unknown> | undefined;
-    const nextCursor = hasMore && last ? { value: last[orderBy] as string | number, id: last.id as string } : null;
-    return { rows: page, nextCursor };
+    if (!hasMore) return { rows: page, nextCursor: null };
+
+    const col = camelToSnake(orderBy);
+    const last = rawRows[page.length - 1] as Record<string, unknown> | undefined;
+    const value = last?.[col];
+    if (value === undefined || value === null) {
+      throw new Error(
+        `Keyset imleci kurulamadı: sıralama alanı "${col}" okunan satırda yok. Projeksiyonlu okumada (getPageAs) sıralama alanı da select'e yazılmalı.`,
+      );
+    }
+    return { rows: page, nextCursor: { value: value as string | number, id: last!.id as string } };
   }
 
   /**
@@ -188,8 +209,8 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     options: GetAllOptions & { orderBy: string; limit: number },
   ): Promise<Page<TDb>> {
     // tiebreakById: imleç `id` ikilisine dayanır → sıra deterministik OLMALI (bkz. GetAllOptions).
-    const rows = await this.getAll(filters, { ...options, limit: options.limit + 1, tiebreakById: true });
-    return BaseDbService.pageOf(rows, options.limit, options.orderBy);
+    const raw = await this.selectRows(filters, { ...options, limit: options.limit + 1, tiebreakById: true });
+    return BaseDbService.pageOf(this.parseRows(raw), raw, options.limit, options.orderBy);
   }
 
   /** `getPage`'in projeksiyonlu ikizi — gömülü ilişkili satırlar (bkz. `getAllAs`). */
@@ -198,8 +219,9 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     filters: Record<string, unknown> | undefined,
     options: GetAllOptions & { orderBy: string; limit: number; select: string },
   ): Promise<Page<T>> {
-    const rows = await this.getAllAs(rowSchema, filters, { ...options, limit: options.limit + 1, tiebreakById: true });
-    return BaseDbService.pageOf(rows, options.limit, options.orderBy);
+    const raw = await this.selectRows(filters, { ...options, limit: options.limit + 1, tiebreakById: true });
+    const rows = raw.map((row) => rowSchema.parse(dbToApp(row)));
+    return BaseDbService.pageOf(rows, raw, options.limit, options.orderBy);
   }
 
   /**

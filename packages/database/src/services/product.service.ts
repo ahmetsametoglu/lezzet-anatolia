@@ -209,8 +209,11 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   async listStockRows(opts: ProductListOptions = {}): Promise<Page<ProductStockRow>> {
     const { filters, orFilters } = this.buildQuery(opts.filters);
     return this.getPageAs(ProductStockRowSchema, filters, {
+      // `sort_order` GÖRÜNÜM için değil, İMLEÇ için: sayfa ona göre sıralanıyor ve keyset imleci son
+      // satırın bu değerinden kuruluyor (bkz. `pageOf`). Dar şema onu taşımaz — Zod düşürür, ham
+      // satırda okunur. Select'ten çıkarsa ikinci sayfa istenemez ve `pageOf` bunu fırlatarak söyler.
       select:
-        'id,name,category_id,date_type,shelf_life_days,status,variants:product_variant(id,label,is_active,min_stock_qty,sku)',
+        'id,sort_order,name,category_id,date_type,shelf_life_days,status,variants:product_variant(id,label,is_active,min_stock_qty,sku)',
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
@@ -229,8 +232,11 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   async listPriceRows(opts: ProductListOptions = {}): Promise<Page<ProductPriceRow>> {
     const { filters, orFilters } = this.buildQuery(opts.filters);
     return this.getPageAs(ProductPriceRowSchema, filters, {
+      // Baştaki `sort_order` ÜRÜNÜN kendisininki — imleç ona dayanır (bkz. `listStockRows` notu).
+      // Sondaki, gömülü seçimin içindeki ise BOYUN sıra numarası; ikisi ayrı alanlar. Eskiden yalnız
+      // ikincisi vardı ve "sort_order geçiyor" diye bakan göz farkı görmüyordu — hata orada saklandı.
       select:
-        'id,name,category_id,vat_rate,target_margin_percent,auto_price,status,variants:product_variant(id,label,is_active,sort_order)',
+        'id,sort_order,name,category_id,vat_rate,target_margin_percent,auto_price,status,variants:product_variant(id,label,is_active,sort_order)',
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,

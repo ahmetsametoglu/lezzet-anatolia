@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Product } from '@lezzet/types';
+import type { KeysetCursor, Product } from '@lezzet/types';
 import { serviceDb } from '../client';
 import { CategoryService } from './category.service';
 import { CollectionService } from './collection.service';
@@ -140,6 +140,43 @@ describe('ProductService.list — keyset sayfalama', () => {
   it('son sayfada nextCursor null döner', async () => {
     const page = await products.list({ filters: { query: STAMP }, limit: 50 });
     expect(page.nextCursor).toBeNull();
+  });
+});
+
+/**
+ * DAR PROJEKSİYONLARIN İMLECİ (09.17 nöbeti).
+ *
+ * Fiyat ve stok listeleri `getPageAs` ile dar bir şemadan okunuyor ve Zod tanımadığı alanı düşürüyor.
+ * Sıralama alanı (`sort_order`) select'ten çıktığında imleç `{ value: undefined }` doğuyor, ikinci
+ * sayfa PostgREST'te `invalid input syntax for type integer: "undefined"` ile düşüyor ve çağıran
+ * hatayı yuttuğu için liste sessizce birinci sayfada kalıyor — ekranda "Daha fazla yükle" sonsuza
+ * kadar duruyor. Tip denetimi bunu göremez (`value` tipi doğru, DEĞERİ yok) ve tek sayfalık veriyle
+ * hiç görünmez; o yüzden nöbet burada, gerçek sorguda.
+ */
+describe.each([
+  ['listPriceRows', (o: { limit: number; cursor?: KeysetCursor }) => products.listPriceRows({ filters: { query: STAMP }, ...o })],
+  ['listStockRows', (o: { limit: number; cursor?: KeysetCursor }) => products.listStockRows({ filters: { query: STAMP }, ...o })],
+])('ProductService.%s — dar projeksiyonda keyset', (_ad, read) => {
+  it('imleç DEĞER taşır (dar şema düşürse bile)', async () => {
+    const page = await read({ limit: 2 });
+    expect(page.nextCursor).not.toBeNull();
+    expect(page.nextCursor?.value).toBeTypeOf('number');
+  });
+
+  it('sayfalar birbirini tekrarlamaz, hepsi gelir ve liste BİTER', async () => {
+    const seen: string[] = [];
+    let cursor: KeysetCursor | undefined;
+    let guard = 0;
+    do {
+      const page = await read({ limit: 2, cursor });
+      seen.push(...page.rows.map((r) => r.id));
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor && ++guard < 20);
+
+    // Bu testin 8 kaydı: tekrar yok, hepsi geldi ve imleç null'a düştü (sonsuz "Daha fazla" yok).
+    expect(new Set(seen).size).toBe(seen.length);
+    expect(seen).toHaveLength(8);
+    expect(cursor).toBeUndefined();
   });
 });
 
