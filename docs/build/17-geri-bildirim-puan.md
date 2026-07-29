@@ -29,19 +29,37 @@ Değerli veri toplarken müşteriyi ödüllendiren döngü: yorum + beğeni + ü
     - **Skor iki ayaklı ve sayı-ağırlıklı:** beğeni oranı 1–5'e eşlenip yıldız ortalamasıyla harmanlanır. Sabit ağırlık ikisinden birini ezerdi — 5 yorumlu 60 beğenili üründe sonucu beğeniler, 40 yorumlu 3 beğenili üründe yıldızlar belirlemeli. Katsayı motorda tek yerde, parametrik.
     - Veri modeline göre değişiklikler: `status` üç hâlli, `language` (yorum **çevrilmez**), `vote`/`context`/`dwell_ms`/`feedback_request_id`; `customer_id` **nullable** (ziyaretçinin keşif kaydırması sayılır ama puan doğurmaz, tekilleştirilemez).
     - Eksik: ürün sayfası yorum paneli (müşteri UI) ve operasyon moderasyon kuyruğu ekranı.
-- [ ] (17.2) **FeedbackRequest cron:** teslim +10 gün (taramalı-idempotent); WhatsApp/e-posta link'iyle davet; tamamlanma izlenir
+- [~] (17.2) **FeedbackRequest cron:** teslim +10 gün (taramalı-idempotent); WhatsApp/e-posta link'iyle davet; tamamlanma izlenir
   - *Bitti:* teslimden 10 gün sonra davet gidiyor; tekrar tetiklenmiyor
+  - **Durum (29.07):** **arka uç hazır** — `0038_feedback_request.sql` (tablo + `feedback_request_progress` görünümü), `createDueFeedbackRequests` (taramalı-idempotent; teslim anı `order_status_log`'dan türetilir), `openFeedbackInvite`/`completeFeedbackInvite` (`lib/feedback/invite.ts`). 13 test.
+    - **Davet oluşturulur, sonra gönderilir** — iki ayrı adım: e-posta sağlayıcısı düştüğünde davet kaybolmaz, `sentAt` boş olarak kuyrukta kalır (`listPendingInvites`).
+    - **Token oturum yerine geçer** (16 karakter, sipariş referansıyla aynı okunabilir alfabe): davet telefonda tek elle açılır, araya giriş ekranı akışı kırardı.
+    - **İlerleme ("2/5") türetilir**, saklanmaz; yarıda bırakılan akış kaldığı yerden devam eder.
+    - Eksik: (a) **zamanlayıcı** — tarama işi hazır, onu günde bir çağıracak cron altyapısı yok; (b) davet e-postası/WhatsApp şablonu (modül 14); (c) müşteri yüzeyi kart akışı.
 - [~] (17.3) **Kaydırma akışları:** alım-sonrası memnuniyet (`context='purchase'`) + aday ürün keşif (`context='candidate'`) → `ProductFeedback(vote, dwell_ms)`; sinyal kalite ağırlığı domain-core'da
   - *Bitti:* beğeni kaydediliyor ve ürün skoruna giriyor; düşük kaliteli kaydırma analizde zayıf
-  - **Durum (29.07):** **veri ve kapı hazır** — `recordVote` iki bağlamı da yazıyor (`purchase` satın almayı, `candidate` ürünün aday olduğunu doğrular), `dwell_ms` toplanıyor, aday talep panosu `candidate_demand` görünümünden okunuyor (kimlikli beğeniler ayrı sayılır — "kaç kaydırma" ile "kaç kişi" farklı sorulardır). Eksik: (a) keşif ve alım-sonrası kart ekranları (müşteri UI), (b) **sinyal kalite ağırlıklandırması** — `dwell_ms` ve desen toplanıyor ama zayıflatma motoru henüz yazılmadı.
-- [ ] (17.4) **Puan (PointsEntry):** aksiyonlara puan (yorum/swipe/sipariş); bakiye **türetilir** (Σ points); tavanlar (aynı ürüne bir kez + günlük), B2C-only, süresiz; puan tamamlamaya bağlı (beğeniye değil)
+  - **Durum (29.07):** **arka uç hazır** — `recordVote` iki bağlamı da yazıyor (`purchase` satın almayı, `candidate` ürünün aday olduğunu doğrular), `dwell_ms` toplanıyor.
+    - **Sinyal kalitesi yazıldı** (`domain-core/feedback/signal-quality`): ağırlık = kart süresi × kaydıranın deseni. 400 ms altı kart görülmemiştir (sıfır ağırlık); hep aynı yöne savuran bilgi taşımaz (azınlık payı ölçüsü, 5 kaydırmadan az ise desen aranmaz). `listCandidateDemand` ham beğeniyi ve **ağırlıklı** beğeniyi yan yana verir, sıralama ağırlıklıya göre — 40 savurma beğenisi 8 gerçek beğeniyi geçemez. `trust` göstergesi tasarımın istediği "sade güven göstergesi".
+    - **Müşterinin puanı bundan etkilenmez** (ödül ≠ güven): kalitesiz kaydırma da ödülünü alır.
+    - Eksik: keşif ve alım-sonrası kart ekranları (müşteri UI).
+- [x] (17.4) **Puan (PointsEntry):** aksiyonlara puan (yorum/swipe/sipariş); bakiye **türetilir** (Σ points); tavanlar (aynı ürüne bir kez + günlük), B2C-only, süresiz; puan tamamlamaya bağlı (beğeniye değil)
   - *Bitti:* bakiye ledger'dan türeniyor; istismar tavanları çalışıyor
-- [ ] (17.5) **Redemption:** müşteri isteyince puan → kişisel `Discount` (`customer_id`) RPC (PointsEntry negatif + kupon tek transaction)
+  - **Durum (29.07):** `0037_points.sql` (defter + `customer_points_balance` görünümü + 8 parametrik ayar), motor `domain-core/feedback/points`, servisler, kapılar `lib/feedback/points.ts`. 22 test.
+    - **Defter, sayaç değil:** bakiye Σ ile türer; `MoneyMovement` ↔ hesap bakiyesiyle aynı desen. `update`/`delete` yok — defter satırı düzeltilmez, karşı kayıt yazılır.
+    - **Tavan defterin kendisinde:** "aynı kaynaktan iki kez puan yok" `(müşteri, sebep, kaynak)` kısmi unique indeksiyle; uygulama unutsa da yazılamaz. Günlük tavan **kısmi uygulanmaz** — ya tamamı ya hiç, çünkü tekillik yüzünden müşteri yarın telafi edemezdi.
+    - **Ödül asıl işlemi durdurmaz:** puan sessiz yazılır; B2B olmak ya da tavana takılmak yorumu geri çevirmez (DOMAIN §14).
+    - Puan değerleri parametrik: yorum 20 · alım-sonrası beğeni 5 · keşif kaydırması 2 · sipariş 10 · getiren 50 · günlük tavan 100. Ölçek 1 puan = 1 cent ("500 puan = 5 €" anlatılabilir bir cümledir).
+- [x] (17.5) **Redemption:** müşteri isteyince puan → kişisel `Discount` (`customer_id`) RPC (PointsEntry negatif + kupon tek transaction)
   - *Bitti:* çevirme atomik; puan düşüyor, kişisel kupon oluşuyor
-- [ ] (17.6) **Google yorum köprüsü:** anket sonunda memnun müşteri Google işletme yorumuna tek-tık yönlendirilir
+  - **Durum (29.07):** `redeem_points` RPC — puan düşümü ve kuponun doğuşu **tek transaction**; ayrı olsalardı ikincisi düştüğünde müşterinin puanı gider, kuponu doğmazdı. Bakiye bir SATIR değil TOPLAM olduğu için kilit **advisory**'dir (`for update` agregatla çalışmaz): müşteri başına serileştirme, farklı müşteriler birbirini beklemez.
+    - Kupon **sabit tutarlı** (yüzde değil): aynı puan farklı sepetlerde farklı değer etseydi "500 puan = 5 €" yalan olurdu. Kişisel + tek kullanımlık.
+    - Kod motorda üretilir (`PUAN-7K4M2P`, sipariş referansıyla **aynı okunabilir alfabe**), benzersizliği veritabanı söyler — çakışmada yeniden denenir.
+- [x] (17.6) **Google yorum köprüsü:** anket sonunda memnun müşteri Google işletme yorumuna tek-tık yönlendirilir
   - *Bitti:* yüksek memnuniyette Google linki sunuluyor
-- [ ] (17.7) **Referral zemini:** `referred_by` yazımı (kayıtta); `PointsEntry.reason=referral` hazır (bağ ileride)
+  - **Durum (29.07):** `feedbackOutcomeOf` — üç çıkış: `google_review` · `report_issue` · `thanks`. **Memnun olmayan Google'a yönlendirilmez** (tasarım §6): onun yolu talep girişidir. Ölçüt beğeni ORANIDIR (eşik %80, parametrik), tek bir yıldız değil — bir üründen hoşlanmamak siparişten memnun olmamak değildir. `google_review_url` ayarı boşsa davet hiç gösterilmez; uydurma adrese yönlendirmektense teşekkürle biter. **Ekran tarafı müşteri UI'ında.**
+- [~] (17.7) **Referral zemini:** `referred_by` yazımı (kayıtta); `PointsEntry.reason=referral` hazır (bağ ileride)
   - *Bitti:* getiren müşteri kaydediliyor
+  - **Durum (29.07):** `awardReferralPoints(newCustomerId)` hazır — `referred_by` doluysa getirene bir kez puan yazar. Kaynak (`ref_id`) YENİ müşterinin kimliğidir: tekillik "aynı kişiyi iki kez getiremezsin" demeli. Eksik: **kayıt akışında `referred_by` yazımı** (04) ve davet bağlantısı üretimi.
 
 ## Netleşecekler
 

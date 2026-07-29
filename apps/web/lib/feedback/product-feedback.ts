@@ -9,8 +9,18 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { EMPTY_PRODUCT_SCORE, canModerate, initialFeedbackStatus, productScoreOf, type ProductScore } from '@lezzet/domain-core';
+import {
+  EMPTY_PRODUCT_SCORE,
+  candidateSignalOf,
+  canModerate,
+  initialFeedbackStatus,
+  productScoreOf,
+  swipeWeight,
+  type CandidateSignal,
+  type ProductScore,
+} from '@lezzet/domain-core';
 import type { FeedbackContext, FeedbackVote, KeysetCursor, Page, PreferredLanguage, ProductFeedback, ReviewStatus } from '@lezzet/types';
+import { awardFeedbackPoints } from './points';
 
 /**
  * Ürün geri bildirimi kapıları (17.1, 17.3) — motor karar verir, servisler satır getirir, burası
@@ -131,10 +141,10 @@ export async function submitReview(input: {
   // Satın almayan yazamaz (DOMAIN §14) — doğrulanmamış yorum sosyal kanıt değil reklamdır.
   if (!orderId) return { ok: false, reason: 'not_purchased' };
 
-  return {
-    ok: true,
-    data: await upsertFeedback({ ...input, comment, orderId, context: 'purchase' }),
-  };
+  const saved = await upsertFeedback({ ...input, comment, orderId, context: 'purchase' });
+  // Puan SESSİZ yazılır: tavana takılmak ya da B2B olmak yorumu geri çevirmez (DOMAIN §14).
+  await awardFeedbackPoints(saved);
+  return { ok: true, data: saved };
 }
 
 /**
@@ -178,10 +188,14 @@ export async function recordVote(input: {
   if (input.context === 'purchase') {
     const orderId = await findPurchase(input.customerId, input.productId);
     if (!orderId) return { ok: false, reason: 'not_purchased' };
-    return { ok: true, data: await upsertFeedback({ ...input, customerId: input.customerId, orderId }) };
+    const saved = await upsertFeedback({ ...input, customerId: input.customerId, orderId });
+    await awardFeedbackPoints(saved);
+    return { ok: true, data: saved };
   }
 
-  return { ok: true, data: await upsertFeedback({ ...input, customerId: input.customerId }) };
+  const saved = await upsertFeedback({ ...input, customerId: input.customerId });
+  await awardFeedbackPoints(saved);
+  return { ok: true, data: saved };
 }
 
 /** Müşterinin bu ürüne yazabilir mi ve yazdıysa ne — ürün sayfasındaki yorum panelinin girdisi. */
@@ -283,4 +297,70 @@ export async function moderateReview(input: {
 /** Operasyon başlığındaki "N yorum onay bekliyor" rozeti. */
 export function countPendingReviews(): Promise<number> {
   return new ProductFeedbackService(serviceDb()).countPending();
+}
+
+/** Aday panosunun tek satırı — ham talep + **ağırlıklı** sinyal yan yana. */
+export interface CandidateDemandRow {
+  productId: string;
+  dislikeCount: number;
+  /** Kaç KİŞİ beğendi (kimlikli) — "kaç kaydırma" ile aynı şey değil. */
+  identifiedLikeCount: number;
+  signal: CandidateSignal;
+}
+
+/**
+ * **Aday ürün talep panosu, sinyal kalitesi ağırlıklı** (13.4 · 17.3 · DOMAIN §14).
+ *
+ * Ham beğeni sayısı panoda yanıltıcıdır: 40 savurma beğenisi 8 gerçek beğeniden büyük görünür.
+ * Burada her kaydırma kendi ağırlığıyla sayılır — kartta geçirilen süre ve kaydıranın deseni
+ * (hep aynı yöne savuran bilgi taşımaz).
+ *
+ * **Müşterinin puanı bundan ETKİLENMEZ** (DOMAIN §14 "ödül ≠ güven"): kalitesiz kaydırma da
+ * ödülünü almıştır, yalnız iş kararını bozmaz.
+ *
+ * Sıralama ağırlıklı sayıya göredir; ham sayı da taşınır ki ekran ikisini yan yana gösterebilsin.
+ */
+export async function listCandidateDemand(limit = 20): Promise<CandidateDemandRow[]> {
+  const db = serviceDb();
+  const rows = await new ProductFeedbackService(db).listCandidateVotes();
+  if (rows.length === 0) return [];
+
+  // Kaydıranın deseni: kimlik başına beğeni/geçme sayıları. Kimliksiz kaydırmalar tek bir havuzda
+  // toplanamaz — hangisinin aynı kişi olduğu bilinmiyor; onlar için desen ağırlığı uygulanmaz.
+  const byCustomer = new Map<string, { like: number; dislike: number }>();
+  for (const row of rows) {
+    if (!row.customerId || !row.vote) continue;
+    const tally = byCustomer.get(row.customerId) ?? { like: 0, dislike: 0 };
+    if (row.vote === 'like') tally.like += 1;
+    else tally.dislike += 1;
+    byCustomer.set(row.customerId, tally);
+  }
+
+  const byProduct = new Map<string, Array<{ vote: 'like' | 'dislike'; weight: number }>>();
+  const dislikes = new Map<string, number>();
+  const identified = new Map<string, number>();
+
+  for (const row of rows) {
+    if (!row.vote) continue;
+    const tally = row.customerId ? byCustomer.get(row.customerId) : undefined;
+    const weight = swipeWeight({
+      dwellMs: row.dwellMs,
+      // Kimliksiz kaydırmada desen çıkarılamaz: nötr (dengeli) kabul edilir.
+      swiperLikeCount: tally?.like ?? 1,
+      swiperDislikeCount: tally?.dislike ?? 1,
+    });
+    byProduct.set(row.productId, [...(byProduct.get(row.productId) ?? []), { vote: row.vote, weight }]);
+    if (row.vote === 'dislike') dislikes.set(row.productId, (dislikes.get(row.productId) ?? 0) + 1);
+    if (row.vote === 'like' && row.customerId) identified.set(row.productId, (identified.get(row.productId) ?? 0) + 1);
+  }
+
+  return [...byProduct.entries()]
+    .map(([productId, swipes]) => ({
+      productId,
+      dislikeCount: dislikes.get(productId) ?? 0,
+      identifiedLikeCount: identified.get(productId) ?? 0,
+      signal: candidateSignalOf(swipes),
+    }))
+    .sort((a, b) => b.signal.weightedLikes - a.signal.weightedLikes)
+    .slice(0, limit);
 }

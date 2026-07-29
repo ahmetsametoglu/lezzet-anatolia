@@ -34,7 +34,7 @@ Varlık tabloları konu dosyalarına ayrıldı — 700 satırlık tek dosya, par
 - [`data-model/stok-tedarik.md`](data-model/stok-tedarik.md) — **Stok ve Tedarik:** `Stock`, `Reservation`, `StockAdjustment`, `TemperatureLog`, `Supplier`, `SupplierProduct`, `PurchaseOrder`, `PurchaseOrderItem`, `StockIntake`
 - [`data-model/musteri-siparis.md`](data-model/musteri-siparis.md) — **Müşteri ve Sipariş:** `Customer`, `Address`, `DeliveryZone`, `Order`, `OrderItem`, `OrderItemBatch`, `OrderStatusLog`, `Cart`, `CourierDayClose`
 - [`data-model/para.md`](data-model/para.md) — **Para ve Ön Muhasebe:** `Account`, `MoneyMovement`, `BankImportProfile`
-- [`data-model/iletisim-geribildirim.md`](data-model/iletisim-geribildirim.md) — **İletişim, Geri Bildirim ve Analitik:** `Conversation`, `Message`, `WebhookEvent`, `AnalyticsEvent`, `Review`, `FeedbackRequest`, `PointsEntry`, `Ticket`, `TicketMessage`, `Setting`
+- [`data-model/iletisim-geribildirim.md`](data-model/iletisim-geribildirim.md) — **İletişim, Geri Bildirim ve Analitik:** `Conversation`, `Message`, `WebhookEvent`, `AnalyticsEvent`, `ProductFeedback`, `FeedbackRequest`, `PointsEntry`, `Ticket`, `TicketMessage`, `Setting`
 
 Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` → katalog).
 
@@ -65,7 +65,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `feedback_channel`: email, whatsapp
 - `feedback_context`: purchase, candidate
 - `feedback_vote`: like, dislike
-- `points_reason`: review, swipe_candidate, swipe_post_purchase, order, redemption, manual
+- `points_reason`: review, feedback_purchase, feedback_candidate, order, referral, redemption, manual
 - `review_status`: pending, approved, rejected
 - `ticket_type`: damaged, missing, question, other
 - `ticket_status`: open, in_progress, resolved

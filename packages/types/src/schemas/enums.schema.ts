@@ -176,3 +176,30 @@ export type FeedbackContext = z.infer<typeof FeedbackContextEnum>;
 /** Kaydırmanın yönü — beğen / geç. */
 export const FeedbackVoteEnum = z.enum(['like', 'dislike']);
 export type FeedbackVote = z.infer<typeof FeedbackVoteEnum>;
+
+/**
+ * Puan kazanımının/harcamasının sebebi (DOMAIN §14). Bağlam adları `ProductFeedback.context` ile
+ * HİZALI (`feedback_purchase`/`feedback_candidate`): aynı olayı iki ayrı sözlükle adlandırmak,
+ * "hangi aksiyona kaç puan" ayarını okurken her seferinde çeviri yapmak olurdu.
+ *
+ * `review` ayrı bir sebeptir ve bu bilinçli: müşteri önce beğeni verip sonra yorum yazabilir —
+ * ikisi ayrı beyanlar, ayrı puanlar. Defterdeki tekillik `(müşteri, sebep, kaynak)` üzerinde
+ * olduğu için ikisi çakışmadan yan yana durur.
+ */
+export const PointsReasonEnum = z.enum([
+  'review',
+  'feedback_purchase',
+  'feedback_candidate',
+  'order',
+  'referral',
+  'redemption',
+  'manual',
+]);
+export type PointsReason = z.infer<typeof PointsReasonEnum>;
+
+/**
+ * Davetin gittiği kanal (17.2). Müşterinin tercih ettiği kanal değil, DAVETİN kanalı: hangisinin
+ * daha çok tamamlandığını bilmek, kanalları karşılaştırmanın tek yolu.
+ */
+export const FeedbackChannelEnum = z.enum(['email', 'whatsapp']);
+export type FeedbackChannel = z.infer<typeof FeedbackChannelEnum>;

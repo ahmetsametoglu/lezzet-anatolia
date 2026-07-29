@@ -34,3 +34,6 @@ export * from './bank/fingerprint';
 export * from './bank/match';
 export * from './support/ticket-flow';
 export * from './feedback/feedback-score';
+export * from './feedback/points';
+export * from './feedback/invite';
+export * from './feedback/signal-quality';

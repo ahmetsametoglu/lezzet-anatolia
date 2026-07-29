@@ -41,3 +41,5 @@ export { WebhookEventService } from './services/webhook-event.service';
 export { CourierDayCloseService, CourierDayCollectionService } from './services/courier-day-close.service';
 export { TicketService, TicketQueueService, TicketMessageService, type TicketQueueFilter } from './services/ticket.service';
 export { ProductFeedbackService, ProductRatingService, CandidateDemandService } from './services/product-feedback.service';
+export { PointsEntryService, PointsBalanceService } from './services/points.service';
+export { FeedbackRequestService, FeedbackProgressService } from './services/feedback-request.service';

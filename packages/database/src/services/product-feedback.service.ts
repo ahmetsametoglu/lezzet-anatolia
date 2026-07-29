@@ -72,6 +72,17 @@ export class ProductFeedbackService extends BaseDbService<ProductFeedback, Produ
     return this.getAll({ customerId }, { orderBy: 'createdAt', orderDirection: 'desc' });
   }
 
+  /**
+   * Keşif kaydırmalarının tamamı — aday panosunun ağırlıklandırma girdisi (13.4 · 17.3).
+   *
+   * Ağırlık SQL'de hesaplanamaz: kaydıranın deseni tüm kaydırmalarına bakmayı ister ve kural
+   * motorda yaşar (`swipeWeight`). Bu yüzden ham satırlar döner. Küme aday ürünlerle sınırlı
+   * olduğu için sayfalanmaz — tavanı operatörün kurduğu aday listesidir.
+   */
+  listCandidateVotes(limit = 5000): Promise<ProductFeedback[]> {
+    return this.getAll({ context: 'candidate' }, { isNotNullFields: ['vote'], limit });
+  }
+
   /** Bir davetten doğan kayıtlar — "2/5 tamamlandı" ilerlemesi buradan türetilir (17.2). */
   listByRequest(feedbackRequestId: string): Promise<ProductFeedback[]> {
     return this.getAll({ feedbackRequestId });

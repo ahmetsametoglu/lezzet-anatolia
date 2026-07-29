@@ -11,9 +11,28 @@
  * Benzersizlik burada garanti EDİLEMEZ (DB işi): çağıran, unique ihlalinde yeniden üretir.
  */
 
-/** Karışabilen karakterler yok: I/1, O/0, S/5, Z/2 çıkarıldı — telefonda okunabilir kalsın. */
-const ALPHABET = '34679ACDEFGHJKLMNPQRTUVWXY';
+/**
+ * Karışabilen karakterler yok: I/1, O/0, S/5, Z/2 çıkarıldı — telefonda okunabilir kalsın.
+ *
+ * Dışa açık, çünkü müşteriye okunacak her kod aynı alfabeyi kullanmalı (sipariş referansı, puan
+ * kuponu…). İkinci bir alfabe tanımlamak, aynı kararı iki yerde tutmak olurdu.
+ */
+export const READABLE_ALPHABET = '34679ACDEFGHJKLMNPQRTUVWXY';
+const ALPHABET = READABLE_ALPHABET;
 const CODE_LENGTH = 6;
+
+/**
+ * Okunabilir rastgele kod. Benzersizlik burada garanti EDİLMEZ (DB işi): çağıran, unique
+ * ihlalinde yeniden üretir. Rastgelelik dışarıdan alınır — test aynı diziyi verip biçimi
+ * doğrulayabilsin.
+ */
+export function readableCode(length: number = CODE_LENGTH, random: () => number = Math.random): string {
+  let code = '';
+  for (let i = 0; i < length; i += 1) {
+    code += ALPHABET[Math.floor(random() * ALPHABET.length) % ALPHABET.length];
+  }
+  return code;
+}
 
 export interface ReferenceNoOptions {
   /** Marka öneki (varsayılan `LA` — Lezzet Anatolia). */
@@ -25,12 +44,7 @@ export interface ReferenceNoOptions {
 }
 
 export function generateReferenceNo({ prefix = 'LA', year, random = Math.random }: ReferenceNoOptions): string {
-  let code = '';
-  for (let i = 0; i < CODE_LENGTH; i += 1) {
-    const index = Math.floor(random() * ALPHABET.length) % ALPHABET.length;
-    code += ALPHABET[index];
-  }
-  return `${prefix}-${String(year).slice(-2)}-${code}`;
+  return `${prefix}-${String(year).slice(-2)}-${readableCode(CODE_LENGTH, random)}`;
 }
 
 /** Biçim doğrulaması — dışarıdan gelen referansın (destek talebi, WhatsApp mesajı) şekli doğru mu. */

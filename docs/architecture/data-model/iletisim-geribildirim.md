@@ -122,6 +122,8 @@ Teslim sonrası (~10 gün) swipe/yorum daveti; tamamlayınca ödül kuponu (bkz.
 | completed_at | timestamptz \| null | |
 | points_awarded | int \| null | tamamlayınca verilen puan (`PointsEntry`); puanlar sonra kişisel kupona çevrilir |
 
+**İlerlemenin bağı:** davetten doğan her değerlendirme `ProductFeedback.feedback_request_id` ile buraya bağlanır; "2/5" o bağdan türetilir (`feedback_request_progress`).
+
 **Token neden var:** davet e-posta/WhatsApp'tan gelir ve telefonda tek elle açılır — araya giriş ekranı koymak akışı kırar. Bağlantının kendisi kimlik taşır. Bu yüzden `reference_no` ile aynı kural geçerlidir: **rastgele**, sıralı değil — sıralı olsaydı bir davet linkinden komşusunun siparişine geçilebilirdi.
 
 **Yarıda bırakma ayrı alan istemez:** "2/5" ilerlemesi tamamlanmış değerlendirmelerden türetilir (siparişin kalemleri ↔ o kalemler için düşmüş beğeni/yorum). `completed_at` yalnız akışın sonuna basılır ve puanın **tek kez** verilmesini o sağlar.
@@ -135,7 +137,7 @@ Oyunlaştırma/sadakat: müşteri aksiyonları puan kazandırır, biriken puan k
 | id | uuid | |
 | customer_id | uuid | |
 | points | int | +kazanım / −harcama (delta) |
-| reason | enum(`review`,`swipe_candidate`,`swipe_post_purchase`,`order`,`redemption`,`manual`) | |
+| reason | enum(`review`,`feedback_purchase`,`feedback_candidate`,`order`,`referral`,`redemption`,`manual`) | bağlam adları `ProductFeedback.context` ile **hizalı** — aynı olayı iki sözlükle adlandırmamak için |
 | ref_id | uuid \| null | ilgili kayıt (review/order/discount…) |
 | note | text \| null | serbest sebep — **yalnız `manual`'da**: "gecikme telafisi — jest" |
 | created_by | uuid \| null | elle girişte personel; sistemin verdiği puanda boş |

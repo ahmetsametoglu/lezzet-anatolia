@@ -13,6 +13,8 @@ import { purgeTestData } from '@lezzet/database/testing';
 import type { ProductFeedback } from '@lezzet/types';
 import {
   countPendingReviews,
+  listCandidateDemand,
+  type CandidateDemandRow,
   getProductScore,
   getProductScores,
   getReviewEligibility,
@@ -297,6 +299,31 @@ describe('aday ürün talep panosu', () => {
     await recordVote({ customerId: buyerId, productId: candidateId, context: 'candidate', vote: 'like' });
     const ranked = await new CandidateDemandService(db).listRanked(50);
     expect(ranked.some((r) => r.productId === candidateId)).toBe(true);
+  });
+
+  it('savurma beğenileri panoyu şişirmez — sıralama AĞIRLIKLI sayıya bakar', async () => {
+    // Kartlara bakmadan geçilen altı kaydırma (ziyaretçi — tekilleştirilmez): ham sayı yüksek,
+    // sinyal sıfır.
+    for (let i = 0; i < 6; i += 1) {
+      await recordVote({ productId: candidateId, context: 'candidate', vote: 'like', dwellMs: 80 });
+    }
+    const rows: CandidateDemandRow[] = await listCandidateDemand(50);
+    const row = rows.find((r) => r.productId === candidateId);
+
+    expect(row?.signal.rawLikes).toBe(6);
+    // Hem süre hem desen sıfırlıyor: 6 beğeni, sıfır ağırlık.
+    expect(row?.signal.weightedLikes).toBe(0);
+    expect(row?.signal.trust).toBe(0);
+  });
+
+  it('bakarak ve ayırt ederek kaydıran kişinin beğenisi tam sayılır', async () => {
+    await db.from('product_feedback').insert([
+      { product_id: candidateId, customer_id: buyerId, context: 'candidate', vote: 'like', dwell_ms: 3000, status: 'approved' },
+      { product_id: otherProductId, customer_id: buyerId, context: 'candidate', vote: 'dislike', dwell_ms: 2500, status: 'approved' },
+    ]);
+    const row = (await listCandidateDemand(50)).find((r) => r.productId === candidateId);
+    expect(row?.signal.weightedLikes).toBe(1);
+    expect(row?.identifiedLikeCount).toBe(1);
   });
 
   it('satılabilir ürünün değerlendirmesi panoya karışmaz', async () => {
