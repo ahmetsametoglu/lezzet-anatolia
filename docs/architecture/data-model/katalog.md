@@ -189,6 +189,19 @@ satırları üzerinden yapılır. Hangi kapıdan girildiği yalnız **kırılım
 discount_code_id` "TR kodu mu FR kodu mu tuttu" sorusunu yanıtlar ve kampanyanın hangi dilde
 karşılık bulduğunu söyler.
 
+**Kullanım kaydını SİPARİŞ yazar, kapı değil** (karar 30.07). `OrderService.create` satırı siparişin
+kendi verisinden (`discount_id` + `discount_amount`) türetir; checkout'a yazılsaydı elle sipariş
+girişi, WhatsApp ajanı ve kapıda satış aynı şeyi ayrı ayrı hatırlamak zorunda kalır ve hatırlamayan
+ilk yol kotayı sessizce delerdi. Açık zaten böyle doğdu: indirim siparişe yazılıyor, kullanım kaydı
+hiçbir yerde yazılmıyordu — kotalı kupon aylarca sınırsız kullanılabildi. İdempotency
+`discount_use_order_key` tekil indeksindedir, uygulamada bir kontrolde değil.
+
+**İptal kotayı geri verir, iade vermez** (karar 30.07). Sayım `cancelled` siparişleri **dışlar**:
+vazgeçilen siparişte müşteri indirimden yararlanmadı, hakkını yakmak kendi hatası olmayan bir
+sebeple kuponu elinden almak olurdu (en çok puanla alınmış tek kullanımlık kuponda acıtır). Kayıt
+silinmez, sayarken dışlanır — "kim ne zaman denedi" geçmişte kalır. `returned` dışlanmaz: iptal "hiç
+olmadı", iade "oldu ve geri döndü" demektir.
+
 ## Bundle (paket)
 
 Birden çok ürünü tek fiyata sunan katalog kısayolu; sepete eklenince tek tek `OrderItem`'lara açılır (bkz. `DOMAIN.md §13`). Yeni ürün yaratmaz.

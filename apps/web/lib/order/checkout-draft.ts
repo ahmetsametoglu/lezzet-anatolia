@@ -143,6 +143,9 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
       locale: input.locale,
     },
     items,
+    // Kupon KOTASI siparişle birlikte tükenir (`OrderService.create`); buradan geçen tek şey hangi
+    // KAPIDAN girildiği — kotayı bölmez, "hangi dil karşılık buldu" sorusunu yanıtlar.
+    { discountCodeId: discountCodeIdOf(cart) },
   );
 
   return { status: 'ok', orderId: order.id, totalCents: options.orderTotalCents, deliveryType: delivery.deliveryType };
@@ -234,6 +237,17 @@ function discountSharesOf(cart: { discount: { status: string; lineShares?: numbe
 /** İnen indirim (cent) — kupon da otomatik kampanya da aynı alana yazılır, ayrımı `discountId` taşır. */
 function discountAmountOf(cart: { discount: { status: string; amountCents?: number } }): number {
   return cart.discount.status === 'applied' || cart.discount.status === 'automatic' ? (cart.discount.amountCents ?? 0) : 0;
+}
+
+/**
+ * Kuponun girildiği KAPI (`discount_code.id`) — yalnız `applied` hâlde vardır.
+ *
+ * Otomatik kampanyada kod yoktur; `outranked` hâlde kazanan otomatik kampanyadır, yani girilen kodun
+ * kapısı da tutmamıştır — kullanım kaydına yazılacak bir kapı yok. Kaydı yine de yazsaydık,
+ * uygulanmamış bir kodu "karşılık buldu" diye sayardık.
+ */
+function discountCodeIdOf(cart: { discount: { status: string; codeId?: string } }): string | null {
+  return cart.discount.status === 'applied' ? (cart.discount.codeId ?? null) : null;
 }
 
 function discountIdOf(cart: { discount: { status: string; discountId?: string | null } }): string | null {

@@ -4,7 +4,9 @@ import {
   BundleService,
   CategoryService,
   DeliveryZoneService,
+  DiscountCodeService,
   DiscountService,
+  DiscountUseService,
   OrderService,
   PriceService,
   ProductService,
@@ -211,6 +213,118 @@ describe('sepet → taslak sipariş', () => {
       // Asıl ölçülen: tamamı tahsil edilmiş sipariş `paid` olmalı, kapıda tahsilat kalmamalı.
       const derived = derivePaymentStatusForOrder(order, items, { collected: order.total, refunded: 0 });
       expect(derived).toMatchObject({ status: 'paid', amountToCollectCents: 0 });
+    } finally {
+      await db.from('discount').delete().eq('id', kampanya.id);
+    }
+  });
+
+  /**
+   * KOTA GERÇEKTEN TÜKENİYOR MU (09.6 nöbeti).
+   *
+   * Açık aylarca yaşadı çünkü zincirin her halkası tek tek doğruydu: tanım ekranı sınırı yazıyor,
+   * motor `isApplicable` sınırı kontrol ediyor, `usageCounts` kaydı sayıyor. Yalnız YAZAN yoktu ve
+   * bunu hiçbir test göremezdi — hepsi kendi halkasına bakıyordu. Nöbet bu yüzden uçtan uca:
+   * gerçek checkout, gerçek kupon, sonra sayaç.
+   */
+  it('indirim inen sipariş kupon KOTASINI tüketir — kayıt siparişten türer', async () => {
+    const discounts = new DiscountService(db);
+    const kampanya = await discounts.insert({
+      name: `Kota testi ${stamp}`,
+      trigger: 'automatic',
+      type: 'percent',
+      value: 10,
+      scope: 'category',
+      categoryId,
+    });
+    try {
+      // Yazan taraf HİÇ YOKKEN sayaç sıfırdı ve kupon sonsuz haklı görünüyordu.
+      expect((await discounts.usageCounts([kampanya.id])).get(kampanya.id)?.total ?? 0).toBe(0);
+
+      const outcome = await createCheckoutDraft({
+        ...(await base()),
+        entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }],
+      });
+      expect(outcome.status).toBe('ok');
+      if (outcome.status !== 'ok') return;
+
+      const usage = (await discounts.usageCounts([kampanya.id])).get(kampanya.id);
+      expect(usage?.total).toBe(1);
+      // Müşteri başına sınır bu kırılımdan çıkar — `per_customer_limit` onsuz hiç engellemez.
+      expect(usage?.byCustomer.get(customerId)).toBe(1);
+      // Otomatik kampanyanın kapısı yok: kod kırılımı boş kalmalı, uydurma bir kapı sayılmamalı.
+      expect(usage?.byCode.size).toBe(0);
+
+      // İPTAL kotayı GERİ VERİR: vazgeçilen siparişte müşteri indirimden yararlanmadı. Kayıt
+      // silinmez, sayarken dışlanır — "kim ne zaman denedi" geçmişte kalır.
+      await new OrderService(db).update({ id: outcome.orderId, status: 'cancelled' });
+      expect((await discounts.usageCounts([kampanya.id])).get(kampanya.id)?.total ?? 0).toBe(0);
+    } finally {
+      await db.from('discount').delete().eq('id', kampanya.id);
+    }
+  });
+
+  /**
+   * Kupon yolunda ayrıca HANGİ KAPI yazılır. Kota yine kuralın: üç dilli bir kuponun üç kodu tek
+   * kotadan harcar (`byCode` bölmez, kırılım verir — 0031). Bu ayrım yazan tarafta bozulursa ekran
+   * "hangi dil karşılık buldu" sorusuna yanlış cevap verir ve kimse fark etmez.
+   */
+  it('kuponla açılan siparişte hangi KAPIDAN girildiği de yazılır', async () => {
+    const discounts = new DiscountService(db);
+    const kupon = await discounts.insert({
+      name: `Kapı testi ${stamp}`,
+      trigger: 'coupon',
+      type: 'percent',
+      value: 10,
+      scope: 'category',
+      categoryId,
+    });
+    try {
+      const kodlar = await new DiscountCodeService(db).replaceCodes(kupon.id, [
+        { discountId: kupon.id, code: `KAPI${stamp}`, locale: 'tr' },
+        { discountId: kupon.id, code: `PORTE${stamp}`, locale: 'fr' },
+      ]);
+      const trKod = kodlar.find((k) => k.locale === 'tr')!;
+
+      const outcome = await createCheckoutDraft({
+        ...(await base()),
+        entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }],
+        couponCode: `kapi${stamp}`, // harf ayrımsız: müşteri küçük harfle yazar
+      });
+      if (outcome.status !== 'ok') throw new Error(`taslak açılmadı: ${outcome.status}`);
+
+      const usage = (await discounts.usageCounts([kupon.id])).get(kupon.id);
+      expect(usage?.total).toBe(1);
+      // Kota KURALIN, kırılım kodun: giren kapı TR, FR kapısı hiç sayılmamalı.
+      expect(usage?.byCode.get(trKod.id)).toBe(1);
+      expect(usage?.byCode.size).toBe(1);
+    } finally {
+      await db.from('discount').delete().eq('id', kupon.id);
+    }
+  });
+
+  it('aynı sipariş kotayı iki kez tüketemez — kayıt idempotent', async () => {
+    const discounts = new DiscountService(db);
+    const kampanya = await discounts.insert({
+      name: `Idempotency testi ${stamp}`,
+      trigger: 'automatic',
+      type: 'percent',
+      value: 10,
+      scope: 'category',
+      categoryId,
+    });
+    try {
+      const outcome = await createCheckoutDraft({
+        ...(await base()),
+        entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }],
+      });
+      if (outcome.status !== 'ok') throw new Error(`taslak açılmadı: ${outcome.status}`);
+
+      // İkinci kayıt denemesi — yeniden denenen checkout / iki kez gelen webhook. Hata DEĞİL,
+      // `false`: garanti tekil indekste, uygulamada bir kontrolde değil.
+      const uses = new DiscountUseService(db);
+      const ilk = await uses.record({ discountId: kampanya.id, orderId: outcome.orderId, customerId, amount: 2 });
+      expect(ilk).toBe(false);
+      expect((await discounts.usageCounts([kampanya.id])).get(kampanya.id)?.total).toBe(1);
     } finally {
       await db.from('discount').delete().eq('id', kampanya.id);
     }

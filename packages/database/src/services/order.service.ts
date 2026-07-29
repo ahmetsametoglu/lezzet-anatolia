@@ -52,6 +52,7 @@ import {
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
+import { DiscountUseService } from './discount-use.service';
 
 /**
  * Sipariş listesinin süzgeçleri (09.7). Liste ve sayaç AYNI tipi alır: iki ayrı süzgeç tanımı,
@@ -193,23 +194,53 @@ export class OrderStatusLogService extends BaseDbService<OrderStatusLog, OrderSt
  */
 export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate> {
   private readonly items: OrderItemService;
+  private readonly discountUses: DiscountUseService;
 
   constructor(supabase: SupabaseClient) {
     super(supabase, 'order', OrderSchema, OrderInsertSchema, OrderUpdateSchema);
     this.items = new OrderItemService(supabase);
+    this.discountUses = new DiscountUseService(supabase);
   }
 
   /**
-   * Sipariş + kalemleri. Kalem yazımı düşerse **sipariş de geri alınır**: kalemsiz sipariş
-   * anlamsızdır. Taslak siparişin para/stok etkisi henüz olmadığı için telafi güvenlidir —
-   * rezervasyon ve tahsilatın da girdiği checkout akışı 07.4'te tek RPC'ye alınacak.
+   * Sipariş + kalemleri + (indirim varsa) KULLANIM KAYDI. Herhangi biri düşerse **sipariş de geri
+   * alınır**: kalemsiz sipariş anlamsızdır, kullanım kaydı olmayan indirimli sipariş ise kotayı
+   * sessizce delen bir sipariştir. Taslak siparişin para/stok etkisi henüz olmadığı için telafi
+   * güvenlidir — rezervasyon ve tahsilatın da girdiği checkout akışı 07.4'te tek RPC'ye alınacak.
+   * Siparişi silmek kullanım kaydını da götürür (`order_id … on delete cascade`).
+   *
+   * **KOTA BURADA TÜKENİR ve bu bilinçli bir yer seçimi.** Kayıt siparişin KENDİ verisinden türer
+   * (`discountId` + `discountAmount`), yani çağıranın hatırlamasına bağlı değil. Kapıya (checkout)
+   * yazılsaydı elle sipariş girişi (09.8), WhatsApp ajanı ve kapıda satış aynı şeyi ayrı ayrı
+   * hatırlamak zorunda kalırdı — ve hatırlamayan ilk yol kotayı sessizce delerdi. Açık zaten böyle
+   * doğmuştu: indirim siparişe yazılıyordu, kullanım kaydı hiçbir yerde yazılmıyordu (09.6).
    */
-  async create(order: OrderInsert, lines: CreateOrderItemInput[]): Promise<{ order: Order; items: OrderItem[] }> {
+  async create(
+    order: OrderInsert,
+    lines: CreateOrderItemInput[],
+    /**
+     * Kuponun hangi KAPISINDAN girildi (`discount_code.id`). Kotayı bölmez — yalnız "hangi dil
+     * karşılık buldu" kırılımı. Otomatik kampanyada ve kodsuz yollarda boş.
+     */
+    opts: { discountCodeId?: string | null } = {},
+  ): Promise<{ order: Order; items: OrderItem[] }> {
     if (lines.length === 0) throw new Error('order: kalemsiz sipariş açılamaz');
 
     const created = await this.insert(order);
     try {
       const items = await this.items.addLines(lines.map((line) => ({ ...line, orderId: created.id })));
+      // İndirim İNMEDİYSE kayıt da yazılmaz: `discountId` boşsa tüketilen bir hak yok. Tutar sıfır
+      // olsa bile kural uygulanmışsa hak tükenir — kotayı harcayan şey indirimin BÜYÜKLÜĞÜ değil,
+      // kuralın kullanılmış olması.
+      if (created.discountId) {
+        await this.discountUses.record({
+          discountId: created.discountId,
+          discountCodeId: opts.discountCodeId ?? null,
+          customerId: created.customerId,
+          orderId: created.id,
+          amount: created.discountAmount,
+        });
+      }
       return { order: created, items };
     } catch (error) {
       await this.delete(created.id).catch(() => {});

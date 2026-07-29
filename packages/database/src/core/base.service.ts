@@ -255,6 +255,31 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     return this.dbSchema.parse(dbToApp(data));
   }
 
+  /**
+   * Tek satır yazar; **TEKİLLİK çakışmasını hata saymaz** (`null` döner).
+   *
+   * İdempotent yazımların primitifi: aynı olayı iki kez kaydetmeye çalışan bir yol (yeniden denenen
+   * checkout, iki kez gelen webhook) ikinci kaydı yazmaz ve bunu bir hata gibi de yaşamaz.
+   *
+   * **"Önce sorgula, yoksa yaz" DEĞİL** — iki eşzamanlı deneme aynı anda sorgularsa ikisi de "yok"
+   * görür ve ikisi de yazar. Karar veritabanında kalır (`bulkUpsertIgnoring` ile aynı gerekçe).
+   *
+   * `upsert`/`on conflict` yerine HATA KODU yakalanıyor çünkü çakışmayı tutan tekil indeks KISMİ
+   * olabilir (`… where order_id is not null` gibi) ve Postgres kısmi bir indeksi `on conflict (…)`
+   * ile çıkarsayamaz — indeksin yüklemi ifadede tekrarlanmadıkça. PostgREST o yüklemi yazmaya izin
+   * vermediği için `upsert` yolu böyle indekslerde kapalı; hata kodu her indeks şeklinde çalışır.
+   */
+  protected async insertIgnoringConflict(insertData: TInsert): Promise<TDb | null> {
+    const dbData = appToDb(this.insertSchema.parse(insertData));
+    const { data, error } = await this.supabase.from(this.tableName).insert(dbData).select().single();
+    if (error) {
+      // 23505 = unique_violation. Başka her hata yukarı gider: "sessizce atla" yalnız MÜKERRER için.
+      if (error.code === '23505') return null;
+      throw error;
+    }
+    return this.dbSchema.parse(dbToApp(data));
+  }
+
   protected async bulkInsert(rows: TInsert[]): Promise<TDb[]> {
     if (rows.length === 0) return [];
     const dbRows = rows.map((r) => appToDb(this.insertSchema.parse(r)));

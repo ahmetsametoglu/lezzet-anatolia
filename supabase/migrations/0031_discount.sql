@@ -164,7 +164,9 @@ alter table public.discount_use enable row level security;
 -- Sayım sorguları: toplam kullanım ve müşteri başına kullanım.
 create index discount_use_discount_idx on public.discount_use (discount_id);
 create index discount_use_customer_idx on public.discount_use (discount_id, customer_id) where customer_id is not null;
--- Aynı sipariş bir kuralı iki kez tüketemez (tek-en-büyük zaten tek indirim uygular).
+-- Aynı sipariş bir kuralı iki kez tüketemez (tek-en-büyük zaten tek indirim uygular). Bu indeks
+-- yazan tarafın İDEMPOTENCY garantisidir: checkout yeniden denenirse ya da bir webhook iki kez
+-- gelirse kupon ikinci hakkı yemez (`DiscountUseService.record` çakışmayı sessizce atlar).
 create unique index discount_use_order_key on public.discount_use (discount_id, order_id) where order_id is not null;
 -- "Hangi kod ne kadar tuttu" sayımı — kod bazlı rapor bu indeksin üstünde durur.
 create index discount_use_code_idx on public.discount_use (discount_code_id) where discount_code_id is not null;

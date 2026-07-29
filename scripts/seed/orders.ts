@@ -229,17 +229,10 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
       opts.kalemler.map((k, i) => ({ ...k, lineDiscountAmount: (paylar[i] ?? 0) / 100 })),
     );
 
-    // Kullanım KAYDI — sayaç değil (0031): "bu kupon kaç kez kullanıldı" bu satırlardan türetilir.
-    // Kaydı yazmadan yalnız siparişe indirim yazmak, kuponu sonsuz haklı gösterirdi.
-    if (indirim) {
-      const { error } = await db.from('discount_use').insert({
-        discount_id: indirim,
-        customer_id: customerId,
-        order_id: order.id,
-        amount: indirimTutari,
-      });
-      if (error) throw error;
-    }
+    // Kullanım kaydı BURADA YAZILMAZ — `OrderService.create` siparişin `discountId`'sinden türetiyor
+    // (09.6). Eskiden seed onu elle yazıyordu çünkü uygulama yolunda yazan yoktu; artık ikinci bir
+    // yazım tekil indekse (`discount_use_order_key`) çarpardı ve seed'in kaydı, gerçek yolun test
+    // edilmediği yeri gizlerdi.
 
     // Yaşlandırma: vade gecikmesi ve "eski sipariş" ancak geçmiş tarihli kayıtta görünür.
     if (opts.yasi) await orders.update({ id: order.id, createdAt: an(-opts.yasi) });

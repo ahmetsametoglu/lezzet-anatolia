@@ -72,20 +72,31 @@ export class DiscountService extends BaseDbService<Discount, DiscountInsert, Dis
    * **Kota KURAL seviyesindedir, kod seviyesinde değil:** `total` kuralın tüm kapılarının toplamıdır.
    * `byCode` yalnız kırılımdır — hangi kodun karşılık bulduğunu söyler, tavanı bölmez. Bölseydi üç
    * kodlu bir kuponun "100 kullanım" sınırı fiilen 300 olurdu.
+   *
+   * **İPTAL EDİLEN SİPARİŞ KOTAYI GERİ VERİR.** Vazgeçilen bir siparişte müşteri indirimden hiç
+   * yararlanmadı; hakkını yakmak, kuponu kendi hatası olmayan bir sebeple elinden almak olurdu — ve
+   * bu en çok puanla alınmış kişisel kuponda acıtır (tek kullanımlık, 500 puan ödenmiş). Kayıt
+   * SİLİNMEZ, sayarken dışlanır: "kim ne zaman denedi" geçmişte kalır (bkz. `DiscountUseService`).
+   *
+   * `returned` (iade) DIŞLANMAZ ve bu ayrım bilinçli: iade edilen sipariş gerçekleşti, indirim indi,
+   * kampanya karşılığını verdi. İptal "hiç olmadı", iade "oldu ve geri döndü" demektir.
    */
   async usageCounts(discountIds: readonly string[]): Promise<Map<string, DiscountUsage>> {
     const result = new Map<string, DiscountUsage>();
     if (discountIds.length === 0) return result;
 
-    // ÜÇ KOLON okunur, satırın tamamı değil: sayım için gereken bu kadar (tutar ve tarih raporun işi).
+    // ÜÇ KOLON + siparişin DURUMU okunur, satırın tamamı değil (tutar ve tarih raporun işi).
+    // Gömülü seçim SOL bağdır (`!inner` DEĞİL): siparişsiz kayıt da meşru (elle/idari düzeltme) ve
+    // iç bağ onları sessizce düşürüp kotayı eksik sayardı.
     const { data, error } = await this.supabase
       .from('discount_use')
-      .select('discount_id,customer_id,discount_code_id')
+      .select('discount_id,customer_id,discount_code_id,order:order(status)')
       .in('discount_id', [...discountIds]);
     if (error) throw error;
 
     for (const raw of data ?? []) {
-      const row = raw as { discount_id: string; customer_id: string | null; discount_code_id: string | null };
+      const row = raw as unknown as UseCountRow;
+      if (orderStatusOf(row.order) === 'cancelled') continue;
       const entry = result.get(row.discount_id) ?? { total: 0, byCustomer: new Map<string, number>(), byCode: new Map<string, number>() };
       entry.total += 1;
       if (row.customer_id) entry.byCustomer.set(row.customer_id, (entry.byCustomer.get(row.customer_id) ?? 0) + 1);
@@ -95,6 +106,23 @@ export class DiscountService extends BaseDbService<Discount, DiscountInsert, Dis
     return result;
   }
 }
+
+/** `usageCounts`'un okuduğu dar satır — sayım için gereken dört alan. */
+interface UseCountRow {
+  discount_id: string;
+  customer_id: string | null;
+  discount_code_id: string | null;
+  /**
+   * PostgREST'in ÜRETİLMİŞ tipi çoğa-bir bağı da dizi sayıyor; çalışma zamanında tek nesne geliyor.
+   * İkisi de karşılanır — tipe güvenip yalnız dizi varsaymak, gelen nesnede `status`'u hiç okumamak
+   * ve her iptal edilmiş siparişi kotadan saymak olurdu. Sessizce yanlış sayan bir sayaç, hiç
+   * saymayan bir sayaçtan kötüdür.
+   */
+  order: { status: string } | { status: string }[] | null;
+}
+
+const orderStatusOf = (order: UseCountRow['order']): string | null =>
+  Array.isArray(order) ? (order[0]?.status ?? null) : (order?.status ?? null);
 
 /** Bir kuralın kullanım sayıları: toplam (kota bunun üstünde durur) + müşteri ve kod kırılımı. */
 export interface DiscountUsage {
