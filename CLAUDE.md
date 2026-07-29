@@ -57,6 +57,7 @@
 - **Durumun tek sahibi `docs/build/NN-*.md` görev satırıdır.** İş ilerlediyse aynı oturumda o satır `[x]`/`[~]` olur + altına **Durum** notu yazılır. `BACKLOG` kapsam tutar, ilerleme tutmaz; `build/README` özet tablosu **türetilir** (`pnpm docs:sync`), elle yazılmaz.
 - **Kod ve doküman aynı commit'te gider.** Ayrı commit "sonra yazarım"dır, o da yazmamaktır.
 - **Görev kimliği `(NN.k)`** — iş bu kimlikle üstlenilir. Paralel ajan varsa görev satırına `touches:` (dokunulacak yollar) yazılır; kesişen iki görev aynı anda başlamaz, her ajan kendi dalında çalışır (`WORKFLOW §7`).
+- **Geride bırakılan boşluk `BEKLEYEN(<ref>): <ne>` ile işaretlenir** — `TODO`/`FIXME` YASAK (kimseye söz vermez, denetlenmez, çürür). İşaret envanter DEĞİL, envantere giden **doğrulanmış bağdır**: açığın kendisi gerekçesiyle `design/BACKLOG.md`'ye ya da görev satırına yazılır; `<ref>` ya görev kimliğidir (`08.5`) ya backlog bölümüdür (`BACKLOG §1`). `docs:check` referansın gerçekten var olduğunu doğrular — kayıt düşülmeyen boşluk commit'ten geçmez.
 - **Doğrulama:** `pnpm docs:check` — veri modeli ↔ migration ↔ Zod alan karşılaştırması, anılan paketlerin varlığı, görev kimlikleri, özet tazeliği. `pnpm hooks:install` ile commit öncesi otomatik koşar.
 - Veri modeli konu dosyalarına bölüktür (`docs/architecture/data-model/`): **alan** oraya, **karar** ana `DATA_MODEL.md`'ye yazılır.
 

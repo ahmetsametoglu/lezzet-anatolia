@@ -7,7 +7,8 @@ import type { Messages } from '../cart-types';
 /**
  * Kupon kartı (tasarım: `Musteri - Sepet.dc.html` — özetin altında, mobilde akış içinde).
  *
- * **Bugün BAĞLANMAMIŞ, ama çizili.** İndirim/kupon motoru kurulmadı (`BACKLOG §15`); alan tasarımdaki
+ * **Bugün BAĞLANMAMIŞ, ama çizili.**
+ * BEKLEYEN(BACKLOG §1): kupon kodu uygulama akışı — kutu çizili, "Uygula" bağlanmadı. Alan tasarımdaki
  * yerinde ve ölçüsünde durur, "Uygula" pasiftir ve SEBEBİ yazılıdır. Bilinçli bir karar: ekranın
  * bütününü her seferinde tasarıma dönüp yeniden kurmak yerine yerleşim şimdi oturur, motor gelince
  * yalnız bu dosyanın içi dolar.

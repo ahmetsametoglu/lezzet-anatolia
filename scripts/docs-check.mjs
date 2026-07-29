@@ -252,6 +252,66 @@ for (const f of buildFiles) {
   moduleStats.push({ nn, file: f, title, ...counts, total: lines.length });
 }
 
+// ── 3b. BEKLEYEN(...) işaretleri geçerli bir kayda mı bağlı ───────────────────
+//
+// **Neden bir anahtar kelime var** (kod içi `STUB(...)` bir kez terk edilmişken):
+// terk edilen şey işaretin ENVANTER olarak kullanılmasıydı ve o karar doğruydu — bir yorum
+// "müşteri yüzeyinde neler eksik" sorusunu cevaplayamaz, cevabı her seferinde `grep` ile yeniden
+// derlemek gerekir ve her derlemede bir madde atlanır. Nitekim sepetteki kupon kutusu tam böyle
+// atlandı (29.07): UI çizildi, hiçbir envantere yazılmadı, hiçbir kontrol fark etmedi.
+//
+// Buradaki işaret envanter DEĞİL, envantere giden **doğrulanmış bağdır**. İkisi birlikte çalışır:
+//   · `design/BACKLOG.md` / `docs/build/NN` → açığın kendisi, gerekçesiyle (insan okur)
+//   · `BEKLEYEN(ref)`                      → koddaki yeri (makine bulur, kaydı doğrular)
+// Bu yüzden düz `TODO` yasak kalır: kimseye söz vermez, kimse denetlemez, çürür.
+//
+// Biçim: `BEKLEYEN(08.5): sipariş takip sayfası` ya da `BEKLEYEN(BACKLOG §1): …`
+const codeRoots = ['apps/web', 'packages', 'scripts'];
+const SKIP_DIR = new Set(['node_modules', '.next', 'dist', '.turbo']);
+
+function walk(dir, out = []) {
+  for (const e of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+    if (e.name.startsWith('.') && e.name !== '.next') continue;
+    if (SKIP_DIR.has(e.name)) continue;
+    const p = `${dir}/${e.name}`;
+    if (e.isDirectory()) walk(p, out);
+    else if (/\.(ts|tsx|mjs|sql)$/.test(e.name)) out.push(p);
+  }
+  return out;
+}
+
+const taskIds = new Set();
+for (const f of buildFiles) {
+  for (const m of read(`docs/build/${f}`).matchAll(/^- \[[ x~]\] \((\d\d\.\d+)\)/gm)) taskIds.add(m[1]);
+}
+const designBacklog = existsSync(join(ROOT, 'design/BACKLOG.md')) ? read('design/BACKLOG.md') : '';
+const backlogSections = new Set([...designBacklog.matchAll(/^## (\d+)\./gm)].map((m) => m[1]));
+
+let pendingCount = 0;
+for (const root of codeRoots) {
+  if (!existsSync(join(ROOT, root))) continue;
+  for (const file of walk(root)) {
+    // Denetleyicinin KENDİSİ taranmaz: buradaki geçişler kuralın örneği, bir borç değil.
+    if (file.endsWith('scripts/docs-check.mjs')) continue;
+    for (const m of read(file).matchAll(/BEKLEYEN\(([^)]*)\)\s*:\s*(.*)/g)) {
+      pendingCount += 1;
+      const ref = m[1].trim();
+      const what = m[2].trim();
+      if (!what) note(`${file}: BEKLEYEN(${ref}) neyi beklediğini yazmıyor`);
+      const taskRef = ref.match(/^(\d\d\.\d+)$/);
+      const backlogRef = ref.match(/^BACKLOG §(\d+)$/);
+      if (taskRef) {
+        if (!taskIds.has(taskRef[1])) note(`${file}: BEKLEYEN(${ref}) — böyle bir görev kimliği yok`);
+      } else if (backlogRef) {
+        if (!backlogSections.has(backlogRef[1])) note(`${file}: BEKLEYEN(${ref}) — design/BACKLOG.md'de §${backlogRef[1]} yok`);
+      } else {
+        note(`${file}: BEKLEYEN(${ref}) — referans "NN.k" ya da "BACKLOG §N" olmalı`);
+      }
+    }
+  }
+}
+if (pendingCount) console.log(`· ${pendingCount} BEKLEYEN işareti (hepsi bir kayda bağlı)`);
+
 // ── 4. build/README durum özeti güncel mi ──────────────────────────────────────
 const label = (m) =>
   m.total === 0 ? 'planlanıyor' : m.done === m.total ? 'tamam' : m.done + m.partial === 0 ? 'bekliyor' : 'sürüyor';
