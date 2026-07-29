@@ -24,7 +24,30 @@ interface RootShellProps {
 
 export function RootShell({ lang, className, surface, children }: RootShellProps) {
   return (
-    <html lang={lang} className={className} data-surface={surface}>
+    <html
+      lang={lang}
+      className={className}
+      data-surface={surface}
+      /**
+       * `data-theme`i SUNUCU YAZMAZ, `ThemeScript` yazar — React de bu yüzden hidrasyonda uyarıyor:
+       * sunucudan gelen `<html>`de o özellik yok, tarayıcıdaki düğümde var.
+       *
+       * Kaçınılmaz bir SIRA sorunu, bir tutarsızlık değil: tercih `localStorage`da ve işletim
+       * sisteminin temasında yaşıyor — ikisi de sunucuda okunamaz. Betik ilk boyamadan ÖNCE koşmak
+       * zorunda, yoksa koyu temada açılan panel bir kare beyaz yanıp söner (FOUC). Yani ya uyarı ya
+       * göz alan bir titreme.
+       *
+       * `suppressHydrationWarning` React'in bu durum için verdiği kapıdır ve KAPSAMI DARDIR: yalnız
+       * bu düğümün kendi özelliklerini susturur, ağacın geri kalanını değil. Yalnız operasyonda
+       * açık — müşteri vitrininde tema betiği yok, orada çıkacak bir uyarı GERÇEK bir sapma olur ve
+       * duyulmaya devam etmeli.
+       *
+       * Alternatif, tercihi çereze taşıyıp sunucuda yazmaktı; o zaman uyarı da titreme de olmazdı.
+       * Yapılmadı: tema bir görünüm tercihi, her isteğe takılmasının bir bedeli var ve `localStorage`
+       * kararı zaten alınmış (`theme-toggle`). Çereze taşınırsa bu satır kalkar.
+       */
+      suppressHydrationWarning={surface === 'operations'}
+    >
       {/* Tema yalnız operasyonda seçilebilir; müşteri vitrini tek temalıdır (envanter kararı). */}
       {surface === 'operations' ? (
         <head>
