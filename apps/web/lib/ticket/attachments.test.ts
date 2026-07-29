@@ -10,8 +10,9 @@ import { openTicket } from './write';
  * Sınanan dört kural: **anahtarı kapı seçer** (istemci değil), **başkasının talebine yüklenemez**,
  * **yalnız görsel kabul edilir**, **tavan var**.
  *
- * Kovanın kendisi yerelde yapılandırılmamış olabilir; o zaman kapı `storage_unavailable` döner ve
- * testler yalnız KARAR yolunu sınar — imzanın kendisi `packages/storage` testinin işi.
+ * Testler GERÇEK private kovaya vurur (`R2_PRIVATE_BUCKET_NAME`): izin verilmediğinde sebebiyle
+ * düşerler. "Kova yoksa geç" kaçışı vardı ve kaldırıldı — kaçış, testi sessizce tautolojiye çevirip
+ * "geçti" derken hiçbir şey sınamıyordu.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -38,25 +39,25 @@ afterAll(async () => {
   await purgeTestData(db, { profileIds: createdProfiles });
 });
 
-/** Kova yapılandırılmamışsa karar doğru olsa da adres üretilemez; ikisini de kabul ederiz. */
-function decided(result: Awaited<ReturnType<typeof requestTicketUploadUrl>>) {
-  return result.ok || result.reason === 'storage_unavailable';
+/** İzin verilmiş olmalı; değilse sebebini göstererek düş (sessiz `return` testi tautolojiye çevirir). */
+function granted(result: Awaited<ReturnType<typeof requestTicketUploadUrl>>) {
+  if (!result.ok) throw new Error(`izin verilmedi: ${result.reason}`);
+  return result;
 }
 
 describe('yükleme izni', () => {
   it('talep kimliği verilmezse anahtar MÜŞTERİNİN taslak klasörüne kurulur', async () => {
-    const result = await requestTicketUploadUrl({ customerId, filename: 'bozuk.jpg' });
-    expect(decided(result)).toBe(true);
-    if (!result.ok) return;
+    const result = granted(await requestTicketUploadUrl({ customerId, filename: 'bozuk.jpg' }));
 
     // Anahtarı kapı kurar: istemciden gelen bir yol doğrulanmak zorunda kalmasın.
     expect(result.key).toMatch(new RegExp(`^support/tickets/drafts/${customerId}/[^/]+\\.jpg$`));
+    // Adres imzalı ve KISA ÖMÜRLÜ: yetki bir kez doğrulanır, izin süreyle sınırlanır.
+    expect(result.uploadUrl).toContain('X-Amz-Signature');
+    expect(result.uploadUrl).toContain('X-Amz-Expires=600');
   });
 
   it('var olan talebe yüklenen ek O talebin klasörüne gider', async () => {
-    const result = await requestTicketUploadUrl({ customerId, ticketId, filename: 'ikinci-aci.png' });
-    expect(decided(result)).toBe(true);
-    if (!result.ok) return;
+    const result = granted(await requestTicketUploadUrl({ customerId, ticketId, filename: 'ikinci-aci.png' }));
     expect(result.key).toMatch(new RegExp(`^support/tickets/${ticketId}/[^/]+\\.png$`));
   });
 
@@ -74,7 +75,7 @@ describe('yükleme izni', () => {
   });
 
   it('iPhone varsayılanı HEIC kabul edilir — müşteri dönüştürmekle uğraşmamalı', async () => {
-    expect(decided(await requestTicketUploadUrl({ customerId, filename: 'IMG_0421.HEIC' }))).toBe(true);
+    expect(granted(await requestTicketUploadUrl({ customerId, filename: 'IMG_0421.HEIC' })).key).toMatch(/\.heic$/);
   });
 
   it('ek sayısında tavan var', async () => {
@@ -85,17 +86,15 @@ describe('yükleme izni', () => {
   });
 
   it('her istek AYRI anahtar üretir — ikinci açı birincinin üzerine yazmaz', async () => {
-    const first = await requestTicketUploadUrl({ customerId, ticketId, filename: 'aci.jpg' });
-    const second = await requestTicketUploadUrl({ customerId, ticketId, filename: 'aci.jpg' });
-    if (!first.ok || !second.ok) return; // kova yok — bu testin konusu değil
+    const first = granted(await requestTicketUploadUrl({ customerId, ticketId, filename: 'aci.jpg' }));
+    const second = granted(await requestTicketUploadUrl({ customerId, ticketId, filename: 'aci.jpg' }));
     expect(first.key).not.toBe(second.key);
   });
 });
 
 describe('kapının verdiği anahtar talebe iliştirilebilir', () => {
   it('taslak anahtarı openTicket tarafından kabul edilir', async () => {
-    const issued = await requestTicketUploadUrl({ customerId, filename: 'kanit.jpg' });
-    if (!issued.ok) return;
+    const issued = granted(await requestTicketUploadUrl({ customerId, filename: 'kanit.jpg' }));
 
     const opened = await openTicket({
       customerId,

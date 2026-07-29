@@ -84,11 +84,24 @@ beforeAll(async () => {
   await markDelivered(order.id, 12);
 });
 
+/**
+ * **Paylaşılan ayar satırları geri konur.** `settings` test verisi değil KÜRESEL TEKİLDİR: damgayla
+ * ayrılmış satırların aksine tüm suite (ve paralel koşan başka bir ajan) aynı satırı okur. Test
+ * bıraktığı değeri geri koymazsa, kirlettiği şey kendi dosyası değil başkasının koşusu olur.
+ */
+const settingsSnapshot = new Map<string, string>();
+
+async function overrideSetting(key: string, value: string) {
+  const settings = new SettingsService(db);
+  if (!settingsSnapshot.has(key)) settingsSnapshot.set(key, await settings.get<string>(key, ''));
+  await settings.set(key, value);
+}
+
 beforeEach(async () => {
   await db.from('product_feedback').delete().in('product_id', [productId, secondProductId]);
   await db.from('points_entry').delete().in('customer_id', createdProfiles);
   await db.from('feedback_request').delete().in('order_id', createdOrders);
-  await new SettingsService(db).set('review_platform_url', '');
+  await overrideSetting('review_platform_url', '');
 });
 
 afterAll(async () => {
@@ -97,7 +110,9 @@ afterAll(async () => {
   await db.from('feedback_request').delete().in('order_id', createdOrders);
   for (const id of createdOrders) await db.from('order').delete().eq('id', id);
   await purgeTestData(db, { productIds: [productId, secondProductId], categoryIds: [categoryId], profileIds: createdProfiles });
-  await new SettingsService(db).set('review_platform_url', '');
+  // Ne bulduysak onu bırakırız — "boşa çek" de bir varsayımdır ve bir gün yanlış olur.
+  const settings = new SettingsService(db);
+  for (const [key, value] of settingsSnapshot) await settings.set(key, value);
 });
 
 /** Bu siparişin davetini açar — taramanın yaptığını doğrudan yaparak. */
@@ -161,9 +176,8 @@ describe('akışın tamamlanması', () => {
   });
 
   it('memnun müşteri dış değerlendirmeye davet edilir — platform ayardan gelir', async () => {
-    const settings = new SettingsService(db);
-    await settings.set('review_platform_url', 'https://fr.trustpilot.com/evaluate/lezzet.test');
-    await settings.set('review_platform_name', 'Trustpilot');
+    await overrideSetting('review_platform_url', 'https://fr.trustpilot.com/evaluate/lezzet.test');
+    await overrideSetting('review_platform_name', 'Trustpilot');
     const request = await inviteForOrder();
     await recordVote({ customerId, productId, context: 'purchase', vote: 'like', feedbackRequestId: request.id });
     await recordVote({ customerId, productId: secondProductId, context: 'purchase', vote: 'like', feedbackRequestId: request.id });
@@ -176,7 +190,7 @@ describe('akışın tamamlanması', () => {
   });
 
   it('memnun OLMAYAN müşteri dışarı yönlendirilmez — sorun bildirmeye çağrılır', async () => {
-    await new SettingsService(db).set('review_platform_url', 'https://g.page/r/test/review');
+    await overrideSetting('review_platform_url', 'https://g.page/r/test/review');
     const request = await inviteForOrder();
     await recordVote({ customerId, productId, context: 'purchase', vote: 'dislike', feedbackRequestId: request.id });
 
