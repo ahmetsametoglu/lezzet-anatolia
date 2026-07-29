@@ -33,3 +33,4 @@ export * from './bank/parse';
 export * from './bank/fingerprint';
 export * from './bank/match';
 export * from './support/ticket-flow';
+export * from './feedback/feedback-score';

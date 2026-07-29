@@ -7,7 +7,7 @@
 ## Okunacaklar
 
 - `FEATURES.md` (Analitik — cookie'siz hibrit kural), `data-model/iletisim-geribildirim.md` (AnalyticsEvent)
-- `DOMAIN.md §14` (swipe sinyal kalitesi/ağırlık), `SCOPE.md` (tek faz, izin sınırı)
+- `DOMAIN.md §14` (sinyal kalitesi/ağırlık — **veri `ProductFeedback`'te, analitikte değil**), `SCOPE.md` (tek faz, izin sınırı)
 
 ## Bağımlılık
 
@@ -19,18 +19,19 @@
 
 ## Görevler
 
-- [ ] (13.1) **Olay toplama:** sunucu-tarafı `AnalyticsEvent` (page_view/product_view/add_to_cart/checkout_start/order_placed/search/product_swipe/share); çerezsiz oturum anahtarı; kişisel kimlik yok, giriş varsa opsiyonel `customer_id`
+- [ ] (13.1) **Olay toplama:** sunucu-tarafı `AnalyticsEvent` (page_view/product_view/add_to_cart/checkout_start/order_placed/search/share); çerezsiz oturum anahtarı; kişisel kimlik yok, giriş varsa opsiyonel `customer_id`
+  - **`product_swipe` BU LİSTEDE DEĞİL (29.07):** beğen/geç bir iz değil bir beyandır — puan kazandırır, kişiye bağlanır, "aynı ürüne bir kez" tekilliği ister. `ProductFeedback`'te yaşar (17.3). Analitik yalnız müşteriyi tanımadan toplanan gezinme izini tutar; "toplu ölçüm, banner gerekmez" iddiası buna dayanır.
   - *Bitti:* olaylar cihaza yazmadan kaydediliyor; parmak izi yok
 - [ ] (13.2) **UTM → sipariş eşleşmesi:** link UTM → sunucu oturumu → sipariş; `acquisition_source` ilk siparişte (07 ile); kampanya ROI raporu (ciro + gider yan yana, 12'den)
   - *Bitti:* "kampanya X → N sipariş / € ciro / € gider" tablosu çıkıyor
   - **Gider sütunu HAZIR** (12.5, 28.07): `MoneyMovementService.campaignSpend(from, to)` kampanya başına net reklam giderini veriyor; etiketsiz gider `campaign: null` kovasında görünür. Bu görev ciro sütununu (UTM↔sipariş) ekleyip ikisini yan yana koyacak — gider tarafı yeniden hesaplanmaz.
 - [ ] (13.3) **Huni + sepette bırakma:** ziyaret → ürün → sepet → checkout → sipariş dönüşüm oranları; terk noktası
   - *Bitti:* huni her aşamada sayı/oran veriyor
-- [ ] (13.4) **Talep sinyalleri:** ürün-ilgi (çok bakılıp az alınan), site içi arama + **sıfır-sonuç** (talep/çeşit sinyali), aday ürün swipe panosu
+- [ ] (13.4) **Talep sinyalleri:** ürün-ilgi (çok bakılıp az alınan), site içi arama + **sıfır-sonuç** (talep/çeşit sinyali), aday ürün talep panosu (**beğeniler `ProductFeedback`'ten okunur**, analitikten değil)
   - *Bitti:* sıfır-sonuç aramalar listeleniyor; ürün-ilgi sıralaması çıkıyor
 - [ ] (13.5) **Segmentler:** edinim kaynağı kohortu (tekrar sipariş), RFM + uyuyan müşteri (siparişten türetilir), export'lu
   - *Bitti:* "90 gündür sipariş vermeyenler" listesi türetiliyor; export çalışıyor
-- [ ] (13.6) **Swipe sinyal kalitesi:** `dwell_ms` + desen ile düşük kaliteli swipe zayıflatma (domain-core ağırlık); ödül müşteriye tam, analiz korunur
+- [ ] (13.6) **Kaydırma sinyal kalitesi:** `ProductFeedback.dwell_ms` + desen ile düşük kaliteli kaydırmayı zayıflatma (domain-core ağırlık); ödül müşteriye tam, analiz korunur
   - *Bitti:* hep-aynı/çok-hızlı swipe analizde zayıf ağırlıkta
 - [ ] (13.7) **AI içgörü:** `packages/ai` toplu veriden anlatı/anormallik ("X kaynağı düştü", "Y çok bakılıp az alınıyor")
   - *Bitti:* haftalık özet anlatısı üretiliyor

@@ -1,0 +1,151 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  CandidateDemandSchema,
+  DEFAULT_PAGE_SIZE,
+  ProductFeedbackInsertSchema,
+  ProductFeedbackSchema,
+  ProductFeedbackUpdateSchema,
+  ProductRatingSchema,
+  type CandidateDemand,
+  type FeedbackContext,
+  type KeysetCursor,
+  type Page,
+  type ProductFeedback,
+  type ProductFeedbackInsert,
+  type ProductFeedbackUpdate,
+  type ProductRating,
+  type ReviewStatus,
+} from '@lezzet/types';
+import { BaseDbService } from '../core/base.service';
+
+/**
+ * Ürün geri bildirimi (17.1, 17.3) — **karar vermez, satır getirir/yazar** (STACK §4).
+ *
+ * "Bu müşteri bu ürünü satın almış mı", "bu kayıt kuyruğa mı yayına mı doğar", "bu moderasyon
+ * geçişi meşru mu" soruları burada DEĞİL: ilki uygulama kapısının (siparişleri okur), diğerleri
+ * motorun işi (`domain-core/feedback`).
+ */
+export class ProductFeedbackService extends BaseDbService<ProductFeedback, ProductFeedbackInsert, ProductFeedbackUpdate> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'product_feedback', ProductFeedbackSchema, ProductFeedbackInsertSchema, ProductFeedbackUpdateSchema, false);
+  }
+
+  /**
+   * Ürün sayfasının okuması: **yayınlanmış YAZILI yorumlar**, yeniden eskiye, keyset sayfalı.
+   *
+   * Yalnız metinli kayıtlar: beğeni yayınlanacak bir şey değil, sayılacak bir şeydir (skora girer).
+   * "Durum" bir parametre olsaydı, bir gün müşteri yüzeyi onu yanlış geçirir ve onaylanmamış metin
+   * ürün sayfasında görünürdü — bu yüzden imzada yok.
+   */
+  listPublishedComments(productId: string, cursor?: KeysetCursor, limit = DEFAULT_PAGE_SIZE): Promise<Page<ProductFeedback>> {
+    return this.getPage(
+      { productId, status: 'approved' },
+      { orderBy: 'createdAt', orderDirection: 'desc', limit, keysetAfter: cursor, isNotNullFields: ['comment'] },
+    );
+  }
+
+  /** Moderasyon kuyruğu — bekleyenler, **en eski önce**: bekleyeni bekletmemek. */
+  listPending(cursor?: KeysetCursor, limit = DEFAULT_PAGE_SIZE): Promise<Page<ProductFeedback>> {
+    return this.getPage({ status: 'pending' }, { orderBy: 'createdAt', orderDirection: 'asc', limit, keysetAfter: cursor });
+  }
+
+  /**
+   * Duruma göre metinli kayıtlar — operasyonun "yayınlanmışları gör, gerekirse geri çek" listesi.
+   *
+   * Metinsizler süzülür: onlar hep `approved` doğar ve moderasyon ekranında görünmelerinin bir
+   * anlamı yok — orada okunacak bir şey yok.
+   */
+  listByStatus(status: ReviewStatus, cursor?: KeysetCursor, limit = DEFAULT_PAGE_SIZE): Promise<Page<ProductFeedback>> {
+    return this.getPage(
+      { status },
+      { orderBy: 'createdAt', orderDirection: 'desc', limit, keysetAfter: cursor, isNotNullFields: ['comment'] },
+    );
+  }
+
+  /** Müşterinin bu ürüne bu bağlamdaki kaydı — varsa yeni satır değil GÜNCELLEME yapılır. */
+  findByCustomerProduct(customerId: string, productId: string, context: FeedbackContext): Promise<ProductFeedback | null> {
+    return this.getOneBy({ customerId, productId, context });
+  }
+
+  /** Müşterinin tüm geri bildirimleri — hesap sayfası, puan geçmişi, GDPR silme. */
+  listByCustomer(customerId: string): Promise<ProductFeedback[]> {
+    return this.getAll({ customerId }, { orderBy: 'createdAt', orderDirection: 'desc' });
+  }
+
+  /** Bir davetten doğan kayıtlar — "2/5 tamamlandı" ilerlemesi buradan türetilir (17.2). */
+  listByRequest(feedbackRequestId: string): Promise<ProductFeedback[]> {
+    return this.getAll({ feedbackRequestId });
+  }
+
+  /**
+   * Moderasyon kararı. Damga duruma BAĞLI yazılır (DB kısıtı da zorlar). Geçişin meşruluğu ve
+   * "okunacak bir şey var mı" sorusu çağırana aittir (`canModerate`).
+   */
+  moderate(id: string, status: Exclude<ReviewStatus, 'pending'>, moderatedBy: string): Promise<ProductFeedback> {
+    return this.update({ id, status, moderatedBy, moderatedAt: new Date().toISOString() });
+  }
+
+  /** Bekleyen yorum sayısı — operasyon başlığındaki "5 yorum onay bekliyor" rozeti. */
+  countPending(): Promise<number> {
+    return this.count({ status: 'pending' });
+  }
+}
+
+/**
+ * `product_rating` görünümü — ürün skorunun **ham** sayıları (yıldız + beğeni).
+ *
+ * Ayrı servis, çünkü görünüm yazılmaz. Skoru yazma servisine metot olarak eklemek, bir gün "skoru
+ * güncelle" diye bir yol açmanın davetiyesi olurdu — skorun yazılacak bir yeri yok.
+ */
+export class ProductRatingService extends BaseDbService<ProductRating, never, never> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'product_rating', ProductRatingSchema, ProductRatingSchema as never, ProductRatingSchema as never, false);
+  }
+
+  /** Tek ürünün ham skoru; hiç onaylı beyanı yoksa `null` (satır yoktur). */
+  async getByProduct(productId: string): Promise<ProductRating | null> {
+    const rows = await this.getAll({ productId }, { limit: 1 });
+    return rows[0] ?? null;
+  }
+
+  /**
+   * Bir listedeki ürünlerin skorları TEK turda — katalog kartları, "benzer ürünler", operasyon
+   * skor tablosu. Kart başına sorgu N+1 olurdu.
+   */
+  listByProducts(productIds: readonly string[]): Promise<ProductRating[]> {
+    return this.getAll({ productId: [...productIds] });
+  }
+
+  /**
+   * En sevilen / en sevilmeyen ürünler (operasyon skor tablosu).
+   *
+   * **Sıralama yıldız ortalamasına göredir, birleşik puana göre değil** — birleşik puan motorda
+   * hesaplanır ve SQL onu bilmez. Ekran listeyi aldıktan sonra motorun skoruyla yeniden sıralar;
+   * güven eşiği süzgeci de orada uygulanır (`confident`). Eşiği buraya gömmek, aynı kuralı iki
+   * yerde tutmak olurdu.
+   */
+  listRanked(direction: 'asc' | 'desc', limit = 20): Promise<ProductRating[]> {
+    return this.getAll(undefined, { orderBy: 'ratingAvg', orderDirection: direction, limit });
+  }
+}
+
+/**
+ * `candidate_demand` görünümü — aday ürün talep panosu (13.4 · DOMAIN §13).
+ *
+ * "Sırada hangi ürünü getirmeliyim" sorusunun verisi. Kimliksiz kaydırmalar da sayılır ama ayrı
+ * kolonda görünür: sinyal gücü değerlendirmesi "kaç kaydırma" ile "kaç kişi" farkını ister.
+ */
+export class CandidateDemandService extends BaseDbService<CandidateDemand, never, never> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'candidate_demand', CandidateDemandSchema, CandidateDemandSchema as never, CandidateDemandSchema as never, false);
+  }
+
+  /** Talebe göre sıralı aday listesi — en çok beğenilen önce. */
+  listRanked(limit = 20): Promise<CandidateDemand[]> {
+    return this.getAll(undefined, { orderBy: 'likeCount', orderDirection: 'desc', limit });
+  }
+
+  getByProduct(productId: string): Promise<CandidateDemand | null> {
+    return this.getOneBy({ productId });
+  }
+}

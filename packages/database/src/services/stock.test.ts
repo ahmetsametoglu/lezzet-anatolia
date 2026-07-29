@@ -199,9 +199,25 @@ describe('serbest bırakma ve TTL süpürme (06.4)', () => {
     await reservations.reserve({ orderId: orderId(), variantId, qty: 2, ttlMinutes: 30 }); // süresi dolmamış
     await reservations.reserve({ orderId: orderId(), variantId, qty: 1 }); // süresiz
 
-    expect(await reservations.sweepExpired()).toBe(1);
-    expect(await reservations.sweepExpired()).toBe(0);
-    expect((await stocks.getAvailable(variantId)).reservedQty).toBe(3); // 2 süreli + 1 süresiz kaldı
+    /**
+     * Bu varyantın rezervasyon SATIRLARI. Süpürücünün dönüş sayısına bakılamaz: tüm veritabanını
+     * tarar ve başka test dosyalarının bıraktıklarını da siler — sayı bu dosyanın kontrolünde
+     * değildir. `reservedQty` de yetmez, çünkü görünüm süresi geçmiş rezervasyonu zaten SERBEST
+     * sayar (asıl amacı bu); süpürücü orada hiçbir fark yaratmaz. Kalan tek doğru ölçüt, satırın
+     * gerçekten silinmiş olmasıdır.
+     */
+    const rowCount = async () => ((await db.from('reservation').select('id').eq('variant_id', variantId)).data ?? []).length;
+
+    expect(await rowCount()).toBe(3);
+    // Süresi geçmiş kayıt zaten stoğu tutmuyordu — süpürücü defteri temizler, bakiyeyi değiştirmez.
+    expect((await stocks.getAvailable(variantId)).reservedQty).toBe(3); // 2 süreli + 1 süresiz
+
+    await reservations.sweepExpired();
+    expect(await rowCount()).toBe(2); // yalnız süresi geçen gitti
+    expect((await stocks.getAvailable(variantId)).reservedQty).toBe(3);
+
+    await reservations.sweepExpired();
+    expect(await rowCount()).toBe(2); // ikinci tarama no-op
   });
 });
 

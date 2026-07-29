@@ -479,7 +479,7 @@ Amaç: birkaç ürünü bir arada tek pakette, kendi fiyatıyla sunmak (sosyal m
 ### Aday ürün ve keşif (tinder-kart)
 
 - **Aday ürün** (`Product.is_candidate=true`): stokta olmayan ama tedarik edilebilecek ürün. **Satılamaz** — yalnız müşteri tarafındaki **keşif/beğeni bölümünde** (mobil-öncelikli tinder-kart) gösterilir. Normal (satılabilir) kataloğa karışmaz.
-- Müşteri kaydırır → **beğen/geç** = `AnalyticsEvent(product_swipe, meta.direction)`. Giriş yaptıysa `customer_id` ile kişisel tercih; değilse toplu talep.
+- Müşteri kaydırır → **beğen/geç** = `ProductFeedback(context='candidate', vote)`. Giriş yaptıysa `customer_id` ile kişisel tercih; değilse kimliksiz kayıt (toplu talep sinyali, puan yok).
 - **Admin — Talep/İlgi panosu (analitik içinde):** swipe beğenileri + kataloğun **ürün-ilgi** sinyali (çok bakılıp az alınan) burada birleşir; adaylar talebe göre sıralanır. Yüksek talepli adayı admin **etkinleştirir** (varyant/stok/fiyat ekleyip satılabilir yapar).
 
 ---
@@ -488,14 +488,16 @@ Amaç: birkaç ürünü bir arada tek pakette, kendi fiyatıyla sunmak (sosyal m
 
 Tinder-kart tek bir yer değil, bir **geri bildirim mekanizması**; birkaç bağlamda çalışır. Amaç: değerli veri toplarken müşteriyi ödüllendirmek.
 
-- **Swipe geri bildirimi — aynı mekanizma, iki bağlam** (`AnalyticsEvent(product_swipe)`, `meta.context`):
-  - **Aday talep** (`candidate`): stokta olmayan aday ürünler, keşif bölümünde beğen/geç (bkz. §13).
-  - **Alım-sonrası memnuniyet** (`post_purchase`): teslimden ~10 gün sonra WhatsApp/e-posta link'iyle, aldığı ürünleri beğen/beğenme. Davet ve tamamlanma `FeedbackRequest`'te izlenir.
-- **Yazılı yorum (`Review`):** yalnız **satın alan** müşteri puan + yorum yazar; **moderasyondan sonra ürün sayfasında** görünür. Sosyal kanıt + SEO değeri.
+**Bu bölümün tamamı BEYAN'dır, iz değil** — müşterinin bize vermeyi seçtiği bilgi. Hepsi tek varlıkta yaşar: `ProductFeedback` (yıldız · yazılı yorum · beğen/geç). Analitik (`AnalyticsEvent`) ise müşteriyi tanımadan toplanan gezinme izidir ve buraya karışmaz — puan kazandıran, kişiye bağlanan, "bir kez" kuralı olan bir kayıt anonim bir olay defterinde duramaz (bkz. `DATA_MODEL.md` kalıcı kararlar).
+
+- **Swipe geri bildirimi — aynı mekanizma, iki bağlam** (`ProductFeedback.context`):
+  - **Aday talep** (`candidate`): stokta olmayan aday ürünler, keşif bölümünde beğen/geç (bkz. §13). Satın alma aranmaz — aday ürün henüz satılmıyor.
+  - **Alım-sonrası memnuniyet** (`purchase`): teslimden ~10 gün sonra WhatsApp/e-posta link'iyle, aldığı ürünleri beğen/beğenme. Davet ve tamamlanma `FeedbackRequest`'te izlenir.
+- **Yazılı yorum:** yalnız **satın alan** müşteri puan + yorum yazar (`context='purchase'`); **moderasyondan sonra ürün sayfasında** görünür. Sosyal kanıt + SEO değeri. Moderasyon yalnız METİN içindir: yıldız ve beğeni kuyruğa düşmez, okunacak bir şey yoktur.
 - **Puan / oyunlaştırma:** her değerli aksiyon (yorum, swipe'lar, sipariş…) **puan** kazandırır (`PointsEntry`; değerler parametrik). Biriken puan **kişisel indirim koduna** çevrilir (redemption → `Discount.customer_id`). Tek tek kupon yerine biriken puan — daha güçlü sadakat döngüsü. **Puan aksiyonu tamamlamaya bağlıdır, beğeniye değil.**
 - **Puan kuralları:** puanlar **süreyle yanmaz** (süresiz birikir); yalnız **B2C (son kullanıcı)** kazanır/kullanır — B2B'nin zaten özel fiyatı var. İstismara karşı: aynı ürüne yorum/swipe **bir kez** puan verir + günlük tavan. **Redemption:** müşteri kendi isteyince çevirir (otomatik değil). **Yorum:** doğrulanmış alışveriş yorumu hafif moderasyonla yayınlanır.
-- **Ödül ≠ güven (kritik ilke):** müşteri katılım için puanını **alır**, ama sinyalin **analize etkisi kalitesine bağlıdır.** Hep aynı yöne / çok hızlı / ayırt etmeyen swipe'lar **düşük kaliteli** sayılır, analizde **zayıflatılır veya hariç tutulur**; ayırt eden ve **satın almayla tutarlı** sinyaller **ağırlıklı** sayılır. Ölçüm için swipe olayında **kart süresi + oturum deseni** (`dwell_ms`) tutulur; ağırlıklandırma domain-core'da. Sonuç: müşteri ödülünü alır, **manipüle veri iş kararını bozmaz.**
-- **Ürün skoru (türetilir):** kullanıcı geri bildiriminden — yorum puan ortalaması + beğen/beğenme oranı — **her ürünün kendi puanı** oluşur. Admin için karar aracı; müşteriye de gösterilebilir (sosyal kanıt).
+- **Ödül ≠ güven (kritik ilke):** müşteri katılım için puanını **alır**, ama sinyalin **analize etkisi kalitesine bağlıdır.** Hep aynı yöne / çok hızlı / ayırt etmeyen swipe'lar **düşük kaliteli** sayılır, analizde **zayıflatılır veya hariç tutulur**; ayırt eden ve **satın almayla tutarlı** sinyaller **ağırlıklı** sayılır. Ölçüm için kaydırma kaydında **kart süresi + oturum deseni** (`ProductFeedback.dwell_ms`) tutulur; ağırlıklandırma domain-core'da. Sonuç: müşteri ödülünü alır, **manipüle veri iş kararını bozmaz.**
+- **Ürün skoru (türetilir):** kullanıcı geri bildiriminden — yorum puan ortalaması + beğen/beğenme oranı — **her ürünün kendi puanı** oluşur. İki ayak da `ProductFeedback`'ten gelir, tek okumadan. Admin için karar aracı; müşteriye de gösterilebilir (sosyal kanıt).
 - **Google yorum köprüsü:** alım-sonrası ankette memnuniyeti yüksek çıkan müşteri, akışın sonunda **Google işletme yorumuna** tek-tık yönlendirilir (yerel görünürlük; `FeedbackRequest` akışına bir link — yeni mekanizma değil).
 - **Admin geri bildirim analizi:** yorumlar + swipe oranları + ürün skorları admin analitiğinde toplanır — hangi ürün seviliyor/sevilmiyor, neyi öne çıkar, neyi düzelt/çıkar. Yorumlar **ürün sayfasında**, analiz **admin tarafında**.
 - Tümü Faz 1; **design dokümanı bu ekranları baştan kapsar** (keşif bölümü, alım-sonrası swipe, ürün sayfası yorum+skor, admin geri bildirim/puan analizi).

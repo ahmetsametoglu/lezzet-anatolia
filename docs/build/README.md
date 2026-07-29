@@ -34,7 +34,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | tamam | 11/11 |
 | 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | tamam | 10/10 |
 | 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 0/13 (+5 kısmi) |
-| 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 1/16 (+5 kısmi) |
+| 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 1/16 (+6 kısmi) |
 | 10 | `10-depo.md` | Depo Yüzeyi | sürüyor | 0/6 (+5 kısmi) |
 | 11 | `11-kurye-rota.md` | Kurye ve Rota Teslimat | sürüyor | 1/6 (+4 kısmi) |
 | 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | tamam | 7/7 |
@@ -42,7 +42,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 14 | `14-bildirim-email.md` | Bildirim ve E-posta: `packages/email` + `packages/notify` | sürüyor | 5/9 |
 | 15 | `15-whatsapp.md` | WhatsApp: Zemin ve Canlı Kanal | bekliyor | 0/14 |
 | 16 | `16-talep-sikayet.md` | Talep / Şikâyet | sürüyor | 1/6 (+2 kısmi) |
-| 17 | `17-geri-bildirim-puan.md` | Geri Bildirim, Yorum ve Puan | bekliyor | 0/7 |
+| 17 | `17-geri-bildirim-puan.md` | Geri Bildirim, Yorum ve Puan | sürüyor | 0/7 (+2 kısmi) |
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | bekliyor | 0/10 |
 <!-- durum:son -->
 

@@ -54,7 +54,7 @@ Cookie'siz, sunucu-tarafı, toplu ölçüm (bkz. `FEATURES.md` Analitik). Kişis
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
-| type | enum(`page_view`,`product_view`,`add_to_cart`,`checkout_start`,`order_placed`,`product_swipe`,`share`,`search`) | |
+| type | enum(`page_view`,`product_view`,`add_to_cart`,`checkout_start`,`order_placed`,`share`,`search`) | |
 | session_key | string | sunucu-tarafı geçici oturum (kişisel değil) |
 | source | string \| null | trafik kaynağı |
 | utm | jsonb \| null | kampanya (source/medium/campaign) — reklam ROI |
@@ -65,29 +65,47 @@ Cookie'siz, sunucu-tarafı, toplu ölçüm (bkz. `FEATURES.md` Analitik). Kişis
 | device | enum(`web`,`mobile`) | |
 | country | enum(`FR`,`DE`) \| null | |
 | language | enum(`tr`,`fr`,`de`) \| null | |
-| meta | jsonb \| null | tipe özel (ör. `product_swipe`: `{context, direction, order_id?, dwell_ms}`); `dwell_ms`+desen sinyal kalitesi/ağırlık için; `search`: `{query, result_count}` — sıfır-sonuç aramalar talep/çeşit sinyali |
+| meta | jsonb \| null | tipe özel (ör. `search`: `{query, result_count}` — sıfır-sonuç aramalar talep/çeşit sinyali) |
 | created_at | timestamptz | |
 
-## Review (ürün yorumu)
+**Burada YALNIZ İZ vardır, beyan yoktur.** Analitik, müşteriyi tanımadan topladığımız gezinme izidir; "toplu ölçüm" ve "çerez banner'ı gerekmez" iddiası (bkz. `FEATURES.md` Analitik) buna dayanır. Müşterinin bize **vermeyi seçtiği** her şey — yorum, beğeni, talep, bölge haberi — kendi kalıcı tablosunda yaşar.
 
-Yalnız satın alan müşteri; moderasyondan sonra ürün sayfasında görünür (bkz. `DOMAIN.md §14`).
+Bu yüzden `product_swipe` bu listede DEĞİLDİR (29.07 düzeltmesi): beğen/geç bir iz değil bir beyandır, puan kazandırır, kişiye ve ürüne bağlıdır ve "aynı ürüne bir kez" tekilliği ister — hiçbiri akıp giden bir olay defterinde duramaz → `ProductFeedback`.
+
+## ProductFeedback (ürün geri bildirimi — yorum + beğeni)
+
+Müşterinin bir ürün hakkında **bize vermeyi seçtiği** değerlendirme. Üç biçim tek varlıkta: yıldız, yazılı yorum, beğen/geç (bkz. `DOMAIN.md §14`).
 
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
-| product_id | uuid | yorum ürün düzeyinde |
-| customer_id | uuid | |
-| order_id | uuid \| null | doğrulanmış alışveriş |
-| rating | int \| null | 1–5 |
-| comment | text \| null | |
-| language | enum(`tr`,`fr`,`de`) | yorumun yazıldığı dil — **çevrilmez**, yazıldığı dilde yayınlanır |
-| status | enum(`pending`,`approved`,`rejected`) | moderasyon; yayınlanan geri çekilebilir (`approved` → `rejected`) |
+| product_id | uuid | değerlendirme ürün düzeyinde (varyant değil) |
+| customer_id | uuid \| null | **null = giriş yapmamış ziyaretçinin keşif kaydırması**; puan yalnız kimliklide |
+| order_id | uuid \| null | doğrulanmış alışveriş (`purchase` bağlamında dolu) |
+| context | enum(`purchase`,`candidate`) | aldığı ürün / keşifteki aday ürün — **kapıları farklı** |
+| rating | int \| null | 1–5 yıldız |
+| vote | enum(`like`,`dislike`) \| null | beğen / geç |
+| comment | text \| null | yazılı yorum |
+| language | enum(`tr`,`fr`,`de`) \| null | metnin dili — **çevrilmez**; metinsiz kayıtta boş |
+| dwell_ms | int \| null | kartta geçirilen süre — **sinyal kalitesi** için (yalnız kaydırmada) |
+| feedback_request_id | uuid \| null | alım-sonrası davetten geldiyse (`FeedbackRequest`) |
+| status | enum(`pending`,`approved`,`rejected`) | **moderasyon yalnız METİN içindir**; metinsiz kayıt doğrudan `approved` doğar |
 | moderated_at / moderated_by | timestamptz \| null / uuid \| null | kim ne zaman karar verdi (iz) |
 | created_at | timestamptz | |
 
-**`status` neden boolean değil:** kuyruğun üç hâli var — bekliyor, onaylandı, reddedildi. `is_approved=false` bu üçünden ikisini aynı kovaya atardı: reddedilmiş yorum her açılışta yeniden karar bekliyormuş gibi kuyruğa düşer, moderatör aynı yorumu ikinci kez okurdu.
+**Neden tek tablo:** ayrımları biçimden ibarettir — müşteri, ürün, tarih, puan kazanımı, "aynı ürüne bir kez" tekilliği, ürün skoruna katkı ve GDPR silme yolu üçünde de aynıdır. `Discount`'ın kuponu ve otomatik kampanyayı tek varlıkta tutmasıyla aynı gerekçe: iki tablo, aynı yedi alanı iki kez tanımlamak ve skoru iki yerden toplamak olurdu.
+
+**En az bir beyan şart:** `rating`, `vote` ve `comment`'tan biri dolu olmalı. Üçü de boşsa ortada bir değerlendirme yoktur.
+
+**Moderasyon metnin işidir.** Yıldızı ya da beğeniyi "reddetmek" anlamsızdır — okunacak bir şey yoktur. Metinsiz kayıt kuyruğa hiç düşmez, doğrudan yayına girer; kuyruk yalnız insanın okuyacağı bir cümle olduğunda anlamlıdır.
+
+**İki bağlam, iki kapı:** `purchase` satın alma doğrulaması ister (doğrulanmamış yorum sosyal kanıt değil reklamdır); `candidate` istemez ve isteyemez — aday ürün henüz satılmıyor, kimse alamamıştır.
+
+**`status` neden boolean değil:** kuyruğun üç hâli var — bekliyor, onaylandı, reddedildi. `is_approved=false` bu üçünden ikisini aynı kovaya atardı: reddedilmiş yorum her açılışta yeniden karar bekliyormuş gibi kuyruğa düşer, moderatör aynı metni ikinci kez okurdu.
 
 **Dil saklanır, çevrilmez:** yorum müşterinin kendi cümlesidir; makine çevirisi onu müşterinin söylemediği bir hâle sokar. Alan, moderatörün "bu hangi dilde" sorusunu ve ürün sayfasının dil süzgecini karşılar.
+
+**Tekillik:** `(customer_id, product_id, context)` — aynı ürüne bir müşteriden tek kayıt; ikinci kez alan müşteri görüşünü GÜNCELLER. Ziyaretçi kaydırmasında (`customer_id` null) tekillik yoktur ve olamaz: tekilleştirmek kimlik tutmayı gerektirirdi. Aday talep panosundaki sayı bu yüzden mutlak bir "kişi" değil, ilgi yoğunluğudur (`postal_code_demand` ile aynı kabul).
 
 ## FeedbackRequest (geri bildirim daveti)
 

@@ -154,3 +154,25 @@ export type TicketHandler = z.infer<typeof TicketHandlerEnum>;
  */
 export const TicketSenderEnum = z.enum(['customer', 'admin', 'ai']);
 export type TicketSender = z.infer<typeof TicketSenderEnum>;
+
+/**
+ * Yorum moderasyonu — ÜÇ hâl (DOMAIN §14). Boolean olsaydı "bekliyor" ile "reddedildi" aynı kovaya
+ * düşer, reddedilen yorum her açılışta kuyruğa geri gelirdi. Yayınlanan geri çekilebilir.
+ *
+ * Metin hiçbir hâlde DÜZENLENMEZ: onay/ret vardır, sansürlü yeniden yazım yoktur. **Moderasyon
+ * yalnız metne uygulanır** — metinsiz kayıt (yalnız yıldız ya da yalnız beğeni) `approved` doğar.
+ */
+export const ReviewStatusEnum = z.enum(['pending', 'approved', 'rejected']);
+export type ReviewStatus = z.infer<typeof ReviewStatusEnum>;
+
+/**
+ * Değerlendirmenin bağlamı — **kapıları farklıdır**: `purchase` satın alma doğrulaması ister
+ * (doğrulanmamış yorum sosyal kanıt değil reklamdır); `candidate` isteyemez, çünkü aday ürün henüz
+ * satılmıyor ve kimse almamıştır (DOMAIN §13, §14).
+ */
+export const FeedbackContextEnum = z.enum(['purchase', 'candidate']);
+export type FeedbackContext = z.infer<typeof FeedbackContextEnum>;
+
+/** Kaydırmanın yönü — beğen / geç. */
+export const FeedbackVoteEnum = z.enum(['like', 'dislike']);
+export type FeedbackVote = z.infer<typeof FeedbackVoteEnum>;

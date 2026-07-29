@@ -61,8 +61,10 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `movement_direction`: in, out
 - `movement_type`: order_payment, order_refund, purchase, expense, transfer, capital, misc
 - `movement_source`: manual, bank_import
-- `analytics_event_type`: page_view, product_view, add_to_cart, checkout_start, order_placed, product_swipe, share, search
+- `analytics_event_type`: page_view, product_view, add_to_cart, checkout_start, order_placed, share, search
 - `feedback_channel`: email, whatsapp
+- `feedback_context`: purchase, candidate
+- `feedback_vote`: like, dislike
 - `points_reason`: review, swipe_candidate, swipe_post_purchase, order, redemption, manual
 - `review_status`: pending, approved, rejected
 - `ticket_type`: damaged, missing, question, other
@@ -93,6 +95,9 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - **Yasal beyan ürün seviyesindedir** (`ingredients`, `nutrition`, `allergens`, `traces`, `storage_instructions`) — varyantlar aynı reçeteyi paylaşır; besin değerleri 100 g başına verildiğinden her boy için geçerlidir. Farklı reçete = farklı ürün.
 - **Çapraz bulaşma serbest metin değil, alerjen listesidir** (`traces`) — cümle üç dilde i18n şablonundan kurulur; işletme çevirmen aramaz, liste seçer.
 - **Kapak görseli üründe, galeri ayrı tabloda** — `Product.image_key` kapak (liste/kart/OG tek sorguda), `ProductImage` yalnız ek görseller; kapak galeride tekrarlanmaz (tek kaynak korunur).
+- **İZ ile BEYAN ayrı yaşar (29.07).** Müşteriyi tanımadan topladığımız gezinme verisi `AnalyticsEvent`'tedir ve anonimdir — "toplu ölçüm, çerez banner'ı gerekmez" iddiası buna dayanır. Müşterinin bize **vermeyi seçtiği** her şey (yorum, beğeni, talep, bölge haberi, izin) kendi kalıcı tablosundadır. Ölçüt: kayıt puan kazandırıyor mu, kişiye bağlanıyor mu, "bir kez" kuralı var mı, silme talebinde gitmeli mi — biri bile evetse o veri analitik değildir. Bu yüzden beğen/geç `AnalyticsEvent(product_swipe)`'tan çıkarılıp `ProductFeedback`'e alındı. Emsal: aynı soruya iki kayıt tutan `postal_code_demand` (anonim sayaç) ↔ `zone_notice` (kimlikli kişi) ikilisi.
+- **Bir ürün hakkındaki her beyan tek tabloda** — yıldız, yazılı yorum ve beğen/geç `ProductFeedback`'te birleşir; ayrımları yalnız biçimdir (`rating`/`comment`/`vote`). Müşteri, ürün, tarih, puan, tekillik, skor katkısı ve silme yolu üçünde de aynı. `Discount`'ın kupon+kampanyayı tek varlıkta tutmasıyla aynı gerekçe.
+- **Moderasyon metnin işidir** — metinsiz kayıt (yalnız yıldız ya da yalnız beğeni) kuyruğa düşmez, doğrudan yayına girer. Bir sayıyı "reddetmek" anlamsızdır; kuyruk okunacak bir cümle olduğunda vardır.
 - **Ürün skoru türetilir, ama okuma tarafında önbelleklenir** — kaynak daima `Review` (ortalama + sayı); katalog kartı, ürün detayı ve "benzer ürünler" aynı anda puan gösterdiği için her listede agregasyon yapılmaz: onaylı yorum değişiminde tazelenen özet (materialized view ya da `product` üzerinde `rating_avg`/`rating_count` cache) kullanılır. Cache bozulursa kaynaktan yeniden üretilir — `MoneyMovement`/`Order.amount_*` ile aynı desen.
 - **Kategori tek + koleksiyon çoklu** — kategori yapısal (ürün nedir), koleksiyon esnek pazarlama grubu (Bayram/Yeni/İndirimde).
 - **Paket sipariş anında `OrderItem`'lara açılır** — yeni ürün değil; atanmış kalem fiyatlarının toplamı = paket fiyatı; hediye = 0 fiyatlı kalem. Stok/kâr/fatura kalem kalem işler (bkz. `DOMAIN.md §13`).
