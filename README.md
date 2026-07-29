@@ -43,7 +43,9 @@ pnpm dev              # web + backend
 | `pnpm format`     | Prettier                                   |
 | `pnpm boundaries` | paket sınırı kontrolü (dependency-cruiser) |
 | `pnpm knip`       | ölü kod / kullanılmayan export taraması       |
-| `pnpm test`       | vitest (birim + entegrasyon)               |
+| `pnpm test:unit`  | DB'siz birim testler — paralel, ~1 sn (günlük döngü) |
+| `pnpm test`       | tam paket (birim + entegrasyon), **kilitli** — bkz. `CLAUDE.md §4b` |
+| `pnpm test:integration` | yalnız yerel Supabase'e vuranlar, kilitli |
 | `pnpm docs:check` | doküman ↔ kod tutarlılığı (bkz. WORKFLOW §8) |
 | `pnpm docs:sync`  | türetilmiş durum özetini yeniden yazar     |
 | `pnpm hooks:install` | commit öncesi doküman denetimini kurar  |

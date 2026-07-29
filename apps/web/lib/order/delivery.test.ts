@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DeliveryZoneService, SettingsService, serviceDb } from '@lezzet/database';
+import { settingsSnapshot } from '@lezzet/database/testing';
 import { resolveDelivery } from './delivery';
 
 /**
@@ -48,18 +49,19 @@ describe('rota içi teslimat (07.2)', () => {
   });
 
   it('kesim saati AYARDAN okunur — değiştirince gün hesabı değişir', async () => {
-    const settings = new SettingsService(db);
+    // Ayar KÜRESEL tekil: geri koyma okunan değere yapılır, sabite değil (CLAUDE.md §4b).
+    const settings = settingsSnapshot(db);
     const saliOgle = new Date(2026, 6, 28, 12, 0); // Salı 12:00, teslimat günü
 
     // Varsayılan kesim 16:00 → bugün hâlâ yetişir.
     expect((await resolveDelivery({ postalCode: rotaKodu, now: saliOgle })).availableDates[0]).toBe('2026-07-28');
 
     // Kesim öne çekilirse aynı sipariş bugüne yetişmez.
-    await settings.set('order_cutoff_time', '10:00');
+    await settings.override('order_cutoff_time', '10:00');
     try {
       expect((await resolveDelivery({ postalCode: rotaKodu, now: saliOgle })).availableDates[0]).toBe('2026-07-31');
     } finally {
-      await settings.set('order_cutoff_time', '16:00');
+      await settings.restore();
     }
   });
 });

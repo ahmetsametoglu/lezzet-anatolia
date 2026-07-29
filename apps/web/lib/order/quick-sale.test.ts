@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, OrderService, ProductService, ReservationService, SettingsService, StockService, UserProfileService, serviceDb,
+  AccountService, CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
 import { quickSale } from './quick-sale';
 import { transitionOrder } from './transition';
 
@@ -182,10 +182,8 @@ describe('hızlı satış (07.10)', () => {
   it('hesap belirsizse satış YİNE kapanır — mal gitti, para kayıtsız görünür', async () => {
     // Uydurulmuş bir "ödendi"den, kaydedilmemiş ama görünür bir tahsilat iyidir.
     // Ayar seed'de dolu olabilir; bu senaryo tam da onun BOŞ olduğu hâli sınıyor → geçici olarak kaldır.
-    const settings = new SettingsService(db);
-    const previous = await settings.get<string | null>('door_cash_account_id', null);
-    await db.from('settings').delete().eq('key', 'door_cash_account_id');
-    SettingsService.invalidate('door_cash_account_id');
+    const settings = settingsSnapshot(db);
+    await settings.remove('door_cash_account_id');
 
     try {
       const { order } = await doorDraft(1);
@@ -199,8 +197,9 @@ describe('hızlı satış (07.10)', () => {
       expect(kapanan?.amountCollected).toBe(0); // para kaydı yok — uydurulmadı
       expect(kapanan?.paymentStatus).toBe('pending');
     } finally {
-      if (previous) await settings.set('door_cash_account_id', previous);
-      SettingsService.invalidate('door_cash_account_id');
+      // Ne bulduysak onu bırakırız — ayar YOKTUYSA yok kalır (eskiden `if (previous)` ile atlanıyordu,
+      // yani test değeri geride kalabiliyordu).
+      await settings.restore();
     }
   });
 

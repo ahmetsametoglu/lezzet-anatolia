@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { OrderService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
 import { CategoryService, ProductService } from '@lezzet/database';
 import { resolveCheckoutPayment } from './checkout-options';
 
@@ -65,13 +65,13 @@ describe('kargo ücreti ve KDV (07.3)', () => {
   });
 
   it('ücret ayardan okunur — değiştirince hesap değişir', async () => {
-    const settings = new SettingsService(db);
-    await settings.set('shipping_fee_cents', 1200);
+    const settings = settingsSnapshot(db);
+    await settings.override('shipping_fee_cents', 1200);
     try {
       const r = await resolveCheckoutPayment({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES });
       expect(r.shippingFeeCents).toBe(1200);
     } finally {
-      await settings.set('shipping_fee_cents', 790);
+      await settings.restore();
     }
   });
 });
@@ -95,14 +95,14 @@ describe('ödeme yöntemleri', () => {
   });
 
   it('nakit yasal sınırı UYARIR ama engellemez', async () => {
-    const settings = new SettingsService(db);
-    await settings.set('cod_max_cents', 200_000);
+    const settings = settingsSnapshot(db);
+    await settings.override('cod_max_cents', 200_000);
     try {
       const r = await resolveCheckoutPayment({ customerId, deliveryType: 'route', basketCents: 120_000, lines: [{ totalCents: 120_000, vatRate: 5.5 }] });
       expect(r.cashWarning).toBe(true);
       expect(r.methods).toContain('cash');
     } finally {
-      await settings.set('cod_max_cents', 30_000);
+      await settings.restore();
     }
   });
 });
@@ -153,13 +153,13 @@ describe('asgari sepet', () => {
   });
 
   it('asgari konursa eksik tutar bildirilir', async () => {
-    const settings = new SettingsService(db);
-    await settings.set('min_basket_cents', 2500);
+    const settings = settingsSnapshot(db);
+    await settings.override('min_basket_cents', 2500);
     try {
       const r = await resolveCheckoutPayment({ customerId, deliveryType: 'route', basketCents: 1500, lines: [{ totalCents: 1500, vatRate: 5.5 }] });
       expect(r).toMatchObject({ minBasketOk: false, missingForMinBasketCents: 1000 });
     } finally {
-      await settings.set('min_basket_cents', 0);
+      await settings.restore();
     }
   });
 });

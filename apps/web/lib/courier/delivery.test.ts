@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, OrderService, ProductService, ReservationService, SettingsService,
+  AccountService, CategoryService, OrderService, ProductService, ReservationService,
   StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
 import { confirmDoorDelivery, type DeliveryProofInput, type DoorCollectionInput } from './delivery';
 import { transitionOrder } from '../order/transition';
 
@@ -193,9 +193,8 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
   });
 
   it('sınır ayardan gelir — kodda sabit yok', async () => {
-    const settings = new SettingsService(db);
-    const original = await settings.getNumber('cash_legal_limit_cents', 100_000);
-    await settings.set('cash_legal_limit_cents', 1_000); // 10 €
+    const settings = settingsSnapshot(db);
+    await settings.override('cash_legal_limit_cents', 1_000); // 10 €
     const { orderId } = await atTheDoor({ qty: 4 });
 
     try {
@@ -205,7 +204,7 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
       });
       expect(outcome).toMatchObject({ cashLimitExceeded: true });
     } finally {
-      await settings.set('cash_legal_limit_cents', original);
+      await settings.restore();
     }
   });
 
