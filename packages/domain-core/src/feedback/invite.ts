@@ -1,7 +1,7 @@
 import { readableCode } from '../order/reference-no';
 
 /**
- * Alım-sonrası davet kuralları (17.2) ve Google köprüsü (17.6) — DOMAIN §14.
+ * Alım-sonrası davet kuralları (17.2) ve dış değerlendirme köprüsü (17.6) — DOMAIN §14.
  *
  * Davetin **ne zaman** gideceği, **kime** gideceği ve akış sonunda müşterinin hangi yola çıkacağı
  * burada; gönderim ve kayıt uygulama katmanının işi.
@@ -53,23 +53,27 @@ export function feedbackToken(random: () => number = Math.random): string {
 /**
  * Akış sonunda müşteri hangi yola çıkar.
  *
- * **Memnun olmayan müşteri Google'a yönlendirilmez** (tasarım §6): onun yolu sorununu
+ * **Memnun olmayan müşteri dış değerlendirmeye yönlendirilmez** (tasarım §6): onun yolu sorununu
  * iletebileceği talep girişidir. Bunun tersi — kötü deneyimi olan müşteriyi halka açık bir
  * değerlendirmeye itmek — hem ona hem bize zarar verir.
  *
  * Ölçüt beğeni ORANIDIR, tek bir yıldız değil: bir üründen hoşlanmamış olmak siparişten memnun
  * olmamak demek değildir.
+ *
+ * **Platform motorun umurunda değil.** Kural "memnunu davet et"tir; davetin Google İşletme
+ * Profili'ne mi Trustpilot'a mı gittiği bir ayardır (`review_platform_url`). Motora vendor adı
+ * gömmek, platform değişince kural dosyasını açtırırdı — oysa değişen şey yalnız adres.
  */
-export type FeedbackOutcome = 'google_review' | 'report_issue' | 'thanks';
+export type FeedbackOutcome = 'review_invite' | 'report_issue' | 'thanks';
 
-/** Google davetinin eşiği — beğenilerin en az bu oranı. Parametrik; tek yerde. */
-export const GOOGLE_INVITE_MIN_RATIO = 0.8;
+/** Dış değerlendirme davetinin eşiği — beğenilerin en az bu oranı. Parametrik; tek yerde. */
+export const REVIEW_INVITE_MIN_RATIO = 0.8;
 
 export function feedbackOutcomeOf(input: {
   likeCount: number;
   dislikeCount: number;
-  /** İşletmenin Google değerlendirme bağlantısı; ayarlı değilse davet hiç gösterilmez. */
-  hasGoogleLink: boolean;
+  /** İşletmenin dış değerlendirme bağlantısı ayarlı mı; değilse davet hiç gösterilmez. */
+  hasReviewLink: boolean;
   minRatio?: number;
 }): FeedbackOutcome {
   const total = input.likeCount + input.dislikeCount;
@@ -77,7 +81,7 @@ export function feedbackOutcomeOf(input: {
   if (total === 0) return 'thanks';
 
   const ratio = input.likeCount / total;
-  if (ratio < (input.minRatio ?? GOOGLE_INVITE_MIN_RATIO)) return 'report_issue';
+  if (ratio < (input.minRatio ?? REVIEW_INVITE_MIN_RATIO)) return 'report_issue';
   // Memnun ama bağlantı ayarlı değil: uydurma bir adrese yönlendirmektense teşekkürle biter.
-  return input.hasGoogleLink ? 'google_review' : 'thanks';
+  return input.hasReviewLink ? 'review_invite' : 'thanks';
 }

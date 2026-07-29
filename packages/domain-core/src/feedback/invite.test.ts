@@ -40,14 +40,14 @@ describe('davet anahtarı', () => {
 });
 
 describe('akış sonu', () => {
-  const link = { hasGoogleLink: true };
+  const link = { hasReviewLink: true };
 
-  it('memnun müşteri Google değerlendirmesine davet edilir', () => {
-    expect(feedbackOutcomeOf({ likeCount: 5, dislikeCount: 0, ...link })).toBe('google_review');
-    expect(feedbackOutcomeOf({ likeCount: 4, dislikeCount: 1, ...link })).toBe('google_review'); // %80
+  it('memnun müşteri dış değerlendirmeye davet edilir', () => {
+    expect(feedbackOutcomeOf({ likeCount: 5, dislikeCount: 0, ...link })).toBe('review_invite');
+    expect(feedbackOutcomeOf({ likeCount: 4, dislikeCount: 1, ...link })).toBe('review_invite'); // %80
   });
 
-  it('memnun OLMAYAN müşteri Google\'a yönlendirilmez — yolu talep girişidir', () => {
+  it('memnun OLMAYAN müşteri dışarı yönlendirilmez — yolu talep girişidir', () => {
     expect(feedbackOutcomeOf({ likeCount: 3, dislikeCount: 2, ...link })).toBe('report_issue'); // %60
     expect(feedbackOutcomeOf({ likeCount: 0, dislikeCount: 3, ...link })).toBe('report_issue');
   });
@@ -56,11 +56,11 @@ describe('akış sonu', () => {
     expect(feedbackOutcomeOf({ likeCount: 0, dislikeCount: 0, ...link })).toBe('thanks');
   });
 
-  it('Google bağlantısı ayarlı değilse davet gösterilmez', () => {
-    expect(feedbackOutcomeOf({ likeCount: 5, dislikeCount: 0, hasGoogleLink: false })).toBe('thanks');
+  it('değerlendirme bağlantısı ayarlı değilse davet gösterilmez', () => {
+    expect(feedbackOutcomeOf({ likeCount: 5, dislikeCount: 0, hasReviewLink: false })).toBe('thanks');
   });
 
   it('eşik parametrik', () => {
-    expect(feedbackOutcomeOf({ likeCount: 3, dislikeCount: 2, ...link, minRatio: 0.5 })).toBe('google_review');
+    expect(feedbackOutcomeOf({ likeCount: 3, dislikeCount: 2, ...link, minRatio: 0.5 })).toBe('review_invite');
   });
 });

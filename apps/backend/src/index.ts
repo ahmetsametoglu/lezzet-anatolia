@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import cron from 'node-cron';
+import { CREATE_FEEDBACK_REQUESTS, createFeedbackRequestsJob } from './jobs/feedback-requests';
 import { runJob } from './jobs/runner';
 import { SWEEP_RESERVATIONS, sweepReservations } from './jobs/sweep-reservations';
 
@@ -16,6 +17,16 @@ app.get('/health', (c) => c.json({ ok: true, service: 'lezzet-backend' }));
 cron.schedule('* * * * *', () => {
   void runJob(SWEEP_RESERVATIONS, sweepReservations);
 });
+
+// Geri bildirim daveti taraması (17.2) — günde bir, sabah 09:00 Paris.
+//
+// Sıklık günlüktür çünkü eşik gün cinsindendir (teslim +10 gün): saat başı taramak aynı satırları
+// 24 kez okuyup hiçbir şey yapmazdı. SAAT ise müşteri içindir — davet e-postası gecenin ikisinde
+// değil, okunabilecek bir vakitte düşer. Tarama idempotent olduğu için kaçan bir gün ertesi turda
+// telafi olur; "o gün davet edilecekler" diye kaybolan bir küme yok.
+cron.schedule('0 9 * * *', () => {
+  void runJob(CREATE_FEEDBACK_REQUESTS, createFeedbackRequestsJob);
+}, { timezone: 'Europe/Paris' });
 
 const port = Number(process.env.BACKEND_PORT ?? 8787);
 serve({ fetch: app.fetch, port }, (info) => {

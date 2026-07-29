@@ -80,12 +80,17 @@ comment on view public.feedback_request_progress is
   'Davetin ilerlemesi — "2/5" siparişten ve değerlendirmelerden TÜRETİLİR, saklanmaz (17.2).';
 
 -- ── Ayarlar ─────────────────────────────────────────────────────────────────
--- Bekleme süresi ve Google bağlantısı **parametrik**: ikisi de iş kararıdır ve dağıtım beklemeden
--- değişebilmelidir (STACK §10).
+-- Bekleme süresi ve dış değerlendirme bağlantısı **parametrik**: ikisi de iş kararıdır ve dağıtım
+-- beklemeden değişebilmelidir (STACK §10).
 --
--- `google_review_url` BOŞ başlar ve bu doğru: işletmenin Google kaydı yokken uydurma bir adrese
--- yönlendirmektense davet hiç gösterilmez (`feedbackOutcomeOf` bunu bilir).
+-- **Platform ayarda, kodda değil.** Google İşletme Profili ile Trustpilot arasındaki tercih bir
+-- pazarlama kararıdır ve zamanla değişebilir; ikisi de "memnun müşteriyi dışarıda değerlendirmeye
+-- çağır" kuralının aynı ucuna takılır. Adres + görünen ad ayar olunca geçiş iki satır güncellemedir.
+--
+-- `review_platform_url` BOŞ başlar ve bu doğru: kayıt açılmadan uydurma bir adrese yönlendirmektense
+-- davet hiç gösterilmez (`feedbackOutcomeOf` bunu bilir).
 insert into public.settings (key, value, description) values
-  ('feedback_delay_days', '10', 'Teslimden kaç gün sonra geri bildirim daveti gider. Erken sormak "daha açmadım", geç sormak unutulmuş bir deneyim getirir.'),
-  ('google_review_url',   '""', 'İşletmenin Google değerlendirme bağlantısı. BOŞSA akış sonunda Google daveti gösterilmez.')
+  ('feedback_delay_days',   '10',       'Teslimden kaç gün sonra geri bildirim daveti gider. Erken sormak "daha açmadım", geç sormak unutulmuş bir deneyim getirir.'),
+  ('review_platform_url',   '""',       'Dış değerlendirme bağlantısı (Google İşletme Profili / Trustpilot). BOŞSA akış sonunda davet gösterilmez.'),
+  ('review_platform_name',  '"Google"', 'Değerlendirme platformunun müşteriye gösterilen adı — davet metnindeki "… üzerinde değerlendir".')
 on conflict (key) where scope_id is null do nothing;

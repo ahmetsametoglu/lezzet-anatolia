@@ -4,14 +4,13 @@ import {
   FeedbackRequestService,
   OrderItemService,
   OrderService,
-  OrderStatusLogService,
   ProductService,
   ProductVariantService,
   SettingsService,
   serviceDb,
 } from '@lezzet/database';
-import { FEEDBACK_DELAY_DAYS, feedbackOutcomeOf, feedbackToken, isDueForFeedback, type FeedbackOutcome } from '@lezzet/domain-core';
-import { resolveLocalizedText, type FeedbackChannel, type FeedbackRequest, type ProductFeedback } from '@lezzet/types';
+import { feedbackOutcomeOf, type FeedbackOutcome } from '@lezzet/domain-core';
+import { resolveLocalizedText, type ProductFeedback } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { publicImageUrl } from '@lezzet/storage';
 import { ProductFeedbackService } from '@lezzet/database';
@@ -45,51 +44,6 @@ export interface FeedbackInviteView {
   /** Tamamlanmış davet tekrar açılırsa: teşekkür durumu, puan ikinci kez verilmez. */
   completedAt: string | null;
   pointsAwarded: number | null;
-}
-
-/**
- * **Daveti hak eden siparişleri bulur ve davet açar** (17.2'nin tarama işi).
- *
- * Taramalı ve idempotent: sipariş başına tek davet (DB indeksi), zaten daveti olan atlanır. Cron
- * yoksa da elle çağrılabilir — zamanlayıcı bu işlevi tetikler, işin kendisi burada.
- *
- * Teslim anı `order_status_log`'dan TÜRETİLİR; siparişte `delivered_at` diye bir kolon yok ve
- * olmamalı (DATA_MODEL türetme ilkesi).
- */
-export async function createDueFeedbackRequests(opts: { channel?: FeedbackChannel; limit?: number } = {}): Promise<FeedbackRequest[]> {
-  const db = serviceDb();
-  const orders = new OrderService(db);
-  const logs = new OrderStatusLogService(db);
-  const requests = new FeedbackRequestService(db);
-
-  const delayDays = await new SettingsService(db).getNumber('feedback_delay_days', FEEDBACK_DELAY_DAYS);
-  const candidates = await orders.listByStatus(['delivered', 'completed'], { limit: opts.limit ?? 200 });
-  const created: FeedbackRequest[] = [];
-
-  for (const order of candidates) {
-    if (await requests.findByOrder(order.id)) continue; // zaten davet edilmiş
-    const deliveredAt = await logs.firstEntryAt(order.id, 'delivered');
-    if (!isDueForFeedback({ status: order.status, deliveredAt, delayDays })) continue;
-
-    created.push(
-      await requests.insert({
-        orderId: order.id,
-        customerId: order.customerId,
-        token: feedbackToken(),
-        channel: opts.channel ?? 'email',
-      }),
-    );
-  }
-  return created;
-}
-
-/** Gönderilmeyi bekleyen davetler — bildirim katmanı (14) bunları alıp yollar ve damgalar. */
-export function listPendingInvites(limit?: number): Promise<FeedbackRequest[]> {
-  return new FeedbackRequestService(serviceDb()).listUnsent(limit);
-}
-
-export function markInviteSent(id: string): Promise<FeedbackRequest> {
-  return new FeedbackRequestService(serviceDb()).markSent(id);
 }
 
 /**
@@ -142,8 +96,9 @@ export interface FeedbackCompletion {
   /** Bu turda kazanılan puan; ikinci kez tamamlamada 0. */
   pointsAwarded: number;
   balance: number;
-  /** Yalnız `google_review` sonucunda dolu. */
-  googleReviewUrl: string | null;
+  /** Yalnız `review_invite` sonucunda dolu — dış değerlendirme adresi ve düğmede yazacak ad. */
+  reviewUrl: string | null;
+  reviewPlatform: string | null;
 }
 
 /**
@@ -165,8 +120,15 @@ export async function completeFeedbackInvite(token: string): Promise<FeedbackCom
   const likeCount = given.filter((g) => g.vote === 'like').length;
   const dislikeCount = given.filter((g) => g.vote === 'dislike').length;
 
-  const googleUrl = (await new SettingsService(db).get<string>('google_review_url', '')) || null;
-  const outcome = feedbackOutcomeOf({ likeCount, dislikeCount, hasGoogleLink: Boolean(googleUrl) });
+  // Hangi platform olduğu buranın kararı DEĞİL, ayarın: Google İşletme Profili de Trustpilot da
+  // aynı uca takılır (`review_platform_url`). Motor yalnız "bağlantı var mı"yı sorar.
+  const settings = new SettingsService(db);
+  const reviewUrl = (await settings.get<string>('review_platform_url', '')) || null;
+  const outcome = feedbackOutcomeOf({ likeCount, dislikeCount, hasReviewLink: Boolean(reviewUrl) });
+  const invite =
+    outcome === 'review_invite'
+      ? { reviewUrl, reviewPlatform: await settings.get<string>('review_platform_name', 'Google') }
+      : { reviewUrl: null, reviewPlatform: null };
 
   // Zaten tamamlanmış: teşekkür durumu gösterilir, puan İKİNCİ KEZ verilmez.
   if (request.completedAt) {
@@ -174,7 +136,7 @@ export async function completeFeedbackInvite(token: string): Promise<FeedbackCom
       outcome,
       pointsAwarded: 0,
       balance: (await getPointsBalance(request.customerId)).balance,
-      googleReviewUrl: outcome === 'google_review' ? googleUrl : null,
+      ...invite,
     };
   }
 
@@ -187,6 +149,6 @@ export async function completeFeedbackInvite(token: string): Promise<FeedbackCom
     outcome,
     pointsAwarded: points,
     balance: (await getPointsBalance(request.customerId)).balance,
-    googleReviewUrl: outcome === 'google_review' ? googleUrl : null,
+    ...invite,
   };
 }
