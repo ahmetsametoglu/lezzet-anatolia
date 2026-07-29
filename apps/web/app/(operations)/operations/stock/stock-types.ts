@@ -146,13 +146,8 @@ export interface StockViewProps {
   onSelect: (variantId: string) => void;
   /** Teklif diyaloğunu bu parti için aç. */
   onOpenOffer: (stockId: string) => void;
-  onOpenRecall: () => void;
+  /** Geri çağırma sorgusunu aç. Lot verilirse kutu DOLU açılır — satırdaki numarayı elle yeniden
+   *  yazdırmak, acil bir akışta en gereksiz adımdır. */
+  onOpenRecall: (lot?: string) => void;
 }
 
-/**
- * Listede görünen tam ad. Boy adı BOŞ olabilir (tek boylu üründe varsayılan varyantın etiketi boştur)
- * — o zaman ayraç da yazılmaz, yoksa her satır "Künefe · " diye biterdi.
- */
-export function titleOf(productName: string, variantLabel: string): string {
-  return variantLabel ? `${productName} · ${variantLabel}` : productName;
-}

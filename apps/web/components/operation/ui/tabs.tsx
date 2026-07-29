@@ -19,6 +19,15 @@ interface TabItem<K extends string> {
    * `0` ve `null` çizilmez: boş bir rozet, olmayan bir işi varmış gibi gösterir.
    */
   badge?: number | null;
+  /**
+   * Sekmenin KAPSAM sayısı — "bu sekmede kaç kayıt var". Rozetten (`badge`) farkı ağırlığıdır:
+   * rozet "senden bir şey bekleniyor" der ve ambere boyanır, sayı yalnız büyüklüğü söyler (aktif
+   * sekmede olive, ötekilerde sönük). Sipariş ekranı gibi sekmeleri bir DURUM kümesi olan ekranlar
+   * bunu ister; orada her sekmenin sayısı bilgidir, uyarı değil.
+   *
+   * `0` ve `null` çizilmez — boş bir sayı, sekmeyi tıklamaya değer göstermez.
+   */
+  count?: number | null;
 }
 
 interface TabsProps<K extends string> {
@@ -42,12 +51,22 @@ export function Tabs<K extends string>({ items, active, onSelect, action, classN
             onClick={() => onSelect(t.key)}
             aria-current={on ? 'page' : undefined}
             className={[
-              '-mb-px cursor-pointer border-b-2 px-3.5 py-[11px] font-ops-display text-ops-sm font-semibold transition-colors',
+              '-mb-px cursor-pointer border-b-2 px-3.5 py-[11px] font-ops-display text-ops-sm font-semibold outline-none transition-colors',
               on ? 'border-ops-olive text-ops-ink' : 'border-transparent text-ops-muted hover:text-ops-strong',
             ].join(' ')}
           >
             <span className="flex items-center gap-1.5">
               {t.label}
+              {t.count ? (
+                <span
+                  className={[
+                    'rounded-full px-1.5 py-px font-ops-mono text-ops-micro font-medium',
+                    on ? 'bg-ops-olive-bg text-ops-olive-dark' : 'bg-ops-line-soft text-ops-muted',
+                  ].join(' ')}
+                >
+                  {t.count}
+                </span>
+              ) : null}
               {t.badge ? (
                 <span className="rounded-full bg-ops-amber-bg px-1.5 py-px font-ops-mono text-ops-micro font-medium text-ops-amber">
                   {t.badge}

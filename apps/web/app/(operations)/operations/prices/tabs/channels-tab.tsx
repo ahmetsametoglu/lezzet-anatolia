@@ -15,7 +15,7 @@ import type { PriceRow, PricesViewProps } from '../prices-types';
 // → NE kazanıyorum (marj) → otomatik mi. Maliyet fiyatların sağında duruyor ki göz "fiyat–maliyet"
 // karşılaştırmasını yan yana yapabilsin.
 
-export function ChannelsTab({ rows, hasMore, loadingMore, onLoadMore, onEdit, scope, search }: PricesViewProps) {
+export function ChannelsTab({ rows, hasMore, loadingMore, onLoadMore, onEdit, scope, search, counts }: PricesViewProps) {
   const columns: Column<PriceRow>[] = [
     {
       key: 'name',
@@ -103,10 +103,19 @@ export function ChannelsTab({ rows, hasMore, loadingMore, onLoadMore, onEdit, sc
         footer={
           <>
             <LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />
-            <span className="block px-6 py-3 font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
-              Satıra tıkla → fiyat düzenle. Otomatik fiyatı açık üründe fiyat elle değil, hedef marj değişir.
-              Fiyat değişikliği verilmiş siparişleri etkilemez.
-            </span>
+            {/* Alt şerit (tasarım): solda açıklama, SAĞDA marj-altı sayacı. O çip "bugün bir işin
+                var" göstergesidir; yalnız başlıkta durunca liste kaydırılırken gözden kayboluyordu. */}
+            <div className="flex flex-wrap items-center gap-3 px-6 py-3">
+              <span className="mr-auto font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
+                Satıra tıkla → fiyat düzenle. Otomatik fiyatı açık üründe fiyat elle değil, hedef marj değişir.
+                Fiyat değişikliği verilmiş siparişleri etkilemez.
+              </span>
+              {counts.below > 0 ? (
+                <span className="flex-none rounded-ops-btn border border-ops-red-line bg-ops-red-bg px-[11px] py-[5px] font-ops-body text-ops-xs font-medium text-ops-red">
+                  <strong className="font-ops-mono">{counts.below}</strong> marj-altı
+                </span>
+              ) : null}
+            </div>
           </>
         }
       />

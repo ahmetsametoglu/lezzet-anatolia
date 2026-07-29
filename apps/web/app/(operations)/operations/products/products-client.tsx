@@ -63,6 +63,15 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
     setCreating(false);
     setSearch('');
     if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    // Terim VARSA sığ yazım yetmez: `replaceState` sunucuya gitmez, gelen veri hâlâ eski terimle
+    // süzülüdür. Kutu boşalır, çip kalmaz, ama liste ve başlık sayaçları süzülü kalırdı — görünmez
+    // bir süzgeç. Devamını yükleyen action da adresi (artık terimsiz) okuduğu için ikinci sayfa
+    // SÜZÜLMEMİŞ gelir ve liste kendi içinde tutarsızlaşırdı.
+    if (urlState.q) {
+      router.replace(productsUrl({ ...urlState, tab: next, creating: false, q: '' }), { scroll: false });
+      return;
+    }
     writeUrl({ tab: next, creating: false, q: '' });
   };
 

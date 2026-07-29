@@ -118,6 +118,9 @@ describe('durum TÜRETİLİR — tahsilat değişmeden de değişir', () => {
     await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 50 });
 
     // Kapıda bir adet eksik çıktı: para hiç değişmedi ama karşılanan tutar yarıya indi.
+    // Sipariş TESLİM edilmiş olmalı — `fulfilled_qty` ancak hazırlık kesinleştikten sonra bir
+    // karardır (`isFulfillmentSettled`); taslak siparişte 0 olması "eksik gitti" demek değildir.
+    await db.from('order').update({ status: 'delivered' as const }).eq('id', order.id);
     await new OrderItemService(db).setFulfilled(items[0]!.id, 1);
 
     const result = await syncOrderPaymentStatus(order.id);
@@ -125,6 +128,29 @@ describe('durum TÜRETİLİR — tahsilat değişmeden de değişir', () => {
     if (result.status !== 'ok') return;
     expect(result.paymentStatus).toBe('paid'); // net (50) ≥ karşılanan (25)
     expect(result.derivation.refundDueCents).toBe(2500); // müşteriye 25 € borç
+  });
+
+  it('HAZIRLANMAMIŞ siparişte karşılanan 0 "eksik gitti" DEĞİLDİR — beklenen tutar sipariş edilendir', async () => {
+    // `fulfilled_qty` varsayılanı 0'dır ve hazırlıkta yazılır. Bu ayrım gözetilmezse onaylanmış her
+    // sipariş "hiçbir kalemi karşılanmamış" sayılır: kapıda tahsil edilecek tutar 0'a iner, peşin
+    // ödenmiş sipariş "iade bekliyor" görünür.
+    const { order, items } = await createOrder(); // 2 × 25 = 50
+    await db.from('order').update({ status: 'confirmed' }).eq('id', order.id);
+    await new OrderItemService(db).setFulfilled(items[0]!.id, 0);
+
+    const openResult = await syncOrderPaymentStatus(order.id);
+    expect(openResult.status).toBe('ok');
+    if (openResult.status !== 'ok') return;
+    expect(openResult.derivation.amountToCollectCents).toBe(5000); // tamamı tahsil edilecek
+    expect(openResult.paymentStatus).toBe('pending');
+
+    // Peşin ödenmiş hâli: iade borcu DOĞMAZ — mal daha hazırlanmadı, fazla ödeme yok.
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amount: 50 });
+    const paidResult = await syncOrderPaymentStatus(order.id);
+    expect(paidResult.status).toBe('ok');
+    if (paidResult.status !== 'ok') return;
+    expect(paidResult.derivation.refundDueCents).toBe(0);
+    expect(paidResult.paymentStatus).toBe('paid');
   });
 
   it('iptal edilen siparişte karşılanan 0 sayılır — tahsilatın tamamı iade borcudur', async () => {

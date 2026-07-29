@@ -87,7 +87,7 @@ export function ProductsDesktop(props: ProductsViewProps) {
         <CatalogTab
           kind="collection"
           rows={data.collections}
-          products={data.products}
+          withMembers
           filter={search}
           creating={creating}
           onCreateClose={closeCreate}

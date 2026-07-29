@@ -367,9 +367,9 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    * Müşteri ilişkisi FK adıyla ÇÖZÜLÜR: `order` tablosu `user_profiles`'a iki kez bakar (müşteri ve
    * kurye), belirsiz bırakılırsa PostgREST hangi bağı izleyeceğini bilemez.
    *
-   * KURAL BORCU (STACK §6): `order_item_batch` bir junction tablosu, yani kendi alt sınıfını hak
-   * ediyor — burada üç ham okuma birikti (`listBatches`, `itemCosts`, bu). Üçü birden taşınmalı;
-   * yalnız bunu ayırmak aynı tabloyu iki eve bölerdi. Ayrı bir tur konusu, `09-admin` görev notunda.
+   * BEKLEYEN(02.8): `order_item_batch` kendi `BaseDbService` alt sınıfına taşınmalı (STACK §6 —
+   * junction tablosu = kendi alt sınıfı). Burada üç ham okuma birikti (`listBatches`, `itemCosts`,
+   * bu). Üçü BİRLİKTE taşınır; yalnız bunu ayırmak aynı tabloyu iki eve bölerdi.
    */
   async recallByStocks(stockIds: readonly string[]): Promise<RecallHit[]> {
     if (stockIds.length === 0) return [];

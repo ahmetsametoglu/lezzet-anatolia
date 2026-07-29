@@ -1,8 +1,8 @@
 import { costOf, isBelowTargetMargin, revenueHtOf, tightestMargin, type CostBasis } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText, type Channel, type Discount, type Price, type ProductPriceRow, type UserProfile } from '@lezzet/types';
+import { titleOf } from '@/lib/catalog/title';
 import {
-  titleOf,
   type ChannelPriceCell,
   type CustomerPriceRow,
   type DiscountCustomerRow,

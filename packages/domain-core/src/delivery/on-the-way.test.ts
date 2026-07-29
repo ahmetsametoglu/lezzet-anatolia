@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { onTheWayMessage, whatsAppLink } from './on-the-way';
+import { onTheWayMessage, whatsAppChatLink, whatsAppLink } from './on-the-way';
 
 /**
  * "Yoldayım" mesajı (11.4). İki şey sınanıyor: mesaj **müşterinin** dilinde mi ve elle girilmiş
@@ -44,5 +44,20 @@ describe('wa.me bağlantısı', () => {
 
   it('ülke kodu parametrik — Almanya numarası da doğru tamamlanır', () => {
     expect(whatsAppLink({ phone: '0171 1234567', locale: 'de', countryCode: '49' })).toContain('wa.me/491711234567');
+  });
+});
+
+describe('whatsAppChatLink', () => {
+  it('metinsiz sohbet bağlantısı kurar', () => {
+    expect(whatsAppChatLink('+33 6 12 34 56 78')).toBe('https://wa.me/33612345678');
+  });
+
+  it('yerel biçim ülke koduyla tamamlanır — `whatsAppLink` ile AYNI ayrıştırma', () => {
+    expect(whatsAppChatLink('06 12 34 56 78')).toBe('https://wa.me/33612345678');
+  });
+
+  it('ayırt edilemeyecek numarada bağlantı YOKTUR — düğme hiç çizilmez', () => {
+    expect(whatsAppChatLink('123')).toBeNull();
+    expect(whatsAppChatLink(null)).toBeNull();
   });
 });

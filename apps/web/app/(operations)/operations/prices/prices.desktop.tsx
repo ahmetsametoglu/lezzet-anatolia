@@ -10,7 +10,8 @@ import { ChannelsTab } from './tabs/channels-tab';
 import { CustomersTab } from './tabs/customers-tab';
 import { CouponsTab } from './tabs/coupons-tab';
 import { OffersTab } from './tabs/offers-tab';
-import { PRICE_SCOPES, SCOPE_LABEL, TAB_LABEL, type PriceScope, type PriceTab } from './prices-url';
+import { SCOPE_TONE, tabSubtitle } from './prices-labels';
+import { PRICE_SCOPES, SCOPE_LABEL, TAB_LABEL, type PriceTab } from './prices-url';
 import type { PricesViewProps } from './prices-types';
 
 // Fiyatlar — web KABUĞU: ortak üst bar + sekmeler + süzgeç şeridi; sekme içerikleri kendi
@@ -28,32 +29,12 @@ const TABS: Array<{ key: PriceTab; label: string }> = [
   { key: 'offers', label: TAB_LABEL.offers },
 ];
 
-/**
- * Çip TONU anlam taşır: marj-altı bir KAYIP uyarısıdır (kırmızı), eksik fiyat bir eksikliktir
- * (amber), otomatik fiyat ise bir davranış işaretidir (zeytin) — hata değil.
- */
-const SCOPE_TONE: Record<PriceScope, 'olive' | 'amber' | 'red'> = {
-  all: 'olive',
-  below: 'red',
-  missing: 'amber',
-  auto: 'olive',
-};
-
 export function PricesDesktop(props: PricesViewProps) {
   const { data, rows, counts, tab, onTab, search, onSearch, catFilter, onCatFilter, scope, onScope } = props;
 
-  // Alt başlık sekmeye ait. Sayaçlar YÜKLENMİŞ sayfaya aittir ve metin bunu söyler — "3 marj-altı"
-  // yazıp katalogun tamamını kastetmek, görülmemiş satırları sessizce yok saymaktı.
-  const SUBTITLE: Record<PriceTab, string> = {
-    channels: `${counts.rows} boy yüklendi · ${counts.below} marj-altı · ${counts.missing} fiyatı eksik`,
-    customers: `${data.customerPrices.length} özel fiyat · ${data.discountCustomers.length} müşteride genel indirim oranı`,
-    coupons: 'Kupon ve otomatik kampanya — indirim motoruna bağlı',
-    offers: `${data.offers.length} parti karar bekliyor · teklif partiye bağlıdır, liste fiyatını değiştirmez`,
-  };
-
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <PageHeader title="Fiyatlar" subtitle={SUBTITLE[tab]}>
+      <PageHeader title="Fiyatlar" subtitle={tabSubtitle(tab, data, counts)}>
         {/* Arama YALNIZ kanal listesinde: özel fiyat ve kupon listeleri kısa, süzgeç istemiyor.
             Kutunun her sekmede durması "aradığım şey burada aranıyor" yanılgısı yaratırdı. */}
         {tab === 'channels' ? (

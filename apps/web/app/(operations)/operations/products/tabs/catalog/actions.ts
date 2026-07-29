@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { CategoryService, CollectionService, serviceDb } from '@lezzet/database';
-import { getR2, r2Keys } from '@lezzet/storage';
+import { CategoryService, CollectionService, ProductService, serviceDb } from '@lezzet/database';
+import { getR2, publicImageUrl, r2Keys } from '@lezzet/storage';
 import { pickCropFieldsPartial, resolveLocalizedText, type ImageCropFields, type LocalizedText } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -123,6 +123,78 @@ export async function reorderCatalogAction(kind: CatalogKind, orderedIds: string
     await catalogService(kind).reorder(orderedIds);
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Koleksiyon üyeliği seçicisinin satırı — ad · görsel · kategori. Ürün view-model'inin TAMAMI
+ * değil: seçici bir liste değil, daralt-ve-seç aracıdır.
+ */
+export interface CollectionProductOption {
+  id: string;
+  name: LocalizedText;
+  imageUrl: string | null;
+  categoryName: string;
+}
+
+/** Aramada kaç ürün döner — paket seçicisiyle aynı ölçü, aynı gerekçe. */
+const MEMBER_SEARCH_LIMIT = 20;
+
+/**
+ * Üyelik seçicisinin kaynağı — **iki soru, tek okuma**.
+ *
+ * `ids` verilirse KİMLİKTEN çözer (formun açılışta üyelerini tanıması için), yoksa terimle arar.
+ * İkisi ayrı yazılsaydı üye satırı ile arama satırı bir gün farklı görünürdü.
+ *
+ * **Neden gerekli:** form üyelerini eskiden ekranın YÜKLENMİŞ ürün listesinden çözüyordu — ilk
+ * sayfa, üstelik o anki süzgeçten geçmiş 30 satır. Havuzda bulunmayan üye sessizce düşüyor,
+ * sıralama kaydedildiğinde de listeden siliniyordu: 40 üyeli bir koleksiyonda tek bir sürükleme
+ * kalan üyeleri koleksiyondan çıkarıyordu.
+ */
+async function collectionOptions(opts: { ids?: string[]; term?: string }): Promise<CollectionProductOption[]> {
+  const db = serviceDb();
+  const productSvc = new ProductService(db);
+
+  const rows = opts.ids
+    ? await productSvc.listByIds(opts.ids)
+    : (await productSvc.list({ filters: { query: opts.term }, limit: MEMBER_SEARCH_LIMIT })).rows;
+  if (rows.length === 0) return [];
+
+  // Kategori doğal tavanı olan bir küme (operatörün elle kurduğu) — tek turda çekilir (CLAUDE.md §1).
+  const categories = new Map((await new CategoryService(db).list()).map((c) => [c.id, resolveLocalizedText(c.name)]));
+
+  const byId = new Map(rows.map((p) => [p.id, p]));
+  // Kimlikten çözerken SIRA çağıranın verdiği sıradır: üyelik dizisi vitrin kürasyonudur.
+  const ordered = opts.ids ? opts.ids.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : [])) : rows;
+
+  return ordered.map((p) => ({
+    id: p.id,
+    name: p.name,
+    imageUrl: publicImageUrl(p.imageKey, p.imageUpdatedAt),
+    categoryName: p.categoryId ? (categories.get(p.categoryId) ?? '—') : '—',
+  }));
+}
+
+/** Formun açılışta üyelerini tanıması — kimlikten, sırası korunarak. */
+export async function loadCollectionMembersAction(ids: string[]): Promise<ActionResult<CollectionProductOption[]>> {
+  try {
+    await requireStaff();
+    if (ids.length === 0) return { data: [], error: null };
+    return { data: await collectionOptions({ ids }), error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/** Ekleme menüsünün araması — **sunucuda**, katalog forma indirilmez. */
+export async function searchCollectionProductsAction(term: string): Promise<ActionResult<CollectionProductOption[]>> {
+  try {
+    await requireStaff();
+    const query = term.trim();
+    if (!query) return { data: [], error: null };
+    return { data: await collectionOptions({ term: query }), error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

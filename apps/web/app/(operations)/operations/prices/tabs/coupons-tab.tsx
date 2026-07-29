@@ -78,11 +78,19 @@ interface DiscountCardProps {
 function DiscountCard({ rule, onEdit }: DiscountCardProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // Hata YUTULMAZ: yazım düşerse `router.refresh()` eski değeri geri getirir ve anahtar kendiliğinden
+  // geri döner — sebebi yazılmazsa operatör "tıkladım olmadı" diye ikinci kez basar.
   const toggle = async (next: boolean) => {
     setBusy(true);
-    await setDiscountActiveAction(rule.id, next);
+    setError(null);
+    const { error: actionError } = await setDiscountActiveAction(rule.id, next);
     setBusy(false);
+    if (actionError) {
+      setError(actionError);
+      return;
+    }
     router.refresh();
   };
 
@@ -129,6 +137,10 @@ function DiscountCard({ rule, onEdit }: DiscountCardProps) {
       <span className={busy ? 'opacity-50' : undefined}>
         <Toggle on={rule.isActive} onChange={busy ? undefined : (next) => void toggle(next)} label="Aktif" size="sm" />
       </span>
+
+      {error ? (
+        <span className="w-full font-ops-body text-ops-xs font-semibold text-ops-red">{error}</span>
+      ) : null}
     </div>
   );
 }

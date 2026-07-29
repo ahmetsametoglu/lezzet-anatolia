@@ -48,6 +48,8 @@ export function CustomerPriceDialog({ editing, onClose }: CustomerPriceDialogPro
   const [amountCents, setAmountCents] = useState<number | null>(editing?.specialCents ?? null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Kaldırma iki adımlı — ilk dokunuş niyeti sorar, ikincisi uygular (yıkıcı ve geri alınamaz). */
+  const [confirming, setConfirming] = useState(false);
 
   // Boy araması da SUNUCUDA (müşteri aramasıyla aynı gerekçe): katalog veriyle büyür, tamamını
   // diyaloga indirmek bir gün sessizce eksik liste gösterirdi. Düzenlemede seçici hiç açılmaz —
@@ -153,10 +155,14 @@ export function CustomerPriceDialog({ editing, onClose }: CustomerPriceDialogPro
             {error ? <span className="font-semibold text-ops-red">{error}</span> : 'Verilmiş siparişleri etkilemez'}
           </span>
           {/* Kaldırma yalnız düzenlemede ve hiçbir koşulda kilitlenmez: yanlış açılmış bir anlaşma
-              her zaman geri alınabilmeli. */}
+              her zaman geri alınabilmeli.
+
+              İKİ ADIM ve YIKICI TON (tasarım): tek tıkla o müşteri–boy ikilisinin TÜM fiyat
+              satırları siler ve geri alma yolu yoktur. "İptal"in yanında nötr bir düğme olarak
+              durması, yanlışlıkla basılmayı davet ediyordu — ikisi de gri, ikisi de aynı boyda. */}
           {isEdit ? (
-            <Button variant="secondary" onClick={() => void remove()} disabled={busy}>
-              Kaldır
+            <Button variant="danger" onClick={() => (confirming ? void remove() : setConfirming(true))} disabled={busy}>
+              {confirming ? 'Emin misiniz? Kaldır' : 'Kaldır'}
             </Button>
           ) : null}
           <Button variant="secondary" onClick={onClose} disabled={busy}>

@@ -1,6 +1,8 @@
 import { percent } from '@/components/operation/ui/format';
+import type { ChipTone } from '@/components/operation/ui/chip';
 import type { OpsTone } from '@/components/operation/ui/tone';
-import type { PriceRow } from './prices-types';
+import type { PricesData, PriceRow } from './prices-types';
+import type { PriceScope, PriceTab } from './prices-url';
 
 // Fiyat ekranının SÖZLÜĞÜ — sayıdan cümleye geçiş tek yerde. Karar burada verilmez (motorun işi);
 // burada yalnız kararın nasıl okunacağı yazar.
@@ -52,4 +54,41 @@ export function rowStateNote(row: PriceRow): string {
   // Elle yönetilen üründe aynı sıçrama bir bilgidir, marj sütunu zaten yeni tabana göre konuşuyor.
   if (row.costJump && row.autoPrice) notes.push(`maliyet %${row.costJump.deviationPercent} sıçradı — otomatik fiyat bekliyor`);
   return notes.length ? ` · ${notes.join(' · ')}` : '';
+}
+
+
+/**
+ * Süzgeç çipinin TONU — anlam taşır: marj-altı bir KAYIP uyarısıdır (kırmızı), eksik fiyat bir
+ * eksikliktir (amber), otomatik fiyat bir davranış işaretidir (zeytin) — hata değil.
+ *
+ * İki yüzeyde ayrı yazılmıştı; biri harita, öteki ternary'ydi ve `auto` dalı mobilde yoktu.
+ */
+export const SCOPE_TONE: Record<PriceScope, ChipTone> = {
+  all: 'olive',
+  below: 'red',
+  missing: 'amber',
+  auto: 'olive',
+};
+
+/**
+ * Sekmenin alt başlığı — masaüstü ve telefon AYNI cümleyi kurar.
+ *
+ * Mobilde sabit bir metin vardı ve her sekmede kanal sayaçlarını yazıyordu: okuma sekmeye bağlı
+ * olduğu için "Kupon"da başlık "0 boy yüklendi · 0 marj-altı · 0 fiyatı eksik" diyordu. İki yüzey
+ * aynı ekranın başlığını iki ayrı yerde yazarsa, biri sekmeyi unutur.
+ *
+ * Sayaçlar YÜKLENMİŞ sayfaya aittir ve metin bunu söyler — "3 marj-altı" yazıp katalogun tamamını
+ * kastetmek, görülmemiş satırları sessizce yok saymaktı.
+ */
+export function tabSubtitle(tab: PriceTab, data: PricesData, counts: { rows: number; below: number; missing: number }): string {
+  switch (tab) {
+    case 'customers':
+      return `${data.customerPrices.length} özel fiyat · ${data.discountCustomers.length} müşteride genel indirim oranı`;
+    case 'coupons':
+      return 'Kupon ve otomatik kampanya — indirim motoruna bağlı';
+    case 'offers':
+      return `${data.offers.length} parti karar bekliyor · teklif partiye bağlıdır, liste fiyatını değiştirmez`;
+    default:
+      return `${counts.rows} boy yüklendi · ${counts.below} marj-altı · ${counts.missing} fiyatı eksik`;
+  }
 }

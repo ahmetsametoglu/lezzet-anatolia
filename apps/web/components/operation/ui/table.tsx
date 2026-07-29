@@ -54,8 +54,6 @@ export function Table<Row>({
   onScroll,
   onReorder,
 }: TableProps<Row>) {
-  if (rows.length === 0 && empty) return <>{empty}</>;
-
   const sortable = Boolean(onReorder);
   const template = (sortable ? `${HANDLE_TRACK} ` : '') + columns.map((c) => c.width).join(' ');
   const clickable = Boolean(onRowClick || onRowDoubleClick);
@@ -110,7 +108,15 @@ export function Table<Row>({
         className="min-h-0 flex-1 overflow-y-auto"
         onScroll={onScroll ? (e) => onScroll(e.nativeEvent) : undefined}
       >
-        {sortable && onReorder ? (
+        {/* BOŞ HÂL GÖVDENİN İÇİNDE, tablonun yerine değil.
+            Önce satır yokken tablodan erken dönülüyordu; `footer` da çizilmediği için sonsuz
+            kaydırmanın tetikleyicisi (`LoadMoreSentinel`) ekrandan siliniyordu. Client tarafında
+            süzen bir çip (marj-altı, teklif açık…) ilk sayfayı sıfıra indirdiğinde liste ölüyordu:
+            imleç dolu olmasına rağmen sonraki sayfa HİÇBİR ŞEKİLDE yüklenemiyordu ve ekranın kendi
+            metni "aşağı kaydırıp devamını yükleyin" diyordu — kaydırılacak bir şey kalmamışken. */}
+        {rows.length === 0 && empty ? (
+          empty
+        ) : sortable && onReorder ? (
           <SortableList items={rows} getId={rowKey} onReorder={onReorder} renderItem={(row, handle) => renderRow(row, handle)} />
         ) : (
           rows.map((row) => <div key={rowKey(row)}>{renderRow(row)}</div>)

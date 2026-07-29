@@ -116,7 +116,17 @@ export function PriceDialog({ row, onClose }: PriceDialogProps) {
     onClose();
   };
 
-  const blocked = autoPrice && target === null ? 'Otomatik fiyat için hedef marj girilmeli' : null;
+  // Boşaltılan fiyat kutusu SESSİZCE YUTULMAZ: "bu kanalı kapatayım" diye kutuyu silen operatör
+  // Kaydet'e basınca pencere kapanıyor, fiyat aynı kalıyordu. `null` tutar bugün desteklenmiyor
+  // (kanal kapatma ayrı bir iş) — o zaman ekran REDDEDER, yutmaz.
+  const emptied =
+    !autoPrice && ((b2c === null && row.b2c.amountCents !== null) || (b2b === null && row.b2b.amountCents !== null));
+
+  const blocked = autoPrice && target === null
+    ? 'Otomatik fiyat için hedef marj girilmeli'
+    : emptied
+      ? 'Fiyat kutusu boş bırakılamaz — kanalı kapatmak ayrı bir iştir'
+      : null;
 
   return (
     <Dialog

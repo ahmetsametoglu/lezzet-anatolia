@@ -44,6 +44,27 @@ export function isTerminal(status: OrderStatus): boolean {
   return TRANSITIONS[status].length === 0;
 }
 
+/**
+ * **Hazırlık kesinleşti mi** — `fulfilled_qty` bir VERDİKT mi, yoksa henüz yazılmamış bir sayı mı?
+ *
+ * `fulfilled_qty` yalnız hazırlıkta yazılır (`record_preparation`); ondan önce varsayılanı 0'dır.
+ * Bu ayrım gözetilmezse onaylanmış her sipariş "hiçbir kalemi karşılanmamış" görünür ve buna
+ * dayanan her hesap yanlış çıkar: tahsil edilecek tutar 0'a iner, peşin ödenmiş sipariş "iade
+ * bekliyor" olur, ekran "eksik gitti" der. Oysa mal daha hazırlanmamıştır — eksik giden bir şey yok.
+ *
+ * **Durum tek başına yetmez, üç bölge var:**
+ * - `draft`/`confirmed`/`cancelled` → hazırlık HİÇ başlamadı; sayı bir karar değil.
+ * - `preparing` → belirsiz bölge: depo hâlâ topluyor olabilir, ya da eksik toplayıp kararı
+ *   beklemek için burada bırakmış olabilir (`lib/order/preparation`: "eksik varsa `preparing`'de
+ *   kalır"). Ayıran şey KAYIT: bir kalem bile toplanmışsa hazırlık yazılmıştır.
+ * - `ready` ve sonrası → hazırlık bitti; sayı kesindir.
+ */
+export function isFulfillmentSettled(status: OrderStatus, lines: readonly { fulfilledQty: number }[]): boolean {
+  if (status === 'draft' || status === 'confirmed' || status === 'cancelled') return false;
+  if (status === 'preparing') return lines.some((line) => line.fulfilledQty > 0);
+  return true;
+}
+
 /** Bir durumdan gidilebilecek durumlar (UI yalnız bunları sunar — yasak geçiş hiç gösterilmez). */
 export function allowedTransitions(from: OrderStatus): readonly OrderStatus[] {
   return TRANSITIONS[from];
@@ -97,4 +118,39 @@ export function stockEffectOf(
 export function producesReferenceNo(from: OrderStatus, to: OrderStatus): boolean {
   if (from !== 'draft') return false;
   return to === 'confirmed' || to === 'completed';
+}
+
+/**
+ * Tam yolun ANA HATTI — sipariş normalde bu adımlardan geçer. Zincir katı değildir (adım
+ * atlanabilir), bu yüzden liste bir kural değil bir ÖLÇÜTTÜR: zaman çizelgesi "hangi adım
+ * atlandı" sorusunu buna bakarak yanıtlar.
+ *
+ * `draft` yok (sipariş sayılmaz), `cancelled`/`returned` yok (ana hat değil, sapma).
+ */
+export const MAIN_PATH: readonly OrderStatus[] = [
+  'confirmed',
+  'preparing',
+  'ready',
+  'out_for_delivery',
+  'delivered',
+  'completed',
+];
+
+/**
+ * İki durum arasında ana hatta ATLANAN adımlar — "hazırlanıyor" hiç yazılmadan `ready`'e geçilmişse
+ * o adım atlanmıştır.
+ *
+ * Zaman çizelgesi atlanan adımı SİLMEZ, gri gösterir: "burada bir şey olmadı" ile "burası hiç
+ * yoktu" farklı şeylerdir ve ikincisi, siparişin neden hızlı kapandığını gizler.
+ *
+ * Ana hat dışına çıkan geçişte (iptal, iade, ulaşılamadı) atlama YOKTUR — sapma bir adım eksikliği
+ * değildir.
+ */
+export function skippedBetween(from: OrderStatus | null, to: OrderStatus): OrderStatus[] {
+  const toIndex = MAIN_PATH.indexOf(to);
+  if (toIndex <= 0) return [];
+  // `from` yoksa (siparişin doğuşu) ana hattın başından sayılır.
+  const fromIndex = from === null ? -1 : MAIN_PATH.indexOf(from);
+  if (from !== null && fromIndex === -1) return [];
+  return MAIN_PATH.slice(fromIndex + 1, toIndex);
 }

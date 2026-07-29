@@ -22,7 +22,8 @@ import { AlertIcon } from '@/components/operation/ui/icons';
 import { PricesClient } from './prices-client';
 import { toCustomerPriceRows, toDiscountCustomerRows, toDiscountRows, toPriceRows, type ChannelPriceMaps } from './prices-read';
 import { parsePricesUrl, toPriceFilters } from './prices-url';
-import { titleOf, type CustomerPriceRow, type DiscountCustomerRow, type DiscountRow, type PriceRow } from './prices-types';
+import { titleOf } from '@/lib/catalog/title';
+import { type CustomerPriceRow, type DiscountCustomerRow, type DiscountRow, type PriceRow } from './prices-types';
 import type { BatchView } from '@/lib/stock/batch-types';
 import type { KeysetCursor } from '@lezzet/types';
 

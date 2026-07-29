@@ -81,9 +81,11 @@ export function stockUrl(state: StockUrlState): string {
  * "yaklaşan tarihli" bir raf ömrü KARARIDIR (motorun işi), veritabanı süzgeci değil. Ölçütü SQL'e
  * kopyalamak, eşiği iki yerde tutmak demekti — biri değişince ekran ile sayaç ayrışırdı.
  */
-export function toStockFilters(state: StockUrlState): { query?: string; categoryId?: string } {
+export function toStockFilters(state: StockUrlState): { categoryId?: string } {
+  // `q` BURADA YOK ve bu bilinçli: arama kutusu yalnız imha sekmesinde var ve orada yüklenmiş
+  // satırlarda çalışıyor. Terimi ürün sorgusuna vermek, kutuya yazılan kelimenin görünmeyen bir
+  // listeyi (stok seviyeleri) süzmesi demekti.
   return {
-    query: state.q || undefined,
     categoryId: state.cat === 'all' ? undefined : state.cat,
   };
 }

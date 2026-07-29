@@ -120,6 +120,12 @@ export async function cancelOrder(
  *
  * İade hareketi yazıldığında durum bir kez daha türetilir (para kapısı yapar) — bu yüzden dönen
  * değer hareketten SONRAKİ hâldir, öncekinden değil.
+ *
+ * BEKLEYEN(07.11): sağlayıcıya iade çağrısı (Stripe `refunds.create`). Burada yazılan hareket
+ * MUHASEBEDİR — hesabın bakiyesi düşer, `payment_status` ondan türer — ama kartla ödenmiş bir
+ * siparişte para karta DÖNMEZ; bugün sağlayıcı panelinden elle yapılıyor. Bağlandığında sıra
+ * tersine çevrilemez: önce sağlayıcı çağrısı, sonra hareket. Ters sırada başarısız bir iade
+ * defterde kapanmış görünür, para dönmemiş olur.
  */
 async function settleRefund(orderId: string, opts: RefundOptions): Promise<RefundOutcome | null> {
   const before = await syncOrderPaymentStatus(orderId);

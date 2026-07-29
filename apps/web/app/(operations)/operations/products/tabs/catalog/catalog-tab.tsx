@@ -9,7 +9,7 @@ import { cropOf, IMAGE_ROLES, pickCropFields, resolveLocalizedText, type ImageRo
 import { slugify } from '@lezzet/helper';
 import { reorderCatalogAction } from './actions';
 import { CatalogFormDialog } from './catalog-form-dialog';
-import { matchesCatalogFilter, type CatalogKind, type CatalogRow, type CollectionView, type ProductView } from '../../products-types';
+import { matchesCatalogFilter, type CatalogKind, type CatalogRow, type CollectionView } from '../../products-types';
 
 // Katalog sekmesi — Kategoriler VE Koleksiyonlar. İkisi de aynı düz/sıralı desen (çok dilli ad · slug ·
 // sortOrder · isActive + ürün sayısı): tek tablo, tek sıralama akışı, tek dialog; yalnız `kind` ve
@@ -96,8 +96,8 @@ const CATALOG_COPY: Record<CatalogKind, { hint: string; filtered: string; empty:
 interface CatalogTabProps {
   kind: CatalogKind;
   rows: CatalogRow[];
-  /** Üyelik düzenlemesi için ürün havuzu — yalnız koleksiyonda verilir. */
-  products?: ProductView[];
+  /** Üyelik bölmesi çizilsin mi — yalnız koleksiyonda. Ürün havuzu form içinde SUNUCUDAN aranır. */
+  withMembers?: boolean;
   /** Sekme çubuğundaki arama terimi. Süzme BURADA (client): bu liste sayfalı değil, bütün geliyor. */
   filter: string;
   /**
@@ -108,7 +108,7 @@ interface CatalogTabProps {
   onCreateClose: () => void;
 }
 
-export function CatalogTab({ kind, rows, products, filter, creating, onCreateClose }: CatalogTabProps) {
+export function CatalogTab({ kind, rows, withMembers, filter, creating, onCreateClose }: CatalogTabProps) {
   const copy = CATALOG_COPY[kind];
   // Düzenlenen kayıt KİMLİKLE tutulur, verisi her render'da TAZE listeden türetilir (products-client'ın
   // `selectedId` deseni). Satır nesnesinin kopyası tutulursa dialog içindeki görsel yüklemesi
@@ -164,11 +164,11 @@ export function CatalogTab({ kind, rows, products, filter, creating, onCreateClo
         }
       />
 
-      {creating ? <CatalogFormDialog kind={kind} products={products} onClose={onCreateClose} /> : null}
+      {creating ? <CatalogFormDialog kind={kind} withMembers={withMembers} onClose={onCreateClose} /> : null}
       {editing ? (
         <CatalogFormDialog
           kind={kind}
-          products={products}
+          withMembers={withMembers}
           edit={{
             id: editing.id,
             name: editing.name,

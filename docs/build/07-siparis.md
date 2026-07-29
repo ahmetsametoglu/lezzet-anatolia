@@ -97,6 +97,10 @@ Siparişin doğuşundan kapanışına kadar tüm akış: sepet, checkout (teslim
   - **`delivery_cost = 0`:** kapı önünde teslimat yapılmadı; rota birim maliyeti bu satışa yazılamaz. **Nakitte `payment_fee = 0`** — bu uydurma değil, olgudur (DOMAIN §12); kart/online oranları modül 12'de, o zamana kadar null.
   - **Ödeme durumu yine TÜRETİLİR** (03.6): kapıda bir kalem eksik verilirse tahsilat tam olsa bile durum kendiliğinden doğru çıkar. Yeni ayar: `door_packaging_unit_cost_cents` (varsayılan **0** — mal elden gidiyor, soğuk zincir paketi yok).
   - **Güncelleme (28.07, 12.2 ile):** tahsilat artık RPC'de yazılmıyor. `p_amount_collected`/`p_payment_status` kaldırıldı; kapı, satıştan sonra `recordOrderPayment` çağırıyor — kapı önü nakdi gerçekten kasanın bakiyesine düşüyor, sipariş cache'i ondan türüyor. Hesap yoksa satış yine kapanır (`paymentRecorded:false`): mal gitmişken satışı bloke etmek de, olmayan parayı "ödendi" yazmak da yanlış olurdu.
+- [ ] (07.11) **Sağlayıcıya iade (Stripe `refunds.create`):** karta dönen iadenin gerçek çağrısı; `PaymentIntent` kimliğinin siparişten bulunması, kısmi iade tutarı, idempotency, hata halinde hareketin yazılmaması; `charge.refunded` webhook'uyla mutabakat
+  - **Neden ayrı bir satır:** 07.9 iadenin **muhasebesini** kapattı — hareket doğru hesaba, doğru tutarla yazılıyor ve `payment_status` ondan türüyor. Kapanmayan şey paranın **fiilen dönmesi**: bugün "karta geri" seçilen bir iadede hareket Stripe hesabına düşer, kart hiç görmez. İkisini tek satırda saymak, muhasebede kapanmış bir iadenin müşteriye ulaşmamış olmasını görünmez yapardı.
+  - **Sıra tersine çevrilemez:** önce sağlayıcı çağrısı, sonra hareket. Ters sırada başarısız bir iade defterde "ödendi" olarak kalır; para dönmediği hâlde borç kapanmış görünür.
+  - **Kodda işaretli:** `apps/web/lib/order/refund.ts` (yazım yeri) ve iade/iptal pencereleri — operatöre bugün de yazılı olarak söyleniyor, sessiz bir eksik değil.
 
 ## Netleşecekler
 

@@ -1,4 +1,5 @@
 import type { Order, OrderItem, PaymentStatus } from '@lezzet/types';
+import { isFulfillmentSettled } from '../order/status-machine';
 
 /**
  * Ödeme durumu türetimi (03.6) — DOMAIN §7/§8. `payment_status` **elle set edilmez**, iki
@@ -39,6 +40,15 @@ export interface PaymentDerivationInput {
   shippingFeeCents?: number;
   /** Sipariş iptal edildiyse karşılanan tutar 0 sayılır (ORDER_LIFECYCLE). */
   cancelled?: boolean;
+  /**
+   * Hazırlık kesinleşti mi (`isFulfillmentSettled`). **`false` iken beklenen tutar SİPARİŞ EDİLEN
+   * adetten hesaplanır**, karşılanandan değil — çünkü `fulfilled_qty` henüz yazılmamıştır.
+   *
+   * Bu ayrım olmadan onaylanmış her sipariş "hiçbir kalemi karşılanmamış" sayılıyordu: kapıda
+   * tahsil edilecek tutar 0 çıkıyor, peşin ödenmiş sipariş `refundDueCents` ile "iade bekliyor"
+   * görünüyordu. Varsayılan `true` — çağıran durumu bilmiyorsa bugünkü davranış sürer.
+   */
+  fulfillmentSettled?: boolean;
 }
 
 export interface PaymentDerivation {
@@ -81,6 +91,8 @@ export function derivePaymentStatusForOrder(
     // İptal edilen siparişte karşılanan tutar 0 sayılır (ORDER_LIFECYCLE): tahsil edilmişse tamamı
     // iade borcudur.
     cancelled: order.status === 'cancelled',
+    // Hazırlanmamış siparişin `fulfilled_qty`'si bir karar değil, henüz yazılmamış bir sayıdır.
+    fulfillmentSettled: isFulfillmentSettled(order.status, items),
   });
 }
 
@@ -112,16 +124,19 @@ function statusOf(net: number, fulfilled: number, refunded: number): PaymentStat
  * İndirim payı kalemin TAMAMI için verildiğinden, karşılanan orana bölünür — yarısı gittiyse
  * indirimin yarısı düşülür. Aksi halde kısmi iade fazla/eksik hesaplanır.
  */
-function fulfilledAmount({ lines, shippingFeeCents = 0 }: PaymentDerivationInput): number {
+function fulfilledAmount({ lines, shippingFeeCents = 0, fulfillmentSettled = true }: PaymentDerivationInput): number {
   let total = 0;
   let anyFulfilled = false;
 
   for (const line of lines) {
-    if (line.fulfilledQty <= 0) continue;
+    // Hazırlık kesinleşmediyse ölçü SİPARİŞ EDİLEN adettir: karşılanan henüz yazılmamıştır, 0
+    // olması "hiçbiri gitmedi" demek değil, "daha hazırlanmadı" demektir.
+    const qty = fulfillmentSettled ? line.fulfilledQty : line.orderedQty;
+    if (qty <= 0) continue;
     anyFulfilled = true;
-    const gross = line.unitPriceCents * line.fulfilledQty;
+    const gross = line.unitPriceCents * qty;
     const discountShare = line.lineDiscountCents
-      ? Math.round((line.lineDiscountCents * line.fulfilledQty) / Math.max(1, line.orderedQty))
+      ? Math.round((line.lineDiscountCents * qty) / Math.max(1, line.orderedQty))
       : 0;
     total += gross - discountShare;
   }

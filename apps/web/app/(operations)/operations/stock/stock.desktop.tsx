@@ -56,7 +56,7 @@ export function StockDesktop(props: StockViewProps) {
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader title="Stok" subtitle={SUBTITLE[tab]}>
         {/* Geri çağırma her sekmeden erişilebilir: acil bir iştir, sekme aramaz. */}
-        <Button variant="secondary" size="sm" onClick={onOpenRecall}>
+        <Button variant="secondary" size="sm" onClick={() => onOpenRecall()}>
           <SearchIcon />
           Lot / geri çağırma
         </Button>

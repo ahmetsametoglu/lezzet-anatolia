@@ -1,8 +1,11 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/operation/ui/badge';
 import { money, percent } from '@/components/operation/ui/format';
 import { batchAction, expiryBadge, expiryLine, suggestionText } from '@/lib/stock/batch-labels';
+import { setOfferPriceAction } from '@/lib/stock/offer-actions';
 import {
   EXPIRY_GROUPS,
   costLine,
@@ -116,6 +119,23 @@ interface DecisionCardProps {
  * uygulandı" demez — karar operatörün (design/pages/admin-stok §6).
  */
 export function DecisionCard({ batch, onOpenOffer }: DecisionCardProps) {
+  const router = useRouter();
+  const [closing, setClosing] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
+
+  /** Teklifi kapat — kararı sunucu da denetler (`setOfferPriceAction`), ekranın iyi niyetine kalmaz. */
+  const closeOffer = async () => {
+    setClosing(true);
+    setCloseError(null);
+    const { error } = await setOfferPriceAction(batch.id, null);
+    setClosing(false);
+    if (error) {
+      setCloseError(error);
+      return;
+    }
+    router.refresh();
+  };
+
   const badge = expiryBadge(batch);
   const action = batchAction(batch);
   const blocked = action.kind === 'discard';
@@ -183,21 +203,32 @@ export function DecisionCard({ batch, onOpenOffer }: DecisionCardProps) {
         </div>
       ) : null}
 
+      {closeError ? (
+        <span className="font-ops-body text-ops-xs font-semibold text-ops-red">{closeError}</span>
+      ) : null}
+
       <div className="flex items-center gap-1.5 border-t border-ops-line-soft pt-2.5">
         <span className="mr-auto min-w-0 truncate font-ops-body text-ops-xs text-ops-muted">{suggestionText(batch)}</span>
         {blocked ? (
           <span className="flex-none font-ops-body text-ops-xs font-semibold text-ops-red">Depo ekranından</span>
         ) : (
           <>
-            {/* Teklifi kapatmak AYRI bir düğme: açık teklifte en sık istenen iki iş fiyatı değiştirmek
-                ve teklifi geri almaktır; ikincisini diyaloğun içine gömmek bir tık daha uzağa iterdi. */}
+            {/* Teklifi kapatmak AYRI bir düğme ve İŞİ KENDİ YAPAR: açık teklifte en sık istenen iki
+                iş fiyatı değiştirmek ve teklifi geri almaktır; ikincisini diyaloğun içine gömmek bir
+                tık daha uzağa iterdi.
+
+                Düğme eskiden diyaloğu açıyordu — yani etiketi yaptığı işi YANLIŞ söylüyordu: basan
+                kişi teklifin kapandığını sanıyor, aslında pencere açılıyor ve orada bir kez daha
+                aynı düğmeye basmak gerekiyordu. Kapatma hiçbir koşulda engellenmez (yanlışlıkla
+                açılmış bir teklif her zaman geri alınabilmeli). */}
             {batch.offerPriceCents !== null ? (
               <button
                 type="button"
-                onClick={() => onOpenOffer(batch.id)}
-                className="flex-none cursor-pointer rounded-ops-btn border border-ops-line bg-ops-white px-2.5 py-1.5 font-ops-display text-ops-sm font-semibold text-ops-body hover:border-ops-line-strong"
+                onClick={() => void closeOffer()}
+                disabled={closing}
+                className="flex-none cursor-pointer rounded-ops-btn border border-ops-line bg-ops-white px-2.5 py-1.5 font-ops-display text-ops-sm font-semibold text-ops-body outline-none transition-colors hover:border-ops-line-strong disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Teklifi kapat
+                {closing ? 'Kapatılıyor…' : 'Teklifi kapat'}
               </button>
             ) : null}
             <button

@@ -3,7 +3,8 @@ import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText, type ProductStockRow, type StockAdjustmentDetail } from '@lezzet/types';
 import type { UserProfileService } from '@lezzet/database';
 import type { BatchView } from '@/lib/stock/batch-types';
-import { titleOf, type LossRow, type StockLevelRow } from './stock-types';
+import { titleOf } from '@/lib/catalog/title';
+import { type LossRow, type StockLevelRow } from './stock-types';
 
 // DB satırı → view-model indirgemesi. RSC ve server action'lar bunu PAYLAŞIR: ilk sayfa ile sonraki
 // sayfalar (ve lot sorgusunun sonucu) aynı şekli üretsin diye tek yerde durur.

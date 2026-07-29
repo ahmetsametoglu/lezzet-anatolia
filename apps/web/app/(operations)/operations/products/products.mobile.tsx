@@ -88,6 +88,13 @@ function QuickEditSheet({
           }}
         />
 
+        {/* Koleksiyonlar burada YALNIZ GÖRÜNÜR. Çiplerde "✕" ve "+ ekle" duruyordu ama hiçbiri
+            bağlı değildi — dokunulunca hiçbir şey olmuyordu; işlev vaat eden ölü kontrol, olmayan
+            bir yetenekten daha kötüdür.
+
+            Üyelik koleksiyon TARAFINDAN kurulur ve bu keyfi değil: üyelik dizisi aynı zamanda
+            VİTRİN SIRASIDIR (kürasyon). Ürün tarafından "ekle" demek, sıranın neresine gireceğine
+            karar vermeden eklemek olurdu. */}
         <div className="flex flex-col gap-1.5">
           <span className="font-ops-display text-ops-xs font-medium uppercase tracking-[0.06em] text-ops-muted">Koleksiyonlar</span>
           <div className="flex flex-wrap gap-[7px]">
@@ -96,12 +103,14 @@ function QuickEditSheet({
             ) : (
               product.collectionNames.map((c) => (
                 <Chip key={c} active tone="olive" className="!bg-ops-olive-bg !text-ops-olive-dark">
-                  {c} ✕
+                  {c}
                 </Chip>
               ))
             )}
-            <Chip dashed>+ ekle</Chip>
           </div>
+          <span className="font-ops-body text-ops-micro text-ops-muted">
+            Üyelik ve vitrin sırası koleksiyonun kendi formunda kurulur (web).
+          </span>
         </div>
 
         {error ? <span className="text-center font-ops-body text-ops-xs text-ops-red">{error}</span> : null}

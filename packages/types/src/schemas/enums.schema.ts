@@ -133,6 +133,24 @@ export const TicketStatusEnum = z.enum(['open', 'in_progress', 'resolved']);
 export type TicketStatus = z.infer<typeof TicketStatusEnum>;
 
 /**
+ * Talep tür/durumunun OPERASYON yüzeyindeki adı — `ORDER_STATUS_LABELS` ile aynı gerekçe: enum'la
+ * aynı dosyada durur ki yeni bir değer eklenince karşılığı da yazılsın. Müşteriye giden metin
+ * BURADAN gelmez (yukarıdaki not: iç dil ≠ müşteri dili).
+ */
+export const TICKET_TYPE_LABELS: Record<TicketType, string> = {
+  damaged: 'Hasarlı geldi',
+  missing: 'Eksik geldi',
+  question: 'Soru',
+  other: 'Diğer',
+};
+
+export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
+  open: 'Açık',
+  in_progress: 'İlgileniliyor',
+  resolved: 'Çözüldü',
+};
+
+/**
  * Talebin geliş yolu. `conversationId`'den TÜRETİLEMEZ: konuşma bağı yalnız WhatsApp'ı ayırır —
  * "sipariş detayından geldi" ile "genel formdan gelip sipariş seçti" ikisi de `orderId` dolu
  * bırakır ama admin için farklı şeylerdir.

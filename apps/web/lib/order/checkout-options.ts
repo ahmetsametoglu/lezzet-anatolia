@@ -1,9 +1,11 @@
 import { OrderService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
 import {
   apportionShippingVat,
+  creditPosition,
   meetsMinBasket,
   resolveCheckoutOptions,
   resolveShippingFee,
+  type CreditPosition,
   type ShippingVatPart,
 } from '@lezzet/domain-core';
 import type { DeliveryType, PaymentMethod } from '@lezzet/types';
@@ -121,17 +123,10 @@ async function deriveCreditPosition(
   db: ReturnType<typeof serviceDb>,
   customerId: string,
   paymentTermDays: number,
-): Promise<{ openBalanceCents: number; hasOverdue: boolean }> {
+): Promise<CreditPosition> {
   const orders = await new OrderService(db).listByCustomer(customerId, { limit: 200 });
-  const acikSiparisler = orders.rows.filter((order) => order.onAccount && order.paymentStatus !== 'paid' && order.status !== 'cancelled');
-
-  const vadeSiniri = Date.now() - paymentTermDays * 86_400_000;
-  let openBalanceCents = 0;
-  let hasOverdue = false;
-
-  for (const order of acikSiparisler) {
-    openBalanceCents += Math.round((order.total - order.amountCollected + order.amountRefunded) * 100);
-    if (new Date(order.createdAt).getTime() < vadeSiniri) hasOverdue = true;
-  }
-  return { openBalanceCents: Math.max(0, openBalanceCents), hasOverdue };
+  // Hesabın kendisi MOTORDA (`creditPosition`): aynı "açık" ve "gecikmiş" tanımını sipariş listesi
+  // de satır satır kullanıyor. İki yerde yazılsaydı checkout freni ile ekranın kırmızı vade işareti
+  // bir gün ayrışır, "gecikmesi yok" diyen ekranın altında kapanmış bir vade kapısı olurdu.
+  return creditPosition(orders.rows, paymentTermDays);
 }

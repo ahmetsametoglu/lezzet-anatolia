@@ -104,9 +104,17 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
       ? 'Kupon kodu girilmeli'
       : value === null || value <= 0
         ? 'İndirim değeri girilmeli'
-        : scope !== 'cart' && !targetId
-          ? 'Kapsam hedefi seçilmeli'
-          : null;
+        : // Tavan DB kısıtında da var (%100 üstü yüzde yasak) ama oradan dönen mesaj ham Postgres
+          // metnidir. Kural ekranda da söylenir — operatör kısıt ihlali okumaz.
+          type === 'percent' && value > 100
+          ? 'Yüzde 100ün üstünde olamaz'
+          : maxUses !== '' && Number(maxUses) === 0
+            ? 'Kullanım tavanı 0 olamaz — kupon hiç kullanılamaz'
+            : perCustomerLimit !== '' && Number(perCustomerLimit) === 0
+              ? 'Müşteri başı sınır 0 olamaz — kupon hiç kullanılamaz'
+              : scope !== 'cart' && !targetId
+                ? 'Kapsam hedefi seçilmeli'
+                : null;
 
   return (
     <Dialog

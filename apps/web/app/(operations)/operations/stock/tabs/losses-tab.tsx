@@ -62,7 +62,7 @@ export function LossesTab({
           {r.stock.lotNumber ? (
             <button
               type="button"
-              onClick={onOpenRecall}
+              onClick={() => onOpenRecall(r.stock.lotNumber ?? undefined)}
               className="w-max cursor-pointer font-ops-mono text-ops-xs font-medium text-ops-olive-dark hover:underline"
               title="Bu partiden kime mal gitmiş — geri çağırma sorgusu"
             >
@@ -170,12 +170,17 @@ export function LossesTab({
       </div>
 
       {/* Neden dağılımı: "ne kadar" sorusunun hemen ardından gelen "neden". Dönemin TAMAMINDAN gelir. */}
-      {summary.byReason.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 border-b border-ops-line px-6 py-2.5">
-          <span className="mr-1 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
-            Neden dağılımı
-          </span>
-          {summary.byReason.map((r) => {
+      {/* Şerit dönemde kayıt olmasa da KALIR (tasarımın temiz-hâl notu): "dönem seçici ve neden
+          dağılımı yerinde kalır, tablo yerine temiz hâl görünür". Kaybolan bir şerit, ekranın
+          yapısını döneme göre değiştirir. */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-ops-line px-6 py-2.5">
+        <span className="mr-1 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
+          Neden dağılımı
+        </span>
+        {summary.byReason.length === 0 ? (
+          <span className="font-ops-body text-ops-xs text-ops-faint">dönemde kayıt yok</span>
+        ) : (
+          summary.byReason.map((r) => {
             const t = REASON_CHIP[LOSS_REASON_TONE[r.reason]];
             return (
               <span key={r.reason} className={`rounded-ops-btn border px-[11px] py-[5px] font-ops-body text-ops-xs font-medium ${t}`}>
@@ -183,9 +188,9 @@ export function LossesTab({
                 <strong className="font-ops-mono">{money(r.costCents)}</strong>
               </span>
             );
-          })}
-        </div>
-      ) : null}
+          })
+        )}
+      </div>
 
       <Table
         columns={columns}
@@ -217,10 +222,20 @@ interface CleanStateProps {
  */
 function CleanState({ filtered, periodLabel }: CleanStateProps) {
   if (filtered) {
+    // Arama YÜKLENMİŞ satırlarda çalışır (dönem listesi imleçle gelir) — bu yüzden "kayıt yok"
+    // demez, ne aradığını söyler. Tetikleyici altta durduğu için devamı yüklenebilir.
+    //
+    // BEKLEYEN(09.13): imha aramasının sunucu tarafı. Terim lot numarasına ve ürün adına bakıyor;
+    // ikisi de düzeltme satırının kendisinde değil, gömülü `stock`/`product` ilişkisinde duruyor —
+    // sunucuda süzmek ortak stok servisine inner-join'li bir süzgeç eklemeyi gerektiriyor. Liste
+    // dönemle sınırlı olduğu için bugünkü sınır dar; kuyruğu yutmaması ekranın kendi cümlesiyle
+    // korunuyor (sessiz kesme yok).
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-10">
-        <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Eşleşen kayıt yok</span>
-        <span className="font-ops-body text-ops-sm text-ops-muted">Arama terimini değiştirin.</span>
+      <div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-10 text-center">
+        <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Yüklenen kayıtlarda eşleşme yok</span>
+        <span className="font-ops-body text-ops-sm text-ops-muted">
+          Arama şu ana kadar yüklenmiş satırlarda yapılır — aşağı kaydırıp devamını yükleyin ya da terimi değiştirin.
+        </span>
       </div>
     );
   }

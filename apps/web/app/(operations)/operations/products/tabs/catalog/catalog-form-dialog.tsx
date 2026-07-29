@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,8 +18,15 @@ import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { LocaleCard } from '@/components/operation/form/locale-card';
 import { MultiSelect } from '@/components/operation/form/multi-select';
 import { suggestTranslationAction } from '../../actions/translate';
-import { createCatalogAction, updateCatalogAction, uploadCatalogImageAction } from './actions';
-import type { CatalogKind, ProductView } from '../../products-types';
+import {
+  createCatalogAction,
+  loadCollectionMembersAction,
+  searchCollectionProductsAction,
+  updateCatalogAction,
+  uploadCatalogImageAction,
+  type CollectionProductOption,
+} from './actions';
+import type { CatalogKind } from '../../products-types';
 
 // Kategori/Koleksiyon oluştur + düzenle — tek dialog, `kind` ile çatallanır (no-duplication).
 //
@@ -68,18 +75,18 @@ const FORM_ID = 'catalog-form';
 interface CatalogFormDialogProps {
   kind: CatalogKind;
   edit?: CatalogEditTarget;
-  /** Üyelik için ürün havuzu — yalnız koleksiyonda verilir. */
-  products?: ProductView[];
+  /** Üyelik bölmesi çizilsin mi — yalnız koleksiyonda. Havuz DIŞARIDAN gelmez: seçici sunucuda arar. */
+  withMembers?: boolean;
   onClose: () => void;
 }
 
-export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogFormDialogProps) {
+export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogFormDialogProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const copy = COPY[kind];
   const isEdit = edit !== undefined;
   const isCollection = kind === 'collection';
-  const showMembers = isCollection && products !== undefined;
+  const showMembers = isCollection && withMembers === true;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -100,8 +107,32 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
   const setProductIds = (ids: string[]) => form.setValue('productIds', ids, { shouldDirty: true });
   const [crop, setCrop] = useImageCrop(form);
 
-  const productById = new Map((products ?? []).map((p) => [p.id, p]));
-  const members = productIds.map((id) => productById.get(id)).filter((p): p is ProductView => Boolean(p));
+  // Üyelerin künyesi SUNUCUDAN, kimlikten çözülür. Eskiden ekranın yüklenmiş ilk sayfasından
+  // çözülüyordu: havuzda olmayan üye listeden düşüyor, sıralama kaydedilince koleksiyondan da
+  // siliniyordu. Künyesi henüz gelmemiş bir üye ARTIK DA DÜŞMEZ — kimliğiyle çizilir.
+  const [known, setKnown] = useState<Map<string, CollectionProductOption>>(new Map());
+  const [found, setFound] = useState<CollectionProductOption[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (!showMembers) return;
+    const ids = edit?.productIds ?? [];
+    if (ids.length === 0) return;
+    void loadCollectionMembersAction(ids).then(({ data }) => {
+      if (data) setKnown((prev) => new Map([...prev, ...data.map((p) => [p.id, p] as const)]));
+    });
+  }, [showMembers, edit?.productIds]);
+
+  const onMemberSearch = (term: string) => {
+    setSearching(true);
+    void searchCollectionProductsAction(term).then(({ data }) => {
+      setFound(data ?? []);
+      if (data) setKnown((prev) => new Map([...prev, ...data.map((p) => [p.id, p] as const)]));
+      setSearching(false);
+    });
+  };
+
+  const members = productIds.map((id) => known.get(id) ?? { id, name: {}, imageUrl: null, categoryName: '' });
 
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null);
@@ -233,7 +264,9 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
                       {handle}
                       <Thumbnail src={p.imageUrl} alt="" size={30} iconSize={13} className="!rounded-[6px]" />
                       <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate font-ops-body text-ops-sm font-semibold text-ops-ink">{resolveLocalizedText(p.name)}</span>
+                        <span className="truncate font-ops-body text-ops-sm font-semibold text-ops-ink">
+                          {resolveLocalizedText(p.name) || 'yükleniyor…'}
+                        </span>
                         <span className="truncate font-ops-body text-ops-micro text-ops-muted">{p.categoryName}</span>
                       </div>
                       <button
@@ -253,12 +286,15 @@ export function CatalogFormDialog({ kind, edit, products, onClose }: CatalogForm
             {/* Ekleme: aramalı menü paylaşılan MultiSelect'ten; seçim yukarıda liste olarak sunulduğu
                 için çipleri gizleriz (hideSelected) — arama/menü mantığı tek yerde kalır. */}
             <MultiSelect
-              options={products.map((p) => ({ value: p.id, label: resolveLocalizedText(p.name), imageUrl: p.imageUrl }))}
+              options={found.map((p) => ({ value: p.id, label: resolveLocalizedText(p.name), imageUrl: p.imageUrl }))}
               selected={productIds}
               onChange={setProductIds}
               hideSelected
+              onSearch={onMemberSearch}
+              loading={searching}
               addLabel="+ ürün ekle"
               searchPlaceholder="Ürün ara…"
+              emptyText="Eşleşen ürün yok"
             />
           </div>
         ) : null}

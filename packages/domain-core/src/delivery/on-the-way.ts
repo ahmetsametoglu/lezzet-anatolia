@@ -37,6 +37,19 @@ export function onTheWayMessage(input: { locale: MessageLocale; customerName?: s
  * `wa.me` bağlantısı. Numara yoksa **null** döner — çağıran düğmeyi hiç göstermez; tıklanınca
  * boşa giden bir bağlantı üretmek, kuryeye çalışmayan bir düğme sunmak olurdu.
  */
+/**
+ * METİNSİZ WhatsApp bağlantısı — konuşmayı açar, ne yazılacağını insana bırakır.
+ *
+ * `whatsAppLink`'ten ayrı çünkü orada mesaj KURULUDUR ("yoldayım"): kuryenin tek dokunuşu odur.
+ * Sipariş ekranındaki "WhatsApp" düğmesi ise bir sohbet başlatma davetidir; hazır metin
+ * yollasaydı operatörün söylemek istemediği bir cümle müşteriye giderdi. Numara ayrıştırması
+ * ortak (`normalizePhone`) — iki düğme aynı numarayı farklı yorumlayamaz.
+ */
+export function whatsAppChatLink(phone: string | null | undefined, countryCode: string = DEFAULT_COUNTRY_CODE): string | null {
+  const number = normalizePhone(phone, countryCode);
+  return number ? `https://wa.me/${number}` : null;
+}
+
 export function whatsAppLink(input: {
   phone?: string | null;
   locale: MessageLocale;

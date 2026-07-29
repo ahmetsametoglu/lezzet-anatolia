@@ -307,3 +307,19 @@ export function CalendarIcon({ size = 15 }: { size?: number }) {
     </Svg>
   );
 }
+
+/**
+ * WhatsApp — müşteriye ulaşma düğmesi (sipariş detayı). Tek marka ikonu olduğu için gövde rengini
+ * MİRAS ALMAZ: WhatsApp'ın kendi yeşili tanınırlığın parçasıdır ve `currentColor`'a çevrilirse
+ * düğme sıradan bir ikonla aynılaşır.
+ *
+ * Renk yine de HAM HEX DEĞİL, kendi token'ından gelir (`--color-brand-whatsapp`): ham hex yasağının
+ * gerekçesi rengin tek yerde durması: marka rengi tema ile dönmez ama yine de tek kaynaktan okunur.
+ */
+export function WhatsAppIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="stroke-brand-whatsapp" strokeWidth={2} aria-hidden>
+      <path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.5A8.4 8.4 0 1 1 21 11.5Z" />
+    </svg>
+  );
+}

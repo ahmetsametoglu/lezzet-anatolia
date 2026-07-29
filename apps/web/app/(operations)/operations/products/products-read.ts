@@ -1,4 +1,5 @@
 import { publicImageUrl } from '@lezzet/storage';
+import { titleOf } from '@/lib/catalog/title';
 import { resolveLocalizedText, type BundleListRow, type ProductPool, type ProductWithRelations } from '@lezzet/types';
 import type { BundleView, ProductView, VariantOption } from './products-types';
 
@@ -26,11 +27,7 @@ export function toBundleViews(rows: BundleListRow[]): BundleView[] {
     imageUrl: publicImageUrl(bundle.imageKey, bundle.imageUpdatedAt),
     // Ad çözümü BURADA: okuma fonksiyonu ham jsonb döndürüyor, dil yedek zinciri (TR→FR→DE) tek
     // yerde kalsın diye SQL'e kopyalanmadı. Sıra kalemin `sortOrder`'ı (fonksiyon öyle topluyor).
-    itemLabels: bundle.itemNames.map(({ p, v }) => {
-      const productName = resolveLocalizedText(p);
-      const boy = v ? resolveLocalizedText(v) : '';
-      return boy ? `${productName} · ${boy}` : productName;
-    }),
+    itemLabels: bundle.itemNames.map(({ p, v }) => titleOf(resolveLocalizedText(p), v ? resolveLocalizedText(v) : '')),
   }));
 }
 
@@ -61,7 +58,7 @@ export function toVariantOptions(
       const blockedReason = productBlock ?? (v.isActive ? null : 'pasif boy');
       return {
         variantId: v.id,
-        label: boy ? `${productName} · ${boy}` : productName,
+        label: titleOf(productName, boy),
         imageUrl,
         listPrice: listPrices.get(v.id) ?? null,
         // Maliyet ve KDV oranı ÜRÜNDEN gelir; marj ikisi olmadan hesaplanamaz.

@@ -235,6 +235,11 @@
   --color-ops-red-line: #e2c4c0; /* kutu çerçevesi, hatalı girdi */
   --color-ops-red-dot: #c2571f; /* bağlantı yok noktası, iade tutarı */
 
+  /* MARKA rengi — palete ait değil, WhatsApp'ın kendi yeşili. Token olarak duruyor ki ham hex
+     ikonun içinde kalmasın (CLAUDE.md §3) ve karanlık temada da aynı kalsın: marka rengi temayla
+     dönmez, döndüğü an marka olmaktan çıkar. */
+  --color-brand-whatsapp: #128c4b;
+
   /* Mavi — YENİ aile (bilgi, nötr bildirim, aday kayıt) */
   --color-ops-blue: #3a6b8a; /* bilgi ikonu, etiket, vade rozeti */
   --color-ops-blue-dark: #2f5a78; /* kutu başlığı ve gövdesi */

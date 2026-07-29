@@ -12,7 +12,8 @@ import { CustomersTab } from './tabs/customers-tab';
 import { CouponsTab } from './tabs/coupons-tab';
 import { OffersTab } from './tabs/offers-tab';
 import { marginText, marginTone, rowStateNote } from './prices-labels';
-import { PRICE_SCOPES, SCOPE_LABEL, type PriceTab } from './prices-url';
+import { SCOPE_TONE, tabSubtitle } from './prices-labels';
+import { PRICE_SCOPES, SCOPE_LABEL, TAB_LABEL, type PriceTab } from './prices-url';
 import type { PriceRow, PricesViewProps } from './prices-types';
 
 // Fiyatlar — MOBİL. Telefondaki iş tasarımın kendi notunda yazılı: **tek fiyat düzeltme** ve
@@ -21,26 +22,23 @@ import type { PriceRow, PricesViewProps } from './prices-types';
 //
 // Toplu gözden geçirme masaüstünün işidir — mobilde sütun sıkıştırmak yerine karta indirgiyoruz.
 
-const TABS: Array<{ key: PriceTab; label: string }> = [
-  { key: 'channels', label: 'Fiyatlar' },
-  { key: 'offers', label: 'Teklif' },
-  { key: 'customers', label: 'Özel' },
-  { key: 'coupons', label: 'Kupon' },
-];
+// Sekme ADLARI `TAB_LABEL`'dan (tek kaynak): elle yazıldığında aynı sekme iki yüzeyde iki ad
+// taşıyordu — masaüstünde "Kanal fiyatları", telefonda "Fiyatlar". Sıra mobilde farklı ve bu
+// bilinçli: telefonda ikinci sırada karar kuyruğu (teklif) durur.
+const TABS: Array<{ key: PriceTab; label: string }> = (['channels', 'offers', 'customers', 'coupons'] as const).map(
+  (key) => ({ key, label: TAB_LABEL[key] }),
+);
 
 export function PricesMobile(props: PricesViewProps) {
   const { tab, onTab, counts, search, onSearch, scope, onScope } = props;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      {/* Sayaçlar YÜKLENEN sayfaya ait (masaüstündeki gibi) ve metin bunu SÖYLER. Eskiden düpedüz
-          "3 marj-altı" yazıyordu; okuyan katalogun tamamını sanıyordu — telefonda bu, yanlış haberin
-          daha kötü hâli: operatör listenin sonuna inmeden "bugün üç işim var" diye karar veriyordu.
-          Sayacın gerçekten katalog geneli olması ayrı bir iş (BACKLOG §4). */}
-      <PageHeader
-        title="Fiyatlar"
-        subtitle={`${counts.rows} boy yüklendi · ${counts.below} marj-altı · ${counts.missing} fiyatı eksik`}
-      />
+      {/* Alt başlık SEKMEYE ait ve masaüstüyle aynı cümleden gelir (`tabSubtitle`). Sabit metin
+          her sekmede kanal sayaçlarını yazıyordu: okuma sekmeye bağlı olduğu için "Kupon"da başlık
+          "0 boy yüklendi · 0 marj-altı" diyordu. Sayaçlar yüklenmiş sayfaya aittir ve metin bunu
+          söyler; gerçekten katalog geneli olması ayrı bir iş (BACKLOG §4). */}
+      <PageHeader title="Fiyatlar" subtitle={tabSubtitle(tab, props.data, counts)} />
 
       <Tabs items={TABS.map((t) => (t.key === 'channels' && counts.below > 0 ? { ...t, badge: counts.below } : t))} active={tab} onSelect={onTab} />
 
@@ -50,7 +48,7 @@ export function PricesMobile(props: PricesViewProps) {
             <SearchInput value={search} onChange={onSearch} placeholder="Ürün veya boy ara" />
             <div className="flex flex-wrap items-center gap-2">
               {PRICE_SCOPES.map((s) => (
-                <Chip key={s} active={scope === s} tone={s === 'below' ? 'red' : s === 'missing' ? 'amber' : 'olive'} onClick={() => onScope(s)}>
+                <Chip key={s} active={scope === s} tone={SCOPE_TONE[s]} onClick={() => onScope(s)}>
                   {SCOPE_LABEL[s]}
                 </Chip>
               ))}
@@ -68,19 +66,18 @@ export function PricesMobile(props: PricesViewProps) {
 }
 
 function MobileRows({ rows, hasMore, loadingMore, onLoadMore, onEdit }: PricesViewProps) {
-  if (rows.length === 0) {
-    return (
-      <div className="flex flex-1 items-center justify-center p-8">
-        <span className="font-ops-body text-ops-base text-ops-muted">Bu süzgeçle eşleşen boy yok.</span>
-      </div>
-    );
-  }
-
+  // Boş hâlde de tetikleyici KALIR: çip client'ta süzüyor, ilk sayfada eşleşen çıkmaması listenin
+  // bittiği anlamına gelmez — erken dönülürse sonraki sayfa hiç yüklenemez (masaüstündeki `Table`
+  // ile aynı hata, aynı gerekçe).
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-4">
-      {rows.map((row) => (
-        <PriceCard key={row.variantId} row={row} onEdit={() => onEdit(row.variantId)} />
-      ))}
+      {rows.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center p-8">
+          <span className="font-ops-body text-ops-base text-ops-muted">Bu süzgeçle eşleşen boy yok.</span>
+        </div>
+      ) : (
+        rows.map((row) => <PriceCard key={row.variantId} row={row} onEdit={() => onEdit(row.variantId)} />)
+      )}
       <LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />
     </div>
   );

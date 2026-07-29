@@ -59,6 +59,9 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
   - **Dev admin SEED'LENİR — ve bu zorunludur.** Dev auth bypass'ı (`apps/web/lib/guard.ts`) operasyon kapılarını atlayıp sabit bir kimlik enjekte ediyor; o kimliğin `user_profiles`'ta karşılığı yoksa `order_status_log.actor_id` FK'si yüzünden **ilk durum geçişinde patlar**. Seed o id ile gerçek bir admin profili açar. Id iki yere kopyalanmasın diye ortak sabit: `DEV_ADMIN_PROFILE_ID` (`@lezzet/types`) — `guard.ts` `server-only` olduğu için seed onu import edemezdi.
   - **Bedeli açıkça yazıldı:** veritabanında admin bulunduğu için 0002'nin "ilk giriş yapan admin olur" bootstrap'ı **artık tetiklenmez**; gerçek hesap `customer` açılır, yükseltme `pnpm set-role <e-posta> admin` iledir. Seed yalnız yerel kurulumdur — üretim veritabanına atılmadığı için oradaki bootstrap olduğu gibi durur.
   - **Değerler deterministik** (indise göre, rastgelelik yok) ve her bölüm kendi guard'ıyla idempotent — seed'i tekrar çalıştırmak güvenlidir, iki koşu aynı veriyi kurar.
+- [ ] (02.8) **`order_item_batch` junction servisi (kural borcu — STACK §6):** `OrderService` içindeki üç ham okuma (`listBatches`, kalem maliyetleri, `recallByStocks`) kendi `BaseDbService` alt sınıfına taşınır
+  - **Neden bir borç:** kural "junction tablosu = kendi alt sınıfı" diyor; bugün kalem–parti kaydı sipariş servisinin içinden ham `this.supabase` ile okunuyor. Üçü BİRLİKTE taşınır — yalnız birini ayırmak aynı tabloyu iki eve bölerdi, ki bu bugünkü hâlden kötüdür.
+  - **Acelesi yok, sırası var:** okumalar çalışıyor ve testli; borç davranış değil biçim borcudur. Kalem–parti kaydına dokunan bir sonraki iş (geri çağırma ekranı ya da kâr raporu) bunu ödemeden başlamasın.
 
 ## Netleşecekler
 

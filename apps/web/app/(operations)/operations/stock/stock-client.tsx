@@ -47,10 +47,16 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
   const [search, setSearch] = useState(urlState.q);
   useEffect(() => setSearch(urlState.q), [urlState.q]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Arama YALNIZ imha sekmesinde var ve yüklenmiş satırlarda çalışır — bu yüzden sunucuya
+  // GİTMEZ, adrese sığ yazılır (yenilemede terim kaybolmasın).
+  //
+  // Eskiden `applyFilters` çağırıyordu ve terim servise `query` olarak gidiyordu: imha kutusuna
+  // yazılan kelime SEVİYELER listesini süzüyordu — yani hiç görünmeyen bir listeyi. Her tuşta bir
+  // sunucu turu, karşılığında yanlış listede bir süzgeç.
   const onSearch = (q: string) => {
     setSearch(q);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => applyFilters({ q: q.trim() }), SEARCH_DEBOUNCE_MS);
+    debounceRef.current = setTimeout(() => writeUrl({ q: q.trim() }), SEARCH_DEBOUNCE_MS);
   };
   useEffect(() => () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -62,6 +68,15 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
     setTab(next);
     setSearch('');
     if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    // Terim VARSA sunucuya gidilir: sığ yazım (`replaceState`) RSC'yi yeniden okutmaz, liste eski
+    // terimle süzülü kalırdı — kutusu boş, sebebi görünmeyen bir süzgeç.
+    if (urlState.q) {
+      // `applyFilters` sondaki `tab`'ı kendi durumundan alıyor (henüz eski değer) — adres burada
+      // doğrudan kurulur.
+      router.replace(stockUrl({ ...urlState, tab: next, q: '' }), { scroll: false });
+      return;
+    }
     writeUrl({ tab: next, q: '' });
   };
 
@@ -134,7 +149,8 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
     if (offerStockId && !offerBatch) setOfferStockId(null);
   }, [offerStockId, offerBatch]);
 
-  const [recallOpen, setRecallOpen] = useState(false);
+  // `null` = kapalı, '' = boş kutuyla açık, dolu = satırdan gelen lot ile açık.
+  const [recallLot, setRecallLot] = useState<string | null>(null);
 
   const view = {
     data,
@@ -161,7 +177,7 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
     selectedId: selected?.variantId ?? null,
     onSelect: setSelectedId,
     onOpenOffer: setOfferStockId,
-    onOpenRecall: () => setRecallOpen(true),
+    onOpenRecall: (lot?: string) => setRecallLot(lot ?? ''),
   };
 
   return (
@@ -170,7 +186,7 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
       {offerBatch ? (
         <OfferDialog key={offerBatch.id} batch={offerBatch} onClose={() => setOfferStockId(null)} />
       ) : null}
-      {recallOpen ? <RecallDialog onClose={() => setRecallOpen(false)} /> : null}
+      {recallLot !== null ? <RecallDialog initialLot={recallLot} onClose={() => setRecallLot(null)} /> : null}
     </>
   );
 }

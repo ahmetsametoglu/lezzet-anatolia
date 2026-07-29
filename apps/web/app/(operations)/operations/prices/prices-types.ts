@@ -248,10 +248,3 @@ export interface PricesViewProps {
   onEditDiscount: (row: DiscountRow | null) => void;
 }
 
-/**
- * Listede görünen tam ad. Boy adı BOŞ olabilir (tek boylu üründe varsayılan varyantın etiketi
- * boştur) — o zaman ayraç da yazılmaz.
- */
-export function titleOf(productName: string, variantLabel: string): string {
-  return variantLabel ? `${productName} · ${variantLabel}` : productName;
-}

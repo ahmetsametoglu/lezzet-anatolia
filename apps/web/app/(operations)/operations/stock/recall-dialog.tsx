@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ORDER_STATUS_LABELS, type RecallHit } from '@lezzet/types';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
@@ -19,11 +19,13 @@ import type { RecallResult } from './stock-types';
 // Zincir HAZIRLIK KAYITLARINDAN gelir (`OrderItemBatch`): depocunun onayladığı gerçek, tahmin değil.
 
 interface RecallDialogProps {
+  /** Satırdan gelen parti numarası — kutu dolu açılır ve sorgu kendiliğinden koşar. */
+  initialLot?: string;
   onClose: () => void;
 }
 
-export function RecallDialog({ onClose }: RecallDialogProps) {
-  const [lot, setLot] = useState('');
+export function RecallDialog({ initialLot = '', onClose }: RecallDialogProps) {
+  const [lot, setLot] = useState(initialLot);
   const [result, setResult] = useState<RecallResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -41,6 +43,14 @@ export function RecallDialog({ onClose }: RecallDialogProps) {
     }
     setResult(data);
   };
+
+  // Satırdan gelindiyse sorgu KENDİ KOŞAR: operatör lot'a bastıysa sonucu istiyor demektir,
+  // dolu kutunun yanındaki düğmeye bir kez daha bastırmak boş bir adım olurdu.
+  useEffect(() => {
+    if (!initialLot) return;
+    // Yalnız açılışta: sonraki aramalar operatörün kendi tuşuyla koşar.
+    void run();
+  }, [initialLot]);
 
   return (
     <Dialog

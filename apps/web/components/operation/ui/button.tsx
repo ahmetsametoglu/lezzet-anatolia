@@ -3,10 +3,11 @@ import type { ButtonHTMLAttributes } from 'react';
 /**
  * Operasyon butonu — Komponent Envanteri O8. Tüm buton varyasyonları tek yerde (ops- token'ları).
  * Birincil ekranda tek: `primary` (olive, kaydet) veya `dark` (ink, vurgulu/yeni); `secondary`
- * çerçeveli, `danger` kırmızı çerçeveli (yıkıcı). Müşteri evreninin butonundan AYRI set
+ * çerçeveli, `danger` kırmızı ÇERÇEVELİ (yıkıcı seçenek), `destructive`/`warning` DOLU renkli
+ * (kararın kendisi: iadeyi onayla, kısmi karşılamayı kaydet). Müşteri evreninin butonundan AYRI set
  * (components/customer/ui/button.tsx = "Aile Sofrası"). Tasarım büyüdükçe varyant eklenir.
  */
-type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'danger';
+type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'danger' | 'destructive' | 'warning';
 type ButtonSize = 'md' | 'sm';
 
 const VARIANT: Record<ButtonVariant, string> = {
@@ -14,6 +15,10 @@ const VARIANT: Record<ButtonVariant, string> = {
   dark: 'bg-ops-ink text-ops-card hover:bg-ops-ink-hover disabled:bg-ops-gray-600',
   secondary: 'border border-ops-line-strong bg-ops-card text-ops-strong hover:border-ops-olive',
   danger: 'border border-ops-red-line bg-ops-card text-ops-red hover:bg-ops-red-bg',
+  // DOLU renkli onay düğmeleri: `danger` çerçeveli bir "yıkıcı seçenek"tir, bunlar KARARIN KENDİSİ
+  // (iadeyi onayla · kısmi karşılamayı kaydet). Üç diyalog aynı sınıf zincirini elle kuruyordu.
+  destructive: 'bg-ops-red text-ops-card hover:bg-ops-red-dark disabled:opacity-50',
+  warning: 'bg-ops-amber text-ops-card hover:bg-ops-amber-dark disabled:opacity-50',
 };
 
 const SIZE: Record<ButtonSize, string> = {

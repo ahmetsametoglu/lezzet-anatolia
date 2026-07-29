@@ -42,6 +42,14 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
     super(supabase, 'stock', StockSchema, StockInsertSchema, StockUpdateSchema);
   }
 
+  /**
+   * Kimliğe göre partiler — sipariş detayında "bu kalem hangi lottan çıktı" izini kurar
+   * (`OrderService.listBatches` parti kimliği verir, lot numarası burada çözülür).
+   */
+  listByIds(ids: readonly string[]): Promise<Stock[]> {
+    return this.getByIds([...ids]);
+  }
+
   /** Varyantın partileri — **FEFO sırasında** (önce süresi dolan). Depo hazırlık ekranının okuması. */
   async listByVariant(variantId: string): Promise<Stock[]> {
     return this.getAll({ variantId }, { orderBy: 'expiryDate', orderDirection: 'asc' });

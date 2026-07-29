@@ -36,7 +36,7 @@ export function UnderlineTabs<K extends string>({ items, value, onChange, classN
             title={t.title}
             aria-current={on ? 'true' : undefined}
             className={[
-              'cursor-pointer px-2.5 py-[5px] font-ops-display text-ops-sm font-semibold transition-colors',
+              'cursor-pointer px-2.5 py-[5px] font-ops-display text-ops-sm font-semibold outline-none transition-colors',
               on ? 'border-b-2 border-ops-olive text-ops-ink' : 'text-ops-muted hover:text-ops-strong',
             ].join(' ')}
           >

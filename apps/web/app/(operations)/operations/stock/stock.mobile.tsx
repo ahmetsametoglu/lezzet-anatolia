@@ -36,7 +36,7 @@ export function StockMobile(props: StockViewProps) {
         title="Stok"
         subtitle={`${attention} parti karar bekliyor${blocked > 0 ? ` · ${blocked} imhalık` : ''}`}
       >
-        <Button variant="secondary" size="sm" onClick={onOpenRecall}>
+        <Button variant="secondary" size="sm" onClick={() => onOpenRecall()}>
           <SearchIcon />
           Lot
         </Button>
@@ -53,25 +53,25 @@ export function StockMobile(props: StockViewProps) {
 
 /** Seviyeler mobilde kart listesi: satır tıklanınca partileri altında açılır (ayrı panel yok). */
 function MobileLevels({ levels, selectedId, onSelect, hasMoreLevels, loadingLevels, onLoadMoreLevels, onOpenOffer }: StockViewProps) {
-  if (levels.length === 0) {
-    return (
-      <div className="flex flex-1 items-center justify-center p-8">
-        <span className="font-ops-body text-ops-base text-ops-muted">Bu süzgeçle eşleşen boy yok.</span>
-      </div>
-    );
-  }
-
+  // Boş hâlde de tetikleyici KALIR — bkz. `Table`: client çipi ilk sayfayı sıfıra indirdiğinde
+  // liste ölmemeli.
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-4">
-      {levels.map((row) => (
-        <LevelCard
-          key={row.variantId}
-          row={row}
-          open={row.variantId === selectedId}
-          onToggle={() => onSelect(row.variantId)}
-          onOpenOffer={onOpenOffer}
-        />
-      ))}
+      {levels.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center p-8">
+          <span className="font-ops-body text-ops-base text-ops-muted">Bu süzgeçle eşleşen boy yok.</span>
+        </div>
+      ) : (
+        levels.map((row) => (
+          <LevelCard
+            key={row.variantId}
+            row={row}
+            open={row.variantId === selectedId}
+            onToggle={() => onSelect(row.variantId)}
+            onOpenOffer={onOpenOffer}
+          />
+        ))
+      )}
       <LoadMoreSentinel hasMore={hasMoreLevels} loading={loadingLevels} onLoadMore={onLoadMoreLevels} />
     </div>
   );

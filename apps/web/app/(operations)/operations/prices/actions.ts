@@ -18,7 +18,8 @@ import { repriceAllAuto, repriceProduct } from '@/lib/pricing/auto-price';
 import { readCostBasis } from '@/lib/pricing/cost-basis';
 import { toPriceRows, type ChannelPriceMaps } from './prices-read';
 import { parsePricesUrl, toPriceFilters, PRICES_PATH } from './prices-url';
-import { titleOf, type CustomerOption, type DiscountFormInput, type PriceRow, type VariantOption } from './prices-types';
+import { titleOf } from '@/lib/catalog/title';
+import { type CustomerOption, type DiscountFormInput, type PriceRow, type VariantOption } from './prices-types';
 
 // Fiyat ekranı server action'ları — 'use server' + requireAdmin ilk + servise devret +
 // `{ data, error }` DÖNER (throw yok) + revalidatePath.

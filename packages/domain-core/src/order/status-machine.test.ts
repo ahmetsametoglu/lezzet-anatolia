@@ -1,6 +1,34 @@
 import { describe, expect, it } from 'vitest';
+import { isFulfillmentSettled } from './status-machine';
+
+describe('isFulfillmentSettled', () => {
+  const picked = [{ fulfilledQty: 2 }, { fulfilledQty: 0 }];
+  const none = [{ fulfilledQty: 0 }, { fulfilledQty: 0 }];
+
+  it('hazırlık başlamadan karşılanan adet bir karar DEĞİLDİR', () => {
+    expect(isFulfillmentSettled('draft', none)).toBe(false);
+    expect(isFulfillmentSettled('confirmed', none)).toBe(false);
+    // Onaylanmış siparişte toplama yazılmış olamaz; yazılsa bile karar hazırlıkta verilir.
+    expect(isFulfillmentSettled('confirmed', picked)).toBe(false);
+  });
+
+  it('hazırlanırken ayıran şey KAYITTIR: bir kalem toplandıysa sayı kesinleşmiştir', () => {
+    expect(isFulfillmentSettled('preparing', none)).toBe(false);
+    expect(isFulfillmentSettled('preparing', picked)).toBe(true);
+  });
+
+  it('hazırlık bittikten sonra sayı her hâlde kesindir', () => {
+    for (const status of ['ready', 'out_for_delivery', 'delivered', 'completed', 'returned'] as const) {
+      expect(isFulfillmentSettled(status, none)).toBe(true);
+    }
+  });
+
+  it('iptal edilen siparişte karşılanan sorusu sorulmaz', () => {
+    expect(isFulfillmentSettled('cancelled', picked)).toBe(false);
+  });
+});
 import type { OrderStatus } from '@lezzet/types';
-import { allowedTransitions, canTransition, isTerminal, producesReferenceNo, stockEffectOf } from './status-machine';
+import { MAIN_PATH, allowedTransitions, canTransition, isTerminal, producesReferenceNo, skippedBetween, stockEffectOf } from './status-machine';
 
 describe('tam yol', () => {
   it('draft → confirmed → preparing → ready → out_for_delivery → delivered → completed', () => {
@@ -117,5 +145,33 @@ describe('referans numarası — ilk kalıcı durumda üretilir', () => {
 
   it('iptal edilen draft numara almaz', () => {
     expect(producesReferenceNo('draft', 'cancelled')).toBe(false);
+  });
+});
+
+describe('skippedBetween', () => {
+  it('atlanan ana hat adımlarını verir', () => {
+    expect(skippedBetween('confirmed', 'out_for_delivery')).toEqual(['preparing', 'ready']);
+  });
+
+  it('ardışık geçişte atlama yoktur', () => {
+    expect(skippedBetween('preparing', 'ready')).toEqual([]);
+  });
+
+  it('siparişin doğuşu ana hattın başıdır', () => {
+    expect(skippedBetween(null, 'ready')).toEqual(['confirmed', 'preparing']);
+  });
+
+  it('ana hat DIŞINA çıkan geçiş bir atlama değildir', () => {
+    expect(skippedBetween('confirmed', 'cancelled')).toEqual([]);
+    expect(skippedBetween('out_for_delivery', 'returned')).toEqual([]);
+  });
+
+  it('geri dönüşte (ulaşılamadı) atlama yoktur', () => {
+    expect(skippedBetween('out_for_delivery', 'ready')).toEqual([]);
+  });
+
+  it('ana hat kaynak listesiyle tutarlı', () => {
+    expect(MAIN_PATH).not.toContain('draft');
+    expect(MAIN_PATH).not.toContain('cancelled');
   });
 });
