@@ -238,3 +238,12 @@ Kararlar: `ADR_WHATSAPP.md`. Mimari: `CHANNELS.md`. Faz sınırları: `SCOPE.md`
 ## Faz 2 (ekstrem/ileri — bkz. SCOPE.md)
 
 Mobil uygulama + push, teslimat penceresi/rota kapasitesi, Meta/Google pixel + CAPI + retargeting, akıllı bölge önerisi, kampanya otomasyonu, WhatsApp broadcast/tam chatbot (§14 ölçek), ileri analitik.
+
+- **AI yönetici asistanı (MCP)** — niyet notu yazıldı 30.07: [`AI_ADMIN_ASSISTANT.md`](AI_ADMIN_ASSISTANT.md).
+  Yapay zeka MCP üzerinden yöneticinin işlerinin büyük kısmını yapar (hata raporu, dönemsel paket,
+  sosyal medya içeriği, pazarlama önerisi, finansal analiz) ama **sınırlı ve denetlenebilir**: iki
+  anahtar (bağlantı + kısa ömürlü kapsamlı oturum), **onay kuyruğu** (asistanın yazma niyeti JSON
+  olarak birikir, yönetici tek tek onaylar), son kullanıcı bilgilerine ve şirket-hassas verilere
+  erişim yok. **Faz 1'in tamamı bitmeden başlanmaz** (kullanıcı kararı). Referans projede MCP
+  sunucusu + iki anahtar + oran sınırı + çağrı denetimi ÇALIŞIYOR; onay kuyruğu ve veri maskeleme
+  bize özgü, sıfırdan yazılacak.

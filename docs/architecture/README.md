@@ -35,6 +35,7 @@ Bu klasör, projenin **ne yapacağını**, **nasıl kod dizileceğini** ve **bu 
 | `INTEGRATIONS.md` | Dış servisler, agnostik arayüzler, fazları | Ödeme/kargo/muhasebe/bildirim işinde |
 | `SEO_I18N.md` | Çok dillilik, URL yapısı, çeviri akışı, SEO | i18n, rota, içerik gösterimi işinde |
 | `OBSERVABILITY.md` | Log, hata izleme, sistem sağlığı — üç katman, saklama süreleri, PII disiplini | Üretimde "ne oldu" sorusuna araç yazarken |
+| `AI_ADMIN_ASSISTANT.md` | **NİYET NOTU** (karar değil): MCP üzerinden sınırlı AI yönetici asistanı — iki anahtar, onay kuyruğu, veri maskeleme | Faz 1 bitince; ayrıca bugünkü bir karar bu hedefin önünü kapatıyor mu diye bakarken |
 | `BACKLOG.md` | Açık iş kalemleri, yapılacaklar | Ne yapılacağına bakarken |
 
 ## Rol ayrımı (WORKFLOW §8 ile uyumlu)

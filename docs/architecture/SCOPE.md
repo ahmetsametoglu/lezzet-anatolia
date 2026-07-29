@@ -56,6 +56,7 @@ Sistem bunlar olmadan eksiksiz çalışır; her biri belirgin ek altyapı ister:
 - **İleri analitik** (derin kohort/tahmin); akıllı tedarik tahmini (satış hızı + sezon → "şu tarihte biter")
 - **B2B düzenli sipariş şablonu** (rota gününde otomatik taslak, onayla kesinleşir)
 - **Sepet kurtarma / win-back e-posta otomasyonları** (zemin Faz 1'de: kalıcı sepet + izinli liste)
+- **AI yönetici asistanı (MCP)** — yapay zeka MCP sunucusu üzerinden yöneticinin işlerinin büyük kısmını yapar (sistem hata raporu, dönemsel paket hazırlığı, sosyal medya içeriği, pazarlama önerisi, finansal analiz) ama **sınırlı ve denetlenebilir**: iki anahtar, **onay kuyruğu** (yazma niyeti birikir, yönetici tek tek onaylar), son kullanıcı ve şirket-hassas verilere erişim yok. Niyet notu: [`AI_ADMIN_ASSISTANT.md`](AI_ADMIN_ASSISTANT.md). **Faz 1'in tamamı bitmeden başlanmaz** — asistan var olmayan bir sistemi yönetemez, güvenlik sınırı da yönetilecek yüzeyler kesinleşmeden doğru çizilemez.
 
 ## Faz sınırı kuralları
 
