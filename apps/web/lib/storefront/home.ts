@@ -25,6 +25,30 @@ import type { StorefrontHome, StorefrontOffer, StorefrontProduct } from './store
 /** Fırsat bandında en çok kaç kart — tasarımda üçlü ızgara (K8), fazlası bandı taşırır. */
 const OFFER_LIMIT = 6;
 
+/**
+ * Vitrin seçkisinde kaç kart — tasarımda dörtlü ızgara (anasayfa ve boş sepet, ikisinde de 4).
+ * Seçki bir LİSTE DEĞİL, tıklatma davetidir: sayfalanmaz ama sabit sınırı vardır (CLAUDE.md §1).
+ */
+const SHOWCASE_LIMIT = 4;
+
+/**
+ * **Vitrin seçkisi** — anasayfanın "Bu hafta çok sevilenler" bandı ile boş sepetin öneri alanı AYNI
+ * dörtlüyü okur. İki yerde ayrı yazılsaydı müşteri iki ekranda iki farklı "seçki" görürdü.
+ *
+ * Ölçüt bugün "aktif katalogdan ilk dörtlü": popülerlik sinyalimiz yok (`product_view` sayımı
+ * 08.9'da doğacak, sipariş kalemi sayımı 13'te). **Uydurulan bir sıralama yok — yedek var:**
+ * gerçek bir "çok sevilen" listesi hesaplanana kadar alan katalogla dolar. Alanı boş bırakmak
+ * ölçütü olmayan bir sıralamadan daha kötüydü; müşteri o boşlukta ekranın bittiğini sanıyor.
+ *
+ * BEKLEYEN(08.9): gerçek popülerlik ölçütü (görüntüleme + sipariş sayımı) — ölçüt geldiğinde
+ * yalnız buradaki sıralama değişir, iki ekran da onu izler.
+ */
+export async function readShowcase(db: SupabaseClient, locale: Locale): Promise<StorefrontProduct[]> {
+  const page = await new ProductService(db).listWithRelations({ filters: { status: 'active' }, limit: SHOWCASE_LIMIT });
+  const context = await loadProductContext(db, page.rows);
+  return page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT));
+}
+
 /** Kartın fırsat hâline geçtiğinin tek ölçütü: motor teklifi kazandırdı → üstü çizili referans var. */
 function isOffer(p: StorefrontProduct): p is StorefrontOffer {
   return p.wasCents !== undefined;
@@ -50,17 +74,15 @@ async function readOffers(db: SupabaseClient, locale: Locale): Promise<Storefron
 /** Anasayfanın tüm bölümleri tek turda — bölüm başına ayrı çağrı yapılmaz. */
 export async function getHomeData(locale: Locale): Promise<StorefrontHome> {
   const db = serviceDb();
-  const [categoryRows, page, offers, packages] = await Promise.all([
+  const [categoryRows, featured, offers, packages] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
-    // Vitrin seçkisi: bugün ilk dörtlü (öne çıkarma bayrağı katalogda yok).
-    new ProductService(db).listWithRelations({ filters: { status: 'active' }, limit: 4 }),
+    // Vitrin seçkisi boş sepetle PAYLAŞILIR — tek kaynak (`readShowcase`).
+    readShowcase(db, locale),
     readOffers(db, locale),
     listStorefrontPackages(locale),
   ]);
-  const context = await loadProductContext(db, page.rows);
 
   const categories = (categoryRows.length ? categoryRows : FIXTURE_CATEGORIES).map((c) => toCategory(c, locale));
-  const featured = page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT));
 
   // Bant bir SEÇKİ, liste değil: sabit sınırla kesilir (CLAUDE.md §1). Tükenmişler sona alınmış
   // geldiği için sınır önce satılabilirleri alır.

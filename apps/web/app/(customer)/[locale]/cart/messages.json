@@ -35,10 +35,21 @@
       "bodyShort": "Bu haftanın taze üretimi hazır — kataloğa göz atın ya da hazır bir paket seçin.",
       "cta": "Kataloğa göz at",
       "packagesCta": "Hazır paketleri gör",
-      "delivery": "❄ Strasbourg ve çevresinde kapıya teslim ücretsiz · Fransa genelinde soğuk zincir kargo",
+      "delivery": "❄ Strasbourg ve çevresinde kapıya teslim ücretsiz · Fransa genelinde kargo — soğuk zincir ürünler hariç",
       "repeatTitle": "Son siparişinizi tekrarlayın",
       "repeatCta": "Aynısını sepete ekle",
-      "skipped": "{n} kalem şu an mevcut değil, eklenmedi."
+      "repeatItems": "{n} kalem",
+      "skipped": "{n} kalem şu an mevcut değil, eklenmedi.",
+      "packagesChip": "Paketler",
+      "showcaseTitle": "Bu hafta çok sevilenler",
+      "showcaseAll": "Tümünü gör →",
+      "card": {
+        "addToCart": "Sepete ekle",
+        "options": "Seçenekler →",
+        "priceFrom": "başlangıç fiyatı — boy detayda seçilir",
+        "offer": "Fırsat",
+        "soldOut": "Tükendi — yakında yeniden"
+      }
     },
     "coupon": {
       "title": "Kupon kodu",
@@ -46,13 +57,14 @@
       "apply": "Uygula",
       "applied": "Uygulandı ✓",
       "remove": "Kuponu kaldır",
+      "note": "Kupon; paket ve fırsat kalemlerine uygulanmaz, kalan kalemlerde geçerlidir.",
       "rejected": {
         "invalid": "Bu kod geçerli değil.",
         "expired": "Bu kuponun süresi dolmuş.",
         "minBasket": "Bu kupon daha yüksek bir sepet tutarı istiyor.",
         "firstOrderOnly": "Bu kupon yalnız ilk siparişte geçerli.",
         "usedUp": "Bu kuponun kullanım hakkı dolmuş.",
-        "outranked": "Sepetinize zaten daha büyük bir indirim uygulandı."
+        "outranked": "Sepetinizde zaten daha yüksek bir indirim uygulanıyor ({amount}) — sizin için avantajlı olanı geçerli tuttuk."
       }
     },
     "freeShipping": {
@@ -65,7 +77,7 @@
     "packageWhole": "bütün olarak artırılır/silinir",
     "unreachable": {
       "title": "Sepetiniz şu an getirilemedi",
-      "body": "Kalemleriniz duruyor — bağlantı kurulamadığı için gösteremiyoruz.",
+      "body": "Kalemleriniz duruyor — şu an gösteremiyoruz.",
       "retry": "Tekrar dene"
     }
   },
@@ -105,10 +117,21 @@
       "bodyShort": "La production fraîche de la semaine est prête — parcourez le catalogue ou choisissez un coffret.",
       "cta": "Parcourir le catalogue",
       "packagesCta": "Voir les coffrets",
-      "delivery": "❄ Livraison à domicile offerte à Strasbourg et alentours · chaîne du froid partout en France",
+      "delivery": "❄ Livraison à domicile offerte à Strasbourg et alentours · expédition partout en France — hors produits en chaîne du froid",
       "repeatTitle": "Reprenez votre dernière commande",
       "repeatCta": "Tout remettre au panier",
-      "skipped": "{n} article(s) indisponible(s) — non ajouté(s)."
+      "repeatItems": "{n} article(s)",
+      "skipped": "{n} article(s) indisponible(s) — non ajouté(s).",
+      "packagesChip": "Coffrets",
+      "showcaseTitle": "Les préférés de la semaine",
+      "showcaseAll": "Voir tout →",
+      "card": {
+        "addToCart": "Ajouter",
+        "options": "Options →",
+        "priceFrom": "prix de départ — le format se choisit en détail",
+        "offer": "Offre",
+        "soldOut": "Épuisé — bientôt de retour"
+      }
     },
     "coupon": {
       "title": "Code promo",
@@ -116,13 +139,14 @@
       "apply": "Appliquer",
       "applied": "Appliqué ✓",
       "remove": "Retirer le code",
+      "note": "Le code promo ne s’applique ni aux coffrets ni aux articles en promotion ; il reste valable sur le reste du panier.",
       "rejected": {
         "invalid": "Ce code n'est pas valable.",
         "expired": "Ce code promo a expiré.",
         "minBasket": "Ce code demande un panier plus élevé.",
         "firstOrderOnly": "Ce code est réservé à la première commande.",
         "usedUp": "Ce code a atteint sa limite d’utilisation.",
-        "outranked": "Une remise plus avantageuse est déjà appliquée à votre panier."
+        "outranked": "Une remise plus avantageuse ({amount}) est déjà appliquée à votre panier — nous avons gardé la plus intéressante pour vous."
       }
     },
     "freeShipping": {
@@ -175,10 +199,21 @@
       "bodyShort": "Die frische Produktion dieser Woche ist fertig — Katalog ansehen oder ein fertiges Paket wählen.",
       "cta": "Katalog ansehen",
       "packagesCta": "Fertige Pakete ansehen",
-      "delivery": "❄ Lieferung an die Haustür in Straßburg und Umgebung kostenlos · Kühlkettenversand in ganz Frankreich",
+      "delivery": "❄ Lieferung an die Haustür in Straßburg und Umgebung kostenlos · Versand in ganz Frankreich — ausgenommen Kühlkettenprodukte",
       "repeatTitle": "Letzte Bestellung wiederholen",
       "repeatCta": "Alles in den Warenkorb",
-      "skipped": "{n} Artikel derzeit nicht verfügbar — nicht hinzugefügt."
+      "repeatItems": "{n} Artikel",
+      "skipped": "{n} Artikel derzeit nicht verfügbar — nicht hinzugefügt.",
+      "packagesChip": "Pakete",
+      "showcaseTitle": "Diese Woche besonders beliebt",
+      "showcaseAll": "Alle ansehen →",
+      "card": {
+        "addToCart": "In den Korb",
+        "options": "Optionen →",
+        "priceFrom": "Startpreis — Größe wird im Detail gewählt",
+        "offer": "Angebot",
+        "soldOut": "Ausverkauft — bald wieder da"
+      }
     },
     "coupon": {
       "title": "Gutscheincode",
@@ -186,13 +221,14 @@
       "apply": "Einlösen",
       "applied": "Eingelöst ✓",
       "remove": "Code entfernen",
+      "note": "Der Gutschein gilt nicht für Pakete und Angebotsartikel; für die übrigen Artikel bleibt er gültig.",
       "rejected": {
         "invalid": "Dieser Code ist ungültig.",
         "expired": "Dieser Gutschein ist abgelaufen.",
         "minBasket": "Dieser Gutschein erfordert einen höheren Warenkorbwert.",
         "firstOrderOnly": "Dieser Gutschein gilt nur für die erste Bestellung.",
         "usedUp": "Dieser Gutschein wurde bereits vollständig eingelöst.",
-        "outranked": "Auf Ihren Warenkorb wurde bereits ein größerer Rabatt angewendet."
+        "outranked": "Auf Ihren Warenkorb wird bereits ein höherer Rabatt angewendet ({amount}) — wir haben den für Sie günstigeren behalten."
       }
     },
     "freeShipping": {

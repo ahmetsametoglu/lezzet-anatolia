@@ -4,7 +4,8 @@ import { toCents } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { FIXTURE_CATEGORIES } from '@/lib/storefront/fixtures';
 import { toCategory } from '@/lib/storefront/map';
-import type { StorefrontCategory, StorefrontImage } from '@/lib/storefront/storefront-types';
+import { readShowcase } from '@/lib/storefront/home';
+import type { StorefrontCategory, StorefrontImage, StorefrontProduct } from '@/lib/storefront/storefront-types';
 import { currentCustomerId } from '@/lib/guard';
 import { getCartView } from './read';
 import type { CartEntry } from './cart-types';
@@ -15,14 +16,20 @@ import type { CartEntry } from './cart-types';
  * Boş sepet bir hata ekranı değil, **yön verme** ekranıdır. Bu yüzden okuduğu tek şey "müşteriye
  * bugün ne önerebiliriz" sorusunun cevabıdır; ödeme diline (özet, kupon, checkout) hiç girmez.
  *
- * Tasarımın kuralı net: **bağlam yoksa alan tamamen kaldırılır**, boşluk doldurulmaz. Bu yüzden
- * burada "hiçbir şey yoksa bir şeyler göster" yedeği YOKTUR — `lastOrder` null ve kategori yoksa
- * ekran başlık + iki düğmeyle kalır.
+ * **Öneri alanı TEK blok değil, ÜÇ bloktan oluşur** (tasarım: son sipariş tekrarı · vitrin seçkisi ·
+ * kategori girişleri). Bir süre yalnız ilk ikisinden biri çiziliyordu ve künye "bağlama göre değişen
+ * TEK blok" diye yazılıydı — tasarımın "son sipariş **+** çok sevilenler" kuralı kodun o günkü
+ * hâline göre yeniden ifade edilmişti. Böyle bir künye eksiği bir sonraki denetimde de görünmez
+ * kılar (29.07 kullanıcı geri bildirimi).
  *
  * Dallanma sebebi geçmiş, oturum değil: son siparişi olan müşteri onu tekrarlar, olmayan (ziyaretçi
  * ya da ilk kez alan) kategori girişlerini görür. Tasarım bu iki dalı "girişli / girişsiz" diye
  * anlatıyor ama ayıran şey aslında geçmişin varlığı — ilk siparişini vermemiş girişli müşteriye
- * "son siparişinizi tekrarlayın" gösterilemez.
+ * "son siparişinizi tekrarlayın" gösterilemez. **Vitrin seçkisi ise her iki dalda da vardır:** ne
+ * sipariş geçmişine ne oturuma bağlı, katalog varsa o da vardır.
+ *
+ * BEKLEYEN(BACKLOG §2): B2B'nin sipariş şablonları — tasarım B2B'de vitrin seçkisi yerine şablon
+ * listesi istiyor; şablon diye bir veri modeli henüz yok, müşteri tipi bu yüzden hiç okunmuyor.
  */
 
 /** Meta satırında kaç ürün adı yazılır — fazlası satırı sarar ve okunmaz olur. */
@@ -54,6 +61,11 @@ export interface EmptyCartContext {
   lastOrder: LastOrderSuggestion | null;
   /** Son sipariş yoksa gösterilen kategori girişleri. */
   categories: StorefrontCategory[];
+  /**
+   * Vitrin seçkisi — anasayfanın bandıyla AYNI dörtlü (`readShowcase`). Katalog boşsa boş dizi
+   * döner ve bölüm hiç çizilmez; başka türlü boş bırakılmaz.
+   */
+  showcase: StorefrontProduct[];
 }
 
 /**
@@ -64,10 +76,15 @@ export interface EmptyCartContext {
  */
 export async function getEmptyCartContext(locale: Locale): Promise<EmptyCartContext> {
   const db = serviceDb();
-  const [categoryRows, lastOrder] = await Promise.all([new CategoryService(db).list({ activeOnly: true }), readLastOrder(locale)]);
+  const [categoryRows, lastOrder, showcase] = await Promise.all([
+    new CategoryService(db).list({ activeOnly: true }),
+    readLastOrder(locale),
+    // Seçki her iki dalda da okunur — sipariş geçmişine bağlı değil.
+    readShowcase(db, locale),
+  ]);
   // Son sipariş varsa kategori girişleri hiç çizilmez; boşuna taşınmasın.
   const categories = lastOrder ? [] : (categoryRows.length ? categoryRows : FIXTURE_CATEGORIES).map((c) => toCategory(c, locale));
-  return { lastOrder, categories };
+  return { lastOrder, categories, showcase };
 }
 
 async function readLastOrder(locale: Locale): Promise<LastOrderSuggestion | null> {

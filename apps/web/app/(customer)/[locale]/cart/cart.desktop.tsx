@@ -25,7 +25,7 @@ import type { CartViewProps } from './cart-types';
  * sonra dolması, müşteriye sepetini kaybettiğini düşündürür.
  */
 export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
-  const { view, ready, failed } = useCart();
+  const { view, ready, failed, addSkipped } = useCart();
   // İlk kare BOŞ bırakılmaz: iskelet gerçek yerleşimin ölçüsünü taşır, içerik gelince zıplama olmaz.
   if (!ready) return <CartSkeleton t={t} />;
 
@@ -34,7 +34,14 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
 
   // Boş sepet KENDİ ekranıdır: "Sepetim" başlığı ve "alışverişe devam" bağlantısı da düşer, çünkü
   // kahramanın başlığı zaten sayfanın başlığıdır ve iki düğme zaten devam etme yoludur.
-  if (view.lines.length === 0) return <EmptyCart t={t} locale={locale} context={emptyContext} />;
+  //
+  // Ölçüt "çözülmüş satır yok" DEĞİL, "niyet de yok": tekrar siparişten hemen sonra satırlar henüz
+  // sunucudan dönmemişken ekranın ortası "Sepetiniz şu an boş" derken üstteki rozet "3" gösteriyordu
+  // (29.07 denetimi). Tasarımın sözleşmesi geçişin TEK ADIM olmasını istiyor — arada iskelet var,
+  // boş ekran yok.
+  if (view.lines.length === 0) {
+    return view.itemCount > 0 ? <CartSkeleton t={t} /> : <EmptyCart t={t} locale={locale} context={emptyContext} />;
+  }
 
   return (
     // Başlık ve uyarı SOL SÜTUNUN İÇİNDEDİR, ızgaranın üstünde değil (tasarım): özet kartı sayfanın
@@ -57,6 +64,14 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
           </div>
         )}
 
+        {/* Tekrar siparişin eksik geldiği BURADA söylenir (tasarım: "sepette tek cümleyle bildirilir").
+            Uyarıyı doğuran boş sepet ekranı ekleme anında söküldüğü için orada gösterilemez. */}
+        {addSkipped !== null && (
+          <div className="rounded-soft border border-honey-line bg-honey-bg px-4.5 py-3 font-sans text-body-sm font-semibold text-honey">
+            {t.empty.skipped.replace('{n}', String(addSkipped))}
+          </div>
+        )}
+
         {/* K32 · Teslimat kısıtı — satırların ÜSTÜNDE: hangi kalemlerin etkilendiğini ve çıkışı,
             müşteri listeyi gezmeden görmeli. Kısıt yoksa (ya da yer bilinmiyorsa) hiç çizilmez. */}
         {/* Yer BİLİNMİYORSA soru burada sorulur, biliniyorsa kısıt bloğu konuşur — ikisi birbirini
@@ -75,7 +90,7 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
 
       <div className="sticky top-5 flex flex-col gap-3.5">
         <CartSummary view={view} t={t} locale={locale} />
-        <CartCoupon t={t} />
+        <CartCoupon t={t} locale={locale} />
       </div>
     </section>
   );

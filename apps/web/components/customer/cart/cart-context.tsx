@@ -63,7 +63,20 @@ interface CartContextValue {
   clearCoupon: () => void;
   add: (entry: CartEntry) => void;
   /** Tekrar sipariş: birçok kalem TEK turda girer — tek tek eklemek N sunucu turu demekti. */
-  addMany: (entries: readonly CartEntry[]) => void;
+  /**
+   * `skipped`: eklenemeyen kalem sayısı — çağıran bilir (tekrar siparişte tükenmiş kalemler
+   * peşinen düşülür), sağlayıcı yalnız TAŞIR.
+   */
+  addMany: (entries: readonly CartEntry[], skipped?: number) => void;
+  /**
+   * "N kalem şu an mevcut değil, eklenmedi" — tekrar siparişin sessizce eksik geldiğini söyler.
+   *
+   * Sağlayıcıda durmasının sebebi: uyarıyı doğuran ekran (boş sepet) eklemeden hemen sonra
+   * SÖKÜLÜYOR. Kendi state'inde tutulduğu sürece cümle ekranla birlikte kayboluyor ve müşteri hiç
+   * okumuyordu — oysa tasarım onu **sepette** göstermeyi söylüyor. Bir sonraki sepet değişikliğinde
+   * temizlenir: o noktada müşteri artık kendi eylemine bakıyor.
+   */
+  addSkipped: number | null;
   /**
    * Bu varyant/paket sepette mi, kaç adet? Katalog kartı, ürün detayı ve paket detayı buna bakar:
    * sepetteyse "Sepete ekle" yerine adet seçicisi çizer (K19).
@@ -127,6 +140,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   const serverCart = useRef(false);
   // Silinen kalem, geri alınana ya da pencere kapanana kadar burada bekler.
   const [undo, setUndo] = useState<{ entry: CartEntry; name: string } | null>(null);
+  /** Tekrar siparişte eklenemeyen kalem sayısı — uyarıyı doğuran ekran sökülse de yaşar. */
+  const [addSkipped, setAddSkipped] = useState<number | null>(null);
   // Yarışı kesmek için: geç dönen eski yanıt yeni durumu ezmesin.
   const seq = useRef(0);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -240,12 +255,15 @@ export function CartProvider({ locale, children }: CartProviderProps) {
       },
       add: (entry) => {
         closeUndo();
+        setAddSkipped(null);
         sync(mergeEntry(entries, entry), savedEntries);
       },
-      addMany: (incoming) => {
+      addMany: (incoming, skipped) => {
         closeUndo();
+        setAddSkipped(skipped && skipped > 0 ? skipped : null);
         sync(incoming.reduce<CartEntry[]>((acc, entry) => mergeEntry(acc, entry), entries), savedEntries);
       },
+      addSkipped,
       justRemoved: undo !== null,
       // Adet NİYETTEN okunur (katalogdan yeni eklenen ürünün henüz çözülmüş satırı yok, ama düğme
       // hemen seçiciye dönmeli); tavan çözülmüş satırdan gelir — onu istemci bilemez.
@@ -277,6 +295,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         sync(mergeEntry(entries, moving), savedEntries.filter((e) => cartKey(e) !== key));
       },
       setQty: (ref, qty) => {
+        // Müşteri artık kendi eylemine bakıyor: tekrar siparişin "N kalem eklenmedi" uyarısı düşer.
+        setAddSkipped(null);
         if (qty <= 0) {
           // Silmeden ÖNCE yakala: sync'ten sonra ne adet ne ad elimizde kalır.
           const key = cartKey(ref);

@@ -28,12 +28,16 @@ import type { CartViewProps } from './cart-types';
  * dökümü akıştaki özet kartında kalır. Boş sepette çubuk HİÇ YOKTUR — sabitlenecek tutar yok.
  */
 export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
-  const { view, ready, failed } = useCart();
+  const { view, ready, failed, addSkipped } = useCart();
   // İlk kare BOŞ bırakılmaz: iskelet gerçek yerleşimin ölçüsünü taşır, içerik gelince zıplama olmaz.
   if (!ready) return <CartSkeleton t={t} compact />;
 
   // Okuma DÜŞTÜYSE boş ekran çizilmez: sepet boş değil, ulaşılamıyor (`CartUnreachable`).
   if (failed) return <CartUnreachable t={t} compact />;
+
+  // Tekrar siparişten sonra satırlar henüz dönmemişken boş ekran çizilmez: üst satır "3 ürün"
+  // derken ortanın "Sepetiniz şu an boş" demesi ekranı kendisiyle çeliştiriyordu (29.07 denetimi).
+  if (view.lines.length === 0 && view.itemCount > 0) return <CartSkeleton t={t} compact />;
 
   const empty = view.lines.length === 0;
 
@@ -57,6 +61,12 @@ export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
               {t.blockedNotice}
             </div>
           )}
+          {/* Tekrar siparişin eksik geldiği sepette söylenir — masaüstüyle aynı gerekçe. */}
+          {addSkipped !== null && (
+            <div className="mx-4 rounded-soft border border-honey-line bg-honey-bg px-3.5 py-2.5 font-sans text-note font-semibold text-honey">
+              {t.empty.skipped.replace('{n}', String(addSkipped))}
+            </div>
+          )}
           <div className="flex flex-col gap-2.5 px-4 py-3.5">
             {/* K32 · Teslimat kısıtı satırların ÜSTÜNDE — masaüstüyle aynı sıra, aynı bileşen. */}
             {/* Yer bilinmiyorsa soru, biliniyorsa kısıt — ikisi birbirini dışlar. */}
@@ -75,7 +85,7 @@ export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
             <SavedList locale={locale} compact />
             {/* Mobilde kupon özetin ÜSTÜNDE (tasarım): indirim uygulanınca özet zaten onun sonucunu
                 gösteriyor — sonucu sebebinden önce okutmak sırayı tersine çevirirdi. */}
-            <CartCoupon t={t} />
+            <CartCoupon t={t} locale={locale} />
             <CartSummary view={view} t={t} locale={locale} compact />
           </div>
           <CartCheckoutBar view={view} t={t} locale={locale} />

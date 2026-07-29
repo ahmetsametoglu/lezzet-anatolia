@@ -5,6 +5,8 @@ import type { Locale } from '@lezzet/i18n';
 import { FramedImage } from '@/components/media/framed-image';
 import { Button, buttonClass } from '@/components/customer/ui/button';
 import { FilterChip } from '@/components/customer/ui/filter-controls';
+import { ProductCard } from '@/components/customer/ui/storefront-cards';
+import { SectionHeading } from '@/components/customer/ui/section';
 import { Link } from '@/i18n/navigation';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { formatPrice, formatShortDate } from '@/lib/storefront/format';
@@ -22,12 +24,17 @@ import type { Messages } from '../cart-types';
  * çıkarıldı). Ayrım tasarımdan: ikincisi müşterinin az önce yaptığı işin sonucudur, ona "boş" demek
  * yaptığı şeyi görmezden gelmektir. Geri alma şeridi 5 sn üstünde durmaya devam eder.
  *
- * Öneri alanı bağlama göre değişen TEK bloktur; bağlam yoksa **tamamen kaldırılır** — ekran başlık
- * ve iki düğmeyle kalır, boşluk doldurulmaz.
+ * Öneri alanı ÜÇ bloktan oluşur (tasarım): son sipariş tekrarı · **vitrin seçkisi** · kategori
+ * girişleri. Hiçbiri yoksa alan tamamen kaldırılır — ekran başlık ve iki düğmeyle kalır.
+ *
+ * Seçki bir süre hiç çizilmiyordu ("popülerlik sinyalimiz yok" gerekçesiyle) ve ekranın altı bomboş
+ * kalıyordu. **Ölçüt yokluğu, alanı boş bırakmanın gerekçesi değil** (kullanıcı kararı 29.07):
+ * gerçek bir "çok sevilen" listesi hesaplanana kadar alan katalogla dolar — müşteri o boşlukta
+ * ekranın bittiğini sanıyordu. Sıralamanın kaynağı `readShowcase`, anasayfanın bandıyla aynı.
  */
 
-/** Kahraman görselinin çerçevesi (tasarım: web 260×200 · mobil 180×140 — ikisi de ~4:3). */
-const ILLUSTRATION_RATIO = 4 / 3;
+/** Kahraman görselinin çerçevesi (tasarım: web 260×200 · mobil 180×140 — ikisi de ~1,3). */
+const ILLUSTRATION_RATIO = 1.3;
 
 interface EmptyCartProps {
   t: Messages;
@@ -38,9 +45,14 @@ interface EmptyCartProps {
 
 export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProps) {
   const { addMany, justRemoved } = useCart();
-  // Tükenmiş kalemler sessizce atlanır ama SÖYLENİR — eklemenin eksik geldiğini müşteri fark etmeli.
-  // Aynı state ikinci tıklamayı da kapatır: `addMany` adetleri TOPLAR, iki tık siparişi ikiye katlardı.
-  const [skipped, setSkipped] = useState<number | null>(null);
+  /**
+   * İkinci tıklamayı kapatır — `addMany` adetleri TOPLAR, iki tık siparişi ikiye katlardı.
+   *
+   * "N kalem eklenmedi" uyarısı BURADA tutulmaz: ekleme bu ekranı hemen söküyor, uyarı da onunla
+   * gidiyordu. Artık sağlayıcıda yaşıyor (`addSkipped`) ve tasarımın istediği yerde — sepette —
+   * görünüyor.
+   */
+  const [sent, setSent] = useState(false);
   const last = context.lastOrder;
 
   const title = justRemoved ? t.empty.titleEmptied : t.empty.title;
@@ -54,12 +66,26 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
     >
       <div className={compact ? 'w-[180px]' : 'w-[260px] flex-none opacity-90'}>
         {/* Görsel künyesi henüz yok (hasır sepet / tezgâh fotoğrafı); çerçeve TAM boyutuyla durur ki
-            asıl fotoğraf gelince yerleşim kaymasın. Yer tutucu boş bir kutu değil, sepet işareti. */}
-        <FramedImage src={null} alt="" ratio={ILLUSTRATION_RATIO} placeholder={<span className="text-h1-sm">🧺</span>} />
+            asıl fotoğraf gelince yerleşim kaymasın. Yer tutucu boş bir kutu değil, sepet işareti.
+
+            Ton ve köşe SITE'ın: `FramedImage`ın varsayılanı operasyon grisidir (`ops-gray`) ve
+            karanlık modda döner — krem sayfanın ortasında soğuk gri bir kutu duruyordu. Primitifin
+            varsayılanı değiştirilmedi (operasyon ekranları onu doğru kullanıyor), çağrı yerinde
+            eziliyor. Köşe tasarımdan: web 16 · mobil 14. */}
+        <FramedImage
+          src={null}
+          alt=""
+          ratio={ILLUSTRATION_RATIO}
+          className={compact ? '!rounded-[14px] !bg-cream-deep' : '!rounded-[16px] !bg-cream-deep'}
+          placeholder={<span className="text-h1-sm">🧺</span>}
+        />
       </div>
 
       <div className={['flex flex-col', compact ? 'items-center gap-3' : 'max-w-[520px] gap-3.5'].join(' ')}>
-        <h1 className={['font-serif text-ink', compact ? 'text-page-title-sm' : 'text-page-title'].join(' ')}>{title}</h1>
+        {/* `leading-tight` ŞART: tip token'ları yalnız punto taşıyor, satır yüksekliği taşımıyor —
+            aralık verilmezse 38px başlık gövdenin 1,5 mirasıyla 57px satıra oturuyor ve kahraman
+            tasarımdan ~11px uzuyor. Aynı tuzağa dördüncü kez düşüldü (K19 · girdi · md buton). */}
+        <h1 className={['font-serif leading-tight text-ink', compact ? 'text-page-title-sm' : 'text-page-title'].join(' ')}>{title}</h1>
         {/* Mobilde metin KISALIR, küçültülmez: dar ekranda uzun cümle beş satıra yayılıp düğmeleri
             katlamanın altına iter. Tasarım iki ayrı cümle veriyor, ikisi de yazılı. */}
         <p className={['font-sans leading-relaxed text-body', compact ? 'text-note' : 'text-body'].join(' ')}>
@@ -98,8 +124,16 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
       )}
       <div className="flex flex-1 flex-col gap-1">
         <span className={['font-sans font-bold text-ink', compact ? 'text-body-sm' : 'text-body'].join(' ')}>{t.empty.repeatTitle}</span>
+        {/* Meta satırı cihaza göre FARKLI ve bu tasarımın kararı: masaüstünde ürün adları
+            ("…Fıstıklı Baklava, Ispanaklı Gözleme…"), mobilde kalem SAYISI ("3 kalem"). Dar ekranda
+            üç uzun ad üç satıra yayılıp düğmeyi aşağı itiyor; sayı tek satırda aynı bilgiyi veriyor.
+            `itemCount` kapıda zaten hesaplanıyordu ama hiç okunmuyordu. */}
         <span className={['font-sans text-body', compact ? 'text-micro' : 'text-body-sm'].join(' ')}>
-          {[last.reference, formatShortDate(last.placedAt, locale), last.names.join(', ')].join(' · ')}
+          {[
+            last.reference,
+            formatShortDate(last.placedAt, locale),
+            compact ? t.empty.repeatItems.replace('{n}', String(last.itemCount)) : last.names.join(', '),
+          ].join(' · ')}
           {` — ${formatPrice(last.totalCents, locale)}`}
         </span>
       </div>
@@ -107,10 +141,10 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
         variant="primary"
         size={compact ? 'sm' : 'md'}
         fullWidth={compact}
-        disabled={skipped !== null}
+        disabled={sent}
         onClick={() => {
-          addMany(last.entries);
-          setSkipped(last.unavailable);
+          setSent(true);
+          addMany(last.entries, last.unavailable);
         }}
       >
         {t.empty.repeatCta}
@@ -125,10 +159,33 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
       {context.categories.map((c) => (
         <FilterChip key={c.id} label={c.name} href={{ pathname: '/catalog', query: { category: c.slug } }} compact={compact} />
       ))}
+      {/* "Paketler" tasarımda kategorilerin YANINDA dördüncü çip: paket bir kategori değil ama
+          müşteri için aynı sorunun cevabı — "nereden başlayayım". Kahramandaki düğmeyle çakışmaz,
+          çipler kategori satırının kendi dili. */}
+      <FilterChip label={t.empty.packagesChip} href={{ pathname: '/packages' }} compact={compact} />
     </div>
   );
 
-  const hasSuggestion = Boolean(lastOrderBlock || categoryBlock);
+  /**
+   * Vitrin seçkisi — tasarımda web 4'lü, mobil 2'li ızgara. Kart ve bölüm başlığı ANASAYFANIN
+   * parçaları (`ProductCard` · `SectionHeading`): burada ikinci bir ürün kartı yazmak aynı kartın
+   * iki görünümü demekti, biri iyileştiğinde öbürü geride kalırdı (CLAUDE.md §1).
+   *
+   * Mobilde ızgara ikiye düşer ama kart `compact` olur — küçültülmüş masaüstü değil, kartın kendi
+   * dar hâli. Katalog boşsa bölüm hiç çizilmez.
+   */
+  const showcaseBlock = context.showcase.length > 0 && (
+    <div className={['flex flex-col', compact ? 'gap-2.5' : 'gap-4'].join(' ')}>
+      <SectionHeading title={t.empty.showcaseTitle} action={{ label: t.empty.showcaseAll, href: '/catalog' }} compact={compact} />
+      <div className={['grid', compact ? 'grid-cols-2 gap-3' : 'grid-cols-4 gap-5'].join(' ')}>
+        {context.showcase.map((p) => (
+          <ProductCard key={p.id} product={p} locale={locale} labels={{ ...t.empty.card, limit: null }} compact={compact} />
+        ))}
+      </div>
+    </div>
+  );
+
+  const hasSuggestion = Boolean(lastOrderBlock || showcaseBlock || categoryBlock);
 
   return (
     <div className="flex flex-col">
@@ -136,13 +193,10 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
 
       {/* Bağlam yoksa alan HİÇ çizilmez — tasarım: "boşluk doldurulmaz". */}
       {hasSuggestion && (
-        <div className={['flex flex-col', compact ? 'gap-3.5 p-4' : 'gap-4 px-12 pt-9 pb-4'].join(' ')}>
+        <div className={['flex flex-col', compact ? 'gap-4 p-4' : 'gap-7 px-12 pt-9 pb-12'].join(' ')}>
           {lastOrderBlock}
-          {/* Atlanan kalem tek cümleyle bildirilir; sessizce eksik eklemek güveni bozar. */}
-          {skipped !== null && skipped > 0 && (
-            <span className="font-sans text-note font-semibold text-honey">{t.empty.skipped.replace('{n}', String(skipped))}</span>
-          )}
           {categoryBlock}
+          {showcaseBlock}
         </div>
       )}
 

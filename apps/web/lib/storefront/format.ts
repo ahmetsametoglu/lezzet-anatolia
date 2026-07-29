@@ -5,13 +5,29 @@ import type { Locale } from '@lezzet/i18n';
  * Ayrı durmasının sebebi: aynı fiyat masaüstü ve mobil dosyada iki kez biçimlendirilmesin.
  *
  * Para birimi her dilde EUR — işletme Fransa'dadır; `tr` Fransa'daki Türk diasporasının dilidir,
- * ayrı bir para birimi değil. Ayraç ve simge yeri dile göre değişir (`1 290` → "12,90 €" / "12,90 €"
- * / "12,90 €" ama Almanca ayracı farklıdır) — bunu `Intl` çözer, elle biçim kurulmaz.
+ * ayrı bir para birimi değil.
+ *
+ * **Simge SAYININ ARDINDA, üç dilde de.** `Intl`'in `style: 'currency'`si Türkçede simgeyi ÖNE
+ * koyuyor (`€75,53`) — Türkiye'nin yerel geleneği bu, ama bizim müşterimiz Fransa'da yaşıyor,
+ * fiyatı her yerde "75,53 €" diye görüyor ve tasarımın Türkçe maketlerinde de öyle yazılı
+ * (`113,20 €` · `−10,00 €`; maketlerin hiçbirinde simge önde geçmiyor). Sonuç: aynı ürün Türkçe
+ * ekranda `€75,53`, Fransızcada `75,53 €` görünüyordu — tek işletme, iki para yazımı (29.07).
+ *
+ * `tr-FR` denendi, çare değil: ICU'da öyle bir veri kümesi yok, `tr`ye düşüyor. Bu yüzden SAYI
+ * dilin ayraçlarıyla biçimlenir (Türkçe/Almanca `1.234,50`, Fransızca `1 234,50`) ve simge sabit
+ * biçimde eklenir. Ayraç yine `Intl`in işi; elle kurulan tek şey simgenin yeri.
  */
 const INTL_LOCALE: Record<Locale, string> = { tr: 'tr-TR', fr: 'fr-FR', de: 'de-DE' };
 
+/** Sayı ile simge arasında BÖLÜNMEYEN boşluk: satır sonu tutarı ikiye ayırmasın (Fransız dizgisi). */
+const EURO_SUFFIX = ' €';
+
 export function formatPrice(cents: number, locale: Locale): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], { style: 'currency', currency: 'EUR' }).format(cents / 100);
+  const amount = new Intl.NumberFormat(INTL_LOCALE[locale], {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+  return `${amount}${EURO_SUFFIX}`;
 }
 
 /**
