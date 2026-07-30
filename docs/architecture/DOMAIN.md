@@ -386,6 +386,69 @@ Aynı kişi farklı yüzeylerden farklı anahtarlarla gelir; sistem tek müşter
 - Bu çözümleme `domain-core`'da saf bir fonksiyondur; uygulama katmanına dağıtılmaz. Ayrıntı: `CHANNELS.md §3`.
 - **E-posta ikinci kimlik anahtarıdır:** telefon *veya* e-posta eşleşirse aynı müşteridir. Yine de kopya oluşursa (WhatsApp taslağı + web kaydı) admin **"müşteri birleştir"** aksiyonuyla tekleştirir — siparişler, puanlar, konuşmalar hedef müşteriye taşınır, kaynak kayıt kapanır. Taslak müşteri `is_draft` ile işaretlidir.
 
+### Kimlik anahtarı, çapa ve süreklilik
+
+> Kararlar 30.07.2026, kullanıcıyla birlikte. Uygulaması `04.10`; hangi mesajın nereye yazılacağı `15`.
+
+**Telefon ve e-posta eşit giriş yollarıdır** — biri asıl, öteki ona takılan eklenti değil. Ama arıza modları farklıdır ve tasarımın tamamı bu farkın üstünde durur:
+
+> **Telefon kolay anahtardır, e-posta dayanıklı anahtardır.**
+
+Telefon numaraları el değiştirir — operatörde karantina süresi dolunca yeniden dağıtılır. E-posta adresleri pratikte devredilmez. İkisi birbirinin yedeği değil, **birbirinin arıza modunun kapağıdır**.
+
+#### Anahtar yazmak bir kimlik eylemidir
+
+- **Doğrulanmamış numara anahtar olmaz.** Formdan gelen numara (hesap kartı, checkout) yalnız **iletişim** numarasıdır. Teslimat telefonu zaten **adrese** aittir (`address.phone`); hesabın numarası ayrı bir şeydir ve ayrım burada başlar.
+- **Doğrulama "bu numarayı bugün alabiliyorum" der, "bu numaranın geçmişi benim" demez.** Zilyetlik gerçektir, bağ bayat olabilir. Kod doğrulaması bu yüzden tek başına geçmişe erişim vermez.
+- **Numara kendi kaydında yaşar, kolonda değil.** Aşağıdaki kararlar numaranın ne zaman doğrulandığını, en son ne zaman görüldüğünü ve devredildiğinde **emekliye ayrıldığını** tutmayı gerektiriyor. Kolon modelinde emeklilik `null`'lamaktır — o numaranın bir zamanlar o müşteriye ait olduğu bilgisini silmek; sonra ne olduğunu kimse açıklayamaz.
+  **AÇIK:** bir hesabın kaç numara taşıyacağı **karara bağlanmadı** (`04.10`). Meşru çok-numara halleri var (kişisel + işyeri, FR + TR hattı — diasporada yaygın), ama kullanıcının tereddüdü sürüyor. Kayıt yapısı iki seçeneği de taşır; karar ertelenebilir.
+- **Bir numara en çok bir hesaba çıkar.** Bu ürün tercihi değil zorunluluk: gelen mesajı tek bir müşteriye çözemezsek her mesaj cevapsız bir soruya döner.
+
+#### Çapa isteme akışı — ilk siparişten sonra
+
+Sürtünme, kaybedecek bir şeyin olduğu ilk anda konur; "merhaba" diyen yabancıdan e-posta istemek WhatsApp'ı seçme sebebimizi bozar.
+
+- **İlk sipariş tamamlanınca e-posta bağlama önerilir.** Kod **e-postaya** gider, müşteri **WhatsApp'tan** geri yazar. Kanıtın gücü buradan gelir: kod, doğrulanan kanaldan **başka** bir kanaldan geçer — "bu numarayı tutan kişi şu posta kutusunu da yönetiyor."
+- **Aynı mekanizma, üçüncü kez:** Supabase'in mail göndermesi devre dışı, kodu biz üretip kendi kanalımızdan yolluyoruz (`admin.generateLink` + `verifyOtp`). Burada tek fark taşıyıcının Resend değil WhatsApp olması — yeni altyapı yok.
+- **E-posta zaten bir hesaba aitse bu çakışma değil buluşmadır:** posta kutusunu yönetiyor olmak, web girişinde kullandığımız kanıtın aynısıdır, gücü düşmez → doğrudan o hesaba bağlanır.
+- **E-posta zorunlu değildir.** Sipariş vermek için istenmez; **puanı harcamak için bir çapa aranır** (aşağıdaki güvenlik kodu da çapa sayılır). *Bu son cümle karardan türetilmiştir: devredilmiş hattın sahibi kodu da bilemeyeceği için koruma aynıdır.*
+- **E-posta bir kez yazılır, sonra değişmez** (hesap kartında salt okunur). Posta kutusunu gerçekten kaybeden müşterinin yolu admin birleştirmesidir (04.7).
+
+#### Çapa vermeyene: 6 haneli güvenlik kodu
+
+E-posta bağlamak istemeyen müşteriye, **aynı konuşmada**, sistemin ürettiği 6 haneli bir kod verilir: *"Bunu saklayın; zaman zaman siz olduğunuzu teyit etmek için isteyebiliriz."*
+
+- **Sır, şüphe doğmadan önce kurulur.** Dönüş anında oluşturulan bir kod hiçbir şey kanıtlamaz — karşımıza kim çıkarsa kodu o belirler ve geçmişi o devralır.
+- **Kodu sistem üretir**, müşteri seçmez: seçilen 4 haneli kodların gerçek dağılımı `1234`/`0000`/doğum yılında yığılır. Sistem üretimi + 6 hane + **5 deneme tavanı** → tahmin şansı ~200.000'de 1.
+- **Kod yalnız kendi numarasından geçerlidir.** Bu, kodun tek başına değerini sıfırlar: onu okuyan biri (ör. admin konuşma ekranında) kullanmak için o hattı da elinde tutmak zorundadır. Aynı özellik **oltalamayı da defeder** — dolandırıcıya yazılan kod işe yaramaz.
+- **Sorgunun yönü güvenliğin tamamıdır: koddan kimliğe gidilmez, kimlikten koda gidilir.**
+  Doğru: *gelen mesajın gönderen numarası → o numaraya bağlı kimlik → o kimliğin kodu eşleşiyor mu.*
+  Yanlış: *girilen kod → bu kod kime ait → o hesabı aç.* İkincisi çalışır, testleri geçer ve kodu numaradan bağımsız bir anahtara çevirir.
+  Sonucu iki yasak: **web formundan / admin panelinden kod doğrulanmaz**, ve **admin panelinde "kod doğrula" kutusu bulunmaz.** Telefonda arayan müşteriyi doğrulamanın yolu bu değildir (WhatsApp'tan yazması istenir ya da 04.7).
+- **Çapa numaradır, `Conversation` değil.** Konuşma bizim türettiğimiz kayıttır (24s penceresi kapanınca yenilenebilir); numara taşıyıcının beyanıdır. Numaraya çapalamak zincire halka eklemez, çıkarır.
+- **Bu güvenin dayanağı webhook imzasıdır** (15.7). İmzasız uç noktaya herkes istek atıp "şu numaradan geliyorum" diyebilir; o durumda geriye yalnız 6 haneyi tahmin etmek kalır. İmza doğrulaması bu kararla birlikte rutin hijyen olmaktan çıkıp **kodun üzerinde durduğu temel** hâline gelir.
+- **Kod özetlenerek (hash) saklanır** — canlı DB'ye yazma yetkisi olana karşı değil (o zaten cevabı değiştirebilir), **yedek sızarsa** ortaya (numara, kod) listesi çıkmasın diye.
+- **E-posta doğrulanınca kod silinir.** İki anahtar tutmanın anlamı yok; azaltmak hem sızacak yüzeyi hem anlatılacak şeyi azaltır.
+- **Neyi korumadığı da yazılıdır:** telefonu eline geçiren kişiye karşı bir şey yapmaz (kodu da görür, numara da ondadır). Kapsamı **devredilmiş numaradır** — çözemediğimiz vaka tam olarak oydu.
+
+#### Kimlik şüphesi doğduğunda
+
+- **Kod rutin sorulmaz, tetiğe bağlı sorulur:** ~3 ay sessizlik sonrası dönüşte, ya da geçmiş/puan/kişiye özel fiyat açılmadan önce. Her konuşmada sormak müşteriyi yorar ve kodu sıradanlaştırır.
+- **Boşluğun kendisi teşhis değildir.** Yılda bir bayramda sipariş veren sadık müşteri ile devredilmiş hat aynı şekli üretir. Sessizlik süresi bir **tetik**tir, karar değil — kapı olarak kullanılırsa cezalandırdığı kitlenin ezici çoğunluğu kendi müşterilerimiz olur.
+- **Kimliği bilmeden ne açtığımız asıl sorudur.** Sipariş almak geçmiş gerektirmez. Kapılı olan üç yetki: **geçmişi göstermek · puanı harcatmak · kişiye özel fiyat/kupon uygulamak.**
+- **Ajan geçmişi söylemez, sorar.** *"Her zamanki adrese mi göndereyim?"* sızıntının kendisidir. *"Adresinizi alabilir miyim?"* ise, verilen cevap elimizdekiyle tutarsa kimliği **müşterinin kendi beyanıyla** teyit eder — biz hiçbir şey açıklamadan.
+  Ama **adres tek başına kimlik ölçütü değildir:** aynı müşteri hediye gönderiyor, iş yerine istiyor ya da taşınmış olabilir. Teyit ederse kazançtır; tutmaması suçlama sebebi değildir.
+- **Doğrulanamayan dönüş zarifçe düşer:** suçlama yok, sipariş engellenmiyor. Eski kimlik emekliye ayrılır, **yeni müşteri kaydı** açılır, sipariş oraya yazılır. Eski siparişler eski kayıtta kalır — muhasebe sağlam. Müşteri itiraz ederse admin birleştirir (04.7).
+
+#### Sipariş taşınmaz
+
+- **`Order.customer_id` bağlandığı yerde kalır.** Fatura ve muhasebe kaydı bir telefon numarasının peşinden dolaşamaz.
+- **"WhatsApp siparişlerim" bir SÜZGEÇTİR, ayrı bir hesap değil** — `order_source='whatsapp'` zaten var. Sahiplik değil mercek.
+- Bu, "bağladıktan sonra gelen siparişler kimin?" sorusunu ortadan kaldırır: **hesabın; ama WhatsApp'tan geldiği yazılı.** Sahiplik zamana bağlı olsaydı destek şu cümleyi kurmak zorunda kalırdı — "bağlamadan öncekiler kalır, sonrakiler geçer" — ve kimse onu taşıyamaz.
+- **Numarayı çıkarmak bir KANALI kapatır, geçmişi geri almaz.** Birleştirme geri alınamadığı için sıkı olması gereken yer öncesindeki kapıdır.
+- **Puan ile sipariş ayrılamaz**, çünkü puan siparişten doğar (§14, sipariş başına puan). "Puan geçsin, sipariş kalsın" kurgusu, kaynağı başka kayıtta duran puan satırları üretir; bağ çözülünce ikisi de tutarsızlaşır.
+- **Kod göndermek para harcar** (§11: template ~€0,13): bağlama akışı numara/hesap/IP başına hız sınırlıdır. Sınırsız bir uç nokta, faturası bize kesilen bir mesaj gönderme aracıdır.
+
 ### B2B self-servis kayıt ve onay kapısı
 
 Şirket, hesabını **kendisi açar**; toptan fiyatlar **onaya kadar görünmez** (SIRET herkese açık bilgidir — numarayı giren kişinin o şirket olduğunu kanıtlamaz; fiyat listesi onaysız açılırsa rakibe açılmış olur).

@@ -102,6 +102,8 @@ async function enrich(
   decision: { normalizedPhone: string | null; email: string | null },
 ): Promise<UserProfile> {
   const patch: Record<string, unknown> = {};
+  // BEKLEYEN(04.10): checkout formundan gelen numara DOĞRULANMADAN kimlik anahtarına yazılıyor.
+  // Dolu olanı ezmiyor (yukarıdaki koşul), ama boşta duran bir numarayı sahiplenmeye yetiyor.
   if (!existing.phone && decision.normalizedPhone) patch.phone = decision.normalizedPhone;
   if (!existing.email && decision.email) patch.email = decision.email;
   // Auth bağı doğrulanmış kimliktir: geldiğinde taslak işareti düşer (04.4).

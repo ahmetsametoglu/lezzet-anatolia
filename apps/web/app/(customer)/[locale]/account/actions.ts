@@ -55,6 +55,10 @@ export async function updateProfileAction(input: { name?: string; phone?: string
       patch.name = name;
     }
 
+    // BEKLEYEN(04.10): bu numara DOĞRULANMADAN `user_profiles.phone`'a yazılıyor ve o kolon bir
+    // kimlik anahtarı (0001'de benzersiz indeks) — henüz kayıtlı olmayan bir numara buradan
+    // önceden sahiplenilebilir, sonra gerçek sahibi WhatsApp'tan yazınca yabancı hesaba bağlanır.
+    // Kapanışı: numaraya kod → geri giriş; o zamana kadar bu alan bir İLETİŞİM numarasıdır.
     if (input.phone !== undefined) {
       const raw = input.phone?.trim() ?? '';
       if (!raw) {
