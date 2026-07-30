@@ -27,7 +27,7 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
           <span>{t.linkOrders}</span>
           <span className="text-olive">→</span>
         </Link>
-        {/* BEKLEYEN(16.1): talep/şikâyet ekranı. */}
+        {/* BEKLEYEN(08.6): talep/şikâyet ekranı (servis tarafı hazır — masaüstü eşine bak). */}
         <span className="flex items-center justify-between gap-3 font-sans text-body-sm font-bold text-muted">
           <span>{t.linkSupport}</span>
           <span className="font-normal">{t.soon}</span>
