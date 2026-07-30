@@ -3,21 +3,18 @@
     "signIn": "Giriş",
     "signOut": "Çıkış yap",
     "myAccount": "Hesabım",
-    "account": "Hesap",
-    "soon": "yakında"
+    "account": "Hesap"
   },
   "fr": {
     "signIn": "Connexion",
     "signOut": "Se déconnecter",
     "myAccount": "Mon compte",
-    "account": "Compte",
-    "soon": "bientôt"
+    "account": "Compte"
   },
   "de": {
     "signIn": "Anmelden",
     "signOut": "Abmelden",
     "myAccount": "Mein Konto",
-    "account": "Konto",
-    "soon": "bald"
+    "account": "Konto"
   }
 }

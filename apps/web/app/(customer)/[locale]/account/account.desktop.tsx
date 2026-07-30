@@ -1,6 +1,8 @@
 import { Link } from '@/i18n/navigation';
 import type { AccountViewProps } from './account-types';
-import { Card, CardHead, ConsentSwitch, PointsCard, Row, SavedList } from './components/account-cards';
+import { Card, CardHead, ConsentSwitch, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
+import { AddressesCard } from './components/addresses-card';
+import { ProfileCard } from './components/profile-card';
 
 /**
  * Hesabım — masaüstü (tasarım: `Musteri - Hesap.dc.html`, "Hesap Web").
@@ -17,19 +19,7 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
 
       <div className="grid grid-cols-2 items-start gap-5">
         <div className="flex flex-col gap-5">
-          <Card compact={compact}>
-            {/* BEKLEYEN(08.5): profil düzenleme (satır içi form) — tasarımda çizili, kapı bekliyor. */}
-            <CardHead title={t.profileTitle} compact={compact} action={<Stub label={`${t.edit} · ${t.soon}`} />} />
-            <Row label={t.name} value={account.profile.name || '—'} />
-            <Row label={t.email} value={account.profile.email ?? '—'} />
-            <Row label={t.phone} value={account.profile.phone ?? t.noPhone} />
-            {/* Dil hapı okur: değişimi başlıktaki/footer'daki dil bağlantıları yapar — ikinci bir
-                dil değiştirici, hangisinin geçerli olduğunu sordururdu. */}
-            <Row
-              label={t.language}
-              value={<span className="rounded-pill border-[1.5px] border-sand-400 px-3.5 py-1.5 font-sans text-note">{LANGUAGE_LABEL[account.profile.preferredLanguage]}</span>}
-            />
-          </Card>
+          <ProfileCard t={t} locale={locale} profile={account.profile} compact={compact} />
 
           {account.company && (
             <Card compact={compact}>
@@ -44,36 +34,12 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
             </Card>
           )}
 
-          <Card compact={compact}>
-            {/* BEKLEYEN(08.5): adres ekleme/düzenleme/silme — form checkout'ta var, hesapta yok. */}
-            <CardHead title={t.addressesTitle} compact={compact} note={t.addressesNote} action={<Stub label={`${t.addressAdd} · ${t.soon}`} />} />
-            {account.addresses.length === 0 && <span className="font-sans text-note text-muted">{t.addressEmpty}</span>}
-            {account.addresses.map((address) => (
-              <div
-                key={address.id}
-                className={[
-                  'flex items-center justify-between gap-3 rounded-soft px-4 py-3.5',
-                  // Varsayılan adres ZEYTİN çerçeveli (tasarım): teslimat yeri göstergesini o besliyor.
-                  address.isDefault ? 'border-[1.5px] border-olive bg-olive-bg' : 'border border-sand-200 bg-card',
-                ].join(' ')}
-              >
-                <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className="truncate font-sans text-body-sm font-bold text-ink">
-                    {address.label || address.city}
-                    {address.isDefault && ` · ${t.addressDefault}`}
-                  </span>
-                  <span className="truncate font-sans text-note text-body">
-                    {address.line1}, {address.postalCode} {address.city}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </Card>
+          <AddressesCard t={t} locale={locale} addresses={account.addresses} compact={compact} />
 
           <Card compact={compact}>
             <CardHead title={t.consentTitle} compact={compact} />
-            <ConsentSwitch label={t.consentEmail} on={account.consent.email} onLabel={t.consentOn} offLabel={t.consentOff} />
-            <ConsentSwitch label={t.consentWhatsapp} on={account.consent.whatsapp} onLabel={t.consentOn} offLabel={t.consentOff} />
+            <ConsentSwitch channel="email" label={t.consentEmail} on={account.consent.email} onLabel={t.consentOn} offLabel={t.consentOff} />
+            <ConsentSwitch channel="whatsapp" label={t.consentWhatsapp} on={account.consent.whatsapp} onLabel={t.consentOn} offLabel={t.consentOff} />
             <span className="font-sans text-micro leading-relaxed text-muted">{t.consentNote}</span>
           </Card>
 
@@ -88,20 +54,13 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
           {account.points && <PointsCard t={t} locale={locale} points={account.points} compact={compact} />}
 
           <Card compact={compact}>
-            {/* BEKLEYEN(08.5): "hepsini sepete al" toplu eylemi — tasarımda başlığın sağında; bugün
-                yalnız satır başına taşıma var. */}
-            <CardHead title={t.savedTitle} compact={compact} action={<Stub label={`${t.savedAddAll} · ${t.soon}`} />} />
+            <CardHead title={t.savedTitle} compact={compact} action={<SavedAddAll label={t.savedAddAll} saved={account.saved} />} />
             <span className="font-sans text-micro leading-relaxed text-muted">{t.savedNote}</span>
             <SavedList t={t} locale={locale} saved={account.saved} compact={compact} />
 
             {/* Bölge haberi, kaydedilenlerin ALT BLOĞU (tasarım) — ayrı kart değil: ikisi de
-                "bugün alamadığım şey" başlığı altında yaşıyor.
-                BEKLEYEN(08.5): bekleyen kayıtların okunması + "Vazgeç". Yazma tarafı hazır
-                (`lib/delivery/notice-actions.ts`), okuma kapısı yok. */}
-            <div className="flex flex-col gap-2 border-t border-sand-100 pt-2.5">
-              <span className="font-sans text-body-sm font-bold text-ink">{t.zoneNoticeTitle}</span>
-              <span className="font-sans text-micro leading-relaxed text-muted">{t.soon}</span>
-            </div>
+                "bugün alamadığım şey" başlığı altında yaşıyor. Bekleyen kayıt yoksa hiç çizilmez. */}
+            <ZoneNoticeList t={t} notices={account.zoneNotices} />
           </Card>
 
           {/* BEKLEYEN(17.5): kişisel kuponlar — puanın varış noktası burası; çevirme akışıyla
@@ -128,13 +87,6 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
     </div>
   );
 }
-
-/** Henüz bağlanmamış eylem — yerinde durur ve neden basılamadığını söyler (CLAUDE.md §3). */
-export function Stub({ label }: { label: string }) {
-  return <span className="flex-none font-sans text-note font-bold text-muted">{label}</span>;
-}
-
-const LANGUAGE_LABEL: Record<string, string> = { tr: 'Türkçe', fr: 'Français', de: 'Deutsch' };
 
 /**
  * Veri talebi adresi. `@lezzet/brand`'de böyle bir sabit YOK ve oraya eklemek bu işin kapsamı

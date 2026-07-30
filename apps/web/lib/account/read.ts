@@ -40,6 +40,14 @@ export interface AccountView {
   } | null;
   /** "Sonraya kaydedilenler" — sepetteki listeyle AYNI veri, ikinci bir yer yok. */
   saved: CartLine[];
+  /**
+   * Bekleyen bölge haberi kayıtları (0030) — "şu posta koduna gelince haber ver".
+   *
+   * Pazarlama izinlerinden BAĞIMSIZ ve o anahtarlarla karışmaz (tasarımın sözleşmesi): biri
+   * "bana kampanya yaz", bu ise tek seferlik bir bekleyiş. Ekranda kendi bloğunda durur ve tek
+   * eylemi vazgeçmektir.
+   */
+  zoneNotices: { postalCode: string }[];
 }
 
 export async function getAccountView(locale: Locale, customerId: string): Promise<AccountView | null> {
@@ -48,9 +56,10 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
   if (!profile) return null;
 
   const company = profile.companyInfo ?? null;
-  const [addresses, cart] = await Promise.all([
+  const [addresses, cart, zoneNotices] = await Promise.all([
     new AddressService(db).listByCustomer(customerId),
     new CartService(db).get(customerId),
+    readZoneNotices(db, customerId),
   ]);
 
   // Kaydedilenler sepetin kendi okumasıyla çözülür: ad, görsel, fiyat ve "bölge içi mi" bilgisi
@@ -74,7 +83,22 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
     },
     points,
     saved: savedView.lines,
+    zoneNotices,
   };
+}
+
+/**
+ * Bekleyen bölge haberi kayıtları. Kendi servisi YOK ve gerekmiyor: `zone_notice` tek kolonluk bir
+ * bekleme listesi, üzerinde iş kuralı taşımıyor — bir servis sınıfı burada yalnız bir katman olurdu.
+ * Yazma tarafı da aynı biçimde doğrudan yazıyor (`lib/delivery/notice-actions.ts`).
+ *
+ * Ziyaretçinin kaydı da olabilir (hesap zorunlu değil, oturumsuz kayıt yalnız e-postayla durur);
+ * burada YALNIZ müşteriye bağlı olanlar okunur — kimlik oturumdan gelir.
+ */
+async function readZoneNotices(db: ReturnType<typeof serviceDb>, customerId: string): Promise<{ postalCode: string }[]> {
+  const { data, error } = await db.from('zone_notice').select('postal_code').eq('customer_id', customerId).order('created_at');
+  if (error) throw error;
+  return (data ?? []).map((row) => ({ postalCode: row.postal_code as string }));
 }
 
 /**

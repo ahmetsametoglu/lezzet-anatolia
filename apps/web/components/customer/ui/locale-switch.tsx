@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import type { Locale } from '@lezzet/i18n';
 import { LOCALES } from '@lezzet/i18n';
 import { Link, usePathname } from '@/i18n/navigation';
+import { setPreferredLanguageAction } from '@/lib/identity/language-actions';
 
 /**
  * Dil seçimi — başlıktaki açılır menü (K12) ve footer'daki liste (K16) AYNI parçayı kullanır.
@@ -55,7 +56,12 @@ export function LocaleLinks({ locale, className, activeClassName = '', separator
           <Link
             href={href}
             locale={l}
-            onClick={onNavigate}
+            onClick={() => {
+              onNavigate?.();
+              // Dil TEKTİR: seçim karta da yazılır, mailler ondan konuşur (`language-actions`).
+              // Beklenmez — gezinme dilin yazılmasını beklemez; ziyaretçide eylem sessizce döner.
+              void setPreferredLanguageAction(l);
+            }}
             className={[className, l === locale ? activeClassName : ''].filter(Boolean).join(' ')}
           >
             {LOCALE_LABEL[l]}

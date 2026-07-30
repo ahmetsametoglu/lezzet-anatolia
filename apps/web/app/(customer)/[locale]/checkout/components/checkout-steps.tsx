@@ -2,17 +2,15 @@
 
 import { useState } from 'react';
 import type { PaymentMethod } from '@lezzet/types';
-import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
-import { FormInputField } from '@/components/customer/form/form-input-field';
 import { PlaceRestriction, restrictedLines } from '@/components/customer/delivery/place-restriction';
-import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { signOutAction } from '@/lib/auth/actions';
 import { Skeleton } from '@/components/customer/ui/skeleton';
+import { AddressForm } from '@/components/customer/delivery/address-form';
 import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel } from '@/lib/cart/discount-label';
 import { formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
-import type { CheckoutViewProps, NewAddressInput } from '../checkout-types';
+import type { CheckoutViewProps } from '../checkout-types';
 
 /**
  * Checkout'un üç adımı — masaüstü ve mobil AYNI bloklar (tasarım: numaralı 1·2·3 kartları).
@@ -191,7 +189,7 @@ export function AddressStep({ t, locale, snapshot, state, compact, onSelectAddre
       </div>
 
       {adding ? (
-        <AddressForm t={t} locale={locale} onCancel={() => setAdding(false)} onSave={async (input) => { await onAddAddress(input); setAdding(false); }} />
+        <AddressForm copy={t.address.form} locale={locale} onCancel={() => setAdding(false)} onSave={async (input) => { await onAddAddress(input); setAdding(false); }} />
       ) : (
         // Tasarımda KESİKLİ ÇERÇEVELİ KART — adres kartlarının yanında onlarla aynı ızgarada durur.
         // Metin bağlantısı yapmak onu ızgaradan çıkarıyor ve "yeni adres" bir kart eklemek değil de
@@ -222,153 +220,6 @@ export function AddressStep({ t, locale, snapshot, state, compact, onSelectAddre
  * "(isteğe bağlı)" YALNIZ kapı/kat/zil satırındadır. Telefon zorunludur çünkü kapıya teslimde kurye
  * onu arar; adres başlığı da zorunludur, listedeki kartın adı odur.
  */
-function AddressForm({ t, locale, onSave, onCancel }: { t: CheckoutViewProps['t']; locale: Locale; onSave: (i: NewAddressInput) => Promise<void>; onCancel: () => void }) {
-  const [form, setForm] = useState<NewAddressInput>({ line1: '', postalCode: '', city: '' });
-  const [busy, setBusy] = useState(false);
-  const [postalError, setPostalError] = useState<string | null>(null);
-  const { place, setPostalCode } = useDeliveryPlace();
-
-  const filled = (key: keyof NewAddressInput) => Boolean((form[key] as string | undefined)?.trim());
-  const complete = filled('label') && filled('recipient') && filled('line1') && filled('postalCode') && filled('city') && filled('phone');
-
-  /**
-   * `autoComplete` ŞART ve alanın kendi jetonuyla: tarayıcı kayıtlı adresi ancak alanın ne olduğunu
-   * anlarsa önerir. Jeton yoksa öneri hiç çıkmaz ve müşteri adresini elle yazar — bir adres
-   * formunda en pahalı sürtünme budur. `name` de veriliyor; bazı tarayıcılar sezgilerini ondan kurar.
-   */
-  const META: Record<string, { autoComplete: string; name: string }> = {
-    label: { autoComplete: 'off', name: 'address-label' },
-    recipient: { autoComplete: 'name', name: 'recipient' },
-    line1: { autoComplete: 'address-line1', name: 'address-line1' },
-    line2: { autoComplete: 'address-line2', name: 'address-line2' },
-    postalCode: { autoComplete: 'postal-code', name: 'postal-code' },
-    city: { autoComplete: 'address-level2', name: 'city' },
-    phone: { autoComplete: 'tel', name: 'phone' },
-  };
-
-  const field = (key: keyof NewAddressInput, label: string, optional = false) => (
-    <FormInputField
-      label={label}
-      optional={optional}
-      optionalLabel={t.address.form.optional}
-      value={(form[key] as string) ?? ''}
-      onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
-      autoComplete={META[key]?.autoComplete}
-      name={META[key]?.name}
-    />
-  );
-
-  /**
-   * Posta kodu ALAN TERK EDİLİNCE doğrulanır ve teslimat cevabı orada verilir (K34: "doğrulama alan
-   * terk edilince çalışır, kaydete basınca değil"; K35: "posta kodu yazıldığı an teslimat cevabı
-   * verir"). Müşteri formun sonuna kadar yazıp da adresin gönderilebilir olmadığını en sonda
-   * öğrenmemeli.
-   *
-   * Çözümü sitenin ORTAK yer bağlamı yapar (`setPostalCode`) — burada ikinci bir çözüm yazılsaydı
-   * başlıktaki yer hapı ile formun cevabı ayrışabilirdi. Yan etkisi de istediğimiz şey: kod bölge
-   * dışıysa aşağıdaki K32 kısıt bloğu kendiliğinden açılır.
-   */
-  const checkPostal = async (raw: string) => {
-    const value = raw.trim();
-    if (!value) return setPostalError(null);
-    const failure = await setPostalCode(value);
-    setPostalError(failure ? t.address.form.postalHint : null);
-  };
-
-  const answer = !postalError && place && place.postalCode === form.postalCode.trim() ? place : null;
-
-  return (
-    /* Tasarım künyesi: beyaz kart · 1px kum-200 kenar · radius 18 · ped 20/22 · gap 14.
-       Satır içi açılır, ayrı sayfa yoktur (envanter). */
-    <div className="flex w-full flex-col gap-3.5 rounded-card border border-sand-200 bg-card px-5.5 py-5">
-      <div className="flex gap-3">
-        <div className="flex-1">{field('label', t.address.form.label)}</div>
-        <div className="flex-1">{field('recipient', t.address.form.recipient)}</div>
-      </div>
-      {field('line1', t.address.form.line1)}
-      {field('line2', t.address.form.line2, true)}
-
-      <div className="flex gap-3">
-        {/* Posta kodu DAR (150px): beş hane, tam genişlikte kutu değerinden büyük görünüyor. */}
-        <div className="w-[150px] flex-none">
-          <FormInputField
-            label={t.address.form.postalCode}
-            value={form.postalCode}
-            onChange={(e) => setForm((prev) => ({ ...prev, postalCode: e.target.value }))}
-            onBlur={(e) => void checkPostal(e.target.value)}
-            error={postalError ?? undefined}
-            inputMode="numeric"
-            maxLength={5}
-            autoComplete="postal-code"
-            name="postal-code"
-          />
-        </div>
-        <div className="flex-1">{field('city', t.address.form.city)}</div>
-      </div>
-
-      {/* Teslimat cevabı. Bölge dışı bir HATA DEĞİLDİR (tasarım): nötr krem satır kullanılır,
-          kırmızı yalnız biçim hatasına ayrılmıştır. */}
-      {answer && (
-        <div
-          className={[
-            'rounded-[12px] px-3.5 py-2.5 font-sans text-note leading-relaxed font-semibold',
-            answer.inRoute ? 'border border-olive-line bg-olive-bg text-olive-dark' : 'bg-sand-100 text-body',
-          ].join(' ')}
-        >
-          {answer.inRoute
-            ? answer.nextDate
-              ? t.address.form.placeInRoute.replace('{date}', formatDeliveryDate(answer.nextDate, locale))
-              : t.address.form.placeInRouteNoDate
-            : t.address.form.placeShipping}
-        </div>
-      )}
-
-      <div className="flex gap-3">
-        <div className="flex-1">{field('phone', t.address.form.phone)}</div>
-        {/* Ülke SALT OKUNUR (K34'ün beşinci hâli): bugün yalnız Fransa'ya teslim ediyoruz,
-            seçim sunmak müşteriye olmayan bir olasılık göstermek olurdu. */}
-        <div className="w-[170px] flex-none">
-          <FormInputField label={t.address.form.country} value={t.address.form.countryValue} readOnly name="country" autoComplete="country-name" />
-        </div>
-      </div>
-
-      <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
-        <input
-          type="checkbox"
-          checked={form.makeDefault ?? false}
-          onChange={(e) => setForm((prev) => ({ ...prev, makeDefault: e.target.checked }))}
-          className="size-[22px] flex-none cursor-pointer rounded-[6px] accent-olive"
-        />
-        <span className="font-sans text-body-sm text-ink">{t.address.form.makeDefault}</span>
-      </label>
-
-      {/* Tasarımda eylem satırı İNCE BİR AYRAÇLA ayrılır: formun sonu ile kararın başladığı yer. */}
-      <div className="flex items-center gap-2.5 border-t border-sand-100 pt-3.5">
-        <Button
-          disabled={!complete || busy}
-          onClick={async () => {
-            setBusy(true);
-            await onSave({
-              ...form,
-              label: form.label?.trim() || undefined,
-              recipient: form.recipient?.trim() || undefined,
-              line2: form.line2?.trim() || undefined,
-              phone: form.phone?.trim() || undefined,
-            });
-            setBusy(false);
-          }}
-        >
-          {t.address.form.save}
-        </Button>
-        {/* Vazgeç ÇERÇEVELİ (K2), hayalet metin değil: kaydetin yanında duran ikinci bir karar,
-            metne kaçmış bir bağlantı değil. */}
-        <Button variant="secondary" size="sm" onClick={onCancel}>
-          {t.address.form.cancel}
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 export function DeliveryStep(props: CheckoutViewProps) {
   const { t, locale, snapshot, state, compact, onSelectDate, cart, selectedAddress } = props;

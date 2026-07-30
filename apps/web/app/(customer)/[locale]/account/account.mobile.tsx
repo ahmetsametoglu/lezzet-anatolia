@@ -1,7 +1,8 @@
 import { Link } from '@/i18n/navigation';
 import type { AccountViewProps } from './account-types';
-import { Stub } from './account.desktop';
-import { Card, CardHead, ConsentSwitch, PointsCard, Row, SavedList } from './components/account-cards';
+import { Card, CardHead, ConsentSwitch, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
+import { AddressesCard } from './components/addresses-card';
+import { ProfileCard } from './components/profile-card';
 
 /**
  * Hesabım — mobil (tasarım: "Hesap Mobil").
@@ -33,17 +34,7 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
         </span>
       </Card>
 
-      <Card compact={compact}>
-        {/* BEKLEYEN(08.5): profil düzenleme (satır içi form). */}
-        <CardHead title={t.profileTitle} compact={compact} action={<Stub label={`${t.edit} · ${t.soon}`} />} />
-        <Row label={t.name} value={account.profile.name || '—'} />
-        <Row label={t.email} value={account.profile.email ?? '—'} />
-        <Row label={t.phone} value={account.profile.phone ?? t.noPhone} />
-        <Row
-          label={t.language}
-          value={<span className="rounded-pill border-[1.5px] border-sand-400 px-3 py-1 font-sans text-micro">{LANGUAGE_LABEL[account.profile.preferredLanguage]}</span>}
-        />
-      </Card>
+      <ProfileCard t={t} locale={locale} profile={account.profile} compact={compact} />
 
       {account.company && (
         <Card compact={compact}>
@@ -57,38 +48,18 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
         </Card>
       )}
 
-      <Card compact={compact}>
-        {/* BEKLEYEN(08.5): adres ekleme/düzenleme/silme. */}
-        <CardHead title={t.addressesTitle} compact={compact} action={<Stub label={`${t.addressAdd} · ${t.soon}`} />} />
-        {account.addresses.length === 0 && <span className="font-sans text-note text-muted">{t.addressEmpty}</span>}
-        {account.addresses.map((address) => (
-          <div
-            key={address.id}
-            className={[
-              'flex flex-col gap-0.5 rounded-soft px-3.5 py-2.5',
-              address.isDefault ? 'border-[1.5px] border-olive bg-olive-bg' : 'border border-sand-200 bg-card',
-            ].join(' ')}
-          >
-            <span className="truncate font-sans text-note font-bold text-ink">
-              {address.label || address.city}
-              {address.isDefault && ` · ${t.addressDefault}`}
-            </span>
-            <span className="truncate font-sans text-micro text-body">
-              {address.line1}, {address.city}
-            </span>
-          </div>
-        ))}
-      </Card>
+      <AddressesCard t={t} locale={locale} addresses={account.addresses} compact={compact} />
 
       <Card compact={compact}>
-        <CardHead title={t.savedTitle} compact={compact} />
+        <CardHead title={t.savedTitle} compact={compact} action={<SavedAddAll label={t.savedAddAll} saved={account.saved} />} />
         <SavedList t={t} locale={locale} saved={account.saved} compact={compact} />
+        <ZoneNoticeList t={t} notices={account.zoneNotices} />
       </Card>
 
       <Card compact={compact}>
         <CardHead title={t.consentTitle} compact={compact} />
-        <ConsentSwitch label={t.consentEmail} on={account.consent.email} onLabel={t.consentOn} offLabel={t.consentOff} />
-        <ConsentSwitch label={t.consentWhatsapp} on={account.consent.whatsapp} onLabel={t.consentOn} offLabel={t.consentOff} />
+        <ConsentSwitch channel="email" label={t.consentEmail} on={account.consent.email} onLabel={t.consentOn} offLabel={t.consentOff} />
+        <ConsentSwitch channel="whatsapp" label={t.consentWhatsapp} on={account.consent.whatsapp} onLabel={t.consentOn} offLabel={t.consentOff} />
       </Card>
 
       {/* Veri notu mobilde KART DEĞİL, sayfanın altındaki ince satır (tasarım). */}
@@ -96,8 +67,6 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
     </div>
   );
 }
-
-const LANGUAGE_LABEL: Record<string, string> = { tr: 'Türkçe', fr: 'Français', de: 'Deutsch' };
 
 /**
  * Veri talebi adresi. `@lezzet/brand`'de böyle bir sabit YOK ve oraya eklemek bu işin kapsamı

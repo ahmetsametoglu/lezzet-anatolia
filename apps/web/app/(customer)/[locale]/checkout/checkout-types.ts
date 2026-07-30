@@ -1,6 +1,12 @@
 import type { Address, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import type { CartView } from '@/lib/cart/cart-types';
+/**
+ * Adres girdisinin şekli ORTAK forma aittir (`components/customer/delivery/address-form`) — checkout
+ * ile hesap sayfası aynı formu kullanıyor. Tip de orada yaşar; burada yalnız yeniden dışa açılır,
+ * iki tanım bir gün ayrışırdı (CLAUDE.md §1).
+ */
+import type { NewAddressInput } from '@/components/customer/delivery/address-form';
 import type { CheckoutSnapshot } from './actions';
 import type messages from './messages.json';
 
@@ -70,20 +76,5 @@ export interface CheckoutViewProps extends StepProps {
   selectedAddress: Address | null;
 }
 
-/**
- * Yeni adres — alan sırası **K33** (envanter) ile birebir ve SABİT:
- * başlık · alıcı adı · sokak ve numara · kapı/kat/zil · posta kodu + şehir · telefon · ülke · varsayılan.
- */
-export interface NewAddressInput {
-  /** "Ev", "İş" — kart başlığı olur; boş bırakılabilir, o zaman şehir başlık olur. */
-  label?: string;
-  /** Alıcı: adrese GİDEN kişi, hesabın sahibi olmak zorunda değil (hediye, iş adresi). */
-  recipient?: string;
-  line1: string;
-  line2?: string;
-  postalCode: string;
-  city: string;
-  phone?: string;
-  /** Ülke K33'te SALT OKUNUR ("Fransa") — bugün tek ülkeye teslim ediyoruz, seçim sunmak yalan olurdu. */
-  makeDefault?: boolean;
-}
+
+export type { NewAddressInput };

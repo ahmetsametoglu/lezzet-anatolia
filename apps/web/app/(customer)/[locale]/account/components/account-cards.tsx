@@ -1,10 +1,11 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { formatPrice } from '@/lib/storefront/format';
 import { useCart } from '@/components/customer/cart/cart-context';
 import type { AccountView } from '@/lib/account/read';
+import { cancelZoneNoticeAction, setConsentAction } from '../actions';
 import type { Messages } from '../account-types';
 
 /**
@@ -47,26 +48,71 @@ export function Row({ label, value }: { label: string; value: ReactNode }) {
 }
 
 /**
- * İzin anahtarı. Tasarım "anında kaydedilir, ayrı kaydet yok" diyor — ama bugün yazacak kapı yok,
- * o yüzden anahtar gerçek izni GÖSTERİYOR, değiştirmiyor. Yanıltıcı değil: tıklanabilir görünmüyor.
- * BEKLEYEN(08.5): kampanya izni yazımı — anahtar okur, henüz yazmıyor.
+ * İzin anahtarı — **anında yazar, ayrı "Kaydet" yok** (tasarımın etkileşim sözleşmesi) ve kapatma
+ * onay istemez: izni geri almak müşterinin en doğal hakkı, önüne diyalog koymak caydırmak olurdu.
+ *
+ * Bir süre yalnız OKUYORDU (yazacak kapı yoktu) ve o zaman `role="switch"` bilerek verilmemişti:
+ * çalışmayan bir denetimi ekran okuyucuya "anahtar" diye duyurmak yanlıştı. Artık gerçekten
+ * çalışıyor, rol de yerine geldi.
+ *
+ * **İyimser gösterim:** tıklama anında görünür, sunucu turu beklenmez — izin anahtarı bir onay
+ * kutusu gibi davranmalı. Yazma düşerse eski hâle geri döner ve sebep yazılır; sessizce açık
+ * kalması, müşteriye vermediği bir izni verdiğini düşündürürdü.
  */
-export function ConsentSwitch({ label, on, onLabel, offLabel }: { label: string; on: boolean; onLabel: string; offLabel: string }) {
+export function ConsentSwitch({
+  label,
+  on,
+  onLabel,
+  offLabel,
+  channel,
+}: {
+  label: string;
+  on: boolean;
+  onLabel: string;
+  offLabel: string;
+  channel: 'email' | 'whatsapp';
+}) {
+  const [value, setValue] = useState(on);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  // Sunucu tazelendiğinde (başka bir sekme, başka bir eylem) gelen gerçek değeri izler.
+  useEffect(() => setValue(on), [on]);
+
+  const toggle = async () => {
+    const next = !value;
+    setValue(next);
+    setBusy(true);
+    setFailed(false);
+    const { error } = await setConsentAction(channel, next);
+    setBusy(false);
+    if (error) {
+      setValue(!next);
+      setFailed(true);
+    }
+  };
+
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="font-sans text-body-sm text-ink">
         {label}
-        <span className="sr-only"> — {on ? onLabel : offLabel}</span>
+        <span className="sr-only"> — {value ? onLabel : offLabel}</span>
       </span>
-      {/* `role="switch"` YOK: anahtar bugün yalnız GÖSTERİYOR, tıklanamıyor ve klavyeyle
-          odaklanamıyor. O rolü vermek ekran okuyucuya çalışan bir denetim duyurmak olurdu
-          (29.07 denetimi). Durum metinle de okunuyor. */}
-      <span
-        aria-hidden="true"
-        className={['relative h-6.5 w-11.5 flex-none rounded-pill transition-colors', on ? 'bg-olive' : 'bg-sand-400'].join(' ')}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={value}
+        aria-label={label}
+        disabled={busy}
+        onClick={() => void toggle()}
+        className={[
+          'relative h-6.5 w-11.5 flex-none cursor-pointer rounded-pill transition-colors disabled:cursor-progress',
+          value ? 'bg-olive' : 'bg-sand-400',
+          failed ? 'ring-2 ring-terracotta' : '',
+        ].join(' ')}
       >
-        <span className={['absolute top-[3px] size-5 rounded-full bg-card transition-all', on ? 'right-[3px]' : 'left-[3px]'].join(' ')} />
-      </span>
+        <span className={['absolute top-[3px] size-5 rounded-full bg-card transition-all', value ? 'right-[3px]' : 'left-[3px]'].join(' ')} />
+      </button>
     </div>
   );
 }
@@ -178,6 +224,8 @@ export function SavedList({ t, locale, saved, compact }: { t: Messages; locale: 
   const { restoreToCart } = useCart();
   return (
     <div className="flex flex-col gap-2">
+      {/* Kaydedilenler sepetle AYNI veridir; taşıma da aynı kapıdan geçer (`restoreToCart`).
+          İkinci bir yol yazmak, aynı listenin iki farklı biçimde boşalabildiği bir sistem olurdu. */}
       {saved.length === 0 && <span className="font-sans text-note text-muted">{t.savedEmpty}</span>}
       {saved.map((line) => (
         <div
@@ -206,6 +254,85 @@ export function SavedList({ t, locale, saved, compact }: { t: Messages; locale: 
             className={['flex-none cursor-pointer font-sans font-bold text-olive transition-colors hover:text-olive-dark', compact ? 'text-micro' : 'text-note'].join(' ')}
           >
             {t.savedAdd}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * "Hepsini sepete al" — kart başlığının sağındaki toplu eylem (tasarım).
+ *
+ * Satır başına taşımanın yanında durmasının sebebi pratik: listeye biriktiren müşteri genelde
+ * hepsini birden alır ve tek tek basmak N tıklama demektir. Tek turda gider (`addMany`) — satır
+ * satır çağırmak N sunucu turu olurdu ve arada biri düşerse liste yarım kalırdı.
+ *
+ * Alınamayan kalem SESSİZCE atlanır ama sayılır: uyarıyı sepet gösterir (`addSkipped`), çünkü bu
+ * ekran taşımadan sonra da yerinde duruyor ve müşteri sepete gittiğinde eksiği orada okumalı.
+ */
+export function SavedAddAll({ label, saved }: { label: string; saved: AccountView['saved'] }) {
+  const { addMany } = useCart();
+  const [sent, setSent] = useState(false);
+
+  const addable = saved.filter((line) => !line.blocked);
+  // Alınabilir kalem yoksa düğme hiç çizilmez: basıldığında hiçbir şey yapmayan bir eylem,
+  // bozuk bir eylemdir.
+  if (addable.length === 0) return null;
+
+  return (
+    <button
+      type="button"
+      disabled={sent}
+      onClick={() => {
+        setSent(true);
+        addMany(
+          addable.map((line) =>
+            line.kind === 'bundle'
+              ? { kind: 'bundle' as const, bundleId: line.bundleId, qty: line.qty }
+              : { kind: 'variant' as const, variantId: line.variantId, qty: line.qty, stockId: line.stockId },
+          ),
+          saved.length - addable.length,
+        );
+      }}
+      className="flex-none cursor-pointer font-sans text-note font-bold text-olive transition-colors hover:text-olive-dark disabled:cursor-not-allowed disabled:text-muted"
+    >
+      {label}
+    </button>
+  );
+}
+
+/**
+ * Bekleyen bölge haberi — "şu posta koduna gelince haber verin" kayıtları.
+ *
+ * Pazarlama izinlerinden BAĞIMSIZ (tasarımın sözleşmesi) ve o anahtarlarla aynı kartta durmaz:
+ * biri "bana kampanya yaz", bu ise tek seferlik bir bekleyiş. Tek eylemi vazgeçmektir; onay
+ * istemez — kaydı silmek müşterinin kendi kararı ve geri alması da bir tık.
+ *
+ * Kayıt yoksa blok hiç çizilmez: "bekleyen kaydınız yok" satırı, olmayan bir şeyi anlatan gürültü.
+ */
+export function ZoneNoticeList({ t, notices }: { t: Messages; notices: AccountView['zoneNotices'] }) {
+  const [busy, setBusy] = useState<string | null>(null);
+
+  if (notices.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-2 border-t border-sand-100 pt-2.5">
+      <span className="font-sans text-body-sm font-bold text-ink">{t.zoneNoticeTitle}</span>
+      {notices.map((notice) => (
+        <div key={notice.postalCode} className="flex items-center justify-between gap-3">
+          <span className="font-sans text-note text-body">{t.zoneNoticeWaiting.replace('{code}', notice.postalCode)}</span>
+          <button
+            type="button"
+            disabled={busy === notice.postalCode}
+            onClick={async () => {
+              setBusy(notice.postalCode);
+              await cancelZoneNoticeAction(notice.postalCode);
+              setBusy(null);
+            }}
+            className="flex-none cursor-pointer font-sans text-note font-bold text-muted transition-colors hover:text-terracotta disabled:cursor-progress"
+          >
+            {t.zoneNoticeCancel}
           </button>
         </div>
       ))}

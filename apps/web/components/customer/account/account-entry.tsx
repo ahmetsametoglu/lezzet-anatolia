@@ -17,9 +17,8 @@ import messages from './account-messages.json';
  * Adı olmayan müşteride e-postanın kullanıcı adı kısmı gösterilir: "yamansehzade@…" için
  * *yamansehzade*. Adsız bir simge, kimin girişli olduğu sorusunu cevapsız bırakırdı.
  *
- * Menüde bugün **tek gerçek eylem var: çıkış.**
- * BEKLEYEN(08.5): "Hesabım" ekranı (`/account`) — bağ verilseydi 404'e düşerdi, o yüzden yerinde
- * durur ve neden basılamadığını söyler.
+ * Menüde iki eylem var: **Hesabım** ve **çıkış**. "Hesabım" bir süre "yakında" diyordu çünkü sayfa
+ * yoktu; sayfa 29.07'de indi ve bu satır geride kaldı (30.07'de kullanıcı fark etti).
  *
  * Misafirde menü hiç yoktur — tek bir giriş bağlantısı kalır.
  */
@@ -76,9 +75,17 @@ export function AccountEntry({ locale }: { locale: Locale }) {
         <div className="absolute right-0 z-30 mt-2 flex w-56 flex-col gap-1 rounded-card border border-sand-200 bg-card p-2 text-body-sm shadow-lg">
           {/* Kim olduğu menünün BAŞINDA: düğmede yalnız ilk ad var, tam künye burada. */}
           <span className="truncate px-2.5 pt-1 pb-2 font-sans text-micro text-muted">{account.email}</span>
-          <span className="cursor-not-allowed rounded-soft px-2.5 py-2 font-sans font-semibold text-muted">
-            {t.myAccount} · {t.soon}
-          </span>
+          {/* "Hesabım" BAĞLANDI (30.07, kullanıcı fark etti): sayfa 29.07'de indi ama bu satır
+              "yakında" demeye devam ediyordu — bekleyiş bitti, bağlama unutuldu. Aynı hata sepetin
+              "Ödemeye geç" düğmesinde de yaşanmıştı. Ders: `BEKLEYEN` işaretini koyan, o işi
+              kapatan commit'te işareti de aramak zorunda. */}
+          <Link
+            href="/account"
+            onClick={() => setOpen(false)}
+            className="cursor-pointer rounded-soft px-2.5 py-2 font-sans font-semibold text-ink transition-colors hover:bg-cream-deep hover:text-olive"
+          >
+            {t.myAccount}
+          </Link>
           <button
             type="button"
             disabled={busy}
