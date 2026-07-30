@@ -24,6 +24,10 @@
 - **Servis ham `this.supabase` yazmaz** — `BaseDbService` metodları; junction tablosu = kendi alt sınıfı. → STACK §6
 - **domain-core = saf karar** (DB'siz, testli); **database = saf I/O** (satır getirir/yazar). Birbirlerini BİLMEZLER; ikisini birleştiren yer uygulama katmanıdır — ama uygulama iş kuralını kendi içinde hesaplayamaz, motora sorar. → STACK §4, §13
 - **Bağımlılık tek yönlü.** → STACK §4
+- **`console` YASAK, `logger` var** (lint zorlar). Sunucuda `logger.info/warn/error({bağlam}, 'mesaj')` — bağlam nesnesi ÖNCE, mesaj sonra. Yakalanan hata `captureError(err, {source, context})` ile gidir: önce stdout, sonra `error_log`; asla fırlatmaz. `console` yalnız istemci komponentinde ve `scripts/`'te (pino node-only). → OBSERVABILITY §2
+- **Sessiz `catch` yok.** Bir hatayı yutuyorsan ya izini bırak ya **neden sessiz olduğunu yaz** — yorumsuz boş `catch`, altı ay sonra kimsenin bulamayacağı bir arızadır. Server action'lar zaten `getErrorMessage` funnel'ından geçiyor, ayrıca loglama gerekmez.
+- **Ölçülemeyen değer SIFIR değildir.** Ölçüm düştüyse `null` dön ve okuyan taraf "bilinmiyor" göstersin; sıfıra düşürmek bozuk ölçümü sağlıklı gibi okutur (yaşandı: `df` düşünce disk "%0 dolu" → sistem "iyi"). Aynısı sayaçlar ve eşikler için de geçerli.
+- **Log'a kimlik yazılır, içerik yazılmaz** — `orderId` evet; e-posta/telefon/adres/ham gövde/OTP kodu HAYIR. Teşhis için kimlik yeter, o kimlikle DB'ye bakılır. → OBSERVABILITY §5
 - **Sayfalama ölçütü liste olmak değil, SINIRSIZ büyümek.** Veriyle büyüyen küme (ürün, sipariş, müşteri, stok partisi, hareket) → keyset (cursor) + infinite scroll; **imleç URL'e yazılmaz** (süzgeç yazılır). Doğal tavanı olan, operatörün elle kurduğu küme (kategori, koleksiyon, alerjen, dil, rota, ayar) → **tek turda** çekilir. Editoryal seçki (vitrin şeridi, benzer ürünler) → sayfalama yok ama **sabit sınır** var; liste değil, tıklatma davetidir. Sayfalayan her okumanın tüketeni de olmalı: `nextCursor` üretip kullanmayan ekran, listenin kuyruğunu sessizce yutar.
 
 ## 2. Web & i18n (apps/web)

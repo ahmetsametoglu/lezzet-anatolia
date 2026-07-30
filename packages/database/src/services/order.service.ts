@@ -243,7 +243,22 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       }
       return { order: created, items };
     } catch (error) {
-      await this.delete(created.id).catch(() => {});
+      // Telafi silmesi: kalemler yazılamadıysa başlık da kalmamalı, yoksa kalemsiz bir sipariş
+      // doğar. **Silme de düşerse SESSİZ KALMAZ** — ortada gerçekten kalemsiz bir başlık var ve
+      // onu ancak bu satır haber verebilir. `database` gözlemleme paketine bağlanamaz (STACK §4:
+      // yalnız `types`+`helper`), o yüzden bilgi fırlatılan hatanın İÇİNE konur; çağıran uygulama
+      // katmanı zaten `captureError`'a düşürüyor ve stack orada tam görünüyor.
+      // Kalıcı çare sipariş+kalem yazımının tek transaction'a alınmasıdır (07.4 RPC borcu).
+      let orphanId: string | null = null;
+      await this.delete(created.id).catch(() => {
+        orphanId = created.id;
+      });
+      if (orphanId) {
+        throw new Error(
+          `[order.create] kalemler yazılamadı VE telafi silmesi de düştü — kalemsiz sipariş kaldı: ${orphanId}. ` +
+            `Kök hata: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
       throw error;
     }
   }

@@ -12,7 +12,14 @@ export const baseConfig = [
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/consistent-type-imports': 'error',
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      // **`console` YASAK, `logger` var** (18.5 · `OBSERVABILITY §2`). Eskiden `warn`/`error`
+      // serbestti ve 17 çıplak çağrı tam bu boşluktan birikti: her biri farklı biçimde yazılmış,
+      // hiçbiri aranabilir değil, hiçbiri `error_log`'a düşmüyor. Kural artık lint'te — akılda
+      // tutulması gereken bir şey olmaktan çıktı.
+      //
+      // Meşru istisnalar kök `eslint.config.js`'te TEK TEK yazılır (istemci komponentleri, CLI
+      // script'leri): açık uçlu bir muafiyet, kuralı bir yıl içinde geri alırdı.
+      'no-console': 'error',
     },
   },
 ];

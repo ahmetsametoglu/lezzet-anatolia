@@ -244,6 +244,37 @@ Tasarım yazıldıktan sonra kodlarken beş şey somutlaştı; ikisi tasarımı 
   kelime sınırı oluşmuyor. Her zaman aşımı kendi satırını açardı, yani gruplamanın en çok gerektiği
   yerde çalışmıyordu. Son sınır kaldırıldı (`\b\d{4,}`).
 
+## 6c. Denetim ve alışkanlık (30.07)
+
+Arka uç bittikten sonra "gerçekten kullanılıyor mu" diye ölçüldü. Cevap yarım çıktı ve üç şey düzeltildi.
+
+**Ölçüm.** Uygulama/servis katmanında 100 `catch` var; **63'ü iz bırakıyor** ve neredeyse hepsi
+`lib/error.ts` funnel'ı sayesinde — tek bağlantı altmış çağrı noktasını bedava kapattı. Kalan 37'nin
+çoğunun gerekçesi zaten yazılıydı (tarayıcı deposu, beklenen hâller); **dört tanesi gerçek boşluktu**
+ve kapatıldı: sipariş maili, talep maili (ikisinde de dönen `{status:'error'}` nesnesini okuyan
+yoktu — gitmeyen mail izsiz kalıyordu), `order.create`'in telafi silmesi (düşerse kalemsiz sipariş
+kalıyordu ve kimse bilmiyordu) ve sağlık işinin uygulama metrikleri.
+
+**Kural lint'e bağlandı.** `no-console` `warn`+allowlist'ti — yani `console.warn`/`console.error`
+serbestti ve 17 çıplak çağrı tam bu boşluktan birikmişti. Artık `error`; muafiyetler kök
+`eslint.config.js`'te **tek tek** yazılı (istemci hata sınırları, `payment-element`,
+`instrumentation.ts`, `scripts/`). Açık uçlu bir muafiyet kuralı bir yıl içinde geri alırdı.
+
+**Kural `CLAUDE.md`'ye yazıldı** — dört madde, her oturumda yüklenen tek dosyada. Öncesinde yalnız
+doküman haritasında bir işaret vardı; yani ajanın bu dosyayı **açması** gerekiyordu. Bir kural,
+okunması ihtimaline bırakılamaz.
+
+**Fail-open ölçüm düzeltildi (bu turun en ağır bulgusu).** `df` düşünce disk sıfıra, `pm2`
+okunamayınca boş diziye düşüyordu; ikisi de eşiklerden `ok` çıkarıyordu — yani **bozuk bir ölçüm
+sağlıklı bir sistem gibi okunuyordu**. Üstelik bu davranışı doğrulayan bir test yazılmıştı, yani hata
+sertifikalanmıştı. Artık ikisi de `null` dönüyor ve **ölçüm boşluğu kendi başına `warn` üretiyor**:
+"göremiyorum" ile "sorun yok" aynı şey değil, ve e-posta alarmı bilinçli olarak yokken (§4.1) bunu
+söyleyecek tek yer ekran.
+
+İlke genelleştirildi ve `CLAUDE.md`'ye girdi: **ölçülemeyen değer sıfır değildir.** `certDaysLeft`
+için baştan uygulanmıştı, diske ve süreçlere uygulanmamıştı — desen yarım kalınca en tehlikeli yerde
+boşluk bırakıyor.
+
 ## 7. Kararlar özeti
 
 1. Üç katman birlikte kurulur, kademeli değil (kullanıcı kararı 29.07): yalnız logger yazmak, hatayı

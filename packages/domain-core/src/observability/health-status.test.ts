@@ -108,8 +108,31 @@ describe('healthStatusOf', () => {
       expect(healthStatusOf(withSystem({ swapTotalMb: 0, swapUsedMb: 0 }))).toBe('ok');
     });
 
-    it('PM2 okunamadıysa (boş liste) süreç arızası varsayılmaz', () => {
+    it('süreç LİSTESİ boşsa (hiç süreç yok) arıza varsayılmaz', () => {
       expect(healthStatusOf({ ...healthy, processes: { pm2: [] } })).toBe('ok');
+    });
+  });
+
+  /**
+   * **ÖLÇÜM BOŞLUĞU kendi başına uyarıdır** — 30.07 denetiminin bulgusu.
+   *
+   * İlk yazımda `df` düşünce disk sıfıra, `pm2` okunamayınca boş diziye düşüyordu; ikisi de
+   * eşiklerden `ok` çıkarıyordu. Yani **bozuk bir ölçüm sağlıklı bir sistem gibi okunuyordu** ve
+   * bunu doğrulayan bir test bile yazılmıştı (hatayı sertifikalamak). E-posta alarmı bilinçli
+   * olarak yokken ekranın "göremiyorum" demesi şart: "göremiyorum" ile "sorun yok" aynı şey değil.
+   */
+  describe('ölçülemeyen metrik sağlıklı SAYILMAZ', () => {
+    it('disk ölçülemediyse uyarı', () => {
+      expect(healthStatusOf(withSystem({ diskUsedPct: null, diskTotalGb: null, diskUsedGb: null }))).toBe('warn');
+    });
+
+    it('süreç listesi OKUNAMADIYSA (null) uyarı — boş listeyle karıştırılmaz', () => {
+      expect(healthStatusOf({ ...healthy, processes: { pm2: null } })).toBe('warn');
+    });
+
+    it('ama gerçek bir arıza varken hüküm yine crit — boşluk kritiği gölgelemez', () => {
+      const metrics = { ...withSystem({ diskUsedPct: null }), services: { ...healthy.services, webUp: false } };
+      expect(healthStatusOf(metrics)).toBe('crit');
     });
   });
 

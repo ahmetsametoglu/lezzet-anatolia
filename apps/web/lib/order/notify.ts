@@ -1,6 +1,7 @@
 import { OrderStatusLogService, serviceDb } from '@lezzet/database';
 import type { NotifyEventName, NotifyResult } from '@lezzet/notify';
 import type { OrderStatus } from '@lezzet/types';
+import { captureError, SOURCES } from '@lezzet/observability';
 import { notifier } from '../notify';
 import { buildOrderNotification } from './notification-data';
 
@@ -70,6 +71,10 @@ async function notifyOrderEvent(orderId: string, event: NotifyEventName, opts: {
   try {
     return await notifier.send(event, bundle.recipient, bundle.data);
   } catch (error) {
+    // Sonuç nesnesi çağırana dönüyor ama ÇOĞU ÇAĞIRAN ONU OKUMUYOR (geçiş kapısı yalnız fırlatılan
+    // hatayı yakalıyordu) — yani gitmeyen mail hiçbir yerde görünmüyordu. Kayıt burada düşülür.
+    // `warning`: sipariş sağlam, eksik olan haber; ama izlenmeli.
+    void captureError(error, { source: SOURCES.webAction, level: 'warning', context: { orderId, event } });
     return [{ status: 'error', channel: 'email', error: error instanceof Error ? error.message : String(error) }];
   }
 }

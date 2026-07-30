@@ -49,7 +49,7 @@ describe('kayıt ve okuma', () => {
     // İÇİNE girmemeli, yoksa `memTotalMb` gibi anahtarlar `mem_total_mb` olarak geri gelirdi.
     expect(row.metrics.system.loadAvg).toEqual([0.7, 0.6, 0.5]);
     expect(row.metrics.system.diskUsedGb).toBe(11.5);
-    expect(row.metrics.processes.pm2[0]?.restarts).toBe(2);
+    expect(row.metrics.processes.pm2?.[0]?.restarts).toBe(2);
     expect(row.metrics.services.certDaysLeft).toBe(42);
   });
 

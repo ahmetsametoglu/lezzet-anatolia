@@ -22,9 +22,14 @@ export const HealthSystemSchema = z.object({
   memAvailableMb: z.number().nonnegative(),
   swapTotalMb: z.number().nonnegative(),
   swapUsedMb: z.number().nonnegative(),
-  diskTotalGb: z.number().nonnegative(),
-  diskUsedGb: z.number().nonnegative(),
-  diskUsedPct: z.number().nonnegative(),
+  /**
+   * Disk. **`null` = ÖLÇÜLEMEDİ** (`df` düştü), sıfır değil — ve ayrım kritik: sıfır "disk boş"
+   * demektir ve eşiklerden `ok` çıkar, yani **bozuk bir ölçüm sağlıklı bir disk gibi okunur**.
+   * İlk yazımda bu alanlar sıfıra düşüyordu ve hata tam böyle doğmuştu (30.07 denetimi).
+   */
+  diskTotalGb: z.number().nonnegative().nullable(),
+  diskUsedGb: z.number().nonnegative().nullable(),
+  diskUsedPct: z.number().nonnegative().nullable(),
   uptimeSec: z.number().nonnegative(),
 });
 
@@ -43,7 +48,12 @@ export const HealthProcessSchema = z.object({
 });
 
 export const HealthProcessesSchema = z.object({
-  pm2: z.array(HealthProcessSchema),
+  /**
+   * **`null` = PM2 OKUNAMADI**, boş dizi değil. Boş dizi "hiçbir süreç düşmemiş" diye okunur ve
+   * hüküm `ok` çıkar — oysa süreç yöneticisine ulaşılamıyorsa hiçbir şey bilinmiyordur. Aynı
+   * fail-open hatası (30.07 denetimi).
+   */
+  pm2: z.array(HealthProcessSchema).nullable(),
 });
 
 export const HealthServicesSchema = z.object({

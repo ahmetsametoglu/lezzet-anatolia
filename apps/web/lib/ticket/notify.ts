@@ -4,6 +4,7 @@ import type { NotifyResult } from '@lezzet/notify';
 import type { PreferredLanguage, Ticket, TicketStatus } from '@lezzet/types';
 import { localizedUrl, notifier } from '../notify';
 import { formatShortDate } from '../storefront/format';
+import { captureError, SOURCES } from '@lezzet/observability';
 
 /**
  * Talep bildirimlerinin tetiklendiği yer (16.4) — şablonlar 14.7'de.
@@ -63,6 +64,9 @@ async function send(ticket: Ticket, event: 'ticket_replied' | 'ticket_status_cha
     if (!bundle) return [{ status: 'skipped', channel: 'email', reason: 'customer_not_found' } as NotifyResult];
     return await notifier.send(event, bundle.recipient, bundle.data);
   } catch (error) {
+    // Aynı gerekçe `lib/order/notify.ts`'te: dönen sonuç nesnesini okuyan yok, dolayısıyla gitmeyen
+    // mail izsiz kalıyordu. Talep sağlam, eksik olan haber → `warning`.
+    void captureError(error, { source: SOURCES.webAction, level: 'warning', context: { ticketId: ticket.id, event } });
     return [{ status: 'error', channel: 'email', error: error instanceof Error ? error.message : String(error) } as NotifyResult];
   }
 }

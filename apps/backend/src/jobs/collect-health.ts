@@ -26,6 +26,8 @@ export const COLLECT_HEALTH = 'collect_health';
 const exec = promisify(execFile);
 
 const WEB_URL = `http://127.0.0.1:${process.env.WEB_HEALTH_PORT ?? 3000}/`;
+/** Ölçülemeyen diskin tek gösterimi — üç alan birlikte bilinmez olur, yarısı sayı yarısı boş kalmaz. */
+const UNMEASURED_DISK = { diskTotalGb: null, diskUsedGb: null, diskUsedPct: null } as const;
 const HOUR_MS = 60 * 60 * 1000;
 const MB = 1024 * 1024;
 
@@ -64,17 +66,23 @@ async function readDisk(): Promise<Pick<SystemHealthMetrics['system'], 'diskTota
     const { stdout } = await exec('df', ['-P', '-k', '/']);
     const parts = (stdout.trim().split('\n').pop() ?? '').split(/\s+/);
     const toGb = (kb: string | undefined) => Math.round((Number(kb ?? 0) / 1024 / 1024) * 10) / 10;
-    return {
-      diskTotalGb: toGb(parts[1]),
-      diskUsedGb: toGb(parts[2]),
-      diskUsedPct: Number((parts[4] ?? '').replace('%', '')) || 0,
-    };
-  } catch {
-    return { diskTotalGb: 0, diskUsedGb: 0, diskUsedPct: 0 };
+    const pct = Number((parts[4] ?? '').replace('%', ''));
+    // Yüzde ayrıştırılamadıysa da ÖLÇÜM YOKTUR: `|| 0` yazmak "disk boş" demek olurdu.
+    if (!Number.isFinite(pct)) return UNMEASURED_DISK;
+    return { diskTotalGb: toGb(parts[1]), diskUsedGb: toGb(parts[2]), diskUsedPct: pct };
+  } catch (error) {
+    // **SIFIR DÖNMEZ, `null` DÖNER.** Sıfır "disk boş" diye okunur, eşiklerden `ok` çıkar ve bozuk
+    // bir ölçüm sağlıklı bir disk gibi görünür — ilk yazımdaki hata buydu (30.07 denetimi).
+    logger.warn({ context: 'health/disk', err: error instanceof Error ? error.message : String(error) }, 'disk ölçülemedi');
+    return UNMEASURED_DISK;
   }
 }
 
-/** PM2 süreçleri. Boş dizi = PM2 okunamadı; motor bunu "arıza" saymaz (varsa süreç durumuna bakar). */
+/**
+ * PM2 süreçleri. **Okunamazsa `null`, boş dizi DEĞİL:** boş dizi "hiçbir süreç düşmemiş" diye
+ * okunur ve hüküm `ok` çıkar. Motor `null`'ı arıza saymaz ama sessiz de geçmez — ölçüm boşluğu
+ * uyarı üretir (`healthStatusOf`).
+ */
 async function readProcesses(): Promise<SystemHealthMetrics['processes']> {
   try {
     const { stdout } = await exec('pm2', ['jlist'], { maxBuffer: 4 * MB });
@@ -92,8 +100,9 @@ async function readProcesses(): Promise<SystemHealthMetrics['processes']> {
         cpuPct: p.monit?.cpu ?? 0,
       })),
     };
-  } catch {
-    return { pm2: [] };
+  } catch (error) {
+    logger.warn({ context: 'health/pm2', err: error instanceof Error ? error.message : String(error) }, 'süreç listesi okunamadı');
+    return { pm2: null };
   }
 }
 
@@ -147,17 +156,22 @@ async function certDaysLeft(): Promise<number | null> {
 async function readAppMetrics(): Promise<SystemHealthMetrics['app']> {
   const db = serviceDb();
   const since = new Date(Date.now() - HOUR_MS).toISOString();
-  const safe = async (read: () => Promise<number>): Promise<number> => {
+  const safe = async (label: string, read: () => Promise<number>): Promise<number> => {
     try {
       return await read();
-    } catch {
+    } catch (error) {
+      // Sıfır dönmek "hiç hata yok" diye okunur — disk/pm2 ile aynı fail-open tuzağı. Alan
+      // şemada sayı olduğu için `null` veremiyoruz (ekran bu iki sayıyı her zaman gösteriyor);
+      // en azından ölçümün DÜŞTÜĞÜ görünür olsun. Pratikte nadirdir: bu okumalar düşüyorsa
+      // görüntünün kendisi de yazılamaz.
+      logger.warn({ context: 'health/app', metric: label, err: error instanceof Error ? error.message : String(error) }, 'uygulama metriği okunamadı');
       return 0;
     }
   };
 
   const [errorLogsLastHour, failedJobsLastHour] = await Promise.all([
-    safe(() => new ErrorLogService(db).countSince(since)),
-    safe(() => new JobRunService(db).countFailedSince(since)),
+    safe('errorLogsLastHour', () => new ErrorLogService(db).countSince(since)),
+    safe('failedJobsLastHour', () => new JobRunService(db).countFailedSince(since)),
   ]);
   return { errorLogsLastHour, failedJobsLastHour };
 }
