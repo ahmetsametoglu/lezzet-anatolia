@@ -50,3 +50,34 @@ export function customerOrderStatus(status: OrderStatus): CustomerOrderStatus | 
 export function isActiveForCustomer(status: CustomerOrderStatus): boolean {
   return status === 'received' || status === 'preparing' || status === 'on_the_way';
 }
+
+/**
+ * **`fulfilled_qty` anlamlı mı** — yani o sayı bir ÖLÇÜM mü, yoksa henüz yazılmamış varsayılan mı?
+ *
+ * Kolonun varsayılanı `0` ve hazırlık onaylanana kadar (06.5, `setFulfilled`) öyle kalır. Yani yeni
+ * onaylanmış bir siparişte `fulfilled_qty = 0` **"hiçbiri gönderilmedi" DEMEZ**, "daha bakılmadı"
+ * der. İkisini karıştıran ekran, müşteriye siparişinin boş gittiğini söyler ve tutarları eksiye
+ * düşürür — bu gerçekten yaşandı (30.07, kullanıcı ekran görüntüsüyle yakaladı).
+ *
+ * CLAUDE.md §1'in kuralı: *ölçülemeyen değer sıfır değildir.* Bu fonksiyon o kuralın sipariş
+ * tarafındaki karşılığı: ölçüm var mı yok mu sorusunu TEK yerde cevaplar, okuyan taraf da
+ * yoksa `qty`ye düşer.
+ *
+ * Eşik `ready`: hazırlık onayı tam olarak orada yazılıyor. `preparing` henüz mutfakta demek —
+ * kalemler sayılmamıştır.
+ */
+export function isFulfilmentKnown(status: OrderStatus): boolean {
+  switch (status) {
+    case 'draft':
+    case 'confirmed':
+    case 'preparing':
+    case 'cancelled':
+      return false;
+    case 'ready':
+    case 'out_for_delivery':
+    case 'delivered':
+    case 'completed':
+    case 'returned':
+      return true;
+  }
+}

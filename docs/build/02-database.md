@@ -62,6 +62,11 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
 - [ ] (02.8) **`order_item_batch` junction servisi (kural borcu — STACK §6):** `OrderService` içindeki üç ham okuma (`listBatches`, kalem maliyetleri, `recallByStocks`) kendi `BaseDbService` alt sınıfına taşınır
   - **Neden bir borç:** kural "junction tablosu = kendi alt sınıfı" diyor; bugün kalem–parti kaydı sipariş servisinin içinden ham `this.supabase` ile okunuyor. Üçü BİRLİKTE taşınır — yalnız birini ayırmak aynı tabloyu iki eve bölerdi, ki bu bugünkü hâlden kötüdür.
   - **Acelesi yok, sırası var:** okumalar çalışıyor ve testli; borç davranış değil biçim borcudur. Kalem–parti kaydına dokunan bir sonraki iş (geri çağırma ekranı ya da kâr raporu) bunu ödemeden başlamasın.
+- [ ] (02.9) **Para dönüşümü sınırda yapılsın (kural borcu — STACK §8):** servisler `dbNumeric` para kolonlarını **cent** olarak döndürsün (`…Cents` adıyla); çağrı yerlerindeki elle `toCents` çağrıları kalksın. `touches: packages/types/src/schemas/**, packages/database/src/**`
+  - *Bitti:* bir para alanı okuyan hiçbir çağrı yeri dönüşüm yapmıyor; alan adları `…Cents` ile bitiyor; mevcut testler geçiyor
+  - **Neden borç, ve neden "biçim" DEĞİL (30.07, gerçek hatayla bulundu):** STACK §8 *"DB'de `numeric`, sınırda (servis katmanında) cent'e çevrilir"* diyor. Kod bunu yapmıyor — servisler euroyu olduğu gibi döndürüyor, dönüşüm **her çağrı yerine** dağılmış (bugün ~20 nokta). Sonuç: müşteri sipariş detayı ekranı 74,17 €'yu **0,74 €** gösterdi. Kullanıcı ekran görüntüsüyle yakaladı; ben iki dosyayı ortak helper'a çektim ama **kök neden duruyor.**
+  - **Tip sistemi bunu yakalayamaz:** euro da cent de `number`. Bu yüzden ya sınır gerçekten servis katmanına çekilir (bu görev) ya da tek savunma adlandırma kalır. Branded type (`type Cents = number & {…}`) de düşünülebilir — o zaman derleyici yakalar; kararı bu görev verecek.
+  - **Ölçü:** yalnız PARA kolonları. Yüzde/oran çeviren `Math.round(x * 100)` çağrıları (geri bildirim skoru, sistem sağlığı, görsel oranı) bu işin kapsamı DIŞINDA — onlar cent değil.
 
 ## Netleşecekler
 

@@ -61,7 +61,7 @@ export function OrdersDesktop({
                 order.status === 'cancelled' ? 'text-muted' : 'text-ink',
               ].join(' ')}
             >
-              {formatPrice(order.total, locale)}
+              {formatPrice(order.totalCents, locale)}
             </span>
 
             {/* İptal edilmiş sipariş de tekrar edilebilir (tasarımın etkileşim sözleşmesi): müşteri

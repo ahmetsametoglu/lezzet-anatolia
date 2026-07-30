@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { OrderStatusEnum } from '@lezzet/types';
-import { customerOrderStatus, isActiveForCustomer } from './customer-status';
+import { customerOrderStatus, isActiveForCustomer, isFulfilmentKnown } from './customer-status';
 
 describe('customerOrderStatus', () => {
   it('iç durumların HEPSİ bir karara bağlanır — yeni durum eklenince burası patlar', () => {
@@ -48,5 +48,33 @@ describe('isActiveForCustomer', () => {
     expect(isActiveForCustomer('cancelled')).toBe(false);
     // İadede topu biz taşıyoruz; yeşil çerçeve "yolda" beklentisi yaratırdı.
     expect(isActiveForCustomer('returning')).toBe(false);
+  });
+});
+
+describe('isFulfilmentKnown', () => {
+  it('hazırlık onayından ÖNCE ölçüm yoktur — `fulfilled_qty=0` "gönderilmedi" demez', () => {
+    // 30.07'de yaşanan hata: yeni onaylanmış siparişte 0 okundu, "0 gönderildi" yazıldı ve
+    // tutarlar eksiye düştü. CLAUDE.md §1: ölçülemeyen değer sıfır değildir.
+    expect(isFulfilmentKnown('confirmed')).toBe(false);
+    expect(isFulfilmentKnown('preparing')).toBe(false);
+    expect(isFulfilmentKnown('draft')).toBe(false);
+  });
+
+  it('iptal edilmiş siparişte de ölçüm yoktur — hiç hazırlanmamış olabilir', () => {
+    expect(isFulfilmentKnown('cancelled')).toBe(false);
+  });
+
+  it('hazırlık onaylandıktan sonra sayı gerçek bir ölçümdür', () => {
+    expect(isFulfilmentKnown('ready')).toBe(true);
+    expect(isFulfilmentKnown('out_for_delivery')).toBe(true);
+    expect(isFulfilmentKnown('delivered')).toBe(true);
+    expect(isFulfilmentKnown('completed')).toBe(true);
+    expect(isFulfilmentKnown('returned')).toBe(true);
+  });
+
+  it('iç durumların HEPSİ bir karara bağlanır', () => {
+    for (const status of OrderStatusEnum.options) {
+      expect(typeof isFulfilmentKnown(status)).toBe('boolean');
+    }
   });
 });

@@ -3,6 +3,7 @@ import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { OrderService, ProductService, ProductVariantService, UserProfileService, serviceDb } from '@lezzet/database';
 import { RATIO_SQUARE, resolveLocalizedText } from '@lezzet/types';
+import { toCents } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { detectDevice } from '@/lib/device';
 import { getSessionUser } from '@/lib/guard';
@@ -100,7 +101,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
   const snapshot = order.addressSnapshot as { label?: string; line1?: string; line2?: string; postalCode?: string; city?: string } | null;
 
   const compact = device === 'mobile';
-  const total = formatPrice(Math.round(order.total * 100), locale as Locale);
+  const total = formatPrice(toCents(order.total), locale as Locale);
   const day = order.deliveryDate ? formatDeliveryDate(order.deliveryDate, locale as Locale) : null;
   const onRoute = order.deliveryType === 'route';
   const placedTime = new Date(order.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
@@ -323,7 +324,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
                       </span>
                     </div>
                     <span className="flex-none font-sans text-body-sm font-bold text-ink">
-                      {formatPrice(Math.round(item.unitPrice * 100) * item.qty, locale as Locale)}
+                      {formatPrice(toCents(item.unitPrice) * item.qty, locale as Locale)}
                     </span>
                   </li>
                 );
@@ -336,13 +337,13 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
                   // Kod tasarımda birebir yazılı ("İndirim — HOSGELDIN10"); kodsuz indirimde sebep
                   // türden gelir (bkz. yukarıdaki `discountLabel`).
                   label={discountLabel}
-                  value={`−${formatPrice(Math.round(order.discountAmount * 100), locale as Locale)}`}
+                  value={`−${formatPrice(toCents(order.discountAmount), locale as Locale)}`}
                   tone="olive"
                 />
               )}
               <SummaryRow
                 label={t.summary.delivery}
-                value={order.shippingFee > 0 ? formatPrice(Math.round(order.shippingFee * 100), locale as Locale) : t.summary.free}
+                value={order.shippingFee > 0 ? formatPrice(toCents(order.shippingFee), locale as Locale) : t.summary.free}
                 tone={order.shippingFee > 0 ? 'ink' : 'olive'}
               />
               <div className="flex items-baseline justify-between gap-3 border-t border-sand-200 pt-2.5">

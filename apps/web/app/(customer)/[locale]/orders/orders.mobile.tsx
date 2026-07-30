@@ -62,7 +62,7 @@ export function OrdersMobile({
             </div>
 
             <span className="font-sans text-micro leading-relaxed text-muted">
-              {summaryOf(order, t, locale, true)} · {formatPrice(order.total, locale)}
+              {summaryOf(order, t, locale, true)} · {formatPrice(order.totalCents, locale)}
             </span>
 
             <div className="flex gap-2">

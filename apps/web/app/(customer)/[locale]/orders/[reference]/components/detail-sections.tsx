@@ -82,27 +82,31 @@ function ItemRow({
   line: CustomerOrderDetailLine;
   online: boolean;
 }) {
-  const short = line.fulfilledQty < line.qty;
   return (
     <div className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="font-sans text-body-sm font-bold leading-tight text-ink">{line.name || '—'}</span>
         <span className="font-sans text-micro leading-relaxed text-muted">
-          {[line.unit, t.qty.replace('{qty}', String(line.fulfilledQty)), formatPrice(line.unitPrice, locale)]
+          {/* Adet PARANIN dayandığı miktardır: hazırlık onaylanmadan önce sipariş edilen, sonra
+              gerçekten gönderilen. Kapı bunu tek yerde karara bağlıyor (`billedQty`). */}
+          {[line.unit, t.qty.replace('{qty}', String(line.billedQty)), formatPrice(line.unitPriceCents, locale)]
             .filter(Boolean)
             .join(' · ')}
         </span>
         {/* Paketten gelen kalem işaretlenir — müşteri neyi neden aldığını hatırlasın. */}
         {line.bundleId && <span className="font-sans text-micro font-semibold text-olive">{t.bundleGroup}</span>}
-        {short && (
+        {/* Eksik karşılama uyarısı ekranın kendi hesabı DEĞİL: "ölçüm var mı" sorusunu kapı
+            cevaplıyor. İlk sürümde burada `fulfilledQty < qty` yazıyordu ve henüz hazırlanmamış
+            her siparişte uyarı basıyordu. */}
+        {line.shortfall && (
           <span className="mt-1 rounded-[10px] bg-honey-bg px-2.5 py-1.5 font-sans text-micro leading-relaxed text-honey">
-            {t.shortfall.replace('{ordered}', String(line.qty)).replace('{fulfilled}', String(line.fulfilledQty))} ·{' '}
+            {t.shortfall.replace('{ordered}', String(line.qty)).replace('{fulfilled}', String(line.billedQty))} ·{' '}
             {online ? t.shortfallNoteOnline : t.shortfallNoteDoor}
           </span>
         )}
       </div>
       <span className="flex-none font-sans text-body-sm font-bold leading-tight text-ink">
-        {formatPrice(line.lineTotal, locale)}
+        {formatPrice(line.lineTotalCents, locale)}
       </span>
     </div>
   );
@@ -112,19 +116,19 @@ function ItemRow({
 export function SummaryCard({ t, locale, order }: Pick<DetailViewProps, 't' | 'locale' | 'order'>) {
   return (
     <Card title={t.summaryTitle}>
-      <Row label={t.subtotal} value={formatPrice(order.subtotal, locale)} />
-      {order.discountAmount > 0 && (
+      <Row label={t.subtotal} value={formatPrice(order.subtotalCents, locale)} />
+      {order.discountCents > 0 && (
         <Row
           label={order.discountLabel ? `${t.discount} — ${order.discountLabel}` : t.discount}
-          value={`−${formatPrice(order.discountAmount, locale)}`}
+          value={`−${formatPrice(order.discountCents, locale)}`}
         />
       )}
       <Row
         label={t.shipping}
-        value={order.shippingFee > 0 ? formatPrice(order.shippingFee, locale) : t.freeShipping}
+        value={order.shippingFeeCents > 0 ? formatPrice(order.shippingFeeCents, locale) : t.freeShipping}
       />
       <div className="mt-1 border-t border-sand-200 pt-3">
-        <Row label={t.total} value={formatPrice(order.total, locale)} strong />
+        <Row label={t.total} value={formatPrice(order.totalCents, locale)} strong />
       </div>
       <div className="mt-1 flex flex-col gap-1 border-t border-sand-200 pt-3">
         <Row
