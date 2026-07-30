@@ -232,6 +232,29 @@ revoke execute on function public.transition_order_status(uuid, order_status, or
 -- `UserProfileService.search`'te duruyor ve liste de sayaç da AYNI sonucu kullanmalı. Bu yüzden
 -- fonksiyon müşteri kimliklerini hazır alır; kendi başına `user_profiles`'a join atıp ölçütü
 -- kopyalasaydı sayaç ile listenin bir gün farklı sayı söylemesi kaçınılmazdı.
+-- ── Müşterinin ciro ve sipariş sayısı (09.9) ─────────────────────────────────
+-- AYRI bir fonksiyon ve bu zorunlu: `order_counts`'un müşteri süzgeci arama grubunun İÇİNDE durur
+-- (`p_reference is null or … or customer_id = any(...)`) çünkü sipariş ekranında arama iki eksenlidir
+-- ve "referans VEYA müşteri" demek gerekir. Terim olmadan çağrıldığında o grup daima doğru olur, yani
+-- müşteri süzgeci hiç uygulanmaz — ölçüldü (30.07): bir müşteri için 28 sipariş / 1777 € döndü, gerçek
+-- 10 sipariş. Müşteri kartı o sayıyı ciro diye gösterirse vade limiti işletmenin tamamının cirosuna
+-- göre açılır. Süzgeci AND'lemek sipariş ekranının aramasını bozardı; bu yüzden soru ayrı sorulur.
+--
+-- İPTAL EDİLEN sipariş ciroya GİRMEZ (`order_counts`'un `base`'i yalnız `draft`'ı dışlar): vazgeçilen
+-- bir sipariş müşterinin bize kazandırdığı para değildir. İade (`returned`) girer — o satış oldu ve
+-- geri döndü, ciro tarihi onu içerir.
+create or replace function public.customer_order_totals(p_customer_id uuid)
+returns table (order_count int, revenue numeric)
+language sql
+stable
+as $$
+  select count(*)::int, coalesce(sum(o.total), 0)
+    from public.order o
+   where o.customer_id = p_customer_id
+     and o.status <> 'draft'
+     and o.status <> 'cancelled';
+$$;
+
 create or replace function public.order_counts(
   p_reference text default null,
   p_customer_ids uuid[] default null,

@@ -5,6 +5,7 @@ import {
   UserProfileSchema,
   UserProfileUpdateSchema,
   DEFAULT_PAGE_SIZE,
+  type CustomerType,
   type KeysetCursor,
   type Page,
   type UserProfile,
@@ -13,6 +14,30 @@ import {
   type UserRole,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+import { ilikeContains, ilikeTerm } from '../utils/filter-term';
+
+/**
+ * Serbest aramanın baktığı alanlar — liste (`list`) ve seçici (`search`) AYNI kümeye bakar.
+ * Ayrışsalardı operatör seçicide bulduğu müşteriyi listede bulamazdı; aynı terim, aynı sonuç kümesi.
+ * Telefon burada çünkü KİMLİK anahtarıdır: WhatsApp'tan gelen müşteri telefonla bulunur.
+ */
+const PROFILE_SEARCH_FIELDS = ['name', 'phone', 'email'] as const;
+
+/**
+ * Müşteri listesinin kapsamı: rol kümesinde `customer` olanlar.
+ *
+ * `user_profiles` müşteriyi VE personeli birlikte taşıyor (tek tablo, rol ayırır). Süzgeç olmadan
+ * müşteri ekranı depocuyu, kuryeyi ve patronu da listeler — hem yanlış hem de "312 müşteri" sayacını
+ * şişirir. `contains` (içerir) gerekiyor, eşitlik değil: personelin rolü `['staff','admin']` gibi
+ * çoklu olabilir ve eşitlik onları düşürürdü (bkz. `containsFilters`).
+ */
+/**
+ * Hiçbir satırın taşımayacağı kimlik — "eşleşme yok" süzgeci. Boş bir sayfa döndürmek için ayrı bir
+ * kod yolu açmak yerine sorgu doğal yoluyla boş döner (imleç mantığı da bozulmaz).
+ */
+const IMPOSSIBLE_ID = '00000000-0000-0000-0000-000000000000';
+
+const CUSTOMERS_ONLY = { containsFilters: [{ field: 'roles', values: ['customer'] as const }] } as const;
 
 /**
  * Kullanıcı profili erişimi (kimlik) — TEK tablo `user_profiles`; müşteri + personel, ROL ayırır.
@@ -77,18 +102,64 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
     return this.getAll({}, { isNotNullFields: ['discount_percent'], orderBy: 'createdAt', orderDirection: 'desc' });
   }
 
-  /** Profil listesi (admin) — en yeni önce, sonsuz kaydırma. */
-  async list(opts: { isDraft?: boolean; b2bPending?: boolean; cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<UserProfile>> {
+  /**
+   * Profil listesi (admin) — en yeni önce, sonsuz kaydırma.
+   *
+   * **Süzme ve arama SUNUCUDA** (09.9). Müşteri kümesi veriyle büyür, yani client'ta süzülemez:
+   * yüklenmiş sayfada arayan bir kutu, ikinci sayfada duran müşteriyi "yok" gösterirdi. `search()`
+   * bu işi YAPMAZ ve yapmamalı — o bir seçicinin bulma aracıdır, tavanlıdır ve tavanı bilinçlidir.
+   * Ekranın listesi ile seçicinin havuzu farklı sorular; ortak olan yalnız süzgeç dizesidir
+   * (`ilikeContains`), o da tek yerde.
+   */
+  async list(
+    opts: {
+      /** Ad · telefon · e-posta üzerinde harf-ayrımsız arama. Telefon KİMLİK anahtarıdır (WhatsApp). */
+      query?: string;
+      type?: CustomerType;
+      isDraft?: boolean;
+      b2bPending?: boolean;
+      /** Vade yetkisi açık olanlar (`credit_enabled`) — "vadeli müşteriler" daraltması. */
+      creditEnabled?: boolean;
+      cursor?: KeysetCursor;
+      limit?: number;
+    } = {},
+  ): Promise<Page<UserProfile>> {
     const filters: Record<string, unknown> = {};
+    if (opts.type) filters.type = opts.type;
     if (opts.isDraft !== undefined) filters.isDraft = opts.isDraft;
+    if (opts.creditEnabled !== undefined) filters.creditEnabled = opts.creditEnabled;
     if (opts.b2bPending) filters.b2bApproved = false;
 
+    // Terim VERİLDİ ama kaçıştan sonra boşaldıysa (yalnız `"` `(` `)` `,` yazılmış) liste
+    // SÜZGEÇSİZ dönmemeli: operatör aradığını bulduğunu sanır, oysa 312 satırın hepsi orada.
+    // Eşleşmesi imkânsız bir kimlikle süzülür — "sonuç yok" doğru cevaptır.
+    const term = ilikeTerm(opts.query);
+    const bosalanTerim = Boolean(opts.query?.trim()) && term === '';
+    if (bosalanTerim) filters.id = IMPOSSIBLE_ID;
+
     return this.getPage(filters, {
+      ...CUSTOMERS_ONLY,
       orderBy: 'createdAt',
       orderDirection: 'desc',
       keysetAfter: opts.cursor,
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+      // Tek `or` grubu: üç alandan biri tutarsa satır kalır. Ayrı süzgeç olarak yazılsalar
+      // AND'lenirdi ve hiçbir müşteri hem adında hem telefonunda terimi taşımadığı için liste
+      // her aramada boş dönerdi.
+      orFilters: term ? [PROFILE_SEARCH_FIELDS.map((f) => ilikeContains(f, term)).join(',')] : undefined,
     });
+  }
+
+  /**
+   * Müşteri ekranının başlık sayaçları — `head: true` ile satır TAŞINMADAN sayılır.
+   *
+   * Sayılar TÜM müşteri kümesine aittir, süzgeçli listeye değil: çip "3 taslak" derken kendi
+   * süzgecini saymamalı, yoksa "Taslak" çipine basan operatör sayının değişmesini bekler ve
+   * değişmeyince ekrana güvenmez. Aynı gerekçe sipariş ve ürün ekranlarında da yazılı.
+   */
+  async counts(): Promise<{ total: number; draft: number }> {
+    const [total, draft] = await Promise.all([this.count({}, CUSTOMERS_ONLY), this.count({ isDraft: true }, CUSTOMERS_ONLY)]);
+    return { total, draft };
   }
 
   /**
@@ -138,15 +209,12 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
    * daraltır, kaydırmaz.
    */
   async search(term: string, limit = 10): Promise<UserProfile[]> {
-    const q = term.trim();
-    if (!q) return [];
-    // PostgREST filtre dizesine gömülüyor: tırnak ayıklanır, ayraçlar boşluğa çevrilir ki
-    // virgül/parantez ayrıştırmayı bozmasın. `*` PostgREST'in ilike jokeri.
-    const safe = q.replace(/"/g, '').replace(/[(),]/g, ' ');
+    const safe = ilikeTerm(term);
+    if (!safe) return [];
     return this.getAll(
       {},
       {
-        orFilters: [`name.ilike."*${safe}*",phone.ilike."*${safe}*",email.ilike."*${safe}*"`],
+        orFilters: [PROFILE_SEARCH_FIELDS.map((f) => ilikeContains(f, safe)).join(',')],
         orderBy: 'name',
         limit,
       },

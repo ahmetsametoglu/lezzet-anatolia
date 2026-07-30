@@ -57,6 +57,21 @@ export class DiscountService extends BaseDbService<Discount, DiscountInsert, Dis
     return discount ? { discount, codeId: match.id, code: match.code } : null;
   }
 
+  /**
+   * Bir müşteriye ÖZEL kupon kuralları (09.9) — puan çevriminden doğanlar dahil.
+   *
+   * `listCandidates`'ten farkı kapsam: o "bu müşteriye uygulanabilir olanlar"ı verir (herkese açık
+   * kampanyalar dahil), bu yalnız SAHİBİ o müşteri olanları. Müşteri kartında herkese açık bir
+   * kampanyayı "bu kişinin kuponu" gibi göstermek yanlış olurdu.
+   *
+   * BEKLEYEN(17.5): sayfalanmıyor. Kişisel kupon kümesi operatörün eliyle DEĞİL puan çevrimiyle büyür
+   * (her çevrim yeni bir kural doğurur), yani veriyle büyüyen bir küme — CLAUDE.md §1'e göre keyset
+   * ister. Bugün müşteri başına birkaç satır; puanı kupona çevirme ekranı açılınca sayfalanacak.
+   */
+  listByCustomer(customerId: string): Promise<Discount[]> {
+    return this.getAll({ customerId }, { orderBy: 'createdAt', orderDirection: 'desc' });
+  }
+
   /** Aktiflik anahtarı — süresi dolmuş/kullanımı bitmiş kupon SİLİNMEZ, kapatılır (geçmişi kalsın). */
   setActive(id: string, isActive: boolean): Promise<Discount> {
     return this.update({ id, isActive });

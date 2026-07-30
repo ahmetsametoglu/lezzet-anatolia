@@ -157,6 +157,22 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   }
 
   /**
+   * ÇOK siparişin hareketleri tek turda — ödeme karnesi (09.9) "ne zaman ödedi" sorusunu buradan
+   * yanıtlıyor: siparişin tarihi ile tahsilatın `value_date`'i arasındaki gün sayısı.
+   *
+   * Sipariş başına ayrı `listByOrder` çağırmak N+1 olurdu ve karne elli siparişe bakıyor. Kimlikler
+   * öbeklenir: `in(...)` listesi URL'e gömülüyor (kalem okumasıyla aynı gerekçe).
+   */
+  async listByOrders(orderIds: readonly string[]): Promise<MoneyMovement[]> {
+    const BATCH_SIZE = 200;
+    const all: MoneyMovement[] = [];
+    for (let i = 0; i < orderIds.length; i += BATCH_SIZE) {
+      all.push(...(await this.getAll({ orderId: orderIds.slice(i, i + BATCH_SIZE) }, { orderBy: 'valueDate' })));
+    }
+    return all;
+  }
+
+  /**
    * **Sipariş tahsilatı / iadesi** (12.2) — hareket + siparişin `amount_*` cache'i tek transaction'da
    * (`record_order_movement`). Yön sebepten türer: tahsilat içeri, iade dışarı.
    *

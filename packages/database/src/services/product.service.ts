@@ -27,6 +27,7 @@ import {
   type ProductPriceRow,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+import { ilikeContains, ilikeTerm } from '../utils/filter-term';
 import { dbToApp } from '../utils/case-transformers';
 import { uniqueSlugForTable } from '../utils/slug';
 import { ProductVariantService } from './product-variant.service';
@@ -113,12 +114,11 @@ function buildProductQuery(f?: ProductFilters): { filters: Record<string, unknow
   if (f?.ids) filters.id = f.ids; // dizi → IN (base sorgu kurucusu çevirir)
   if (f?.status) filters.status = f.status; // tek kolon → düz eşitlik (eski ikili bayrak çevrimi kalktı)
 
-  const q = f?.query?.trim();
-  if (q) {
-    // PostgREST filtre dizesine gömülüyor: değeri çift tırnakla sar ve tırnağı ayıkla ki
-    // virgül/parantez ayrıştırmayı bozmasın. `*` PostgREST'in ilike joker karakteri.
-    const safe = q.replace(/"/g, '').replace(/[(),]/g, ' ');
-    orFilters.push(LOCALIZED_TEXT_KEYS.map((l) => `name->>${l}.ilike."*${safe}*"`).join(','));
+  // Terim kaçışı tek kaynakta (`ilikeTerm`). Arama ÜRÜN ADINDA ve üç dilin hepsinde: jsonb alanı
+  // dil dil açılır, biri tutarsa satır kalır.
+  const safe = ilikeTerm(f?.query);
+  if (safe) {
+    orFilters.push(LOCALIZED_TEXT_KEYS.map((l) => ilikeContains(`name->>${l}`, safe)).join(','));
   }
 
   // "Beyan eksik" ölçütü ÜRETİLMİŞ KOLONDA (0005 `is_incomplete`): süzgeç de sayaç da aynı gerçeği

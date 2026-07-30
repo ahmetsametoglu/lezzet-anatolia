@@ -19,6 +19,15 @@ interface FilterOptions {
    * bu yüzden dizi: arama grubu + keyset grubu aynı sorguda yaşayabilir (biri diğerini ezmez).
    */
   orFilters?: string[];
+  /**
+   * DİZİ kolonu İÇERİR süzgeci (`@>`) — "roles dizisi 'customer' içeriyor mu" gibi.
+   *
+   * Düz `filters` ile YAPILAMAZ: orada dizi değer `IN (…)` demek, yani "kolon bu değerlerden birine
+   * EŞİT". Dizi kolonunda eşitlik "tam olarak bu küme" anlamına gelir — `['customer']` süzgeci
+   * `['customer','admin']` olan personeli düşürürdü. İçerir ile eşitlik farkı bu tabloda kritik:
+   * `user_profiles` müşteriyi ve personeli birlikte taşıyor, ayıran şey rol kümesi.
+   */
+  containsFilters?: ReadonlyArray<{ field: string; values: readonly unknown[] }>;
 }
 interface GetAllOptions extends FilterOptions {
   orderBy?: string;
@@ -70,6 +79,7 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     for (const f of options.isNotNullFields ?? []) query = query.not(camelToSnake(f), 'is', null);
     for (const rf of options.rangeFilters ?? []) query = query[rf.operator](camelToSnake(rf.field), rf.value);
     for (const sf of options.searchFilters ?? []) query = query.ilike(camelToSnake(sf.field), `%${sf.query}%`);
+    for (const cf of options.containsFilters ?? []) query = query.contains(camelToSnake(cf.field), [...cf.values]);
     for (const group of options.orFilters ?? []) query = query.or(group);
     return query;
   }

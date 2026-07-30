@@ -1,4 +1,4 @@
-import { ORDER_STATUS_LABELS, OrderStatusEnum, type Channel, type DeliveryType, type OrderStatus, type PaymentStatus } from '@lezzet/types';
+import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, OrderStatusEnum, type Channel, type DeliveryType, type OrderStatus, type PaymentStatus } from '@lezzet/types';
 
 // Sipariş ekranının URL SÖZLEŞMESİ — fiyat/stok/ürün ekranlarının deseni. Sekme ve süzgeçler adreste
 // taşınır: yenilemede aynı görünüm açılır ve SUNUCU okuyabildiği için süzme sunucuda yapılır.
@@ -121,12 +121,10 @@ export const DELIVERY_LABEL: Record<(typeof DELIVERY_FILTERS)[number], string> =
 };
 
 export const PAYMENT_FILTERS = ['all', 'pending', 'partial', 'paid', 'refunded'] as const;
+/** Süzgeç etiketleri — durum adları TEK KAYNAKTAN (`PAYMENT_STATUS_LABELS`), burada yeniden yazılmaz. */
 export const PAYMENT_LABEL: Record<(typeof PAYMENT_FILTERS)[number], string> = {
   all: 'Her tahsilat',
-  pending: 'Bekliyor',
-  partial: 'Kısmi',
-  paid: 'Ödendi',
-  refunded: 'İade',
+  ...PAYMENT_STATUS_LABELS,
 };
 
 

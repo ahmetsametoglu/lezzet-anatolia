@@ -144,7 +144,17 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
 
   /** Kapanmamış talep sayısı — dashboard rozeti. */
   countOpen(): Promise<number> {
-    return this.count(undefined, { orFilters: ['status.eq.open,status.eq.in_progress'] });
+    return this.count(undefined, OPEN_TICKET_FILTER);
+  }
+
+  /**
+   * Müşterinin KAPANMAMIŞ talep sayısı (09.9) — SAYIM, sayfa uzunluğu değil.
+   *
+   * Sayfayı çekip satırları saymak, tam da sayının anlam kazandığı yerde (çok talep açmış müşteride)
+   * tavana takılıp yalan söylerdi.
+   */
+  countOpenByCustomer(customerId: string): Promise<number> {
+    return this.count({ customerId }, OPEN_TICKET_FILTER);
   }
 
   /**
@@ -157,6 +167,12 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
     return this.count({ customerId });
   }
 }
+
+/**
+ * "Kapanmamış talep" ölçütü — TEK yerde. İki sayaç (dashboard ve müşteri kartı) onu paylaşır; ayrı
+ * yazılsalardı biri `resolved`'ı bir gün açık sayardı.
+ */
+const OPEN_TICKET_FILTER: { orFilters: string[] } = { orFilters: ['status.eq.open,status.eq.in_progress'] };
 
 /** Kuyruk süzgeci — hepsi opsiyonel; verilmeyen süzmez (varsayılan odak: kapanmamışlar). */
 export interface TicketQueueFilter {

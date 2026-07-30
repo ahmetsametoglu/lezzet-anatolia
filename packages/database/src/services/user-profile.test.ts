@@ -87,6 +87,120 @@ describe('varsayılanlar ve işaretler', () => {
   });
 });
 
+/**
+ * Müşteri listesinin SUNUCU-TARAFLI arama ve daraltmaları (09.9).
+ *
+ * Süzgeç dizeleri PostgREST'e düz metin olarak gider: yanlışsa tip denetimi değil yalnız DB fark
+ * eder. Ve en sinsi hata sessizdir — üç arama alanı `or` yerine AND'lenirse liste HER aramada boş
+ * döner; kimse "müşteri yok" ile "sorgu yanlış" arasındaki farkı ekrandan göremez.
+ */
+describe('liste: sunucu-taraflı arama + daraltma (09.9)', () => {
+  const arananAd = `Zeytin Bistro ${stamp}`;
+  let arananId: string;
+  let vadeliId: string;
+
+  beforeAll(async () => {
+    const aranan = await profiles.insert({
+      name: arananAd,
+      phone: `+3363333${String(stamp).slice(-4)}`,
+      email: `bistro${stamp}@ornek.fr`,
+      type: 'company',
+    });
+    arananId = aranan.id;
+    const vadeli = await profiles.insert({
+      name: `Vadeli Firma ${stamp}`,
+      type: 'company',
+      creditEnabled: true,
+      creditLimit: 500,
+      paymentTermDays: 30,
+    });
+    vadeliId = vadeli.id;
+    createdIds.push(aranan.id, vadeli.id);
+  });
+
+  it('ada göre bulur', async () => {
+    const page = await profiles.list({ query: `Zeytin Bistro ${stamp}`, limit: 50 });
+    expect(page.rows.map((r) => r.id)).toContain(arananId);
+  });
+
+  it('telefona göre bulur — telefon KİMLİK anahtarıdır (WhatsApp)', async () => {
+    const page = await profiles.list({ query: String(stamp).slice(-4), limit: 50 });
+    expect(page.rows.map((r) => r.id)).toContain(arananId);
+  });
+
+  it('e-postaya göre bulur ve harf ayrımı gözetmez', async () => {
+    const page = await profiles.list({ query: `BISTRO${stamp}@ORNEK.FR`, limit: 50 });
+    expect(page.rows.map((r) => r.id)).toContain(arananId);
+  });
+
+  it('üç alan OR ile bağlanır — ad tutan satır telefonu tutmasa da gelir', async () => {
+    // AND'lenseydi burası boş dönerdi: hiçbir müşteri hem adında hem telefonunda "Zeytin" taşımaz.
+    const page = await profiles.list({ query: 'Zeytin', limit: 50 });
+    expect(page.rows.map((r) => r.id)).toContain(arananId);
+  });
+
+  it('eşleşmeyen terim BOŞ döner — "hepsini getir"e düşmez', async () => {
+    // Sessiz başarısızlığın klasik hâli: süzgeç kurulamayınca liste süzgeçsiz döner ve operatör
+    // aradığı müşteriyi bulduğunu sanır.
+    const page = await profiles.list({ query: `yokboyle${stamp}`, limit: 50 });
+    expect(page.rows).toHaveLength(0);
+  });
+
+  it('yalnız noktalama olan terim süzgeç kurmaz, sorguyu da bozmaz', async () => {
+    // `,` `(` `)` PostgREST'in AYRAÇLARI: kaçış olmadan sorgu ikiye bölünür ve istek hata verir.
+    await expect(profiles.list({ query: '(),', limit: 5 })).resolves.toBeDefined();
+  });
+
+  it('arama ile daraltma BİRLİKTE uygulanır (AND)', async () => {
+    // Terim iki firmaya da uyuyor (ikisinde de damga var); `creditEnabled` yalnız birini bırakır.
+    const page = await profiles.list({ query: String(stamp), creditEnabled: true, limit: 50 });
+    const ids = page.rows.map((r) => r.id);
+    expect(ids).toContain(vadeliId);
+    expect(ids).not.toContain(arananId);
+  });
+
+  it('tip daraltması', async () => {
+    const page = await profiles.list({ query: String(stamp), type: 'company', limit: 50 });
+    expect(page.rows.every((r) => r.type === 'company')).toBe(true);
+    expect(page.rows.map((r) => r.id)).toContain(arananId);
+  });
+
+  it('PERSONEL listeye karışmaz — tek tablo, rolle ayrılır', async () => {
+    // `user_profiles` müşteriyi ve personeli birlikte taşıyor. Süzgeç olmasa müşteri ekranı depocuyu
+    // ve patronu da listelerdi — hem yanlış hem de "N müşteri" sayacını şişirir. Rol kümesi ÇOKLU
+    // olabildiği için ölçüt "içerir", eşitlik değil.
+    const depocu = await profiles.insert({ name: `Depocu ${stamp}`, roles: ['warehouse'] });
+    createdIds.push(depocu.id);
+
+    const page = await profiles.list({ query: String(stamp), limit: 50 });
+    expect(page.rows.map((r) => r.id)).not.toContain(depocu.id);
+    expect(page.rows.every((r) => r.roles.includes('customer'))).toBe(true);
+  });
+
+  it('sayaçlar TÜM müşteri kümesine ait, süzgeçli listeye değil', async () => {
+    // Çip "3 taslak" derken kendi süzgecini saymamalı: "Taslak" çipine basan operatör sayının
+    // değişmesini bekler, değişmeyince ekrana güvenmez.
+    const { total, draft } = await profiles.counts();
+    expect(total).toBeGreaterThanOrEqual(draft);
+    const suzulmus = await profiles.list({ isDraft: true, limit: 1 });
+    expect(suzulmus.rows).toHaveLength(1);
+    // Süzgeç listeyi daralttı ama sayaç aynı kaldı.
+    expect((await profiles.counts()).total).toBe(total);
+  });
+
+  it('arama SAYFALANIR — tavan yok, imleç var', async () => {
+    // `search()` tavanlıdır ve bu bilinçli (seçicinin bulma aracı). Ekranın listesi tavanlı olamaz:
+    // ikinci sayfada duran müşteri "yok" görünürdü.
+    const ilk = await profiles.list({ query: String(stamp), limit: 1 });
+    expect(ilk.rows).toHaveLength(1);
+    expect(ilk.nextCursor).not.toBeNull();
+
+    const ikinci = await profiles.list({ query: String(stamp), limit: 1, cursor: ilk.nextCursor! });
+    expect(ikinci.rows).toHaveLength(1);
+    expect(ikinci.rows[0]!.id).not.toBe(ilk.rows[0]!.id);
+  });
+});
+
 describe('adresler (04.4)', () => {
   it('ilk adres otomatik varsayılandır', async () => {
     const address = await addresses.addForCustomer({ customerId, line1: '1 rue de la Paix', postalCode: '67000', city: 'Strasbourg' });

@@ -101,6 +101,10 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
   const productNames = new Map(products.map((p) => [p.id, resolveLocalizedText(p.name)]));
+  // Başlık haritası BURADA kuruluyor, ortak `readVariantTitles` ile DEĞİL: bu okuma varyantları ve
+  // ürünleri zaten çekti (aşağıdaki `variantSubs`/`variantProducts` haritaları için) — yardımcıyı
+  // çağırmak aynı iki sorguyu tekrar sormak olurdu. Ortaklaşan şey `titleOf` formatlayıcısı; yalnız
+  // başlık isteyen çağıran (sipariş özeti diyaloğu) yardımcıyı kullanır.
   const variantTitles = new Map(
     variants.map((v) => [v.id, titleOf(productNames.get(v.productId) ?? '—', resolveLocalizedText(v.label))]),
   );

@@ -40,6 +40,21 @@ export type EarnCheck = { allowed: true; points: number } | { allowed: false; re
  * yazmak, ertesi gün aynı aksiyonu tekrarlayamayacağı için (tekillik) kalıcı bir kayıp olurdu.
  * Ya tamamı verilir ya hiç — ve müşteri yarın tam puanla döner.
  */
+/**
+ * Bu müşteri TİPİ puan kazanabilir mi — tek soruluk yüklem (DOMAIN §14: puan yalnız B2C).
+ *
+ * `canEarnPoints`'ten ayrı çünkü sorular ayrı: o "bu AKSİYON şimdi puan verir mi" der ve günlük
+ * tavanı, aksiyonun değerini bilmek zorundadır. Müşteri kartı ise defteri hiç okumadan önce yalnız
+ * "bu kişide puan kavramı geçerli mi" diye sorar — şirket müşterisinde ekranda "0 puan" göstermek
+ * "kazanabilir ama kazanmamış" demektir, oysa kazanamaz.
+ *
+ * Ayrı bir yüklem olmasa çağıran ya `type === 'company'` kontrolünü kopyalar (kural iki yerde) ya da
+ * `canEarnPoints`'e uydurma bir aksiyon/tavan geçirirdi.
+ */
+export function isPointsEligible(customerType: CustomerType): boolean {
+  return customerType !== 'company';
+}
+
 export function canEarnPoints(input: {
   customerType: CustomerType;
   actionPoints: number;
@@ -47,7 +62,7 @@ export function canEarnPoints(input: {
   earnedToday: number;
   dailyCap: number;
 }): EarnCheck {
-  if (input.customerType === 'company') return { allowed: false, reason: 'b2b' };
+  if (!isPointsEligible(input.customerType)) return { allowed: false, reason: 'b2b' };
   if (input.actionPoints <= 0) return { allowed: false, reason: 'no_value' };
   if (input.earnedToday + input.actionPoints > input.dailyCap) return { allowed: false, reason: 'daily_cap' };
   return { allowed: true, points: input.actionPoints };

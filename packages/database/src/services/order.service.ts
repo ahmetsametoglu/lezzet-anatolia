@@ -19,6 +19,7 @@ import {
   QuickSaleResultSchema,
   OrderCountsRowSchema,
   OrderStatusEnum,
+  PaymentStatusEnum,
   RecallHitSchema,
   TransitionResultSchema,
   DEFAULT_PAGE_SIZE,
@@ -52,6 +53,7 @@ import {
   type TransitionResult,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+import { ilikeContains, ilikeTerm } from '../utils/filter-term';
 import { appToDb, dbToApp } from '../utils/case-transformers';
 
 /**
@@ -103,13 +105,11 @@ function listedFilters(f: OrderListFilters): Record<string, unknown> {
 
 /** Arama ve tarih aralığı — eşitliğe sığmayan süzgeçler. */
 function searchOptions(f: OrderListFilters): { orFilters?: string[]; rangeFilters?: Array<{ field: string; operator: 'gte' | 'lte'; value: string }> } {
-  const q = f.query?.trim() ?? '';
-  // PostgREST filtre dizesine gömülüyor: tırnak ayıklanır, ayraçlar boşluğa çevrilir (arama
-  // kutusuna yazılan virgül sorguyu bozmasın) — `UserProfileService.search` ile aynı kaçış.
-  const safe = q.replace(/"/g, '').replace(/[(),]/g, ' ');
+  // Terim kaçışı tek kaynakta (`ilikeTerm`): üç serviste aynı satır olarak duruyordu.
+  const safe = ilikeTerm(f.query);
   const ids = f.customerIds ?? [];
-  const or = q
-    ? [[`reference_no.ilike."*${safe}*"`, ...(ids.length ? [`customer_id.in.(${ids.join(',')})`] : [])].join(',')]
+  const or = safe
+    ? [[ilikeContains('reference_no', safe), ...(ids.length ? [`customer_id.in.(${ids.join(',')})`] : [])].join(',')]
     : undefined;
 
   const ranges: Array<{ field: string; operator: 'gte' | 'lte'; value: string }> = [];
@@ -501,6 +501,70 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   async findByIdempotencyKey(key: string): Promise<Order | null> {
     const rows = await this.getAll({ idempotencyKey: key }, { limit: 1 });
     return rows[0] ?? null;
+  }
+
+  /**
+   * Müşterinin AÇIK VADELİ siparişleri — vade pozisyonunun (açık bakiye, gecikme) girdisi (09.9).
+   *
+   * Sayfalanmıyor ve bu bilinçli: küme "ödenmemiş borç"tur, yani doğal tavanı olan bir kümedir ve
+   * TAM olması gerekir — eksik bir sayfa "açık bakiye 200 €" derken gerçek 900 € olurdu ve limit
+   * kararı o yanlış sayı üzerine verilirdi. Süzgeç motorun `isOpenCredit` ölçütüyle birebir:
+   * vadeli + tamamı ödenmemiş + iptal değil.
+   */
+  /**
+   * Müşterinin ciro ve sipariş sayısı — `customer_order_totals` RPC'si (09.9).
+   *
+   * `counts({ customerIds })` KULLANILAMAZ: orada müşteri süzgeci arama grubunun içindedir ve terim
+   * olmadan hiç uygulanmaz (RPC'nin başındaki not). Ayrıca bu okuma iptal edilen siparişi ciroya
+   * katmaz — vazgeçilen sipariş müşterinin kazandırdığı para değildir.
+   */
+  async customerTotals(customerId: string): Promise<{ orderCount: number; revenue: number }> {
+    const rows = await this.executeRpc<Array<{ order_count: number; revenue: number }>>('customer_order_totals', {
+      p_customer_id: customerId,
+    });
+    const row = dbToApp((rows?.[0] ?? { order_count: 0, revenue: 0 }) as Record<string, unknown>) as {
+      orderCount: number;
+      revenue: number;
+    };
+    return { orderCount: Number(row.orderCount), revenue: Number(row.revenue) };
+  }
+
+  /**
+   * TÜM müşterilerin açık vadeli siparişleri — "kaç müşteride gecikme var" sayacının girdisi (09.9,
+   * dashboard 09.3).
+   *
+   * Küme açık BORÇTUR: doğal tavanı var (ödenince düşer) ve tam olması gerekir. Müşteri başına ayrı
+   * sorgu sormak N+1 olurdu — 312 müşteri için 312 tur.
+   *
+   * BEKLEYEN(09.3): PostgREST'in `max_rows` tavanı (1000) bu okumanın üstünde duruyor. Bugün açık borç
+   * o sayının çok altında, ama aşıldığında "gecikmiş vade" sayacı SESSİZCE eksilir. Dashboard aynı
+   * sayacı isteyince ikisi birlikte tek bir toplama RPC'sine taşınacak — sayaç için satır taşımak
+   * zaten yanlış araç.
+   */
+  listOpenCredit(): Promise<Order[]> {
+    return this.openCreditQuery({});
+  }
+
+  listOpenCreditByCustomer(customerId: string): Promise<Order[]> {
+    return this.openCreditQuery({ customerId });
+  }
+
+  /** Açık vadeli sipariş süzgeci — iki okuma da bunu paylaşır (ölçüt iki yerde yaşamaz). */
+  private openCreditQuery(extra: Record<string, unknown>): Promise<Order[]> {
+    return this.getAll(
+      { ...extra, onAccount: true },
+      {
+        // `status <> 'cancelled'` ve `paymentStatus <> 'paid'`: PostgREST eşitlik süzgeci "değil"
+        // diyemez, bu yüzden KALAN değerler sayılır. İki liste de ENUM'DAN türetilir — elle yazılsa
+        // beşinci bir ödeme durumu eklendiğinde o durumdaki açık borç, açık bakiyeden ve gecikme
+        // sayacından SESSİZCE düşerdi. İki `or` grubu birbirine VE ile bağlanır (bkz. FilterOptions).
+        orderBy: 'createdAt',
+        orFilters: [
+          OrderStatusEnum.options.filter((s) => s !== 'cancelled').map((s) => `status.eq.${s}`).join(','),
+          PaymentStatusEnum.options.filter((s) => s !== 'paid').map((s) => `payment_status.eq.${s}`).join(','),
+        ],
+      },
+    );
   }
 
   listByCustomer(customerId: string, opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<Order>> {
