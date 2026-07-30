@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { PreferredLanguage } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
@@ -54,15 +54,31 @@ function LanguagePill({ locale, value, compact }: { locale: Locale; value: Prefe
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
+  /**
+   * **Gösterilen değer AKTİF SAYFA DİLİDİR, karttaki değer değil** (30.07 · kullanıcı fark etti).
+   *
+   * Önce kart okunuyordu ve ekran kendi kendiyle çelişiyordu: sayfa Türkçe, hap "Français". Oysa
+   * karar "dil TEKTİR" — sitenin dili ile bildirimlerin dili aynı şey. İkisinin ayrı görünebildiği
+   * bir ekran, o kararı ekranda bozuyordu.
+   *
+   * Kart farklıysa (kayıt anındaki tohum `fr`, müşteri hiç seçim yapmamış) **sessizce hizalanır**:
+   * ekranda "Türkçe" yazıp maili Fransızca göndermek, gösterdiğimiz şeyi uygulamamak olurdu.
+   * Bu, "yalnız bağlantıya girmek yazmaz" kuralının istisnasıdır ve dar tutuluyor — burası
+   * müşterinin KENDİ ayar sayfası, gelip geçilen bir içerik sayfası değil.
+   */
+  useEffect(() => {
+    if (value !== locale) void setPreferredLanguageAction(locale);
+  }, [value, locale]);
+
   return (
     <span className="relative inline-flex items-center">
       <select
-        value={value}
+        value={locale}
         disabled={pending}
-        aria-label={LANGUAGE_LABEL[value]}
+        aria-label={LANGUAGE_LABEL[locale]}
         onChange={(e) => {
           const next = e.target.value as PreferredLanguage;
-          if (next === value) return;
+          if (next === locale) return;
           // Karta yaz + sayfayı o dile götür. İkisi AYNI eylemin iki yüzü; ayrı düşünülemezler.
           void setPreferredLanguageAction(next);
           if (next !== locale) startTransition(() => router.replace('/account', { locale: next }));

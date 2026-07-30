@@ -38,7 +38,7 @@ export function DetailDesktop({ t, listT, locale, order, busy, onReorder }: Deta
       <div className="mx-auto grid w-full max-w-[1100px] grid-cols-[1.5fr_1fr] items-start gap-9 px-12 py-8">
       <div className="flex flex-col gap-4.5">
         <div className="flex flex-wrap items-baseline gap-3.5">
-          <h1 className="font-serif text-h1 font-semibold leading-tight text-ink">{order.referenceNo ?? '—'}</h1>
+          <h1 className="font-serif text-page-title leading-tight text-ink">{order.referenceNo ?? '—'}</h1>
           <span className="font-sans text-note leading-tight text-muted">{formatOrderDate(order.createdAt, locale)}</span>
           <OrderStatusBadge t={listT} status={order.status} />
         </div>

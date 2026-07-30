@@ -37,7 +37,7 @@ export function OrdersDesktop({
 
   return (
     <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-4 px-12 py-10">
-      <h1 className="font-serif text-h1 font-semibold leading-tight text-ink">{t.title}</h1>
+      <h1 className="font-serif text-page-title leading-tight text-ink">{t.title}</h1>
 
       {orders.map((order) => (
         <div key={order.id} className="flex flex-col gap-2">
@@ -105,10 +105,10 @@ export function OrdersDesktop({
 function EmptyOrders({ t }: { t: OrdersViewProps['t'] }) {
   return (
     <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-12 py-10">
-      <h1 className="font-serif text-h1 font-semibold leading-tight text-ink">{t.title}</h1>
+      <h1 className="font-serif text-page-title leading-tight text-ink">{t.title}</h1>
       <div className="mx-auto flex w-[340px] flex-col items-center gap-2.5 rounded-[16px] bg-cream p-6 text-center">
         <span className="text-[34px] leading-none">📦</span>
-        <span className="font-serif text-h3 font-semibold leading-tight text-ink">{t.empty.title}</span>
+        <span className="font-serif text-card-title-sm leading-tight text-ink">{t.empty.title}</span>
         <span className="font-sans text-note leading-relaxed text-body">{t.empty.body}</span>
         <Link href="/catalog" className={buttonClass({ className: 'mt-1' })}>
           {t.empty.cta}

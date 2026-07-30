@@ -37,7 +37,7 @@ export function OrdersMobile({
     return (
       <div className="flex flex-col items-center gap-2.5 px-4 py-8 text-center">
         <span className="text-[34px] leading-none">📦</span>
-        <span className="font-serif text-h3 font-semibold leading-tight text-ink">{t.empty.title}</span>
+        <span className="font-serif text-card-title-sm leading-tight text-ink">{t.empty.title}</span>
         <span className="font-sans text-note leading-relaxed text-body">{t.empty.body}</span>
         <Link href="/catalog" className={buttonClass({ className: 'mt-1' })}>
           {t.empty.cta}
