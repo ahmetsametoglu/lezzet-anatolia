@@ -48,6 +48,42 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   returned: 'İade',
 };
 
+/**
+ * Ödeme durumunun OPERASYON yüzeyindeki adı — `ORDER_STATUS_LABELS` ile aynı gerekçe: enum'la aynı
+ * yerde durur ki yeni bir durum eklendiğinde karşılığı unutulmasın.
+ *
+ * Proje geneli olmasının sebebi somut: sipariş ekranı, müşteri ekranı ve sipariş özeti diyaloğu aynı
+ * dört kelimeyi yazıyor. Sayfa klasöründe durduğu sürece ikinci ekran onu kopyalıyordu ve kopyalar
+ * AYRIŞIYORDU ("İade" ↔ "İade edildi").
+ */
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  pending: 'Bekliyor',
+  partial: 'Kısmi',
+  paid: 'Ödendi',
+  refunded: 'İade',
+};
+
+/**
+ * Sipariş durumunun MÜŞTERİ yüzeyindeki hâli — **kapalı ve dar bir küme** (tasarım: "iç durum
+ * adları asla sızmaz"). Dokuz iç durum altıya iner: müşteri `preparing` ile `ready` arasındaki
+ * operasyon ayrımını da, `delivered` ile `completed` arasındaki muhasebe ayrımını da görmez.
+ *
+ * Burası yalnız KATEGORİdir, metin değil: adı üç dilde sayfanın `messages.json`'undan gelir
+ * (operasyon haritası düz Türkçe metin tutar, çünkü o yüzey tek dillidir). Kategori ile metni
+ * ayırmasaydık, çeviri dosyası iç durum adlarını taşımak zorunda kalırdı.
+ *
+ * Eşleme `domain-core/order/customer-status` — saf karar, DB'siz ve testli.
+ */
+export const CustomerOrderStatusEnum = z.enum([
+  'received',
+  'preparing',
+  'on_the_way',
+  'delivered',
+  'cancelled',
+  'returning',
+]);
+export type CustomerOrderStatus = z.infer<typeof CustomerOrderStatusEnum>;
+
 /** Sipariş kaynağı — *nereden kapandı*. Kanaldan BAĞIMSIZ eksen (DOMAIN §3, CHANNELS §2). */
 export const OrderSourceEnum = z.enum(['web', 'whatsapp', 'door', 'manual']);
 export type OrderSource = z.infer<typeof OrderSourceEnum>;

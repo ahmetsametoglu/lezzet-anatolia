@@ -358,18 +358,24 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
               </Link>
             ) : (
               /**
-               * BEKLEYEN(08.5): sipariş takip sayfası (`/orders/[reference]`). Bağ VERİLMEZ — ölü
-               * link 404'e düşer; düğme yerinde durup neden basılamadığını söyler.
+               * Sipariş takip sayfası ARTIK VAR (08.5, 30.07) — burada bir dönem devre dışı bir
+               * düğme duruyordu (`BEKLEYEN(08.5)`: "bağ verilseydi 404'e düşerdi") ve o gün doğruydu.
+               * Detay sayfası inince işaret arandı ve bağ verildi.
                *
-               * Gerçek `<button disabled>`, soluklaştırılmış bir `<span>` DEĞİL: `opacity-50` bir
-               * zeytin düğmeyi açık yeşile çeviriyor ve o ton bizde **etkin** bir düğme gibi
-               * okunuyordu (29.07 kullanıcı fark etti). Devre dışı hâlin kendi token'ı var
-               * (`disabled-fill`/`disabled-text`) ve yalnız gerçek `disabled` niteliğiyle açılır;
-               * üstelik klavye ve ekran okuyucu da o zaman doğru bilgilendirilir.
+               * Aynı ders bu oturumda iki kez daha yaşandı (sepetin "Ödemeye geç"i, başlığın
+               * "Hesabım"ı): **bir `BEKLEYEN`'i doğuran engeli kaldıran commit, işaretin kendisini de
+               * aramak zorundadır** — `docs:check` işaretin bir kayda bağlı olduğunu doğrular, kaydın
+               * hâlâ geçerli olduğunu doğrulayamaz.
+               *
+               * Yolda taşınan kimlik sipariş kimliğidir (sayfanın üst künyesi): numara ancak onayla
+               * doğuyor, detay okuması da kimlikle çalışıyor.
                */
-              <Button size="md" fullWidth disabled>
-                {t.track} · {t.soon}
-              </Button>
+              <Link
+                href={{ pathname: '/orders/[reference]', params: { reference: order.id } }}
+                className={buttonClass({ size: 'md', fullWidth: true })}
+              >
+                {t.track}
+              </Link>
             )}
             <Link href="/catalog" className={buttonClass({ variant: 'secondary', size: 'md', fullWidth: true })}>
               {t.continue}

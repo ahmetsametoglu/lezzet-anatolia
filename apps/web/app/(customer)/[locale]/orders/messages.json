@@ -1,0 +1,110 @@
+{
+  "tr": {
+    "title": "Siparişlerim",
+    "backToAccount": "← Hesabım",
+    "backToCatalog": "← Kataloğa dön",
+    "navAccount": "Hesabım",
+    "navOrders": "Siparişlerim",
+    "navSupport": "Taleplerim",
+    "itemCount": "{count} kalem",
+    "reorder": "↻ Tekrar sipariş",
+    "reordering": "Ekleniyor…",
+    "detail": "Detay",
+    "detailArrow": "Detay →",
+    "loadMore": "Daha eski siparişler ↓",
+    "loading": "Yükleniyor…",
+    "status": {
+      "received": "Alındı",
+      "preparing": "Hazırlanıyor",
+      "on_the_way": "● Yolda",
+      "delivered": "Teslim edildi",
+      "cancelled": "İptal edildi",
+      "returning": "İade sürecinde"
+    },
+    "empty": {
+      "title": "Henüz siparişiniz yok",
+      "body": "İlk siparişinizi vermek için kataloğa göz atın.",
+      "cta": "Kataloğa göz at"
+    },
+    "reorderResult": {
+      "added": "{count} kalem sepete eklendi ✓",
+      "skipped": "{count} kalem eklenemedi: {names}.",
+      "none": "Bu siparişteki ürünlerin hiçbiri şu an satışta değil.",
+      "goToCart": "Sepete git",
+      "dismiss": "Kapat",
+      "note": "Kalemler güncel fiyatlarla kopyalanır."
+    }
+  },
+  "fr": {
+    "title": "Mes commandes",
+    "backToAccount": "← Mon compte",
+    "backToCatalog": "← Retour au catalogue",
+    "navAccount": "Mon compte",
+    "navOrders": "Mes commandes",
+    "navSupport": "Mes demandes",
+    "itemCount": "{count} articles",
+    "reorder": "↻ Recommander",
+    "reordering": "Ajout en cours…",
+    "detail": "Détail",
+    "detailArrow": "Détail →",
+    "loadMore": "Commandes plus anciennes ↓",
+    "loading": "Chargement…",
+    "status": {
+      "received": "Reçue",
+      "preparing": "En préparation",
+      "on_the_way": "● En route",
+      "delivered": "Livrée",
+      "cancelled": "Annulée",
+      "returning": "Retour en cours"
+    },
+    "empty": {
+      "title": "Vous n'avez pas encore de commande",
+      "body": "Parcourez le catalogue pour passer votre première commande.",
+      "cta": "Voir le catalogue"
+    },
+    "reorderResult": {
+      "added": "{count} articles ajoutés au panier ✓",
+      "skipped": "{count} articles non ajoutés : {names}.",
+      "none": "Aucun produit de cette commande n'est disponible actuellement.",
+      "goToCart": "Aller au panier",
+      "dismiss": "Fermer",
+      "note": "Les articles sont copiés aux prix actuels."
+    }
+  },
+  "de": {
+    "title": "Meine Bestellungen",
+    "backToAccount": "← Mein Konto",
+    "backToCatalog": "← Zurück zum Katalog",
+    "navAccount": "Mein Konto",
+    "navOrders": "Meine Bestellungen",
+    "navSupport": "Meine Anfragen",
+    "itemCount": "{count} Artikel",
+    "reorder": "↻ Erneut bestellen",
+    "reordering": "Wird hinzugefügt…",
+    "detail": "Detail",
+    "detailArrow": "Detail →",
+    "loadMore": "Ältere Bestellungen ↓",
+    "loading": "Wird geladen…",
+    "status": {
+      "received": "Eingegangen",
+      "preparing": "In Vorbereitung",
+      "on_the_way": "● Unterwegs",
+      "delivered": "Geliefert",
+      "cancelled": "Storniert",
+      "returning": "Rückgabe läuft"
+    },
+    "empty": {
+      "title": "Sie haben noch keine Bestellung",
+      "body": "Sehen Sie sich den Katalog an, um Ihre erste Bestellung aufzugeben.",
+      "cta": "Katalog ansehen"
+    },
+    "reorderResult": {
+      "added": "{count} Artikel in den Warenkorb gelegt ✓",
+      "skipped": "{count} Artikel nicht hinzugefügt: {names}.",
+      "none": "Derzeit ist keines der Produkte dieser Bestellung verfügbar.",
+      "goToCart": "Zum Warenkorb",
+      "dismiss": "Schließen",
+      "note": "Die Artikel werden zu den aktuellen Preisen übernommen."
+    }
+  }
+}

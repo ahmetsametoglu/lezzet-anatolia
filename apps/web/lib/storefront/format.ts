@@ -72,3 +72,23 @@ export function formatComparison(cents: number, locale: Locale): string {
 export function formatShortDate(iso: string, locale: Locale): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: 'numeric', month: 'long' }).format(new Date(iso));
 }
+
+/**
+ * Sipariş GEÇMİŞİNİN tarihi — `formatShortDate`'ten farkı **yıl taşımasıdır**.
+ *
+ * O helper'ın künyesi "yıl yazılmaz" diyor ve kendi bağlamında haklı: sipariş onay sayfasında
+ * müşteri az önce verdiği siparişe bakıyordur. Burası ise bir ARŞİV — liste yıllara yayılır ve
+ * yılsız "22 Temmuz" iki farklı siparişi ayırt edemez.
+ *
+ * `compact` mobil satır içindir: kart tek satıra "22 Tem 2026 · 3 kalem · 103,20 €" sığdırıyor,
+ * uzun ay adı taşardı. Tasarımın mobil karesinde yıl yok ("22 Tem"); yılı yine de yazıyoruz çünkü
+ * o kare yalnız bu ayın siparişleriyle çizilmiş — eski siparişte yılsız tarih yanlış bilgidir.
+ * Sapma `design/BACKLOG` §1'de kayıtlı.
+ */
+export function formatOrderDate(iso: string, locale: Locale, compact = false): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    day: 'numeric',
+    month: compact ? 'short' : 'long',
+    year: 'numeric',
+  }).format(new Date(iso));
+}
