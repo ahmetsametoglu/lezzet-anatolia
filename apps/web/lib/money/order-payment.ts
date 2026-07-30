@@ -27,6 +27,11 @@ interface OrderMovementInput {
   valueDate?: string;
   description?: string | null;
   source?: 'manual' | 'bank_import';
+  /**
+   * Sağlayıcı künyesi (07.11) — tahsilatta `{ providerRef: 'pi_...' }` yazılır ve iade o referansın
+   * üzerinden döner. Kapıda nakit/kart tahsilatında yoktur: dönülecek bir sağlayıcı da yoktur.
+   */
+  meta?: Record<string, unknown> | null;
 }
 
 /** Tahsilat — kapıda nakit/kart, havale, Stripe onayı, kurye gün kapanışı. */

@@ -171,6 +171,8 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     valueDate?: string;
     description?: string | null;
     source?: 'manual' | 'bank_import';
+    /** Sağlayıcı künyesi (07.11) — `{ providerRef: 'pi_...' }`. İade bu referansın üzerinden döner. */
+    meta?: Record<string, unknown> | null;
   }): Promise<OrderAmounts> {
     const raw = await this.executeRpc('record_order_movement', {
       p_order_id: input.orderId,
@@ -180,8 +182,27 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
       p_value_date: input.valueDate ?? new Date().toISOString().slice(0, 10),
       p_description: input.description ?? null,
       p_source: input.source ?? 'manual',
+      p_meta: input.meta ?? null,
     });
     return OrderAmountsSchema.parse(dbToApp(raw));
+  }
+
+  /**
+   * Sağlayıcı künyesinden hareketi bulur (07.11) — `charge.refunded` bize sipariş kimliğiyle değil
+   * yalnız `pi_...` ile gelir. Panelden elle yapılan bir iadenin deftere düşebilmesi buna bağlı.
+   *
+   * Tekillik ARANMAZ, en yenisi alınır: aynı niyet üzerinden birden çok hareket olabilir (tahsilat +
+   * sonraki iadeler); soruyu yanıtlayan şey hangi SİPARİŞE ait olduğudur ve o hepsinde aynıdır.
+   */
+  async findByProviderRef(providerRef: string): Promise<MoneyMovement | null> {
+    const { data, error } = await this.supabase
+      .from('money_movement')
+      .select('*')
+      .eq('meta->>providerRef', providerRef)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (error) throw error;
+    return data?.[0] ? this.dbSchema.parse(dbToApp(data[0])) : null;
   }
 
   /**

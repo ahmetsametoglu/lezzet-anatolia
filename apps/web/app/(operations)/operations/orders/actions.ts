@@ -12,7 +12,7 @@ import {
 } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
-import { adjustFulfillment, cancelOrder } from '@/lib/order/refund';
+import { adjustFulfillment, cancelOrder, retryRefund, type RefundBlockReason } from '@/lib/order/refund';
 import { readOrderDetail } from './[id]/order-detail-read';
 import { readOrdersPage } from './orders-page-read';
 import { ORDERS_PATH, parseOrdersUrl } from './orders-url';
@@ -108,7 +108,7 @@ export async function adjustFulfillmentAction(
    * ekranın söylemesi, türetimi ekrandan ezmek olurdu.
    */
   opts: { refundAccountId?: string | null; refundAmount?: number | null } = {},
-): Promise<ActionResult<{ refundedAmount: number; amountToCollect: number }>> {
+): Promise<ActionResult<{ refundedAmount: number; amountToCollect: number; refundNotice: string | null; refundBlocked: RefundBlockReason | null }>> {
   try {
     const actor = await requireAdmin();
     const result = await adjustFulfillment(orderId, lines, { actorId: actor.id, ...opts });
@@ -122,7 +122,15 @@ export async function adjustFulfillmentAction(
 
     revalidatePath(`${ORDERS_PATH}/${orderId}`);
     revalidatePath(ORDERS_PATH);
-    return { data: { refundedAmount: result.refundedAmount, amountToCollect: result.amountToCollect }, error: null };
+    return {
+      data: {
+        refundedAmount: result.refundedAmount,
+        amountToCollect: result.amountToCollect,
+        refundNotice: refundNotice(result.refundBlocked),
+        refundBlocked: result.refundBlocked ?? null,
+      },
+      error: null,
+    };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
@@ -132,7 +140,7 @@ export async function adjustFulfillmentAction(
 export async function cancelOrderAction(
   orderId: string,
   opts: { refundAccountId?: string | null } = {},
-): Promise<ActionResult<{ refundedAmount: number }>> {
+): Promise<ActionResult<{ refundedAmount: number; refundNotice: string | null; refundBlocked: RefundBlockReason | null }>> {
   try {
     const actor = await requireAdmin();
     const result = await cancelOrder(orderId, { actorId: actor.id, ...opts });
@@ -153,10 +161,69 @@ export async function cancelOrderAction(
 
     revalidatePath(`${ORDERS_PATH}/${orderId}`);
     revalidatePath(ORDERS_PATH);
-    return { data: { refundedAmount: result.refundedAmount }, error: null };
+    return {
+      data: {
+        refundedAmount: result.refundedAmount,
+        refundNotice: refundNotice(result.refundBlocked),
+        refundBlocked: result.refundBlocked ?? null,
+      },
+      error: null,
+    };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
+}
+
+/**
+ * **İadeyi yeniden dene** (07.11) — sağlayıcı çağrısı düştüğünde tek çıkış yolu.
+ *
+ * Düzeltme/iptal zaten yazıldığı için onları tekrar çalıştırmak yanlış olurdu (adetler ikinci kez
+ * uygulanır). Bu action yalnız para ayağını tekrar dener; borcu da yeniden türetir, saklamaz.
+ */
+export async function retryRefundAction(
+  orderId: string,
+  opts: { refundAccountId?: string | null } = {},
+): Promise<ActionResult<{ refundedAmount: number; refundNotice: string | null; refundBlocked: RefundBlockReason | null }>> {
+  try {
+    await requireAdmin();
+    const result = await retryRefund(orderId, opts);
+    if (result.status === 'not_found') throw new Error('Sipariş bulunamadı.');
+
+    revalidatePath(`${ORDERS_PATH}/${orderId}`);
+    revalidatePath(ORDERS_PATH);
+    return {
+      data: {
+        refundedAmount: result.refundedAmount,
+        refundNotice: refundNotice(result.refundBlocked),
+        refundBlocked: result.refundBlocked ?? null,
+      },
+      error: null,
+    };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * İade YAZILAMADIYSA operatöre söylenecek cümle (07.11).
+ *
+ * Bu bir hata değil — düzeltme/iptal geçerli, kaydedildi; eksik olan yalnız paranın çıkışı. Hata
+ * gibi gösterilseydi operatör işlemi tekrar dener ve düzeltmeyi ikinci kez uygulardı. Ama sessiz de
+ * kalınamaz: sıfır iade "borç yoktu" ile aynı görünürdü ve müşteri parasını beklerdi.
+ *
+ * Her cümle **ne yapılacağını** söyler; sebebi tekrarlamak operatörün işine yaramaz.
+ */
+function refundNotice(reason: RefundBlockReason | undefined): string | null {
+  if (!reason) return null;
+
+  const notices: Record<RefundBlockReason, string> = {
+    no_account: 'İade yazılamadı: bu siparişte tahsilat kaydı yok, para hangi hesaptan çıkacağı belirlenemedi. Para hareketini elle girin.',
+    provider_ref_missing:
+      'İade yazılamadı: kart ödemesinin sağlayıcı künyesi kayıtlı değil, hangi ödemenin üzerinden dönüleceği bilinmiyor. Stripe panelinden iade edin.',
+    provider_unavailable: 'İade yazılamadı: ödeme sağlayıcısı bu ortamda tanımlı değil.',
+    provider_failed: 'İade yazılamadı: sağlayıcı çağrısı başarısız oldu. Para ÇIKMADI — tekrar deneyin ya da Stripe panelinden iade edin.',
+  };
+  return notices[reason];
 }
 
 /**

@@ -54,7 +54,11 @@ create or replace function public.record_order_movement(
   p_type movement_type,                              -- order_payment | order_refund
   p_value_date date default current_date,
   p_description text default null,
-  p_source movement_source default 'manual'
+  p_source movement_source default 'manual',
+  -- Sağlayıcı künyesi (07.11): kartla ödenmiş bir siparişte iade, paranın GELDİĞİ ödeme niyetinin
+  -- üzerinden yapılır — `{"providerRef": "pi_..."}`. Sipariş kolonuna değil harekete yazılır:
+  -- referans o ödemenin künyesidir, siparişin değil (bir siparişin birden çok tahsilatı olabilir).
+  p_meta jsonb default null
 ) returns jsonb
 language plpgsql
 security invoker
@@ -77,8 +81,8 @@ begin
     raise exception 'record_order_movement: sipariş bulunamadı (%)', p_order_id;
   end if;
 
-  insert into public.money_movement (account_id, direction, amount, type, order_id, value_date, description, source)
-  values (p_account_id, v_direction, p_amount, p_type, p_order_id, p_value_date, p_description, p_source)
+  insert into public.money_movement (account_id, direction, amount, type, order_id, value_date, description, source, meta)
+  values (p_account_id, v_direction, p_amount, p_type, p_order_id, p_value_date, p_description, p_source, p_meta)
   returning id into v_movement_id;
 
   v_amounts := public.resync_order_amounts(p_order_id);
@@ -93,5 +97,10 @@ end;
 $$;
 
 revoke execute on function public.resync_order_amounts(uuid) from public, anon, authenticated;
-revoke execute on function public.record_order_movement(uuid, uuid, numeric, movement_type, date, text, movement_source)
+revoke execute on function public.record_order_movement(uuid, uuid, numeric, movement_type, date, text, movement_source, jsonb)
   from public, anon, authenticated;
+
+-- Sağlayıcı künyesinden harekete (07.11): `charge.refunded` bize yalnız `pi_...` ile gelir, sipariş
+-- kimliğiyle değil. Kısmi indeks — künyeyi yalnız sağlayıcı üzerinden geçen ödemeler taşır.
+create index money_movement_provider_ref_idx on public.money_movement ((meta ->> 'providerRef'))
+  where meta ? 'providerRef';

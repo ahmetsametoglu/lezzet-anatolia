@@ -322,6 +322,8 @@ Kurallar birlikte netleşecek (iş kararı), ama sistem şunları desteklemeli:
 
 - Müşteri "bozuk/eksik geldi" bildirimi
 - **Para iadesi** — online Stripe'tan, nakit kuryeyle. Muhasebe açısından para iadesi daha temiz (gerçek, simetrik hareket, KDV temiz döner). **Mağaza alacağı (store credit) belki gelecekte** — faza sabitlenmedi, muallak; gelirse taşınan borç + avoir/KDV takibi gerektirir.
+  - **Sıra tersine çevrilemez (karar 30.07 — 07.11): önce sağlayıcı çağrısı, sonra hareket.** Ters sırada başarısız bir iade defterde kapanmış görünür, para dönmemiş olur — ve hiçbir ekranda iz bırakmaz. Çağrı düşerse hareket hiç yazılmaz, borç açıkta kalır ve **sebebiyle** operatöre söylenir; sessizce sıfır iade dönmek "borç yoktu" ile aynı görünürdü.
+  - **Yol hesabın TÜRÜNDEN çıkar, ödeme yönteminden değil.** Kartla ödenmiş bir siparişi operatör kasadan nakit iade etmeyi seçebilir; o zaman sağlayıcıya gidilmez. Ödeme yöntemine bakan bir dallanma, operatörün kararını sistemin yerine vermek olurdu.
 - **İade edilen mala ne olduğu üç yoldan biridir** (`OrderItem.return_disposition`) — para tarafı üçünde de aynı (iade hareketi), ayrışan stok ve maliyet:
   - `restock` — mal depoya girdi, tekrar satılabilir (kapıda reddedilip frigo araçtan hiç çıkmamış mal).
   - `discard` — mal döndü ama satılamaz. **Kaybın nerede sayılacağı malın fiilen çıkıp çıkmadığına bağlıdır** (07.9): teslim edildiyse fiili stok o an düşmüştür, ikinci kez düşülemez — maliyet `OrderItemBatch` kaydında kalır ve o siparişin kârında görünür. Hiç çıkmadan bozulduysa (araçta) fiiliden burada düşülür + imha kaydı (`StockAdjustment`) yazılır. Teslim edilmiş donuk üründe **varsayılan** budur (soğuk zincir belgelenemez).

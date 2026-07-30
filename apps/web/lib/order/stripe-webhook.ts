@@ -1,7 +1,15 @@
-import { CartService, OrderService, ReservationService, StockService, WebhookEventService, serviceDb } from '@lezzet/database';
+import {
+  CartService,
+  MoneyMovementService,
+  OrderService,
+  ReservationService,
+  StockService,
+  WebhookEventService,
+  serviceDb,
+} from '@lezzet/database';
 import { decideLatePayment } from '@lezzet/domain-core';
 import type { OrderItem } from '@lezzet/types';
-import { recordOrderPayment } from '../money/order-payment';
+import { recordOrderPayment, recordOrderRefund } from '../money/order-payment';
 import { broadcastOrderChanged } from '../realtime/broadcast';
 import { stripeClient } from '../stripe';
 import { cancelOrder } from './refund';
@@ -41,6 +49,11 @@ export interface VerifiedEvent {
   paymentIntentId: string | null;
   /** Tahsil edilen tutar (cent) — sipariş toplamına değil, GERÇEKTEN ödenene bakarız. */
   amountTotalCents: number | null;
+  /**
+   * Sağlayıcı tarafında o ödemeden **bugüne kadar** iade edilmiş TOPLAM (cent) — `charge.refunded`
+   * olayında dolu. Fark değil toplam: olay tekrar gelirse fark iki kez yazılırdı, toplam yazılmaz.
+   */
+  amountRefundedCents?: number | null;
   raw?: Record<string, unknown> | null;
 }
 
@@ -70,12 +83,61 @@ export async function handleStripeEvent(event: VerifiedEvent, accountId: string 
  */
 const PAID_EVENTS = ['payment_intent.succeeded', 'checkout.session.completed', 'checkout.session.async_payment_succeeded'];
 const RELEASE_EVENTS = ['payment_intent.canceled', 'checkout.session.expired'];
+/** İade mutabakatı (07.11) — bizim başlattığımız ya da panelden elle yapılan iade buradan döner. */
+const REFUND_EVENTS = ['charge.refunded'];
 
 async function route(event: VerifiedEvent, accountId: string | null): Promise<WebhookOutcome> {
   if (RELEASE_EVENTS.includes(event.type)) return releaseExpired(event);
+  if (REFUND_EVENTS.includes(event.type)) return reconcileRefund(event, accountId);
   if (!PAID_EVENTS.includes(event.type)) return { status: 'ok', action: 'ignored' };
 
   return confirmPayment(event, accountId);
+}
+
+/**
+ * **İade mutabakatı** (07.11): sağlayıcıda iade edilmiş toplam ile bizim defterimizdeki toplamı
+ * eşitler.
+ *
+ * İki yol aynı olayı doğurur ve ikisi de doğru işlenmeli:
+ * - **Biz başlattık** (`refund.ts` → `refunds.create`): hareket çağrıdan HEMEN SONRA yazıldı, olay
+ *   geldiğinde iki toplam zaten eşittir → yazılacak bir şey yok. Fark yazsaydık iade iki kez düşerdi.
+ * - **Panelden elle yapıldı**: bizim haberimiz yok. Fark burada deftere düşer — yoksa müşterinin
+ *   parası dönmüş ama sipariş "ödendi" görünmeye devam ederdi.
+ *
+ * Sipariş kimliği olayda GÜVENİLİR DEĞİL: `charge` künyesi niyetinkini her zaman taşımaz. Bu yüzden
+ * sipariş, tahsilatta sakladığımız kendi künyemizden (`providerRef`) bulunur — kendi verimiz,
+ * sağlayıcının şekil değiştirebilen alanından güvenilirdir.
+ */
+async function reconcileRefund(event: VerifiedEvent, accountId: string | null): Promise<WebhookOutcome> {
+  if (event.amountRefundedCents == null || !event.paymentIntentId) return { status: 'ok', action: 'ignored' };
+
+  const db = serviceDb();
+  const payment = await new MoneyMovementService(db).findByProviderRef(event.paymentIntentId);
+  const orderId = payment?.orderId ?? event.orderId;
+  if (!orderId) return { status: 'not_found' };
+
+  const order = await new OrderService(db).getById(orderId);
+  if (!order) return { status: 'not_found' };
+
+  const missingCents = event.amountRefundedCents - Math.round(order.amountRefunded * 100);
+  // Sağlayıcı bizden AZ iade göstermiş olamaz (biz kendi başımıza para döndürmüyoruz); negatif fark
+  // bir mutabakat sorunudur ve burada sessizce "düzeltilmez" — defter kaynaktır, olay değil.
+  if (missingCents <= 0) return { status: 'ok', action: 'ignored' };
+
+  // Hesap: para hangi hesaba girdiyse oradan çıkar; sağlayıcı hesabı yalnız yedek. İkisi de yoksa
+  // hareket yazılmaz — yanlış hesaba yazmak bakiyeyi sessizce kaydırırdı.
+  const refundAccountId = payment?.accountId ?? accountId;
+  if (!refundAccountId) return { status: 'not_found' };
+
+  await recordOrderRefund({
+    orderId,
+    accountId: refundAccountId,
+    amount: missingCents / 100,
+    description: 'Sağlayıcı panelinden iade — mutabakat',
+    meta: { providerRef: event.paymentIntentId },
+  });
+
+  return { status: 'ok', action: 'refunded' };
 }
 
 /**
@@ -145,6 +207,10 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null): P
       accountId,
       amount: event.amountTotalCents / 100,
       description: 'Stripe tahsilatı',
+      // **Ödeme künyesi burada saklanır (07.11)** — iade bu referansın üzerinden döner. Tahsilat
+      // anında yazılmazsa bir daha bulunamaz: sağlayıcıda niyeti sipariş kimliğinden aramak
+      // (`search`) gecikmeli çalışır ve iade anında güvenilemez.
+      meta: event.paymentIntentId ? { providerRef: event.paymentIntentId } : null,
     });
   }
 

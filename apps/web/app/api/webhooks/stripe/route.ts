@@ -28,6 +28,25 @@ async function stripeAccountId(): Promise<string | null> {
  * Sipariş kimliği yine künyeden okunuyor — niyeti yaratırken oraya yazmıştık.
  */
 function toVerifiedEvent(event: Stripe.Event): VerifiedEvent {
+  // İade olaylarının taşıyıcısı `Charge`'dır, `PaymentIntent` değil — ve alan adları farklıdır.
+  // Tek nesne varsayıp `intent.id` okusaydık künyeye `ch_...` yazılır, iade mutabakatı hiçbir
+  // ödemeyi bulamazdı (07.11).
+  if (event.type === 'charge.refunded') {
+    const charge = event.data.object as Stripe.Charge;
+    const intentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : (charge.payment_intent?.id ?? null);
+
+    return {
+      id: event.id,
+      type: event.type,
+      orderId: charge.metadata?.order_id ?? null,
+      paymentIntentId: intentId,
+      amountTotalCents: charge.amount || null,
+      // TOPLAM iade, bu olayın farkı değil: olay tekrar gelirse fark iki kez yazılırdı.
+      amountRefundedCents: charge.amount_refunded ?? null,
+      raw: { type: event.type, charge: charge.id, paymentIntent: intentId },
+    };
+  }
+
   const intent = event.data.object as Stripe.PaymentIntent;
 
   return {

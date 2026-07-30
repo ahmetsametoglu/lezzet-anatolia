@@ -70,12 +70,10 @@ export function CancelDialog({ order, onClose, onConfirm, busy, error }: CancelD
         />
       </div>
 
-      {/* BEKLEYEN(07.11): sağlayıcıya iade çağrısı — aşağıdaki cümle bu eksiğin operatöre söylenmiş
-          hâlidir, bağlandığında cümle de kalkar. */}
       {collected > 0 ? (
         <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-muted">
-          İade hareketi paranın girdiği hesaba yazılır. Kartla ödenmişse hareket Stripe hesabına düşer;
-          karta dönüş çağrısı henüz bağlı değil, sağlayıcı panelinden yapılır.
+          İade paranın girdiği hesaba yazılır. Kartla ödenmişse tutar karta geri gönderilir; müşterinin
+          hesabına geçmesi birkaç gün sürebilir.
         </span>
       ) : null}
     </Dialog>

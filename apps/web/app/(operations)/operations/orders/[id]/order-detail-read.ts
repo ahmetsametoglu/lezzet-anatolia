@@ -342,13 +342,10 @@ function refundRoutesOf(accounts: readonly Account[], movements: readonly MoneyM
       label: ROUTE_LABELS[account.type],
       sub: account.name,
       isDefault: account.id === paidInto,
-      // BEKLEYEN(07.11): sağlayıcıya iade çağrısı (`refunds.create`). Stripe'a iade HAREKETİ yazılır
-      // ama para karta dönmez. Ekran bunu SÖYLER — muhasebede kapanmış görünen bir iadenin müşteriye
-      // ulaşmamış olması, sessiz kalınacak bir şey değil.
-      caveat:
-        account.type === 'provider'
-          ? 'Hareket yazılır; karta dönüş çağrısı henüz bağlı değil, sağlayıcı panelinden yapılır.'
-          : '',
+      // Sağlayıcı yolunda para KARTA DÖNER (07.11): önce `refunds.create`, sonra hareket. Ekran
+      // bunu söyler çünkü iki yolun sonucu operatör için farklıdır — kasadan iade elden verilir,
+      // karta iade müşteriye birkaç gün sonra ulaşır.
+      caveat: account.type === 'provider' ? 'Para karta döner; bankaya geçmesi birkaç gün sürebilir.' : '',
     }))
     .sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
 }
