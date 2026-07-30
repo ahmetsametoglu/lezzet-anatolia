@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { OrderStatusEnum } from '@lezzet/types';
-import { customerOrderStatus, isActiveForCustomer, isFulfilmentKnown } from './customer-status';
+import { customerOrderStatus, isActiveForCustomer, isFulfilmentKnown, orderTimeline } from './customer-status';
 
 describe('customerOrderStatus', () => {
   it('iç durumların HEPSİ bir karara bağlanır — yeni durum eklenince burası patlar', () => {
@@ -76,5 +76,45 @@ describe('isFulfilmentKnown', () => {
     for (const status of OrderStatusEnum.options) {
       expect(typeof isFulfilmentKnown(status)).toBe('boolean');
     }
+  });
+});
+
+describe('orderTimeline', () => {
+  const log = (...pairs: [string, string][]) => pairs.map(([toStatus, createdAt]) => ({ toStatus, createdAt })) as never;
+
+  it('yolda olan siparişte önceki adımlar GEÇMİŞTEN okunur, damgalarıyla', () => {
+    const steps = orderTimeline('out_for_delivery', log(['confirmed', '2026-07-22T09:14:00Z'], ['preparing', '2026-07-23T10:00:00Z'], ['ready', '2026-07-23T16:40:00Z']));
+    expect(steps?.map((s) => s.state)).toEqual(['done', 'done', 'current', 'pending']);
+    expect(steps?.[0]?.at).toBe('2026-07-22T09:14:00Z');
+    expect(steps?.[1]?.at).toBe('2026-07-23T16:40:00Z');
+  });
+
+  it('teslim edilmişte son adım da tamamlanmıştır — "şu an" kalmaz', () => {
+    const steps = orderTimeline('delivered', log(['confirmed', 'a'], ['ready', 'b'], ['out_for_delivery', 'c']));
+    expect(steps?.map((s) => s.state)).toEqual(['done', 'done', 'done', 'done']);
+  });
+
+  it('atlanan adım GEÇİLMİŞ sayılır ama DAMGASI uydurulmaz', () => {
+    // İlk yazdığım test bunun tersini bekliyordu ve yanlıştı: hazırlanmamış sipariş yola çıkmaz,
+    // yani `ready` kaydı yoksa bile fiziksel olarak geçilmiştir. Ortada boş halka bırakmak
+    // müşteriye bozuk bir çizgi gösterirdi. Çıkarsanamayan tek şey ZAMAN.
+    const steps = orderTimeline('out_for_delivery', log(['confirmed', 'a']));
+    expect(steps?.[1]?.state).toBe('done');
+    expect(steps?.[1]?.at).toBeNull();
+  });
+
+  it('iptal ve iadede çizgi ÇİZİLMEZ — tek durum bloğu gösterilir', () => {
+    expect(orderTimeline('cancelled', log(['confirmed', 'a']))).toBeNull();
+    expect(orderTimeline('returned', log(['confirmed', 'a'], ['delivered', 'b']))).toBeNull();
+    expect(orderTimeline('draft', [])).toBeNull();
+  });
+
+  it('yalnız hazırlıktaysa ilk adım "şu an"dır — boş çizgi gösterilmez', () => {
+    const steps = orderTimeline('preparing', []);
+    expect(steps?.map((s) => s.state)).toEqual(['current', 'pending', 'pending', 'pending']);
+  });
+
+  it('dört adım her zaman dörttür', () => {
+    expect(orderTimeline('confirmed', log(['confirmed', 'a']))).toHaveLength(4);
   });
 });

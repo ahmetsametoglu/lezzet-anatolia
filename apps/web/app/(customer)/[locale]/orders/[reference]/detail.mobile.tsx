@@ -1,40 +1,35 @@
 'use client';
 
-import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/customer/ui/button';
-import { OrderStatusBadge } from '../components/order-status-badge';
-import { DeliveryCard, HelpCard, ItemsCard, SummaryCard } from './components/detail-sections';
+import { HelpCard, ItemsCard, StatusHero, SummaryCard, TimelineStrip } from './components/detail-sections';
 import type { DetailViewProps } from './detail-types';
 
 /**
- * Sipariş detay — mobil. Tek sütun ve **sıra farklı**: müşteri buraya çoğunlukla bildirimden gelir,
- * ilk sorusu "nerede" — o yüzden teslimat kalemlerden ÖNCE. Masaüstünde teslimat sağ sütunda,
- * çünkü orada ikisi aynı anda görünüyor ve sıra bir öncelik iddiası taşımıyor.
+ * Sipariş detay — mobil (tasarım: "Siparis Detay Mobil · bildirimden gelinen ekran").
  *
- * Tekrar sipariş düğmesi tam genişlik: dar ekranda başlık şeridine sığmaz ve tasarımın notu bu
- * aksiyonun tek elle erişilebilir olmasını istiyor.
+ * **Masaüstünün dar hâli DEĞİL, ayrı bir çizim** ve sırası bir iddia taşıyor: bildirimden gelen
+ * müşterinin ilk sorusu "siparişim nerede". Bu yüzden en üstte zeytin zeminli **durum kartı**
+ * (durum + tarih + "bugün kapınıza geliyor — adres"), sonra **yatay** dört adımlı mini çizgi.
+ * Masaüstünde bu bilgi çizgi + teslimat kartına dağılır; orada ikisi aynı anda görünüyor.
+ *
+ * Teslimat için ayrı kart YOK: adres ve gün zaten durum kartında. Dar ekranda aynı iki satırı
+ * ikinci bir kartta tekrarlamak, kaydırma uzunluğunu bilgi eklemeden artırırdı.
+ *
+ * "↻ Tekrar sipariş" en ALTTA ve tam genişlikte (tasarım): başparmağın doğal yeri orası ve bu
+ * ekranın asıl işi bilgi vermek — tekrar sipariş, okuduktan sonra alınan bir karar.
  */
 export function DetailMobile({ t, listT, locale, order, busy, onReorder }: DetailViewProps) {
   return (
-    <div className="flex flex-col gap-4 px-4 py-4">
-      <Link href="/orders" className="cursor-pointer font-sans text-note font-bold text-olive hover:text-olive-dark">
-        {t.back}
-      </Link>
+    <div className="flex flex-col gap-3 px-4 py-3.5">
+      <StatusHero listT={listT} locale={locale} order={order} />
+      <TimelineStrip t={t} order={order} />
+      <ItemsCard t={t} locale={locale} order={order} title={t.itemsTitle} />
+      <SummaryCard t={t} locale={locale} order={order} title={t.amountTitle} />
+      <HelpCard t={t} />
 
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="truncate font-serif text-h3 font-semibold leading-tight text-ink">{order.referenceNo ?? '—'}</h1>
-        <OrderStatusBadge t={listT} status={order.status} compact />
-      </div>
-
-      <DeliveryCard t={t} locale={locale} order={order} />
-      <ItemsCard t={t} locale={locale} order={order} />
-      <SummaryCard t={t} locale={locale} order={order} />
-
-      <Button variant="outlineOlive" size="sm" fullWidth disabled={busy} onClick={onReorder}>
+      <Button variant="outlineOlive" fullWidth disabled={busy} onClick={onReorder}>
         {busy ? t.reordering : t.reorder}
       </Button>
-
-      <HelpCard t={t} />
     </div>
   );
 }

@@ -81,3 +81,76 @@ export function isFulfilmentKnown(status: OrderStatus): boolean {
       return true;
   }
 }
+
+/** Müşteriye gösterilen dört sabit kilometre taşı (tasarım: "zaman çizgisi 4 sabit adım"). */
+export type OrderMilestone = 'received' | 'prepared' | 'on_the_way' | 'delivered';
+
+export interface OrderTimelineStep {
+  milestone: OrderMilestone;
+  state: 'done' | 'current' | 'pending';
+  /**
+   * Adımın gerçekleştiği an — **kaydı yoksa `null`.**
+   *
+   * Ayrım şu: **durum çıkarsanabilir, damga çıkarsanamaz.** Sipariş yoldaysa hazırlandığı
+   * kesindir (hazırlanmamış sipariş yola çıkmaz), o yüzden adım `done` işaretlenir. Ama "ne zaman
+   * hazırlandı" sorusunun cevabı yoksa uydurulmaz — ekran o adımın altına saat yazmaz.
+   * (CLAUDE.md §1: ölçülemeyen değer sıfır değildir; burada da tarih değildir.)
+   */
+  at: string | null;
+}
+
+/** Kilometre taşını KARŞILAYAN iç durum(lar) — sıra anlamlıdır, zaman çizgisi bu sırayla çizilir. */
+const MILESTONE_STATUSES: readonly (readonly [OrderMilestone, readonly OrderStatus[]])[] = [
+  ['received', ['confirmed']],
+  ['prepared', ['ready']],
+  ['on_the_way', ['out_for_delivery']],
+  ['delivered', ['delivered', 'completed']],
+];
+
+/**
+ * Sipariş zaman çizgisi (08.5) — dört adımın hangisi geçildi, hangisi şu an, hangisi bekliyor.
+ *
+ * **Girdi durum GEÇMİŞİDİR, anlık durum değil.** Sipariş `out_for_delivery` iken "Hazırlandı"nın
+ * da geçildiğini yalnız geçmiş söyleyebilir; anlık durumdan çıkarmaya çalışmak, atlanan geçişleri
+ * (hızlı satış yolu) uydurmak olurdu.
+ *
+ * **`null` = çizgi çizilmez.** İptal ve iade için tasarım açıkça *"çizgi yerine tek durum bloğu"*
+ * diyor ve haklı: iptal bir yolculuğun adımı değil, yolculuğun kendisinin sonlanması. Taslak da
+ * müşteriye hiç görünmez.
+ *
+ * `prepared` adımı `ready` iç durumuna bakar, `preparing`e DEĞİL: müşteri "hazırlandı" gördüğünde
+ * işin bittiğini anlar — mutfakta olmayı adım saymak, aynı adımı iki kez göstermek olurdu.
+ */
+export function orderTimeline(
+  current: OrderStatus,
+  /** Durum defteri (`order_status_log`), eskiden yeniye. */
+  history: readonly { toStatus: OrderStatus; createdAt: string }[],
+): OrderTimelineStep[] | null {
+  if (current === 'draft' || current === 'cancelled' || current === 'returned') return null;
+
+  const stampOf = new Map<OrderStatus, string>();
+  for (const row of history) if (!stampOf.has(row.toStatus)) stampOf.set(row.toStatus, row.createdAt);
+
+  const reached = new Set<OrderStatus>([...history.map((h) => h.toStatus), current]);
+  const hit = MILESTONE_STATUSES.map(([, statuses]) => statuses.some((s) => reached.has(s)));
+
+  // En ileri geçilen adım. Hiçbiri yoksa (yalnız `preparing`) ilk adım "şu an"dır: sipariş alınmış
+  // ama kaydı düşmemiş olabilir — müşteriye boş bir çizgi göstermektense ilk adımı işaretlemek doğru.
+  let furthest = 0;
+  for (let i = hit.length - 1; i >= 0; i -= 1) {
+    if (hit[i]) {
+      furthest = i;
+      break;
+    }
+  }
+
+  const terminal = current === 'delivered' || current === 'completed';
+  return MILESTONE_STATUSES.map(([milestone, statuses], i) => ({
+    milestone,
+    // Geçilmiş adım `done`: yoldaki sipariş hazırlanmıştır, kaydı düşmemiş olsa da. Bu bir uydurma
+    // DEĞİL, fiziksel bir çıkarım — ortada boş halka bırakmak müşteriye bozuk bir çizgi gösterirdi.
+    state: (i < furthest ? 'done' : i === furthest ? (terminal ? 'done' : 'current') : 'pending') as OrderTimelineStep['state'],
+    // Damga ise çıkarsanmaz: defterde karşılığı yoksa `null`.
+    at: statuses.map((st) => stampOf.get(st)).find(Boolean) ?? null,
+  }));
+}

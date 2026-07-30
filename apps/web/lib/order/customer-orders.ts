@@ -1,11 +1,13 @@
 import 'server-only';
-import { OrderItemService, OrderService, serviceDb } from '@lezzet/database';
-import { customerOrderStatus, isActiveForCustomer, isFulfilmentKnown } from '@lezzet/domain-core';
+import { OrderItemService, OrderService, OrderStatusLogService, serviceDb } from '@lezzet/database';
+import { customerOrderStatus, isActiveForCustomer, isFulfilmentKnown, orderTimeline } from '@lezzet/domain-core';
+import type { OrderTimelineStep } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { CustomerOrderStatus, KeysetCursor, OrderItem, PaymentMethod, PaymentStatus } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { resolveOrderLines } from './customer-lines';
+import { getPackagesByIds } from '@/lib/storefront/packages';
 
 /**
  * **PARA SÖZLEŞMESİ — bu dosya bir sınırdır.**
@@ -102,12 +104,22 @@ export async function listCustomerOrders(
   return { orders, nextCursor: page.nextCursor };
 }
 
-/** Detay sayfasının kalemi — künye + sipariş anındaki para (cent). */
+/**
+ * Detay sayfasının SATIRI — künye + sipariş anındaki para (cent).
+ *
+ * **Paket TEK satırdır** (tasarım: `Bayram Sofrası · Paket · 8 ürün` + altında içerik listesi).
+ * Sipariş anında paket kalemlerine açılıyor ama müşteri onu bir bütün olarak satın aldı; kalemleri
+ * ayrı ayrı fiyatlarıyla dizmek, hiç görmediği bir fiyat kırılımını ona göstermek olurdu (DOMAIN
+ * §13: "müşteri yalnız paket toplamını görür"). Bu yüzden gruplama KAPIDA yapılır, ekranda değil.
+ */
 export interface CustomerOrderDetailLine {
   id: string;
+  /** `bundle` satırında paket adı, `variant` satırında ürün adı. */
   name: string;
   unit: string;
-  /** Sipariş edilen miktar. */
+  /** Paket satırıysa içerik künyesi; varyant satırında `null`. */
+  bundle: { itemCount: number; contents: readonly string[] } | null;
+  /** Sipariş edilen miktar (pakette: kaç paket). */
   qty: number;
   /**
    * Paranın hesaplandığı miktar. Hazırlık onaylanmadan önce **`qty`nin kendisidir** — o aşamada
@@ -120,10 +132,10 @@ export interface CustomerOrderDetailLine {
    * demekti (ve ilk sürümde ekran kendi hesabını yapıp her siparişte uyarı bastı).
    */
   shortfall: boolean;
+  /** Eksik gelen miktarın para karşılığı — tasarım uyarıda tutarı da yazıyor ("5,90 € fark"). */
+  shortfallCents: number;
   unitPriceCents: number;
   lineTotalCents: number;
-  /** Paketten gelen kalem — ekran paket adıyla gruplar. */
-  bundleId: string | null;
 }
 
 export interface CustomerOrderDetail {
@@ -135,6 +147,11 @@ export interface CustomerOrderDetail {
   deliveryDate: string | null;
   address: { line1?: string; line2?: string; postalCode?: string; city?: string } | null;
   lines: readonly CustomerOrderDetailLine[];
+  /**
+   * Dört adımlı zaman çizgisi; iptal/iade/taslakta `null` — tasarım orada "çizgi yerine tek durum
+   * bloğu" istiyor ve kararı motor veriyor (`orderTimeline`).
+   */
+  timeline: readonly OrderTimelineStep[] | null;
   subtotalCents: number;
   discountCents: number;
   discountLabel: string;
@@ -142,6 +159,8 @@ export interface CustomerOrderDetail {
   totalCents: number;
   paymentMethod: PaymentMethod | null;
   paymentStatus: PaymentStatus;
+  /** Vadeli (B2B) — ödeme hapı tasarımda ayrı bir hâl olarak çizili ("📋 Vadeli"). */
+  onAccount: boolean;
 }
 
 /**
@@ -170,29 +189,68 @@ export async function getCustomerOrderDetail(
   const status = customerOrderStatus(order.status);
   if (!status) return null;
 
-  const lookup = await resolveOrderLines(db, items, locale);
+  const [lookup, history, bundles] = await Promise.all([
+    resolveOrderLines(db, items, locale),
+    new OrderStatusLogService(db).listByOrder(order.id),
+    getPackagesByIds([...new Set(items.map((i) => i.bundleId).filter((id): id is string => Boolean(id)))], locale),
+  ]);
 
   /**
    * Ölçüm var mı? Hazırlık onaylanana kadar `fulfilled_qty` yazılmamış bir `0`dır — onu "gönderilen
    * miktar" saymak, yeni siparişte tüm kalemleri boş ve tutarları EKSİ gösterir (30.07 hatası).
    */
   const measured = isFulfilmentKnown(order.status);
+  const billedOf = (item: OrderItem) => (measured ? item.fulfilledQty : item.qty);
+  const moneyOf = (item: OrderItem) => item.unitPrice * billedOf(item) - item.lineDiscountAmount;
 
-  const lines = items.map((item) => {
-    // Eksik gönderilen kalemin parası da eksiktir — ama bunu ancak ölçüm varsa söyleyebiliriz.
-    const billedQty = measured ? item.fulfilledQty : item.qty;
-    return {
+  const lines: CustomerOrderDetailLine[] = [];
+
+  /**
+   * PAKET satırları tek satıra katlanır. Adet paket içeriğinin oranından geri gelir (paket 2 adet A
+   * içeriyorsa ve siparişte 6 A varsa 3 paket alınmıştır) — `reorder` ile aynı hesap.
+   *
+   * Paket artık satılmıyorsa künyesi yok; o zaman kalemler tek tek gösterilir. Alternatif, siparişin
+   * bir bölümünü hiç göstermemekti — müşteri parasının karşılığını görmeli.
+   */
+  const grouped = new Set<string>();
+  for (const bundle of bundles) {
+    const own = items.filter((i) => i.bundleId === bundle.id);
+    if (own.length === 0) continue;
+    own.forEach((i) => grouped.add(i.id));
+
+    const qty = bundleQtyOf(bundle.items, own);
+    const totalCents = own.reduce((sum, i) => sum + toCents(moneyOf(i)), 0);
+    lines.push({
+      id: `bundle:${bundle.id}`,
+      name: bundle.name,
+      unit: '',
+      bundle: { itemCount: bundle.items.length, contents: bundle.items.map((c) => c.name) },
+      qty,
+      billedQty: qty,
+      // Paket bütün olarak satılır; eksik karşılama kalem düzeyinde bir olaydır ve paket satırında
+      // gösterilecek yeri yok. Kalemlerinden biri eksik geldiyse fark tutar satırında görünür.
+      shortfall: false,
+      shortfallCents: 0,
+      unitPriceCents: qty > 0 ? Math.round(totalCents / qty) : totalCents,
+      lineTotalCents: totalCents,
+    });
+  }
+
+  for (const item of items) {
+    if (grouped.has(item.id)) continue;
+    lines.push({
       id: item.id,
       name: lookup.get(item.variantId)?.name ?? '',
       unit: lookup.get(item.variantId)?.unit ?? '',
+      bundle: null,
       qty: item.qty,
-      billedQty,
+      billedQty: billedOf(item),
       shortfall: measured && item.fulfilledQty < item.qty,
+      shortfallCents: measured ? toCents(item.unitPrice * (item.qty - item.fulfilledQty)) : 0,
       unitPriceCents: toCents(item.unitPrice),
-      lineTotalCents: toCents(item.unitPrice * billedQty - item.lineDiscountAmount),
-      bundleId: item.bundleId,
-    };
-  });
+      lineTotalCents: toCents(moneyOf(item)),
+    });
+  }
 
   return {
     id: order.id,
@@ -203,6 +261,7 @@ export async function getCustomerOrderDetail(
     deliveryDate: order.deliveryDate,
     address: order.addressSnapshot as CustomerOrderDetail['address'],
     lines,
+    timeline: orderTimeline(order.status, history),
     // Ara toplam kalemlerden TÜRETİLİR: siparişte ayrı bir alan yok ve olmamalı — iki kaynak
     // bir gün ayrışır. İndirim ayrı satır olarak gösterildiği için burada payları geri ekliyoruz.
     subtotalCents: lines.reduce((sum, l) => sum + l.lineTotalCents, 0) + toCents(order.discountAmount),
@@ -212,5 +271,19 @@ export async function getCustomerOrderDetail(
     totalCents: toCents(order.total),
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
+    onAccount: order.onAccount,
   };
+}
+
+/**
+ * Paket kaç adet alınmış — kalem adedinin paket içeriğindeki adede oranı (`reorder` ile aynı kural).
+ * Oran bozuksa (paket içeriği o günden beri değişmiş) 1'e düşer: uydurma bir adet yazmaktansa
+ * en muhafazakâr sayıyı göstermek, tutar satırıyla çelişmeyen tek seçenek.
+ */
+function bundleQtyOf(contents: readonly { variantId: string; qty: number }[], items: readonly OrderItem[]): number {
+  for (const item of items) {
+    const inBundle = contents.find((c) => c.variantId === item.variantId);
+    if (inBundle && inBundle.qty > 0 && item.qty % inBundle.qty === 0) return item.qty / inBundle.qty;
+  }
+  return 1;
 }
