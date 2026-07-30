@@ -13,6 +13,4 @@ export interface DetailViewProps {
   listT: ListMessages;
   locale: Locale;
   order: CustomerOrderDetail;
-  busy: boolean;
-  onReorder: () => void;
 }

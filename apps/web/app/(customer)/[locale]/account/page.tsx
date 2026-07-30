@@ -39,7 +39,7 @@ export default async function AccountPage({ params }: AccountPageProps) {
   if (!account) notFound();
 
   return (
-    <SiteFrame device={device} locale={locale}>
+    <SiteFrame device={device} locale={locale} accountChrome={{ nav: 'account', title: t.title }}>
       <AccountClient t={t} locale={locale} account={account} device={device} />
     </SiteFrame>
   );

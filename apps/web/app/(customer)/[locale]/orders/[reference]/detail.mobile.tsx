@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/customer/ui/button';
+import { ReorderButton } from '../components/reorder-button';
 import { HelpCard, ItemsCard, StatusHero, SummaryCard, TimelineStrip } from './components/detail-sections';
 import type { DetailViewProps } from './detail-types';
 
@@ -18,7 +18,7 @@ import type { DetailViewProps } from './detail-types';
  * "↻ Tekrar sipariş" en ALTTA ve tam genişlikte (tasarım): başparmağın doğal yeri orası ve bu
  * ekranın asıl işi bilgi vermek — tekrar sipariş, okuduktan sonra alınan bir karar.
  */
-export function DetailMobile({ t, listT, locale, order, busy, onReorder }: DetailViewProps) {
+export function DetailMobile({ t, listT, locale, order }: DetailViewProps) {
   return (
     <div className="flex flex-col gap-3 px-4 py-3.5">
       <StatusHero listT={listT} locale={locale} order={order} />
@@ -27,9 +27,7 @@ export function DetailMobile({ t, listT, locale, order, busy, onReorder }: Detai
       <SummaryCard t={t} locale={locale} order={order} title={t.amountTitle} />
       <HelpCard t={t} />
 
-      <Button variant="outlineOlive" fullWidth disabled={busy} onClick={onReorder}>
-        {busy ? t.reordering : t.reorder}
-      </Button>
+      <ReorderButton locale={locale} orderId={order.id} label={t.reorder} busyLabel={t.reordering} fullWidth />
     </div>
   );
 }

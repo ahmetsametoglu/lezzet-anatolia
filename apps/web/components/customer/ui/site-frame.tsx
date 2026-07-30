@@ -29,6 +29,8 @@ import messages from './site-frame-messages.json';
  * Diğer sayfalardan aramaya giden yol menüdeki "Katalog".
  */
 type NavKey = 'catalog' | 'packages' | 'deals' | 'discover' | 'pro';
+/** Hesap alanının üç sekmesi (tasarım: `Hesabım · Siparişlerim · Taleplerim`). */
+type AccountTab = 'account' | 'orders' | 'support';
 
 interface SiteFrameProps {
   device: 'mobile' | 'desktop';
@@ -49,6 +51,26 @@ interface SiteFrameProps {
   mobileChrome?: 'default' | 'detail';
   /** `detail` başlığındaki geri bağlantısı ("← Katalog"). Metin sayfaya aittir, çerçeveye değil. */
   back?: { label: string; href: ComponentProps<typeof Link>['href'] };
+  /**
+   * **HESAP ALANININ BAŞLIĞI** (08.14) — verilirse vitrin başlığının YERİNE geçer.
+   *
+   * Tasarımda hesap/siparişler/sipariş detay ekranlarının başlığı vitrinden farklıdır: logo +
+   * (sekmeler | geri bağı) + sağ uçta ekrana özel bir öğe. Duyuru şeridi de yoktur — hesap alanı
+   * girişli bir yardımcı yüzey, kampanya duyurusunun yeri değil (üç `.dc.html`'de de çizili değil).
+   *
+   * Neden `SiteFrame` içinde ve ayrı bir bileşen değil: `main` ve footer aynı kalıyor. Ayrı bir
+   * çerçeve yazmak footer'ı ikinci kez tanımlamak, yani dil listesini iki yerde tutmak olurdu.
+   */
+  accountChrome?: {
+    /** Masaüstünde sekme gezinmesi — geri bağıyla birlikte kullanılmaz (tasarımda ikisi ayrı ekran). */
+    nav?: AccountTab;
+    /** Sekme yerine geri bağı (sipariş detayı: "← Siparişlerim"). */
+    back?: { label: string; href: ComponentProps<typeof Link>['href'] };
+    /** Mobil başlığın orta/sol metni — sayfanın adı ya da sipariş referansı. */
+    title: string;
+    /** Sağ uçtaki öğe: "Çıkış yap" · "← Kataloğa dön" · "↻ Tekrar sipariş". Sayfanın kararı. */
+    right?: ReactNode;
+  };
   children: ReactNode;
 }
 
@@ -70,17 +92,27 @@ function navClass(key: NavKey, active: NavKey | undefined, base = ''): string {
   return [base, 'border-b-2 pb-0.5', active === key ? 'border-olive text-olive' : 'border-transparent'].filter(Boolean).join(' ');
 }
 
-export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default', back, children }: SiteFrameProps) {
+/**
+ * Hesap sekmesi — vitrin menüsüyle AYNI kural: alt çizgi her sekmede var, aktif olmayanda şeffaf.
+ * Yalnız aktife verilirse sekme 4px uzar ve sayfa değiştikçe satır oynar (`navClass` künyesi).
+ */
+function tabClass(key: AccountTab, active: AccountTab | undefined, base = ''): string {
+  return [base, 'border-b-2 pb-0.5', active === key ? 'border-olive text-olive' : 'border-transparent'].filter(Boolean).join(' ');
+}
+
+export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default', back, accountChrome, children }: SiteFrameProps) {
   const t = messages[locale];
   const isMobile = device === 'mobile';
   // Mobil detayda çerçevenin tamamı sadeleşir: şerit yok, arama yok, footer tek satır.
   const isMobileDetail = isMobile && mobileChrome === 'detail';
+  // Hesap alanında duyuru şeridi ÇİZİLMEZ (üç tasarımda da yok) ve başlık tamamen değişir.
+  const account = accountChrome;
   const bandItems = isMobile ? [t.announcement.mobile] : [t.announcement.cold, t.announcement.local, t.announcement.shipping];
 
   return (
     <div className="flex min-h-screen flex-col bg-cream text-ink">
       {/* K11 · Duyuru şeridi — mobil detayda gösterilmez, yerini üst bar alır. */}
-      {!isMobileDetail && (
+      {!isMobileDetail && !account && (
       <div className="bg-olive px-4 py-2 font-sans text-note font-medium text-cream">
         <div className={`${SHELL} flex justify-center gap-7 text-center`}>
           {bandItems.map((item) => (
@@ -90,8 +122,48 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
       </div>
       )}
 
-      {/* K12 · Site başlığı */}
-      {isMobileDetail ? (
+      {/* K12 · Site başlığı — hesap alanında kendi başlığı (08.14) */}
+      {account ? (
+        isMobile ? (
+          /* Mobil: [geri] · başlık · [sağ öğe]. Geri yoksa başlık sola yerleşir (tasarım: hesap
+             ekranında "Hesabım" solda, sağda "Çıkış"; siparişlerde "← Hesabım" solda, başlık ortada). */
+          <header className="flex items-center justify-between gap-3 border-b border-sand-300 px-4 py-3">
+            {account.back && (
+              <Link href={account.back.href} className="flex-none cursor-pointer font-sans text-body-sm font-bold text-olive">
+                {account.back.label}
+              </Link>
+            )}
+            <span className="truncate font-serif text-lead font-semibold leading-tight text-ink">{account.title}</span>
+            {/* Sağ uç boşsa yer AYRILIR: başlığın ortada kalması buna bağlı (tasarımda 36–40px boşluk). */}
+            {account.right ?? <span className="w-10 flex-none" aria-hidden="true" />}
+          </header>
+        ) : (
+          <header className={`${SHELL} flex items-center gap-9 border-b border-sand-300 px-12 py-4.5`}>
+            <Link href="/" className="cursor-pointer">
+              {/* Hesap başlığında logo 52px — vitrin başlığındaki 58px'ten küçük (tasarım). */}
+              <img src="/logo.jpg" alt={brand.name} className="h-[52px] mix-blend-multiply" />
+            </Link>
+            {account.nav ? (
+              <nav className="flex gap-6 font-sans text-body-sm font-semibold text-muted">
+                <Link href="/account" className={tabClass('account', account.nav, 'cursor-pointer transition-colors hover:text-olive')}>
+                  {t.accountNav.account}
+                </Link>
+                <Link href="/orders" className={tabClass('orders', account.nav, 'cursor-pointer transition-colors hover:text-olive')}>
+                  {t.accountNav.orders}
+                </Link>
+                {/* BEKLEYEN(08.6): talep ekranı yok — bağ verilseydi 404'e düşerdi. Sekme yerinde
+                    durur ki hesap alanının üç bölümü olduğu görünsün. */}
+                <span className={tabClass('support', account.nav)}>{t.accountNav.support}</span>
+              </nav>
+            ) : account.back ? (
+              <Link href={account.back.href} className="cursor-pointer font-sans text-body-sm font-bold text-olive hover:text-olive-dark">
+                {account.back.label}
+              </Link>
+            ) : null}
+            {account.right && <div className="ml-auto flex flex-none items-center">{account.right}</div>}
+          </header>
+        )
+      ) : isMobileDetail ? (
         <header className="flex items-center justify-between px-4 py-3">
           {back ? (
             <Link href={back.href} className="cursor-pointer font-sans text-body font-bold text-olive hover:text-olive-dark">

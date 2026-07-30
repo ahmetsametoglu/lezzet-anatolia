@@ -23,7 +23,13 @@
       "faq": "SSS"
     },
     "share": "WhatsApp ile paylaş",
-    "cart": "Sepetim"
+    "cart": "Sepetim",
+    "accountNav": {
+      "account": "Hesabım",
+      "orders": "Siparişlerim",
+      "support": "Taleplerim",
+      "backToCatalog": "← Kataloğa dön"
+    }
   },
   "fr": {
     "announcement": {
@@ -49,7 +55,13 @@
       "faq": "FAQ"
     },
     "share": "Partager sur WhatsApp",
-    "cart": "Mon panier"
+    "cart": "Mon panier",
+    "accountNav": {
+      "account": "Mon compte",
+      "orders": "Mes commandes",
+      "support": "Mes demandes",
+      "backToCatalog": "← Retour au catalogue"
+    }
   },
   "de": {
     "announcement": {
@@ -75,6 +87,12 @@
       "faq": "FAQ"
     },
     "share": "Über WhatsApp teilen",
-    "cart": "Mein Warenkorb"
+    "cart": "Mein Warenkorb",
+    "accountNav": {
+      "account": "Mein Konto",
+      "orders": "Meine Bestellungen",
+      "support": "Meine Anfragen",
+      "backToCatalog": "← Zurück zum Katalog"
+    }
   }
 }

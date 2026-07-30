@@ -7,6 +7,7 @@ import { currentCustomerId } from '@/lib/guard';
 import { getCustomerOrderDetail } from '@/lib/order/customer-orders';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { routing } from '@/i18n/routing';
+import { ReorderButton } from '../components/reorder-button';
 import { DetailClient } from './detail-client';
 import type { Messages } from './detail-types';
 import type { Messages as ListMessages } from '../orders-types';
@@ -44,7 +45,20 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   if (!order) notFound();
 
   return (
-    <SiteFrame device={device} locale={locale}>
+    <SiteFrame
+      device={device}
+      locale={locale}
+      accountChrome={{
+        back: { label: t.back, href: '/orders' },
+        title: order.referenceNo ?? '—',
+        // Mobilde düğme başlıkta DEĞİL, sayfanın altında (tasarım) — sağ uç boş kalır ve başlık
+        // ortada durur. Masaüstünde tasarım onu başlığın sağ ucuna koyuyor.
+        right:
+          device === 'mobile' ? undefined : (
+            <ReorderButton locale={locale as Locale} orderId={order.id} label={t.reorder} busyLabel={t.reordering} />
+          ),
+      }}
+    >
       <DetailClient t={t} listT={listT} locale={locale as Locale} order={order} device={device} />
     </SiteFrame>
   );
