@@ -32,7 +32,7 @@ const LIMIT_STEP_EUR = 50;
 export function CustomersMobile(props: CustomersViewProps) {
   // `onType` ve `onScope` BİLİNÇLİ olarak alınmıyor: tasarımın mobil bölümünde çip şeridi yok.
   const { rows, search, onSearch, hasMore, loadingMore, onLoadMore } = props;
-  const { selectedId, onSelect, detail, detailLoading, onOpenOrder, onEditCredit } = props;
+  const { selectedId, onSelect, detail, detailLoading, onOpenOrder, onEditCredit, onOpenB2b } = props;
   const { saving, saveError, onSaveCreditLimit } = props;
 
   return (
@@ -90,6 +90,11 @@ export function CustomersMobile(props: CustomersViewProps) {
 
                 {open ? (
                   <MobileDetail
+                    // B2B kutusu satırın TİPİNE bakıyor, detaya değil: detay okunurken de görünmesi
+                    // gerekiyor ve tip zaten satırda taşınıyor.
+                    isCompany={row.type === 'company'}
+                    b2bApproved={row.b2bApproved}
+                    onOpenB2b={onOpenB2b}
                     detail={detail}
                     loading={detailLoading}
                     saving={saving}
@@ -117,6 +122,9 @@ export function CustomersMobile(props: CustomersViewProps) {
  * sorusu "ödüyor mu", "ne kadar alıyor" değil (o web'de).
  */
 interface MobileDetailProps {
+  isCompany: boolean;
+  b2bApproved: boolean | null;
+  onOpenB2b: () => void;
   detail: CustomerDetail | null;
   loading: boolean;
   saving: boolean;
@@ -127,6 +135,9 @@ interface MobileDetailProps {
 }
 
 function MobileDetail({
+  isCompany,
+  b2bApproved,
+  onOpenB2b,
   detail,
   loading,
   saving,
@@ -137,7 +148,10 @@ function MobileDetail({
 }: MobileDetailProps) {
   if (loading || !detail) {
     return (
-      <div className="bg-ops-subtle px-4 py-3.5">
+      <div className="flex flex-col gap-3 bg-ops-subtle px-4 py-3.5">
+        {/* B2B kutusu detay beklemez — kararı verecek bilgi (tip + onay hâli) satırda zaten var ve
+            tasarımın mobil kuralı "karar telefonda anında". */}
+        {isCompany ? <B2bBox approved={b2bApproved} onOpen={onOpenB2b} /> : null}
         <span className="font-ops-body text-ops-sm text-ops-muted">Yükleniyor…</span>
       </div>
     );
@@ -147,6 +161,8 @@ function MobileDetail({
 
   return (
     <div className="flex flex-col gap-3 bg-ops-subtle px-4 py-3.5">
+      {isCompany ? <B2bBox approved={b2bApproved} onOpen={onOpenB2b} /> : null}
+
       {/* Ödeme karnesi — kutunun rengi durumu söyler. */}
       <div
         className={`flex flex-col gap-2 rounded-ops-card border px-3 py-2.5 ${
@@ -322,6 +338,34 @@ function LimitStepper({
       >
         Vade süresi ve yetkisi için tam form
       </button>
+    </div>
+  );
+}
+
+/**
+ * B2B onay kutusu (mobil) — durum + kartı açan düğme.
+ *
+ * Mobilde de var, çünkü tasarımın B2B bölümü *"başvurular gün içinde tek tek düşer; karar telefonda
+ * anında"* diyor. Onay geri dönüşsüz DEĞİL (ret kaydı silmez, onay geri alınabilir), yani mobilin
+ * "geri dönüşsüz işlem yok" kuralına takılmıyor.
+ */
+function B2bBox({ approved, onOpen }: { approved: boolean | null; onOpen: () => void }) {
+  const bekliyor = approved === false;
+  return (
+    <div
+      className={`flex flex-col gap-2 rounded-ops-card border px-3 py-2.5 ${
+        bekliyor ? 'border-ops-amber-line bg-ops-amber-bg' : 'border-ops-line bg-ops-white'
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <span className="mr-auto font-ops-body text-ops-xs font-medium text-ops-ink">B2B onayı</span>
+        <Badge tone={approved === true ? 'olive' : bekliyor ? 'amber' : 'neutral'} outline>
+          {approved === true ? 'Onaylı' : bekliyor ? 'Bekliyor' : 'Başvuru yok'}
+        </Badge>
+      </div>
+      <Button variant="secondary" size="sm" fullWidth onClick={onOpen}>
+        Başvuruyu incele
+      </Button>
     </div>
   );
 }

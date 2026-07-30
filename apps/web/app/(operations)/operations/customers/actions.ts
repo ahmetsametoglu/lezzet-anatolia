@@ -17,6 +17,7 @@ import { DEFAULT_PAGE_SIZE, type Discount, type DiscountCode, type KeysetCursor 
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readOrderSummary, type OrderSummaryView } from '@/lib/order/summary';
+import { readB2bCheck } from '@/lib/customer/b2b-check';
 import { readCustomerScorecard, readOverdueCustomerIds, SCORECARD_WINDOW } from '@/lib/customer/scorecard';
 import {
   acquisitionLabel,
@@ -27,7 +28,7 @@ import {
   toPersonalCouponRows,
 } from './customers-read';
 import { CUSTOMERS_PATH, parseCustomersUrl, toCustomerFilters } from './customers-url';
-import type { CreditFormInput, CustomerDetail, CustomerEditInput, CustomerRow } from './customers-types';
+import type { B2bCheckView, CreditFormInput, CustomerDetail, CustomerEditInput, CustomerRow } from './customers-types';
 
 // Müşteri ekranı server action'ları — 'use server' + requireAdmin ilk + servise devret +
 // `{ data, error }` DÖNER (throw yok) + revalidatePath.
@@ -164,6 +165,46 @@ export async function readOrderSummaryAction(orderId: string): Promise<ActionRes
     const summary = await readOrderSummary(serviceDb(), orderId);
     if (!summary) throw new Error('Sipariş bulunamadı.');
     return { data: summary, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * B2B başvurusunun kontrol kartı — diyalog açılınca okunur, seçimle DEĞİL.
+ *
+ * Dört okuma (profil · adres · teslim bölgeleri · mükerrer adayları) yalnız profesyonel müşteride ve
+ * yalnız diyalog açıldığında anlamlı. `CustomerDetail`e katılsaydı her seçimde, her müşteride, hiç
+ * açılmayacak bir kart için atılırdı.
+ */
+export async function readB2bCheckAction(customerId: string): Promise<ActionResult<B2bCheckView>> {
+  try {
+    await requireAdmin();
+    const check = await readB2bCheck(serviceDb(), customerId);
+    if (!check) throw new Error('Müşteri bulunamadı.');
+    return { data: check, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * B2B başvurusunu onaylar / reddeder.
+ *
+ * **Onay YALNIZ toptan fiyatı açar** (tasarımın altına yazdığı kural): vade/limit ayrı bir karardır ve
+ * ayrı diyalogda verilir. Burada `creditEnabled`e dokunulmaması bilinçli — onayla birlikte vade açmak,
+ * hiç değerlendirilmemiş bir müşteriye limitsiz vade vermek olurdu.
+ *
+ * **Ret SİLMEZ**: kayıt B2C olarak kalır (`b2bApproved = false`), müşteri perakende fiyatla alışverişe
+ * devam eder. Reddedilen bir başvuruyu silmek, aynı kişinin yarın yeniden başvurmasında geçmişi
+ * bilmemek demekti.
+ */
+export async function setB2bApprovalAction(customerId: string, approved: boolean): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    await new UserProfileService(serviceDb()).setB2bApproval(customerId, approved);
+    revalidatePath(CUSTOMERS_PATH);
+    return { data: null, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

@@ -1,3 +1,4 @@
+import type { B2bSignal, SignalTone } from '@lezzet/domain-core';
 import type { Country, CustomerType, KeysetCursor, OrderStatus, PaymentStatus, PreferredLanguage } from '@lezzet/types';
 import type { CustomerScope, CustomersUrlState } from './customers-url';
 
@@ -166,6 +167,42 @@ export interface CustomerEditInput {
   discountPercent: number | null;
 }
 
+/** Mükerrer ADAYI — kesinlik iddiası yok; operatör kaydı açıp kendisi karar verir. */
+export interface B2bDuplicateRow {
+  id: string;
+  name: string;
+  phone: string | null;
+  /** Taslak kayıt (WhatsApp telefonuyla açılmış) — mükerrer adaylarının en sık kaynağı. */
+  isDraft: boolean;
+}
+
+/**
+ * B2B onay KONTROL KARTI — profesyonel müşterinin başvuru diyaloğunun tamamı.
+ *
+ * Ayrı bir "başvuru" varlığı YOK: onay, müşteri kaydının bir alanıdır (`b2bApproved`) ve kart o kaydın
+ * çevresindeki sinyalleri toplar. Bu yüzden tip `CustomerDetail`in içine gömülmedi — detay her seçimde
+ * okunuyor, bu ise yalnız diyalog açılınca (dört okuma: profil, adres, bölgeler, mükerrer adayları).
+ *
+ * `signals`/`flag` tipleri MOTORDAN gelir (`@lezzet/domain-core`), burada yeniden yazılmaz.
+ */
+export interface B2bCheckView {
+  customerId: string;
+  name: string;
+  /** Resmî künye adı (`company_info.legalName`) — ticari addan farklı olabilir. */
+  legalName: string | null;
+  siret: string | null;
+  country: Country;
+  phone: string | null;
+  /** Tek satırlık adres; `null` = kayıtlı adresi yok. */
+  addressLine: string | null;
+  mapsHref: string | null;
+  /** `null` = B2C (soru hiç sorulmadı), `false` = onay bekliyor, `true` = onaylı. */
+  approved: boolean | null;
+  signals: B2bSignal[];
+  flag: { label: string; tone: SignalTone };
+  duplicates: B2bDuplicateRow[];
+}
+
 /** Vade/limit formunun girdisi. Limit KURUŞ (STACK §8), vade süresi GÜN. */
 export interface CreditFormInput {
   creditEnabled: boolean;
@@ -212,6 +249,11 @@ export interface CustomersViewProps {
    * indirim oranı da bu formun içinde; panelde canlı kontrol YOK (kullanıcı kararı 30.07).
    */
   onEdit: () => void;
+  /**
+   * B2B kontrol kartı diyaloğunu açar — eski `/operations/b2b-approvals` sayfasının yerine
+   * (kullanıcı kararı 30.07). Yalnız şirket müşterisinde çizilir.
+   */
+  onOpenB2b: () => void;
   /**
    * YALNIZ limiti yazar (mobilin satır-içi adımlayıcısı). Vade yetkisi ve süresi DEĞİŞMEZ — telefonda
    * yapılan iş "limiti oynat", yetkiyi açıp kapamak değil (tasarımın mobil kuralı).

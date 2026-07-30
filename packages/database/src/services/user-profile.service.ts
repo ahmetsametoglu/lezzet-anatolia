@@ -163,6 +163,44 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }
 
   /**
+   * MÜKERRER ADAYLARI — "bu başvuru zaten kayıtlı bir işletme olabilir mi".
+   *
+   * **Birebir kopya aramıyoruz, çünkü mümkün değil:** telefon ve e-posta kısmî TEKİL indeksli, aynı
+   * değer ikinci kez yazılamaz. Gerçek risk başka — aynı işletme farklı yazımla iki kez giriyor:
+   * WhatsApp'tan `+33 3 88 12 34 56` ile açılmış bir taslak, sonra web formundan `0388123456` ile
+   * yapılan bir B2B başvurusu. İkisi ayrı satır, ayrı sipariş geçmişi, ayrı cari bakiye.
+   *
+   * Bu yüzden ölçüt İKİ TARAFLI:
+   *  · **telefonun son haneleri** — ülke kodu/boşluk/tire farkını yok sayar (formatlama farkı)
+   *  · **ad benzerliği** — aynı işletmenin "Bosphore" ve "Restaurant Bosphore" olarak girilmesi
+   *
+   * Kesinlik iddiası YOK ve olmamalı: dönen şey ADAY, karar admin'in. Bu yüzden servis "mükerrer mi"
+   * demiyor, satır getiriyor (STACK §4).
+   */
+  async findDuplicateCandidates(opts: {
+    excludeId: string;
+    phone?: string | null;
+    name?: string | null;
+  }): Promise<UserProfile[]> {
+    const gruplar: string[] = [];
+
+    // Son 8 hane: Fransız sabit/mobil numarasının ulusal kısmını taşır ve ülke kodu ile öndeki
+    // sıfırın (0388… ↔ +33388…) farkından etkilenmez. Daha kısası (6) alakasız numaraları eşler.
+    const haneler = (opts.phone ?? '').replace(/\D/g, '');
+    if (haneler.length >= 8) gruplar.push(ilikeContains('phone', haneler.slice(-8)));
+
+    const ad = ilikeTerm(opts.name);
+    if (ad) gruplar.push(ilikeContains('name', ad));
+
+    // Hiçbir ölçüt kurulamadıysa (telefon yok, ad boş) sorgu HİÇ atılmaz: ölçütsüz bir `or` grubu
+    // tüm müşterileri "aday" olarak döndürürdü.
+    if (gruplar.length === 0) return [];
+
+    const adaylar = await this.getAll({}, { ...CUSTOMERS_ONLY, orFilters: [gruplar.join(',')], limit: 20 });
+    return adaylar.filter((p) => p.id !== opts.excludeId);
+  }
+
+  /**
    * B2B başvurusunu onaylar/reddeder (DOMAIN §10). Onaya kadar toptan fiyat görünmez; reddedilen
    * kayıt B2C olarak kalır — silinmez.
    */

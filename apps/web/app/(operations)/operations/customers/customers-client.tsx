@@ -9,17 +9,27 @@ import type { OrderSummaryView } from '@/lib/order/summary';
 import {
   loadMoreCustomersAction,
   readCustomerDetailAction,
+  readB2bCheckAction,
   readOrderSummaryAction,
+  setB2bApprovalAction,
   setCustomerCreditAction,
   updateCustomerAction,
 } from './actions';
+import { B2bApprovalDialog } from './components/b2b-approval-dialog';
 import { CreditDialog } from './components/credit-dialog';
 import { CustomerEditDialog } from './components/customer-edit-dialog';
 import { OrderDialog } from './components/order-dialog';
 import { CustomersDesktop } from './customers.desktop';
 import { CustomersMobile } from './customers.mobile';
 import { customersUrl, type CustomerScope, type CustomersUrlState } from './customers-url';
-import type { CreditFormInput, CustomerDetail, CustomerEditInput, CustomerRow, CustomersData } from './customers-types';
+import type {
+  B2bCheckView,
+  CreditFormInput,
+  CustomerDetail,
+  CustomerEditInput,
+  CustomerRow,
+  CustomersData,
+} from './customers-types';
 
 // Müşteri ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
 //
@@ -208,6 +218,32 @@ export function CustomersClient({ data, device, urlState }: CustomersClientProps
   const [creditOpen, setCreditOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
+  // ── B2B kontrol kartı ──
+  // Kart SEÇİMLE değil DİYALOG AÇILINCA okunur: dört okuma (profil, adres, teslim bölgeleri, mükerrer
+  // adayları) yalnız şirket müşterisinde ve yalnız operatör başvuruyu inceleyeceği zaman anlamlı.
+  const [b2bOpen, setB2bOpen] = useState(false);
+  const [b2bCheck, setB2bCheck] = useState<B2bCheckView | null>(null);
+  const [b2bError, setB2bError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!b2bOpen || !selectedId) {
+      setB2bCheck(null);
+      return;
+    }
+    setB2bCheck(null);
+    setB2bError(null);
+    let iptal = false;
+    void readB2bCheckAction(selectedId).then(({ data: c, error }) => {
+      if (iptal) return;
+      // Hata YUTULMAZ: yutulsa kart sonsuza kadar "okunuyor…" kalırdı.
+      if (c) setB2bCheck(c);
+      else setB2bError(error ?? 'Kontrol kartı okunamadı.');
+    });
+    return () => {
+      iptal = true;
+    };
+  }, [b2bOpen, selectedId]);
+
   const onOpenOrder = (orderId: string) => {
     const row = detail?.lastOrders.find((o) => o.id === orderId);
     setOrderDialog({ id: orderId, referenceNo: row?.referenceNo ?? null });
@@ -236,6 +272,10 @@ export function CustomersClient({ data, device, urlState }: CustomersClientProps
     onEdit: () => {
       setSaveError(null);
       setEditOpen(true);
+    },
+    onOpenB2b: () => {
+      setSaveError(null);
+      setB2bOpen(true);
     },
     // Mobilin satır-içi adımlayıcısı: yalnız LİMİT değişir. Yetki ve süre mevcut hâliyle geri
     // yazılıyor — action üçünü tek karar sayıyor ve eksik alan geçilse temizlerdi.
@@ -297,6 +337,32 @@ export function CustomersClient({ data, device, urlState }: CustomersClientProps
             )
           }
           onClose={() => setEditOpen(false)}
+        />
+      ) : null}
+      {b2bOpen && selected ? (
+        <B2bApprovalDialog
+          key={`b2b-${selected.id}`}
+          check={b2bCheck}
+          error={b2bError}
+          saving={saving}
+          onDecide={(approved) =>
+            void runWrite(
+              async () => {
+                const sonuc = await setB2bApprovalAction(selected.id, approved);
+                if (!sonuc.error) {
+                  // Satır rozeti ("Onay bekliyor") `b2bApproved`'a bağlı; liste yeniden okunmadan
+                  // doğru olsun diye yerelde yamalanıyor (`router.refresh()` seçimi düşürürdü).
+                  setRowPatch((prev) => ({
+                    ...prev,
+                    [selected.id]: { ...prev[selected.id], b2bApproved: approved },
+                  }));
+                }
+                return sonuc;
+              },
+              () => setB2bOpen(false),
+            )
+          }
+          onClose={() => setB2bOpen(false)}
         />
       ) : null}
       {orderDialog ? (

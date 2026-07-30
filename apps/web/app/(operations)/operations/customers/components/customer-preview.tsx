@@ -47,6 +47,8 @@ interface CustomerPreviewProps {
   onOpenOrder: (orderId: string) => void;
   onEditCredit: () => void;
   onEdit: () => void;
+  /** B2B kontrol kartı diyaloğu — yalnız şirket müşterisinde gösterilir. */
+  onOpenB2b: () => void;
 }
 
 export function CustomerPreview({
@@ -58,6 +60,7 @@ export function CustomerPreview({
   onOpenOrder,
   onEditCredit,
   onEdit,
+  onOpenB2b,
 }: CustomerPreviewProps) {
   if (!row) {
     return (
@@ -143,6 +146,34 @@ export function CustomerPreview({
             tone={detail && detail.latePaymentCount > 0 ? 'red' : undefined}
           />
         </div>
+
+        {/* ── B2B onay ── YALNIZ şirket müşterisinde: bireysel müşteride "onay" diye bir soru yok ve
+            boş bir kutu "bir şey eksik mi" düşündürür. Kutu eski `/operations/b2b-approvals` sayfasının
+            yerini alıyor (kullanıcı kararı 30.07): onay ayrı bir varlık değil, bu müşterinin bir hâli. */}
+        {row.type === 'company' ? (
+          <div
+            className={`flex flex-wrap items-center gap-2.5 rounded-ops-card border px-3.5 py-3 ${
+              row.b2bApproved === false ? 'border-ops-amber-line bg-ops-amber-bg' : 'border-ops-line bg-ops-white'
+            }`}
+          >
+            <span className="mr-auto flex min-w-0 flex-col gap-px">
+              <span className="font-ops-display text-ops-xs font-semibold text-ops-ink">B2B onayı</span>
+              <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
+                {row.b2bApproved === true
+                  ? 'Onaylı — toptan fiyatları görüyor.'
+                  : row.b2bApproved === false
+                    ? 'Onay bekliyor — toptan fiyat görmüyor, perakende fiyatla alışveriş yapıyor.'
+                    : 'Başvuru kaydı yok; şirket olarak işaretli ama onay süreci hiç başlamamış.'}
+              </span>
+            </span>
+            <Badge tone={row.b2bApproved === true ? 'olive' : row.b2bApproved === false ? 'amber' : 'neutral'} outline>
+              {row.b2bApproved === true ? 'Onaylı' : row.b2bApproved === false ? 'Bekliyor' : 'Başvuru yok'}
+            </Badge>
+            <Button variant="secondary" size="sm" onClick={onOpenB2b} disabled={saving}>
+              Başvuruyu incele
+            </Button>
+          </div>
+        ) : null}
 
         {/* ── Vade / limit ── Kutunun RENGİ durumu söyler. */}
         {detail ? (

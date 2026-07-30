@@ -62,7 +62,7 @@ const COLUMNS: Column<CustomerRow>[] = [
 
 export function CustomersDesktop(props: CustomersViewProps) {
   const { data, rows, urlState, search, onSearch, onScope, onType, hasMore, loadingMore, onLoadMore } = props;
-  const { selectedId, onSelect, detail, detailLoading, onOpenOrder, onEditCredit, onEdit, saving, saveError } = props;
+  const { selectedId, onSelect, detail, detailLoading, onOpenOrder, onEditCredit, onEdit, onOpenB2b, saving, saveError } = props;
   const selected = rows.find((r) => r.id === selectedId) ?? null;
   const { total, draft } = data.counts;
 
@@ -129,6 +129,7 @@ export function CustomersDesktop(props: CustomersViewProps) {
           onOpenOrder={onOpenOrder}
           onEditCredit={onEditCredit}
           onEdit={onEdit}
+          onOpenB2b={onOpenB2b}
         />
       </div>
     </div>

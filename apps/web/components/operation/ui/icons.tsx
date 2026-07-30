@@ -35,7 +35,6 @@ export type NavIconName =
   | 'raporlar'
   | 'analitik'
   | 'musteriler'
-  | 'b2b'
   | 'talepler'
   | 'geribildirim'
   | 'whatsapp'
@@ -111,13 +110,6 @@ const NAV_PATHS: Record<NavIconName, ReactNode> = {
     <>
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21v-1a6 6 0 0 1 12 0v1" />
-    </>
-  ),
-  b2b: (
-    <>
-      <rect x="4" y="2" width="16" height="20" rx="1.5" />
-      <path d="M9 22v-4h6v4" />
-      <path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01" />
     </>
   ),
   talepler: <path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" />,

@@ -50,8 +50,10 @@ const SECTIONS: NavSection[] = [
   {
     label: 'İlişki',
     items: [
+      // `B2B Onay` BURADA DEĞİL (kullanıcı kararı 30.07): onay, profesyonel müşterinin bir hâlidir,
+      // ayrı bir varlık değil. Ayrı satır aynı müşteriyi iki yerde yaşatıyordu ve onaydan sonra gelen
+      // iş (vade/limit) zaten müşteri panelindeydi. Kontrol kartı o panelden açılan diyalog.
       { key: 'musteriler', label: 'Müşteriler', href: '/operations/customers' },
-      { key: 'b2b', label: 'B2B Onay', href: '/operations/b2b-approvals' },
       { key: 'talepler', label: 'Talepler', href: '/operations/tickets' },
       { key: 'geribildirim', label: 'Geri Bildirim', href: '/operations/feedback' },
       { key: 'whatsapp', label: 'WhatsApp', href: '/operations/whatsapp' },
