@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { z } from 'zod';
 import {
   OrderSchema,
   OrderInsertSchema,
@@ -51,8 +52,7 @@ import {
   type TransitionResult,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
-import { dbToApp } from '../utils/case-transformers';
-import { DiscountUseService } from './discount-use.service';
+import { appToDb, dbToApp } from '../utils/case-transformers';
 
 /**
  * Sipariş listesinin süzgeçleri (09.7). Liste ve sayaç AYNI tipi alır: iki ayrı süzgeç tanımı,
@@ -119,8 +119,9 @@ function searchOptions(f: OrderListFilters): { orFilters?: string[]; rangeFilter
   return { orFilters: or, rangeFilters: ranges.length ? ranges : undefined };
 }
 
-/** Yeni kalem girişi — sipariş bağı `create` içinde kurulur. */
-export type CreateOrderItemInput = Omit<OrderItemInsert, 'orderId'>;
+/** Yeni kalem girişi — sipariş bağı `create` içinde kurulur (kimlik RPC'de doğar, dışarıdan gelmez). */
+const CreateOrderItemSchema = OrderItemInsertSchema.omit({ orderId: true });
+export type CreateOrderItemInput = z.infer<typeof CreateOrderItemSchema>;
 
 export class OrderItemService extends BaseDbService<OrderItem, OrderItemInsert, OrderItemUpdate> {
   constructor(supabase: SupabaseClient) {
@@ -144,10 +145,6 @@ export class OrderItemService extends BaseDbService<OrderItem, OrderItemInsert, 
       all.push(...(await this.getAll({ orderId: orderIds.slice(i, i + BATCH_SIZE) })));
     }
     return all;
-  }
-
-  addLines(rows: OrderItemInsert[]): Promise<OrderItem[]> {
-    return this.bulkInsert(rows);
   }
 
   /**
@@ -194,23 +191,24 @@ export class OrderStatusLogService extends BaseDbService<OrderStatusLog, OrderSt
  */
 export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate> {
   private readonly items: OrderItemService;
-  private readonly discountUses: DiscountUseService;
 
   constructor(supabase: SupabaseClient) {
     super(supabase, 'order', OrderSchema, OrderInsertSchema, OrderUpdateSchema);
     this.items = new OrderItemService(supabase);
-    this.discountUses = new DiscountUseService(supabase);
   }
 
   /**
-   * Sipariş + kalemleri + (indirim varsa) KULLANIM KAYDI. Herhangi biri düşerse **sipariş de geri
-   * alınır**: kalemsiz sipariş anlamsızdır, kullanım kaydı olmayan indirimli sipariş ise kotayı
-   * sessizce delen bir sipariştir. Taslak siparişin para/stok etkisi henüz olmadığı için telafi
-   * güvenlidir — rezervasyon ve tahsilatın da girdiği checkout akışı 07.4'te tek RPC'ye alınacak.
-   * Siparişi silmek kullanım kaydını da götürür (`order_id … on delete cascade`).
+   * Sipariş + kalemleri + (indirim varsa) KULLANIM KAYDI — **tek transaction** (`create_order` RPC).
    *
-   * **KOTA BURADA TÜKENİR ve bu bilinçli bir yer seçimi.** Kayıt siparişin KENDİ verisinden türer
-   * (`discountId` + `discountAmount`), yani çağıranın hatırlamasına bağlı değil. Kapıya (checkout)
+   * Üçü tek gerçektir: kalemsiz sipariş anlamsızdır, kullanım kaydı olmayan indirimli sipariş ise
+   * kotayı sessizce delen bir sipariştir. Önceden üç ayrı ifadeydi ve yarım kalan yazım "telafi
+   * silmesi" ile geri alınmaya çalışılıyordu; telafi bir garanti değildir (silme de düşebilir,
+   * süreç arada ölebilir) ve yalnız HATA anında çalışır. Artık ya üçü de yazılır ya hiçbiri —
+   * ve `discount_amount = Σ line_discount_amount` değişmezini COMMIT anında veritabanı denetler
+   * (`order_discount_balance` kısıt tetikleyicisi, 0041). 07.4'ün RPC borcu buydu.
+   *
+   * **KOTA RPC'DE TÜKENİR ve bu bilinçli bir yer seçimi.** Kayıt siparişin KENDİ verisinden türer
+   * (`discount_id` + `discount_amount`), yani çağıranın hatırlamasına bağlı değil. Kapıya (checkout)
    * yazılsaydı elle sipariş girişi (09.8), WhatsApp ajanı ve kapıda satış aynı şeyi ayrı ayrı
    * hatırlamak zorunda kalırdı — ve hatırlamayan ilk yol kotayı sessizce delerdi. Açık zaten böyle
    * doğmuştu: indirim siparişe yazılıyordu, kullanım kaydı hiçbir yerde yazılmıyordu (09.6).
@@ -224,43 +222,28 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
      */
     opts: { discountCodeId?: string | null } = {},
   ): Promise<{ order: Order; items: OrderItem[] }> {
+    // RPC de reddediyor; buradaki kontrol gidiş-dönüşü boşuna harcamamak için (mesaj aynı).
     if (lines.length === 0) throw new Error('order: kalemsiz sipariş açılamaz');
 
-    const created = await this.insert(order);
-    try {
-      const items = await this.items.addLines(lines.map((line) => ({ ...line, orderId: created.id })));
-      // İndirim İNMEDİYSE kayıt da yazılmaz: `discountId` boşsa tüketilen bir hak yok. Tutar sıfır
-      // olsa bile kural uygulanmışsa hak tükenir — kotayı harcayan şey indirimin BÜYÜKLÜĞÜ değil,
-      // kuralın kullanılmış olması.
-      if (created.discountId) {
-        await this.discountUses.record({
-          discountId: created.discountId,
-          discountCodeId: opts.discountCodeId ?? null,
-          customerId: created.customerId,
-          orderId: created.id,
-          amount: created.discountAmount,
-        });
-      }
-      return { order: created, items };
-    } catch (error) {
-      // Telafi silmesi: kalemler yazılamadıysa başlık da kalmamalı, yoksa kalemsiz bir sipariş
-      // doğar. **Silme de düşerse SESSİZ KALMAZ** — ortada gerçekten kalemsiz bir başlık var ve
-      // onu ancak bu satır haber verebilir. `database` gözlemleme paketine bağlanamaz (STACK §4:
-      // yalnız `types`+`helper`), o yüzden bilgi fırlatılan hatanın İÇİNE konur; çağıran uygulama
-      // katmanı zaten `captureError`'a düşürüyor ve stack orada tam görünüyor.
-      // Kalıcı çare sipariş+kalem yazımının tek transaction'a alınmasıdır (07.4 RPC borcu).
-      let orphanId: string | null = null;
-      await this.delete(created.id).catch(() => {
-        orphanId = created.id;
-      });
-      if (orphanId) {
-        throw new Error(
-          `[order.create] kalemler yazılamadı VE telafi silmesi de düştü — kalemsiz sipariş kaldı: ${orphanId}. ` +
-            `Kök hata: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-      throw error;
-    }
+    // Doğrulama YİNE Zod'da: gövde jsonb olarak gidiyor diye şema atlanmaz, yoksa tipsiz bir
+    // nesne doğrudan tabloya akardı. `appToDb` camelCase→snake_case çevirir — RPC gelen anahtarları
+    // tablonun kolonlarıyla kesiştirdiği için adların birebir tutması şart.
+    const orderId = await this.executeRpc<string>('create_order', {
+      p_order: appToDb(this.insertSchema.parse(order)),
+      p_items: lines.map((line) => appToDb(CreateOrderItemSchema.parse(line))),
+      p_discount_code_id: opts.discountCodeId ?? null,
+    });
+
+    // Yazılan satırı GERİ OKURUZ, gönderdiğimizi yansıtmayız: varsayılanlar (`status`, `created_at`),
+    // tetikleyiciler ve numeric yuvarlaması veritabanının kararıdır. Çağıranın elindeki nesne
+    // veritabanındakiyle aynı olmalı.
+    //
+    // **Kalemlerin sırası artık GİRDİ sırası değil, okuma sırasıdır.** Toplu yazımda dönen dizi girdiyle
+    // hizalıydı; burada ayrı bir okuma var. Kalemi kimliğinden (`variantId`, `bundleId`) tanıyın —
+    // `items[i] ↔ lines[i]` varsayan bir çağıran bir gün yanlış kalemi işler.
+    const created = await this.getWithItems(orderId);
+    if (!created) throw new Error(`[order.create] sipariş yazıldı ama okunamadı: ${orderId}`);
+    return created;
   }
 
   /**

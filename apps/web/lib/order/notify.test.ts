@@ -73,7 +73,9 @@ afterAll(async () => {
 async function confirmOrder(qty: number, extra: { shippingFee?: number; discountAmount?: number } = {}) {
   const { order, items } = await orders.create(
     { customerId, channel: 'b2c', deliveryType: 'route', shippingFee: extra.shippingFee ?? 0, discountAmount: extra.discountAmount ?? 0, total: qty * 10 + (extra.shippingFee ?? 0) - (extra.discountAmount ?? 0) },
-    [{ variantId, qty, unitPrice: 10, vatRate: 5.5 }],
+    // İndirim KALEME de dağıtılır: `discount_amount = Σ line_discount_amount` artık veritabanının
+    // zorladığı bir değişmez (0041). Tek kalemli fikstürde payın tamamı o kaleme iner.
+    [{ variantId, qty, unitPrice: 10, vatRate: 5.5, lineDiscountAmount: extra.discountAmount ?? 0 }],
   );
   await reservations.reserve({ orderId: order.id, variantId, qty });
   await transitionOrder({ orderId: order.id, to: 'confirmed' });

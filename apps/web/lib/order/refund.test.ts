@@ -66,7 +66,15 @@ afterAll(async () => {
 /** Sipariş aç → ayır → hazırla. Kalem tek: `qty` adet, birim 10 €. Durum `ready`'de bırakılır. */
 async function prepare(qty: number, extra: { shippingFee?: number; lineDiscountAmount?: number } = {}) {
   const { order, items } = await orders.create(
-    { customerId, channel: 'b2c', deliveryType: 'route', shippingFee: extra.shippingFee ?? 0 },
+    // Başlıktaki indirim kalem paylarının toplamıdır ve bunu artık veritabanı zorluyor (0041) —
+    // tek kalemli fikstürde ikisi aynı sayı.
+    {
+      customerId,
+      channel: 'b2c',
+      deliveryType: 'route',
+      shippingFee: extra.shippingFee ?? 0,
+      discountAmount: extra.lineDiscountAmount ?? 0,
+    },
     [{ variantId, qty, unitPrice: 10, vatRate: 5.5, lineDiscountAmount: extra.lineDiscountAmount ?? 0 }],
   );
   await reservations.reserve({ orderId: order.id, variantId, qty });

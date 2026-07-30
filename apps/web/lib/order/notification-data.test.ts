@@ -46,7 +46,9 @@ async function orderWith(
 ) {
   const { order } = await orders.create(
     { customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status, total: 20, ...extra },
-    [{ variantId, qty: 2, unitPrice: 10, vatRate: 5.5 }],
+    // İndirim KALEME de dağıtılır: `discount_amount = Σ line_discount_amount` artık veritabanının
+    // zorladığı bir değişmez (0041). Tek kalemli fikstürde payın tamamı o kaleme iner.
+    [{ variantId, qty: 2, unitPrice: 10, vatRate: 5.5, lineDiscountAmount: extra.discountAmount ?? 0 }],
   );
   createdOrders.push(order.id);
   await db.from('order_item').update({ fulfilled_qty: fulfilledQty }).eq('order_id', order.id);
