@@ -2,16 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { render } from '@react-email/render';
 import type { PreferredLanguage, TicketNotification } from '@lezzet/types';
 import {
+  TicketReceivedEmail,
   TicketRepliedEmail,
   TicketStatusChangedEmail,
+  ticketReceivedSubject,
   ticketRepliedSubject,
   ticketStatusChangedSubject,
 } from './ticket-notification';
 
 /**
- * Talep e-postaları (14.7). Sınanan dört şey: **metin müşterinin dilinde çıkıyor**, **cevabın tam
- * metni mailde**, **çözülen talepte "yine yazabilirsin" daveti var**, **kapalı ile yeniden açılan
- * ayırt ediliyor**.
+ * Talep e-postaları (14.7 · 16.4). Sınanan altı şey: **metin müşterinin dilinde çıkıyor**,
+ * **cevabın tam metni mailde**, **öncesi alıntı olarak mailde**, **teyit maili müşterinin kendi
+ * anlatımını taşıyor**, **çözülen talepte "yine yazabilirsin" daveti var**, **kapalı ile yeniden
+ * açılan ayırt ediliyor**.
  */
 
 const base: TicketNotification = {
@@ -23,8 +26,15 @@ const base: TicketNotification = {
   locale: 'tr',
   orderReferenceNo: 'LZA-1234',
   openedOn: '22 Temmuz 2026',
-  replyBody: 'Eksik gönderilen kalemi tespit ettik.\nBedeli iade edildi; 3-5 iş günü içinde hesabınızda görünür.',
-  repliedAt: '24 Temmuz, 10:40',
+  history: [
+    {
+      sender: 'admin',
+      body: 'Eksik gönderilen kalemi tespit ettik.\nBedeli iade edildi; 3-5 iş günü içinde hesabınızda görünür.',
+      at: '24 Temmuz, 10:40',
+      truncated: false,
+    },
+    { sender: 'customer', body: 'Kutuda iki kavanoz eksikti.', at: '23 Temmuz, 18:05', truncated: false },
+  ],
   previousStatus: null,
   ticketUrl: 'https://example.test/tr/talepler/11111111',
   notificationPreferencesUrl: 'https://example.test/tr/tercihler',
@@ -32,9 +42,14 @@ const base: TicketNotification = {
 
 const props = { brandName: 'Lezzet Anatolia', postalAddress: 'Lezzet Anatolia · Strasbourg' };
 
-function html(data: TicketNotification, kind: 'replied' | 'status' = 'replied'): Promise<string> {
-  const element = kind === 'replied' ? TicketRepliedEmail({ data, ...props }) : TicketStatusChangedEmail({ data, ...props });
-  return render(element);
+const RENDERERS = {
+  received: TicketReceivedEmail,
+  replied: TicketRepliedEmail,
+  status: TicketStatusChangedEmail,
+} as const;
+
+function html(data: TicketNotification, kind: keyof typeof RENDERERS = 'replied'): Promise<string> {
+  return render(RENDERERS[kind]({ data, ...props }));
 }
 
 describe('cevap maili', () => {
@@ -58,6 +73,51 @@ describe('cevap maili', () => {
   it('konu satırı talebi tanıtır', () => {
     expect(ticketRepliedSubject(base)).toBe('Talebinize cevap verdik — Eksik ürün');
   });
+
+  it('cevabın ÖNCESİ alıntılanır — "neye cevap verdiler" tıklamayı gerektirmesin', async () => {
+    const output = await html(base);
+
+    expect(output).toContain('Önceki mesajlar');
+    expect(output).toContain('Kutuda iki kavanoz eksikti.');
+    // Müşterinin kendi mesajı "Siz" diye işaretlenir; personelinki markadan ayrılmaz.
+    expect(output).toContain('Siz');
+  });
+
+  it('tek mesajlık talepte alıntı bloğu HİÇ çizilmez — boş bir başlık gösterilmez', async () => {
+    const output = await html({ ...base, history: [base.history[0]!] });
+
+    expect(output).not.toContain('Önceki mesajlar');
+  });
+
+  it('kırpılan alıntı kırpıldığını SÖYLER — sessizce kesmek okunanı değiştirirdi', async () => {
+    const output = await html({
+      ...base,
+      history: [base.history[0]!, { ...base.history[1]!, body: 'çok uzun bir anlatım', truncated: true }],
+    });
+
+    expect(output).toContain('Mesajın tamamı talep sayfasında.');
+  });
+});
+
+describe('teyit maili', () => {
+  it('müşterinin KENDİ anlatımı mailde — ne ulaştığının kanıtı odur', async () => {
+    const received: TicketNotification = {
+      ...base,
+      status: 'open',
+      history: [{ sender: 'customer', body: 'Kutuda iki kavanoz eksikti.', at: '23 Temmuz, 18:05', truncated: false }],
+    };
+    const output = await html(received, 'received');
+
+    expect(output).toContain('Talebinizi aldık');
+    expect(output).toContain('Bize yazdıklarınız');
+    expect(output).toContain('Kutuda iki kavanoz eksikti.');
+  });
+
+  it('konu satırı talebi tanıtır ve üç dilde çevrilir', () => {
+    expect(ticketReceivedSubject(base)).toBe('Talebinizi aldık — Eksik ürün');
+    expect(ticketReceivedSubject({ ...base, locale: 'fr' })).toContain('bien reçu');
+    expect(ticketReceivedSubject({ ...base, locale: 'de' })).toContain('erhalten');
+  });
 });
 
 describe('durum maili', () => {
@@ -76,10 +136,13 @@ describe('durum maili', () => {
     expect(output).not.toContain('Sorun devam ediyor mu?');
   });
 
-  it('durum mailinde cevap gövdesi gösterilmez — o başka bir olayın konusu', async () => {
+  it('durum mailinde yazışma HİÇ gösterilmez — ne tam kart ne alıntı', async () => {
     const output = await html({ ...base, status: 'resolved' }, 'status');
 
+    // Cevabın metni başka bir olayın konusu ve o mail zaten gitti; burada tekrarlamak aynı cümleyi
+    // iki kez göndermek olurdu. Neyin çözüldüğünü künye kartı söylüyor.
     expect(output).not.toContain('Eksik gönderilen kalemi tespit ettik.');
+    expect(output).not.toContain('Önceki mesajlar');
   });
 });
 

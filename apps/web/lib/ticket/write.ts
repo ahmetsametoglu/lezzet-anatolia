@@ -9,7 +9,7 @@ import {
 } from '@lezzet/domain-core';
 import { ticketAttachmentScope } from '@lezzet/storage';
 import type { Ticket, TicketMessage, TicketStatus, TicketType } from '@lezzet/types';
-import { notifyTicketReplied, notifyTicketStatusChanged } from './notify';
+import { notifyTicketReceived, notifyTicketReplied, notifyTicketStatusChanged } from './notify';
 
 /**
  * Talep yazımları (16.1) — **kapı**: motora sorar, servise yazdırır (STACK §4).
@@ -112,6 +112,10 @@ export async function openTicket(input: {
     // Personelin elle açtığı talepte ilk sözü o söyler; müşterinin kendi açtığında müşteri.
     sender: input.authorId ? 'admin' : 'customer',
   });
+  // Teyit maili — talep kaydedildikten SONRA ve sonucu beklenmeden değil, beklenerek: gönderim
+  // zaten kendi içinde sessiz (hata yukarı çıkmaz), ama beklemezsek server action süreci mail
+  // gitmeden sonlanabilir.
+  await notifyTicketReceived(ticket, input.authorId ? 'staff' : 'customer');
   return { ok: true, data: ticket };
 }
 

@@ -59,6 +59,10 @@ Sistemin dışarıya konuşan sesi: `packages/email` (mail istemcisi + default �
 - [x] (14.7) **Talep cevap bildirimi:** ticket olayları için notify olayı + şablon (admin cevabı / durum değişimi) — tetikleme `16-talep-sikayet`'te bağlanır
   - *Bitti:* örnek ticket cevabı şablondan müşteri dilinde çıkıyor
   - **Durum (29.07):** iki olay (`ticket_replied` · `ticket_status_changed`), tek veri şekli `TicketNotification` (`types/notification.schema`), tek şablon dosyası `email/templates/ticket-notification.tsx` + üç dilli `ticket-copy.ts`. 12 test (10 şablon + 2 sürücü).
+  - **Üçüncü olay + yazışma geçmişi (01.08):** `ticket_received` (teyit) eklendi ve mailler artık yazışmanın kendisini taşıyor. `replyBody`/`repliedAt` KALKTI, yerine `history: TicketHistoryEntry[]` — son mesajlar en yeniden eskiye; `history[0]` mailin konusu (tam kartta), kalanı alıntı (`QuoteCard`). Aynı mesajı iki alanda taşımak "hangisi güncel" sorusunu doğuran türden bir tekrardı.
+    - **Sınır KAPIDA, şablonda değil:** bir talebin mesajları sınırsız büyür (`CLAUDE.md §1`) — `lib/ticket/notify.ts` son 4 mesajı alır, alıntıları 600 karakterde keser ve kestiğini `truncated` ile söyler. **İlk sıra asla kırpılmaz:** personelin cevabı müşteriye aynen görünmelidir (DOMAIN §15 — iç not yoktur).
+    - **Durum maili yazışmayı GÖSTERMEZ** (`quoted={[]}`): konusu bir mesaj değil bir durum, neyin çözüldüğünü künye kartı zaten söylüyor. Cevabın metni başka bir olayın konusu ve o mail zaten gitti.
+    - **`admin` ile `ai` müşteriye aynı görünür** ("Biz"): kimin yazdığı iç izlenebilirlik meselesi, müşterinin muhatabı marka.
     - **Enum ham geçer, etiket değil:** kapı `status`/`type` gönderir, "Çözüldü"/"Résolue" çevirisi şablonun yanındaki sözlükte. Kapı etiket üretseydi aynı sözlük iki yerde dururdu.
     - **Cevabın TAM metni maildedir** (DOMAIN §15 — iç not yoktur): kırpsaydık müşteri okumak için tıklamak zorunda kalırdı, oysa mail zaten cevabı taşımak için gidiyor. Satır sonları korunur.
     - **Çözülen talepte "yine yazabilirsin" daveti var:** kapanmış talebe yazılabildiği söylenmezse müşteri ikinci talep açar ve aynı konu iki yerde ilerler.

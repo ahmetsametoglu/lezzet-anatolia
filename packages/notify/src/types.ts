@@ -22,6 +22,12 @@ export interface NotifyPayloads {
   order_refunded: OrderNotification;
   // Talep bildirimleri (14.7 · 16.4) — olay başına ayrı veri şekli; hepsi `OrderNotification`
   // olsaydı sürücüler "bu payload'da referenceNo var mı" diye tahmin etmek zorunda kalırdı.
+  //
+  // `ticket_received` bu ailenin İSTİSNASIDIR: müşterinin kendi eylemi haber doğurur. Kural
+  // ("kimse kendi cümlesini mailde okumak istemez") bir BİLDİRİM kuralıdır; bu ise bir TEYİTTİR —
+  // işi müşteriye bir şey anlatmak değil, mesajın bize ulaştığını kanıtlamak. Ekran zaten söz
+  // veriyordu ("aldığımızda ve yanıtladığımızda haber veririz") ve olay yoktu.
+  ticket_received: TicketNotification;
   ticket_replied: TicketNotification;
   ticket_status_changed: TicketNotification;
 }

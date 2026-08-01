@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PreferredLanguageEnum, TicketStatusEnum, TicketTypeEnum } from './enums.schema';
+import { PreferredLanguageEnum, TicketSenderEnum, TicketStatusEnum, TicketTypeEnum } from './enums.schema';
 
 // Bildirim (modül 14) — müşteriye giden mesajın VERİ ŞEKLİ. DOMAIN §6, build/14.
 //
@@ -108,9 +108,27 @@ export type OrderNotification = z.infer<typeof OrderNotificationSchema>;
  * yanındaki metin tablosudur (`ticket-copy.ts`). Kapı etiket üretseydi aynı sözlük iki dilde iki
  * yerde dururdu.
  *
- * **`replyBody` tam metindir, özet değil:** personelin cevabı müşteriye aynen görünür (DOMAIN §15,
- * iç not yoktur). Kırpma bir sunum kararıdır ve şablona aittir.
+ * **Mail yazışmanın KENDİSİNİ taşır** (16.4, referans desen): son mesajlar `history` içinde gelir,
+ * müşteri bağlamı görmek için tıklamak zorunda kalmaz. Önce yalnız `replyBody` vardı — cevabın
+ * öncesi görünmüyordu ve "neye cevap verdiler" sorusu için tıklamak gerekiyordu.
  */
+
+/**
+ * Alıntılanan tek mesaj. **Gövde kapıda kırpılır, şablonda değil:** bir talebin mesajları sınırsız
+ * büyür (`CLAUDE.md §1`) ve şablona kırpılmamış bir yazışma vermek, payload'ı ve maili sınırsız
+ * şişirirdi. Sunum kararı değil, sözleşme sınırı.
+ */
+export const TicketHistoryEntrySchema = z.object({
+  /** Kim yazdı — şablon "Siz" ile markayı ayırt eder. `ai` müşteriye ayrı gösterilmez (DOMAIN §15). */
+  sender: TicketSenderEnum,
+  body: z.string(),
+  /** Biçimlenmiş zaman ("24 Temmuz, 10:40"). */
+  at: z.string(),
+  /** Kırpıldıysa şablon "…" ve tam metnin bağlantısını gösterir — sessiz kırpma yalan söylerdi. */
+  truncated: z.boolean(),
+});
+export type TicketHistoryEntry = z.infer<typeof TicketHistoryEntrySchema>;
+
 export const TicketNotificationSchema = z.object({
   ticketId: z.string().uuid(),
   /** Yüzeyin türettiği ya da personelin koyduğu başlık; yoksa şablon tipten bir başlık kurar. */
@@ -124,9 +142,20 @@ export const TicketNotificationSchema = z.object({
   /** Talebin açıldığı gün, biçimlenmiş ("22 Temmuz 2026"). */
   openedOn: z.string(),
 
-  /** `ticket_replied` olayında dolu: personelin son cevabı ve zamanı. */
-  replyBody: z.string().nullable(),
-  repliedAt: z.string().nullable(),
+  /**
+   * Yazışmanın son mesajları, **en yeniden eskiye** — mailin okunma yönü budur (yeni haber üstte,
+   * bağlam altında; e-posta alıntı geleneği).
+   *
+   * `history[0]` mailin KONUSU olan mesajdır: `ticket_replied`'da personelin cevabı,
+   * `ticket_received`'da müşterinin kendi anlatımı. Şablon onu tam kartta gösterir, kalanını
+   * alıntılar. Ayrı bir `replyBody` alanı vardı ve kaldırıldı: aynı mesajı iki alanda taşımak,
+   * "hangisi güncel" sorusunu doğuran türden bir tekrardı.
+   *
+   * `ticket_status_changed` şablonu bunu KULLANMAZ (o mailin konusu bir mesaj değil bir durum);
+   * alan yine dolu gelir çünkü kapı olay başına ayrı veri kurmaz — hangi bloğun çizileceği
+   * şablonun kararıdır.
+   */
+  history: z.array(TicketHistoryEntrySchema),
   /**
    * `ticket_status_changed` olayında dolu — nereden gelindiği. Yalnız yeni durumu göstermek
    * "çözüldü" ile "yeniden açıldı"yı ayırt edilemez kılardı.

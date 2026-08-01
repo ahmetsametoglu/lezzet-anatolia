@@ -1,14 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TicketService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
-import { notifyTicketReplied, notifyTicketStatusChanged } from './notify';
+import { notifyTicketReceived, notifyTicketReplied, notifyTicketStatusChanged } from './notify';
 import { changeTicketStatus, openTicket, replyAsCustomer, replyAsStaff } from './write';
 
 /**
  * Talep bildirimlerinin tetiklenmesi (16.4).
  *
- * Sınanan dört kural: **personelin cevabı haber doğurur**, **müşterinin kendi mesajı doğurmaz**,
- * **`in_progress` doğurmaz**, **bildirim asıl işlemi durdurmaz**.
+ * Sınanan beş kural: **talebin açılışı teyit doğurur**, **personelin cevabı haber doğurur**,
+ * **müşterinin kendi mesajı doğurmaz**, **`in_progress` doğurmaz**, **bildirim asıl işlemi
+ * durdurmaz**.
  *
  * Sağlayıcı anahtarı yerelde yok; sürücü `skipped` döner. Sınanan şey gönderimin kendisi değil —
  * **hangi olayın haber sayıldığı**. Gönderim `packages/notify` testinin işi.
@@ -41,6 +42,22 @@ afterAll(async () => {
 });
 
 describe('hangi olay haber sayılır', () => {
+  it('müşterinin kendi açtığı talep TEYİT doğurur — ekran iki mail vaat ediyor', async () => {
+    const ticket = await newTicket();
+
+    // Kuralın ("kendi cümleni mailde okumak istemezsin") istisnası: teyidin işi anlatmak değil,
+    // mesajın ulaştığını kanıtlamak.
+    expect((await notifyTicketReceived(ticket, 'customer'))[0]?.channel).toBe('email');
+  });
+
+  it('personelin müşteri adına açtığı talep teyit DOĞURMAZ', async () => {
+    const ticket = await newTicket();
+
+    // Orada ilk sözü operatör söyler; "bize yazdıklarınız" başlığı altında müşteriye kendi
+    // yazmadığı bir metni göstermek olurdu.
+    expect(await notifyTicketReceived(ticket, 'staff')).toEqual([]);
+  });
+
   it('personelin cevabı müşteriye haber doğurur', async () => {
     const ticket = await newTicket();
     await replyAsStaff({ ticketId: ticket.id, authorId: staffId, body: 'Strasbourg ve 20 km çevresi.' });

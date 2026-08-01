@@ -64,6 +64,12 @@ const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => string } =
       fr: `Le remboursement de votre commande ${d.referenceNo} a été traité.`,
       de: `Die Erstattung Ihrer Bestellung ${d.referenceNo} wurde bearbeitet.`,
     }),
+  ticket_received: (d) =>
+    say(d.locale, {
+      tr: `Talebinizi aldık, en kısa sürede döneceğiz: ${d.ticketUrl}`,
+      fr: `Nous avons bien reçu votre demande, nous revenons vers vous rapidement : ${d.ticketUrl}`,
+      de: `Wir haben Ihre Anfrage erhalten und melden uns in Kürze: ${d.ticketUrl}`,
+    }),
   ticket_replied: (d) =>
     say(d.locale, {
       tr: `Talebinize cevap verdik: ${d.ticketUrl}`,

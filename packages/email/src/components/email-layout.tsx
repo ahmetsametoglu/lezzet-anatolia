@@ -546,6 +546,55 @@ export function MessageCard({ title, meta, body }: { title: string; meta: string
   );
 }
 
+/** Alıntılanan tek mesaj — kim, ne zaman, ne yazdı. Ticket kavramı taşımaz: etiketi çağıran verir. */
+export interface EmailQuote {
+  author: string;
+  at: string;
+  body: string;
+  /** Gövde kırpıldıysa altına düşen dürüstlük satırı; kırpılmadıysa null. */
+  note?: string | null;
+}
+
+/**
+ * Alıntılanan yazışma (16.4) — mailin KONUSU olan mesajın altında duran bağlam.
+ *
+ * Ayrı bir çizimi yok; `MessageCard`ın soluklaştırılmış hâlidir ve alıntı olduğunu üç işaretle
+ * söyler: sol çizgi, küçük punto, soluk renk. Yeni mesajla aynı ağırlıkta çizilseydi müşteri
+ * hangisinin bugünkü haber olduğunu ayırt edemezdi — mailin tek işi o farkı göstermek.
+ *
+ * Sıra **en yeniden eskiye**: e-posta alıntı geleneği bu, ve müşterinin aradığı şey en son ne
+ * konuşulduğu.
+ */
+export function QuoteCard({ title, entries }: { title: string; entries: readonly EmailQuote[] }) {
+  return (
+    <Card title={title}>
+      {entries.map((entry, index) => (
+        <table
+          key={`${entry.at}-${index}`}
+          role="presentation"
+          width="100%"
+          cellPadding={0}
+          cellSpacing={0}
+          border={0}
+          style={{ width: '100%', borderTop: index === 0 ? undefined : `1px solid ${C.rule}` }}
+        >
+          <tbody>
+            <tr>
+              <td style={{ padding: index === 0 ? '0 0 12px 12px' : '12px 0 12px 12px', borderLeft: `2px solid ${C.pendingRule}` }}>
+                <div style={{ fontFamily: SANS, fontSize: 12, lineHeight: '17px', color: C.faint, paddingBottom: 4 }}>
+                  <strong style={{ color: C.muted }}>{entry.author}</strong> · {entry.at}
+                </div>
+                <div style={{ fontFamily: SANS, fontSize: 13, lineHeight: '20px', color: C.muted, whiteSpace: 'pre-line' }}>{entry.body}</div>
+                {entry.note && <div style={{ fontFamily: SANS, fontSize: 12, lineHeight: '17px', color: C.pale, paddingTop: 4 }}>{entry.note}</div>}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      ))}
+    </Card>
+  );
+}
+
 /** Yeşil hap buton — her mailde tek birincil eylem. */
 export function CtaButton({ label, url }: { label: string; url: string }) {
   return (

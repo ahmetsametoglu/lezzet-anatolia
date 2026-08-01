@@ -5,6 +5,7 @@ import {
   OrderOutForDeliveryEmail,
   OrderRefundedEmail,
   OrderShortfallEmail,
+  TicketReceivedEmail,
   TicketRepliedEmail,
   TicketStatusChangedEmail,
   orderCancelledSubject,
@@ -14,6 +15,7 @@ import {
   orderRefundedSubject,
   orderShortfallSubject,
   sendEmail,
+  ticketReceivedSubject,
   ticketRepliedSubject,
   ticketStatusChangedSubject,
 } from '@lezzet/email';
@@ -50,6 +52,7 @@ const TEMPLATES: { [E in NotifyEventName]: Template<E> } = {
   order_cancelled: { subject: orderCancelledSubject, render: OrderCancelledEmail },
   order_shortfall: { subject: orderShortfallSubject, render: OrderShortfallEmail },
   order_refunded: { subject: orderRefundedSubject, render: OrderRefundedEmail },
+  ticket_received: { subject: ticketReceivedSubject, render: TicketReceivedEmail },
   ticket_replied: { subject: ticketRepliedSubject, render: TicketRepliedEmail },
   ticket_status_changed: { subject: ticketStatusChangedSubject, render: TicketStatusChangedEmail },
 };
