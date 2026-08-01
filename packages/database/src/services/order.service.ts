@@ -63,6 +63,14 @@ import { appToDb, dbToApp } from '../utils/case-transformers';
 export interface OrderListFilters {
   /** Boşsa listenin kendi kümesi (taslak hariç tüm durumlar) geçerlidir. */
   status?: OrderStatus[];
+  /**
+   * Depo süzgeci (DOMAIN §17). Boş = depo-üstü ve bu YALNIZ admin/muhasebe için meşrudur;
+   * depocunun ekranı daima kendi deposunu gönderir (kapsam kararı guard'ın işi).
+   *
+   * Sayaçlar bu süzgeci LİSTEYLE aynı şekilde alır — biri süzülüp öteki süzülmezse başlıkta
+   * "12 sipariş" yazarken listede 4 satır görünür ve operatör kendi ekranına güvenmeyi bırakır.
+   */
+  warehouseId?: string;
   channel?: Channel;
   source?: OrderSource;
   deliveryType?: DeliveryType;
@@ -100,6 +108,7 @@ function listedFilters(f: OrderListFilters): Record<string, unknown> {
     orderSource: f.source,
     deliveryType: f.deliveryType,
     paymentStatus: f.paymentStatus,
+    warehouseId: f.warehouseId,
   };
 }
 
@@ -613,6 +622,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       p_payment_status: filters.paymentStatus ?? null,
       p_from: filters.deliveryFrom ?? null,
       p_to: filters.deliveryTo ?? null,
+      p_warehouse_id: filters.warehouseId ?? null,
     });
     // `by_status`'un ANAHTARLARI enum değeridir, alan adı değil: `dbToApp` onları da camelCase'e
     // çevirip `out_for_delivery`'yi `outForDelivery` yapıyordu — sessizce hiçbir sekmeye denk
@@ -628,10 +638,18 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     };
   }
 
-  /** Operasyon kuyruğu: duruma (ve varsa güne) göre. Depo/kurye ekranlarının okuması. */
-  listByStatus(status: OrderStatus | OrderStatus[], opts: { deliveryDate?: string; limit?: number } = {}): Promise<Order[]> {
+  /**
+   * Operasyon kuyruğu: duruma (ve varsa güne) göre. Depo/kurye ekranlarının okuması.
+   *
+   * `warehouseId` verilirse yalnız o deponun kuyruğu — depocu başka deponun siparişini görmez (C5)
+   * ve zaten hazırlayamaz: partiler siparişin deposundan seçilir. Verilmezse depo-üstü (admin).
+   */
+  listByStatus(
+    status: OrderStatus | OrderStatus[],
+    opts: { deliveryDate?: string; limit?: number; warehouseId?: string } = {},
+  ): Promise<Order[]> {
     return this.getAll(
-      { status: Array.isArray(status) ? status : [status], deliveryDate: opts.deliveryDate },
+      { status: Array.isArray(status) ? status : [status], deliveryDate: opts.deliveryDate, warehouseId: opts.warehouseId },
       { orderBy: 'createdAt', limit: opts.limit },
     );
   }

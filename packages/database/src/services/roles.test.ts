@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
+import { createTestWarehouse } from '../testing/warehouse';
 import { purgeTestData } from '../testing/cleanup';
 import { UserProfileService } from './user-profile.service';
 
@@ -11,6 +12,8 @@ const db = serviceDb();
 const profiles = new UserProfileService(db);
 const stamp = Date.now();
 const createdIds: string[] = [];
+// Depocu/kurye rolü kapsamsız YAZILAMAZ (DOMAIN §17, DB kısıtı) — rol ile kapsam tek gerçektir.
+let warehouseId: string;
 
 async function createProfile(ad: string) {
   const p = await profiles.insert({ name: `${ad} ${stamp}` });
@@ -19,11 +22,13 @@ async function createProfile(ad: string) {
 }
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db, { label: 'ROL' })).id;
   await createProfile('rol-testi');
 });
 
 afterAll(async () => {
   await purgeTestData(db, { profileIds: createdIds });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 describe('kural DB kısıtında zorlanır', () => {
@@ -44,7 +49,7 @@ describe('kural DB kısıtında zorlanır', () => {
 
   it('personel içinde çoklu rol yazılabilir — depo + muhasebe', async () => {
     const p = await createProfile('coklu');
-    const updated = await profiles.setRoles(p.id, ['warehouse', 'accounting']);
+    const updated = await profiles.setRoles(p.id, ['warehouse', 'accounting'], [warehouseId]);
     expect(updated.roles).toEqual(['warehouse', 'accounting']);
   });
 });
@@ -58,7 +63,7 @@ describe('okuma uçları', () => {
     const triggerProfili = await profiles.findByAuthUserId(authUserId);
     createdIds.push(triggerProfili!.id);
 
-    await profiles.setRoles(triggerProfili!.id, ['warehouse', 'accounting']);
+    await profiles.setRoles(triggerProfili!.id, ['warehouse', 'accounting'], [warehouseId]);
     expect(await profiles.hasRole(authUserId, 'accounting')).toBe(true);
     expect(await profiles.hasRole(authUserId, 'courier')).toBe(false);
     expect(await profiles.isStaff(authUserId)).toBe(true);
@@ -72,7 +77,7 @@ describe('okuma uçları', () => {
 
   it('role göre listeleme dizide arar', async () => {
     const p = await createProfile('listeleme');
-    await profiles.setRoles(p.id, ['courier', 'accounting']);
+    await profiles.setRoles(p.id, ['courier', 'accounting'], [warehouseId]);
 
     const kuryeler = await profiles.listByRole('courier');
     expect(kuryeler.some((r) => r.id === p.id)).toBe(true);

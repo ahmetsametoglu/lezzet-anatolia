@@ -129,7 +129,7 @@ function buildProductQuery(f?: ProductFilters): { filters: Record<string, unknow
 }
 
 /**
- * **Fiyata göre sıralı katalog** (08.10) — `product_listing` görünümü (0034).
+ * **Fiyata göre sıralı katalog** (08.10) — `product_listing` görünümü (0043).
  *
  * Kendi sınıfı olmasının sebebi teknik: keyset sayfalama `tableName`'e bağlıdır ve sıralama anahtarı
  * (`sort_price`) yalnız görünümde vardır (`OrderSaleService` ile aynı gerekçe). Süzgeçler paylaşılır
@@ -137,7 +137,7 @@ function buildProductQuery(f?: ProductFilters): { filters: Record<string, unknow
  * hangi kaynaktan ve hangi sıraya göre okunduğu.
  *
  * **Sıralamanın kullandığı fiyat, kartta yazan fiyattır.** Görünüm motorun ziyaretçi dalını yeniden
- * ifade eder (0034 başlığındaki ödünleşme); ikisinin ayrışmadığı testle tutulur.
+ * ifade eder (0043 başlığındaki ödünleşme); ikisinin ayrışmadığı testle tutulur.
  */
 export class ProductListingService extends BaseDbService<ProductWithRelations, never, never> {
   constructor(supabase: SupabaseClient) {
@@ -153,17 +153,33 @@ export class ProductListingService extends BaseDbService<ProductWithRelations, n
 
   /**
    * Fiyata göre sayfa. Fiyatı olmayan ürün (kanal fiyatı girilmemiş → satışa kapalı) listeden
-   * DÜŞMEZ, sonda durur — görünümdeki `sort_price` sonsuzdur (0034).
+   * DÜŞMEZ, sonda durur — görünümdeki `sort_price` sonsuzdur (0043).
+   *
+   * ── DEPO SÜZGECİ ZORUNLU, YOKLUĞU DA BİR DEĞER ──────────────────────────────
+   * Görünüm depo boyutu aldı (0043): her ürün için aktif depo sayısı kadar satır + yeri bilinmeyen
+   * okuma için bir satır. Süzgeç uygulanmazsa **aynı ürün sayfada birkaç kez görünür** ve keyset
+   * imleci bozulur — `sort_price` artık tek başına benzersiz bir sıra vermez.
+   *
+   * `warehouseId` null = yer bilinmiyor → görünümdeki `warehouse_id is null` satırı okunur: liste
+   * fiyatıyla sıralanır, near-expiry teklif TUTARI gösterilmez (yalnız `has_near_expiry_offer`
+   * bayrağı). Bu bir eksiklik değil, verilen sözün korunmasıdır: teklif bir depodadır ve
+   * ziyaretçinin posta kodu oraya düşmeyebilir.
    */
-  async listByPrice(opts: ProductListOptions & { direction: 'asc' | 'desc' }): Promise<Page<ProductWithRelations>> {
+  async listByPrice(
+    opts: ProductListOptions & { direction: 'asc' | 'desc'; warehouseId?: string | null },
+  ): Promise<Page<ProductWithRelations>> {
     const { filters, orFilters } = buildProductQuery(opts.filters);
-    return this.getPageAs(ProductWithRelationsSchema, filters, {
+    // Yer belliyse depo satırı, belli değilse `warehouse_id is null` satırı — ikisi ayrı süzgeç
+    // biçimi: null'a `eq` uygulanamaz.
+    const scoped = opts.warehouseId ? { ...filters, warehouseId: opts.warehouseId } : filters;
+    return this.getPageAs(ProductWithRelationsSchema, scoped, {
       select: '*,variants:product_variant(*),collections:product_collections(collection_id)',
       orderBy: 'sortPrice',
       orderDirection: opts.direction,
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
       orFilters,
+      isNullFields: opts.warehouseId ? undefined : ['warehouse_id'],
     });
   }
 }

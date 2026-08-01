@@ -28,7 +28,16 @@ export function documentPrefixFor(reason: StockAdjustmentReason): AdjustmentDocu
   return 'IMH';
 }
 
-/** Biçim doğrulaması — elle girilen numaranın (denetmenin okuduğu kâğıt) şekli doğru mu. */
+/**
+ * Biçim doğrulaması — elle girilen numaranın (denetmenin okuduğu kâğıt) şekli doğru mu.
+ *
+ * Önek artık DEPO KODU taşır (`IMH-STR-26-0012`, DOMAIN §17): kâğıt klasör fiziksel olarak o
+ * depoda durur ve seriler depo başına ayrışır. Kodu SQL ekliyor (`adjust_stock_batch`) ama
+ * doğrulama burada kalmak zorunda — biçimin ne olduğunu bilen tek yer motordur.
+ *
+ * Depo segmenti İSTEĞE BAĞLI kalıyor: tek depolu dünyada üretilmiş eski numaralar (`IMH-26-0007`)
+ * hâlâ geçerli kâğıtlardır ve denetmen onları da yazabilir.
+ */
 export function isValidDocumentNo(value: string): boolean {
-  return /^(IMH|SAY|IAD)-\d{2}-\d{4,}$/.test(value);
+  return /^(IMH|SAY|IAD)(-[A-Z0-9]+)?-\d{2}-\d{4,}$/.test(value);
 }

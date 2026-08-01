@@ -1,33 +1,42 @@
 import { describe, expect, it } from 'vitest';
 import { findZoneForPostalCode, isInRoute, upcomingDeliveryDates } from './delivery-days';
 
+// Posta kodu artık (ülke, kod) ikilisi (DOMAIN §17): `67000` iki ülkede de geçerli.
+const fr = (postalCode: string) => ({ country: 'FR' as const, postalCode });
+const de = (postalCode: string) => ({ country: 'DE' as const, postalCode });
+
 const ZONES = [
-  { id: 'z1', postalCodes: ['67000', '67100'], weekdays: [2, 5], isActive: true },
-  { id: 'z2', postalCodes: ['77694'], weekdays: [3], isActive: true }, // Kehl (DE) — sınır ötesi
-  { id: 'z3', postalCodes: ['68000'], weekdays: [1], isActive: false }, // kapatılmış bölge
+  { id: 'z1', postalCodes: [fr('67000'), fr('67100')], weekdays: [2, 5], isActive: true },
+  { id: 'z2', postalCodes: [de('77694')], weekdays: [3], isActive: true }, // Kehl (DE) — sınır ötesi
+  { id: 'z3', postalCodes: [fr('68000')], weekdays: [1], isActive: false }, // kapatılmış bölge
 ];
 
 describe('rota içi mi (07.2)', () => {
   it('posta kodu aktif bölgeye düşerse rota içidir', () => {
-    expect(findZoneForPostalCode('67000', ZONES)?.id).toBe('z1');
-    expect(isInRoute('67100', ZONES)).toBe(true);
+    expect(findZoneForPostalCode(fr('67000'), ZONES)?.id).toBe('z1');
+    expect(isInRoute(fr('67100'), ZONES)).toBe(true);
   });
 
   it('Alman posta kodu da bir bölgeye dahil edilebilir (ADR-002)', () => {
-    expect(findZoneForPostalCode('77694', ZONES)?.id).toBe('z2');
+    expect(findZoneForPostalCode(de('77694'), ZONES)?.id).toBe('z2');
   });
 
   it('kapatılmış bölge rota SAYILMAZ — kargoya düşer', () => {
-    expect(findZoneForPostalCode('68000', ZONES)).toBeNull();
-    expect(isInRoute('68000', ZONES)).toBe(false);
+    expect(findZoneForPostalCode(fr('68000'), ZONES)).toBeNull();
+    expect(isInRoute(fr('68000'), ZONES)).toBe(false);
   });
 
   it('hiçbir bölgeye düşmeyen adres kargodur', () => {
-    expect(isInRoute('75001', ZONES)).toBe(false);
+    expect(isInRoute(fr('75001'), ZONES)).toBe(false);
   });
 
   it('biçim farkı kimlik ayırmaz: "67 000" ile "67000" aynı yer', () => {
-    expect(findZoneForPostalCode('67 000', ZONES)?.id).toBe('z1');
+    expect(findZoneForPostalCode(fr('67 000'), ZONES)?.id).toBe('z1');
+  });
+
+  it('ÜLKE kimliğin parçasıdır — aynı kod başka ülkede aynı bölge değildir', () => {
+    // 67000 Almanya'da da geçerli bir koddur; FR bölgesine yazılmış olması onu kapsamaz.
+    expect(findZoneForPostalCode(de('67000'), ZONES)).toBeNull();
   });
 });
 

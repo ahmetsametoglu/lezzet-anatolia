@@ -13,8 +13,11 @@ import {
   type PurchaseOrderItemInsert,
   type PurchaseOrderItemUpdate,
   type PurchaseOrderStatus,
+  PurchaseOrderProgressSchema,
+  type PurchaseOrderProgress,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+import { dbToApp } from '../utils/case-transformers';
 import { SupplierProductService } from './supplier.service';
 
 /** PO taslağına konacak kalem — kod eşlemesini servis kendisi bulur, çağıran varyant + adet verir. */
@@ -22,6 +25,12 @@ export interface DraftLine {
   variantId: string;
   qty: number;
   unitPrice?: number | null;
+  /**
+   * İsteğe bağlı hedef depo (C7) — "20 koli STR'ye, 10 koli KEHL'e". Tedarikçi listesine yazılır ve
+   * kabul eden depocu kendi payını listeden okur. Boşsa hedefi kabul eden depo söyler: bu bir NİYET
+   * beyanıdır, kısıt değil — mal fiilen nereye indiyse oraya girer (`DOMAIN §17`).
+   */
+  targetWarehouseId?: string | null;
 }
 
 /** Tedarikçiye kopyalanacak temiz liste satırı — **tedarikçinin diliyle** (onun kodu, onun adı). */
@@ -89,6 +98,7 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
         supplierProductId: byVariant.get(line.variantId)?.id ?? null,
         qty: line.qty,
         unitPrice: line.unitPrice ?? byVariant.get(line.variantId)?.lastPurchasePrice ?? null,
+        targetWarehouseId: line.targetWarehouseId ?? null,
       })),
     );
     return { order, items };
@@ -125,5 +135,21 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
     if (!order) throw new Error(`purchase_order bulunamadı: ${id}`);
     if (order.status === 'received') throw new Error('purchase_order: mal gelmiş sipariş iptal edilemez');
     return this.update({ id, status: 'cancelled' });
+  }
+
+  /**
+   * Siparişin kalem kalem ilerlemesi (`purchase_order_progress`, 0042).
+   *
+   * PO durumu SAKLANAN bir sayaç değil, bu görünümden türer: tek sipariş birden çok depoda parça
+   * parça kabul edilebilir (K6) ve ilk kabul siparişi kapatmaz. Ölçü `initial_qty` — `physical_qty`
+   * satışla erir ve "ne kadar geldi" sorusuna yanlış cevap verir.
+   */
+  async progressOf(purchaseOrderId: string): Promise<PurchaseOrderProgress[]> {
+    const { data, error } = await this.supabase
+      .from('purchase_order_progress')
+      .select('*')
+      .eq('purchase_order_id', purchaseOrderId);
+    if (error) throw error;
+    return (data ?? []).map((row) => PurchaseOrderProgressSchema.parse(dbToApp(row)));
   }
 }

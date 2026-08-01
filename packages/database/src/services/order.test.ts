@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
+import { createTestWarehouse } from '../testing/warehouse';
 import { purgeTestData } from '../testing/cleanup';
 import { CategoryService } from './category.service';
 import { DiscountService } from './discount.service';
@@ -28,9 +29,12 @@ let variantId: string;
 let secondVariantId: string;
 let productId: string;
 let categoryId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let discountId: string;
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db, { label: 'SIP' })).id;
   categoryId = (await new CategoryService(db).create({ name: { tr: `Sipariş testi ${stamp}` } })).id;
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Mantı ${stamp}` },
@@ -51,10 +55,11 @@ afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId); // kalemler + kullanım kaydı CASCADE
   await discounts.delete(discountId).catch(() => {});
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [customerId] });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** En sade geçerli sipariş: tek kalem, indirimsiz. Testler bunun üstüne tek alan değiştirir. */
-const header = () => ({ customerId, channel: 'b2c' as const, total: 20 });
+const header = () => ({ customerId, warehouseId, channel: 'b2c' as const, total: 20 });
 const line = (overrides: Record<string, unknown> = {}) => ({
   variantId,
   qty: 2,

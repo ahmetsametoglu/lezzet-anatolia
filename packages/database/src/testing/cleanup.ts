@@ -26,6 +26,8 @@ export interface PurgeTargets {
   verificationEmails?: string[];
   /** Auth kullanıcıları — profil satırı `on delete set null` olduğu için ayrıca temizlenir. */
   authUserIds?: string[];
+  /** Test depoları (`createTestWarehouse`) — bağlı transfer/eşik/bölge satırları burada gider. */
+  warehouseIds?: string[];
 }
 
 export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): Promise<void> {
@@ -42,6 +44,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     temperatureLocations,
     verificationEmails,
     authUserIds,
+    warehouseIds,
   } = {
     productIds: clean(targets.productIds),
     categoryIds: clean(targets.categoryIds),
@@ -51,6 +54,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     temperatureLocations: clean(targets.temperatureLocations),
     verificationEmails: clean(targets.verificationEmails),
     authUserIds: clean(targets.authUserIds),
+    warehouseIds: clean(targets.warehouseIds),
   };
 
   // 1) Ürün grafiği: varyantlara `restrict` ile bağlı ne varsa ÖNCE gider.
@@ -87,6 +91,17 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   if (authUserIds.length > 0) {
     await db.from('user_profiles').delete().in('auth_user_id', authUserIds);
     for (const id of authUserIds) await db.auth.admin.deleteUser(id);
+  }
+
+  // 6) Depolar EN SON, profillerden de sonra: depoya `restrict` ile bağlı ne varsa (parti, sipariş,
+  //    giriş, sıcaklık kaydı, bölge) yukarıda gitti; personel kapsamı ise ayrı bir tetikleyiciyle
+  //    korunuyor — kapsamda geçen depo silinemez, o yüzden profiller önce gitmek zorunda.
+  if (warehouseIds.length > 0) {
+    await db.from('warehouse_transfer').delete().in('from_warehouse_id', warehouseIds); // satırları CASCADE
+    await db.from('warehouse_transfer').delete().in('to_warehouse_id', warehouseIds);
+    await db.from('warehouse_variant_threshold').delete().in('warehouse_id', warehouseIds);
+    await db.from('delivery_zone').delete().in('warehouse_id', warehouseIds); // posta kodları CASCADE
+    await db.from('warehouse').delete().in('id', warehouseIds);
   }
 }
 

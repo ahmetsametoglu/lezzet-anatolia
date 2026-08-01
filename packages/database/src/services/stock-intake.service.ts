@@ -15,6 +15,12 @@ import { appToDb, dbToApp } from '../utils/case-transformers';
 
 export interface ReceiveIntakeInput {
   supplierId?: string | null;
+  /**
+   * **Mal hangi depoya girdi** (K6) — zorunlu. Satın alma siparişi depo-üstüdür ama mal fiziksel
+   * olarak bir kapıdan girer; depo bağı PO'ya değil bu kabule takılır. Aynı PO'nun ikinci kabulü
+   * başka depoda olabilir ve sipariş ancak hepsi geldiğinde kapanır.
+   */
+  warehouseId: string;
   /** Bağlı tedarik siparişi; PO'suz doğrudan giriş de mümkündür (küçük/plansız alım). */
   purchaseOrderId?: string | null;
   lines: IntakeLine[];
@@ -43,6 +49,7 @@ export class StockIntakeService extends BaseDbService<StockIntake, StockIntakeIn
 
     const raw = await this.executeRpc('receive_intake', {
       p_supplier_id: input.supplierId ?? null,
+      p_warehouse_id: input.warehouseId,
       p_lines: input.lines.map((line) => appToDb(line)),
       p_purchase_order_id: input.purchaseOrderId ?? null,
       p_date: input.date ?? new Date().toISOString().slice(0, 10),

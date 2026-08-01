@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
+import { createTestWarehouse } from '../testing/warehouse';
 import { purgeTestData } from '../testing/cleanup';
 import { AddressService } from './address.service';
 import { UserProfileService } from './user-profile.service';
@@ -169,7 +170,9 @@ describe('liste: sunucu-taraflı arama + daraltma (09.9)', () => {
     // `user_profiles` müşteriyi ve personeli birlikte taşıyor. Süzgeç olmasa müşteri ekranı depocuyu
     // ve patronu da listelerdi — hem yanlış hem de "N müşteri" sayacını şişirir. Rol kümesi ÇOKLU
     // olabildiği için ölçüt "içerir", eşitlik değil.
-    const depocu = await profiles.insert({ name: `Depocu ${stamp}`, roles: ['warehouse'] });
+    // Depocu kapsamsız açılamaz (DOMAIN §17) — testin kendi deposu, sonunda toplanıyor.
+    const depo = await createTestWarehouse(db, { label: 'PRF' });
+    const depocu = await profiles.insert({ name: `Depocu ${stamp}`, roles: ['warehouse'], warehouseIds: [depo.id] });
     createdIds.push(depocu.id);
 
     const page = await profiles.list({ query: String(stamp), limit: 50 });

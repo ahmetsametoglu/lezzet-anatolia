@@ -1,3 +1,5 @@
+import type { Country } from '@lezzet/types';
+
 /**
  * Teslimat kararları (07.2) — DOMAIN §6.
  *
@@ -12,36 +14,66 @@
  * Saf: takvim ve kural. Bölge satırlarını çağıran getirir.
  */
 
-/** Motorun karar için gördüğü asgari bölge alanları (DB karşılığı `DeliveryZone`). */
+/**
+ * Motorun karar için gördüğü asgari bölge alanları (DB karşılığı `DeliveryZoneWithCodes`).
+ *
+ * Posta kodu artık `(ülke, kod)` ikilisidir (DOMAIN §17): `67000` hem Fransa'da hem Almanya'da
+ * geçerlidir, ülkesiz bir kod eksik bir sorudur. Bir bölge İKİ ülkenin kodlarını kapsayabilir
+ * (ADR-002 — Strasbourg rotası Kehl'i de alabilir), bu yüzden ülke bölgede değil kodda durur.
+ */
 export interface DeliveryZoneCandidate {
   id: string;
-  postalCodes: readonly string[];
+  postalCodes: readonly PostalCodeRef[];
   /** Haftalık teslimat günleri, ISO: 1=Pazartesi … 7=Pazar. */
   weekdays: readonly number[];
   isActive?: boolean;
 }
 
+export interface PostalCodeRef {
+  country: Country;
+  postalCode: string;
+}
+
 /** Posta kodu karşılaştırması biçimden etkilenmemeli: "67 000" ile "67000" aynı yerdir. */
-function normalizePostalCode(value: string): string {
+export function normalizePostalCode(value: string): string {
   return value.replace(/\s+/g, '').toUpperCase();
 }
 
 /**
+ * Bir yeri kapsayan **aktif** bölgelerin tamamı.
+ *
+ * Tekil değil ÇOĞUL döner ve bu bilinçlidir: "kaç bölge eşleşti" sorusunun cevabı kararın kendisi
+ * kadar önemli. Bir kod iki aktif bölgede duruyorsa hangisinin geçerli olduğu BİLİNMEZ ve bunu
+ * çözmek çağıranın işidir — rota günü sorarken sessizce birini seçmek kabul edilebilir, depo
+ * seçerken değil (yanlış depo = mal başka şehirde). Tek kaynak burada, yorum orada.
+ */
+export function matchZones<T extends DeliveryZoneCandidate>(place: PostalCodeRef, zones: readonly T[]): T[] {
+  const wanted = normalizePostalCode(place.postalCode);
+  return zones.filter(
+    (zone) =>
+      zone.isActive !== false &&
+      zone.postalCodes.some((c) => c.country === place.country && normalizePostalCode(c.postalCode) === wanted),
+  );
+}
+
+/**
  * Posta kodunun düştüğü **aktif** bölge; yoksa `null` → rota dışı, yani kargo.
- * Birden çok bölge aynı kodu içeriyorsa ilki kazanır (çakışma admin hatasıdır, sessizce seçilir
- * ama liste sırası deterministiktir).
+ *
+ * Çakışmada ilki döner: bu okumanın sorusu "hangi gün teslim edilir" ve iki bölgenin günleri
+ * arasında seçim yapmak, sipariş yanlış depoya düşmesinden çok daha ucuz bir hatadır. Depo
+ * çözümü aynı belirsizlikte HATA verir (`resolveWarehouseForPostalCode`) — soru farklı olduğu
+ * için cevap da farklı.
  */
 export function findZoneForPostalCode(
-  postalCode: string,
+  place: PostalCodeRef,
   zones: readonly DeliveryZoneCandidate[],
 ): DeliveryZoneCandidate | null {
-  const wanted = normalizePostalCode(postalCode);
-  return zones.find((zone) => zone.isActive !== false && zone.postalCodes.some((code) => normalizePostalCode(code) === wanted)) ?? null;
+  return matchZones(place, zones)[0] ?? null;
 }
 
 /** Rota içi mi — `findZoneForPostalCode`'un evet/hayır hâli (çağrı yerini okunur kılar). */
-export function isInRoute(postalCode: string, zones: readonly DeliveryZoneCandidate[]): boolean {
-  return findZoneForPostalCode(postalCode, zones) !== null;
+export function isInRoute(place: PostalCodeRef, zones: readonly DeliveryZoneCandidate[]): boolean {
+  return findZoneForPostalCode(place, zones) !== null;
 }
 
 /** "HH:MM" → gün içi dakika. Bozuk değer akışı kilitlemesin diye `null` döner. */

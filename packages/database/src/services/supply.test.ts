@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
+import { createTestWarehouse } from '../testing/warehouse';
 import { purgeTestData } from '../testing/cleanup';
 import { CategoryService } from './category.service';
 import { ProductService } from './product.service';
@@ -25,9 +26,12 @@ let supplierId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 const createdSuppliers: string[] = [];
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db, { label: 'TED' })).id;
   const stamp = Date.now();
   const category = await new CategoryService(db).create({ name: { tr: `Tedarik testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
@@ -53,6 +57,7 @@ beforeEach(async () => {
 // Tedarik grafiği `restrict` FK'lerle bağlı: giriş → sipariş → tedarikçi sırasıyla toplanır.
 afterAll(async () => {
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], supplierIds: createdSuppliers });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
@@ -82,6 +87,7 @@ describe('tedarikçi ve kod eşlemesi (06.8)', () => {
 
   it('borç türetilir: girişler − ödemeler', async () => {
     await intakes.receive({
+      warehouseId,
       supplierId,
       lines: [{ variantId, qty: 10, expiryDate: dayOffset(250), unitCost: 4 }],
     });
@@ -115,7 +121,7 @@ describe('tedarik siparişi (06.9)', () => {
 
   it('mal gelmiş sipariş iptal edilemez — zincir kopmaz', async () => {
     const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 12 }]);
-    await intakes.receive({ supplierId, purchaseOrderId: order.id, lines: [{ variantId, qty: 12, expiryDate: dayOffset(250) }] });
+    await intakes.receive({ warehouseId, supplierId, purchaseOrderId: order.id, lines: [{ variantId, qty: 12, expiryDate: dayOffset(250) }] });
 
     await expect(orders.cancel(order.id)).rejects.toThrow();
   });
@@ -126,6 +132,7 @@ describe('mal kabul (06.10)', () => {
     const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 24 }]);
 
     const outcome = await intakes.receive({
+      warehouseId,
       supplierId,
       purchaseOrderId: order.id,
       lines: [
@@ -138,7 +145,7 @@ describe('mal kabul (06.10)', () => {
     expect(outcome.stockIds).toHaveLength(2);
     expect(outcome.totalAmount).toBe(84); // 24 × 3.5
 
-    const batches = await stocks.listByVariant(variantId);
+    const batches = await stocks.listByVariant(warehouseId, variantId);
     expect(batches.every((p) => p.intakeId === outcome.intakeId)).toBe(true);
     expect(batches.find((p) => p.lotNumber === 'LOT-A')?.location).toBe('Dolap 1');
 
@@ -149,6 +156,7 @@ describe('mal kabul (06.10)', () => {
   it('eksik gelen mal fark olarak görünür — parti satılsa bile rakam erimez', async () => {
     const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 24 }]);
     const outcome = await intakes.receive({
+      warehouseId,
       supplierId,
       purchaseOrderId: order.id,
       lines: [{ variantId, qty: 20, expiryDate: dayOffset(250) }],
@@ -162,15 +170,15 @@ describe('mal kabul (06.10)', () => {
   });
 
   it('kalemsiz mal kabul yapılamaz', async () => {
-    await expect(intakes.receive({ supplierId, lines: [] })).rejects.toThrow();
+    await expect(intakes.receive({ warehouseId, supplierId, lines: [] })).rejects.toThrow();
   });
 });
 
 describe('"sipariş zamanı" önerisi (06.11)', () => {
   it('eşik altı varyant tedarikçisine göre gruplanır ve koliye yuvarlanır', async () => {
-    await stocks.insert({ variantId, physicalQty: 5, expiryDate: dayOffset(250) }); // eşik 20
+    await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(250) }); // eşik 20
 
-    const groups = await reorder.suggestions();
+    const groups = await reorder.suggestions(warehouseId);
     const group = groups.find((g) => g.supplierId === supplierId);
     const row = group?.lines.find((l) => l.variantId === variantId);
 
@@ -179,9 +187,9 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
   });
 
   it('öneriden tek dokunuşla PO taslağı çıkar', async () => {
-    await stocks.insert({ variantId, physicalQty: 5, expiryDate: dayOffset(250) });
+    await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(250) });
 
-    const group = (await reorder.suggestions()).find((g) => g.supplierId === supplierId)!;
+    const group = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
     const { order, items } = await reorder.createDraftFrom(group, 'Eşik altı otomatik taslak');
 
     expect(order.supplierId).toBe(supplierId);
@@ -193,9 +201,9 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
   });
 
   it('stok eşiğin üstündeyse öneri çıkmaz', async () => {
-    await stocks.insert({ variantId, physicalQty: 50, expiryDate: dayOffset(250) });
+    await stocks.insert({ variantId, warehouseId, physicalQty: 50, expiryDate: dayOffset(250) });
 
-    const groups = await reorder.suggestions();
+    const groups = await reorder.suggestions(warehouseId);
     expect(groups.flatMap((g) => g.lines).find((l) => l.variantId === variantId)).toBeUndefined();
   });
 });

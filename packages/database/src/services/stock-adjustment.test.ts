@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
+import { createTestWarehouse } from '../testing/warehouse';
 import { purgeTestData } from '../testing/cleanup';
 import { CategoryService } from './category.service';
 import { ProductService } from './product.service';
@@ -19,9 +20,12 @@ const temps = new TemperatureLogService(db);
 let variantId: string;
 let productId: string;
 let categoryId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 const shelves: string[] = [];
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db, { label: 'DUZ' })).id;
   const category = await new CategoryService(db).create({ name: { tr: `Fire testi ${Date.now()}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Su böreği ${Date.now()}` },
@@ -36,6 +40,7 @@ beforeAll(async () => {
 // Test kendi zeminini toplar — yerel veritabanında çöp satır bırakmaz (silme sırası: cleanup.ts).
 afterAll(async () => {
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], temperatureLocations: shelves });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 beforeEach(async () => {
@@ -48,7 +53,7 @@ const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 
 describe('stok düzeltmesi (06.6)', () => {
   it('imha kaydı fiiliyi düşürür ve maliyeti o anda kopyalar', async () => {
-    const batch = await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(20), purchasePrice: 3.2 });
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 10, expiryDate: dayOffset(20), purchasePrice: 3.2 });
 
     const outcome = await adjustments.adjust({ stockId: batch.id, qty: 4, reason: 'expired' });
     expect(outcome).toMatchObject({ ok: true, remainingQty: 6 });
@@ -59,7 +64,7 @@ describe('stok düzeltmesi (06.6)', () => {
   });
 
   it('maliyet SNAPSHOT: parti fiyatı sonradan değişse fire maliyeti kaymaz', async () => {
-    const batch = await stocks.insert({ variantId, physicalQty: 5, expiryDate: dayOffset(20), purchasePrice: 2 });
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(20), purchasePrice: 2 });
     await adjustments.adjust({ stockId: batch.id, qty: 1, reason: 'damaged' });
     await stocks.update({ id: batch.id, purchasePrice: 9 });
 
@@ -67,7 +72,7 @@ describe('stok düzeltmesi (06.6)', () => {
   });
 
   it('partide olmayan miktar düşülemez — kayıt da yazılmaz (bölünmez)', async () => {
-    const batch = await stocks.insert({ variantId, physicalQty: 2, expiryDate: dayOffset(20) });
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 2, expiryDate: dayOffset(20) });
 
     await expect(adjustments.adjust({ stockId: batch.id, qty: 3, reason: 'lost' })).rejects.toThrow();
     expect((await stocks.getById(batch.id))?.physicalQty).toBe(2);
@@ -75,7 +80,7 @@ describe('stok düzeltmesi (06.6)', () => {
   });
 
   it('stoğa geri ekleme sebep notu ister (iade restoku istisnadır)', async () => {
-    const batch = await stocks.insert({ variantId, physicalQty: 3, expiryDate: dayOffset(20) });
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 3, expiryDate: dayOffset(20) });
 
     await expect(adjustments.adjust({ stockId: batch.id, qty: -2, reason: 'return_restock' })).rejects.toThrow();
 
@@ -90,7 +95,7 @@ describe('stok düzeltmesi (06.6)', () => {
   });
 
   it('fire raporu NET kaybı verir — geri eklemeler toplamdan düşer', async () => {
-    const batch = await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(20), purchasePrice: 5 });
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 10, expiryDate: dayOffset(20), purchasePrice: 5 });
     await adjustments.adjust({ stockId: batch.id, qty: 4, reason: 'expired' });
     await adjustments.adjust({ stockId: batch.id, qty: -1, reason: 'count_diff', note: 'sayımda fazla çıktı' });
 
@@ -99,7 +104,7 @@ describe('stok düzeltmesi (06.6)', () => {
   });
 
   it('sıfır miktar reddedilir', async () => {
-    const batch = await stocks.insert({ variantId, physicalQty: 1, expiryDate: dayOffset(20) });
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 1, expiryDate: dayOffset(20) });
     await expect(adjustments.adjust({ stockId: batch.id, qty: 0, reason: 'count_diff' })).rejects.toThrow();
   });
 });
@@ -109,9 +114,9 @@ describe('sıcaklık kaydı (06.7)', () => {
   shelves.push(shelf, `${shelf}-arac`);
 
   it('kayıt girilir, konum + tarih aralığıyla listelenir (en yeni önce)', async () => {
-    await temps.insert({ location: shelf, temperatureC: -18.5 });
-    await temps.insert({ location: shelf, temperatureC: -19.2 });
-    await temps.insert({ location: `${shelf}-arac`, temperatureC: -15 });
+    await temps.insert({ warehouseId, location: shelf, temperatureC: -18.5 });
+    await temps.insert({ warehouseId, location: shelf, temperatureC: -19.2 });
+    await temps.insert({ warehouseId, location: `${shelf}-arac`, temperatureC: -15 });
 
     const page = await temps.list({ location: shelf, limit: 10 });
     expect(page.rows).toHaveLength(2);

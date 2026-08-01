@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { resolveLocalizedText } from '@lezzet/types';
 import { serviceDb } from '../client';
+import { createTestWarehouse } from '../testing/warehouse';
 import { purgeTestData } from '../testing/cleanup';
 import { CategoryService } from './category.service';
 import { PriceService } from './price.service';
@@ -28,8 +29,11 @@ const stocks = new StockService(db);
 const stamp = Date.now();
 let productId: string;
 let categoryId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db, { label: 'VAR' })).id;
   const category = await categories.create({ name: { tr: `Varyant testi ${stamp}` } });
   const { product } = await products.create({
     name: { tr: `Varyant ürünü ${stamp}` },
@@ -45,6 +49,7 @@ beforeAll(async () => {
 // partisi bırakıyor, yani sıra burada gerçekten gerekiyor; ama sırayı kendimiz uydurmuyoruz.
 afterAll(async () => {
   await purgeTestData(db, { productIds: [productId].filter(Boolean), categoryIds: [categoryId].filter(Boolean) });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 describe('ProductVariantService.syncVariants', () => {
@@ -117,7 +122,7 @@ describe('ProductVariantService.syncVariants', () => {
       { label: { tr: 'Kutu' }, netWeightG: 250, minStockQty: null, sku: null, isActive: true },
     ]);
     const withStock = added[1]!;
-    await stocks.insert({ variantId: withStock.id, physicalQty: 4, expiryDate: '2030-01-01' });
+    await stocks.insert({ variantId: withStock.id, warehouseId, physicalQty: 4, expiryDate: '2030-01-01' });
 
     const remaining = [{ id: added[0]!.id, label: added[0]!.label, netWeightG: null, minStockQty: null, sku: null, isActive: true }];
     await expect(variants.syncVariants(productId, remaining)).rejects.toThrow(/«Kutu» silinemedi.*stok partisi/s);

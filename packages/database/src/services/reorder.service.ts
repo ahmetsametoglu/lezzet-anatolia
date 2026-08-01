@@ -41,9 +41,15 @@ export class ReorderService {
     this.orders = new PurchaseOrderService(supabase);
   }
 
-  /** Eşik altı varyantlar, tercihli tedarikçilerine göre gruplu. */
-  async suggestions(): Promise<ReorderGroup[]> {
-    const below = await this.stocks.listBelowMinStock();
+  /**
+   * BİR DEPODA eşik altına inen varyantlar, tercihli tedarikçilerine göre gruplu.
+   *
+   * Öneri depo başınadır (C6) ve bu isteğe bağlı bir ayrıntı değil: eşiğin kendisi depo bazlı
+   * (varyanttaki değer varsayılan, depo satırı istisna). Depo-üstü tek bir öneri listesi "toplamda
+   * 40 var" deyip Kehl'in boş rafını gizlerdi — sipariş de o rafı doldurmak için verilecek.
+   */
+  async suggestions(warehouseId: string): Promise<ReorderGroup[]> {
+    const below = await this.stocks.listBelowMinStock(warehouseId);
     if (below.length === 0) return [];
 
     const mappings = await this.mappings.listByVariants(below.map((row) => row.variantId));

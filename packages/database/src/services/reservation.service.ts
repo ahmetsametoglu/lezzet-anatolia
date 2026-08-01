@@ -16,6 +16,12 @@ import { dbToApp } from '../utils/case-transformers';
 export interface ReserveInput {
   orderId: string;
   variantId: string;
+  /**
+   * Hangi depodan ayrılıyor (DOMAIN §17) — zorunlu ve varsayılansız. Süzgeç unutulsaydı sistem
+   * başka şehirdeki malı ayırır, yani OLMAYAN MALI SATARDI; üstelik tek depolu bir veri setinde
+   * hiçbir test bunu kırmazdı. Siparişin deposuyla eşitliği DB kısıtı tutar.
+   */
+  warehouseId: string;
   qty: number;
   /** Online checkout TTL'i (dk). Kapıda/vadeli rezervasyonda verilmez → süresiz. */
   ttlMinutes?: number | null;
@@ -47,6 +53,7 @@ export class ReservationService extends BaseDbService<Reservation, ReservationIn
     const raw = await this.executeRpc('reserve_stock', {
       p_order_id: input.orderId,
       p_variant_id: input.variantId,
+      p_warehouse_id: input.warehouseId,
       p_qty: input.qty,
       p_ttl_minutes: input.ttlMinutes ?? null,
       p_stock_id: input.stockId ?? null,

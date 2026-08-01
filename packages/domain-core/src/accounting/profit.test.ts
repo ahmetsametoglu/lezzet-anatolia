@@ -14,6 +14,8 @@ const BASE_SALE: OrderSale = {
   id: '11111111-1111-1111-1111-111111111111',
   saleDate: '2026-03-14',
   customerId: '22222222-2222-2222-2222-222222222222',
+  // Sipariş tek depodan çıkar (DOMAIN §17) — muhasebe hesabını etkilemez ama alan zorunlu.
+  warehouseId: '99999999-9999-9999-9999-999999999999',
   channel: 'b2c',
   orderSource: 'web',
   isGiftOrder: false,

@@ -25,6 +25,8 @@ export { DiscountUseService } from './services/discount-use.service';
 export { AddressService } from './services/address.service';
 export { SettingsService } from './services/settings.service';
 export { DeliveryZoneService } from './services/delivery-zone.service';
+export { WarehouseService } from './services/warehouse.service';
+export { WarehouseTransferService } from './services/warehouse-transfer.service';
 export { CartService } from './services/cart.service';
 export {
   OrderService,

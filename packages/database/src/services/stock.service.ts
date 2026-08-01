@@ -1,12 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   AvailableStockSchema,
+  WarehouseVariantThresholdSchema,
+  AvailableStockTotalSchema,
   StockBatchDetailSchema,
   StockSchema,
   StockInsertSchema,
   StockUpdateSchema,
   StockWithProductDatesSchema,
   type AvailableStock,
+  type AvailableStockTotal,
   type Stock,
   type StockBatchDetail,
   type StockInsert,
@@ -50,25 +53,32 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
     return this.getByIds([...ids]);
   }
 
-  /** Varyantın partileri — **FEFO sırasında** (önce süresi dolan). Depo hazırlık ekranının okuması. */
-  async listByVariant(variantId: string): Promise<Stock[]> {
-    return this.getAll({ variantId }, { orderBy: 'expiryDate', orderDirection: 'asc' });
+  /**
+   * Varyantın BİR DEPODAKİ partileri — **FEFO sırasında** (önce süresi dolan). Hazırlık ekranının
+   * okuması.
+   *
+   * `warehouseId` zorunlu: hazırlık daima siparişin deposundan toplanır ve başka deponun partisi
+   * listede görünürse depocu onu seçer — DB kısıtı reddeder ama bu kötü bir yol. Depo-ÜSTÜ okuma
+   * gereken tek yer geri çağırmadır ve onun kendi yolu var (`findByLot` / `listByIds`).
+   */
+  async listByVariant(warehouseId: string, variantId: string): Promise<Stock[]> {
+    return this.getAll({ warehouseId, variantId }, { orderBy: 'expiryDate', orderDirection: 'asc' });
   }
 
   /**
    * Partiler + ürünün tarih alanları (tip, toplam raf ömrü) TEK sorguda. Raf ömrü kararlarının
    * (satılabilirlik, yaklaşan son tarih, MLOR) girdisi budur; hesabı çağıran motora yaptırır.
    */
-  async listByVariantWithDates(variantId: string): Promise<StockWithProductDates[]> {
-    return this.getAllAs(StockWithProductDatesSchema, { variantId }, {
+  async listByVariantWithDates(warehouseId: string, variantId: string): Promise<StockWithProductDates[]> {
+    return this.getAllAs(StockWithProductDatesSchema, { warehouseId, variantId }, {
       select: '*,variant:product_variant(id,product:product(date_type,shelf_life_days))',
       orderBy: 'expiryDate',
     });
   }
 
   /** Stoğu olan partiler (fiili > 0) — boş partiler hazırlık ve teklif listelerini kirletmesin. */
-  async listInStock(variantId: string): Promise<Stock[]> {
-    return this.getAll({ variantId }, {
+  async listInStock(warehouseId: string, variantId: string): Promise<Stock[]> {
+    return this.getAll({ warehouseId, variantId }, {
       rangeFilters: [{ field: 'physical_qty', operator: 'gt', value: 0 }],
       orderBy: 'expiryDate',
     });
@@ -81,8 +91,15 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    * kart başına sorgu atmaz (N+1). Süzgeçsiz çağrı katalogdaki tüm açık teklifleri verir — teklif
    * sayısı doğası gereği küçüktür (partiyi insan teklife açar, DOMAIN §5).
    */
-  async listOfferBatches(variantId?: string | string[]): Promise<Stock[]> {
-    return this.getAll(variantId ? { variantId } : undefined, {
+  async listOfferBatches(variantId?: string | string[], warehouseId?: string): Promise<Stock[]> {
+    // Depo süzgeci OPSİYONEL, `getAvailableMap`'in tersine — ve gerekçesi var: teklif bir partiye
+    // bağlıdır, parti bir depodadır, ama yeri BİLİNMEYEN ziyaretçinin de bu okumaya ihtiyacı olur
+    // ("bir yerde indirim var mı"). Yer belliyse süzülür, bilinmiyorsa depo-üstü sorulur; tutarın
+    // gösterilip gösterilmeyeceği okuyanın kararıdır (0043'teki `has_near_expiry_offer` ayrımı).
+    const filters: Record<string, unknown> = {};
+    if (variantId) filters.variantId = variantId;
+    if (warehouseId) filters.warehouseId = warehouseId;
+    return this.getAll(Object.keys(filters).length > 0 ? filters : undefined, {
       isNotNullFields: ['offer_price'],
       rangeFilters: [{ field: 'physical_qty', operator: 'gt', value: 0 }],
       orderBy: 'expiryDate',
@@ -100,11 +117,16 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    * Kararı motor verir (`domain-core/stock/offer` + `shelf-life`): bu okuma yalnız ölçütün girdisini
    * (tarih tipi, toplam raf ömrü, teklif fiyatı) tek turda toplar.
    */
-  async listInStockDetailed(variantIds?: readonly string[]): Promise<StockBatchDetail[]> {
+  async listInStockDetailed(variantIds?: readonly string[], warehouseId?: string): Promise<StockBatchDetail[]> {
     // Boş dizi ile çağrı BOŞ döner: `in.()` süzgeci PostgREST'te "hiçbiri" değil sözdizimi hatasıdır,
     // süzgeci hiç uygulamamak ise sessizce TÜM partileri getirirdi (sayfa okuması patlardı).
     if (variantIds?.length === 0) return [];
-    return this.getAllAs(StockBatchDetailSchema, variantIds ? { variantId: [...variantIds] } : undefined, {
+    // Depo süzgeci opsiyonel: depocu kendi deposunu görür (kapsamı ekran verir), admin depo-üstü
+    // tarayabilir — kapsam kararı guard'ın işidir, servisin değil.
+    const filters: Record<string, unknown> = {};
+    if (variantIds) filters.variantId = [...variantIds];
+    if (warehouseId) filters.warehouseId = warehouseId;
+    return this.getAllAs(StockBatchDetailSchema, Object.keys(filters).length > 0 ? filters : undefined, {
       select: BATCH_DETAIL_SELECT,
       rangeFilters: [{ field: 'physical_qty', operator: 'gt', value: 0 }],
       orderBy: 'expiryDate',
@@ -138,23 +160,55 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * Bir varyantın kullanılabilir stoğu. Satır yoksa (hiç parti girilmemiş) sıfırlarla döner —
-   * çağıranın `null` kontrolü yapması gerekmez, "stok yok" da bir cevaptır.
+   * Bir varyantın BİR DEPODAKİ kullanılabilir stoğu. Satır yoksa sıfırlarla döner — çağıranın
+   * `null` kontrolü yapması gerekmez, "stok yok" da bir cevaptır.
    */
-  async getAvailable(variantId: string): Promise<AvailableStock> {
-    const rows = await this.readAvailable([variantId]);
-    return rows[0] ?? { variantId, physicalQty: 0, reservedQty: 0, availableQty: 0, expiredDlcQty: 0 };
+  async getAvailable(warehouseId: string, variantId: string): Promise<AvailableStock> {
+    const rows = await this.readAvailable(warehouseId, [variantId]);
+    return rows[0] ?? { warehouseId, variantId, physicalQty: 0, reservedQty: 0, availableQty: 0, expiredDlcQty: 0 };
   }
 
   /**
    * Çok varyantın kullanılabilirini TEK sorguda — vitrin listesi ve sepet doğrulaması varyant başına
    * ayrı sorgu atarsa N+1 doğar. Dönen harita eksik anahtar bırakmaz.
+   *
+   * **`warehouseId` ZORUNLU ve ilk parametre (T8).** Geçişin en riskli sessiz bozulması buradaydı:
+   * süzgeç olmasaydı iki deponun satırı aynı varyant anahtarına düşer ve `Map`'te SON DEPO
+   * KAZANIRDI — kimse fark etmeden yanlış stok gösterilir, olmayan mal satılırdı. Parametreyi
+   * zorunlu yapmak o kırılmayı derleme anında gürültülü hale getirir.
    */
-  async getAvailableMap(variantIds: string[]): Promise<Map<string, AvailableStock>> {
-    const rows = await this.readAvailable(variantIds);
+  async getAvailableMap(warehouseId: string, variantIds: string[]): Promise<Map<string, AvailableStock>> {
+    const rows = await this.readAvailable(warehouseId, variantIds);
     const map = new Map(rows.map((r) => [r.variantId, r]));
     for (const id of variantIds) {
-      if (!map.has(id)) map.set(id, { variantId: id, physicalQty: 0, reservedQty: 0, availableQty: 0, expiredDlcQty: 0 });
+      if (!map.has(id)) {
+        map.set(id, { warehouseId, variantId: id, physicalQty: 0, reservedQty: 0, availableQty: 0, expiredDlcQty: 0 });
+      }
+    }
+    return map;
+  }
+
+  /**
+   * Depo-ÜSTÜ toplam kullanılabilir (`available_stock_total`).
+   *
+   * **Satış kararı bunu OKUMAZ:** birleştirilmiş stok kimsenin stoğu değildir — 3 STR'de + 2
+   * KEHL'de duran maldan 5 kişilik sipariş çıkmaz. Meşru iki tüketicisi var: tedarik önerisi
+   * ("toplamda ne kadar kaldı, sipariş vermeli miyim") ve ziyaretçiye "tükendi" demenin tek
+   * dayanağı (C3 — yalnız HİÇBİR depoda yoksa söylenir).
+   */
+  async getAvailableTotalMap(variantIds: string[]): Promise<Map<string, AvailableStockTotal>> {
+    if (variantIds.length === 0) return new Map();
+    const { data, error } = await this.supabase
+      .from('available_stock_total')
+      .select('*')
+      .in('variant_id', variantIds);
+    if (error) throw error;
+    const rows = (data ?? []).map((row) => AvailableStockTotalSchema.parse(dbToApp(row)));
+    const map = new Map(rows.map((r) => [r.variantId, r]));
+    for (const id of variantIds) {
+      if (!map.has(id)) {
+        map.set(id, { variantId: id, physicalQty: 0, reservedQty: 0, availableQty: 0, expiredDlcQty: 0 });
+      }
     }
     return map;
   }
@@ -238,23 +292,39 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * Eşik altı varyantlar ("sipariş zamanı" önerisinin girdisi, 06.11). İki turda okur — görünüm
-   * PostgREST'te tabloya gömülemez (ilişki tanımı yok). Varyant başına sorgu YOK: eşiği olan
-   * varyantlar tek sorguda, kullanılabilirleri tek sorguda gelir.
+   * BİR DEPODA eşik altına inen varyantlar ("sipariş zamanı" önerisinin girdisi, 06.11).
+   *
+   * **Eşik iki katmanlı (C6):** varyanttaki `minStockQty` varsayılandır, `warehouse_variant_threshold`
+   * satırı yalnız İSTİSNA yazar — fiyatın müşteriye-özel satır deseniyle aynı. Küresel tek eşik çok
+   * depoda yapısal olarak yanlış cevap verir: 20 adet Strasbourg'da bol, Kehl'de kritik olabilir.
+   * İkisi de yoksa varyantın eşiği yok demektir ve listeye hiç girmez.
+   *
+   * Üç turda okur (varsayılanlar · istisnalar · kullanılabilirler) — varyant başına sorgu YOK.
    */
-  async listBelowMinStock(): Promise<Array<AvailableStock & { minStockQty: number }>> {
-    const { data, error } = await this.supabase
-      .from('product_variant')
-      .select('id,min_stock_qty')
-      .not('min_stock_qty', 'is', null)
-      .eq('is_active', true);
-    if (error) throw error;
-    const thresholds = (data ?? []) as Array<{ id: string; min_stock_qty: number }>;
+  async listBelowMinStock(warehouseId: string): Promise<Array<AvailableStock & { minStockQty: number }>> {
+    const [{ data: variantRows, error: variantError }, { data: overrideRows, error: overrideError }] = await Promise.all([
+      this.supabase.from('product_variant').select('id,min_stock_qty').eq('is_active', true),
+      this.supabase.from('warehouse_variant_threshold').select('variant_id,min_stock_qty').eq('warehouse_id', warehouseId),
+    ]);
+    if (variantError) throw variantError;
+    if (overrideError) throw overrideError;
+
+    // Satırlar ŞEMADAN geçer (CLAUDE.md §1): elle yazılmış bir yapısal tip, aynı bilgiyi ikinci kez
+    // tanımlar ve kolon adı değişince sessizce `undefined` okumaya başlardı.
+    const overrides = new Map(
+      (overrideRows ?? [])
+        .map((row) => WarehouseVariantThresholdSchema.parse(dbToApp(row)))
+        .map((r) => [r.variantId, r.minStockQty] as const),
+    );
+    const thresholds = ((variantRows ?? []) as Array<{ id: string; min_stock_qty: number | null }>).flatMap((v) => {
+      const limit = overrides.get(v.id) ?? v.min_stock_qty;
+      return limit == null ? [] : [{ id: v.id, minStockQty: limit }];
+    });
     if (thresholds.length === 0) return [];
 
-    const available = await this.getAvailableMap(thresholds.map((t) => t.id));
+    const available = await this.getAvailableMap(warehouseId, thresholds.map((t) => t.id));
     return thresholds
-      .map((t) => ({ ...available.get(t.id)!, minStockQty: t.min_stock_qty }))
+      .map((t) => ({ ...available.get(t.id)!, minStockQty: t.minStockQty }))
       .filter((row) => row.availableQty < row.minStockQty);
   }
 
@@ -276,9 +346,13 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    * `available_stock` GÖRÜNÜMÜNÜ okur — base'in sorgu kurucusu `stock` tablosuna bağlı olduğu için
    * tek ham okuma burada. Dönüşüm ve doğrulama yine ortak yoldan geçer (dbToApp + Zod).
    */
-  private async readAvailable(variantIds: string[]): Promise<AvailableStock[]> {
+  private async readAvailable(warehouseId: string, variantIds: string[]): Promise<AvailableStock[]> {
     if (variantIds.length === 0) return [];
-    const { data, error } = await this.supabase.from('available_stock').select('*').in('variant_id', variantIds);
+    const { data, error } = await this.supabase
+      .from('available_stock')
+      .select('*')
+      .eq('warehouse_id', warehouseId)
+      .in('variant_id', variantIds);
     if (error) throw error;
     return (data ?? []).map((row) => AvailableStockSchema.parse(dbToApp(row)));
   }

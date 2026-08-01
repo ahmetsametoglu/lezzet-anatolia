@@ -231,12 +231,31 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }
 
   /**
-   * Rol kümesini yazar. **Kümenin geçerliliğini SERVİS denetlemez** (STACK §4) — kuralı motor
-   * bilir (`validateRoleSet`), son emniyet DB kısıtındadır: geçersiz küme yazılamaz, yazılmaya
-   * çalışılırsa hata döner.
+   * Rol kümesini — ve gerekiyorsa DEPO KAPSAMINI — yazar.
+   *
+   * **Kümenin geçerliliğini SERVİS denetlemez** (STACK §4) — kuralı motor bilir (`validateRoleSet`),
+   * son emniyet DB kısıtındadır.
+   *
+   * Kapsam neden AYNI çağrıda: depocu/kurye rolü kapsamsız olamaz (DB kısıtı, DOMAIN §17). Rol ile
+   * kapsam iki ayrı yazımla gitseydi arada geçersiz bir hâl doğardı ve ilk yazım kısıtta patlardı —
+   * yani "önce rolü ver, sonra depoyu seç" akışı hiç çalışmazdı. İkisi tek gerçektir.
+   *
+   * `warehouseIds` verilmezse mevcut kapsam korunur: yalnız rol düzeltmesi yapan çağıran (ör.
+   * muhasebe rolü ekleme) kapsamı sıfırlamak zorunda kalmaz.
    */
-  setRoles(profileId: string, roles: UserRole[]): Promise<UserProfile> {
-    return this.update({ id: profileId, roles });
+  setRoles(profileId: string, roles: UserRole[], warehouseIds?: string[]): Promise<UserProfile> {
+    return this.update(warehouseIds ? { id: profileId, roles, warehouseIds } : { id: profileId, roles });
+  }
+
+  /**
+   * Depo kapsamını yazar (19.5 kapsam atama ekranı).
+   *
+   * **Boş dizi = HİÇBİR depo, "hepsi" değil** (fail-closed): kapsamı boşaltmak depocuyu kapıya
+   * kilitler, tüm depolara açmaz. Depocu/kurye için boş kapsam DB'de zaten reddedilir — rolü
+   * kaldırmadan kapsamı boşaltmak mümkün değildir ve bu bilinçlidir.
+   */
+  setWarehouseScope(profileId: string, warehouseIds: string[]): Promise<UserProfile> {
+    return this.update({ id: profileId, warehouseIds });
   }
 
   /**
