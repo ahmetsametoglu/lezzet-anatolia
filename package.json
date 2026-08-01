@@ -23,6 +23,7 @@
     "knip": "knip",
     "docs:check": "node scripts/docs-check.mjs",
     "docs:sync": "node scripts/docs-check.mjs --fix",
+    "postal:build": "node scripts/build-postal-codes.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
     "test": "node scripts/with-test-lock.mjs pnpm exec vitest run",
     "test:unit": "vitest run --project unit",
