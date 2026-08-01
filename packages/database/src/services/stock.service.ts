@@ -117,15 +117,18 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    * Kararı motor verir (`domain-core/stock/offer` + `shelf-life`): bu okuma yalnız ölçütün girdisini
    * (tarih tipi, toplam raf ömrü, teklif fiyatı) tek turda toplar.
    */
-  async listInStockDetailed(variantIds?: readonly string[], warehouseId?: string): Promise<StockBatchDetail[]> {
+  async listInStockDetailed(variantIds?: readonly string[], warehouseIds?: readonly string[]): Promise<StockBatchDetail[]> {
     // Boş dizi ile çağrı BOŞ döner: `in.()` süzgeci PostgREST'te "hiçbiri" değil sözdizimi hatasıdır,
     // süzgeci hiç uygulamamak ise sessizce TÜM partileri getirirdi (sayfa okuması patlardı).
-    if (variantIds?.length === 0) return [];
-    // Depo süzgeci opsiyonel: depocu kendi deposunu görür (kapsamı ekran verir), admin depo-üstü
-    // tarayabilir — kapsam kararı guard'ın işidir, servisin değil.
+    if (variantIds?.length === 0 || warehouseIds?.length === 0) return [];
+    // Depo süzgeci KÜME alır, `OrderListFilters` ve `listAvailableAcross` ile birebir aynı
+    // sözleşmeyle: `undefined` = depo-üstü · dizi = o depolar · boş dizi = hiçbiri. Aynı soru
+    // ("kapsamımdaki depolar") üç ayrı okumada soruluyor ve üçü de tek depo alacak şekilde
+    // yazılmıştı — raf ömrü kuyruğu için bu özellikle yanlıştı: her depo kendi mal kabulünü yapar,
+    // aynı ürünün bir depoda son günlerinde ötekinde yeni gelmiş partisi olması rutin hâl.
     const filters: Record<string, unknown> = {};
     if (variantIds) filters.variantId = [...variantIds];
-    if (warehouseId) filters.warehouseId = warehouseId;
+    if (warehouseIds) filters.warehouseId = [...warehouseIds];
     return this.getAllAs(StockBatchDetailSchema, Object.keys(filters).length > 0 ? filters : undefined, {
       select: BATCH_DETAIL_SELECT,
       rangeFilters: [{ field: 'physical_qty', operator: 'gt', value: 0 }],
@@ -189,14 +192,53 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * Depo-ÜSTÜ toplam kullanılabilir (`available_stock_total`).
+   * ÇOK DEPO × çok varyant — `(depo, varyant)` taneli ham satırlar.
+   *
+   * Elimizde iki uç vardı ve **arada bir şey yoktu**: tek depo (`getAvailableMap`) ve depo-üstü
+   * toplam (`getNetworkAvailabilityMap`, ki satış kararı onu okuyamaz). Operasyonun "Tüm depolar"
+   * görünümü tam ortada duruyor — hem toplamı hem kırılımı istiyor ve beş depo için beş tur atmak
+   * N+1'dir.
+   *
+   * **Ham satır dönüyor, hazır toplam değil.** Toplamı serviste üretmek "N depoda var" ipucunu da
+   * servise taşırdı ve o tamamen sunum. Sınır şurada: hangi satırların toplanacağı (kapsam) bir
+   * karardır ve o burada; nasıl toplanacağı sunumdur ve o ekranda.
+   *
+   * **`warehouseIds` zorunlu ve varsayılansız (T8).** Boş dizi "hepsi" DEĞİL "hiçbiri"dir —
+   * kapsamsız personel hiçbir şey görmez. O hâlde sorgu HİÇ atılmaz: PostgREST'te `in.()` boş
+   * listesi güvenilmez ve fail-closed niyetini veriye değil koda yazıyoruz.
+   */
+  async listAvailableAcross(warehouseIds: readonly string[], variantIds: readonly string[]): Promise<AvailableStock[]> {
+    if (warehouseIds.length === 0 || variantIds.length === 0) return [];
+    const { data, error } = await this.supabase
+      .from('available_stock')
+      .select('*')
+      .in('warehouse_id', [...warehouseIds])
+      .in('variant_id', [...variantIds]);
+    if (error) throw error;
+    return (data ?? []).map((row) => AvailableStockSchema.parse(dbToApp(row)));
+  }
+
+  /**
+   * Depo AĞI genelinde toplam kullanılabilir (`available_stock_total`).
    *
    * **Satış kararı bunu OKUMAZ:** birleştirilmiş stok kimsenin stoğu değildir — 3 STR'de + 2
    * KEHL'de duran maldan 5 kişilik sipariş çıkmaz. Meşru iki tüketicisi var: tedarik önerisi
    * ("toplamda ne kadar kaldı, sipariş vermeli miyim") ve ziyaretçiye "tükendi" demenin tek
    * dayanağı (C3 — yalnız HİÇBİR depoda yoksa söylenir).
+   *
+   * ── ADI NİYETİNİ SÖYLÜYOR (19.13) ────────────────────────────────────────────
+   * Eski adı `getAvailableTotalMap`'ti ve bu bir açıktı: `getAvailableMap`'e fazladan bir kelime
+   * eklenmiş gibi duruyordu, oysa **sözleşmesi bambaşka**. `getAvailableMap`'te unutulan argüman
+   * DERLENMEZ; burada unutulan bağlam derlenir, çalışır ve makul görünen bir sayı döndürür. Ad artık
+   * çağıranı bir cümle kurmaya zorluyor: "ağ genelinde".
+   *
+   * Kapsamla süzülmüş çoklu-depo okuması isteyen `listAvailableAcross`'a gider — o kapı 19.13'te
+   * tam olarak bu metodun yanlış kullanımını gereksiz kılmak için açıldı.
+   *
+   * Dönüş tipi `boolean` haritasına DARALTILAMIYOR (ölçüldü): paket okuması `available < item.qty`
+   * karşılaştırması yapıyor, yani gerçek miktara ihtiyacı var (`storefront/packages.ts`).
    */
-  async getAvailableTotalMap(variantIds: string[]): Promise<Map<string, AvailableStockTotal>> {
+  async getNetworkAvailabilityMap(variantIds: string[]): Promise<Map<string, AvailableStockTotal>> {
     if (variantIds.length === 0) return new Map();
     const { data, error } = await this.supabase
       .from('available_stock_total')

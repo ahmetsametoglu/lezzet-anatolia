@@ -108,7 +108,7 @@ describe('kullanılabilir stok depo içinde hesaplanır', () => {
     await stocks.insert({ variantId, warehouseId: bosDepo, physicalQty: 3, expiryDate: dayOffset(200) });
 
     // 7 + 3 = 10 ama bu SATIŞ KARARI DEĞİL: 10 kişilik sipariş bu maldan çıkmaz.
-    expect((await stocks.getAvailableTotalMap([variantId])).get(variantId)?.availableQty).toBe(10);
+    expect((await stocks.getNetworkAvailabilityMap([variantId])).get(variantId)?.availableQty).toBe(10);
   });
 });
 

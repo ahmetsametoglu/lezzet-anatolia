@@ -143,7 +143,7 @@ async function loadContext(bundles: BundleRow[]): Promise<PackageContext> {
     new ProductService(db).list({ filters: { ids: productIds }, limit: productIds.length }),
     // Paket kalemleri depo-ÜSTÜ okunur: paket bir kürasyondur, "bu paket alınabilir mi" sorusunun
     // yeri checkout'tur. Yer belliyken kalem bazlı doğrulama 19.7'nin işi.
-    new StockService(db).getAvailableTotalMap(variantIds),
+    new StockService(db).getNetworkAvailabilityMap(variantIds),
   ]);
 
   return {

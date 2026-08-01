@@ -16,6 +16,7 @@ import { needsExpiryAttention } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type KeysetCursor } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
+import { readWarehouseContext } from '@/lib/warehouse/context';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readActorNames, toLevelRows, toLossRows } from './stock-read';
@@ -81,11 +82,15 @@ export async function loadMoreLevelsAction(
     ]);
 
     const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
+    const { warehouseIds } = await readWarehouseContext();
     const [batchRows, available] = await Promise.all([
-      // BEKLEYEN(19.5): depo süzgeci ekrana bağlanacak (operasyon şeridi). Bugün depo-ÜSTÜ toplam
-      // okunuyor — davranış tek depolu dünyayla aynı; kapsam kararı guard'ın işi, servisin değil.
-      stockSvc.listInStockDetailed(variantIds),
-      stockSvc.getAvailableTotalMap(variantIds),
+      // Parti listesi artık BAĞLAMLA süzülüyor (19.14): personel kapsamı dışındaki deponun raf ömrü
+      // kuyruğunu görmez. `undefined` = depo-üstü ve yalnız admin/muhasebede oluşur.
+      stockSvc.listInStockDetailed(variantIds, warehouseIds),
+      // BEKLEYEN(19.5): seviye satırının kendisi hâlâ ağ-geneli toplam okuyor. Kapı hazır
+      // (`listAvailableAcross`) ama satır modeli değişiyor — tasarım "tek satır + N depoda ipucu"
+      // istiyor ve o ekranın işi (operasyon şeridi).
+      stockSvc.getNetworkAvailabilityMap(variantIds),
     ]);
 
     const now = new Date();

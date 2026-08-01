@@ -48,7 +48,7 @@ export async function loadProductContext(
   const stocks = new StockService(db);
   const [prices, stock, offerBatches] = await Promise.all([
     new PriceService(db).findApplicableMap(variantIds, 'b2c'),
-    warehouseId ? stocks.getAvailableMap(warehouseId, variantIds) : stocks.getAvailableTotalMap(variantIds),
+    warehouseId ? stocks.getAvailableMap(warehouseId, variantIds) : stocks.getNetworkAvailabilityMap(variantIds),
     // ── TEKLİF TUTARI YALNIZ YER BELLİYKEN ────────────────────────────────────
     // Yer belliyse o deponun teklifi okunur. Yer BİLİNMİYORSA hiç okunmaz (boş liste): teklif bir
     // partiye bağlıdır, parti bir depodadır ve ziyaretçinin posta kodu oraya düşmeyebilir —

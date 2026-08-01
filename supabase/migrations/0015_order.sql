@@ -273,10 +273,16 @@ create or replace function public.order_counts(
   p_payment_status text default null,
   p_from date default null,
   p_to date default null,
-  -- Depo süzgeci (DOMAIN §17): null = depo-üstü (admin/muhasebe). Kapsamı tek depo olan personelin
-  -- ekranı bunu daima dolu gönderir — sayaçlar da listeyle aynı kümeyi saymak zorunda, yoksa
-  -- "12 sipariş" yazan başlığın altında 4 satır görünür.
-  p_warehouse_id uuid default null
+  -- Depo süzgeci (DOMAIN §17). **Tek uuid değil KÜME**, çünkü üç hâl var ve ortadaki tek uuid ile
+  -- ifade edilemiyordu: `null` = depo-üstü (admin/muhasebe) · tek elemanlı dizi = o depo ·
+  -- çok elemanlı = "kapsamımdaki depolar". Kapsamı iki depo olan personel "tümü" dediğinde eskiden
+  -- ya tek depo seçmek zorundaydı ya `null` göndermek — ikincisi kapsam DIŞI depoların siparişlerini
+  -- de sayardı.
+  --
+  -- Boş dizi (`'{}'`) hiçbir satırla eşleşmez ve bu DOĞRU davranış: kapsamsız personel hiçbir şey
+  -- görmez (fail-closed). `null` ile boş diziyi karıştırmamak çağıranın sorumluluğu — servis
+  -- tarafında boş dizi zaten erken dönüyor.
+  p_warehouse_ids uuid[] default null
 )
 returns table (
   by_status jsonb,
@@ -297,7 +303,7 @@ as $$
            o.on_account, o.payment_status
     from public.order o
     where o.status <> 'draft'
-      and (p_warehouse_id is null or o.warehouse_id = p_warehouse_id)
+      and (p_warehouse_ids is null or o.warehouse_id = any (p_warehouse_ids))
       and (p_channel is null or o.channel = p_channel::channel)
       and (p_source is null or o.order_source = p_source::order_source)
       and (p_delivery_type is null or o.delivery_type = p_delivery_type::delivery_type)
@@ -332,5 +338,5 @@ as $$
 $$;
 
 -- Operasyon okumasıdır; müşteri yüzeyine açılmaz.
-revoke execute on function public.order_counts(text, uuid[], text, text, text, text, date, date, uuid) from public;
-grant execute on function public.order_counts(text, uuid[], text, text, text, text, date, date, uuid) to service_role;
+revoke execute on function public.order_counts(text, uuid[], text, text, text, text, date, date, uuid[]) from public;
+grant execute on function public.order_counts(text, uuid[], text, text, text, text, date, date, uuid[]) to service_role;

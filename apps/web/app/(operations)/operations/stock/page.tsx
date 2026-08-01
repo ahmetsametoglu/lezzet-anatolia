@@ -12,6 +12,7 @@ import { needsExpiryAttention } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { detectDevice } from '@/lib/device';
+import { readWarehouseContext } from '@/lib/warehouse/context';
 import { StockClient } from './stock-client';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readActorNames, toLevelRows, toLossRows } from './stock-read';
@@ -50,9 +51,13 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   const lossSvc = new StockAdjustmentService(db);
   const from = periodStart(urlState.period, new Date());
 
+  // Bağlam ÖNCE: parti kuyruğu personelin kapsamıyla süzülür (19.14). Depocu başka deponun raf
+  // ömrü kuyruğunu görmemeli — "Dolap 1" gibi, aynı ürünün iki depoda bambaşka partisi olur.
+  const { warehouseIds } = await readWarehouseContext();
+
   const [productPage, batchRows, categories, lossPage, lossTotals, thresholds] = await Promise.all([
     productSvc.listStockRows({ filters, limit: DEFAULT_PAGE_SIZE }),
-    stockSvc.listInStockDetailed(),
+    stockSvc.listInStockDetailed(undefined, warehouseIds),
     new CategoryService(db).list(),
     lossSvc.listRecent({ from, limit: DEFAULT_PAGE_SIZE }),
     lossSvc.reasonSummary(from),
@@ -72,7 +77,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
 
   const [available, priceMap, actorNames] = await Promise.all([
     // BEKLEYEN(19.5): depo süzgeci ekrana bağlanacak — bugün depo-üstü toplam.
-    stockSvc.getAvailableTotalMap(pageVariantIds),
+    stockSvc.getNetworkAvailabilityMap(pageVariantIds),
     new PriceService(db).findApplicableMap(attentionVariantIds, 'b2c'),
     readActorNames(new UserProfileService(db), lossPage.rows),
   ]);

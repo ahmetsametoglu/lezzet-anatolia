@@ -23,9 +23,23 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
     super(supabase, 'warehouse', WarehouseSchema, WarehouseInsertSchema, WarehouseUpdateSchema);
   }
 
-  /** Tüm depolar (admin) ya da yalnız aktifler (operasyon seçicisi). Operatörün sırası, eşitlikte kod. */
-  list(opts: { activeOnly?: boolean } = {}): Promise<Warehouse[]> {
-    return this.getAll(opts.activeOnly ? { isActive: true } : undefined, { orderBy: 'sort_order' });
+  /**
+   * Tüm depolar (admin) ya da yalnız aktifler (operasyon seçicisi). Operatörün sırası, eşitlikte kod.
+   *
+   * `warehouseIds` = personelin kapsamı: verilmezse süzgeç yok (admin), verilirse yalnız o depolar,
+   * boş dizi ise **hiçbiri** — kapsam dışı depo hiçbir seçicide ve süzgeçte seçenek olarak var
+   * olmamalı (görüp de seçememek değil, hiç görmemek).
+   *
+   * Kapsam buraya **dizi** olarak girer, `WarehouseScope` motor tipi olarak DEĞİL: `domain-core`
+   * (saf karar) ile `database` (saf I/O) birbirini bilmez (`STACK §4`) ve `boundaries` lint'i o
+   * bağımlılığı geçirmez. Kapsamı diziye çeviren tek yer uygulama katmanındaki bağlam kapısıdır.
+   */
+  list(opts: { activeOnly?: boolean; warehouseIds?: readonly string[] } = {}): Promise<Warehouse[]> {
+    if (opts.warehouseIds?.length === 0) return Promise.resolve([]);
+    const filters: Record<string, unknown> = {};
+    if (opts.activeOnly) filters.isActive = true;
+    if (opts.warehouseIds) filters.id = [...opts.warehouseIds];
+    return this.getAll(Object.keys(filters).length > 0 ? filters : undefined, { orderBy: 'sort_order' });
   }
 
   /** Belge önekinin ve ekranın okuduğu kısa kod ('STR'). */

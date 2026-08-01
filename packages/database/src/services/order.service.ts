@@ -64,13 +64,20 @@ export interface OrderListFilters {
   /** Boşsa listenin kendi kümesi (taslak hariç tüm durumlar) geçerlidir. */
   status?: OrderStatus[];
   /**
-   * Depo süzgeci (DOMAIN §17). Boş = depo-üstü ve bu YALNIZ admin/muhasebe için meşrudur;
-   * depocunun ekranı daima kendi deposunu gönderir (kapsam kararı guard'ın işi).
+   * Depo süzgeci (DOMAIN §17) — **tek uuid değil KÜME**, çünkü üç hâl var:
+   *
+   * - `undefined` → depo-üstü. YALNIZ admin/muhasebe için meşru.
+   * - tek elemanlı dizi → o depo (eski `warehouseId`'nin karşılığı).
+   * - çok elemanlı → **"kapsamımdaki depolar"**. Ortadaki bu hâl tek uuid ile ifade edilemiyordu:
+   *   kapsamı iki depo olan personel "tümü" dediğinde ya tek depo seçmek zorunda kalıyordu ya
+   *   `undefined` göndermek — ikincisi kapsam DIŞI depoların siparişlerini de sayardı.
+   * - boş dizi → hiçbiri (fail-closed; kapsamsız personel hiçbir sipariş görmez).
    *
    * Sayaçlar bu süzgeci LİSTEYLE aynı şekilde alır — biri süzülüp öteki süzülmezse başlıkta
    * "12 sipariş" yazarken listede 4 satır görünür ve operatör kendi ekranına güvenmeyi bırakır.
+   * Bu yüzden süzgeç RPC'nin İÇİNDE uygulanır (`p_warehouse_ids`), dışarıda değil.
    */
-  warehouseId?: string;
+  warehouseIds?: readonly string[];
   channel?: Channel;
   source?: OrderSource;
   deliveryType?: DeliveryType;
@@ -108,8 +115,19 @@ function listedFilters(f: OrderListFilters): Record<string, unknown> {
     orderSource: f.source,
     deliveryType: f.deliveryType,
     paymentStatus: f.paymentStatus,
-    warehouseId: f.warehouseId,
+    // Dizi → `in` süzgeci; `undefined` → süzgeç yok (depo-üstü). Boş dizi buraya HİÇ gelmez:
+    // çağıranlar `emptyScope` ile erkenden dönüyor (aşağıda) — `in.()` PostgREST'te sözdizimi
+    // hatasıdır ve süzgeci atlamak sessizce her deponun siparişini getirirdi.
+    warehouseId: f.warehouseIds ? [...f.warehouseIds] : undefined,
   };
+}
+
+/**
+ * Kapsam boş mu — "hiçbir depo" hâli. Boş dizi `undefined`'dan (depo-üstü) AYRI bir anlamdır ve
+ * ikisini karıştırmak kapsamsız personele her şeyi göstermek olurdu. Sorgu hiç atılmaz.
+ */
+function emptyScope(f: OrderListFilters): boolean {
+  return f.warehouseIds?.length === 0;
 }
 
 /** Arama ve tarih aralığı — eşitliğe sığmayan süzgeçler. */
@@ -596,6 +614,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    * kapsar, müşteri araması kapsamaz olurdu.
    */
   listPage(filters: OrderListFilters = {}, opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<Order>> {
+    if (emptyScope(filters)) return Promise.resolve({ rows: [], nextCursor: null });
     return this.getPage(listedFilters(filters), {
       ...searchOptions(filters),
       orderBy: 'createdAt',
@@ -613,6 +632,15 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    * için altı `HEAD` sayım + üç toplam yerine bir tur.
    */
   async counts(filters: OrderListFilters = {}): Promise<OrderCounts> {
+    // Kapsam boşsa RPC hiç çağrılmaz: sıfırlar zaten doğru cevap ve sorgu atmanın karşılığı yok.
+    if (emptyScope(filters)) {
+      return {
+        byStatus: new Map(),
+        total: 0,
+        sum: { total: 0, collected: 0, refunded: 0 },
+        cod: { count: 0, total: 0, collected: 0, refunded: 0 },
+      };
+    }
     const rows = await this.executeRpc<unknown[]>('order_counts', {
       p_reference: filters.query?.trim() || null,
       p_customer_ids: filters.customerIds ?? null,
@@ -622,7 +650,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       p_payment_status: filters.paymentStatus ?? null,
       p_from: filters.deliveryFrom ?? null,
       p_to: filters.deliveryTo ?? null,
-      p_warehouse_id: filters.warehouseId ?? null,
+      p_warehouse_ids: filters.warehouseIds ? [...filters.warehouseIds] : null,
     });
     // `by_status`'un ANAHTARLARI enum değeridir, alan adı değil: `dbToApp` onları da camelCase'e
     // çevirip `out_for_delivery`'yi `outForDelivery` yapıyordu — sessizce hiçbir sekmeye denk
