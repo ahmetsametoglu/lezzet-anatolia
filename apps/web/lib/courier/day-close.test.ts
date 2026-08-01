@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, OrderService, ProductService, ReservationService, StockService,
   UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { closeCourierDay, openDayClose, type DayCloseDraft } from './day-close';
 import { confirmDoorDelivery } from './delivery';
 import { markUndelivered } from './day';
@@ -22,6 +22,8 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let courierId: string;
 let variantId: string;
 let productId: string;
@@ -36,6 +38,7 @@ let day: string;
 let dayCounter = 0;
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Kapanış testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Lokum ${stamp}` },
@@ -61,7 +64,7 @@ beforeEach(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
-  stockId = (await stocks.insert({ variantId, physicalQty: 60, expiryDate: dayOffset(60), purchasePrice: 2 })).id;
+  stockId = (await stocks.insert({ warehouseId, variantId, physicalQty: 60, expiryDate: dayOffset(60), purchasePrice: 2 })).id;
   day = dayOffset(++dayCounter);
 });
 
@@ -71,14 +74,15 @@ afterAll(async () => {
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('account').delete().eq('id', accountId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 async function atTheDoor(qty: number) {
   const { order, items } = await orders.create(
-    { customerId, channel: 'b2c', deliveryType: 'route', deliveryDate: day, courierId, total: qty * 10 },
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', deliveryDate: day, courierId, total: qty * 10 },
     [{ variantId, qty, unitPrice: 10, vatRate: 5.5 }],
   );
-  await reservations.reserve({ orderId: order.id, variantId, qty });
+  await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   for (const status of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: status });
   await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }]);
   for (const status of ['ready', 'out_for_delivery'] as const) await transitionOrder({ orderId: order.id, to: status });

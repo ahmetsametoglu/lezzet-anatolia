@@ -39,6 +39,12 @@ import { resolveDelivery } from './delivery';
 
 type CheckoutDraftOutcome =
   | { status: 'ok'; orderId: string; totalCents: number; deliveryType: DeliveryType }
+  /**
+   * Yer çözülemedi: sipariş açılamaz. `ambiguous_zone` bir VERİ hatasıdır (aynı kod iki bölgede),
+   * `no_shipping_warehouse` bir YAPILANDIRMA eksiğidir (kargo deposu yok). İkisi de müşteriye
+   * "bölge dışısınız" dedirtmemeli — o başka bir şey; ekran operatöre haber verilmesini söyler.
+   */
+  | { status: 'warehouse_unresolved'; reason: 'ambiguous_zone' | 'no_shipping_warehouse' }
   | { status: 'empty_cart' }
   /** Tükenmiş/satışa kapanmış satır var — çıkarılmadan sipariş açılmaz. */
   | { status: 'blocked_lines'; lines: string[] }
@@ -92,7 +98,7 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
 
   // 3) Teslimat: posta kodu → bölge → gün(ler). Soğuk zincir kalemi kargoyu kapatır.
   const hasNonShippableItem = cart.lines.some((l) => !l.shippable);
-  const delivery = await resolveDelivery({ postalCode: address.postalCode, hasNonShippableItem });
+  const delivery = await resolveDelivery({ postalCode: address.postalCode, country: address.country, hasNonShippableItem });
   if (delivery.shippingBlockedReason === 'cold_chain') return { status: 'cold_chain_unshippable' };
 
   // Gün DOĞRULANIR, kabul edilmez: ekran açıkken kesim saati geçmiş ya da bölge günü değişmiş olabilir.
@@ -116,12 +122,22 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
     return { status: 'payment_not_allowed', methods: options.methods };
   }
 
+  // Depo çözülemediyse sipariş AÇILMAZ: deposuz bir sipariş şemada da yazılamaz (not null) ve
+  // yazılabilseydi hangi depodan hazırlanacağı bilinmeyen bir kayıt kalırdı. Sebep çağırana
+  // taşınır — "bölge dışısınız" ile "kargo deposu tanımlı değil" aynı cümle olamaz.
+  if (!delivery.warehouseId) {
+    return { status: 'warehouse_unresolved', reason: delivery.unresolvedReason ?? 'no_shipping_warehouse' };
+  }
+
   // 5) Taslak. Kanal müşteri tipinden TÜRER ve bir daha değişmez (DOMAIN §3); adres ANLIK GÖRÜNTÜ
   //    olarak da yazılır — müşteri adresini sonradan düzenlerse sipariş nereye gittiğini unutmamalı.
   const deliveryDate = delivery.deliveryType === 'route' ? (input.deliveryDate ?? delivery.availableDates[0] ?? null) : null;
   const { order } = await new OrderService(db).create(
     {
       customerId: customer.id,
+      // Sipariş TEK depodan çıkar (DOMAIN §17) ve kaynağı ADRESİN posta kodudur — uzaktan siparişte
+      // varsayılan depo kavramı yoktur (C2). Yer çözümü teslimat kararıyla aynı turda yapıldı.
+      warehouseId: delivery.warehouseId,
       channel: deriveChannel({ isCompany: customer.type === 'company' }),
       orderSource: 'web',
       status: 'draft',

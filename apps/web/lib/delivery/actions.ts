@@ -23,12 +23,13 @@ export async function resolvePlaceAction(rawPostalCode: string): Promise<ActionR
 
     const [delivery, zones] = await Promise.all([
       resolveDelivery({ postalCode }),
-      new DeliveryZoneService(serviceDb()).list({ activeOnly: true }),
+      new DeliveryZoneService(serviceDb()).listWithCodes({ activeOnly: true }),
     ]);
 
     // Bölge adı yalnız rota içinde bilinir; rota dışında şehir adı UYDURULMAZ (`place-types`).
     // Motor aday tipini döndürür (ad taşımaz — karar için gereksiz); adı kendi listemizden okuruz.
-    const matched = findZoneForPostalCode(postalCode, zones);
+    // Ülke bugün sabit FR (tek ülkede hizmet); yer bağlamı v2 onu taşıyınca buraya girer.
+    const matched = findZoneForPostalCode({ country: 'FR', postalCode }, zones);
     const zone = matched ? zones.find((z) => z.id === matched.id) : undefined;
     const inRoute = delivery.deliveryType === 'route';
 

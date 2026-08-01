@@ -75,14 +75,20 @@ function declarationOf(
  * Aynı kategoriden başka ürünler. Ürünün kendisi listeden düşer; kategorisiz üründe bölüm boş kalır
  * (rastgele ürün önerilmez — "benzer" iddiası karşılanamıyorsa hiç iddia edilmez).
  */
-async function readSimilar(db: SupabaseClient, categoryId: string | null, excludeId: string, locale: Locale) {
+async function readSimilar(
+  db: SupabaseClient,
+  categoryId: string | null,
+  excludeId: string,
+  locale: Locale,
+  warehouseId: string | null,
+) {
   if (!categoryId) return [];
   const page = await new ProductService(db).listWithRelations({
     filters: { categoryId, status: 'active' },
     limit: SIMILAR_LIMIT + 1, // kendisi de gelebilir; elendikten sonra kart sayısı tutsun
   });
   const rows = page.rows.filter((p) => p.id !== excludeId).slice(0, SIMILAR_LIMIT);
-  const context = await loadProductContext(db, rows);
+  const context = await loadProductContext(db, rows, warehouseId);
   return rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT));
 }
 
@@ -92,16 +98,28 @@ async function readSimilar(db: SupabaseClient, categoryId: string | null, exclud
  * Aday ve pasif ürün müşteriye AÇILMAZ: katalogda görünmeyen bir ürünün doğrudan linkle satın
  * alınabilir olması, `status`'ün taşıdığı kararı boşa çıkarırdı (DOMAIN §13).
  */
-export async function getProductDetail(locale: Locale, slug: string): Promise<StorefrontProductDetail | null> {
+/**
+ * `warehouseId` — müşterinin yerinden çözülen depo. **Zorunlu ve varsayılansız**: `null` meşru bir
+ * değerdir ("yer bilinmiyor", posta kodu zorunlu değil — K1) ama VERİLMESİ zorunludur. Varsayılan
+ * bıraksaydık argümanı unutan çağrı derlenir ve sessizce depo-üstü okurdu — `getAvailableMap`'i
+ * kurtaran şey (T8) tam olarak parametrenin zorunluluğuydu, aynı disiplin burada da geçerli.
+ *
+ * `null` → depo-ÜSTÜ okuma: "tükendi" demenin tek dayanağı hiçbir depoda bulunmamasıdır (C3).
+ */
+export async function getProductDetail(
+  locale: Locale,
+  slug: string,
+  warehouseId: string | null,
+): Promise<StorefrontProductDetail | null> {
   const db = serviceDb();
   const product = await new ProductService(db).findBySlug(slug);
   if (!product || product.status !== 'active') return null;
 
   const [context, images, category, similar] = await Promise.all([
-    loadProductContext(db, [product]),
+    loadProductContext(db, [product], warehouseId),
     new ProductImageService(db).listByProduct(product.id),
     product.categoryId ? new CategoryService(db).getById(product.categoryId) : Promise.resolve(null),
-    readSimilar(db, product.categoryId, product.id, locale),
+    readSimilar(db, product.categoryId, product.id, locale, warehouseId),
   ]);
 
   const ctx: ProductContext = context.get(product.id) ?? EMPTY_PRODUCT_CONTEXT;

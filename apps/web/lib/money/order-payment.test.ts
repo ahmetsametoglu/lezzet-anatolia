@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, MoneyMovementService, OrderItemService, OrderService, ProductService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { recordOrderPayment, recordOrderRefund, syncOrderPaymentStatus } from './order-payment';
 
 /**
@@ -17,6 +17,8 @@ const accounts = new AccountService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -24,6 +26,7 @@ let cashAccount: string;
 const createdProfiles: string[] = [];
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Para testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Tulumba ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
@@ -45,12 +48,13 @@ afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('account').delete().eq('id', cashAccount);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** 2 × 25 € = 50 € tutarında, tamamı karşılanmış sipariş. */
 async function createOrder(qty = 2, unitPrice = 25, shippingFee = 0) {
   const { order, items } = await orders.create(
-    { customerId, channel: 'b2c', total: qty * unitPrice + shippingFee, shippingFee },
+    { warehouseId, customerId, channel: 'b2c', total: qty * unitPrice + shippingFee, shippingFee },
     [{ variantId, qty, unitPrice, vatRate: 5.5, fulfilledQty: qty }],
   );
   return { order, items };

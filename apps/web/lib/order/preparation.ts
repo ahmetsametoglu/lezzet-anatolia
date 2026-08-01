@@ -70,11 +70,19 @@ export interface PreparationOrder {
  * Teslim gününe göre süzülür; gün verilmezse bekleyen her sipariş gelir. **Arşiv yığılmaz**:
  * teslim edilmiş/kapanmış sipariş bu okumaya hiç girmez.
  */
-export async function listPreparationQueue(opts: { deliveryDate?: string; limit?: number } = {}): Promise<PreparationOrder[]> {
+/**
+ * Hazırlık kuyruğu. `warehouseId` verilirse yalnız o deponun siparişleri — depocu başka deponun
+ * kuyruğunu GÖRMEZ (C5) ve zaten hazırlayamaz: partiler siparişin deposundan seçilir. Verilmezse
+ * depo-üstü (admin). Kapsam kararı guard'ın işi (`requireWarehouseScope`), servisin değil.
+ */
+export async function listPreparationQueue(
+  opts: { deliveryDate?: string; limit?: number; warehouseId?: string } = {},
+): Promise<PreparationOrder[]> {
   const db = serviceDb();
   const orders = await new OrderService(db).listByStatus(['confirmed', 'preparing'], {
     deliveryDate: opts.deliveryDate,
     limit: opts.limit ?? 50,
+    warehouseId: opts.warehouseId,
   });
   if (orders.length === 0) return [];
 
@@ -89,7 +97,9 @@ export async function listPreparationQueue(opts: { deliveryDate?: string; limit?
   for (const order of orders) {
     const orderItems = items.filter((item) => item.orderId === order.id);
     const lines = await Promise.all(
-      orderItems.map((item) => buildLine(item, names.get(item.variantId), pinned.get(`${order.id}:${item.variantId}`) ?? item.stockId)),
+      orderItems.map((item) =>
+        buildLine(order.warehouseId, item, names.get(item.variantId), pinned.get(`${order.id}:${item.variantId}`) ?? item.stockId),
+      ),
     );
 
     queue.push({
@@ -112,6 +122,8 @@ export async function listPreparationQueue(opts: { deliveryDate?: string; limit?
  * teklife söz verilen stok başka partiyle karşılanamaz (DOMAIN §4).
  */
 async function buildLine(
+  // Hazırlık siparişin deposundan toplanır: FEFO önerisi başka deponun partisini gösteremez.
+  warehouseId: string,
   item: OrderItem,
   variant: { productName: string; label: string } | undefined,
   pinnedStockId: string | null,
@@ -133,7 +145,7 @@ async function buildLine(
     };
   }
 
-  const fefo = await suggestPicksForVariant(item.variantId, remaining);
+  const fefo = await suggestPicksForVariant(warehouseId, item.variantId, remaining);
   return {
     itemId: item.id,
     variantId: item.variantId,

@@ -80,7 +80,7 @@ export async function getEmptyCartContext(locale: Locale): Promise<EmptyCartCont
     new CategoryService(db).list({ activeOnly: true }),
     readLastOrder(locale),
     // Seçki her iki dalda da okunur — sipariş geçmişine bağlı değil.
-    readShowcase(db, locale),
+    readShowcase(db, locale, null /* yer bağlamı sunucuya 19.7'de taşınacak — BEKLEYEN(19.7) */),
   ]);
   // Son sipariş varsa kategori girişleri hiç çizilmez; boşuna taşınmasın.
   const categories = lastOrder ? [] : (categoryRows.length ? categoryRows : FIXTURE_CATEGORIES).map((c) => toCategory(c, locale));

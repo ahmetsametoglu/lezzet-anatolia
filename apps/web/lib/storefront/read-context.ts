@@ -15,8 +15,22 @@ import type { ProductContext } from './map';
  *
  * Fiyat ziyaretçi kanalından (`b2c`) okunur. Giriş yapmış müşterinin kanalı ve özel fiyatı 04/07
  * bağlandığında buraya parametre olarak girer — kart ve sayfa değişmez.
+ *
+ * ── YER BİLİNİYOR MU (DOMAIN §17) ────────────────────────────────────────────
+ * `warehouseId` **null olabilir ve bu normaldir**: posta kodu zorunlu değil (K1), ziyaretçi
+ * katalogu yerini söylemeden gezebilir. İki okuma AYRI sözleşmedir:
+ *
+ * - Yer BELLİ → o deponun kullanılabiliri. Söz kesindir: "var" dediğimiz mal o depodadır.
+ * - Yer BELİRSİZ → depo-ÜSTÜ toplam. Burada "var" bir vaat DEĞİL, "yok"un dayanağıdır:
+ *   ziyaretçiye "tükendi" demenin tek meşru hâli hiçbir depoda bulunmamasıdır (C3). Toplamı
+ *   satılabilir gibi göstermek yanlış olurdu — 3 STR'de + 2 KEHL'de duran maldan 5 kişilik
+ *   sipariş çıkmaz — ama "hiç yok mu" sorusunun doğru cevabı odur.
  */
-export async function loadProductContext(db: SupabaseClient, rows: ProductWithRelations[]): Promise<Map<string, ProductContext>> {
+export async function loadProductContext(
+  db: SupabaseClient,
+  rows: ProductWithRelations[],
+  warehouseId: string | null,
+): Promise<Map<string, ProductContext>> {
   const context = new Map<string, ProductContext>();
   if (!rows.length) return context;
 
@@ -31,10 +45,22 @@ export async function loadProductContext(db: SupabaseClient, rows: ProductWithRe
   );
   const variantIds = rows.flatMap((r) => r.variants.filter((v) => v.isActive).map((v) => v.id));
 
+  const stocks = new StockService(db);
   const [prices, stock, offerBatches] = await Promise.all([
     new PriceService(db).findApplicableMap(variantIds, 'b2c'),
-    new StockService(db).getAvailableMap(variantIds),
-    new StockService(db).listOfferBatches(variantIds),
+    warehouseId ? stocks.getAvailableMap(warehouseId, variantIds) : stocks.getAvailableTotalMap(variantIds),
+    // ── TEKLİF TUTARI YALNIZ YER BELLİYKEN ────────────────────────────────────
+    // Yer belliyse o deponun teklifi okunur. Yer BİLİNMİYORSA hiç okunmaz (boş liste): teklif bir
+    // partiye bağlıdır, parti bir depodadır ve ziyaretçinin posta kodu oraya düşmeyebilir —
+    // indirimli fiyatı gösterip checkout'ta yükseltmek verilmiş bir sözü bozmaktır.
+    //
+    // Bu, sıralamayla kartı da HİZALAR: `product_listing` yersiz okumada liste fiyatıyla sıralıyor
+    // (0043). Teklifi burada okusaydık kart 3 € yazar, sıra 30 €'ya göre kurulurdu — ekran kendi
+    // kendisiyle çelişirdi.
+    //
+    // BEKLEYEN(19.7): teklifin VARLIĞI (`has_near_expiry_offer`) posta kodu davetine dönüşecek —
+    // "posta kodunuzu girin, size ulaşabilecek son tarih indirimlerini görün".
+    warehouseId ? stocks.listOfferBatches(variantIds, warehouseId) : Promise.resolve([]),
   ]);
 
   const offers = toOfferMap(offerBatches);
@@ -54,8 +80,8 @@ export async function loadProductContext(db: SupabaseClient, rows: ProductWithRe
  *
  * Boş dizi "teklifli ürün yok" demektir — çağıran bunu sonucu daraltmak için kullanır.
  */
-export async function listOfferProductIds(db: SupabaseClient): Promise<string[]> {
-  const batches = await new StockService(db).listOfferBatches();
+export async function listOfferProductIds(db: SupabaseClient, warehouseId: string | null): Promise<string[]> {
+  const batches = await new StockService(db).listOfferBatches(undefined, warehouseId ?? undefined);
   if (!batches.length) return [];
   const variants = await new ProductVariantService(db).listByIds([...new Set(batches.map((b) => b.variantId))]);
   return [...new Set(variants.map((v) => v.productId))];

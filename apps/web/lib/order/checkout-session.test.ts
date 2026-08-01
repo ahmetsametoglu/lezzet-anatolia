@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { createCheckoutSession, type CheckoutSessionCreator } from './checkout-session';
 import { transitionOrder } from './transition';
 
@@ -19,6 +19,8 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -37,6 +39,7 @@ function fakeCreator() {
 }
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Ödeme testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Su Böreği ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
@@ -51,18 +54,19 @@ beforeEach(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
-  await stocks.insert({ variantId, physicalQty: 5, expiryDate: dayOffset(30), purchasePrice: 4 });
+  await stocks.insert({ warehouseId, variantId, physicalQty: 5, expiryDate: dayOffset(30), purchasePrice: 4 });
 });
 
 afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 async function draftOrder(qty: number) {
   const { order } = await orders.create(
-    { customerId, channel: 'b2c', deliveryType: 'route', total: qty * 10 },
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', total: qty * 10 },
     [{ variantId, qty, unitPrice: 10, vatRate: 5.5 }],
   );
   return order.id;
@@ -101,7 +105,7 @@ describe('önce ayır, sonra öde (07.4)', () => {
   it('kalemlerden biri ayrılamazsa ÖNCEKİLER geri bırakılır', async () => {
     // İki kalem: ilki elde olanı bitirir, ikincisi ayrılamaz.
     const { order } = await orders.create(
-      { customerId, channel: 'b2c', total: 80 },
+      { warehouseId, customerId, channel: 'b2c', total: 80 },
       [
         { variantId, qty: 5, unitPrice: 10, vatRate: 5.5 },
         { variantId, qty: 3, unitPrice: 10, vatRate: 5.5 },
@@ -114,7 +118,7 @@ describe('önce ayır, sonra öde (07.4)', () => {
     expect(outcome.status).toBe('insufficient_stock');
     // İlk kalemin ayırması geride kalsaydı stok 30 dakika boşuna kilitli olurdu.
     expect(await reservations.listActiveByOrder(order.id)).toHaveLength(0);
-    expect((await stocks.getAvailable(variantId)).availableQty).toBe(5);
+    expect((await stocks.getAvailable(warehouseId, variantId)).availableQty).toBe(5);
   });
 
   it('taslak olmayan siparişte ödeme açılmaz', async () => {

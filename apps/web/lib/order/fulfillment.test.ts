@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { closeOrder, deliverOrder } from './fulfillment';
 import { transitionOrder } from './transition';
 
@@ -17,6 +17,8 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -27,6 +29,7 @@ const createdProfiles: string[] = [];
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Teslim testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Yaprak sarma ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
@@ -41,23 +44,24 @@ beforeEach(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
-  batchA = (await stocks.insert({ variantId, physicalQty: 4, expiryDate: dayOffset(20), purchasePrice: 2 })).id;
-  batchB = (await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 3 })).id;
+  batchA = (await stocks.insert({ warehouseId, variantId, physicalQty: 4, expiryDate: dayOffset(20), purchasePrice: 2 })).id;
+  batchB = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 3 })).id;
 });
 
 afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Sipariş aç → ayır → hazırla → yola çıkar. Teslime hazır hâle getirir. */
 async function sendOut(picks: { stockId: string; qty: number }[]) {
   const total = picks.reduce((s, p) => s + p.qty, 0);
   const { order, items } = await orders.create(
-    { customerId, channel: 'b2c', deliveryType: 'route' },
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route' },
     [{ variantId, qty: total, unitPrice: 10, vatRate: 5.5 }],
   );
-  await reservations.reserve({ orderId: order.id, variantId, qty: total });
+  await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty: total });
   for (const status of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: status });
   await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: picks }]);
   for (const status of ['ready', 'out_for_delivery'] as const) await transitionOrder({ orderId: order.id, to: status });
@@ -78,7 +82,7 @@ describe('teslim (07.7)', () => {
   });
 
   it('yolda olmayan sipariş teslim edilemez — stok DEĞİŞMEZ', async () => {
-    const { order } = await orders.create({ customerId, channel: 'b2c' }, [{ variantId, qty: 1, unitPrice: 10, vatRate: 5.5 }]);
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c' }, [{ variantId, qty: 1, unitPrice: 10, vatRate: 5.5 }]);
 
     const outcome = await deliverOrder(order.id);
     expect(outcome).toMatchObject({ ok: false, reason: 'stale', currentStatus: 'draft' });
@@ -96,7 +100,7 @@ describe('teslim (07.7)', () => {
 
   it('hiç hazırlanmamış sipariş teslim edilirse stok düşmez ama teslim kaydı yazılır', async () => {
     const { order, items } = await orders.create(
-      { customerId, channel: 'b2c' },
+      { warehouseId, customerId, channel: 'b2c' },
       [{ variantId, qty: 2, unitPrice: 10, vatRate: 5.5 }],
     );
     for (const d of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: d });

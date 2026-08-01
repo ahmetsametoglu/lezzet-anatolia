@@ -43,9 +43,13 @@ const SHOWCASE_LIMIT = 4;
  * BEKLEYEN(08.9): gerçek popülerlik ölçütü (görüntüleme + sipariş sayımı) — ölçüt geldiğinde
  * yalnız buradaki sıralama değişir, iki ekran da onu izler.
  */
-export async function readShowcase(db: SupabaseClient, locale: Locale): Promise<StorefrontProduct[]> {
+export async function readShowcase(
+  db: SupabaseClient,
+  locale: Locale,
+  warehouseId: string | null,
+): Promise<StorefrontProduct[]> {
   const page = await new ProductService(db).listWithRelations({ filters: { status: 'active' }, limit: SHOWCASE_LIMIT });
-  const context = await loadProductContext(db, page.rows);
+  const context = await loadProductContext(db, page.rows, warehouseId);
   return page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT));
 }
 
@@ -62,23 +66,31 @@ function isOffer(p: StorefrontProduct): p is StorefrontOffer {
  * çözdürür, teklif normal fiyatı yenemezse ürün fırsat sayılmaz ve banda girmez. Bant boş kalırsa
  * sayfa bölümü tamamen kaldırır — boş hâl gösterilmez (komponent envanteri K8).
  */
-async function readOffers(db: SupabaseClient, locale: Locale): Promise<StorefrontOffer[]> {
-  const productIds = await listOfferProductIds(db);
+async function readOffers(db: SupabaseClient, locale: Locale, warehouseId: string | null): Promise<StorefrontOffer[]> {
+  const productIds = await listOfferProductIds(db, warehouseId);
   if (!productIds.length) return [];
 
   const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds, status: 'active' }, limit: OFFER_LIMIT });
-  const context = await loadProductContext(db, page.rows);
+  const context = await loadProductContext(db, page.rows, warehouseId);
   return page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)).filter(isOffer);
 }
 
 /** Anasayfanın tüm bölümleri tek turda — bölüm başına ayrı çağrı yapılmaz. */
-export async function getHomeData(locale: Locale): Promise<StorefrontHome> {
+/**
+ * `warehouseId` — müşterinin yerinden çözülen depo. **Zorunlu ve varsayılansız**: `null` meşru bir
+ * değerdir ("yer bilinmiyor", posta kodu zorunlu değil — K1) ama VERİLMESİ zorunludur. Varsayılan
+ * bıraksaydık argümanı unutan çağrı derlenir ve sessizce depo-üstü okurdu — `getAvailableMap`'i
+ * kurtaran şey (T8) tam olarak parametrenin zorunluluğuydu, aynı disiplin burada da geçerli.
+ *
+ * `null` → depo-ÜSTÜ okuma: "tükendi" demenin tek dayanağı hiçbir depoda bulunmamasıdır (C3).
+ */
+export async function getHomeData(locale: Locale, warehouseId: string | null): Promise<StorefrontHome> {
   const db = serviceDb();
   const [categoryRows, featured, offers, packages] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
     // Vitrin seçkisi boş sepetle PAYLAŞILIR — tek kaynak (`readShowcase`).
-    readShowcase(db, locale),
-    readOffers(db, locale),
+    readShowcase(db, locale, warehouseId),
+    readOffers(db, locale, warehouseId),
     listStorefrontPackages(locale),
   ]);
 

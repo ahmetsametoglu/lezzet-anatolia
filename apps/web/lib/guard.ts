@@ -1,5 +1,6 @@
 import 'server-only';
 import { serviceDb, UserProfileService } from '@lezzet/database';
+import { canAccessWarehouse, warehouseScope, type WarehouseScope } from '@lezzet/domain-core';
 import { DEV_ADMIN_PROFILE_ID, type UserRole } from '@lezzet/types';
 import { createClient } from './supabase/server';
 import { logger } from '@lezzet/observability';
@@ -116,6 +117,28 @@ export async function requireStaff(): Promise<AuthUser> {
   const user = await requireAuth();
   if (!(await new UserProfileService(serviceDb()).isStaff(user.id))) throw new AuthError('forbidden');
   return user;
+}
+
+/**
+ * Personelin DEPO KAPSAMI (DOMAIN §17) — rolün ikinci ekseni: ne yapar × nerede yapar.
+ *
+ * `warehouseId` verilirse o depoya erişim de doğrulanır ve yetkisizse `forbidden` atar. Verilmezse
+ * yalnız kapsam döner (ekran kendi seçicisini ona göre kurar).
+ *
+ * **Fail-closed:** kapsamsız depocu/kurye HİÇBİR depoyu göremez — boş kapsam "hepsi" değildir.
+ * Karar motorda (`warehouseScope`), guard yalnız kimliği getirip motora sorar (STACK §4).
+ */
+export async function requireWarehouseScope(warehouseId?: string): Promise<{ user: AuthUser; scope: WarehouseScope }> {
+  const user = await requireStaff();
+  if (devBypassActive()) return { user, scope: { kind: 'all' } };
+
+  const profile = await new UserProfileService(serviceDb()).findByAuthUserId(user.id);
+  if (!profile) throw new AuthError('forbidden');
+
+  const scope = warehouseScope(profile.roles, profile.warehouseIds);
+  if (scope.kind === 'none') throw new AuthError('forbidden');
+  if (warehouseId && !canAccessWarehouse(scope, warehouseId)) throw new AuthError('forbidden');
+  return { user, scope };
 }
 
 export const requireAdmin = (): Promise<AuthUser> => requireRole('admin');

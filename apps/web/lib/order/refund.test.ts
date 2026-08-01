@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { recordOrderPayment } from '../money/order-payment';
 import { closeOrder, deliverOrder } from './fulfillment';
 import { adjustFulfillment, cancelOrder } from './refund';
@@ -22,6 +22,8 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -32,6 +34,7 @@ const createdProfiles: string[] = [];
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `İade testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Mantı ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
@@ -51,7 +54,7 @@ beforeEach(async () => {
   const ids = (previous.data ?? []).map((row) => row.id as string);
   if (ids.length > 0) await db.from('stock_adjustment').delete().in('stock_id', ids);
   await db.from('stock').delete().eq('variant_id', variantId);
-  batchId = (await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(30), purchasePrice: 4 })).id;
+  batchId = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(30), purchasePrice: 4 })).id;
 });
 
 afterAll(async () => {
@@ -61,6 +64,7 @@ afterAll(async () => {
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('account').delete().eq('id', cashAccount);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Sipariş aç → ayır → hazırla. Kalem tek: `qty` adet, birim 10 €. Durum `ready`'de bırakılır. */
@@ -69,6 +73,7 @@ async function prepare(qty: number, extra: { shippingFee?: number; lineDiscountA
     // Başlıktaki indirim kalem paylarının toplamıdır ve bunu artık veritabanı zorluyor (0041) —
     // tek kalemli fikstürde ikisi aynı sayı.
     {
+      warehouseId,
       customerId,
       channel: 'b2c',
       deliveryType: 'route',
@@ -77,7 +82,7 @@ async function prepare(qty: number, extra: { shippingFee?: number; lineDiscountA
     },
     [{ variantId, qty, unitPrice: 10, vatRate: 5.5, lineDiscountAmount: extra.lineDiscountAmount ?? 0 }],
   );
-  await reservations.reserve({ orderId: order.id, variantId, qty });
+  await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   for (const status of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: status });
   await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId: batchId, qty }] }]);
   await transitionOrder({ orderId: order.id, to: 'ready' });

@@ -1,6 +1,7 @@
 import { UserProfileService } from '@lezzet/database';
 import { DEV_ADMIN_PROFILE_ID } from '@lezzet/types';
 import { an, type Db, type Kisiler } from './shared';
+import type { Depolar } from './warehouse';
 
 // Kimlik (04): taslak müşteriler, ticari müşteri kartları, personel.
 
@@ -50,6 +51,12 @@ interface SeedKisi {
   email: string;
   phone: string;
   roles: ('customer' | 'admin' | 'warehouse' | 'courier' | 'accounting')[];
+  /**
+   * Depo kapsamı (DOMAIN §17) — rolün ikinci ekseni: ne yapar × NEREDE yapar. Depocu ve kurye
+   * kapsamsız OLAMAZ (DB kısıtı); admin ve muhasebe depo-üstüdür, kapsamı hiç okunmaz.
+   * Değer `Depolar` anahtarıdır; gerçek kimlik seed sırasında çözülür.
+   */
+  depolar?: (keyof Depolar)[];
   type?: 'individual' | 'company';
   country?: 'FR' | 'DE';
   preferredLanguage?: 'tr' | 'fr' | 'de';
@@ -160,15 +167,18 @@ const KISILER: SeedKisi[] = [
   //   `actor_id` FK'sinden düşerdi. E-posta kimsenin giriş yapmayacağı bir yerel adres.
   { key: 'devAdmin', id: DEV_ADMIN_PROFILE_ID, name: 'Dev Admin (bypass)', email: 'dev-admin@lezzet.local', phone: '+33600000100', roles: ['admin'], preferredLanguage: 'tr' },
   // — Personel: operasyon rolleri. Sipariş geçişlerinin AKTÖRÜ ve kuryesi bunlar.
-  { key: 'depocu', name: 'Deniz Arslan', email: 'depo@lezzetanatolia.fr', phone: '+33600000101', roles: ['warehouse'], preferredLanguage: 'tr' },
-  { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolia.fr', phone: '+33600000102', roles: ['courier'], preferredLanguage: 'fr' },
+  // Depocu TEK depoya bağlı: ekranında depo seçici görmez, kendi deposunun kuyruğunu görür.
+  { key: 'depocu', name: 'Deniz Arslan', email: 'depo@lezzetanatolia.fr', phone: '+33600000101', roles: ['warehouse'], depolar: ['str'], preferredLanguage: 'tr' },
+  { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolia.fr', phone: '+33600000102', roles: ['courier'], depolar: ['str'], preferredLanguage: 'fr' },
   // Çoklu operasyon rolü olağandır (DOMAIN §2): depo + muhasebe aynı kişide olabilir.
-  { key: 'muhasebe', name: 'Ayşe Demir', email: 'muhasebe@lezzetanatolia.fr', phone: '+33600000103', roles: ['accounting', 'warehouse'], preferredLanguage: 'tr' },
+  // Kapsamı İKİ depo: ekranda kapsamıyla sınırlı depo seçici görür — sistem onun yerine varsayılan
+  // seçmez (C2). Tek depolu bir seed'de bu ekran hiç denenemezdi.
+  { key: 'muhasebe', name: 'Ayşe Demir', email: 'muhasebe@lezzetanatolia.fr', phone: '+33600000103', roles: ['accounting', 'warehouse'], depolar: ['str', 'kehl'], preferredLanguage: 'tr' },
 ];
 
 
 /** Kartları açar (varsa dokunmaz) ve `key → profil id` haritasını döner. */
-export async function seedKisiler(db: Db): Promise<Kisiler> {
+export async function seedKisiler(db: Db, depolar: Depolar): Promise<Kisiler> {
   const profiles = new UserProfileService(db);
   const harita: Kisiler = new Map();
   console.log('▸ MÜŞTERİ KARTI + PERSONEL seed');
@@ -179,9 +189,10 @@ export async function seedKisiler(db: Db): Promise<Kisiler> {
       harita.set(k.key, mevcut.id);
       continue;
     }
-    const { key, note, ...alanlar } = k;
+    const { key, note, depolar: kapsam, ...alanlar } = k;
     const created = await profiles.insert({
       ...alanlar,
+      warehouseIds: (kapsam ?? []).map((d) => depolar[d]),
       type: k.type ?? 'individual',
       country: k.country ?? 'FR',
       preferredLanguage: k.preferredLanguage ?? 'fr',

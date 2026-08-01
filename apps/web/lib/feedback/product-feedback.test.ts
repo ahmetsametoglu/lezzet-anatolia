@@ -8,7 +8,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import type { ProductFeedback } from '@lezzet/types';
 import {
   countPendingReviews,
@@ -41,6 +41,8 @@ const stamp = Date.now();
 const createdProfiles: string[] = [];
 const createdOrders: string[] = [];
 let buyerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let strangerId: string;
 let staffId: string;
 let productId: string;
@@ -50,6 +52,7 @@ let variantId: string;
 let categoryId: string;
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const products = new ProductService(db);
   categoryId = (await new CategoryService(db).create({ name: { tr: `Geri bildirim ${stamp}` } })).id;
 
@@ -77,7 +80,7 @@ beforeAll(async () => {
   createdProfiles.push(buyerId, strangerId, staffId);
 
   const { order } = await orders.create(
-    { customerId: buyerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
+    { warehouseId, customerId: buyerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
     [{ variantId, qty: 1, unitPrice: 12, vatRate: 5.5 }],
   );
   createdOrders.push(order.id);
@@ -95,6 +98,7 @@ afterAll(async () => {
     categoryIds: [categoryId],
     profileIds: createdProfiles,
   });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Onaylı yazılı yorum kurar — skor testlerinin zemini. */

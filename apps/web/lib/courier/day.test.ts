@@ -3,7 +3,7 @@ import {
   AccountService, AddressService, CategoryService, OrderService, ProductService, ReservationService,
   StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { listCourierDay, markUndelivered, type CourierStop } from './day';
 import { recordOrderPayment } from '../money/order-payment';
 import { transitionOrder } from '../order/transition';
@@ -21,6 +21,8 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let addressId: string;
 let courierId: string;
 let otherCourierId: string;
@@ -35,6 +37,7 @@ const today = new Date().toISOString().slice(0, 10);
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Kurye testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Kayısılı Reçel ${stamp}` },
@@ -64,7 +67,7 @@ beforeEach(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
-  stockId = (await stocks.insert({ variantId, physicalQty: 20, expiryDate: dayOffset(60), purchasePrice: 3 })).id;
+  stockId = (await stocks.insert({ warehouseId, variantId, physicalQty: 20, expiryDate: dayOffset(60), purchasePrice: 3 })).id;
 });
 
 afterAll(async () => {
@@ -73,6 +76,7 @@ afterAll(async () => {
   await db.from('address').delete().eq('id', addressId);
   await db.from('account').delete().eq('id', accountId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Yola çıkmış sipariş — kuryenin gün listesine düşmesi için gereken en kısa yol. */
@@ -80,6 +84,7 @@ async function dispatched(opts: { courier?: string; qty?: number; total?: number
   const qty = opts.qty ?? 2;
   const { order, items } = await orders.create(
     {
+      warehouseId,
       customerId,
       channel: 'b2c',
       deliveryType: 'route',
@@ -92,7 +97,7 @@ async function dispatched(opts: { courier?: string; qty?: number; total?: number
     },
     [{ variantId, qty, unitPrice: 10, vatRate: 5.5 }],
   );
-  await reservations.reserve({ orderId: order.id, variantId, qty });
+  await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   for (const status of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: status });
   await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }]);
   for (const status of ['ready', 'out_for_delivery'] as const) await transitionOrder({ orderId: order.id, to: status });
@@ -167,7 +172,7 @@ describe('ulaşılamadı / reddedildi (11.4)', () => {
 
     expect(result).toMatchObject({ status: 'ok', currentStatus: 'ready' });
     // Stok HİÇ değişmez: mal araçta, başkasına satılamaz (ORDER_LIFECYCLE).
-    const available = await stocks.getAvailable(variantId);
+    const available = await stocks.getAvailable(warehouseId, variantId);
     expect(available.physicalQty).toBe(20);
     expect(available.reservedQty).toBe(2);
   });

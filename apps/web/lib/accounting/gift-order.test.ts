@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, OrderService, ProductService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { quickSale } from '../order/quick-sale';
 import { buildExport } from './export';
 
@@ -22,6 +22,8 @@ const accounts = new AccountService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -36,6 +38,7 @@ const PURCHASE_PRICE = 4;
 const TOTAL = QTY * UNIT_PRICE; // 36 €
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `İkram testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Künefe ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
@@ -52,17 +55,18 @@ afterAll(async () => {
   await db.from('stock').delete().eq('variant_id', variantId);
   await db.from('account').delete().eq('id', cashAccount);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 describe('patron ikramı iç hesapların TAMAMINDA sayılır', () => {
   it('mal stoktan düşer, maliyet kâra biner, para kasaya girer — yalnız export dışıdır', async () => {
-    const batch = await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: PURCHASE_PRICE });
+    const batch = await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: PURCHASE_PRICE });
     const cashBefore = (await accounts.balance(cashAccount)).balance;
     // Export'un ikram öncesi hâli: karşılaştırma FARK üzerinden yapılır (rapor şirket genelini okur).
     const exportBefore = await buildExport({ from: dayOffset(0), to: dayOffset(0) });
 
     const { order } = await orders.create(
-      { customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: true, total: TOTAL },
+      { warehouseId, customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: true, total: TOTAL },
       [{ variantId, qty: QTY, unitPrice: UNIT_PRICE, vatRate: 5.5 }],
     );
 

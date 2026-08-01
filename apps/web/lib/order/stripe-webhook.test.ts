@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { handleStripeEvent, type VerifiedEvent } from './stripe-webhook';
 
 /**
@@ -19,6 +19,8 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -42,6 +44,7 @@ function paidEvent(orderId: string, amountCents: number, overrides: Partial<Veri
 }
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Webhook testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `İçli Köfte ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
@@ -58,7 +61,7 @@ beforeEach(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
-  await stocks.insert({ variantId, physicalQty: 5, expiryDate: dayOffset(30), purchasePrice: 4 });
+  await stocks.insert({ warehouseId, variantId, physicalQty: 5, expiryDate: dayOffset(30), purchasePrice: 4 });
 });
 
 afterAll(async () => {
@@ -68,15 +71,16 @@ afterAll(async () => {
   await db.from('webhook_event').delete().like('event_id', `evt_${stamp}_%`);
   await db.from('account').delete().eq('id', stripeAccount);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Taslak sipariş + (istenirse) aktif rezervasyon — ödeme onayının geldiği hâl. */
 async function pendingOrder(qty: number, opts: { reserve?: boolean } = { reserve: true }) {
   const { order } = await orders.create(
-    { customerId, channel: 'b2c', deliveryType: 'route', total: qty * 10 },
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', total: qty * 10 },
     [{ variantId, qty, unitPrice: 10, vatRate: 5.5 }],
   );
-  if (opts.reserve) await reservations.reserve({ orderId: order.id, variantId, qty, ttlMinutes: 30 });
+  if (opts.reserve) await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty, ttlMinutes: 30 });
   return order.id;
 }
 
@@ -140,8 +144,8 @@ describe('geç ödeme — rezervasyon düşmüşken onay gelirse (DOMAIN §4)', 
   it('stok da kalmadıysa sipariş İPTAL edilir — elle karar beklenmez', async () => {
     const orderId = await pendingOrder(4, { reserve: false });
     // Bu arada mal başkasına gitti: elde kalan 1 adet.
-    const other = await orders.create({ customerId, channel: 'b2c' }, [{ variantId, qty: 4, unitPrice: 10, vatRate: 5.5 }]);
-    await reservations.reserve({ orderId: other.order.id, variantId, qty: 4 });
+    const other = await orders.create({ warehouseId, customerId, channel: 'b2c' }, [{ variantId, qty: 4, unitPrice: 10, vatRate: 5.5 }]);
+    await reservations.reserve({ orderId: other.order.id, warehouseId, variantId, qty: 4 });
 
     const outcome = await handleStripeEvent(paidEvent(orderId, 4000), stripeAccount);
 
@@ -191,6 +195,6 @@ describe('oturum süresi dolarsa', () => {
     expect(await reservations.listActiveByOrder(orderId)).toHaveLength(0);
     // Müşteri aynı sepetle tekrar deneyebilmeli — iptal onun kararı.
     expect((await orders.getById(orderId))?.status).toBe('draft');
-    expect((await stocks.getAvailable(variantId)).availableQty).toBe(5);
+    expect((await stocks.getAvailable(warehouseId, variantId)).availableQty).toBe(5);
   });
 });

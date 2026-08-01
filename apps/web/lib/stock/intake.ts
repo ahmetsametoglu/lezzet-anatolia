@@ -102,6 +102,8 @@ type IntakeOutcome =
  * sipariş kapanır ve fark görünür kalır (DOMAIN §16).
  */
 export async function receiveGoods(input: {
+  /** Mal HANGİ depoya girdi (K6) — zorunlu: satın alma depo-üstüdür ama mal bir kapıdan girer. */
+  warehouseId: string;
   lines: readonly IntakeFormLine[];
   purchaseOrderId?: string | null;
   supplierId?: string | null;
@@ -115,6 +117,7 @@ export async function receiveGoods(input: {
   const expected = await expectedQtysOf(db, input.purchaseOrderId);
 
   const result = await new StockIntakeService(db).receive({
+    warehouseId: input.warehouseId,
     supplierId: input.supplierId ?? (await supplierOf(db, input.purchaseOrderId)),
     purchaseOrderId: input.purchaseOrderId,
     date: input.date,
@@ -185,10 +188,27 @@ async function unitCostsOf(db: ReturnType<typeof serviceDb>, purchaseOrderId?: s
   return new Map(lines.filter((line) => line.unitPrice != null).map((line) => [line.variantId, line.unitPrice!]));
 }
 
+/**
+ * Siparişin KALAN beklentisi — "bu kabulden önce daha ne bekliyorduk".
+ *
+ * Ölçü `purchase_order_progress` görünümüdür (0042), PO kaleminin ham `qty`'si DEĞİL. Fark bu
+ * yüzden önemli: tek sipariş birden çok depoda parça parça kabul edilebilir (K6). Ham `qty`'ye
+ * bakan bir karşılaştırma, 30'luk siparişin 20'si Strasbourg'a girdikten sonra Kehl'deki ikinci
+ * kabulde "20 eksik" derdi — oysa o 20 çoktan gelmişti. Sistem aynı soruya iki cevap verirdi:
+ * ekran "eksik", PO durumu "tamamlandı".
+ *
+ * `missing_qty` kümülatiftir ve `initial_qty` üzerinden hesaplanır (`physical_qty` satışla erir).
+ * Kalemi olmayan sipariş boş harita döndürür — karşılaştırılacak bir beklenti yoktur.
+ */
 async function expectedQtysOf(db: ReturnType<typeof serviceDb>, purchaseOrderId?: string | null): Promise<Map<string, number>> {
   if (!purchaseOrderId) return new Map();
-  const lines = await new PurchaseOrderItemService(db).listByOrder(purchaseOrderId);
-  return new Map(lines.map((line) => [line.variantId, line.qty]));
+  const rows = await new PurchaseOrderService(db).progressOf(purchaseOrderId);
+
+  // Aynı varyant iki kalemde olabilir: beklenti TOPLANIR, üzerine yazılmaz. `new Map(...)` ile
+  // kurulsaydı sessizce sonuncu kalem kazanırdı ve fark raporu diğerini yok sayardı.
+  const kalan = new Map<string, number>();
+  for (const row of rows) kalan.set(row.variantId, (kalan.get(row.variantId) ?? 0) + row.missingQty);
+  return kalan;
 }
 
 /** PO'lu kabulde tedarikçi siparişten türer — depocuya sorulmaz. */

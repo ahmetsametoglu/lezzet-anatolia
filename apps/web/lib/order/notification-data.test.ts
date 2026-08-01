@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CategoryService, OrderService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { buildOrderNotification } from './notification-data';
 
 /**
@@ -18,11 +18,14 @@ const orders = new OrderService(db);
 const stamp = Date.now();
 const createdOrders: string[] = [];
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let productId: string;
 let variantId: string;
 let categoryId: string;
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   categoryId = (await new CategoryService(db).create({ name: { tr: `Bildirim ${stamp}` } })).id;
   const created = await new ProductService(db).create({
     name: { tr: `Bildirim ürünü ${stamp}`, fr: `Produit ${stamp}` },
@@ -37,6 +40,7 @@ beforeAll(async () => {
 afterAll(async () => {
   for (const id of createdOrders) await db.from('order').delete().eq('id', id);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [customerId] });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 async function orderWith(
@@ -45,7 +49,7 @@ async function orderWith(
   extra: Partial<Parameters<typeof orders.create>[0]> = {},
 ) {
   const { order } = await orders.create(
-    { customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status, total: 20, ...extra },
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status, total: 20, ...extra },
     // İndirim KALEME de dağıtılır: `discount_amount = Σ line_discount_amount` artık veritabanının
     // zorladığı bir değişmez (0041). Tek kalemli fikstürde payın tamamı o kaleme iner.
     [{ variantId, qty: 2, unitPrice: 10, vatRate: 5.5, lineDiscountAmount: extra.discountAmount ?? 0 }],

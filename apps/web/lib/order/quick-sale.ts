@@ -79,7 +79,7 @@ export async function quickSale(input: QuickSaleInput): Promise<QuickSaleOutcome
   } else {
     picks = [];
     for (const item of items) {
-      const suggestion = await suggestPicksForVariant(item.variantId, item.qty);
+      const suggestion = await suggestPicksForVariant(order.warehouseId, item.variantId, item.qty);
       if (suggestion.shortfall > 0) {
         return {
           status: 'insufficient_stock',

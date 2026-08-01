@@ -9,7 +9,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { recordOrderPayment } from '../money/order-payment';
 import { cancelOrder, retryRefund } from './refund';
 import { handleStripeEvent } from './stripe-webhook';
@@ -32,6 +32,8 @@ const money = new MoneyMovementService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -41,6 +43,7 @@ let cashAccount: string;
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Sağlayıcı iade ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Börek ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
@@ -56,7 +59,7 @@ beforeEach(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
-  await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(30), purchasePrice: 4 });
+  await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(30), purchasePrice: 4 });
 });
 
 afterAll(async () => {
@@ -68,6 +71,7 @@ afterAll(async () => {
   await db.from('account').delete().eq('id', providerAccount);
   await db.from('account').delete().eq('id', cashAccount);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [customerId] });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Sahte sağlayıcı: çağrıları kaydeder, sonucu test söyler. */
@@ -86,7 +90,7 @@ function fakeRefunder(outcome: ProviderRefundOutcome): ProviderRefunder & { call
  * üretimde bunu webhook yapar, burada aynı kapı taklit edilir.
  */
 async function paidOrder(opts: { providerRef?: string | null; accountId?: string } = {}) {
-  const { order } = await orders.create({ customerId, channel: 'b2c', deliveryType: 'route', total: 20 }, [
+  const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', deliveryType: 'route', total: 20 }, [
     { variantId, qty: 2, unitPrice: 10, vatRate: 5.5 },
   ]);
   await transitionOrder({ orderId: order.id, to: 'confirmed' });

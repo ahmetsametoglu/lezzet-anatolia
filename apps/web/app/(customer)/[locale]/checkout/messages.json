@@ -119,7 +119,8 @@
       "provider_unavailable": "Ödeme sağlayıcısına ulaşılamıyor. Kapıda ödemeyi seçebilirsiniz.",
       "stale": "Bu sipariş zaten işleme alınmış.",
       "customer_not_found": "Hesabınız çözümlenemedi, lütfen tekrar giriş yapın.",
-      "order_not_placed": "Sipariş kesinleştirilemedi. Lütfen tekrar deneyin."
+      "order_not_placed": "Sipariş kesinleştirilemedi. Lütfen tekrar deneyin.",
+      "warehouse_unresolved": "Adresiniz için teslimat noktası belirlenemedi. Ekibimize haber verildi — lütfen bizimle iletişime geçin."
     },
     "eyebrow": "sepetiniz · ödeme",
     "secure": "Stripe · 3D Secure · şifreli bağlantı",
@@ -257,7 +258,8 @@
       "provider_unavailable": "Le prestataire de paiement est injoignable. Vous pouvez choisir le paiement à la livraison.",
       "stale": "Cette commande est déjà en cours de traitement.",
       "customer_not_found": "Votre compte n'a pas pu être identifié, reconnectez-vous.",
-      "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer."
+      "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer.",
+      "warehouse_unresolved": "Nous n'avons pas pu déterminer le point de livraison pour votre adresse. Notre équipe a été prévenue — merci de nous contacter."
     },
     "eyebrow": "votre panier · commande",
     "secure": "Stripe · 3D Secure · connexion chiffrée",
@@ -395,7 +397,8 @@
       "provider_unavailable": "Der Zahlungsanbieter ist nicht erreichbar. Sie können bei Lieferung zahlen.",
       "stale": "Diese Bestellung wird bereits bearbeitet.",
       "customer_not_found": "Ihr Konto konnte nicht ermittelt werden, bitte erneut anmelden.",
-      "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut."
+      "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
+      "warehouse_unresolved": "Für Ihre Adresse konnte kein Lieferpunkt bestimmt werden. Unser Team wurde benachrichtigt — bitte kontaktieren Sie uns."
     },
     "eyebrow": "Ihr Warenkorb · Kasse",
     "secure": "Stripe · 3D Secure · verschlüsselt",

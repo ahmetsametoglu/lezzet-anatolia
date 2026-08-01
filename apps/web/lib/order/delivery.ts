@@ -1,6 +1,7 @@
-import { DeliveryZoneService, SettingsService, serviceDb } from '@lezzet/database';
-import { findZoneForPostalCode, upcomingDeliveryDates } from '@lezzet/domain-core';
+import { DeliveryZoneService, SettingsService, WarehouseService, serviceDb } from '@lezzet/database';
+import { resolveWarehouseForPostalCode, upcomingDeliveryDates } from '@lezzet/domain-core';
 import type { DeliveryType } from '@lezzet/types';
+import type { Country } from '@lezzet/types';
 
 /**
  * Checkout teslimat çözümü (07.2) — **uygulama katmanı orkestrasyonu**. DOMAIN §6.
@@ -20,6 +21,17 @@ import type { DeliveryType } from '@lezzet/types';
 interface DeliveryResolution {
   deliveryType: DeliveryType;
   zoneId: string | null;
+  /**
+   * Siparişin çıkacağı depo (DOMAIN §17) — teslimat kararıyla AYNI turda çözülür çünkü ikisi tek
+   * zincirdir: posta kodu → bölge → depo. Ayrı bir okumaya alınsaydı iki cevap ayrışabilirdi
+   * (bölge şurada, depo burada) ve sipariş kendi bölgesinin deposundan çıkmayabilirdi.
+   *
+   * `null` yalnız çözümsüz hâlde: aynı kod iki bölgede (veri çakışması) ya da kargo deposu hiç
+   * tanımlı değil. İkisi de sipariş verilemez demektir ve `unresolvedReason` sebebini söyler —
+   * müşteriye "bölge dışısınız" dedirtmemek için ikisi ayrı tutuluyor.
+   */
+  warehouseId: string | null;
+  unresolvedReason: 'ambiguous_zone' | 'no_shipping_warehouse' | null;
   /** Rota-içi teslimat için yaklaşan somut tarihler; kargoda boş. */
   availableDates: string[];
   /** Tek tarih varsa arayüz seçim sunmaz, onu gösterir (DOMAIN §6). */
@@ -33,6 +45,13 @@ interface DeliveryResolution {
 
 interface ResolveDeliveryInput {
   postalCode: string;
+  /**
+   * Adresin ülkesi (DOMAIN §17) — `67000` hem Fransa'da hem Almanya'da geçerlidir, ülkesiz bir
+   * posta kodu eksik bir sorudur. Varsayılan `FR`: bugün tek ülkede hizmet veriyoruz ve mevcut
+   * çağrıların hepsi Fransız adresleri; ikinci ülke açıldığında çağıranlar bunu doldurmak zorunda
+   * kalır (BEKLEYEN(19.7) — yer bağlamı v2 ülkeyi taşıyacak).
+   */
+  country?: Country;
   /** Sepette kargolanamayan (soğuk zincir) ürün var mı — çağıran ürün okumasından bilir. */
   hasNonShippableItem?: boolean;
   now?: Date;
@@ -42,18 +61,36 @@ interface ResolveDeliveryInput {
 
 export async function resolveDelivery(input: ResolveDeliveryInput): Promise<DeliveryResolution> {
   const db = serviceDb();
-  const [zones, cutoffTime] = await Promise.all([
-    new DeliveryZoneService(db).list({ activeOnly: true }),
+  const [zones, warehouses, cutoffTime] = await Promise.all([
+    new DeliveryZoneService(db).listWithCodes({ activeOnly: true }),
+    new WarehouseService(db).list({ activeOnly: true }),
     new SettingsService(db).get<string>('order_cutoff_time', '16:00'),
   ]);
 
-  const zone = findZoneForPostalCode(input.postalCode, zones);
+  const place = { country: input.country ?? 'FR', postalCode: input.postalCode };
+  const resolution = resolveWarehouseForPostalCode(place, zones, warehouses);
 
-  // Rota dışı: kargo. Kargolanamayan ürün varsa bu adrese hiç gönderilemez — çağıran akışı durdurur.
-  if (!zone) {
+  // Çözümsüz: ya aynı kod iki bölgede (veri çakışması) ya da kargo deposu tanımlı değil. İkisi de
+  // sipariş verilemez demektir ama SEBEPLERİ ayrıdır — biri veri hatası, öteki yapılandırma eksiği.
+  if (resolution.kind === 'unresolved') {
     return {
       deliveryType: 'shipping',
       zoneId: null,
+      warehouseId: null,
+      unresolvedReason: resolution.reason,
+      availableDates: [],
+      requiresDateChoice: false,
+      shippingBlockedReason: input.hasNonShippableItem ? 'cold_chain' : null,
+    };
+  }
+
+  // Rota dışı: kargo deposundan. Kargolanamayan ürün varsa bu adrese hiç gönderilemez.
+  if (resolution.kind === 'shipping') {
+    return {
+      deliveryType: 'shipping',
+      zoneId: null,
+      warehouseId: resolution.warehouseId,
+      unresolvedReason: null,
       availableDates: [],
       requiresDateChoice: false,
       shippingBlockedReason: input.hasNonShippableItem ? 'cold_chain' : null,
@@ -61,7 +98,7 @@ export async function resolveDelivery(input: ResolveDeliveryInput): Promise<Deli
   }
 
   const availableDates = upcomingDeliveryDates({
-    weekdays: zone.weekdays,
+    weekdays: resolution.weekdays,
     now: input.now ?? new Date(),
     cutoffTime,
     count: input.dateCount ?? 3,
@@ -69,7 +106,9 @@ export async function resolveDelivery(input: ResolveDeliveryInput): Promise<Deli
 
   return {
     deliveryType: 'route',
-    zoneId: zone.id,
+    zoneId: resolution.zoneId,
+    warehouseId: resolution.warehouseId,
+    unresolvedReason: null,
     availableDates,
     requiresDateChoice: availableDates.length > 1,
     shippingBlockedReason: null,

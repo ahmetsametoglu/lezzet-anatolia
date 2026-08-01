@@ -24,7 +24,7 @@ import type { CatalogSort, StorefrontCatalog } from './storefront-types';
  * geçerlilik tarihi + müşteriye özel satır) ve "bu ürünün b2c fiyatı" tek bir kolon değil bir
  * SEÇİMDİR. Sayfa çekildikten sonra sıralamak seçenek değil — "artan fiyat" yalnız o 30 satır içinde
  * artan olur ve keyset sayfalama bozulur. Çözüm `available_stock` deseninde bir okuma görünümü
- * (`0034`): seçim SQL'de çözülür, sıralama ve imleç onun üstünde çalışır.
+ * (`0043`): seçim SQL'de çözülür, sıralama ve imleç onun üstünde çalışır.
  */
 
 interface CatalogQuery {
@@ -53,7 +53,19 @@ const noProducts = (categories: StorefrontCatalog['categories'], activeCategory:
 });
 
 
-export async function getCatalogData(locale: Locale, q: CatalogQuery = {}): Promise<StorefrontCatalog> {
+/**
+ * `warehouseId` — müşterinin yerinden çözülen depo. **Zorunlu ve varsayılansız**: `null` meşru bir
+ * değerdir ("yer bilinmiyor", posta kodu zorunlu değil — K1) ama VERİLMESİ zorunludur. Varsayılan
+ * bıraksaydık argümanı unutan çağrı derlenir ve sessizce depo-üstü okurdu — `getAvailableMap`'i
+ * kurtaran şey (T8) tam olarak parametrenin zorunluluğuydu, aynı disiplin burada da geçerli.
+ *
+ * `null` → depo-ÜSTÜ okuma: "tükendi" demenin tek dayanağı hiçbir depoda bulunmamasıdır (C3).
+ */
+export async function getCatalogData(
+  locale: Locale,
+  q: CatalogQuery = {},
+  warehouseId: string | null,
+): Promise<StorefrontCatalog> {
   const db = serviceDb();
   const categoryRows = await new CategoryService(db).list({ activeOnly: true });
   const categories = (categoryRows.length ? categoryRows : FIXTURE_CATEGORIES).map((c) => toCategory(c, locale));
@@ -61,22 +73,22 @@ export async function getCatalogData(locale: Locale, q: CatalogQuery = {}): Prom
 
   // "Yalnız indirimliler": teklifli ürünler önden çözülür ve SORGUYA girer — sayfa çekildikten
   // sonra elemek keyset sayfalamayı ve toplam sayıyı bozardı.
-  const offerIds = q.onlyOffers ? await listOfferProductIds(db) : undefined;
+  const offerIds = q.onlyOffers ? await listOfferProductIds(db, warehouseId) : undefined;
   if (offerIds && !offerIds.length) return noProducts(categories, activeCategory);
 
   // Aday ürün katalogda GÖRÜNMEZ (`musteri-katalog.md §6`) — `status: 'active'` bunu sağlar.
   const filters = { query: q.search, categoryId: activeCategory?.id, status: 'active' as const, ids: offerIds, onlyShippable: q.onlyShippable };
   const productSvc = new ProductService(db);
-  // Fiyat sıralaması AYRI kaynaktan okunur (`product_listing` görünümü, 0034): sıralama anahtarı
+  // Fiyat sıralaması AYRI kaynaktan okunur (`product_listing` görünümü, 0043): sıralama anahtarı
   // ürün tablosunda yoktur. Süzgeçler ve satır şeması ortaktır — ayrışan tek şey sıra.
   const direction = q.sort === 'priceAsc' ? 'asc' : q.sort === 'priceDesc' ? 'desc' : null;
   const [page, counts] = await Promise.all([
     direction
-      ? new ProductListingService(db).listByPrice({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE, direction })
+      ? new ProductListingService(db).listByPrice({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE, direction, warehouseId })
       : productSvc.listWithRelations({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE }),
     productSvc.counts(filters),
   ]);
-  const context = await loadProductContext(db, page.rows);
+  const context = await loadProductContext(db, page.rows, warehouseId);
 
   return {
     categories,

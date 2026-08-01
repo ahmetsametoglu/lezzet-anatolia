@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, OrderService, ProductService, StockService, UserProfileService, serviceDb } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 
 /**
  * Hazırlık onayı (06.5'in yazım yarısı) — depocunun onayladığı partiler kalem–parti eşlemesine
@@ -12,6 +12,8 @@ const stocks = new StockService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -22,6 +24,7 @@ const createdProfiles: string[] = [];
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Hazırlık testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Sarma ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
@@ -36,17 +39,18 @@ beforeAll(async () => {
 beforeEach(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('stock').delete().eq('variant_id', variantId);
-  batchA = (await stocks.insert({ variantId, physicalQty: 3, expiryDate: dayOffset(20), purchasePrice: 2 })).id;
-  batchB = (await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 3 })).id;
+  batchA = (await stocks.insert({ warehouseId, variantId, physicalQty: 3, expiryDate: dayOffset(20), purchasePrice: 2 })).id;
+  batchB = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 3 })).id;
 });
 
 afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 async function createOrder(qty = 5) {
-  return orders.create({ customerId, channel: 'b2c' }, [{ variantId, qty, unitPrice: 10, vatRate: 5.5 }]);
+  return orders.create({ warehouseId, customerId, channel: 'b2c' }, [{ variantId, qty, unitPrice: 10, vatRate: 5.5 }]);
 }
 
 describe('hazırlık onayı (06.5)', () => {

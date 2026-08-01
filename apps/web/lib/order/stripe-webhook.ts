@@ -185,7 +185,7 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null): P
     return { status: 'ok', action: 'refunded' };
   }
 
-  const decision = await decideForOrder(db, order.id, items);
+  const decision = await decideForOrder(db, order.id, order.warehouseId, items);
 
   if (decision.action === 'refund') {
     await refundAndCancel(event, order.id, accountId);
@@ -195,7 +195,14 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null): P
   if (decision.action === 'reserve_again') {
     const reservations = new ReservationService(db);
     for (const item of items) {
-      await reservations.reserve({ orderId: order.id, variantId: item.variantId, qty: item.qty, ttlMinutes: null, stockId: item.stockId });
+      await reservations.reserve({
+        orderId: order.id,
+        variantId: item.variantId,
+        warehouseId: order.warehouseId,
+        qty: item.qty,
+        ttlMinutes: null,
+        stockId: item.stockId,
+      });
     }
   }
 
@@ -237,10 +244,13 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null): P
 async function decideForOrder(
   db: ReturnType<typeof serviceDb>,
   orderId: string,
+  warehouseId: string,
   items: readonly OrderItem[],
 ): Promise<{ action: 'proceed' | 'reserve_again' | 'refund' }> {
   const active = await new ReservationService(db).listActiveByOrder(orderId);
-  const availability = await new StockService(db).getAvailableMap(items.map((item) => item.variantId));
+  // Stok kontrolü SİPARİŞİN deposunda: ödeme geldiğinde malın hâlâ orada olup olmadığına bakılır,
+  // başka depodaki aynı ürün bu siparişi kurtarmaz (DOMAIN §17).
+  const availability = await new StockService(db).getAvailableMap(warehouseId, items.map((item) => item.variantId));
 
   let worst: 'proceed' | 'reserve_again' | 'refund' = 'proceed';
   for (const item of items) {

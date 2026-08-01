@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, OrderService, ProductService, ReservationService,
   StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot, createTestWarehouse } from '@lezzet/database/testing';
 import { confirmDoorDelivery, type DeliveryProofInput, type DoorCollectionInput } from './delivery';
 import { transitionOrder } from '../order/transition';
 
@@ -20,6 +20,8 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let b2bCustomerId: string;
 let courierId: string;
 let variantId: string;
@@ -33,6 +35,7 @@ const today = new Date().toISOString().slice(0, 10);
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Kapı testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Sucuk ${stamp}` },
@@ -59,7 +62,7 @@ beforeEach(async () => {
   for (const id of [customerId, b2bCustomerId]) await db.from('order').delete().eq('customer_id', id);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
-  stockId = (await stocks.insert({ variantId, physicalQty: 30, expiryDate: dayOffset(60), purchasePrice: 4 })).id;
+  stockId = (await stocks.insert({ warehouseId, variantId, physicalQty: 30, expiryDate: dayOffset(60), purchasePrice: 4 })).id;
 });
 
 afterAll(async () => {
@@ -67,6 +70,7 @@ afterAll(async () => {
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('account').delete().eq('id', accountId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Kapıya varmış sipariş: hazırlanmış, partisi yazılmış, yola çıkmış. */
@@ -76,6 +80,7 @@ async function atTheDoor(opts: { channel?: 'b2b' | 'b2c'; qty?: number; unitPric
   const channel = opts.channel ?? 'b2c';
   const { order, items } = await orders.create(
     {
+      warehouseId,
       customerId: channel === 'b2b' ? b2bCustomerId : customerId,
       channel,
       deliveryType: 'route',
@@ -86,7 +91,7 @@ async function atTheDoor(opts: { channel?: 'b2b' | 'b2c'; qty?: number; unitPric
     },
     [{ variantId, qty, unitPrice, vatRate: 5.5 }],
   );
-  await reservations.reserve({ orderId: order.id, variantId, qty });
+  await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   for (const status of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: status });
   await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }]);
   for (const status of ['ready', 'out_for_delivery'] as const) await transitionOrder({ orderId: order.id, to: status });
@@ -102,7 +107,7 @@ describe('teslim onayı (11.2)', () => {
     expect(outcome).toEqual({ status: 'proof_required', channel: 'b2b' });
     // Kanıt kapısı yazımdan ÖNCE: sipariş hâlâ yolda, stok el değmemiş.
     expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
-    expect((await stocks.getAvailable(variantId)).physicalQty).toBe(30);
+    expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(30);
   });
 
   it('imzayla B2B teslimatı kapanır, kanıt siparişe yazılır', async () => {
@@ -147,7 +152,7 @@ describe('eksik/reddedilen kalem (11.2)', () => {
 
     expect(outcome).toMatchObject({ status: 'ok', collected: 30, amountDue: 0, paymentStatus: 'paid' });
     // Reddedilen adet HİÇ çıkmadı: fiiliden yalnız 3 düştü, 1 adet depoda kaldı.
-    expect((await stocks.getAvailable(variantId)).physicalQty).toBe(27);
+    expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(27);
   });
 
   it('kalem düzeltmesi teslimden ÖNCE yazılır — mal iki kez oynatılmaz', async () => {
@@ -162,7 +167,7 @@ describe('eksik/reddedilen kalem (11.2)', () => {
     // Kalem–parti kaydı 2'ye inmiş olmalı: teslimde bundan düşülür (0026 "tam bir kez say").
     const batches = await orders.listBatches(orderId);
     expect(batches.reduce((sum, batch) => sum + batch.qty, 0)).toBe(2);
-    expect((await stocks.getAvailable(variantId)).physicalQty).toBe(28);
+    expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(28);
   });
 });
 

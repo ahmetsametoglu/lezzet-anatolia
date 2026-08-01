@@ -42,6 +42,15 @@ export async function getCartView(
      * ziyaretçide saklanan fiyat yoktur.
      */
     previousPrices?: ReadonlyMap<string, number>;
+    /**
+     * Müşterinin yerinden çözülen depo (DOMAIN §17). Null = yer bilinmiyor: sepet depo-ÜSTÜ okunur
+     * ve "burada satılmıyor" denmez — yalnız hiçbir depoda yoksa tükendi denir (C3).
+     *
+     * Adlandırılmış alan, konumsal parametre DEĞİL: sepet okumasının imzası zaten üç şey taşıyordu
+     * ve araya girecek dördüncü bir konum, mevcut çağrıları sessizce kaydırırdı.
+     * BEKLEYEN(19.7): yer bağlamı v2 bunu dolduracak.
+     */
+    warehouseId?: string | null;
   } = {},
 ): Promise<CartView> {
   const db = serviceDb();
@@ -75,7 +84,7 @@ export async function getCartView(
 
   const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds }, limit: productIds.length });
   const byProduct = new Map(page.rows.map((p) => [p.id, p]));
-  const context = await loadProductContext(db, page.rows);
+  const context = await loadProductContext(db, page.rows, opts.warehouseId ?? null);
 
   const lines: CartLine[] = [];
   for (const entry of entries) {

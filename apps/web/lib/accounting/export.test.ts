@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, OrderService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { buildExport, matchInvoiceNo, pendingInvoices, toExportCsv } from './export';
 
 /**
@@ -16,6 +16,8 @@ const orders = new OrderService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -26,6 +28,7 @@ const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 const PERIOD = { from: dayOffset(-200), to: dayOffset(-180) };
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Export testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Baklava ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
@@ -43,6 +46,7 @@ beforeEach(async () => {
 afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 let counter = 0;
@@ -69,6 +73,7 @@ async function makeSale(g: SaleInput) {
   const unitPrice = g.unitPrice ?? 10;
   const { order } = await orders.create(
     {
+      warehouseId,
       customerId,
       channel: 'b2c',
       total: qty * unitPrice + (g.shippingFee ?? 0),
@@ -118,7 +123,7 @@ describe('dönem ve satış tarihi', () => {
   });
 
   it('gerçekleşmemiş sipariş hiç görünmez — taslak ciro değildir', async () => {
-    const { order } = await orders.create({ customerId, channel: 'b2c', total: 50 }, [{ variantId, qty: 1, unitPrice: 50, vatRate: 5.5 }]);
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', total: 50 }, [{ variantId, qty: 1, unitPrice: 50, vatRate: 5.5 }]);
     const { rows } = await buildExport(PERIOD);
     expect(rows.map((r) => r.orderId)).not.toContain(order.id);
   });

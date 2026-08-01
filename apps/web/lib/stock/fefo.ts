@@ -36,10 +36,19 @@ interface FefoSuggestion {
  * (DLC'si geçmiş) hiç önerilmez; teklife söz verilmiş (partiye çıpalı) miktar o partinin
  * kullanılabilirinden düşülür — normal hazırlık teklifin stoğunu yiyemez.
  */
-export async function suggestPicksForVariant(variantId: string, qty: number, now: Date = new Date()): Promise<FefoSuggestion> {
+/**
+ * `warehouseId` zorunlu: hazırlık daima siparişin deposundan toplanır. Süzgeçsiz bir FEFO önerisi
+ * başka şehirdeki partiyi önerir; depocu onu seçer ve `record_preparation` reddeder (DOMAIN §17).
+ */
+export async function suggestPicksForVariant(
+  warehouseId: string,
+  variantId: string,
+  qty: number,
+  now: Date = new Date(),
+): Promise<FefoSuggestion> {
   const db = serviceDb();
   const [batches, reservations] = await Promise.all([
-    new StockService(db).listByVariantWithDates(variantId),
+    new StockService(db).listByVariantWithDates(warehouseId, variantId),
     new ReservationService(db).listActiveByVariant(variantId),
   ]);
 

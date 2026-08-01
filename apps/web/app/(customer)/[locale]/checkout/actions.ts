@@ -6,6 +6,7 @@ import type { Address, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { captureError, SOURCES } from '@lezzet/observability';
 import { getCartView } from '@/lib/cart/read';
 import type { CartEntry } from '@/lib/cart/cart-types';
 import { createCheckoutDraft } from '@/lib/order/checkout-draft';
@@ -212,6 +213,18 @@ export async function confirmCheckoutAction(input: {
       idempotencyKey: input.idempotencyKey,
     });
     if (draft.status !== 'ok') {
+      // Depo çözülemedi: iki sebep de siparişi engeller ama biri VERİ hatası (aynı kod iki bölgede),
+      // öteki YAPILANDIRMA eksiği (kargo deposu yok). İkisi de operatörün müdahalesini bekler ve
+      // müşteri bunu "ödeme hatası" olarak görmemeli — sebep ekrana taşınır, iz de bırakılır.
+      if (draft.status === 'warehouse_unresolved') {
+        // Log'a KİMLİK yazılır, içerik yazılmaz (CLAUDE.md §1): sebep ve müşteri kimliği yeter —
+        // adres satırı ya da posta kodu kişisel veridir ve teşhis için gerekmez.
+        await captureError(new Error(`checkout: yer çözülemedi (${draft.reason})`), {
+          source: SOURCES.webAction,
+          context: { reason: draft.reason, customerId },
+        });
+        return { data: { status: 'rejected', reason: draft.status, detail: draft.reason }, error: null };
+      }
       const detail = draft.status === 'blocked_lines' ? draft.lines : draft.status === 'date_unavailable' ? draft.availableDates : undefined;
       return { data: { status: 'rejected', reason: draft.status, detail }, error: null };
     }

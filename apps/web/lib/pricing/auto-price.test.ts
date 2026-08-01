@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { toCents } from '@lezzet/helper';
 import { repriceAllAuto, repriceProduct, repriceVariants } from './auto-price';
 
@@ -15,6 +15,8 @@ const prices = new PriceService(db);
 const stamp = Date.now();
 
 let categoryId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let autoProductId: string;
 let autoVariantId: string;
 let manualProductId: string;
@@ -39,6 +41,7 @@ async function setCostHistory(variantId: string, ...purchasePrices: number[]) {
   const stocks = new StockService(db);
   for (const purchasePrice of purchasePrices) {
     await stocks.insert({
+      warehouseId,
       variantId,
       physicalQty: 10,
       purchasePrice,
@@ -48,6 +51,7 @@ async function setCostHistory(variantId: string, ...purchasePrices: number[]) {
 }
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   categoryId = (await new CategoryService(db).create({ name: { tr: `Otomatik fiyat ${stamp}` } })).id;
   const products = new ProductService(db);
 
@@ -84,6 +88,7 @@ afterAll(async () => {
     await db.from('stock').delete().eq('variant_id', id);
   }
   await purgeTestData(db, { productIds: [autoProductId, manualProductId], categoryIds: [categoryId] });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 describe('hedefe çekme', () => {

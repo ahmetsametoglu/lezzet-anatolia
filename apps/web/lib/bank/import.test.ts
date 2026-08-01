@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, MoneyMovementService, OrderService, ProductService,
   UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { analyzeFile, importBankRows, profileFor, saveProfile } from './import';
 import { applyOrderMatch, classifyAsExpense, dismissRow, matchQueue } from './reconcile';
 
@@ -22,6 +22,8 @@ const orders = new OrderService(db);
 const stamp = Date.now();
 let bankAccount: string;
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -32,6 +34,7 @@ const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 const frDate = (n: number) => dayOffset(n).split('-').reverse().join('/');
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   bankAccount = (await accounts.insert({ name: `Import bankası ${stamp}`, type: 'bank' })).id;
   const category = await new CategoryService(db).create({ name: { tr: `Import testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Lokum ${stamp}` }, categoryId: category.id });
@@ -55,6 +58,7 @@ afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('account').delete().eq('id', bankAccount);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Fransız bankası ekstresi görünümlü ham satırlar. */
@@ -142,7 +146,7 @@ describe('mükerrer koruması', () => {
 describe('eşleştirme kuyruğu', () => {
   /** Referansı ekstredeki açıklamayla eşleşen, tahsil edilmemiş bir satış kurar. */
   async function unpaidSale(referenceNo: string, total: number, daysAgo: number) {
-    const { order } = await orders.create({ customerId, channel: 'b2c', total }, [
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', total }, [
       { variantId, qty: 1, fulfilledQty: 1, unitPrice: total, vatRate: 5.5 },
     ]);
     await orders.update({ id: order.id, status: 'completed', referenceNo });

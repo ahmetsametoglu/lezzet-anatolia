@@ -36,7 +36,7 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
 
   const t: Messages = messages[locale];
   const [data, device] = await Promise.all([
-    getCatalogData(locale, { categorySlug: category, search: q, sort: activeSort, onlyOffers, onlyShippable }),
+    getCatalogData(locale, { categorySlug: category, search: q, sort: activeSort, onlyOffers, onlyShippable }, null /* yer bağlamı sunucuya 19.7'de taşınacak — BEKLEYEN(19.7) */),
     detectDevice(),
   ]);
 

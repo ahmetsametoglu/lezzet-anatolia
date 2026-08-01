@@ -85,7 +85,7 @@ Engel bir modül değildi (stub bir süre yanlışlıkla `→05.4` etiketliydi):
 tablodadır ve "bu ürünün b2c fiyatı" tek bir kolon değil bir **seçimdir**. Sayfa çekildikten sonra
 sıralamak seçenek değildi — "artan fiyat" yalnız o 30 satır içinde artan olur.
 
-Çözüm `available_stock` desenindedir: `product_listing` okuma görünümü (`0034`) seçimi SQL'de çözer,
+Çözüm `available_stock` desenindedir: `product_listing` okuma görünümü (`0043`) seçimi SQL'de çözer,
 sıralama ve keyset imleci onun üstünde çalışır. Görünüm motorun (`resolvePrice`) **ziyaretçi dalını**
 SQL'de yeniden ifade eder; bu bilinçli bir ödünleşmedir ve ayrışma riski yorumla değil **testle**
 tutulur (`catalog-sort.test.ts`: teklif kazanır / kaybeder / eşittir / partisi boştur hâllerinde
@@ -304,7 +304,10 @@ gözden kaçacak" bir yerleşim; (b) **koşullu ülke seçici** — yalnız akti
 1'i aşınca görünür, site dili ön-seçim ipucu; (c) **"kargoyla gönderilir" işareti** + sepette kargo
 grubu + "kargolu ürünleri ayrıca sipariş ver" iki-checkout akışı (yolu stok belirler, müşteri
 seçmez); (d) **operasyon: Depolar + Transfer ekranları** ve stok/sipariş ekranlarına depo süzgeci
-(operasyon evreni envanteriyle).
+(operasyon evreni envanteriyle). Davranış sözleşmeleri yazıldı (01.08): (a)-(c) müşteri tarafı →
+`pages/musteri-yer-ekseni.md` (yer ekseni: kalemin dört hâli, iki-checkout, koşullu ülke seçici,
+davet deseni); (d) operasyon tarafı → `pages/operasyon-depo-ekseni.md` (iki katmanlı bağlam+süzgeç
+deseni). İki doküman birlikte paketin sözleşmesidir; Claude Design'a birlikte verilir.
 
 ---
 

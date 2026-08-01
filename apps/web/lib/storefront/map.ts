@@ -3,7 +3,7 @@ import type { ActiveOffer } from '@lezzet/domain-core';
 import { pricePerKg, toCents } from '@lezzet/helper';
 import { publicImageUrl } from '@lezzet/storage';
 import { cropOf, resolveLocalizedText } from '@lezzet/types';
-import type { AvailableStock, Category, ImageMeta, Price, Product, ProductVariant } from '@lezzet/types';
+import type { AvailableStockTotal, Category, ImageMeta, Price, Product, ProductVariant } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import type { StorefrontCategory, StorefrontImage, StorefrontProduct, StorefrontVariant } from './storefront-types';
 
@@ -30,7 +30,12 @@ export function toCategory(row: CategoryRow, locale: Locale): StorefrontCategory
 export interface ProductContext {
   variants: ProductVariant[];
   prices: Map<string, { channelPrice: Price | null; customerPrice: Price | null }>;
-  stock: Map<string, AvailableStock>;
+  /**
+   * Kullanılabilir stok. Tip depo-ÜSTÜ olanı (`AvailableStockTotal`) çünkü iki okumadan da
+   * beslenir: yer belliyse depo satırı (o tip bunun süpersetidir), belirsizse toplam. Okuyan taraf
+   * yalnız `availableQty`ye bakar — hangi okumadan geldiği kararı çağıranındır (DOMAIN §17).
+   */
+  stock: Map<string, AvailableStockTotal>;
   /** Varyanta açık near-expiry teklifi (partiye bağlı indirim, DOMAIN §5). */
   offers: Map<string, ActiveOffer>;
 }

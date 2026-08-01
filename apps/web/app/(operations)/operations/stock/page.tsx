@@ -71,7 +71,8 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   const pageVariantIds = productPage.rows.flatMap((p) => p.variants.map((v) => v.id));
 
   const [available, priceMap, actorNames] = await Promise.all([
-    stockSvc.getAvailableMap(pageVariantIds),
+    // BEKLEYEN(19.5): depo süzgeci ekrana bağlanacak — bugün depo-üstü toplam.
+    stockSvc.getAvailableTotalMap(pageVariantIds),
     new PriceService(db).findApplicableMap(attentionVariantIds, 'b2c'),
     readActorNames(new UserProfileService(db), lossPage.rows),
   ]);

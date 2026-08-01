@@ -1,18 +1,37 @@
 import { AddressService, DeliveryZoneService } from '@lezzet/database';
 import { an, tabloDolu, type Db, type Kisiler } from './shared';
+import type { Depolar } from './warehouse';
 
 // ── Teslimat bölgesi + adres (07) ────────────────────────────────────────────────────────────────
 // Rota içi/dışı SAKLANMAZ: adresin posta kodu aktif bir bölgeye düşüyorsa rota içidir. Bu yüzden
 // adreslerin bir kısmı bilinçli olarak HİÇBİR bölgeye düşmez — "kargoya düşen adres" hâli.
 
-const BOLGELER = [
-  { name: 'Strasbourg Merkez', postalCodes: ['67000', '67100', '67200'], weekdays: [2, 5] }, // salı + cuma
-  { name: 'Schiltigheim / Bischheim', postalCodes: ['67300', '67800'], weekdays: [4] }, // perşembe
-  { name: 'Illkirch / Ostwald', postalCodes: ['67400', '67540'], weekdays: [3, 6] },
-  { name: 'Kehl (DE) — hazırlanıyor', postalCodes: ['77694'], weekdays: [5], isActive: false }, // pasif bölge
+// Bölge TEK depoya bağlanır (DOMAIN §17): posta kodu → bölge → depo zincirinin orta halkası.
+// Kodlar artık bölgenin dizi kolonunda değil kendi tablosunda — aynı kod iki bölgeye yazılamaz
+// (tekillik veride) ve yer çözümü daima (ülke, kod) ikilisidir.
+const BOLGELER: Array<{
+  name: string;
+  depo: keyof Depolar;
+  codes: Array<{ country: 'FR' | 'DE'; postalCode: string }>;
+  weekdays: number[];
+  isActive?: boolean;
+}> = [
+  { name: 'Strasbourg Merkez', depo: 'str', codes: [fr('67000'), fr('67100'), fr('67200')], weekdays: [2, 5] }, // salı + cuma
+  { name: 'Schiltigheim / Bischheim', depo: 'str', codes: [fr('67300'), fr('67800')], weekdays: [4] }, // perşembe
+  { name: 'Illkirch / Ostwald', depo: 'str', codes: [fr('67400'), fr('67540')], weekdays: [3, 6] },
+  // Sınır ötesi bölge (ADR-002) — Kehl deposuna bağlı, henüz pasif. Ülke BÖLGEDE değil kodda durur:
+  // bir bölge iki devletin kodlarını kapsayabilir, depo kapsayamaz.
+  { name: 'Kehl (DE) — hazırlanıyor', depo: 'kehl', codes: [de('77694')], weekdays: [5], isActive: false },
 ];
 
-export async function seedDeliveryZones(db: Db): Promise<void> {
+function fr(postalCode: string) {
+  return { country: 'FR' as const, postalCode };
+}
+function de(postalCode: string) {
+  return { country: 'DE' as const, postalCode };
+}
+
+export async function seedDeliveryZones(db: Db, depolar: Depolar): Promise<void> {
   if (await tabloDolu(db, 'delivery_zone')) {
     console.log('▸ bölgeler zaten dolu — atlandı');
     return;
@@ -20,8 +39,15 @@ export async function seedDeliveryZones(db: Db): Promise<void> {
   console.log('▸ TESLİMAT BÖLGESİ seed');
   const zones = new DeliveryZoneService(db);
   for (const b of BOLGELER) {
-    await zones.insert(b);
-    console.log(`  ✓ ${b.name} · ${b.postalCodes.join(', ')} · gün ${b.weekdays.join(',')}${b.isActive === false ? ' · PASİF' : ''}`);
+    const zone = await zones.insert({
+      name: b.name,
+      warehouseId: depolar[b.depo],
+      weekdays: b.weekdays,
+      isActive: b.isActive,
+    });
+    await zones.replacePostalCodes(zone.id, b.codes);
+    const kodlar = b.codes.map((c) => `${c.country}-${c.postalCode}`).join(', ');
+    console.log(`  ✓ ${b.name} · ${kodlar} · gün ${b.weekdays.join(',')}${b.isActive === false ? ' · PASİF' : ''}`);
   }
   console.log(`✓ bölge: ${BOLGELER.length} kayıt (3 aktif + 1 pasif)`);
 }

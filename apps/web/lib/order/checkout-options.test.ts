@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { OrderService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
-import { purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot, createTestWarehouse } from '@lezzet/database/testing';
 import { CategoryService, ProductService } from '@lezzet/database';
 import { resolveCheckoutPayment } from './checkout-options';
 
@@ -15,6 +15,8 @@ const orders = new OrderService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let creditCustomerId: string;
 let variantId: string;
 let productId: string;
@@ -24,6 +26,7 @@ const createdProfiles: string[] = [];
 const LINES = [{ totalCents: 4000, vatRate: 5.5 }];
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Checkout testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Baklava ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
@@ -42,6 +45,7 @@ afterAll(async () => {
   await db.from('order').delete().in('customer_id', createdProfiles);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
   SettingsService.invalidate();
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 describe('kargo ücreti ve KDV (07.3)', () => {
@@ -122,7 +126,7 @@ describe('vade freni — açık bakiye TÜRETİLİR', () => {
   it('ödenmemiş vadeli sipariş açık bakiyeye girer; limit aşımı admin onayına düşer', async () => {
     // 80 € ödenmemiş vadeli sipariş + 40 € yeni sipariş = 120 € > 100 € limit
     await orders.create(
-      { customerId: creditCustomerId, channel: 'b2b', onAccount: true, total: 80 },
+      { warehouseId, customerId: creditCustomerId, channel: 'b2b', onAccount: true, total: 80 },
       [{ variantId, qty: 1, unitPrice: 80, vatRate: 5.5 }],
     );
 
@@ -134,7 +138,7 @@ describe('vade freni — açık bakiye TÜRETİLİR', () => {
 
   it('iptal edilen vadeli sipariş açık bakiyeye SAYILMAZ', async () => {
     const { order } = await orders.create(
-      { customerId: creditCustomerId, channel: 'b2b', onAccount: true, total: 500, status: 'cancelled' },
+      { warehouseId, customerId: creditCustomerId, channel: 'b2b', onAccount: true, total: 500, status: 'cancelled' },
       [{ variantId, qty: 1, unitPrice: 500, vatRate: 5.5 }],
     );
     expect(order.status).toBe('cancelled');

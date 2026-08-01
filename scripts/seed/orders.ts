@@ -7,6 +7,7 @@ import { distributeDiscount } from '@lezzet/helper';
 import type { OrderStatus } from '@lezzet/types';
 import type { Kuponlar } from './discount';
 import { an, euro, gun, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
+import type { Depolar } from './warehouse';
 
 // ── Sepet (07) ───────────────────────────────────────────────────────────────────────────────────
 // Sepette stok AYRILMAZ ve sepetteki fiyat BAĞLAYICI DEĞİLDİR (DOMAIN §5): gösterimdir. Bayat sepet
@@ -73,7 +74,13 @@ interface SiparisKalem {
 /** Tam yolun durakları — sırayla yürünür; hedef nerede ise orada durulur. */
 const TAM_YOL: OrderStatus[] = ['confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'completed'];
 
-export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRef[], kuponlar: Kuponlar): Promise<void> {
+export async function seedOrders(
+  db: Db,
+  kisiler: Kisiler,
+  varyantlar: VaryantRef[],
+  kuponlar: Kuponlar,
+  depolar: Depolar,
+): Promise<void> {
   if (await tabloDolu(db, 'order')) {
     console.log('▸ siparişler zaten dolu — atlandı');
     return;
@@ -82,7 +89,9 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
   const orders = new OrderService(db);
   const reservations = new ReservationService(db);
   const stocks = new StockService(db);
-  const zones = await new DeliveryZoneService(db).list({ activeOnly: true });
+  // Kodlar bölgenin dizi kolonunda değil bağ tablosunda (DOMAIN §17) — `listWithCodes` ikisini
+  // tek turda birleştirir; bölge başına sorgu (N+1) yok.
+  const zones = await new DeliveryZoneService(db).listWithCodes({ activeOnly: true });
   const addresses = new AddressService(db);
 
   const movements = new MoneyMovementService(db);
@@ -108,9 +117,15 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
   };
   const toplam = (kalemler: SiparisKalem[], kargo = 0) => euro(kalemler.reduce((s, k) => s + k.unitPrice * k.qty, 0) + kargo);
 
-  /** Kalemin karşılanabileceği partileri FEFO sırasıyla toplar (hazırlık onayının girdisi). */
+  /**
+   * Kalemin karşılanabileceği partileri FEFO sırasıyla toplar (hazırlık onayının girdisi).
+   *
+   * **Yalnız SİPARİŞİN DEPOSUNDAN** (DOMAIN §17): partiler iki depoya dağıtılmış durumda ve süzgeç
+   * olmadan FEFO en yakın tarihli partiyi seçer — o parti Kehl'de olabilir. `record_preparation`
+   * bunu reddeder ("başka deponun malı") ve haklıdır: bir sipariş tek depodan çıkar.
+   */
   async function partiSec(variantId: string, qty: number): Promise<Array<{ stockId: string; qty: number }>> {
-    const partiler = await stocks.listInStock(variantId);
+    const partiler = await stocks.listInStock(depolar.str, variantId);
     const secim: Array<{ stockId: string; qty: number }> = [];
     let kalan = qty;
     for (const p of partiler) {
@@ -183,7 +198,10 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
 
     const adres = await varsayilanAdres(customerId);
     const deliveryType = opts.deliveryType ?? 'route';
-    const zone = deliveryType === 'route' ? zones.find((z) => adres && z.postalCodes.includes(adres.postalCode)) : undefined;
+    const zone =
+      deliveryType === 'route'
+        ? zones.find((z) => adres && z.postalCodes.some((c) => c.postalCode === adres.postalCode && c.country === adres.country))
+        : undefined;
     // Teslim günü siparişin yaşıyla TUTARLI olmalı: 45 gün önce açılmış bir siparişin teslimatı iki
     // gün sonrasına düşemez. Geçmiş günler ayrıca kurye gün kapanışının zeminidir — hepsi aynı güne
     // yığılırsa tek bir kapanış satırı çıkar ve mutabakat ekranı tek satırla denenir.
@@ -208,6 +226,10 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
     const { order, items } = await orders.create(
       {
         customerId,
+        // Sipariş TEK depodan çıkar (DOMAIN §17). Kaynağı ya adresin bölgesi ya kapı önü satışta
+        // personelin sabit deposudur — seed'de ikisi de STR: bölgelerin üçü de oraya bağlı ve
+        // kapıdaki satış ana depoda yapılıyor. Partiler de o depodan seçilecek (DB kısıtı tutar).
+        warehouseId: depolar.str,
         channel: opts.channel,
         orderSource: opts.kaynak ?? 'web',
         deliveryType,
@@ -263,13 +285,13 @@ export async function seedOrders(db: Db, kisiler: Kisiler, varyantlar: VaryantRe
 
     if (opts.hedef === 'draft') {
       // Online checkout başlamış, ödeme bekleniyor: rezervasyon TTL'li (süre dolarsa cron bırakır).
-      for (const item of items) await reservations.reserve({ orderId: order.id, variantId: item.variantId, qty: item.qty, ttlMinutes: opts.ttlDk ?? 30 });
+      for (const item of items) await reservations.reserve({ orderId: order.id, variantId: item.variantId, warehouseId: depolar.str, qty: item.qty, ttlMinutes: opts.ttlDk ?? 30 });
       console.log(`  ✓ ${opts.etiket} · taslak (TTL'li rezervasyon)`);
       return order.id;
     }
 
     // Tam yol: önce ayır (kapıda/vadeli → süresiz), sonra ilerlet.
-    for (const item of items) await reservations.reserve({ orderId: order.id, variantId: item.variantId, qty: item.qty });
+    for (const item of items) await reservations.reserve({ orderId: order.id, variantId: item.variantId, warehouseId: depolar.str, qty: item.qty });
 
     // İptal/iade kendi hedefine doğrudan gitmez: siparişin oraya gelmiş olması gerekir. İptal
     // `confirmed`'dan, iade ise teslim SONRASINDAN olur — yol farkı budur (ORDER_LIFECYCLE).

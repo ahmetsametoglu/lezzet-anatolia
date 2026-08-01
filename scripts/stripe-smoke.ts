@@ -26,7 +26,7 @@ try {
   // aynı
 }
 
-const { CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb } =
+const { CategoryService, OrderService, ProductService, ReservationService, StockService, WarehouseService, UserProfileService, serviceDb } =
   await import('@lezzet/database');
 const { purgeTestData } = await import('@lezzet/database/testing');
 const { createCheckoutSession } = await import('../apps/web/lib/order/checkout-session');
@@ -43,10 +43,15 @@ const { product, variants } = await new ProductService(db).create({
 });
 const variantId = variants[0]!.id;
 const profile = await new UserProfileService(db).insert({ name: 'Duman testi', email: `smoke-${stamp}@example.test` });
-await new StockService(db).insert({ variantId, physicalQty: 10, expiryDate: dayOffset(30), purchasePrice: 4 });
+// Duman testinin kendi deposu: sistem artık deposuz parti/sipariş kabul etmiyor (DOMAIN §17).
+const warehouse = await new WarehouseService(db).insert({
+  code: `SMOKE-${stamp}`,
+  name: 'Duman testi deposu',
+});
+await new StockService(db).insert({ variantId, warehouseId: warehouse.id, physicalQty: 10, expiryDate: dayOffset(30), purchasePrice: 4 });
 
 const { order } = await new OrderService(db).create(
-  { customerId: profile.id, channel: 'b2c', deliveryType: 'route', total: 24 },
+  { customerId: profile.id, warehouseId: warehouse.id, channel: 'b2c', deliveryType: 'route', total: 24 },
   [{ variantId, qty: 2, unitPrice: 12, vatRate: 5.5 }],
 );
 

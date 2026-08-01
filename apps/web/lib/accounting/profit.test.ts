@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, MoneyMovementService, OrderService, ProductService,
   StockAdjustmentService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { quickSale } from '../order/quick-sale';
 import { companyPnl, orderProfits, productProfits } from './profit';
 
@@ -21,6 +21,8 @@ const movements = new MoneyMovementService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let cheapVariant: string;
 let costlyVariant: string;
 let productId: string;
@@ -33,6 +35,7 @@ const TODAY = { from: dayOffset(0), to: dayOffset(0) };
 const round2 = (v: number) => Math.round(v * 100) / 100;
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Kâr testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Sarma ${stamp}` },
@@ -52,17 +55,18 @@ afterAll(async () => {
   await db.from('money_movement').delete().eq('account_id', cashAccount);
   await db.from('order').delete().eq('customer_id', customerId);
   for (const v of [cheapVariant, costlyVariant]) {
-    await db.from('stock_adjustment').delete().in('stock_id', (await stocks.listByVariant(v)).map((s) => s.id));
+    await db.from('stock_adjustment').delete().in('stock_id', (await stocks.listByVariant(warehouseId, v)).map((s) => s.id));
     await db.from('stock').delete().eq('variant_id', v);
   }
   await db.from('account').delete().eq('id', cashAccount);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Kapıda satış: tek adımda kapanır, maliyet kalemleri sabitlenir, partiler yazılır. */
 async function sell(variantId: string, qty: number, unitPrice: number, opts: { gift?: boolean } = {}) {
   const { order } = await orders.create(
-    { customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: opts.gift ?? false, total: qty * unitPrice },
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: opts.gift ?? false, total: qty * unitPrice },
     [{ variantId, qty, unitPrice, vatRate: 5.5 }],
   );
   const result = await quickSale({ orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
@@ -73,8 +77,8 @@ async function sell(variantId: string, qty: number, unitPrice: number, opts: { g
 describe('ürün kârlılığı GERÇEK partiden hesaplanır', () => {
   it('aynı üründen cheap ve pahalı batch çıkarsa maliyet ayrışır', async () => {
     // İki ayrı varyant, iki ayrı alış: pay etseydik ikisi de ortalamayı gösterirdi.
-    await stocks.insert({ variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 2 });
-    await stocks.insert({ variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 8 });
+    await stocks.insert({ warehouseId, variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 2 });
+    await stocks.insert({ warehouseId, variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 8 });
 
     await sell(cheapVariant, 2, 21.1); // 40 € HT ciro, 4 € maliyet
     await sell(costlyVariant, 2, 21.1); // 40 € HT ciro, 16 € maliyet
@@ -92,7 +96,7 @@ describe('ürün kârlılığı GERÇEK partiden hesaplanır', () => {
   });
 
   it('fire ürünün marjından düşer — çöpe giden mal gizlenmez', async () => {
-    const batch = await stocks.insert({ variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 2 });
+    const batch = await stocks.insert({ warehouseId, variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 2 });
     await sell(cheapVariant, 2, 21.1);
     const beforeRows = await productProfits(TODAY);
     const before = beforeRows.find((u) => u.variantId === cheapVariant)!;
@@ -110,7 +114,7 @@ describe('ürün kârlılığı GERÇEK partiden hesaplanır', () => {
 
 describe('şirket P&L', () => {
   it('genel gider ve fire bir kez düşülür; STOK ALIMI ikinci kez gider yazılmaz', async () => {
-    await stocks.insert({ variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 8 });
+    await stocks.insert({ warehouseId, variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 8 });
     const before = await companyPnl(TODAY);
 
     await sell(costlyVariant, 1, 21.1); // 20 € HT ciro, 8 € COGS
@@ -129,7 +133,7 @@ describe('şirket P&L', () => {
   });
 
   it('kanal kırılımı katkı payı seviyesindedir', async () => {
-    await stocks.insert({ variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 2 });
+    await stocks.insert({ warehouseId, variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 2 });
     await sell(cheapVariant, 1, 21.1);
 
     const pnl = await companyPnl(TODAY);
@@ -141,7 +145,7 @@ describe('şirket P&L', () => {
   });
 
   it('patron ikramı kârda SAYILIR — yalnız export dışıdır', async () => {
-    await stocks.insert({ variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 8 });
+    await stocks.insert({ warehouseId, variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 8 });
     const before = await companyPnl(TODAY);
 
     const gift = await sell(costlyVariant, 1, 21.1, { gift: true });
@@ -161,7 +165,7 @@ describe('eksik maliyet kârı şişirmez', () => {
     const before = await companyPnl(TODAY);
 
     // Teslim edilmiş ama kapanmamış sipariş: `cogs_amount` henüz sabitlenmedi.
-    const { order } = await orders.create({ customerId, channel: 'b2c', total: 21.1 }, [
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', total: 21.1 }, [
       { variantId: cheapVariant, qty: 1, fulfilledQty: 1, unitPrice: 21.1, vatRate: 5.5 },
     ]);
     await orders.update({ id: order.id, status: 'delivered', referenceNo: `LA-KR-${stamp}` });

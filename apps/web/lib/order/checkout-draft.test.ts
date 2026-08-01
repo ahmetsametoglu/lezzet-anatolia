@@ -15,7 +15,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { derivePaymentStatusForOrder } from '@lezzet/domain-core';
 import { createCheckoutDraft } from './checkout-draft';
 
@@ -32,6 +32,8 @@ const stamp = Date.now();
 const rotaKodu = `67${String(stamp).slice(-3)}`;
 
 let categoryId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let productId: string;
 let coldProductId: string;
 let variantId: string;
@@ -44,6 +46,7 @@ let authUserId: string;
 const createdProfiles: string[] = [];
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Checkout testi ${stamp}` } });
   categoryId = category.id;
 
@@ -75,8 +78,8 @@ beforeAll(async () => {
   // varmadan reddeder — teslimat/ödeme doğrulamaları o zaman hiç sınanmazdı.
   const stocks = new StockService(db);
   const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
-  await stocks.insert({ variantId, physicalQty: 50, expiryDate: gun(120), purchasePrice: 8 });
-  await stocks.insert({ variantId: coldVariantId, physicalQty: 50, expiryDate: gun(30), purchasePrice: 4 });
+  await stocks.insert({ warehouseId, variantId, physicalQty: 50, expiryDate: gun(120), purchasePrice: 8 });
+  await stocks.insert({ warehouseId, variantId: coldVariantId, physicalQty: 50, expiryDate: gun(30), purchasePrice: 4 });
 
   // Paket: iki kalem, payları BİLEREK katalog fiyatının altında — indirim tam da o farktır.
   const bundle = await new BundleService(db).create({
@@ -102,7 +105,9 @@ beforeAll(async () => {
   customerId = profile.id;
   createdProfiles.push(profile.id);
 
-  zoneId = (await new DeliveryZoneService(db).insert({ name: `Test bölgesi ${stamp}`, postalCodes: [rotaKodu], weekdays: [1, 2, 3, 4, 5] })).id;
+  const zoneSvc = new DeliveryZoneService(db);
+  zoneId = (await zoneSvc.insert({ name: `Test bölgesi ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5] })).id;
+  await zoneSvc.replacePostalCodes(zoneId, [{ country: 'FR', postalCode: rotaKodu }]);
   addressId = (await new AddressService(db).addForCustomer({ customerId, line1: '1 rue du Test', postalCode: rotaKodu, city: 'Strasbourg' })).id;
   SettingsService.invalidate();
 });
@@ -124,6 +129,7 @@ afterAll(async () => {
     authUserIds: [authUserId],
   });
   SettingsService.invalidate();
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** O bölgenin yaklaşan ilk günü — testin tarihi elle yazması, günü geçince testi çürütürdü. */

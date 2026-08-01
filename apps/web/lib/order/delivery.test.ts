@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DeliveryZoneService, SettingsService, serviceDb } from '@lezzet/database';
-import { settingsSnapshot } from '@lezzet/database/testing';
+import { settingsSnapshot, createTestWarehouse } from '@lezzet/database/testing';
 import { resolveDelivery } from './delivery';
 
 /**
@@ -14,13 +14,18 @@ const zones = new DeliveryZoneService(db);
 const stamp = Date.now();
 const rotaKodu = `67${String(stamp).slice(-3)}`;
 const createdZones: string[] = [];
+// Bölge tek depoya bağlanır (DOMAIN §17) — testin kendi deposu, sonunda toplanıyor.
+let warehouseId: string;
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const zone = await zones.insert({
     name: `Test bölgesi ${stamp}`,
-    postalCodes: [rotaKodu],
+    warehouseId,
     weekdays: [2, 5], // Salı, Cuma
   });
+  // Kodlar artık bölgenin dizi kolonunda değil kendi tablosunda; ülke de anahtarın parçası.
+  await zones.replacePostalCodes(zone.id, [{ country: 'FR', postalCode: rotaKodu }]);
   createdZones.push(zone.id);
   SettingsService.invalidate();
 });
@@ -28,6 +33,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.from('delivery_zone').delete().in('id', createdZones);
   SettingsService.invalidate();
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 const pazartesiSabah = new Date(2026, 6, 27, 9, 0);

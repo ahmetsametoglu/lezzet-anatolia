@@ -33,7 +33,7 @@ export default async function Home({ params }: HomeProps) {
   }
 
   const t: Messages = messages[locale];
-  const [data, device] = await Promise.all([getHomeData(locale), detectDevice()]);
+  const [data, device] = await Promise.all([getHomeData(locale, null /* yer bağlamı sunucuya 19.7'de taşınacak — BEKLEYEN(19.7) */), detectDevice()]);
 
   return (
     <SiteFrame device={device} locale={locale}>

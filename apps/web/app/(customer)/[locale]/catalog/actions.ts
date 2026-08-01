@@ -44,7 +44,7 @@ export async function loadMoreCatalogAction(locale: string, q: CatalogPageQuery,
       sort,
       onlyOffers: q.onlyOffers,
       cursor: safeCursor,
-    });
+    }, null /* yer bağlamı sunucuya 19.7'de taşınacak — BEKLEYEN(19.7) */);
     return { data: { products: data.products, nextCursor: data.nextCursor }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { recordOrderPayment } from '../money/order-payment';
 import { buildOrderNotification } from './notification-data';
 import { notifyOrderStatus } from './notify';
@@ -23,6 +23,8 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -33,6 +35,7 @@ const createdProfiles: string[] = [];
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Bildirim testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Fıstıklı Baklava ${stamp}`, fr: `Baklava pistache ${stamp}`, de: `Baklava Pistazie ${stamp}` },
@@ -56,7 +59,7 @@ beforeEach(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
-  batchId = (await stocks.insert({ variantId, physicalQty: 20, expiryDate: dayOffset(30), purchasePrice: 4 })).id;
+  batchId = (await stocks.insert({ warehouseId, variantId, physicalQty: 20, expiryDate: dayOffset(30), purchasePrice: 4 })).id;
 });
 
 afterAll(async () => {
@@ -67,17 +70,18 @@ afterAll(async () => {
   // satır TTL süpürme testini yanıltır: o test genel sayı üzerinden çalışır.
   await db.from('reservation').delete().eq('variant_id', variantId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Sipariş aç → ayır → onayla. Bildirim için yeterli en kısa yol. */
 async function confirmOrder(qty: number, extra: { shippingFee?: number; discountAmount?: number } = {}) {
   const { order, items } = await orders.create(
-    { customerId, channel: 'b2c', deliveryType: 'route', shippingFee: extra.shippingFee ?? 0, discountAmount: extra.discountAmount ?? 0, total: qty * 10 + (extra.shippingFee ?? 0) - (extra.discountAmount ?? 0) },
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', shippingFee: extra.shippingFee ?? 0, discountAmount: extra.discountAmount ?? 0, total: qty * 10 + (extra.shippingFee ?? 0) - (extra.discountAmount ?? 0) },
     // İndirim KALEME de dağıtılır: `discount_amount = Σ line_discount_amount` artık veritabanının
     // zorladığı bir değişmez (0041). Tek kalemli fikstürde payın tamamı o kaleme iner.
     [{ variantId, qty, unitPrice: 10, vatRate: 5.5, lineDiscountAmount: extra.discountAmount ?? 0 }],
   );
-  await reservations.reserve({ orderId: order.id, variantId, qty });
+  await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   await transitionOrder({ orderId: order.id, to: 'confirmed' });
   return { orderId: order.id, itemId: items[0]!.id };
 }

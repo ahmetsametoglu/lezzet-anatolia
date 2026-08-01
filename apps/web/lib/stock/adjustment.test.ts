@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, ProductService, StockAdjustmentService, StockService, serviceDb } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { findByDocument, recordAdjustment, type AdjustmentLine, type WarehouseReason } from './adjustment';
 
 /**
@@ -15,6 +15,8 @@ const adjustments = new StockAdjustmentService(db);
 
 const stamp = Date.now();
 let variantId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let productId: string;
 let categoryId: string;
 let batchA: string;
@@ -23,6 +25,7 @@ let batchB: string;
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `İmha testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Peynir ${stamp}` },
@@ -36,13 +39,14 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await db.from('stock').delete().eq('variant_id', variantId);
-  batchA = (await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(5), purchasePrice: 4 })).id;
-  batchB = (await stocks.insert({ variantId, physicalQty: 8, expiryDate: dayOffset(9), purchasePrice: 5 })).id;
+  batchA = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(5), purchasePrice: 4 })).id;
+  batchB = (await stocks.insert({ warehouseId, variantId, physicalQty: 8, expiryDate: dayOffset(9), purchasePrice: 5 })).id;
 });
 
 afterAll(async () => {
   await db.from('stock').delete().eq('variant_id', variantId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId] });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 describe('olay belgesi', () => {
@@ -53,7 +57,9 @@ describe('olay belgesi', () => {
 
     expect(outcome.status).toBe('ok');
     const reference = outcome.status === 'ok' ? outcome.result.referenceNo : '';
-    expect(reference).toMatch(/^IMH-\d{2}-\d{4}$/);
+    // Önek artık DEPO KODU taşıyor (DOMAIN §17): `IMH-STR-26-0012`. Kâğıt klasör o depoda durduğu
+    // için seriler depo başına ayrışır; testin deposu damgalı bir kod üretir.
+    expect(reference).toMatch(/^IMH-[A-Z0-9-]+-\d{2}-\d{4}$/);
 
     const rows = await findByDocument(reference);
     expect(rows).toHaveLength(2);

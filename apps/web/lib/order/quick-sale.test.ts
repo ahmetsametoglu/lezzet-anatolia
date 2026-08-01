@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot, createTestWarehouse } from '@lezzet/database/testing';
 import { quickSale } from './quick-sale';
 import { transitionOrder } from './transition';
 
@@ -17,6 +17,8 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -28,6 +30,7 @@ const createdProfiles: string[] = [];
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Kapı satışı testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Mantı ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
@@ -45,8 +48,8 @@ beforeEach(async () => {
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
   // A önce doluyor (yakın tarih) — FEFO onu önce çıkarmalı.
-  batchA = (await stocks.insert({ variantId, physicalQty: 3, expiryDate: dayOffset(10), purchasePrice: 2 })).id;
-  batchB = (await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(300), purchasePrice: 3 })).id;
+  batchA = (await stocks.insert({ warehouseId, variantId, physicalQty: 3, expiryDate: dayOffset(10), purchasePrice: 2 })).id;
+  batchB = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(300), purchasePrice: 3 })).id;
 });
 
 afterAll(async () => {
@@ -54,12 +57,13 @@ afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('account').delete().eq('id', cashAccount);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Kapıda açılan taslak: kaynak `door`, teslimat yok. */
 async function doorDraft(qty: number, unitPrice = 10) {
   return orders.create(
-    { customerId, channel: 'b2c', orderSource: 'door', total: qty * unitPrice },
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'door', total: qty * unitPrice },
     [{ variantId, qty, unitPrice, vatRate: 5.5 }],
   );
 }
@@ -111,7 +115,7 @@ describe('hızlı satış (07.10)', () => {
   it('rezervasyon adımı YOK: satış sonrası siparişin ayrılmışı kalmaz', async () => {
     const { order } = await doorDraft(2);
     // Online sepetini açmış, kapıya gelip almış: kendi ayırdığı mal kendisini engellemez.
-    await reservations.reserve({ orderId: order.id, variantId, qty: 2 });
+    await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty: 2 });
 
     expect((await quickSale({ orderId: order.id, paymentMethod: 'cash' })).status).toBe('ok');
     expect(await reservations.listActiveByOrder(order.id)).toHaveLength(0);
@@ -120,7 +124,7 @@ describe('hızlı satış (07.10)', () => {
 
   it('BAŞKASINA ayrılmış mal kapıda satılamaz — tek satır yazılmadan reddedilir', async () => {
     const { order: baskasi } = await doorDraft(1);
-    await reservations.reserve({ orderId: baskasi.id, variantId, qty: 12 }); // 13'ün 12'si sözlü
+    await reservations.reserve({ orderId: baskasi.id, warehouseId, variantId, qty: 12 }); // 13'ün 12'si sözlü
 
     // FEFO önerisi parti bazında bakar (varyant-toplamı rezervasyonu görmez); son söz RPC'nindir —
     // emniyet, öneriyi üreten katmanda değil, yazımın olduğu yerde durur.

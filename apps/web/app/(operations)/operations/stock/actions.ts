@@ -82,8 +82,10 @@ export async function loadMoreLevelsAction(
 
     const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
     const [batchRows, available] = await Promise.all([
+      // BEKLEYEN(19.5): depo süzgeci ekrana bağlanacak (operasyon şeridi). Bugün depo-ÜSTÜ toplam
+      // okunuyor — davranış tek depolu dünyayla aynı; kapsam kararı guard'ın işi, servisin değil.
       stockSvc.listInStockDetailed(variantIds),
-      stockSvc.getAvailableMap(variantIds),
+      stockSvc.getAvailableTotalMap(variantIds),
     ]);
 
     const now = new Date();

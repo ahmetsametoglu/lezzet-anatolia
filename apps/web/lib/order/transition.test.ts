@@ -7,7 +7,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { transitionOrder } from './transition';
 
 /**
@@ -22,12 +22,15 @@ const profiles = new UserProfileService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
 const createdProfiles: string[] = [];
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Sipariş testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Kadayıf ${stamp}` },
@@ -45,12 +48,13 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId); // kalemler + log CASCADE
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Taslak sipariş + tek kalem. */
 async function createOrder() {
   const { order } = await orders.create(
-    { customerId, channel: 'b2c' },
+    { warehouseId, customerId, channel: 'b2c' },
     [{ variantId, qty: 2, unitPrice: 12.5, vatRate: 5.5 }],
   );
   return order;
@@ -155,7 +159,7 @@ describe('eşzamanlılık', () => {
 
 describe('sipariş yazımı', () => {
   it('kalemsiz sipariş açılamaz', async () => {
-    await expect(orders.create({ customerId, channel: 'b2c' }, [])).rejects.toThrow();
+    await expect(orders.create({ warehouseId, customerId, channel: 'b2c' }, [])).rejects.toThrow();
   });
 
   it('kalem yazımı düşerse sipariş de geri alınır (kalemsiz sipariş kalmaz)', async () => {
@@ -163,7 +167,7 @@ describe('sipariş yazımı', () => {
 
     await expect(
       // Olmayan varyant → kalem FK'ye takılır.
-      orders.create({ customerId, channel: 'b2c' }, [
+      orders.create({ warehouseId, customerId, channel: 'b2c' }, [
         { variantId: crypto.randomUUID(), qty: 1, unitPrice: 10, vatRate: 5.5 },
       ]),
     ).rejects.toThrow();

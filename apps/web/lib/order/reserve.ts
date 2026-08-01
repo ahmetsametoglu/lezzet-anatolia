@@ -1,4 +1,4 @@
-import { ReservationService, SettingsService, serviceDb } from '@lezzet/database';
+import { OrderService, ReservationService, SettingsService, serviceDb } from '@lezzet/database';
 import type { OrderItem } from '@lezzet/types';
 
 /**
@@ -27,6 +27,10 @@ interface ReserveOrderInput {
 
 export async function reserveOrderStock(input: ReserveOrderInput): Promise<ReserveOutcome> {
   const db = serviceDb();
+  // Ayırma SİPARİŞİN deposundan yapılır (DOMAIN §17) — ayrıca sorulmaz, siparişten okunur:
+  // ikinci bir kaynak, iki kaynağın ayrışabileceği anlamına gelirdi. DB kısıtı da eşitliği tutar.
+  const order = await new OrderService(db).getById(input.orderId);
+  if (!order) throw new Error(`[reserve] sipariş bulunamadı: ${input.orderId}`);
   const ttlMinutes = input.expiring ? await new SettingsService(db).getNumber('reservation_ttl_minutes', 30) : null;
   const reservations = new ReservationService(db);
 
@@ -34,6 +38,7 @@ export async function reserveOrderStock(input: ReserveOrderInput): Promise<Reser
     const result = await reservations.reserve({
       orderId: input.orderId,
       variantId: item.variantId,
+      warehouseId: order.warehouseId,
       qty: item.qty,
       ttlMinutes: ttlMinutes ?? undefined,
       stockId: item.stockId,

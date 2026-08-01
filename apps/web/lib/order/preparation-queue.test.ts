@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { confirmPreparation, listPreparationQueue, type PreparationLine, type PreparationOrder } from './preparation';
 import { transitionOrder } from './transition';
 
@@ -20,6 +20,8 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -30,6 +32,7 @@ const createdProfiles: string[] = [];
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Depo testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Fıstıklı Baklava ${stamp}` },
@@ -49,23 +52,24 @@ beforeEach(async () => {
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
   // Yakın tarihli parti önce çıkmalı (FEFO) — konum da öneriyle birlikte gitmeli.
-  nearBatch = (await stocks.insert({ variantId, physicalQty: 4, expiryDate: dayOffset(10), purchasePrice: 4, location: 'Dolap A' })).id;
-  farBatch = (await stocks.insert({ variantId, physicalQty: 10, expiryDate: dayOffset(90), purchasePrice: 5, location: 'Dolap B' })).id;
+  nearBatch = (await stocks.insert({ warehouseId, variantId, physicalQty: 4, expiryDate: dayOffset(10), purchasePrice: 4, location: 'Dolap A' })).id;
+  farBatch = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(90), purchasePrice: 5, location: 'Dolap B' })).id;
 });
 
 afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Onaylanmış sipariş — kuyruğa düşmesi için gereken en kısa yol. */
 async function confirmedOrder(qty: number, opts: { pinTo?: string; deliveryDate?: string } = {}) {
   const { order, items } = await orders.create(
-    { customerId, channel: 'b2c', deliveryType: 'route', deliveryDate: opts.deliveryDate, total: qty * 10 },
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', deliveryDate: opts.deliveryDate, total: qty * 10 },
     [{ variantId, qty, unitPrice: 10, vatRate: 5.5, stockId: opts.pinTo }],
   );
-  await reservations.reserve({ orderId: order.id, variantId, qty, stockId: opts.pinTo });
+  await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty, stockId: opts.pinTo });
   await transitionOrder({ orderId: order.id, to: 'confirmed' });
   return { orderId: order.id, itemId: items[0]!.id };
 }

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CategoryService, OrderItemService, OrderService, ProductService, TicketService, UserProfileService, serviceDb } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { r2Keys } from '@lezzet/storage';
 import type { Ticket } from '@lezzet/types';
 import { countOpenTickets, getCustomerTicket, getStaffTicketDetail, listCustomerTickets, listTicketQueue, listTicketsForOrder } from './read';
@@ -21,6 +21,8 @@ const createdProfiles: string[] = [];
 const createdTickets: string[] = [];
 const createdOrders: string[] = [];
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let otherCustomerId: string;
 let staffId: string;
 let categoryId: string;
@@ -32,6 +34,7 @@ let orderItemId: string;
 let otherOrderId: string;
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const customer = await profiles.insert({ name: 'Ayşe Kaya', email: `talep-${stamp}@example.test` });
   const other = await profiles.insert({ name: 'Marc Dubois', email: `talep-other-${stamp}@example.test` });
   const staff = await profiles.insert({ name: 'Depo Sorumlusu', email: `talep-staff-${stamp}@example.test` });
@@ -52,14 +55,14 @@ beforeAll(async () => {
   const orders = new OrderService(db);
   const line = { variantId, qty: 1, unitPrice: 12, vatRate: 5.5 };
   const mine = await orders.create(
-    { customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
     [line],
   );
   orderId = mine.order.id;
   orderItemId = (await new OrderItemService(db).listByOrder(orderId))[0]!.id;
 
   const theirs = await orders.create(
-    { customerId: otherCustomerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
+    { warehouseId, customerId: otherCustomerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
     [line],
   );
   otherOrderId = theirs.order.id;
@@ -70,6 +73,7 @@ afterAll(async () => {
   for (const id of createdTickets) await db.from('ticket').delete().eq('id', id);
   for (const id of createdOrders) await db.from('order').delete().eq('id', id);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Siparişsiz genel talep — testlerin çoğu için yeterli zemin. */

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, DiscountService, OrderService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import {
   adjustPointsManually,
   awardPoints,
@@ -29,12 +29,15 @@ const createdDiscounts: string[] = [];
 let b2cId: string;
 let b2bId: string;
 let staffId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let productId: string;
 let candidateId: string;
 let variantId: string;
 let categoryId: string;
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const products = new ProductService(db);
   categoryId = (await new CategoryService(db).create({ name: { tr: `Puan testi ${stamp}` } })).id;
 
@@ -58,7 +61,7 @@ beforeAll(async () => {
   // Her iki müşteri de ürünü almış olmalı — yorum kapısı satın alma istiyor.
   for (const customerId of [b2cId, b2bId]) {
     const { order } = await new OrderService(db).create(
-      { customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
+      { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
       [{ variantId, qty: 1, unitPrice: 12, vatRate: 5.5 }],
     );
     createdOrders.push(order.id);
@@ -77,6 +80,7 @@ afterAll(async () => {
   await db.from('discount').delete().in('customer_id', createdProfiles);
   for (const id of createdOrders) await db.from('order').delete().eq('id', id);
   await purgeTestData(db, { productIds: [productId, candidateId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 describe('bakiye defterden türetilir', () => {

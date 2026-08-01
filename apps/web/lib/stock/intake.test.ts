@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   CategoryService, ProductService, PurchaseOrderService, StockService, SupplierService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { openIntakeForm, receiveGoods, type IntakeDifference, type IntakeFormLine, type IntakeFormRow, type IntakeWarning } from './intake';
 
 /**
@@ -14,6 +14,8 @@ const stocks = new StockService(db);
 
 const stamp = Date.now();
 let variantId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let productId: string;
 let categoryId: string;
 let supplierId: string;
@@ -22,6 +24,7 @@ const createdOrders: string[] = [];
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Kabul testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `Mantı ${stamp}` },
@@ -45,6 +48,7 @@ afterAll(async () => {
   for (const id of createdOrders) await db.from('purchase_order').delete().eq('id', id);
   await db.from('supplier').delete().eq('id', supplierId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId] });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Tedarik siparişi — beklenen adet ve birim maliyetle (admin girer, depocu görmez). */
@@ -73,7 +77,7 @@ describe('PO’lu mal kabul', () => {
     // Ekranın göndereceği satır şekli — para alanı yok, tip de kabul etmez.
     const lines: IntakeFormLine[] = [{ variantId, qty: 20, expiryDate: dayOffset(90), lotNumber: 'LOT-1', location: 'Dolap A' }];
 
-    const outcome = await receiveGoods({ purchaseOrderId, lines });
+    const outcome = await receiveGoods({ warehouseId, purchaseOrderId, lines });
 
     expect(outcome.status).toBe('ok');
     const batch = await stocks.getById(outcome.status === 'ok' ? outcome.result.stockIds[0]! : '');
@@ -85,7 +89,7 @@ describe('PO’lu mal kabul', () => {
   it('eksik gelen mal FARK olarak işaretlenir, kabul yine tamamlanır', async () => {
     const purchaseOrderId = await draftPurchaseOrder(20, 6);
 
-    const outcome = await receiveGoods({
+    const outcome = await receiveGoods({ warehouseId,
       purchaseOrderId,
       lines: [{ variantId, qty: 15, expiryDate: dayOffset(90) }],
     });
@@ -94,25 +98,25 @@ describe('PO’lu mal kabul', () => {
     const differences: IntakeDifference[] = outcome.status === 'ok' ? outcome.differences : [];
     expect(differences).toEqual([{ variantId, expectedQty: 20, receivedQty: 15 }]);
     // Mal fiilen girdi: fark bir uyarıdır, engel değil.
-    expect((await stocks.getAvailable(variantId)).physicalQty).toBe(15);
+    expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(15);
   });
 
   it('PO’suz alımda fark üretilmez — karşılaştıracak sipariş yok', async () => {
-    const outcome = await receiveGoods({
+    const outcome = await receiveGoods({ warehouseId,
       supplierId,
       lines: [{ variantId, qty: 5, expiryDate: dayOffset(90) }],
     });
 
     // PO yok → karşılaştırılacak sipariş de yok; her satırı "beklenmedik" saymak gürültü olurdu.
     expect(outcome.status === 'ok' ? outcome.differences : null).toEqual([]);
-    expect((await stocks.getAvailable(variantId)).physicalQty).toBe(5);
+    expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(5);
   });
 });
 
 describe('raf ömrü uyarısı (MLOR) — engellemez, uyarır', () => {
   it('ömrü kısa gelen partide uyarı doğar ama mal GİRER', async () => {
     // 100 günlük ömrün yalnız 10 günü kalmış: eşiğin altında.
-    const outcome = await receiveGoods({
+    const outcome = await receiveGoods({ warehouseId,
       supplierId,
       lines: [{ variantId, qty: 4, expiryDate: dayOffset(10) }],
     });
@@ -120,11 +124,11 @@ describe('raf ömrü uyarısı (MLOR) — engellemez, uyarır', () => {
     const warnings: IntakeWarning[] = outcome.status === 'ok' ? outcome.warnings : [];
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.remainingPercent).toBeLessThan(50);
-    expect((await stocks.getAvailable(variantId)).physicalQty).toBe(4); // kabul engellenmedi
+    expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(4); // kabul engellenmedi
   });
 
   it('ömrü yeterli partide uyarı yok', async () => {
-    const outcome = await receiveGoods({
+    const outcome = await receiveGoods({ warehouseId,
       supplierId,
       lines: [{ variantId, qty: 4, expiryDate: dayOffset(95) }],
     });
@@ -135,6 +139,6 @@ describe('raf ömrü uyarısı (MLOR) — engellemez, uyarır', () => {
 
 describe('boş form', () => {
   it('kalemsiz kabul yazım YAPMAZ', async () => {
-    expect(await receiveGoods({ supplierId, lines: [] })).toEqual({ status: 'empty' });
+    expect(await receiveGoods({ warehouseId, supplierId, lines: [] })).toEqual({ status: 'empty' });
   });
 });

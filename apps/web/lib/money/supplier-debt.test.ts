@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, ProductService, StockIntakeService, SupplierService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { recordMovement, recordSupplierPayment } from './movement';
 
 /**
@@ -17,6 +17,8 @@ const accounts = new AccountService(db);
 
 const stamp = Date.now();
 let supplierId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -25,6 +27,7 @@ let bankAccount: string;
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Borç testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Un ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
@@ -47,11 +50,12 @@ afterAll(async () => {
   await db.from('account').delete().eq('id', bankAccount);
   await db.from('supplier').delete().eq('id', supplierId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId] });
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** 10 × 4 € = 40 €'luk mal kabul. */
 async function malKabul(qty = 10, unitCost = 4) {
-  return intakes.receive({ supplierId, lines: [{ variantId, qty, expiryDate: dayOffset(250), unitCost }] });
+  return intakes.receive({ warehouseId, supplierId, lines: [{ variantId, qty, expiryDate: dayOffset(250), unitCost }] });
 }
 
 describe('tedarikçi borcu TÜRETİLİR', () => {

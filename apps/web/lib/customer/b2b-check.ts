@@ -1,7 +1,7 @@
 import 'server-only';
 import { AddressService, DeliveryZoneService, UserProfileService, type Db } from '@lezzet/database';
-import { b2bFlag, b2bSignals } from '@lezzet/domain-core';
-import type { Address, DeliveryZone, UserProfile } from '@lezzet/types';
+import { b2bFlag, b2bSignals, isInRoute } from '@lezzet/domain-core';
+import type { Address, DeliveryZoneWithCodes, UserProfile } from '@lezzet/types';
 import type { B2bCheckView, B2bDuplicateRow } from '@/app/(operations)/operations/customers/customers-types';
 
 /**
@@ -39,10 +39,12 @@ function mapsHrefOf(address: Address | null): string | null {
  * ölçülemedi (CLAUDE.md §1): adressiz bir başvuruyu "rota dışı" saymak, onu kargo müşterisi gibi
  * göstermek olurdu.
  */
-function inRouteOf(address: Address | null, zones: DeliveryZone[]): boolean | null {
+function inRouteOf(address: Address | null, zones: DeliveryZoneWithCodes[]): boolean | null {
   if (!address) return null;
-  const kod = address.postalCode.replace(/\s/g, '');
-  return zones.some((z) => z.postalCodes.some((p) => p.replace(/\s/g, '') === kod));
+  // Eşleştirme MOTORUN işi (`domain-core/delivery`): kendi karşılaştırmamızı yazsaydık üçüncü bir
+  // kopya olurdu — ve zaten ayrışmıştı (motor `\s+` + büyük harf, buradaki yalnız `\s`). Aynı kural
+  // iki yerde yaşayamaz; biri güncellenir, öteki unutulur.
+  return isInRoute({ country: address.country, postalCode: address.postalCode }, zones);
 }
 
 /** Varsayılan adres, yoksa ilk adres — kartın gösterdiği tek adres. */
@@ -62,7 +64,7 @@ export async function readB2bCheck(db: Db, customerId: string): Promise<B2bCheck
   const [addresses, zones, duplicates] = await Promise.all([
     new AddressService(db).listByCustomer(customerId),
     // Bölgeler operatörün elle kurduğu, doğal tavanı olan bir küme → tek turda (CLAUDE.md §1).
-    new DeliveryZoneService(db).list({ activeOnly: true }),
+    new DeliveryZoneService(db).listWithCodes({ activeOnly: true }),
     profiles.findDuplicateCandidates({
       excludeId: customerId,
       phone: profile.phone,

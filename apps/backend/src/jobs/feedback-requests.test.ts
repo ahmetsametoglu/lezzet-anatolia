@@ -7,7 +7,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { createDueFeedbackRequests, listPendingInvites, markInviteSent } from './feedback-requests';
 
 /**
@@ -26,6 +26,7 @@ let customerId: string;
 let productId: string;
 let variantId: string;
 let categoryId: string;
+let warehouseId: string;
 let dueOrderId: string;
 
 /** Siparişi teslim edilmiş göstermek için durum geçişini geçmişe damgalar. */
@@ -43,7 +44,7 @@ async function markDelivered(orderId: string, daysAgo: number) {
 
 async function newOrder(): Promise<string> {
   const { order } = await orders.create(
-    { customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
+    { customerId, warehouseId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
     [{ variantId, qty: 1, unitPrice: 12, vatRate: 5.5 }],
   );
   createdOrders.push(order.id);
@@ -51,6 +52,8 @@ async function newOrder(): Promise<string> {
 }
 
 beforeAll(async () => {
+  // Sipariş deposuz açılamaz (DOMAIN §17) — testin kendi deposu, sonunda toplanıyor.
+  warehouseId = (await createTestWarehouse(db, { label: 'GBLD' })).id;
   categoryId = (await new CategoryService(db).create({ name: { tr: `Tarama testi ${stamp}` } })).id;
   const created = await new ProductService(db).create({
     name: { tr: `Tarama ürünü ${stamp}` },
@@ -73,7 +76,7 @@ beforeEach(async () => {
 afterAll(async () => {
   await db.from('feedback_request').delete().in('order_id', createdOrders);
   for (const id of createdOrders) await db.from('order').delete().eq('id', id);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [customerId] });
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [customerId], warehouseIds: [warehouseId] });
 });
 
 describe('createDueFeedbackRequests', () => {

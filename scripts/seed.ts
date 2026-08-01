@@ -101,6 +101,7 @@ import { katalogVaryantlari } from './seed/shared';
 import { seedStock, seedAdjustments, seedTemperatureLogs } from './seed/stock';
 import { seedSupply } from './seed/supply';
 import { seedTickets } from './seed/support';
+import { seedTransfer, seedWarehouses } from './seed/warehouse';
 
 // Seed Next.js dışında çalışır — .env'i elle yükle (Node 22 process.loadEnvFile).
 try {
@@ -114,31 +115,36 @@ async function main(): Promise<void> {
   // `db:refresh` = reset + seed. Reset, VERİTABANI sağlıklı olur olmaz döner ama PostgREST o anda hâlâ
   // şema önbelleğini yüklüyor olabilir; ilk sorgu kapıdan 502 alıp seed'i ilk bölümde düşürüyordu.
   await waitForRest(db);
+  // Depolar EN BAŞTA: parti, sipariş, bölge ve personel kapsamı hepsi depoya bağlı — deposuz
+  // hiçbir satır yazılamaz (DOMAIN §17).
+  const depolar = await seedWarehouses(db);
   await seedCatalog(db);
   await seedCollections(db);
   await seedDraftCustomers(db);
 
   // Ticari zemin — SIRA BAĞLAYICIDIR: her bölüm bir öncekinin ürettiği kimliğe dayanır.
-  const kisiler = await seedKisiler(db);
+  const kisiler = await seedKisiler(db, depolar);
   const varyantlar = await katalogVaryantlari(db);
   await seedPrices(db, varyantlar, kisiler);
   // Paketler FİYATLARDAN SONRA: paket fiyatı kalemlerin birim fiyatlarından türetiliyor (elle yazılan
   // bir sayı değil). Sıra bozulursa paketler fiyatsız kalemlerle kurulur ve seed anlamsız veri üretir.
   await seedBundles(db);
-  await seedDeliveryZones(db);
+  await seedDeliveryZones(db, depolar);
   await seedAddresses(db, kisiler);
   await seedPostalDemand(db);
   await seedZoneNotices(db, kisiler);
   const tedarik = await seedSupply(db, varyantlar);
-  await seedStock(db, varyantlar, tedarik);
+  await seedStock(db, varyantlar, tedarik, depolar);
   await seedAdjustments(db, kisiler);
-  await seedTemperatureLogs(db, kisiler);
+  await seedTemperatureLogs(db, kisiler, depolar);
   await seedCarts(db, kisiler, varyantlar);
   // Para SİPARİŞLERDEN ÖNCE: sipariş tahsilatları bir hesaba yazılıyor (12.2), hesap hazır olmalı.
   await seedMoney(db);
   // Kuponlar SİPARİŞLERDEN ÖNCE: sipariş kuponu uygular ve kullanım kaydını yazar; tanım hazır olmalı.
   const kuponlar = await seedDiscounts(db, kisiler);
-  await seedOrders(db, kisiler, varyantlar, kuponlar);
+  await seedOrders(db, kisiler, varyantlar, kuponlar, depolar);
+  // Transfer siparişlerden SONRA: sevk kullanılabilir stoğa bakar, rezervasyonlu malı yola çıkarmaz.
+  await seedTransfer(db, depolar);
 
   // Siparişten DOĞAN kayıtlar — hepsi sipariş kimliğine dayanır, sıra bağlayıcıdır.
   await seedCourierDayCloses(db, kisiler); // kapanış, günün tahsilat görünümünü okur

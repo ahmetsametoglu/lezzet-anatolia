@@ -33,7 +33,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   setRequestLocale(locale);
 
   const t: Messages = messages[locale];
-  const [product, device] = await Promise.all([getProductDetail(locale, slug), detectDevice()]);
+  const [product, device] = await Promise.all([getProductDetail(locale, slug, null /* yer bağlamı sunucuya 19.7'de taşınacak — BEKLEYEN(19.7) */), detectDevice()]);
   if (!product) notFound();
 
   /**

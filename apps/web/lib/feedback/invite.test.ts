@@ -7,7 +7,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot, createTestWarehouse } from '@lezzet/database/testing';
 import { feedbackToken } from '@lezzet/domain-core';
 import {
   completeFeedbackInvite,
@@ -37,6 +37,8 @@ const stamp = Date.now();
 const createdProfiles: string[] = [];
 const createdOrders: string[] = [];
 let customerId: string;
+// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let warehouseId: string;
 let productId: string;
 let secondProductId: string;
 let variantId: string;
@@ -58,6 +60,7 @@ async function markDelivered(orderId: string, daysAgo: number) {
 }
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db)).id;
   const products = new ProductService(db);
   categoryId = (await new CategoryService(db).create({ name: { tr: `Davet testi ${stamp}` } })).id;
 
@@ -74,7 +77,7 @@ beforeAll(async () => {
 
   // İki ürünlü, 12 gün önce teslim edilmiş sipariş — davet zamanı geçmiş.
   const { order } = await orders.create(
-    { customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 20 },
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 20 },
     [
       { variantId, qty: 1, unitPrice: 12, vatRate: 5.5 },
       { variantId: secondVariantId, qty: 1, unitPrice: 8, vatRate: 5.5 },
@@ -99,6 +102,7 @@ afterAll(async () => {
   for (const id of createdOrders) await db.from('order').delete().eq('id', id);
   await purgeTestData(db, { productIds: [productId, secondProductId], categoryIds: [categoryId], profileIds: createdProfiles });
   await settings.restore();
+  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Bu siparişin davetini açar — taramanın yaptığını doğrudan yaparak. */
