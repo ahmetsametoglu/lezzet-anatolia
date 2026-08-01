@@ -269,7 +269,8 @@
     <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
       <span style="font:600 16px 'Space Grotesk'">O1 · AdminSidebar <span style="font:400 12px 'Karla';color:#5f7a2c">— paylaşılan bileşen (<code>active</code> prop)</span></span>
       <span style="font:400 13.5px 'Karla';color:#6a7065">Tek kaynak: 214px açık ray, olive "L" marka + arama + 5 bölüm (Günlük / Katalog / Para &amp; analiz / İlişki / Sistem) + kullanıcı bloğu. Aktif öğe olive şerit + koyu metin. Rozetler bekleyen işi taşır. Her admin sayfası <code>&lt;dc-import name="AdminSidebar" active="…"&gt;</code> ile çağırır.</span>
-      <span style="font:400 12.5px 'Karla';color:#8b9086">Canlı: <a href="AdminSidebar.dc.html">AdminSidebar</a> · Kullanıldığı sayfalar: tüm 14 admin sayfası. Depo/kurye kendi açık başlık barını alır (marka + ekran adı).</span>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Canlı: <a href="AdminSidebar.dc.html">AdminSidebar</a> · Kullanıldığı sayfalar: tüm 15 admin sayfası. Depo/kurye kendi açık başlık barını alır (marka + ekran adı).</span>
+      <span style="font:400 12.5px 'Karla';color:#9a6416">Değişiklik (30 Tem): “Sistem” bölümüne <code>sistem</code> maddesi eklendi (<a href="Operasyon - Sistem.dc.html">Sistem</a>). Ekleme geriye dönük uyumlu — diğer sayfalar aynı görünür, rayda bir madde daha çıkar; <code>active</code> seçenek listesi güncellendi.</span>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
@@ -308,6 +309,7 @@
         <div style="display:grid;grid-template-columns:1fr 80px 90px;gap:0 10px;padding:11px 16px;align-items:center"><span style="font:600 13px 'Karla'">Café Marceau</span><span style="text-align:right;font:500 12.5px 'IBM Plex Mono'">312,00</span><span style="justify-self:end;font:600 10px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:7px;padding:3px 8px">Hazır</span></div>
       </div>
       <span style="font:400 12.5px 'Karla';color:#8b9086">Canlı: <a href="Operasyon - Siparisler.dc.html">Siparişler</a> · <a href="Operasyon - Para.dc.html">Para</a> · Kullanıldığı sayfalar: Siparişler, Para, Ürünler, Fiyatlar, Stok, Müşteriler, Satın Alma, Raporlar</span>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Varyantları: <strong>O16</strong> (kayıt içi kalem tablosu) · <strong>O23</strong> (sayfalamalı hata kaydı). O4'ün kendi davranışı değişmedi — sonsuz kaydırma yerine sayfalama gereken yerde O23 kullanılır.</span>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
@@ -471,6 +473,68 @@
         <span style="font:500 11.5px 'IBM Plex Mono';color:#9a6416;background:#fdf1e3;border-radius:9px;padding:2px 8px">3 sırada</span>
       </div>
       <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Kurye Gün · Kurye Teslimat · Kurye Kapanış · Depo Hazırlık · Depo Stok Giriş · Depo İmha/Sayım</span>
+    </div>
+  </div>
+
+  <!-- §6 -->
+  <div style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h2 style="margin:0;font:600 21px 'Space Grotesk'">§6 · Sistem sağlığı (tek ekran, admin)</h2>
+      <p style="margin:0;font:400 13.5px/1.65 'Karla';color:#6a7065;max-width:900px">Kritik hatada e-posta/itme bildirimi <strong>gönderilmiyor</strong>; bu yüzden ekran alarmın yerini tutar: kötü durum panelin girişinde, bakmayan gözü yakalayacak kadar yüksek sesle görünür. İki kural her komponente işlenmiştir — <strong><code>null</code> “bilinmiyor”dur, sıfır değildir</strong>; <strong>bayat ölçüm bir arızadır</strong>. Canlı: <a href="Operasyon - Sistem.dc.html">Sistem</a></p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O20 · Hüküm şeridi</span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065">Panelin girişinde tek blok: <strong>tek kelimelik hüküm</strong> (İyi / Uyarı / Kritik / İzleme durdu) + <strong>gerekçe listesi</strong> (hangi koşul tuttu — “disk %84”, “backend 3 kez yeniden başladı”) + <strong>ölçüm yaşı</strong> + canlı/duraklat göstergesi. Ses seviyesi hükümle büyür: iyi hâl sakin beyaz kart (28px), uyarı amber çerçeve (34px), kritik ve bayat <strong>dolu koyu kırmızı bant</strong> (40px, nabız atan nokta). Renk tek başına bilgi taşımaz — gerekçe her zaman yazılır.</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font:600 11px 'Space Grotesk';color:#22251f;border:1px solid #e0e2da;background:#fbfbf9;border-radius:7px;padding:5px 10px">İyi · sakin</span>
+        <span style="font:600 11px 'Space Grotesk';color:#8a6410;border:1.5px solid #ecd9b4;background:#fdf1e3;border-radius:7px;padding:5px 10px">Uyarı</span>
+        <span style="font:600 11px 'Space Grotesk';color:#fff;background:#8a3a33;border-radius:7px;padding:5px 10px">Kritik</span>
+        <span style="font:600 11px 'Space Grotesk';color:#fff;background:#8a3a33;border-radius:7px;padding:5px 10px">İzleme durdu</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Sistem (web + mobil). Sahte tazelik yasak: ölçüm 10+ dk eskiyse hüküm otomatik “izleme durdu”ya döner ve panel değerleri geçersiz sayılır.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O21 · Ölçüm satırı (eşikli, <code>null</code>-farkındalıklı)</span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065">Etiket + mono değer + tam ölçekli çubuk + sabit eşik metni + tek satır <strong>oran notu</strong> (“4 çekirdeğe oranla %14”, “kullanılabilir ≠ boş”). Üç hâl: normal (olive), eşik aşıldı (amber/kırmızı dolgu), <strong>ölçülemedi</strong> — kesikli boş çubuk + “bilinmiyor” değeri + amber “ölçülemedi” rozeti; sıfır <strong>çizilmez</strong>. Swap kullanımı ayrı satırdır (kendi amber zemini): sunucu çalışır ama yavaşlamıştır.</span>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Sistem · Sunucu paneli, mobil sunucu özeti. Eşikler kodda sabit — panelde ayar kutusu yok.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O22 · Trend paneli (tam ölçek, pencereli)</span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065">Üç mini grafik (disk · bellek · yük), tek pencere seçici: 10 dk / 1 saat / 24 saat / 7 gün. Yüzde metrikleri <strong>tavan 100, taban 0</strong> çizilir — otomatik ölçek yok, çünkü sabit bir değeri dramatik dalgalanma gibi gösterir. Kesikli kırmızı çizgi eşiği işaretler; altında <strong>yön cümlesi</strong> (“7 gün: %60,2 → %84,1 · yükseliyor (+23,9 puan)”). Veri yoksa boş çerçeve + sebep; ölçüm alınamamışsa “çizilecek değer yok” (sıfır çizgisi değil).</span>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Sistem (mobilde tek grafik: disk). Grafik panosu değil — üç trendden fazlası asıl haberi seyreltir.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O23 · Hata kaydı tablosu <span style="font:400 12px 'Karla';color:#5f7a2c">— O4'ün sayfalamalı varyantı</span></span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065">Satır = hata <strong>türü</strong>, olay değil: 400 kez olan hata tek satır, sayacı 400. Sütunlar: seviye rozeti + mesaj + yol · kaynak · <strong>kez</strong> · ilk/son görülme · işlem. Sıra <strong>son görülmeye</strong> sabit (seviyeye göre değil). O2 sekmeleri açık/çözülmüş sayaçlarını taşır, O3 arama mesaj·kaynak·yol üzerinde süzer, alt şeritte sayfalama. <strong>Regresyon</strong> ayrı haberdir: geri gelen hata “geri geldi” rozetiyle ve önceki kapanış notuyla görünür. Tek aksiyon “Çözüldü” — silme yok; boş hâl iki ayrı metin taşır (“açık hata yok” ≠ “kayıt yeni başladı”).</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font:600 10px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#8a6410;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:5px;padding:3px 8px">warning</span>
+        <span style="font:600 10px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#8a3a33;background:#fbe9e7;border:1px solid #e2c4c0;border-radius:5px;padding:3px 8px">error</span>
+        <span style="font:600 10px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#fff;background:#8a3a33;border-radius:5px;padding:3px 8px">fatal</span>
+        <span style="font:600 10px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#8a6410;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:5px;padding:3px 8px">geri geldi</span>
+        <span style="font:500 10.5px 'IBM Plex Mono';color:#4a6121;background:#eef4e2;border-radius:5px;padding:3px 8px">çözüldü · 28 Tem · Selim A.</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Sistem. O4 kullanan sayfalar etkilenmez.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O24 · Stack / bağlam bloğu</span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065">Uzun teknik metnin tek okuma kabı: gri-25 zemin, mono 11,5px, <strong>satır kırılmaz</strong> — iki eksende kaydırılır, yüksekliği sınırlıdır (web 220px, telefon 150px) ve <strong>kopyalanabilir</strong> (kopyalandı geri bildirimi 1,6 sn). Bağlam ayrı bir anahtar-değer bloğudur ve <strong>yalnız kimlik taşır</strong>: <code>orderId</code>, iş adı, upstream görünür; e-posta, telefon, adres, sipariş içeriği görünmez. O9 dialogunun içinde ve mobil hata kartında aynı bileşen.</span>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Sistem — üç ölçüde aynı bileşen: O25'in geniş sütunu (12,5px · 300–420px) · O9 dialogu (11,5px · 220px) · mobil kart (10,5px · 150px). Ham log akışı buraya taşınmaz — süreç yöneticisinde durur.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 16px 'Space Grotesk'">O25 · Geniş hata inceleme yüzeyi</span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065">Stack okumak dar satır işi değil: hata panelinin ikinci görünümü, aynı kartın içinde <strong>iki kolona</strong> açılır. Solda <strong>352px liste</strong> (seçili satır olive sol şerit + gri-100 zemin; seviye noktası, mesaj, kaynak·yol, sayaç, son görülme; altta sayfalama), sağda seçili hatanın <strong>tam geniş okuma sütunu</strong>: 19px başlık mesaj, regresyon kutusu (O10), <strong>üç kolonlu bağlam</strong> ızgarası ve büyük O24 stack bloğu. Üstteki <strong>Liste / İnceleme</strong> geçişi (O8) görünümü değiştirir; süzme, sekme ve sayfalama iki görünümde aynı durumu paylaşır. Yeni ekran açılmaz — bakılması gereken yer hâlâ tek.</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font:600 11px 'Space Grotesk';color:#22251f;background:#fbfbf9;border:1px solid #e0e2da;border-radius:7px;padding:5px 11px">Liste</span>
+        <span style="font:600 11px 'Space Grotesk';color:#6a7065;background:#eef0ea;border:1px solid #e0e2da;border-radius:7px;padding:5px 11px">İnceleme</span>
+        <span style="font:400 12.5px 'Karla';color:#8b9086">— 352px liste + minmax(0,1fr) okuma sütunu, min yükseklik 560px</span>
+      </div>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Sistem (yalnız masaüstü). Telefonda bu yüzey yok — mobil kart + O24 bloğu kullanılır. O9 dialogu korunur: listeden hızlı bakış için.</span>
     </div>
   </div>
 

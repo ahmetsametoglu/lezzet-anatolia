@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+  @keyframes sysPulse { 0%,100% { opacity:1 } 50% { opacity:.35 } }
+  input, textarea { font-family:'Karla',sans-serif; }
+  input:focus, textarea:focus { outline:2px solid #5f7a2c; outline-offset:2px; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:26px">
+
+  <div style="display:flex;flex-direction:column;gap:12px;max-width:1360px">
+    <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Sistem — sağlık ve hatalar</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Tek ekran, iki panel. Kritik hatada e-posta gitmiyor: bu sayfa alarmın kendisidir. Durum hâllerini aşağıdan değiştirebilirsiniz.</span>
+    </div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+      <span style="font:500 11px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#8b9086;margin-right:4px">Hâl</span>
+      <sc-for list="{{ haller }}" as="h" hint-placeholder-count="7">
+        <span onClick="{{ h.pick }}" style="font-family:'Space Grotesk';font-size:12px;font-weight:600;border-radius:14px;padding:6px 13px;cursor:pointer;background:{{ h.bg }};color:{{ h.fg }};border:1px solid {{ h.bd }}">{{ h.label }}</span>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ══════════ WEB ══════════ -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px;max-width:1360px;flex-wrap:wrap">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Web — masaüstü öncelikli</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Buraya bir sorun araştırılırken bakılır: stack okumak ve trend karşılaştırmak geniş ekran işi.</span>
+    </div>
+
+    <div data-screen-label="Sistem Web" style="width:100%;max-width:1360px;box-sizing:border-box;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="sistem" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+
+        <!-- KONTROL BARI -->
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">Sistem</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">Sağlık görüntüsü iki dakikada bir yazılır · 14 gün saklanır</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;border:1px solid {{ liveBd }};background:{{ liveBg }};border-radius:7px;padding:7px 12px">
+            <span style="width:7px;height:7px;border-radius:50%;background:{{ liveDot }};animation:{{ liveAnim }}"></span>
+            <span style="font:600 12px 'Space Grotesk';color:{{ liveFg }}">{{ liveLabel }}</span>
+            <span style="width:1px;height:13px;background:{{ liveBd }}"></span>
+            <span style="font:500 11.5px 'IBM Plex Mono';color:{{ liveSubFg }}">{{ liveNext }}</span>
+          </div>
+          <span onClick="{{ togglePause }}" style="font:600 12.5px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:7px;padding:8px 14px;cursor:pointer">{{ pauseLabel }}</span>
+          <span onClick="{{ refreshNow }}" style="font:600 12.5px 'Space Grotesk';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 15px;cursor:pointer">Şimdi yenile</span>
+        </div>
+
+        <div style="padding:22px 24px;display:flex;flex-direction:column;gap:22px">
+
+          <!-- O20 · HÜKÜM ŞERİDİ -->
+          <div style="border:{{ vBdW }} solid {{ vBd }};background:{{ vBg }};border-radius:12px;padding:{{ vPad }};display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:6px;min-width:210px">
+              <div style="display:flex;align-items:center;gap:9px">
+                <span style="width:10px;height:10px;border-radius:50%;background:{{ vDot }};animation:{{ vDotAnim }}"></span>
+                <span style="font:600 11px 'Space Grotesk';letter-spacing:.16em;text-transform:uppercase;color:{{ vLabelFg }}">{{ vLabel }}</span>
+              </div>
+              <span style="font-family:'Space Grotesk';font-weight:700;font-size:{{ vSize }};line-height:1.05;letter-spacing:-.02em;color:{{ vFg }}">{{ vTitle }}</span>
+              <span style="font:500 12.5px 'IBM Plex Mono';color:{{ vAgeFg }}">{{ vAge }}</span>
+            </div>
+            <div style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:9px">
+              <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:{{ vLabelFg }}">{{ vReasonTitle }}</span>
+              <sc-if value="{{ hasReasons }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:7px">
+                  <sc-for list="{{ reasons }}" as="r" hint-placeholder-count="3">
+                    <div style="display:flex;align-items:flex-start;gap:9px;background:{{ r.bg }};border:1px solid {{ r.bd }};border-radius:8px;padding:9px 12px">
+                      <span style="font:600 10px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:{{ r.tagFg }};background:{{ r.tagBg }};border-radius:5px;padding:3px 7px;flex:none">{{ r.tag }}</span>
+                      <span style="font-family:'Karla';font-weight:500;font-size:13px;line-height:1.5;color:{{ r.fg }}">{{ r.t }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ calm }}" hint-placeholder-val="{{ true }}">
+                <span style="font:400 13.5px/1.6 'Karla';color:#3a3f37">{{ vSummary }}</span>
+              </sc-if>
+            </div>
+          </div>
+
+          <!-- SUNUCU · SÜREÇLER -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px">
+
+            <!-- O21 · ÖLÇÜM SATIRLARI -->
+            <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                <span style="font:600 15px 'Space Grotesk'">Sunucu</span>
+                <span style="font:400 11px 'Karla';color:#9aa094">eşikler sabit ve kodda testli</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:13px">
+                <sc-for list="{{ serverRows }}" as="m" hint-placeholder-count="5">
+                  <div style="display:flex;flex-direction:column;gap:5px;padding:{{ m.pad }};border-radius:8px;background:{{ m.rowBg }};box-shadow:{{ m.ring }}">
+                    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+                      <span style="font:500 12.5px 'Karla';color:#6a7065;flex:0 0 104px">{{ m.label }}</span>
+                      <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:14px;color:{{ m.valFg }};flex:1 1 120px;min-width:0">{{ m.value }}</span>
+                      <sc-if value="{{ m.tag }}" hint-placeholder-val="{{ false }}">
+                        <span style="font:600 10px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:{{ m.tagFg }};background:{{ m.tagBg }};border:1px solid {{ m.tagBd }};border-radius:5px;padding:3px 7px;flex:none">{{ m.tag }}</span>
+                      </sc-if>
+                    </div>
+                    <sc-if value="{{ m.hasBar }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;align-items:center;gap:10px">
+                        <span style="flex:0 0 104px"></span>
+                        <span style="flex:1 1 auto;min-width:60px;height:8px;border-radius:2px;background:#eef0ea;overflow:hidden;position:relative;display:block">
+                          <span style="display:block;height:100%;width:{{ m.pct }};background:{{ m.bar }}"></span>
+                        </span>
+                        <span style="font:400 11px 'Karla';color:#9aa094;flex:0 1 106px;text-align:right">{{ m.thr }}</span>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ m.unknown }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;align-items:center;gap:10px">
+                        <span style="flex:0 0 104px"></span>
+                        <span style="flex:1 1 auto;min-width:60px;height:8px;border-radius:2px;border:1px dashed #d4d7ce;display:block"></span>
+                        <span style="font:400 11px 'Karla';color:#9a6416;flex:0 1 106px;text-align:right">sıfır değil</span>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ m.note }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;gap:10px">
+                        <span style="flex:0 0 104px"></span>
+                        <span style="font-family:'Karla';font-weight:500;font-size:11.5px;line-height:1.5;color:{{ m.noteFg }};flex:1 1 auto;min-width:0">{{ m.note }}</span>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- SÜREÇLER -->
+            <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                <span style="font:600 15px 'Space Grotesk'">Süreçler</span>
+                <span style="font:400 11px 'Karla';color:#9aa094">yeniden başlama = sessiz arıza</span>
+              </div>
+              <sc-if value="{{ pm2Unknown }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid #ecd9b4;background:#fdf1e3;border-radius:9px;padding:14px 16px;display:flex;flex-direction:column;gap:6px">
+                  <span style="font:600 13px 'Space Grotesk';color:#8a6410">PM2 okunamadı — süreçler bilinmiyor</span>
+                  <span style="font:400 12px/1.6 'Karla';color:#8a6410">Bu, “hiç süreç yok” demek değil: ölçüm alınamadı. Göremediğimiz için sistem hükmü uyarıya çekildi.</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ pm2Known }}" hint-placeholder-val="{{ true }}">
+                <div style="border:1px solid #e6e7e1;border-radius:8px;overflow:hidden">
+                  <div style="display:flex;align-items:center;gap:10px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;padding:8px 12px;font:600 10px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#8b9086">
+                    <span style="flex:1">Süreç</span><span style="width:74px;text-align:right">Yeniden</span><span style="width:62px;text-align:right">Bellek</span><span style="width:46px;text-align:right">CPU</span>
+                  </div>
+                  <sc-for list="{{ procs }}" as="p" hint-placeholder-count="3">
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #f0f1ec">
+                      <span style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                        <span style="font:500 13px 'Karla';color:#22251f">{{ p.name }}</span>
+                        <span style="display:flex;align-items:center;gap:6px">
+                          <span style="width:6px;height:6px;border-radius:50%;background:{{ p.dot }}"></span>
+                          <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:10.5px;color:{{ p.stFg }}">{{ p.status }}</span>
+                        </span>
+                      </span>
+                      <span style="width:74px;text-align:right;font-family:'IBM Plex Mono';font-weight:600;font-size:13px;color:{{ p.rsFg }}">{{ p.restarts }}</span>
+                      <span style="width:62px;text-align:right;font:400 12px 'IBM Plex Mono';color:#6a7065">{{ p.mem }}</span>
+                      <span style="width:46px;text-align:right;font:400 12px 'IBM Plex Mono';color:#6a7065">{{ p.cpu }}</span>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ procNote }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:9px 12px;background:{{ procNoteBg }}">
+                      <span style="font-family:'Karla';font-weight:500;font-size:11.5px;line-height:1.5;color:{{ procNoteFg }}">{{ procNote }}</span>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+
+          <!-- SERVİSLER · UYGULAMA -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px">
+            <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:14px">
+              <span style="font:600 15px 'Space Grotesk'">Servisler</span>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+                <sc-for list="{{ services }}" as="s" hint-placeholder-count="3">
+                  <div style="border:1px solid {{ s.bd }};background:{{ s.bg }};border-radius:9px;padding:12px 13px;display:flex;flex-direction:column;gap:6px">
+                    <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:{{ s.labelFg }}">{{ s.label }}</span>
+                    <span style="font-family:'Space Grotesk';font-weight:600;font-size:15px;color:{{ s.fg }}">{{ s.value }}</span>
+                    <span style="font-family:'Karla';font-weight:400;font-size:11px;line-height:1.5;color:{{ s.subFg }}">{{ s.sub }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                <span style="font:600 15px 'Space Grotesk'">Uygulama</span>
+                <span style="font:400 11px 'Karla';color:#9aa094">son 1 saat</span>
+              </div>
+              <div style="display:flex;border:1px solid #e6e7e1;border-radius:9px;overflow:hidden">
+                <sc-for list="{{ appRows }}" as="a" hint-placeholder-count="2">
+                  <div style="flex:1;padding:14px 16px;border-right:1px solid #e6e7e1;display:flex;flex-direction:column;gap:5px;background:{{ a.bg }}">
+                    <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#6a7065">{{ a.label }}</span>
+                    <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:28px;letter-spacing:-.02em;color:{{ a.fg }}">{{ a.value }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <span style="font:400 12px/1.6 'Karla';color:#6a7065">Bu iki sayı sunucu metriklerinden başka bir şey söyler: makine rahatken uygulama bozuk olabilir.</span>
+            </div>
+          </div>
+
+          <!-- O22 · TREND -->
+          <div style="border:1px solid #e6e7e1;border-radius:10px;padding:18px 22px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;gap:2px;margin-right:auto">
+                <span style="font:600 15px 'Space Grotesk'">Trend — anlık değer değil, yön</span>
+                <span style="font:400 11.5px 'Karla';color:#8b9086">Yüzde metrikleri tam ölçekte: tavan %100, taban 0. Otomatik ölçek yok.</span>
+              </div>
+              <div style="display:flex;background:#eef0ea;border:1px solid #e0e2da;border-radius:8px;padding:2px">
+                <sc-for list="{{ windows }}" as="w" hint-placeholder-count="4">
+                  <span onClick="{{ w.pick }}" style="font-family:'Space Grotesk';font-size:12px;font-weight:600;padding:7px 12px;border-radius:6px;cursor:pointer;background:{{ w.bg }};color:{{ w.fg }}">{{ w.label }}</span>
+                </sc-for>
+              </div>
+            </div>
+            <sc-if value="{{ trendEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px dashed #d4d7ce;border-radius:9px;padding:26px;display:flex;flex-direction:column;align-items:center;gap:6px">
+                <span style="font:600 13.5px 'Space Grotesk';color:#6a7065">{{ trendEmptyTitle }}</span>
+                <span style="font:400 12.5px 'Karla';color:#8b9086">{{ trendEmptyBody }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ trendShown }}" hint-placeholder-val="{{ true }}">
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px">
+                <sc-for list="{{ charts }}" as="c" hint-placeholder-count="3">
+                  <div style="display:flex;flex-direction:column;gap:9px">
+                    <div style="display:flex;align-items:baseline;gap:9px">
+                      <span style="font:500 12.5px 'Karla';color:#6a7065;margin-right:auto">{{ c.title }}</span>
+                      <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:17px;color:{{ c.fg }}">{{ c.now }}</span>
+                    </div>
+                    <div style="position:relative;border:1px solid #f0f1ec;border-radius:6px;background:#fdfdfb;padding:4px 0">
+                      <svg viewBox="0 0 300 72" preserveAspectRatio="none" style="width:100%;height:78px;display:block">
+                        <line x1="0" y1="14.4" x2="300" y2="14.4" stroke="#e2c4c0" stroke-width="1" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"></line>
+                        <path d="{{ c.area }}" fill="{{ c.fill }}"></path>
+                        <polyline points="{{ c.line }}" fill="none" stroke="{{ c.stroke }}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></polyline>
+                      </svg>
+                      <span style="position:absolute;top:2px;right:6px;font:400 9.5px 'IBM Plex Mono';color:#b3b7ac">100</span>
+                      <span style="position:absolute;bottom:2px;right:6px;font:400 9.5px 'IBM Plex Mono';color:#b3b7ac">0</span>
+                      <span style="position:absolute;top:24px;left:6px;font:400 9.5px 'IBM Plex Mono';color:#c2571f">eşik {{ c.thr }}</span>
+                    </div>
+                    <span style="font-family:'Karla';font-weight:500;font-size:11.5px;line-height:1.5;color:{{ c.capFg }}">{{ c.caption }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- O23 · HATA KAYDI -->
+          <div style="border:1px solid #e6e7e1;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="padding:16px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;gap:2px;margin-right:auto">
+                <span style="font:600 15px 'Space Grotesk'">Hatalar</span>
+                <span style="font:400 11.5px 'Karla';color:#8b9086">Satır = hata türü, olay değil. Sıra son görülmeye göre — seviyeye göre değil.</span>
+              </div>
+              <div style="display:flex;background:#eef0ea;border:1px solid #e0e2da;border-radius:8px;padding:2px">
+                <span onClick="{{ setListe }}" style="font-family:'Space Grotesk';font-size:12px;font-weight:600;padding:7px 13px;border-radius:6px;cursor:pointer;background:{{ listeBg }};color:{{ listeFg }}">Liste</span>
+                <span onClick="{{ setIncele }}" style="font-family:'Space Grotesk';font-size:12px;font-weight:600;padding:7px 13px;border-radius:6px;cursor:pointer;background:{{ inceleBg }};color:{{ inceleFg }}">İnceleme</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;border:1px solid #d9dbd2;border-radius:8px;padding:7px 11px;background:#fff;min-width:250px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                <input value="{{ q }}" onChange="{{ onQ }}" placeholder="mesaj · kaynak · yol ara…" style="border:0;outline:0;background:transparent;font:400 12.5px 'Karla';color:#22251f;flex:1;min-width:0;padding:0" />
+                <sc-if value="{{ hasQ }}" hint-placeholder-val="{{ false }}">
+                  <span onClick="{{ clearQ }}" style="font:500 13px 'Space Grotesk';color:#9aa094;cursor:pointer">✕</span>
+                </sc-if>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:2px;background:#f8f9f5;border-top:1px solid #e6e7e1;border-bottom:1px solid #e6e7e1;padding:0 18px">
+              <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2">
+                <span onClick="{{ t.pick }}" style="display:flex;align-items:center;gap:8px;font-family:'Space Grotesk';font-size:13px;font-weight:600;padding:11px 14px;cursor:pointer;border-bottom:2px solid {{ t.edge }};color:{{ t.fg }}">
+                  {{ t.label }}
+                  <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:11px;color:{{ t.cFg }};background:{{ t.cBg }};border-radius:9px;padding:1px 7px">{{ t.count }}</span>
+                </span>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:34px 22px;display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center">
+                <span style="width:42px;height:42px;border-radius:11px;background:{{ emptyIconBg }};display:grid;place-items:center;color:{{ emptyIconFg }}">{{ emptyIcon }}</span>
+                <span style="font-family:'Space Grotesk';font-weight:600;font-size:15px;color:#22251f">{{ emptyTitle }}</span>
+                <span style="font-family:'Karla';font-weight:400;font-size:12.5px;line-height:1.6;color:#6a7065;max-width:440px">{{ emptyBody }}</span>
+                <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:11.5px;color:#8b9086">{{ emptyMeta }}</span>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ viewIncele }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-wrap:wrap;align-items:stretch;min-height:560px">
+                <div style="flex:1 1 296px;max-width:352px;min-width:264px;border-right:1px solid #e6e7e1;border-bottom:1px solid #e6e7e1;display:flex;flex-direction:column;background:#fdfdfb">
+                  <div style="padding:9px 16px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:8px">
+                    <span style="font:600 10px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#8b9086;margin-right:auto">Hata türü</span>
+                    <span style="font:500 10.5px 'IBM Plex Mono';color:#8b9086">{{ incCount }}</span>
+                  </div>
+                  <div style="max-height:620px;overflow-y:auto;display:flex;flex-direction:column">
+                    <sc-for list="{{ incRows }}" as="e" hint-placeholder-count="6">
+                      <div onClick="{{ e.select }}" style="padding:12px 16px 12px 14px;border-bottom:1px solid #f0f1ec;border-left:2px solid {{ e.selEdge }};background:{{ e.selBg }};cursor:pointer;display:flex;flex-direction:column;gap:6px">
+                        <div style="display:flex;align-items:center;gap:7px">
+                          <span style="width:7px;height:7px;border-radius:50%;background:{{ e.lvDot }};flex:none"></span>
+                          <span style="font-family:'Space Grotesk';font-weight:600;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:{{ e.lvFg }}">{{ e.level }}</span>
+                          <sc-if value="{{ e.reg }}" hint-placeholder-val="{{ false }}">
+                            <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#8a6410;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:4px;padding:1px 6px">geri geldi</span>
+                          </sc-if>
+                          <span style="font-family:'IBM Plex Mono';font-weight:600;font-size:11px;color:{{ e.cntFg }};margin-left:auto">{{ e.count }}×</span>
+                        </div>
+                        <span style="font-family:'Karla';font-weight:500;font-size:12.5px;line-height:1.45;color:{{ e.msgFg }};text-wrap:pretty">{{ e.message }}</span>
+                        <div style="display:flex;align-items:baseline;gap:8px">
+                          <span style="font:400 10.5px 'IBM Plex Mono';color:#8b9086;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ e.source }}{{ e.pathSep }}{{ e.path }}</span>
+                          <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:10.5px;color:{{ e.lastFg }};flex:none">{{ e.last }}</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="margin-top:auto;padding:10px 16px;border-top:1px solid #e6e7e1;background:#f8f9f5;display:flex;align-items:center;gap:10px">
+                    <span style="font:500 10.5px 'IBM Plex Mono';color:#6a7065;margin-right:auto">{{ pageInfo }}</span>
+                    <span onClick="{{ prevPage }}" style="font-family:'Space Grotesk';font-size:11px;font-weight:600;border:1px solid #d9dbd2;border-radius:6px;padding:5px 9px;cursor:pointer;color:{{ prevFg }}">←</span>
+                    <span onClick="{{ nextPage }}" style="font-family:'Space Grotesk';font-size:11px;font-weight:600;border:1px solid #d9dbd2;border-radius:6px;padding:5px 9px;cursor:pointer;color:{{ nextFg }}">→</span>
+                  </div>
+                </div>
+
+                <div style="flex:6 1 460px;min-width:0;display:flex;flex-direction:column;gap:16px;padding:20px 24px">
+                  <div style="display:flex;flex-direction:column;gap:9px">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                      <span style="font-family:'Space Grotesk';font-weight:600;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:{{ sel.lvFg }};background:{{ sel.lvBg }};border:1px solid {{ sel.lvBd }};border-radius:5px;padding:3px 8px">{{ sel.level }}</span>
+                      <span style="font:400 11.5px 'IBM Plex Mono';color:#6a7065">{{ sel.source }}</span>
+                      <sc-if value="{{ sel.path }}" hint-placeholder-val="{{ false }}">
+                        <span style="font:400 11.5px 'IBM Plex Mono';color:#8b9086">{{ sel.path }}</span>
+                      </sc-if>
+                      <sc-if value="{{ sel.resolvedBy }}" hint-placeholder-val="{{ false }}">
+                        <span style="font:500 10.5px 'IBM Plex Mono';color:#4a6121;background:#eef4e2;border-radius:5px;padding:2px 8px">{{ sel.resolvedBy }}</span>
+                      </sc-if>
+                    </div>
+                    <span style="font-family:'Space Grotesk';font-weight:600;font-size:19px;line-height:1.35;color:{{ sel.msgFg }};text-wrap:pretty">{{ sel.message }}</span>
+                  </div>
+
+                  <sc-if value="{{ sel.reg }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;align-items:flex-start;gap:9px;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:11px 14px">
+                      <span style="color:#9a6416;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v5h5"></path></svg></span>
+                      <span style="font:500 12px/1.55 'Karla';color:#8a6410">{{ sel.regNote }} Bu satır yeni açıldı — “hiç çözülmemiş bir hata” değil, geri gelmiş bir hata.</span>
+                    </div>
+                  </sc-if>
+
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 22px;border:1px solid #e6e7e1;border-radius:10px;padding:14px 16px">
+                    <sc-for list="{{ sel.meta }}" as="k" hint-placeholder-count="6">
+                      <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                        <span style="font:400 10.5px 'Karla';color:#8b9086">{{ k.k }}</span>
+                        <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:12.5px;color:#3a3f37;word-break:break-all">{{ k.v }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+
+                  <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-height:0">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <span style="font:600 12.5px 'Space Grotesk';margin-right:auto">Stack</span>
+                      <span style="font:400 11px 'Karla';color:#9aa094">satır kırılmaz — iki eksende kaydırılır</span>
+                      <span onClick="{{ copySelStack }}" style="font-family:'Space Grotesk';font-size:11.5px;font-weight:600;color:{{ copySelFg }};border:1px solid {{ copySelBd }};background:{{ copySelBg }};border-radius:7px;padding:6px 11px;cursor:pointer">{{ copySelLabel }}</span>
+                    </div>
+                    <div style="border:1px solid #e0e2da;background:#f8f9f5;border-radius:9px;padding:14px 16px;min-height:300px;max-height:420px;overflow:auto">
+                      <pre style="margin:0;font:400 12.5px/1.75 'IBM Plex Mono';color:#3a3f37;white-space:pre;min-width:max-content">{{ sel.stack }}</pre>
+                    </div>
+                  </div>
+
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid #f0f1ec;padding-top:14px">
+                    <span style="font:400 11.5px 'Karla';color:#8b9086;margin-right:auto">{{ sel.footNote }}</span>
+                    <sc-if value="{{ sel.canResolve }}" hint-placeholder-val="{{ true }}">
+                      <span onClick="{{ resolveSel }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 18px;cursor:pointer">Çözüldü işaretle</span>
+                    </sc-if>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ viewListe }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column">
+                <div style="display:flex;align-items:center;gap:12px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;padding:9px 22px;font:600 10px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#8b9086">
+                  <span style="flex:1;min-width:0">Hata</span>
+                  <span style="width:104px">Kaynak</span>
+                  <span style="width:52px;text-align:right">Kez</span>
+                  <span style="width:150px">İlk / son görülme</span>
+                  <span style="width:112px;text-align:right">İşlem</span>
+                </div>
+                <sc-for list="{{ rows }}" as="e" hint-placeholder-count="5">
+                  <div onClick="{{ e.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 22px;border-bottom:1px solid #f0f1ec;cursor:pointer;background:{{ e.rowBg }}">
+                    <span style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0">
+                      <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                        <span style="font-family:'Space Grotesk';font-weight:600;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:{{ e.lvFg }};background:{{ e.lvBg }};border:1px solid {{ e.lvBd }};border-radius:5px;padding:2px 7px">{{ e.level }}</span>
+                        <sc-if value="{{ e.reg }}" hint-placeholder-val="{{ false }}">
+                          <span style="font:600 10px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#8a6410;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:5px;padding:2px 7px">geri geldi</span>
+                        </sc-if>
+                        <sc-if value="{{ e.resolvedBy }}" hint-placeholder-val="{{ false }}">
+                          <span style="font:500 10.5px 'IBM Plex Mono';color:#4a6121;background:#eef4e2;border-radius:5px;padding:2px 7px">{{ e.resolvedBy }}</span>
+                        </sc-if>
+                      </span>
+                      <span style="font-family:'Karla';font-weight:500;font-size:13.5px;line-height:1.45;color:{{ e.msgFg }};text-wrap:pretty">{{ e.message }}</span>
+                      <sc-if value="{{ e.regNote }}" hint-placeholder-val="{{ false }}">
+                        <span style="font-family:'Karla';font-weight:400;font-size:11.5px;color:#8a6410">{{ e.regNote }}</span>
+                      </sc-if>
+                      <sc-if value="{{ e.path }}" hint-placeholder-val="{{ false }}">
+                        <span style="font-family:'IBM Plex Mono';font-weight:400;font-size:11px;color:#8b9086">{{ e.path }}</span>
+                      </sc-if>
+                    </span>
+                    <span style="width:104px;font-family:'IBM Plex Mono';font-weight:400;font-size:11.5px;color:#6a7065">{{ e.source }}</span>
+                    <span style="width:52px;text-align:right;font-family:'IBM Plex Mono';font-weight:600;font-size:14px;color:{{ e.cntFg }}">{{ e.count }}</span>
+                    <span style="width:150px;display:flex;flex-direction:column;gap:2px">
+                      <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:11.5px;color:{{ e.lastFg }}">son {{ e.last }}</span>
+                      <span style="font:400 11px 'IBM Plex Mono';color:#9aa094">ilk {{ e.first }}</span>
+                    </span>
+                    <span style="width:112px;display:flex;justify-content:flex-end">
+                      <sc-if value="{{ e.canResolve }}" hint-placeholder-val="{{ true }}">
+                        <span onClick="{{ e.resolve }}" style="font:600 11.5px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:7px;padding:7px 11px;cursor:pointer;white-space:nowrap">Çözüldü</span>
+                      </sc-if>
+                      <sc-if value="{{ e.doneMark }}" hint-placeholder-val="{{ false }}">
+                        <span style="font:500 11.5px 'IBM Plex Mono';color:#8b9086">kayıt kalır</span>
+                      </sc-if>
+                    </span>
+                  </div>
+                </sc-for>
+                <div style="padding:12px 22px;display:flex;align-items:center;gap:12px;background:#f8f9f5">
+                  <span style="font:500 11.5px 'IBM Plex Mono';color:#6a7065;margin-right:auto">{{ pageInfo }}</span>
+                  <span onClick="{{ prevPage }}" style="font-family:'Space Grotesk';font-size:12px;font-weight:600;border:1px solid #d9dbd2;border-radius:7px;padding:7px 12px;cursor:pointer;color:{{ prevFg }}">← Önceki</span>
+                  <span onClick="{{ nextPage }}" style="font-family:'Space Grotesk';font-size:12px;font-weight:600;border:1px solid #d9dbd2;border-radius:7px;padding:7px 12px;cursor:pointer;color:{{ nextFg }}">Sonraki →</span>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="display:flex;align-items:flex-start;gap:9px;background:#eef0ea;border:1px solid #e0e2da;border-radius:9px;padding:11px 14px">
+            <span style="color:#6a7065;flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8h.01M12 11v5"></path></svg></span>
+            <span style="font:400 11.5px/1.6 'Karla';color:#5c6157">Silme yok: “çözüldü” yalnız odaktan çıkarır, kayıt saklama süresi bitene kadar durur. Bağlamda kimlik var, içerik yok — sipariş numarası görünür; e-posta, telefon, adres görünmez. Ham log akışı buraya taşınmaz, süreç yöneticisinde durur.</span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ MOBİL ══════════ -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px;max-width:1360px;flex-wrap:wrap">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Mobil — sıra değişir</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Tepe durumu → hatalar → sunucu → trend. Yolda “bir şey mi oldu” diye bakan kişi hükmü ve son hataları görür; grafik aşağıda kalır.</span>
+    </div>
+
+    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+
+      <div data-screen-label="Sistem Mobil" style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px 12px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px">
+          <span style="font:600 17px 'Space Grotesk';color:#22251f;margin-right:auto">Sistem</span>
+          <span style="display:flex;align-items:center;gap:6px;border:1px solid {{ liveBd }};background:{{ liveBg }};border-radius:14px;padding:5px 10px">
+            <span style="width:6px;height:6px;border-radius:50%;background:{{ liveDot }};animation:{{ liveAnim }}"></span>
+            <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:10.5px;color:{{ liveFg }}">{{ mobAge }}</span>
+          </span>
+        </div>
+
+        <div style="padding:13px 16px;display:flex;flex-direction:column;gap:14px">
+          <div style="border:{{ vBdW }} solid {{ vBd }};background:{{ vBg }};border-radius:13px;padding:14px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="width:9px;height:9px;border-radius:50%;background:{{ vDot }};animation:{{ vDotAnim }}"></span>
+              <span style="font:600 10px 'Space Grotesk';letter-spacing:.16em;text-transform:uppercase;color:{{ vLabelFg }}">{{ vLabel }}</span>
+            </div>
+            <span style="font-family:'Space Grotesk';font-weight:700;font-size:{{ vMobSize }};line-height:1.05;color:{{ vFg }}">{{ vTitle }}</span>
+            <sc-if value="{{ hasReasons }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <sc-for list="{{ mobReasons }}" as="r" hint-placeholder-count="2">
+                  <span style="font-family:'Karla';font-weight:500;font-size:12px;line-height:1.45;color:{{ r.fg }};background:{{ r.bg }};border:1px solid {{ r.bd }};border-radius:8px;padding:8px 10px">{{ r.t }}</span>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ calm }}" hint-placeholder-val="{{ true }}">
+              <span style="font:400 12px/1.55 'Karla';color:#3a3f37">{{ vSummary }}</span>
+            </sc-if>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <span style="font:600 13px 'Space Grotesk';color:#22251f;margin-right:auto">Son hatalar</span>
+              <span style="font:500 11px 'IBM Plex Mono';color:#8b9086">{{ mobErrCount }}</span>
+            </div>
+            <sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px dashed #d4d7ce;border-radius:11px;padding:16px;display:flex;flex-direction:column;gap:4px">
+                <span style="font-family:'Space Grotesk';font-weight:600;font-size:12.5px;color:#3a3f37">{{ emptyTitle }}</span>
+                <span style="font-family:'Karla';font-weight:400;font-size:11.5px;line-height:1.5;color:#8b9086">{{ emptyMeta }}</span>
+              </div>
+            </sc-if>
+            <sc-for list="{{ mobErrors }}" as="e" hint-placeholder-count="3">
+              <div onClick="{{ e.open }}" style="border:1px solid #e6e7e1;border-radius:11px;padding:11px 12px;display:flex;flex-direction:column;gap:6px;background:#fff">
+                <div style="display:flex;align-items:center;gap:7px">
+                  <span style="width:7px;height:7px;border-radius:50%;background:{{ e.lvDot }}"></span>
+                  <span style="font-family:'Space Grotesk';font-weight:600;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:{{ e.lvFg }}">{{ e.level }}</span>
+                  <sc-if value="{{ e.reg }}" hint-placeholder-val="{{ false }}">
+                    <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#8a6410;background:#fdf1e3;border-radius:4px;padding:2px 6px">geri geldi</span>
+                  </sc-if>
+                  <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:10.5px;color:#8b9086;margin-left:auto">{{ e.count }}× · {{ e.last }}</span>
+                </div>
+                <span style="font-family:'Karla';font-weight:500;font-size:12.5px;line-height:1.45;color:#22251f;text-wrap:pretty">{{ e.message }}</span>
+                <span style="font-family:'IBM Plex Mono';font-weight:400;font-size:10.5px;color:#8b9086">{{ e.source }}{{ e.pathSep }}{{ e.path }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:600 13px 'Space Grotesk';color:#22251f">Sunucu</span>
+            <div style="border:1px solid #e6e7e1;border-radius:11px;overflow:hidden">
+              <sc-for list="{{ mobServer }}" as="m" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #f0f1ec">
+                  <span style="font:400 11.5px 'Karla';color:#6a7065;flex:1">{{ m.label }}</span>
+                  <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:12.5px;color:{{ m.fg }}">{{ m.value }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:7px;padding-bottom:6px">
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <span style="font:600 13px 'Space Grotesk';color:#22251f;margin-right:auto">Trend · disk</span>
+              <span style="font:500 10.5px 'IBM Plex Mono';color:#8b9086">{{ mobWin }} · tam ölçek</span>
+            </div>
+            <sc-if value="{{ trendShown }}" hint-placeholder-val="{{ true }}">
+              <div style="border:1px solid #f0f1ec;border-radius:9px;background:#fdfdfb;padding:4px 0">
+                <svg viewBox="0 0 300 60" preserveAspectRatio="none" style="width:100%;height:56px;display:block">
+                  <line x1="0" y1="12" x2="300" y2="12" stroke="#e2c4c0" stroke-width="1" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"></line>
+                  <path d="{{ mobArea }}" fill="{{ mobFill }}"></path>
+                  <polyline points="{{ mobLine }}" fill="none" stroke="{{ mobStroke }}" stroke-width="2" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline>
+                </svg>
+              </div>
+              <span style="font-family:'Karla';font-weight:500;font-size:11px;line-height:1.45;color:{{ mobCapFg }}">{{ mobCaption }}</span>
+            </sc-if>
+            <sc-if value="{{ trendEmpty }}" hint-placeholder-val="{{ false }}">
+              <span style="font:400 11px/1.5 'Karla';color:#8b9086;border:1px dashed #d4d7ce;border-radius:9px;padding:12px">{{ trendEmptyBody }}</span>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+
+      <!-- MOBİL · HATA DETAYI -->
+      <div data-screen-label="Sistem Mobil Hata Detay" style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14);display:flex;flex-direction:column">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px">
+          <span style="font:500 15px 'Space Grotesk';color:#6a7065">←</span>
+          <span style="font:600 15px 'Space Grotesk';color:#22251f;margin-right:auto">Hata detayı</span>
+          <span style="font:500 10.5px 'IBM Plex Mono';color:#8b9086">{{ mobDetail.count }}×</span>
+        </div>
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:13px">
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+            <span style="font-family:'Space Grotesk';font-weight:600;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:{{ mobDetail.lvFg }};background:{{ mobDetail.lvBg }};border:1px solid {{ mobDetail.lvBd }};border-radius:5px;padding:3px 7px">{{ mobDetail.level }}</span>
+            <span style="font:400 10.5px 'IBM Plex Mono';color:#6a7065">{{ mobDetail.source }}</span>
+          </div>
+          <span style="font-family:'Karla';font-weight:500;font-size:13.5px;line-height:1.5;color:#22251f;text-wrap:pretty">{{ mobDetail.message }}</span>
+          <div style="display:flex;flex-direction:column;gap:6px;border:1px solid #e6e7e1;border-radius:10px;padding:11px 12px">
+            <sc-for list="{{ mobDetail.meta }}" as="k" hint-placeholder-count="4">
+              <div style="display:flex;align-items:baseline;gap:10px">
+                <span style="font:400 11px 'Karla';color:#8b9086;width:88px;flex:none">{{ k.k }}</span>
+                <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:11.5px;color:#3a3f37;flex:1;word-break:break-all">{{ k.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;align-items:center gap:8px">
+              <span style="font:600 11.5px 'Space Grotesk';color:#22251f;margin-right:auto">Stack</span>
+            </div>
+            <div style="border:1px solid #e0e2da;background:#f8f9f5;border-radius:9px;padding:10px;max-height:150px;overflow:auto">
+              <pre style="margin:0;font:400 10.5px/1.65 'IBM Plex Mono';color:#3a3f37;white-space:pre;min-width:max-content">{{ mobDetail.stack }}</pre>
+            </div>
+            <div style="display:flex;gap:8px">
+              <span onClick="{{ copyStack }}" style="flex:1;text-align:center;font-family:'Space Grotesk';font-size:12.5px;font-weight:600;color:{{ copyFg }};border:1px solid {{ copyBd }};background:{{ copyBg }};border-radius:10px;padding:12px;cursor:pointer">{{ copyLabel }}</span>
+              <span onClick="{{ copyCtx }}" style="flex:1;text-align:center;font-family:'Space Grotesk';font-size:12.5px;font-weight:600;color:{{ copyCtxFg }};border:1px solid {{ copyCtxBd }};background:{{ copyCtxBg }};border-radius:10px;padding:12px;cursor:pointer">{{ copyCtxLabel }}</span>
+            </div>
+          </div>
+          <span style="background:#5f7a2c;color:#fff;font:600 14px 'Space Grotesk';padding:13px;border-radius:11px;text-align:center">Çözüldü işaretle</span>
+          <span style="font:400 10.5px/1.5 'Karla';color:#8b9086;text-align:center">Silme yok — kayıt kalır, yalnız odaktan çıkar.</span>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:280px;max-width:400px;background:#fff;border:1.5px dashed #b3b7ac;border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#22251f">Web / mobil ayrımı</span>
+        <ul style="margin:0;padding-left:18px;font:400 12.5px/1.75 'Karla';color:#6a7065">
+          <li><strong>Web</strong> → dört metrik paneli yan yana, üç trend karşılaştırmalı, hata tablosu tam sütunlu, stack geniş.</li>
+          <li><strong>Mobil</strong> → hüküm ve son hatalar üstte; sunucu özeti dört satır, tek trend (disk) en altta.</li>
+          <li><strong>Kural</strong> → ölçüm yaşı her iki yüzeyde görünür; <code>null</code> “bilinmiyor” yazılır; stack ve bağlam telefonda da kopyalanabilir.</li>
+          <li><strong>Yok</strong> → grafik panosu, ham log akışı, eşik ayarı, hata silme, kişisel veri.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ KOD LİSTESİ ══════════ -->
+  <div style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:22px;max-width:1360px;box-sizing:border-box">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h2 style="margin:0;font:600 21px 'Space Grotesk';color:#22251f">Sayfanın komponent kodları</h2>
+      <p style="margin:0;font:400 13.5px/1.65 'Karla';color:#6a7065;max-width:900px">Operasyon evreni dizisi <strong>O19</strong>'da bitiyordu; bu sayfanın yeni parçaları <strong>O20–O25</strong> aralığını aldı. Mevcut parçalar kendi kodlarıyla anılır, yeniden tanımlanmaz. Listede tekrar eden numara yok. Envanterdeki tam tanımlar: <a href="Komponent Envanteri - Operasyon.dc.html">§6 · Sistem sağlığı</a></p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:0">
+      <sc-for list="{{ codes }}" as="c" hint-placeholder-count="12">
+        <div style="display:flex;flex-direction:column;gap:4px;border-bottom:1px solid #f0f1ec;padding:11px 0">
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+            <span style="font-family:'Space Grotesk';font-weight:600;font-size:16px;color:{{ c.fg }}">{{ c.code }} · {{ c.name }}</span>
+            <span style="font:600 10px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:{{ c.tagFg }};background:{{ c.tagBg }};border:1px solid {{ c.tagBd }};border-radius:5px;padding:3px 8px">{{ c.tag }}</span>
+          </div>
+          <span style="font-family:'Karla';font-weight:400;font-size:13.5px;line-height:1.6;color:#6a7065">{{ c.desc }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid #e6e7e1;padding-top:18px">
+      <span style="font:600 16px 'Space Grotesk';color:#22251f">Değişen mevcut komponentler — etkisi</span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065"><strong style="color:#22251f">O1 · AdminSidebar</strong> — “Sistem” bölümüne <code>sistem</code> maddesi eklendi (ikon: çerçeve içinde nabız). Ekleme geriye dönük uyumlu: <code>active</code> prop'u eşleşmeyen 14 sayfa aynı görünür, yalnız rayda bir madde daha çıkar. <code>active</code> seçenek listesi güncellendi.</span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065"><strong style="color:#22251f">O4 · Veri tablosu</strong> — kendisi değişmedi; bu sayfa <strong>O23</strong> ile sayfalamalı varyantını kullanıyor (sonsuz kaydırma yerine sayfalama, sıra son görülmeye sabit). O4'ü kullanan Siparişler / Stok / Para sayfaları etkilenmez.</span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065"><strong style="color:#22251f">O9 · Dialog</strong> — kural aynı: hata detayı yeni kabuk açmaz, O9'un kaydırılır gövdesini kullanır. Dialog artık <strong>ikincil yol</strong>: masaüstünde asıl okuma yüzeyi <strong>O25</strong>, dialog listeden hızlı bakış ve telefon için kalır.</span>
+      <span style="font:400 13.5px/1.65 'Karla';color:#6a7065"><strong style="color:#22251f">O24 · Stack / bağlam bloğu</strong> — üç yerde aynı bileşen: O25'in geniş sütununda (mono 12,5px, 300–420px), O9 dialogunda (11,5px, 220px) ve mobil kartta (10,5px, 150px). Ölçü değişir, davranış değişmez: satır kırılmaz, iki eksende kaydırılır, kopyalanır.</span>
+    </div>
+  </div>
+
+  <!-- O9 · HATA DETAY DIALOGU -->
+  <sc-if value="{{ detailOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDetail }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:660px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f;max-height:86vh">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:flex-start;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:7px;margin-right:auto;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-family:'Space Grotesk';font-weight:600;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:{{ detail.lvFg }};background:{{ detail.lvBg }};border:1px solid {{ detail.lvBd }};border-radius:5px;padding:3px 8px">{{ detail.level }}</span>
+              <span style="font:400 11.5px 'IBM Plex Mono';color:#6a7065">{{ detail.source }}</span>
+              <sc-if value="{{ detail.reg }}" hint-placeholder-val="{{ false }}">
+                <span style="font:600 10px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#8a6410;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:5px;padding:3px 8px">geri geldi</span>
+              </sc-if>
+            </div>
+            <span style="font-family:'Space Grotesk';font-weight:600;font-size:17px;line-height:1.35;text-wrap:pretty">{{ detail.message }}</span>
+          </div>
+          <span onClick="{{ closeDetail }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer;flex:none">✕</span>
+        </div>
+        <div style="overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+          <sc-if value="{{ detail.reg }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:flex-start;gap:9px;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:11px 14px">
+              <span style="color:#9a6416;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v5h5"></path></svg></span>
+              <span style="font:500 12px/1.55 'Karla';color:#8a6410">{{ detail.regNote }} Bu satır yeni açıldı — “hiç çözülmemiş bir hata” değil, geri gelmiş bir hata.</span>
+            </div>
+          </sc-if>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;border:1px solid #e6e7e1;border-radius:10px;padding:14px 16px">
+            <sc-for list="{{ detail.meta }}" as="k" hint-placeholder-count="6">
+              <div style="display:flex;align-items:baseline;gap:10px">
+                <span style="font:400 11.5px 'Karla';color:#8b9086;width:96px;flex:none">{{ k.k }}</span>
+                <span style="font-family:'IBM Plex Mono';font-weight:500;font-size:12px;color:#3a3f37;flex:1;word-break:break-all">{{ k.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <!-- O24 · STACK / BAĞLAM BLOĞU -->
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font:600 12.5px 'Space Grotesk';margin-right:auto">Stack</span>
+              <span onClick="{{ copyStack }}" style="font-family:'Space Grotesk';font-size:11.5px;font-weight:600;color:{{ copyFg }};border:1px solid {{ copyBd }};background:{{ copyBg }};border-radius:7px;padding:6px 11px;cursor:pointer">{{ copyLabel }}</span>
+            </div>
+            <div style="border:1px solid #e0e2da;background:#f8f9f5;border-radius:9px;padding:12px 14px;max-height:220px;overflow:auto">
+              <pre style="margin:0;font:400 11.5px/1.7 'IBM Plex Mono';color:#3a3f37;white-space:pre;min-width:max-content">{{ detail.stack }}</pre>
+            </div>
+            <span style="font:400 11px 'Karla';color:#9aa094">Taşmadan kaydırılır; tam metin kopyalanabilir. Ham log akışı burada değil — süreç yöneticisinde durur.</span>
+          </div>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5;flex-wrap:wrap">
+          <span style="font:400 11.5px 'Karla';color:#8b9086;margin-right:auto">{{ detail.footNote }}</span>
+          <span onClick="{{ closeDetail }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 16px;cursor:pointer">Kapat</span>
+          <sc-if value="{{ detail.canResolve }}" hint-placeholder-val="{{ true }}">
+            <span onClick="{{ resolveDetail }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 18px;cursor:pointer">Çözüldü işaretle</span>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;hal&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;iyi&quot;,&quot;options&quot;:[&quot;iyi&quot;,&quot;uyari&quot;,&quot;kritik&quot;,&quot;bayat&quot;,&quot;bilinmiyor&quot;,&quot;hatasiz&quot;,&quot;yeni&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Durum&quot;},&quot;win&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;d1&quot;,&quot;options&quot;:[&quot;m10&quot;,&quot;h1&quot;,&quot;d1&quot;,&quot;d7&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Trend&quot;}}">
+const OLIVE='#5f7a2c', OLIVED='#4a6121', OLIVEBG='#eef4e2', OLIVEBD='#cdd8b6', OLIVEG='#a9c46b';
+const AMB='#9a6416', AMBD='#8a6410', AMBBG='#fdf1e3', AMBBD='#ecd9b4', AMBDOT='#c98a2e';
+const RED='#a5443c', REDD='#8a3a33', REDBG='#fbe9e7', REDBD='#e2c4c0', REDDOT='#c2571f';
+const BLUE='#3a6b8a', BLUEBG='#e6eef3', BLUEBD='#bcd0e0';
+const INK='#22251f', INK2='#3a3f37', TXT='#6a7065', MUT='#8b9086', PAS='#9aa094';
+
+const STACKS = {
+  cron: "Error: connect ETIMEDOUT 51.15.204.88:443\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1595:16)\n    at Object.onceWrapper (node:events:634:26)\n    at TLSSocket.emit (node:events:531:35)\n    at /srv/lezzet/backend/src/jobs/stok-sync.ts:118:22\n    at async runJob (/srv/lezzet/backend/src/queue/runner.ts:64:5)\n    at async processTick (/srv/lezzet/backend/src/queue/runner.ts:31:9)\n    at async Timeout._onTimeout (/srv/lezzet/backend/src/queue/scheduler.ts:47:7)",
+  lock: "LockTimeoutError: could not acquire lock \"cart:lock\" within 2000ms\n    at withLock (/srv/lezzet/web/src/lib/lock.ts:44:11)\n    at updateCartLine (/srv/lezzet/web/src/actions/cart.ts:96:20)\n    at async POST (/srv/lezzet/web/src/app/api/cart/update/route.ts:22:5)\n    at async runAction (/srv/lezzet/web/src/lib/action.ts:58:12)",
+  sig: "WebhookSignatureVerificationError: No signatures found matching the expected signature for payload\n    at verifyHeader (/srv/lezzet/backend/node_modules/stripe/lib/Webhooks.js:128:15)\n    at constructEvent (/srv/lezzet/backend/node_modules/stripe/lib/Webhooks.js:24:14)\n    at /srv/lezzet/backend/src/http/webhooks/stripe.ts:31:26\n    at Layer.handle (/srv/lezzet/backend/node_modules/express/lib/router/layer.js:95:5)",
+  slow: "SlowResponseWarning: /katalog rendered in 3184ms (threshold 3000ms)\n    at reportSlow (/srv/lezzet/web/src/lib/telemetry.ts:71:9)\n    at renderPage (/srv/lezzet/web/src/app/katalog/page.tsx:118:3)\n    — kayıt: 42 ürün, 6 filtre, önbellek: MISS",
+  route: "UpstreamError: 502 Bad Gateway from route-service\n    at assignCourier (/srv/lezzet/backend/src/http/routes/assign.ts:57:13)\n    at async handler (/srv/lezzet/backend/src/http/routes/index.ts:24:5)\n    at async dispatch (/srv/lezzet/backend/src/http/server.ts:88:9)\n    — upstream: http://127.0.0.1:7301/plan (bağlantı reddedildi)",
+  mail: "RetryScheduled: 2 job(s) requeued in queue \"mail\"\n    at requeue (/srv/lezzet/backend/src/queue/runner.ts:132:7)\n    at async processTick (/srv/lezzet/backend/src/queue/runner.ts:31:9)",
+  caddy: "UpstreamUnavailable: dial tcp 127.0.0.1:3000: connect: connection refused\n    at reverseProxy (caddy/modules/caddyhttp/reverseproxy/reverseproxy.go:1102)\n    at ServeHTTP (caddy/modules/caddyhttp/server.go:392)\n    — deneme 3/3, tüm upstream'ler kapalı",
+  disk: "Error: ENOSPC: no space left on device, write\n    at writeSync (node:fs:936:3)\n    at WriteStream._write (node:internal/fs/streams:452:5)\n    at /srv/lezzet/backend/src/media/store.ts:88:14\n    — hedef: /var/lib/uploads (disk %96 dolu)",
+  pay: "TransactionError: could not serialize access due to concurrent update\n    at Query.run (/srv/lezzet/backend/src/db/query.ts:212:11)\n    at recordPayment (/srv/lezzet/backend/src/domain/payment.ts:143:9)\n    at async POST (/srv/lezzet/backend/src/http/payments/record.ts:41:5)",
+  img: "ValidationError: uzun kenar 1440 px < 2000 px\n    at validateUpload (/srv/lezzet/backend/src/media/validate.ts:29:11)",
+  pm2: "ProcessRestartLoop: backend-cron exited with code 1 (12 restarts in 6h)\n    at ProcessContainer (/usr/lib/node_modules/pm2/lib/ProcessContainer.js:303:25)",
+  cert: "RenewalScriptError: acme.sh exited with status 2\n    at /srv/lezzet/ops/renew-cert.sh:14",
+};
+
+const ERR = {
+  cron:  { id:'e1', level:'error',   source:'backend-cron', message:'Cron: stok senkronizasyonu tamamlanamadı — tedarikçi yanıtı zaman aşımına düştü', path:'', count:34,  first:'24 Tem 02:10', last:'30 Tem 04:10', ctx:[['iş','stok-sync'],['deneme','3 / 3'],['tedarikçi','SUP-114']], stack:STACKS.cron },
+  lock:  { id:'e2', level:'warning', source:'web-action',   message:'Sepet güncelleme: stok kilidi 2 sn içinde alınamadı, işlem yeniden denendi', path:'/api/cart/update', count:212, first:'18 Tem 11:04', last:'30 Tem 09:42', ctx:[['orderId','—'],['kilit','cart:lock'],['yeniden deneme','başarılı']], stack:STACKS.lock },
+  sig:   { id:'e3', level:'error',   source:'webhook',      message:'Stripe webhook imza doğrulaması başarısız — olay işlenmedi', path:'/webhooks/stripe', count:7, first:'29 Tem 16:20', last:'30 Tem 08:15', ctx:[['orderId','SP-24188'],['olay','payment_intent.succeeded'],['imza','eşleşmedi']], stack:STACKS.sig },
+  slow:  { id:'e4', level:'warning', source:'web-server',   message:'Yanıt süresi 3 sn üzerinde: katalog sayfası (3,18 sn)', path:'/katalog', count:48, first:'21 Tem 09:30', last:'30 Tem 07:58', ctx:[['önbellek','MISS'],['ürün','42'],['filtre','6']], stack:STACKS.slow },
+  route: { id:'e5', level:'error',   source:'backend-http',  message:'Kurye atama: rota servisi 502 döndü, atama yapılamadı', path:'/api/routes/assign', count:5, first:'30 Tem 05:48', last:'30 Tem 06:31', ctx:[['orderId','SP-24176'],['upstream','route-service'],['deneme','3 / 3']], stack:STACKS.route, reg:'26 Tem\'de çözüldü işaretlenmişti (Selim A.); 30 Tem\'de yeniden geldi.' },
+  mail:  { id:'e6', level:'warning', source:'backend-cron',  message:'E-posta kuyruğu: 2 iş yeniden kuyruğa alındı', path:'', count:19, first:'22 Tem 08:00', last:'29 Tem 23:05', ctx:[['kuyruk','mail'],['iş','2']], stack:STACKS.mail },
+  caddy: { id:'e7', level:'fatal',   source:'web-server',   message:'Caddy ters vekil yanıt vermiyor: upstream bağlantısı reddedildi — site erişilemez', path:'/', count:96, first:'30 Tem 09:12', last:'30 Tem 09:51', ctx:[['upstream','127.0.0.1:3000'],['deneme','3 / 3']], stack:STACKS.caddy },
+  dsk:   { id:'e8', level:'fatal',   source:'backend-http',  message:'Disk yazma hatası: /var/lib/uploads üzerinde alan kalmadı', path:'/api/media/upload', count:41, first:'30 Tem 08:40', last:'30 Tem 09:49', ctx:[['hedef','/var/lib/uploads'],['disk','%96']], stack:STACKS.disk },
+  pay:   { id:'e9', level:'error',   source:'backend-http',  message:'Ödeme kaydı yazılamadı, sipariş askıda kaldı', path:'/api/payments/record', count:12, first:'30 Tem 08:52', last:'30 Tem 09:44', ctx:[['orderId','SP-24193'],['tablo','payments']], stack:STACKS.pay },
+  img:   { id:'r1', level:'warning', source:'web-action',   message:'Görsel yükleme: 2000 px altı dosya reddedildi', path:'/api/media/upload', count:63, first:'12 Tem 10:12', last:'27 Tem 15:40', ctx:[['kural','uzun kenar ≥ 2000 px']], stack:STACKS.img, res:'28 Tem · Selim A.' },
+  pm2:   { id:'r2', level:'error',   source:'backend-cron',  message:'PM2: backend-cron 6 saatte 12 kez yeniden başladı', path:'', count:12, first:'26 Tem 01:30', last:'26 Tem 07:20', ctx:[['süreç','backend-cron'],['çıkış kodu','1']], stack:STACKS.pm2, res:'27 Tem · Selim A.' },
+  cert:  { id:'r3', level:'error',   source:'backend-cron',  message:'Sertifika yenileme betiği hata verdi', path:'', count:3, first:'20 Tem 03:00', last:'21 Tem 03:00', ctx:[['betik','renew-cert.sh'],['çıkış kodu','2']], stack:STACKS.cert, res:'22 Tem · Selim A.' },
+};
+
+const BASE_OPEN = ['lock','cron','sig','slow','route','mail'];
+const KRITIK_OPEN = ['caddy','dsk','pay','lock','cron','sig','slow','route','mail'];
+const RESOLVED = ['img','pm2','cert'];
+
+const HAL = {
+  iyi: {
+    verdict:'iyi', title:'İyi', ageMin:2, load:[0.42,0.55,0.61], cpu:4,
+    memTotal:7936, memUsed:3120, memAvail:4410, swapTotal:2048, swapUsed:0,
+    diskTotal:78, diskUsed:41, diskPct:53, uptime:1209600,
+    pm2:[{name:'web-server',status:'online',restarts:0,memoryMb:214,cpuPct:1.2},{name:'backend-http',status:'online',restarts:0,memoryMb:168,cpuPct:0.8},{name:'backend-cron',status:'online',restarts:0,memoryMb:96,cpuPct:0.2}],
+    webUp:true, caddyActive:true, certDaysLeft:61, errorLogsLastHour:0, failedJobsLastHour:0,
+    reasons:[], open:BASE_OPEN.slice(0,2), resolved:RESOLVED,
+    summary:'Tüm eşikler altında: disk %53 · kullanılabilir bellek %56 · yük çekirdek başına %14 · swap kullanılmıyor · üç süreç online, yeniden başlama yok · sertifika 61 gün.',
+  },
+  uyari: {
+    verdict:'uyari', title:'Uyarı', ageMin:2, load:[1.94,2.31,2.05], cpu:4,
+    memTotal:7936, memUsed:6180, memAvail:1290, swapTotal:2048, swapUsed:340,
+    diskTotal:78, diskUsed:66, diskPct:84, uptime:1209600,
+    pm2:[{name:'web-server',status:'online',restarts:0,memoryMb:264,cpuPct:3.4},{name:'backend-http',status:'online',restarts:3,memoryMb:402,cpuPct:6.1},{name:'backend-cron',status:'online',restarts:0,memoryMb:112,cpuPct:0.4}],
+    webUp:true, caddyActive:true, certDaysLeft:12, errorLogsLastHour:6, failedJobsLastHour:2,
+    reasons:[
+      {tag:'disk', t:'Disk %84 dolu (eşik %80) — üç günde %60\'tan geldi, yönü yukarı.', tone:'u'},
+      {tag:'süreç', t:'backend-http 3 kez yeniden başladı; durumu “online” görünüyor.', tone:'u'},
+      {tag:'swap', t:'Swap kullanımda: 340 MB. Sunucu çalışır ama yavaşlamıştır.', tone:'u'},
+      {tag:'sertifika', t:'Sertifika 12 gün sonra doluyor (eşik 14 gün).', tone:'u'},
+    ],
+    open:BASE_OPEN, resolved:RESOLVED,
+  },
+  kritik: {
+    verdict:'kritik', title:'Kritik', ageMin:1, load:[9.82,8.44,6.10], cpu:4,
+    memTotal:7936, memUsed:7480, memAvail:280, swapTotal:2048, swapUsed:1810,
+    diskTotal:78, diskUsed:75, diskPct:96, uptime:2640,
+    pm2:[{name:'web-server',status:'errored',restarts:14,memoryMb:88,cpuPct:0.0},{name:'backend-http',status:'online',restarts:6,memoryMb:512,cpuPct:41.2},{name:'backend-cron',status:'stopped',restarts:2,memoryMb:0,cpuPct:0.0}],
+    webUp:false, caddyActive:false, certDaysLeft:12, errorLogsLastHour:128, failedJobsLastHour:14,
+    reasons:[
+      {tag:'servis', t:'Caddy ters vekil kapalı — süreçler ne görünürse görünsün site dışarıdan erişilemez.', tone:'k'},
+      {tag:'disk', t:'Disk %96 dolu: yükleme ve kayıt yazma hataları başladı.', tone:'k'},
+      {tag:'bellek', t:'Kullanılabilir bellek 280 MB; swap 1,8 GB — sunucu takas üzerinde sürünüyor.', tone:'k'},
+      {tag:'süreç', t:'web-server errored (14 yeniden başlama) · backend-cron stopped.', tone:'k'},
+      {tag:'uygulama', t:'Son bir saatte 128 hata kaydı, 14 başarısız iş.', tone:'k'},
+      {tag:'yeniden başlatma', t:'Çalışma süresi 44 dakika — beklenmeyen yeniden başlatma.', tone:'k'},
+    ],
+    open:KRITIK_OPEN, resolved:RESOLVED,
+  },
+  bayat: {
+    verdict:'bayat', title:'İzleme durdu', ageMin:23, load:[0.51,0.60,0.58], cpu:4,
+    memTotal:7936, memUsed:3240, memAvail:4290, swapTotal:2048, swapUsed:0,
+    diskTotal:78, diskUsed:42, diskPct:54, uptime:1209600,
+    pm2:[{name:'web-server',status:'online',restarts:0,memoryMb:218,cpuPct:1.1},{name:'backend-http',status:'online',restarts:0,memoryMb:172,cpuPct:0.9},{name:'backend-cron',status:'online',restarts:0,memoryMb:98,cpuPct:0.2}],
+    webUp:true, caddyActive:true, certDaysLeft:61, errorLogsLastHour:0, failedJobsLastHour:0,
+    reasons:[
+      {tag:'ölçüm', t:'Son sağlık görüntüsü 23 dakika önce yazıldı; görüntü iki dakikada bir gelmeliydi.', tone:'k'},
+      {tag:'geçersiz', t:'Aşağıdaki değerler 23 dakika öncesine ait — şu anki durumu göstermiyor.', tone:'k'},
+      {tag:'sebep', t:'Ya ölçüm işi durdu ya sunucu yanıt vermiyor. İkisi de arıza sayılır.', tone:'k'},
+    ],
+    open:BASE_OPEN.slice(0,3), resolved:RESOLVED, stale:true,
+  },
+  bilinmiyor: {
+    verdict:'uyari', title:'Uyarı', ageMin:2, load:[0.48,0.52,0.57], cpu:4,
+    memTotal:7936, memUsed:3180, memAvail:4360, swapTotal:2048, swapUsed:0,
+    diskTotal:null, diskUsed:null, diskPct:null, uptime:1209600,
+    pm2:null, webUp:true, caddyActive:true, certDaysLeft:null, errorLogsLastHour:1, failedJobsLastHour:0,
+    reasons:[
+      {tag:'ölçülemedi', t:'Disk ölçülemedi — “%0 dolu” değil, bilinmiyor.', tone:'b'},
+      {tag:'ölçülemedi', t:'PM2 okunamadı: süreç listesi boş değil, alınamadı.', tone:'b'},
+      {tag:'ölçülemedi', t:'Sertifika süresi okunamadı.', tone:'b'},
+      {tag:'hüküm', t:'Üç ölçüm eksik olduğu için hüküm “iyi” olamaz: göremediğimizi sorunsuz saymıyoruz.', tone:'u'},
+    ],
+    open:BASE_OPEN.slice(0,3), resolved:RESOLVED,
+  },
+  hatasiz: {
+    verdict:'iyi', title:'İyi', ageMin:2, load:[0.31,0.38,0.42], cpu:4,
+    memTotal:7936, memUsed:2840, memAvail:4720, swapTotal:2048, swapUsed:0,
+    diskTotal:78, diskUsed:39, diskPct:50, uptime:1814400,
+    pm2:[{name:'web-server',status:'online',restarts:0,memoryMb:204,cpuPct:0.9},{name:'backend-http',status:'online',restarts:0,memoryMb:160,cpuPct:0.6},{name:'backend-cron',status:'online',restarts:0,memoryMb:92,cpuPct:0.2}],
+    webUp:true, caddyActive:true, certDaysLeft:74, errorLogsLastHour:0, failedJobsLastHour:0,
+    reasons:[], open:[], resolved:RESOLVED,
+    summary:'Tüm eşikler altında: disk %50 · kullanılabilir bellek %59 · yük çekirdek başına %10 · üç süreç online · 21 gündür kesintisiz.',
+    emptyKind:'temiz',
+  },
+  yeni: {
+    verdict:'iyi', title:'İyi', ageMin:2, load:[0.12,0.15,0.14], cpu:4,
+    memTotal:7936, memUsed:1180, memAvail:6420, swapTotal:2048, swapUsed:0,
+    diskTotal:78, diskUsed:9, diskPct:12, uptime:14400,
+    pm2:[{name:'web-server',status:'online',restarts:0,memoryMb:142,cpuPct:0.4},{name:'backend-http',status:'online',restarts:0,memoryMb:118,cpuPct:0.3},{name:'backend-cron',status:'online',restarts:0,memoryMb:74,cpuPct:0.1}],
+    webUp:true, caddyActive:true, certDaysLeft:89, errorLogsLastHour:0, failedJobsLastHour:0,
+    reasons:[], open:[], resolved:[],
+    summary:'Tüm eşikler altında, ama geçmiş yok: kayıt 4 saat önce başladı. “Hata yok” demek için henüz yeterli süre geçmedi.',
+    emptyKind:'yeni', fresh:true,
+  },
+};
+
+// pencere başındaki değer → şimdiki değer (yön okumak için)
+const TREND = {
+  iyi:        { disk:{m10:53.2,h1:53.1,d1:52.4,d7:49.6,now:53.4}, mem:{m10:44,h1:43,d1:41,d7:39,now:44}, load:{m10:13,h1:15,d1:17,d7:16,now:14} },
+  uyari:      { disk:{m10:83.8,h1:83.4,d1:79.6,d7:60.2,now:84.1}, mem:{m10:76,h1:74,d1:68,d7:54,now:78}, load:{m10:54,h1:49,d1:38,d7:31,now:58} },
+  kritik:     { disk:{m10:95.2,h1:92.8,d1:86.1,d7:61.4,now:96.3}, mem:{m10:92,h1:88,d1:74,d7:57,now:96}, load:{m10:180,h1:142,d1:64,d7:34,now:211} },
+  bayat:      { disk:{m10:53.9,h1:53.8,d1:53.1,d7:50.2,now:54.0}, mem:{m10:45,h1:44,d1:42,d7:40,now:45}, load:{m10:15,h1:16,d1:18,d7:17,now:15} },
+  bilinmiyor: { disk:null, mem:{m10:43,h1:42,d1:41,d7:38,now:43}, load:{m10:12,h1:13,d1:15,d7:15,now:13} },
+  hatasiz:    { disk:{m10:50.1,h1:50.0,d1:49.8,d7:49.1,now:50.2}, mem:{m10:41,h1:40,d1:40,d7:38,now:41}, load:{m10:10,h1:10,d1:11,d7:11,now:10} },
+  yeni:       { disk:{m10:11.8,h1:11.2,d1:null,d7:null,now:12.0}, mem:{m10:14,h1:13,d1:null,d7:null,now:15}, load:{m10:4,h1:5,d1:null,d7:null,now:4} },
+};
+
+const WINS = [{k:'m10',l:'10 dk'},{k:'h1',l:'1 saat'},{k:'d1',l:'24 saat'},{k:'d7',l:'7 gün'}];
+const WINLABEL = {m10:'10 dk',h1:'1 saat',d1:'24 saat',d7:'7 gün'};
+const PAGE = 5;
+
+const nf = (n,d=0) => n.toLocaleString('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const gb = mb => nf(mb/1024,1)+' GB';
+
+class Component extends DCLogic {
+  state = { hal: HAL[this.props.hal] ? this.props.hal : 'iyi', win: WINLABEL[this.props.win] ? this.props.win : 'd1', tab:'acik', q:'', page:0, openId:null, resolved:{}, paused:false, copied:'', copiedCtx:'', copiedSel:'', view:'liste', selId:null };
+
+  set(p) { this.setState(p); }
+
+  copy(text, key) {
+    try { navigator.clipboard.writeText(text); } catch (e) {}
+    this.setState({ [key]: 'ok' });
+    clearTimeout(this['_t'+key]);
+    this['_t'+key] = setTimeout(() => this.setState({ [key]: '' }), 1600);
+  }
+
+  errObj(k) {
+    const e = ERR[k]; const r = this.state.resolved[e.id];
+    return Object.assign({}, e, { res: r || e.res });
+  }
+
+  series(spec, amp, seed) {
+    const a = spec[this.state.win], b = spec.now;
+    if (a === null || a === undefined) return null;
+    const n = 46, pts = [];
+    for (let i = 0; i < n; i++) {
+      const t = i/(n-1);
+      const w = Math.sin(i*1.7+seed)*amp*0.5 + Math.sin(i*0.63+seed*2.1)*amp*0.34;
+      pts.push(Math.max(0.5, Math.min(100, a+(b-a)*t + w*(1-t*0.55))));
+    }
+    pts[n-1] = Math.max(0.5, Math.min(100, b));
+    return pts;
+  }
+
+  chart(title, spec, amp, seed, thrPct, fmt) {
+    const pts = this.series(spec, amp, seed);
+    if (!pts) return { title, now:'bilinmiyor', fg:AMB, area:'', line:'', fill:'transparent', stroke:AMBBD, thr:'%'+thrPct, caption:'Ölçüm alınamadı — çizilecek değer yok. Boş grafik “sıfır” demek değil.', capFg:AMBD };
+    const X = i => (i/(pts.length-1)*300).toFixed(1);
+    const Y = v => (72 - v/100*72).toFixed(1);
+    const line = pts.map((v,i) => X(i)+','+Y(v)).join(' ');
+    const a = spec[this.state.win], b = spec.now, d = b-a;
+    const hot = b >= thrPct;
+    const dir = Math.abs(d) < 1.2 ? 'yatay' : (d > 0 ? 'yükseliyor' : 'düşüyor');
+    const cap = WINLABEL[this.state.win]+': '+fmt(a)+' → '+fmt(b)+' · '+dir+(Math.abs(d) >= 1.2 ? ' ('+(d>0?'+':'−')+nf(Math.abs(d),1)+' puan)' : '');
+    return {
+      title, now: fmt(b), fg: hot ? REDD : INK,
+      area: 'M0,72 L'+line.split(' ').join(' L')+' L300,72 Z',
+      line, fill: hot ? 'rgba(165,68,60,.10)' : 'rgba(95,122,44,.10)',
+      stroke: hot ? RED : OLIVE, thr: '%'+thrPct,
+      caption: cap, capFg: dir === 'yatay' ? MUT : (d > 0 && hot ? REDD : TXT),
+    };
+  }
+
+  renderVals() {
+    const st = this.state, S = HAL[st.hal], stale = !!S.stale;
+    const V = S.verdict;
+
+    // ── hâl seçici
+    const haller = Object.keys(HAL).map(k => {
+      const on = k === st.hal;
+      const label = {iyi:'Her şey iyi',uyari:'Uyarı',kritik:'Kritik',bayat:'Bayat ölçüm',bilinmiyor:'Metrik alınamadı',hatasiz:'Hata yok',yeni:'Yeni kurulum'}[k];
+      return { label, pick: () => this.set({hal:k, page:0, openId:null, tab:'acik'}),
+        bg: on ? INK : '#fbfbf9', fg: on ? '#fbfbf9' : TXT, bd: on ? INK : '#d9dbd2' };
+    });
+
+    // ── hüküm şeridi
+    const loud = V === 'kritik' || V === 'bayat';
+    const vTheme = loud
+      ? { bg:REDD, bd:REDD, bdW:'1px', fg:'#fff', labelFg:'rgba(255,255,255,.72)', ageFg:'rgba(255,255,255,.82)', dot:'#f2c8c3', size:'40px', mob:'27px', pad:'22px 24px' }
+      : V === 'uyari'
+        ? { bg:AMBBG, bd:AMBBD, bdW:'1.5px', fg:AMBD, labelFg:AMB, ageFg:AMB, dot:AMBDOT, size:'34px', mob:'24px', pad:'20px 22px' }
+        : { bg:'#fbfbf9', bd:'#e0e2da', bdW:'1px', fg:INK, labelFg:MUT, ageFg:TXT, dot:OLIVEG, size:'28px', mob:'21px', pad:'18px 22px' };
+
+    const reasons = (S.reasons || []).map(r => {
+      const t = r.tone === 'k'
+        ? { bg:'rgba(255,255,255,.10)', bd:'rgba(242,200,195,.34)', fg:'#f7e4e2', tagBg:'rgba(255,255,255,.16)', tagFg:'#fff' }
+        : r.tone === 'b'
+          ? { bg:'#fff', bd:'#e0e2da', fg:INK2, tagBg:'#eef0ea', tagFg:TXT }
+          : { bg:'#fff', bd:AMBBD, fg:AMBD, tagBg:AMBBG, tagFg:AMB };
+      return { t:r.t, tag:r.tag, bg:t.bg, bd:t.bd, fg:t.fg, tagBg:t.tagBg, tagFg:t.tagFg };
+    });
+
+    const ageTxt = S.ageMin + ' dk önce ölçüldü';
+
+    // ── sunucu satırları
+    const load5 = S.load[1], loadPct = Math.round(load5/S.cpu*100);
+    const memPct = Math.round(S.memUsed/S.memTotal*100), availPct = Math.round(S.memAvail/S.memTotal*100);
+    const swapOn = S.swapUsed > 0;
+    const upDays = Math.floor(S.uptime/86400), upHours = Math.floor(S.uptime%86400/3600), upMin = Math.floor(S.uptime%3600/60);
+    const upTxt = upDays > 0 ? upDays+' gün '+upHours+' sa' : (upHours > 0 ? upHours+' sa '+upMin+' dk' : upMin+' dk');
+    const tone = (bad, warn) => bad ? {fg:REDD, bar:RED} : (warn ? {fg:AMBD, bar:AMBDOT} : {fg:INK, bar:OLIVEG});
+
+    const row = o => Object.assign({ pad:'0', rowBg:'transparent', ring:'none', tag:null, tagFg:AMB, tagBg:AMBBG, tagBd:AMBBD, hasBar:false, unknown:false, note:null, noteFg:TXT, valFg:INK, pct:'0%', bar:OLIVEG, thr:'' }, o);
+
+    const loadT = tone(loadPct >= 150, loadPct >= 80);
+    const memT = tone(availPct < 5, availPct < 15);
+    const diskT = S.diskPct === null ? null : tone(S.diskPct >= 90, S.diskPct >= 80);
+
+    const serverRows = [
+      row({ label:'Yük (1/5/15)', value:S.load.map(x => nf(x,2)).join(' · '), valFg:loadT.fg, hasBar:true,
+        pct: Math.min(100, loadPct)+'%', bar:loadT.bar, thr:'eşik: %100 / çekirdek',
+        note: S.cpu+' çekirdeğe oranla %'+loadPct+' — ham sayı tek başına bilgi değil.', noteFg:MUT }),
+      row({ label:'Bellek', value:gb(S.memAvail)+' kullanılabilir / '+gb(S.memTotal), valFg:memT.fg, hasBar:true,
+        pct:memPct+'%', bar:memT.bar, thr:'eşik: kullanılabilir < %15',
+        note:'Kullanılan '+gb(S.memUsed)+' · “kullanılabilir” ile “boş” aynı şey değil; eşik kullanılabilire bakar.', noteFg:MUT }),
+      row(swapOn
+        ? { label:'Swap', value:nf(S.swapUsed)+' MB / '+gb(S.swapTotal)+' kullanımda', valFg:AMBD, hasBar:true,
+            pct: Math.round(S.swapUsed/S.swapTotal*100)+'%', bar:AMBDOT, thr:'eşik: > 0 MB', tag:'swap\'ta',
+            note:'Ayrı bir haber: swap\'a düşmüş sunucu çalışır ama yavaşlamıştır.', noteFg:AMBD, pad:'8px 10px', rowBg:AMBBG }
+        : { label:'Swap', value:'0 MB / '+gb(S.swapTotal), valFg:TXT, note:'Takas kullanılmıyor.', noteFg:MUT }),
+      row(S.diskPct === null
+        ? { label:'Disk', value:'bilinmiyor', valFg:AMBD, tag:'ölçülemedi', unknown:true,
+            note:'Ölçüm alınamadı. Sıfır çizilmez — “%0 dolu” demek sağlıklı görünen bozuk bir ölçümdür.', noteFg:AMBD, pad:'8px 10px', rowBg:AMBBG }
+        : { label:'Disk', value:nf(S.diskUsed)+' / '+nf(S.diskTotal)+' GB · %'+S.diskPct, valFg:diskT.fg, hasBar:true,
+            pct:S.diskPct+'%', bar:diskT.bar, thr:'eşik: %80',
+            pad: st.hal === 'uyari' ? '8px 10px' : '0', rowBg: st.hal === 'uyari' ? '#fff' : 'transparent',
+            ring: st.hal === 'uyari' ? '0 0 0 2px '+AMBBD : 'none',
+            tag: st.hal === 'uyari' ? 'yeni ölçüm' : null }),
+      row({ label:'Çalışma süresi', value:upTxt, valFg: S.uptime < 3600 ? AMBD : TXT,
+        tag: S.uptime < 3600 ? 'yeniden başladı' : null,
+        note: S.uptime < 3600 ? 'Beklenmeyen yeniden başlatma: sunucu '+upTxt+' önce açıldı.' : null, noteFg:AMBD }),
+    ];
+
+    // ── süreçler
+    const pm2 = S.pm2;
+    const procs = (pm2 || []).map(p => {
+      const bad = p.status !== 'online', many = p.restarts >= 3;
+      return { name:p.name, status:p.status, restarts:nf(p.restarts),
+        dot: bad ? RED : OLIVEG, stFg: bad ? REDD : TXT,
+        rsFg: p.restarts === 0 ? PAS : (many ? REDD : AMBD),
+        mem: p.memoryMb ? nf(p.memoryMb)+' MB' : '—', cpu:nf(p.cpuPct,1)+'%' };
+    });
+    const worst = (pm2 || []).reduce((a,p) => Math.max(a, p.restarts), 0);
+    const anyDown = (pm2 || []).some(p => p.status !== 'online');
+    const procNote = pm2 === null ? null : (anyDown
+      ? 'web-server errored, backend-cron stopped — “online” olmayan süreç, sitenin bir kısmının çalışmadığı anlamına gelir.'
+      : (worst >= 3 ? 'Yeniden başlama sayısı sessiz arızanın en iyi göstergesi: süreç “online” görünür ama '+worst+' kez düşüp kalkmış.' : null));
+
+    // ── servisler
+    const cert = S.certDaysLeft;
+    const services = [
+      S.webUp
+        ? { label:'Web', value:'ayakta', fg:OLIVED, sub:'Sunucunun içinden denetim yanıt verdi.', bg:OLIVEBG, bd:OLIVEBD, labelFg:OLIVE, subFg:OLIVED }
+        : { label:'Web', value:'yanıt yok', fg:REDD, sub:'İç denetim başarısız.', bg:REDBG, bd:REDBD, labelFg:RED, subFg:REDD },
+      S.caddyActive
+        ? { label:'Caddy', value:'çalışıyor', fg:OLIVED, sub:'Ters vekil ayakta.', bg:OLIVEBG, bd:OLIVEBD, labelFg:OLIVE, subFg:OLIVED }
+        : { label:'Caddy', value:'kapalı', fg:REDD, sub:'Ters vekil düştü: süreçler “online” görünse de site erişilemez.', bg:REDBG, bd:REDBD, labelFg:RED, subFg:REDD },
+      cert === null
+        ? { label:'Sertifika', value:'bilinmiyor', fg:AMBD, sub:'Kalan gün okunamadı — sıfır değil.', bg:AMBBG, bd:AMBBD, labelFg:AMB, subFg:AMBD }
+        : cert <= 14
+          ? { label:'Sertifika', value:cert+' gün', fg:AMBD, sub:'Yenileme penceresi açıldı (eşik 14 gün).', bg:AMBBG, bd:AMBBD, labelFg:AMB, subFg:AMBD }
+          : { label:'Sertifika', value:cert+' gün', fg:INK, sub:'Otomatik yenileme çalışıyor.', bg:'#fbfbf9', bd:'#e6e7e1', labelFg:MUT, subFg:MUT },
+    ];
+
+    const appRows = [
+      { label:'Hata kaydı', value:nf(S.errorLogsLastHour), fg: S.errorLogsLastHour > 20 ? REDD : (S.errorLogsLastHour > 0 ? AMBD : INK), bg: S.errorLogsLastHour > 20 ? REDBG : 'transparent' },
+      { label:'Başarısız iş', value:nf(S.failedJobsLastHour), fg: S.failedJobsLastHour > 5 ? REDD : (S.failedJobsLastHour > 0 ? AMBD : INK), bg: S.failedJobsLastHour > 5 ? REDBG : 'transparent' },
+    ];
+
+    // ── trend
+    const T = TREND[st.hal];
+    const trendEmpty = !!S.fresh && (st.win === 'd1' || st.win === 'd7');
+    const pctF = v => '%'+nf(v,1);
+    const charts = trendEmpty ? [] : [
+      this.chart('Disk doluluğu', T.disk || {}, 0.6, 1, 80, pctF),
+      this.chart('Bellek kullanımı', T.mem, 4, 3, 85, v => '%'+nf(v,0)),
+      this.chart('Yük · çekirdek başına', T.load, 14, 5, 100, v => '%'+nf(v,0)),
+    ];
+
+    // ── hatalar
+    const openKeys = S.open, resKeys = S.resolved;
+    const movedIds = Object.keys(st.resolved);
+    const openList = openKeys.map(k => this.errObj(k)).filter(e => !st.resolved[e.id]);
+    const resList = resKeys.map(k => this.errObj(k)).concat(openKeys.map(k => this.errObj(k)).filter(e => st.resolved[e.id]));
+    const active = st.tab === 'acik' ? openList : resList;
+    const q = st.q.trim().toLocaleLowerCase('tr');
+    const filtered = q ? active.filter(e => (e.message+' '+e.source+' '+e.path).toLocaleLowerCase('tr').includes(q)) : active;
+    const pages = Math.max(1, Math.ceil(filtered.length/PAGE));
+    const page = Math.min(st.page, pages-1);
+    const slice = filtered.slice(page*PAGE, page*PAGE+PAGE);
+
+    const lvTheme = l => l === 'fatal' ? {fg:'#fff', bg:REDD, bd:REDD, dot:REDD, label:'fatal'}
+      : l === 'error' ? {fg:REDD, bg:REDBG, bd:REDBD, dot:RED, label:'error'}
+      : {fg:AMBD, bg:AMBBG, bd:AMBBD, dot:AMBDOT, label:'warning'};
+
+    const mkRow = e => {
+      const th = lvTheme(e.level);
+      return { level:th.label, lvFg:th.fg, lvBg:th.bg, lvBd:th.bd, lvDot:th.dot,
+        message:e.message, source:e.source, path:e.path || null, pathSep: e.path ? ' · ' : '',
+        count:nf(e.count), first:e.first, last:e.last,
+        reg: !!e.reg && !e.res, regNote: e.reg && !e.res ? e.reg : null,
+        resolvedBy: e.res ? 'çözüldü · '+e.res : null,
+        canResolve: !e.res, doneMark: e.res ? true : false,
+        msgFg: e.level === 'fatal' ? REDD : INK,
+        cntFg: e.count >= 100 ? REDD : (e.count >= 20 ? AMBD : TXT),
+        lastFg: e.level === 'fatal' ? REDD : INK2,
+        rowBg: e.level === 'fatal' ? '#fdf5f4' : 'transparent',
+        open: () => this.set({openId:e.id}),
+        resolve: ev => { if (ev && ev.stopPropagation) ev.stopPropagation(); this.setState(s => ({ resolved: Object.assign({}, s.resolved, { [e.id]:'Bugün 10:04 · Selim A.' }), openId:null })); },
+      };
+    };
+
+    const rows = slice.map(mkRow);
+    const listEmpty = filtered.length === 0;
+
+    // ── geniş inceleme yüzeyi (O25)
+    const selBase = filtered.find(e => e.id === st.selId) || slice[0] || filtered[0] || null;
+    const incRows = slice.map(e => {
+      const r = mkRow(e), on = selBase && e.id === selBase.id;
+      return Object.assign(r, { select: () => this.set({selId:e.id}),
+        selBg: on ? '#eef0ea' : 'transparent', selEdge: on ? OLIVE : 'transparent' });
+    });
+    const emptyOf = () => {
+      if (q) return { title:'Aramaya uyan kayıt yok', body:'“'+st.q+'” için mesaj, kaynak ve yol alanlarında eşleşme bulunamadı. Arama kutusunu temizleyip listeye dönebilirsiniz.', meta:active.length+' kayıt gizlendi', icon:'search' };
+      if (st.tab === 'cozulmus') return { title:'Çözüldü işaretlenmiş kayıt yok', body:'Bir hatayı kapattığınızda burada, kimin kapattığıyla birlikte durur. Silinmez.', meta:'saklama süresi 30 gün', icon:'check' };
+      if (S.emptyKind === 'yeni') return { title:'Kayıt yeni başladı', body:'Hata kaydı 4 saat önce açıldı. Şu an açık hata yok, ama bu “sistem sağlam” demek için yeterli süre değil — ilk tam gün dolmadan sessizlik bilgi taşımaz.', meta:'kayıt başlangıcı: bugün 06:12 · 4 sa 0 dk', icon:'new' };
+      return { title:'Açık hata yok', body:'Kayıt 14 gündür kesintisiz tutuluyor ve son 6 gündür yeni hata türü açılmadı. Sessizlik burada bilgi: izleme çalışıyor, ölçüm 2 dk önce geldi.', meta:'son çözülen: 28 Tem · Selim A. · 3 kayıt arşivde', icon:'check' };
+    };
+    const emp = emptyOf();
+    const E = React.createElement;
+    const svg = (...ch) => E('svg', {width:20, height:20, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:1.9, strokeLinecap:'round', strokeLinejoin:'round'}, ...ch);
+    const emptyIcons = {
+      check: svg(E('path',{key:1,d:'M20 6 9 17l-5-5'})),
+      search: svg(E('circle',{key:1,cx:11,cy:11,r:7}), E('path',{key:2,d:'m21 21-4.3-4.3'})),
+      new: svg(E('circle',{key:1,cx:12,cy:12,r:9}), E('path',{key:2,d:'M12 8v4l3 2'})),
+    };
+    const emptyTone = emp.icon === 'check' ? {bg:OLIVEBG, fg:OLIVED} : (emp.icon === 'new' ? {bg:BLUEBG, fg:BLUE} : {bg:'#eef0ea', fg:TXT});
+
+    // ── detay
+    const allById = {};
+    Object.keys(ERR).forEach(k => { allById[ERR[k].id] = this.errObj(k); });
+    const de = allById[st.openId] || allById['e2'];
+    const dth = lvTheme(de.level);
+    const mkMeta = e => [
+      { k:'kaç kez', v:nf(e.count)+' kez' },
+      { k:'ilk görülme', v:e.first },
+      { k:'son görülme', v:e.last },
+      { k:'yol', v:e.path || '— (istek yolu yok)' },
+    ].concat(e.ctx.map(c => ({ k:c[0], v:c[1] }))).concat(e.res ? [{ k:'çözüldü', v:e.res }] : []);
+
+    const detail = { level:dth.label, lvFg:dth.fg, lvBg:dth.bg, lvBd:dth.bd, message:de.message, source:de.source,
+      reg: !!de.reg && !de.res, regNote: de.reg || '', meta:mkMeta(de), stack:de.stack || '— stack kaydı yok —',
+      canResolve: !de.res,
+      footNote: de.count >= 50 && de.last.indexOf('30 Tem') === -1 ? nf(de.count)+' kez görüldü ama son görülme bugün değil — sorun bitmiş olabilir.' : 'Bağlamda kimlik var, içerik yok: sipariş numarası görünür, müşteri verisi görünmez.' };
+
+    const mobDe = allById['e5'];
+    const mdth = lvTheme(mobDe.level);
+    const mobDetail = { level:mdth.label, lvFg:mdth.fg, lvBg:mdth.bg, lvBd:mdth.bd, message:mobDe.message,
+      source:mobDe.source, count:nf(mobDe.count), meta:mkMeta(mobDe).slice(0,5), stack:mobDe.stack };
+
+    const selE = selBase || de;
+    const selTh = lvTheme(selE.level);
+    const sel = { level:selTh.label, lvFg:selTh.fg, lvBg:selTh.bg, lvBd:selTh.bd,
+      message:selE.message, source:selE.source, path:selE.path || null,
+      msgFg: selE.level === 'fatal' ? REDD : INK,
+      resolvedBy: selE.res ? 'çözüldü · '+selE.res : null,
+      reg: !!selE.reg && !selE.res, regNote: selE.reg || '',
+      meta: mkMeta(selE), stack: selE.stack || '— stack kaydı yok —',
+      canResolve: !selE.res,
+      footNote: selE.res ? 'Kayıt kalır, yalnız odaktan çıkar — silme yok.' : 'Bağlamda kimlik var, içerik yok: sipariş numarası görünür, müşteri verisi görünmez.' };
+    const copySelOk = st.copiedSel === 'ok';
+
+    const copyOk = st.copied === 'ok', copyCtxOk = st.copiedCtx === 'ok';
+    const ctxText = de.ctx.map(c => c[0]+': '+c[1]).join('\n');
+
+    // ── kod listesi
+    const nw = {tag:'yeni', tagFg:'#4a6121', tagBg:OLIVEBG, tagBd:OLIVEBD}, ex = {tag:'mevcut', tagFg:TXT, tagBg:'#eef0ea', tagBd:'#e0e2da'}, ch = {tag:'değişti', tagFg:AMBD, tagBg:AMBBG, tagBd:AMBBD};
+    const codes = [
+      Object.assign({code:'O1', name:'AdminSidebar', fg:AMBD, desc:'Sol ray; bu sayfa için “Sistem” maddesi eklendi.'}, ch),
+      Object.assign({code:'O2', name:'Sekme çubuğu', fg:INK, desc:'Açık / Çözülmüş, sayaçlarıyla.'}, ex),
+      Object.assign({code:'O3', name:'Arama', fg:INK, desc:'Mesaj · kaynak · yol üzerinde süzme.'}, ex),
+      Object.assign({code:'O4', name:'Veri tablosu', fg:INK, desc:'O23 bunun sayfalamalı varyantı; O4 kendisi değişmedi.'}, ex),
+      Object.assign({code:'O8', name:'Butonlar & girdi', fg:INK, desc:'Şimdi yenile, Duraklat, Çözüldü, Liste/İnceleme geçişi, arama girdisi.'}, ex),
+      Object.assign({code:'O9', name:'Dialog', fg:INK, desc:'Listeden hızlı bakış ve telefon yolu; masaüstünde asıl okuma yüzeyi O25.'}, ex),
+      Object.assign({code:'O10', name:'Uyarı / bağlam kutusu', fg:INK, desc:'Regresyon notu, gizlilik ve silme kuralı.'}, ex),
+      Object.assign({code:'O20', name:'Hüküm şeridi', fg:OLIVED, desc:'Tek kelimelik hüküm + gerekçe listesi + ölçüm yaşı + canlı/duraklat göstergesi.'}, nw),
+      Object.assign({code:'O21', name:'Ölçüm satırı', fg:OLIVED, desc:'Eşikli çubuk, oran notu ve null-farkındalık: “bilinmiyor” yazar, sıfır çizmez.'}, nw),
+      Object.assign({code:'O22', name:'Trend paneli', fg:OLIVED, desc:'Tam ölçekli (tavan %100) mini grafik, pencere seçici, yön açıklaması.'}, nw),
+      Object.assign({code:'O23', name:'Hata kaydı tablosu', fg:OLIVED, desc:'Tür başına satır, sayaç, ilk/son görülme, regresyon rozeti, sayfalama.'}, nw),
+      Object.assign({code:'O24', name:'Stack / bağlam bloğu', fg:OLIVED, desc:'Taşmadan kaydırılır, kopyalanabilir; O25, O9 ve mobil kartta aynı bileşen.'}, nw),
+      Object.assign({code:'O25', name:'Geniş hata inceleme yüzeyi', fg:OLIVED, desc:'Solda esnek liste (seçili satır olive şeritli), sağda geniş stack + sarmalanan bağlam ızgarası; Liste/İnceleme geçişi.'}, nw),
+    ];
+
+    return {
+      haller, codes,
+      // hüküm
+      vBg:vTheme.bg, vBd:vTheme.bd, vBdW:vTheme.bdW, vFg:vTheme.fg, vLabelFg:vTheme.labelFg, vAgeFg:vTheme.ageFg,
+      vDot:vTheme.dot, vDotAnim: loud ? 'sysPulse 1.4s ease-in-out infinite' : 'none',
+      vSize:vTheme.size, vMobSize:vTheme.mob, vPad:vTheme.pad,
+      vLabel: stale ? 'Ölçüm akmıyor' : 'Hüküm',
+      vTitle:S.title, vAge:ageTxt,
+      vReasonTitle: (S.reasons || []).length ? (V === 'kritik' ? 'Neden kritik' : (stale ? 'Neden arıza sayılıyor' : 'Hangi koşul tuttu')) : 'Gerekçe',
+      hasReasons: reasons.length > 0, calm: reasons.length === 0,
+      reasons, mobReasons: reasons.slice(0,3), vSummary:S.summary || '',
+      // canlı göstergesi
+      liveLabel: stale ? 'Bayat' : (st.paused ? 'Duraklatıldı' : 'Canlı'),
+      liveNext: stale ? 'akış kesildi' : (st.paused ? 'otomatik tazeleme kapalı' : 'sonraki 1 dk 12 sn'),
+      liveBg: stale ? REDBG : (st.paused ? '#eef0ea' : OLIVEBG),
+      liveBd: stale ? REDBD : (st.paused ? '#e0e2da' : OLIVEBD),
+      liveFg: stale ? REDD : (st.paused ? TXT : OLIVED),
+      liveSubFg: stale ? RED : MUT,
+      liveDot: stale ? RED : (st.paused ? '#b3b7ac' : OLIVEG),
+      liveAnim: stale ? 'sysPulse 1.2s ease-in-out infinite' : (st.paused ? 'none' : 'sysPulse 2.4s ease-in-out infinite'),
+      pauseLabel: st.paused ? 'Otomatik tazelemeyi aç' : 'Duraklat',
+      togglePause: () => this.set({paused:!st.paused}),
+      refreshNow: () => this.set({page:0}),
+      mobAge: S.ageMin+' dk önce',
+      // paneller
+      serverRows, procs, pm2Unknown: pm2 === null, pm2Known: pm2 !== null,
+      procNote, procNoteBg: anyDown ? REDBG : AMBBG, procNoteFg: anyDown ? REDD : AMBD,
+      services, appRows,
+      // trend
+      windows: WINS.map(w => ({ label:w.l, pick: () => this.set({win:w.k}),
+        bg: st.win === w.k ? '#fbfbf9' : 'transparent', fg: st.win === w.k ? INK : TXT })),
+      charts, trendShown: !trendEmpty, trendEmpty,
+      trendEmptyTitle:'Bu pencere için henüz veri yok',
+      trendEmptyBody:'Kayıt 4 saat önce başladı; 24 saat ve 7 gün pencereleri dolmadı. 10 dk ve 1 saat çizilebilir.',
+      mobWin: WINLABEL[st.win],
+      mobArea: charts.length ? charts[0].area.replace(/72/g,'60') : '',
+      mobLine: charts.length ? charts[0].line.split(' ').map(p => { const xy = p.split(','); return xy[0]+','+(parseFloat(xy[1])/72*60).toFixed(1); }).join(' ') : '',
+      mobFill: charts.length ? charts[0].fill : 'transparent',
+      mobStroke: charts.length ? charts[0].stroke : OLIVE,
+      mobCaption: charts.length ? charts[0].caption : '',
+      mobCapFg: charts.length ? charts[0].capFg : MUT,
+      // hatalar
+      tabs: [
+        { label:'Açık', count:nf(openList.length), pick: () => this.set({tab:'acik', page:0}),
+          edge: st.tab === 'acik' ? OLIVE : 'transparent', fg: st.tab === 'acik' ? INK : TXT,
+          cFg: openList.length ? AMBD : TXT, cBg: openList.length ? AMBBG : '#eef0ea' },
+        { label:'Çözülmüş', count:nf(resList.length), pick: () => this.set({tab:'cozulmus', page:0}),
+          edge: st.tab === 'cozulmus' ? OLIVE : 'transparent', fg: st.tab === 'cozulmus' ? INK : TXT,
+          cFg:OLIVED, cBg:OLIVEBG },
+      ],
+      q:st.q, hasQ: st.q.length > 0,
+      onQ: e => this.set({q:e.target.value, page:0}),
+      clearQ: () => this.set({q:'', page:0}),
+      rows, listEmpty, listShown: !listEmpty,
+      viewListe: !listEmpty && st.view === 'liste', viewIncele: !listEmpty && st.view === 'inceleme',
+      setListe: () => this.set({view:'liste'}), setIncele: () => this.set({view:'inceleme'}),
+      listeBg: st.view === 'liste' ? '#fbfbf9' : 'transparent', listeFg: st.view === 'liste' ? INK : TXT,
+      inceleBg: st.view === 'inceleme' ? '#fbfbf9' : 'transparent', inceleFg: st.view === 'inceleme' ? INK : TXT,
+      incRows, sel, incCount: filtered.length+' kayıt',
+      copySelStack: () => this.copy(selE.stack || '', 'copiedSel'),
+      copySelLabel: copySelOk ? 'Kopyalandı ✓' : 'Stack\'i kopyala',
+      copySelFg: copySelOk ? OLIVED : INK2, copySelBd: copySelOk ? OLIVEBD : '#d9dbd2', copySelBg: copySelOk ? OLIVEBG : '#fff',
+      resolveSel: () => this.setState(s => ({ resolved: Object.assign({}, s.resolved, { [selE.id]:'Bugün 10:04 · Selim A.' }) })),
+      emptyTitle:emp.title, emptyBody:emp.body, emptyMeta:emp.meta,
+      emptyIcon: emptyIcons[emp.icon], emptyIconBg:emptyTone.bg, emptyIconFg:emptyTone.fg,
+      pageInfo: filtered.length ? (page*PAGE+1)+'–'+Math.min(filtered.length, page*PAGE+PAGE)+' / '+filtered.length+' kayıt · sayfa '+(page+1)+'/'+pages : '',
+      prevPage: () => this.set({page:Math.max(0, page-1)}),
+      nextPage: () => this.set({page:Math.min(pages-1, page+1)}),
+      prevFg: page === 0 ? '#b3b7ac' : INK2, nextFg: page >= pages-1 ? '#b3b7ac' : INK2,
+      mobErrors: openList.slice(0,3).map(mkRow),
+      mobErrCount: openList.length ? openList.length+' açık' : '0 açık',
+      mobServer: [
+        { label:'Disk', value: S.diskPct === null ? 'bilinmiyor' : '%'+S.diskPct, fg: S.diskPct === null ? AMBD : (diskT ? diskT.fg : INK) },
+        { label:'Kullanılabilir bellek', value: gb(S.memAvail), fg:memT.fg },
+        { label:'Yük · çekirdek başına', value:'%'+loadPct, fg:loadT.fg },
+        { label:'Süreçler', value: pm2 === null ? 'bilinmiyor' : (anyDown ? 'sorunlu' : nf(pm2.length)+' online'), fg: pm2 === null ? AMBD : (anyDown ? REDD : INK) },
+      ],
+      // detay
+      detailOpen: !!st.openId, detail, mobDetail,
+      closeDetail: () => this.set({openId:null}),
+      stop: e => { if (e && e.stopPropagation) e.stopPropagation(); },
+      resolveDetail: () => this.setState(s => ({ resolved: Object.assign({}, s.resolved, { [de.id]:'Bugün 10:04 · Selim A.' }), openId:null })),
+      copyStack: () => this.copy(de.stack || '', 'copied'),
+      copyLabel: copyOk ? 'Kopyalandı ✓' : 'Stack\'i kopyala',
+      copyFg: copyOk ? OLIVED : INK2, copyBd: copyOk ? OLIVEBD : '#d9dbd2', copyBg: copyOk ? OLIVEBG : '#fff',
+      copyCtx: () => this.copy(ctxText, 'copiedCtx'),
+      copyCtxLabel: copyCtxOk ? 'Kopyalandı ✓' : 'Bağlamı kopyala',
+      copyCtxFg: copyCtxOk ? OLIVED : INK2, copyCtxBd: copyCtxOk ? OLIVEBD : '#d9dbd2', copyCtxBg: copyCtxOk ? OLIVEBG : '#fff',
+    };
+  }
+}
+
+</script>
+</body>
+</html>
