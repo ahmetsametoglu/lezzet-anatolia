@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { formatDeliveryDate } from '@/lib/storefront/format';
+import type { StockStatus } from '@/lib/storefront/storefront-types';
 import { useDeliveryPlace } from './place-context';
 import { PlaceDialog } from './place-dialog';
 import messages from './place-messages.json';
@@ -15,6 +16,18 @@ import messages from './place-messages.json';
  *   yer var, rota içi → "67000 Strasbourg — en yakın teslimat: Perşembe, 24 Temmuz"
  *   yer var, rota dışı, ürün gidebiliyor → "Bu ürünü buraya gönderebiliriz"
  *   yer var, rota dışı, ürün gidemiyor   → kısıt uyarısı (amber) + çıkışlar
+ *
+ * ── STOK HÂLİ VERİLİRSE O KAZANIR (19.7) ─────────────────────────────────────
+ * Yukarıdaki dört hâl yalnız ROTAYA bakar ve "bu ürün senin deponda var mı" sorusunu soramaz —
+ * çok depodan önce sorulacak bir soru değildi. `status` geçilirse (`stockStatus`, 19.10) blok
+ * tasarımın §3 diliyle konuşur: **kargoyla gönderilir** (kum kutu) ya da **bölgenizde şu an yok**
+ * (amber kutu + "gelince haber ver"). İkisi de rota+kargolanabilirlik tahmininden DAHA KESİNDİR:
+ * stoğun kendisine bakarlar.
+ *
+ * `status` isteğe bağlı çünkü PAKET detayında yoktur — paketin stok hâli kalemlerinden doğar ve o
+ * indirgeme (`inRouteOnly`) bugün yalnız "hepsi rota içi mi" sorusunu cevaplıyor. Paket geçmediği
+ * sürece eski rota tahmini yürürlükte kalır; iki yol aynı cümleyi iki kez KURMAZ — biri ötekinin
+ * yerine geçer.
  *
  * **Cümleler METOT değil KAPSAM söyler.** Bu aşamada müşterinin sorusu "nasıl gelecek" değil,
  * "gelebilir mi": teslimat yöntemi checkout'ta gerçek adresten zaten çıkacak, burada söylenmesi
@@ -31,6 +44,13 @@ interface DeliveryLineProps {
   locale: Locale;
   /** Ürün/paket kargoya verilebiliyor mu — `Product.shippable` ya da paketin `!inRouteOnly` hâli. */
   shippable: boolean;
+  /**
+   * Seçili varyantın yere göre stok hâli (19.10). Verilirse `shipping`/`elsewhere` blokları rota
+   * tahminin YERİNE geçer. `out_of_stock` burada hiçbir blok basmaz: tükendi yere bağlı değildir,
+   * onu sayfanın kendi rozeti ve pasif düğmesi söyler — yer kutusunda tekrarlamak, evrensel bir
+   * hâli yerel bir sorun gibi okuturdu.
+   */
+  status?: StockStatus;
   /** Yer bilinmediğinde gösterilecek genel vaatler (sayfanın kendi metinleri). */
   fallback: { coldChain: string; doorstep: string; shippable: string; notShippable: string };
   /** Kısıt hâlinde gösterilecek çıkışlar — ürün ve pakette farklı (benzer ürün / benzer paket). */
@@ -38,7 +58,7 @@ interface DeliveryLineProps {
   compact?: boolean;
 }
 
-export function DeliveryLine({ locale, shippable, fallback, blockedActions, compact = false }: DeliveryLineProps) {
+export function DeliveryLine({ locale, shippable, status, fallback, blockedActions, compact = false }: DeliveryLineProps) {
   const t = messages[locale];
   const { place, ready } = useDeliveryPlace();
   const [open, setOpen] = useState(false);
@@ -79,6 +99,34 @@ export function DeliveryLine({ locale, shippable, fallback, blockedActions, comp
           )}
           <span>{change}</span>
         </div>
+        {open && <PlaceDialog locale={locale} onClose={() => setOpen(false)} />}
+      </>
+    );
+  }
+
+  // Stok hâli biliniyorsa iki blok tasarımın §3 diliyle konuşur ve rota tahminini ezer.
+  if (status === 'shipping' || status === 'elsewhere') {
+    const away = status === 'elsewhere';
+    return (
+      <>
+        <div
+          className={[
+            'flex flex-col gap-1.5 rounded-soft font-sans',
+            compact ? 'px-3.5 py-2.5 text-micro' : 'px-4.5 py-3.5 text-note',
+            away ? 'border border-honey-line bg-honey-bg text-honey' : 'border border-sand-300 bg-sand-100 text-body',
+          ].join(' ')}
+        >
+          <span className="font-bold">{away ? t.awayMark : t.shipMark}</span>
+          <span className="leading-relaxed">{(away ? t.awayBody : t.shipBody).replace('{code}', place.postalCode)}</span>
+          {blockedActions}
+          {/* Yer değiştirme çıkışı YALNIZ engelli hâlde: kargoyla gelen üründe engellenmiş bir şey
+              yok, oraya çıkış koymak olmayan bir sorunu varmış gibi gösterirdi. */}
+          {away && <span className="font-normal">{change}</span>}
+        </div>
+        {/* Ayırt edici cümle KUTUNUN DIŞINDA ve soluk: kutunun içinde dururken uyarının kendisiyle
+            aynı ağırlıkta okunuyor ve "bölgenizde yok" mesajını uzatıyordu. Burası bir dipnot —
+            "tükendi değil" ile "kargo grubu ayrı ödenir" ikisi de okunması iyi ama şart olmayan şeyler. */}
+        <span className="font-sans text-micro leading-relaxed text-muted">{away ? t.awayNote : t.shipNote}</span>
         {open && <PlaceDialog locale={locale} onClose={() => setOpen(false)} />}
       </>
     );

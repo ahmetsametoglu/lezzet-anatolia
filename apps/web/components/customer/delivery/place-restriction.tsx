@@ -10,7 +10,8 @@ import { formatPrice } from '@/lib/storefront/format';
 import type { DeliveryPlace } from '@/lib/delivery/place-types';
 import { useDeliveryPlace } from './place-context';
 import { PlaceDialog } from './place-dialog';
-import { ZoneNoticeDialog } from './zone-notice-dialog';
+import { recordZoneNoticeAction } from '@/lib/delivery/notice-actions';
+import { NoticeDialog } from './notice-dialog';
 import messages from './restriction-messages.json';
 
 /**
@@ -166,7 +167,16 @@ export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCe
       </div>
 
       {placeOpen && <PlaceDialog locale={locale} onClose={() => setPlaceOpen(false)} />}
-      {noticeOpen && <ZoneNoticeDialog locale={locale} postalCode={place.postalCode} onClose={() => setNoticeOpen(false)} />}
+      {noticeOpen && (
+        <NoticeDialog
+          locale={locale}
+          title={t.noticeTitle}
+          body={t.noticeBody.replace('{code}', place.postalCode)}
+          doneText={t.noticeDone.replace('{code}', place.postalCode)}
+          onSubmit={(email) => recordZoneNoticeAction(place.postalCode, email)}
+          onClose={() => setNoticeOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
 import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
+import { StockMark, StockNoticeButton } from '@/components/customer/delivery/stock-mark';
 import { Badge } from '@/components/customer/ui/badge';
 import { SectionHeading } from '@/components/customer/ui/section';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
@@ -39,8 +40,15 @@ export function ProductDesktop({ t, locale, product, selected, onSelect , review
             )}
             <h1 className="font-serif text-page-title text-ink">{product.name}</h1>
             {/* Stok rozeti SEÇİLİ boyu anlatır: bir boy tükenmişken "Stokta" yazmak, butonu
-                "Tükendi" gösteren aynı ekranda kendi kendini yalanlar. */}
-            {selected && <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>}
+                "Tükendi" gösteren aynı ekranda kendi kendini yalanlar.
+                Yere bağlı iki hâlde (kargoyla / bölgenizde yok) rozetin yerini YER İŞARETİ alır:
+                orada da yeşil "Stokta" yazmak, hemen altındaki kutuyla çelişirdi (19.7). */}
+            {selected &&
+              (selected.stockStatus === 'available' || selected.stockStatus === 'out_of_stock' ? (
+                <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>
+              ) : (
+                <StockMark status={selected.stockStatus} locale={locale} />
+              ))}
           </div>
 
           {product.description && <p className="font-sans text-lead text-body">{product.description}</p>}
@@ -57,11 +65,18 @@ export function ProductDesktop({ t, locale, product, selected, onSelect , review
           <DeliveryLine
             locale={locale}
             shippable={product.shippable}
+            status={selected?.stockStatus}
             fallback={t.assurance}
             blockedActions={
-              <Link href={{ pathname: '/catalog', query: { shippable: '1' } }} className={buttonClass({ size: 'sm', className: '!text-note' })}>
-                {t.assurance.seeShippable}
-              </Link>
+              selected?.stockStatus === 'elsewhere' ? (
+                /* "Bölgenizde şu an yok" hâlinin BİRİNCİL eylemi (tasarım): sepete ekleme yolu
+                   yukarıda açık kalır, buradaki düğme bekleyişi kaydeder. */
+                <StockNoticeButton variantId={selected.id} productName={product.name} locale={locale} emphasis="panel" />
+              ) : (
+                <Link href={{ pathname: '/catalog', query: { shippable: '1' } }} className={buttonClass({ size: 'sm', className: '!text-note' })}>
+                  {t.assurance.seeShippable}
+                </Link>
+              )
             }
           />
         </div>

@@ -7,6 +7,7 @@ import { Link } from '@/i18n/navigation';
 import { formatComparison } from '@/lib/storefront/format';
 import type { StorefrontCategory, StorefrontOffer, StorefrontPackage, StorefrontProduct } from '@/lib/storefront/storefront-types';
 import { useCart } from '@/components/customer/cart/cart-context';
+import { StockMark, StockNoticeButton } from '@/components/customer/delivery/stock-mark';
 import { Badge } from './badge';
 import { buttonClass } from './button';
 import { Price } from './price';
@@ -65,7 +66,13 @@ export function CategoryCard({ category, circle = false }: CategoryCardProps) {
   );
 }
 
-/** Kart etiketleri — çağıran sayfa `messages.json`'undan geçer; komponent metin taşımaz. */
+/**
+ * Kart etiketleri — çağıran sayfa `messages.json`'undan geçer; komponent metin taşımaz.
+ *
+ * **İstisna: yer işaretleri** (19.7). "📦 Kargoyla gönderilir" ve "Bölgenizde şu an yok" dört
+ * sayfada birden aynı cümledir ve kartın değil YER ailesinin metnidir — dört `messages.json`'a
+ * kopyalamak yerine `StockMark` kendi sözlüğünü taşır (`place-chip` ile aynı desen).
+ */
 interface ProductCardLabels {
   addToCart: string;
   /** Çok varyantlı ürün: listeden eklenemez, detayda seçilir. */
@@ -97,10 +104,22 @@ interface ProductCardProps {
  * "Sepette" hâli süs değil, listeden alışverişin ta kendisi: müşteri kataloğu gezerken adet
  * ayarlamak için sepete gidip geri dönmez. Buton kalıp "Eklendi ✓" deseydi ikinci tıklama ikinci
  * adet mi, yoksa hiçbir şey mi belli olmazdı.
+ *
+ * ── YER EKSENİ (19.7) ────────────────────────────────────────────────────────
+ * Bunların ÜSTÜNE, yere bağlı bir işaret dili biner (`stockStatus`, tasarım §3): kargoyla gelen
+ * ürün işaretlenir, bölgede olmayan solar ve birincil eylemi "Gelince haber ver" olur. İkisi
+ * dikey eksendir — kargoyla gelen bir ürün de fırsatlı olabilir, sepette de olabilir.
+ *
+ * `soldOut` ile `stockStatus` çakışmaz: `soldOut` artık YALNIZ `out_of_stock` hâlinde true
+ * (19.10). Bir dönem "senin deponda yok" anlamına kaymıştı ve kargoyla gönderebileceğimiz ürünü
+ * "Tükendi" gösteriyordu — sistem müşteriyi tanıdıkça daha az satıyordu.
  */
 export function ProductCard({ product, locale, labels, compact = false }: ProductCardProps) {
   const isOffer = product.wasCents !== undefined;
   const { add, setQty, lineOf } = useCart();
+  // "Bölgenizde şu an yok": ürün ağda var, müşterinin yerine ulaşamıyor. Tükendi DEĞİL — görsel
+  // yarı solar (tamamen değil: ürün gerçek ve geri gelecek), fiyat sessizleşir, ad ink kalır.
+  const away = product.stockStatus === 'elsewhere';
   // Tek boylu ürün listeden eklenir; teklif kalemi ÇIPALI PARTİSİYLE girer (DOMAIN §5).
   const addToCart = () => {
     if (!product.variantId) return;
@@ -115,7 +134,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
           alt={product.name}
           ratio={RATIO_SOURCE}
           crop={product.image.crop}
-          className={['!rounded-none', product.soldOut ? 'opacity-60 grayscale' : ''].join(' ')}
+          className={['!rounded-none', product.soldOut ? 'opacity-60 grayscale' : away ? 'opacity-85 grayscale-[.55]' : ''].join(' ')}
         />
         {/* Durum rozeti — tükendi fırsatı ezer: satın alınamayan üründe indirim vurgusu yanıltır. */}
         {(product.soldOut || isOffer) && (
@@ -145,13 +164,23 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
             .filter(Boolean)
             .join(' · ')}
         </span>
+        {/* Yer işareti künyenin ALTINDA, fiyatın üstünde (tasarım): ürünün ne olduğu okunduktan
+            sonra, satın alma kararından önce. Tükendi hâli burada değil görselin köşesinde. */}
+        <StockMark status={product.stockStatus} locale={locale} />
         {labels.limit && (
           <Badge tone="offer" variant={compact ? 'plain' : 'tint'}>
             {labels.limit}
           </Badge>
         )}
         <div className={['flex items-center justify-between gap-2', compact ? 'mt-0.5' : 'mt-1'].join(' ')}>
-          <Price cents={product.priceCents} wasCents={product.wasCents} locale={locale} size={compact ? 'sm' : 'lg'} stacked={compact} />
+          <Price
+            cents={product.priceCents}
+            wasCents={product.wasCents}
+            locale={locale}
+            size={compact ? 'sm' : 'lg'}
+            tone={away ? 'muted' : 'default'}
+            stacked={compact}
+          />
           {product.soldOut ? (
             <span
               aria-disabled
@@ -162,6 +191,11 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
             >
               {labels.addToCart}
             </span>
+          ) : away ? (
+            /* Kartta TEK eylem "Gelince haber ver" (tasarım): dar kartta iki düğme sığmaz ve bu
+               hâlde müşterinin sorusu "alabilir miyim" değil, "ne zaman alabilirim". Sepete ekleme
+               yolu kapanmıyor — ürün detayında "sonraya kaydet" ile sürüyor. */
+            <StockNoticeButton variantId={product.variantId} productName={product.name} locale={locale} />
           ) : product.purchaseMode === 'options' ? (
             /* Mobilde düğme belirgin şekilde küçülür (tasarım: 11px · 5/9 ped): dar kartta fiyatla
                aynı satırı paylaşıyor, masaüstü ölçüsüyle kalınca kartın dışına taşıyordu. `nowrap`

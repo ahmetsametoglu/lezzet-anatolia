@@ -178,6 +178,17 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
 
+- **YER EKSENİ — ürün detayında "Sonraya kaydet" düğmesi YOK (01.08, `build/19` 19.7).**
+  `Musteri - Urun Detay.dc.html` "bölgenizde şu an yok" panelinde iki düğme çiziyor: **Gelince haber
+  ver** (birincil) + **Sonraya kaydet** (ikincil). Birincisi indi; ikincisi inmedi ve boş bir düğme
+  konmadı. Sebep mekanik: sepet bağlamının `saveForLater`ı **sepetteki** bir kalemi kaydedilenlere
+  TAŞIR — sepette olmayan bir ürünü oraya yazacak bir yol yok. Sahte bir düğme koymak, basıldığında
+  hiçbir şey olmayan bir söz olurdu.
+  Yerine "Sepete ekle" açık bırakıldı ve yol uçtan uca çalışıyor: kalem sepete girer, kısıt bloğu
+  (K32) onu "bölgenize gönderemiyoruz" diye işaretler ve **oradaki** "Sonraya kaydet" ile taşınır.
+  Yani müşterinin ulaştığı sonuç aynı, adım sayısı bir fazla. Doğrudan kaydetme sepetin iki-grup
+  çalışmasıyla gelir (19.11) — kaydedilenler bölmesi zaten o turda yeniden ele alınıyor.
+
 - **TALEP EKRANI — iki sapma (01.08, `build/08` 08.6).**
   **(a) Mobil başlığa "+ Bize yazın" eklendi.** `Musteri - Talep.dc.html` bu düğmeyi yalnız web
   başlığında çiziyor; mobil liste karesinde başlığın sağ yuvası boş. Sonuç bir çıkmaz sokak: yeni

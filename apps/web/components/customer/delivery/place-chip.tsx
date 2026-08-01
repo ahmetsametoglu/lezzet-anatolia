@@ -18,12 +18,23 @@ import messages from './place-messages.json';
  * karar orada veriliyor, bilgi de orada duruyor.
  *
  * Rota içi/dışı ayrımı yalnız RENKTE kalır (yeşil / nötr kum) — metin değil, sessiz bir durum
- * işareti. Yer adı bugün yalnız kendi bölgelerimizde biliniyor; ileride harita servisinden gelirse
- * her kodda görünecek, hap değişmeyecek.
+ * işareti.
  *
- * Rota DIŞINDA şehir adı yazılmaz (`place-types`): 75011'in "Paris" olduğunu bilmek için bir posta
- * kodu veritabanı gerekirdi, elimizde yok — uydurulmuş bir şehir adı yanlış olduğunda güveni
- * doğrudan zedeler. Rota içinde bölgenin kendi adı yazılır.
+ * ── ŞEHİR ADI ARTIK HER KODDA YAZILIR (19.8) ─────────────────────────────────
+ * Buradaki eski künye "rota dışında şehir adı yazılmaz, çünkü 75011'in Paris olduğunu bilmek için
+ * bir posta kodu veritabanı gerekirdi ve elimizde yok" diyordu. **Artık var**: `postal_code_place`
+ * (16.878 satır, FR+DE) ve çözüm `placeName`i her hâlde dolduruyor. Uydurma ad yasağı yerinde —
+ * ad tablodan geliyor, tahminden değil; kodun birden çok yerleşimi varsa bir üst idari birim
+ * yazılıyor, rastgele bir köy değil.
+ *
+ * **Yazılan ad BÖLGEMİZİN adı değil, YERİN adı** (`placeName`, `zoneName` değil): müşterinin zihninde
+ * "Strasbourg" var, "Strasbourg Merkez" bizim rota bölgemizin iç adı. Rota içi olup olmadığını zaten
+ * hapın rengi söylüyor.
+ *
+ * **Ülke eki bugün YOK ve bilinçli:** tek ülkeye hizmet verirken "Strasbourg · FR" gürültüdür — ülke
+ * seçicisinde verilen kararın aynısı (`design/BACKLOG §3`): ülke bir alan değil, ancak GERÇEKTEN
+ * belirsizken görünen bir bilgidir. Hizmet verilen ülke kümesi birden çoğa çıktığında ek de belirir;
+ * o türetme belirsizlik seçicisiyle aynı veriye dayanıyor ve onunla birlikte gelecek.
  *
  * Hap **yalan söylememelidir**: checkout'ta seçilen adres buradaki yeri tazeler; başlık hiçbir zaman
  * siparişten farklı bir yer göstermez.
@@ -43,7 +54,10 @@ export function PlaceChip({ locale, compact = false }: PlaceChipProps) {
   // kaydettiği bilginin kaybolduğunu düşündürür.
   if (!ready) return null;
 
-  const label = place ? (place.zoneName ? `${place.postalCode} ${place.zoneName}` : place.postalCode) : t.empty;
+  // `placeName` → `zoneName` → yalnız kod. İkinci basamak bir emniyet ağı: referansta olmayan ama
+  // kendi bölgemizde duran bir kodda (bkz. `19.16`) hap yine bir ad gösterebilsin.
+  const placeLabel = place?.placeName ?? place?.zoneName ?? null;
+  const label = place ? (placeLabel ? `${place.postalCode} ${placeLabel}` : place.postalCode) : t.empty;
 
   const tone = !place
     ? 'border-[1.5px] border-dashed border-sand-400 bg-card text-muted'

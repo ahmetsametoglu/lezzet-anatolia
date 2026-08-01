@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useRouter } from '@/i18n/navigation';
 import { resolvePlaceAction } from '@/lib/delivery/actions';
 import { readPlaceAnswer, readSkipped, writePlaceAnswer, writeSkipped } from '@/lib/delivery/place-store';
 import type { DeliveryPlace, DeliveryZoneSummary, PlaceLookup } from '@/lib/delivery/place-types';
@@ -68,6 +69,7 @@ interface PlaceProviderProps {
 }
 
 export function PlaceProvider({ children, zones }: PlaceProviderProps) {
+  const router = useRouter();
   const [place, setPlace] = useState<DeliveryPlace | null>(null);
   const [ready, setReady] = useState(false);
   const [skipped, setSkipped] = useState<Record<'home' | 'cart', boolean>>({ home: false, cart: false });
@@ -105,9 +107,15 @@ export function PlaceProvider({ children, zones }: PlaceProviderProps) {
       writePlaceAnswer({ country: data.place.country, postalCode: data.place.postalCode });
       // Kod girildiyse her iki soru da cevaplanmıştır; atlama işaretleri düşer.
       setSkipped({ home: false, cart: false });
+      // ── SUNUCUYU DA TAZELE (19.7) ───────────────────────────────────────────
+      // Çerezi İSTEMCİ yazıyor (`document.cookie`); o an ekranda duran RSC çıktısı hâlâ eski yerle
+      // (çoğu zaman depo-üstü) çizilmiş. Tazeleme olmadan hap doluyor ama katalog kartlarındaki
+      // stok işaretleri bir sonraki gezinmeye kadar ESKİ kalıyordu — "kargoyla gönderilir" yazması
+      // gereken ürün işaretsiz duruyordu. Yer bir soru: cevaplandığı an her yüzey ona göre konuşmalı.
+      router.refresh();
     }
     return data;
-  }, []);
+  }, [router]);
 
   const value = useMemo<PlaceContextValue>(
     () => ({
@@ -117,6 +125,9 @@ export function PlaceProvider({ children, zones }: PlaceProviderProps) {
       clear: () => {
         setPlace(null);
         writePlaceAnswer(null);
+        // Temizleme de bir cevap değişimidir: okumalar depo-üstüne dönmeli, yoksa ekranda yerin
+        // silindiği ama işaretlerin hâlâ o yeri anlattığı bir ara hâl kalır.
+        router.refresh();
       },
       zones,
       skipped: (scope) => skipped[scope],
@@ -125,7 +136,7 @@ export function PlaceProvider({ children, zones }: PlaceProviderProps) {
         writeSkipped(scope);
       },
     }),
-    [place, ready, setPostalCode, skipped, zones],
+    [place, ready, router, setPostalCode, skipped, zones],
   );
 
   return <PlaceContext.Provider value={value}>{children}</PlaceContext.Provider>;

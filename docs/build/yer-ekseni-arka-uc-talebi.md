@@ -408,3 +408,63 @@ Altısı da **kabul**, hiçbirinde ters karar yok. Beklediğin sırayla gidiyoru
 
 Bu dosya **arşiv**: cevaplar geldiğine göre durumun sahibi artık `19-coklu-depo.md` görev
 satırlarıdır (`CLAUDE.md §5`). Yeni soru çıkarsa buraya değil, o satırın altına.
+
+---
+
+## Müşteri şeridinden kapanış notu (01.08)
+
+> Altı istek de indi (19.8 · 19.9 · 19.10 · 19.16). Bu blok **teslim tutanağıdır**: ne aldım, ne
+> yaptım, hangi tarafta ne kaldı. Durum yine görev satırlarında; burası yalnız iki şeridin
+> birbirine baktığı yer.
+
+### Aldıklarım — üçü de ekranda karşılığını buluyor
+
+| Ne geldi | Müşteri yüzeyinde ne açıyor |
+| --- | --- |
+| `stockStatus` dört hâlli (19.10) | Katalog/ürün işaret dili: `available` · `shipping` · `elsewhere` · `out_of_stock` |
+| `PlaceLookup` ayrık sonuç (19.16b) | Belirsizlik seçicisi + "tanımadık" ekranı — dizgi ayrıştırması gerekmiyor |
+| Kendi bölgemiz referanstan üstün (19.16a) | Vitrin ile checkout aynı koda aynı cevabı veriyor |
+
+**`unknown` uyarısına verdiğin cevap ekranda böyle karşılanacak:** uyarı + "yine de devam et";
+devam edilirse yer `null` sayılıyor, yani bugünkü "yer bilinmiyor" davranışı. Yeni yol açılmıyor.
+
+### Bu turda benim tarafımda kapanan iki karar
+
+1. **Yazarken şehir önizlemesi YAPILMIYOR** (kullanıcı kararı, 01.08). Veri hazırdı; engel
+   `resolvePlaceAction`'ın içindeki `recordDemand` — her tuşlanan kod "bölge dışı talep" sayacına
+   düşerdi. **Ölçüm niyeti kaydeder, tuş vuruşunu değil**; yazım hatasıyla dolan sayaç bölge açma
+   kararını sessizce yanlış yere çeker. **Sende bir iş yok** — ama ileride biri "yazarken çöz"
+   isterse, sayacın niyet-dışı yazımdan nasıl korunacağı önce çözülmeli: kapıya bayrak eklemek
+   yetmez, o bayrağı unutan ilk çağrı sayacı yine kirletir.
+2. **Hap `placeName` yazıyor, `zoneName` değil.** Müşterinin zihnindeki ad "Strasbourg";
+   "Strasbourg Merkez" bizim iç bölge adımız. `zoneName` yalnız emniyet ağı (kod bizim tablomuzda
+   ama referansta yoksa). Ülke eki yok — tek ülkeye hizmet verirken gürültü; hizmet kümesi
+   büyüyünce belirsizlik seçicisiyle aynı türetmeden gelecek.
+
+### Sende kalan dört iş — ekranların bekleme sebebi
+
+| # | Görev | Bensiz olmayan ekran |
+| --- | --- | --- |
+| 1 | `19.11` `CartLine.route` + grup toplamları + bölünmüş eşik | Sepetin iki bölmesi ve kargo eşiği cümlesi |
+| 2 | `19.15` kargo siparişi taslağı | "Kargolu ürünleri ayrıca sipariş ver" ikinci checkout |
+| 3 | `19.12` `variant_stock_notice` | `elsewhere` hâlinin yanındaki "Gelince haber ver" düğmesi |
+| 4 | `07.x` taşıyıcı + takip no | Sipariş detayındaki kargo takip bölümü |
+
+3 numara bir hatırlatma istiyor: dört hâlin ekran dilini bu turda yazıyorum ve `elsewhere` hâli
+tasarımda **düğmesiz düşünülmemiş** — "bölgenizde şu an yok" tek başına bir çıkmaz. `CLAUDE.md §3`
+uyarınca UI'ı tam yazıp arka ucu stub bırakacağım (düğme görünür, kayıt tutulmaz, ekran söz vermez:
+"not aldık" tonu senin `zone_notice` için kurduğun tonun aynısı). Kayıt inince tek satır bağlanır.
+
+### Bir koordinasyon sorusu — cevabı sende
+
+**Katalogdaki "adresime gönderilebilir" çipinin SQL süzgeci kimin turunda?** 19.10 satırı onu
+`BEKLEYEN(19.7)` diye bana bırakmış ("bugün çip yalnız yerel depoya bakıyor") ama işin durduğu yer
+`0043_product_listing.sql` + `ProductListingService` — ikisi de senin `touches` kümen, benimki
+değil. Çipin doğru anlamı iki depo kimliği üzerinden bir `in` sorgusu (madde 3'te öyle
+cevaplamıştın) ve keyset'i bozmamak için sorgunun İÇİNDE olmak zorunda; sonuç çekildikten sonra
+elenemez.
+
+Önerim: **süzgeç sende kalsın, çipin metni ve durumu bende.** Aksi hâlde ya ben senin dosyalarına
+girerim ya da çip bugünkü yanlış anlamıyla ekranda kalır — "adresime gönderilebilir" diyen bir çip
+kargoyla gelebilecek ürünü gizlerse tam da C3'ün yasakladığı şeyi yapar: sistem müşteriyi tanıdıkça
+daha az gösterir.

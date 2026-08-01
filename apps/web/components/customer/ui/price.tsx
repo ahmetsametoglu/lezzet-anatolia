@@ -9,7 +9,12 @@ import { formatPrice } from '@/lib/storefront/format';
  * `was` verildiğinde fiyat fırsat rengine (terracotta) döner — indirimin GÖRSEL dili tek karardır,
  * her kartta yeniden verilmez. İndirimin SEBEBİ hiçbir zaman burada değildir (musteri-anasayfa §6).
  */
-type PriceTone = 'default' | 'onDark';
+/**
+ * `muted` — fiyat DURUYOR ama sessizleşiyor: "bölgenizde şu an yok" kartında (19.7) ürün gerçek ve
+ * fiyatı doğru, ama şu an alınamıyor. Fiyatı gizlemek ürünü bilinmez kılardı; ink bırakmak ise
+ * alınabilir gibi okuturdu.
+ */
+type PriceTone = 'default' | 'onDark' | 'muted';
 type PriceSize = 'sm' | 'md' | 'lg' | 'xl';
 
 const SIZE: Record<PriceSize, string> = {
@@ -40,7 +45,7 @@ interface PriceProps {
 
 export function Price({ cents, locale, wasCents, size = 'md', tone = 'default', stacked = false }: PriceProps) {
   if (cents === null) return null;
-  const color = tone === 'onDark' ? 'text-cream' : wasCents ? 'text-terracotta' : 'text-ink';
+  const color = tone === 'onDark' ? 'text-cream' : tone === 'muted' ? 'text-muted' : wasCents ? 'text-terracotta' : 'text-ink';
   return (
     <span className={stacked ? 'flex flex-col' : 'flex items-center gap-2'}>
       <span className={['font-sans font-bold', SIZE[size], color].join(' ')}>{formatPrice(cents, locale)}</span>

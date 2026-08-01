@@ -25,7 +25,17 @@
     "cartAskBody": "Sepetinizde soğuk zincirle taşınan {n} ürün var — bunları yalnız kendi aracımızla götürebiliyoruz. Posta kodunuzu girin, gönderebilir miyiz şimdiden söyleyelim.",
     "lineInRoute": "🚚 Bu adrese kapıya getiriyoruz",
     "lineShipping": "📦 Bu adrese kargoyla gönderiyoruz",
-    "lineBlocked": "❄ Soğuk zincir — bu adrese gönderemiyoruz"
+    "lineBlocked": "❄ Soğuk zincir — bu adrese gönderemiyoruz",
+    "shipMark": "📦 Kargoyla gönderilir",
+    "shipBody": "Bu ürün {code} için araç teslimine giremiyor; kargoyla gönderiyoruz. Sepette kargo grubunda toplanır, ayrı ödemeyle ayrı sipariş olarak verilir.",
+    "shipNote": "Kargo ücreti ve eşiği kendi grubunun tutarından hesaplanır; yalnız online peşin ödenir — bu, sepette söylenir.",
+    "awayMark": "Bölgenizde şu an yok",
+    "awayBody": "Soğuk zincir ürünü — kargoya veremiyoruz ve {code} için şu an elimizde yok. Bu durum değişebilir; gelince size haber verelim.",
+    "awayNote": "\"Tükendi\"den ayrı bir mesajdır: bu hâl yere bağlıdır. Sepette olan kalem silinmez — sonraya kaydedilenlere taşınır.",
+    "notifyCta": "Gelince haber ver",
+    "stockNoticeTitle": "Gelince haber verelim",
+    "stockNoticeBody": "{product} için not alalım. {code} adresine ulaşabildiğimizde tek bir e-posta göndeririz — başka bir şey için kullanmayız.",
+    "stockNoticeDone": "Not aldık — {code} için bu ürünü bekleyenler arasındasınız."
   },
   "fr": {
     "empty": "Saisissez le code postal",
@@ -53,7 +63,17 @@
     "cartAskBody": "Votre panier contient {n} produit(s) en chaîne du froid — ils ne voyagent que dans notre propre véhicule. Saisissez votre code postal et nous vous dirons tout de suite si nous pouvons les livrer.",
     "lineInRoute": "🚚 Livré à domicile à cette adresse",
     "lineShipping": "📦 Expédié à cette adresse",
-    "lineBlocked": "❄ Chaîne du froid — impossible à cette adresse"
+    "lineBlocked": "❄ Chaîne du froid — impossible à cette adresse",
+    "shipMark": "📦 Envoyé par transporteur",
+    "shipBody": "Cet article ne peut pas entrer dans la livraison en camion pour {code} ; nous l'envoyons par transporteur. Il forme un groupe à part dans le panier et donne lieu à une commande séparée, payée séparément.",
+    "shipNote": "Les frais et le seuil de livraison sont calculés sur le montant de ce groupe ; le paiement se fait uniquement en ligne — cela est indiqué dans le panier.",
+    "awayMark": "Indisponible dans votre zone",
+    "awayBody": "Produit en chaîne du froid — nous ne pouvons pas l'expédier et nous ne l'avons pas actuellement pour {code}. Cela peut changer ; nous vous préviendrons dès son retour.",
+    "awayNote": "C'est un message différent de « épuisé » : cet état dépend du lieu. L'article présent dans le panier n'est pas supprimé — il passe dans « gardé pour plus tard ».",
+    "notifyCta": "Me prévenir",
+    "stockNoticeTitle": "Être prévenu du retour",
+    "stockNoticeBody": "Nous notons {product}. Dès que nous pouvons livrer à {code}, nous envoyons un seul e-mail — rien d'autre.",
+    "stockNoticeDone": "C'est noté — vous faites partie des personnes qui attendent cet article pour {code}."
   },
   "de": {
     "empty": "Postleitzahl eingeben",
@@ -81,6 +101,16 @@
     "cartAskBody": "In Ihrem Warenkorb sind {n} Produkte mit Kühlkette — sie fahren nur in unserem eigenen Fahrzeug. Geben Sie Ihre Postleitzahl ein, dann sagen wir Ihnen gleich, ob wir liefern können.",
     "lineInRoute": "🚚 Wird hier an die Tür geliefert",
     "lineShipping": "📦 Wird an diese Adresse versandt",
-    "lineBlocked": "❄ Kühlkette — an diese Adresse nicht möglich"
+    "lineBlocked": "❄ Kühlkette — an diese Adresse nicht möglich",
+    "shipMark": "📦 Wird versandt",
+    "shipBody": "Dieser Artikel kann für {code} nicht mit unserem Fahrzeug geliefert werden; wir versenden ihn. Im Warenkorb bildet er eine eigene Gruppe und wird als separate Bestellung separat bezahlt.",
+    "shipNote": "Versandkosten und Schwelle werden aus dem Betrag dieser Gruppe berechnet; bezahlt wird nur online — das steht im Warenkorb.",
+    "awayMark": "In Ihrer Region derzeit nicht da",
+    "awayBody": "Kühlkettenartikel — wir können ihn nicht versenden und haben ihn für {code} derzeit nicht vorrätig. Das kann sich ändern; wir melden uns, sobald er wieder da ist.",
+    "awayNote": "Das ist eine andere Aussage als „ausverkauft“: Dieser Zustand hängt vom Ort ab. Ein Artikel im Warenkorb wird nicht gelöscht — er wandert zu „für später gespeichert“.",
+    "notifyCta": "Benachrichtigen",
+    "stockNoticeTitle": "Benachrichtigung bei Verfügbarkeit",
+    "stockNoticeBody": "Wir notieren {product}. Sobald wir an {code} liefern können, senden wir eine einzige E-Mail — sonst nichts.",
+    "stockNoticeDone": "Notiert — Sie gehören zu denen, die diesen Artikel für {code} erwarten."
   }
 }

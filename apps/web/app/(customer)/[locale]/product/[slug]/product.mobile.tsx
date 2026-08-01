@@ -6,6 +6,8 @@ import { SimilarStrip } from './components/similar-strip';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
 import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
+import { Badge } from '@/components/customer/ui/badge';
+import { StockMark, StockNoticeButton } from '@/components/customer/delivery/stock-mark';
 import type { ProductViewProps } from './product-types';
 
 /**
@@ -35,12 +37,15 @@ export function ProductMobile({ t, locale, product, selected, onSelect , reviews
           )}
           <h1 className="font-serif text-page-title-sm text-ink">{product.name}</h1>
           {/* Stok rozeti SEÇİLİ boyu anlatır — butonla çelişmemesi için. Tasarımda puan satırının
-              sağına yaslıdır; puan satırı bugün yok (17), rozet o satırın yerinde tek başına durur. */}
-          {selected && (
-            <span className="w-max rounded-soft bg-olive-bg px-2.5 py-0.5 font-sans text-note font-semibold text-olive">
-              {selected.soldOut ? t.soldOut : t.inStock}
-            </span>
-          )}
+              sağına yaslıdır; puan satırı bugün yok (17), rozet o satırın yerinde tek başına durur.
+              Rozet elle boyanıyordu ve tükendi hâlinde de YEŞİL çıkıyordu ("Tükendi" yazan yeşil bir
+              rozet); K5 tonu anlamdan seçiyor. Yere bağlı iki hâlde yerini yer işareti alır (19.7). */}
+          {selected &&
+            (selected.stockStatus === 'available' || selected.stockStatus === 'out_of_stock' ? (
+              <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>
+            ) : (
+              <StockMark status={selected.stockStatus} locale={locale} />
+            ))}
         </div>
 
         {product.description && <p className="font-sans text-body-sm leading-relaxed text-body">{product.description}</p>}
@@ -54,14 +59,19 @@ export function ProductMobile({ t, locale, product, selected, onSelect , reviews
         <DeliveryLine
           locale={locale}
           shippable={product.shippable}
+          status={selected?.stockStatus}
           fallback={{ ...t.assurance, coldChain: t.assurance.coldChainShort, doorstep: t.assurance.doorstepShort }}
           blockedActions={
-            <Link
-              href={{ pathname: '/catalog', query: { shippable: '1' } }}
-              className={buttonClass({ size: 'xs', className: '!text-micro' })}
-            >
-              {t.assurance.seeShippable}
-            </Link>
+            selected?.stockStatus === 'elsewhere' ? (
+              <StockNoticeButton variantId={selected.id} productName={product.name} locale={locale} emphasis="panel" />
+            ) : (
+              <Link
+                href={{ pathname: '/catalog', query: { shippable: '1' } }}
+                className={buttonClass({ size: 'xs', className: '!text-micro' })}
+              >
+                {t.assurance.seeShippable}
+              </Link>
+            )
           }
           compact
         />
