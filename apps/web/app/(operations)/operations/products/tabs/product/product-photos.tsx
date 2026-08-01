@@ -7,6 +7,7 @@ import { ImageCropField } from '@/components/operation/form/image-crop-field';
 import { ImageCropDialog } from '@/components/operation/form/image-crop-dialog';
 import { ImageUploadButton } from '@/components/operation/ui/image-upload-button';
 import { ImageIcon, PlusIcon, StarIcon, TrashIcon } from '@/components/operation/ui/icons';
+import { Skeleton, SkeletonBlock } from '@/components/operation/ui/skeleton';
 import { SortableList } from '@/components/operation/ui/sortable-list';
 import type { ActionResult } from '@/lib/error';
 import {
@@ -44,6 +45,14 @@ interface ProductPhotosProps {
 
 export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChange, uploadCover, camera }: ProductPhotosProps) {
   const [photos, setPhotos] = useState<ProductPhotoView[]>([]);
+  /**
+   * İlk okuma DÖNDÜ MÜ — `photos.length` tek başına iki durumu ayırmıyor.
+   *
+   * Bir tur ayrılmıyordu ve sonucu CLAUDE.md §1'in kırmızı çizgisiydi: galeri okunurken sayaç `0/5`
+   * yazıyor, ızgarada yalnız "+" karesi duruyordu. Dört fotoğrafı olan ürün, "hiç fotoğrafı yok" gibi
+   * görünüyordu — ölçülemeyen değer sıfır gösteriliyordu (bağımsız ajan denetimi, 30.07).
+   */
+  const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState<ProductPhotoView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, startTransition] = useTransition();
@@ -53,6 +62,7 @@ export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChang
     const { data, error: err } = await listProductPhotosAction(productId);
     if (err) setError(err);
     else setPhotos(data ?? []);
+    setLoaded(true);
   }, [productId]);
 
   useEffect(() => {
@@ -90,12 +100,22 @@ export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChang
           <div className="flex items-baseline gap-2">
             <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.08em] text-ops-muted">Galeri</span>
             <span className="font-ops-body text-ops-micro text-ops-faint">detay sayfasındaki ek fotoğraflar</span>
-            <span className="ml-auto font-ops-mono text-ops-micro text-ops-faint">
-              {photos.length}/{PRODUCT_GALLERY_MAX}
-            </span>
+            {loaded ? (
+              <span className="ml-auto font-ops-mono text-ops-micro text-ops-faint">
+                {photos.length}/{PRODUCT_GALLERY_MAX}
+              </span>
+            ) : (
+              <Skeleton className="ml-auto h-2.5 w-8" />
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-2">
+            {/* İlk okuma dönene kadar kareler İSKELET ve "+" karesi ÇİZİLMEZ: dolu bir galeriye
+                "ilk fotoğrafı ekle" davetiyle bakmak, olmayan bir boşluğu doldurmaya çağırmaktı. */}
+            {!loaded ? (
+              [0, 1, 2].map((i) => <SkeletonBlock key={i} className="aspect-[3/2] w-full" />)
+            ) : (
+              <>
             <SortableList
               items={photos}
               getId={(p) => p.id}
@@ -127,6 +147,8 @@ export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChang
               >
                 <PlusIcon />
               </ImageUploadButton>
+            )}
+              </>
             )}
           </div>
 

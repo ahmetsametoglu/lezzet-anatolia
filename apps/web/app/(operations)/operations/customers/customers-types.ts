@@ -227,6 +227,11 @@ export interface CustomersViewProps {
   onType: (type: CustomerType | 'all') => void;
   hasMore: boolean;
   loadingMore: boolean;
+  /**
+   * Süzgeç/sekme turu sürüyor — tablo gövdesi soluklaşır (satır varsa) ya da iskelete döner (yoksa).
+   * `loadingMore`dan AYRI: o listenin KUYRUĞU, bu listenin TAMAMININ yenilenmesi.
+   */
+  navPending: boolean;
   onLoadMore: () => void;
   /** Seçili müşteri kimliği — kayıt taze listeden türetilir (kopya tutulmaz). */
   selectedId: string | null;
@@ -234,6 +239,12 @@ export interface CustomersViewProps {
   /** Seçili müşterinin türetilmiş bilgisi; okuma sürerken `null`. */
   detail: CustomerDetail | null;
   detailLoading: boolean;
+  /**
+   * Detay okuması düştüyse sebebi. `detail === null` İKİ ayrı durumu temsil ediyor — "henüz gelmedi"
+   * ve "gelemedi" — ve ikisi ekranda ayrı görünmek zorunda: birincisi iskelet, ikincisi hata.
+   * Ayrılmadığı sürece düşen bir okuma, boş hâller aracılığıyla yalan söyler.
+   */
+  detailError: string | null;
   /**
    * Sipariş KARTINA tıklanınca özet diyaloğunu açar (detay sayfasına GİTMEZ).
    *

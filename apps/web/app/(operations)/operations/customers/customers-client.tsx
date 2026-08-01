@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CustomerType } from '@lezzet/types';
 import type { Device } from '@/lib/device';
@@ -51,9 +51,17 @@ export function CustomersClient({ data, device, urlState }: CustomersClientProps
   const resolvedDevice = useDevice(device);
   const router = useRouter();
 
+  /**
+   * Süzgeç turu SÜRÜYOR MU. `router.replace` bir RSC okumasıdır (liste + sayaçlar + gecikme kümesi =
+   * üç paralel sorgu) ve dönene kadar ekranda hiçbir karşılık yoktu: liste eski satırlarla duruyor,
+   * tıklanan çip bile aktifleşmiyordu — aktiflik `urlState`'ten, yani sunucudan geliyor. Operatör
+   * bastığının işleyip işlemediğini anlayamıyordu (bağımsız ajan denetimi, 30.07).
+   */
+  const [pending, startNav] = useTransition();
+
   /** Süzgeç değişimi: URL'e yaz + RSC'yi yeniden okut (süzülmüş ilk sayfa gelir). */
   const applyFilters = (patch: Partial<CustomersUrlState>) => {
-    router.replace(customersUrl({ ...urlState, ...patch }), { scroll: false });
+    startNav(() => router.replace(customersUrl({ ...urlState, ...patch }), { scroll: false }));
   };
 
   // Arama: giriş yerel (anında yazılır), URL'e gecikmeli. Sunucu değeri değişince yerel giriş eşitlenir.
@@ -116,22 +124,35 @@ export function CustomersClient({ data, device, urlState }: CustomersClientProps
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  /**
+   * Detay okuması DÜŞTÜYSE sebebi.
+   *
+   * Bir tur bu hata YUTULUYORDU (`if (iptal || !d) return;` — `error` hiç okunmuyordu) ve sonucu
+   * sessiz bir yalandı: `detailLoading` false'a dönüyor, `detail` null kalıyor ve panel elindeki boş
+   * hâlleri gösteriyordu — "Son siparişler: Henüz siparişi yok." Müşterinin 38 siparişi olabilir;
+   * ekran onları olmadığına ikna ediyordu. Aynı dosyadaki diğer iki okuma (sipariş özeti, B2B kartı)
+   * hatayı zaten yüzeye çıkarıyordu; bu okuma o desenden sapmıştı (bağımsız ajan denetimi, 30.07).
+   */
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedId) {
       setDetail(null);
+      setDetailError(null);
       return;
     }
     // Seçim değişince ESKİ detay hemen düşer: kalması, yeni müşterinin altında başkasının cirosunu
     // göstermek olurdu — bir an için bile kabul edilemez.
     setDetail(null);
+    setDetailError(null);
     setDetailLoading(true);
     let iptal = false;
     void readCustomerDetailAction(selectedId)
-      .then(({ data: d }) => {
+      .then(({ data: d, error }) => {
         // Hızlı tıklamada yarış: yalnız SON seçimin cevabı yazılır.
-        if (iptal || !d) return;
-        setDetail(d);
+        if (iptal) return;
+        if (d) setDetail(d);
+        else setDetailError(error ?? 'Müşteri bilgisi okunamadı.');
       })
       .finally(() => {
         if (!iptal) setDetailLoading(false);
@@ -257,6 +278,7 @@ export function CustomersClient({ data, device, urlState }: CustomersClientProps
     onSearch,
     onScope: (scope: CustomerScope) => applyFilters({ scope }),
     onType: (type: CustomerType | 'all') => applyFilters({ type }),
+    navPending: pending,
     hasMore: cursor !== null,
     loadingMore,
     onLoadMore,
@@ -264,6 +286,7 @@ export function CustomersClient({ data, device, urlState }: CustomersClientProps
     onSelect: setSelectedId,
     detail,
     detailLoading,
+    detailError,
     onOpenOrder,
     onEditCredit: () => {
       setSaveError(null);

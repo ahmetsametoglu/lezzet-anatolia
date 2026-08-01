@@ -109,6 +109,11 @@ export interface OrdersViewProps {
   onSearch: (q: string) => void;
   hasMore: boolean;
   loadingMore: boolean;
+  /**
+   * Süzgeç/sekme turu sürüyor — tablo gövdesi soluklaşır (satır varsa) ya da iskelete döner (yoksa).
+   * `loadingMore`dan AYRI: o listenin KUYRUĞU, bu listenin TAMAMININ yenilenmesi.
+   */
+  navPending: boolean;
   onLoadMore: () => void;
   /** Satırın hızlı bakış diyaloğunu aç. */
   onOpen: (orderId: string) => void;

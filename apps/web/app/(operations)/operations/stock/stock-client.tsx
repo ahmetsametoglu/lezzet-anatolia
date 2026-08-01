@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
@@ -30,6 +30,15 @@ interface StockClientProps {
 export function StockClient({ data, device, urlState }: StockClientProps) {
   const resolvedDevice = useDevice(device);
   const router = useRouter();
+  /**
+   * Süzgeç/sekme turu SÜRÜYOR MU — `router.replace` bir RSC okumasıdır ve dönene kadar ekranda hiçbir
+   * karşılık yoktu: liste eski satırlarla duruyor, tıklanan çip bile aktifleşmiyordu (aktiflik
+   * `urlState`'ten, yani sunucudan geliyor). Operatör basıp basmadığını anlamıyordu.
+   *
+   * `isPending` iki yere bağlanıyor: çip şeridi (iyimser vurgu) ve tablo gövdesi (`busy` — satır
+   * varsa soluklaşır, yoksa iskelet). Bağımsız ajan denetimi, 30.07.
+   */
+  const [pending, startNav] = useTransition();
 
   const [tab, setTab] = useState<StockTab>(urlState.tab);
   useEffect(() => setTab(urlState.tab), [urlState.tab]);
@@ -40,7 +49,7 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
 
   /** Süzgeç değişimi: URL'e yaz + RSC'yi yeniden okut (süzülmüş ilk sayfa gelir). */
   const applyFilters = (patch: Partial<StockUrlState>) => {
-    router.replace(stockUrl({ ...urlState, ...patch, tab }), { scroll: false });
+    startNav(() => router.replace(stockUrl({ ...urlState, ...patch, tab }), { scroll: false }));
   };
 
   // Arama: giriş yerel (anında yazılır), URL'e gecikmeli. Sunucu değeri değişince yerel giriş eşitlenir.
@@ -74,7 +83,7 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
     if (urlState.q) {
       // `applyFilters` sondaki `tab`'ı kendi durumundan alıyor (henüz eski değer) — adres burada
       // doğrudan kurulur.
-      router.replace(stockUrl({ ...urlState, tab: next, q: '' }), { scroll: false });
+      startNav(() => router.replace(stockUrl({ ...urlState, tab: next, q: '' }), { scroll: false }));
       return;
     }
     writeUrl({ tab: next, q: '' });
@@ -153,6 +162,7 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
   const [recallLot, setRecallLot] = useState<string | null>(null);
 
   const view = {
+    navPending: pending,
     data,
     levels: scoped,
     tab,

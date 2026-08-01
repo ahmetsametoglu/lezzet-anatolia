@@ -1,8 +1,9 @@
 'use client';
 
 import { Badge } from '@/components/operation/ui/badge';
+import { PRICES_COLUMN_TRACKS } from '../prices-columns';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
-import { Table, type Column } from '@/components/operation/ui/table';
+import { Table, withCells, type Column } from '@/components/operation/ui/table';
 import { amount, money } from '@/components/operation/ui/format';
 import { channelHint, marginHint, marginText, marginTone, rowStateNote } from '../prices-labels';
 import { SCOPE_LABEL } from '../prices-url';
@@ -15,86 +16,52 @@ import type { PriceRow, PricesViewProps } from '../prices-types';
 // → NE kazanıyorum (marj) → otomatik mi. Maliyet fiyatların sağında duruyor ki göz "fiyat–maliyet"
 // karşılaştırmasını yan yana yapabilsin.
 
-export function ChannelsTab({ rows, hasMore, loadingMore, onLoadMore, onEdit, scope, search, counts }: PricesViewProps) {
-  const columns: Column<PriceRow>[] = [
-    {
-      key: 'name',
-      header: 'Varyant',
-      width: 'minmax(180px,1.3fr)',
-      cell: (r) => (
-        <div className="flex min-w-0 flex-col gap-px">
-          <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{r.title}</span>
-          <span className="truncate font-ops-body text-ops-xs text-ops-muted">
-            {r.categoryName || 'kategorisiz'}
-            {rowStateNote(r)}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: 'b2c',
-      header: 'B2C',
-      width: '86px',
-      align: 'right',
-      cell: (r) => <ChannelCell channel="b2c" cents={r.b2c.amountCents} />,
-    },
-    {
-      key: 'b2b',
-      header: 'B2B',
-      width: '86px',
-      align: 'right',
-      cell: (r) => <ChannelCell channel="b2b" cents={r.b2b.amountCents} />,
-    },
-    {
-      key: 'cost',
-      header: 'Maliyet',
-      width: '84px',
-      align: 'right',
-      cell: (r) => (
-        <span
-          className="font-ops-mono text-ops-sm font-medium text-ops-muted"
-          title={
-            r.costCents === null
-              ? 'Fiyatlı parti yok — maliyet bilinmiyor (sıfır değil)'
-              : 'Son alış fiyatı — yeniden almanın bedeli (KDV hariç)'
-          }
-        >
-          {amount(r.costCents)}
+export function ChannelsTab({ rows, hasMore, loadingMore, onLoadMore, onEdit, scope, search, counts, navPending }: PricesViewProps) {
+  const columns: Column<PriceRow>[] = withCells<PriceRow>(PRICES_COLUMN_TRACKS, {
+    name: (r) => (
+      <div className="flex min-w-0 flex-col gap-px">
+        <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{r.title}</span>
+        <span className="truncate font-ops-body text-ops-xs text-ops-muted">
+          {r.categoryName || 'kategorisiz'}
+          {rowStateNote(r)}
         </span>
-      ),
-    },
-    {
-      key: 'margin',
-      header: 'Marj',
-      width: '72px',
-      align: 'right',
-      cell: (r) => (
-        <span title={marginHint(r)}>
-          <Badge tone={marginTone(r)}>{marginText(r)}</Badge>
-        </span>
-      ),
-    },
-    {
-      key: 'auto',
-      header: 'auto',
-      width: '48px',
-      align: 'center',
-      cell: (r) => (
-        <span
-          className={`inline-block h-2 w-2 rounded-full ${r.autoPrice ? 'bg-ops-olive' : 'border-[1.5px] border-ops-line-strong'}`}
-          title={
-            r.autoPrice
-              ? 'Otomatik fiyat açık — fiyat elle değil, hedef marjdan hesaplanır'
-              : 'Otomatik fiyat kapalı — marj-altına düşünce yalnız uyarır'
-          }
-        />
-      ),
-    },
-  ];
+      </div>
+    ),
+    b2c: (r) => <ChannelCell channel="b2c" cents={r.b2c.amountCents} />,
+    b2b: (r) => <ChannelCell channel="b2b" cents={r.b2b.amountCents} />,
+    cost: (r) => (
+      <span
+        className="font-ops-mono text-ops-sm font-medium text-ops-muted"
+        title={
+          r.costCents === null
+            ? 'Fiyatlı parti yok — maliyet bilinmiyor (sıfır değil)'
+            : 'Son alış fiyatı — yeniden almanın bedeli (KDV hariç)'
+        }
+      >
+        {amount(r.costCents)}
+      </span>
+    ),
+    margin: (r) => (
+      <span title={marginHint(r)}>
+        <Badge tone={marginTone(r)}>{marginText(r)}</Badge>
+      </span>
+    ),
+    auto: (r) => (
+      <span
+        className={`inline-block h-2 w-2 rounded-full ${r.autoPrice ? 'bg-ops-olive' : 'border-[1.5px] border-ops-line-strong'}`}
+        title={
+          r.autoPrice
+            ? 'Otomatik fiyat açık — fiyat elle değil, hedef marjdan hesaplanır'
+            : 'Otomatik fiyat kapalı — marj-altına düşünce yalnız uyarır'
+        }
+      />
+    ),
+  });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <Table
+        busy={navPending}
         columns={columns}
         rows={rows}
         rowKey={(r) => r.variantId}
@@ -107,8 +74,8 @@ export function ChannelsTab({ rows, hasMore, loadingMore, onLoadMore, onEdit, sc
                 var" göstergesidir; yalnız başlıkta durunca liste kaydırılırken gözden kayboluyordu. */}
             <div className="flex flex-wrap items-center gap-3 px-6 py-3">
               <span className="mr-auto font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
-                Satıra tıkla → fiyat düzenle. Otomatik fiyatı açık üründe fiyat elle değil, hedef marj değişir.
-                Fiyat değişikliği verilmiş siparişleri etkilemez.
+                Satıra tıkla → fiyat düzenle. Otomatik fiyatı açık üründe fiyat elle değil, hedef marj değişir. Fiyat değişikliği verilmiş
+                siparişleri etkilemez.
               </span>
               {counts.below > 0 ? (
                 <span className="flex-none rounded-ops-btn border border-ops-red-line bg-ops-red-bg px-[11px] py-[5px] font-ops-body text-ops-xs font-medium text-ops-red">
@@ -163,8 +130,8 @@ function CleanState({ filtered, scopeLabel }: CleanStateProps) {
     <div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-10">
       <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Bu süzgeçte satır yok</span>
       <span className="max-w-[420px] text-center font-ops-body text-ops-sm leading-relaxed text-ops-muted">
-        “{scopeLabel}” ölçütüne uyan boy bulunamadı — yüklenmiş sayfalarda. Liste sayfalıdır; aşağı kaydırıp
-        devamını yükleyince ölçüte uyan satır çıkabilir.
+        “{scopeLabel}” ölçütüne uyan boy bulunamadı — yüklenmiş sayfalarda. Liste sayfalıdır; aşağı kaydırıp devamını yükleyince ölçüte uyan
+        satır çıkabilir.
       </span>
     </div>
   );

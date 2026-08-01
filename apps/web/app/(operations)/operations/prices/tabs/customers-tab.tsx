@@ -14,7 +14,7 @@ import type { CustomerPriceRow, PricesViewProps } from '../prices-types';
 //
 // Liste SAYFALANMAZ: küme veriyle değil admin'in eliyle büyür (her satır ayrı bir pazarlık).
 
-export function CustomersTab({ data, onEditCustomerPrice }: PricesViewProps) {
+export function CustomersTab({ data, onEditCustomerPrice, navPending }: PricesViewProps) {
   const columns: Column<CustomerPriceRow>[] = [
     {
       key: 'customer',
@@ -87,6 +87,7 @@ export function CustomersTab({ data, onEditCustomerPrice }: PricesViewProps) {
       </div>
 
       <Table
+            busy={navPending}
         columns={columns}
         rows={data.customerPrices}
         rowKey={(r) => r.priceId}

@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { ORDERS_COLUMN_TRACKS } from './orders-columns';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { SearchInput } from '@/components/operation/ui/search-input';
 import { Select } from '@/components/operation/form/select';
-import { Table, type Column } from '@/components/operation/ui/table';
+import { Table, withCells, type Column } from '@/components/operation/ui/table';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { amount, money, shortDate } from '@/components/operation/ui/format';
 import { contentText, deliveryText, paymentText, paymentToneClass, statusLabel, statusTone, summaryText } from './orders-labels';
@@ -33,7 +34,7 @@ import type { OrderRow, OrdersViewProps } from './orders-types';
 // değil. Kendi tablosunu yazan ekran, bir gün başlık hizasını da kaydırır.
 
 export function OrdersDesktop(props: OrdersViewProps) {
-  const { rows, counts, urlState, today, onFilter, search, onSearch, hasMore, loadingMore, onLoadMore, onOpen } = props;
+  const { rows, counts, urlState, today, onFilter, search, onSearch, hasMore, loadingMore, onLoadMore, onOpen, navPending } = props;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -95,6 +96,7 @@ export function OrdersDesktop(props: OrdersViewProps) {
       </div>
 
       <Table
+        busy={navPending}
         columns={COLUMNS}
         rows={rows}
         rowKey={(r) => r.id}
@@ -130,81 +132,43 @@ export function OrdersDesktop(props: OrdersViewProps) {
 }
 
 /** Sütunlar tasarımın grid'i: no · müşteri · tutar · kanal · teslim · durum · tahsilat. */
-const COLUMNS: Column<OrderRow>[] = [
-  {
-    key: 'no',
-    header: 'No',
-    width: '104px',
-    // NUMARA DOĞRUDAN DETAYA gider; satırın gerisi hızlı bakışı açar. İki niyet iki hedef: "şu
-    // siparişle işim var" ile "bu satır neydi?" aynı tıklamayla karşılanamaz. Tıklama satıra
-    // YAYILMAZ — yoksa arkada pencere de açılırdı.
-    cell: (row) => (
-      <Link
-        href={`${ORDERS_PATH}/${row.id}`}
-        onClick={(e) => e.stopPropagation()}
-        className="cursor-pointer font-ops-mono text-ops-xs text-ops-muted transition-colors hover:text-ops-olive-dark hover:underline"
-      >
-        {row.referenceNo ?? '—'}
-      </Link>
-    ),
-  },
-  {
-    key: 'customer',
-    header: 'Müşteri',
-    width: 'minmax(160px,1fr)',
-    cell: (row) => (
+const COLUMNS: Column<OrderRow>[] = withCells<OrderRow>(ORDERS_COLUMN_TRACKS, {
+  // NUMARA DOĞRUDAN DETAYA gider; satırın gerisi hızlı bakışı açar. İki niyet iki hedef: "şu
+  // siparişle işim var" ile "bu satır neydi?" aynı tıklamayla karşılanamaz. Tıklama satıra
+  // YAYILMAZ — yoksa arkada pencere de açılırdı.
+  no: (row) => (
+    <Link
+      href={`${ORDERS_PATH}/${row.id}`}
+      onClick={(e) => e.stopPropagation()}
+      className="cursor-pointer font-ops-mono text-ops-xs text-ops-muted transition-colors hover:text-ops-olive-dark hover:underline"
+    >
+      {row.referenceNo ?? '—'}
+    </Link>
+  ),
+  customer: (row) => (
+    <div className="flex min-w-0 flex-col gap-px">
+      <span className="truncate font-ops-body text-ops-sm font-semibold text-ops-ink">
+        {row.customerName}
+        {row.isGift ? <span className="ml-1.5 font-ops-display text-ops-micro text-ops-olive">ikram</span> : null}
+      </span>
+      <span className="truncate font-ops-body text-ops-micro text-ops-muted">{contentText(row)}</span>
+    </div>
+  ),
+  total: (row) => <span className="font-ops-mono text-ops-sm text-ops-ink">{amount(row.totalCents)}</span>,
+  channel: (row) => <Badge tone={CHANNEL_TONE[row.channel]}>{row.channel.toUpperCase()}</Badge>,
+  delivery: (row) => {
+    const { main, meta } = deliveryText(row, shortDate);
+    return (
       <div className="flex min-w-0 flex-col gap-px">
-        <span className="truncate font-ops-body text-ops-sm font-semibold text-ops-ink">
-          {row.customerName}
-          {row.isGift ? <span className="ml-1.5 font-ops-display text-ops-micro text-ops-olive">ikram</span> : null}
-        </span>
-        <span className="truncate font-ops-body text-ops-micro text-ops-muted">{contentText(row)}</span>
+        <span className="truncate font-ops-body text-ops-xs text-ops-body">{main}</span>
+        <span className="truncate font-ops-body text-ops-micro text-ops-muted">{meta}</span>
       </div>
-    ),
+    );
   },
-  {
-    key: 'total',
-    header: 'Tutar',
-    width: '84px',
-    align: 'right',
-    cell: (row) => <span className="font-ops-mono text-ops-sm text-ops-ink">{amount(row.totalCents)}</span>,
-  },
-  {
-    key: 'channel',
-    header: 'Kanal',
-    width: '54px',
-    cell: (row) => <Badge tone={CHANNEL_TONE[row.channel]}>{row.channel.toUpperCase()}</Badge>,
-  },
-  {
-    key: 'delivery',
-    header: 'Teslim',
-    width: 'minmax(110px,140px)',
-    cell: (row) => {
-      const { main, meta } = deliveryText(row, shortDate);
-      return (
-        <div className="flex min-w-0 flex-col gap-px">
-          <span className="truncate font-ops-body text-ops-xs text-ops-body">{main}</span>
-          <span className="truncate font-ops-body text-ops-micro text-ops-muted">{meta}</span>
-        </div>
-      );
-    },
-  },
-  {
-    key: 'status',
-    header: 'Durum',
-    width: '116px',
-    cell: (row) => (
-      <Badge tone={statusTone(row.status)} dot>
-        {statusLabel(row.status)}
-      </Badge>
-    ),
-  },
-  {
-    key: 'payment',
-    header: 'Tahsilat',
-    width: 'minmax(120px,150px)',
-    cell: (row) => (
-      <span className={`truncate font-ops-mono text-ops-micro ${paymentToneClass(row)}`}>{paymentText(row, money)}</span>
-    ),
-  },
-];
+  status: (row) => (
+    <Badge tone={statusTone(row.status)} dot>
+      {statusLabel(row.status)}
+    </Badge>
+  ),
+  payment: (row) => <span className={`truncate font-ops-mono text-ops-micro ${paymentToneClass(row)}`}>{paymentText(row, money)}</span>,
+});

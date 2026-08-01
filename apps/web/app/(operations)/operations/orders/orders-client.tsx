@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
@@ -28,9 +28,18 @@ interface OrdersClientProps {
 export function OrdersClient({ data, device, urlState, today }: OrdersClientProps) {
   const resolvedDevice = useDevice(device);
   const router = useRouter();
+  /**
+   * Süzgeç/sekme turu SÜRÜYOR MU — `router.replace` bir RSC okumasıdır ve dönene kadar ekranda hiçbir
+   * karşılık yoktu: liste eski satırlarla duruyor, tıklanan çip bile aktifleşmiyordu (aktiflik
+   * `urlState`'ten, yani sunucudan geliyor). Operatör basıp basmadığını anlamıyordu.
+   *
+   * `isPending` iki yere bağlanıyor: çip şeridi (iyimser vurgu) ve tablo gövdesi (`busy` — satır
+   * varsa soluklaşır, yoksa iskelet). Bağımsız ajan denetimi, 30.07.
+   */
+  const [pending, startNav] = useTransition();
 
   const go = (patch: Partial<OrdersUrlState>) => {
-    router.replace(ordersUrl({ ...urlState, ...patch }), { scroll: false });
+    startNav(() => router.replace(ordersUrl({ ...urlState, ...patch }), { scroll: false }));
   };
 
   // Arama: giriş yerel (anında yazılır), URL'e gecikmeli. Sunucu değeri değişince yerel giriş eşitlenir.
@@ -91,6 +100,7 @@ export function OrdersClient({ data, device, urlState, today }: OrdersClientProp
     onFilter: go,
     search,
     onSearch,
+    navPending: pending,
     hasMore: cursor !== null,
     loadingMore,
     onLoadMore,

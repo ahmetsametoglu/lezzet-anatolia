@@ -9,6 +9,7 @@ import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { SearchInput } from '@/components/operation/ui/search-input';
 import { money, shortDate } from '@/components/operation/ui/format';
 import { InlineMetric } from '@/components/operation/ui/inline-metric';
+import { Skeleton, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
 import { statusHint, statusOf } from './customers-labels';
 import type { CustomerDetail, CustomersViewProps } from './customers-types';
 
@@ -32,7 +33,7 @@ const LIMIT_STEP_EUR = 50;
 export function CustomersMobile(props: CustomersViewProps) {
   // `onType` ve `onScope` BİLİNÇLİ olarak alınmıyor: tasarımın mobil bölümünde çip şeridi yok.
   const { rows, search, onSearch, hasMore, loadingMore, onLoadMore } = props;
-  const { selectedId, onSelect, detail, detailLoading, onOpenOrder, onEditCredit, onOpenB2b } = props;
+  const { selectedId, onSelect, detail, detailLoading, detailError, onOpenOrder, onEditCredit, onOpenB2b } = props;
   const { saving, saveError, onSaveCreditLimit } = props;
 
   return (
@@ -97,6 +98,7 @@ export function CustomersMobile(props: CustomersViewProps) {
                     onOpenB2b={onOpenB2b}
                     detail={detail}
                     loading={detailLoading}
+                    detailError={detailError}
                     saving={saving}
                     saveError={saveError}
                     onOpenOrder={onOpenOrder}
@@ -127,6 +129,8 @@ interface MobileDetailProps {
   onOpenB2b: () => void;
   detail: CustomerDetail | null;
   loading: boolean;
+  /** Okuma düştüyse sebebi — iskelet sonsuza kadar dönmesin (bağımsız ajan denetimi, 30.07). */
+  detailError: string | null;
   saving: boolean;
   saveError: string | null;
   onOpenOrder: (orderId: string) => void;
@@ -140,19 +144,47 @@ function MobileDetail({
   onOpenB2b,
   detail,
   loading,
+  detailError,
   saving,
   saveError,
   onOpenOrder,
   onEditCredit,
   onSaveCreditLimit,
 }: MobileDetailProps) {
+  // OKUMA DÜŞTÜ: iskelet sonsuza kadar nabız atardı ("geliyor" derken gelmiyor). Bir tur tam bu
+  // oluyordu — `loading || !detail` koşulu hatayı da yükleme sayıyordu.
+  if (!loading && !detail && detailError) {
+    return (
+      <div className="flex flex-col gap-1.5 bg-ops-red-bg px-4 py-3.5" role="alert">
+        <span className="font-ops-display text-ops-xs font-semibold text-ops-red">Bilgi okunamadı</span>
+        <span className="font-ops-body text-ops-sm leading-[1.5] text-ops-red">{detailError}</span>
+      </div>
+    );
+  }
+
   if (loading || !detail) {
     return (
       <div className="flex flex-col gap-3 bg-ops-subtle px-4 py-3.5">
         {/* B2B kutusu detay beklemez — kararı verecek bilgi (tip + onay hâli) satırda zaten var ve
             tasarımın mobil kuralı "karar telefonda anında". */}
         {isCompany ? <B2bBox approved={b2bApproved} onOpen={onOpenB2b} /> : null}
-        <span className="font-ops-body text-ops-sm text-ops-muted">Yükleniyor…</span>
+        {/* İSKELET, tek satır "Yükleniyor…" değil: telefonda kart bir kez açılıp içerik gelince
+            uzuyordu ve altındaki müşteri satırı ekrandan kayıyordu — operatörün baktığı yer değişiyor.
+            İskelet gelen içerikle aynı yüksekliği kaplıyor. */}
+        <div className="flex flex-col gap-2 rounded-ops-card border border-ops-line bg-ops-white px-3 py-2.5">
+          <Skeleton className="h-3 w-28" />
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <SkeletonMetric boxed={false} />
+            <SkeletonMetric boxed={false} />
+            <SkeletonMetric boxed={false} />
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 rounded-ops-card border border-ops-line bg-ops-white px-3 py-2.5">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-9 w-full rounded-ops-btn" />
+        </div>
+        <Skeleton className="h-2.5 w-24" />
+        <SkeletonRows rows={2} />
       </div>
     );
   }

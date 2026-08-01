@@ -1,21 +1,16 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { PRODUCTS_COLUMN_TRACKS } from '../../products-columns';
 import { AnchoredMenu } from '@/components/operation/ui/anchored-menu';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
-import { Table, type Column } from '@/components/operation/ui/table';
+import { withCells, Table, type Column } from '@/components/operation/ui/table';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { ProductPreview } from './product-preview';
-import {
-  filledContentLangs,
-  type ProductStatus,
-  type ProductView,
-  type ProductsViewProps,
-  type StatusFilter,
-} from '../../products-types';
+import { filledContentLangs, type ProductStatus, type ProductView, type ProductsViewProps, type StatusFilter } from '../../products-types';
 
 // Ürünler sekmesi (masaüstü): liste + seçili önizleme paneli (1.95fr / 1fr). Süzgeçler
 // (arama · kategori · durum · beyan eksik) İŞLEVSEL — hepsi listeyi gerçekten daraltır.
@@ -24,9 +19,23 @@ const STATUS_LABEL: Record<ProductStatus, string> = { active: 'Aktif', passive: 
 const STATUS_ORDER: ProductStatus[] = ['active', 'passive', 'candidate'];
 
 function StatusBadge({ status }: { status: ProductStatus }) {
-  if (status === 'candidate') return <Badge tone="blue" dot>Aday</Badge>;
-  if (status === 'passive') return <Badge tone="neutral" dot>Pasif</Badge>;
-  return <Badge tone="olive" dot>Aktif</Badge>;
+  if (status === 'candidate')
+    return (
+      <Badge tone="blue" dot>
+        Aday
+      </Badge>
+    );
+  if (status === 'passive')
+    return (
+      <Badge tone="neutral" dot>
+        Pasif
+      </Badge>
+    );
+  return (
+    <Badge tone="olive" dot>
+      Aktif
+    </Badge>
+  );
 }
 
 function LangBadge({ langs }: { langs: Locale[] }) {
@@ -34,28 +43,17 @@ function LangBadge({ langs }: { langs: Locale[] }) {
   return <Badge tone={langs.length === 3 ? 'olive' : 'amber'}>{langs.map((l) => l.toUpperCase()).join('·')}</Badge>;
 }
 
-const COLUMNS: Column<ProductView>[] = [
-  {
-    key: 'name',
-    header: 'Ürün',
-    width: 'minmax(120px,1fr)',
-    cell: (r) => (
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{resolveLocalizedText(r.name)}</span>
-        <span className="font-ops-body text-ops-xs text-ops-muted">{r.categoryName}</span>
-      </div>
-    ),
-  },
-  {
-    key: 'variants',
-    header: 'Varyant',
-    width: '66px',
-    align: 'center',
-    cell: (r) => <span className="font-ops-mono text-ops-sm text-ops-strong">{r.variants.length}</span>,
-  },
-  { key: 'langs', header: 'Diller', width: '88px', align: 'center', cell: (r) => <LangBadge langs={filledContentLangs(r.name)} /> },
-  { key: 'status', header: 'Durum', width: '80px', align: 'right', cell: (r) => <StatusBadge status={r.status} /> },
-];
+const COLUMNS: Column<ProductView>[] = withCells<ProductView>(PRODUCTS_COLUMN_TRACKS, {
+  name: (r) => (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{resolveLocalizedText(r.name)}</span>
+      <span className="font-ops-body text-ops-xs text-ops-muted">{r.categoryName}</span>
+    </div>
+  ),
+  variants: (r) => <span className="font-ops-mono text-ops-sm text-ops-strong">{r.variants.length}</span>,
+  langs: (r) => <LangBadge langs={filledContentLangs(r.name)} />,
+  status: (r) => <StatusBadge status={r.status} />,
+});
 
 // "+ durum" — dashed çip açılır durum menüsü; seçilince aktif çip + ✕ ile temizlenir (İşlevsel süzgeç).
 function StatusFilterChip({ value, onChange }: { value: StatusFilter; onChange: (s: StatusFilter) => void }) {
@@ -96,7 +94,19 @@ function StatusFilterChip({ value, onChange }: { value: StatusFilter; onChange: 
 }
 
 export function ProductsTab(props: ProductsViewProps) {
-  const { data, products, catFilter, onCatFilter, statusFilter, onStatusFilter, onlyIncomplete, onToggleIncomplete, selectedId, onSelect, openEdit } = props;
+  const {
+    data,
+    products,
+    catFilter,
+    onCatFilter,
+    statusFilter,
+    onStatusFilter,
+    onlyIncomplete,
+    onToggleIncomplete,
+    selectedId,
+    onSelect,
+    openEdit,
+  } = props;
   const { hasMore, loadingMore, onLoadMore } = props;
   // Seçili kayıt GÖRÜNEN listeden çözülür (eklenen sayfalar dahil); sayaç sunucudan gelir.
   const selected = products.find((p) => p.id === selectedId) ?? null;
@@ -132,6 +142,7 @@ export function ProductsTab(props: ProductsViewProps) {
       <div className="grid min-h-0 flex-1 grid-cols-[1.95fr_1fr] overflow-hidden">
         <div className="flex min-h-0 flex-col border-r border-ops-line">
           <Table
+            busy={props.navPending}
             columns={COLUMNS}
             rows={products}
             rowKey={(r) => r.id}

@@ -5,6 +5,7 @@ import { Badge } from '@/components/operation/ui/badge';
 import { buttonClass } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { money, shortDate } from '@/components/operation/ui/format';
+import { Skeleton } from '@/components/operation/ui/skeleton';
 import { paymentTone } from '../customers-labels';
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@lezzet/types';
 import type { OrderSummaryView } from '@/lib/order/summary';
@@ -60,7 +61,42 @@ export function OrderDialog({ summary, error, referenceNo, onClose }: OrderDialo
           {error}
         </span>
       ) : !summary ? (
-        <span className="font-ops-body text-ops-base text-ops-muted">Yükleniyor…</span>
+        // Diyalog GERÇEK özetin şeklinde bekliyor: rozet şeridi · üç kalem · üç toplam satırı.
+        // "Yükleniyor…" yazan tek satır, diyaloğu bir anda üç katına çıkarıyordu — açılan kutu
+        // büyürken kullanıcının imleci artık başka bir şeyin üzerinde kalıyor.
+        <div className="flex flex-col gap-4" aria-hidden="true">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-20 rounded-[7px]" />
+            <Skeleton className="h-5 w-24 rounded-[7px]" />
+            <Skeleton className="ml-auto h-3 w-28" />
+          </div>
+          <div className="flex flex-col rounded-ops-card border border-ops-line">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-ops-line-soft px-3.5 py-2.5 last:border-b-0"
+              >
+                <span className="flex min-w-0 flex-col gap-1">
+                  <Skeleton className={`h-3.5 ${i === 1 ? 'w-2/5' : 'w-3/5'}`} />
+                  <Skeleton className="h-2.5 w-1/4" />
+                </span>
+                <Skeleton className="h-3 w-16 justify-self-end" />
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col gap-2">
+            {[0, 1].map((i) => (
+              <div key={i} className="flex items-center justify-between">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            ))}
+            <div className="flex items-center justify-between border-t border-ops-line pt-2">
+              <Skeleton className="h-3.5 w-16" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="flex flex-col gap-4">
           {/* Üst şerit: karar için gereken üç şey — ödendi mi, ne kadar kaldı, nasıl gidiyor. */}

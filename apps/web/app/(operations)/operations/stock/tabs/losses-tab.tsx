@@ -42,6 +42,7 @@ export function LossesTab({
   onPeriod,
   data,
   onOpenRecall,
+  navPending,
 }: StockViewProps) {
   const term = search.trim().toLocaleLowerCase('tr');
   const rows = losses.filter(
@@ -193,6 +194,7 @@ export function LossesTab({
       </div>
 
       <Table
+        busy={navPending}
         columns={columns}
         rows={rows}
         rowKey={(r) => r.id}

@@ -6,6 +6,7 @@ import type { SignalTone } from '@lezzet/domain-core';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
+import { Skeleton, SkeletonCard, SkeletonText } from '@/components/operation/ui/skeleton';
 import type { B2bCheckView, B2bDuplicateRow } from '../customers-types';
 import { CUSTOMERS_PATH } from '../customers-url';
 
@@ -53,7 +54,7 @@ export function B2bApprovalDialog({ check, error, saving, onDecide, onClose }: B
           {error}
         </p>
       ) : !check ? (
-        <p className="font-ops-body text-ops-sm text-ops-muted">Kontrol kartı okunuyor…</p>
+        <CardSkeleton />
       ) : step.kind === 'confirm' ? (
         <ConfirmStep
           check={check}
@@ -66,6 +67,42 @@ export function B2bApprovalDialog({ check, error, saving, onDecide, onClose }: B
         <Card check={check} saving={saving} onDecide={(approve) => setStep({ kind: 'confirm', approve })} />
       )}
     </Dialog>
+  );
+}
+
+/**
+ * Kart beklerken — künye kutusu · AI kutusu · ALTI sinyal hücresi (2 kolon).
+ *
+ * Sinyal sayısı SABİT altı (motorun ürettiği kadar) ve bu iskeleti nadiren yanıltıcı yapan bir durum:
+ * sayı veriye göre değişmiyor, yani gelen içerik iskeletle birebir aynı yeri kaplıyor.
+ */
+function CardSkeleton() {
+  return (
+    <div className="flex flex-col gap-3.5" aria-hidden="true">
+      <SkeletonCard>
+        <Skeleton className="h-4 w-2/5" />
+        <Skeleton className="h-2.5 w-3/5" />
+        <Skeleton className="h-2.5 w-32" />
+      </SkeletonCard>
+      <div className="flex flex-col gap-1.5 rounded-ops-card border border-dashed border-ops-line bg-ops-subtle px-3.5 py-3">
+        <Skeleton className="h-2.5 w-48" />
+        {/* Gövde bir CÜMLE bekliyor (kaç satıra sarabileceği belli değil) → paragraf iskeleti:
+            son satırı kısa, yani tablo değil metin gibi okunuyor. */}
+        <SkeletonText lines={2} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="flex items-center gap-2.5 rounded-ops-card border border-ops-line bg-ops-white px-3 py-2.5">
+            <Skeleton className="h-[22px] w-[22px] flex-none rounded-[7px]" />
+            <span className="flex min-w-0 flex-col gap-1">
+              <Skeleton className="h-2.5 w-16" />
+              <Skeleton className="h-3 w-20" />
+            </span>
+          </div>
+        ))}
+      </div>
+      <Skeleton className="h-3 w-2/3" />
+    </div>
   );
 }
 

@@ -123,6 +123,12 @@ export interface StockData {
  * `data.levels` ise ham ilk sayfadır. İkisi ayrı tutulur ki sayaçlar süzgeçten etkilenmesin.
  */
 export interface StockViewProps {
+  /**
+   * Süzgeç/sekme turu sürüyor — tablo gövdesi soluklaşır (satır varsa) ya da iskelete döner (yoksa).
+   * Bu ekranda sekme değişimi ÇOĞUNLUKLA sığdır (`replaceState`, sunucuya gitmez); bayrak yalnız
+   * gerçekten gezinilen hâllerde (arama terimi varken sekme, ya da süzgeç) doluyor.
+   */
+  navPending: boolean;
   data: StockData;
   levels: StockLevelRow[];
   tab: StockTab;

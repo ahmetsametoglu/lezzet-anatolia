@@ -34,6 +34,12 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
   const resolvedDevice = useDevice(device);
   const router = useRouter();
   const [, startTransition] = useTransition();
+  /**
+   * Süzgeç/sekme turu sürüyor mu — `router.replace` bir RSC okumasıdır (bu sayfada 5 paralel sorgu) ve
+   * dönene kadar ekranda hiçbir karşılık yoktu. Yazma turunun `startTransition`'ından AYRI: ikisi aynı
+   * bayrağı paylaşırsa bir kaydetme de listeyi soluklaştırırdı. (Bağımsız ajan denetimi, 30.07.)
+   */
+  const [pending, startNav] = useTransition();
 
   // Sekme SUNUCUYA GİTMEZ (yalnız hangi panelin çizildiğini değiştirir) → sığ yazım (replaceState).
   // Süzgeçler ise RSC'yi yeniden okutur (router.replace), çünkü veriyi sunucu süzüyor.
@@ -69,7 +75,7 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
     // bir süzgeç. Devamını yükleyen action da adresi (artık terimsiz) okuduğu için ikinci sayfa
     // SÜZÜLMEMİŞ gelir ve liste kendi içinde tutarsızlaşırdı.
     if (urlState.q) {
-      router.replace(productsUrl({ ...urlState, tab: next, creating: false, q: '' }), { scroll: false });
+      startNav(() => router.replace(productsUrl({ ...urlState, tab: next, creating: false, q: '' }), { scroll: false }));
       return;
     }
     writeUrl({ tab: next, creating: false, q: '' });
@@ -82,7 +88,7 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
 
   /** Süzgeç değişimi: URL'e yaz + RSC'yi yeniden okut (süzülmüş ilk sayfa gelir). */
   const applyFilters = (patch: Partial<ProductsUrlState>) => {
-    router.replace(productsUrl({ ...urlState, ...patch, tab }), { scroll: false });
+    startNav(() => router.replace(productsUrl({ ...urlState, ...patch, tab }), { scroll: false }));
   };
 
   // Arama: giriş yerel (anında yazılır), URL'e gecikmeli. Sunucu değeri değişince yerel giriş eşitlenir.
@@ -155,6 +161,7 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
     onStatusFilter: (status: StatusFilter) => applyFilters({ status }),
     onlyIncomplete: urlState.incomplete,
     onToggleIncomplete: () => applyFilters({ incomplete: !urlState.incomplete }),
+    navPending: pending,
     hasMore: cursor !== null,
     loadingMore,
     onLoadMore,

@@ -1,8 +1,9 @@
 'use client';
 
 import { Badge } from '@/components/operation/ui/badge';
+import { STOCK_COLUMN_TRACKS } from '../stock-columns';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
-import { Table, type Column } from '@/components/operation/ui/table';
+import { Table, withCells, type Column } from '@/components/operation/ui/table';
 import { money, shortDate } from '@/components/operation/ui/format';
 import { expiryBadge } from '@/lib/stock/batch-labels';
 import { totalRiskCents } from '../stock-labels';
@@ -19,90 +20,69 @@ const URGENT_PREVIEW = 3;
 // aynı üç parti bekliyordur; paneli seçime bağlamak, kuyruğu ancak doğru satıra tıklayınca görünür
 // kılardı. Tam karar yüzeyi kendi sekmesinde, burası ona giden kapı.
 
-export function LevelsTab({ data, levels, selectedId, onSelect, hasMoreLevels, loadingLevels, onLoadMoreLevels, onOpenOffer, onTab }: StockViewProps) {
-
-  const columns: Column<StockLevelRow>[] = [
-    {
-      key: 'name',
-      header: 'Boy',
-      width: 'minmax(180px,1fr)',
-      cell: (r) => (
-        <div className="flex min-w-0 flex-col gap-px">
-          <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{r.title}</span>
-          <span className="font-ops-body text-ops-xs text-ops-muted">
-            {r.categoryName} · {r.batches.length === 0 ? 'parti yok' : `${r.batches.length} parti`}
-            {/* Satılamaz olmak stoğu yok saymaz — mal duruyor, satışı kapalı. İkisini ayırmak, "neden
+export function LevelsTab({
+  data,
+  levels,
+  selectedId,
+  onSelect,
+  hasMoreLevels,
+  loadingLevels,
+  onLoadMoreLevels,
+  onOpenOffer,
+  onTab,
+  navPending,
+}: StockViewProps) {
+  const columns: Column<StockLevelRow>[] = withCells<StockLevelRow>(STOCK_COLUMN_TRACKS, {
+    name: (r) => (
+      <div className="flex min-w-0 flex-col gap-px">
+        <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{r.title}</span>
+        <span className="font-ops-body text-ops-xs text-ops-muted">
+          {r.categoryName} · {r.batches.length === 0 ? 'parti yok' : `${r.batches.length} parti`}
+          {/* Satılamaz olmak stoğu yok saymaz — mal duruyor, satışı kapalı. İkisini ayırmak, "neden
                 satmıyorum" sorusunu ekranda cevaplar. */}
-            {r.status === 'passive' ? ' · ürün pasif' : r.status === 'candidate' ? ' · aday ürün' : ''}
-            {r.variantActive ? '' : ' · boy kapalı'}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: 'available',
-      header: 'Kullanılabilir',
-      width: '112px',
-      align: 'right',
-      cell: (r) => (
-        <div className="flex flex-col items-end gap-px">
-          <span
-            className={`font-ops-mono text-ops-base ${r.availableQty === 0 ? 'text-ops-red' : 'text-ops-ink'}`}
-            title="Fiili − aktif rezervasyon"
-          >
-            {r.availableQty}
-          </span>
-          {r.belowMin ? (
-            <span className="font-ops-mono text-ops-micro text-ops-amber" title="Sipariş eşiğinin altında">
-              eşik {r.minStockQty}
-            </span>
-          ) : null}
-        </div>
-      ),
-    },
-    {
-      key: 'reserved',
-      header: 'Ayrılmış',
-      width: '88px',
-      align: 'right',
-      cell: (r) => (
-        <span
-          className="font-ops-mono text-ops-sm text-ops-muted"
-          title="Siparişe ayrılmış — mal depoda duruyor ama satılabilir değil"
-        >
-          {r.reservedQty}
+          {r.status === 'passive' ? ' · ürün pasif' : r.status === 'candidate' ? ' · aday ürün' : ''}
+          {r.variantActive ? '' : ' · boy kapalı'}
         </span>
-      ),
+      </div>
+    ),
+    available: (r) => (
+      <div className="flex flex-col items-end gap-px">
+        <span
+          className={`font-ops-mono text-ops-base ${r.availableQty === 0 ? 'text-ops-red' : 'text-ops-ink'}`}
+          title="Fiili − aktif rezervasyon"
+        >
+          {r.availableQty}
+        </span>
+        {r.belowMin ? (
+          <span className="font-ops-mono text-ops-micro text-ops-amber" title="Sipariş eşiğinin altında">
+            eşik {r.minStockQty}
+          </span>
+        ) : null}
+      </div>
+    ),
+    reserved: (r) => (
+      <span className="font-ops-mono text-ops-sm text-ops-muted" title="Siparişe ayrılmış — mal depoda duruyor ama satılabilir değil">
+        {r.reservedQty}
+      </span>
+    ),
+    physical: (r) => <span className="font-ops-mono text-ops-sm text-ops-muted">{r.physicalQty}</span>,
+    nearest: (r) => {
+      if (!r.nearest) return <span className="font-ops-body text-ops-xs text-ops-faint">stok yok</span>;
+      const badge = expiryBadge(r.nearest);
+      return (
+        <div className="flex flex-col items-end gap-px">
+          <Badge tone={badge.tone}>{badge.text}</Badge>
+          <span className="font-ops-mono text-ops-micro text-ops-muted">{shortDate(r.nearest.expiryDate)}</span>
+        </div>
+      );
     },
-    {
-      key: 'physical',
-      header: 'Fiili',
-      width: '78px',
-      align: 'right',
-      cell: (r) => <span className="font-ops-mono text-ops-sm text-ops-muted">{r.physicalQty}</span>,
-    },
-    {
-      key: 'nearest',
-      header: 'En yakın',
-      width: '142px',
-      align: 'right',
-      cell: (r) => {
-        if (!r.nearest) return <span className="font-ops-body text-ops-xs text-ops-faint">stok yok</span>;
-        const badge = expiryBadge(r.nearest);
-        return (
-          <div className="flex flex-col items-end gap-px">
-            <Badge tone={badge.tone}>{badge.text}</Badge>
-            <span className="font-ops-mono text-ops-micro text-ops-muted">{shortDate(r.nearest.expiryDate)}</span>
-          </div>
-        );
-      },
-    },
-  ];
+  });
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] overflow-hidden">
       <div className="flex min-h-0 flex-col border-r border-ops-line">
         <Table
+          busy={navPending}
           columns={columns}
           rows={levels}
           rowKey={(r) => r.variantId}
@@ -110,9 +90,7 @@ export function LevelsTab({ data, levels, selectedId, onSelect, hasMoreLevels, l
           isRowActive={(r) => r.variantId === selectedId}
           empty={
             <div className="flex flex-1 items-center justify-center p-10">
-              <span className="font-ops-body text-ops-base text-ops-muted">
-                Bu süzgeçle eşleşen boy yok — süzgeci gevşetin.
-              </span>
+              <span className="font-ops-body text-ops-base text-ops-muted">Bu süzgeçle eşleşen boy yok — süzgeci gevşetin.</span>
             </div>
           }
           footer={<LoadMoreSentinel hasMore={hasMoreLevels} loading={loadingLevels} onLoadMore={onLoadMoreLevels} />}
@@ -175,9 +153,7 @@ function UrgentPanel({ batches, onOpenOffer, onSeeAll }: UrgentPanelProps) {
           <span className="font-ops-display text-ops-base font-semibold text-ops-ink">En acil partiler</span>
           {risk !== null ? <span className="font-ops-mono text-ops-xs text-ops-red">{money(risk)} riskte</span> : null}
         </div>
-        <span className="font-ops-body text-ops-xs text-ops-muted">
-          En az kalan üstte · tam karar yüzeyi “Yaklaşan tarihli” sekmesinde
-        </span>
+        <span className="font-ops-body text-ops-xs text-ops-muted">En az kalan üstte · tam karar yüzeyi “Yaklaşan tarihli” sekmesinde</span>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-[11px] overflow-y-auto px-5 py-3.5">

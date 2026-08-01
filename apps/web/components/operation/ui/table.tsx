@@ -1,4 +1,11 @@
 import type { ReactNode } from 'react';
+import { Skeleton } from './skeleton';
+import { COLUMN_SELF, type Column } from './table-columns';
+
+// Yerleşim sözleşmesi ALT modülde (`table-columns`) — iskelet de aynı şeritleri okuyor ve tipler
+// burada dururken `skeleton → table → skeleton` döngüsü oluşuyordu. Tüketiciler tek yerden alsın
+// diye buradan yeniden dışa veriliyor.
+export { withCells, type Column } from './table-columns';
 import { SortableList } from './sortable-list';
 
 /**
@@ -9,21 +16,30 @@ import { SortableList } from './sortable-list';
  * Sona-yaklaşınca yükleme (infinite scroll) `footer` slotuna spinner konarak bağlanır.
  * `onReorder` verilirse satırlar sürükle-bırakla sıralanır (opt-in yetenek; dnd tek kaynak = SortableList).
  */
-export interface Column<Row> {
-  key: string;
-  header: ReactNode;
-  /** CSS grid track: '60px' | '1fr' | 'minmax(120px,1fr)' */
-  width: string;
-  align?: 'left' | 'center' | 'right';
-  cell: (row: Row) => ReactNode;
-}
-
 interface TableProps<Row> {
   columns: Column<Row>[];
   rows: Row[];
   rowKey: (row: Row) => string;
   /** Satır yokken gösterilir (O7 boş durum). */
   empty?: ReactNode;
+  /**
+   * YENİ BİR OKUMA UÇUŞTA — süzgeç/arama/sekme değişti ve sunucu cevabı bekleniyor.
+   *
+   * İki ayrı karşılık üretir, çünkü iki ayrı durum var:
+   *  · **satır yok** → iskelet satırlar. `empty`den ÖNCE gelir ve bu ayrım kritik: satırı olmayan bir
+   *    tablonun iki hâli var, "veri yok" ve "henüz okumadım". İkincisinde `empty` göstermek
+   *    ("Bu ölçüte uyan müşteri yok") ekranın yalan söylemesidir — operatör süzgecini değiştirmeye
+   *    kalkar, oysa istek daha dönmemiştir.
+   *  · **satır var** → satırlar YERİNDE KALIR, soluklaşır ve tıklama kapanır. Süzgeç değişiminde
+   *    yüklenmiş 30 satırı iskelete çevirmek, operatörün bağlamını gereksiz yere silmek olurdu; oysa
+   *    solukluk "bu liste artık güncel değil, birazdan yenilenecek" der.
+   *
+   * İskelet satırları başlığın grid ŞABLONUNU paylaşır (`template`), yani kolon genişlikleri gerçek
+   * satırla birebir aynı: içerik gelince hiçbir kolon kaymaz.
+   */
+  busy?: boolean;
+  /** İskelet satır sayısı — gelecek sayfadan belirgin fazla olmasın (liste yükleme bitince küçülür). */
+  busyRows?: number;
   /** Gövde sonuna eklenir — infinite scroll "yükleniyor" satırı vb. */
   footer?: ReactNode;
   /** Satır seçimi/tıklaması — verilirse satır tıklanabilir olur. */
@@ -37,7 +53,7 @@ interface TableProps<Row> {
   onReorder?: (orderedIds: string[]) => void;
 }
 
-const SELF = { left: 'justify-self-start', center: 'justify-self-center', right: 'justify-self-end' } as const;
+const SELF = COLUMN_SELF;
 
 // Sıralama modunda satır başına eklenen tutamak kolonunun genişliği.
 const HANDLE_TRACK = '22px';
@@ -47,6 +63,8 @@ export function Table<Row>({
   rows,
   rowKey,
   empty,
+  busy = false,
+  busyRows = 8,
   footer,
   onRowClick,
   onRowDoubleClick,
@@ -105,7 +123,10 @@ export function Table<Row>({
 
       {/* Gövde (kaydırılır) */}
       <div
-        className="min-h-0 flex-1 overflow-y-auto"
+        className={`min-h-0 flex-1 overflow-y-auto ${
+          busy && rows.length > 0 ? 'pointer-events-none opacity-55 transition-opacity' : 'transition-opacity'
+        }`}
+        aria-busy={busy || undefined}
         onScroll={onScroll ? (e) => onScroll(e.nativeEvent) : undefined}
       >
         {/* BOŞ HÂL GÖVDENİN İÇİNDE, tablonun yerine değil.
@@ -114,7 +135,33 @@ export function Table<Row>({
             süzen bir çip (marj-altı, teklif açık…) ilk sayfayı sıfıra indirdiğinde liste ölüyordu:
             imleç dolu olmasına rağmen sonraki sayfa HİÇBİR ŞEKİLDE yüklenemiyordu ve ekranın kendi
             metni "aşağı kaydırıp devamını yükleyin" diyordu — kaydırılacak bir şey kalmamışken. */}
-        {rows.length === 0 && empty ? (
+        {rows.length === 0 && busy ? (
+          // İSKELET, `empty`den ÖNCE: "henüz okumadım" ile "veri yok" ayrı hâller.
+          Array.from({ length: busyRows }, (_, i) => (
+            <div
+              key={i}
+              style={{ gridTemplateColumns: template }}
+              className="grid items-center gap-x-2.5 border-b border-ops-line-soft px-5 py-3 last:border-b-0"
+              aria-hidden="true"
+            >
+              {sortable ? <span /> : null}
+              {columns.map((c, ci) => (
+                <div key={c.key} className={c.align && c.align !== 'left' ? SELF[c.align] : 'min-w-0'}>
+                  {/* İlk kolon genelde iki satırlık kimliktir (ad + telefon/kod); gerisi tek çubuk.
+                      Genişlik dönüşümlü: eşit çubuklar tabloyu bir tarama deseni gibi gösteriyor. */}
+                  {ci === 0 ? (
+                    <span className="flex flex-col gap-1">
+                      <Skeleton className="h-3 w-3/5" />
+                      <Skeleton className="h-2.5 w-2/5" />
+                    </span>
+                  ) : (
+                    <Skeleton className={`h-3 ${i % 2 === 0 ? 'w-4/5' : 'w-3/5'} max-w-[90px]`} />
+                  )}
+                </div>
+              ))}
+            </div>
+          ))
+        ) : rows.length === 0 && empty ? (
           empty
         ) : sortable && onReorder ? (
           <SortableList items={rows} getId={rowKey} onReorder={onReorder} renderItem={(row, handle) => renderRow(row, handle)} />

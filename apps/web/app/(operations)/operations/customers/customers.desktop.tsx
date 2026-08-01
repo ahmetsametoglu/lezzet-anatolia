@@ -1,11 +1,12 @@
 'use client';
 
 import { Badge } from '@/components/operation/ui/badge';
+import { CUSTOMERS_COLUMN_TRACKS } from './customers-columns';
 import { Chip } from '@/components/operation/ui/chip';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { SearchInput } from '@/components/operation/ui/search-input';
-import { Table, type Column } from '@/components/operation/ui/table';
+import { Table, withCells, type Column } from '@/components/operation/ui/table';
 import { CustomerPreview } from './components/customer-preview';
 import { statusHint, statusOf, typeTone } from './customers-labels';
 import { CustomerTypeEnum } from '@lezzet/types';
@@ -18,51 +19,34 @@ import type { CustomerRow, CustomersViewProps } from './customers-types';
 //
 // Sütun sırası kararın sırası: KİM (ad + telefon — telefon kimlik anahtarıdır) → NE TÜR → HANGİ HÂLDE.
 
-const COLUMNS: Column<CustomerRow>[] = [
-  {
-    key: 'name',
-    header: 'Müşteri',
-    width: 'minmax(120px,1fr)',
-    // Avatar YOK: tasarımın web listesi iki satırlık metin (ad + telefon). Avatar yalnız mobil
-    // listede ve önizleme panelinde var — listede de göstermek satırı gereksiz şişiriyordu.
-    cell: (r) => (
-      <span className="flex min-w-0 flex-col gap-px">
-        <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{r.name}</span>
-        {/* Telefon ADIN ALTINDA ve MONO: operatör WhatsApp yazışırken satırı telefondan tanır. */}
-        <span className="truncate font-ops-mono text-ops-xs text-ops-muted">{r.phone ?? r.email ?? '—'}</span>
+const COLUMNS: Column<CustomerRow>[] = withCells<CustomerRow>(CUSTOMERS_COLUMN_TRACKS, {
+  // Avatar YOK: tasarımın web listesi iki satırlık metin (ad + telefon). Avatar yalnız mobil
+  // listede ve önizleme panelinde var — listede de göstermek satırı gereksiz şişiriyordu.
+  name: (r) => (
+    <span className="flex min-w-0 flex-col gap-px">
+      <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{r.name}</span>
+      {/* Telefon ADIN ALTINDA ve MONO: operatör WhatsApp yazışırken satırı telefondan tanır. */}
+      <span className="truncate font-ops-mono text-ops-xs text-ops-muted">{r.phone ?? r.email ?? '—'}</span>
+    </span>
+  ),
+  // Renk ANLAM taşır (envanter O6): B2C olive, B2B amber. Nötr gri bir kanal rozeti, listeyi
+  // tarayan gözün hiç kullanmadığı bir rozet olur.
+  type: (r) => <Badge tone={typeTone(r.type)}>{TYPE_LABEL[r.type]}</Badge>,
+  status: (r) => {
+    const s = statusOf(r);
+    return (
+      <span title={statusHint(r)}>
+        <Badge tone={s.tone} dot>
+          {s.label}
+        </Badge>
       </span>
-    ),
+    );
   },
-  {
-    key: 'type',
-    header: 'Tip',
-    width: '70px',
-    align: 'center',
-    // Renk ANLAM taşır (envanter O6): B2C olive, B2B amber. Nötr gri bir kanal rozeti, listeyi
-    // tarayan gözün hiç kullanmadığı bir rozet olur.
-    cell: (r) => <Badge tone={typeTone(r.type)}>{TYPE_LABEL[r.type]}</Badge>,
-  },
-  {
-    key: 'status',
-    header: 'Durum',
-    width: '96px',
-    align: 'right',
-    cell: (r) => {
-      const s = statusOf(r);
-      return (
-        <span title={statusHint(r)}>
-          <Badge tone={s.tone} dot>
-            {s.label}
-          </Badge>
-        </span>
-      );
-    },
-  },
-];
+});
 
 export function CustomersDesktop(props: CustomersViewProps) {
-  const { data, rows, urlState, search, onSearch, onScope, onType, hasMore, loadingMore, onLoadMore } = props;
-  const { selectedId, onSelect, detail, detailLoading, onOpenOrder, onEditCredit, onEdit, onOpenB2b, saving, saveError } = props;
+  const { data, rows, urlState, search, onSearch, onScope, onType, hasMore, loadingMore, onLoadMore, navPending } = props;
+  const { selectedId, onSelect, detail, detailLoading, detailError, onOpenOrder, onEditCredit, onEdit, onOpenB2b, saving, saveError } = props;
   const selected = rows.find((r) => r.id === selectedId) ?? null;
   const { total, draft } = data.counts;
 
@@ -105,6 +89,7 @@ export function CustomersDesktop(props: CustomersViewProps) {
       <div className="grid min-h-0 flex-1 grid-cols-[1.4fr_1fr] overflow-hidden">
         <div className="flex min-h-0 flex-col border-r border-ops-line">
           <Table
+            busy={navPending}
             columns={COLUMNS}
             rows={rows}
             rowKey={(r) => r.id}
@@ -112,9 +97,7 @@ export function CustomersDesktop(props: CustomersViewProps) {
             isRowActive={(r) => r.id === selectedId}
             empty={
               <div className="flex flex-1 items-center justify-center p-10 text-center font-ops-body text-ops-base text-ops-faint">
-                {search || urlState.scope !== 'all' || urlState.type !== 'all'
-                  ? 'Bu ölçüte uyan müşteri yok.'
-                  : 'Henüz müşteri kaydı yok.'}
+                {search || urlState.scope !== 'all' || urlState.type !== 'all' ? 'Bu ölçüte uyan müşteri yok.' : 'Henüz müşteri kaydı yok.'}
               </div>
             }
             footer={<LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />}
@@ -124,6 +107,7 @@ export function CustomersDesktop(props: CustomersViewProps) {
           row={selected}
           detail={detail}
           loading={detailLoading}
+          detailError={detailError}
           saving={saving}
           saveError={saveError}
           onOpenOrder={onOpenOrder}

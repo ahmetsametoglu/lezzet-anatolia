@@ -261,6 +261,11 @@ export interface PricesViewProps {
   onScope: (s: PriceScope) => void;
   hasMore: boolean;
   loadingMore: boolean;
+  /**
+   * Süzgeç/sekme turu sürüyor — tablo gövdesi soluklaşır (satır varsa) ya da iskelete döner (yoksa).
+   * `loadingMore`dan AYRI: o listenin KUYRUĞU, bu listenin TAMAMININ yenilenmesi.
+   */
+  navPending: boolean;
   onLoadMore: () => void;
   /** Fiyat diyaloğunu bu boy için aç. */
   onEdit: (variantId: string) => void;
