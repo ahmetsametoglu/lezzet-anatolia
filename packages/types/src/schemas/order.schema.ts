@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { dbNumeric } from './db-numeric';
 import {
+  CarrierEnum,
   ChannelEnum,
   CountryEnum,
   DeliveryTypeEnum,
@@ -71,6 +72,13 @@ export const OrderSchema = z.object({
   idempotencyKey: z.string().nullable(),
   invoiceNo: z.string().nullable(),
   deliveryProof: z.record(z.unknown()).nullable(),
+  /**
+   * Kargo künyesi (07.12) — yalnız `deliveryType === 'shipping'` siparişlerde dolu. Rota
+   * siparişinde yazılamaz: kendi aracımızla giden malın taşıyıcısı ve takip numarası yoktur
+   * (kural veritabanında da duruyor — ekran unutsa bile yazılamaz).
+   */
+  carrier: CarrierEnum.nullable(),
+  trackingNumber: z.string().nullable(),
 
   shippingFee: dbNumeric,
   total: dbNumeric,

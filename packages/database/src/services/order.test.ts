@@ -198,3 +198,23 @@ async function countOrders(): Promise<number> {
   const { count } = await db.from('order').select('id', { count: 'exact', head: true }).eq('customer_id', customerId);
   return count ?? 0;
 }
+
+/**
+ * Kargo künyesi (07.12) — taşıyıcı + takip numarası.
+ *
+ * Kural VERİDE duruyor (`order_carrier_only_shipping`), ekranda değil: rota siparişinde taşıyıcı
+ * yoktur ve olmayan bir taşıyıcının takip bağlantısı müşteriye hiç çalışmayan bir düğme gösterirdi.
+ * Ekran unutabilir; veritabanı unutmaz.
+ */
+describe('kargo künyesi yalnız kargo siparişinde', () => {
+  it('kargo siparişine taşıyıcı ve takip numarası yazılır', async () => {
+    const { order } = await orders.create({ ...header(), deliveryType: 'shipping' }, [line()]);
+    const updated = await orders.setShipment(order.id, 'colissimo', '6A 2451 7788');
+    expect(updated).toMatchObject({ carrier: 'colissimo', trackingNumber: '6A 2451 7788' });
+  });
+
+  it('ROTA siparişine yazılamaz — kendi aracımızla giden malın taşıyıcısı yoktur', async () => {
+    const { order } = await orders.create({ ...header(), deliveryType: 'route' }, [line()]);
+    await expect(orders.setShipment(order.id, 'dhl', 'XYZ')).rejects.toThrow();
+  });
+});

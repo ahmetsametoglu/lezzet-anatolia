@@ -14,6 +14,9 @@ create type payment_status as enum ('pending', 'paid', 'partial', 'refunded');
 -- `on_account` (vadeli) BU LİSTEDE DEĞİL: vade bir yöntem değil, siparişin bayrağıdır (DOMAIN §7).
 create type payment_method as enum ('online', 'cash', 'card', 'cheque', 'bank_transfer');
 create type delivery_type as enum ('route', 'shipping');
+-- Kargo taşıyıcısı (07.12). TANIMLI küme çünkü takip bağlantısı URL kalıbından üretilir; `other`
+-- kümeyi kapatmamak için — yeni bir taşıyıcıyla çalışmaya başlamak migration beklememeli.
+create type carrier as enum ('colissimo', 'chronopost', 'dhl', 'ups', 'other');
 create type vat_treatment as enum ('domestic', 'intra_eu_b2b_reverse_charge');
 -- İade edilen kalemde MALA ne oldu (DOMAIN §8). `goodwill` = mal müşteride kaldı.
 create type return_disposition as enum ('restock', 'discard', 'goodwill');
@@ -75,6 +78,19 @@ create table public.order (
   idempotency_key text,
   invoice_no text,                                   -- dış muhasebeden sonradan eşleşir
   delivery_proof jsonb,                              -- imza/foto + onaylayan + zaman (DOMAIN §6)
+
+  -- KARGO KÜNYESİ (07.12) — yalnız `delivery_type = 'shipping'` siparişlerde anlamlı.
+  --
+  -- Taşıyıcı TANIMLI KÜME, serbest metin değil: takip bağlantısını üretmek için URL kalıbı gerekir
+  -- ve serbest metinden çıkmaz — o zaman tasarımın "Kargoyu takip et ↗" düğmesinin karşılığı
+  -- olmazdı. `other` kümeyi kapatmamak için var (yeni taşıyıcı bir migration bekleyemez); o
+  -- seçilince bağlantı gösterilmez, numara düz metin durur.
+  carrier carrier,
+  tracking_number text,
+  -- Rota siparişine kargo künyesi YAZILAMAZ: kendi aracımızla giden malın taşıyıcısı ve takip
+  -- numarası yoktur. Kural veride durur çünkü ekran unutabilir; unutulduğunda müşteri hiç
+  -- çalışmayacak bir takip bağlantısı görürdü.
+  constraint order_carrier_only_shipping check (delivery_type = 'shipping' or (carrier is null and tracking_number is null)),
 
   -- Para (hepsi sipariş anında sabit; DOMAIN §5). Kargo ücreti KDV'ye tabidir.
   shipping_fee numeric(10, 2) not null default 0,

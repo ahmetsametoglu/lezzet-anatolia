@@ -101,6 +101,17 @@ export const DeliveryTypeEnum = z.enum(['route', 'shipping']);
 export type DeliveryType = z.infer<typeof DeliveryTypeEnum>;
 
 /**
+ * Kargo taşıyıcısı (07.12) — **tanımlı küme, serbest metin değil.**
+ *
+ * Takip bağlantısı taşıyıcının URL kalıbından üretilir ve serbest metinden çıkmaz; o zaman
+ * tasarımın "Kargoyu takip et ↗" düğmesinin karşılığı olmazdı. `other` kümeyi kapatmamak için
+ * var — yeni bir taşıyıcıyla çalışmaya başlamak bir migration beklememeli; o seçilince bağlantı
+ * gösterilmez, numara düz metin durur.
+ */
+export const CarrierEnum = z.enum(['colissimo', 'chronopost', 'dhl', 'ups', 'other']);
+export type Carrier = z.infer<typeof CarrierEnum>;
+
+/**
  * Ödeme yöntemi. **`on_account` (vadeli) BU LİSTEDE DEĞİLDİR** — vade bir yöntem değil, siparişin
  * bir özelliğidir (`Order.on_account`); tahsilat sonradan havaleyle yapılır (DOMAIN §7).
  */

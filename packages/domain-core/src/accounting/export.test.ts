@@ -37,6 +37,8 @@ const BASE_SALE: OrderSale = {
   idempotencyKey: null,
   invoiceNo: null,
   deliveryProof: null,
+  carrier: null,
+  trackingNumber: null,
   shippingFee: 0,
   total: 0,
   discountId: null,

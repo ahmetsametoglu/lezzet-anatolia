@@ -625,6 +625,17 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
+   * Kargo künyesini yazar (07.12) — paketi kapatan kişi etiketi elinde tutar, o yüzden hazırlık
+   * ekranının işi; ayrı bir "sevk" adımı açılmıyor.
+   *
+   * Rota siparişine yazılamaz ve bu kural VERİDE duruyor (`order_carrier_only_shipping`): ekran
+   * unutsa bile yazılamaz. Unutulduğunda müşteri hiç çalışmayacak bir takip bağlantısı görürdü.
+   */
+  setShipment(id: string, carrier: Order['carrier'], trackingNumber: string | null): Promise<Order> {
+    return this.update({ id, carrier, trackingNumber });
+  }
+
+  /**
    * Sekme sayaçları + alt şerit toplamı — TEK okuma (`order_counts()`).
    *
    * Sayılar SÜZGECİN TAMAMINA aittir, yüklenmiş sayfaya değil: sayfadan hesaplanan sekme sayacı
