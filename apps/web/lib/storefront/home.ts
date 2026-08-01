@@ -2,6 +2,7 @@ import 'server-only';
 import { CategoryService, ProductService, serviceDb } from '@lezzet/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Locale } from '@lezzet/i18n';
+import type { PlaceWarehouses } from '@/lib/delivery/place-types';
 import { FIXTURE_CATEGORIES } from './fixtures';
 import { listOfferProductIds, loadProductContext } from './read-context';
 import { EMPTY_PRODUCT_CONTEXT, toCategory, toProduct } from './map';
@@ -46,10 +47,10 @@ const SHOWCASE_LIMIT = 4;
 export async function readShowcase(
   db: SupabaseClient,
   locale: Locale,
-  warehouseId: string | null,
+  place: PlaceWarehouses,
 ): Promise<StorefrontProduct[]> {
   const page = await new ProductService(db).listWithRelations({ filters: { status: 'active' }, limit: SHOWCASE_LIMIT });
-  const context = await loadProductContext(db, page.rows, warehouseId);
+  const context = await loadProductContext(db, page.rows, place);
   return page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT));
 }
 
@@ -66,12 +67,12 @@ function isOffer(p: StorefrontProduct): p is StorefrontOffer {
  * çözdürür, teklif normal fiyatı yenemezse ürün fırsat sayılmaz ve banda girmez. Bant boş kalırsa
  * sayfa bölümü tamamen kaldırır — boş hâl gösterilmez (komponent envanteri K8).
  */
-async function readOffers(db: SupabaseClient, locale: Locale, warehouseId: string | null): Promise<StorefrontOffer[]> {
-  const productIds = await listOfferProductIds(db, warehouseId);
+async function readOffers(db: SupabaseClient, locale: Locale, place: PlaceWarehouses): Promise<StorefrontOffer[]> {
+  const productIds = await listOfferProductIds(db, place.warehouseId);
   if (!productIds.length) return [];
 
   const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds, status: 'active' }, limit: OFFER_LIMIT });
-  const context = await loadProductContext(db, page.rows, warehouseId);
+  const context = await loadProductContext(db, page.rows, place);
   return page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)).filter(isOffer);
 }
 
@@ -84,13 +85,13 @@ async function readOffers(db: SupabaseClient, locale: Locale, warehouseId: strin
  *
  * `null` → depo-ÜSTÜ okuma: "tükendi" demenin tek dayanağı hiçbir depoda bulunmamasıdır (C3).
  */
-export async function getHomeData(locale: Locale, warehouseId: string | null): Promise<StorefrontHome> {
+export async function getHomeData(locale: Locale, place: PlaceWarehouses): Promise<StorefrontHome> {
   const db = serviceDb();
   const [categoryRows, featured, offers, packages] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
     // Vitrin seçkisi boş sepetle PAYLAŞILIR — tek kaynak (`readShowcase`).
-    readShowcase(db, locale, warehouseId),
-    readOffers(db, locale, warehouseId),
+    readShowcase(db, locale, place),
+    readOffers(db, locale, place),
     listStorefrontPackages(locale),
   ]);
 

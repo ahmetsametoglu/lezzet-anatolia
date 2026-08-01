@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import { readPlaceWarehouseId } from '@/lib/delivery/read-place';
+import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { detectDevice } from '@/lib/device';
 import { getProductDetail } from '@/lib/storefront/product';
 import { getProductScore, getReviewEligibility, listProductReviews } from '@/lib/feedback/product-feedback';
@@ -34,7 +34,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   setRequestLocale(locale);
 
   const t: Messages = messages[locale];
-  const [product, device] = await Promise.all([getProductDetail(locale, slug, await readPlaceWarehouseId()), detectDevice()]);
+  const [product, device] = await Promise.all([getProductDetail(locale, slug, await readPlaceWarehouses()), detectDevice()]);
   if (!product) notFound();
 
   /**

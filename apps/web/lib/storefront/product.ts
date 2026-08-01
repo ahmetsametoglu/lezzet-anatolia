@@ -5,6 +5,7 @@ import { hasNutrition, resolveLocalizedText } from '@lezzet/types';
 import type { LocalizedText } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Locale } from '@lezzet/i18n';
+import type { PlaceWarehouses } from '@/lib/delivery/place-types';
 import { EMPTY_PRODUCT_CONTEXT, imageOf, toCategory, toProduct, toVariant } from './map';
 import { loadProductContext } from './read-context';
 import type { ProductContext } from './map';
@@ -80,7 +81,7 @@ async function readSimilar(
   categoryId: string | null,
   excludeId: string,
   locale: Locale,
-  warehouseId: string | null,
+  place: PlaceWarehouses,
 ) {
   if (!categoryId) return [];
   const page = await new ProductService(db).listWithRelations({
@@ -88,7 +89,7 @@ async function readSimilar(
     limit: SIMILAR_LIMIT + 1, // kendisi de gelebilir; elendikten sonra kart sayısı tutsun
   });
   const rows = page.rows.filter((p) => p.id !== excludeId).slice(0, SIMILAR_LIMIT);
-  const context = await loadProductContext(db, rows, warehouseId);
+  const context = await loadProductContext(db, rows, place);
   return rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT));
 }
 
@@ -109,17 +110,17 @@ async function readSimilar(
 export async function getProductDetail(
   locale: Locale,
   slug: string,
-  warehouseId: string | null,
+  place: PlaceWarehouses,
 ): Promise<StorefrontProductDetail | null> {
   const db = serviceDb();
   const product = await new ProductService(db).findBySlug(slug);
   if (!product || product.status !== 'active') return null;
 
   const [context, images, category, similar] = await Promise.all([
-    loadProductContext(db, [product], warehouseId),
+    loadProductContext(db, [product], place),
     new ProductImageService(db).listByProduct(product.id),
     product.categoryId ? new CategoryService(db).getById(product.categoryId) : Promise.resolve(null),
-    readSimilar(db, product.categoryId, product.id, locale, warehouseId),
+    readSimilar(db, product.categoryId, product.id, locale, place),
   ]);
 
   const ctx: ProductContext = context.get(product.id) ?? EMPTY_PRODUCT_CONTEXT;
@@ -134,7 +135,7 @@ export async function getProductDetail(
     image: cover,
     gallery: galleryOf(cover, images.map(imageOf)),
     category: category ? toCategory(category, locale) : null,
-    variants: variants.map((v) => toVariant(v, locale, ctx)),
+    variants: variants.map((v) => toVariant(v, locale, ctx, product.shippable)),
     declaration: declarationOf(product, locale),
     shippable: product.shippable,
     similar,

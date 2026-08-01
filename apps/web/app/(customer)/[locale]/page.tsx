@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import { readPlaceWarehouseId } from '@/lib/delivery/read-place';
+import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import type { Locale } from '@lezzet/i18n';
 import { getSessionUser } from '@/lib/guard';
@@ -34,7 +34,7 @@ export default async function Home({ params }: HomeProps) {
   }
 
   const t: Messages = messages[locale];
-  const [data, device] = await Promise.all([getHomeData(locale, await readPlaceWarehouseId()), detectDevice()]);
+  const [data, device] = await Promise.all([getHomeData(locale, await readPlaceWarehouses()), detectDevice()]);
 
   return (
     <SiteFrame device={device} locale={locale}>

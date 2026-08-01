@@ -89,9 +89,27 @@ export function resolveWarehouseForPostalCode(
     if (warehouse) return { kind: 'route', warehouseId: warehouse.id, zoneId: zone.id, weekdays: zone.weekdays };
   }
 
-  const shipping = warehouses.find((w) => w.isActive && w.shipsOnline && w.countryCode === place.country);
+  const shipping = findShippingWarehouse(place.country, warehouses);
   if (!shipping) return { kind: 'unresolved', reason: 'no_shipping_warehouse' };
   return { kind: 'shipping', warehouseId: shipping.id };
+}
+
+/**
+ * Ülkenin kargo çıkış deposu — **ülke başına en fazla bir tane** (K9; kural veritabanında, kısmi
+ * unique indeks). Bu yüzden "seçim algoritması" yok, tek satır aranıyor.
+ *
+ * Ayrı fonksiyon çünkü iki soru bunu sorar ve ikisi FARKLI: yer çözümü "bu adres nereden gider"
+ * diye sorar (rota yoksa buraya düşer), vitrin ise "rota deposunda olmayan bu ürün kargoyla
+ * gelebilir mi" diye — rota İÇİNDEKİ müşteri için bile. İkinci soruyu yer çözümünün içinden
+ * cevaplayamayız: orası rota bulduğunda kargo deposunu hiç aramaz.
+ *
+ * `null` gerçek bir arızadır (kargo deposu tanımlı değil) ve çağıran onu açıkça söylemeli.
+ */
+export function findShippingWarehouse(
+  country: Country,
+  warehouses: readonly WarehouseCandidate[],
+): WarehouseCandidate | null {
+  return warehouses.find((w) => w.isActive && w.shipsOnline && w.countryCode === country) ?? null;
 }
 
 /**

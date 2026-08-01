@@ -5,7 +5,7 @@ import { publicImageUrl } from '@lezzet/storage';
 import { cropOf, resolveLocalizedText } from '@lezzet/types';
 import type { AvailableStockTotal, Category, ImageMeta, Price, Product, ProductVariant } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
-import type { StorefrontCategory, StorefrontImage, StorefrontProduct, StorefrontVariant } from './storefront-types';
+import type { StockStatus, StorefrontCategory, StorefrontImage, StorefrontProduct, StorefrontVariant } from './storefront-types';
 
 /**
  * DB satırı → vitrin kartı indirgemesi. Anasayfa ve katalog AYNI indirgemeyi kullanır; ayrı yazılsa
@@ -36,15 +36,61 @@ export interface ProductContext {
    * yalnız `availableQty`ye bakar — hangi okumadan geldiği kararı çağıranındır (DOMAIN §17).
    */
   stock: Map<string, AvailableStockTotal>;
+  /**
+   * AĞ genelindeki toplam (19.10) — dördüncü hâli ayırmak için.
+   *
+   * "Yerelde yok + kargoda yok" iki ayrı şey olabilir: ürün başka bir depoda duruyor (soğuk zincir,
+   * o bölgeye gitmiyor) ya da hiçbir yerde yok. İlkinin doğru cümlesi "bölgenizde şu an yok" ve
+   * yanında "gelince haber ver"; ikincisininki "tükendi". Aynı kelimeyle söylemek, gelmeyecek malı
+   * bekletmek ya da gelecek malı kaçırmaktır.
+   *
+   * `null` = yer bilinmiyor; o hâlde `stock` zaten ağ toplamıdır.
+   */
+  networkStock: Map<string, AvailableStockTotal> | null;
+  /**
+   * KARGO deposunun kullanılabiliri (19.10) — `stock`'tan ayrı bir soru.
+   *
+   * "Yerel depoda yok" tek başına **tükendi demek değildir** (C3): ürün kargo deposunda duruyorsa
+   * hâlâ satılabilir, yalnız yolu değişir. Bu harita olmadan yer bilen müşteri, kargoyla
+   * gönderebileceğimiz ürünü "Tükendi" görüyordu — sistem müşteriyi tanıdıkça daha az satıyordu.
+   *
+   * `null` = yer bilinmiyor (o hâlde `stock` zaten ağ-geneli toplam) ya da o ülkeye kargo yok.
+   */
+  shippingStock: Map<string, AvailableStockTotal> | null;
   /** Varyanta açık near-expiry teklifi (partiye bağlı indirim, DOMAIN §5). */
   offers: Map<string, ActiveOffer>;
+}
+
+
+/** Stok hâlini üç sayıdan ve ürünün kargolanabilirliğinden türetir. */
+function stockStatusOf(
+  ctx: ProductContext,
+  variantIds: readonly string[],
+  shippable: boolean,
+): StockStatus {
+  const sum = (map: Map<string, AvailableStockTotal> | null): number =>
+    map ? variantIds.reduce((total, id) => total + (map.get(id)?.availableQty ?? 0), 0) : 0;
+
+  if (sum(ctx.stock) > 0) return 'available';
+  // Kargolanamayan ürün (soğuk zincir) kargo deposunda dursa da o yola giremez.
+  if (shippable && sum(ctx.shippingStock) > 0) return 'shipping';
+  // Yer bilinmiyorsa `networkStock` null'dur ve `ctx.stock` zaten ağ toplamıydı → buraya
+  // düşmek "hiçbir yerde yok" demektir.
+  return sum(ctx.networkStock) > 0 ? 'elsewhere' : 'out_of_stock';
 }
 
 /**
  * Yan verisi olmayan ürün bağlamı — fiyatsız/stoksuz görünür, yani satışa kapalı ve tükendi.
  * Toplu okuma bir ürünü ıskalarsa buraya düşülür; her okuma dosyası kendi boşunu tanımlamasın.
  */
-export const EMPTY_PRODUCT_CONTEXT: ProductContext = { variants: [], prices: new Map(), stock: new Map(), offers: new Map() };
+export const EMPTY_PRODUCT_CONTEXT: ProductContext = {
+  variants: [],
+  prices: new Map(),
+  stock: new Map(),
+  shippingStock: null,
+  networkStock: null,
+  offers: new Map(),
+};
 
 /**
  * Tek varyantın satış künyesi — fiyat, kıyas fiyatı, indirim referansı, adet tavanı ve tükendi.
@@ -86,9 +132,15 @@ function sellingOf(variant: ProductVariant, ctx: ProductContext) {
   };
 }
 
-/** Varyantı detay sayfasının "Boy seçin" kartına indirger (K22). */
-export function toVariant(variant: ProductVariant, locale: Locale, ctx: ProductContext): StorefrontVariant {
+/**
+ * Varyantı detay sayfasının "Boy seçin" kartına indirger (K22).
+ *
+ * `shippable` ÜRÜNÜN özelliğidir, varyantın değil — ama karar varyant düzeyinde verilir (bir boy
+ * yerelde bitip öteki durabilir), o yüzden çağıran onu geçirir.
+ */
+export function toVariant(variant: ProductVariant, locale: Locale, ctx: ProductContext, shippable: boolean): StorefrontVariant {
   const selling = sellingOf(variant, ctx);
+  const stockStatus = stockStatusOf(ctx, [variant.id], shippable);
   return {
     id: variant.id,
     // Boy etiketi ÇOK DİLLİ ("700 g tepsi" / "plateau 700 g") — burada çözülür, sayfa dil bilmez.
@@ -99,11 +151,14 @@ export function toVariant(variant: ProductVariant, locale: Locale, ctx: ProductC
     comparisonCents: selling.comparisonCents,
     limitLabel: selling.limitLabel,
     stockId: selling.stockId,
-    soldOut: selling.availableQty <= 0,
+    stockStatus,
+    // `soldOut` artık YALNIZ gerçek tükenmede true — "senin deponda yok" onun cevabı değil.
+    // Kargoyla gelebilen ya da başka depoda duran ürün satılabilir kalır (C3).
+    soldOut: stockStatus === 'out_of_stock',
   };
 }
 
-type ProductRow = Pick<Product, 'id' | 'slug' | 'name'> & ImageMeta;
+type ProductRow = Pick<Product, 'id' | 'slug' | 'name' | 'shippable'> & ImageMeta;
 
 /**
  * Ürünü vitrin kartına indirger.
@@ -128,8 +183,9 @@ export function toProduct(row: ProductRow, locale: Locale, ctx: ProductContext):
   const variants = ctx.variants.filter((v) => v.isActive);
   const primary = variants[0];
   const selling = primary ? sellingOf(primary, ctx) : null;
-  // Tükendi kararı kartta ÜRÜN düzeyindedir: bir boyu biten ürün listede tükenmiş görünmemeli.
-  const availableQty = variants.reduce((sum, v) => sum + (ctx.stock.get(v.id)?.availableQty ?? 0), 0);
+  // Stok kararı kartta ÜRÜN düzeyindedir: bir boyu biten ürün listede tükenmiş görünmemeli — bu
+  // yüzden hâl tüm aktif varyantların toplamından türer.
+  const stockStatus = stockStatusOf(ctx, variants.map((v) => v.id), row.shippable);
 
   return {
     id: row.id,
@@ -144,6 +200,8 @@ export function toProduct(row: ProductRow, locale: Locale, ctx: ProductContext):
     wasCents: selling?.wasCents,
     limitLabel: selling?.limitLabel ?? null,
     purchaseMode: variants.length > 1 ? 'options' : 'quick',
-    soldOut: availableQty <= 0,
+    stockStatus,
+    // Yalnız GERÇEK tükenmede true (bkz. `StockStatus`).
+    soldOut: stockStatus === 'out_of_stock',
   };
 }

@@ -3,6 +3,7 @@ import { CategoryService, ProductListingService, ProductService, serviceDb } fro
 import { DEFAULT_PAGE_SIZE } from '@lezzet/types';
 import type { KeysetCursor } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
+import type { PlaceWarehouses } from '@/lib/delivery/place-types';
 import { FIXTURE_CATEGORIES } from './fixtures';
 import { listOfferProductIds, loadProductContext } from './read-context';
 import { EMPTY_PRODUCT_CONTEXT, toCategory, toProduct } from './map';
@@ -64,7 +65,7 @@ const noProducts = (categories: StorefrontCatalog['categories'], activeCategory:
 export async function getCatalogData(
   locale: Locale,
   q: CatalogQuery = {},
-  warehouseId: string | null,
+  place: PlaceWarehouses,
 ): Promise<StorefrontCatalog> {
   const db = serviceDb();
   const categoryRows = await new CategoryService(db).list({ activeOnly: true });
@@ -73,7 +74,7 @@ export async function getCatalogData(
 
   // "Yalnız indirimliler": teklifli ürünler önden çözülür ve SORGUYA girer — sayfa çekildikten
   // sonra elemek keyset sayfalamayı ve toplam sayıyı bozardı.
-  const offerIds = q.onlyOffers ? await listOfferProductIds(db, warehouseId) : undefined;
+  const offerIds = q.onlyOffers ? await listOfferProductIds(db, place.warehouseId) : undefined;
   if (offerIds && !offerIds.length) return noProducts(categories, activeCategory);
 
   // Aday ürün katalogda GÖRÜNMEZ (`musteri-katalog.md §6`) — `status: 'active'` bunu sağlar.
@@ -84,11 +85,11 @@ export async function getCatalogData(
   const direction = q.sort === 'priceAsc' ? 'asc' : q.sort === 'priceDesc' ? 'desc' : null;
   const [page, counts] = await Promise.all([
     direction
-      ? new ProductListingService(db).listByPrice({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE, direction, warehouseId })
+      ? new ProductListingService(db).listByPrice({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE, direction, warehouseId: place.warehouseId })
       : productSvc.listWithRelations({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE }),
     productSvc.counts(filters),
   ]);
-  const context = await loadProductContext(db, page.rows, warehouseId);
+  const context = await loadProductContext(db, page.rows, place);
 
   return {
     categories,

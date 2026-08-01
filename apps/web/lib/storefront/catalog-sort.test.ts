@@ -64,7 +64,7 @@ afterAll(async () => {
 
 /** Kendi ürünlerimizin adları — katalogda seed verisi de var. */
 async function sortedNames(sort: 'priceAsc' | 'priceDesc') {
-  const data = await getCatalogData('tr', { sort, search: String(stamp) }, null);
+  const data = await getCatalogData('tr', { sort, search: String(stamp) }, { warehouseId: null, shippingWarehouseId: null });
   return data.products.map((p) => p.name.split(' ')[0]);
 }
 
@@ -78,7 +78,7 @@ describe('fiyat sıralaması', () => {
   });
 
   it('sıralama SAYFA İÇİNDE değil, kümenin tamamında', async () => {
-    const first = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, null);
+    const first = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, { warehouseId: null, shippingWarehouseId: null });
 
     // İlk sayfanın ilk ürünü kümenin EN UCUZU olmalı; sayfa çekildikten sonra sıralansaydı bu
     // yalnız o sayfa içinde doğru olurdu.
@@ -92,7 +92,7 @@ describe('sıralama ile KART aynı fiyatı kullanır', () => {
     // 30 €'luk ürüne 3 €'luk teklif: kartta 3 € yazacak, sıralamada da 3 € sayılmalı.
     await db.from('stock').update({ offer_price: 3 }).eq('variant_id', pahali.variantId);
 
-    const data = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, warehouseId);
+    const data = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, { warehouseId: warehouseId, shippingWarehouseId: null });
 
     expect(data.products.map((p) => p.name.split(' ')[0])).toEqual(['Pahalı', 'Ucuz', 'Orta']);
     // Kartın gösterdiği fiyat da teklif fiyatıdır — ikisi ayrışmıyor.
@@ -106,7 +106,7 @@ describe('sıralama ile KART aynı fiyatı kullanır', () => {
     // bildirilir (`has_near_expiry_offer` → posta kodu daveti).
     await db.from('stock').update({ offer_price: 3 }).eq('variant_id', pahali.variantId);
 
-    const data = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, null);
+    const data = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, { warehouseId: null, shippingWarehouseId: null });
 
     expect(data.products.map((p) => p.name.split(' ')[0])).toEqual(['Ucuz', 'Orta', 'Pahalı']);
     // Kartta da liste fiyatı yazar: 30 €.
@@ -118,7 +118,7 @@ describe('sıralama ile KART aynı fiyatı kullanır', () => {
     await db.from('stock').update({ offer_price: 50 }).eq('variant_id', ucuz.variantId);
 
     // Teklif kuralı yer BELLİYKEN işler (tutar ancak o zaman gösterilir).
-    const data = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, warehouseId);
+    const data = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, { warehouseId: warehouseId, shippingWarehouseId: null });
 
     expect(data.products.map((p) => p.name.split(' ')[0])).toEqual(['Ucuz', 'Orta', 'Pahalı']);
     expect(data.products[0]?.priceCents).toBe(400);
@@ -130,7 +130,7 @@ describe('sıralama ile KART aynı fiyatı kullanır', () => {
     await db.from('stock').update({ offer_price: 12 }).eq('variant_id', orta.variantId);
 
     // Teklif kuralı yer BELLİYKEN işler (tutar ancak o zaman gösterilir).
-    const data = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, warehouseId);
+    const data = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, { warehouseId: warehouseId, shippingWarehouseId: null });
 
     expect(data.products[1]?.name).toContain('Orta');
     expect(data.products[1]?.priceCents).toBe(1_200);
@@ -140,7 +140,7 @@ describe('sıralama ile KART aynı fiyatı kullanır', () => {
     await db.from('stock').update({ offer_price: 1, physical_qty: 0 }).eq('variant_id', pahali.variantId);
 
     // Teklif kuralı yer BELLİYKEN işler (tutar ancak o zaman gösterilir).
-    const data = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, warehouseId);
+    const data = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, { warehouseId: warehouseId, shippingWarehouseId: null });
 
     // Parti boş: teklif ne kartta ne sırada. Ürün liste fiyatıyla sonda kalır.
     expect(data.products.map((p) => p.name.split(' ')[0])).toEqual(['Ucuz', 'Orta', 'Pahalı']);
@@ -149,7 +149,7 @@ describe('sıralama ile KART aynı fiyatı kullanır', () => {
 
 describe('süzgeçler sıralamayla birlikte çalışır', () => {
   it('kategori/arama süzgeci fiyat sıralamasında da geçerli — tek süzgeç makinesi', async () => {
-    const data = await getCatalogData('tr', { sort: 'priceDesc', search: `Orta ${stamp}` }, null);
+    const data = await getCatalogData('tr', { sort: 'priceDesc', search: `Orta ${stamp}` }, { warehouseId: null, shippingWarehouseId: null });
 
     expect(data.products).toHaveLength(1);
     expect(data.products[0]?.name).toContain('Orta');
@@ -168,7 +168,7 @@ describe('süzgeçler sıralamayla birlikte çalışır', () => {
     await stocks.insert({ warehouseId, variantId: variants[0]!.id, physicalQty: 5, expiryDate: dayOffset(60), purchasePrice: 1 });
 
     try {
-      const data = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, null);
+      const data = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, { warehouseId: null, shippingWarehouseId: null });
 
       // Satışa kapalı olması ekranın söyleyeceği bir şeydir, saklayacağı değil.
       expect(data.products.at(-1)?.name).toContain('Fiyatsız');

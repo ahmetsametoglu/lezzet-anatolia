@@ -51,6 +51,12 @@ export async function getCartView(
      * BEKLEYEN(19.7): yer bağlamı v2 bunu dolduracak.
      */
     warehouseId?: string | null;
+    /**
+     * Ülkenin kargo deposu (19.10) — sepetin "bu kalem kargoyla gelebilir" ayrımı için. `null` =
+     * yer bilinmiyor ya da o ülkeye kargo yok. BEKLEYEN(19.11): satır bazlı grup ayrımı bunu
+     * `decideCartAgainstWarehouse` motoruna verecek.
+     */
+    shippingWarehouseId?: string | null;
   } = {},
 ): Promise<CartView> {
   const db = serviceDb();
@@ -84,7 +90,7 @@ export async function getCartView(
 
   const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds }, limit: productIds.length });
   const byProduct = new Map(page.rows.map((p) => [p.id, p]));
-  const context = await loadProductContext(db, page.rows, opts.warehouseId ?? null);
+  const context = await loadProductContext(db, page.rows, { warehouseId: opts.warehouseId ?? null, shippingWarehouseId: opts.shippingWarehouseId ?? null });
 
   const lines: CartLine[] = [];
   for (const entry of entries) {
@@ -110,7 +116,7 @@ export async function getCartView(
     }
 
     const ctx = context.get(product.id) ?? EMPTY_PRODUCT_CONTEXT;
-    const view = toVariant(variant, locale, ctx);
+    const view = toVariant(variant, locale, ctx, product.shippable);
     // Sepetteki çıpa bugünkü teklifle uyuşmuyorsa teklif bu satırda GEÇERSİZDİR.
     const offerHolds = entry.stockId !== null && view.stockId === entry.stockId;
     const unitPriceCents = view.priceCents;

@@ -2,7 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { PostalCodePlaceService, serviceDb } from '@lezzet/database';
-import { resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
+import { findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
 import { readDeliveryInputs } from './inputs';
 import type { PlaceAnswer } from './place-types';
 
@@ -35,9 +35,19 @@ interface PlaceContext {
    * dayanağıdır (C3).
    */
   warehouseId: string | null;
+  /**
+   * Müşterinin ülkesinin KARGO deposu — `warehouseId`'den ayrı bir soru (19.10).
+   *
+   * Rota içindeki müşteri için de doludur ve dolu olması gerekir: "bu ürün senin deponda yok ama
+   * kargoyla gönderebiliriz" cevabı ancak kargo deposunun stoğu bilinerek verilebilir. Yer çözümü
+   * bunu kendi içinden veremez — rota bulduğunda kargo deposunu hiç aramaz.
+   *
+   * `null` = yer bilinmiyor ya da o ülkeye kargo yapılmıyor.
+   */
+  shippingWarehouseId: string | null;
 }
 
-const EMPTY: PlaceContext = { answer: null, resolution: null, warehouseId: null };
+const EMPTY: PlaceContext = { answer: null, resolution: null, warehouseId: null, shippingWarehouseId: null };
 
 /**
  * Posta kodunun ülke adayları — istek başına bir kez (aynı kod birden çok bileşen tarafından
@@ -64,18 +74,27 @@ const readPlaceContext = cache(async (): Promise<PlaceContext> => {
   const scoped = matches.filter((m) => m.country === answer.country);
   const resolution = resolvePlaceByPostalCode(answer.postalCode, scoped, zones, warehouses);
 
+  const resolved = resolution.kind === 'route' || resolution.kind === 'shipping';
   return {
     answer,
     resolution,
     // Yalnız ÇÖZÜLMÜŞ hâller depo verir. `ambiguous`/`unknown`/`unresolved` → yer bilinmiyor gibi
     // davranılır: sessizce bir depo seçmek, müşteriye başka şehrin stoğunu göstermek olurdu.
-    warehouseId: resolution.kind === 'route' || resolution.kind === 'shipping' ? resolution.warehouseId : null,
+    warehouseId: resolved ? resolution.warehouseId : null,
+    // Kargo deposu ÜLKEDEN türer, rotadan değil: rota içindeki müşteri de kargo dolgusu alabilir.
+    shippingWarehouseId: resolved ? (findShippingWarehouse(resolution.country, warehouses)?.id ?? null) : null,
   };
 });
 
-/** Okumaların en sık ihtiyacı — bağlamın yalnız depo kimliği. */
-export async function readPlaceWarehouseId(): Promise<string | null> {
-  return (await readPlaceContext()).warehouseId;
+/**
+ * Okumaların ihtiyacı: yerel depo + kargo deposu. İKİSİ BİRLİKTE döner çünkü vitrin kararı ikisini
+ * de ister — "yerelde yok" tek başına "tükendi" demek DEĞİLDİR (C3), kargo deposunda varsa ürün
+ * hâlâ satılabilir. Ayrı ayrı okunsalardı bir çağıran ikincisini unutur ve sistem müşteriyi
+ * tanıdıkça daha az satardı.
+ */
+export async function readPlaceWarehouses(): Promise<{ warehouseId: string | null; shippingWarehouseId: string | null }> {
+  const { warehouseId, shippingWarehouseId } = await readPlaceContext();
+  return { warehouseId, shippingWarehouseId };
 }
 
 async function readPlaceAnswerFromCookie(): Promise<PlaceAnswer | null> {

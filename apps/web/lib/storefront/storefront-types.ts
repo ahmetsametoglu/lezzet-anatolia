@@ -2,6 +2,27 @@ import type { TextSegment } from '@lezzet/helper';
 import type { ImageCrop, KeysetCursor, Nutrition, ProductAllergen } from '@lezzet/types';
 
 /**
+ * Ürünün/varyantın YERE göre stok hâli (19.10) — dört cevap, dört ayrı cümle.
+ *
+ * Tek bir `soldOut` bayrağı bu soruyu artık cevaplayamıyor. 19.9 yeri sunucuya taşıyınca
+ * `availableQty` depo süzgeçli hâle geldi ve `soldOut = availableQty <= 0` sessizce anlam
+ * değiştirdi: "hiçbir depoda yok"tan "senin deponda yok"a. Sonuç bir GERİLEMEYDİ — posta kodunu
+ * giren müşteri, kargoyla gönderebileceğimiz ürünü "Tükendi" ve pasif bir düğme olarak görüyordu.
+ * Sistem müşteriyi tanıdıkça daha az satıyordu, ki C3 tam olarak bunu yasaklıyor: "tükendi" yalnız
+ * ürün HİÇBİR depoda yokken söylenebilir.
+ */
+export type StockStatus =
+  /** Yerel depoda var (yer bilinmiyorsa: ağda var). Normal satış. */
+  | 'available'
+  /** Yerelde yok ama kargo deposunda var ve ürün kargolanabilir → "📦 Kargoyla gönderilir". */
+  | 'shipping'
+  /** Ağda var ama ne yerelde ne kargoda — soğuk zincir başka bölgede. "Bölgenizde şu an yok." */
+  | 'elsewhere'
+  /** Hiçbir depoda yok. Tek meşru "Tükendi". */
+  | 'out_of_stock';
+
+
+/**
  * Vitrin görünüm tipleri — müşteri yüzeyinin TEK veri sözleşmesi (08.10).
  *
  * Sayfalar servisi doğrudan çağırmaz; `lib/storefront` üzerinden okur. Bugün bu fonksiyonların bir
@@ -76,6 +97,8 @@ export interface StorefrontProduct {
    * Tükendi. Ürün listede KALIR (tekrar gelecek beklentisi doğru kurulsun) ama sepete eklenemez;
    * kartın kendisi yine detaya tıklanabilir (`musteri-katalog.md §2`).
    */
+  /** Yere göre stok hâli (19.10) — dört cevap, dört ayrı cümle. `soldOut` bunun daraltılmışı. */
+  stockStatus: StockStatus;
   soldOut: boolean;
 }
 
@@ -189,6 +212,8 @@ export interface StorefrontVariant {
   limitLabel: string | null;
   /** Teklif kazandıysa çıpalı parti — sepete o parti ile girer (DOMAIN §5). */
   stockId: string | null;
+  /** Yere göre stok hâli (19.10) — dört cevap, dört ayrı cümle. `soldOut` bunun daraltılmışı. */
+  stockStatus: StockStatus;
   soldOut: boolean;
 }
 

@@ -5,7 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import { FIXTURE_CATEGORIES } from '@/lib/storefront/fixtures';
 import { toCategory } from '@/lib/storefront/map';
 import { readShowcase } from '@/lib/storefront/home';
-import { readPlaceWarehouseId } from '@/lib/delivery/read-place';
+import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import type { StorefrontCategory, StorefrontImage, StorefrontProduct } from '@/lib/storefront/storefront-types';
 import { currentCustomerId } from '@/lib/guard';
 import { getCartView } from './read';
@@ -81,7 +81,7 @@ export async function getEmptyCartContext(locale: Locale): Promise<EmptyCartCont
     new CategoryService(db).list({ activeOnly: true }),
     readLastOrder(locale),
     // Seçki her iki dalda da okunur — sipariş geçmişine bağlı değil.
-    readShowcase(db, locale, await readPlaceWarehouseId()),
+    readShowcase(db, locale, await readPlaceWarehouses()),
   ]);
   // Son sipariş varsa kategori girişleri hiç çizilmez; boşuna taşınmasın.
   const categories = lastOrder ? [] : (categoryRows.length ? categoryRows : FIXTURE_CATEGORIES).map((c) => toCategory(c, locale));

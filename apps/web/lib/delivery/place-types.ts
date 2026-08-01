@@ -136,3 +136,17 @@ export function normalizePostalCode(raw: string): string {
 export function isValidPostalCode(raw: string): boolean {
   return /^\d{5}$/.test(normalizePostalCode(raw));
 }
+
+/**
+ * Vitrin okumalarının yer bağlamı (19.10) — **iki depo, tek nesne.**
+ *
+ * Ayrı konumsal parametreler yerine nesne: üçüncü bir alan eklendiğinde (ör. kapsam) çağıranların
+ * imzası kaymaz, ve daha önemlisi ikisini birlikte geçmek zorunlu hâle gelir. `warehouseId` tek
+ * başına geçilseydi "yerelde yok = tükendi" hatası ilk unutan çağırandan geri dönerdi.
+ */
+export interface PlaceWarehouses {
+  /** Yerin çözdüğü depo. `null` = yer bilinmiyor → okuma ağ-geneline düşer. */
+  warehouseId: string | null;
+  /** Ülkenin kargo deposu. `null` = yer bilinmiyor ya da o ülkeye kargo yok. */
+  shippingWarehouseId: string | null;
+}
