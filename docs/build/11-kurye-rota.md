@@ -11,7 +11,7 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
 
 ## Bağımlılık
 
-`07-siparis` (teslim/durum RPC'leri), `09-admin` (kurye atama + operasyon komponentleri), `14-bildirim` (teslimat özeti PDF + e-posta).
+`07-siparis` (teslim/durum RPC'leri), `09-admin` (kurye atama + operasyon komponentleri), `14-bildirim` (teslimat özeti PDF + e-posta). **`19-coklu-depo` (01.08):** kurye depoya bağlı roldür (kapsam ataması 19.5; kapsamsız kurye hiçbir teslimatı görmez) — ekranlar 19.1–19.3'ten sonra yazılır; gün listesi/kapanış kurye-gün ekseninde kalır (`DOMAIN §17`).
 
 ## Başlarken verilecek izah (örnek)
 

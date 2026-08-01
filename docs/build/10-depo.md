@@ -11,7 +11,7 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
 
 ## Bağımlılık
 
-`06-stok` (parti/intake/adjustment servisleri, FEFO hesabı), `07-siparis` (hazırlık → durum), `09-admin` (operasyon komponent envanteri). Tasarım onayı: operasyon evreni.
+`06-stok` (parti/intake/adjustment servisleri, FEFO hesabı), `07-siparis` (hazırlık → durum), `09-admin` (operasyon komponent envanteri). Tasarım onayı: operasyon evreni. **`19-coklu-depo` (01.08):** bu modülün ekranları 19.1–19.3 (şema + çekirdek) inmeden yazılmaz — kuyruk/mal kabul/imha depo kapsamıyla doğar; tek-depo varsayımıyla yazılan ekran iki kere yapılır (`DOMAIN §17`).
 
 ## Başlarken verilecek izah (örnek)
 

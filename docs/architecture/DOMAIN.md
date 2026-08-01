@@ -75,6 +75,10 @@ Sipariş oluştuğunda kanal, sipariş verenin **şirket olup olmadığına** g�
 
 ## 4. Stok kuralları
 
+> **Depo ağı (01.08):** çok depoda bu bölümün tamamı depo **başına** işler — kullanılabilir, FEFO
+> ve rezervasyon depo içinde hesaplanır; rezervasyon varyant+depo seviyesindedir (parti seçimi yine
+> hazırlıkta). Kurallar §17'de.
+
 ### Üç seviye
 
 `Kullanılabilir = Fiili − Ayrılmış`. Müşteri her zaman **kullanılabilir** stoğu görür.
@@ -153,6 +157,7 @@ Muhasebe programı değiliz; beyan/OSS/VIES-yönetimi muhasebenindir. Ama KDV **
 - **Yurt içi (FR) ve FR müşteri:** Fransız KDV'si (ürün oranından).
 - **Alman B2B + geçerli vergi no:** **reverse charge** — %0 KDV, müşteri kendi ülkesinde beyan eder; faturada "Autoliquidation" ibaresi. Vergi no alınır ve VIES açık API'siyle doğrulanır (`Customer.vat_number`, `vat_number_valid`). `vat_treatment = intra_eu_b2b_reverse_charge`.
 - **Alman B2C:** şimdilik Fransız KDV'si. AB kuralı: Almanya'ya tüketici satışı yıllık **10.000 €** eşiğini aşınca Alman KDV'si + OSS gerekir — **eşik aşılana kadar bizi ilgilendirmez** (fiyatı ancak o zaman değiştirir); aşılırsa o an ele alınır. Sistem DE'ye giden B2C ciroyu (`Order.delivery_country`) yıl bazında türetip izler; parametrik eşiğe yaklaşınca **uyarır**.
+  - ⚠ **Depo ağı uyarısı (01.08):** bu eşik yalnız **uzaktan satış** kuralıdır. Almanya'da depo açılırsa DE deposundan DE müşterisine satış **yerel satış** olur — eşik hiç işlemez, Alman KDV'si ilk günden gerekir ve yanlış kesilen KDV geriye dönük düzeltilemez. DE deposu açılmadan önce mali danışmana sorulacak (bkz. §17).
 - Her siparişe **KDV işleme tipi** (`vat_treatment`) yazılır ve export'a girer; muhasebe doğru beyanı bundan yapar.
 
 Kısaca: müşteri-yüzü doğru KDV = bizim işimiz (fiyat); beyan/OSS/iade = muhasebenin, biz temiz veriyi veririz.
@@ -234,6 +239,9 @@ Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, �
 
 ## 6. Teslimat ve minimum sepet
 
+> **Depo ağı (01.08):** bölge tek depoya bağlanır; posta kodu → bölge → depo zinciri, karma sepet
+> ve kargo dolgusu kuralları §17'de.
+
 - **Rota içi:** müşteri beklemeyi kabul eder, teslimat ücretsiz, kapıda ödeme mümkün.
 - **Rota dışı:** kargo.
 - **Ürün teslimat izni:** bazı ürünler soğuk zincir nedeniyle kargoyla gönderilemez (`Product.shippable=false`) — yalnız rota-içi kapı teslimi. Böyle bir ürün rota-dışı (kargo) siparişte **görünmez/eklenemez**; sepette varsa müşteri kargo adresi seçemez, yalnız rota-içi teslim sunulur.
@@ -267,6 +275,9 @@ Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, �
 1. **Online** (kart) — ödeme sağlayıcı üzerinden.
 2. **Kapıda** — nakit / kart / çek. Kurye toplar.
 3. **Banka** — hesap hareketleri Excel ile içe alınır.
+
+> **Depo ağı (01.08):** her depo aynı zamanda bir kapıda-tahsilat kasasıdır — depo başına ayrı
+> `Account` satırı açılır, model değişmez; merkeze aktarım hesaplar arası harekettir (§17).
 
 ### Checkout ödeme seçenekleri (bağlama göre)
 
@@ -595,6 +606,9 @@ Basit yaşam döngüsü; karmaşık ticket sistemi kurulmaz. Amaç: müşteri so
 
 Müşteri tarafının simetriği: tedarikçi de bir karttır, alım da bir akıştır. İlke aynı — **sistem önerir, siparişi insan verir.**
 
+> **Depo ağı (01.08):** mal kabul depoya yapılır; tek PO birden çok depoda parçalı kabul edilebilir,
+> eşik ve sipariş önerisi depo başınadır — §17.
+
 ### Tedarikçi kartı ve borç
 
 - Tedarikçi kartı: ad, iletişim, vergi no, **bize tanıdığı vade** (`payment_term_days`, null = peşin), not.
@@ -615,3 +629,89 @@ Her varyant için tedarikçideki **sipariş kodu**, oradaki adı, koli içi adet
 
 - **Faz 1 — eşik:** varyant başına asgari stok (`min_stock_qty`, isteğe bağlı); kullanılabilir stok altına düşen ürün admin'de **"sipariş zamanı"** listesine düşer. Liste tedarikçiye göre gruplanır → tek dokunuşla PO taslağına dönüşür.
 - **Faz 2 — akıllı öneri:** satış hızı + kalan stok + tedarik süresi + sezon (Kasım–Aralık) → "şu tarihte biter" tahmini; AI içgörü ailesine girer. Her iki halde de otomatik sipariş **yoktur**.
+
+---
+
+## 17. Depo ağı (çok depo)
+
+> **Karar 01.08.2026; implementasyon `docs/build/19-coklu-depo.md`.** Kod bugün tek depoyla çalışır —
+> bu bölüm yürürlükteki hedef kurallardır; 19 modülü indikçe kod bu bölüme yaklaşır. Teknik karar
+> dökümü `DATA_MODEL.md` Kalıcı kararlar'dadır (01.08 bloğu).
+
+### Omurga: posta kodu → bölge → depo
+
+- Her teslimat bölgesi (`DeliveryZone`) **tek bir depoya** bağlıdır; bir posta kodu **tek bir aktif
+  bölgede** olabilir — tekillik veritabanında zorlanır, çakışma kayıt anında reddedilir ("ilki
+  kazanır" sessiz çözümü kalkar). Sonuç: posta kodu her zaman tek depoya çözülür.
+- Müşteriye depo **gösterilmez** — altın kural: sistemin karmaşıklığı arayüze yansımaz. Müşteri
+  posta kodunu girer; gerisi içeride çözülür.
+- **Varsayılan depo kavramı YOKTUR.** Belirsizlik varsayılanla çözülmez: sipariş deposunun kaynağı
+  ya adresin posta kodudur (uzaktan sipariş: web/WhatsApp/elle) ya işlemi yapan personelin sabit
+  deposudur (kapı önü satış). Admin kapı önü satış yapmaz.
+- **Ülke:** posta kodu ülkeler arası benzersiz değildir (FR ve DE ikisi de 5 hane; `67000` ikisinde
+  de geçerli). Yer çözümü `(ülke, posta kodu)` ikilisidir. Ülke seçici yalnız aktif bölge/depoların
+  ülke kümesi 1'i aşınca görünür (veriden türer, ayar değil); site dili en fazla ön-seçim
+  **ipucudur**, karar müşterinindir. Dış coğrafi servis kullanılmaz — belirsizlik niyettedir,
+  hiçbir servis çözemez.
+
+### Sipariş: tek depodan, istisnasız
+
+- **Bir sipariş tek depodan çıkar** (`Order.warehouse_id`); bölünmüş sipariş yoktur ve soğuk zincir
+  ürünü asla depo değiştirmez. Değişmez **veride** durur: siparişe yazılan partiler siparişin
+  deposundan olmak zorundadır (ertelenmiş kısıt — `order_discount_balance` emsali).
+- **Karma sepet (rota müşterisi):** kendi deposunda OLAN her şey — kargolanabilir dahil — rota
+  siparişiyle araçtan gider. Kendi deposunda OLMAYAN kargolanabilir ürün **engellenmez**:
+  "kargoyla gönderilir" işaretiyle satılır ve **ayrı ödemeli ayrı bir kargo checkout'una** gider
+  (kargo deposundan). İki checkout = iki sipariş = iki ödeme — "her ödeme bir siparişe" modeli
+  değişmez. Ürün iki depoda da yoksa gerçekten "tükendi"dir.
+  **Yolu stok belirler, müşteri seçmez (01.08):** kendi deposunda mevcut kalem kargoya
+  yönlendirilemez — ücretsiz kapı teslimi varken paralı kargo seçtirmek ikinci bir karar noktası
+  açar, karşılığı yoktur. Sepet tamamen yerel-dışı kalemlerden oluşuyorsa salt-kargo siparişi
+  kendiliğinden doğar; farklı adrese gönderim de o adresin posta kodundan doğru yola düşer.
+- **Kargo deposu TEKtir** (ileride ülke başına bir): `ships_online` işaretli tek aktif depo —
+  kayıt kapısı ikinciyi reddeder. Kargo deposu bölge dışı müşterilere ve rota müşterilerinin kargo
+  dolgusuna hizmet eder.
+
+### Katalog ve sepet davranışı
+
+- **Katalog süzülmez, işaretlenir** — "yer bir sözdür, filtre değildir" sözleşmesi korunur. Depo
+  stoğu karta işaret olarak düşer; süzme müşterinin elindeki çiptir (varsayılan kapalı).
+- Posta kodu **zorunlu değildir**; ısrarlı ve nazik davetle istenir (anasayfa, katalog girişi,
+  soğuk zincir ürün detayı — tasarım deseni). Yer bilinmiyorken yere bağlı hiçbir vaat verilmez:
+  "tükendi" yalnız **hiçbir depoda** yoksa söylenir, gerisi "muhtemel" tonunda kalır.
+- Posta kodu değişince sepet yeniden değerlendirilir: yeni depoda karşılanamayan kalem
+  **silinmez**, `saved_items`'a taşınır (mevcut mekanizma; tetik genişler). "Burada satılmıyor" ile
+  "şu an tükendi" ayrı mesajlardır — ilki kalıcı, ikincisi geçici.
+
+### Operasyon
+
+- **Roller iki eksenlidir:** ne yapar (rol) × nerede yapar (depo kapsamı). Admin ve muhasebe
+  depo-**üstüdür**; depocu ve kurye depoya bağlıdır — kapsamı boşsa **hiçbir** depoyu göremez
+  (kapalı kapı). Kapsamında birden çok depo olan personel ekranda kapsamıyla sınırlı seçici görür.
+- **Depocu başka deponun stoğunu görmez** — eksik kaleminde "diğer depoda var" bilgisi de yoktur;
+  depolar fiziksel olarak uzaktır, bilginin operasyonel karşılığı yoktur. Depo karşılaştırma ve
+  transfer kararı admin'in işidir.
+- **Tedarik:** satın alma siparişi depo-üstüdür; **mal kabul depoya yapılır** — tek PO birden çok
+  depoda parçalı kabul edilebilir, PO durumu kabullerden **türetilir**. PO kalemine isteğe bağlı
+  hedef depo yazılabilir ("20 koli STR'ye, 10 koli KEHL'e") — kabul eden depocu kendi payını
+  listeden okur. Asgari stok eşiği depo bazlıdır: varyanttaki genel eşik varsayılan, depo satırı
+  istisnadır (müşteriye-özel fiyat deseni); sipariş önerisi depo başına hesaplanır.
+- **Depolar arası transfer** iki fiziksel-gerçek anıyla çalışır (sevk → kabul; §4'ün "yalnız
+  fiziksel an stoğu değiştirir" ilkesi): yoldaki mal hiçbir depoda satılamaz, "yolda ne var"
+  transfer kaydının kendisidir. Parti kimliği korunur (tarih/lot/alış hedefte yeni partiye
+  kopyalanır) — geri çağırma ve gerçek COGS transferden etkilenmez. Parti seçiminde sistem FEFO
+  **önerir**, operatör serbestçe değiştirir; hedefe ulaşım süresi (parametrik) kadar ömrü kalmayan
+  parti önerilmez — uyarır, engellemez.
+- **Her depo bir kasadır:** kapıya teslim + kapıda tahsilat her depoda mümkün; depo başına
+  `Account` satırı açılır ("Kasa — STR"), merkeze aktarım hesaplar arası harekettir (§7/§9 modeli
+  değişmez).
+- **İmha/sayım belge numarası depo koduyla ayrışır** (`IMH-STR-26-0012`) — kâğıt klasör fiziksel
+  olarak o depoda durur; ortak sıra denetmene delik gösterirdi.
+- **Araçlar depoya bağlanmaz**; kurye günü ve kapanışı kurye/gün ekseninde kalır (§7). Sıcaklık
+  kaydı depo + konum (dolap/araç) taşır — hijyen denetimi tesis bazındadır.
+- **Fiyat depo boyutu almaz** — aynı katalog her yerde aynı fiyattır; depo bazlı tek fiyat farkı
+  partiye bağlı near-expiry teklifidir (parti zaten bir depodadır). Ülke farkı gerekirse araç
+  kanal/ülke eksenidir, depo değil (§5).
+
+> ⚠ **Almanya ön koşulu:** DE'de depo açmak vergi modelini değiştirir (§5 KDV uyarısı) — mali
+> danışmana sorulmadan DE deposu açılmaz.
