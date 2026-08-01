@@ -77,6 +77,23 @@ interface CheckoutDraftInput {
   couponCode?: string | null;
   /** Çift sipariş kalkanı (0015) — istemcinin o checkout denemesi için ürettiği anahtar. */
   idempotencyKey?: string | null;
+  /**
+   * Bu taslak, sepetin KARGO grubundan açılan ikinci sipariş mi (19.15).
+   *
+   * ── NEDEN AÇIK BİR GİRDİ, TÜRETME DEĞİL ────────────────────────────────────
+   * Taslak sepetin alt kümesini zaten alabiliyordu (`entries`), ama teslimatı ADRESTEN çözüyordu:
+   * adres rota içindeyse zincir `route` + **rota deposunu** döndürür. Kargo grubunun kalemleriyle
+   * açılan ikinci taslak böylece malın BULUNMADIĞI depodan bir rota siparişi üretirdi.
+   *
+   * Türetmek de yanlış olurdu ("kalemlerin hiçbiri yerelde yok, demek ki kargo"): aynı sepet iki
+   * kez okunur ve arada stok değişirse ikinci taslak sessizce tür değiştirirdi. Yol AÇIK seçimdir,
+   * varsayılanı yoktur (DOMAIN §17 / C2).
+   *
+   * `true` iken üç şey değişir: depo kargo deposudur, tür `shipping`'tir, gün seçilmez (kargoda
+   * tarih taşıyıcıya bağlıdır ve söz verilmez). Ödeme kısıtı KENDİLİĞİNDEN düzelir — motor
+   * `deliveryType === 'shipping'` görünce kapıda ödemeyi zaten kapatıyor (K37, doğrulandı).
+   */
+  shippingOrder?: boolean;
 }
 
 export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<CheckoutDraftOutcome> {
@@ -99,12 +116,24 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
   //    iki kez çözülüyor — girdileri önbellekli (`lib/delivery/inputs`), ikinci tur bedava.
   const place = await resolveDelivery({ postalCode: address.postalCode, country: address.country });
 
+  // Kargo siparişinde depo ADRESTEN değil, ülkenin kargo deposundan gelir (19.15): kalemler orada
+  // duruyor, rota deposunda değil. Kargo deposu yoksa sipariş açılamaz ve sebebi ayrı söylenir —
+  // bu bizim yapılandırma eksiğimizdir, müşterinin bölgesiyle ilgisi yok.
+  const orderWarehouseId = input.shippingOrder ? place.shippingWarehouseId : place.warehouseId;
+  if (input.shippingOrder && !orderWarehouseId) {
+    return { status: 'warehouse_unresolved', reason: 'no_shipping_warehouse' };
+  }
+
   // 3) Sepet SUNUCUDA yeniden okunur: bağlayıcı fiyat bu okumadan doğar. Depo bağlamıyla —
   //    aksi hâlde "sepette gördüm, ödemede kayboldu" sürprizi mümkün kalırdı.
+  //
+  //    Kargo siparişinde sepet KARGO deposuyla okunur: kalemlerin bulunduğu yer orası. Satırların
+  //    `route`'u o hâlde `local` görünür ve bu bir çelişki değil — o alan "sepet ekranında hangi
+  //    gruba düşüyor" sorusunun cevabıdır; burada grup zaten seçilmiş, sipariş türü ayrı taşınıyor.
   const cart = await getCartView(input.locale, input.entries, {
     customerId: customer.id,
     couponCode: input.couponCode,
-    warehouseId: place.warehouseId,
+    warehouseId: orderWarehouseId,
     shippingWarehouseId: place.shippingWarehouseId,
   });
   if (cart.lines.length === 0) return { status: 'empty_cart' };
@@ -113,17 +142,38 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
   const hasNonShippableItem = cart.lines.some((l) => !l.shippable);
   const delivery = await resolveDelivery({ postalCode: address.postalCode, country: address.country, hasNonShippableItem });
 
+  // ── SİPARİŞİN TÜRÜ: KARGO SEÇİMİ ADRESİN CEVABINI EZER (19.15) ─────────────
+  // Adres rota içinde olsa bile bu sipariş kargodur — kalemleri yerel depoda yok, kargo deposundan
+  // gidiyor. Tür burada sabitlenir ve aşağıdaki her karar (ödeme yöntemleri, kargo ücreti, gün) onu
+  // izler. Ezme TEK YÖNLÜDÜR: normal taslak adresin cevabını olduğu gibi kullanır.
+  const deliveryType = input.shippingOrder ? ('shipping' as const) : delivery.deliveryType;
+
   // ── YAPISAL ENGEL, GEÇİCİ OLANDAN ÖNCE ────────────────────────────────────
   // Soğuk zincir kontrolü `blocked_lines`'tan ÖNCE gelir. Sepet artık depo bağlamıyla okunuyor
   // (adım 3) ve rota dışı adreste kargo deposunda bulunmayan soğuk zincir kalemi "şu an alınamıyor"
   // diye işaretleniyor — doğru ama YANILTICI cümle: müşteri stok beklemeye başlar, oysa o ürün o
   // adrese hiç gitmeyecek. Önce "gönderilemez" denir, sonra "şu an yok".
+  // Kargo siparişi soğuk zincir kalemi TAŞIYAMAZ ve bu ayrıca kontrol edilir: `shippingBlockedReason`
+  // yalnız rota DIŞI adreste doluyor (orada kargo tek yoldur). Rota İÇİ bir adresten açılan kargo
+  // siparişinde o alan boş kalır — kontrol ona bırakılsaydı soğuk zincir ürün kargoya çıkardı.
+  if (input.shippingOrder && hasNonShippableItem) return { status: 'cold_chain_unshippable' };
   if (delivery.shippingBlockedReason === 'cold_chain') return { status: 'cold_chain_unshippable' };
   if (cart.hasBlocked) return { status: 'blocked_lines', lines: cart.lines.filter((l) => l.blocked).map((l) => l.name) };
+
+  // ── BU SİPARİŞİN DEPOSUNDA KARŞILANAMAYAN KALEM (19.15) ───────────────────
+  // `blocked` bu soruyu artık cevaplamıyor ve cevaplamamalı: 19.10 onu daralttı — kargoyla
+  // gelebilen ürün "tükendi" değildir (C3) ve sepette satılabilir görünür. Ama BU sipariş tek bir
+  // depodan çıkıyor (K5); o depoda bulunmayan kalem buraya giremez, yoksa taslak açılır ve iş
+  // rezervasyon aşamasında, müşteri ödemeye geçtikten sonra patlar.
+  //
+  // Ayrımın yeri burası: sepet "alınabilir mi" sorusunu yanıtlar, checkout "bu siparişle gelir mi".
+  const unfulfillable = cart.lines.filter((l) => l.route !== null && l.route !== 'local');
+  if (unfulfillable.length > 0) return { status: 'blocked_lines', lines: unfulfillable.map((l) => l.name) };
   if (!cart.minBasketOk) return { status: 'min_basket', missingCents: cart.missingForMinBasketCents };
 
   // Gün DOĞRULANIR, kabul edilmez: ekran açıkken kesim saati geçmiş ya da bölge günü değişmiş olabilir.
-  if (delivery.deliveryType === 'route') {
+  // Kargo siparişinde gün HİÇ sorulmaz: tarih taşıyıcıya bağlıdır ve söz verilmez.
+  if (deliveryType === 'route') {
     const chosen = input.deliveryDate ?? (delivery.availableDates.length === 1 ? delivery.availableDates[0]! : null);
     if (!chosen || !delivery.availableDates.includes(chosen)) {
       return { status: 'date_unavailable', availableDates: delivery.availableDates };
@@ -135,7 +185,7 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
   const items = await expandToOrderItems(db, cart.lines, discountSharesOf(cart));
   const options = await resolveCheckoutPayment({
     customerId: customer.id,
-    deliveryType: delivery.deliveryType,
+    deliveryType,
     basketCents: cart.totalCents,
     lines: items.map((i) => ({ totalCents: Math.round(i.unitPrice * 100) * i.qty, vatRate: i.vatRate })),
   });
@@ -146,27 +196,28 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
   // Depo çözülemediyse sipariş AÇILMAZ: deposuz bir sipariş şemada da yazılamaz (not null) ve
   // yazılabilseydi hangi depodan hazırlanacağı bilinmeyen bir kayıt kalırdı. Sebep çağırana
   // taşınır — "bölge dışısınız" ile "kargo deposu tanımlı değil" aynı cümle olamaz.
-  if (!delivery.warehouseId) {
+  if (!orderWarehouseId) {
     return { status: 'warehouse_unresolved', reason: delivery.unresolvedReason ?? 'no_shipping_warehouse' };
   }
 
   // 5) Taslak. Kanal müşteri tipinden TÜRER ve bir daha değişmez (DOMAIN §3); adres ANLIK GÖRÜNTÜ
   //    olarak da yazılır — müşteri adresini sonradan düzenlerse sipariş nereye gittiğini unutmamalı.
-  const deliveryDate = delivery.deliveryType === 'route' ? (input.deliveryDate ?? delivery.availableDates[0] ?? null) : null;
+  const deliveryDate = deliveryType === 'route' ? (input.deliveryDate ?? delivery.availableDates[0] ?? null) : null;
   const { order } = await new OrderService(db).create(
     {
       customerId: customer.id,
       // Sipariş TEK depodan çıkar (DOMAIN §17) ve kaynağı ADRESİN posta kodudur — uzaktan siparişte
       // varsayılan depo kavramı yoktur (C2). Yer çözümü teslimat kararıyla aynı turda yapıldı.
-      warehouseId: delivery.warehouseId,
+      warehouseId: orderWarehouseId,
       channel: deriveChannel({ isCompany: customer.type === 'company' }),
       orderSource: 'web',
       status: 'draft',
       idempotencyKey: input.idempotencyKey ?? null,
       paymentMethod: input.paymentMethod,
       onAccount: input.onAccount ?? false,
-      deliveryType: delivery.deliveryType,
-      deliveryZoneId: delivery.zoneId,
+      deliveryType,
+      // Kargo siparişi bir BÖLGEYE ait değildir: rota bölgesi yalnız araçla gidilen teslimatın kaydı.
+      deliveryZoneId: input.shippingOrder ? null : delivery.zoneId,
       deliveryDate,
       addressId: address.id,
       addressSnapshot: { ...address },
@@ -185,7 +236,7 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
     { discountCodeId: discountCodeIdOf(cart) },
   );
 
-  return { status: 'ok', orderId: order.id, totalCents: options.orderTotalCents, deliveryType: delivery.deliveryType };
+  return { status: 'ok', orderId: order.id, totalCents: options.orderTotalCents, deliveryType };
 }
 
 /**

@@ -44,7 +44,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 16 | `16-talep-sikayet.md` | Talep / Şikâyet | sürüyor | 1/6 (+3 kısmi) |
 | 17 | `17-geri-bildirim-puan.md` | Geri Bildirim, Yorum ve Puan | sürüyor | 0/7 (+7 kısmi) |
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/10 |
-| 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 11/16 |
+| 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 12/16 |
 <!-- durum:son -->
 
 Sıra katı değildir ama bağımlılıklar bağlayıcıdır (her dosyada yazılı). 08–09, tasarımdan gelen **komponent envanterinin kodlanmasıyla** başlar: önce komponentler, sonra sayfalar.
