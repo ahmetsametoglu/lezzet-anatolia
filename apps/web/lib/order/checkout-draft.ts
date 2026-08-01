@@ -90,16 +90,36 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
   const address = (await new AddressService(db).listByCustomer(customer.id)).find((a) => a.id === input.addressId);
   if (!address) return { status: 'address_not_found' };
 
-  // 2) Sepet SUNUCUDA yeniden okunur: bağlayıcı fiyat bu okumadan doğar.
-  const cart = await getCartView(input.locale, input.entries, { customerId: customer.id, couponCode: input.couponCode });
-  if (cart.lines.length === 0) return { status: 'empty_cart' };
-  if (cart.hasBlocked) return { status: 'blocked_lines', lines: cart.lines.filter((l) => l.blocked).map((l) => l.name) };
-  if (!cart.minBasketOk) return { status: 'min_basket', missingCents: cart.missingForMinBasketCents };
+  // 2) DEPO önce: sepet hangi deponun stoğuyla okunacağını bilmek zorunda (19.9). Tasarımın
+  //    "adres kazanır" kuralı burada uygulanır — seçilen adresin kodu şeritteki koddan farklıysa
+  //    sepet o anda o adrese göre değerlendirilir, şerit yalnız bir varsayılandı.
+  //
+  //    Sıra döngüsel görünüyor (teslimat sepeti ister, sepet depoyu) ama değil: depo seçimi
+  //    yalnız ADRESE bağlı, sepet yalnız "kargo da kapalı mı" kararını etkiliyor. O yüzden teslimat
+  //    iki kez çözülüyor — girdileri önbellekli (`lib/delivery/inputs`), ikinci tur bedava.
+  const place = await resolveDelivery({ postalCode: address.postalCode, country: address.country });
 
-  // 3) Teslimat: posta kodu → bölge → gün(ler). Soğuk zincir kalemi kargoyu kapatır.
+  // 3) Sepet SUNUCUDA yeniden okunur: bağlayıcı fiyat bu okumadan doğar. Depo bağlamıyla —
+  //    aksi hâlde "sepette gördüm, ödemede kayboldu" sürprizi mümkün kalırdı.
+  const cart = await getCartView(input.locale, input.entries, {
+    customerId: customer.id,
+    couponCode: input.couponCode,
+    warehouseId: place.warehouseId,
+  });
+  if (cart.lines.length === 0) return { status: 'empty_cart' };
+
+  // 4) Teslimat kararı tamamlanır: posta kodu → bölge → gün(ler). Soğuk zincir kalemi kargoyu kapatır.
   const hasNonShippableItem = cart.lines.some((l) => !l.shippable);
   const delivery = await resolveDelivery({ postalCode: address.postalCode, country: address.country, hasNonShippableItem });
+
+  // ── YAPISAL ENGEL, GEÇİCİ OLANDAN ÖNCE ────────────────────────────────────
+  // Soğuk zincir kontrolü `blocked_lines`'tan ÖNCE gelir. Sepet artık depo bağlamıyla okunuyor
+  // (adım 3) ve rota dışı adreste kargo deposunda bulunmayan soğuk zincir kalemi "şu an alınamıyor"
+  // diye işaretleniyor — doğru ama YANILTICI cümle: müşteri stok beklemeye başlar, oysa o ürün o
+  // adrese hiç gitmeyecek. Önce "gönderilemez" denir, sonra "şu an yok".
   if (delivery.shippingBlockedReason === 'cold_chain') return { status: 'cold_chain_unshippable' };
+  if (cart.hasBlocked) return { status: 'blocked_lines', lines: cart.lines.filter((l) => l.blocked).map((l) => l.name) };
+  if (!cart.minBasketOk) return { status: 'min_basket', missingCents: cart.missingForMinBasketCents };
 
   // Gün DOĞRULANIR, kabul edilmez: ekran açıkken kesim saati geçmiş ya da bölge günü değişmiş olabilir.
   if (delivery.deliveryType === 'route') {

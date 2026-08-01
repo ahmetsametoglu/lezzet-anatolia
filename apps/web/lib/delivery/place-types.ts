@@ -19,6 +19,26 @@ import type { Country } from '@lezzet/types';
  * mümkün olduğunu söyler ve her uyarının yanında bir çıkış bırakır.
  */
 
+/**
+ * Müşterinin CEVABI — saklanan tek şey (19.9).
+ *
+ * Çerez bunu taşır, çözümü değil: `warehouseId`, `zoneId`, `nextDate` yazılmaz. Üç gerekçe:
+ *
+ * 1. **Çerezi istemci yazabilir.** Çözülmüş depo kimliğini oradan okursak, uydurulmuş bir çerez
+ *    hangi deponun stoğunu göstereceğimizi belirler. Cevabı okuyup depoyu her istekte kendimiz
+ *    çözersek bu sınıf tamamen kapanır.
+ * 2. **Ucuz.** Bölge, depo ve posta kodu listeleri önbellekte; çözüm sıcak yolda DB'ye gitmiyor.
+ * 3. **`nextDate` zaten bayatlar.** Kesim saati geçince "en yakın teslimat" kayar; çereze tarih
+ *    yazmak o bayatlığı kalıcı hâle getirirdi.
+ *
+ * `country` da saklanır çünkü TÜRETİLEMEYEBİLİR: 610 kod iki ülkede birden geçerli ve o hâlde ülke
+ * müşterinin cevabıdır. İkinci kez sormamak için tutuyoruz.
+ */
+export interface PlaceAnswer {
+  country: Country;
+  postalCode: string;
+}
+
 /** Çözülmüş teslimat yeri — sunucu `resolvePlaceAction` ile üretir, istemci saklar. */
 export interface DeliveryPlace {
   /** Boşluksuz, normalize edilmiş posta kodu ("67000"). */

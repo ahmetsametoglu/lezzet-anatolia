@@ -1,7 +1,8 @@
-import { DeliveryZoneService, SettingsService, WarehouseService, serviceDb } from '@lezzet/database';
+import { SettingsService, serviceDb } from '@lezzet/database';
 import { resolveWarehouseForPostalCode, upcomingDeliveryDates } from '@lezzet/domain-core';
 import type { DeliveryType } from '@lezzet/types';
 import type { Country } from '@lezzet/types';
+import { readDeliveryInputs } from '@/lib/delivery/inputs';
 
 /**
  * Checkout teslimat çözümü (07.2) — **uygulama katmanı orkestrasyonu**. DOMAIN §6.
@@ -47,9 +48,9 @@ interface ResolveDeliveryInput {
   postalCode: string;
   /**
    * Adresin ülkesi (DOMAIN §17) — `67000` hem Fransa'da hem Almanya'da geçerlidir, ülkesiz bir
-   * posta kodu eksik bir sorudur. Varsayılan `FR`: bugün tek ülkede hizmet veriyoruz ve mevcut
-   * çağrıların hepsi Fransız adresleri; ikinci ülke açıldığında çağıranlar bunu doldurmak zorunda
-   * kalır (BEKLEYEN(19.7) — yer bağlamı v2 ülkeyi taşıyacak).
+   * posta kodu eksik bir sorudur. Varsayılan `FR` yalnız TESTLER için kaldı: gerçek çağıranların
+   * ikisi de ülkeyi doldurur — checkout adresten okur, yer çözümü `postal_code_place`'ten türetir
+   * (19.8). İkinci ülke açıldığında varsayılan kalkar.
    */
   country?: Country;
   /** Sepette kargolanamayan (soğuk zincir) ürün var mı — çağıran ürün okumasından bilir. */
@@ -60,11 +61,14 @@ interface ResolveDeliveryInput {
 }
 
 export async function resolveDelivery(input: ResolveDeliveryInput): Promise<DeliveryResolution> {
-  const db = serviceDb();
-  const [zones, warehouses, cutoffTime] = await Promise.all([
-    new DeliveryZoneService(db).listWithCodes({ activeOnly: true }),
-    new WarehouseService(db).list({ activeOnly: true }),
-    new SettingsService(db).get<string>('order_cutoff_time', '16:00'),
+  // Bölge + depo listeleri ORTAK ve önbellekli (`lib/delivery/inputs`): aynı iki listeyi vitrinin
+  // yer bağlamı da okuyor. İki ayrı okuma iki farklı ana ait olabilirdi ve o hâlde aynı istekte
+  // sepet bir depoyu, katalog başka bir depoyu görürdü. Ucuz olması da checkout'ta işe yarıyor:
+  // teslimat bir kez depoyu vermek, bir kez de sepet bilindikten sonra kargo kararını vermek için
+  // iki kez çözülebiliyor.
+  const [{ zones, warehouses }, cutoffTime] = await Promise.all([
+    readDeliveryInputs(),
+    new SettingsService(serviceDb()).get<string>('order_cutoff_time', '16:00'),
   ]);
 
   const place = { country: input.country ?? 'FR', postalCode: input.postalCode };

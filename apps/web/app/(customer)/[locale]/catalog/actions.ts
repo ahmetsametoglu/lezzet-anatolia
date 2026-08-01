@@ -3,6 +3,7 @@
 import { KeysetCursorSchema, type KeysetCursor } from '@lezzet/types';
 import { hasLocale } from 'next-intl';
 import { getCatalogData } from '@/lib/storefront/catalog';
+import { readPlaceWarehouseId } from '@/lib/delivery/read-place';
 import { CATALOG_SORTS, type CatalogSort, type StorefrontProduct } from '@/lib/storefront/storefront-types';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { routing } from '@/i18n/routing';
@@ -44,7 +45,7 @@ export async function loadMoreCatalogAction(locale: string, q: CatalogPageQuery,
       sort,
       onlyOffers: q.onlyOffers,
       cursor: safeCursor,
-    }, null /* yer bağlamı sunucuya 19.7'de taşınacak — BEKLEYEN(19.7) */);
+    }, await readPlaceWarehouseId());
     return { data: { products: data.products, nextCursor: data.nextCursor }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };

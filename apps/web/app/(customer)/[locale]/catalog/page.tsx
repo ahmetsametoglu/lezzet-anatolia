@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
+import { readPlaceWarehouseId } from '@/lib/delivery/read-place';
 import { detectDevice } from '@/lib/device';
 import { getCatalogData } from '@/lib/storefront/catalog';
 import { CATALOG_SORTS, type CatalogSort } from '@/lib/storefront/storefront-types';
@@ -36,7 +37,7 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
 
   const t: Messages = messages[locale];
   const [data, device] = await Promise.all([
-    getCatalogData(locale, { categorySlug: category, search: q, sort: activeSort, onlyOffers, onlyShippable }, null /* yer bağlamı sunucuya 19.7'de taşınacak — BEKLEYEN(19.7) */),
+    getCatalogData(locale, { categorySlug: category, search: q, sort: activeSort, onlyOffers, onlyShippable }, await readPlaceWarehouseId()),
     detectDevice(),
   ]);
 

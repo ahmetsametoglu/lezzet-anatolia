@@ -1,0 +1,96 @@
+import 'server-only';
+import { cache } from 'react';
+import { cookies } from 'next/headers';
+import { PostalCodePlaceService, serviceDb } from '@lezzet/database';
+import { resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
+import { readDeliveryInputs } from './inputs';
+import type { PlaceAnswer } from './place-types';
+
+/**
+ * Yerin SUNUCU tarafı (19.9) — RSC'lerin "hangi deponun stoğunu okuyacağım" sorusu.
+ *
+ * Katalog, anasayfa, ürün detayı ve sepet render anında depoyu bilmek zorunda. Yer tarayıcıda
+ * (`localStorage`) durduğu sürece bunu bilemiyorlardı ve hepsi depo-üstü okuyordu — dört
+ * `BEKLEYEN(19.7)` işareti tam olarak buydu. Çerez o boşluğu kapatıyor.
+ *
+ * ── ÇÖZÜM İSTEK BAŞINA BİR KEZ ───────────────────────────────────────────────
+ * `cache()` React'in istek-kapsamlı belleği: aynı render'da katalog + hap + sepet üç kez sorsa da
+ * tek tur çalışır. Bu bir optimizasyon değil bir TUTARLILIK aracı — aynı sayfada iki farklı depo
+ * cevabı çıkması, listenin bir yerde "var" öteki yerde "yok" demesi demekti.
+ */
+
+/**
+ * Yerin çözülmüş hâli + müşterinin cevabı. `answer` null ise yer hiç bilinmiyor.
+ *
+ * Bugün dışa AÇILMIYOR: tek tüketici `readPlaceWarehouseId` ve fazlasına ihtiyaç duyan yok.
+ * `ambiguous`/`unknown` hâllerini ekranda gösterecek olan 19.7 geldiğinde `resolution` alanıyla
+ * birlikte export edilir — o güne kadar açık durması ölü bir kapı olurdu.
+ */
+interface PlaceContext {
+  answer: PlaceAnswer | null;
+  resolution: PostalCodeResolution | null;
+  /**
+   * Okumaların kullanacağı depo — **null "yer bilinmiyor" demektir** ve bu normaldir (K1: posta
+   * kodu zorunlu değil). Null'da okuma depo-üstüne düşer ve orada "var" bir vaat DEĞİL, "yok"un
+   * dayanağıdır (C3).
+   */
+  warehouseId: string | null;
+}
+
+const EMPTY: PlaceContext = { answer: null, resolution: null, warehouseId: null };
+
+/**
+ * Posta kodunun ülke adayları — istek başına bir kez (aynı kod birden çok bileşen tarafından
+ * sorulabilir). Tablo migration'la doğar ve yılda bir yenilenir (`pnpm postal:build`), yani veri
+ * bayatlamaz; burada tek istenen aynı istekte iki kez sorgu atmamak.
+ */
+const getPostalMatches = cache(async (postalCode: string) =>
+  new PostalCodePlaceService(serviceDb()).findByPostalCode(postalCode),
+);
+
+/**
+ * İstek başına yer bağlamı. Çerez yoksa ya da çözülemiyorsa **yer bilinmiyor** sayılır — hata
+ * fırlatılmaz: yerin bilinmemesi bir arıza değil, cevaplanmamış bir sorudur (`place-types`).
+ */
+const readPlaceContext = cache(async (): Promise<PlaceContext> => {
+  const answer = await readPlaceAnswerFromCookie();
+  if (!answer) return EMPTY;
+
+  const [{ zones, warehouses }, matches] = await Promise.all([readDeliveryInputs(), getPostalMatches(answer.postalCode)]);
+
+  // Müşterinin cevabındaki ülke SÜZGEÇ olarak uygulanır: `ambiguous` hâlini bir kez çözüp cevabı
+  // sakladık, her istekte yeniden sormuyoruz. Kod o ülkede geçerli değilse (çerez elle
+  // düzenlenmiş ya da veri değişmiş) süzgeç boşalır ve çözüm doğal olarak `unknown`'a düşer.
+  const scoped = matches.filter((m) => m.country === answer.country);
+  const resolution = resolvePlaceByPostalCode(answer.postalCode, scoped, zones, warehouses);
+
+  return {
+    answer,
+    resolution,
+    // Yalnız ÇÖZÜLMÜŞ hâller depo verir. `ambiguous`/`unknown`/`unresolved` → yer bilinmiyor gibi
+    // davranılır: sessizce bir depo seçmek, müşteriye başka şehrin stoğunu göstermek olurdu.
+    warehouseId: resolution.kind === 'route' || resolution.kind === 'shipping' ? resolution.warehouseId : null,
+  };
+});
+
+/** Okumaların en sık ihtiyacı — bağlamın yalnız depo kimliği. */
+export async function readPlaceWarehouseId(): Promise<string | null> {
+  return (await readPlaceContext()).warehouseId;
+}
+
+async function readPlaceAnswerFromCookie(): Promise<PlaceAnswer | null> {
+  const raw = (await cookies()).get('lezzet.place.v2')?.value;
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(decodeURIComponent(raw));
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const row = parsed as Record<string, unknown>;
+    // İstemciden gelen her şey şüphelidir. Ülke kümesi kapalı, kod biçimi sabit — uymayan çerez
+    // yok sayılır (istisna fırlatılmaz: bozuk çerez yüzünden sayfa çökmemeli).
+    if (typeof row.postalCode !== 'string' || !/^\d{5}$/.test(row.postalCode)) return null;
+    if (row.country !== 'FR' && row.country !== 'DE') return null;
+    return { country: row.country, postalCode: row.postalCode };
+  } catch {
+    return null;
+  }
+}

@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { resolvePlaceAction } from '@/lib/delivery/actions';
-import { readPlace, readSkipped, writePlace, writeSkipped } from '@/lib/delivery/place-store';
+import { readPlaceAnswer, readSkipped, writePlaceAnswer, writeSkipped } from '@/lib/delivery/place-store';
 import type { DeliveryPlace, DeliveryZoneSummary } from '@/lib/delivery/place-types';
 
 /**
@@ -66,19 +66,22 @@ export function PlaceProvider({ children, zones }: PlaceProviderProps) {
   const [skipped, setSkipped] = useState<Record<'home' | 'cart', boolean>>({ home: false, cart: false });
 
   useEffect(() => {
-    const stored = readPlace();
+    // Çerez artık yalnız müşterinin CEVABINI taşıyor (`{country, postalCode}`, 19.9); çözümü
+    // sunucu yapar. Bu yüzden depodaki değer doğrudan gösterilemez — `inRoute` ve teslimat günü
+    // orada yok ve UYDURULAMAZ.
+    const stored = readPlaceAnswer();
     setSkipped({ home: readSkipped('home'), cart: readSkipped('cart') });
     if (!stored) {
       setReady(true);
       return;
     }
-    // Depodakini HEMEN göster (hap boş yanıp sönmesin), sonra sunucuya tazelet.
-    setPlace(stored);
-    setReady(true);
+    // `ready` çözüm gelene kadar false: hap önce "yer seçin" deyip sonra dolarsa yanıp söner.
+    // Kısa bir gecikme, yanlış bir ara kareye yeğdir.
+    // BEKLEYEN(19.7): ilk kare sunucudan gelebilir — `PlaceProvider` bir `initialPlace` prop'u
+    // alırsa (RSC `readPlaceContext()` ile çözer) bu tur tamamen kalkar ve gecikme sıfırlanır.
     void resolvePlaceAction(stored.postalCode).then(({ data }) => {
-      if (!data) return;
-      setPlace(data);
-      writePlace(data);
+      if (data) setPlace(data);
+      setReady(true);
     });
   }, []);
 
@@ -86,7 +89,8 @@ export function PlaceProvider({ children, zones }: PlaceProviderProps) {
     const { data, error } = await resolvePlaceAction(postalCode);
     if (!data) return error ?? 'Posta kodu çözülemedi';
     setPlace(data);
-    writePlace(data);
+    // Saklanan tek şey CEVAP: çözümü (bölge, gün, depo) her istekte sunucu yeniden üretir.
+    writePlaceAnswer({ country: data.country, postalCode: data.postalCode });
     // Kod girildiyse her iki soru da cevaplanmıştır; atlama işaretleri düşer.
     setSkipped({ home: false, cart: false });
     return null;
@@ -99,7 +103,7 @@ export function PlaceProvider({ children, zones }: PlaceProviderProps) {
       setPostalCode,
       clear: () => {
         setPlace(null);
-        writePlace(null);
+        writePlaceAnswer(null);
       },
       zones,
       skipped: (scope) => skipped[scope],
