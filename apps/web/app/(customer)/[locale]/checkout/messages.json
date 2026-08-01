@@ -26,6 +26,7 @@
       "title": "Teslimat adresi",
       "default": "varsayılan",
       "add": "+ Yeni adres",
+      "edit": "Bu adresi düzenle",
       "empty": "Henüz kayıtlı adresiniz yok. Nereye getirelim?",
       "form": {
         "label": "Adres başlığı",
@@ -165,6 +166,7 @@
       "title": "Adresse de livraison",
       "default": "par défaut",
       "add": "+ Nouvelle adresse",
+      "edit": "Modifier cette adresse",
       "empty": "Vous n'avez pas encore d'adresse enregistrée. Où livrons-nous ?",
       "form": {
         "label": "Titre de l'adresse",
@@ -304,6 +306,7 @@
       "title": "Lieferadresse",
       "default": "Standard",
       "add": "+ Neue Adresse",
+      "edit": "Diese Adresse bearbeiten",
       "empty": "Sie haben noch keine gespeicherte Adresse. Wohin liefern wir?",
       "form": {
         "label": "Adresstitel",

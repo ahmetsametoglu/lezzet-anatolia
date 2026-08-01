@@ -178,6 +178,17 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
 
+- **CHECKOUT — adres kartında "düzenle" YOK, seçili adresin ALTINDA var (01.08, `build/08` 08.13).**
+  `Musteri - Checkout.dc.html` adres adımında kartları yalnız SEÇTİRİYOR; düzenleme diye bir yol
+  çizilmemiş. Bu bir çıkmazdı (kullanıcı bildirimi): kaydedilen adres bir daha açılamıyor, yazım
+  hatası yapan müşterinin tek yolu ikinci bir adres eklemek oluyordu.
+  Düzenleme eklendi ama **kartın içine değil**, iki sebeple: (a) kart bir `<button>`, içine ikinci
+  bir düğme koymak geçersiz HTML ve klavye erişimini bozar; (b) düzeltilmeye değer olan siparişin
+  GİDECEĞİ adrestir — başka bir adresi düzeltmek isteyen önce onu seçer, ki seçim zaten bu siparişe
+  özel ve zararsız. Sonuç: kartların altında tek bir "Bu adresi düzenle" satırı; form açılınca kart
+  ızgarası gizlenir (aynı adres hem kart hem form olarak dururken hangisinin güncel olduğu belirsiz
+  kalıyordu). Yeni ekleme kutusu yerinde ve tasarımdaki gibi kesikli çerçeveli.
+
 - **YER EKSENİ — ürün detayında "Sonraya kaydet" düğmesi YOK (01.08, `build/19` 19.7).**
   `Musteri - Urun Detay.dc.html` "bölgenizde şu an yok" panelinde iki düğme çiziyor: **Gelince haber
   ver** (birincil) + **Sonraya kaydet** (ikincil). Birincisi indi; ikincisi inmedi ve boş bir düğme

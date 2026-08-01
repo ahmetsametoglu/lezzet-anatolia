@@ -6,7 +6,7 @@ import { Button } from '@/components/customer/ui/button';
 import { PlaceRestriction, restrictedLines } from '@/components/customer/delivery/place-restriction';
 import { signOutAction } from '@/lib/auth/actions';
 import { Skeleton } from '@/components/customer/ui/skeleton';
-import { AddressForm } from '@/components/customer/delivery/address-form';
+import { AddressForm, toFormInput } from '@/components/customer/delivery/address-form';
 import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel } from '@/lib/cart/discount-label';
 import { formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
@@ -164,8 +164,29 @@ export function AccountLine({ t, email, compact }: { t: CheckoutViewProps['t']; 
   );
 }
 
-export function AddressStep({ t, locale, snapshot, state, compact, onSelectAddress, onAddAddress }: CheckoutViewProps) {
-  const [adding, setAdding] = useState(false);
+/**
+ * Adres adımı — seçim + ekleme + **düzenleme**.
+ *
+ * Düzenleme bir süre YOKTU ve bu bir çıkmazdı (kullanıcı bildirimi, 01.08): kaydedilen adres bir
+ * daha açılamıyordu, yazım hatası yapan müşterinin tek yolu ikinci bir adres eklemekti — kurye için
+ * iki benzer kayıt, müşteri için "hangisi doğruydu". Hesap sayfasında düzenleme zaten vardı; eksik
+ * olan checkout'un kendi kapısı ve bu ekrandı.
+ *
+ * **Düzenle bağlantısı SEÇİLİ adresin altında, her kartın içinde değil.** İki sebep: (a) kart bir
+ * `<button>`, içine ikinci bir düğme konamaz (geçersiz HTML, klavye erişimi de bozulur); (b) burada
+ * önemli olan siparişin GİDECEĞİ adres — düzeltilmeye değer olan o. Başka bir adresi düzeltmek
+ * isteyen önce onu seçer, ki seçim zaten bu siparişe özel ve zararsız.
+ *
+ * Tasarımda karşılığı yok (`design/BACKLOG §3`): çizim adresi yalnız seçtiriyor.
+ */
+export function AddressStep({ t, locale, snapshot, state, compact, selectedAddress, onSelectAddress, onAddAddress, onUpdateAddress }: CheckoutViewProps) {
+  /** Tek seferde tek form: ekleme ile düzenleme aynı yerde açılır, ikisi birden açık kalamaz. */
+  const [editing, setEditing] = useState<'new' | string | null>(null);
+  const adding = editing === 'new';
+  // Form kimliğin KENDİSİNDEN doldurulur, "seçili olan"dan değil: bugün ikisi hep aynı (düzenleme
+  // yolu yalnız seçili adreste açılıyor) ama o bir yerleşim tercihi — yarın kartların içine bir
+  // düzenle düğmesi konursa bu satırın sessizce yanlış adresi açması gerekmemeli.
+  const editTarget = adding ? null : (snapshot.addresses.find((a) => a.id === editing) ?? null);
 
   return (
     <StepShell id={ADDRESS_STEP_ID} step={t.address.step} title={t.address.title} compact={compact}>
@@ -173,34 +194,63 @@ export function AddressStep({ t, locale, snapshot, state, compact, onSelectAddre
         <p className="font-sans text-note leading-relaxed text-body">{t.address.empty}</p>
       )}
 
-      <div className={compact ? 'flex flex-col gap-2' : 'grid grid-cols-2 gap-2.5'}>
-        {snapshot.addresses.map((address) => (
-          <ChoiceCard key={address.id} selected={state.addressId === address.id} onClick={() => onSelectAddress(address.id)}>
-            <span className="font-sans text-body-sm font-bold text-ink">
-              {address.label ?? address.city}
-              {address.isDefault && <span className="font-semibold text-muted"> · {t.address.default}</span>}
-            </span>
-            <span className="font-sans text-note leading-relaxed text-body">{address.line1}</span>
-            <span className="font-sans text-note leading-relaxed text-body">
-              {address.postalCode} {address.city}
-            </span>
-          </ChoiceCard>
-        ))}
-      </div>
-
-      {adding ? (
-        <AddressForm copy={t.address.form} locale={locale} onCancel={() => setAdding(false)} onSave={async (input) => { await onAddAddress(input); setAdding(false); }} />
+      {/* Düzenleme açıkken kart ızgarası GİZLENİR: aynı adres hem kart hem form olarak dururken
+          hangisinin güncel olduğu belirsiz kalıyor ve adım gereksiz uzuyor. Eklemede ızgara kalır —
+          orada form yeni bir kayıt, mevcutları örtmesi için bir sebep yok. */}
+      {editTarget ? (
+        <AddressForm
+          copy={t.address.form}
+          locale={locale}
+          initial={toFormInput(editTarget)}
+          onCancel={() => setEditing(null)}
+          onSave={async (input) => {
+            await onUpdateAddress(editTarget.id, input);
+            setEditing(null);
+          }}
+        />
       ) : (
-        // Tasarımda KESİKLİ ÇERÇEVELİ KART — adres kartlarının yanında onlarla aynı ızgarada durur.
-        // Metin bağlantısı yapmak onu ızgaradan çıkarıyor ve "yeni adres" bir kart eklemek değil de
-        // sayfadan ayrılmak gibi okunuyordu.
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="grid w-max cursor-pointer place-items-center rounded-soft border-[1.5px] border-dashed border-sand-500 px-[18px] py-3.5 font-sans text-body-sm font-bold text-olive transition-colors hover:border-olive hover:bg-olive-bg"
-        >
-          {t.address.add}
-        </button>
+        <>
+          <div className={compact ? 'flex flex-col gap-2' : 'grid grid-cols-2 gap-2.5'}>
+            {snapshot.addresses.map((address) => (
+              <ChoiceCard key={address.id} selected={state.addressId === address.id} onClick={() => onSelectAddress(address.id)}>
+                <span className="font-sans text-body-sm font-bold text-ink">
+                  {address.label ?? address.city}
+                  {address.isDefault && <span className="font-semibold text-muted"> · {t.address.default}</span>}
+                </span>
+                <span className="font-sans text-note leading-relaxed text-body">{address.line1}</span>
+                <span className="font-sans text-note leading-relaxed text-body">
+                  {address.postalCode} {address.city}
+                </span>
+              </ChoiceCard>
+            ))}
+          </div>
+
+          {adding ? (
+            <AddressForm copy={t.address.form} locale={locale} onCancel={() => setEditing(null)} onSave={async (input) => { await onAddAddress(input); setEditing(null); }} />
+          ) : (
+            <>
+              {selectedAddress && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(selectedAddress.id)}
+                  className="w-max cursor-pointer font-sans text-note font-semibold text-olive underline hover:text-olive-dark"
+                >
+                  {t.address.edit}
+                </button>
+              )}
+              {/* Tasarımda KESİKLİ ÇERÇEVELİ KART — adres kartlarının yanında onlarla aynı ızgarada
+                  durur. Metin bağlantısı yapmak onu ızgaradan çıkarıyor ve "yeni adres" bir kart
+                  eklemek değil de sayfadan ayrılmak gibi okunuyordu. */}
+              <button
+                type="button"
+                onClick={() => setEditing('new')}
+                className="grid w-max cursor-pointer place-items-center rounded-soft border-[1.5px] border-dashed border-sand-500 px-[18px] py-3.5 font-sans text-body-sm font-bold text-olive transition-colors hover:border-olive hover:bg-olive-bg"
+              >
+                {t.address.add}
+              </button>
+            </>
+          )}
+        </>
       )}
     </StepShell>
   );

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { Address } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
-import { AddressForm, type NewAddressInput } from '@/components/customer/delivery/address-form';
+import { AddressForm, toAddressFields, toFormInput } from '@/components/customer/delivery/address-form';
 import { addAddressAction, deleteAddressAction, setDefaultAddressAction, updateAddressAction } from '../actions';
 import { Card, CardHead } from './account-cards';
 import type { Messages } from '../account-types';
@@ -29,39 +29,6 @@ interface AddressesCardProps {
   locale: Locale;
   addresses: Address[];
   compact: boolean;
-}
-
-/**
- * Formun çıktısı → adres alanları. Dönüşüm AÇIK yazılır (yayma ile değil): `NewAddressInput`
- * formun kendi sözleşmesi ve içinde `makeDefault` var — adres tablosunda öyle bir kolon yok,
- * `is_default` var ve onu ayrı bir eylem yönetiyor. Yayarak geçmek, kapının ayıklamasına güvenmek
- * demekti; iki taraf da doğru olsun.
- */
-function toAddressFields(input: NewAddressInput) {
-  return {
-    label: input.label ?? null,
-    recipient: input.recipient ?? null,
-    line1: input.line1,
-    line2: input.line2 ?? null,
-    postalCode: input.postalCode,
-    city: input.city,
-    phone: input.phone ?? null,
-    country: 'FR' as const,
-  };
-}
-
-/** DB satırı → formun beklediği şekil. Düzenlemede alanlar DOLU açılır; boş form yeniden yazdırırdı. */
-function toFormInput(address: Address): NewAddressInput {
-  return {
-    label: address.label ?? undefined,
-    recipient: address.recipient ?? undefined,
-    line1: address.line1,
-    line2: address.line2 ?? undefined,
-    postalCode: address.postalCode,
-    city: address.city,
-    phone: address.phone ?? undefined,
-    makeDefault: address.isDefault,
-  };
 }
 
 export function AddressesCard({ t, locale, addresses, compact }: AddressesCardProps) {

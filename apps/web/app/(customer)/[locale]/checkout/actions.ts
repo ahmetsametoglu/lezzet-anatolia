@@ -2,9 +2,10 @@
 
 import { AddressService, CartService, OrderService, ReservationService, serviceDb } from '@lezzet/database';
 import { hasLocale } from 'next-intl';
-import type { Address, PaymentMethod } from '@lezzet/types';
+import type { Address, AddressInsert, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
+import { updateAddress } from '@/lib/account/addresses';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { captureError, SOURCES } from '@lezzet/observability';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
@@ -124,12 +125,64 @@ export async function loadCheckoutAction(
   }
 }
 
+/**
+ * Adresin alanları — ekleme ve güncelleme AYNI şekli alır.
+ *
+ * Alıcı ve telefon ADRESİN alanları (0013): form ikisini de soruyor ve kurye ikisini de kullanıyor.
+ * Bir dönem burada eksiktiler — form topluyor, action tipi görmüyor, servis yazmıyordu; iki alan
+ * sessizce düşüyordu (28.07). Sipariş anlık görüntüsü adresi olduğu gibi kopyaladığı için düzeltme
+ * oraya da yürüyor.
+ */
+interface CheckoutAddressInput {
+  label?: string;
+  recipient?: string;
+  line1: string;
+  line2?: string;
+  postalCode: string;
+  city: string;
+  phone?: string;
+  makeDefault?: boolean;
+}
+
+/**
+ * Var olan adresi düzenle — **checkout'tan çıkmadan.**
+ *
+ * Ekran adresi kaydettikten sonra onu bir daha düzenleyemiyordu: kartlar yalnız SEÇİLİYORDU
+ * (kullanıcı bildirimi, 01.08). Yazım hatası yapan müşterinin tek çıkışı ikinci bir adres açmaktı;
+ * o da kurye için iki benzer kayıt, müşteri için "hangisi doğruydu" demek. Hesap sayfasında
+ * düzenleme zaten vardı — eksik olan checkout'un kendi kapısıydı.
+ *
+ * **Sahiplik doğrulanır ve kapıda:** `addressId` istemciden geliyor. `updateAddress` sahipliği
+ * kendi içinde sınıyor (`lib/account/addresses` → `ownedAddress`), yani başkasının adresi
+ * güncellenemez. Kapı ayrıca `isDefault`i patch'ten ayıklar — varsayılan seçimi kendi işidir.
+ *
+ * Varsayılan bayrağı AYRI parametre, patch'in içinde değil: tek satırı işaretlemek yetmiyor,
+ * öbürlerinin bayrağı düşmek zorunda. Tek turda gidiyor çünkü ikinci bir çağrı, kaydeden ama
+ * varsayılanı yazamayan bir ara hâl bırakabilirdi.
+ */
+export async function updateCheckoutAddressAction(
+  addressId: string,
+  patch: Omit<AddressInsert, 'customerId'>,
+  makeDefault: boolean,
+): Promise<ActionResult<true>> {
+  try {
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new Error('Oturum gerekli');
+    await updateAddress(customerId, addressId, patch);
+    // Varsayılan TEKİLDİR (0013): servis eskisini düşürür, ekran o kuralı bilmez.
+    if (makeDefault) await new AddressService(serviceDb()).setDefault(addressId);
+    return { data: true, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
 /** Yeni adres — checkout'tan çıkmadan. Adres MÜŞTERİYE bağlanır, kimlik oturumdan gelir. */
 export async function addCheckoutAddressAction(
   // Alıcı ve telefon ADRESİN alanları (0013): form ikisini de soruyor ve kurye ikisini de kullanıyor.
   // Burada eksiktiler — form topluyor, action tipi görmüyor, servis yazmıyordu; iki alan sessizce
   // düşüyordu (28.07). Sipariş anlık görüntüsü adresi olduğu gibi kopyaladığı için düzeltme oraya da yürür.
-  input: { label?: string; recipient?: string; line1: string; line2?: string; postalCode: string; city: string; phone?: string; makeDefault?: boolean },
+  input: CheckoutAddressInput,
 ): Promise<ActionResult<Address>> {
   try {
     const customerId = await currentCustomerId();

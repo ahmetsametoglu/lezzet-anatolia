@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { Address } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
 import { FormInputField } from '@/components/customer/form/form-input-field';
@@ -35,6 +36,42 @@ export interface NewAddressInput {
   phone?: string;
   /** Ülke K33'te SALT OKUNUR ("Fransa") — bugün tek ülkeye teslim ediyoruz, seçim sunmak yalan olurdu. */
   makeDefault?: boolean;
+}
+
+/**
+ * Formun çıktısı → adres alanları. Dönüşüm AÇIK yazılır (yayma ile değil): `NewAddressInput` formun
+ * kendi sözleşmesi ve içinde `makeDefault` var — adres tablosunda öyle bir kolon yok, `is_default`
+ * var ve onu ayrı bir eylem yönetiyor. Yayarak geçmek, kapının ayıklamasına güvenmek demekti.
+ *
+ * **Formun yanında durur, çağıranın içinde değil:** hesap sayfası ile checkout aynı formu kullanıyor
+ * ve aynı dönüşüme ihtiyaç duyuyor. İki kopya olsaydı biri yeni bir alan öğrenip öteki öğrenmezdi —
+ * `recipient` ile `phone`ın bir kez sessizce düşmesi (28.07) tam olarak bu sınıftandı.
+ */
+export function toAddressFields(input: NewAddressInput) {
+  return {
+    label: input.label ?? null,
+    recipient: input.recipient ?? null,
+    line1: input.line1,
+    line2: input.line2 ?? null,
+    postalCode: input.postalCode,
+    city: input.city,
+    phone: input.phone ?? null,
+    country: 'FR' as const,
+  };
+}
+
+/** DB satırı → formun beklediği şekil. Düzenlemede alanlar DOLU açılır; boş form yeniden yazdırırdı. */
+export function toFormInput(address: Address): NewAddressInput {
+  return {
+    label: address.label ?? undefined,
+    recipient: address.recipient ?? undefined,
+    line1: address.line1,
+    line2: address.line2 ?? undefined,
+    postalCode: address.postalCode,
+    city: address.city,
+    phone: address.phone ?? undefined,
+    makeDefault: address.isDefault,
+  };
 }
 
 /**
@@ -118,11 +155,20 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel }: Address
    * başlıktaki yer hapı ile formun cevabı ayrışabilirdi. Yan etkisi de istediğimiz şey: kod bölge
    * dışıysa aşağıdaki K32 kısıt bloğu kendiliğinden açılır.
    */
+  /**
+   * **Dönüş değeri 19.16b'de TERSİNE döndü ve burası onu bilmiyordu.** `setPostalCode` eskiden hata
+   * metni ya da `null` dönüyordu; artık `PlaceLookup | null` dönüyor ve `null` YALNIZ gerçek arıza
+   * demek. Eski `failure ? …` kontrolü bu yüzden çözülen her kodda uyarı basıyor, gerçekten
+   * başarısız olduğunda susuyordu. Tip değişimi derleyiciye görünmedi (ikisi de "truthy sorgulanan
+   * bir değer"), sessizce ters çalıştı.
+   */
   const checkPostal = async (raw: string) => {
     const value = raw.trim();
     if (!value) return setPostalError(null);
-    const failure = await setPostalCode(value);
-    setPostalError(failure ? copy.postalHint : null);
+    const lookup = await setPostalCode(value);
+    // Kabul edilen tek hâl `resolved`. `ambiguous`/`unknown`/`unresolved` ve arıza (`null`) hepsi
+    // "bu kodla devam edilemez" demek — ekranları ayrışacak (19.7) ama form için sonuç aynı.
+    setPostalError(lookup?.kind === 'resolved' ? null : copy.postalHint);
   };
 
   const answer = !postalError && place && place.postalCode === form.postalCode.trim() ? place : null;

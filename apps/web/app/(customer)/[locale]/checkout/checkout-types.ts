@@ -67,6 +67,8 @@ export interface CheckoutViewProps extends StepProps {
    */
   snapshotReady: boolean;
   onAddAddress: (input: NewAddressInput) => Promise<void>;
+  /** Var olan adresi düzenle — checkout'tan çıkmadan (kullanıcı bildirimi, 01.08). */
+  onUpdateAddress: (addressId: string, input: NewAddressInput) => Promise<void>;
   onConfirm: () => void;
   /** Adım 0 doğrulandı — sayfa tazelenir, adımlar açılır. */
   onVerified: () => void;

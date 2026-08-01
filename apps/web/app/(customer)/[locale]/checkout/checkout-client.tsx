@@ -14,7 +14,14 @@ import { clientStripe } from '@/lib/stripe-client';
 import { PaymentSection } from './components/payment-element';
 import { CheckoutDesktop } from './checkout.desktop';
 import { CheckoutMobile } from './checkout.mobile';
-import { addCheckoutAddressAction, confirmCheckoutAction, loadCheckoutAction, type CheckoutSnapshot } from './actions';
+import { toAddressFields } from '@/components/customer/delivery/address-form';
+import {
+  addCheckoutAddressAction,
+  confirmCheckoutAction,
+  loadCheckoutAction,
+  updateCheckoutAddressAction,
+  type CheckoutSnapshot,
+} from './actions';
 import type { CheckoutState, CheckoutViewProps, Messages, NewAddressInput } from './checkout-types';
 
 /**
@@ -231,6 +238,15 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
     onAddAddress: async (input: NewAddressInput) => {
       const { data } = await addCheckoutAddressAction(input);
       if (data) await refresh(data.id);
+    },
+    /**
+     * Adres düzenleme sonrası TAZELEME ŞART, yalnız listeyi güncellemek yetmez: posta kodu
+     * değişmişse teslimat yolu, günleri ve kargo ücreti de değişmiştir — anlık görüntü sunucudan
+     * yeniden çözülmeli. `refresh` zaten bileti (`seq`) yönetiyor, yarış açılmıyor.
+     */
+    onUpdateAddress: async (addressId: string, input: NewAddressInput) => {
+      const { data } = await updateCheckoutAddressAction(addressId, toAddressFields(input), input.makeDefault ?? false);
+      if (data) await refresh(addressId);
     },
     onConfirm: () => void confirm(),
     // Doğrulama bittiğinde sayfa tazelenir: oturum sunucuda çözülüyor, adımlar oradan açılıyor.
