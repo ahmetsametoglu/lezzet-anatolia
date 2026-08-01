@@ -39,6 +39,40 @@ export interface PlaceAnswer {
   postalCode: string;
 }
 
+/**
+ * `ambiguous` hâlinde müşteriye sunulan seçenek (19.16b). Ülke DEĞİL, tanınabilir bir YER
+ * gösterilir — "Fransa mı Almanya mı" sorusu müşteriye bir şey ifade etmez, "Bischwiller mi
+ * Bobenheim-Roxheim mi" eder.
+ */
+export interface PlaceOption {
+  country: Country;
+  /** Yer adı — kod yalnız kendi bölge tablomuzda varsa `null` (uydurulmaz, `zoneName` gösterilir). */
+  placeName: string | null;
+  /** Rota bölgemize düşüyor mu — liste bunu önce gösterir (daha olası cevap). */
+  inRoute: boolean;
+}
+
+/**
+ * Yer çözümünün ekrana ulaşan hâli (19.16b) — **dört hâl ayrık taşınır.**
+ *
+ * Önceki sürüm `ambiguous`/`unknown`/`unresolved` hâllerinde `throw` ediyordu ve hepsi tek bir
+ * `error: string`e iniyordu. Ekran belirsizlik seçicisini yazamıyordu: adayları göremiyor, hâli
+ * ancak hata metnini ayrıştırarak anlayabilirdi — bir dizgi eşleştirmesi, üstelik üç dilde
+ * çalışmayan biri. `throw` artık yalnız GERÇEK arıza için (DB düştü, kod biçimsiz).
+ */
+export type PlaceLookup =
+  /** Çözüldü — ekran yeri gösterebilir. */
+  | { kind: 'resolved'; place: DeliveryPlace }
+  /** Kod birden çok hizmet ülkemizde geçerli; müşteri seçer. En az iki aday taşır. */
+  | { kind: 'ambiguous'; options: PlaceOption[] }
+  /** Ne kendi bölge tablomuzda ne referansta — büyük olasılıkla yazım hatası. */
+  | { kind: 'unknown' }
+  /**
+   * Zincir koptu. İki sebep AYRI cümle gerektirir: `no_shipping_warehouse` bizim yapılandırma
+   * eksiğimizdir (müşteriye "bölge dışısınız" dedirtilmemeli), `ambiguous_zone` veri çakışmasıdır.
+   */
+  | { kind: 'unresolved'; reason: 'no_shipping_warehouse' | 'ambiguous_zone' };
+
 /** Çözülmüş teslimat yeri — sunucu `resolvePlaceAction` ile üretir, istemci saklar. */
 export interface DeliveryPlace {
   /** Boşluksuz, normalize edilmiş posta kodu ("67000"). */

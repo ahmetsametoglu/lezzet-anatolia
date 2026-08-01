@@ -50,9 +50,14 @@ export function PlaceDialog({ locale, onClose }: PlaceDialogProps) {
       return;
     }
     setBusy(true);
-    const failure = await setPostalCode(value);
+    const result = await setPostalCode(value);
     setBusy(false);
-    setError(failure);
+    // Sonuç artık AYRIK bir hâl (19.16b): `resolved` · `ambiguous` · `unknown` · `unresolved`.
+    // BEKLEYEN(19.7): üçü ayrı ekran istiyor — `ambiguous` iki somut yeri seçtiren bir liste
+    // (`result.options`, `{country, placeName, inRoute}` taşır), `unresolved` sebebine göre farklı
+    // cümle ("oraya gönderemiyoruz" ≠ "kodu çözemedik"). Bugün üçü de tek uyarıya düşüyor; metin
+    // `unknown` için zaten doğru ("Bu kod geçerli değil"), ötekiler için eksik.
+    setError(result === null || result.kind !== 'resolved' ? t.invalid : null);
   };
 
   return (

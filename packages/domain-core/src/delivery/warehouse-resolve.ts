@@ -26,7 +26,7 @@
  */
 
 import type { Country } from '@lezzet/types';
-import { matchZones, type DeliveryZoneCandidate } from './delivery-days';
+import { matchZones, normalizePostalCode, type DeliveryZoneCandidate } from './delivery-days';
 
 /** Motorun gördüğü asgari warehouse alanları (DB karşılığı `Warehouse`). */
 export interface WarehouseCandidate {
@@ -117,8 +117,14 @@ export function activeCountries(
 /** Posta kodu referansının bir satırı — `postal_code_place` tablosunun motor karşılığı. */
 export interface PostalCodeMatch {
   country: Country;
-  /** Gösterilecek yer adı ("Strasbourg", çok yerleşimli kodda "Ortenaukreis"). */
-  placeName: string;
+  /**
+   * Gösterilecek yer adı ("Strasbourg", çok yerleşimli kodda "Ortenaukreis").
+   *
+   * **`null` olabilir ve bu normaldir (19.16a):** kod yalnız KENDİ bölge tablomuzda varsa (dış
+   * referansta yoksa) ülkesini biliriz ama coğrafi adını bilmeyiz — ve uydurmayız. O hâlde ekran
+   * bölge adını gösterir (`zoneName`), ki zaten daha bilgilendiricidir.
+   */
+  placeName: string | null;
 }
 
 /** `ambiguous` hâlinde müşteriye sunulan seçenek — ülke DEĞİL, tanınabilir bir YER. */
@@ -133,7 +139,7 @@ export interface PlaceCandidate extends PostalCodeMatch {
  */
 export type PostalCodeResolution =
   /** Zincir çözüldü: `PlaceResolution`'ın aynısı + türetilmiş ülke ve gösterilecek ad. */
-  | (Extract<PlaceResolution, { kind: 'route' | 'shipping' }> & { country: Country; placeName: string })
+  | (Extract<PlaceResolution, { kind: 'route' | 'shipping' }> & { country: Country; placeName: string | null })
   /** Çözülemedi (bizim eksiğimiz ya da veri çakışması) — ülke yine de biliniyor, sebep ayrık kalır. */
   | (Extract<PlaceResolution, { kind: 'unresolved' }> & { country: Country })
   /** Kod birden çok hizmet ülkemizde geçerli — tek soru, iki somut yer. */
@@ -165,14 +171,42 @@ export function resolvePlaceByPostalCode(
   zones: readonly ZoneWithWarehouse[],
   warehouses: readonly WarehouseCandidate[],
 ): PostalCodeResolution {
-  if (matches.length === 0) return { kind: 'unknown' };
+  // ── KENDİ BÖLGE TABLOMUZ HİZMET ALANIMIZ İÇİN OTORİTEDİR (19.16a) ──────────
+  // İlk sürüm doğrudan `matches.length === 0 → unknown` diyordu ve `zones`'a hiç bakmıyordu. Sonuç
+  // bir ÇELİŞKİYDİ: operatörün elle girdiği, fiilen aracımızla gittiğimiz bir kod dış referansta
+  // yoksa vitrin "tanımadık" derken checkout aynı kodu kabul edip siparişi açıyordu (`resolveDelivery`
+  // referansa hiç bakmaz). Tek sistem, aynı koda iki cevap.
+  //
+  // Referans tablosunun işi ad çözümü ve hizmet vermediğimiz yerlerdir; nereye gittiğimizi
+  // kendi tablomuz bilir. Bağ satırı `(ülke, kod)` taşıdığı için ülke referanssız da türer.
+  // Pasif bölge de sayılır: rota kapalı olabilir ama kod bizim kaydımızdır ve ülkesi bellidir.
+  const code = normalizePostalCode(postalCode);
+  const own = new Map<Country, PostalCodeMatch>();
+  for (const zone of zones) {
+    for (const entry of zone.postalCodes) {
+      if (normalizePostalCode(entry.postalCode) === code && !own.has(entry.country)) {
+        // Yer adı YOK ve uydurulmaz: kendi tablomuz bölge adını bilir (`zoneName`, ayrı alan),
+        // coğrafi yer adını değil. Referansta karşılığı varsa aşağıda o kazanır.
+        own.set(entry.country, { country: entry.country, placeName: null });
+      }
+    }
+  }
+
+  // Birleşim: referanstaki ad daha bilgilendirici olduğu için ONA öncelik verilir; kendi
+  // kaydımızdan gelen ülke, referansta hiç yoksa da ayakta kalır.
+  const merged = new Map(own);
+  for (const m of matches) merged.set(m.country, m);
+  const all = [...merged.values()];
+
+  // Ne kendi kaydımızda ne referansta — büyük olasılıkla yazım hatası.
+  if (all.length === 0) return { kind: 'unknown' };
 
   const served = new Set(activeCountries(zones, warehouses));
   // Kesişim boşsa referanstaki adaylarla devam edilir: kod geçerlidir ama hizmet alanımızda
   // değildir ve bunun doğru cevabı `no_shipping_warehouse`'tur — aşağıdaki çözüm onu zaten üretir.
   // "Tanımadık" (`unknown`) demek YANLIŞ olurdu: kodu tanıyoruz, oraya gidemiyoruz.
-  const candidates = matches.filter((m) => served.has(m.country));
-  const effective = candidates.length > 0 ? candidates : matches;
+  const candidates = all.filter((m) => served.has(m.country));
+  const effective = candidates.length > 0 ? candidates : all;
 
   if (effective.length > 1) {
     const scored = effective.map((m) => ({

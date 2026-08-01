@@ -159,3 +159,46 @@ describe('posta kodundan ülke TÜRETİLİR, sorulmaz', () => {
     expect(sonuc).toEqual({ kind: 'shipping', country: 'FR', placeName: 'Paris', warehouseId: 'w-str' });
   });
 });
+
+/**
+ * Kendi bölge tablomuz hizmet alanımız için OTORİTEDİR (19.16a).
+ *
+ * İlk sürüm `matches.length === 0 → unknown` diyor ve `zones`'a hiç bakmıyordu. Sonuç bir
+ * ÇELİŞKİYDİ: operatörün elle girdiği, fiilen aracımızla gittiğimiz bir kod dış referansta yoksa
+ * vitrin "tanımadık" derken checkout aynı kodu kabul edip siparişi açıyordu (`resolveDelivery`
+ * referansa hiç bakmaz). Tek sistem, aynı koda iki cevap.
+ */
+describe('kendi bölgemiz dış referanstan ÜSTÜNDÜR', () => {
+  it('referansta olmayan ama BİZİM bölgemizdeki kod çözülür — "tanımadık" denmez', () => {
+    // GeoNames eksik olabilir: FR'de ~6.065 kod var ama liste tam değil, ve operatör yeni bir kodu
+    // her an ekleyebilir. Referansın bilmemesi bizim gitmediğimiz anlamına gelmez.
+    const sonuc = resolvePlaceByPostalCode('67000', [], [zone()], [STR]);
+    expect(sonuc).toMatchObject({ kind: 'route', country: 'FR', warehouseId: 'w-str' });
+  });
+
+  it('ülke referanssız da türer — bağ satırı (ülke, kod) taşıyor', () => {
+    const deBolge = zone({ warehouseId: KEHL.id, postalCodes: [{ country: 'DE', postalCode: '77694' }] });
+    const sonuc = resolvePlaceByPostalCode('77694', [], [deBolge], [STR, KEHL]);
+    expect(sonuc).toMatchObject({ kind: 'route', country: 'DE' });
+  });
+
+  it('yer adı UYDURULMAZ — referansta yoksa null kalır, bölge adı zaten ekranda', () => {
+    const sonuc = resolvePlaceByPostalCode('67000', [], [zone()], [STR]);
+    expect(sonuc).toMatchObject({ placeName: null });
+  });
+
+  it('referanstaki ad kazanır — iki kaynak aynı ülkeyi verirse daha bilgilendirici olan', () => {
+    const sonuc = resolvePlaceByPostalCode('67000', [{ country: 'FR', placeName: 'Strasbourg' }], [zone()], [STR]);
+    expect(sonuc).toMatchObject({ placeName: 'Strasbourg' });
+  });
+
+  it('PASİF bölgedeki kod da bizim kaydımızdır — rota kapalı ama kod tanınır', () => {
+    // Rota kapalıysa müşteri kargoya düşer; "tanımadık" demek onu hizmetsiz bırakmak olurdu.
+    const sonuc = resolvePlaceByPostalCode('67000', [], [zone({ isActive: false })], [STR]);
+    expect(sonuc).toMatchObject({ kind: 'shipping', country: 'FR' });
+  });
+
+  it('ne bizde ne referansta olan kod hâlâ TANINMAZ — düzeltme unknown hâlini yutmadı', () => {
+    expect(resolvePlaceByPostalCode('99999', [], [zone()], [STR])).toEqual({ kind: 'unknown' });
+  });
+});

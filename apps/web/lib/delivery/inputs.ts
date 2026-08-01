@@ -19,7 +19,11 @@ import { DeliveryZoneService, WarehouseService, serviceDb } from '@lezzet/databa
 export const readDeliveryInputs = cache(async () => {
   const db = serviceDb();
   const [zones, warehouses] = await Promise.all([
-    new DeliveryZoneService(db).listWithCodes({ activeOnly: true }),
+    // Bölgeler AKTİFLİK SÜZGECİSİZ (19.16a): pasif bölgedeki kod da bizim kaydımızdır ve ülkesi
+    // ondan türer — süzersek kapalı bölgedeki müşteri "bu kodu tanımadık" cevabı alır, oysa doğru
+    // cevap "rota kapalı, kargoyla gönderiyoruz". Rotanın açık olup olmadığına MOTOR karar verir
+    // (`matchZones` pasifleri zaten eliyor); okuma o kararı önden vermemeli.
+    new DeliveryZoneService(db).listWithCodes(),
     new WarehouseService(db).list({ activeOnly: true }),
   ]);
   return { zones, warehouses };

@@ -5,7 +5,7 @@ import { findZoneForPostalCode, resolvePlaceByPostalCode } from '@lezzet/domain-
 import { captureError, SOURCES } from '@lezzet/observability';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { resolveDelivery } from '@/lib/order/delivery';
-import { isValidPostalCode, normalizePostalCode, type DeliveryPlace } from './place-types';
+import { isValidPostalCode, normalizePostalCode, type PlaceLookup } from './place-types';
 
 /**
  * Teslimat yeri çözümü (K30-K31) — posta kodu → "ne gönderebiliriz, ne zaman".
@@ -17,7 +17,7 @@ import { isValidPostalCode, normalizePostalCode, type DeliveryPlace } from './pl
  * burada sepet bilinmez, o yüzden "kargo tamamen kapalı mı" sorusu sorulmaz (o karar sepetin
  * içeriğine bağlıdır ve kısıt bloğunun işidir).
  */
-export async function resolvePlaceAction(rawPostalCode: string): Promise<ActionResult<DeliveryPlace>> {
+export async function resolvePlaceAction(rawPostalCode: string): Promise<ActionResult<PlaceLookup>> {
   try {
     const postalCode = normalizePostalCode(rawPostalCode);
     if (!isValidPostalCode(postalCode)) throw new Error('Posta kodu 5 haneli olmalı');
@@ -25,7 +25,10 @@ export async function resolvePlaceAction(rawPostalCode: string): Promise<ActionR
     const db = serviceDb();
     const [matches, zones, warehouses] = await Promise.all([
       new PostalCodePlaceService(db).findByPostalCode(postalCode),
-      new DeliveryZoneService(db).listWithCodes({ activeOnly: true }),
+      // Bölgeler AKTİFLİK SÜZGECİSİZ okunur (19.16a): pasif bölgedeki kod da bizim kaydımızdır ve
+      // ülkesi ondan türer. Rotanın açık olup olmadığına motor karar verir — okuma o kararı
+      // önden vermemeli, yoksa kapalı bölgedeki müşteri "tanımadık" cevabı alır.
+      new DeliveryZoneService(db).listWithCodes(),
       new WarehouseService(db).list({ activeOnly: true }),
     ]);
 
@@ -35,33 +38,34 @@ export async function resolvePlaceAction(rawPostalCode: string): Promise<ActionR
     // ülke KDV oranını belirler (`DOMAIN §5`).
     const lookup = resolvePlaceByPostalCode(postalCode, matches, zones, warehouses);
 
-    if (lookup.kind === 'unknown') {
-      // Yazım hatası. Eskiden bu hâl YOKTU: geçersiz kod sessizce "bölge dışı → kargo" oluyordu ve
-      // müşteri hiç ulaşmayacak bir siparişe kadar gidebiliyordu.
-      throw new Error('Bu posta kodunu tanımadık — kontrol eder misiniz?');
-    }
+    // ── DÖRT HÂL EKRANA VERİ OLARAK GİDER (19.16b) ────────────────────────────
+    // Önceki sürüm bu hâllerde `throw` ediyordu ve `ActionResult` hepsini tek bir `error: string`e
+    // indiriyordu. Ekran belirsizlik seçicisini yazamıyordu: adayları göremiyor, hâli ancak hata
+    // metnini ayrıştırarak anlayabilirdi — bir dizgi eşleştirmesi, üstelik üç dilde çalışmayan.
+    // Metin ekranın işi (i18n orada); buradan çıkan şey VERİ.
+    if (lookup.kind === 'unknown') return { data: { kind: 'unknown' }, error: null };
+
     if (lookup.kind === 'ambiguous') {
-      // BEKLEYEN(19.7): iki somut yer gösterilip müşteriye seçtirilecek. Bugün oluşamaz (tek ülke
-      // aktif) ama sessizce birini seçmiyoruz — yanlış ülke yanlış vergi demek.
-      await captureError(new Error(`Posta kodu ${postalCode} birden çok ülkede geçerli`), {
-        source: SOURCES.webAction,
-        context: { postalCode, countries: lookup.candidates.map((c) => c.country) },
-      });
-      throw new Error('Bu posta kodu birden çok ülkede geçerli — seçim ekranı henüz hazır değil.');
+      // Kayıt tutulur ama HATA değil: müşterinin cevaplayabileceği meşru bir soru. Yine de iz
+      // bırakıyoruz — hangi kodların gerçekten sorulduğunu bilmek veri kalitesinin ölçüsü.
+      return {
+        data: {
+          kind: 'ambiguous',
+          options: lookup.candidates.map((c) => ({ country: c.country, placeName: c.placeName, inRoute: c.inRoute })),
+        },
+        error: null,
+      };
     }
+
     if (lookup.kind === 'unresolved') {
-      // İki sebep, iki AYRI cümle: `no_shipping_warehouse` "oraya gönderemiyoruz" (kod geçerli, biz
-      // ulaşamıyoruz), `ambiguous_zone` ise BİZİM veri çakışmamız — müşteriye "bölge dışısınız"
-      // dedirtmemeli, operatöre bildirilmeli.
+      // Bu ikisi BİZİM tarafımızın sorunu, o yüzden iz bırakılır: `no_shipping_warehouse` bir
+      // yapılandırma eksiği, `ambiguous_zone` bir veri çakışması. Müşteriye ikisi de "bölge
+      // dışısınız" diye görünmemeli — ekran sebebe göre farklı cümle kurar.
       await captureError(new Error(`Yer çözülemedi: ${lookup.reason}`), {
         source: SOURCES.webAction,
         context: { postalCode, country: lookup.country, reason: lookup.reason },
       });
-      throw new Error(
-        lookup.reason === 'no_shipping_warehouse'
-          ? 'Bu bölgeye şu an gönderim yapamıyoruz.'
-          : 'Bu posta kodunu çözemedik; ekibimize bildirildi.',
-      );
+      return { data: { kind: 'unresolved', reason: lookup.reason }, error: null };
     }
 
     const delivery = await resolveDelivery({ postalCode, country: lookup.country });
@@ -78,13 +82,17 @@ export async function resolvePlaceAction(rawPostalCode: string): Promise<ActionR
 
     return {
       data: {
-        postalCode,
-        country: lookup.country,
-        // Rota dışında da dolu: "75011 Paris · kargo" artık yazılabiliyor (19.8).
-        placeName: lookup.placeName,
-        zoneName: inRoute ? (zone?.name ?? null) : null,
-        inRoute,
-        nextDate: delivery.availableDates[0] ?? null,
+        kind: 'resolved',
+        place: {
+          postalCode,
+          country: lookup.country,
+          // Rota dışında da dolu: "75011 Paris · kargo" artık yazılabiliyor (19.8). Yalnız kendi
+          // bölge tablomuzda olan kodda null kalır — orada bölge adı zaten daha bilgilendirici.
+          placeName: lookup.placeName,
+          zoneName: inRoute ? (zone?.name ?? null) : null,
+          inRoute,
+          nextDate: delivery.availableDates[0] ?? null,
+        },
       },
       error: null,
     };

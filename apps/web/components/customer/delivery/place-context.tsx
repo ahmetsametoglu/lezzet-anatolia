@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import { resolvePlaceAction } from '@/lib/delivery/actions';
 import { readPlaceAnswer, readSkipped, writePlaceAnswer, writeSkipped } from '@/lib/delivery/place-store';
-import type { DeliveryPlace, DeliveryZoneSummary } from '@/lib/delivery/place-types';
+import type { DeliveryPlace, DeliveryZoneSummary, PlaceLookup } from '@/lib/delivery/place-types';
 
 /**
  * Teslimat yeri bağlamı — "nereye getirelim" cevabının TEK sahibi.
@@ -25,8 +25,15 @@ interface PlaceContextValue {
   place: DeliveryPlace | null;
   /** İlk okuma bitene kadar hap çizilmez — yanlış yer göstermektense hiç göstermemek. */
   ready: boolean;
-  /** Kodu çözer ve saklar; hatalı kodda `error` döner, yer değişmez. */
-  setPostalCode: (postalCode: string) => Promise<string | null>;
+  /**
+   * Kodu çözer. **Sonucu ayrık döndürür (19.16b)**, hata metni değil: `resolved` dışındaki hâller
+   * (`ambiguous` · `unknown` · `unresolved`) ekranın kendi cümlesini kurabilmesi için tip olarak
+   * gelir — metni ayrıştırmak bir dizgi eşleştirmesi olurdu ve üç dilde çalışmazdı.
+   *
+   * `null` yalnız GERÇEK arızada döner (ağ/DB); o hâlde çağıran genel hata gösterir.
+   * Yer yalnız `resolved` hâlinde değişir — belirsiz bir cevap saklanmaz.
+   */
+  setPostalCode: (postalCode: string) => Promise<PlaceLookup | null>;
   clear: () => void;
   /**
    * Soru atlandı mı — şerit ikinci kez sormaz (tasarım: "şimdi değil"). KAPSAMLIDIR: anasayfadaki
@@ -80,20 +87,26 @@ export function PlaceProvider({ children, zones }: PlaceProviderProps) {
     // BEKLEYEN(19.7): ilk kare sunucudan gelebilir — `PlaceProvider` bir `initialPlace` prop'u
     // alırsa (RSC `readPlaceContext()` ile çözer) bu tur tamamen kalkar ve gecikme sıfırlanır.
     void resolvePlaceAction(stored.postalCode).then(({ data }) => {
-      if (data) setPlace(data);
+      // Saklanan cevap artık çözülemiyorsa (bölge kapandı, kod tablodan düştü) yer BOŞ kalır —
+      // eski çözümü göstermeye devam etmek, olmayan bir sözü sürdürmek olurdu.
+      if (data?.kind === 'resolved') setPlace(data.place);
       setReady(true);
     });
   }, []);
 
-  const setPostalCode = useCallback(async (postalCode: string) => {
-    const { data, error } = await resolvePlaceAction(postalCode);
-    if (!data) return error ?? 'Posta kodu çözülemedi';
-    setPlace(data);
-    // Saklanan tek şey CEVAP: çözümü (bölge, gün, depo) her istekte sunucu yeniden üretir.
-    writePlaceAnswer({ country: data.country, postalCode: data.postalCode });
-    // Kod girildiyse her iki soru da cevaplanmıştır; atlama işaretleri düşer.
-    setSkipped({ home: false, cart: false });
-    return null;
+  const setPostalCode = useCallback(async (postalCode: string): Promise<PlaceLookup | null> => {
+    const { data } = await resolvePlaceAction(postalCode);
+    if (!data) return null;
+    // Yer YALNIZ çözülmüş hâlde değişir: belirsiz ya da tanınmayan bir cevabı saklamak, müşterinin
+    // vermediği bir kararı vermiş gibi göstermek olurdu.
+    if (data.kind === 'resolved') {
+      setPlace(data.place);
+      // Saklanan tek şey CEVAP: çözümü (bölge, gün, depo) her istekte sunucu yeniden üretir.
+      writePlaceAnswer({ country: data.place.country, postalCode: data.place.postalCode });
+      // Kod girildiyse her iki soru da cevaplanmıştır; atlama işaretleri düşer.
+      setSkipped({ home: false, cart: false });
+    }
+    return data;
   }, []);
 
   const value = useMemo<PlaceContextValue>(
