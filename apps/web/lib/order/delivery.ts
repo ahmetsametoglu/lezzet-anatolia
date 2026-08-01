@@ -1,5 +1,5 @@
 import { SettingsService, serviceDb } from '@lezzet/database';
-import { resolveWarehouseForPostalCode, upcomingDeliveryDates } from '@lezzet/domain-core';
+import { findShippingWarehouse, resolveWarehouseForPostalCode, upcomingDeliveryDates } from '@lezzet/domain-core';
 import type { DeliveryType } from '@lezzet/types';
 import type { Country } from '@lezzet/types';
 import { readDeliveryInputs } from '@/lib/delivery/inputs';
@@ -32,6 +32,12 @@ interface DeliveryResolution {
    * müşteriye "bölge dışısınız" dedirtmemek için ikisi ayrı tutuluyor.
    */
   warehouseId: string | null;
+  /**
+   * Ülkenin KARGO deposu (19.11) — `warehouseId`'den ayrı. Rota içindeki adres için de doludur:
+   * sepetin kargo grubu (kendi deposunda olmayan kargolanabilir kalemler) oradan çıkacak ve
+   * ikinci taslak onu isteyecek. `null` = o ülkeye kargo yapılmıyor.
+   */
+  shippingWarehouseId: string | null;
   unresolvedReason: 'ambiguous_zone' | 'no_shipping_warehouse' | null;
   /** Rota-içi teslimat için yaklaşan somut tarihler; kargoda boş. */
   availableDates: string[];
@@ -73,6 +79,8 @@ export async function resolveDelivery(input: ResolveDeliveryInput): Promise<Deli
 
   const place = { country: input.country ?? 'FR', postalCode: input.postalCode };
   const resolution = resolveWarehouseForPostalCode(place, zones, warehouses);
+  // Kargo deposu ÜLKEDEN türer, rotadan değil — rota içindeki müşteri de kargo dolgusu alabilir.
+  const shippingWarehouseId = findShippingWarehouse(place.country, warehouses)?.id ?? null;
 
   // Çözümsüz: ya aynı kod iki bölgede (veri çakışması) ya da kargo deposu tanımlı değil. İkisi de
   // sipariş verilemez demektir ama SEBEPLERİ ayrıdır — biri veri hatası, öteki yapılandırma eksiği.
@@ -81,6 +89,7 @@ export async function resolveDelivery(input: ResolveDeliveryInput): Promise<Deli
       deliveryType: 'shipping',
       zoneId: null,
       warehouseId: null,
+      shippingWarehouseId,
       unresolvedReason: resolution.reason,
       availableDates: [],
       requiresDateChoice: false,
@@ -94,6 +103,7 @@ export async function resolveDelivery(input: ResolveDeliveryInput): Promise<Deli
       deliveryType: 'shipping',
       zoneId: null,
       warehouseId: resolution.warehouseId,
+      shippingWarehouseId,
       unresolvedReason: null,
       availableDates: [],
       requiresDateChoice: false,
@@ -112,6 +122,7 @@ export async function resolveDelivery(input: ResolveDeliveryInput): Promise<Deli
     deliveryType: 'route',
     zoneId: resolution.zoneId,
     warehouseId: resolution.warehouseId,
+    shippingWarehouseId,
     unresolvedReason: null,
     availableDates,
     requiresDateChoice: availableDates.length > 1,

@@ -1,6 +1,7 @@
 import { meetsMinBasket } from '@lezzet/domain-core';
 import type { CouponRejection } from '@lezzet/domain-core';
 import type { LocalizedText } from '@lezzet/types';
+import type { CartLineRoute } from '@lezzet/domain-core';
 import type { StorefrontImage } from '@/lib/storefront/storefront-types';
 
 /**
@@ -165,6 +166,18 @@ interface CartLineView {
    */
   blocked: boolean;
   /**
+   * Bu kalem hangi yoldan gider (19.11) — karar `decideCartAgainstWarehouse` motorundan gelir,
+   * ekran hesaplamaz (`STACK §4`).
+   *
+   * **Yolu STOK belirler, müşteri seçmez:** kendi deposunda bulunan her şey — kargolanabilir olsa
+   * bile — rota siparişiyle gider; ücretsiz kapı teslimi varken paralı kargo seçtirmek ikinci bir
+   * karar noktası açar ve karşılığı yoktur.
+   *
+   * `null` = yer bilinmiyor. O hâlde ayrım yapılamaz ve YAPILMAMALI: ziyaretçiye hangi yoldan
+   * geleceğini söylemek, bilmediğimiz bir şeyi söylemektir.
+   */
+  route: CartLineRoute | null;
+  /**
    * PAKET satırının salt-okunur içeriği (K27) — varyant satırında boş dizi.
    *
    * Sepette gösterilmesi tasarımın kararı: müşteri "Bayram Sofrası"nın ne olduğunu satın alma
@@ -227,6 +240,29 @@ export interface CartView {
    * tanımsız, ilerleme bloğu hiç çizilmez.
    */
   freeShippingCents: number;
+  /**
+   * KARGO grubunun toplamı (19.11) — ücretsiz kargo eşiği buna bakar, sepetin tamamına değil.
+   *
+   * Ücretsiz kargo eşiği bir **kargo maliyeti** kuralıdır; rota grubunun tutarının onunla ilgisi
+   * yok. Bölünmeseydi 80 €'luk bir rota siparişi 5 €'luk kargo kalemini bedava taşıtırdı — kendi
+   * aracımızla giden malın tutarı, bir kargo firmasına ödediğimiz ücreti karşılamaz (K37).
+   *
+   * Yer bilinmiyorken 0: ayrım yapılamadığı için kargo grubu diye bir şey yoktur.
+   */
+  shippingSubtotalCents: number;
+  /**
+   * Ücretsiz kargoya kalan tutar — **kargo grubundan** hesaplanır. 0 = eşik aşıldı, eşik tanımsız
+   * ya da kargo grubu boş.
+   *
+   * Hesap burada yapılır, çağıranda değil: aynı sayı sepet ekranında ve checkout'ta görünecek ve
+   * iki yerde ayrı hesaplanırsa "sepette bedava yazıyordu" şikâyeti doğar.
+   */
+  freeShippingRemainingCents: number;
+  /**
+   * Sepetin TAMAMI kargo grubunda mı (19.11). Öyleyse salt-kargo siparişi kendiliğinden doğar ve
+   * müşteriye "iki sipariş vereceksiniz" DENMEZ — verilecek tek sipariş vardır.
+   */
+  shippingOnly: boolean;
 }
 
 /** Boş sepet — hiç kalem yokken ve okuma yapılamadığında aynı şekil döner. */
@@ -241,6 +277,9 @@ export const EMPTY_CART: CartView = {
   missingForMinBasketCents: 0,
   minBasketCents: 0,
   freeShippingCents: 0,
+  shippingSubtotalCents: 0,
+  freeShippingRemainingCents: 0,
+  shippingOnly: false,
 };
 
 /**

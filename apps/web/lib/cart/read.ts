@@ -1,9 +1,11 @@
 import 'server-only';
 import { ProductService, ProductVariantService, SettingsService, serviceDb } from '@lezzet/database';
-import { meetsMinBasket, type DiscountableLine } from '@lezzet/domain-core';
+import { decideCartAgainstWarehouse, meetsMinBasket, type CartLineInput, type CartLineRoute, type DiscountableLine } from '@lezzet/domain-core';
 import { CROP_CENTER, resolveLocalizedText } from '@lezzet/types';
+import type { ProductVariant, ProductWithRelations } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { EMPTY_PRODUCT_CONTEXT, imageOf, toVariant } from '@/lib/storefront/map';
+import type { ProductContext } from '@/lib/storefront/map';
 import { loadProductContext } from '@/lib/storefront/read-context';
 import { getPackagesByIds } from '@/lib/storefront/packages';
 import type { StorefrontPackageDetail } from '@/lib/storefront/storefront-types';
@@ -133,6 +135,8 @@ export async function getCartView(
       lineTotalCents: unitPriceCents === null ? null : unitPriceCents * entry.qty,
       // Satışa kapalı ya da tükendi → çıkarılmadan devam edilemez.
       blocked: unitPriceCents === null || view.soldOut,
+      // Yol kararı satırlar kurulduktan SONRA toplu veriliyor (motor sepetin tamamını görmeli).
+      route: null,
       contents: [],
       shippable: product.shippable,
       vatRate: product.vatRate,
@@ -150,7 +154,24 @@ export async function getCartView(
     });
   }
 
+  // ── YOL KARARI: MOTOR VERİR, EKRAN DEĞİL (19.11) ──────────────────────────
+  // `decideCartAgainstWarehouse` 19.3'ten beri yazılıydı ve çağıranı yoktu. Karar burada verilir
+  // çünkü aynı ayrımı checkout da isteyecek (kargo grubu ikinci bir taslak açar) ve iş gerçeğini
+  // ekran hesaplayamaz (`STACK §4`).
+  //
+  // Yer bilinmiyorsa ayrım YAPILMAZ: hangi yoldan geleceğini bilmediğimiz bir kaleme yol atamak,
+  // bilmediğimiz bir şeyi söylemektir. `route` o hâlde null kalır.
+  const routeByIndex = decideRoutes(lines, context, byVariant, byProduct, opts.warehouseId ?? null);
+  for (const [index, route] of routeByIndex.entries()) {
+    const line = lines[index];
+    if (line) line.route = route;
+  }
+
   const subtotalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
+  // Kargo grubunun kendi toplamı — ücretsiz kargo eşiği BUNA bakar (K37).
+  const shippingSubtotalCents = lines.reduce((sum, l) => (l.route === 'shipping' ? sum + (l.lineTotalCents ?? 0) : sum), 0);
+  const hasLocal = lines.some((l) => l.route === 'local');
+  const hasShipping = lines.some((l) => l.route === 'shipping');
   const discount = await resolveCartDiscount(db, {
     lines: discountable,
     customerId: opts.customerId,
@@ -166,8 +187,61 @@ export async function getCartView(
     itemCount: lines.reduce((sum, l) => sum + l.qty, 0),
     hasBlocked: lines.some((l) => l.blocked),
     freeShippingCents,
+    shippingSubtotalCents,
+    // Eşiğe kalan KARGO grubundan hesaplanır. Sepetin tamamından hesaplansaydı 80 €'luk bir rota
+    // siparişi 5 €'luk kargo kalemini bedava taşıtırdı — kendi aracımızla giden malın tutarı, bir
+    // kargo firmasına ödediğimiz ücreti karşılamaz.
+    freeShippingRemainingCents:
+      freeShippingCents > 0 && hasShipping ? Math.max(0, freeShippingCents - shippingSubtotalCents) : 0,
+    // Tamamı kargodaysa salt-kargo siparişi kendiliğinden doğar; müşteriye "iki sipariş
+    // vereceksiniz" denmez, verilecek tek sipariş vardır.
+    shippingOnly: hasShipping && !hasLocal,
     ...meets(subtotalCents, minBasketCents),
   };
+}
+
+/**
+ * Satırların yol kararı — motorun girdisini kurar, kararı ona verir.
+ *
+ * Paket satırı ayrımın DIŞINDADIR: paket bir kürasyondur, kalemleri farklı depolarda olabilir ve
+ * "paketi ikiye böl" diye bir şey yok (DOMAIN §13). Yolu checkout'ta paketin bütünü üzerinden
+ * çözülür; burada `null` kalır.
+ */
+function decideRoutes(
+  lines: readonly CartLine[],
+  context: Map<string, ProductContext>,
+  byVariant: Map<string, ProductVariant>,
+  byProduct: Map<string, ProductWithRelations>,
+  warehouseId: string | null,
+): Map<number, CartLineRoute | null> {
+  const result = new Map<number, CartLineRoute | null>();
+  if (!warehouseId) return result;
+
+  const inputs: CartLineInput[] = [];
+  const indexOfInput: number[] = [];
+  lines.forEach((line, index) => {
+    if (line.bundleId || !line.variantId) return;
+    const variant = byVariant.get(line.variantId);
+    const product = variant ? byProduct.get(variant.productId) : undefined;
+    if (!variant || !product) return;
+    const ctx = context.get(product.id);
+    inputs.push({
+      variantId: line.variantId,
+      qty: line.qty,
+      shippable: product.shippable,
+      localAvailable: ctx?.stock.get(line.variantId)?.availableQty ?? 0,
+      // Kargo deposu yoksa 0 — motorun sözleşmesi bunu bekliyor ve `shipping` yolunu açmıyor.
+      shippingAvailable: ctx?.shippingStock?.get(line.variantId)?.availableQty ?? 0,
+    });
+    indexOfInput.push(index);
+  });
+
+  const decision = decideCartAgainstWarehouse(inputs);
+  decision.lines.forEach((d, i) => {
+    const index = indexOfInput[i];
+    if (index !== undefined) result.set(index, d.route);
+  });
+  return result;
 }
 
 /**
@@ -205,6 +279,7 @@ function orphanLine(entry: CartEntry): CartLine {
     limitCap: null,
     lineTotalCents: null,
     blocked: true,
+    route: null,
     contents: [],
     vatRate: 0,
     // Kaynağı kayboldu: kargolanıp kargolanamayacağı da bilinmiyor. `true` demek kısıt uyarısını
@@ -235,6 +310,9 @@ function bundleLine(bundleId: string, qty: number, pack: StorefrontPackageDetail
     limitCap: null,
     lineTotalCents: pack.priceCents * qty,
     blocked: pack.soldOut,
+    // Paket ayrımın DIŞINDA: kalemleri farklı depolarda olabilir ve "paketi ikiye böl" diye bir şey
+    // yok (DOMAIN §13). Yolu checkout'ta bütünü üzerinden çözülür.
+    route: null,
     contents: pack.items.map((item) => ({ name: item.name, qty: item.qty })),
     vatRate: pack.vatRate,
     // Pakette TEK bir soğuk zincir kalemi bile varsa paketin tamamı rota içi kalır (05.5).

@@ -105,6 +105,7 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
     customerId: customer.id,
     couponCode: input.couponCode,
     warehouseId: place.warehouseId,
+    shippingWarehouseId: place.shippingWarehouseId,
   });
   if (cart.lines.length === 0) return { status: 'empty_cart' };
 

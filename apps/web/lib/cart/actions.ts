@@ -6,6 +6,7 @@ import { currentCustomerId } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { routing } from '@/i18n/routing';
 import type { CartItem } from '@lezzet/types';
+import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { getCartView } from './read';
 import { cartKey, type CartEntry, type CartView } from './cart-types';
 
@@ -157,7 +158,7 @@ async function resolveBoth(
   opts: { previousPrices?: ReadonlyMap<string, number>; customerId?: string | null; couponCode?: string | null } = {},
 ): Promise<Omit<CartPayload, 'serverCart'>> {
   const [view, savedView] = await Promise.all([
-    getCartView(locale, entries, { previousPrices: opts.previousPrices, customerId: opts.customerId, couponCode: opts.couponCode }),
+    getCartView(locale, entries, { previousPrices: opts.previousPrices, customerId: opts.customerId, couponCode: opts.couponCode, ...(await readPlaceWarehouses()) }),
     // Sonraya kaydedilenlerde zam işareti gösterilmez: o liste bir satın alma niyeti değil, bir
     // hatırlatmadır — orada onay istenecek bir karar yok.
     getCartView(locale, saved),

@@ -7,6 +7,7 @@ import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { captureError, SOURCES } from '@lezzet/observability';
+import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { getCartView } from '@/lib/cart/read';
 import type { CartEntry } from '@/lib/cart/cart-types';
 import { createCheckoutDraft } from '@/lib/order/checkout-draft';
@@ -80,7 +81,7 @@ export async function loadCheckoutAction(
     const selected = addresses.find((a) => a.id === addressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0];
     if (!selected) return { data: { addresses, delivery: null, payment: null }, error: null };
 
-    const cart = await getCartView(locale as Locale, entries, { customerId, couponCode });
+    const cart = await getCartView(locale as Locale, entries, { customerId, couponCode, ...(await readPlaceWarehouses()) });
     const delivery = await resolveDelivery({
       postalCode: selected.postalCode,
       hasNonShippableItem: cart.lines.some((l) => !l.shippable),
