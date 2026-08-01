@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/operation/ui/page-header';
 import { Select } from '@/components/operation/form/select';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { SearchIcon } from '@/components/operation/ui/icons';
+import { WarehouseFilterChip, WarehouseFilterNotice } from '@/components/operation/ui/warehouse-filter-bar';
 import { LevelsTab } from './tabs/levels-tab';
 import { LossesTab } from './tabs/losses-tab';
 import { AttentionTab } from './tabs/attention-tab';
@@ -41,13 +42,16 @@ const SCOPE_LABEL: Record<StockScope, string> = {
 };
 
 export function StockDesktop(props: StockViewProps) {
-  const { data, tab, onTab, catFilter, onCatFilter, scope, onScope, onOpenRecall } = props;
+  const { data, tab, onTab, catFilter, onCatFilter, scope, onScope, onOpenRecall, warehouseFilter, onWarehouseFilter } = props;
   const { inStock, attention, blocked } = data.counts;
+  const { warehouse } = data;
 
   // Alt başlık sekmeye ait: her sekmede aynı üç sayıyı yazmak, imha geçmişine bakarken stok
-  // sayaçlarını okutmaktı.
+  // sayaçlarını okutmaktı. Evren adı BAŞTA: sayılar hangi depolara ait, ilk okunan o olsun —
+  // ve o evren BAĞLAMDIR, tablo süzgeci değil (sayaçlar süzgeçle daralmıyor, kural 5).
+  const scopeLine = warehouse.scopeLabel ? `${warehouse.scopeLabel} · ` : '';
   const SUBTITLE: Record<StockTab, string> = {
-    levels: `${inStock} boyda stok var · ${attention} parti karar bekliyor${blocked > 0 ? ` · ${blocked} DLC geçti` : ''}`,
+    levels: `${scopeLine}${inStock} boyda stok var · ${attention} parti karar bekliyor${blocked > 0 ? ` · ${blocked} DLC geçti` : ''}`,
     attention: `${attention} parti karar bekliyor${blocked > 0 ? ` · ${blocked} yalnız imha` : ''}`,
     losses: 'Stoktan düşen ve stoğa dönen kayıtlar — en yeni önce',
   };
@@ -89,7 +93,23 @@ export function StockDesktop(props: StockViewProps) {
               ...data.categories.map((c) => ({ value: c.id, label: c.name })),
             ]}
           />
+          {/* Depo — bir bakış daraltması (mavi), karar süzgeci değil. Yalnız bağlam "tüm depolar"
+              iken çizilir; tek depolu evrende daraltacak bir şey yoktur (kural 2). */}
+          {warehouse.available ? (
+            <WarehouseFilterChip value={warehouseFilter} onChange={onWarehouseFilter} options={warehouse.options} />
+          ) : null}
         </div>
+      ) : null}
+
+      {/* Şerit YALNIZ seviyeler sekmesinde: süzgeç de orada. Karar kuyruğunda her parti zaten
+          deposunu tam adıyla söylüyor. */}
+      {tab === 'levels' ? (
+        <WarehouseFilterNotice
+          active={warehouse.active}
+          dropped={warehouse.dropped}
+          detail="sekme sayıları ve özet bağlamın gerçeğidir; tablodaki adetler bu deponundur, satır listesi katalogun tamamıdır."
+          onClear={() => onWarehouseFilter('')}
+        />
       ) : null}
 
       {tab === 'levels' && <LevelsTab {...props} />}

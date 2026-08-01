@@ -6,6 +6,7 @@ import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { SearchInput } from '@/components/operation/ui/search-input';
 import { Tabs } from '@/components/operation/ui/tabs';
+import { WarehouseFilterChip, WarehouseFilterNotice } from '@/components/operation/ui/warehouse-filter-bar';
 import { money, shortDate } from '@/components/operation/ui/format';
 import { contentText, deliveryText, paymentText, paymentToneClass, statusLabel, statusTone, summaryText } from './orders-labels';
 import { CHANNEL_FILTERS, CHANNEL_LABEL, CHANNEL_TONE, ORDER_TABS, tabLabel } from './orders-url';
@@ -19,7 +20,7 @@ import type { OrderRow, OrdersViewProps } from './orders-types';
 // Sekme (durum) + kanal, telefondaki iki gerçek soruyu karşılıyor.
 
 export function OrdersMobile(props: OrdersViewProps) {
-  const { rows, counts, urlState, onFilter, search, onSearch, hasMore, loadingMore, onLoadMore, onOpen } = props;
+  const { rows, counts, warehouse, urlState, onFilter, search, onSearch, hasMore, loadingMore, onLoadMore, onOpen } = props;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -47,8 +48,20 @@ export function OrdersMobile(props: OrdersViewProps) {
               {CHANNEL_LABEL[c]}
             </Chip>
           ))}
+          {/* Depo çipi mobilde DE var (teslim türü/tahsilat'ın aksine): telefonda "bugün benim
+              depomdan ne çıkıyor" gerçek bir soru, oysa tahsilat türü masa başı sorusudur. */}
+          {warehouse.available ? (
+            <WarehouseFilterChip value={urlState.depo} onChange={(depo) => onFilter({ depo })} options={warehouse.options} />
+          ) : null}
         </div>
       </div>
+
+      <WarehouseFilterNotice
+        active={warehouse.active}
+        dropped={warehouse.dropped}
+        detail={`sekme sayıları tüm depoların gerçeğidir, liste bu deponun ${rows.length} siparişini gösteriyor.`}
+        onClear={() => onFilter({ depo: '' })}
+      />
 
       {rows.length === 0 ? (
         <div className="flex flex-1 items-center justify-center p-8">
@@ -57,7 +70,7 @@ export function OrdersMobile(props: OrdersViewProps) {
       ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-4">
           {rows.map((row) => (
-            <OrderCard key={row.id} row={row} onOpen={() => onOpen(row.id)} />
+            <OrderCard key={row.id} row={row} showWarehouse={warehouse.showColumn} onOpen={() => onOpen(row.id)} />
           ))}
           <LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />
         </div>
@@ -68,11 +81,13 @@ export function OrdersMobile(props: OrdersViewProps) {
 
 interface OrderCardProps {
   row: OrderRow;
+  /** Çok depolu bakışta kart deposunu söyler; tek depoda aynı kod her kartta tekrarlanır (kural 4). */
+  showWarehouse: boolean;
   onOpen: () => void;
 }
 
 /** Sipariş kartı — vadesi geçmiş satırın SOL KENARI kırmızı: telefonda göz sütun taramaz, kenar tarar. */
-function OrderCard({ row, onOpen }: OrderCardProps) {
+function OrderCard({ row, showWarehouse, onOpen }: OrderCardProps) {
   const { main, meta } = deliveryText(row, shortDate);
   return (
     <button
@@ -89,9 +104,16 @@ function OrderCard({ row, onOpen }: OrderCardProps) {
             {row.referenceNo ?? '—'} · {contentText(row)}
           </span>
         </div>
-        <Badge tone={statusTone(row.status)} dot>
-          {statusLabel(row.status)}
-        </Badge>
+        <div className="flex flex-none flex-col items-end gap-1">
+          <Badge tone={statusTone(row.status)} dot>
+            {statusLabel(row.status)}
+          </Badge>
+          {showWarehouse && row.warehouse ? (
+            <Badge tone="blue" className="font-ops-mono">
+              {row.warehouse.code}
+            </Badge>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex items-center gap-3">

@@ -138,6 +138,17 @@ export function NavIcon({ name }: { name: NavIconName }) {
   return <Svg>{NAV_PATHS[name]}</Svg>;
 }
 
+/** Depo (tesis) — bağlam seçicisinde ve satırdaki depo işaretinde. */
+export function WarehouseIcon({ size = 14 }: { size?: number }) {
+  return (
+    <Svg size={size} strokeWidth={1.8}>
+      <path d="M3 21V9l9-5 9 5v12" />
+      <path d="M3 21h18" />
+      <path d="M9 21v-6h6v6" />
+    </Svg>
+  );
+}
+
 /** Arama ikonu (büyüteç). */
 export function SearchIcon({ size = 14 }: { size?: number }) {
   return (

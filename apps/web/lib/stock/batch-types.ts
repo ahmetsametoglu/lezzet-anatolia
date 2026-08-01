@@ -17,6 +17,12 @@ export type BatchView = StockBatchDetail & {
   title: string;
   productName: string;
   variantLabel: string;
+  /**
+   * Partinin durduğu depo — TAM AD + kod (19.5). Parti her zaman tek depodadır; karar kuyruğunda
+   * bu bilgi zorunludur, çünkü "SKT'ye 3 gün kaldı" kararı hangi şehirdeki mala verildiğini
+   * bilmeden alınamaz. `null` = ad çözülmedi; ekran o zaman depo söylemez (uydurmaz).
+   */
+  warehouse: { code: string; name: string } | null;
   flag: ExpiryFlag;
   decision: OfferDecision;
   /** Kalan raf ömrü %; ürünün toplam raf ömrü girilmemişse `null` (eşik kararı verilmez). */

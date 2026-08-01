@@ -49,6 +49,18 @@ interface TableProps<Row> {
   isRowActive?: (row: Row) => boolean;
   /** Gövde kaydırma olayı — infinite scroll için. */
   onScroll?: (e: UIEvent) => void;
+  /**
+   * Satırın ALTINA açılan tam genişlikte blok — `null` dönerse hiçbir şey çizilmez (19.5).
+   *
+   * Kırılım (stokta depo dağılımı) satırın kendisi DEĞİL, satırın detayıdır: grid'e ikinci bir satır
+   * eklemek sütun hizasını kırılıma da dayatırdı, oysa kırılımın kendi düzeni var. Bu yüzden blok
+   * grid'in dışında, satır sarmalayıcısının içinde durur.
+   *
+   * **Sıralama modunda ÇİZİLMEZ:** orada satırları `SortableList` üretir ve sürüklenen öğenin altına
+   * açılmış bir blok, bırakma hedefini yanlış hesaplatırdı. İki yetenek bugün hiçbir ekranda
+   * birleşmiyor; birleştiği gün burası bilinçli olarak yeniden düşünülür.
+   */
+  renderSubRow?: (row: Row) => ReactNode;
   /** Verilirse satırlar sürükle-bırakla sıralanır (baştaki tutamaktan); yeni id sırası (0..n-1). */
   onReorder?: (orderedIds: string[]) => void;
 }
@@ -71,6 +83,7 @@ export function Table<Row>({
   isRowActive,
   onScroll,
   onReorder,
+  renderSubRow,
 }: TableProps<Row>) {
   const sortable = Boolean(onReorder);
   const template = (sortable ? `${HANDLE_TRACK} ` : '') + columns.map((c) => c.width).join(' ');
@@ -166,7 +179,12 @@ export function Table<Row>({
         ) : sortable && onReorder ? (
           <SortableList items={rows} getId={rowKey} onReorder={onReorder} renderItem={(row, handle) => renderRow(row, handle)} />
         ) : (
-          rows.map((row) => <div key={rowKey(row)}>{renderRow(row)}</div>)
+          rows.map((row) => (
+            <div key={rowKey(row)}>
+              {renderRow(row)}
+              {renderSubRow?.(row)}
+            </div>
+          ))
         )}
         {footer}
       </div>

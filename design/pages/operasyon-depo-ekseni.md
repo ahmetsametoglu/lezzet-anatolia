@@ -70,12 +70,16 @@ ilişki aşağıda **tanımlıdır** — tanımsız kesişim yoktur.
 
 **Depo ekseni ALAN sayfalar:**
 
-- **Stok (`admin-stok`):** bağlam + tablo süzgeci + kural 4 sütunu. Satır modeli: bağlam = "Tüm
-  depolar" iken seviye listesi varyant başına **tek satır** (toplamlar + "N depoda" ipucu), satır
-  açılınca depo kırılımı — varyant×depo düz listesi tarama düzenini bozar. **Eşik/karar kuyruğu
-  istisna:** asgari stok eşiği depo bazlı bir gerçektir, o kuyruğun satırları (depo × varyant)
-  kalır ve deposunu söyler. Parti her zaman tek depodadır; parti satırı çok depolu bakışta
-  deposunu taşır.
+- **Stok (`admin-stok`) — ekseni EN TAM alan sayfa.** Bağlam + tablo süzgeci + kural 4 sütunu.
+  Satır modeli: bağlam = "Tüm depolar" iken seviye listesi varyant başına **tek satır** (toplamlar +
+  "N depoda" ipucu), satır açılınca depo kırılımı — varyant×depo düz listesi tarama düzenini bozar.
+  **Eşik/karar kuyruğu istisna:** asgari stok eşiği depo bazlı bir gerçektir, o kuyruğun satırları
+  (depo × varyant) kalır ve deposunu söyler. Parti her zaman tek depodadır; parti satırı çok depolu
+  bakışta deposunu taşır.
+  **Mal kabul ve Çıkışlar sekmeleri (01.08)** ekseni doğrudan alır: satır deposunu söyler, transfer
+  satırı İKİ depoyu birden (kaynak → hedef) — depo ekseninin tek satırda iki değer taşıdığı yegâne
+  yer burasıdır. Aynı transfer kaynağın Çıkışlar'ında, hedefin Mal kabul'ünde görünür; **bağlam
+  hangi yüzü göreceğini kendiliğinden belirler** ve süzgeç her iki ucu da eşleştirir.
 - **Siparişler (`admin-siparisler`):** bağlam + tablo süzgeci + depo sütunu/işareti; sekme
   sayaçları kural 5'e uyar. Sipariş detayında "hangi depodan" künye bilgisidir.
 - **Satın alma (`admin-satin-alma`):** PO listesi depo-üstüdür (satın alma tüm şirketin işi);
@@ -83,20 +87,48 @@ ilişki aşağıda **tanımlıdır** — tanımsız kesişim yoktur.
   (kapsamdan; varsayılan yok) ve parçalı kabul ilerlemesi kalem bazında "sipariş edilen ↔ gelen"
   olarak görünür — hangi kabul hangi depoya yapıldı, listeden okunur.
 - **Dashboard (`admin-dashboard`):** bağlamı izler; kartlar bağlam evreninin toplamıdır.
-- **Rotalar (`admin-rotalar`):** bölge kartı bağlı depoyu söyler; bölgeye depo atama buradadır.
-  Bir posta kodu tek bölgede olabilir — çakışma kayıt anında reddedilir, tasarım bu ret hâlini
-  içermelidir.
+- **Teslimat (`admin-teslimat`) — eski adı "Rotalar", düzeltme 01.08:** iki değişiklik. (a) Bölge
+  TANIMI (posta kodları, günler, depo bağı) bu sayfadan çıktı, `admin-depolar`'a taşındı — **bölge
+  bir tanım, teslimat günü bir gündür**; biri kurulum, öteki günlük iş. (b) Sayfa adı düzeldi:
+  **rota bu sistemde bir sayfa değil bir teslimat TÜRÜDÜR** (`deliveryType: rota | kargo`), bir türü
+  çoğullayıp varlığa çevirmek kavramları karıştırıyordu. Sayfa artık iki türü de kapsıyor (araçla
+  giden + kargoya verilen). Satır bölgesini ve dolayısıyla deposunu künye olarak söyler; posta kodu
+  çakışmasının ret hâli artık **Depolar**'ın tasarımına aittir.
 - **Depo yüzeyi (`depo-hazirlik`, `depo-stok-giris`, `depo-imha-sayim`):** depocu kural gereği
   kendi evreninde yaşar (§4); sayfa içinde ayrıca depo süzgeci yoktur. Başka deponun stoğu,
   karşılaştırması veya "diğer depoda var" bilgisi **gösterilmez** (`DOMAIN §17`).
-- **Yeni ekranlar — Depolar ve Transfer:** kendi sayfa dokümanları ayrıca yazılacak. Bu desenle
-  ilişkileri şimdiden bağlayıcı: **Depolar** yönetim nesnesidir, bağlamdan bağımsız listelenir;
-  **Transfer** listesi bağlam tek depoyken "bu deponun gönderdikleri + aldıkları" olarak süzülür.
+- **Depolar (`admin-depolar`) — yeni sayfa, ekseni ALMAZ.** Yönetim nesnesidir: bağlam bu listeyi
+  daraltmaz, tüm depolar her zaman listelenir. Sayfanın kendisi zaten depo başına konuşur.
+- **Transfer AYRI SAYFA DEĞİL (düzeltme 01.08).** İlk turda kendi sayfa dokümanı yazılmıştı; kaldırıldı
+  ve içeriği `admin-stok`'a taşındı. Gerekçe sistemin kendi emsalidir: parada **hesaplar arası
+  transfer bir hareket TİPİDİR**, kendi sayfası yoktur (`DOMAIN §7` — "kasa hareketi ile banka
+  hareketi aynı şeydir, yalnız hesabı farklı"). Depolar arası transfer bunun stok karşılığıdır.
+  Stok'ta iki sekme olarak yaşar: **Mal kabul** (girenler + bekleyenler) ve **Çıkışlar**
+  (gidenler); sevk ve kabul birer form, liste üstünde açılır.
+  **Hedef depo seçicisi bir kapsam süzgeci değildir** (kural 8'in istisnası değil, kapsamı dışıdır):
+  kapsam hangi verinin okunabildiğini sınırlar, hedef listesi malın nereye gidebileceğidir — hedefin
+  adını görmek stoğunu görmek değildir. Aksi hâlde tek kapsamlı depocu hiçbir yere sevk edemezdi.
 
-**Depo ekseni ALMAYAN sayfalar** (eksen buralara çizilmez): fiyatlar (fiyat depo-üstü —
-`DOMAIN §17`), ürünler (katalog tanımı depo-üstü; stok gösteren bir alanı varsa yalnız o alan
-bağlamı izler), müşteriler, talepler, geri bildirim, WhatsApp, para/raporların depo kırılımı
-(kendi modüllerinin işi). Kurye ekranları kurye-gün ekseninde kalır — araç depoya bağlı değildir.
+- **Fiyatlar (`admin-fiyatlar`) — SEKME BAZINDA bölünür (düzeltme 01.08).** Bu sayfa önce "ekseni
+  almayan" listedeydi ve gerekçe doğruydu ama sayfanın tamamını kapsıyordu: **liste fiyatı
+  depo-üstüdür**, Kanallar ve Müşteriler sekmeleri depoyu hiç görmez. **Teklifler sekmesi ise fiyat
+  değil PARTİ listeler** — "SKT'ye 3 gün kaldı, %30 teklif aç" kararı belirli bir partiye aittir ve
+  parti her zaman tek depodadır. Her depo kendi mal kabulünü yaptığı için aynı ürünün bir depoda
+  son günlerinde, ötekinde yeni gelmiş partisi olması **rutin hâldir, istisna değil**; işaretsiz bir
+  listede operatör hangi şehirdeki mala indirim açtığını bilemez. Bu sekme ekseni **tam** alır:
+  bağlam + tablo süzgeci + satır işareti. Raf ömrü uyarıları da deposunu söyler. Müşterinin gördüğü
+  fiyatın depoya göre değişmesi kararı zaten veride: `variant_effective_price` `(depo, ürün)` taneli
+  (`data-model/depo.md`).
+
+**Depo ekseni ALMAYAN sayfalar** (eksen buralara çizilmez): fiyatların **fiyat** sekmeleri (liste
+fiyatı depo-üstü — `DOMAIN §17`; teklif sekmesi için yukarı bak), ürünler (katalog tanımı
+depo-üstü; stok gösteren bir alanı varsa yalnız o alan bağlamı izler), müşteriler, talepler, geri
+bildirim, WhatsApp, para/raporların depo kırılımı (kendi modüllerinin işi). Kurye ekranları
+kurye-gün ekseninde kalır — araç depoya bağlı değildir.
+
+> **Kural olarak:** bir sayfanın "ekseni alıp almadığı" sayfa adıyla değil, **gösterdiği şeyin
+> partiye bağlı olup olmadığıyla** belirlenir. Partiye bağlı her liste deposunu söyler — hangi
+> sayfada durduğuna bakılmaksızın.
 
 ## 6. Kenar durumlar
 
@@ -125,7 +157,26 @@ bağlamı izler), müşteriler, talepler, geri bildirim, WhatsApp, para/raporlar
 1. **Operasyon evreni komponent envanterine** depo ekseni parçaları: bağlam seçici (web + mobil),
    tablo depo süzgeci hâli, satırdaki depo işareti/sütunu, "süzülüyor" ibaresi, kapalı kapı hâli.
 2. **Etkilenen sayfaların `.dc` güncellemeleri:** stok, siparişler, satın alma, dashboard,
-   rotalar (bkz. §5 — her birinin kendi sayfa dokümanındaki içerik envanteri geçerli kalır).
-3. **Yeni sayfalar (Depolar, Transfer) ayrı turda** — sayfa dokümanları yazıldığında.
+   rotalar ve **fiyatların Teklifler sekmesi** (bkz. §5 — her birinin kendi sayfa dokümanındaki
+   içerik envanteri geçerli kalır). Teklifler sekmesi listeye 01.08'de eklendi: orada eksen sayfanın
+   tamamına değil **tek sekmeye** iniyor, yani bağlam seçici sayfa başlığında dururken depo süzgeci
+   ve satır işareti yalnız o sekmede görünür — fiyat sekmelerine geçince kaybolur. Bu "kısmi eksen"
+   hâli tasarımda karşılığı olmayan tek yeni durum.
+3. **TEK yeni sayfa: Depolar** (`admin-depolar.md`). `.dc` karşılığı yok, sıfırdan çizilecek;
+   sidebar'a **bir** yeni giriş gelir (yerleşim Claude Design'ın kararı). Üç bölümlü: tesis künyesi ·
+   hizmet alanı (bölge/posta kodu tanımı — Teslimat'tan taşındı) · **karne** (risk, eşik altı, yolda
+   bekleyen — sayar, listelemez; her sayı Stok'a o depo bağlamıyla gider).
+4. **Stok yeniden çizilecek — iki yeni sekme:** `Mal kabul` (girenler + bekleyen tedarik siparişi ve
+   yoldaki transfer; kabul formu buradan) ve `Çıkışlar` (hazırlık, sevk, imha, sayım eksiği, kapı
+   satışı — bugünkü "İmha geçmişi" burada erir). Adlar bilerek SOMUT: soyut "hareket" kelimesi
+   kullanıcı itirazıyla kalktı. **Transfer ayrı sayfa
+   değil** — parada hesaplar arası transferin kendi sayfası olmadığı gibi (§5). Sevk ve kabul birer
+   FORM'dur, liste üstünde açılır (bu ekranın mevcut deseni: teklif diyaloğu, lot sorgusu).
+   Sevk/kabul formunun **rolüne göre daralması** (yönetici tüm ağ / depocu kendi deposu) bu turun
+   tasarımca en dikkat isteyen yeri.
+5. **Rotalar → Teslimat** — sayfa hem adını hem konusunu değiştirdi: bölge tanımı çıktı, yerine
+   **kargo teslimatları** girdi (taşıyıcı + takip numarası; bugün hiçbir ekranda yeri yok).
+   Sidebar'daki `Rotalar` girişi `Teslimat` olur, yol `/operations/routes` → `/operations/deliveries`.
+   Posta kodu çakışmasının ret hâli artık Depolar'ın işi.
 
 Kural seti (§3) davranıştır ve bağlayıcıdır; görünümü, yerleşimi ve biçimi tamamen serbesttir.

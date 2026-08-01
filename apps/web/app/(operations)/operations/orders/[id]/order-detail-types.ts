@@ -238,6 +238,11 @@ export interface OrderDetailView {
     address: string;
     courierName: string | null;
     proof: DeliveryProofView | null;
+    /**
+     * Siparişin çıktığı depo — KÜNYE bilgisidir, kontrol değil (19.5): sipariş tek depodan çıkar ve
+     * o depo adresten türemiştir, buradan değiştirilmez. `null` yalnız ad çözülemediğinde.
+     */
+    warehouse: { code: string; name: string } | null;
   };
 
   customer: CustomerContextView;

@@ -95,6 +95,7 @@ export function OrdersClient({ data, device, urlState, today }: OrdersClientProp
   const view = {
     rows,
     counts: data.counts,
+    warehouse: data.warehouse,
     urlState,
     today,
     onFilter: go,

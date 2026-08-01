@@ -20,6 +20,24 @@ import type { LossPeriod, StockScope, StockTab } from './stock-url';
 export type { BatchView } from '@/lib/stock/batch-types';
 
 /**
+ * Bir boyun TEK depodaki gerçeği — satır açılınca görünen kırılım (19.5).
+ *
+ * Satırın toplamı bu parçaların toplamıdır; iki ayrı okumadan gelmez. "3 STR'de + 2 KEHL'de duran
+ * maldan 5 kişilik sipariş çıkmaz" (`DOMAIN §17`) — operatörün transfer kararı bu kırılımda doğar,
+ * ama kararın kendisi burada VERİLMEZ (Transfer ekranının işi).
+ */
+export interface StockWarehouseSplit {
+  warehouseId: string;
+  code: string;
+  name: string;
+  physicalQty: number;
+  reservedQty: number;
+  availableQty: number;
+  /** O depodaki en yakın son tarih — hangi şehirdeki malın daha acil olduğu kırılımda okunur. */
+  nearestExpiry: string | null;
+}
+
+/**
  * Stok seviyesi satırı — ekranın ana listesi. Satır BOYDUR (satılabilir birim), ama adı ve tarih
  * rejimi üründen gelir.
  *
@@ -44,6 +62,14 @@ export interface StockLevelRow {
   /** Eşik (varsa) ve altına düşmüş mü — "sipariş zamanı" göstergesi. */
   minStockQty: number | null;
   belowMin: boolean;
+  /**
+   * Depo kırılımı — yalnız MALI OLAN depolar, operatörün seçici sırasıyla (19.5).
+   *
+   * Boş = hiçbir depoda stok yok. Tek elemanlı = mal tek yerde (satır kodu doğrudan söyler).
+   * Çok elemanlı = "N depoda" ipucu + açılır kırılım. Üç hâl de aynı diziden okunur; ayrı bir
+   * "kaç depoda" alanı tutmak, sayının listeden sapabileceği ikinci bir gerçek yaratırdı.
+   */
+  warehouses: StockWarehouseSplit[];
   batches: BatchView[];
   /** En yakın son tarihli parti (FEFO'da ilk çıkacak olan) — yoksa stok yok demektir. */
   nearest: BatchView | null;
@@ -114,6 +140,24 @@ export interface StockData {
    * ayarlara gitmeden yanıtlanabilmeli; ayrıca temiz hâlde "acaba uyarı mı çalışmıyor" şüphesini keser.
    */
   nearExpiryPercent: number;
+  warehouse: StockWarehouseView;
+}
+
+/** Listenin depo ekseni — kırılım çizilir mi, süzgeç var mı, hangi depoya süzülü (19.5). */
+export interface StockWarehouseView {
+  /**
+   * Başlıktaki evren adı — BAĞLAMIN adı ("Tüm depolar" / "Kehl — sınır deposu"), süzgecin değil.
+   * Boş = tek depolu kurulum, eksen hiç görünmez.
+   */
+  scopeLabel: string;
+  /** Satırda "N depoda" ipucu ve açılır kırılım görünür mü (kural 4). */
+  showSplit: boolean;
+  /** Süzgeç kontrolü çizilir mi (kural 2: yalnız bağlam "tüm depolar" iken). */
+  available: boolean;
+  active: { id: string; code: string; name: string } | null;
+  /** Adresten gelen ama bağlama uymadığı için düşen kod (kural 7). */
+  dropped: string | null;
+  options: Array<{ id: string; code: string; name: string }>;
 }
 
 /**
@@ -139,6 +183,9 @@ export interface StockViewProps {
   onCatFilter: (id: string) => void;
   scope: StockScope;
   onScope: (s: StockScope) => void;
+  /** Seçili depo KODU ('' = tümü) — adreste yaşar, bağlamdan ayrıdır (19.5). */
+  warehouseFilter: string;
+  onWarehouseFilter: (code: string) => void;
   hasMoreLevels: boolean;
   loadingLevels: boolean;
   onLoadMoreLevels: () => void;
@@ -150,6 +197,14 @@ export interface StockViewProps {
   onPeriod: (p: LossPeriod) => void;
   selectedId: string | null;
   onSelect: (variantId: string) => void;
+  /**
+   * Depo kırılımı açık olan boy — aynı anda TEK satır açılır (19.5).
+   *
+   * Hepsi açılabilseydi liste varyant×depo düz listesine dönerdi ve tam olarak kaçınılan şey o:
+   * kırılım bir detaydır, tarama düzeninin kendisi değil.
+   */
+  openVariantId: string | null;
+  onToggleSplit: (variantId: string) => void;
   /** Teklif diyaloğunu bu parti için aç. */
   onOpenOffer: (stockId: string) => void;
   /** Geri çağırma sorgusunu aç. Lot verilirse kutu DOLU açılır — satırdaki numarayı elle yeniden

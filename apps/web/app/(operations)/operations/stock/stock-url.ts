@@ -5,6 +5,8 @@
 
 // Yol sabiti dışa VERİLMEZ: teklif eylemi `lib/stock/offer-actions`'a taşınınca tek tüketicisi
 // kalmadı; adres burada, `stockUrl()` içinde yaşıyor.
+import { WAREHOUSE_PARAM } from '@/lib/warehouse/filter';
+
 const STOCK_PATH = '/operations/stock';
 
 export const STOCK_TABS = ['levels', 'attention', 'losses'] as const;
@@ -44,9 +46,14 @@ export interface StockUrlState {
   cat: string;
   scope: StockScope;
   period: LossPeriod;
+  /**
+   * Depo süzgeci — depo KODU (`STR`); boş = süzgeç yok (19.5). Adreste taşınır çünkü paylaşılabilir
+   * bir BAKIŞTIR; depo bağlamı ise çerezdedir ve adrese yazılmaz.
+   */
+  depo: string;
 }
 
-const DEFAULTS: StockUrlState = { tab: 'levels', q: '', cat: 'all', scope: 'all', period: 'quarter' };
+const DEFAULTS: StockUrlState = { tab: 'levels', q: '', cat: 'all', scope: 'all', period: 'quarter', depo: '' };
 
 type RawParams = Record<string, string | string[] | undefined>;
 const one = (raw: string | string[] | undefined): string => (Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? ''));
@@ -61,6 +68,8 @@ export function parseStockUrl(params: RawParams): StockUrlState {
     cat: one(params.cat) || DEFAULTS.cat,
     scope: STOCK_SCOPES.find((s) => s === scopeRaw) ?? DEFAULTS.scope,
     period: LOSS_PERIODS.find((p) => p === one(params.period)) ?? DEFAULTS.period,
+    // Kod burada DOĞRULANMAZ, normalize edilir: "bu kod benim evrenimde var mı" bağlamın sorusudur.
+    depo: one(params[WAREHOUSE_PARAM]).trim().toUpperCase(),
   };
 }
 
@@ -72,6 +81,7 @@ export function stockUrl(state: StockUrlState): string {
   if (state.cat !== DEFAULTS.cat) p.set('cat', state.cat);
   if (state.scope !== DEFAULTS.scope) p.set('scope', state.scope);
   if (state.period !== DEFAULTS.period) p.set('period', state.period);
+  if (state.depo) p.set(WAREHOUSE_PARAM, state.depo);
   const qs = p.toString();
   return qs ? `${STOCK_PATH}?${qs}` : STOCK_PATH;
 }

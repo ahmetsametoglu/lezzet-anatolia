@@ -92,13 +92,14 @@ Her `pages/*.md` dosyası şu başlıkları taşır:
 | `admin-musteriler.md` | Müşteri listesi + detay (vade/limit, izinler, birleştirme, GDPR silme) |
 | `admin-b2b-onay.md` | B2B başvuru onayı (kontrol kartı) |
 | `admin-talepler.md` | Talep/şikâyet kuyruğu ve yazışma |
-| `admin-stok.md` | Stok görünümü: partiler, yaklaşan tarihli, near-expiry teklif açma |
+| `admin-stok.md` | Stok: seviyeler + yaklaşan tarihli + **mal kabul** (bekleyen tedarik/transfer dahil) + **çıkışlar** |
 | `admin-satin-alma.md` | Tedarik: tedarikçi kartları (vade/borç), ürün–kod eşlemesi, tedarik siparişi + öneri, stok girişi |
 | `admin-para.md` | Para hareketleri, hesaplar, banka import |
 | `admin-raporlar.md` | Kârlılık (ürün/kanal/fire), muhasebe export |
 | `admin-analitik.md` | Analitik: kaynak/huni/kampanya ROI/segmentler + AI içgörü |
 | `admin-geri-bildirim.md` | Yorum moderasyonu, ürün skorları, swipe analizi, puan yönetimi |
-| `admin-rotalar.md` | Rota bölgeleri + gün planı + kurye atama |
+| `admin-teslimat.md` | Günün çıkışları: rota (kurye atamalı) + kargo (takip no) — bölge TANIMI Depolar'dadır |
+| `admin-depolar.md` | Tesis künyesi + hizmet alanı (bölge/posta kodu tanımı) + depo karnesi |
 | `admin-ayarlar.md` | Parametrik ayarlar + kullanıcı/rol yönetimi |
 | `admin-whatsapp.md` | WhatsApp konuşma izleme (ajan devir alma dahil) |
 

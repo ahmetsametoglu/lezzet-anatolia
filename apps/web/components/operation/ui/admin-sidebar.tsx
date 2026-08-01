@@ -4,11 +4,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NavIcon, SearchIcon, type NavIconName } from './icons';
 import { ThemeToggle } from './theme-toggle';
+import { WarehouseContextPicker, type WarehouseContextPickerProps } from './warehouse-context-picker';
 
 /**
  * AdminSidebar — Komponent Envanteri O1. Tüm admin sayfalarının TEK gezinme kaynağı (nav kopyalanmaz):
- * 214px açık ray, marka + arama + 5 bölüm + kullanıcı bloğu. Aktif öğe olive şerit + koyu metin.
- * Rozet sayaçları (bekleyen iş) veri bağlanınca eklenecek. Aktiflik route'tan türetilir (usePathname).
+ * 214px açık ray, marka + depo bağlamı + arama + 5 bölüm + kullanıcı bloğu. Aktif öğe olive şerit +
+ * koyu metin. Rozet sayaçları (bekleyen iş) veri bağlanınca eklenecek. Aktiflik route'tan türetilir.
+ *
+ * **Depo bağlamı nav'a değil markanın altına konur** (01.08): bir gezinme hedefi değil, bütün
+ * gezinmenin ANLAMINI belirleyen bir evren seçimidir. Nav girişleri depo kararıyla değişmedi.
  */
 interface NavItem {
   key: NavIconName;
@@ -81,9 +85,11 @@ const ROLE_LABEL: Record<string, string> = { admin: 'Yönetici', warehouse: 'Dep
 
 interface AdminSidebarProps {
   user: { email: string; role: string };
+  /** Depo bağlamı (19.5) — tek depolu kurulumda seçici hiçbir şey çizmez. */
+  warehouse: WarehouseContextPickerProps;
 }
 
-export function AdminSidebar({ user }: AdminSidebarProps) {
+export function AdminSidebar({ user, warehouse }: AdminSidebarProps) {
   const pathname = usePathname();
   const local = user.email.split('@')[0] || 'personel';
   const initials = local.slice(0, 2).toUpperCase();
@@ -101,6 +107,9 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
           <span className="font-ops-display text-ops-micro font-medium tracking-[0.2em] text-ops-muted">OPERASYON</span>
         </div>
       </div>
+
+      {/* Depo bağlamı — markanın hemen altında, aramadan ÖNCE: sayfanın anlamını o belirler. */}
+      <WarehouseContextPicker {...warehouse} />
 
       {/* Arama — görsel yer tutucu; işlev sonraki dilimde */}
       <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg border border-ops-gray-300 bg-ops-line px-2.5 py-[7px] text-ops-faint">

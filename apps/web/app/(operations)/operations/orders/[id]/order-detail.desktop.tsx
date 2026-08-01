@@ -439,6 +439,15 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             <div className="flex flex-col gap-2 px-3.5 py-[11px]">
               <InfoRow label="Gün" value={order.delivery.date ? shortDate(order.delivery.date) : 'girilmemiş'} />
               <InfoRow label="Adres" value={order.delivery.address || 'kopya yok'} />
+              {/* HANGİ DEPODAN — künye, kontrol değil: depo adresin posta kodundan türedi ve sipariş
+                  tek depodan çıkar (DOMAIN §17). Buradan değiştirilemez; değiştirilebilseydi malın
+                  ayrıldığı depo ile siparişin deposu ayrışırdı. */}
+              {order.delivery.warehouse ? (
+                <InfoRow
+                  label="Hangi depodan"
+                  value={`${order.delivery.warehouse.name} (${order.delivery.warehouse.code})`}
+                />
+              ) : null}
               {/* Kurye YALNIZ GÖRÜNÜR: atama günün planıdır (Rotalar), tek siparişin özelliği değil. */}
               <InfoRow label="Kurye" value={order.delivery.courierName ?? 'atanmadı · Rotalar'} />
               {/* Kanıt PARÇA PARÇA gösterilir (tasarım): "imza" ile "foto ×2" ayrı çipler, çünkü

@@ -1,13 +1,15 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ORDERS_COLUMN_TRACKS } from './orders-columns';
+import { ordersColumnTracks } from './orders-columns';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { SearchInput } from '@/components/operation/ui/search-input';
 import { Select } from '@/components/operation/form/select';
+import { WarehouseFilterChip, WarehouseFilterNotice } from '@/components/operation/ui/warehouse-filter-bar';
 import { Table, withCells, type Column } from '@/components/operation/ui/table';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { amount, money, shortDate } from '@/components/operation/ui/format';
@@ -34,7 +36,8 @@ import type { OrderRow, OrdersViewProps } from './orders-types';
 // değil. Kendi tablosunu yazan ekran, bir gün başlık hizasını da kaydırır.
 
 export function OrdersDesktop(props: OrdersViewProps) {
-  const { rows, counts, urlState, today, onFilter, search, onSearch, hasMore, loadingMore, onLoadMore, onOpen, navPending } = props;
+  const { rows, counts, warehouse, urlState, today, onFilter, search, onSearch, hasMore, loadingMore, onLoadMore, onOpen, navPending } =
+    props;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -81,6 +84,17 @@ export function OrdersDesktop(props: OrdersViewProps) {
           options={PAYMENT_FILTERS.map((p) => ({ value: p, label: PAYMENT_LABEL[p] }))}
         />
 
+        {/* DEPO — bir karar süzgeci değil bir BAKIŞ daraltmasıdır; bu yüzden dolu hâli mavi, olive
+            değil. Yalnız bağlam "tüm depolar" iken çizilir (kural 2): tek depolu bir evrende
+            daraltacak bir şey yoktur. */}
+        {warehouse.available ? (
+          <WarehouseFilterChip
+            value={urlState.depo}
+            onChange={(depo) => onFilter({ depo })}
+            options={warehouse.options}
+          />
+        ) : null}
+
         {/* TESLİM GÜNÜ — tasarımın şerit sağındaki "bugün · 24 Tem ▾" kontrolü. Alan URL
             sözleşmesinde baştan vardı ve servise gidiyordu ama ekranda hiçbir kontrolü yoktu:
             yalnız adresi elle yazan kullanabiliyordu. Yazılmış ama bağlanmamış kod. */}
@@ -95,9 +109,16 @@ export function OrdersDesktop(props: OrdersViewProps) {
         </span>
       </div>
 
+      <WarehouseFilterNotice
+        active={warehouse.active}
+        dropped={warehouse.dropped}
+        detail={`sekme sayıları ve alt toplam tüm depoların gerçeğidir, tablo bu deponun ${rows.length} satırını gösteriyor.`}
+        onClear={() => onFilter({ depo: '' })}
+      />
+
       <Table
         busy={navPending}
-        columns={COLUMNS}
+        columns={columnsOf(warehouse.showColumn)}
         rows={rows}
         rowKey={(r) => r.id}
         onRowClick={(r) => onOpen(r.id)}
@@ -131,8 +152,13 @@ export function OrdersDesktop(props: OrdersViewProps) {
   );
 }
 
-/** Sütunlar tasarımın grid'i: no · müşteri · tutar · kanal · teslim · durum · tahsilat. */
-const COLUMNS: Column<OrderRow>[] = withCells<OrderRow>(ORDERS_COLUMN_TRACKS, {
+/**
+ * Sütunlar tasarımın grid'i: no · müşteri · tutar · kanal · (depo) · teslim · durum · tahsilat.
+ *
+ * Depo hücresi şerit olmadığında da tanımlı kalır ve bu zararsız: `withCells` yalnız şeritteki
+ * anahtarları çizer. Hücreyi de koşullu yapmak, aynı kararı iki yerde tutmak olurdu.
+ */
+const CELLS: Record<string, (row: OrderRow) => ReactNode> = {
   // NUMARA DOĞRUDAN DETAYA gider; satırın gerisi hızlı bakışı açar. İki niyet iki hedef: "şu
   // siparişle işim var" ile "bu satır neydi?" aynı tıklamayla karşılanamaz. Tıklama satıra
   // YAYILMAZ — yoksa arkada pencere de açılırdı.
@@ -156,6 +182,16 @@ const COLUMNS: Column<OrderRow>[] = withCells<OrderRow>(ORDERS_COLUMN_TRACKS, {
   ),
   total: (row) => <span className="font-ops-mono text-ops-sm text-ops-ink">{amount(row.totalCents)}</span>,
   channel: (row) => <Badge tone={CHANNEL_TONE[row.channel]}>{row.channel.toUpperCase()}</Badge>,
+  // Kod yeter, tam ad künyede (tasarım O3D "sütun" biçimi): sipariş tek depodan çıkar, satırda
+  // uzun ad taşımak tarama düzenini bozardı.
+  warehouse: (row) =>
+    row.warehouse ? (
+      <Badge tone="blue" className="font-ops-mono">
+        {row.warehouse.code}
+      </Badge>
+    ) : (
+      <span className="font-ops-body text-ops-micro text-ops-faint">—</span>
+    ),
   delivery: (row) => {
     const { main, meta } = deliveryText(row, shortDate);
     return (
@@ -171,4 +207,9 @@ const COLUMNS: Column<OrderRow>[] = withCells<OrderRow>(ORDERS_COLUMN_TRACKS, {
     </Badge>
   ),
   payment: (row) => <span className={`truncate font-ops-mono text-ops-micro ${paymentToneClass(row)}`}>{paymentText(row, money)}</span>,
-});
+};
+
+/** Şerit + hücreler; depo sütunu yalnız çok depolu bakışta (bkz. `ordersColumnTracks`). */
+function columnsOf(withWarehouse: boolean): Column<OrderRow>[] {
+  return withCells<OrderRow>(ordersColumnTracks(withWarehouse), CELLS);
+}

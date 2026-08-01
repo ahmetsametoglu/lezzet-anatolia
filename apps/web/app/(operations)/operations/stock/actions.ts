@@ -16,7 +16,8 @@ import { needsExpiryAttention } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type KeysetCursor } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
-import { readWarehouseContext } from '@/lib/warehouse/context';
+import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
+import { warehouseFilterOf } from '@/lib/warehouse/filter';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readActorNames, toLevelRows, toLossRows } from './stock-read';
@@ -82,19 +83,18 @@ export async function loadMoreLevelsAction(
     ]);
 
     const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
-    const { warehouseIds } = await readWarehouseContext();
-    const [batchRows, available] = await Promise.all([
-      // Parti listesi artık BAĞLAMLA süzülüyor (19.14): personel kapsamı dışındaki deponun raf ömrü
-      // kuyruğunu görmez. `undefined` = depo-üstü ve yalnız admin/muhasebede oluşur.
-      stockSvc.listInStockDetailed(variantIds, warehouseIds),
-      // BEKLEYEN(19.5): seviye satırının kendisi hâlâ ağ-geneli toplam okuyor. Kapı hazır
-      // (`listAvailableAcross`) ama satır modeli değişiyor — tasarım "tek satır + N depoda ipucu"
-      // istiyor ve o ekranın işi (operasyon şeridi).
-      stockSvc.getNetworkAvailabilityMap(variantIds),
+    const ctx = await readWarehouseContext();
+    const warehouse = warehouseFilterOf(ctx, urlState.depo);
+    const [batchRows, available, warehouseLabels] = await Promise.all([
+      // Parti listesi BAĞLAMLA okunur, süzgeçle değil — ilk sayfayla aynı kural (kural 5).
+      // `undefined` = depo-üstü ve yalnız admin/muhasebede oluşur.
+      stockSvc.listInStockDetailed(variantIds, ctx.warehouseIds),
+      stockSvc.listAvailableAcross(warehouse.active ? [warehouse.active.id] : ctx.visibleWarehouseIds, variantIds),
+      readWarehouseLabels(),
     ]);
 
     const now = new Date();
-    const undecided = toBatchViews(batchRows, { now, thresholds });
+    const undecided = toBatchViews(batchRows, { now, thresholds, warehouseLabels });
     const attentionVariantIds = [
       ...new Set(undecided.filter((b) => needsExpiryAttention(b.decision)).map((b) => b.variantId)),
     ];
@@ -105,12 +105,15 @@ export async function loadMoreLevelsAction(
       ),
     );
 
-    const levels = toLevelRows(
-      page.rows,
-      toBatchViews(batchRows, { now, thresholds, listPriceCents }),
+    // Satır süzgeci görür (ilk sayfayla aynı hesap); sayaçlar bu yolda zaten üretilmiyor.
+    const priced = toBatchViews(batchRows, { now, thresholds, listPriceCents, warehouseLabels });
+    const levels = toLevelRows({
+      products: page.rows,
+      batches: warehouse.active ? priced.filter((b) => b.warehouseId === warehouse.active?.id) : priced,
       available,
-      new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)])),
-    );
+      categoryNames: new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)])),
+      warehouseLabels,
+    });
     return { data: { levels, nextCursor: page.nextCursor }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };

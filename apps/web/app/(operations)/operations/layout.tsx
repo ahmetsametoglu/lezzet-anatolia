@@ -7,6 +7,7 @@ import { Space_Grotesk, IBM_Plex_Mono, Karla } from 'next/font/google';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { STAFF_ROLES } from '@lezzet/types';
 import { AuthError, requireStaff } from '@/lib/guard';
+import { readWarehouseContext } from '@/lib/warehouse/context';
 import { OPERATIONS_PATH_HEADER, OPERATIONS_PREFIX } from '@/lib/operations-request';
 import { getPathname } from '@/i18n/navigation';
 import { RootShell } from '@/components/root-shell';
@@ -62,11 +63,19 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
   const roles = await new UserProfileService(serviceDb()).getRoles(user.id);
   const role = STAFF_ROLES.find((r) => roles.includes(r)) ?? 'admin';
 
+  // Depo bağlamı BURADA okunur: sidebar'da durur ve sayfadan sayfaya taşınır — kimlik düzeyinde bir
+  // tercih (19.5). Sayfalar aynı isteğin içinde tekrar sorduğunda `cache()` sayesinde bedava, ve
+  // daha önemlisi seçici ile liste AYNI cevabı görür.
+  const { warehouses, activeWarehouseId, scope } = await readWarehouseContext();
+
   return (
     <RootShell lang="tr" surface="operations" className={fontVars}>
       {/* Uygulama kabuğu: viewport yüksekliği sabit; sidebar ve içerik kendi içinde kaydırılır (Veri Masası). */}
       <div className="flex h-screen overflow-hidden bg-ops-bg font-ops-body text-ops-ink">
-        <AdminSidebar user={{ email: user.email ?? '', role }} />
+        <AdminSidebar
+          user={{ email: user.email ?? '', role }}
+          warehouse={{ warehouses, activeWarehouseId, unscoped: scope.kind === 'all' }}
+        />
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>
       </div>
     </RootShell>

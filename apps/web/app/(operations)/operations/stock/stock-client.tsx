@@ -161,6 +161,10 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
   // `null` = kapalı, '' = boş kutuyla açık, dolu = satırdan gelen lot ile açık.
   const [recallLot, setRecallLot] = useState<string | null>(null);
 
+  // Depo kırılımı açık olan boy — aynı anda tek satır (19.5). Kimlikle tutulur: liste tazelenince
+  // satır nesnesi değişir ama kimlik durur, açık kırılım kapanmaz.
+  const [openVariantId, setOpenVariantId] = useState<string | null>(null);
+
   const view = {
     navPending: pending,
     data,
@@ -173,6 +177,10 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
     onCatFilter: (cat: string) => applyFilters({ cat }),
     scope: urlState.scope,
     onScope: (scope: StockScope) => applyFilters({ scope }),
+    warehouseFilter: urlState.depo,
+    // Depo SUNUCUDA süzülür (kategori gibi): parti kuyruğu ve kullanılabilirlik sorgusu ona göre
+    // atılıyor — client'ta süzmek yalnız görünen sayfayı daraltır, sayılarla çelişirdi.
+    onWarehouseFilter: (depo: string) => applyFilters({ depo }),
     hasMoreLevels: levelCursor !== null,
     loadingLevels,
     onLoadMoreLevels,
@@ -186,6 +194,8 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
     onLoadMoreLosses,
     selectedId: selected?.variantId ?? null,
     onSelect: setSelectedId,
+    openVariantId,
+    onToggleSplit: (variantId: string) => setOpenVariantId((cur) => (cur === variantId ? null : variantId)),
     onOpenOffer: setOfferStockId,
     onOpenRecall: (lot?: string) => setRecallLot(lot ?? ''),
   };

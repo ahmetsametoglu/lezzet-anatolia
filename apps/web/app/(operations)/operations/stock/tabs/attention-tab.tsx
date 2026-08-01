@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/operation/ui/badge';
+import { WarehouseIcon } from '@/components/operation/ui/icons';
 import { money, percent } from '@/components/operation/ui/format';
 import { batchAction, expiryBadge, expiryLine, suggestionText } from '@/lib/stock/batch-labels';
 import { setOfferPriceAction } from '@/lib/stock/offer-actions';
@@ -150,6 +151,15 @@ export function DecisionCard({ batch, onOpenOffer }: DecisionCardProps) {
             {batch.lotNumber ? `Lot ${batch.lotNumber} · ` : ''}
             {batch.physicalQty} ad. kaldı
           </span>
+          {/* DEPO TAM ADIYLA (tasarım O3D "istisna" biçimi): bu bir karar kuyruğudur, tarama listesi
+              değil — "SKT'ye 3 gün kaldı, %30 aç" kararı hangi ŞEHİRDEKİ mala verildiğini bilmeden
+              alınamaz. Kod yetmez: STR/KEHL bir bakışta ayırt edilmesi gereken şey değil. */}
+          {batch.warehouse ? (
+            <span className="flex items-center gap-1 font-ops-body text-ops-micro text-ops-blue-dark">
+              <WarehouseIcon size={11} />
+              {batch.warehouse.name}
+            </span>
+          ) : null}
         </div>
         <div className="flex flex-none flex-col items-end gap-1">
           <Badge tone={badge.tone}>{badge.text}</Badge>

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnchoredMenu } from '../ui/anchored-menu';
-import { SearchIcon } from '../ui/icons';
+import { ChevronDownIcon, SearchIcon } from '../ui/icons';
+import { CHIP_MENU_WIDTH, triggerClass, type TriggerTone, type TriggerVariant } from './trigger';
 import { useOptionSearch } from './use-option-search.hook';
 
 /**
@@ -17,6 +18,10 @@ import { useOptionSearch } from './use-option-search.hook';
  *
  * İKİ KİP: yerel (seçenekler elde) ve uzak (`onSearch` — kaynak sunucuda). İkisinin davranışı
  * `useOptionSearch`'te, çoklu seçiciyle ORTAK: gecikme, süzme ve sıfırlama tek yerde.
+ *
+ * İKİ BİÇİM: form alanı (`field`) ve süzgeç çipi (`chip`, 19.5). Çip biçimi yukarıdaki notun
+ * "süzgeç şeridi aramasız `Select`'le idare ediyordu" itirafını kapatır — tetikleyici görünümü
+ * `Select` ile ORTAK (`triggerClass`), yalnız içeriği ve menüsü burada.
  */
 
 // Dışa verilmez: çağıranlar nesne literali geçiyor, tipi adıyla anan yok.
@@ -47,6 +52,16 @@ interface ComboboxProps {
   emptyText?: string;
   disabled?: boolean;
   className?: string;
+  /** `chip` — süzgeç şeridi biçimi; `field` (varsayılan) form alanı. */
+  variant?: TriggerVariant;
+  /**
+   * Çipin solundaki soluk alan adı ("Depo: STR"). Süzgeç şeridindeki diğer çipler "+ kategori"
+   * davetiyesiyle çalışır çünkü boş kalabilirler; DAİMA bir değer taşıyan çip ("tümü" de bir
+   * değerdir) neyin süzüldüğünü kendi üstünde söylemek zorundadır.
+   */
+  label?: string;
+  /** Dolu çipin rengi — `blue` bakış daraltması, `olive` karar (bkz. `TriggerTone`). */
+  tone?: TriggerTone;
 }
 
 export function Combobox({
@@ -61,6 +76,9 @@ export function Combobox({
   emptyText = 'Eşleşen kayıt yok',
   disabled,
   className,
+  variant = 'field',
+  label,
+  tone,
 }: ComboboxProps) {
   const anchorRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -87,20 +105,31 @@ export function Combobox({
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={[
-          'flex w-full cursor-pointer items-center justify-between gap-3 rounded-ops-card border bg-ops-white px-[13px] py-[7px] font-ops-body text-ops-base font-medium outline-none transition-colors',
-          open ? 'border-[1.5px] border-ops-olive' : 'border border-ops-line-strong hover:border-ops-olive',
-          triggerText ? 'text-ops-ink' : 'text-ops-faint',
-          disabled ? 'cursor-not-allowed opacity-60' : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
+        className={triggerClass({
+          variant,
+          open,
+          filled: Boolean(triggerText),
+          disabled: Boolean(disabled),
+          tone,
+          // Alan adı taşıyan çip boş kalamaz — davetiye (kesikli) hâli ona ait değil.
+          invite: !label,
+        })}
       >
+        {label ? <span className="flex-none opacity-70">{label}:</span> : null}
         <span className="truncate">{triggerText || placeholder}</span>
-        <span className="flex-none text-ops-faint">{open ? '▴' : '▾'}</span>
+        <span className="flex-none text-ops-faint">
+          {variant === 'chip' ? <ChevronDownIcon /> : open ? '▴' : '▾'}
+        </span>
       </button>
 
-      <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width="anchor">
+      {/* Çip biçiminde menü çipin genişliğini MİRAS ALMAZ: çip içeriği kadar dardır, menü ise
+          arama satırını ve iki satırlı öğeleri taşır (`Select`'teki aynı gerekçe). */}
+      <AnchoredMenu
+        anchorRef={anchorRef}
+        open={open}
+        onClose={() => setOpen(false)}
+        width={variant === 'chip' ? CHIP_MENU_WIDTH : 'anchor'}
+      >
         <div className="flex items-center gap-2 border-b border-ops-line px-[13px] py-2.5 text-ops-faint">
           <SearchIcon size={14} />
           <input

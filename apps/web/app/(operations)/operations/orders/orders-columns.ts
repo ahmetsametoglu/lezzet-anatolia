@@ -20,3 +20,20 @@ export const ORDERS_COLUMN_TRACKS: ColumnTrack[] = [
   { key: 'status', header: 'Durum', width: '116px' },
   { key: 'payment', header: 'Tahsilat', width: 'minmax(120px,150px)' },
 ];
+
+/** Depo sütunu — kanal ile teslim ARASINA girer (tasarımın grid'i); kod taşır, ad künyededir. */
+const WAREHOUSE_TRACK: ColumnTrack = { key: 'warehouse', header: 'Depo', width: '62px' };
+
+/**
+ * Şerit + (varsa) depo sütunu.
+ *
+ * Sütun yalnız ÇOK DEPOLU bakışta vardır (depo ekseni sözleşmesi, kural 4): tek depoda her satıra
+ * aynı kodu yazmak gürültüdür. İskelet (`loading.tsx`) bu parametreyi `false` geçer ve bu bilinçli
+ * — iskeletin çizilmesi hiçbir okumayı BEKLEYEMEZ, oysa "kaç depo var" bir okumadır. Çok depolu
+ * kurulumda 62px'lik tek bir kaymanın bedeli, iskeleti veri bekletmenin bedelinden küçüktür.
+ */
+export function ordersColumnTracks(withWarehouse: boolean): ColumnTrack[] {
+  if (!withWarehouse) return ORDERS_COLUMN_TRACKS;
+  const at = ORDERS_COLUMN_TRACKS.findIndex((t) => t.key === 'delivery');
+  return [...ORDERS_COLUMN_TRACKS.slice(0, at), WAREHOUSE_TRACK, ...ORDERS_COLUMN_TRACKS.slice(at)];
+}

@@ -31,12 +31,8 @@ import { requireWarehouseScope } from '@/lib/guard';
 const COOKIE = 'lezzet.ops.warehouse';
 const ALL = 'all';
 
-/**
- * Bugün dışa AÇILMIYOR: çağıranlar alanları destructuring ile alıyor ve tipe adıyla ihtiyaç duyan
- * yok. Seçici komponenti (19.5) prop tipi olarak isteyince export edilir — o güne kadar açık
- * durması, kimsenin kullanmadığı bir sözleşmeyi kamuya açmak olurdu.
- */
-interface WarehouseContext {
+/** Seçici komponenti (19.5) prop tipi olarak istedi → dışa açıldı (dosyanın kendi notu gereği). */
+export interface WarehouseContext {
   scope: WarehouseScope;
   /** Kapsamla SÜZÜLMÜŞ depolar — seçiciyi çizmeye yeter (ad + kod). Kapsam dışı depo burada yoktur. */
   warehouses: Warehouse[];
@@ -52,6 +48,17 @@ interface WarehouseContext {
    * — o da "hepsi" demek.
    */
   warehouseIds: readonly string[] | undefined;
+  /**
+   * Aynı evrenin SAYILMIŞ hâli — daima dizi. `listAvailableAcross` gibi süzgeç değil **kırılım**
+   * isteyen okumalar içindir: "hangi depoların satırını çizeceğim".
+   *
+   * ⚠ Bunu bir süzgeç yerine KOYMA. `undefined` süzgeç "hiç süzme" demektir ve kapalı deponun
+   * geçmiş kaydını da kapsar; buradaki liste yalnız AKTİF depolardır. Sipariş listesinde ikisini
+   * karıştırmak, kapatılmış bir depodan çıkmış eski siparişleri sessizce yok sayardı — geçmiş
+   * kaybolmaz, yalnız satılabilir stok kapanır. Tip de bu yönü korur: süzgeç alanı `undefined`
+   * kabul eder, bu alan etmez.
+   */
+  visibleWarehouseIds: readonly string[];
 }
 
 /**
@@ -81,8 +88,54 @@ export const readWarehouseContext = cache(async (): Promise<WarehouseContext> =>
     warehouses,
     activeWarehouseId,
     warehouseIds: warehouseIdsFor(scope, activeWarehouseId, warehouses),
+    // Kırılım evreni: tek depo seçiliyse yalnız o, değilse görünen depoların hepsi.
+    visibleWarehouseIds: activeWarehouseId ? [activeWarehouseId] : warehouses.map((w) => w.id),
   };
 });
+
+/**
+ * Kimlik → ad/kod, TÜM depolar için (KAPALI olanlar dahil).
+ *
+ * Bağlamın `warehouses`'ı yalnız aktif ve kapsam içi depoları taşır — o bir YETKİ kümesidir.
+ * Buradaki harita bir GÖRÜNTÜ sözlüğü: kapatılmış bir depodan çıkmış eski sipariş listede durmaya
+ * devam eder ve deposunun adını söylemek zorundadır. Geçmiş, tesis kapandı diye isimsizleşmez.
+ *
+ * Tablo fiziksel tesis sayısı kadardır (birkaç satır); `cache()` ile istek başına tek tur.
+ *
+ * Dönüş `Warehouse`'un kendisidir, kırpılmış bir kopyası değil: kırpmak `filter.ts`'in görünüm
+ * tipine bağımlılık kurar ve iki dosya birbirini içe aktarır (döngü, `boundaries` reddeder).
+ * Okuyanlar zaten yalnız ihtiyaç duydukları alanları yapısal olarak istiyor.
+ */
+export const readWarehouseLabels = cache(async (): Promise<Map<string, Warehouse>> => {
+  const rows = await new WarehouseService(serviceDb()).list();
+  return new Map(rows.map((w) => [w.id, w]));
+});
+
+/**
+ * Bağlamı YAZ — seçicinin tek yolu. Okuma ile aynı dosyada, çünkü çerezin adı, "all" sabiti ve
+ * kapsam doğrulaması aynı sözleşmenin parçası: ikisi ayrı dosyaya düşseydi biri değişip öteki
+ * kalabilirdi.
+ *
+ * **Yazarken de doğrulanır.** Okuma zaten doğruluyor (uymayan değer düşer), ama kapsam dışı bir
+ * kimliği çereze YAZMAK sessiz bir hâl bırakırdı: kullanıcı seçtiğini sanır, her okumada geri
+ * düşer ve "seçimim tutmuyor" der. Reddi burada vermek o hâli baştan engeller.
+ *
+ * Ömür: 1 yıl. Bağlam "oturumlar arası hatırlanan tercih" olarak tanımlı (tasarım sözleşmesi §2);
+ * oturum çerezi olsaydı her sabah yeniden seçilirdi.
+ */
+export async function writeWarehouseContext(value: string): Promise<boolean> {
+  const { scope } = await requireWarehouseScope();
+  if (value !== ALL && !canAccessWarehouse(scope, value)) return false;
+
+  (await cookies()).set(COOKIE, value, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  return true;
+}
 
 /**
  * Bağlam → süzgeç. Üç hâl, üç ayrı anlam:

@@ -3,15 +3,15 @@
 import { useRef, useState } from 'react';
 import { AnchoredMenu } from '../ui/anchored-menu';
 import { CheckIcon } from '../ui/icons';
+import { CHIP_MENU_WIDTH, triggerClass, type TriggerVariant } from './trigger';
 
 /**
  * Operasyon select'i — Komponent Envanteri O8 (girdi kontrolleri). Basit tek-seçim açılır liste;
  * native <select> DEĞİL (tasarım stiline uymuyor): kapalı kutu + ▾, açıkken olive çerçeve + gölgeli
  * panel, seçili öğe olive zemin + check. Dışarı tık / Escape kapatır; klavye ile gezilebilir.
  *
- * Gelişmiş varyantlar (aranabilir "combobox" görsel item'lı, "çoklu seçim" chip'li) tasarımda ayrı
- * component olarak duruyor — gerçek tüketicileri (ürün seçici / alerjen listesi) geldiğinde ayrı
- * dosya olarak eklenecek; bu dosya yalnız basit select'i taşır.
+ * ARANABİLİR kardeşi `Combobox` (ayrı dosya): seçenek sayısı göz taramasını aştığında o kullanılır.
+ * Tetikleyici görünümü ikisinde ORTAK (`triggerClass`) — yan yana duran iki çip aynı kutudur.
  */
 export interface SelectOption {
   value: string;
@@ -30,11 +30,8 @@ interface SelectProps {
    * Alan görünümü (`field`, varsayılan) form içindir; süzgeç şeridinde bir form alanı gibi durmak,
    * çiplerin yanında yabancı bir kutu bırakıyordu.
    */
-  variant?: 'field' | 'chip';
+  variant?: TriggerVariant;
 }
-
-/** Çip biçimindeki seçicinin menü genişliği — çip dar, menü içeriğe yeter. */
-const CHIP_MENU_WIDTH = 220;
 
 export function Select({ value, onChange, options, placeholder = 'Seç', className, variant = 'field' }: SelectProps) {
   const [open, setOpen] = useState(false);
@@ -48,20 +45,7 @@ export function Select({ value, onChange, options, placeholder = 'Seç', classNa
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={
-          variant === 'chip'
-            ? [
-                'flex cursor-pointer items-center gap-1.5 rounded-ops-chip border px-3 py-[5px] font-ops-body text-ops-sm font-medium outline-none transition-colors',
-                selected
-                  ? 'border-solid border-ops-olive-line bg-ops-olive-bg text-ops-olive-dark'
-                  : 'border-dashed border-ops-gray-500 text-ops-body hover:border-ops-olive',
-              ].join(' ')
-            : [
-                'flex w-full cursor-pointer items-center justify-between gap-3 rounded-ops-card border bg-ops-white px-[13px] py-[7px] font-ops-body text-ops-base font-medium outline-none transition-colors',
-                open ? 'border-[1.5px] border-ops-olive' : 'border border-ops-line-strong hover:border-ops-olive',
-                selected ? 'text-ops-ink' : 'text-ops-faint',
-              ].join(' ')
-        }
+        className={triggerClass({ variant, open, filled: selected !== null })}
       >
         <span className="truncate">{selected ? selected.label : placeholder}</span>
         {variant === 'chip' ? null : <span className="flex-none text-ops-faint">{open ? '▴' : '▾'}</span>}

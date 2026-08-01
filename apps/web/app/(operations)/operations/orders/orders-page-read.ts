@@ -1,5 +1,7 @@
 import { OrderItemService, OrderService, SettingsService, UserProfileService, type serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, type KeysetCursor, type OrderItem } from '@lezzet/types';
+import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
+import { warehouseFilterOf } from '@/lib/warehouse/filter';
 import { toCountsView, toOrderRows } from './orders-read';
 import { toOrderFilters, type OrdersUrlState } from './orders-url';
 import type { OrdersData } from './orders-types';
@@ -29,14 +31,27 @@ export async function readOrdersPage(
   const orderSvc = new OrderService(db);
   const profileSvc = new UserProfileService(db);
 
+  // Bağlam ÖNCE: hem sayaçların hem listenin evrenini o belirliyor (19.5).
+  const ctx = await readWarehouseContext();
+  const warehouse = warehouseFilterOf(ctx, urlState.depo);
+
   // Aramanın müşteri ayağı ÖNCE çözülür: hem liste hem sayaç aynı kimlik kümesini kullanmalı.
   const matches = urlState.q ? await profileSvc.search(urlState.q, CUSTOMER_MATCH_LIMIT) : [];
   const filters = { ...toOrderFilters(urlState), customerIds: matches.map((m) => m.id) };
 
-  const [page, counts, termDays] = await Promise.all([
-    orderSvc.listPage(filters, { cursor: opts.cursor, limit: opts.limit ?? DEFAULT_PAGE_SIZE }),
-    orderSvc.counts(filters),
+  // ── SAYAÇ İLE LİSTE AYNI SÜZGECİ ALMAZ (sözleşme kural 5) ────────────────────
+  // Sekme sayıları ve alt toplam BAĞLAMIN gerçeğidir: operatörün iş yükü, tabloda o an neye
+  // baktığından bağımsızdır. Tablo süzgeci yalnız satırları daraltır ve tablo bunu görünür biçimde
+  // söyler ("Süzülüyor: …"). İkisi tek nesneyi paylaşsaydı sayı da satırla düşer, ekran "STR'yi
+  // süzdüm" derken toplam iş yükünü olduğundan az gösterirdi.
+  const [page, counts, termDays, labels] = await Promise.all([
+    orderSvc.listPage(
+      { ...filters, warehouseIds: warehouse.warehouseIds },
+      { cursor: opts.cursor, limit: opts.limit ?? DEFAULT_PAGE_SIZE },
+    ),
+    orderSvc.counts({ ...filters, warehouseIds: ctx.warehouseIds }),
     new SettingsService(db).getNumber(PAYMENT_TERM_KEY, PAYMENT_TERM_DEFAULT),
+    readWarehouseLabels(),
   ]);
 
   const orderIds = page.rows.map((o) => o.id);
@@ -65,8 +80,17 @@ export async function readOrdersPage(
       defaultTermDays: termDays,
       // TEK "şimdi": istek ortasında gün dönerse listenin yarısı "gecikmiş" görünmesin.
       now: new Date(),
+      warehouseLabels: labels,
     }),
     nextCursor: page.nextCursor,
     counts: toCountsView(counts),
+    warehouse: {
+      // Depo sütunu YALNIZ çok depolu bakışta anlamlı (kural 4): tek depoda aynı bilgi gürültüdür.
+      showColumn: ctx.activeWarehouseId === null && ctx.warehouses.length > 1 && warehouse.active === null,
+      available: warehouse.available,
+      active: warehouse.active,
+      dropped: warehouse.dropped,
+      options: warehouse.options,
+    },
   };
 }

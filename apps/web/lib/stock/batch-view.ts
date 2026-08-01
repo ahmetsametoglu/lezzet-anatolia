@@ -55,7 +55,17 @@ export async function readExpiryThresholds(settings: SettingsService): Promise<E
  */
 export function toBatchViews(
   rows: StockBatchDetail[],
-  opts: { now: Date; thresholds: ExpiryThresholds; listPriceCents?: Map<string, number> },
+  opts: {
+    now: Date;
+    thresholds: ExpiryThresholds;
+    listPriceCents?: Map<string, number>;
+    /**
+     * Kimlik → depo adı/kodu (19.5). Verilmezse parti deposunu SÖYLEMEZ — yanlış depo söylemektense
+     * susmak doğrudur: parti her zaman tek depodadır ve o depoyu karıştırmak, malın başka şehirde
+     * olduğunu fark etmeden indirim açtırır.
+     */
+    warehouseLabels?: Map<string, { code: string; name: string }>;
+  },
 ): BatchView[] {
   return rows.map((row) => {
     const product = row.variant.product;
@@ -82,6 +92,7 @@ export function toBatchViews(
       title: variantLabel ? `${productName} · ${variantLabel}` : productName,
       productName,
       variantLabel,
+      warehouse: opts.warehouseLabels?.get(row.warehouseId) ?? null,
       flag,
       decision,
       remainingPercent,

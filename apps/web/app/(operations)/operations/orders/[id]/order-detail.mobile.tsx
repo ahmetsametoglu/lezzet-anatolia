@@ -142,6 +142,12 @@ export function OrderDetailMobile({ order, onAdvance, busy, error }: OrderDetail
           {order.delivery.address ? (
             <span className="font-ops-body text-ops-micro text-ops-muted">{order.delivery.address}</span>
           ) : null}
+          {/* Hangi depodan — künye (bkz. masaüstü notu). */}
+          {order.delivery.warehouse ? (
+            <span className="font-ops-body text-ops-micro text-ops-muted">
+              {order.delivery.warehouse.name} ({order.delivery.warehouse.code})
+            </span>
+          ) : null}
         </div>
 
         {order.delivery.proof ? (

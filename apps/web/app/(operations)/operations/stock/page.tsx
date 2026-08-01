@@ -12,7 +12,8 @@ import { needsExpiryAttention } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { detectDevice } from '@/lib/device';
-import { readWarehouseContext } from '@/lib/warehouse/context';
+import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
+import { warehouseFilterOf } from '@/lib/warehouse/filter';
 import { StockClient } from './stock-client';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readActorNames, toLevelRows, toLossRows } from './stock-read';
@@ -53,21 +54,28 @@ export default async function StockPage({ searchParams }: StockPageProps) {
 
   // Bağlam ÖNCE: parti kuyruğu personelin kapsamıyla süzülür (19.14). Depocu başka deponun raf
   // ömrü kuyruğunu görmemeli — "Dolap 1" gibi, aynı ürünün iki depoda bambaşka partisi olur.
-  const { warehouseIds } = await readWarehouseContext();
+  const ctx = await readWarehouseContext();
+  const warehouse = warehouseFilterOf(ctx, urlState.depo);
 
-  const [productPage, batchRows, categories, lossPage, lossTotals, thresholds] = await Promise.all([
+  // ── PARTİLER BAĞLAMLA OKUNUR, SÜZGEÇLE DEĞİL (sözleşme kural 5) ──────────────
+  // Sekme sayıları ve karar kuyruğu bağlam evreninin gerçeğidir: tabloda KEHL'i süzmek, STR'de
+  // bekleyen 20 kararı yok saymaz — o kararlar hâlâ operatörün önünde. Süzgeç yalnız SEVİYE
+  // tablosunun satırlarını daraltır ve daraltmayı in-memory yaparız: partiler zaten tamamen
+  // yüklü (sayfalanmıyor), ikinci bir sorgu atmanın karşılığı yok.
+  const [productPage, batchRows, categories, lossPage, lossTotals, thresholds, warehouseLabels] = await Promise.all([
     productSvc.listStockRows({ filters, limit: DEFAULT_PAGE_SIZE }),
-    stockSvc.listInStockDetailed(undefined, warehouseIds),
+    stockSvc.listInStockDetailed(undefined, ctx.warehouseIds),
     new CategoryService(db).list(),
     lossSvc.listRecent({ from, limit: DEFAULT_PAGE_SIZE }),
     lossSvc.reasonSummary(from),
     readExpiryThresholds(new SettingsService(db)),
+    readWarehouseLabels(),
   ]);
 
   // TEK "şimdi": okumanın tüm satırları aynı ana göre değerlendirilsin. İstek ortasında gün dönerse
   // listenin yarısı "yaklaşan", yarısı "geçmiş" görünürdü.
   const now = new Date();
-  const undecided = toBatchViews(batchRows, { now, thresholds });
+  const undecided = toBatchViews(batchRows, { now, thresholds, warehouseLabels });
 
   // Fiyat YALNIZ karar bekleyen boylar için okunur — teklif önerisinin ihtiyacı bu kadar.
   const attentionVariantIds = [
@@ -76,8 +84,10 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   const pageVariantIds = productPage.rows.flatMap((p) => p.variants.map((v) => v.id));
 
   const [available, priceMap, actorNames] = await Promise.all([
-    // BEKLEYEN(19.5): depo süzgeci ekrana bağlanacak — bugün depo-üstü toplam.
-    stockSvc.getNetworkAvailabilityMap(pageVariantIds),
+    // Depo TANELİ okuma (19.5): satırın toplamı da kırılımı da bu tek kaynaktan türer. Depo-üstü
+    // görünüm (`getNetworkAvailabilityMap`) burada YANLIŞ olurdu — birleştirilmiş stok kimsenin
+    // stoğu değildir ve operatör "5 var" görüp iki şehirdeki malı tek siparişe yazamaz.
+    stockSvc.listAvailableAcross(warehouse.active ? [warehouse.active.id] : ctx.visibleWarehouseIds, pageVariantIds),
     new PriceService(db).findApplicableMap(attentionVariantIds, 'b2c'),
     readActorNames(new UserProfileService(db), lossPage.rows),
   ]);
@@ -89,10 +99,13 @@ export default async function StockPage({ searchParams }: StockPageProps) {
       channelPrice ? [[variantId, toCents(channelPrice.amount)] as const] : [],
     ),
   );
-  const batches = toBatchViews(batchRows, { now, thresholds, listPriceCents });
+  const batches = toBatchViews(batchRows, { now, thresholds, listPriceCents, warehouseLabels });
 
   const categoryNames = new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)]));
-  const levels = toLevelRows(productPage.rows, batches, available, categoryNames);
+  // Seviye satırı süzgeci görür, sayaçlar görmez: satırın partileri ile sayıları aynı evrenden
+  // gelmezse satır kendi içinde çelişirdi ("3 adet" yazıp başka şehrin partisini listelemek).
+  const rowBatches = warehouse.active ? batches.filter((b) => b.warehouseId === warehouse.active?.id) : batches;
+  const levels = toLevelRows({ products: productPage.rows, batches: rowBatches, available, categoryNames, warehouseLabels });
   const attention = batches.filter((b) => needsExpiryAttention(b.decision));
 
   const device = await detectDevice();
@@ -122,6 +135,21 @@ export default async function StockPage({ searchParams }: StockPageProps) {
         },
         categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
         nearExpiryPercent: thresholds.nearExpiryPercent,
+        warehouse: {
+          // Başlıktaki evren adı BAĞLAMIN adıdır, süzgecin değil (kural 5): sayaçlar bağlamı
+          // izliyorsa onların hangi evrene ait olduğunu da bağlam söylemeli.
+          scopeLabel:
+            ctx.warehouses.length < 2
+              ? ''
+              : (ctx.activeWarehouseId && ctx.warehouses.find((w) => w.id === ctx.activeWarehouseId)?.name) || 'Tüm depolar',
+          // Kırılım ve parti rozeti yalnız çok depolu bakışta (kural 4); süzgeç aktifken satır
+          // zaten tek deponun sayılarını gösterir, kırılım kapanır.
+          showSplit: ctx.activeWarehouseId === null && ctx.warehouses.length > 1 && warehouse.active === null,
+          available: warehouse.available,
+          active: warehouse.active,
+          dropped: warehouse.dropped,
+          options: warehouse.options,
+        },
       }}
       device={device}
       urlState={urlState}

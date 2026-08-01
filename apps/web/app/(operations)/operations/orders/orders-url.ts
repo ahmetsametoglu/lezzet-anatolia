@@ -1,4 +1,5 @@
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, OrderStatusEnum, type Channel, type DeliveryType, type OrderStatus, type PaymentStatus } from '@lezzet/types';
+import { WAREHOUSE_PARAM } from '@/lib/warehouse/filter';
 
 // Sipariş ekranının URL SÖZLEŞMESİ — fiyat/stok/ürün ekranlarının deseni. Sekme ve süzgeçler adreste
 // taşınır: yenilemede aynı görünüm açılır ve SUNUCU okuyabildiği için süzme sunucuda yapılır.
@@ -29,9 +30,16 @@ export interface OrdersUrlState {
   pay: PaymentStatus | 'all';
   /** Teslim günü (YYYY-AA-GG); boş = gün süzgeci yok. */
   day: string;
+  /**
+   * Depo süzgeci — depo KODU (`STR`), kimliği değil; boş = süzgeç yok (19.5).
+   *
+   * Adreste taşınır çünkü bir BAKIŞTIR ve paylaşılabilir olmalı; depo BAĞLAMI ise çerezdedir ve
+   * adrese yazılmaz — paylaşılan bir bağlantı alıcının evrenini ezmemeli.
+   */
+  depo: string;
 }
 
-const DEFAULTS: OrdersUrlState = { tab: 'all', q: '', chan: 'all', del: 'all', pay: 'all', day: '' };
+const DEFAULTS: OrdersUrlState = { tab: 'all', q: '', chan: 'all', del: 'all', pay: 'all', day: '', depo: '' };
 
 type RawParams = Record<string, string | string[] | undefined>;
 const one = (raw: string | string[] | undefined): string => (Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? ''));
@@ -49,6 +57,9 @@ export function parseOrdersUrl(params: RawParams): OrdersUrlState {
     del: delRaw === 'route' || delRaw === 'shipping' ? delRaw : 'all',
     pay: PAYMENT_FILTERS.find((p) => p === payRaw) ?? 'all',
     day: /^\d{4}-\d{2}-\d{2}$/.test(one(params.day)) ? one(params.day) : DEFAULTS.day,
+    // Kod burada DOĞRULANMAZ, yalnız normalize edilir: "bu kod benim evrenimde var mı" sorusunun
+    // cevabı bağlamdadır (`warehouseFilterOf`) ve URL çözümleyicisi bağlamı görmez.
+    depo: one(params[WAREHOUSE_PARAM]).trim().toUpperCase(),
   };
 }
 
@@ -61,6 +72,7 @@ export function ordersUrl(state: OrdersUrlState): string {
   if (state.del !== DEFAULTS.del) p.set('del', state.del);
   if (state.pay !== DEFAULTS.pay) p.set('pay', state.pay);
   if (state.day) p.set('day', state.day);
+  if (state.depo) p.set(WAREHOUSE_PARAM, state.depo);
   const qs = p.toString();
   return qs ? `${ORDERS_PATH}?${qs}` : ORDERS_PATH;
 }

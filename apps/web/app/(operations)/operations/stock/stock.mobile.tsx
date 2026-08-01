@@ -52,7 +52,7 @@ export function StockMobile(props: StockViewProps) {
 }
 
 /** Seviyeler mobilde kart listesi: satır tıklanınca partileri altında açılır (ayrı panel yok). */
-function MobileLevels({ levels, selectedId, onSelect, hasMoreLevels, loadingLevels, onLoadMoreLevels, onOpenOffer }: StockViewProps) {
+function MobileLevels({ data, levels, selectedId, onSelect, hasMoreLevels, loadingLevels, onLoadMoreLevels, onOpenOffer }: StockViewProps) {
   // Boş hâlde de tetikleyici KALIR — bkz. `Table`: client çipi ilk sayfayı sıfıra indirdiğinde
   // liste ölmemeli.
   return (
@@ -67,6 +67,7 @@ function MobileLevels({ levels, selectedId, onSelect, hasMoreLevels, loadingLeve
             key={row.variantId}
             row={row}
             open={row.variantId === selectedId}
+            showSplit={data.warehouse.showSplit}
             onToggle={() => onSelect(row.variantId)}
             onOpenOffer={onOpenOffer}
           />
@@ -80,11 +81,13 @@ function MobileLevels({ levels, selectedId, onSelect, hasMoreLevels, loadingLeve
 interface LevelCardProps {
   row: StockLevelRow;
   open: boolean;
+  /** Çok depolu bakış mı — tek depoda dağılım satırı her kartta aynı şeyi tekrarlar (kural 4). */
+  showSplit: boolean;
   onToggle: () => void;
   onOpenOffer: (stockId: string) => void;
 }
 
-function LevelCard({ row, open, onToggle, onOpenOffer }: LevelCardProps) {
+function LevelCard({ row, open, showSplit, onToggle, onOpenOffer }: LevelCardProps) {
   return (
     <div className="flex flex-col rounded-ops-card border border-ops-line bg-ops-white">
       <button
@@ -99,6 +102,13 @@ function LevelCard({ row, open, onToggle, onOpenOffer }: LevelCardProps) {
             {row.reservedQty > 0 ? ` · ${row.reservedQty} ayrılmış` : ''}
             {row.belowMin ? ' · eşik altı' : ''}
           </span>
+          {/* Telefonda kırılım AÇILIR DEĞİL, tek satır: kart zaten dokununca partileri açıyor ve
+              ikinci bir açılır katman küçük ekranda kaybolur. Dağılım özet hâlde yeter. */}
+          {showSplit && row.warehouses.length > 0 ? (
+            <span className="truncate font-ops-mono text-ops-micro text-ops-blue-dark">
+              {row.warehouses.map((w) => `${w.code} ${w.availableQty}`).join(' · ')}
+            </span>
+          ) : null}
         </div>
         <div className="flex flex-none flex-col items-end gap-px">
           <span className={`font-ops-mono text-ops-lead ${row.availableQty === 0 ? 'text-ops-red' : 'text-ops-ink'}`}>

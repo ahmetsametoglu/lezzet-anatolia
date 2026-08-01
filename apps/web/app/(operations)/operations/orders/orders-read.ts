@@ -23,6 +23,8 @@ interface OrderRowInput {
   defaultTermDays: number;
   /** TEK "şimdi": listenin tüm satırları aynı ana göre değerlendirilsin. */
   now: Date;
+  /** Kimlik → depo adı/kodu; KAPALI depolar dahil (geçmiş sipariş tesisini söylemek zorunda). */
+  warehouseLabels: Map<string, { code: string; name: string }>;
 }
 
 export function toOrderRows(input: OrderRowInput): OrderRow[] {
@@ -33,6 +35,7 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
   const customer = input.customers.get(order.customerId);
   const items = input.itemsByOrder.get(order.id) ?? [];
   const termDays = customer?.paymentTermDays ?? input.defaultTermDays;
+  const warehouse = input.warehouseLabels.get(order.warehouseId) ?? null;
 
   return {
     id: order.id,
@@ -64,6 +67,9 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
     isGift: order.isGiftOrder,
     createdAt: order.createdAt,
     allowedNext: [...allowedTransitions(order.status)],
+    // Bir sipariş TEK depodan çıkar (DOMAIN §17) — bu yüzden satırda tek bir kod durur, liste değil.
+    // Ad bilinmiyorsa (silinmiş değil, yalnız haritaya girmemiş bir kimlik) uydurma yapılmaz.
+    warehouse: warehouse ? { code: warehouse.code, name: warehouse.name } : null,
   };
 }
 

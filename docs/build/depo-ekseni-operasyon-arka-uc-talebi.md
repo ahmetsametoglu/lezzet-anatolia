@@ -370,6 +370,56 @@ Doğru çözüm ilk yolun: önek zaten var (`T-`, `TPRF-`) ve `purgeTestData` de
 
 ---
 
+## 7. Kısıt ihlali okunur bir cümleye nasıl dönüşecek? *(yeni — 01.08, altı madde kapandıktan sonra)*
+
+### Sorun
+
+19.5 görev satırı şunu istiyor: *"ülke başına tek aktif kargo deposu kuralı — **kısıt DB'de, ekran
+hatayı okunur gösterir**"*. Kısıt yerinde ve doğru çalışıyor; denedim (rollback'li):
+
+```
+ERROR:  duplicate key value violates unique constraint "warehouse_single_online"
+DETAIL:  Key (country_code)=(FR) already exists.
+```
+
+Bu metin action'ın `getErrorMessage` funnel'ından geçip **olduğu gibi** ekrana düşer. Operatör
+İngilizce bir Postgres cümlesi ve bir indeks adı görür — "okunur" değil, ve `docs`'un istediği şey
+bu değil.
+
+Bu **depoya özgü de değil**: aynı sınıf 19.5'te iki kez var (kargo deposu tekilliği + bir posta
+kodunun tek bölgede olması — tasarım o ret hâlini açıkça istiyor) ve depo turu yeni kısıtlar
+ekledikçe çoğalacak (siparişin partileri siparişin deposundan, rezervasyon-sipariş depo eşitliği,
+depocu kapsamsız olamaz…). Bugün hiçbirinin okunur karşılığı yok — `lib/error.ts`'te de,
+servislerde de kısıt adına bakan tek satır yok.
+
+### Önerim — motor/dil ayrımının aynısı
+
+Ekranın kısıt **adını** görmesi lazım, metnini değil:
+
+```ts
+// @lezzet/database
+export function constraintOf(err: unknown): string | null   // 'warehouse_single_online' | null
+```
+
+Sonra cümleyi ben yazarım (`'warehouse_single_online' → "FR için zaten bir kargo deposu var:
+Strasbourg. Bir ülkede aynı anda tek kargo deposu olabilir; önce onu kapatın."`).
+
+Ayrım `healthSignals` ile birebir aynı gerekçeye dayanıyor: **hangi kuralın tuttuğu veri katmanının
+bilgisi, o kuralın nasıl anlatılacağı arayüzün işi.** Cümleyi servise koymak, bir kısıtı bir dile
+bağlamak olurdu.
+
+**Mesajı regex'lemeyi bilinçli olarak istemiyorum:** o metin Postgres'in malı ve sürümle değişebilir;
+kısıt adı bizim ve şemada sabit. İngilizce bir cümleyi ayrıştırmak, aynı işin kırılgan hâli.
+
+Ufak bir istek daha: kısıt adları **konuşsun**. `warehouse_single_online` iyi; ama ertelenmiş
+tetikleyicilerin fırlattığı hatalar kısıt adı taşımıyor olabilir — onlarda `errcode` + sabit bir
+mesaj öneki (`LZ_ORDER_WAREHOUSE_MISMATCH` gibi) aynı işi görür. Hangisi senin tarafında ucuzsa.
+
+**Arka uç cevabı:**
+<!-- buraya -->
+
+---
+
 ## Özet — benim beklediğim çıktılar
 
 | # | İstek | Bensiz olur mu |
@@ -379,6 +429,7 @@ Doğru çözüm ilk yolun: önek zaten var (`T-`, `TPRF-`) ve `purgeTestData` de
 | 2 | Sipariş süzgeci + `order_counts` küme alsın | **Hayır** — çok kapsamlı personelde sayaç yalan söyler |
 | 3 | `WarehouseService.list` kapsam süzgeci | Uygulama katmanında süzerim, ama kural tek kapıdan geçmez |
 | 4 | Bağlam çerezi kapısının sahipliği + `readWarehouseContext` | **Hayır** — bağlam URL'de değil, sunucudan okunmalı |
+| 7 | `constraintOf(err)` — kısıt adı ekrana ulaşsın | Ekran yazılır ama hata İngilizce Postgres cümlesi olarak düşer |
 | 5 | `getAvailableTotalMap`'in yanlış kullanımı yapısal olarak zorlaşsın | Ekran yazılır; kural yorumda kalır |
 | 6 | Transfer `cancelled` kararı + test deposu hijyeni | Ekran (a) varsayımıyla yazılır; seçici test satırlarını gösterir |
 

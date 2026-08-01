@@ -11,6 +11,7 @@ const order = (patch: Partial<Order> = {}): Order =>
   ({
     id: 'o1',
     customerId: 'c1',
+    warehouseId: 'w1',
     channel: 'b2b',
     orderSource: 'web',
     isGiftOrder: false,
@@ -58,6 +59,7 @@ const build = (orders: Order[], opts: { items?: OrderItem[]; customer?: UserProf
     courierNames: new Map([['k1', 'Ali']]),
     defaultTermDays: opts.termDays ?? 30,
     now: NOW,
+    warehouseLabels: new Map([['w1', { code: 'STR', name: 'Strasbourg' }]]),
   });
 
 describe('sipariş satırı', () => {

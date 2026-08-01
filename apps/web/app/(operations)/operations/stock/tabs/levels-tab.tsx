@@ -31,17 +31,30 @@ export function LevelsTab({
   onOpenOffer,
   onTab,
   navPending,
+  openVariantId,
+  onToggleSplit,
 }: StockViewProps) {
+  const { warehouse } = data;
   const columns: Column<StockLevelRow>[] = withCells<StockLevelRow>(STOCK_COLUMN_TRACKS, {
     name: (r) => (
       <div className="flex min-w-0 flex-col gap-px">
         <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{r.title}</span>
-        <span className="font-ops-body text-ops-xs text-ops-muted">
-          {r.categoryName} · {r.batches.length === 0 ? 'parti yok' : `${r.batches.length} parti`}
-          {/* Satılamaz olmak stoğu yok saymaz — mal duruyor, satışı kapalı. İkisini ayırmak, "neden
+        <span className="flex items-center gap-1.5 font-ops-body text-ops-xs text-ops-muted">
+          <span className="truncate">
+            {r.categoryName} · {r.batches.length === 0 ? 'parti yok' : `${r.batches.length} parti`}
+            {/* Satılamaz olmak stoğu yok saymaz — mal duruyor, satışı kapalı. İkisini ayırmak, "neden
                 satmıyorum" sorusunu ekranda cevaplar. */}
-          {r.status === 'passive' ? ' · ürün pasif' : r.status === 'candidate' ? ' · aday ürün' : ''}
-          {r.variantActive ? '' : ' · boy kapalı'}
+            {r.status === 'passive' ? ' · ürün pasif' : r.status === 'candidate' ? ' · aday ürün' : ''}
+            {r.variantActive ? '' : ' · boy kapalı'}
+          </span>
+          {/* "N depoda" — sayı DİZİDEN okunur, ayrıca tutulmaz: iki gerçek ayrışamaz. Tek depoda
+              doğrudan kod yazılır, çünkü "1 depoda" hiçbir şey söylemez. */}
+          {warehouse.showSplit && r.warehouses.length > 0 ? (
+            <Badge tone="blue" className="flex-none font-ops-mono">
+              {r.warehouses.length > 1 ? `${r.warehouses.length} depoda` : r.warehouses[0]?.code}
+              {r.warehouses.length > 1 ? (openVariantId === r.variantId ? ' ▴' : ' ▾') : ''}
+            </Badge>
+          ) : null}
         </span>
       </div>
     ),
@@ -86,8 +99,18 @@ export function LevelsTab({
           columns={columns}
           rows={levels}
           rowKey={(r) => r.variantId}
-          onRowClick={(r) => onSelect(r.variantId)}
+          onRowClick={(r) => {
+            onSelect(r.variantId);
+            // Kırılım YALNIZ çok depolu satırda açılır; tek depolu satırda açacak bir şey yok ve
+            // tıklama seçimden ibaret kalır.
+            if (warehouse.showSplit && r.warehouses.length > 1) onToggleSplit(r.variantId);
+          }}
           isRowActive={(r) => r.variantId === selectedId}
+          renderSubRow={(r) =>
+            warehouse.showSplit && openVariantId === r.variantId && r.warehouses.length > 1 ? (
+              <WarehouseSplit row={r} />
+            ) : null
+          }
           empty={
             <div className="flex flex-1 items-center justify-center p-10">
               <span className="font-ops-body text-ops-base text-ops-muted">Bu süzgeçle eşleşen boy yok — süzgeci gevşetin.</span>
@@ -98,6 +121,41 @@ export function LevelsTab({
       </div>
 
       <UrgentPanel batches={data.attention} onOpenOffer={onOpenOffer} onSeeAll={() => onTab('attention')} />
+    </div>
+  );
+}
+
+/**
+ * Depo kırılımı — satırın altında açılan blok.
+ *
+ * Sayılar satırın toplamının parçalarıdır, ayrı bir okuma değil (`toLevelRows`). Blok bir KARAR
+ * yeri değil bir bakış: transfer kararı burada verilmez, çünkü karar iki deponun ihtiyacını
+ * karşılaştırmayı gerektirir ve o karşılaştırma Transfer ekranının işidir.
+ */
+function WarehouseSplit({ row }: { row: StockLevelRow }) {
+  return (
+    <div className="flex flex-col gap-1.5 border-b border-ops-line-soft bg-ops-subtle px-5 py-2.5">
+      {row.warehouses.map((w) => (
+        <div key={w.warehouseId} className="flex items-center gap-2.5 pl-4">
+          <span className="h-1.5 w-1.5 flex-none rounded-full bg-ops-blue" />
+          <span className="min-w-0 flex-1 truncate font-ops-body text-ops-xs text-ops-strong">
+            {w.name} <span className="font-ops-mono text-ops-micro text-ops-muted">{w.code}</span>
+          </span>
+          <span className="flex-none font-ops-mono text-ops-xs text-ops-ink" title="Kullanılabilir">
+            {w.availableQty}
+          </span>
+          <span className="w-14 flex-none text-right font-ops-mono text-ops-micro text-ops-muted" title="Ayrılmış">
+            {w.reservedQty > 0 ? `${w.reservedQty} ayrılmış` : ''}
+          </span>
+          <span className="w-20 flex-none text-right font-ops-mono text-ops-micro text-ops-muted" title="En yakın son tarih">
+            {w.nearestExpiry ? shortDate(w.nearestExpiry) : ''}
+          </span>
+        </div>
+      ))}
+      <span className="pl-4 font-ops-body text-ops-micro text-ops-faint">
+        Transfer kararı burada verilmez — Transfer ekranından. Eşik ve karar kuyruğu depo bazlıdır,
+        yaklaşan tarihli sekmesinde deposuyla görünür.
+      </span>
     </div>
   );
 }

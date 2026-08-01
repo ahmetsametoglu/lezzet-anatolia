@@ -200,6 +200,19 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
   Yani müşterinin ulaştığı sonuç aynı, adım sayısı bir fazla. Doğrudan kaydetme sepetin iki-grup
   çalışmasıyla gelir (19.11) — kaydedilenler bölmesi zaten o turda yeniden ele alınıyor.
 
+- **TALEP FORMU — ÖNCE SORUN, SONRA ÜRÜN (01.08, kullanıcı kararı, `build/08` 08.6).**
+  `Musteri - Talep.dc.html` bölümleri şu sırada çiziyor: *Hangi ürünlerle ilgili?* → *Sorun ne?* →
+  *Anlatın* → *Fotoğraf*. Sıra ters çevrildi: **tip önce sorulur, kalem listesi ve fotoğraf yalnız
+  ürüne dair tiplerde** (`missing` · `damaged`) görünür.
+  İki gerekçe. (1) *Bilgi sırası:* müşteri neyi anlatacağını söylemeden hangi ürünleri
+  işaretleyeceğini bilemez — "Soru" soracak biri önce üç kaleme bakıp hangisini seçeceğini düşünür,
+  sonra o bölümün kendisiyle ilgisi olmadığını anlar. (2) *Form kendini kısaltır:* dört tipin
+  ikisinde kalem ve fotoğraf zaten gereksiz; tip önce sorulunca "Soru" seçen müşteri üç bölüm
+  yerine bir bölüm görür.
+  Tipe geçiş kalem işaretlerini **düşürür**: gizlenen bir bölümün state'i gönderilseydi müşteri
+  ekranda görmediği bir seçimi yapmış olurdu ve "Soru" tipinde üç kaleme bağlanmış bir talep
+  operatörü yanıltırdı.
+
 - **TALEP EKRANI — iki sapma (01.08, `build/08` 08.6).**
   **(a) Mobil başlığa "+ Bize yazın" eklendi.** `Musteri - Talep.dc.html` bu düğmeyi yalnız web
   başlığında çiziyor; mobil liste karesinde başlığın sağ yuvası boş. Sonuç bir çıkmaz sokak: yeni
@@ -365,6 +378,12 @@ seçmez); (d) **operasyon: Depolar + Transfer ekranları** ve stok/sipariş ekra
 `pages/musteri-yer-ekseni.md` (yer ekseni: kalemin dört hâli, iki-checkout, koşullu ülke seçici,
 davet deseni); (d) operasyon tarafı → `pages/operasyon-depo-ekseni.md` (iki katmanlı bağlam+süzgeç
 deseni). İki doküman birlikte paketin sözleşmesidir; Claude Design'a birlikte verilir.
+**Çizim geldi (01.08):** 14 `.dc` güncellemesi — (a)-(c) ve operasyonun mevcut ekranları (stok,
+siparişler, satın alma, dashboard, rotalar) karşılandı. **Açık kalan (d)'nin yeni ekranlarıdır:**
+Depolar ve Transfer'in `.dc`'si yok, ikisi de sıfırdan çizilecek; sayfa dokümanları 01.08'de yazıldı
+(`pages/admin-depolar.md`) ve ısmarlanmayı bekliyor — **Transfer ayrı sayfa olmaktan çıktı, Stok'un
+içine girdi** (aşağıdaki bilgi mimarisi kararı). Fiyatların
+**Teklifler sekmesi** de aynı turda (kısmi eksen — sözleşme §5/§8).
 
 ---
 
@@ -373,6 +392,73 @@ deseni). İki doküman birlikte paketin sözleşmesidir; Claude Design'a birlikt
 Diyalog formlarında ve onların beslediği liste satırlarında verilmiş kararlar. Mekanik bir denetim
 (ör. ölçü/token turu) bunları "tasarıma çekilecek sapma" sanıp geri almasın: geri çekilecek bir
 tasarım yok, gerekçe burada yazılı. İtiraz gelirse madde §2'ye taşınır.
+
+**Operasyon bilgi mimarisi — depo/stok/rota ayrımı (karar 01.08, kullanıcı).**
+
+Kullanıcı depo giriş/çıkışının dört ekrana dağıldığını bildirdi ("yönetimimi zorlaştırıyor").
+İnceleme kök sebebi buldu: **parada birleşik hareket defteri var, stokta yok.** `DOMAIN §7` finansı
+"para bir hesapta durur, hareketlerle girer/çıkar" diye tanımlıyor ve kasa/banka ayrımını hesaba
+indiriyor; stokta bunun karşılığı yazılmamış, sekiz RPC beş ayrı tabloya yazıyor. Verilen kararlar:
+
+- **Transfer ayrı sayfa DEĞİL** — parada hesaplar arası transfer bir hareket tipidir, sayfası yoktur;
+  depolar arası transfer onun stok karşılığıdır. `admin-transfer.md` **silindi**, içeriği
+  `admin-stok.md`'ye taşındı — **Mal kabul** ve **Çıkışlar** sekmeleri; sevk/kabul birer form. Sekme adları soyut "Hareketler" değil (kullanıcı itirazı): depoda kimse "hareket yaptım" demez, "mal kabul ettim" ya da "sevk ettim" der. Yoldaki transfer ayrı sekme değil, Mal kabul'ün "bekleyenler" kısmı — hedef depo için gelecek maldır.
+- **Bölge tanımı Rotalar'dan Depolar'a taşındı** ve **"Rotalar" sayfası "Teslimat" oldu**
+  (`admin-rotalar.md` → `admin-teslimat.md`; yol `/operations/routes` → `/operations/deliveries`).
+  Terminoloji karışıklığının iki katmanı vardı ve kullanıcı ikincisini yakaladı: **(a)** bölge bir
+  TANIM (kodlar + günler + depo, kurulum işi), teslimat günü bir GÜN (veride varlığı bile yok,
+  `delivery_date`'ten türer) — ikisi aynı sayfadayken sözcükler birbirinin yerine geçiyordu;
+  **(b)** *"rota gidilen şeydir, teslimat teslim edilen şeydir"* — ve **rota bu sistemde bir sayfa
+  değil bir teslimat TÜRÜDÜR** (`DeliveryTypeEnum = ['route','shipping']`, `DOMAIN` sözlüğü "rota
+  içi" diye tanımlıyor). Bir türü çoğullayıp varlığa çevirmek hatalıydı; üstelik sistem gitmeyi
+  (durak sırası, kapasite, zaman penceresi) hiç modellemiyor.
+  **Yan kazanç:** ad düzelince kargo teslimatı da evini buldu — "bugün hangi paketleri taşıyıcıya
+  vereceğim" sorusunun hiçbir ekranda cevabı yoktu (`grep` kanıtı: takip no yalnız müşteri yüzünde
+  anılıyor). ⚠ Kargo yarısının **arka ucu eksik**: `order` tablosunda taşıyıcı/takip alanı yok
+  (`build/19` bunu `07`'ye kaydetmişti) — tasarım çizilebilir, bağlanması o alanları bekler.
+- **Depolar ayrı sayfa kalır ve büyür:** künye + hizmet alanı + **karne** (risk, eşik altı, yolda
+  bekleyen). Karne SAYAR, listelemez — her sayı Stok'a o depo bağlamıyla giden bir kapıdır.
+- **Veri temeli yeni tablo değil GÖRÜNÜM olabilir:** beş tablo da `stock_id`/`warehouse_id` taşıyor,
+  `stock` da varyant/depoyu — `stock_movement` bir `union` görünümü olarak türetilebilir
+  (`available_stock` ve `purchase_order_progress` deseni). ⚠ Tek gerçek eksik: `order_item_batch`'te
+  zaman damgası yok (`id, order_item_id, stock_id, qty`), zaman sıralı defterde hazırlık hareketleri
+  yerini bulamaz → arka uca `created_at` isteği.
+
+**Teslimat sırası — tasarım kodun veremeyeceğini vaat ediyor (bulundu 01.08).**
+
+`kurye-gun.md` kuryeye *"teslimat listesi (**rota sırasıyla**) — günün duraklarının **sıralı**
+listesi"* sözü veriyor. **Sıra diye bir veri yok:** `order` tablosunda sıra/ETA/zaman penceresi alanı
+bulunmuyor ve `architecture/BACKLOG:132` kapsamı açıkça sınırlıyor ("Faz 1: liste, optimizasyon
+yok"). O ekran bugün yazılsa kurye siparişleri **oluşturulma sırasıyla** görürdü — yani rastgele.
+
+Üç yol var, kullanıcı kararı bekliyor:
+
+1. **Elle sıralama** — operatör Teslimat sayfasında durakları sürükleyerek sıraya sokar, kurye o
+   sırayı görür. Tek alan (`delivery_seq`) + sürükle-bırak bileşeni **zaten var** (`SortableList`,
+   ürün sıralamasında kullanılıyor). Çelişkiyi kapatan en ucuz yol.
+2. **Vaadi geri çekmek** — `kurye-gun.md`'den "sıralı" ifadesi kalkar, liste bilinçli olarak
+   sırasız kalır (adres/bölge gruplu).
+3. **Otomatik optimizasyon** — dış rota servisi (Google Directions/Routes). Adreslerin
+   koordinatlanması + aylık maliyet + `STACK §271` (kendi sunucumuzda barındırma) ile tartılması
+   gerekir. Teslimat sayısı iki haneliyken algoritmanın operatörden iyi olduğu ölçülmedi.
+
+Navigasyon linki (`kurye-gun.md:21` — adresi telefonun harita uygulamasında açmak) bu tartışmanın
+dışında ve zaten çizili: bir rota hesabı değil, bir kısayol.
+
+**Depo ekseni (19.5, 01.08) — çizimden iki sapma, ikisi de ölçülü.**
+
+- **Stokta süzgeç SATIR elemez, ADET daraltır.** `Operasyon - Stok.dc.html`'in şerit metni "tablo
+  yalnız bu deponun satırlarını gösteriyor" diyor. Uygulanamadı ve sebebi yapısal: seviye listesi bir
+  stok listesi değil **ürün sayfalamasıdır** (keyset imleç ürün üzerinde ilerliyor). "Bu depoda stoğu
+  olan ürünler" diye süzmek imleci bozar ve listenin kuyruğunu sessizce yutar — CLAUDE.md §1'in
+  açıkça yasakladığı hâl. Bunun yerine satırlar kalır, adet/rezerve o deponun sayısına iner ve kırılım
+  kapanır; şerit metni de tam olarak bunu söyler ("tablodaki adetler bu deponundur, satır listesi
+  katalogun tamamıdır"). Siparişlerde böyle bir sorun yok: orada satır zaten bir siparişe ait ve
+  eleme SQL'de yapılıyor.
+- **Mobil bağlam seçici çizildi ama uygulanmadı — sapma değil, SIRA.** Envanterdeki mobil varyant
+  (başlık barının altında tam genişlikte satır + bottom sheet) bir mobil operasyon KABUĞU varsayıyor;
+  o kabuk (envanter O11) henüz yok, sidebar `w-[214px]` sabit ve responsive değil. Masaüstü hâli
+  birebir indi; mobil varyant O11 ile birlikte gelir.
 
 **Paket formu (`tabs/package/`) — tümüyle yazılmış.** Referansı ürün form diyaloğu; ondan ayrılan
 tek yer sekme yokluğu (paketin alanı çok daha az, ürün formunu ikiye bölen yasal beyan yığını yok).

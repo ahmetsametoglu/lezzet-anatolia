@@ -40,6 +40,7 @@ import {
 } from '@lezzet/domain-core';
 import { addVat, toCents, vatPortion } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
+import { readWarehouseLabels } from '@/lib/warehouse/context';
 import type {
   OrderBundleGroup,
   OrderDetailView,
@@ -76,13 +77,15 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
   const { order, items } = found;
 
-  const [logs, movements, accounts, batches, tickets, termDays] = await Promise.all([
+  const [logs, movements, accounts, batches, tickets, termDays, warehouseLabels] = await Promise.all([
     new OrderStatusLogService(db).listByOrder(orderId),
     new MoneyMovementService(db).listByOrder(orderId),
     new AccountService(db).list(),
     orderSvc.listBatches(orderId),
     new TicketService(db).listByOrder(orderId),
     new SettingsService(db).getNumber(PAYMENT_TERM_KEY, PAYMENT_TERM_DEFAULT),
+    // Kapalı depolar dahil: eski bir sipariş tesisi kapandı diye deposunu unutmaz.
+    readWarehouseLabels(),
   ]);
 
   const variantIds = [...new Set(items.map((i) => i.variantId))];
@@ -209,6 +212,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       address: addressOf(order.addressSnapshot),
       courierName: courier?.name ?? null,
       proof: proofOf(order.deliveryProof),
+      warehouse: warehouseLabels.get(order.warehouseId) ?? null,
     },
 
     customer: {

@@ -63,6 +63,24 @@ export interface OrderRow {
   createdAt: string;
   /** Bu durumdan gidilebilecek durumlar — motor söyler, ekran YALNIZ bunları sunar (ORDER_LIFECYCLE). */
   allowedNext: OrderStatus[];
+  /**
+   * Siparişin çıktığı depo (19.5) — bir sipariş tek depodan çıkar, istisnasız (DOMAIN §17).
+   * `null` yalnız ad çözülemediğinde; satır o zaman depo söylemez, yanlış depo söylemez.
+   */
+  warehouse: { code: string; name: string } | null;
+}
+
+/** Listenin depo ekseni — sütun çizilir mi, süzgeç var mı, hangi depoya süzülü (19.5). */
+export interface OrdersWarehouseView {
+  /** Satırlarda depo sütunu görünür mü (kural 4: yalnız çok depolu bakışta). */
+  showColumn: boolean;
+  /** Süzgeç kontrolü çizilir mi (kural 2: yalnız bağlam "tüm depolar" iken). */
+  available: boolean;
+  /** Süzgeç uygulandıysa hangi depo. */
+  active: { id: string; code: string; name: string } | null;
+  /** Adresten gelen ama bağlama uymadığı için düşen kod (kural 7) — sessiz düşme yok. */
+  dropped: string | null;
+  options: Array<{ id: string; code: string; name: string }>;
 }
 
 /**
@@ -95,12 +113,14 @@ export interface OrdersData {
   rows: OrderRow[];
   nextCursor: KeysetCursor | null;
   counts: OrderCountsView;
+  warehouse: OrdersWarehouseView;
 }
 
 /** orders-client'ın tuttuğu durum + eylemler; desktop/mobile görünümleri bunu tüketir. */
 export interface OrdersViewProps {
   rows: OrderRow[];
   counts: OrderCountsView;
+  warehouse: OrdersWarehouseView;
   urlState: OrdersUrlState;
   /** Bugün (YYYY-AA-GG), sunucudan — gün süzgecinin etiketleri buradan doğar. */
   today: string;
