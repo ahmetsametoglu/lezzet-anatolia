@@ -235,6 +235,19 @@
   --color-ops-red-line: #e2c4c0; /* kutu çerçevesi, hatalı girdi */
   --color-ops-red-dot: #c2571f; /* bağlantı yok noktası, iade tutarı */
 
+  /* ALARM — DOLU kırmızı bant; sistem sağlığının `kritik`/`izleme durdu` hâli (O20, 18.5).
+     Kendi ailesi çünkü var olan hiçbiri işi görmüyor: `red-bg` kutu zeminidir (açık), `red-dark`
+     metin rengidir ve karanlık temada AÇILIR (#f2c8c3) — zemin olarak kullanılsaydı bant koyu temada
+     soluk pembeye döner, "yüksek sesle görünme" yükümlülüğü kaybolurdu (`OBSERVABILITY §4.1`:
+     e-posta alarmı yok, ekran alarmın yerini tutar). Bant her iki temada da DOLU ve koyu kalır;
+     üzerindeki metin/kutu renkleri bu yüzden ayrı token. */
+  --color-ops-alarm: #8a3a33; /* bandın kendisi */
+  --color-ops-alarm-ink: #ffffff; /* bant üzerindeki başlık ve hüküm */
+  --color-ops-alarm-muted: rgba(255, 255, 255, 0.75); /* bant üzerindeki etiket, ölçüm yaşı */
+  --color-ops-alarm-inset: rgba(255, 255, 255, 0.1); /* bandın içindeki gerekçe kutusu */
+  --color-ops-alarm-inset-line: rgba(242, 200, 195, 0.34);
+  --color-ops-alarm-dot: #f2c8c3; /* nabız atan durum noktası */
+
   /* MARKA rengi — palete ait değil, WhatsApp'ın kendi yeşili. Token olarak duruyor ki ham hex
      ikonun içinde kalmasın (CLAUDE.md §3) ve karanlık temada da aynı kalsın: marka rengi temayla
      dönmez, döndüğü an marka olmaktan çıkar. */
@@ -353,6 +366,15 @@ body {
   --color-ops-red-bg: #351d1a;
   --color-ops-red-line: #5c322d;
   --color-ops-red-dot: #e07a3a;
+
+  /* Alarm bandı koyu temada da DOLU ve koyu kalır — yalnız bir tık derinleşir. Diğer ailelerin
+     aksine ters çevrilmiyor: bu bant bir "kutu" değil, sayfanın en yüksek sesli öğesi. */
+  --color-ops-alarm: #6e2a24;
+  --color-ops-alarm-ink: #fbeceb;
+  --color-ops-alarm-muted: rgba(251, 236, 235, 0.72);
+  --color-ops-alarm-inset: rgba(255, 255, 255, 0.07);
+  --color-ops-alarm-inset-line: rgba(224, 141, 132, 0.3);
+  --color-ops-alarm-dot: #f2c8c3;
 
   --color-ops-blue: #82b2d0;
   --color-ops-blue-dark: #c3d6e4;

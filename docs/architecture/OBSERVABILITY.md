@@ -275,6 +275,35 @@ söyleyecek tek yer ekran.
 için baştan uygulanmıştı, diske ve süreçlere uygulanmamıştı — desen yarım kalınca en tehlikeli yerde
 boşluk bırakıyor.
 
+## 6d. Ekran yazılırken netleşenler (01.08)
+
+Ekran (`/operations/system`) kodlanırken üç şey daha somutlaştı; ikisi modeli değiştirdi.
+
+**`caddyActive` fail-closed'du — 30.07 bulgusunun üçüncü ölçümde kalmış hâli.** `systemctl is-active`,
+etkin olmayan birimde sıfırdan farklı çıkışla döner; yani cevap `catch`'te bekler. Ama `systemctl`'in
+hiç bulunmaması da oraya düşüyordu ve ikisi tek değere (`false`) iniyordu. `false` motorda doğrudan
+`crit` üretiyor: **systemd olmayan her makinede ekran kalıcı olarak kırmızıydı** — gerçek bir arızayı
+haber veremeyecek kadar çok bağıran bir panel. Alan `boolean | null` oldu; ayrımı çıkışın METNİ
+yapıyor (systemd bir durum sözcüğü yazdıysa ölçüm alınmıştır, `ENOENT` ise alınmamıştır). `null` →
+`warn`. Aynı ilkenin (`ölçülemeyen değer sıfır/false değildir`) üçüncü kez uygulanması; desen yarım
+kalınca hep en tehlikeli yerde boşluk bırakıyor.
+
+**Hüküm artık sinyallerden türüyor.** `healthSignals(metrics, ageMinutes)` tutan koşulları listeler,
+`healthStatusOf` onu en ağır seviyeye indirger. Sebebi ekranın yükümlülüğü: alarm yokken (§4.1) ekran
+"neden kritik" sorusunu yanıtlamak zorunda ve renk tek başına bilgi değil. Hüküm için bir dallanma,
+gerekçe için başka bir liste yazılsaydı bir gün ayrışırlardı — motor kritik der, ekran sebebi
+gösteremezdi. Üçüncü seviye `info` eklendi: söylenmeye değer ama hüküm değil (taze yeniden başlatma,
+okunamayan sertifika, düşüp kalkmış ama ayakta süreç). Sinyal METNİ motorda değil: karar motorun,
+dil arayüzün.
+
+**Trend projeksiyonlu okunuyor.** En geniş pencere 7 gün × 2 dk ≈ 5.000 satır ve her satırın
+`metrics`'i bir kilobayt civarı — tamamını okumak beş megabayt taşıyıp ekranda 46 nokta çizmek olurdu.
+`SystemHealthService.trendSince` jsonb yollarını `select`'te açıyor (`metrics->system->>disk_used_pct`
+gibi), satır elli bayta iniyor; kovalama uygulama katmanında. Yol adları **snake_case**, çünkü
+`appToDb` derin çalışıyor ve jsonb'nin içindeki anahtarlar da diskte snake_case duruyor. Kovanın
+tamamı ölçümsüzse değer `null` kalır ve eğri orada KIRILIR: aradan düz çizgi geçirmek, olmayan bir
+ölçümü varmış gibi göstermek olurdu.
+
 ## 7. Kararlar özeti
 
 1. Üç katman birlikte kurulur, kademeli değil (kullanıcı kararı 29.07): yalnız logger yazmak, hatayı
@@ -286,3 +315,6 @@ boşluk bırakıyor.
 6. Saklama: hata 90 gün (çözülmüşler), sağlık 14 gün; çözülmemiş hata süresiz.
 7. `context`'e kimlik yazılır, içerik yazılmaz.
 8. Tek operasyon ekranı (`/operations/system`), iki panel.
+9. Ölçümün üç hâli var: değer · `false`/0 (ölçüldü, kötü) · `null` (ölçülemedi). Üçüncüsü ikinciye
+   düşerse bozuk ölçüm arıza gibi okunur; sessiz de geçmez, kendi başına `warn` üretir.
+10. Hüküm ve gerekçe TEK listeden (`healthSignals`) türer — ekran motorun gördüğünden başkasını yazamaz.

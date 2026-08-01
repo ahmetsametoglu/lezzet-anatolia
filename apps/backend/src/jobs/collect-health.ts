@@ -116,13 +116,31 @@ async function webUp(): Promise<boolean> {
   }
 }
 
-/** Ters vekil etkin mi. `is-active` inaktifte sıfırdan farklı çıkışla döner → catch de "hayır"dır. */
-async function caddyActive(): Promise<boolean> {
+/** systemd'nin `is-active` sözlüğü — bunlardan biri geldiyse SORU YANITLANMIŞTIR (olumsuz da olsa). */
+const SYSTEMD_STATES = new Set(['active', 'inactive', 'failed', 'activating', 'deactivating', 'reloading', 'unknown']);
+
+/**
+ * Ters vekil etkin mi. **Üç değerli:** `true` etkin · `false` systemd "etkin değil" dedi ·
+ * `null` soramadık.
+ *
+ * `is-active` etkin olmayan birimde SIFIRDAN FARKLI çıkışla döner, yani cevabı `catch`'te bekler —
+ * ama `systemctl`'in hiç bulunmaması da oraya düşer. Bir tur bu ikisi tek değere (`false`) iniyordu
+ * ve `false` motorda doğrudan `crit` üretiyordu: systemd olmayan her makinede (geliştirme) ekran
+ * kalıcı olarak kırmızıydı ve "sakin iyi hâl" hiç görülemiyordu. Ayrımı çıkışın METNİ yapıyor —
+ * systemd bir durum sözcüğü yazdıysa ölçüm alınmıştır; `ENOENT` ise alınmamıştır.
+ */
+async function caddyActive(): Promise<boolean | null> {
   try {
     const { stdout } = await exec('systemctl', ['is-active', 'caddy']);
     return stdout.trim() === 'active';
-  } catch {
-    return false;
+  } catch (error) {
+    const said = String((error as { stdout?: string }).stdout ?? '').trim();
+    if (SYSTEMD_STATES.has(said)) return false;
+    logger.warn(
+      { context: 'health/caddy', err: error instanceof Error ? error.message : String(error) },
+      'ters vekil durumu okunamadı',
+    );
+    return null;
   }
 }
 

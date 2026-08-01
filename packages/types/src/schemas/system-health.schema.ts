@@ -59,8 +59,15 @@ export const HealthProcessesSchema = z.object({
 export const HealthServicesSchema = z.object({
   /** Web sunucusu içeriden denetlendi mi (localhost isteği). */
   webUp: z.boolean(),
-  /** Ters vekil etkin mi — süreçler "online" olsa da bu düşerse site erişilemez; ayrı soru. */
-  caddyActive: z.boolean(),
+  /**
+   * Ters vekil etkin mi — süreçler "online" olsa da bu düşerse site erişilemez; ayrı soru.
+   *
+   * **Üç değerli ve bu şart:** `false` = süreç yöneticisi "etkin değil" DEDİ · `null` = SORAMADIK
+   * (`systemctl` yok — systemd olmayan makine, geliştirme ortamı). İki değerli bırakıldığında ölçüm
+   * boşluğu doğrudan `crit` üretiyordu ve geliştirmede ekran her zaman kırmızıydı; disk ve pm2 için
+   * 30.07'de düzeltilen fail-open/closed hatasının burada kalmış hâliydi (01.08).
+   */
+  caddyActive: z.boolean().nullable(),
   /** HTTPS sertifikası kaç gün sonra doluyor. `null` = ÖLÇÜLEMEDİ (sıfır değil — bilinmemek bir ölçüm değildir). */
   certDaysLeft: z.number().nullable(),
 });
@@ -95,3 +102,28 @@ export type SystemHealthSnapshotInsert = z.infer<typeof SystemHealthSnapshotInse
 
 export const SystemHealthSnapshotUpdateSchema = SystemHealthSnapshotSchema.partial().required({ id: true });
 export type SystemHealthSnapshotUpdate = z.infer<typeof SystemHealthSnapshotUpdateSchema>;
+
+/**
+ * Trend grafiğinin DAR satırı — üç eğrinin ihtiyacı, tam `metrics` jsonb'si değil.
+ *
+ * **Neden projeksiyon:** en geniş pencere 7 gün ve toplama iki dakikada bir koşuyor → ~5.000 satır.
+ * Her satırın `metrics`'i bir kilobayt civarı; tamamını okumak beş megabayt taşıyıp ekranda 46 nokta
+ * çizmek olurdu. jsonb yolları `select`'te seçilince satır elli bayta iner.
+ *
+ * **Alanlar ham, oran değil.** Yüzdeyi (bellek doluluğu, çekirdek başına yük) okuyan taraf hesaplar:
+ * servis saf I/O'dur ve `loadCapacityPercent` motorda yaşar (STACK §4). Burada bölme yapılsaydı aynı
+ * hesap iki yerde dururdu.
+ *
+ * `->>` metin döndürür, o yüzden sayılar `coerce` ile okunur. **`null` `coerce`'a UĞRAMAZ** —
+ * `.nullable()` önce bakar; uğrasaydı `Number(null) === 0` ile ölçülemeyen disk "%0 dolu" olurdu.
+ */
+export const HealthTrendPointSchema = z.object({
+  at: z.string(),
+  status: HealthStatusEnum,
+  disk: z.coerce.number().nullable(),
+  memUsed: z.coerce.number().nullable(),
+  memTotal: z.coerce.number().nullable(),
+  load1: z.coerce.number().nullable(),
+  cores: z.coerce.number().nullable(),
+});
+export type HealthTrendPoint = z.infer<typeof HealthTrendPointSchema>;

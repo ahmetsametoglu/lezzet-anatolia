@@ -50,6 +50,23 @@ export function shortDateTime(iso: string | null | undefined): string {
 }
 
 /**
+ * "2 dk önce" · "3 sa önce" · "2 gün önce" — bir damganın YAŞI.
+ *
+ * Sistem ekranında mutlak saat yetmiyor: "09:42" okunup geçilir, "23 dk önce" bir arıza işaretidir
+ * (`OBSERVABILITY §2`, ölçüm iki dakikada bir gelmeli). Ölçünün kendisi `dakika` alır çünkü çağıran
+ * onu sunucuda hesaplayıp istemcide ilerletiyor — iki tarafta ayrı `Date.now()` okunsaydı ilk boyama
+ * sunucununkinden farklı çıkar ve hidrasyon uyuşmazlığı doğardı.
+ */
+export function agoLabel(minutes: number | null | undefined): string {
+  if (minutes == null) return '—';
+  if (minutes < 1) return 'az önce';
+  if (minutes < 60) return `${Math.floor(minutes)} dk önce`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} sa önce`;
+  return `${Math.floor(hours / 24)} gün önce`;
+}
+
+/**
  * Son tarihe kalan süreyi operatörün diliyle söyler. Mutlak tarih tek başına yetmiyor: "3 gün kaldı"
  * ile "12 Ağustos" arasındaki fark, aciliyetin okunup okunmamasıdır.
  */

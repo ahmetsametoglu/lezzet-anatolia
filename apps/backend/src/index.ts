@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import cron from 'node-cron';
+import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { requestLog, type AppEnv } from './http/request-log';
 import { COLLECT_HEALTH, collectHealthJob } from './jobs/collect-health';
@@ -54,7 +55,7 @@ cron.schedule('0 9 * * *', () => {
 // Sıklık ekranın çözünürlüğünü belirliyor: daha sık toplamak 14 günlük saklamayı katlar, daha seyrek
 // toplamak "disk ne zaman doldu" sorusunu bulanıklaştırır. İki dakika, dolan bir diski panik anından
 // önce görmeye yetiyor.
-cron.schedule('*/2 * * * *', () => {
+cron.schedule(`*/${HEALTH_COLLECT_INTERVAL_MIN} * * * *`, () => {
   void runJob(COLLECT_HEALTH, collectHealthJob);
 });
 

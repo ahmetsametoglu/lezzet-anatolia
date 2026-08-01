@@ -141,6 +141,37 @@ export class ErrorLogService extends BaseDbService<ErrorLog, ErrorLogInsert, Err
     return this.count(undefined, { isNullFields: ['resolvedAt'] });
   }
 
+  /**
+   * EN ESKİ kayıt — "kayıt ne zamandan beri tutuluyor" sorusunun cevabı.
+   *
+   * Boş listenin iki hâlini ayıran şey bu: "hiç hata yok" ile "kayıt yeni başladı" aynı görünemez.
+   * İkincisinde sessizlik bilgi TAŞIMAZ — dört saatlik bir kayıt, sistemin sağlam olduğunu söylemez
+   * (`design/pages/admin-sistem.md §4`).
+   */
+  async oldest(): Promise<ErrorLog | null> {
+    const rows = await this.getAll(undefined, { orderBy: 'firstSeenAt', orderDirection: 'asc', limit: 1 });
+    return rows[0] ?? null;
+  }
+
+  /**
+   * Verilen parmak izlerinin DAHA ÖNCE çözülmüş satırları — **"geri geldi" haberi buradan doğar.**
+   *
+   * Regresyon şemada gizlidir, bir bayrakta değil: kısmi unique indeks yalnız aktif satıra baktığı
+   * için çözülmüş bir hata tekrar geldiğinde yeni satır açılır (`0039`). Yani "bu yeni satırın
+   * geçmişi var mı" sorusu ancak aynı parmak izinin kapalı satırlarına bakarak yanıtlanır. Tek
+   * turda sorulur; sayfadaki satır başına sorgu açmak N+1 olurdu.
+   *
+   * Sıra `resolvedAt desc`: okuyan taraf ilk eşleşmeyi alır, o da EN SON kapanıştır — "26 Tem'de
+   * çözülmüştü" derken kastedilen budur.
+   */
+  async resolvedHistoryOf(fingerprints: readonly string[]): Promise<ErrorLog[]> {
+    if (fingerprints.length === 0) return [];
+    return this.getAll(
+      { fingerprint: [...new Set(fingerprints)] },
+      { isNotNullFields: ['resolvedAt'], orderBy: 'resolvedAt', orderDirection: 'desc' },
+    );
+  }
+
   /** Sağlık görüntüsünün "son bir saatte kaç hata" alanı — uyarı seviyesi sayılmaz (o gürültü değil, bilgi). */
   async countSince(since: string): Promise<number> {
     return this.count({ level: 'error' }, { rangeFilters: [{ field: 'lastSeenAt', operator: 'gte', value: since }] });

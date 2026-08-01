@@ -1,9 +1,14 @@
 # Admin — Sistem (sağlık + hatalar)
 
-> **Görsel kararı (`.dc.html`) YOK — Claude Design'a verilecek.** Diğer 38 sayfa tasarımdan doğdu, bu
-> ihtiyaçtan doğdu (`build/18-operasyon-guvenlik.md` 18.5). Kodlamadan önce çizim gelmeli
-> (`CLAUDE.md §3`: implement ederken improvise edilmez) ve çizimin merkezinde §1'deki yükümlülük
-> durmalı: **bu ekran alarmın yerini tutuyor.**
+> **Görsel kararı geldi (01.08):** `design/project/Operasyon - Sistem.dc.html` · komponentler
+> **O20–O25** (`Komponent Envanteri - Operasyon.dc.html §6`). Diğer 38 sayfa tasarımdan doğdu, bu
+> ihtiyaçtan doğdu (`build/18-operasyon-guvenlik.md` 18.5) — çizim sonradan geldi ve merkezinde
+> §1'deki yükümlülük duruyor: **bu ekran alarmın yerini tutuyor.**
+>
+> **Ekran indi (01.08):** `/operations/system`. Tasarımın modelimizle çeliştiği dört yer bilinçli
+> olarak KODUN lehine çözüldü ve 18.5'in durum notunda tek tek yazılı: saklama süresi (30 → **90
+> gün**), bellek eşiği (sabit %85 → **mutlak 500 MB**'dan türetilen çizgi), yük çubuğu (5 dk → **1
+> dk**, hükümle aynı sayı), hata sayacının rengi (>0 → **motorun eşiği**).
 
 ## 1. Amaç ve kullanıcı
 

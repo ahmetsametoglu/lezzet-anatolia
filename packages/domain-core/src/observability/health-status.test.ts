@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SystemHealthMetrics } from '@lezzet/types';
-import { healthStatusOf, loadCapacityPercent, HEALTH_THRESHOLDS } from './health-status';
+import { healthSignals, healthStatusOf, loadCapacityPercent, HEALTH_THRESHOLDS, type HealthSignalCode } from './health-status';
 
 /**
  * Sağlık hükmü (18.5). Sınanan şey ayrımın kendisi: **`crit` bir şeyin ÇALIŞMADIĞI, `warn` baskı
@@ -139,6 +139,91 @@ describe('healthStatusOf', () => {
   it('crit, warn koşulu da tutsa bile crit kalır — ağır hüküm hafifi ezer', () => {
     const metrics = withSystem({ diskUsedPct: 95, swapUsedMb: 1800 });
     expect(healthStatusOf(metrics)).toBe('crit');
+  });
+});
+
+/**
+ * **"Etkin değil" ile "soramadım" ayrımı** (01.08 — sistem ekranı yazılırken çıktı).
+ *
+ * `caddyActive` iki değerliydi ve `systemctl` bulunmayan her makinede `false`'a düşüyordu; `false`
+ * ise doğrudan `crit`. Sonuç: systemd olmayan ortamda ekran KALICI olarak kırmızıydı — yani gerçek
+ * bir arızayı haber veremeyecek kadar çok bağıran bir panel. Disk ve pm2 için 30.07'de düzeltilen
+ * hatanın aynısı, üçüncü ölçümde kalmıştı.
+ */
+describe('ters vekil: ölçülemedi ≠ kapalı', () => {
+  const withCaddy = (caddyActive: boolean | null): SystemHealthMetrics => ({
+    ...healthy,
+    services: { ...healthy.services, caddyActive },
+  });
+
+  it('systemd "etkin değil" dediyse crit — site gerçekten erişilemez', () => {
+    expect(healthStatusOf(withCaddy(false))).toBe('crit');
+  });
+
+  it('soramadıysak (null) UYARI — göremediğimizi arıza saymayız, ama sorunsuz da saymayız', () => {
+    expect(healthStatusOf(withCaddy(null))).toBe('warn');
+  });
+
+  it('iki hâl ayrı sinyal üretir: ekran hangisi olduğunu yazabilmeli', () => {
+    expect(codesOf(withCaddy(false))).toContain('caddy-down');
+    expect(codesOf(withCaddy(null))).toContain('caddy-unknown');
+  });
+});
+
+const codesOf = (metrics: SystemHealthMetrics, ageMinutes?: number): HealthSignalCode[] =>
+  healthSignals(metrics, ageMinutes).map((s) => s.code);
+
+/**
+ * Sinyaller hükmün TEK kaynağıdır: ekran gerekçeyi buradan yazar. İki ayrı liste tutulsaydı bir gün
+ * ayrışırlardı — motor "kritik" derken ekranın sebebi gösterememesi, alarmı olmayan bir kurulumda
+ * (`OBSERVABILITY §4.1`) hükmü işe yaramaz kılardı.
+ */
+describe('healthSignals', () => {
+  it('rahat sunucuda hiç sinyal yok — sessizlik burada bilgidir', () => {
+    expect(healthSignals(healthy)).toEqual([]);
+  });
+
+  it('tutan HER koşul listelenir; hüküm en ağırından çıkar', () => {
+    const metrics: SystemHealthMetrics = {
+      ...withSystem({ diskUsedPct: 96, swapUsedMb: 1800 }),
+      services: { webUp: false, caddyActive: false, certDaysLeft: 3 },
+    };
+    expect(codesOf(metrics)).toEqual(['web-down', 'caddy-down', 'disk-crit', 'swap', 'cert-crit']);
+    expect(healthStatusOf(metrics)).toBe('crit');
+  });
+
+  it('bayat ölçüm İLK sırada — altındaki her değer geçmişe aittir', () => {
+    expect(codesOf(healthy, HEALTH_THRESHOLDS.staleCritMinutes)[0]).toBe('stale');
+  });
+
+  it('aynı ölçüt iki kez sinyal vermez — kritik disk ayrıca uyarı da doğurmaz', () => {
+    expect(codesOf(withSystem({ diskUsedPct: 96 }))).toEqual(['disk-crit']);
+  });
+
+  describe('info — söylenmeye değer ama hüküm değil', () => {
+    it('taze yeniden başlatma not düşer, hükmü bozmaz', () => {
+      const metrics = withSystem({ uptimeSec: 2640 });
+      expect(codesOf(metrics)).toEqual(['reboot']);
+      expect(healthStatusOf(metrics)).toBe('ok');
+    });
+
+    it('okunamayan sertifika not düşer — bilinmemek bir ölçüm değildir', () => {
+      const metrics = { ...healthy, services: { ...healthy.services, certDaysLeft: null } };
+      expect(codesOf(metrics)).toEqual(['cert-unknown']);
+      expect(healthStatusOf(metrics)).toBe('ok');
+    });
+
+    it('yeniden başlama sayısı: süreç ayakta ama sessizce düşüp kalkıyor', () => {
+      const pm2 = [{ name: 'backend-http', status: 'online', restarts: HEALTH_THRESHOLDS.restartsNoticeCount, memoryMb: 400, cpuPct: 6 }];
+      const metrics = { ...healthy, processes: { pm2 } };
+      expect(codesOf(metrics)).toEqual(['process-restarts']);
+      expect(healthStatusOf(metrics)).toBe('ok');
+    });
+
+    it('düşmüş süreç varken yeniden başlama notu yazılmaz — asıl haber gölgelenmez', () => {
+      const pm2 = [{ name: 'web-server', status: 'errored', restarts: 14, memoryMb: 0, cpuPct: 0 }];
+      expect(codesOf({ ...healthy, processes: { pm2 } })).toEqual(['process-down']);
+    });
   });
 });
 

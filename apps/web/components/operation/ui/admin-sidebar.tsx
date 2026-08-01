@@ -61,7 +61,13 @@ const SECTIONS: NavSection[] = [
   },
   {
     label: 'Sistem',
-    items: [{ key: 'ayarlar', label: 'Ayarlar', href: '/operations/settings' }],
+    items: [
+      { key: 'ayarlar', label: 'Ayarlar', href: '/operations/settings' },
+      // Sistem sağlığı (18.5) — YALNIZ admin. Rayda durması zorunlu: kritik hatada e-posta/itme
+      // bildirimi gönderilmiyor (`OBSERVABILITY §4.1`), yani bu ekran alarmın kendisi. Menüde
+      // görünmeyen bir alarm, olmayan bir alarmdır.
+      { key: 'sistem', label: 'Sistem', href: '/operations/system' },
+    ],
   },
 ];
 

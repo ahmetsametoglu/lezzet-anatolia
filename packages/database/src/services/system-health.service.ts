@@ -1,8 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  HealthTrendPointSchema,
   SystemHealthSnapshotSchema,
   SystemHealthSnapshotInsertSchema,
   SystemHealthSnapshotUpdateSchema,
+  type HealthTrendPoint,
   type SystemHealthMetrics,
   type SystemHealthSnapshot,
   type SystemHealthSnapshotInsert,
@@ -44,6 +46,35 @@ export class SystemHealthService extends BaseDbService<
    */
   async since(cutoff: string, limit = 6000): Promise<SystemHealthSnapshot[]> {
     return this.getAll(undefined, {
+      rangeFilters: [{ field: 'createdAt', operator: 'gte', value: cutoff }],
+      orderBy: 'createdAt',
+      orderDirection: 'asc',
+      limit,
+    });
+  }
+
+  /**
+   * Trend penceresi — grafiğin okuduğu DAR biçim (`since`'in projeksiyonlu ikizi).
+   *
+   * Ekran tam görüntüyü yalnız EN SON satır için ister (`latest`); geçmişte üç eğri çiziliyor ve
+   * onlar için beş alan yetiyor. jsonb yolları `select`'te açılınca 5.000 satırlık bir pencere
+   * megabaytlardan kilobaytlara iner — aynı sorgu, aynı indeks, yüzde birlik yük.
+   *
+   * **Yollar snake_case:** `metrics` jsonb'si kaydedilirken anahtarları da dönüştürülüyor
+   * (`appToDb` derin çalışır), yani diskte `disk_used_pct` duruyor. Okurken `dbToApp` geri çeviriyor;
+   * burada araya girdiğimiz için diskteki adı yazmak zorundayız.
+   */
+  async trendSince(cutoff: string, limit = 6000): Promise<HealthTrendPoint[]> {
+    return this.getAllAs(HealthTrendPointSchema, undefined, {
+      select: [
+        'at:created_at',
+        'status',
+        'disk:metrics->system->>disk_used_pct',
+        'mem_used:metrics->system->>mem_used_mb',
+        'mem_total:metrics->system->>mem_total_mb',
+        'load1:metrics->system->load_avg->>0',
+        'cores:metrics->system->>cpu_count',
+      ].join(','),
       rangeFilters: [{ field: 'createdAt', operator: 'gte', value: cutoff }],
       orderBy: 'createdAt',
       orderDirection: 'asc',

@@ -64,6 +64,11 @@
  *   ✓ webhook_event       işlenmiş · DÜŞMÜŞ (hata metinli) · bekleyen · dinlenmeyen tür
  *   ✓ job_run             2 iz — adlar `apps/backend/src/jobs`'takilerle BİREBİR (uydurma ad, ekranda
  *                         hiç tazelenmeyen hayalet satır bırakır). Biri HATALI; kayıtsız iş = hiç koşmadı
+ *   ✓ system_health_snapshot 7 günlük seri (yakında 2 dk, geçmişte 30 dk çözünürlük): disk %60→%84
+ *                         tırmanıyor, 6–9 sa arası ÖLÇÜLEMEDİ. Hüküm elle yazılmaz, `healthStatusOf`
+ *                         hesaplar — yoksa seed eşikleri sınamak yerine gizlerdi
+ *   ✓ error_log           10 satır: 3 seviye · açık/çözülmüş · 1 REGRESYON (aynı parmak izinin kapalı
+ *                         ikizi). Parmak izi servisin fonksiyonundan; sayaç tek satırda kurulur
  *   ✓ settings            migration 0016/0038'de seed'li — burada tekrarlanmaz
  *   ✗ email_verifications GEÇİCİ OTP kaydı — seed'lenmez (dakikalar içinde ölür, giriş akışı üretir)
  *   ✓ bank_import         şablon + bir ekstre yüklemesi; satırlar GERÇEK okuyucudan geçer →
@@ -94,6 +99,7 @@ import { seedDiscounts } from './seed/discount';
 import { seedFeedbackRequests, seedPoints, seedProductFeedback } from './seed/feedback';
 import { seedJobRuns } from './seed/jobs';
 import { seedMoney } from './seed/money';
+import { seedErrorLog, seedSystemHealth } from './seed/observability';
 import { seedCarts, seedOrders } from './seed/orders';
 import { seedDraftCustomers, seedKisiler } from './seed/people';
 import { seedPrices } from './seed/pricing';
@@ -153,6 +159,10 @@ async function main(): Promise<void> {
   const degerlendirmeler = await seedProductFeedback(db, kisiler, varyantlar, davetler);
   await seedPoints(db, kisiler, degerlendirmeler); // puan, değerlendirmenin izine dayanır
   await seedJobRuns(db);
+  // Gözlemleme EN SONDA: sağlık görüntüsünün "son bir saatte kaç hata" alanı ile hata kaydı aynı
+  // hikâyeyi anlatıyor; hata satırları yazılmadan görüntü alınsaydı ekran kendiyle çelişirdi.
+  await seedSystemHealth(db);
+  await seedErrorLog(db);
 
   // Seed bir admin açtığı için 0002'nin "ilk giren admin olur" bootstrap'ı artık tetiklenmez.
   console.log('✓ seed tamam · operasyon yüzeyi dev bypass ile açık · gerçek hesabı yükseltmek: pnpm set-role <e-posta> admin');

@@ -43,7 +43,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 15 | `15-whatsapp.md` | WhatsApp: Zemin ve Canlı Kanal | bekliyor | 0/14 |
 | 16 | `16-talep-sikayet.md` | Talep / Şikâyet | sürüyor | 1/6 (+3 kısmi) |
 | 17 | `17-geri-bildirim-puan.md` | Geri Bildirim, Yorum ve Puan | sürüyor | 0/7 (+7 kısmi) |
-| 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 0/10 (+1 kısmi) |
+| 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/10 |
 | 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 4/7 |
 <!-- durum:son -->
 

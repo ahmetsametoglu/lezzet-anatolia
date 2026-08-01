@@ -10,7 +10,23 @@ import type { HealthStatus, SystemHealthMetrics } from '@lezzet/types';
  * **Eşikler SABİT, ayar tablosunda değil.** Operatörün ayarlayacağı bir şey değil bunlar; ayar
  * tablosuna taşımak kimsenin dokunmayacağı bir ayarın bakım borcunu ve bir ayar ekranını doğurur.
  * Değişmesi gerekirse burada değişir ve testi vardır (`data-model/operasyon.md`).
+ *
+ * **Hüküm SİNYALLERDEN türer, ayrı bir dallanmadan değil** (`healthSignals` → `healthStatusOf`).
+ * Sebebi ekranın yükümlülüğü: e-posta alarmı bilinçli olarak yokken (`OBSERVABILITY §4.1`) ekran
+ * "neden kritik" sorusunu yanıtlamak zorunda ve renk tek başına bilgi değildir. İki ayrı liste
+ * yazılsaydı — biri hüküm için, biri gerekçe için — bir gün ayrışırlardı: motor kritik der, ekran
+ * sebebi gösteremezdi. Tek liste, iki tüketici.
  */
+
+/**
+ * Toplama sıklığı (dakika) — **cron bunu kurar, ekran geri sayımını bundan çizer.**
+ *
+ * İki tüketicisi olduğu için motorda: cron ifadesini backend'de yazıp ekranda "sonraki ölçüm" için
+ * ayrıca 2 yazmak, bir gün sıklık değişince ekranın yalan söylemesi demekti. Sıklık çözünürlüğü de
+ * belirliyor: daha sık toplamak 14 günlük saklamayı katlar, daha seyrek toplamak "disk ne zaman
+ * doldu" sorusunu bulanıklaştırır.
+ */
+export const HEALTH_COLLECT_INTERVAL_MIN = 2;
 
 /** Sayılar tek yerde ve adlı: dallanmanın içine gömülü bir `90` neyi anlattığını söylemez. */
 export const HEALTH_THRESHOLDS = {
@@ -36,6 +52,14 @@ export const HEALTH_THRESHOLDS = {
    * hâlidir** — o yüzden bu `crit`.
    */
   staleCritMinutes: 10,
+  /**
+   * Kaç yeniden başlamadan sonra bu bir HABER olur. Hükmü DEĞİŞTİRMEZ (`info`): süreç şu an ayakta
+   * ve eşik uydurmak, üretimdeki her dağıtımı uyarıya çevirirdi. Ama sessiz arızanın en iyi
+   * göstergesi budur — süreç "online" görünürken gece boyu kırk kez düşüp kalkmış olabilir.
+   */
+  restartsNoticeCount: 3,
+  /** Bu süreden yeni bir çalışma süresi beklenmeyen bir yeniden başlatmadır — not, hüküm değil. */
+  rebootNoticeSec: 3600,
 } as const;
 
 /** Yükün ANLAMI çekirdek sayısına göredir: ham "2.4" bilgi değil, "2 çekirdekte 2.4" doygunluktur. */
@@ -45,48 +69,105 @@ export function loadCapacityPercent(loadAvg1: number, cpuCount: number): number 
 }
 
 /**
- * Hüküm. `crit` koşullarından BİRİ yeterse kritik; yoksa `warn` koşullarından biri yeterse uyarı.
+ * Tutan koşulun kimliği. Ekran bunu Türkçe cümleye çevirir — **metin burada YOK**: motor karar
+ * verir, dil arayüzün işidir (aynı sinyal ileride bir bildirimde başka sözcüklerle görünebilir).
+ */
+export type HealthSignalCode =
+  | 'stale'
+  | 'web-down'
+  | 'caddy-down'
+  | 'caddy-unknown'
+  | 'disk-crit'
+  | 'disk-warn'
+  | 'disk-unknown'
+  | 'mem-crit'
+  | 'mem-warn'
+  | 'swap'
+  | 'process-down'
+  | 'process-unknown'
+  | 'process-restarts'
+  | 'load'
+  | 'errors'
+  | 'failed-jobs'
+  | 'cert-crit'
+  | 'cert-warn'
+  | 'cert-unknown'
+  | 'reboot';
+
+/**
+ * Sinyalin ağırlığı. `info` HÜKME GİRMEZ: söylenmeye değer ama bir şeyin bozuk olduğunu söylemeyen
+ * gözlemler (taze yeniden başlatma, okunamayan sertifika) buraya düşer. Onları uyarıya çevirmek,
+ * uyarının değerini düşürürdü — sürekli uyaran bir panel, gerçekten uyardığında okunmaz.
+ */
+export type HealthSignalLevel = 'crit' | 'warn' | 'info';
+
+export interface HealthSignal {
+  code: HealthSignalCode;
+  level: HealthSignalLevel;
+}
+
+/**
+ * Tutan bütün koşullar, ekranın okuyacağı sırayla: önce izlemenin kendisi, sonra dışarıdan
+ * erişilebilirlik, sonra kaynaklar, en sonda notlar. Sıra bilinçli — hüküm şeridinin ilk satırı
+ * en çok şey söyleyen satır olmalı.
+ *
+ * `ageMinutes` verilirse bayatlık da listeye girer; çağıran onu görüntünün damgasından hesaplar.
+ */
+export function healthSignals(metrics: SystemHealthMetrics, ageMinutes?: number): HealthSignal[] {
+  const t = HEALTH_THRESHOLDS;
+  const { system: s, processes, services, app } = metrics;
+  const out: HealthSignal[] = [];
+  const add = (code: HealthSignalCode, level: HealthSignalLevel) => out.push({ code, level });
+
+  // İzleme durduysa aşağıdaki her değer geçmişe aittir; bu yüzden ilk satır.
+  if (ageMinutes !== undefined && ageMinutes >= t.staleCritMinutes) add('stale', 'crit');
+
+  // Dışarıdan erişilebilirlik: süreçler ne görünürse görünsün, ters vekil düşükse site kapalıdır.
+  if (!services.webUp) add('web-down', 'crit');
+  // `false` = systemd "etkin değil" DEDİ · `null` = SORAMADIK. İkisi aynı değere düşerse ölçüm
+  // boşluğu arıza gibi okunur — disk ve pm2 için 30.07'de düzeltilen hatanın Caddy'de kalmış hâliydi.
+  if (services.caddyActive === false) add('caddy-down', 'crit');
+  else if (services.caddyActive === null) add('caddy-unknown', 'warn');
+
+  // Disk: `null` = ölçülemedi. Sıfır sayılsaydı eşiklerden `ok` çıkardı — bozuk ölçüm, sağlıklı disk.
+  if (s.diskUsedPct === null) add('disk-unknown', 'warn');
+  else if (s.diskUsedPct >= t.diskCritPct) add('disk-crit', 'crit');
+  else if (s.diskUsedPct >= t.diskWarnPct) add('disk-warn', 'warn');
+
+  if (s.memAvailableMb < t.memCritAvailableMb) add('mem-crit', 'crit');
+  else if (s.memAvailableMb < t.memWarnAvailableMb) add('mem-warn', 'warn');
+
+  const swapRatio = s.swapTotalMb > 0 ? s.swapUsedMb / s.swapTotalMb : 0;
+  if (swapRatio >= t.swapWarnRatio) add('swap', 'warn');
+
+  if (processes.pm2 === null) add('process-unknown', 'warn');
+  else if (processes.pm2.some((p) => p.status !== 'online')) add('process-down', 'crit');
+  else if (processes.pm2.some((p) => p.restarts >= t.restartsNoticeCount)) add('process-restarts', 'info');
+
+  if (loadCapacityPercent(s.loadAvg[0], s.cpuCount) > 100) add('load', 'warn');
+
+  if (app.errorLogsLastHour > t.errorsWarnPerHour) add('errors', 'warn');
+  // Düşen cron: bir tur bile düştüyse haberdir — eşik yok, varlığı yeter.
+  if (app.failedJobsLastHour > 0) add('failed-jobs', 'warn');
+
+  if (services.certDaysLeft === null) add('cert-unknown', 'info');
+  else if (services.certDaysLeft < t.certCritDays) add('cert-crit', 'crit');
+  else if (services.certDaysLeft < t.certWarnDays) add('cert-warn', 'warn');
+
+  if (s.uptimeSec < t.rebootNoticeSec) add('reboot', 'info');
+
+  return out;
+}
+
+/**
+ * Hüküm. `crit` sinyallerinden BİRİ yeterse kritik; yoksa `warn` sinyallerinden biri yeterse uyarı.
  *
  * `crit` = servis ya da kaynak ARIZASI (bir şey çalışmıyor / çalışmak üzere); `warn` = baskı altında
  * ama ayakta. Ayrım ekranın renk kodudur ve karıştırılmamalı: her uyarıyı kritik saymak, gerçekten
  * kritik olanı görünmez yapar.
- *
- * `ageMinutes` verilirse bayatlık da hükme girer — çağıran onu görüntünün damgasından hesaplar.
  */
 export function healthStatusOf(metrics: SystemHealthMetrics, ageMinutes?: number): HealthStatus {
-  const t = HEALTH_THRESHOLDS;
-  const { system: s, processes, services, app } = metrics;
-
-  if (ageMinutes !== undefined && ageMinutes >= t.staleCritMinutes) return 'crit';
-
-  const crit =
-    // "online" olmayan süreç: web ya da backend fiilen çalışmıyor. `null` (okunamadı) BURAYA girmez —
-    // bilinmemek arıza değildir; ama sessizce "sorun yok"a da düşmez, aşağıda `warn` üretir.
-    (processes.pm2?.some((p) => p.status !== 'online') ?? false) ||
-    (s.diskUsedPct !== null && s.diskUsedPct >= t.diskCritPct) ||
-    s.memAvailableMb < t.memCritAvailableMb ||
-    !services.webUp ||
-    !services.caddyActive ||
-    // `null` = ölçülemedi; bilinmemek bir arıza değil (ekran "bilinmiyor" der).
-    (services.certDaysLeft !== null && services.certDaysLeft < t.certCritDays);
-  if (crit) return 'crit';
-
-  const swapRatio = s.swapTotalMb > 0 ? s.swapUsedMb / s.swapTotalMb : 0;
-  const warn =
-    // **ÖLÇÜM BOŞLUĞU kendi başına uyarıdır.** Ölçülemeyen bir metrik sıfır sayılırsa hüküm `ok`
-    // çıkar ve bozuk bir ölçüm sağlıklı bir sistem gibi okunur — ilk yazımdaki hata tam buydu
-    // (30.07 denetimi). "Göremiyorum" ile "sorun yok" aynı şey değildir; e-posta alarmı bilinçli
-    // olarak yokken (§4.1) ekranın bunu söylemesi şart.
-    s.diskUsedPct === null ||
-    processes.pm2 === null ||
-    (s.diskUsedPct >= t.diskWarnPct) ||
-    s.memAvailableMb < t.memWarnAvailableMb ||
-    swapRatio >= t.swapWarnRatio ||
-    loadCapacityPercent(s.loadAvg[0], s.cpuCount) > 100 ||
-    app.errorLogsLastHour > t.errorsWarnPerHour ||
-    // Düşen cron: bir tur bile düştüyse haberdir — eşik yok, varlığı yeter.
-    app.failedJobsLastHour > 0 ||
-    (services.certDaysLeft !== null && services.certDaysLeft < t.certWarnDays);
-
-  return warn ? 'warn' : 'ok';
+  const signals = healthSignals(metrics, ageMinutes);
+  if (signals.some((x) => x.level === 'crit')) return 'crit';
+  return signals.some((x) => x.level === 'warn') ? 'warn' : 'ok';
 }

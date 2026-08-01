@@ -38,7 +38,8 @@ export type NavIconName =
   | 'talepler'
   | 'geribildirim'
   | 'whatsapp'
-  | 'ayarlar';
+  | 'ayarlar'
+  | 'sistem';
 
 const NAV_PATHS: Record<NavIconName, ReactNode> = {
   panel: (
@@ -119,6 +120,15 @@ const NAV_PATHS: Record<NavIconName, ReactNode> = {
     <>
       <circle cx="12" cy="12" r="3" />
       <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
+    </>
+  ),
+  // Çerçeve içinde NABIZ (tasarım): sistem ekranı bir monitör değil, sağlık göstergesi. Dişli
+  // (Ayarlar) ile aynı bölümde durduğu için biçimi belirgin ayrışmalı.
+  sistem: (
+    <>
+      <rect x="2" y="4" width="20" height="13" rx="2" />
+      <path d="M6 10.5h3l1.6-3.2 2.2 6.4 1.4-3.2H18" />
+      <path d="M8 21h8M12 17v4" />
     </>
   ),
 };
