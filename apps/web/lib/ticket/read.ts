@@ -16,7 +16,15 @@ import { allowedTicketTransitions, canTriggerReturn, isReturnBound } from '@lezz
 import { resolveLocalizedText, type KeysetCursor, type Page, type Ticket, type TicketMessage } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { privateReadUrls } from '@lezzet/storage';
-import type { CustomerTicketView, StaffTicketDetail, TicketMessageView, TicketOrderRef, TicketQueueItem, TicketReturnOutcome } from './ticket-types';
+import type {
+  CustomerTicketSummary,
+  CustomerTicketView,
+  StaffTicketDetail,
+  TicketMessageView,
+  TicketOrderRef,
+  TicketQueueItem,
+  TicketReturnOutcome,
+} from './ticket-types';
 
 /**
  * Talep okumaları (16.1) — **uygulama katmanı orkestrasyonu**: motor karar verir, servisler satır
@@ -103,9 +111,39 @@ async function toMessageView(message: TicketMessage): Promise<TicketMessageView>
 const toMessageViews = (messages: readonly TicketMessage[]): Promise<TicketMessageView[]> =>
   Promise.all(messages.map(toMessageView));
 
-/** Müşterinin "Taleplerim" listesi — keyset sayfalı (talep sayısı veriyle büyür). */
-export function listCustomerTickets(customerId: string, cursor?: KeysetCursor, limit?: number): Promise<Page<Ticket>> {
-  return new TicketService(serviceDb()).listByCustomer(customerId, cursor, limit);
+/**
+ * Müşterinin "Taleplerim" listesi (08.6) — keyset sayfalı (talep sayısı veriyle büyür).
+ *
+ * Ham `ticket` satırı yerine **kuyruk görünümünden** okur: tasarımın kartta gösterdiği iki bağlam —
+ * "son mesaj: bugün" ve "LZA-2451" — yalnız orada türetilmiş hâlde duruyor. Ham satırdan okumak,
+ * sayfa başına bir sipariş turu + talep başına bir mesaj turu (N+1) demekti.
+ *
+ * Sıra da oradan geliyor ve müşteri için de doğru: **son mesaja göre**, yani az önce cevaplanan
+ * talep başa çıkar. Açılış tarihine göre sıralasaydık, cevap bekleyen taze talep eski bir kaydın
+ * altında kalırdı.
+ *
+ * Görünümün personel alanları (`customerName`, `handledBy`, `lastMessageBody`) BURADA DÜŞER —
+ * müşteri tipine hiç girmezler. Sızıntı riski taşımayanları bile taşımıyoruz: bir gün eklenecek
+ * gerçek bir iç alanın önündeki tek engel bu ayrımın kendisi.
+ */
+export async function listCustomerTickets(
+  customerId: string,
+  cursor?: KeysetCursor,
+  limit?: number,
+): Promise<Page<CustomerTicketSummary>> {
+  const page = await new TicketQueueService(serviceDb()).list({ customerId }, cursor, limit);
+  return {
+    rows: page.rows.map((row) => ({
+      id: row.id,
+      type: row.type,
+      status: row.status,
+      subject: row.subject,
+      createdAt: row.createdAt,
+      lastMessageAt: row.lastMessageAt,
+      orderReferenceNo: row.orderReferenceNo,
+    })),
+    nextCursor: page.nextCursor,
+  };
 }
 
 /**

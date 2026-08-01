@@ -1,0 +1,194 @@
+{
+  "tr": {
+    "title": "Taleplerim",
+    "backToAccount": "← Hesabım",
+    "backToList": "← Taleplerim",
+    "newTicket": "+ Bize yazın",
+    "empty": {
+      "title": "Talebiniz yok",
+      "body": "Bir sorunuz ya da sorununuz olursa buradayız.",
+      "cta": "Bize yazın"
+    },
+    "status": {
+      "open": "Aldık, sıradayız",
+      "in_progress": "İlgileniyoruz",
+      "resolved": "Çözüldü"
+    },
+    "type": {
+      "damaged": "Bozuk / hasarlı",
+      "missing": "Eksik geldi",
+      "question": "Soru",
+      "other": "Diğer"
+    },
+    "noOrder": "siparişsiz",
+    "lastMessage": "son mesaj: {when}",
+    "today": "bugün",
+    "orderBound": "{ref} siparişine bağlı",
+    "reply": {
+      "placeholder": "Cevap yazın…",
+      "send": "Gönder",
+      "sending": "Gönderiliyor…",
+      "photo": "Fotoğraf ekle",
+      "removePhoto": "Fotoğrafı kaldır",
+      "failed": "Mesaj gönderilemedi, tekrar deneyin.",
+      "photoFailed": "Fotoğraf yüklenemedi."
+    },
+    "refunded": "↩ {amount} iade edildi — sipariş detayında da görünür",
+    "reopenNote": "Sorun devam ediyorsa yazışmaya mesaj yazmanız yeterli — talep kendiliğinden yeniden açılır.",
+    "loadMore": "Daha eski talepler ↓",
+    "loading": "Yükleniyor…",
+    "photoAlt": "Talep fotoğrafı",
+    "new": {
+      "title": "Sorun bildir",
+      "generalTitle": "Bize yazın",
+      "orderQuestion": "Bir siparişle mi ilgili?",
+      "yes": "Evet, siparişimle ilgili",
+      "no": "Hayır, başka bir konu",
+      "pickOrder": "Hangi sipariş?",
+      "noOrders": "Henüz siparişiniz yok — doğrudan yazabilirsiniz.",
+      "items": "Hangi ürünlerle ilgili?",
+      "bundleLabel": "paket",
+      "problem": "Sorun ne?",
+      "describe": "Anlatın",
+      "describePlaceholder": "Ne olduğunu birkaç cümleyle anlatın.",
+      "photo": "Fotoğraf",
+      "photoHint": "isteğe bağlı, çözümü hızlandırır",
+      "addPhoto": "Fotoğraf ekle",
+      "submit": "Talebi gönder",
+      "submitting": "Gönderiliyor…",
+      "note": "Talebinizi aldığımızda ve yanıtladığımızda e-posta ile haber veririz.",
+      "failed": "Talep gönderilemedi, tekrar deneyin.",
+      "sentTitle": "Aldık",
+      "sentBody": "Cevabımızı e-posta ile bildireceğiz.",
+      "sentCta": "Talebi aç"
+    }
+  },
+  "fr": {
+    "title": "Mes demandes",
+    "backToAccount": "← Mon compte",
+    "backToList": "← Mes demandes",
+    "newTicket": "+ Écrivez-nous",
+    "empty": {
+      "title": "Aucune demande",
+      "body": "Si vous avez une question ou un souci, nous sommes là.",
+      "cta": "Écrivez-nous"
+    },
+    "status": {
+      "open": "Reçue, en attente",
+      "in_progress": "En cours",
+      "resolved": "Résolue"
+    },
+    "type": {
+      "damaged": "Abîmé / endommagé",
+      "missing": "Article manquant",
+      "question": "Question",
+      "other": "Autre"
+    },
+    "noOrder": "sans commande",
+    "lastMessage": "dernier message : {when}",
+    "today": "aujourd'hui",
+    "orderBound": "liée à la commande {ref}",
+    "reply": {
+      "placeholder": "Écrivez votre réponse…",
+      "send": "Envoyer",
+      "sending": "Envoi…",
+      "photo": "Ajouter une photo",
+      "removePhoto": "Retirer la photo",
+      "failed": "Message non envoyé, réessayez.",
+      "photoFailed": "Photo non envoyée."
+    },
+    "refunded": "↩ {amount} remboursés — visible aussi dans le détail de la commande",
+    "reopenNote": "Si le problème persiste, il suffit d'écrire un message — la demande se rouvre d'elle-même.",
+    "loadMore": "Demandes plus anciennes ↓",
+    "loading": "Chargement…",
+    "photoAlt": "Photo de la demande",
+    "new": {
+      "title": "Signaler un problème",
+      "generalTitle": "Écrivez-nous",
+      "orderQuestion": "Est-ce lié à une commande ?",
+      "yes": "Oui, à ma commande",
+      "no": "Non, autre sujet",
+      "pickOrder": "Quelle commande ?",
+      "noOrders": "Vous n'avez pas encore de commande — écrivez-nous directement.",
+      "items": "Quels articles sont concernés ?",
+      "bundleLabel": "coffret",
+      "problem": "Quel est le problème ?",
+      "describe": "Expliquez-nous",
+      "describePlaceholder": "Racontez en quelques phrases ce qui s'est passé.",
+      "photo": "Photo",
+      "photoHint": "facultatif, accélère la résolution",
+      "addPhoto": "Ajouter une photo",
+      "submit": "Envoyer la demande",
+      "submitting": "Envoi…",
+      "note": "Nous vous préviendrons par e-mail à la réception et à la réponse.",
+      "failed": "Demande non envoyée, réessayez.",
+      "sentTitle": "Bien reçue",
+      "sentBody": "Nous vous répondrons par e-mail.",
+      "sentCta": "Ouvrir la demande"
+    }
+  },
+  "de": {
+    "title": "Meine Anfragen",
+    "backToAccount": "← Mein Konto",
+    "backToList": "← Meine Anfragen",
+    "newTicket": "+ Schreiben Sie uns",
+    "empty": {
+      "title": "Keine Anfragen",
+      "body": "Wenn Sie eine Frage oder ein Problem haben, sind wir für Sie da.",
+      "cta": "Schreiben Sie uns"
+    },
+    "status": {
+      "open": "Erhalten, in Bearbeitung geplant",
+      "in_progress": "Wir kümmern uns darum",
+      "resolved": "Gelöst"
+    },
+    "type": {
+      "damaged": "Beschädigt",
+      "missing": "Fehlt",
+      "question": "Frage",
+      "other": "Sonstiges"
+    },
+    "noOrder": "ohne Bestellung",
+    "lastMessage": "letzte Nachricht: {when}",
+    "today": "heute",
+    "orderBound": "gehört zur Bestellung {ref}",
+    "reply": {
+      "placeholder": "Antwort schreiben…",
+      "send": "Senden",
+      "sending": "Wird gesendet…",
+      "photo": "Foto hinzufügen",
+      "removePhoto": "Foto entfernen",
+      "failed": "Nachricht nicht gesendet, bitte erneut versuchen.",
+      "photoFailed": "Foto nicht hochgeladen."
+    },
+    "refunded": "↩ {amount} erstattet — auch in den Bestelldetails sichtbar",
+    "reopenNote": "Falls das Problem weiterbesteht, schreiben Sie einfach eine Nachricht — die Anfrage wird von selbst wieder geöffnet.",
+    "loadMore": "Ältere Anfragen ↓",
+    "loading": "Wird geladen…",
+    "photoAlt": "Foto zur Anfrage",
+    "new": {
+      "title": "Problem melden",
+      "generalTitle": "Schreiben Sie uns",
+      "orderQuestion": "Geht es um eine Bestellung?",
+      "yes": "Ja, um meine Bestellung",
+      "no": "Nein, anderes Thema",
+      "pickOrder": "Welche Bestellung?",
+      "noOrders": "Sie haben noch keine Bestellung — schreiben Sie uns direkt.",
+      "items": "Um welche Artikel geht es?",
+      "bundleLabel": "Paket",
+      "problem": "Was ist das Problem?",
+      "describe": "Erzählen Sie es uns",
+      "describePlaceholder": "Beschreiben Sie in ein paar Sätzen, was passiert ist.",
+      "photo": "Foto",
+      "photoHint": "optional, beschleunigt die Lösung",
+      "addPhoto": "Foto hinzufügen",
+      "submit": "Anfrage senden",
+      "submitting": "Wird gesendet…",
+      "note": "Wir melden uns per E-Mail, sobald wir Ihre Anfrage erhalten und beantwortet haben.",
+      "failed": "Anfrage nicht gesendet, bitte erneut versuchen.",
+      "sentTitle": "Erhalten",
+      "sentBody": "Wir antworten Ihnen per E-Mail.",
+      "sentCta": "Anfrage öffnen"
+    }
+  }
+}

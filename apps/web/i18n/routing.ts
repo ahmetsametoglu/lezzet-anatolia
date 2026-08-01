@@ -42,6 +42,9 @@ export const routing = defineRouting({
     '/orders/[reference]': { fr: '/commandes/[reference]', de: '/bestellungen/[reference]', tr: '/siparislerim/[reference]' },
     '/account/notifications': { fr: '/compte/notifications', de: '/konto/benachrichtigungen', tr: '/hesap/bildirim-tercihleri' },
     '/support': { fr: '/assistance', de: '/anfrage', tr: '/talep' },
+    // Talep açma (08.6). Statik segment `[ticket]`ten önce çözülür — "new" adında bir talep kimliği
+    // olamaz (kimlikler uuid), yani çakışma yapısal olarak imkânsız.
+    '/support/new': { fr: '/assistance/nouvelle', de: '/anfrage/neu', tr: '/talep/yeni' },
     // Talep detayı — cevap/durum maillerinin hedefi (14.7 · 16.4). Sayfanın kendisi 16.2'de doğar;
     // adres eşlemesi burada durur çünkü URL'in tek kaynağı bu tablodur.
     '/support/[ticket]': { fr: '/assistance/[ticket]', de: '/anfrage/[ticket]', tr: '/talep/[ticket]' },

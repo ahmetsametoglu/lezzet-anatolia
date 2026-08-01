@@ -178,6 +178,41 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
 
+- **TALEP EKRANI — iki sapma (01.08, `build/08` 08.6).**
+  **(a) Mobil başlığa "+ Bize yazın" eklendi.** `Musteri - Talep.dc.html` bu düğmeyi yalnız web
+  başlığında çiziyor; mobil liste karesinde başlığın sağ yuvası boş. Sonuç bir çıkmaz sokak: yeni
+  talep girişi mobilde YALNIZ boş listenin davet kartında var, yani bir talebi olan müşterinin
+  ikincisini açacak yolu yok. Yuva zaten ayrılmış durumda (başlığın ortada kalması ona bağlı) —
+  web'in düğmesini oraya koymak en küçük dürüst tamamlama. Yeni bir öğe icat edilmedi.
+  **(b) "LZA-2451'e bağlı" → "LZA-2451 siparişine bağlı".** Tasarımın Türkçe metni referansa
+  doğrudan ek getiriyor; Türkçede o ek sayının **telaffuzuna** bağlıdır (2451 "…bir" → `-e`, 2450
+  "…elli" → `-ye`) ve referanstan üretilemez. Ek sabit bir kelimeye ("sipariş") taşındı — üç dilde
+  de dilbilgisel olarak doğru ve kalıp tek: `{ref} siparişine bağlı` · `liée à la commande {ref}` ·
+  `gehört zur Bestellung {ref}`.
+  **Sapma OLMAYAN, kasten uygulanmayan bir şey:** tasarımın "Yeniden aç ve yaz" düğmesi kodda bir
+  düğme değil bir cümle. Motor müşteri yazınca kapanmış talebi zaten açıyor
+  (`statusAfterCustomerReply`); ayrı düğme olsaydı yazıp basmayı unutan müşterinin mesajı kimsenin
+  bakmadığı kapalı bir talepte kalırdı. Tasarımın kendi açıklama cümlesi ekranda duruyor.
+
+- **ÜLKE SEÇİCİ (K38) BİR ALAN DEĞİL, BELİRSİZLİK ÇÖZÜCÜSÜ (01.08, kullanıcı kararı).**
+  Tasarım posta kodunun **yanına** koşullu bir ülke seçici koyuyor (`K38`, `musteri-yer-ekseni.md
+  §6`); üç ekranda çizili (başlık hapı, "Nereye getirelim?" şeridi, katalog/ürün daveti). O alan
+  kalkıyor: **müşteri yalnız posta kodunu yazar, ülke veriden türer.** Kullanıcı: *"Ülkeye gireyim
+  sonra posta kodunu gireyim çok mantıklı değil. Hatta suistimale bile açık."*
+  **İki gerekçe.** (1) *Yanlış soru:* "67000 dünyada hangi ülkede?" sorusunun cevabı yok — FR ve DE
+  ikisi de 5 haneli kod kullanır, aralıklar örtüşür. Bizim sorumuz "67000 BİZİM hangi bölgemizde?"
+  ve cevabı kendi `delivery_zone_postal_code` tablomuzda, küçük bir kümede duruyor. (2) *Vergi
+  beyanı riski:* serbestçe seçilen ülke KDV oranını ve Alman B2B muafiyetini etkiler (`DOMAIN §5`);
+  müşterinin yazdığı bir alanın vergi sonucu doğurması kabul edilemez.
+  **Tasarımın "koşullu görünür" kuralı korunuyor, koşulu değişiyor:** bir *alan* olmaktan çıkıp bir
+  *belirsizlik hâli* oluyor. Yalnız iki durumda ve yalnız ikinci ülke açıldığında sorulur — aynı kod
+  iki ülkenin bölgesinde (`ambiguous`), ya da kod hiçbir bölgede yok ve birden çok kargo deposu var
+  (`outside`). Bugün (tek ülke) hiçbiri oluşmaz, seçici hiç çizilmez — tasarımın öngördüğü boş hâlle
+  aynı yere çıkıyor. Sitenin dili yalnız ön-seçim ipucudur: Fransızca Belçika/İsviçre'de de
+  konuşulur, Strasbourg'daki Türk müşteri `tr` seçer.
+  **Bağlı istek:** ülkesiz çözüm kapısı henüz yok — `matchZones` ülkeyi zorunlu istiyor, çağıran
+  `'FR'` sabitini yazıyor. Talep `docs/build/yer-ekseni-arka-uc-talebi.md §1`'de.
+
 - **UYDURULAN TİP JETONU — sessizce yanlış punto (30.07, kullanıcı ekran görüntüsüyle yakaladı).**
   Sipariş ekranlarında `text-h3` ve `text-h4` yazmışım; **ikisi de `globals.css`'te YOK.** Tailwind
   tanımsız jeton için CSS üretmiyor, o yüzden başlıklar ebeveyninin puntosunu miras alıyordu — hata

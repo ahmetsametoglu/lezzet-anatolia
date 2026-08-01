@@ -71,6 +71,19 @@ interface SiteFrameProps {
     /** Sağ uçtaki öğe: "Çıkış yap" · "← Kataloğa dön" · "↻ Tekrar sipariş". Sayfanın kararı. */
     right?: ReactNode;
   };
+  /**
+   * **Sayfa EKRANI DOLDURUR** — yazışma yüzeyleri için (08.6).
+   *
+   * Normalde gövde içeriği kadar uzar ve altında footer durur; bu doğru davranıştır, sayfalar
+   * okunmak için var. Ama yazışma bir SAYFA değil bir ALAN: cevap kutusu ekranın dibinde durmalı,
+   * içeriğin bittiği yerde değil. Kısa bir yazışmada kutu ekranın ortasında asılı kalıyordu.
+   *
+   * Üç şey birlikte değişir: dış kap `h-screen` olur (en az değil, TAM), `main` kalanı alır ve
+   * kendi içinde kaydırılabilir hale gelir (`min-h-0` olmadan flex çocuğu küçülmez), **footer
+   * çizilmez**. Footer'ın gitmesi bir kayıp değil bağlam kararı: gelen kutusunun altında site
+   * bağlantıları aranmaz, ve dururken kaydırılabilir alandan yer çalardı.
+   */
+  fill?: boolean;
   children: ReactNode;
 }
 
@@ -100,7 +113,7 @@ function tabClass(key: AccountTab, active: AccountTab | undefined, base = ''): s
   return [base, 'border-b-2 pb-0.5', active === key ? 'border-olive text-olive' : 'border-transparent'].filter(Boolean).join(' ');
 }
 
-export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default', back, accountChrome, children }: SiteFrameProps) {
+export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default', back, accountChrome, fill, children }: SiteFrameProps) {
   const t = messages[locale];
   const isMobile = device === 'mobile';
   // Mobil detayda çerçevenin tamamı sadeleşir: şerit yok, arama yok, footer tek satır.
@@ -110,7 +123,7 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
   const bandItems = isMobile ? [t.announcement.mobile] : [t.announcement.cold, t.announcement.local, t.announcement.shipping];
 
   return (
-    <div className="flex min-h-screen flex-col bg-cream text-ink">
+    <div className={`flex flex-col bg-cream text-ink ${fill ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       {/* K11 · Duyuru şeridi — mobil detayda gösterilmez, yerini üst bar alır. */}
       {!isMobileDetail && !account && (
       <div className="bg-olive px-4 py-2 font-sans text-note font-medium text-cream">
@@ -151,9 +164,9 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
                 <Link href="/orders" className={tabClass('orders', account.nav, 'cursor-pointer transition-colors hover:text-olive')}>
                   {t.accountNav.orders}
                 </Link>
-                {/* BEKLEYEN(08.6): talep ekranı yok — bağ verilseydi 404'e düşerdi. Sekme yerinde
-                    durur ki hesap alanının üç bölümü olduğu görünsün. */}
-                <span className={tabClass('support', account.nav)}>{t.accountNav.support}</span>
+                <Link href="/support" className={tabClass('support', account.nav, 'cursor-pointer transition-colors hover:text-olive')}>
+                  {t.accountNav.support}
+                </Link>
               </nav>
             ) : account.back ? (
               <Link href={account.back.href} className="cursor-pointer font-sans text-body-sm font-bold text-olive hover:text-olive-dark">
@@ -226,11 +239,15 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
         </header>
       )}
 
-      <main className={`${SHELL} flex flex-1 flex-col`}>{children}</main>
+      {/* `min-h-0`: flex çocuğu varsayılan olarak içeriğinden küçülmez — o olmadan içerideki
+          kaydırılabilir alan taşar ve sayfanın kendisi kaydırılır (yani kutu yine dipte durmaz). */}
+      <main className={`${SHELL} flex flex-1 flex-col ${fill ? 'min-h-0' : ''}`}>{children}</main>
 
       {/* K16 · Footer — zemin tam genişlikte, içerik kabuk içinde (geniş ekranda zemin kesilmez).
           Mobil detayda tek satıra iner: o ekranın altı sabit satın alma çubuğuna ayrılmıştır,
-          altına üç sütunluk bir footer yığmak çubuğu ekranın dışına iter. */}
+          altına üç sütunluk bir footer yığmak çubuğu ekranın dışına iter.
+          `fill` yüzeylerinde HİÇ çizilmez — gerekçe prop'un künyesinde. */}
+      {!fill && (
       <footer className="bg-ink text-neutral-400">
         {isMobileDetail ? (
           <div className="flex items-center justify-between px-4 py-4 font-sans text-micro">
@@ -267,6 +284,7 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
         </div>
         )}
       </footer>
+      )}
     </div>
   );
 }

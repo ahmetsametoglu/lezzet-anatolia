@@ -3,6 +3,7 @@
 import type { OrderTimelineStep } from '@lezzet/domain-core';
 import { formatDeliveryDate, formatOrderDate, formatPrice } from '@/lib/storefront/format';
 import { buttonClass } from '@/components/customer/ui/button';
+import { Link } from '@/i18n/navigation';
 import type { CustomerOrderDetail, CustomerOrderDetailLine } from '@/lib/order/customer-orders';
 import type { DetailViewProps } from '../detail-types';
 
@@ -300,20 +301,20 @@ function PaymentPill({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
  * "Bir sorun mu var?" — tasarımda beyaz kart DEĞİL, **cream-deep zeminli** blok ve içinde gerçek
  * bir birincil düğme. Ton farkı bilinçli: bu bir bilgi kartı değil, bir davet.
  *
- * BEKLEYEN(08.6): düğme henüz bir yere gitmiyor — talep ekranı yok, bağ verilseydi 404'e düşerdi.
- * Servis tarafı hazır (`lib/ticket/read.ts`). Devre dışı `<button>` kullanıldı, soluk `<span>`
- * değil: `opacity` bir zeytin düğmeyi etkin gibi okutuyor (29.07 dersi) ve klavye/ekran okuyucu
- * ancak gerçek `disabled` ile doğru bilgilendirilir.
+ * Düğme talep formuna **siparişin kimliğiyle** gider (08.6): form o siparişin kalemlerini hazır
+ * listeler ve müşteri hangi ürünlerden şikâyetçi olduğunu işaretler. Kimlik sorgu dizesinde taşınır,
+ * yolda değil — talep açma tek bir sayfadır ve siparişli/siparişsiz iki ayrı rota kurmak aynı formu
+ * ikiye bölerdi.
  */
-export function HelpCard({ t }: Pick<DetailViewProps, 't'>) {
+export function HelpCard({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
   return (
     <section className="flex flex-col gap-2 rounded-[16px] bg-cream-deep px-5.5 py-4.5">
       {/* Tasarımda 16px Lora 600 → `text-body` (15px); `text-lead` 18px olurdu ve blok kart gibi okunurdu. */}
       <span className="font-serif text-body font-semibold leading-tight text-ink">{t.helpTitle}</span>
       <span className="font-sans text-note leading-relaxed text-body">{t.helpBodyLong}</span>
-      <button type="button" disabled className={buttonClass({ fullWidth: true })}>
+      <Link href={{ pathname: '/support/new', query: { order: order.id } }} className={buttonClass({ fullWidth: true })}>
         {t.reportIssue}
-      </button>
+      </Link>
     </section>
   );
 }

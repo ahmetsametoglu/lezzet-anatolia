@@ -76,14 +76,10 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
               <span>{t.linkOrders}</span>
               <span className="text-olive">→</span>
             </Link>
-            {/* BEKLEYEN(08.6): talep/şikâyet EKRANI — bağ verilseydi 404'e düşerdi. Referans 16.1'di,
-                yanlıştı: 16.1 (Ticket servisleri) bitti ve okuma kapısı da hazır
-                (`lib/ticket/read.ts` → `listCustomerTickets`). Eksik olan tek şey müşteri ekranı,
-                o da 08.6. Yani bunu bekleten dış modül değil, kendi sıramız. */}
-            <span className="flex items-center justify-between gap-3 font-sans text-body-sm font-bold text-muted">
+            <Link href="/support" className="flex items-center justify-between gap-3 font-sans text-body-sm font-bold text-ink transition-colors hover:text-olive">
               <span>{t.linkSupport}</span>
-              <span className="font-normal">{t.soon}</span>
-            </span>
+              <span className="text-olive">→</span>
+            </Link>
           </Card>
         </div>
       </div>

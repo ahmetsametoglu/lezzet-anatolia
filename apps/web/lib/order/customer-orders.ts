@@ -114,6 +114,18 @@ export async function listCustomerOrders(
  */
 export interface CustomerOrderDetailLine {
   id: string;
+  /**
+   * Satırın ARKASINDAKİ gerçek sipariş kalemleri (08.6).
+   *
+   * Varyant satırında tek eleman (`id`nin kendisi); PAKET satırında **birden çok** — paket ekranda
+   * tek satıra katlanıyor ama veride kendi kalemleridir ve `id` orada sentetik (`bundle:…`).
+   * Talep formu "hangi ürünlerle ilgili" sorusunu bu kümeyle cevaplıyor: müşteri paketi işaretlerse
+   * paketin bütün kalemleri işaretlenmiş olur, çünkü şikâyet ettiği şey paketin kendisidir.
+   *
+   * Ekranın kendi başına türetemeyeceği tek bilgi bu: katlama burada yapılıyor ve `bundle:` öneki
+   * geri döndürülemez.
+   */
+  orderItemIds: readonly string[];
   /** `bundle` satırında paket adı, `variant` satırında ürün adı. */
   name: string;
   unit: string;
@@ -222,6 +234,7 @@ export async function getCustomerOrderDetail(
     const totalCents = own.reduce((sum, i) => sum + toCents(moneyOf(i)), 0);
     lines.push({
       id: `bundle:${bundle.id}`,
+      orderItemIds: own.map((i) => i.id),
       name: bundle.name,
       unit: '',
       bundle: { itemCount: bundle.items.length, contents: bundle.items.map((c) => c.name) },
@@ -240,6 +253,7 @@ export async function getCustomerOrderDetail(
     if (grouped.has(item.id)) continue;
     lines.push({
       id: item.id,
+      orderItemIds: [item.id],
       name: lookup.get(item.variantId)?.name ?? '',
       unit: lookup.get(item.variantId)?.unit ?? '',
       bundle: null,

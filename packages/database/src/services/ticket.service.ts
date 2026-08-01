@@ -184,6 +184,14 @@ export interface TicketQueueFilter {
   hasOrder?: boolean;
   /** Kapanmışları gizle — kuyruğun varsayılan hâli. */
   openOnly?: boolean;
+  /**
+   * Tek müşterinin talepleri — müşterinin kendi "Taleplerim" listesi (08.6).
+   *
+   * Görünüm zaten `customer_id` taşıyor; süzgeç eksikti. Müşteri listesi bu görünümden okunuyor
+   * çünkü tasarımın istediği iki alan (son mesajın anı, siparişin numarası) yalnız burada türetilmiş
+   * hâlde duruyor — ham `ticket` satırından okumak sayfa başına iki ek tur demekti.
+   */
+  customerId?: string;
 }
 
 /**
@@ -210,7 +218,7 @@ export class TicketQueueService extends BaseDbService<TicketQueueRow, never, nev
     const orFilters: string[] = [];
     if (filter.openOnly) orFilters.push('status.eq.open,status.eq.in_progress');
     return this.getPage(
-      { status: filter.status, type: filter.type, awaitingReply: filter.awaitingReply },
+      { status: filter.status, type: filter.type, awaitingReply: filter.awaitingReply, customerId: filter.customerId },
       {
         orderBy: 'lastMessageAt',
         orderDirection: 'desc',

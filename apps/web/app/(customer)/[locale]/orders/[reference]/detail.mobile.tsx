@@ -25,7 +25,7 @@ export function DetailMobile({ t, listT, locale, order }: DetailViewProps) {
       <TimelineStrip t={t} order={order} />
       <ItemsCard t={t} locale={locale} order={order} title={t.itemsTitle} />
       <SummaryCard t={t} locale={locale} order={order} title={t.amountTitle} />
-      <HelpCard t={t} />
+      <HelpCard t={t} order={order} />
 
       <ReorderButton locale={locale} orderId={order.id} label={t.reorder} busyLabel={t.reordering} fullWidth />
     </div>

@@ -34,7 +34,7 @@ export function DetailDesktop({ t, listT, locale, order }: DetailViewProps) {
       <div className="flex flex-col gap-3.5">
         <DeliveryCard t={t} locale={locale} order={order} title={t.deliveryTitle} />
         <SummaryCard t={t} locale={locale} order={order} title={t.amountTitle} />
-        <HelpCard t={t} />
+        <HelpCard t={t} order={order} />
       </div>
     </div>
   );

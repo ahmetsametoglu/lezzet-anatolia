@@ -43,6 +43,26 @@ export interface TicketReturnOutcome {
 }
 
 /**
+ * "Taleplerim" listesinin tek satırı (08.6) — **taranmaya yetecek kadarı.**
+ *
+ * Yazışma taşımaz: liste yirmi talebin yirmi mesaj dizisini çekmek zorunda değil, o detayın işi.
+ * `lastMessageAt` hem sıralama ölçütü hem ekranın "son mesaj: bugün" satırı — tasarımın kartta
+ * gösterdiği iki bağlam (o an ve siparişin numarası) `ticket_queue` görünümünde zaten türetilmiş
+ * durumda; ham talep satırından okumak sayfa başına iki ek tur olurdu.
+ */
+export interface CustomerTicketSummary {
+  id: string;
+  type: Ticket['type'];
+  status: Ticket['status'];
+  subject: string | null;
+  createdAt: string;
+  /** Son mesajın anı — liste bu sıraya göre gelir (cevaplanan talep başa çıkar). */
+  lastMessageAt: string;
+  /** Bağlı siparişin müşteri numarası ("LZA-2451"); siparişsiz talepte null. */
+  orderReferenceNo: string | null;
+}
+
+/**
  * Müşterinin gördüğü talep. **İç durum adları burada da `status`'tür** — çeviri yüzeyin işi
  * (messages.json); veri kapısı iki ayrı durum alanı taşımaz.
  */

@@ -92,3 +92,13 @@ export function formatOrderDate(iso: string, locale: Locale, compact = false): s
     year: 'numeric',
   }).format(new Date(iso));
 }
+
+/**
+ * Gün İÇİNDEKİ saat — yazışma damgası ("18:02", 08.6).
+ *
+ * Burada duruyor çünkü dil tablosu (`INTL_LOCALE`) bu modülün: saati çağıranın yanında
+ * biçimlendirmek, o tabloyu ikinci kez yazmak demekti ve iki kopya bir gün ayrışır.
+ */
+export function formatTime(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+}
