@@ -68,7 +68,12 @@ export type SupplierProductUpdate = z.infer<typeof SupplierProductUpdateSchema>;
 // ── PurchaseOrder ───────────────────────────────────────────────────────────
 // Taslak → gönderildi → mal kabulde kapanır. Sistem GÖNDERMEZ: temiz liste üretir, gönderim insana ait.
 
-export const PurchaseOrderStatusEnum = z.enum(['draft', 'sent', 'received', 'cancelled']);
+/**
+ * `partially_received` (K6): tek tedarik siparişi birden çok depoda parça parça kabul edilebilir —
+ * ilk kabul siparişi KAPATMAZ. Durum saklanan bir sayaçtan değil kabullerden TÜRETİLİR
+ * (`purchase_order_progress`); bu enum yalnız türetilmiş sonucu taşır.
+ */
+export const PurchaseOrderStatusEnum = z.enum(['draft', 'sent', 'partially_received', 'received', 'cancelled']);
 export type PurchaseOrderStatus = z.infer<typeof PurchaseOrderStatusEnum>;
 
 export const PurchaseOrderSchema = z.object({
@@ -99,6 +104,12 @@ export const PurchaseOrderItemSchema = z.object({
   supplierProductId: z.string().uuid().nullable(),
   qty: z.number().int(),
   unitPrice: dbNumeric.nullable(),
+  /**
+   * İSTEĞE BAĞLI hedef depo (C7): "20 koli STR'ye, 10 koli KEHL'e" — tedarikçi listesine yazılır,
+   * kabul eden depocu kendi payını listeden okur. Boşsa hedefi kabul eden depo söyler; niyet
+   * beyanıdır, kısıt değil — mal fiilen nereye indiyse oraya girer.
+   */
+  targetWarehouseId: z.string().uuid().nullable(),
 });
 export type PurchaseOrderItem = z.infer<typeof PurchaseOrderItemSchema>;
 
@@ -108,6 +119,7 @@ export const PurchaseOrderItemInsertSchema = z.object({
   supplierProductId: z.string().uuid().nullish(),
   qty: z.number().int().positive(),
   unitPrice: z.number().nullish(),
+  targetWarehouseId: z.string().uuid().nullish(),
 });
 export type PurchaseOrderItemInsert = z.infer<typeof PurchaseOrderItemInsertSchema>;
 
@@ -120,6 +132,11 @@ export const StockIntakeSchema = z.object({
   id: z.string().uuid(),
   supplierId: z.string().uuid().nullable(),
   purchaseOrderId: z.string().uuid().nullable(),
+  /**
+   * **Mal kabul depoya yapılır** (K6): satın alma siparişi depo-üstüdür ama mal bir kapıdan girer.
+   * Depo bağı PO'ya değil BURAYA takılır — aynı PO'nun ikinci kabulü başka depoda olabilir.
+   */
+  warehouseId: z.string().uuid(),
   date: z.string(),
   totalAmount: dbNumeric,
   note: z.string().nullable(),
@@ -130,6 +147,7 @@ export type StockIntake = z.infer<typeof StockIntakeSchema>;
 export const StockIntakeInsertSchema = z.object({
   supplierId: z.string().uuid().nullish(),
   purchaseOrderId: z.string().uuid().nullish(),
+  warehouseId: z.string().uuid(),
   date: z.string().optional(),
   totalAmount: z.number().optional(),
   note: z.string().nullish(),
@@ -148,6 +166,12 @@ export const IntakeLineSchema = z.object({
   /** Birim (paket) başına alış maliyeti — gerçek COGS bundan çıkar. */
   unitCost: z.number().nonnegative().nullish(),
   location: z.string().nullish(),
+  /**
+   * Hangi PO kalemini karşılıyor (T5). PO'lu kabulde ZORUNLU ama yazılması şart değil: boş
+   * bırakılırsa RPC varyanttan çözer, belirsizse (aynı varyant iki kalemde) hata verir. Bağsız
+   * kabul PO'yu sonsuza dek açık bırakırdı — ölçüm yokken "0 geldi" demek olurdu.
+   */
+  purchaseOrderItemId: z.string().uuid().nullish(),
 });
 export type IntakeLine = z.infer<typeof IntakeLineSchema>;
 

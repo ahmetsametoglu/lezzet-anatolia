@@ -276,3 +276,12 @@ export type ErrorLogLevel = z.infer<typeof ErrorLogLevelEnum>;
  */
 export const HealthStatusEnum = z.enum(['ok', 'warn', 'crit']);
 export type HealthStatus = z.infer<typeof HealthStatusEnum>;
+
+/**
+ * Depolar arası transfer durumu (DOMAIN §17 · `0042_warehouse.sql`).
+ *
+ * `draft` YOK: hazırlık ekranı henüz yok ve kullanılmayan bir enum değeri yalan söyler — sevk anı
+ * ilk kalıcı andır. `cancelled` var ama yazan yolu yok → BEKLEYEN(19.6): sevkin geri alınması.
+ */
+export const TransferStatusEnum = z.enum(['in_transit', 'received', 'cancelled']);
+export type TransferStatus = z.infer<typeof TransferStatusEnum>;

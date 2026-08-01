@@ -34,7 +34,12 @@ create unique index supplier_product_key on public.supplier_product (supplier_id
 -- "Bu varyantı kimden alıyorum" — alternatif kaynak listesi.
 create index supplier_product_variant_idx on public.supplier_product (variant_id);
 
-create type purchase_order_status as enum ('draft', 'sent', 'received', 'cancelled');
+-- `partially_received` (DOMAIN §17): tek PO birden çok depoda parça parça kabul edilebilir —
+-- ilk kabul siparişi KAPATMAZ. Durum saklanan bir sayaçtan değil, kabullerden TÜRETİLİR
+-- (`purchase_order_progress`, 0042): kalem miktarı ↔ o kaleme giren partilerin `initial_qty`
+-- toplamı. `physical_qty` satışla eridiği için "ne kadar geldi" sorusuna yalnız `initial_qty`
+-- doğru cevap verir.
+create type purchase_order_status as enum ('draft', 'sent', 'partially_received', 'received', 'cancelled');
 
 create table public.purchase_order (
   id uuid primary key default gen_random_uuid(),
@@ -53,7 +58,12 @@ create table public.purchase_order_item (
   -- Kod eşlemesi; tedarikçide tanımlı değilse null (liste bizim adımızla yazılır).
   supplier_product_id uuid references public.supplier_product (id) on delete set null,
   qty int not null check (qty > 0),
-  unit_price numeric(10, 2)                          -- beklenen alış (varsa)
+  unit_price numeric(10, 2),                         -- beklenen alış (varsa)
+  -- İSTEĞE BAĞLI hedef depo (DOMAIN §17): "20 koli STR'ye, 10 koli KEHL'e" — tedarikçi listesine
+  -- yazılabilir, kabul eden depocu kendi payını listeden okur. Boşsa hedefi kabul eden depo söyler:
+  -- niyet beyanıdır, kısıt değil — mal fiilen nereye indiyse oraya girer.
+  -- FK YOK: `warehouse` 0042'de açılır.
+  target_warehouse_id uuid
 );
 create index purchase_order_item_order_idx on public.purchase_order_item (purchase_order_id);
 
@@ -62,6 +72,10 @@ create table public.stock_intake (
   supplier_id uuid references public.supplier (id) on delete restrict,
   -- Bağlı tedarik siparişi; PO'suz doğrudan giriş de mümkündür (küçük/plansız alım).
   purchase_order_id uuid references public.purchase_order (id) on delete set null,
+  -- **MAL KABUL DEPOYA YAPILIR** (DOMAIN §17) — parçalı kabulün kalbi: satın alma siparişi
+  -- depo-üstüdür, ama mal fiziksel olarak bir kapıdan girer. Depo bağı PO'ya değil BURAYA takılır;
+  -- aynı PO'nun ikinci kabulü başka depoda olabilir. FK YOK: `warehouse` 0042'de açılır.
+  warehouse_id uuid not null,
   date date not null default current_date,
   total_amount numeric(10, 2) not null default 0,
   note text,
@@ -84,9 +98,17 @@ alter table public.stock_intake enable row level security;
 -- Yarısı yazılırsa "partiler girdi ama PO açık kaldı" gibi elle düzeltilecek tutarsızlık doğar
 -- (STACK §13 (b) koşulu). MLOR uyarısı BURADA hesaplanmaz — o motorun işi, kabulü de engellemez.
 --
--- p_lines: [{"variant_id":…,"qty":…,"expiry_date":…,"lot_number":…,"unit_cost":…,"location":…}]
+-- ── MAL KABUL DEPOYA YAPILIR (DOMAIN §17) ───────────────────────────────────
+-- `p_warehouse_id` zorunlu: mal fiziksel olarak bir kapıdan girer. Tek PO birden çok depoda parça
+-- parça kabul edilebilir — bu yüzden PO kapanışı artık KOŞULSUZ DEĞİL: eskiden ilk kabul siparişi
+-- `received` yapıyordu ve "20 koli STR'ye, 10 koli KEHL'e" senaryosunda ikinci depo malı beklerken
+-- sipariş kapanmış görünüyordu. Durum artık `purchase_order_progress`'ten TÜRETİLİR (0042).
+--
+-- p_lines: [{"variant_id":…,"qty":…,"expiry_date":…,"lot_number":…,"unit_cost":…,"location":…,
+--            "purchase_order_item_id":…}]
 create or replace function public.receive_intake(
   p_supplier_id uuid,
+  p_warehouse_id uuid,
   p_lines jsonb,
   p_purchase_order_id uuid default null,
   p_date date default current_date,
@@ -103,15 +125,21 @@ declare
   v_qty int;
   v_cost numeric(10, 2);
   v_variant uuid;
+  v_po_item uuid;
+  v_po_count int;
   v_stock_ids uuid[] := '{}';
   v_stock_id uuid;
+  v_open int;
 begin
   if p_lines is null or jsonb_array_length(p_lines) = 0 then
     raise exception 'receive_intake: en az bir kalem gerekir';
   end if;
+  if p_warehouse_id is null then
+    raise exception 'receive_intake: depo zorunlu — mal bir kapıdan girer (DOMAIN §17)';
+  end if;
 
-  insert into public.stock_intake (supplier_id, purchase_order_id, date, total_amount, note)
-  values (p_supplier_id, p_purchase_order_id, p_date, 0, p_note)
+  insert into public.stock_intake (supplier_id, warehouse_id, purchase_order_id, date, total_amount, note)
+  values (p_supplier_id, p_warehouse_id, p_purchase_order_id, p_date, 0, p_note)
   returning id into v_intake_id;
 
   for v_line in select * from jsonb_array_elements(p_lines)
@@ -124,14 +152,58 @@ begin
       raise exception 'receive_intake: kalem miktarı pozitif olmalı (varyant %)', v_variant;
     end if;
 
-    insert into public.stock (variant_id, physical_qty, expiry_date, lot_number, purchase_price, intake_id, location)
+    -- Hangi PO kalemini karşıladığı partinin KENDİSİNDE durur (T5): parçalı kabulde "sipariş
+    -- ettiğim kadar geldi mi" sorusu artık girişten değil bu bağdan hesaplanır.
+    v_po_item := nullif(v_line ->> 'purchase_order_item_id', '')::uuid;
+
+    if p_purchase_order_id is not null then
+      -- PO'lu kabulde bağ ZORUNLU. Bağsız bırakılsaydı mal depoya girer ama ilerleme "0 geldi"
+      -- derdi: sipariş sonsuza dek `partially_received` kalır, fark raporu var olmayan bir eksik
+      -- gösterirdi. Bu, ölçülmemiş bir değeri sıfır saymaktır (CLAUDE.md §1) — ölçüm yoksa cevap
+      -- "bilinmiyor"dur, sıfır değil; burada da doğru davranış yazmayı reddetmektir.
+      --
+      -- Ama depocudan kalem seçmesini İSTEMEYİZ: PO'da o varyanttan tek kalem varsa sistem çözer.
+      -- Belirsizse (aynı varyant iki kalemde) varsayılan seçmez, sorar — C2'nin aynı ilkesi.
+      if v_po_item is null then
+        -- `select ... into` tek başına YETMEZ: birden çok satırda sessizce ilkini alır ve
+        -- belirsizlik varsayılanla çözülmüş olurdu. Sayıyı ayrıca soruyoruz.
+        -- `array_agg(...)[1]`: uuid'nin `min()` agregatı yoktur, ama tek satırlık halde ilk öğe
+        -- zaten aradığımız kalemdir; birden çoksa aşağıdaki sayı kontrolü devreye girer.
+        select count(*), (array_agg(poi.id))[1] into v_po_count, v_po_item
+          from public.purchase_order_item poi
+         where poi.purchase_order_id = p_purchase_order_id and poi.variant_id = v_variant;
+
+        if v_po_count = 0 then
+          raise exception 'receive_intake: varyant % bu tedarik siparişinde yok — kalem kimliği gerekli', v_variant;
+        elsif v_po_count > 1 then
+          raise exception 'receive_intake: varyant % siparişte % kalemde geçiyor — hangisi olduğu yazılmalı',
+            v_variant, v_po_count;
+        end if;
+      end if;
+
+      -- Başka bir PO'nun kalemi bu kabule yazılamaz: yazılsaydı hiç mal gelmemiş bir sipariş
+      -- ilerlemede tamamlanmış görünürdü.
+      if not exists (
+        select 1 from public.purchase_order_item
+         where id = v_po_item and purchase_order_id = p_purchase_order_id
+      ) then
+        raise exception 'receive_intake: kalem % bu tedarik siparişine ait değil', v_po_item;
+      end if;
+    end if;
+
+    insert into public.stock (
+      warehouse_id, variant_id, physical_qty, expiry_date, lot_number, purchase_price,
+      intake_id, purchase_order_item_id, location
+    )
     values (
+      p_warehouse_id,
       v_variant,
       v_qty,
       (v_line ->> 'expiry_date')::date,
       nullif(v_line ->> 'lot_number', ''),
       v_cost,
       v_intake_id,
+      v_po_item,
       nullif(v_line ->> 'location', '')
     )
     returning id into v_stock_id;
@@ -149,14 +221,24 @@ begin
 
   update public.stock_intake set total_amount = v_total where id = v_intake_id;
 
-  -- Sipariş kapanır: "sipariş ettim ↔ gelen mal" halkası tamamlanır. Eksik gelen kalem farkı
-  -- PO kalemleri ile giren partiler karşılaştırılarak GÖRÜNÜR olur (rapor işi, burada değil).
+  -- Sipariş durumu KABULLERDEN TÜRER, bu kabulden değil (K6). Eskiden burada koşulsuz `received`
+  -- yazılıyordu; çok depoda bu, ikinci depo malı beklerken siparişi kapatmak demekti.
+  -- Ölçü `purchase_order_progress` (0042) — `initial_qty` üzerinden kümülatif karşılaştırma.
+  -- Fonksiyon gövdesi geç bağlanır: görünüm 0042'de doğar, ilk çağrıya kadar yerindedir.
   if p_purchase_order_id is not null then
-    update public.purchase_order set status = 'received' where id = p_purchase_order_id;
+    select count(*) into v_open
+      from public.purchase_order_progress
+     where purchase_order_id = p_purchase_order_id and missing_qty > 0;
+
+    update public.purchase_order
+       set status = (case when v_open = 0 then 'received' else 'partially_received' end)::purchase_order_status
+     where id = p_purchase_order_id
+       -- İptal edilmiş siparişe gelen mal durumu geri diriltmez: iptal bir karardır, kabul olgu.
+       and status <> 'cancelled';
   end if;
 
   return jsonb_build_object('ok', true, 'intake_id', v_intake_id, 'stock_ids', to_jsonb(v_stock_ids), 'total_amount', v_total);
 end;
 $$;
 
-revoke execute on function public.receive_intake(uuid, jsonb, uuid, date, text) from public, anon, authenticated;
+revoke execute on function public.receive_intake(uuid, uuid, jsonb, uuid, date, text) from public, anon, authenticated;

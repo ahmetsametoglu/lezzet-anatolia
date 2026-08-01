@@ -37,6 +37,14 @@ export const OrderSchema = z.object({
   /** Vadeli mi — vade bir ödeme YÖNTEMİ değil, siparişin bayrağıdır (DOMAIN §7). */
   onAccount: z.boolean(),
 
+  /**
+   * **Bir sipariş tek depodan çıkar** (DOMAIN §17, istisnasız): bölünmüş sipariş yoktur; kendi
+   * deposunda olmayan kargolanabilir ürün AYRI bir kargo siparişi olur. Kaynağı ya adresin posta
+   * kodudur (uzaktan sipariş) ya işlemi yapan personelin sabit deposudur (kapı önü) — VARSAYILAN
+   * DEPO KAVRAMI YOKTUR. Siparişe yazılan partilerin de bu depodan olduğunu DB kısıtı tutar.
+   */
+  warehouseId: z.string().uuid(),
+
   deliveryType: DeliveryTypeEnum,
   /** Rota-içiyse hangi bölge. Bölge düzenlenebilir olduğu için bu alan aynı zamanda snapshot'tır. */
   deliveryZoneId: z.string().uuid().nullable(),
@@ -88,6 +96,8 @@ export type Order = z.infer<typeof OrderSchema>;
 
 export const OrderInsertSchema = z.object({
   customerId: z.string().uuid(),
+  /** Zorunlu ve varsayılansız (DOMAIN §17): deposuz sipariş açılamaz, sonra da doldurulamaz. */
+  warehouseId: z.string().uuid(),
   channel: ChannelEnum,
   orderSource: OrderSourceEnum.optional(),
   isGiftOrder: z.boolean().optional(),

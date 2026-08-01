@@ -32,6 +32,12 @@ create table public.user_profiles (
   phone text,                                  -- kimlik anahtarı (E.164 normalize) — bkz. CHANNELS §3
   preferred_language preferred_language not null default 'fr',
   country country_code not null default 'FR',
+  -- ROLÜN İKİNCİ EKSENİ: ne yapar (`roles`) × NEREDE yapar (DOMAIN §17). `roles` ile aynı karar,
+  -- aynı gerekçe — kapsam okuması guard'ın sıcak yolunda, bağ tablosu her istekte join demekti.
+  -- FK YOK (dizi kolonda zaten kurulamaz): `warehouse` 0042'de açılır, kısıt orada tetikleyiciyle.
+  -- **BOŞ DİZİ = HİÇBİR DEPO**, "hepsi" değil (fail-closed): depocu/kurye kapsamsız kalırsa kapı
+  -- kapanır, sessizce tüm depolara açılmaz. Admin/muhasebe depo-ÜSTÜdür, kapsamı hiç okunmaz.
+  warehouse_ids uuid[] not null default '{}',
   auth_user_id uuid unique references auth.users (id) on delete set null,
   b2b_approved boolean,                         -- B2B self-servis onayı; B2C/personel'de null
   is_draft boolean not null default false,      -- WhatsApp/manuel taslak; doğrulanınca false

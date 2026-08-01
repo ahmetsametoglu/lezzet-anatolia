@@ -94,6 +94,13 @@ export type StockAdjustmentDetail = z.infer<typeof StockAdjustmentDetailSchema>;
 
 export const TemperatureLogSchema = z.object({
   id: z.string().uuid(),
+  /**
+   * Hangi TESİS (DOMAIN §17) — hijyen denetimi tesis bazındadır, denetmen bir depoya gelir ve o
+   * deponun kayıtlarını ister. Araç kaydı da bir depoya yazılır (aracın çıktığı depo): araçlar
+   * depoya bağlanmaz (K8) ama soğuk zincir kaydı sahipsiz kalamaz.
+   */
+  warehouseId: z.string().uuid(),
+  /** Depo İÇİ dolap adı / araç plakası. */
   location: z.string(),
   temperatureC: dbNumeric,
   recordedBy: z.string().uuid().nullable(),
@@ -102,6 +109,7 @@ export const TemperatureLogSchema = z.object({
 export type TemperatureLog = z.infer<typeof TemperatureLogSchema>;
 
 export const TemperatureLogInsertSchema = z.object({
+  warehouseId: z.string().uuid(),
   location: z.string().min(1),
   temperatureC: z.number(),
   recordedBy: z.string().uuid().nullish(),

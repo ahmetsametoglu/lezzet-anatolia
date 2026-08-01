@@ -14,6 +14,8 @@ import { ProductVariantSchema } from './product-variant.schema';
 export const StockSchema = z.object({
   id: z.string().uuid(),
   variantId: z.string().uuid(),
+  /** PARTİ BİR DEPODA DURUR (DOMAIN §17). `location` bundan ayrıdır: o depo İÇİ raftır. */
+  warehouseId: z.string().uuid(),
   physicalQty: z.number().int(),
   /** Girişte yazılan miktar — tarihtir, değişmez. Fiili erirken bu durur (fark raporu, tüketim). */
   initialQty: z.number().int(),
@@ -21,19 +23,23 @@ export const StockSchema = z.object({
   lotNumber: z.string().nullable(), // geri çağırmada (rappel) eşleşme anahtarı
   purchasePrice: dbNumeric.nullable(), // birim (paket) başına alış — gerçek COGS
   intakeId: z.string().uuid().nullable(),
+  /** Hangi tedarik kalemini karşıladı (T5) — parçalı kabulde fark raporunun bağı. */
+  purchaseOrderItemId: z.string().uuid().nullable(),
   offerPrice: dbNumeric.nullable(), // dolu → parti indirimli teklifte
-  location: z.string().nullable(),
+  location: z.string().nullable(), // depo İÇİ raf/dolap
   createdAt: z.string(),
 });
 export type Stock = z.infer<typeof StockSchema>;
 
 export const StockInsertSchema = z.object({
   variantId: z.string().uuid(),
+  warehouseId: z.string().uuid(),
   physicalQty: z.number().int().nonnegative(),
   expiryDate: z.string(),
   lotNumber: z.string().nullish(),
   purchasePrice: z.number().nonnegative().nullish(),
   intakeId: z.string().uuid().nullish(),
+  purchaseOrderItemId: z.string().uuid().nullish(),
   offerPrice: z.number().nonnegative().nullish(),
   location: z.string().nullish(),
 });
@@ -46,8 +52,14 @@ export type StockUpdate = z.infer<typeof StockUpdateSchema>;
  * `available_stock` görünümü — kullanılabilir = fiili − aktif rezervasyon (süresi dolan sayılmaz).
  * Görünüm karar vermez: `expiredDlcQty` bir olgudur ("tarihi geçmiş DLC partilerde ne kadar var"),
  * "satma" kararını motor verir.
+ *
+ * **Grain `(warehouse_id, variant_id)` — `warehouseId` ZORUNLU alan (T8).** Bu, geçişin en riskli
+ * sessiz bozulmasının panzehiridir: alan olmasaydı iki deponun satırı aynı varyant anahtarına
+ * düşer ve `Map`'te SON DEPO KAZANIRDI — kimse fark etmeden yanlış stok gösterilirdi. Zorunlu alan
+ * o kırılmayı gürültülü hale getirir.
  */
 export const AvailableStockSchema = z.object({
+  warehouseId: z.string().uuid(),
   variantId: z.string().uuid(),
   physicalQty: z.number().int(),
   reservedQty: z.number().int(),
@@ -55,6 +67,15 @@ export const AvailableStockSchema = z.object({
   expiredDlcQty: z.number().int(),
 });
 export type AvailableStock = z.infer<typeof AvailableStockSchema>;
+
+/**
+ * `available_stock_total` — depo-üstü toplam. SATIŞ KARARI BUNU OKUMAZ: birleştirilmiş stok
+ * kimsenin stoğu değildir (3 STR'de + 2 KEHL'de duran maldan 5 kişilik sipariş çıkmaz).
+ * Tüketicileri: tedarik önerisi ve "hiçbir depoda yok mu" sorusu (C3 — ziyaretçiye 'tükendi'
+ * demenin tek meşru dayanağı). Geri çağırma bunu değil parti tablosunu okur (0042 notu).
+ */
+export const AvailableStockTotalSchema = AvailableStockSchema.omit({ warehouseId: true });
+export type AvailableStockTotal = z.infer<typeof AvailableStockTotalSchema>;
 
 /**
  * Parti + kararın ihtiyaç duyduğu ürün alanları, TEK sorguda. Raf ömrü kararları (satılabilir mi,
@@ -133,6 +154,12 @@ export const ReservationSchema = z.object({
   id: z.string().uuid(),
   orderId: z.string().uuid(),
   variantId: z.string().uuid(),
+  /**
+   * Rezervasyon depoyu AÇIKÇA taşır (T1) — türetme ilkesinin gerekçeli istisnası: normal
+   * rezervasyonun partisi yoktur (parti seçimi hazırlıkta) ve siparişten türetmek `available_stock`
+   * sıcak yoluna join eklerdi. Siparişin deposuyla eşitliği DB kısıtı tutar (0042, iki yönlü).
+   */
+  warehouseId: z.string().uuid(),
   stockId: z.string().uuid().nullable(),
   qty: z.number().int(),
   expiresAt: z.string().nullable(),
@@ -143,6 +170,7 @@ export type Reservation = z.infer<typeof ReservationSchema>;
 export const ReservationInsertSchema = z.object({
   orderId: z.string().uuid(),
   variantId: z.string().uuid(),
+  warehouseId: z.string().uuid(),
   stockId: z.string().uuid().nullish(),
   qty: z.number().int().positive(),
   expiresAt: z.string().nullish(),

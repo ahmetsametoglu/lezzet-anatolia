@@ -9,14 +9,19 @@
 -- Değer jsonb: ayarlar sayı, metin, saat, bayrak ve nesne olabiliyor (ör. teslim onayı kapsamı
 -- kanal başına). Tip başına ayrı kolon açmak tabloyu boş kolonlarla doldururdu.
 
-create type setting_scope as enum ('global', 'channel', 'zone', 'country');
+-- `warehouse` kapsamı (DOMAIN §17): depolar farklı şehirlerde, kurye anlaşmaları ve kesim saatleri
+-- ayrışır. Mekanizma zaten burada — `settings`'e ayrı bir `warehouse_id` kolonu AÇILMAZ, ikinci bir
+-- kapsam mekanizması duplication olurdu (CLAUDE.md §1). Depo bazlı olmaya aday değerler: kesim
+-- saati, rota teslimat birim maliyeti (kâr hesabına girer — global kalırsa kâr sessizce yanlışlaşır),
+-- paketleme maliyeti, minimum sepet. TTL ve raf ömrü eşikleri global kalır.
+create type setting_scope as enum ('global', 'channel', 'zone', 'country', 'warehouse');
 
 create table public.settings (
   id uuid primary key default gen_random_uuid(),
   key text not null,
   scope_type setting_scope not null default 'global',
-  -- Kapsamın kimliği: `channel` için 'b2b'/'b2c', `country` için 'FR'/'DE', `zone` için bölge uuid'i.
-  -- Metin tutulur çünkü üçü farklı tipte; global'de null.
+  -- Kapsamın kimliği: `channel` için 'b2b'/'b2c', `country` için 'FR'/'DE', `zone` için bölge uuid'i,
+  -- `warehouse` için depo uuid'i. Metin tutulur çünkü hepsi farklı tipte; global'de null.
   scope_id text,
   value jsonb not null,
   description text,

@@ -76,10 +76,12 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | --- | --- | --- |
 | id | uuid | |
 | name | string | iç etiket (ör. "Strasbourg Kuzey") |
-| postal_codes | string[] | bölgeye dahil posta kodları (FR + DE/Baden dahil); karşılaştırma biçimden bağımsızdır ("67 000" = "67000") |
+| warehouse_id | uuid | **bölge tek depoya bağlıdır** — posta kodu → bölge → depo zincirinin orta halkası (`DOMAIN §17`) |
 | weekdays | int[] | haftalık teslimat günleri, **ISO**: 1=Pzt … 7=Paz |
 | is_active | boolean | kapatılan bölge rota sayılmaz — adres kargoya düşer |
 | created_at | timestamptz | |
+
+**Posta kodları artık bu tabloda değil** (`DeliveryZonePostalCode`, `data-model/depo.md`): dizi kolonken iki bölgeye aynı kodu yazmak serbestti ve çözücü sessizce ilkini seçiyordu — çok depoda bu, siparişin yanlış depoya düşmesi demek. Anahtar `(ülke, kod)`: `67000` iki ülkede de geçerlidir.
 
 **Rota içi/dışı SAKLANMAZ** (07.2): adresin posta kodu aktif bir bölgeye düşüyorsa rota içi. Bölge sınırı admin tarafından değiştirilebildiği için saklanan değer ertesi gün yalan olur. Teslimat günü hesabı da (kesim saati dâhil) motordadır — `domain-core/delivery`.
 
@@ -89,6 +91,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | --- | --- | --- |
 | id | uuid | |
 | customer_id | uuid | |
+| warehouse_id | uuid | **bir sipariş tek depodan çıkar** (`DOMAIN §17`, istisnasız): bölünmüş sipariş yoktur; kendi deposunda olmayan kargolanabilir ürün AYRI bir kargo siparişi olur. Kaynağı ya adresin posta kodu ya işlemi yapan personelin sabit deposudur — **varsayılan depo kavramı yoktur**. Siparişe yazılan partilerin de bu depodan olduğunu ertelenmiş kısıt tutar |
 | channel | enum(`b2b`,`b2c`) | *kim* — müşteri tipinden otomatik, değişmez |
 | order_source | enum(`web`,`whatsapp`,`door`,`manual`) | *nereden kapandı* — kanaldan bağımsız eksen (bkz. `CHANNELS.md §2`) |
 | is_gift_order | boolean | patron ikramı (arkadaşa hediye); **yalnız muhasebe export'una girmez** — gelir/kâr/kasa/ortaklık dahil gerisi tam normal, parayı patron öder (bkz. `DOMAIN.md §9`) |

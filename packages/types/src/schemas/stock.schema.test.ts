@@ -16,12 +16,15 @@ import { StockBatchDetailSchema } from './stock.schema';
 const batch = (variantLabel: Record<string, string>) => ({
   id: '3f3f9a5e-6b8f-4b0e-9a1e-2d0e6b7c8a11',
   variant_id: '6d70f537-83b0-49fd-aef9-e05084e0d5b2',
+  // Parti bir depoda durur (DOMAIN §17) — bu şemanın zorunlu alanı.
+  warehouse_id: '5c1f0a2b-1111-4000-8000-000000000042',
   physical_qty: 20,
   initial_qty: 20,
   expiry_date: '2026-08-22',
   lot_number: 'AF-20260725-0',
   purchase_price: '2.90',
   intake_id: null,
+  purchase_order_item_id: null,
   offer_price: null,
   location: 'Soğuk oda',
   created_at: '2026-07-28T15:31:30.445047+00:00',

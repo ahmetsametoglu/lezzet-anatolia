@@ -28,9 +28,17 @@ declare
   v_ordered int;
   v_total int;
   v_items int := 0;
+  v_order_warehouse uuid;
+  v_stock_id uuid;
+  v_batch_warehouse uuid;
 begin
   if p_picks is null or jsonb_array_length(p_picks) = 0 then
     raise exception 'record_preparation: kalem seçimi boş olamaz';
+  end if;
+
+  select warehouse_id into v_order_warehouse from public.order where id = p_order_id;
+  if v_order_warehouse is null then
+    raise exception 'record_preparation: sipariş bulunamadı (%)', p_order_id;
   end if;
 
   for v_pick in select * from jsonb_array_elements(p_picks)
@@ -52,8 +60,22 @@ begin
     v_total := 0;
     for v_batch in select * from jsonb_array_elements(coalesce(v_pick -> 'batches', '[]'::jsonb))
     loop
+      v_stock_id := (v_batch ->> 'stock_id')::uuid;
+
+      -- Parti siparişin deposundan olmak zorunda (DOMAIN §17). Değişmez 0042'deki ertelenmiş kısıtta
+      -- da duruyor — orası son savunma, burası ERKEN ve okunur hata: depocu hangi partiyi yanlış
+      -- okuttuğunu COMMIT anındaki soyut ihlal mesajından değil, buradan öğrenir.
+      select warehouse_id into v_batch_warehouse from public.stock where id = v_stock_id;
+      if v_batch_warehouse is null then
+        raise exception 'record_preparation: parti bulunamadı (%)', v_stock_id;
+      end if;
+      if v_batch_warehouse <> v_order_warehouse then
+        raise exception 'record_preparation: parti % başka deponun malı — sipariş % deposundan hazırlanır',
+          v_stock_id, v_order_warehouse;
+      end if;
+
       insert into public.order_item_batch (order_item_id, stock_id, qty)
-      values (v_item_id, (v_batch ->> 'stock_id')::uuid, (v_batch ->> 'qty')::int);
+      values (v_item_id, v_stock_id, (v_batch ->> 'qty')::int);
       v_total := v_total + (v_batch ->> 'qty')::int;
     end loop;
 

@@ -12,14 +12,16 @@ Parti, rezervasyon, düzeltme, sıcaklık; tedarikçi ve satın alma zinciri.
 | --- | --- | --- |
 | id | uuid | |
 | variant_id | uuid | stok varyant seviyesinde |
+| warehouse_id | uuid | **parti bir depoda durur** (`DOMAIN §17`); `location` ondan ayrıdır — biri tesis, öteki o tesisteki raf |
 | physical_qty | number | fiili (satış/fire ile erir) |
 | initial_qty | number | **girişte** yazılan miktar — tarihtir, değişmez; trigger yazar. "Sipariş ettiğim kadar geldi mi" (§16 fark raporu) ve "bu partiden ne kadar tüketildi" buna dayanır |
 | expiry_date | date | partinin son tarihi; **tipi üründedir** (`Product.date_type`: DLC güvenlik / DDM kalite) — bu yüzden kolon adı tipten bağımsız |
 | lot_number | string \| null | tedarikçinin lot numarası — geri çağırma (rappel) eşleşmesi; girişte istenir |
 | purchase_price | number \| null | **birim (paket) başına** alış maliyeti — kâr/marj için; toptan alınıp paketlenirse giriş paket adediyle yapılır (ör. 1kg → 10×100gr), maliyet pakete bölünür |
 | intake_id | uuid \| null | bağlı stok girişi/satın alma (bkz. `StockIntake`) |
+| purchase_order_item_id | uuid \| null | hangi tedarik KALEMİNİ karşıladı — parçalı kabulde fark raporunun bağı; transferle doğan partide null (`data-model/depo.md`) |
 | offer_price | number \| null | partiye bağlı indirimli teklif fiyatı; doluysa bu parti indirimli satışta (bkz. `DOMAIN.md §5`) |
-| location | string \| null | depo konumu |
+| location | string \| null | depo İÇİ konum (dolap/raf) — hangi depo olduğu `warehouse_id`'de |
 | created_at | timestamptz | |
 
 Ayrılmış miktar **saklanmaz** — aktif `Reservation` satırlarından türetilir. `available = Σ physical − Σ aktif rezervasyon` (bkz. `DOMAIN.md §4`).
@@ -38,6 +40,7 @@ Her ayırma bir satırdır; "ayrılan toplam" bu satırlardan **türetilir** (sa
 | id | uuid | |
 | order_id | uuid | |
 | variant_id | uuid | rezervasyon varyant-toplamı seviyesinde |
+| warehouse_id | uuid | **açıkça taşınır, türetilmez** — normal rezervasyonun partisi yoktur ve bu tablonun `order`'a FK'sı yoktur; siparişten türetmek `available_stock` sıcak yoluna join eklerdi. Siparişin deposuyla eşitliği ertelenmiş kısıt tutar (`data-model/depo.md`) |
 | stock_id | uuid \| null | **yalnız** partiye bağlı teklif satırında dolu (batch-pinned, bkz. `DOMAIN.md §5`); normalde null |
 | qty | number | |
 | expires_at | timestamptz \| null | online checkout TTL'i; kapıda/vadeli rezervasyonda null (süresiz, sipariş kapatır) |
@@ -86,7 +89,8 @@ Hijyen denetiminin ilk istediği veri; günde bir-iki **elle** giriş yeter (sen
 | Alan | Tip | Not |
 | --- | --- | --- |
 | id | uuid | |
-| location | string | dolap adı / araç |
+| warehouse_id | uuid | hangi TESİS — hijyen denetimi tesis bazındadır (denetmen bir depoya gelir). Araç kaydı da aracın çıktığı depoya yazılır: araçlar depoya bağlanmaz ama soğuk zincir kaydı sahipsiz kalamaz |
+| location | string | depo İÇİ dolap adı / araç plakası |
 | temperature_c | number | −18.5 gibi; donukta negatif normaldir |
 | recorded_by | uuid \| null | ölçümü giren personel |
 | recorded_at | timestamptz | |
@@ -145,6 +149,7 @@ Taslak → gönderildi → mal kabulde kapanır (bkz. `DOMAIN.md §16`). Sistem 
 | supplier_product_id | uuid \| null | kod eşlemesi (liste tedarikçi koduyla yazılır) |
 | qty | number | paket adedi |
 | unit_price | number \| null | beklenen alış (varsa) |
+| target_warehouse_id | uuid \| null | **isteğe bağlı** hedef depo ("20 koli STR'ye, 10 koli KEHL'e") — kabul eden depocu kendi payını listeden okur. Niyet beyanıdır, kısıt değil: mal fiilen nereye indiyse oraya girer |
 
 ## StockIntake (stok girişi / satın alma)
 
@@ -154,10 +159,13 @@ Mal alımının envanter tarafı; oluşturduğu partiler buna bağlanır (`Stock
 | --- | --- | --- |
 | id | uuid | |
 | supplier_id | uuid \| null | tedarikçi (bkz. `Supplier`) — lot izlenebilirliğinin "bir adım geri" halkası |
-| purchase_order_id | uuid \| null | bağlı tedarik siparişi — mal kabul formu PO kalemleriyle önceden dolu gelir; kabulle PO `received` olur |
+| warehouse_id | uuid | **mal kabul depoya yapılır**: satın alma siparişi depo-üstüdür ama mal bir kapıdan girer. Depo bağı PO'ya değil BURAYA takılır — aynı PO'nun ikinci kabulü başka depoda olabilir |
+| purchase_order_id | uuid \| null | bağlı tedarik siparişi — mal kabul formu PO kalemleriyle önceden dolu gelir. **Kabul PO'yu koşulsuz kapatmaz**: durum `purchase_order_progress`'ten türer, hepsi gelene kadar `partially_received` kalır |
 | date | date | |
 | total_amount | number | kalemlerden hesaplanır (Σ birim maliyet × adet) |
 | note | string \| null | |
 | created_at | timestamptz | |
 
-**`receive_intake` fonksiyonu (06.10):** giriş kaydı + partiler + PO `received` + `last_purchase_price` tazelemesi tek transaction'da — yarısı yazılırsa "partiler girdi ama sipariş açık kaldı" tutarsızlığı doğar. MLOR uyarısı burada hesaplanmaz (motorun işi, kabulü engellemez).
+**`receive_intake` fonksiyonu (06.10):** giriş kaydı + partiler + PO durumu + `last_purchase_price` tazelemesi tek transaction'da — yarısı yazılırsa "partiler girdi ama sipariş açık kaldı" tutarsızlığı doğar. MLOR uyarısı burada hesaplanmaz (motorun işi, kabulü engellemez).
+
+**Parçalı kabul (`DOMAIN §17`):** depo zorunlu parametredir; PO'lu kabulde her satır bir PO kalemine bağlanır (yazılmazsa varyanttan çözülür, belirsizse hata). Bağsız kabul siparişi sonsuza dek açık bırakırdı — ölçüm yokken "0 geldi" demek olurdu (`CLAUDE.md §1`).

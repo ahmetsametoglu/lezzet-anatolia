@@ -61,6 +61,14 @@ export const UserProfileSchema = z.object({
    * Kural DB'de check kısıtıyla zorlanır, saf hâli `domain-core/identity/roles`'ta.
    */
   roles: z.array(UserRoleEnum),
+  /**
+   * Rolün İKİNCİ EKSENİ: ne yapar (`roles`) × NEREDE yapar (DOMAIN §17). `roles` ile aynı karar,
+   * aynı gerekçe — kapsam okuması guard'ın sıcak yolunda, bağ tablosu her istekte join demekti.
+   *
+   * **Boş dizi = HİÇBİR depo**, "hepsi" değil (fail-closed): depocu/kurye kapsamsız kalırsa kapı
+   * kapanır. Admin/muhasebe depo-ÜSTÜdür; onlarda boş kapsam normaldir ve hiç okunmaz.
+   */
+  warehouseIds: z.array(z.string().uuid()),
   type: CustomerTypeEnum,
   name: z.string(),
   email: z.string().email().nullable(),

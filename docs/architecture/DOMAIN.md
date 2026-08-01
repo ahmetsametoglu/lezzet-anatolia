@@ -640,9 +640,11 @@ Her varyant için tedarikçideki **sipariş kodu**, oradaki adı, koli içi adet
 
 ### Omurga: posta kodu → bölge → depo
 
-- Her teslimat bölgesi (`DeliveryZone`) **tek bir depoya** bağlıdır; bir posta kodu **tek bir aktif
-  bölgede** olabilir — tekillik veritabanında zorlanır, çakışma kayıt anında reddedilir ("ilki
-  kazanır" sessiz çözümü kalkar). Sonuç: posta kodu her zaman tek depoya çözülür.
+- Her teslimat bölgesi (`DeliveryZone`) **tek bir depoya** bağlıdır; bir posta kodu **tek bir
+  bölgede** olabilir — pasif bölge dahil ("pasifken çakışsın" esnekliği, bölge yeniden açıldığında
+  iki sahipli kod bırakırdı). Tekillik veritabanında `(ülke, kod)` anahtarıyla zorlanır, çakışma
+  kayıt anında reddedilir ("ilki kazanır" sessiz çözümü kalkar). Ülke bölgeye değil kod satırına
+  yazılır — bölge sınır ötesi olabilir (ADR-002). Sonuç: posta kodu her zaman tek depoya çözülür.
 - Müşteriye depo **gösterilmez** — altın kural: sistemin karmaşıklığı arayüze yansımaz. Müşteri
   posta kodunu girer; gerisi içeride çözülür.
 - **Varsayılan depo kavramı YOKTUR.** Belirsizlik varsayılanla çözülmez: sipariş deposunun kaynağı
@@ -668,9 +670,10 @@ Her varyant için tedarikçideki **sipariş kodu**, oradaki adı, koli içi adet
   yönlendirilemez — ücretsiz kapı teslimi varken paralı kargo seçtirmek ikinci bir karar noktası
   açar, karşılığı yoktur. Sepet tamamen yerel-dışı kalemlerden oluşuyorsa salt-kargo siparişi
   kendiliğinden doğar; farklı adrese gönderim de o adresin posta kodundan doğru yola düşer.
-- **Kargo deposu TEKtir** (ileride ülke başına bir): `ships_online` işaretli tek aktif depo —
-  kayıt kapısı ikinciyi reddeder. Kargo deposu bölge dışı müşterilere ve rota müşterilerinin kargo
-  dolgusuna hizmet eder.
+- **Kargo deposu ülke başına en fazla BİRDİR:** `ships_online` işaretli tek aktif depo — tekillik
+  veritabanındadır (kısmi unique indeks; uygulama unutsa da ikincisi yazılamaz). Bugün tek ülke =
+  tek kargo deposu; DE açıldığında kendi kargo deposu olur, kod değişmez. Kargo deposu bölge dışı
+  müşterilere ve rota müşterilerinin kargo dolgusuna hizmet eder.
 
 ### Katalog ve sepet davranışı
 
@@ -701,7 +704,8 @@ Her varyant için tedarikçideki **sipariş kodu**, oradaki adı, koli içi adet
   transfer kaydının kendisidir. Parti kimliği korunur (tarih/lot/alış hedefte yeni partiye
   kopyalanır) — geri çağırma ve gerçek COGS transferden etkilenmez. Parti seçiminde sistem FEFO
   **önerir**, operatör serbestçe değiştirir; hedefe ulaşım süresi (parametrik) kadar ömrü kalmayan
-  parti önerilmez — uyarır, engellemez.
+  parti önerilmez — uyarır, engellemez. Sevk deponun **kullanılabiliri** üzerinden yapılır:
+  müşteriye söz verilmiş (ayrılmış ya da teklife çıpalı) mal yola çıkamaz.
 - **Her depo bir kasadır:** kapıya teslim + kapıda tahsilat her depoda mümkün; depo başına
   `Account` satırı açılır ("Kasa — STR"), merkeze aktarım hesaplar arası harekettir (§7/§9 modeli
   değişmez).

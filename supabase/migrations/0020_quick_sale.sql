@@ -46,8 +46,13 @@ declare
   v_cogs numeric(10, 2);
   v_fee numeric(10, 2);
   v_reference text;
+  -- Kapı önü satışta depo, işlemi yapan personelin sabit deposudur (C4) ve siparişin taslağına
+  -- zaten yazılmıştır — burada AYRICA sorulmaz, siparişten okunur. İkinci bir kaynak, iki kaynağın
+  -- ayrışabileceği anlamına gelirdi.
+  v_order_warehouse uuid;
 begin
-  select status into v_current from public.order where id = p_order_id for update;
+  select status, warehouse_id into v_current, v_order_warehouse
+    from public.order where id = p_order_id for update;
   if not found then
     raise exception 'quick_sale: sipariş bulunamadı (%)', p_order_id;
   end if;
@@ -75,16 +80,21 @@ begin
   loop
     -- Varyantın TÜM partileri kilitlenir: kullanılabilir hesabı varyant toplamındadır, tek parti
     -- kilitlemek yarışı kapatmaz. Sabit sırayla (id) kilitlenir — karşılıklı bekleme olmasın.
-    perform 1 from public.stock where variant_id = v_row.variant_id order by id for update;
+    -- **DEPO İÇİNDE** (DOMAIN §17): kapıdaki satış o kapının deposundan çıkar; başka şehirdeki mal
+    -- burada satılamaz. Süzgeç düşerse fonksiyon sessizce olmayan malı satar ve kasa açık verir.
+    perform 1 from public.stock
+      where variant_id = v_row.variant_id and warehouse_id = v_order_warehouse
+      order by id for update;
 
     select coalesce(sum(physical_qty), 0) into v_physical
-      from public.stock where variant_id = v_row.variant_id;
+      from public.stock where variant_id = v_row.variant_id and warehouse_id = v_order_warehouse;
 
     -- KULLANILABİLİR = FİİLİ − BAŞKASINA AYRILMIŞ. Siparişin KENDİ rezervasyonu düşülmez: online
     -- sepetini kapıda kapatan müşteri kendi ayırdığı mala takılmasın (o satırlar aşağıda silinir).
     select coalesce(sum(qty), 0) into v_reserved
       from public.reservation
      where variant_id = v_row.variant_id
+       and warehouse_id = v_order_warehouse
        and order_id <> p_order_id
        and (expires_at is null or expires_at > now());
 
@@ -107,9 +117,12 @@ begin
      group by 1
   loop
     select physical_qty, variant_id into v_physical, v_variant_id
-      from public.stock where id = v_row.stock_id;
+      from public.stock where id = v_row.stock_id and warehouse_id = v_order_warehouse;
     if not found then
-      raise exception 'quick_sale: parti bulunamadı (%)', v_row.stock_id;
+      -- Parti hiç yok ya da BAŞKA DEPODA: ikisi de kasiyerin seçemeyeceği bir satırdır. Ayrım
+      -- yapmıyoruz çünkü kapıdaki ekranda başka deponun partisi zaten listelenmez — buraya gelen
+      -- böyle bir kimlik bir çağrı hatasıdır, kullanıcı hatası değil.
+      raise exception 'quick_sale: parti bu depoda bulunamadı (%)', v_row.stock_id;
     end if;
     if v_row.qty > v_physical then
       return jsonb_build_object(

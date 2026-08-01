@@ -35,6 +35,14 @@ create table public.order (
   -- Vadeli mi: yalnız `credit_enabled` müşteride true; peşin ödemesiz `confirmed` olur (DOMAIN §7).
   on_account boolean not null default false,
 
+  -- **BİR SİPARİŞ TEK DEPODAN ÇIKAR** (DOMAIN §17, istisnasız). Bölünmüş sipariş yoktur; kendi
+  -- deposunda olmayan kargolanabilir ürün AYRI bir kargo siparişi olur — aynı siparişin ikinci
+  -- deposu olmaz. Kaynağı ya adresin posta kodudur (uzaktan sipariş) ya işlemi yapan personelin
+  -- sabit deposudur (kapı önü satış); VARSAYILAN DEPO KAVRAMI YOKTUR.
+  -- `not null` + 0042'deki ertelenmiş kısıt: siparişe yazılan partiler de bu depodan olmak zorunda.
+  -- FK YOK: `warehouse` 0042'de açılır.
+  warehouse_id uuid not null,
+
   delivery_type delivery_type not null default 'route',
   -- FK YOK: `delivery_zone` tablosu 07.2'de açılıyor. Zone düzenlenebilir olduğu için bu alan
   -- aynı zamanda SNAPSHOT'tır — sonradan bölge sınırı değişse sipariş bozulmaz.
@@ -96,8 +104,9 @@ create unique index order_reference_key on public.order (reference_no) where ref
 create unique index order_idempotency_key on public.order (idempotency_key) where idempotency_key is not null;
 -- Müşteri sipariş geçmişi (sonsuz kaydırma).
 create index order_customer_idx on public.order (customer_id, created_at desc);
--- Operasyon kuyruğu: "bugün hazırlanacaklar", "yolda olanlar".
-create index order_status_idx on public.order (status, delivery_date);
+-- Operasyon kuyruğu: "bu depoda bugün hazırlanacaklar", "yolda olanlar". Baş kolon depo (DOMAIN §17):
+-- depocu yalnız kendi deposunun kuyruğunu görür, depo-üstü tarama yalnız admin ekranının işidir.
+create index order_status_idx on public.order (warehouse_id, status, delivery_date);
 -- Kuryenin günü.
 create index order_courier_idx on public.order (courier_id, delivery_date) where courier_id is not null;
 
@@ -263,7 +272,11 @@ create or replace function public.order_counts(
   p_delivery_type text default null,
   p_payment_status text default null,
   p_from date default null,
-  p_to date default null
+  p_to date default null,
+  -- Depo süzgeci (DOMAIN §17): null = depo-üstü (admin/muhasebe). Kapsamı tek depo olan personelin
+  -- ekranı bunu daima dolu gönderir — sayaçlar da listeyle aynı kümeyi saymak zorunda, yoksa
+  -- "12 sipariş" yazan başlığın altında 4 satır görünür.
+  p_warehouse_id uuid default null
 )
 returns table (
   by_status jsonb,
@@ -284,6 +297,7 @@ as $$
            o.on_account, o.payment_status
     from public.order o
     where o.status <> 'draft'
+      and (p_warehouse_id is null or o.warehouse_id = p_warehouse_id)
       and (p_channel is null or o.channel = p_channel::channel)
       and (p_source is null or o.order_source = p_source::order_source)
       and (p_delivery_type is null or o.delivery_type = p_delivery_type::delivery_type)
@@ -318,5 +332,5 @@ as $$
 $$;
 
 -- Operasyon okumasıdır; müşteri yüzeyine açılmaz.
-revoke execute on function public.order_counts(text, uuid[], text, text, text, text, date, date) from public;
-grant execute on function public.order_counts(text, uuid[], text, text, text, text, date, date) to service_role;
+revoke execute on function public.order_counts(text, uuid[], text, text, text, text, date, date, uuid) from public;
+grant execute on function public.order_counts(text, uuid[], text, text, text, text, date, date, uuid) to service_role;

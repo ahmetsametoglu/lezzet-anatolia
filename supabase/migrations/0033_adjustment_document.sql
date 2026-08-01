@@ -58,10 +58,22 @@ $$;
 -- Fonksiyon KARAR VERMEZ: hangi sebebin hangi öneke düştüğü bir sınıflandırmadır ve motordadır
 -- (`domain-core/stock/document-no`); buraya öneğin kendisi gelir. Numaranın benzersizliği ve
 -- atomikliği ise veritabanının işidir — motor onu garanti edemez.
+--
+-- ÖNEK ARTIK DEPO KODU TAŞIR (DOMAIN §17): `IMH-STR-26-0012`. Sayaç şeması değişmedi — `prefix`
+-- kolonu 'IMH-STR' değerini alır ve seriler kendiliğinden depo başına ayrışır (T6).
+--
+-- Depo kodunu MOTOR DEĞİL BU FONKSİYON ekler (T6'dan sapma, gerekçesiyle): sınıflandırma motorda
+-- kalıyor ('IMH' | 'SAY' | 'IAD'), depo kodu ise burada zaten biliniyor — partilerin kendisinden
+-- türüyor. Motora bıraksaydık aynı bilgi iki yerde üretilir ve ayrışabilirdi: çağıran depo kodunu
+-- eklemeyi unutursa KEHL'in ilk imhası STR'nin serisini sürdürür ve dosyanın kendi deyimiyle
+-- "denetmene delik" gösterir. Kısıtın yarısı veride yarısı çağıranın dikkatinde kalamaz.
+--
+-- Karşılığı aşağıdaki kuraldır: tek tutanak tek depodan olmak zorunda, çünkü kâğıt klasör fiziksel
+-- olarak o depoda duruyor.
 create or replace function public.adjust_stock_batch(
   p_lines jsonb,                                     -- [{"stock_id": uuid, "qty": int}]
   p_reason stock_adjustment_reason,
-  p_prefix text,                                     -- IMH | SAY | IAD (motor seçer)
+  p_prefix text,                                     -- IMH | SAY | IAD (motor seçer; depo kodunu bu fonksiyon ekler)
   p_note text default null,
   p_created_by uuid default null
 ) returns jsonb
@@ -76,6 +88,8 @@ declare
   v_qty int;
   v_physical int;
   v_cost numeric(10, 2);
+  v_warehouse_count int;
+  v_warehouse_code text;
   v_lines int := 0;
   v_total_qty int := 0;
   v_cost_total numeric(12, 2) := 0;
@@ -84,10 +98,25 @@ begin
     raise exception 'adjust_stock_batch: satır listesi boş olamaz';
   end if;
 
+  -- Tutanağın deposu satırlardan TÜRER (ayrıca sorulmaz — sorulsaydı satırlarla çelişebilirdi).
+  -- Tek tutanak tek depodan: kâğıt klasör fiziksel olarak o depoda duruyor, ortak numara iki
+  -- depoya yayılsaydı ikisinin de serisinde delik açardı.
+  select count(distinct s.warehouse_id), min(w.code)
+    into v_warehouse_count, v_warehouse_code
+    from jsonb_array_elements(p_lines) l
+    join public.stock s on s.id = (l ->> 'stock_id')::uuid
+    join public.warehouse w on w.id = s.warehouse_id;
+
+  if v_warehouse_count = 0 then
+    raise exception 'adjust_stock_batch: hiçbir parti bulunamadı';
+  elsif v_warehouse_count > 1 then
+    raise exception 'adjust_stock_batch: tek tutanakta tek depo olur (% farklı depo)', v_warehouse_count;
+  end if;
+
   -- Numara İŞ BAŞARILIRSA anlamlıdır ama BAŞTA alınır: satırlar ona yazılacak. Yazım düşerse
   -- transaction geri sarılır ve numara da geri gelir — yakılan numara yalnız commit'lenmiş
   -- iptallerde kalır.
-  v_reference := public.next_document_no(p_prefix, extract(year from now())::int);
+  v_reference := public.next_document_no(p_prefix || '-' || v_warehouse_code, extract(year from now())::int);
 
   for v_line in select * from jsonb_array_elements(p_lines)
   loop
