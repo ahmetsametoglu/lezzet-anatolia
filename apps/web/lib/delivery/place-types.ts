@@ -1,3 +1,5 @@
+import type { Country } from '@lezzet/types';
+
 /**
  * Teslimat yeri (K30-K33) — müşterinin "nereye getirelim" cevabı.
  *
@@ -22,11 +24,23 @@ export interface DeliveryPlace {
   /** Boşluksuz, normalize edilmiş posta kodu ("67000"). */
   postalCode: string;
   /**
-   * Bölgenin adı ("Strasbourg Merkez") — YALNIZ rota içindeyken bilinir.
+   * Ülke — müşteriye SORULMAZ, posta kodundan türer (19.8). Bir alan değil, bir sonuçtur:
+   * serbestçe seçilen ülke KDV oranını ve Alman B2B muafiyetini etkilerdi (`DOMAIN §5`).
+   */
+  country: Country;
+  /**
+   * Yer adı ("Strasbourg", "Vitry-le-François") — posta kodu referansından (19.8).
    *
-   * Rota dışında **şehir adı yazılmaz**: 75011'in "Paris" olduğunu bilmemiz için bir posta kodu
-   * veritabanı gerekirdi ve elimizde yok. Tasarım "75011 Paris · kargo" gösteriyor; biz "75011 ·
-   * kargo" diyoruz — uydurulmuş bir şehir adı, yanlış olduğunda güveni doğrudan zedeler.
+   * Rota dışında da DOLUDUR: tasarımın istediği "75011 Paris · kargo" artık yazılabiliyor. Eskiden
+   * burada bir itiraf vardı — *"75011'in Paris olduğunu bilmemiz için bir posta kodu veritabanı
+   * gerekirdi ve elimizde yok"* — `postal_code_place` tam olarak o boşluğu kapattı. Uydurulmuş ad
+   * yasağı yerinde: kodun birden çok yerleşimi varsa bir üst idari birim yazılır, rastgele bir köy
+   * değil.
+   */
+  placeName: string | null;
+  /**
+   * Bölgenin adı ("Strasbourg Merkez") — YALNIZ rota içindeyken bilinir. `placeName`'den farklıdır:
+   * bu BİZİM rota bölgemizin adı, o coğrafi yer adı.
    */
   zoneName: string | null;
   /** Rota içi mi — kapıya teslim mi kargo mu (tek karar noktası). */
@@ -61,7 +75,8 @@ export function normalizePostalCode(raw: string): string {
 }
 
 /**
- * Fransız posta kodu biçimi: 5 rakam. Doğrulama İSTEMCİDE de yapılır ki her tuşta sunucuya
+ * Posta kodu biçimi: 5 rakam — Fransa ve Almanya'da AYNI, o yüzden biçim ülkeyi ayırt etmez
+ * (ayrımı `postal_code_place` yapar, 19.8). Doğrulama İSTEMCİDE de yapılır ki her tuşta sunucuya
  * gidilmesin; sunucu yine de kendi kontrolünü yapar (istemciden gelen hiçbir şeye güvenilmez).
  */
 export function isValidPostalCode(raw: string): boolean {

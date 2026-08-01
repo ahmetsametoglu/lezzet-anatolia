@@ -238,7 +238,17 @@ export function DeliveryStep(props: CheckoutViewProps) {
    * Bölge adı ve gün TAŞINMAZ: blok ikisini de kullanmıyor, tek sorduğu "rota içinde mi".
    */
   const addressPlace = selectedAddress
-    ? { postalCode: selectedAddress.postalCode, zoneName: null, inRoute, nextDate: null }
+    ? {
+        postalCode: selectedAddress.postalCode,
+        // Ülke adresin KENDİSİNDEN gelir, posta kodundan türetilmez: burada zaten cevap verilmiş
+        // bir soru var (19.8 türetmesi kod tek başına girildiğinde gerekir).
+        country: selectedAddress.country,
+        // Yer adı ve bölge adı TAŞINMAZ: blok ikisini de kullanmıyor, tek sorduğu "rota içinde mi".
+        placeName: null,
+        zoneName: null,
+        inRoute,
+        nextDate: null,
+      }
     : null;
   const restricted = restrictedLines(addressPlace, cart.lines);
   // Eşik sepet okumasından gelir; ekran ayar okumaz (tek kaynak).

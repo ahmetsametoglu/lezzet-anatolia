@@ -68,5 +68,8 @@ export function writeSkipped(scope: SkipScope): void {
 function isPlace(value: unknown): value is DeliveryPlace {
   if (typeof value !== 'object' || value === null) return false;
   const row = value as Record<string, unknown>;
-  return typeof row.postalCode === 'string' && typeof row.inRoute === 'boolean';
+  // `country` da aranır (19.8): ülke artık yerin ayrılmaz parçası ve kodun tek başına anlamı yok
+  // (610 kod iki ülkede birden geçerli). Ülkesiz eski kayıt burada DÜŞER ve soru yeniden sorulur —
+  // eksik alanı `undefined` bırakıp taşımak, KDV'yi belirleyen bir değeri sessizce boş geçirmekti.
+  return typeof row.postalCode === 'string' && typeof row.inRoute === 'boolean' && typeof row.country === 'string';
 }

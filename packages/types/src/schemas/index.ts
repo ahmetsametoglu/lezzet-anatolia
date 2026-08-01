@@ -20,6 +20,7 @@ export * from './order.schema';
 export * from './courier.schema';
 export * from './setting.schema';
 export * from './delivery-zone.schema';
+export * from './postal-code-place.schema';
 export * from './warehouse.schema';
 export * from './stock.schema';
 export * from './stock-adjustment.schema';

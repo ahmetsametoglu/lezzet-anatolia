@@ -12,9 +12,15 @@
  * (Veritabanı da aynı şeyi söylüyor: posta kodu bağ tablosunda birincil anahtar. Motor onun saf
  * karşılığıdır — kural iki yerde de aynı, çünkü ikisi de kuralın kendisi.)
  *
- * ── ÜLKE ZİNCİRİN PARÇASIDIR ─────────────────────────────────────────────────
- * `67000` hem Fransa'da hem Almanya'da geçerlidir. Yer çözümü daima `(ülke, kod)` ikilisidir;
- * ülkesiz bir posta kodu eksik bir sorudur ve bu motor onu cevaplamaz.
+ * ── ÜLKE ZİNCİRİN PARÇASIDIR, AMA MÜŞTERİYE SORULMAZ (19.8) ──────────────────
+ * Posta kodu ülkeler arası benzersiz değildir — ölçtük: FR 6.065 + DE 10.813 kodun **610'u ikisinde
+ * de geçerli**. Yani `(ülke, kod)` ikilisi zincirin gerçek girdisidir ve `resolveWarehouseForPostalCode`
+ * ülkeyi zorunlu ister.
+ *
+ * Ama ülkeyi MÜŞTERİYE sormuyoruz. İki gerekçe: sürtünme (cevabı zaten elimizde olan bir soru) ve
+ * **vergi** — serbestçe seçilen ülke KDV oranını ve Alman B2B muafiyetini etkiler (`DOMAIN §5`);
+ * müşterinin doldurduğu bir alanın vergi sonucu doğurması kabul edilemez. Ülke bir beyan değil,
+ * veriden türeyen bir **sonuç**tur. Türetmeyi `resolvePlaceByPostalCode` yapar.
  *
  * Saf: satırları çağıran getirir, karar burada verilir.
  */
@@ -89,14 +95,11 @@ export function resolveWarehouseForPostalCode(
 }
 
 /**
- * Ülke seçici gösterilmeli mi (C11).
+ * Hizmet verdiğimiz ülkeler — aktif depoların ve aktif bölgelerin kapsadığı küme.
  *
- * Cevap VERİDEN türer, bir ayardan değil: aktif depoların ve aktif bölgelerin kapsadığı ülke kümesi
- * 1'i aşıyorsa müşteriye sorulur. Yeni ülkede warehouse açıldığı gün seçici kendiliğinden belirir —
- * kimsenin bir bayrağı açması gerekmez, açmayı unutması da mümkün olmaz.
- *
- * Dış coğrafi servis YOKTUR ve olamaz: belirsizlik niyettedir (`67000` iki ülkede de geçerlidir),
- * hiçbir servis müşterinin hangisini kastettiğini bilemez. Site dili en fazla bir ÖN-SEÇİM ipucudur.
+ * Cevap VERİDEN türer, bir ayardan değil: Almanya'da depo açıldığı gün küme kendiliğinden büyür,
+ * kimsenin bir bayrak açması gerekmez (açmayı unutması da mümkün olmaz). `resolvePlaceByPostalCode`
+ * bunu bir SÜZGEÇ olarak kullanır — asıl işi orada.
  */
 export function activeCountries(
   zones: readonly ZoneWithWarehouse[],
@@ -111,10 +114,81 @@ export function activeCountries(
   return [...countries].sort();
 }
 
-/** Ülke seçici görünsün mü — `activeCountries`'in evet/hayır hâli (çağrı yerini okunur kılar). */
-export function needsCountryChoice(
+/** Posta kodu referansının bir satırı — `postal_code_place` tablosunun motor karşılığı. */
+export interface PostalCodeMatch {
+  country: Country;
+  /** Gösterilecek yer adı ("Strasbourg", çok yerleşimli kodda "Ortenaukreis"). */
+  placeName: string;
+}
+
+/** `ambiguous` hâlinde müşteriye sunulan seçenek — ülke DEĞİL, tanınabilir bir YER. */
+export interface PlaceCandidate extends PostalCodeMatch {
+  /** Rota bölgemize düşüyor mu — sıralamada önce gelir (daha olası cevap). */
+  inRoute: boolean;
+}
+
+/**
+ * Ülkesiz posta kodu çözümünün sonucu. `PlaceResolution`'ın üstünde bir katman: o `(ülke, kod)`
+ * ikilisini çözer, bu ülkeyi de türetir.
+ */
+export type PostalCodeResolution =
+  /** Zincir çözüldü: `PlaceResolution`'ın aynısı + türetilmiş ülke ve gösterilecek ad. */
+  | (Extract<PlaceResolution, { kind: 'route' | 'shipping' }> & { country: Country; placeName: string })
+  /** Çözülemedi (bizim eksiğimiz ya da veri çakışması) — ülke yine de biliniyor, sebep ayrık kalır. */
+  | (Extract<PlaceResolution, { kind: 'unresolved' }> & { country: Country })
+  /** Kod birden çok hizmet ülkemizde geçerli — tek soru, iki somut yer. */
+  | { kind: 'ambiguous'; candidates: readonly PlaceCandidate[] }
+  /** Hiçbir ülkede geçerli değil: büyük olasılıkla yazım hatası. Bir KAPI değil, bir uyarıdır. */
+  | { kind: 'unknown' };
+
+/**
+ * Posta kodundan yer çözümü — **ülke sorulmadan** (19.8).
+ *
+ * `matches` referans tablosundan gelir (`postal_code_place`): kodun geçerli olduğu ülkeler ve
+ * gösterilecek yer adları. Çağıran satırları getirir, karar burada verilir.
+ *
+ * ── BELİRSİZLİK HİZMET ALANIMIZLA KESİŞİR ────────────────────────────────────
+ * 610 kod iki ülkede birden geçerli, ama bu 610 sorunun hepsi BİZİM sorunumuz değil: kod Almanya'da
+ * da geçerliyken biz Almanya'ya hizmet vermiyorsak ortada bir seçim yoktur. Bu yüzden önce hizmet
+ * ülkelerimizle kesiştiriyoruz — bugün (yalnız FR aktifken) çakışmaların HİÇBİRİ soru doğurmaz,
+ * Almanya açıldığı gün yalnız gerçekten iki anlama gelenler sorar.
+ *
+ * ── NEDEN "ROTA KAZANSIN" DEMİYORUZ ──────────────────────────────────────────
+ * İki aday varsa ve biri rota bölgemizdeyse, onu seçmek cazip: müşterilerimizin çoğu oradadır.
+ * Ama iki adayın sonucu yalnız teslimat yolu değil **KDV oranı** da: yanlış ülke yanlış vergi
+ * demektir ve bu sessizce tahmin edilemez. Rota adayı yalnız SIRALAMADA öne alınır (daha olası
+ * cevap önce görünür); kararı müşteri verir.
+ */
+export function resolvePlaceByPostalCode(
+  postalCode: string,
+  matches: readonly PostalCodeMatch[],
   zones: readonly ZoneWithWarehouse[],
   warehouses: readonly WarehouseCandidate[],
-): boolean {
-  return activeCountries(zones, warehouses).length > 1;
+): PostalCodeResolution {
+  if (matches.length === 0) return { kind: 'unknown' };
+
+  const served = new Set(activeCountries(zones, warehouses));
+  // Kesişim boşsa referanstaki adaylarla devam edilir: kod geçerlidir ama hizmet alanımızda
+  // değildir ve bunun doğru cevabı `no_shipping_warehouse`'tur — aşağıdaki çözüm onu zaten üretir.
+  // "Tanımadık" (`unknown`) demek YANLIŞ olurdu: kodu tanıyoruz, oraya gidemiyoruz.
+  const candidates = matches.filter((m) => served.has(m.country));
+  const effective = candidates.length > 0 ? candidates : matches;
+
+  if (effective.length > 1) {
+    const scored = effective.map((m) => ({
+      ...m,
+      inRoute: resolveWarehouseForPostalCode({ country: m.country, postalCode }, zones, warehouses).kind === 'route',
+    }));
+    // Rota adayı önce; eşitlikte ülke kodu — sıra RASTGELE olmamalı, aynı kod her seferinde aynı
+    // ekranı üretsin (aksi hâlde müşteri iki denemede iki farklı liste görür).
+    scored.sort((a, b) => Number(b.inRoute) - Number(a.inRoute) || a.country.localeCompare(b.country));
+    return { kind: 'ambiguous', candidates: scored };
+  }
+
+  // Tek aday: ülke artık BİLİNİYOR, zincirin geri kalanı mevcut motorun işi.
+  const only = effective[0]!;
+  const resolved = resolveWarehouseForPostalCode({ country: only.country, postalCode }, zones, warehouses);
+  return resolved.kind === 'unresolved'
+    ? { ...resolved, country: only.country }
+    : { ...resolved, country: only.country, placeName: only.placeName };
 }
