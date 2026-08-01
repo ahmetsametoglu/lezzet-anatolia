@@ -97,6 +97,15 @@ export async function readPlaceWarehouses(): Promise<{ warehouseId: string | nul
   return { warehouseId, shippingWarehouseId };
 }
 
+/**
+ * Müşterinin CEVABI — çerezden, çözülmeden (19.12).
+ *
+ * Yalnız yerin kendisini isteyen çağıranlar için: "gelince haber ver" kaydı hangi yere ait olduğunu
+ * bilmek zorunda ama depoyu bilmesine gerek yok — söz müşterinin adresi hakkındadır, bizim iç
+ * coğrafyamız hakkında değil.
+ */
+export const readPlaceAnswer = cache(readPlaceAnswerFromCookie);
+
 async function readPlaceAnswerFromCookie(): Promise<PlaceAnswer | null> {
   const raw = (await cookies()).get('lezzet.place.v2')?.value;
   if (!raw) return null;

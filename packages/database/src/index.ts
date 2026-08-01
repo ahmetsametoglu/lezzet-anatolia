@@ -26,6 +26,7 @@ export { AddressService } from './services/address.service';
 export { SettingsService } from './services/settings.service';
 export { DeliveryZoneService } from './services/delivery-zone.service';
 export { PostalCodePlaceService } from './services/postal-code-place.service';
+export { VariantStockNoticeService } from './services/variant-stock-notice.service';
 export { WarehouseService } from './services/warehouse.service';
 export { WarehouseTransferService } from './services/warehouse-transfer.service';
 export { CartService } from './services/cart.service';

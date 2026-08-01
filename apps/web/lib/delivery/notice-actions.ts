@@ -1,9 +1,10 @@
 'use server';
 
-import { serviceDb } from '@lezzet/database';
+import { VariantStockNoticeService, serviceDb } from '@lezzet/database';
 import { currentCustomerId } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { isValidPostalCode, normalizePostalCode } from './place-types';
+import { readPlaceAnswer } from './read-place';
 
 /**
  * "Bölgeye gelince haber ver" kaydı (0030).
@@ -37,6 +38,49 @@ export async function recordZoneNoticeAction(rawPostalCode: string, rawEmail: st
       .from('zone_notice')
       .upsert({ postal_code: postalCode, email, customer_id: customerId }, { onConflict: 'postal_code,email', ignoreDuplicates: true });
     if (error) throw error;
+
+    return { data: true, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * "Bu ürün bölgeme gelince haber ver" kaydı (19.12) — `variant_stock_notice`.
+ *
+ * Üstteki `recordZoneNoticeAction`'dan AYRI ve karıştırılmamalı: o "bölgenize gelmiyoruz" hâlinin
+ * kaydıdır, bu "bölgenize geliyoruz ama bu ürün burada şu an yok" hâlinin. İkincisi vitrinin
+ * dördüncü stok hâlidir (`elsewhere`, 19.10): ürün ağda var ama müşterinin yerine ulaşamıyor —
+ * soğuk zincir olduğu için kargoya da verilemiyor. Tek bir "yok" mesajına indirmek, müşteriyi
+ * gelmeyecek bir mal için bekletmek olurdu.
+ *
+ * **Yine söz değil, kayıt:** tetikleyici (stok girince haber gönderme) yazılmadı. Ekran "not aldık"
+ * der. Aynı dürüstlük tonu, aynı gerekçe.
+ *
+ * Yer MÜŞTERİNİN cevabından okunur (çerez, 19.9), istemciden parametre olarak alınmaz: kaydın
+ * hangi yere ait olduğu bir tercih değil, sistemin bildiği bir gerçek. Yer bilinmiyorsa kayıt
+ * alınmaz — nereye haber vereceğimizi bilmeden söz veremeyiz.
+ *
+ * BEKLEYEN(19.7): düğmeyi müşteri şeridi bağlayacak; o güne kadar bu kapının çağıranı yok ve
+ * `knip` onu bildirir. Bilinçli borç — kapıyı ekranla birlikte yazmak, ekranı yazan ajanın guard
+ * ve çerez okumasını da üstlenmesi demekti.
+ */
+export async function recordVariantStockNoticeAction(variantId: string, rawEmail: string): Promise<ActionResult<true>> {
+  try {
+    const email = rawEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Geçerli bir e-posta adresi girin');
+
+    const answer = await readPlaceAnswer();
+    if (!answer) throw new Error('Önce teslimat yerinizi girin');
+
+    const customerId = await currentCustomerId();
+    await new VariantStockNoticeService(serviceDb()).record({
+      variantId,
+      country: answer.country,
+      postalCode: answer.postalCode,
+      email,
+      customerId,
+    });
 
     return { data: true, error: null };
   } catch (err) {
