@@ -76,9 +76,9 @@ export function ConsentSwitch({
     setValue(next);
     setBusy(true);
     setFailed(false);
-    const { error } = await setConsentAction(channel, next);
+    const { errorKey } = await setConsentAction(channel, next);
     setBusy(false);
-    if (error) {
+    if (errorKey) {
       setValue(!next);
       setFailed(true);
     }

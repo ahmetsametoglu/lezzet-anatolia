@@ -39,12 +39,14 @@ export function AddressesCard({ t, locale, addresses, compact }: AddressesCardPr
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const run = async (task: () => Promise<{ error: string | null }>) => {
+  const run = async (task: () => Promise<{ errorKey: string | null }>) => {
     setBusy(true);
     setError(null);
-    const { error: failure } = await task();
+    const { errorKey } = await task();
     setBusy(false);
-    if (failure) return setError(failure);
+    // Cümle EKRANDA kurulur (denetim H1/H2): sunucu anahtar döner, sözlük burada. Bilinmeyen bir
+    // anahtar jenerik cümleye düşer — ekran asla boş kalmaz, ham mesaj da asla görünmez.
+    if (errorKey) return setError(t.errors[errorKey as keyof typeof t.errors] ?? t.errors.unexpected);
     setEditing(null);
     setConfirmDelete(null);
   };
@@ -83,7 +85,7 @@ export function AddressesCard({ t, locale, addresses, compact }: AddressesCardPr
                 const result = await updateAddressAction(address.id, toAddressFields(input));
                 // Varsayılan işareti AYRI eylemdir: tek satırı güncellemek yetmiyor, öbürlerinin
                 // bayrağı düşmek zorunda (tek varsayılan kuralı).
-                if (!result.error && input.makeDefault && !address.isDefault) await setDefaultAddressAction(address.id);
+                if (!result.errorKey && input.makeDefault && !address.isDefault) await setDefaultAddressAction(address.id);
                 return result;
               });
             }}

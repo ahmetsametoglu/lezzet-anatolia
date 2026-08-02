@@ -74,6 +74,12 @@
       "placeInRoute": "❄ Bu adrese kapıya teslim — en yakın gün {date}",
       "placeInRouteNoDate": "❄ Bu adrese kapıya teslim ediyoruz",
       "placeShipping": "📦 Bu adrese kargoyla gönderiyoruz — soğuk zincir ürünler hariç"
+    },
+    "errors": {
+      "unexpected": "Bir şeyler ters gitti. Tekrar deneyin; sürerse bize yazın.",
+      "session_expired": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın.",
+      "name_required": "Adınızı boş bırakamayız.",
+      "phone_invalid": "Numarayı anlayamadık — ülke koduyla yazmayı deneyin (+33…)."
     }
   },
   "fr": {
@@ -151,6 +157,12 @@
       "placeInRoute": "❄ Livraison à domicile — au plus tôt le {date}",
       "placeInRouteNoDate": "❄ Nous livrons à domicile à cette adresse",
       "placeShipping": "📦 Nous expédions à cette adresse — hors produits en chaîne du froid"
+    },
+    "errors": {
+      "unexpected": "Une erreur est survenue. Réessayez ; si cela persiste, écrivez-nous.",
+      "session_expired": "Votre session semble expirée. Reconnectez-vous.",
+      "name_required": "Le nom ne peut pas être vide.",
+      "phone_invalid": "Numéro non reconnu — essayez avec l'indicatif du pays (+33…)."
     }
   },
   "de": {
@@ -228,6 +240,12 @@
       "placeInRoute": "❄ Lieferung an die Haustür — frühestens am {date}",
       "placeInRouteNoDate": "❄ Wir liefern an diese Adresse",
       "placeShipping": "📦 Wir versenden an diese Adresse — ausgenommen Kühlkettenprodukte"
+    },
+    "errors": {
+      "unexpected": "Etwas ist schiefgelaufen. Bitte erneut versuchen; wenn es bleibt, schreiben Sie uns.",
+      "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden.",
+      "name_required": "Der Name darf nicht leer sein.",
+      "phone_invalid": "Nummer nicht erkannt — bitte mit Ländervorwahl versuchen (+33…)."
     }
   }
 }

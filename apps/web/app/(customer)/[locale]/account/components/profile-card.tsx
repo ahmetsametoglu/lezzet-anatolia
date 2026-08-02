@@ -124,9 +124,11 @@ export function ProfileCard({ t, locale, profile, compact }: ProfileCardProps) {
   const save = async () => {
     setBusy(true);
     setError(null);
-    const { error: failure } = await updateProfileAction({ name, phone });
+    const { errorKey } = await updateProfileAction({ name, phone });
     setBusy(false);
-    if (failure) return setError(failure);
+    // Cümle EKRANDA kurulur (denetim H1/H2): sunucu anahtar döner, sözlük burada. Bilinmeyen bir
+    // anahtar gelirse jenerik cümleye düşeriz — ekran asla boş kalmaz.
+    if (errorKey) return setError(t.errors[errorKey as keyof typeof t.errors] ?? t.errors.unexpected);
     setEditing(false);
   };
 

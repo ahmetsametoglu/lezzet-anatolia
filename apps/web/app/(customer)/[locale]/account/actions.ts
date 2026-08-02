@@ -6,7 +6,7 @@ import type { AddressInsert } from '@lezzet/types';
 import { revalidatePath } from 'next/cache';
 import { currentCustomerId } from '@/lib/guard';
 import { addAddress, deleteAddress, setDefaultAddress, updateAddress } from '@/lib/account/addresses';
-import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 
 /**
  * Hesap sayfasının YAZMA kapıları (08.5) — okuma tarafı `lib/account/read.ts`.
@@ -41,17 +41,17 @@ function revalidateAccount(): void {
  * **Dil BURADA DEĞİL** (`lib/identity/language-actions.ts`): dil tektir — sitenin dili ile
  * bildirimlerin dili aynı şey — ve onu değiştiren yer dil seçicisidir, profil formu değil.
  */
-export async function updateProfileAction(input: { name?: string; phone?: string | null }): Promise<ActionResult<true>> {
+export async function updateProfileAction(input: { name?: string; phone?: string | null }): Promise<CustomerResult<true>> {
   try {
     const customerId = await currentCustomerId();
-    if (!customerId) throw new Error('Oturum bulunamadı');
+    if (!customerId) throw new CustomerError('session_expired');
 
     const patch: { id: string; name?: string; phone?: string | null } = { id: customerId };
 
     if (input.name !== undefined) {
       const name = input.name.trim();
       // Adsız bir kart, siparişin kime gittiğini söyleyemez; boş geçilemez.
-      if (!name) throw new Error('Ad boş bırakılamaz');
+      if (!name) throw new CustomerError('name_required');
       patch.name = name;
     }
 
@@ -69,16 +69,16 @@ export async function updateProfileAction(input: { name?: string; phone?: string
         const phone = normalizePhone(raw);
         // Çözülemeyen numara SESSİZCE düşürülmez: `null` yazmak müşterinin girdiği numarayı
         // kaybettirir ve o bunu ancak WhatsApp mesajı gelmediğinde fark eder.
-        if (!phone) throw new Error('Telefon numarası anlaşılamadı — ülke koduyla yazmayı deneyin');
+        if (!phone) throw new CustomerError('phone_invalid');
         patch.phone = phone;
       }
     }
 
     await new UserProfileService(serviceDb()).update(patch);
     revalidateAccount();
-    return { data: true, error: null };
+    return { data: true, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
@@ -94,14 +94,14 @@ export async function updateProfileAction(input: { name?: string; phone?: string
  * Sipariş bildirimleri bundan BAĞIMSIZDIR: siparişin kendi maili bir sözleşme gereği, pazarlama
  * izni değil — kapatan müşteri de siparişinin yola çıktığını öğrenir.
  */
-export async function setConsentAction(channel: 'email' | 'whatsapp', granted: boolean): Promise<ActionResult<true>> {
+export async function setConsentAction(channel: 'email' | 'whatsapp', granted: boolean): Promise<CustomerResult<true>> {
   try {
     const customerId = await currentCustomerId();
-    if (!customerId) throw new Error('Oturum bulunamadı');
+    if (!customerId) throw new CustomerError('session_expired');
 
     const profiles = new UserProfileService(serviceDb());
     const profile = await profiles.getById(customerId);
-    if (!profile) throw new Error('Profil bulunamadı');
+    if (!profile) throw new CustomerError('session_expired');
 
     // Öbür kanalın kaydı KORUNUR: nesne baştan yazılsaydı e-posta iznini açmak WhatsApp'ın
     // "ne zaman verildi" izini siliyordu.
@@ -113,9 +113,9 @@ export async function setConsentAction(channel: 'email' | 'whatsapp', granted: b
       },
     });
     revalidateAccount();
-    return { data: true, error: null };
+    return { data: true, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
@@ -125,32 +125,32 @@ export async function setConsentAction(channel: 'email' | 'whatsapp', granted: b
  * Action'ın işi kimliği çözmek ve sonucu sözleşmeye sokmak; "varsayılan silinirse en yeni adres
  * varsayılan olur" gibi kurallar oturum gerektirmeyen bir yerde yaşamak zorunda, yoksa sınanamaz.
  */
-export async function addAddressAction(input: Omit<AddressInsert, 'customerId'>): Promise<ActionResult<true>> {
+export async function addAddressAction(input: Omit<AddressInsert, 'customerId'>): Promise<CustomerResult<true>> {
   return guarded((customerId) => addAddress(customerId, input));
 }
 
-export async function updateAddressAction(addressId: string, patch: Omit<AddressInsert, 'customerId'>): Promise<ActionResult<true>> {
+export async function updateAddressAction(addressId: string, patch: Omit<AddressInsert, 'customerId'>): Promise<CustomerResult<true>> {
   return guarded((customerId) => updateAddress(customerId, addressId, patch));
 }
 
-export async function setDefaultAddressAction(addressId: string): Promise<ActionResult<true>> {
+export async function setDefaultAddressAction(addressId: string): Promise<CustomerResult<true>> {
   return guarded((customerId) => setDefaultAddress(customerId, addressId));
 }
 
-export async function deleteAddressAction(addressId: string): Promise<ActionResult<true>> {
+export async function deleteAddressAction(addressId: string): Promise<CustomerResult<true>> {
   return guarded((customerId) => deleteAddress(customerId, addressId));
 }
 
 /** Guard + `{data,error}` + tazeleme — dört adres eyleminde birebir aynı, tek yerde. */
-async function guarded(task: (customerId: string) => Promise<void>): Promise<ActionResult<true>> {
+async function guarded(task: (customerId: string) => Promise<void>): Promise<CustomerResult<true>> {
   try {
     const customerId = await currentCustomerId();
-    if (!customerId) throw new Error('Oturum bulunamadı');
+    if (!customerId) throw new CustomerError('session_expired');
     await task(customerId);
     revalidateAccount();
-    return { data: true, error: null };
+    return { data: true, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
@@ -165,15 +165,15 @@ async function guarded(task: (customerId: string) => Promise<void>): Promise<Act
  * satırı kaldırır, ikinci bir "vazgeçti" durumu tutulmaz — tutulsaydı aynı gerçek iki alanda
  * yaşardı.
  */
-export async function cancelZoneNoticeAction(postalCode: string): Promise<ActionResult<true>> {
+export async function cancelZoneNoticeAction(postalCode: string): Promise<CustomerResult<true>> {
   try {
     const customerId = await currentCustomerId();
-    if (!customerId) throw new Error('Oturum bulunamadı');
+    if (!customerId) throw new CustomerError('session_expired');
     // Servis üzerinden (denetim A4) — ham tablo erişimi ad dönüşümünün ve doğrulamanın dışında kalır.
     await new ZoneNoticeService(serviceDb()).removeForCustomer(customerId, postalCode);
     revalidateAccount();
-    return { data: true, error: null };
+    return { data: true, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
