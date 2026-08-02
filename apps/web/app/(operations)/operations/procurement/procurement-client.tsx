@@ -92,6 +92,13 @@ export function ProcurementClient({ data, device, urlState, canCancelOrders }: P
         // Taslak açıldı: operatör onu GÖNDERMELİ, yoksa sipariş yalnız bizde kalır. Bu yüzden
         // ekran Siparişler sekmesine geçer — taslağın yaşadığı ve gönderim penceresinin açıldığı yer.
         else if (result.data) {
+          // Öneri listesi de yeniden okunur: action `revalidatePath` yapıyor ama istemci yönlendirme
+          // önbelleği eski RSC yükünü bir süre tutuyor ve sekmeye dönüldüğünde bayat liste görünürdü.
+          //
+          // ⚠ Tazeleme satırı DÜŞÜRMEZ: öneri motoru açık siparişleri henüz görmüyor, yani eşik hâlâ
+          // delik ve satır haklı olarak duruyor (`tedarik-arka-uc-talebi.md §3`). Kural inince
+          // "N yolda" ipucu ve düşme buraya bağlanacak — `BEKLEYEN(09.14)`.
+          router.refresh();
           setSendingOrderId(result.data.orderId);
           onTab('orders');
         }

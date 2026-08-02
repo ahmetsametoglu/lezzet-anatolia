@@ -161,3 +161,64 @@ Kararlar:
 note · created_at`). Satırda "sipariş referansı/tarihi" istemişsiniz; bugün verebileceğim tarih ve
 kimlik. Müşteri siparişindeki gibi insan-okur bir referans isteniyorsa (`LA-26-7K4M2P` emsali) bu
 ayrı bir karar ve şema değişikliği — söyleyin, açayım.
+
+---
+
+## 3. Sipariş önerisi AÇIK SİPARİŞLERİ görmüyor — çift sipariş açığı (kullanıcı bulgusu, 02.08)
+
+**Bulgu (kullanıcı, ekranda yaşandı):** "Sipariş zamanı"ndan taslak açtıktan sonra **aynı liste
+aynen duruyor**. Sipariş, Siparişler sekmesine taslak olarak düşüyor ama öneri satırı yerinde.
+
+**Sebep ölçüldü, davranış bugünkü tanıma göre DOĞRU:** `ReorderService.suggestions()` tek şeye
+bakıyor — `StockService.listBelowMinStock()` (`stock.service.ts:346`): `availableQty < minStockQty`.
+Sipariş vermek stoğu değiştirmez (mal gelmedi, raf boş), dolayısıyla eşik hâlâ delik ve satır haklı
+olarak duruyor. Yani bu bir hata değil, **tanımın eksikliği**.
+
+**Ama operasyonel sonucu gerçek bir arıza:**
+
+- Aynı tedarikçiye üst üste basmak **ikinci, üçüncü siparişi** açıyor; hiçbir yerde uyarı yok.
+- Ekran "10 koli eksiğin var" demeye devam ediyor, oysa 10 koli yolda. Operatör her gün aynı listeye
+  bakıp "bunu sipariş etmiş miydim?" diye Siparişler sekmesinde elle kontrol etmek zorunda.
+- Bedeli para ve depo yeri: çift gelen mal hem ödenir hem raf işgal eder; soğuk zincirde fazladan
+  gelen malın raf ömrü de bizim riskimiz.
+
+**İstenen — karşılaştırma "eldeki" değil "eldeki + yoldaki" ile yapılsın.** Veri hazır:
+`purchase_order_progress` (0042) kalem başına `ordered_qty − received_qty = missing_qty` veriyor;
+açık siparişlerin `missing_qty` toplamı varyant başına "yolda"dır.
+
+Önerdiğim sözleşme (biçim size kalmış):
+
+```ts
+ReorderLine {
+  …mevcut alanlar,
+  /** Yolda: GÖNDERİLMİŞ siparişlerden bekleyen adet (sent + partially_received). */
+  incomingQty: number;
+  /** Taslakta bekleyen adet — tedarikçiye henüz GİTMEDİ. */
+  draftQty: number;
+}
+```
+
+Süzgecin ölçütü `availableQty + incomingQty < minStockQty` olsun; `suggestedQty` de yoldakini
+düştükten sonra hesaplansın.
+
+**Üç ayrım önemli, tek sayıya sıkıştırılmasın:**
+
+1. **`sent` ile `draft` aynı şey değil.** Gönderilmiş sipariş bir BEKLEYİŞTİR; taslak yalnız bizim
+   kararımızdır, tedarikçi ondan habersizdir. İkisini toplamak, açıp göndermeyi unuttuğumuz bir
+   taslağın eksiği "kapatmış" görünmesi demekti — sessizce boş raf. Ekran ikisini ayrı cümleyle
+   söyleyecek ("6 koli yolda" ≠ "6 koli taslakta").
+2. **Depo eşleşmesi.** Öneri depo başınadır (C6) ama PO kalemi `target_warehouse_id`'yi **isteğe
+   bağlı** taşır (C7 — niyet beyanı, kısıt değil). Hedefi boş kalemin yoldaki adedi hangi deponun
+   eksiğini kapatır? Önerim: hedefi olan kalem yalnız o depoya sayılsın; **hedefsiz kalem hiçbir
+   depoya sayılmasın** ama görünür kalsın (ekran "hedefsiz N adet yolda" diyebilsin) — hedefsizi
+   bakılan depoya saymak malın oraya geleceğini varsaymaktır ve K6 tam bunu yasaklıyor. Karar
+   sizin; hangisini seçerseniz ekran ona göre konuşur.
+3. **`received` ve `cancelled` sayılmaz** — ilki zaten stoğa girdi (iki kez sayılırdı), ikincisi
+   hiç gelmeyecek.
+
+**Ekran tarafı bende:** satırdaki "N yolda" ipucu, eksiği kapanan grubun listeden düşmesi ve "hepsi
+yolda" hâlinin temiz cümlesi. Alanlar gelir gelmez bağlarım.
+
+⚠ **Bu turda indirdiğim tek şey tazeleme** (`router.refresh()` — taslak açılınca liste yeniden
+okunuyordu, eksikti). Ama tazeleme yalnız listeyi yeniden OKUR; satır yine düşmez, çünkü düşmesini
+sağlayacak kural bu maddede. Yani madde kapanmadan kullanıcının gördüğü davranış değişmiyor.
