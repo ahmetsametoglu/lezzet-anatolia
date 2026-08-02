@@ -171,6 +171,29 @@ export function AddressForm({ copy, locale, initial, onSave, onCancel }: Address
     setPostalError(lookup?.kind === 'resolved' ? null : copy.postalHint);
   };
 
+  /**
+   * ── ŞEHİR KODDAN DOLDURULMUYOR, VE BU BİLİNÇLİ (01.08) ────────────────────
+   * Bir süre burada "şehir boşsa `placeName` ile doldur" vardı; yaşanmış bir hatayı hedefliyordu
+   * (`67000` Strasbourg + `LINGOLSHEIM` yazılmış bir kapıda-ödeme siparişi, oysa Lingolsheim'ın
+   * kodu 67380 ve o kod rota bölgelerimizde yok). **Geri alındı, çünkü referans verisi bu işi
+   * taşıyamıyor.**
+   *
+   * `postal_code_place` kod başına TEK ad tutuyor ve çok yerleşimli kodda üst idari birime
+   * çıkıyor. Tuzak şurada: o üst birim çoğu zaman kendi merkez kasabasının ADINI taşır ve geçerli
+   * bir belediye adı gibi okunur — `67800` bizde "Strasbourg" (gerçek: Bischheim/Hoenheim),
+   * `51300` "Vitry-le-François" (gerçek: 46 köy). Yani doldurma, Bischheim'lı müşterinin adresine
+   * "Strasbourg" yazardı: bir yanlışı düzeltmek değil, doğruyu bozmak. Kodların **%40'ı** çok
+   * yerleşimli (FR 4.289 + DE 2.392 / 16.878), yani bu istisna değil kural.
+   *
+   * Aynı sebeple kodun yer adı bu formda HİÇ gösterilmiyor: "📍 67800 Strasbourg" satırı
+   * Bischheim'lı müşteriye yanlış bir şehir söyler. Uydurulmuş şehir adı yazmama kuralı
+   * (`place-types.ts`) burada da geçerli — ad güvenilir olmadığı sürece gösterilmez.
+   *
+   * Doğru çözüm veride: kod başına TÜM yerleşimler + adın gerçekten belediye olup olmadığını
+   * söyleyen bir işaret (`19.17`). O gelince hem doldurma hem "şehir bu koda ait mi" kuralı
+   * yazılabilir; ikisi de aynı veriyi bekliyor.
+   */
+
   const answer = !postalError && place && place.postalCode === form.postalCode.trim() ? place : null;
 
   return (
