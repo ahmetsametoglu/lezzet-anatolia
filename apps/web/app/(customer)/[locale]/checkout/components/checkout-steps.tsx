@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import type { PaymentMethod } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
+import { Card } from '@/components/customer/ui/card';
+import { SummaryRow } from '@/components/customer/ui/summary-row';
 import { PlaceRestriction, restrictedLines } from '@/components/customer/delivery/place-restriction';
 import { signOutAction } from '@/lib/auth/actions';
 import { Skeleton } from '@/components/customer/ui/skeleton';
@@ -469,7 +471,8 @@ export function OrderSummary(props: CheckoutViewProps) {
 
   return (
     // Tasarım künyesi: `radius 18 · ped 22/24 · gap 12` — adım kartlarıyla aynı aile, bir tık dar.
-    <section className={['flex flex-col gap-3 rounded-card border border-sand-200 bg-card', compact ? 'px-4 py-4' : 'px-6 py-5.5'].join(' ')}>
+    // `snug` tam olarak bu: paylaşılan kartın yaygın pedi 22/26, özet kartı tasarımda 22/24 (M2).
+    <Card compact={compact} pad="snug">
       <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{t.summary.title}</span>
 
       {/* Kalemler ÖZETİN İÇİNDE, tasarımdaki gibi: `ad × adet ——— tutar`, sonra indirim, teslimat
@@ -492,20 +495,20 @@ export function OrderSummary(props: CheckoutViewProps) {
           ))}
         {cartReady &&
           cart.lines.map((line) => (
-            <Row
+            <SummaryRow
               key={cartKey(line)}
               // Paket satırı adetle değil KÜNYESİYLE anılır (tasarım: "Bayram Sofrası (paket)"):
               // paketin adedi tek, satılan şey bütünün kendisi.
               label={line.kind === 'bundle' ? `${line.name} ${t.summary.packageSuffix}` : `${line.name} × ${line.qty}`}
               value={line.lineTotalCents === null ? '—' : formatPrice(line.lineTotalCents, locale)}
-              tone="ink"
             />
           ))}
         {discountCents > 0 && (
           // Etiket sepetle AYNI yardımcıdan: müşteri iki ekranda aynı indirimi iki türlü okumamalı.
-          <Row label={discountLabel(cart.discount, t.summary, locale)} value={`−${formatPrice(discountCents, locale)}`} tone="olive" />
+          <SummaryRow label={discountLabel(cart.discount, t.summary, locale)} value={`−${formatPrice(discountCents, locale)}`} tone="olive" />
         )}
-        <Row label={t.summary.delivery} value={shippingLabel} tone={payment?.shippingFeeCents ? 'ink' : 'olive'} />
+        {/* Ücretsizde YALNIZ tutar yeşil (tasarım): ücret bir maliyet, ücretsizlik bir kazanç. */}
+        <SummaryRow label={t.summary.delivery} value={shippingLabel} tone={payment?.shippingFeeCents ? 'default' : 'oliveValue'} />
         {/* Toplam satırı tasarımda **Karla 700/18** — serif DEĞİL. Serif yapmak onu bir başlığa
             çeviriyor; oysa bu bir sayı satırı ve üstündeki satırlarla aynı ailede okunmalı. */}
         <div className="flex items-baseline justify-between gap-3 border-t border-sand-200 pt-2.5">
@@ -554,15 +557,6 @@ export function OrderSummary(props: CheckoutViewProps) {
           {t.summary.coldChain.replace('{date}', formatDeliveryDate(state.deliveryDate, locale))}
         </p>
       )}
-    </section>
-  );
-}
-
-function Row({ label, value, tone }: { label: string; value: string; tone: 'ink' | 'olive' }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="font-sans text-body-sm text-body">{label}</span>
-      <span className={['font-sans text-body-sm font-semibold', tone === 'olive' ? 'text-olive-dark' : 'text-ink'].join(' ')}>{value}</span>
-    </div>
+    </Card>
   );
 }

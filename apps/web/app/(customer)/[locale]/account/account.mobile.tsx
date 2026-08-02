@@ -1,6 +1,8 @@
 import { Link } from '@/i18n/navigation';
 import type { AccountViewProps } from './account-types';
-import { Card, CardHead, ConsentSwitch, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
+import { statusPillClass } from '@/components/customer/ui/badge';
+import { Card } from '@/components/customer/ui/card';
+import { CardHead, ConsentSwitch, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { AddressesCard } from './components/addresses-card';
 import { ProfileCard } from './components/profile-card';
 
@@ -40,7 +42,7 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
           <CardHead
             title={t.companyTitle}
             compact={compact}
-            action={<span className="rounded-pill bg-olive-bg px-2.5 py-0.5 font-sans text-micro font-bold text-olive">{t.companyApproved}</span>}
+            action={<span className={statusPillClass('sm', 'bg-olive-bg text-olive')}>{t.companyApproved}</span>}
           />
           <Row label={t.companyLegalName} value={account.company.legalName} />
           {account.company.siret && <Row label={t.companySiret} value={account.company.siret} />}

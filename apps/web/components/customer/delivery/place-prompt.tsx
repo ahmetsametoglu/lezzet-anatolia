@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
+import { pillInputClass } from '@/components/customer/form/pill-input';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { isValidPostalCode } from '@/lib/delivery/place-types';
 import { useDeliveryPlace } from './place-context';
@@ -73,7 +74,7 @@ export function PlacePrompt({ locale, scope = 'home' }: PlacePromptProps) {
           maxLength={5}
           placeholder={t.placeholder}
           aria-label={scope === 'cart' ? t.cartAskTitle : t.promptTitle}
-          className="w-28 rounded-pill border-[1.5px] border-sand-300 bg-card px-4 py-2 font-sans text-body-sm font-semibold text-ink outline-none focus:border-olive"
+          className={pillInputClass('w-28 py-2 text-body-sm font-semibold')}
         />
         <Button size="sm" onClick={() => void submit()} disabled={busy} className="!px-5">
           {t.submit}

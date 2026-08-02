@@ -1,5 +1,4 @@
-import { Link } from '@/i18n/navigation';
-import { buttonClass } from '@/components/customer/ui/button';
+import { ListEmpty } from '@/components/customer/ui/list-empty';
 import type { Messages } from '../support-types';
 
 /**
@@ -8,6 +7,9 @@ import type { Messages } from '../support-types';
  *
  * Çıkışı olan bir boş hâl: emoji + iki cümle + davet. "Hiç talebiniz yok" bir eksiklik değil, iyi
  * haberdir; ekran onu bir hata gibi göstermez.
+ *
+ * İç dizilim paylaşılan `ListEmpty`den gelir (K1); buranın işi yalnız ekranı dolduran kabuk —
+ * boş hâl tepeye yapışıp altını boş bırakmamalı.
  */
 interface EmptyTicketsProps {
   t: Messages;
@@ -15,15 +17,8 @@ interface EmptyTicketsProps {
 
 export function EmptyTickets({ t }: EmptyTicketsProps) {
   return (
-    // `h-full` + ortalama: ekranı dolduran bir yüzeydeyiz, boş hâl tepeye yapışıp altını boş
-    // bırakmamalı.
-    <div className="flex h-full flex-col items-center justify-center gap-2.5 px-4 py-10 text-center">
-      <span className="text-[32px] leading-none">💬</span>
-      <span className="font-serif text-card-title-sm leading-tight font-semibold text-ink">{t.empty.title}</span>
-      <span className="font-sans text-note leading-relaxed text-body">{t.empty.body}</span>
-      <Link href="/support/new" className={buttonClass({ className: 'mt-1' })}>
-        {t.empty.cta}
-      </Link>
+    <div className="flex h-full flex-col items-center justify-center px-4 py-10">
+      <ListEmpty compact icon="💬" title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/support/new' }} />
     </div>
   );
 }

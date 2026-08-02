@@ -9,7 +9,8 @@ import { useRouter } from '@/i18n/navigation';
 import type { AccountView } from '@/lib/account/read';
 import { setPreferredLanguageAction } from '@/lib/identity/language-actions';
 import { updateProfileAction } from '../actions';
-import { Card, CardHead, Row } from './account-cards';
+import { Card } from '@/components/customer/ui/card';
+import { CardHead, Row } from './account-cards';
 import type { Messages } from '../account-types';
 
 /**
@@ -43,9 +44,12 @@ const LANGUAGE_LABEL: Record<PreferredLanguage, string> = { tr: 'Türkçe', fr: 
 /**
  * Dil hapı — tasarımda "Türkçe ▾", yani satırın kendi açılır listesi.
  *
- * **Ham `<select>` bilinçli** (CLAUDE.md §2 "son çare"): form kitinin `FormSelectField`'i etiketli,
- * tam genişlikte bir alan — tasarımın istediği şey satır içinde duran kompakt bir hap. Kiti zorlamak
- * tasarımı bozardı. Kutu tasarımın künyesiyle birebir: 1,5px kum-400 kenar, beyaz zemin, hap köşe.
+ * **Ham `<select>` bilinçli** (CLAUDE.md §2 "son çare"): kitin alan kabuğu (`FieldShell` +
+ * `controlClass`) etiketli, `48px` sabit yükseklikte, tam genişlikte bir kutu verir — tasarımın
+ * istediği şey satır içinde duran kompakt bir hap. Kiti zorlamak tasarımı bozardı. (Kitte bir de
+ * saf `FormSelectField` duruyordu; hiç tüketilmemişti ve `bg-card` yerine hâlâ `bg-white` yazıyordu
+ * — K4 · 02.08 ile silindi. Kitin bekleyen satır-içi ekseni: `design/BACKLOG §2`.)
+ * Kutu tasarımın künyesiyle birebir: 1,5px kum-400 kenar, beyaz zemin, hap köşe.
  *
  * Ok işareti ayrı bir düğüm: `appearance-none` yerel oku kaldırıyor, tasarımın "▾"si onun yerine
  * geçiyor — üç tarayıcıda üç farklı ok çizilmesin.

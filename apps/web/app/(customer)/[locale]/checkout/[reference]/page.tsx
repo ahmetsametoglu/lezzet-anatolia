@@ -10,6 +10,8 @@ import { getSessionUser } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { FramedImage } from '@/components/media/framed-image';
 import { Button, buttonClass } from '@/components/customer/ui/button';
+import { Card } from '@/components/customer/ui/card';
+import { SummaryRow } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
 import { imageOf } from '@/lib/storefront/map';
 import { formatDeliveryDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
@@ -197,7 +199,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
           {/* Teslimat ve ödeme YAN YANA: ikisi de "sipariş ne oldu" sorusunun yarısı, alt alta
               dizildiklerinde biri diğerinin altında kalıp gözden kaçıyordu. */}
           <div className={compact ? 'flex flex-col gap-3' : 'grid grid-cols-2 gap-4.5'}>
-            <Card compact={compact}>
+            <Card compact={compact} gap="sm">
               <Eyebrow>{t.delivery.title}</Eyebrow>
               <span className={['font-serif leading-tight text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>
                 {day ?? t.delivery.shipping}
@@ -217,7 +219,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
               <Footnote>{onRoute ? t.delivery.coldChain : t.delivery.shippingNote}</Footnote>
             </Card>
 
-            <Card compact={compact}>
+            <Card compact={compact} gap="sm">
               <Eyebrow>{t.payment.title}</Eyebrow>
               <span className={['font-serif leading-tight text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>
                 {order.onAccount
@@ -250,7 +252,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
             </Card>
           </div>
 
-          <Card compact={compact}>
+          <Card compact={compact} gap="sm">
             <span className={['font-serif leading-tight text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{t.timeline.title}</span>
             {/**
              * Zaman çizgisi masaüstünde YATAY: dört adım bir yolculuktur ve yolculuk soldan sağa
@@ -319,7 +321,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
         {/* Özet masaüstünde YAPIŞIK: uzun sayfada aşağı inerken ne sipariş ettiği ve ne ödediği
             gözden kaybolmamalı. */}
         <div className={compact ? '' : 'sticky top-5'}>
-          <Card compact={compact}>
+          <Card compact={compact} gap="sm">
             <span className={['font-serif leading-tight text-ink', compact ? 'text-card-title-sm' : 'text-card-title'].join(' ')}>{t.summary.title}</span>
 
             <ul className="flex flex-col gap-2.5">
@@ -358,7 +360,8 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
               <SummaryRow
                 label={t.summary.delivery}
                 value={order.shippingFee > 0 ? formatPrice(toCents(order.shippingFee), locale as Locale) : t.summary.free}
-                tone={order.shippingFee > 0 ? 'ink' : 'olive'}
+                // Ücretsizde YALNIZ tutar yeşil (tasarım): ücret maliyet, ücretsizlik kazanç.
+                tone={order.shippingFee > 0 ? 'default' : 'oliveValue'}
               />
               <div className="flex items-baseline justify-between gap-3 border-t border-sand-200 pt-2.5">
                 <span className="font-sans text-lead font-bold text-ink">{t.summary.total}</span>
@@ -420,15 +423,6 @@ function Mailed({ template, email }: { template: string; email: string }) {
   );
 }
 
-/** Onay ekranının tek kart kabuğu — üç yerde aynı çerçeve, üç kez yazılmasın diye. */
-function Card({ compact, children }: { compact: boolean; children: React.ReactNode }) {
-  return (
-    <section className={['flex flex-col gap-2.5 rounded-card border border-sand-200 bg-card', compact ? 'px-4 py-4' : 'px-6.5 py-5.5'].join(' ')}>
-      {children}
-    </section>
-  );
-}
-
 /** Üstbaşlık: kartın NE olduğunu söyler, içeriğin kendisi başlığı tekrar etmez. */
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return <span className="font-sans text-eyebrow uppercase text-muted">{children}</span>;
@@ -450,14 +444,5 @@ function Dot({ done }: { done: boolean }) {
       className={['size-3.5 flex-none rounded-full', done ? 'bg-olive' : 'border-2 border-sand-500 bg-card'].join(' ')}
       aria-hidden="true"
     />
-  );
-}
-
-function SummaryRow({ label, value, tone }: { label: string; value: string; tone: 'ink' | 'olive' }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className={['font-sans text-body-sm', tone === 'olive' ? 'text-olive' : 'text-body'].join(' ')}>{label}</span>
-      <span className={['font-sans text-body-sm font-bold', tone === 'olive' ? 'text-olive' : 'text-ink'].join(' ')}>{value}</span>
-    </div>
   );
 }

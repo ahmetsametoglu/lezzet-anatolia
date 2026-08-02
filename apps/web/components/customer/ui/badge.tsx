@@ -74,3 +74,34 @@ export function Badge({ tone, variant = 'tint', children }: BadgeProps) {
     <span className={['w-max font-sans font-semibold', SHAPE[variant], TONE[tone][variant]].join(' ')}>{children}</span>
   );
 }
+
+/**
+ * **Durum hapı** kabuğu — `Badge`in kardeşi, varyantı değil (denetim bulgusu M2, 02.08).
+ *
+ * Sipariş durumu, talep durumu, ödeme yolu ve hesap onay hapı aynı kabuğu ayrı ayrı yazıyordu:
+ * `rounded-pill` + `font-bold` + `leading-tight`, üç ayrı ölçü kademesiyle.
+ *
+ * **Neden `Badge`e bir `shape` ekseni DEĞİL:** ölçüldü, tonlar tutmuyor. `Badge` anlam ailesi seçtirir
+ * ve tonu kendi tablosundan verir; durum hapları ise tasarımın açıkça ayırdığı tonları kullanıyor —
+ * iptal `terracotta-bright` ("hata/iptal metni" jetonu, `terracotta` değil), aktif üçlü `olive`
+ * (`olive-dark` değil), çözülmüş talep `text-ink` ("çözülmüş talep pasif değil, sonuçlanmıştır").
+ * Üçü de kendi künyesinde gerekçeli. `Badge`e bağlamak bu üç kararı sessizce ezerdi; `Badge`e ham
+ * sınıf geçirmek ise onun "çağıran renk seçmez, ANLAM seçer" sözleşmesini bozardı.
+ *
+ * Paylaşılan şey KABUK; ton çağıranın kapalı listesinde kalır ve orada gerekçesiyle durur. İkisi aynı
+ * dosyada yaşıyor ki "hangisini kullanacağım" sorusu tek yerde cevaplansın.
+ *
+ * Kademeler koddaki gerçek değerlerden: `sm` dar cihaz ve satır içi, `md` liste satırı, `lg` özet
+ * kartındaki ödeme hapı (tasarımda tek başına duruyor, bir tık iri).
+ */
+type StatusPillSize = 'sm' | 'md' | 'lg';
+
+const PILL_SIZE: Record<StatusPillSize, string> = {
+  sm: 'px-2.5 py-0.5 text-micro',
+  md: 'px-3 py-1 text-micro',
+  lg: 'px-3 py-1.5 text-note',
+};
+
+export function statusPillClass(size: StatusPillSize, tone: string): string {
+  return ['w-max flex-none rounded-pill font-sans font-bold leading-tight', PILL_SIZE[size], tone].join(' ');
+}

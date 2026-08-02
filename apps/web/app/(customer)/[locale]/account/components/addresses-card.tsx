@@ -6,7 +6,8 @@ import type { Address } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
 import { AddressForm, toAddressFields, toFormInput } from '@/components/customer/delivery/address-form';
 import { addAddressAction, deleteAddressAction, setDefaultAddressAction, updateAddressAction } from '../actions';
-import { Card, CardHead } from './account-cards';
+import { Card } from '@/components/customer/ui/card';
+import { CardHead } from './account-cards';
 import type { Messages } from '../account-types';
 
 /**

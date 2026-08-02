@@ -1,7 +1,8 @@
 'use client';
 
 import { Link } from '@/i18n/navigation';
-import { Button, buttonClass } from '@/components/customer/ui/button';
+import { Button } from '@/components/customer/ui/button';
+import { ListEmpty } from '@/components/customer/ui/list-empty';
 import { LoadMore } from '@/components/customer/ui/load-more';
 import { formatOrderDate, formatPrice } from '@/lib/storefront/format';
 import type { CustomerOrderSummary } from '@/lib/order/customer-orders';
@@ -106,13 +107,8 @@ function EmptyOrders({ t }: { t: OrdersViewProps['t'] }) {
   return (
     <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-12 py-10">
       <h1 className="font-serif text-page-title leading-tight text-ink">{t.title}</h1>
-      <div className="mx-auto flex w-[340px] flex-col items-center gap-2.5 rounded-[16px] bg-cream p-6 text-center">
-        <span className="text-[34px] leading-none">📦</span>
-        <span className="font-serif text-card-title-sm leading-tight text-ink">{t.empty.title}</span>
-        <span className="font-sans text-note leading-relaxed text-body">{t.empty.body}</span>
-        <Link href="/catalog" className={buttonClass({ className: 'mt-1' })}>
-          {t.empty.cta}
-        </Link>
+      <div className="mx-auto w-[340px] rounded-[16px] bg-cream p-6">
+        <ListEmpty icon="📦" title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} />
       </div>
     </div>
   );

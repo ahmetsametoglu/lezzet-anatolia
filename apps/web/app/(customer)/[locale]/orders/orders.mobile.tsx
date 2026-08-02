@@ -2,6 +2,7 @@
 
 import { Link } from '@/i18n/navigation';
 import { Button, buttonClass } from '@/components/customer/ui/button';
+import { ListEmpty } from '@/components/customer/ui/list-empty';
 import { LoadMore } from '@/components/customer/ui/load-more';
 import { formatPrice } from '@/lib/storefront/format';
 import { OrderStatusBadge } from './components/order-status-badge';
@@ -35,13 +36,8 @@ export function OrdersMobile({
 }: OrdersViewProps) {
   if (orders.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2.5 px-4 py-8 text-center">
-        <span className="text-[34px] leading-none">📦</span>
-        <span className="font-serif text-card-title-sm leading-tight text-ink">{t.empty.title}</span>
-        <span className="font-sans text-note leading-relaxed text-body">{t.empty.body}</span>
-        <Link href="/catalog" className={buttonClass({ className: 'mt-1' })}>
-          {t.empty.cta}
-        </Link>
+      <div className="px-4 py-8">
+        <ListEmpty icon="📦" title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} />
       </div>
     );
   }

@@ -165,6 +165,19 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
   **O güne kadar üçü gerekçeli istisna** (`CLAUDE.md §2` "ham `<input>` son çare") — kiti çağırıp
   sınıflarının çoğunu ezmek, kiti kullanmak değil adını kullanmak olurdu.
 
+- **HAP GİRDİNİN KENAR TONU: `sand-300` mü `sand-400` mü? (02.08, denetim K2).**
+  Üç hap girdi (`place-prompt` · `place-dialog` · `notice-dialog`) artık tek kaynaktan geliyor
+  (`components/customer/form/pill-input.ts`) ve **`sand-300`** kullanıyor. Ama yüzeydeki öteki hap
+  KONTROLLER `sand-400`: `Button.secondary`, `load-more`, `sort-select`, hesaptaki dil hapı.
+  İki okuma var ve hangisinin doğru olduğunu kod söyleyemez: *(a)* girdi ile kontrol bilinçli olarak
+  ayrı tonda — `field-shell` künyesi `sand-300`ü "salt-okunur alanın kenarı" diye tarif ediyor, ki bu
+  ayrımı DESTEKLEMİYOR; *(b)* üçü birlikte sapmış ve `sand-400` olmalı.
+  **İstenen karar:** envanterde hap girdinin kenar tonu. Cevap gelene kadar bugünkü ton korunuyor —
+  tasarım söylemeden değiştirmek improvise olurdu.
+
+  Not: hap girdi kitin `size` ekseninin küçük hâli DEĞİL, kardeşi (etiket kabuğu yok, köşe `pill`).
+  Yukarıdaki karar gelince ikisi birleşmez; ikisi de ayrı ayrı kalır.
+
 
 - **ÇÖZÜLDÜ (02.08, kullanıcı kararı): Transfer AYRI SAYFA DEĞİL — 01.08 kararı geçerli.** Gelen
   çizim ayrı sayfa varsayıyordu; kullanıcı *"bence (a)'yı yapsak daha iyi… mevcut tasarımdaki ilgili

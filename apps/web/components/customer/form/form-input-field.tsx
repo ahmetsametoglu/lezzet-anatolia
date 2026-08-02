@@ -6,7 +6,9 @@ import { FieldShell, controlClass, errorIdFor } from './field-shell';
 
 /**
  * Saf (RHF'siz) input primitive'i — etiket + input + hata (petitcigogne `FormInputField` deseni,
- * Lezzet token'larıyla). Hem register'lı/kontrollü hem RHF adaptörü (`FormInput`) bunu paylaşır.
+ * Lezzet token'larıyla). Hem kontrollü kullanım hem react-hook-form `register()` yayılımı bunu
+ * doğrudan kullanır: **müşteri yüzeyinde ayrı bir RHF adaptör katmanı YOKTUR** (K4 · 02.08 —
+ * `FormInput`/`FormSelect`/`FormNumber`/`FormSwitch` hiç tüketilmeden duruyordu, silindi).
  * Native input prop'ları (`value`, `onChange`, `type`, `placeholder`, `inputMode`, …) doğrudan geçer.
  * `optional` etiketin yanına "(isteğe bağlı)" yazar — K32 zorunluluğu yıldızla anlatmaz, tersini işaretler.
  */

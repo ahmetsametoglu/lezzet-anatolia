@@ -16,14 +16,6 @@ import type { Messages } from '../account-types';
  * bölümü, B2B'de puan bölümü DOM'da yoktur. Tasarımın açık kuralı bu — boş bir kart, olmayan bir
  * özelliği varmış gibi gösterir.
  */
-export function Card({ compact, children }: { compact: boolean; children: ReactNode }) {
-  return (
-    <section className={['flex flex-col gap-3 rounded-card border border-sand-200 bg-card', compact ? 'px-4 py-3.5' : 'px-6.5 py-5.5'].join(' ')}>
-      {children}
-    </section>
-  );
-}
-
 /** Kart başlığı + (varsa) sağdaki eylem bağlantısı. Künye notu mobilde düşer: satır zaten dar. */
 export function CardHead({ title, compact, action, note }: { title: string; compact: boolean; action?: ReactNode; note?: string }) {
   return (

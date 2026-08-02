@@ -1,4 +1,5 @@
 import type { CustomerOrderStatus } from '@lezzet/types';
+import { statusPillClass } from '@/components/customer/ui/badge';
 import type { Messages } from '../orders-types';
 
 /**
@@ -29,15 +30,5 @@ interface OrderStatusBadgeProps {
 }
 
 export function OrderStatusBadge({ t, status, compact = false }: OrderStatusBadgeProps) {
-  return (
-    <span
-      className={[
-        'flex-none rounded-pill font-sans font-bold leading-tight',
-        compact ? 'px-2.5 py-0.5 text-micro' : 'px-3 py-1 text-micro',
-        BADGE_CLASS[status],
-      ].join(' ')}
-    >
-      {t.status[status]}
-    </span>
-  );
+  return <span className={statusPillClass(compact ? 'sm' : 'md', BADGE_CLASS[status])}>{t.status[status]}</span>;
 }

@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { Link } from '@/i18n/navigation';
+import { buttonClass } from './button';
 
 /**
  * §4 · Katalog süzgeç parçaları — K17 Filtre Çipi · K20 Boş Durum. (K18 Sıralama ayrı dosyada:
@@ -91,11 +92,12 @@ export function EmptyState({ title, body, action, icon }: EmptyStateProps) {
       {icon && <span className="text-h2">{icon}</span>}
       <span className="font-serif text-card-title text-ink">{title}</span>
       <span className="max-w-md font-sans text-body text-muted">{body}</span>
+      {/* Düğme `buttonClass`tan gelir. Elle yazılmış hâli ODAK HALKASINI kaybetmişti ve sabit
+          yükseklik yerine `py-3` kullanıyordu — `Button` künyesinin adıyla uyardığı tuzak: kontrol
+          gövde metninin 1,5 satır aralığını miras alıp çizilenden uzuyor. Kardeş boş-durumlar
+          (`packages`, `orders`) zaten `buttonClass` kullanıyordu; sapan taraf paylaşılan primitifti. */}
       {action && (
-        <Link
-          href={action.href}
-          className="mt-1 cursor-pointer rounded-pill bg-olive px-6 py-3 font-sans text-body font-bold text-white transition-colors hover:bg-olive-dark"
-        >
+        <Link href={action.href} className={buttonClass({ className: 'mt-1' })}>
           {action.label}
         </Link>
       )}

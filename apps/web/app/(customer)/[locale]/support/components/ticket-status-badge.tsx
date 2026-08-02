@@ -1,4 +1,5 @@
 import type { TicketStatus } from '@lezzet/types';
+import { statusPillClass } from '@/components/customer/ui/badge';
 import type { Messages } from '../support-types';
 
 /**
@@ -28,15 +29,5 @@ interface TicketStatusBadgeProps {
 }
 
 export function TicketStatusBadge({ t, status, compact = false }: TicketStatusBadgeProps) {
-  return (
-    <span
-      className={[
-        'flex-none rounded-pill font-sans text-micro font-bold leading-tight',
-        compact ? 'px-2.5 py-0.5' : 'px-3 py-1',
-        BADGE_CLASS[status],
-      ].join(' ')}
-    >
-      {t.status[status]}
-    </span>
-  );
+  return <span className={statusPillClass(compact ? 'sm' : 'md', BADGE_CLASS[status])}>{t.status[status]}</span>;
 }

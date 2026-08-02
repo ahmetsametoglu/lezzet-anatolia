@@ -2,8 +2,17 @@ import type { ReactNode } from 'react';
 
 /**
  * Müşteri "durum ekranı" gövdesi — simge + üst etiket + Lora başlık + açıklama + aksiyonlar.
- * Hata sayfaları (404/500) ve ileride boş-durum ekranları bu TEK bloğu paylaşır (yeni komponent
- * icat edilmez). Cihaz forku: masaüstünde daha büyük başlık/boşluk, mobilde sıkışık — `md:` yok.
+ *
+ * **Sayfanın KENDİSİ durum ekranı olduğunda** kullanılır: 404, 500 ve gelecekteki kardeşleri. Bu
+ * blok gövdesinde `<h1>` çizer ve `eyebrow` ister; ikisi de "bu sayfa şu anda budur" demenin
+ * parçası.
+ *
+ * **Liste-içi boş hâl bu blok DEĞİLDİR** (K1 · 02.08): o hâl, başlığı zaten çizilmiş bir sayfanın
+ * içinde durur — buraya bağlanırsa aynı sayfada ikinci bir `<h1>` doğar ve üst etiketi de yoktur.
+ * Karşılığı `ui/list-empty.tsx`. Künye önce "ileride boş-durum ekranları da bunu paylaşır" diyordu;
+ * iddia daraltıldı, çünkü kod hiçbir zaman öyle olmadı ve okuyan ajanı yanlış yere gönderiyordu.
+ *
+ * Cihaz forku: masaüstünde daha büyük başlık/boşluk, mobilde sıkışık — `md:` yok.
  */
 interface MessageScreenProps {
   device: 'mobile' | 'desktop';

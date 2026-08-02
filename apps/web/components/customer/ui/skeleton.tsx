@@ -14,6 +14,8 @@
  * `animate-pulse` bilinçli olarak ÇOK sönük: iskelet bir bekleme göstergesidir, ekranın ilgi
  * merkezi değil.
  */
+import { cardClass } from './card';
+
 export function Skeleton({ className = '' }: { className?: string }) {
   return <span className={['block animate-pulse rounded-[6px] bg-sand-100', className].join(' ')} aria-hidden="true" />;
 }
@@ -50,11 +52,10 @@ export function SkeletonRegion({ label, children }: { label?: string; children: 
  * Sayfalar yalnız İÇİNİ tarif eder.
  */
 export function SkeletonCard({ compact = false, className = '', children }: { compact?: boolean; className?: string; children: React.ReactNode }) {
-  return (
-    <div className={['flex flex-col gap-3 rounded-card border border-sand-200 bg-card', compact ? 'px-4 py-4' : 'px-6.5 py-5.5', className].join(' ')}>
-      {children}
-    </div>
-  );
+  // Kabuk `cardClass`tan gelir — künyenin "aynı kabuğu paylaşmalı" sözü ancak böyle tutulur (M2).
+  // Elle yazıldığı sürece tutulmuyordu: iskelet `px-6.5`, yerini tuttuğu checkout özeti `px-6` idi
+  // ve içerik gelince kart 4 px kayıyordu.
+  return <div className={cardClass({ compact, className })}>{children}</div>;
 }
 
 /**

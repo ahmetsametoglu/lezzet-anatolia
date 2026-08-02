@@ -2,6 +2,7 @@
 
 import type { Locale } from '@lezzet/i18n';
 import { buttonClass } from '@/components/customer/ui/button';
+import { cardClass } from '@/components/customer/ui/card';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
 import { shippingGroupFee, type CartView } from '@/lib/cart/cart-types';
@@ -110,7 +111,10 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
   const fee = view.shippingOnly ? shippingGroupFee(view) : null;
   const totalCents = view.totalCents + (fee?.feeCents ?? 0);
   return (
-    <div className={['flex flex-col rounded-card border border-sand-200 bg-card', compact ? 'gap-2 p-3.5' : 'gap-3 p-6'].join(' ')}>
+    /* Ölçüler tasarımdan (`Musteri - Sepet.dc.html:104` web · `:399` mobil): web `22×24` + `gap 12`,
+       mobil `14` + `gap 7`. Web pedi `p-6` (24×24) yazılıydı — dikeyde 2 px fazlaydı, `snug` ile
+       tasarıma döndü. Mobil ped ve dar boşluk bu kartın kendi kademesi ve primitifte adı var. */
+    <div className={cardClass({ compact, pad: 'snug', compactPad: 'sm', gap: compact ? 'xs' : 'md' })}>
       {!compact && <h2 className="font-serif text-h2-sm text-ink">{grouped ? t.group.summaryScope : t.summary}</h2>}
 
       {/* Tutar satırları TEK BLOKTA ve kendi aralarında dar (8px). Kartın 12px'lik ana aralığı

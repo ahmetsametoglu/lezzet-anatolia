@@ -3,6 +3,8 @@
 import type { OrderTimelineStep } from '@lezzet/domain-core';
 import { formatDeliveryDate, formatOrderDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
 import { buttonClass } from '@/components/customer/ui/button';
+import { statusPillClass } from '@/components/customer/ui/badge';
+import { SummaryRow } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
 import type { CustomerOrderDetail, CustomerOrderDetailLine } from '@/lib/order/customer-orders';
 import type { DetailViewProps } from '../detail-types';
@@ -15,10 +17,17 @@ import type { DetailViewProps } from '../detail-types';
  * içinde. Bu yüzden parça bazında ortak, diziliş bazında ayrı.
  */
 
-/** Beyaz kart — tasarımın standart bloğu (1px sand kenar, 18px köşe). */
+/**
+ * Beyaz kart — tasarımın standart bloğu (1px sand kenar, 18px köşe).
+ *
+ * Paylaşılan `Card`a bağlanmadı (M2): bu blok BAŞLIK taşıyor (`<h2>`) ve tasarımda kendi pedi var
+ * (`px-6 py-5`). Kabuğu paylaşmak için `Card`a beşinci bir ped kademesi ve bir başlık yuvası eklemek,
+ * primitifi tek çağrı yeri uğruna genişletmek olurdu. Köşe artık jetondan (`rounded-card`); ham
+ * `rounded-[18px]` yazılıydı ve jeton değişse geride kalırdı.
+ */
 function Panel({ title, children, className = '' }: { title?: string; children: React.ReactNode; className?: string }) {
   return (
-    <section className={['flex flex-col rounded-[18px] border border-sand-200 bg-card px-6 py-5', className].join(' ')}>
+    <section className={['flex flex-col rounded-card border border-sand-200 bg-card px-6 py-5', className].join(' ')}>
       {/* Kart başlığı tasarımda 18px Lora 600 → `text-lead` (18px). Ağırlık ve satır yüksekliği
           jetonun içinde; ayrıca yazmak jetonu ezer. */}
       {title && <h2 className="mb-2.5 font-serif text-lead font-semibold leading-tight text-ink">{title}</h2>}
@@ -231,18 +240,19 @@ export function SummaryCard({ t, locale, order, title }: Pick<DetailViewProps, '
 
   return (
     <Panel title={title}>
-      <Row label={t.subtotal} value={formatPrice(order.subtotalCents, locale)} />
+      <SummaryRow label={t.subtotal} value={formatPrice(order.subtotalCents, locale)} />
       {order.discountCents > 0 && (
-        <Row
+        <SummaryRow
           label={order.discountLabel ? `${t.discount} — ${order.discountLabel}` : t.discount}
           value={`−${formatPrice(order.discountCents, locale)}`}
           tone="olive"
         />
       )}
-      <Row
+      <SummaryRow
         label={t.shipping}
         value={order.shippingFeeCents > 0 ? formatPrice(order.shippingFeeCents, locale) : t.freeShipping}
-        tone={order.shippingFeeCents > 0 ? undefined : 'olive'}
+        // Ücretsiz teslimatta YALNIZ tutar yeşil (tasarım): etiket bir kazanç değil, tutar kazanç.
+        tone={order.shippingFeeCents > 0 ? 'default' : 'oliveValue'}
       />
       <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-sand-200 pt-2.5 font-sans text-body font-bold text-ink">
         <span>{t.grandTotal}</span>
@@ -257,15 +267,6 @@ export function SummaryCard({ t, locale, order, title }: Pick<DetailViewProps, '
         </span>
       )}
     </Panel>
-  );
-}
-
-function Row({ label, value, tone }: { label: string; value: string; tone?: 'olive' }) {
-  return (
-    <div className={['flex items-baseline justify-between gap-4 font-sans text-body-sm', tone === 'olive' ? 'text-olive' : 'text-body'].join(' ')}>
-      <span>{label}</span>
-      <span className={['font-bold', tone === 'olive' ? '' : 'text-ink'].join(' ')}>{value}</span>
-    </div>
   );
 }
 
@@ -292,11 +293,7 @@ function PaymentPill({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
     refunded: 'bg-cream-deep text-ink',
   };
 
-  return (
-    <span className={['w-max rounded-pill px-3 py-1.5 font-sans text-note font-bold leading-tight', tone[key]].join(' ')}>
-      {t.pay[key]}
-    </span>
-  );
+  return <span className={statusPillClass('lg', tone[key])}>{t.pay[key]}</span>;
 }
 
 /**
