@@ -537,6 +537,33 @@ kullanıcı kararı, gürültü değil — aynı kod iki ülkede geçerli olabil
 eksiğimizi** itiraf eder — müşteriye kusur yüklemez. Panel ileride haritaya dönebilir (kullanıcı
 niyeti, 02.08); o gün bu hâllerin haritadaki karşılığı da kararlaştırılmalı.
 
+**Checkout mobilde YAPIŞKAN OLAN ŞERİT, onay düğmesi değil — bilinçli sapma, kayda geçiyor (03.08).**
+Tasarım not düşüyor: *"onay butonu alta sabitlenir"* (`Musteri - Checkout.dc.html:339`). Kod bunun
+yerine üstteki ilerleme şeridini yapışkan yapıyor (`checkout-progress.tsx:37` — `sticky top-0`) ve
+gerekçesi `checkout.mobile.tsx` künyesinde yazılı: dar ekranda kalıcı bir özet/eylem paneli, üzerinde
+karar verilen adımın yerini yiyor; şerit aynı iki bilgiyi (tutar + kalan adım) tek satırda taşıyor.
+
+Kayıt burada duruyor çünkü **bir denetim bunu "eksik" diye buldu** ve arayışı `checkout.mobile.tsx`
+içinde `sticky` arayarak yaptı — yapışkanlık çocuk bileşende olduğu için görmedi. Sapma gerçek ve
+bilinçli; ama yazılı olmadığı sürece her taramada yeniden bulgu olarak açılacak. Tasarım tarafı
+şeridi yeterli bulmazsa karar burada tartışılır.
+
+**Mobil katalog kartında dokunma hedefi 44px'in ALTINDA — bilinçli, kullanıcı kararı (03.08).**
+Envanter iki yerde taban veriyor: *"− ve + dokunma alanı en az 44px kare"* (`:162`) ve *"Mobil
+dokunma hedefleri en az 44px"* (`:630`). Ama aynı tasarım katalog kartını 26px'lik bir daireyle
+çiziyor ve kodun künyesi sebebini yazıyor: ekleme düğmesi **yerini adet seçicisine bırakıyor**
+(`storefront-cards.tsx:232` · `qty-stepper.tsx` `xs`), ikisi aynı kutuyu paylaşmazsa kart eklemede
+zıplıyor. Tasarımın iki ifadesi çakışıyor ve ikisi de tasarımın.
+
+Üç yol tartışıldı: *(a)* kartı büyütmek (hedef sağlanır, kartın ritmi bozulur), *(b)* görseli
+korumak ama hedefi görünmez büyütmek (− ve + yan yana olduğu için hedefler çakışır — en kötüsü),
+*(c)* kartı olduğu gibi bırakıp ihlali kaydetmek. **Karar (c)**: kartın işi "aç bak", satın alma
+kararının ağırlıklı yeri ürün detayı ve orada ölçüler geniş (`PurchaseBar` · `PurchasePanel`).
+
+Kayıt burada duruyor ki bir sonraki denetim bunu yeniden bulgu olarak açmasın. Kart tasarımı
+elden geçerse ilk sorulacak soru bu. Yüzeydeki öteki hedefler 44px'e çekildi (✕ kapatmalar,
+mobil menü satırları — `iconHitClass`).
+
 **İstisna — operasyonun diyalog formları.** `.dc.html` dosyaları sayfaları çiziyor; form
 diyaloglarının (ürün · katalog · paket) görsel kararı çizilmedi ve bilinçli olarak **bize** bırakıldı
 (kullanıcı kararı, 28.07: "operasyon tarafında özellikle diyalog formlarında kendi custom
@@ -856,10 +883,10 @@ uydurulmadı, envantere yazılması bekleniyor:
 
 ### İç-içe kart zemini — token sözlüğünde adı yok (03.08, denetim OP3)
 
-Denetim iki dosyada "yanlış token" buldu (`bg-ops-white` kart yüzeyinde). Saydım: **`bg-ops-white`
-38 yerde, `bg-ops-card` 12 yerde.** Yani `bg-ops-white` iki ekranın kaçağı değil, sistemin fiilî
-yerleşik kullanımı; azınlıkta olan `bg-ops-card`. Önerilen çare (iki dosyayı çevir) bu ölçekte
-tutarsızlık üretirdi.
+Denetim iki dosyada "yanlış token" buldu (`bg-ops-white` kart yüzeyinde). Saydım (03.08 tazelenmiş
+ölçüm): **`bg-ops-white` 70 yerde / 37 dosyada, `bg-ops-card` 53 yerde / 39 dosyada** — ikisi de
+yalnız operasyon yüzeyinde. Yani `bg-ops-white` iki ekranın kaçağı değil, sistemin fiilî yerleşik
+kullanımı ve hâlâ çoğunluk. Önerilen çare (iki dosyayı çevir) bu ölçekte tutarsızlık üretirdi.
 
 Kullanımın bir gerekçesi de var: karanlık modda `ops-white` (#2a2e26), `ops-card`'ın (#23261f)
 **üstünde** bir kademe. Kart zemininin ya da `ops-subtle` panelin İÇİNE oturan bir kart ayrışmak
@@ -870,8 +897,8 @@ söylüyor: `ops-card` = "kart, tablo, sidebar zemini" · `ops-white` = "dialog 
 **İstenen karar:** envanter §0'a **iç-içe / yükseltilmiş kart zemini** kademesi giriyor mu?
 
 - *(a) Giriyorsa* — ya `ops-white`'ın tanımı genişler ("dialog, girdi ve iç-içe kart zemini") ya
-  üçüncü bir token açılır (`--color-ops-card-raised`); 12 azınlık kullanım ona hizalanır.
-- *(b) Girmiyorsa* — 38 kullanım `bg-ops-card`'a iner ve iç-içe kartlar yalnız kenarlıkla ayrışır.
+  üçüncü bir token açılır (`--color-ops-card-raised`); iç-içe olmayan kullanımlar ona hizalanır.
+- *(b) Girmiyorsa* — 70 kullanım `bg-ops-card`'a iner ve iç-içe kartlar yalnız kenarlıkla ayrışır.
 
-Karar gelene kadar hiçbiri değiştirilmedi: 38 satırı bir tahminle çevirmek, tasarımın söylemediği
+Karar gelene kadar hiçbiri değiştirilmedi: 70 satırı bir tahminle çevirmek, tasarımın söylemediği
 bir kararı kodda vermek olurdu (`CLAUDE.md §3`). Aynı sınıf: K2 (hap girdinin kenar tonu).

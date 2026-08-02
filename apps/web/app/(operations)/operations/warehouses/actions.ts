@@ -203,6 +203,10 @@ export async function searchPostalCodesAction(term: string): Promise<ActionResul
     const rows = await new PostalCodePlaceService(serviceDb()).searchPrefix(term, 12);
     return { data: rows, error: null };
   } catch (error) {
+    // `readable` DEĞİL, çıplak funnel — ve bu bilinçli (denetim S2): bu uç salt OKUMA yapıyor
+    // (önek araması), yani çarpabileceği bir kısıt yok. `readable` kısıt adını insan cümlesine
+    // çeviriyor; hiç kısıt üretmeyen bir yola onu bağlamak, olmayan bir hâli varmış gibi göstermek
+    // olurdu. Buraya bir gün yazma eklenirse `readable`'a bağlanmalı.
     return { data: null, error: getErrorMessage(error) };
   }
 }
