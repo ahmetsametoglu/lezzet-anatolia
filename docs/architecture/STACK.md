@@ -33,9 +33,19 @@ Tek markalı, tek veritabanlı, orta ölçekli bir web ürünü: müşteriye aç
 | Doğrulama | **Zod** | Tip ve çalışma-anı doğrulama tek kaynaktan |
 | Veritabanı | **Supabase** (Postgres + Auth + Storage + Realtime) | ORM yok — `@supabase/supabase-js` doğrudan |
 | **Stil** | **Tailwind** | Tasarım Claude Design ile üretiliyor, çıktısı Tailwind. Bkz. Sapma 2. |
-| **i18n (arayüz)** | kod içi i18n | Statik metinler; içerik jsonb (§5) |
+| **i18n (arayüz)** | kod içi i18n + **`next-intl`** (yalnız yönlendirme) | Statik metinler; içerik jsonb (§5). Sınır aşağıda. |
 | Arka plan işleri | **Hono** + `node-cron` | Webhook ve zamanlı işler için hafif süreç |
 | Süreç yönetimi | **PM2** + reverse proxy (Caddy) | Basit sunucu, sıfır-kesinti reload |
+| Ödeme | **Stripe** (PaymentElement + webhook + refund) | Karar VERİLDİ, üretimde (07.5). `INTEGRATIONS.md`'deki "aday" ifadesi eskidir. |
+| Sürükle-bırak | **`@dnd-kit`** | Tek kullanım: `components/operation/ui/sortable-list.tsx` (operatör sırası) |
+| Log / hata / sağlık | **`packages/observability`** | pino + `error_log` + sağlık görüntüsü → `OBSERVABILITY.md` |
+
+> **`next-intl` SINIRI (denetim B1, 02.08):** yalnız **routing/locale yönlendirmesi** için kullanılır
+> (`middleware.ts`, `i18n/routing.ts`, `i18n/request.ts`). **Mesaj API'si (`useTranslations`,
+> `getTranslations`) KULLANILMAZ** — arayüz metinleri sayfanın yanındaki `messages.json`'dan gelir
+> ve tipi `LocalizedCopy`'den türer (`CLAUDE.md §2`). Bugün `useTranslations` kullanımı **sıfır** ve
+> öyle kalmalı: bu satır yokken bir ajan onu yazdığı gün ikinci bir i18n mekanizması doğar, iki
+> metin kaynağı yan yana yaşar ve hangisinin geçerli olduğunu kimse bilmez.
 
 ORM bilinçli yok: doğrulama Zod'da, sorgu katmanı §6 taban sınıfta. Üçüncü şema kaynağı senkron derdi getirir.
 
@@ -227,10 +237,26 @@ Genel blueprint §10 ile aynı. Env'e yalnız sır + ortama göre değişen değ
 | --- | --- |
 | Marka adı, alan adı, logo yolu, yasal metinler, renkler | `packages/brand` |
 | Arayüz metinleri (tr/fr/de) | `packages/i18n` |
-| Fiziksel ölçüler, sabit oranlar, biçimleme | `packages/helper` |
+| Fiziksel ölçüler, sabit oranlar, para dönüşümü (`toCents`/`fromCents`) | `packages/helper` |
+| **Görüntüleme biçimlemesi (para/tarih/sayı metni)** | **yüzey başına TEK dosya** — aşağı bak |
 | İşletme ayarı (kullanıcı değiştirebilmeli): min sepet, kargo eşiği, DLC uyarı eşiği, KDV varsayılanı | Veritabanı — ayar tablosu + önbellekli çözücü |
 
 Marka adı/alan adı tek sabitten okunur, elle yazılmaz.
+
+**Biçimleme yüzey başına tek dosyadır (karar 02.08 — denetim B6).** Kural eskiden "biçimleme →
+`packages/helper`" diyordu ama kod hiç öyle olmadı ve gerekçesi sağlam: iki yüzeyin ihtiyacı aynı
+değil. Müşteri yüzeyi **üç dilde** `Intl` ile biçimlendirir (ondalık ayracı, para simgesinin yeri,
+tarih sırası dile göre değişir); operasyon yüzeyi tek dilli (TR) ve sabit biçimlidir. Ortak bir
+fonksiyon ikisini de yarım karşılar, ve "locale parametresi geçilir" çözümü operasyonun her çağrısına
+taşıması gereksiz bir argüman ekler.
+
+- Müşteri: `apps/web/lib/storefront/format.ts`
+- Operasyon: `apps/web/components/operation/ui/format.ts`
+
+**Bu iki dosya DIŞINDA `toLocaleString`/`toFixed`/`Intl.NumberFormat` yazılmaz.** Sızıntının bedeli
+görünmez: aynı tutar iki ekranda iki farklı biçimde çıkar ve hangisinin doğru olduğu tartışılır.
+Taşıma (`packages/helper`'a almak) bilinçli olarak YAPILMADI — getirisi düşük, ihtiyaç kuralın
+netleşmesiydi.
 
 ### Dosya deposu: iki kova, iki okuma yolu
 
@@ -299,6 +325,11 @@ Açık iş kalemleri buraya **girmez**; `BACKLOG.md`'ye gider (WORKFLOW.md §8 r
 - **Cron disiplini:** `apps/backend` tek instance (fork mode); her zamanlanmış iş **taramalı ve idempotent** yazılır (kaçan tik bir sonraki taramada telafi olur); kritik işler `last_run` bırakır, gecikince alarm. **Uygulama (06.4):** işler ortak bir kabuktan (`apps/backend/src/jobs/runner.ts`) geçer — üst üste binme koruması (önceki tur bitmediyse tik atlanır), hata yakalama (cron geri çağrısındaki hata sessizce kaybolmaz, süreç de düşmez) ve iz yazımı orada tek yerde. İz `job_run` tablosunda iş başına TEK satırdır (tarihçe değil); hatalı turda da `last_run_at` yazılır — "koştu ama düştü" ile "hiç koşmadı" ayrımı alarmın girdisidir.
 - **Deploy atomikliği:** yeni sürüm ayrı dizine derlenir → symlink değişimi → `pm2 reload`; derleme düşük trafik saatinde.
 - **Test/CI/staging:** her push'ta typecheck+lint+birim test (GitHub Actions); yerel Supabase üzerinde entegrasyon testleri — özellikle **paralel rezervasyon yarışı** ve para-akışı RPC'leri; staging = ikinci (ücretsiz) Supabase projesi + aynı VPS'te ikinci PM2 app; migration provası önce staging'de.
+- **`vitest` yalnız KÖK package.json'da ve bu bilinçlidir (denetim B5, 02.08).** Tek bir kök
+  `vitest.config.ts` iki projeyi (`unit`/`integration`) birlikte tanımlıyor; koşum noktası daima kök.
+  Hiçbir workspace paketinde `test` scripti YOK, yani `pnpm --filter <paket> test` diye bir akış da
+  yok — bağımlılığı paketlere dağıtmak, var olmayan bir kullanımı desteklemek olurdu. Ayrım
+  dizinle çizilir (aşağıdaki madde), paket sınırıyla değil; ikisi çakışsaydı 52 dosya yer değiştirirdi.
 - **Test paketi ikiye ayrıktır (karar 29.07 — ölçümle):** `unit` (DB'siz, **paralel**, 568 test ~1,3 sn) ve `integration` (yerel Supabase, **seri**, ~35 sn). Ayrım öncesi tek paket `fileParallelism: false` altında 45–107 sn geziyordu; oysa saf yarının asıl test süresi 224 ms'ti — kalanı kurulum ve sıra bekleme. **Sınır dizinle çizilir** (`apps/web/lib`, `packages/database`, `apps/backend` = entegrasyon kökleri), isimle değil: 52 dosyayı yeniden adlandırmak paralel ajanların işine dokunurdu. **Sınır kendini denetler:** birim kurulumu `.env` yüklemez ve DB env'ini siler, yani yanlış projeye düşen test sessizce paralel koşup veri kirletmez — ilk satırında "Supabase env eksik" diye patlar. Tam paket **kilit altında** koşar (`scripts/with-test-lock.mjs`; `flock` macOS'ta yok, `mkdir` atomikliği yeter) çünkü üç ajan tek yerel veritabanını paylaşıyor ve eşzamanlı iki koşu **tekrarlanmayan düşüşler** üretiyordu. Kurallar → `CLAUDE.md §4b`.
 - **Paket sınırı araçla zorlanır** (karar 27.07 — §4'teki şema bağlayıcıdır): `domain-core` DB bilmez, `database` motoru bilmez; ikisi de yalnız `types`+`helper`'a bağlanır. `apps/*` **her ikisini de** çağırabilir, AMA sipariş/stok/para/fiyat **kararını** kendi içinde hesaplayamaz — kararı domain-core'a sorar, servisi yalnız o kararı yazmak/okumak için kullanır. Kural sızması testi: bir `if` içinde iş kuralı varsa (eşik, sıra, izin) yeri motordur.
 - **Admin yüzey izolasyonu:** `(admin)`/`(shop)` route group ayrımı + `/admin` altı middleware'de toptan oturum+rol kontrolü (sayfa içi guard yine tekrarlanır — çift kat) + `noindex`.
