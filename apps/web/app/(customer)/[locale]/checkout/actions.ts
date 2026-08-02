@@ -142,25 +142,6 @@ export async function loadCheckoutAction(
 }
 
 /**
- * Adresin alanları — ekleme ve güncelleme AYNI şekli alır.
- *
- * Alıcı ve telefon ADRESİN alanları (0013): form ikisini de soruyor ve kurye ikisini de kullanıyor.
- * Bir dönem burada eksiktiler — form topluyor, action tipi görmüyor, servis yazmıyordu; iki alan
- * sessizce düşüyordu (28.07). Sipariş anlık görüntüsü adresi olduğu gibi kopyaladığı için düzeltme
- * oraya da yürüyor.
- */
-interface CheckoutAddressInput {
-  label?: string;
-  recipient?: string;
-  line1: string;
-  line2?: string;
-  postalCode: string;
-  city: string;
-  phone?: string;
-  makeDefault?: boolean;
-}
-
-/**
  * Var olan adresi düzenle — **checkout'tan çıkmadan.**
  *
  * Ekran adresi kaydettikten sonra onu bir daha düzenleyemiyordu: kartlar yalnız SEÇİLİYORDU
@@ -193,18 +174,28 @@ export async function updateCheckoutAddressAction(
   }
 }
 
-/** Yeni adres — checkout'tan çıkmadan. Adres MÜŞTERİYE bağlanır, kimlik oturumdan gelir. */
+/**
+ * Yeni adres — checkout'tan çıkmadan. Adres MÜŞTERİYE bağlanır, kimlik oturumdan gelir.
+ *
+ * **Kendi girdi tipi YOK ve olmamalı** (denetim bulgusu M3, 02.08). Burada `CheckoutAddressInput`
+ * diye formunkinin alan alan kopyası bir arayüz duruyordu — üstelik `NewAddressInput`'ın künyesi
+ * tam bu senaryoyu anlatıyor: *"iki kopya olsaydı biri yeni bir alan öğrenip öteki öğrenmezdi;
+ * `recipient` ile `phone`ın bir kez sessizce düşmesi (28.07) tam olarak bu sınıftandı."* Aynı risk
+ * aynı alanda ikinci kez kurulmuştu.
+ *
+ * Şimdi ikisi de `updateCheckoutAddressAction` ile AYNI şekli alıyor: dönüşümü form kendi yanındaki
+ * `toAddressFields` ile yapar (hesap sayfası da öyle yapıyor), kapı yalnız yazar. Yan kazanç:
+ * eskiden buradaki elle yayma `country`yi hiç geçmiyordu — kolonun `default 'FR'`i kurtarıyordu,
+ * yani ikinci ülke açıldığı gün sessizce yanlış olacaktı.
+ */
 export async function addCheckoutAddressAction(
-  // Alıcı ve telefon ADRESİN alanları (0013): form ikisini de soruyor ve kurye ikisini de kullanıyor.
-  // Burada eksiktiler — form topluyor, action tipi görmüyor, servis yazmıyordu; iki alan sessizce
-  // düşüyordu (28.07). Sipariş anlık görüntüsü adresi olduğu gibi kopyaladığı için düzeltme oraya da yürür.
-  input: CheckoutAddressInput,
+  fields: Omit<AddressInsert, 'customerId'>,
+  makeDefault: boolean,
 ): Promise<ActionResult<Address>> {
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new Error('Oturum gerekli');
     const addresses = new AddressService(serviceDb());
-    const { makeDefault, ...fields } = input;
     const created = await addresses.addForCustomer({ ...fields, customerId });
     // Varsayılan TEKİLDİR (0013): servis eskisini düşürür, ekran o kuralı bilmez.
     if (makeDefault) await addresses.setDefault(created.id);

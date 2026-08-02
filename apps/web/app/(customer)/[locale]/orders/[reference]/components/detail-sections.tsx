@@ -1,7 +1,7 @@
 'use client';
 
 import type { OrderTimelineStep } from '@lezzet/domain-core';
-import { formatDeliveryDate, formatOrderDate, formatPrice } from '@/lib/storefront/format';
+import { formatDeliveryDate, formatOrderDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
 import { buttonClass } from '@/components/customer/ui/button';
 import { Link } from '@/i18n/navigation';
 import type { CustomerOrderDetail, CustomerOrderDetailLine } from '@/lib/order/customer-orders';
@@ -110,15 +110,17 @@ function ClosedStateCard({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
   );
 }
 
-/** Kısa damga — "22 Tem, 09:14" (tasarım). Gün+kısa ay + saat; yıl yok, çizgi tek siparişin içinde. */
+/**
+ * Kısa damga — "22 Tem, 09:14" (tasarım). Gün+kısa ay + saat; yıl yok, çizgi tek siparişin içinde.
+ *
+ * Parçalar ORTAK biçimlendiriciden gelir (denetim bulgusu M5, 02.08): burada `Intl` iki kez elle
+ * kuruluyordu ve yanında `INTL_LOCALE`in birebir kopyası olan yerel bir harita duruyordu. Kopya
+ * bugün aynı değeri üretiyordu, ama biçim kararı (ör. `fr-FR` yerine `fr-BE`) tek yerde
+ * değiştirilebilmeli — iki harita, birinin öğrenip ötekinin öğrenmediği bir karar demek.
+ */
 function formatStamp(iso: string, locale: DetailViewProps['locale']): string {
-  const d = new Date(iso);
-  const day = new Intl.DateTimeFormat(INTL[locale], { day: 'numeric', month: 'short' }).format(d);
-  const time = new Intl.DateTimeFormat(INTL[locale], { hour: '2-digit', minute: '2-digit' }).format(d);
-  return `${day}, ${time}`;
+  return `${formatShortDate(iso, locale)}, ${formatTime(iso, locale)}`;
 }
-
-const INTL: Record<DetailViewProps['locale'], string> = { tr: 'tr-TR', fr: 'fr-FR', de: 'de-DE' };
 
 /* ————————————————————————————— Kalemler ————————————————————————————— */
 

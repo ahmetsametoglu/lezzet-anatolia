@@ -178,6 +178,23 @@ items/
 - Ortak katman (veri, hook, action çağrıları, token) paylaşılır; yalnız sunum bileşeni dallanır.
 - Cihaz ipucu sunucudan header ile client'a prop geçilebilir (ağaç yine tek).
 
+**Bu projeye özgü — canlı güncelleme: `postgres_changes` DEĞİL, broadcast** (`lib/realtime/`)
+
+Ekranın kendini tazelemesi gereken yerler var (ödeme onayı webhook'la geliyor ve müşterinin
+tarayıcısından bağımsız). Supabase Realtime'ın iki yolu var ve **birini seçmek bir güvenlik
+kararıdır:**
+
+- `postgres_changes` tarayıcıyı **tabloya abone eder.** Bu ancak RLS varsa güvenlidir — abonelik
+  satır düzeyinde okuma demektir ve neyin sızacağını RLS belirler. Bizim modelimiz RLS'siz:
+  yetki sunucu kapılarında (`lib/guard.ts`), servis anahtarı sunucuda. O hâlde tarayıcıyı tabloya
+  bağlamak, kurduğumuz tek savunma hattını atlatmaktır.
+- **Broadcast** yalnız bir ZİL çalar: kanala "şu sipariş değişti" diye kimliksiz bir tetik düşer,
+  ekran veriyi kendi sunucu kapısından yeniden ister. Yetki yolu hiç değişmez.
+
+Bu yüzden `lib/realtime/` yalnız kanal adı + zil üretir (`broadcast.ts`, `order-channel.ts`);
+veriyi asla taşımaz. **Kural: tarayıcı hiçbir zaman tabloya abone edilmez.** RLS bir gün eklenirse
+karar yeniden tartışılabilir; o güne kadar yeni bir canlı ekran da aynı deseni kullanır.
+
 ---
 
 ## 8. Domain motoru: `domain-core` (zorunlu)

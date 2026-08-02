@@ -262,7 +262,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
     onSelectPayment: (method, onAccount) => setState((prev) => ({ ...prev, paymentMethod: method, onAccount })),
     onToggleConsent: (value) => setState((prev) => ({ ...prev, marketingConsent: value })),
     onAddAddress: async (input: NewAddressInput) => {
-      const { data } = await addCheckoutAddressAction(input);
+      const { data } = await addCheckoutAddressAction(toAddressFields(input), input.makeDefault ?? false);
       if (data) await refresh(data.id);
     },
     /**

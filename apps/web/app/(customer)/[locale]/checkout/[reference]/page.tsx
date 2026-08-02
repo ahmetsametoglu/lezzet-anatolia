@@ -12,7 +12,7 @@ import { FramedImage } from '@/components/media/framed-image';
 import { Button, buttonClass } from '@/components/customer/ui/button';
 import { Link } from '@/i18n/navigation';
 import { imageOf } from '@/lib/storefront/map';
-import { formatDeliveryDate, formatPrice, formatShortDate } from '@/lib/storefront/format';
+import { formatDeliveryDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
 import { routing } from '@/i18n/routing';
 import { OrderWatch } from './components/order-watch';
 import messages from './messages.json';
@@ -104,7 +104,10 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
   const total = formatPrice(toCents(order.total), locale as Locale);
   const day = order.deliveryDate ? formatDeliveryDate(order.deliveryDate, locale as Locale) : null;
   const onRoute = order.deliveryType === 'route';
-  const placedTime = new Date(order.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  // `formatTime` — burada `toLocaleTimeString(locale, …)` vardı ve HAM dil kodunu geçiyordu
+  // (`'tr'`), oysa `Intl` `'tr-TR'` bekliyor; `INTL_LOCALE` eşlemesinin varlık sebebi tam bu.
+  // Tarayıcılar `'tr'`yi tolere ettiği için görünmüyordu (denetim bulgusu M5, 02.08).
+  const placedTime = formatTime(order.createdAt, locale as Locale);
 
   const steps = [
     { label: t.timeline.placed, when: t.timeline.placedAt.replace('{time}', placedTime), done: true },

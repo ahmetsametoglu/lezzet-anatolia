@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import type { ChangeEvent } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { TicketType } from '@lezzet/types';
 import { Button, buttonClass } from '@/components/customer/ui/button';
@@ -11,7 +10,8 @@ import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
 import { formatOrderDate } from '@/lib/storefront/format';
 import type { CustomerOrderDetail, CustomerOrderSummary } from '@/lib/order/customer-orders';
-import { openTicketAction, requestTicketPhotoAction } from '../actions';
+import { openTicketAction } from '../actions';
+import { useTicketPhoto } from '../use-ticket-photo.hook';
 import type { Messages } from '../support-types';
 
 /**
@@ -60,11 +60,13 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
   const [type, setType] = useState<TicketType | null>(null);
   const [body, setBody] = useState('');
   const [markedLines, setMarkedLines] = useState<string[]>([]);
-  const [attachments, setAttachments] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentTicketId, setSentTicketId] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  // Yükleme akışı ortak hook'ta (denetim M4). `ticketId: null` — talep henüz açılmadı, dosya
+  // taslak anahtarına yükleniyor ve kapı onu açılışta gerçek talebe bağlıyor.
+  const photo = useTicketPhoto({ ticketId: null, busy, onFailed: () => setError(t.reply.photoFailed) });
 
   const column = isMobile ? 'px-4 py-4' : 'mx-auto w-[560px] py-8';
 
@@ -152,7 +154,7 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
       // Satır kimlikleri ekranın işi, kalem kimlikleri kapının: paket satırı arkasında birden çok
       // kalem taşıyor ve şikâyet paketin bütününe yazılıyor.
       orderItemIds: (order?.lines ?? []).filter((l) => markedLines.includes(l.id)).flatMap((l) => l.orderItemIds),
-      attachments,
+      attachments: photo.attachments,
     })
       .then(({ data, error: failed }) => {
         if (failed || !data) {
@@ -164,22 +166,6 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
         router.refresh();
       })
       .finally(() => setBusy(false));
-  };
-
-  const onPickPhoto = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file || busy) return;
-
-    setError(null);
-    void requestTicketPhotoAction(null, file.name, attachments.length)
-      .then(async ({ data, error: failed }) => {
-        if (failed || !data) throw new Error(failed ?? 'upload');
-        const response = await fetch(data.uploadUrl, { method: 'PUT', body: file, headers: { 'content-type': file.type } });
-        if (!response.ok) throw new Error('upload');
-        setAttachments((prev) => [...prev, data.key]);
-      })
-      .catch(() => setError(t.reply.photoFailed));
   };
 
   return (
@@ -270,7 +256,7 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
           {t.new.photo} <span className="font-normal text-muted">— {t.new.photoHint}</span>
         </span>
         <div className="flex flex-wrap gap-2.5">
-          <input ref={fileInput} type="file" accept="image/*" capture="environment" onChange={onPickPhoto} className="hidden" />
+          <input ref={fileInput} type="file" accept="image/*" capture="environment" onChange={photo.pick} className="hidden" />
           <button
             type="button"
             onClick={() => fileInput.current?.click()}
@@ -279,11 +265,11 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
           >
             📷
           </button>
-          {attachments.map((key, index) => (
+          {photo.attachments.map((key, index) => (
             <button
               key={key}
               type="button"
-              onClick={() => setAttachments((prev) => prev.filter((k) => k !== key))}
+              onClick={() => photo.remove(key)}
               aria-label={t.reply.removePhoto}
               className="grid size-19 cursor-pointer place-items-center rounded-[12px] border border-sand-200 bg-cream-deep font-sans text-micro text-muted transition-colors hover:border-terracotta-line"
             >

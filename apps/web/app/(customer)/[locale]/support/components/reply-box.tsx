@@ -1,10 +1,11 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import type { ChangeEvent, KeyboardEvent } from 'react';
+import type { KeyboardEvent } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { CustomerTicketView } from '@/lib/ticket/ticket-types';
-import { replyToTicketAction, requestTicketPhotoAction } from '../actions';
+import { replyToTicketAction } from '../actions';
+import { useTicketPhoto } from '../use-ticket-photo.hook';
 import type { Messages } from '../support-types';
 
 /**
@@ -37,16 +38,17 @@ interface ReplyBoxProps {
 
 export function ReplyBox({ t, locale, ticketId, onReplied, compact = false }: ReplyBoxProps) {
   const [body, setBody] = useState('');
-  const [attachments, setAttachments] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  // Yükleme akışı ortak hook'ta (denetim M4): yeni talep formuyla gövdesi birebir aynıydı.
+  const photo = useTicketPhoto({ ticketId, busy, onFailed: () => setError(t.reply.photoFailed) });
 
   const send = () => {
     if (busy || body.trim().length === 0) return;
     setBusy(true);
     setError(null);
-    void replyToTicketAction(locale, ticketId, body, attachments)
+    void replyToTicketAction(locale, ticketId, body, photo.attachments)
       .then(({ data, error: failed }) => {
         if (failed || !data) {
           setError(t.reply.failed);
@@ -55,27 +57,10 @@ export function ReplyBox({ t, locale, ticketId, onReplied, compact = false }: Re
         // Besteci ancak sunucu kabul ettikten sonra temizlenir: erken temizlemek, düşen bir istekte
         // müşterinin yazdığını yok etmek olurdu.
         setBody('');
-        setAttachments([]);
+        photo.reset();
         onReplied(data);
       })
       .finally(() => setBusy(false));
-  };
-
-  const onPickPhoto = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    // Aynı dosya arka arkaya seçilebilsin diye alan hemen sıfırlanır (aynı değer `change` doğurmaz).
-    event.target.value = '';
-    if (!file || busy) return;
-
-    setError(null);
-    void requestTicketPhotoAction(ticketId, file.name, attachments.length)
-      .then(async ({ data, error: failed }) => {
-        if (failed || !data) throw new Error(failed ?? 'upload');
-        const response = await fetch(data.uploadUrl, { method: 'PUT', body: file, headers: { 'content-type': file.type } });
-        if (!response.ok) throw new Error('upload');
-        setAttachments((prev) => [...prev, data.key]);
-      })
-      .catch(() => setError(t.reply.photoFailed));
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -88,13 +73,13 @@ export function ReplyBox({ t, locale, ticketId, onReplied, compact = false }: Re
 
   return (
     <div className="flex flex-col gap-2">
-      {attachments.length > 0 && (
+      {photo.attachments.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {attachments.map((key) => (
+          {photo.attachments.map((key) => (
             <button
               key={key}
               type="button"
-              onClick={() => setAttachments((prev) => prev.filter((k) => k !== key))}
+              onClick={() => photo.remove(key)}
               aria-label={t.reply.removePhoto}
               className="flex cursor-pointer items-center gap-2 rounded-soft border border-sand-200 bg-cream-deep px-3 py-1.5 font-sans text-micro text-muted hover:border-terracotta-line"
             >
@@ -119,7 +104,7 @@ export function ReplyBox({ t, locale, ticketId, onReplied, compact = false }: Re
         />
 
         {/* Mobilde kamerayı doğrudan açar (tasarım §7: bozuk ürün fotoğrafı o an çekilir). */}
-        <input ref={fileInput} type="file" accept="image/*" capture="environment" onChange={onPickPhoto} className="hidden" />
+        <input ref={fileInput} type="file" accept="image/*" capture="environment" onChange={photo.pick} className="hidden" />
         <button
           type="button"
           onClick={() => fileInput.current?.click()}

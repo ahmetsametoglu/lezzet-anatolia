@@ -1,5 +1,6 @@
 import { meetsMinBasket, resolveShippingFee } from '@lezzet/domain-core';
 import type { CouponRejection, ShippingFeeResult } from '@lezzet/domain-core';
+import type { CartItem } from '@lezzet/types';
 import type { LocalizedText } from '@lezzet/types';
 import type { CartLineRoute } from '@lezzet/domain-core';
 import type { StorefrontImage } from '@/lib/storefront/storefront-types';
@@ -348,6 +349,24 @@ export function shippingGroupFee(
  */
 export function cartKey(ref: CartRef | CartEntry): string {
   return ref.kind === 'bundle' ? `b:${ref.bundleId}` : `${ref.variantId}:${ref.stockId ?? ''}`;
+}
+
+/**
+ * SAKLANAN satırdan niyete — `entryOf`in ham-satır ikizi (denetim bulgusu M4, 02.08).
+ *
+ * `entryOf` çözülmüş görünümü (`CartLine`) alır, bu depodaki kaydı (`CartItem`). İkisi ayrı çünkü
+ * girdileri ayrı; ama **ürettikleri kural aynı** ve o kural üç ayrı dosyada üç kez yazılmıştı
+ * (`lib/cart/actions`, `lib/account/read`, `lib/order/reorder`). Kopya, `CartEntry`nin künyesinin
+ * uyardığı şeyi yapıyordu: birleşimin hangi alanı hangi türde taşıdığı bilgisi dağılınca, paket
+ * satırı bir yerde varyant satırına dönüşür.
+ *
+ * Tür ALANDAN değil kendi bayrağından okunur: `bundleId` doluluğu bir `string` kontrolüdür ve
+ * TypeScript onunla daraltma yapamaz.
+ */
+export function entryOfItem(item: CartItem): CartEntry {
+  return item.bundleId
+    ? { kind: 'bundle', bundleId: item.bundleId, qty: item.qty }
+    : { kind: 'variant', variantId: item.variantId ?? '', qty: item.qty, stockId: item.stockId ?? null };
 }
 
 /**

@@ -1,9 +1,9 @@
 import 'server-only';
 import { AddressService, CartService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
-import type { Address, CartItem, CompanyInfo, PointsEntry, PreferredLanguage } from '@lezzet/types';
+import type { Address, CompanyInfo, PointsEntry, PreferredLanguage } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
-import type { CartEntry, CartLine } from '@/lib/cart/cart-types';
+import { entryOfItem, type CartLine } from '@/lib/cart/cart-types';
 import { getPointsBalance, listPointsHistory } from '@/lib/feedback/points';
 import { POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY } from '@/lib/settings-keys';
 
@@ -64,7 +64,7 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
 
   // Kaydedilenler sepetin kendi okumasıyla çözülür: ad, görsel, fiyat ve "bölge içi mi" bilgisi
   // orada zaten hesaplanıyor. İkinci bir çözüm yazmak, aynı satırın iki görünümü demekti.
-  const savedView = await getCartView(locale, cart.savedItems.map(toEntry), { customerId });
+  const savedView = await getCartView(locale, cart.savedItems.map(entryOfItem), { customerId });
 
   const points = company ? null : await readPoints(db, customerId);
 
@@ -119,16 +119,6 @@ async function readPoints(db: ReturnType<typeof serviceDb>, customerId: string):
     history: history.rows,
     redeem: { minimumPoints, valueCents: minimumPoints * centValue },
   };
-}
-
-/**
- * Saklanan satır → niyet. Tür ALANDAN değil kendi bayrağından okunur: `bundleId` doluluğu bir
- * `string` kontrolüdür ve TypeScript onunla daraltma yapamaz (`CartEntry` notu).
- */
-function toEntry(item: CartItem): CartEntry {
-  return item.bundleId
-    ? { kind: 'bundle', bundleId: item.bundleId, qty: item.qty }
-    : { kind: 'variant', variantId: item.variantId ?? '', qty: item.qty, stockId: item.stockId ?? null };
 }
 
 /** Tasarımın "Son kazanımlar" listesi dört satır gösteriyor; tam döküm ayrı bir ekranın işi. */

@@ -8,7 +8,7 @@ import { routing } from '@/i18n/routing';
 import type { CartItem } from '@lezzet/types';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { getCartView } from './read';
-import { cartKey, type CartEntry, type CartView } from './cart-types';
+import { cartKey, entryOfItem, type CartEntry, type CartView } from './cart-types';
 
 /**
  * Sepet server action'ları (08.4).
@@ -91,7 +91,7 @@ export async function readCartAction(
     const stored = await cart.get(customerId);
     return {
       data: {
-        ...(await resolveBoth(locale, stored.items.map(toEntry), stored.savedItems.map(toEntry), {
+        ...(await resolveBoth(locale, stored.items.map(entryOfItem), stored.savedItems.map(entryOfItem), {
           previousPrices: storedPrices(stored.items),
           customerId,
           couponCode,
@@ -176,7 +176,7 @@ function storedPrices(items: readonly CartItem[]): Map<string, number> {
   const map = new Map<string, number>();
   for (const item of items) {
     if (!item.unitPrice) continue; // 0 = henüz çözülmemiş, geçerli bir "önceki" değil
-    map.set(cartKey(toEntry(item)), Math.round(item.unitPrice * 100));
+    map.set(cartKey(entryOfItem(item)), Math.round(item.unitPrice * 100));
   }
   return map;
 }
@@ -193,12 +193,6 @@ function toItem(entry: CartEntry): { variantId: string | null; bundleId: string 
     unitPrice: 0,
     stockId: entry.stockId ?? null,
   };
-}
-
-function toEntry(item: { variantId?: string | null; bundleId?: string | null; qty: number; stockId?: string | null }): CartEntry {
-  return item.bundleId
-    ? { kind: 'bundle', bundleId: item.bundleId, qty: item.qty }
-    : { kind: 'variant', variantId: item.variantId ?? '', qty: item.qty, stockId: item.stockId ?? null };
 }
 
 /** Devralmada çakışma kontrolü — `CartService.sameLine` ile aynı kural (paket kendi kimliğiyle). */

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
-import { formatShortDate } from '@/lib/storefront/format';
+import { formatDecimal, formatShortDate } from '@/lib/storefront/format';
 import type { Messages, ReviewsData } from '../product-types';
 import { ReviewForm } from './review-form';
 
@@ -83,7 +83,7 @@ export function Reviews({ t, locale, productId, data, compact = false }: Reviews
         <div className="flex items-center gap-4.5 rounded-card border border-sand-200 bg-card px-5.5 py-4.5">
           {/* Ortalama TEK ve iri: tasarımın bu kartta söylediği tek şey "bu ürün kaç alıyor". */}
           <span className={['font-serif leading-tight text-ink', compact ? 'text-h1-sm' : 'text-h1-sm'].join(' ')}>
-            {score.average.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+            {formatDecimal(score.average, locale, 1)}
           </span>
           <div className="flex flex-col gap-0.5">
             <Stars value={score.stars ?? score.average} />

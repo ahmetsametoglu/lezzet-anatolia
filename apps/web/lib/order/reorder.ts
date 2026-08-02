@@ -4,7 +4,7 @@ import type { OrderItem } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
 import { getPackagesByIds } from '@/lib/storefront/packages';
-import type { CartEntry } from '@/lib/cart/cart-types';
+import { entryOf, type CartEntry } from '@/lib/cart/cart-types';
 import { resolveOrderLines } from './customer-lines';
 
 /**
@@ -71,7 +71,9 @@ export async function planReorder(locale: Locale, customerId: string, orderId: s
   const addable = view.lines.filter((line) => !line.blocked);
   skipped.push(...view.lines.filter((line) => line.blocked).map((line) => line.name));
 
-  return { entries: addable.map(toEntry), skipped };
+  // `entryOf` — buradaki yerel kopya onun birebir aynısıydı (denetim bulgusu M4): girdisi de
+  // çıktısı da aynı, yalnız adı farklıydı.
+  return { entries: addable.map(entryOf), skipped };
 }
 
 /** Paket kaç adet alınmış — kalem adedinin paket içeriğindeki adede oranı. */
@@ -91,8 +93,3 @@ async function namesOf(db: ReturnType<typeof serviceDb>, items: readonly OrderIt
 }
 
 /** Görünümden niyete geri — sepete yazılan şey niyettir, görünüm değil. */
-function toEntry(line: { kind: 'variant' | 'bundle'; variantId?: string; bundleId?: string; qty: number; stockId?: string | null }): CartEntry {
-  return line.kind === 'bundle'
-    ? { kind: 'bundle', bundleId: line.bundleId!, qty: line.qty }
-    : { kind: 'variant', variantId: line.variantId!, qty: line.qty, stockId: line.stockId ?? null };
-}
