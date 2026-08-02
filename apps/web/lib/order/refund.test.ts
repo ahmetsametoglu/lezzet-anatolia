@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
+  AccountService, CategoryService, OrderItemBatchService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { recordOrderPayment } from '../money/order-payment';
@@ -17,6 +17,7 @@ import { transitionOrder } from './transition';
  */
 const db = serviceDb();
 const orders = new OrderService(db);
+const itemBatches = new OrderItemBatchService(db);
 const stocks = new StockService(db);
 const reservations = new ReservationService(db);
 
@@ -232,7 +233,7 @@ describe('iptal (07.9)', () => {
     const { orderId } = await prepare(3);
     await cancelOrder(orderId);
 
-    expect(await orders.listBatches(orderId)).toHaveLength(0);
+    expect(await itemBatches.listByOrder(orderId)).toHaveLength(0);
     expect((await stocks.getById(batchId))?.physicalQty).toBe(10);
   });
 

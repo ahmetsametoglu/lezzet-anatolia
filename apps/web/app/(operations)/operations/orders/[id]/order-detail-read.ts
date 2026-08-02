@@ -3,6 +3,7 @@ import {
   MoneyMovementService,
   AccountService,
   OrderService,
+  OrderItemBatchService,
   OrderStatusLogService,
   ProductService,
   ProductVariantService,
@@ -81,7 +82,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     new OrderStatusLogService(db).listByOrder(orderId),
     new MoneyMovementService(db).listByOrder(orderId),
     new AccountService(db).list(),
-    orderSvc.listBatches(orderId),
+    new OrderItemBatchService(db).listByOrder(orderId),
     new TicketService(db).listByOrder(orderId),
     new SettingsService(db).getNumber(PAYMENT_TERM_KEY, PAYMENT_TERM_DEFAULT),
     // Kapalı depolar dahil: eski bir sipariş tesisi kapandı diye deposunu unutmaz.

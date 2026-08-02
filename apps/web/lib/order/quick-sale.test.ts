@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
+  AccountService, CategoryService, OrderItemBatchService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, settingsSnapshot, createTestWarehouse } from '@lezzet/database/testing';
 import { quickSale } from './quick-sale';
@@ -12,6 +12,7 @@ import { transitionOrder } from './transition';
  */
 const db = serviceDb();
 const orders = new OrderService(db);
+const itemBatches = new OrderItemBatchService(db);
 const stocks = new StockService(db);
 const reservations = new ReservationService(db);
 
@@ -104,7 +105,7 @@ describe('hızlı satış (07.10)', () => {
     await quickSale({ orderId: order.id, paymentMethod: 'card' });
 
     // Geri çağırma ("bu parti kime gitti") hızlı satışta da çalışır.
-    const partiler = await orders.listBatches(order.id);
+    const partiler = await itemBatches.listByOrder(order.id);
     expect(partiler).toHaveLength(1);
     expect(partiler[0]).toMatchObject({ stockId: batchA, qty: 2 });
 
@@ -135,7 +136,7 @@ describe('hızlı satış (07.10)', () => {
     // Reddedilen satış hiçbir iz bırakmaz.
     expect((await stocks.getById(batchA))?.physicalQty).toBe(3);
     expect((await orders.getById(order.id))?.status).toBe('draft');
-    expect(await orders.listBatches(order.id)).toHaveLength(0);
+    expect(await itemBatches.listByOrder(order.id)).toHaveLength(0);
   });
 
   it('taslak olmayan sipariş kapıda satılamaz', async () => {

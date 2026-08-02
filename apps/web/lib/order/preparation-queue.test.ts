@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
+  CategoryService, OrderItemBatchService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { confirmPreparation, listPreparationQueue, type PreparationLine, type PreparationOrder } from './preparation';
@@ -15,6 +15,7 @@ import { transitionOrder } from './transition';
  */
 const db = serviceDb();
 const orders = new OrderService(db);
+const itemBatches = new OrderItemBatchService(db);
 const stocks = new StockService(db);
 const reservations = new ReservationService(db);
 
@@ -155,7 +156,7 @@ describe('partiye kilitli kalem (10.2)', () => {
     const outcome = await confirmPreparation({ orderId, picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 2 }] }] });
 
     expect(outcome).toMatchObject({ status: 'pinned_violation', itemId, requiredStockId: farBatch });
-    expect(await orders.listBatches(orderId)).toHaveLength(0);
+    expect(await itemBatches.listByOrder(orderId)).toHaveLength(0);
   });
 });
 

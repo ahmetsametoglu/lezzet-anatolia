@@ -32,6 +32,7 @@ export { VariantStockNoticeService } from './services/variant-stock-notice.servi
 export { WarehouseService } from './services/warehouse.service';
 export { WarehouseTransferService } from './services/warehouse-transfer.service';
 export { CartService } from './services/cart.service';
+export { OrderItemBatchService } from './services/order-item-batch.service';
 export {
   OrderService,
   OrderItemService,

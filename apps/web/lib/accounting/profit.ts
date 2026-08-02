@@ -1,4 +1,4 @@
-import { MoneyMovementService, OrderItemService, OrderSaleService, OrderService, StockAdjustmentService, serviceDb } from '@lezzet/database';
+import { MoneyMovementService, OrderItemBatchService, OrderItemService, OrderSaleService, StockAdjustmentService, serviceDb } from '@lezzet/database';
 import {
   companyProfit, orderContribution, variantProfit,
   type CompanyProfit, type OrderContribution, type SoldLine, type VariantProfit,
@@ -52,7 +52,7 @@ export async function productProfits(period: ProfitPeriod): Promise<VariantProfi
 
   const salesById = new Map(sales.map((s) => [s.id, s]));
   const allItems = [...itemsByOrder.values()].flat();
-  const costs = await new OrderService(db).itemCosts(allItems.map((i) => i.id));
+  const costs = await new OrderItemBatchService(db).itemCosts(allItems.map((i) => i.id));
 
   const lines: SoldLine[] = allItems.map((item) => ({
     variantId: item.variantId,

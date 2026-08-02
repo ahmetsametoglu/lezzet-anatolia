@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, OrderService, ProductService, ReservationService,
+  AccountService, CategoryService, OrderItemBatchService, OrderService, ProductService, ReservationService,
   StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, settingsSnapshot, createTestWarehouse } from '@lezzet/database/testing';
@@ -15,6 +15,7 @@ import { transitionOrder } from '../order/transition';
  */
 const db = serviceDb();
 const orders = new OrderService(db);
+const itemBatches = new OrderItemBatchService(db);
 const stocks = new StockService(db);
 const reservations = new ReservationService(db);
 
@@ -165,7 +166,7 @@ describe('eksik/reddedilen kalem (11.2)', () => {
     });
 
     // Kalem–parti kaydı 2'ye inmiş olmalı: teslimde bundan düşülür (0026 "tam bir kez say").
-    const batches = await orders.listBatches(orderId);
+    const batches = await itemBatches.listByOrder(orderId);
     expect(batches.reduce((sum, batch) => sum + batch.qty, 0)).toBe(2);
     expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(28);
   });

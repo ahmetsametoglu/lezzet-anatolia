@@ -7,7 +7,6 @@ import {
   OrderItemSchema,
   OrderItemInsertSchema,
   OrderItemUpdateSchema,
-  OrderItemBatchSchema,
   OrderStatusLogSchema,
   OrderStatusLogInsertSchema,
   OrderStatusLogUpdateSchema,
@@ -20,7 +19,6 @@ import {
   OrderCountsRowSchema,
   OrderStatusEnum,
   PaymentStatusEnum,
-  RecallHitSchema,
   TransitionResultSchema,
   DEFAULT_PAGE_SIZE,
   type Channel,
@@ -32,7 +30,6 @@ import {
   type OrderItem,
   type OrderItemInsert,
   type OrderItemUpdate,
-  type OrderItemBatch,
   type OrderStatus,
   type CancelResult,
   type CloseResult,
@@ -49,7 +46,6 @@ import {
   type OrderStatusLogUpdate,
   type OrderUpdate,
   type Page,
-  type RecallHit,
   type TransitionResult,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
@@ -397,119 +393,9 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     return QuickSaleResultSchema.parse(dbToApp(raw));
   }
 
-  /** Siparişin kalem–parti eşlemesi — geri çağırma ve gerçek COGS bunun üstünde durur. */
-  async listBatches(orderId: string): Promise<OrderItemBatch[]> {
-    const { data, error } = await this.supabase
-      .from('order_item_batch')
-      .select('*,order_item!inner(order_id)')
-      .eq('order_item.order_id', orderId);
-    if (error) throw error;
-    // Süzme için gömülen `order_item` şemada yok — Zod fazla anahtarı zaten eler.
-    return (data ?? []).map((row) => OrderItemBatchSchema.parse(dbToApp(row)));
-  }
-
-  /**
-   * **Geri çağırma (rappel) sorgusu** — "bu partilerden çıkan mal kime gitti" (09.13).
-   *
-   * `listBatches`'in TERS yönü: orada sipariş verilir partiler istenir, burada parti verilir siparişler.
-   * Zincir hazırlık kaydından gelir (`OrderItemBatch`), yani depocunun onayladığı gerçektir — tahmin
-   * değil. Tedarikçi bir lotu geri çağırdığında cevabın dakikalar içinde verilmesi gerekir; tek turda
-   * okunur (sipariş başına ayrı sorgu, tam da acele edilen anda ekranı yavaşlatırdı).
-   *
-   * **Sipariş başına TEK satır döner:** aynı siparişe aynı partiden iki kalem çıkmış olabilir (farklı
-   * ürün satırı, aynı parti); ham satırlar aynı müşteriyi iki kez listelerdi. Miktarlar toplanır —
-   * aranan "kaç sipariş, kime, ne kadar"dır.
-   *
-   * Müşteri ilişkisi FK adıyla ÇÖZÜLÜR: `order` tablosu `user_profiles`'a iki kez bakar (müşteri ve
-   * kurye), belirsiz bırakılırsa PostgREST hangi bağı izleyeceğini bilemez.
-   *
-   * BEKLEYEN(02.8): `order_item_batch` kendi `BaseDbService` alt sınıfına taşınmalı (STACK §6 —
-   * junction tablosu = kendi alt sınıfı). Burada üç ham okuma birikti (`listBatches`, `itemCosts`,
-   * bu). Üçü BİRLİKTE taşınır; yalnız bunu ayırmak aynı tabloyu iki eve bölerdi.
-   */
-  async recallByStocks(stockIds: readonly string[]): Promise<RecallHit[]> {
-    if (stockIds.length === 0) return [];
-    const { data, error } = await this.supabase
-      .from('order_item_batch')
-      .select(
-        'qty,order_item!inner(order:order!inner(id,reference_no,created_at,status,customer:user_profiles!order_customer_id_fkey(id,name,phone)))',
-      )
-      .in('stock_id', stockIds);
-    if (error) throw error;
-
-    type Row = {
-      qty: number;
-      order_item: {
-        order: {
-          id: string;
-          reference_no: string | null;
-          created_at: string;
-          status: OrderStatus;
-          customer: { id: string; name: string; phone: string | null };
-        };
-      };
-    };
-
-    const byOrder = new Map<string, RecallHit>();
-    for (const raw of (data ?? []) as unknown as Row[]) {
-      const o = raw.order_item.order;
-      const seen = byOrder.get(o.id);
-      if (seen) {
-        seen.qty += raw.qty;
-        continue;
-      }
-      byOrder.set(
-        o.id,
-        RecallHitSchema.parse({
-          orderId: o.id,
-          referenceNo: o.reference_no,
-          orderCreatedAt: o.created_at,
-          orderStatus: o.status,
-          customerId: o.customer.id,
-          customerName: o.customer.name,
-          customerPhone: o.customer.phone,
-          qty: raw.qty,
-        }),
-      );
-    }
-    // En yeni sipariş önce: geri çağırmada önce hâlâ müşterinin elinde olabilecek mal aranır.
-    return [...byOrder.values()].sort((a, b) => b.orderCreatedAt.localeCompare(a.orderCreatedAt));
-  }
-
-  /**
-   * **Kalem başına gerçek maliyet** (cent) — fiilen çıkan partilerin alış fiyatından (12.6).
-   * Ortalama değil gerçek: hangi partiden çıktığı `OrderItemBatch`'te yazılı.
-   *
-   * Dönüş `null` = maliyet BİLİNMİYOR (partinin alış fiyatı girilmemiş). 0 ile karıştırılmaz:
-   * bilinmeyeni 0 saymak ürün marjını şişirir (DOMAIN §13). Hiç parti kaydı olmayan kalem haritada
-   * yer almaz — çağıran onu da "bilinmiyor" sayar.
-   */
-  async itemCosts(orderItemIds: readonly string[]): Promise<Map<string, number | null>> {
-    const BATCH_SIZE = 200;
-    const costs = new Map<string, number | null>();
-
-    for (let i = 0; i < orderItemIds.length; i += BATCH_SIZE) {
-      const { data, error } = await this.supabase
-        .from('order_item_batch')
-        .select('order_item_id,qty,stock:stock(purchase_price)')
-        .in('order_item_id', orderItemIds.slice(i, i + BATCH_SIZE));
-      if (error) throw error;
-
-      type Row = { order_item_id: string; qty: number; stock: { purchase_price: string | number | null } | null };
-      for (const row of (data ?? []) as unknown as Row[]) {
-        const current = costs.get(row.order_item_id);
-        const purchasePrice = row.stock?.purchase_price;
-        // Tek bir partinin fiyatı bile eksikse kalemin maliyeti bilinmiyordur — kalanı toplamak
-        // eksik bir sayıyı tam gibi gösterirdi.
-        if (purchasePrice === null || purchasePrice === undefined || current === null) {
-          costs.set(row.order_item_id, null);
-          continue;
-        }
-        costs.set(row.order_item_id, (current ?? 0) + Math.round(Number(purchasePrice) * 100) * row.qty);
-      }
-    }
-    return costs;
-  }
+  // Kalem–parti eşlemesinin üç okuması BURADAN TAŞINDI (02.8) → `OrderItemBatchService`.
+  // Üçü de ham `this.supabase` ile yazılmıştı; junction tablosu kendi alt sınıfını hak ediyor
+  // (`STACK §6`). Üçü birlikte gitti — birini burada bırakmak aynı tabloyu iki eve bölerdi.
 
   /**
    * Kimlik listesinden siparişler — **toplu okumaların N+1 kalkanı.**

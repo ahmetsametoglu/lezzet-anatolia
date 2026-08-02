@@ -3,7 +3,7 @@
 import {
   CategoryService,
   LOT_SEARCH_LIMIT,
-  OrderService,
+  OrderItemBatchService,
   PriceService,
   ProductService,
   SettingsService,
@@ -48,7 +48,7 @@ export async function recallByLotAction(lot: string): Promise<ActionResult<Recal
       readExpiryThresholds(new SettingsService(db)),
     ]);
     const batches = toBatchViews(batchRows, { now: new Date(), thresholds });
-    const hits = await new OrderService(db).recallByStocks(batches.map((b) => b.id));
+    const hits = await new OrderItemBatchService(db).recallByStocks(batches.map((b) => b.id));
 
     return {
       data: { batches, hits, truncated: batchRows.length >= LOT_SEARCH_LIMIT },

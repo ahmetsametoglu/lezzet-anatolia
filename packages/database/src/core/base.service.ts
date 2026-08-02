@@ -134,8 +134,17 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     return this.parseRows(data);
   }
 
-  /** Sorguyu kurar ve HAM satırları döner (doğrulama çağırana ait) — okuma uçlarının tek gövdesi. */
-  private async selectRows(filters?: Record<string, unknown>, options?: GetAllOptions): Promise<unknown[]> {
+  /**
+   * Sorguyu kurar ve HAM satırları döner (doğrulama çağırana ait) — okuma uçlarının tek gövdesi.
+   *
+   * **`protected`, çünkü bazı okumaların çıktısı bir VARLIK değil** (02.8): gömülü ilişkilerden
+   * türetilen şekiller (geri çağırma isabeti, kalem maliyeti) toplandıktan SONRA doğrulanıyor.
+   * Aradaki ham şekli bir Zod şemasıyla geçirmek, yalnız araya girmek için var olan bir tip
+   * üretirdi. Yine de bu bir HAM SORGU KAPISI DEĞİL: sorguyu taban sınıf kuruyor, alt sınıf
+   * yalnız süzgeç ve `select` veriyor — yani `STACK §6`'nın yasakladığı "servis ham
+   * `this.supabase` yazar" hâli açılmıyor.
+   */
+  protected async selectRows(filters?: Record<string, unknown>, options?: GetAllOptions): Promise<unknown[]> {
     let query = this.supabase.from(this.tableName).select(options?.select ?? '*');
     for (const [key, value] of Object.entries(filters ?? {})) {
       if (value === undefined || value === null) continue;

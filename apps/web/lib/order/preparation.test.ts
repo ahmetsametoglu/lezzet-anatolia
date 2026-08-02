@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CategoryService, OrderService, ProductService, StockService, UserProfileService, serviceDb } from '@lezzet/database';
+import { CategoryService, OrderItemBatchService, OrderService, ProductService, StockService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 
 /**
@@ -8,6 +8,7 @@ import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
  */
 const db = serviceDb();
 const orders = new OrderService(db);
+const itemBatches = new OrderItemBatchService(db);
 const stocks = new StockService(db);
 
 const stamp = Date.now();
@@ -61,7 +62,7 @@ describe('hazırlık onayı (06.5)', () => {
       { orderItemId: items[0]!.id, batches: [{ stockId: batchA, qty: 3 }, { stockId: batchB, qty: 2 }] },
     ]);
 
-    const partiler = await orders.listBatches(order.id);
+    const partiler = await itemBatches.listByOrder(order.id);
     expect(partiler.reduce((s, b) => s + b.qty, 0)).toBe(5);
     const currentLine = (await orders.getWithItems(order.id))!.items[0]!;
     expect(currentLine.fulfilledQty).toBe(5);
@@ -90,7 +91,7 @@ describe('hazırlık onayı (06.5)', () => {
     await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [] }]);
 
     expect((await orders.getWithItems(order.id))!.items[0]!.fulfilledQty).toBe(0);
-    expect(await orders.listBatches(order.id)).toHaveLength(0);
+    expect(await itemBatches.listByOrder(order.id)).toHaveLength(0);
   });
 
   it('yeniden hazırlık önceki kaydı YENİSİYLE DEĞİŞTİRİR, yamalamaz', async () => {
@@ -98,7 +99,7 @@ describe('hazırlık onayı (06.5)', () => {
     await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId: batchA, qty: 3 }] }]);
     await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId: batchB, qty: 4 }] }]);
 
-    const partiler = await orders.listBatches(order.id);
+    const partiler = await itemBatches.listByOrder(order.id);
     expect(partiler).toHaveLength(1);
     expect(partiler[0]).toMatchObject({ stockId: batchB, qty: 4 });
     expect((await orders.getWithItems(order.id))!.items[0]!.fulfilledQty).toBe(4);

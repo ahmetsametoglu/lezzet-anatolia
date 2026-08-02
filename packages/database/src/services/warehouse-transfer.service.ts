@@ -119,17 +119,44 @@ export class WarehouseTransferService extends BaseDbService<WarehouseTransfer, n
   /**
    * Transferin satırları — sevk ekranının onayı ve kabul ekranının girdisi.
    *
-   * BEKLEYEN(02.8): junction tablosu kendi alt sınıfını hak ediyor (CLAUDE.md §1); `order_item_batch`
-   * için aynı borç zaten kayıtlı. İkisi birlikte çıkarılacak — tek transferin satır sayısı doğal
-   * olarak sınırlı (sevk kalemleri), o yüzden burada sayfalama gerekmiyor.
+   * Okuma artık `WarehouseTransferLineService`'te (02.8): junction tablosunun kendi evi var. Burada
+   * duran ince sarmalayıcı çağıranları korumak için — transferi okuyan ekran satırları da aynı
+   * yerden istiyor ve iki servis kurdurmanın bir faydası yok.
    */
-  async listLines(transferId: string): Promise<WarehouseTransferLine[]> {
-    const { data, error } = await this.supabase
-      .from('warehouse_transfer_line')
-      .select('*')
-      .eq('transfer_id', transferId)
-      .order('id');
-    if (error) throw error;
-    return (data ?? []).map((row) => WarehouseTransferLineSchema.parse(dbToApp(row)));
+  listLines(transferId: string): Promise<WarehouseTransferLine[]> {
+    return new WarehouseTransferLineService(this.supabase).listByTransfer(transferId);
+  }
+}
+
+/**
+ * Transfer satırları (`warehouse_transfer_line`) — **junction kendi alt sınıfında** (02.8,
+ * `STACK §6`), `order_item_batch` ile aynı gerekçe.
+ *
+ * **Yazma yolu YOK.** Satırlar sevk ve kabul RPC'leriyle doğuyor/güncelleniyor: satırın yazılması
+ * ile stoğun taşınması bölünemez bir işlem (`STACK §13`). Buradan tek satır yazma kapısı açmak, o
+ * bölünmezliği delen ikinci bir yol olurdu — ve transfer tam da "mal iki yerde birden görünmesin"
+ * diye var.
+ */
+export class WarehouseTransferLineService extends BaseDbService<WarehouseTransferLine, never, never> {
+  constructor(supabase: SupabaseClient) {
+    super(
+      supabase,
+      'warehouse_transfer_line',
+      WarehouseTransferLineSchema,
+      WarehouseTransferLineSchema as never,
+      WarehouseTransferLineSchema as never,
+      false,
+    );
+  }
+
+  /**
+   * Bir transferin satırları, yazıldıkları sırayla.
+   *
+   * **Sayfalama YOK ve bu ölçülü bir karar** (`CLAUDE.md §1`): küme veriyle büyümüyor, tek sevkin
+   * kalem sayısı kadar — operatörün o an araca yüklediği şey. Sınırsız büyüyen tek şey transferlerin
+   * KENDİSİ ve o zaten keyset sayfalı (`listByWarehouse`).
+   */
+  listByTransfer(transferId: string): Promise<WarehouseTransferLine[]> {
+    return this.getAll({ transferId }, { orderBy: 'id' });
   }
 }
