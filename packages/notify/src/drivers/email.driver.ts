@@ -1,4 +1,5 @@
 import {
+  FeedbackInviteEmail,
   OrderCancelledEmail,
   OrderConfirmedEmail,
   OrderDeliveredEmail,
@@ -8,6 +9,7 @@ import {
   TicketReceivedEmail,
   TicketRepliedEmail,
   TicketStatusChangedEmail,
+  feedbackInviteSubject,
   orderCancelledSubject,
   orderConfirmedSubject,
   orderDeliveredSubject,
@@ -55,6 +57,7 @@ const TEMPLATES: { [E in NotifyEventName]: Template<E> } = {
   ticket_received: { subject: ticketReceivedSubject, render: TicketReceivedEmail },
   ticket_replied: { subject: ticketRepliedSubject, render: TicketRepliedEmail },
   ticket_status_changed: { subject: ticketStatusChangedSubject, render: TicketStatusChangedEmail },
+  feedback_invite: { subject: feedbackInviteSubject, render: FeedbackInviteEmail },
 };
 
 export function emailDriver(options: EmailDriverOptions): NotifyDriver {

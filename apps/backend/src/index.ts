@@ -8,6 +8,7 @@ import { COLLECT_HEALTH, collectHealthJob } from './jobs/collect-health';
 import { CREATE_FEEDBACK_REQUESTS, createFeedbackRequestsJob } from './jobs/feedback-requests';
 import { PURGE_OBSERVABILITY, purgeObservabilityJob } from './jobs/purge-observability';
 import { runJob } from './jobs/runner';
+import { SEND_FEEDBACK_INVITES, sendFeedbackInvitesJob } from './jobs/send-feedback-invites';
 import { SWEEP_RESERVATIONS, sweepReservations } from './jobs/sweep-reservations';
 
 const app = new Hono<AppEnv>();
@@ -49,6 +50,16 @@ cron.schedule('* * * * *', () => {
 cron.schedule('0 9 * * *', () => {
   void runJob(CREATE_FEEDBACK_REQUESTS, createFeedbackRequestsJob);
 }, { timezone: 'Europe/Paris' });
+
+// Davet kuyruğunun boşaltılması (17.2) — on beş dakikada bir.
+//
+// Oluşturmadan AYRI ve daha SIK: oluşturma günde bir yeter (eşik gün cinsinden), ama gönderim bir
+// dış sağlayıcıya bağlı ve o sağlayıcı düşebilir. Günde bir denemek, sabahki bir kesintide daveti
+// ertesi güne bırakırdı. On beş dakika, kesintiyi müşteri fark etmeden telafi edecek kadar sık;
+// kuyruk boşken iş tek sorguyla no-op olduğu için bedeli de yok.
+cron.schedule('*/15 * * * *', () => {
+  void runJob(SEND_FEEDBACK_INVITES, sendFeedbackInvitesJob);
+});
 
 // Sistem sağlığı (18.5) — iki dakikada bir sunucu/süreç/servis görüntüsü. `/operations/system` okur.
 //

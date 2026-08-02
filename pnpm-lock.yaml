@@ -68,6 +68,12 @@ importers:
       '@lezzet/domain-core':
         specifier: workspace:*
         version: link:../../packages/domain-core
+      '@lezzet/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@lezzet/notify':
+        specifier: workspace:*
+        version: link:../../packages/notify
       '@lezzet/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -325,12 +331,18 @@ importers:
       '@lezzet/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.20.1
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
 
   packages/notify:
     dependencies:
+      '@lezzet/brand':
+        specifier: workspace:*
+        version: link:../brand
       '@lezzet/email':
         specifier: workspace:*
         version: link:../email

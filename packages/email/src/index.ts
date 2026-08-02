@@ -23,3 +23,6 @@ export {
   ticketStatusChangedSubject,
   type TicketEmailProps,
 } from './templates/ticket-notification';
+
+// Alım-sonrası değerlendirme daveti (17.2) — aynı iskelet, tek eylem.
+export { FeedbackInviteEmail, feedbackInviteSubject, type FeedbackInviteEmailProps } from './templates/feedback-invite';

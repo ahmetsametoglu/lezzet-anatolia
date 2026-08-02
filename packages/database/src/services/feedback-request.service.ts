@@ -5,6 +5,7 @@ import {
   FeedbackRequestProgressSchema,
   FeedbackRequestSchema,
   FeedbackRequestUpdateSchema,
+  type FeedbackChannel,
   type FeedbackDueOrder,
   type FeedbackRequest,
   type FeedbackRequestInsert,
@@ -57,9 +58,16 @@ export class FeedbackRequestService extends BaseDbService<FeedbackRequest, Feedb
     return this.getAll(undefined, { isNullFields: ['sentAt'], orderBy: 'createdAt', limit });
   }
 
-  /** Gönderim damgası. Ayrı metot, çünkü "oluşturuldu" ile "gitti" iki ayrı gerçektir. */
-  markSent(id: string, sentAt: string = new Date().toISOString()): Promise<FeedbackRequest> {
-    return this.update({ id, sentAt });
+  /**
+   * Gönderim damgası. Ayrı metot, çünkü "oluşturuldu" ile "gitti" iki ayrı gerçektir.
+   *
+   * **Kanal burada yazılır, oluşturmada değil.** Davet açılırken `channel` bir NİYETTİR; fiilen
+   * hangi kanaldan gittiğine sürücü katmanı karar verir (e-postası yoksa WhatsApp'a düşer). Niyeti
+   * gerçek sanmak, "davet e-postayla gitti" diye bakılan bir kaydın aslında WhatsApp'tan gitmiş
+   * olması demekti — ve "müşteri neden davet almadı" sorusu yanlış kanalda aranırdı.
+   */
+  markSent(id: string, channel: FeedbackChannel, sentAt: string = new Date().toISOString()): Promise<FeedbackRequest> {
+    return this.update({ id, channel, sentAt });
   }
 
   /**

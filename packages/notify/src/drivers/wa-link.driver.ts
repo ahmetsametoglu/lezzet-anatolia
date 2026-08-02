@@ -88,6 +88,14 @@ const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => string } =
           fr: `Votre demande a été rouverte : ${d.ticketUrl}`,
           de: `Ihre Anfrage wurde wieder geöffnet: ${d.ticketUrl}`,
         }),
+  // Davet mesajı KISA: WhatsApp'ta uzun metin okunmaz, tıklanır. Ürün sayısı yok — kaç ürün
+  // olduğu bağlantının ardındaki ekranın işi; mesajın işi tek soruyu sormak.
+  feedback_invite: (d) =>
+    say(d.locale, {
+      tr: `${d.orderReferenceNo} numaralı siparişinizdekiler nasıldı? Birkaç saniyenizi alır: ${d.feedbackUrl}`,
+      fr: `Comment étaient les produits de votre commande ${d.orderReferenceNo} ? Cela prend quelques secondes : ${d.feedbackUrl}`,
+      de: `Wie waren die Produkte Ihrer Bestellung ${d.orderReferenceNo}? Es dauert nur Sekunden: ${d.feedbackUrl}`,
+    }),
 };
 
 /** Telefonu wa.me biçimine indirger: yalnız rakamlar (uluslararası ön ek dâhil). */

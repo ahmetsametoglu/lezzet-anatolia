@@ -1,4 +1,4 @@
-import type { OrderNotification, PreferredLanguage, TicketNotification } from '@lezzet/types';
+import type { FeedbackInviteNotification, OrderNotification, PreferredLanguage, TicketNotification } from '@lezzet/types';
 
 /**
  * Bildirim sözleşmesi (14.4). **İş kodu kanal bilmez**: "müşteriye haber ver" der, hangi kanaldan
@@ -30,6 +30,13 @@ export interface NotifyPayloads {
   ticket_received: TicketNotification;
   ticket_replied: TicketNotification;
   ticket_status_changed: TicketNotification;
+  /**
+   * Alım-sonrası değerlendirme daveti (17.2). Bu ailenin İKİNCİ istisnası: yukarıdakilerin hepsini
+   * bir istek doğurur (durum değişti, müşteri yazdı), bunu ise SAAT doğurur — `apps/backend`'in
+   * günlük taraması. Sözleşme açısından farkı yok ve olmamalı: aynı sürücü listesi, aynı yetenek
+   * bakması. Zamanlı işin kendi gönderim yolunu açması, bir gün iki farklı kanal sırası demekti.
+   */
+  feedback_invite: FeedbackInviteNotification;
 }
 export type NotifyEventName = keyof NotifyPayloads;
 

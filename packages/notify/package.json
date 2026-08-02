@@ -12,6 +12,7 @@
     "clean": "rm -rf .turbo node_modules"
   },
   "dependencies": {
+    "@lezzet/brand": "workspace:*",
     "@lezzet/email": "workspace:*",
     "@lezzet/types": "workspace:*"
   },

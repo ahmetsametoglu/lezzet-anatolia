@@ -1,4 +1,10 @@
 {
   "extends": "@lezzet/typescript-config/node.json",
+  "compilerOptions": {
+    // Backend JSX YAZMAZ ama `@lezzet/notify` üzerinden e-posta şablonlarını (.tsx) çözümlüyor
+    // (17.2 davet gönderimi). Derleyicinin o dosyaları okuyabilmesi için ayar burada da gerekli;
+    // `react-jsx` = otomatik runtime, şablonların başındaki `void React` kalıbıyla uyumlu.
+    "jsx": "react-jsx"
+  },
   "include": ["src"]
 }

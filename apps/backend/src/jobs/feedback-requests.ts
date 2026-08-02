@@ -56,22 +56,8 @@ export async function createFeedbackRequestsJob(): Promise<Record<string, unknow
   return { created: (await createDueFeedbackRequests()).length };
 }
 
-/**
- * Gönderilmeyi bekleyen davetler — bildirim katmanı (14) bunları alıp yollar ve damgalar.
- *
- * **Oluşturma ile gönderim ayrı adımlar:** e-posta sağlayıcısı düştüğünde davet kaybolmaz,
- * `sent_at` boş olarak kuyrukta kalır ve bir sonraki tur onu bulur. Tek adım olsaydı sağlayıcı
- * hatası daveti hiç var olmamış yapardı.
- *
- * BEKLEYEN(17.2): gönderim işinin kendisi — şablon ve kanal bildirim modülüyle gelir.
- * (Önceki işaret `14.3`'e asılıydı; o görev Supabase Auth send-email hook'udur ve KAPANDI. Anlatılan
- * boşluk davetin fiilen yollanmasıydı ve 17.2'nin işidir — kapanmış bir göreve asılı işaret,
- * sahipsiz bir boşluk demektir.)
- */
-export function listPendingInvites(limit?: number): Promise<FeedbackRequest[]> {
-  return new FeedbackRequestService(serviceDb()).listUnsent(limit);
-}
-
-export function markInviteSent(id: string): Promise<FeedbackRequest> {
-  return new FeedbackRequestService(serviceDb()).markSent(id);
-}
+// Gönderim İKİNCİ bir iştir ve kendi dosyasındadır (`send-feedback-invites.ts`): sağlayıcı
+// düştüğünde davet kaybolmasın diye oluşturma ile gönderim ayrıdır. Burada duran iki sarmalayıcı
+// (`listPendingInvites` / `markInviteSent`) o işin YERİNİ TUTUYORDU — kuyruğu okuyup damgalamayı
+// biliyorlardı ama hiçbir yerden çağrılmıyorlardı; kuyruk doluyor, kimse boşaltmıyordu. Gerçek iş
+// gelince yer tutucuya gerek kalmadı.

@@ -166,3 +166,36 @@ export const TicketNotificationSchema = z.object({
   notificationPreferencesUrl: z.string(),
 });
 export type TicketNotification = z.infer<typeof TicketNotificationSchema>;
+
+/**
+ * Alım-sonrası değerlendirme davetinin verisi (17.2) — DOMAIN §14.
+ *
+ * **Sipariş bildirimi DEĞİLDİR ve `OrderNotification`'ı yeniden kullanmaz.** O şekil siparişin
+ * anlatısını taşır (zaman çizgisi, kalemler, tutarlar, ödeme); davetin işi tek bir şey istemek.
+ * Aynı tipe bindirilseydi şablon otuz alandan üçünü doldurup gerisini `null` geçerdi ve derleyici
+ * "bu mailde tutar niye yok" sorusunu hiç soramazdı.
+ *
+ * **Puan miktarı BURADA YOKTUR ve bu bilinçli.** Puan tamamlamada verilir, verilip verilmeyeceği o
+ * anki günlük tavana ve müşteri türüne bağlıdır (B2B kazanmaz — DOMAIN §14). Davette bir sayı
+ * yazmak, tutulamayabilecek bir söz vermektir; müşteri akışı bitirir, puanı görmez ve haklı olarak
+ * kandırıldığını düşünür.
+ */
+export const FeedbackInviteNotificationSchema = z.object({
+  customerName: z.string().nullable(),
+  locale: PreferredLanguageEnum,
+  /** Hangi sipariş — müşterinin "ne değerlendireceğim" sorusunun cevabı. */
+  orderReferenceNo: z.string(),
+  /** Teslim günü, biçimlenmiş ("22 Temmuz 2026"). Davet teslimden ~10 gün sonra gider. */
+  deliveredOn: z.string(),
+  /**
+   * Değerlendirilecek ÜRÜN sayısı (kalem değil — aynı ürünün iki boyu tek karttır, akışla aynı
+   * sayım). Metinde "kaç dakika sürer" beklentisini bu kuruyor; kartların sayısıyla uyuşmazsa
+   * müşteri sözden fazlasıyla karşılaşır.
+   */
+  productCount: z.number().int(),
+
+  /** Davetin kendisi — `/feedback/[token]`; token oturum yerine geçer. */
+  feedbackUrl: z.string(),
+  notificationPreferencesUrl: z.string(),
+});
+export type FeedbackInviteNotification = z.infer<typeof FeedbackInviteNotificationSchema>;

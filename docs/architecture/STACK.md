@@ -237,6 +237,7 @@ Genel blueprint §10 ile aynı. Env'e yalnız sır + ortama göre değişen değ
 | --- | --- |
 | Marka adı, alan adı, logo yolu, yasal metinler, renkler | `packages/brand` |
 | Arayüz metinleri (tr/fr/de) | `packages/i18n` |
+| **Müşteri URL yol tablosu** (iç yol → dile göre segment) | `packages/i18n` (`PATHNAMES`) — apps/web next-intl'i, apps/backend giden bağlantıyı bununla kurar; iki kopya olsaydı biri eskir, mail 404'e düşerdi |
 | Fiziksel ölçüler, sabit oranlar, para dönüşümü (`toCents`/`fromCents`) | `packages/helper` |
 | **Görüntüleme biçimlemesi (para/tarih/sayı metni)** | **yüzey başına TEK dosya** — aşağı bak |
 | İşletme ayarı (kullanıcı değiştirebilmeli): min sepet, kargo eşiği, DLC uyarı eşiği, KDV varsayılanı | Veritabanı — ayar tablosu + önbellekli çözücü |
@@ -252,8 +253,14 @@ taşıması gereksiz bir argüman ekler.
 
 - Müşteri: `apps/web/lib/storefront/format.ts`
 - Operasyon: `apps/web/components/operation/ui/format.ts`
+- **Giden mesaj (mail/WhatsApp): `packages/notify/src/format.ts`** — üçüncü yüzey (17.2'de eklendi).
+  Ekran biçimlemesi `apps/web`'de yaşar; oysa giden mesajı İKİ uygulama kuruyor — istekten doğanı
+  `apps/web`, saatten doğanı `apps/backend`. Zamanlı işin ekran katmanından biçimleyici çekmesi
+  bağımlılık yönünü tersine çevirirdi (STACK §4); kendi `Intl` çağrısını yazması ise aynı tarihin iki
+  mailde iki türlü çıkması demekti. Ekranla ölçüt de aynı değil: mail arşivde kalıp aylar sonra
+  açılır, o yüzden tarih **yıl taşır** — ekranda yılsız tarih meşrudur.
 
-**Bu iki dosya DIŞINDA `toLocaleString`/`toFixed`/`Intl.NumberFormat` yazılmaz.** Sızıntının bedeli
+**Bu üç dosya DIŞINDA `toLocaleString`/`toFixed`/`Intl.NumberFormat` yazılmaz.** Sızıntının bedeli
 görünmez: aynı tutar iki ekranda iki farklı biçimde çıkar ve hangisinin doğru olduğu tartışılır.
 Taşıma (`packages/helper`'a almak) bilinçli olarak YAPILMADI — getirisi düşük, ihtiyaç kuralın
 netleşmesiydi.

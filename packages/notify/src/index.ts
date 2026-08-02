@@ -8,7 +8,8 @@ export type {
   NotifyRecipient,
   NotifyResult,
 } from './types';
-export { createNotifier, type Notifier } from './notifier';
+export { createNotifier, defaultNotifier, type Notifier } from './notifier';
+export { formatMessageDate } from './format';
 export { emailDriver } from './drivers/email.driver';
 export { waLinkDriver, type WaLinkDriverOptions } from './drivers/wa-link.driver';
 export { whatsappApiDriver } from './drivers/whatsapp-api.driver';

@@ -8,7 +8,8 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
-import { createDueFeedbackRequests, listPendingInvites, markInviteSent } from './feedback-requests';
+import { createDueFeedbackRequests } from './feedback-requests';
+import { sendPendingFeedbackInvites } from './send-feedback-invites';
 
 /**
  * Davet taraması (17.2) — zamanlanmış işin kendisi.
@@ -22,6 +23,8 @@ const orders = new OrderService(db);
 
 const stamp = Date.now();
 const createdOrders: string[] = [];
+/** Testin açtığı TÜM profiller — sonunda toplanır (kuyruk sınamaları ikinci bir müşteri kuruyor). */
+const profileIds: string[] = [];
 let customerId: string;
 let productId: string;
 let variantId: string;
@@ -64,6 +67,7 @@ beforeAll(async () => {
   variantId = created.variants[0]!.id;
 
   customerId = (await new UserProfileService(db).insert({ name: 'Deniz Yıldız', email: `tarama-${stamp}@example.test` })).id;
+  profileIds.push(customerId);
 
   dueOrderId = await newOrder();
   await markDelivered(dueOrderId, 12); // eşik 10 gün — zamanı geçmiş
@@ -76,7 +80,7 @@ beforeEach(async () => {
 afterAll(async () => {
   await db.from('feedback_request').delete().in('order_id', createdOrders);
   for (const id of createdOrders) await db.from('order').delete().eq('id', id);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [customerId], warehouseIds: [warehouseId] });
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds, warehouseIds: [warehouseId] });
 });
 
 describe('createDueFeedbackRequests', () => {
@@ -113,13 +117,58 @@ describe('createDueFeedbackRequests', () => {
   });
 });
 
-describe('gönderim kuyruğu', () => {
-  it('oluşan davet gönderilene kadar kuyrukta bekler', async () => {
+/**
+ * Gönderim (17.2) — kuyruğun boşaltılması.
+ *
+ * **Küresel sayıya bakılmaz** (CLAUDE.md §4b): kuyruk paylaşılan veritabanında başka ajanların
+ * davetlerini de taşıyabilir. Her sınama KENDİ davetinin damgasına bakar.
+ *
+ * Kanal ayrımı testin belkemiği: e-postalı müşteride sağlayıcı anahtarı yereldeyken yok, o yüzden
+ * davet KUYRUKTA KALMALI — "gitti" demek en kötü yalan olurdu. Telefonlu müşteride ise `wa.me`
+ * bağlantısı gerçekten üretilir ve davet damgalanır.
+ */
+describe('sendPendingFeedbackInvites', () => {
+  it('sağlayıcı anahtarı yokken davet kuyrukta KALIR — yanlışlıkla "gitti" damgası atılmaz', async () => {
     await createDueFeedbackRequests({ limit: 500 });
     const request = await requests.findByOrder(dueOrderId);
+    expect(request?.sentAt).toBeNull();
 
-    expect((await listPendingInvites(500)).some((r) => r.id === request!.id)).toBe(true);
-    await markInviteSent(request!.id);
-    expect((await listPendingInvites(500)).some((r) => r.id === request!.id)).toBe(false);
+    await sendPendingFeedbackInvites({ limit: 500 });
+
+    // E-postalı müşteri → e-posta sürücüsü üstlenir, anahtar yoksa `skipped` döner.
+    expect((await requests.findByOrder(dueOrderId))?.sentAt).toBeNull();
+  });
+
+  it('telefonla ulaşılan müşteride davet gider ve kanal DAMGASI whatsapp olur', async () => {
+    // Kanal davet açılırken `email` niyetiyle yazılıyor; fiilen giden kanal başkaysa damga onu
+    // söylemeli, yoksa "davet e-postayla gitti" diye bakılan kayıt yanlış kanalı gösterirdi.
+    const profiles = new UserProfileService(db);
+    const phoneOnly = await profiles.insert({ name: 'Kerem Aksoy', phone: `+3360000${String(stamp).slice(-4)}` });
+    profileIds.push(phoneOnly.id);
+
+    const { order } = await orders.create(
+      { customerId: phoneOnly.id, warehouseId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
+      [{ variantId, qty: 1, unitPrice: 12, vatRate: 5.5 }],
+    );
+    createdOrders.push(order.id);
+    await markDelivered(order.id, 12);
+
+    await createDueFeedbackRequests({ limit: 500 });
+    await sendPendingFeedbackInvites({ limit: 500 });
+
+    const sent = await requests.findByOrder(order.id);
+    expect(sent?.sentAt).not.toBeNull();
+    expect(sent?.channel).toBe('whatsapp');
+  });
+
+  it('damgalanan davet ikinci turda yeniden gönderilmez', async () => {
+    await createDueFeedbackRequests({ limit: 500 });
+    const request = await requests.findByOrder(dueOrderId);
+    await requests.markSent(request!.id, 'email');
+
+    // Kuyruk sorgusu `sent_at is null` süzgecinde: damgalı satır bir daha görünmez.
+    const before = (await requests.findByOrder(dueOrderId))!.sentAt;
+    await sendPendingFeedbackInvites({ limit: 500 });
+    expect((await requests.findByOrder(dueOrderId))?.sentAt).toBe(before);
   });
 });

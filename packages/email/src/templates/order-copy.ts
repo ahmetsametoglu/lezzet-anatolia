@@ -1,4 +1,5 @@
 import type { NotificationStep, PreferredLanguage } from '@lezzet/types';
+import { BRAND_COPY } from './brand-copy';
 
 /**
  * Üç sipariş e-postasının PAYLAŞILAN metinleri — zaman çizgisi adımları, alt bilgi, ortak kart
@@ -25,7 +26,7 @@ interface SharedCopy {
 
 export const SHARED_COPY: Record<OrderCopyLocale, SharedCopy> = {
   tr: {
-    region: 'Strasbourg & çevresi',
+    ...BRAND_COPY.tr,
     steps: { received: 'Alındı', prepared: 'Hazırlandı', on_the_way: 'Yolda', delivered: 'Teslim edildi' },
     itemsTitle: 'Kalemler',
     sentItemsTitle: 'Gönderilen kalemler',
@@ -33,10 +34,9 @@ export const SHARED_COPY: Record<OrderCopyLocale, SharedCopy> = {
     currentTotal: 'Güncel toplam',
     viewOrder: 'Siparişimi görüntüle',
     footerNotice: (ref) => `Bu e-posta ${ref} numaralı siparişinizle ilgili gönderilmiştir.`,
-    preferences: 'Bildirim tercihleri',
   },
   fr: {
-    region: 'Strasbourg & environs',
+    ...BRAND_COPY.fr,
     steps: { received: 'Reçue', prepared: 'Préparée', on_the_way: 'En route', delivered: 'Livrée' },
     itemsTitle: 'Articles',
     sentItemsTitle: 'Articles expédiés',
@@ -44,10 +44,9 @@ export const SHARED_COPY: Record<OrderCopyLocale, SharedCopy> = {
     currentTotal: 'Total actualisé',
     viewOrder: 'Voir ma commande',
     footerNotice: (ref) => `Cet e-mail concerne votre commande ${ref}.`,
-    preferences: 'Préférences de notification',
   },
   de: {
-    region: 'Straßburg & Umgebung',
+    ...BRAND_COPY.de,
     steps: { received: 'Eingegangen', prepared: 'Vorbereitet', on_the_way: 'Unterwegs', delivered: 'Zugestellt' },
     itemsTitle: 'Artikel',
     sentItemsTitle: 'Versandte Artikel',
@@ -55,6 +54,5 @@ export const SHARED_COPY: Record<OrderCopyLocale, SharedCopy> = {
     currentTotal: 'Aktueller Gesamtbetrag',
     viewOrder: 'Meine Bestellung ansehen',
     footerNotice: (ref) => `Diese E-Mail betrifft Ihre Bestellung ${ref}.`,
-    preferences: 'Benachrichtigungseinstellungen',
   },
 };

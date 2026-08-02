@@ -511,6 +511,18 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     return costs;
   }
 
+  /**
+   * Kimlik listesinden siparişler — **toplu okumaların N+1 kalkanı.**
+   *
+   * Bir kuyruğu gezip her satır için `getById` çağıran iş, kuyruk büyüdükçe yavaşlar ve o yavaşlama
+   * hiçbir yerde görünmez (17.2 davet gönderimi tam bu şekilde yazılabilirdi). Küme çağıranın
+   * elindeki sınırlı listedir; sayfalama gerektirmez.
+   */
+  async listByIds(ids: readonly string[]): Promise<Order[]> {
+    if (ids.length === 0) return [];
+    return this.getAll({ id: [...ids] });
+  }
+
   /** Sipariş + kalemleri TEK sorguda — kalem başına ayrı sorgu (N+1) yerine gömülü select. */
   async getWithItems(id: string): Promise<{ order: Order; items: OrderItem[] } | null> {
     const order = await this.getById(id);

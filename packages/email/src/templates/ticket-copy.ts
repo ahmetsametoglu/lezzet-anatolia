@@ -1,4 +1,5 @@
 import type { PreferredLanguage, TicketStatus, TicketType } from '@lezzet/types';
+import { BRAND_COPY } from './brand-copy';
 
 /**
  * Talep e-postalarının metinleri, üç dilde (14.7) — müşterinin `preferred_language`'ı.
@@ -56,7 +57,7 @@ interface TicketCopy {
 
 export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
   tr: {
-    region: 'Strasbourg & çevresi',
+    ...BRAND_COPY.tr,
     receivedSubject: (ref) => `Talebinizi aldık — ${ref}`,
     repliedSubject: (ref) => `Talebinize cevap verdik — ${ref}`,
     resolvedSubject: (ref) => `Talebiniz çözüldü — ${ref}`,
@@ -90,10 +91,9 @@ export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
     statuses: { open: 'Açık', in_progress: 'İnceleniyor', resolved: 'Çözüldü' },
 
     footerNotice: 'Bu e-posta açtığınız talep hakkında gönderilmiştir.',
-    preferences: 'Bildirim tercihleri',
   },
   fr: {
-    region: 'Strasbourg & environs',
+    ...BRAND_COPY.fr,
     receivedSubject: (ref) => `Nous avons bien reçu votre demande — ${ref}`,
     repliedSubject: (ref) => `Nous avons répondu à votre demande — ${ref}`,
     resolvedSubject: (ref) => `Votre demande est résolue — ${ref}`,
@@ -128,10 +128,9 @@ export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
     statuses: { open: 'Ouverte', in_progress: 'En cours', resolved: 'Résolue' },
 
     footerNotice: 'Cet e-mail concerne la demande que vous avez ouverte.',
-    preferences: 'Préférences de notification',
   },
   de: {
-    region: 'Straßburg & Umgebung',
+    ...BRAND_COPY.de,
     receivedSubject: (ref) => `Wir haben Ihre Anfrage erhalten — ${ref}`,
     repliedSubject: (ref) => `Wir haben auf Ihre Anfrage geantwortet — ${ref}`,
     resolvedSubject: (ref) => `Ihre Anfrage ist gelöst — ${ref}`,
@@ -166,7 +165,6 @@ export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
     statuses: { open: 'Offen', in_progress: 'In Bearbeitung', resolved: 'Gelöst' },
 
     footerNotice: 'Diese E-Mail betrifft die von Ihnen eröffnete Anfrage.',
-    preferences: 'Benachrichtigungseinstellungen',
   },
 };
 
