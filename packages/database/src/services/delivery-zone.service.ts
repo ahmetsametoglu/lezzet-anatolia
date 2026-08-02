@@ -11,7 +11,6 @@ import {
   type DeliveryZoneWithCodes,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
-import { dbToApp } from '../utils/case-transformers';
 
 /**
  * Rota bölgesi servisi (07.2) — DOMAIN §6.
@@ -41,18 +40,13 @@ export class DeliveryZoneService extends BaseDbService<DeliveryZone, DeliveryZon
     const zones = await this.list(opts);
     if (zones.length === 0) return [];
 
-    const { data, error } = await this.supabase
-      .from('delivery_zone_postal_code')
-      .select('*')
-      .in('zone_id', zones.map((z) => z.id));
-    if (error) throw error;
+    const rows = await new DeliveryZonePostalCodeService(this.supabase).listByZones(zones.map((z) => z.id));
 
     const byZone = new Map<string, Array<{ country: DeliveryZonePostalCode['country']; postalCode: string }>>();
-    for (const row of data ?? []) {
-      const parsed = DeliveryZonePostalCodeSchema.parse(dbToApp(row));
-      const list = byZone.get(parsed.zoneId) ?? [];
-      list.push({ country: parsed.country, postalCode: parsed.postalCode });
-      byZone.set(parsed.zoneId, list);
+    for (const row of rows) {
+      const list = byZone.get(row.zoneId) ?? [];
+      list.push({ country: row.country, postalCode: row.postalCode });
+      byZone.set(row.zoneId, list);
     }
     return zones.map((zone) => ({ ...zone, postalCodes: byZone.get(zone.id) ?? [] }));
   }
@@ -65,20 +59,7 @@ export class DeliveryZoneService extends BaseDbService<DeliveryZone, DeliveryZon
    * bölge onu tutuyor) yazım DB kısıtında patlar — sessiz "ilki kazanır" davranışı artık yok.
    */
   async replacePostalCodes(zoneId: string, codes: Array<{ country: DeliveryZonePostalCode['country']; postalCode: string }>): Promise<void> {
-    const { error: deleteError } = await this.supabase.from('delivery_zone_postal_code').delete().eq('zone_id', zoneId);
-    if (deleteError) throw deleteError;
-    if (codes.length === 0) return;
-
-    const { error } = await this.supabase.from('delivery_zone_postal_code').insert(
-      codes.map((c) => ({
-        zone_id: zoneId,
-        country: c.country,
-        // Normalize: DB'de de CHECK var, ama hatayı kullanıcıya göstermek yerine burada düzeltiyoruz —
-        // "67 000" yazan operatör hata değil, boşluk yazmış bir insandır.
-        postal_code: c.postalCode.replace(/\s/g, '').toUpperCase(),
-      })),
-    );
-    if (error) throw error;
+    await new DeliveryZonePostalCodeService(this.supabase).replaceForZone(zoneId, codes);
   }
 
   /**
@@ -92,4 +73,72 @@ export class DeliveryZoneService extends BaseDbService<DeliveryZone, DeliveryZon
   async recordDemand(postalCode: string): Promise<void> {
     await this.executeRpc('record_postal_code_demand', { p_postal_code: postalCode });
   }
+}
+
+/**
+ * Bölge ↔ posta kodu junction servisi (19.5 · `STACK §6`).
+ *
+ * **Junction tablosu kendi alt sınıfını hak eder** ve bu bir düzen kaygısı değil: bu tablo iki
+ * farklı sorunun kapısı — "bölgenin kodları neler" (yazma yolu) ve "bu kod rota içinde mi" (okuma
+ * yolu). İkisi de `DeliveryZoneService` içinde ham `this.supabase` çağrısı olarak duruyordu; ham
+ * sorgu şema doğrulamasını ve ad dönüşümünü çağıranın hatırlamasına bırakır (biri `dbToApp`
+ * yazmayı unutunca `zone_id` diye bir alan uygulamaya sızar).
+ *
+ * Yazma AÇIK (`allowDelete`), çünkü küme sil-yaz ile değiştiriliyor — ama satırın kendi kimliği
+ * yok: anahtar `(country, postal_code)`.
+ */
+export class DeliveryZonePostalCodeService extends BaseDbService<DeliveryZonePostalCode, DeliveryZonePostalCode, DeliveryZonePostalCode> {
+  constructor(supabase: SupabaseClient) {
+    super(
+      supabase,
+      'delivery_zone_postal_code',
+      DeliveryZonePostalCodeSchema,
+      DeliveryZonePostalCodeSchema,
+      DeliveryZonePostalCodeSchema,
+    );
+  }
+
+  /** Verilen bölgelerin tüm kodları — bölge başına sorgu (N+1) yerine tek tur. */
+  listByZones(zoneIds: readonly string[]): Promise<DeliveryZonePostalCode[]> {
+    if (zoneIds.length === 0) return Promise.resolve([]);
+    return this.getAll({ zoneId: [...zoneIds] });
+  }
+
+  /**
+   * Verilen kodlardan HANGİLERİ bir bölgeye bağlı — "rota içinde mi" sorusunun toplu cevabı.
+   *
+   * Küme çağıranın elindeki kısa listedir (öneri satırları); kod başına ayrı sorgu N+1 olurdu ve
+   * bu uç **tuş yolunda**. Ülke süzgeci YOK: aynı kod iki ülkede geçerli olabilir ve hangisinin
+   * rotada olduğu `(ülke, kod)` çiftiyle ayrılır — çağıran eşleştirir.
+   */
+  listByCodes(codes: readonly string[]): Promise<DeliveryZonePostalCode[]> {
+    if (codes.length === 0) return Promise.resolve([]);
+    return this.getAll({ postalCode: [...codes] });
+  }
+
+  /**
+   * Bölgenin kod kümesini KOMPLE değiştirir (sil-yaz).
+   *
+   * Yamalamak yerine değiştirmek bilinçli: ekran kümenin son hâlini gönderir, "hangileri eklendi
+   * hangileri silindi" hesabını iki tarafın da tutması gerekirdi. Çakışan bir kod varsa (başka
+   * bölge onu tutuyor) yazım DB kısıtında patlar — sessiz "ilki kazanır" davranışı yok.
+   */
+  async replaceForZone(zoneId: string, codes: ReadonlyArray<{ country: DeliveryZonePostalCode['country']; postalCode: string }>): Promise<void> {
+    await this.deleteWhere({ zoneId });
+    if (codes.length === 0) return;
+    await this.bulkInsert(
+      codes.map((c) => ({
+        zoneId,
+        country: c.country,
+        // Normalize: DB'de de CHECK var, ama hatayı kullanıcıya göstermek yerine burada düzeltiyoruz —
+        // "67 000" yazan operatör hata değil, boşluk yazmış bir insandır.
+        postalCode: normalizePostalCode(c.postalCode),
+      })),
+    );
+  }
+}
+
+/** Posta kodunun saklanan biçimi: boşluksuz, büyük harf. Tek yerde — kısıt da DB'de aynısını ister. */
+export function normalizePostalCode(value: string): string {
+  return value.replace(/\s/g, '').toUpperCase();
 }

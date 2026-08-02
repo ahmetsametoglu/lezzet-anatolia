@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PostalCodePlaceSchema, type Country, type PostalCodePlace } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+import { DeliveryZonePostalCodeService, normalizePostalCode } from './delivery-zone.service';
 
 /**
  * Posta kodu referansı servisi (19.8) — salt okunur.
@@ -53,4 +54,81 @@ export class PostalCodePlaceService extends BaseDbService<PostalCodePlace, never
     const rows = await this.getAll({ country, postalCode });
     return rows[0]?.places ?? [];
   }
+
+  /**
+   * Birden çok kodun satırları TEK turda — liste ekranlarının kapısı (19.19).
+   *
+   * `findPlaces` tek adres içindir; bir sipariş listesindeki elli adres için elli kez çağrılsaydı
+   * elli gidiş-dönüş olurdu. Küme çağıranın elindeki sayfadır, sınırsız büyümez.
+   */
+  listByPostalCodes(postalCodes: readonly string[]): Promise<PostalCodePlace[]> {
+    if (postalCodes.length === 0) return Promise.resolve([]);
+    return this.getAll({ postalCode: [...new Set(postalCodes)] });
+  }
+
+  /**
+   * **Önek araması** (19.19 · müşteri şeridinin talebi §7) — posta kodu alanının autocomplete'i.
+   *
+   * Bu uç **tuş yolundadır** ve tasarımı o gerçeğe göre: tek sorgu, sabit tavan, önek indeksi.
+   *
+   * **Neden ayrı bir kapı, `resolvePlaceAction`'a bayrak değil:** o kapının içinde `recordDemand`
+   * var ve her tuşlanan kodu "bölge dışı talep" sayacına yazardı — bölge açma kararını besleyen
+   * sayaç. 19.7'nin kayıtlı kararı bunu açıkça uyarıyor: *"kapıya bayrak eklemek yetmez, o bayrağı
+   * unutan ilk çağrı sayacı yine kirletir."* Ayrı fonksiyon bunu **yapısal olarak** imkânsız kılar:
+   * öneri bir OKUMA, onay bir NİYET; sayaç niyete bağlı kalır.
+   *
+   * **`inRoute` taşınır ve sıralamada öne alınır, ama SEÇİLMEZ.** Müşterinin aradığı büyük
+   * olasılıkla hizmet verdiğimiz yerdir; doğru cevabı listenin dibine koymak onu saklamaktır. Öne
+   * almak bir sıralama kararıdır — otomatik seçmek ise bir teslimat kararı ve iki adayın farkı
+   * yalnız teslimat yolu değil **KDV oranıdır** (19.8).
+   *
+   * **Etiket kurulmaz, ham veri döner:** kaç ad yazılıp nereden sonra "+4" deneceği görsel bir
+   * karardır (`CLAUDE.md §3`) ve hazır bir dize üç dilde çalışmaz.
+   *
+   * **Ülke süzgeci alınmaz:** müşteri ülke seçmiyor (19.16b); önek hangi ülkeye düşerse gelsin,
+   * ayrımı yer adı ve ülke ile müşteri yapar.
+   */
+  async searchPrefix(prefix: string, limit = 8): Promise<PostalCodeSuggestion[]> {
+    // Tek harflik önek 16.9k satırın onda birini gezdirir ve hiçbir şey ayırt etmez (ölçüldü:
+    // `6%` → 11,7 ms, `672%` → 0,11 ms). Kısa öneki reddetmek başarım değil ANLAM meselesi:
+    // "6" hiçbir yeri işaret etmiyor.
+    const normalized = normalizePostalCode(prefix);
+    if (normalized.length < 2) return [];
+
+    const rows = await this.getAll(undefined, {
+      prefixFilters: [{ field: 'postalCode', value: normalized }],
+      orderBy: 'postalCode',
+      limit,
+    });
+    if (rows.length === 0) return [];
+
+    // İkinci tur YALNIZ bulunan kodlar için (en çok `limit` tane) — kod başına sorgu N+1 olurdu.
+    const served = await new DeliveryZonePostalCodeService(this.supabase).listByCodes(rows.map((row) => row.postalCode));
+    const inRoute = new Set(served.map((row) => `${row.country}:${row.postalCode}`));
+
+    return rows
+      .map((row) => ({
+        country: row.country,
+        postalCode: row.postalCode,
+        places: row.places,
+        inRoute: inRoute.has(`${row.country}:${row.postalCode}`),
+      }))
+      // Sıralama BELLEKTE: küme en çok `limit` satır ve ölçüt iki tabloya birden bakıyor.
+      // Rota adayı önce, sonra kodun kendi sırası — eşitlikte ülke, ki sıra belirleyici olsun.
+      .sort((a, b) =>
+        a.inRoute === b.inRoute
+          ? a.postalCode.localeCompare(b.postalCode) || a.country.localeCompare(b.country)
+          : Number(b.inRoute) - Number(a.inRoute),
+      );
+  }
+}
+
+/** Autocomplete satırı — ekran etiketi buradan KURAR, burada kurulmaz. */
+export interface PostalCodeSuggestion {
+  country: Country;
+  postalCode: string;
+  /** Kodun kapsadığı TÜM yerleşimler, ham. Kısaltma (“+4”) ekranın kararı. */
+  places: string[];
+  /** Kod bizim bir teslimat bölgemizde mi — sıralamayı belirler, seçimi DEĞİL. */
+  inRoute: boolean;
 }

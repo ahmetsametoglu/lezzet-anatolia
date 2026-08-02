@@ -28,6 +28,18 @@ interface FilterOptions {
    * `user_profiles` müşteriyi ve personeli birlikte taşıyor, ayıran şey rol kümesi.
    */
   containsFilters?: ReadonlyArray<{ field: string; values: readonly unknown[] }>;
+  /**
+   * ÖNEK süzgeci (`like 'değer%'`) — `searchFilters`'tan ayrı ve bu ayrım başarım meselesidir.
+   *
+   * `searchFilters` `ilike '%q%'` üretir: iki taraflı joker hiçbir btree indeksini kullanamaz,
+   * tabloyu tarar. Küçük ve nadir okunan kümede sorun değil; **tuş yolunda** olan bir uç için
+   * felakettir (ölçüldü: 16.9k satırda 3 harflik önek, tarama 36,9 ms → önek indeksiyle 0,11 ms).
+   *
+   * Büyük/küçük harfe DUYARLI (`like`), çünkü `ilike` indeksi yine devre dışı bırakırdı. Değeri
+   * kolonun yazım biçimine normalleştirmek çağıranın işidir — kural veriyle birlikte yaşar
+   * (posta kodu büyük harf, e-posta küçük).
+   */
+  prefixFilters?: ReadonlyArray<{ field: string; value: string }>;
 }
 interface GetAllOptions extends FilterOptions {
   orderBy?: string;
@@ -79,6 +91,7 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     for (const f of options.isNotNullFields ?? []) query = query.not(camelToSnake(f), 'is', null);
     for (const rf of options.rangeFilters ?? []) query = query[rf.operator](camelToSnake(rf.field), rf.value);
     for (const sf of options.searchFilters ?? []) query = query.ilike(camelToSnake(sf.field), `%${sf.query}%`);
+    for (const pf of options.prefixFilters ?? []) query = query.like(camelToSnake(pf.field), `${pf.value}%`);
     for (const cf of options.containsFilters ?? []) query = query.contains(camelToSnake(cf.field), [...cf.values]);
     for (const group of options.orFilters ?? []) query = query.or(group);
     return query;

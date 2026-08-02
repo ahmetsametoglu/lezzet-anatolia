@@ -54,7 +54,18 @@ comment on table public.postal_code_place is
 
 -- Koddan ÜLKEYE gidiş bu tablonun asıl sorgusu: "67000 hangi ülke(ler)de geçerli?" PK ülkeyle
 -- başladığı için o yönde kullanılamaz, ayrı indeks gerekir.
-create index postal_code_place_code on public.postal_code_place (postal_code);
+--
+-- **`text_pattern_ops` — ikinci bir indeks DEĞİL, aynı indeksin doğru sınıfı (19.19).** Kod alanı
+-- artık ÖNEK de aranıyor (autocomplete, `searchPrefix`) ve varsayılan işleç sınıfı bunu yapamaz:
+-- veritabanının harmanlaması C değil, o yüzden `like '672%'` aralık taramasına çevrilemiyor ve
+-- planlayıcı tabloyu geziyor. Ölçüldü (16.878 satır, yerel): `672%` → **36,9 ms** tarama;
+-- `text_pattern_ops` ile aynı sorgu **0,11 ms** indeks taraması. Uç tuş yolunda, fark görünür.
+--
+-- Eşitlik ("67000 hangi ülkelerde") bu sınıfla da çalışır — `=` her iki sınıfta aynı; kaybedilen
+-- şey yalnız harmanlamaya duyarlı SIRALAMA ve bu kolonda böyle bir sorgu yok (kodlar ASCII).
+-- Bu yüzden ikinci bir indeks eklenmiyor: aynı işi iki indeksle yapmak, her yazımda iki ağaç
+-- güncellemek demekti.
+create index postal_code_place_code on public.postal_code_place (postal_code text_pattern_ops);
 
 -- Referans verisi herkese açık okunur: yer çözümü giriş yapmamış ziyaretçi için de çalışır ve
 -- burada kişisel veri yoktur (kamuya açık coğrafi liste).

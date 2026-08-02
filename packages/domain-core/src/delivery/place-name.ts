@@ -83,3 +83,38 @@ export function cityMatchesPlaces(city: string, places: readonly string[]): bool
   const bare = wanted.replace(/\s+(?:cedex\s*)?\d{1,2}\s*(?:e|er|eme|ieme)?$/, '').replace(/\s+cedex$/, '').trim();
   return bare !== wanted && bare.length > 0 && known.includes(bare);
 }
+
+/**
+ * Bir adresin taşıdığı UYARI — operasyon ekranının "bu adrese gidebilecek miyiz" sorusu (19.19).
+ *
+ * `unknown_code` · kod ne bizim bölge tablomuzda ne referansta. Adres uydurma OLABİLİR ama
+ *   olmayabilir de: referans bir anlık görüntüdür (GeoNames'te olmayan geçerli kod var, yenileri
+ *   açılıyor). Bu yüzden bir ENGEL değil, bir işarettir.
+ * `city_mismatch` · kod tanınıyor ama yazılan şehir o kodun hiçbir yerleşimi değil. **Daha güçlü
+ *   sinyal budur**: burada bilinmeyen bir şey yok, çelişen iki beyan var — ve 19.17'yi doğuran
+ *   yaşanmış şikâyet (`67000` + `LINGOLSHEIM`) tam olarak bu sınıftı, tanınmayan kod değil.
+ */
+export type AddressAnomaly = 'unknown_code' | 'city_mismatch';
+
+/**
+ * Adresin uyarılarını çıkarır — **saf karar**, girdiyi çağıran toplar.
+ *
+ * `inRoute` bizim bölge tablomuz, `places` referans tablosu. İkisi de "hayır" diyorsa kod tanınmıyor
+ * demektir; **ikisinden biri yeterlidir** çünkü kendi tablomuz referansın üstündedir (19.16a): bir
+ * kodu bölgemize eklemişsek o kod bizim için geçerlidir, GeoNames ne derse desin.
+ *
+ * Şehir uyuşmazlığı yalnız kod TANINIYORKEN sorulur: tanınmayan kodda karşılaştıracak bir liste
+ * yoktur ve iki uyarıyı birden basmak aynı arızayı iki kez saymak olurdu.
+ */
+export function addressAnomalies(input: {
+  city: string | null;
+  places: readonly string[];
+  inRoute: boolean;
+}): AddressAnomaly[] {
+  const known = input.inRoute || input.places.length > 0;
+  if (!known) return ['unknown_code'];
+  // Şehirsiz adres uyarı doğurmaz: eksik alan bir çelişki değildir (`CLAUDE.md §1` — ölçülemeyen
+  // değer sıfır değildir; burada da "yazılmamış şehir" ≠ "yanlış şehir").
+  if (input.city && !cityMatchesPlaces(input.city, input.places)) return ['city_mismatch'];
+  return [];
+}

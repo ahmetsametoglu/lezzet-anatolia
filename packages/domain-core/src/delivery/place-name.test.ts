@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cityMatchesPlaces, normalizePlaceName, placeLabel } from './place-name';
+import { addressAnomalies, cityMatchesPlaces, normalizePlaceName, placeLabel } from './place-name';
 
 /**
  * Yer adının güvenilirliği (19.17).
@@ -84,5 +84,38 @@ describe('yazılan şehir bu koda ait mi', () => {
 
   it('ek atma kuralı YANLIŞ eşleşme üretmez — yalnız kabul kümesini büyütür', () => {
     expect(cityMatchesPlaces('Lingolsheim 2', ['Strasbourg'])).toBe(false);
+  });
+});
+
+/**
+ * Adres uyarıları (19.19) — operasyon listesinin işareti. Sınanan şey ayrımın kendisi: "bilmiyorum"
+ * ile "çelişiyor" aynı uyarı DEĞİL, ve ikisi birden basılmaz.
+ */
+describe('addressAnomalies', () => {
+  it('kod hiçbir yerde tanınmıyorsa unknown_code', () => {
+    expect(addressAnomalies({ city: 'Neresi', places: [], inRoute: false })).toEqual(['unknown_code']);
+  });
+
+  it('kod KENDİ bölge tablomuzdaysa tanınır — referans susmuş olsa bile', () => {
+    // 19.16a: kendi tablomuz referansın üstündedir. GeoNames bir kodu bilmiyor olabilir; biz o kodu
+    // bölgemize eklediysek oraya gidiyoruz demektir ve uyarı yanlış öterdi.
+    expect(addressAnomalies({ city: 'Neresi', places: [], inRoute: true })).toEqual([]);
+  });
+
+  it('YAŞANMIŞ vaka: 67000 + LINGOLSHEIM → city_mismatch', () => {
+    // 19.17'yi doğuran şikâyet. Burada bilinmeyen bir şey yok: iki beyan birbiriyle çelişiyor.
+    expect(addressAnomalies({ city: 'LINGOLSHEIM', places: ['Strasbourg'], inRoute: true })).toEqual(['city_mismatch']);
+  });
+
+  it('şehir koda uyuyorsa uyarı yok', () => {
+    expect(addressAnomalies({ city: 'Hœnheim', places: ['Bischheim', 'Hœnheim'], inRoute: true })).toEqual([]);
+  });
+
+  it('şehir yazılmamışsa uyarı doğurmaz — eksik alan çelişki değildir', () => {
+    expect(addressAnomalies({ city: null, places: ['Strasbourg'], inRoute: true })).toEqual([]);
+  });
+
+  it('tanınmayan kodda şehir uyuşmazlığı AYRICA basılmaz — aynı arıza iki kez sayılmaz', () => {
+    expect(addressAnomalies({ city: 'Neresi', places: [], inRoute: false })).toEqual(['unknown_code']);
   });
 });

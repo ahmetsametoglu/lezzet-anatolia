@@ -7,6 +7,8 @@ export { createServiceRoleClient, serviceDb, type Db } from './client';
 // Reset/restart sonrası ilk istek 502 alır (PostgREST şema önbelleğini yüklüyor) — seed ve testler
 // ilk sorgudan önce bunu bekler.
 export { waitForRest, type WaitForRestOptions } from './core/ready';
+// Kısıt ihlalinin ADI — cümlesini arayüz yazar (operasyon talebi §7).
+export { constraintOf } from './core/constraint';
 
 // Servisler
 export { UserProfileService } from './services/user-profile.service';
@@ -24,8 +26,8 @@ export { DiscountCodeService } from './services/discount-code.service';
 export { DiscountUseService } from './services/discount-use.service';
 export { AddressService } from './services/address.service';
 export { SettingsService } from './services/settings.service';
-export { DeliveryZoneService } from './services/delivery-zone.service';
-export { PostalCodePlaceService } from './services/postal-code-place.service';
+export { DeliveryZoneService, DeliveryZonePostalCodeService, normalizePostalCode } from './services/delivery-zone.service';
+export { PostalCodePlaceService, type PostalCodeSuggestion } from './services/postal-code-place.service';
 export { VariantStockNoticeService } from './services/variant-stock-notice.service';
 export { WarehouseService } from './services/warehouse.service';
 export { WarehouseTransferService } from './services/warehouse-transfer.service';

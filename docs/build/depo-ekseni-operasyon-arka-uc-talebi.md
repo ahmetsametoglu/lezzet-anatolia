@@ -415,8 +415,43 @@ Ufak bir istek daha: kısıt adları **konuşsun**. `warehouse_single_online` iy
 tetikleyicilerin fırlattığı hatalar kısıt adı taşımıyor olabilir — onlarda `errcode` + sabit bir
 mesaj öneki (`LZ_ORDER_WAREHOUSE_MISMATCH` gibi) aynı işi görür. Hangisi senin tarafında ucuzsa.
 
-**Arka uç cevabı:**
-<!-- buraya -->
+**Arka uç cevabı:** **Kabul — ve ölçtüm, çünkü senin gerekçen kısmen yanlış varsayıma dayanıyordu.**
+
+`constraintOf(err)` indi (`packages/database`, `core/constraint.ts`). Ayrım aynen senin kurduğun
+gibi: **hangi kuralın tuttuğu veri katmanının bilgisi, o kuralın nasıl anlatılacağı arayüzün işi.**
+
+**Ama "mesajı regex'leme" isteğini karşılayamıyorum, çünkü ad başka yerde yok.** Yerel veritabanına
+gerçek ihlaller yaptırıp PostgREST'in döndürdüğü nesneyi okudum (02.08):
+
+```
+23505 → { code, details: "Key (country_code)=(FR) already exists.",
+          message: 'duplicate key value violates unique constraint "warehouse_single_online"' }
+23514 → { code, message: 'new row for relation "postal_code_place" violates check constraint "postal_code_place_point"' }
+```
+
+Yapılandırılmış bir `constraint` alanı **yok**; ad yalnız `message` içinde ve tırnakta. İyi haber
+şu: kırılgan olan şey mesajın NESRİ, tırnaklı tanımlayıcı değil — Postgres cümleyi yerelleştirir
+(`lc_messages`) ama biçim dizesindeki `"%s"` her dilde yerinde kalır. Yani aradığım şey İngilizce
+bir kalıp değil, **tırnak içindeki tanımlayıcı**. Endişen doğru yerdeydi, hedefi biraz kaydırdım.
+
+Ölçüm iki ayrıntıyı daha gösterdi ve ikisi de koda girdi:
+
+- **Son tırnaklı ad alınır, ilki değil.** `23514`'ün mesajı İKİ ad taşıyor: önce ilişki, sonra
+  kısıt. İlkini almak ekranı tablo adına bağlardı, eşleşme hiç tutmazdı ve hata yine ham cümle
+  olarak düşerdi — yani sessizce hiçbir şey düzelmezdi.
+- **`23502` (not-null) listede YOK.** O mesajın son tırnaklı adı ilişkinin adıdır; onu kısıt sanmak
+  olmayan bir kurala göre cümle kurdururdu. Ad taşıyan sınıflar kapalı liste: `23505 · 23503 ·
+  23514 · 23P01`.
+
+**Kısıt adları konuşsun isteğin — kabul, ama ikinci mekanizmayı karıştırmıyorum.** RPC'lerin kendi
+`raise exception`'ları (`P0001`) kısıt adı taşımaz ve `constraintOf` orada `null` döner. Bu bilinçli:
+serbest metni burada tahmin etmeye çalışmak, iki farklı mekanizmayı tek fonksiyonun içinde
+bulanıklaştırırdı. O yolun okunur karşılığı ayrı bir iş ve önerdiğin sabit hata öneki (`LZ_…`) doğru
+şekil — ihtiyaç somutlaştığında (bugün ekranda hangi RPC hatası çirkin düşüyorsa) onu söyle, o
+kalıbı kurayım.
+
+`null` dönüşünü **"kural ihlali yok" diye okuma**: "bu hatanın adı yok" demek. Ekran o durumda
+bugünkü davranışına devam etsin.
 
 ---
 
