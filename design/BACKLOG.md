@@ -148,6 +148,24 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ## 2. Karar bekleyen (tasarım tarafında netleşmeli)
 
+- **FORM KİTİNE `size` EKSENİ — üç ham girdi bunu bekliyor (02.08, denetim M5).**
+  `controlClass` bugün **tek ölçü** biliyor: sabit `h-12` (48px) + `text-body` (15px) + `FieldShell`
+  etiket/hata iskeleti. Envanterin K34'ü de böyle çiziyor ve doğru — **gerçek form alanı** için.
+  Ama üç yerde form alanı değil, **satır içi kontrol** var ve üçü de kiti kullanamadığı için
+  kenarını, odak halkasını ve a11y kablosunu elle yazıyor:
+  · `cart/components/cart-coupon.tsx` — `size="sm"` düğmeyle yan yana duran kod alanı (dar, kalın,
+    büyük harf; 48px satırın hizasını bozar)
+  · `product/[slug]/components/review-form.tsx` — kart içinde `rows={3}`, `resize-none`, etiketsiz
+  · `support/components/reply-box.tsx` — hap biçimli satır içi besteci (dosyanın künyesinde
+    gerekçesi zaten yazılı)
+  **İstenen karar tasarımdan:** kitin ikinci bir ölçüsü olacak mı (`md` 48px · `sm` satır içi) ve o
+  ölçünün yüksekliği/punto/yarıçapı ne? Kod bunu kendi başına seçemez — kontrol yüksekliği
+  envanterin kararı. `field-shell` künyesi aynı boşluğu mobil 52px için de itiraf ediyor; ikisi
+  aynı eksenin iki değeri, tek turda çözülür.
+  **O güne kadar üçü gerekçeli istisna** (`CLAUDE.md §2` "ham `<input>` son çare") — kiti çağırıp
+  sınıflarının çoğunu ezmek, kiti kullanmak değil adını kullanmak olurdu.
+
+
 - **ÇÖZÜLDÜ (02.08, kullanıcı kararı): Transfer AYRI SAYFA DEĞİL — 01.08 kararı geçerli.** Gelen
   çizim ayrı sayfa varsayıyordu; kullanıcı *"bence (a)'yı yapsak daha iyi… mevcut tasarımdaki ilgili
   yerleri kopyalayıp birleştirebiliriz"* dedi ve karar korundu. Gerekçe estetik değil yapısal ve
@@ -171,21 +189,21 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
   · "Tek depolu kurulum — sayfa kapalı" → `admin-stok.md` §4'teki tek-depo hâli (sayfa kapanmaz,
     **bölüm** görünmez; sayfanın kalanı tek depoda da çalışır)
   **Kodlanmayacak:** `AdminSidebar.dc`'nin Transfer nav satırı.
-  **KÖK SEBEP — ilk yazdığım teşhis YANLIŞTI, düzeltildi (kullanıcı: "ben o belgeyi vermedim").**
-  Doğrusu şu ve izi sürülebilir: `design/project/uploads/` klasörü, kendi README'sinin dediği gibi
-  **Claude Design'a verilmiş girdilerin aynasıdır** ve `admin-transfer.md` orada **ilk turdan beri**
-  duruyor — sayfa dokümanı o zaman yazılmış, verilmiş, sonra 01.08'de kaldırılmıştı ama
-  **tasarımcının elinden geri alınmamıştı.** Kullanıcı bu turda yalnız dört belge verdi
-  (`depo-mal-kabul-tasarim-istegi` · `depo-stok-giris` · `operasyon-depo-ekseni` · `admin-depolar`).
-  Yani kimse eski belgeyi yeniden iletmedi; belge zaten oradaydı.
-  Doğrulaması: `design/pages/admin-transfer.md` **hiçbir commit'te yok** (`git log --all` boş) —
-  yazılıp verilmiş, commit'lenmeden kaldırılmış. Uploads aynasında ise duruyor.
-  **Üstelik bu turda verilen `operasyon-depo-ekseni.md` TERSİNİ söylüyor** (§102: *"Transfer AYRI
-  SAYFA DEĞİL… ilk turda kendi sayfa dokümanı yazılmıştı; kaldırıldı"*). Yani tasarımcının elinde
-  çelişen iki girdi vardı ve **adı bir sayfayı işaret eden dosya** ağır bastı.
-  **Ders: bir sayfa dokümanı kaldırıldığında tasarım projesinden de geri çekilmeli** — `design/pages/`
-  altından silmek yetmiyor, aynadaki kopya sessizce yaşamaya devam ediyor. Kaldırma kullanıcının
-  (klasör tasarım aracının).
+  **KÖK SEBEP: BİLİNMİYOR — iki teşhis yazdım, ikisi de yanlış çıktı ve üçüncüsünü uydurmuyorum.**
+  Kullanıcı önce *"ben o belgeyi vermedim"*, sonra *"bu yeni bir chat olarak açıldı ve sadece senin
+  verdiğin dokümanlar yüklendi"* dedi. Elimdeki doğrulanabilir olgular yalnız şunlar:
+  · `design/pages/admin-transfer.md` **hiçbir commit'te yok** (`git log --all` boş) — yazılmış,
+    commit'lenmeden kaldırılmış.
+  · `design/project/uploads/admin-transfer.md` bugün **duruyor** ve içinde `operasyon-depo-ekseni.md`'ye
+    atıf var; o dosya 01.08'de doğdu — yani transfer dokümanı 01.08'de ya da sonrasında yazılmış,
+    "ilk turdan kalma" değil.
+  · Aynı turda `uploads/belgeler.md` de yeni ve o da yüklenenler listesinde anılmadı; buna karşılık
+    üç `Belge - *.dc` çizildi. Yani aynanın neyi ne zaman aldığını buradan okuyamıyorum.
+  Mekanizmayı bilmeden sebep yazmak, bu maddede iki kez yaptığım hata. **Sebep açık kalıyor.**
+  **Yine de yapılacak iş sebepten bağımsız:** `uploads/admin-transfer.md` tasarım projesinden
+  kaldırılmalı — orada durduğu sürece bir sonraki turda yeniden sayfa olarak çizilebilir. Ve genel
+  kural olarak: bir sayfa dokümanı `design/pages/` altından kaldırıldığında **tasarım projesinden de
+  geri çekilmeli**; yalnız yerelden silmek yetmiyor.
 
 - **~~ÇELİŞKİ: Transfer'in AYRI SAYFA'sı çizildi, oysa 01.08'de sayfa olmaktan çıkarılmıştı (02.08).~~** *(yukarıda çözüldü; kayıt izi için duruyor)*
   Gelen tasarım paketinde `Operasyon - Transfer.dc.html` var (web "yolda ne var" listesi · mobil
