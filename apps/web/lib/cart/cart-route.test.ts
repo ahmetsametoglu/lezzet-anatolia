@@ -38,7 +38,7 @@ beforeAll(async () => {
   });
   productId = product.id;
   variantId = variants[0]!.id;
-  await new PriceService(db).insert({ variantId, channel: 'b2c', amount: 30 });
+  await new PriceService(db).insert({ variantId, channel: 'b2c', amountCents: 3000 });
 
   const pair = await createTestWarehousePair(db);
   localWarehouseId = pair.primary.id;

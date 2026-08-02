@@ -1,4 +1,5 @@
 import { PriceService } from '@lezzet/database';
+import { toCents } from '@lezzet/helper';
 import { euro, gun, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
 
 // ── Fiyat (03/05) ────────────────────────────────────────────────────────────────────────────────
@@ -27,16 +28,16 @@ export async function seedPrices(db: Db, varyantlar: VaryantRef[], kisiler: Kisi
 
     // Her 11'incisinde ESKİ bir liste bırakılır: fiyat geçmişi ve "hangi listeden çıktı" görünür.
     if (i % 11 === 0) {
-      await prices.setPrice({ variantId: v.id, channel: 'b2c', amount: euro(b2cTtc * 0.92), validFrom: gun(-120) });
+      await prices.setPrice({ variantId: v.id, channel: 'b2c', amountCents: toCents(b2cTtc * 0.92), validFrom: gun(-120) });
       satir += 1;
     }
-    await prices.setPrice({ variantId: v.id, channel: 'b2c', amount: b2cTtc, validFrom: gun(-30) });
-    await prices.setPrice({ variantId: v.id, channel: 'b2b', amount: b2bHt, validFrom: gun(-30) });
+    await prices.setPrice({ variantId: v.id, channel: 'b2c', amountCents: toCents(b2cTtc), validFrom: gun(-30) });
+    await prices.setPrice({ variantId: v.id, channel: 'b2b', amountCents: toCents(b2bHt), validFrom: gun(-30) });
     satir += 2;
 
     // Her 17'ncisinde İLERİ TARİHLİ zam: "zam önceden planlanır" kuralı denenebilsin.
     if (i % 17 === 0) {
-      await prices.setPrice({ variantId: v.id, channel: 'b2c', amount: euro(b2cTtc * 1.08), validFrom: gun(30) });
+      await prices.setPrice({ variantId: v.id, channel: 'b2c', amountCents: toCents(b2cTtc * 1.08), validFrom: gun(30) });
       satir += 1;
     }
   }
@@ -51,7 +52,7 @@ export async function seedPrices(db: Db, varyantlar: VaryantRef[], kisiler: Kisi
         variantId: v.id,
         channel: 'b2b',
         customerId: ozelMusteri,
-        amount: euro((liste / (1 + v.vatRate / 100)) * 0.74), // listeden daha iyi
+        amountCents: toCents((liste / (1 + v.vatRate / 100)) * 0.74), // listeden daha iyi
         validFrom: gun(-60),
       });
       satir += 1;

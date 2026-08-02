@@ -185,7 +185,7 @@ describe('BundleService', () => {
     const stocks = new StockService(db);
     const bundle = await createBundle(`Dolu özet ${stamp}`, 21.1, [{ variantId: variantA, qty: 1, allocatedUnitPrice: 21.1 }]);
 
-    await prices.setPrice({ variantId: variantA, channel: 'b2c', amount: 25, validFrom: new Date(Date.now() - 86_400_000).toISOString() });
+    await prices.setPrice({ variantId: variantA, channel: 'b2c', amountCents: 2500, validFrom: new Date(Date.now() - 86_400_000).toISOString() });
     // İki parti: 10 adet × 4 € + 30 adet × 8 € → ağırlıklı ortalama 7 €.
     const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
     await stocks.insert({ variantId: variantA, warehouseId, physicalQty: 10, purchasePrice: 4, expiryDate: dayOffset(100) });

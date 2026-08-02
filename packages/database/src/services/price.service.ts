@@ -23,6 +23,9 @@ import { BaseDbService } from '../core/base.service';
  * en yeni** kazanır. Gelecek tarihli satır, fiyat değişimini önceden hazırlamak içindir.
  */
 export class PriceService extends BaseDbService<Price, PriceInsert, PriceUpdate> {
+  /** `price.amount` euro `numeric`; app tarafı cent (STACK §8) — dönüşüm taban sınıfta. */
+  protected override readonly moneyFields = ['amountCents'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'price', PriceSchema, PriceInsertSchema, PriceUpdateSchema);
   }

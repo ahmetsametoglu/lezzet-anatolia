@@ -124,7 +124,7 @@ export function BundleItemsEditor({ control, pool, setValue, onSearch, searching
 
     // Liste fiyatı eksik olan otomatik satır varsa DAĞITMA: eksik fiyatı 0 ağırlık saymak o kalemi
     // sessizce hediyeye çevirirdi. Şerit eksikliği söyler, paylar elle girilir.
-    if (autoIdx.some((i) => byId.get(current[i]?.variantId ?? '')?.listPrice == null)) return;
+    if (autoIdx.some((i) => byId.get(current[i]?.variantId ?? '')?.listPriceCents == null)) return;
 
     const manualTotal = current.reduce(
       (sum, r) => sum + (manual.has(r.variantId) ? toCents(r.allocatedUnitPrice) * r.qty : 0),
@@ -136,7 +136,7 @@ export function BundleItemsEditor({ control, pool, setValue, onSearch, searching
     const result = rebalanceAllocations(
       autoIdx.map((i) => ({
         qty: current[i]?.qty ?? 1,
-        allocatedUnitPriceCents: toCents(byId.get(current[i]?.variantId ?? '')?.listPrice ?? 0),
+        allocatedUnitPriceCents: byId.get(current[i]?.variantId ?? '')?.listPriceCents ?? 0,
       })),
       target,
     );
@@ -287,9 +287,9 @@ export function BundleItemsEditor({ control, pool, setValue, onSearch, searching
                   />
                   <span
                     className="text-right font-ops-mono text-ops-xs text-ops-muted"
-                    title={option?.listPrice == null ? 'Bu varyanta birim fiyat (b2c liste) girilmemiş' : undefined}
+                    title={option?.listPriceCents == null ? 'Bu varyanta birim fiyat (b2c liste) girilmemiş' : undefined}
                   >
-                    {option?.listPrice == null ? '—' : `${money(toCents(option.listPrice))}`}
+                    {option?.listPriceCents == null ? '—' : money(option.listPriceCents)}
                   </span>
                   <Controller
                     control={control}

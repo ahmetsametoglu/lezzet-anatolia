@@ -100,7 +100,7 @@ async function optionsForProducts(db: ReturnType<typeof serviceDb>, productIds: 
     new StockService(db).unitCostMap(variantIds),
   ]);
   const listPrices = new Map(
-    [...priceRows].flatMap(([id, { channelPrice }]) => (channelPrice ? [[id, channelPrice.amount] as const] : [])),
+    [...priceRows].flatMap(([id, { channelPrice }]) => (channelPrice ? [[id, channelPrice.amountCents] as const] : [])),
   );
   return toVariantOptions(poolRows, listPrices, unitCosts);
 }

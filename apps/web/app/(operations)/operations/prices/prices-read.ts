@@ -26,7 +26,7 @@ export interface ChannelPriceMaps {
 }
 
 const cellOf = (price: Price | undefined): ChannelPriceCell =>
-  price ? { amountCents: toCents(price.amount), validFrom: price.validFrom } : { amountCents: null, validFrom: null };
+  price ? { amountCents: price.amountCents, validFrom: price.validFrom } : { amountCents: null, validFrom: null };
 
 interface PriceRowInput {
   products: ProductPriceRow[];
@@ -132,7 +132,7 @@ export function toCustomerPriceRows({ rows, profiles, variantTitles, listCents, 
         variantId: row.variantId,
         variantTitle: variantTitles.get(row.variantId) ?? 'Bilinmeyen boy',
         channel: row.channel,
-        specialCents: toCents(row.amount),
+        specialCents: row.amountCents,
         listCents: listCents.get(`${row.variantId}·${row.channel}`) ?? null,
         costCents: costs.get(row.variantId) ?? null,
         vatRate: products.get(row.variantId)?.vatRate ?? 0,

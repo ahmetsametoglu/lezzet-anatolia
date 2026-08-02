@@ -82,8 +82,8 @@ beforeAll(async () => {
   coldVariantId = soguk.variants[0]!.id;
 
   const prices = new PriceService(db);
-  await prices.setPrice({ variantId, channel: 'b2c', amount: 20 });
-  await prices.setPrice({ variantId: coldVariantId, channel: 'b2c', amount: 10 });
+  await prices.setPrice({ variantId, channel: 'b2c', amountCents: 2000 });
+  await prices.setPrice({ variantId: coldVariantId, channel: 'b2c', amountCents: 1000 });
 
   // Stok ŞART: sepet okuması stoksuz satırı "tükendi" işaretler ve kapı onu daha teslimat adımına
   // varmadan reddeder — teslimat/ödeme doğrulamaları o zaman hiç sınanmazdı.

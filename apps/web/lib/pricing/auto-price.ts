@@ -1,7 +1,6 @@
 import 'server-only';
 import { PriceService, ProductService, ProductVariantService, type Db } from '@lezzet/database';
 import { autoPriceCents } from '@lezzet/domain-core';
-import { fromCents, toCents } from '@lezzet/helper';
 import { readCostBasis } from './cost-basis';
 import type { Channel } from '@lezzet/types';
 
@@ -100,10 +99,10 @@ export async function repriceVariants(db: Db, variantIds: readonly string[]): Pr
         targetMarginPercent: product.targetMarginPercent!,
         vatRate: product.vatRate,
       });
-      const currentCents = toCents(current.amount);
+      const currentCents = current.amountCents;
       if (next === null || next === currentCents) continue;
 
-      await priceSvc.setPrice({ variantId: variant.id, channel, amount: fromCents(next), customerId: null });
+      await priceSvc.setPrice({ variantId: variant.id, channel, amountCents: next, customerId: null });
       changes.push({ variantId: variant.id, channel, fromCents: currentCents, toCents: next });
     }
   }

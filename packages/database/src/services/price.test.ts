@@ -48,28 +48,50 @@ describe('PriceService — satır getirme', () => {
   });
 
   it('yazılan kanal fiyatı okunur; müşteriye özel satır kanal fiyatını kirletmez', async () => {
-    await prices.setPrice({ variantId, channel: 'b2c', amount: 16.9 });
-    await prices.setPrice({ variantId, channel: 'b2c', amount: 14.0, customerId: CUSTOMER_ID });
+    await prices.setPrice({ variantId, channel: 'b2c', amountCents: 1690 });
+    await prices.setPrice({ variantId, channel: 'b2c', amountCents: 1400, customerId: CUSTOMER_ID });
 
     const channelPrice = await prices.findChannelPrice(variantId, 'b2c');
-    expect(channelPrice?.amount).toBe(16.9);
+    expect(channelPrice?.amountCents).toBe(1690);
     expect(channelPrice?.customerId).toBeNull();
 
     const customerPrice = await prices.findCustomerPrice(variantId, 'b2c', CUSTOMER_ID);
-    expect(customerPrice?.amount).toBe(14);
+    expect(customerPrice?.amountCents).toBe(1400);
   });
 
   it('en YENİ geçerli satır kazanır; gelecek tarihli satır henüz uygulanmaz', async () => {
     const gelecek = new Date(Date.now() + 86_400_000).toISOString();
-    await prices.setPrice({ variantId, channel: 'b2c', amount: 19.9, validFrom: gelecek });
+    await prices.setPrice({ variantId, channel: 'b2c', amountCents: 1990, validFrom: gelecek });
 
-    expect((await prices.findChannelPrice(variantId, 'b2c'))?.amount).toBe(16.9); // bugün
-    expect((await prices.findChannelPrice(variantId, 'b2c', new Date(Date.now() + 90_000_000)))?.amount).toBe(19.9);
+    expect((await prices.findChannelPrice(variantId, 'b2c'))?.amountCents).toBe(1690); // bugün
+    expect((await prices.findChannelPrice(variantId, 'b2c', new Date(Date.now() + 90_000_000)))?.amountCents).toBe(1990);
   });
 
   it('findApplicable kanal + müşteri satırını tek turda getirir', async () => {
     const { channelPrice, customerPrice } = await prices.findApplicable(variantId, 'b2c', CUSTOMER_ID);
-    expect(channelPrice?.amount).toBe(16.9);
-    expect(customerPrice?.amount).toBe(14);
+    expect(channelPrice?.amountCents).toBe(1690);
+    expect(customerPrice?.amountCents).toBe(1400);
+  });
+});
+
+/**
+ * SINIR TESTİ (02.9 · STACK §8) — para servis sınırında çevriliyor mu.
+ *
+ * Yukarıdaki testler cent'i yazıp cent'i okuyor; ikisi de aynı yanlış sabitle çarpılsa yine geçerdi.
+ * Bu yüzden burada **ham kolon** okunur: uygulama cent yazar, DB euro `numeric` tutar, geri okunan
+ * değer yine cent'tir. Zinciri kıran her değişiklik (beyanın düşmesi, kolonun adının kayması) burada
+ * patlar — ekranda 0,74 € olarak değil.
+ */
+describe('PriceService — euro↔cent sınırı', () => {
+  it('cent yazılır, kolon euro tutar, cent okunur (gidiş-dönüş)', async () => {
+    const yazilan = 1234; // 12,34 €
+    const created = await prices.setPrice({ variantId, channel: 'b2b', amountCents: yazilan });
+    expect(created.amountCents).toBe(yazilan);
+
+    const { data } = await db.from('price').select('amount').eq('id', created.id).single();
+    expect(Number((data as { amount: number | string }).amount)).toBe(12.34);
+
+    const okunan = await prices.findChannelPrice(variantId, 'b2b');
+    expect(okunan?.amountCents).toBe(yazilan);
   });
 });

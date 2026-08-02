@@ -12,7 +12,6 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { costOf, needsExpiryAttention } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Price } from '@lezzet/types';
 import { detectDevice } from '@/lib/device';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
@@ -182,7 +181,7 @@ async function readOffersTab(db: Db): Promise<BatchView[]> {
   const priceMap = await new PriceService(db).findApplicableMap(attentionVariantIds, 'b2c');
   const listPriceCents = new Map(
     [...priceMap].flatMap(([variantId, { channelPrice }]) =>
-      channelPrice ? [[variantId, toCents(channelPrice.amount)] as const] : [],
+      channelPrice ? [[variantId, channelPrice.amountCents] as const] : [],
     ),
   );
 
@@ -228,8 +227,8 @@ async function readCustomerTab(db: Db): Promise<{ prices: CustomerPriceRow[]; di
   );
 
   const listCents = new Map<string, number>();
-  for (const [variantId, { channelPrice }] of b2cMap) if (channelPrice) listCents.set(`${variantId}·b2c`, toCents(channelPrice.amount));
-  for (const [variantId, { channelPrice }] of b2bMap) if (channelPrice) listCents.set(`${variantId}·b2b`, toCents(channelPrice.amount));
+  for (const [variantId, { channelPrice }] of b2cMap) if (channelPrice) listCents.set(`${variantId}·b2c`, channelPrice.amountCents);
+  for (const [variantId, { channelPrice }] of b2bMap) if (channelPrice) listCents.set(`${variantId}·b2b`, channelPrice.amountCents);
 
   return {
     prices: toCustomerPriceRows({

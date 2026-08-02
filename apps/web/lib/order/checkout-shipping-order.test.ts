@@ -63,7 +63,7 @@ beforeAll(async () => {
   });
   productId = product.id;
   variantId = variants[0]!.id;
-  await new PriceService(db).insert({ variantId, channel: 'b2c', amount: 40 });
+  await new PriceService(db).insert({ variantId, channel: 'b2c', amountCents: 4000 });
 
   // İki DE deposu: biri rota (bölgeye bağlı), biri kargo. Ayrı olmaları testin bütün noktası —
   // aynı depo olsalardı "hangisinden çıktı" sorusu ölçülemezdi.

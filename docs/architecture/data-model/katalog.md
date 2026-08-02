@@ -129,7 +129,7 @@ Paylaşılan alanlar (ad, açıklama, kategori, görsel, `date_type`, `shelf_lif
 | variant_id | uuid | fiyat varyant seviyesinde |
 | channel | enum(`b2b`,`b2c`) | kanal fiyatı |
 | customer_id | uuid \| null | doluysa müşteriye özel fiyat |
-| amount | number | **KANAL TABANINDA**: b2c satırları KDV dahil (TTC), b2b satırları hariç (HT) — bkz. `DOMAIN.md §5` |
+| amount | numeric (€) | **KANAL TABANINDA**: b2c satırları KDV dahil (TTC), b2b satırları hariç (HT) — bkz. `DOMAIN.md §5`. Uygulama tarafındaki adı `amountCents` ve birimi **cent**tir; dönüşümü `PriceService.moneyFields` yapar (`STACK §8`) |
 | currency | enum(`EUR`) | |
 | valid_from | timestamptz | tarihli geçerlilik; "geçmiş ve en yeni" kazanır, gelecek tarihli satır zammı önceden hazırlar |
 | created_at | timestamptz | |

@@ -25,7 +25,7 @@ const slugOf = new Map<string, string>();
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 /** Fiyatlı, stoklu, satışta bir ürün — katalogda görünmesi için gereken en az şey. */
-async function makeProduct(label: string, priceEuro: number) {
+async function makeProduct(label: string, priceCents: number) {
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `${label} ${stamp}` },
     categoryId,
@@ -34,7 +34,7 @@ async function makeProduct(label: string, priceEuro: number) {
   });
   productIds.push(product.id);
   slugOf.set(label, product.slug);
-  await prices.insert({ variantId: variants[0]!.id, channel: 'b2c', amount: priceEuro });
+  await prices.insert({ variantId: variants[0]!.id, channel: 'b2c', amountCents: priceCents });
   await stocks.insert({ warehouseId, variantId: variants[0]!.id, physicalQty: 10, expiryDate: dayOffset(60), purchasePrice: 1 });
   return { productId: product.id, variantId: variants[0]!.id };
 }
@@ -46,9 +46,9 @@ let pahali: { productId: string; variantId: string };
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db)).id;
   categoryId = (await new CategoryService(db).create({ name: { tr: `Sıralama ${stamp}` } })).id;
-  ucuz = await makeProduct('Ucuz', 4);
-  orta = await makeProduct('Orta', 12);
-  pahali = await makeProduct('Pahalı', 30);
+  ucuz = await makeProduct('Ucuz', 400);
+  orta = await makeProduct('Orta', 1200);
+  pahali = await makeProduct('Pahalı', 3000);
 });
 
 beforeEach(async () => {

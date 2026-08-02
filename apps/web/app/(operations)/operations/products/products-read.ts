@@ -45,7 +45,7 @@ export function toBundleViews(rows: BundleListRow[]): BundleView[] {
  */
 export function toVariantOptions(
   rows: ProductPool[],
-  listPrices: Map<string, number>,
+  listPriceCents: Map<string, number>,
   unitCosts: Map<string, number>,
 ): VariantOption[] {
   return rows.flatMap((p) => {
@@ -60,7 +60,7 @@ export function toVariantOptions(
         variantId: v.id,
         label: titleOf(productName, boy),
         imageUrl,
-        listPrice: listPrices.get(v.id) ?? null,
+        listPriceCents: listPriceCents.get(v.id) ?? null,
         // Maliyet ve KDV oranı ÜRÜNDEN gelir; marj ikisi olmadan hesaplanamaz.
         unitCost: unitCosts.get(v.id) ?? null,
         vatRate: p.vatRate,

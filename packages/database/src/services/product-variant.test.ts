@@ -105,7 +105,7 @@ describe('ProductVariantService.syncVariants', () => {
   it('listeden çıkan varyant silinir; fiyat satırı onunla birlikte gider (cascade)', async () => {
     const loaded = await variants.listByProduct(productId);
     const toDelete = loaded[1]!;
-    await prices.setPrice({ variantId: toDelete.id, channel: 'b2c', amount: 12.5 });
+    await prices.setPrice({ variantId: toDelete.id, channel: 'b2c', amountCents: 1250 });
     expect(await prices.listByVariant(toDelete.id)).toHaveLength(1);
 
     await variants.syncVariants(productId, [

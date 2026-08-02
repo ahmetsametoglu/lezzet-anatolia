@@ -11,7 +11,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { costOf } from '@lezzet/domain-core';
-import { fromCents, toCents } from '@lezzet/helper';
+import { fromCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Channel, type KeysetCursor, type LocalizedText, type Price } from '@lezzet/types';
 import { LOCALES } from '@lezzet/i18n';
 import { requireAdmin } from '@/lib/guard';
@@ -53,7 +53,7 @@ export async function setChannelPriceAction(
     await new PriceService(serviceDb()).setPrice({
       variantId,
       channel,
-      amount: fromCents(Math.round(amountCents)),
+      amountCents: Math.round(amountCents),
       customerId: null,
       validFrom: validFrom ?? undefined,
     });
@@ -141,7 +141,7 @@ export async function setCustomerPriceAction(
       variantId,
       channel,
       customerId,
-      amount: fromCents(Math.round(amountCents)),
+      amountCents: Math.round(amountCents),
     });
     revalidatePath(PRICES_PATH);
     return { data: null, error: null };
@@ -203,8 +203,7 @@ export async function searchVariantsAction(term: string): Promise<ActionResult<V
       readCostBasis(db, variantIds),
     ]);
     const listOf = (map: Map<string, { channelPrice: Price | null }>, id: string): number | null => {
-      const price = map.get(id)?.channelPrice;
-      return price ? toCents(price.amount) : null;
+      return map.get(id)?.channelPrice?.amountCents ?? null;
     };
 
     const options = page.rows.flatMap((product) =>

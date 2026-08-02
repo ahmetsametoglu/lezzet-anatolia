@@ -67,10 +67,11 @@ export interface VariantOption {
   label: string;
   imageUrl: string | null;
   /**
-   * Kalemin TEK BAŞINA satıldığı fiyat (b2c, KDV dahil €) — paketin verdiği indirim ancak buna göre
-   * görülebilir. `null` = o varyanta henüz fiyat girilmemiş; sayı UYDURULMAZ, ekran eksikliği söyler.
+   * Kalemin TEK BAŞINA satıldığı fiyat (b2c, KDV dahil, **cent**) — paketin verdiği indirim ancak
+   * buna göre görülebilir. `null` = o varyanta henüz fiyat girilmemiş; sayı UYDURULMAZ, ekran
+   * eksikliği söyler.
    */
-  listPrice: number | null;
+  listPriceCents: number | null;
   /**
    * Tahmini birim maliyet (KDV hariç €) — eldeki partilerin ağırlıklı ortalama alış fiyatı. Gerçek
    * COGS parti başına belli ve sipariş anında kesinleşir; bu, fiyat verirken bakılan tahmindir.

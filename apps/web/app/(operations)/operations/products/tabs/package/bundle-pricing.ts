@@ -50,9 +50,9 @@ export function bundlePricing(rows: BundlePricingRow[], pool: Map<string, Varian
 
   const economicsLines = rows.map((r) => {
     const option = pool.get(r.variantId);
-    const listPrice = option?.listPrice;
-    if (listPrice == null) missingListPrice += 1;
-    else listTotalCents += toCents(listPrice) * r.qty;
+    const listPriceCents = option?.listPriceCents;
+    if (listPriceCents == null) missingListPrice += 1;
+    else listTotalCents += listPriceCents * r.qty;
 
     const unitCostCents = option?.unitCost == null ? null : toCents(option.unitCost);
     const vatRate = option?.vatRate ?? 0;

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ZodType, ZodTypeDef } from 'zod';
+import { fromCents, toCents } from '@lezzet/helper';
 import type { KeysetCursor, Page } from '@lezzet/types';
 import { appToDb, camelToSnake, dbToApp } from '../utils/case-transformers';
 
@@ -65,6 +66,16 @@ interface GetAllOptions extends FilterOptions {
  * Tüm DB servislerinin tabanı: Zod doğrulama + camelCase↔snake_case dönüşümü, throw-tabanlı.
  * Servisler HAM sorgu yazmaz — kendi domain API'lerini (findByX/list/count…) bu metodların
  * üstüne kurar. Tek-satır metodlar public; çok-satır olanlar protected (concrete servis sarar).
+ *
+ * ── PARA SINIRDA ÇEVRİLİR (`moneyFields`) ────────────────────────────────────
+ * Servis para kolonunu **cent** olarak döndürür; euro↔cent dönüşümü burada, TEK yerde yapılır
+ * (`STACK §8`). Alt sınıf yalnız `moneyFields` beyan eder, gerisi otomatiktir.
+ *
+ * **İSTİSNA — projeksiyonlu okumalar otomatik eşlemenin DIŞINDADIR:** `getAllAs`/`getPageAs`
+ * gömülü ilişkili (`alias:tablo(...)`) satır döndürür; şekli bu servisin tablosu değildir, bu
+ * yüzden `moneyFields` oraya uygulanmaz. O okumalarda dönüşüm **okuma sınırında elle** yapılır
+ * (`toCents`) ve şema alanı yine `…Cents` adını taşır. İki rejim geçicidir: kalıcı çözüm
+ * `getPageAs`'e kendi para beyanını vermektir (`02.9`'un son dilimi).
  */
 export abstract class BaseDbService<TDb, TInsert, TUpdate> {
   constructor(
@@ -78,21 +89,82 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     protected allowDelete: boolean = true,
   ) {}
 
+  // ─── Para: euro (DB `numeric`) ↔ cent (app) ───────────
+
+  /**
+   * Bu tablonun para alanları — **app tarafındaki cent adlarıyla** (`amountCents`, `unitPriceCents`).
+   * Kolon adı `Cents` eki atılarak türetilir: `amountCents` → `amount`, `unitPriceCents` → `unit_price`.
+   *
+   * Beyan edilen alan için taban sınıf ÜÇ yerde birden çevirir — üçü de aynı hatanın ayrı yüzü:
+   * okunan satır (euro → cent), yazılan satır (cent → euro) ve **süzgeç değeri** (cent → euro).
+   * Süzgeç en sinsisidir: `{ amountCents: 1690 }` çevrilmezse sorgu 1690 € arar, boş döner ve hata
+   * hiçbir yerde patlamaz — yalnız liste boş görünür.
+   *
+   * Yalnız ÜST düzey alanlara uygulanır; gömülü ilişkiler başka tablonundur (bkz. sınıf künyesi).
+   */
+  protected readonly moneyFields: readonly string[] = [];
+
+  /** `amountCents` → `amount` (kolonun app yazımı). */
+  private static withoutCents(field: string): string {
+    return field.slice(0, -'Cents'.length);
+  }
+
+  /** Alan adını DB kolonuna çevirir; para alanında `Cents` eki düşer. */
+  private column(field: string): string {
+    return camelToSnake(this.moneyFields.includes(field) ? BaseDbService.withoutCents(field) : field);
+  }
+
+  /** Süzgeç/aralık değeri: para alanıysa cent → euro (kolon euro tutar). */
+  private filterValue(field: string, value: unknown): unknown {
+    if (!this.moneyFields.includes(field) || typeof value !== 'number') return value;
+    return fromCents(value);
+  }
+
+  /** DB satırı → app modeli: snake→camel, sonra para kolonları cent'e iner. */
+  private toApp(row: unknown): unknown {
+    const app = dbToApp<Record<string, unknown>>(row);
+    if (!this.moneyFields.length || app === null || typeof app !== 'object') return app;
+    for (const field of this.moneyFields) {
+      const source = BaseDbService.withoutCents(field);
+      if (!(source in app)) continue;
+      const value = app[source];
+      delete app[source];
+      // Ölçülemeyen değer sıfır değildir (CLAUDE.md §1): null kolonu null kalır.
+      app[field] = value === null || value === undefined ? null : toCents(Number(value));
+    }
+    return app;
+  }
+
+  /** App modeli → DB satırı: para alanları euro'ya çıkar, sonra camel→snake. */
+  private toDbRow(data: Record<string, unknown>): Record<string, unknown> {
+    if (!this.moneyFields.length) return appToDb<Record<string, unknown>>(data);
+    const out: Record<string, unknown> = { ...data };
+    for (const field of this.moneyFields) {
+      if (!(field in out)) continue;
+      const value = out[field];
+      delete out[field];
+      out[BaseDbService.withoutCents(field)] = value === null || value === undefined ? null : fromCents(Number(value));
+    }
+    return appToDb<Record<string, unknown>>(out);
+  }
+
   // ─── Ortak yardımcılar ───────────────────────────────
 
   protected parseRows(rows: unknown[]): TDb[] {
-    return (rows ?? []).map((row) => this.dbSchema.parse(dbToApp(row)));
+    return (rows ?? []).map((row) => this.dbSchema.parse(this.toApp(row)));
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private applyFilterOptions(query: any, options?: FilterOptions): any {
     if (!options) return query;
-    for (const f of options.isNullFields ?? []) query = query.is(camelToSnake(f), null);
-    for (const f of options.isNotNullFields ?? []) query = query.not(camelToSnake(f), 'is', null);
-    for (const rf of options.rangeFilters ?? []) query = query[rf.operator](camelToSnake(rf.field), rf.value);
-    for (const sf of options.searchFilters ?? []) query = query.ilike(camelToSnake(sf.field), `%${sf.query}%`);
-    for (const pf of options.prefixFilters ?? []) query = query.like(camelToSnake(pf.field), `${pf.value}%`);
-    for (const cf of options.containsFilters ?? []) query = query.contains(camelToSnake(cf.field), [...cf.values]);
+    for (const f of options.isNullFields ?? []) query = query.is(this.column(f), null);
+    for (const f of options.isNotNullFields ?? []) query = query.not(this.column(f), 'is', null);
+    for (const rf of options.rangeFilters ?? []) {
+      query = query[rf.operator](this.column(rf.field), this.filterValue(rf.field, rf.value));
+    }
+    for (const sf of options.searchFilters ?? []) query = query.ilike(this.column(sf.field), `%${sf.query}%`);
+    for (const pf of options.prefixFilters ?? []) query = query.like(this.column(pf.field), `${pf.value}%`);
+    for (const cf of options.containsFilters ?? []) query = query.contains(this.column(cf.field), [...cf.values]);
     for (const group of options.orFilters ?? []) query = query.or(group);
     return query;
   }
@@ -102,11 +174,15 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
    *   `alan > v  VEYA  (alan = v VE id > lastId)`
    * Artan sırada `gt`, azalanda `lt`. Değer PostgREST filtre dizesine gömüldüğü için metinse
    * çift tırnakla sarılır (virgül/parantez ayrıştırmayı bozmasın).
+   *
+   * Para alanına göre sıralanan sayfada imleç değeri de cent'tir (`pageOf` öyle üretir) — burada
+   * euro'ya iner. Uygulamanın gördüğü her para sayısı cent kalır, imleç dahil.
    */
   private keysetGroup(orderBy: string, cursor: KeysetCursor, descending: boolean): string {
-    const col = camelToSnake(orderBy);
+    const col = this.column(orderBy);
     const op = descending ? 'lt' : 'gt';
-    const v = typeof cursor.value === 'number' ? String(cursor.value) : `"${cursor.value}"`;
+    const value = this.filterValue(orderBy, cursor.value);
+    const v = typeof value === 'number' ? String(value) : `"${value as string}"`;
     return `${col}.${op}.${v},and(${col}.eq.${v},id.${op}.${cursor.id})`;
   }
 
@@ -124,7 +200,7 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
       if (error.code === 'PGRST116') return null; // satır yok
       throw error;
     }
-    return this.dbSchema.parse(dbToApp(data));
+    return this.dbSchema.parse(this.toApp(data));
   }
 
   protected async getByIds(ids: string[]): Promise<TDb[]> {
@@ -150,9 +226,9 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
       if (value === undefined || value === null) continue;
       if (Array.isArray(value)) {
         if (value.length === 0) return [];
-        query = query.in(camelToSnake(key), value);
+        query = query.in(this.column(key), value.map((v) => this.filterValue(key, v)));
       } else {
-        query = query.eq(camelToSnake(key), value);
+        query = query.eq(this.column(key), this.filterValue(key, value));
       }
     }
     const ascending = options?.orderDirection !== 'desc';
@@ -163,7 +239,7 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     }
     query = this.applyFilterOptions(query, options);
     if (options?.orderBy) {
-      query = query.order(camelToSnake(options.orderBy), { ascending });
+      query = query.order(this.column(options.orderBy), { ascending });
       if (options.tiebreakById) query = query.order('id', { ascending });
     }
     if (options?.offset !== undefined && options?.limit !== undefined) {
@@ -184,6 +260,8 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
    * PROJEKSİYONLU okuma: `select` gömülü ilişki (`alias:tablo(...)`) içerdiğinde satır artık `TDb`
    * değildir → kendi şemasıyla doğrulanır. İlişkileri satır başına ayrı sorguyla çekmek (N+1) yerine
    * TEK sorguda getirmenin yolu budur — STACK §13: N+1'i kırmanın ilk aracı gömülü select, RPC değil.
+   *
+   * Para eşlemesinin DIŞINDADIR (sınıf künyesi): dönen şekil bu tablonun satırı değil.
    */
   protected async getAllAs<T>(rowSchema: ZodType<T, ZodTypeDef, unknown>, filters?: Record<string, unknown>, options?: GetAllOptions): Promise<T[]> {
     const rows = await this.selectRows(filters, options);
@@ -213,20 +291,22 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
    * Eksikse SESSİZ geçilmez, fırlatılır. Eski hâl ikinci sayfada ve yalnız yeterince veri varken
    * görünüyordu — yani hatanın kendisi, onu bulmayı en zor kılan yerde saklanıyordu.
    */
-  private static pageOf<T>(rows: T[], rawRows: unknown[], limit: number, orderBy: string): Page<T> {
+  private pageOf<T>(rows: T[], rawRows: unknown[], limit: number, orderBy: string): Page<T> {
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;
     if (!hasMore) return { rows: page, nextCursor: null };
 
-    const col = camelToSnake(orderBy);
+    const col = this.column(orderBy);
     const last = rawRows[page.length - 1] as Record<string, unknown> | undefined;
-    const value = last?.[col];
-    if (value === undefined || value === null) {
+    const raw = last?.[col];
+    if (raw === undefined || raw === null) {
       throw new Error(
         `Keyset imleci kurulamadı: sıralama alanı "${col}" okunan satırda yok. Projeksiyonlu okumada (getPageAs) sıralama alanı da select'e yazılmalı.`,
       );
     }
-    return { rows: page, nextCursor: { value: value as string | number, id: last!.id as string } };
+    // Para alanına göre sıralamada imleç de cent'tir — `keysetGroup` geri çevirir (bkz. orası).
+    const value = this.moneyFields.includes(orderBy) ? toCents(Number(raw)) : (raw as string | number);
+    return { rows: page, nextCursor: { value, id: last!.id as string } };
   }
 
   /**
@@ -242,10 +322,15 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
   ): Promise<Page<TDb>> {
     // tiebreakById: imleç `id` ikilisine dayanır → sıra deterministik OLMALI (bkz. GetAllOptions).
     const raw = await this.selectRows(filters, { ...options, limit: options.limit + 1, tiebreakById: true });
-    return BaseDbService.pageOf(this.parseRows(raw), raw, options.limit, options.orderBy);
+    return this.pageOf(this.parseRows(raw), raw, options.limit, options.orderBy);
   }
 
-  /** `getPage`'in projeksiyonlu ikizi — gömülü ilişkili satırlar (bkz. `getAllAs`). */
+  /**
+   * `getPage`'in projeksiyonlu ikizi — gömülü ilişkili satırlar (bkz. `getAllAs`).
+   *
+   * `getAllAs` gibi para eşlemesinin DIŞINDADIR (sınıf künyesi): dönen şekil bu tablonun satırı
+   * değil, gömülü ilişkilerden kurulmuş bir görünümdür. Para varsa okuma sınırında elle çevrilir.
+   */
   protected async getPageAs<T>(
     rowSchema: ZodType<T, ZodTypeDef, unknown>,
     filters: Record<string, unknown> | undefined,
@@ -253,7 +338,7 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
   ): Promise<Page<T>> {
     const raw = await this.selectRows(filters, { ...options, limit: options.limit + 1, tiebreakById: true });
     const rows = raw.map((row) => rowSchema.parse(dbToApp(row)));
-    return BaseDbService.pageOf(rows, raw, options.limit, options.orderBy);
+    return this.pageOf(rows, raw, options.limit, options.orderBy);
   }
 
   /**
@@ -267,9 +352,9 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
       if (value === undefined || value === null) continue;
       if (Array.isArray(value)) {
         if (value.length === 0) return 0;
-        query = query.in(camelToSnake(key), value);
+        query = query.in(this.column(key), value.map((v) => this.filterValue(key, v)));
       } else {
-        query = query.eq(camelToSnake(key), value);
+        query = query.eq(this.column(key), this.filterValue(key, value));
       }
     }
     query = this.applyFilterOptions(query, options);
@@ -281,10 +366,10 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
   // ─── Yazma ───────────────────────────────────────────
 
   async insert(insertData: TInsert): Promise<TDb> {
-    const dbData = appToDb(this.insertSchema.parse(insertData));
+    const dbData = this.toDbRow(this.insertSchema.parse(insertData) as Record<string, unknown>);
     const { data, error } = await this.supabase.from(this.tableName).insert(dbData).select().single();
     if (error) throw error;
-    return this.dbSchema.parse(dbToApp(data));
+    return this.dbSchema.parse(this.toApp(data));
   }
 
   /**
@@ -302,19 +387,19 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
    * vermediği için `upsert` yolu böyle indekslerde kapalı; hata kodu her indeks şeklinde çalışır.
    */
   protected async insertIgnoringConflict(insertData: TInsert): Promise<TDb | null> {
-    const dbData = appToDb(this.insertSchema.parse(insertData));
+    const dbData = this.toDbRow(this.insertSchema.parse(insertData) as Record<string, unknown>);
     const { data, error } = await this.supabase.from(this.tableName).insert(dbData).select().single();
     if (error) {
       // 23505 = unique_violation. Başka her hata yukarı gider: "sessizce atla" yalnız MÜKERRER için.
       if (error.code === '23505') return null;
       throw error;
     }
-    return this.dbSchema.parse(dbToApp(data));
+    return this.dbSchema.parse(this.toApp(data));
   }
 
   protected async bulkInsert(rows: TInsert[]): Promise<TDb[]> {
     if (rows.length === 0) return [];
-    const dbRows = rows.map((r) => appToDb(this.insertSchema.parse(r)));
+    const dbRows = rows.map((r) => this.toDbRow(this.insertSchema.parse(r) as Record<string, unknown>));
     const { data, error } = await this.supabase.from(this.tableName).insert(dbRows).select();
     if (error) throw error;
     return this.parseRows(data ?? []);
@@ -329,7 +414,7 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
    */
   protected async bulkUpsertIgnoring(rows: TInsert[], onConflict: string): Promise<TDb[]> {
     if (rows.length === 0) return [];
-    const dbRows = rows.map((r) => appToDb(this.insertSchema.parse(r)));
+    const dbRows = rows.map((r) => this.toDbRow(this.insertSchema.parse(r) as Record<string, unknown>));
     const { data, error } = await this.supabase
       .from(this.tableName)
       .upsert(dbRows, { onConflict, ignoreDuplicates: true })
@@ -339,10 +424,10 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
   }
 
   async upsert(data: TInsert, onConflict: string): Promise<TDb> {
-    const dbData = appToDb(this.insertSchema.parse(data));
+    const dbData = this.toDbRow(this.insertSchema.parse(data) as Record<string, unknown>);
     const { data: result, error } = await this.supabase.from(this.tableName).upsert(dbData, { onConflict }).select().single();
     if (error) throw error;
-    return this.dbSchema.parse(dbToApp(result));
+    return this.dbSchema.parse(this.toApp(result));
   }
 
   async update(updateData: TUpdate): Promise<TDb> {
@@ -352,9 +437,9 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     const provided = Object.keys(updateData as Record<string, unknown>).filter((k) => k !== 'id');
     const updates: Record<string, unknown> = {};
     for (const k of provided) updates[k] = validated[k];
-    const { data, error } = await this.supabase.from(this.tableName).update(appToDb(updates)).eq('id', id).select().single();
+    const { data, error } = await this.supabase.from(this.tableName).update(this.toDbRow(updates)).eq('id', id).select().single();
     if (error) throw error;
-    return this.dbSchema.parse(dbToApp(data));
+    return this.dbSchema.parse(this.toApp(data));
   }
 
   /**
@@ -377,7 +462,7 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
    */
   protected async reorderBy(orderedIds: string[], field: string): Promise<void> {
     if (orderedIds.length === 0) return;
-    const col = camelToSnake(field);
+    const col = this.column(field);
     const results = await Promise.all(
       orderedIds.map((id, index) => this.supabase.from(this.tableName).update({ [col]: index }).eq('id', id)),
     );
@@ -400,7 +485,7 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     const entries = Object.entries(filters).filter(([, v]) => v !== undefined && v !== null);
     if (entries.length === 0) throw new Error(`[${this.tableName}] deleteWhere filtresiz çağrılamaz.`);
     let query = this.supabase.from(this.tableName).delete();
-    for (const [key, value] of entries) query = query.eq(camelToSnake(key), value);
+    for (const [key, value] of entries) query = query.eq(this.column(key), this.filterValue(key, value));
     const { error } = await query;
     if (error) throw error;
   }

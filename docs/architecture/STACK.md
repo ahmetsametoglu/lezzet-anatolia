@@ -246,12 +246,35 @@ Hepsi UI'sız, saf fonksiyon + gerekiyorsa Zustand deposu + **birim test**. Her 
 - **Dönüşüm `toCents`/`fromCents` iledir** (`packages/helper/money`) — elle `Math.round(x * 100)` YAZILMAZ. Ortak fonksiyon varsa kopyası yazılmaz (CLAUDE.md §1).
 - **Adlandırma sözleşmenin parçası: `…Cents` ile bitmeyen bir para alanı yoktur.** Süs değil, tek gerçek savunma: `total: number` gören biri euro mu cent mi olduğunu bilemez ve satıra bakınca hata GÖRÜNMEZ; `totalCents` olunca görünür. Tip sistemi ikisini ayırt edemez — ikisi de `number`.
 
-> **AÇIK — sözleşme ile kod ayrışıyor (30.07, gerçek hatayla bulundu).** Yukarıda "sınırda (servis
-> katmanında) cent'e çevrilir" yazıyor, ama servisler `dbNumeric`'i olduğu gibi (euro) döndürüyor;
-> dönüşüm **her çağrı yerine** bırakılmış — bugün ~20 yerde elle. Bu bir "stil" sorunu değil, hata
-> fabrikası: siparişler detay ekranı bu yüzden 74,17 €'yu **0,74 €** gösterdi (kullanıcı ekran
-> görüntüsüyle yakaladı). Kapatılması gereken yer servis katmanı → `02.9`. O iş bitene kadar
-> savunma, yukarıdaki iki maddedir (ortak helper + `…Cents` adlandırması).
+### Dönüşümün yeri: `BaseDbService.moneyFields` (02.9)
+
+Servis para kolonunu **cent** döndürür; euro↔cent dönüşümü taban sınıfta, TEK yerde yapılır. Alt sınıf
+yalnız beyan eder:
+
+```ts
+protected override readonly moneyFields = ['amountCents']; // kolon: price.amount (euro numeric)
+```
+
+Kolon adı `Cents` eki atılarak türetilir (`unitPriceCents` → `unit_price`). Taban sınıf ÜÇ yerde birden
+çevirir: okunan satır, yazılan satır ve **süzgeç değeri**. Üçüncüsü en sinsisidir — `{ amountCents: 1690 }`
+çevrilmezse sorgu 1690 € arar, hata patlamaz, yalnız liste boş görünür.
+
+> **İSTİSNA — projeksiyonlu okumalar otomatik eşlemenin DIŞINDADIR.** `getPageAs`/`getAllAs` gömülü
+> ilişkili (`alias:tablo(...)`) satır döndürür; şekli servisin tablosu değildir, bu yüzden `moneyFields`
+> oraya uygulanmaz. O okumalarda dönüşüm **okuma sınırında elle** yapılır (`toCents`) ve şema alanı yine
+> `…Cents` adını taşır. **İki rejim geçicidir**: kalıcı çözüm `getPageAs`'e kendi para beyanını vermektir
+> (`02.9`'un son dilimi). Ara dönemde ayrımın yazılı olması şart — yazılmayan istisna, bir sonraki ajanın
+> "burada da otomatik çevriliyordur" varsayımıdır.
+
+**Güvence koda gömülüdür, ada güvenilmez:** `pnpm docs:check` bir `…Cents` şema alanının servis beyanında
+karşılığı olduğunu ve `dbNumeric` KULLANMADIĞINI doğrular. Beyansız bir `…Cents` alanı — adı doğru,
+dönüşümü yok — tam olarak 74,17 €'yu **0,74 €** gösteren hatadır (30.07, kullanıcı ekran görüntüsüyle
+yakaladı). Göç bitince kural yumuşamaz, sertleşir: sıra **branded tip**tedir (`Cents`), o gün güvence
+denetleyiciden derleyiciye geçer.
+
+> **AÇIK — göç sürüyor (`02.9`).** Beyan bugün yalnız **fiyat** ailesinde; indirim · stok · sipariş ·
+> para hareketi · profil aileleri hâlâ euro döndürüyor ve dönüşüm çağrı yerlerinde elle yapılıyor.
+> O aileler kapanana kadar savunma, yukarıdaki iki maddedir (ortak helper + `…Cents` adlandırması).
 
 ## 9. UI: Tailwind + primitif/adaptör
 

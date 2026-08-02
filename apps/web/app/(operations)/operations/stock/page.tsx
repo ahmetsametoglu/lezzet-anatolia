@@ -9,7 +9,6 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { needsExpiryAttention } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { detectDevice } from '@/lib/device';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
@@ -96,7 +95,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   // açılır, tek bir müşterinin anlaşmalı fiyatı üzerinden indirim önermek yanlış tabandır.
   const listPriceCents = new Map(
     [...priceMap].flatMap(([variantId, { channelPrice }]) =>
-      channelPrice ? [[variantId, toCents(channelPrice.amount)] as const] : [],
+      channelPrice ? [[variantId, channelPrice.amountCents] as const] : [],
     ),
   );
   const batches = toBatchViews(batchRows, { now, thresholds, listPriceCents, warehouseLabels });

@@ -643,25 +643,25 @@ export async function seedBundles(db: Db): Promise<void> {
   );
   // Birim fiyatlar (b2c TTC) tek turda: paket fiyatı bunlardan türeyecek.
   const priceMap = await new PriceService(db).findApplicableMap([...idBySku.values()], 'b2c');
-  const unitPriceOf = (variantId: string) => priceMap.get(variantId)?.channelPrice?.amount ?? null;
+  const unitPriceOf = (variantId: string) => priceMap.get(variantId)?.channelPrice?.amountCents ?? null;
 
   console.log('▸ PAKET seed');
   for (const b of BUNDLES) {
-    const lines = b.items.map((i) => ({ ...i, variantId: idBySku.get(i.sku), price: null as number | null }));
-    for (const l of lines) l.price = l.variantId ? unitPriceOf(l.variantId) : null;
-    if (lines.some((l) => !l.variantId || l.price == null)) {
+    const lines = b.items.map((i) => ({ ...i, variantId: idBySku.get(i.sku), priceCents: null as number | null }));
+    for (const l of lines) l.priceCents = l.variantId ? unitPriceOf(l.variantId) : null;
+    if (lines.some((l) => !l.variantId || l.priceCents == null)) {
       console.warn(`  ⚠ ${resolveLocalizedText(b.name)}: SKU ya da birim fiyat eksik — atlandı`);
       continue;
     }
 
     // Paket fiyatı = birim fiyatlar toplamının indirimlisi. Hediye kalem toplama GİRER (müşteri onu da
     // ayrı alsa parasını verirdi) ama payı 0 kalır — indirimin tamamını öbür kalemler taşır.
-    const listTotalCents = lines.reduce((sum, l) => sum + cents(l.price!) * l.qty, 0);
+    const listTotalCents = lines.reduce((sum, l) => sum + l.priceCents! * l.qty, 0);
     const targetCents = Math.round(listTotalCents * (1 - b.discountPercent / 100));
 
     const shareable = lines.filter((l) => !l.gift);
     const shares = rebalanceAllocations(
-      shareable.map((l) => ({ qty: l.qty, allocatedUnitPriceCents: cents(l.price!) })),
+      shareable.map((l) => ({ qty: l.qty, allocatedUnitPriceCents: l.priceCents! })),
       targetCents,
     );
     let shareIndex = 0;

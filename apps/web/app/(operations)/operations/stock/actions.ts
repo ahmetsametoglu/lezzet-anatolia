@@ -13,7 +13,6 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { needsExpiryAttention } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type KeysetCursor } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
@@ -100,9 +99,7 @@ export async function loadMoreLevelsAction(
     ];
     const priceMap = await new PriceService(db).findApplicableMap(attentionVariantIds, 'b2c');
     const listPriceCents = new Map(
-      [...priceMap].flatMap(([id, { channelPrice }]) =>
-        channelPrice ? [[id, toCents(channelPrice.amount)] as const] : [],
-      ),
+      [...priceMap].flatMap(([id, { channelPrice }]) => (channelPrice ? [[id, channelPrice.amountCents] as const] : [])),
     );
 
     // Satır süzgeci görür (ilk sayfayla aynı hesap); sayaçlar bu yolda zaten üretilmiyor.

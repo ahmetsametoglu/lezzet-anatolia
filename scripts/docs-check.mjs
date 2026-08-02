@@ -185,6 +185,34 @@ for (const f of readdirSync(join(ROOT, 'docs/architecture/data-model'))) {
   if (f.endsWith('.md')) parts.set(f.replace(/\.md$/, ''), read(`docs/architecture/data-model/${f}`));
 }
 
+// ── 1a. Para: `…Cents` şema alanı ↔ euro kolonu, BEYANLA bağlanır (02.9 · STACK §8) ──
+// Para DB'de euro `numeric`, uygulamada tamsayı cent. İkisini `BaseDbService.moneyFields` bağlar:
+// `amountCents` alanı `amount` kolonunu okur. Bu kural o bağın var olduğunu doğrular — beyansız bir
+// `…Cents` alanı, adı doğru ama dönüşümü olmayan bir alandır ve tam da 02.9'un kapattığı hatadır
+// (74,17 € ekranda 0,74 € görünmüştü). Ada bakıp "cent'tir" diye güvenmek, güvenceyi süse çevirir.
+//
+// Göç bitince kural yumuşamaz, SERTLEŞİR: yeni bir para alanı beyansız eklendiği gün burada patlar.
+const serviceDir = 'packages/database/src/services';
+const serviceSrc = readdirSync(join(ROOT, serviceDir))
+  .filter((f) => f.endsWith('.ts'))
+  .map((f) => read(`${serviceDir}/${f}`))
+  .join('\n');
+const declaredCents = new Set();
+for (const decl of serviceSrc.matchAll(/\bmoneyFields\s*(?::[^=]*)?=\s*\[([^\]]*)\]/g)) {
+  for (const field of decl[1].matchAll(/['"]([A-Za-z0-9_]+)['"]/g)) declaredCents.add(field[1]);
+}
+for (const field of declaredCents) {
+  if (!field.endsWith('Cents')) note(`moneyFields beyanı "${field}": para alanı adı Cents ile bitmeli (STACK §8)`);
+}
+// `…Cents` alanı `dbNumeric` OLAMAZ: dönüşümü taban sınıf yapar, şema tamsayı bekler. `dbNumeric`
+// kalmışsa alan euro taşıyor ama cent adı taşıyor demektir — adın yalan söylediği tek durum.
+for (const m of allSchemaSrc().matchAll(/([A-Za-z0-9_]*Cents)\s*:\s*dbNumeric/g)) {
+  note(`${m[1]}: "…Cents" alanı dbNumeric kullanamaz — dönüşüm moneyFields ile taban sınıfta yapılır (STACK §8)`);
+}
+
+/** Şema alanının DB kolonu: beyan edilmiş para alanında `Cents` eki düşer. */
+const columnOf = (field) => snake(declaredCents.has(field) ? field.slice(0, -'Cents'.length) : field);
+
 for (const e of ENTITIES) {
   const doc = docFields(parts.get(e.part) ?? '', e.doc);
   const cols = tableColumns(migrations, e.table);
@@ -192,8 +220,17 @@ for (const e of ENTITIES) {
   if (!doc) { note(`data-model/${e.part}.md: "## ${e.doc}" başlığı ya da tablosu bulunamadı`); continue; }
   if (!cols || !zod) continue; // henüz kodlanmamış varlık — artımlı inşa, hata değil
 
+  // Beyansız `…Cents` alanı: kolon adı eşleşmez ve aşağıdaki fark listesinde "tabloda yok" diye
+  // görünürdü — sebebini söylemeden. Burada adıyla sanıyla söylenir.
+  for (const field of zod) {
+    if (!field.endsWith('Cents') || declaredCents.has(field)) continue;
+    if (cols.includes(snake(field.slice(0, -'Cents'.length)))) {
+      note(`${e.zod}.${field}: para alanı ${e.table} servisinin moneyFields beyanında YOK → euro/cent dönüşümü yapılmıyor (STACK §8)`);
+    }
+  }
+
   const docSnake = doc.map(snake);
-  const zodSnake = zod.map(snake);
+  const zodSnake = zod.map(columnOf);
   const missInDb = docSnake.filter((f) => !cols.includes(f));
   const extraInDb = cols.filter((c) => !docSnake.includes(c));
   const zodVsDb = zodSnake.filter((f) => !cols.includes(f));

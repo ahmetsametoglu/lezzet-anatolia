@@ -1,6 +1,6 @@
 import { resolvePrice } from '@lezzet/domain-core';
 import type { ActiveOffer } from '@lezzet/domain-core';
-import { pricePerKg, toCents } from '@lezzet/helper';
+import { pricePerKg } from '@lezzet/helper';
 import { publicImageUrl } from '@lezzet/storage';
 import { cropOf, resolveLocalizedText } from '@lezzet/types';
 import type { AvailableStockTotal, Category, ImageMeta, Price, Product, ProductVariant } from '@lezzet/types';
@@ -103,9 +103,9 @@ export const EMPTY_PRODUCT_CONTEXT: ProductContext = {
  */
 function sellingOf(variant: ProductVariant, ctx: ProductContext) {
   const priceRows = ctx.prices.get(variant.id);
-  // Motor euro değil cent ister (para hesabı tamsayıda yapılır) — `Price.amount` euro cinsindendir.
-  const listCents = priceRows?.channelPrice ? toCents(priceRows.channelPrice.amount) : null;
-  const customerCents = priceRows?.customerPrice ? toCents(priceRows.customerPrice.amount) : null;
+  // Servis cent döndürür (02.9 · STACK §8) — motorun istediği birim de bu, dönüşüm kalmadı.
+  const listCents = priceRows?.channelPrice?.amountCents ?? null;
+  const customerCents = priceRows?.customerPrice?.amountCents ?? null;
 
   const resolved = resolvePrice({
     channel: 'b2c',
