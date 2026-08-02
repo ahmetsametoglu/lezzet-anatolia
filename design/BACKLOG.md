@@ -178,6 +178,28 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
 
+- **ROTA-ONLY ÜRÜNDE SATIN ALMA EYLEMİ POSTA KODU İSTER (02.08, kullanıcı kararı, `build/19` 19.7).**
+  Tasarımın soğuk zincir kartı yer bilinmezken fiyatı + bir daveti gösteriyor ve altına şunu
+  yazıyor: *"Davet zorunlu değildir, **kilit değildir**: atlanabilir."* Kullanıcı kararıyla bu
+  yumuşak bir kilide döndü: **`shippable=false` ürün/pakette yer bilinmiyorken "Sepete ekle"
+  yerine "Posta kodunu gir" durur.**
+  Gerekçe fiyat değil, **örtük söz**: soğuk zincir ürünü yalnız rota deposundan gidiyor: müşterinin
+  rota içinde olup olmadığını bilmeden "Sepete ekle" düğmesi *"bunu satın alabilirsiniz"* diyor ve
+  bunu doğrulayamıyoruz. Müşteri iddiaya güvenip sepete atıyor, gerçeği checkout'ta öğreniyor.
+  Kullanıcının ikinci gerekçesi de kabul edildi: soru **en yüksek niyet anında** sorulmuş oluyor —
+  anasayfa şeridi bir bannerdır, atlanır; "bu ürünü istiyorum" diyenden kod istemek cevap alma
+  olasılığı en yüksek yerdir. Bu üçüncü davet noktası, öncekilerin ikisinden de iyi.
+  **Süzgeç DEĞİL, sıra:** ürün katalogda durur, kart tıklanır, detay okunur, fiyat görünür. Kod
+  girilir girilmez kart dört hâlinden birine oturur ve normal akış sürer.
+  **Fiyat GİZLENMEDİ** (kullanıcının ilk önerisinden sapma, gerekçesi ölçüldü): liste fiyatı yere
+  göre asla değişmiyor (sözleşme §5), değişebilen tek şey near-expiry teklifi ve yer bilinmiyorken
+  teklifler hiç okunmuyor (`read-context.ts:87`) — yani gösterilen sayı TAVAN, kod girilince ya
+  aynı kalır ya düşer, asla artmaz. Fiyatı saklamak müşteriyi ürünle ilgilenip ilgilenmeyeceğine
+  karar veremez hâle getirirdi; sorun sayıda değil, düğmenin verdiği sözdeydi.
+  **Panel tasarımdakinden farklı:** tasarım satır içi bir posta kodu alanı çiziyor, biz sitenin
+  kanonik panelini (`PlaceDialog`) açıyoruz — üçüncü bir posta kodu girdisi aynı doğrulamayı üç
+  yerde bakıma bırakırdı.
+
 - **CHECKOUT — adres kartında "düzenle" YOK, seçili adresin ALTINDA var (01.08, `build/08` 08.13).**
   `Musteri - Checkout.dc.html` adres adımında kartları yalnız SEÇTİRİYOR; düzenleme diye bir yol
   çizilmemiş. Bu bir çıkmazdı (kullanıcı bildirimi): kaydedilen adres bir daha açılamıyor, yazım

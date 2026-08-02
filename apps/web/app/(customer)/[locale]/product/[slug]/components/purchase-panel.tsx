@@ -8,6 +8,8 @@ import { Price } from '@/components/customer/ui/price';
 import { buttonClass } from '@/components/customer/ui/button';
 import { QtyStepper } from '@/components/customer/ui/qty-stepper';
 import { useCart } from '@/components/customer/cart/cart-context';
+import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
+import { PlaceGate } from '@/components/customer/delivery/place-gate';
 import type { Messages } from '../product-types';
 
 /**
@@ -142,15 +144,36 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, compact
 
 interface PurchaseBarProps {
   t: Messages;
+  locale: Locale;
   selected: StorefrontVariant;
+  /**
+   * Ürün YALNIZ kapıya teslim edilebiliyor mu (`!product.shippable` — soğuk zincir).
+   *
+   * Yer bilinmiyorken bu ürünün satın alınabilirliğini söyleyemeyiz: rota deposundan gidiyor ve
+   * müşterinin rota içinde olup olmadığını bilmiyoruz. O hâlde eylem yerini posta kodu isteğine
+   * bırakır (`PlaceGate`).
+   */
+  routeOnly?: boolean;
   /** Mobil: ekranın altına SABİT koyu çubuk. Masaüstü: sağ sütunda akan açık satır. */
   fixed?: boolean;
 }
 
-export function PurchaseBar({ t, selected, fixed = false }: PurchaseBarProps) {
+export function PurchaseBar({ t, locale, selected, routeOnly = false, fixed = false }: PurchaseBarProps) {
   const { add, setQty: setCartQty, lineOf } = useCart();
+  const { place, ready } = useDeliveryPlace();
   const cap = capOf(selected);
   const sellable = selected.priceCents !== null && !selected.soldOut;
+
+  /**
+   * Yer sorulmadan satın alma eylemi çizilmez — ama YALNIZ rota-only üründe.
+   *
+   * Kargolanabilen ürün Fransa'nın her yerine gidiyor; orada kodu sormanın bu aşamada bir sonucu
+   * yok ve karşılıksız bir soru olurdu (`place-prompt`in sepetteki koşuluyla aynı gerekçe).
+   *
+   * `ready` beklenir: ilk karede yer henüz okunmamışken kapıyı göstermek, kodu zaten kayıtlı olan
+   * müşteriye bir an "önce posta kodu" demek olurdu.
+   */
+  const gated = routeOnly && ready && !place;
 
   // SEÇİLİ BOYUN sepetteki satırı — boy değişince bu da değişir. Varyantlı üründe "3 adet" bilgisi
   // ürüne değil BOYA aittir: 500 g'dan 3 alıp 1 kg'a geçen müşteriye hâlâ 3 göstermek yalan olur.
@@ -169,7 +192,9 @@ export function PurchaseBar({ t, selected, fixed = false }: PurchaseBarProps) {
 
   // Tek kontrol, tek kutu. İkisi de satırın tamamını kaplar ve aynı yüksekliktedir; çerçeve farkı
   // düğmeye ŞEFFAF kenarlık verilerek kapanır — yoksa geçişte kutu birkaç piksel zıplıyor.
-  const control = inCart ? (
+  const control = gated ? (
+    <PlaceGate locale={locale} onDark={fixed} />
+  ) : inCart ? (
     <QtyStepper
       value={qty}
       onChange={setQty}

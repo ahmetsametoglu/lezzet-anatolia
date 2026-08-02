@@ -58,7 +58,7 @@ export function PackageDesktop({ t, locale, pack }: PackageViewProps) {
 
           {pack.description && <p className="font-sans text-lead text-body">{pack.description}</p>}
 
-          <PurchaseBox t={t} bundleId={pack.id} soldOut={pack.soldOut} />
+          <PurchaseBox t={t} locale={locale} bundleId={pack.id} soldOut={pack.soldOut} routeOnly={pack.inRouteOnly} />
 
           {/* Kargolanamayan pakette şerit UYARIYA döner: üç ferah vaat yerine tek kısıt cümlesi —
               "kargoya uygun" ile "kargoya verilemez" aynı kutuda yan yana duramaz. */}

@@ -2,7 +2,10 @@
 
 import { Button, buttonClass } from '@/components/customer/ui/button';
 import { QtyStepper } from '@/components/customer/ui/qty-stepper';
+import type { Locale } from '@lezzet/i18n';
 import { useCart } from '@/components/customer/cart/cart-context';
+import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
+import { PlaceGate } from '@/components/customer/delivery/place-gate';
 import type { Messages } from '../package-types';
 
 /**
@@ -30,8 +33,15 @@ import type { Messages } from '../package-types';
  */
 interface PurchaseBoxProps {
   t: Messages;
+  locale: Locale;
   bundleId: string;
   soldOut: boolean;
+  /**
+   * Paket YALNIZ kapıya teslim edilebiliyor mu (`pack.inRouteOnly` — içinde kargolanamayan kalem
+   * var). Yer bilinmiyorken satın alınabilirliğini söyleyemeyiz; eylem posta kodu isteğine bırakır.
+   * Gerekçenin tamamı `PlaceGate` künyesinde.
+   */
+  routeOnly?: boolean;
   /**
    * Koyu zeminli mobil çubuk: kontrast tersine döner VE kontrol satırın tamamını kaplar — orada
    * çubuğun kendisi zaten dar, yarıya indirmek düğmeyi kullanılamayacak kadar küçültürdü.
@@ -39,12 +49,15 @@ interface PurchaseBoxProps {
   onDark?: boolean;
 }
 
-export function PurchaseBox({ t, bundleId, soldOut, onDark = false }: PurchaseBoxProps) {
+export function PurchaseBox({ t, locale, bundleId, soldOut, routeOnly = false, onDark = false }: PurchaseBoxProps) {
   const { add, setQty, lineOf } = useCart();
+  const { place, ready } = useDeliveryPlace();
   const inCart = soldOut ? null : lineOf({ bundleId });
 
   // Tükendi hâlinde adet seçici GİZLENİR (tasarım): seçilecek bir adet yok, kutu boşuna yer kaplar.
-  const control = soldOut ? (
+  const control = routeOnly && ready && !place ? (
+    <PlaceGate locale={locale} onDark={onDark} />
+  ) : soldOut ? (
     <Button variant={onDark ? 'primaryOnDark' : 'primary'} size="md" fullWidth disabled>
       {t.addToCart}
     </Button>

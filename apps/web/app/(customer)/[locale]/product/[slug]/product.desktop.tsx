@@ -56,7 +56,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect , review
           {selected && (
             <>
               <VariantPicker t={t} locale={locale} variants={product.variants} selected={selected} onSelect={onSelect} />
-              <PurchaseBar t={t} selected={selected} />
+              <PurchaseBar t={t} locale={locale} selected={selected} routeOnly={!product.shippable} />
             </>
           )}
 

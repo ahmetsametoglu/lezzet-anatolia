@@ -74,7 +74,7 @@ export function PackageMobile({ t, locale, pack }: PackageViewProps) {
           sayfada farklı davranan bir satın alma çubuğu, aynı jesti iki şey yapar hale getirirdi. */}
       <div className="fixed inset-x-0 bottom-0 z-20 px-3 pb-3">
         <div className="mx-auto max-w-[430px] rounded-card bg-ink px-3.5 py-3">
-          <PurchaseBox t={t} bundleId={pack.id} soldOut={pack.soldOut} onDark />
+          <PurchaseBox t={t} locale={locale} bundleId={pack.id} soldOut={pack.soldOut} routeOnly={pack.inRouteOnly} onDark />
         </div>
       </div>
     </div>

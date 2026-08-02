@@ -35,7 +35,9 @@
     "notifyCta": "Gelince haber ver",
     "stockNoticeTitle": "Gelince haber verelim",
     "stockNoticeBody": "{product} için not alalım. {code} adresine ulaşabildiğimizde tek bir e-posta göndeririz — başka bir şey için kullanmayız.",
-    "stockNoticeDone": "Not aldık — {code} için bu ürünü bekleyenler arasındasınız."
+    "stockNoticeDone": "Not aldık — {code} için bu ürünü bekleyenler arasındasınız.",
+    "gateCta": "Posta kodunu gir",
+    "gateHint": "Bu ürün soğuk zincirle taşınıyor ve yalnız kapıya teslim edilebiliyor. Size ulaşıp ulaşamayacağımızı posta kodunuzdan öğreniyoruz."
   },
   "fr": {
     "empty": "Saisissez le code postal",
@@ -73,7 +75,9 @@
     "notifyCta": "Me prévenir",
     "stockNoticeTitle": "Être prévenu du retour",
     "stockNoticeBody": "Nous notons {product}. Dès que nous pouvons livrer à {code}, nous envoyons un seul e-mail — rien d'autre.",
-    "stockNoticeDone": "C'est noté — vous faites partie des personnes qui attendent cet article pour {code}."
+    "stockNoticeDone": "C'est noté — vous faites partie des personnes qui attendent cet article pour {code}.",
+    "gateCta": "Saisir mon code postal",
+    "gateHint": "Ce produit voyage en chaîne du froid et ne peut être livré qu'à domicile. Votre code postal nous dit si nous pouvons vous l'apporter."
   },
   "de": {
     "empty": "Postleitzahl eingeben",
@@ -111,6 +115,8 @@
     "notifyCta": "Benachrichtigen",
     "stockNoticeTitle": "Benachrichtigung bei Verfügbarkeit",
     "stockNoticeBody": "Wir notieren {product}. Sobald wir an {code} liefern können, senden wir eine einzige E-Mail — sonst nichts.",
-    "stockNoticeDone": "Notiert — Sie gehören zu denen, die diesen Artikel für {code} erwarten."
+    "stockNoticeDone": "Notiert — Sie gehören zu denen, die diesen Artikel für {code} erwarten.",
+    "gateCta": "Postleitzahl eingeben",
+    "gateHint": "Dieser Artikel wird in der Kühlkette transportiert und kann nur an die Haustür geliefert werden. Ihre Postleitzahl sagt uns, ob wir ihn zu Ihnen bringen können."
   }
 }
