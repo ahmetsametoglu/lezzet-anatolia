@@ -289,6 +289,19 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
   - *Bitti:* dönem dışındaki bir lot da aramayla bulunuyor
 
 
+- [ ] (09.19) **Ortak header + sol raydan devralma** · `touches: apps/web/components/operation/ui/{page-header,admin-sidebar,tabs}.tsx · apps/web/app/(operations)/operations/**` *(kullanıcı isteği 02.08)* — her ekranın başlığı TEK komponent olacak; ve o komponent sol navigasyon panelinden üç bloğu devralacak: **depo bağlamı seçicisi · ⌘K hızlı işlem/arama · bağlanan kullanıcı künyesi**. Gerekçe kullanıcının kendi cümlesi: *"orası çok karmaşık ve dolu görünüyor."* Ray böylece yalnız "nereye gidiyorum" sorusuna kalır.
+  - **ÖNCE TASARIM (CLAUDE.md §3):** görsel karar `.dc`'de verilir, implement ederken improvise edilmez. Aşağıdaki envanter Claude Design'a gidecek isteğin ekidir — barın bugün NE taşıdığını sayıyor.
+  - **Envanter — bugünkü başlık barları (02.08'de sayıldı):**
+    - `PageHeader` **10 ekranda** kullanılıyor ve yalnız üç şey sabitliyor: başlık (22px) · alt satır (sayaç/özet) · sağda serbest `children` yuvası. Yani "ortak" olan düzen; içerik her ekranda elden yazılıyor.
+    - **Sağ yuvada bugün ne var:** arama kutusu (müşteriler · siparişler · fiyatlar) · birincil aksiyon düğmesi (tedarik: "+ Tedarik siparişi", "+ Tedarikçi") · ikincil araç düğmesi (stok: "Lot / geri çağırma") · özel aksiyon (fiyatlar: "otomatik yeniden fiyatla"). Boş bırakan ekranlar da var (ürünler, sistem).
+    - **Aynı işler ÜÇÜNCÜ bir yerde de duruyor:** ürünler ekranı aramayı ve "+ Yeni"yi `PageHeader`'a değil `Tabs action` yuvasına koyuyor. Yani aynı iki kontrol iki farklı bara girebiliyor ve ekranlar arasında yer değiştiriyor — birleştirmenin ilk işi bu ikiliği bitirmek.
+    - **Mobil kendi barını elden yazıyor:** müşteriler ve sistem ekranları `PageHeader` yerine kendi `<div>`'ini kuruyor (farklı yükseklik, farklı yazı kademesi); tedarik de öyle. Üçü de aynı şeyi başka ölçüyle çiziyor.
+    - **Alt satır (`subtitle`) tek tip değil:** kimi ekranda sabit cümle, kimi ekranda sekmeye bağlı sayaç, kimi ekranda süzgeçten türeyen özet. Ortak header bunu bir *sözleşme* hâline getirmeli (ne zaman sayaç, ne zaman cümle).
+    - **Sayfa-üstü bağlam bugün RAYDA:** `WarehouseContextPicker` (markanın altında), arama kutusu (⌘K — bugün **görsel yer tutucu**, işlevi yok), kullanıcı künyesi (baş harf + e-posta yereli + rol metni), tema anahtarı. Devralınacak olan ilk üçü; tema anahtarının yeri ayrı karar.
+  - **Sıra notu:** yeni ekranlar (mal kabul · Depolar · Transfer · Rotalar) bu iş inmeden başlığını ELDEN kurmamalı — bugün eklenen her elle blok, 09.19 turunda bir kopya daha demek.
+  - *Bitti:* on ekranın hiçbirinde elle yazılmış başlık barı kalmadı; depo seçimi ve kullanıcı künyesi rayda değil üstte
+
+
 ## Netleşecekler
 
 - **Admin izolasyon ayrıntısı (STACK §13 taslak):** middleware kapsamı, anon key'in tarayıcı kapsamı, RLS'nin admin tablolarındaki rolü — ilk görevden önce tek konuşmada karar.

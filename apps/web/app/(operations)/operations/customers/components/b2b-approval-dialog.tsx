@@ -136,7 +136,8 @@ function Card({
         </div>
       </div>
 
-      {/* ── AI özeti ── BEKLEYEN(09.11): `packages/ai` yok. Kutu ÇİZİLİYOR ama içi UYDURULMUYOR:
+      {/* ── AI özeti ── BEKLEYEN(09.11): `packages/ai` bir KABUK — paket var (00'ın iskeletinden),
+          içinde yalnız kendi adı duruyor, tek bir kapı bile yok. Kutu ÇİZİLİYOR ama içi UYDURULMUYOR:
           "okuma yardımı" diye sunulan bir cümle üretilmediği hâlde varmış gibi görünürse, operatör
           okumadığı bir özete güvenir. Eksiğini kendi üstünde yazıyor (CLAUDE.md §3). */}
       <div className="flex flex-col gap-1 rounded-ops-card border border-ops-line border-dashed bg-ops-subtle px-3.5 py-3">
