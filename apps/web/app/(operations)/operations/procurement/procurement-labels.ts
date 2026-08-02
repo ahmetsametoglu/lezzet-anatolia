@@ -37,6 +37,34 @@ export function receivedText(row: PurchaseOrderRowView): { main: string; meta: s
   return { main, meta: row.byWarehouse.map((w) => `${w.code} ${w.qty}`).join(' · ') };
 }
 
+/**
+ * Gönderimden bu yana geçen TAM GÜN. Saat değil gün sayılır: "37 saattir yolda" kimsenin sorduğu
+ * soru değil, ve gün sınırı iki tarafta da (sunucu/istemci) aynı yerden geçmeli.
+ */
+function daysSince(iso: string, today: string): number {
+  const from = Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
+  const to = Date.parse(`${today}T00:00:00Z`);
+  if (Number.isNaN(from) || Number.isNaN(to)) return 0;
+  // Negatif olamaz: ileri tarihli bir damga bir arızadır, "−2 gündür yolda" diye gösterilmez.
+  return Math.max(0, Math.round((to - from) / 86_400_000));
+}
+
+/**
+ * "Neyi bekliyorum, ne zamandır" — gönderilmiş ama kapanmamış siparişin bekleyiş süresi.
+ *
+ * **Yargı YOK, süre var.** "Gecikti" diyebilmek için tedarikçinin teslim süresini bilmek gerekir
+ * (`supplier.lead_time_days` henüz yok) ve eşiği ekranda uydurmak, kimse söz vermemişken geç
+ * kalınmış gibi göstermek olurdu. Süreyi görmek zaten kararı verdiriyor: 12 gündür bekleyen sipariş
+ * operatörün gözünden kaçmaz. Uyarı eşiği arka uç talebinde (`tedarik-arka-uc-talebi.md §5`).
+ *
+ * Kapanmış/iptal/taslak siparişte null: bekleyiş bitmiş ya da hiç başlamamıştır.
+ */
+export function waitingText(row: Pick<PurchaseOrderRowView, 'status' | 'sentAt'>, today: string): string | null {
+  if (!row.sentAt || (row.status !== 'sent' && row.status !== 'partially_received')) return null;
+  const days = daysSince(row.sentAt, today);
+  return days === 0 ? 'bugün gönderildi' : `${days} gündür yolda`;
+}
+
 /** Kabul sütununun tonu — tamamlanan olive, kısmi amber, hiç girmemiş sönük. */
 export function receivedToneClass(row: PurchaseOrderRowView): string {
   if (row.itemCount > 0 && row.receivedItemCount >= row.itemCount) return 'text-ops-olive-dark';

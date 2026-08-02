@@ -178,6 +178,21 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
 
+- **TEDARİK SİPARİŞİ PDF ÜRETMİYOR, METİN ÜRETİYOR (02.08).** `pages/admin-satin-alma.md` §2
+  "temiz bir liste/PDF" diyor; kodlanan **panoya kopyala + WhatsApp**. Üç gerekçe: (1) sayfanın
+  kendi mobil notu gerçek yolu söylüyor — *"üretilen listeyi telefondan WhatsApp'a paylaşmak en
+  olası gönderim yolu"*; PDF o akışta fazladan bir dosya adımı. (2) PDF aracı seçimi hâlâ açık
+  (`build/06` "Netleşecekler") ve bir ekran için araç seçmek, seçimi tüm proje adına yapmak olurdu.
+  (3) Metni sunucu kuruyor — PDF eklendiği gün aynı metni sarar, ikinci bir biçim doğmaz. Vaat
+  `build/09-admin` görev satırında üstü çizildi. PDF gerekirse ayrı bir tur.
+
+- **TEDARİK SİPARİŞİ DETAYI AYRI SAYFA DEĞİL, PENCERE (02.08).** Sipariş kalemleri, kabul
+  ilerlemesi ve gönderim tek bir pencerede (`purchase-order-dialog`). Ayrı bir `/orders/[id]`
+  sayfası açılmadı: sipariş bir liste satırının derinleşmesidir — operatör listeye bakarken açar,
+  adedi düzeltir, listeyi gönderir, kapatır. Ayrı sayfa her seferinde listeyi kaybettirir ve
+  dönüşte süzgeci yeniden kurdurur. Müşteri siparişi farklı ve orada sayfa doğru: onun detayı
+  yazışma, ödeme ve teslimatla birlikte okunan uzun bir kayıttır.
+
 - **ROTA-ONLY ÜRÜNDE SATIN ALMA EYLEMİ POSTA KODU İSTER (02.08, kullanıcı kararı, `build/19` 19.7).**
   Tasarımın soğuk zincir kartı yer bilinmezken fiyatı + bir daveti gösteriyor ve altına şunu
   yazıyor: *"Davet zorunlu değildir, **kilit değildir**: atlanabilir."* Kullanıcı kararıyla bu

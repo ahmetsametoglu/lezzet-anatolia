@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { SupplierInsertSchema, type KeysetCursor, type PurchaseOrderStatus } from '@lezzet/types';
+import {
+  PurchaseOrderInsertSchema,
+  PurchaseOrderItemInsertSchema,
+  SupplierInsertSchema,
+  type KeysetCursor,
+  type PurchaseOrderStatus,
+} from '@lezzet/types';
 
 // Tedarik ekranının görünüm modelleri — sunucu okur ve bu biçime indirger, ekran yalnız çizer.
 
@@ -16,6 +22,21 @@ export interface SuggestionLineView {
   minStockQty: number;
   /** Eşiğe çıkaracak öneri (koli katına yuvarlı) — öneridir, sipariş admin'in. */
   suggestedQty: number;
+  /** **Yolda**: gönderilmiş siparişlerden bu depoya bekleyen adet. Öneri bunu zaten düşmüştür. */
+  incomingQty: number;
+  /** **Taslakta**: açılmış ama GÖNDERİLMEMİŞ adet. Eşiğe girmez — satırın neden durduğunu açıklar. */
+  draftQty: number;
+  /** Hedefi yazılmamış açık siparişlerdeki adet — hiçbir depoya sayılmaz ama gizlenmez de. */
+  unassignedQty: number;
+  /**
+   * Aynı varyantın BAŞKA depolardaki kullanılabilir miktarı — "sipariş yerine transfer" seçeneği.
+   *
+   * Ham sayı taşınır, yargı taşınmaz: "transfer et" demiyoruz, çünkü öteki deponun kendi eşiğini
+   * bilmiyoruz (`listBelowMinStock` yalnız eşik ALTINDAKİLERİ veriyor) ve oradan mal çekmek onu
+   * eksiğe düşürebilir. Karar operatörün; ekran yalnız "başka yerde var" diyor. Boş dizi = başka
+   * depoda kullanılabilir yok.
+   */
+  elsewhere: Array<{ code: string; qty: number }>;
 }
 
 /** Tedarikçiye gruplu öneri kartı — "tek dokunuş taslak" bu gruptan açılır. */
@@ -70,10 +91,14 @@ export type SupplierFormInput = z.infer<typeof SupplierFormSchema>;
  */
 export interface PurchaseOrderRowView {
   id: string;
+  /** Tedarikçi KİMLİĞİ — telefon/kart eşleşmesi adla değil bununla yapılır (ad tekil değildir). */
+  supplierId: string;
   supplierName: string;
   status: PurchaseOrderStatus;
   /** Siparişin açıldığı an (ISO) — satırın tarihi ve keyset sıralaması bu alandan. */
   createdAt: string;
+  /** Gönderim damgası (ISO); null = henüz gönderilmedi. "Kaç gündür yolda" bundan okunur. */
+  sentAt: string | null;
   itemCount: number;
   receivedItemCount: number;
   /** Σ adet × birim fiyat (cent). `missingPriceCount > 0` ise EKSİKTİR — ekran "≈" der. */
@@ -110,6 +135,83 @@ export interface VariantPickOption {
   title: string;
 }
 
+/**
+ * Siparişin TEK KALEMİ — hem taslak düzenleyicisinin satırı hem kabul ilerlemesinin satırı.
+ *
+ * İkisi tek tip: aynı kalemin iki hâli (düzenlenebilir / okunur), iki ayrı tip yazmak aynı satırın
+ * iki tanımını doğururdu ve biri gün gelip ötekinden ayrışırdı.
+ */
+export interface OrderLineView {
+  /** `purchase_order_item.id` — düzenleme ve silme bu kimliğe bağlanır. */
+  itemId: string;
+  variantId: string;
+  /** BİZİM adımız — "Fıstıklı Baklava · 500g". */
+  title: string;
+  /** ONUN kodu (sipariş anında donmuş eşlemeden); yoksa liste bizim adımızla gider. */
+  supplierCode: string | null;
+  qty: number;
+  /** Beklenen alış (cent); null = fiyat girilmemiş — tutar EKSİKTİR (ekran "≈" der). */
+  unitPriceCents: number | null;
+  /** Hedef depo kodu — NİYET beyanıdır, kısıt değil (K6). null = hedefsiz (elle açılan sipariş). */
+  targetWarehouseCode: string | null;
+  /** Fiilen giren adet (`purchase_order_progress`, ölçü `initial_qty`). */
+  receivedQty: number;
+  /** Hâlâ bekleyen adet; 0 = bu kalem kapandı. Fazla gelmişse de 0 (eksik sayılmaz). */
+  missingQty: number;
+}
+
+/**
+ * Sipariş penceresinin tam okuması — kalem kalem.
+ *
+ * Liste satırı (`PurchaseOrderRowView`) özetle yetinir; pencere açıldığında kalemler ve tedarikçiye
+ * gidecek metin BİR turda gelir: iki ayrı eylem iki gidiş-geliş demekti ve pencere iki kez boş
+ * kalırdı.
+ */
+export interface OrderDetailView {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  /** WhatsApp yolunun anahtarı — tedarikçi KARTINDAN, satırın adından değil. */
+  supplierPhone: string | null;
+  status: PurchaseOrderStatus;
+  createdAt: string;
+  sentAt: string | null;
+  note: string | null;
+  lines: OrderLineView[];
+  /**
+   * Tedarikçiye kopyalanacak temiz liste (`printableList` + biçim) — metni SUNUCU kurar: kopyala,
+   * WhatsApp ve yazdır aynı metni taşımalı, üç yerde biçimlenseydi üç farklı liste giderdi.
+   */
+  message: string;
+}
+
+/** Süzgeç ve elle sipariş için dar tedarikçi listesi — kart okuması (borç türetimi) burada fazla. */
+export interface SupplierOption {
+  id: string;
+  name: string;
+}
+
+/** Elle siparişin hedef depo seçeneği — bağlam evreninden (kapsam dışı depo hiç görünmez). */
+export interface WarehouseOption {
+  id: string;
+  code: string;
+  name: string;
+}
+
+/**
+ * Elle sipariş formunun girdisi — **varlık şemalarından türetilir** (elle interface yazılmaz, §1).
+ *
+ * `targetWarehouseId` burada `string` (boş = seçilmedi), varlıktaki gibi `uuid | null` değil: HTML
+ * seçicisinin boş değeri boş metindir ve `null`'a çeviren tek yer gönderim anıdır. Tipi burada
+ * gevşetmek, o dönüşümü tek noktada tutuyor.
+ */
+export const ManualOrderSchema = PurchaseOrderInsertSchema.pick({ supplierId: true, note: true }).extend({
+  targetWarehouseId: z.string(),
+  // Kalemsiz sipariş yok: `createDraft` da reddediyor, form da baştan söylüyor.
+  lines: z.array(PurchaseOrderItemInsertSchema.pick({ variantId: true, qty: true })).min(1),
+});
+export type ManualOrderInput = z.infer<typeof ManualOrderSchema>;
+
 export interface ProcurementData {
   /** Yalnız `suggestions` sekmesinde dolu (okuma sekmeye bağlı). */
   suggestions: SuggestionGroupView[] | null;
@@ -121,4 +223,20 @@ export interface ProcurementData {
   ordersCursor: KeysetCursor | null;
   /** Gönderilmiş ve henüz kapanmamış sipariş sayısı — başlık altı ("yolda ne var"). */
   pendingOrderCount: number | null;
+  /**
+   * Tedarikçi seçenekleri — sipariş sekmesinin süzgeci ve "elle sipariş" penceresi için.
+   *
+   * Kart okumasından AYRI: kart borç türetiyor (tedarikçi başına tur), süzgeç yalnız ad istiyor.
+   * Aynı okumayı paylaşmak, süzgeç şeridini çizmek için borç hesaplatmak olurdu.
+   */
+  supplierOptions: SupplierOption[] | null;
+  /** Elle siparişin hedef depo seçenekleri — yalnız sipariş sekmesinde okunur. */
+  warehouseOptions: WarehouseOption[] | null;
+  /**
+   * Sunucunun günü (YYYY-AA-GG) — "kaç gündür yolda" bundan sayılır.
+   *
+   * İstemcide `new Date()` çağrılmaz: client bileşen sunucuda da render ediliyor ve gece yarısını
+   * geçen bir istekte iki taraf farklı gün üretir (sipariş ekranının `today` deseni).
+   */
+  today: string;
 }

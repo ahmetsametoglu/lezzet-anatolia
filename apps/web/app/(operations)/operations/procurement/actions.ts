@@ -2,18 +2,21 @@
 
 import { revalidatePath } from 'next/cache';
 import {
+  PurchaseOrderItemService,
   PurchaseOrderService,
   ReorderService,
   SupplierProductService,
   SupplierService,
   serviceDb,
 } from '@lezzet/database';
-import type { KeysetCursor } from '@lezzet/types';
+import { fromCents } from '@lezzet/helper';
+import type { KeysetCursor, PurchaseOrderStatus } from '@lezzet/types';
 import { requireAdmin, requireFinance } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readWarehouseContext } from '@/lib/warehouse/context';
-import { readOrderPage, readSupplierProducts, searchVariantOptions } from './procurement-read';
+import { readOrderDetail, readOrderPage, readSupplierProducts, searchVariantOptions } from './procurement-read';
 import type {
+  OrderDetailView,
   PurchaseOrderRowView,
   SupplierFormInput,
   SupplierProductRowView,
@@ -31,16 +34,28 @@ const PATH = '/operations/procurement';
 /**
  * Sipariş listesinin bir sonraki sayfası (sonsuz kaydırma).
  *
- * İmleç istemciden gelir ama süzgeç GELMEZ: bugün liste süzgeçsiz okunuyor ve imleç yalnız
- * sıralama alanına dayanıyor. Süzgeç eklendiği gün buraya da geçmesi gerekir — yoksa ikinci sayfa
- * birinciyle aynı ölçütü kullanmaz ve liste sessizce karışır.
+ * İmleç ve SÜZGEÇ birlikte gelir: ikinci sayfa birincinin ölçütünü taşımazsa liste sessizce
+ * karışır — "gönderildi" süzgecinin altına iptal edilmiş siparişler eklenir ve kimse fark etmez.
+ * Süzgeç istemciden geliyor ama tehlikesiz: daraltmadır, yetki genişletmez ve sunucu yine kendi
+ * kapısını tutar.
  */
 export async function loadMorePurchaseOrdersAction(
   cursor: KeysetCursor,
+  filters: { status?: PurchaseOrderStatus; supplierId?: string },
 ): Promise<ActionResult<{ rows: PurchaseOrderRowView[]; nextCursor: KeysetCursor | null }>> {
   try {
     await requireFinance();
-    return { data: await readOrderPage(serviceDb(), cursor), error: null };
+    return { data: await readOrderPage(serviceDb(), { cursor, ...filters }), error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Sipariş penceresinin açılış okuması — kalemler + tedarikçiye gidecek metin, tek turda. */
+export async function loadOrderDetailAction(orderId: string): Promise<ActionResult<OrderDetailView>> {
+  try {
+    await requireFinance();
+    return { data: await readOrderDetail(serviceDb(), orderId), error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
   }
@@ -224,28 +239,97 @@ export async function createDraftFromSuggestionAction(supplierId: string): Promi
 }
 
 /**
- * Tedarikçiye kopyalanacak TEMİZ LİSTE — onun kodu, onun adı, koli karşılığı (DOMAIN §16).
+ * **Elle sipariş** — öneriden bağımsız (sayfa sözleşmesi §3).
  *
- * Metni sunucu kurar: aynı listeyi kopyalama, WhatsApp ve yazdırma yolları kullanıyor ve üçü ayrı
- * yerde biçimlendirilseydi tedarikçiye üç farklı metin giderdi.
+ * Öneri yalnız "eşik altına düşen"i yakalar; gerçek hayatta sipariş bundan ibaret değil: kampanya
+ * için fazladan mal, yeni ürün denemesi, tedarikçinin "bu hafta şu var" demesi. Öneriyi bekleyen
+ * bir ekran üçünü de imkânsız kılardı.
+ *
+ * Kalemler PENCEREDE toplanır ve sipariş tek turda doğar (`createDraft`) — kalemsiz taslak açıp
+ * sonra doldurmak değil. Sebebi kural: kod eşlemesini ve "geçen sefer kaçtı" fiyatını bulan yer
+ * `createDraft`'tır; kalemi ayrı bir kapıdan eklemek o kuralı ikinci kez yazmak olurdu (§1).
  */
-export async function buildOrderMessageAction(orderId: string): Promise<ActionResult<{ text: string }>> {
+export async function createManualDraftAction(input: {
+  supplierId: string;
+  note?: string | null;
+  lines: Array<{ variantId: string; qty: number; targetWarehouseId?: string | null }>;
+}): Promise<ActionResult<{ orderId: string }>> {
   try {
     await requireFinance();
-    const lines = await new PurchaseOrderService(serviceDb()).printableList(orderId);
-    if (lines.length === 0) throw new Error('Siparişte kalem yok.');
+    if (!input.supplierId) throw new Error('Tedarikçi seçin.');
+    if (input.lines.length === 0) throw new Error('En az bir kalem ekleyin.');
+    if (input.lines.some((l) => !Number.isInteger(l.qty) || l.qty <= 0)) throw new Error('Adet en az 1 olmalı.');
 
-    const text = lines
-      .map((line) => {
-        // Eşlemesi olmayan kalem BİZİM adımızla yazılır — iş durmaz (servisin kendi kuralı).
-        const name = line.nameAtSupplier ?? '(kod eşlemesi yok)';
-        const code = line.supplierCode ? `${line.supplierCode} · ` : '';
-        // Koli içi adet biliniyorsa karşılığı yazılır: telefonda "kaç koli eder" tarifi biter.
-        const pack = line.packQty && line.packQty > 1 ? ` (${Math.ceil(line.qty / line.packQty)} koli)` : '';
-        return `• ${code}${name} — ${line.qty} adet${pack}`;
-      })
-      .join('\n');
-    return { data: { text }, error: null };
+    const { order } = await new PurchaseOrderService(serviceDb()).createDraft(
+      input.supplierId,
+      input.lines.map((l) => ({ variantId: l.variantId, qty: l.qty, targetWarehouseId: l.targetWarehouseId ?? null })),
+      input.note?.trim() || undefined,
+    );
+    revalidatePath(PATH);
+    return { data: { orderId: order.id }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+// ─── Taslak kalemleri ─────────────────────────────────────────────────────────
+// Öneri bir başlangıçtır, son söz değil: adet değişir, vazgeçilen kalem çıkarılır. Düzenlenemeyen
+// bir taslak, "sipariş taslağı" değil bir dayatmadır.
+//
+// İKİSİ DE AYNI KAPIDAN GEÇER (`requireDraft`): gönderilmiş siparişin kalemi değiştirilemez. Bu bir
+// görgü kuralı değil kayıt bütünlüğüdür — tedarikçiye 10 koli yazıp kaydı 6'ya çekmek gelen malı
+// "fazla" gösterir ve fark raporu yalan söyler. Kural bugün UYGULAMA katmanında duruyor; kalıcı yeri
+// veridir (talep: `tedarik-arka-uc-talebi.md §5`).
+
+/** Taslak mı — değilse eylem reddedilir. Sipariş okunur, istemcinin beyanına güvenilmez. */
+async function requireDraft(orderId: string): Promise<void> {
+  const order = await new PurchaseOrderService(serviceDb()).getById(orderId);
+  if (!order) throw new Error('Sipariş bulunamadı.');
+  if (order.status !== 'draft') throw new Error('Gönderilmiş sipariş değiştirilemez — kayıt tedarikçiye gideni yansıtmalı.');
+}
+
+/**
+ * Kalemin adedini ya da beklenen alışını değiştirir.
+ *
+ * Fiyat İSTEĞE BAĞLI ve `null` anlamlı: "bilinmiyor" demektir ve tutarı eksik bırakır (ekran "≈"
+ * der). Sıfır yazmak bedava alım demek olurdu (`CLAUDE.md §1`).
+ */
+export async function updateDraftLineAction(input: {
+  orderId: string;
+  itemId: string;
+  qty?: number;
+  unitPriceCents?: number | null;
+}): Promise<ActionResult> {
+  try {
+    await requireFinance();
+    await requireDraft(input.orderId);
+    if (input.qty !== undefined && (!Number.isInteger(input.qty) || input.qty <= 0)) {
+      throw new Error('Adet en az 1 olmalı.');
+    }
+
+    await new PurchaseOrderItemService(serviceDb()).update({
+      id: input.itemId,
+      ...(input.qty === undefined ? {} : { qty: input.qty }),
+      // Cent → euro dönüşümü TEK noktada, servis sınırında (`STACK §8`).
+      ...(input.unitPriceCents === undefined
+        ? {}
+        : { unitPrice: input.unitPriceCents === null ? null : fromCents(input.unitPriceCents) }),
+    });
+    revalidatePath(PATH);
+    return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Kalemi taslaktan çıkarır. Son kalem de silinebilir: kalemsiz taslak geçerli bir ara hâldir. */
+export async function removeDraftLineAction(input: { orderId: string; itemId: string }): Promise<ActionResult> {
+  try {
+    await requireFinance();
+    await requireDraft(input.orderId);
+    await new PurchaseOrderItemService(serviceDb()).delete(input.itemId);
+    revalidatePath(PATH);
+    return { data: null, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
   }

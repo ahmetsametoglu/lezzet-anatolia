@@ -269,3 +269,52 @@ düşer), biri de hedef damgasının yazıldığını (o olmasa hesap hiç çal�
 
 **Ekran tarafı sizde:** `incomingQty` / `draftQty` / `unassignedQty` üçü ayrı cümle hak ediyor —
 "6 koli yolda" ≠ "6 koli taslakta" ≠ "hedefsiz 6 koli yolda".
+
+---
+
+## §4 — Gecikme uyarısı için tedarikçi teslim süresi (operasyon yüzeyi → arka uç, 02.08)
+
+**Bugün ekranda ne var:** gönderilmiş ama kapanmamış siparişte **bekleyiş SÜRESİ** yazıyor —
+"12 gündür yolda" (`sentAt` elde vardı, tablo ve mobil kart ikisi de gösteriyor). Yani operatör
+uzun bekleyeni artık görüyor.
+
+**Eksik olan yargı:** "geç kaldı" diyebilmek için tedarikçinin teslim süresini bilmek gerekiyor.
+`supplier` tablosunda böyle bir alan yok (`payment_term_days` VADEdir — para tarafı, teslim değil).
+Eşiği ekranda uydurmak istemedim: kimse söz vermemişken "gecikti" demek, bir tedarikçiyi bizim
+varsayımımızla suçlamak olurdu ve o rakam ilk günden yanlış olurdu.
+
+**İstenen:**
+1. `supplier.lead_time_days` (int, nullable) — "sipariş verdikten kaç gün sonra elimizde olur".
+   Boş = bilinmiyor, o zaman ekran yalnız süreyi yazmaya devam eder (bugünkü hâl).
+2. Yargının kendisi `domain-core`'da — `purchase-summary.ts`'in künyesi zaten bu kapıyı bırakıyor:
+   *"'tamamlandı mı', 'geç kaldı mı' gibi yargılar burada YOK; özeti `domain-core` türetir."*
+   Önerim saf bir fonksiyon: `purchaseDelay({ sentAt, leadTimeDays, today })` → `'on_time' |
+   'due' | 'late'`. Takvim dışarıdan verilsin (motor saat okumaz — `transferDecision`'ın deseni).
+3. Tolerans parametrik olsun (varsayılan öneri: teslim süresi + 2 gün geçince `late`). Sabit bir
+   sayı yazmak, hafta sonunu ve resmî tatili gecikme saymak olurdu.
+
+**Ekran tarafı bende:** ton (`sent` mavi kalır, `late` amber olur), sekme rozetine "N gecikmiş"
+ve tedarikçi kartında "bu firma ortalama kaç günde gönderiyor" — ilki gelir gelmez bağlarım.
+
+## §5 — Taslak kalemi için iki kapı (operasyon yüzeyi → arka uç, 02.08)
+
+**1. `PurchaseOrderService.addDraftLine(orderId, line)`** — var olan bir taslağa TEK kalem ekleme.
+
+Bugün ekranda kalem **adedi ve alış fiyatı değiştirilebiliyor, kalem çıkarılabiliyor**, ve elle
+sipariş penceresi kalemleriyle birlikte tek turda doğuyor (`createDraft`). Eksik olan tek şey:
+açılmış bir taslağa sonradan kalem eklemek.
+
+Kendim yazmadım çünkü **kural kopyası olurdu**: "bu varyantın bu tedarikçideki kod eşlemesi hangisi
+ve beklenen alış son alıştan mı gelir" kararı `createDraft`'ın içinde (`byVariant` haritası +
+`unitPrice ?? lastPurchasePrice`). Aynı kararı eylemde ikinci kez yazmak, bir gün ikisinin farklı
+eşleme seçmesi demekti — sipariş listesi tedarikçiye yanlış kodla giderdi. Doğrusu `createDraft`'ın
+o bölümünün tek satırlık bir kapıya çıkması ve `createDraft`'ın da onu çağırması.
+
+**2. Durum kısıtı: gönderilmiş siparişin kalemi değişmesin.** Bugün bu kural `actions.ts`'te
+duruyor (`requireDraft` — sipariş okunur, `draft` değilse reddedilir) ve orada durması **yetersiz**:
+kayıt bütünlüğü bir ekran nezaketi değil. Tedarikçiye 10 koli yazıp kaydı 6'ya çekmek, gelen malı
+"fazla" gösterir ve fark raporu yalan söyler. Kalıcı yeri veri: `purchase_order_item` üzerinde
+siparişin durumuna bakan bir tetikleyici ya da servis düzeyinde tek kapı.
+
+**Ekran tarafı bende:** sipariş penceresindeki "+ Kalem ekle" şeridi — birinci madde iner inmez
+bağlarım (form zaten yazılı, elle sipariş penceresinde çalışıyor).

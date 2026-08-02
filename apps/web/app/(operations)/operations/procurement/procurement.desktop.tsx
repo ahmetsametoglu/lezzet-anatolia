@@ -1,20 +1,23 @@
 import { Button } from '@/components/operation/ui/button';
+import { Chip } from '@/components/operation/ui/chip';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { Tabs } from '@/components/operation/ui/tabs';
+import { Select } from '@/components/operation/form/select';
 import { OrdersTab } from './orders-tab';
 import { SuggestionGroupCard, SuggestionsEmpty, SupplierCard } from './procurement-sections';
-import { TAB_LABEL, type ProcurementTab } from './procurement-url';
+import { statusLabel } from './procurement-labels';
+import { ORDER_STATUS_FILTERS, TAB_LABEL, type ProcurementUrlState } from './procurement-url';
 import type { ProcurementData, PurchaseOrderRowView, SupplierCardView } from './procurement-types';
 
 // Tedarik — masaüstü. Yerleşim `.dc`'ye göre: başlık + üç sekme; öneri kartları tam genişlik,
-// sipariş listesi tablo, tedarikçi kartları iki kolon. Başlıktaki "+ Stok girişi / + Tedarik
-// siparişi" düğmeleri diyaloglarıyla birlikte iner (BEKLEYEN(09.14)) — ölü düğme konmaz.
+// sipariş listesi tablo, tedarikçi kartları iki kolon. Başlıktaki "+ Stok girişi" düğmesi burada
+// YOK ve bu bilinçli: mal kabul bu sayfadan çıktı, Stok ekranının işi (kapsam kararı 02.08).
 
 export interface ProcurementViewProps {
   data: ProcurementData;
-  tab: ProcurementTab;
-  onTab: (tab: ProcurementTab) => void;
+  urlState: ProcurementUrlState;
+  onFilter: (patch: Partial<ProcurementUrlState>) => void;
   navPending: boolean;
   /** Sunucudan gelen ilk sayfa + action ile eklenenler. */
   orders: PurchaseOrderRowView[];
@@ -27,13 +30,24 @@ export interface ProcurementViewProps {
   actionError: string | null;
   onEditSupplier: (supplier: SupplierCardView | null) => void;
   onOpenOrder: (orderId: string) => void;
+  onNewOrder: () => void;
 }
 
 export function ProcurementDesktop(props: ProcurementViewProps) {
-  const { data, tab, onTab, navPending, orders, hasMoreOrders, loadingMoreOrders, onLoadMoreOrders, actionError } = props;
+  const { data, urlState, onFilter, navPending, orders, hasMoreOrders, loadingMoreOrders, onLoadMoreOrders, actionError } =
+    props;
+  const tab = urlState.tab;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <PageHeader title="Tedarik" subtitle={subtitleOf(data, tab)}>
+      <PageHeader title="Tedarik" subtitle={subtitleOf(data, urlState)}>
+        {/* Elle sipariş yalnız kendi sekmesinde: öneri sekmesindeyken "yeni sipariş" demek, ekranın
+            o an önerdiği işi görmezden gelmeye davet etmek olurdu. */}
+        {tab === 'orders' ? (
+          <Button variant="primary" size="sm" onClick={props.onNewOrder}>
+            + Tedarik siparişi
+          </Button>
+        ) : null}
         {/* Yeni tedarikçi HER sekmede: kart olmadan sipariş de olmuyor, kurulumun ilk adımı bu. */}
         <Button variant="secondary" size="sm" onClick={() => props.onEditSupplier(null)}>
           + Tedarikçi
@@ -53,8 +67,35 @@ export function ProcurementDesktop(props: ProcurementViewProps) {
           { key: 'suppliers', label: TAB_LABEL.suppliers, count: data.suppliers?.length ?? null },
         ]}
         active={tab}
-        onSelect={onTab}
+        onSelect={(next) => onFilter({ tab: next })}
       />
+
+      {/* Süzgeç şeridi YALNIZ sipariş sekmesinde — öteki iki sekmenin listesi zaten sınırlı ve
+          süzülecek bir şeyi yok. Sayılı iki-üç seçenek `Chip`, açık uçlu süzgeç `Select variant="chip"`
+          (sipariş/fiyat ekranlarının ayrımı). */}
+      {tab === 'orders' ? (
+        <div className="flex flex-wrap items-center gap-2 border-b border-ops-line-soft px-6 py-2.5">
+          {ORDER_STATUS_FILTERS.map((s) => (
+            <Chip key={s} active={urlState.status === s} onClick={() => onFilter({ status: s })}>
+              {s === 'all' ? 'Tümü' : statusLabel(s)}
+            </Chip>
+          ))}
+          <span className="ml-1 h-4 w-px bg-ops-line" />
+          <Select
+            variant="chip"
+            value={urlState.supplier}
+            onChange={(supplier) => onFilter({ supplier })}
+            placeholder="+ tedarikçi"
+            // İlk seçenek süzgeci KALDIRIR: boş değerli bir satır olmadan çip bir kez dolunca
+            // temizlenemezdi — operatör süzgeci kurmanın yolunu bulur, bozmanın yolunu bulamazdı.
+            options={[
+              { value: '', label: 'Her tedarikçi' },
+              ...(data.supplierOptions ?? []).map((s) => ({ value: s.id, label: s.name })),
+            ]}
+          />
+        </div>
+      ) : null}
+
       {/* Sekme turu sürerken içerik soluklaşır — tıklamanın karşılığı görünür (09.2 navPending).
           Sipariş sekmesi kendi `busy` yeteneğini kullanır: tablo satırları yerinde soluklaşır. */}
       <div
@@ -69,6 +110,7 @@ export function ProcurementDesktop(props: ProcurementViewProps) {
         {tab === 'orders' ? (
           <OrdersTab
             rows={orders}
+            today={data.today}
             hasMore={hasMoreOrders}
             loadingMore={loadingMoreOrders}
             onLoadMore={onLoadMoreOrders}
@@ -82,18 +124,19 @@ export function ProcurementDesktop(props: ProcurementViewProps) {
   );
 }
 
-function subtitleOf(data: ProcurementData, tab: ProcurementTab): string {
-  if (tab === 'suggestions' && data.suggestions) {
+function subtitleOf(data: ProcurementData, urlState: ProcurementUrlState): string {
+  if (urlState.tab === 'suggestions' && data.suggestions) {
     const lineCount = data.suggestions.reduce((sum, g) => sum + g.lines.length, 0);
     return lineCount === 0 ? 'Eşik altında ürün yok' : `${data.suggestions.length} tedarikçide ${lineCount} kalem eşik altında`;
   }
-  if (tab === 'orders' && data.pendingOrderCount !== null) {
-    // "Yolda ne var" — gönderilmiş ama kapanmamış sipariş. Sıfır da bir haberdir (beklenen yok).
+  if (urlState.tab === 'orders' && data.pendingOrderCount !== null) {
+    // "Yolda ne var" — gönderilmiş ama kapanmamış sipariş. Sayı SÜZGEÇTEN bağımsızdır ve öyle
+    // kalmalı: bu, ekranın daralttığı bakışın değil işin gerçeğinin sorusu. Sıfır da bir haberdir.
     return data.pendingOrderCount === 0
       ? 'Yolda bekleyen sipariş yok'
       : `${data.pendingOrderCount} sipariş yolda — kabul bekliyor`;
   }
-  if (tab === 'suppliers' && data.suppliers) return `${data.suppliers.length} tedarikçi`;
+  if (urlState.tab === 'suppliers' && data.suppliers) return `${data.suppliers.length} tedarikçi`;
   return 'Sistem hazırlar, siparişi siz verirsiniz';
 }
 
@@ -105,7 +148,7 @@ function SuggestionsPane({ data, onCreateDraft, creatingFor }: ProcurementViewPr
       {/* Tasarımın açıklama cümlesi: eşik depo bazlı bir gerçek, öneri sistemden, karar admin'den. */}
       <p className="font-ops-body text-ops-sm text-ops-muted">
         Asgari stok eşiğinin altına düşen ürünler, tedarikçiye göre gruplu. Eşik depo bazlıdır — aynı ürün iki depoda
-        iki satır olarak çıkabilir. Sistem önerir, siparişi siz verirsiniz.
+        iki satır olarak çıkabilir. Yoldaki mal hesaba katılmıştır. Sistem önerir, siparişi siz verirsiniz.
       </p>
       {groups.map((group) => (
         <SuggestionGroupCard

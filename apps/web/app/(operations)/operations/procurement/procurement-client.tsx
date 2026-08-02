@@ -5,15 +5,17 @@ import { useRouter } from 'next/navigation';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
 import { createDraftFromSuggestionAction, loadMorePurchaseOrdersAction } from './actions';
-import { OrderSendDialog } from './order-send-dialog';
+import { ManualOrderDialog } from './manual-order-dialog';
+import { PurchaseOrderDialog } from './purchase-order-dialog';
 import { ProcurementDesktop } from './procurement.desktop';
 import { ProcurementMobile } from './procurement.mobile';
 import { SupplierDialog } from './supplier-dialog';
-import { procurementUrl, type ProcurementTab, type ProcurementUrlState } from './procurement-url';
+import { procurementUrl, toOrderFilters, type ProcurementUrlState } from './procurement-url';
 import type { ProcurementData, PurchaseOrderRowView, SupplierCardView } from './procurement-types';
 
 // Tedarik ekranı client kökü (Sapma 3): durum burada, sunum web/mobil olarak çatallanır.
 // SEKME GERÇEK gezinmedir: okuma sunucuda sekmeye bağlı — sığ yazsaydık öteki sekme boş açılırdı.
+// Süzgeçler de öyle: sunucuda uygulanıyorlar (`listRows`), yani adres değişmeli.
 
 interface ProcurementClientProps {
   data: ProcurementData;
@@ -26,15 +28,15 @@ interface ProcurementClientProps {
 export function ProcurementClient({ data, device, urlState, canCancelOrders }: ProcurementClientProps) {
   const resolvedDevice = useDevice(device);
   const router = useRouter();
-  // Sekme turu sürerken ekran karşılık vermeli (09.2 navPending dersi): içerik soluklaşır.
+  // Sekme/süzgeç turu sürerken ekran karşılık vermeli (09.2 navPending dersi): içerik soluklaşır.
   const [pending, startNav] = useTransition();
 
-  const onTab = (tab: ProcurementTab) => {
-    startNav(() => router.replace(procurementUrl({ tab }), { scroll: false }));
+  const onFilter = (patch: Partial<ProcurementUrlState>) => {
+    startNav(() => router.replace(procurementUrl({ ...urlState, ...patch }), { scroll: false }));
   };
 
   // ── Sipariş listesi: ilk sayfa sunucudan, devamı action ile EKLENİR ──
-  // Sunucu verisi değişince (sekme dönüşü/revalidate) eklenen sayfalar SIFIRLANIR; yoksa eski
+  // Sunucu verisi değişince (sekme dönüşü/süzgeç/revalidate) eklenen sayfalar SIFIRLANIR; yoksa eski
   // okumanın satırları yeni listede kalır (fiyat ekranının deseni).
   const [extraOrders, setExtraOrders] = useState<PurchaseOrderRowView[]>([]);
   const [ordersCursor, setOrdersCursor] = useState(data.ordersCursor);
@@ -47,7 +49,8 @@ export function ProcurementClient({ data, device, urlState, canCancelOrders }: P
   const onLoadMoreOrders = () => {
     if (!ordersCursor || loadingMore) return;
     setLoadingMore(true);
-    void loadMorePurchaseOrdersAction(ordersCursor)
+    // Süzgeç imleçle BİRLİKTE gider: ikinci sayfa birincinin ölçütünü taşımazsa liste sessizce karışır.
+    void loadMorePurchaseOrdersAction(ordersCursor, toOrderFilters(urlState))
       .then(({ data: page }) => {
         // Hata sessiz: liste olduğu yerde kalır, tetikleyici yeniden denenebilir (sunucu = gerçek).
         if (!page) return;
@@ -69,14 +72,11 @@ export function ProcurementClient({ data, device, urlState, canCancelOrders }: P
     if (supplierState !== 'closed' && supplierState !== 'new' && !editingSupplier) setSupplierState('closed');
   }, [supplierState, editingSupplier]);
 
-  // Gönderim penceresi bir SİPARİŞE bağlı; kimlikle tutulur ki sunucu tazelendiğinde pencere eski
-  // satırın kopyasını göstermesin. Sipariş listeden düşerse pencere kendiliğinden kapanır.
-  const orders = [...(data.orders ?? []), ...extraOrders];
-  const [sendingOrderId, setSendingOrderId] = useState<string | null>(null);
-  const sendingOrder = orders.find((o) => o.id === sendingOrderId) ?? null;
-  useEffect(() => {
-    if (sendingOrderId && !sendingOrder) setSendingOrderId(null);
-  }, [sendingOrderId, sendingOrder]);
+  // Sipariş penceresi yalnız KİMLİK tutar: içeriğini kendi okur (kalemler + tedarikçiye gidecek
+  // metin). Satırın kopyasını taşısaydı, pencere içinde adet değiştikten sonra ekranda eski sayı
+  // kalırdı — pencere kendi gerçeğinin sahibi.
+  const [openOrderId, setOpenOrderId] = useState<string | null>(null);
+  const [manualOpen, setManualOpen] = useState(false);
 
   // Taslak açma — hangi tedarikçinin düğmesinin sürdüğünü kimlikle tutuyoruz: tek bayrak olsaydı
   // bir gruba basmak bütün kartların düğmesini kilitlerdi.
@@ -94,22 +94,21 @@ export function ProcurementClient({ data, device, urlState, canCancelOrders }: P
         else if (result.data) {
           // Öneri listesi de yeniden okunur: action `revalidatePath` yapıyor ama istemci yönlendirme
           // önbelleği eski RSC yükünü bir süre tutuyor ve sekmeye dönüldüğünde bayat liste görünürdü.
-          //
-          // ⚠ Tazeleme satırı DÜŞÜRMEZ: öneri motoru açık siparişleri henüz görmüyor, yani eşik hâlâ
-          // delik ve satır haklı olarak duruyor (`tedarik-arka-uc-talebi.md §3`). Kural inince
-          // "N yolda" ipucu ve düşme buraya bağlanacak — `BEKLEYEN(09.14)`.
+          // Satır artık DÜŞMEZ de değil: taslak gönderilene kadar eşik hâlâ delik ve motor bunu
+          // "taslakta" olarak ayrı gösteriyor — gönderildiği anda satır listeden çıkar.
           router.refresh();
-          setSendingOrderId(result.data.orderId);
-          onTab('orders');
+          setOpenOrderId(result.data.orderId);
+          onFilter({ tab: 'orders' });
         }
       })
       .finally(() => setCreatingFor(null));
   };
 
+  const orders = [...(data.orders ?? []), ...extraOrders];
   const view = {
     data,
-    tab: urlState.tab,
-    onTab,
+    urlState,
+    onFilter,
     navPending: pending,
     orders,
     hasMoreOrders: ordersCursor !== null,
@@ -119,7 +118,8 @@ export function ProcurementClient({ data, device, urlState, canCancelOrders }: P
     creatingFor,
     actionError,
     onEditSupplier: (supplier: SupplierCardView | null) => setSupplierState(supplier ? supplier.id : 'new'),
-    onOpenOrder: setSendingOrderId,
+    onOpenOrder: setOpenOrderId,
+    onNewOrder: () => setManualOpen(true),
   };
 
   return (
@@ -128,26 +128,29 @@ export function ProcurementClient({ data, device, urlState, canCancelOrders }: P
       {supplierState !== 'closed' ? (
         <SupplierDialog key={supplierState} editing={editingSupplier} onClose={() => setSupplierState('closed')} />
       ) : null}
-      {sendingOrder ? (
-        <OrderSendDialog
-          key={sendingOrder.id}
-          order={sendingOrder}
-          supplierPhone={phoneOf(data, sendingOrder.supplierName)}
+      {openOrderId ? (
+        <PurchaseOrderDialog
+          key={openOrderId}
+          orderId={openOrderId}
+          today={data.today}
           canCancel={canCancelOrders}
-          onClose={() => setSendingOrderId(null)}
+          onClose={() => setOpenOrderId(null)}
+        />
+      ) : null}
+      {manualOpen ? (
+        <ManualOrderDialog
+          suppliers={data.supplierOptions ?? []}
+          warehouses={data.warehouseOptions ?? []}
+          onClose={() => setManualOpen(false)}
+          // Yeni sipariş doğar doğmaz penceresi açılır: açılıp gönderilmeyen sipariş yalnız bizde
+          // kalır, o yüzden akış operatörü gönderime taşır (öneriden açılan taslağın aynı kuralı).
+          onCreated={(orderId) => {
+            setManualOpen(false);
+            router.refresh();
+            setOpenOrderId(orderId);
+          }}
         />
       ) : null}
     </>
   );
-}
-
-/**
- * Siparişin tedarikçi telefonu — WhatsApp yolunun anahtarı.
- *
- * Kartlar yalnız kendi sekmesinde okunduğu için ADLA eşleştiriliyor; eşleşme bulunamazsa WhatsApp
- * düğmesi çizilmez ve pencere sebebini söyler. Doğrusu satırın `supplierId` taşıması — sipariş
- * detayı ekranıyla birlikte gelecek (`BEKLEYEN(09.14)`).
- */
-function phoneOf(data: ProcurementData, supplierName: string): string | null {
-  return (data.suppliers ?? []).find((s) => s.name === supplierName)?.phone ?? null;
 }

@@ -5,7 +5,7 @@ import { Button } from '@/components/operation/ui/button';
 import { ErrorState } from '@/components/operation/ui/error-state';
 import { InfoIcon } from '@/components/operation/ui/icons';
 import { money } from '@/components/operation/ui/format';
-import type { SuggestionGroupView, SupplierCardView } from './procurement-types';
+import type { SuggestionGroupView, SuggestionLineView, SupplierCardView } from './procurement-types';
 
 // İki cihaz görünümünün ORTAK içerik parçaları — masaüstü/mobil yalnız yerleşimi değiştirir
 // (grid ↔ tek kolon); kart ve satırların kendisi tek nüsha.
@@ -55,9 +55,10 @@ export function SuggestionGroupCard({ group, onCreateDraft, creating }: Suggesti
           >
             <div className="mr-auto flex min-w-0 flex-col gap-px">
               <span className="truncate font-ops-body text-ops-base font-medium text-ops-ink">{line.title}</span>
-              {line.supplierCode ? (
-                <span className="font-ops-body text-ops-xs text-ops-muted">kod: {line.supplierCode}</span>
-              ) : null}
+              <span className="truncate font-ops-body text-ops-xs text-ops-muted">
+                {line.supplierCode ? `kod: ${line.supplierCode}` : null}
+                {line.supplierCode ? <LineHints line={line} lead=" · " /> : <LineHints line={line} lead="" />}
+              </span>
             </div>
             {/* Satır DEPOSUNU söyler: eşik depo bazlı bir gerçek — aynı ürün iki depoda iki satırdır. */}
             <Badge tone="blue" outline className="font-ops-mono">
@@ -71,6 +72,28 @@ export function SuggestionGroupCard({ group, onCreateDraft, creating }: Suggesti
       </ul>
     </section>
   );
+}
+
+/**
+ * Satırın "neden hâlâ burada" ipuçları — üçü de AYRI, çünkü üçü ayrı şey (`ReorderLine` künyesi).
+ *
+ * - **yolda** — gönderilmiş sipariş. Öneri bunu zaten düşmüştür; satır duruyorsa yolda olan
+ *   yetmiyor demektir. Yazılıyor ki operatör "ama ben sipariş vermiştim" diye ikincisini açmasın.
+ * - **taslakta** — açılmış ama GÖNDERİLMEMİŞ. Eşiğe girmez ve girmemeli: göndermeyi unuttuğumuz
+ *   bir taslağın eksiği kapatmış görünmesi, sessizce boş raf demekti. Uyarı tam da bu yüzden var.
+ * - **hedefsiz** — açık siparişte var ama hangi depoya geleceği yazılmamış. Hiçbir depoya sayılmaz
+ *   (varsaymak yasak, K6) ama gizlenmez de: ölçemediğimizi sıfır saymıyoruz (`CLAUDE.md §1`).
+ * - **başka depoda** — sipariş yerine TRANSFER seçeneği. Yargı değil sayı: "şuradan çek" demiyoruz,
+ *   öteki deponun kendi eşiğini bilmiyoruz. Kararı operatör verir, transferi Stok ekranı yazar.
+ */
+function LineHints({ line, lead }: { line: SuggestionLineView; lead: string }) {
+  const parts: string[] = [];
+  if (line.incomingQty > 0) parts.push(`${line.incomingQty} yolda`);
+  if (line.draftQty > 0) parts.push(`${line.draftQty} taslakta`);
+  if (line.unassignedQty > 0) parts.push(`${line.unassignedQty} hedefsiz siparişte`);
+  if (line.elsewhere.length > 0) parts.push(`başka depoda ${line.elsewhere.map((w) => `${w.code} ${w.qty}`).join(', ')}`);
+  if (parts.length === 0) return null;
+  return <span className="text-ops-strong">{`${lead}${parts.join(' · ')}`}</span>;
 }
 
 /** Boş kuyruk = temiz hâl — bir eksiklik gibi gösterilmez. */
