@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Link } from '@/i18n/navigation';
-import { signOutAction } from '@/lib/auth/actions';
 import { useAccount } from './account-context';
+import { useSignOut } from './use-sign-out.hook';
 import messages from './account-messages.json';
 
 /**
@@ -26,7 +26,7 @@ export function AccountEntry({ locale }: { locale: Locale }) {
   const t = messages[locale];
   const account = useAccount();
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const { busy, signOut } = useSignOut();
   const box = useRef<HTMLDivElement>(null);
 
   // Dışarı tıklayınca kapanır: açık kalan bir menü, sayfanın geri kalanını tıklanmaz gibi gösteriyor.
@@ -48,14 +48,6 @@ export function AccountEntry({ locale }: { locale: Locale }) {
   }
 
   const label = account.name.split(' ')[0] || account.email?.split('@')[0] || t.account;
-
-  const signOut = async () => {
-    setBusy(true);
-    await signOutAction();
-    // Tam yenileme: oturum sunucuda çözülüyor ve istemcideki her durum (sepet, adres) sıfırdan
-    // kurulmalı — yumuşak tazeleme ekranda önceki kişinin verisini bırakabilirdi.
-    window.location.reload();
-  };
 
   return (
     <div ref={box} className="relative">

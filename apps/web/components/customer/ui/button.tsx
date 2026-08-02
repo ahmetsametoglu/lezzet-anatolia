@@ -95,6 +95,19 @@ export function buttonClass({ variant = 'primary', size = 'md', fullWidth, class
     .join(' ');
 }
 
+/**
+ * **İkon düğmesi dokunma alanı** — ✕ kapat/temizle gibi tek glifli düğmeler için (03.08).
+ *
+ * Envanter mobil için açık bir taban veriyor: *"Mobil dokunma hedefleri en az 44px"* ve K3'te
+ * *"metin küçük olsa da dokunma alanı 44px"*. Yüzeydeki ✕'lerin hiçbirinde alan yoktu — glif ~16px
+ * ve basılabilir kutu da o kadardı. Bunlar en sık ıskalanan hedefler: panel kapatma, arama
+ * temizleme, kupon kaldırma.
+ *
+ * Glif BÜYÜMEZ, kutu büyür. Dar bir kabuğun (hap, başlık satırı) içinde çağıran negatif kenar
+ * boşluğu ekler (`-my-2` gibi) ki kutu ebeveyni uzatmasın — büyüyen tek şey dokunulabilir alandır.
+ */
+export const iconHitClass = 'flex size-11 flex-none cursor-pointer items-center justify-center transition-colors';
+
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;

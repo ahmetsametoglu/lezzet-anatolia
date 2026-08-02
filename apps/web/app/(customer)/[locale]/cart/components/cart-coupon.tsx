@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
-import { Button } from '@/components/customer/ui/button';
+import { Button, iconHitClass } from '@/components/customer/ui/button';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CouponFailure } from '@/lib/cart/cart-types';
@@ -71,7 +71,7 @@ export function CartCoupon({ t, locale }: CartCouponProps) {
               type="button"
               onClick={clearCoupon}
               aria-label={t.coupon.remove}
-              className="flex-none cursor-pointer font-normal transition-colors hover:text-terracotta"
+              className={`${iconHitClass} -my-2 font-normal hover:text-terracotta`}
             >
               ✕
             </button>

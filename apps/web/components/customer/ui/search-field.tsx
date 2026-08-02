@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
+import { iconHitClass } from './button';
 
 /**
  * K4 · Arama Alanı — site başlığındaki ürün araması.
@@ -69,7 +70,7 @@ export function SearchField({ placeholder, clearLabel, fullWidth = false, defaul
             setValue('');
             search('');
           }}
-          className="cursor-pointer text-sand-600 transition-colors hover:text-ink"
+          className={`${iconHitClass} -my-2 text-sand-600 hover:text-ink`}
         >
           ✕
         </button>

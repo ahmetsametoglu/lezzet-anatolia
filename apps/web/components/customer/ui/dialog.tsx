@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, type ReactNode } from 'react';
+import { iconHitClass } from './button';
 
 /**
  * Açık panellerin yığını. Esc yalnız EN ÜSTTEKİNİ kapatır — iç içe panel doğduğu gün tek tuş iki
@@ -99,7 +100,7 @@ export function Dialog({ title, closeLabel, onClose, maxWidth = 420, children }:
             type="button"
             onClick={onClose}
             aria-label={closeLabel}
-            className="cursor-pointer font-sans text-note text-muted hover:text-ink"
+            className={`${iconHitClass} -my-2.5 -mr-2.5 font-sans text-note text-muted hover:text-ink`}
           >
             ✕
           </button>

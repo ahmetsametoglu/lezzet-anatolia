@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
+import { useDevice } from '@/lib/use-device';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { entryOf, splitByRoute } from '@/lib/cart/cart-types';
 import { clientStripe } from '@/lib/stripe-client';
@@ -55,6 +56,13 @@ function newAttemptKey(): string {
 }
 
 export function CheckoutClient({ t, locale, device, authenticated, shippingOrder, customer }: CheckoutClientProps) {
+  /**
+   * Cihaz İSTEMCİDE doğrulanır (03.08 · denetim bulgusu) — sunucunun UA tahmini bir başlangıç
+   * değeri, son söz değil. Bu dosya yüzeydeki 13 istemciden **tek**i olarak `device` prop'unu
+   * doğrudan okuyordu; tahmin yanılırsa ya da müşteri ekranı döndürürse checkout tek başına yanlış
+   * düzende kalıyordu — hem de dönüşümün en pahalı ekranında.
+   */
+  const resolved = useDevice(device);
   const router = useRouter();
   const { view, ready: cartReady, failed: cartFailed, reload: reloadCart, coupon } = useCart();
   const [snapshot, setSnapshot] = useState<CheckoutSnapshot>(EMPTY);
@@ -243,7 +251,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
   const props: CheckoutViewProps = {
     t,
     locale,
-    compact: device === 'mobile',
+    compact: resolved === 'mobile',
     cart: view,
     cartReady,
     cartFailed,
@@ -279,7 +287,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
     onVerified: () => router.refresh(),
   };
 
-  return device === 'mobile' ? <CheckoutMobile {...props} /> : <CheckoutDesktop {...props} />;
+  return resolved === 'mobile' ? <CheckoutMobile {...props} /> : <CheckoutDesktop {...props} />;
 }
 
 /** Ret sebebi → müşteri diline. Sunucu kodu döner, metin ekranın sorumluluğudur. */

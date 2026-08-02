@@ -1,6 +1,7 @@
 'use client';
 
 import type { Locale } from '@lezzet/i18n';
+import { iconHitClass } from '@/components/customer/ui/button';
 import messages from './cart-messages.json';
 
 /**
@@ -47,7 +48,7 @@ export function CartUndo({ locale, name, open, onUndo, onClose }: CartUndoProps)
           onClick={onClose}
           aria-label={t.dismiss}
           title={t.dismiss}
-          className="cursor-pointer font-sans text-body-sm text-closed-line transition-colors hover:text-cream"
+          className={`${iconHitClass} -my-2 font-sans text-body-sm text-closed-line hover:text-cream`}
         >
           ✕
         </button>

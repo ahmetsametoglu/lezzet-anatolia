@@ -4,6 +4,7 @@ import { LOCALES } from '@lezzet/i18n';
 import { brand } from '@lezzet/brand';
 import { Link } from '@/i18n/navigation';
 import { LocaleLinks } from './locale-switch';
+import { MobileMenu } from './mobile-menu';
 import { ShareButton } from './share-button';
 import { PlaceChip } from '@/components/customer/delivery/place-chip';
 import { CartBadge } from '@/components/customer/cart/cart-badge';
@@ -196,7 +197,10 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
       ) : isMobile ? (
         <>
           <header className="flex items-center justify-between border-b border-sand-300 px-4 py-3">
-            <span className="font-sans text-icon-sm font-bold text-ink">☰</span>
+            {/* Menü GERÇEK (03.08): burası uzun süre handler'sız bir `<span>`ti ve mobil müşterinin
+                hesabına ulaşacağı, oturumunu kapatacağı hiçbir yol yoktu — `AccountEntry` yalnız
+                masaüstü dalında monte oluyordu. "Statik ≠ işlevsiz" (CLAUDE.md §3). */}
+            <MobileMenu locale={locale} />
             <Link href="/" className="cursor-pointer">
               <img src="/logo.jpg" alt={brand.name} className="h-10 mix-blend-multiply" />
             </Link>

@@ -29,7 +29,9 @@
       "orders": "Siparişlerim",
       "support": "Taleplerim",
       "backToCatalog": "← Kataloğa dön"
-    }
+    },
+    "menu": "Menü",
+    "close": "Kapat"
   },
   "fr": {
     "announcement": {
@@ -61,7 +63,9 @@
       "orders": "Mes commandes",
       "support": "Mes demandes",
       "backToCatalog": "← Retour au catalogue"
-    }
+    },
+    "menu": "Menu",
+    "close": "Fermer"
   },
   "de": {
     "announcement": {
@@ -93,6 +97,8 @@
       "orders": "Meine Bestellungen",
       "support": "Meine Anfragen",
       "backToCatalog": "← Zurück zum Katalog"
-    }
+    },
+    "menu": "Menü",
+    "close": "Schließen"
   }
 }
