@@ -7,6 +7,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { meetsMlor } from '@lezzet/domain-core';
+import { fromCents, toCents } from '@lezzet/helper';
 import { resolveLocalizedText, type ReceiveIntakeResult } from '@lezzet/types';
 import { repriceVariants } from '@/lib/pricing/auto-price';
 
@@ -29,6 +30,35 @@ export interface IntakeFormLine {
   expiryDate: string;
   lotNumber?: string | null;
   location?: string | null;
+}
+
+/**
+ * Admin'in doldurduğu satır — **maliyeti taşıyan tek tip** (09.14).
+ *
+ * ── NEDEN AYRI TİP, `IntakeFormLine`'a ALAN DEĞİL ────────────────────────────
+ * Depocunun fiyat görmemesi bir ekran kuralı değil, bir TİP sınırıdır: alanı ortak tipe koysaydık
+ * depo ekranı onu "isteğe bağlı" diye gönderebilirdi ve sınır yalnız iyi niyetle ayakta kalırdı.
+ * İki ayrı tip, iki ayrı kapı — depocu yolu fiyat gönderemez, admin yolu göndermeyi unutmaz.
+ *
+ * ── MALİYET SATIRIN, VARYANTIN DEĞİL ─────────────────────────────────────────
+ * Talep `Record<variantId, …>` önermişti; o harita aynı varyantın İKİ satırını birbirine bağlardı.
+ * Ama bu dosya aynı varyantın birden çok satırda gelebileceğini zaten biliyor (`differencesOf`
+ * adetleri TOPLUYOR, üzerine yazmıyor): farklı son tarih ya da farklı lot ayrı satırdır ve aynı
+ * sevkiyatta farklı fiyata alınmış olabilir. Varyant anahtarlı harita o farkı sessizce yutardı.
+ */
+export interface PurchaseIntakeLine extends IntakeFormLine {
+  /**
+   * Birim alış fiyatı — **tamsayı cent** (`STACK §8`). Adlandırma sözleşmenin parçası: `…Cents` ile
+   * bitmeyen bir para alanı yoktur, çünkü `unitCost: number` gören biri euro mu cent mi olduğunu
+   * bilemez ve hata satıra bakınca GÖRÜNMEZ. (Bu ekran birim maliyeti bölerek üretiyor —
+   * toplam ÷ paket sayısı — ve o bölme kayan noktada kuruş kaçırır.)
+   *
+   * Euro'ya çevrim tek yerde, DB sınırında (`fromCents`, aşağıda) — dosyanın geri kalanı cent.
+   *
+   * `null` = "bu satırın fiyatını bilmiyorum" ve bu meşrudur: PO'lu kabulde admin yalnız SAPAN
+   * satırı düzeltir, ötekiler siparişten eşleşmeye devam eder.
+   */
+  unitCostCents: number | null;
 }
 
 /** PO'dan dolu gelen form satırı — beklenen adet + ürün adı; fiyat yok. */
@@ -94,12 +124,14 @@ type IntakeOutcome =
   | { status: 'empty' };
 
 /**
- * **Mal kabul.** Satırlar partiye dönüşür, PO kapanır, son alış fiyatı güncellenir — hepsi tek
- * transaction'da (RPC). Bu kapının eklediği üç şey: PO'dan maliyet eşlemesi, MLOR uyarısı ve
- * beklenen–gelen farkı.
+ * **Mal kabul — DEPOCU yolu.** Satırlar partiye dönüşür, PO kapanır, son alış fiyatı güncellenir —
+ * hepsi tek transaction'da (RPC). Bu kapının eklediği üç şey: PO'dan maliyet eşlemesi, MLOR uyarısı
+ * ve beklenen–gelen farkı.
  *
  * Fark **hata değildir**: tedarikçi eksik ya da fazla göndermiş olabilir; kayıt gerçeği yazar,
  * sipariş kapanır ve fark görünür kalır (DOMAIN §16).
+ *
+ * Fiyatlı giriş için `receivePurchase` (09.14) — bu kapı fiyat KABUL ETMEZ ve etmemeli.
  */
 export async function receiveGoods(input: {
   /** Mal HANGİ depoya girdi (K6) — zorunlu: satın alma depo-üstüdür ama mal bir kapıdan girer. */
@@ -110,10 +142,45 @@ export async function receiveGoods(input: {
   date?: string;
   note?: string | null;
 }): Promise<IntakeOutcome> {
+  // Satırlar fiyatsız GİRER ve fiyatsız kalır: `null` burada "bilmiyorum" demek, ve çekirdek onu
+  // PO'dan doldurur. Depocu yolunun fiyata dair söyleyebileceği hiçbir şey yok.
+  return intake({ ...input, lines: input.lines.map((line) => ({ ...line, unitCostCents: null })) });
+}
+
+/**
+ * **Satın alma kaydı** — admin'in "Stok girişi" yolu (09.14).
+ *
+ * `receiveGoods`'tan tek farkı satırların maliyet taşıması; envanter tarafı (parti, PO kapanışı,
+ * MLOR uyarısı, fark raporu, yeniden fiyatlama) birebir aynıdır ve aynı çekirdekten geçer — iki
+ * ayrı akış yazsaydık biri gün gelir ötekinden ayrılırdı.
+ *
+ * İki durumu birden karşılar: **PO'suz doğrudan alım** (maliyet yalnız buradan gelebilir — eskiden
+ * parti maliyetsiz doğuyordu) ve **PO'lu kabulde fiyat düzeltmesi** (fatura siparişten farklı
+ * geldiyse gerçek fiyat yazılır; son alış fiyatı ve `auto_price`'ın tabanı onu izler).
+ */
+export async function receivePurchase(input: {
+  warehouseId: string;
+  lines: readonly PurchaseIntakeLine[];
+  purchaseOrderId?: string | null;
+  supplierId?: string | null;
+  date?: string;
+  note?: string | null;
+}): Promise<IntakeOutcome> {
+  return intake(input);
+}
+
+async function intake(input: {
+  warehouseId: string;
+  lines: readonly PurchaseIntakeLine[];
+  purchaseOrderId?: string | null;
+  supplierId?: string | null;
+  date?: string;
+  note?: string | null;
+}): Promise<IntakeOutcome> {
   if (input.lines.length === 0) return { status: 'empty' };
 
   const db = serviceDb();
-  const costs = await unitCostsOf(db, input.purchaseOrderId);
+  const costsInCents = await unitCostsOf(db, input.purchaseOrderId);
   const expected = await expectedQtysOf(db, input.purchaseOrderId);
 
   const result = await new StockIntakeService(db).receive({
@@ -122,8 +189,29 @@ export async function receiveGoods(input: {
     purchaseOrderId: input.purchaseOrderId,
     date: input.date,
     note: input.note,
-    // Maliyet BURADA eşleşir: depocunun gönderdiği satırda yoktur, PO'dan gelir.
-    lines: input.lines.map((line) => ({ ...line, unitCost: costs.get(line.variantId) ?? null })),
+    // ── MALİYETİN ÖNCELİĞİ: SATIR > PO > null ──────────────────────────────
+    // Elle girilen fiyat siparişteki beklentiyi EZER, çünkü fatura gerçeği söyler: tedarikçi zamla
+    // gönderdiyse "son alış fiyatı" o zamlı fiyattır ve `auto_price` da onu görmelidir. Tersi sıra
+    // (PO kazansa) admin'in düzeltmesini sessizce çöpe atardı.
+    //
+    // Karşılaştırma CENT'te yapılır, euro'ya çevrim **tek noktada** — burada (`STACK §8`). PO
+    // maliyeti servisten euro geliyor (bilinen açık, 02.9) ve onu da girişte cent'e alıyoruz:
+    // aksi hâlde iki birim aynı `??` zincirinde yan yana dururdu, ve o satır bir gün sessizce
+    // 100× şaşırırdı.
+    // Alanlar TEK TEK yazılıyor, yayılarak değil: `unitCostCents` bu sınırın dışına çıkmamalı —
+    // yayılsaydı RPC'ye `unit_cost_cents` diye ikinci bir para alanı giderdi ve iki birim aynı
+    // satırda yan yana dururdu.
+    lines: input.lines.map((line) => {
+      const cents = line.unitCostCents ?? costsInCents.get(line.variantId) ?? null;
+      return {
+        variantId: line.variantId,
+        qty: line.qty,
+        expiryDate: line.expiryDate,
+        lotNumber: line.lotNumber,
+        location: line.location,
+        unitCost: cents == null ? null : fromCents(cents),
+      };
+    }),
   });
 
   // MALİYET DEĞİŞTİ → otomatik fiyatlı ürünlerin fiyatı hedef marja çekilir (DOMAIN §"Maliyet ve
@@ -182,10 +270,17 @@ function differencesOf(lines: readonly IntakeFormLine[], expected: Map<string, n
   return differences;
 }
 
+/**
+ * PO kalemlerinin birim fiyatı — **cent** olarak.
+ *
+ * Servis euro döndürüyor (`dbNumeric`; sözleşmeye göre çevrim servis katmanında olmalıydı, açık
+ * `STACK §8` altında ve `02.9`'un işi). Çevrimi burada, tek satırda yapıyoruz ki dosyanın geri
+ * kalanı tek birimle çalışsın — `toCents` ile, elle `Math.round(x * 100)` yazılmaz.
+ */
 async function unitCostsOf(db: ReturnType<typeof serviceDb>, purchaseOrderId?: string | null): Promise<Map<string, number>> {
   if (!purchaseOrderId) return new Map();
   const lines = await new PurchaseOrderItemService(db).listByOrder(purchaseOrderId);
-  return new Map(lines.filter((line) => line.unitPrice != null).map((line) => [line.variantId, line.unitPrice!]));
+  return new Map(lines.filter((line) => line.unitPrice != null).map((line) => [line.variantId, toCents(line.unitPrice!)]));
 }
 
 /**

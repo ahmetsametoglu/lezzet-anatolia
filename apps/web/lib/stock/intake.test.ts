@@ -3,7 +3,16 @@ import {
   CategoryService, ProductService, PurchaseOrderService, StockService, SupplierService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
-import { openIntakeForm, receiveGoods, type IntakeDifference, type IntakeFormLine, type IntakeFormRow, type IntakeWarning } from './intake';
+import {
+  openIntakeForm,
+  receiveGoods,
+  receivePurchase,
+  type IntakeDifference,
+  type IntakeFormLine,
+  type IntakeFormRow,
+  type IntakeWarning,
+  type PurchaseIntakeLine,
+} from './intake';
 
 /**
  * Mal kabul kapısı (10.4). İki şey sınanıyor: **depocu fiyat girmeden maliyet doğru yazılıyor mu**
@@ -110,6 +119,76 @@ describe('PO’lu mal kabul', () => {
     // PO yok → karşılaştırılacak sipariş de yok; her satırı "beklenmedik" saymak gürültü olurdu.
     expect(outcome.status === 'ok' ? outcome.differences : null).toEqual([]);
     expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(5);
+  });
+});
+
+/**
+ * Satın alma kaydı — admin yolu (09.14).
+ *
+ * Depocu yolundan ayrılan TEK şey maliyet. Buradaki testlerin çivilediği asıl açık şuydu: PO'suz
+ * doğrudan alımda parti **maliyetsiz doğuyordu** (partinin `unit_cost`u null kalıyordu) — yani "toptan alıp paketleme"
+ * hesabı hiçbir yere yazılamıyordu ve `auto_price` boş bir tabana bakıyordu.
+ */
+describe('satın alma kaydı — maliyet admin yolundan gelir', () => {
+  it('PO’SUZ alımda parti elle girilen fiyatla doğar — eskiden maliyetsizdi', async () => {
+    const outcome = await receivePurchase({ warehouseId,
+      supplierId,
+      lines: [{ variantId, qty: 4, expiryDate: dayOffset(90), unitCostCents: 750 }],
+    });
+
+    expect(outcome.status).toBe('ok');
+    const batch = await stocks.getById(outcome.status === 'ok' ? outcome.result.stockIds[0]! : '');
+    // Giriş CENT (750), DB euro (7,50) — çevrim sınırda ve TEK yerde (`STACK §8`). Bu satır aynı
+    // zamanda birim karışıklığının kalkanı: 100× şaşan bir çevrim burada 750 diye görünürdü.
+    expect(batch?.purchasePrice).toBe(7.5);
+  });
+
+  it('SATIR maliyeti PO’yu EZER — fatura gerçeği söyler', async () => {
+    // Tedarikçi 6 €'ya ısmarlanan malı 8 €'ya göndermiş. "Son alış fiyatı" 8 olmalı, yoksa
+    // `auto_price` gerçekte olmayan bir marjla çalışır.
+    const purchaseOrderId = await draftPurchaseOrder(20, 6);
+
+    const outcome = await receivePurchase({ warehouseId,
+      purchaseOrderId,
+      lines: [{ variantId, qty: 20, expiryDate: dayOffset(90), unitCostCents: 800 }],
+    });
+
+    const batch = await stocks.getById(outcome.status === 'ok' ? outcome.result.stockIds[0]! : '');
+    expect(batch?.purchasePrice).toBe(8);
+  });
+
+  it('satır maliyeti YOKSA PO’dan eşleşir — admin yalnız sapanı düzeltir', async () => {
+    const purchaseOrderId = await draftPurchaseOrder(20, 6);
+
+    const outcome = await receivePurchase({ warehouseId,
+      purchaseOrderId,
+      lines: [{ variantId, qty: 20, expiryDate: dayOffset(90), unitCostCents: null }],
+    });
+
+    const batch = await stocks.getById(outcome.status === 'ok' ? outcome.result.stockIds[0]! : '');
+    expect(batch?.purchasePrice).toBe(6);
+  });
+
+  it('AYNI varyantın iki satırı AYRI fiyat taşır — varyant anahtarlı harita bunu yutardı', async () => {
+    // Talep `Record<variantId, cost>` önermişti. Aynı sevkiyatta farklı son tarihli iki lot farklı
+    // fiyata alınmış olabilir ve bu dosya zaten aynı varyantın çok satırlı gelebileceğini biliyor.
+    // Ekranın göndereceği satır şekli — depocu tipinin AKSİNE fiyat taşır, ve maliyet SATIRIN.
+    const lines: PurchaseIntakeLine[] = [
+      { variantId, qty: 3, expiryDate: dayOffset(60), unitCostCents: 500 },
+      { variantId, qty: 3, expiryDate: dayOffset(120), unitCostCents: 900 },
+    ];
+
+    const outcome = await receivePurchase({ warehouseId, supplierId, lines });
+
+    expect(outcome.status).toBe('ok');
+    const ids = outcome.status === 'ok' ? outcome.result.stockIds : [];
+    const fiyatlar = [];
+    for (const id of ids) fiyatlar.push((await stocks.getById(id))?.purchasePrice);
+    expect(fiyatlar.sort()).toEqual([5, 9]);
+  });
+
+  it('kalemsiz kayıt yazım YAPMAZ', async () => {
+    expect(await receivePurchase({ warehouseId, supplierId, lines: [] })).toEqual({ status: 'empty' });
   });
 });
 
