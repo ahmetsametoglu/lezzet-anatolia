@@ -31,6 +31,7 @@ export type NavIconName =
   | 'fiyatlar'
   | 'stock'
   | 'satinalma'
+  | 'depolar'
   | 'para'
   | 'raporlar'
   | 'analitik'
@@ -89,6 +90,15 @@ const NAV_PATHS: Record<NavIconName, ReactNode> = {
       <circle cx="9" cy="20" r="1" />
       <circle cx="18" cy="20" r="1" />
       <path d="M1 2h3l2.4 12.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 2-1.6L23 5H5" />
+    </>
+  ),
+  // Depolar (tesis) — WarehouseIcon ile aynı bina biçimi: bağlam seçicisi, satır işareti ve nav
+  // girişi aynı kavramı aynı şekille söyler.
+  depolar: (
+    <>
+      <path d="M3 21V9l9-5 9 5v12" />
+      <path d="M3 21h18" />
+      <path d="M9 21v-6h6v6" />
     </>
   ),
   para: (

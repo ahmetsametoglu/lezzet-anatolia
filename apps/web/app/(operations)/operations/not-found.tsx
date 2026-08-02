@@ -54,7 +54,7 @@ export default function OperationsNotFound() {
             {[
               { label: 'Siparişler', href: '/operations/orders' },
               { label: 'Stok', href: '/operations/stock' },
-              { label: 'Rotalar', href: '/operations/routes' },
+              { label: 'Teslimat & Rota', href: '/operations/deliveries' },
             ].map((s) => (
               <Link
                 key={s.href}

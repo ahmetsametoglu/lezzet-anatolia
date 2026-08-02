@@ -25,13 +25,20 @@ interface NavSection {
 }
 
 // URL segmentleri İngilizce (web-conventions kuralı operasyon yüzeyinde de geçerli); etiketler Türkçe.
+//
+// Gruplama 02.08'de yeniden kuruldu (kullanıcı kararı): "Katalog" iki doğayı karıştırıyordu —
+// Ürünler/Fiyatlar depo-üstü TANIM işleridir, Stok/Tedarik depo GERÇEĞİ (depo ekseni sözleşmesi §5).
+// Yeni "Depo" grubu o gerçeği topluyor ve Depolar sayfasına ev veriyor. Adlar da düzeldi:
+// "Rotalar" → "Teslimat & Rota" (sayfa günün çıkışlarıdır — rota + kargo; `admin-teslimat.md`),
+// "Satın Alma" → "Tedarik" (sayfa dokümanının kendi adı; tedarikçi/kod eşlemesi de kapsamda).
+// Sidebar .dc henüz eski kurguda — sapma bilinçli, tasarım tarafına bildirildi (09.2 Durum notu).
 const SECTIONS: NavSection[] = [
   {
     label: 'Günlük',
     items: [
       { key: 'panel', label: 'Panel', href: '/operations' },
       { key: 'siparisler', label: 'Siparişler', href: '/operations/orders' },
-      { key: 'rotalar', label: 'Rotalar', href: '/operations/routes' },
+      { key: 'rotalar', label: 'Teslimat & Rota', href: '/operations/deliveries' },
     ],
   },
   {
@@ -39,8 +46,14 @@ const SECTIONS: NavSection[] = [
     items: [
       { key: 'urunler', label: 'Ürünler', href: '/operations/products' },
       { key: 'fiyatlar', label: 'Fiyatlar', href: '/operations/prices' },
+    ],
+  },
+  {
+    label: 'Depo',
+    items: [
       { key: 'stock', label: 'Stok', href: '/operations/stock' },
-      { key: 'satinalma', label: 'Satın Alma', href: '/operations/purchasing' },
+      { key: 'satinalma', label: 'Tedarik', href: '/operations/procurement' },
+      { key: 'depolar', label: 'Depolar', href: '/operations/warehouses' },
     ],
   },
   {
