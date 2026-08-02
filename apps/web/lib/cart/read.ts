@@ -61,8 +61,8 @@ export async function getCartView(
     warehouseId?: string | null;
     /**
      * Ülkenin kargo deposu (19.10) — sepetin "bu kalem kargoyla gelebilir" ayrımı için. `null` =
-     * yer bilinmiyor ya da o ülkeye kargo yok. BEKLEYEN(19.11): satır bazlı grup ayrımı bunu
-     * `decideCartAgainstWarehouse` motoruna verecek.
+     * yer bilinmiyor ya da o ülkeye kargo yok. Satır bazlı grup ayrımı bunu
+     * `decideCartAgainstWarehouse` motoruna veriyor (19.11).
      */
     shippingWarehouseId?: string | null;
   } = {},

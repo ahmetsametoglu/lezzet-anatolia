@@ -63,7 +63,10 @@ export async function createFeedbackRequestsJob(): Promise<Record<string, unknow
  * `sent_at` boş olarak kuyrukta kalır ve bir sonraki tur onu bulur. Tek adım olsaydı sağlayıcı
  * hatası daveti hiç var olmamış yapardı.
  *
- * BEKLEYEN(14.3): gönderim işinin kendisi — şablon ve kanal bildirim modülüyle gelir.
+ * BEKLEYEN(17.2): gönderim işinin kendisi — şablon ve kanal bildirim modülüyle gelir.
+ * (Önceki işaret `14.3`'e asılıydı; o görev Supabase Auth send-email hook'udur ve KAPANDI. Anlatılan
+ * boşluk davetin fiilen yollanmasıydı ve 17.2'nin işidir — kapanmış bir göreve asılı işaret,
+ * sahipsiz bir boşluk demektir.)
  */
 export function listPendingInvites(limit?: number): Promise<FeedbackRequest[]> {
   return new FeedbackRequestService(serviceDb()).listUnsent(limit);

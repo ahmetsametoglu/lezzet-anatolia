@@ -287,8 +287,13 @@ function walk(dir, out = []) {
 }
 
 const taskIds = new Set();
+/** KAPANMIŞ görevler — bir boşluk işareti bunlara asılamaz (bkz. aşağıdaki kural). */
+const closedTaskIds = new Set();
 for (const f of buildFiles) {
-  for (const m of read(`docs/build/${f}`).matchAll(/^- \[[ x~]\] \((\d\d\.\d+)\)/gm)) taskIds.add(m[1]);
+  for (const m of read(`docs/build/${f}`).matchAll(/^- \[([ x~])\] \((\d\d\.\d+)\)/gm)) {
+    taskIds.add(m[2]);
+    if (m[1] === 'x') closedTaskIds.add(m[2]);
+  }
 }
 const designBacklog = existsSync(join(ROOT, 'design/BACKLOG.md')) ? read('design/BACKLOG.md') : '';
 const backlogSections = new Set([...designBacklog.matchAll(/^## (\d+)\./gm)].map((m) => m[1]));
@@ -308,6 +313,17 @@ for (const root of codeRoots) {
       const backlogRef = ref.match(/^BACKLOG §(\d+)$/);
       if (taskRef) {
         if (!taskIds.has(taskRef[1])) note(`${file}: BEKLEYEN(${ref}) — böyle bir görev kimliği yok`);
+        // KAPANMIŞ göreve asılı işaret = SAHİPSİZ boşluk (denetim B2, 02.08). Kimlik doğru olduğu
+        // için eski kontrolden sessizce geçiyordu, ama görev `[x]` olduğu an o satırı kimse bir daha
+        // okumaz: boşluk kodda durur, planda durmaz. Ölçüldü — dört işaret bu hâldeydi, biri
+        // gerçekten yapılmamış bir işi bekliyordu (`14.3`, oysa iş `17.2`'nin).
+        //
+        // UYARI, hata DEĞİL — ve bu geçici: bayat işaret çoğu zaman BAŞKA bir şeridin dosyasında
+        // duruyor (üçü öyle) ve sert hata üç ajanın commit'ini birden bloklardı. Kalanlar
+        // temizlenince eşik sertleşmeli; yumuşak kalan kural bir süre sonra okunmayan kuraldır.
+        else if (closedTaskIds.has(taskRef[1])) {
+          note(`[bilgi] ${file}: BEKLEYEN(${ref}) — görev KAPANMIŞ ([x]); işaret ya silinmeli ya açık bir göreve taşınmalı`);
+        }
       } else if (backlogRef) {
         if (!backlogSections.has(backlogRef[1])) note(`${file}: BEKLEYEN(${ref}) — design/BACKLOG.md'de §${backlogRef[1]} yok`);
       } else {
