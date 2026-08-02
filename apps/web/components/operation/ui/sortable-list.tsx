@@ -15,6 +15,15 @@ import type { CSSProperties, ReactNode } from 'react';
 // Operasyon geneli, tek seviye dikey sürükle-bırak sıralama (dnd-kit). Tekrar yok: bir tek burada
 // kurulur, tüketici yalnız item + tutamağı yerleştirir. Sürükleme YALNIZ tutamaktan (handle) başlar;
 // böylece satır içindeki tıklama/aksiyonlar çakışmaz. onReorder yeni id sırasını (0..n-1) verir.
+//
+// ⚠ **YERLEŞİMİ (flex/grid + gap) ÇAĞIRAN VERİR — burası DOM kabı çizmez.** `DndContext` ve
+// `SortableContext` eleman üretmeyen sağlayıcılardır; satırlar doğrudan ÜST kaba düşer. Yani kabın
+// `flex flex-col gap-*` (ya da `grid … gap-*`) taşıması gerekir. Kap unutulunca satırlar bitişir ve
+// bu bazen DOĞRUDUR (ayraçlı listeler: katalog üyeleri, paket kalemleri — "çerçeve yok, satır
+// ayraçları listeyi zaten okunur kılıyor"), bazen arızadır: çerçeveli kartlar bitişince kenarlıklar
+// üst üste biner ve liste kırık okunur (yaşandı — Depolar listesi, 03.08 kullanıcı bildirimi).
+// Kabı buraya gömmek ilk hâli imkânsız kılardı, o yüzden karar çağıranda kalıyor — ama bilinçli
+// verilmesi gereken bir karar olduğu artık burada yazıyor.
 interface SortableListProps<T> {
   items: T[];
   getId: (item: T) => string;

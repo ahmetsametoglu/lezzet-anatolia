@@ -72,7 +72,13 @@ function ListView({ data, navPending, onSelect, onNewWarehouse }: WarehousesView
         aria-busy={navPending || undefined}
         className={['min-h-0 flex-1 overflow-y-auto px-6 py-4', navPending ? 'pointer-events-none opacity-60' : ''].join(' ')}
       >
-        <WarehouseList rows={data.rows} onSelect={onSelect} />
+        {/* Aralığı KAP verir: `SortableList` DOM kabı çizmiyor (dnd sağlayıcıları eleman üretmez),
+            satırlar doğrudan buraya düşüyor. Çerçeveli kartlar bitişik durursa kenarlıklar üst üste
+            biner ve liste kırık okunur — ayraçlı listelerde (katalog üyeleri, paket kalemleri)
+            bitişiklik doğru, burada değil. */}
+        <div className="flex flex-col gap-2.5">
+          <WarehouseList rows={data.rows} onSelect={onSelect} />
+        </div>
         <p className="px-0.5 pb-1 pt-3 font-ops-body text-ops-sm leading-relaxed text-ops-muted">
           Kapalı depo listeden silinmez — geçmiş sipariş ve parti hangi tesisten çıktığını bilmek zorundadır. Hiçbir
           seçicide, süzgeçte ve transfer hedefinde görünmez.
