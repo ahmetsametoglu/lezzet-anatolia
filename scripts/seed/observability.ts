@@ -254,28 +254,63 @@ const HATALAR: HataTohumu[] = [
 /** Regresyonun kapalı ikizi — mesajı ve stack'i AYNI, yoksa parmak izi tutmaz ve rozet çıkmaz. */
 const REGRESYON_IKIZI = HATALAR.find((h) => h.regresyon);
 
+/**
+ * Örnek kaydın İŞARETİ — mesajın başına yazılır.
+ *
+ * **Neden var** (kullanıcı kararı 03.08): bu tablo yalnız kurgu taşımıyor; `captureError` gerçek
+ * arızaları da buraya yazıyor. Yerelde bir hata avlarken kurgu satırlarla gerçek satırlar aynı
+ * listede yan yana duruyordu ve ayırt edilemiyordu — yaşandı: sekiz kayıttan yedisi tohumdu,
+ * biri gerçek bir `ReferenceError`'dı ve ancak `path`/`context` alanlarına bakılarak ayrıldı.
+ *
+ * İşaret MESAJIN İÇİNDE, ayrı bir kolonda değil: kolon eklemek şemayı yalnız yerel bir kolaylık
+ * için büyütürdü ve her okuyan ekranın onu göstermeyi hatırlaması gerekirdi. Önek ise listede,
+ * aramada, `psql` çıktısında ve parmak izinde — her yerde görünür.
+ *
+ * Parmak izi mesajdan türediği için işaretli satır gerçek bir hatayla **asla gruplanamaz**: aynı
+ * metni üreten gerçek bir arıza gelse bile ayrı bir satır açar.
+ */
+const ORNEK_ONEKI = '[ÖRNEK]';
+
+/**
+ * Örnek hata kaydı hiç yazılmasın mı — `SEED_ERROR_LOG=0`.
+ *
+ * Varsayılan AÇIK, çünkü seed'in var olma sebebi bu: `/operations/system` alarmın yerini tutuyor ve
+ * yedi hâlinin altısı kayıt olmadan hiç denenemiyor (dosya başlığındaki gerekçe). Ama tamamen boş
+ * bir tablo isteyen bir tur olabilir — o zaman tek değişken yeter, dosya düzenlemek gerekmez.
+ */
+const ORNEK_HATA_YAZ = process.env.SEED_ERROR_LOG !== '0';
+
 export async function seedErrorLog(db: Db): Promise<void> {
+  if (!ORNEK_HATA_YAZ) {
+    console.log('▸ hata kaydı seed KAPALI (SEED_ERROR_LOG=0) — tablo boş bırakıldı');
+    return;
+  }
   if (await tabloDolu(db, 'error_log')) {
     console.log('▸ hata kaydı zaten dolu — atlandı');
     return;
   }
   console.log('▸ HATA KAYDI seed');
 
-  const satirlar = HATALAR.map((h) => ({
-    fingerprint: errorFingerprint(h.source, h.message, h.stack),
-    level: h.level,
-    source: h.source,
-    message: h.message,
-    stack: h.stack,
-    context: h.context,
-    path: h.path ?? null,
-    count: h.count,
-    first_seen_at: new Date(Date.now() - h.ilkGunOnce * 86_400_000).toISOString(),
-    last_seen_at: dakikaOnce(h.sonDkOnce),
-    resolved_at: h.cozuldu ? new Date(Date.now() - h.cozuldu * 86_400_000).toISOString() : null,
-    resolved_by: h.cozuldu ? DEV_ADMIN_PROFILE_ID : null,
-    created_at: new Date(Date.now() - h.ilkGunOnce * 86_400_000).toISOString(),
-  }));
+  const satirlar = HATALAR.map((h) => {
+    // İşaret parmak izinin GİRDİSİNE de giriyor: önce mesaj işaretlenir, sonra izi hesaplanır.
+    const message = `${ORNEK_ONEKI} ${h.message}`;
+    return {
+      fingerprint: errorFingerprint(h.source, message, h.stack),
+      level: h.level,
+      source: h.source,
+      message,
+      stack: h.stack,
+      // `seed: true` makinenin okuduğu hâli: önek göze, bayrak sorguya (`context->>'seed'`).
+      context: { ...h.context, seed: true },
+      path: h.path ?? null,
+      count: h.count,
+      first_seen_at: new Date(Date.now() - h.ilkGunOnce * 86_400_000).toISOString(),
+      last_seen_at: dakikaOnce(h.sonDkOnce),
+      resolved_at: h.cozuldu ? new Date(Date.now() - h.cozuldu * 86_400_000).toISOString() : null,
+      resolved_by: h.cozuldu ? DEV_ADMIN_PROFILE_ID : null,
+      created_at: new Date(Date.now() - h.ilkGunOnce * 86_400_000).toISOString(),
+    };
+  });
 
   // Geri gelen hatanın ÖNCEKİ hayatı: aynı parmak izi, kapalı. Kısmi unique indeks
   // (`where resolved_at is null`) buna izin verir — iki satır, biri kapalı biri açık.
@@ -304,6 +339,6 @@ export async function seedErrorLog(db: Db): Promise<void> {
   const acik = satirlar.filter((s) => !s.resolved_at).length;
   console.log(
     `✓ hata kaydı: ${satirlar.length} satır (${acik} açık · ${satirlar.length - acik} çözülmüş) · ` +
-      '1 FATAL · 1 REGRESYON (aynı parmak izinin kapalı ikizi var)',
+      `1 FATAL · 1 REGRESYON (aynı parmak izinin kapalı ikizi var) · hepsi "${ORNEK_ONEKI}" işaretli`,
   );
 }
