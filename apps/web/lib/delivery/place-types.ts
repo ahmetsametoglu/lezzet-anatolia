@@ -62,6 +62,27 @@ export interface PlaceOption {
 }
 
 /**
+ * Autocomplete satırı (19.7) — müşteri yazarken gösterilen aday.
+ *
+ * **Neden burada, `@lezzet/database`'ten alınmıyor:** bu tipi bir İSTEMCİ bileşeni okuyor (panel) ve
+ * yüzeydeki hiçbir istemci dosyası veri paketine bağlanmıyor — bugün `import type` zararsız görünse
+ * de aynı yoldan bir gün bir değer içe aktarılır ve sunucu kodu tarayıcı paketine düşer. Sınır
+ * `DeliveryZoneSummary` ile aynı gerekçeyle burada çiziliyor.
+ *
+ * **Kopya değil, DOĞRULANAN bir sözleşme:** `suggestPostalCodesAction` dönüşünü bu tiple imzalıyor;
+ * veri tarafındaki `PostalCodeSuggestion` ayrışırsa eylem derlenmez. Bağ yorumla değil, tip
+ * denetimiyle duruyor.
+ */
+export interface PlaceSuggestion {
+  country: Country;
+  postalCode: string;
+  /** Kodun kapsadığı TÜM yerleşimler, ham. Kısaltma ("+4") ekranın kararı. */
+  places: string[];
+  /** Kod bizim bir teslimat bölgemizde mi — sıralamayı belirler, seçimi DEĞİL. */
+  inRoute: boolean;
+}
+
+/**
  * Yer çözümünün ekrana ulaşan hâli (19.16b) — **dört hâl ayrık taşınır.**
  *
  * Önceki sürüm `ambiguous`/`unknown`/`unresolved` hâllerinde `throw` ediyordu ve hepsi tek bir

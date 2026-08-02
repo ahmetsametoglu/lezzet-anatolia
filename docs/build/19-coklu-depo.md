@@ -75,6 +75,30 @@ Sistemi tek-depo varsayımından depo ağına taşır: depo varlığı, posta ko
     - **"Gelince haber ver" GERÇEK, stub değil:** arka uç kapıyı bu tur içinde indirdi (`recordVariantStockNoticeAction`) ve içine `BEKLEYEN(19.7)` bırakmıştı — düğme onu bağlıyor. Panel iki bekleyiş için TEK kutu: `NoticeDialog` (eski `ZoneNoticeDialog` genelleştirildi, ikinci bir form yazılmadı).
     - **(a) kapandı:** `setPostalCode` ve `clear` sonrası `router.refresh()`. Çerezi istemci yazıyor; tazeleme olmadan hap doluyor ama katalog kartlarındaki işaretler bir sonraki gezinmeye kadar ESKİ kalıyordu — yani işaret dili yazıldığı gün yanlış çalışacaktı.
   - ⏳ **(b) ilk kare gecikmesi AÇIK.** `PlaceProvider` çerezi okuyup `resolvePlaceAction`'ı yeniden çağırıyor; `readPlaceContext()` zaten sunucuda çözüyor. Çare `initialPlace` prop'u ama **bugün yazılamaz**: layout'un aynı `DeliveryPlace`'i kurabilmesi için `resolvePlaceAction`'ın içindeki dönüşümün ayrıştırılması gerekiyor ve o dosyayı (`lib/delivery/actions.ts`) arka uç şeridi şu an düzenliyor. Ayrıca dikkat: layout doğrudan `resolvePlaceAction` çağıramaz — içindeki `recordDemand` her sayfa açılışında "bölge dışı talep" sayacına yazardı, yani yukarıdaki ✅ kararın ihlali. Ayrıştırma yapılırken sayaç eylemin içinde kalmalı.
+  - **Panelin dört hâli + öneri listesi indi (03.08).** `place-dialog` artık `resolvePlaceAction`'ın
+    ayrık sonucunu (19.16b) dört ayrı cümleyle karşılıyor; önce dördü de tek bir "Bu kod geçerli
+    değil" uyarısına düşüyordu ve metin yalnız `unknown` için doğruydu. Ötekilerde ekran müşteriye
+    **onun hatası olmayan bir şeyi hata gibi** söylüyordu: `unresolved`'ın iki sebebi de bizim
+    tarafımızın eksiği (`no_shipping_warehouse` yapılandırma, `ambiguous_zone` veri çakışması), ama
+    müşteri "kodum yanlış" diye okuyordu.
+    **`ambiguous` bir SEÇİM ekranı oldu.** Ülke normalde sorulmaz, koddan türer (19.8) — tek istisna
+    kodun iki hizmet ülkemizde birden geçerli olduğu hâl: orada türetecek bir şey yok. Seçim
+    `resolvePlaceAction`'a **isteğe bağlı ülke** olarak geçiyor ve motorda DEĞİL eylemde uygulanıyor:
+    motor "bu kod hangi ülkelere düşüyor" sorusunun cevabı; hangi adayın seçildiği bir kullanıcı
+    kararı. Çözülmüş yerin son hâli tek yerde kuruluyor (`finishResolved`) — iki giriş, tek yol.
+    **Öneri listesi (kullanıcı kararı 02.08): müşteri yazar, biz öneririz, o seçerek onaylar.**
+    Kapı arka uçtan geldi (19.19 · `searchPrefix`) ve **ayrı bir eylem** olarak bağlandı
+    (`suggestPostalCodesAction`) — `resolvePlaceAction`'a bayrak eklemek her tuşlanan kodu
+    `recordDemand`'e yazardı. Ayrım yapısal: **öneri bir okuma, onay bir niyet.** Gecikme 220 ms,
+    geç dönen cevap yeni listeyi ezmiyor. **Ülke her satırda yazılı** (kullanıcı kararı): aynı kod iki
+    ülkede geçerli olabiliyor ve yalnız ilçe adı gören müşteri hangisine baktığını bilemiyor.
+    Öneri satırı ile belirsizlik seçicisi **aynı bileşen** — ikisi de aynı soruyu soruyor ve aynı üç
+    bilgiyi taşıyor. Rota işareti satırı öne alıyor ama seçmiyor: iki adayın farkı yalnız teslimat
+    yolu değil KDV oranı.
+    **Sözleşme tipi `place-types.ts`'te** (`PlaceSuggestion`), `@lezzet/database`'ten alınmıyor:
+    paneli bir istemci bileşeni okuyor ve yüzeydeki hiçbir istemci dosyası veri paketine bağlı değil.
+    Kopya değil doğrulanan bir bağ — eylem dönüşünü bu tiple imzalıyor, veri tarafı ayrışırsa
+    derlenmiyor. Tasarımı çizili değil: `design/BACKLOG §4`.
   - **Rota-only üründe satın alma eylemi posta kodu ister (02.08, kullanıcı kararı).** `shippable=false` ürün/pakette yer bilinmiyorken "Sepete ekle" yerine **"Posta kodunu gir"** durur (`PlaceGate`, `PlaceDialog` açar). Gerekçe fiyat değil örtük söz: soğuk zincir malı yalnız rota deposundan gidiyor, müşterinin rota içinde olup olmadığını bilmeden düğme "satın alabilirsiniz" diyor ve bunu doğrulayamıyoruz. Kod girilince kart dört hâlinden birine oturuyor — süzgeç değil, sıra. Fiyat gizlenmedi (yer bilinmiyorken teklifler okunmadığı için gösterilen sayı tavandır, kod girilince ya aynı kalır ya düşer). Tasarım sapması `design/BACKLOG §3`.
     - **İndi:** ürün detayı (`PurchaseBar routeOnly`) + paket detayı (`PurchaseBox routeOnly`) — ikisinde de veri yerinde (`StorefrontProductDetail.shippable`, `StorefrontPackage.inRouteOnly`).
     - ⏳ **Katalog + anasayfa KARTI açık, veri eksik:** `StorefrontProduct` (kart tipi) `shippable` taşımıyor — yalnız detay tipinde var. Bir alan + eşleyici satırı gerekiyor ve dosyalar arka ucun `touches` kümesinde (`lib/storefront/{storefront-types,map}.ts`). Alan gelince kart bağlanır; o güne kadar kilit yalnız detayda, yani müşterinin gerçekten karar verdiği yerde çalışıyor.

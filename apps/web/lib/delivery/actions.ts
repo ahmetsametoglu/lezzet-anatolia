@@ -3,9 +3,10 @@
 import { DeliveryZoneService, PostalCodePlaceService, WarehouseService, serviceDb } from '@lezzet/database';
 import { findZoneForPostalCode, placeLabel, resolvePlaceByPostalCode } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
+import type { Country } from '@lezzet/types';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { resolveDelivery } from '@/lib/order/delivery';
-import { isValidPostalCode, normalizePostalCode, type PlaceLookup } from './place-types';
+import { isValidPostalCode, normalizePostalCode, type PlaceLookup, type PlaceSuggestion } from './place-types';
 
 /**
  * Teslimat yeri çözümü (K30-K31) — posta kodu → "ne gönderebiliriz, ne zaman".
@@ -17,7 +18,7 @@ import { isValidPostalCode, normalizePostalCode, type PlaceLookup } from './plac
  * burada sepet bilinmez, o yüzden "kargo tamamen kapalı mı" sorusu sorulmaz (o karar sepetin
  * içeriğine bağlıdır ve kısıt bloğunun işidir).
  */
-export async function resolvePlaceAction(rawPostalCode: string): Promise<ActionResult<PlaceLookup>> {
+export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: Country): Promise<ActionResult<PlaceLookup>> {
   try {
     const postalCode = normalizePostalCode(rawPostalCode);
     if (!isValidPostalCode(postalCode)) throw new Error('Posta kodu 5 haneli olmalı');
@@ -46,6 +47,21 @@ export async function resolvePlaceAction(rawPostalCode: string): Promise<ActionR
     if (lookup.kind === 'unknown') return { data: { kind: 'unknown' }, error: null };
 
     if (lookup.kind === 'ambiguous') {
+      /**
+       * Müşterinin ÜLKE CEVABI (19.7) — belirsizlik seçicisinden ya da öneri listesinden gelir.
+       *
+       * Ülke normalde SORULMAZ, koddan türer (19.8). Tek istisna bu: kod iki hizmet ülkemizde
+       * birden geçerliyse türetecek bir şey yoktur, cevap müşterinindir. Seçim burada uygulanıyor,
+       * motorda değil — motor "bu kod hangi ülkelere düşüyor" sorusunun cevabıdır; hangi adayın
+       * seçildiği bir KULLANICI kararı ve motorun bilmesi gereken bir şey değil.
+       *
+       * Gelen ülke adaylar arasında yoksa sessizce yok sayılır ve seçici yeniden çizilir: uydurma
+       * bir ülkeyle çözmek, müşterinin vermediği kararı vermek olurdu (KDV oranı buna bağlı).
+       */
+      const picked = chosenCountry ? lookup.candidates.find((c) => c.country === chosenCountry) : undefined;
+      if (picked) {
+        return await finishResolved(postalCode, { country: picked.country, placeName: placeLabel(picked.places), places: picked.places }, zones);
+      }
       // Kayıt tutulur ama HATA değil: müşterinin cevaplayabileceği meşru bir soru. Yine de iz
       // bırakıyoruz — hangi kodların gerçekten sorulduğunu bilmek veri kalitesinin ölçüsü.
       return {
@@ -77,38 +93,79 @@ export async function resolvePlaceAction(rawPostalCode: string): Promise<ActionR
       return { data: { kind: 'unresolved', reason: lookup.reason }, error: null };
     }
 
-    const delivery = await resolveDelivery({ postalCode, country: lookup.country });
-
-    // Bölge adı yalnız rota içinde bilinir. Motor aday tipini döndürür (ad taşımaz — karar için
-    // gereksiz); adı kendi listemizden okuruz.
-    const matched = findZoneForPostalCode({ country: lookup.country, postalCode }, zones);
-    const zone = matched ? zones.find((z) => z.id === matched.id) : undefined;
-    const inRoute = delivery.deliveryType === 'route';
-
-    // Talep sayacı sonucu BEKLETMEZ ve hata verirse akışı kesmez: müşterinin sorusuna cevap
-    // vermek asıl iş, sayaç yan üründür. Sayamamak yüzünden ekranın boş kalması saçma olurdu.
-    void recordDemand(postalCode);
-
-    return {
-      data: {
-        kind: 'resolved',
-        place: {
-          postalCode,
-          country: lookup.country,
-          // Rota dışında da dolu: "75011 Paris · kargo" artık yazılabiliyor (19.8). Çok yerleşimli
-          // kodda `null` kalır ve ekran `places`'ten kendi etiketini kurar (19.17); kendi bölge
-          // tablomuzda olan kodda da null — orada bölge adı zaten daha bilgilendirici.
-          placeName: lookup.placeName,
-          places: [...lookup.places],
-          zoneName: inRoute ? (zone?.name ?? null) : null,
-          inRoute,
-          nextDate: delivery.availableDates[0] ?? null,
-        },
-      },
-      error: null,
-    };
+    return await finishResolved(postalCode, { country: lookup.country, placeName: lookup.placeName, places: lookup.places }, zones);
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Çözülmüş yerin son hâli — **iki giriş, tek yol.** Kimlik ya motorun tek adayından gelir ya
+ * müşterinin belirsizlik seçiminden; ötesi (teslimat yolu, bölge adı, en yakın gün, talep sayacı)
+ * ikisinde de aynı kapılardan çıkar. İki yerde yazılsaydı biri değiştiğinde öteki eskirdi.
+ */
+async function finishResolved(
+  postalCode: string,
+  identity: { country: Country; placeName: string | null; places: readonly string[] },
+  zones: Awaited<ReturnType<DeliveryZoneService['listWithCodes']>>,
+): Promise<ActionResult<PlaceLookup>> {
+  const delivery = await resolveDelivery({ postalCode, country: identity.country });
+
+  // Bölge adı yalnız rota içinde bilinir. Motor aday tipini döndürür (ad taşımaz — karar için
+  // gereksiz); adı kendi listemizden okuruz.
+  const matched = findZoneForPostalCode({ country: identity.country, postalCode }, zones);
+  const zone = matched ? zones.find((z) => z.id === matched.id) : undefined;
+  const inRoute = delivery.deliveryType === 'route';
+
+  // Talep sayacı sonucu BEKLETMEZ ve hata verirse akışı kesmez: müşterinin sorusuna cevap
+  // vermek asıl iş, sayaç yan üründür. Sayamamak yüzünden ekranın boş kalması saçma olurdu.
+  void recordDemand(postalCode);
+
+  return {
+    data: {
+      kind: 'resolved',
+      place: {
+        postalCode,
+        country: identity.country,
+        // Rota dışında da dolu: "75011 Paris · kargo" artık yazılabiliyor (19.8). Çok yerleşimli
+        // kodda `null` kalır ve ekran `places`'ten kendi etiketini kurar (19.17); kendi bölge
+        // tablomuzda olan kodda da null — orada bölge adı zaten daha bilgilendirici.
+        placeName: identity.placeName,
+        places: [...identity.places],
+        zoneName: inRoute ? (zone?.name ?? null) : null,
+        inRoute,
+        nextDate: delivery.availableDates[0] ?? null,
+      },
+    },
+    error: null,
+  };
+}
+
+/**
+ * Posta kodu önerileri (19.7 · autocomplete) — müşteri yazarken gösterilen aday listesi.
+ *
+ * **`resolvePlaceAction`'ın bir kipi DEĞİL, ayrı bir kapı.** O eylemin içinde `recordDemand` var ve
+ * her tuşlanan kod "bölge dışı talep" sayacına düşerdi — bölge açma kararını besleyen sayaç.
+ * Ayrım yapısal: **öneri bir OKUMA, onay bir NİYET**; sayaç niyete bağlı kalır (19.7'nin kayıtlı
+ * kararı: *"kapıya bayrak eklemek yetmez, o bayrağı unutan ilk çağrı sayacı yine kirletir"*).
+ *
+ * Guard yok — `resolvePlaceAction` gibi, soru ziyaretçiye de açık.
+ *
+ * Kısa önekte sunucuya HİÇ gidilmez: iki haneden kısa önek hiçbir yeri işaret etmiyor (kapı da
+ * aynı eşiği uyguluyor, ama boşa gidiş-dönüş yapmanın anlamı yok).
+ *
+ * Hata hâlinde boş liste döner, `error` DEĞİL: öneri bir kolaylık. Kapı düşerse müşteri kodu elle
+ * yazıp "Göster"e basar ve akış sürer; kırmızı bir satır göstermek çalışan bir yolu arızalı gibi
+ * okuturdu.
+ */
+export async function suggestPostalCodesAction(prefix: string): Promise<PlaceSuggestion[]> {
+  const normalized = normalizePostalCode(prefix);
+  if (normalized.length < 2) return [];
+  try {
+    return await new PostalCodePlaceService(serviceDb()).searchPrefix(normalized);
+  } catch (err) {
+    await captureError(err, { source: SOURCES.webAction, context: { prefix: normalized } });
+    return [];
   }
 }
 

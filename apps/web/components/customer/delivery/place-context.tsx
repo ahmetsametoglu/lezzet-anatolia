@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import type { Country } from '@lezzet/types';
 import { useRouter } from '@/i18n/navigation';
 import { resolvePlaceAction } from '@/lib/delivery/actions';
 import { readPlaceAnswer, readSkipped, writePlaceAnswer, writeSkipped } from '@/lib/delivery/place-store';
@@ -34,7 +35,7 @@ interface PlaceContextValue {
    * `null` yalnız GERÇEK arızada döner (ağ/DB); o hâlde çağıran genel hata gösterir.
    * Yer yalnız `resolved` hâlinde değişir — belirsiz bir cevap saklanmaz.
    */
-  setPostalCode: (postalCode: string) => Promise<PlaceLookup | null>;
+  setPostalCode: (postalCode: string, country?: Country) => Promise<PlaceLookup | null>;
   clear: () => void;
   /**
    * Soru atlandı mı — şerit ikinci kez sormaz (tasarım: "şimdi değil"). KAPSAMLIDIR: anasayfadaki
@@ -96,8 +97,10 @@ export function PlaceProvider({ children, zones }: PlaceProviderProps) {
     });
   }, []);
 
-  const setPostalCode = useCallback(async (postalCode: string): Promise<PlaceLookup | null> => {
-    const { data } = await resolvePlaceAction(postalCode);
+  // `country` YALNIZ belirsizlik hâlinde geçilir (19.7): kod iki hizmet ülkemizde birden geçerliyse
+  // türetecek bir şey kalmaz ve cevap müşterinindir. Öteki her çağrıda kod ülkeyi zaten belirler.
+  const setPostalCode = useCallback(async (postalCode: string, country?: Country): Promise<PlaceLookup | null> => {
+    const { data } = await resolvePlaceAction(postalCode, country);
     if (!data) return null;
     // Yer YALNIZ çözülmüş hâlde değişir: belirsiz ya da tanınmayan bir cevabı saklamak, müşterinin
     // vermediği bir kararı vermiş gibi göstermek olurdu.

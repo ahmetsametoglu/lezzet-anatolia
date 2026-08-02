@@ -70,6 +70,10 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
     **Ürün adı `order_item`'da YOK** (yalnız `variant_id`), o yüzden varyant→ürün zinciri üç ekranın ortak parçasına çıktı (`lib/order/customer-lines.ts`). Para siparişte donuyor, **ad canlı okunuyor** — ikisi farklı türde bilgi. Kalemler tek turda (`listByOrders`), N+1 yok.
     **Onay sayfasındaki ölü düğme bağlandı.** `BEKLEYEN(08.5)` "bağ verilseydi 404'e düşerdi" diyordu ve o gün doğruydu; detay inince işaret arandı. Bu ders bu oturumda **üçüncü** kez uygulandı (sepetin "Ödemeye geç"i, başlığın "Hesabım"ı, şimdi bu).
     **Kalan (dış modül):** puanı kupona çevirme + Kuponlarım (17.5 — kapı hazır, çağıranı yok) · taleplerim ekranı, detaydaki "bir sorun mu var?" dahil (08.6 — servis hazır) · gizlilik politikası (08.8) · fatura PDF (12.1) · WhatsApp yazışma bağı (15.1).
+  - **Durum (03.08 · iki referans düzeltmesi — okuyanı yanlış yere gönderiyorlardı):** yukarıdaki listede iki madde artık geçerli değil.
+    **~~fatura PDF (12.1)~~ → teslimat özeti (14.6).** Kullanıcı kararı (02.08): **fatura kesilmeyecek.** Sistemin ürettiği tek belge, kutuda ne olduğunu söyleyen teslimat özetidir ve kutu hazırlandıktan SONRA üretilir — müşteri neyin niye eksik olduğunu orada görsün. Onay sayfasındaki işaret `BEKLEYEN(14.6)`ya taşındı, sayfa metni de "fatura" demeyi bıraktı. Eski satır 12.1'i işaret ediyordu; o modül böyle bir belge üretmeyecek, yani işaret hiç kapanmayacak bir kapıyı gösteriyordu. Tasarım dokümanı: `design/pages/belgeler.md`.
+    **~~taleplerim ekranı (08.6)~~ indi:** 08.6 `[x]`, liste + yazışma + "bir sorun mu var?" bağı ayakta.
+    Satır `[~]` kalıyor: hesaptaki **Kuponlarım** bölümü hâlâ boş bir kart (17.5) ve **gizlilik politikası** bağı verilemiyor (08.8). İkisi de kendi kayıtlarında.
   - *Bitti:* tekrar sipariş güncel fiyatla sepet oluşturuyor; sipariş durumu sade dille görünüyor
 - [x] (08.6) **Talep grubu:** talep oluşturma (sipariş kalemi/tip/foto + genel "bize yaz" yönlendirmesi), talep listesi + yazışma (16'ya bağlanır)
   - *Bitti:* siparişli ve siparişsiz talep açılıyor; durum takip ediliyor
