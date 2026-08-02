@@ -210,3 +210,25 @@ veriyor (aynı kişi iki rol taşıyabiliyor) ama dört tur.
 Bu uç yalnız Depolar'ın işi değil: Ayarlar ekranının (09.16) kişi listesi de aynı kümeyi soracak.
 
 **Arka uç cevabı:**
+
+---
+
+## 6. `SOURCES.webClient` — istemci hatalarının kaynağı *(tek satır)*
+
+Denetim G1 (`docs/denetim/denetim-gozlemleme.md`) istemci hata sınırlarının sunucuda hiç iz
+bırakmadığını buldu. Kapı açıldı: `apps/web/lib/observability/report-client-error.ts` →
+`captureError({ source: 'web-client', … })`, operasyon hata sınırı ona bağlandı.
+
+Ama `source` **literal dize** olarak geçiyor, çünkü `SOURCES` sözlüğünde karşılığı yok
+(`packages/observability/src/capture.ts:43`). Sözlüğün var olma sebebi kaynak adının tek yerde
+durması; literal onu deliyor — bir gün biri `'webClient'` ya da `'client'` yazar ve sistem ekranı
+aynı kaynağı iki isimle gösterir.
+
+**İstek:** `webClient: 'web-client'` diğerlerinin yanına insin. İndiği tur literal onunla değişir.
+
+Not: kapı **guard'sız** ve olmak zorunda — müşteri yüzeyinin hata sınırı oturumsuz ziyaretçide de
+tetikleniyor. Kötüye kullanım üç yerden tutuluyor: kaynak sabit (çağıran seçemez), mesaj tek satır +
+200 karakter, aynı parmak izi süreç içinde dakikada bir. Bunun yetmediğini düşünüyorsan söyle —
+oran sınırı sizin katmanınızda daha doğru durur.
+
+**Arka uç cevabı:**

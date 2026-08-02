@@ -6,6 +6,7 @@ import { Button, buttonClass } from '@/components/operation/ui/button';
 import { ErrorState } from '@/components/operation/ui/error-state';
 import { shortDateTime } from '@/components/operation/ui/format';
 import { AlertIcon, ChevronDownIcon, CopyIcon } from '@/components/operation/ui/icons';
+import { reportClientErrorAction } from '@/lib/observability/report-client-error';
 
 /**
  * Operasyon 500 — segment içindeki beklenmeyen hataları yakalar (client zorunlu). AdminSidebar
@@ -31,8 +32,16 @@ export default function OperationsError({ error, reset }: { error: Error & { dig
   const stack = process.env.NODE_ENV === 'development' ? error.stack?.trim() : undefined;
 
   useEffect(() => {
-    // Hata izleme servisi bağlanınca buraya gönderilir (referans kodu = digest ile ilişkilendirilir).
+    // Konsol GELİŞTİRİCİ içindir ve kalır; kayıt ayrı bir iştir (denetim G1): bu sınır çalıştığında
+    // sunucuda hiç iz kalmıyordu, yani operatörün gördüğü hata ekranı bizim için görünmezdi.
+    // Giden şey KİMLİK: yol + digest + mesajın ilk satırı — yığın izi gitmez (`OBSERVABILITY §5`).
     console.error(error);
+    void reportClientErrorAction({
+      message: error.message,
+      digest: error.digest ?? null,
+      // Sorgu dizesi TAŞINMAZ: kimlik taşıyabilir (`?depo=`, `?q=` müşteri adı olabilir).
+      path: typeof window === 'undefined' ? null : window.location.pathname,
+    });
   }, [error]);
 
   async function copy(key: 'reference' | 'message', text: string) {
