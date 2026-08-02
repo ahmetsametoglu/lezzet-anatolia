@@ -83,6 +83,33 @@ export interface PurchaseOrderRowView {
   byWarehouse: Array<{ code: string; qty: number }>;
 }
 
+/**
+ * Ürün–kod eşlemesi (`supplier_product`) — tedarik siparişinin **tedarikçinin diliyle** yazılmasını
+ * sağlayan satır (`DOMAIN §16`). Bizim varyantımız ↔ onun kodu, onun adı, kolisi, son alışı.
+ */
+export interface SupplierProductRowView {
+  id: string;
+  variantId: string;
+  /** BİZİM adımız — "Fıstıklı Baklava · 500g". Eşleşmenin hangi ürüne ait olduğu buradan okunur. */
+  title: string;
+  /** ONUN kodu — sipariş listesinin anahtarı. */
+  supplierCode: string;
+  /** ONUN kataloğundaki adı; boş bırakılabilir (liste o zaman yalnız kodu taşır). */
+  nameAtSupplier: string | null;
+  /** Koli içi adet — "12 adet = 1 koli" çevirisi; boşsa liste yalnız adet yazar. */
+  packQty: number | null;
+  /** Son alış (cent) — mal kabulde güncellenir, elle girilmez. */
+  lastPurchaseCents: number | null;
+  /** Bir varyantın birden çok kaynağı olabilir; öneri TERCİHLİ olanı seçer. */
+  isPreferred: boolean;
+}
+
+/** Eşleme formunda varyant seçicisinin seçeneği — dar okuma (fiyat/maliyet taşımaz, burada gereksiz). */
+export interface VariantPickOption {
+  variantId: string;
+  title: string;
+}
+
 export interface ProcurementData {
   /** Yalnız `suggestions` sekmesinde dolu (okuma sekmeye bağlı). */
   suggestions: SuggestionGroupView[] | null;

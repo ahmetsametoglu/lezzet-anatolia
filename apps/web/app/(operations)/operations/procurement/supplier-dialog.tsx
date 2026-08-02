@@ -9,6 +9,7 @@ import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
 import { FormInput, FormNumber } from '@/components/operation/form/form-input';
 import { FormSwitch } from '@/components/operation/form/form-switch';
 import { saveSupplierAction } from './actions';
+import { SupplierCatalogPane } from './supplier-catalog-pane';
 import { SupplierFormSchema, type SupplierCardView } from './procurement-types';
 
 // Tedarikçi kartı formu (09.14). Kart olmadan sipariş de olmaz — bu form ekranın süsü değil,
@@ -69,7 +70,9 @@ export function SupplierDialog({ editing, onClose }: SupplierDialogProps) {
       onClose={onClose}
       title={editing ? 'Tedarikçi kartı' : 'Yeni tedarikçi'}
       subtitle="Sipariş bu kartla yazılır; borç ve vade buradan izlenir"
-      maxWidth={520}
+      // Kayıtlı tedarikçide iki bölme (künye + tedarikçinin kataloğu) → geniş panel; yeni kayıtta
+      // yalnız künye (eşleme satırı `supplier_id` istiyor, kart kaydedilmeden o kimlik yok).
+      maxWidth={editing ? 900 : 520}
       footer={
         <DialogFooter
           formId={FORM_ID}
@@ -82,38 +85,44 @@ export function SupplierDialog({ editing, onClose }: SupplierDialogProps) {
         />
       }
     >
-      <form id={FORM_ID} onSubmit={onSubmit} className="flex flex-col gap-4">
-        <FormInput control={form.control} name="name" label="Tedarikçi adı" required placeholder="Metro Cash&Carry" />
+      <div className={editing ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6' : ''}>
+        <form id={FORM_ID} onSubmit={onSubmit} className="flex flex-col gap-4">
+          <FormInput control={form.control} name="name" label="Tedarikçi adı" required placeholder="Metro Cash&Carry" />
 
-        <div className="grid grid-cols-2 gap-3">
-          <FormInput
-            control={form.control}
-            name="phone"
-            label="Telefon"
-            // Telefon yalnız bir iletişim bilgisi değil: sipariş listesini WhatsApp'tan göndermenin
-            // anahtarı. Boşsa o düğme hiç çizilmez ve pencere sebebini söyler.
-            labelAside="WhatsApp gönderimi için"
-            placeholder="+33 3 88 …"
-          />
-          <FormInput control={form.control} name="email" label="E-posta" placeholder="siparis@tedarikci.fr" />
-        </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormInput
+              control={form.control}
+              name="phone"
+              label="Telefon"
+              // Telefon yalnız bir iletişim bilgisi değil: sipariş listesini WhatsApp'tan göndermenin
+              // anahtarı. Boşsa o düğme hiç çizilmez ve pencere sebebini söyler.
+              labelAside="WhatsApp gönderimi için"
+              placeholder="+33 3 88 …"
+            />
+            <FormInput control={form.control} name="email" label="E-posta" placeholder="siparis@tedarikci.fr" />
+          </div>
 
-        <FormInput control={form.control} name="address" label="Adres" placeholder="İrsaliye ve yazışma adresi" />
+          <FormInput control={form.control} name="address" label="Adres" placeholder="İrsaliye ve yazışma adresi" />
 
-        <div className="grid grid-cols-2 gap-3">
-          <FormInput control={form.control} name="vatNumber" label="Vergi no" mono />
-          <FormNumber
-            control={form.control}
-            name="paymentTermDays"
-            label="Bize tanıdığı vade"
-            labelAside="boş = peşin"
-            integer
-            placeholder="30"
-          />
-        </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormInput control={form.control} name="vatNumber" label="Vergi no" mono />
+            <FormNumber
+              control={form.control}
+              name="paymentTermDays"
+              label="Bize tanıdığı vade"
+              labelAside="boş = peşin"
+              integer
+              placeholder="30"
+            />
+          </div>
 
-        <FormInput control={form.control} name="note" label="Not" placeholder="Teslimat günü, iletişim kişisi…" />
-      </form>
+          <FormInput control={form.control} name="note" label="Not" placeholder="Teslimat günü, iletişim kişisi…" />
+        </form>
+
+        {/* İkinci bölme: tedarikçinin kendi kataloğu. Yeni kayıtta yok — eşleme satırı kartın
+            kimliğini istiyor ve o kimlik ancak kaydedince doğar. */}
+        {editing ? <SupplierCatalogPane supplierId={editing.id} /> : null}
+      </div>
     </Dialog>
   );
 }

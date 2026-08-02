@@ -1,13 +1,24 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { PurchaseOrderService, ReorderService, SupplierService, serviceDb } from '@lezzet/database';
+import {
+  PurchaseOrderService,
+  ReorderService,
+  SupplierProductService,
+  SupplierService,
+  serviceDb,
+} from '@lezzet/database';
 import type { KeysetCursor } from '@lezzet/types';
 import { requireAdmin, requireFinance } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readWarehouseContext } from '@/lib/warehouse/context';
-import { readOrderPage } from './procurement-read';
-import type { PurchaseOrderRowView, SupplierFormInput } from './procurement-types';
+import { readOrderPage, readSupplierProducts, searchVariantOptions } from './procurement-read';
+import type {
+  PurchaseOrderRowView,
+  SupplierFormInput,
+  SupplierProductRowView,
+  VariantPickOption,
+} from './procurement-types';
 
 const PATH = '/operations/procurement';
 
@@ -73,6 +84,95 @@ export async function saveSupplierAction(input: SupplierFormInput): Promise<Acti
     const saved = input.id ? await svc.update({ id: input.id, ...fields }) : await svc.insert(fields);
     revalidatePath(PATH);
     return { data: { id: saved.id }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+// ─── Ürün–kod eşlemesi ────────────────────────────────────────────────────────
+// `DOMAIN §16`: tedarik siparişi TEDARİKÇİNİN DİLİYLE yazılsın diye — bizim varyantımız ↔ onun
+// kodu. Eşleme olmadan liste bizim adımızla gider ve tedarikçi neyi göndereceğini kendi
+// kataloğundan aramak zorunda kalır.
+
+/** Bir tedarikçinin kataloğu — eşleme satırları, bizim ürün adımızla birlikte. */
+export async function loadSupplierProductsAction(supplierId: string): Promise<ActionResult<SupplierProductRowView[]>> {
+  try {
+    await requireFinance();
+    return { data: await readSupplierProducts(serviceDb(), supplierId), error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Eşleme formunun varyant seçicisi — ürün adında arar, eşleşen ürünün TÜM boyları döner. */
+export async function searchVariantsForMappingAction(term: string): Promise<ActionResult<VariantPickOption[]>> {
+  try {
+    await requireFinance();
+    return { data: await searchVariantOptions(serviceDb(), term), error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/**
+ * Eşleme yazar/günceller. Aynı (tedarikçi, varyant) ikilisi iki kez tanımlanmaz — servis `upsert`
+ * yapar, kod değişirse satır güncellenir, kopya satır doğmaz.
+ *
+ * `lastPurchasePrice` BURADAN yazılmaz: onu mal kabul günceller ("geçen sefer kaçtı" ölçülen bir
+ * gerçektir, beyan değil).
+ */
+export async function saveSupplierProductAction(input: {
+  supplierId: string;
+  variantId: string;
+  supplierCode: string;
+  nameAtSupplier?: string | null;
+  packQty?: number | null;
+}): Promise<ActionResult> {
+  try {
+    await requireFinance();
+    const code = input.supplierCode.trim();
+    if (!code) throw new Error('Tedarikçideki sipariş kodu gerekli.');
+
+    await new SupplierProductService(serviceDb()).setMapping({
+      supplierId: input.supplierId,
+      variantId: input.variantId,
+      supplierCode: code,
+      nameAtSupplier: input.nameAtSupplier?.trim() || null,
+      // 1 ve altı "koli yok" demektir; liste o zaman koli karşılığı yazmaz.
+      packQty: input.packQty && input.packQty > 1 ? input.packQty : null,
+    });
+    revalidatePath(PATH);
+    return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/**
+ * Tercihli kaynağı değiştirir — aynı varyantın diğer eşlemeleri düşer (servisin kuralı).
+ * "İki tercihli" sessiz bir belirsizliktir: sipariş önerisi hangisini seçeceğini bilemez.
+ */
+export async function setPreferredSupplierProductAction(mappingId: string): Promise<ActionResult> {
+  try {
+    await requireFinance();
+    await new SupplierProductService(serviceDb()).setPreferred(mappingId);
+    revalidatePath(PATH);
+    return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/**
+ * Eşlemeyi kaldırır. Bu bir SATIN ALMA geçmişi değil, bir sözlük satırıdır — silinmesi geçmişi
+ * yalanlamaz: verilmiş siparişler kendi kalemlerinde kodu zaten taşıyor.
+ */
+export async function deleteSupplierProductAction(mappingId: string): Promise<ActionResult> {
+  try {
+    await requireFinance();
+    await new SupplierProductService(serviceDb()).delete(mappingId);
+    revalidatePath(PATH);
+    return { data: null, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
   }

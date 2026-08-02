@@ -4,6 +4,7 @@ import {
   ProductVariantService,
   PurchaseOrderService,
   ReorderService,
+  SupplierProductService,
   SupplierService,
 } from '@lezzet/database';
 import type { serviceDb } from '@lezzet/database';
@@ -17,6 +18,8 @@ import type {
   SuggestionGroupView,
   SuggestionLineView,
   SupplierCardView,
+  SupplierProductRowView,
+  VariantPickOption,
 } from './procurement-types';
 
 // Tedarik ekranının sunucu okumaları. Okuma SEKMEYE bağlıdır (09.4'te ölçülen desen) — page.tsx
@@ -162,6 +165,60 @@ export async function readSupplierCards(db: Db): Promise<SupplierCardView[]> {
         isActive: s.isActive,
       };
     }),
+  );
+}
+
+/**
+ * Bir tedarikçinin ürün–kod eşlemeleri, BİZİM ürün adımızla. Ad çözümü tek turda (satır başına
+ * sorgu yok) — fiyat ekranının boy adı deseni.
+ */
+export async function readSupplierProducts(db: Db, supplierId: string): Promise<SupplierProductRowView[]> {
+  const mappings = await new SupplierProductService(db).listBySupplier(supplierId);
+  if (mappings.length === 0) return [];
+
+  const titles = await variantTitles(db, mappings.map((m) => m.variantId));
+  return mappings.map((m) => ({
+    id: m.id,
+    variantId: m.variantId,
+    title: titles.get(m.variantId) ?? '—',
+    supplierCode: m.supplierCode,
+    nameAtSupplier: m.nameAtSupplier,
+    packQty: m.packQty,
+    lastPurchaseCents: m.lastPurchasePrice === null ? null : toCents(m.lastPurchasePrice),
+    isPreferred: m.isPreferred,
+  }));
+}
+
+/**
+ * Eşleme formunun varyant seçicisi. Arama ÜRÜN ADINDA yapılır ve eşleşen ürünün tüm boyları döner:
+ * "baklava" yazan, baklavanın boylarını arıyordur (fiyat ekranının seçicisiyle aynı kural).
+ *
+ * Okuma DAR: fiyat/maliyet taşımıyor. Fiyat ekranının seçicisi o bağlamı getiriyor çünkü orada
+ * karar parasal; burada soru "hangi ürün" — aynı okumayı paylaşmak, tedarik ekranına hiç
+ * kullanmayacağı üç okumanın bedelini ödetirdi.
+ */
+export async function searchVariantOptions(db: Db, term: string): Promise<VariantPickOption[]> {
+  const query = term.trim();
+  if (!query) return [];
+
+  const page = await new ProductService(db).listPriceRows({ filters: { query }, limit: VARIANT_SEARCH_LIMIT });
+  return page.rows.flatMap((product) =>
+    product.variants.map((variant) => ({
+      variantId: variant.id,
+      title: titleOf(resolveLocalizedText(product.name), resolveLocalizedText(variant.label)),
+    })),
+  );
+}
+
+const VARIANT_SEARCH_LIMIT = 20;
+
+/** Varyant kimliği → "Ürün · Boy". Boy adı üründen gelir; boy listesi yalnız etiketi taşır. */
+async function variantTitles(db: Db, variantIds: readonly string[]): Promise<Map<string, string>> {
+  const variants = await new ProductVariantService(db).listByIds([...new Set(variantIds)]);
+  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
+  const productNames = new Map(products.map((p) => [p.id, resolveLocalizedText(p.name)]));
+  return new Map(
+    variants.map((v) => [v.id, titleOf(productNames.get(v.productId) ?? '—', resolveLocalizedText(v.label))]),
   );
 }
 
