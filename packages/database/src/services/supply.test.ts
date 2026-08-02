@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
 import { createTestWarehouse } from '../testing/warehouse';
 import { purgeTestData } from '../testing/cleanup';
@@ -197,7 +197,87 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
   });
 
   it('tedarikçisi eşlenmemiş kalemlerden sipariş açılmaz (açıkça reddedilir)', async () => {
-    await expect(reorder.createDraftFrom({ supplierId: null, lines: [] })).rejects.toThrow();
+    await expect(reorder.createDraftFrom({ supplierId: null, warehouseId, lines: [] })).rejects.toThrow();
+  });
+
+  /**
+   * "Yolda" hesabı (09.14 üçüncü talep · kullanıcı bulgusu): sipariş verdikten sonra öneri satırı
+   * OLDUĞU GİBİ duruyordu. Sipariş stoğu değiştirmez (mal gelmedi), o yüzden eşik hâlâ delikti —
+   * davranış tanıma göre doğru ama sonucu arıza: aynı tedarikçiye üst üste basmak ikinci siparişi
+   * açıyordu ve hiçbir yerde uyarı yoktu.
+   */
+  describe('öneri açık siparişleri görür', () => {
+    /**
+     * Bu blokta açılan siparişler her testten sonra TOPLANIR.
+     *
+     * Şart, çünkü dosyanın önceki testleri de açık sipariş bırakıyor ve "yolda" hesabı tam olarak
+     * onları okuyor: temizlik olmadan ikinci test birincinin siparişini görür ve satır beklenmedik
+     * yerde düşerdi. Mutlak sayı yerine FARK ölçen iddialar da aynı sebeple (`CLAUDE.md §4b`).
+     */
+    const acilanlar: string[] = [];
+    afterEach(async () => {
+      for (const id of acilanlar.splice(0)) await db.from('purchase_order').delete().eq('id', id);
+    });
+
+    /** Bu varyantın o andaki öneri satırı — yoksa `undefined` (eksik kapanmış demektir). */
+    async function öneriSatiri() {
+      return (await reorder.suggestions(warehouseId))
+        .find((g) => g.supplierId === supplierId)
+        ?.lines.find((l) => l.variantId === variantId);
+    }
+
+    beforeEach(async () => {
+      await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(250) });
+    });
+
+    it('taslak açılınca satır DÜŞMEZ ama "taslakta" olarak görünür — tedarikçi haberdar değil', async () => {
+      const önceki = (await öneriSatiri())?.draftQty ?? 0;
+      const grup = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
+      const { order } = await reorder.createDraftFrom(grup, 'Test');
+      acilanlar.push(order.id);
+
+      const satir = await öneriSatiri();
+      // Taslak eşiğe GİRMEZ: açıp göndermeyi unuttuğumuz bir taslak eksiği "kapatmış" görünseydi
+      // raf sessizce boş kalırdı.
+      expect(satir).toBeDefined();
+      expect((satir?.draftQty ?? 0) - önceki).toBe(24);
+      expect(satir?.incomingQty).toBe(0);
+    });
+
+    it('GÖNDERİLİNCE satır düşer — mal yolda, ikinci sipariş açılmamalı', async () => {
+      const grup = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
+      const { order } = await reorder.createDraftFrom(grup, 'Test');
+      acilanlar.push(order.id);
+      await orders.markSent(order.id);
+
+      // Asıl bulgunun kapanışı: eksik 15 (20 − 5), yolda 24 → satır artık öneri değil.
+      expect(await öneriSatiri()).toBeUndefined();
+    });
+
+    it('öneriden açılan sipariş HEDEF DEPOYU taşır — yoksa "yolda" hiç hesaplanamazdı', async () => {
+      const grup = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
+      expect(grup.warehouseId).toBe(warehouseId);
+
+      const { order, items } = await reorder.createDraftFrom(grup, 'Test');
+      acilanlar.push(order.id);
+      expect(items[0]?.targetWarehouseId).toBe(warehouseId);
+    });
+
+    it('HEDEFSİZ sipariş hiçbir deponun eksiğini kapatmaz — ama görünür kalır', async () => {
+      const önceki = (await öneriSatiri())?.unassignedQty ?? 0;
+
+      // Elle açılmış, hedefi yazılmamış sipariş: mal fiilen nereye inecek bilinmiyor (C7/K6).
+      const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 100 }]);
+      acilanlar.push(order.id);
+      await orders.markSent(order.id);
+
+      const satir = await öneriSatiri();
+      // 100 adet yolda ama hangi depoya? Bilinmiyor → eksik KAPANMADI sayılır, sayı ayrı gösterilir.
+      // Bakılan depoya saymak malın oraya geleceğini varsaymaktı ve K6 tam bunu yasaklıyor.
+      expect(satir).toBeDefined();
+      expect(satir?.incomingQty).toBe(0);
+      expect((satir?.unassignedQty ?? 0) - önceki).toBe(100);
+    });
   });
 
   it('stok eşiğin üstündeyse öneri çıkmaz', async () => {

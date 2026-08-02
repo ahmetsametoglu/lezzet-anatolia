@@ -196,6 +196,34 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
    * parça kabul edilebilir (K6) ve ilk kabul siparişi kapatmaz. Ölçü `initial_qty` — `physical_qty`
    * satışla erir ve "ne kadar geldi" sorusuna yanlış cevap verir.
    */
+  /**
+   * AÇIK siparişlerin bekleyen kalemleri — "yolda ne var" (09.14 · üçüncü talep).
+   *
+   * `received` ve `cancelled` DIŞARIDA: ilki zaten stoğa girdi (iki kez sayılırdı), ikincisi hiç
+   * gelmeyecek. `draft` İÇERİDE ama ayrı sayılmalı — çağıran onu `sent` ile toplamamalı: gönderilmiş
+   * sipariş bir bekleyiştir, taslak yalnız bizim kararımızdır ve tedarikçi ondan habersizdir.
+   *
+   * Sayfalama YOK ve gerekmiyor: açık sipariş kümesi veriyle büyümez, kabul edildikçe kapanır
+   * (`CLAUDE.md §1` — ölçüt liste olmak değil, sınırsız büyümek).
+   */
+  async openProgress(): Promise<Array<PurchaseOrderProgress & { status: PurchaseOrderStatus }>> {
+    const open = await this.getAll({ status: ['draft', 'sent', 'partially_received'] });
+    if (open.length === 0) return [];
+    const statusOf = new Map(open.map((o) => [o.id, o.status]));
+
+    const { data, error } = await this.supabase
+      .from('purchase_order_progress')
+      .select('*')
+      .in('purchase_order_id', [...statusOf.keys()]);
+    if (error) throw error;
+
+    return (data ?? [])
+      .map((row) => PurchaseOrderProgressSchema.parse(dbToApp(row)))
+      // Tamamlanmış kalem "yolda" değildir: sipariş açık olsa da o satırın malı geldi.
+      .filter((row) => row.missingQty > 0)
+      .map((row) => ({ ...row, status: statusOf.get(row.purchaseOrderId)! }));
+  }
+
   async progressOf(purchaseOrderId: string): Promise<PurchaseOrderProgress[]> {
     const { data, error } = await this.supabase
       .from('purchase_order_progress')

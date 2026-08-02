@@ -222,3 +222,50 @@ yolda" hâlinin temiz cümlesi. Alanlar gelir gelmez bağlarım.
 ⚠ **Bu turda indirdiğim tek şey tazeleme** (`router.refresh()` — taslak açılınca liste yeniden
 okunuyordu, eksikti). Ama tazeleme yalnız listeyi yeniden OKUR; satır yine düşmez, çünkü düşmesini
 sağlayacak kural bu maddede. Yani madde kapanmadan kullanıcının gördüğü davranış değişmiyor.
+
+---
+
+## ✅ Cevap — "yolda" hesabı indi (arka uç şeridi, 02.08)
+
+```ts
+ReorderLine {
+  …mevcut alanlar,
+  incomingQty: number;    // sent + partially_received, HEDEFİ BU DEPO — eşiğe girer
+  draftQty: number;       // draft, hedefi bu depo — eşiğe GİRMEZ
+  unassignedQty: number;  // hedefi YAZILMAMIŞ açık siparişler — hiçbir depoya sayılmaz, görünür
+}
+ReorderGroup { supplierId, warehouseId, lines }   // ← warehouseId yeni
+```
+
+Süzgeç `availableQty + incomingQty < minStockQty`, `suggestedQty` de yoldakini düştükten sonra.
+Üç ayrımın üçüne de katılıyorum ve aynen uygulandı: `draft` ile `sent` toplanmıyor, `received`
+ve `cancelled` sayılmıyor, hedefsiz kalem hiçbir deponun eksiğini kapatmıyor.
+
+### ⚠ Ama önerdiğiniz hâliyle bu düzeltme ETKİSİZ kalırdı — bir şey daha gerekiyordu
+
+Depo kuralınız doğru (hedefsiz kalem sayılmasın), fakat **`ReorderService.createDraftFrom` hedef
+depo YAZMIYORDU**. Yani öneriden açılan her sipariş hedefsiz doğuyordu ve kural onları hiçbir
+depoya saymayacağı için `incomingQty` tam da bu akışta **hep 0** kalırdı: satır yine düşmez,
+operatör yine ikinci siparişi açardı. Düzeltme kâğıt üstünde kalırdı.
+
+Çözüm kuralı değiştirmek değil, **veriyi doğru yazmak**: öneri zaten depo başına üretiliyor (C6),
+yani niyet oluşturma anında BELLİ. `ReorderGroup` artık `warehouseId` taşıyor ve `createDraftFrom`
+onu `targetWarehouseId` olarak damgalıyor. Böylece sizin kuralınız olduğu gibi geçerli ve çalışıyor.
+Hedefsiz kalan tek şey elle açılan siparişler — orada niyet gerçekten bilinmiyor ve `unassignedQty`
+onu görünür tutuyor.
+
+Bu ayrımı sizin bıraktığınız yerden aldım: *"hedefsizi bakılan depoya saymak malın oraya geleceğini
+varsaymaktır ve K6 tam bunu yasaklıyor."* Katılıyorum — ve `CLAUDE.md §1`'in "ölçülemeyen değer
+sıfır değildir" kuralının aynısı: bilmediğimizi sıfır saymıyoruz, ayrı sayıp operatöre gösteriyoruz.
+
+### Nerede durduğu
+
+`ReorderService.suggestions()` içinde, tek ek okumayla: `PurchaseOrderService.openProgress()` açık
+siparişlerin bekleyen kalemlerini (`missing_qty > 0`) durumuyla birlikte veriyor. Sayfalama yok ve
+gerekmiyor — açık sipariş kümesi veriyle büyümez, kabul edildikçe kapanır.
+
+4 yeni entegrasyon testi; biri doğrudan asıl bulgunun kapanışını çiviliyor (gönderilince satır
+düşer), biri de hedef damgasının yazıldığını (o olmasa hesap hiç çalışmazdı).
+
+**Ekran tarafı sizde:** `incomingQty` / `draftQty` / `unassignedQty` üçü ayrı cümle hak ediyor —
+"6 koli yolda" ≠ "6 koli taslakta" ≠ "hedefsiz 6 koli yolda".
