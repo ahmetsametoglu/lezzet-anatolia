@@ -290,7 +290,8 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
 
 
 - [ ] (09.19) **Ortak header + sol raydan devralma** · `touches: apps/web/components/operation/ui/{page-header,admin-sidebar,tabs}.tsx · apps/web/app/(operations)/operations/**` *(kullanıcı isteği 02.08)* — her ekranın başlığı TEK komponent olacak; ve o komponent sol navigasyon panelinden üç bloğu devralacak: **depo bağlamı seçicisi · ⌘K hızlı işlem/arama · bağlanan kullanıcı künyesi**. Gerekçe kullanıcının kendi cümlesi: *"orası çok karmaşık ve dolu görünüyor."* Ray böylece yalnız "nereye gidiyorum" sorusuna kalır.
-  - **ÖNCE TASARIM (CLAUDE.md §3):** görsel karar `.dc`'de verilir, implement ederken improvise edilmez. Aşağıdaki envanter Claude Design'a gidecek isteğin ekidir — barın bugün NE taşıdığını sayıyor.
+  - **ÖNCE TASARIM (CLAUDE.md §3):** görsel karar `.dc`'de verilir, implement ederken improvise edilmez. Sözleşme yazıldı → **`design/pages/operasyon-ortak-header.md`** (Claude Design'a iletilecek); aşağıdaki envanter onun eki.
+  - **Envanterde barın NUMARASI YOK (02.08'de fark edildi):** komponent envanteri `O1 AdminSidebar` · `O2 Sekme çubuğu` · `O3 Filtre çipi & arama` tanımlıyor ama **sayfa başlık barını hiç tanımlamamış**. Yani ekranların her birinin kendi barını yazması bir ihmal değil, tasarım sisteminin boşluğu — komponent oradan başlamalı, koddan değil.
   - **Envanter — bugünkü başlık barları (02.08'de sayıldı):**
     - `PageHeader` **10 ekranda** kullanılıyor ve yalnız üç şey sabitliyor: başlık (22px) · alt satır (sayaç/özet) · sağda serbest `children` yuvası. Yani "ortak" olan düzen; içerik her ekranda elden yazılıyor.
     - **Sağ yuvada bugün ne var:** arama kutusu (müşteriler · siparişler · fiyatlar) · birincil aksiyon düğmesi (tedarik: "+ Tedarik siparişi", "+ Tedarikçi") · ikincil araç düğmesi (stok: "Lot / geri çağırma") · özel aksiyon (fiyatlar: "otomatik yeniden fiyatla"). Boş bırakan ekranlar da var (ürünler, sistem).

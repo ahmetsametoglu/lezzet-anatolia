@@ -148,6 +148,29 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ## 2. Karar bekleyen (tasarım tarafında netleşmeli)
 
+- **ÇELİŞKİ: Transfer'in AYRI SAYFA'sı çizildi, oysa 01.08'de sayfa olmaktan çıkarılmıştı (02.08).**
+  Gelen tasarım paketinde `Operasyon - Transfer.dc.html` var (web "yolda ne var" listesi · mobil
+  depocu kabul akışı · sevk oluşturma diyaloğu · tek-depolu kapalı hâl) ve `AdminSidebar.dc`
+  navigasyona **Transfer** satırı ekliyor. Ama §5'te yazılı kullanıcı kararı bunun tersi:
+  *"Transfer ayrı sayfa DEĞİL — `admin-transfer.md` **silindi**, içeriği `admin-stok.md`'ye taşındı:
+  Mal kabul ve Çıkışlar sekmeleri"*, ve *"yoldaki transfer ayrı sekme değil, Mal kabul'ün
+  'bekleyenler' kısmı"*.
+  **Sebebi bulundu:** `design/project/uploads/admin-transfer.md` duruyor — yani **silinmiş sayfa
+  dokümanının eski bir kopyası** Claude Design'a iletilmiş. `design/pages/` altında o dosya yok;
+  yürürlükteki sözleşme `admin-stok.md` (dört sekme: Seviyeler · Yaklaşan tarihli · Mal kabul ·
+  Çıkışlar) ve o da aynı pakette güncellenmedi.
+  **Karar kullanıcının** ve iki yol da tutarlı olabilir: (a) 01.08 kararı geçerli → Transfer çizimi
+  Stok'un iki sekmesine dağıtılır, nav satırı kodlanmaz; (b) karar değişti → `admin-stok.md`'den
+  transfer bölümü çıkarılır, `admin-transfer.md` geri yazılır, nav'a Transfer eklenir.
+  **Kodlanmadı** — ikisi arasında seçim yapmak sayfa mimarisi kararıdır, çizimden okunmaz.
+  Ara çözüm de yapılmadı: iki yerde birden kurmak, aynı kaydı iki ekranın sahiplenmesi olurdu.
+
+- **`AdminSidebar.dc` iki noktada koddan geride (02.08).** (1) Nav etiketi hâlâ **"Satın Alma"**;
+  kullanıcı 02.08'de **"Tedarik"** dedi ve kod öyle. (2) Çizim **Depolar**'ı "Sistem" grubuna
+  koyuyor, kod "Depo" grubuna (Stok · Tedarik · Depolar) — gruplama 09.2'de kullanıcıyla birlikte
+  yeniden yapılmıştı ve gerekçesi görev notunda. Çizim güncellenirken bu ikisi de düzeltilmeli;
+  aksi hâlde bir sonraki tur aynı sapmayı "kod yanlış" diye geri getirir.
+
 - [ ] **B2B sipariş şablonu diye bir varlık var mı** — tasarım boş sepette B2B'ye vitrin seçkisi
       yerine şablon listesi gösteriyor ("Haftalık standart · 14 kalem" + "Yükle"). Böyle bir veri
       modeli yok ve şablonun ne olduğu kararlaştırılmadı: müşterinin kaydettiği bir sepet mi

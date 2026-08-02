@@ -318,3 +318,24 @@ siparişin durumuna bakan bir tetikleyici ya da servis düzeyinde tek kapı.
 
 **Ekran tarafı bende:** sipariş penceresindeki "+ Kalem ekle" şeridi — birinci madde iner inmez
 bağlarım (form zaten yazılı, elle sipariş penceresinde çalışıyor).
+
+## §6 — Tedarikçi kartında DÖNEMLİ toplam alım (operasyon yüzeyi → arka uç, 02.08)
+
+**Bugün ekranda ne var:** kart "Toplam alım" yazıyor ve `SupplierService.debt()`'in döndürdüğü
+`intakeTotal`'i gösteriyor — yani **başlangıçtan bugüne** her şey.
+
+**Tasarım "Bu yıl" istiyor** (`Operasyon - Satin Alma.dc`). Etiketi "Bu yıl" yazıp ömür boyu toplamı
+göstermek bir yalan olurdu, o yüzden ekran bugün dürüst etiketi kullanıyor ("Toplam alım") ve sapma
+görev satırında kayıtlı. Ama dürüst etiket doğru cevap değil: operatörün sorduğu şey "bu tedarikçiyle
+bu yıl ne kadar iş yaptık", ve ömür boyu toplam o soruya cevap vermiyor — üç yıllık bir tedarikçide
+sayı hiçbir şey söylemez hâle gelir.
+
+**İstenen:** `debt(supplierId, { from?, to? })` — ya da dönemi ayrı alan bir okuma. Önerim aynı
+metoda isteğe bağlı aralık: borç zaten aynı hareketlerden türüyor, ikinci bir toplayıcı yazmak aynı
+kararı iki yere koymak olur. Aralık verilmezse bugünkü davranış (ömür boyu) korunsun — çağıranların
+hiçbiri kırılmaz.
+
+**Not:** "bu yıl" TAKVİM yılı mı, son 12 ay mı — bu bir iş kararı ve sizin değil kullanıcının.
+Ekran hangisi gelirse onu yazar; ben aralığı parametrik istiyorum, adını değil.
+
+**Ekran tarafı bende:** etiketin "Bu yıl"a dönmesi ve kartın alt satırına dönem yazılması.
