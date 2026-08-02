@@ -25,9 +25,6 @@ Cevap yazmadan önce dosyanın GÜNCEL hâli okunur.
 
 Dosyalar:
 
-- `denetim-arka-uc-veritabani.md` — arka uç ikinci tarama: A1 kapandı-doğrulandı (para kaydı
-  düzeltildi + daha derin `discountSharesOf` kusuru bulundu), A7 ikinci turu tamamlandı (02.9
-  göç kararı + emniyetler); A2–A6 · A8 · A9 cevap bekliyor
 - `denetim-server-actions.md` — 26 `'use server'` dosyasının taraması (S1 müşteri · S2 operasyon;
   geneli temiz)
 - `denetim-gozlemleme.md` — hata kaydı ağının kör noktaları (G1 kısmen kapandı — operasyon
@@ -37,9 +34,11 @@ Dosyalar:
 - `denetim-test-kapsami.md` — test senaryoları kapsam/kurgu denetimi (T1 güçlü çekirdek ·
   T2 teklif akışı · T3 fiyat-değişim onayı · T4 cron iş testi)
 
-Kapanıp silinenler (02.08): operasyon ilk dosyası · arka uç dosyası · müşteri ilk dosyası
-(M2-kalan dahil tamamı doğrulandı: `cardClass` snug/sm eksenleri + `statusPillClass('sm')`) ·
-müşteri komponent taraması (K1–K4).
+Kapanıp silinenler (02–03.08): operasyon ilk dosyası ve komponent taraması · arka uç ilk dosyası
+ve **veritabanı/duplikasyon taraması** (A1–A9 tamamı uygulanıp doğrulandı — para kaydı düzeltmesi,
+`postal-code`/`date`/`bundle-qty` tek evleri, `ZoneNoticeService`, migration indeksi + `docs:check`
+§3c2 kuralı, PII maskeleme, DOMAIN ödeme pasajları; 02.9 cent göçü `02-database.md` görev satırında
+izlenir) · müşteri ilk dosyası ve komponent taraması (K1–K4, M2 dahil).
 - `barkod-okuyucu-calismasi.md` — barkod okuyucu entegrasyonu etüdü
 - `mobil-platform-calismasi.md` — web mi / native mi / hibrit mi platform etüdü (barkod + kurye
   takibi + push ekseninde)
