@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/operation/ui/button';
-import { Dialog } from '@/components/operation/ui/dialog';
-import { FieldShell } from '@/components/operation/form/field-shell';
-import { Input, Textarea } from '@/components/operation/form/input';
-import { Toggle } from '@/components/operation/form/toggle';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import type { z } from 'zod';
+import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
+import { FormInput, FormNumber } from '@/components/operation/form/form-input';
+import { FormSwitch } from '@/components/operation/form/form-switch';
 import { saveSupplierAction } from './actions';
-import type { SupplierCardView } from './procurement-types';
+import { SupplierFormSchema, type SupplierCardView } from './procurement-types';
 
 // Tedarikçi kartı formu (09.14). Kart olmadan sipariş de olmaz — bu form ekranın süsü değil,
 // sıfırdan kurulumun ilk adımı.
@@ -16,6 +18,14 @@ import type { SupplierCardView } from './procurement-types';
 // Borç burada YOK ve olmayacak: türetilir (Σ girişler − Σ ödemeler), elle yazılan bir bakiye
 // ilk günden yanlış olurdu.
 
+// Form şeması ve tipi `procurement-types` içinde, VARLIK ŞEMASINDAN türetilmiş (`SupplierFormSchema`):
+// action ile form aynı sözleşmeyi paylaşır — ayrı yazılsalardı biri değişip öteki eskirdi.
+// `id` formda düzenlenen bir alan değil, kaydın kimliği → şemadan çıkarılır.
+const FormSchema = SupplierFormSchema.omit({ id: true });
+type FormValues = z.infer<typeof FormSchema>;
+
+const FORM_ID = 'supplier-form';
+
 interface SupplierDialogProps {
   /** null = yeni kayıt. */
   editing: SupplierCardView | null;
@@ -23,41 +33,35 @@ interface SupplierDialogProps {
 }
 
 export function SupplierDialog({ editing, onClose }: SupplierDialogProps) {
-  const [name, setName] = useState(editing?.name ?? '');
-  const [phone, setPhone] = useState(editing?.phone ?? '');
-  const [email, setEmail] = useState(editing?.email ?? '');
-  const [address, setAddress] = useState(editing?.address ?? '');
-  const [vatNumber, setVatNumber] = useState(editing?.vatNumber ?? '');
-  // Vade GÜN sayısıdır ve boş bırakılabilir: boş = peşin çalışıyoruz (şemanın sözleşmesi).
-  const [term, setTerm] = useState(editing?.paymentTermDays != null ? String(editing.paymentTermDays) : '');
-  const [note, setNote] = useState(editing?.note ?? '');
-  const [isActive, setIsActive] = useState(editing?.isActive ?? true);
-
-  const [saving, setSaving] = useState(false);
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
-  const onSave = () => {
-    if (saving) return;
-    setSaving(true);
+  const form = useForm<FormValues>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: {
+      name: editing?.name ?? '',
+      phone: editing?.phone ?? '',
+      email: editing?.email ?? '',
+      address: editing?.address ?? '',
+      vatNumber: editing?.vatNumber ?? '',
+      // null = peşin çalışıyoruz (şemanın kendi sözleşmesi); 0 gün "vade var ama sıfır" olurdu.
+      paymentTermDays: editing?.paymentTermDays ?? null,
+      note: editing?.note ?? '',
+      isActive: editing?.isActive ?? true,
+    },
+    mode: 'onChange',
+  });
+
+  const onSubmit = form.handleSubmit(async (values) => {
     setError(null);
-    const parsedTerm = term.trim() === '' ? null : Number(term);
-    void saveSupplierAction({
-      id: editing?.id,
-      name,
-      phone,
-      email,
-      address,
-      vatNumber,
-      paymentTermDays: Number.isFinite(parsedTerm) ? parsedTerm : null,
-      note,
-      isActive,
-    })
-      .then((result) => {
-        if (result.error) setError(result.error);
-        else onClose();
-      })
-      .finally(() => setSaving(false));
-  };
+    const { error: actionError } = await saveSupplierAction({ id: editing?.id, ...values });
+    if (actionError) {
+      setError(actionError);
+      return;
+    }
+    router.refresh();
+    onClose();
+  });
 
   return (
     <Dialog
@@ -65,75 +69,51 @@ export function SupplierDialog({ editing, onClose }: SupplierDialogProps) {
       onClose={onClose}
       title={editing ? 'Tedarikçi kartı' : 'Yeni tedarikçi'}
       subtitle="Sipariş bu kartla yazılır; borç ve vade buradan izlenir"
-      maxWidth={560}
+      maxWidth={520}
       footer={
-        <>
-          {error ? <span className="mr-auto font-ops-body text-ops-xs font-semibold text-ops-red">{error}</span> : null}
-          <Button variant="secondary" onClick={onClose}>
-            Vazgeç
-          </Button>
-          <Button variant="primary" onClick={onSave} disabled={saving || name.trim() === ''}>
-            {saving ? 'Kaydediliyor…' : 'Kaydet'}
-          </Button>
-        </>
+        <DialogFooter
+          formId={FORM_ID}
+          onCancel={onClose}
+          submitting={form.formState.isSubmitting}
+          error={error}
+          // Silme YOK, pasifleştirme var: geçmiş alım ve borç kaydı tedarikçisiz kalamaz. Alt barda
+          // duruyor çünkü kayda EŞLİK EDEN bir karar, ayrı bir alan değil (katalog formunun deseni).
+          actions={<FormSwitch control={form.control} name="isActive" label="Çalışmaya devam ediyoruz" bare />}
+        />
       }
     >
-      <div className="flex flex-col gap-4">
-        <FieldShell fieldId="supplier-name" label="Tedarikçi adı" required>
-          <Input id="supplier-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Metro Cash&Carry" />
-        </FieldShell>
+      <form id={FORM_ID} onSubmit={onSubmit} className="flex flex-col gap-4">
+        <FormInput control={form.control} name="name" label="Tedarikçi adı" required placeholder="Metro Cash&Carry" />
 
         <div className="grid grid-cols-2 gap-3">
-          <FieldShell
-            fieldId="supplier-phone"
+          <FormInput
+            control={form.control}
+            name="phone"
             label="Telefon"
             // Telefon yalnız bir iletişim bilgisi değil: sipariş listesini WhatsApp'tan göndermenin
-            // anahtarı. Boşsa o düğme hiç çizilmez ve sebebini söyler.
+            // anahtarı. Boşsa o düğme hiç çizilmez ve pencere sebebini söyler.
             labelAside="WhatsApp gönderimi için"
-          >
-            <Input id="supplier-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+33 3 88 …" />
-          </FieldShell>
-          <FieldShell fieldId="supplier-email" label="E-posta">
-            <Input id="supplier-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </FieldShell>
+            placeholder="+33 3 88 …"
+          />
+          <FormInput control={form.control} name="email" label="E-posta" placeholder="siparis@tedarikci.fr" />
         </div>
 
-        <FieldShell fieldId="supplier-address" label="Adres">
-          <Input id="supplier-address" value={address} onChange={(e) => setAddress(e.target.value)} />
-        </FieldShell>
+        <FormInput control={form.control} name="address" label="Adres" placeholder="İrsaliye ve yazışma adresi" />
 
         <div className="grid grid-cols-2 gap-3">
-          <FieldShell fieldId="supplier-vat" label="Vergi no">
-            <Input id="supplier-vat" mono value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} />
-          </FieldShell>
-          <FieldShell fieldId="supplier-term" label="Bize tanıdığı vade" labelAside="boş = peşin">
-            <Input
-              id="supplier-term"
-              mono
-              inputMode="numeric"
-              value={term}
-              onChange={(e) => setTerm(e.target.value.replace(/\D/g, ''))}
-              placeholder="30"
-              trailing={<span className="font-ops-body text-ops-xs text-ops-muted">gün</span>}
-            />
-          </FieldShell>
+          <FormInput control={form.control} name="vatNumber" label="Vergi no" mono />
+          <FormNumber
+            control={form.control}
+            name="paymentTermDays"
+            label="Bize tanıdığı vade"
+            labelAside="boş = peşin"
+            integer
+            placeholder="30"
+          />
         </div>
 
-        <FieldShell fieldId="supplier-note" label="Not">
-          <Textarea id="supplier-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
-        </FieldShell>
-
-        {/* Silme YOK, pasifleştirme var: geçmiş alımlar ve borç kayıtları tedarikçisiz kalamaz. */}
-        <div className="flex items-start gap-3 rounded-ops-card border border-ops-line px-3.5 py-3">
-          <Toggle on={isActive} onChange={setIsActive} label="Çalışmaya devam ediyoruz" />
-          <span className="flex flex-col gap-px">
-            <span className="font-ops-body text-ops-sm font-medium text-ops-ink">Çalışmaya devam ediyoruz</span>
-            <span className="font-ops-body text-ops-xs text-ops-muted">
-              Kapatılan tedarikçi yeni siparişte seçilemez; geçmiş kayıtları ve borcu durur.
-            </span>
-          </span>
-        </div>
-      </div>
+        <FormInput control={form.control} name="note" label="Not" placeholder="Teslimat günü, iletişim kişisi…" />
+      </form>
     </Dialog>
   );
 }

@@ -1,4 +1,5 @@
-import type { KeysetCursor, PurchaseOrderStatus } from '@lezzet/types';
+import { z } from 'zod';
+import { SupplierInsertSchema, type KeysetCursor, type PurchaseOrderStatus } from '@lezzet/types';
 
 // Tedarik ekranının görünüm modelleri — sunucu okur ve bu biçime indirger, ekran yalnız çizer.
 
@@ -49,20 +50,19 @@ export interface SupplierCardView {
   isActive: boolean;
 }
 
-/** Tedarikçi formunun girdisi — `contact` JSON'u üç adlı alandan kurulur (bkz. `saveSupplierAction`). */
-export interface SupplierFormInput {
+/**
+ * Tedarikçi formunun girdisi — **varlık şemasından türetilir** (elle interface yazılmaz, CLAUDE.md §1).
+ * `contact` serbest JSON'u formda üç adlı alana açılır; birleştirme `saveSupplierAction`'da.
+ */
+export const SupplierFormSchema = SupplierInsertSchema.omit({ contact: true }).extend({
   /** Boşsa yeni kayıt. */
-  id?: string;
-  name: string;
-  phone?: string;
-  email?: string;
-  address?: string;
-  vatNumber?: string;
-  /** null/undefined = peşin. */
-  paymentTermDays?: number | null;
-  note?: string;
-  isActive: boolean;
-}
+  id: z.string().uuid().optional(),
+  phone: z.string().nullish(),
+  email: z.string().nullish(),
+  address: z.string().nullish(),
+  isActive: z.boolean(),
+});
+export type SupplierFormInput = z.infer<typeof SupplierFormSchema>;
 
 /**
  * Tedarik siparişi liste satırı — ham okuma (`PurchaseOrderRow`) + motorun özeti
