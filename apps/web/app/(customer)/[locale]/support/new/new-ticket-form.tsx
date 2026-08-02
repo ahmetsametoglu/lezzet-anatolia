@@ -29,6 +29,18 @@ import type { Messages } from '../support-types';
  */
 const TYPES: readonly TicketType[] = ['missing', 'damaged', 'question', 'other'];
 
+/**
+ * Hangi tipler bir ÜRÜNE dair? Yalnız bunlarda kalem işaretlemek ve fotoğraf istemek anlamlı.
+ *
+ * "Soru" ve "Diğer" siparişin bütününe ya da bambaşka bir şeye dair olabilir — orada kalem
+ * listesi cevaplanacak bir soru değil, atlanacak bir bölümdür. Fotoğraf da öyle: amacı somut bir
+ * kalemin hâline dair KANIT (tasarım: "bozuk ürün şikâyetinde çözümü hızlandırır"); soruda neyin
+ * fotoğrafının isteneceği belli değildir ve boş duran bir kutu "bir şey eklemem mi gerekiyordu?"
+ * diye sordurur.
+ */
+const ITEM_TYPES: readonly TicketType[] = ['missing', 'damaged'];
+const isItemType = (type: TicketType | null): boolean => type !== null && ITEM_TYPES.includes(type);
+
 interface NewTicketFormProps {
   t: Messages;
   locale: Locale;
@@ -172,7 +184,39 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
 
   return (
     <div className={`flex flex-col gap-3.5 ${column}`}>
-      {order && order.lines.length > 0 && (
+      {/* ── SIRA: ÖNCE SORUN, SONRA ÜRÜN (01.08, kullanıcı kararı) ────────────
+          Tasarım kalemleri tipin ÜSTÜNE koyuyordu ve sıra tersti: müşteri neyi anlatacağını
+          söylemeden hangi ürünleri işaretleyeceğini bilemez, üstelik kalem listesi soruların
+          yarısında (soru · diğer) hiç gerekmiyor. Tip önce sorulunca form kendini kısaltıyor —
+          "Soru" seçen müşteri üç bölüm yerine bir bölüm görüyor. */}
+      {order && (
+      <section className="flex flex-col gap-2">
+        <span className="font-sans text-body-sm font-bold text-ink">{t.new.problem}</span>
+        <div className="flex flex-wrap gap-2">
+          {TYPES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => {
+                setType(value);
+                // Ürünle ilgisi olmayan bir tipe geçildiğinde işaretler DÜŞER: gizlenen bir bölümün
+                // state'i formla birlikte gönderilirse müşteri, ekranda görmediği bir seçimi
+                // yapmış olur — "Soru" tipinde üç kaleme bağlanmış bir talep operatörü yanıltır.
+                if (!isItemType(value)) setMarkedLines([]);
+              }}
+              className={[
+                'cursor-pointer rounded-pill px-4 py-2.25 font-sans text-note font-bold transition-colors',
+                value === type ? 'bg-olive text-cream' : 'border-[1.5px] border-sand-400 bg-card text-ink hover:border-olive',
+              ].join(' ')}
+            >
+              {t.type[value]}
+            </button>
+          ))}
+        </div>
+      </section>
+      )}
+
+      {order && isItemType(type) && order.lines.length > 0 && (
         <section className="flex flex-col gap-2">
           <span className="font-sans text-body-sm font-bold text-ink">{t.new.items}</span>
           {order.lines.map((line) => {
@@ -208,27 +252,6 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
         </section>
       )}
 
-      {order && (
-      <section className="flex flex-col gap-2">
-        <span className="font-sans text-body-sm font-bold text-ink">{t.new.problem}</span>
-        <div className="flex flex-wrap gap-2">
-          {TYPES.map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setType(value)}
-              className={[
-                'cursor-pointer rounded-pill px-4 py-2.25 font-sans text-note font-bold transition-colors',
-                value === type ? 'bg-olive text-cream' : 'border-[1.5px] border-sand-400 bg-card text-ink hover:border-olive',
-              ].join(' ')}
-            >
-              {t.type[value]}
-            </button>
-          ))}
-        </div>
-      </section>
-      )}
-
       <FormTextareaField
         label={t.new.describe}
         placeholder={t.new.describePlaceholder}
@@ -237,12 +260,11 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
         onChange={(e) => setBody(e.target.value)}
       />
 
-      {/* **Fotoğraf yalnız siparişli talepte.** Amacı tasarımda yazılı: "bozuk ürün şikâyetinde
-          çözümü hızlandırır" — yani kanıt, somut bir kalemin hâline dair. Siparişsiz genel bir
-          mesajda neyin fotoğrafı isteneceği belli değil; boş duran bir yükleme kutusu müşteriye
-          "bir şey eklemem mi gerekiyordu?" diye sordurur. Tasarımın genel "bize yaz" karesinde de
-          yok. */}
-      {order && (
+      {/* **Fotoğraf yalnız ÜRÜNE dair talepte.** Amacı tasarımda yazılı: "bozuk ürün şikâyetinde
+          çözümü hızlandırır" — yani kanıt, somut bir kalemin hâline dair. Kalem listesiyle aynı
+          koşula bağlı ve aynı sebeple: soruda ya da genel bir mesajda neyin fotoğrafı isteneceği
+          belli değildir. Tasarımın genel "bize yaz" karesinde de yok. */}
+      {order && isItemType(type) && (
       <section className="flex flex-col gap-2">
         <span className="font-sans text-body-sm font-bold text-ink">
           {t.new.photo} <span className="font-normal text-muted">— {t.new.photoHint}</span>
