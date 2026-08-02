@@ -242,6 +242,47 @@ describe('sepet → taslak sipariş', () => {
   });
 
   /**
+   * REDDEDİLEN KUPON + YERİNE İNEN KAMPANYA (denetim A1).
+   *
+   * `checkout-draft`'ta `discountAmountOf`'un yerel bir kopyası vardı ve `rejected` hâlinde **0**
+   * dönüyordu; paylaşılan sürüm ise `appliedInsteadCents` döndürüyor. Sepet toplamı paylaşılanı
+   * kullandığı için tahsilat DOĞRUYDU — ama siparişe "indirim verilmedi" yazılıyordu. Müşteri
+   * indirimli ödüyor, defter sıfır gösteriyordu: marj ve kampanya raporu ikisi de yanlış okunur.
+   *
+   * Kurulum: geçersiz bir kupon kodu (`unknown_code` → `rejected`) + kategorisi bu testin kendi
+   * damgalı kategorisi olan otomatik kampanya (kazanan). Kategori kapsamı bilinçli — sepet kapsamlı
+   * aktif bir kampanya, o sırada koşan başka bir ajanın siparişine de inerdi (`CLAUDE.md §4b`).
+   */
+  it('kupon reddedilip yerine kampanya inince KAYIT da indirimi gösterir', async () => {
+    const kampanya = await new DiscountService(db).insert({
+      name: `Ret testi ${stamp}`,
+      trigger: 'automatic',
+      type: 'percent',
+      value: 10,
+      scope: 'category',
+      categoryId,
+    });
+    try {
+      const outcome = await createCheckoutDraft({
+        ...(await base()),
+        couponCode: `YOK-${stamp}`, // hiç var olmayan kod → status: 'rejected'
+        entries: [{ kind: 'variant', variantId, qty: 2, stockId: null }],
+      });
+
+      expect(outcome.status).toBe('ok');
+      if (outcome.status !== 'ok') return;
+      const { order } = (await new OrderService(db).getWithItems(outcome.orderId))!;
+
+      // 2 × 20 €'nun %10'u. Yerel kopya buraya 0 yazıyordu.
+      expect(order.discountAmount).toBe(4);
+      // Ve tahsilat zaten doğruydu — ikisinin AYNI sayı olması sözleşmenin kendisi.
+      expect(order.total).toBe(36);
+    } finally {
+      await db.from('discount').delete().eq('id', kampanya.id);
+    }
+  });
+
+  /**
    * KOTA GERÇEKTEN TÜKENİYOR MU (09.6 nöbeti).
    *
    * Açık aylarca yaşadı çünkü zincirin her halkası tek tek doğruydu: tanım ekranı sınırı yazıyor,

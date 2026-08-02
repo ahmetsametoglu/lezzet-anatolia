@@ -1,5 +1,5 @@
 import 'server-only';
-import { DiscountCodeService, DiscountService, UserProfileService, type Db, type DiscountUsage } from '@lezzet/database';
+import { DiscountCodeService, DiscountService, OrderService, UserProfileService, type Db, type DiscountUsage } from '@lezzet/database';
 import {
   applyBestDiscount,
   checkCouponEligibility,
@@ -78,6 +78,10 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
     appliedInstead: winner
       ? { reason: reasonOf(winner, pool, customerDiscountPercent), label: publicLabelOf(pool.find((row) => row.id === winner.discountId)) }
       : null,
+    // Paylar ve indirim kimliği de taşınır — yoksa tutar yazılabilir ama sipariş yazılamaz
+    // (`order_item.line_discount_amount` toplamı başlıkla eşleşmek ZORUNDA, kısıt veritabanında).
+    appliedInsteadShares: winner?.lineShares ?? [],
+    appliedInsteadId: winner?.discountId ?? null,
   });
 
   // Kupon olmayan bir kuralın kimliğiyle indirim alınamaz: kampanyanın kodu yoktur.
@@ -196,7 +200,7 @@ async function customerRate(db: Db, customerId?: string | null): Promise<number 
  */
 async function isFirstOrder(db: Db, customerId?: string | null): Promise<boolean> {
   if (!customerId) return true;
-  const { count, error } = await db.from('order').select('id', { count: 'exact', head: true }).eq('customer_id', customerId);
-  if (error) throw error;
-  return (count ?? 0) === 0;
+  // Servis üzerinden (denetim A4): ham `db.from('order')` sayımı `BaseDbService.count` dururken
+  // yazılmıştı ve `{data,error}` funnel'ının dışında kalıyordu.
+  return (await new OrderService(db).countForCustomer(customerId)) === 0;
 }

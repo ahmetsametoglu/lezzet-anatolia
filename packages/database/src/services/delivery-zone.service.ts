@@ -10,6 +10,7 @@ import {
   type DeliveryZoneUpdate,
   type DeliveryZoneWithCodes,
 } from '@lezzet/types';
+import { normalizePostalCode } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
 
 /**
@@ -138,7 +139,5 @@ export class DeliveryZonePostalCodeService extends BaseDbService<DeliveryZonePos
   }
 }
 
-/** Posta kodunun saklanan biçimi: boşluksuz, büyük harf. Tek yerde — kısıt da DB'de aynısını ister. */
-export function normalizePostalCode(value: string): string {
-  return value.replace(/\s/g, '').toUpperCase();
-}
+// Posta kodu normalizasyonu `@lezzet/helper`'da (denetim A2) — saklama biçimi ile karşılaştırma
+// biçimi aynı olmak ZORUNDA, o yüzden iki katman aynı fonksiyonu okur.

@@ -17,6 +17,8 @@
  * Saf: partileri ve süreyi çağıran verir.
  */
 
+import { daysBetween } from '@lezzet/helper';
+
 export interface TransferBatchInput {
   stockId: string;
   variantId: string;
@@ -59,11 +61,9 @@ export interface TransferSuggestion {
   shortReason: 'none' | 'insufficient_available' | 'no_suitable_batch';
 }
 
-const DAY_MS = 86_400_000;
-
-function daysBetween(from: string, to: string): number {
-  return Math.floor((Date.parse(to) - Date.parse(from)) / DAY_MS);
-}
+// `daysBetween` `@lezzet/helper`'da (denetim A6). Buradaki yerel tanım ham milisaniyeyi
+// `floor`'luyordu — "kaç 24 saat geçti" demekti, "kaç gün sonra" değil. Aynı parti saat kaça göre
+// sevkte bozulur ya da bozulmaz görünürdü. Ortak tanım iki ucu da gün başına indiriyor.
 
 /**
  * FEFO sırasında sevk önerisi.

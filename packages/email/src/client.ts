@@ -36,7 +36,11 @@ function getClient(): Resend | null {
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
   const client = getClient();
   if (!client) {
-    logger.warn({ context: 'email/send', to: params.to, subject: params.subject }, 'RESEND_API_KEY yok → mail atlandı');
+    // **Alıcı adresi loglanmaz** (denetim A8 · `OBSERVABILITY §5`, `CLAUDE.md §1`): log'a kimlik
+    // yazılır, içerik yazılmaz — e-posta/telefon/adres HAYIR. Burada `to` yazıyordu ve bu satır
+    // yerelde her mail atlandığında bir müşteri adresini kayda düşürüyordu. Teşhis için konu yeter:
+    // hangi mailin atlandığını söyler, kime gideceğini söylemez. Kime gideceği zaten DB'de.
+    logger.warn({ context: 'email/send', subject: params.subject }, 'RESEND_API_KEY yok → mail atlandı');
     return { data: null, error: null };
   }
 

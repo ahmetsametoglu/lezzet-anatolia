@@ -1,5 +1,5 @@
 import 'server-only';
-import { AddressService, CartService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
+import { AddressService, CartService, SettingsService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import type { Address, CompanyInfo, PointsEntry, PreferredLanguage } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
@@ -88,17 +88,19 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
 }
 
 /**
- * Bekleyen bölge haberi kayıtları. Kendi servisi YOK ve gerekmiyor: `zone_notice` tek kolonluk bir
- * bekleme listesi, üzerinde iş kuralı taşımıyor — bir servis sınıfı burada yalnız bir katman olurdu.
- * Yazma tarafı da aynı biçimde doğrudan yazıyor (`lib/delivery/notice-actions.ts`).
+ * Bekleyen bölge haberi kayıtları.
  *
- * Ziyaretçinin kaydı da olabilir (hesap zorunlu değil, oturumsuz kayıt yalnız e-postayla durur);
- * burada YALNIZ müşteriye bağlı olanlar okunur — kimlik oturumdan gelir.
+ * Eskiden burada ham `db.from('zone_notice')` vardı ve künyesi *"kendi servisi gerekmiyor, iş
+ * kuralı taşımıyor"* diyordu. Gerekçe eksikti (denetim A4): mesele iş kuralı değil **sözleşme** —
+ * ham okuma `postal_code`'u elle `as string` diye çeviriyordu, yani kolon adı değişse derleyici
+ * değil çalışma zamanı haber verirdi (`STACK §6`).
+ *
+ * Ziyaretçinin kaydı da olabilir (hesap zorunlu değil); burada YALNIZ müşteriye bağlı olanlar
+ * okunur — kimlik oturumdan gelir.
  */
 async function readZoneNotices(db: ReturnType<typeof serviceDb>, customerId: string): Promise<{ postalCode: string }[]> {
-  const { data, error } = await db.from('zone_notice').select('postal_code').eq('customer_id', customerId).order('created_at');
-  if (error) throw error;
-  return (data ?? []).map((row) => ({ postalCode: row.postal_code as string }));
+  const rows = await new ZoneNoticeService(db).listForCustomer(customerId);
+  return rows.map((row) => ({ postalCode: row.postalCode }));
 }
 
 /**

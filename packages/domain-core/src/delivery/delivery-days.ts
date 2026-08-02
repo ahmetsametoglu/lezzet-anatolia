@@ -1,3 +1,4 @@
+import { normalizePostalCode } from '@lezzet/helper';
 import type { Country } from '@lezzet/types';
 
 /**
@@ -34,10 +35,8 @@ export interface PostalCodeRef {
   postalCode: string;
 }
 
-/** Posta kodu karşılaştırması biçimden etkilenmemeli: "67 000" ile "67000" aynı yerdir. */
-export function normalizePostalCode(value: string): string {
-  return value.replace(/\s+/g, '').toUpperCase();
-}
+// Posta kodu normalizasyonu `@lezzet/helper`'a taşındı (denetim A2): aynı gövde üç katmanda
+// yazılıydı ve biri ayrışsaydı aynı kod iki katmanda farklı depoya çözülürdü — sessizce.
 
 /**
  * Bir yeri kapsayan **aktif** bölgelerin tamamı.

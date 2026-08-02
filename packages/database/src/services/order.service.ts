@@ -492,6 +492,16 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     );
   }
 
+  /**
+   * Müşterinin sipariş SAYISI — "ilk sipariş mi" ölçütünün girdisi (denetim A4).
+   *
+   * Satır TAŞINMADAN sayılır (`head: true`); çağıran yalnız sıfır olup olmadığına bakıyor ve
+   * geçmişi kalabalık bir müşterinin bütün siparişlerini çekmenin anlamı yok.
+   */
+  countForCustomer(customerId: string): Promise<number> {
+    return this.count({ customerId });
+  }
+
   listByCustomer(customerId: string, opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<Order>> {
     return this.getPage({ customerId }, {
       orderBy: 'createdAt',

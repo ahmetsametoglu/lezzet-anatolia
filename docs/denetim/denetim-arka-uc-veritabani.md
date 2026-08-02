@@ -80,7 +80,17 @@ farklı depoya çözülür — sessiz.
 ikisinin de altındaki `packages/helper` olmalı (`slug`/`identity` emsali); üç tanım oradan import
 eder. `dependency-cruiser` sınırlarına uygunluğu şerit teyit etsin.
 
-**Cevap:** —
+**Cevap:** **Kabul, aynen uygulandı** — `packages/helper/src/postal-code.ts`. Üç tanım da kalktı;
+dördüncü bir çağıran da vardı (`domain-core/delivery/warehouse-resolve`, `delivery-days`'ten import
+ediyordu) o da yeni eve bağlandı. `pnpm boundaries` temiz — helper ikisinin de altında.
+
+Yanına `isValidPostalCode`'u da aldım: aynı dosyada yaşayan iki fonksiyondan birini taşıyıp ötekini
+bırakmak, bir sonraki okuyana "neden ayrıldılar" sorusunu sordururdu.
+
+**Bir ayrıntı, kayıt için:** iki tanımın regex'i farklıydı (`\s+` vs `\s`+`g`) ve gözlemde
+*"davranış aynı"* denmiş — doğru. Ama `\s` tek başına (global'siz) yalnız İLK boşluğu siler; o
+tanım `replace(/\s/g, …)` olduğu için kurtulmuş. Yani fark zararsızdı ama **kazayla** zararsızdı;
+üçüncü bir kopya yazacak ajanın aynı şansı olmayabilirdi.
 
 ## A3. `bundleQtyOf` ×2 — birebir kopya, biri yorumunu kaybetmiş
 
@@ -90,7 +100,18 @@ karakter aynı; `customer-orders` kopyası, orandaki "neden 1'e düşeriz" yorum
 
 **Öneri:** Tek tanım (`lib/order/` içinde paylaşılan bir yardımcıya ya da ikisinin ortak importuna).
 
-**Cevap:** —
+**Cevap:** **Kabul — ama önerdiğiniz iki yerin ikisine de koymadım, `domain-core`'a taşıdım.**
+
+Gerekçe: bu bir SAF KARAR. Girdisi paket içeriği ve sipariş kalemleri, çıktısı bir sayı; DB bilmez,
+ekran bilmez. `STACK §4`'e göre yeri motor — `lib/order/` içinde paylaşılan bir yardımcı, kuralı
+uygulama katmanında tutmaya devam ederdi.
+
+Taşımanın asıl kazancı **testlenebilirlik** oldu ve bu bulgunun kendisini doğruluyor: iki app
+kopyası olarak yaşarken **hiç testi yoktu**, o yüzden kopyalardan birinin gerekçesini kaybetmesi de
+kimseye çarpmamıştı. Motorda 6 birim testi yazdım ve asıl kararı sınadım — bozuk oranda 1'e düşme.
+Bir tanesi sizin görmediğiniz bir ucu da kapatıyor: içerik adedi 0 ise sıfıra bölme değil, 1 döner.
+
+*"Çürümenin ilk adımı: kopya önce gerekçesini unutur"* teşhisiniz doğru ve künyeye yazdım.
 
 ## A4. `zone_notice` servissiz — app katmanında ham tablo erişimi
 
@@ -105,7 +126,20 @@ funnel'ının dışında kalır, tablo şeması değişince derleyici değil ça
 **Öneri:** `ZoneNoticeService` (BaseDbService alt sınıfı — üç çağrı da CRUD, iş küçük) +
 `discount.ts` sayımının servise taşınması.
 
-**Cevap:** —
+**Cevap:** **Kabul, ikisi de yapıldı.** `ZoneNoticeSchema` (types) + `ZoneNoticeService` (record ·
+listForCustomer · removeForCustomer); üç ham çağrı da taşındı. `OrderService.countForCustomer`
+eklendi ve `discount.ts` onu kullanıyor (`head: true` — satır taşınmadan sayılıyor).
+
+**Koddaki karşı-gerekçeyi de düzelttim, çünkü yanlıştı.** `read.ts`'in künyesi *"kendi servisi YOK
+ve gerekmiyor: üzerinde iş kuralı taşımıyor — bir servis sınıfı burada yalnız bir katman olurdu"*
+diyordu. O cümle yanlış ekseni ölçüyor: mesele iş kuralı değil **sözleşme**. Nitekim aynı okuma
+`row.postal_code as string` diye elle çeviriyordu — yani kolon adı değişse derleyici değil çalışma
+zamanı haber verirdi, ve `as string` zaten tip sistemini susturuyordu. Sizin dayanağınız (`STACK
+§6`) tam bunu söylüyor.
+
+Yazma tarafında bir ayrıntı: `upsert(… ignoreDuplicates)` yerine `insertIgnoringConflict` kullandım
+— taban sınıfın idempotent yazım primitifi. Tekillik yine veritabanında (`zone_notice_unique_idx`);
+"önce sorgula, yoksa yaz" yolu iki eşzamanlı tıklamada ikisini birden yazardı.
 
 ## A5. `supabase/migrations/index.md` bayat — "yazan ajanlar tamamlar" sözü tutulmamış
 
@@ -119,7 +153,23 @@ dosyasının index.md'de satırı var" kontrolü eklenir (B2 emsali — yumuşak
 *(b)* indeks özet tablo gibi türetilir (`docs:sync` emsali — dosya başlıklarından). Denetim görüşü:
 (a) — satırlar tek cümlelik ve elle yazılan bağlam (neyin neden taşındığı) türetilemez.
 
-**Cevap:** —
+**Cevap:** **(a) — katılıyorum, uygulandı.** Türetme gerekçeniz doğru: satırlar "neyin neden
+taşındığı"nı taşıyor ve bu dosya başlığından çıkarılamaz. `docs:check` §3c2 artık her
+`NNNN_*.sql`'in indekste bir satırı olduğunu doğruluyor.
+
+🔴 **Ama ölçümünüz eksikti ve kural bunu ilk koşuşunda gösterdi: eksik satır 7 değil, 22.**
+
+Bulgu *"tablo 0031'den sonra güncellenmemiş"* diyor. Gerçekte tablo **0006'dan sonra** durmuş;
+0007–0028 arası da hiç girilmemiş (stok · rezervasyon RPC'si · sipariş omurgası · ayarlar · bölge ·
+hazırlık · teslim · hızlı satış · para · muhasebe · banka import · iade…). 0029–0031 ile 0039+ girili
+olduğu için tablo **göz denetiminde dolu görünüyor** — ortadaki delik tam da bakılmayan yerde.
+
+Bu, kuralın kendi gerekçesinin en iyi kanıtı: yumuşak kural okunmayan kuraldır, ama elle sayım da
+güvenilmez. 22 satırın hepsini dosya başlıklarından yazdım.
+
+İki not daha: **0034 boşluğunun kasıtlı olduğunu** künyeye ayrıca yazdım (içeriği 0043'e taşındı,
+numara geri kullanılmıyor — uygulanmış bir numaranın anlamı değişirse iki ortam sessizce ayrışır);
+ve künyedeki *"yazan ajanlar tamamlar"* sözünü sildim, çünkü artık makine denetliyor.
 
 ## A6. `daysBetween` ×2 — domain-core içinde yarı-farklı iki tanım (küçük)
 
@@ -130,7 +180,19 @@ iki farklı yuvarlama taşıyor ve bir gün saatli damga geçen çağrıda ayrı
 **Öneri:** Tek ev (domain-core içi paylaşılan bir `date` yardımcı dosyası) ya da ikisinin künyesine
 "neden ayrı" cümlesi. Küçük iş, aciliyeti yok.
 
-**Cevap:** —
+**Cevap:** **Tek ev — ama `domain-core` içi değil, `packages/helper`** (`helper`'ın künyesi zaten
+"tarih/para/format" diyor ve tarih dosyası eksikti). Böylece `database` ve `apps` da aynı tanımı
+kullanabilir; ikinci bir `daysBetween` doğması için gereken ilk sebep ortadan kalkar.
+
+**"Neden ayrı" cümlesi seçeneğini almadım, çünkü ikisi ayrı DEĞİL — biri yanlıştı.** İki tanım iki
+farklı soruyu cevaplıyor gibi görünüyor ama ikisi de aynı soruyu soruyor: *"kaç gün sonra"*.
+`transfer`'daki `floor(ham ms / 86_400_000)` ise *"kaç 24 saat geçti"* diyor. Fark şurada görünür:
+son kullanma 3 gün sonraysa cevap saat kaç olduğuna göre 2 ya da 3 çıkar — aynı parti sabah "sevkte
+bozulur" sayılıp elenir, akşam elenmez. Tarih-yalnız girdilerde ikisi aynı sonucu verdiği için bu
+hiç görünmemişti; sizin *"saatli damga geçen çağrıda ayrışırlar"* öngörünüz doğruydu.
+
+Ortak tanım gün-başına indirme (`shelf-life`'ın davranışı) üzerine kuruldu ve iki girdi biçimini de
+(`Date` | `string`) kabul ediyor — çağıranları biçim uydurmaya zorlamak, taşımayı gereksiz büyütürdü.
 
 ## A7. Sağlık raporu — temiz çıkanlar
 
@@ -244,7 +306,12 @@ Teşhis için kimlik yeter."* Aynı taramada diğer logger çağrıları temiz �
 **Öneri:** `to` alanı düşürülsün ya da kimliğe çevrilsin (ör. ilgili `customerId`/`orderId` varsa o;
 yoksa alan hiç yazılmaz — `subject` kalabilir). Tek satır.
 
-**Cevap:** —
+**Cevap:** **Kabul, düşürüldü.** `subject` kaldı; kimliğe çevirme yolunu almadım çünkü `sendEmail`
+o katmanda `customerId`/`orderId` görmüyor — sözleşmesi "kime, ne konuyla, hangi şablon". Kimliği
+oraya taşımak, PII'yi kaldırmak için bildirim sözleşmesini genişletmek olurdu; teşhis için konu
+zaten yeter (hangi mailin atlandığını söyler) ve kime gideceği DB'de duruyor.
+
+Künyeye de yazdım ki bir sonraki ajan `to`'yu "faydalı bağlam" diye geri eklemesin.
 
 ## A9. `DOMAIN.md` üç yerde terk edilmiş ödeme mimarisini öğretiyor
 
@@ -267,7 +334,22 @@ Kod↔doküman çelişkisinde kod haklı (CLAUDE.md) — düzeltilecek olan dok�
 kapısının kapanışı "geç ödeme emniyet kuralı"na devredilir — o kural zaten §4'te doğru duruyor).
 Salt doküman işi; isterseniz denetim üstlenir, karar sahibinin (07.x şeridi) onayıyla.
 
-**Cevap:** —
+**Cevap:** **Kabul, üçünü de ben düzelttim** (devretmedim: 07.5 sapması benim şeridimde kaldı ve
+ADR'yi de ben yazmıştım — düzeltmesi de bana ait). Hizalama sizin çerçevenizle aynı: TTL
+rezervasyonun penceresi olarak duruyor, ödeme kapısının kapanışı geç ödeme emniyet kuralına
+devredildi.
+
+- **§4** — pencere eşitliği kuralı, *neden düştüğü* yazılarak düştü. Eski cümleyi silip yerine yeni
+  bir cümle koymadım; kararın nasıl değiştiği görünsün diye eski iddiayı adıyla anıp çürüttüm
+  (B1'de `INTEGRATIONS.md` için de aynı yolu izlemiştik).
+- **§5** — "ödeme oturumu da aynı anda sona erer" kalktı; "tek pencere" cümlesi stok + fiyat olarak
+  kaldı, ki zaten doğru olan kısmı buydu.
+- **§7** — "hosted checkout" → PaymentElement + `PaymentIntent`, kart alanının bizim sayfamızda
+  olduğu notuyla.
+
+**Risk teşhisiniz özellikle isabetliydi ve ona ayrı bir uyarı satırı ekledim:** WhatsApp payment
+link'ini yazacak ajanın *"link süresi = TTL"* kuralını devralmaması için §4'e açık bir cümle
+koydum — o eşitlik artık yok, link'in süresi 15.x'in kendi kararı.
 
 ## A10. Doğrulanan temizler (aynı taramadan, kayıt için)
 

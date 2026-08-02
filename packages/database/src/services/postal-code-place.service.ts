@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PostalCodePlaceSchema, type Country, type PostalCodePlace } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
-import { DeliveryZonePostalCodeService, normalizePostalCode } from './delivery-zone.service';
+import { normalizePostalCode } from '@lezzet/helper';
+import { DeliveryZonePostalCodeService } from './delivery-zone.service';
 
 /**
  * Posta kodu referansı servisi (19.8) — salt okunur.

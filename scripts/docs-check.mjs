@@ -376,6 +376,25 @@ for (const root of codeRoots) {
 }
 if (pendingCount) console.log(`· ${pendingCount} BEKLEYEN işareti (hepsi bir kayda bağlı)`);
 
+// ── 3c2. Her migration dosyasının index.md'de bir satırı var mı ───────────────
+//
+// **Denetim bulgusu A5 (03.08).** `supabase/migrations/index.md` 0031'de donmuştu; künyesi eksik
+// satırları kendisi tespit edip *"yazan ajanlar tamamlar"* diyordu ve tutulmamıştı — üstelik
+// sonraki migration'lardan biri girilmişti, yani disiplin yarım işliyordu (kimi ajan yazıyor, kimi
+// yazmıyor). Yumuşak kural okunmayan kuraldır; B2 emsali.
+//
+// **Türetme DEĞİL kontrol** (denetim görüşü de bu yöndeydi): satırlar tek cümlelik ve elle yazılan
+// bağlam taşıyor — "neyin neden taşındığı", "hangi karar bu tabloyu doğurdu". Dosya başlığından
+// türetilemez; ama VARLIĞI denetlenebilir.
+const migrationDir = 'supabase/migrations';
+const migrationIndexPath = `${migrationDir}/index.md`;
+if (existsSync(join(ROOT, migrationIndexPath))) {
+  const indexSrc = read(migrationIndexPath);
+  for (const file of readdirSync(join(ROOT, migrationDir)).filter((f) => /^\d{4}_.+\.sql$/.test(f)).sort()) {
+    if (!indexSrc.includes(file)) note(`${migrationIndexPath}: ${file} kayıtlı değil — her migration'ın bir satırı olmalı`);
+  }
+}
+
 // ── 3d. Çalışma-anı bağımlılığı mimari dokümanda BEYAN EDİLMİŞ mi ─────────────
 //
 // **Denetim bulgusu B2-i (02.08).** Yığına giren bir araç STACK'te yazmıyorsa iki şey birden olur:

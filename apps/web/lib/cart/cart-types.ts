@@ -66,6 +66,17 @@ export type CartDiscount =
       code: string;
       appliedInsteadCents: number;
       appliedInstead: { reason: DiscountReason; label: LocalizedText | null } | null;
+      /**
+       * Kazanan indirimin KALEM PAYLARI ve kimliği — kupon reddedilse de sipariş yazılabilsin diye.
+       *
+       * Eskiden taşınmıyordu ve bu, `appliedInsteadCents`'i tek başına anlamsız kılıyordu: sepet
+       * "yine de 4 € indirim aldın" diyor ama o 4 €'nun kalemlere nasıl bölündüğünü söylemiyordu.
+       * Sipariş yazımı payları ister — veritabanı kısıtı *"başlıktaki indirim = payların toplamı"*
+       * diyor ve payı olmayan bir başlık indirimini REDDEDER (denetim A1'in testi bunu ortaya
+       * çıkardı; A1 yalnız tutarı düzeltseydi sipariş hiç açılamazdı).
+       */
+      appliedInsteadShares: readonly number[];
+      appliedInsteadId: string | null;
     }
   | { status: 'none' };
 

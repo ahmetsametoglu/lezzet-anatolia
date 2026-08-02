@@ -165,19 +165,13 @@ export interface DeliveryZoneSummary {
   postalCodes: string[];
 }
 
-/** Posta kodu normalizasyonu — kullanıcı "67 000" ya da " 67000 " yazabilir; kimlik tek biçimdir. */
-export function normalizePostalCode(raw: string): string {
-  return raw.replace(/\s+/g, '').toUpperCase();
-}
+// Posta kodu normalizasyonu ve biçim doğrulaması `@lezzet/helper`'da (denetim A2). Form girdisi,
+// motorun karşılaştırması ve DB'nin saklama biçimi AYNI fonksiyondan gelmek zorunda.
+export { isValidPostalCode, normalizePostalCode } from '@lezzet/helper';
 
-/**
- * Posta kodu biçimi: 5 rakam — Fransa ve Almanya'da AYNI, o yüzden biçim ülkeyi ayırt etmez
- * (ayrımı `postal_code_place` yapar, 19.8). Doğrulama İSTEMCİDE de yapılır ki her tuşta sunucuya
- * gidilmesin; sunucu yine de kendi kontrolünü yapar (istemciden gelen hiçbir şeye güvenilmez).
- */
-export function isValidPostalCode(raw: string): boolean {
-  return /^\d{5}$/.test(normalizePostalCode(raw));
-}
+// `isValidPostalCode`'un gerekçesi (5 rakam FR ve DE'de aynı; ayrımı `postal_code_place` yapar) ve
+// gövdesi artık `@lezzet/helper`'da. Doğrulama İSTEMCİDE de yapılır ki her tuşta sunucuya
+// gidilmesin; sunucu yine de kendi kontrolünü yapar — istemciden gelen hiçbir şeye güvenilmez.
 
 /**
  * Vitrin okumalarının yer bağlamı (19.10) — **iki depo, tek nesne.**

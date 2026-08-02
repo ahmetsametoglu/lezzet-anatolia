@@ -26,7 +26,8 @@
  */
 
 import type { Country } from '@lezzet/types';
-import { matchZones, normalizePostalCode, type DeliveryZoneCandidate } from './delivery-days';
+import { normalizePostalCode } from '@lezzet/helper';
+import { matchZones, type DeliveryZoneCandidate } from './delivery-days';
 import { placeLabel } from './place-name';
 
 /** Motorun gördüğü asgari warehouse alanları (DB karşılığı `Warehouse`). */

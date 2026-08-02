@@ -86,7 +86,7 @@ describe('discountLabel', () => {
   });
 
   it('reddedilen kupon sepette indirim BIRAKMADIYSA satır genel adında kalır', () => {
-    const rejected: CartDiscount = { status: 'rejected', reason: 'expired', code: 'RAMAZAN20', appliedInsteadCents: 0, appliedInstead: null };
+    const rejected: CartDiscount = { status: 'rejected', reason: 'expired', code: 'RAMAZAN20', appliedInsteadCents: 0, appliedInstead: null, appliedInsteadShares: [], appliedInsteadId: null };
 
     expect(discountLabel(rejected, t, 'fr')).toBe('İndirim');
   });
@@ -103,6 +103,8 @@ describe('discountLabel', () => {
       code: 'ILK5',
       appliedInsteadCents: 536,
       appliedInstead: { reason: { kind: 'campaign', percent: null }, label: { tr: 'Baklava haftası', fr: 'Semaine du baklava' } },
+      appliedInsteadShares: [536],
+      appliedInsteadId: '11111111-1111-1111-1111-111111111111',
     };
 
     expect(discountLabel(rejected, t, 'tr')).toBe('İndirim — Baklava haftası');
@@ -116,6 +118,8 @@ describe('discountLabel', () => {
       code: 'ILK5',
       appliedInsteadCents: 800,
       appliedInstead: { reason: { kind: 'campaign', percent: 8 }, label: null },
+      appliedInsteadShares: [800],
+      appliedInsteadId: '22222222-2222-2222-2222-222222222222',
     };
 
     expect(discountLabel(rejected, t, 'tr')).toBe('İndirim — kampanya %8');

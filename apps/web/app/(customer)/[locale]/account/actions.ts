@@ -1,6 +1,6 @@
 'use server';
 
-import { UserProfileService, serviceDb } from '@lezzet/database';
+import { UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import { normalizePhone } from '@lezzet/helper';
 import type { AddressInsert } from '@lezzet/types';
 import { revalidatePath } from 'next/cache';
@@ -169,8 +169,8 @@ export async function cancelZoneNoticeAction(postalCode: string): Promise<Action
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new Error('Oturum bulunamadı');
-    const { error } = await serviceDb().from('zone_notice').delete().eq('customer_id', customerId).eq('postal_code', postalCode);
-    if (error) throw error;
+    // Servis üzerinden (denetim A4) — ham tablo erişimi ad dönüşümünün ve doğrulamanın dışında kalır.
+    await new ZoneNoticeService(serviceDb()).removeForCustomer(customerId, postalCode);
     revalidateAccount();
     return { data: true, error: null };
   } catch (err) {

@@ -1,6 +1,6 @@
 'use server';
 
-import { VariantStockNoticeService, serviceDb } from '@lezzet/database';
+import { VariantStockNoticeService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import { currentCustomerId } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { isValidPostalCode, normalizePostalCode } from './place-types';
@@ -34,10 +34,9 @@ export async function recordZoneNoticeAction(rawPostalCode: string, rawEmail: st
     // `zone_notice.customer_id` de `user_profiles`'a FK'li: auth kimliği yazıldığında girişli
     // müşterinin kaydı FK ihlaliyle düşüyordu (ziyaretçininki null geçtiği için sorunsuz görünüyordu).
     const customerId = await currentCustomerId();
-    const { error } = await serviceDb()
-      .from('zone_notice')
-      .upsert({ postal_code: postalCode, email, customer_id: customerId }, { onConflict: 'postal_code,email', ignoreDuplicates: true });
-    if (error) throw error;
+    // Servis üzerinden (denetim A4): tekillik yine veritabanında (`zone_notice_unique_idx`),
+    // çakışma hata sayılmıyor — düğmeye ikinci kez basmak yeni bir bekleyiş değil.
+    await new ZoneNoticeService(serviceDb()).record({ postalCode, email, customerId });
 
     return { data: true, error: null };
   } catch (err) {

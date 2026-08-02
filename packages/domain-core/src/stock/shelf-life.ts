@@ -1,3 +1,4 @@
+import { daysBetween } from '@lezzet/helper';
 import type { ProductDateType } from '@lezzet/types';
 
 /**
@@ -16,11 +17,8 @@ import type { ProductDateType } from '@lezzet/types';
 export const NEAR_EXPIRY_PERCENT = 25;
 export const MLOR_PERCENT = 75;
 
-/** Gün farkı — saat/dilim gürültüsü karara girmesin diye ikisi de gün başına indirilir. */
-function daysBetween(from: Date, to: Date): number {
-  const dayStart = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-  return Math.round((dayStart(to) - dayStart(from)) / 86_400_000);
-}
+// `daysBetween` `@lezzet/helper`'a taşındı (denetim A6) — `stock/transfer` içinde ikinci, ham
+// milisaniyeyi `floor`'layan bir tanım daha vardı ve saatli bir damgada ayrışacaklardı.
 
 /**
  * Kalan raf ömrü yüzdesi. Ürünün toplam raf ömrü girilmemişse (`shelfLifeDays` null) **hesaplanamaz**

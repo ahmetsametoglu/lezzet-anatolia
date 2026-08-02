@@ -100,7 +100,10 @@ Online ödemede stok **checkout başlarken** ayrılır — cart'ta değil ("sepe
 
 - Ayrılır; **30 dakika** (varsayılan) içinde ödeme onayı gelmezse `apps/backend` cron'u ayrılmışı **geri bırakır** (`Reservation.expires_at` üzerinden); sipariş `draft`'ta kalır/iptal olur.
 - TTL **parametrik** `Setting`'tir (kod sabiti değil).
-- **Ödeme penceresi = rezervasyon penceresi:** Stripe checkout oturumu TTL ile **aynı anda sona erdirilir** (session expiry = TTL). Stok serbest kaldığı anda ödeme kapısı da kapanır — "süre doldu ama müşteri hâlâ ödeyebiliyor" yarışı normalde imkânsızdır. Varsayılanın 30 dk olması bundandır: Stripe oturumunun asgari süresi 30 dk'dır; TTL bunun altına indirilemez. WhatsApp payment link'leri de aynı kurala bağlanır: link süresi = TTL.
+- **Pencere eşitliği kuralı DÜŞTÜ (03.08, denetim A9 — kod↔doküman hizalaması).** Bu satır *"Stripe checkout oturumu TTL ile aynı anda sona erdirilir; TTL 30 dk altına indirilemez çünkü Stripe oturumunun asgarisi 30 dk"* diyordu. Mimari değişti: hosted checkout yerine **PaymentElement + `PaymentIntent`** kullanılıyor (`ARCHITECTURE_DECISIONS` — kart alanı sitede, müşteri dışarı çıkmıyor) ve **`PaymentIntent`'in son kullanma tarihi yoktur**, yani ne eşitlik kurulabilir ne de TTL'e böyle bir alt sınır gelir.
+  - **Yerine geleni daha iyi:** istemci **ertelenmiş Elements** kullanıyor — form açılışta monte olur, niyet ancak "öde"ye basınca doğar. Ayırma ile ödeme arasındaki mesafe dakikalar değil saniyeler.
+  - Kapıyı kapatan şey artık bir süre değil, aşağıdaki **geç ödeme emniyet kuralı**: rezervasyon düşmüşken ödeme gelirse yeniden ayır ya da otomatik iade et.
+  - ⚠ **WhatsApp payment link'i (15.x) bu satırdan kural devralmasın:** "link süresi = TTL" eşitliği artık yok. Link'in süresi kendi kararıdır ve o modülde verilir.
 - **Geç ödeme emniyet kuralı (webhook gecikirse/tekrarlanırsa):** rezervasyon düşmüş bir sipariş için ödeme onayı gelirse sistem önce stoğu **yeniden ayırmayı** dener — ayrılabilirse sipariş normal devam eder; ayrılamazsa **otomatik para iadesi** + müşteriye bilgi mesajı. Elle karar gerekmez; dallanma `domain-core`'da tanımlıdır.
 - `confirmed` yalnız ödeme onayında olur; onaya kadar sipariş `draft`'tır ama stok ayrılmıştır.
 
@@ -142,7 +145,7 @@ Rezervasyonun serbest bırakılması **yalnızca mal fiziksel olarak depoya geri
 
 - **Fiyat sabitleme anı = checkout başlangıcı** (karar 27.07). Sipariş boyunca o fiyat korunur; sonradan fiyat değişse bile **verilmiş sipariş etkilenmez**. Sepetteki fiyat **bağlayıcı değildir**: gösterim ve değişiklik tespiti içindir.
   - *Neden sepet değil:* sepet sunucuda kalıcıdır ve aylarca bekleyebilir. Sepet fiyatını süresiz dondurmak, tedarikçi maliyeti oynayan donuk gıdada doğrudan zarardır; fiyat düşmüşse de müşteriye fazla ödetir. Piyasa normu da budur (Amazon ve market e-ticaretinde bağlayıcı fiyat sipariş/checkout anındakidir); FR tüketici hukuku açısından belirleyici olan **onay adımında gösterilen tutardır**, sepetteki değil. Sessiz zam sorundur, bildirilmiş zam değil.
-  - *Tek pencere:* checkout başlarken stok ayrılır ve 30 dk'lık pencere açılır (§4); ödeme oturumu da aynı anda sona erer. **Fiyat da aynı anda sabitlenir** — stok, ödeme ve fiyat tek ve aynı pencerede yaşar, ayrı bir süre/cron/kavram yoktur.
+  - *Tek pencere:* checkout başlarken stok ayrılır ve 30 dk'lık pencere açılır (§4). **Fiyat da aynı anda sabitlenir** — stok ve fiyat tek ve aynı pencerede yaşar, ayrı bir süre/cron/kavram yoktur. (Ödeme oturumunun aynı anda sona ermesi kuralı 03.08'de düştü: `PaymentIntent`'in son kullanma tarihi yok — bkz. §4.)
   - *Değişiklik davranışı:* fiyat **arttıysa** müşteriye açıkça bildirilir ve onay istenir (kabul et / sepetten çıkar); **düştüyse** sessizce uygulanır — müşteri lehine olan sorulmaz.
   - *Tükenen teklif partisi aynı akıştan geçer:* near-expiry indirimi **partiye** aittir (indirimin sebebi o partinin tarihidir), başka partiye taşınmaz. Çıpalı parti checkout'a kadar tükenmişse kalem sessizce normal fiyata dönmez — aynı bildirim/onay akışıyla normal fiyat teklif edilir (bkz. §4 batch-pinned, §5 teklif çakışması).
 - **B2B fiyatı** ayrı liste; ayrıca **müşteriye özel fiyat** olabilir.
@@ -288,7 +291,7 @@ Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, �
 | B2B (credit yok) | Online öde / havale (peşin) |
 | B2B (credit var) | + Hesaba (vadeli) |
 
-Online: Stripe hosted checkout (SCA/3DS, kart + Apple/Google Pay); WhatsApp'ta payment link (canlı kanalla). Kapıda ödeme ayrıca değer tavanı ve `cod_allowed`'a tabidir (aşağıda).
+Online: Stripe **PaymentElement + `PaymentIntent`** (SCA/3DS, kart + Apple/Google Pay) — kart alanı bizim sayfamızda, müşteri siteden çıkmıyor. (Hosted checkout'tan geçildi; gerekçe `ARCHITECTURE_DECISIONS`.) WhatsApp'ta payment link (canlı kanalla). Kapıda ödeme ayrıca değer tavanı ve `cod_allowed`'a tabidir (aşağıda).
 
 ### Kapıda ödeme sınırı (kötüye kullanım önlemi)
 

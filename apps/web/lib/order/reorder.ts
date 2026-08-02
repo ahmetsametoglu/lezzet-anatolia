@@ -1,5 +1,6 @@
 import 'server-only';
 import { OrderService, serviceDb } from '@lezzet/database';
+import { bundleQtyOf } from '@lezzet/domain-core';
 import type { OrderItem } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
@@ -76,16 +77,8 @@ export async function planReorder(locale: Locale, customerId: string, orderId: s
   return { entries: addable.map(entryOf), skipped };
 }
 
-/** Paket kaç adet alınmış — kalem adedinin paket içeriğindeki adede oranı. */
-function bundleQtyOf(contents: readonly { variantId: string; qty: number }[], items: readonly OrderItem[]): number {
-  for (const item of items) {
-    const inBundle = contents.find((c) => c.variantId === item.variantId);
-    // Oran bozuksa (paket içeriği o günden beri değişmiş) 1'e düşeriz: fazla eklemektense az
-    // eklemek, müşterinin sepette fark edip artırabileceği bir hatadır.
-    if (inBundle && inBundle.qty > 0 && item.qty % inBundle.qty === 0) return item.qty / inBundle.qty;
-  }
-  return 1;
-}
+// `bundleQtyOf` motora taşındı (denetim A3): aynı gövde `customer-orders.ts`'te de vardı ve o
+// kopya "neden 1'e düşeriz" gerekçesini kaybetmişti. Kural DB bilmez, ekran bilmez — yeri motor.
 
 async function namesOf(db: ReturnType<typeof serviceDb>, items: readonly OrderItem[], locale: Locale): Promise<string[]> {
   const lines = await resolveOrderLines(db, items, locale);

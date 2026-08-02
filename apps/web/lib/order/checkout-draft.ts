@@ -9,11 +9,12 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { cityMatchesPlaces, deriveChannel } from '@lezzet/domain-core';
+import { fromCents } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import type { DeliveryType, LocalizedText, OrderItemInsert, PaymentMethod } from '@lezzet/types';
 import { getCartView } from '@/lib/cart/read';
 import { placesForPostalCode } from '@/lib/delivery/places';
-import type { CartEntry, CartLine, CartView } from '@/lib/cart/cart-types';
+import { discountAmountOf, type CartDiscount, type CartEntry, type CartLine, type CartView } from '@/lib/cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
 import { resolveDelivery } from './delivery';
 
@@ -273,9 +274,13 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
       addressId: address.id,
       addressSnapshot: { ...address },
       deliveryCountry: address.country,
-      shippingFee: options.shippingFeeCents / 100,
-      total: options.orderTotalCents / 100,
-      discountAmount: discountAmountOf(cart) / 100,
+      shippingFee: fromCents(options.shippingFeeCents),
+      total: fromCents(options.orderTotalCents),
+      // Paylaşılan fonksiyon (denetim A1): yerel bir kopya vardı ve `rejected` hâlinde 0 dönüyordu.
+      // Sepet toplamı zaten paylaşılanı kullanıyor, yani tahsilat doğruydu — ama deftere "indirim
+      // verilmedi" yazılıyordu. Kupon reddedilip yerine otomatik kampanya indiğinde müşteri
+      // indirimli ödüyor, kayıt sıfır gösteriyordu: marj ve kampanya raporu ikisi de yanlış okunur.
+      discountAmount: fromCents(discountAmountOf(cart.discount)),
       discountId: discountIdOf(cart),
       discountLabel: discountLabelOf(cart),
       // Siparişin dili: müşteri bu siparişi hangi yüzeyde okuyorsa o. Mailler buradan konuşur.
@@ -337,9 +342,9 @@ async function expandToOrderItems(
         qty: line.qty,
         stockId: line.stockId,
         bundleId: null,
-        unitPrice: (line.unitPriceCents ?? 0) / 100,
+        unitPrice: fromCents(line.unitPriceCents ?? 0),
         vatRate: vatByVariant.get(line.variantId) ?? 0,
-        lineDiscountAmount: (shares[index] ?? 0) / 100,
+        lineDiscountAmount: fromCents(shares[index] ?? 0),
       });
       return;
     }
@@ -368,14 +373,15 @@ async function expandToOrderItems(
  * İndirim yoksa boş dizi döner ve her kalem 0 pay alır. `Σ pay = discount_amount` motorun
  * garantisidir (`distributeDiscount`) — burada yeniden bölüştürme YAPILMAZ, yapılsaydı kuruş
  * artığı iki yerde farklı yuvarlanır ve sipariş kendi toplamıyla çelişirdi.
+ *
+ * **Reddedilen kuponda da pay vardır** (denetim A1): kupon tutmasa bile sepette kazanan bir
+ * kampanya olabilir ve müşteri onu kaybetmez. Payları yok saymak, başlıkta 4 € indirim yazıp
+ * kalemlere 0 dağıtmak olurdu — veritabanı bunu zaten reddediyor.
  */
-function discountSharesOf(cart: { discount: { status: string; lineShares?: number[] } }): readonly number[] {
-  return cart.discount.status === 'applied' || cart.discount.status === 'automatic' ? (cart.discount.lineShares ?? []) : [];
-}
-
-/** İnen indirim (cent) — kupon da otomatik kampanya da aynı alana yazılır, ayrımı `discountId` taşır. */
-function discountAmountOf(cart: { discount: { status: string; amountCents?: number } }): number {
-  return cart.discount.status === 'applied' || cart.discount.status === 'automatic' ? (cart.discount.amountCents ?? 0) : 0;
+function discountSharesOf(cart: { discount: CartDiscount }): readonly number[] {
+  const { discount } = cart;
+  if (discount.status === 'applied' || discount.status === 'automatic') return discount.lineShares;
+  return discount.status === 'rejected' ? discount.appliedInsteadShares : [];
 }
 
 /**

@@ -1,6 +1,6 @@
 import 'server-only';
 import { OrderItemService, OrderService, OrderStatusLogService, serviceDb } from '@lezzet/database';
-import { customerOrderStatus, isActiveForCustomer, isFulfilmentKnown, orderTimeline } from '@lezzet/domain-core';
+import { bundleQtyOf, customerOrderStatus, isActiveForCustomer, isFulfilmentKnown, orderTimeline } from '@lezzet/domain-core';
 import type { OrderTimelineStep } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText } from '@lezzet/types';
@@ -294,10 +294,4 @@ export async function getCustomerOrderDetail(
  * Oran bozuksa (paket içeriği o günden beri değişmiş) 1'e düşer: uydurma bir adet yazmaktansa
  * en muhafazakâr sayıyı göstermek, tutar satırıyla çelişmeyen tek seçenek.
  */
-function bundleQtyOf(contents: readonly { variantId: string; qty: number }[], items: readonly OrderItem[]): number {
-  for (const item of items) {
-    const inBundle = contents.find((c) => c.variantId === item.variantId);
-    if (inBundle && inBundle.qty > 0 && item.qty % inBundle.qty === 0) return item.qty / inBundle.qty;
-  }
-  return 1;
-}
+// Gövde motora taşındı (denetim A3) — `@lezzet/domain-core`. Yukarıdaki künye orada duruyor.
