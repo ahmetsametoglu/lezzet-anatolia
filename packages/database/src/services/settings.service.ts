@@ -11,6 +11,18 @@ import {
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 
+/**
+ * Ayar önbelleğinin ÖMRÜ — aynı zamanda ekranın operatöre verebileceği SÖZ.
+ *
+ * Dışa açık, çünkü Ayarlar ekranı bu sayıyı yazacak ("değişiklik en geç 30 saniye içinde tüm
+ * süreçlerde geçerli olur"). Sayı iki yerde ayrı yaşasaydı ekran bir gün tutulmayan bir söz verirdi.
+ *
+ * 30 sn: ayarlar sıcak yolda okunuyor (checkout), yani süre başına anahtar başına iki sorgu — ihmal
+ * edilebilir; ve operatörün kaydedip etkisini görmek için beklediği süre bir sayfa yenilemesi
+ * kadar. Ayarın kendisi ayardan okunamaz (kendi kendine bağımlılık), o yüzden sabit.
+ */
+export const SETTINGS_CACHE_TTL_MS = 30_000;
+
 /** Özgüllük sırası: en dar kapsam kazanır, hiçbiri yoksa global'e düşülür. */
 const SCOPE_PRIORITY: readonly SettingScope[] = ['zone', 'channel', 'country', 'global'];
 
@@ -20,14 +32,31 @@ const SCOPE_PRIORITY: readonly SettingScope[] = ['zone', 'channel', 'country', '
  * **Ayar env'e/koda gömülmez.** Kesim saati, minimum sepet, kapıda ödeme tavanı gibi değerler işin
  * sahibinin kararıdır; dağıtım beklemeden değişebilmelidir.
  *
- * **Önbellekli:** ayarlar her istekte okunur ama neredeyse hiç değişmez; her checkout için tur
- * atmak gereksizdir. Önbellek süreç ömrü boyunca yaşar, yazma anında düşer (`invalidate`).
- * Süreç içi olduğu için çok instance'ta gecikmeli yayılır — ayar değişimi saniyeler içinde her
- * yere ulaşmak zorunda değil, `apps/backend` de tek instance (STACK §13).
+ * **Önbellekli, ve önbellek SÜRELİ.** Ayarlar her istekte okunur ama neredeyse hiç değişmez; her
+ * checkout için tur atmak gereksizdir.
+ *
+ * ── SÜRE NEDEN ŞART (operasyon şeridinin bulgusu, 02.08) ─────────────────────
+ * Önceki hâlde önbellek süreç ömrü boyunca yaşıyordu ve yalnız `set()` düşürüyordu — yani yalnız
+ * YAZAN sürecinki. Buradaki künye bunu "çok instance'ta gecikmeli yayılır" diye anlatıyordu ve
+ * **o cümle yanlıştı**: gecikme değil, hiç yayılmama. Operatör Ayarlar ekranından bir değeri
+ * değiştirir, ekran "kaydedildi" der, kararı veren öteki süreç bir sonraki dağıtıma kadar eski
+ * değeri okurdu. Ayar ekranının var olma sebebi tam da bunun tersi.
+ *
+ * ── NEDEN TTL, NEDEN `LISTEN/NOTIFY` DEĞİL ───────────────────────────────────
+ * Yayın (notify) anında yansıtır ama bir kalıcı bağlantı ister: PostgREST `LISTEN` bilmez, yani ya
+ * doğrudan `pg` bağlantısı ya Realtime aboneliği gerekir. İkisi de yeni bir arıza yüzeyi getirir ve
+ * o arıza SESSİZDİR — abonelik koparsa önbellek bir daha hiç düşmez, üstelik çalışırken anında
+ * yansıdığı için kimse süreyi izlemez. TTL sınırlıdır, kendi kendini onarır, bağımlılık istemez.
+ *
+ * Ve asıl fark şu: TTL **söylenebilir bir sözleşmedir.** Ekran "değişiklik en geç N saniye içinde
+ * her yerde geçerli olur" diye yazabilir; yayın kurulumunda söylenebilecek şey "genelde anında,
+ * bozulursa bilinmiyor"dur — belirsiz bir vaat, yanlış bir vaatten kötüdür.
+ *
+ * Yazan süreç beklemez: `set()` kendi kopyasını hemen düşürür. Süre yalnız ÖTEKİ süreçler için.
  */
 export class SettingsService extends BaseDbService<Setting, SettingInsert, SettingUpdate> {
-  /** key → o anahtarın TÜM kapsam satırları. Çözüm bellekte yapılır, sorgu anahtar başına tek. */
-  private static cache = new Map<string, Setting[]>();
+  /** key → o anahtarın TÜM kapsam satırları + okuma anı. Çözüm bellekte, sorgu anahtar başına tek. */
+  private static cache = new Map<string, { rows: Setting[]; at: number }>();
 
   constructor(supabase: SupabaseClient) {
     super(supabase, 'settings', SettingSchema, SettingInsertSchema, SettingUpdateSchema);
@@ -84,10 +113,14 @@ export class SettingsService extends BaseDbService<Setting, SettingInsert, Setti
 
   private async rowsFor(key: string): Promise<Setting[]> {
     const cached = SettingsService.cache.get(key);
-    if (cached) return cached;
+    // Süresi dolan kayıt SİLİNMEZ, yenilenir: silmek ile yenilemek arasındaki fark, aradaki
+    // sorgu düşerse eski değerin mi yoksa `fallback`'in mi kullanılacağıdır. Burada yenileme
+    // atılıyor ve hata yukarı gidiyor — sessizce varsayılana düşmek, ayarı hiç yazmamış gibi
+    // davranmak olurdu (`CLAUDE.md §1`: ölçülemeyen değer sıfır değildir).
+    if (cached && Date.now() - cached.at < SETTINGS_CACHE_TTL_MS) return cached.rows;
 
     const rows = await this.getAll({ key });
-    SettingsService.cache.set(key, rows);
+    SettingsService.cache.set(key, { rows, at: Date.now() });
     return rows;
   }
 }

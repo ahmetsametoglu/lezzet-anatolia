@@ -67,7 +67,12 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
   - **Neden borç, ve neden "biçim" DEĞİL (30.07, gerçek hatayla bulundu):** STACK §8 *"DB'de `numeric`, sınırda (servis katmanında) cent'e çevrilir"* diyor. Kod bunu yapmıyor — servisler euroyu olduğu gibi döndürüyor, dönüşüm **her çağrı yerine** dağılmış (bugün ~20 nokta). Sonuç: müşteri sipariş detayı ekranı 74,17 €'yu **0,74 €** gösterdi. Kullanıcı ekran görüntüsüyle yakaladı; ben iki dosyayı ortak helper'a çektim ama **kök neden duruyor.**
   - **Tip sistemi bunu yakalayamaz:** euro da cent de `number`. Bu yüzden ya sınır gerçekten servis katmanına çekilir (bu görev) ya da tek savunma adlandırma kalır. Branded type (`type Cents = number & {…}`) de düşünülebilir — o zaman derleyici yakalar; kararı bu görev verecek.
   - **Ölçü:** yalnız PARA kolonları. Yüzde/oran çeviren `Math.round(x * 100)` çağrıları (geri bildirim skoru, sistem sağlığı, görsel oranı) bu işin kapsamı DIŞINDA — onlar cent değil.
-
+- [x] (02.10) **Ayar önbelleği SÜRELİ olsun (operasyon şeridinin bulgusu — 02.08)**: `SettingsService` süreç içi önbelleği hiç düşmüyordu; `SETTINGS_CACHE_TTL_MS` (30 sn) eklendi ve dışa açıldı — touches: `packages/database/src/services/settings.service.ts`
+  - *Bitti:* dış kaynaklı ayar değişikliği en geç 30 sn içinde her süreçte geçerli; yazan süreç anında görür
+  - **Neden bir arıza, "gecikme" değil:** önbellek yalnız `set()` ile düşüyordu, yani YALNIZ yazan sürecinki. Çok süreçli dağıtımda (PM2, 18.9) operatör Ayarlar ekranından değeri değiştirir, ekran "kaydedildi" der, kararı veren öteki süreç **bir sonraki dağıtıma kadar** eski değeri okurdu. Servisin kendi künyesi bunu "çok instance'ta gecikmeli yayılır" diye anlatıyordu ve o cümle yanlıştı; düzeltildi.
+  - **TTL, `LISTEN/NOTIFY` DEĞİL:** yayın anında yansıtır ama kalıcı bağlantı ister (PostgREST `LISTEN` bilmez → `pg` ya da Realtime) ve arızası **sessizdir** — abonelik koparsa önbellek bir daha hiç düşmez, üstelik çalışırken anında yansıdığı için kimse süreyi izlemez. TTL sınırlı ve kendi kendini onarır.
+  - **Asıl fark söylenebilirlik:** TTL bir SÖZLEŞMEDİR, ekran yazabilir ("en geç 30 sn"). Yayın kurulumunda söylenebilecek tek şey "genelde anında, bozulursa bilinmiyor" — belirsiz vaat, yanlış vaatten kötüdür. Sabit dışa açık (`SETTINGS_CACHE_TTL_MS`) ki sayı iki yerde ayrı yaşamasın. Ayarın kendisi ayardan okunamaz (kendi kendine bağımlılık).
+  - Kaynak: `operasyon-ekranlari-arka-uc-talebi.md` §1 — `09.16` (Ayarlar ekranı) bunu bekliyordu.
 ## Netleşecekler
 
 - **Migration aracı:** Supabase CLI mi, kendi küçük runner'ımız mı — artı/eksi masaya konup karar verilecek (STACK §13 statü notu gereği).

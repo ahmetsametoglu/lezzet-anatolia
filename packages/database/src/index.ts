@@ -25,7 +25,7 @@ export { DiscountService, type DiscountUsage } from './services/discount.service
 export { DiscountCodeService } from './services/discount-code.service';
 export { DiscountUseService } from './services/discount-use.service';
 export { AddressService } from './services/address.service';
-export { SettingsService } from './services/settings.service';
+export { SettingsService, SETTINGS_CACHE_TTL_MS } from './services/settings.service';
 export { DeliveryZoneService, DeliveryZonePostalCodeService, normalizePostalCode } from './services/delivery-zone.service';
 export { PostalCodePlaceService, type PostalCodeSuggestion } from './services/postal-code-place.service';
 export { VariantStockNoticeService } from './services/variant-stock-notice.service';

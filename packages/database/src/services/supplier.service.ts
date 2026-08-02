@@ -40,11 +40,30 @@ export class SupplierService extends BaseDbService<Supplier, SupplierInsert, Sup
    *
    * İki tur okur: girişler ve ödemeler ayrı tablolarda. Tedarikçi başına çağrılır (kart ekranı),
    * liste ekranı gerekirse toplu okuma ayrıca eklenir.
+   *
+   * **Dönem isteğe bağlı** (tedarik talebi §6): aralık verilmezse ömür boyu — bugünkü davranış, hiçbir
+   * çağıran kırılmaz. Aralık ikinci bir toplayıcı olarak DEĞİL bu metoda eklendi: borç da dönem
+   * toplamı da aynı hareketlerden türüyor, ayrı bir okuma aynı kararı iki yere koymak olurdu.
+   *
+   * ⚠ **Dönem `balance`'ı bir borç DEĞİLDİR** ve okuyan taraf bunu bilmeli: aralık verildiğinde
+   * `paid` da kırpılır, yani "bu yıl alınan mal − bu yıl yapılan ödeme" çıkar. Geçen yılın malına bu
+   * yıl yapılan ödeme o farkı negatife çeker. Dönemli çağrının anlamlı alanı `intakeTotal`'dir
+   * ("bu tedarikçiyle bu yıl ne kadar iş yaptık"); borç sorusu dönemsizdir.
    */
-  async debt(supplierId: string): Promise<{ intakeTotal: number; paid: number; balance: number }> {
+  async debt(
+    supplierId: string,
+    period: { from?: Date; to?: Date } = {},
+  ): Promise<{ intakeTotal: number; paid: number; balance: number }> {
+    const inPeriod = <T extends { gte: (c: string, v: string) => T; lte: (c: string, v: string) => T }>(query: T): T => {
+      let scoped = query;
+      if (period.from) scoped = scoped.gte('created_at', period.from.toISOString());
+      if (period.to) scoped = scoped.lte('created_at', period.to.toISOString());
+      return scoped;
+    };
+
     const [intakes, payments] = await Promise.all([
-      this.supabase.from('stock_intake').select('total_amount').eq('supplier_id', supplierId),
-      this.supabase.from('money_movement').select('amount').eq('supplier_id', supplierId).eq('direction', 'out'),
+      inPeriod(this.supabase.from('stock_intake').select('total_amount').eq('supplier_id', supplierId)),
+      inPeriod(this.supabase.from('money_movement').select('amount').eq('supplier_id', supplierId).eq('direction', 'out')),
     ]);
     if (intakes.error) throw intakes.error;
     if (payments.error) throw payments.error;

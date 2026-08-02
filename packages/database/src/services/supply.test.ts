@@ -98,6 +98,24 @@ describe('tedarikçi ve kod eşlemesi (06.8)', () => {
     expect(debt.intakeTotal).toBeGreaterThanOrEqual(40);
     expect(debt.balance).toBe(Math.round((debt.intakeTotal - debt.paid) * 100) / 100);
   });
+
+  /**
+   * Dönemli toplam (tedarik talebi §6) — kart "bu yıl ne kadar iş yaptık" soruyor, ömür boyu toplam
+   * o soruya cevap vermiyor. Kendi kurduğumuz girişleri sayıyoruz, küresel sayıya bakmıyoruz
+   * (`CLAUDE.md §4b`).
+   */
+  it('dönem verilince yalnız o aralığın girişleri sayılır', async () => {
+    const gecmis = await suppliers.debt(supplierId, { to: new Date(Date.now() - 86_400_000) });
+    // Bu testin girişleri az önce yazıldı; dünden öncesi onları GÖRMEMELİ.
+    expect(gecmis.intakeTotal).toBe(0);
+
+    const bugun = await suppliers.debt(supplierId, { from: new Date(Date.now() - 86_400_000) });
+    expect(bugun.intakeTotal).toBeGreaterThanOrEqual(40);
+  });
+
+  it('dönemsiz çağrı bugünkü davranışı korur — hiçbir çağıran kırılmaz', async () => {
+    expect(await suppliers.debt(supplierId)).toEqual(await suppliers.debt(supplierId, {}));
+  });
 });
 
 describe('tedarik siparişi (06.9)', () => {

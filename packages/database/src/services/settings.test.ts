@@ -1,6 +1,6 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
-import { SettingsService } from './settings.service';
+import { SETTINGS_CACHE_TTL_MS, SettingsService } from './settings.service';
 
 /**
  * İşletme ayarı (02.6) — kapsamlı çözüm: EN ÖZGÜL kapsam kazanır, yoksa global'e düşer.
@@ -66,6 +66,51 @@ describe('kapsamlı çözüm', () => {
     expect(await settings.getNumber(key, 2500)).toBe(2500);
   });
 });
+
+/**
+ * Önbelleğin ÖMRÜ (operasyon talebi §1) — ekranın operatöre verdiği sözün karşılığı.
+ *
+ * Sınanan şey davranışın kendisi: önbellek dış kaynaklı değişikliği bir süre GÖRMEZ (yoksa TTL'in
+ * anlamı yok) ama süre dolunca GÖRÜR (eski hâlde hiç görmüyordu — süreç ömrü boyunca asılı kalıyordu
+ * ve ayar ekranı yazdığını uygulatamıyordu).
+ */
+describe('önbellek ömrü', () => {
+  it('süre dolmadan dış kaynaklı değişikliği görmez', async () => {
+    await settings.set(key, 1000);
+    expect(await settings.getNumber(key, 0)).toBe(1000);
+
+    // Başka bir sürecin yazımını taklit: satır doğrudan değişir, bu sürecin `set()`'i çağrılmaz.
+    await db.from('settings').update({ value: 2000 }).eq('key', key);
+    expect(await settings.getNumber(key, 0)).toBe(1000);
+  });
+
+  it('süre dolunca dış kaynaklı değişikliği GÖRÜR', async () => {
+    await settings.set(key, 1000);
+    expect(await settings.getNumber(key, 0)).toBe(1000);
+    await db.from('settings').update({ value: 2000 }).eq('key', key);
+
+    // Saati ileri almak yerine önbelleğin damgasını geriye itiyoruz: gerçek 30 sn beklemek testi
+    // paketin en yavaş dosyası yapardı, sahte zamanlayıcı ise `await`li DB çağrılarını dondurur.
+    expireSettingsCache();
+    expect(await settings.getNumber(key, 0)).toBe(2000);
+  });
+
+  it('yazan süreç beklemez — `set()` kendi kopyasını hemen düşürür', async () => {
+    await settings.set(key, 1000);
+    await settings.set(key, 2000);
+    expect(await settings.getNumber(key, 0)).toBe(2000);
+  });
+});
+
+/**
+ * Önbellek damgalarını TTL kadar geriye iter — "süre doldu" hâlinin testteki karşılığı.
+ * Özel alana dokunuyor ve bu bilinçli: alternatif ya 30 saniye beklemek ya da ömrü yalnız test
+ * için parametreye çevirmekti; ikincisi üretim kodunu testin şekline göre eğmek olurdu.
+ */
+function expireSettingsCache(): void {
+  const cache = (SettingsService as unknown as { cache: Map<string, { rows: unknown[]; at: number }> }).cache;
+  for (const entry of cache.values()) entry.at -= SETTINGS_CACHE_TTL_MS + 1;
+}
 
 describe('seed varsayılanları (02.7)', () => {
   it('rezervasyon TTL 30 dk — Stripe oturum asgarisi, ödeme penceresiyle eşit', async () => {

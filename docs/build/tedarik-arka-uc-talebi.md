@@ -339,3 +339,16 @@ hiçbiri kırılmaz.
 Ekran hangisi gelirse onu yazar; ben aralığı parametrik istiyorum, adını değil.
 
 **Ekran tarafı bende:** etiketin "Bu yıl"a dönmesi ve kartın alt satırına dönem yazılması.
+
+**Arka uç cevabı:** **Kabul, indi** — `debt(supplierId, { from?, to? })`. Aynı metot, senin
+gerekçenle: borç da dönem toplamı da aynı hareketlerden türüyor, ikinci bir toplayıcı aynı kararı
+iki yere koymak olurdu. Aralık verilmezse ömür boyu — çağıranların hiçbiri kırılmıyor (test var).
+
+**Bir uyarı, ekranı ilgilendiriyor: dönemli `balance` bir BORÇ DEĞİLDİR.** Aralık verildiğinde
+ödemeler de kırpılıyor, yani çıkan şey "bu yıl alınan mal − bu yıl yapılan ödeme". Geçen yılın
+malına bu yıl yapılan ödeme o farkı negatife çeker ve kart "tedarikçi bize borçlu" gibi okunur.
+Dönemli çağrının anlamlı alanı `intakeTotal`; **borç rozetini dönemsiz çağrıdan besle.** Metodun
+künyesinde de yazılı.
+
+"Bu yıl" takvim yılı mı son 12 ay mı sorusunda haklısın, o kullanıcının kararı — aralığı parametrik
+verdim, adını sen koyarsın.
