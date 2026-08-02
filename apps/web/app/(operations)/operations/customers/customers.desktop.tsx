@@ -5,7 +5,6 @@ import { CUSTOMERS_COLUMN_TRACKS } from './customers-columns';
 import { Chip } from '@/components/operation/ui/chip';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { SearchInput } from '@/components/operation/ui/search-input';
 import { Table, withCells, type Column } from '@/components/operation/ui/table';
 import { CustomerPreview } from './components/customer-preview';
 import { statusHint, statusOf, typeTone } from './customers-labels';
@@ -61,9 +60,11 @@ export function CustomersDesktop(props: CustomersViewProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <PageHeader title="Müşteriler" subtitle={subtitle}>
-        <SearchInput value={search} onChange={onSearch} placeholder="Telefon / ad ara" className="w-[210px]" />
-      </PageHeader>
+      <PageHeader
+        title="Müşteriler"
+        subtitle={subtitle}
+        search={{ value: search, onChange: onSearch, placeholder: 'Telefon / ad ara' }}
+      />
 
       {/* Süzgeç çipleri — TEK sıra, ayraçsız (tasarım): Tümü · B2C · B2B · Vadeli · Taslak.
           Tip çipleri "Tümü"nün yanında duruyor çünkü hepsi aynı soruyu daraltıyor ("kimler

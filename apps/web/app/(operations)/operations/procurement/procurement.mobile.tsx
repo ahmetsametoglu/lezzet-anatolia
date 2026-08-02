@@ -1,4 +1,5 @@
 import { Badge } from '@/components/operation/ui/badge';
+import { PageHeader } from '@/components/operation/ui/page-header';
 import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
@@ -23,8 +24,7 @@ export function ProcurementMobile(props: ProcurementViewProps) {
   const tab = urlState.tab;
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <header className="flex items-center gap-2 border-b border-ops-line px-4 py-3">
-        <h1 className="mr-auto font-ops-display text-ops-section font-semibold text-ops-ink">Tedarik</h1>
+      <PageHeader title="Tedarik" compact>
         {tab === 'orders' ? (
           <Button variant="primary" size="sm" onClick={props.onNewOrder}>
             + Sipariş
@@ -33,7 +33,7 @@ export function ProcurementMobile(props: ProcurementViewProps) {
         <Button variant="secondary" size="sm" onClick={() => props.onEditSupplier(null)}>
           + Tedarikçi
         </Button>
-      </header>
+      </PageHeader>
       {actionError ? (
         <p role="alert" className="border-b border-ops-red-line bg-ops-red-bg px-4 py-2 font-ops-body text-ops-sm text-ops-red">
           {actionError}

@@ -24,10 +24,7 @@ export function OrdersMobile(props: OrdersViewProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <PageHeader
-        title="Siparişler"
-        subtitle={summaryText(counts)}
-      />
+      <PageHeader title="Siparişler" subtitle={summaryText(counts)} compact />
 
       <Tabs
         items={ORDER_TABS.map((key) => ({

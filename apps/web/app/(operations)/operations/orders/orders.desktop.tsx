@@ -7,7 +7,6 @@ import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { PageHeader } from '@/components/operation/ui/page-header';
-import { SearchInput } from '@/components/operation/ui/search-input';
 import { Select } from '@/components/operation/form/select';
 import { WarehouseFilterChip, WarehouseFilterNotice } from '@/components/operation/ui/warehouse-filter-bar';
 import { Table, withCells, type Column } from '@/components/operation/ui/table';
@@ -44,9 +43,11 @@ export function OrdersDesktop(props: OrdersViewProps) {
       {/* BEKLEYEN(09.8): başlıktaki "+ Sipariş" girişi — elle sipariş/kapı satışı ekranı yok. Arka
           ucu hazır (`lib/order/quick-sale.ts`) ama düğme bugün açacak bir yer bulamazdı; ölü
           düğme, olmayan sayfaya davet eden linkten daha kötüdür (basılır, hiçbir şey olmaz). */}
-      <PageHeader title="Siparişler" subtitle={summaryText(counts)}>
-        <SearchInput value={search} onChange={onSearch} placeholder="Referans no, müşteri ara" />
-      </PageHeader>
+      <PageHeader
+        title="Siparişler"
+        subtitle={summaryText(counts)}
+        search={{ value: search, onChange: onSearch, placeholder: 'Referans no, müşteri ara' }}
+      />
 
       {/* Sekmeler = DURUMLAR; sayılar süzgecin TAMAMINDAN gelir (yüklenmiş sayfadan değil). */}
       <Tabs

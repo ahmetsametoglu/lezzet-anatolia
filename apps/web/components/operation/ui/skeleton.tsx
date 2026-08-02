@@ -200,6 +200,13 @@ export function SkeletonPageHeader({ actions = [] }: { actions?: readonly string
       {actions.map((width, i) => (
         <Skeleton key={i} className={`h-9 rounded-ops-btn ${width}`} />
       ))}
+      {/* Kabuk blokları (depo · ⌘K · kullanıcı) barın SABİT parçasıdır ve yüklenirken de yer tutar —
+          çizilmezse gerçek bar geldiğinde sağ taraf bir anda dolar ve başlık sola kayar (09.19). */}
+      <span className="flex items-center gap-2.5 border-l border-ops-line-soft pl-2.5">
+        <Skeleton className="h-9 w-[150px] rounded-lg" />
+        <Skeleton className="h-9 w-[132px] rounded-lg" />
+        <Skeleton className="h-[30px] w-[30px] rounded-lg" />
+      </span>
     </header>
   );
 }

@@ -38,7 +38,7 @@ export function PricesMobile(props: PricesViewProps) {
           her sekmede kanal sayaçlarını yazıyordu: okuma sekmeye bağlı olduğu için "Kupon"da başlık
           "0 boy yüklendi · 0 marj-altı" diyordu. Sayaçlar yüklenmiş sayfaya aittir ve metin bunu
           söyler; gerçekten katalog geneli olması ayrı bir iş (BACKLOG §4). */}
-      <PageHeader title="Fiyatlar" subtitle={tabSubtitle(tab, props.data, counts)} />
+      <PageHeader title="Fiyatlar" subtitle={tabSubtitle(tab, props.data, counts)} compact />
 
       <Tabs items={TABS.map((t) => (t.key === 'channels' && counts.below > 0 ? { ...t, badge: counts.below } : t))} active={tab} onSelect={onTab} />
 

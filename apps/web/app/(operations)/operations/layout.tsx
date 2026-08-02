@@ -12,6 +12,7 @@ import { OPERATIONS_PATH_HEADER, OPERATIONS_PREFIX } from '@/lib/operations-requ
 import { getPathname } from '@/i18n/navigation';
 import { RootShell } from '@/components/root-shell';
 import { AdminSidebar } from '@/components/operation/ui/admin-sidebar';
+import { OpsShellProvider } from '@/components/operation/ui/ops-shell';
 import { buttonClass } from '@/components/operation/ui/button';
 import { ErrorState } from '@/components/operation/ui/error-state';
 import { AlertIcon } from '@/components/operation/ui/icons';
@@ -77,11 +78,17 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
     <RootShell lang="tr" surface="operations" className={fontVars}>
       {/* Uygulama kabuğu: viewport yüksekliği sabit; sidebar ve içerik kendi içinde kaydırılır (Veri Masası). */}
       <div className="flex h-screen overflow-hidden bg-ops-bg font-ops-body text-ops-ink">
-        <AdminSidebar
-          user={{ email: user.email ?? '', roles }}
-          warehouse={{ warehouses, activeWarehouseId, unscoped: scope.kind === 'all' }}
-        />
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>
+        <AdminSidebar roles={roles} />
+        {/* Kabuk bağlamı: kim bağlandı + hangi depo evreni. Başlık barı (`PageHeader`) bunları
+            buradan okur — barı SAYFA çiziyor ama bu üç blok sayfanın değil oturumun (09.19). */}
+        <OpsShellProvider
+          value={{
+            user: { email: user.email ?? '', roles },
+            warehouse: { warehouses, activeWarehouseId, unscoped: scope.kind === 'all' },
+          }}
+        >
+          <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>
+        </OpsShellProvider>
       </div>
     </RootShell>
   );

@@ -34,9 +34,10 @@ export function PricesDesktop(props: PricesViewProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
+      {/* Arama ve yeniden fiyatlama YALNIZ kanal listesinde anlamlı — ikisi de SEKMEYE bağlı, ekran
+          çapında değil. Bu yüzden barın `search` yuvasında değil `children`'da: yuva "bu ekranda
+          arama var" der ve sekme değişince o söz yalan olurdu (ürün ekranının `Tabs.action` dersi). */}
       <PageHeader title="Fiyatlar" subtitle={tabSubtitle(tab, data, counts)}>
-        {/* Arama YALNIZ kanal listesinde: özel fiyat ve kupon listeleri kısa, süzgeç istemiyor.
-            Kutunun her sekmede durması "aradığım şey burada aranıyor" yanılgısı yaratırdı. */}
         {tab === 'channels' ? (
           <>
             <AutoRepriceButton />

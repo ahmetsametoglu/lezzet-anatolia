@@ -29,11 +29,20 @@ export interface WarehouseContextPickerProps {
   activeWarehouseId: string | null;
   /** Depo-üstü rol mü — "Tüm depolar" seçeneğinin metnini belirler ("kapsamım" değil). */
   unscoped: boolean;
+  /**
+   * Nerede duruyor: `rail` sol rayın dikey bloğu (etiketli, tam genişlik), `bar` başlık barının
+   * yatay çipi (etiketsiz, içeriğine göre daralır).
+   *
+   * Seçici 09.19'da raydan BARA taşındı ama iki biçim de korunuyor: aynı kontrolün ikinci bir
+   * kopyasını yazmak yerine tek komponent iki yerleşimi biliyor — KARARI değil yalnız çerçeveyi
+   * değiştiriyorlar (dört hâl, menü, çerez yazımı, süzgeç temizleme hepsinde aynı).
+   */
+  variant?: 'rail' | 'bar';
 }
 
 const ALL = 'all';
 
-export function WarehouseContextPicker({ warehouses, activeWarehouseId, unscoped }: WarehouseContextPickerProps) {
+export function WarehouseContextPicker({ warehouses, activeWarehouseId, unscoped, variant = 'rail' }: WarehouseContextPickerProps) {
   const router = useRouter();
   const anchorRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -45,7 +54,7 @@ export function WarehouseContextPicker({ warehouses, activeWarehouseId, unscoped
   if (warehouses.length < 2) {
     // Depo-üstü rolde tek depo = "tek depolu kurulum" → hiçbir şey. Kapsamlı personelde aynı sayı
     // "benim depom" demek → adı künye olarak durur.
-    return only && !unscoped ? <FixedWarehouse name={only.name} /> : null;
+    return only && !unscoped ? <FixedWarehouse name={only.name} variant={variant} /> : null;
   }
 
   const active = warehouses.find((w) => w.id === activeWarehouseId) ?? null;
@@ -68,11 +77,16 @@ export function WarehouseContextPicker({ warehouses, activeWarehouseId, unscoped
     });
   };
 
+  const bar = variant === 'bar';
   return (
-    <div className="mx-4 mb-2 flex flex-col gap-1">
-      <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.15em] text-ops-faint">
-        Depo bağlamı
-      </span>
+    <div className={bar ? 'flex' : 'mx-4 mb-2 flex flex-col gap-1'}>
+      {/* Rayda alan adı yazılır (dikey blok kendini tanıtmalı); barda YAZILMAZ — çipin ikonu ve
+          içeriği zaten "depo" diyor, üstüne etiket koymak barın yatay alanını yer. */}
+      {bar ? null : (
+        <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.15em] text-ops-faint">
+          Depo bağlamı
+        </span>
+      )}
       <div ref={anchorRef}>
         <button
           type="button"
@@ -81,7 +95,8 @@ export function WarehouseContextPicker({ warehouses, activeWarehouseId, unscoped
           aria-expanded={open}
           disabled={pending}
           className={[
-            'flex w-full cursor-pointer items-center gap-2 rounded-lg border bg-ops-white px-2.5 py-[7px] text-left outline-none transition-colors',
+            'flex cursor-pointer items-center gap-2 rounded-lg border bg-ops-white px-2.5 py-[7px] text-left outline-none transition-colors',
+            bar ? 'max-w-[220px]' : 'w-full',
             open ? 'border-ops-blue-line' : 'border-ops-line-strong hover:border-ops-blue-line',
             pending ? 'cursor-wait opacity-60' : '',
           ]
@@ -103,7 +118,7 @@ export function WarehouseContextPicker({ warehouses, activeWarehouseId, unscoped
         </button>
       </div>
 
-      <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width="anchor">
+      <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width={bar ? 240 : 'anchor'}>
         <div role="listbox">
           <Option
             label="Tüm depolar"
@@ -139,9 +154,14 @@ function withoutWarehouseFilter(href: string): string {
 }
 
 /** Tek kapsamlı personel — seçici YOK. Depocuya depo seçtirilmez; deposunun adı bir künyedir. */
-function FixedWarehouse({ name }: { name: string }) {
+function FixedWarehouse({ name, variant }: { name: string; variant: 'rail' | 'bar' }) {
   return (
-    <div className="mx-4 mb-2 flex items-center gap-2 px-0.5 py-1 text-ops-faint">
+    <div
+      className={[
+        'flex items-center gap-2 text-ops-faint',
+        variant === 'bar' ? 'px-0.5' : 'mx-4 mb-2 px-0.5 py-1',
+      ].join(' ')}
+    >
       <span className="flex-none">
         <WarehouseIcon />
       </span>

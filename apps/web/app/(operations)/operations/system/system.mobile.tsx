@@ -2,6 +2,7 @@
 
 import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
 import { Button } from '@/components/operation/ui/button';
+import { PageHeader } from '@/components/operation/ui/page-header';
 import { agoLabel, num, shortDate, shortDateTime } from '@/components/operation/ui/format';
 import { ERROR_PAGE_SIZE, WINDOW_LABEL } from './system-url';
 import type { ErrorRowView, MetricTone, SystemViewProps } from './system-types';
@@ -35,8 +36,7 @@ export function SystemMobile(props: SystemViewProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <div className="flex items-center gap-2.5 border-b border-ops-line px-4 py-3.5">
-        <span className="mr-auto font-ops-display text-[17px] font-semibold text-ops-ink">Sistem</span>
+      <PageHeader title="Sistem" compact>
         <span
           className={[
             'flex items-center gap-1.5 rounded-[14px] border px-2.5 py-1.5',
@@ -58,7 +58,7 @@ export function SystemMobile(props: SystemViewProps) {
             {data.health ? agoLabel(ageMinutes ?? data.health.ageMinutes) : 'ölçüm yok'}
           </span>
         </span>
-      </div>
+      </PageHeader>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="flex flex-col gap-3.5 px-4 py-3.5">

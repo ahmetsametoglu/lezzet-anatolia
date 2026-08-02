@@ -35,6 +35,7 @@ export function StockMobile(props: StockViewProps) {
       <PageHeader
         title="Stok"
         subtitle={`${attention} parti karar bekliyor${blocked > 0 ? ` · ${blocked} imhalık` : ''}`}
+        compact
       >
         <Button variant="secondary" size="sm" onClick={() => onOpenRecall()}>
           <SearchIcon />

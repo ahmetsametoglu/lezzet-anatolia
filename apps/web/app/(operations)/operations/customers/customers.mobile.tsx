@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { ORDER_STATUS_LABELS } from '@lezzet/types';
 import { Badge } from '@/components/operation/ui/badge';
+import { PageHeader } from '@/components/operation/ui/page-header';
 import { Button } from '@/components/operation/ui/button';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
-import { SearchInput } from '@/components/operation/ui/search-input';
 import { StepButton } from '@/components/operation/ui/step-button';
 import { money, shortDate } from '@/components/operation/ui/format';
 import { InlineMetric } from '@/components/operation/ui/inline-metric';
@@ -40,14 +40,13 @@ export function CustomersMobile(props: CustomersViewProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      {/* Başlık — mobil kademesi (`ops-section`), masaüstü başlığından bir kademe küçük. */}
-      <div className="flex items-center border-b border-ops-line px-4 py-3.5">
-        <span className="font-ops-display text-ops-section font-semibold text-ops-ink">Müşteriler</span>
-      </div>
-
-      <div className="px-4 py-3">
-        <SearchInput value={search} onChange={onSearch} placeholder="Telefon veya ad…" className="w-full" />
-      </div>
+      {/* Başlık barı ORTAK (`PageHeader compact`) — mobil kademesi ve arama kutusu onun içinde.
+          Elden yazılan blok üç ekranda üç farklı yükseklik üretiyordu (09.19). */}
+      <PageHeader
+        title="Müşteriler"
+        compact
+        search={{ value: search, onChange: onSearch, placeholder: 'Telefon veya ad…' }}
+      />
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {rows.length === 0 ? (
