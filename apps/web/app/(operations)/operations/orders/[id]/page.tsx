@@ -2,10 +2,9 @@ import { notFound } from 'next/navigation';
 import { serviceDb } from '@lezzet/database';
 import { detectDevice } from '@/lib/device';
 import { guarded, requireAdmin } from '@/lib/guard';
-import { ErrorState } from '@/components/operation/ui/error-state';
-import { AlertIcon } from '@/components/operation/ui/icons';
 import { OrderDetailClient } from './order-detail-client';
 import { readOrderDetail } from './order-detail-read';
+import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 
 // Sipariş DETAYI (09.7) — tek kaydın tam sayfası, `/operations/orders/<id>`.
 //
@@ -21,7 +20,7 @@ interface OrderDetailPageProps {
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
   const access = await guarded(requireAdmin);
-  if (!access.ok) return <NoAccessPane />;
+  if (!access.ok) return <NoAccessPane title="Sipariş" reason="Sipariş tutarları, tahsilat ve müşteri bilgisi operasyonun geri kalanına kapalıdır." />;
 
   const { id } = await params;
   const order = await readOrderDetail(serviceDb(), id);
@@ -30,14 +29,3 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   return <OrderDetailClient order={order} device={await detectDevice()} />;
 }
 
-/** Personel ama admin değil — kabuk korunur, yalnız pane kapanır (liste ekranıyla aynı). */
-function NoAccessPane() {
-  return (
-    <ErrorState
-      tone="warn"
-      icon={<AlertIcon />}
-      title="Bu ekran yalnız yöneticiye açık"
-      description="Sipariş tutarları, tahsilat ve müşteri bilgisi operasyonun geri kalanına kapalıdır."
-    />
-  );
-}

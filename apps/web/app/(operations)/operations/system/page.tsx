@@ -1,11 +1,10 @@
 import { ErrorLogService, SystemHealthService, UserProfileService, serviceDb } from '@lezzet/database';
 import { detectDevice } from '@/lib/device';
 import { guarded, requireAdmin } from '@/lib/guard';
-import { ErrorState } from '@/components/operation/ui/error-state';
-import { AlertIcon } from '@/components/operation/ui/icons';
 import { SystemClient } from './system-client';
 import { ageMinutesOf, toErrorRows, toHealthView, toTrendCharts, windowCutoff } from './system-read';
 import { ERROR_PAGE_SIZE, parseSystemUrl } from './system-url';
+import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 
 // Sistem — sağlık ve hatalar (18.5). YALNIZ admin.
 //
@@ -29,7 +28,7 @@ interface SystemPageProps {
 
 export default async function SystemPage({ searchParams }: SystemPageProps) {
   const access = await guarded(requireAdmin);
-  if (!access.ok) return <NoAccessPane />;
+  if (!access.ok) return <NoAccessPane title="Sistem" reason="Sunucu metrikleri, süreç durumları ve hata kayıtları operasyonun geri kalanına kapalıdır. Bir arıza olduğunu düşünüyorsanız yöneticinize iletin." />;
 
   const urlState = parseSystemUrl(await searchParams);
   const db = serviceDb();
@@ -85,22 +84,3 @@ export default async function SystemPage({ searchParams }: SystemPageProps) {
   );
 }
 
-/** Personel ama admin değil — kabuk (sidebar) korunur, yalnız pane kapanır (müşteri/fiyat deseni). */
-function NoAccessPane() {
-  return (
-    <>
-      <div className="flex items-center gap-3.5 border-b border-ops-line px-6 py-4">
-        <span className="font-ops-display text-ops-section font-semibold text-ops-ink">Sistem</span>
-        <span className="rounded-md border border-ops-line bg-ops-gray-25 px-2 py-[3px] font-ops-mono text-ops-xs font-medium text-ops-muted">
-          kapalı
-        </span>
-      </div>
-      <ErrorState
-        tone="warn"
-        icon={<AlertIcon />}
-        title="Bu ekran yalnız yöneticiye açık"
-        description="Sunucu metrikleri, süreç durumları ve hata kayıtları operasyonun geri kalanına kapalıdır. Bir arıza olduğunu düşünüyorsanız yöneticinize iletin."
-      />
-    </>
-  );
-}

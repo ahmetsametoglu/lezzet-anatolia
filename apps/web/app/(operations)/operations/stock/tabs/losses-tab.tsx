@@ -10,6 +10,7 @@ import { LOSS_REASON, LOSS_REASON_TONE, lossKind } from '../stock-labels';
 import { LOSS_PERIODS, PERIOD_LABEL } from '../stock-url';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { LossRow, StockViewProps } from '../stock-types';
+import { EmptyState } from '@/components/operation/ui/empty-state';
 
 /** Dağılım çipinin rengi — Badge'in dolgulu hâlinden farklı: burada çerçeveli, tabloya baskın çıkmasın. */
 const REASON_CHIP: Record<OpsTone, string> = {
@@ -233,12 +234,10 @@ function CleanState({ filtered, periodLabel }: CleanStateProps) {
     // dönemle sınırlı olduğu için bugünkü sınır dar; kuyruğu yutmaması ekranın kendi cümlesiyle
     // korunuyor (sessiz kesme yok).
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-10 text-center">
-        <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Yüklenen kayıtlarda eşleşme yok</span>
-        <span className="font-ops-body text-ops-sm text-ops-muted">
-          Arama şu ana kadar yüklenmiş satırlarda yapılır — aşağı kaydırıp devamını yükleyin ya da terimi değiştirin.
-        </span>
-      </div>
+      <EmptyState
+        title="Yüklenen kayıtlarda eşleşme yok"
+        description="Arama şu ana kadar yüklenmiş satırlarda yapılır — aşağı kaydırıp devamını yükleyin ya da terimi değiştirin."
+      />
     );
   }
   return (

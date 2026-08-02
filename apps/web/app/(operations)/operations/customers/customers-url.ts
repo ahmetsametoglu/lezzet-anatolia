@@ -1,4 +1,5 @@
 import { CustomerTypeEnum, type CustomerType } from '@lezzet/types';
+import { one, oneOf, type RawParams } from '@/lib/url-params';
 
 // Müşteri ekranının URL SÖZLEŞMESİ — tek kaynak (ürünler/stok/fiyat ekranlarının deseni). Süzgeçler
 // adreste taşınır çünkü yenilemede aynı görünüm açılır ve SUNUCU okuyabildiği için süzme sunucuda
@@ -35,17 +36,12 @@ export interface CustomersUrlState {
 
 const DEFAULTS: CustomersUrlState = { q: '', type: 'all', scope: 'all' };
 
-type RawParams = Record<string, string | string[] | undefined>;
-const one = (raw: string | string[] | undefined): string => (Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? ''));
-
 /** URL → ekran durumu. Tanınmayan değer sessizce varsayılana düşer (bozuk link ekranı kırmaz). */
 export function parseCustomersUrl(params: RawParams): CustomersUrlState {
-  const typeRaw = one(params.type);
-  const scopeRaw = one(params.scope);
   return {
     q: one(params.q).trim(),
-    type: CustomerTypeEnum.options.find((t) => t === typeRaw) ?? DEFAULTS.type,
-    scope: CUSTOMER_SCOPES.find((s) => s === scopeRaw) ?? DEFAULTS.scope,
+    type: oneOf(params.type, CustomerTypeEnum.options, DEFAULTS.type),
+    scope: oneOf(params.scope, CUSTOMER_SCOPES, DEFAULTS.scope),
   };
 }
 

@@ -8,6 +8,8 @@
 // bir satırın kimliğini taşır ve paylaşılan bir bağlantıda anlamsızdır; sayfa numarası konumdur ve
 // paylaşılabilir. Bu ekranın sayfalama seçmesinin gerekçesi `system-types`'ta yazılı.
 
+import { one, oneOf, type RawParams } from '@/lib/url-params';
+
 export const SYSTEM_PATH = '/operations/system';
 
 export const ERROR_TABS = ['acik', 'cozulmus'] as const;
@@ -40,16 +42,15 @@ export interface SystemUrlState {
   win: TrendWindow;
 }
 
-type RawParams = Record<string, string | string[] | undefined>;
-
-const tekil = (v: string | string[] | undefined): string => (Array.isArray(v) ? (v[0] ?? '') : (v ?? ''));
-
 export function parseSystemUrl(params: RawParams): SystemUrlState {
-  const tab = ERROR_TABS.find((t) => t === tekil(params.tab)) ?? 'acik';
-  const win = TREND_WINDOWS.find((w) => w === tekil(params.win)) ?? 'd1';
   // Sayfa 0'dan başlar; bozuk/negatif değer başa döner — URL elle düzenlenebilir bir yüzeydir.
-  const page = Math.max(0, Number.parseInt(tekil(params.page), 10) || 0);
-  return { tab, q: tekil(params.q).trim(), page, win };
+  const page = Math.max(0, Number.parseInt(one(params.page), 10) || 0);
+  return {
+    tab: oneOf(params.tab, ERROR_TABS, 'acik'),
+    q: one(params.q).trim(),
+    page,
+    win: oneOf(params.win, TREND_WINDOWS, 'd1'),
+  };
 }
 
 /** Varsayılan olan alan URL'e YAZILMAZ: paylaşılan bağlantı gürültüsüz kalsın. */

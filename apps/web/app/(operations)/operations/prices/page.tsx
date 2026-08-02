@@ -18,8 +18,6 @@ import { detectDevice } from '@/lib/device';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readCostBasis } from '@/lib/pricing/cost-basis';
 import { guarded, requireAdmin } from '@/lib/guard';
-import { ErrorState } from '@/components/operation/ui/error-state';
-import { AlertIcon } from '@/components/operation/ui/icons';
 import { PricesClient } from './prices-client';
 import { toCustomerPriceRows, toDiscountCustomerRows, toDiscountRows, toPriceRows, type ChannelPriceMaps } from './prices-read';
 import { parsePricesUrl, toPriceFilters } from './prices-url';
@@ -27,6 +25,7 @@ import { titleOf } from '@/lib/catalog/title';
 import { type CustomerPriceRow, type DiscountCustomerRow, type DiscountRow, type PriceRow } from './prices-types';
 import type { BatchView } from '@/lib/stock/batch-types';
 import type { KeysetCursor } from '@lezzet/types';
+import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 
 // Fiyat ekranı (09.5) — yalnız ADMİN. Depo ve kurye maliyet/marj görmez (brief §6); guard bu yüzden
 // `requireAdmin`, sayfa içi bir gizleme değil.
@@ -45,7 +44,7 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
   // Depocu/kurye buraya gelirse kabuk korunur ve sebep yazılır — sessiz yönlendirme, gezinmede
   // gördüğü bir bağlantının neden çalışmadığını söylemezdi.
   const access = await guarded(requireAdmin);
-  if (!access.ok) return <NoAccessPane />;
+  if (!access.ok) return <NoAccessPane title="Fiyatlar" reason="Fiyat, maliyet ve marj bilgisi operasyonun geri kalanına kapalıdır. Bir düzeltme gerekiyorsa yöneticinize iletin." />;
 
   const urlState = parsePricesUrl(await searchParams);
   const db = serviceDb();
@@ -78,25 +77,6 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
   );
 }
 
-/** Personel ama admin değil — kabuk (sidebar) korunur, yalnız pane kapanır. */
-function NoAccessPane() {
-  return (
-    <>
-      <div className="flex items-center gap-3.5 border-b border-ops-line px-6 py-4">
-        <span className="font-ops-display text-ops-section font-semibold text-ops-ink">Fiyatlar</span>
-        <span className="rounded-md border border-ops-line bg-ops-gray-25 px-2 py-[3px] font-ops-mono text-ops-xs font-medium text-ops-muted">
-          kapalı
-        </span>
-      </div>
-      <ErrorState
-        tone="warn"
-        icon={<AlertIcon />}
-        title="Bu ekran yalnız yöneticiye açık"
-        description="Fiyat, maliyet ve marj bilgisi operasyonun geri kalanına kapalıdır. Bir düzeltme gerekiyorsa yöneticinize iletin."
-      />
-    </>
-  );
-}
 
 type Db = ReturnType<typeof serviceDb>;
 

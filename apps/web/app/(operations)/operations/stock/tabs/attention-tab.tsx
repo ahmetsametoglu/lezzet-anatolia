@@ -16,6 +16,7 @@ import {
   type ExpiryGroupKey,
 } from '../stock-labels';
 import type { BatchView, StockViewProps } from '../stock-types';
+import { EmptyState } from '@/components/operation/ui/empty-state';
 
 // Yaklaşan tarihli — KARAR kuyruğu. Ekranın en çok bakılan yeri: "hangi partiye bugün ne yapacağım".
 //
@@ -272,12 +273,7 @@ interface CleanStateProps {
  */
 function CleanState({ filtered, inStock, nearExpiryPercent }: CleanStateProps) {
   if (filtered) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-10">
-        <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Eşleşen parti yok</span>
-        <span className="font-ops-body text-ops-sm text-ops-muted">Arama terimini değiştirin.</span>
-      </div>
-    );
+    return <EmptyState title="Eşleşen parti yok" description="Arama terimini değiştirin." />;
   }
   return (
     <div className="flex flex-1 items-start justify-center p-8">

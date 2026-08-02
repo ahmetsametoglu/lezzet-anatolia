@@ -6,6 +6,7 @@
 // Yol sabiti dışa VERİLMEZ: teklif eylemi `lib/stock/offer-actions`'a taşınınca tek tüketicisi
 // kalmadı; adres burada, `stockUrl()` içinde yaşıyor.
 import { WAREHOUSE_PARAM } from '@/lib/warehouse/filter';
+import { one, oneOf, type RawParams } from '@/lib/url-params';
 
 const STOCK_PATH = '/operations/stock';
 
@@ -55,19 +56,14 @@ export interface StockUrlState {
 
 const DEFAULTS: StockUrlState = { tab: 'levels', q: '', cat: 'all', scope: 'all', period: 'quarter', depo: '' };
 
-type RawParams = Record<string, string | string[] | undefined>;
-const one = (raw: string | string[] | undefined): string => (Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? ''));
-
 /** URL → ekran durumu. Tanınmayan değer sessizce varsayılana düşer (bozuk link ekranı kırmaz). */
 export function parseStockUrl(params: RawParams): StockUrlState {
-  const tabRaw = one(params.tab);
-  const scopeRaw = one(params.scope);
   return {
-    tab: STOCK_TABS.find((t) => t === tabRaw) ?? DEFAULTS.tab,
+    tab: oneOf(params.tab, STOCK_TABS, DEFAULTS.tab),
     q: one(params.q).trim(),
     cat: one(params.cat) || DEFAULTS.cat,
-    scope: STOCK_SCOPES.find((s) => s === scopeRaw) ?? DEFAULTS.scope,
-    period: LOSS_PERIODS.find((p) => p === one(params.period)) ?? DEFAULTS.period,
+    scope: oneOf(params.scope, STOCK_SCOPES, DEFAULTS.scope),
+    period: oneOf(params.period, LOSS_PERIODS, DEFAULTS.period),
     // Kod burada DOĞRULANMAZ, normalize edilir: "bu kod benim evrenimde var mı" bağlamın sorusudur.
     depo: one(params[WAREHOUSE_PARAM]).trim().toUpperCase(),
   };

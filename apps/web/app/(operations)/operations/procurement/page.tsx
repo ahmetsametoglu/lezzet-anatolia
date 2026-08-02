@@ -1,11 +1,10 @@
 import { serviceDb } from '@lezzet/database';
 import { detectDevice } from '@/lib/device';
 import { guarded, requireAdmin, requireFinance } from '@/lib/guard';
-import { ErrorState } from '@/components/operation/ui/error-state';
-import { AlertIcon } from '@/components/operation/ui/icons';
 import { ProcurementClient } from './procurement-client';
 import { readOrderPage, readPendingOrderCount, readSuggestionGroups, readSupplierCards } from './procurement-read';
 import { parseProcurementUrl } from './procurement-url';
+import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 
 // Tedarik ekranı (09.14) — YÖNETİCİ + MUHASEBE. Tedarikçi borcu ve vadesi muhasebenin de sorusudur;
 // depocu ve kurye görmez (onun mal kabulü fiyatsızdır, 10.4). Sidebar da aynı kümeyi gösterir ama
@@ -21,7 +20,7 @@ interface ProcurementPageProps {
 
 export default async function ProcurementPage({ searchParams }: ProcurementPageProps) {
   const access = await guarded(requireFinance);
-  if (!access.ok) return <NoAccessPane />;
+  if (!access.ok) return <NoAccessPane title="Tedarik" reason="Alış fiyatı ve tedarikçi borcu operasyonun geri kalanına kapalıdır. Mal kabulü kendi ekranınızdan yapabilirsiniz." />;
 
   const urlState = parseProcurementUrl(await searchParams);
   const db = serviceDb();
@@ -56,22 +55,3 @@ export default async function ProcurementPage({ searchParams }: ProcurementPageP
   );
 }
 
-/** Personel ama admin değil — kabuk (sidebar) korunur, yalnız pane kapanır (fiyat ekranının deseni). */
-function NoAccessPane() {
-  return (
-    <>
-      <div className="flex items-center gap-3.5 border-b border-ops-line px-6 py-4">
-        <span className="font-ops-display text-ops-section font-semibold text-ops-ink">Tedarik</span>
-        <span className="rounded-md border border-ops-line bg-ops-gray-25 px-2 py-[3px] font-ops-mono text-ops-xs font-medium text-ops-muted">
-          kapalı
-        </span>
-      </div>
-      <ErrorState
-        tone="warn"
-        icon={<AlertIcon />}
-        title="Bu ekran yalnız yöneticiye açık"
-        description="Alış fiyatı ve tedarikçi borcu operasyonun geri kalanına kapalıdır. Mal kabulü kendi ekranınızdan yapabilirsiniz."
-      />
-    </>
-  );
-}

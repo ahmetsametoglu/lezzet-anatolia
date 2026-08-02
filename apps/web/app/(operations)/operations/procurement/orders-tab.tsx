@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge } from '@/components/operation/ui/badge';
+import { EmptyState } from '@/components/operation/ui/empty-state';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Table, withCells, type Column } from '@/components/operation/ui/table';
 import { amount, shortDate } from '@/components/operation/ui/format';
@@ -90,12 +91,9 @@ function ReceivedCell({ row }: { row: PurchaseOrderRowView }) {
 /** Boş hâl — sipariş yokluğu bir arıza değil; ne zaman satır doğacağını söyler. */
 function OrdersEmpty() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-10">
-      <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Henüz tedarik siparişi yok</span>
-      <span className="max-w-[420px] text-center font-ops-body text-ops-sm leading-relaxed text-ops-muted">
-        “Sipariş zamanı” sekmesinden bir tedarikçi grubu seçip taslak oluşturduğunuzda sipariş burada görünür ve
-        gelene kadar listede kalır.
-      </span>
-    </div>
+    <EmptyState
+      title="Henüz tedarik siparişi yok"
+      description="“Sipariş zamanı” sekmesinden bir tedarikçi grubu seçip taslak oluşturduğunuzda sipariş burada görünür ve gelene kadar listede kalır."
+    />
   );
 }

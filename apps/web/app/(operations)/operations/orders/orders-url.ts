@@ -1,5 +1,6 @@
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, OrderStatusEnum, type Channel, type DeliveryType, type OrderStatus, type PaymentStatus } from '@lezzet/types';
 import { WAREHOUSE_PARAM } from '@/lib/warehouse/filter';
+import { one, oneOf, type RawParams } from '@/lib/url-params';
 
 // Sipariş ekranının URL SÖZLEŞMESİ — fiyat/stok/ürün ekranlarının deseni. Sekme ve süzgeçler adreste
 // taşınır: yenilemede aynı görünüm açılır ve SUNUCU okuyabildiği için süzme sunucuda yapılır.
@@ -41,21 +42,14 @@ export interface OrdersUrlState {
 
 const DEFAULTS: OrdersUrlState = { tab: 'all', q: '', chan: 'all', del: 'all', pay: 'all', day: '', depo: '' };
 
-type RawParams = Record<string, string | string[] | undefined>;
-const one = (raw: string | string[] | undefined): string => (Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? ''));
-
 /** URL → ekran durumu. Tanınmayan değer sessizce varsayılana düşer (bozuk link ekranı kırmaz). */
 export function parseOrdersUrl(params: RawParams): OrdersUrlState {
-  const tabRaw = one(params.tab);
-  const chanRaw = one(params.chan);
-  const delRaw = one(params.del);
-  const payRaw = one(params.pay);
   return {
-    tab: ORDER_TABS.find((t) => t === tabRaw) ?? DEFAULTS.tab,
+    tab: oneOf(params.tab, ORDER_TABS, DEFAULTS.tab),
     q: one(params.q).trim(),
-    chan: chanRaw === 'b2c' || chanRaw === 'b2b' ? chanRaw : 'all',
-    del: delRaw === 'route' || delRaw === 'shipping' ? delRaw : 'all',
-    pay: PAYMENT_FILTERS.find((p) => p === payRaw) ?? 'all',
+    chan: oneOf(params.chan, ['b2c', 'b2b', 'all'] as const, DEFAULTS.chan),
+    del: oneOf(params.del, ['route', 'shipping', 'all'] as const, DEFAULTS.del),
+    pay: oneOf(params.pay, PAYMENT_FILTERS, DEFAULTS.pay),
     day: /^\d{4}-\d{2}-\d{2}$/.test(one(params.day)) ? one(params.day) : DEFAULTS.day,
     // Kod burada DOĞRULANMAZ, yalnız normalize edilir: "bu kod benim evrenimde var mı" sorusunun
     // cevabı bağlamdadır (`warehouseFilterOf`) ve URL çözümleyicisi bağlamı görmez.

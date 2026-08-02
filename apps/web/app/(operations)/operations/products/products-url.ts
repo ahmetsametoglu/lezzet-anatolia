@@ -1,5 +1,6 @@
 import { PRODUCT_TABS, PRODUCTS_PATH, type ProductTab } from './products-paths';
 import { ProductStatusEnum, type ProductStatus } from '@lezzet/types';
+import { one, oneOf, type RawParams } from '@/lib/url-params';
 
 // Ekran durumunun URL SÖZLEŞMESİ — tek kaynak. Sekme ve süzgeçler URL'de taşınır çünkü:
 //  · yenileme/paylaşımda aynı görünüm açılır,
@@ -26,18 +27,13 @@ export interface ProductsUrlState {
 
 const DEFAULT_URL_STATE: ProductsUrlState = { tab: 'products', q: '', cat: 'all', status: 'all', incomplete: false, creating: false };
 
-type RawParams = Record<string, string | string[] | undefined>;
-const one = (raw: string | string[] | undefined): string => (Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? ''));
-
 /** URL → ekran durumu. Tanınmayan değer sessizce varsayılana düşer (bozuk link ekranı kırmaz). */
 export function parseProductsUrl(params: RawParams): ProductsUrlState {
-  const tabRaw = one(params.tab);
-  const statusRaw = one(params.status);
   return {
-    tab: PRODUCT_TABS.find((t) => t === tabRaw) ?? DEFAULT_URL_STATE.tab,
+    tab: oneOf(params.tab, PRODUCT_TABS, DEFAULT_URL_STATE.tab),
     q: one(params.q).trim(),
     cat: one(params.cat) || DEFAULT_URL_STATE.cat,
-    status: ProductStatusEnum.options.find((s) => s === statusRaw) ?? DEFAULT_URL_STATE.status,
+    status: oneOf(params.status, ProductStatusEnum.options, DEFAULT_URL_STATE.status),
     incomplete: one(params.incomplete) === '1',
     creating: one(params.new) === '1',
   };

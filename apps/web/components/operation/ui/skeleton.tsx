@@ -175,3 +175,67 @@ export function SkeletonTable({ tracks, rows = 12 }: { tracks: readonly ColumnTr
     </div>
   );
 }
+
+/**
+ * ── Ekran kabuğunun iskelet parçaları (denetim O3) ────────────────────────────
+ *
+ * Dört `loading.tsx` (siparişler · fiyatlar · ürünler · stok) docblock dahil kopyala-yapıştırdı;
+ * değişen yalnız dört parametreydi. Ama tek bir "her ekranı çizen" iskelet komponenti yerine
+ * PARÇALAR duruyor: beşinci ekran (tedarik) kart tabanlı, tabloya benzemiyor — tek konfigürasyon
+ * nesnesine bağlanan bir bileşen onu ya dışarıda bırakırdı ya da kendi içinde ikinci bir düzen
+ * dalı açardı. Parçalar birleşince tekrar ölüyor, düzen serbest kalıyor.
+ *
+ * Ölçüler GERÇEK bileşenlerden gelir ve buradaki yorumlar o bağı söyler; iskeletin tek işi
+ * "içerik gelince hiçbir şey kaymasın".
+ */
+
+/** `PageHeader` ölçüsü (px-6 py-4): başlık + alt bilgi satırı, sağda ekran aksiyonları. */
+export function SkeletonPageHeader({ actions = [] }: { actions?: readonly string[] }) {
+  return (
+    <header className="flex flex-wrap items-center gap-3.5 border-b border-ops-line px-6 py-4">
+      <span className="mr-auto flex flex-col gap-px">
+        <Skeleton className="h-7 w-32" />
+        <Skeleton className="h-3 w-48" />
+      </span>
+      {actions.map((width, i) => (
+        <Skeleton key={i} className={`h-9 rounded-ops-btn ${width}`} />
+      ))}
+    </header>
+  );
+}
+
+/**
+ * `Tabs` ölçüsü (px-3.5 py-[11px]). Hangi sekmenin seçili olduğu URL'den gelir ve o bilgi henüz
+ * elimizde YOK — hepsi eşit çizilir; birini vurgulamak yanlış sekmeyi işaretlemek olurdu.
+ */
+export function SkeletonTabs({ count, actions = [] }: { count: number; actions?: readonly string[] }) {
+  return (
+    <div className="flex gap-0.5 border-b border-ops-line bg-ops-subtle px-6">
+      {Array.from({ length: count }, (_, i) => (
+        <span key={i} className="px-3.5 py-[11px]">
+          <Skeleton className="h-4 w-20" />
+        </span>
+      ))}
+      {/* Sekmeye BAĞLI kontroller (arama, "+ Kategori") çubuğun sağında yaşıyor — `Tabs.action`
+          yuvası (09.4 kararı); iskelet de onları orada tutar, yoksa sayfa gelince bar zıplar. */}
+      {actions.length > 0 ? (
+        <span className="ml-auto flex items-center gap-2 py-[7px]">
+          {actions.map((width, i) => (
+            <Skeleton key={i} className={`h-9 rounded-ops-btn ${width}`} />
+          ))}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/** Çip süzgeci şeridi — ilki dar ("Tümü"), gerisi geniş. */
+export function SkeletonFilterBar({ count }: { count: number }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-b border-ops-line-soft px-6 py-2.5">
+      {Array.from({ length: count }, (_, i) => (
+        <Skeleton key={i} className={`h-7 rounded-ops-chip ${i === 0 ? 'w-16' : 'w-24'}`} />
+      ))}
+    </div>
+  );
+}

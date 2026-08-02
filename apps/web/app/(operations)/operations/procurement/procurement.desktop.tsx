@@ -1,4 +1,5 @@
 import { Button } from '@/components/operation/ui/button';
+import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { OrdersTab } from './orders-tab';
@@ -122,15 +123,14 @@ function SuppliersPane({ data, onEditSupplier }: ProcurementViewProps) {
   const suppliers = data.suppliers ?? [];
   if (suppliers.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-10">
-        <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Henüz tedarikçi yok</span>
-        <span className="max-w-[420px] text-center font-ops-body text-ops-sm leading-relaxed text-ops-muted">
-          Sipariş verebilmek için önce kimden aldığınızı tanıtın: ad yeter, vade ve telefonu sonra da ekleyebilirsiniz.
-        </span>
+      <EmptyState
+        title="Henüz tedarikçi yok"
+        description="Sipariş verebilmek için önce kimden aldığınızı tanıtın: ad yeter, vade ve telefonu sonra da ekleyebilirsiniz."
+      >
         <Button variant="primary" size="sm" onClick={() => onEditSupplier(null)}>
           + İlk tedarikçiyi ekle
         </Button>
-      </div>
+      </EmptyState>
     );
   }
   return (

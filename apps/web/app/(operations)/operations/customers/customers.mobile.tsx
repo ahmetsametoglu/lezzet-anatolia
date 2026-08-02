@@ -12,6 +12,7 @@ import { InlineMetric } from '@/components/operation/ui/inline-metric';
 import { Skeleton, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
 import { statusHint, statusOf } from './customers-labels';
 import type { CustomerDetail, CustomersViewProps } from './customers-types';
+import { EmptyState } from '@/components/operation/ui/empty-state';
 
 // Müşteriler — mobil. Tasarımın kuralı: **telefonla bulma · karneye bakma · limit değiştirme**.
 // Daralık bilinçli, eksiklik değil: birleştirme ve GDPR silme gibi geri dönüşsüz işlemler burada YOK.
@@ -49,12 +50,11 @@ export function CustomersMobile(props: CustomersViewProps) {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {rows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-1.5 p-10 text-center">
-            <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Müşteri bulunamadı</span>
-            <span className="font-ops-body text-ops-sm text-ops-muted">
-              {search ? 'Telefonun son hanelerini denemek genelde en hızlısı.' : 'Henüz müşteri kaydı yok.'}
-            </span>
-          </div>
+          <EmptyState
+            fill={false}
+            title="Müşteri bulunamadı"
+            description={search ? 'Telefonun son hanelerini denemek genelde en hızlısı.' : 'Henüz müşteri kaydı yok.'}
+          />
         ) : (
           rows.map((row) => {
             const status = statusOf(row);

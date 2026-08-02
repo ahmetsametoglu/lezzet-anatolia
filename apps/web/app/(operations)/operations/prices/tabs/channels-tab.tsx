@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge } from '@/components/operation/ui/badge';
+import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PRICES_COLUMN_TRACKS } from '../prices-columns';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Table, withCells, type Column } from '@/components/operation/ui/table';
@@ -119,20 +120,12 @@ interface CleanStateProps {
 /** Boş hâl. Süzgeç sonucu boşsa bu bir EKSİKLİK değil, iyi haber olabilir — metin ikisini ayırır. */
 function CleanState({ filtered, scopeLabel }: CleanStateProps) {
   if (!filtered) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-10">
-        <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Henüz fiyatlanacak boy yok</span>
-        <span className="font-ops-body text-ops-sm text-ops-muted">Ürün eklendiğinde boyları burada listelenir.</span>
-      </div>
-    );
+    return <EmptyState title="Henüz fiyatlanacak boy yok" description="Ürün eklendiğinde boyları burada listelenir." />;
   }
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-10">
-      <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Bu süzgeçte satır yok</span>
-      <span className="max-w-[420px] text-center font-ops-body text-ops-sm leading-relaxed text-ops-muted">
-        “{scopeLabel}” ölçütüne uyan boy bulunamadı — yüklenmiş sayfalarda. Liste sayfalıdır; aşağı kaydırıp devamını yükleyince ölçüte uyan
-        satır çıkabilir.
-      </span>
-    </div>
+    <EmptyState
+      title="Bu süzgeçte satır yok"
+      description={`“${scopeLabel}” ölçütüne uyan boy bulunamadı — yüklenmiş sayfalarda. Liste sayfalıdır; aşağı kaydırıp devamını yükleyince ölçüte uyan satır çıkabilir.`}
+    />
   );
 }
