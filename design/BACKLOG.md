@@ -555,14 +555,22 @@ dokunma hedefleri en az 44px"* (`:630`). Ama aynı tasarım katalog kartını 26
 (`storefront-cards.tsx:232` · `qty-stepper.tsx` `xs`), ikisi aynı kutuyu paylaşmazsa kart eklemede
 zıplıyor. Tasarımın iki ifadesi çakışıyor ve ikisi de tasarımın.
 
-Üç yol tartışıldı: *(a)* kartı büyütmek (hedef sağlanır, kartın ritmi bozulur), *(b)* görseli
-korumak ama hedefi görünmez büyütmek (− ve + yan yana olduğu için hedefler çakışır — en kötüsü),
-*(c)* kartı olduğu gibi bırakıp ihlali kaydetmek. **Karar (c)**: kartın işi "aç bak", satın alma
-kararının ağırlıklı yeri ürün detayı ve orada ölçüler geniş (`PurchaseBar` · `PurchasePanel`).
+Üç yol tartışıldı: *(a)* kartı büyütmek, *(b)* görseli korumak ama hedefi görünmez büyütmek,
+*(c)* kartı olduğu gibi bırakıp ihlali kaydetmek. Önce (c) seçildi; **kullanıcı kararı 03.08 ile
+(a)'ya dönüldü — kural uygulanacak.**
 
-Kayıt burada duruyor ki bir sonraki denetim bunu yeniden bulgu olarak açmasın. Kart tasarımı
-elden geçerse ilk sorulacak soru bu. Yüzeydeki öteki hedefler 44px'e çekildi (✕ kapatmalar,
-mobil menü satırları — `iconHitClass`).
+**Uygulanan (03.08):** görsel 26px'lik daire KORUNDU, dokunma alanı 44px'e çıktı — dış kutu şeffaf
+`size-11`, daire içeride (`storefront-cards.tsx`). Adet seçicinin küçük kademeleri de tabana çekildi:
+sepet satırı (`sm`) iki eksende `min-h-11 min-w-11`, katalog kartı (`xs`) **yalnız dikeyde** `min-h-11`.
+Düğme ile seçici aynı yüksekliği paylaştığı için kart eklemede zıplamıyor.
+
+**Kalan açık — yatay eksen, kartta.** `xs`'te `min-w-11` verilmedi: iki sütunlu mobil ızgarada kart
+~180px ve seçici fiyatla aynı satırı paylaşıyor; iki düğmeyi 88px'e çıkarmak fiyatı taşırırdı. Dikey
+eksen listede en çok ıskalanan olduğu için önce o kapatıldı. Tam uyum kart yerleşiminin değişmesini
+gerektiriyor (fiyat alt satıra) — **tasarım kararı, çizim bekliyor.**
+
+⚠ **Tarayıcıda doğrulanmadı:** bu değişiklik kart ve sepet satırının yüksekliğini artırıyor; ölçüler
+sınıf dizgilerinden hesaplandı, gerçek cihazda görülmedi.
 
 **İstisna — operasyonun diyalog formları.** `.dc.html` dosyaları sayfaları çiziyor; form
 diyaloglarının (ürün · katalog · paket) görsel kararı çizilmedi ve bilinçli olarak **bize** bırakıldı

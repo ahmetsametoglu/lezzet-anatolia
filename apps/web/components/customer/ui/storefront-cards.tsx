@@ -227,11 +227,15 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               onClick={addToCart}
               disabled={!product.variantId}
               aria-label={labels.addToCart}
-              // `size-6.5` = `cardSm` yüksekliği: bu düğme de yerini adet seçicisine bırakıyor,
-              // ikisi aynı kutuyu paylaşmazsa mobil kart eklemede zıplıyor.
-              className="grid size-6.5 flex-none cursor-pointer place-items-center rounded-full bg-olive font-sans text-body-sm font-bold text-white transition-colors hover:bg-olive-dark disabled:cursor-not-allowed disabled:opacity-50"
+              // Görsel daire 26px KALIR (tasarım), dokunma alanı 44px'e çıkar: dış kutu şeffaf ve
+              // `size-11`, daire içeride. Bu düğme yerini adet seçicisine bırakıyor ve seçicinin
+              // yeni tabanı da `min-h-11` — ikisi aynı yüksekliği paylaştığı için kart eklemede
+              // zıplamıyor. Yatay eksen kartın genişliğine bağlı, kalıntı `design/BACKLOG §4`te.
+              className="group flex size-11 flex-none cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-50"
             >
-              +
+              <span className="grid size-6.5 place-items-center rounded-full bg-olive font-sans text-body-sm font-bold text-white transition-colors group-hover:bg-olive-dark">
+                +
+              </span>
             </button>
           ) : (
             <button

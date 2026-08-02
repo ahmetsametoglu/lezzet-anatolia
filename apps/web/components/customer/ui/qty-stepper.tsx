@@ -61,7 +61,9 @@ const SIZE: Record<StepperSize, SizeStyle> = {
   // Sepet mobil satırı.
   sm: {
     frame: 'rounded-soft border-[1.5px] border-olive bg-card',
-    pad: 'px-2.5 py-1 text-step-sm leading-tight',
+    // 44px dokunma tabanı (envanter: "- ve + dokunma alanı en az 44px kare"). Sepet satırında yer
+    // var: seçici satırın tek kontrolü, genişlemesi komşusunu taşırmıyor.
+    pad: 'flex min-h-11 min-w-11 items-center justify-center px-2.5 text-step-sm leading-tight',
     minus: 'text-olive',
     plus: 'bg-olive text-cream',
     value: 'w-6 py-1 text-note leading-tight text-ink',
@@ -71,7 +73,10 @@ const SIZE: Record<StepperSize, SizeStyle> = {
   // sepet satırı 15/13). Aynı ölçüyle bağlanınca kart dışına taşıyor.
   xs: {
     frame: 'rounded-soft border-[1.5px] border-olive bg-card',
-    pad: 'px-2 py-0.5 text-body-sm leading-tight',
+    // Kartta hedef YALNIZ DİKEYDE 44px'e çıkar, yatayda değil: iki sütunlu mobil ızgarada kart
+    // ~180px ve seçici fiyatla aynı satırı paylaşıyor; `min-w-11` iki düğmeyi 88px'e çıkarıp
+    // fiyatı taşırırdı. Dikey, listede en çok ıskalanan eksen. Yatay kalıntı design/BACKLOG §4'te.
+    pad: 'flex min-h-11 items-center justify-center px-2 text-body-sm leading-tight',
     minus: 'text-olive',
     plus: 'bg-olive text-cream',
     value: 'w-6 py-0.5 text-micro leading-tight text-ink',
