@@ -401,6 +401,28 @@ describe('sepet → taslak sipariş', () => {
   });
 
   /**
+   * **İstenen adet depodakinden fazla (19.7).** Kontrol edilmezse taslak açılıyor ve iş
+   * REZERVASYONDA patlıyordu — yani müşteri adresini ve ödeme yöntemini seçip "onayla"ya bastıktan
+   * sonra, üstelik hangi ürün olduğunu söylemeyen bir cümleyle ("bir ürün tükendi"; oysa tükenen
+   * bir şey yok, o adrese o adet gitmiyor).
+   *
+   * Ret `blocked_lines`ten AYRI: orası "kalem alınamıyor" der, burası "azı alınabiliyor". Tek
+   * mesaja indirilseydi müşteri kalemi büsbütün silmeye kalkardı. Sayı da taşınır — sepetin
+   * düzeltme düğmesiyle aynı sayı olmak zorunda.
+   */
+  it('istenen adet depodakinden fazlaysa sipariş AÇILMAZ ve mümkün olan adet söylenir', async () => {
+    const outcome = await createCheckoutDraft({
+      ...(await base()),
+      entries: [{ kind: 'variant', variantId, qty: 60, stockId: null }],
+    });
+    expect(outcome.status).toBe('insufficient_here');
+    if (outcome.status !== 'insufficient_here') return;
+    expect(outcome.lines).toHaveLength(1);
+    expect(outcome.lines[0]!.available).toBe(50);
+    expect(await siparisSayisi()).toBe(0);
+  });
+
+  /**
    * Adres kendiyle tutarsız (19.17) — **yaşanmış arıza.**
    *
    * `LA-26-RFRWKK`: `67000` + `LINGOLSHEIM`, rota + kapıda ödeme. Lingolsheim'ın kodu 67380 ve o kod

@@ -23,6 +23,13 @@ export type CartLineChange =
    * depoda kalmadı. Kalem SİLİNMEZ; çıkışını kısıt bloğu sunar (sonraya kaydet / haber ver).
    */
   | { kind: 'unavailable'; name: string }
+  /**
+   * Kalem var ama SEPETTEKİ ADET kadar yok: 5 istenmiş, yeni yerde 2 getirilebiliyor.
+   *
+   * Ayrı bir hâl olması şart — "alınamıyor" demek yanlış olurdu (alınabiliyor, azı) ve müşteri
+   * kalemi büsbütün silmeye kalkardı. Adet DÜŞÜRÜLMEZ, satırın kendi düğmesi tek tıkla düşürür.
+   */
+  | { kind: 'reduced'; name: string; qty: number; availableHere: number }
   /** Fiyat değişti — teklif partisi yere bağlıdır ve yeni yerde geçerli olmayabilir (DOMAIN §5). */
   | { kind: 'price'; name: string; fromCents: number; toCents: number };
 
@@ -54,6 +61,17 @@ export function diffCartByPlace(before: CartView, after: CartView): CartLineChan
     if (line.route === 'local' && was.route === 'shipping') {
       changes.push({ kind: 'to_route', name: line.name });
       continue;
+    }
+    /**
+     * Adet tavanı yeni yerde daralmış mı. Yalnız **bu değişimin açtığı** açık bildirilir: kalem
+     * zaten eski yerde de tavanın üstündeyse haber yeni değil, satırın kendi düğmesi onu zaten
+     * söylüyor. `availableHere === null` (yol bilinmiyor) kıyas dışıdır.
+     */
+    if (line.availableHere !== null && line.availableHere > 0 && line.qty > line.availableHere) {
+      if (was.availableHere === null || line.qty <= was.availableHere) {
+        changes.push({ kind: 'reduced', name: line.name, qty: line.qty, availableHere: line.availableHere });
+        continue;
+      }
     }
     // Fiyat karşılaştırması yalnız İKİ TARAF DA BİLİNİYORKEN yapılır: satışa kapanmış kalemin
     // fiyatı `null` ve onu "0 €'ya düştü" diye okumak, olmayan bir indirim uydurmak olurdu.

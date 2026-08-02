@@ -298,7 +298,17 @@ export async function confirmCheckoutAction(input: {
         });
         return { data: { status: 'rejected', reason: draft.status, detail: draft.reason }, error: null };
       }
-      const detail = draft.status === 'blocked_lines' ? draft.lines : draft.status === 'date_unavailable' ? draft.availableDates : undefined;
+      // Ürünün adı YETMEZ, sayısı da gerekir: "Kayseri Mantısı" cümlesi müşteriye ne yapacağını
+      // söylemiyor, "Kayseri Mantısı (2)" söylüyor. Parantezin ne anlama geldiğini metin yazıyor —
+      // sunucu tarafında dil sözlüğü açmadan (`rejected.insufficient_here`).
+      const detail =
+        draft.status === 'blocked_lines'
+          ? draft.lines
+          : draft.status === 'insufficient_here'
+            ? draft.lines.map((l) => `${l.name} (${l.available})`)
+            : draft.status === 'date_unavailable'
+              ? draft.availableDates
+              : undefined;
       return { data: { status: 'rejected', reason: draft.status, detail }, error: null };
     }
 

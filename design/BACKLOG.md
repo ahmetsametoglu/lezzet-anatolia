@@ -217,6 +217,15 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
      kargo eşiği kayboluyor mu. Sessizce taşımak müşteriyi tam da o iki uyarıdan mahrum bırakırdı —
      iki kalemi çıkarıp toplamın ARTTIĞINI gören müşteri, hata yaptığını sanır. Kart durumu
      bildirir, kararı blok verdirir.
+  **Tasarımda OLMAYAN bir öğe eklendi (02.08, kullanıcı bildirimi): adet tavanı düzeltme düğmesi.**
+  Sepet satırının adet seçicisinin yanında, bal tonlu: *"Bu adrese şu an en fazla 2 adet
+  getirebiliyoruz · 2 adede indir"*. Tasarım bu hâli hiç çizmiyor çünkü çok depo öncesinde yoktu:
+  yeri değişen müşterinin 5 adedi yeni yerde 2 olabiliyor. Adet **otomatik düşürülmüyor** ve karar
+  kullanıcınındı; gerekçe de kendi kuralımız — müşterinin yazdığı sayıyı haber vermeden
+  değiştirmek, kalemler için yasakladığımız sessiz daralmanın adetteki hâli. Bal tonu da aynı
+  aileden: müşteri hata yapmadı, yer değişti. Sayı bir SÖZ değil ("şu an en fazla"): sepet stok
+  ayırmıyor, gerçek kapı checkout'un rezervasyonu.
+
   Ayrıca **grup toplamı indirim İÇERMEZ** ve bu bir sapma değil bir sınır: kupon/kampanya her
   siparişin kendi kalemlerine göre checkout'ta yeniden çözülüyor (`createCheckoutDraft` alt kümeyi
   yeniden okuyor), yani sepette bir gruba düşecek payı kesin bilemeyiz. İki gruplu sepette özet

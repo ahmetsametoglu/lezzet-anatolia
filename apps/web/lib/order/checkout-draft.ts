@@ -49,6 +49,18 @@ type CheckoutDraftOutcome =
   | { status: 'empty_cart' }
   /** Tükenmiş/satışa kapanmış satır var — çıkarılmadan sipariş açılmaz. */
   | { status: 'blocked_lines'; lines: string[] }
+  /**
+   * Kalem bu depoda VAR ama sepetteki adet kadar yok (19.7 · kullanıcı bildirimi 02.08).
+   *
+   * `blocked_lines`ten ayrı, çünkü söylediği şey başka: orada kalem alınamıyor, burada AZI
+   * alınabiliyor. Tek mesaja indirilseydi müşteri kalemi büsbütün silmeye kalkardı.
+   *
+   * Kontrol edilmezse iş rezervasyonda patlıyordu — müşteri adresini ve ödeme yöntemini seçip
+   * "onayla"ya bastıktan sonra, üstelik hangi ürün olduğunu söylemeyen bir cümleyle. Adet burada
+   * SESSİZCE düşürülmez: müşterinin yazdığı sayıyı haber vermeden değiştirmek, sepette kalemler
+   * için yasakladığımız sessiz daralmanın ta kendisi. Sepet satırı tek tıkla düzeltiyor.
+   */
+  | { status: 'insufficient_here'; lines: { name: string; available: number }[] }
   | { status: 'min_basket'; missingCents: number }
   | { status: 'address_not_found' }
   /**
@@ -198,6 +210,16 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
   // Ayrımın yeri burası: sepet "alınabilir mi" sorusunu yanıtlar, checkout "bu siparişle gelir mi".
   const unfulfillable = cart.lines.filter((l) => l.route !== null && l.route !== 'local');
   if (unfulfillable.length > 0) return { status: 'blocked_lines', lines: unfulfillable.map((l) => l.name) };
+
+  // ── ADET DE KARŞILANMALI (19.7) ───────────────────────────────────────────
+  // Yukarıdaki süzgeç "kalem bu depoda var mı" sorusunu cevaplıyor, "kaç tane var" sorusunu değil.
+  // Cevaplanmadığında iş rezervasyonda patlıyordu: müşteri ödeme yöntemini seçmiş, "onayla"ya
+  // basmış, ve aldığı cevap ürünü adlandırmayan bir "bir ürün tükendi" oluyordu — oysa tükenen bir
+  // şey yok, o adrese istenen adet gitmiyor. Sayı sepetin gösterdiğiyle aynı kaynaktan (`availableHere`).
+  const overCap = cart.lines.filter((l) => l.availableHere !== null && l.availableHere < l.qty);
+  if (overCap.length > 0) {
+    return { status: 'insufficient_here', lines: overCap.map((l) => ({ name: l.name, available: l.availableHere ?? 0 })) };
+  }
   if (!cart.minBasketOk) return { status: 'min_basket', missingCents: cart.missingForMinBasketCents };
 
   // Gün DOĞRULANIR, kabul edilmez: ekran açıkken kesim saati geçmiş ya da bölge günü değişmiş olabilir.

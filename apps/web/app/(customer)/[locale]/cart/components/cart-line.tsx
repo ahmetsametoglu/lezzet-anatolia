@@ -246,20 +246,62 @@ export function CartLineRow({ line, t, locale, compact = false, tone = 'default'
       </span>
     );
 
+  /**
+   * **Bu yerde şu an kaç adet getirebiliyoruz** (19.7 · kullanıcı bildirimi 02.08).
+   *
+   * Yeri değişen müşterinin sepetindeki 5 adet, yeni yerde 2 olabiliyor. Eskiden bunun hiçbir izi
+   * yoktu: satır 5 gösteriyor, "+" sonsuza kadar basılıyor, ve iş **rezervasyonda** patlıyordu —
+   * yani müşteri adresini ve ödeme yöntemini seçip "onayla"ya bastıktan sonra, hangi ürün olduğunu
+   * bile söylemeyen bir cümleyle ("bir ürün tükendi" — oysa tükenen bir şey yok, biz oraya 5 tane
+   * götüremiyoruz).
+   *
+   * `null` = yer ya da yol bilinmiyor; 0 = kalemin kendisi bu yerde yok (o hâli kısıt bloğu ve
+   * engelli yerleşim anlatıyor, burada susulur).
+   */
+  const placeCap = line.availableHere !== null && line.availableHere > 0 ? line.availableHere : null;
+
+  /**
+   * Tavan İKİ kaynaktan gelebilir ve **ikisi farklı şey söyler**: `limitCap` "bu FİYATTAN en fazla
+   * bu kadar" (teklif partisinde kalan), `placeCap` "bu YERE en fazla bu kadar". Seçici en dar
+   * olana uyar; cümleyi ise gerçekten dayanılan tavan yazar — yoksa müşteri "5 adet vardı, neden
+   * 2'de durdu" sorusuna yanlış cevap okur.
+   */
+  const cap = Math.min(line.limitCap ?? Infinity, placeCap ?? Infinity);
+  const atCap = Number.isFinite(cap) && line.qty >= cap;
+  const placeBinds = placeCap !== null && (line.limitCap === null || placeCap <= line.limitCap);
+
+  /**
+   * Sepetteki adet tavanı AŞIYOR — düzeltmeyi biz yapmayız, tek tıkla yaptırırız.
+   *
+   * Otomatik indirmek, kalemler için yasakladığımız sessiz daralmanın adetteki hâli olurdu:
+   * müşterinin kendi yazdığı sayıyı haber vermeden değiştirmek. Bal tonu da bilinçli — müşteri bir
+   * hata yapmadı, yer değişti.
+   */
+  const overCap = placeCap !== null && line.qty > placeCap;
+
   // Tavana ulaşıldığında sebep YAZILIR; "+" sessizce pasifleşirse müşteri arızalı sanır.
-  const capNote =
-    line.limitCap !== null && line.qty >= line.limitCap ? (
-      <span className="font-sans text-micro font-semibold text-terracotta">
-        {t.limitReached.replace('{n}', String(line.limitCap))}
-      </span>
-    ) : null;
+  const capNote = overCap ? (
+    <button
+      type="button"
+      onClick={() => setQty(key, placeCap)}
+      className="w-max cursor-pointer rounded-soft border border-honey-line bg-honey-bg px-2.5 py-1 text-left font-sans text-micro font-semibold text-honey transition-colors hover:bg-honey-line"
+    >
+      {t.placeCap.replace('{n}', String(placeCap))} · {t.placeCapFix.replace('{n}', String(placeCap))}
+    </button>
+  ) : atCap ? (
+    <span className={['font-sans text-micro font-semibold', placeBinds ? 'text-honey' : 'text-terracotta'].join(' ')}>
+      {placeBinds ? t.placeCap.replace('{n}', String(cap)) : t.limitReached.replace('{n}', String(cap))}
+    </span>
+  ) : null;
 
   const stepper = (
     <QtyStepper
       value={line.qty}
       onChange={(next) => setQty(key, next)}
       min={0}
-      max={line.limitCap}
+      // Tavan aşılmış hâlde seçici KİLİTLENMEZ: mevcut değer zaten tavanın üstünde ve `max` onu
+      // geçersiz gösterirdi. Düzeltmeyi düğme yapar, sonra tavan normal işler.
+      max={overCap ? null : Number.isFinite(cap) ? cap : null}
       size={compact ? 'sm' : 'md'}
     />
   );

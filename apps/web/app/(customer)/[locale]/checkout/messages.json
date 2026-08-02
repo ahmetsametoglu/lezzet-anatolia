@@ -111,6 +111,7 @@
     "rejected": {
       "empty_cart": "Sepetiniz boş görünüyor.",
       "blocked_lines": "Sepetinizde artık satın alınamayan kalemler var: {detail}. Sepete dönüp çıkarın.",
+      "insufficient_here": "Bazı ürünlerden istediğiniz adet bu adrese gönderilemiyor — parantezdeki sayı şu an mümkün olan en fazla adet: {detail}. Sepette tek tıkla düzeltebilirsiniz.",
       "min_basket": "Sipariş alt sınırının altındasınız.",
       "address_not_found": "Seçilen adres bulunamadı.",
       "cold_chain_unshippable": "Soğuk zincir kalemleri bu adrese gönderilemiyor.",
@@ -253,6 +254,7 @@
     "rejected": {
       "empty_cart": "Votre panier semble vide.",
       "blocked_lines": "Certains articles ne sont plus disponibles : {detail}. Retournez au panier pour les retirer.",
+      "insufficient_here": "Pour certains articles, la quantité demandée ne peut pas être livrée à cette adresse — le nombre entre parenthèses est le maximum possible actuellement : {detail}. Vous pouvez corriger en un clic depuis le panier.",
       "min_basket": "Vous êtes en dessous du minimum de commande.",
       "address_not_found": "Adresse introuvable.",
       "cold_chain_unshippable": "Les articles en chaîne du froid ne peuvent pas être envoyés à cette adresse.",
@@ -395,6 +397,7 @@
     "rejected": {
       "empty_cart": "Ihr Warenkorb scheint leer zu sein.",
       "blocked_lines": "Einige Artikel sind nicht mehr erhältlich: {detail}. Bitte im Warenkorb entfernen.",
+      "insufficient_here": "Bei einigen Artikeln kann die gewünschte Menge nicht an diese Adresse geliefert werden — die Zahl in Klammern ist die derzeit höchstmögliche Menge: {detail}. Im Warenkorb können Sie das mit einem Klick korrigieren.",
       "min_basket": "Sie liegen unter dem Mindestbestellwert.",
       "address_not_found": "Adresse nicht gefunden.",
       "cold_chain_unshippable": "Kühlkettenartikel können nicht an diese Adresse gesendet werden.",

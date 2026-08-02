@@ -146,6 +146,7 @@ export async function getCartView(
       blocked: unitPriceCents === null || view.soldOut,
       // Yol kararı satırlar kurulduktan SONRA toplu veriliyor (motor sepetin tamamını görmeli).
       route: null,
+      availableHere: null,
       contents: [],
       shippable: product.shippable,
       vatRate: product.vatRate,
@@ -171,9 +172,11 @@ export async function getCartView(
   // Yer bilinmiyorsa ayrım YAPILMAZ: hangi yoldan geleceğini bilmediğimiz bir kaleme yol atamak,
   // bilmediğimiz bir şeyi söylemektir. `route` o hâlde null kalır.
   const routeByIndex = decideRoutes(lines, context, byVariant, byProduct, opts.warehouseId ?? null);
-  for (const [index, route] of routeByIndex.entries()) {
+  for (const [index, decision] of routeByIndex.entries()) {
     const line = lines[index];
-    if (line) line.route = route;
+    if (!line) continue;
+    line.route = decision.route;
+    line.availableHere = decision.availableHere;
   }
 
   const subtotalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
@@ -215,6 +218,12 @@ export async function getCartView(
  * Paket satırı ayrımın DIŞINDADIR: paket bir kürasyondur, kalemleri farklı depolarda olabilir ve
  * "paketi ikiye böl" diye bir şey yok (DOMAIN §13). Yolu checkout'ta paketin bütünü üzerinden
  * çözülür; burada `null` kalır.
+ *
+ * Yolla birlikte **o yolun havuzundaki miktar** da döner (`availableHere`). Motorun kendi
+ * `fulfillableQty` alanı bu soruyu cevaplayamıyor: o `min(istenen, mevcut)` — yani 2 adet isteyip
+ * 2 adet bulunan satır ile 5 isteyip 2 bulunan satır aynı sayıyı üretir, "tavana dayandım mı"
+ * sorusu ondan okunamaz. Hangi havuza bakılacağını yine MOTOR söylüyor (`route`); burada yalnız
+ * o havuzun sayısı alınıyor — bir kural değil, bir arama.
  */
 function decideRoutes(
   lines: readonly CartLine[],
@@ -222,8 +231,8 @@ function decideRoutes(
   byVariant: Map<string, ProductVariant>,
   byProduct: Map<string, ProductWithRelations>,
   warehouseId: string | null,
-): Map<number, CartLineRoute | null> {
-  const result = new Map<number, CartLineRoute | null>();
+): Map<number, { route: CartLineRoute; availableHere: number }> {
+  const result = new Map<number, { route: CartLineRoute; availableHere: number }>();
   if (!warehouseId) return result;
 
   const inputs: CartLineInput[] = [];
@@ -248,7 +257,11 @@ function decideRoutes(
   const decision = decideCartAgainstWarehouse(inputs);
   decision.lines.forEach((d, i) => {
     const index = indexOfInput[i];
-    if (index !== undefined) result.set(index, d.route);
+    const input = inputs[i];
+    if (index === undefined || !input) return;
+    // İki olumsuz yolda havuz tanım gereği boş — motor oraya ancak ikisi de tükendiğinde düşürür.
+    const availableHere = d.route === 'shipping' ? input.shippingAvailable : d.route === 'local' ? input.localAvailable : 0;
+    result.set(index, { route: d.route, availableHere });
   });
   return result;
 }
@@ -289,6 +302,8 @@ function orphanLine(entry: CartEntry): CartLine {
     lineTotalCents: null,
     blocked: true,
     route: null,
+    // Kaynağı kaybolmuş satırın "burada kaç tane var" sorusu yok: sorulacak bir ürün kalmadı.
+    availableHere: null,
     contents: [],
     vatRate: 0,
     // Kaynağı kayboldu: kargolanıp kargolanamayacağı da bilinmiyor. `true` demek kısıt uyarısını
@@ -320,8 +335,10 @@ function bundleLine(bundleId: string, qty: number, pack: StorefrontPackageDetail
     lineTotalCents: pack.priceCents * qty,
     blocked: pack.soldOut,
     // Paket ayrımın DIŞINDA: kalemleri farklı depolarda olabilir ve "paketi ikiye böl" diye bir şey
-    // yok (DOMAIN §13). Yolu checkout'ta bütünü üzerinden çözülür.
+    // yok (DOMAIN §13). Yolu checkout'ta bütünü üzerinden çözülür — adet tavanı da öyle: paketin
+    // "kaç tane yapılabilir"i en zayıf kaleminden doğar ve bugün ölçülmüyor.
     route: null,
+    availableHere: null,
     contents: pack.items.map((item) => ({ name: item.name, qty: item.qty })),
     vatRate: pack.vatRate,
     // Pakette TEK bir soğuk zincir kalemi bile varsa paketin tamamı rota içi kalır (05.5).

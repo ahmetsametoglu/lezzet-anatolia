@@ -31,6 +31,7 @@ function line(over: Partial<CartLine> & { route: CartLineRoute | null }): CartLi
     contents: [],
     shippable: true,
     vatRate: 5.5,
+    availableHere: null,
     ...over,
   } as CartLine;
 }
@@ -101,6 +102,27 @@ describe('diffCartByPlace — sessiz daralma yok', () => {
     const before = line({ route: 'local', name: 'İçli Köfte', shippable: false });
     const after = { ...before, route: 'not_shippable_here' as const };
     expect(diffCartByPlace(viewOf([before]), viewOf([after]))).toEqual([{ kind: 'unavailable', name: 'İçli Köfte' }]);
+  });
+
+  it('adet daralması "alınamıyor" DEĞİL kendi hâliyle bildirilir', () => {
+    const before = line({ route: 'local', name: 'Mantı', qty: 5, availableHere: 9 });
+    const after = { ...before, availableHere: 2 };
+    expect(diffCartByPlace(viewOf([before]), viewOf([after]))).toEqual([
+      { kind: 'reduced', name: 'Mantı', qty: 5, availableHere: 2 },
+    ]);
+  });
+
+  it('zaten tavanın üstündeyse yer değişimi bunu YENİ haber gibi söylemez', () => {
+    // Satırın kendi düğmesi bunu zaten söylüyor; kartın işi DEĞİŞENİ bildirmek.
+    const before = line({ route: 'local', qty: 5, availableHere: 2 });
+    const after = { ...before, availableHere: 3 };
+    expect(diffCartByPlace(viewOf([before]), viewOf([after]))).toEqual([]);
+  });
+
+  it('adet yetiyorsa sessiz kalınır — tavan var diye uyarı üretilmez', () => {
+    const before = line({ route: 'local', qty: 2, availableHere: 9 });
+    const after = { ...before, availableHere: 4 };
+    expect(diffCartByPlace(viewOf([before]), viewOf([after]))).toEqual([]);
   });
 
   it('teklif fiyatı yere bağlıdır: fiyat değişimi de bildirilir', () => {

@@ -40,6 +40,11 @@ function lineText(change: CartLineChange, t: Messages, locale: Locale): string {
       return c.toRoute.replace('{name}', change.name);
     case 'unavailable':
       return c.unavailable.replace('{name}', change.name);
+    case 'reduced':
+      return c.reduced
+        .replace('{name}', change.name)
+        .replace('{qty}', String(change.qty))
+        .replace('{max}', String(change.availableHere));
     case 'price':
       return c.price
         .replace('{name}', change.name)

@@ -178,6 +178,20 @@ interface CartLineView {
    */
   route: CartLineRoute | null;
   /**
+   * Bu yerde ŞU AN kaç adet var (19.7) — `route`'un işaret ettiği havuzun miktarı.
+   *
+   * `null` = yol bilinmiyor (yer sorulmamış ya da satır bir paket): sayı da bilinmiyor. Rota
+   * dışı/kargo dışı hâllerde 0 — o satırın sorunu adet değil, kalemin kendisi.
+   *
+   * **Bir SÖZ DEĞİL, bir sayı.** Sepet stok ayırmıyor (DOMAIN §4); ekran "en fazla 2 adet" değil
+   * **"şu an en fazla 2 adet"** demeli ve buna dayanarak kilitlememeli. Gerçek kapı checkout'ta,
+   * rezervasyonda.
+   *
+   * Motorun `fulfillableQty` alanı bunun yerini TUTAMAZ: o `min(istenen, mevcut)` döndürüyor, yani
+   * 2 isteyip 2 bulan satır ile 5 isteyip 2 bulan satır ondan ayırt edilemez.
+   */
+  availableHere: number | null;
+  /**
    * PAKET satırının salt-okunur içeriği (K27) — varyant satırında boş dizi.
    *
    * Sepette gösterilmesi tasarımın kararı: müşteri "Bayram Sofrası"nın ne olduğunu satın alma

@@ -91,6 +91,21 @@ describe('sepetin yol ayrımı', () => {
     expect(view.lines[0]?.route).toBeNull();
     expect(view.shippingOnly).toBe(false);
     expect(view.shippingSubtotalCents).toBe(0);
+    // Yol bilinmiyorsa "kaç tane var" da bilinmiyor: adet tavanı uydurulmaz.
+    expect(view.lines[0]?.availableHere).toBeNull();
+  });
+
+  it('SATIRIN kendi havuzundaki miktar taşınır — istenen adet kadar değil', async () => {
+    // Motorun `fulfillableQty` alanı `min(istenen, mevcut)` döndürüyor; ekran ondan "tavana
+    // dayandım mı" sorusunu cevaplayamaz. 1 adet isteyip 10 bulunan satırda da havuz 10'dur.
+    const one = await getCartView('tr', entry(1), { warehouseId: localWarehouseId, shippingWarehouseId });
+    expect(one.lines[0]?.availableHere).toBe(10);
+
+    // İstenen adet havuzu aşsa da taşınan sayı havuzun kendisidir — sepetin düzeltme düğmesi
+    // ve checkout'un reddi aynı sayıyı söylemek zorunda.
+    const many = await getCartView('tr', entry(25), { warehouseId: localWarehouseId, shippingWarehouseId });
+    expect(many.lines[0]?.availableHere).toBe(10);
+    expect(many.lines[0]?.route).toBe('shipping');
   });
 
   it('kargo deposu bilinmiyorsa kalem kargoya düşmez — uydurma yol yok', async () => {
