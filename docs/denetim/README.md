@@ -31,6 +31,8 @@ Dosyalar:
   H2 tek dilli jenerik · H3 Zod imleci; H4 iyi desenler)
 - `denetim-test-kapsami.md` — test senaryoları kapsam/kurgu denetimi (T1 güçlü çekirdek ·
   T2 teklif akışı · T3 fiyat-değişim onayı · T4 cron iş testi)
+- `denetim-dosya-agaci.md` — dosya ağacı standardı, iki yüzey (D1 kardeş-sayfa importları ·
+  D2 fork istisnaları · D3 hook adı; yerleşim geneli temiz)
 
 Kapanıp silinenler (02–03.08): operasyon ilk dosyası ve komponent taraması · arka uç ilk dosyası
 ve **veritabanı/duplikasyon taraması** (A1–A9 tamamı uygulanıp doğrulandı — para kaydı düzeltmesi,
