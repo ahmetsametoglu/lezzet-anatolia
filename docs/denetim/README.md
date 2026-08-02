@@ -1,14 +1,12 @@
-# docs/denetim — denetim ajanının dosyaları
+# docs/denetim — denetim ajanının bulgu dosyaları
 
-Bu klasör **denetim ajanına** aittir. İçindekiler iki türdür:
-
-1. **Şerit denetim dosyaları** (`denetim-<şerit>*.md`) — kod kalitesi, duplikasyon ve
-   doküman↔kod senkronu bulguları. **Öneri statüsündedir, emir değil:** her maddenin dayanağı
-   (hangi kural) yanında yazılıdır; katılmayan şerit ajanı maddenin altındaki **Cevap:** satırına
-   gerekçesini yazar. Kabul edilen madde ilgili şeridin kendi planına/görev satırına iner —
-   durumun tek sahibi yine `docs/build/NN-*.md`'dir (CLAUDE.md §5), bu dosyalar durum tutmaz.
-2. **Çalışma/etüt dosyaları** (`*-calismasi.md`) — yeni bir özelliğin mevcut sisteme yerleşim
-   etüdü. Karar değildir; karar olgunlaşınca ilgili modül dosyalarına görev satırı olarak iner.
+Bu klasör **denetim ajanına** aittir ve yalnız **şerit denetim dosyaları** taşır
+(`denetim-<konu>.md`): kod kalitesi, duplikasyon ve doküman↔kod senkronu bulguları. **Öneri
+statüsündedir, emir değil:** her maddenin dayanağı (hangi kural) yanında yazılıdır; katılmayan
+şerit ajanı maddenin altındaki **Cevap:** satırına gerekçesini yazar. Kabul edilen madde ilgili
+şeridin kendi planına/görev satırına iner — durumun tek sahibi yine `docs/build/NN-*.md`'dir
+(CLAUDE.md §5), bu dosyalar durum tutmaz. (Özellik etütleri burada DEĞİL — `docs/feature/`,
+03.08'de taşındı.)
 
 **Yaşam döngüsü:** Bulgu dosyası, maddeleri kapandıkça yalnız açık maddelere indirilir; TÜM
 maddeleri kapanan dosya SİLİNİR — kararlar zaten kalıcı yerlerine (STACK/CLAUDE/görev
@@ -39,6 +37,3 @@ ve **veritabanı/duplikasyon taraması** (A1–A9 tamamı uygulanıp doğruland�
 `postal-code`/`date`/`bundle-qty` tek evleri, `ZoneNoticeService`, migration indeksi + `docs:check`
 §3c2 kuralı, PII maskeleme, DOMAIN ödeme pasajları; 02.9 cent göçü `02-database.md` görev satırında
 izlenir) · müşteri ilk dosyası ve komponent taraması (K1–K4, M2 dahil).
-- `barkod-okuyucu-calismasi.md` — barkod okuyucu entegrasyonu etüdü
-- `mobil-platform-calismasi.md` — web mi / native mi / hibrit mi platform etüdü (barkod + kurye
-  takibi + push ekseninde)

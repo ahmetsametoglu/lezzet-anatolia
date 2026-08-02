@@ -27,7 +27,46 @@ hatalar bir sözleşmeyle geçer (login'in `authErrorMessage(key, locale)` desen
 metne düşer, ham mesaj yalnız `error_log`'a gider (o kanal zaten kurulu — 18.5). Not: operasyon
 yüzeyi bu bulgunun DIŞINDA — personel iç sözlüğü görebilir, `readable()` deseni orada doğru.
 
-**Cevap:** —
+**Cevap:** Kabul — ve en güçlü kanıt funnel'ın **kendi künyesi**: `lib/error.ts:7` *"(iç detay
+sızmaz)"* yazıyor, `:33` tam tersini yapıyor. `Error` türevi olan her şey mesajını aynen geçiriyor,
+jenerik metin yalnız `Error` OLMAYAN fırlatmalara kalıyor — ve pratikte fırlatılan her şey `Error`.
+Yani kural yazılmış, kod hiç uymamış; bunu ne tip denetimi ne test yakalayabilirdi.
+
+**Ama önerilen çare olduğu gibi uygulanamaz, ölçtüm:** `getErrorMessage` **paylaşılan** bir kapı —
+müşteri yüzeyinde 12, operasyon yüzeyinde 12 dosya çağırıyor. Varsayılanı tersine çevirmek 12
+operasyon ekranını da jenerik metne düşürür; personelin iç mesajı görmesi ise doğru davranış ve
+denetimin kendisi de bunu kapsam dışı bırakıyor. (`readable()` deseni de genel değil: yalnız
+`warehouses/actions.ts:36`'da var, tek dosya.)
+
+**Karşı önerim — ayrım kapıda olsun, bayrakta değil:** müşteri action'ları ayrı bir funnel kullansın
+(`getCustomerError`) ve o funnel **metin değil ANAHTAR** döndürsün; ekran kendi `messages.json`'undan
+okusun. Operasyon `getErrorMessage`'ı olduğu gibi kullanmaya devam etsin.
+
+Gerekçe: iki yüzeyin gereksinimi gerçekten farklı — personel iç sözlüğü GÖRMELİ, müşteri
+GÖRMEMELİ. Bunu tek kapıda bir bayrakla ayırmak, bayrağı unutan ilk çağrıda sızıntıya döner (aynı
+sınıfın kaydı: `19.7`'nin `recordDemand` kararı, `K2`). İki ayrı kapı, yanlışı **import düzeyinde**
+imkânsız kılar: müşteri dosyasında yanlış funnel'ı çağırmak gözle görülür.
+
+Yan kazanç: **H2 kendiliğinden kapanır.** Anahtar dönen bir funnel'da çevrilecek metin ekranda
+yaşar, jenerik cümle de dahil — Fransız müşteriye Türkçe cümle gitme yolu kalmaz.
+
+**Maliyet dürüstçe:** 12 müşteri dosyası mesaj taşımaktan anahtar taşımaya geçmeli. Desen yeni değil,
+projede iki yerde zaten doğru çalışıyor (`authErrorMessage` · checkout `t.rejected.*`) — genelleşmesi
+gereken o. Tek turluk bir iş değil; kendi görev satırını hak ediyor.
+
+**Bir ayrım da kayda geçsin:** bu bulgu, dün kapattığım log maskelemesiyle AYNI ŞEY DEĞİL.
+`scrubMessage` **kaydı** koruyor (`error_log`'a sızan Postgres değerleri), bu bulgu **ekranı**.
+İkisi bağımsız iki delik; birini kapatmak ötekini kapatmıyor.
+
+**Denetim görüşü (03.08):** **Karşı öneri KABUL — benimkinden iyi.** "Ayrım kapıda, bayrakta
+değil" argümanı belirleyici: bayrağı unutan ilk çağrı sızıntıdır, yanlış funnel'ı import etmek ise
+gözle görülür ve lint'le bile zorlanabilir. `getCustomerError`'ın metin değil ANAHTAR dönmesi
+H2'yi de kendiliğinden kapatıyor — kabulüm tam. İki şart: *(1)* bu iş kendi görev satırını alsın
+(tespitiniz doğru — tek turluk değil; 12 dosya + anahtar sözlükleri) ve satır bu maddeye işaret
+etsin; *(2)* `getErrorMessage`'ın künyesindeki "iç detay sızmaz" cümlesi HEMEN düzeltilsin —
+görev satırı inene kadar bile künye yanlış vaatte bulunmamalı ("müşteri yüzeyi için
+`getCustomerError` gelene dek bu funnel ham mesaj geçirir" gibi dürüst bir cümle). Görev satırı
+açılıp künye düzeltilince H1–H2 bu dosyada kapanır, iş sahibine geçer.
 
 ## H2. Jenerik hata metni TEK DİLDE — "Beklenmeyen bir hata oluştu" Türkçe (müşteri şeridi)
 
@@ -36,7 +75,9 @@ maskelenmiş hâlde bile Türkçe bir cümle görür. i18n kuralı ("her sayfa k
 hata metinlerini de kapsamalı — H1'in anahtar sözleşmesi bunu kendiliğinden çözer: action anahtar
 döner, ekran kendi sözlüğünden okur (login bugün tam böyle yapıyor).
 
-**Cevap:** —
+**Cevap:** Kabul, ve H1'in çözümüyle birlikte gelir — ayrı bir iş değil. Not: jenerik metin
+bugün `lib/error.ts:33`'te sabit ve o dosya `server-only`; çeviriyi oraya taşımak sunucuya sayfa
+sözlüğü taşımak olurdu. Doğru yer ekran: funnel anahtar döner (`unexpected`), cümleyi sayfa kurar.
 
 ## H3. Küçük: `catalog/actions.ts:39` `KeysetCursorSchema.parse` — ZodError funnel'a düşer
 
@@ -44,7 +85,9 @@ Bozuk imleçte ZodError mesajı (alan adlarıyla çok satırlı döküm) H1 zinc
 kurcalanmış demektir; `safeParse` + sessiz varsayılana dönüş (ilk sayfa) hem daha doğru davranış
 hem sızıntısız. Tek satır.
 
-**Cevap:** —
+**Cevap:** Kabul. `safeParse` + ilk sayfaya dönüş, hem sızıntısız hem daha doğru: kurcalanmış bir
+imleç bir arıza değil, geçersiz bir istek — müşteriye hata göstermek yerine listeyi baştan vermek
+onun göreceği en anlamlı cevap. Küçük ve H1'den bağımsız, ilk turda kapatılabilir.
 
 ## H4. İyi desenler (kayıt için — H1'in çözümü bunların genelleşmesi)
 
@@ -53,4 +96,6 @@ hem sızıntısız. Tek satır.
 - Kupon reddi sebepleri domain'den yapılandırılmış geliyor, ham mesaj değil ✓
 - `adet depodakinden fazlaysa "mümkün olan adet söylenir"` — kural-tabanlı, yerelleştirilebilir mesaj ✓
 
-**Cevap:** —
+**Cevap:** Doğru tespit, ve H1'in çözümü tam olarak bunların genelleşmesi. Dördü de aynı şeyi
+yapıyor: **karar sunucuda, cümle ekranda.** Yeni funnel bu deseni istisna olmaktan çıkarıp
+varsayılan hâline getirecek.
