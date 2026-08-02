@@ -148,7 +148,35 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ## 2. Karar bekleyen (tasarım tarafında netleşmeli)
 
-- **ÇELİŞKİ: Transfer'in AYRI SAYFA'sı çizildi, oysa 01.08'de sayfa olmaktan çıkarılmıştı (02.08).**
+- **ÇÖZÜLDÜ (02.08, kullanıcı kararı): Transfer AYRI SAYFA DEĞİL — 01.08 kararı geçerli.** Gelen
+  çizim ayrı sayfa varsayıyordu; kullanıcı *"bence (a)'yı yapsak daha iyi… mevcut tasarımdaki ilgili
+  yerleri kopyalayıp birleştirebiliriz"* dedi ve karar korundu. Gerekçe estetik değil yapısal ve
+  zaten yazılıydı (§5): parada hesaplar arası transfer bir HAREKET TİPİDİR, sayfası yoktur; depolar
+  arası transfer onun stok karşılığıdır. Ayrı sayfa, "bu depoya ne girdi" sorusunu yeniden dört
+  ekrana bölerdi — 01.08'de tam olarak o dağınıklık toplanmıştı.
+  **İkinci gerekçe kullanıcının kendi şikâyetinden çıktı:** ray zaten kalabalık (09.19 bu yüzden
+  var); on yedinci nav satırını, içeriği başka bir sekmede zaten yaşayan bir ekran için eklemek
+  ters yöne gitmek olurdu.
+  **Kontrol edildi: `admin-stok.md` çizimin neredeyse tamamını zaten karşılıyor** — yoldakiler
+  (Mal kabul/bekleyenler), sevk oluşturma + FEFO önerisi + kullanılabilir üzerinden hesap, sevk
+  kaydını geri alma (ve "iptal" kelimesinin neden yetmediği), belge numarası (`TRF-STR-26-0007`),
+  tek depolu kurulumda bölümün görünmemesi, FEFO'nun zorlanmaması. Yani birleştirme bir yeniden
+  yazım değil, **kare eşlemesi**.
+  **Kare eşlemesi (`Operasyon - Transfer.dc` artık bir SAYFA değil, KARE KAYNAĞI):**
+  · "Yoldakiler" listesi + "Fark olanlar" süzgeci → **Stok › Mal kabul › bekleyenler**
+  · "Sevk oluştur" diyaloğu (kaynak/hedef, kalemler, `STR kullanılabilir`, öneri) → **Stok › Çıkışlar**
+  · "Geri alma iki ayrı gerçektir" bloğu → **Stok › Çıkışlar**, `admin-stok.md`'deki geri alma maddesi
+  · Mobil depocu kabul akışı ("Bana ne geliyor", "Kabul · TRF-…", "Kabul et · 2 satır eksik") →
+    **`depo-stok-giris.md`** (depo yüzeyi) — orada transferden kabul HİÇ yazılı değildi, eklendi
+  · "Tek depolu kurulum — sayfa kapalı" → `admin-stok.md` §4'teki tek-depo hâli (sayfa kapanmaz,
+    **bölüm** görünmez; sayfanın kalanı tek depoda da çalışır)
+  **Kodlanmayacak:** `AdminSidebar.dc`'nin Transfer nav satırı.
+  **KÖK SEBEP — tekrarlamasın diye:** `design/project/uploads/admin-transfer.md` duruyor; o dosya
+  01.08'de SİLİNDİ (`design/pages/` altında yok) ama eski kopyası Claude Design'a iletilince ayrı
+  sayfa yeniden çizildi. Upload klasöründen kaldırılmalı — yoksa bir sonraki turda aynı çizim geri
+  gelir. (Klasör tasarım aracının; silmesi kullanıcının.)
+
+- **~~ÇELİŞKİ: Transfer'in AYRI SAYFA'sı çizildi, oysa 01.08'de sayfa olmaktan çıkarılmıştı (02.08).~~** *(yukarıda çözüldü; kayıt izi için duruyor)*
   Gelen tasarım paketinde `Operasyon - Transfer.dc.html` var (web "yolda ne var" listesi · mobil
   depocu kabul akışı · sevk oluşturma diyaloğu · tek-depolu kapalı hâl) ve `AdminSidebar.dc`
   navigasyona **Transfer** satırı ekliyor. Ama §5'te yazılı kullanıcı kararı bunun tersi:

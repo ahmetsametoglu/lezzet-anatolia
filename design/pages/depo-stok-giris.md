@@ -2,7 +2,12 @@
 
 ## 1. Amaç ve kullanıcı
 
-Tedarikçiden gelen malın parti parti sisteme girildiği ekran. Kullanıcı: depo sorumlusu.
+Depoya **giren malın** parti parti sisteme girildiği ekran. Kullanıcı: depo sorumlusu.
+
+Mal iki kaynaktan girer ve ikisi de burada: **tedarikçiden** (satın alınan) ve **başka depodan**
+(transferle sevk edilmiş). İkisi ayrı ekran değil, çünkü rampadaki iş aynı iş — kutu iner, sayılır,
+rafa gider. Ayıran şey formun neyi sorduğu: tedarikten kabulde son tarih ve lot **etiketten okunur**,
+transferden kabulde **kaynak depodan gelir** (parti kimliği korunur, depocu yeniden yazmaz).
 
 ## 2. İçerik envanteri — ne var, neden
 
@@ -12,6 +17,24 @@ Tedarikçiden gelen malın parti parti sisteme girildiği ekran. Kullanıcı: de
 - **Lot numarası** — tedarikçinin paket üstündeki lot numarası; geri çağırma durumunda "bu lot kimlere gitti" sorusunun tek anahtarıdır. Girişte istenir
 - **Tedarikçi** — parti hangi tedarikçiden geldi; izlenebilirliğin "bir adım geri" halkası. Kayıtlı tedarikçi listesinden seçilir
 - **Depo konumu** — parti nereye kondu (raf/dolap); hazırlıkta depocuyu doğru yere yönlendirir
+
+### Transferden kabul — "bana ne geliyor" *(eklendi 02.08; kareler `Operasyon - Transfer.dc` mobilinden)*
+
+> Transfer AYRI BİR SAYFA DEĞİL (karar 01.08, 02.08'de korundu): yöneticinin gördüğü yüz Stok'un
+> **Mal kabul** sekmesi, depocunun gördüğü yüz burası. Çizilen mobil kareler bu bölümün karşılığıdır.
+
+- **Bekleyen sevkiyat listesi** — bu depoya gönderilmiş ama kabul edilmemiş her sevkiyat: belge no
+  (`TRF-COL-26-0011`), kaynak depo, kalem sayısı, sevk tarihi. **Kaynak sorulmaz, söylenir** —
+  depocu nereden geldiğini seçmez, kayıt zaten biliyor
+- **Kabul formu tedarikten FARKLI:** son tarih ve lot **dolu gelir** (kaynak partiden kopyalanır) ve
+  depocu onları yeniden yazmaz — yazsaydı aynı partinin iki tarihi olurdu ve geri çağırma izi kopardı.
+  Depocunun girdiği tek şey **gelen adet** ve **konum**
+- **Eksik gelen satır boş bırakılmaz, "gelmedi" denir** — boş satır "henüz saymadım" demektir ve
+  kabulü tamamlamaz; sıfır ise bir BEYANDIR ("kutu geldi, içi boştu"). İkisi aynı şey değil
+- **Kısmi kabul** — sevkiyatın bir kısmı gelmişse kayıt açık kalır; kalanı "yolda" sayılmaya devam
+  eder. Yoldaki mal hiçbir deponun stoğunda olmadığı için bu liste TAM olmak zorunda
+- **Fark kalıcıdır ve hata değildir** — eksik/fazla gelen kalem işaretlenir, kabul yine tamamlanır
+- **Alış fiyatı burada YOK** (tedarikten kabulde de yok) — depocunun işi mal, para değil
 - **Raf ömrü uyarısı** — girilen tarihe göre partinin **kalan raf ömrü beklenenden kısaysa** sistem uyarır ("bu parti kısa ömürlü geldi" anlamında). Uyarı **engellemez** — malı kabul edip etmemek sahadaki insanın kararıdır; uyarı yalnız kararı bilinçli kılar
 - **Toptan alıp paketleme girişi** — 1 kg dökme alınıp 10×100gr paketlenen mal, paketlendiği haliyle (**10 paket** olarak) girilir; ekran bu senaryoyu doğal karşılamalı (girişin birimi her zaman satılan paket)
 - **Girilen partilerin günlük özeti** — bugün kabul edilen partiler; "girdim mi girmedim mi" belirsizliği yaşanmaz, yanlış giriş hemen fark edilir

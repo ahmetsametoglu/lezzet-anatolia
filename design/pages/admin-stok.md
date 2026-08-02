@@ -14,6 +14,13 @@ Stokun parti gözüyle izlendiği, tarihe bağlı kararların (near-expiry tekli
 
 Sayfa dört sekmedir: **Seviyeler · Yaklaşan tarihli · Mal kabul · Çıkışlar.**
 
+> **Çizimi İKİ `.dc` besliyor (02.08).** `Operasyon - Stok.dc` sayfanın kendisi; `Operasyon -
+> Transfer.dc` ise **ayrı bir sayfa değil, kare kaynağıdır** — transfer 01.08'de sayfa olmaktan
+> çıkarılmıştı ve karar 02.08'de korundu. Oradaki "Yoldakiler" listesi (+ **"Fark olanlar"**
+> süzgeci) bu sayfanın *Mal kabul › bekleyenler* kısmına, "Sevk oluştur" diyaloğu ve "geri alma"
+> bloğu *Çıkışlar*a düşer. Mobil depocu kabul akışı buraya değil `depo-stok-giris.md`'ye aittir.
+> Eşlemenin tamamı `design/BACKLOG §2`'de.
+
 > **Neden "Hareket" değil (kullanıcı itirazı, 01.08).** İlk kurguda tek bir "Hareketler" sekmesi
 > vardı. "Hareket" doğru ama SOYUT bir kelime — depoda kimse "hareket yaptım" demez, "mal kabul
 > ettim" ya da "sevk ettim" der. Tek somut isim de yetmiyordu: "Mal kabul" içeriğin yalnız yarısını
