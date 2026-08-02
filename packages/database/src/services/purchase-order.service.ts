@@ -15,6 +15,10 @@ import {
   type PurchaseOrderStatus,
   PurchaseOrderProgressSchema,
   type PurchaseOrderProgress,
+  PurchaseOrderRowSchema,
+  type PurchaseOrderRow,
+  type KeysetCursor,
+  type Page,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
@@ -78,6 +82,54 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
 
   async listBySupplier(supplierId: string, status?: PurchaseOrderStatus): Promise<PurchaseOrder[]> {
     return this.getAll({ supplierId, status }, { orderBy: 'createdAt', orderDirection: 'desc' });
+  }
+
+  /**
+   * Siparişler ekranının sayfası (09.14) — **tek turda**, keyset imleçli.
+   *
+   * ── NEDEN AYRI BİR OKUMA ────────────────────────────────────────────────────
+   * `listBySupplier` tedarikçi başına tur attırıyor: sayfalama bozulur (her tedarikçi kendi
+   * sayfasını verir, birleştirme elde yapılır) ve sıralama listenin değil elin işi olur. Alternatifi
+   * satır başına `progressOf` + kalem okumasıydı — N+1, `bundle_list_rows`'un kapattığı sınıf.
+   *
+   * ── VE NEDEN RPC DEĞİL ──────────────────────────────────────────────────────
+   * `STACK §13`: okuma RPC'si istisnadır, N+1'i kırmanın **ilk** aracı gömülü `select`'tir. Zincirin
+   * tamamı gerçek yabancı anahtar üzerinden gidiyor (`stock → purchase_order_item`,
+   * `stock → warehouse`, `purchase_order → supplier`), yani sorgu kurucusu bunu ifade edebiliyor ve
+   * eşiğin üçüncü koşulu ("fark bariz") sağlanmıyor. Toplama okunan SAYFA üzerinde yapılır: 20
+   * satırlık sayfa 20 satırlık toplama demektir, veriyle büyümez.
+   *
+   * Depo kırılımı FİİLEN GİREN partilerden çıkar (`stock.warehouse_id`), kalemin
+   * `target_warehouse_id`'sinden değil: o bir niyet beyanıdır, kısıt değil (K6).
+   */
+  async listRows(opts: { limit?: number; cursor?: KeysetCursor; status?: PurchaseOrderStatus; supplierId?: string } = {}): Promise<Page<PurchaseOrderRow>> {
+    return this.getPageAs(PurchaseOrderRowSchema, { status: opts.status, supplierId: opts.supplierId }, {
+      // `created_at` hem GÖRÜNÜM hem İMLEÇ alanı — dar şema onu taşısa da select'te bulunması şart
+      // (bkz. `pageOf`): eksikse ikinci sayfa istenemez.
+      select:
+        'id,supplier_id,status,sent_at,note,created_at,' +
+        'supplier:supplier_id(id,name),' +
+        'items:purchase_order_item(id,qty,unit_price,batches:stock(initial_qty,warehouse:warehouse_id(id,code)))',
+      orderBy: 'createdAt',
+      orderDirection: 'desc',
+      limit: opts.limit ?? 20,
+      keysetAfter: opts.cursor,
+    });
+  }
+
+  /**
+   * Gönderilmiş ve HENÜZ KAPANMAMIŞ sipariş sayısı — ekranın başlık altı (09.14).
+   *
+   * "Yolda ne var" sorusudur: `draft` daha gönderilmedi, `received`/`cancelled` kapandı. Satır
+   * TAŞINMADAN sayılır (`head: true`).
+   *
+   * `supplierId` isteğe bağlı: tedarikçi kartı aynı soruyu tek tedarikçi için sorar ("bu firmadan
+   * yolda ne var"). Aynı sayacı iki kez yazmamak için tek metot — sayaç ile listenin süzgeci
+   * ayrışırsa "12 sonuç" yazıp 5 satır gösteren ekranlar doğar.
+   */
+  async countPending(supplierId?: string): Promise<number> {
+    // Dizi değer PostgREST'te `IN (…)` demektir (bkz. `FilterOptions` künyesi).
+    return this.count({ status: ['sent', 'partially_received'], supplierId });
   }
 
   /**

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { dbNumeric } from './db-numeric';
+import { dbNumeric, dbNumericNullable } from './db-numeric';
 
 // Tedarik zinciri şemaları (DOMAIN §16, data-model/stok-tedarik.md): tedarikçi kartı,
 // ürün–kod eşlemesi, tedarik siparişi ve mal kabul. Müşteri tarafının simetriği.
@@ -85,6 +85,49 @@ export const PurchaseOrderSchema = z.object({
   createdAt: z.string(),
 });
 export type PurchaseOrder = z.infer<typeof PurchaseOrderSchema>;
+
+/**
+ * Tedarik siparişi LİSTE satırı (09.14) — ekranın bir satırda sorduğu her şey, tek turda.
+ *
+ * ── NEDEN RPC DEĞİL ──────────────────────────────────────────────────────────
+ * `STACK §13`: okuma RPC'si istisnadır ve N+1'i kırmanın **ilk** aracı PostgREST'in gömülü
+ * `select`'idir. Buradaki tüm bağlar gerçek yabancı anahtar (`stock → purchase_order_item`,
+ * `stock → warehouse`, `purchase_order → supplier`), yani sorgu kurucusu zinciri ifade edebiliyor —
+ * eşik geçilmiyor. Toplamlar okunan sayfanın satırlarında yapılır: sayfa 20 satırsa toplama da
+ * 20 satırlıktır, veriyle büyümez.
+ *
+ * **Ham sayılar taşınır, karar taşınmaz.** "Tamamlandı mı", "geç kaldı mı" gibi yargılar burada
+ * YOK; şema yalnız kalemleri ve gelen partileri getirir, özeti `domain-core` türetir (`STACK §4`).
+ */
+export const PurchaseOrderRowSchema = PurchaseOrderSchema.extend({
+  /** Tedarikçi — satırın başlığı; ad olmadan sipariş listesi okunmaz. */
+  supplier: z.object({ id: z.string().uuid(), name: z.string() }).nullable(),
+  items: z.array(
+    z.object({
+      id: z.string().uuid(),
+      qty: z.number().int(),
+      /** Beklenen alış; **null olabilir** ve o zaman sipariş tutarı EKSİKTİR (ekran "≈" der). */
+      unitPrice: dbNumericNullable,
+      /**
+       * Bu kaleme karşılık FİİLEN giren partiler.
+       *
+       * Depo kırılımı buradan çıkar, `purchase_order_item.target_warehouse_id`'den DEĞİL: o alan bir
+       * niyet beyanıdır, kısıt değil (K6) — mal fiilen nereye indiyse oraya girer. Hedefi okumak
+       * "planlanan"ı "gerçekleşen" diye göstermek olurdu.
+       *
+       * Ölçü `initialQty`: `physicalQty` satışla erir ve "ne kadar geldi" sorusuna yanlış cevap
+       * verir (`purchase_order_progress` da bu yüzden `initial_qty` sayıyor).
+       */
+      batches: z.array(
+        z.object({
+          initialQty: z.number().int(),
+          warehouse: z.object({ id: z.string().uuid(), code: z.string() }).nullable(),
+        }),
+      ),
+    }),
+  ),
+});
+export type PurchaseOrderRow = z.infer<typeof PurchaseOrderRowSchema>;
 
 export const PurchaseOrderInsertSchema = z.object({
   supplierId: z.string().uuid(),

@@ -207,3 +207,60 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
     expect(groups.flatMap((g) => g.lines).find((l) => l.variantId === variantId)).toBeUndefined();
   });
 });
+
+/**
+ * Siparişler ekranının sayfası (09.14) — `listRows`.
+ *
+ * Buradaki iddia okumanın DOĞRULUĞU değil yalnız; **tek turda ifade edilebildiği**. Zincir üç
+ * yabancı anahtar üzerinden gidiyor (`purchase_order → supplier`, `stock → purchase_order_item`,
+ * `stock → warehouse`) ve gömülü select onu taşıyabiliyorsa RPC eşiği geçilmiyor (`STACK §13`).
+ * Gömme bozulursa (FK kalkar, alan adı değişir) bu testler kırılır — sessizce N+1'e düşülmez.
+ */
+describe('tedarik siparişi listesi (09.14)', () => {
+  it('satır tedarikçiyi, kalemleri ve GİREN partileri tek turda taşır', async () => {
+    const { order, items } = await orders.createDraft(supplierId, [{ variantId, qty: 10, unitPrice: 4.5 }]);
+    await orders.markSent(order.id);
+    await intakes.receive({
+      warehouseId,
+      supplierId,
+      purchaseOrderId: order.id,
+      lines: [{ variantId, qty: 6, expiryDate: dayOffset(200), unitCost: 4.5, purchaseOrderItemId: items[0]!.id }],
+    });
+
+    const satir = (await orders.listRows({ supplierId })).rows.find((r) => r.id === order.id);
+
+    expect(satir?.supplier?.name).toContain('Anadolu Gıda');
+    expect(satir?.items).toHaveLength(1);
+    // Depo kırılımı FİİLEN giren partiden çıkar — kalemin hedef deposundan değil (K6).
+    expect(satir?.items[0]?.batches[0]).toMatchObject({ initialQty: 6 });
+    expect(satir?.items[0]?.batches[0]?.warehouse?.id).toBe(warehouseId);
+  });
+
+  it('keyset imleci kurulur — liste sonsuz kaydırmaya açık', async () => {
+    await orders.createDraft(supplierId, [{ variantId, qty: 1, unitPrice: 1 }]);
+    await orders.createDraft(supplierId, [{ variantId, qty: 2, unitPrice: 1 }]);
+
+    const ilk = await orders.listRows({ supplierId, limit: 1 });
+    expect(ilk.rows).toHaveLength(1);
+    expect(ilk.nextCursor).not.toBeNull();
+
+    const ikinci = await orders.listRows({ supplierId, limit: 1, cursor: ilk.nextCursor! });
+    expect(ikinci.rows[0]?.id).not.toBe(ilk.rows[0]?.id);
+  });
+
+  it('bekleyen sayacı yalnız GÖNDERİLMİŞ ve kapanmamışları sayar', async () => {
+    // Sayaç KENDİ tedarikçimizle daraltılıyor: küresel sayıya bakan test, başka bir ajanın açtığı
+    // siparişle oynar ve tekrarlanmayan bir düşüş üretir (`CLAUDE.md §4b`).
+    const önce = await orders.countPending(supplierId);
+
+    const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 3, unitPrice: 1 }]);
+    // Taslak henüz gönderilmedi: "yolda" değil.
+    expect(await orders.countPending(supplierId)).toBe(önce);
+
+    await orders.markSent(order.id);
+    expect(await orders.countPending(supplierId)).toBe(önce + 1);
+
+    await orders.cancel(order.id);
+    expect(await orders.countPending(supplierId)).toBe(önce);
+  });
+});

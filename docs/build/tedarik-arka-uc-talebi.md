@@ -100,3 +100,64 @@ turda `count` da olur, liste okumasının yanında dönerse daha iyi).
 
 **Aciliyet:** Sipariş zamanı ve Tedarikçiler sekmeleri indi, bu sekme pane ile bekliyor; "tek
 dokunuş taslak" aksiyonunu da bu listeye bağlayacağım (taslak oluşunca görüneceği yer burası).
+
+---
+
+## ✅ Cevap — okuma açıldı (arka uç şeridi, 02.08)
+
+```ts
+// packages/database — sayfa, keyset imleçli, TEK tur
+orders.listRows({ limit?, cursor?, status?, supplierId? })  // → Page<PurchaseOrderRow>
+orders.countPending(supplierId?)                            // → number
+
+// packages/domain-core — satırın özeti (saf, DB'siz)
+summarizePurchaseOrder(row) // → { itemCount, receivedItemCount, totalCents,
+                            //     missingPriceCount, byWarehouse: [{ warehouseId, code, qty }] }
+```
+
+### RPC YAZILMADI — ve bu bilinçli
+
+İstediğiniz `bundle_list_rows` emsaliydi, ama `STACK §13` okuma RPC'sini **istisna** sayıyor ve
+üç koşulun birlikte sağlanmasını istiyor; ayrıca *"N+1'i kırmanın **ilk** aracı RPC değil,
+PostgREST'in gömülü `select`'idir"* diyor. Burada zincirin tamamı gerçek yabancı anahtar üzerinden
+gidiyor — kontrol ettim:
+
+- `purchase_order → supplier` · `stock → purchase_order_item` (`stock_purchase_order_item_fk`) ·
+  `stock → warehouse` (`stock_warehouse_fk`)
+
+Yani sorgu kurucusu zinciri ifade edebiliyor ve üçüncü koşul ("fark bariz") sağlanmıyor.
+`bundle_list_rows`'da durum farklıydı: orada varyant başına ağırlıklı ortalama alış ve kalem başına
+KDV'siz gelir vardı — kurucunun dili dışında, ve ölçülmüş bir fark (75 KB → 4 KB). Burada toplama
+**okunan sayfanın** satırlarında yapılıyor: 20 satırlık sayfa 20 satırlık toplama demek, veriyle
+büyümüyor. RPC yazmak migration bağı ve iş kuralının SQL'e sızma riskini bedava ödemek olurdu.
+
+Gömme bozulursa (FK kalkar, alan adı değişir) entegrasyon testleri kırılıyor — sessizce N+1'e
+düşülmüyor.
+
+### Özet neden ayrı bir fonksiyon
+
+"8/12 kalem" bir SAYIM değil bir KARAR ("tamamlandı" ne demek). `STACK §4`/§13 gereği okuma ham
+sayıları taşıyor, yorumu motor yapıyor — `bundle_list_rows`'un kendi künyesindeki kural. Pratik
+sebebi de var: bu üç sayı ekranın üç yerinde görünecek (liste satırı, sipariş detayı, tedarikçi
+kartı) ve türetmeyi ekrana bırakmak üç kopya demekti.
+
+Kararlar:
+
+- **Depo kırılımı FİİLEN GİREN partiden** (`stock.warehouse_id`), kalemin `target_warehouse_id`'sinden
+  DEĞİL — o bir niyet beyanıdır, kısıt değil (K6). Hedefi okumak "planlanan"ı "gerçekleşen" diye
+  göstermek olurdu.
+- **Ölçü `initial_qty`** — `physical_qty` satışla erir ve "ne kadar geldi" sorusuna yanlış cevap
+  verir (`purchase_order_progress` da bu yüzden onu sayıyor).
+- **Tamamlanma ölçütü `>=`**, `===` değil: fazla gelen kalem eksik sayılmamalı.
+- **`totalCents`** — `STACK §8`. `missingPriceCount > 0` ise tutar EKSİKTİR; "≈" işaretinizin
+  dayanağı o alan.
+- **Kırılım çoktan aza, eşitlikte koda göre** — sıra kararlı olmalı, yoksa aynı sipariş her
+  yenilemede farklı sıralanır.
+- `countPending` **tedarikçiye daraltılabiliyor**: tedarikçi kartı aynı soruyu tek firma için sorar.
+
+### ⚠ Sipariş referansı YOK
+
+`purchase_order` tablosunda `reference_no` gibi bir alan yok (`id · supplier_id · status · sent_at ·
+note · created_at`). Satırda "sipariş referansı/tarihi" istemişsiniz; bugün verebileceğim tarih ve
+kimlik. Müşteri siparişindeki gibi insan-okur bir referans isteniyorsa (`LA-26-7K4M2P` emsali) bu
+ayrı bir karar ve şema değişikliği — söyleyin, açayım.

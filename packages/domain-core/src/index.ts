@@ -24,6 +24,7 @@ export * from './stock/shelf-life';
 export * from './stock/shortfall';
 export * from './stock/document-no';
 export * from './stock/transfer';
+export * from './stock/purchase-summary';
 export * from './delivery/delivery-days';
 export * from './delivery/warehouse-resolve';
 export * from './delivery/place-name';
