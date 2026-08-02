@@ -7,3 +7,4 @@
 // projede her ikisi kendi yapılandırmasını kuruyor — bu projede duplication yasak (CLAUDE.md §1).
 export { logger } from './logger';
 export { captureError, SOURCES, type CaptureContext } from './capture';
+export { maskEmail, maskPhone, scrubMessage } from './mask';

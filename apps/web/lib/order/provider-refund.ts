@@ -1,4 +1,5 @@
 import 'server-only';
+import { captureError, SOURCES } from '@lezzet/observability';
 import { stripeClient } from '../stripe';
 
 /**
@@ -56,6 +57,16 @@ export function stripeRefunder(): ProviderRefunder {
       );
       return { status: 'ok', refundId: refund.id };
     } catch (error) {
+      // **İZ BURADA DÜŞÜLÜR** (OBSERVABILITY §2, §6c). Dönen `error` alanını okuyan YOK: tek çağıran
+      // (`refund.ts`) yalnız `status`'a bakıp `unsettled('provider_failed')` diyor, sağlayıcının
+      // söylediği sebep ("charge already refunded", "balance insufficient") orada düşüyordu. Yani
+      // müşterinin parası dönmemişken elimizde neden dönmediğini söyleyen tek satır kalmıyordu —
+      // gitmeyen sipariş mailiyle aynı sınıf, ondan daha ağır sonuçlu.
+      // Bağlam KİMLİK taşır (§5): ödeme niyeti ve iade anahtarı (içinde sipariş kimliği var).
+      await captureError(error, {
+        source: SOURCES.webAction,
+        context: { paymentIntentId: input.paymentIntentId, idempotencyKey: input.idempotencyKey },
+      });
       return { status: 'failed', error: error instanceof Error ? error.message : String(error) };
     }
   };

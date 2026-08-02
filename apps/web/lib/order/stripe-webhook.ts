@@ -7,6 +7,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { decideLatePayment } from '@lezzet/domain-core';
+import { captureError, SOURCES } from '@lezzet/observability';
 import type { OrderItem } from '@lezzet/types';
 import { clearOrderedLines } from '../cart/settle';
 import { recordOrderPayment, recordOrderRefund } from '../money/order-payment';
@@ -72,6 +73,16 @@ export async function handleStripeEvent(event: VerifiedEvent, accountId: string 
     // Damga ATILMAZ: işlenmemiş olay elle tekrar denenebilir kalmalı.
     const message = error instanceof Error ? error.message : String(error);
     await events.markFailed(claim.event.id, message);
+    // **TEKNİK İZ ayrıca düşülür** (OBSERVABILITY §1, §2). `markFailed` bir İŞ KAYDIDIR
+    // (`webhook_event`): "bu olay işlenemedi" der, "neden" demez ve operasyon sağlık ekranına
+    // düşmez. Hata buradan çağırana bir 500 CEVABI olarak dönüyor — fırlatılmadığı için Next'in
+    // `onRequestError` kancası da görmüyor, yani `error_log`'da tek satır kalmıyordu. Alarm
+    // bilinçli olarak yokken (§4.1) ekranın göremediği hata görülmemiş hatadır.
+    // Bağlam KİMLİK taşır (§5): olay/sipariş kimliği yeter, gövde yazılmaz.
+    await captureError(error, {
+      source: SOURCES.webhook,
+      context: { provider: 'stripe', eventId: event.id, type: event.type, orderId: event.orderId },
+    });
     return { status: 'error', error: message };
   }
 }

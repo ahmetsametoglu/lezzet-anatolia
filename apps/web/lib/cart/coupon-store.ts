@@ -19,6 +19,8 @@ export function readCoupon(): string | null {
   try {
     return window.localStorage.getItem(KEY) || null;
   } catch {
+    // Depo kapalı (gizli sekme, kota): kupon girilmemiş sayılır. Sessizlik bilinçli — yazma
+    // tarafındaki gerekçenin aynısı, kupon uğruna ekranı kırmayız.
     return null;
   }
 }

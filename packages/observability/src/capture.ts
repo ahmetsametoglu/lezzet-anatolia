@@ -4,6 +4,7 @@
 // orada `node:` şemalı modül yok ve derleme "UnhandledSchemeError: node:crypto" ile kırılıyor.
 // Yaşandı (30.07); referans projede aynı tuzak aynı gerekçeyle yazılıydı.
 import { serviceDb } from '@lezzet/database/client';
+import { scrubMessage } from './mask';
 import { ErrorLogService } from '@lezzet/database/services/error-log.service';
 import type { ErrorLogLevel } from '@lezzet/types';
 import { logger } from './logger';
@@ -54,7 +55,14 @@ export const SOURCES = {
 } as const;
 
 export async function captureError(error: unknown, ctx: CaptureContext): Promise<void> {
-  const message = error instanceof Error ? error.message : String(error);
+  /**
+   * Mesaj TEK KAPIDAN maskelenir (03.08). En tehlikeli sızıntı bizim yazdığımız bağlam değil,
+   * veritabanının kendi hata gövdesidir: Postgres kısıt ihlalinde değeri metne gömüyor
+   * (`Key (postal_code, email)=(75011, ahmet@example.com)`) ve o metin `error_log.message`'a
+   * olduğu gibi düşüyordu. Her çağıranın hatırlaması gereken bir kural, bir gün hatırlanmaz —
+   * bu yüzden kural çağıranda değil burada.
+   */
+  const message = scrubMessage(error instanceof Error ? error.message : String(error));
   const stack = error instanceof Error ? (error.stack ?? null) : null;
 
   logger.error({ source: ctx.source, path: ctx.path, ctx: ctx.context, err: { message, stack } }, message);

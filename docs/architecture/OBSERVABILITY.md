@@ -209,6 +209,33 @@ kaydı okunmaz kılmak olur.
 `message` 2000, `stack` 8000 karaktere kırpılır. Kırpma sessiz değil: kesilen metnin sonu görünür
 olduğu için parmak izi zaten ilk stack karesinden kuruluyor.
 
+### 5.1 Üçüncü kategori: MASKELİ (kullanıcı kararı, 03.08)
+
+Yukarıdaki ikili ayrım bir sınıfı teşhissiz bırakıyordu: **kimliğin olmadığı yollar.** Misafir OTP'si,
+ziyaretçiye açık yer çözümü, mail gönderimi — buralarda `customerId` yok. E-postayı tamamen silmek
+"hangi kayıt" sorusunu cevapsız bırakıyor ve arıza tekrarlanana kadar kör kalınıyor; e-posta alarmı
+da bilinçli olarak yokken (§4.1) bu, "OTP mailleri gitmiyor"u müşteri arayınca öğrenmek demek.
+
+**Maskeli hâl iki ucun arasında durur: kim olduğunu söylemez, hangi kayıt olduğunu söyler.**
+
+- **Kapı tek:** `@lezzet/observability/mask` → `maskEmail` (`a***@example.com`) · `maskPhone`
+  (`+33*****78`). Alt yol ayrı çünkü kök `index` service-role DB istemcisi kuruyor; maskeleme saf metin.
+- **Alan adı KORUNUR:** `gmail.com` kimseyi tanımlamaz ama "tüm Gmail teslimatları düşüyor" sorusunun
+  tek dayanağıdır.
+- **Maskeleme geri döndürülemez olmalı** — kısaltma değil, silme. Ayrıştırılamayan girdi tamamen gider:
+  biçimini tanımadığımız bir dizgede neyin kişisel olduğunu da bilemeyiz.
+- **Serbest metin `captureError`'da otomatik taranır** (`scrubMessage`). En tehlikeli sızıntı bizim
+  yazdığımız `context` değil, **veritabanının kendi hata gövdesidir**: Postgres kısıt ihlalinde değeri
+  metne gömüyor (`Key (postal_code, email)=(75011, ahmet@example.com)`) ve o metin `error_log.message`
+  alanına olduğu gibi düşüyordu. Kural çağıranda değil kapıda — her çağıranın hatırlaması gereken bir
+  kural, bir gün hatırlanmaz.
+- **OTP kodu hiçbir hâlde yazılmaz, maskeli bile.** Maskeleme "az veri" demek; kod ise az miktarı bile
+  sızdırılamayacak bir sırdır (kaydı okuyan biri o kodla giriş yapabilir).
+
+Ham hâl hâlâ yasak: maskeleme bir izin değil, **kimliksiz yolda teşhis kalsın diye açılmış dar bir
+kapı**. Kimliği olan bir yolda hâlâ `customerId` yazılır, e-posta maskeli bile yazılmaz — orada
+maskeli adres yalnız gürültüdür.
+
 ---
 
 ## 6. Diskteki log ve döndürme

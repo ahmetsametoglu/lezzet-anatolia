@@ -12,6 +12,7 @@ import type { CartEntry } from './cart-types';
  */
 const KEY = 'lezzet.saved.v1';
 
+/** Bozuk/eski kayıt sessizce ATILIR — liste uğruna sayfa çökmez (`cart-store` ile aynı gerekçe). */
 export function readSaved(): CartEntry[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -20,6 +21,8 @@ export function readSaved(): CartEntry[] {
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed.filter(isEntry) as CartEntry[]) : [];
   } catch {
+    // Depo kapalı ya da JSON bozuk: liste boş sayılır. Sessizlik bilinçli — iz bırakacak bir arıza
+    // değil, tarayıcının beklenen bir hâli (gizli sekme, elle kurcalanmış depo).
     return [];
   }
 }

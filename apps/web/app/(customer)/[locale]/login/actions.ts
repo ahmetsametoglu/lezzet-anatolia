@@ -5,7 +5,7 @@ import { normalizeEmail } from '@lezzet/helper';
 import { brand } from '@lezzet/brand';
 import type { Locale } from '@lezzet/i18n';
 import { createServiceRoleClient, EmailVerificationService, UserProfileService } from '@lezzet/database';
-import { logger } from '@lezzet/observability';
+import { captureError, maskEmail, SOURCES } from '@lezzet/observability';
 import { OtpCodeEmail, otpSubject, sendEmail } from '@lezzet/email';
 import { createClient } from '@/lib/supabase/server';
 import { resolvePostLoginRedirect } from '@/lib/auth/redirect';
@@ -35,7 +35,16 @@ export async function sendEmailOtp(emailRaw: string): Promise<SendResult> {
   });
   if (mail.error) {
     // Kod ASLA loglanmaz — kaydı okuyan biri o kodla giriş yapabilirdi.
-    logger.error({ context: 'auth/sendEmailOtp', err: mail.error }, 'OTP maili gönderilemedi');
+    //
+    // İz `error_log`'a da düşer (03.08): giriş yolu **kimliksiz** — `customerId` yok, çünkü müşteri
+    // henüz oturum açmadı. Yalnız `logger` yazınca arıza operasyon ekranında hiç görünmüyordu ve
+    // e-posta alarmı bilinçli olarak yok (`OBSERVABILITY §4.1`); yani "OTP mailleri gitmiyor"
+    // ancak müşteri arayınca öğrenilirdi. Adres MASKELİ: hangi kayıt olduğunu söyler, kim
+    // olduğunu söylemez (kullanıcı kararı 03.08).
+    await captureError(new Error(`OTP maili gönderilemedi: ${mail.error}`), {
+      source: SOURCES.webAction,
+      context: { flow: 'auth/sendEmailOtp', email: maskEmail(email) },
+    });
     return { ok: false, error: authErrorMessage('send_failed', locale) };
   }
   return { ok: true };
@@ -75,14 +84,20 @@ export async function verifyEmailOtp(emailRaw: string, token: string, next?: str
   const { data: link, error: linkErr } = await admin.auth.admin.generateLink({ type: 'magiclink', email });
   if (linkErr || !link.properties?.hashed_token || !link.user) {
     // `linkErr` null olabilir: bağlantı geldi ama jeton/kullanıcı eksik olan hâl de buraya düşer.
-    logger.error({ context: 'auth/verifyEmailOtp', err: linkErr?.message ?? 'jeton ya da kullanıcı boş' }, 'generateLink başarısız');
+    await captureError(new Error(`generateLink başarısız: ${linkErr?.message ?? 'jeton ya da kullanıcı boş'}`), {
+      source: SOURCES.webAction,
+      context: { flow: 'auth/verifyEmailOtp', email: maskEmail(email) },
+    });
     return { ok: false, error: authErrorMessage('send_failed', locale) };
   }
 
   const supabase = await createClient();
   const { error: sessionErr } = await supabase.auth.verifyOtp({ token_hash: link.properties.hashed_token, type: 'email' });
   if (sessionErr) {
-    logger.error({ context: 'auth/verifyEmailOtp', err: sessionErr.message }, 'oturum açılamadı');
+    await captureError(new Error(`oturum açılamadı: ${sessionErr.message}`), {
+      source: SOURCES.webAction,
+      context: { flow: 'auth/verifyEmailOtp', email: maskEmail(email) },
+    });
     return { ok: false, error: authErrorMessage('send_failed', locale) };
   }
 
