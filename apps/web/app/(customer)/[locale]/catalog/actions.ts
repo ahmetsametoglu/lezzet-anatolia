@@ -35,8 +35,20 @@ interface CatalogPageQuery {
 export async function loadMoreCatalogAction(locale: string, q: CatalogPageQuery, cursor: KeysetCursor): Promise<ActionResult<CatalogPageResult>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
-    // İmleç ve sıralama client'tan geliyor → doğrulanır (uydurma değer sorguyu bozmasın).
-    const safeCursor = KeysetCursorSchema.parse(cursor);
+    /**
+     * İmleç ve sıralama client'tan geliyor → doğrulanır (uydurma değer sorguyu bozmasın).
+     *
+     * **`safeParse`, `parse` değil** (denetim H3 · 03.08): `parse` fırlatınca ZodError funnel'a
+     * düşüyor ve alan adlarıyla çok satırlı dökümü **müşterinin ekranına** basılıyordu — hem iç
+     * yapıyı sızdıran hem de kimsenin okuyamayacağı bir metin.
+     *
+     * Bozuk imleç zaten bir ARIZA değil, geçersiz bir istek: adres çubuğuyla oynanmış ya da bir
+     * bağlantı eskimiş. Doğru cevap hata göstermek değil, listeyi baştan vermek — müşterinin
+     * göreceği en anlamlı sonuç o. Sıralama da bir satır aşağıda tam olarak böyle davranıyordu;
+     * imleç tek istisna kalmıştı.
+     */
+    const parsed = KeysetCursorSchema.safeParse(cursor);
+    const safeCursor = parsed.success ? parsed.data : undefined;
     const sort: CatalogSort = CATALOG_SORTS.includes(q.sort as CatalogSort) ? (q.sort as CatalogSort) : 'featured';
 
     const data = await getCatalogData(locale, {
