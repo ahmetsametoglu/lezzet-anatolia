@@ -227,11 +227,22 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
               {/* Kart künyesi: son dört hane ödeme sağlayıcısından çekilecek (12) — bugün
                   saklamıyoruz, uydurma rakam yazmaktansa yalnız aracı söyleriz. */}
               {order.paymentMethod === 'online' && placed && <span className="font-sans text-body-sm text-body">{t.payment.card}</span>}
-              <Footnote>{t.payment.invoiceSoon}</Footnote>
-              {/* BEKLEYEN(12.1): fatura PDF üretimi — bağlantı tasarımda var, yerinde durur ve neden
-                  basılamadığını söyler; silmek tasarımın bu satırını kaybetmek olurdu. */}
+              {/**
+               * **FATURA DEĞİL, TESLİMAT ÖZETİ (02.08 · kullanıcı kararı).** Burada "Faturayı indir"
+               * yazıyordu ve altında "fatura hazır olduğunda e-postanıza eklenecek" deniyordu —
+               * ikisi de tutulmayacak sözdü: sistem fatura KESMİYOR ve kesmeyecek (fatura dışarıdaki
+               * muhasebede doğuyor, biz yalnız numarasını kendi referansımızla eşleştiriyoruz).
+               * Müşteriye verdiğimiz tek belge teslimat özeti.
+               *
+               * Zamanı da "yakında" değil: belge kutu HAZIRLANDIKTAN sonra doğuyor, çünkü işi eksik
+               * konan bir şey varsa onu göstermek. Sipariş anında basılan kâğıt "ne sipariş ettiniz"
+               * der; bizim istediğimiz "kutuda ne var".
+               */}
+              <Footnote>{t.payment.deliveryNoteBody}</Footnote>
+              {/* BEKLEYEN(14.6): teslimat özeti PDF üretimi — bağlantı tasarımda var, yerinde durur
+                  ve ne zaman geleceğini söyler; silmek tasarımın bu satırını kaybetmek olurdu. */}
               <span className="font-sans text-note font-bold text-muted">
-                {t.payment.invoice} · {t.soon}
+                {t.payment.deliveryNote} · {t.payment.deliveryNoteWhen}
               </span>
             </Card>
           </div>

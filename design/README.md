@@ -117,6 +117,16 @@ Her `pages/*.md` dosyası şu başlıkları taşır:
 | `kurye-teslimat.md` | Teslimat ekranı: teslim onayı (imza/foto), ulaşılamadı/reddedildi, tahsilat |
 | `kurye-kapanis.md` | Gün kapanışı ve kasa mutabakatı |
 
+### Basılabilir belgeler — ekran değil kâğıt
+| Dosya | Belge |
+| --- | --- |
+| `belgeler.md` | Teslimat özeti (müşteri) · hazırlık kâğıdı (depo) · tedarik siparişi (tedarikçi) |
+
+Üçü de PDF olarak üretilir ve **ekran tasarımı değildir**: siyah-beyaz basılabilmeli, katlanabilmeli,
+kutuya girebilmeli. Ortak bir iskeletleri var ama **gizlilik sınırları farklı** — müşteriye giden
+kâğıt parti/depo/maliyet taşıyamaz. **Fatura yoktur ve olmayacaktır** (işletme kararı); teslimat
+özeti faturanın basit hâli değil, sistemin müşteriye verdiği tek belgedir.
+
 ### Ortak
 | Dosya | Sayfa |
 | --- | --- |

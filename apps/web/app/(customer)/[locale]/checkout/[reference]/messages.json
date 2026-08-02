@@ -24,9 +24,10 @@
       "online": "💳 Online ödeme",
       "cod": "🚪 Kapıda ödeme",
       "credit": "🧾 Vadeli",
-      "invoiceSoon": "Fatura hazır olduğunda e-postanıza eklenecek.",
+      "deliveryNoteBody": "Kutuda ne olduğunu kalem kalem gösteren özet, sipariş hazırlandıktan sonra e-postanıza gelir ve kutunun içinde de bulunur. Resmî fatura değildir.",
       "card": "Kart ile",
-      "invoice": "Faturayı indir (PDF) ↓"
+      "deliveryNote": "Teslimat özetini indir (PDF) ↓",
+      "deliveryNoteWhen": "Siparişiniz hazırlandıktan sonra"
     },
     "timeline": {
       "title": "Sırada ne var",
@@ -87,9 +88,10 @@
       "online": "💳 Paiement en ligne",
       "cod": "🚪 Paiement à la livraison",
       "credit": "🧾 Différé",
-      "invoiceSoon": "La facture vous sera envoyée par e-mail dès qu'elle sera prête.",
+      "deliveryNoteBody": "Le récapitulatif, article par article, de ce que contient le colis vous est envoyé par e-mail après la préparation ; il se trouve aussi dans le colis. Ce n'est pas une facture.",
       "card": "Par carte",
-      "invoice": "Télécharger la facture (PDF) ↓"
+      "deliveryNote": "Télécharger le récapitulatif de livraison (PDF) ↓",
+      "deliveryNoteWhen": "Après la préparation de votre commande"
     },
     "timeline": {
       "title": "La suite",
@@ -150,9 +152,10 @@
       "online": "💳 Online-Zahlung",
       "cod": "🚪 Zahlung bei Lieferung",
       "credit": "🧾 Zahlungsziel",
-      "invoiceSoon": "Die Rechnung senden wir per E-Mail, sobald sie fertig ist.",
+      "deliveryNoteBody": "Die Übersicht, Artikel für Artikel, über den Inhalt des Pakets senden wir nach der Vorbereitung per E-Mail; sie liegt auch im Paket. Es ist keine Rechnung.",
       "card": "Mit Karte",
-      "invoice": "Rechnung herunterladen (PDF) ↓"
+      "deliveryNote": "Lieferübersicht herunterladen (PDF) ↓",
+      "deliveryNoteWhen": "Nach der Vorbereitung Ihrer Bestellung"
     },
     "timeline": {
       "title": "Wie es weitergeht",

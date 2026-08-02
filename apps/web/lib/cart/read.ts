@@ -56,7 +56,11 @@ export async function getCartView(
      *
      * Adlandırılmış alan, konumsal parametre DEĞİL: sepet okumasının imzası zaten üç şey taşıyordu
      * ve araya girecek dördüncü bir konum, mevcut çağrıları sessizce kaydırırdı.
-     * BEKLEYEN(19.7): yer bağlamı v2 bunu dolduracak.
+     *
+     * Yer bağlamı v2 bunu artık DOLDURUYOR (19.9): çerezden okunan cevap `readPlaceWarehouses` ile
+     * çözülüp geçiliyor. **Boş geçen üç çağrı bilinçli:** sonraya kaydedilenler ve tekrar sipariş
+     * yere göre DARALTILMAMALI — ikisinin de sorusu "bu ürün hâlâ satılıyor mu", "senin deponda var
+     * mı" değil. Depo-üstü okumanın tek meşru kullanımı bu olumsuz cevaptır (C3).
      */
     warehouseId?: string | null;
     /**

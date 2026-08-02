@@ -61,9 +61,9 @@ export async function recordZoneNoticeAction(rawPostalCode: string, rawEmail: st
  * hangi yere ait olduğu bir tercih değil, sistemin bildiği bir gerçek. Yer bilinmiyorsa kayıt
  * alınmaz — nereye haber vereceğimizi bilmeden söz veremeyiz.
  *
- * BEKLEYEN(19.7): düğmeyi müşteri şeridi bağlayacak; o güne kadar bu kapının çağıranı yok ve
- * `knip` onu bildirir. Bilinçli borç — kapıyı ekranla birlikte yazmak, ekranı yazan ajanın guard
- * ve çerez okumasını da üstlenmesi demekti.
+ * **Çağıranı BAĞLANDI (01.08 · 02.08).** İki yerden: kartın/ürün detayının "Gelince haber ver"
+ * düğmesi (`StockNoticeButton`) ve rota İÇİNDEKİ müşterinin kısıt bloğu — orada bölge notu
+ * anlamsız (müşteri zaten bölgede), söz kalem kalem veriliyor ve kayıt da kalem kalem düşülüyor.
  */
 export async function recordVariantStockNoticeAction(variantId: string, rawEmail: string): Promise<ActionResult<true>> {
   try {
