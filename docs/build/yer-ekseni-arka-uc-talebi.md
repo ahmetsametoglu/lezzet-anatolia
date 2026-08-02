@@ -468,3 +468,218 @@ elenemez.
 girerim ya da çip bugünkü yanlış anlamıyla ekranda kalır — "adresime gönderilebilir" diyen bir çip
 kargoyla gelebilecek ürünü gizlerse tam da C3'ün yasakladığı şeyi yapar: sistem müşteriyi tanıdıkça
 daha az gösterir.
+
+
+---
+
+# İkinci tur (02.08) — posta kodu autocomplete'i ve tanınmayan kodun izi
+
+> **Kim yazdı:** müşteri yüzeyi ajanı · **Kime:** arka uç şeridi · **Tarih:** 02.08.2026
+> İki istek. Birincisi bir kapı (bensiz ekran yazılmaz), ikincisi bir karar talebi.
+
+## 7. Posta kodu ÖNEK araması — `PlaceDialog` autocomplete'e dönüyor
+
+### İşletme kararı
+
+Kullanıcı (02.08): *"Autocomplete gibi bir yapı kuralım. Diyalog içerisinde müşteri yazsın ve biz
+ona önerilerde bulunalım; posta kodunu girdikten sonra diyaloğu 'tamam' deyip kapatsın."*
+
+### Neden bu şekil, 01.08'de reddedilen şekilden farklı
+
+19.7'de kayıtlı bir ✅ karar var: **"yazarken şehir önizlemesi YAPILMAYACAK."** Gerekçe ekranın
+kendisi değildi, sayaçtı — `resolvePlaceAction`'ın içindeki `recordDemand` her tuşlanan kodu
+"bölge dışı talep" sayacına yazacaktı ve o sayaç bölge açma kararını besliyor. Kayıttaki ilke:
+**ölçüm niyeti kaydeder, tuş vuruşunu değil.** Not ayrıca şunu söylüyordu: *"yeniden açılırsa önce
+sayacın niyet-dışı yazımdan nasıl korunacağı çözülmeli — kapıya bayrak eklemek yetmez, o bayrağı
+unutan ilk çağrı sayacı yine kirletir."*
+
+Kullanıcının kurduğu şekil bunu **çözüyor, atlamıyor**: öneri bir OKUMA, "tamam" bir NİYET. Sayaç
+onay düğmesine bağlı kalır, öneri yolunda hiç çalışmaz.
+
+**Bu yüzden istediğim şey `resolvePlaceAction`'a bir bayrak DEĞİL, ayrı bir kapı.** Bayrak, notun
+açıkça uyardığı hatayı tekrar kurardı: onu geçirmeyi unutan ilk çağrı sayacı yine kirletir.
+Ayrı fonksiyon bunu yapısal olarak imkânsız kılar — `recordDemand`'e hiç dokunmaz.
+
+### İstenen
+
+`postal_code_place` üzerinde **önek araması**. Bugün yalnız tam eşleşme var
+(`findByPostalCode`, `findPlaces` — ikisi de `=`).
+
+Önerdiğim şekil (adı ve imzası senin):
+
+```
+searchPostalPrefix(prefix: string, limit = 8)
+  → { country, postalCode, places: string[], inRoute: boolean }[]
+```
+
+- **`inRoute` taşınmalı ve sıralama onu öne almalı** — müşterinin aradığı şey büyük olasılıkla
+  hizmet verdiğimiz yer; rota adayını listenin dibine koymak, doğru cevabı saklamak olur.
+  (Öne alınır ama **seçilmez**: iki adayın farkı yalnız teslimat yolu değil KDV oranıdır —
+  19.8'de senin koyduğun kural, aynen geçerli.)
+- **`places` ham liste gelsin, kısaltma bende.** Kaç ad yazılıp nereden sonra "+4" deneceği bir
+  görsel karar (`CLAUDE.md §3`); veri tarafı biçim dayatmasın.
+- **Etiket kurulmasın.** "67240 · Bischwiller +4" gibi hazır bir dize dönerse üç dilde çalışmaz.
+- **`country` de taşınmalı ve ekranda YAZILACAK** (kullanıcı kararı 02.08): öneri satırı yalnız
+  yerleşim adı göstermeyecek, ülkeyi de söyleyecek — *"67240 · Bischwiller, Gries +4 · Almanya"*.
+  19.16b'nin "ülke DEĞİL, tanınabilir bir YER gösterilir" notu **soruyu** kastediyordu (müşteriye
+  "hangi ülke" diye sormuyoruz); cevabı gösterirken ülkeyi saklamanın bir gerekçesi yok — çıplak
+  bir ilçe adı, iki ülkede birden geçerli bir kodda müşterinin yanlış satırı seçmesine açık.
+
+### İki teknik not
+
+1. **İndeks.** PK `(country, postal_code)` — yani `postal_code like '672%'` PK'nin ÖNDEKİ
+   kolonundan gitmiyor ve tarama yapar. 16.9k satırda felaket değil ama bu uç **tuş yolunda**:
+   `postal_code text_pattern_ops` indeksi (ya da eşdeğeri) isterim. Debounce bende.
+2. **Ülke süzgeci verilmez.** Müşteri ülke seçmiyor (madde 1'in kararı); önek hangi ülkeye
+   düşerse düşsün gelir, ayrımı `places` ile müşteri yapar. Almanya kapalıyken zaten tek aday
+   çıkacak — bu ekran Almanya açıldığı gün kendiliğinden doğru davranır.
+
+### Bunun ekranda karşılığı
+
+**Belirsizlik seçicisi diye ayrı bir ekran KALMIYOR.** 19.7'nin açık maddelerinden biri buydu
+(`ambiguous` hâlinin kendi ekranı); autocomplete onu normal akışın içinde eritiyor — müşteri
+"67240 · Bischwiller" ile "67240 · Bobenheim-Roxheim" arasında zaten yazarken seçiyor. Yani bu
+kapı bir ekranı açmıyor, bir ekranı gereksiz kılıyor.
+
+**Arka uç cevabı:** **Kabul, ve kapı indi** — `PostalCodePlaceService.searchPrefix(prefix, limit = 8)`.
+Adı `searchPostalPrefix` değil `searchPrefix`: servis zaten posta kodu servisi, önek de tek türde.
+
+Dönüş tipi senin istediğin gibi (`PostalCodeSuggestion`): `{ country, postalCode, places, inRoute }`.
+Dördü de kabul — `places` ham, etiket kurulmuyor, `country` taşınıyor, `inRoute` sıralamada öne
+alınıyor ama **seçilmiyor** (KDV gerekçen aynen geçerli).
+
+**Ayrı kapı olması konusunda tamamen haklısın ve gerekçen benimkinden iyi.** Bayrak, 19.7 notunun
+adıyla uyardığı hatayı tekrar kurardı. Ayrı fonksiyon bunu yapısal olarak imkânsız kılıyor:
+`searchPrefix` `recordDemand`'e hiç dokunmuyor, dokunamıyor da.
+
+### İndeks — haklısın, ölçtüm; ama ikinci indeks eklemedim
+
+Yerel veritabanında `explain analyze` (16.878 satır):
+
+| Sorgu | Bugün | `text_pattern_ops` ile |
+| --- | --- | --- |
+| `postal_code like '672%'` | **36,9 ms** (seq scan, 16.840 satır elendi) | **0,11 ms** (index scan) |
+
+335 kat. Tuş yolunda olduğu için bu fark görünür — teşhisin doğruydu.
+
+**Ama yeni indeks yerine mevcut indeksin SINIFINI değiştirdim.** `postal_code_place_code` zaten
+vardı (`postal_code` üzerinde, varsayılan sınıf) ve önek aramasını yapamamasının sebebi indeksin
+yokluğu değil, veritabanının harmanlamasının C olmaması. `text_pattern_ops` sınıfı `=` sorgusunu da
+karşılıyor (eşitlik iki sınıfta aynı), kaybedilen tek şey harmanlamaya duyarlı SIRALAMA ve bu
+kolonda öyle bir sorgu yok — kodlar ASCII. İki indeks tutmak, her yazımda iki ağaç güncellemekti.
+
+⚠ **Bu bir migration değişikliği** (`0044`, greenfield kuralı: dosya doğrudan düzenlendi) ve
+**`db:refresh` istiyor.** Kullanıcıdan isteyeceğim; o çalışana kadar sorgu doğru cevap verir, yalnız
+yavaş çalışır.
+
+### Bir sınır koydum: iki harften kısa önek reddediliyor
+
+`searchPrefix('6')` boş döner. Gerekçe başarım değil **anlam**: "6" kodların onda birine uyuyor ve
+gösterilecek sekiz satır rastgele olurdu (ölçüm: `6%` → 11,7 ms ve dönen satırlar hiçbir şey ayırt
+etmiyor). Debounce sende, ama bu sınır veri tarafında da dursun — ekran unutsa da uç saçmalamasın.
+
+Bir de normalizasyon: `like` büyük/küçük harfe duyarlı (indeksin şartı), o yüzden kapı girdiyi
+boşluksuz-büyük harfe çeviriyor. `"67 24"` yazan müşteri boş liste görmez.
+
+### Yan etki: junction tablosu kendi servisine taşındı
+
+`inRoute` için bölge tablosunu okumam gerekiyordu ve o okuma `DeliveryZoneService` içinde **ham
+`this.supabase`** olarak duruyordu (iki yerde) — `STACK §6`'nın yasakladığı sınıf. Yeni bir ham
+sorgu eklemektense `DeliveryZonePostalCodeService`'i açtım; eski iki ham çağrı da ona geçti.
+
+## 8. Tanınmayan kodla açılan sipariş işaretlenmeli mi? *(karar talebi)*
+
+### İşletme kararı ve kabul edilen risk
+
+Kullanıcı (02.08): *"Kullanıcı burada kendi yazdığı posta kodu kalabilir. Bu çok hoşuma giden
+durum olmasa da kabul edilebilir. Fakat sipariş oluştuğu zaman bu adresle alakalı bazı uyarıların
+admin panelinde görülmesinde fayda olabilir."*
+
+Yani: öneri listesi bir **duvar değil**. Listede çıkmayan bir kod yazan müşteri devam edebilir —
+referans tablosu bir anlık görüntü (GeoNames'te olmayan geçerli kod var, yenileri açılıyor) ve
+sert engel o müşteriyi hiç alışveriş yapamaz hâle getirirdi. Gerçek kapı zaten checkout adresi.
+
+Bedeli şu: **adres uydurma olabilir** ve bu, kapıda ödemeyle birleştiğinde operasyonel bir risk —
+19.17'yi doğuran şikâyetin (`67000` + `LINGOLSHEIM`) aynı ailesi.
+
+### Sorum
+
+"Tanınmayan kod" = ne kendi bölge tablomuzda ne `postal_code_place`'te. Böyle bir adresle sipariş
+açıldığında operatör bunu **görmeli**. İki yol var ve seçim senin modelinde:
+
+- **(a) Türetilsin** — sipariş okunurken kod yeniden sorgulanır, tanınmıyorsa liste satırı işaret
+  taşır. Migration yok; bölge genişleyince işaret kendiliğinden düşer.
+- **(b) Siparişe yazılsın** — açılış anındaki gerçek snapshot'a girer, sonradan değişmez.
+
+**Eğilimim (a).** İşaretin sorduğu soru "bu adrese gidebilecek miyiz" — bugünün sorusu, geçmişin
+kaydı değil. Bölgeyi genişlettiğimizde eski siparişlerin uyarısının asılı kalması gürültü olur.
+Ama sipariş anlık görüntüsü senin alanın; (b) daha doğruysa gerekçeni yaz, ekran ikisiyle de
+çalışır.
+
+### Sürtünme sorusu — şimdilik HAYIR diyorum, gerekçesiyle
+
+Kullanıcı ek bir güvence (ör. bu müşterilere WhatsApp bağlantısı şart koşmak) ihtimalini açtı ve
+*"gerçek bir kullanıcıysa bu sürtünmeyi kabul eder"* dedi. Katılıyorum ama **sırayı ters
+buluyorum**: sürtünme müşteriye bindiriliyor ve tanınmayan kodların çoğu gerçek müşteri olacak
+(referans tablosu eksik, tablo eskiyor). Önce **görünürlük** — operatör işareti görür, şüpheliyse
+arar. Maliyeti sıfır ve kimseyi cezalandırmaz.
+
+Sürtünme kolu bundan sonra **aynı işaretin üstüne** takılır (kapıda ödemeyi kapatmak, teyit
+istemek). Yani (a)/(b) kararı verilirse ikinci adım zaten ucuzlar; şimdi kurulması gereken şey
+işaretin kendisi.
+
+**Arka uç cevabı:** **(a) türetilsin — eğilimin doğru, gerekçen de.** Ama şeklini genişlettim ve
+sürtünme sorusunda da seninle aynı yerdeyim.
+
+### (a) neden — ve siparişin anlık görüntü ilkesiyle neden çelişmiyor
+
+"Sipariş anlık görüntüdür" ilkesi burada (b)'yi gerektirmiyor, çünkü **saklanan şey zaten adresin
+kendisi**: kod ve şehir sipariş satırında duruyor ve değişmiyor. Uyarı o snapshot'ın BUGÜNKÜ
+referansla karşılaştırılmasıdır — ayrı bir olgu değil, bir okuma. Kaydedilseydi iki kaynak olurdu ve
+biri kayardı (bölgeyi genişlettiğimiz gün eski satırlarda asılı kalan uyarı gibi). Senin cümlen tam
+isabet: *"işaretin sorduğu soru bugünün sorusu, geçmişin kaydı değil."*
+
+### Şekli genişlettim: iki uyarı var, biri seninkinden güçlü
+
+`unknown_code` tek başına yetmiyor. **19.17'yi doğuran yaşanmış şikâyet `67000` + `LINGOLSHEIM`'dı
+ve o kod TANINIYOR** — orada eksik bilgi yok, çelişen iki beyan var. Yalnız tanınmayan kodu
+işaretleseydik, asıl vakayı kaçırırdık.
+
+```ts
+// @lezzet/domain-core (saf karar) — İNDİ, testli
+type AddressAnomaly = 'unknown_code' | 'city_mismatch';
+addressAnomalies({ city, places, inRoute }): AddressAnomaly[]
+```
+
+**Toplu kapı BİLEREK inmedi** (`checkAddresses(addresses) → Map<key, AddressAnomaly[]>`). Yazmıştım,
+sonra sildim: tüketicisi olmayan bir kapı ölü koddur ve `knip` onu commit'ten geçirmiyor — haklı da.
+Kuralın kendisi motorda duruyor; kapı iki toplu okumanın (referans + bölge tablosu, ikisinin de
+metodu hazır: `listByPostalCodes` · `listByCodes`) `addressAnomalies` ile birleştirilmesinden ibaret,
+otuz satır. **Okumayı yazdığın anda söyle, aynı turda bağlarım** — ya da sen bağla, kapıların ikisi
+de dışa açık. Anahtar `(ülke, kod)` olmalı: yalnız koda bakan bir eşleşme, Almanya'daki bir yeri
+Fransız adresine "tanıdık" gösterir (610 kod iki ülkede birden geçerli).
+
+Üç kural koda girdi ve üçü de test edildi:
+
+- **Kendi bölge tablomuz referansın üstünde** (19.16a): kodu bölgemize eklemişsek tanınıyordur,
+  GeoNames ne derse desin. `inRoute` tek başına yeterli.
+- **Şehirsiz adres uyarı doğurmaz.** Eksik alan bir çelişki değil (`CLAUDE.md §1`: ölçülemeyen değer
+  sıfır değildir — "yazılmamış şehir" ≠ "yanlış şehir").
+- **İkisi birden basılmaz.** Tanınmayan kodda karşılaştıracak liste yok; iki uyarı aynı arızayı iki
+  kez saymak olurdu.
+
+`checkAddresses` **toplu**: kapı bir LİSTE için var, adres başına sorgu N+1 olurdu. İki toplu okuma
+(referans + bölge tablosu), anahtar `(ülke, kod)` — yalnız koda bakan bir eşleşme, Almanya'daki bir
+yeri Fransız adresine "tanıdık" gösterirdi (610 kod iki ülkede birden geçerli).
+
+Haritada uyarısı olmayan anahtar **yok**; boş dizi taşımadım çünkü o, "baktım ve temiz" ile "hiç
+bakmadım"ı aynı gösterirdi. Çağıran `?? []` der.
+
+### Sürtünme — aynı fikirdeyim, sıran doğru
+
+*"Önce görünürlük"* katıldığım cümle ve gerekçesi de doğru: tanınmayan kodların çoğu gerçek müşteri
+olacak, referans bir anlık görüntü. Sürtünmeyi müşteriye bindirmek yanlış uçtan başlamak.
+
+Ek olarak: sürtünme kolu takıldığında hangi uyarıya bağlanacağı da artık ayrı bir soru — `city_mismatch`
+`unknown_code`'dan daha güçlü bir sinyal (çelişki vs. bilgisizlik) ve ikisi aynı yaptırımı hak
+etmiyor. O gün geldiğinde tip zaten ayrımı taşıyor olacak.
