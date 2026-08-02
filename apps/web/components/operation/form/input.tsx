@@ -51,7 +51,7 @@ export function Textarea({ mono = false, error, className, textareaRef, ...rest 
   return (
     <textarea
       ref={textareaRef}
-      className={controlClass(error, { mono, extra: ['resize-none leading-[1.5]', className].filter(Boolean).join(' ') })}
+      className={controlClass(error, { mono, multiline: true, extra: ['resize-none leading-[1.5]', className].filter(Boolean).join(' ') })}
       aria-invalid={error ? 'true' : undefined}
       {...rest}
     />

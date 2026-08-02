@@ -1,3 +1,4 @@
+import { CONTROL_H, type ControlSize } from './control';
 import { SearchIcon } from './icons';
 
 /**
@@ -9,14 +10,17 @@ interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  /** Yükseklik kademesi — bar `md`, dar ekran `sm`. Ölçü ortak (`CONTROL_H`), kutu kendi uydurmaz. */
+  size?: ControlSize;
   className?: string;
 }
 
-export function SearchInput({ value, onChange, placeholder = 'Ara…', className }: SearchInputProps) {
+export function SearchInput({ value, onChange, placeholder = 'Ara…', size = 'md', className }: SearchInputProps) {
   return (
     <label
       className={[
-        'inline-flex items-center gap-2 rounded-ops-btn border border-ops-line-strong bg-ops-white px-3 py-2 text-ops-faint focus-within:border-ops-olive',
+        'inline-flex items-center gap-2 rounded-ops-btn border border-ops-line-strong bg-ops-white px-3 text-ops-faint focus-within:border-ops-olive',
+        CONTROL_H[size],
         className,
       ]
         .filter(Boolean)

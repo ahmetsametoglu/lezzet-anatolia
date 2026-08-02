@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes } from 'react';
+import { CONTROL_H, type ControlSize } from './control';
 
 /**
  * Operasyon butonu — Komponent Envanteri O8. Tüm buton varyasyonları tek yerde (ops- token'ları).
@@ -8,7 +9,6 @@ import type { ButtonHTMLAttributes } from 'react';
  * (components/customer/ui/button.tsx = "Aile Sofrası"). Tasarım büyüdükçe varyant eklenir.
  */
 type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'danger' | 'destructive' | 'warning';
-type ButtonSize = 'md' | 'sm';
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary: 'bg-ops-olive text-ops-card hover:bg-ops-olive-dark disabled:bg-ops-gray-600',
@@ -21,14 +21,16 @@ const VARIANT: Record<ButtonVariant, string> = {
   warning: 'bg-ops-amber text-ops-card hover:bg-ops-amber-dark disabled:opacity-50',
 };
 
-const SIZE: Record<ButtonSize, string> = {
-  md: 'px-4 py-2.5 text-ops-base',
-  sm: 'px-3 py-2 text-ops-sm',
+// Yükseklik ORTAK (`CONTROL_H`), burada yalnız yatay dolgu ve yazı kademesi var: bir düğme yan yana
+// durduğu arama kutusuyla aynı yüksekliği paylaşmalı ama aynı genişliği paylaşmak zorunda değil.
+const SIZE: Record<ControlSize, string> = {
+  md: `${CONTROL_H.md} px-4 text-ops-base`,
+  sm: `${CONTROL_H.sm} px-3 text-ops-sm`,
 };
 
 interface ButtonClassOptions {
   variant?: ButtonVariant;
-  size?: ButtonSize;
+  size?: ControlSize;
   fullWidth?: boolean;
   className?: string;
 }
@@ -48,7 +50,7 @@ export function buttonClass({ variant = 'primary', size = 'md', fullWidth, class
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
-  size?: ButtonSize;
+  size?: ControlSize;
   fullWidth?: boolean;
 }
 

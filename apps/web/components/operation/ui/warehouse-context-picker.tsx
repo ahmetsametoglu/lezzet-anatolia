@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from 'react';
 import type { Warehouse } from '@lezzet/types';
 import { setWarehouseContextAction } from '@/app/(operations)/operations/actions';
 import { AnchoredMenu } from './anchored-menu';
+import { CONTROL_H } from './control';
 import { CheckIcon, ChevronDownIcon, WarehouseIcon } from './icons';
 
 /**
@@ -95,8 +96,9 @@ export function WarehouseContextPicker({ warehouses, activeWarehouseId, unscoped
           aria-expanded={open}
           disabled={pending}
           className={[
-            'flex cursor-pointer items-center gap-2 rounded-lg border bg-ops-white px-2.5 py-[7px] text-left outline-none transition-colors',
-            bar ? 'max-w-[220px]' : 'w-full',
+            'flex cursor-pointer items-center gap-2 rounded-ops-btn border bg-ops-white px-2.5 text-left outline-none transition-colors',
+            // Barda TEK SATIR ve ortak yükseklik; rayda iki satırlık yığın (dikey blokta yer var).
+            bar ? `${CONTROL_H.md} max-w-[220px]` : 'w-full py-[7px]',
             open ? 'border-ops-blue-line' : 'border-ops-line-strong hover:border-ops-blue-line',
             pending ? 'cursor-wait opacity-60' : '',
           ]
@@ -106,13 +108,27 @@ export function WarehouseContextPicker({ warehouses, activeWarehouseId, unscoped
           <span className="flex-none text-ops-blue">
             <WarehouseIcon />
           </span>
-          <span className="flex min-w-0 flex-1 flex-col leading-tight">
-            <span className="truncate font-ops-display text-ops-sm font-semibold text-ops-ink">
-              {active ? active.name : 'Tüm depolar'}
+          {/* ── BARDA ALT SATIR YOK ──
+              İki satırlık yığın çipi 46px'e çıkarıyordu ve bar bu yüzden hizasızdı (kullanıcı
+              bildirimi, 02.08). Alt satır SİLİNMEDİ, taşındı: menüde zaten yazıyor ("ağın tamamı" /
+              "kapsamımdaki depolar" / her deponun kodu). Seçili depoda kod tek satırda, adın yanında
+              kalıyor — belge önekidir, bakılan bir şeydir. Rayda ise dikey blok iki satırı taşıyor. */}
+          {bar ? (
+            <span className="flex min-w-0 items-baseline gap-1.5">
+              <span className="truncate font-ops-display text-ops-sm font-semibold text-ops-ink">
+                {active ? active.name : 'Tüm depolar'}
+              </span>
+              {active ? <span className="flex-none font-ops-mono text-ops-micro text-ops-muted">{active.code}</span> : null}
             </span>
-            <span className="truncate font-ops-mono text-ops-micro text-ops-muted">{subtitle}</span>
-          </span>
-          <span className="flex-none text-ops-faint">
+          ) : (
+            <span className="flex min-w-0 flex-1 flex-col leading-tight">
+              <span className="truncate font-ops-display text-ops-sm font-semibold text-ops-ink">
+                {active ? active.name : 'Tüm depolar'}
+              </span>
+              <span className="truncate font-ops-mono text-ops-micro text-ops-muted">{subtitle}</span>
+            </span>
+          )}
+          <span className={['flex-none text-ops-faint', bar ? '' : 'ml-auto'].join(' ')}>
             <ChevronDownIcon />
           </span>
         </button>
@@ -153,13 +169,18 @@ function withoutWarehouseFilter(href: string): string {
   return `${url.pathname}${url.search}`;
 }
 
-/** Tek kapsamlı personel — seçici YOK. Depocuya depo seçtirilmez; deposunun adı bir künyedir. */
+/**
+ * Tek kapsamlı personel — seçici YOK. Depocuya depo seçtirilmez; deposunun adı bir künyedir.
+ *
+ * Barda yine de ortak yüksekliği alır: kontrol değil ama bir bar öğesi, ve komşularıyla aynı hizada
+ * durmazsa satır kırık görünür.
+ */
 function FixedWarehouse({ name, variant }: { name: string; variant: 'rail' | 'bar' }) {
   return (
     <div
       className={[
         'flex items-center gap-2 text-ops-faint',
-        variant === 'bar' ? 'px-0.5' : 'mx-4 mb-2 px-0.5 py-1',
+        variant === 'bar' ? `${CONTROL_H.md} px-0.5` : 'mx-4 mb-2 px-0.5 py-1',
       ].join(' ')}
     >
       <span className="flex-none">

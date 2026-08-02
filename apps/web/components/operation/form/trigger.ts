@@ -6,6 +6,8 @@
  * `Combobox` çip biçimini hiç almamıştı ve alması onları kopyalamak olurdu; kopya iki kutunun
  * zamanla ayrışmasıyla biterdi — süzgeç şeridinde yan yana duran iki çip farklı yükseklikte.
  */
+import { CONTROL_H } from '../ui/control';
+
 export type TriggerVariant = 'field' | 'chip';
 
 /**
@@ -39,11 +41,14 @@ const CHIP_FILLED: Record<TriggerTone, string> = {
   blue: 'border-solid border-ops-blue-line bg-ops-blue-bg text-ops-blue-dark',
 };
 
+// Yükseklik ORTAK (`CONTROL_H`): tetikleyici bir form alanı hizasında (`md`) ya da bir süzgeç çipi
+// hizasında (`sm`) durur — ikisi de kendi dikey dolgusunu uydurmaz. Çipin `md`den küçük olması
+// bilinçli: süzgeç şeridi bir araç çubuğudur, kararın kendisi değil.
 const FIELD_BASE =
-  'flex w-full cursor-pointer items-center justify-between gap-3 rounded-ops-card border bg-ops-white px-[13px] py-[7px] font-ops-body text-ops-base font-medium outline-none transition-colors';
+  `flex w-full cursor-pointer items-center justify-between gap-3 rounded-ops-card border bg-ops-white px-[13px] font-ops-body text-ops-base font-medium outline-none transition-colors ${CONTROL_H.md}`;
 
 const CHIP_BASE =
-  'flex cursor-pointer items-center gap-1.5 rounded-ops-chip border px-3 py-[5px] font-ops-body text-ops-sm font-medium outline-none transition-colors';
+  `flex cursor-pointer items-center gap-1.5 rounded-ops-chip border px-3 font-ops-body text-ops-sm font-medium outline-none transition-colors ${CONTROL_H.sm}`;
 
 /** Çip biçimindeki seçicinin menü genişliği — çip dar, menü içeriğe yeter. */
 export const CHIP_MENU_WIDTH = 220;

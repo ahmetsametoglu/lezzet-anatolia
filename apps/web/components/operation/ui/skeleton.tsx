@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { COLUMN_SELF as SELF, templateOf, type ColumnTrack } from './table-columns';
+import { CONTROL_H } from './control';
 
 /**
  * Operasyon yükleme iskeleti — Komponent Envanteri O#, "yükleniyor" hâli (09.2).
@@ -197,15 +198,17 @@ export function SkeletonPageHeader({ actions = [] }: { actions?: readonly string
         <Skeleton className="h-7 w-32" />
         <Skeleton className="h-3 w-48" />
       </span>
+      {/* Yükseklik `CONTROL_H.md` — iskeletin ölçüsü gerçek kontrolün ölçüsüdür, elle yazılmaz. */}
       {actions.map((width, i) => (
-        <Skeleton key={i} className={`h-9 rounded-ops-btn ${width}`} />
+        <Skeleton key={i} className={`${CONTROL_H.md} rounded-ops-btn ${width}`} />
       ))}
       {/* Kabuk blokları (depo · ⌘K · kullanıcı) barın SABİT parçasıdır ve yüklenirken de yer tutar —
           çizilmezse gerçek bar geldiğinde sağ taraf bir anda dolar ve başlık sola kayar (09.19). */}
       <span className="flex items-center gap-2.5 border-l border-ops-line-soft pl-2.5">
-        <Skeleton className="h-9 w-[150px] rounded-lg" />
-        <Skeleton className="h-9 w-[132px] rounded-lg" />
-        <Skeleton className="h-[30px] w-[30px] rounded-lg" />
+        <Skeleton className={`${CONTROL_H.md} w-[150px] rounded-ops-btn`} />
+        <Skeleton className={`${CONTROL_H.md} w-[132px] rounded-ops-btn`} />
+        {/* Avatar YUVARLAK: iskelet de öyle olmalı, yoksa yükleme bitince biçim değişir. */}
+        <Skeleton className={`${CONTROL_H.md} w-9 rounded-full`} />
       </span>
     </header>
   );
@@ -228,7 +231,7 @@ export function SkeletonTabs({ count, actions = [] }: { count: number; actions?:
       {actions.length > 0 ? (
         <span className="ml-auto flex items-center gap-2 py-[7px]">
           {actions.map((width, i) => (
-            <Skeleton key={i} className={`h-9 rounded-ops-btn ${width}`} />
+            <Skeleton key={i} className={`${CONTROL_H.md} rounded-ops-btn ${width}`} />
           ))}
         </span>
       ) : null}

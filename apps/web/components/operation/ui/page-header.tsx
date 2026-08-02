@@ -1,7 +1,10 @@
 'use client';
 
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import type { UserRole } from '@lezzet/types';
+import { signOutAction } from '@/lib/auth/actions';
+import { AnchoredMenu } from './anchored-menu';
+import { CONTROL_H } from './control';
 import { SearchInput } from './search-input';
 import { CommandPalette, useCommandPaletteShortcut } from './command-palette';
 import { useOpsShell } from './ops-shell';
@@ -46,6 +49,19 @@ interface PageHeaderProps {
    * çalışır" der ve yalandır.
    */
   search?: { value: string; onChange: (value: string) => void; placeholder: string };
+  /**
+   * Sayfanın HÂLİ — rozet(ler). Başlığın yanında durur, aksiyonların arasında DEĞİL.
+   *
+   * Ayrı bir yuva olmasının sebebi ölçülebilir bir arıza: rozetler bir tur `children`'a konmuştu ve
+   * 36px'lik düğmelerin yanında ~21px kalıyorlardı (kullanıcı bildirimi, 02.08 — *"butonların yanına
+   * denk gelmiş ve küçükler"*). Rozeti büyütmek YANLIŞ çözümdü: `Badge` bir tablo/kart öğesidir (O6,
+   * 11px yazı) ve ölçüsü orada doğru — barda büyütmek her tablodaki rozeti de bozardı.
+   *
+   * Asıl mesele hizalama değil YER: rozet bir durumdur, kontrol değil. Kontrollerin arasında duran
+   * tek tıklanmaz öğe, hem küçük hem yabancı görünür. Başlığın (24px) yanında ise doğal eşidir ve
+   * "bu ekran şu hâlde" cümlesini başlıkla birlikte kurar.
+   */
+  status?: ReactNode;
   /** Ekran aksiyonları (+Yeni, araç düğmeleri). En fazla bir BİRİNCİL düğme — fazlası araç çubuğudur. */
   children?: ReactNode;
   /**
@@ -55,7 +71,7 @@ interface PageHeaderProps {
   compact?: boolean;
 }
 
-export function PageHeader({ title, subtitle, search, children, compact = false }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, status, search, children, compact = false }: PageHeaderProps) {
   const shell = useOpsShell();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const openPalette = useCallback(() => setPaletteOpen(true), []);
@@ -71,14 +87,19 @@ export function PageHeader({ title, subtitle, search, children, compact = false 
         ].join(' ')}
       >
         <div className="mr-auto flex min-w-0 flex-col gap-px">
-          <h1
-            className={[
-              'truncate font-ops-display font-semibold text-ops-ink',
-              compact ? 'text-ops-section' : 'text-ops-title',
-            ].join(' ')}
-          >
-            {title}
-          </h1>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <h1
+              className={[
+                'truncate font-ops-display font-semibold text-ops-ink',
+                compact ? 'text-ops-section' : 'text-ops-title',
+              ].join(' ')}
+            >
+              {title}
+            </h1>
+            {/* Hâl rozetleri başlığın YANINDA: 24px başlık ile 21px rozet doğal bir eş. Daralmazlar
+                (`flex-none`) — kısalması gereken şey uzun bir tesis adıdır, "Kapalı" değil. */}
+            {status ? <span className="flex flex-none items-center gap-1.5">{status}</span> : null}
+          </div>
           {subtitle ? <span className="font-ops-body text-ops-sm text-ops-muted">{subtitle}</span> : null}
         </div>
 
@@ -87,6 +108,7 @@ export function PageHeader({ title, subtitle, search, children, compact = false 
             value={search.value}
             onChange={search.onChange}
             placeholder={search.placeholder}
+            size={compact ? 'sm' : 'md'}
             className={compact ? 'w-full order-last' : 'w-[210px]'}
           />
         ) : null}
@@ -98,7 +120,7 @@ export function PageHeader({ title, subtitle, search, children, compact = false 
           <div className="flex items-center gap-2.5 border-l border-ops-line-soft pl-2.5">
             <WarehouseContextPicker {...shell.warehouse} variant="bar" />
             <PaletteTrigger compact={compact} onOpen={openPalette} />
-            <UserBadge email={shell.user.email} roles={shell.user.roles} compact={compact} />
+            <UserAvatar email={shell.user.email} roles={shell.user.roles} compact={compact} />
           </div>
         ) : null}
       </header>
@@ -114,16 +136,17 @@ const NOOP = () => {};
 
 /**
  * ⌘K tetikleyicisi. Geniş ekranda kutu gibi görünür (kısayolu ÖĞRETİR — kimse denemeden bilmez),
- * dar ekranda tek düğmeye iner: telefonda klavye kısayolu diye bir şey yok, kutu yalnız yer kaplardı.
+ * dar ekranda tek düğmeye düşer: telefonda klavye kısayolu diye bir şey yok, kutu yalnız yer kaplardı.
  */
 function PaletteTrigger({ compact, onOpen }: { compact: boolean; onOpen: () => void }) {
+  const h = compact ? CONTROL_H.sm : CONTROL_H.md;
   if (compact) {
     return (
       <button
         type="button"
         onClick={onOpen}
         aria-label="Ekrana git"
-        className="grid h-[30px] w-[30px] flex-none cursor-pointer place-items-center rounded-lg border border-ops-line-strong text-ops-faint transition-colors hover:border-ops-olive hover:text-ops-olive"
+        className={`grid ${h} w-8 flex-none cursor-pointer place-items-center rounded-ops-btn border border-ops-line-strong text-ops-faint transition-colors hover:border-ops-olive hover:text-ops-olive`}
       >
         <SearchIcon />
       </button>
@@ -133,7 +156,7 @@ function PaletteTrigger({ compact, onOpen }: { compact: boolean; onOpen: () => v
     <button
       type="button"
       onClick={onOpen}
-      className="flex cursor-pointer items-center gap-2 rounded-lg border border-ops-gray-300 bg-ops-line px-2.5 py-[7px] text-ops-faint transition-colors hover:border-ops-olive hover:text-ops-olive"
+      className={`flex ${h} cursor-pointer items-center gap-2 rounded-ops-btn border border-ops-gray-300 bg-ops-line px-2.5 text-ops-faint transition-colors hover:border-ops-olive hover:text-ops-olive`}
     >
       <SearchIcon />
       <span className="font-ops-body text-ops-sm">Ekrana git…</span>
@@ -143,26 +166,85 @@ function PaletteTrigger({ compact, onOpen }: { compact: boolean; onOpen: () => v
 }
 
 /**
- * Kullanıcı künyesi — baş harf + kim + roller.
+ * Kullanıcı avatarı — barın **tek yuvarlak** öğesi.
  *
- * Dar ekranda yalnız baş harf kalır: ad ve rol satırı orada başlığın yerini yiyordu. Bilgi kaybı
- * değil — `title` ile erişilebilir kalıyor ve mobilde "ben kimim" nadiren sorulan bir sorudur.
+ * ── NEDEN AVATAR, NEDEN KÜNYE DEĞİL ─────────────────────────────────────────
+ * Önce baş harf karesi + ad + rol sütunu vardı ve barın öteki kutularından ayırt edilemiyordu
+ * (kullanıcı bildirimi, 02.08: *"normal bir komponent gibi görünüyor"*). Sorun boyut değil BİÇİM:
+ * dikdörtgen + çerçeve + iki satır yazı, o bölgedeki her kontrolün tarifi. Avatar bu tarifin dışına
+ * çıkıyor — **dolu daire**, barda başka hiçbir öğe yuvarlak değil. Göz onu aramadan buluyor.
+ *
+ * Ad ve rol SİLİNMEDİ, menüye taşındı: barda sürekli görünmesi gerekmiyor ("ben kimim" günde bir kez
+ * sorulur), ama görünmez de olmamalı — paylaşılan bir tablette yanlış hesapla çalışmak gerçek bir hâl.
+ *
+ * ── MENÜ GERÇEK BİR İŞ YAPIYOR ──────────────────────────────────────────────
+ * Yalnız kimliği göstermiyor: **operasyon yüzeyinde hiç çıkış yolu yoktu.** `signOutAction` müşteri
+ * tarafında vardı, personel tarafında çağıranı yoktu — dükkândaki tablette biri açık oturumu kapatmak
+ * isterse yapabileceği bir şey yoktu. Avatar o kapıya ev sahipliği yapıyor.
  */
-function UserBadge({ email, roles, compact }: { email: string; roles: readonly UserRole[]; compact: boolean }) {
+function UserAvatar({ email, roles, compact }: { email: string; roles: readonly UserRole[]; compact: boolean }) {
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
   const local = email.split('@')[0] || 'personel';
   const initials = local.slice(0, 2).toLocaleUpperCase('tr');
   const label = roleText(roles);
+  const size = compact ? 'h-8 w-8' : 'h-9 w-9';
+
+  const signOut = () => {
+    setBusy(true);
+    // Tam yenileme, yumuşak tazeleme DEĞİL (`signOutAction`'ın kendi notu): oturum sunucuda çözülüyor
+    // ve istemcide o oturuma göre kurulmuş her durum sıfırdan kurulmalı.
+    //
+    // Hedef GİRİŞ SAYFASI DEĞİL, operasyon kökü: giriş yolu dile göre değişiyor (`/giris` · `/connexion`
+    // · `/anmelden`) ve o eşlemeyi burada ikinci kez kurmak, bir gün ayrışan iki adres demekti.
+    // Köke gitmek layout'un guard'ını çalıştırır; yönlendirme kararının tek sahibi zaten orası.
+    void signOutAction().then(() => window.location.assign('/operations'));
+  };
+
   return (
-    <span className="flex items-center gap-2" title={`${local} · ${label}`}>
-      <span className="grid h-[30px] w-[30px] flex-none place-items-center rounded-lg bg-ops-olive font-ops-display text-ops-sm font-semibold text-ops-card">
-        {initials}
-      </span>
-      {compact ? null : (
-        <span className="flex min-w-0 flex-col leading-tight">
+    <>
+      <div ref={anchorRef} className="flex">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={`${local} · ${label}`}
+          title={`${local} · ${label}`}
+          className={[
+            // Yuvarlak + dolu + halka: halka avatarı barın zemininden ayırıyor, koyu temada da
+            // (zemin `ops-card`) kenar kaybolmuyor.
+            'grid flex-none cursor-pointer place-items-center rounded-full bg-ops-olive font-ops-display font-semibold text-ops-card outline-none transition-all',
+            'ring-2 ring-ops-olive-bg hover:ring-ops-olive-line',
+            size,
+            compact ? 'text-ops-micro' : 'text-ops-sm',
+            open ? 'ring-ops-olive-line' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          {initials}
+        </button>
+      </div>
+
+      <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width={232}>
+        <div className="flex flex-col gap-px border-b border-ops-line-soft px-3.5 py-2.5">
           <span className="truncate font-ops-display text-ops-sm font-semibold text-ops-ink">{local}</span>
+          <span className="truncate font-ops-body text-ops-xs text-ops-muted">{email}</span>
           <span className="font-ops-body text-ops-micro text-ops-muted">{label}</span>
-        </span>
-      )}
-    </span>
+        </div>
+        <button
+          type="button"
+          role="menuitem"
+          onClick={signOut}
+          disabled={busy}
+          className="flex w-full cursor-pointer items-center px-3.5 py-2.5 text-left font-ops-body text-ops-sm text-ops-red transition-colors hover:bg-ops-red-bg disabled:cursor-wait disabled:opacity-60"
+        >
+          {busy ? 'Çıkılıyor…' : 'Oturumu kapat'}
+        </button>
+      </AnchoredMenu>
+    </>
   );
 }

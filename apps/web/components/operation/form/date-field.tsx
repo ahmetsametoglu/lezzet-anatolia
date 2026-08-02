@@ -6,6 +6,7 @@ import { CalendarIcon } from '@/components/operation/ui/icons';
 import { FieldShell } from './field-shell';
 import { Calendar, initialMonth, shiftMonth } from './calendar';
 import { RANGE_PRESETS, formatDay, matchingPreset, toDay } from './calendar-math';
+import { CONTROL_H } from '../ui/control';
 
 // TARİH ve TARİH ARALIĞI seçicileri (envanter O8) — operasyon yüzeyinin ortak alanları.
 //
@@ -39,7 +40,8 @@ function Trigger({ text, placeholder, disabled, onClick, triggerRef, onClear }: 
         onClick={onClick}
         disabled={disabled}
         className={[
-          'flex w-full cursor-pointer items-center justify-between gap-3 rounded-ops-card border border-ops-line bg-ops-white px-3 py-2.5 text-left transition-colors',
+          // Yükseklik ORTAK: tarih alanı bir form kontrolüdür, yanındaki `Input`/`Select` ile hizalanır.
+          `flex w-full cursor-pointer items-center justify-between gap-3 rounded-ops-card border border-ops-line bg-ops-white px-3 text-left transition-colors ${CONTROL_H.md}`,
           'hover:border-ops-line-strong focus-visible:border-ops-olive focus-visible:outline-none',
           disabled ? 'cursor-not-allowed opacity-60' : '',
         ]

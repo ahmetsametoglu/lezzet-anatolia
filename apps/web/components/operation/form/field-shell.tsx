@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { CONTROL_H, type ControlSize } from '../ui/control';
 
 /**
  * Operasyon form iskeleti — Komponent Envanteri O8. Customer `FieldShell` deseninin operasyon ikizi
@@ -41,24 +42,30 @@ export function errorIdFor(fieldId: string, error?: string): string | undefined 
   return error ? `${fieldId}-error` : undefined;
 }
 
-type ControlSize = 'md' | 'sm';
 // `trailing`: kutunun İÇİNE bir eylem oturduğunda sağ dolgu — boyutla birlikte yaşar, çağıran
 // kendi payını uydurmaz. Yazı düğmenin altına girmesin diye dolgu HER ZAMAN ayrılır (düğme gizliyken de).
 // Sağ dolgu KARE eylemi taşır: kutunun iç yüksekliği kadar genişlik + kenar boşluğu.
-const CONTROL_SIZE: Record<ControlSize, { base: string; trailing: string }> = {
-  md: { base: 'rounded-ops-card px-[13px] py-[7px] text-ops-base', trailing: 'pr-[38px]' },
-  sm: { base: 'rounded-md px-2 py-1.5 text-ops-sm', trailing: 'pr-[32px]' },
+//
+// Yükseklik burada YOK, `CONTROL_H`'de: bir metin kutusu yanındaki `Select` ve altındaki düğmeyle aynı
+// hizada durmalı ve o ölçü hepsinin ortak kararı (`ui/control.ts`). Burada yalnız köşe, yatay dolgu ve
+// yazı kademesi var. Çok satırlı alanlar (`multiline`) o yükseklikten MUAF — bir textarea'nın boyunu
+// `rows` belirler; sabit yükseklik onu tek satıra hapsederdi. Muafiyette dikey dolgu geri gelir.
+const CONTROL_SIZE: Record<ControlSize, { base: string; multiline: string; trailing: string }> = {
+  md: { base: 'rounded-ops-card px-[13px] text-ops-base', multiline: 'py-[7px]', trailing: 'pr-[38px]' },
+  sm: { base: 'rounded-md px-2 text-ops-sm', multiline: 'py-1.5', trailing: 'pr-[32px]' },
 };
 
 /** Input/textarea/select ortak görünümü (ops token'ları). `error` çerçeveyi kırmızıya çeker. TEK KAYNAK. */
 export function controlClass(
   error?: string,
-  opts?: { size?: ControlSize; mono?: boolean; extra?: string; trailing?: boolean },
+  opts?: { size?: ControlSize; mono?: boolean; extra?: string; trailing?: boolean; multiline?: boolean },
 ): string {
-  const size = CONTROL_SIZE[opts?.size ?? 'md'];
+  const key = opts?.size ?? 'md';
+  const size = CONTROL_SIZE[key];
   return [
     'w-full border bg-ops-white text-ops-ink outline-none transition-colors focus:border-ops-olive disabled:cursor-not-allowed disabled:opacity-60',
     size.base,
+    opts?.multiline ? size.multiline : CONTROL_H[key],
     // `pr-*` üretilen CSS'te `px-*`'tan sonra gelir → sağ dolguyu o kazanır (Tailwind'in kanonik sırası).
     opts?.trailing ? size.trailing : undefined,
     error ? 'border-ops-red' : 'border-ops-line-strong',
