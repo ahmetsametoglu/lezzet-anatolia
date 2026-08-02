@@ -55,15 +55,25 @@ const CONTROL_SIZE: Record<ControlSize, { base: string; multiline: string; trail
   sm: { base: 'rounded-md px-2 text-ops-sm', multiline: 'py-1.5', trailing: 'pr-[32px]' },
 };
 
-/** Input/textarea/select ortak görünümü (ops token'ları). `error` çerçeveyi kırmızıya çeker. TEK KAYNAK. */
+/**
+ * Input/textarea/select ortak görünümü (ops token'ları). `error` çerçeveyi kırmızıya çeker. TEK KAYNAK.
+ *
+ * ⚠ **`fullWidth` KAPATILABİLİR olmak zorunda.** Kabuk `w-full` veriyor (form alanının doğru hâli),
+ * ama çağıranın `className`'ine yazdığı `w-16` onu EZEMEZ: Tailwind'de kazananı sınıf sırası değil
+ * CSS kaynak sırası belirler ve iki genişlik utility'si aynı katmanda. Sonuç sessiz bir arıza —
+ * yaşandı (03.08, kullanıcı ekran görüntüsü): tedarik sipariş penceresinde adet ve fiyat kutuları
+ * satırı komple kaplayıp ürün adını 0 piksele düşürdü, operatör NE ısmarladığını göremedi.
+ * Bir satırın içine giren kutu bunu açıkça kapatır; varsayılan değişmez.
+ */
 export function controlClass(
   error?: string,
-  opts?: { size?: ControlSize; mono?: boolean; extra?: string; trailing?: boolean; multiline?: boolean },
+  opts?: { size?: ControlSize; mono?: boolean; extra?: string; trailing?: boolean; multiline?: boolean; fullWidth?: boolean },
 ): string {
   const key = opts?.size ?? 'md';
   const size = CONTROL_SIZE[key];
   return [
-    'w-full border bg-ops-white text-ops-ink outline-none transition-colors focus:border-ops-olive disabled:cursor-not-allowed disabled:opacity-60',
+    'border bg-ops-white text-ops-ink outline-none transition-colors focus:border-ops-olive disabled:cursor-not-allowed disabled:opacity-60',
+    opts?.fullWidth === false ? undefined : 'w-full',
     size.base,
     opts?.multiline ? size.multiline : CONTROL_H[key],
     // `pr-*` üretilen CSS'te `px-*`'tan sonra gelir → sağ dolguyu o kazanır (Tailwind'in kanonik sırası).

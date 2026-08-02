@@ -297,7 +297,9 @@ function QtyCell({ value, disabled, onCommit }: { value: number; disabled: boole
     <Input
       inputSize="sm"
       mono
-      className="w-16 text-right"
+      // Satır içi kutu: kabuğun `w-full`'ü KAPALI, yoksa satırı kaplayıp ürün adını 0 piksele düşürür.
+      fullWidth={false}
+      className="w-16 flex-none text-right"
       inputMode="numeric"
       aria-label="Sipariş adedi"
       disabled={disabled}
@@ -333,7 +335,8 @@ function PriceCell({
 
   return (
     <MoneyInput
-      className="w-24"
+      fullWidth={false}
+      className="w-24 flex-none"
       disabled={disabled}
       placeholder="alış"
       ariaLabel="Beklenen alış fiyatı"

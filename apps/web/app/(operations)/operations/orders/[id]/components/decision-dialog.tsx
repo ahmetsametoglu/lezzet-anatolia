@@ -234,7 +234,9 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
               <MoneyInput
                 value={goodwillAmount}
                 onChange={setGoodwillAmount}
-                className="w-28 text-right"
+                // Satır içi: kabuğun `w-full`'ü kapalı, yoksa yanındaki cümleyi ezer.
+                fullWidth={false}
+                className="w-28 flex-none text-right"
                 placeholder="0,00"
                 ariaLabel="Jest iadesi tutarı"
               />

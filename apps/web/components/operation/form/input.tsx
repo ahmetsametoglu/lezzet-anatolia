@@ -14,6 +14,12 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   mono?: boolean;
   error?: string;
   /**
+   * `false` → kabuğun `w-full`'ü çizilmez ve `className`'deki genişlik geçerli olur. Bir SATIRIN
+   * içine giren kutular (tablo hücresi, sipariş kalemi) bunu verir; kabuk `w-full` kalırsa kutu
+   * satırı kaplar ve komşularını 0 piksele düşürür (`controlClass` künyesi).
+   */
+  fullWidth?: boolean;
+  /**
    * Kutunun İÇİNE, sağ kenara oturan eylem (ör. AI çeviri düğmesi). Verilirse sağ dolgu ona ayrılır →
    * yazı düğmenin altına girmez. Sarmalayıcı `group` sınıfını taşır: eylem kendi görünürlüğünü
    * `group-hover` / `group-focus-within` ile kutunun hâline bağlayabilir.
@@ -21,10 +27,10 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   trailing?: ReactNode;
 }
 
-export function Input({ inputSize = 'md', mono = false, error, trailing, className, ...rest }: InputProps) {
+export function Input({ inputSize = 'md', mono = false, error, trailing, fullWidth, className, ...rest }: InputProps) {
   const input = (
     <input
-      className={controlClass(error, { size: inputSize, mono, extra: className, trailing: Boolean(trailing) })}
+      className={controlClass(error, { size: inputSize, mono, extra: className, trailing: Boolean(trailing), fullWidth })}
       aria-invalid={error ? 'true' : undefined}
       {...rest}
     />

@@ -50,13 +50,15 @@ const draftOptions = (core: MoneyCoreProps) => ({ ...core, format, toDraft, sani
 interface MoneyInputProps extends MoneyCoreProps {
   inputSize?: 'md' | 'sm';
   className?: string;
+  /** `Input.fullWidth` ile aynı — satır içine giren kutu kabuğun `w-full`'ünü kapatır. */
+  fullWidth?: boolean;
   disabled?: boolean;
   placeholder?: string;
   title?: string;
   ariaLabel?: string;
 }
 
-export function MoneyInput({ inputSize = 'sm', className, disabled, placeholder, title, ariaLabel, ...core }: MoneyInputProps) {
+export function MoneyInput({ inputSize = 'sm', className, fullWidth, disabled, placeholder, title, ariaLabel, ...core }: MoneyInputProps) {
   const text = useNumericDraft(draftOptions(core));
   return (
     <Input
@@ -64,6 +66,7 @@ export function MoneyInput({ inputSize = 'sm', className, disabled, placeholder,
       mono
       inputMode="decimal"
       className={className}
+      fullWidth={fullWidth}
       disabled={disabled}
       placeholder={placeholder}
       title={title}
