@@ -34,12 +34,33 @@ export interface SupplierCardView {
   id: string;
   name: string;
   phone: string | null;
+  email: string | null;
+  address: string | null;
+  vatNumber: string | null;
+  note: string | null;
   /** null = peşin çalışılır. */
   paymentTermDays: number | null;
   /** Türetilen borç (cent): Σ girişler − Σ ödemeler. */
   debtCents: number;
   /** Toplam alım (cent). Tasarım "bu yıl" istiyor — dönemli toplam arka uç talebinde (bilinçli sapma). */
   intakeTotalCents: number;
+  /** Bu tedarikçiden yolda: gönderilmiş, henüz kapanmamış sipariş sayısı. */
+  pendingOrderCount: number;
+  isActive: boolean;
+}
+
+/** Tedarikçi formunun girdisi — `contact` JSON'u üç adlı alandan kurulur (bkz. `saveSupplierAction`). */
+export interface SupplierFormInput {
+  /** Boşsa yeni kayıt. */
+  id?: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  vatNumber?: string;
+  /** null/undefined = peşin. */
+  paymentTermDays?: number | null;
+  note?: string;
   isActive: boolean;
 }
 

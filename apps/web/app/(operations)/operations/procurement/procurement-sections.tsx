@@ -1,4 +1,7 @@
+'use client';
+
 import { Badge } from '@/components/operation/ui/badge';
+import { Button } from '@/components/operation/ui/button';
 import { ErrorState } from '@/components/operation/ui/error-state';
 import { InfoIcon } from '@/components/operation/ui/icons';
 import { money } from '@/components/operation/ui/format';
@@ -12,8 +15,15 @@ function TermBadge({ days }: { days: number | null }) {
   return days ? <Badge tone="olive">{days} gün vade</Badge> : <Badge tone="neutral">Peşin</Badge>;
 }
 
-/** Tedarikçiye gruplu öneri kartı. Taslak düğmesi AKSİYON dilimiyle gelir (BEKLEYEN(09.14)). */
-export function SuggestionGroupCard({ group }: { group: SuggestionGroupView }) {
+interface SuggestionGroupCardProps {
+  group: SuggestionGroupView;
+  /** "Tek dokunuş taslak" — DOMAIN §16'nın ana vaadi. Sürerken düğme kilitlenir. */
+  onCreateDraft: (supplierId: string) => void;
+  creating: boolean;
+}
+
+/** Tedarikçiye gruplu öneri kartı — başlıkta tek dokunuşla taslak açan düğme. */
+export function SuggestionGroupCard({ group, onCreateDraft, creating }: SuggestionGroupCardProps) {
   const unmapped = group.supplierId === null;
   return (
     <section className="overflow-hidden rounded-ops-card border border-ops-line">
@@ -29,7 +39,12 @@ export function SuggestionGroupCard({ group }: { group: SuggestionGroupView }) {
           // Sipariş açılamaz (motor reddeder: kime yazılacağı belli değil) — sebep rozette, sessiz değil.
           <Badge tone="amber">eşleme yok — sipariş açılamaz</Badge>
         ) : (
-          <TermBadge days={group.paymentTermDays} />
+          <>
+            <TermBadge days={group.paymentTermDays} />
+            <Button size="sm" variant="primary" disabled={creating} onClick={() => onCreateDraft(group.supplierId!)}>
+              {creating ? 'Açılıyor…' : 'Sipariş taslağı oluştur →'}
+            </Button>
+          </>
         )}
       </header>
       <ul>
@@ -70,15 +85,22 @@ export function SuggestionsEmpty() {
   );
 }
 
-/** Tedarikçi kartı — ad, vade, iletişim, türetilen borç. */
-export function SupplierCard({ supplier }: { supplier: SupplierCardView }) {
+/** Tedarikçi kartı — ad, vade, iletişim, türetilen borç, yoldaki sipariş. Tıklanınca kart açılır. */
+export function SupplierCard({ supplier, onEdit }: { supplier: SupplierCardView; onEdit: (s: SupplierCardView) => void }) {
   return (
-    <section className="flex flex-col gap-2 rounded-ops-card border border-ops-line px-4 py-3.5">
+    <section
+      onClick={() => onEdit(supplier)}
+      className="flex cursor-pointer flex-col gap-2 rounded-ops-card border border-ops-line px-4 py-3.5 transition-colors hover:border-ops-olive"
+    >
       <header className="flex items-center justify-between gap-3">
         <span className="truncate font-ops-display text-ops-lead font-semibold text-ops-ink">{supplier.name}</span>
         {supplier.isActive ? <TermBadge days={supplier.paymentTermDays} /> : <Badge tone="slate">Pasif</Badge>}
       </header>
-      {supplier.phone ? <span className="font-ops-body text-ops-sm text-ops-muted">{supplier.phone}</span> : null}
+      <div className="flex flex-wrap items-center gap-2 font-ops-body text-ops-sm text-ops-muted">
+        {supplier.phone ? <span>{supplier.phone}</span> : <span className="text-ops-faint">telefon girilmemiş</span>}
+        {/* "Bu firmadan yolda ne var" — kart tek başına okunabilsin diye burada. */}
+        {supplier.pendingOrderCount > 0 ? <Badge tone="blue">{supplier.pendingOrderCount} sipariş yolda</Badge> : null}
+      </div>
       <div className="flex gap-5 border-t border-ops-line-soft pt-2">
         <span className="flex flex-col">
           <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-muted">Borç</span>

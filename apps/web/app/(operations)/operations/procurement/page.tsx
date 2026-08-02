@@ -1,14 +1,15 @@
 import { serviceDb } from '@lezzet/database';
 import { detectDevice } from '@/lib/device';
-import { guarded, requireAdmin } from '@/lib/guard';
+import { guarded, requireAdmin, requireFinance } from '@/lib/guard';
 import { ErrorState } from '@/components/operation/ui/error-state';
 import { AlertIcon } from '@/components/operation/ui/icons';
 import { ProcurementClient } from './procurement-client';
 import { readOrderPage, readPendingOrderCount, readSuggestionGroups, readSupplierCards } from './procurement-read';
 import { parseProcurementUrl } from './procurement-url';
 
-// Tedarik ekranı (09.14) — yalnız ADMİN: alış fiyatı, borç ve tedarikçi ilişkisi operasyonun geri
-// kalanına kapalı (depocunun kendi mal kabulü fiyatsızdır, 10.4).
+// Tedarik ekranı (09.14) — YÖNETİCİ + MUHASEBE. Tedarikçi borcu ve vadesi muhasebenin de sorusudur;
+// depocu ve kurye görmez (onun mal kabulü fiyatsızdır, 10.4). Sidebar da aynı kümeyi gösterir ama
+// kapı BURADA: nav bir görgü kuralı, guard bir yetki kapısıdır (09.1 çift kat).
 //
 // OKUMA SEKMEYE BAĞLI (09.4'te ölçülen desen): öneri sekmesi stok eşiklerini, sipariş sekmesi PO
 // sayfasını, tedarikçi sekmesi borç türetimini okur — üçünü birden okumak, açılan her sekmeye
@@ -19,7 +20,7 @@ interface ProcurementPageProps {
 }
 
 export default async function ProcurementPage({ searchParams }: ProcurementPageProps) {
-  const access = await guarded(requireAdmin);
+  const access = await guarded(requireFinance);
   if (!access.ok) return <NoAccessPane />;
 
   const urlState = parseProcurementUrl(await searchParams);
@@ -35,6 +36,10 @@ export default async function ProcurementPage({ searchParams }: ProcurementPageP
     detectDevice(),
   ]);
 
+  // İptal yalnız yöneticinin — muhasebeci zinciri okur, akışı durdurmaz. Ekran düğmeyi gizler,
+  // action kendi kapısını ayrıca tutar (gizlemek bir güvence değildir).
+  const canCancelOrders = (await guarded(requireAdmin)).ok;
+
   return (
     <ProcurementClient
       data={{
@@ -46,6 +51,7 @@ export default async function ProcurementPage({ searchParams }: ProcurementPageP
       }}
       device={device}
       urlState={urlState}
+      canCancelOrders={canCancelOrders}
     />
   );
 }

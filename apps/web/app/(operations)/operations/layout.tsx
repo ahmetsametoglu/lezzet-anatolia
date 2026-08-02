@@ -58,10 +58,15 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
     return <NotStaffScreen />;
   }
 
-  // requireStaff geçtiğine göre en az bir operasyon rolü var. Bir kişi birden çok rol taşıyabilir
-  // (depo + muhasebe); sidebar tek etiket gösterdiği için yetkisi EN GENİŞ olanı seçilir.
-  const roles = await new UserProfileService(serviceDb()).getRoles(user.id);
-  const role = STAFF_ROLES.find((r) => roles.includes(r)) ?? 'admin';
+  // requireStaff geçtiğine göre en az bir operasyon rolü var. Roller ÇOĞUL taşınır: bir kişi hem
+  // depocu hem muhasebeci olabilir ve gezinmesi ikisinin BİRLEŞİMİdir. Önceden yalnız "en geniş"
+  // rol seçiliyordu ve o da sadece etiket içindi — nav herkese her şeyi gösteriyordu.
+  // Müşteri rolü ayıklanır: aynı kişi hem müşteri hem personel olabilir, ama operasyon gezinmesi
+  // personel rollerinden doğar.
+  const allRoles = await new UserProfileService(serviceDb()).getRoles(user.id);
+  const staffRoles = STAFF_ROLES.filter((r) => allRoles.includes(r));
+  // Dev bypass'ta profil okunamayabilir (sahte kimlik) — yüzey açık kalsın diye yönetici sayılır.
+  const roles = staffRoles.length > 0 ? staffRoles : (['admin'] as const);
 
   // Depo bağlamı BURADA okunur: sidebar'da durur ve sayfadan sayfaya taşınır — kimlik düzeyinde bir
   // tercih (19.5). Sayfalar aynı isteğin içinde tekrar sorduğunda `cache()` sayesinde bedava, ve
@@ -73,7 +78,7 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
       {/* Uygulama kabuğu: viewport yüksekliği sabit; sidebar ve içerik kendi içinde kaydırılır (Veri Masası). */}
       <div className="flex h-screen overflow-hidden bg-ops-bg font-ops-body text-ops-ink">
         <AdminSidebar
-          user={{ email: user.email ?? '', role }}
+          user={{ email: user.email ?? '', roles }}
           warehouse={{ warehouses, activeWarehouseId, unscoped: scope.kind === 'all' }}
         />
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>

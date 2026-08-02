@@ -1,9 +1,10 @@
+import { Button } from '@/components/operation/ui/button';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { OrdersTab } from './orders-tab';
 import { SuggestionGroupCard, SuggestionsEmpty, SupplierCard } from './procurement-sections';
 import { TAB_LABEL, type ProcurementTab } from './procurement-url';
-import type { ProcurementData, PurchaseOrderRowView } from './procurement-types';
+import type { ProcurementData, PurchaseOrderRowView, SupplierCardView } from './procurement-types';
 
 // Tedarik — masaüstü. Yerleşim `.dc`'ye göre: başlık + üç sekme; öneri kartları tam genişlik,
 // sipariş listesi tablo, tedarikçi kartları iki kolon. Başlıktaki "+ Stok girişi / + Tedarik
@@ -19,13 +20,29 @@ export interface ProcurementViewProps {
   hasMoreOrders: boolean;
   loadingMoreOrders: boolean;
   onLoadMoreOrders: () => void;
+  onCreateDraft: (supplierId: string) => void;
+  /** Taslağı açılmakta olan tedarikçi (yoksa null) — yalnız o kartın düğmesi kilitlenir. */
+  creatingFor: string | null;
+  actionError: string | null;
+  onEditSupplier: (supplier: SupplierCardView | null) => void;
+  onOpenOrder: (orderId: string) => void;
 }
 
 export function ProcurementDesktop(props: ProcurementViewProps) {
-  const { data, tab, onTab, navPending, orders, hasMoreOrders, loadingMoreOrders, onLoadMoreOrders } = props;
+  const { data, tab, onTab, navPending, orders, hasMoreOrders, loadingMoreOrders, onLoadMoreOrders, actionError } = props;
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <PageHeader title="Tedarik" subtitle={subtitleOf(data, tab)} />
+      <PageHeader title="Tedarik" subtitle={subtitleOf(data, tab)}>
+        {/* Yeni tedarikçi HER sekmede: kart olmadan sipariş de olmuyor, kurulumun ilk adımı bu. */}
+        <Button variant="secondary" size="sm" onClick={() => props.onEditSupplier(null)}>
+          + Tedarikçi
+        </Button>
+      </PageHeader>
+      {actionError ? (
+        <p role="alert" className="border-b border-ops-red-line bg-ops-red-bg px-6 py-2 font-ops-body text-ops-sm text-ops-red">
+          {actionError}
+        </p>
+      ) : null}
       <Tabs
         items={[
           // Rozet yalnız KARAR bekleyen iş: öneri listesi "senden sipariş bekleniyor" demektir;
@@ -47,7 +64,7 @@ export function ProcurementDesktop(props: ProcurementViewProps) {
           navPending && tab !== 'orders' ? 'pointer-events-none opacity-60' : '',
         ].join(' ')}
       >
-        {tab === 'suggestions' ? <SuggestionsPane data={data} /> : null}
+        {tab === 'suggestions' ? <SuggestionsPane {...props} /> : null}
         {tab === 'orders' ? (
           <OrdersTab
             rows={orders}
@@ -55,9 +72,10 @@ export function ProcurementDesktop(props: ProcurementViewProps) {
             loadingMore={loadingMoreOrders}
             onLoadMore={onLoadMoreOrders}
             busy={navPending}
+            onOpenOrder={props.onOpenOrder}
           />
         ) : null}
-        {tab === 'suppliers' ? <SuppliersPane data={data} /> : null}
+        {tab === 'suppliers' ? <SuppliersPane {...props} /> : null}
       </div>
     </div>
   );
@@ -78,7 +96,7 @@ function subtitleOf(data: ProcurementData, tab: ProcurementTab): string {
   return 'Sistem hazırlar, siparişi siz verirsiniz';
 }
 
-function SuggestionsPane({ data }: { data: ProcurementData }) {
+function SuggestionsPane({ data, onCreateDraft, creatingFor }: ProcurementViewProps) {
   const groups = data.suggestions ?? [];
   if (groups.length === 0) return <SuggestionsEmpty />;
   return (
@@ -89,25 +107,36 @@ function SuggestionsPane({ data }: { data: ProcurementData }) {
         iki satır olarak çıkabilir. Sistem önerir, siparişi siz verirsiniz.
       </p>
       {groups.map((group) => (
-        <SuggestionGroupCard key={group.supplierId ?? 'unmapped'} group={group} />
+        <SuggestionGroupCard
+          key={group.supplierId ?? 'unmapped'}
+          group={group}
+          onCreateDraft={onCreateDraft}
+          creating={creatingFor === group.supplierId}
+        />
       ))}
     </div>
   );
 }
 
-function SuppliersPane({ data }: { data: ProcurementData }) {
+function SuppliersPane({ data, onEditSupplier }: ProcurementViewProps) {
   const suppliers = data.suppliers ?? [];
   if (suppliers.length === 0) {
     return (
-      <p className="px-6 py-8 text-center font-ops-body text-ops-sm text-ops-muted">
-        Henüz tedarikçi kaydı yok — ilk kayıt tedarikçi formuyla birlikte geliyor.
-      </p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-10">
+        <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Henüz tedarikçi yok</span>
+        <span className="max-w-[420px] text-center font-ops-body text-ops-sm leading-relaxed text-ops-muted">
+          Sipariş verebilmek için önce kimden aldığınızı tanıtın: ad yeter, vade ve telefonu sonra da ekleyebilirsiniz.
+        </span>
+        <Button variant="primary" size="sm" onClick={() => onEditSupplier(null)}>
+          + İlk tedarikçiyi ekle
+        </Button>
+      </div>
     );
   }
   return (
     <div className="grid grid-cols-2 gap-3 px-6 py-4">
       {suppliers.map((supplier) => (
-        <SupplierCard key={supplier.id} supplier={supplier} />
+        <SupplierCard key={supplier.id} supplier={supplier} onEdit={onEditSupplier} />
       ))}
     </div>
   );

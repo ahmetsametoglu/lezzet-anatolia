@@ -11,8 +11,9 @@ import type { PurchaseOrderRowView } from './procurement-types';
 // Siparişler sekmesi — "neyi bekliyorum" listesi. Sütun sırası sorunun sırası: KİMDEN → kaç kalem →
 // ne tutar → NE KADARI GELDİ (depo kırılımıyla) → ne zaman → hangi hâlde.
 //
-// Satır tıklaması YOK: sipariş detayı henüz bir ekran değil (BEKLEYEN(09.14)); tıklanan ama hiçbir
-// yere gitmeyen satır, olmayan bir yetenek vaat eder.
+// Satır tıklaması GÖNDERİM penceresini açar: tedarik siparişinin hayattaki asıl anı "listeyi
+// tedarikçiye ilet"tir (DOMAIN §16). Tam sipariş detayı (kalem kalem kabul) ayrı bir ekran ve
+// henüz yok — pencere o gelene kadar listeyi, gönderim yollarını ve iptali taşır.
 
 interface OrdersTabProps {
   rows: PurchaseOrderRowView[];
@@ -20,9 +21,10 @@ interface OrdersTabProps {
   loadingMore: boolean;
   onLoadMore: () => void;
   busy: boolean;
+  onOpenOrder: (orderId: string) => void;
 }
 
-export function OrdersTab({ rows, hasMore, loadingMore, onLoadMore, busy }: OrdersTabProps) {
+export function OrdersTab({ rows, hasMore, loadingMore, onLoadMore, busy, onOpenOrder }: OrdersTabProps) {
   const columns: Column<PurchaseOrderRowView>[] = withCells<PurchaseOrderRowView>(PROCUREMENT_ORDER_TRACKS, {
     supplier: (r) => (
       <div className="flex min-w-0 flex-col gap-px">
@@ -44,6 +46,7 @@ export function OrdersTab({ rows, hasMore, loadingMore, onLoadMore, busy }: Orde
       rows={rows}
       rowKey={(r) => r.id}
       busy={busy}
+      onRowClick={(row) => onOpenOrder(row.id)}
       empty={<OrdersEmpty />}
       footer={<LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />}
     />

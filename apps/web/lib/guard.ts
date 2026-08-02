@@ -141,7 +141,24 @@ export async function requireWarehouseScope(warehouseId?: string): Promise<{ use
   return { user, scope };
 }
 
+/**
+ * Verilen rollerden **en az biri** şart — "yönetici VEYA muhasebeci" gibi kapılar için.
+ *
+ * `requireRole`'u iki kez çağırmak yerine tek okuma: rol listesi bir kez getirilir ve ilk çağrının
+ * `forbidden` fırlatması ikinciyi hiç çalıştırmazdı. Tek rollü kapılar için `requireAdmin` vb.
+ * kısayolları durmaya devam eder.
+ */
+export async function requireAnyRole(roles: readonly UserRole[]): Promise<AuthUser> {
+  if (devBypassActive()) return DEV_BYPASS_USER;
+  const user = await requireAuth();
+  const owned = await new UserProfileService(serviceDb()).getRoles(user.id);
+  if (!roles.some((r) => owned.includes(r))) throw new AuthError('forbidden');
+  return user;
+}
+
 export const requireAdmin = (): Promise<AuthUser> => requireRole('admin');
+/** Yönetici ya da muhasebeci — para gözü (tedarikçi borcu, sipariş tahsilatı, hesaplar). */
+export const requireFinance = (): Promise<AuthUser> => requireAnyRole(['admin', 'accounting']);
 export const requireWarehouse = (): Promise<AuthUser> => requireRole('warehouse');
 export const requireCourier = (): Promise<AuthUser> => requireRole('courier');
 /** Muhasebe: para/muhasebe ekranları ve export. Bir kişi hem depo hem muhasebe olabilir. */

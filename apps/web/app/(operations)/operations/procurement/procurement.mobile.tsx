@@ -1,4 +1,5 @@
 import { Badge } from '@/components/operation/ui/badge';
+import { Button } from '@/components/operation/ui/button';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { amount, shortDate } from '@/components/operation/ui/format';
@@ -13,12 +14,20 @@ import type { PurchaseOrderRowView } from './procurement-types';
 // Tasarımın mobil aksiyon kareleri (taslak → WhatsApp/PDF) diyaloglarıyla birlikte gelir.
 
 export function ProcurementMobile(props: ProcurementViewProps) {
-  const { data, tab, onTab, navPending, orders, hasMoreOrders, loadingMoreOrders, onLoadMoreOrders } = props;
+  const { data, tab, onTab, navPending, orders, hasMoreOrders, loadingMoreOrders, onLoadMoreOrders, actionError } = props;
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <header className="flex flex-col gap-px border-b border-ops-line px-4 py-3">
-        <h1 className="font-ops-display text-ops-section font-semibold text-ops-ink">Tedarik</h1>
+      <header className="flex items-center gap-2 border-b border-ops-line px-4 py-3">
+        <h1 className="mr-auto font-ops-display text-ops-section font-semibold text-ops-ink">Tedarik</h1>
+        <Button variant="secondary" size="sm" onClick={() => props.onEditSupplier(null)}>
+          + Tedarikçi
+        </Button>
       </header>
+      {actionError ? (
+        <p role="alert" className="border-b border-ops-red-line bg-ops-red-bg px-4 py-2 font-ops-body text-ops-sm text-ops-red">
+          {actionError}
+        </p>
+      ) : null}
       <Tabs
         items={[
           { key: 'suggestions', label: TAB_LABEL.suggestions, badge: data.suggestions?.length ?? null },
@@ -39,7 +48,12 @@ export function ProcurementMobile(props: ProcurementViewProps) {
           ) : (
             <div className="flex flex-col gap-3 px-3 py-3">
               {data.suggestions!.map((group) => (
-                <SuggestionGroupCard key={group.supplierId ?? 'unmapped'} group={group} />
+                <SuggestionGroupCard
+                  key={group.supplierId ?? 'unmapped'}
+                  group={group}
+                  onCreateDraft={props.onCreateDraft}
+                  creating={props.creatingFor === group.supplierId}
+                />
               ))}
             </div>
           )
@@ -53,7 +67,7 @@ export function ProcurementMobile(props: ProcurementViewProps) {
           ) : (
             <div className="flex flex-col">
               {orders.map((row) => (
-                <OrderCard key={row.id} row={row} />
+                <OrderCard key={row.id} row={row} onOpen={props.onOpenOrder} />
               ))}
               <LoadMoreSentinel hasMore={hasMoreOrders} loading={loadingMoreOrders} onLoadMore={onLoadMoreOrders} />
             </div>
@@ -61,11 +75,17 @@ export function ProcurementMobile(props: ProcurementViewProps) {
         ) : null}
 
         {tab === 'suppliers' ? (
-          <div className="flex flex-col gap-3 px-3 py-3">
-            {(data.suppliers ?? []).map((supplier) => (
-              <SupplierCard key={supplier.id} supplier={supplier} />
-            ))}
-          </div>
+          (data.suppliers?.length ?? 0) === 0 ? (
+            <p className="px-6 py-10 text-center font-ops-body text-ops-sm text-ops-muted">
+              Henüz tedarikçi yok — sipariş verebilmek için önce kimden aldığınızı tanıtın.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3 px-3 py-3">
+              {data.suppliers!.map((supplier) => (
+                <SupplierCard key={supplier.id} supplier={supplier} onEdit={props.onEditSupplier} />
+              ))}
+            </div>
+          )
         ) : null}
       </div>
     </div>
@@ -73,11 +93,14 @@ export function ProcurementMobile(props: ProcurementViewProps) {
 }
 
 /** Sipariş kartı — tablonun altı sütunu iki satıra iner; kabul kırılımı korunur (asıl bilgi o). */
-function OrderCard({ row }: { row: PurchaseOrderRowView }) {
+function OrderCard({ row, onOpen }: { row: PurchaseOrderRowView; onOpen: (id: string) => void }) {
   const received = receivedText(row);
   const totalUnknown = row.missingPriceCount > 0 && row.missingPriceCount === row.itemCount;
   return (
-    <article className="flex flex-col gap-1.5 border-b border-ops-line-soft px-4 py-3">
+    <article
+      onClick={() => onOpen(row.id)}
+      className="flex cursor-pointer flex-col gap-1.5 border-b border-ops-line-soft px-4 py-3 active:bg-ops-subtle"
+    >
       <div className="flex items-center gap-2">
         <span className="mr-auto truncate font-ops-body text-ops-base font-semibold text-ops-ink">{row.supplierName}</span>
         <Badge tone={statusTone(row.status)}>{statusLabel(row.status)}</Badge>

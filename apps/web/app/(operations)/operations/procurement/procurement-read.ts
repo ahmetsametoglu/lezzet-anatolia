@@ -138,21 +138,41 @@ function toOrderRowView(row: PurchaseOrderRow): PurchaseOrderRowView {
  */
 export async function readSupplierCards(db: Db): Promise<SupplierCardView[]> {
   const svc = new SupplierService(db);
+  const orders = new PurchaseOrderService(db);
   const suppliers = await svc.list();
 
   return Promise.all(
     suppliers.map(async (s) => {
-      const { intakeTotal, balance } = await svc.debt(s.id);
-      const phone = s.contact && typeof s.contact.phone === 'string' ? s.contact.phone : null;
+      const [{ intakeTotal, balance }, pendingOrderCount] = await Promise.all([
+        svc.debt(s.id),
+        // "Bu firmadan yolda ne var" — kart tek başına okunabilsin: borç kadar bunun da cevabı
+        // burada olmalı, yoksa operatör sipariş sekmesine gidip elle süzmek zorunda kalır.
+        orders.countPending(s.id),
+      ]);
       return {
         id: s.id,
         name: s.name,
-        phone,
+        ...contactOf(s.contact),
+        vatNumber: s.vatNumber,
+        note: s.note,
         paymentTermDays: s.paymentTermDays,
         debtCents: toCents(balance),
         intakeTotalCents: toCents(intakeTotal),
+        pendingOrderCount,
         isActive: s.isActive,
       };
     }),
   );
+}
+
+/**
+ * `contact` serbest JSON'dur; okuma tarafı ÜÇ adlı alana indirger. Tip güvencesi yok, o yüzden
+ * her alan tek tek doğrulanır — beklenmedik bir şekil ekranı düşürmez, alan boş görünür.
+ */
+function contactOf(contact: Record<string, unknown> | null): { phone: string | null; email: string | null; address: string | null } {
+  const pick = (key: string): string | null => {
+    const value = contact?.[key];
+    return typeof value === 'string' && value.trim() !== '' ? value : null;
+  };
+  return { phone: pick('phone'), email: pick('email'), address: pick('address') };
 }
