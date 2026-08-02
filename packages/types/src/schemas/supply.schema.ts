@@ -80,6 +80,14 @@ export const PurchaseOrderSchema = z.object({
   id: z.string().uuid(),
   supplierId: z.string().uuid(),
   status: PurchaseOrderStatusEnum,
+  /**
+   * İnsan-okur numara (`TS-26-4K2M9P`) — **taslakta null, gönderimde dolu.**
+   *
+   * Belge dışarı çıkıyor (tedarikçiye WhatsApp/PDF), yani karşı tarafın referans verebileceği bir
+   * numara gerekiyor; fatura eşleştirmede siparişi faturayla bağlayan da bu olacak. Rastgele,
+   * sıralı değil: sıralı numara dışarıya iş hacmimizi söyler.
+   */
+  referenceNo: z.string().nullable(),
   sentAt: z.string().nullable(),
   note: z.string().nullable(),
   createdAt: z.string(),

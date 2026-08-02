@@ -39,6 +39,10 @@ Tek markalı, tek veritabanlı, orta ölçekli bir web ürünü: müşteriye aç
 | Ödeme | **Stripe** (PaymentElement + webhook + refund) | Karar VERİLDİ, üretimde (07.5). `INTEGRATIONS.md`'deki "aday" ifadesi eskidir. |
 | Sürükle-bırak | **`@dnd-kit`** | Tek kullanım: `components/operation/ui/sortable-list.tsx` (operatör sırası) |
 | Log / hata / sağlık | **`packages/observability`** | pino + `error_log` + sağlık görüntüsü → `OBSERVABILITY.md` |
+| **Form** | **`react-hook-form`** + **`@hookform/resolvers`** (Zod resolver) | Doğrulama şeması zaten Zod (§5); resolver aynı şemayı forma bağlar — ikinci bir kural kaynağı doğmaz |
+| **E-posta** | **`resend`** (gönderim) + **`@react-email/components`** (şablon) | Supabase mail yapısı KULLANILMAZ; Auth OTP dahil tüm mail `packages/email`'den (§10, `14-bildirim-email`) |
+| **Dosya deposu** | **`@aws-sdk/client-s3`** + **`@aws-sdk/s3-request-presigner`** | Cloudflare R2, S3-uyumlu API. Presigner özel kova için süreli okuma/yükleme adresi üretir (§10 "iki kova") |
+| **Lint** | **ESLint flat config** + **`typescript-eslint`** | Kuralı zorlayan yer: `console` yasağı, ölü kod, `any` (`packages/eslint-config`) |
 
 > **`next-intl` SINIRI (denetim B1, 02.08):** yalnız **routing/locale yönlendirmesi** için kullanılır
 > (`middleware.ts`, `i18n/routing.ts`, `i18n/request.ts`). **Mesaj API'si (`useTranslations`,
@@ -146,6 +150,28 @@ export type LocalizedText = z.infer<typeof LocalizedText>;
 - **Sunucuda süz + sayfala:** üretimde ~200 satırı geçebilen her liste — ürün, sipariş, müşteri, parti, fatura, para hareketi. Süzgeçler **URL'de** taşınır (paylaşılabilir + yenilemeye dayanıklı + RSC okuyabilir), servise parametre olarak iner ve okuma **keyset (cursor)** paginasyonludur (CLAUDE.md: tüm listeler infinite scroll). Sayaç/özet de sunucuda hesaplanır — client tam listeye sahip olmadığı için türetemez.
 - **Client'ta süz (tamamını çek):** onlarla sınırlı, tavanı belli ve arayüzün **zaten tamamını** istediği kümeler — kategori, koleksiyon, enum listeleri (alerjen/KDV). Bunlar açılır menü ve filtre çipini beslediği için parça parça çekmek anlamsızdır.
 - **Ölçüt sızması:** "şimdilik az kayıt var" gerekçesiyle büyüyecek bir listeyi client'ta süzmek, sonradan **ikinci bir iş** doğurur (ekran + servis + URL birlikte değişir). Yeni bir liste ekranı yazılırken bu karar **baştan** verilir.
+
+**Serbest metin ARAMASI nereden okunur (karar 02.08 — ölçüldü):** ölçüt, aranan metnin **kimin
+malı** olduğudur.
+
+- **Metin satırın KENDİ malıysa → üretilmiş sütun** (`generated always as (…) stored`) + `pg_trgm`
+  GIN indeksi. Türetilmiş olduğu için bayatlaması **imkânsız**, indeksli olduğu için `%kelime%`
+  bile hızlı. Karşılığı: müşteri araması (`user_profiles`: ad + e-posta + telefon + firma).
+- **Metin BAŞKA tablonun malıysa → görünüm** (`stock_adjustment_detail` gibi), sütuna kopyalanmaz.
+  Kopyalamak onu bir **önbelleğe** çevirir ve önbelleğin geçersizleme sorunu vardır: ürün adı
+  değiştiğinde o üründen doğmuş bütün satırların metnini tetikleyiciyle yeniden yazmak gerekir —
+  tek satırlık bir düzeltme binlerce satır günceller, ve tetikleyicinin atladığı ilk yol sonucu
+  **sessizce** eskitir ("adı değiştirdim, arama hâlâ eskisini buluyor"). Şikâyet edilemeyen hata.
+
+**Ölçüm (yerel, 54.808 fire kaydı):** görünümün **arama YOKKEN** maliyeti sıfıra yakın — `0,29 ms`
+(tarih indeksinden 30 satır, birleştirmeler PK ile). Yani sık çalışan yol hiç etkilenmiyor. Arama
+yazıldığında `~100 ms`; saklanan sütun + GIN ile aynı arama `0,21 ms` ama tablo **39 MB → 55 MB**
+(+ 6 MB indeks). Yani hız 500 kat, bedeli %56 depolama **ve** yukarıdaki doğruluk riski.
+
+**Karar: görünüm kalır.** Sık yol zaten bedava, pahalı yol operatörün ara sıra yazdığı bir arama.
+Saklanan sütuna geçiş **ölçüye bağlı**: bir arama `~300 ms`'i geçtiğinde (kabaca 150 bin satır)
+yeniden bakılır — o gün gelmeden yapılan iyileştirme, bugün var olmayan bir sorunun bedelini
+doğruluk riskiyle ödemektir.
 
 **Bu projeye özgü not — jsonb ve eşzamanlılık:**
 - `LocalizedText` jsonb alanları taban sınıfta özel işlem gerektirmez; sıradan kolon gibi geçer (camelCase dönüşümü nesne içine inmez, değer olduğu gibi saklanır — dönüştürücünün jsonb değerini **çevirmemesi** sağlanır).

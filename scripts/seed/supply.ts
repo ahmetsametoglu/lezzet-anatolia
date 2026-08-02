@@ -1,4 +1,5 @@
 import { PurchaseOrderService, SupplierProductService, SupplierService } from '@lezzet/database';
+import { purchaseOrderReferenceNo } from '@lezzet/domain-core';
 import { euro, tabloDolu, type Db, type VaryantRef } from './shared';
 
 // ── Tedarik zinciri (06) ─────────────────────────────────────────────────────────────────────────
@@ -60,15 +61,18 @@ export async function seedSupply(db: Db, varyantlar: VaryantRef[]): Promise<Map<
     }
   }
 
-  // Tedarik siparişleri — dört durumun dördü de örneklenir.
+  // Tedarik siparişleri — dört durumun dördü de örneklenir. Gönderilmiş olanın NUMARASI olur
+  // (06.12): kural veritabanında, seed de ondan muaf değil — muaf olsaydı seed verisi üretimde
+  // imkânsız bir hâli örnekler ve ekranlar o hâle göre yazılırdı.
+  const YIL = new Date().getFullYear();
   const taslak = await purchases.createDraft(ana, satilabilir.slice(0, 5).map((v, i) => ({ variantId: v.id, qty: 24 + i * 6, unitPrice: euro(2.4 + i * 0.3) })), 'Bayram öncesi ek sipariş — taslak.');
   const gonderilen = await purchases.createDraft(ana, satilabilir.slice(5, 11).map((v, i) => ({ variantId: v.id, qty: 36 + i * 12, unitPrice: euro(2.6 + i * 0.25) })), 'Aylık ana sipariş.');
-  await purchases.markSent(gonderilen.order.id);
+  await purchases.markSent(gonderilen.order.id, purchaseOrderReferenceNo(YIL));
   const iptal = await purchases.createDraft(yerel, satilabilir.slice(0, 2).map((v) => ({ variantId: v.id, qty: 10 })), 'Yanlış tedarikçiye açıldı.');
   await purchases.cancel(iptal.order.id);
   // Dördüncüsü (received) mal kabulde kapanır — stok bölümü onu kullanır.
   const kabulBekleyen = await purchases.createDraft(ana, satilabilir.slice(11, 16).map((v, i) => ({ variantId: v.id, qty: 48 + i * 6, unitPrice: euro(2.2 + i * 0.4) })), 'Gelen konteyner — mal kabulde kapanacak.');
-  await purchases.markSent(kabulBekleyen.order.id);
+  await purchases.markSent(kabulBekleyen.order.id, purchaseOrderReferenceNo(YIL));
   harita.set('kabulBekleyenPo', kabulBekleyen.order.id);
 
   console.log(`  ✓ tedarik siparişi: taslak(${taslak.items.length}) · gönderildi(${gonderilen.items.length}) · iptal(${iptal.items.length}) · kabul bekleyen(${kabulBekleyen.items.length})`);

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { dbNumeric } from './db-numeric';
-import { LocalizedTextSchema } from './localized-text.schema';
+import { ProductSchema } from './product.schema';
+import { ProductVariantSchema } from './product-variant.schema';
 
 // StockAdjustment — stok azalışının SATIŞ DIŞI her sebebi (DOMAIN §4, §12). Kayıp görünmezse
 // yönetilemez: "bu üründen yılda ne kadar çöpe attım" sorusunun tek cevabı bu tablodur.
@@ -83,12 +84,37 @@ export const StockAdjustmentDetailSchema = StockAdjustmentSchema.extend({
     expiryDate: z.string(),
     variant: z.object({
       id: z.string().uuid(),
-      label: LocalizedTextSchema,
-      product: z.object({ id: z.string().uuid(), name: LocalizedTextSchema }),
+      // Etiket ENTİTE ŞEMASINDAN türer, elle yazılmaz (`CLAUDE.md §1`). Elle yazıldığı sürece
+      // `LocalizedTextSchema` (en az bir dil) diyordu; oysa varyant etiketi TASLAK şemadır —
+      // tek boylu üründe etiket YOKTUR ve `{}` meşrudur. Yani bu liste, varsayılan varyantlı bir
+      // ürünün fire kaydına rastladığı an doğrulamada patlıyordu. Ekranda hiç görülmedi çünkü
+      // okumanın testi yoktu; 09.18'in testi bulup çıkardı.
+      label: ProductVariantSchema.shape.label,
+      product: z.object({ id: z.string().uuid(), name: ProductSchema.shape.name }),
     }),
   }),
 });
 export type StockAdjustmentDetail = z.infer<typeof StockAdjustmentDetailSchema>;
+
+/**
+ * `stock_adjustment_detail` GÖRÜNÜMÜNÜN düz satırı (09.18).
+ *
+ * Ayrı bir şema, çünkü görünüm düz kolon döndürür; yukarıdaki iç içe şekil ise **ekranın gördüğü**
+ * şekildir ve değişmemeli. Servis düzü okuyup iç içeye eşler — iki şekli tek şemada tutmaya
+ * çalışmak, okuyanın hangisinin nereden geldiğini bilememesi demekti.
+ *
+ * `searchText` burada YOK: arama görünümün içinde süzülüyor, uygulamaya taşınmasının bir sebebi
+ * yok (ve taşınsaydı her satırda gereksiz bir metin bloğu gidip gelirdi).
+ */
+export const StockAdjustmentDetailRowSchema = StockAdjustmentSchema.extend({
+  lotNumber: z.string().nullable(),
+  expiryDate: z.string(),
+  variantId: z.string().uuid(),
+  variantLabel: ProductVariantSchema.shape.label,
+  productId: z.string().uuid(),
+  productName: ProductSchema.shape.name,
+});
+export type StockAdjustmentDetailRow = z.infer<typeof StockAdjustmentDetailRowSchema>;
 
 // TemperatureLog — hijyen denetiminin ilk istediği veri. Sensör yok, elle giriş (DOMAIN §4).
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { canChangeChannel, deriveChannel, usesFastSalePath } from './channel';
-import { generateReferenceNo, isValidReferenceNo } from './reference-no';
+import { generateReferenceNo, isValidReferenceNo, purchaseOrderReferenceNo } from './reference-no';
 
 describe('kanal türetimi (03.2)', () => {
   it('şirket → b2b, bireysel → b2c', () => {
@@ -50,6 +50,13 @@ describe('referans numarası (03.11)', () => {
 
   it('marka öneki değiştirilebilir', () => {
     expect(generateReferenceNo({ prefix: 'XY', year: 2027, random: () => 0 })).toMatch(/^XY-27-/);
+  });
+
+  it('tedarik siparişi KENDİ önekini taşır — telefonda karışmasın', () => {
+    // Önek çağıranın değil domain'in kararı: her çağıran kendi yazsaydı seed `TS`, uygulama `TD`
+    // yazar ve iki numara ailesi doğardı — üstelik ikisi de "çalışır".
+    expect(purchaseOrderReferenceNo(2026, () => 0)).toMatch(/^TS-26-/);
+    expect(isValidReferenceNo(purchaseOrderReferenceNo(2026))).toBe(true);
   });
 
   it('geçersiz biçimler reddedilir', () => {

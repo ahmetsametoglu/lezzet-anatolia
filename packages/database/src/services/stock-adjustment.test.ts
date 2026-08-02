@@ -109,6 +109,52 @@ describe('stok düzeltmesi (06.6)', () => {
   });
 });
 
+/**
+ * İmha/fire listesinin ARAMASI (09.18 · operasyon talebi §2) — `stock_adjustment_detail` görünümü.
+ *
+ * Sınanan şey aramanın iki ayrı kaynağa birden bakabilmesi: lot numarası düzeltme satırında,
+ * ürün adı üç tablo ötede. Gömülü `select` ile bu "VEYA" kurulamıyordu; görünüm onu düz bir
+ * kolona indiriyor. **Kendi kurduğumuz satırları arıyoruz**, küresel sayıya bakmıyoruz
+ * (`CLAUDE.md §4b`) — paylaşılan veritabanında başka ajanın fire kaydı da var.
+ */
+describe('imha/fire araması (09.18)', () => {
+  it('LOT numarasıyla bulunur', async () => {
+    const lot = `LOTQ${Date.now()}`;
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(10), lotNumber: lot });
+    await adjustments.adjust({ stockId: batch.id, qty: 2, reason: 'damaged' });
+
+    const page = await adjustments.listRecent({ query: lot });
+    expect(page.rows.map((row) => row.stock.lotNumber)).toEqual([lot]);
+  });
+
+  it('ÜRÜN ADIYLA da bulunur — arama iki kaynağa birden bakar', async () => {
+    // Asıl istek buydu: elinde lot yoksa operatör ürünün adını yazar. Ad `product` tablosunda,
+    // yani düzeltme satırından üç tablo ötede — eski okumada aranamıyordu.
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(10) });
+    await adjustments.adjust({ stockId: batch.id, qty: 1, reason: 'lost' });
+
+    const page = await adjustments.listRecent({ query: 'Su böreği' });
+    expect(page.rows.some((row) => row.stock.variant.product.id === productId)).toBe(true);
+  });
+
+  it('eşleşmeyen terim BOŞ döner — "bulamadım" ile "hepsi" karışmaz', async () => {
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(10) });
+    await adjustments.adjust({ stockId: batch.id, qty: 1, reason: 'lost' });
+
+    expect((await adjustments.listRecent({ query: `YOK${Date.now()}` })).rows).toEqual([]);
+  });
+
+  it('terimsiz çağrı bugünkü davranışı korur ve şekil DEĞİŞMEZ', async () => {
+    // Ekran iç içe `stock.variant.product` bekliyor; okuma görünüme taşındı ama şekil aynı kaldı.
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(10), purchasePrice: 2.5 });
+    await adjustments.adjust({ stockId: batch.id, qty: 3, reason: 'expired' });
+
+    const row = (await adjustments.listRecent({ limit: 50 })).rows.find((r) => r.stockId === batch.id);
+    expect(row).toMatchObject({ qty: 3, reason: 'expired', stock: { id: batch.id } });
+    expect(row?.stock.variant.product.id).toBe(productId);
+  });
+});
+
 describe('sıcaklık kaydı (06.7)', () => {
   const shelf = `Dolap-${Date.now()}`;
   shelves.push(shelf, `${shelf}-arac`);

@@ -14,6 +14,7 @@ import type { KeysetCursor, PurchaseOrderStatus } from '@lezzet/types';
 import { requireAdmin, requireFinance } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readWarehouseContext } from '@/lib/warehouse/context';
+import { sendPurchaseOrder } from '@/lib/stock/purchase-order-send';
 import { readOrderDetail, readOrderPage, readSupplierProducts, searchVariantOptions } from './procurement-read';
 import type {
   OrderDetailView,
@@ -344,7 +345,9 @@ export async function removeDraftLineAction(input: { orderId: string; itemId: st
 export async function markOrderSentAction(orderId: string): Promise<ActionResult> {
   try {
     await requireFinance();
-    await new PurchaseOrderService(serviceDb()).markSent(orderId);
+    // Numara BURADA üretilmiyor: kapı motoru ve veritabanını birleştiriyor (çarpışmada yeniden
+    // dener). Belge dışarı çıktığı için gönderilmiş siparişin numarası olmak zorunda — kural DB'de.
+    await sendPurchaseOrder(orderId);
     revalidatePath(PATH);
     return { data: null, error: null };
   } catch (error) {

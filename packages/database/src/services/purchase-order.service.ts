@@ -107,7 +107,7 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
       // `created_at` hem GÖRÜNÜM hem İMLEÇ alanı — dar şema onu taşısa da select'te bulunması şart
       // (bkz. `pageOf`): eksikse ikinci sayfa istenemez.
       select:
-        'id,supplier_id,status,sent_at,note,created_at,' +
+        'id,supplier_id,status,reference_no,sent_at,note,created_at,' +
         'supplier:supplier_id(id,name),' +
         'items:purchase_order_item(id,qty,unit_price,batches:stock(initial_qty,warehouse:warehouse_id(id,code)))',
       orderBy: 'createdAt',
@@ -176,9 +176,18 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
     }));
   }
 
-  /** İnsan gönderdikten sonra işaretlenir — sistemin gönderdiği anlamına GELMEZ. */
-  async markSent(id: string): Promise<PurchaseOrder> {
-    return this.update({ id, status: 'sent', sentAt: new Date().toISOString() });
+  /**
+   * İnsan gönderdikten sonra işaretlenir — sistemin gönderdiği anlamına GELMEZ.
+   *
+   * **Numara burada ÜRETİLMEZ, dışarıdan gelir** (`Order.reference_no` ile aynı sözleşme):
+   * rastgelelik motorun (`generateReferenceNo`), benzersizlik veritabanının işi. Servis karar
+   * vermez, satır yazar (`STACK §4`) — ve zaten `domain-core`'u da bilmiyor (`STACK §6` sınırı).
+   *
+   * Çarpışmada `23505` fırlar; çağıran yeni numarayla yeniden dener. "Önce sorgula, boşsa yaz"
+   * yolu iki eşzamanlı gönderimde ikisine de aynı numarayı verirdi.
+   */
+  async markSent(id: string, referenceNo: string): Promise<PurchaseOrder> {
+    return this.update({ id, status: 'sent', referenceNo, sentAt: new Date().toISOString() });
   }
 
   /** İptal yolu: kapanmış (mal gelmiş) sipariş iptal edilmez — zincir kopar. */

@@ -376,6 +376,61 @@ for (const root of codeRoots) {
 }
 if (pendingCount) console.log(`· ${pendingCount} BEKLEYEN işareti (hepsi bir kayda bağlı)`);
 
+// ── 3d. Çalışma-anı bağımlılığı mimari dokümanda BEYAN EDİLMİŞ mi ─────────────
+//
+// **Denetim bulgusu B2-i (02.08).** Yığına giren bir araç STACK'te yazmıyorsa iki şey birden olur:
+// (a) sonraki okuyan onu bir karar değil bir kaza sanır, (b) aynı işi yapan ikinci bir araç eklenir
+// ve kimse çakışmayı fark etmez. Denetimin ilk turunda çıkan dört bulgunun dördü de tam buydu —
+// kullanılan ama hiçbir yerde beyan edilmemiş araçlar.
+//
+// **Yalnız `dependencies`, `devDependencies` DEĞİL** (denetimce onaylanan daraltma): mimari beyan
+// üretimde ÇALIŞAN şeyi kapsar. Lint eklentisi, tip paketi, test koşucusu mimari bir karar değil
+// araç seçimidir ve her birini STACK'e yazmak dosyayı bir `package.json` kopyasına çevirirdi.
+//
+// Eşleşme ailesiyle: `@dnd-kit/core` için STACK'te `@dnd-kit` yazması yeter — sürüm ve alt paket
+// ayrıntısı `package.json`'ın işi, dokümanın işi aracın kendisi.
+/** `apps/*` ve `packages/*` altındaki workspace manifestleri. */
+function walkPackageJsons() {
+  const out = [];
+  for (const root of ['apps', 'packages']) {
+    for (const e of readdirSync(join(ROOT, root), { withFileTypes: true })) {
+      if (!e.isDirectory()) continue;
+      const file = `${root}/${e.name}/package.json`;
+      if (existsSync(join(ROOT, file))) out.push(file);
+    }
+  }
+  return out;
+}
+
+const DEP_EXEMPT = new Map([
+  // Çerçevenin KENDİSİ zaten beyan edilmiş; bunlar onun taşıyıcıları, ayrı bir karar değil.
+  ['react', 'Next.js satırı kapsıyor'],
+  ['react-dom', 'Next.js satırı kapsıyor'],
+  ['server-only', 'Next işaretleyicisi — sunucu modülünü istemciye sızdırmayı derlemede engeller'],
+]);
+
+const declaredIn = [read('docs/architecture/STACK.md'), read('docs/architecture/ARCHITECTURE_DECISIONS.md')]
+  .join('\n')
+  .toLowerCase();
+
+for (const pkgFile of ['package.json', ...walkPackageJsons()]) {
+  let pkg;
+  try {
+    pkg = JSON.parse(read(pkgFile));
+  } catch {
+    continue;
+  }
+  for (const dep of Object.keys(pkg.dependencies ?? {})) {
+    if (dep.startsWith('@lezzet/') || DEP_EXEMPT.has(dep)) continue;
+    // Aile: `@aws-sdk/client-s3` → `@aws-sdk` ve `aws-sdk`; `stripe` → `stripe`.
+    const family = dep.startsWith('@') ? dep.split('/')[0] : dep;
+    const tokens = [dep, family, family.replace(/^@/, '')];
+    if (!tokens.some((t) => declaredIn.includes(t.toLowerCase()))) {
+      note(`${pkgFile}: "${dep}" çalışma-anı bağımlılığı STACK.md/ADR'de beyan EDİLMEMİŞ`);
+    }
+  }
+}
+
 // ── 4. build/README durum özeti güncel mi ──────────────────────────────────────
 const label = (m) =>
   m.total === 0 ? 'planlanıyor' : m.done === m.total ? 'tamam' : m.done + m.partial === 0 ? 'bekliyor' : 'sürüyor';

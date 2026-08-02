@@ -92,3 +92,47 @@ $$;
 
 revoke execute on function public.adjust_stock(uuid, int, stock_adjustment_reason, text, uuid)
   from public, anon, authenticated;
+
+-- ── İmha/fire LİSTESİNİN görünümü (09.18) ───────────────────────────────────
+--
+-- **Neden görünüm, gömülü `select` değil.** Ekran lot numarasına VEYA ürün adına göre arıyor; ikisi
+-- iki ayrı gömülü kaynakta (`stock.lot_number`, `stock→variant→product.name`). PostgREST'in `or=`
+-- grubu YALNIZ üst tablonun kolonlarına bakar — gömülü süzgeçler ayrı parametrelerdir ve birbirine
+-- VE ile bağlanır. Yani "lot VEYA ürün adı" sorgu kurucuyla ifade edilemiyor; `STACK §13`'ün
+-- "kurucunun ifade edemediği şey" istisnası tam bu.
+--
+-- Eleneni de yazalım: iki ayrı sorgu + birleştirme keyset sayfalamayı bozardı (iki imleçli sayfa
+-- birleştirilemez), eşleşen `stock_id`'leri önce çözüp `in (…)` ile süzmek ise ya tavan (sessiz
+-- kırpma) ya şişen sorgu demekti.
+--
+-- **İç birleştirme (join) hiçbir satır düşürmez:** `stock_id` `not null` ve `on delete restrict`,
+-- yani partisi silinmiş bir düzeltme satırı yapısal olarak var olamıyor. `left join` yazmak
+-- olmayan bir ihtimale karşı korunmak olurdu.
+create or replace view public.stock_adjustment_detail as
+select a.id,
+       a.stock_id,
+       a.qty,
+       a.reason,
+       a.unit_cost,
+       a.note,
+       a.created_by,
+       a.reference_no,
+       a.created_at,
+       s.lot_number,
+       s.expiry_date,
+       v.id                as variant_id,
+       v.label             as variant_label,
+       p.id                as product_id,
+       p.name              as product_name,
+       -- ARAMA METNİ görünümün içinde kuruluyor: ekranın terimi tek bir düz kolona bakar, `or`
+       -- gerekmez ve sorgu kurucusu yeterli olur. Üç dil birden: operasyon Türkçe ama katalog üç
+       -- dilli ve operatör ürünü hangi adla hatırlıyorsa onu yazar.
+       concat_ws(' ', s.lot_number, p.name ->> 'tr', p.name ->> 'fr', p.name ->> 'de',
+                 v.label ->> 'tr', a.reference_no) as search_text
+  from public.stock_adjustment a
+  join public.stock s on s.id = a.stock_id
+  join public.product_variant v on v.id = s.variant_id
+  join public.product p on p.id = v.product_id;
+
+comment on view public.stock_adjustment_detail is
+  'İmha/fire listesi + aranabilir metin (09.18). Arama lot · ürün adı (3 dil) · varyant · belge no.';

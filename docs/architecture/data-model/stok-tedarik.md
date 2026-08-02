@@ -135,6 +135,7 @@ Taslak → gönderildi → mal kabulde kapanır (bkz. `DOMAIN.md §16`). Sistem 
 | id | uuid | |
 | supplier_id | uuid | |
 | status | enum(`draft`,`sent`,`received`,`cancelled`) | |
+| reference_no | string \| null | İnsan-okur numara (`TS-26-4K2M9P`) — **gönderimde** üretilir, taslakta null. Belge dışarı çıkıyor (tedarikçiye liste/PDF) ve fatura eşleştirmesinin bağı bu. Rastgele, sıralı DEĞİL: sıralı numara dışarıya iş hacmini söyler (`Order.reference_no` ile aynı karar). Kısıt: taslak değilse zorunlu. |
 | sent_at | timestamptz \| null | |
 | note | string \| null | |
 | created_at | timestamptz | |

@@ -280,8 +280,13 @@ export async function seedErrorLog(db: Db): Promise<void> {
   // Geri gelen hatanın ÖNCEKİ hayatı: aynı parmak izi, kapalı. Kısmi unique indeks
   // (`where resolved_at is null`) buna izin verir — iki satır, biri kapalı biri açık.
   if (REGRESYON_IKIZI) {
+    // `!` DEĞİL, açık kontrol: `REGRESYON_IKIZI` listeden seçildiği için indeks daima bulunur, ama
+    // liste elle düzenlenen bir sabit — biri o satırı silerse burası sessizce `undefined` yaymak
+    // yerine görünür biçimde durmalı. (`scripts/` artık typecheck kapsamında; bu hata orada çıktı.)
+    const ikiz = satirlar[HATALAR.indexOf(REGRESYON_IKIZI)];
+    if (!ikiz) throw new Error('seed: regresyon ikizi listede yok — HATALAR ile REGRESYON_IKIZI ayrışmış');
     satirlar.push({
-      ...satirlar[HATALAR.indexOf(REGRESYON_IKIZI)],
+      ...ikiz,
       count: 11,
       first_seen_at: new Date(Date.now() - 6 * 86_400_000).toISOString(),
       last_seen_at: new Date(Date.now() - 5 * 86_400_000).toISOString(),

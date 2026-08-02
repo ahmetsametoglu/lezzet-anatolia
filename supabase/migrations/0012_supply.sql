@@ -45,9 +45,28 @@ create table public.purchase_order (
   id uuid primary key default gen_random_uuid(),
   supplier_id uuid not null references public.supplier (id) on delete restrict,
   status purchase_order_status not null default 'draft',
+  -- İNSAN-OKUR NUMARA (`TS-26-4K2M9P`) — bu belge DIŞARI çıkıyor: liste tedarikçiye WhatsApp'tan ya
+  -- da PDF olarak gidiyor (`printableList`). Numarasız belge, karşı tarafın referans veremediği
+  -- belgedir; fatura eşleştirmede de siparişi faturayla bağlayan tek şey bu numara olacak.
+  --
+  -- **Rastgele, sıralı DEĞİL** (`Order.reference_no` ile aynı gerekçe): sıralı numara dışarıya iş
+  -- hacmimizi söyler — tedarikçi iki siparişin numarasına bakıp aradaki farkı okur.
+  --
+  -- **GÖNDERİMDE üretilir, açılışta değil.** Taslak bizim içimizde bir hazırlıktır; numara karşı
+  -- tarafa verilen sözdür. Siparişteki "ilk kalıcı durum" kuralının buradaki karşılığı `sent`:
+  -- açılıp vazgeçilen taslaklar numara tüketmez.
+  reference_no text unique,
   sent_at timestamptz,                               -- İNSAN gönderdikten sonra işaretlenir
   note text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Gönderilmiş siparişin numarası OLMAK ZORUNDA: numarasız gönderilmiş bir kayıt, tedarikçinin
+  -- elindeki kâğıtla eşleşmeyen bir kayıttır. Kural veride durur, uygulama unutsa da geçmez.
+  --
+  -- **Ölçüt `sent_at`, `status` DEĞİL** — ilk yazımda durum eksenine bağlanmıştı ve yanlıştı:
+  -- `receive_intake` bir siparişi `draft`tan doğrudan `received`a taşıyabiliyor (mal geldi, kimse
+  -- "gönderdim" demedi) ve o kayıtta numara YOKTUR — olmamalı da, çünkü numara tedarikçiye
+  -- söylediğimiz şeydir ve söylemedik. Aynı şekilde iptal edilen taslak da numara tüketmez.
+  constraint purchase_order_sent_has_reference check (sent_at is null or reference_no is not null)
 );
 create index purchase_order_supplier_idx on public.purchase_order (supplier_id, created_at desc);
 

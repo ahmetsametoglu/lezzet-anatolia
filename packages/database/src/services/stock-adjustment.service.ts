@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   AdjustBatchResultSchema,
   AdjustResultSchema,
-  StockAdjustmentDetailSchema,
+  StockAdjustmentDetailRowSchema,
   StockAdjustmentSchema,
   StockAdjustmentInsertSchema,
   StockAdjustmentUpdateSchema,
@@ -13,6 +13,7 @@ import {
   type Page,
   type StockAdjustment,
   type StockAdjustmentDetail,
+  type StockAdjustmentDetailRow,
   type StockAdjustmentInsert,
   type StockAdjustmentReason,
   type StockAdjustmentUpdate,
@@ -20,10 +21,6 @@ import {
 import { BaseDbService } from '../core/base.service';
 
 import { dbToApp } from '../utils/case-transformers';
-
-/** Kayıt + hangi partinin, hangi ürünün — iki okumanın paylaştığı gömülü seçim. */
-const DETAIL_SELECT =
-  '*,stock:stock(id,lot_number,expiry_date,variant:product_variant(id,label,product:product(id,name)))';
 
 /** Dönem süzgeci — verilmeyen uç sınırsızdır ("Tümü" iki ucu da vermez). */
 function periodFilters(from?: Date, to?: Date) {
@@ -109,15 +106,8 @@ export class StockAdjustmentService extends BaseDbService<StockAdjustment, Stock
    * Ayrıntılı analiz burada DEĞİL (raporlar, DOMAIN §12): bu liste "ne oldu" sorusunu yanıtlar,
    * `lossSummary` ise "ne kadar" sorusunu.
    */
-  async listRecent(opts: { from?: Date; to?: Date; limit?: number; cursor?: KeysetCursor } = {}): Promise<Page<StockAdjustmentDetail>> {
-    return this.getPageAs(StockAdjustmentDetailSchema, undefined, {
-      select: DETAIL_SELECT,
-      rangeFilters: periodFilters(opts.from, opts.to),
-      orderBy: 'createdAt',
-      orderDirection: 'desc',
-      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
-      keysetAfter: opts.cursor,
-    });
+  listRecent(opts: { from?: Date; to?: Date; limit?: number; cursor?: KeysetCursor; query?: string } = {}): Promise<Page<StockAdjustmentDetail>> {
+    return new StockAdjustmentDetailService(this.supabase).listPage(opts);
   }
 
   /**
@@ -182,4 +172,60 @@ export class StockAdjustmentService extends BaseDbService<StockAdjustment, Stock
     }
     return [...totals.values()];
   }
+}
+
+/**
+ * `stock_adjustment_detail` görünümü (09.18) — imha/fire listesinin ARANABİLİR okuması.
+ *
+ * Ayrı servis, çünkü görünüm yazılmaz (`never, never`) — ve çünkü aradaki fark bir okuma
+ * ayrıntısı değil: liste artık gömülü `select` ile değil, birleşik bir görünümden geliyor.
+ *
+ * **Neden görünüm** (operasyon talebi §2): arama terimi lot numarasına VEYA ürün adına bakıyor;
+ * ikisi iki ayrı gömülü kaynakta. PostgREST'in `or=` grubu yalnız üst tablonun kolonlarına bakar,
+ * yani bu koşul sorgu kurucusuyla ifade edilemiyor (`STACK §13` istisnası). Görünümün içinde
+ * kurulan tek bir `search_text` kolonu sorunu düz bir süzgece indiriyor ve keyset sayfalama bozulmuyor.
+ *
+ * **Ekranın gördüğü şekil DEĞİŞMİYOR:** görünüm düz kolon döndürür, burada iç içe
+ * `StockAdjustmentDetail`'e eşlenir.
+ */
+export class StockAdjustmentDetailService extends BaseDbService<StockAdjustmentDetailRow, never, never> {
+  constructor(supabase: SupabaseClient) {
+    super(
+      supabase,
+      'stock_adjustment_detail',
+      StockAdjustmentDetailRowSchema,
+      StockAdjustmentDetailRowSchema as never,
+      StockAdjustmentDetailRowSchema as never,
+      false,
+    );
+  }
+
+  async listPage(opts: { from?: Date; to?: Date; limit?: number; cursor?: KeysetCursor; query?: string } = {}): Promise<Page<StockAdjustmentDetail>> {
+    const term = opts.query?.trim();
+    const page = await this.getPageAs(StockAdjustmentDetailRowSchema, undefined, {
+      // `search_text` seçilmiyor: süzgeç sunucuda çalışıyor, metnin kendisi ekrana taşınmıyor.
+      select: 'id,stock_id,qty,reason,unit_cost,note,created_by,reference_no,created_at,lot_number,expiry_date,variant_id,variant_label,product_id,product_name',
+      rangeFilters: periodFilters(opts.from, opts.to),
+      ...(term ? { searchFilters: [{ field: 'searchText', query: term }] } : {}),
+      orderBy: 'createdAt',
+      orderDirection: 'desc',
+      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+      keysetAfter: opts.cursor,
+    });
+    return { ...page, rows: page.rows.map(toDetail) };
+  }
+}
+
+/** Görünümün düz satırı → ekranın beklediği iç içe şekil. Tek yerde, iki okuma yolu yok. */
+function toDetail(row: StockAdjustmentDetailRow): StockAdjustmentDetail {
+  const { lotNumber, expiryDate, variantId, variantLabel, productId, productName, ...adjustment } = row;
+  return {
+    ...adjustment,
+    stock: {
+      id: row.stockId,
+      lotNumber,
+      expiryDate,
+      variant: { id: variantId, label: variantLabel, product: { id: productId, name: productName } },
+    },
+  };
 }

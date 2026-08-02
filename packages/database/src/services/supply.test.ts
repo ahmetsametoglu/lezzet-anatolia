@@ -62,6 +62,17 @@ afterAll(async () => {
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
+/**
+ * Testin ürettiği tedarik numarası — **sayaçlı**, damgalı değil. `Date.now()` aynı milisaniyede iki
+ * kez çağrılabilir ve numara UNIQUE; damga kullanan bir yardımcı arada bir, tekrarlanmayan biçimde
+ * düşerdi (`CLAUDE.md §4b`: yalancı düşüş yavaş koşudan pahalıdır).
+ */
+let refCounter = 0;
+function testRef(): string {
+  refCounter += 1;
+  return `TS-26-T${String(Date.now()).slice(-4)}${String(refCounter).padStart(2, '0')}`;
+}
+
 describe('tedarikçi ve kod eşlemesi (06.8)', () => {
   it('aynı varyant aynı tedarikçide iki kez tanımlanmaz — kod değişirse satır güncellenir', async () => {
     await mappings.setMapping({ supplierId, variantId, supplierCode: 'AG-9999' });
@@ -130,7 +141,7 @@ describe('tedarik siparişi (06.9)', () => {
 
   it('gönderim işareti insana aittir; kalemsiz taslak açılmaz', async () => {
     const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 12 }]);
-    const gonderilen = await orders.markSent(order.id);
+    const gonderilen = await orders.markSent(order.id, testRef());
     expect(gonderilen.status).toBe('sent');
     expect(gonderilen.sentAt).not.toBeNull();
 
@@ -266,7 +277,7 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
       const grup = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
       const { order } = await reorder.createDraftFrom(grup, 'Test');
       acilanlar.push(order.id);
-      await orders.markSent(order.id);
+      await orders.markSent(order.id, testRef());
 
       // Asıl bulgunun kapanışı: eksik 15 (20 − 5), yolda 24 → satır artık öneri değil.
       expect(await öneriSatiri()).toBeUndefined();
@@ -287,7 +298,7 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
       // Elle açılmış, hedefi yazılmamış sipariş: mal fiilen nereye inecek bilinmiyor (C7/K6).
       const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 100 }]);
       acilanlar.push(order.id);
-      await orders.markSent(order.id);
+      await orders.markSent(order.id, testRef());
 
       const satir = await öneriSatiri();
       // 100 adet yolda ama hangi depoya? Bilinmiyor → eksik KAPANMADI sayılır, sayı ayrı gösterilir.
@@ -317,7 +328,7 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
 describe('tedarik siparişi listesi (09.14)', () => {
   it('satır tedarikçiyi, kalemleri ve GİREN partileri tek turda taşır', async () => {
     const { order, items } = await orders.createDraft(supplierId, [{ variantId, qty: 10, unitPrice: 4.5 }]);
-    await orders.markSent(order.id);
+    await orders.markSent(order.id, testRef());
     await intakes.receive({
       warehouseId,
       supplierId,
@@ -355,7 +366,7 @@ describe('tedarik siparişi listesi (09.14)', () => {
     // Taslak henüz gönderilmedi: "yolda" değil.
     expect(await orders.countPending(supplierId)).toBe(önce);
 
-    await orders.markSent(order.id);
+    await orders.markSent(order.id, testRef());
     expect(await orders.countPending(supplierId)).toBe(önce + 1);
 
     await orders.cancel(order.id);

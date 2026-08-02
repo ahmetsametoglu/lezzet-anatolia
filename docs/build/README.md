@@ -31,10 +31,10 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 03 | `03-domain-core.md` | `packages/domain-core`: İş Kuralları Motoru | sürüyor | 10/11 (+1 kısmi) |
 | 04 | `04-auth-kimlik.md` | Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama | sürüyor | 8/10 |
 | 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 9/13 (+2 kısmi) |
-| 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | tamam | 11/11 |
+| 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | tamam | 12/12 |
 | 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 11/12 (+1 kısmi) |
 | 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 4/14 (+7 kısmi) |
-| 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 3/19 (+8 kısmi) |
+| 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 4/19 (+9 kısmi) |
 | 10 | `10-depo.md` | Depo Yüzeyi | sürüyor | 0/6 (+5 kısmi) |
 | 11 | `11-kurye-rota.md` | Kurye ve Rota Teslimat | sürüyor | 1/6 (+4 kısmi) |
 | 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | sürüyor | 6/7 (+1 kısmi) |
@@ -44,7 +44,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 16 | `16-talep-sikayet.md` | Talep / Şikâyet | sürüyor | 1/6 (+3 kısmi) |
 | 17 | `17-geri-bildirim-puan.md` | Geri Bildirim, Yorum ve Puan | sürüyor | 0/7 (+7 kısmi) |
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/10 |
-| 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 14/19 (+4 kısmi) |
+| 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 14/20 (+4 kısmi) |
 <!-- durum:son -->
 
 Sıra katı değildir ama bağımlılıklar bağlayıcıdır (her dosyada yazılı). 08–09, tasarımdan gelen **komponent envanterinin kodlanmasıyla** başlar: önce komponentler, sonra sayfalar.

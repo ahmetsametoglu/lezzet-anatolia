@@ -56,15 +56,41 @@ export interface ReferenceNoOptions {
   prefix?: string;
   /** Siparişin yılı; iki hane kullanılır. */
   year: number;
-  /** 0–1 arası rastgele üreteç — test edilebilirlik için enjekte edilir. */
+  /**
+   * 0–1 arası rastgele üreteç — test edilebilirlik için enjekte edilir. **Verilmezse kriptografik**
+   * (`readableCode`'un varsayılanı).
+   *
+   * Burada bir süre `Math.random` yazıyordu ve bu, otuz satır yukarıdaki *"varsayılan daima
+   * kriptografiktir (test kolaylığı bir güvenlik ödünü olamaz)"* cümlesiyle çelişiyordu: üretimdeki
+   * hiçbir çağıran `random` geçmiyor, yani numaralar fiilen `Math.random`la üretiliyordu.
+   *
+   * Erişim açığı DEĞİLDİ — referansla açılan sayfalar sahipliği ayrıca doğruluyor
+   * (`checkout/[reference]` müşteri kimliğini karşılaştırıyor). Ama kod söylediğini yapmıyordu ve
+   * aynı üretecin token üreten kardeşleri var; varsayılanın iki yerde ayrışması, o kardeşlerden
+   * birinin bir gün sessizce zayıflaması demek.
+   */
   random?: () => number;
 }
 
-export function generateReferenceNo({ prefix = 'LA', year, random = Math.random }: ReferenceNoOptions): string {
+export function generateReferenceNo({ prefix = 'LA', year, random }: ReferenceNoOptions): string {
   return `${prefix}-${String(year).slice(-2)}-${readableCode(CODE_LENGTH, random)}`;
 }
 
 /** Biçim doğrulaması — dışarıdan gelen referansın (destek talebi, WhatsApp mesajı) şekli doğru mu. */
 export function isValidReferenceNo(value: string): boolean {
   return new RegExp(`^[A-Z]{2}-\\d{2}-[${ALPHABET}]{${CODE_LENGTH}}$`).test(value);
+}
+
+/**
+ * TEDARİK siparişinin numarası — `TS-26-4K2M9P` (06.12).
+ *
+ * Ayrı bir fonksiyon, çünkü ayrı bir KARAR: hangi önek kullanılacağı domain'in işidir, çağıranın
+ * değil. Öneki her çağıranın kendi yazdığı bir dünyada seed `TS`, uygulama `TD` yazar ve iki
+ * numara ailesi doğar — üstelik ikisi de "çalışır".
+ *
+ * Müşteri siparişinden ayrı önek (`LA`) bilinçli: ikisi de telefonda okunuyor ve karıştırılırsa
+ * yanlış kayda bakılır.
+ */
+export function purchaseOrderReferenceNo(year: number, random?: () => number): string {
+  return generateReferenceNo({ prefix: 'TS', year, random });
 }
