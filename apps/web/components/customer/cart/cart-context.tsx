@@ -8,6 +8,8 @@ import { clearGuestCart, mergeEntry, readGuestCart, setEntryQty, writeGuestCart 
 import { clearSaved, readSaved, writeSaved } from '@/lib/cart/saved-store';
 import { readCoupon, writeCoupon } from '@/lib/cart/coupon-store';
 import { EMPTY_CART, cartKey, entryOf, viewWithEntries, type CartEntry, type CartRef, type CartView } from '@/lib/cart/cart-types';
+import { diffCartByPlace, type CartLineChange } from '@/lib/cart/place-change';
+import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { CartUndo } from './cart-undo';
 
 /** Silinen kalemin geri alma penceresi (tasarım: "geri al snackbar'ı 5 sn görünür"). */
@@ -104,6 +106,16 @@ interface CartContextValue {
   saveForLater: (refs: readonly CartRef[]) => void;
   /** Listeden sepete geri alır (aynı adetle). Liste tarafındaki tek aksiyon budur. */
   restoreToCart: (ref: CartRef) => void;
+  /**
+   * Yer değişince sepette ne değişti (19.7) — kalem kalem, `null` iken bildirilecek bir şey yok.
+   *
+   * Sağlayıcıda durur çünkü yer sepet sayfasında DEĞİL, başlıktaki haptan da değiştirilebiliyor:
+   * anasayfada kodunu giren müşteri sepete geldiğinde farkı görmeli. Ekranın kendi state'inde
+   * tutulsaydı, sepet o sırada monte olmadığı için fark hiç hesaplanmazdı.
+   */
+  placeChange: CartLineChange[] | null;
+  /** Kartı kapatır — "anladım". Bir sonraki yer değişimine kadar bir daha çizilmez. */
+  dismissPlaceChange: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -120,6 +132,9 @@ interface CartProviderProps {
 }
 
 export function CartProvider({ locale, children }: CartProviderProps) {
+  // Yer sağlayıcısı BU sağlayıcıyı sarıyor (`(customer)/layout`), yani buradan okunabilir —
+  // tersi mümkün değildi ve olması da gerekmiyor: sepet yeri izler, yer sepeti değil.
+  const { place, ready: placeReady } = useDeliveryPlace();
   const [entries, setEntries] = useState<CartEntry[]>([]);
   const [savedEntries, setSavedEntries] = useState<CartEntry[]>([]);
   const [view, setView] = useState<CartView>(EMPTY_CART);
@@ -142,6 +157,13 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   const [undo, setUndo] = useState<{ entry: CartEntry; name: string } | null>(null);
   /** Tekrar siparişte eklenemeyen kalem sayısı — uyarıyı doğuran ekran sökülse de yaşar. */
   const [addSkipped, setAddSkipped] = useState<number | null>(null);
+  /**
+   * Yer değişimi bildirimi (19.7). `compareTo` bir sonraki okumanın kıyaslanacağı ESKİ görünümü
+   * taşır; yalnız yer değiştiğinde dolar, okuma dönünce boşalır. Ref çünkü okumanın içinden
+   * okunuyor ve değişmesi yeni bir render doğurmamalı.
+   */
+  const [placeChange, setPlaceChange] = useState<CartLineChange[] | null>(null);
+  const compareTo = useRef<CartView | null>(null);
   // Yarışı kesmek için: geç dönen eski yanıt yeni durumu ezmesin.
   const seq = useRef(0);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -217,6 +239,14 @@ export function CartProvider({ locale, children }: CartProviderProps) {
           clearGuestCart();
           clearSaved();
         }
+        // Yer değiştiği için okunduysa fark BURADA çıkar: iki görünüm de aynı kaynaktan, biri eski
+        // biri yeni yer bağlamıyla çözülmüş. Fark boşsa kart hiç çizilmez — "hiçbir şey değişmedi"
+        // demek için bir kutu açmak, olmayan bir olayı haber yapmaktır.
+        if (compareTo.current) {
+          const changes = diffCartByPlace(compareTo.current, data.view);
+          compareTo.current = null;
+          setPlaceChange(changes.length > 0 ? changes : null);
+        }
         setView(data.view);
         setSavedView(data.saved);
         setEntries(data.view.lines.map(entryOf));
@@ -232,6 +262,31 @@ export function CartProvider({ locale, children }: CartProviderProps) {
 
   useEffect(() => load(), [load]);
 
+  /**
+   * **Yer değişti → sepet yeniden okunur.** Şart: satırların yolu (`route`) ve fiyatı müşterinin
+   * deposundan çözülüyor; okunmazsa ekran eski yerin gruplarını göstermeye devam eder ve müşteri
+   * checkout'a kadar öyle sanır.
+   *
+   * İLK KARE atlanır: sayfa açılırken yer "yok"tan "var"a geçiyor ve bu bir değişim değil, cevabın
+   * gelmesi. Atlanmasaydı her açılışta bir tazeleme turu ve boş bir bildirim doğardı.
+   */
+  const placeKey = place ? `${place.country}:${place.postalCode}` : '';
+  const lastPlaceKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (!placeReady) return;
+    if (lastPlaceKey.current === null) {
+      lastPlaceKey.current = placeKey;
+      return;
+    }
+    if (lastPlaceKey.current === placeKey) return;
+    lastPlaceKey.current = placeKey;
+    // Kıyas noktası, o ana kadar EKRANDA olan görünüm. `view` (ham sunucu okuması) alınır,
+    // `displayView` değil: fark iki sunucu cevabı arasındadır, iyimser adet güncellemeleri
+    // arasında değil.
+    compareTo.current = view;
+    load();
+  }, [placeKey, placeReady, load, view]);
+
   // Görünüm sunucudan, adetler niyetten. İkisini birleştiren tek yer burası.
   const displayView = useMemo(() => viewWithEntries(view, entries), [view, entries]);
 
@@ -241,6 +296,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
       ready,
       failed,
       reload: load,
+      placeChange,
+      dismissPlaceChange: () => setPlaceChange(null),
       coupon,
       // Kod DEĞİŞTİRİLİR, sonuç sorulmaz: state değişince `load` yeniden koşar ve cevabı sunucu
       // verir. İstemcinin "bu kupon geçerli mi" diye bir görüşü yok.
@@ -313,7 +370,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         sync(setEntryQty(entries, ref, qty), savedEntries);
       },
     }),
-    [displayView, view, savedView, ready, failed, load, entries, savedEntries, sync, closeUndo, undo, coupon],
+    [displayView, view, savedView, ready, failed, load, entries, savedEntries, sync, closeUndo, undo, coupon, placeChange],
   );
 
   return (

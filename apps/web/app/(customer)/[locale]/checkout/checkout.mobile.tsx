@@ -5,6 +5,7 @@ import { AccountLine, AddressStep, DeliveryStep, LockedStep, OrderSummary, Payme
 import { CheckoutProgress } from './components/checkout-progress';
 import { GuestVerify } from './components/guest-verify';
 import { CheckoutStepsSkeleton } from './components/checkout-skeleton';
+import { ShippingOrderNote } from './components/shipping-order-note';
 import type { CheckoutViewProps } from './checkout-types';
 
 /**
@@ -23,10 +24,14 @@ export function CheckoutMobile(props: CheckoutViewProps) {
         <Link href="/cart" className="w-max cursor-pointer font-sans text-note font-semibold text-olive hover:text-olive-dark">
           {t.backToCart}
         </Link>
-        <span className="font-sans text-micro font-semibold tracking-wide text-muted uppercase">{t.eyebrow}</span>
+        {/* Kargo siparişinde üst satır kendini söyler — masaüstüyle aynı gerekçe. */}
+        <span className="font-sans text-micro font-semibold tracking-wide text-muted uppercase">
+          {props.shippingOrder ? t.shippingEyebrow : t.eyebrow}
+        </span>
         <h1 className="font-serif text-h1-sm text-ink">{t.title}</h1>
       </div>
 
+      <ShippingOrderNote {...props} />
       <CheckoutProgress {...props} />
 
       {props.authenticated ? (

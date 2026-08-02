@@ -200,6 +200,29 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
   kanonik panelini (`PlaceDialog`) açıyoruz — üçüncü bir posta kodu girdisi aynı doğrulamayı üç
   yerde bakıma bırakırdı.
 
+- **SEPETİN İKİ GRUBU — üç küçük sapma (02.08, `build/19` 19.7).** Tasarımın "tek sepet, iki grup,
+  iki checkout" bölümü birebir uygulandı; üç yerde ayrıldık ve üçünün de sebebi aynı aileden:
+  **söylenen şeyin arkasında durabilmek.**
+  1. **Kargo başlığında "· 2-3 iş günü" YAZILMADI.** Tasarım bunu iki yerde basıyor ("📦 Kargoyla
+     gönderilir · 2-3 iş günü"). Arkasında ne bir ayar ne bir taşıyıcı sözleşmesi var; yazsaydık
+     tutamayacağımız bir teslim süresi vaat etmiş olurduk ve gecikmede müşteri haklı olarak onu
+     gösterirdi. Süre parametrik bir ayara bağlandığında (kargo firması seçilince) cümle geri gelir.
+  2. **Yer değişimi kartında TEK eylem var.** Tasarım iki düğme çiziyor: "Anladım, sepeti göster" +
+     "Fiyat değişimini gözden geçir". İkisi de kartın zaten içinde olduğu ekrana götürüyor — kart
+     sepette çiziliyor ve fiyat farkı satırın kendisinde yazılı. İkinci düğme müşteriyi bulunduğu
+     yere göndermiş olurdu; "Anladım" kaldı.
+  3. **Karşılanamayan kalem OTOMATİK olarak sonraya kaydedilmiyor.** Tasarım §5 "karşılanamayanlar
+     sonraya kaydedilir" diyor ve mock'ta bir bildirim satırı var. Taşımayı kısıt bloğu (K32)
+     yapıyor ve orada iki sonuç da söyleniyor: kalan asgari sepetin altına düşüyor mu, ücretsiz
+     kargo eşiği kayboluyor mu. Sessizce taşımak müşteriyi tam da o iki uyarıdan mahrum bırakırdı —
+     iki kalemi çıkarıp toplamın ARTTIĞINI gören müşteri, hata yaptığını sanır. Kart durumu
+     bildirir, kararı blok verdirir.
+  Ayrıca **grup toplamı indirim İÇERMEZ** ve bu bir sapma değil bir sınır: kupon/kampanya her
+  siparişin kendi kalemlerine göre checkout'ta yeniden çözülüyor (`createCheckoutDraft` alt kümeyi
+  yeniden okuyor), yani sepette bir gruba düşecek payı kesin bilemeyiz. İki gruplu sepette özet
+  kartı bunu bir cümleyle söylüyor ve kendi checkout düğmesini düşürüyor — o düğme sepetin
+  tamamını ödeyecekmiş gibi okunurdu, oysa `/checkout` yalnız kapıya giden kalemleri alır.
+
 - **CHECKOUT — adres kartında "düzenle" YOK, seçili adresin ALTINDA var (01.08, `build/08` 08.13).**
   `Musteri - Checkout.dc.html` adres adımında kartları yalnız SEÇTİRİYOR; düzenleme diye bir yol
   çizilmemiş. Bu bir çıkmazdı (kullanıcı bildirimi): kaydedilen adres bir daha açılamıyor, yazım

@@ -1,6 +1,6 @@
 'use server';
 
-import { AddressService, CartService, OrderService, ReservationService, serviceDb } from '@lezzet/database';
+import { AddressService, OrderService, ReservationService, serviceDb } from '@lezzet/database';
 import { hasLocale } from 'next-intl';
 import type { Address, AddressInsert, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
@@ -10,6 +10,7 @@ import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { captureError, SOURCES } from '@lezzet/observability';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { getCartView } from '@/lib/cart/read';
+import { clearOrderedLines } from '@/lib/cart/settle';
 import type { CartEntry } from '@/lib/cart/cart-types';
 import { createCheckoutDraft } from '@/lib/order/checkout-draft';
 import { reserveOrderStock } from '@/lib/order/reserve';
@@ -71,6 +72,15 @@ export async function loadCheckoutAction(
    * kullanmış görünüp TAM FİYAT ödüyordu (29.07 denetimi).
    */
   couponCode: string | null = null,
+  /**
+   * Sepetin KARGO grubundan açılan ikinci sipariş mi (19.7 · `/checkout?group=shipping`).
+   *
+   * Taslakla AYNI bayrak, aynı gerekçe (`createCheckoutDraft` künyesi): tür türetilmez, açık
+   * seçilir. Burada da geçmesi şart — geçmezse ekran adresin cevabını gösterir ("kapıya teslim,
+   * kapıda ödeme mümkün, şu günler"), taslak ise kargo siparişi açar. Müşteri ekranda gördüğü
+   * ödeme yöntemini seçer, onaylar ve kasada reddedilirdi.
+   */
+  shippingOrder = false,
 ): Promise<ActionResult<CheckoutSnapshot>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
@@ -88,9 +98,13 @@ export async function loadCheckoutAction(
       hasNonShippableItem: cart.lines.some((l) => !l.shippable),
     });
 
+    // Kargo siparişinde tür adresin cevabını EZER (19.15) ve gün hiç sorulmaz: tarih taşıyıcıya
+    // bağlıdır, söz verilmez. Ezme tek yönlü — normal taslak adresin cevabını olduğu gibi kullanır.
+    const deliveryType = shippingOrder ? ('shipping' as const) : delivery.deliveryType;
+
     const options = await resolveCheckoutPayment({
       customerId,
-      deliveryType: delivery.deliveryType,
+      deliveryType,
       basketCents: cart.totalCents,
       // Oran satırın kendi gerçeğinden gelir (paketse kalemlerin en yükseği) — sabit yazmak
       // malzeme gibi %20'lik kalemlerde kargo KDV'sini yanlış bölerdi.
@@ -101,10 +115,12 @@ export async function loadCheckoutAction(
       data: {
         addresses,
         delivery: {
-          deliveryType: delivery.deliveryType,
-          availableDates: delivery.availableDates,
-          requiresDateChoice: delivery.requiresDateChoice,
-          blocked: delivery.shippingBlockedReason === 'cold_chain',
+          deliveryType,
+          availableDates: shippingOrder ? [] : delivery.availableDates,
+          requiresDateChoice: shippingOrder ? false : delivery.requiresDateChoice,
+          // Kargo siparişi soğuk zincir kalemi TAŞIYAMAZ — adres rota içinde olsa bile. Taslak
+          // bunu ayrıca reddediyor (`cold_chain_unshippable`); ekran aynı gerçeği önce söyler.
+          blocked: shippingOrder ? cart.lines.some((l) => !l.shippable) : delivery.shippingBlockedReason === 'cold_chain',
         },
         payment: {
           methods: options.methods,
@@ -234,6 +250,8 @@ export async function confirmCheckoutAction(input: {
    * düğmenin gezinme bitene kadar kapalı kalması.
    */
   idempotencyKey?: string | null;
+  /** Sepetin kargo grubundan açılan ikinci sipariş mi — `loadCheckoutAction` ile aynı bayrak. */
+  shippingOrder?: boolean;
 }): Promise<ActionResult<ConfirmOutcome>> {
   try {
     if (!hasLocale(routing.locales, input.locale)) throw new Error('Geçersiz dil');
@@ -265,6 +283,7 @@ export async function confirmCheckoutAction(input: {
       onAccount: input.onAccount,
       couponCode: input.couponCode,
       idempotencyKey: input.idempotencyKey,
+      shippingOrder: input.shippingOrder,
     });
     if (draft.status !== 'ok') {
       // Depo çözülemedi: iki sebep de siparişi engeller ama biri VERİ hatası (aynı kod iki bölgede),
@@ -315,9 +334,9 @@ export async function confirmCheckoutAction(input: {
         return { data: { status: 'rejected', reason: 'order_not_placed' }, error: null };
       }
 
-      // Sipariş kesinleşti → sepet boşalır. Aksi hâlde müşteri sipariş verdikten sonra sepetini
-      // hâlâ dolu buluyor ve aynı kalemleri ikinci kez sipariş edebiliyordu.
-      await clearCustomerCart(customerId);
+      // Sipariş kesinleşti → sepetten O SİPARİŞİN kalemleri düşer. Toptan boşaltmak, iki gruplu
+      // sepette kapıya siparişini veren müşterinin kargo grubunu da sessizce silerdi (19.7).
+      await clearOrderedLines(customerId, draft.orderId);
       return { data: { status: 'placed', orderId: draft.orderId, totalCents: draft.totalCents }, error: null };
     }
 
@@ -362,11 +381,6 @@ async function supersedeOpenDrafts(customerId: string): Promise<void> {
     await releaseOrderStock(order.id);
     await cancelDraft(order.id);
   }
-}
-
-/** Sipariş kesinleşince sepet boşalır — aynı kalemler ikinci kez sipariş edilmesin. */
-async function clearCustomerCart(customerId: string): Promise<void> {
-  await new CartService(serviceDb()).replace(customerId, []);
 }
 
 /** Ayrılamayan siparişin taslağı kapatılır: ortada söz verilmemiş yarım bir sipariş kalmaz. */

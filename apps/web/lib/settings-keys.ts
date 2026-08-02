@@ -19,6 +19,19 @@ export const FREE_SHIPPING_THRESHOLD_KEY = 'free_shipping_threshold_cents';
 export const MIN_BASKET_KEY = 'min_basket_cents';
 
 /**
+ * Kargo ücreti (cent). Checkout'ta kesilen tutar; sepette **kargo grubunun** blokunda yazılır.
+ *
+ * Sepet uzun süre ücreti hiç yazmadı ve bu doğruydu: ücret teslimat türüne bağlı, tür de adresten
+ * çıkıyordu. Kargo grubunda o belirsizlik YOK — grubun tanımı zaten "kargoyla gidecek": türü
+ * biliniyor, tutarı biliniyor. Bilinen bir sayıyı saklamak, müşteriyi checkout'ta sürprizle
+ * karşılamaktır.
+ */
+export const SHIPPING_FEE_KEY = 'shipping_fee_cents';
+
+/** Kargo ücretinin varsayılanı (cent) — ayar satırı yoksa geçerli. */
+export const SHIPPING_FEE_DEFAULT = 790;
+
+/**
  * Ücretsiz kargo eşiğinin varsayılanı (cent) — ayar satırı yoksa geçerli.
  *
  * 60,00 €: soğuk zincir kargosunun kendisi ~7-8 € tuttuğu için eşik onun belirgin üstünde olmalı,

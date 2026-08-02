@@ -4,7 +4,7 @@ import type { Locale } from '@lezzet/i18n';
 import { buttonClass } from '@/components/customer/ui/button';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
-import type { CartView } from '@/lib/cart/cart-types';
+import { shippingGroupFee, type CartView } from '@/lib/cart/cart-types';
 import { discountLabel } from '@/lib/cart/discount-label';
 import type { Messages } from '../cart-types';
 
@@ -48,9 +48,19 @@ export function checkoutBlockReason(view: CartView, t: Messages, locale: Locale)
  * TÜRÜNE bağlı, tür de adresten çıkıyor — rota içindeki müşteri zaten ücretsiz teslim alıyor.
  * Bu yüzden burada bir "Teslimat: 6,90 €" satırı YOK; yalnız eşiğe ne kadar kaldığı var ve
  * cümle kargoyu adıyla anıyor. Eşik tanımsızsa (0) blok hiç çizilmez.
+ *
+ * ── ÇUBUK YALNIZ YOL BİLİNMİYORKEN ÇİZİLİR (19.7) ────────────────────────────
+ * Yol biliniyorsa çubuğun söyleyeceği bir şey kalmıyor ve söylediği yanlış oluyordu:
+ *   sepetin tamamı kapıya gidiyorsa → teslimat zaten ücretsiz, eşik hiç devreye girmiyor;
+ *   iki grup varsa → eşik KARGO grubunun tutarına bakar (K37) ama çubuk sepetin tamamını
+ *     ölçüyordu, yani 80 €'luk rota siparişi kargo grubunu bedavaymış gibi gösteriyordu;
+ *   sepetin tamamı kargoysa → sayı doğru ama aynı cümle grubun kendi blokunda zaten yazılı.
+ * Yol bilinmiyorken çubuk bugünkü "muhtemel" tonunda kalır: müşteri henüz yerini söylemedi,
+ * söylediğinde cevap netleşecek.
  */
 function FreeShippingProgress({ view, t, locale }: { view: CartView; t: Messages; locale: Locale }) {
   if (view.freeShippingCents <= 0) return null;
+  if (view.lines.some((l) => l.route !== null)) return null;
 
   const reached = view.subtotalCents >= view.freeShippingCents;
   const percent = reached ? 100 : Math.round((view.subtotalCents / view.freeShippingCents) * 100);
@@ -74,9 +84,17 @@ interface CartSummaryProps {
   locale: Locale;
   /** Mobil: başlık ve aksiyon düşer, yalnız tutar satırları kalır. */
   compact?: boolean;
+  /**
+   * Sepet iki gruba bölündü mü (19.7). Bölündüyse **aksiyon buradan düşer**: her grup kendi
+   * blokunda kendi eylemiyle duruyor ve buradaki düğme sepetin tamamını ödeyecekmiş gibi
+   * okunurdu — oysa `/checkout` yalnız kapıya giden kalemleri alır.
+   *
+   * Kart yine de kalır: sepetin tamamının parası bir yerde toplu görünmeli, indirim de orada.
+   */
+  grouped?: boolean;
 }
 
-export function CartSummary({ view, t, locale, compact = false }: CartSummaryProps) {
+export function CartSummary({ view, t, locale, compact = false, grouped = false }: CartSummaryProps) {
   // Devam etmeyi GERÇEKTEN engelleyen iki hâl: çıkarılmadan geçilemeyecek satır, ve asgari sepetin
   // altı. İkisi de checkout'ta yeniden kontrol ediliyor; buradaki kilit müşteriyi boşuna bir adım
   // ilerletmemek için (sunucu güvenliği ekranın kilidine dayanmaz).
@@ -84,9 +102,16 @@ export function CartSummary({ view, t, locale, compact = false }: CartSummaryPro
   const reason = checkoutBlockReason(view, t, locale);
   // İndirim tutarı türetilir, yeniden hesaplanmaz — kararın sahibi motor, yazan sunucu.
   const discountCents = view.subtotalCents - view.totalCents;
+  /**
+   * Sepetin tamamı kargo grubundaysa **tek sipariş** doğar ve o siparişin kargo ücreti BELLİDİR:
+   * tür bilinmiyor değil, "kargo". Ücret satırının yokluğunun gerekçesi (tür adresten çıkar)
+   * burada geçerli değil — sayıyı saklamak müşteriyi kasada sürprizle karşılamak olurdu.
+   */
+  const fee = view.shippingOnly ? shippingGroupFee(view) : null;
+  const totalCents = view.totalCents + (fee?.feeCents ?? 0);
   return (
     <div className={['flex flex-col rounded-card border border-sand-200 bg-card', compact ? 'gap-2 p-3.5' : 'gap-3 p-6'].join(' ')}>
-      {!compact && <h2 className="font-serif text-h2-sm text-ink">{t.summary}</h2>}
+      {!compact && <h2 className="font-serif text-h2-sm text-ink">{grouped ? t.group.summaryScope : t.summary}</h2>}
 
       {/* Tutar satırları TEK BLOKTA ve kendi aralarında dar (8px). Kartın 12px'lik ana aralığı
           bölümler arasındır — satırlara da uygulanınca "Fiyatlara KDV dahildir" toplamdan
@@ -108,6 +133,22 @@ export function CartSummary({ view, t, locale, compact = false }: CartSummaryPro
           </div>
         )}
 
+        {fee !== null && (
+          <div className="flex items-center justify-between font-sans text-body-sm">
+            <span className="text-body">{t.group.shippingRow}</span>
+            {/* Ücretsizken tutar sütununa TEK KELİME yazılır: "🎉 Ücretsiz kargo eşiğini geçtiniz"
+                bir kutlama cümlesidir ve sağa yaslı bir tutar hücresinde satırı bozar. Kutlamanın
+                yeri ilerleme çubuğu; buranın işi sayıyı söylemek.
+                Zeytin ton YALNIZ ücretsizken: ödenecek bir tutarı iyi haber rengiyle yazmak,
+                masrafı kazanç gibi okutur. */}
+            {fee.feeCents > 0 ? (
+              <span className="font-bold text-ink">{formatPrice(fee.feeCents, locale)}</span>
+            ) : (
+              <span className="font-bold text-olive">{t.group.free}</span>
+            )}
+          </div>
+        )}
+
         <div
           className={[
             'flex items-center justify-between border-t border-sand-200 font-sans font-bold text-ink',
@@ -115,9 +156,13 @@ export function CartSummary({ view, t, locale, compact = false }: CartSummaryPro
           ].join(' ')}
         >
           <span>{t.total}</span>
-          <span>{formatPrice(view.totalCents, locale)}</span>
+          <span>{formatPrice(totalCents, locale)}</span>
         </div>
         <span className="font-sans text-micro text-muted">{t.vatIncluded}</span>
+        {/* İki gruplu sepette indirim bir siparişe DEĞİL, iki siparişe dağılacak. Kupon/kampanya
+            her siparişin kendi kalemlerine göre checkout'ta yeniden çözülüyor; burada tek bir
+            sayı yazıp "bunu ödeyeceksiniz" demek, tutulmayacak bir söz olurdu. */}
+        {grouped && discountCents > 0 && <span className="font-sans text-micro leading-relaxed text-muted">{t.group.discountSplit}</span>}
       </div>
 
       <FreeShippingProgress view={view} t={t} locale={locale} />
@@ -130,7 +175,7 @@ export function CartSummary({ view, t, locale, compact = false }: CartSummaryPro
         </div>
       )}
 
-      {!compact && (
+      {!compact && !grouped && (
         <>
           {/* Checkout BAĞLANDI (08.13). Düğme yalnız gerçek bir engel varken pasifleşir:
               tükenen/satıştan kalkan kalem ya da asgari sepetin altı. Engel yoksa düğme bir
@@ -145,7 +190,13 @@ export function CartSummary({ view, t, locale, compact = false }: CartSummaryPro
               {t.checkout}
             </button>
           ) : (
-            <Link href="/checkout" className={buttonClass({ variant: 'primary', size: 'md', fullWidth: true })}>
+            /* Sepetin tamamı kargodaysa açılacak taslak da KARGO taslağıdır: aynı düğme, farklı
+               sipariş. Bayrak olmadan checkout adresi rota bölgesine düşen müşteri için rota
+               siparişi açar ve malın bulunmadığı depodan sipariş üretirdi (19.15). */
+            <Link
+              href={view.shippingOnly ? { pathname: '/checkout', query: { group: 'shipping' } } : '/checkout'}
+              className={buttonClass({ variant: 'primary', size: 'md', fullWidth: true })}
+            >
               {t.checkout}
             </Link>
           )}

@@ -10,7 +10,8 @@ import { formatPrice } from '@/lib/storefront/format';
 import type { DeliveryPlace } from '@/lib/delivery/place-types';
 import { useDeliveryPlace } from './place-context';
 import { PlaceDialog } from './place-dialog';
-import { recordZoneNoticeAction } from '@/lib/delivery/notice-actions';
+import { recordVariantStockNoticeAction, recordZoneNoticeAction } from '@/lib/delivery/notice-actions';
+import type { ActionResult } from '@/lib/error';
 import { NoticeDialog } from './notice-dialog';
 import messages from './restriction-messages.json';
 
@@ -64,10 +65,36 @@ interface PlaceRestrictionProps {
  *
  * Zaten engelli satır (tükendi/satıştan kalktı) SAYILMAZ: onun çıkışı bu blok değil, sepetten
  * çıkarmaktır.
+ *
+ * **Cevabı motor verir** (`line.route === 'not_shippable_here'`). Eski kural "rota dışındayım +
+ * ürün kargolanamıyor" idi ve çok depoda bir hâli tamamen kaçırıyordu: rota İÇİNDEKİ müşterinin
+ * kendi deposunda bulunmayan soğuk zincir ürünü. `place.inRoute` doğru olduğu için blok hiç
+ * çizilmiyor, satır normal görünüyor, kalem checkout'a kadar geliyor ve orada reddediliyordu
+ * (`cold_chain_unshippable`). Kısıt gerçekti; ekran onu ancak müşteri ödemeye geçince söylüyordu.
+ *
+ * PAKET satırı eski kuralda kalır: yolu yoktur (`route: null` — paket bölünmez, checkout'ta bütünü
+ * üzerinden çözülür), o yüzden hakkındaki tek bilgi "içinde soğuk zincir var mı" (`shippable`).
  */
 export function restrictedLines(place: DeliveryPlace | null, lines: CartLine[]): CartLine[] {
-  if (!place || place.inRoute) return [];
-  return lines.filter((l) => !l.shippable && !l.blocked);
+  if (!place) return [];
+  return lines.filter((l) =>
+    l.blocked ? false : l.route !== null ? l.route === 'not_shippable_here' : !place.inRoute && !l.shippable,
+  );
+}
+
+/**
+ * Rota İÇİNDEKİ müşterinin "gelince haber ver" kaydı — kalem başına bir satır.
+ *
+ * Tek bir hata bile kaydı başarısız sayar: müşteriye "not aldık" derken kalemlerin bir kısmının
+ * düşmüş olması, tutulamayacak bir sözün yarısını vermektir. Paneli hatayla döndürmek, müşterinin
+ * tekrar denemesini sağlar (kayıt kısmi unique'li — ikinci deneme çift satır yazmaz).
+ */
+async function recordVariantNotices(lines: CartLine[], email: string): Promise<ActionResult<true>> {
+  const ok: ActionResult<true> = { data: true, error: null };
+  const results = await Promise.all(
+    lines.map((line) => (line.variantId ? recordVariantStockNoticeAction(line.variantId, email) : Promise.resolve(ok))),
+  );
+  return results.find((r) => r.error !== null) ?? ok;
 }
 
 export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCents, compact = false, place: override, onChangePlace }: PlaceRestrictionProps) {
@@ -84,6 +111,16 @@ export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCe
   // diyemez: kime gönderileceği bilinmiyor (tasarım: atlanırsa uyarılar "muhtemel" tonunda kalır).
   const blocked = restrictedLines(place, lines);
   if (!place || blocked.length === 0) return null;
+
+  /**
+   * Kısıtın İKİ sebebi var ve müşteriye aynı cümleyle anlatılamaz:
+   *   rota dışı  → "bu bölgeye hiç gelmiyoruz" — kalıcı; bekleyeceği şey BÖLGENİN açılması.
+   *   rota içi   → "geliyoruz ama bu kalem bölgenizin deposunda şu an yok" — geçici; bekleyeceği
+   *                şey KALEMİN gelmesi (vitrinin dördüncü hâli, 19.10 `elsewhere`).
+   * İkisini "gönderemiyoruz" diye birleştirmek, gelecek malı bekleyen müşteriye bölge açılmasını
+   * bekletmek olurdu. Kayıt da farklı: biri bölge notu, öteki varyant notu.
+   */
+  const here = place.inRoute;
 
   const remaining = lines.filter((l) => !blocked.includes(l));
   const remainingCents = remaining.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
@@ -108,7 +145,9 @@ export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCe
       <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>
         {t.title.replace('{n}', String(blocked.length))}
       </span>
-      <p className={['font-sans leading-relaxed text-body', compact ? 'text-micro' : 'text-note'].join(' ')}>{t.reason}</p>
+      <p className={['font-sans leading-relaxed text-body', compact ? 'text-micro' : 'text-note'].join(' ')}>
+        {here ? t.reasonHere : t.reason}
+      </p>
 
       {/* Hangi kalemler — sayı tek başına "hangisi" sorusunu cevaplamıyor.
           Satır içi "sonraya kaydet" YALNIZ ÇOĞULDA çizilir: seçim ancak seçilecek bir şey varken
@@ -137,7 +176,9 @@ export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCe
       </ul>
 
       {/* Sepetin tamamı kısıtlıysa "kalanını sipariş et" anlamsız — cümle onun yerini alır. */}
-      {allBlocked && <p className="font-sans text-note leading-relaxed font-semibold text-honey">{t.allBlocked}</p>}
+      {allBlocked && (
+        <p className="font-sans text-note leading-relaxed font-semibold text-honey">{here ? t.allBlockedHere : t.allBlocked}</p>
+      )}
       {!allBlocked && !basket.ok && (
         <p className="font-sans text-note leading-relaxed font-semibold text-honey">
           {t.belowMin.replace('{remaining}', formatPrice(remainingCents, locale)).replace('{min}', formatPrice(minBasketCents, locale))}
@@ -162,7 +203,7 @@ export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCe
           {onChangePlace ? t.changeAddressCta : t.changeCta}
         </Button>
         <Button variant="ghost" size="sm" onClick={() => setNoticeOpen(true)}>
-          {t.noticeCta}
+          {here ? t.noticeCtaHere : t.noticeCta}
         </Button>
       </div>
 
@@ -170,10 +211,14 @@ export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCe
       {noticeOpen && (
         <NoticeDialog
           locale={locale}
-          title={t.noticeTitle}
-          body={t.noticeBody.replace('{code}', place.postalCode)}
-          doneText={t.noticeDone.replace('{code}', place.postalCode)}
-          onSubmit={(email) => recordZoneNoticeAction(place.postalCode, email)}
+          title={here ? t.noticeTitleHere : t.noticeTitle}
+          body={(here ? t.noticeBodyHere : t.noticeBody).replace('{code}', place.postalCode)}
+          doneText={(here ? t.noticeDoneHere : t.noticeDone).replace('{code}', place.postalCode)}
+          /* Rota içindeyken bölge notu ANLAMSIZ — müşteri zaten bölgede. Söz kalem kalem verilir
+             ve kayıt da kalem kalem düşülür; tek bir çağrının kaydedeceği bir "bölge" yok.
+             Bu dalda engelli satırların hepsi varyant satırıdır: paketin yolu `null` olduğu için
+             kısıt süzgeci onu ancak rota DIŞINDA yakalar. */
+          onSubmit={(email) => (here ? recordVariantNotices(blocked, email) : recordZoneNoticeAction(place.postalCode, email))}
           onClose={() => setNoticeOpen(false)}
         />
       )}

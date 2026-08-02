@@ -2,12 +2,14 @@
 
 import { Link } from '@/i18n/navigation';
 import { useCart } from '@/components/customer/cart/cart-context';
-import { cartKey } from '@/lib/cart/cart-types';
+import { cartKey, splitByRoute } from '@/lib/cart/cart-types';
 import { PlacePrompt } from '@/components/customer/delivery/place-prompt';
 import { PlaceRestriction } from '@/components/customer/delivery/place-restriction';
 import { SavedList } from '@/components/customer/delivery/saved-list';
 import { CartLineRow } from './components/cart-line';
+import { CartGroup } from './components/cart-group';
 import { CartSummary } from './components/cart-summary';
+import { PlaceChangeCard } from './components/place-change-card';
 import { CartCoupon } from './components/cart-coupon';
 import { EmptyCart } from './components/empty-cart';
 import { CartUnreachable } from './components/cart-unreachable';
@@ -42,6 +44,9 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
   if (view.lines.length === 0) {
     return view.itemCount > 0 ? <CartSkeleton t={t} /> : <EmptyCart t={t} locale={locale} context={emptyContext} />;
   }
+
+  const groups = splitByRoute(view.lines);
+  const grouped = groups.route.length > 0 && groups.shipping.length > 0;
 
   return (
     // Başlık ve uyarı SOL SÜTUNUN İÇİNDEDİR, ızgaranın üstünde değil (tasarım): özet kartı sayfanın
@@ -80,16 +85,26 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
         <PlacePrompt locale={locale} scope="cart" />
         <PlaceRestriction locale={locale} lines={view.lines} minBasketCents={view.minBasketCents} freeShippingCents={view.freeShippingCents} />
 
-        {view.lines.map((line) => (
-          <CartLineRow key={cartKey(line)} line={line} t={t} locale={locale} />
-        ))}
+        {/* Sepet iki yola bölündüyse her grup kendi başlığı, toplamı ve eylemiyle durur; tek yol
+            varsa hiçbir şey değişmez — ayrım ancak ayrılacak bir şey varken bilgidir. */}
+        {grouped ? (
+          <>
+            <CartGroup kind="route" lines={groups.route} view={view} t={t} locale={locale} />
+            <CartGroup kind="shipping" lines={groups.shipping} view={view} t={t} locale={locale} />
+          </>
+        ) : (
+          view.lines.map((line) => <CartLineRow key={cartKey(line)} line={line} t={t} locale={locale} />)
+        )}
 
         {/* K33 · Sonraya kaydedilenler — sepetin ALTINDA, boşken hiç çizilmez. */}
         <SavedList locale={locale} />
       </div>
 
       <div className="sticky top-5 flex flex-col gap-3.5">
-        <CartSummary view={view} t={t} locale={locale} />
+        {/* Yer değişimi bildirimi ÖZETİN ÜSTÜNDE (tasarım: sağ sütunun kendi kartı): müşteri
+            önce neyin değiştiğini okur, sonra tutara bakar. */}
+        <PlaceChangeCard t={t} locale={locale} />
+        <CartSummary view={view} t={t} locale={locale} grouped={grouped} />
         <CartCoupon t={t} locale={locale} />
       </div>
     </section>

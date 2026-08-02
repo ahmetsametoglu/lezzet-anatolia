@@ -2,12 +2,14 @@
 
 import { Link } from '@/i18n/navigation';
 import { useCart } from '@/components/customer/cart/cart-context';
-import { cartKey } from '@/lib/cart/cart-types';
+import { cartKey, splitByRoute } from '@/lib/cart/cart-types';
 import { PlacePrompt } from '@/components/customer/delivery/place-prompt';
 import { PlaceRestriction } from '@/components/customer/delivery/place-restriction';
 import { SavedList } from '@/components/customer/delivery/saved-list';
 import { CartLineRow } from './components/cart-line';
+import { CartGroup } from './components/cart-group';
 import { CartSummary } from './components/cart-summary';
+import { PlaceChangeCard } from './components/place-change-card';
 import { CartCoupon } from './components/cart-coupon';
 import { CartCheckoutBar } from './components/cart-checkout-bar';
 import { EmptyCart } from './components/empty-cart';
@@ -40,6 +42,8 @@ export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
   if (view.lines.length === 0 && view.itemCount > 0) return <CartSkeleton t={t} compact />;
 
   const empty = view.lines.length === 0;
+  const groups = splitByRoute(view.lines);
+  const grouped = groups.route.length > 0 && groups.shipping.length > 0;
 
   return (
     <div className={['flex flex-col', empty ? '' : 'pb-28'].join(' ')}>
@@ -68,6 +72,9 @@ export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
             </div>
           )}
           <div className="flex flex-col gap-2.5 px-4 py-3.5">
+            {/* Yer değişimi bildirimi en üstte: masaüstünde sağ sütunun kendi kartı, mobilde
+                sütun yok — değişimin sebebi olan yer sorusu da hemen altında duruyor. */}
+            <PlaceChangeCard t={t} locale={locale} compact />
             {/* K32 · Teslimat kısıtı satırların ÜSTÜNDE — masaüstüyle aynı sıra, aynı bileşen. */}
             {/* Yer bilinmiyorsa soru, biliniyorsa kısıt — ikisi birbirini dışlar. */}
             <PlacePrompt locale={locale} scope="cart" />
@@ -78,17 +85,26 @@ export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
               freeShippingCents={view.freeShippingCents}
               compact
             />
-            {view.lines.map((line) => (
-              <CartLineRow key={cartKey(line)} line={line} t={t} locale={locale} compact />
-            ))}
+            {/* Masaüstüyle aynı ayrım, aynı bileşen — mobilde yalnız daha dar çizilir. */}
+            {grouped ? (
+              <>
+                <CartGroup kind="route" lines={groups.route} view={view} t={t} locale={locale} compact />
+                <CartGroup kind="shipping" lines={groups.shipping} view={view} t={t} locale={locale} compact />
+              </>
+            ) : (
+              view.lines.map((line) => <CartLineRow key={cartKey(line)} line={line} t={t} locale={locale} compact />)
+            )}
             {/* K33 · Sonraya kaydedilenler; boşken hiç çizilmez. */}
             <SavedList locale={locale} compact />
             {/* Mobilde kupon özetin ÜSTÜNDE (tasarım): indirim uygulanınca özet zaten onun sonucunu
                 gösteriyor — sonucu sebebinden önce okutmak sırayı tersine çevirirdi. */}
             <CartCoupon t={t} locale={locale} />
-            <CartSummary view={view} t={t} locale={locale} compact />
+            <CartSummary view={view} t={t} locale={locale} compact grouped={grouped} />
           </div>
-          <CartCheckoutBar view={view} t={t} locale={locale} />
+          {/* Alt çubuk YALNIZ kapıya grubunu taşır (tasarım): asıl akış odur, kargo grubu kendi
+              kartında kendi eylemiyle durur. Tek çubukta iki tutar toplanmaz — toplandığında
+              müşteri tek bir ödemeyle her ikisini de aldığını sanırdı. */}
+          <CartCheckoutBar view={view} t={t} locale={locale} lines={grouped ? groups.route : view.lines} />
         </>
       )}
     </div>

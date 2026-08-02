@@ -1,5 +1,4 @@
 import {
-  CartService,
   MoneyMovementService,
   OrderService,
   ReservationService,
@@ -9,6 +8,7 @@ import {
 } from '@lezzet/database';
 import { decideLatePayment } from '@lezzet/domain-core';
 import type { OrderItem } from '@lezzet/types';
+import { clearOrderedLines } from '../cart/settle';
 import { recordOrderPayment, recordOrderRefund } from '../money/order-payment';
 import { broadcastOrderChanged } from '../realtime/broadcast';
 import { stripeClient } from '../stripe';
@@ -224,10 +224,11 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null): P
   // Referans numarası ve `confirmed` geçişi burada doğar (07.6 kapısı; motor karar verir).
   await transitionOrder({ orderId: order.id, to: 'confirmed' });
 
-  // Ödeme geçtiğine göre sepet boşalır. Kart yolunda sepeti burada temizlemek ŞART: taslak
-  // açılırken temizlenseydi ödeme başarısız olan müşteri sepetini de kaybederdi. Temizlik
-  // siparişin kesinleştiği ana bağlı, açıldığı ana değil.
-  await new CartService(serviceDb()).replace(order.customerId, []);
+  // Ödeme geçtiğine göre sepetten BU SİPARİŞİN kalemleri düşer. Kart yolunda temizliğin burada
+  // olması ŞART: taslak açılırken temizlenseydi ödemesi başarısız olan müşteri sepetini de
+  // kaybederdi — temizlik siparişin kesinleştiği ana bağlı, açıldığı ana değil. Kısmi olması da
+  // şart: sepet iki grup taşıyabiliyor ve ikinci sipariş isteğe bağlı (19.7).
+  await clearOrderedLines(order.customerId, order.id);
 
   // Onay ekranı ZİLİ burada çalar: müşteri hâlâ "ödemeniz onaylanıyor" yazısına bakıyor olabilir ve
   // bu çağrı onun tarayıcısından bağımsız geldi. Zil olmasaydı ekran ancak elle yenilenince doğruyu

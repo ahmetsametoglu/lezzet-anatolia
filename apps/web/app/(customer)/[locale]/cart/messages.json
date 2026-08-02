@@ -79,6 +79,34 @@
       "title": "Sepetiniz şu an getirilemedi",
       "body": "Kalemleriniz duruyor — şu an gösteremiyoruz.",
       "retry": "Tekrar dene"
+    },
+    "group": {
+      "routeTitle": "🚚 Kapıya teslim",
+      "routeTitleDated": "🚚 Kapıya teslim · {date}",
+      "shippingTitle": "📦 Kargoyla gönderilir",
+      "routeTotal": "Kapıya gidecek toplam: {amount}",
+      "routeNote": "Teslimat ücretsiz · kapıda ödeme mümkün",
+      "shippingTotal": "Kargoyla gidecek toplam: {amount}",
+      "shippingFee": "{items} + kargo {fee}",
+      "shippingFeeFree": "{items} · kargo ücretsiz",
+      "free": "Ücretsiz",
+      "shippingRow": "Kargo",
+      "shippingRemaining": "{amount} daha eklerseniz kargo ücretsiz",
+      "shippingPayment": "yalnız online ödeme",
+      "shippingCta": "Kargolu ürünleri ayrıca sipariş ver",
+      "shippingCtaShort": "Ayrıca sipariş ver",
+      "shippingFootnote": "Kargo eşiği kendi tutarından hesaplanır — iki grup birbirinin eşiğini beslemez. İkinci siparişi vermek zorunlu değildir: vermezseniz kalemler sepette bekler, kapıya siparişinizi etkilemez.",
+      "summaryScope": "Sepetin tamamı",
+      "discountSplit": "İndirim her siparişe, o siparişin kalemlerine düşen payıyla uygulanır."
+    },
+    "placeChange": {
+      "title": "Yeni yerinize göre {n} kalem değişti",
+      "toShipping": "📦 {name} artık kargo grubunda",
+      "toRoute": "🚚 {name} kapıya teslime geçti",
+      "unavailable": "{name} yeni yerinizde şu an alınamıyor",
+      "price": "{name} fiyatı değişti — {from} yerine {to}",
+      "dismiss": "Anladım",
+      "note": "Hiçbir kalem silinmedi. Fırsat fiyatı bir partiye bağlıdır ve yere göre değişebilir; liste fiyatı ise yere göre asla değişmez."
     }
   },
   "fr": {
@@ -161,6 +189,34 @@
       "title": "Votre panier n’a pas pu être chargé",
       "body": "Vos articles sont bien là — nous n’avons pas pu les afficher.",
       "retry": "Réessayer"
+    },
+    "group": {
+      "routeTitle": "🚚 Livraison à domicile",
+      "routeTitleDated": "🚚 Livraison à domicile · {date}",
+      "shippingTitle": "📦 Envoi en colis",
+      "routeTotal": "Total à domicile : {amount}",
+      "routeNote": "Livraison offerte · paiement à la livraison possible",
+      "shippingTotal": "Total en colis : {amount}",
+      "shippingFee": "{items} + livraison {fee}",
+      "shippingFeeFree": "{items} · livraison offerte",
+      "free": "Offerte",
+      "shippingRow": "Livraison",
+      "shippingRemaining": "encore {amount} et la livraison est offerte",
+      "shippingPayment": "paiement en ligne uniquement",
+      "shippingCta": "Commander les articles en colis séparément",
+      "shippingCtaShort": "Commander séparément",
+      "shippingFootnote": "Le seuil de livraison offerte se calcule sur ce total — les deux groupes ne s'additionnent pas. Cette seconde commande n'est pas obligatoire : sans elle, les articles restent au panier et votre commande à domicile n'est pas affectée.",
+      "summaryScope": "Panier complet",
+      "discountSplit": "La remise s’applique à chaque commande au prorata de ses articles."
+    },
+    "placeChange": {
+      "title": "{n} article(s) ont changé avec votre nouveau lieu",
+      "toShipping": "📦 {name} passe en envoi colis",
+      "toRoute": "🚚 {name} passe en livraison à domicile",
+      "unavailable": "{name} n'est pas disponible à votre nouveau lieu pour le moment",
+      "price": "{name} a changé de prix — {to} au lieu de {from}",
+      "dismiss": "J'ai compris",
+      "note": "Aucun article n'a été supprimé. Un prix promotionnel dépend d'un lot et peut varier selon le lieu ; le prix courant, lui, ne change jamais selon le lieu."
     }
   },
   "de": {
@@ -243,6 +299,34 @@
       "title": "Ihr Warenkorb konnte nicht geladen werden",
       "body": "Ihre Artikel sind noch da — wir konnten sie nur nicht anzeigen.",
       "retry": "Erneut versuchen"
+    },
+    "group": {
+      "routeTitle": "🚚 Lieferung an die Tür",
+      "routeTitleDated": "🚚 Lieferung an die Tür · {date}",
+      "shippingTitle": "📦 Versand als Paket",
+      "routeTotal": "Summe für die Lieferung: {amount}",
+      "routeNote": "Lieferung kostenlos · Barzahlung an der Tür möglich",
+      "shippingTotal": "Summe für den Versand: {amount}",
+      "shippingFee": "{items} + Versand {fee}",
+      "shippingFeeFree": "{items} · Versand kostenlos",
+      "free": "Kostenlos",
+      "shippingRow": "Versand",
+      "shippingRemaining": "noch {amount} und der Versand ist kostenlos",
+      "shippingPayment": "nur Online-Zahlung",
+      "shippingCta": "Versandartikel separat bestellen",
+      "shippingCtaShort": "Separat bestellen",
+      "shippingFootnote": "Die Versandgrenze wird aus dieser Summe berechnet — die beiden Gruppen zählen nicht zusammen. Die zweite Bestellung ist freiwillig: ohne sie bleiben die Artikel im Warenkorb und Ihre Lieferung an die Tür bleibt unberührt.",
+      "summaryScope": "Gesamter Warenkorb",
+      "discountSplit": "Der Rabatt wird je Bestellung anteilig auf deren Artikel angewendet."
+    },
+    "placeChange": {
+      "title": "{n} Artikel haben sich mit Ihrem neuen Ort geändert",
+      "toShipping": "📦 {name} geht jetzt als Paket",
+      "toRoute": "🚚 {name} wird jetzt an die Tür geliefert",
+      "unavailable": "{name} ist an Ihrem neuen Ort derzeit nicht erhältlich",
+      "price": "{name} hat einen anderen Preis — {to} statt {from}",
+      "dismiss": "Verstanden",
+      "note": "Es wurde kein Artikel entfernt. Ein Aktionspreis hängt an einer Charge und kann sich mit dem Ort ändern; der Listenpreis ändert sich nie nach Ort."
     }
   }
 }

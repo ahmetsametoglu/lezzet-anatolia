@@ -5,6 +5,7 @@ import { AccountLine, AddressStep, DeliveryStep, LockedStep, OrderSummary, Payme
 import { CheckoutProgress } from './components/checkout-progress';
 import { GuestVerify } from './components/guest-verify';
 import { CheckoutStepsSkeleton } from './components/checkout-skeleton';
+import { ShippingOrderNote } from './components/shipping-order-note';
 import type { CheckoutViewProps } from './checkout-types';
 
 /**
@@ -28,7 +29,11 @@ export function CheckoutDesktop(props: CheckoutViewProps) {
           asıl ağırlık adımlarda olmalı. "← Sepete dön" sağa yaslı (tasarım: `margin-left:auto`). */}
       <div className="flex flex-wrap items-center gap-x-9 gap-y-2 border-b border-sand-200 px-12 py-4.5">
         <h1 className="font-serif text-card-title text-ink">{t.title}</h1>
-        <span className="font-sans text-micro font-semibold tracking-wide text-muted uppercase">{t.eyebrow}</span>
+        {/* Kargo siparişinde üst satır KENDİNİ SÖYLER: iki checkout birbirinin aynısı görünürse
+            müşteri hangisini verdiğini bilemez. */}
+        <span className="font-sans text-micro font-semibold tracking-wide text-muted uppercase">
+          {props.shippingOrder ? t.shippingEyebrow : t.eyebrow}
+        </span>
         <div className="ml-auto flex items-center gap-5">
           <span className="font-sans text-micro font-semibold text-body">🔒 {t.secure}</span>
           <Link href="/cart" className="cursor-pointer font-sans text-body-sm font-bold text-olive hover:text-olive-dark">
@@ -41,6 +46,7 @@ export function CheckoutDesktop(props: CheckoutViewProps) {
           oranlı; dar ekranlarda özet kartı da adımlarla birlikte daralıyor. */}
       <div className="grid grid-cols-[1.5fr_1fr] items-start gap-10 px-12 pt-9 pb-12">
         <div className="flex min-w-0 flex-col gap-4">
+          <ShippingOrderNote {...props} />
           <CheckoutProgress {...props} />
 
           {/* Adım 0 yalnız girişsizken. Sonraki adımlar SİLİNMEZ, başlıklarıyla durur: müşteri kaç

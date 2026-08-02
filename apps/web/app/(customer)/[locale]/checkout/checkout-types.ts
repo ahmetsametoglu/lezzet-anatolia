@@ -40,6 +40,13 @@ export interface CheckoutViewProps extends StepProps {
   state: CheckoutState;
   /** Doğrulanmış oturum var mı — yoksa "adım 0" çizilir, sonrakiler soluk başlıklarıyla bekler. */
   authenticated: boolean;
+  /**
+   * Sepetin KARGO grubundan açılan ikinci sipariş mi (19.7). Ekran bunu SÖYLEMEK zorunda: iki
+   * checkout birbirinin tıpatıp aynısı görünürse müşteri hangisini verdiğini bilemez ve "kapıya
+   * giden kalemlerim nerede" diye sorar. Cevap sepette bekliyor olmaları — ama söylenmezse
+   * kaybolmuş gibi okunur.
+   */
+  shippingOrder: boolean;
   /** Girişli müşterinin e-postası — kimlik satırı ("… olarak devam ediyorsunuz") bunu yazar. */
   customerEmail: string;
   busy: boolean;

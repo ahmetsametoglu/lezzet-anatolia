@@ -23,11 +23,18 @@ interface CartCheckoutBarProps {
   view: CartView;
   t: Messages;
   locale: Locale;
+  /**
+   * Çubuğun taşıdığı kalemler (19.7). Sepet iki gruba bölündüyse yalnız **kapıya giden** grup
+   * gelir: çubuk bir karar taşıyor ("bu kadar tutuyor, devam et") ve o karar rota siparişinindir.
+   * İki grubun tutarını toplamak, tek ödemeyle ikisini birden aldığını sandırırdı.
+   */
+  lines: CartView['lines'];
 }
 
-export function CartCheckoutBar({ view, t, locale }: CartCheckoutBarProps) {
+export function CartCheckoutBar({ view, t, locale, lines }: CartCheckoutBarProps) {
   const reason = checkoutBlockReason(view, t, locale);
   const blocked = view.hasBlocked || !view.minBasketOk;
+  const totalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
   // Koyu çubuğun içindeki aksiyon: dolgu açık yeşile, metin antrasite döner (envanter §2 —
   // koyu zemin varyantı). Pasifken kum dolgu; ikisi de aynı kutuyu verir, zıplama olmaz.
   const actionClass = 'rounded-soft px-5 py-3 font-sans text-body-sm font-bold transition-colors';
@@ -37,7 +44,7 @@ export function CartCheckoutBar({ view, t, locale }: CartCheckoutBarProps) {
       <div className="mx-auto max-w-[430px]">
         <div className="flex items-center justify-between gap-3 rounded-card bg-ink px-3.5 py-3">
           <span className="flex flex-col">
-            <span className="font-sans text-body font-bold text-cream">{formatPrice(view.subtotalCents, locale)}</span>
+            <span className="font-sans text-body font-bold text-cream">{formatPrice(totalCents, locale)}</span>
             <span className="font-sans text-micro text-closed-line">{t.vatShort}</span>
           </span>
           {blocked ? (
@@ -45,7 +52,12 @@ export function CartCheckoutBar({ view, t, locale }: CartCheckoutBarProps) {
               {t.checkout}
             </button>
           ) : (
-            <Link href="/checkout" className={`${actionClass} cursor-pointer bg-olive-light text-ink hover:bg-olive-light/90`}>
+            /* Sepetin tamamı kargodaysa açılacak taslak da KARGO taslağıdır (19.15) — özet
+               kartıyla aynı karar, iki yerde ayrı yazılmasın diye aynı koşul. */
+            <Link
+              href={view.shippingOnly ? { pathname: '/checkout', query: { group: 'shipping' } } : '/checkout'}
+              className={`${actionClass} cursor-pointer bg-olive-light text-ink hover:bg-olive-light/90`}
+            >
               {t.checkout}
             </Link>
           )}

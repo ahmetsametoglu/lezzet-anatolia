@@ -12,6 +12,18 @@ import messages from './messages.json';
 
 interface CheckoutPageProps {
   params: Promise<{ locale: string }>;
+  /**
+   * `?group=shipping` — sepetin KARGO grubundan açılan ikinci sipariş (19.7).
+   *
+   * URL'de taşınması bilinçli: müşteri geri gelebilmeli, sayfayı yenileyebilmeli ve hangi siparişi
+   * verdiğini adres çubuğunda görebilmeli. Bir bellek durumunda tutulsaydı yenileme sessizce rota
+   * checkout'una düşerdi — üstelik kargo grubunun kalemleriyle.
+   *
+   * Bayrak bir YETKİ değil, bir seçim: uydurulmuş bir değerin yapabileceği tek şey kendi sepetinin
+   * kargo kalemlerini sipariş etmek. Taslak zaten kendi kontrollerini yapıyor (kargo deposu var mı,
+   * soğuk zincir kalemi var mı, kalemler o depoda mı).
+   */
+  searchParams: Promise<{ group?: string }>;
 }
 
 /**
@@ -24,8 +36,8 @@ interface CheckoutPageProps {
  * Kimliğin sunucuda çözülmesi şart: "girişli miyim" sorusunu istemciye sordurmak, adım 0'ı
  * atlatmanın en kolay yolu olurdu.
  */
-export default async function CheckoutPage({ params }: CheckoutPageProps) {
-  const { locale } = await params;
+export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
+  const [{ locale }, { group }] = await Promise.all([params, searchParams]);
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
 
@@ -39,6 +51,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
         t={t}
         locale={locale}
         device={device}
+        shippingOrder={group === 'shipping'}
         authenticated={profile !== null}
         customer={profile ? { name: profile.name, email: profile.email ?? user?.email ?? '', phone: profile.phone } : null}
       />

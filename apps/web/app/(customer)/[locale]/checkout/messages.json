@@ -124,6 +124,8 @@
       "warehouse_unresolved": "Adresiniz için teslimat noktası belirlenemedi. Ekibimize haber verildi — lütfen bizimle iletişime geçin."
     },
     "eyebrow": "sepetiniz · ödeme",
+    "shippingEyebrow": "kargo siparişi · ayrı ödeme",
+    "shippingNote": "Bu, sepetinizin kargoyla gidecek kalemleri için AYRI bir sipariştir — kapıya giden kalemleriniz sepette bekliyor. Kargo ücreti bu siparişin kendi tutarından hesaplanır ve ödeme yalnız online yapılır.",
     "secure": "Stripe · 3D Secure · şifreli bağlantı",
     "progress": {
       "cart": "Sepet",
@@ -264,6 +266,8 @@
       "warehouse_unresolved": "Nous n'avons pas pu déterminer le point de livraison pour votre adresse. Notre équipe a été prévenue — merci de nous contacter."
     },
     "eyebrow": "votre panier · commande",
+    "shippingEyebrow": "commande en colis · paiement séparé",
+    "shippingNote": "Ceci est une commande SÉPARÉE pour les articles de votre panier envoyés en colis — vos articles livrés à domicile restent au panier. Les frais de livraison se calculent sur cette commande et le paiement se fait uniquement en ligne.",
     "secure": "Stripe · 3D Secure · connexion chiffrée",
     "progress": {
       "cart": "Panier",
@@ -404,6 +408,8 @@
       "warehouse_unresolved": "Für Ihre Adresse konnte kein Lieferpunkt bestimmt werden. Unser Team wurde benachrichtigt — bitte kontaktieren Sie uns."
     },
     "eyebrow": "Ihr Warenkorb · Kasse",
+    "shippingEyebrow": "Versandbestellung · separate Zahlung",
+    "shippingNote": "Dies ist eine SEPARATE Bestellung für die Artikel Ihres Warenkorbs, die als Paket gehen — Ihre Artikel für die Lieferung an die Tür bleiben im Warenkorb. Die Versandkosten werden aus dieser Bestellung berechnet und die Zahlung erfolgt nur online.",
     "secure": "Stripe · 3D Secure · verschlüsselt",
     "progress": {
       "cart": "Warenkorb",

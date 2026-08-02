@@ -9,7 +9,7 @@ import { useRouter } from '@/i18n/navigation';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useCart } from '@/components/customer/cart/cart-context';
-import { entryOf } from '@/lib/cart/cart-types';
+import { entryOf, splitByRoute } from '@/lib/cart/cart-types';
 import { clientStripe } from '@/lib/stripe-client';
 import { PaymentSection } from './components/payment-element';
 import { CheckoutDesktop } from './checkout.desktop';
@@ -36,6 +36,14 @@ interface CheckoutClientProps {
   locale: Locale;
   device: Device;
   authenticated: boolean;
+  /**
+   * Sepetin KARGO grubundan açılan ikinci sipariş mi (19.7 · `?group=shipping`).
+   *
+   * İki şeyi birden belirler: hangi kalemlerin siparişe gireceği ve siparişin TÜRÜ. İkisi ayrı
+   * ayrı türetilseydi ayrışabilirlerdi — kalemler kargo grubundan, tür adresten gelirdi ve rota
+   * içindeki müşteride ekran "kapıya teslim" derken taslak kargo siparişi açardı.
+   */
+  shippingOrder: boolean;
   customer: { name: string; email: string; phone: string | null } | null;
 }
 
@@ -46,7 +54,7 @@ function newAttemptKey(): string {
   return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `k${Date.now()}${Math.random().toString(36).slice(2)}`;
 }
 
-export function CheckoutClient({ t, locale, device, authenticated, customer }: CheckoutClientProps) {
+export function CheckoutClient({ t, locale, device, authenticated, shippingOrder, customer }: CheckoutClientProps) {
   const router = useRouter();
   const { view, ready: cartReady, failed: cartFailed, reload: reloadCart, coupon } = useCart();
   const [snapshot, setSnapshot] = useState<CheckoutSnapshot>(EMPTY);
@@ -61,7 +69,22 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
   const [snapshotReady, setSnapshotReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const cartEntries = useMemo(() => view.lines.map(entryOf), [view.lines]);
+  /**
+   * Bu siparişe girecek kalemler — sepetin TAMAMI değil, **bu grubun** kalemleri (19.7).
+   *
+   * Kargo checkout'u yalnız kargo grubunu alır; normal checkout ise kargo grubunu DIŞARIDA bırakır.
+   * Bırakmasaydı kapıya siparişi, o adrese araçla gidemeyecek kalemleri de taşırdı ve taslak
+   * "bu siparişin deposunda karşılanamayan kalem" diye reddederdi — müşteri sepetinde gördüğü
+   * kalemin neden siparişe girmediğini ancak ödemeye geçince öğrenirdi.
+   *
+   * Yol bilinmiyorken (`route === null`: yer sorulmamış ya da satır bir paket) kalem HER ZAMAN ana
+   * gruptadır: bilmediğimiz bir satırı asıl akıştan çıkarmak, siparişten sessizce kalem düşürmek
+   * olurdu.
+   */
+  const cartEntries = useMemo(() => {
+    const groups = splitByRoute(view.lines);
+    return (shippingOrder ? groups.shipping : groups.route).map(entryOf);
+  }, [view.lines, shippingOrder]);
   /**
    * Anlık görüntü okumasının SIRA BİLETİ. Sepet bağlamında zaten vardı, burada yoktu: hızlıca A
    * sonra B adresine tıklayan müşteride yanıtlar ters sırada dönerse geç gelen ESKİ cevap yeniyi
@@ -82,7 +105,7 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
   const refresh = useCallback(
     async (addressId: string | null) => {
       const ticket = ++seq.current;
-      const { data, error: failure } = await loadCheckoutAction(locale, cartEntries, addressId, coupon);
+      const { data, error: failure } = await loadCheckoutAction(locale, cartEntries, addressId, coupon, shippingOrder);
       if (ticket !== seq.current) return;
       // Okuma düşse de bayrak kalkar: sonsuza kadar iskelet göstermek, hatayı gizlemenin bir
       // başka biçimi olurdu — ekran hata satırını gösterebilmeli.
@@ -101,7 +124,7 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
         return { ...prev, addressId: selected?.id ?? null, deliveryDate: keepDate };
       });
     },
-    [locale, cartEntries, coupon],
+    [locale, cartEntries, coupon, shippingOrder],
   );
 
   useEffect(() => {
@@ -128,6 +151,7 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
       marketingConsent: state.marketingConsent,
       couponCode: coupon,
       idempotencyKey: attemptKey.current,
+      shippingOrder,
     });
 
     if (failure || !data) {
@@ -168,6 +192,7 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
       paymentMethod: 'online',
       marketingConsent: state.marketingConsent,
       couponCode: coupon,
+      shippingOrder,
     });
     if (failure || !data) return { ok: false, error: failure ?? t.pay.error };
     if (data.status === 'rejected') return { ok: false, error: rejectionMessage(t, data.reason, data.detail) };
@@ -226,6 +251,7 @@ export function CheckoutClient({ t, locale, device, authenticated, customer }: C
     snapshot,
     state,
     authenticated,
+    shippingOrder,
     customerEmail: customer?.email ?? '',
     busy,
     error,

@@ -9,7 +9,13 @@ import type { ProductContext } from '@/lib/storefront/map';
 import { loadProductContext } from '@/lib/storefront/read-context';
 import { getPackagesByIds } from '@/lib/storefront/packages';
 import type { StorefrontPackageDetail } from '@/lib/storefront/storefront-types';
-import { FREE_SHIPPING_THRESHOLD_DEFAULT, FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY } from '@/lib/settings-keys';
+import {
+  FREE_SHIPPING_THRESHOLD_DEFAULT,
+  FREE_SHIPPING_THRESHOLD_KEY,
+  MIN_BASKET_KEY,
+  SHIPPING_FEE_DEFAULT,
+  SHIPPING_FEE_KEY,
+} from '@/lib/settings-keys';
 import { resolveCartDiscount } from './discount';
 import { EMPTY_CART, cartKey, discountAmountOf, type CartEntry, type CartLine, type CartView } from './cart-types';
 
@@ -68,11 +74,14 @@ export async function getCartView(
   // Anahtarlar ORTAK sabitten gelir (`lib/settings-keys`): burada `free_shipping_cents` yazıyordu
   // ve öyle bir ayar hiç yoktu — okuma sessizce varsayılana düşüyor, checkout ise gerçek ayarı
   // okuyordu. İkisi tesadüfen aynı değerde olduğu için görünmüyordu (29.07).
-  const [minBasketCents, freeShippingCents] = await Promise.all([
+  const [minBasketCents, freeShippingCents, shippingTariffCents] = await Promise.all([
     settings.getNumber(MIN_BASKET_KEY, 0),
     settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT),
+    // Tarife de aynı sebeple ortak anahtardan: kargo grubunun blokunda yazdığımız sayı, checkout'un
+    // keseceği sayının ta kendisi olmalı.
+    settings.getNumber(SHIPPING_FEE_KEY, SHIPPING_FEE_DEFAULT),
   ]);
-  if (entries.length === 0) return { ...EMPTY_CART, freeShippingCents, ...meets(0, minBasketCents) };
+  if (entries.length === 0) return { ...EMPTY_CART, freeShippingCents, shippingTariffCents, ...meets(0, minBasketCents) };
   // Motorun kalem sözleşmesi: satır çözülürken doldurulur (kategori/koleksiyon oradan gelir).
   const discountable: DiscountableLine[] = [];
 
@@ -188,11 +197,11 @@ export async function getCartView(
     hasBlocked: lines.some((l) => l.blocked),
     freeShippingCents,
     shippingSubtotalCents,
-    // Eşiğe kalan KARGO grubundan hesaplanır. Sepetin tamamından hesaplansaydı 80 €'luk bir rota
-    // siparişi 5 €'luk kargo kalemini bedava taşıtırdı — kendi aracımızla giden malın tutarı, bir
-    // kargo firmasına ödediğimiz ücreti karşılamaz.
-    freeShippingRemainingCents:
-      freeShippingCents > 0 && hasShipping ? Math.max(0, freeShippingCents - shippingSubtotalCents) : 0,
+    // Eşiğe kalan ve ücret KARGO grubundan çözülür (`shippingGroupFee`) — sepetin tamamından
+    // çözülseydi 80 €'luk bir rota siparişi 5 €'luk kargo kalemini bedava taşıtırdı: kendi
+    // aracımızla giden malın tutarı, bir kargo firmasına ödediğimiz ücreti karşılamaz. Tarife ham
+    // taşınır, karar motorun.
+    shippingTariffCents,
     // Tamamı kargodaysa salt-kargo siparişi kendiliğinden doğar; müşteriye "iki sipariş
     // vereceksiniz" denmez, verilecek tek sipariş vardır.
     shippingOnly: hasShipping && !hasLocal,

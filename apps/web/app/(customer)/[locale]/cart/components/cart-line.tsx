@@ -10,7 +10,6 @@ import { QtyStepper } from '@/components/customer/ui/qty-stepper';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
 import { useCart } from '@/components/customer/cart/cart-context';
-import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import placeMessages from '@/components/customer/delivery/place-messages.json';
 import type { CartLine as Line, CartRef } from '@/lib/cart/cart-types';
 import type { Messages } from '../cart-types';
@@ -43,11 +42,16 @@ interface CartLineProps {
   t: Messages;
   locale: Locale;
   compact?: boolean;
+  /**
+   * Kargo grubunun satırı bir ton koyu çerçeve alır (tasarım). Fark bilerek küçük: grup ayrımını
+   * başlık ve blok anlatıyor, çerçeve yalnız gözün grubu bir bakışta toplamasına yarıyor. Belirgin
+   * bir renk farkı ikinci bir uyarı gibi okunurdu — oysa kargo grubu bir sorun değil.
+   */
+  tone?: 'default' | 'shipping';
 }
 
-export function CartLineRow({ line, t, locale, compact = false }: CartLineProps) {
+export function CartLineRow({ line, t, locale, compact = false, tone = 'default' }: CartLineProps) {
   const { setQty } = useCart();
-  const { place } = useDeliveryPlace();
   const pt = placeMessages[locale];
   // Satırın kimliği türüne göre doğar: pakette paketin kendisi, varyantta varyant + parti.
   const key: CartRef =
@@ -98,7 +102,8 @@ export function CartLineRow({ line, t, locale, compact = false }: CartLineProps)
     ) : (
       <div
         className={[
-          'flex rounded-card border border-sand-200 bg-card',
+          'flex rounded-card bg-card',
+          tone === 'shipping' ? 'border border-sand-300' : 'border border-sand-200',
           compact ? 'gap-3 p-3' : 'items-center gap-4 px-5 py-4',
           blocked ? 'opacity-90' : '',
         ]
@@ -217,23 +222,29 @@ export function CartLineRow({ line, t, locale, compact = false }: CartLineProps)
    * **Bu kalem BU ADRESE nasıl gider?** Kararın verildiği yer sepet olduğu için bilgi de burada,
    * kalem kalem duruyor (28.07 · kullanıcı geri bildirimi). Başlıktaki hap yalnız yeri söyler.
    *
-   * Yer bilinmiyorsa satır SESSİZ kalır: kime gönderileceğini bilmeden "kapıya getiriyoruz" ya da
-   * "gönderemiyoruz" demek, ikisi de uydurma olurdu. Soruyu sepetin üstündeki şerit soruyor.
+   * Cevabı MOTOR verir (`line.route` ← `decideCartAgainstWarehouse`), ekran çıkarmaz. Eskiden
+   * satır "rota içindeyim + ürün kargolanabilir mi" diye kendi kestiriyordu ve çok depoda yanlış
+   * cevap veriyordu: rota İÇİNDEKİ müşterinin kendi deposunda bulunmayan soğuk zincir ürünü
+   * "kapıya getiriyoruz" diye işaretleniyordu — getiremediğimiz hâlde (19.11 verisi bunu ölçüyor).
    *
-   * Üç hâl: rota içi → kapıya · rota dışı ve kargolanabilir → kargo · rota dışı ve soğuk zincir →
-   * gönderilemez (bal tonu). Üçüncüsü uyarıdır ama satırı engellemez — çıkışı kısıt bloğu verir.
+   * `null` = yol bilinmiyor ve satır SESSİZ kalır. İki sebebi var: yer sorulmamış olabilir (kime
+   * gönderileceğini bilmeden konuşmak uydurma olurdu — soruyu üstteki şerit soruyor) ya da satır
+   * bir PAKET olabilir: paket bölünmez, yolu checkout'ta bütünü üzerinden çözülür.
+   *
+   * `unavailable` burada hiç görünmez: o satır zaten `blocked` ve engelli yerleşime düşüyor.
    */
-  const deliveryNote = place ? (
-    <span
-      className={[
-        'font-sans font-semibold',
-        compact ? 'text-micro' : 'text-note',
-        place.inRoute ? 'text-olive-dark' : line.shippable ? 'text-muted' : 'text-honey',
-      ].join(' ')}
-    >
-      {place.inRoute ? pt.lineInRoute : line.shippable ? pt.lineShipping : pt.lineBlocked}
-    </span>
-  ) : null;
+  const deliveryNote =
+    line.route === null || line.route === 'unavailable' ? null : (
+      <span
+        className={[
+          'font-sans font-semibold',
+          compact ? 'text-micro' : 'text-note',
+          line.route === 'local' ? 'text-olive-dark' : line.route === 'shipping' ? 'text-muted' : 'text-honey',
+        ].join(' ')}
+      >
+        {line.route === 'local' ? pt.lineInRoute : line.route === 'shipping' ? pt.lineShipping : pt.lineBlocked}
+      </span>
+    );
 
   // Tavana ulaşıldığında sebep YAZILIR; "+" sessizce pasifleşirse müşteri arızalı sanır.
   const capNote =

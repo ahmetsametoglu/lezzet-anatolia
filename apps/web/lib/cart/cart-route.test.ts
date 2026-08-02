@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CategoryService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
 import { createTestWarehousePair, purgeTestData } from '@lezzet/database/testing';
 import { getCartView } from './read';
+import { shippingGroupFee } from './cart-types';
 
 /**
  * Sepetin YOL ayrımı (19.11) — `decideCartAgainstWarehouse` motorunun kablosu.
@@ -72,7 +73,12 @@ describe('sepetin yol ayrımı', () => {
     const view = await getCartView('tr', entry(1), { warehouseId: localWarehouseId, shippingWarehouseId });
     expect(view.shippingSubtotalCents).toBe(3_000);
     // Eşik ayardan gelir; kalan = eşik − kargo grubu (sepetin tamamı değil).
-    expect(view.freeShippingRemainingCents).toBe(Math.max(0, view.freeShippingCents - 3_000));
+    expect(shippingGroupFee(view).remainingForFreeCents).toBe(Math.max(0, view.freeShippingCents - 3_000));
+  });
+
+  it('kargo grubu yokken ücret de yok — boş grup eşiğin altı sayılmaz', async () => {
+    const view = await getCartView('tr', entry(1), {});
+    expect(shippingGroupFee(view).feeCents).toBe(0);
   });
 
   it('sepetin tamamı kargodaysa `shippingOnly` — müşteriye "iki sipariş" denmez', async () => {

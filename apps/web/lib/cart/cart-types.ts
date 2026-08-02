@@ -1,5 +1,5 @@
-import { meetsMinBasket } from '@lezzet/domain-core';
-import type { CouponRejection } from '@lezzet/domain-core';
+import { meetsMinBasket, resolveShippingFee } from '@lezzet/domain-core';
+import type { CouponRejection, ShippingFeeResult } from '@lezzet/domain-core';
 import type { LocalizedText } from '@lezzet/types';
 import type { CartLineRoute } from '@lezzet/domain-core';
 import type { StorefrontImage } from '@/lib/storefront/storefront-types';
@@ -251,13 +251,17 @@ export interface CartView {
    */
   shippingSubtotalCents: number;
   /**
-   * Ücretsiz kargoya kalan tutar — **kargo grubundan** hesaplanır. 0 = eşik aşıldı, eşik tanımsız
-   * ya da kargo grubu boş.
+   * Kargo TARİFESİ (cent) — ücretsiz olup olmadığına bakılmaksızın, ayardaki ham tutar.
    *
-   * Hesap burada yapılır, çağıranda değil: aynı sayı sepet ekranında ve checkout'ta görünecek ve
-   * iki yerde ayrı hesaplanırsa "sepette bedava yazıyordu" şikâyeti doğar.
+   * Karar burada DEĞİL: "bu grup ücret öder mi, eşiğe ne kadar kaldı" sorusunu motor cevaplıyor
+   * (`shippingGroupFee`). Çözülmüş sayıyı da ayrıca taşısaydık aynı gerçeğin iki kopyası olurdu
+   * ve biri bir gün ötekinden geride kalırdı; taşınan şey motorun GİRDİSİ.
+   *
+   * Özet kartının "sepette kargo satırı yok" kuralını bozmaz, sınırını çizer: o kural ücretin
+   * teslimat türüne, türün de adrese bağlı olmasından doğuyor. **Kargo grubunda tür zaten belli** —
+   * grubun tanımı bu. Rota grubunun ücreti hâlâ yazılmaz, orada eski gerekçe aynen geçerli.
    */
-  freeShippingRemainingCents: number;
+  shippingTariffCents: number;
   /**
    * Sepetin TAMAMI kargo grubunda mı (19.11). Öyleyse salt-kargo siparişi kendiliğinden doğar ve
    * müşteriye "iki sipariş vereceksiniz" DENMEZ — verilecek tek sipariş vardır.
@@ -278,9 +282,50 @@ export const EMPTY_CART: CartView = {
   minBasketCents: 0,
   freeShippingCents: 0,
   shippingSubtotalCents: 0,
-  freeShippingRemainingCents: 0,
+  shippingTariffCents: 0,
   shippingOnly: false,
 };
+
+/**
+ * Sepetin İKİ GRUBU (19.7) — kapıya gidenler + kargoyla gidenler.
+ *
+ * **Ayrımın TEK yeri.** Üç yer birden soruyor: sepet ekranı (iki grup çizer), mobil alt çubuk
+ * (yalnız rota grubunu taşır) ve checkout istemcisi (siparişe hangi kalemler girecek). Üçü ayrı
+ * ayrı `route === 'shipping'` yazsaydı kural üç yerde bakıma kalırdı — ve ayrışan bir kopya
+ * burada "ekranda gördüğüm kalem siparişe girmedi" demek.
+ *
+ * Kargo grubuna YALNIZ motorun oraya koyduğu kalem girer; geri kalan her şey — yolu çözülmemiş
+ * satır, paket, engelli kalem — ana grupta kalır. Yön bilinçli: bilinmeyen bir satırı ana akıştan
+ * çıkarmak, müşterinin siparişinden sessizce kalem düşürmek olurdu. Paket zaten tanım gereği
+ * bölünmez (`route: null`) — yolu checkout'ta bütünü üzerinden çözülür.
+ */
+export function splitByRoute(lines: readonly CartLine[]): { route: CartLine[]; shipping: CartLine[] } {
+  return {
+    route: lines.filter((l) => l.route !== 'shipping'),
+    shipping: lines.filter((l) => l.route === 'shipping'),
+  };
+}
+
+/**
+ * Kargo grubunun ücret kararı — **motorun kendisi**, sepetin kargo tarafına uygulanmış hâli.
+ *
+ * Sunucu okuması da sepet ekranı da bunu çağırır ve checkout `resolveShippingFee`'yi aynı eşikle
+ * çağırır: sepette "6,90 €" ya da "ücretsiz" yazıp kasada başka bir sayı kesmek, ekranın sözünü
+ * tutmamasıdır (`lib/settings-keys` künyesi bunun bir kez yaşandığını anlatıyor).
+ *
+ * Kargo grubu yoksa erken çıkar: motor 0 €'luk bir sepeti "eşiğin altında" okuyup ücret yazardı.
+ */
+export function shippingGroupFee(
+  view: Pick<CartView, 'shippingSubtotalCents' | 'freeShippingCents' | 'shippingTariffCents'>,
+): ShippingFeeResult {
+  if (view.shippingSubtotalCents <= 0) return { feeCents: 0, freeReason: null, remainingForFreeCents: 0 };
+  return resolveShippingFee({
+    deliveryType: 'shipping',
+    basketCents: view.shippingSubtotalCents,
+    freeThresholdCents: view.freeShippingCents,
+    feeCents: view.shippingTariffCents,
+  });
+}
 
 /**
  * Satırın kimliği — aynı varyantın farklı partisi AYRI satır (React anahtarı da budur).
@@ -335,10 +380,22 @@ export function viewWithEntries(view: CartView, entries: readonly CartEntry[]): 
   const subtotalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
   // Eşik kuralı MOTORDAN sorulur, burada yeniden yazılmaz — sunucu okumasıyla aynı karar.
   const basket = meetsMinBasket(subtotalCents, view.minBasketCents);
+  /**
+   * KARGO grubunun sayıları da tazelenir. Yoksa kargo satırının adedini artıran müşteri, sunucu
+   * turu dönene kadar eski grup toplamını ve "ücretsiz kargoya X kaldı" cümlesini okur — üstelik
+   * o X'i çoktan eklemiştir. Ücretin kendisi burada TUTULMAZ, motora sorulur (`shippingGroupFee`).
+   *
+   * Son kargo satırı silinince `shippingOnly` de düşmeli: kalan tek grup rotaysa ekran hâlâ
+   * "kargolu ürünleri ayrıca sipariş ver" diyor olurdu.
+   */
+  const shippingSubtotalCents = lines.reduce((sum, l) => (l.route === 'shipping' ? sum + (l.lineTotalCents ?? 0) : sum), 0);
+  const hasShipping = lines.some((l) => l.route === 'shipping');
   return {
     ...view,
     lines,
     subtotalCents,
+    shippingSubtotalCents,
+    shippingOnly: hasShipping && !lines.some((l) => l.route === 'local'),
     /**
      * Toplam da BURADA yeniden kurulur. Kurulmazsa sunucunun ESKİ toplamı yerinde kalıyor ve
      * özet kartı indirimi `ara toplam − toplam` farkından türettiği için ekranda **olmayan bir
