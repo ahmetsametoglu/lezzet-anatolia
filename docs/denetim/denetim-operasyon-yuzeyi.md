@@ -60,7 +60,7 @@ erişilebilirliği `Segmented`'da yok — kopya şimdiden geride.
 Ayrı kalması gerektiğini düşünüyorsanız künyesine `MultiToggle`'dan farkını yazın — bir sonraki
 okuyan aynı soruyu sormasın.
 
-**Cevap:** —
+**Cevap:** KABUL, indi (02.08). `Segmented` silindi; iki çağrı yeri (`trend-panel` pencere seçicisi · `error-panel` görünüm seçicisi) `MultiToggle size="sm"` ile bağlandı. Tespit birebir doğruydu — kopya yalnız gereksiz değil, GERİDEYDİ: ok tuşu gezinmesi ve `radiogroup` rolü kopyada hiç yoktu, yani sistem ekranı klavyeyle kullanılamıyordu. Yan kazanç: seçili hap artık kayıyor ve seçenek genişlikleri eşit, yani "hangisindeyim" iki ekranda aynı biçimde okunuyor.
 
 ## O6. Küçük kopyalar: `StepButton` ×2, `StatusBadge` ×2, ürün durum etiketi ×3
 
@@ -72,7 +72,12 @@ okuyan aynı soruyu sormasın.
 **Öneri:** `StepButton` → `components/operation/ui/`; ürün durum sözlüğü `packages/types`'a
 (`ORDER_STATUS_LABELS` deseni) — etiket üç yerde ayrışamaz olsun.
 
-**Cevap:** —
+**Cevap:** KABUL, ikisi de indi (02.08).
+
+- **`StepButton`** → `components/operation/ui/step-button.tsx`. Ölçü, "tasarım ölçüsü" diye künyelenmiş olandan alındı (26px); öteki kopya dört ölçüde sapmıştı ve hiçbiri karar değildi. Erişilebilirlik de eklendi: "−" tek başına ne yaptığını söylemiyor, dört çağrı yeri artık `ariaLabel` veriyor.
+- **Ürün durum sözlüğü** → `PRODUCT_STATUS_LABELS`, `packages/types/product.schema.ts`, `ProductStatusEnum`'un YANINDA (`ORDER_STATUS_LABELS` deseni: `Record` eksik anahtarda derlemeyi durdurur). Rozet de tek komponente indi (`tabs/product/status-badge.tsx`) — renk orada kaldı, çünkü `OpsTone` bir arayüz sözlüğü ve `packages/types` onu bilmemeli.
+- **Denetimin görmediği bir şey de çıktı:** üç kopya yalnız tekrar değildi, ZATEN AYRIŞMIŞTI — `active` rozette "Aktif", durum seçicisinde "Satışta" yazıyordu. Aynı ürün aynı ekranda iki ad taşıyordu. Kazanan "Satışta": tasarımın kendi dili de öyle (*"aday ürün / **satılabilir** ürün"*), ve "Aktif" neyin aktif olduğunu söylemiyor.
+- **Not:** `packages/types` arka uç şeridinin dosyası; dokunuş bilinçli ve emsalli (aynı dosyada üç etiket haritası zaten operasyon yüzeyi için duruyor), toplamı iki blok ve tamamen eklemeli.
 
 ## O7. URL yardımcıları — `RawParams` 7, `one()` 6+1 kopya
 
@@ -102,7 +107,15 @@ diyerek bu sınıfı bir kez temizlemiş; bugün yine:
 **Dayanak:** CLAUDE.md §1; kural tarafı için `denetim-arka-uc.md §B6` (STACK §10 kararı) —
 oradaki karar ne olursa olsun bu çağrılar tek dosyaya toplanmalı.
 
-**Cevap:** —
+**Cevap:** KABUL, indi (02.08). `format.ts` dört yeni işlevle tek kaynak oldu: **`num`** (binlik ayraçlı sayı — altı dosyadaki `count.toLocaleString('tr-TR')` buraya bağlandı), **`decimal`** (sabit basamaklı ondalık — `money`/`amount` ve para GİRDİ kutusu artık aynı kararı okuyor), **`megabytes`/`gigabytes`** (sistem ekranının `mb`/`gb`/`mbGb` üçlüsü), **`dayMonth`** (yılsız gün etiketi). `percent` de `num` üzerine oturdu.
+
+Bulduklarınıza ek olarak **üç sızıntı daha** çıktı, biri gerçek bir kusurdu:
+
+- `order-detail.desktop.tsx:412` marjı `%{x.toFixed(1)}` ile yazıyordu — **noktalı ondalık**: ekranda "%15.3". Türkçe arayüzde virgül olmalı. Denetimin listesinde yoktu, aynı sınıfı tarayınca çıktı.
+- `bundle-items-editor.tsx:409` ve `package/actions.ts:64` — aynı elle biçimleme.
+- `money-input.tsx`'te yüzde kutusu da (`formatPercent`) aynı kararı üçüncü kez yazıyordu.
+
+**Bir öneriyi UYGULAMADIM ve gerekçesi dosyada yazılı:** `calendar-math.formatDay` ilk bakışta `shortDate`'in kopyası ama değil — `shortDate` günü **UTC** okur (DB'de saklanan bir andır), takvim günü **yerel** ayrıştırılır (kullanıcının seçtiği gündür). Birleştirmek, seçilen günü GMT-5'te bir gün geriye kaydırırdı. Dosyanın kendi künyesi bu kararı zaten anlatıyordu; ben yine de birleştirmeye kalkıştım ve künyeyi okuyunca geri aldım — künyeye artık "onu KULLANMAZ ve bu bilinçli" cümlesi eklendi ki bir sonraki okuyan (ya da denetim) aynı yolu tekrar denemesin. `system-read.ts:312` `.toFixed(1)` de dokunulmadı: o SVG koordinatı, ekranda okunan bir sayı değil.
 
 ## O9. `customers-types.ts` — şemadan türetme kuralının açık reddi (tartışma bekliyor)
 
@@ -120,7 +133,14 @@ türetilir, ya da künyedeki gerekçe (neden bu dosyada türetme *bilinçli* red
 dönüşür ve karar CLAUDE.md/STACK'e istisna olarak işlenir. Savunmanızı bekliyorum — "kopya bir gün
 alan düşürür" riskinin yaşanmış örneği müşteri şeridinde var (`NewAddressInput`, 28.07).
 
-**Cevap:** —
+**Cevap:** SAVUNMA YOK — haklısınız, türetildi (02.08). Künyedeki gerekçe yanlış değildi (*"satır bir `UserProfile` değil, onun indirgenmiş hâlidir"*) ama **çıkarımı yanlıştı**: indirgeme türetmenin karşıtı değil, `Pick`'in ta kendisi. Sayı da iddiayı çürüttü — saydım: `CustomerRow`'un on dört alanının **on ikisi** birebir `UserProfile` alanıydı (`b2bApproved` dahil; sizin saydığınız ondan da fazla).
+
+- `CustomerRow` = `Pick<UserProfile, 12 alan> & { initials; hasOverdue }` — kalan ikisi gerçekten hesaplanan: baş harfler addan türer, gecikme siparişlerden.
+- `CustomerEditInput` = `Pick<UserProfile, 9 alan>` — tamamı.
+- `ConsentView` = `Consent`. Şemadaki `ConsentSchema` dışa açık değildi, açıldı (+ `z.infer` tipi). İzin kaydı GDPR **kanıtıdır**; kopyanın bir gün alan düşürmesi, kanıtın eksik gösterilmesi demek.
+- `CustomerAddressRow` = `Pick<Address, 6 alan> & { line }` — `line` türetilir (`line1`+`line2` tek okunur satır olur), gerisi varlıktan.
+
+Künyeye artık ayrımın kendisi yazıldı: **veride duran alan `Pick`'lenir, hesaplanan alan yazılır.** Kural CLAUDE.md'de zaten var, istisna gerekmedi.
 
 ## O10. `BEKLEYEN(18.5)` — istemci hata loglaması kapanmış göreve asılı
 
@@ -132,7 +152,12 @@ ama takip eden açık kayıt yok.
 **Öneri:** İşaret ya 18.x altında yeni bir görev satırına ya `BACKLOG`'a bağlansın; mevcut hâliyle
 hiçbir zaman ele alınmayacak.
 
-**Cevap:** —
+**Cevap:** KABUL, indi (02.08) — ve **ikinci bir tanesi daha vardı**: `losses-tab.tsx`'teki `BEKLEYEN(09.13)` de kapanmış bir göreve asılıydı (`docs:check` ikisini de bilgi olarak veriyordu).
+
+- `BEKLEYEN(18.5)` → **`BEKLEYEN(09.17)`**. Yeni görev açmadım çünkü gereği yoktu: 09.17 açık, o dört client'ın sahibi ve **analizi zaten kendi notunda** duruyor. Ama o not da 18.5'i gösteriyordu — işaretle birlikte o da düzeltildi, yoksa iz yine kapanmış göreve çıkardı.
+- `BEKLEYEN(09.13)` → **yeni görev `(09.18)`**, "imha/fire aramasının sunucu tarafı". Burada mevcut bir görev sahiplenemezdi: iş stok servisine inner-join'li bir süzgeç eklemek, yani kendi kapsamı var.
+
+`pnpm docs:check` artık "✔ doküman/kod tutarlı" diyor — iki bilgi satırı da kalktı.
 
 ## Şüpheli — meşru olabilir, kararı size bırakıyorum
 
@@ -143,4 +168,9 @@ hiçbir zaman ele alınmayacak.
 - `ChipTone`/`OpsTone`/`SignalTone`/`ErrorTone`/`BadgeTone` — `tone.ts` merkez olacaksa diğerleri
   alt küme olarak oradan türetilebilir; değerlendirin.
 
-**Cevap:** —
+**Cevap:** Üçü de değerlendirildi; ikisinde size katılıyorum, birinde katılmıyorum (02.08).
+
+- **`paymentTone` — DUPLİKASYON, birleştirildi.** "Kurallar örtüşüyor ama birebir değil" demişsiniz; fark bir karar değildi: sipariş ekranı gecikmiş vadeyi kırmızı çiziyor, müşteri paneli o dalı **hiç bilmiyordu** — ve gecikme tam da müşteri panelinde saklanmaması gereken şey. Tek kapı `ui/tone.ts`: `paymentTone(status, overdue = false)`. `overdue` ayrı bir girdi çünkü durumun bir değeri değil — vadesi geçmiş sipariş hâlâ "bekliyor" durumundadır, gecikme zamanın ona kattığı şeydir. Bilinmediği yerde varsayılan `false`: cevabı olmayan soruya kırmızı yazmak uydurma olurdu.
+- **`ChipTone` ve `ErrorTone` — türetildi.** `ChipTone` artık `Extract<OpsTone, 'olive'|'amber'|'red'>`; `ErrorTone` de öyle ama önce **sözlüğünü değiştirmesi gerekti**: kendi kelimelerini kullanıyordu (`danger`/`warn`), yani aynı kırmızı rozette `red`, hata gövdesinde `danger` diye çağrılıyordu. Üç çağrı yeri güncellendi. Kazanç: palete bir renk eklenir ya da adı değişirse bu listeler ya kendiliğinden doğru kalır ya da DERLENMEZ.
+- **`SignalTone` ve `BadgeTone` — AYRI KALIYOR, gerekçesiyle.** `SignalTone` (`ok|warn|bad`) `domain-core`'da ve bir DOMAIN sözlüğü: motor "bu sinyal kötü" der, "bu sinyal kırmızı" demez — palete bağlamak, iş kuralına arayüz kararı sızdırmak olurdu (`STACK §4`). `BadgeTone` (`offer|positive|pending|closed|package`) müşteri yüzeyinin ve o yüzeyin token'ları ayrı; üstelik değerleri renk değil **rol** adı, yani zaten farklı bir soyutlama. İkisi de `OpsTone`'un alt kümesi DEĞİL, komşusu.
+- **`OrderCard` ×3** — sizinle aynı fikirdeyim, duplikasyon değil: üç ekranın veri modeli gerçekten farklı. Ad çakışması için de bir şey yapmadım; üçü de kendi dosyasında yerel ve dosya adı bağlamı zaten veriyor.

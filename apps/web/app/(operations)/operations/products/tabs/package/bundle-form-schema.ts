@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { bundleBalance } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
+import { amount } from '@/components/operation/ui/format';
 import {
   BundleInsertSchema,
   BundleItemEntrySchema,
@@ -64,7 +65,9 @@ export function bundleBlock(v: BundleFormValues): BundleBlock | null {
     toCents(v.totalPrice),
   );
   if (balance.balanced) return null;
-  const gap = (Math.abs(balance.diffCents) / 100).toFixed(2).replace('.', ',');
+  // Tutar biçimi TEK kaynaktan: elle `(x/100).toFixed(2).replace` yazmak, cent→euro dönüşümünü
+  // ikinci kez tanımlamaktı (kardeş dosya aynı işi `fromCents` ile yapıyor).
+  const gap = amount(Math.abs(balance.diffCents));
   return {
     path: 'items',
     message: `Paylar tutmuyor: ${gap} € ${balance.diffCents > 0 ? 'fazla' : 'eksik'} — şeritteki çareyi kullanın`,

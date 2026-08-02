@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { OpsTone } from './tone';
 
 /**
  * Operasyon çipi — Komponent Envanteri O3 (filtre & arama). Filtre/etiket öğesi (kategori süzgeci,
@@ -6,7 +7,15 @@ import type { ReactNode } from 'react';
  * `active` dolu olive; pasif çerçeveli olive; `tone='amber'` dikkat çipi; `dashed` ekleme çipi ("+ …").
  * Rozetten (Badge) farkı: çip tıklanabilir/seçilebilir bir kontrol, rozet salt gösterimdir.
  */
-export type ChipTone = 'olive' | 'amber' | 'red';
+/**
+ * Çipin taşıyabildiği anlam renkleri — `OpsTone`'un ALT KÜMESİ, ayrı bir sözlük değil.
+ *
+ * `Extract` ile türetilir: palete bir renk eklenir ya da adı değişirse burası ya kendiliğinden
+ * doğru kalır ya da derlenmez. Elle yazılmış üç dizge, sessizce ayrışabilecek ikinci bir liste
+ * demekti. Çip neden hepsini almıyor: bir SÜZGEÇTİR — "kapalı/nötr" ve "ölçüm" bir süzgeç değeri
+ * değil, "onay/aday" ise durumun kendisi (rozetin işi).
+ */
+export type ChipTone = Extract<OpsTone, 'olive' | 'amber' | 'red'>;
 
 interface ChipProps {
   active?: boolean;

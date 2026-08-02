@@ -1,5 +1,5 @@
 import type { OpsTone } from '@/components/operation/ui/tone';
-import type { CustomerType, PaymentStatus } from '@lezzet/types';
+import type { CustomerType } from '@lezzet/types';
 import type { CustomerRow } from './customers-types';
 
 // Ekran metinleri ve renk anlamları — TEK yerde, iki cihaz görünümü paylaşır. Kopyalansaydı mobil ve
@@ -46,13 +46,14 @@ export function statusHint(row: CustomerRow): string {
 }
 
 /**
- * Ödeme durumunun RENK anlamı. Etiketler burada YOK: `ORDER_STATUS_LABELS` ve `PAYMENT_STATUS_LABELS`
- * `packages/types`'ta, enum'ın yanında duruyor. Bir tur kopyalanmıştı ve kopya ayrışmıştı
- * (`completed`: "Kapandı" ↔ "Tamamlandı") — aynı sipariş iki ekranda iki ad taşıyordu.
+ * Ödeme durumunun RENK anlamı — kendi tanımı YOK, ortak kapıya bağlı (`ui/tone.ts`).
+ *
+ * İkinci bir tanım vardı ve sipariş ekranınınkinden bir dal eksikti: gecikmiş vade orada kırmızı,
+ * burada değildi. Etiketler de burada değil: `PAYMENT_STATUS_LABELS` `packages/types`'ta, enum'ın
+ * yanında (kopyalandığı tur ayrışmıştı — `completed`: "Kapandı" ↔ "Tamamlandı").
+ *
+ * Bu ekranın satırları gecikmeyi TAŞIMIYOR (`CustomerOrderRow` bir sipariş özeti, vade defteri
+ * değil), o yüzden varsayılan `false` ile çağrılıyor — gecikme bilgisi listede ayrı bir rozetle
+ * (`hasOverdue`) zaten söyleniyor.
  */
-export function paymentTone(status: PaymentStatus): OpsTone {
-  if (status === 'paid') return 'olive';
-  // Kısmi ve bekleyen İKİSİ DE dikkat ister ama aynı şey değil; ayrımı etiket taşır, renk "bak" der.
-  if (status === 'partial' || status === 'pending') return 'amber';
-  return 'neutral';
-}
+export { paymentTone } from '@/components/operation/ui/tone';

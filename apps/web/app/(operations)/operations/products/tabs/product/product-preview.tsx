@@ -3,19 +3,13 @@ import Link from 'next/link';
 import { Badge } from '@/components/operation/ui/badge';
 import { AlertIcon, CheckIcon, InfoIcon } from '@/components/operation/ui/icons';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
+import { StatusBadge } from './status-badge';
 import { missingDeclarations, resolveLocalizedText } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 import { filledContentLangs, type ProductView } from '../../products-types';
 
 // Seçili ürün paneli — Ürünler ekranının sağ sütunu. SALT görünüm: türetilmiş bilgi gösterir,
 // düzenleme modal'da (Düzenle) yapılır. Fiyat/stok burada düzenlenmez, kendi ekranlarına köprü verir.
-
-function StatusBadge({ product }: { product: ProductView }) {
-  const status = product.status;
-  if (status === 'candidate') return <Badge tone="blue">Aday</Badge>;
-  if (status === 'passive') return <Badge tone="neutral">Pasif</Badge>;
-  return <Badge tone="olive">Aktif</Badge>;
-}
 
 // Bir dilin içerik kartı: dolu (olive) ya da eksik (amber, öneri hazır).
 function LangCard({ code, filled }: { code: Locale; filled: boolean }) {
@@ -118,7 +112,7 @@ export function ProductPreview({ product, onEdit }: ProductPreviewProps) {
                 {product.categoryName} · slug: {product.slug}
               </span>
               <div className="mt-0.5 flex gap-1.5">
-                <StatusBadge product={product} />
+                <StatusBadge status={product.status} />
                 <Badge tone="neutral">{product.variants.length} varyant</Badge>
               </div>
             </div>

@@ -6,12 +6,12 @@ import { Card } from '@/components/operation/ui/card';
 import { SearchInput } from '@/components/operation/ui/search-input';
 import { Table, withCells, type Column } from '@/components/operation/ui/table';
 import { Tabs } from '@/components/operation/ui/tabs';
-import { shortDate, shortDateTime } from '@/components/operation/ui/format';
+import { num, shortDate, shortDateTime } from '@/components/operation/ui/format';
 import { ERROR_COLUMN_TRACKS } from '../system-columns';
 import { ERROR_PAGE_SIZE, type ErrorTab } from '../system-url';
 import type { ErrorRowView, SystemData } from '../system-types';
 import { ErrorMetaGrid, LevelBadge, LevelDot, RegressionChip, RegressionNote, ResolvedChip } from './error-meta';
-import { Segmented } from './segmented';
+import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { CopyButton, StackBlock } from './stack-block';
 
 /**
@@ -78,7 +78,7 @@ function errorColumns(onResolve: (id: string) => void, resolving: string | null)
           r.count >= 100 ? 'text-ops-red-dark' : r.count >= 20 ? 'text-ops-amber-dark' : 'text-ops-body'
         }`}
       >
-        {r.count.toLocaleString('tr-TR')}
+        {num(r.count)}
       </span>
     ),
     // MUTLAK zaman, göreli değil (tasarım). Göreli süre "son 3 gün önce" der ve iki hatayı
@@ -133,13 +133,14 @@ export function ErrorPanel(props: ErrorPanelProps) {
             Satır = hata türü, olay değil. Sıra son görülmeye göre — seviyeye göre değil.
           </span>
         </div>
-        <Segmented
+        <MultiToggle
           label="Hata görünümü"
           value={view}
           onChange={setView}
-          items={[
-            { value: 'liste' as PanelView, label: 'Liste' },
-            { value: 'inceleme' as PanelView, label: 'İnceleme' },
+          size="sm"
+          options={[
+            { key: 'liste' as PanelView, label: 'Liste' },
+            { key: 'inceleme' as PanelView, label: 'İnceleme' },
           ]}
         />
         <SearchInput value={search} onChange={onSearch} placeholder="mesaj · kaynak · yol ara…" className="w-[250px]" />
@@ -352,7 +353,7 @@ function ErrorInspector({
                       r.count >= 100 ? 'text-ops-red-dark' : r.count >= 20 ? 'text-ops-amber-dark' : 'text-ops-body'
                     }`}
                   >
-                    {r.count.toLocaleString('tr-TR')}×
+                    {num(r.count)}×
                   </span>
                 </span>
                 <span className={`font-ops-body text-ops-sm font-medium leading-[1.45] ${r.level === 'fatal' ? 'text-ops-red-dark' : 'text-ops-ink'}`}>

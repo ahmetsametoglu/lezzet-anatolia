@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ALLERGEN_LABELS, ProductAllergenEnum, resolveLocalizedText, type LocalizedText } from '@lezzet/types';
+import { ALLERGEN_LABELS, PRODUCT_STATUS_LABELS, ProductAllergenEnum, resolveLocalizedText, type LocalizedText } from '@lezzet/types';
 import { type Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
@@ -217,9 +217,12 @@ export function ProductFormDialog({ mode, product, categories, bundles, device, 
             bare
             className="w-[248px]"
             options={[
-              { key: 'active', label: 'Satışta', tone: 'olive', title: 'Katalogda görünür ve satılabilir' },
-              { key: 'passive', label: 'Pasif', tone: 'neutral', title: 'Katalogda gizli — arşiv değil, geri açılabilir' },
-              { key: 'candidate', label: 'Aday', tone: 'blue', title: 'Satılamaz; yalnız keşif akışında görünür' },
+              // Etiketler TEK kaynaktan (`PRODUCT_STATUS_LABELS`): seçicideki kelime ile listedeki
+              // rozetin kelimesi ayrışmıştı ("Satışta" ↔ "Aktif"). Açıklama (`title`) burada kalır —
+              // o bir arayüz ipucudur, durumun adı değil.
+              { key: 'active', label: PRODUCT_STATUS_LABELS.active, tone: 'olive', title: 'Katalogda görünür ve satılabilir' },
+              { key: 'passive', label: PRODUCT_STATUS_LABELS.passive, tone: 'neutral', title: 'Katalogda gizli — arşiv değil, geri açılabilir' },
+              { key: 'candidate', label: PRODUCT_STATUS_LABELS.candidate, tone: 'blue', title: 'Satılamaz; yalnız keşif akışında görünür' },
             ]}
           />
           {bundleNote}

@@ -25,11 +25,13 @@ export const CompanyInfoSchema = z.object({
 export type CompanyInfo = z.infer<typeof CompanyInfoSchema>;
 
 /** Kanal bazlı pazarlama izni — GDPR kanıtı: ne zaman, nereden verildi. */
-const ConsentSchema = z.object({
+export const ConsentSchema = z.object({
   granted: z.boolean(),
   at: z.string().nullish(),
   source: z.string().nullish(),
 });
+/** Tek kanalın izni — operasyon ekranı bunu ALAN ALAN yeniden yazıyordu (denetim O9). */
+export type Consent = z.infer<typeof ConsentSchema>;
 
 export const MarketingConsentSchema = z.object({
   email: ConsentSchema.nullish(),

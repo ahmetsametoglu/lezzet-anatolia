@@ -1,19 +1,26 @@
 import type { ReactNode } from 'react';
+import type { OpsTone } from './tone';
 
 /**
  * Operasyon hata gövdesi — pane ortasında merkezlenmiş durum bloğu: ikon kutusu + başlık +
  * açıklama + aksiyon/ek slot. 404 ve 500 ekranları bu TEK bloğu paylaşır (yeni komponent icat
  * edilmez). Çerçeve (AdminSidebar + üst bar) layout/sayfada korunur; burası yalnız gövdedir.
  *
- * `tone` ikon kutusunun rengini belirler — anlam taşır: `neutral` (bulunamadı), `danger` (hata),
- * `warn` (yetki/uyarı). Emoji yok; ikon çizgi SVG olarak `icon` slot'undan gelir.
+ * `tone` ikon kutusunun rengini belirler — anlam taşır: `neutral` (bulunamadı), `red` (hata),
+ * `amber` (yetki/uyarı). Emoji yok; ikon çizgi SVG olarak `icon` slot'undan gelir.
+ *
+ * Sözlük ORTAK (`OpsTone`) ve buradaki küme onun ALT KÜMESİ olarak türetiliyor. Bir tur kendi
+ * kelimelerini kullanıyordu (`danger` / `warn`) ve bu ikinci bir sözlüktü: aynı kırmızıyı rozette
+ * `red`, hata gövdesinde `danger` diye çağırmak, iki ekranı karşılaştıran gözü yoruyor ve palete
+ * bir renk eklendiğinde hangi listelerin güncelleneceğini belirsiz bırakıyordu. `Extract` sayesinde
+ * `OpsTone`'dan bir değer kalkarsa burası DERLENMEZ.
  */
-type ErrorTone = 'neutral' | 'danger' | 'warn';
+type ErrorTone = Extract<OpsTone, 'neutral' | 'red' | 'amber'>;
 
 const TONE: Record<ErrorTone, string> = {
   neutral: 'bg-ops-gray-100 text-ops-body',
-  danger: 'bg-ops-red-bg text-ops-red',
-  warn: 'bg-ops-amber-bg text-ops-amber',
+  red: 'bg-ops-red-bg text-ops-red',
+  amber: 'bg-ops-amber-bg text-ops-amber',
 };
 
 interface ErrorStateProps {

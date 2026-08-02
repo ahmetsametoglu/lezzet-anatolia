@@ -1,7 +1,7 @@
 'use client';
 
 import { Card } from '@/components/operation/ui/card';
-import { Segmented } from './segmented';
+import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { TREND_WINDOWS, WINDOW_LABEL, type TrendWindow } from '../system-url';
 import type { TrendChartView } from '../system-types';
 
@@ -69,11 +69,12 @@ export function TrendPanel({ charts, empty, win, onWindow, emptyBody }: TrendPan
  */
 function WindowPicker({ win, onWindow }: { win: TrendWindow; onWindow: (w: TrendWindow) => void }) {
   return (
-    <Segmented
+    <MultiToggle
       label="Trend penceresi"
       value={win}
       onChange={onWindow}
-      items={TREND_WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))}
+      size="sm"
+      options={TREND_WINDOWS.map((w) => ({ key: w, label: WINDOW_LABEL[w] }))}
     />
   );
 }

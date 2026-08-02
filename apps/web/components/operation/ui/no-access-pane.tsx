@@ -34,7 +34,7 @@ export function NoAccessPane({ title, reason }: NoAccessPaneProps) {
           kapalı
         </span>
       </div>
-      <ErrorState tone="warn" icon={<AlertIcon />} title="Bu ekran yalnız yöneticiye açık" description={reason} />
+      <ErrorState tone="amber" icon={<AlertIcon />} title="Bu ekran yalnız yöneticiye açık" description={reason} />
     </>
   );
 }

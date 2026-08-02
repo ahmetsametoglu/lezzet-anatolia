@@ -228,7 +228,7 @@ function CleanState({ filtered, periodLabel }: CleanStateProps) {
     // Arama YÜKLENMİŞ satırlarda çalışır (dönem listesi imleçle gelir) — bu yüzden "kayıt yok"
     // demez, ne aradığını söyler. Tetikleyici altta durduğu için devamı yüklenebilir.
     //
-    // BEKLEYEN(09.13): imha aramasının sunucu tarafı. Terim lot numarasına ve ürün adına bakıyor;
+    // BEKLEYEN(09.18): imha aramasının sunucu tarafı. Terim lot numarasına ve ürün adına bakıyor;
     // ikisi de düzeltme satırının kendisinde değil, gömülü `stock`/`product` ilişkisinde duruyor —
     // sunucuda süzmek ortak stok servisine inner-join'li bir süzgeç eklemeyi gerektiriyor. Liste
     // dönemle sınırlı olduğu için bugünkü sınır dar; kuyruğu yutmaması ekranın kendi cümlesiyle

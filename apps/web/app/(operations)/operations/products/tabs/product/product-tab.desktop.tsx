@@ -7,36 +7,16 @@ import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
 import { withCells, Table, type Column } from '@/components/operation/ui/table';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
-import { resolveLocalizedText } from '@lezzet/types';
+import { PRODUCT_STATUS_LABELS, resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { ProductPreview } from './product-preview';
+import { StatusBadge } from './status-badge';
 import { filledContentLangs, type ProductStatus, type ProductView, type ProductsViewProps, type StatusFilter } from '../../products-types';
 
 // Ürünler sekmesi (masaüstü): liste + seçili önizleme paneli (1.95fr / 1fr). Süzgeçler
 // (arama · kategori · durum · beyan eksik) İŞLEVSEL — hepsi listeyi gerçekten daraltır.
 
-const STATUS_LABEL: Record<ProductStatus, string> = { active: 'Aktif', passive: 'Pasif', candidate: 'Aday' };
 const STATUS_ORDER: ProductStatus[] = ['active', 'passive', 'candidate'];
-
-function StatusBadge({ status }: { status: ProductStatus }) {
-  if (status === 'candidate')
-    return (
-      <Badge tone="blue" dot>
-        Aday
-      </Badge>
-    );
-  if (status === 'passive')
-    return (
-      <Badge tone="neutral" dot>
-        Pasif
-      </Badge>
-    );
-  return (
-    <Badge tone="olive" dot>
-      Aktif
-    </Badge>
-  );
-}
 
 function LangBadge({ langs }: { langs: Locale[] }) {
   if (langs.length === 0) return <Badge tone="amber">—</Badge>;
@@ -63,7 +43,7 @@ function StatusFilterChip({ value, onChange }: { value: StatusFilter; onChange: 
   if (value !== 'all') {
     return (
       <Chip active onClick={() => onChange('all')}>
-        {STATUS_LABEL[value]} ✕
+        {PRODUCT_STATUS_LABELS[value]} ✕
       </Chip>
     );
   }
@@ -85,7 +65,7 @@ function StatusFilterChip({ value, onChange }: { value: StatusFilter; onChange: 
             }}
             className="cursor-pointer px-[13px] py-2.5 text-left font-ops-body text-ops-base text-ops-strong hover:bg-ops-subtle"
           >
-            {STATUS_LABEL[s]}
+            {PRODUCT_STATUS_LABELS[s]}
           </button>
         ))}
       </AnchoredMenu>

@@ -44,7 +44,14 @@ export function toDay(date: Date): string {
   return `${date.getFullYear()}-${m}-${d}`;
 }
 
-/** "24 Tem 2026" — tetikleyicide görünen hâl. */
+/**
+ * "24 Tem 2026" — tetikleyicide görünen hâl.
+ *
+ * `shortDate` ile aynı metni üretir ama ONU KULLANMAZ ve bu bilinçli: `shortDate` günü **UTC**
+ * okur (DB'de saklanan bir andır), burada gün **yerel** ayrıştırılır — dosyanın en üstündeki karar.
+ * İkisini birleştirmek, kullanıcının seçtiği günü GMT-5'te bir gün geriye kaydırırdı. Boş hâl de
+ * farklı: tetikleyici kendi yer tutucusunu gösteriyor, sütunun "—"si oraya yazılamaz.
+ */
 export function formatDay(iso: string | null | undefined): string {
   const date = parseDay(iso);
   if (!date) return '';

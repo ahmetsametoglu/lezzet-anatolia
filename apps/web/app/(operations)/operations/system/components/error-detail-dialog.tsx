@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
+import { num } from '@/components/operation/ui/format';
 import type { ErrorRowView } from '../system-types';
 import { ErrorMetaGrid, LevelBadge, RegressionChip, RegressionNote } from './error-meta';
 import { CopyButton, StackBlock } from './stack-block';
@@ -28,7 +29,7 @@ export function ErrorDetailDialog({ row, onClose, onResolve, resolving }: ErrorD
       open
       onClose={onClose}
       title="Hata detayı"
-      subtitle={`${row.count.toLocaleString('tr-TR')} kez görüldü · ${row.source}`}
+      subtitle={`${num(row.count)} kez görüldü · ${row.source}`}
       maxWidth={660}
       footer={
         <>

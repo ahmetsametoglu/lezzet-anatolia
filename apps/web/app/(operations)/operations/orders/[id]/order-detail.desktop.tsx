@@ -6,7 +6,7 @@ import { whatsAppChatLink } from '@lezzet/domain-core';
 import { Badge } from '@/components/operation/ui/badge';
 import { Timeline } from '@/components/operation/ui/timeline';
 import { WhatsAppIcon } from '@/components/operation/ui/icons';
-import { money, shortDate, shortDateTime } from '@/components/operation/ui/format';
+import { money, percent, shortDate, shortDateTime } from '@/components/operation/ui/format';
 import { statusLabel, statusTone } from '../orders-labels';
 import { OrderLines } from './components/order-lines';
 import {
@@ -409,7 +409,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                             order.finance.profitCents > 0 ? 'text-ops-olive-dark' : 'text-ops-red'
                           }`}
                         >
-                          %{order.finance.marginPercent.toFixed(1)}
+                          {percent(order.finance.marginPercent, 1)}
                         </span>
                       </div>
                     ) : null}

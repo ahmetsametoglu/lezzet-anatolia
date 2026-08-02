@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button, buttonClass } from '@/components/operation/ui/button';
 import { ErrorState } from '@/components/operation/ui/error-state';
+import { shortDateTime } from '@/components/operation/ui/format';
 import { AlertIcon, ChevronDownIcon, CopyIcon } from '@/components/operation/ui/icons';
 
 /**
@@ -22,7 +23,9 @@ export default function OperationsError({ error, reset }: { error: Error & { dig
   // Hangi kartın kopyalandığı — iki kopyala butonu ayrı geri bildirim verir.
   const [copied, setCopied] = useState<'reference' | 'message' | null>(null);
   const refCode = error.digest ? `ERR-${error.digest.slice(0, 8)}` : 'ERR-yok';
-  const stamp = occurredAt.toLocaleString('tr-TR');
+  // Damga TEK kaynaktan (`format.ts`): serbest `toLocaleString` çağrıları ekranlar arasında farklı
+  // biçim üretiyordu — burada saniye de yazılıyordu, öteki ekranlarda yazılmıyordu.
+  const stamp = shortDateTime(occurredAt.toISOString());
   const message = error.message?.trim() || 'Hata mesajı iletilmedi (sunucu tarafında maskelendi).';
   // Yığın izi yalnız geliştirmede; üretimde operatöre dosya yolu / iç yapı sızmaz.
   const stack = process.env.NODE_ENV === 'development' ? error.stack?.trim() : undefined;
@@ -54,7 +57,7 @@ export default function OperationsError({ error, reset }: { error: Error & { dig
       </div>
 
       <ErrorState
-        tone="danger"
+        tone="red"
         icon={<AlertIcon />}
         title="Bu ekran şu an yüklenemedi"
         description="Sunucu tarafında beklenmeyen bir hata oluştu. Yeniden deneyin; sürerse referans kodunu ileterek bildirin."

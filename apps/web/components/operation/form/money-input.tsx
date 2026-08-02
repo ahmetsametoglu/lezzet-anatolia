@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { Controller, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
+import { decimal } from '@/components/operation/ui/format';
 import { Input, InputField } from './input';
 import { useNumericDraft } from './use-numeric-draft.hook';
 
@@ -15,7 +16,9 @@ import { useNumericDraft } from './use-numeric-draft.hook';
  *
  * Odak-taslak davranışı ortak kancada (`useNumericDraft`) — yüzde girdisi de aynı davranışı kullanır.
  */
-const format = (value: number | null): string => (value == null ? '' : value.toFixed(2).replace('.', ','));
+// Yazım kararı ORTAK (`ui/format.ts`): sütundaki tutar ile kutudaki tutar aynı dili konuşmalı.
+// Boş hâl burada `''` — sütunun "—"si bir kutuya yazılamaz; fark budur, biçim değil.
+const format = (value: number | null): string => (value == null ? '' : decimal(value));
 const toDraft = (value: number | null): string => (value == null ? '' : String(value).replace('.', ','));
 
 /** Serbest yazımı sayıya indirir: virgül/nokta ikisi de ondalık ayracı, boş → null. */
@@ -152,7 +155,7 @@ export function FormMoney<T extends FieldValues>({ control, name, label, require
  * formunda indirim yüzdesi fiyatın ikinci yazımıdır), o yüzden RHF adaptörü yok — değer ve yazıcı
  * dışarıdan verilir.
  */
-const formatPercent = (value: number | null): string => (value == null ? '' : value.toFixed(1).replace('.', ','));
+const formatPercent = (value: number | null): string => (value == null ? '' : decimal(value, 1));
 // Yüzde TÜRETİLMİŞ bir değer olabilir (fiyattan hesaplanır) ve ham hâli `4.255319148936170` gibi
 // gelir; odaklanınca düzenlenecek metin de yuvarlanmış olmalı, yoksa kutuya on beş hane dökülür.
 const toPercentDraft = (value: number | null): string =>

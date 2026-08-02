@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type { ErrorLogLevel } from '@lezzet/types';
-import { shortDate, shortDateTime } from '@/components/operation/ui/format';
+import { num, shortDate, shortDateTime } from '@/components/operation/ui/format';
 import type { ErrorRowView } from '../system-types';
 
 /**
@@ -82,7 +82,7 @@ interface MetaEntry {
  */
 function metaEntries(row: ErrorRowView): MetaEntry[] {
   const out: MetaEntry[] = [
-    { k: 'kaç kez', v: `${row.count.toLocaleString('tr-TR')} kez` },
+    { k: 'kaç kez', v: `${num(row.count)} kez` },
     { k: 'ilk görülme', v: shortDateTime(row.firstSeenAt) },
     { k: 'son görülme', v: shortDateTime(row.lastSeenAt) },
     { k: 'yol', v: row.path ?? '— (istek yolu yok)' },

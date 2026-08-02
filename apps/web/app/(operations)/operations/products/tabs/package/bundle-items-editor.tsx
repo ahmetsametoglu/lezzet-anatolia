@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Controller, useFieldArray, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { rebalanceAllocations } from '@lezzet/domain-core';
 import { fromCents, toCents } from '@lezzet/helper';
-import { amount as money } from '@/components/operation/ui/format';
+import { amount as money, percent } from '@/components/operation/ui/format';
 import { Input } from '@/components/operation/form/input';
 import { MoneyInput } from '@/components/operation/form/money-input';
 import { MultiSelect } from '@/components/operation/form/multi-select';
@@ -406,7 +406,7 @@ export function BundleItemsEditor({ control, pool, setValue, onSearch, searching
                     </Metric>
                     <Separator />
                     <Metric label="Marj" title="Maliyet üzerine markup (DOMAIN tanımı)" alert={(economics.marginPercent ?? 0) < 0}>
-                      %{(economics.marginPercent ?? 0).toFixed(1).replace('.', ',')}
+                      {percent(economics.marginPercent ?? 0, 1)}
                     </Metric>
                   </>
                 )}

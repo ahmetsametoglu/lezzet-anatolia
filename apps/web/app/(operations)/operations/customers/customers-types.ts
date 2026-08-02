@@ -1,26 +1,58 @@
 import type { B2bSignal, SignalTone } from '@lezzet/domain-core';
-import type { Country, CustomerType, KeysetCursor, OrderStatus, PaymentStatus, PreferredLanguage } from '@lezzet/types';
+import type {
+  Address,
+  Consent,
+  Country,
+  CustomerType,
+  KeysetCursor,
+  OrderStatus,
+  PaymentStatus,
+  UserProfile,
+} from '@lezzet/types';
 import type { CustomerScope, CustomersUrlState } from './customers-url';
 
-// Müşteri ekranının view-model'i (09.9). Tipler ŞEMADAN türetilmeye çalışılmaz burada: satır bir
-// `UserProfile` değil, onun ekran için indirgenmiş hâlidir (baş harfler türetilir, roller düşer,
-// pazarlama izni bu dilimde hiç taşınmaz). Entity'nin kendisi gerektiğinde `UserProfile` kullanılır.
+// Müşteri ekranının view-model'i (09.9).
+//
+// ── TÜRETME KURALI BURADA DA GEÇERLİ (düzeltildi 02.08, denetim O9) ──────────
+// Bu dosyanın künyesi bir tur "tipler şemadan türetilmeye ÇALIŞILMAZ burada" diyordu; gerekçesi de
+// yanlış değildi (satır bir `UserProfile` değil, onun indirgenmiş hâlidir) ama **çıkarımı yanlıştı**:
+// indirgeme türetmenin karşıtı değil, `Pick`'in ta kendisi. Sayı iddiayı çürüttü — `CustomerRow`'un
+// on dört alanının **on ikisi** birebir `UserProfile` alanıydı ve elle yeniden yazılmıştı.
+//
+// Kural (`CLAUDE.md §1`) şimdi olduğu gibi uygulanıyor: **`View = Pick<Entity, …> & { türetilen }`**.
+// Kazancı somut: varlığa alan eklenince ekran onu görür, alan tipi değişince (nullable olması gibi)
+// ekran DERLENMEZ — elle kopyada aynı değişiklik sessizce eskir. Bu, müşteri şeridinde yaşandı
+// (`NewAddressInput`, 28.07).
+//
+// Türetilmeyen alanlar hâlâ var ve olmalı: baş harfler addan hesaplanır, "gecikmiş borcu var mı"
+// siparişlerden türer, adres satırı iki kolondan birleşir. Ayrım şu — **veride duran alan Pick'lenir,
+// hesaplanan alan yazılır.**
 
-/** Liste satırı — tasarımın üç kolonu (Müşteri · Tip · Durum) bunun üstünde kurulur. */
-export interface CustomerRow {
-  id: string;
-  name: string;
-  phone: string | null;
-  email: string | null;
-  type: CustomerType;
-  country: Country;
+/**
+ * Liste satırı — tasarımın üç kolonu (Müşteri · Tip · Durum) bunun üstünde kurulur.
+ *
+ * Varlıktan İNDİRGENİR: roller, depo kapsamı, kredi limiti, pazarlama izni ve edinim kaynağı bu
+ * dilimde hiç taşınmaz — liste onları göstermiyor ve otuz satırın yükünü taşımanın karşılığı yok.
+ * `b2bApproved` seçilenler arasında: B2C'de `null` ve o "sorulmamış bir soru" demek, rozet bunu
+ * "hayır"dan ayırıyor.
+ */
+export type CustomerRow = Pick<
+  UserProfile,
+  | 'id'
+  | 'name'
+  | 'phone'
+  | 'email'
+  | 'type'
+  | 'country'
+  | 'isDraft'
+  | 'b2bApproved'
+  | 'creditEnabled'
+  | 'preferredLanguage'
+  | 'vatNumber'
+  | 'createdAt'
+> & {
   /** Avatar baş harfleri — addan TÜRETİLİR, saklanmaz. */
   initials: string;
-  /** Taslak: WhatsApp telefonuyla kendiliğinden açılmış, eksik bilgili, birleştirme adayı. */
-  isDraft: boolean;
-  /** B2B self-servis kayıt onayı; B2C'de `null` (sorulmamış bir soru). */
-  b2bApproved: boolean | null;
-  creditEnabled: boolean;
   /**
    * Vadesi geçmiş açık borcu VAR MI — listedeki kırmızı "Gecikmiş" rozetinin dayanağı.
    *
@@ -29,12 +61,7 @@ export interface CustomerRow {
    * siparişleri zaten tek turda okuyor (başlık sayacı için) — aynı okumadan üretiliyor, ek tur yok.
    */
   hasOverdue: boolean;
-  /** Mailin dili — düzenleme formunun alanı; listede gösterilmez ama satırla birlikte taşınır. */
-  preferredLanguage: PreferredLanguage;
-  /** Vergi numarası — yalnız şirkette anlamlı; VIES doğrulaması 09.11'in işi. */
-  vatNumber: string | null;
-  createdAt: string;
-}
+};
 
 /**
  * Başlık sayaçları — SUNUCUDAN gelir, yüklenmiş sayfadan türetilmez. Türetilseydi "312 müşteri"
@@ -61,23 +88,25 @@ export interface CustomerOrderRow {
   href: string;
 }
 
-/** Müşterinin adresi — rota-içi mi kargo mu, TÜRETİLMİŞ hâliyle. */
-export interface CustomerAddressRow {
-  id: string;
-  label: string | null;
+/**
+ * Müşterinin adresi — panelde tek satırda okunan hâli.
+ *
+ * `line` türetilir (`line1` + `line2` birleşir): ekran iki kutu değil bir cümle gösteriyor. Geri
+ * kalanı varlıktan gelir; alıcı adı ve teslimat telefonu bu dilimde yok — panel adresi listeliyor,
+ * teslimat kurgulamıyor.
+ */
+export type CustomerAddressRow = Pick<Address, 'id' | 'label' | 'postalCode' | 'city' | 'country' | 'isDefault'> & {
+  /** `line1` + `line2` — ekran iki kolonu değil, tek okunur adres satırını gösterir. */
   line: string;
-  postalCode: string;
-  city: string;
-  country: Country;
-  isDefault: boolean;
-}
+};
 
-/** Bir pazarlama izninin GÖRÜNÜMÜ — salt okunur (GDPR kanıtı: ne zaman, nereden). */
-export interface ConsentView {
-  granted: boolean;
-  at: string | null;
-  source: string | null;
-}
+/**
+ * Bir pazarlama izninin GÖRÜNÜMÜ — salt okunur (GDPR kanıtı: ne zaman, nereden).
+ *
+ * Şemanın kendisi (`Consent`): alan alan aynıydı, elle yazılmıştı. İzin kaydı GDPR kanıtıdır —
+ * kopyanın bir gün alan düşürmesi, kanıtın eksik gösterilmesi demek.
+ */
+export type ConsentView = Consent;
 
 /** Müşteriye özel kupon — puan çevriminden doğanlar dahil. */
 export interface PersonalCouponRow {
@@ -154,18 +183,19 @@ export interface CustomerDetail {
  * (kullanıcı kararı 30.07). Aynı formda olmaları tek kaydetme demek: operatör üç ayrı yazma yerine
  * bir kez onaylıyor.
  */
-export interface CustomerEditInput {
-  name: string;
-  phone: string | null;
-  email: string | null;
-  preferredLanguage: PreferredLanguage;
-  country: Country;
-  type: CustomerType;
-  vatNumber: string | null;
-  codAllowed: boolean;
+export type CustomerEditInput = Pick<
+  UserProfile,
+  | 'name'
+  | 'phone'
+  | 'email'
+  | 'preferredLanguage'
+  | 'country'
+  | 'type'
+  | 'vatNumber'
+  | 'codAllowed'
   /** Genel indirim oranı (%); `null` = oran kaldırılır (liste fiyatına döner). */
-  discountPercent: number | null;
-}
+  | 'discountPercent'
+>;
 
 /** Mükerrer ADAYI — kesinlik iddiası yok; operatör kaydı açıp kendisi karar verir. */
 export interface B2bDuplicateRow {

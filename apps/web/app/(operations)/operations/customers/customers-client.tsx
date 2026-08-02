@@ -108,8 +108,9 @@ export function CustomersClient({ data, device, urlState }: CustomersClientProps
     void loadMoreCustomersAction(window.location.search, cursor)
       .then(({ data: page }) => {
         // Hata sessiz: liste olduğu yerde kalır, tetikleyici yeniden denenebilir (sunucu = gerçek).
-        // BEKLEYEN(18.5): düşen sayfa isteği loglanacak — sessiz kalması 09.17'de bir imleç hatasını
-        // aylarca gizledi.
+        // BEKLEYEN(09.17): düşen sayfa isteği loglanacak — sessiz kalması 09.17'de bir imleç hatasını
+        // aylarca gizledi. İşaret 18.5'i gösteriyordu; o görev KAPANDI ve kapsamında istemci tarafını
+        // bilinçle dışladı — kapanmış göreve asılı bir işaret hiçbir zaman ele alınmaz.
         if (!page) return;
         setExtra((prev) => [...prev, ...page.rows]);
         setCursor(page.nextCursor);

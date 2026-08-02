@@ -1,5 +1,6 @@
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, OrderStatusEnum, type Channel, type DeliveryType, type OrderStatus, type PaymentStatus } from '@lezzet/types';
 import { WAREHOUSE_PARAM } from '@/lib/warehouse/filter';
+import { dayMonth } from '@/components/operation/ui/format';
 import { one, oneOf, type RawParams } from '@/lib/url-params';
 
 // Sipariş ekranının URL SÖZLEŞMESİ — fiyat/stok/ürün ekranlarının deseni. Sekme ve süzgeçler adreste
@@ -148,7 +149,7 @@ export function deliveryDayOptions(today: string, span = 7): Array<{ value: stri
   return Array.from({ length: span }, (_, i) => {
     const day = new Date(base.getTime() + i * 86_400_000);
     const value = day.toISOString().slice(0, 10);
-    const label = i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : day.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+    const label = i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : dayMonth(value);
     return { value, label };
   });
 }

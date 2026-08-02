@@ -7,6 +7,7 @@ import { Button } from '@/components/operation/ui/button';
 import { Input } from '@/components/operation/form/input';
 import { MoneyInput } from '@/components/operation/form/money-input';
 import { money } from '@/components/operation/ui/format';
+import { StepButton } from '@/components/operation/ui/step-button';
 import { previewFulfillmentAction } from '../../actions';
 import type { OrderDetailView, OrderLineView, RefundRouteView } from '../order-detail-types';
 
@@ -291,9 +292,9 @@ function LineRow({ line, refund, moved, fate, onMove, onFate }: LineRowProps) {
       </div>
 
       <div className="flex items-center justify-center gap-1.5">
-        <StepButton label="−" onClick={() => onMove(Math.max(0, moved - 1))} disabled={moved <= 0} />
+        <StepButton label="−" ariaLabel="Adet azalt" onClick={() => onMove(Math.max(0, moved - 1))} disabled={moved <= 0} />
         <span className="min-w-4 text-center font-ops-mono text-ops-sm font-medium text-ops-ink">{moved}</span>
-        <StepButton label="+" onClick={() => onMove(Math.min(max, moved + 1))} disabled={moved >= max} />
+        <StepButton label="+" ariaLabel="Adet artır" onClick={() => onMove(Math.min(max, moved + 1))} disabled={moved >= max} />
       </div>
 
       <div className="flex flex-wrap gap-1">
@@ -335,19 +336,6 @@ function LineRow({ line, refund, moved, fate, onMove, onFate }: LineRowProps) {
         {goodwill ? <span className="ml-1 text-ops-muted">jest</span> : null}
       </span>
     </div>
-  );
-}
-
-function StepButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="grid h-6 w-6 cursor-pointer place-items-center rounded-[6px] border border-ops-line-strong font-ops-mono text-ops-sm text-ops-body outline-none transition-colors hover:border-ops-olive disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {label}
-    </button>
   );
 }
 

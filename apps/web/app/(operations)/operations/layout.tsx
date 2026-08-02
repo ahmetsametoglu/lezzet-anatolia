@@ -100,7 +100,7 @@ function NotStaffScreen() {
     <RootShell lang="tr" surface="operations" className={fontVars}>
       <div className="flex h-screen flex-col overflow-hidden bg-ops-bg font-ops-body text-ops-ink">
         <ErrorState
-          tone="warn"
+          tone="amber"
           icon={<AlertIcon />}
           title="Bu alan personel içindir"
           description="Hesabınız operasyon yüzeyine yetkili değil. Personelseniz iş hesabınızla girin; değilseniz alışverişe markette devam edebilirsiniz."

@@ -11,7 +11,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { bundleBalance } from '@lezzet/domain-core';
-import { fromCents, toCents } from '@lezzet/helper';
+import { toCents } from '@lezzet/helper';
 import { getR2, r2Keys } from '@lezzet/storage';
 import {
   resolveLocalizedText,
@@ -19,6 +19,7 @@ import {
   type BundleItemEntry,
   type LocalizedText,
 } from '@lezzet/types';
+import { amount } from '@/components/operation/ui/format';
 import { requireStaff } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { PRODUCTS_PATH } from '../../products-paths';
@@ -61,7 +62,7 @@ function requireBalanced(items: BundleItemEntry[], totalPrice: number | undefine
   if (balance.balanced) return;
 
   if (items.length === 0) throw new Error('Pakete en az bir kalem eklenmeli.');
-  const gap = fromCents(Math.abs(balance.diffCents)).toFixed(2).replace('.', ',');
+  const gap = amount(Math.abs(balance.diffCents));
   const direction = balance.diffCents > 0 ? 'fazla' : 'eksik';
   throw new Error(
     `Kalem fiyatları toplamı paket fiyatını tutmuyor: ${gap} € ${direction}. ` +

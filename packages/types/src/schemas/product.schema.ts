@@ -60,6 +60,25 @@ export const ProductStatusEnum = z.enum(['active', 'passive', 'candidate']);
 export type ProductStatus = z.infer<typeof ProductStatusEnum>;
 
 /**
+ * Durumun OPERASYON yüzeyindeki adı — `ORDER_STATUS_LABELS` ile aynı gerekçe (bkz. `enums.schema`):
+ * enum'la AYNI dosyada durur ki yeni bir durum eklenince karşılığının yazılması unutulmasın
+ * (`Record` eksik anahtarda derlemeyi durdurur), ve tek yerde durur ki ekranlar ayrışmasın.
+ *
+ * Ayrışma yaşandı: ürün ekranında üç kopya vardı ve `active` iki farklı kelimeyle yazılıyordu —
+ * rozette "Aktif", durum seçicisinde "Satışta". Aynı ürün aynı ekranda iki ad taşıyordu. Kazanan
+ * "Satışta": tasarımın kendi dili de öyle (*"aday ürün / **satılabilir** ürün"*), ve "Aktif" neyin
+ * aktif olduğunu söylemiyor.
+ *
+ * Personel ekranları yalnız Türkçedir (CLAUDE.md §2), o yüzden düz metin. Müşteri yüzeyi bu haritayı
+ * KULLANMAZ — orada ürün durumu bir etiket değil, görünürlük kuralıdır.
+ */
+export const PRODUCT_STATUS_LABELS: Record<ProductStatus, string> = {
+  active: 'Satışta',
+  passive: 'Pasif',
+  candidate: 'Aday',
+};
+
+/**
  * Besin değerleri — INCO'nun zorunlu beyan seti, **100 g başına**, SABİT kalemli. Serbest anahtarlı
  * jsonb değil: müşteri tablosu, operasyon formu ve çeviri aynı listeden üretilir (satır adları arayüz
  * i18n'inde, veride değil). Kalem `null` bırakılabilir → bilinmiyor, o satır gösterilmez.

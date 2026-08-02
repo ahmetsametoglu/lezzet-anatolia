@@ -6,6 +6,7 @@ import {
   loadCapacityPercent,
 } from '@lezzet/domain-core';
 import type { ErrorLog, HealthTrendPoint, SystemHealthSnapshot } from '@lezzet/types';
+import { gigabytes, megabytes, num, percent } from '@/components/operation/ui/format';
 import { calmSummary, reasonViews, uptimeLabel } from './system-reasons';
 import { WINDOW_LABEL, WINDOW_MINUTES, type TrendWindow } from './system-url';
 import type {
@@ -28,9 +29,6 @@ import type {
  * satırı ekranın istediği şekle sokmak (STACK §4: birleştiren yer uygulama katmanıdır).
  */
 
-const mbGb = (v: number): string => `${(v / 1024).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} GB`;
-const say = (v: number, basamak = 0): string => v.toLocaleString('tr-TR', { maximumFractionDigits: basamak, minimumFractionDigits: basamak });
-const yuzde = (v: number, basamak = 0): string => `%${say(v, basamak)}`;
 
 /** Ölçümün yaşı — dakika. Damga geçersizse `null`: uydurma bir yaş, bayatlığı gizlerdi. */
 export function ageMinutesOf(iso: string, now: number): number | null {
@@ -94,14 +92,14 @@ function serverRows(m: SystemHealthMetrics): MetricRowView[] {
   const yuk: MetricRowView = {
     key: 'load',
     label: 'Yük (1/5/15)',
-    value: s.loadAvg.map((x) => say(x, 2)).join(' · '),
+    value: s.loadAvg.map((x) => num(x, 2)).join(' · '),
     tone: tone(loadPct >= 150, loadPct > 100),
     // Çubuk 1 DAKİKA yükünü gösterir, 5 değil: hüküm de ona bakıyor (`healthSignals`). Tasarımın
     // taslağı 5 dakikayı çiziyordu — ekranın çubuğu ile bandın hükmü aynı sayıya bakmalı, yoksa
     // "eşik aşıldı" diyen bant, eşiği aşmamış görünen bir çubuğun üstünde durur.
     barPct: Math.min(100, loadPct),
     threshold: 'eşik: %100 / çekirdek',
-    note: `${s.cpuCount} çekirdeğe oranla ${yuzde(loadPct)} — ham sayı tek başına bilgi değil.`,
+    note: `${s.cpuCount} çekirdeğe oranla ${percent(loadPct)} — ham sayı tek başına bilgi değil.`,
     tag: null,
     unknown: false,
     highlight: false,
@@ -110,11 +108,11 @@ function serverRows(m: SystemHealthMetrics): MetricRowView[] {
   const bellek: MetricRowView = {
     key: 'mem',
     label: 'Bellek',
-    value: `${mbGb(s.memAvailableMb)} kullanılabilir / ${mbGb(s.memTotalMb)}`,
+    value: `${gigabytes(s.memAvailableMb)} kullanılabilir / ${gigabytes(s.memTotalMb)}`,
     tone: tone(s.memAvailableMb < T.memCritAvailableMb, s.memAvailableMb < T.memWarnAvailableMb),
     barPct: usedPct,
     threshold: `eşik: kullanılabilir < ${T.memWarnAvailableMb} MB`,
-    note: `Kullanılan ${mbGb(s.memUsedMb)} · "kullanılabilir" ile "boş" aynı şey değil; eşik kullanılabilire bakar.`,
+    note: `Kullanılan ${gigabytes(s.memUsedMb)} · "kullanılabilir" ile "boş" aynı şey değil; eşik kullanılabilire bakar.`,
     tag: null,
     unknown: false,
     highlight: false,
@@ -124,13 +122,13 @@ function serverRows(m: SystemHealthMetrics): MetricRowView[] {
     ? {
         key: 'swap',
         label: 'Swap',
-        value: `${say(s.swapUsedMb)} MB / ${mbGb(s.swapTotalMb)} kullanımda`,
+        value: `${megabytes(s.swapUsedMb)} / ${gigabytes(s.swapTotalMb)} kullanımda`,
         // Swap'ın KULLANILIYOR olması başlı başına haber (tasarım: kendi amber zemini) — eşik
         // aşılmasa da satır dikkat çeker. Hükmü DEĞİŞTİRMEZ: hüküm `healthSignals`'tan gelir ve
         // orada eşik %50. Satırın rengi bir uyarı değil, bir işarettir: "sunucu takasa düştü".
         tone: 'warn',
         barPct: swapPct,
-        threshold: `eşik: ${yuzde(T.swapWarnRatio * 100)}`,
+        threshold: `eşik: ${percent(T.swapWarnRatio * 100)}`,
         note: "Ayrı bir haber: swap'a düşmüş sunucu çalışır ama yavaşlamıştır.",
         tag: "swap'ta",
         unknown: false,
@@ -139,7 +137,7 @@ function serverRows(m: SystemHealthMetrics): MetricRowView[] {
     : {
         key: 'swap',
         label: 'Swap',
-        value: `0 MB / ${mbGb(s.swapTotalMb)}`,
+        value: `0 MB / ${gigabytes(s.swapTotalMb)}`,
         tone: 'ok',
         barPct: null,
         threshold: null,
@@ -168,10 +166,10 @@ function serverRows(m: SystemHealthMetrics): MetricRowView[] {
       : {
           key: 'disk',
           label: 'Disk',
-          value: `${say(s.diskUsedGb ?? 0, 1)} / ${say(s.diskTotalGb ?? 0, 1)} GB · ${yuzde(s.diskUsedPct, 1)}`,
+          value: `${num(s.diskUsedGb ?? 0, 1)} / ${num(s.diskTotalGb ?? 0, 1)} GB · ${percent(s.diskUsedPct, 1)}`,
           tone: tone(s.diskUsedPct >= T.diskCritPct, s.diskUsedPct >= T.diskWarnPct),
           barPct: s.diskUsedPct,
-          threshold: `eşik: ${yuzde(T.diskWarnPct)}`,
+          threshold: `eşik: ${percent(T.diskWarnPct)}`,
           note: null,
           tag: null,
           unknown: false,
@@ -203,16 +201,16 @@ function mobileRows(m: SystemHealthMetrics): HealthView['mobileRows'] {
     {
       key: 'disk',
       label: 'Disk',
-      value: s.diskUsedPct === null ? 'bilinmiyor' : yuzde(s.diskUsedPct),
+      value: s.diskUsedPct === null ? 'bilinmiyor' : percent(s.diskUsedPct),
       tone: s.diskUsedPct === null ? 'warn' : tone(s.diskUsedPct >= T.diskCritPct, s.diskUsedPct >= T.diskWarnPct),
     },
     {
       key: 'mem',
       label: 'Kullanılabilir bellek',
-      value: mbGb(s.memAvailableMb),
+      value: gigabytes(s.memAvailableMb),
       tone: tone(s.memAvailableMb < T.memCritAvailableMb, s.memAvailableMb < T.memWarnAvailableMb),
     },
-    { key: 'load', label: 'Yük · çekirdek başına', value: yuzde(loadPct), tone: tone(loadPct >= 150, loadPct > 100) },
+    { key: 'load', label: 'Yük · çekirdek başına', value: percent(loadPct), tone: tone(loadPct >= 150, loadPct > 100) },
     {
       key: 'proc',
       label: 'Süreçler',
@@ -232,8 +230,8 @@ function processRows(m: SystemHealthMetrics): ProcessRowView[] | null {
     down: p.status !== 'online',
     restarts: p.restarts,
     restartsNotable: p.restarts >= T.restartsNoticeCount,
-    memory: p.memoryMb > 0 ? `${say(p.memoryMb)} MB` : '—',
-    cpu: `${say(p.cpuPct, 1)}%`,
+    memory: p.memoryMb > 0 ? megabytes(p.memoryMb) : '—',
+    cpu: percent(p.cpuPct, 1),
   }));
 }
 
@@ -354,7 +352,7 @@ function toChart(seri: Seri, winLabel: string): TrendChartView {
 
   const fark = son - ilk;
   const yon = Math.abs(fark) < 1.2 ? 'yatay' : fark > 0 ? 'yükseliyor' : 'düşüyor';
-  const puan = Math.abs(fark) >= 1.2 ? ` (${fark > 0 ? '+' : '−'}${say(Math.abs(fark), 1)} puan)` : '';
+  const puan = Math.abs(fark) >= 1.2 ? ` (${fark > 0 ? '+' : '−'}${num(Math.abs(fark), 1)} puan)` : '';
   const thr = seri.thresholdPct;
 
   return {
@@ -395,8 +393,8 @@ export function toTrendCharts(points: readonly HealthTrendPoint[], win: TrendWin
       title: 'Disk doluluğu',
       values: kovala(points, (p) => p.disk),
       thresholdPct: T.diskWarnPct,
-      thresholdLabel: `eşik ${yuzde(T.diskWarnPct)}`,
-      format: (v) => yuzde(v, 1),
+      thresholdLabel: `eşik ${percent(T.diskWarnPct)}`,
+      format: (v) => percent(v, 1),
     },
     {
       key: 'mem',
@@ -404,7 +402,7 @@ export function toTrendCharts(points: readonly HealthTrendPoint[], win: TrendWin
       values: kovala(points, (p) => (p.memUsed !== null && p.memTotal ? (p.memUsed / p.memTotal) * 100 : null)),
       thresholdPct: memThreshold,
       thresholdLabel: memThreshold === null ? null : `eşik: kullanılabilir ${T.memWarnAvailableMb} MB`,
-      format: (v) => yuzde(v),
+      format: (v) => percent(v),
     },
     {
       key: 'load',
@@ -412,7 +410,7 @@ export function toTrendCharts(points: readonly HealthTrendPoint[], win: TrendWin
       values: kovala(points, (p) => (p.load1 !== null && p.cores ? loadCapacityPercent(p.load1, p.cores) : null)),
       thresholdPct: 100,
       thresholdLabel: 'eşik %100',
-      format: (v) => yuzde(v),
+      format: (v) => percent(v),
     },
   ];
 

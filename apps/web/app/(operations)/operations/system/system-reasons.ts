@@ -5,6 +5,7 @@ import {
   type HealthSignal,
 } from '@lezzet/domain-core';
 import type { SystemHealthMetrics } from '@lezzet/types';
+import { gigabytes, megabytes, num, percent } from '@/components/operation/ui/format';
 import type { HealthReasonView } from './system-types';
 
 /**
@@ -25,9 +26,6 @@ import type { HealthReasonView } from './system-types';
 /** Ölçüm boşluğu bildiren kodlar — nötr çizilir: haber tam olarak arıza OLMADIĞIDIR. */
 const OLCUM_BOSLUGU = new Set(['disk-unknown', 'process-unknown', 'caddy-unknown', 'cert-unknown']);
 
-const mb = (v: number): string => `${Math.round(v).toLocaleString('tr-TR')} MB`;
-const gb = (v: number): string => `${(v / 1024).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} GB`;
-const yuzde = (v: number, basamak = 0): string => `%${v.toLocaleString('tr-TR', { maximumFractionDigits: basamak })}`;
 
 /** "14 gün 6 sa" · "3 sa 12 dk" · "44 dk" — çalışma süresi gün ölçeğinden dakikaya iner. */
 export function uptimeLabel(seconds: number): string {
@@ -64,11 +62,11 @@ export function reasonViews(
     },
     'disk-crit': {
       tag: 'disk',
-      text: `Disk ${yuzde(s.diskUsedPct ?? 0, 1)} dolu (eşik ${yuzde(T.diskCritPct)}): yükleme ve kayıt yazma hataları bu noktada başlar.`,
+      text: `Disk ${percent(s.diskUsedPct ?? 0, 1)} dolu (eşik ${percent(T.diskCritPct)}): yükleme ve kayıt yazma hataları bu noktada başlar.`,
     },
     'disk-warn': {
       tag: 'disk',
-      text: `Disk ${yuzde(s.diskUsedPct ?? 0, 1)} dolu (eşik ${yuzde(T.diskWarnPct)}). Anlamı yönünde: trendde eğrinin nereden geldiğine bakın.`,
+      text: `Disk ${percent(s.diskUsedPct ?? 0, 1)} dolu (eşik ${percent(T.diskWarnPct)}). Anlamı yönünde: trendde eğrinin nereden geldiğine bakın.`,
     },
     'disk-unknown': {
       tag: 'ölçülemedi',
@@ -76,15 +74,15 @@ export function reasonViews(
     },
     'mem-crit': {
       tag: 'bellek',
-      text: `Kullanılabilir bellek ${mb(s.memAvailableMb)} (eşik ${mb(T.memCritAvailableMb)}); swap ${mb(s.swapUsedMb)} — sunucu takas üzerinde sürünüyor.`,
+      text: `Kullanılabilir bellek ${megabytes(s.memAvailableMb)} (eşik ${megabytes(T.memCritAvailableMb)}); swap ${megabytes(s.swapUsedMb)} — sunucu takas üzerinde sürünüyor.`,
     },
     'mem-warn': {
       tag: 'bellek',
-      text: `Kullanılabilir bellek ${mb(s.memAvailableMb)} (eşik ${mb(T.memWarnAvailableMb)}). "Kullanılabilir" ile "boş" aynı şey değil; eşik kullanılabilire bakar.`,
+      text: `Kullanılabilir bellek ${megabytes(s.memAvailableMb)} (eşik ${megabytes(T.memWarnAvailableMb)}). "Kullanılabilir" ile "boş" aynı şey değil; eşik kullanılabilire bakar.`,
     },
     swap: {
       tag: 'swap',
-      text: `Swap kullanımda: ${mb(s.swapUsedMb)} / ${gb(s.swapTotalMb)}. Ayrı bir haber — swap'a düşmüş sunucu çalışır ama yavaşlamıştır.`,
+      text: `Swap kullanımda: ${megabytes(s.swapUsedMb)} / ${gigabytes(s.swapTotalMb)}. Ayrı bir haber — swap'a düşmüş sunucu çalışır ama yavaşlamıştır.`,
     },
     'process-down': {
       tag: 'süreç',
@@ -100,7 +98,7 @@ export function reasonViews(
     },
     load: {
       tag: 'yük',
-      text: `1 dakika yükü ${s.loadAvg[0].toLocaleString('tr-TR', { maximumFractionDigits: 2 })} — ${s.cpuCount} çekirdeğe oranla ${yuzde(loadCapacityPercent(s.loadAvg[0], s.cpuCount))} (eşik %100). Ham sayı tek başına bilgi değil.`,
+      text: `1 dakika yükü ${num(s.loadAvg[0], 2)} — ${s.cpuCount} çekirdeğe oranla ${percent(loadCapacityPercent(s.loadAvg[0], s.cpuCount))} (eşik %100). Ham sayı tek başına bilgi değil.`,
     },
     errors: {
       tag: 'uygulama',
@@ -142,10 +140,10 @@ export function reasonViews(
 export function calmSummary(metrics: SystemHealthMetrics): string {
   const { system: s, processes, services } = metrics;
   const parcalar = [
-    s.diskUsedPct === null ? 'disk bilinmiyor' : `disk ${yuzde(s.diskUsedPct, 0)}`,
-    `kullanılabilir bellek ${yuzde(Math.round((s.memAvailableMb / Math.max(1, s.memTotalMb)) * 100))}`,
-    `yük çekirdek başına ${yuzde(loadCapacityPercent(s.loadAvg[0], s.cpuCount))}`,
-    s.swapUsedMb > 0 ? `swap ${mb(s.swapUsedMb)}` : 'swap kullanılmıyor',
+    s.diskUsedPct === null ? 'disk bilinmiyor' : `disk ${percent(s.diskUsedPct, 0)}`,
+    `kullanılabilir bellek ${percent(Math.round((s.memAvailableMb / Math.max(1, s.memTotalMb)) * 100))}`,
+    `yük çekirdek başına ${percent(loadCapacityPercent(s.loadAvg[0], s.cpuCount))}`,
+    s.swapUsedMb > 0 ? `swap ${megabytes(s.swapUsedMb)}` : 'swap kullanılmıyor',
     processes.pm2 === null ? 'süreçler bilinmiyor' : `${processes.pm2.length} süreç online`,
     services.certDaysLeft === null ? 'sertifika bilinmiyor' : `sertifika ${services.certDaysLeft} gün`,
   ];

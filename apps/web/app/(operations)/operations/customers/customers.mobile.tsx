@@ -7,6 +7,7 @@ import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { SearchInput } from '@/components/operation/ui/search-input';
+import { StepButton } from '@/components/operation/ui/step-button';
 import { money, shortDate } from '@/components/operation/ui/format';
 import { InlineMetric } from '@/components/operation/ui/inline-metric';
 import { Skeleton, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
@@ -356,8 +357,8 @@ function LimitStepper({
         <span className="font-ops-mono text-ops-base font-medium text-ops-ink">
           {draft === null ? 'tanımsız' : money(draft)}
         </span>
-        <StepButton label="−" onClick={() => setDraft(Math.max(0, (draft ?? 0) - step))} disabled={saving} />
-        <StepButton label="+" onClick={() => setDraft((draft ?? 0) + step)} disabled={saving} />
+        <StepButton label="−" ariaLabel="Azalt" onClick={() => setDraft(Math.max(0, (draft ?? 0) - step))} disabled={saving} />
+        <StepButton label="+" ariaLabel="Artır" onClick={() => setDraft((draft ?? 0) + step)} disabled={saving} />
       </div>
       {/* Kaydet OLIVE (tasarım), ink değil: ekranın tek olumlu eylemi ve olive "onayla"nın rengi. */}
       <Button variant="primary" fullWidth onClick={() => onSave(draft)} disabled={saving || !degisti}>
@@ -399,20 +400,6 @@ function B2bBox({ approved, onOpen }: { approved: boolean | null; onOpen: () => 
         Başvuruyu incele
       </Button>
     </div>
-  );
-}
-
-/** 26px adımlayıcı düğmesi (tasarım ölçüsü). */
-function StepButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="grid h-[26px] w-[26px] flex-none cursor-pointer place-items-center rounded-ops-btn border border-ops-line-strong font-ops-display text-ops-sm font-semibold text-ops-strong transition-colors hover:border-ops-olive hover:text-ops-olive disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {label}
-    </button>
   );
 }
 

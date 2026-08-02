@@ -1,5 +1,5 @@
 import { ORDER_STATUS_LABELS, type OrderStatus, type PaymentMethod } from '@lezzet/types';
-import type { OpsTone } from '@/components/operation/ui/tone';
+import { paymentTone, type OpsTone } from '@/components/operation/ui/tone';
 import type { OrderCountsView, OrderRow } from './orders-types';
 
 // Sipariş satırının SÖZLERİ — durum rengi, tahsilat cümlesi, teslim yazısı. Tek yerde durur ki
@@ -58,13 +58,13 @@ export function paymentText(row: OrderRow, money: (cents: number) => string): st
   return `${prefix} ${money(openCents)}${methodText}`;
 }
 
-/** Tahsilat tonu: gecikmiş vade kırmızı, bekleyen tahsilat amber, gelen para olive. */
-function paymentTone(row: OrderRow): OpsTone {
-  if (row.payment.overdue) return 'red';
-  if (row.payment.status === 'paid') return 'olive';
-  if (row.payment.status === 'refunded') return 'neutral';
-  return 'amber';
-}
+/**
+ * Tahsilat tonu — kural ORTAK (`ui/tone.ts`), burada yalnız satırdan girdi çıkarılıyor.
+ *
+ * Gecikme bu ekranda BİLİNİYOR (`payment.overdue`) ve geçiliyor; müşteri panelinde bilinmiyor ve
+ * orada varsayılan `false` işliyor. Kuralın kendisi tek yerde durduğu için ikisi ayrışamaz.
+ */
+const rowPaymentTone = (row: OrderRow): OpsTone => paymentTone(row.payment.status, row.payment.overdue);
 
 /**
  * Tahsilat tonunun METİN SINIFI — tabloda, mobil kartta ve hızlı bakışta AYNI cümle aynı renkte
@@ -74,7 +74,7 @@ function paymentTone(row: OrderRow): OpsTone {
  * sönük gri, telefonda amber görünüyordu — kapanmış bir kayıt "bekleyen iş" rengiyle.
  */
 export function paymentToneClass(row: OrderRow): string {
-  switch (paymentTone(row)) {
+  switch (rowPaymentTone(row)) {
     case 'red':
       return 'font-semibold text-ops-red';
     case 'olive':

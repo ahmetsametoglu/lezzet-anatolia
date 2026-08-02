@@ -2,7 +2,7 @@
 
 import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
 import { Button } from '@/components/operation/ui/button';
-import { agoLabel, shortDate, shortDateTime } from '@/components/operation/ui/format';
+import { agoLabel, num, shortDate, shortDateTime } from '@/components/operation/ui/format';
 import { ERROR_PAGE_SIZE, WINDOW_LABEL } from './system-url';
 import type { ErrorRowView, MetricTone, SystemViewProps } from './system-types';
 import { ErrorMetaGrid, LevelBadge, LevelDot, RegressionChip, RegressionNote, ResolvedChip, contextText } from './components/error-meta';
@@ -109,7 +109,7 @@ export function SystemMobile(props: SystemViewProps) {
                     <span className="font-ops-display text-[9.5px] font-semibold uppercase tracking-[0.07em] text-ops-body">{r.level}</span>
                     {r.regression ? <RegressionChip /> : null}
                     <span className="ml-auto font-ops-mono text-[10.5px] font-medium text-ops-muted">
-                      {r.count.toLocaleString('tr-TR')}× · {shortDateTime(r.lastSeenAt)}
+                      {num(r.count)}× · {shortDateTime(r.lastSeenAt)}
                     </span>
                   </span>
                   <span className="font-ops-body text-ops-sm font-medium leading-[1.45] text-ops-ink">{r.message}</span>
@@ -221,7 +221,7 @@ function MobileDetail({
           ←
         </button>
         <span className="mr-auto font-ops-display text-[15px] font-semibold text-ops-ink">Hata detayı</span>
-        <span className="font-ops-mono text-[10.5px] font-medium text-ops-muted">{row.count.toLocaleString('tr-TR')}×</span>
+        <span className="font-ops-mono text-[10.5px] font-medium text-ops-muted">{num(row.count)}×</span>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
