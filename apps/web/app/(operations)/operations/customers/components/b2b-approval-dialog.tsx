@@ -64,7 +64,7 @@ export function B2bApprovalDialog({ check, error, saving, onDecide, onClose }: B
           onConfirm={() => onDecide(step.approve)}
         />
       ) : (
-        <Card check={check} saving={saving} onDecide={(approve) => setStep({ kind: 'confirm', approve })} />
+        <CheckPane check={check} saving={saving} onDecide={(approve) => setStep({ kind: 'confirm', approve })} />
       )}
     </Dialog>
   );
@@ -106,7 +106,14 @@ function CardSkeleton() {
   );
 }
 
-function Card({
+/**
+ * Kontrol kartının GÖVDESİ — künye + VIES + karar düğmeleri.
+ *
+ * Adı `Card` idi ve paylaşılan kart primitifiyle (`ui/card.tsx`) çakışıyordu (denetim OP4): burası
+ * bir kabuk değil bir içerik grubu (zemin/kenar yok), ama okuyan "kart primitifini mi kullanıyor"
+ * diye duraklıyordu — ve primitif bir gün import edilseydi sessizce gölgelenirdi.
+ */
+function CheckPane({
   check,
   saving,
   onDecide,

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Badge } from '@/components/operation/ui/badge';
+import { cardClass } from '@/components/operation/ui/card';
 import { Button } from '@/components/operation/ui/button';
 import { AlertIcon, InfoIcon, WarehouseIcon } from '@/components/operation/ui/icons';
 import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
@@ -213,7 +214,7 @@ export function SectionHead({ title, hint, aside }: { title: string; hint: strin
 /** Künye kutusu — etiket + değer + alt not. */
 export function FactCard({ label, value, note, tone }: { label: string; value: string; note?: string; tone?: 'amber' }) {
   return (
-    <div className="flex flex-col gap-0.5 rounded-ops-card border border-ops-line bg-ops-card px-3.5 py-2.5">
+    <div className={cardClass('flex flex-col gap-0.5 px-3.5 py-2.5')}>
       <span className="font-ops-display text-ops-micro font-medium uppercase tracking-wide text-ops-muted">{label}</span>
       <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">{value}</span>
       {note ? (
@@ -237,7 +238,7 @@ export function ZoneCard({
 }) {
   const days = weekdayList(zone.weekdays);
   return (
-    <div className="flex flex-col gap-2 rounded-ops-card border border-ops-line bg-ops-card px-3.5 py-3">
+    <div className={cardClass('flex flex-col gap-2 px-3.5 py-3')}>
       <div className="flex items-center gap-2">
         <span className="min-w-0 flex-1 truncate font-ops-display text-ops-lead font-semibold text-ops-ink">{zone.name}</span>
         <Badge tone={zone.isActive ? 'olive' : 'neutral'}>{zone.isActive ? 'Aktif' : 'Pasif'}</Badge>
@@ -247,9 +248,7 @@ export function ZoneCard({
       {days.length > 0 ? (
         <div className="flex flex-wrap gap-1">
           {days.map((d) => (
-            <span key={d} className="rounded-full bg-ops-olive px-2 py-0.5 font-ops-display text-ops-micro font-semibold text-ops-card">
-              {d}
-            </span>
+            <DayPill key={d} label={d} />
           ))}
         </div>
       ) : (
@@ -392,20 +391,54 @@ export function StaffChips({ staff }: { staff: readonly StaffChipView[] }) {
   return (
     <div className="flex flex-wrap gap-2">
       {staff.map((p) => (
-        <span
-          key={p.id}
-          className="flex items-center gap-1.5 rounded-full border border-ops-line bg-ops-card px-3 py-1.5 font-ops-body text-ops-sm text-ops-strong"
-        >
-          <span className="text-ops-faint">
-            <WarehouseIcon size={12} />
-          </span>
-          {p.name} · {p.roleText}
-          {p.onlyHere ? <span className="font-ops-body text-ops-xs text-ops-muted">tek kapsamı burası</span> : null}
-        </span>
+        <StaffChip key={p.id} name={p.name} role={p.roleText} note={p.onlyHere ? 'tek kapsamı burası' : null} />
       ))}
       {/* Ayarlar ekranı henüz yok (09.16) — bağlantı KOYMUYORUZ: var olmayan bir yere giden düğme,
           olmayan bir yetenek vaat eder. Cümle kapsamın nerede yönetildiğini söylemeye yeter. */}
       <span className="self-center font-ops-body text-ops-xs text-ops-muted">Kapsam Ayarlar'da yönetilir</span>
     </div>
+  );
+}
+
+/**
+ * Gün hapı — bölgenin teslim günü (`Sa` · `Pe` · `Ct`).
+ *
+ * **`Badge` DEĞİL ve bu bilinçli** (denetim OP2): `Badge` bir *tint* ailesidir (zemin tonun açık
+ * hâli, metin koyu hâli) ve anlamı DURUM'dur. Gün hapı bir durum değil **küme üyeliği** — dolu
+ * zemin "bu gün seçili" demektir. `Badge`'e "dolu" varyantı eklemek, rozetin tint sözleşmesini iki
+ * anlama bölerdi.
+ *
+ * Tasarım da böyle çiziyor (`Operasyon - Depolar.dc.html`: tam yuvarlak, dolu olive). Adlandırılmış
+ * olmasının sebebi ayrı: satır içi bir hap, gün listesi çizen bir sonraki ekranda dördüncü biçimi
+ * doğurur.
+ *
+ * **Terfi eşiği:** Teslimat ekranı (11.x) aynı şeridi çizecek — ikinci tüketici doğduğu gün bu
+ * komponent `components/operation/ui/`'ye taşınır (`CLAUDE.md §2` yerleşim kuralı). Bugün tek
+ * tüketicisi var, sayfa altında durması doğru.
+ */
+function DayPill({ label }: { label: string }) {
+  return (
+    <span className="rounded-full bg-ops-olive px-2 py-0.5 font-ops-display text-ops-micro font-semibold text-ops-card">
+      {label}
+    </span>
+  );
+}
+
+/**
+ * Personel çipi — kim bu tesiste çalışıyor. Nötr, çerçeveli, tıklanmaz.
+ *
+ * `Badge`'den ayrı çünkü bir durum değil bir KAYIT gösteriyor (kişi), ve `Chip`'ten ayrı çünkü
+ * `Chip` bir süzgeç kontrolüdür — tıklanır ve seçili hâli vardır. Bu ikisinin de olmadığı üçüncü
+ * bir şey: okunur künye.
+ */
+function StaffChip({ name, role, note }: { name: string; role: string; note: string | null }) {
+  return (
+    <span className="flex items-center gap-1.5 rounded-full border border-ops-line bg-ops-card px-3 py-1.5 font-ops-body text-ops-sm text-ops-strong">
+      <span className="text-ops-faint">
+        <WarehouseIcon size={12} />
+      </span>
+      {name} · {role}
+      {note ? <span className="font-ops-body text-ops-xs text-ops-muted">{note}</span> : null}
+    </span>
   );
 }

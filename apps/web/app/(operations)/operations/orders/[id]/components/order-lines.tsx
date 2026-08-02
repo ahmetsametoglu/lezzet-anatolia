@@ -1,6 +1,7 @@
 import { discountPercentOf } from '@lezzet/domain-core';
 import { amount, money, percent } from '@/components/operation/ui/format';
 import type { OrderBundleGroup, OrderLineView, OrderTotalLine } from '../order-detail-types';
+import { cardClass } from '@/components/operation/ui/card';
 
 /**
  * Kalem tablosu — Komponent Envanteri O16 (`Table`'ın kayıt içi hâli).
@@ -33,7 +34,7 @@ export function OrderLines({ lines, bundles, totals, settled }: OrderLinesProps)
   const loose = lines.filter((l) => !grouped.has(l.id));
 
   return (
-    <div className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-card">
+    <div className={cardClass()}>
       <div className="flex items-center gap-2.5 border-b border-ops-line bg-ops-subtle px-3.5 py-2.5">
         <span className="mr-auto font-ops-display text-ops-base font-semibold text-ops-ink">
           Kalemler{' '}

@@ -1,6 +1,7 @@
 import { LoadingRegion } from '@/components/loading-region';
 import { Skeleton, SkeletonCard, SkeletonMetric, SkeletonTable } from '@/components/operation/ui/skeleton';
 import { ERROR_COLUMN_TRACKS } from './system-columns';
+import { cardClass } from '@/components/operation/ui/card';
 
 /**
  * Sistem ekranının ROTA DÜZEYİ beklemesi (18.5).
@@ -111,7 +112,7 @@ function DesktopShell() {
             </span>
           </SkeletonCard>
 
-          <div className="flex flex-col overflow-hidden rounded-ops-card border border-ops-line bg-ops-card">
+          <div className={cardClass('flex flex-col')}>
             <span className="flex flex-wrap items-center gap-3.5 px-[22px] py-4">
               <Skeleton className="mr-auto h-4 w-20" />
               <Skeleton className="h-9 w-[170px] rounded-[8px]" />

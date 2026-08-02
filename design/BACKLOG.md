@@ -523,6 +523,20 @@ bu ekran **alarmın yerini tutmak zorunda** — "kötü durum, bakmayan gözü y
 görsel kararın merkezinde durmalı. Envanterde bu yükümlülük yazılı; kodlamadan önce çizim gelmeli
 (`CLAUDE.md §3`: implement ederken improvise edilmez).
 
+**Teslimat yeri panelinin dört hâli + öneri listesi — çizilmedi, kodlandı (03.08).** Envanter K30-K31
+hapı ve şeridi çiziyor; panelin `ambiguous` / `unknown` / `unresolved` hâlleri ile posta kodu **öneri
+listesi** hiçbir `.dc.html`'de yok. İkisi de sonradan doğdu: dört hâl 19.16b'nin ayrık sonucundan,
+öneri listesi kullanıcı kararından (02.08 — *"müşteri yazsın, biz önerelim, tamam desin"*). Panelin
+mevcut diliyle kuruldu (hap girdi, `rounded-soft` bilgi bloğu, kum/bal tonları) ve ayrı bir görsel
+dil icat edilmedi — ama bu bir **çizim değil, en yakın emsale dayanan bir yerleştirme**.
+
+Çizim istenirken bilinmesi gerekenler: *(a)* öneri satırı bir açılır kutu değil, panelin akışında
+duran bir blok (klavye sözleşmesi vaat etmemek için bilinçli); *(b)* satırda **ülke yazılı** ve bu bir
+kullanıcı kararı, gürültü değil — aynı kod iki ülkede geçerli olabiliyor; *(c)* rota işareti satırı
+öne alır ama seçmez; *(d)* `unresolved`'ın iki sebebi iki ayrı cümle ister ve ikisi de **bizim
+eksiğimizi** itiraf eder — müşteriye kusur yüklemez. Panel ileride haritaya dönebilir (kullanıcı
+niyeti, 02.08); o gün bu hâllerin haritadaki karşılığı da kararlaştırılmalı.
+
 **İstisna — operasyonun diyalog formları.** `.dc.html` dosyaları sayfaları çiziyor; form
 diyaloglarının (ürün · katalog · paket) görsel kararı çizilmedi ve bilinçli olarak **bize** bırakıldı
 (kullanıcı kararı, 28.07: "operasyon tarafında özellikle diyalog formlarında kendi custom
@@ -839,3 +853,25 @@ uydurulmadı, envantere yazılması bekleniyor:
   gerekiyor; o gelene kadar bu on yer ham kaldı.
 - **Kontrol yarıçapı.** Girdi kutuları (`field-shell`) kart token'ına bağlandı; ayrı bir kademe
   isteniyorsa envanterde belirtilmeli.
+
+### İç-içe kart zemini — token sözlüğünde adı yok (03.08, denetim OP3)
+
+Denetim iki dosyada "yanlış token" buldu (`bg-ops-white` kart yüzeyinde). Saydım: **`bg-ops-white`
+38 yerde, `bg-ops-card` 12 yerde.** Yani `bg-ops-white` iki ekranın kaçağı değil, sistemin fiilî
+yerleşik kullanımı; azınlıkta olan `bg-ops-card`. Önerilen çare (iki dosyayı çevir) bu ölçekte
+tutarsızlık üretirdi.
+
+Kullanımın bir gerekçesi de var: karanlık modda `ops-white` (#2a2e26), `ops-card`'ın (#23261f)
+**üstünde** bir kademe. Kart zemininin ya da `ops-subtle` panelin İÇİNE oturan bir kart ayrışmak
+için bir kademe yükselmek zorunda ve elde o kademeyi veren tek token bu. Sözlük ise yalnız iki şey
+söylüyor: `ops-card` = "kart, tablo, sidebar zemini" · `ops-white` = "dialog ve girdi zemini".
+İç-içe kart katmanından hiç söz etmiyor.
+
+**İstenen karar:** envanter §0'a **iç-içe / yükseltilmiş kart zemini** kademesi giriyor mu?
+
+- *(a) Giriyorsa* — ya `ops-white`'ın tanımı genişler ("dialog, girdi ve iç-içe kart zemini") ya
+  üçüncü bir token açılır (`--color-ops-card-raised`); 12 azınlık kullanım ona hizalanır.
+- *(b) Girmiyorsa* — 38 kullanım `bg-ops-card`'a iner ve iç-içe kartlar yalnız kenarlıkla ayrışır.
+
+Karar gelene kadar hiçbiri değiştirilmedi: 38 satırı bir tahminle çevirmek, tasarımın söylemediği
+bir kararı kodda vermek olurdu (`CLAUDE.md §3`). Aynı sınıf: K2 (hap girdinin kenar tonu).

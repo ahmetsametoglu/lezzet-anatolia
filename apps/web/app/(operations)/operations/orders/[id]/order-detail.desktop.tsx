@@ -23,6 +23,7 @@ import {
 import type { OrderDetailView } from './order-detail-types';
 import type { OrderDecision } from '@lezzet/domain-core';
 import type { OrderStatus } from '@lezzet/types';
+import { cardClass } from '@/components/operation/ui/card';
 
 // Sipariş DETAYI — MASAÜSTÜ. Tasarım "Operasyon - Siparis Detay" birebir.
 //
@@ -152,7 +153,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             settled={order.fulfillmentSettled}
           />
 
-          <section className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-card">
+          <section className={cardClass()}>
             <div className="flex items-center gap-2.5 border-b border-ops-line bg-ops-subtle px-3.5 py-[11px]">
               <span className="mr-auto font-ops-display text-ops-base font-semibold text-ops-ink">Para</span>
               {/* Ton da DURUMDAN okunur: "kalan 0" ile "ödendi" aynı şey değil. */}
@@ -236,7 +237,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             </div>
           </section>
 
-          <section className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-card">
+          <section className={cardClass()}>
             <div className="flex items-center gap-2.5 border-b border-ops-line bg-ops-subtle px-3.5 py-[11px]">
               <span className="mr-auto font-ops-display text-ops-base font-semibold text-ops-ink">Zaman çizelgesi</span>
               <span className="font-ops-body text-ops-micro text-ops-muted">{timelineNote(order)}</span>
@@ -309,7 +310,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
 
         {/* ── SAĞ RAY: BAĞLAM ── */}
         <aside className="flex flex-col gap-3.5 bg-ops-subtle px-5 py-5">
-          <div className="flex flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-card px-3.5 py-[13px]">
+          <div className={cardClass('flex flex-col gap-2.5 px-3.5 py-[13px]')}>
             <div className="flex items-center gap-2.5">
               <span
                 className={`grid h-[34px] w-[34px] flex-none place-items-center rounded-ops-card font-ops-display text-ops-sm font-semibold ${
@@ -359,7 +360,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               yöneticinin dışına çıkmıyor. Sayfa depo/kurye rollerine açıldığı gün `finance` alanı
               `null` gelir ve burası kendiliğinden susar. */}
           {order.finance ? (
-            <div className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-card">
+            <div className={cardClass()}>
               <div className="flex items-center gap-2 border-b border-ops-line-soft px-3.5 py-2.5">
                 <span className="mr-auto font-ops-display text-ops-sm font-semibold text-ops-ink">Finansal</span>
                 <Badge tone="slate">Yönetici</Badge>
@@ -429,7 +430,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             </div>
           ) : null}
 
-          <div className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-card">
+          <div className={cardClass()}>
             <div className="flex items-center gap-2 border-b border-ops-line-soft px-3.5 py-2.5">
               <span className="mr-auto font-ops-display text-ops-sm font-semibold text-ops-ink">Teslimat</span>
               <Badge tone={order.delivery.type === 'shipping' ? 'slate' : 'olive'}>
@@ -487,7 +488,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
           {/* Bağlar — talepler ve parti izi TEK kartta: sorusu tek ("bu sipariş başka nereye
               dokunuyor?"). Hedef ekranı olan satır davet eder, olmayan yalnız kaydı gösterir. */}
           {order.links.length > 0 ? (
-            <div className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-card">
+            <div className={cardClass()}>
               <div className="border-b border-ops-line-soft px-3.5 py-2.5 font-ops-display text-ops-sm font-semibold text-ops-ink">
                 Bağlar
               </div>
