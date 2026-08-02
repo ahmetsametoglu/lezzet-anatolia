@@ -23,7 +23,7 @@
   <div style="display:flex;flex-direction:column;gap:16px">
     <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
       <span style="font:700 20px 'Space Grotesk';color:#22251f">Satın Alma — tedarik &amp; mal girişi · web</span>
-      <span style="font:400 13.5px 'Karla';color:#6a7065">Fiyatlı admin hali. Sistem hazırlar, insan gönderir — otomatik sipariş yok. Depo mal kabulünde fiyat/borç görünmez.</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Fiyatlı admin hali. Sistem hazırlar, insan gönderir — otomatik sipariş yok. Depo mal kabulünde fiyat/borç görünmez. <strong>PO depo-üstüdür</strong>; depo yalnız mal kabulde belirlenir.</span>
     </div>
 
     <div data-screen-label="Satin Alma Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
@@ -47,7 +47,7 @@
         <!-- SİPARİŞ ZAMANI -->
         <sc-if value="{{ isOneri }}" hint-placeholder-val="{{ true }}">
           <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 24px;display:flex;flex-direction:column;gap:16px">
-            <span style="font:400 12.5px/1.5 'Karla';color:#8b9086">Asgari stok eşiğinin altına düşen ürünler, tedarikçiye göre gruplu. Sistem önerir, siparişi siz verirsiniz.</span>
+            <span style="font:400 12.5px/1.5 'Karla';color:#8b9086">Asgari stok eşiğinin altına düşen ürünler, tedarikçiye göre gruplu. Eşik <strong>depo bazlı bir gerçektir</strong> — her satır hangi deponun eşiği olduğunu söyler; aynı ürün iki depoda ayrı satır olarak çıkabilir. Sistem önerir, siparişi siz verirsiniz.</span>
             <sc-for list="{{ oneriler }}" as="g" hint-placeholder-count="3">
               <div style="border:1px solid #e6e7e1;border-radius:11px;overflow:hidden;flex:none">
                 <div style="padding:12px 16px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px">
@@ -57,6 +57,7 @@
                 <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
                   <div style="padding:10px 16px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:12px">
                     <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:500 13px 'Karla';color:#22251f">{{ it.name }}</span><span style="font:400 11px 'Karla';color:#8b9086">kod: {{ it.code }} · {{ it.pack }}</span></div>
+                    <span style="font:500 10px 'IBM Plex Mono';color:#3a6b8a;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:2px 6px">{{ it.depo }}</span>
                     <span style="font:500 12px 'IBM Plex Mono';color:#a5443c">{{ it.stock }}</span>
                     <span style="font:500 12px 'IBM Plex Mono';color:#8b9086;width:88px;text-align:right">öneri {{ it.suggest }}</span>
                   </div>
@@ -69,14 +70,15 @@
         <!-- SİPARİŞLER -->
         <sc-if value="{{ isSiparisler }}" hint-placeholder-val="{{ false }}">
           <div style="flex:1;min-height:0;overflow-y:auto">
-            <div style="display:grid;grid-template-columns:minmax(120px,1fr) 90px 84px 96px 110px;gap:0 10px;padding:10px 24px;border-bottom:1px solid #e6e7e1;font:500 10.5px 'Space Grotesk';letter-spacing:.04em;text-transform:uppercase;color:#8b9086;background:#f8f9f5">
-              <span>Tedarikçi</span><span style="text-align:center">Kalem</span><span style="text-align:right">Tutar</span><span style="text-align:center">Tarih</span><span style="text-align:right">Durum</span>
+            <div style="display:grid;grid-template-columns:minmax(120px,1fr) 66px 84px 104px 84px 104px;gap:0 10px;padding:10px 24px;border-bottom:1px solid #e6e7e1;font:500 10.5px 'Space Grotesk';letter-spacing:.04em;text-transform:uppercase;color:#8b9086;background:#f8f9f5">
+              <span>Tedarikçi</span><span style="text-align:center">Kalem</span><span style="text-align:right">Tutar</span><span>Kabul</span><span style="text-align:center">Tarih</span><span style="text-align:right">Durum</span>
             </div>
             <sc-for list="{{ siparisler }}" as="s" hint-placeholder-count="5">
-              <div onClick="{{ openSiparisModal }}" style="display:grid;grid-template-columns:minmax(120px,1fr) 90px 84px 96px 110px;gap:0 10px;padding:12px 24px;border-bottom:1px solid #f0f1ec;align-items:center;cursor:pointer">
+              <div onClick="{{ openSiparisModal }}" style="display:grid;grid-template-columns:minmax(120px,1fr) 66px 84px 104px 84px 104px;gap:0 10px;padding:12px 24px;border-bottom:1px solid #f0f1ec;align-items:center;cursor:pointer">
                 <div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 13px 'Karla';color:#22251f">{{ s.supplier }}</span><span style="font:400 11px 'Karla';color:#8b9086">{{ s.ref }}</span></div>
                 <span style="text-align:center;font:500 12.5px 'IBM Plex Mono';color:#3a3f37">{{ s.items }}</span>
                 <span style="text-align:right;font:500 12.5px 'IBM Plex Mono';color:#22251f">{{ s.amount }}</span>
+                <div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:500 11.5px 'IBM Plex Mono';color:{{ s.recvFg }}">{{ s.recv }}</span><span style="font:400 10px 'IBM Plex Mono';color:#8b9086">{{ s.recvDepo }}</span></div>
                 <span style="text-align:center;font:400 11.5px 'IBM Plex Mono';color:#8b9086">{{ s.date }}</span>
                 <span style="justify-self:end;font:600 10.5px 'Space Grotesk';color:{{ s.stFg }};background:{{ s.stBg }};border-radius:7px;padding:3px 9px">{{ s.status }}</span>
               </div>
@@ -164,11 +166,12 @@
           <div style="display:flex;flex-direction:column;gap:8px">
             <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Kalemler</span><span style="font:600 11px 'Karla';color:#5f7a2c">+ kalem</span></div>
             <div style="border:1px solid #e6e7e1;border-radius:9px;overflow:hidden">
-              <div style="display:grid;grid-template-columns:1fr 80px 74px;gap:0 8px;padding:8px 13px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;font:500 10px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086"><span>Ürün · kod</span><span style="text-align:center">Adet</span><span style="text-align:right">Birim</span></div>
-              <div style="display:grid;grid-template-columns:1fr 80px 74px;gap:0 8px;padding:10px 13px;border-bottom:1px solid #f0f1ec;align-items:center;font:500 12.5px 'Karla'"><span>Antep fıstığı <span style="color:#8b9086">· AF-25</span></span><span style="text-align:center;font-family:'IBM Plex Mono'">4 koli</span><span style="text-align:right;font-family:'IBM Plex Mono';color:#8b9086">42,00 €</span></div>
-              <div style="display:grid;grid-template-columns:1fr 80px 74px;gap:0 8px;padding:10px 13px;border-bottom:1px solid #f0f1ec;align-items:center;font:500 12.5px 'Karla'"><span>Tereyağı <span style="color:#8b9086">· TY-10</span></span><span style="text-align:center;font-family:'IBM Plex Mono'">6 koli</span><span style="text-align:right;font-family:'IBM Plex Mono';color:#8b9086">18,00 €</span></div>
-              <div style="display:grid;grid-template-columns:1fr 80px 74px;gap:0 8px;padding:10px 13px;align-items:center;font:500 12.5px 'Karla'"><span>Kadayıf <span style="color:#8b9086">· KD-05</span></span><span style="text-align:center;font-family:'IBM Plex Mono'">2 koli</span><span style="text-align:right;font-family:'IBM Plex Mono';color:#8b9086">24,00 €</span></div>
+              <div style="display:grid;grid-template-columns:1fr 68px 84px 66px;gap:0 8px;padding:8px 13px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;font:500 10px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086"><span>Ürün · kod</span><span style="text-align:center">Adet</span><span style="text-align:center">Hedef depo</span><span style="text-align:right">Birim</span></div>
+              <div style="display:grid;grid-template-columns:1fr 68px 84px 66px;gap:0 8px;padding:10px 13px;border-bottom:1px solid #f0f1ec;align-items:center;font:500 12.5px 'Karla'"><span>Antep fıstığı <span style="color:#8b9086">· AF-25</span></span><span style="text-align:center;font-family:'IBM Plex Mono'">4 koli</span><span style="justify-self:center;font:500 10px 'IBM Plex Mono';color:#3a6b8a;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:2px 7px">STR</span><span style="text-align:right;font-family:'IBM Plex Mono';color:#8b9086">42,00 €</span></div>
+              <div style="display:grid;grid-template-columns:1fr 68px 84px 66px;gap:0 8px;padding:10px 13px;border-bottom:1px solid #f0f1ec;align-items:center;font:500 12.5px 'Karla'"><span>Tereyağı <span style="color:#8b9086">· TY-10</span></span><span style="text-align:center;font-family:'IBM Plex Mono'">6 koli</span><span style="justify-self:center;font:400 11px 'IBM Plex Mono';color:#b3b7ac">—</span><span style="text-align:right;font-family:'IBM Plex Mono';color:#8b9086">18,00 €</span></div>
+              <div style="display:grid;grid-template-columns:1fr 68px 84px 66px;gap:0 8px;padding:10px 13px;align-items:center;font:500 12.5px 'Karla'"><span>Kadayıf <span style="color:#8b9086">· KD-05</span></span><span style="text-align:center;font-family:'IBM Plex Mono'">2 koli</span><span style="justify-self:center;font:500 10px 'IBM Plex Mono';color:#3a6b8a;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:2px 7px">COL</span><span style="text-align:right;font-family:'IBM Plex Mono';color:#8b9086">24,00 €</span></div>
             </div>
+            <span style="font:400 11px/1.5 'Karla';color:#8b9086">Hedef depo <strong>isteğe bağlıdır</strong> — tedarikçiye giden listede niyeti taşır ("2 koli Colmar'a"). Bağlayıcı olan mal kabulde seçilen depodur; boş bırakılabilir.</span>
           </div>
           <div style="display:flex;align-items:center;gap:9px;background:#eef4e2;border:1px solid #cdd8b6;border-radius:9px;padding:11px 14px"><span style="color:#4a6121;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></span><span style="font:500 11.5px/1.5 'Karla';color:#3f5a2a">Kaydedince taslak olur; gönderim size ait (WhatsApp/e-posta/telefon). "Gönderildi" işaretleyene dek bekleyen listede görünür.</span></div>
         </div>
@@ -194,13 +197,15 @@
             <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Tedarikçi</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';background:#fff;display:flex;justify-content:space-between;align-items:center">Metro Cash&amp;Carry<span style="color:#9aa094">▾</span></div></div>
             <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Tarih</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13px 'Karla';background:#fff;display:flex;justify-content:space-between">24 Tem 2026<span style="color:#9aa094">▾</span></div></div>
           </div>
+          <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Hangi depoya giriyor <span style="font:400 11px 'Karla';color:#a5443c">· zorunlu, varsayılan yok</span></span><div style="border:1.5px solid #5f7a2c;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';background:#fff;display:flex;align-items:center;gap:9px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l9-5 9 5v12"></path><path d="M3 21h18"></path><path d="M9 21v-6h6v6"></path></svg><span style="flex:1;color:#9aa094">Depo seçin…</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div><span style="font:400 11px/1.5 'Karla';color:#8b9086">Seçenekler kapsamınızdaki depolardan türer. Parti bu depoya doğar; bir kabul tek depoya yapılır — iki depoya bölmek iki kabul kaydıdır.</span></div>
           <div style="display:flex;flex-direction:column;gap:8px">
             <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Parti satırları</span>
             <div style="border:1px solid #e6e7e1;border-radius:9px;overflow:hidden">
-              <div style="display:grid;grid-template-columns:1fr 56px 74px 74px 72px;gap:0 6px;padding:8px 12px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;font:500 9.5px 'Space Grotesk';letter-spacing:.03em;text-transform:uppercase;color:#8b9086"><span>Ürün</span><span style="text-align:center">Adet</span><span style="text-align:center">S.tarih</span><span>Lot</span><span style="text-align:right">Birim</span></div>
-              <div style="display:grid;grid-template-columns:1fr 56px 74px 74px 72px;gap:0 6px;padding:10px 12px;border-bottom:1px solid #f0f1ec;align-items:center;font:500 12px 'Karla'"><span>Fıstıklı Baklava</span><span style="text-align:center;font-family:'IBM Plex Mono'">40</span><span style="text-align:center;font-family:'IBM Plex Mono';color:#8b9086">05.08</span><span style="font-family:'IBM Plex Mono';color:#8b9086">L-A25</span><span style="text-align:right;font-family:'IBM Plex Mono'">9,20</span></div>
-              <div style="display:grid;grid-template-columns:1fr 56px 74px 74px 72px;gap:0 6px;padding:10px 12px;align-items:center;font:500 12px 'Karla'"><span>Kadayıf 500g</span><span style="text-align:center;font-family:'IBM Plex Mono'">24</span><span style="text-align:center;font-family:'IBM Plex Mono';color:#8b9086">28.07</span><span style="font-family:'IBM Plex Mono';color:#8b9086">L-K12</span><span style="text-align:right;font-family:'IBM Plex Mono'">6,80</span></div>
+              <div style="display:grid;grid-template-columns:1fr 84px 62px 64px 58px;gap:0 6px;padding:8px 12px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;font:500 9.5px 'Space Grotesk';letter-spacing:.03em;text-transform:uppercase;color:#8b9086"><span>Ürün</span><span style="text-align:center">Sip. ↔ gelen</span><span style="text-align:center">S.tarih</span><span>Lot</span><span style="text-align:right">Birim</span></div>
+              <div style="display:grid;grid-template-columns:1fr 84px 62px 64px 58px;gap:0 6px;padding:10px 12px;border-bottom:1px solid #f0f1ec;align-items:center;font:500 12px 'Karla'"><span>Fıstıklı Baklava</span><span style="text-align:center;font-family:'IBM Plex Mono';color:#4a6121">40 ↔ 40</span><span style="text-align:center;font-family:'IBM Plex Mono';color:#8b9086">05.08</span><span style="font-family:'IBM Plex Mono';color:#8b9086">L-A25</span><span style="text-align:right;font-family:'IBM Plex Mono'">9,20</span></div>
+              <div style="display:grid;grid-template-columns:1fr 84px 62px 64px 58px;gap:0 6px;padding:10px 12px;align-items:center;font:500 12px 'Karla'"><span>Kadayıf 500g</span><span style="text-align:center;font-family:'IBM Plex Mono';color:#9a6416">24 ↔ 18</span><span style="text-align:center;font-family:'IBM Plex Mono';color:#8b9086">28.07</span><span style="font-family:'IBM Plex Mono';color:#8b9086">L-K12</span><span style="text-align:right;font-family:'IBM Plex Mono'">6,80</span></div>
             </div>
+            <span style="font:400 11px/1.5 'Karla';color:#8b9086">Kalan <strong>6 adet</strong> PO'da açık kalır — sonraki kabul başka bir depoya yapılabilir; hangi kabul hangi depoya gittiği PO listesindeki <strong>Kabul</strong> sütunundan okunur.</span>
             <span style="font:600 11px 'Karla';color:#5f7a2c">+ parti satırı</span>
           </div>
           <div style="display:flex;align-items:center;gap:9px;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:11px 14px"><span style="color:#9a6416;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span><span style="font:500 11.5px/1.5 'Karla';color:#8a6410">Tazelik uyarısı: "Kadayıf 500g" beklenenden kısa ömürlü geldi (28.07). Engellemez — kabul kararı sizin.</span></div>
@@ -236,29 +241,30 @@ class Component extends DCLogic {
     const openGirisModal = () => this.setState({ girisOpen:true });
 
     const oneriler = [
-      { supplier:'Metro Cash&Carry', meta:'vadeli · 3 ürün eşikte', items:[
-        { name:'Antep fıstığı 25kg', code:'AF-25', pack:'koli/25kg', stock:'0,5 koli', suggest:'4 koli' },
-        { name:'Tereyağı 10kg', code:'TY-10', pack:'koli/10kg', stock:'1 koli', suggest:'6 koli' },
-        { name:'Kadayıf 5kg', code:'KD-05', pack:'koli/5kg', stock:'2 koli', suggest:'2 koli' },
+      { supplier:'Metro Cash&Carry', meta:'vadeli · 3 ürün eşikte · 2 depo', items:[
+        { name:'Antep fıstığı 25kg', code:'AF-25', pack:'koli/25kg', stock:'0,5 koli', suggest:'4 koli', depo:'STR' },
+        { name:'Tereyağı 10kg', code:'TY-10', pack:'koli/10kg', stock:'1 koli', suggest:'6 koli', depo:'STR' },
+        { name:'Kadayıf 5kg', code:'KD-05', pack:'koli/5kg', stock:'2 koli', suggest:'2 koli', depo:'COL' },
       ]},
       { supplier:'Öz Un & Şeker', meta:'peşin · 2 ürün eşikte', items:[
-        { name:'İrmik 25kg', code:'IR-25', pack:'çuval/25kg', stock:'1 çuval', suggest:'3 çuval' },
-        { name:'Toz şeker 50kg', code:'TS-50', pack:'çuval/50kg', stock:'0,5 çuval', suggest:'2 çuval' },
+        { name:'İrmik 25kg', code:'IR-25', pack:'çuval/25kg', stock:'1 çuval', suggest:'3 çuval', depo:'KEHL' },
+        { name:'Toz şeker 50kg', code:'TS-50', pack:'çuval/50kg', stock:'0,5 çuval', suggest:'2 çuval', depo:'STR' },
       ]},
       { supplier:'Ege Kuruyemiş', meta:'vadeli · 1 ürün eşikte', items:[
-        { name:'Ceviz içi 10kg', code:'CV-10', pack:'koli/10kg', stock:'1 koli', suggest:'3 koli' },
+        { name:'Ceviz içi 10kg', code:'CV-10', pack:'koli/10kg', stock:'1 koli', suggest:'3 koli', depo:'COL' },
       ]},
     ];
     const mobOneri = oneriler.map(g => ({ supplier:g.supplier, meta:g.meta }));
 
     const stMap = { taslak:['#6a7065','#eef0ea'], gonderildi:['#3a6b8a','#e6eef3'], kabul:['#4a6121','#eef4e2'], iptal:['#a5443c','#fbe9e7'] };
-    const so = (supplier,ref,items,amount,date,stKey,status) => ({ supplier,ref,items,amount,date,status,stFg:stMap[stKey][0],stBg:stMap[stKey][1] });
+    const so = (supplier,ref,items,amount,date,stKey,status,recv,recvDepo,recvTone) => ({ supplier,ref,items,amount,date,status,stFg:stMap[stKey][0],stBg:stMap[stKey][1],
+      recv: recv||'—', recvDepo: recvDepo||'', recvFg: recvTone==='part' ? '#9a6416' : (recvTone==='full' ? '#4a6121' : '#b3b7ac') });
     const siparisler = [
-      so('Metro Cash&Carry','#T-241 · 24 Tem','12','1.240,00','24 Tem','gonderildi','Gönderildi'),
-      so('Ege Kuruyemiş','#T-240 · 22 Tem','3','620,00','22 Tem','gonderildi','Gönderildi'),
-      so('Öz Un & Şeker','#T-239 · 20 Tem','5','480,00','20 Tem','kabul','Mal kabul'),
-      so('Metro Cash&Carry','#T-238 · 18 Tem','8','—','18 Tem','taslak','Taslak'),
-      so('Süt Dünyası','#T-236 · 15 Tem','4','210,00','15 Tem','iptal','İptal'),
+      so('Metro Cash&Carry','#T-241 · 24 Tem','12','1.240,00','24 Tem','gonderildi','Gönderildi','8 / 12 kalem','STR 6 · COL 2','part'),
+      so('Ege Kuruyemiş','#T-240 · 22 Tem','3','620,00','22 Tem','gonderildi','Gönderildi','0 / 3 kalem','kabul bekliyor','none'),
+      so('Öz Un & Şeker','#T-239 · 20 Tem','5','480,00','20 Tem','kabul','Mal kabul','5 / 5 kalem','KEHL 5','full'),
+      so('Metro Cash&Carry','#T-238 · 18 Tem','8','—','18 Tem','taslak','Taslak','—','henüz gönderilmedi','none'),
+      so('Süt Dünyası','#T-236 · 15 Tem','4','210,00','15 Tem','iptal','İptal','—','—','none'),
     ];
 
     const vadeOn=['#4a6121','#eef4e2'], vadeOff=['#6a7065','#eef0ea'];

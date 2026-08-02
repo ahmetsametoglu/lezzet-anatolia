@@ -43,7 +43,7 @@ Sayfa **gün** üzerine kuruludur; gün seçilir, iki tür yan yana durur. En s�
 ### Kargo teslimatları — taşıyıcıya verilen
 
 - **Bugün kargoya verilecekler** — kargo deposundan çıkacak siparişler; müşteri, adres, paket özeti
-- **Taşıyıcı ve takip numarası** — paketin hangi taşıyıcıya verildiği ve takip numarası buraya girilir; numara girilince müşteri bilgilendirmesi tetiklenir
+- **Taşıyıcı ve takip numarası** — paketin hangi taşıyıcıya verildiği ve takip numarası satırda **okunur**; girilmemişse gün kapanmadan görünür bir eksikliktir. ⚠ **Giriş burada DEĞİL:** numarayı hazırlık ekranı alır (`07.12` kararı — etiketi paketi kapatan kişi elinde tutar, ayrı bir sevk adımı açılmaz). Aynı alanı iki ekranın sahiplenmesi, iki farklı anda iki farklı gerçek yazılması demekti. Bu sayfa planlar ve eksiği gösterir, kaydı hazırlık yazar
 - **Etiket / irsaliye çıktısı** — paketin üstüne gidecek belge
 - **Kargonun günü rotanınkinden farklı çalışır** — kargoda teslim tarihi bizim vaadimiz değil taşıyıcınındır; liste "bugün elden çıkacaklar"dır, "bugün varacaklar" değil. Ekran bu farkı gizlemez
 - ⚠ **Kargo yalnız ONLINE PEŞİN ödenir** (K37) — kapıda tahsilat bu listede hiç görünmez
@@ -53,7 +53,7 @@ Sayfa **gün** üzerine kuruludur; gün seçilir, iki tür yan yana durur. En s�
 - Gün seçme; günün listesine bakma (rota + kargo)
 - Siparişe kurye atama; atamayı değiştirme
 - Siparişi **başka güne taşıma** (istisna: müşteri aradı, "yarın olsun")
-- Kargo satırında **taşıyıcı seçme + takip numarası girme**; etiket çıktısı alma
+- Kargo satırında etiket / irsaliye çıktısı alma (taşıyıcı ve takip numarası **girilmez**, okunur — §2)
 - Listeden sipariş detayına inme
 - Bölge tanımına geçiş (Depolar)
 
@@ -79,6 +79,7 @@ Gidilen: sipariş detayı, müşteri detayı (adres sorunu), **Depolar** (bölge
 - **"DeliveryZone", "delivery_date", "cut-off" gibi iç terimler ham kullanılmaz** — "bölge", "teslim günü", "sipariş kesim saati" denir
 - Kurye burada tahsilat/teslim işlemi yapmaz — teslim işaretleme ve tahsilat kurye ekranının işidir; admin planlar ve izler
 - Kesim saati burada değiştirilmez (ayarların işi) — yalnız etkisi görünür
+- **Takip numarası burada YAZILMAZ** — hazırlık ekranının kaydıdır (`07.12`); burada okunur ve eksikse gösterilir
 - Sipariş içeriği düzenlenmez — kalem değişikliği sipariş ekranının işidir
 - **Stok hareketi gösterilmez** — hazırlıkta malın stoktan düşmesi bir harekettir ve Stok'un defterinde yaşar; burada yalnız "hazır mı" durumu okunur
 
@@ -86,5 +87,5 @@ Gidilen: sipariş detayı, müşteri detayı (adres sorunu), **Depolar** (bölge
 
 - **Telefon önceliklidir** — gün planına en sık sabah, depoda ya da araç başında bakılır; liste ve kurye ataması telefonda hızlı yürümeli
 - "Bugün kaç çıkış, kaçı hazır, kaçı atanmamış" tek bakışta okunmalı
-- **Takip numarası girişi telefonda yapılabilmeli** — paket taşıyıcıya verilirken, ayakta; barkod okuma işlevsel bir ihtiyaçtır
+- **Takip numarası okunur ve kopyalanabilir olmalı** — müşteri arayınca telefondan okunur. Girişi bu ekranda değil (hazırlık ekranı, `07.12`); barkod okuma ihtiyacı da oraya ait, paket kapatılırken
 - Bölge kurulumu bu ekranda olmadığı için sayfa hafifledi: telefonda uzun posta kodu listeleriyle uğraşılmaz

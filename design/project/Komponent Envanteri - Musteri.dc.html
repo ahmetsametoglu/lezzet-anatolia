@@ -693,6 +693,86 @@
       <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı sayfalar: Checkout · Hesap · Canlı örnek: <a href="Musteri - Checkout.dc.html">Checkout mokapları</a></span>
     </div>
   </div>
+
+  <!-- §7B YER EKSENİ (ÇOK DEPO) -->
+  <div style="background:#fff;border:1px solid #e3dcc8;border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">§7B · Yer ekseni — çok depo <span style="font:400 15px 'Karla';color:#b05c2e">(yeni, 01.08)</span></h2>
+    <span style="font:400 14px/1.7 'Karla';color:#6d7261;max-width:900px">Sistemin birden çok deposu var; <strong>müşteri bu kavramı hiç görmez</strong> — ne adını, ne kodunu, ne sayısını. "Strasbourg deposundan gönderilir" gibi bir cümle kurulmaz. Müşterinin ekseni <strong>teslimat yeri</strong>dir (ülke + posta kodu); depo sistemin iç çözümüdür. §7'nin tamamı geçerli kalır; buradaki parçalar onu çok depoya genişletir. Değişmeyenler değişenler kadar bağlayıcı: yer bir <em>sözdür, filtre değildir</em> — katalog kendiliğinden küçülmez, sepetten hiçbir şey silinmez, liste fiyatı yere göre değişmez.</span>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K36 · Kalemin dört hâli — işaret dili</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Yer bilinen müşteri için her ürün dört hâlden birindedir; <strong>hâli stok belirler, müşteri seçmez</strong>. Aynı işaret dili üç düzeyde geçer: katalog kartı (ad altı çip) · ürün detay (kısıt bloğu, K32'nin gövdesiyle) · sepet satırı (grup başlığı). Yer bilinmiyorsa hiçbir işaret basılmaz. <strong>Yeni ton üretilmedi</strong>: kargo yolu §0'daki nötr krem çiftini (<code>#f0e9d6</code> / <code>#e0d8c2</code>, K30'un bölge-dışı hapıyla aynı), kısıt amber'i, tükendi nötr taşını kullanır.</span>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+        <div style="border:1px solid #ece5d2;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:7px">
+          <span style="font:700 14.5px 'Karla';color:#3a4147">Alınabilir — kapıya</span>
+          <span style="font:400 12.5px/1.55 'Karla';color:#6d7261">Yerin deposunda var. <strong>İşaret yok</strong> — rota siparişiyle araçtan gelir.</span>
+        </div>
+        <div style="border:1px solid #ece5d2;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:7px">
+          <span style="font:700 14.5px 'Karla';color:#3a4147">Alınabilir — kargoyla</span>
+          <span style="font:600 12px 'Karla';color:#6d7261;background:#f0e9d6;border:1px solid #e0d8c2;border-radius:11px;padding:3px 9px;width:max-content">📦 Kargoyla gönderilir</span>
+          <span style="font:400 12.5px/1.55 'Karla';color:#6d7261">Yerinde yok + kargolanabilir. Sepette kargo grubuna düşer.</span>
+        </div>
+        <div style="border:1px solid #ece5d2;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:7px">
+          <span style="font:700 14.5px 'Karla';color:#3a4147">Bölgenizde şu an yok</span>
+          <span style="font:600 12px 'Karla';color:#8a6b2a;background:#fdf3e0;border:1px solid #ecd9b4;border-radius:11px;padding:3px 9px;width:max-content">Bölgenizde şu an yok</span>
+          <span style="font:400 12.5px/1.55 'Karla';color:#6d7261">Soğuk zincir, kargolanamaz. K32 gövdesi + sonraya kaydet + haber ver.</span>
+        </div>
+        <div style="border:1px solid #ece5d2;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:7px">
+          <span style="font:700 14.5px 'Karla';color:#3a4147">Tükendi</span>
+          <span style="font:600 12px 'Karla';color:#3a4147;background:#e9e4d4;border-radius:11px;padding:3px 9px;width:max-content">Tükendi — yakında yeniden</span>
+          <span style="font:400 12.5px/1.55 'Karla';color:#6d7261">Hiçbir depoda yok. Tek dürüst engel; evrenseldir.</span>
+        </div>
+      </div>
+      <span style="font:400 13px/1.7 'Karla';color:#8a8270">Yerelde mevcut ürün kargoya <strong>yönlendirilemez</strong> ("bunu kargoyla istiyorum" diye bir seçenek yoktur) — ücretsiz kapı teslimi varken paralı kargo seçtirmek yalnız karar yükü ekler. "Bölgenizde şu an yok" ile "tükendi" asla aynı cümleyi kurmaz: ilki yere bağlı ve değişebilir, ikincisi evrensel. Kullanıldığı sayfalar: Katalog · Ürün detay · Paket detay · Sepet · Keşif.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K37 · Kargo grubu ve ayrı checkout girişi</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Sepet tek yerdir ama <strong>iki grup</strong> taşıyabilir; gruplama kalemin hâlinden kendiliğinden doğar. Her grubun kendi başlığı, kendi toplamı ve kendi çıkışı vardır. İki checkout = <strong>iki sipariş = iki ödeme</strong>; ikincisi zorunlu değildir — yapılmazsa kalemler sepette bekler, rota siparişi etkilenmez.</span>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <div style="width:340px;background:#eef2e2;border:1px solid #cddbb0;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:5px">
+          <span style="font:700 13px 'Karla';color:#4a6121">🚚 Kapıya teslim · Perşembe</span>
+          <span style="font:700 16px 'Karla';color:#343b41">32,40 €</span>
+          <span style="font:400 12.5px 'Karla';color:#4a6121">ücretsiz · bölgenin gününde · kapıda ödeme mümkün</span>
+          <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:11px;border-radius:22px;text-align:center;margin-top:4px">Checkout'a geç</span>
+        </div>
+        <div style="width:340px;background:#f0e9d6;border:1px solid #e0d8c2;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:5px">
+          <span style="font:700 13px 'Karla';color:#6d7261">📦 Kargoyla · 2-3 iş günü</span>
+          <span style="font:700 16px 'Karla';color:#343b41">46,60 €</span>
+          <span style="font:400 12.5px 'Karla';color:#6d7261">kendi kargo ücreti/eşiği · yalnız online peşin</span>
+          <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 13px 'Karla';padding:9px;border-radius:22px;text-align:center;margin-top:4px">Kargolu ürünleri ayrıca sipariş ver</span>
+        </div>
+        <div style="width:300px;background:#fff;border:1px dashed #ecd9b4;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:5px">
+          <span style="font:700 13px 'Karla';color:#8a6b2a">Sonraya kaydedilenler (K33)</span>
+          <span style="font:400 12.5px/1.55 'Karla';color:#6d7261">"Bölgenizde yok" kalemlerin evi. Toplamlara girmez, checkout'u engellemez. <strong>Silme yoktur; taşıma vardır.</strong></span>
+        </div>
+      </div>
+      <span style="font:400 13px/1.7 'Karla';color:#8a8270">İki grubun karakter farkı tasarımdan sezilir: rota ücretsiz + bölgenin günü + kapıda ödeme mümkün; kargo kendi ücreti/eşiği (kendi tutarından) + yalnız online. Mobilde alt çubuk yalnız kapıya grubunu taşır; tek çubukta iki tutar toplanmaz. <strong>İki ödeme tek ödemeye birleştirilmez</strong> — "her ödeme bir siparişe" modeli tasarımda da korunur. Siparişlerim'de iki ayrı sipariş olarak görünürler; yapay "birleşik sipariş" kabuğu kurulmaz. Kullanıldığı sayfalar: Sepet · Checkout · Siparişlerim.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K38 · Ülke seçici <span style="font:400 13px 'Karla';color:#8a8270">(koşullu — K30/K31/K35 içinde)</span></span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Posta kodu ülkeler arası benzersiz değildir (<code>67000</code> hem FR hem DE). Yer artık <strong>ülke + kod</strong> ikilisidir. Seçici <strong>yalnız</strong> sistem birden çok ülkeye hizmet verirken görünür — aktif bölgelerin ülke kümesinden türer; tek ülke varken soru sorulmaz (tek seçenek varsayılan değil, tek cevaptır). Sitenin dili ön-seçim <em>ipucu</em> olabilir; karar daima müşterinindir. Dış coğrafi servis kullanılmaz.</span>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <span style="display:inline-flex;align-items:center;gap:8px;background:#eef2e2;border:1px solid #cddbb0;border-radius:20px;padding:7px 14px;font:700 13px 'Karla';color:#4a6121">📍 <span style="border-right:1px solid #cddbb0;padding-right:8px">FR ▾</span> 67000 Strasbourg · kapıya teslim<span style="font:600 12px 'Karla';color:#5f7a2c;text-decoration:underline">değiştir</span></span>
+        <span style="font:400 13px 'Karla';color:#8a8270">↔ tek ülkede:</span>
+        <span style="display:inline-flex;align-items:center;gap:8px;background:#eef2e2;border:1px solid #cddbb0;border-radius:20px;padding:7px 14px;font:700 13px 'Karla';color:#4a6121">📍 67000 Strasbourg · kapıya teslim<span style="font:600 12px 'Karla';color:#5f7a2c;text-decoration:underline">değiştir</span></span>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı yerler: K30 hapı · K31 sorma şeridi · K35 adres formu (ülke alanı artık koşullu olarak seçilebilir hâle gelir) · ürün detayındaki davet.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:700 17px 'Karla'">K39 · Yer değişim bildirimi</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Yer değişince sepet <strong>yeniden değerlendirilir</strong>: her kalem K36'daki hâline yeniden oturur. Kapıya gidenler kargo grubuna düşebilir, düşenler geri çıkabilir; karşılanamayanlar sonraya kaydedilir. Hiçbir kalem silinmez ve değişiklik <strong>tek tek, görünür biçimde</strong> bildirilir — sessiz daralma yoktur.</span>
+      <div style="background:#fff;border:1px solid #e0d8c2;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:9px;max-width:520px">
+        <span style="font:600 17px 'Lora';color:#343b41">Yeni yerinize göre 3 kalem yer değiştirdi</span>
+        <span style="font:400 13px/1.5 'Karla';color:#6d7261">📦 <strong>Fıstıklı Baklava</strong> artık kargo grubunda</span>
+        <span style="font:400 13px/1.5 'Karla';color:#8a6b2a"><strong>İçli Köfte</strong> sonraya kaydedildi — yeni bölgenizde şu an yok</span>
+        <span style="font:400 13px/1.5 'Karla';color:#8a6b2a"><strong>Ispanaklı Gözleme</strong> fırsat fiyatı bu yerde geçerli değil — 7,90 €</span>
+      </div>
+      <span style="font:400 13px/1.7 'Karla';color:#8a8270">Teklifli (indirimli) kalem özeldir: near-expiry teklifi bir partiye bağlıdır ve parti tek yerdedir — yeni yerde geçerli olmayabilir. Kalem normal fiyata döner ve bu, mevcut <strong>"fiyat değişti"</strong> akışından geçer (arttıysa açıkça sorulur). Liste fiyatı yere göre asla değişmez. Checkout'ta <strong>adres kazanır</strong>: adresin posta kodu şeritteki koddan farklıysa sipariş adrese göre çözülür ve sepet o an yeniden değerlendirilir — sürpriz checkout'un içinde, açık mesajla yaşanır. Kullanıldığı sayfalar: Sepet · Checkout · Hesap (adres değişimi).</span>
+    </div>
+  </div>
   </div>
 </div>
 </x-dc>

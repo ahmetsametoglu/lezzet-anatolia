@@ -23,7 +23,7 @@
   <div style="display:flex;flex-direction:column;gap:16px">
     <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
       <span style="font:700 20px 'Space Grotesk';color:#22251f">Stok — parti gözü &amp; tarih kararları · web</span>
-      <span style="font:400 13.5px 'Karla';color:#6a7065">Görünüm ve karar yeri. Mal kabul/imha girişi depo ekranlarında. Depo maliyet/teklif fiyatı görmez.</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Görünüm ve karar yeri. Mal kabul/imha girişi depo ekranlarında. Depo maliyet/teklif fiyatı görmez. <strong>Depo ekseni:</strong> bağlam kenar çubuğunda (kalıcı), süzgeç tabloda (geçici).</span>
     </div>
 
     <div data-screen-label="Stok Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
@@ -33,7 +33,7 @@
         <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
             <span style="font:600 22px 'Space Grotesk'">Stok</span>
-            <span style="font:400 12px 'Karla';color:#8b9086">142 varyant · 6 yaklaşan tarihli · 1 DLC geçti</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">{{ scopeLine }}</span>
           </div>
           <span onClick="{{ openLot }}" style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Lot / geri çağırma</span>
         </div>
@@ -49,7 +49,15 @@
           <span style="font:600 12px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:14px;padding:5px 12px">Teklif açık</span>
           <span style="width:1px;height:18px;background:#dfe1d9;margin:0 4px"></span>
           <span style="font:500 12px 'Karla';color:#6a7065;border:1px dashed #d2d4cb;border-radius:14px;padding:5px 12px">+ kategori</span>
+          <span onClick="{{ cycleDepo }}" style="font:600 12px 'Space Grotesk';color:{{ depoChipFg }};background:{{ depoChipBg }};border:1px solid {{ depoChipBd }};border-radius:14px;padding:5px 11px;cursor:pointer;display:flex;align-items:center;gap:6px">Depo: {{ depoChipLabel }}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span>
         </div>
+        <sc-if value="{{ depoFiltered }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:8px 24px;background:#e6eef3;border-bottom:1px solid #bcd0e0;display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3a6b8a" stroke-width="2" stroke-linecap="round" style="flex:none"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path></svg>
+            <span style="font:400 12px 'Karla';color:#2f5a78;margin-right:auto">Süzülüyor: <strong style="font:600 12px 'Space Grotesk'">{{ depoFilterName }}</strong> — tablo yalnız bu deponun satırlarını gösteriyor. Sekme sayıları ve özet kartlar bağlamın (tüm depolar) gerçeğidir.</span>
+            <span onClick="{{ clearDepo }}" style="font:600 11.5px 'Space Grotesk';color:#3a6b8a;border:1px solid #bcd0e0;background:#fff;border-radius:7px;padding:4px 10px;cursor:pointer">Süzgeci kaldır</span>
+          </div>
+        </sc-if>
 
         <div style="display:grid;grid-template-columns:1.5fr 1fr;flex:1;min-height:0;overflow:hidden">
           <div style="border-right:1px solid #e6e7e1;display:flex;flex-direction:column;min-height:0">
@@ -58,15 +66,28 @@
             </div>
             <div style="overflow-y:auto;flex:1;min-height:0" onScroll="{{ onScroll }}">
               <sc-for list="{{ shown }}" as="v" hint-placeholder-count="12">
-                <div style="display:grid;grid-template-columns:minmax(130px,1fr) 78px 66px 100px;gap:0 10px;padding:11px 22px;border-bottom:1px solid #f0f1ec;align-items:center">
+                <div onClick="{{ v.toggle }}" style="display:grid;grid-template-columns:minmax(130px,1fr) 78px 66px 100px;gap:0 10px;padding:11px 22px;border-bottom:1px solid #f0f1ec;align-items:center;background:{{ v.rowBg }};cursor:{{ v.cursor }}">
                   <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
                     <span style="font:600 13px 'Karla';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ v.name }}</span>
-                    <span style="font:400 11px 'Karla';color:#8b9086">{{ v.meta }}</span>
+                    <span style="display:flex;align-items:center;gap:6px;font:400 11px 'Karla';color:#8b9086">{{ v.meta }}<sc-if value="{{ v.spread }}" hint-placeholder-val="{{ false }}"><span style="font:500 10px 'IBM Plex Mono';color:#3a6b8a;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:1px 6px">{{ v.spread }} {{ v.caret }}</span></sc-if></span>
                   </div>
                   <span style="text-align:right;font:500 13.5px 'IBM Plex Mono';color:{{ v.availFg }}">{{ v.avail }}</span>
                   <span style="text-align:right;font:500 12.5px 'IBM Plex Mono';color:#8b9086">{{ v.reserved }}</span>
                   <span style="justify-self:end;font:600 10.5px 'Space Grotesk';color:{{ v.dFg }};background:{{ v.dBg }};border-radius:7px;padding:3px 9px">{{ v.dLabel }}</span>
                 </div>
+                <sc-if value="{{ v.open }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:#f6f7f3;border-bottom:1px solid #f0f1ec;padding:4px 22px 10px">
+                    <sc-for list="{{ v.perDepo }}" as="p" hint-placeholder-count="3">
+                      <div style="display:grid;grid-template-columns:minmax(130px,1fr) 78px 66px 100px;gap:0 10px;padding:6px 0;align-items:center">
+                        <span style="display:flex;align-items:center;gap:7px;font:400 12px 'Karla';color:#6a7065;padding-left:12px"><span style="width:5px;height:5px;border-radius:3px;background:#b3b7ac"></span>{{ p.name }} <span style="font:500 10px 'IBM Plex Mono';color:#8b9086">{{ p.code }}</span></span>
+                        <span style="text-align:right;font:500 12.5px 'IBM Plex Mono';color:#22251f">{{ p.avail }}</span>
+                        <span style="text-align:right;font:500 12px 'IBM Plex Mono';color:#8b9086">{{ p.reserved }}</span>
+                        <span style="justify-self:end;font:500 11px 'IBM Plex Mono';color:#8b9086">{{ p.near }}</span>
+                      </div>
+                    </sc-for>
+                    <span style="display:block;padding-top:5px;font:400 10.5px 'Karla';color:#8b9086">Transfer kararı burada verilmez — Transfer ekranından. Eşik ve karar kuyruğu depo bazlıdır, <a href="#" style="color:#5f7a2c">Yaklaşan tarihli</a> sekmesinde deposuyla görünür.</span>
+                  </div>
+                </sc-if>
               </sc-for>
               <sc-if value="{{ more }}" hint-placeholder-val="{{ false }}">
                 <div style="padding:14px;text-align:center;font:500 11.5px 'IBM Plex Mono';color:#9aa094;display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:12px;height:12px;border:2px solid #cdd0c8;border-top-color:#5f7a2c;border-radius:50%;display:inline-block;animation:sp .7s linear infinite"></span>daha fazla yükleniyor…</div>
@@ -86,6 +107,7 @@
                     <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
                       <span style="font:600 13.5px 'Karla';color:#22251f">{{ b.name }}</span>
                       <span style="font:400 11px 'Karla';color:#8b9086">Lot {{ b.lot }} · {{ b.qty }} · {{ b.dateLine }}</span>
+                      <span style="font:500 10px 'IBM Plex Mono';color:#3a6b8a;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:1px 6px;width:max-content;margin-top:2px">{{ b.depo }}</span>
                     </div>
                     <span style="font:600 10px 'Space Grotesk';color:{{ b.tagFg }};background:{{ b.tagBg }};border-radius:6px;padding:2px 8px;flex:none">{{ b.tag }}</span>
                   </div>
@@ -109,7 +131,7 @@
         <div style="flex:none;padding:12px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:#f8f9f5">
           <div style="display:flex;flex-direction:column;gap:2px;margin-right:auto">
             <span style="font:600 13px 'Space Grotesk';color:#22251f">6 parti eşik altında · <span style="font:500 13px 'IBM Plex Mono';color:#a5443c">620,40 € riskte</span></span>
-            <span style="font:400 11.5px 'Karla';color:#8b9086">En az kalan üstte · hazırlıkta önce süresi dolan çıkar (FEFO), sıralamayı elle yönetmezsiniz</span>
+            <span style="font:400 11.5px 'Karla';color:#8b9086">En az kalan üstte · hazırlıkta önce süresi dolan çıkar (FEFO), sıralamayı elle yönetmezsiniz · <strong>eşik depo bazlıdır</strong>, her satır deposunu söyler</span>
           </div>
           <span style="font:500 11.5px 'Karla';color:#6a7065;background:#eef0ea;border:1px solid #e0e2da;border-radius:14px;padding:6px 12px">Eşik: kalan raf ömrü <strong>%25</strong> · <a href="Operasyon - Ayarlar.dc.html">Ayarlar</a></span>
         </div>
@@ -128,7 +150,7 @@
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
                       <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
                         <span style="font:600 14px 'Karla';color:#22251f">{{ b.name }}</span>
-                        <span style="font:400 11.5px 'Karla';color:#8b9086">Lot {{ b.lot }} · {{ b.qty }} kaldı</span>
+                        <span style="display:flex;align-items:center;gap:6px;font:400 11.5px 'Karla';color:#8b9086">Lot {{ b.lot }} · {{ b.qty }} kaldı <span style="font:500 10px 'IBM Plex Mono';color:#3a6b8a;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:1px 6px">{{ b.depo }}</span></span>
                       </div>
                       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none">
                         <span style="font:600 10px 'Space Grotesk';color:{{ b.tagFg }};background:{{ b.tagBg }};border-radius:6px;padding:2px 8px">{{ b.tag }}</span>
@@ -236,6 +258,18 @@
         <span style="font:400 12.5px/1.7 'Karla';color:#6a7065">Dönem seçici ve neden dağılımı yerinde kalır; tablo yerine bu blok görünür. Önceki döneme geçmek tek dokunuş.</span>
         <span style="font:400 11.5px 'Karla';color:#8b9086">Karşılaştırma yine Raporlar'da.</span>
       </div>
+      <div style="width:420px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:10px;padding:22px 24px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086">Depo ekseni — iki sessiz hâl</span>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:600 13.5px 'Space Grotesk';color:#22251f">1 · Tek aktif depo (bugünkü kurulum)</span>
+          <span style="font:400 12.5px/1.65 'Karla';color:#6a7065">Kenar çubuğundaki bağlam seçici, "Depo: …" süzgeci ve satırdaki depo işareti <strong>hiç görünmez</strong>. Ekran bugünkü hâlinden farksızdır; desen ikinci depo eklendiği gün kendiliğinden belirir.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;border-top:1px solid #f0f1ec;padding-top:10px">
+          <span style="font:600 13.5px 'Space Grotesk';color:#22251f">2 · Link'ten gelen uyumsuz süzgeç</span>
+          <div style="background:#e6eef3;border:1px solid #bcd0e0;border-radius:8px;padding:9px 11px;font:400 11.5px/1.55 'Karla';color:#2f5a78">Paylaşılan bağlantı <strong>KEHL</strong> deposuna süzülmüştü; kapsamınızda bu depo yok — süzgeç düştü, liste bağlamınızla açıldı.</div>
+          <span style="font:400 11.5px/1.6 'Karla';color:#8b9086">Bağlam üstündür ve URL'e yazılmaz: paylaşılan link alıcının evrenini değiştiremez. Sessiz düşme yok.</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -257,7 +291,7 @@
               <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
                 <div style="display:flex;flex-direction:column;gap:1px">
                   <span style="font:600 13.5px 'Karla';color:#22251f">{{ m.name }}</span>
-                  <span style="font:400 11px 'Karla';color:#8b9086">{{ m.qty }} · kalan {{ m.pctT }}</span>
+                  <span style="display:flex;align-items:center;gap:6px;font:400 11px 'Karla';color:#8b9086">{{ m.qty }} · kalan {{ m.pctT }} <span style="font:500 9.5px 'IBM Plex Mono';color:#3a6b8a;background:#e6eef3;border:1px solid #bcd0e0;border-radius:5px;padding:1px 5px">{{ m.depo }}</span></span>
                   <span style="font:500 11px 'IBM Plex Mono';color:{{ m.dateFg }}">{{ m.dateLine }}</span>
                 </div>
                 <span style="font:600 10px 'Space Grotesk';color:{{ m.tagFg }};background:{{ m.tagBg }};border-radius:6px;padding:2px 8px">{{ m.tag }}</span>
@@ -353,7 +387,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { visible: 14, modalOpen: false, tab: 'levels', period: 'q' };
+  state = { visible: 14, modalOpen: false, tab: 'levels', period: 'q', depoFilter: null, openVar: null };
   onScroll = (e) => {
     const el = e.target;
     if (el.scrollHeight - el.scrollTop - el.clientHeight < 90 && this.state.visible < this._total) {
@@ -382,9 +416,39 @@ class Component extends DCLogic {
         d, dLabel: d===warn?'%'+(15+Math.floor(rnd()*9)):(d===bad?'DLC geçti':'%'+(45+Math.floor(rnd()*40))) });
     }
     this._total = all.length;
-    const shown = all.slice(0, this.state.visible).map(v => ({
-      ...v, availFg: v.avail==='0' ? '#a5443c' : '#22251f', dFg:v.d[0], dBg:v.d[1] }));
-    const more = this.state.visible < all.length;
+
+    // ---- Depo ekseni: tablo süzgeci (geçici, URL'de yaşar) — bağlamı ASLA yazmaz.
+    const DEPOS = [{code:'STR',name:'Strasbourg'},{code:'COL',name:'Colmar'},{code:'KEHL',name:'Kehl (DE)'}];
+    const dfObj = DEPOS.find(d => d.code === this.state.depoFilter) || null;
+    const wts = [[.5,.3,.2],[.62,.24,.14],[.34,.33,.33],[.78,.22,0],[.46,0,.54],[.55,.45,0]];
+    const splitN = (n,i) => { const w = wts[i%wts.length]; const p = w.map(x=>Math.floor(n*x)); p[0] += n - p.reduce((a,b)=>a+b,0); return p; };
+    const nearLabels = ['26 Tem','04 Ağu','18 Ağu','—'];
+    const enriched = all.map((v,i) => {
+      const n = parseInt(v.avail,10)||0, rs = parseInt(v.reserved,10)||0;
+      const pa = splitN(n,i), pr = splitN(rs,i+2);
+      const perDepo = DEPOS.map((d,k)=>({ ...d, availN:pa[k], reservedN:pr[k] })).filter(p=>p.availN>0||p.reservedN>0);
+      return { ...v, perDepo };
+    });
+    const list = dfObj
+      ? enriched.map(v => { const p = v.perDepo.find(x=>x.code===dfObj.code); return p ? { ...v, avail:String(p.availN), reserved:String(p.reservedN) } : null; }).filter(Boolean)
+      : enriched;
+    this._total = list.length;
+    const shown = list.slice(0, this.state.visible).map((v,i) => {
+      const isOpen = !dfObj && this.state.openVar === i;
+      return { ...v,
+        availFg: v.avail==='0' ? '#a5443c' : '#22251f', dFg:v.d[0], dBg:v.d[1],
+        spread: dfObj ? null : (v.perDepo.length>1 ? v.perDepo.length+' depoda' : (v.perDepo[0] ? v.perDepo[0].code : null)),
+        caret: isOpen ? '▴' : '▾',
+        open: isOpen, rowBg: isOpen ? '#f6f7f3' : 'transparent', cursor: dfObj ? 'default' : 'pointer',
+        toggle: dfObj ? (()=>{}) : (() => this.setState(s => ({ openVar: s.openVar===i ? null : i }))),
+        perDepo: v.perDepo.map((p,k)=>({ name:p.name, code:p.code, avail:String(p.availN), reserved:String(p.reservedN), near:nearLabels[k%nearLabels.length] })),
+      };
+    });
+    const more = this.state.visible < list.length;
+    const cycleDepo = () => this.setState(s => {
+      const i = DEPOS.findIndex(d => d.code === s.depoFilter);
+      return { depoFilter: i+1 >= DEPOS.length ? null : DEPOS[i+1].code, visible: 14, openVar: null };
+    });
 
     const nb = (o) => {
       const blocked = o.kind==='bad';
@@ -403,23 +467,23 @@ class Component extends DCLogic {
       };
     };
     const B = {
-      baklava: nb({ name:'Fıstıklı Baklava 1kg', lot:'LOT-2451-A', qty:'14 ad.', pctT:'%18', pct:'18%',
+      baklava: nb({ name:'Fıstıklı Baklava 1kg', lot:'LOT-2451-A', qty:'14 ad.', pctT:'%18', pct:'18%', depo:'Strasbourg',
         tag:'DLC', kind:'warn', mlor:true, dateLine:'DLC 26 Tem · 3 gün', costLine:'9,20 €/ad · 128,80 € riskte',
         sub:'Öneri: %30 → 12,60 €', cta:'Teklif aç', canOffer:true }),
-      special: nb({ name:'Baklava Special (tepsi)', lot:'LOT-2452-A', qty:'11 ad.', pctT:'%15', pct:'15%',
+      special: nb({ name:'Baklava Special (tepsi)', lot:'LOT-2452-A', qty:'11 ad.', pctT:'%15', pct:'15%', depo:'Colmar',
         tag:'DLC', kind:'warn', dateLine:'DLC 27 Tem · 4 gün', costLine:'12,40 €/ad · 136,40 € riskte',
         sub:'Öneri: %35 → 13,50 €', cta:'Teklif aç', canOffer:true }),
-      kunefe: nb({ name:'Künefe 2 kişilik', lot:'LOT-2440-C', qty:'22 ad.', pctT:'%22', pct:'22%',
+      kunefe: nb({ name:'Künefe 2 kişilik', lot:'LOT-2440-C', qty:'22 ad.', pctT:'%22', pct:'22%', depo:'Strasbourg',
         tag:'DDM', kind:'warn', dateLine:'DDM 25 Tem · 2 gün', costLine:'6,10 €/ad · 134,20 € riskte',
         offerPrice:'8,90 € (liste 12,70 €)', offerSold:'5 / 22 satıldı',
         sub:'Kalite düşer, satılabilir', cta:'Fiyatı güncelle', canOffer:true }),
-      sarma: nb({ name:'Sarma Kadayıf 1kg', lot:'LOT-2445-A', qty:'9 ad.', pctT:'%24', pct:'24%',
+      sarma: nb({ name:'Sarma Kadayıf 1kg', lot:'LOT-2445-A', qty:'9 ad.', pctT:'%24', pct:'24%', depo:'Kehl (DE)',
         tag:'DDM', kind:'warn', dateLine:'DDM 29 Tem · 6 gün', costLine:'10,00 €/ad · 90,00 € riskte',
         sub:'Öneri: %25 → 15,00 €', cta:'Teklif aç', canOffer:true }),
-      borek: nb({ name:'Su Böreği (tepsi)', lot:'LOT-2399-B', qty:'8 ad.', pctT:'%0', pct:'0%',
+      borek: nb({ name:'Su Böreği (tepsi)', lot:'LOT-2399-B', qty:'8 ad.', pctT:'%0', pct:'0%', depo:'Colmar',
         tag:'DLC geçti', kind:'bad', dateLine:'DLC 20 Tem\u2019de geçti', costLine:'11,50 €/ad · 92,00 € zarar',
         sub:'Karar yok — yalnız imha', cta:'İmha başlat', canOffer:false }),
-      ekmek: nb({ name:'Ekmek Kadayıfı 500g', lot:'LOT-2401-D', qty:'5 ad.', pctT:'%0', pct:'0%',
+      ekmek: nb({ name:'Ekmek Kadayıfı 500g', lot:'LOT-2401-D', qty:'5 ad.', pctT:'%0', pct:'0%', depo:'Strasbourg',
         tag:'DLC geçti', kind:'bad', mlor:true, dateLine:'DLC 22 Tem\u2019de geçti', costLine:'7,80 €/ad · 39,00 € zarar',
         sub:'Karar yok — yalnız imha', cta:'İmha başlat', canOffer:false }),
     };
@@ -435,7 +499,7 @@ class Component extends DCLogic {
     const nearTop = [B.borek, B.baklava, B.special];
 
     const mobNear = [B.borek, B.baklava, B.kunefe, B.sarma].map(b => ({
-      name:b.name, qty:b.qty, pctT:b.pctT, tag:b.tag, tagFg:b.tagFg, tagBg:b.tagBg,
+      name:b.name, qty:b.qty, pctT:b.pctT, tag:b.tag, tagFg:b.tagFg, tagBg:b.tagBg, depo:b.depo,
       dateLine:b.dateLine, dateFg:b.dateFg,
       edge:b.edge, bd:b.bd, cta:b.cta, ctaFg:b.ctaFg, ctaBg:b.ctaBg, ctaBd:b.ctaBd, action:open }));
 
@@ -491,6 +555,13 @@ class Component extends DCLogic {
 
     return {
       shown, more, onScroll: this.onScroll, nearExpiry, nearTop, mobNear, recall,
+      scopeLine: 'Tüm depolar · 142 varyant · 6 yaklaşan tarihli · 1 DLC geçti',
+      cycleDepo, clearDepo: () => this.setState({ depoFilter:null, visible:14 }),
+      depoFiltered: !!dfObj, depoFilterName: dfObj ? dfObj.name+' ('+dfObj.code+')' : '',
+      depoChipLabel: dfObj ? dfObj.code : 'tümü',
+      depoChipFg: dfObj ? '#2f5a78' : '#6a7065',
+      depoChipBg: dfObj ? '#e6eef3' : 'transparent',
+      depoChipBd: dfObj ? '#bcd0e0' : '#d2d4cb',
       tabs, isLevels: this.state.tab==='levels', isExpiry: this.state.tab==='expiry', isImha: this.state.tab==='imha',
       goExpiry: () => this.setState({ tab:'expiry' }),
       expiryGroups, destroyed, periods, reasonSplit,

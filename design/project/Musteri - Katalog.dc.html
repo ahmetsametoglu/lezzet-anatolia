@@ -35,7 +35,7 @@
         </nav>
         <div style="margin-left:auto;display:flex;align-items:center;gap:18px">
           <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e0d8c2;border-radius:24px;padding:9px 18px;width:250px;color:#9a917c;font:400 14px 'Karla'">🔍 Ürün ara…</div>
-          <span style="display:inline-flex;align-items:center;gap:8px;background:#eef2e2;border:1px solid #cddbb0;border-radius:20px;padding:7px 14px;font:700 13px 'Karla';color:#4a6121">📍 67000 Strasbourg · kapıya teslim<span style="font:600 12px 'Karla';color:#5f7a2c;text-decoration:underline">değiştir</span></span>
+          <span style="display:inline-flex;align-items:center;gap:8px;background:#eef2e2;border:1px solid #cddbb0;border-radius:20px;padding:7px 14px;font:700 13px 'Karla';color:#4a6121">📍 <span style="font:700 13px 'Karla';color:#4a6121;border-right:1px solid #cddbb0;padding-right:8px">FR ▾</span> 67000 Strasbourg · kapıya teslim<span style="font:600 12px 'Karla';color:#5f7a2c;text-decoration:underline">değiştir</span></span>
           <span style="font:600 14px 'Karla';color:#8a8270">TR ▾</span>
           <div style="position:relative;font-size:22px">🧺<span style="position:absolute;top:-6px;right:-10px;background:#b05c2e;color:#fff;font:700 11px 'Karla';border-radius:10px;padding:1px 6px">3</span></div>
         </div>
@@ -69,6 +69,9 @@
             <div style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px">
               <span style="font:700 16px 'Karla';color:{{ p.nameColor }}">{{ p.name }}</span>
               <span style="font:400 13px 'Karla';color:#8a8270">{{ p.weight }} · {{ p.unit }}</span>
+              <sc-if value="{{ p.mark }}" hint-placeholder-val="{{ false }}">
+                <span style="display:flex;align-items:center;gap:5px;font:600 12px 'Karla';color:{{ p.markFg }};background:{{ p.markBg }};border:1px solid {{ p.markBd }};border-radius:11px;padding:3px 9px;width:max-content">{{ p.mark }}</span>
+              </sc-if>
               <sc-if value="{{ p.limit }}" hint-placeholder-val="{{ false }}">
                 <span style="font:600 12px 'Karla';color:#b05c2e;background:#f9ede2;border-radius:10px;padding:2px 8px;width:max-content">{{ p.limit }}</span>
               </sc-if>
@@ -90,6 +93,9 @@
                     <span style="font:700 16px 'Karla';color:#fff;background:#5f7a2c;padding:5px 12px">+</span>
                   </span>
                 </sc-if>
+                <sc-if value="{{ p.away }}" hint-placeholder-val="{{ false }}">
+                  <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 12.5px 'Karla';padding:6px 12px;border-radius:18px">Gelince haber ver</span>
+                </sc-if>
                 <sc-if value="{{ p.sold }}" hint-placeholder-val="{{ false }}">
                   <span style="background:#c9c3b0;color:#fff;font:700 13px 'Karla';padding:8px 14px;border-radius:18px">Sepete ekle</span>
                 </sc-if>
@@ -105,6 +111,52 @@
       </div>
     </div>
 
+    <span style="font:600 16px 'Karla';color:#3a4147;margin-top:12px">Durum: yer bilinmiyor — katalog girişindeki davet</span>
+    <div style="width:1360px;background:#faf6ec;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);padding:28px 48px;display:flex;flex-direction:column;gap:16px">
+      <h1 style="margin:0;font:600 38px 'Lora';color:#343b41">Katalog</h1>
+      <div style="background:#fff;border:1px solid #e0d8c2;border-radius:16px;padding:18px 22px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+        <span style="font-size:26px">📍</span>
+        <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:260px">
+          <span style="font:700 16px 'Karla';color:#3a4147">Nereye göndereceğimizi söyleyin</span>
+          <span style="font:400 13.5px/1.55 'Karla';color:#6d7261">Posta kodunuzu bilirsek her ürünün yanında ne zaman ve nasıl geleceğini yazarız. Bilmezsek katalog aynı kalır — yalnız vaat veremeyiz.</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid #d8cfb6;border-radius:22px;padding:10px 16px;font:600 14px 'Karla';color:#3a4147">FR ▾</span>
+          <span style="display:flex;align-items:center;background:#fff;border:2px solid #5f7a2c;border-radius:22px;padding:10px 18px;font:400 14px 'Karla';color:#9a917c;width:150px">Posta kodu</span>
+          <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:12px 22px;border-radius:22px">Göster</span>
+          <span style="font:600 13.5px 'Karla';color:#8a8270;text-decoration:underline">Şimdilik geç</span>
+        </div>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Ülke seçici <strong>koşulludur</strong>: yalnız birden çok ülkeye hizmet verilirken görünür (posta kodu ülkeler arası benzersiz değildir — 67000 hem FR hem DE'de var). Tek ülke varken soru sorulmaz. Davet ne iter ne kaybolur: kapatılabilir, atlanabilir; katalog kendiliğinden süzülmez.</span>
+    </div>
+
+    <span style="font:600 16px 'Karla';color:#3a4147;margin-top:12px">Kalemin dört hâli — işaret dili</span>
+    <div style="width:1360px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+      <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:8px">
+        <span style="font:700 15px 'Karla';color:#3a4147">Kapıya</span>
+        <span style="font:400 13px/1.6 'Karla';color:#6d7261">Yerinizde var. <strong>Hiçbir işaret yok</strong> — normal ürün, araçla ücretsiz gelir. İyi haber sessizdir.</span>
+        <span style="background:#5f7a2c;color:#fff;font:700 13px 'Karla';padding:8px 14px;border-radius:18px;width:max-content">Sepete ekle</span>
+      </div>
+      <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:8px">
+        <span style="font:700 15px 'Karla';color:#3a4147">Kargoyla</span>
+        <span style="font:600 12px 'Karla';color:#6d7261;background:#f0e9d6;border:1px solid #e0d8c2;border-radius:11px;padding:3px 9px;width:max-content">📦 Kargoyla gönderilir</span>
+        <span style="font:400 13px/1.6 'Karla';color:#6d7261">Yerinizde yok ama kargolanabiliyor. Sepette <strong>kargo grubuna</strong> düşer; ayrı ödemeyle ayrı sipariş olur.</span>
+      </div>
+      <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:8px">
+        <span style="font:700 15px 'Karla';color:#3a4147">Bölgenizde şu an yok</span>
+        <span style="font:600 12px 'Karla';color:#8a6b2a;background:#fdf3e0;border:1px solid #ecd9b4;border-radius:11px;padding:3px 9px;width:max-content">Bölgenizde şu an yok</span>
+        <span style="font:400 13px/1.6 'Karla';color:#6d7261">Soğuk zincir — kargoya verilemez. Yere bağlı ve <strong>değişebilir</strong>: haber ver + sonraya kaydet.</span>
+        <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 12.5px 'Karla';padding:6px 12px;border-radius:18px;width:max-content">Gelince haber ver</span>
+      </div>
+      <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:8px">
+        <span style="font:700 15px 'Karla';color:#3a4147">Tükendi</span>
+        <span style="font:600 12px 'Karla';color:#3a4147;background:#e9e4d4;border-radius:11px;padding:3px 9px;width:max-content">Tükendi — yakında yeniden</span>
+        <span style="font:400 13px/1.6 'Karla';color:#6d7261">Hiçbir yerde yok. <strong>Tek dürüst engel</strong>; evrenseldir, yer değişince de değişmez.</span>
+        <span style="background:#c9c3b0;color:#fff;font:700 13px 'Karla';padding:8px 14px;border-radius:18px;width:max-content">Sepete ekle</span>
+      </div>
+    </div>
+    <span style="width:1360px;font:400 13px/1.7 'Karla';color:#8a8270">Hâli <strong>stok belirler, müşteri seçmez</strong>: yerelde olan ürün kargoya yönlendirilemez (ücretsiz kapı teslimi varken paralı kargo seçtirmek yalnız karar yükü ekler) ve "bunu kargoyla istiyorum" diye bir seçenek yoktur. Yer bilinmiyorsa hiçbir işaret basılmaz — "tükendi" yalnız ürün hiçbir yerde yokken söylenir.</span>
+
     <div style="width:1360px;background:#fff;border:1.5px dashed #cdc4a8;border-radius:16px;padding:24px 32px;display:flex;flex-direction:column;gap:10px">
       <span style="font:700 16px 'Karla';color:#3a4147">Etkileşim sözleşmesi (kodlayan ajan için)</span>
       <ul style="margin:0;padding-left:20px;font:400 14px/1.8 'Karla';color:#6d7261">
@@ -112,6 +164,8 @@
         <li><strong>Seçenekler</strong> → ürün detay sayfasına götürür; varyant seçimi listeden yapılamaz, atlanamaz (kural: çok varyantlıda hızlı ekleme yok). Detay sayfası varyant bölümü görünür şekilde açılır.</li>
         <li><strong>İndirimli kartta +</strong> → normal ekleme; adet, fırsat limitine ulaşınca K19'un + ucu pasifleşir.</li>
         <li><strong>Tükendi</strong> → aksiyon pasif; kartın kendisi yine detaya tıklanabilir (ürün geri gelecek beklentisi).</li>
+        <li><strong>Yer işaretleri</strong> → kartın üzerindeki işaret §"dört hâl"den türer ve yere bağlıdır; yer değişinciye kadar sabittir. "Bölgenizde şu an yok" kartında birincil eylem <strong>Gelince haber ver</strong>'dir — sepete ekleme yolu kapanmaz, ürün detayında "sonraya kaydet" ile sürer.</li>
+        <li><strong>"📍 Adresime gönderilebilir" çipi</strong> → varsayılan kapalı; açılınca yere göre karşılanabilen kalemleri süzer — artık <strong>kargo yoluyla</strong> gelebilenleri de kapsar. Süzme yalnız bu çiple olur; katalog kendiliğinden daralmaz.</li>
         <li><strong>Kart görseli / adı</strong> → her durumda ürün detaya gider.</li>
       </ul>
     </div>
@@ -229,6 +283,9 @@ class Component extends DCLogic {
   renderVals() {
     const on = { bg: "#5f7a2c", fg: "#fff", bd: "#5f7a2c" };
     const off = { bg: "#fff", fg: "#3a4147", bd: "#d8cfb6" };
+    // Yer ekseni — kalemin hâli stoktan doğar, müşteri seçmez. Depo adı/sayısı hiçbir yerde geçmez.
+    const ship = { mark: "📦 Kargoyla gönderilir", markFg: "#6d7261", markBg: "#f0e9d6", markBd: "#e0d8c2" };
+    const away = { mark: "Bölgenizde şu an yok", markFg: "#8a6b2a", markBg: "#fdf3e0", markBd: "#ecd9b4" };
     return {
       chips: [
         { name: "Tümü", ...on }, { name: "Börekler", ...off }, { name: "Mantı & Hamur İşi", ...off },
@@ -238,11 +295,11 @@ class Component extends DCLogic {
         { name: "El Açması Su Böreği", weight: "1 kg", unit: "12,90 €/kg", price: "12,90 €", plain: true, nameColor: "#3a4147", priceColor: "#343b41", imgFilter: "none" },
         { name: "Kayseri Mantısı", weight: "500 g", unit: "15,00 €/kg", price: "7,50 €", added: true, qty: 3, nameColor: "#3a4147", priceColor: "#343b41", imgFilter: "none" },
         { name: "Ispanaklı Gözleme", weight: "4 adet", unit: "1,48 €/adet", price: "5,90 €", was: "7,90 €", limit: "En fazla 5 adet", plain: true, nameColor: "#3a4147", priceColor: "#b05c2e", imgFilter: "none" },
-        { name: "Fıstıklı Baklava", weight: "2 boy", unit: "700 g / 1 kg", price: "16,90 €", multi: true, from: true, nameColor: "#3a4147", priceColor: "#343b41", imgFilter: "none" },
-        { name: "İçli Köfte", weight: "6 adet · 540 g", unit: "18,33 €/kg", price: "9,90 €", plain: true, nameColor: "#3a4147", priceColor: "#343b41", imgFilter: "none" },
+        { name: "Fıstıklı Baklava", weight: "2 boy", unit: "700 g / 1 kg", price: "16,90 €", multi: true, from: true, ...ship, nameColor: "#3a4147", priceColor: "#343b41", imgFilter: "none" },
+        { name: "İçli Köfte", weight: "6 adet · 540 g", unit: "18,33 €/kg", price: "9,90 €", away: true, ...away, nameColor: "#3a4147", priceColor: "#8a8270", imgFilter: "grayscale(.55) opacity(.85)" },
         { name: "Yaprak Sarma", weight: "1 kg", unit: "9,90 €/kg", price: "9,90 €", was: "12,50 €", limit: "En fazla 4 adet", plain: true, nameColor: "#3a4147", priceColor: "#b05c2e", imgFilter: "none" },
         { name: "Tel Kadayıf", weight: "500 g", unit: "11,80 €/kg", price: "5,90 €", sold: true, nameColor: "#8a8270", priceColor: "#8a8270", imgFilter: "grayscale(1) opacity(.7)" },
-        { name: "Antep Fıstığı", weight: "250 g", unit: "35,60 €/kg", price: "8,90 €", plain: true, nameColor: "#3a4147", priceColor: "#343b41", imgFilter: "none" },
+        { name: "Antep Fıstığı", weight: "250 g", unit: "35,60 €/kg", price: "8,90 €", plain: true, ...ship, nameColor: "#3a4147", priceColor: "#343b41", imgFilter: "none" },
       ],
     };
   }

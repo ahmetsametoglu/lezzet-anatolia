@@ -20,6 +20,25 @@
       <span style="font:500 9px 'Space Grotesk';letter-spacing:.2em;color:#8b9086">OPERASYON</span>
     </div>
   </div>
+  <sc-if value="{{ depoPicker }}" hint-placeholder-val="{{ true }}">
+    <div style="margin:0 15px 10px;display:flex;flex-direction:column;gap:5px">
+      <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.15em;text-transform:uppercase;color:#a7ac9f">Depo bağlamı</span>
+      <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #d9dbd2;border-radius:8px;padding:7px 9px;cursor:pointer">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 21V9l9-5 9 5v12"></path><path d="M3 21h18"></path><path d="M9 21v-6h6v6"></path></svg>
+        <div style="display:flex;flex-direction:column;flex:1;min-width:0;gap:1px">
+          <span style="font:600 12.5px 'Space Grotesk';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ depoLabel }}</span>
+          <span style="font:400 10px 'Karla';color:#8b9086">{{ depoSub }}</span>
+        </div>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="m6 9 6 6 6-6"></path></svg>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ depoFixed }}" hint-placeholder-val="{{ false }}">
+    <div style="margin:0 15px 10px;display:flex;align-items:center;gap:8px;padding:2px 1px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b9086" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 21V9l9-5 9 5v12"></path><path d="M3 21h18"></path><path d="M9 21v-6h6v6"></path></svg>
+      <span style="font:500 11.5px 'Karla';color:#6a7065">{{ depoLabel }}</span>
+    </div>
+  </sc-if>
   <div style="margin:0 15px 8px;display:flex;align-items:center;gap:8px;background:#e9eae4;border:1px solid #e0e2da;border-radius:8px;padding:7px 10px">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
     <span style="font:400 12px 'Karla';color:#9aa094;flex:1">Ara…</span>
@@ -48,7 +67,7 @@
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:214,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;panel&quot;,&quot;options&quot;:[&quot;panel&quot;,&quot;siparisler&quot;,&quot;rotalar&quot;,&quot;urunler&quot;,&quot;fiyatlar&quot;,&quot;stok&quot;,&quot;satinalma&quot;,&quot;para&quot;,&quot;raporlar&quot;,&quot;analitik&quot;,&quot;musteriler&quot;,&quot;b2b&quot;,&quot;talepler&quot;,&quot;geribildirim&quot;,&quot;whatsapp&quot;,&quot;ayarlar&quot;,&quot;sistem&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:214,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;panel&quot;,&quot;options&quot;:[&quot;panel&quot;,&quot;siparisler&quot;,&quot;rotalar&quot;,&quot;urunler&quot;,&quot;fiyatlar&quot;,&quot;stok&quot;,&quot;satinalma&quot;,&quot;para&quot;,&quot;raporlar&quot;,&quot;analitik&quot;,&quot;musteriler&quot;,&quot;b2b&quot;,&quot;talepler&quot;,&quot;geribildirim&quot;,&quot;whatsapp&quot;,&quot;ayarlar&quot;,&quot;sistem&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;depoMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;all&quot;,&quot;options&quot;:[&quot;all&quot;,&quot;scoped&quot;,&quot;fixed&quot;,&quot;none&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;},&quot;depo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Tüm depolar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;}}">
 class Component extends DCLogic {
   renderVals() {
     const active = this.props.active || 'panel';
@@ -124,7 +143,18 @@ class Component extends DCLogic {
         };
       }),
     }));
-    return { sections };
+    // Depo bağlamı: kimlik/ortam düzeyi kontrol (rol gibi) — sayfadan sayfaya taşınır.
+    // mode: 'all' (depo-üstü rol) · 'scoped' (çok kapsamlı personel) · 'fixed' (tek kapsam, kontrol değil bilgi) · 'none' (tek aktif depo kurulumu)
+    const mode = this.props.depoMode || 'all';
+    const depo = this.props.depo || 'Tüm depolar';
+    const subs = { all:'3 aktif depo · STR · COL · KEHL', scoped:'kapsamım · 2 depo', fixed:'', none:'' };
+    return {
+      sections,
+      depoPicker: mode === 'all' || mode === 'scoped',
+      depoFixed: mode === 'fixed',
+      depoLabel: mode === 'fixed' ? (this.props.depo || 'Strasbourg deposu') : depo,
+      depoSub: subs[mode] || '',
+    };
   }
 }
 </script>

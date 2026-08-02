@@ -106,6 +106,37 @@
 
     <span style="font:600 15px 'Karla';color:#3a4147;margin-top:12px">Durumlar</span>
     <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div style="width:560px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:22px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Yer ekseni · adres kazanır — seçilen adres şeritteki koddan farklı</span>
+        <div style="background:#fff;border:1px solid #e0d8c2;border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:11px">
+          <span style="font:600 18px 'Lora';color:#343b41">Sipariş <strong>68000 Colmar</strong> adresine göre hazırlandı</span>
+          <span style="font:400 13px/1.6 'Karla';color:#6d7261">Sitede <strong>67000</strong> seçiliydi, seçtiğiniz adres 68000. Sepeti bu adrese göre yeniden değerlendirdik — sürpriz ödemeden sonra değil, <strong>burada</strong> yaşansın diye:</span>
+          <div style="display:flex;flex-direction:column;gap:6px;background:#faf6ec;border-radius:12px;padding:12px 14px">
+            <span style="font:400 13px/1.5 'Karla';color:#6d7261">🚚 2 kalem yine kapıya teslim — gün <strong>Perşembe</strong> yerine <strong>Cumartesi</strong></span>
+            <span style="font:400 13px/1.5 'Karla';color:#6d7261">📦 <strong>Antep Fıstığı</strong> bu adrese kargoyla gider — ayrı sipariş olarak sepette bekliyor</span>
+            <span style="font:400 13px/1.5 'Karla';color:#8a6b2a"><strong>İçli Köfte</strong> bu bölgede şu an yok — sonraya kaydedildi</span>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:12px 20px;border-radius:24px">Bu adresle devam et</span>
+            <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 13.5px 'Karla';padding:10px 18px;border-radius:24px">Başka adres seç</span>
+          </div>
+        </div>
+        <span style="font:400 12.5px/1.7 'Karla';color:#8a8270">Adres, şerit/hap ile çelişirse <strong>adres kazanır</strong> — sipariş her zaman gerçek teslimat yerine göre çözülür. "Sepette gördüm, ödemede kayboldu" sürprizi checkout'un <strong>içinde</strong>, açık mesajla yaşanır; sonrasında değil. Ret değil bilgi bloklarıdır; kırmızı kullanılmaz.</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:11px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Kargo checkout'u — ikinci sipariş</span>
+        <span style="font:600 17px 'Lora';color:#343b41">Kargolu ürünler · 2 kalem</span>
+        <div style="background:#f0e9d6;border:1px solid #e0d8c2;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;justify-content:space-between;font:400 13.5px 'Karla';color:#3a3f35"><span>Ara toplam</span><span style="font-weight:700">39,70 €</span></div>
+          <div style="display:flex;justify-content:space-between;font:400 13.5px 'Karla';color:#3a3f35"><span>📦 Kargo</span><span style="font-weight:700">6,90 €</span></div>
+          <span style="font:400 12px/1.5 'Karla';color:#6d7261">50 € üzeri ücretsiz — eşik <strong>bu siparişin</strong> tutarından hesaplanır.</span>
+        </div>
+        <div style="border:2px solid #5f7a2c;background:#eef2e2;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px">
+          <span style="font:700 13.5px 'Karla';color:#3a4147">Online öde</span>
+          <span style="font:400 12px 'Karla';color:#6d7261">Kart · tek seçenek</span>
+        </div>
+        <span style="font:400 12.5px/1.7 'Karla';color:#8a8270">Aynı checkout akışı, kargo karakteriyle: <strong>gün kartları yok</strong> ("2-3 iş günü"), kapıda ödeme hiç listelenmez, minimum sepet kuralı rota siparişinden bağımsızdır. Rota siparişi bu akıştan etkilenmez — iki ödeme birleştirilmez.</span>
+      </div>
       <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
         <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Girişsiz gelen — hızlı doğrulama adımı (adım 0)</span>
         <span style="font:600 18px 'Lora';color:#343b41">Siparişinizi tamamlamak için doğrulanın</span>
@@ -246,6 +277,8 @@
         <li><strong>+ Yeni adres</strong> → kayıtlı adres listesinin altında satır içi form açılır (ayrı sayfa/modal değil); kaydedilince liste yenilenir, yeni adres seçili gelir ve akış adım 2'ye kendiliğinden iner. "Varsayılan yap" işaretliyse hesaptaki varsayılan da güncellenir.</li>
         <li><strong>Adres seçimi</strong> → posta kodu teslimat şeklini belirler: bölge içi = kapıya teslim (ücretsiz, gün kartları); bölge dışı = kargo (ücret + eşik). Sepette soğuk zincir kalemi varken bölge dışı adres seçilirse teslimat kısıtı bloğu (sepetteki bileşenin aynısı) açılır: sonraya kaydet / adres değiştir / haber ver. Kargo yolu hiç mümkün değilse yöntem seçici render edilmez, tek satır "Kapıya teslim" kalır. Adım 2'nin içeriği adrese göre yeniden kurulur.</li>
         <li><strong>Ödeme kartları</strong> → yalnız bağlamda geçerli olanlar render edilir; geçersiz yol DOM'da hiç yoktur. Kural sonuçları tek sade cümleyle verilir.</li>
+        <li><strong>Adres ↔ yer çelişkisi</strong> → adresin posta kodu şeritteki koddan farklıysa sipariş <strong>adresin yerine</strong> göre çözülür ve sepet o an yeniden değerlendirilir; sonuç checkout'un içinde açıkça bildirilir. Kalem silinmez, sonraya kaydedilir.</li>
+        <li><strong>Kargo checkout'u</strong> → sepetteki kargo grubundan açılan <strong>ayrı bir sipariştir</strong>: kendi kargo ücreti/eşiği, yalnız online peşin, gün kartı yok. Rota siparişiyle tek ödemeye birleştirilmez.</li>
         <li><strong>Siparişi onayla</strong> → online yolda dış ödeme sayfasına gider; dönüşte başarılı/başarısız net sonuç ekranı. Kapıda/havale/vadelide doğrudan onay ekranı.</li>
         <li><strong>Pazarlama kutusu</strong> → daima işaretsiz başlar; durumu siparişi hiçbir biçimde etkilemez.</li>
         <li>Alman B2B (geçerli vergi no) → toplamlar otomatik KDV'siz gelir; arayüzde ek açıklama/etiket yok, yalnız doğru rakam.</li>

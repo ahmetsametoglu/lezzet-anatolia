@@ -32,7 +32,7 @@
       <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
         <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
           <span style="font:600 22px 'Space Grotesk'">Bugün · Perşembe 24 Temmuz</span>
-          <span style="font:400 12px 'Karla';color:#8b9086">Karar tetikler, analiz etmez · derin analiz Raporlar &amp; Analitik'te</span>
+          <span style="font:400 12px 'Karla';color:#8b9086">Tüm depolar · karar tetikler, analiz etmez · derin analiz Raporlar &amp; Analitik'te</span>
         </div>
         <div style="display:flex;background:#eef0ea;border:1px solid #e0e2da;border-radius:8px;padding:2px">
           <span onClick="{{ setBusy }}" style="font:600 12.5px 'Space Grotesk';padding:8px 15px;border-radius:6px;cursor:pointer;background:{{ busyBg }};color:{{ busyFg }}">Yoğun gün</span>
@@ -47,6 +47,9 @@
             <span style="font:500 11px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#6a7065">{{ k.label }}</span>
             <span style="font:500 27px 'IBM Plex Mono';color:#22251f;letter-spacing:-.02em">{{ k.value }}</span>
             <span style="font:500 11.5px 'IBM Plex Mono';color:{{ k.dfg }}">{{ k.delta }}</span>
+            <sc-if value="{{ k.split }}" hint-placeholder-val="{{ false }}">
+              <span style="font:400 10.5px 'IBM Plex Mono';color:#8b9086">{{ k.split }}</span>
+            </sc-if>
           </div>
         </sc-for>
       </div>
@@ -87,11 +90,11 @@
         <div style="display:flex;flex-direction:column;gap:13px">
           <div style="display:flex;align-items:baseline;justify-content:space-between">
             <span style="font:600 16px 'Space Grotesk'">Bugünün teslimatları</span>
-            <span style="font:400 12px 'Karla';color:#8b9086">14:00 rota · 8 durak</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">14:00 rota · 8 durak · 3 depo</span>
           </div>
           <div style="border:1px solid #e6e7e1;border-radius:10px;overflow:hidden">
             <div style="padding:11px 16px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;display:flex;justify-content:space-between">
-              <span style="font:500 12px 'Karla';color:#6a7065">Kurye: Murat · Rota A</span>
+              <span style="font:500 12px 'Karla';color:#6a7065">Kurye: Murat · Rota A <span style="font:500 10px 'IBM Plex Mono';color:#3a6b8a;background:#e6eef3;border:1px solid #bcd0e0;border-radius:5px;padding:1px 5px;margin-left:4px">STR</span></span>
               <span style="font:500 12px 'IBM Plex Mono';color:#4a6121">3 / 8 teslim</span>
             </div>
             <sc-for list="{{ today }}" as="t" hint-placeholder-count="6">
@@ -139,13 +142,13 @@ class Component extends DCLogic {
 
     const pos='#4a6121', warn='#9a6416', neg='#b0561f';
     const kpis = busy ? [
-      { label:'Bugünkü sipariş', value:'24', delta:'↑ 6 dün' , dfg:pos },
-      { label:'Bugünkü ciro', value:'3.842 €', delta:'↑ %8', dfg:pos },
+      { label:'Bugünkü sipariş', value:'24', delta:'↑ 6 dün' , dfg:pos, split:'STR 12 · COL 7 · KEHL 5' },
+      { label:'Bugünkü ciro', value:'3.842 €', delta:'↑ %8', dfg:pos, split:'STR 1.980 · COL 1.104 · KEHL 758' },
       { label:'Bekleyen tahsilat', value:'1.118 €', delta:'kapıda 504 € · vade 614 €', dfg:warn },
       { label:'Marj-altı satış', value:'2 ürün', delta:'incele →', dfg:neg },
     ] : [
-      { label:'Bugünkü sipariş', value:'9', delta:'↓ 15 dün', dfg:'#8b9086' },
-      { label:'Bugünkü ciro', value:'1.284 €', delta:'sakin', dfg:'#8b9086' },
+      { label:'Bugünkü sipariş', value:'9', delta:'↓ 15 dün', dfg:'#8b9086', split:'STR 5 · COL 3 · KEHL 1' },
+      { label:'Bugünkü ciro', value:'1.284 €', delta:'sakin', dfg:'#8b9086', split:'STR 690 · COL 402 · KEHL 192' },
       { label:'Bekleyen tahsilat', value:'0 €', delta:'hepsi tahsil edildi', dfg:pos },
       { label:'Marj-altı satış', value:'0', delta:'temiz', dfg:pos },
     ];
@@ -159,7 +162,7 @@ class Component extends DCLogic {
     const queue = [
       q('1','Gecikmiş vadeli sipariş','Café Marceau · #2451 · vade 12 Tem geçti (312 €)','Tahsilat →','red'),
       q('1','Uyuşan kurye kapanışı','Dün Murat · beklenen ile fark −10 €','Para →','amber'),
-      q('4','Yaklaşan tarihli parti','Raf ömrü eşik altı · indirimli teklif kararı','Stok →','amber'),
+      q('4','Yaklaşan tarihli parti','Raf ömrü eşik altı · COL 2 · STR 1 · KEHL 1 — eşik depo bazlı','Stok →','amber'),
       q('2','B2B başvurusu','Self-servis kayıt · onay bekliyor','B2B Onay →','neutral'),
       q('1','Limit aşan vadeli sipariş','Traiteur Yıldız · limit üstü, onay gerek','Sipariş →','neutral'),
       q('3','Açık talep','Cevap bekleyen müşteri talebi/şikâyeti','Talepler →','neutral'),

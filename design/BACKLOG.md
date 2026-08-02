@@ -414,8 +414,13 @@ indiriyor; stokta bunun karşılığı yazılmamış, sekiz RPC beş ayrı tablo
   (durak sırası, kapasite, zaman penceresi) hiç modellemiyor.
   **Yan kazanç:** ad düzelince kargo teslimatı da evini buldu — "bugün hangi paketleri taşıyıcıya
   vereceğim" sorusunun hiçbir ekranda cevabı yoktu (`grep` kanıtı: takip no yalnız müşteri yüzünde
-  anılıyor). ⚠ Kargo yarısının **arka ucu eksik**: `order` tablosunda taşıyıcı/takip alanı yok
-  (`build/19` bunu `07`'ye kaydetmişti) — tasarım çizilebilir, bağlanması o alanları bekler.
+  anılıyor). **Arka uç HAZIR** (`07.12`, aynı gün indi): `order.carrier` tanımlı küme +
+  `order.tracking_number`, kısıt veride (rota siparişine takip numarası yazılamaz). Sayfanın kargo
+  yarısı çizilir çizilmez bağlanabilir. ⚠ **Ama numarayı KİM girer sorusu tek cevaplı olmalı:**
+  `07.12` "hazırlık ekranı girer, paketi kapatan kişi etiketi elinde tutar" diyor ve haklı. Teslimat
+  sayfası numarayı **okur** ve eksikse gösterir (gün kapanmadan görünür bir açık); ikinci bir giriş
+  yeri açmak aynı alanı iki ekranın sahiplenmesi olurdu. Hazırlık ekranı (`10.1`) yazılana kadar
+  giriş yolu hiç yok — bu bir tasarım açığı değil, sıra meselesi.
 - **Depolar ayrı sayfa kalır ve büyür:** künye + hizmet alanı + **karne** (risk, eşik altı, yolda
   bekleyen). Karne SAYAR, listelemez — her sayı Stok'a o depo bağlamıyla giden bir kapıdır.
 - **Veri temeli yeni tablo değil GÖRÜNÜM olabilir:** beş tablo da `stock_id`/`warehouse_id` taşıyor,
