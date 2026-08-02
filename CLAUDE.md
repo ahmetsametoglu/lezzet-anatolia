@@ -77,6 +77,7 @@
 - **Tamamlanmış görev satırı VAAT ETTİĞİNİ teslim etmiş olmalı.** `[x]`/`[~]` satırında anılan dosya ya da `pnpm` komutu gerçekten var olmalı; yön değiştiyse vaat **üstü çizilir** (`~~…~~`) ve gerekçesi yazılır. Satırı okuyup altındaki notu okumayan ajan olmayan bir komutu çağırır — CLAUDE.md §5'in "durumun tek sahibi görev satırıdır" kuralı ancak böyle ayakta durur. `docs:check` bunu doğrular.
 - **Doğrulama:** `pnpm docs:check` — veri modeli ↔ migration ↔ Zod alan karşılaştırması, anılan paketlerin varlığı, görev kimlikleri, **kapanmış göreve asılı `BEKLEYEN` işareti**, **tamamlanmış satırın vaat ettiği dosya/komut**, özet tazeliği. `pnpm hooks:install` ile commit öncesi otomatik koşar.
 - Veri modeli konu dosyalarına bölüktür (`docs/architecture/data-model/`): **alan** oraya, **karar** ana `DATA_MODEL.md`'ye yazılır.
+- **`docs/denetim/` yalnız denetim ajanının yönetimindedir.** Şerit ajanları buradaki dosyalara YALNIZ kendi **Cevap:** bölümlerini yazar; dosya silmek, yeniden adlandırmak, denetim metnini değiştirmek ya da dosyayı **eski bir sürümüyle ezmek** YASAK (yaşandı: 02.08, inceltilmiş bir dosya eski tam kopyayla ezildi). Cevap yazmadan önce dosyanın GÜNCEL hâlini oku; klasörün yaşam döngüsünü (açık maddeye indirme, kapanan dosyayı silme) yalnız denetim ajanı işletir.
 
 ## 6. docs haritası
 Kurallar + kod dizilimi → `STACK` · Disiplin (migration/deploy/git/ajan) → `WORKFLOW` · İş kuralları → `DOMAIN` ·
