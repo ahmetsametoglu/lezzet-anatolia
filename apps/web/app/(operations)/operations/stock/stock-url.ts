@@ -83,6 +83,18 @@ export function stockUrl(state: StockUrlState): string {
 }
 
 /**
+ * BAŞKA bir ekrandan Stok'a bağlantı — varsayılanların üstüne yalnız istenen alanlar konur.
+ *
+ * Depolar ekranının karnesi buraya bağlanıyor ("6 varyant eşik altı" → Stok, bağlam bu depoda) ve
+ * adresi elle kurmak (`?depo=STR&scope=expiry`) parametre adlarını ikinci kez yazmak olurdu: bu
+ * dosyanın kendi başlığı "URL SÖZLEŞMESİ — tek kaynak" diyor, dışarıdan gelen bağlantı da o
+ * sözleşmeden geçmeli.
+ */
+export function stockLink(patch: Partial<StockUrlState> = {}): string {
+  return stockUrl({ ...DEFAULTS, ...patch });
+}
+
+/**
  * SERVİS süzgeçleri — yalnız sunucunun uygulayabileceği olanlar. `scope` burada YOK ve bu bilinçli:
  * "yaklaşan tarihli" bir raf ömrü KARARIDIR (motorun işi), veritabanı süzgeci değil. Ölçütü SQL'e
  * kopyalamak, eşiği iki yerde tutmak demekti — biri değişince ekran ile sayaç ayrışırdı.

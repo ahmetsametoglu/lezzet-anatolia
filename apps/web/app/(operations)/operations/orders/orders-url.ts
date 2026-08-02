@@ -77,6 +77,14 @@ export function ordersUrl(state: OrdersUrlState): string {
  * yapmak listenin kuyruğunu yutardı. Müşteri araması burada YOK: kimlikler çağıranda çözülür
  * (`UserProfileService.search`), böylece "neyde aranır" tek yerde kalır.
  */
+/**
+ * BAŞKA bir ekrandan Siparişler'e bağlantı — `stockLink` ile aynı gerekçe: parametre adları bu
+ * dosyanın sözleşmesidir, çağıran onları elle kurmaz.
+ */
+export function ordersLink(patch: Partial<OrdersUrlState> = {}): string {
+  return ordersUrl({ ...DEFAULTS, ...patch });
+}
+
 export function toOrderFilters(state: OrdersUrlState): {
   status?: OrderStatus[];
   channel?: Channel;

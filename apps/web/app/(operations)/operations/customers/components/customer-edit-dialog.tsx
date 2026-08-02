@@ -6,7 +6,8 @@ import { FieldShell } from '@/components/operation/form/field-shell';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
 import { ToggleField } from '@/components/operation/form/toggle';
-import { CountryEnum, CustomerTypeEnum, PreferredLanguageEnum, type Country, type CustomerType, type PreferredLanguage } from '@lezzet/types';
+import { CustomerTypeEnum, PreferredLanguageEnum, type Country, type CustomerType, type PreferredLanguage } from '@lezzet/types';
+import { COUNTRY_OPTIONS } from '@/components/operation/ui/labels';
 import { TYPE_LABEL } from '../customers-url';
 import type { CustomerEditInput, CustomerRow } from '../customers-types';
 
@@ -31,7 +32,6 @@ import type { CustomerEditInput, CustomerRow } from '../customers-types';
 const FORM_ID = 'customer-edit-form';
 
 const LANGUAGE_LABEL: Record<PreferredLanguage, string> = { tr: 'Türkçe', fr: 'Français', de: 'Deutsch' };
-const COUNTRY_LABEL: Record<Country, string> = { FR: 'Fransa', DE: 'Almanya' };
 
 interface CustomerEditDialogProps {
   row: CustomerRow;
@@ -159,7 +159,7 @@ export function CustomerEditDialog({
             <Select
               value={country}
               onChange={(v) => setCountry(v as Country)}
-              options={CountryEnum.options.map((c) => ({ value: c, label: COUNTRY_LABEL[c] }))}
+              options={COUNTRY_OPTIONS}
             />
           </FieldShell>
         </div>

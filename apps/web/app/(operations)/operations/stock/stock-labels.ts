@@ -1,34 +1,19 @@
 import type { StockAdjustmentReason } from '@lezzet/types';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import { money } from '@/components/operation/ui/format';
+import { riskCentsOf } from '@/lib/stock/batch-labels';
 import type { BatchView } from '@/lib/stock/batch-types';
 
-// Stok ekranına ÖZGÜ sözlük. İki ekranın paylaştığı parça (`expiryBadge` · `expiryLine` ·
-// `batchAction` · `suggestionText`) `lib/stock/batch-labels`'a taşındı; burada kalanlar yalnız bu
-// ekranın sorduğu sorular: riskteki tutar, parti gruplama, imha sebebi sözlüğü.
-
-/**
- * **Risk altındaki tutar** — partide kalan malın alış maliyeti (`kalan × birim alış`).
- *
- * Aciliyeti PARAYLA ölçer: "9 adet kaldı" ile "90 € çöpe gidecek" aynı cümle değildir ve karar
- * sırasını belirleyen ikincisidir. Alış fiyatı girilmemiş partide `null` — sayı uydurulmaz.
- * Satılamaz partide bu tutar artık risk değil GERÇEKLEŞMİŞ zarardır; ekran adını ona göre koyar.
- */
-function riskCentsOf(batch: BatchView): number | null {
-  return batch.purchasePriceCents === null ? null : batch.purchasePriceCents * batch.physicalQty;
-}
+// Stok ekranına ÖZGÜ sözlük. Birden çok ekranın paylaştığı parça (`expiryBadge` · `expiryLine` ·
+// `batchAction` · `suggestionText`, ve 19.5'te `riskCentsOf` · `totalRiskCents`)
+// `lib/stock/batch-labels`'a taşındı; burada kalanlar yalnız bu ekranın sorduğu sorular: maliyet
+// satırı, parti gruplama, imha sebebi sözlüğü.
 
 /** Kart alt satırı — "9,20 €/ad · 128,80 € riskte" (satılamazda "zarar"). */
 export function costLine(batch: BatchView): string {
   if (batch.purchasePriceCents === null) return 'alış fiyatı girilmemiş';
   const total = money(riskCentsOf(batch));
   return `${money(batch.purchasePriceCents)}/ad · ${total} ${batch.decision === 'must_discard' ? 'zarar' : 'riskte'}`;
-}
-
-/** Bir küme partinin toplam riski; hiçbirinin fiyatı yoksa `null` (toplam uydurulmaz). */
-export function totalRiskCents(batches: readonly BatchView[]): number | null {
-  const known = batches.map(riskCentsOf).filter((c): c is number => c !== null);
-  return known.length === 0 ? null : known.reduce((sum, c) => sum + c, 0);
 }
 
 /**

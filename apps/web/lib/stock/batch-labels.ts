@@ -59,3 +59,29 @@ export function suggestionText(batch: BatchView): string {
   if (batch.flag === 'expired_sellable') return `DDM geçti · öneri: ${money(batch.suggestedOfferCents)}`;
   return `Öneri: %${batch.offerDiscountPercent} → ${money(batch.suggestedOfferCents)}`;
 }
+
+/**
+ * **Risk altındaki tutar** — partide kalan malın alış maliyeti (`kalan × birim alış`).
+ *
+ * Aciliyeti PARAYLA ölçer: "9 adet kaldı" ile "90 € çöpe gidecek" aynı cümle değildir ve karar
+ * sırasını belirleyen ikincisidir. Alış fiyatı girilmemiş partide `null` — sayı uydurulmaz.
+ * Satılamaz partide bu tutar artık risk değil GERÇEKLEŞMİŞ zarardır; ekran adını ona göre koyar.
+ *
+ * Stok ekranının özel sözlüğünden BURAYA taşındı (19.5): Depolar ekranının karnesi aynı tutarı depo
+ * başına soruyor. İki yerde hesaplansaydı, biri "kalan × alış", öteki bir gün "giriş × alış" derdi
+ * ve iki ekran aynı depo için farklı risk yazardı.
+ */
+export function riskCentsOf(batch: BatchView): number | null {
+  return batch.purchasePriceCents === null ? null : batch.purchasePriceCents * batch.physicalQty;
+}
+
+/**
+ * Bir küme partinin toplam riski; hiçbirinin fiyatı yoksa `null` (toplam uydurulmaz).
+ *
+ * Fiyatı bilinen partiler toplanır, bilinmeyenler ATLANIR — yani dönen sayı bir ALT sınırdır.
+ * Sıfıra düşürmek bozuk ölçümü sağlıklı gibi okuturdu (`CLAUDE.md §1`).
+ */
+export function totalRiskCents(batches: readonly BatchView[]): number | null {
+  const known = batches.map(riskCentsOf).filter((c): c is number => c !== null);
+  return known.length === 0 ? null : known.reduce((sum, c) => sum + c, 0);
+}

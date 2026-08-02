@@ -5,14 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/operation/ui/badge';
 import { WarehouseIcon } from '@/components/operation/ui/icons';
 import { money, percent } from '@/components/operation/ui/format';
-import { batchAction, expiryBadge, expiryLine, suggestionText } from '@/lib/stock/batch-labels';
+import { batchAction, expiryBadge, expiryLine, suggestionText, totalRiskCents } from '@/lib/stock/batch-labels';
 import { setOfferPriceAction } from '@/lib/stock/offer-actions';
 import {
   EXPIRY_GROUPS,
   costLine,
   groupOf,
   movedOutOf,
-  totalRiskCents,
   type ExpiryGroupKey,
 } from '../stock-labels';
 import type { BatchView, StockViewProps } from '../stock-types';

@@ -6,7 +6,7 @@ import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Table, withCells, type Column } from '@/components/operation/ui/table';
 import { money, shortDate } from '@/components/operation/ui/format';
 import { expiryBadge } from '@/lib/stock/batch-labels';
-import { totalRiskCents } from '../stock-labels';
+import { totalRiskCents } from '@/lib/stock/batch-labels';
 import { DecisionCard } from './attention-tab';
 import type { BatchView, StockLevelRow, StockViewProps } from '../stock-types';
 

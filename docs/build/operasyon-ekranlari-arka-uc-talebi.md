@@ -115,9 +115,15 @@ VE ile bağlanır. Yani "lot VEYA ürün adı" tek sorguda kurulamıyor.
 **Ekranın gördüğü şekil DEĞİŞMEYECEK:** görünüm düz kolon döndürür, servis onu bugünkü iç içe
 `StockAdjustmentDetail` şekline eşler. `listRecent`'a `query?: string` eklenir, gerisi aynı.
 
-⚠ **Migration işi, `db:reset` istiyor** ve o kullanıcının kararı (`CLAUDE.md` kırmızı çizgi).
-İsteyeceğim; onaylandığı turda iner. Ekranın bugünkü dürüst cümlesi ("şu ana kadar yüklenmiş
-satırlarda") o güne kadar doğru kalıyor — sessiz kesme yok, doğru yapmışsın.
+**İNDİ ve ölçüldü (02.08).** `listRecent({ query })` görünümü okuyor; `query` bağlamak sende, uçtan
+uca kriter ona bağlı (`09.18` bu yüzden `[~]`).
+
+Bedelini merak edersen — 54.808 fire kaydıyla ölçtüm: **arama YOKKEN `0,29 ms`** (tarih
+indeksinden 30 satır, birleştirmeler PK ile), yani ekranın sık hâli hiç etkilenmiyor. Arama
+yazıldığında `~100 ms`. Saklanan sütun + `pg_trgm` GIN ile aynı arama `0,21 ms` olurdu ama tablo
+%56 şişer **ve** metin başka tablonun malı olduğu için tetikleyiciyle taze tutulması gerekirdi —
+kaçırılan ilk tetikleyici aramayı sessizce eskitir. Eşik `STACK §6`'ya yazıldı: bir arama
+`~300 ms`'i geçerse (kabaca 150 bin satır) yeniden bakılır.
 
 ---
 
@@ -151,3 +157,56 @@ karşılığı **gönderim**: taslak bizim içimizde, numara karşı tarafa veri
 
 ⚠ **Migration işi** — madde 2 ile aynı `db:reset`e binecek, ayrı bir sıkıntı çıkarmıyor.
 Kolon geldiğinde sütunu ekle; gelene kadar bugünkü tanıtım (tedarikçi + tarih) doğru davranış.
+
+---
+
+## 4. `COUNTRY_LABELS` — enum'un yanına *(sözlük yeri; küçük)*
+
+`ORDER_STATUS_LABELS`, `PAYMENT_STATUS_LABELS` ve arkadaşları `packages/types/schemas/enums.schema`
+içinde, enum'la **aynı dosyada** duruyor ve dosyanın kendi yorumu gerekçesini yazıyor: `Record`
+eksik anahtarda derlemeyi durdurur, yani yeni bir değer eklenince karşılığını yazmak unutulamaz.
+
+`CountryEnum`'un böyle bir sözlüğü yok. İki ekran ona ihtiyaç duydu (müşteri künyesi · depo künyesi)
+ve ikinci kopyayı yazmamak için geçici olarak yüzey tarafında birleştirdim:
+`apps/web/components/operation/ui/labels.ts` → `COUNTRY_LABELS` + `COUNTRY_OPTIONS`.
+
+**İstek:** `COUNTRY_LABELS: Record<Country, string> = { FR: 'Fransa', DE: 'Almanya' }` diğerlerinin
+yanına insin. İndiği turda o dosya düşer, iki tüketici doğrudan `@lezzet/types`'tan okur.
+
+Neden sizin şeridinizde: sözlük enum'un yanında durduğu için değerini koruyor — ayrı bir pakete ya da
+yüzeye koymak, `DE` dışında bir ülke eklendiğinde derleyicinin susmasına yol açar.
+
+**Arka uç cevabı:**
+
+---
+
+## 5. `WarehouseService` — iki eksik uç *(Depolar ekranı, 19.5; ikisi de bugün ÇALIŞIYOR)*
+
+Depolar ekranı indi ve iki yerde servis sözleşmesinin dışına çıkmak zorunda kaldım. İkisi de bugün
+ölçülebilir bir bedel doğurmuyor (tesis sayısı fiziksel bir gerçek, bir avuç satır) — ama ikisi de
+"desen var, bu servise uygulanmamış" durumu.
+
+### 5a. `reorder(orderedIds)` yok
+
+`BaseDbService.reorderBy` **korumalı** ve beş serviste tek satırla açılmış (`category`, `collection`,
+`bundle`, `bundle-item`, `product-image`). `WarehouseService`'te yok, o yüzden
+`reorderWarehousesAction` satır satır `update({ id, sortOrder })` atıyor.
+
+Depo sırası önemsiz bir tercih değil: **sistemdeki bütün depo seçicilerinde aynı sıradır** (bağlam
+seçicisi, tablo süzgeci, transfer hedefi). Tek turda yazılması doğrusu.
+
+**İstek:** `async reorder(orderedIds: string[]) { return this.reorderBy(orderedIds, 'sortOrder'); }`
+
+### 5b. "Tüm personel" ucu yok
+
+Ekranın "kapsamında bu depo olan kişiler" bölümü için operasyon rolü taşıyan **tüm** profiller
+gerekiyor. `list()` müşteri kümesine kilitli (`CUSTOMERS_ONLY`), `listByRole(role)` tek rol alıyor.
+Bugün `STAFF_ROLES.map(listByRole)` ile dört tur atıp kimliğe göre tekilleştiriyorum — doğru sonuç
+veriyor (aynı kişi iki rol taşıyabiliyor) ama dört tur.
+
+**İstek:** `listStaff(): Promise<UserProfile[]>` — `roles && STAFF_ROLES` kesişimi, tek sorgu.
+`listByRole` zaten `contains` + GIN indeksi kullanıyor; `overlaps` (`?|`) aynı indeksten yararlanır.
+
+Bu uç yalnız Depolar'ın işi değil: Ayarlar ekranının (09.16) kişi listesi de aynı kümeyi soracak.
+
+**Arka uç cevabı:**
