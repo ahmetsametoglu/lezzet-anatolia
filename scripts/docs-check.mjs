@@ -298,6 +298,48 @@ for (const f of buildFiles) {
 const designBacklog = existsSync(join(ROOT, 'design/BACKLOG.md')) ? read('design/BACKLOG.md') : '';
 const backlogSections = new Set([...designBacklog.matchAll(/^## (\d+)\./gm)].map((m) => m[1]));
 
+// ── 3c. TAMAMLANMIŞ görev satırının vaat ettiği şey gerçekten var mı ──────────
+//
+// Denetim B4'ün sınıfı: satır bir dosya ya da komut TESLİM EDİYOR, karşılığı kodda yok. Kimse
+// yalan söylemiyor — iş sırasında yön değişiyor, gerekçe alttaki Durum notuna yazılıyor ve BAŞLIK
+// düzeltilmeden kalıyor. Sonuç: satırı okuyup notu okumayan ajan olmayan bir komutu çağırır
+// (`pnpm test:purge`) ya da silinmiş bir betiği arar (`repair-discount-shares.mjs`).
+//
+// CLAUDE.md §5 "durumun tek sahibi görev satırıdır" der; satır yalnız notuyla birlikte doğruysa
+// tek sahip değildir. Bu kontrol o sahipliği makineye doğrulatır.
+//
+// `~~üstü çizili~~` geçen satır atlanır: geri alınan vaat açıkça geri alınmıştır.
+const NPM_BUILTINS = new Set(['install', 'add', 'remove', 'exec', 'dlx', 'why', 'update', 'run']);
+const pkgScripts = new Set(Object.keys(JSON.parse(read('package.json')).scripts ?? {}));
+/** `lib/bank/{import,reconcile}.ts` → iki yol. Kısaltma dokümanda yaygın ve tek yol değildir. */
+function expandBraces(path) {
+  const m = path.match(/^(.*)\{([^}]+)\}(.*)$/);
+  return m ? m[2].split(',').map((part) => `${m[1]}${part.trim()}${m[3]}`) : [path];
+}
+
+for (const f of buildFiles) {
+  let task = null;
+  for (const line of read(`docs/build/${f}`).split('\n')) {
+    const head = line.match(/^- \[([ x~])\] \((\d\d\.\d+)\)/);
+    if (head) task = { id: head[2], done: head[1] !== ' ' };
+    // Açık görev (`[ ]`) bir NİYET beyanıdır — henüz yazılmamış dosyayı adıyla anması normaldir.
+    if (!task?.done || line.includes('~~')) continue;
+
+    for (const s of line.matchAll(/`pnpm ([a-z][a-z0-9:-]*)`/g)) {
+      if (!NPM_BUILTINS.has(s[1]) && !pkgScripts.has(s[1])) {
+        note(`docs/build/${f} (${task.id}): \`pnpm ${s[1]}\` teslim ediliyor ama böyle bir script yok`);
+      }
+    }
+    for (const p of line.matchAll(/`((?:apps|packages|supabase|scripts)\/[^`\s]*\.[a-z]{2,4})`/g)) {
+      for (const path of expandBraces(p[1])) {
+        if (!existsSync(join(ROOT, path))) {
+          note(`docs/build/${f} (${task.id}): \`${path}\` teslim ediliyor ama dosya yok`);
+        }
+      }
+    }
+  }
+}
+
 let pendingCount = 0;
 for (const root of codeRoots) {
   if (!existsSync(join(ROOT, root))) continue;

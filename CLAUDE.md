@@ -74,7 +74,8 @@
 - **Kod ve doküman aynı commit'te gider.** Ayrı commit "sonra yazarım"dır, o da yazmamaktır.
 - **Görev kimliği `(NN.k)`** — iş bu kimlikle üstlenilir. Paralel ajan varsa görev satırına `touches:` (dokunulacak yollar) yazılır; kesişen iki görev aynı anda başlamaz, her ajan kendi dalında çalışır (`WORKFLOW §7`).
 - **Geride bırakılan boşluk `BEKLEYEN(<ref>): <ne>` ile işaretlenir** — `TODO`/`FIXME` YASAK (kimseye söz vermez, denetlenmez, çürür). İşaret envanter DEĞİL, envantere giden **doğrulanmış bağdır**: açığın kendisi gerekçesiyle `design/BACKLOG.md`'ye ya da görev satırına yazılır; `<ref>` ya görev kimliğidir (`08.5`) ya backlog bölümüdür (`BACKLOG §1`). `docs:check` referansın gerçekten var olduğunu doğrular — kayıt düşülmeyen boşluk commit'ten geçmez.
-- **Doğrulama:** `pnpm docs:check` — veri modeli ↔ migration ↔ Zod alan karşılaştırması, anılan paketlerin varlığı, görev kimlikleri, özet tazeliği. `pnpm hooks:install` ile commit öncesi otomatik koşar.
+- **Tamamlanmış görev satırı VAAT ETTİĞİNİ teslim etmiş olmalı.** `[x]`/`[~]` satırında anılan dosya ya da `pnpm` komutu gerçekten var olmalı; yön değiştiyse vaat **üstü çizilir** (`~~…~~`) ve gerekçesi yazılır. Satırı okuyup altındaki notu okumayan ajan olmayan bir komutu çağırır — CLAUDE.md §5'in "durumun tek sahibi görev satırıdır" kuralı ancak böyle ayakta durur. `docs:check` bunu doğrular.
+- **Doğrulama:** `pnpm docs:check` — veri modeli ↔ migration ↔ Zod alan karşılaştırması, anılan paketlerin varlığı, görev kimlikleri, **kapanmış göreve asılı `BEKLEYEN` işareti**, **tamamlanmış satırın vaat ettiği dosya/komut**, özet tazeliği. `pnpm hooks:install` ile commit öncesi otomatik koşar.
 - Veri modeli konu dosyalarına bölüktür (`docs/architecture/data-model/`): **alan** oraya, **karar** ana `DATA_MODEL.md`'ye yazılır.
 
 ## 6. docs haritası
