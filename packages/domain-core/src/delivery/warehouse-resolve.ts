@@ -27,6 +27,7 @@
 
 import type { Country } from '@lezzet/types';
 import { matchZones, normalizePostalCode, type DeliveryZoneCandidate } from './delivery-days';
+import { placeLabel } from './place-name';
 
 /** Motorun gördüğü asgari warehouse alanları (DB karşılığı `Warehouse`). */
 export interface WarehouseCandidate {
@@ -136,13 +137,15 @@ export function activeCountries(
 export interface PostalCodeMatch {
   country: Country;
   /**
-   * Gösterilecek yer adı ("Strasbourg", çok yerleşimli kodda "Ortenaukreis").
+   * Kodun o ülkede kapsadığı yerleşimler (19.17).
    *
-   * **`null` olabilir ve bu normaldir (19.16a):** kod yalnız KENDİ bölge tablomuzda varsa (dış
-   * referansta yoksa) ülkesini biliriz ama coğrafi adını bilmeyiz — ve uydurmayız. O hâlde ekran
+   * **Boş olabilir ve bu normaldir (19.16a):** kod yalnız KENDİ bölge tablomuzda varsa (dış
+   * referansta yoksa) ülkesini biliriz ama coğrafi adlarını bilmeyiz — ve uydurmayız. O hâlde ekran
    * bölge adını gösterir (`zoneName`), ki zaten daha bilgilendiricidir.
+   *
+   * Gösterilecek ad buradan `placeLabel` ile türetilir; ayrı bir alan olarak taşınmaz.
    */
-  placeName: string | null;
+  places: readonly string[];
 }
 
 /** `ambiguous` hâlinde müşteriye sunulan seçenek — ülke DEĞİL, tanınabilir bir YER. */
@@ -156,8 +159,19 @@ export interface PlaceCandidate extends PostalCodeMatch {
  * ikilisini çözer, bu ülkeyi de türetir.
  */
 export type PostalCodeResolution =
-  /** Zincir çözüldü: `PlaceResolution`'ın aynısı + türetilmiş ülke ve gösterilecek ad. */
-  | (Extract<PlaceResolution, { kind: 'route' | 'shipping' }> & { country: Country; placeName: string | null })
+  /**
+   * Zincir çözüldü: `PlaceResolution`'ın aynısı + türetilmiş ülke, kodun yerleşimleri ve
+   * gösterilebilir ad.
+   *
+   * `placeName` bir ALAN değil `places`'in TÜREVİDİR (`placeLabel`) ve burada bir kez hesaplanır:
+   * her çağıranın aynı kuralı yeniden yazması, kuralın bir gün bir yerde farklı uygulanması
+   * demekti — tam olarak 19.8'in yanlış adı üretmesinin sebebi.
+   */
+  | (Extract<PlaceResolution, { kind: 'route' | 'shipping' }> & {
+      country: Country;
+      places: readonly string[];
+      placeName: string | null;
+    })
   /** Çözülemedi (bizim eksiğimiz ya da veri çakışması) — ülke yine de biliniyor, sebep ayrık kalır. */
   | (Extract<PlaceResolution, { kind: 'unresolved' }> & { country: Country })
   /** Kod birden çok hizmet ülkemizde geçerli — tek soru, iki somut yer. */
@@ -203,9 +217,9 @@ export function resolvePlaceByPostalCode(
   for (const zone of zones) {
     for (const entry of zone.postalCodes) {
       if (normalizePostalCode(entry.postalCode) === code && !own.has(entry.country)) {
-        // Yer adı YOK ve uydurulmaz: kendi tablomuz bölge adını bilir (`zoneName`, ayrı alan),
+        // Yerleşim adı YOK ve uydurulmaz: kendi tablomuz bölge adını bilir (`zoneName`, ayrı alan),
         // coğrafi yer adını değil. Referansta karşılığı varsa aşağıda o kazanır.
-        own.set(entry.country, { country: entry.country, placeName: null });
+        own.set(entry.country, { country: entry.country, places: [] });
       }
     }
   }
@@ -242,5 +256,5 @@ export function resolvePlaceByPostalCode(
   const resolved = resolveWarehouseForPostalCode({ country: only.country, postalCode }, zones, warehouses);
   return resolved.kind === 'unresolved'
     ? { ...resolved, country: only.country }
-    : { ...resolved, country: only.country, placeName: only.placeName };
+    : { ...resolved, country: only.country, places: only.places, placeName: placeLabel(only.places) };
 }

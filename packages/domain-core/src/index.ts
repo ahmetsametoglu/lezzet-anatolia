@@ -26,6 +26,7 @@ export * from './stock/document-no';
 export * from './stock/transfer';
 export * from './delivery/delivery-days';
 export * from './delivery/warehouse-resolve';
+export * from './delivery/place-name';
 export * from './delivery/cart-warehouse';
 export * from './delivery/shipping-fee';
 export * from './delivery/on-the-way';

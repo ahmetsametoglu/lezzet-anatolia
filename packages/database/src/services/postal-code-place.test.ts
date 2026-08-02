@@ -15,7 +15,18 @@ describe('posta kodu referansı', () => {
 
   it('tek ülkede geçerli kod tek satır döner — ülke artık türetilebilir', async () => {
     const rows = await svc.findByPostalCode('67000');
-    expect(rows).toEqual([{ country: 'FR', postalCode: '67000', placeName: 'Strasbourg' }]);
+    expect(rows).toEqual([
+      { country: 'FR', postalCode: '67000', places: ['Strasbourg'], lat: 48.5839, lng: 7.7455 },
+    ]);
+  });
+
+  /** Bölge kurulumu haritadan yapılıyor (19.18) — kodun haritada bir yeri olmalı. */
+  it('kod merkez noktasını taşır — harita onsuz hiçbir kodu basamaz', async () => {
+    const [row] = await svc.findByPostalCode('67800');
+    // Bischheim / Hœnheim: Strasbourg'un hemen kuzeyi. Nokta yerleşimlerin ORTALAMASI, birinin
+    // konumu değil — birini seçmek "tek ad" hatasının coğrafi karşılığı olurdu.
+    expect(row?.lat).toBeCloseTo(48.62, 1);
+    expect(row?.lng).toBeCloseTo(7.75, 1);
   });
 
   it('İKİ ülkede geçerli kod iki satır döner — belirsizliğin kaynağı burası', async () => {
@@ -31,15 +42,45 @@ describe('posta kodu referansı', () => {
     expect(await svc.findByPostalCode('67999')).toEqual([]);
   });
 
-  it('çok yerleşimli kodda üst idari birim yazılır — uydurulmuş köy adı yok', async () => {
-    // 51300 tek başına 46 köy kapsıyor; birini seçmek keyfi olurdu. Üst birim (FR'de arrondissement)
-    // hem dar hem doğru: bu kodun 46 köyü Vitry-le-François çevresindedir.
+  it('çok yerleşimli kod TÜM yerleşimlerini taşır — indirgeme yok (19.17)', async () => {
+    // 51300 tek başına 46 köy kapsıyor. Eski sürüm burada arrondissement adını ("Vitry-le-François")
+    // yazıyordu ve o ad geçerli bir belediye adı gibi okunuyordu — Marolles'lu müşteri kendi
+    // adresinde başka bir kasabanın adını görüyordu.
     const [row] = await svc.findByPostalCode('51300');
-    expect(row?.placeName).toBe('Vitry-le-François');
+    expect(row?.places.length).toBeGreaterThan(40);
+    expect(row?.places).toContain('Marolles');
+    expect(row?.places).toContain('Vitry-le-François');
+  });
+
+  it('YAŞANMIŞ vaka: 67800 Bischheim ve Hœnheim\'dır, Strasbourg DEĞİL', async () => {
+    const [row] = await svc.findByPostalCode('67800');
+    expect(row?.places).toEqual(['Bischheim', 'Hœnheim']);
+    expect(row?.places).not.toContain('Strasbourg');
+  });
+
+  it('arrondissement türevi ayrı yerleşim SAYILMAZ — 75011 Paris\'tir', async () => {
+    // GeoNames hem "Paris" hem "Paris 11" taşır. Ham sayımla bu kod "çok yerleşimli" görünür ve
+    // Paris çıplak koda düşerdi.
+    expect((await svc.findByPostalCode('75011'))[0]?.places).toEqual(['Paris']);
   });
 
   it('kod sınırın iki yakasında da tanınır — Kehl ve Offenburg', async () => {
-    expect((await svc.findByPostalCode('77694'))[0]).toMatchObject({ country: 'DE', placeName: 'Kehl' });
-    expect((await svc.findByPostalCode('77652'))[0]).toMatchObject({ country: 'DE', placeName: 'Offenburg' });
+    expect((await svc.findByPostalCode('77694'))[0]).toMatchObject({ country: 'DE', places: ['Kehl'] });
+    expect((await svc.findByPostalCode('77652'))[0]).toMatchObject({ country: 'DE', places: ['Offenburg'] });
+  });
+
+  /**
+   * Adres tutarlılığının kapısı (19.17) — `findByPostalCode`'dan ayrı bir soru: orada ülke
+   * bilinmiyor, burada zaten çözülmüş.
+   */
+  describe('kodun yerleşimleri (kapı)', () => {
+    it('ülkeyle birlikte sorulur — aynı kod iki ülkede farklı yer demektir', async () => {
+      expect(await svc.findPlaces('FR', '67240')).toContain('Bischwiller');
+      expect(await svc.findPlaces('DE', '67240')).toEqual(['Bobenheim-Roxheim']);
+    });
+
+    it('referansta olmayan kod BOŞ döner — "bilinmiyor", "uyuşmuyor" değil', async () => {
+      expect(await svc.findPlaces('FR', '67999')).toEqual([]);
+    });
   });
 });

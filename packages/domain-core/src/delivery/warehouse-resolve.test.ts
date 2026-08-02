@@ -114,12 +114,20 @@ describe('hizmet ülkeleri VERİDEN türer, ayardan değil', () => {
  * geçerli, yani her on Fransız kodundan biri.
  */
 describe('posta kodundan ülke TÜRETİLİR, sorulmaz', () => {
-  const FR_67000: PostalCodeMatch = { country: 'FR', placeName: 'Strasbourg' };
-  const DE_67000: PostalCodeMatch = { country: 'DE', placeName: 'Ludwigshafen' };
+  const FR_67000: PostalCodeMatch = { country: 'FR', places: ['Strasbourg'] };
+  const DE_67000: PostalCodeMatch = { country: 'DE', places: ['Ludwigshafen'] };
 
   it('tek ülkede geçerli kod tek turda rotaya çözülür — soru yok', () => {
     const sonuc = resolvePlaceByPostalCode('67000', [FR_67000], [zone()], [STR]);
-    expect(sonuc).toEqual({ kind: 'route', country: 'FR', placeName: 'Strasbourg', warehouseId: 'w-str', zoneId: 'z-1', weekdays: [2, 5] });
+    expect(sonuc).toEqual({
+      kind: 'route',
+      country: 'FR',
+      places: ['Strasbourg'],
+      placeName: 'Strasbourg',
+      warehouseId: 'w-str',
+      zoneId: 'z-1',
+      weekdays: [2, 5],
+    });
   });
 
   it('ÇAKIŞAN kod bile hizmet vermediğimiz ülkede soru doğurmaz', () => {
@@ -134,7 +142,7 @@ describe('posta kodundan ülke TÜRETİLİR, sorulmaz', () => {
     if (sonuc.kind !== 'ambiguous') throw new Error('beklenen ambiguous');
     // Rota adayı ÖNCE: daha olası cevap üstte görünür, ama seçim yine müşterinin.
     expect(sonuc.candidates.map((c) => c.country)).toEqual(['FR', 'DE']);
-    expect(sonuc.candidates[0]).toMatchObject({ inRoute: true, placeName: 'Strasbourg' });
+    expect(sonuc.candidates[0]).toMatchObject({ inRoute: true, places: ['Strasbourg'] });
     expect(sonuc.candidates[1]).toMatchObject({ inRoute: false });
   });
 
@@ -150,13 +158,13 @@ describe('posta kodundan ülke TÜRETİLİR, sorulmaz', () => {
   });
 
   it('geçerli ama hizmet dışı ülke "tanımadık" DEĞİLDİR — kodu tanıyoruz, oraya gidemiyoruz', () => {
-    const sonuc = resolvePlaceByPostalCode('10115', [{ country: 'DE', placeName: 'Berlin' }], [zone()], [STR]);
+    const sonuc = resolvePlaceByPostalCode('10115', [{ country: 'DE', places: ['Berlin'] }], [zone()], [STR]);
     expect(sonuc).toEqual({ kind: 'unresolved', reason: 'no_shipping_warehouse', country: 'DE' });
   });
 
   it('bölge dışı ama hizmet içi kod kargoya düşer ve YER ADINI taşır', () => {
-    const sonuc = resolvePlaceByPostalCode('75011', [{ country: 'FR', placeName: 'Paris' }], [zone()], [STR]);
-    expect(sonuc).toEqual({ kind: 'shipping', country: 'FR', placeName: 'Paris', warehouseId: 'w-str' });
+    const sonuc = resolvePlaceByPostalCode('75011', [{ country: 'FR', places: ['Paris'] }], [zone()], [STR]);
+    expect(sonuc).toEqual({ kind: 'shipping', country: 'FR', places: ['Paris'], placeName: 'Paris', warehouseId: 'w-str' });
   });
 });
 
@@ -188,8 +196,15 @@ describe('kendi bölgemiz dış referanstan ÜSTÜNDÜR', () => {
   });
 
   it('referanstaki ad kazanır — iki kaynak aynı ülkeyi verirse daha bilgilendirici olan', () => {
-    const sonuc = resolvePlaceByPostalCode('67000', [{ country: 'FR', placeName: 'Strasbourg' }], [zone()], [STR]);
+    const sonuc = resolvePlaceByPostalCode('67000', [{ country: 'FR', places: ['Strasbourg'] }], [zone()], [STR]);
     expect(sonuc).toMatchObject({ placeName: 'Strasbourg' });
+  });
+
+  it('çok yerleşimli kodda ad DEĞİL liste taşınır — seçimi ekran yapar (19.17)', () => {
+    // 67800'ün gerçek hâli. Çözüm adı kendi hesaplamaz, `placeLabel`'a sorar: kural iki yerde
+    // yaşasaydı biri gün gelir ötekinden ayrılırdı — 19.8'in yanlış adı tam olarak öyle doğdu.
+    const sonuc = resolvePlaceByPostalCode('67000', [{ country: 'FR', places: ['Bischheim', 'Hœnheim'] }], [zone()], [STR]);
+    expect(sonuc).toMatchObject({ placeName: null, places: ['Bischheim', 'Hœnheim'] });
   });
 
   it('PASİF bölgedeki kod da bizim kaydımızdır — rota kapalı ama kod tanınır', () => {

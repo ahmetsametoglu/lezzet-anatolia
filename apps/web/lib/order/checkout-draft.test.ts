@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AddressService,
   BundleService,
@@ -29,7 +29,18 @@ import { createCheckoutDraft } from './checkout-draft';
  */
 const db = serviceDb();
 const stamp = Date.now();
-const rotaKodu = `67${String(stamp).slice(-3)}`;
+/**
+ * Test rota kodu — **önek 99, çünkü FR referansında 99 ile başlayan kod YOK** (ölçüldü: 0 satır;
+ * boş önekler 96 · 97 · 99 · 00).
+ *
+ * Eskiden `67` önekliydi ve 19.17 ile bu bir TUZAĞA dönüştü: `createCheckoutDraft` artık rota
+ * siparişinde "şehir bu kodun yerleşimlerinden biri mi" diye soruyor ve 67xxx aralığında 96 gerçek
+ * kod var. Damga onlardan birine denk geldiği koşuda buradaki sabit "Strasbourg" şehri uymaz ve
+ * dosya, kodunda hiçbir şey değişmeden düşerdi — yani ~%10 ihtimalle tekrarlanmayan bir hata.
+ * Referansın tanımadığı kod gerçekçi de bir hâldir: kendi bölge tablomuz o kodlar için otoritedir
+ * (19.16a) ve kapı ölçüm yokken engellemez.
+ */
+const rotaKodu = `99${String(stamp).slice(-3)}`;
 
 let categoryId: string;
 // Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
@@ -132,10 +143,16 @@ afterAll(async () => {
   await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
-/** O bölgenin yaklaşan ilk günü — testin tarihi elle yazması, günü geçince testi çürütürdü. */
-async function ilkUygunGun(): Promise<string> {
+/**
+ * O bölgenin yaklaşan ilk günü — testin tarihi elle yazması, günü geçince testi çürütürdü.
+ *
+ * Kod PARAMETRİK, çünkü tutarlılık testleri bölgenin kodunu geçici olarak referans bir kodla
+ * değiştiriyor: sabit `rotaKodu` ile sorsaydık o blokta bölge dışı bir koda gün sorulur, cevap boş
+ * döner ve rota siparişi `date_unavailable`e düşerdi — testin ölçtüğü şeyle ilgisiz bir sebeple.
+ */
+async function ilkUygunGun(postalCode: string = rotaKodu): Promise<string> {
   const { resolveDelivery } = await import('./delivery');
-  return (await resolveDelivery({ postalCode: rotaKodu })).availableDates[0]!;
+  return (await resolveDelivery({ postalCode })).availableDates[0]!;
 }
 
 const base = async () => ({
@@ -381,6 +398,73 @@ describe('sepet → taslak sipariş', () => {
     const outcome = await createCheckoutDraft({ ...(await base()), entries: [] });
     expect(outcome.status).toBe('empty_cart');
     expect(await siparisSayisi()).toBe(0);
+  });
+
+  /**
+   * Adres kendiyle tutarsız (19.17) — **yaşanmış arıza.**
+   *
+   * `LA-26-RFRWKK`: `67000` + `LINGOLSHEIM`, rota + kapıda ödeme. Lingolsheim'ın kodu 67380 ve o kod
+   * rotamızda yok; kurye kapıya gidemez, operasyon müşteriyi aramak zorunda kalır. Yolu belirleyen
+   * tek şey posta koduydu ve hiçbir yerde adresle karşılaştırılmıyordu.
+   *
+   * Referans kodu olarak `51300` seçildi: gerçek bir FR kodu (46 köy kapsıyor) ve başka hiçbir test
+   * onu kullanmıyor — bağ tablosunun anahtarı `(ülke, kod)` yani küresel, çakışan iki koşu birbirini
+   * PK hatasıyla düşürürdü (`CLAUDE.md §4b`). Bölge testin kendi bölgesidir, kodu geçici olarak
+   * değiştirilip geri konuyor.
+   */
+  describe('adres kendiyle tutarlı mı', () => {
+    const referansKodu = '51300';
+
+    beforeEach(async () => {
+      await new DeliveryZoneService(db).replacePostalCodes(zoneId, [{ country: 'FR', postalCode: referansKodu }]);
+    });
+
+    afterEach(async () => {
+      await new DeliveryZoneService(db).replacePostalCodes(zoneId, [{ country: 'FR', postalCode: rotaKodu }]);
+    });
+
+    it('koda AİT OLMAYAN şehirle rota siparişi açılmaz', async () => {
+      const tutarsiz = await new AddressService(db).addForCustomer({
+        customerId,
+        line1: '192C rue du Maréchal Foch',
+        postalCode: referansKodu,
+        city: 'LINGOLSHEIM',
+      });
+
+      const outcome = await createCheckoutDraft({
+        ...(await base()),
+        addressId: tutarsiz.id,
+        deliveryDate: null,
+        entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }],
+      });
+
+      expect(outcome.status).toBe('address_city_mismatch');
+      // Ekran "şu olmalı" diyebilmeli: sipariş sessizce kargoya çevrilmiyor, sebebi söyleniyor.
+      if (outcome.status !== 'address_city_mismatch') throw new Error('beklenen address_city_mismatch');
+      expect(outcome.places).toContain('Vitry-le-François');
+      expect(await siparisSayisi()).toBe(0);
+    });
+
+    it('koda AİT şehirle açılır — çok yerleşimli kodda yanlış alarm ötmez', async () => {
+      // 51300'ün 46 köyünden biri. Eski veri tek ada indirgiyordu ve Marolles "kodun şehri değil"
+      // görünürdü — yanlış öten bir uyarı, bir süre sonra hiç okunmayan bir uyarıdır.
+      const tutarli = await new AddressService(db).addForCustomer({
+        customerId,
+        line1: '3 rue de l\'Église',
+        postalCode: referansKodu,
+        city: 'Marolles',
+      });
+
+      const outcome = await createCheckoutDraft({
+        ...(await base()),
+        addressId: tutarli.id,
+        // Gün BU bloğun kodundan sorulur: bölgenin kodu geçici olarak `51300`.
+        deliveryDate: await ilkUygunGun(referansKodu),
+        entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }],
+      });
+
+      expect(outcome.status).toBe('ok');
+    });
   });
 });
 

@@ -46,8 +46,17 @@ export interface PlaceAnswer {
  */
 export interface PlaceOption {
   country: Country;
-  /** Yer adı — kod yalnız kendi bölge tablomuzda varsa `null` (uydurulmaz, `zoneName` gösterilir). */
+  /** Kodun tartışmasız adı — çok yerleşimliyse `null`, o hâlde `places` kullanılır (19.17). */
   placeName: string | null;
+  /**
+   * Kodun o ülkedeki tüm yerleşimleri (19.17) — **etiketi ekran kurar.**
+   *
+   * Belirsizlik seçicisinin işi "Fransa mı Almanya mı" değil "hangi yer" sorusunu sordurmak; ülke
+   * adı müşteriye bir şey ifade etmez, "67240 · Bischwiller, Gries, Kaltenhouse +4" ile
+   * "67240 · Bobenheim-Roxheim" arasında ise seçim yapılabilir. Kaç ad yazılıp nerede "+X"e
+   * geçileceği bu şeridin kararı — veri tarafı bir biçim dayatmaz.
+   */
+  places: string[];
   /** Rota bölgemize düşüyor mu — liste bunu önce gösterir (daha olası cevap). */
   inRoute: boolean;
 }
@@ -85,13 +94,25 @@ export interface DeliveryPlace {
   /**
    * Yer adı ("Strasbourg", "Vitry-le-François") — posta kodu referansından (19.8).
    *
-   * Rota dışında da DOLUDUR: tasarımın istediği "75011 Paris · kargo" artık yazılabiliyor. Eskiden
+   * Rota dışında da dolabilir: tasarımın istediği "75011 Paris · kargo" yazılabiliyor. Eskiden
    * burada bir itiraf vardı — *"75011'in Paris olduğunu bilmemiz için bir posta kodu veritabanı
-   * gerekirdi ve elimizde yok"* — `postal_code_place` tam olarak o boşluğu kapattı. Uydurulmuş ad
-   * yasağı yerinde: kodun birden çok yerleşimi varsa bir üst idari birim yazılır, rastgele bir köy
-   * değil.
+   * gerekirdi ve elimizde yok"* — `postal_code_place` o boşluğu kapattı.
+   *
+   * **`null` SIK bir hâldir ve öyle olmalı (19.17):** kodların ~%39'u birden çok yerleşim kapsıyor
+   * ve orada tartışmasız bir ad YOKTUR. Üst idari birime çıkmak (19.8'in yaptığı) çözüm değildi —
+   * Fransız arrondissement'ı merkez kasabasının adını taşır, yani `67800` için üretilen "Strasbourg"
+   * geçerli bir belediye adı gibi okunuyordu; orası Bischheim / Hœnheim.
+   *
+   * `null` "gösterilecek bir şey yok" demek DEĞİL: `places` yanında geliyor ve etiketi ekran kurar.
    */
   placeName: string | null;
+  /**
+   * Kodun kapsadığı tüm yerleşimler (19.17) — `placeName` null'ken hapın malzemesi.
+   *
+   * Ne kadarının yazılıp nereden sonra "+X" deneceği **bu şeridin kararı**: veri tarafı listeyi
+   * verir, biçimi dayatmaz (`CLAUDE.md §3` — görsel karar tasarımdan gelir, motordan değil).
+   */
+  places: string[];
   /**
    * Bölgenin adı ("Strasbourg Merkez") — YALNIZ rota içindeyken bilinir. `placeName`'den farklıdır:
    * bu BİZİM rota bölgemizin adı, o coğrafi yer adı.

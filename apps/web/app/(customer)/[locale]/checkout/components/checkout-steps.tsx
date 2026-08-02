@@ -293,8 +293,10 @@ export function DeliveryStep(props: CheckoutViewProps) {
         // Ülke adresin KENDİSİNDEN gelir, posta kodundan türetilmez: burada zaten cevap verilmiş
         // bir soru var (19.8 türetmesi kod tek başına girildiğinde gerekir).
         country: selectedAddress.country,
-        // Yer adı ve bölge adı TAŞINMAZ: blok ikisini de kullanmıyor, tek sorduğu "rota içinde mi".
+        // Yer adı, yerleşim listesi ve bölge adı TAŞINMAZ: blok üçünü de kullanmıyor, tek sorduğu
+        // "rota içinde mi".
         placeName: null,
+        places: [],
         zoneName: null,
         inRoute,
         nextDate: null,

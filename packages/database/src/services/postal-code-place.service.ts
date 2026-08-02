@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { PostalCodePlaceSchema, type PostalCodePlace } from '@lezzet/types';
+import { PostalCodePlaceSchema, type Country, type PostalCodePlace } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 
 /**
@@ -37,5 +37,20 @@ export class PostalCodePlaceService extends BaseDbService<PostalCodePlace, never
    */
   async findByPostalCode(postalCode: string): Promise<PostalCodePlace[]> {
     return this.getAll({ postalCode }, { orderBy: 'country' });
+  }
+
+  /**
+   * `(ülke, kod)` ikilisinin kapsadığı yerleşimler (19.17) — adres tutarlılığının kapısı.
+   *
+   * `findByPostalCode`'dan AYRI: o "bu kod hangi ülkelerde geçerli" sorusunun cevabıdır ve ülkeyi
+   * bilmez; bu ise ülke zaten çözülmüşken sorulur ("67000 + LINGOLSHEIM tutarlı mı").
+   *
+   * **Boş dizi "uyuşmuyor" DEĞİL "bilinmiyor" demektir:** kod referansta olmayabilir ama yine de
+   * bizim bölge tablomuzda olabilir (19.16a). Kararı çağıran değil `cityMatchesPlaces` verir ve o
+   * boş listede engellemez — ölçülemeyen değer sıfır değildir (`CLAUDE.md §1`).
+   */
+  async findPlaces(country: Country, postalCode: string): Promise<string[]> {
+    const rows = await this.getAll({ country, postalCode });
+    return rows[0]?.places ?? [];
   }
 }

@@ -1,7 +1,7 @@
 'use server';
 
 import { DeliveryZoneService, PostalCodePlaceService, WarehouseService, serviceDb } from '@lezzet/database';
-import { findZoneForPostalCode, resolvePlaceByPostalCode } from '@lezzet/domain-core';
+import { findZoneForPostalCode, placeLabel, resolvePlaceByPostalCode } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { resolveDelivery } from '@/lib/order/delivery';
@@ -51,7 +51,16 @@ export async function resolvePlaceAction(rawPostalCode: string): Promise<ActionR
       return {
         data: {
           kind: 'ambiguous',
-          options: lookup.candidates.map((c) => ({ country: c.country, placeName: c.placeName, inRoute: c.inRoute })),
+          // Ad TÜRETİLİR, taşınmaz (19.17): tek yerleşimliyse adı, çoksa `null` + tam liste. Kuralı
+          // burada yeniden yazmak yerine motorun `placeLabel`'ı çağrılıyor — 19.8'in yanlış adı
+          // üretmesinin sebebi kuralın veriye gömülmüş olmasıydı. Listeyi NASIL göstereceği (ilk üç
+          // ad + "+X", hepsi, çıplak kod) seçicinin kendi kararı; veri ikisini de veriyor.
+          options: lookup.candidates.map((c) => ({
+            country: c.country,
+            placeName: placeLabel(c.places),
+            places: [...c.places],
+            inRoute: c.inRoute,
+          })),
         },
         error: null,
       };
@@ -86,9 +95,11 @@ export async function resolvePlaceAction(rawPostalCode: string): Promise<ActionR
         place: {
           postalCode,
           country: lookup.country,
-          // Rota dışında da dolu: "75011 Paris · kargo" artık yazılabiliyor (19.8). Yalnız kendi
-          // bölge tablomuzda olan kodda null kalır — orada bölge adı zaten daha bilgilendirici.
+          // Rota dışında da dolu: "75011 Paris · kargo" artık yazılabiliyor (19.8). Çok yerleşimli
+          // kodda `null` kalır ve ekran `places`'ten kendi etiketini kurar (19.17); kendi bölge
+          // tablomuzda olan kodda da null — orada bölge adı zaten daha bilgilendirici.
           placeName: lookup.placeName,
+          places: [...lookup.places],
           zoneName: inRoute ? (zone?.name ?? null) : null,
           inRoute,
           nextDate: delivery.availableDates[0] ?? null,

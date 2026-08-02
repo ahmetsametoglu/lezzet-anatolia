@@ -28,9 +28,18 @@ import { createCheckoutDraft } from './checkout-draft';
  */
 const db = serviceDb();
 const stamp = Date.now();
-// Damgalı kod: seed'in `DE-77694`'ü PK'yi (ülke, kod) zaten tutuyor. Bu kod GeoNames'te de yok —
-// yani test aynı zamanda 19.16a'yı sınıyor: kendi bölge tablomuz dış referanstan üstündür.
-const rotaKodu = String(10_000 + (stamp % 80_000));
+/**
+ * Damgalı kod: seed'in `DE-77694`'ü PK'yi (ülke, kod) zaten tutuyor.
+ *
+ * **Önek 43, çünkü DE referansında 43 ile başlayan kod YOK** (ölçüldü: 0 satır; boş önekler
+ * 00 · 05 · 43 · 62). Önceki hâli `10_000 + (stamp % 80_000)` idi ve künyesinde "bu kod GeoNames'te
+ * de yok" yazıyordu — o iddia DOĞRULANMAMIŞTI ve yanlıştı: üretilen aralık gerçek DE kodlarıyla
+ * dolu. 19.17 ile bedeli doğdu (`createCheckoutDraft` rota siparişinde şehri kodun yerleşimleriyle
+ * karşılaştırıyor); damga gerçek bir koda denk geldiğinde buradaki "Kehl" uymaz ve dosya kendiliğinden
+ * düşerdi. Şimdi iddia ölçülmüş bir gerçek: test aynı zamanda 19.16a'yı sınıyor — kendi bölge
+ * tablomuz dış referanstan üstündür.
+ */
+const rotaKodu = `43${String(stamp).slice(-3)}`;
 
 let categoryId: string;
 let productId: string;

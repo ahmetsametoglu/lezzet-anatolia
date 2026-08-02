@@ -105,6 +105,28 @@ Tekillik **tüm** bölgeleri kapsar, aktif/pasif ayırmaz: pasif bölge de kodu 
 
 ---
 
+## PostalCodePlace (posta kodu referansı)
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| country | country_code | PK'nın parçası |
+| postal_code | text | PK'nın parçası |
+| places | text[] | kodun kapsadığı **tüm** yerleşimler; boş olabilir |
+| lat | numeric(9,6) \| null | kapsanan yerleşimlerin ortalaması — kodun harita üstündeki merkezi |
+| lng | numeric(9,6) \| null | aynı; `lat` ile birlikte var ya da birlikte yok (CHECK) |
+
+Üretilmiş, salt okunur referans (GeoNames FR+DE, CC-BY; 16.878 kod / 60.496 yerleşim). Veri migration'ın **içindedir**: tablo boşken sistem her kodu "tanınmadı" sayar, yani veri opsiyonel bir yükleme değil tanımın parçasıdır. Üreteç `scripts/build-postal-codes.mjs`, yılda bir koşar.
+
+**Neden var:** ülke bir ALAN değil, posta kodundan türeyen bir SONUÇtur. Müşteriye ülke sormak yalnız sürtünme değil, **vergi** meselesidir — serbestçe seçilen ülke KDV oranını ve Alman B2B muafiyetini etkiler (`DOMAIN §5`).
+
+**Şehir adı SAKLANMAZ, türetilir** (`placeLabel`: tek yerleşimse adı, çoksa `null` — çünkü orada tartışmasız bir ad yoktur). Çok yerleşimli kodda ekranın ne yazacağı (liste, ilk N + "+X", çıplak kod) bir GÖSTERİM kararıdır ve veri tarafı biçim dayatmaz; `places` listesi olduğu gibi taşınır. İlk sürüm burada tek bir ad tutuyor ve çok yerleşimli kodda bir üst idari birime çıkıyordu — *"daha geniş ama asla yanlış değil"* gerekçesiyle. **İddia yanlıştı:** Fransız arrondissement'ı merkez kasabasının adını taşır, yani üretilen etiket geçerli bir belediye adı gibi okunur ve ayırt edilemez; `67800` tabloda "Strasbourg" yazıyordu, orası Bischheim / Hœnheim. Kodların ~%39'u çok yerleşimli, yani istisna değil kural. Kararı veriye gömmek yerine tek bir saf fonksiyonda tutmak aynı listenin adres doğrulamasına da hizmet etmesini sağladı.
+
+**Merkez nokta (19.18)** bölge kurulumunun haritadan yapılması kararından doğdu (`design/pages/admin-depolar.md`): harita kod başına tek işaret basar. Nokta kapsanan yerleşimlerin ortalamasıdır — birini seçmek keyfi olurdu, aynı "tek ad" hatasının coğrafi karşılığı. Bir ADRESİ göstermez. `null` ise harita o kodu **basmaz**; (0, 0)'a düşürmek Gine Körfezi'nde bir işaret üretir ve eksik ölçümü sağlıklı gibi okuturdu.
+
+**Boş liste "uyuşmuyor" değil "bilinmiyor" demektir.** Kod referansta olmayıp kendi bölge tablomuzda olabilir; orada otorite bizim tablomuzdur. Boş listeyi uyuşmazlık saymak, referansı eksik olan her adresi reddetmek olurdu — ölçülemeyen değer sıfır değildir.
+
+---
+
 ## Mevcut tablolara eklenen alanlar
 
 | Tablo | Alan | Not |

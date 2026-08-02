@@ -8,10 +8,11 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { deriveChannel } from '@lezzet/domain-core';
+import { cityMatchesPlaces, deriveChannel } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
 import type { DeliveryType, LocalizedText, OrderItemInsert, PaymentMethod } from '@lezzet/types';
 import { getCartView } from '@/lib/cart/read';
+import { placesForPostalCode } from '@/lib/delivery/places';
 import type { CartEntry, CartLine, CartView } from '@/lib/cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
 import { resolveDelivery } from './delivery';
@@ -50,6 +51,19 @@ type CheckoutDraftOutcome =
   | { status: 'blocked_lines'; lines: string[] }
   | { status: 'min_basket'; missingCents: number }
   | { status: 'address_not_found' }
+  /**
+   * Adresin şehri, posta kodunun kapsadığı yerleşimlerden biri değil (19.17) — **rota siparişinde.**
+   *
+   * Yaşanmış bir arızanın kapısı: `67000` + `LINGOLSHEIM` rota + kapıda ödeme olarak açılmıştı,
+   * oysa Lingolsheim'ın kodu `67380` ve o kod rotamızda yok. Kurye kapıya gidemez, operasyon
+   * müşteriyi aramak zorunda kalır. Yolu belirleyen tek şey posta koduydu ve hiçbir yerde adresle
+   * karşılaştırılmıyordu.
+   *
+   * Sipariş SESSİZCE kargoya çevrilmez: tür değişimi kargo ücretini ve açık ödeme yöntemlerini de
+   * değiştirir, müşteri sebebini anlamadan başka bir siparişe bakar. Doğrusu durup söylemek —
+   * `places` ekranın "şu olmalı" diyebilmesi için taşınır.
+   */
+  | { status: 'address_city_mismatch'; postalCode: string; city: string; places: string[] }
   /** Rota dışı adres + sepette soğuk zincir kalemi: ne kapıya ne kargoya. Sepet bölünmeli (K32). */
   | { status: 'cold_chain_unshippable' }
   | { status: 'date_unavailable'; availableDates: string[] }
@@ -156,6 +170,21 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
   // Kargo siparişi soğuk zincir kalemi TAŞIYAMAZ ve bu ayrıca kontrol edilir: `shippingBlockedReason`
   // yalnız rota DIŞI adreste doluyor (orada kargo tek yoldur). Rota İÇİ bir adresten açılan kargo
   // siparişinde o alan boş kalır — kontrol ona bırakılsaydı soğuk zincir ürün kargoya çıkardı.
+  // ── ADRES KENDİYLE TUTARLI MI (19.17) ─────────────────────────────────────
+  // Yalnız ROTA siparişinde sorulur ve sırası burası: yolu belirleyen posta kodudur, ama kapıya
+  // giden kurye SOKAĞA gider. Kod ile şehir farklı yerleri gösteriyorsa ikisinden biri yanlıştır ve
+  // hangisi olduğunu biz bilemeyiz — o yüzden düzeltmiyoruz, soruyoruz. Kargoda sorulmaz: paketi
+  // taşıyıcı taşır ve adresi o doğrular; bizim reddimiz orada boşa sürtünme olurdu.
+  //
+  // Kural KAPIDA, formda değil: form istemcidedir ve atlanabilir. Form aynı şeyi erken söyler
+  // (müşteri ödemeye gelmeden düzeltsin) ama tek başına bir kapı değildir.
+  if (deliveryType === 'route') {
+    const places = await placesForPostalCode(address.country, address.postalCode);
+    if (!cityMatchesPlaces(address.city, places)) {
+      return { status: 'address_city_mismatch', postalCode: address.postalCode, city: address.city, places };
+    }
+  }
+
   if (input.shippingOrder && hasNonShippableItem) return { status: 'cold_chain_unshippable' };
   if (delivery.shippingBlockedReason === 'cold_chain') return { status: 'cold_chain_unshippable' };
   if (cart.hasBlocked) return { status: 'blocked_lines', lines: cart.lines.filter((l) => l.blocked).map((l) => l.name) };
