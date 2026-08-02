@@ -35,6 +35,18 @@ Bu bölüm **Teslimat sayfasından buraya taşındı** (karar 01.08; o sayfa esk
 - **Çakışma reddi** — bir posta kodu **tek bir bölgede** olabilir (pasif bölge dahil). Başka bölgede tanımlı bir kod eklenmeye çalışılırsa kayıt reddedilir; ekran hangi bölgenin ve hangi deponun tuttuğunu söyler ve taşımanın yolunu gösterir. Sessiz "ilki kazanır" YOKTUR — çok depoda bunun bedeli siparişin yanlış şehre düşmesidir
 - **Bir kodu çıkarmanın sonucu** — o adresler rota dışına düşer ve kargo yoluna geçer; ekran bunu değişiklik anında söyler
 
+#### Bölge kurulumu HARİTADAN yapılır (kullanıcı kararı, 02.08)
+
+Bölge kararı coğrafi bir karardır: operatör kodu değil YOLU bilir — iki komşu kodun arasına dağ girer, bir yol koridorunun üstündeki her kod ise kolay erişilirdir. Kod listesini elle yazdırmak (haritadan tek tek kopyalamak) hem yavaş hem hatalıdır; yaşanmış örnek: `LA-26-RFRWKK`, rota dışı bir adrese rota + kapıda ödeme siparişi olarak açıldı. Bu yüzden hizmet alanı bölümünün **asıl giriş aracı haritadır; kod listesi onun sonucudur.**
+
+- **Taban harita yol ağını gösterir** — karar "bu yol üstünde mi"dir; yol hiyerarşisi (otoyol / ana yol / köy yolu) ve yerleşim adları okunur olmalı
+- **Kodlar bizim veriden biner** (`postal_code_place`): merkez nokta işareti + yakınlaşınca kod ve yerleşim adı etiketi. Serbest metin girişi yoktur — haritada (yani referans tablomuzda) olmayan kod sisteme girilemez; yazım hatası sınıfı kapanır
+- **Tıkla-ekle / tıkla-çıkar** — noktaya tıklamak kodu bölgeye ekler, tekrar tıklamak çıkarır; yandaki kod listesi eşzamanlı birikir. Liste de düzenlenebilir — harita ile liste aynı gerçeğin iki görünümüdür
+- **Kod hâlleri haritada da ayrışır:** bu bölgenin kodu · **başka bölgede tanımlı kod** (dolu görünür; tıklanınca kim tuttuğu ve taşıma yolu — §2 çakışma reddi haritada da aynı cümleyi kurar) · boşta kod. Hizmet verilmeyen ülkenin kodları gösterilmez
+- **Poligon sınırları v1'de YOK** — nokta + ad, yol koridoru seçimi için yeterli; gerçek sınır çizgileri (FR/DE açık verisi, ayrı lisans ve bakım yükü) ihtiyaç doğarsa ayrı karardır
+- **Teknik karar (bağlayıcı, 02.08): MapLibre GL JS + OpenFreeMap vektör karoları.** Gerekçe: binlerce kod noktası GPU'da tek veri katmanı olarak akıcı çizilir (DOM tabanlı kütüphaneler bu sayıda tıkanır); vektör stil, taban haritayı sakinleştirip işaretlerimizi öne çıkaran ve operasyon paletiyle uyumlu bir görünüme izin verir (görsel ayar Claude Design'ın — stil JSON'u ona göre kurulur, koyu tema karşılığı stil varyantıyla gelir); anahtar/hesap/ücret gerektirmez ve aynı karolar ileride kendi sunucumuzda barındırılabilir — ekran kodu değişmeden dış bağımlılık sıfırlanır (kendi karo dosyası backlog)
+- ⚠ **Arka uç ön koşulu:** `postal_code_place` bugün koordinat taşımıyor; GeoNames dökümünde zaten olan enlem/boylam üretece ve tabloya eklenmeli (`scripts/build-postal-codes.mjs` + `0044` — kod başına merkez nokta yeter). Bu gelmeden harita kodları basamaz. Talep kullanıcı üzerinden arka uç şeridine iletildi (02.08)
+
 ### Karne (bu depo nasıl duruyor)
 
 Karne **SAYAR, listelemez**: her sayı Stok ekranına o depo bağlamıyla giden bir kapıdır. Satırların kendisi orada yaşar — burada tekrarlanması aynı listenin iki sahibi olması demekti.
@@ -56,7 +68,7 @@ Karne **SAYAR, listelemez**: her sayı Stok ekranına o depo bağlamıyla giden 
 - Depo ekleme / künye düzenleme / sırayı değiştirme
 - **Kapatma / yeniden açma** — kapatma öncesi sonuçlar açıkça gösterilir ve onay istenir
 - Kargo çıkış rolünü işaretleme/kaldırma (ret hâli §4'te)
-- **Bölge ekleme/düzenleme/pasifleştirme** — posta kodları + teslim günleri; kod ekleme/çıkarma
+- **Bölge ekleme/düzenleme/pasifleştirme** — teslim günleri + posta kodları; kod ekleme/çıkarma **haritadan tıklayarak** (asıl yol) ya da listeden (§2 harita bloğu)
 - Karnedeki bir sayıdan Stok'a geçiş (bağlam o depoya alınmış hâlde)
 - Personele (Ayarlar), gün planına (Teslimat) geçiş
 
@@ -92,6 +104,6 @@ Gidilen: **Stok** (karneden — bağlam o depoya alınır: seviyeler, hareketler
 
 - **Nadir ve sonuçları ağır bir kurulum işi** — hız değil, doğruluk ve geri dönülmezliğin anlaşılması önemlidir
 - Karne bunun istisnasıdır: telefondan **bakılır** (sahada "KEHL'de durum ne?"), ama oradan karar verilmez — sayıya dokunmak Stok'a götürür
-- Posta kodu listeleri uzayabilir (FR + DE); çok kodlu bölge girişinde toplu giriş/tarama işlevsel bir ihtiyaçtır
+- Posta kodu listeleri uzayabilir (FR + DE); çok kodlu bölge girişinin asıl aracı haritadır ve **bölge kurulumu masaüstü işidir** — harita telefonda görüntülenebilir ama koridor seçimi masada yapılır
 - Kapatma gibi sonucu geniş bir eylem telefonda kazara verilebilecek bir karar olmamalı
 - Kod ve adres kopyalanabilir olmalı — ikisi de sistem dışına elle taşınır
