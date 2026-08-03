@@ -179,14 +179,29 @@
      dolaşılması gerekmedi, turun asıl kazancı buydu.
 
      Yan etki: `micro` 10 → 11px oldu ve rozetler artık tasarımın istediği 11px'e OTURUYOR (eskiden
-     1px küçüktü). Tasarımdan bilinçli sapma; design/BACKLOG §5'te kayıtlı. */
-  --text-ops-title: 24px;     /* sayfa başlığı            ← 22 · 24 */
-  --text-ops-section: 19px;   /* bölüm başlığı            ← 17 · 18 · 20 */
-  --text-ops-lead: 16px;      /* öne çıkan sayı/kart adı  ← 15 · 16 */
-  --text-ops-base: 14px;      /* gövde, tablo hücresi     ← 13 · 13,5 · 14 */
-  --text-ops-sm: 13px;        /* ikincil satır            ← 12 · 12,5 */
-  --text-ops-xs: 12px;        /* etiket, yardım metni     ← 11 · 11,5 */
-  --text-ops-micro: 11px;     /* tablo başlığı, rozet     ← 9 · 9,5 · 10 · 10,5 */
+     1px küçüktü). Tasarımdan bilinçli sapma; design/BACKLOG §5'te kayıtlı.
+
+     İKİNCİ KEZ BİR KADEME BÜYÜTÜLDÜ (03.08, kullanıcı kararı). Aynı şikâyet yeniden geldi —
+     *"okumakta zorlanıyorum; kimden geldiğini yazan metin bile küçük"* — ve ikinci kez gelmesi
+     teşhisin kendisi: sorun tek bir ekranın seçimlerinde değil, ÖLÇEĞİN kalibrasyonunda. Talepler
+     ekranında çizimin değerleri merdivene DOĞRU eşlenmişti (13 → `base`, 12,5 → `sm`) ve sonuç yine
+     okunmuyordu; yani hata eşlemede değil, eşlemenin hedefindeydi.
+
+     Sebep ölçekte: tasarım dosyaları 1360px genişlikte bir çerçevede çiziliyor, gerçek operasyon
+     ekranı çok daha geniş — aynı piksel değeri orada daha küçük okunuyor. Mock'a sadakat amaç
+     değil, okunabilirlik amaç.
+
+     Yine tüm ölçek ~1px yukarı, oranlar korundu (hiyerarşi aynı). ÖNCE tek bir ekranı elle
+     büyütmüştüm; o yol yanlıştı — Talepler öteki dokuz ekrandan bir kademe büyük kalırdı ve
+     düzeltmeye çalıştığım kaymanın aynısını üretirdi. Token'ı değiştirmek on ekranı birden düzeltir
+     ve tutarlılığı korur; ölçek zaten bunun için token. */
+  --text-ops-title: 25px;     /* sayfa başlığı            ← 22 · 24 */
+  --text-ops-section: 20px;   /* bölüm başlığı            ← 17 · 18 · 20 */
+  --text-ops-lead: 17px;      /* öne çıkan sayı/kart adı  ← 15 · 16 */
+  --text-ops-base: 15px;      /* gövde, tablo hücresi     ← 13 · 13,5 · 14 */
+  --text-ops-sm: 14px;        /* ikincil satır            ← 12 · 12,5 */
+  --text-ops-xs: 13px;        /* etiket, yardım metni     ← 11 · 11,5 */
+  --text-ops-micro: 12px;     /* tablo başlığı, rozet     ← 9 · 9,5 · 10 · 10,5 */
 
   /* §0.1 Yüzey ve mürekkep */
   --color-ops-ink: #22251f; /* başlık, koyu buton, birincil metin, "L" */
