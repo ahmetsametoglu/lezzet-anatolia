@@ -27,6 +27,15 @@ Bu doküman işletmenin künyesini ve ürün kataloğunu tek yerde toplar. Katal
 | Instagram | LezzetAnatolie |
 | Pazar | Fransa ve Almanya |
 | Diller | Türkçe, Fransızca, Almanca |
+| Barındırıcı | Hetzner Online GmbH · Industriestr. 25, 91710 Gunzenhausen, Almanya · +49 (0)9831 505-0 |
+
+> **Barındırıcı künyesi neden burada:** LCEN md. 6 barındırıcının **unvanını, adresini ve telefonunu**
+> mentions légales'te zorunlu kılıyor — bu bir tercih değil. Künye burada tutuluyor ki sağlayıcı
+> değişirse tek yerden güncellensin; bugün üç dilde `legal/terms/content.json`'a yazılı.
+> **Sunucu bölgesi doğrulanmalı:** metin "AB içindeki veri merkezleri" diyor. Hetzner'ın Almanya
+> (Nürnberg/Falkenstein) ve Finlandiya (Helsinki) lokasyonları AB içindedir; ABD (Ashburn/Hillsboro)
+> ve Singapur **değildir**. Sunucu AB dışındaysa hem bu cümle hem gizlilik politikası değişmeli ve
+> veri aktarımı için ayrı bir hukuki dayanak gerekir.
 
 > **DÜZELTME (03.08.2026) — bu tablo üç yerinden yanlıştı ve yanlışı yasal sayfalara taşınmıştı.**
 > · **SIRET `…00018` DEĞİL `…00026`.** `00018` numaralı işletme (20 rue des Vignes) **01.09.2025'te

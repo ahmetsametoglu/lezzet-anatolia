@@ -53,7 +53,7 @@
           "Ödeme sağlayıcısı: kart bilgileriniz bize hiç ulaşmaz, doğrudan ödeme sağlayıcısında işlenir.",
           "E-posta gönderim servisi: bildirim e-postalarını iletmek için.",
           "Kargo firması: bölge dışı gönderimlerde adınız ve teslimat adresiniz.",
-          "Barındırma ve veritabanı altyapımız."
+          "Barındırma: Hetzner Online GmbH (Almanya) — sunucular Avrupa Birliği içindedir."
         ]
       },
       {
@@ -141,7 +141,7 @@
           "Prestataire de paiement : vos données de carte ne nous parviennent jamais, elles sont traitées directement chez le prestataire.",
           "Service d'envoi d'e-mails : pour acheminer les e-mails de notification.",
           "Transporteur : votre nom et votre adresse de livraison pour les expéditions hors zone.",
-          "Notre infrastructure d'hébergement et de base de données."
+          "Hébergement : Hetzner Online GmbH (Allemagne) — les serveurs sont situés dans l'Union européenne."
         ]
       },
       {
@@ -229,7 +229,7 @@
           "Zahlungsdienstleister: Ihre Kartendaten erreichen uns nie, sie werden direkt beim Dienstleister verarbeitet.",
           "E-Mail-Versanddienst: zur Zustellung der Benachrichtigungs-E-Mails.",
           "Versanddienstleister: Ihr Name und Ihre Lieferadresse bei Sendungen außerhalb des Liefergebiets.",
-          "Unsere Hosting- und Datenbankinfrastruktur."
+          "Hosting: Hetzner Online GmbH (Deutschland) — die Server stehen innerhalb der Europäischen Union."
         ]
       },
       {

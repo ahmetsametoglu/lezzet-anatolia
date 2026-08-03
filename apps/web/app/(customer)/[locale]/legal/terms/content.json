@@ -33,7 +33,12 @@
         "id": "barindirma",
         "heading": "Barındırma",
         "body": [
-          "Site ve veritabanı, Avrupa Birliği içindeki veri merkezlerinde barındırılmaktadır. Barındırıcının ticari unvanı, adresi ve telefon numarası talep üzerine iletilir."
+          "Site, Hetzner Online GmbH tarafından Avrupa Birliği içindeki veri merkezlerinde barındırılmaktadır."
+        ],
+        "bullets": [
+          "Barındırıcı: Hetzner Online GmbH",
+          "Adres: Industriestr. 25, 91710 Gunzenhausen, Almanya",
+          "Telefon: +49 (0)9831 505-0"
         ]
       },
       {
@@ -100,7 +105,12 @@
         "id": "barindirma",
         "heading": "Hébergement",
         "body": [
-          "Le site et la base de données sont hébergés dans des centres de données situés dans l'Union européenne. La dénomination, l'adresse et le numéro de téléphone de l'hébergeur sont communiqués sur demande."
+          "Le site est hébergé par Hetzner Online GmbH, dans des centres de données situés dans l'Union européenne."
+        ],
+        "bullets": [
+          "Hébergeur : Hetzner Online GmbH",
+          "Adresse : Industriestr. 25, 91710 Gunzenhausen, Allemagne",
+          "Téléphone : +49 (0)9831 505-0"
         ]
       },
       {
@@ -167,7 +177,12 @@
         "id": "barindirma",
         "heading": "Hosting",
         "body": [
-          "Website und Datenbank werden in Rechenzentren innerhalb der Europäischen Union gehostet. Firma, Anschrift und Telefonnummer des Hosters werden auf Anfrage mitgeteilt."
+          "Die Website wird von der Hetzner Online GmbH in Rechenzentren innerhalb der Europäischen Union gehostet."
+        ],
+        "bullets": [
+          "Hoster: Hetzner Online GmbH",
+          "Anschrift: Industriestr. 25, 91710 Gunzenhausen, Deutschland",
+          "Telefon: +49 (0)9831 505-0"
         ]
       },
       {

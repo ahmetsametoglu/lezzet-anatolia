@@ -22,10 +22,13 @@ import content from './content.json';
  * tanıdığı ad marka adıdır — ikisinden birini gizlemek okuyanı "yanlış siteye mi geldim" diye
  * düşündürürdü.
  *
- * BEKLEYEN(08.8): barındırıcının ticari unvanı, adresi ve telefonu — LCEN md. 6 üçünü de istiyor.
- * Sitenin nerede barındırıldığı henüz bildirilmedi; sayfa şimdilik "talep üzerine iletilir" diyor
- * ve bu yasal olarak yeterli DEĞİL, geçici bir dürüstlük. Bilgi gelince `barindirma` bölümüne
- * üç satır olarak yazılır.
+ * **Barındırıcı künyesi 03.08'de yazıldı** (Hetzner Online GmbH — unvan, adres, telefon): LCEN
+ * md. 6 üçünü de zorunlu kılıyor ve sayfa bir süre "talep üzerine iletilir" diyerek geçici bir
+ * dürüstlükle duruyordu. Künyenin kaynağı `BUSINESS_CATALOG.md` — sağlayıcı değişirse tek yerden.
+ *
+ * Sayfa sunucuların AB içinde olduğunu söylüyor. Hetzner'ın Almanya ve Finlandiya lokasyonları
+ * öyledir, ABD ve Singapur değildir; lokasyon değişirse bu cümle de gizlilik politikası da
+ * değişmek zorunda (kayıt `BUSINESS_CATALOG.md`'de).
  */
 interface TermsPageProps {
   params: Promise<{ locale: string }>;
