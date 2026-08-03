@@ -9,25 +9,42 @@ import { captureError, maskEmail, SOURCES } from '@lezzet/observability';
 import { OtpCodeEmail, otpSubject, sendEmail } from '@lezzet/email';
 import { createClient } from '@/lib/supabase/server';
 import { resolvePostLoginRedirect } from '@/lib/auth/redirect';
-import { authErrorMessage } from '@/lib/auth/errors';
+import type { AuthErrorKey } from '@/lib/auth/errors';
 import { seedPreferredLanguage } from '@/lib/identity/preferred-language';
 
-type SendResult = { ok: true } | { ok: false; error: string };
-type VerifyResult = { ok: true; redirect: string } | { ok: false; error: string };
+/**
+ * **Yüzeyin TEK dönüş sözleşmesi** (`CustomerResult`) — denetim S1.
+ *
+ * Bu iki fonksiyon bir ara `{ ok, error }` dönüyordu: çalışan ve tipli bir şekildi, ama yüzeyde
+ * ikinci bir sözleşme yaşatıyordu ve login'i örnek alan bir sonraki oturumsuz action üçüncü
+ * varyantı doğururdu. Ayrı şeklin taşıdığı bir bilgi de yoktu.
+ *
+ * **`error` değil `errorKey` dönüyor** ve fark burada esas: 08.15'te bütün müşteri kapıları
+ * metin değil ANAHTAR döndürmeye geçti — cümleyi ekran kurar. Login bunun dışında kalmıştı ve
+ * hazır cümle taşıyordu; `authErrorMessage` zaten saf bir tablo (sunucuya bağlı değil), yani
+ * çeviriyi istemcide yapmanın maliyeti sıfır.
+ *
+ * Anahtar kümesi `AuthErrorKey` — `SHARED_ERROR_KEYS`e değil ona bağlı, çünkü bu akışın hataları
+ * (`code_expired`, `code_locked`, `cooldown`) yüzeyin geri kalanında karşılığı olmayan, tamamen
+ * kendine ait hâller.
+ */
+type AuthResult<T> = { data: T | null; errorKey: AuthErrorKey | null };
 
 /**
  * Tek kullanımlık kod gönderir. Kendi OTP tablomuza (SHA-256 hash) yazar; plain kodu
  * Resend ile yollar. Supabase mail göndermez. Kod sızdırmamak için hata mesajları geneldir.
  */
-export async function sendEmailOtp(emailRaw: string): Promise<SendResult> {
-  const locale = (await getLocale()) as Locale;
+export async function sendEmailOtp(emailRaw: string): Promise<AuthResult<true>> {
   const email = normalizeEmail(emailRaw);
-  if (!email) return { ok: false, error: authErrorMessage('invalid_email', locale) };
+  if (!email) return { data: null, errorKey: 'invalid_email' };
 
   const service = new EmailVerificationService(createServiceRoleClient());
   const requested = await service.requestCode(email);
-  if (requested.status !== 'ok') return { ok: false, error: authErrorMessage(requested.status, locale) };
+  if (requested.status !== 'ok') return { data: null, errorKey: requested.status };
 
+  // Dil MAİL için okunuyor, hata cümlesi için değil: cümleyi artık ekran kuruyor (`AuthResult`
+  // künyesi). Kodun gittiği mailin dili ise sunucuda belli olmak zorunda.
+  const locale = (await getLocale()) as Locale;
   const mail = await sendEmail({
     to: email,
     subject: otpSubject(locale, brand.name),
@@ -45,9 +62,9 @@ export async function sendEmailOtp(emailRaw: string): Promise<SendResult> {
       source: SOURCES.webAction,
       context: { flow: 'auth/sendEmailOtp', email: maskEmail(email) },
     });
-    return { ok: false, error: authErrorMessage('send_failed', locale) };
+    return { data: null, errorKey: 'send_failed' };
   }
-  return { ok: true };
+  return { data: true, errorKey: null };
 }
 
 /**
@@ -55,16 +72,17 @@ export async function sendEmailOtp(emailRaw: string): Promise<SendResult> {
  * verifyOtp(token_hash)** ile açılır (auth.users yaratılır → trigger Customer'a bağlar),
  * sonra iki-yüzey kuralına göre yönlendirilir.
  */
-export async function verifyEmailOtp(emailRaw: string, token: string, next?: string | null): Promise<VerifyResult> {
-  const locale = (await getLocale()) as Locale;
+export async function verifyEmailOtp(emailRaw: string, token: string, next?: string | null): Promise<AuthResult<{ redirect: string }>> {
   const email = normalizeEmail(emailRaw);
-  if (!email) return { ok: false, error: authErrorMessage('invalid_email', locale) };
+  if (!email) return { data: null, errorKey: 'invalid_email' };
 
   const admin = createServiceRoleClient();
   const service = new EmailVerificationService(admin);
   const verified = await service.verifyCode(email, token.trim());
   if (verified.status !== 'ok') {
-    const key =
+    // Servisin durum adı ile müşterinin göreceği anahtar AYRI: `not_found` sistemin sözü
+    // ("böyle bir kayıt yok"), `no_active_code` müşterinin anlayacağı hâl ("geçerli kodunuz yok").
+    const errorKey: AuthErrorKey =
       verified.status === 'expired'
         ? 'code_expired'
         : verified.status === 'locked'
@@ -72,7 +90,7 @@ export async function verifyEmailOtp(emailRaw: string, token: string, next?: str
           : verified.status === 'not_found'
             ? 'no_active_code'
             : 'invalid_code';
-    return { ok: false, error: authErrorMessage(key, locale) };
+    return { data: null, errorKey };
   }
 
   // Kart ZATEN VAR MI — dili yalnız yeni açılana yazacağız (04.9). Ölçüm oturum açılmadan ÖNCE
@@ -88,7 +106,7 @@ export async function verifyEmailOtp(emailRaw: string, token: string, next?: str
       source: SOURCES.webAction,
       context: { flow: 'auth/verifyEmailOtp', email: maskEmail(email) },
     });
-    return { ok: false, error: authErrorMessage('send_failed', locale) };
+    return { data: null, errorKey: 'send_failed' };
   }
 
   const supabase = await createClient();
@@ -98,13 +116,14 @@ export async function verifyEmailOtp(emailRaw: string, token: string, next?: str
       source: SOURCES.webAction,
       context: { flow: 'auth/verifyEmailOtp', email: maskEmail(email) },
     });
-    return { ok: false, error: authErrorMessage('send_failed', locale) };
+    return { data: null, errorKey: 'send_failed' };
   }
 
   // Yeni müşteri: geldiği dil kartına yazılır. Başarısız olursa giriş bozulmaz — dil bir kolaylıktır,
   // kimlik değil; müşteri Fransızca mail alır ve hesabından değiştirir.
-  if (!knownBefore) await seedPreferredLanguage(link.user.id, locale).catch(() => undefined);
+  // Dil burada da MAİL/PROFİL için okunuyor, hata cümlesi için değil (`AuthResult` künyesi).
+  if (!knownBefore) await seedPreferredLanguage(link.user.id, (await getLocale()) as Locale).catch(() => undefined);
 
   const redirect = await resolvePostLoginRedirect(link.user.id, next);
-  return { ok: true, redirect };
+  return { data: { redirect }, errorKey: null };
 }

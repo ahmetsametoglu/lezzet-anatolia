@@ -8,6 +8,7 @@ import { useDevice } from '@/lib/use-device';
 import { Button, buttonClass } from '@/components/customer/ui/button';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { MessageScreen } from '@/components/customer/ui/message-screen';
+import { reportClientErrorAction } from '@/lib/observability/report-client-error';
 import errorMessages from './error-messages.json';
 
 /**
@@ -23,8 +24,25 @@ export default function CustomerError({ error, reset }: { error: Error & { diges
   const t = errorMessages[locale].serverError;
 
   useEffect(() => {
-    // Hata izleme servisi bağlanınca buraya gönderilir; müşteriye teknik ayrıntı yansıtılmaz.
+    /**
+     * Konsol GELİŞTİRİCİ içindir ve kalır; kayıt ayrı bir iştir (denetim G1).
+     *
+     * Buradaki not bir süre *"hata izleme servisi bağlanınca buraya gönderilir"* diyordu — servis
+     * bağlandı (`report-client-error.ts`), operasyon sınırı da bağlanmıştı; müşteri yarısı geride
+     * kalmıştı. O sürede müşteri tarafındaki HER render çökmesi sunucuda **sıfır iz** bırakıyordu
+     * ve bu yüzeyin en görünmez arıza sınıfı: müşteri hata ekranını görür, kapatır, gider — kimse
+     * öğrenmez.
+     *
+     * Giden şey KİMLİK: yol + digest + mesajın ilk satırı. Yığın izi gitmez (`OBSERVABILITY §5`);
+     * müşteriye teknik ayrıntı zaten yansıtılmıyor, sunucuya da gövde taşınmıyor.
+     */
     console.error(error);
+    void reportClientErrorAction({
+      message: error.message,
+      digest: error.digest ?? null,
+      // Sorgu dizesi TAŞINMAZ: kimlik taşıyabilir (`?q=` arama metni, `?token=` davet anahtarı).
+      path: typeof window === 'undefined' ? null : window.location.pathname,
+    });
   }, [error]);
 
   return (

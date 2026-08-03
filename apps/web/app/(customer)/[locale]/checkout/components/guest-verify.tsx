@@ -6,6 +6,7 @@ import { FormInputField } from '@/components/customer/form/form-input-field';
 import type { Locale } from '@lezzet/i18n';
 import { OtpCodeInput, type OtpResendResult, type OtpVerifyResult } from '@/components/customer/auth/otp-code-input';
 import { createClient } from '@/lib/supabase/client';
+import { authErrorMessage, type AuthErrorKey } from '@/lib/auth/errors';
 import { StepShell } from './checkout-steps';
 import { GoogleIcon } from '../../login/login-icons';
 import { sendEmailOtp, verifyEmailOtp } from '../../login/actions';
@@ -65,13 +66,16 @@ export function GuestVerify({ t, locale, compact, onVerified }: GuestVerifyProps
     if (failure) setError(t.verify.googleUnavailable);
   };
 
+  /** Anahtar → cümle. `authErrorMessage` saf tablo; çeviri ekranda yapılıyor (denetim S1). */
+  const say = (key: AuthErrorKey | null): string => (key ? authErrorMessage(key, locale) : t.verify.googleUnavailable);
+
   const send = async () => {
     if (!validEmail || busy) return;
     setBusy(true);
     setError(null);
-    const result = await sendEmailOtp(trimmed);
+    const { data, errorKey } = await sendEmailOtp(trimmed);
     setBusy(false);
-    if (!result.ok) return setError(result.error);
+    if (!data) return setError(say(errorKey));
     setSent(true);
   };
 
@@ -79,16 +83,18 @@ export function GuestVerify({ t, locale, compact, onVerified }: GuestVerifyProps
    * Kod doğrulama. Yönlendirme adresi KULLANILMAZ: müşteri checkout'ta kalmalı — giriş akışı
    * oturumu kurar, sayfa tazelenince adımlar açılır.
    *
-   * Hata metnini olduğu gibi geçiriyoruz: action zaten müşterinin dilinde döndürüyor.
+   * Cümleyi EKRAN kuruyor: kapı artık anahtar döndürüyor (denetim S1). Bu blok bir ara *"hata
+   * metnini olduğu gibi geçiriyoruz: action zaten müşterinin dilinde döndürüyor"* diyordu — o gün
+   * doğruydu, sözleşme değişince not da değişti.
    */
   const verify = async (code: string): Promise<OtpVerifyResult> => {
-    const result = await verifyEmailOtp(trimmed, code);
-    return result.ok ? { ok: true } : { ok: false, error: result.error };
+    const { data, errorKey } = await verifyEmailOtp(trimmed, code);
+    return data ? { ok: true } : { ok: false, error: say(errorKey) };
   };
 
   const resend = async (): Promise<OtpResendResult> => {
-    const result = await sendEmailOtp(trimmed);
-    return result.ok ? { ok: true } : { ok: false, error: result.error };
+    const { data, errorKey } = await sendEmailOtp(trimmed);
+    return data ? { ok: true } : { ok: false, error: say(errorKey) };
   };
 
   return (

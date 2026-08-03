@@ -8,6 +8,7 @@ import type { Locale } from '@lezzet/i18n';
 import { createClient } from '@/lib/supabase/client';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
+import { authErrorMessage, type AuthErrorKey } from '@/lib/auth/errors';
 import type { OtpResendResult, OtpVerifyResult } from '@/components/customer/auth/otp-code-input';
 import { sendEmailOtp, verifyEmailOtp } from './actions';
 import type { LoginErrors, LoginViewProps, Messages, Stage } from './login-types';
@@ -59,13 +60,23 @@ export function LoginClient({ next, subtitle, locale, t, errors: copyErrors, ini
     }
   }
 
+  /**
+   * Anahtarı CÜMLEYE çevirir — kapı artık metin değil anahtar döndürüyor (denetim S1).
+   *
+   * `authErrorMessage` saf bir tablo (sunucuya bağlı değil), o yüzden çeviri burada yapılabiliyor
+   * ve yüzeyin kuralı korunuyor: kapı anahtar döner, cümleyi ekran kurar (08.15). Anahtar bir
+   * şekilde boş gelirse genel e-posta hatasına düşülür — boş bir kırmızı satır göstermek,
+   * müşteriye hiçbir şey söylememektir.
+   */
+  const say = (key: AuthErrorKey | null): string => (key ? authErrorMessage(key, locale) : copyErrors.invalidEmail);
+
   const onSubmit = handleSubmit((values) => {
     setError(null);
     setNotice(null);
     startSending(async () => {
-      const res = await sendEmailOtp(values.email);
-      if (!res.ok) {
-        setError(res.error);
+      const { data, errorKey } = await sendEmailOtp(values.email);
+      if (!data) {
+        setError(say(errorKey));
         return;
       }
       setStage({ kind: 'code', email: values.email.trim().toLowerCase() });
@@ -74,18 +85,18 @@ export function LoginClient({ next, subtitle, locale, t, errors: copyErrors, ini
 
   async function onVerify(code: string): Promise<OtpVerifyResult> {
     if (stage.kind !== 'code') return { ok: false, error: copyErrors.invalidEmail };
-    const res = await verifyEmailOtp(stage.email, code, next);
-    if (res.ok) {
-      window.location.assign(res.redirect);
+    const { data, errorKey } = await verifyEmailOtp(stage.email, code, next);
+    if (data) {
+      window.location.assign(data.redirect);
       return { ok: true };
     }
-    return { ok: false, error: res.error };
+    return { ok: false, error: say(errorKey) };
   }
 
   async function onResend(): Promise<OtpResendResult> {
     if (stage.kind !== 'code') return { ok: false, error: copyErrors.invalidEmail };
-    const res = await sendEmailOtp(stage.email);
-    return res.ok ? { ok: true } : { ok: false, error: res.error };
+    const { data, errorKey } = await sendEmailOtp(stage.email);
+    return data ? { ok: true } : { ok: false, error: say(errorKey) };
   }
 
   async function onGoogle() {

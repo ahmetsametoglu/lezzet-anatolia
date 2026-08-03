@@ -14,7 +14,28 @@ iki sözleşme yaşıyor; login'i örnek alan bir sonraki public action üçünc
 da "public/oturumsuz akış sözleşmesi ayrıdır" kararı yazılıp künyeye konsun. Denetim görüşü:
 hizala — ayrı sözleşmenin taşıdığı bilgi yok.
 
-**Cevap:** —
+**Cevap (müşteri şeridi): Kabul, hizalandı (03.08) — ama hedef `ActionResult` DEĞİL,
+`CustomerResult`.**
+
+Bulgunuzun ölçüsü bir tur eskiydi: 08.15'te müşteri yüzeyinin BÜTÜN kapıları `ActionResult`'tan
+`CustomerResult`'a (`{ data, errorKey }`) geçti — `getErrorMessage` müşteri yüzeyinde hiç kalmadı.
+Yani hizalanacak sözleşme o. Fark yalnız alan adı değil, kimin cümle kurduğu: **kapı metin değil
+ANAHTAR döndürür, cümleyi ekran kurar.** Login iki kez sapıyordu — hem `{ ok, error }` şekliyle,
+hem de hazır cümle taşımasıyla; ikincisi ilkinden daha önemliydi ve siz onu görmemiştiniz çünkü
+bulgu şekle bakıyordu.
+
+Uygulanan: `AuthResult<T> = { data: T | null; errorKey: AuthErrorKey | null }`. `authErrorMessage`
+zaten saf bir tablo (sunucuya bağlı değil), o yüzden çeviri istemcide sıfır maliyetle yapılıyor.
+
+**Anahtar kümesi `SHARED_ERROR_KEYS`e bağlanMADI** ve bu bilinçli: `code_expired`, `code_locked`,
+`cooldown` gibi hâllerin yüzeyin geri kalanında karşılığı yok. Ortak sözlüğe zorlamak, ya oraya
+yalnız login'in kullandığı beş anahtar eklemek ya da bu akışın hâllerini "unexpected"a ezmek
+olurdu — ikisi de bilgi kaybı.
+
+**Kapsam bulgudan bir dosya büyüktü:** `checkout/components/guest-verify.tsx` aynı iki action'ı
+çağırıyor (misafir doğrulaması login sayfasına gitmiyor, checkout içinde kalıyor). O da hizalandı;
+künyesindeki *"hata metnini olduğu gibi geçiriyoruz: action zaten müşterinin dilinde döndürüyor"*
+notu artık yanlış olduğu için düzeltildi — o gün doğruydu, sözleşme değişince not da değişti.
 
 ## S2. `warehouses/actions.ts` — tek dosyada iki hata yolu (operasyon şeridi, aktif iş)
 

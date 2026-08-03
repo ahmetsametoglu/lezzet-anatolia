@@ -309,6 +309,32 @@ kodlanabilir — ama dört alanlı bir formun çiziminin olmaması, ekranın ger
 durup durmayacağını belirsiz bırakıyor. Karar gelene kadar pencere brief'ten türetilerek, ekranın
 mevcut form kitiyle kurulacak; çizim gelince birebir uygulanır.
 
+**Yazıldı (03.08, `manual-ticket-dialog.tsx`):** müşteri (uzak arama) · tip (`MultiToggle`, dört
+değer) · bağlı sipariş (müşteriye bağlı seçici, isteğe bağlı) · başlık (isteğe bağlı) · anlatım.
+İşaretli kalemler KONMADI: brief "müşteri + varsa sipariş" diyor ve operatör telefonda konuşurken
+kalem kimliğiyle uğraşmaz — gerekirse sipariş ekranından görülür. Çizim gelirse birebir uygulanır.
+
+### Talepler — çizimin karşılığı olmayan üç sunum kararı (03.08, 16.3)
+
+Ekran yazılırken çizimin ya susduğu ya da palette karşılığı olmayan üç nokta çıktı. Üçü de
+uydurulmadı, en yakın karşılıkla kuruldu ve buraya yazıldı — çizim gelince birebir uygulanır.
+
+- **Kuyruk satırına iki işaret EKLENDİ.** Çizim satırda müşteri · tip · önizleme · durum · AI · yaş
+  gösteriyor. Eklenenler: **"Cevap bekliyor"** rozeti ve **kamera** işareti. İkisi de brief'ten
+  geliyor (`§2`: *"cevap bekleyenin bekletilmemesi kuyruğun tek amacıdır"*, `§7`: *"bozuk ürün
+  kararı çoğu kez fotoğraftan verilir"*) ve ikisinin de verisi görünümde hazırdı (`awaiting_reply`,
+  `has_attachment`) — çizim onları hiç kullanmıyordu. Sipariş numarası da satıra kondu (aynı
+  gerekçe: veri hazır, çizim kullanmıyor).
+- **AI'ın moru palette YOK.** Çizim AI mesajını ve rozetini `#5a4a8a` ile ayırıyor; envanterde mor
+  bir token yok ve ham hex yasak (`CLAUDE.md §3`). En yakın ayrık ton `slate` kullanıldı. **İstenen
+  karar:** AI için bir token açılsın mı, yoksa `slate` kalıcı mı olsun?
+- **Personel mesajının başlığı "Operasyon", çizimdeki "Selim A. (siz)" değil.** Mesaj görünümü
+  yazarın kimliğini taşımıyor (`TicketMessageView` — `authorId` müşteri yüzeyine sızmasın diye
+  düşürülüyor) ve taşısa bile bir meslektaşın yazdığı cevaba "siz" demek yanlış olurdu. Ayrım
+  gerçekten gereken yerde duruyor: müşteri ↔ operasyon ↔ AI. **İstenen karar:** yazarın adı
+  operasyon detayında görünsün mü? Görünecekse veri kapısı `authorId`'yi personel görünümünde
+  taşımalı (arka uç şeridi).
+
 - **UZUN METİN İÇİN OKUMA KADEMESİ YOK — statik sayfalar bunu bekliyor (03.08, 08.8).**
   `Musteri - Statik.dc.html` gövde metnini `15.5px/1.75` ve `#4a4f44` ile çiziyor. Envanterde
   ikisinin de karşılığı yok: en yakın punto `text-body` (15px), en yakın renk `--color-body`
@@ -324,6 +350,33 @@ mevcut form kitiyle kurulacak; çizim gelince birebir uygulanır.
   gövde tonunun koyu varyantı + 1.75 satır aralığı). Eklenirse `legal-sections.tsx` tek dosyada o
   token'lara geçer. Eklenmezse bugünkü hâli kalır ve tasarımın statik sayfa çizimi bu üç değerde
   envantere uydurulur — ikisinden biri, ama ikisi birden değil.
+
+- **ZİYARETÇİDE FİYAT DEĞİŞİMİ BİLDİRİMİ HİÇ ÇALIŞMIYOR — karar bekliyor (03.08, denetim T3'ü
+  cevaplarken çıktı).**
+  DOMAIN §5: *fiyat arttıysa müşteriye bildirilir ve onay istenir; düştüyse sessiz uygulanır.*
+  Kural yazılmış ve girişli müşteride çalışıyor (`priceChangeOf`, testi `lib/cart/price-change.test.ts`).
+  **Ziyaretçide çalışmıyor:** `previousPrices` yalnız girişli dalda geçiyor (`cart/actions.ts:101`
+  `customerId` bloğunun içinde, `:138` ziyaretçi erken dönüşünden sonra). Ziyaretçide harita hiç
+  verilmediği için `priceChangeOf` her zaman boş dönüyor.
+
+  **Pratik sonucu:** çıpalı teklif partisi tükenen bir ziyaretçi normal fiyata **sessizce** geçiyor.
+  Ziyaretçi checkout'a girebiliyor (SSS: *"hesap açmanız gerekmiyor"*), yani DOMAIN §5'in Fransız
+  tüketici hukuku gerekçesiyle yasakladığı "sessiz zam" bu yolda fiilen mümkün.
+
+  **Bu bir unutma değil, yapısal bir sonuç.** Ziyaretçinin sepeti tarayıcıda ve `CartEntry` bilerek
+  fiyat taşımıyor ("yalnız niyet" — fiyatı her okumada sunucu çözüyor, ki bu doğru bir karar ve
+  "eski fiyatı taşıma" hatasını imkânsız kılıyor). Karşılaştırılacak eski fiyat bu yüzden hiçbir
+  yerde durmuyor.
+
+  **İstenen karar — iki yol var ve ikisi de meşru:**
+  · *Son görülen fiyat tarayıcıya da yazılır* (niyetin yanında, ayrı bir alan olarak). Koruma
+    ziyaretçiye de gelir; bedeli, `CartEntry`'nin yanında fiyat tutmayan tasarımın kenarına bir
+    istisna açmak — o alan **kıyas için** tutulur, satış için değil, ve künyede böyle yazılmalı.
+  · *Ziyaretçi bu korumanın dışında kalır* ve bu **yazılı bir sapma** olur. Savunulabilir: fiyat
+    zaten checkout'ta sabitleniyor ve müşteri ödemeden önce toplamı görüyor. Ama o zaman sapma
+    gerekçesiyle DOMAIN §5'e de düşülmeli, yoksa kural "her müşteri için" diye okunur.
+
+  Karar verilene kadar kod bugünkü hâlinde; test künyesi kapsam dışı olduğunu söylüyor.
 
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
 

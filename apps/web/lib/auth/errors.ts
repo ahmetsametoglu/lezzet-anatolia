@@ -4,7 +4,7 @@ import type { Locale } from '@lezzet/i18n';
  * Kullanıcıya dönen auth hata anahtarları. Ham Supabase mesajı yerine anlamsal anahtar
  * taşınır; çeviri tek yerde ({@link AUTH_MESSAGES}) tutulur (DRY + i18n).
  */
-type AuthErrorKey =
+export type AuthErrorKey =
   | 'invalid_email'
   | 'send_failed'
   | 'rate_limit'
