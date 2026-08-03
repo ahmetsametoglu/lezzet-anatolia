@@ -1100,6 +1100,33 @@ istediği boya OTURDU — daha önce 1px küçüktü.
 Bu bir tasarım sapmasıdır: `.dc.html` dosyaları eski boyları taşımaya devam ediyor. Tasarım tarafı
 ölçeği güncellerse bu madde kapanır; güncellemezse fark bilinçli olarak kalır.
 
+### Ölçek İKİNCİ kez büyütüldü + merdivene iki uç eklendi (03.08, kullanıcı kararı)
+
+**Aynı şikâyet ikinci kez geldi** — *"okumakta zorlanıyorum; kimden geldiğini yazan metin bile
+küçük"* — ve ikinci kez gelmesi teşhisin kendisi oldu: sorun bir ekranın seçimlerinde değil,
+ölçeğin **kalibrasyonunda**. Talepler ekranında çizimin değerleri merdivene DOĞRU eşlenmişti (13 →
+`base`, 12,5 → `sm`) ve sonuç yine okunmuyordu; yani hata eşlemede değil, eşlemenin hedefindeydi.
+Sebep: tasarım dosyaları 1360px'lik bir çerçevede çiziliyor, gerçek operasyon ekranı çok daha
+geniş — aynı piksel orada daha küçük okunuyor.
+
+Yedi basamak yine ~1px yukarı (25 · 20 · 17 · 15 · 14 · 13 · 12), oranlar korundu. **Sapma
+büyüdü:** `.dc.html` boyları artık iki kademe geride. Bilinçli — mock'a sadakat amaç değil,
+okunabilirlik amaç.
+
+**Merdivene iki YENİ uç eklendi:** `hero` 36 (← 34 · 40) ve `display` 29 (← 26 · 28). Bunlar metin
+değil **gösterge** boyları: sistem panelinin büyük değerleri, hüküm şeridinin başlığı, sipariş
+tutarı. Yedi basamak metin içindi ve bu değerler hiçbirine sığmadığı için dokuz yerde ham px
+yazılmıştı — merdiven yükselince yerlerinde kaldılar. Ham değeri en yakın metin basamağına yamamak
+hiyerarşiyi bozardı (29px bir başlık değil, bir sayıdır).
+
+Yan sonuç: hüküm şeridinin üç ses kademesi (28 → 34 → 40) ikiye indi (`display` → `hero`). Kayıp
+değil — kritik hâl zaten dolu alarm bandı + nabız atan nokta ile ayrışıyor, boyut üçüncü bir kopya
+sinyaldi.
+
+**Kural artık denetleniyor** (`docs:check §3h`): operasyon yüzeyinde ham `text-[Npx]` yasak. Sistem
+ekranı 34 yerde ham px taşıyordu ve **iki ölçek yükseltmesini de kaçırmıştı** — üçüncü şikâyet
+oradan gelecekti. `leading`/`tracking`/dolgu ham kalabilir (yukarıdaki gerekçe).
+
 ### Palete kurşuni ton eklendi (28.07)
 
 `slate` (#5a6472 / #eceff3, karanlıkta ters çevrilmiş) — **ölçüm/nötr kayıt** anlamı için. İmha

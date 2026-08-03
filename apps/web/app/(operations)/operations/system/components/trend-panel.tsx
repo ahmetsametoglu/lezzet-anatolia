@@ -85,7 +85,7 @@ function TrendChart({ chart }: { chart: TrendChartView }) {
     <div className="flex flex-col gap-2.5">
       <div className="flex items-baseline gap-2.5">
         <span className="mr-auto font-ops-body text-ops-sm font-medium text-ops-body">{chart.title}</span>
-        <span className={`font-ops-mono text-[17px] font-medium ${chart.hot ? 'text-ops-red-dark' : bos ? 'text-ops-amber-dark' : 'text-ops-ink'}`}>
+        <span className={`font-ops-mono text-ops-lead font-medium ${chart.hot ? 'text-ops-red-dark' : bos ? 'text-ops-amber-dark' : 'text-ops-ink'}`}>
           {chart.now}
         </span>
       </div>
@@ -116,11 +116,11 @@ function TrendChart({ chart }: { chart: TrendChartView }) {
             strokeLinecap="round"
           />
         </svg>
-        <span className="absolute right-1.5 top-0.5 font-ops-mono text-[9.5px] text-ops-gray-700">100</span>
-        <span className="absolute bottom-0.5 right-1.5 font-ops-mono text-[9.5px] text-ops-gray-700">0</span>
+        <span className="absolute right-1.5 top-0.5 font-ops-mono text-ops-micro text-ops-gray-700">100</span>
+        <span className="absolute bottom-0.5 right-1.5 font-ops-mono text-ops-micro text-ops-gray-700">0</span>
         {chart.thresholdLabel ? (
           <span
-            className="absolute left-1.5 font-ops-mono text-[9.5px] text-ops-red-dot"
+            className="absolute left-1.5 font-ops-mono text-ops-micro text-ops-red-dot"
             style={{ top: chart.thresholdY !== null ? `${(chart.thresholdY / VB_H) * 78 + 8}px` : undefined }}
           >
             {chart.thresholdLabel}

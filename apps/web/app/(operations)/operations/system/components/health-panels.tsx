@@ -33,7 +33,7 @@ function MetricRow({ row }: { row: MetricRowView }) {
         <span className="flex-none basis-[104px] font-ops-body text-ops-sm font-medium text-ops-body">{row.label}</span>
         <span className={`min-w-0 flex-1 basis-[120px] font-ops-mono text-ops-base font-medium ${VALUE[row.tone]}`}>{row.value}</span>
         {row.tag ? (
-          <span className="flex-none rounded-[5px] border border-ops-amber-line bg-ops-amber-bg px-1.5 py-[3px] font-ops-display text-[10px] font-semibold uppercase tracking-[0.06em] text-ops-amber">
+          <span className="flex-none rounded-[5px] border border-ops-amber-line bg-ops-amber-bg px-1.5 py-[3px] font-ops-display text-ops-micro font-semibold uppercase tracking-[0.06em] text-ops-amber">
             {row.tag}
           </span>
         ) : null}
@@ -102,7 +102,7 @@ export function ProcessPanel({ processes }: { processes: ProcessRowView[] | null
         </div>
       ) : (
         <div className="overflow-hidden rounded-[8px] border border-ops-line">
-          <div className="flex items-center gap-2.5 border-b border-ops-line bg-ops-subtle px-3 py-2 font-ops-display text-[10px] font-semibold uppercase tracking-[0.09em] text-ops-muted">
+          <div className="flex items-center gap-2.5 border-b border-ops-line bg-ops-subtle px-3 py-2 font-ops-display text-ops-micro font-semibold uppercase tracking-[0.09em] text-ops-muted">
             <span className="flex-1">Süreç</span>
             <span className="w-[74px] text-right">Yeniden</span>
             <span className="w-[62px] text-right">Bellek</span>
@@ -114,7 +114,7 @@ export function ProcessPanel({ processes }: { processes: ProcessRowView[] | null
                 <span className="truncate font-ops-body text-ops-sm font-medium text-ops-ink">{p.name}</span>
                 <span className="flex items-center gap-1.5">
                   <span className={`h-1.5 w-1.5 rounded-full ${p.down ? 'bg-ops-red' : 'bg-ops-olive-light'}`} aria-hidden="true" />
-                  <span className={`font-ops-mono text-[10.5px] font-medium ${p.down ? 'text-ops-red-dark' : 'text-ops-body'}`}>{p.status}</span>
+                  <span className={`font-ops-mono text-ops-micro font-medium ${p.down ? 'text-ops-red-dark' : 'text-ops-body'}`}>{p.status}</span>
                 </span>
               </span>
               <span
@@ -156,7 +156,7 @@ export function ServicesPanel({ services }: { services: ServiceCardView[] }) {
       <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2.5">
         {services.map((s) => (
           <div key={s.key} className={`flex flex-col gap-1.5 rounded-[9px] border px-3 py-3 ${SERVICE_TONE[s.tone]}`}>
-            <span className="font-ops-display text-[10.5px] font-medium uppercase tracking-[0.08em] opacity-80">{s.label}</span>
+            <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.08em] opacity-80">{s.label}</span>
             <span className="font-ops-display text-ops-lead font-semibold">{s.value}</span>
             <span className="font-ops-body text-ops-micro leading-[1.5] opacity-90">{s.sub}</span>
           </div>
@@ -175,8 +175,8 @@ export function AppPanel({ counters }: { counters: AppCounterView[] }) {
             key={c.key}
             className={`flex flex-1 flex-col gap-1.5 border-r border-ops-line px-4 py-3.5 last:border-r-0 ${c.tone === 'crit' ? 'bg-ops-red-bg' : ''}`}
           >
-            <span className="font-ops-display text-[10.5px] font-medium uppercase tracking-[0.08em] text-ops-body">{c.label}</span>
-            <span className={`font-ops-mono text-[28px] font-medium tracking-[-0.02em] ${VALUE[c.tone]}`}>{c.value}</span>
+            <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.08em] text-ops-body">{c.label}</span>
+            <span className={`font-ops-mono text-ops-display font-medium tracking-[-0.02em] ${VALUE[c.tone]}`}>{c.value}</span>
           </div>
         ))}
       </div>

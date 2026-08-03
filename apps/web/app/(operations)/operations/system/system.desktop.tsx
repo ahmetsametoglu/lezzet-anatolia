@@ -96,7 +96,7 @@ export function NoSnapshot() {
   return (
     <div className="flex flex-col gap-2 rounded-[12px] border-[1.5px] border-ops-amber-line bg-ops-amber-bg px-[22px] py-5">
       <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.16em] text-ops-amber">Ölçüm yok</span>
-      <span className="font-ops-display text-[28px] font-bold leading-[1.05] tracking-[-0.02em] text-ops-amber-dark">
+      <span className="font-ops-display text-ops-display font-bold leading-[1.05] tracking-[-0.02em] text-ops-amber-dark">
         Henüz hiç sağlık görüntüsü alınmamış
       </span>
       <span className="max-w-[620px] font-ops-body text-ops-base leading-[1.6] text-ops-amber-dark">

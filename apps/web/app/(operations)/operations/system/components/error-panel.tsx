@@ -328,8 +328,8 @@ function ErrorInspector({
     <div className="flex min-h-[560px] flex-wrap items-stretch">
       <div className="flex min-w-[264px] max-w-[352px] flex-1 basis-[296px] flex-col border-b border-r border-ops-line bg-ops-card">
         <div className="flex items-center gap-2 border-b border-ops-line bg-ops-subtle px-4 py-2.5">
-          <span className="mr-auto font-ops-display text-[10px] font-semibold uppercase tracking-[0.09em] text-ops-muted">Hata türü</span>
-          <span className="font-ops-mono text-[10.5px] font-medium text-ops-muted">{total} kayıt</span>
+          <span className="mr-auto font-ops-display text-ops-micro font-semibold uppercase tracking-[0.09em] text-ops-muted">Hata türü</span>
+          <span className="font-ops-mono text-ops-micro font-medium text-ops-muted">{total} kayıt</span>
         </div>
         <div className="flex max-h-[620px] flex-col overflow-y-auto">
           {rows.map((r) => {
@@ -346,7 +346,7 @@ function ErrorInspector({
               >
                 <span className="flex items-center gap-[7px]">
                   <LevelDot level={r.level} />
-                  <span className="font-ops-display text-[9.5px] font-semibold uppercase tracking-[0.07em] text-ops-body">{r.level}</span>
+                  <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.07em] text-ops-body">{r.level}</span>
                   {r.regression ? <RegressionChip /> : null}
                   <span
                     className={`ml-auto font-ops-mono text-ops-micro font-semibold ${
@@ -360,11 +360,11 @@ function ErrorInspector({
                   {r.message}
                 </span>
                 <span className="flex items-baseline gap-2">
-                  <span className="min-w-0 flex-1 truncate font-ops-mono text-[10.5px] text-ops-muted">
+                  <span className="min-w-0 flex-1 truncate font-ops-mono text-ops-micro text-ops-muted">
                     {r.source}
                     {r.path ? ` · ${r.path}` : ''}
                   </span>
-                  <span className="flex-none font-ops-mono text-[10.5px] font-medium text-ops-strong">{shortDateTime(r.lastSeenAt)}</span>
+                  <span className="flex-none font-ops-mono text-ops-micro font-medium text-ops-strong">{shortDateTime(r.lastSeenAt)}</span>
                 </span>
               </button>
             );
@@ -380,7 +380,7 @@ function ErrorInspector({
             {sel.path ? <span className="font-ops-mono text-ops-xs text-ops-muted">{sel.path}</span> : null}
             {sel.resolvedAt ? <ResolvedChip at={sel.resolvedAt} by={sel.resolvedByName} /> : null}
           </div>
-          <span className={`font-ops-display text-[19px] font-semibold leading-[1.35] ${sel.level === 'fatal' ? 'text-ops-red-dark' : 'text-ops-ink'}`}>
+          <span className={`font-ops-display text-ops-section font-semibold leading-[1.35] ${sel.level === 'fatal' ? 'text-ops-red-dark' : 'text-ops-ink'}`}>
             {sel.message}
           </span>
         </div>

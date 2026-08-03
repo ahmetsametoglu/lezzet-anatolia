@@ -56,7 +56,7 @@ export function ErrorDetailDialog({ row, onClose, onResolve, resolving }: ErrorD
             {row.path ? <span className="font-ops-mono text-ops-xs text-ops-muted">{row.path}</span> : null}
             {row.regression ? <RegressionChip /> : null}
           </div>
-          <span className={`font-ops-display text-[17px] font-semibold leading-[1.35] ${row.level === 'fatal' ? 'text-ops-red-dark' : 'text-ops-ink'}`}>
+          <span className={`font-ops-display text-ops-lead font-semibold leading-[1.35] ${row.level === 'fatal' ? 'text-ops-red-dark' : 'text-ops-ink'}`}>
             {row.message}
           </span>
         </div>

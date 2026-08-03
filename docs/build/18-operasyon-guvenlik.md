@@ -44,6 +44,14 @@ Fiilen tüm modüllerin ürettiği yüzeyler; ama **VPS kurulumu, CI ve staging 
     - **İki süpürme işi** tek cron'da (`purge_observability`, gece 03:20): çözülmüş hata 90 gün, sağlık görüntüsü 14 gün. **Çözülmemiş hata süpürülmez.**
     - **`console.*` dönüşümü:** sunucu tarafındaki 8 çağrı logger'a/`captureError`'a geçti. Dört tanesi BİLİNÇLİ kaldı — `global-error.tsx`, iki `error.tsx`, `payment-element.tsx` hepsi `'use client'` ve `pino` node-only'dir (`OBSERVABILITY §2`).
     - **Test bir hata yakaladı:** parmak izi normalizasyonu `\b\d{4,}\b` kullanıyordu ve *"timeout after 30000ms"* gibi **birime yapışık** sayıları sabitlemiyordu (rakam-harf arasında kelime sınırı oluşmaz) — her zaman aşımı kendi satırını açardı, yani gruplama en çok gerektiği yerde çalışmıyordu. Son sınır kaldırıldı.
+    - **Ekran yazı ölçeğine bağlandı (03.08).** Sistem paneli 34 yerde HAM px yazı boyu taşıyordu
+      (`text-[9.5px]` … `text-[40px]`) ve bu yüzden **iki ölçek yükseltmesini de kaçırmıştı** —
+      merdiven iki kez yükselirken bu ekran yerinde kaldı, yani ötekilerden görece küçüldü. Hepsi
+      basamağa bağlandı; gösterge rakamları için merdivene iki uç eklendi (`hero` 36 · `display` 29),
+      çünkü 28px bir başlık değil bir SAYI ve en yakın metin basamağına yamanması hiyerarşiyi
+      bozardı. Hüküm şeridinin üç ses kademesi ikiye indi — kritik hâl zaten dolu alarm bandı +
+      nabızla ayrışıyor, boyut üçüncü bir kopya sinyaldi. Kural denetime bağlandı (`docs:check §3h`,
+      `STACK §7`): ham `text-[Npx]` artık commit'ten geçmez, çünkü bu sınıf hata üçüncü kez çıktı.
     - **RLS politikası YAZILMADI** (bilinçli): tablolar deny-by-default, `job_run`/`webhook_event` deseni. Referansın admin `SELECT` politikası alınmadı — oradaki `is_admin()` yardımcısının burada karşılığı yok ve RLS kapsamı 18.1'de karara bağlanacak. Okuma ekranın `requireAdmin` kapısından geçecek.
     - **Örnek hata kayıtları `[ÖRNEK]` ile işaretlendi (03.08, kullanıcı kararı).** `error_log` yalnız kurgu taşımıyor — `captureError` gerçek arızaları da buraya yazıyor ve ikisi aynı listede ayırt edilemiyordu. Yaşandı: kullanıcı yereldeki sekiz kaydı sorduğunda yedisi tohumdu, biri gerçek bir `ReferenceError`'dı (`skeleton.tsx` · `CONTROL_H`) ve ancak `path`/`context` alanlarına bakılarak ayrıldı. Önek MESAJIN içinde (ayrı kolon değil): listede, aramada, `psql` çıktısında ve **parmak izinde** görünür — yani işaretli satır gerçek bir hatayla asla gruplanamaz. Makine tarafı için `context.seed = true`. Tamamen boş tablo isteyen tur için `SEED_ERROR_LOG=0` (varsayılan açık: ekran alarmın yerini tutuyor ve kayıtsız yedi hâlinin altısı denenemiyor).
     - Doğrulama: 37 yeni test (20 birim eşik + 13 hata kaydı + 4 sağlık servisi). Kapılar yeşil: typecheck · lint · knip · boundaries (0 hata) · docs:check.

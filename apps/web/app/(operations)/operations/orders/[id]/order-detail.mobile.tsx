@@ -74,7 +74,7 @@ export function OrderDetailMobile({ order, onAdvance, busy, error }: OrderDetail
             {paymentHeadline(order)}
           </span>
           <span
-            className={`font-ops-mono text-[26px] font-medium ${
+            className={`font-ops-mono text-ops-display font-medium ${
               order.payment.overdue ? 'text-ops-red' : openCents > 0 ? 'text-ops-amber' : 'text-ops-olive-dark'
             }`}
           >

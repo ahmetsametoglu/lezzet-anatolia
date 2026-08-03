@@ -21,7 +21,7 @@ const LEVEL: Record<ErrorLogLevel, { cls: string; dot: string; label: string }> 
 export function LevelBadge({ level }: { level: ErrorLogLevel }) {
   const t = LEVEL[level];
   return (
-    <span className={`rounded-[5px] border px-2 py-[3px] font-ops-display text-[10px] font-semibold uppercase tracking-[0.07em] ${t.cls}`}>
+    <span className={`rounded-[5px] border px-2 py-[3px] font-ops-display text-ops-micro font-semibold uppercase tracking-[0.07em] ${t.cls}`}>
       {t.label}
     </span>
   );
@@ -34,7 +34,7 @@ export function LevelDot({ level }: { level: ErrorLogLevel }) {
 /** "geri geldi" — çözülmüş bir hatanın dönüşü, hiç çözülmemiş bir hatadan FARKLI bir haberdir. */
 export function RegressionChip() {
   return (
-    <span className="rounded-[5px] border border-ops-amber-line bg-ops-amber-bg px-1.5 py-[2px] font-ops-display text-[9.5px] font-semibold uppercase tracking-[0.07em] text-ops-amber-dark">
+    <span className="rounded-[5px] border border-ops-amber-line bg-ops-amber-bg px-1.5 py-[2px] font-ops-display text-ops-micro font-semibold uppercase tracking-[0.07em] text-ops-amber-dark">
       geri geldi
     </span>
   );
@@ -42,7 +42,7 @@ export function RegressionChip() {
 
 export function ResolvedChip({ at, by }: { at: string; by: string | null }) {
   return (
-    <span className="rounded-[5px] bg-ops-olive-bg px-2 py-[2px] font-ops-mono text-[10.5px] font-medium text-ops-olive-dark">
+    <span className="rounded-[5px] bg-ops-olive-bg px-2 py-[2px] font-ops-mono text-ops-micro font-medium text-ops-olive-dark">
       çözüldü · {shortDate(at)}
       {by ? ` · ${by}` : ''}
     </span>
@@ -135,7 +135,7 @@ export function ErrorMetaGrid({ row, columns = 'auto' }: { row: ErrorRowView; co
     >
       {entries.map((e) => (
         <div key={e.k} className="flex min-w-0 flex-col gap-0.5">
-          <span className="font-ops-body text-[10.5px] text-ops-muted">{e.k}</span>
+          <span className="font-ops-body text-ops-micro text-ops-muted">{e.k}</span>
           <span className="break-all font-ops-mono text-ops-sm font-medium text-ops-strong">{e.v}</span>
         </div>
       ))}

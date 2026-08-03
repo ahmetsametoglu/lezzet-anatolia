@@ -194,7 +194,16 @@
      Yine tüm ölçek ~1px yukarı, oranlar korundu (hiyerarşi aynı). ÖNCE tek bir ekranı elle
      büyütmüştüm; o yol yanlıştı — Talepler öteki dokuz ekrandan bir kademe büyük kalırdı ve
      düzeltmeye çalıştığım kaymanın aynısını üretirdi. Token'ı değiştirmek on ekranı birden düzeltir
-     ve tutarlılığı korur; ölçek zaten bunun için token. */
+     ve tutarlılığı korur; ölçek zaten bunun için token.
+
+     MERDİVENİN ÜSTÜNE İKİ UÇ EKLENDİ (03.08). Yedi basamak METİN içindi; gösterge rakamları
+     (sistem panelinin büyük değerleri, hüküm şeridinin başlığı, sipariş tutarı) hiçbirine
+     sığmıyordu ve o yüzden dokuz yerde HAM px yazılmıştı — 21 · 26 · 28 · 34 · 40. Bunlar okunmayan
+     değil, ÖLÇEKSİZ değerlerdi: merdiven yükselince yerlerinde kaldılar ve aradaki mesafe sessizce
+     kapandı. Rol gerçekten farklı olduğu için basamak eklendi; ham değeri en yakın metin
+     basamağına yamamak hiyerarşiyi bozardı (28px bir başlık değil, bir SAYI). */
+  --text-ops-hero: 36px;      /* alarm bandı başlığı      ← 34 · 40 */
+  --text-ops-display: 29px;   /* büyük gösterge sayısı    ← 26 · 28 */
   --text-ops-title: 25px;     /* sayfa başlığı            ← 22 · 24 */
   --text-ops-section: 20px;   /* bölüm başlığı            ← 17 · 18 · 20 */
   --text-ops-lead: 17px;      /* öne çıkan sayı/kart adı  ← 15 · 16 */

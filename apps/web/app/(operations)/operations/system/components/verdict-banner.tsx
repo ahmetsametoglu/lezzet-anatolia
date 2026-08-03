@@ -24,7 +24,14 @@ interface BannerTheme {
   age: string;
   dot: string;
   pulse: boolean;
-  /** Başlık boyutu — hüküm ağırlaştıkça büyür (28 → 34 → 40px). */
+  /**
+   * Başlık boyutu — hüküm ağırlaştıkça büyür: `display` (sakin) → `hero` (yüksek sesli).
+   *
+   * Eskiden ham üç kademeydi (28 → 34 → 40px) ve ölçeğin dışındaydı; merdiven yükselince yerinde
+   * kaldı. Token'a bağlanınca `crit` ile `warn` aynı basamağa (`hero`) düştü ve bu bir kayıp değil:
+   * kritik hâl zaten DOLU alarm bandı + nabız atan nokta ile ayrışıyor, boyut üçüncü bir kopya
+   * sinyaldi. Ayrım hâlâ iki yerden okunuyor, sadece üçüncüsü tekrar etmiyor.
+   */
   titleSize: string;
   pad: string;
 }
@@ -37,7 +44,7 @@ const THEME: Record<VerdictTone, BannerTheme> = {
     age: 'text-ops-body',
     dot: 'bg-ops-olive-light',
     pulse: false,
-    titleSize: 'text-[28px]',
+    titleSize: 'text-ops-display',
     pad: 'px-[22px] py-[18px]',
   },
   warn: {
@@ -47,7 +54,7 @@ const THEME: Record<VerdictTone, BannerTheme> = {
     age: 'text-ops-amber',
     dot: 'bg-ops-amber-dot',
     pulse: false,
-    titleSize: 'text-[34px]',
+    titleSize: 'text-ops-hero',
     pad: 'px-[22px] py-5',
   },
   crit: {
@@ -57,7 +64,7 @@ const THEME: Record<VerdictTone, BannerTheme> = {
     age: 'text-ops-alarm-muted',
     dot: 'bg-ops-alarm-dot',
     pulse: true,
-    titleSize: 'text-[40px]',
+    titleSize: 'text-ops-hero',
     pad: 'px-6 py-[22px]',
   },
   stale: {
@@ -67,7 +74,7 @@ const THEME: Record<VerdictTone, BannerTheme> = {
     age: 'text-ops-alarm-muted',
     dot: 'bg-ops-alarm-dot',
     pulse: true,
-    titleSize: 'text-[40px]',
+    titleSize: 'text-ops-hero',
     pad: 'px-6 py-[22px]',
   },
 };
@@ -113,7 +120,7 @@ export function VerdictBanner({ health, ageMinutes, compact = false }: VerdictBa
             {health.stale ? 'Ölçüm akmıyor' : 'Hüküm'}
           </span>
         </span>
-        <span className={`font-ops-display font-bold leading-[1.05] tracking-[-0.02em] ${t.title} ${compact ? 'text-[21px]' : t.titleSize}`}>
+        <span className={`font-ops-display font-bold leading-[1.05] tracking-[-0.02em] ${t.title} ${compact ? 'text-ops-title' : t.titleSize}`}>
           {health.title}
         </span>
         <span className={`font-ops-mono text-ops-sm font-medium ${t.age}`}>{agoLabel(ageMinutes)} ölçüldü</span>
@@ -138,7 +145,7 @@ export function VerdictBanner({ health, ageMinutes, compact = false }: VerdictBa
               const rb = reasonBox(r.tone, loud);
               return (
                 <div key={r.code} className={`flex items-start gap-2.5 rounded-[8px] px-3 py-2.5 ${rb.box}`}>
-                  <span className={`flex-none rounded-[5px] px-1.5 py-[3px] font-ops-display text-[10px] font-semibold uppercase tracking-[0.08em] ${rb.tag}`}>
+                  <span className={`flex-none rounded-[5px] px-1.5 py-[3px] font-ops-display text-ops-micro font-semibold uppercase tracking-[0.08em] ${rb.tag}`}>
                     {r.tag}
                   </span>
                   <span className={`font-ops-body text-ops-sm font-medium leading-[1.5] ${rb.text}`}>{r.text}</span>

@@ -54,7 +54,7 @@ export function SystemMobile(props: SystemViewProps) {
             ].join(' ')}
             aria-hidden="true"
           />
-          <span className={`font-ops-mono text-[10.5px] font-medium ${stale ? 'text-ops-red-dark' : 'text-ops-body'}`}>
+          <span className={`font-ops-mono text-ops-micro font-medium ${stale ? 'text-ops-red-dark' : 'text-ops-body'}`}>
             {data.health ? agoLabel(ageMinutes ?? data.health.ageMinutes) : 'ölçüm yok'}
           </span>
         </span>
@@ -106,14 +106,14 @@ export function SystemMobile(props: SystemViewProps) {
                 >
                   <span className="flex items-center gap-[7px]">
                     <LevelDot level={r.level} />
-                    <span className="font-ops-display text-[9.5px] font-semibold uppercase tracking-[0.07em] text-ops-body">{r.level}</span>
+                    <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.07em] text-ops-body">{r.level}</span>
                     {r.regression ? <RegressionChip /> : null}
-                    <span className="ml-auto font-ops-mono text-[10.5px] font-medium text-ops-muted">
+                    <span className="ml-auto font-ops-mono text-ops-micro font-medium text-ops-muted">
                       {num(r.count)}× · {shortDateTime(r.lastSeenAt)}
                     </span>
                   </span>
                   <span className="font-ops-body text-ops-sm font-medium leading-[1.45] text-ops-ink">{r.message}</span>
-                  <span className="truncate font-ops-mono text-[10.5px] text-ops-muted">
+                  <span className="truncate font-ops-mono text-ops-micro text-ops-muted">
                     {r.source}
                     {r.path ? ` · ${r.path}` : ''}
                   </span>
@@ -155,12 +155,12 @@ export function SystemMobile(props: SystemViewProps) {
           <div className="flex flex-col gap-1.5 pb-2">
             <div className="flex items-baseline gap-2">
               <span className="mr-auto font-ops-display text-ops-sm font-semibold text-ops-ink">Trend · disk</span>
-              <span className="font-ops-mono text-[10.5px] font-medium text-ops-muted">{WINDOW_LABEL[urlState.win]} · tam ölçek</span>
+              <span className="font-ops-mono text-ops-micro font-medium text-ops-muted">{WINDOW_LABEL[urlState.win]} · tam ölçek</span>
             </div>
             <MobileDiskTrend {...props} />
           </div>
 
-          <span className="pb-2 text-center font-ops-body text-[10.5px] leading-[1.5] text-ops-muted">
+          <span className="pb-2 text-center font-ops-body text-ops-micro leading-[1.5] text-ops-muted">
             Ölçüm {HEALTH_COLLECT_INTERVAL_MIN} dakikada bir yazılır. Silme yok — “çözüldü” yalnız odaktan çıkarır.
             {live.active ? '' : ' Otomatik tazeleme kapalı.'}
           </span>
@@ -217,18 +217,18 @@ function MobileDetail({
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <div className="flex items-center gap-2.5 border-b border-ops-line px-4 py-3.5">
-        <button type="button" onClick={onBack} aria-label="Listeye dön" className="cursor-pointer font-ops-display text-[15px] font-medium text-ops-body">
+        <button type="button" onClick={onBack} aria-label="Listeye dön" className="cursor-pointer font-ops-display text-ops-base font-medium text-ops-body">
           ←
         </button>
-        <span className="mr-auto font-ops-display text-[15px] font-semibold text-ops-ink">Hata detayı</span>
-        <span className="font-ops-mono text-[10.5px] font-medium text-ops-muted">{num(row.count)}×</span>
+        <span className="mr-auto font-ops-display text-ops-base font-semibold text-ops-ink">Hata detayı</span>
+        <span className="font-ops-mono text-ops-micro font-medium text-ops-muted">{num(row.count)}×</span>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="flex flex-col gap-3.5 px-4 py-3.5">
           <div className="flex flex-wrap items-center gap-[7px]">
             <LevelBadge level={row.level} />
-            <span className="font-ops-mono text-[10.5px] text-ops-body">{row.source}</span>
+            <span className="font-ops-mono text-ops-micro text-ops-body">{row.source}</span>
             {row.resolvedAt ? <ResolvedChip at={row.resolvedAt} by={row.resolvedByName} /> : null}
           </div>
           <span className="font-ops-body text-ops-sm font-medium leading-[1.5] text-ops-ink">{row.message}</span>
@@ -255,7 +255,7 @@ function MobileDetail({
               {resolving ? 'İşaretleniyor…' : 'Çözüldü'}
             </Button>
           ) : null}
-          <span className="pb-2 text-center font-ops-body text-[10.5px] leading-[1.5] text-ops-muted">
+          <span className="pb-2 text-center font-ops-body text-ops-micro leading-[1.5] text-ops-muted">
             Silme yok — kayıt kalır, yalnız odaktan çıkar.
           </span>
         </div>
