@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { KeysetCursor, Page } from '@lezzet/types';
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import type { CustomerTicketSummary, CustomerTicketView } from '@/lib/ticket/ticket-types';
 import { loadMoreTicketsAction } from './actions';
 import type { Messages, SupportMode } from './support-types';

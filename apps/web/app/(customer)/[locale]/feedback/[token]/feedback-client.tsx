@@ -5,7 +5,7 @@ import Image from 'next/image';
 import type { Locale } from '@lezzet/i18n';
 import type { FeedbackVote } from '@lezzet/types';
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { Link } from '@/i18n/navigation';
 import { Button, buttonClass } from '@/components/customer/ui/button';
 import { errorText } from '@/lib/customer-error-text';

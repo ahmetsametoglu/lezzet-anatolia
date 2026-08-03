@@ -2,7 +2,7 @@
 
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import type { AccountView } from '@/lib/account/read';
 import type { Messages } from './account-types';
 import { AccountDesktop } from './account.desktop';

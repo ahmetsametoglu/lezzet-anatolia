@@ -2,7 +2,7 @@
 
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { ConfirmationDesktop } from './confirmation.desktop';
 import { ConfirmationMobile } from './confirmation.mobile';
 import type { ConfirmationView, Messages } from './confirmation-types';

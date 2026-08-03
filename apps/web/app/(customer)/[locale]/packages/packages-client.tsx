@@ -1,7 +1,7 @@
 'use client';
 
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { PackagesDesktop } from './packages.desktop';
 import { PackagesMobile } from './packages.mobile';
 import type { PackagesViewProps } from './packages-types';

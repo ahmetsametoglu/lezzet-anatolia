@@ -2,7 +2,7 @@
 
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import type { StorefrontHome } from '@/lib/storefront/storefront-types';
 import type { Messages } from './home-types';
 import { HomeDesktop } from './home.desktop';

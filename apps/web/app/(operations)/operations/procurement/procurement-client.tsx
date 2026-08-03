@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { createDraftFromSuggestionAction, loadMorePurchaseOrdersAction } from './actions';
 import { ManualOrderDialog } from './manual-order-dialog';
 import { PurchaseOrderDialog } from './purchase-order-dialog';

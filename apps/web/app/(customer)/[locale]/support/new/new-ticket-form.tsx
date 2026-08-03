@@ -7,7 +7,7 @@ import { Button, buttonClass } from '@/components/customer/ui/button';
 import { FormTextareaField } from '@/components/customer/form/form-textarea-field';
 import { Link, useRouter } from '@/i18n/navigation';
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { formatOrderDate } from '@/lib/storefront/format';
 import type { CustomerOrderDetail, CustomerOrderSummary } from '@/lib/order/customer-orders';
 import { errorText } from '@/lib/customer-error-text';

@@ -1,7 +1,7 @@
 'use client';
 
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { LegalPageDesktop } from './legal-page.desktop';
 import { LegalPageMobile } from './legal-page.mobile';
 import type { LegalViewProps } from './legal-view-types';

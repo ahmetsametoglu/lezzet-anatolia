@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { resolveErrorAction } from './actions';
 import { ErrorDetailDialog } from './components/error-detail-dialog';

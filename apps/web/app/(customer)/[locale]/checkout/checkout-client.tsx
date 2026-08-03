@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { entryOf, splitByRoute } from '@/lib/cart/cart-types';
 import { clientStripe } from '@/lib/stripe-client';

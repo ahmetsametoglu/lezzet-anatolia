@@ -1,7 +1,7 @@
 'use client';
 
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { ProfessionalsDesktop } from './professionals.desktop';
 import { ProfessionalsMobile } from './professionals.mobile';
 import type { ProfessionalsViewProps } from './professionals-types';

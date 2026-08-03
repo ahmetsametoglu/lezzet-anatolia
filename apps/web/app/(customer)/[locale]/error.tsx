@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { DEFAULT_LOCALE, LOCALES, type Locale } from '@lezzet/i18n';
 import { Link } from '@/i18n/navigation';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { Button, buttonClass } from '@/components/customer/ui/button';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { MessageScreen } from '@/components/customer/ui/message-screen';

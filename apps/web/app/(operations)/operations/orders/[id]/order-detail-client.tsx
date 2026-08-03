@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { OrderDecision } from '@lezzet/domain-core';
 import type { FulfillmentAdjustment, OrderStatus } from '@lezzet/types';
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { adjustFulfillmentAction, advanceOrderStatusAction, cancelOrderAction, retryRefundAction } from '../actions';
 import { CancelDialog } from './components/cancel-dialog';
 import { DecisionDialog } from './components/decision-dialog';

@@ -1,7 +1,7 @@
 'use client';
 
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { CartDesktop } from './cart.desktop';
 import { CartMobile } from './cart.mobile';
 import type { CartViewProps } from './cart-types';

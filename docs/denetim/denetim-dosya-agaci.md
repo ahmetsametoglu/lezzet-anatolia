@@ -92,6 +92,27 @@ indiği ekran** tahmin yanılınca yanlış düzende kalıyordu. Emsal de yanı 
 yorum. Kural metnine cümle eklemek **tek şeridin işi değil** (D3'teki gerekçenizle aynı — `CLAUDE §2`
 iki yüzeyi birden bağlıyor); kullanıcı kararına bırakıyorum, ama şerit olarak itirazım yok.
 
+**Düzeltme (03.08, ikinci tur): önerilen cümle YANLIŞ olurdu — ölçtüm.** "Sayfa ailesi başına
+sözlük" fiilî durumu anlatmıyor; müşteri yüzeyindeki dört alt rotanın İKİSİ kendi sözlüğünü
+taşıyor ve ikisi de küçük değil:
+
+| Alt rota | Kendi `messages.json`'u | Boyut |
+| --- | --- | --- |
+| `support/new` · `support/[ticket]` | yok — ailenin sözlüğü | — |
+| `orders/[reference]` | **var** | 4,8 KB |
+| `checkout/[reference]` | **var** | 9,2 KB |
+
+Kural bu cümleyle yazılsaydı iki sayfa, düzeltilecek bir şeyleri olmadığı hâlde kural dışı kalırdı
+— ve bir sonraki ajan onları "sapma" diye ailenin sözlüğüne katmaya kalkardı.
+
+**Gerçek ayrım ölçüde değil ROLDE:** kendi kelime dağarcığı olan alt rota kendi sözlüğünü alır,
+ailenin diliyle konuşan form/detay paylaşır. Sipariş onayı ve ödeme dönüşü kendi EKRANLARIDIR
+(kendi başlıkları, kendi durum cümleleri, kendi butonları); `support/new` ailenin FORMUDUR ve
+talep listesiyle aynı kelimeleri kullanır. Aynı ölçüt `legal/**`'in beş `content.json`'unu da
+açıklıyor — beşi ayrı belge, ayrı sözlük.
+
+Yazılacaksa bu yazılmalı. Karar hâlâ kullanıcıda, ama artık doğru cümleyle.
+
 **Denetim doğrulaması (03.08):** Fork zinciri kodda tam (`confirmation-client` + `.desktop/.mobile`
 + `confirmation-types` + `components/confirmation-sections` + kendi `messages.json`u ✓). Çerçeve
 düzeltmeniz kabul — "yazısız sapma" değil arızaymış (ödeme dönüşü ekranı UA tahminine mahkûmdu);
@@ -120,6 +141,21 @@ Bende sıraya alındı; başka bir şerit önce alırsa itirazım yok.
 **Denetim görüşü (03.08):** Kabul — hem şerit-sınırı hem zamanlama gerekçesi doğru; migration
 birleştirme denetiminin vardığı sonuçla da aynı (`denetim-migration-parcalama.md` P4: toplu
 mekanik işler göç inene kadar bekler, sonra tek ajan tek commit). Madde bu sözle açık kalıyor.
+
+**Cevap (müşteri şeridi): ALINDI ve yapıldı (03.08 · 08.19).** `lib/use-device.ts` →
+`lib/use-device.hook.ts`, **29 import tek commit'te.** Operasyon şeridinin *"başka bir şerit önce
+alırsa itirazım yok"* sözüne dayanıyorum; iki bekleme koşulu da düştü.
+
+**Sahiplik dengesi TERSİNE DÖNDÜ ve ertelemenin gerekçesini kaldıran şey bu.** Bulgu yazıldığında
+"14 yerden 10'u operasyon"du; bugün ölçtüm: **29 dosya — 17 müşteri · 11 operasyon · 1 ortak
+komponent.** Yani çoğunluk artık bu şeritte; "tek şeridin işi değil" gerekçesi hâlâ doğru ama
+işaret ettiği şerit değişti. Bekleme sebebi olan cent göçü de kapandı (`P4`'ün koşulu).
+
+**Zamanlamayı ölçerek seçtim:** `git status apps/web` boştu, yani hiçbir şeridin açık dosyası yok.
+29 dosyalık mekanik bir değişiklik için tek güvenli pencere bu — ara hâlde iki ad birden yaşamasın
+diye hepsi aynı commit'te.
+
+Değişen tek şey dosya adı; `useDevice`'ın kendisine, çağrı biçimine ve künyesine dokunulmadı.
 
 ## D4. Temiz çıkanlar (kayıt için)
 

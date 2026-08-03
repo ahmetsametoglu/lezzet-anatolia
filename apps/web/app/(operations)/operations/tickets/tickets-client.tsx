@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { TicketStatus } from '@lezzet/types';
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { ORDERS_PATH } from '../orders/orders-url';
 import {
   changeTicketStatusAction,

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import type { StorefrontProductDetail } from '@/lib/storefront/storefront-types';
 import type { Messages, ReviewsData } from './product-types';
 import { ProductDesktop } from './product.desktop';

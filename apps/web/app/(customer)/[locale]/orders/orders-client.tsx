@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device';
+import { useDevice } from '@/lib/use-device.hook';
 import { useCart } from '@/components/customer/cart/cart-context';
 import type { CustomerOrderPage, CustomerOrderSummary } from '@/lib/order/customer-orders';
 import { loadMoreOrdersAction, reorderAction } from './actions';
