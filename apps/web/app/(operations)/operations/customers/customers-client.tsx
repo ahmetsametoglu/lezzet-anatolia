@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CustomerType } from '@lezzet/types';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
+import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import type { OrderSummaryView } from '@/lib/order/summary';
 import {
   loadMoreCustomersAction,
@@ -38,9 +39,6 @@ import type {
 // ekranlarının 09.17'de teşhis edilen hatasından bilinçli sapma: orada client süzgeci `router.replace`
 // ile yazılıyor ve yüklenmiş sayfaları siliyor. Buradaki her süzgeç bir KOLON, yani sunucuya ait.
 
-/** Arama kutusunun URL'e yazılma gecikmesi (ms) — yazarken her tuşta sunucuya gidilmesin. */
-const SEARCH_DEBOUNCE_MS = 350;
-
 interface CustomersClientProps {
   data: CustomersData;
   device: Device;
@@ -64,18 +62,8 @@ export function CustomersClient({ data, device, urlState }: CustomersClientProps
     startNav(() => router.replace(customersUrl({ ...urlState, ...patch }), { scroll: false }));
   };
 
-  // Arama: giriş yerel (anında yazılır), URL'e gecikmeli. Sunucu değeri değişince yerel giriş eşitlenir.
-  const [search, setSearch] = useState(urlState.q);
-  useEffect(() => setSearch(urlState.q), [urlState.q]);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onSearch = (q: string) => {
-    setSearch(q);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => applyFilters({ q: q.trim() }), SEARCH_DEBOUNCE_MS);
-  };
-  useEffect(() => () => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-  }, []);
+  // Arama: giriş yerel (anında yazılır), URL'e gecikmeli — mekanizma ortak (`useSearchDraft`).
+  const { draft: search, onDraft: onSearch } = useSearchDraft(urlState.q, (q) => applyFilters({ q }));
 
   // ── Liste: ilk sayfa sunucudan, devamı action ile EKLENİR ──
   // Sunucu verisi değişince (süzgeç/revalidate) eklenen sayfalar SIFIRLANIR; yoksa eski süzgecin

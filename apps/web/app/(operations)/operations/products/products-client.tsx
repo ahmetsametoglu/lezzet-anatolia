@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
+import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { loadMoreProductsAction } from './actions/list';
 import { setProductStatusAction } from './tabs/product/actions';
 import { ProductFormDialog } from './tabs/product/product-form-dialog';
@@ -19,9 +20,6 @@ import type { ProductsData, ProductView, StatusFilter } from './products-types';
 // SÜZGEÇ AKIŞI: süzgeç bir client durumu DEĞİL, URL durumudur (STACK §6). Kullanıcı süzgeci değiştirince
 // URL yazılır → RSC yeniden okur → süzülmüş İLK SAYFA gelir. Burada client-side filtreleme YOK.
 // Arama yazarken her tuşta sunucuya gitmemek için giriş yerel tutulur ve URL'e GECİKMELİ yazılır.
-
-/** Arama kutusunun URL'e yazılma gecikmesi (ms) — parametrik; yazarken her tuşta sunucuya gidilmesin. */
-const SEARCH_DEBOUNCE_MS = 350;
 
 interface ProductsClientProps {
   data: ProductsData;
@@ -67,8 +65,7 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
     // kategori listesinde anlamsız) — taşınsaydı yeni sekme sebebi görünmeyen bir süzgeçle açılırdı.
     setTab(next);
     setCreating(false);
-    setSearch('');
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    resetSearch();
 
     // Terim VARSA sığ yazım yetmez: `replaceState` sunucuya gitmez, gelen veri hâlâ eski terimle
     // süzülüdür. Kutu boşalır, çip kalmaz, ama liste ve başlık sayaçları süzülü kalırdı — görünmez
@@ -91,20 +88,8 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
     startNav(() => router.replace(productsUrl({ ...urlState, ...patch, tab }), { scroll: false }));
   };
 
-  // Arama: giriş yerel (anında yazılır), URL'e gecikmeli. Sunucu değeri değişince yerel giriş eşitlenir.
-  const [search, setSearch] = useState(urlState.q);
-  useEffect(() => setSearch(urlState.q), [urlState.q]);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onSearch = (q: string) => {
-    setSearch(q);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => applyFilters({ q: q.trim() }), SEARCH_DEBOUNCE_MS);
-  };
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
+  // Arama: giriş yerel (anında yazılır), URL'e gecikmeli — mekanizma ortak (`useSearchDraft`).
+  const { draft: search, onDraft: onSearch, reset: resetSearch } = useSearchDraft(urlState.q, (q) => applyFilters({ q }));
 
   // ── Sayfalama: ilk sayfa sunucudan, devamı action ile EKLENİR ──
   // Sunucu verisi değişince (süzgeç/revalidate) eklenen sayfalar SIFIRLANIR; yoksa eski süzgecin

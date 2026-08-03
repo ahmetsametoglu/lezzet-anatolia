@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { SEARCH_DEBOUNCE_MS } from '@/lib/use-search-draft.hook';
 
 /**
  * SEÇİCİLERİN ARAMA DAVRANIŞI — tekil (`Combobox`) ve çoklu (`MultiSelect`) seçici ortak kullanır.
@@ -14,13 +15,15 @@ import { useEffect, useRef, useState } from 'react';
  * ve aynı ekranda iki farklı "yazma hissi" doğardı; üçüncü bir seçici geldiğinde de kimse hangisini
  * kopyalayacağını bilemezdi.
  *
+ * **Sayının kendisi bir kat yukarıdan geliyor** (`lib/use-search-draft.hook`): aynı gerekçe seçici
+ * ile EKRAN araması arasında da geçerliydi ve bir süre öyle değildi — seçiciler 300 ms, altı ekran
+ * 350 ms yazıyordu. Aynı ekranda bir kutu 300'de, yanındaki 350'de tepki veriyorsa fark küçük ama
+ * ortak sayının olmayışı büyük: dokuzuncu kutuyu yazan kişi hangisini kopyalayacağını bilemez.
+ *
  * Uzak kipte YEREL SÜZME YAPILMAZ: sunucu eşleşmeyi zaten buldu ve ölçütü daha geniş olabilir
  * (telefonla bulunan müşteri, etiketinde o rakamlar geçmez) — burada bir daha süzmek, sunucunun
  * bulduğunu gizlerdi.
  */
-
-/** Uzak aramada tuş başına istek gitmesin. */
-const SEARCH_DEBOUNCE_MS = 300;
 
 interface OptionSearchParams<T> {
   options: T[];

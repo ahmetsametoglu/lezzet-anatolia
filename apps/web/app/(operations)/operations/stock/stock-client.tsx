@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
+import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { loadMoreLevelsAction, loadMoreLossesAction } from './actions';
 import { OfferDialog } from '@/components/operation/stock/offer-dialog';
 import { RecallDialog } from './recall-dialog';
@@ -17,9 +18,6 @@ import type { BatchView, StockData, StockLevelRow } from './stock-types';
 //
 // SEKME SIĞ yazılır (`replaceState`): üç sekme de AYNI okumadan besleniyor, sunucuya gitmenin
 // getireceği veri yok. Süzgeçler ise RSC'yi yeniden okutur — süzme sunucuda yapılıyor (STACK §6).
-
-/** Arama kutusunun URL'e yazılma gecikmesi (ms) — yazarken her tuşta sunucuya gidilmesin. */
-const SEARCH_DEBOUNCE_MS = 350;
 
 interface StockClientProps {
   data: StockData;
@@ -52,31 +50,22 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
     startNav(() => router.replace(stockUrl({ ...urlState, ...patch, tab }), { scroll: false }));
   };
 
-  // Arama: giriş yerel (anında yazılır), URL'e gecikmeli. Sunucu değeri değişince yerel giriş eşitlenir.
-  const [search, setSearch] = useState(urlState.q);
-  useEffect(() => setSearch(urlState.q), [urlState.q]);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Arama YALNIZ imha sekmesinde var ve yüklenmiş satırlarda çalışır — bu yüzden sunucuya
-  // GİTMEZ, adrese sığ yazılır (yenilemede terim kaybolmasın).
+  // Arama: giriş yerel (anında yazılır), adrese gecikmeli — mekanizma ortak (`useSearchDraft`).
+  //
+  // Arama YALNIZ imha sekmesinde var ve yüklenmiş satırlarda çalışır — bu yüzden sunucuya GİTMEZ,
+  // adrese SIĞ yazılır (yenilemede terim kaybolmasın). Gecikme yine de gerekli: sığ yazım da bir
+  // `replaceState`, her tuşta tarayıcı geçmişine dokunmanın karşılığı yok.
   //
   // Eskiden `applyFilters` çağırıyordu ve terim servise `query` olarak gidiyordu: imha kutusuna
   // yazılan kelime SEVİYELER listesini süzüyordu — yani hiç görünmeyen bir listeyi. Her tuşta bir
   // sunucu turu, karşılığında yanlış listede bir süzgeç.
-  const onSearch = (q: string) => {
-    setSearch(q);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => writeUrl({ q: q.trim() }), SEARCH_DEBOUNCE_MS);
-  };
-  useEffect(() => () => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-  }, []);
+  const { draft: search, onDraft: onSearch, reset: resetSearch } = useSearchDraft(urlState.q, (q) => writeUrl({ q }));
 
   const onTab = (next: StockTab) => {
     // Sekme değişince ARAMA düşer: terim sekmeye bağlıdır ("baklava" seviye listesinde anlamlı, imha
     // geçmişinde başka bir şey arar). Taşınsaydı yeni sekme, sebebi görünmeyen bir süzgeçle açılırdı.
     setTab(next);
-    setSearch('');
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    resetSearch();
 
     // Terim VARSA sunucuya gidilir: sığ yazım (`replaceState`) RSC'yi yeniden okutmaz, liste eski
     // terimle süzülü kalırdı — kutusu boş, sebebi görünmeyen bir süzgeç.

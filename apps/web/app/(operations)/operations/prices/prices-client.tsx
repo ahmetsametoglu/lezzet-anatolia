@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
+import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { loadMorePricesAction } from './actions';
 import { OfferDialog } from '@/components/operation/stock/offer-dialog';
 import { CustomerPriceDialog } from './customer-price-dialog';
@@ -19,9 +20,6 @@ import type { CustomerPriceRow, DiscountRow, PriceRow, PricesData } from './pric
 //
 // SEKME GERÇEK gezinmedir (sığ değil): sekmelerin veri ihtiyacı ayrı, okuma sunucuda sekmeye bağlı.
 // Sığ yazsaydık müşteriye özel sekmesi boş açılırdı.
-
-/** Arama kutusunun URL'e yazılma gecikmesi (ms) — yazarken her tuşta sunucuya gidilmesin. */
-const SEARCH_DEBOUNCE_MS = 350;
 
 interface PricesClientProps {
   data: PricesData;
@@ -46,25 +44,14 @@ export function PricesClient({ data, device, urlState }: PricesClientProps) {
     startNav(() => router.replace(pricesUrl({ ...urlState, ...patch }), { scroll: false }));
   };
 
-  // Arama: giriş yerel (anında yazılır), URL'e gecikmeli. Sunucu değeri değişince yerel giriş eşitlenir.
-  const [search, setSearch] = useState(urlState.q);
-  useEffect(() => setSearch(urlState.q), [urlState.q]);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onSearch = (q: string) => {
-    setSearch(q);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => go({ q: q.trim() }), SEARCH_DEBOUNCE_MS);
-  };
-  useEffect(() => () => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-  }, []);
+  // Arama: giriş yerel (anında yazılır), URL'e gecikmeli — mekanizma ortak (`useSearchDraft`).
+  const { draft: search, onDraft: onSearch, reset: resetSearch } = useSearchDraft(urlState.q, (q) => go({ q }));
 
   const onTab = (tab: PriceTab) => {
     // Sekme değişince ARAMA ve SÜZGEÇ düşer: ölçüt sekmeye bağlıdır ("marj-altı" kanal listesinde
     // anlamlı, özel fiyat listesinde karşılığı yok). Taşınsaydı yeni sekme, sebebi görünmeyen bir
     // süzgeçle açılırdı.
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    setSearch('');
+    resetSearch();
     go({ tab, q: '', scope: 'all' });
   };
 

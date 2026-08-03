@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
+import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { resolveErrorAction } from './actions';
 import { ErrorDetailDialog } from './components/error-detail-dialog';
 import { SystemDesktop } from './system.desktop';
@@ -24,7 +25,6 @@ import type { SystemData } from './system-types';
  *     yüzden gerçek: bir sonraki ÖLÇÜM ne zaman yazılacak.
  */
 
-const SEARCH_DEBOUNCE_MS = 350;
 /** Ölçüm yazıldıktan sonra okumaya küçük pay — cron tetiklendiği anda satır henüz yazılmamış olur. */
 const REFRESH_LAG_SEC = 6;
 
@@ -54,20 +54,10 @@ export function SystemClient({ data, serverAgeMinutes, device, urlState }: Syste
     [router, urlState],
   );
 
-  // ── Arama: giriş yerel, URL'e gecikmeli ──
-  const [search, setSearch] = useState(urlState.q);
-  useEffect(() => setSearch(urlState.q), [urlState.q]);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onSearch = (q: string) => {
-    setSearch(q);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    // Arama daralınca sayfa BAŞA döner: üçüncü sayfadayken süzgeç değişirse sonuç kümesi küçülür ve
-    // operatör var olmayan bir sayfaya bakardı.
-    debounceRef.current = setTimeout(() => applyUrl({ q: q.trim(), page: 0 }), SEARCH_DEBOUNCE_MS);
-  };
-  useEffect(() => () => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-  }, []);
+  // ── Arama: giriş yerel, URL'e gecikmeli — mekanizma ortak (`useSearchDraft`) ──
+  // Arama daralınca sayfa BAŞA döner: üçüncü sayfadayken süzgeç değişirse sonuç kümesi küçülür ve
+  // operatör var olmayan bir sayfaya bakardı.
+  const { draft: search, onDraft: onSearch } = useSearchDraft(urlState.q, (q) => applyUrl({ q, page: 0 }));
 
   // ── Ölçüm yaşı: sunucudan gelen değer + mount'tan bu yana geçen süre ──
   // İlk boyamada sunucununkiyle AYNI olmalı (hidrasyon), sonra kendi kendine ilerler.

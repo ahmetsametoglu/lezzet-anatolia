@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
+import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { loadMoreOrdersAction } from './actions';
 import { OrderDialog } from './order-dialog';
 import { OrdersDesktop } from './orders.desktop';
@@ -13,9 +14,6 @@ import type { OrderRow, OrdersData } from './orders-types';
 
 // Sipariş ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
 // Hızlı bakış diyaloğu iki yüzeyin de üstünde — telefonda da masaüstünde de aynı karar verilir.
-
-/** Arama kutusunun URL'e yazılma gecikmesi (ms) — yazarken her tuşta sunucuya gidilmesin. */
-const SEARCH_DEBOUNCE_MS = 350;
 
 interface OrdersClientProps {
   data: OrdersData;
@@ -42,21 +40,8 @@ export function OrdersClient({ data, device, urlState, today }: OrdersClientProp
     startNav(() => router.replace(ordersUrl({ ...urlState, ...patch }), { scroll: false }));
   };
 
-  // Arama: giriş yerel (anında yazılır), URL'e gecikmeli. Sunucu değeri değişince yerel giriş eşitlenir.
-  const [search, setSearch] = useState(urlState.q);
-  useEffect(() => setSearch(urlState.q), [urlState.q]);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onSearch = (q: string) => {
-    setSearch(q);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => go({ q: q.trim() }), SEARCH_DEBOUNCE_MS);
-  };
-  useEffect(
-    () => () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    },
-    [],
-  );
+  // Arama: giriş yerel (anında yazılır), URL'e gecikmeli — mekanizma ortak (`useSearchDraft`).
+  const { draft: search, onDraft: onSearch } = useSearchDraft(urlState.q, (q) => go({ q }));
 
   // Liste: ilk sayfa sunucudan, devamı action ile EKLENİR. Sunucu verisi değişince (süzgeç/
   // revalidate) eklenen sayfalar SIFIRLANIR; yoksa eski süzgecin satırları yeni listede kalır.
