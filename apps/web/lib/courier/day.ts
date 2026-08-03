@@ -37,8 +37,8 @@ export interface CourierStop {
   whatsAppLink: string | null;
   /** Kapıda ödenecek mi, ödendi mi — kuryenin duraktaki en kritik bilgisi. */
   payment: {
-    /** `null` = önceden ödenmiş; para konuşulmaz. */
-    dueAmount: number | null;
+    /** `null` = önceden ödenmiş; para konuşulmaz. Birim **cent** (02.9). */
+    dueAmountCents: number | null;
     expectedMethod: Order['paymentMethod'];
   };
   /** Araçtan doğru koliyi almak için: kaç kalem, ne var. */
@@ -98,7 +98,7 @@ export async function listCourierDay(input: {
         customerName: customer?.name,
       }),
       payment: {
-        dueAmount: amountDue(order),
+        dueAmountCents: amountDueCents(order),
         expectedMethod: order.paymentMethod,
       },
       itemCount: lines.length,
@@ -114,12 +114,16 @@ export async function listCourierDay(input: {
  * edilmiş net düşülür — eksik kalem işaretlendiğinde tutarı düşüren de aynı türetimdir (07.8),
  * kurye ayrıca bir hesap görmez.
  *
- * `null` = borç yok (önceden ödenmiş). Kuruş altı kalıntı sıfır sayılır: 0,004 € borç diye ekranda
- * "ödenecek" yazması, ödenmiş siparişi ödenmemiş göstermek olurdu.
+ * `null` = borç yok (önceden ödenmiş).
+ *
+ * "Kuruş altı kalıntı sıfır sayılır" kuralı KALKTI (02.9) ve kalkması gerekiyordu: hesap artık
+ * tamsayı cent üstünde yapılıyor, yani 0,004 € gibi bir kalıntı ARTIK DOĞAMAZ. O eşik kayan nokta
+ * çıkarmasının ürettiği çöpü süpürmek içindi; sebep ortadan kalkınca eşik de bir sayıyı sessizce
+ * yutan gereksiz bir kapıya dönüşürdü.
  */
-function amountDue(order: Order): number | null {
-  const due = order.total - (order.amountCollected - order.amountRefunded);
-  return due > 0.005 ? Math.round(due * 100) / 100 : null;
+function amountDueCents(order: Order): number | null {
+  const dueCents = order.totalCents - (order.amountCollectedCents - order.amountRefundedCents);
+  return dueCents > 0 ? dueCents : null;
 }
 
 /**

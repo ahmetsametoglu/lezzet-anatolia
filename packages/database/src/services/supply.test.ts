@@ -100,14 +100,14 @@ describe('tedarikçi ve kod eşlemesi (06.8)', () => {
     await intakes.receive({
       warehouseId,
       supplierId,
-      lines: [{ variantId, qty: 10, expiryDate: dayOffset(250), unitCost: 4 }],
+      lines: [{ variantId, qty: 10, expiryDate: dayOffset(250), unitCostCents: 400 }],
     });
 
     // Ödeme tarafı 12.3'te bağlandı; buradaki sözleşme yalnız denklemin kendisidir
     // (ödemenin borcu gerçekten kapattığı `apps/web/lib/money/supplier-debt.test.ts`'te).
     const debt = await suppliers.debt(supplierId);
-    expect(debt.intakeTotal).toBeGreaterThanOrEqual(40);
-    expect(debt.balance).toBe(Math.round((debt.intakeTotal - debt.paid) * 100) / 100);
+    expect(debt.intakeTotalCents).toBeGreaterThanOrEqual(4000);
+    expect(debt.balanceCents).toBe(debt.intakeTotalCents - debt.paidCents);
   });
 
   /**
@@ -118,10 +118,10 @@ describe('tedarikçi ve kod eşlemesi (06.8)', () => {
   it('dönem verilince yalnız o aralığın girişleri sayılır', async () => {
     const gecmis = await suppliers.debt(supplierId, { to: new Date(Date.now() - 86_400_000) });
     // Bu testin girişleri az önce yazıldı; dünden öncesi onları GÖRMEMELİ.
-    expect(gecmis.intakeTotal).toBe(0);
+    expect(gecmis.intakeTotalCents).toBe(0);
 
     const bugun = await suppliers.debt(supplierId, { from: new Date(Date.now() - 86_400_000) });
-    expect(bugun.intakeTotal).toBeGreaterThanOrEqual(40);
+    expect(bugun.intakeTotalCents).toBeGreaterThanOrEqual(4000);
   });
 
   it('dönemsiz çağrı bugünkü davranışı korur — hiçbir çağıran kırılmaz', async () => {
@@ -165,21 +165,21 @@ describe('mal kabul (06.10)', () => {
       supplierId,
       purchaseOrderId: order.id,
       lines: [
-        { variantId, qty: 12, expiryDate: dayOffset(250), lotNumber: 'LOT-A', unitCost: 3.5, location: 'Dolap 1' },
-        { variantId, qty: 12, expiryDate: dayOffset(280), lotNumber: 'LOT-B', unitCost: 3.5 },
+        { variantId, qty: 12, expiryDate: dayOffset(250), lotNumber: 'LOT-A', unitCostCents: 350, location: 'Dolap 1' },
+        { variantId, qty: 12, expiryDate: dayOffset(280), lotNumber: 'LOT-B', unitCostCents: 350 },
       ],
     });
 
     expect(outcome.ok).toBe(true);
     expect(outcome.stockIds).toHaveLength(2);
-    expect(outcome.totalAmount).toBe(84); // 24 × 3.5
+    expect(outcome.totalAmountCents).toBe(8400); // 24 × 3,50 €
 
     const batches = await stocks.listByVariant(warehouseId, variantId);
     expect(batches.every((p) => p.intakeId === outcome.intakeId)).toBe(true);
     expect(batches.find((p) => p.lotNumber === 'LOT-A')?.location).toBe('Dolap 1');
 
     expect((await orders.getById(order.id))?.status).toBe('received');
-    expect((await mappings.listByVariant(variantId)).find((m) => m.supplierId === supplierId)?.lastPurchasePrice).toBe(3.5);
+    expect((await mappings.listByVariant(variantId)).find((m) => m.supplierId === supplierId)?.lastPurchasePriceCents).toBe(350);
   });
 
   it('eksik gelen mal fark olarak görünür — parti satılsa bile rakam erimez', async () => {
@@ -327,13 +327,13 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
  */
 describe('tedarik siparişi listesi (09.14)', () => {
   it('satır tedarikçiyi, kalemleri ve GİREN partileri tek turda taşır', async () => {
-    const { order, items } = await orders.createDraft(supplierId, [{ variantId, qty: 10, unitPrice: 4.5 }]);
+    const { order, items } = await orders.createDraft(supplierId, [{ variantId, qty: 10, unitPriceCents: 450 }]);
     await orders.markSent(order.id, testRef());
     await intakes.receive({
       warehouseId,
       supplierId,
       purchaseOrderId: order.id,
-      lines: [{ variantId, qty: 6, expiryDate: dayOffset(200), unitCost: 4.5, purchaseOrderItemId: items[0]!.id }],
+      lines: [{ variantId, qty: 6, expiryDate: dayOffset(200), unitCostCents: 450, purchaseOrderItemId: items[0]!.id }],
     });
 
     const satir = (await orders.listRows({ supplierId })).rows.find((r) => r.id === order.id);
@@ -346,8 +346,8 @@ describe('tedarik siparişi listesi (09.14)', () => {
   });
 
   it('keyset imleci kurulur — liste sonsuz kaydırmaya açık', async () => {
-    await orders.createDraft(supplierId, [{ variantId, qty: 1, unitPrice: 1 }]);
-    await orders.createDraft(supplierId, [{ variantId, qty: 2, unitPrice: 1 }]);
+    await orders.createDraft(supplierId, [{ variantId, qty: 1, unitPriceCents: 100 }]);
+    await orders.createDraft(supplierId, [{ variantId, qty: 2, unitPriceCents: 100 }]);
 
     const ilk = await orders.listRows({ supplierId, limit: 1 });
     expect(ilk.rows).toHaveLength(1);
@@ -362,7 +362,7 @@ describe('tedarik siparişi listesi (09.14)', () => {
     // siparişle oynar ve tekrarlanmayan bir düşüş üretir (`CLAUDE.md §4b`).
     const önce = await orders.countPending(supplierId);
 
-    const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 3, unitPrice: 1 }]);
+    const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 3, unitPriceCents: 100 }]);
     // Taslak henüz gönderilmedi: "yolda" değil.
     expect(await orders.countPending(supplierId)).toBe(önce);
 
@@ -371,5 +371,55 @@ describe('tedarik siparişi listesi (09.14)', () => {
 
     await orders.cancel(order.id);
     expect(await orders.countPending(supplierId)).toBe(önce);
+  });
+});
+
+/**
+ * Tedarik ailesinin euro↔cent sınırı (02.9 dilim 4 · `STACK §8`).
+ *
+ * Kolon HAM okunur (`db.from(...).select(...)`), servisten değil: iki tarafı da servisten okuyan bir
+ * test, dönüşüm yanlış sabitle yapılsa bile geçerdi — gidiş ve dönüş aynı hatayı taşırdı. Sınırın
+ * doğrulanması ancak kolonun kendi birimine bakarak mümkün.
+ *
+ * Üç kapı da ayrı ayrı sınanıyor, çünkü üçü ayrı yollardan geçiyor: eşleme ve PO kalemi taban
+ * sınıfın `moneyFields` eşlemesinden, mal kabul ise RPC'den (jsonb — eşlemenin dışında).
+ */
+describe('euro↔cent sınırı (02.9)', () => {
+  it('eşlemenin son alışı: cent yazılır, kolon euro tutar, cent okunur', async () => {
+    const mapping = await mappings.setMapping({ supplierId, variantId, supplierCode: 'AG-1234', lastPurchasePriceCents: 1234 });
+    expect(mapping.lastPurchasePriceCents).toBe(1234);
+
+    const { data } = await db.from('supplier_product').select('last_purchase_price').eq('id', mapping.id).single();
+    expect(Number((data as { last_purchase_price: number | string }).last_purchase_price)).toBe(12.34);
+
+    expect((await mappings.getById(mapping.id))?.lastPurchasePriceCents).toBe(1234);
+  });
+
+  it('PO kaleminin beklenen alışı: cent yazılır, kolon euro tutar, cent okunur', async () => {
+    const { order, items } = await orders.createDraft(supplierId, [{ variantId, qty: 2, unitPriceCents: 675 }]);
+    expect(items[0]!.unitPriceCents).toBe(675);
+
+    const { data } = await db.from('purchase_order_item').select('unit_price').eq('id', items[0]!.id).single();
+    expect(Number((data as { unit_price: number | string }).unit_price)).toBe(6.75);
+
+    // Liste satırı GÖMÜLÜ kalemden okuyor — ayrı bir dönüşüm yolu, ayrıca doğrulanmalı.
+    const satir = (await orders.listRows({ supplierId })).rows.find((r) => r.id === order.id);
+    expect(satir?.items[0]?.unitPriceCents).toBe(675);
+  });
+
+  it('mal kabul RPC’si: cent gider, kolonlar euro tutar, cent döner', async () => {
+    const outcome = await intakes.receive({
+      warehouseId,
+      supplierId,
+      lines: [{ variantId, qty: 4, expiryDate: dayOffset(240), unitCostCents: 1105 }],
+    });
+    expect(outcome.totalAmountCents).toBe(4420); // 4 × 11,05 €
+
+    const { data: giris } = await db.from('stock_intake').select('total_amount').eq('id', outcome.intakeId).single();
+    expect(Number((giris as { total_amount: number | string }).total_amount)).toBe(44.2);
+    const { data: parti } = await db.from('stock').select('purchase_price').eq('id', outcome.stockIds[0]!).single();
+    expect(Number((parti as { purchase_price: number | string }).purchase_price)).toBe(11.05);
+
+    expect((await intakes.getById(outcome.intakeId))?.totalAmountCents).toBe(4420);
   });
 });

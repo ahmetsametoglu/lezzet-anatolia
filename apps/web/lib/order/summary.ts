@@ -1,6 +1,5 @@
 import { OrderService, type serviceDb } from '@lezzet/database';
 import { derivePaymentStatusForOrder } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 import type { DeliveryType, OrderStatus, PaymentStatus } from '@lezzet/types';
 import { readVariantTitles } from './line-titles';
 
@@ -65,8 +64,8 @@ export async function readOrderSummary(db: Db, orderId: string): Promise<OrderSu
   const titleByVariant = await readVariantTitles(db, items.map((i) => i.variantId));
 
   const lines: OrderSummaryLine[] = items.map((item) => {
-    const unitPriceCents = toCents(item.unitPrice);
-    const lineDiscountCents = toCents(item.lineDiscountAmount);
+    // Servis cent döndürüyor (02.9) — burada iki `toCents` çağrısı vardı, ikisi de kalktı.
+    const { unitPriceCents, lineDiscountAmountCents: lineDiscountCents } = item;
     return {
       id: item.id,
       title: titleByVariant.get(item.variantId) ?? 'Silinmiş boy',
@@ -80,8 +79,8 @@ export async function readOrderSummary(db: Db, orderId: string): Promise<OrderSu
 
   // Karar MOTORUN: "ne kadar borçlu, durumu ne" sorusu burada hesaplanmaz, sorulur.
   const derived = derivePaymentStatusForOrder(order, items, {
-    collected: order.amountCollected,
-    refunded: order.amountRefunded,
+    collectedCents: order.amountCollectedCents,
+    refundedCents: order.amountRefundedCents,
   });
 
   return {
@@ -98,9 +97,9 @@ export async function readOrderSummary(db: Db, orderId: string): Promise<OrderSu
     lines,
     // İndirim ÖNCESİ toplam: başlıktaki indirimin neyin üstüne indiği ancak böyle görünür.
     subtotalCents: lines.reduce((sum, l) => sum + l.unitPriceCents * l.qty, 0),
-    discountCents: toCents(order.discountAmount),
-    shippingCents: toCents(order.shippingFee),
-    totalCents: toCents(order.total),
+    discountCents: order.discountAmountCents,
+    shippingCents: order.shippingFeeCents,
+    totalCents: order.totalCents,
     href: `/operations/orders/${order.id}`,
   };
 }

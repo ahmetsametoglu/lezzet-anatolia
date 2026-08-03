@@ -2,7 +2,6 @@ import 'server-only';
 import { OrderItemService, OrderService, OrderStatusLogService, serviceDb } from '@lezzet/database';
 import { bundleQtyOf, customerOrderStatus, isActiveForCustomer, isFulfilmentKnown, orderTimeline } from '@lezzet/domain-core';
 import type { OrderTimelineStep } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { CustomerOrderStatus, KeysetCursor, OrderItem, PaymentMethod, PaymentStatus } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
@@ -13,8 +12,9 @@ import { getPackagesByIds } from '@/lib/storefront/packages';
  * **PARA SÖZLEŞMESİ — bu dosya bir sınırdır.**
  *
  * `packages/helper/money`: motor ve ekran **cent** ile çalışır, DB `numeric` (euro) tutar, dönüşüm
- * **sınırda** yapılır. Burası o sınır: `toCents` ortak helper'dan gelir, elle `* 100` yazılmaz.
- * Alan adları da sözleşmenin parçası — `…Cents` ile bitmeyen bir para alanı yoktur.
+ * **sınırda** yapılır. Sınır artık BURASI DEĞİL, servis katmanı (`02.9`): `OrderService` cent
+ * döndürüyor, bu dosyadaki dönüşümlerin hepsi kalktı. Alan adları sözleşmenin parçası olmayı
+ * sürdürüyor — `…Cents` ile bitmeyen bir para alanı yoktur.
  *
  * Bu blok bir hatanın ardından yazıldı (30.07, kullanıcı ekran görüntüsüyle yakaladı): euro
  * değerleri cent sanılıp `formatPrice`'a verildi, 74,17 € ekranda **"0,74 €"** göründü. İki ders:
@@ -95,7 +95,7 @@ export async function listCustomerOrders(
       createdAt: order.createdAt,
       status,
       active: isActiveForCustomer(status),
-      totalCents: toCents(order.total),
+      totalCents: order.totalCents,
       itemCount: own.length,
       productNames: names.slice(0, SUMMARY_NAME_LIMIT),
     });
@@ -213,7 +213,7 @@ export async function getCustomerOrderDetail(
    */
   const measured = isFulfilmentKnown(order.status);
   const billedOf = (item: OrderItem) => (measured ? item.fulfilledQty : item.qty);
-  const moneyOf = (item: OrderItem) => item.unitPrice * billedOf(item) - item.lineDiscountAmount;
+  const moneyCentsOf = (item: OrderItem) => item.unitPriceCents * billedOf(item) - item.lineDiscountAmountCents;
 
   const lines: CustomerOrderDetailLine[] = [];
 
@@ -231,7 +231,7 @@ export async function getCustomerOrderDetail(
     own.forEach((i) => grouped.add(i.id));
 
     const qty = bundleQtyOf(bundle.items, own);
-    const totalCents = own.reduce((sum, i) => sum + toCents(moneyOf(i)), 0);
+    const totalCents = own.reduce((sum, i) => sum + moneyCentsOf(i), 0);
     lines.push({
       id: `bundle:${bundle.id}`,
       orderItemIds: own.map((i) => i.id),
@@ -260,9 +260,9 @@ export async function getCustomerOrderDetail(
       qty: item.qty,
       billedQty: billedOf(item),
       shortfall: measured && item.fulfilledQty < item.qty,
-      shortfallCents: measured ? toCents(item.unitPrice * (item.qty - item.fulfilledQty)) : 0,
-      unitPriceCents: toCents(item.unitPrice),
-      lineTotalCents: toCents(moneyOf(item)),
+      shortfallCents: measured ? item.unitPriceCents * (item.qty - item.fulfilledQty) : 0,
+      unitPriceCents: item.unitPriceCents,
+      lineTotalCents: moneyCentsOf(item),
     });
   }
 
@@ -278,11 +278,11 @@ export async function getCustomerOrderDetail(
     timeline: orderTimeline(order.status, history),
     // Ara toplam kalemlerden TÜRETİLİR: siparişte ayrı bir alan yok ve olmamalı — iki kaynak
     // bir gün ayrışır. İndirim ayrı satır olarak gösterildiği için burada payları geri ekliyoruz.
-    subtotalCents: lines.reduce((sum, l) => sum + l.lineTotalCents, 0) + toCents(order.discountAmount),
-    discountCents: toCents(order.discountAmount),
+    subtotalCents: lines.reduce((sum, l) => sum + l.lineTotalCents, 0) + order.discountAmountCents,
+    discountCents: order.discountAmountCents,
     discountLabel: order.discountLabel ? resolveLocalizedText(order.discountLabel, locale) : '',
-    shippingFeeCents: toCents(order.shippingFee),
-    totalCents: toCents(order.total),
+    shippingFeeCents: order.shippingFeeCents,
+    totalCents: order.totalCents,
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     onAccount: order.onAccount,

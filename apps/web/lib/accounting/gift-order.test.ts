@@ -33,10 +33,11 @@ const createdProfiles: string[] = [];
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 const QTY = 3;
-const UNIT_PRICE = 12;
-const PURCHASE_PRICE = 4; // euro — sipariş tarafı hâlâ euro (02.9 dilim 4)
-const PURCHASE_PRICE_CENTS = PURCHASE_PRICE * 100;
-const TOTAL = QTY * UNIT_PRICE; // 36 €
+const UNIT_PRICE_CENTS = 1200; // 12,00 €
+const PURCHASE_PRICE_CENTS = 400; // 4,00 €
+const TOTAL_CENTS = QTY * UNIT_PRICE_CENTS; // 36,00 €
+/** Kasa bakiyesi hâlâ euro okunuyor (para hareketi ailesi göçmedi — 02.9 dilim 5). */
+const TOTAL_EURO = TOTAL_CENTS / 100;
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db)).id;
@@ -67,8 +68,8 @@ describe('patron ikramı iç hesapların TAMAMINDA sayılır', () => {
     const exportBefore = await buildExport({ from: dayOffset(0), to: dayOffset(0) });
 
     const { order } = await orders.create(
-      { warehouseId, customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: true, total: TOTAL },
-      [{ variantId, qty: QTY, unitPrice: UNIT_PRICE, vatRate: 5.5 }],
+      { warehouseId, customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: true, totalCents: TOTAL_CENTS },
+      [{ variantId, qty: QTY, unitPriceCents: UNIT_PRICE_CENTS, vatRate: 5.5 }],
     );
 
     const result = await quickSale({ orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
@@ -80,19 +81,19 @@ describe('patron ikramı iç hesapların TAMAMINDA sayılır', () => {
     expect(result.consumedQty).toBe(QTY);
 
     // 2) KÂR: maliyet kapanışta sabitlendi — ikramın maliyeti kârda görünür.
-    expect(result.cogsAmount).toBe(QTY * PURCHASE_PRICE);
-    expect((await orders.getById(order.id))?.cogsAmount).toBe(QTY * PURCHASE_PRICE);
+    expect(result.cogsAmountCents).toBe(QTY * PURCHASE_PRICE_CENTS);
+    expect((await orders.getById(order.id))?.cogsAmountCents).toBe(QTY * PURCHASE_PRICE_CENTS);
 
     // 3) KASA: parayı patron ödedi, hesabın bakiyesine girdi.
     expect(result.paymentRecorded).toBe(true);
-    expect((await accounts.balance(cashAccount)).balance).toBe(cashBefore + TOTAL);
-    expect(await orders.getById(order.id)).toMatchObject({ amountCollected: TOTAL, paymentStatus: 'paid' });
+    expect((await accounts.balance(cashAccount)).balance).toBe(cashBefore + TOTAL_EURO);
+    expect(await orders.getById(order.id)).toMatchObject({ amountCollectedCents: TOTAL_CENTS, paymentStatus: 'paid' });
 
     // 4) EXPORT: TEK fark burada — satır dosyaya girmez, ama tutarı özet'te açıkça durur.
     const exportAfter = await buildExport({ from: dayOffset(0), to: dayOffset(0) });
     expect(exportAfter.rows.map((r) => r.orderId)).not.toContain(order.id);
     expect(exportAfter.rows).toHaveLength(exportBefore.rows.length);
     expect(exportAfter.summary.excludedGiftCount - exportBefore.summary.excludedGiftCount).toBe(1);
-    expect(exportAfter.summary.excludedGiftGross - exportBefore.summary.excludedGiftGross).toBe(TOTAL);
+    expect(exportAfter.summary.excludedGiftGross - exportBefore.summary.excludedGiftGross).toBe(TOTAL_EURO);
   });
 });

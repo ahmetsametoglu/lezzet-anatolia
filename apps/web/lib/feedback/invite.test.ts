@@ -77,10 +77,10 @@ beforeAll(async () => {
 
   // İki ürünlü, 12 gün önce teslim edilmiş sipariş — davet zamanı geçmiş.
   const { order } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 20 },
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', totalCents: 2000 },
     [
-      { variantId, qty: 1, unitPrice: 12, vatRate: 5.5 },
-      { variantId: secondVariantId, qty: 1, unitPrice: 8, vatRate: 5.5 },
+      { variantId, qty: 1, unitPriceCents: 1200, vatRate: 5.5 },
+      { variantId: secondVariantId, qty: 1, unitPriceCents: 800, vatRate: 5.5 },
     ],
   );
   deliveredOrderId = order.id;

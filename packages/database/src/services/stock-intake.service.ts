@@ -10,8 +10,10 @@ import {
   type StockIntakeInsert,
   type StockIntakeUpdate,
 } from '@lezzet/types';
+import { fromCents } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
 import { appToDb, dbToApp } from '../utils/case-transformers';
+import { rpcMoneyToCents } from '../utils/rpc-money';
 
 export interface ReceiveIntakeInput {
   supplierId?: string | null;
@@ -39,6 +41,9 @@ export interface ReceiveIntakeInput {
  * kabulü **engellemez**, uyarır: karar mal kabul edende (DOMAIN §4).
  */
 export class StockIntakeService extends BaseDbService<StockIntake, StockIntakeInsert, StockIntakeUpdate> {
+  /** Kolon `stock_intake.total_amount` (euro numeric); app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ['totalAmountCents'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'stock_intake', StockIntakeSchema, StockIntakeInsertSchema, StockIntakeUpdateSchema);
   }
@@ -50,12 +55,21 @@ export class StockIntakeService extends BaseDbService<StockIntake, StockIntakeIn
     const raw = await this.executeRpc('receive_intake', {
       p_supplier_id: input.supplierId ?? null,
       p_warehouse_id: input.warehouseId,
-      p_lines: input.lines.map((line) => appToDb(line)),
+      // ── PARA SINIRI: cent → euro, TEK NOKTADA ────────────────────────────────
+      // `unit_cost` yayılarak yazılamaz: `appToDb` onu `unit_cost_cents` yapardı, RPC o anahtarı
+      // hiç okumaz ve maliyet SESSİZCE düşerdi — parti fiyatsız doğar, hiçbir yerde hata patlamaz.
+      // Alan bu yüzden çıkarılıp euro karşılığıyla ayrıca yazılıyor.
+      p_lines: input.lines.map(({ unitCostCents, ...line }) => ({
+        ...appToDb<Record<string, unknown>>(line),
+        unit_cost: unitCostCents == null ? null : fromCents(unitCostCents),
+      })),
       p_purchase_order_id: input.purchaseOrderId ?? null,
       p_date: input.date ?? new Date().toISOString().slice(0, 10),
       p_note: input.note ?? null,
     });
-    return ReceiveIntakeResultSchema.parse(dbToApp(raw));
+    // RPC dönüşü bir TABLO SATIRI değil (jsonb) — `moneyFields` yolundan geçmez; dönüşüm bu sınırda
+    // ve ortak yardımcıyla (`rpcMoneyToCents`), her serviste yeniden yazılmasın diye.
+    return ReceiveIntakeResultSchema.parse(rpcMoneyToCents(dbToApp(raw), ['totalAmount']));
   }
 
   async listBySupplier(supplierId: string): Promise<StockIntake[]> {

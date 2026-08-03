@@ -211,7 +211,11 @@ const serviceSrc = readdirSync(join(ROOT, serviceDir))
   .map((f) => read(`${serviceDir}/${f}`))
   .join('\n');
 const declaredCents = new Set();
-for (const decl of serviceSrc.matchAll(/\bmoneyFields\s*(?::[^=]*)?=\s*\[([^\]]*)\]/g)) {
+// Beyan doğrudan bir dizi olabilir (`moneyFields = ['amountCents']`) ya da PAYLAŞILAN bir sabite
+// bağlanabilir (`moneyFields = ORDER_MONEY_FIELDS`) — sipariş ailesinde aynı liste hem beyanda hem
+// RPC gövdesinin çevriminde kullanılıyor ve iki yerde ayrı yazılması tam da kuralın kapattığı hata.
+// Bu yüzden `…MONEY_FIELDS` adlı sabitlerin dizileri de taranır.
+for (const decl of serviceSrc.matchAll(/\b(?:moneyFields|[A-Z_]*MONEY_FIELDS)\s*(?::[^=]*)?=\s*\[([^\]]*)\]/g)) {
   for (const field of decl[1].matchAll(/['"]([A-Za-z0-9_]+)['"]/g)) declaredCents.add(field[1]);
 }
 for (const field of declaredCents) {

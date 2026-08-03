@@ -41,7 +41,11 @@ export function rpcMoneyToEuro(row: unknown, fields: readonly string[]): Record<
     if (!(field in out)) continue;
     const value = out[field];
     delete out[field];
-    out[field.slice(0, -'Cents'.length)] = value === null || value === undefined ? null : fromCents(Number(value));
+    // `undefined` ile `null` AYNI ŞEY DEĞİL ve bu ayrım yazma yolunda kritiktir: `undefined`
+    // "gönderme" demektir (kolon kendi varsayılanını alır), `null` "boşalt". İkisini `null`a
+    // indirmek `shipping_fee` gibi `not null default 0` kolonlarda kısıt ihlali doğurur — nitekim
+    // doğurdu. `undefined` olduğu gibi bırakılır; JSON gövdede o anahtar zaten yer almaz.
+    out[field.slice(0, -'Cents'.length)] = value === null || value === undefined ? value : fromCents(Number(value));
   }
   return out;
 }

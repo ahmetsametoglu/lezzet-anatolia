@@ -122,7 +122,7 @@ Tedarik siparişi **tedarikçinin diliyle** yazılabilsin diye: bizim varyantım
 | supplier_code | string | tedarikçinin ürün/sipariş kodu |
 | name_at_supplier | string \| null | üründeki adı (farklıysa) |
 | pack_qty | number \| null | koli içi adet (sipariş koliyle verilirse çeviri) |
-| last_purchase_price | number \| null | son alış (girişte otomatik güncellenir) — "geçen sefer kaçtı" |
+| last_purchase_price | numeric (€) \| null | son alış (girişte otomatik güncellenir) — "geçen sefer kaçtı". Uygulamadaki adı `lastPurchasePriceCents`, birimi **cent** (`STACK §8`) |
 | is_preferred | boolean | varsayılan tedarikçi işareti; **tekildir** — ikinci kaynak tercihli yapılınca ilki düşer |
 | created_at | timestamptz | |
 
@@ -149,7 +149,7 @@ Taslak → gönderildi → mal kabulde kapanır (bkz. `DOMAIN.md §16`). Sistem 
 | variant_id | uuid | |
 | supplier_product_id | uuid \| null | kod eşlemesi (liste tedarikçi koduyla yazılır) |
 | qty | number | paket adedi |
-| unit_price | number \| null | beklenen alış (varsa) |
+| unit_price | numeric (€) \| null | beklenen alış (varsa). Uygulamadaki adı `unitPriceCents`, birimi **cent** — liste satırının gömülü kaleminde de öyle (dönüşüm `listRows`'un sınırında, `moneyFields` gömülü ilişkiye inmez) |
 | target_warehouse_id | uuid \| null | **isteğe bağlı** hedef depo ("20 koli STR'ye, 10 koli KEHL'e") — kabul eden depocu kendi payını listeden okur. Niyet beyanıdır, kısıt değil: mal fiilen nereye indiyse oraya girer |
 
 ## StockIntake (stok girişi / satın alma)
@@ -163,10 +163,10 @@ Mal alımının envanter tarafı; oluşturduğu partiler buna bağlanır (`Stock
 | warehouse_id | uuid | **mal kabul depoya yapılır**: satın alma siparişi depo-üstüdür ama mal bir kapıdan girer. Depo bağı PO'ya değil BURAYA takılır — aynı PO'nun ikinci kabulü başka depoda olabilir |
 | purchase_order_id | uuid \| null | bağlı tedarik siparişi — mal kabul formu PO kalemleriyle önceden dolu gelir. **Kabul PO'yu koşulsuz kapatmaz**: durum `purchase_order_progress`'ten türer, hepsi gelene kadar `partially_received` kalır |
 | date | date | |
-| total_amount | number | kalemlerden hesaplanır (Σ birim maliyet × adet) |
+| total_amount | numeric (€) | kalemlerden hesaplanır (Σ birim maliyet × adet). Uygulamadaki adı `totalAmountCents`, birimi **cent** |
 | note | string \| null | |
 | created_at | timestamptz | |
 
-**`receive_intake` fonksiyonu (06.10):** giriş kaydı + partiler + PO durumu + `last_purchase_price` tazelemesi tek transaction'da — yarısı yazılırsa "partiler girdi ama sipariş açık kaldı" tutarsızlığı doğar. MLOR uyarısı burada hesaplanmaz (motorun işi, kabulü engellemez).
+**`receive_intake` fonksiyonu (06.10):** giriş kaydı + partiler + PO durumu + `last_purchase_price` tazelemesi tek transaction'da — yarısı yazılırsa "partiler girdi ama sipariş açık kaldı" tutarsızlığı doğar. MLOR uyarısı burada hesaplanmaz (motorun işi, kabulü engellemez). **Para RPC sınırında çevrilir:** uygulama `unitCostCents` gönderir, servis `p_lines.unit_cost`'a euro yazar; dönüşteki `total_amount` da `totalAmountCents` olarak okunur (jsonb bir tablo satırı değildir, `moneyFields` oraya inmez — `STACK §8`).
 
 **Parçalı kabul (`DOMAIN §17`):** depo zorunlu parametredir; PO'lu kabulde her satır bir PO kalemine bağlanır (yazılmazsa varyanttan çözülür, belirsizse hata). Bağsız kabul siparişi sonsuza dek açık bırakırdı — ölçüm yokken "0 geldi" demek olurdu (`CLAUDE.md §1`).

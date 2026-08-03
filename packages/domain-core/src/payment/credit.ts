@@ -15,7 +15,7 @@ import type { Order } from '@lezzet/types';
 /** Vade kapsamındaki sipariş için gereken asgari alanlar. */
 export type CreditOrder = Pick<
   Order,
-  'onAccount' | 'paymentStatus' | 'status' | 'total' | 'amountCollected' | 'amountRefunded' | 'createdAt'
+  'onAccount' | 'paymentStatus' | 'status' | 'totalCents' | 'amountCollectedCents' | 'amountRefundedCents' | 'createdAt'
 >;
 
 /**
@@ -25,8 +25,10 @@ export type CreditOrder = Pick<
  * Kaynak `Order`'ın `amount_*` alanlarıdır; onlar bir CACHE'tir ve gerçeği para hareketleri tutar
  * (12.2). Cache'in tazeliği çağıranın sorunudur, formülün doğruluğu burasının.
  */
-export function openAmountCents(order: Pick<Order, 'total' | 'amountCollected' | 'amountRefunded'>): number {
-  return Math.round((order.total - order.amountCollected + order.amountRefunded) * 100);
+export function openAmountCents(order: Pick<Order, 'totalCents' | 'amountCollectedCents' | 'amountRefundedCents'>): number {
+  // Hesap doğrudan cent üstünde (02.9): eskiden euro çıkarılıp sonuç `* 100` ile çevriliyordu ve
+  // çıkarma kayan noktada yapılıyordu — `0.1 + 0.2` sapmasının tam yeri (STACK §8).
+  return order.totalCents - order.amountCollectedCents + order.amountRefundedCents;
 }
 
 /** Vade günü — sipariş tarihinden itibaren. */

@@ -9,7 +9,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { cityMatchesPlaces, deriveChannel } from '@lezzet/domain-core';
-import { fromCents } from '@lezzet/helper';
+import { toCents } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import type { DeliveryType, LocalizedText, OrderItemInsert, PaymentMethod } from '@lezzet/types';
 import { getCartView } from '@/lib/cart/read';
@@ -239,7 +239,7 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
     customerId: customer.id,
     deliveryType,
     basketCents: cart.totalCents,
-    lines: items.map((i) => ({ totalCents: Math.round(i.unitPrice * 100) * i.qty, vatRate: i.vatRate })),
+    lines: items.map((i) => ({ totalCents: i.unitPriceCents * i.qty, vatRate: i.vatRate })),
   });
   if (!options.methods.includes(input.paymentMethod)) {
     return { status: 'payment_not_allowed', methods: options.methods };
@@ -274,13 +274,14 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
       addressId: address.id,
       addressSnapshot: { ...address },
       deliveryCountry: address.country,
-      shippingFee: fromCents(options.shippingFeeCents),
-      total: fromCents(options.orderTotalCents),
+      // Servis cent alıyor (02.9): iki `fromCents` kalktı, motorun çıktısı doğrudan gidiyor.
+      shippingFeeCents: options.shippingFeeCents,
+      totalCents: options.orderTotalCents,
       // Paylaşılan fonksiyon (denetim A1): yerel bir kopya vardı ve `rejected` hâlinde 0 dönüyordu.
       // Sepet toplamı zaten paylaşılanı kullanıyor, yani tahsilat doğruydu — ama deftere "indirim
       // verilmedi" yazılıyordu. Kupon reddedilip yerine otomatik kampanya indiğinde müşteri
       // indirimli ödüyor, kayıt sıfır gösteriyordu: marj ve kampanya raporu ikisi de yanlış okunur.
-      discountAmount: fromCents(discountAmountOf(cart.discount)),
+      discountAmountCents: discountAmountOf(cart.discount),
       discountId: discountIdOf(cart),
       discountLabel: discountLabelOf(cart),
       // Siparişin dili: müşteri bu siparişi hangi yüzeyde okuyorsa o. Mailler buradan konuşur.
@@ -342,9 +343,9 @@ async function expandToOrderItems(
         qty: line.qty,
         stockId: line.stockId,
         bundleId: null,
-        unitPrice: fromCents(line.unitPriceCents ?? 0),
+        unitPriceCents: line.unitPriceCents ?? 0,
         vatRate: vatByVariant.get(line.variantId) ?? 0,
-        lineDiscountAmount: fromCents(shares[index] ?? 0),
+        lineDiscountAmountCents: shares[index] ?? 0,
       });
       return;
     }
@@ -355,11 +356,13 @@ async function expandToOrderItems(
         qty: item.qty * line.qty,
         stockId: null,
         bundleId: line.bundleId,
-        unitPrice: item.allocatedUnitPrice,
+        // `Bundle.allocatedUnitPrice` hâlâ euro — paket ailesi göçmedi (02.9'un listesinde yoktu,
+        // görev satırına eklendi). Çevrim burada, ortak `toCents` ile.
+        unitPriceCents: toCents(item.allocatedUnitPrice),
         vatRate: vatByVariant.get(item.variantId) ?? 0,
         // Pakete sepet indirimi BİNMEZ (DOMAIN §13) — motor da payını 0 dağıtır. Paketin kendi
         // indirimi zaten birim fiyatın içinde.
-        lineDiscountAmount: 0,
+        lineDiscountAmountCents: 0,
       });
     }
   });

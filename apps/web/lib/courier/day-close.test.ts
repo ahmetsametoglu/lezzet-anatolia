@@ -79,8 +79,8 @@ afterAll(async () => {
 
 async function atTheDoor(qty: number) {
   const { order, items } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', deliveryDate: day, courierId, total: qty * 10 },
-    [{ variantId, qty, unitPrice: 10, vatRate: 5.5 }],
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', deliveryDate: day, courierId, totalCents: qty * 1000 },
+    [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }],
   );
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   for (const status of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: status });

@@ -90,7 +90,7 @@ export async function createCheckoutSession(
   // `resolveCheckoutPayment` tarafından hesaplanıp siparişe yazılmış hâliyle. Burada yeniden
   // toplamak, iki hesabın ayrışabildiği ikinci bir kaynak yaratırdı.
   const intent = await createSession({
-    amountCents: Math.round(order.total * 100),
+    amountCents: order.totalCents,
     orderId: order.id,
     description: order.referenceNo ?? `Sipariş ${order.id.slice(0, 8)} · ${items.length} kalem`,
     reservationExpiresAt: expiresAt,

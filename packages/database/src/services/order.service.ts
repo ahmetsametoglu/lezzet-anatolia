@@ -48,9 +48,11 @@ import {
   type Page,
   type TransitionResult,
 } from '@lezzet/types';
+import { fromCents } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
 import { ilikeContains, ilikeTerm } from '../utils/filter-term';
 import { appToDb, dbToApp } from '../utils/case-transformers';
+import { rpcMoneyToCents, rpcMoneyToEuro } from '../utils/rpc-money';
 
 /**
  * Sipariş listesinin süzgeçleri (09.7). Liste ve sayaç AYNI tipi alır: iki ayrı süzgeç tanımı,
@@ -92,8 +94,9 @@ export interface OrderCounts {
   /** Duruma göre adet — sıfır olan durum haritada HİÇ yoktur (ekran `?? 0` okur). */
   byStatus: Map<OrderStatus, number>;
   total: number;
-  sum: { total: number; collected: number; refunded: number };
-  cod: { count: number; total: number; collected: number; refunded: number };
+  /** Tutarlar **cent** (02.9 · STACK §8) — RPC euro toplar, çevrim `counts()` sınırında. */
+  sum: { totalCents: number; collectedCents: number; refundedCents: number };
+  cod: { count: number; totalCents: number; collectedCents: number; refundedCents: number };
 }
 
 /**
@@ -142,11 +145,32 @@ function searchOptions(f: OrderListFilters): { orFilters?: string[]; rangeFilter
   return { orFilters: or, rangeFilters: ranges.length ? ranges : undefined };
 }
 
+/**
+ * Para alan listeleri TEK yerde: hem `moneyFields` beyanı hem RPC gövdesinin euro'ya indirilmesi
+ * aynı listeyi kullanır. İki yerde ayrı yazılsaydı biri güncellenir öbürü unutulur ve RPC'ye giden
+ * anahtar sessizce düşerdi (`rpcMoneyToEuro` künyesi).
+ */
+const ITEM_MONEY_FIELDS = ['unitPriceCents', 'lineDiscountAmountCents'];
+const ORDER_MONEY_FIELDS = [
+  'shippingFeeCents',
+  'totalCents',
+  'discountAmountCents',
+  'amountCollectedCents',
+  'amountRefundedCents',
+  'cogsAmountCents',
+  'deliveryCostCents',
+  'paymentFeeCents',
+  'packagingCostCents',
+];
+
 /** Yeni kalem girişi — sipariş bağı `create` içinde kurulur (kimlik RPC'de doğar, dışarıdan gelmez). */
 const CreateOrderItemSchema = OrderItemInsertSchema.omit({ orderId: true });
 export type CreateOrderItemInput = z.infer<typeof CreateOrderItemSchema>;
 
 export class OrderItemService extends BaseDbService<OrderItem, OrderItemInsert, OrderItemUpdate> {
+  /** Kolonlar `unit_price` / `line_discount_amount` (euro numeric); app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ITEM_MONEY_FIELDS;
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'order_item', OrderItemSchema, OrderItemInsertSchema, OrderItemUpdateSchema);
   }
@@ -213,6 +237,9 @@ export class OrderStatusLogService extends BaseDbService<OrderStatusLog, OrderSt
  * kapı uygulama katmanındadır (`apps/web/lib/order`).
  */
 export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate> {
+  /** Sipariş başlığının para kolonları (hepsi euro numeric); app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ORDER_MONEY_FIELDS;
+
   private readonly items: OrderItemService;
 
   constructor(supabase: SupabaseClient) {
@@ -250,10 +277,15 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
 
     // Doğrulama YİNE Zod'da: gövde jsonb olarak gidiyor diye şema atlanmaz, yoksa tipsiz bir
     // nesne doğrudan tabloya akardı. `appToDb` camelCase→snake_case çevirir — RPC gelen anahtarları
-    // tablonun kolonlarıyla kesiştirdiği için adların birebir tutması şart.
+    // tablonun kolonlarıyla KESİŞTİRDİĞİ için adların birebir tutması şart.
+    //
+    // Para bu yüzden burada euro'ya iner (`rpcMoneyToEuro`, 02.9): `unitPriceCents` olduğu gibi
+    // gitseydi `unit_price_cents` anahtarı üretirdi, öyle bir kolon yok, anahtar sessizce düşerdi.
+    // Bu yolda `not null` kısıtı patladı ve hatayı görünür kıldı — kısıtı olmayan bir kolonda satır
+    // fiyatsız doğar ve hiçbir yerde hata çıkmazdı.
     const orderId = await this.executeRpc<string>('create_order', {
-      p_order: appToDb(this.insertSchema.parse(order)),
-      p_items: lines.map((line) => appToDb(CreateOrderItemSchema.parse(line))),
+      p_order: appToDb(rpcMoneyToEuro(this.insertSchema.parse(order), ORDER_MONEY_FIELDS)),
+      p_items: lines.map((line) => appToDb(rpcMoneyToEuro(CreateOrderItemSchema.parse(line), ITEM_MONEY_FIELDS))),
       p_discount_code_id: opts.discountCodeId ?? null,
     });
 
@@ -310,15 +342,24 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    * `payment_fee` burada yazılmaz — komisyon oranları para modülüyle (12) gelir; uydurma oranla
    * doldurmak kârı sessizce yanlış gösterirdi.
    */
-  async close(orderId: string, costs: { actorId?: string | null; deliveryCost?: number | null; routeUnitCost?: number; packagingUnitCost?: number } = {}): Promise<CloseResult> {
+  async close(
+    orderId: string,
+    costs: {
+      actorId?: string | null;
+      deliveryCostCents?: number | null;
+      routeUnitCostCents?: number;
+      packagingUnitCostCents?: number;
+    } = {},
+  ): Promise<CloseResult> {
+    // RPC euro konuşuyor (kolonlarla aynı taban); uygulama cent — çevrim bu sınırda, TEK yerde.
     const raw = await this.executeRpc('close_order', {
       p_order_id: orderId,
       p_actor_id: costs.actorId ?? null,
-      p_delivery_cost: costs.deliveryCost ?? null,
-      p_route_unit_cost: costs.routeUnitCost ?? 0,
-      p_packaging_unit_cost: costs.packagingUnitCost ?? 0,
+      p_delivery_cost: costs.deliveryCostCents == null ? null : fromCents(costs.deliveryCostCents),
+      p_route_unit_cost: fromCents(costs.routeUnitCostCents ?? 0),
+      p_packaging_unit_cost: fromCents(costs.packagingUnitCostCents ?? 0),
     });
-    return CloseResultSchema.parse(dbToApp(raw));
+    return CloseResultSchema.parse(rpcMoneyToCents(dbToApp(raw), ['cogsAmount', 'deliveryCost', 'packagingCost']));
   }
 
   /**
@@ -390,7 +431,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       p_payment_method: input.paymentMethod ?? null,
       p_packaging_unit_cost: input.packagingUnitCost ?? 0,
     });
-    return QuickSaleResultSchema.parse(dbToApp(raw));
+    return QuickSaleResultSchema.parse(rpcMoneyToCents(dbToApp(raw), ['cogsAmount']));
   }
 
   // Kalem–parti eşlemesinin üç okuması BURADAN TAŞINDI (02.8) → `OrderItemBatchService`.
@@ -556,8 +597,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       return {
         byStatus: new Map(),
         total: 0,
-        sum: { total: 0, collected: 0, refunded: 0 },
-        cod: { count: 0, total: 0, collected: 0, refunded: 0 },
+        sum: { totalCents: 0, collectedCents: 0, refundedCents: 0 },
+        cod: { count: 0, totalCents: 0, collectedCents: 0, refundedCents: 0 },
       };
     }
     const rows = await this.executeRpc<unknown[]>('order_counts', {
@@ -576,12 +617,20 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     // gelmeyen bir anahtar. Bu yüzden o alan HAM hâliyle alınır.
     const raw = (rows?.[0] ?? {}) as Record<string, unknown>;
     const flat = dbToApp(raw) as Record<string, unknown>;
-    const row = OrderCountsRowSchema.parse({ ...flat, byStatus: raw.by_status ?? {} });
+    // RPC dönüşü bir TABLO SATIRI değil (jsonb) — `moneyFields` yolundan geçmez; toplamlar euro
+    // gelir ve cent'e burada, ortak yardımcıyla inilir (02.9 · STACK §8).
+    const money = rpcMoneyToCents(flat, ['sumTotal', 'sumCollected', 'sumRefunded', 'codTotal', 'codCollected', 'codRefunded']);
+    const row = OrderCountsRowSchema.parse({ ...money, byStatus: raw.by_status ?? {} });
     return {
       byStatus: new Map(Object.entries(row.byStatus) as Array<[OrderStatus, number]>),
       total: row.total,
-      sum: { total: row.sumTotal, collected: row.sumCollected, refunded: row.sumRefunded },
-      cod: { count: row.codCount, total: row.codTotal, collected: row.codCollected, refunded: row.codRefunded },
+      sum: { totalCents: row.sumTotalCents, collectedCents: row.sumCollectedCents, refundedCents: row.sumRefundedCents },
+      cod: {
+        count: row.codCount,
+        totalCents: row.codTotalCents,
+        collectedCents: row.codCollectedCents,
+        refundedCents: row.codRefundedCents,
+      },
     };
   }
 

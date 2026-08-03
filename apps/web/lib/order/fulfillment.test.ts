@@ -59,7 +59,7 @@ async function sendOut(picks: { stockId: string; qty: number }[]) {
   const total = picks.reduce((s, p) => s + p.qty, 0);
   const { order, items } = await orders.create(
     { warehouseId, customerId, channel: 'b2c', deliveryType: 'route' },
-    [{ variantId, qty: total, unitPrice: 10, vatRate: 5.5 }],
+    [{ variantId, qty: total, unitPriceCents: 1000, vatRate: 5.5 }],
   );
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty: total });
   for (const status of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: status });
@@ -82,7 +82,7 @@ describe('teslim (07.7)', () => {
   });
 
   it('yolda olmayan sipariş teslim edilemez — stok DEĞİŞMEZ', async () => {
-    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c' }, [{ variantId, qty: 1, unitPrice: 10, vatRate: 5.5 }]);
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c' }, [{ variantId, qty: 1, unitPriceCents: 1000, vatRate: 5.5 }]);
 
     const outcome = await deliverOrder(order.id);
     expect(outcome).toMatchObject({ ok: false, reason: 'stale', currentStatus: 'draft' });
@@ -101,7 +101,7 @@ describe('teslim (07.7)', () => {
   it('hiç hazırlanmamış sipariş teslim edilirse stok düşmez ama teslim kaydı yazılır', async () => {
     const { order, items } = await orders.create(
       { warehouseId, customerId, channel: 'b2c' },
-      [{ variantId, qty: 2, unitPrice: 10, vatRate: 5.5 }],
+      [{ variantId, qty: 2, unitPriceCents: 1000, vatRate: 5.5 }],
     );
     for (const d of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: d });
     await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [] }]); // hiç çıkmadı
@@ -119,7 +119,7 @@ describe('kapanış — kâr kalemleri sabitlenir (DOMAIN §12)', () => {
 
     const outcome = await closeOrder(order.id);
     expect(outcome.ok).toBe(true);
-    expect(outcome.cogsAmount).toBe(14); // 4×2 + 2×3 — ortalama olsaydı 15 çıkardı
+    expect(outcome.cogsAmountCents).toBe(1400); // 4×2 + 2×3 — ortalama olsaydı 15 € çıkardı
   });
 
   it('rota-içinde teslimat birim maliyeti, paketleme maliyeti ayardan gelir', async () => {
@@ -127,12 +127,13 @@ describe('kapanış — kâr kalemleri sabitlenir (DOMAIN §12)', () => {
     await deliverOrder(order.id);
 
     const outcome = await closeOrder(order.id);
-    expect(outcome.deliveryCost).toBe(2.5); // route_delivery_unit_cost_cents = 250
-    expect(outcome.packagingCost).toBe(1.2); // packaging_unit_cost_cents = 120
+    // Ayar zaten cent'ti; artık dönüş de cent — arada `/100 → *100` gidip gelen bir çevrim yok (02.9).
+    expect(outcome.deliveryCostCents).toBe(250); // route_delivery_unit_cost_cents
+    expect(outcome.packagingCostCents).toBe(120); // packaging_unit_cost_cents
 
     const closed = await orders.getById(order.id);
-    expect(closed).toMatchObject({ status: 'completed', cogsAmount: 3, deliveryCost: 2.5 });
-    expect(closed?.paymentFee).toBeNull(); // komisyon oranları modül 12'de
+    expect(closed).toMatchObject({ status: 'completed', cogsAmountCents: 300, deliveryCostCents: 250 });
+    expect(closed?.paymentFeeCents).toBeNull(); // komisyon oranları modül 12'de
   });
 
   it('teslim edilmemiş sipariş kapanamaz', async () => {

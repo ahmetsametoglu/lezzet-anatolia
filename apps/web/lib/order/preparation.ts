@@ -209,7 +209,7 @@ export async function confirmPreparation(input: {
       suggestion: suggestShortfallAction({
         orderedQty: item.qty,
         pickedQty: picked,
-        missingValueCents: Math.round(item.unitPrice * 100) * (item.qty - picked),
+        missingValueCents: item.unitPriceCents * (item.qty - picked),
         thresholds,
       }),
     });

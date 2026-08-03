@@ -1,6 +1,5 @@
 import 'server-only';
 import { CategoryService, OrderService, serviceDb } from '@lezzet/database';
-import { toCents } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { FIXTURE_CATEGORIES } from '@/lib/storefront/fixtures';
 import { toCategory } from '@/lib/storefront/map';
@@ -126,7 +125,7 @@ async function readLastOrder(locale: Locale): Promise<LastOrderSuggestion | null
     placedAt: order.createdAt,
     names: available.slice(0, NAME_LIMIT).map((l) => l.name),
     itemCount: available.length,
-    totalCents: toCents(order.total),
+    totalCents: order.totalCents,
     image: first.image,
     // Yalnız VARYANT satırları: paket kalemleri zaten yukarıda elendi, çözülmüş satırda da paket
     // olamaz — süzgeç tipi daraltmak için, sessizce bir şey düşürmek için değil.

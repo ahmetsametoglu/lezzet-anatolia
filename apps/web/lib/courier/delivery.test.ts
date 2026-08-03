@@ -75,9 +75,9 @@ afterAll(async () => {
 });
 
 /** Kapıya varmış sipariş: hazırlanmış, partisi yazılmış, yola çıkmış. */
-async function atTheDoor(opts: { channel?: 'b2b' | 'b2c'; qty?: number; unitPrice?: number } = {}) {
+async function atTheDoor(opts: { channel?: 'b2b' | 'b2c'; qty?: number; unitPriceCents?: number } = {}) {
   const qty = opts.qty ?? 4;
-  const unitPrice = opts.unitPrice ?? 10;
+  const unitPriceCents = opts.unitPriceCents ?? 1000;
   const channel = opts.channel ?? 'b2c';
   const { order, items } = await orders.create(
     {
@@ -88,9 +88,9 @@ async function atTheDoor(opts: { channel?: 'b2b' | 'b2c'; qty?: number; unitPric
       deliveryDate: today,
       courierId,
       paymentMethod: 'cash',
-      total: qty * unitPrice,
+      totalCents: qty * unitPriceCents,
     },
-    [{ variantId, qty, unitPrice, vatRate: 5.5 }],
+    [{ variantId, qty, unitPriceCents, vatRate: 5.5 }],
   );
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   for (const status of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: status });
@@ -174,7 +174,7 @@ describe('eksik/reddedilen kalem (11.2)', () => {
 
 describe('tahsilat ve nakit sınırı (11.3)', () => {
   it('nakit yasal sınır aşımında UYARI çıkar ama tahsilat tamamlanır', async () => {
-    const { orderId } = await atTheDoor({ qty: 4, unitPrice: 500 }); // 2.000 € — sınır 1.000 €
+    const { orderId } = await atTheDoor({ qty: 4, unitPriceCents: 50_000 }); // 2.000 € — sınır 1.000 €
 
     const outcome = await confirmDoorDelivery({
       orderId, courierId,
@@ -186,7 +186,7 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
   });
 
   it('aynı tutar KARTLA alınırsa uyarı yok — sınır yalnız nakde ait', async () => {
-    const { orderId } = await atTheDoor({ qty: 4, unitPrice: 500 });
+    const { orderId } = await atTheDoor({ qty: 4, unitPriceCents: 50_000 });
 
     const outcome = await confirmDoorDelivery({
       orderId, courierId,

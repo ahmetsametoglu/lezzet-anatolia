@@ -145,9 +145,9 @@ describe('mükerrer koruması', () => {
 
 describe('eşleştirme kuyruğu', () => {
   /** Referansı ekstredeki açıklamayla eşleşen, tahsil edilmemiş bir satış kurar. */
-  async function unpaidSale(referenceNo: string, total: number, daysAgo: number) {
-    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', total }, [
-      { variantId, qty: 1, fulfilledQty: 1, unitPrice: total, vatRate: 5.5 },
+  async function unpaidSale(referenceNo: string, totalCents: number, daysAgo: number) {
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', totalCents }, [
+      { variantId, qty: 1, fulfilledQty: 1, unitPriceCents: totalCents, vatRate: 5.5 },
     ]);
     await orders.update({ id: order.id, status: 'completed', referenceNo });
     await db.from('order_status_log').insert({
@@ -166,7 +166,7 @@ describe('eşleştirme kuyruğu', () => {
 
   it('referans açıklamada geçiyorsa güçlü ve TEK öneri çıkar', async () => {
     const reference = `LA-26-${stamp % 100000}`;
-    const order = await unpaidSale(reference, 45.9, 3);
+    const order = await unpaidSale(reference, 4590, 3);
     await importStatement([{ Date: frDate(-3), 'Libellé': `VIR SEPA ${reference}`, Montant: '45,90', Solde: '100,00' }], 'tek.csv');
 
     const row = (await matchQueue(bankAccount))[0]!;
@@ -175,7 +175,7 @@ describe('eşleştirme kuyruğu', () => {
   });
 
   it('PARA ÇIKIŞI için sipariş önerisi çıkmaz', async () => {
-    await unpaidSale(`LA-26-X${stamp % 10000}`, 120, 2);
+    await unpaidSale(`LA-26-X${stamp % 10000}`, 12_000, 2);
     await importStatement([{ Date: frDate(-2), 'Libellé': 'PRLV EDF', Montant: '-120,00', Solde: '0,00' }], 'gider.csv');
 
     expect((await matchQueue(bankAccount))[0]!.suggestions).toEqual([]);
@@ -183,7 +183,7 @@ describe('eşleştirme kuyruğu', () => {
 
   it('onay uygulanınca para 12.2 kapısından geçer — İKİ KEZ sayılmaz', async () => {
     const reference = `LA-26-${(stamp + 1) % 100000}`;
-    const order = await unpaidSale(reference, 45.9, 3);
+    const order = await unpaidSale(reference, 4590, 3);
     await importStatement([{ Date: frDate(-3), 'Libellé': `VIR SEPA ${reference}`, Montant: '45,90', Solde: '100,00' }], 'onay.csv');
     const balanceBefore = (await accounts.balance(bankAccount)).balance;
 
@@ -191,7 +191,7 @@ describe('eşleştirme kuyruğu', () => {
     expect(await applyOrderMatch(row.movement.id, order.id)).toEqual({ status: 'ok', movementId: row.movement.id });
 
     // Sipariş tahsilatı yazıldı ve durumu türedi…
-    expect(await orders.getById(order.id)).toMatchObject({ amountCollected: 45.9, paymentStatus: 'paid' });
+    expect(await orders.getById(order.id)).toMatchObject({ amountCollectedCents: 4590, paymentStatus: 'paid' });
     // …ama hesabın bakiyesi DEĞİŞMEDİ: import satırı yerini tahsilata bıraktı, para iki kez sayılmadı.
     expect((await accounts.balance(bankAccount)).balance).toBe(balanceBefore);
     expect(await matchQueue(bankAccount)).toEqual([]);
@@ -199,7 +199,7 @@ describe('eşleştirme kuyruğu', () => {
 
   it('eşleşen satır YERİNDE güncellenir — ekstre yeniden yüklenirse para İKİ KEZ girmez', async () => {
     const reference = `LA-26-${(stamp + 3) % 100000}`;
-    const order = await unpaidSale(reference, 45.9, 3);
+    const order = await unpaidSale(reference, 4590, 3);
     const rows = [{ Date: frDate(-3), 'Libellé': `VIR SEPA ${reference}`, Montant: '45,90', Solde: '100,00' }];
     await importStatement(rows, 'yeniden.csv');
 
@@ -212,12 +212,12 @@ describe('eşleştirme kuyruğu', () => {
     expect(again.inserted).toBe(0);
     expect(again.duplicates).toBe(1);
     expect((await accounts.balance(bankAccount)).balance).toBe(balanceAfterMatch);
-    expect(await orders.getById(order.id)).toMatchObject({ amountCollected: 45.9 });
+    expect(await orders.getById(order.id)).toMatchObject({ amountCollectedCents: 4590 });
   });
 
   it('aynı satır iki kez uygulanamaz', async () => {
     const reference = `LA-26-${(stamp + 2) % 100000}`;
-    const order = await unpaidSale(reference, 45.9, 3);
+    const order = await unpaidSale(reference, 4590, 3);
     await importStatement([{ Date: frDate(-3), 'Libellé': `VIR SEPA ${reference}`, Montant: '45,90', Solde: '100,00' }], 'iki-kez.csv');
 
     const row = (await matchQueue(bankAccount))[0]!;

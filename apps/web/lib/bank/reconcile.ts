@@ -49,10 +49,12 @@ export async function matchQueue(accountId: string, opts: { limit?: number } = {
     .map((s) => ({
       orderId: s.id,
       referenceNo: s.referenceNo,
-      outstanding: Math.round((s.total - s.amountCollected + s.amountRefunded) * 100) / 100,
+      // Formül `openAmountCents` ile AYNI olmalı; artık tek satır ve tamsayı (02.9): eskiden burada
+      // euro çıkarılıp `* 100 / 100` ile yuvarlanıyordu — kayan noktada çıkarma, kuruş kaçıran yer.
+      outstandingCents: s.totalCents - s.amountCollectedCents + s.amountRefundedCents,
       saleDate: s.saleDate,
     }))
-    .filter((c) => c.outstanding > 0);
+    .filter((c) => c.outstandingCents > 0);
 
   return bankRows.map((movement) => {
     const suggestions = suggestOrderMatches(

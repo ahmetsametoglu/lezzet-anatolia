@@ -1,7 +1,6 @@
 import 'server-only';
 import { StockService, SupplierProductService, type Db } from '@lezzet/database';
 import { COST_HISTORY_SIZE, replacementCost, type CostBasis } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 
 /**
  * FİYATIN MALİYET TABANI — okuma tarafı (DOMAIN §"Maliyet ve hedef marj").
@@ -34,14 +33,14 @@ export async function readCostBasis(db: Db, variantIds: readonly string[]): Prom
     }
     const last = fallback.get(id);
     // Yedek tek sayıdır: karşılaştıracak geçmişi yok, motor da onu "ok" sayar (bkz. tek alım kuralı).
-    result.set(id, last === undefined ? { status: 'unknown' } : replacementCost([toCents(last)]));
+    result.set(id, last === undefined ? { status: 'unknown' } : replacementCost([last]));
   }
   return result;
 }
 
 /**
- * Tedarikçi eşlemelerinden son alış — birden çok tedarikçi varsa **tercih edilen**, o da yoksa
- * EN DÜŞÜK fiyat. En düşüğü seçmek iyimserlik değil gerçekçilik: yeniden alırken en ucuz
+ * Tedarikçi eşlemelerinden son alış (**cent**) — birden çok tedarikçi varsa **tercih edilen**, o da
+ * yoksa EN DÜŞÜK fiyat. En düşüğü seçmek iyimserlik değil gerçekçilik: yeniden alırken en ucuz
  * tedarikçiye gideriz, fiyat kararının tabanı da o olmalı.
  */
 async function lastPurchaseOf(db: Db, variantIds: string[]): Promise<Map<string, number>> {
@@ -49,9 +48,9 @@ async function lastPurchaseOf(db: Db, variantIds: string[]): Promise<Map<string,
   const best = new Map<string, { price: number; preferred: boolean }>();
 
   for (const row of mappings) {
-    if (row.lastPurchasePrice == null || row.lastPurchasePrice <= 0) continue;
+    if (row.lastPurchasePriceCents == null || row.lastPurchasePriceCents <= 0) continue;
     const current = best.get(row.variantId);
-    const candidate = { price: row.lastPurchasePrice, preferred: row.isPreferred };
+    const candidate = { price: row.lastPurchasePriceCents, preferred: row.isPreferred };
     if (!current) {
       best.set(row.variantId, candidate);
       continue;

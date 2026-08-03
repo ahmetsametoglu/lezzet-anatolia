@@ -262,7 +262,7 @@ export async function confirmCheckoutAction(input: {
     if (input.idempotencyKey) {
       const already = await new OrderService(serviceDb()).findByIdempotencyKey(input.idempotencyKey);
       if (already && already.status !== 'draft' && already.status !== 'cancelled') {
-        return { data: { status: 'placed', orderId: already.id, totalCents: Math.round(already.total * 100) }, errorKey: null };
+        return { data: { status: 'placed', orderId: already.id, totalCents: already.totalCents }, errorKey: null };
       }
     }
 

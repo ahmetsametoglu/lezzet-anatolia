@@ -55,7 +55,7 @@ afterAll(async () => {
 async function createOrder() {
   const { order } = await orders.create(
     { warehouseId, customerId, channel: 'b2c' },
-    [{ variantId, qty: 2, unitPrice: 12.5, vatRate: 5.5 }],
+    [{ variantId, qty: 2, unitPriceCents: 1250, vatRate: 5.5 }],
   );
   return order;
 }
@@ -168,7 +168,7 @@ describe('sipariş yazımı', () => {
     await expect(
       // Olmayan varyant → kalem FK'ye takılır.
       orders.create({ warehouseId, customerId, channel: 'b2c' }, [
-        { variantId: crypto.randomUUID(), qty: 1, unitPrice: 10, vatRate: 5.5 },
+        { variantId: crypto.randomUUID(), qty: 1, unitPriceCents: 1000, vatRate: 5.5 },
       ]),
     ).rejects.toThrow();
 

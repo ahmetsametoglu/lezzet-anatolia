@@ -1,5 +1,4 @@
 import { allowedTransitions, dueDateOf, isOverdue, openAmountCents } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 import type { Order, OrderItem, UserProfile } from '@lezzet/types';
 import type { OrderCountsView, OrderRow } from './orders-types';
 import type { OrderCounts } from '@lezzet/database';
@@ -48,7 +47,7 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
     itemCount: items.length,
     unitCount: items.reduce((sum, i) => sum + i.qty, 0),
     hasBundle: items.some((i) => i.bundleId !== null),
-    totalCents: toCents(order.total),
+    totalCents: order.totalCents,
     deliveryType: order.deliveryType,
     deliveryDate: order.deliveryDate,
     deliveryArea: areaOf(order.addressSnapshot),
@@ -96,13 +95,13 @@ export function toCountsView(counts: OrderCounts): OrderCountsView {
   return {
     byStatus: Object.fromEntries(counts.byStatus),
     total: counts.total,
-    totalCents: toCents(counts.sum.total),
+    totalCents: counts.sum.totalCents,
     codCount: counts.cod.count,
     // Açık tutar formülü MOTORUN: toplamlar doğrusal olduğu için küme toplamına da birebir uyar.
     codOpenCents: openAmountCents({
-      total: counts.cod.total,
-      amountCollected: counts.cod.collected,
-      amountRefunded: counts.cod.refunded,
+      totalCents: counts.cod.totalCents,
+      amountCollectedCents: counts.cod.collectedCents,
+      amountRefundedCents: counts.cod.refundedCents,
     }),
   };
 }

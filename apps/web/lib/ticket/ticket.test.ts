@@ -53,16 +53,16 @@ beforeAll(async () => {
   const variantId = created.variants[0]!.id;
 
   const orders = new OrderService(db);
-  const line = { variantId, qty: 1, unitPrice: 12, vatRate: 5.5 };
+  const line = { variantId, qty: 1, unitPriceCents: 1200, vatRate: 5.5 };
   const mine = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', totalCents: 1200 },
     [line],
   );
   orderId = mine.order.id;
   orderItemId = (await new OrderItemService(db).listByOrder(orderId))[0]!.id;
 
   const theirs = await orders.create(
-    { warehouseId, customerId: otherCustomerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', total: 12 },
+    { warehouseId, customerId: otherCustomerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', totalCents: 1200 },
     [line],
   );
   otherOrderId = theirs.order.id;

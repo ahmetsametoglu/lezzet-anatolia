@@ -64,10 +64,10 @@ afterAll(async () => {
 });
 
 /** Kapıda satış: tek adımda kapanır, maliyet kalemleri sabitlenir, partiler yazılır. */
-async function sell(variantId: string, qty: number, unitPrice: number, opts: { gift?: boolean } = {}) {
+async function sell(variantId: string, qty: number, unitPriceCents: number, opts: { gift?: boolean } = {}) {
   const { order } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: opts.gift ?? false, total: qty * unitPrice },
-    [{ variantId, qty, unitPrice, vatRate: 5.5 }],
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: opts.gift ?? false, totalCents: qty * unitPriceCents },
+    [{ variantId, qty, unitPriceCents, vatRate: 5.5 }],
   );
   const result = await quickSale({ orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
   expect(result.status).toBe('ok');
@@ -80,8 +80,8 @@ describe('ürün kârlılığı GERÇEK partiden hesaplanır', () => {
     await stocks.insert({ warehouseId, variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 200 });
     await stocks.insert({ warehouseId, variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 800 });
 
-    await sell(cheapVariant, 2, 21.1); // 40 € HT ciro, 4 € maliyet
-    await sell(costlyVariant, 2, 21.1); // 40 € HT ciro, 16 € maliyet
+    await sell(cheapVariant, 2, 2110); // 40 € HT ciro, 4 € maliyet
+    await sell(costlyVariant, 2, 2110); // 40 € HT ciro, 16 € maliyet
 
     const products = await productProfits(TODAY);
     const cheap = products.find((u) => u.variantId === cheapVariant)!;
@@ -97,7 +97,7 @@ describe('ürün kârlılığı GERÇEK partiden hesaplanır', () => {
 
   it('fire ürünün marjından düşer — çöpe giden mal gizlenmez', async () => {
     const batch = await stocks.insert({ warehouseId, variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 200 });
-    await sell(cheapVariant, 2, 21.1);
+    await sell(cheapVariant, 2, 2110);
     const beforeRows = await productProfits(TODAY);
     const before = beforeRows.find((u) => u.variantId === cheapVariant)!;
 
@@ -117,7 +117,7 @@ describe('şirket P&L', () => {
     await stocks.insert({ warehouseId, variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 800 });
     const before = await companyPnl(TODAY);
 
-    await sell(costlyVariant, 1, 21.1); // 20 € HT ciro, 8 € COGS
+    await sell(costlyVariant, 1, 2110); // 20 € HT ciro, 8 € COGS
 
     // Genel gider: kira. Stok alımı: aynı dönemde 500 € — COGS'ta zaten sayıldığı için P&L'e
     // İKİNCİ KEZ girmemeli.
@@ -134,7 +134,7 @@ describe('şirket P&L', () => {
 
   it('kanal kırılımı katkı payı seviyesindedir', async () => {
     await stocks.insert({ warehouseId, variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 200 });
-    await sell(cheapVariant, 1, 21.1);
+    await sell(cheapVariant, 1, 2110);
 
     const pnl = await companyPnl(TODAY);
     const b2c = pnl.byChannel.find((c) => c.channel === 'b2c');
@@ -148,7 +148,7 @@ describe('şirket P&L', () => {
     await stocks.insert({ warehouseId, variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 800 });
     const before = await companyPnl(TODAY);
 
-    const gift = await sell(costlyVariant, 1, 21.1, { gift: true });
+    const gift = await sell(costlyVariant, 1, 2110, { gift: true });
 
     const after = await companyPnl(TODAY);
     expect(round2(after.revenue - before.revenue)).toBe(20);
@@ -165,8 +165,8 @@ describe('eksik maliyet kârı şişirmez', () => {
     const before = await companyPnl(TODAY);
 
     // Teslim edilmiş ama kapanmamış sipariş: `cogs_amount` henüz sabitlenmedi.
-    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', total: 21.1 }, [
-      { variantId: cheapVariant, qty: 1, fulfilledQty: 1, unitPrice: 21.1, vatRate: 5.5 },
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', totalCents: 2110 }, [
+      { variantId: cheapVariant, qty: 1, fulfilledQty: 1, unitPriceCents: 2110, vatRate: 5.5 },
     ]);
     await orders.update({ id: order.id, status: 'delivered', referenceNo: `LA-KR-${stamp}` });
     await db.from('order_status_log').insert({ order_id: order.id, from_status: 'out_for_delivery', to_status: 'delivered' });

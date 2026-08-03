@@ -20,6 +20,8 @@ import {
   type KeysetCursor,
   type Page,
 } from '@lezzet/types';
+import { toCents } from '@lezzet/helper';
+import { z } from 'zod';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
 import { SupplierProductService } from './supplier.service';
@@ -28,7 +30,8 @@ import { SupplierProductService } from './supplier.service';
 export interface DraftLine {
   variantId: string;
   qty: number;
-  unitPrice?: number | null;
+  /** Beklenen alış (**cent**); verilmezse eşlemedeki "geçen sefer kaçtı" kullanılır. */
+  unitPriceCents?: number | null;
   /**
    * İsteğe bağlı hedef depo (C7) — "20 koli STR'ye, 10 koli KEHL'e". Tedarikçi listesine yazılır ve
    * kabul eden depocu kendi payını listeden okur. Boşsa hedefi kabul eden depo söyler: bu bir NİYET
@@ -46,7 +49,32 @@ export interface PurchaseListLine {
   packQty: number | null;
 }
 
+/**
+ * Liste satırının GÖMÜLÜ kalemlerini cent'e indirir (02.9 · `STACK §8`).
+ *
+ * `moneyFields` yalnız ÜST DÜZEY alanlara iner ve projeksiyonun üst düzeyi `purchase_order`'dır;
+ * kalem `items:purchase_order_item(...)` ile gelen BAŞKA bir tablonun satırıdır ve euro taşır. Şema
+ * tamsayı beklediği için çevrim doğrulamadan ÖNCE olmalı — bu yüzden `preprocess`, sonradan bir
+ * `map` değil: `getPageAs` satırı kendi içinde doğruluyor ve araya girilecek başka nokta yok.
+ *
+ * Çevrim `toCents` ile; elle `* 100` `STACK §8`'de yasak.
+ */
+const PurchaseOrderRowInCentsSchema = z.preprocess((raw) => {
+  const row = raw as { items?: unknown };
+  if (!Array.isArray(row?.items)) return raw;
+  return {
+    ...row,
+    items: row.items.map((item) => {
+      const { unitPrice, ...rest } = item as { unitPrice?: number | string | null };
+      return { ...rest, unitPriceCents: unitPrice == null ? null : toCents(Number(unitPrice)) };
+    }),
+  };
+}, PurchaseOrderRowSchema);
+
 export class PurchaseOrderItemService extends BaseDbService<PurchaseOrderItem, PurchaseOrderItemInsert, PurchaseOrderItemUpdate> {
+  /** Kolon `purchase_order_item.unit_price` (euro numeric); app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ['unitPriceCents'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'purchase_order_item', PurchaseOrderItemSchema, PurchaseOrderItemInsertSchema, PurchaseOrderItemUpdateSchema);
   }
@@ -103,7 +131,7 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
    * `target_warehouse_id`'sinden değil: o bir niyet beyanıdır, kısıt değil (K6).
    */
   async listRows(opts: { limit?: number; cursor?: KeysetCursor; status?: PurchaseOrderStatus; supplierId?: string } = {}): Promise<Page<PurchaseOrderRow>> {
-    return this.getPageAs(PurchaseOrderRowSchema, { status: opts.status, supplierId: opts.supplierId }, {
+    return this.getPageAs(PurchaseOrderRowInCentsSchema, { status: opts.status, supplierId: opts.supplierId }, {
       // `created_at` hem GÖRÜNÜM hem İMLEÇ alanı — dar şema onu taşısa da select'te bulunması şart
       // (bkz. `pageOf`): eksikse ikinci sayfa istenemez.
       select:
@@ -149,7 +177,9 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
         variantId: line.variantId,
         supplierProductId: byVariant.get(line.variantId)?.id ?? null,
         qty: line.qty,
-        unitPrice: line.unitPrice ?? byVariant.get(line.variantId)?.lastPurchasePrice ?? null,
+        // İkisi de cent: çağıranın verdiği fiyat da, eşlemedeki son alış da (`STACK §8`) — aynı
+        // `??` zincirinde iki farklı birim yan yana duramaz.
+        unitPriceCents: line.unitPriceCents ?? byVariant.get(line.variantId)?.lastPurchasePriceCents ?? null,
         targetWarehouseId: line.targetWarehouseId ?? null,
       })),
     );

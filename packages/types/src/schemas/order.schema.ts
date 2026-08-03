@@ -80,10 +80,11 @@ export const OrderSchema = z.object({
   carrier: CarrierEnum.nullable(),
   trackingNumber: z.string().nullable(),
 
-  shippingFee: dbNumeric,
-  total: dbNumeric,
+  // Para **cent** (02.9 · STACK §8); DB kolonları euro `numeric`, dönüşüm `OrderService.moneyFields`.
+  shippingFeeCents: z.number().int(),
+  totalCents: z.number().int(),
   discountId: z.string().uuid().nullable(),
-  discountAmount: dbNumeric,
+  discountAmountCents: z.number().int(),
   /**
    * İnen indirimin müşteriye görünen adı, sipariş anındaki hâliyle (`Discount.publicLabel` kopyası).
    * Kampanya yeniden adlandırılır ya da silinirse geçmiş siparişin maili/fişi değişmesin diye
@@ -91,12 +92,12 @@ export const OrderSchema = z.object({
    */
   discountLabel: LocalizedTextDraftSchema.nullable(),
   /** CACHE — kaynak `MoneyMovement` (modül 12); ödeme durumu bunlardan türetilir. */
-  amountCollected: dbNumeric,
-  amountRefunded: dbNumeric,
-  cogsAmount: dbNumeric.nullable(),
-  deliveryCost: dbNumeric.nullable(),
-  paymentFee: dbNumeric.nullable(),
-  packagingCost: dbNumeric.nullable(),
+  amountCollectedCents: z.number().int(),
+  amountRefundedCents: z.number().int(),
+  cogsAmountCents: z.number().int().nullable(),
+  deliveryCostCents: z.number().int().nullable(),
+  paymentFeeCents: z.number().int().nullable(),
+  packagingCostCents: z.number().int().nullable(),
 
   createdAt: z.string(),
 });
@@ -121,10 +122,10 @@ export const OrderInsertSchema = z.object({
   deliveryCountry: CountryEnum.optional(),
   vatNumberSnapshot: z.string().nullish(),
   vatTreatment: VatTreatmentEnum.optional(),
-  shippingFee: z.number().nonnegative().optional(),
-  total: z.number().nonnegative().optional(),
+  shippingFeeCents: z.number().int().nonnegative().optional(),
+  totalCents: z.number().int().nonnegative().optional(),
   discountId: z.string().uuid().nullish(),
-  discountAmount: z.number().nonnegative().optional(),
+  discountAmountCents: z.number().int().nonnegative().optional(),
   discountLabel: LocalizedTextDraftSchema.nullish(),
   locale: PreferredLanguageEnum.nullish(),
   /** Çift sipariş kalkanı (0015) — checkout denemesinin anahtarı; yalnız web akışı yazar. */
@@ -160,9 +161,10 @@ export const OrderItemSchema = z.object({
   fulfilledQty: z.number().int(),
   stockId: z.string().uuid().nullable(),
   bundleId: z.string().uuid().nullable(),
-  unitPrice: dbNumeric,
-  /** Sepet indiriminin bu kaleme ORANSAL payı — kısmi iade ve KDV indirimli birimden hesaplanır. */
-  lineDiscountAmount: dbNumeric,
+  unitPriceCents: z.number().int(),
+  /** Sepet indiriminin bu kaleme ORANSAL payı (**cent**) — kısmi iade ve KDV indirimli birimden. */
+  lineDiscountAmountCents: z.number().int(),
+  /** ORAN, para değil (5.5 = %5,5) — bu yüzden `…Cents` almaz ve `dbNumeric` kalır. */
   vatRate: dbNumeric,
   returnDisposition: ReturnDispositionEnum.nullable(),
 });
@@ -175,8 +177,8 @@ export const OrderItemInsertSchema = z.object({
   fulfilledQty: z.number().int().nonnegative().optional(),
   stockId: z.string().uuid().nullish(),
   bundleId: z.string().uuid().nullish(),
-  unitPrice: z.number().nonnegative(),
-  lineDiscountAmount: z.number().nonnegative().optional(),
+  unitPriceCents: z.number().int().nonnegative(),
+  lineDiscountAmountCents: z.number().int().nonnegative().optional(),
   vatRate: z.number().nonnegative(),
   returnDisposition: ReturnDispositionEnum.nullish(),
 });
@@ -246,9 +248,10 @@ export const CloseResultSchema = z.object({
   ok: z.boolean(),
   reason: z.literal('stale').optional(),
   currentStatus: OrderStatusEnum,
-  cogsAmount: dbNumeric.optional(),
-  deliveryCost: dbNumeric.optional(),
-  packagingCost: dbNumeric.optional(),
+  // RPC dönüşü euro; cent'e çevrim servis sınırında (02.9 · STACK §8) — jsonb tablo satırı değildir.
+  cogsAmountCents: z.number().int().optional(),
+  deliveryCostCents: z.number().int().optional(),
+  packagingCostCents: z.number().int().optional(),
 });
 export type CloseResult = z.infer<typeof CloseResultSchema>;
 
@@ -263,7 +266,7 @@ export const QuickSaleResultSchema = z.object({
   /** Hızlı satışta referans BURADA üretilir — ilk kalıcı durum `completed`'dır. */
   referenceNo: z.string().nullish(),
   consumedQty: z.number().int().optional(),
-  cogsAmount: dbNumeric.optional(),
+  cogsAmountCents: z.number().int().optional(),
   /** `insufficient_stock`'ta: hangi varyant ve elde ne kadar var. */
   variantId: z.string().uuid().optional(),
   available: z.number().int().optional(),
@@ -320,20 +323,21 @@ export type TransitionResult = z.infer<typeof TransitionResultSchema>;
 /**
  * `order_counts` RPC'sinin satırı (09.7) — sipariş ekranının sekme sayaçları ve alt şerit toplamı.
  *
- * Tutarlar HAM KOLON toplamıdır (euro): "açık tutar" formülü burada değil, motorda uygulanır
+ * Tutarlar HAM KOLON toplamıdır: "açık tutar" formülü burada değil, motorda uygulanır
  * (`openAmountCents`). Toplama doğrusal olduğu için sonuç birebir aynı, ama kural tek yerde kalır.
+ * RPC euro toplar; cent'e çevrim servis sınırındadır (02.9 · STACK §8).
  */
 export const OrderCountsRowSchema = z.object({
   /** Duruma göre adet — listede görünmeyen durum anahtarı hiç gelmez (sıfırları yazmaz). */
   byStatus: z.record(z.number().int()),
   total: z.number().int(),
-  sumTotal: dbNumeric,
-  sumCollected: dbNumeric,
-  sumRefunded: dbNumeric,
+  sumTotalCents: z.number().int(),
+  sumCollectedCents: z.number().int(),
+  sumRefundedCents: z.number().int(),
   /** Kapıda tahsilat bekleyen siparişler — peşin ödenmemiş, vadesiz, kapı yöntemli. */
   codCount: z.number().int(),
-  codTotal: dbNumeric,
-  codCollected: dbNumeric,
-  codRefunded: dbNumeric,
+  codTotalCents: z.number().int(),
+  codCollectedCents: z.number().int(),
+  codRefundedCents: z.number().int(),
 });
 export type OrderCountsRow = z.infer<typeof OrderCountsRowSchema>;

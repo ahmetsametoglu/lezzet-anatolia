@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { toCents } from '@lezzet/helper';
 import type { OrderSale } from '@lezzet/types';
 import { companyProfit, orderContribution, variantProfit, type SoldLine } from './profit';
 
@@ -39,33 +40,33 @@ const BASE_SALE: OrderSale = {
   deliveryProof: null,
   carrier: null,
   trackingNumber: null,
-  shippingFee: 0,
-  total: 0,
+  shippingFeeCents: 0,
+  totalCents: 0,
   discountId: null,
   discountLabel: null,
-  discountAmount: 0,
-  amountCollected: 0,
-  amountRefunded: 0,
-  cogsAmount: null,
-  deliveryCost: null,
-  paymentFee: null,
-  packagingCost: null,
+  discountAmountCents: 0,
+  amountCollectedCents: 0,
+  amountRefundedCents: 0,
+  cogsAmountCents: null,
+  deliveryCostCents: null,
+  paymentFeeCents: null,
+  packagingCostCents: null,
   createdAt: '2026-03-12T09:00:00.000Z',
 };
 
 const sale = (over: Partial<OrderSale> = {}): OrderSale => ({ ...BASE_SALE, ...over });
 const line = (over: Partial<SoldLine['item']> = {}) => ({
-  qty: 1, fulfilledQty: 1, unitPrice: 10, lineDiscountAmount: 0, vatRate: 5.5, ...over,
+  qty: 1, fulfilledQty: 1, unitPriceCents: 1000, lineDiscountAmountCents: 0, vatRate: 5.5, ...over,
 });
 
 /** Kapanmış sipariş: maliyet kalemleri sabitlenmiş. */
 const closed = (over: Partial<OrderSale> = {}) =>
-  sale({ cogsAmount: 0, deliveryCost: 0, paymentFee: 0, packagingCost: 0, ...over });
+  sale({ cogsAmountCents: 0, deliveryCostCents: 0, paymentFeeCents: 0, packagingCostCents: 0, ...over });
 
 describe('sipariş katkı payı', () => {
   it('kâr HT üstünden hesaplanır — KDV ciro değildir', () => {
     // 21.10 € TTC @ %5,5 → 20 € HT. Maliyet 8 € → katkı 12 €.
-    const result = orderContribution(closed({ cogsAmount: 8 }), [line({ unitPrice: 21.1 })]);
+    const result = orderContribution(closed({ cogsAmountCents: 800 }), [line({ unitPriceCents: 2110 })]);
 
     expect(result.revenue).toBe(20);
     expect(result.contribution).toBe(12);
@@ -74,8 +75,8 @@ describe('sipariş katkı payı', () => {
 
   it('dört doğrudan gider de düşülür — genel gider karışmaz', () => {
     const result = orderContribution(
-      closed({ cogsAmount: 8, deliveryCost: 2.5, paymentFee: 0.6, packagingCost: 1.2, shippingFee: 0 }),
-      [line({ unitPrice: 21.1 })],
+      closed({ cogsAmountCents: 800, deliveryCostCents: 250, paymentFeeCents: 60, packagingCostCents: 120, shippingFeeCents: 0 }),
+      [line({ unitPriceCents: 2110 })],
     );
 
     expect(result.costs).toEqual({ cogs: 8, delivery: 2.5, paymentFee: 0.6, packaging: 1.2 });
@@ -85,8 +86,8 @@ describe('sipariş katkı payı', () => {
   });
 
   it('kargo ciroya girer, teslimat maliyeti gidere — ikisi ayrı gerçektir', () => {
-    const withoutShipping = orderContribution(closed({ cogsAmount: 8 }), [line({ unitPrice: 21.1 })]);
-    const withShipping = orderContribution(closed({ cogsAmount: 8, shippingFee: 7.9, deliveryCost: 6 }), [line({ unitPrice: 21.1 })]);
+    const withoutShipping = orderContribution(closed({ cogsAmountCents: 800 }), [line({ unitPriceCents: 2110 })]);
+    const withShipping = orderContribution(closed({ cogsAmountCents: 800, shippingFeeCents: 790, deliveryCostCents: 600 }), [line({ unitPriceCents: 2110 })]);
 
     expect(withShipping.revenue).toBeGreaterThan(withoutShipping.revenue);
     // Kargo ücreti teslimat maliyetini karşılamıyorsa katkı payı DÜŞER — rapor bunu göstermeli.
@@ -97,8 +98,8 @@ describe('sipariş katkı payı', () => {
     // DOMAIN §5: `Price.amount` kanalın tabanında saklanır — b2c TTC, b2b HT. Aynı sayı (100 €)
     // iki kanalda iki ayrı şey demektir: b2c'de 94,79 HT, b2b'de 100 HT. Tek yön varsayıldığında
     // b2b cirosu her satırda %5,5 eriyordu ve aynı hata muhasebe dosyasına da geçiyordu.
-    const b2b = orderContribution(closed({ channel: 'b2b', cogsAmount: 60 }), [line({ unitPrice: 100 })]);
-    const b2c = orderContribution(closed({ channel: 'b2c', cogsAmount: 60 }), [line({ unitPrice: 100 })]);
+    const b2b = orderContribution(closed({ channel: 'b2b', cogsAmountCents: 6000 }), [line({ unitPriceCents: 10_000 })]);
+    const b2c = orderContribution(closed({ channel: 'b2c', cogsAmountCents: 6000 }), [line({ unitPriceCents: 10_000 })]);
 
     expect(b2b.revenue).toBe(100);
     expect(b2b.contribution).toBe(40);
@@ -108,15 +109,15 @@ describe('sipariş katkı payı', () => {
 
   it('reverse charge\'da KDV yoktur — tutar olduğu gibi cirodur', () => {
     const result = orderContribution(
-      closed({ channel: 'b2b', vatTreatment: 'intra_eu_b2b_reverse_charge', deliveryCountry: 'DE', cogsAmount: 60 }),
-      [line({ unitPrice: 100 })],
+      closed({ channel: 'b2b', vatTreatment: 'intra_eu_b2b_reverse_charge', deliveryCountry: 'DE', cogsAmountCents: 6000 }),
+      [line({ unitPriceCents: 10_000 })],
     );
 
     expect(result.revenue).toBe(100);
   });
 
   it('patron ikramı kârda SAYILIR — parayı patron öder', () => {
-    const result = orderContribution(closed({ cogsAmount: 8, isGiftOrder: true }), [line({ unitPrice: 21.1 })]);
+    const result = orderContribution(closed({ cogsAmountCents: 800, isGiftOrder: true }), [line({ unitPriceCents: 2110 })]);
 
     expect(result.isGiftOrder).toBe(true);
     expect(result.contribution).toBe(12); // ikram olması kârı değiştirmez
@@ -126,7 +127,7 @@ describe('sipariş katkı payı', () => {
 describe('eksik maliyet 0 SAYILMAZ', () => {
   it('kapanmamış siparişin kârı hesaplanmaz, cirosu durur', () => {
     // Teslim edilmiş ama `completed` olmamış: `cogs_amount` henüz sabitlenmedi.
-    const result = orderContribution(sale({ status: 'delivered' }), [line({ unitPrice: 21.1 })]);
+    const result = orderContribution(sale({ status: 'delivered' }), [line({ unitPriceCents: 2110 })]);
 
     expect(result.costsFixed).toBe(false);
     expect(result.contribution).toBeNull();
@@ -136,8 +137,8 @@ describe('eksik maliyet 0 SAYILMAZ', () => {
 
   it('şirket P&L fiyatlanmamışı kârdan düşer ama SAYI ve CİRO olarak gösterir', () => {
     const pnl = companyProfit({ from: '2026-03-01', to: '2026-03-31' }, [
-      orderContribution(closed({ cogsAmount: 8 }), [line({ unitPrice: 21.1 })]),
-      orderContribution(sale({ status: 'delivered' }), [line({ unitPrice: 21.1 })]),
+      orderContribution(closed({ cogsAmountCents: 800 }), [line({ unitPriceCents: 2110 })]),
+      orderContribution(sale({ status: 'delivered' }), [line({ unitPriceCents: 2110 })]),
     ], { lossCost: 0, overhead: 0 });
 
     expect(pnl.orderCount).toBe(1);
@@ -151,7 +152,7 @@ describe('eksik maliyet 0 SAYILMAZ', () => {
 describe('ürün kârlılığı — fire düşülmüş net marj', () => {
   const soldLine = (variantId: string, over: Partial<SoldLine> = {}): SoldLine => ({
     variantId,
-    item: line({ unitPrice: 21.1 }),
+    item: line({ unitPriceCents: 2110 }),
     channel: 'b2c',
     costCents: 800,
     ...over,
@@ -195,8 +196,10 @@ describe('ürün kârlılığı — fire düşülmüş net marj', () => {
 });
 
 describe('şirket kârlılığı — tam P&L', () => {
-  const contribution = (channel: 'b2c' | 'b2b', cogs: number, unitPrice: number) =>
-    orderContribution(closed({ channel, cogsAmount: cogs }), [line({ unitPrice })]);
+  // Girdiler EURO okunur (testin okunurluğu için), cent'e burada inilir — sayıların 21,1 kalması
+  // "20 HT − 8 = 12" gibi yorumların satırla aynı dili konuşmasını sağlıyor.
+  const contribution = (channel: 'b2c' | 'b2b', cogsEuro: number, unitPriceEuro: number) =>
+    orderContribution(closed({ channel, cogsAmountCents: toCents(cogsEuro) }), [line({ unitPriceCents: toCents(unitPriceEuro) })]);
 
   it('genel gider ve fire BİR KEZ düşülür, ürüne dağıtılmaz', () => {
     const pnl = companyProfit({ from: '2026-03-01', to: '2026-03-31' }, [

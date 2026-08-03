@@ -73,11 +73,16 @@ export interface VariantOption {
    */
   listPriceCents: number | null;
   /**
-   * Tahmini birim maliyet (KDV hariç €) — eldeki partilerin ağırlıklı ortalama alış fiyatı. Gerçek
-   * COGS parti başına belli ve sipariş anında kesinleşir; bu, fiyat verirken bakılan tahmindir.
+   * Tahmini birim maliyet (KDV hariç, **cent**) — eldeki partilerin ağırlıklı ortalama alış fiyatı.
+   * Gerçek COGS parti başına belli ve sipariş anında kesinleşir; bu, fiyat verirken bakılan tahmindir.
    * `null` = fiyatlı parti yok → marj hesaplanmaz (0 saymak marjı şişirirdi).
+   *
+   * Alan `unitCost` adıyla ve euro künyesiyle duruyordu; kaynağı (`unitCostCentsMap`) dilim 3'te
+   * cent'e geçtiği hâlde tüketici üstüne bir kez daha `toCents` uyguluyordu — paket kalem maliyeti
+   * 100 KAT şişiyor ve her kalem "marj altı" sayılıyordu. Adı doğru olsaydı hata satıra bakınca
+   * görünürdü; `STACK §8`'in adlandırma kuralının varlık sebebi tam olarak bu.
    */
-  unitCost: number | null;
+  unitCostCents: number | null;
   /** Ürünün KDV oranı — paketin tek oranı yoktur, HT'ye iniş kalem kalem yapılır. */
   vatRate: number;
   /** Ürünün hedef kâr marjı (%) — kalemin payı bunun altına düşerse şerit sayar. */

@@ -51,7 +51,7 @@ afterAll(async () => {
 });
 
 async function createOrder(qty = 5) {
-  return orders.create({ warehouseId, customerId, channel: 'b2c' }, [{ variantId, qty, unitPrice: 10, vatRate: 5.5 }]);
+  return orders.create({ warehouseId, customerId, channel: 'b2c' }, [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }]);
 }
 
 describe('hazırlık onayı (06.5)', () => {

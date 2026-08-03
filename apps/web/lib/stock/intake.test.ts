@@ -60,16 +60,16 @@ afterAll(async () => {
   await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
-/** Tedarik siparişi — beklenen adet ve birim maliyetle (admin girer, depocu görmez). */
-async function draftPurchaseOrder(qty: number, unitPrice: number) {
-  const { order } = await new PurchaseOrderService(db).createDraft(supplierId, [{ variantId, qty, unitPrice }]);
+/** Tedarik siparişi — beklenen adet ve birim maliyetle (**cent**; admin girer, depocu görmez). */
+async function draftPurchaseOrder(qty: number, unitPriceCents: number) {
+  const { order } = await new PurchaseOrderService(db).createDraft(supplierId, [{ variantId, qty, unitPriceCents }]);
   createdOrders.push(order.id);
   return order.id;
 }
 
 describe('PO’lu mal kabul', () => {
   it('form tedarik siparişinden DOLU gelir ve fiyat taşımaz', async () => {
-    const purchaseOrderId = await draftPurchaseOrder(20, 6);
+    const purchaseOrderId = await draftPurchaseOrder(20, 600);
 
     const rows: IntakeFormRow[] = await openIntakeForm(purchaseOrderId);
 
@@ -81,7 +81,7 @@ describe('PO’lu mal kabul', () => {
   });
 
   it('maliyet PO’dan eşleşir — depocu fiyat girmeden parti alış fiyatıyla doğar', async () => {
-    const purchaseOrderId = await draftPurchaseOrder(20, 6);
+    const purchaseOrderId = await draftPurchaseOrder(20, 600);
 
     // Ekranın göndereceği satır şekli — para alanı yok, tip de kabul etmez.
     const lines: IntakeFormLine[] = [{ variantId, qty: 20, expiryDate: dayOffset(90), lotNumber: 'LOT-1', location: 'Dolap A' }];
@@ -96,7 +96,7 @@ describe('PO’lu mal kabul', () => {
   });
 
   it('eksik gelen mal FARK olarak işaretlenir, kabul yine tamamlanır', async () => {
-    const purchaseOrderId = await draftPurchaseOrder(20, 6);
+    const purchaseOrderId = await draftPurchaseOrder(20, 600);
 
     const outcome = await receiveGoods({ warehouseId,
       purchaseOrderId,
@@ -146,7 +146,7 @@ describe('satın alma kaydı — maliyet admin yolundan gelir', () => {
   it('SATIR maliyeti PO’yu EZER — fatura gerçeği söyler', async () => {
     // Tedarikçi 6 €'ya ısmarlanan malı 8 €'ya göndermiş. "Son alış fiyatı" 8 olmalı, yoksa
     // `auto_price` gerçekte olmayan bir marjla çalışır.
-    const purchaseOrderId = await draftPurchaseOrder(20, 6);
+    const purchaseOrderId = await draftPurchaseOrder(20, 600);
 
     const outcome = await receivePurchase({ warehouseId,
       purchaseOrderId,
@@ -158,7 +158,7 @@ describe('satın alma kaydı — maliyet admin yolundan gelir', () => {
   });
 
   it('satır maliyeti YOKSA PO’dan eşleşir — admin yalnız sapanı düzeltir', async () => {
-    const purchaseOrderId = await draftPurchaseOrder(20, 6);
+    const purchaseOrderId = await draftPurchaseOrder(20, 600);
 
     const outcome = await receivePurchase({ warehouseId,
       purchaseOrderId,

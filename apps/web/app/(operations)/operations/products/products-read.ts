@@ -62,7 +62,7 @@ export function toVariantOptions(
         imageUrl,
         listPriceCents: listPriceCents.get(v.id) ?? null,
         // Maliyet ve KDV oranı ÜRÜNDEN gelir; marj ikisi olmadan hesaplanamaz.
-        unitCost: unitCosts.get(v.id) ?? null,
+        unitCostCents: unitCosts.get(v.id) ?? null,
         vatRate: p.vatRate,
         targetMarginPercent: p.targetMarginPercent ?? null,
         addable: blockedReason === null,

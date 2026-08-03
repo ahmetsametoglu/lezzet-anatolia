@@ -111,7 +111,7 @@ function marginOf(contributionCents: number, revenueCents: number): number | nul
  * daraltmak, açık bir siparişin kârını sormak için sahte bir satış kaydı uydurmayı gereksiz kılar.
  */
 export type ContributionInput = SaleVatBasis &
-  Pick<OrderSale, 'id' | 'saleDate' | 'isGiftOrder' | 'cogsAmount' | 'deliveryCost' | 'paymentFee' | 'packagingCost'>;
+  Pick<OrderSale, 'id' | 'saleDate' | 'isGiftOrder' | 'cogsAmountCents' | 'deliveryCostCents' | 'paymentFeeCents' | 'packagingCostCents'>;
 
 /**
  * Bir siparişin katkı payı. Maliyetler **kapanışta sabitlenmiş snapshot'lardır** — geçmiş kârın
@@ -120,15 +120,18 @@ export type ContributionInput = SaleVatBasis &
 export function orderContribution(sale: ContributionInput, items: readonly AccountingLine[]): OrderContribution {
   const revenue = saleNetCents(sale, items);
   // `cogs_amount` kapanışta yazılır; null ise sipariş teslim edilmiş ama kapanmamıştır.
-  const costsFixed = sale.cogsAmount !== null;
+  const costsFixed = sale.cogsAmountCents !== null;
 
+  // Toplam CENT üstünden alınır, euro'ya yalnız çıktı alanları için inilir (02.9): dört kalemi tek
+  // tek euro'ya çevirip toplasaydık her kalemde bir kuruş yuvarlama riski birikirdi.
+  const costCents =
+    (sale.cogsAmountCents ?? 0) + (sale.deliveryCostCents ?? 0) + (sale.paymentFeeCents ?? 0) + (sale.packagingCostCents ?? 0);
   const costs: DirectCosts = {
-    cogs: sale.cogsAmount ?? 0,
-    delivery: sale.deliveryCost ?? 0,
-    paymentFee: sale.paymentFee ?? 0,
-    packaging: sale.packagingCost ?? 0,
+    cogs: fromCents(sale.cogsAmountCents ?? 0),
+    delivery: fromCents(sale.deliveryCostCents ?? 0),
+    paymentFee: fromCents(sale.paymentFeeCents ?? 0),
+    packaging: fromCents(sale.packagingCostCents ?? 0),
   };
-  const costCents = toCents(costs.cogs) + toCents(costs.delivery) + toCents(costs.paymentFee) + toCents(costs.packaging);
   const contributionCents = revenue - costCents;
 
   return {

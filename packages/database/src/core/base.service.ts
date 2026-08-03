@@ -147,7 +147,9 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
       if (!(field in out)) continue;
       const value = out[field];
       delete out[field];
-      out[BaseDbService.withoutCents(field)] = value === null || value === undefined ? null : fromCents(Number(value));
+      // `undefined` KORUNUR, `null`a indirilmez: yazma yolunda "gönderme" (kolon varsayılanını alır)
+      // ile "boşalt" ayrı şeylerdir; ikisini birleştirmek `not null default` kolonları kırar.
+      out[BaseDbService.withoutCents(field)] = value === null || value === undefined ? value : fromCents(Number(value));
     }
     return appToDb<Record<string, unknown>>(out);
   }

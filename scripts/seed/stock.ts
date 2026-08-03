@@ -49,7 +49,7 @@ export async function seedStock(
       qty: i === 2 ? 30 : 48 + i * 6, // üçüncü kalem eksik → fark raporu
       expiryDate: gun(150 + i * 20),
       lotNumber: `A227-${String(i + 1).padStart(2, '0')}`,
-      unitCost: euro(2.2 + i * 0.4),
+      unitCostCents: toCents(2.2 + i * 0.4),
       location: `Dolap ${1 + (i % 3)}`,
     })),
   });
@@ -78,7 +78,8 @@ export async function seedStock(
           qty: k.qty, // TAM: sipariş miktarının aynısı
           expiryDate: gun(60 + i * 25),
           lotNumber: `ALS-${String(i + 1).padStart(2, '0')}`,
-          unitCost: euro(Number(k.unit_price)),
+          // Ham kolon okunuyor (euro `numeric`) — servis sınırından geçmediği için çevrim burada.
+          unitCostCents: toCents(Number(k.unit_price)),
           location: 'Soğuk oda',
         })),
       });
@@ -96,7 +97,7 @@ export async function seedStock(
       qty: 20 + i * 4,
       expiryDate: gun(25 + i * 15),
       lotNumber: `AF-${gun(-3).replaceAll('-', '')}-${i}`,
-      unitCost: euro(2.9 + i * 0.2),
+      unitCostCents: toCents(2.9 + i * 0.2),
       location: 'Soğuk oda',
     })),
   });

@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { OrderItemInsert } from '@lezzet/types';
 import { serviceDb } from '../client';
 import { createTestWarehouse } from '../testing/warehouse';
 import { purgeTestData } from '../testing/cleanup';
@@ -59,11 +60,14 @@ afterAll(async () => {
 });
 
 /** En sade geçerli sipariş: tek kalem, indirimsiz. Testler bunun üstüne tek alan değiştirir. */
-const header = () => ({ customerId, warehouseId, channel: 'b2c' as const, total: 20 });
-const line = (overrides: Record<string, unknown> = {}) => ({
+const header = () => ({ customerId, warehouseId, channel: 'b2c' as const, totalCents: 2000 });
+// `overrides` TİPLİ (02.9): `Record<string, unknown>` yazım hatasını yutuyordu — alan adı değişince
+// eski ad sessizce düşer ve test kendi kurduğu zemini doğrulamaz. Aynı açık `cart/discount.test`'te
+// gerçekten yaşandı: koşulsuz kalan kupon uygulandı, iki test sebebini söylemeden patladı.
+const line = (overrides: Partial<OrderItemInsert> = {}): Omit<OrderItemInsert, 'orderId'> => ({
   variantId,
   qty: 2,
-  unitPrice: 10,
+  unitPriceCents: 1000,
   vatRate: 5.5,
   ...overrides,
 });
@@ -71,8 +75,8 @@ const line = (overrides: Record<string, unknown> = {}) => ({
 describe('create — üç tablo tek gerçek', () => {
   it('başlık, kalemler ve kullanım kaydı birlikte yazılır', async () => {
     const { order, items } = await orders.create(
-      { ...header(), total: 17, discountAmount: 3, discountId },
-      [line({ lineDiscountAmount: 2 }), line({ variantId: secondVariantId, qty: 1, unitPrice: 5, lineDiscountAmount: 1 })],
+      { ...header(), totalCents: 1700, discountAmountCents: 300, discountId },
+      [line({ lineDiscountAmountCents: 200 }), line({ variantId: secondVariantId, qty: 1, unitPriceCents: 500, lineDiscountAmountCents: 100 })],
     );
 
     expect(items).toHaveLength(2);
@@ -90,7 +94,7 @@ describe('create — üç tablo tek gerçek', () => {
     // Bu üçü gövdede hiç yok; RPC gelen anahtarları kolonlarla kesiştirdiği için ifadeye girmiyorlar.
     expect(order.status).toBe('draft');
     expect(order.paymentStatus).toBe('pending');
-    expect(order.amountCollected).toBe(0);
+    expect(order.amountCollectedCents).toBe(0);
     // Kalem tarafında da aynı: `fulfilled_qty` gönderilmedi, varsayılanı geldi.
     const { items } = (await orders.getWithItems(order.id))!;
     expect(items[0]?.fulfilledQty).toBe(0);
@@ -132,8 +136,8 @@ describe('yarım yazım geride hiçbir şey bırakmaz', () => {
     // SONRA yazılıyordu; düşerse ortada indirimli ama kotayı hiç tüketmemiş bir sipariş kalırdı.
     await expect(
       orders.create(
-        { ...header(), total: 17, discountAmount: 3, discountId: '00000000-0000-0000-0000-000000000000' },
-        [line({ lineDiscountAmount: 3 })],
+        { ...header(), totalCents: 1700, discountAmountCents: 300, discountId: '00000000-0000-0000-0000-000000000000' },
+        [line({ lineDiscountAmountCents: 300 })],
       ),
     ).rejects.toThrow();
 
@@ -152,7 +156,7 @@ describe('indirim dengesi (kısıt tetikleyicisi)', () => {
   it('başlıktaki indirim kalemlere dağıtılmadıysa sipariş YAZILMAZ', async () => {
     const before = await countOrders();
 
-    await expect(orders.create({ ...header(), total: 17, discountAmount: 3 }, [line()])).rejects.toThrow(/indirim/i);
+    await expect(orders.create({ ...header(), totalCents: 1700, discountAmountCents: 300 }, [line()])).rejects.toThrow(/indirim/i);
 
     // Kontrol COMMIT anında yapılıyor; ihlal yalnız hata vermekle kalmayıp yazımı geri almalı.
     expect(await countOrders()).toBe(before);
@@ -161,13 +165,13 @@ describe('indirim dengesi (kısıt tetikleyicisi)', () => {
   it('payların toplamı tutuyorsa yazılır — kuruş artığı dahil', async () => {
     // 3,00 € üç kaleme bölünürse pay 1,00 + 1,00 + 1,00 değil 1,01 + 1,00 + 0,99 olabilir; motorun
     // garantisi eşit dağıtım değil, TOPLAMIN korunması. Kısıt da onu denetliyor.
-    const { order } = await orders.create({ ...header(), total: 27, discountAmount: 3 }, [
-      line({ lineDiscountAmount: 1.01 }),
-      line({ variantId: secondVariantId, lineDiscountAmount: 1 }),
-      line({ lineDiscountAmount: 0.99 }),
+    const { order } = await orders.create({ ...header(), totalCents: 2700, discountAmountCents: 300 }, [
+      line({ lineDiscountAmountCents: 101 }),
+      line({ variantId: secondVariantId, lineDiscountAmountCents: 100 }),
+      line({ lineDiscountAmountCents: 99 }),
     ]);
 
-    expect(order.discountAmount).toBe(3);
+    expect(order.discountAmountCents).toBe(300);
   });
 
   it('SONRADAN bozan bir güncelleme de reddedilir — koruma yazım yolunda değil VERİDE', async () => {
@@ -175,18 +179,18 @@ describe('indirim dengesi (kısıt tetikleyicisi)', () => {
 
     // RPC bugünün tek yazım yolu; ama yarın elle giriş, bir onarım betiği ya da doğrudan SQL ikinci
     // bir yol açabilir. Kısıt veride durduğu için hangi yoldan gelinirse gelinsin denge bozulamaz.
-    await expect(orders.update({ id: order.id, discountAmount: 5 })).rejects.toThrow(/indirim/i);
+    await expect(orders.update({ id: order.id, discountAmountCents: 500 })).rejects.toThrow(/indirim/i);
 
-    expect((await orders.getById(order.id))?.discountAmount).toBe(0);
+    expect((await orders.getById(order.id))?.discountAmountCents).toBe(0);
   });
 
   it('kalemin payını silmek de dengeyi bozar — kısıt kalem tarafını da tutuyor', async () => {
-    const { order, items } = await orders.create({ ...header(), total: 17, discountAmount: 3 }, [
-      line({ lineDiscountAmount: 3 }),
+    const { order, items } = await orders.create({ ...header(), totalCents: 1700, discountAmountCents: 300 }, [
+      line({ lineDiscountAmountCents: 300 }),
       line({ variantId: secondVariantId }),
     ]);
 
-    const { error } = await db.from('order_item').delete().eq('id', items.find((i) => i.lineDiscountAmount === 3)!.id);
+    const { error } = await db.from('order_item').delete().eq('id', items.find((i) => i.lineDiscountAmountCents === 300)!.id);
     expect(error?.message).toMatch(/indirim/i);
 
     expect((await orders.getWithItems(order.id))?.items).toHaveLength(2);
@@ -216,5 +220,60 @@ describe('kargo künyesi yalnız kargo siparişinde', () => {
   it('ROTA siparişine yazılamaz — kendi aracımızla giden malın taşıyıcısı yoktur', async () => {
     const { order } = await orders.create({ ...header(), deliveryType: 'route' }, [line()]);
     await expect(orders.setShipment(order.id, 'dhl', 'XYZ')).rejects.toThrow();
+  });
+});
+
+/**
+ * SINIR TESTİ (02.9 · STACK §8) — sipariş ailesi euro↔cent.
+ *
+ * Sipariş ailesinde ÜÇ ayrı yol var ve üçü ayrı ayrı denenir, çünkü üçü ayrı kodda:
+ *   1. **Yazma RPC'si** (`create_order`) — gövde jsonb gider, anahtarlar kolonlarla kesişir.
+ *      `unitPriceCents` olduğu gibi gitseydi `unit_price_cents` üretirdi, öyle bir kolon yok,
+ *      anahtar SESSİZCE düşerdi (`rpcMoneyToEuro`).
+ *   2. **Okuma** (`moneyFields`) — kolon euro, dönen alan cent.
+ *   3. **Güncelleme** (`update`) — aynı eşleme yazma yönünde.
+ *
+ * Kolonlar HAM okunur (`db.from('order')`): iki tarafı da servisten okuyan bir test, aynı yanlış
+ * sabitle çarpılsa yine geçerdi.
+ */
+describe('sipariş ailesi — euro↔cent sınırı', () => {
+  it('cent yazılır, kolonlar euro tutar, cent okunur (gidiş-dönüş)', async () => {
+    const { order, items } = await orders.create(
+      { ...header(), totalCents: 1234, shippingFeeCents: 790 },
+      [line({ unitPriceCents: 617, qty: 2 })],
+    );
+
+    expect(order.totalCents).toBe(1234);
+    expect(order.shippingFeeCents).toBe(790);
+    expect(items[0]?.unitPriceCents).toBe(617);
+
+    const { data: baslik } = await db.from('order').select('total, shipping_fee').eq('id', order.id).single();
+    const ham = baslik as { total: number | string; shipping_fee: number | string };
+    expect(Number(ham.total)).toBe(12.34);
+    expect(Number(ham.shipping_fee)).toBe(7.9);
+
+    const { data: kalem } = await db.from('order_item').select('unit_price').eq('id', items[0]!.id).single();
+    expect(Number((kalem as { unit_price: number | string }).unit_price)).toBe(6.17);
+
+    const okunan = await orders.getById(order.id);
+    expect(okunan?.totalCents).toBe(1234);
+    expect(okunan?.shippingFeeCents).toBe(790);
+  });
+
+  it('güncelleme de sınırdan geçer — kolon euro kalır', async () => {
+    const { order } = await orders.create(header(), [line()]);
+
+    await orders.update({ id: order.id, packagingCostCents: 155 });
+
+    const { data } = await db.from('order').select('packaging_cost').eq('id', order.id).single();
+    expect(Number((data as { packaging_cost: number | string }).packaging_cost)).toBe(1.55);
+    expect((await orders.getById(order.id))?.packagingCostCents).toBe(155);
+  });
+
+  // `undefined` ile `null` AYNI ŞEY DEĞİL: ilki "gönderme" (kolon varsayılanını alır), ikincisi
+  // "boşalt". İkisini `null`a indirdiğim ilk hâl `shipping_fee`in `not null` kısıtını kırdı.
+  it('gönderilmeyen para alanı kolonun VARSAYILANINI alır, null yazmaz', async () => {
+    const { order } = await orders.create({ ...header(), shippingFeeCents: undefined }, [line()]);
+    expect(order.shippingFeeCents).toBe(0);
   });
 });

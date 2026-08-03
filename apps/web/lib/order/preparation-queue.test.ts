@@ -67,8 +67,8 @@ afterAll(async () => {
 /** Onaylanmış sipariş — kuyruğa düşmesi için gereken en kısa yol. */
 async function confirmedOrder(qty: number, opts: { pinTo?: string; deliveryDate?: string } = {}) {
   const { order, items } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', deliveryDate: opts.deliveryDate, total: qty * 10 },
-    [{ variantId, qty, unitPrice: 10, vatRate: 5.5, stockId: opts.pinTo }],
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', deliveryDate: opts.deliveryDate, totalCents: qty * 1000 },
+    [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5, stockId: opts.pinTo }],
   );
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty, stockId: opts.pinTo });
   await transitionOrder({ orderId: order.id, to: 'confirmed' });
@@ -98,6 +98,9 @@ describe('hazırlık kuyruğu (10.1)', () => {
     const mine: PreparationOrder = (await listPreparationQueue()).find((row) => row.orderId === orderId)!;
 
     const serialized = JSON.stringify(mine);
+    // Anahtar adları `…Cents` oldu (02.9) ama iddia AYNI: alt-dize araması hem eski hem yeni adı
+    // yakalar, çünkü yeni ad eskisini içeriyor (`unitPrice` ⊂ `unitPriceCents`). Liste bilerek eski
+    // köklerle yazılı: yarın biri euro'ya geri dönse de bu test yine tutar.
     for (const moneyKey of ['unitPrice', 'total', 'purchasePrice', 'lineDiscountAmount', 'amountCollected', 'vatRate']) {
       expect(serialized).not.toContain(moneyKey);
     }

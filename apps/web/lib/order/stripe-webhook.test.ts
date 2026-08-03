@@ -77,8 +77,8 @@ afterAll(async () => {
 /** Taslak sipariş + (istenirse) aktif rezervasyon — ödeme onayının geldiği hâl. */
 async function pendingOrder(qty: number, opts: { reserve?: boolean } = { reserve: true }) {
   const { order } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', total: qty * 10 },
-    [{ variantId, qty, unitPrice: 10, vatRate: 5.5 }],
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', totalCents: qty * 1000 },
+    [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }],
   );
   if (opts.reserve) await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty, ttlMinutes: 30 });
   return order.id;
@@ -94,7 +94,7 @@ describe('ödeme onayı', () => {
     const order = await orders.getById(orderId);
     expect(order?.status).toBe('confirmed');
     expect(order?.referenceNo).toBeTruthy();
-    expect(order?.amountCollected).toBe(20);
+    expect(order?.amountCollectedCents).toBe(2000);
     expect(order?.paymentStatus).toBe('paid');
   });
 
@@ -103,7 +103,7 @@ describe('ödeme onayı', () => {
 
     await handleStripeEvent(paidEvent(orderId, 1850), stripeAccount);
 
-    expect((await orders.getById(orderId))?.amountCollected).toBe(18.5);
+    expect((await orders.getById(orderId))?.amountCollectedCents).toBe(1850);
   });
 
   it('AYNI olay ikinci kez gelirse hiçbir şey tekrarlanmaz', async () => {
@@ -116,7 +116,7 @@ describe('ödeme onayı', () => {
     expect(first).toMatchObject({ status: 'ok' });
     expect(second).toMatchObject({ status: 'duplicate' });
     // Çift yazım olsaydı tahsilat 40 € görünürdü.
-    expect((await orders.getById(orderId))?.amountCollected).toBe(20);
+    expect((await orders.getById(orderId))?.amountCollectedCents).toBe(2000);
   });
 
   it('ödeme dışı olay sessizce geçilir', async () => {
@@ -144,7 +144,7 @@ describe('geç ödeme — rezervasyon düşmüşken onay gelirse (DOMAIN §4)', 
   it('stok da kalmadıysa sipariş İPTAL edilir — elle karar beklenmez', async () => {
     const orderId = await pendingOrder(4, { reserve: false });
     // Bu arada mal başkasına gitti: elde kalan 1 adet.
-    const other = await orders.create({ warehouseId, customerId, channel: 'b2c' }, [{ variantId, qty: 4, unitPrice: 10, vatRate: 5.5 }]);
+    const other = await orders.create({ warehouseId, customerId, channel: 'b2c' }, [{ variantId, qty: 4, unitPriceCents: 1000, vatRate: 5.5 }]);
     await reservations.reserve({ orderId: other.order.id, warehouseId, variantId, qty: 4 });
 
     const outcome = await handleStripeEvent(paidEvent(orderId, 4000), stripeAccount);

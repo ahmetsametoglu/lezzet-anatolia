@@ -23,7 +23,8 @@ export interface DayCloseDraft {
   pending: CourierStop[];
   /** Reddedilenler — getirilen mal; depoya fiziksel teslim edilir. */
   returned: CourierStop[];
-  expected: { cash: number; card: number; cheque: number };
+  /** Beklenen tahsilat, yöntem başına (**cent** — 02.9). */
+  expected: { cashCents: number; cardCents: number; chequeCents: number };
 }
 
 /**

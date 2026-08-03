@@ -54,10 +54,10 @@ let counter = 0;
 interface SaleInput {
   /** Kaç gün önce gerçekleşti (teslim/kapanış anı). */
   daysAgo: number;
-  unitPrice?: number;
+  unitPriceCents?: number;
   qty?: number;
   vatRate?: number;
-  shippingFee?: number;
+  shippingFeeCents?: number;
   isGiftOrder?: boolean;
   status?: 'completed' | 'delivered';
   invoiceNo?: string;
@@ -70,17 +70,17 @@ interface SaleInput {
 async function makeSale(g: SaleInput) {
   counter += 1;
   const qty = g.qty ?? 1;
-  const unitPrice = g.unitPrice ?? 10;
+  const unitPriceCents = g.unitPriceCents ?? 1000;
   const { order } = await orders.create(
     {
       warehouseId,
       customerId,
       channel: 'b2c',
-      total: qty * unitPrice + (g.shippingFee ?? 0),
-      shippingFee: g.shippingFee,
+      totalCents: qty * unitPriceCents + (g.shippingFeeCents ?? 0),
+      shippingFeeCents: g.shippingFeeCents,
       isGiftOrder: g.isGiftOrder,
     },
-    [{ variantId, qty, fulfilledQty: qty, unitPrice, vatRate: g.vatRate ?? 5.5 }],
+    [{ variantId, qty, fulfilledQty: qty, unitPriceCents, vatRate: g.vatRate ?? 5.5 }],
   );
 
   const status = g.status ?? 'completed';
@@ -96,7 +96,7 @@ async function makeSale(g: SaleInput) {
 
 describe('dönem ve satış tarihi', () => {
   it('satış tarihi kayıt anından değil TESLİM anından gelir', async () => {
-    const order = await makeSale({ daysAgo: 190, unitPrice: 21.1 });
+    const order = await makeSale({ daysAgo: 190, unitPriceCents: 2110 });
 
     const { rows } = await buildExport(PERIOD);
     const row = rows.find((r) => r.orderId === order.id);
@@ -123,7 +123,7 @@ describe('dönem ve satış tarihi', () => {
   });
 
   it('gerçekleşmemiş sipariş hiç görünmez — taslak ciro değildir', async () => {
-    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', total: 50 }, [{ variantId, qty: 1, unitPrice: 50, vatRate: 5.5 }]);
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', totalCents: 5000 }, [{ variantId, qty: 1, unitPriceCents: 5000, vatRate: 5.5 }]);
     const { rows } = await buildExport(PERIOD);
     expect(rows.map((r) => r.orderId)).not.toContain(order.id);
   });
@@ -131,8 +131,8 @@ describe('dönem ve satış tarihi', () => {
 
 describe('hediye sipariş export dışıdır ama farkı görünür', () => {
   it('dosyada satırı yok, özette sayısı ve tutarı var', async () => {
-    await makeSale({ daysAgo: 190, unitPrice: 21.1 });
-    const gift = await makeSale({ daysAgo: 188, unitPrice: 42.2, isGiftOrder: true });
+    await makeSale({ daysAgo: 190, unitPriceCents: 2110 });
+    const gift = await makeSale({ daysAgo: 188, unitPriceCents: 4220, isGiftOrder: true });
 
     const { rows, summary } = await buildExport(PERIOD);
     expect(rows.map((r) => r.orderId)).not.toContain(gift.id);
@@ -144,9 +144,9 @@ describe('hediye sipariş export dışıdır ama farkı görünür', () => {
 
 describe('dosyanın toplamı satırlarla tutar', () => {
   it('özet satırların toplamıdır; oran kovaları da tutar', async () => {
-    await makeSale({ daysAgo: 195, unitPrice: 21.1, vatRate: 5.5, shippingFee: 7.9 });
-    await makeSale({ daysAgo: 190, unitPrice: 12, vatRate: 20 });
-    await makeSale({ daysAgo: 185, unitPrice: 30, qty: 2, vatRate: 5.5 });
+    await makeSale({ daysAgo: 195, unitPriceCents: 2110, vatRate: 5.5, shippingFeeCents: 790 });
+    await makeSale({ daysAgo: 190, unitPriceCents: 1200, vatRate: 20 });
+    await makeSale({ daysAgo: 185, unitPriceCents: 3000, qty: 2, vatRate: 5.5 });
 
     const { rows, summary } = await buildExport(PERIOD);
     expect(summary.orderCount).toBe(3);
@@ -156,8 +156,8 @@ describe('dosyanın toplamı satırlarla tutar', () => {
   });
 
   it('CSV başlık + satır + TOPLAM taşır; hediye farkı da dosyada yazar', async () => {
-    await makeSale({ daysAgo: 190, unitPrice: 21.1 });
-    await makeSale({ daysAgo: 189, unitPrice: 10, isGiftOrder: true });
+    await makeSale({ daysAgo: 190, unitPriceCents: 2110 });
+    await makeSale({ daysAgo: 189, unitPriceCents: 1000, isGiftOrder: true });
 
     const csv = toExportCsv(await buildExport(PERIOD));
     expect(csv.split('\n')[0]).toContain('Referans;Fatura no');

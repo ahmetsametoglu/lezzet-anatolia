@@ -12,7 +12,8 @@ export interface ReorderLine {
   /** Eşiğe çıkarmak için gereken adet — öneridir, admin değiştirebilir. */
   suggestedQty: number;
   supplierCode: string | null;
-  lastPurchasePrice: number | null;
+  /** Eşlemedeki "geçen sefer kaçtı" (**cent**, `STACK §8`) — taslağın beklenen alışı bundan doğar. */
+  lastPurchasePriceCents: number | null;
   /**
    * **Yolda**: GÖNDERİLMİŞ siparişlerden bu depoya bekleyen adet (`sent` + `partially_received`).
    * Eşik karşılaştırmasına GİRER — mal yolda ise raf yakında dolacaktır.
@@ -119,7 +120,7 @@ export class ReorderService {
         // (koli bölünmez). Yoldakini düşmemek, gelen malın üstüne bir kez daha sipariş vermekti.
         suggestedQty: roundToPack(row.minStockQty - row.availableQty - incomingQty, mapping?.packQty ?? null),
         supplierCode: mapping?.supplierCode ?? null,
-        lastPurchasePrice: mapping?.lastPurchasePrice ?? null,
+        lastPurchasePriceCents: mapping?.lastPurchasePriceCents ?? null,
         incomingQty,
         draftQty: drafts.get(row.variantId) ?? 0,
         unassignedQty: unassigned.get(row.variantId) ?? 0,
@@ -139,7 +140,7 @@ export class ReorderService {
     const lines: DraftLine[] = group.lines.map((line) => ({
       variantId: line.variantId,
       qty: line.suggestedQty,
-      unitPrice: line.lastPurchasePrice,
+      unitPriceCents: line.lastPurchasePriceCents,
       // HEDEF DEPO YAZILIR (09.14 üçüncü talep): öneri depo başınadır, yani niyet zaten belli.
       // Yazmamak, bir sonraki turda "bu mal hangi deponun eksiğini kapatıyor" sorusunu
       // cevapsız bırakırdı ve `incomingQty` tam da bu akışta hep 0 kalırdı — düzeltme kâğıt

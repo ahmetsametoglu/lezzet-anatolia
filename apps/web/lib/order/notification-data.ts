@@ -75,8 +75,8 @@ export async function buildOrderNotification(
   const [lines, steps] = await Promise.all([buildLines(db, items, locale, settled), buildSteps(db, orderId, event)]);
 
   const derivation = derivePaymentStatusForOrder(order, items, {
-    collected: order.amountCollected,
-    refunded: order.amountRefunded,
+    collectedCents: order.amountCollectedCents,
+    refundedCents: order.amountRefundedCents,
   });
 
   const data: OrderNotification = {
@@ -93,17 +93,16 @@ export async function buildOrderNotification(
       // hazırlanmadı, karşılanan 0'dır — onu yazsaydık mail "0,00 €" derdi). Sonraki maillerde
       // **karşılanan** tutar yazar; eksik çıkan kalem varsa toplam kendiliğinden iner ve müşteri
       // ödeyeceği/iade alacağı gerçek rakamı görür.
-      value: formatPrice(
-        Math.round((event === 'order_confirmed' ? order.total : derivation.fulfilledAmountCents / 100) * 100),
-        locale,
-      ),
+      // İki taraf da CENT (02.9): eskiden biri euro'ydu ve `/100 * 100` gidip geliyordu — aynı
+      // sayının iki kez çevrildiği bir ifade, birim karışıklığının tipik izi.
+      value: formatPrice(event === 'order_confirmed' ? order.totalCents : derivation.fulfilledAmountCents, locale),
     },
     statusAt: EXCEPTION_EVENTS.includes(event) ? formatShortDate(new Date().toISOString(), locale) : null,
     // Para çözümü istisna bildirimlerinin ilk kartıdır. İki sayı da TÜRETİLİR: iade borcu motordan
     // (`refundDueCents`), iptalde ise net tahsilatın tamamı — karşılanan 0 sayıldığı için aynı
     // hesap kendiliğinden tamamını verir (ORDER_LIFECYCLE).
     refund: buildRefund(order, refundAmountCents(items, event, opts.refundedAmount, derivation.refundDueCents), event, locale),
-    paidOnline: order.amountCollected > 0,
+    paidOnline: order.amountCollectedCents > 0,
     paymentNote: paymentNote(order, derivation.amountToCollectCents, locale),
     delivery: buildDelivery(order, locale),
     tracking: null, // Kargo takibi 07.4/07.5 ile gelir; alan hazır, kaynak yok.
@@ -157,7 +156,7 @@ async function buildLines(
     const variant = variantOf.get(item.variantId);
     const bundle = item.bundleId ? bundleOf.get(item.bundleId) : null;
     const name = bundle?.name?.[locale] ?? (variant ? productOf.get(variant.productId)?.name?.[locale] : null) ?? '—';
-    const unit = formatPrice(Math.round(item.unitPrice * 100), locale);
+    const unit = formatPrice(item.unitPriceCents, locale);
     const shown = fulfillmentSettled ? item.fulfilledQty : item.qty;
     // Eksiklik ancak hazırlık kesinleştiyse BİLİNİR; öncesinde ortada bir fark yoktur.
     const missing = fulfillmentSettled ? item.qty - item.fulfilledQty : 0;
@@ -166,10 +165,10 @@ async function buildLines(
       name,
       meta: `${item.qty} × ${unit}`,
       qty: shown,
-      amount: formatPrice(Math.round(item.unitPrice * shown * 100), locale),
+      amount: formatPrice(item.unitPriceCents * shown, locale),
       shortfall:
         missing > 0
-          ? SHORTFALL[locale](item.qty, item.fulfilledQty, formatPrice(Math.round(item.unitPrice * missing * 100), locale))
+          ? SHORTFALL[locale](item.qty, item.fulfilledQty, formatPrice(item.unitPriceCents * missing, locale))
           : null,
     };
   });
@@ -227,17 +226,17 @@ const PAYMENT_NOTE: Record<PreferredLanguage, { paid: string; onDelivery: (amoun
 function buildTotals(order: Order, locale: PreferredLanguage, event: NotifyEventName) {
   if (event !== 'order_confirmed') return [];
   const t = TOTAL_LABEL[locale];
-  const lineTotal = order.total + order.discountAmount - order.shippingFee;
+  const lineTotalCents = order.totalCents + order.discountAmountCents - order.shippingFeeCents;
 
   return [
-    { label: t.subtotal, value: formatPrice(Math.round(lineTotal * 100), locale) },
-    ...(order.discountAmount > 0
-      ? [{ label: discountRowLabel(order, t.discount, locale), value: `−${formatPrice(Math.round(order.discountAmount * 100), locale)}`, positive: true }]
+    { label: t.subtotal, value: formatPrice(lineTotalCents, locale) },
+    ...(order.discountAmountCents > 0
+      ? [{ label: discountRowLabel(order, t.discount, locale), value: `−${formatPrice(order.discountAmountCents, locale)}`, positive: true }]
       : []),
     {
       label: t.delivery,
-      value: order.shippingFee > 0 ? formatPrice(Math.round(order.shippingFee * 100), locale) : t.free,
-      positive: order.shippingFee === 0,
+      value: order.shippingFeeCents > 0 ? formatPrice(order.shippingFeeCents, locale) : t.free,
+      positive: order.shippingFeeCents === 0,
     },
   ];
 }
@@ -265,7 +264,7 @@ function discountRowLabel(order: Order, generic: string, locale: PreferredLangua
 function buildRefund(order: Order, amountCents: number, event: NotifyEventName, locale: PreferredLanguage) {
   if (!EXCEPTION_EVENTS.includes(event) || amountCents <= 0) return null;
 
-  const previousCents = Math.round(order.total * 100);
+  const previousCents = order.totalCents;
   return {
     amount: formatPrice(amountCents, locale),
     previousTotal: formatPrice(previousCents, locale),
@@ -290,7 +289,7 @@ function refundAmountCents(
   refundDueCents: number,
 ): number {
   if (event === 'order_shortfall') {
-    return items.reduce((sum, item) => sum + Math.round(item.unitPrice * 100) * Math.max(0, item.qty - item.fulfilledQty), 0);
+    return items.reduce((sum, item) => sum + item.unitPriceCents * Math.max(0, item.qty - item.fulfilledQty), 0);
   }
   return refundedAmount != null ? Math.round(refundedAmount * 100) : refundDueCents;
 }
@@ -298,7 +297,7 @@ function refundAmountCents(
 /** Ödeme hapı: peşin ödenmişse "ödendi", kalan varsa tahsil edilecek tutar (türetimden). */
 function paymentNote(order: Order, toCollectCents: number, locale: PreferredLanguage): string | null {
   if (toCollectCents > 0) return PAYMENT_NOTE[locale].onDelivery(formatPrice(toCollectCents, locale));
-  return order.amountCollected > 0 ? PAYMENT_NOTE[locale].paid : null;
+  return order.amountCollectedCents > 0 ? PAYMENT_NOTE[locale].paid : null;
 }
 
 const DELIVERY_COPY: Record<PreferredLanguage, { route: string; shipping: string }> = {

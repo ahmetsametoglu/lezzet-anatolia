@@ -130,7 +130,7 @@ async function reconcileRefund(event: VerifiedEvent, accountId: string | null): 
   const order = await new OrderService(db).getById(orderId);
   if (!order) return { status: 'not_found' };
 
-  const missingCents = event.amountRefundedCents - Math.round(order.amountRefunded * 100);
+  const missingCents = event.amountRefundedCents - order.amountRefundedCents;
   // Sağlayıcı bizden AZ iade göstermiş olamaz (biz kendi başımıza para döndürmüyoruz); negatif fark
   // bir mutabakat sorunudur ve burada sessizce "düzeltilmez" — defter kaynaktır, olay değil.
   if (missingCents <= 0) return { status: 'ok', action: 'ignored' };

@@ -107,7 +107,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | courier_id | uuid \| null | atanan kurye (rota teslimatı; atamada dolar) |
 | delivery_country | enum(`FR`,`DE`) | teslimat ülkesi — DE B2C 10.000€ OSS eşiği izlemi (bkz. `DOMAIN.md §5`) |
 | vat_number_snapshot | string \| null | reverse charge siparişinde o anki geçerli vergi no (denetim kanıtı) |
-| shipping_fee | number | müşteriden alınan kargo ücreti (varsayılan 0); KDV'ye tabi (bkz. `DOMAIN.md §6`) |
+| shipping_fee | numeric (€) | müşteriden alınan kargo ücreti (varsayılan 0); KDV'ye tabi (bkz. `DOMAIN.md §6`). Uygulamadaki adı `shippingFeeCents`, birimi **cent** (`STACK §8`) |
 | reference_no | string | sistemin ürettiği referans — marka+yıl+**rastgele** (ör. `LA-26-7K4M2P`), hacim sızdırmaz; **ilk kalıcı duruma geçişte** üretilir (`confirmed`, hızlı satışta `completed`); resmî fatura no değil |
 | idempotency_key | string? | **çift sipariş kalkanı** — istemcinin o checkout denemesi için ürettiği anahtar; aynı istek ikinci kez ulaşırsa (çift tıklama, ağın yeniden denemesi) ikinci sipariş AÇILMAZ, var olan döner. Kısmi unique: anahtarsız satırlar (operasyon girişi, hızlı satış) birbirini engellemez |
 | delivery_proof | jsonb \| null | teslim onayı: imza görüntüsü/foto (storage yolu), onaylayan, zaman — B2B varsayılan zorunlu, B2C kapalı (parametrik; bkz. `DOMAIN.md §6`) |
@@ -116,16 +116,16 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | invoice_no | string \| null | dış muhasebeden sonradan eşleşir |
 | vat_treatment | enum(`domestic`,`intra_eu_b2b_reverse_charge`) | KDV işleme tipi (export için); ileride `oss_destination` |
 | locale | enum(`tr`,`fr`,`de`) \| null | **siparişin dili** — müşterinin bu siparişi verirken okuduğu yüzeyin dili; sipariş maillerinin dili buradan gelir. `null` = bilinmiyor (hızlı satış, operasyon girişi) → profilin `preferred_language`'ına düşülür. Profilden okumamanın sebebi snapshot mantığı: profil sonradan değişebilir, siparişin metni değişmemeli |
-| total | number | **sipariş edilen** toplam = Σ kalem − indirim + `shipping_fee` (sabit, sipariş anı) |
+| total | numeric (€) | **sipariş edilen** toplam = Σ kalem − indirim + `shipping_fee` (sabit, sipariş anı). App: `totalCents` |
 | discount_id | uuid \| null | uygulanan indirim/kupon (tek; üst üste binmez) |
-| discount_amount | number | uygulanan indirim tutarı; varsayılan 0 |
+| discount_amount | numeric (€) | uygulanan indirim tutarı; varsayılan 0. App: `discountAmountCents` |
 | discount_label | jsonb \| null | inen indirimin **müşteriye görünen adının** sipariş anındaki kopyası (`{"fr":"Offre de bienvenue",…}`) — kampanya yeniden adlandırılsa/silinse de siparişin maili ve fişi aynı şeyi der; `address_snapshot` ile aynı gerekçe. `null` = ad verilmemiş → yüzey genel "İndirim"e düşer |
-| amount_collected | number | **cache** — kaynak `MoneyMovement` (siparişe bağlı girişler); toplam tahsil edilen |
-| amount_refunded | number | **cache** — kaynak `MoneyMovement` (`order_refund` çıkışları); toplam iade edilen |
-| cogs_amount | number \| null | malın maliyeti — tüketilen partilerin alışı; kapanışta sabitlenir |
-| delivery_cost | number \| null | teslimat maliyeti (kargo gerçek / rota birim); kapanışta sabitlenir |
-| payment_fee | number \| null | ödeme komisyonu (Stripe/SumUp); kapanışta sabitlenir |
-| packaging_cost | number \| null | paketleme (soğuk zincir) maliyeti; kapanışta sabitlenir |
+| amount_collected | numeric (€) | **cache** — kaynak `MoneyMovement` (siparişe bağlı girişler); toplam tahsil edilen. App: `amountCollectedCents` |
+| amount_refunded | numeric (€) | **cache** — kaynak `MoneyMovement` (`order_refund` çıkışları); toplam iade edilen. App: `amountRefundedCents` |
+| cogs_amount | numeric (€) \| null | malın maliyeti — tüketilen partilerin alışı; kapanışta sabitlenir. App: `cogsAmountCents` |
+| delivery_cost | numeric (€) \| null | teslimat maliyeti (kargo gerçek / rota birim); kapanışta sabitlenir. App: `deliveryCostCents` |
+| payment_fee | numeric (€) \| null | ödeme komisyonu (Stripe/SumUp); kapanışta sabitlenir. App: `paymentFeeCents` |
+| packaging_cost | numeric (€) \| null | paketleme (soğuk zincir) maliyeti; kapanışta sabitlenir. App: `packagingCostCents` |
 | created_at | timestamptz | |
 
 ## OrderItem (sipariş kalemi)
@@ -139,8 +139,8 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | fulfilled_qty | number | **fiziksel olarak müşteriye giden** miktar (varsayılan = qty; eksikte düşer, 0 olabilir). Mal geri döndüyse düşer; `goodwill` iadesinde düşmez — mal müşteride kalmıştır |
 | stock_id | uuid \| null | partiye bağlı teklif satırıysa hangi parti (batch-pinned); normal satırda null. Fiilen çıkan parti(ler) `OrderItemBatch`'te |
 | bundle_id | uuid \| null | bu kalem bir paketten geldiyse hangi paket; normal satırda null |
-| unit_price | number | **sabitlenmiş** fiyat (sepete eklenince) |
-| line_discount_amount | number | sepet/kupon indiriminin bu kaleme **oransal payı** (varsayılan 0) — kısmi iade ve kalem KDV'si indirimli birimden hesaplanır (bkz. `DOMAIN.md §5`) |
+| unit_price | numeric (€) | **sabitlenmiş** fiyat (sepete eklenince). App: `unitPriceCents` |
+| line_discount_amount | numeric (€) | sepet/kupon indiriminin bu kaleme **oransal payı** (varsayılan 0). App: `lineDiscountAmountCents` — kısmi iade ve kalem KDV'si indirimli birimden hesaplanır (bkz. `DOMAIN.md §5`) |
 | vat_rate | number | o anki oran |
 | return_disposition | enum(`restock`,`discard`,`goodwill`) \| null | kalem iade edildiyse **mala ne oldu** (DOMAIN §8). `goodwill` = mal müşteride kaldı: `fulfilled_qty` ve stok DEĞİŞMEZ, yalnız para iade edilir — jestin maliyeti kârda görünür |
 

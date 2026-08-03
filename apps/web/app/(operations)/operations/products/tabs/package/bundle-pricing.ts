@@ -54,7 +54,7 @@ export function bundlePricing(rows: BundlePricingRow[], pool: Map<string, Varian
     if (listPriceCents == null) missingListPrice += 1;
     else listTotalCents += listPriceCents * r.qty;
 
-    const unitCostCents = option?.unitCost == null ? null : toCents(option.unitCost);
+    const unitCostCents = option?.unitCostCents ?? null;
     const vatRate = option?.vatRate ?? 0;
     // Kalem bazında marj: paketin toplamı tutuyor olsa da TEK bir kalemin payı kendi hedefinin altına
     // itilmiş olabilir — paketler marjı işte böyle sessizce yer.

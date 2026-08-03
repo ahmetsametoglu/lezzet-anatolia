@@ -7,7 +7,6 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { meetsMlor } from '@lezzet/domain-core';
-import { fromCents, toCents } from '@lezzet/helper';
 import { resolveLocalizedText, type ReceiveIntakeResult } from '@lezzet/types';
 import { repriceVariants } from '@/lib/pricing/auto-price';
 
@@ -17,7 +16,7 @@ import { repriceVariants } from '@/lib/pricing/auto-price';
  *
  * **Depocu alış fiyatı GÖRMEZ ve GİRMEZ.** Form satırı yalnız adet, son tarih, lot ve konum ister;
  * birim maliyet tedarik siparişinden (admin'in girdiği) sunucu tarafında eklenir. Bu yüzden giriş
- * tipinde `unitCost` alanı YOKTUR — ekran isteseydi bile gönderemez.
+ * tipinde `unitCostCents` alanı YOKTUR — ekran isteseydi bile gönderemez.
  *
  * **MLOR uyarısı engellemez, uyarır** (DOMAIN §4): raf ömrünün yeterince kalmadığı parti yine kabul
  * edilebilir — kararı mal kabul eden verir. Sistem yalnız görünür kılar.
@@ -53,7 +52,8 @@ export interface PurchaseIntakeLine extends IntakeFormLine {
    * bilemez ve hata satıra bakınca GÖRÜNMEZ. (Bu ekran birim maliyeti bölerek üretiyor —
    * toplam ÷ paket sayısı — ve o bölme kayan noktada kuruş kaçırır.)
    *
-   * Euro'ya çevrim tek yerde, DB sınırında (`fromCents`, aşağıda) — dosyanın geri kalanı cent.
+   * Euro'ya çevrim bu dosyada DEĞİL, servisin RPC sınırında (`StockIntakeService.receive`, 02.9) —
+   * uygulama katmanının gördüğü her para sayısı cent.
    *
    * `null` = "bu satırın fiyatını bilmiyorum" ve bu meşrudur: PO'lu kabulde admin yalnız SAPAN
    * satırı düzeltir, ötekiler siparişten eşleşmeye devam eder.
@@ -194,24 +194,17 @@ async function intake(input: {
     // gönderdiyse "son alış fiyatı" o zamlı fiyattır ve `auto_price` da onu görmelidir. Tersi sıra
     // (PO kazansa) admin'in düzeltmesini sessizce çöpe atardı.
     //
-    // Karşılaştırma CENT'te yapılır, euro'ya çevrim **tek noktada** — burada (`STACK §8`). PO
-    // maliyeti servisten euro geliyor (bilinen açık, 02.9) ve onu da girişte cent'e alıyoruz:
-    // aksi hâlde iki birim aynı `??` zincirinde yan yana dururdu, ve o satır bir gün sessizce
-    // 100× şaşırırdı.
-    // Alanlar TEK TEK yazılıyor, yayılarak değil: `unitCostCents` bu sınırın dışına çıkmamalı —
-    // yayılsaydı RPC'ye `unit_cost_cents` diye ikinci bir para alanı giderdi ve iki birim aynı
-    // satırda yan yana dururdu.
-    lines: input.lines.map((line) => {
-      const cents = line.unitCostCents ?? costsInCents.get(line.variantId) ?? null;
-      return {
-        variantId: line.variantId,
-        qty: line.qty,
-        expiryDate: line.expiryDate,
-        lotNumber: line.lotNumber,
-        location: line.location,
-        unitCost: cents == null ? null : fromCents(cents),
-      };
-    }),
+    // Birim CENT ve öyle KALIR: euro'ya çevrim artık servisin RPC sınırında (02.9 · `STACK §8`).
+    // İki kaynak da (satırın kendi fiyatı, PO'dan gelen beklenti) cent olduğu için `??` zinciri
+    // tek birimle çalışıyor — eskiden PO tarafı euro geliyordu ve burada elle çevriliyordu.
+    lines: input.lines.map((line) => ({
+      variantId: line.variantId,
+      qty: line.qty,
+      expiryDate: line.expiryDate,
+      lotNumber: line.lotNumber,
+      location: line.location,
+      unitCostCents: line.unitCostCents ?? costsInCents.get(line.variantId) ?? null,
+    })),
   });
 
   // MALİYET DEĞİŞTİ → otomatik fiyatlı ürünlerin fiyatı hedef marja çekilir (DOMAIN §"Maliyet ve
@@ -271,16 +264,15 @@ function differencesOf(lines: readonly IntakeFormLine[], expected: Map<string, n
 }
 
 /**
- * PO kalemlerinin birim fiyatı — **cent** olarak.
+ * PO kalemlerinin birim fiyatı — **cent** olarak (servis öyle döndürüyor, 02.9 · `STACK §8`).
  *
- * Servis euro döndürüyor (`dbNumeric`; sözleşmeye göre çevrim servis katmanında olmalıydı, açık
- * `STACK §8` altında ve `02.9`'un işi). Çevrimi burada, tek satırda yapıyoruz ki dosyanın geri
- * kalanı tek birimle çalışsın — `toCents` ile, elle `Math.round(x * 100)` yazılmaz.
+ * Fiyatı GİRİLMEMİŞ kalem haritaya hiç girmez: `null`'ı taşımak "bilinmiyor"u bir değer gibi
+ * göstermek olurdu; yokluk zaten `??` zincirinin bir sonraki halkasına düşüyor.
  */
 async function unitCostsOf(db: ReturnType<typeof serviceDb>, purchaseOrderId?: string | null): Promise<Map<string, number>> {
   if (!purchaseOrderId) return new Map();
   const lines = await new PurchaseOrderItemService(db).listByOrder(purchaseOrderId);
-  return new Map(lines.filter((line) => line.unitPrice != null).map((line) => [line.variantId, toCents(line.unitPrice!)]));
+  return new Map(lines.filter((line) => line.unitPriceCents != null).map((line) => [line.variantId, line.unitPriceCents!]));
 }
 
 /**

@@ -175,7 +175,7 @@ describe('sepet → taslak sipariş', () => {
     const { items } = (await new OrderService(db).getWithItems(outcome.orderId))!;
     expect(items).toHaveLength(1);
     // Fiyat İSTEMCİDEN gelmedi — sunucunun kendi çözümü.
-    expect(items[0]!.unitPrice).toBe(20);
+    expect(items[0]!.unitPriceCents).toBe(2000);
     expect(items[0]!.qty).toBe(2);
     expect(items[0]!.bundleId).toBeNull();
   });
@@ -196,7 +196,7 @@ describe('sepet → taslak sipariş', () => {
     // Paketin adedi kalemin adedini ÇARPAR.
     expect(items.map((i) => i.qty).sort()).toEqual([2, 2]);
     // Katalog fiyatı (20 + 10 = 30) DEĞİL, paylaştırılmış fiyat (18 + 9 = 27).
-    expect(items.reduce((sum, i) => sum + i.unitPrice, 0)).toBe(27);
+    expect(items.reduce((sum, i) => sum + i.unitPriceCents, 0)).toBe(2700);
   });
 
   /**
@@ -229,12 +229,12 @@ describe('sepet → taslak sipariş', () => {
       const { order, items } = (await new OrderService(db).getWithItems(outcome.orderId))!;
 
       // 2 × 20 € = 40 €'nun %10'u.
-      expect(order.discountAmount).toBe(4);
+      expect(order.discountAmountCents).toBe(400);
       // Payların toplamı başlıktaki indirime EŞİT — motorun `distributeDiscount` garantisi.
-      expect(items.reduce((sum, i) => sum + i.lineDiscountAmount, 0)).toBe(order.discountAmount);
+      expect(items.reduce((sum, i) => sum + i.lineDiscountAmountCents, 0)).toBe(order.discountAmountCents);
 
       // Asıl ölçülen: tamamı tahsil edilmiş sipariş `paid` olmalı, kapıda tahsilat kalmamalı.
-      const derived = derivePaymentStatusForOrder(order, items, { collected: order.total, refunded: 0 });
+      const derived = derivePaymentStatusForOrder(order, items, { collectedCents: order.totalCents, refundedCents: 0 });
       expect(derived).toMatchObject({ status: 'paid', amountToCollectCents: 0 });
     } finally {
       await db.from('discount').delete().eq('id', kampanya.id);
@@ -274,9 +274,9 @@ describe('sepet → taslak sipariş', () => {
       const { order } = (await new OrderService(db).getWithItems(outcome.orderId))!;
 
       // 2 × 20 €'nun %10'u. Yerel kopya buraya 0 yazıyordu.
-      expect(order.discountAmount).toBe(4);
+      expect(order.discountAmountCents).toBe(400);
       // Ve tahsilat zaten doğruydu — ikisinin AYNI sayı olması sözleşmenin kendisi.
-      expect(order.total).toBe(36);
+      expect(order.totalCents).toBe(3600);
     } finally {
       await db.from('discount').delete().eq('id', kampanya.id);
     }

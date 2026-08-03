@@ -86,28 +86,29 @@ export interface PaymentDerivation {
  * (12.2) — çağıran taze toplamı verir.
  */
 export function derivePaymentStatusForOrder(
-  order: Pick<Order, 'shippingFee' | 'status' | 'total'>,
-  items: readonly Pick<OrderItem, 'fulfilledQty' | 'qty' | 'unitPrice' | 'lineDiscountAmount'>[],
-  amounts: { collected: number; refunded: number },
+  order: Pick<Order, 'shippingFeeCents' | 'status' | 'totalCents'>,
+  items: readonly Pick<OrderItem, 'fulfilledQty' | 'qty' | 'unitPriceCents' | 'lineDiscountAmountCents'>[],
+  amounts: { collectedCents: number; refundedCents: number },
 ): PaymentDerivation {
-  const cent = (v: number) => Math.round(v * 100);
+  // Yerel `cent = v => Math.round(v * 100)` KALKTI (02.9): servis zaten cent döndürüyor ve
+  // STACK §8 elle çevirmeyi yasaklıyor. Bu satır, kuralın bir "stil" değil bir kapı olduğunun örneği.
   return derivePaymentStatus({
     lines: items.map((item) => ({
       fulfilledQty: item.fulfilledQty,
       orderedQty: item.qty,
-      unitPriceCents: cent(item.unitPrice),
-      lineDiscountCents: cent(item.lineDiscountAmount),
+      unitPriceCents: item.unitPriceCents,
+      lineDiscountCents: item.lineDiscountAmountCents,
     })),
-    collectedCents: cent(amounts.collected),
-    refundedCents: cent(amounts.refunded),
-    shippingFeeCents: cent(order.shippingFee),
+    collectedCents: amounts.collectedCents,
+    refundedCents: amounts.refundedCents,
+    shippingFeeCents: order.shippingFeeCents,
     // İptal edilen siparişte karşılanan tutar 0 sayılır (ORDER_LIFECYCLE): tahsil edilmişse tamamı
     // iade borcudur.
     cancelled: order.status === 'cancelled',
     // Hazırlanmamış siparişin `fulfilled_qty`'si bir karar değil, henüz yazılmamış bir sayıdır.
     fulfillmentSettled: isFulfillmentSettled(order.status, items),
     // O aşamada beklenen tutar siparişin kendi toplamıdır (bkz. `orderTotalCents`).
-    orderTotalCents: cent(order.total),
+    orderTotalCents: order.totalCents,
   });
 }
 

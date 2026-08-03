@@ -1,4 +1,3 @@
-import { toCents } from '@lezzet/helper';
 import type { Address, Discount, DiscountCode, Order, UserProfile } from '@lezzet/types';
 import type { ConsentView, CustomerAddressRow, CustomerOrderRow, CustomerRow, PersonalCouponRow } from './customers-types';
 
@@ -115,7 +114,7 @@ export function toCustomerOrderRows(orders: readonly Order[]): CustomerOrderRow[
     id: o.id,
     referenceNo: o.referenceNo,
     createdAt: o.createdAt,
-    totalCents: toCents(o.total),
+    totalCents: o.totalCents,
     status: o.status,
     paymentStatus: o.paymentStatus,
     href: `/operations/orders/${o.id}`,

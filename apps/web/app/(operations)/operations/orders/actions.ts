@@ -77,7 +77,7 @@ export async function previewFulfillmentAction(
     const derivation = derivePaymentStatusForOrder(
       found.order,
       found.items.map((item) => ({ ...item, fulfilledQty: proposed.get(item.id) ?? item.fulfilledQty })),
-      { collected: found.order.amountCollected, refunded: found.order.amountRefunded },
+      { collectedCents: found.order.amountCollectedCents, refundedCents: found.order.amountRefundedCents },
     );
 
     return {

@@ -49,10 +49,10 @@ async function orderWith(
   extra: Partial<Parameters<typeof orders.create>[0]> = {},
 ) {
   const { order } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status, total: 20, ...extra },
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status, totalCents: 2000, ...extra },
     // İndirim KALEME de dağıtılır: `discount_amount = Σ line_discount_amount` artık veritabanının
     // zorladığı bir değişmez (0041). Tek kalemli fikstürde payın tamamı o kaleme iner.
-    [{ variantId, qty: 2, unitPrice: 10, vatRate: 5.5, lineDiscountAmount: extra.discountAmount ?? 0 }],
+    [{ variantId, qty: 2, unitPriceCents: 1000, vatRate: 5.5, lineDiscountAmountCents: extra.discountAmountCents ?? 0 }],
   );
   createdOrders.push(order.id);
   await db.from('order_item').update({ fulfilled_qty: fulfilledQty }).eq('order_id', order.id);
@@ -119,7 +119,7 @@ describe('siparişin dili ve indirim satırı', () => {
   it('indirim satırı KOPYADAN gelen adı yazar, kampanya tanımından değil', async () => {
     const orderId = await orderWith('confirmed', 0, {
       locale: 'fr',
-      discountAmount: 3,
+      discountAmountCents: 300,
       discountLabel: { tr: 'Hoş geldin indirimi', fr: 'Offre de bienvenue' },
     });
 
@@ -128,7 +128,7 @@ describe('siparişin dili ve indirim satırı', () => {
   });
 
   it('ad yoksa satır genel adında kalır — tür UYDURULMAZ', async () => {
-    const orderId = await orderWith('confirmed', 0, { locale: 'fr', discountAmount: 3 });
+    const orderId = await orderWith('confirmed', 0, { locale: 'fr', discountAmountCents: 300 });
 
     const totals = (await buildOrderNotification(orderId, 'order_confirmed'))?.data.totals ?? [];
     expect(totals.some((row) => row.label === 'Remise')).toBe(true);

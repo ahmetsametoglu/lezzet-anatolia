@@ -1,5 +1,3 @@
-import { toCents } from '@lezzet/helper';
-
 /**
  * Tedarik siparişi liste satırının ÖZETİ (09.14) — saf türetme, DB'siz.
  *
@@ -16,8 +14,14 @@ import { toCents } from '@lezzet/helper';
 export interface PurchaseOrderRowInput {
   items: ReadonlyArray<{
     qty: number;
-    /** Beklenen alış (EURO — DB `numeric`); `null` ise tutar EKSİK kalır. */
-    unitPrice: number | null;
+    /**
+     * Beklenen alış (**cent**); `null` ise tutar EKSİK kalır.
+     *
+     * Motor içinde para zaten cent'ti ama girdi euro geliyordu ve dönüşüm burada yapılıyordu —
+     * yani sınır motorun İÇİNDEN geçiyordu. Artık okuma cent veriyor (02.9 · `STACK §8`): motor
+     * tek birimle çalışır, çevrim yapmaz.
+     */
+    unitPriceCents: number | null;
     batches: ReadonlyArray<{
       initialQty: number;
       warehouse: { id: string; code: string } | null;
@@ -66,8 +70,8 @@ export function summarizePurchaseOrder(row: PurchaseOrderRowInput): PurchaseOrde
   const byWarehouse = new Map<string, WarehouseIntake>();
 
   for (const item of row.items) {
-    if (item.unitPrice == null) missingPriceCount += 1;
-    else totalCents += toCents(item.unitPrice) * item.qty;
+    if (item.unitPriceCents == null) missingPriceCount += 1;
+    else totalCents += item.unitPriceCents * item.qty;
 
     let received = 0;
     for (const batch of item.batches) {

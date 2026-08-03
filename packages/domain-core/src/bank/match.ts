@@ -11,8 +11,8 @@ import { toCents } from '@lezzet/helper';
 export interface MatchCandidate {
   orderId: string;
   referenceNo: string | null;
-  /** Siparişin AÇIK bakiyesi (tahsil edilmesi kalan) — eşleşme bunun üstünde aranır. */
-  outstanding: number;
+  /** Siparişin AÇIK bakiyesi **cent** (tahsil edilmesi kalan) — eşleşme bunun üstünde aranır. */
+  outstandingCents: number;
   /** Satışın gerçekleştiği gün. */
   saleDate: string;
   customerName?: string | null;
@@ -77,7 +77,7 @@ export function suggestOrderMatches(
         score += 0.6;
       }
 
-      const outstandingCents = toCents(candidate.outstanding);
+      const { outstandingCents } = candidate; // çağıran cent veriyor (02.9) — çeviri kalmadı
       if (outstandingCents > 0 && outstandingCents === rowCents) {
         reasons.push('exact_amount');
         score += 0.4;

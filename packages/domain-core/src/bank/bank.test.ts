@@ -203,7 +203,7 @@ describe('parmak izi — mükerrer koruması', () => {
 
 describe('eşleştirme önerisi', () => {
   const candidate = (over: Partial<MatchCandidate> = {}): MatchCandidate => ({
-    orderId: 'o1', referenceNo: 'LA-26-7K4M2P', outstanding: 45.9, saleDate: '2026-07-13', ...over,
+    orderId: 'o1', referenceNo: 'LA-26-7K4M2P', outstandingCents: 4590, saleDate: '2026-07-13', ...over,
   });
   const row = (over: Partial<{ valueDate: string; amount: number; direction: 'in' | 'out'; label: string }> = {}) => ({
     valueDate: '2026-07-13', amount: 45.9, direction: 'in' as const, label: 'VIR SEPA LA-26-7K4M2P', ...over,
@@ -227,7 +227,7 @@ describe('eşleştirme önerisi', () => {
   });
 
   it('tamamı tahsil edilmiş sipariş candidate değildir (çağıran süzer) — açık bakiye 0 ise puan almaz', () => {
-    const suggestions = suggestOrderMatches(row({ label: 'VIREMENT RECU' }), [candidate({ outstanding: 0 })]);
+    const suggestions = suggestOrderMatches(row({ label: 'VIREMENT RECU' }), [candidate({ outstandingCents: 0 })]);
     expect(suggestions).toEqual([]);
   });
 

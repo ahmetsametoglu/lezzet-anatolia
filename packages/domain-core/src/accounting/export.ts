@@ -124,8 +124,11 @@ export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]
     gross: sumOf(vatLines, 'gross'),
     net: sumOf(vatLines, 'net'),
     vat: sumOf(vatLines, 'vat'),
-    shippingFee: sale.shippingFee,
-    discountAmount: sale.discountAmount,
+    // Export SATIRI muhasebeciye giden bir belgedir ve euro yazar; sipariş tarafı artık cent
+    // döndürüyor (02.9), dönüşüm burada. Satırın kendi alanlarının `…Cents`e geçmesi para/muhasebe
+    // ailesinin işi (02.9 dilim 5) — bu dilim sipariş alanlarını kapatıyor.
+    shippingFee: fromCents(sale.shippingFeeCents),
+    discountAmount: fromCents(sale.discountAmountCents),
     vatLines,
   };
 }
@@ -139,7 +142,7 @@ function sumOf<T>(rows: readonly T[], field: keyof T): number {
  * KDV kırılımının tabanı: satışın kanalı ve vergi işlemi. Satırın geri kalanı (referans, müşteri,
  * ülke) para hesabına girmez — bu yüzden ciro soranın tam bir `OrderSale` taşıması gerekmez.
  */
-export type SaleVatBasis = Pick<OrderSale, 'channel' | 'vatTreatment' | 'shippingFee'>;
+export type SaleVatBasis = Pick<OrderSale, 'channel' | 'vatTreatment' | 'shippingFeeCents'>;
 
 /**
  * Satışın oran bazında KDV kırılımı — **export satırının da kâr raporunun da tek zemini**.
@@ -152,7 +155,7 @@ export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[])
   const zeroRated = sale.vatTreatment === 'intra_eu_b2b_reverse_charge';
   const buckets = items.map((item) => ({ vatRate: zeroRated ? 0 : item.vatRate, amount: lineAmountCents(item) }));
 
-  const shippingCents = toCents(sale.shippingFee);
+  const shippingCents = sale.shippingFeeCents;
   const bucketTotal = buckets.reduce((sum, b) => sum + b.amount, 0);
   if (shippingCents > 0 && bucketTotal > 0) {
     distributeProportional(buckets.map((b) => b.amount), shippingCents).forEach((share, i) => {

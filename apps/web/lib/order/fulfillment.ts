@@ -35,7 +35,7 @@ export async function deliverOrder(
  */
 export async function closeOrder(
   orderId: string,
-  opts: { actorId?: string | null; actualDeliveryCost?: number | null } = {},
+  opts: { actorId?: string | null; actualDeliveryCostCents?: number | null } = {},
 ): Promise<CloseResult> {
   const db = serviceDb();
   const settings = new SettingsService(db);
@@ -45,11 +45,12 @@ export async function closeOrder(
     settings.getNumber('packaging_unit_cost_cents', 120),
   ]);
 
+  // Ayarlar zaten cent'te tutuluyordu; servis de artık cent alıyor (02.9) — buradaki `/ 100`
+  // çevrimleri kalktı ve iki taraf aynı birimi konuşuyor.
   return new OrderService(db).close(orderId, {
     actorId: opts.actorId,
-    deliveryCost: opts.actualDeliveryCost,
-    // Ayarlar cent'te tutulur (STACK §8); sipariş tablosundaki para kolonları euro numeric.
-    routeUnitCost: routeUnitCents / 100,
-    packagingUnitCost: packagingUnitCents / 100,
+    deliveryCostCents: opts.actualDeliveryCostCents,
+    routeUnitCostCents: routeUnitCents,
+    packagingUnitCostCents: packagingUnitCents,
   });
 }

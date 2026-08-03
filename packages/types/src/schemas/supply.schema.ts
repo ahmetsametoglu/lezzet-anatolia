@@ -1,8 +1,11 @@
 import { z } from 'zod';
-import { dbNumeric, dbNumericNullable } from './db-numeric';
 
 // Tedarik zinciri şemaları (DOMAIN §16, data-model/stok-tedarik.md): tedarikçi kartı,
 // ürün–kod eşlemesi, tedarik siparişi ve mal kabul. Müşteri tarafının simetriği.
+//
+// Para alanları **cent** (02.9 · STACK §8); DB kolonları euro `numeric` ve çevrimi servis yapıyor
+// (`moneyFields`). `dbNumeric` bu dosyada artık YOK: tedarik ailesinde numeric taşıyan tek şey
+// paraydı — oran ya da ölçü alanı bulunmuyor.
 
 // ── Supplier ────────────────────────────────────────────────────────────────
 // Tedarikçiye borç SAKLANMAZ, türetilir: Σ girişler − Σ ödemeler.
@@ -44,8 +47,8 @@ export const SupplierProductSchema = z.object({
   nameAtSupplier: z.string().nullable(),
   /** Koli içi adet — sipariş koliyle veriliyorsa çeviri. */
   packQty: z.number().int().nullable(),
-  /** Mal kabulde otomatik güncellenir — "geçen sefer kaçtı". */
-  lastPurchasePrice: dbNumeric.nullable(),
+  /** Mal kabulde otomatik güncellenir — "geçen sefer kaçtı". Kolon `last_purchase_price` (euro). */
+  lastPurchasePriceCents: z.number().int().nullable(),
   isPreferred: z.boolean(),
   createdAt: z.string(),
 });
@@ -57,7 +60,7 @@ export const SupplierProductInsertSchema = z.object({
   supplierCode: z.string().min(1),
   nameAtSupplier: z.string().nullish(),
   packQty: z.number().int().nullish(),
-  lastPurchasePrice: z.number().nullish(),
+  lastPurchasePriceCents: z.number().int().nullish(),
   isPreferred: z.boolean().optional(),
 });
 export type SupplierProductInsert = z.infer<typeof SupplierProductInsertSchema>;
@@ -114,8 +117,14 @@ export const PurchaseOrderRowSchema = PurchaseOrderSchema.extend({
     z.object({
       id: z.string().uuid(),
       qty: z.number().int(),
-      /** Beklenen alış; **null olabilir** ve o zaman sipariş tutarı EKSİKTİR (ekran "≈" der). */
-      unitPrice: dbNumericNullable,
+      /**
+       * Beklenen alış (**cent**); **null olabilir** ve o zaman sipariş tutarı EKSİKTİR (ekran "≈" der).
+       *
+       * Kalem GÖMÜLÜ bir ilişkiden geliyor (`items:purchase_order_item(...)`), yani `moneyFields`
+       * buraya inmez — üst düzey servisin kendi tablosudur (`STACK §8`). Çevrim okumanın sınırında,
+       * `PurchaseOrderService.listRows` içinde yapılıyor.
+       */
+      unitPriceCents: z.number().int().nullable(),
       /**
        * Bu kaleme karşılık FİİLEN giren partiler.
        *
@@ -154,7 +163,8 @@ export const PurchaseOrderItemSchema = z.object({
   variantId: z.string().uuid(),
   supplierProductId: z.string().uuid().nullable(),
   qty: z.number().int(),
-  unitPrice: dbNumeric.nullable(),
+  /** Beklenen alış (**cent**) — kolon `unit_price` (euro numeric). */
+  unitPriceCents: z.number().int().nullable(),
   /**
    * İSTEĞE BAĞLI hedef depo (C7): "20 koli STR'ye, 10 koli KEHL'e" — tedarikçi listesine yazılır,
    * kabul eden depocu kendi payını listeden okur. Boşsa hedefi kabul eden depo söyler; niyet
@@ -169,7 +179,7 @@ export const PurchaseOrderItemInsertSchema = z.object({
   variantId: z.string().uuid(),
   supplierProductId: z.string().uuid().nullish(),
   qty: z.number().int().positive(),
-  unitPrice: z.number().nullish(),
+  unitPriceCents: z.number().int().nullish(),
   targetWarehouseId: z.string().uuid().nullish(),
 });
 export type PurchaseOrderItemInsert = z.infer<typeof PurchaseOrderItemInsertSchema>;
@@ -189,7 +199,8 @@ export const StockIntakeSchema = z.object({
    */
   warehouseId: z.string().uuid(),
   date: z.string(),
-  totalAmount: dbNumeric,
+  /** Kalemlerden hesaplanır (Σ birim maliyet × adet) — **cent**; kolon `total_amount` (euro). */
+  totalAmountCents: z.number().int(),
   note: z.string().nullable(),
   createdAt: z.string(),
 });
@@ -200,7 +211,7 @@ export const StockIntakeInsertSchema = z.object({
   purchaseOrderId: z.string().uuid().nullish(),
   warehouseId: z.string().uuid(),
   date: z.string().optional(),
-  totalAmount: z.number().optional(),
+  totalAmountCents: z.number().int().optional(),
   note: z.string().nullish(),
 });
 export type StockIntakeInsert = z.infer<typeof StockIntakeInsertSchema>;
@@ -214,8 +225,14 @@ export const IntakeLineSchema = z.object({
   qty: z.number().int().positive(),
   expiryDate: z.string(),
   lotNumber: z.string().nullish(),
-  /** Birim (paket) başına alış maliyeti — gerçek COGS bundan çıkar. */
-  unitCost: z.number().nonnegative().nullish(),
+  /**
+   * Birim (paket) başına alış maliyeti (**cent**) — gerçek COGS bundan çıkar.
+   *
+   * RPC girdisidir (`receive_intake.p_lines`) ve fonksiyon euro `numeric` bekler; cent→euro çevrimi
+   * servis sınırında yapılır (`StockIntakeService.receive`). Alan yine `…Cents` adını taşır: adı
+   * euro bırakmak, uygulamanın tek birimini (cent) kapıya kadar taşıyıp orada bozmak olurdu.
+   */
+  unitCostCents: z.number().int().nonnegative().nullish(),
   location: z.string().nullish(),
   /**
    * Hangi PO kalemini karşılıyor (T5). PO'lu kabulde ZORUNLU ama yazılması şart değil: boş
@@ -231,6 +248,7 @@ export const ReceiveIntakeResultSchema = z.object({
   ok: z.boolean(),
   intakeId: z.string().uuid(),
   stockIds: z.array(z.string().uuid()),
-  totalAmount: dbNumeric,
+  /** Girişin toplamı (**cent**) — RPC jsonb'si euro döner, çevrim servis sınırında (`STACK §8`). */
+  totalAmountCents: z.number().int(),
 });
 export type ReceiveIntakeResult = z.infer<typeof ReceiveIntakeResultSchema>;

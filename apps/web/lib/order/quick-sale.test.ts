@@ -62,10 +62,10 @@ afterAll(async () => {
 });
 
 /** Kapıda açılan taslak: kaynak `door`, teslimat yok. */
-async function doorDraft(qty: number, unitPrice = 10) {
+async function doorDraft(qty: number, unitPriceCents = 1000) {
   return orders.create(
-    { warehouseId, customerId, channel: 'b2c', orderSource: 'door', total: qty * unitPrice },
-    [{ variantId, qty, unitPrice, vatRate: 5.5 }],
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'door', totalCents: qty * unitPriceCents },
+    [{ variantId, qty, unitPriceCents, vatRate: 5.5 }],
   );
 }
 
@@ -86,9 +86,9 @@ describe('hızlı satış (07.10)', () => {
       status: 'completed',
       paymentStatus: 'paid', // tahsilat hareketinden TÜRETİLDİ
       paymentMethod: 'cash',
-      amountCollected: 40,
-      deliveryCost: 0, // kapıda teslimat yapılmadı — rota birim maliyeti yazılamaz
-      paymentFee: 0, // nakitte komisyon sıfırdır (uydurma değil, olgu)
+      amountCollectedCents: 4000,
+      deliveryCostCents: 0, // kapıda teslimat yapılmadı — rota birim maliyeti yazılamaz
+      paymentFeeCents: 0, // nakitte komisyon sıfırdır (uydurma değil, olgu)
     });
 
     // Para uydurulmadı: nakit gerçekten kasanın bakiyesine girdi.
@@ -97,7 +97,7 @@ describe('hızlı satış (07.10)', () => {
     // FEFO: önce süresi dolan çıktı — 3 × A (2 €) + 1 × B (3 €) = 9 €.
     expect((await stocks.getById(batchA))?.physicalQty).toBe(0);
     expect((await stocks.getById(batchB))?.physicalQty).toBe(9);
-    expect(outcome.cogsAmount).toBe(9);
+    expect(outcome.cogsAmountCents).toBe(900);
   });
 
   it('adım atlandı diye İZ atlanmaz: parti kaydı ve geçiş logu yazılır', async () => {
@@ -172,7 +172,7 @@ describe('hızlı satış (07.10)', () => {
       orderId: order.id,
       paymentMethod: 'cash',
       paymentAccountId: cashAccount,
-      collectedAmount: 20,
+      collectedAmountCents: 2000,
       picks: [{ orderItemId: items[0]!.id, batches: [{ stockId: batchA, qty: 2 }] }],
     });
     expect(outcome.status).toBe('ok');
@@ -199,7 +199,7 @@ describe('hızlı satış (07.10)', () => {
 
       const kapanan = await orders.getById(order.id);
       expect(kapanan?.status).toBe('completed'); // mal gitti, satış kapandı
-      expect(kapanan?.amountCollected).toBe(0); // para kaydı yok — uydurulmadı
+      expect(kapanan?.amountCollectedCents).toBe(0); // para kaydı yok — uydurulmadı
       expect(kapanan?.paymentStatus).toBe('pending');
     } finally {
       // Ne bulduysak onu bırakırız — ayar YOKTUYSA yok kalır (eskiden `if (previous)` ile atlanıyordu,

@@ -297,9 +297,16 @@ taşıyordu (`type`'a göre) ve hiçbir adla dürüst olamıyordu: `valueCents` 
 (`percent` + `amount`) ve hangisinin dolu olacağını bir kısıt tutar (`02.9`, `0031`). Aynı ölçüt
 görünüm tiplerinde ve form girdilerinde de geçerlidir: tek kutu, iki alan gönderir.
 
-> **AÇIK — göç sürüyor (`02.9`).** Beyan bugün **fiyat · indirim · stok** ailelerinde; sipariş ·
-> para hareketi · profil · tedarik aileleri hâlâ euro döndürüyor ve dönüşüm çağrı yerlerinde elle
-> yapılıyor. O aileler kapanana kadar savunma, yukarıdaki iki maddedir (ortak helper + `…Cents` adı).
+**RPC gövdeleri iki yönde de sınırdır.** Fonksiyonlar gelen anahtarları tablonun kolonlarıyla
+**kesiştirir**: `unit_price_cents` diye bir kolon yoksa o anahtar sessizce düşer ve satır fiyatsız
+doğar. Bu yüzden RPC'ye giden gövde `rpcMoneyToEuro`, dönen gövde `rpcMoneyToCents` ile çevrilir
+(`packages/database/src/utils/rpc-money.ts`). **`undefined` ile `null` aynı şey değildir:** ilki
+"gönderme" (kolon varsayılanını alır), ikincisi "boşalt" — ikisini birleştirmek `not null default`
+kolonları kırar (`shipping_fee`de kırdı).
+
+> **AÇIK — göç sürüyor (`02.9`).** Beyan bugün **fiyat · indirim · stok · tedarik · sipariş**
+> ailelerinde; **para hareketi** ve **profil** hâlâ euro döndürüyor, dönüşüm çağrı yerlerinde elle
+> yapılıyor. O iki aile kapanana kadar savunma, yukarıdaki iki maddedir (ortak helper + `…Cents` adı).
 
 ## 9. UI: Tailwind + primitif/adaptör
 

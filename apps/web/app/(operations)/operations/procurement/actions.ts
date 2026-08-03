@@ -9,7 +9,6 @@ import {
   SupplierService,
   serviceDb,
 } from '@lezzet/database';
-import { fromCents } from '@lezzet/helper';
 import type { KeysetCursor, PurchaseOrderStatus } from '@lezzet/types';
 import { requireAdmin, requireFinance } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -134,7 +133,7 @@ export async function searchVariantsForMappingAction(term: string): Promise<Acti
  * Eşleme yazar/günceller. Aynı (tedarikçi, varyant) ikilisi iki kez tanımlanmaz — servis `upsert`
  * yapar, kod değişirse satır güncellenir, kopya satır doğmaz.
  *
- * `lastPurchasePrice` BURADAN yazılmaz: onu mal kabul günceller ("geçen sefer kaçtı" ölçülen bir
+ * `lastPurchasePriceCents` BURADAN yazılmaz: onu mal kabul günceller ("geçen sefer kaçtı" ölçülen bir
  * gerçektir, beyan değil).
  */
 export async function saveSupplierProductAction(input: {
@@ -214,14 +213,14 @@ export async function createDraftFromSuggestionAction(supplierId: string): Promi
     // Depoları toplayıp tek satıra indirmek, tedarikçiye giden listeden niyeti silerdi — mal tek
     // adrese gelir ve iki deponun eksiği tek yerde birikirdi. Aynı varyant iki depoda eşik altıysa
     // iki satır olur ve bu doğrudur: farklı yere gidecek iki parti.
-    const lines: Array<{ variantId: string; qty: number; unitPrice: number | null; targetWarehouseId: string }> = [];
+    const lines: Array<{ variantId: string; qty: number; unitPriceCents: number | null; targetWarehouseId: string }> = [];
     for (const warehouseId of ctx.visibleWarehouseIds) {
       const group = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId);
       for (const line of group?.lines ?? []) {
         lines.push({
           variantId: line.variantId,
           qty: line.suggestedQty,
-          unitPrice: line.lastPurchasePrice,
+          unitPriceCents: line.lastPurchasePriceCents,
           targetWarehouseId: warehouseId,
         });
       }
@@ -311,10 +310,8 @@ export async function updateDraftLineAction(input: {
     await new PurchaseOrderItemService(serviceDb()).update({
       id: input.itemId,
       ...(input.qty === undefined ? {} : { qty: input.qty }),
-      // Cent → euro dönüşümü TEK noktada, servis sınırında (`STACK §8`).
-      ...(input.unitPriceCents === undefined
-        ? {}
-        : { unitPrice: input.unitPriceCents === null ? null : fromCents(input.unitPriceCents) }),
+      // Cent → euro dönüşümü artık servisin kendi işi (`moneyFields`, 02.9) — burada birim değişmez.
+      ...(input.unitPriceCents === undefined ? {} : { unitPriceCents: input.unitPriceCents }),
     });
     revalidatePath(PATH);
     return { data: null, error: null };

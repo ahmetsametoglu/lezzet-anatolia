@@ -3,7 +3,6 @@ import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { OrderService, ProductService, ProductVariantService, UserProfileService, serviceDb } from '@lezzet/database';
 import { resolveLocalizedText } from '@lezzet/types';
-import { toCents } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { detectDevice } from '@/lib/device';
 import { getSessionUser } from '@/lib/guard';
@@ -92,8 +91,8 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     deliveryDate: order.deliveryDate,
     onAccount: order.onAccount,
     paymentMethod: order.paymentMethod,
-    totalCents: toCents(order.total),
-    discountCents: toCents(order.discountAmount),
+    totalCents: order.totalCents,
+    discountCents: order.discountAmountCents,
     /**
      * İndirim satırının adı. Kaynak SİPARİŞTEKİ KOPYADIR (`discount_label`), tanım değil: kampanya
      * o günden sonra yeniden adlandırılmış, süresi dolmuş ya da silinmiş olabilir — sipariş özeti
@@ -103,7 +102,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
      * Sepette oran gösterilir çünkü orada karar ANLIK; siparişte karar geçmiştir.
      */
     discountName: order.discountLabel ? resolveLocalizedText(order.discountLabel, locale as Locale) : '',
-    shippingFeeCents: toCents(order.shippingFee),
+    shippingFeeCents: order.shippingFeeCents,
     // Yalnız İLK ad (tasarım: "Teşekkürler, Ahmet") — tam ad kutlama cümlesini resmîleştirirdi.
     customerFirstName: profile.name ? (profile.name.split(' ')[0] ?? '') : '',
     customerEmail: profile.email ?? '',
@@ -117,7 +116,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
         unit: line?.unit ?? '',
         image: line?.image ?? null,
         qty: item.qty,
-        lineTotalCents: toCents(item.unitPrice) * item.qty,
+        lineTotalCents: item.unitPriceCents * item.qty,
       };
     }),
   };

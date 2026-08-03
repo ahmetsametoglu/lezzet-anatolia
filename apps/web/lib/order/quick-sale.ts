@@ -1,5 +1,6 @@
 import { OrderService, SettingsService, serviceDb } from '@lezzet/database';
 import { canTransition, generateReferenceNo, producesReferenceNo, stockEffectOf } from '@lezzet/domain-core';
+import { fromCents } from '@lezzet/helper';
 import type { OrderStatus, PaymentMethod, PreparationPick } from '@lezzet/types';
 import { recordOrderPayment } from '../money/order-payment';
 import { suggestPicksForVariant } from '../stock/fefo';
@@ -25,7 +26,7 @@ type QuickSaleOutcome =
       status: 'ok';
       referenceNo: string | null;
       consumedQty: number;
-      cogsAmount: number;
+      cogsAmountCents: number;
       /** Tahsilat hareketi yazıldı mı — hesap belirsizse satış kapanır ama para kayıtsız kalır. */
       paymentRecorded: boolean;
     }
@@ -42,8 +43,8 @@ interface QuickSaleInput {
   /** Kapıdaki satışı yapan personel. */
   actorId?: string | null;
   paymentMethod: PaymentMethod;
-  /** Tahsil edilen tutar (euro). Verilmezse siparişin toplamı tahsil edilmiş sayılır. */
-  collectedAmount?: number;
+  /** Tahsil edilen tutar (**cent**). Verilmezse siparişin toplamı tahsil edilmiş sayılır. */
+  collectedAmountCents?: number;
   /**
    * Paranın girdiği hesap (kasadaki çekmece). Verilmezse `door_cash_account_id` ayarına düşülür;
    * o da yoksa tahsilat KAYDEDİLMEZ — satış yine kapanır, para kayıtsız görünür.
@@ -128,7 +129,9 @@ export async function quickSale(input: QuickSaleInput): Promise<QuickSaleOutcome
     const collected = await recordOrderPayment({
       orderId: order.id,
       accountId,
-      amount: input.collectedAmount ?? order.total,
+      // `recordOrderPayment` hâlâ euro alıyor (para hareketi ailesi göçmedi — 02.9 dilim 5);
+      // çevrim burada, ortak `fromCents` ile. O dilim gelince bu satır de sadeleşecek.
+      amount: fromCents(input.collectedAmountCents ?? order.totalCents),
       description: 'Kapı önü satış',
     });
     paymentRecorded = collected.status === 'ok';
@@ -138,7 +141,7 @@ export async function quickSale(input: QuickSaleInput): Promise<QuickSaleOutcome
     status: 'ok',
     referenceNo: result.referenceNo ?? null,
     consumedQty: result.consumedQty ?? 0,
-    cogsAmount: result.cogsAmount ?? 0,
+    cogsAmountCents: result.cogsAmountCents ?? 0,
     paymentRecorded,
   };
 }

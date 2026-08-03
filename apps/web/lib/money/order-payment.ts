@@ -1,5 +1,6 @@
 import { MoneyMovementService, OrderService, serviceDb } from '@lezzet/database';
 import { derivePaymentStatusForOrder, type PaymentDerivation } from '@lezzet/domain-core';
+import { toCents } from '@lezzet/helper';
 import type { Order, OrderItem, PaymentStatus } from '@lezzet/types';
 
 /**
@@ -16,7 +17,7 @@ import type { Order, OrderItem, PaymentStatus } from '@lezzet/types';
  */
 
 type PaymentOutcome =
-  | { status: 'ok'; amountCollected: number; amountRefunded: number; paymentStatus: PaymentStatus; derivation: PaymentDerivation }
+  | { status: 'ok'; amountCollectedCents: number; amountRefundedCents: number; paymentStatus: PaymentStatus; derivation: PaymentDerivation }
   | { status: 'not_found' };
 
 interface OrderMovementInput {
@@ -50,7 +51,9 @@ async function writeOrderMovement(input: OrderMovementInput, type: 'order_paymen
   if (!found) return { status: 'not_found' };
 
   const amounts = await new MoneyMovementService(db).recordForOrder({ ...input, type });
-  return finalize(db, found.order, found.items, amounts.amountCollected, amounts.amountRefunded);
+  // `OrderAmounts` (RPC dönüşü) hâlâ euro — para hareketi ailesi henüz göçmedi (02.9 dilim 5).
+  // Çevrim burada, ortak `toCents` ile; o dilim gelince bu iki satır de düşecek.
+  return finalize(db, found.order, found.items, toCents(amounts.amountCollected), toCents(amounts.amountRefunded));
 }
 
 /**
@@ -65,18 +68,20 @@ export async function syncOrderPaymentStatus(orderId: string): Promise<PaymentOu
 
   // Cache'i de tazele: hareket elle silinmiş/düzeltilmiş olabilir.
   const amounts = await new MoneyMovementService(db).resyncOrder(orderId);
-  return finalize(db, found.order, found.items, amounts.amountCollected, amounts.amountRefunded);
+  // `OrderAmounts` (RPC dönüşü) hâlâ euro — para hareketi ailesi henüz göçmedi (02.9 dilim 5).
+  // Çevrim burada, ortak `toCents` ile; o dilim gelince bu iki satır de düşecek.
+  return finalize(db, found.order, found.items, toCents(amounts.amountCollected), toCents(amounts.amountRefunded));
 }
 
 async function finalize(
   db: ReturnType<typeof serviceDb>,
   order: Order,
   items: OrderItem[],
-  collected: number,
-  refunded: number,
+  collectedCents: number,
+  refundedCents: number,
 ): Promise<PaymentOutcome> {
   // Eşleme motorda (kargo, indirim payı, iptal kuralı) — burada tekrarlanmaz.
-  const derivation = derivePaymentStatusForOrder(order, items, { collected, refunded });
+  const derivation = derivePaymentStatusForOrder(order, items, { collectedCents, refundedCents });
 
   if (derivation.status !== order.paymentStatus) {
     await new OrderService(db).update({ id: order.id, paymentStatus: derivation.status });
@@ -84,8 +89,8 @@ async function finalize(
 
   return {
     status: 'ok',
-    amountCollected: collected,
-    amountRefunded: refunded,
+    amountCollectedCents: collectedCents,
+    amountRefundedCents: refundedCents,
     paymentStatus: derivation.status,
     derivation,
   };

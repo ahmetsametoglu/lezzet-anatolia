@@ -90,8 +90,8 @@ function fakeRefunder(outcome: ProviderRefundOutcome): ProviderRefunder & { call
  * üretimde bunu webhook yapar, burada aynı kapı taklit edilir.
  */
 async function paidOrder(opts: { providerRef?: string | null; accountId?: string } = {}) {
-  const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', deliveryType: 'route', total: 20 }, [
-    { variantId, qty: 2, unitPrice: 10, vatRate: 5.5 },
+  const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', deliveryType: 'route', totalCents: 2000 }, [
+    { variantId, qty: 2, unitPriceCents: 1000, vatRate: 5.5 },
   ]);
   await transitionOrder({ orderId: order.id, to: 'confirmed' });
   await recordOrderPayment({
@@ -133,7 +133,7 @@ describe('sıra: önce sağlayıcı, sonra hareket', () => {
     const movements = await money.listByOrder(orderId);
     expect(movements.filter((m) => m.type === 'order_refund')).toHaveLength(0);
     // Sipariş hâlâ "para bizde" diyor: borç açıkta, kimse iadeyi yapılmış sanmıyor.
-    expect((await orders.getById(orderId))?.amountRefunded).toBe(0);
+    expect((await orders.getById(orderId))?.amountRefundedCents).toBe(0);
   });
 
   it('anahtar yoksa iade yazılmaz — "sağlayıcı tanımlı değil" ile "iade edildi" karıştırılmaz', async () => {
@@ -200,7 +200,7 @@ describe('charge.refunded mutabakatı', () => {
     const outcome = await handleStripeEvent(refundEvent(`pi_panel_${stamp}`, 2000, 'panel'), providerAccount);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'refunded' });
-    expect((await orders.getById(orderId))?.amountRefunded).toBe(20);
+    expect((await orders.getById(orderId))?.amountRefundedCents).toBe(2000);
   });
 
   it('kendi başlattığımız iadede İKİNCİ kez yazılmaz — toplam zaten eşit', async () => {
@@ -210,7 +210,7 @@ describe('charge.refunded mutabakatı', () => {
     const outcome = await handleStripeEvent(refundEvent(`pi_own_${stamp}`, 2000, 'own'), providerAccount);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'ignored' });
-    expect((await orders.getById(orderId))?.amountRefunded).toBe(20);
+    expect((await orders.getById(orderId))?.amountRefundedCents).toBe(2000);
   });
 
   it('kısmi iadede yalnız FARK yazılır', async () => {
@@ -220,7 +220,7 @@ describe('charge.refunded mutabakatı', () => {
     // Sağlayıcıda toplam 12 € iade görünüyor: 5 € bizim, 7 € panelden eklenmiş.
     await handleStripeEvent(refundEvent(`pi_part_${stamp}`, 1200, 'part'), providerAccount);
 
-    expect((await orders.getById(orderId))?.amountRefunded).toBe(12);
+    expect((await orders.getById(orderId))?.amountRefundedCents).toBe(1200);
   });
 });
 
@@ -238,7 +238,7 @@ describe('yeniden deneme', () => {
     const retried = await retryRefund(orderId, { refunder: fakeRefunder({ status: 'ok', refundId: 're_retry' }) });
 
     expect(retried).toMatchObject({ status: 'ok', refundedAmount: 20 });
-    expect((await orders.getById(orderId))?.amountRefunded).toBe(20);
+    expect((await orders.getById(orderId))?.amountRefundedCents).toBe(2000);
   });
 
   it('aynı iade tekrar denendiğinde AYNI anahtar gider — para iki kez çıkmaz', async () => {
@@ -265,6 +265,6 @@ describe('yeniden deneme', () => {
     // Borç türetimden geliyor ve kapandı: sağlayıcıya hiç gidilmez.
     expect(retried).toMatchObject({ status: 'ok', refundedAmount: 0 });
     expect(again.calls).toHaveLength(0);
-    expect((await orders.getById(orderId))?.amountRefunded).toBe(20);
+    expect((await orders.getById(orderId))?.amountRefundedCents).toBe(2000);
   });
 });

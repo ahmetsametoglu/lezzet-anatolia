@@ -13,6 +13,7 @@ import {
   type SupplierProductInsert,
   type SupplierProductUpdate,
 } from '@lezzet/types';
+import { toCents } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
 
 /**
@@ -45,15 +46,19 @@ export class SupplierService extends BaseDbService<Supplier, SupplierInsert, Sup
    * çağıran kırılmaz. Aralık ikinci bir toplayıcı olarak DEĞİL bu metoda eklendi: borç da dönem
    * toplamı da aynı hareketlerden türüyor, ayrı bir okuma aynı kararı iki yere koymak olurdu.
    *
-   * ⚠ **Dönem `balance`'ı bir borç DEĞİLDİR** ve okuyan taraf bunu bilmeli: aralık verildiğinde
-   * `paid` da kırpılır, yani "bu yıl alınan mal − bu yıl yapılan ödeme" çıkar. Geçen yılın malına bu
-   * yıl yapılan ödeme o farkı negatife çeker. Dönemli çağrının anlamlı alanı `intakeTotal`'dir
+   * ⚠ **Dönem `balanceCents`'i bir borç DEĞİLDİR** ve okuyan taraf bunu bilmeli: aralık verildiğinde
+   * `paidCents` da kırpılır, yani "bu yıl alınan mal − bu yıl yapılan ödeme" çıkar. Geçen yılın malına
+   * bu yıl yapılan ödeme o farkı negatife çeker. Dönemli çağrının anlamlı alanı `intakeTotalCents`'tir
    * ("bu tedarikçiyle bu yıl ne kadar iş yaptık"); borç sorusu dönemsizdir.
+   *
+   * **Dönüş cent** (02.9 · `STACK §8`). İki toplam iki AYRI ailenin kolonundan geliyor (`stock_intake`
+   * tedarik, `money_movement` para) ve ikisi de ham okunuyor — biri cent'e inip öteki euro kalsaydı
+   * aynı nesnede iki birim yan yana dururdu ve `balance` çıkarması sessizce 100× şaşardı.
    */
   async debt(
     supplierId: string,
     period: { from?: Date; to?: Date } = {},
-  ): Promise<{ intakeTotal: number; paid: number; balance: number }> {
+  ): Promise<{ intakeTotalCents: number; paidCents: number; balanceCents: number }> {
     const inPeriod = <T extends { gte: (c: string, v: string) => T; lte: (c: string, v: string) => T }>(query: T): T => {
       let scoped = query;
       if (period.from) scoped = scoped.gte('created_at', period.from.toISOString());
@@ -68,14 +73,16 @@ export class SupplierService extends BaseDbService<Supplier, SupplierInsert, Sup
     if (intakes.error) throw intakes.error;
     if (payments.error) throw payments.error;
 
-    const sumOf = (rows: unknown[], field: string) =>
-      rows.reduce<number>((sum, row) => sum + Number((row as Record<string, string | number>)[field]), 0);
+    // Toplama SATIR SATIR cent'e inilerek yapılır, euro'da toplanıp sonra çevrilerek değil: kayan
+    // noktada biriken artık, çevrimden önce toplandığında bir kuruş kaydırabilir. Cent tamsayı
+    // olduğu için toplamın kendisi kesindir — eski kodun `Math.round(v * 100) / 100` düzeltmesi
+    // artık gereksiz, çünkü düzeltilecek bir artık kalmıyor.
+    const sumCents = (rows: unknown[], field: string) =>
+      rows.reduce<number>((sum, row) => sum + toCents(Number((row as Record<string, string | number>)[field])), 0);
 
-    // Para 2 ondalıktır; kayan nokta artığı borç rakamında görünmesin.
-    const round = (v: number) => Math.round(v * 100) / 100;
-    const intakeTotal = round(sumOf(intakes.data ?? [], 'total_amount'));
-    const paid = round(sumOf(payments.data ?? [], 'amount'));
-    return { intakeTotal, paid, balance: round(intakeTotal - paid) };
+    const intakeTotalCents = sumCents(intakes.data ?? [], 'total_amount');
+    const paidCents = sumCents(payments.data ?? [], 'amount');
+    return { intakeTotalCents, paidCents, balanceCents: intakeTotalCents - paidCents };
   }
 }
 
@@ -85,6 +92,9 @@ export class SupplierService extends BaseDbService<Supplier, SupplierInsert, Sup
  * biri "tercihli" işaretlenir.
  */
 export class SupplierProductService extends BaseDbService<SupplierProduct, SupplierProductInsert, SupplierProductUpdate> {
+  /** Kolon `supplier_product.last_purchase_price` (euro numeric); app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ['lastPurchasePriceCents'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'supplier_product', SupplierProductSchema, SupplierProductInsertSchema, SupplierProductUpdateSchema);
   }

@@ -12,7 +12,6 @@ import {
 } from '@lezzet/database';
 import type { serviceDb } from '@lezzet/database';
 import { summarizePurchaseOrder } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText, type KeysetCursor, type PurchaseOrderRow, type PurchaseOrderStatus } from '@lezzet/types';
 import { titleOf } from '@/lib/catalog/title';
 import { readWarehouseContext } from '@/lib/warehouse/context';
@@ -220,7 +219,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
         title: titles.get(item.variantId) ?? '—',
         supplierCode: item.supplierProductId ? (codeOfMapping.get(item.supplierProductId) ?? null) : null,
         qty: item.qty,
-        unitPriceCents: item.unitPrice === null ? null : toCents(item.unitPrice),
+        unitPriceCents: item.unitPriceCents, // servis cent döndürüyor (02.9) — çeviri kalmadı
         targetWarehouseCode: item.targetWarehouseId ? (warehouseCodeOf.get(item.targetWarehouseId) ?? null) : null,
         // İlerleme satırı yoksa mal hiç girmemiştir — "bilinmiyor" değil, sıfır: görünüm açık
         // siparişin her kalemini taşır, eksik satır kabul edilmemiş kalemdir.
@@ -284,7 +283,7 @@ export async function readSupplierCards(db: Db): Promise<SupplierCardView[]> {
 
   return Promise.all(
     suppliers.map(async (s) => {
-      const [{ intakeTotal, balance }, pendingOrderCount] = await Promise.all([
+      const [{ intakeTotalCents, balanceCents }, pendingOrderCount] = await Promise.all([
         svc.debt(s.id),
         // "Bu firmadan yolda ne var" — kart tek başına okunabilsin: borç kadar bunun da cevabı
         // burada olmalı, yoksa operatör sipariş sekmesine gidip elle süzmek zorunda kalır.
@@ -297,8 +296,8 @@ export async function readSupplierCards(db: Db): Promise<SupplierCardView[]> {
         vatNumber: s.vatNumber,
         note: s.note,
         paymentTermDays: s.paymentTermDays,
-        debtCents: toCents(balance),
-        intakeTotalCents: toCents(intakeTotal),
+        debtCents: balanceCents, // servis cent döndürüyor (02.9) — çeviri kalmadı
+        intakeTotalCents,
         pendingOrderCount,
         isActive: s.isActive,
       };
@@ -322,7 +321,7 @@ export async function readSupplierProducts(db: Db, supplierId: string): Promise<
     supplierCode: m.supplierCode,
     nameAtSupplier: m.nameAtSupplier,
     packQty: m.packQty,
-    lastPurchaseCents: m.lastPurchasePrice === null ? null : toCents(m.lastPurchasePrice),
+    lastPurchaseCents: m.lastPurchasePriceCents,
     isPreferred: m.isPreferred,
   }));
 }

@@ -18,8 +18,8 @@ import {
   type StockAdjustmentReason,
   type StockAdjustmentUpdate,
 } from '@lezzet/types';
-import { toCents } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
+import { rpcMoneyToCents } from '../utils/rpc-money';
 
 import { dbToApp } from '../utils/case-transformers';
 
@@ -87,11 +87,9 @@ export class StockAdjustmentService extends BaseDbService<StockAdjustment, Stock
       p_note: input.note ?? null,
       p_created_by: input.createdBy ?? null,
     });
-    // RPC dönüşü bir TABLO SATIRI değil (jsonb) — `moneyFields` yolundan geçmez. Dönüşüm bu sınırda
-    // ve ortak `toCents` ile: RPC euro döndürüyor, uygulamanın gördüğü her para sayısı cent (STACK §8).
-    const row = dbToApp<Record<string, unknown>>(raw);
-    const { costTotal, ...rest } = row as { costTotal: number | string };
-    return AdjustBatchResultSchema.parse({ ...rest, costTotalCents: toCents(Number(costTotal)) });
+    // RPC dönüşü bir TABLO SATIRI değil (jsonb) — `moneyFields` yolundan geçmez; dönüşüm bu sınırda
+    // ve ortak yardımcıyla (`rpcMoneyToCents`), her serviste yeniden yazılmasın diye.
+    return AdjustBatchResultSchema.parse(rpcMoneyToCents(dbToApp(raw), ['costTotal']));
   }
 
   /** Bir olayın bütün satırları — "elimdeki kâğıdın karşılığı" araması. */

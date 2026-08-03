@@ -1,4 +1,4 @@
-import { addVat, removeVat, toCents } from '@lezzet/helper';
+import { addVat, removeVat } from '@lezzet/helper';
 import type { Channel, OrderItem } from '@lezzet/types';
 import { vatBaseOf } from '../pricing/resolve-price';
 
@@ -15,17 +15,17 @@ import { vatBaseOf } from '../pricing/resolve-price';
  * Kâr **her zaman HT üstünden** hesaplanır: KDV ciro değildir, devlet adına tahsil edilir.
  */
 
-export type AccountingLine = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPrice' | 'lineDiscountAmount' | 'vatRate'>;
+export type AccountingLine = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPriceCents' | 'lineDiscountAmountCents' | 'vatRate'>;
 
 /**
  * Kalemin faturalanacak tutarı **kanalın kendi tabanında** (cent) — **teslim edilen** miktar
  * üzerinden. Sipariş edilen değil: gitmeyen mal ne faturalanır ne ciro sayılır.
  */
 export function lineAmountCents(item: AccountingLine): number {
-  const beforeDiscount = toCents(item.unitPrice) * item.fulfilledQty;
+  const beforeDiscount = item.unitPriceCents * item.fulfilledQty;
   // İndirim payı tüm miktar için yazılmıştır; eksik karşılanan kalemde (07.8) oransal düşer —
   // yoksa yarısı gitmiş bir kalem indirimin tamamını taşır ve satır olduğundan ucuz görünürdü.
-  const discountShare = item.qty > 0 ? Math.round((toCents(item.lineDiscountAmount) * item.fulfilledQty) / item.qty) : 0;
+  const discountShare = item.qty > 0 ? Math.round((item.lineDiscountAmountCents * item.fulfilledQty) / item.qty) : 0;
   return Math.max(0, beforeDiscount - discountShare);
 }
 
