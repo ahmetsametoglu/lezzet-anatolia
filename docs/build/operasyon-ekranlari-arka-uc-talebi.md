@@ -209,6 +209,10 @@ veriyor (aynı kişi iki rol taşıyabiliyor) ama dört tur.
 
 Bu uç yalnız Depolar'ın işi değil: Ayarlar ekranının (09.16) kişi listesi de aynı kümeyi soracak.
 
+**Güncelleme (03.08):** ikinci tüketici geldi (Ayarlar) ve dört turlu okuma **tek yere** taşındı —
+`apps/web/lib/staff.ts` → `readStaff(svc)`. `listStaff` indiği gün değişecek tek dosya orası;
+iki ekran da onu çağırıyor, kendi kopyasını tutmuyor.
+
 **Arka uç cevabı:**
 
 ---
@@ -230,5 +234,63 @@ Not: kapı **guard'sız** ve olmak zorunda — müşteri yüzeyinin hata sınır
 tetikleniyor. Kötüye kullanım üç yerden tutuluyor: kaynak sabit (çağıran seçemez), mesaj tek satır +
 200 karakter, aynı parmak izi süreç içinde dakikada bir. Bunun yetmediğini düşünüyorsan söyle —
 oran sınırı sizin katmanınızda daha doğru durur.
+
+**Arka uç cevabı:**
+
+---
+
+## 7. Ayarlar ekranının (09.16) üç isteği
+
+Ekran yazıldı ve çalışıyor; aşağıdaki üçü olmadan da ayakta ama ikisi **kapalı bir kapı**, biri
+**yarım bir vaat**.
+
+### 7a. `SettingScopeEnum`'da `warehouse` YOK — şema ile migration ayrışmış
+
+`0016_settings.sql` enum'u beş değerli: `global · channel · zone · country · warehouse`. Migration'ın
+kendi künyesi depo bazlı olmaya aday değerleri de sayıyor (kesim saati, rota teslimat birim maliyeti,
+paketleme maliyeti, minimum sepet — "kâr hesabına girer, global kalırsa kâr sessizce yanlışlaşır").
+
+`packages/types/src/schemas/setting.schema.ts` ise DÖRT değerli — `warehouse` yok. `SettingScopeContext`'te
+de `warehouseId` yok, dolayısıyla `SettingsService`'in `SCOPE_PRIORITY`'si onu hiç aramıyor.
+
+Sonuç: depo kapsamlı bir satır bugün yazılsa **okuma tarafında Zod'a takılır** (`SettingSchema.parse`).
+Yani kapı veritabanında açık, uygulamada kapalı. Ekran bu yüzden depo eksenini hiç sunmuyor
+(`settings-catalog.ts` künyesinde yazılı) — olmayan bir yeteneği varmış gibi göstermemek için.
+
+**Üçüncü tanık veri modelinde:** `data-model/iletisim-geribildirim.md` de `scope_type`'ı DÖRT değerli
+yazıyor. Yani üç kaynaktan ikisi (doküman + Zod) dört diyor, migration beş — ihtimal migration'daki
+değerin ileriye dönük bir niyet olarak eklenip hiç tamamlanmadığı. Ama karar sizin: künyesindeki
+gerekçe (depo bazlı kesim saati / rota maliyeti — *"global kalırsa kâr sessizce yanlışlaşır"*) hâlâ
+geçerli bir ihtiyacı anlatıyor.
+
+**İstek:** üçü hizalansın. Ya enum'a `warehouse` eklensin + `SettingScopeContext.warehouseId` +
+`SCOPE_PRIORITY`'ye (bölgeden sonra, kanaldan önce mi — sıra sizin kararınız) + veri modeli tablosu,
+ya da migration'daki enum değeri kaldırılsın. Hangisi olursa olsun ekran ona göre açılır/kapalı
+kalır; bugünkü hâl "üçünden biri yanlış" durumu.
+
+### 7b. "Tüm ayarları getir" ucu yok
+
+`SettingsService`'te çok-satır okuma `listByKey(key)` — tek anahtar. `getAll` korumalı (haklı olarak).
+Ekran bugün sözlükteki 27 anahtar için 27 sorgu atıyor (`Promise.all`). Küme sabit ve küçük, o yüzden
+kabul edilebilir; ama iki gerçek bedeli var:
+
+1. **Sözlükte olmayan satır ekranda hiç görünmüyor.** Elle açılmış bir anahtar (ya da sözlüğe henüz
+   eklenmemiş yeni bir ayar) yönetim ekranında yok — oysa sistemde çalışan bir değeri olabilir.
+2. 27 tur, tek turun yerine.
+
+**İstek:** `listAll(): Promise<Setting[]>` — tablo zaten küçük ve doğal tavanlı (operatörün elle
+büyütemediği bir küme). İndiği tur ekran hem tek tura düşer hem "sözlükte olmayan N ayar" satırını
+gösterebilir.
+
+### 7c. `settings.updated_by` — değişiklik izinin aktörü
+
+Görev satırı (09.16) ve tasarım (`admin-ayarlar.md §2`) ayarda **"kimin tarafından ne zaman"** izi
+istiyor. Tabloda yalnız `updated_at` var. Ekran bugün hiçbir iz göstermiyor ve bu bilinçli: yarım bir
+iz ("03.08 10:12'de değişti") tam bir iz varmış gibi okunur, sonra "kim değiştirdi" sorusunun cevabı
+yokken güvenilir sanılır.
+
+**İstek:** `updated_by uuid references user_profiles(id)` + `SettingsService.set(…, { actorId })`.
+Aktörü uygulama katmanı biliyor (`requireAdmin` zaten kullanıcıyı çözüyor), yazması bir alan.
+İndiği tur ekran ayar satırının altına "Murat Y. · 3 Ağustos 10:12" yazar.
 
 **Arka uç cevabı:**

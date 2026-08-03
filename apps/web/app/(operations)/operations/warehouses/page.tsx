@@ -8,9 +8,10 @@ import {
   WarehouseTransferService,
   serviceDb,
 } from '@lezzet/database';
-import { CountryEnum, STAFF_ROLES, type Country, type UserProfile } from '@lezzet/types';
+import { CountryEnum, type Country, type UserProfile } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { detectDevice } from '@/lib/device';
+import { readStaff } from '@/lib/staff';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
@@ -99,20 +100,6 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
   return <WarehousesClient data={data} device={await detectDevice()} urlState={urlState} />;
 }
 
-/**
- * Operasyon rolü taşıyan profiller.
- *
- * Rol başına bir sorgu (`listByRole`) ve sonra birleştirme: servis "tüm personel" diye bir uç
- * SUNMUYOR ve kimliği rol dizisinde arayan sorgu GIN indeksli — dört küçük turun bedeli, indekssiz
- * bir tarama yazmaktan azdır. Tek turluk bir uç arka uç şeridinden istendi
- * (`operasyon-ekranlari-arka-uc-talebi.md §5`).
- *
- * Aynı kişi birden çok rol taşıyabilir (depocu + muhasebeci) → kimliğe göre tekilleştirilir.
- */
-async function readStaff(svc: UserProfileService): Promise<UserProfile[]> {
-  const lists = await Promise.all(STAFF_ROLES.map((role) => svc.listByRole(role)));
-  return [...new Map(lists.flat().map((p) => [p.id, p])).values()];
-}
 
 /** Seçili tesisin tam kartı — ikinci dalga: yalnız bu deponun eşik altı ve açık işi okunur. */
 async function readCard(

@@ -1,0 +1,25 @@
+import { LoadingRegion } from '@/components/loading-region';
+import { SkeletonCard, SkeletonPageHeader, SkeletonText } from '@/components/operation/ui/skeleton';
+
+/**
+ * Ayarlar ekranının ROTA DÜZEYİ beklemesi (09.2 dersi): bu dosya olmadan raydan bu ekrana geçmek
+ * tarayıcıda ESKİ sayfayı bırakıyor ve operatör tıklamanın işlediğini anlamıyor.
+ *
+ * İskelet AYAR LİSTESİ hâlini çiziyor: varsayılan sekme bir ayar grubudur, personel sekmesine
+ * yalnız açık bir tıklamayla gidilir.
+ */
+export default function Loading() {
+  return (
+    <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Ayarlar yükleniyor">
+      {/* Tek "aksiyon" arama kutusudur: barın o yuvasında gerçekte o duruyor, genişliği de onun. */}
+      <SkeletonPageHeader actions={['w-[220px]']} />
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden px-6 py-4">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <SkeletonCard key={i}>
+            <SkeletonText lines={2} />
+          </SkeletonCard>
+        ))}
+      </div>
+    </LoadingRegion>
+  );
+}

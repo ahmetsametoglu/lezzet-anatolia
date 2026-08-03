@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import {
-  constraintOf,
   DeliveryZonePostalCodeService,
   DeliveryZoneService,
   PostalCodePlaceService,
@@ -12,6 +11,7 @@ import {
   type PostalCodeSuggestion,
 } from '@lezzet/database';
 import { requireAdmin } from '@/lib/guard';
+import { constraintMessage } from '@/lib/constraint-message';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { WAREHOUSES_PATH } from './warehouses-url';
 import { WarehouseFormSchema, ZoneFormSchema, type PostalCodePick } from './warehouses-types';
@@ -33,10 +33,7 @@ const CONSTRAINT_MESSAGE: Record<string, string> = {
   delivery_zone_postal_code_pkey: 'Eklemek istediğiniz posta kodlarından biri başka bir bölgede tanımlı. Bir kod yalnız tek bölgede olabilir.',
 };
 
-function readable(error: unknown): string {
-  const name = constraintOf(error);
-  return (name && CONSTRAINT_MESSAGE[name]) || getErrorMessage(error);
-}
+const readable = (error: unknown): string => constraintMessage(error, CONSTRAINT_MESSAGE);
 
 // ── Künye ───────────────────────────────────────────────────────────────────
 

@@ -33,6 +33,7 @@ değişecek yer parantezde.
 | **Bölge haberi tetikleyicisi** — bölge genişleyince bekleyenlere TEK e-posta | `zone_notice` kaydı alınıyor, ekran "not aldık" diyor (söz vermiyor) | bölge kaydedilince kontrol eden iş + gönderim (`14-bildirim`) |
 | **Hesap sayfasında "sonraya kaydedilenler" + bölge haberi kartı** | çizili (`Musteri - Hesap.dc.html`) | hesap sayfası (`04-auth`); veri hazır (`cart.saved_items`, `zone_notice`) |
 | **Operasyon → Analitik "bölge dışı talep" listesi** | tasarımda anıldı | `postal_code_demand` doluyor; ekran operasyon yüzeyinin işi |
+| **Ayarlar → "Vitrin görselleri" sekmesi** (ürüne ait OLMAYAN sayfa görselleri: ana sayfa hero, fırsat bandı, Professionnels hero, Hakkımızda; ayrıca "statik" işaretli iki kalem) | `Operasyon - Ayarlar.dc.html` → 7. sekme, tam çizili | **İKİ ŞERİT birden:** (1) *arka uç* — `site_image` tablosu + depolama kovası yok; ürün görselinin yolu (`product-image.service`) burada kullanılamaz, çünkü bunlar bir varlığa değil bir SAYFA YERİNE bağlı. (2) *müşteri şeridi* — hangi slot'un gerçekten var olduğu ve hangisinin koda gömülü kaldığı (marka sahnesi, hata çizimi) o yüzeyin bilgisi; liste onlardan mutabakatla gelir. Operasyon şeridi sekmeyi ancak ikisi netleşince çizer — bugün çizmek, arkasında hiçbir şey olmayan bir yükleme alanı göstermek olurdu (`09.16` AÇIK 2) |
 | **Menü: Fırsatlar · Keşif · Professionnels** | K12'de çizili, bugün düz metin (Paketler bağlandı) | kendi sayfaları (`08.7`) |
 | **Menü: Hesabım** | K12'de tanımlı | `04-auth` |
 
@@ -270,6 +271,22 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 ---
 
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
+
+- **AYARLAR: TESLİMAT BÖLGESİ TABLOSU BU EKRANDA DEĞİL, DEPOLAR'DA (03.08, 09.16 ↔ 19.5).**
+  Tasarımın alt yarısındaki "Teslimat bölgeleri — posta kodu tanımı" tablosu (bölge · kodlar · gün ·
+  min. sepet · durum) Ayarlar'a çizilmiş. Kodlanan yer **Depolar** ekranının tesis kartı. Sebep
+  tasarımdan sonra gelen bir karar: çok depo (19.x). Bölge artık bir DEPOYA aittir — hangi tesisin
+  aracı çıkacaksa onun hizmet alanıdır. Ayarlar'da tutmak, bölgeyi depodan koparıp "sistem-geneli
+  bir parametre" gibi gösterirdi. Ayarlar'daki "Teslimat bölgeleri" satırı da bu yüzden yok:
+  sözlükte bir Setting anahtarı karşılığı olmayan tek satırdı.
+
+- **AYARLAR: LİSTEDE "PASİF" PERSONEL SATIRI YOK (03.08, 09.16).** Tasarım kullanıcı listesinde
+  "Eski Personel · Depo · Pasif" satırı gösteriyor. Veri modelinde personel-aktiflik ekseni YOK:
+  `user_profiles.roles` boş bırakılamıyor (DB kısıtı) ve `domain-core`'un kuralı "son rol çıkarılırsa
+  kişi `customer`a düşer". Yani pasifleştirilen kişi personel listesinden çıkıp müşteri kaydında
+  yaşamaya devam ediyor — erişimi kapanıyor, geçmişi duruyor (tasarımın `§4` kuralı korunuyor), ama
+  rolüyle birlikte "pasif" olarak listelenemiyor. Ayrı bir aktiflik kolonu ikinci bir eksen açardı;
+  o karar verilmeden satır uydurulmadı. Gerekirse `staff_deactivated_at` ile açılır.
 
 - **TEDARİK SİPARİŞİ PDF ÜRETMİYOR, METİN ÜRETİYOR (02.08).** `pages/admin-satin-alma.md` §2
   "temiz bir liste/PDF" diyor; kodlanan **panoya kopyala + WhatsApp**. Üç gerekçe: (1) sayfanın

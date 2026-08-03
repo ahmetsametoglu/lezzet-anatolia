@@ -202,7 +202,7 @@ Parametrik değerler **env'e veya koda gömülmez** (blueprint STACK §10): kesi
 | --- | --- | --- |
 | id | uuid | |
 | key | string | ör. `order_cutoff_time` |
-| scope_type | enum(`global`,`channel`,`zone`,`country`) | |
+| scope_type | enum(`global`,`channel`,`zone`,`country`) | ⚠ **`0016` migration'ında BEŞİNCİ bir değer var: `warehouse`.** Ne bu tablo ne `SettingScopeEnum` onu tanıyor ve `SettingScopeContext`'te `warehouseId` yok — yani depo kapsamlı bir satır yazılsa okumada Zod'a takılır. Üç kaynaktan ikisi dört diyor; hizalanması istendi (`build/operasyon-ekranlari-arka-uc-talebi.md §7a`). Ayarlar ekranı (09.16) o ekseni bu yüzden hiç sunmuyor |
 | scope_id | string \| null | kanal `b2b`, ülke `FR`, bölge uuid; global'de null. Üç farklı tipi taşıdığı için metin |
 | value | jsonb | ayar sayı, metin, saat, bayrak ya da nesne olabilir |
 | description | string \| null | admin ekranında ne işe yaradığı |
@@ -232,3 +232,11 @@ Parametrik değerler **env'e veya koda gömülmez** (blueprint STACK §10): kesi
 | `door_packaging_unit_cost_cents` | 0 | Kapı önü satışta paketleme birim maliyeti — mal elden gidiyor, soğuk zincir paketi yok |
 
 Oyunlaştırma (puan değerleri, puan→kupon eşiği) ve ödeme komisyon oranları ilgili modülleriyle eklenir.
+
+> **Bu varsayılanları DEĞİŞTİRENE not (03.08).** Sayılar artık üç yerde yaşıyor: migration (`0016` ·
+> `0037` · `0038`), yukarıdaki tablo ve Ayarlar ekranının sözlüğü (`settings-catalog.ts` —
+> ekran "varsayılan 20,00 €" yazıp "Varsayılana dön" sunduğu için fabrika değerini bilmek zorunda;
+> satır düzenlenince o değer veride kalmıyor). Üçüncüsü **nöbete bağlı**: `settings-catalog.test.ts`
+> migration dosyalarını okuyup her anahtarı karşılaştırıyor, ayrışırsa test düşer ve hangi anahtar
+> olduğunu söyler. Yani migration'daki bir sayıyı değiştirmek serbest — testin söylediği yeri de
+> güncelleyin, yoksa ekran yalan bir "varsayılan" gösterir. Bu tablo nöbetin dışında; elle tutulur.
