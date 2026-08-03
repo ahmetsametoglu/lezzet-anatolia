@@ -7,6 +7,7 @@ import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { CATALOG_SORTS, type CatalogSort, type StorefrontProduct } from '@/lib/storefront/storefront-types';
 import { customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { routing } from '@/i18n/routing';
+import type { CatalogFilters } from './catalog-types';
 
 /**
  * Katalogun sonraki sayfası — sonsuz kaydırmanın sunucu ucu (08.10).
@@ -24,13 +25,18 @@ interface CatalogPageResult {
   nextCursor: KeysetCursor | null;
 }
 
-/** Etkin süzgeçler — sayfa `hrefFor` ile ürettiği aynı değerleri geri gönderir. */
-interface CatalogPageQuery {
-  category?: string;
-  search?: string;
-  sort?: string;
-  onlyOffers?: boolean;
-}
+/**
+ * Sonraki sayfanın süzgeci — **`CatalogFilters`ten türer, elle yazılmaz** (03.08).
+ *
+ * Bir ara burada ayrı bir arayüz duruyordu ve `onlyShippable` alanı yoktu: ilk sayfa süzgeçliydi,
+ * kaydırınca gelen sayfa süzgeçsiz. Müşteri "adresime gönderilebilir"i seçmiş olmasına rağmen
+ * listeye gönderilemeyen ürünler karışıyordu. Türetilen tip bunu bir daha yaşatmaz — yeni bir
+ * süzgeç `CatalogFilters`e eklendiği anda bu kapı da onu istemek zorunda kalır.
+ *
+ * `sort` gevşetiliyor (`string`): değer istemciden geliyor ve aşağıda doğrulanıyor; tipe güvenip
+ * doğrulamayı atlamak, uydurma bir sıralamayla sorguyu bozmak demekti.
+ */
+type CatalogPageQuery = Omit<CatalogFilters, 'sort'> & { sort?: string; search?: string };
 
 export async function loadMoreCatalogAction(locale: string, q: CatalogPageQuery, cursor: KeysetCursor): Promise<CustomerResult<CatalogPageResult>> {
   try {
@@ -56,6 +62,7 @@ export async function loadMoreCatalogAction(locale: string, q: CatalogPageQuery,
       search: q.search,
       sort,
       onlyOffers: q.onlyOffers,
+      onlyShippable: q.onlyShippable,
       cursor: safeCursor,
     }, await readPlaceWarehouses());
     return { data: { products: data.products, nextCursor: data.nextCursor }, errorKey: null };

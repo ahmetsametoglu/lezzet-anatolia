@@ -13,6 +13,26 @@ export type Messages = LocalizedCopy<typeof messages>;
 /** Süzgeç bağlantısının hedefi — seçim URL'de yaşar, client state'te değil. */
 export type CatalogHref = ComponentProps<typeof Link>['href'];
 
+/**
+ * Etkin süzgeçler — **tek tanım** (03.08).
+ *
+ * Bu şekil bir ara dört yerde elle yazılıydı (görünüm props'u, yama imzası, istemci, sayfalama
+ * kapısı) ve olması gereken oldu: `onlyShippable` kopyaların BİRİNDEN düştü. Sonuç görünmez bir
+ * arızaydı — "adresime gönderilebilir" işaretli müşteri aşağı kaydırınca gönderilemeyen ürünleri
+ * görüyor, çip ise hâlâ etkin duruyordu. Süzgeç eklendiğinde tek yer değişsin diye tip burada.
+ *
+ * `search` bilerek DIŞARIDA: o bir çip değil, adresin `q` parametresi ve çerçeveden geliyor.
+ */
+export interface CatalogFilters {
+  category?: string;
+  sort: CatalogSort;
+  onlyOffers: boolean;
+  onlyShippable: boolean;
+}
+
+/** Tek süzgeci değiştirip diğerlerini koruyan yama — `category: null` süzgeci kaldırır ("Tümü"). */
+export type CatalogFilterPatch = Partial<Omit<CatalogFilters, 'category'>> & { category?: string | null };
+
 export interface CatalogViewProps {
   t: Messages;
   locale: Locale;
@@ -27,9 +47,9 @@ export interface CatalogViewProps {
   loadingMore: boolean;
   onLoadMore: () => void;
   /** Etkin süzgeçler — çip ve sıralama seçimlerinin işaretlenmesi için. */
-  active: { category?: string; sort: CatalogSort; onlyOffers: boolean; onlyShippable: boolean };
-  /** Bir süzgeci değiştirip diğerlerini koruyan URL üretir (süzgeçler birbirini silmez). */
-  /** Adresteki güncel arama — kutu ne arandığını göstersin (çerçeveden buraya indi). */
+  active: CatalogFilters;
+  /** Adresteki güncel arama — kutu ne arandığını göstersin (çerçeveden buraya geldi). */
   search?: string;
-  hrefFor: (patch: { category?: string | null; sort?: CatalogSort; onlyOffers?: boolean; onlyShippable?: boolean }) => CatalogHref;
+  /** Bir süzgeci değiştirip diğerlerini koruyan URL üretir (süzgeçler birbirini silmez). */
+  hrefFor: (patch: CatalogFilterPatch) => CatalogHref;
 }

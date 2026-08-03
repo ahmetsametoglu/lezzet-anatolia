@@ -11,6 +11,7 @@ import { EMPTY_CART, cartKey, entryOf, viewWithEntries, type CartEntry, type Car
 import { diffCartByPlace, type CartLineChange } from '@/lib/cart/place-change';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { CartUndo } from './cart-undo';
+import { CartWriteFailed } from './cart-write-failed';
 
 /** Silinen kalemin geri alma penceresi (tasarım: "geri al snackbar'ı 5 sn görünür"). */
 const UNDO_MS = 5000;
@@ -153,6 +154,16 @@ export function CartProvider({ locale, children }: CartProviderProps) {
    * yeniden kurulan bir bağımlılık zinciri doğardı.
    */
   const serverCart = useRef(false);
+  /**
+   * Sunucunun ONAYLADIĞI son niyet — yazma düşünce iyimser adetin geri sarılacağı yer.
+   *
+   * `ref`, çünkü `sync` bunu okumak zorunda ve state olsaydı her okuma yeni bir `sync` doğurup
+   * bağımlılık zincirini kırardı. `view`den türetilemezdi: `view` çözülmüş SATIRLARI taşır, geri
+   * sarılacak olan ise niyet listesi.
+   */
+  const serverEntries = useRef<{ cart: CartEntry[]; saved: CartEntry[] }>({ cart: [], saved: [] });
+  /** Yazma düştü mü — şerit bunu gösterir. Okumanın `failed`'i ile AYRI: o blok, bu haber. */
+  const [writeFailed, setWriteFailed] = useState(false);
   // Silinen kalem, geri alınana ya da pencere kapanana kadar burada bekler.
   const [undo, setUndo] = useState<{ entry: CartEntry; name: string } | null>(null);
   /** Tekrar siparişte eklenemeyen kalem sayısı — uyarıyı doğuran ekran sökülse de yaşar. */
@@ -168,6 +179,25 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   const seq = useRef(0);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /**
+   * Yazma düştü → iyimser adet GERİ SARILIR (akış denetimi #12).
+   *
+   * Öncesinde yazma sessizce düşüyordu: ekran "3 kg" gösteriyor, sunucuda 2 kg duruyordu ve müşteri
+   * bunu ancak checkout'ta görüyordu. Ekranın söylediği ile sunucudakinin ayrıştığı yerde doğru
+   * davranış, sunucuyu göstermektir.
+   *
+   * **Yalnız GİRİŞLİ müşteride.** Ziyaretçide sepet tarayıcıda yaşar ve niyet oraya `sync`in ilk
+   * satırında zaten yazılmıştır; sunucudan istenen tek şey fiyatın çözülmesiydi. Orada geri sarmak,
+   * gerçekte kaybolmamış bir değişikliği silmek olurdu — ekran yalnız fiyatı bir tur eski gösterir,
+   * adet doğrudur.
+   */
+  const rollback = useCallback(() => {
+    if (!serverCart.current) return;
+    setEntries(serverEntries.current.cart);
+    setSavedEntries(serverEntries.current.saved);
+    setWriteFailed(true);
+  }, []);
+
   /** Niyeti yazar ve çözülmüş görünümü alır. Ziyaretçide tarayıcıya, girişlide sunucuya gider. */
   const sync = useCallback(
     (next: CartEntry[], nextSaved: CartEntry[]) => {
@@ -181,18 +211,26 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         writeSaved(nextSaved);
       }
       const ticket = ++seq.current;
-      void writeCartAction(locale, next, nextSaved, coupon).then(({ data }) => {
-        // Bilet eskiyse kullanıcı bu arada bir şey daha yaptı: eski cevap YOK SAYILIR. Kilide gerek
-        // bırakmayan şey bu — arayüz açık kalır, sonuncu yazma kazanır.
-        if (ticket !== seq.current || !data) return;
-        setView(data.view);
-        setSavedView(data.saved);
-        // Sunucu satırı düşürdüyse (ürün silinmiş) niyet listeleri de ona uyar.
-        setEntries(data.view.lines.map(entryOf));
-        setSavedEntries(data.saved.lines.map(entryOf));
-      });
+      void writeCartAction(locale, next, nextSaved, coupon)
+        .then(({ data }) => {
+          // Bilet eskiyse kullanıcı bu arada bir şey daha yaptı: eski cevap YOK SAYILIR. Kilide gerek
+          // bırakmayan şey bu — arayüz açık kalır, sonuncu yazma kazanır.
+          if (ticket !== seq.current) return;
+          if (!data) return rollback();
+          setView(data.view);
+          setSavedView(data.saved);
+          // Sunucu satırı düşürdüyse (ürün silinmiş) niyet listeleri de ona uyar.
+          const confirmed = data.view.lines.map(entryOf);
+          const confirmedSaved = data.saved.lines.map(entryOf);
+          serverEntries.current = { cart: confirmed, saved: confirmedSaved };
+          setEntries(confirmed);
+          setSavedEntries(confirmedSaved);
+        })
+        .catch(() => {
+          if (ticket === seq.current) rollback();
+        });
     },
-    [locale, coupon],
+    [locale, coupon, rollback],
   );
 
   const closeUndo = useCallback(() => {
@@ -226,6 +264,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
     setEntries(guest);
     setSavedEntries(guestSaved);
     setFailed(false);
+    // Yeniden okuma, düşen yazmanın haberini de kapatır: şerit "tekrar dene" diyor ve denenen bu.
+    setWriteFailed(false);
     const ticket = ++seq.current;
     void readCartAction(locale, guest, guestSaved, code)
       .then(({ data }) => {
@@ -249,8 +289,12 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         }
         setView(data.view);
         setSavedView(data.saved);
-        setEntries(data.view.lines.map(entryOf));
-        setSavedEntries(data.saved.lines.map(entryOf));
+        // Geri sarma noktası da BURADA doğar: okuma, sunucunun onayladığı ilk hâldir.
+        const confirmed = data.view.lines.map(entryOf);
+        const confirmedSaved = data.saved.lines.map(entryOf);
+        serverEntries.current = { cart: confirmed, saved: confirmedSaved };
+        setEntries(confirmed);
+        setSavedEntries(confirmedSaved);
       })
       .catch(() => {
         if (ticket === seq.current) setFailed(true);
@@ -390,6 +434,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         }}
         onClose={closeUndo}
       />
+      {/* Yazma şeridi de kökte: adet sepet dışında da değişiyor (katalog kartı, ürün detayı). */}
+      <CartWriteFailed locale={locale} open={writeFailed} onRetry={load} onClose={() => setWriteFailed(false)} />
     </CartContext.Provider>
   );
 }

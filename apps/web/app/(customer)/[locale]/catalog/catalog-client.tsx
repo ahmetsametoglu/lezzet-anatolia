@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
-import type { CatalogSort, StorefrontCatalog, StorefrontProduct } from '@/lib/storefront/storefront-types';
+import type { StorefrontCatalog, StorefrontProduct } from '@/lib/storefront/storefront-types';
 import { loadMoreCatalogAction } from './actions';
-import type { CatalogHref, Messages } from './catalog-types';
+import type { CatalogFilterPatch, CatalogFilters, CatalogHref, Messages } from './catalog-types';
 import { CatalogDesktop } from './catalog.desktop';
 import { CatalogMobile } from './catalog.mobile';
 
@@ -23,7 +23,7 @@ interface CatalogClientProps {
   t: Messages;
   locale: Locale;
   data: StorefrontCatalog;
-  active: { category?: string; sort: CatalogSort; onlyOffers: boolean; onlyShippable: boolean };
+  active: CatalogFilters;
   device: Device;
   /** Arama kutusundaki sorgu — sonraki sayfa isteği aynı süzgeci taşımalı. */
   search?: string;
@@ -45,7 +45,9 @@ export function CatalogClient({ t, locale, data, active, device, search }: Catal
   const onLoadMore = () => {
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
-    void loadMoreCatalogAction(locale, { category: active.category, search, sort: active.sort, onlyOffers: active.onlyOffers }, cursor)
+    // Süzgeç TEK TEK sayılmaz, olduğu gibi geçer: alan alan yazmak `onlyShippable`'ı bir kez
+    // düşürmüştü ve sonraki sayfa süzgeçsiz geliyordu. Yayarak geçmek yeni süzgeci de taşır.
+    void loadMoreCatalogAction(locale, { ...active, search }, cursor)
       .then(({ data: page, errorKey }) => {
         // Hata sessiz: liste olduğu yerde kalır, tetikleyici yeniden denenebilir (sunucu = gerçek).
         if (errorKey || !page) return;
@@ -59,7 +61,7 @@ export function CatalogClient({ t, locale, data, active, device, search }: Catal
    * Bir süzgeci değiştirir, diğerlerini KORUR — çipe basmak sıralamayı sıfırlamaz. `null` kategori
    * süzgeci kaldırır ("Tümü"). Sayfa imleci bilerek taşınmaz: süzgeç değişince liste baştan başlar.
    */
-  const hrefFor = (patch: { category?: string | null; sort?: CatalogSort; onlyOffers?: boolean; onlyShippable?: boolean }): CatalogHref => {
+  const hrefFor = (patch: CatalogFilterPatch): CatalogHref => {
     const category = patch.category === null ? undefined : (patch.category ?? active.category);
     const sort = patch.sort ?? active.sort;
     const onlyOffers = patch.onlyOffers ?? active.onlyOffers;

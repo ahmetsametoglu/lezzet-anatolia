@@ -107,7 +107,16 @@ export async function buildOrderNotification(
     paymentNote: paymentNote(order, derivation.amountToCollectCents, locale),
     delivery: buildDelivery(order, locale),
     tracking: null, // Kargo takibi 07.4/07.5 ile gelir; alan hazır, kaynak yok.
-    orderUrl: localizedUrl('/orders/[reference]', locale, { reference: order.referenceNo ?? order.id }),
+    /**
+     * **Bağda KİMLİK taşınır, referans numarası değil** (03.08 düzeltmesi).
+     *
+     * Segment adı `[reference]` ama sayfa siparişi `getWithItems(orderId)` ile çözüyor — yüzeydeki
+     * bütün bağlar (siparişler listesi, talep formu, onay ekranı) kimlik geçiriyor. Burada bir ara
+     * `referenceNo ?? id` yazıyordu: referans numarası olan HER siparişte, yani onaylanmış olan
+     * hepsinde, mailin ana düğmesi 404'e düşüyordu. Numara mailin metninde zaten görünüyor;
+     * müşteriye gösterilen ile adreste taşınan aynı şey olmak zorunda değil.
+     */
+    orderUrl: localizedUrl('/orders/[reference]', locale, { reference: order.id }),
     deliverySummaryUrl: null, // Teslimat özeti belgesi 14.6'da doğar.
     supportUrl: localizedUrl('/support', locale),
     notificationPreferencesUrl: localizedUrl('/account/notifications', locale),

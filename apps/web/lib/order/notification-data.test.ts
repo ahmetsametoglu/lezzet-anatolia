@@ -134,3 +134,25 @@ describe('siparişin dili ve indirim satırı', () => {
     expect(totals.some((row) => row.label === 'Remise')).toBe(true);
   });
 });
+
+/**
+ * Mailin ana düğmesinin GİTTİĞİ YER (03.08).
+ *
+ * Bağ `referenceNo ?? id` ile kuruluyordu ve numara onayla doğduğu için pratikte HER sipariş
+ * mailinde numara yazıyordu; sayfa ise siparişi kimlikle çözüyor. Yani düğme çalışmıyordu ve bunu
+ * kimse sınamıyordu — arıza tam da bu yüzden aylarca yaşadı. Sınanan şey biçim değil, İÇERİK:
+ * adreste taşınan değer siparişin kimliği mi.
+ */
+describe('sipariş bağı', () => {
+  it('bağ KİMLİK taşır — referans numarası taşısaydı sayfa 404 verirdi', async () => {
+    const orderId = await orderWith('confirmed', 0);
+    // Numara normalde onay akışında doğar; burada doğrudan yazılıyor — sınanan şey numaranın nasıl
+    // doğduğu değil, VAR olduğunda bağın hangi değeri taşıdığı.
+    await db.from('order').update({ reference_no: `LA-TEST-${stamp}` }).eq('id', orderId);
+
+    const bundle = await buildOrderNotification(orderId, 'order_confirmed');
+    expect(bundle?.data.orderUrl).toContain(orderId);
+    // Numara mailin METNİNDE durur; görünen ile adreste taşınan aynı şey olmak zorunda değil.
+    expect(bundle?.data.referenceNo).toBe(`LA-TEST-${stamp}`);
+  });
+});
