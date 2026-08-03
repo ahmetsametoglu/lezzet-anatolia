@@ -86,6 +86,25 @@ export function PageHeader({ title, subtitle, status, search, children, compact 
           compact ? 'px-4 py-3' : 'px-6 py-4',
         ].join(' ')}
       >
+        {/* HAMBURGER — yalnız telefonda (`nav !== null`). Rayın çekmeceye dönmesiyle geldi (04.08):
+            gezinme artık akışta durmuyor, bir yerden açılması gerekiyor ve o yer başlığın solu.
+            Masaüstünde çizilmiyor çünkü orada ray zaten görünür — kapatılamayan bir şeyi açan bir
+            düğme, ne işe yaradığı anlaşılmayan bir düğmedir. */}
+        {shell?.nav ? (
+          <button
+            type="button"
+            onClick={shell.nav.toggle}
+            aria-label="Gezinme"
+            aria-expanded={shell.nav.open}
+            className="-ml-1 flex-none cursor-pointer rounded-ops-btn p-1.5 text-ops-body transition-colors hover:bg-ops-line hover:text-ops-ink"
+          >
+            <span aria-hidden className="flex w-[18px] flex-col gap-[3px]">
+              <span className="h-[2px] rounded-full bg-current" />
+              <span className="h-[2px] rounded-full bg-current" />
+              <span className="h-[2px] rounded-full bg-current" />
+            </span>
+          </button>
+        ) : null}
         <div className="mr-auto flex min-w-0 flex-col gap-px">
           <div className="flex min-w-0 items-center gap-2.5">
             <h1
