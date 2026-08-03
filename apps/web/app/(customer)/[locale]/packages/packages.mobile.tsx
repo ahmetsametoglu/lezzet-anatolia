@@ -28,7 +28,7 @@ export function PackagesMobile({ t, locale, packages }: PackagesViewProps) {
           <span className="text-icon">🎁</span>
           <span className="font-sans text-note font-bold text-ink">{t.empty.title}</span>
           <span className="font-sans text-micro text-muted">{t.empty.body}</span>
-          <Link href="/catalog" className={buttonClass({ size: 'sm', className: 'mt-1' })}>
+          <Link href="/catalog" className={buttonClass({ size: 'sm', compact: true, className: 'mt-1' })}>
             {t.empty.cta}
           </Link>
         </div>
@@ -44,7 +44,7 @@ export function PackagesMobile({ t, locale, packages }: PackagesViewProps) {
           bant dar ekranda üç satıra yayılıp sayfayı uzatıyor, verdiği tek yön ise aynı. */}
       {packages.length > 0 && (
         <div className="px-4 pb-6">
-          <Link href="/catalog" className={buttonClass({ variant: 'outlineOlive', size: 'md', fullWidth: true })}>
+          <Link href="/catalog" className={buttonClass({ variant: 'outlineOlive', size: 'md', compact: true, fullWidth: true })}>
             {t.catalogBand.cta}
           </Link>
         </div>

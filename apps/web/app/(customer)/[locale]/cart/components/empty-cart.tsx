@@ -93,10 +93,10 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
         </p>
 
         <div className={['flex gap-3', compact ? 'w-full flex-col' : 'mt-1'].join(' ')}>
-          <Link href="/catalog" className={buttonClass({ variant: 'primary', size: 'md', fullWidth: compact })}>
+          <Link href="/catalog" className={buttonClass({ variant: 'primary', size: 'md', compact, fullWidth: compact })}>
             {t.empty.cta}
           </Link>
-          <Link href="/packages" className={buttonClass({ variant: 'outlineOlive', size: 'md', fullWidth: compact })}>
+          <Link href="/packages" className={buttonClass({ variant: 'outlineOlive', size: 'md', compact, fullWidth: compact })}>
             {t.empty.packagesCta}
           </Link>
         </div>
@@ -140,6 +140,7 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
       <Button
         variant="primary"
         size={compact ? 'sm' : 'md'}
+        compact={compact}
         fullWidth={compact}
         disabled={sent}
         onClick={() => {

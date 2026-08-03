@@ -64,7 +64,9 @@ export function CtaBand({ title, body, cta, compact = false }: CtaBandProps) {
       </div>
       <Link
         href={cta.href}
-        className={buttonClass({ fullWidth: compact, size: compact ? 'sm' : 'md', className: compact ? 'mt-1 !py-3' : 'flex-none' })}
+        /* `!py-3` KALDIRILDI (03.08): sabit `h-*` yanında dikey ped ölü yazıdır — butonun kendi
+           künyesi de bu tuzağı anlatıyor. Mobil yükseklik artık kademeden geliyor (K2 → 48px). */
+        className={buttonClass({ compact, fullWidth: compact, size: compact ? 'sm' : 'md', className: compact ? 'mt-1' : 'flex-none' })}
       >
         {cta.label}
       </Link>

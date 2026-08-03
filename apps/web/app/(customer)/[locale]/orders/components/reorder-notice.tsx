@@ -47,7 +47,7 @@ export function ReorderNotice({ t, notice, onDismiss, compact = false }: Reorder
 
       <div className="flex items-center gap-2">
         {!nothing && (
-          <Link href="/cart" className={buttonClass({ size: 'sm' })}>
+          <Link href="/cart" className={buttonClass({ size: 'sm', compact })}>
             {t.reorderResult.goToCart}
           </Link>
         )}

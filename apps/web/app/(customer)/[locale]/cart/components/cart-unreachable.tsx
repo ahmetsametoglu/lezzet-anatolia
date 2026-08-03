@@ -27,7 +27,7 @@ export function CartUnreachable({ t, compact = false }: { t: Messages; compact?:
       {/* Bal tonu, terracotta değil: müşteri bir hata yapmadı ve kaybedilmiş bir şey yok. */}
       <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{t.unreachable.title}</span>
       <p className="font-sans text-body-sm leading-relaxed text-body">{t.unreachable.body}</p>
-      <Button size="sm" onClick={reload}>
+      <Button size="sm" compact={compact} onClick={reload}>
         {t.unreachable.retry}
       </Button>
     </section>

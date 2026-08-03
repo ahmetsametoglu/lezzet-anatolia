@@ -51,10 +51,10 @@ export function LoginMobile({ t, errors, subtitle, locale, stage, error, notice,
         </div>
 
         <div className="flex flex-col gap-2.5">
-          <Button variant="secondary" fullWidth onClick={onGoogle}>
+          <Button variant="secondary" compact fullWidth onClick={onGoogle}>
             <GoogleIcon /> {t.googleCta}
           </Button>
-          <Button variant="secondary" fullWidth onClick={onWhatsApp}>
+          <Button variant="secondary" compact fullWidth onClick={onWhatsApp}>
             <WhatsAppIcon /> {t.whatsappCta}
           </Button>
         </div>
@@ -77,7 +77,7 @@ export function LoginMobile({ t, errors, subtitle, locale, stage, error, notice,
             inputRef={emailRef}
             {...emailField}
           />
-          <Button type="submit" fullWidth disabled={isSending}>
+          <Button type="submit" compact fullWidth disabled={isSending}>
             {isSending ? t.sending : t.sendCta}
           </Button>
         </div>

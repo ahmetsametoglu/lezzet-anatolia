@@ -62,6 +62,29 @@ const PADDED_SIZE: Record<ButtonSize, string> = {
   card: 'h-8 px-3.5 text-note',
   cardSm: 'h-6.5 px-2.5 text-micro',
 };
+
+/**
+ * **Mobil kademe** (`compact` — bu projede "mobil" demek) — envanterin dokunma hedefi tablosundan:
+ * K1 birincil `48 → 52`, K2 ikincil `44 → 48`. Parmak kalemden kalın; masaüstünde yeterli olan
+ * kutu telefonda ıskalanıyor ve envanterin evren kuralı da tabanı yazıyor ("mobil dokunma
+ * hedefleri en az 44px").
+ *
+ * **Arama tablosu, "varsayılan + ezme" DEĞİL** (`card.tsx`in `PAD`/`COMPACT_PAD` deseni): mobilde
+ * `h-12` üstüne `h-13` eklemek öngörülemez sonuç verir — Tailwind çakışan sınıfları kaynak
+ * sırasına göre çözer, sınıf dizgisindeki sıraya göre değil ve birleştirme yardımcımız yok.
+ * Kademe seçilir, üstüne yazılmaz.
+ *
+ * **Tablo kısmi ve bu bilinçli:** yalnız tasarımın MOBİL değer çizdiği iki kademe burada. `lg`
+ * (ürün detayın tek satın alma düğmesi), `xs` (satır içi eylem) ve kart kademeleri için envanterde
+ * ayrı bir mobil ölçü yok — orada web değeri geçerli kalır. Beş satırı aynı değerle kopyalamak,
+ * tasarımın söylemediği bir kararı söylenmiş gibi gösterirdi (kart kademesinin mobil karşılığı
+ * zaten ayrı bir BOY: `cardSm`).
+ */
+const COMPACT_PADDED_SIZE: Partial<Record<ButtonSize, string>> = {
+  md: 'h-13 px-7 text-body',
+  sm: 'h-12 px-5 text-body-sm',
+};
+
 const GHOST_SIZE: Record<ButtonSize, string> = {
   lg: 'text-lead',
   md: 'text-body',
@@ -74,11 +97,15 @@ const GHOST_SIZE: Record<ButtonSize, string> = {
 interface ButtonClassOptions {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /** Mobil yerleşim (cihaz forku — `md:` yok). Dolgulu kademeyi mobil yüksekliğine taşır. */
+  compact?: boolean;
   fullWidth?: boolean;
   className?: string;
 }
 
-export function buttonClass({ variant = 'primary', size = 'md', fullWidth, className }: ButtonClassOptions = {}): string {
+export function buttonClass({ variant = 'primary', size = 'md', compact = false, fullWidth, className }: ButtonClassOptions = {}): string {
+  // Ghost sabit yükseklik almaz (yalnız metin) — mobil kademesi de yoktur.
+  const padded = (compact && COMPACT_PADDED_SIZE[size]) || PADDED_SIZE[size];
   return [
     // Odak halkası envanter §0.4: 2px zeytin outline, 3px offset — ayrı renk taşımaz.
     // `leading-tight`: tip token'ları satır yüksekliği taşımıyor, kontrol o zaman gövde metninin
@@ -87,7 +114,7 @@ export function buttonClass({ variant = 'primary', size = 'md', fullWidth, class
     'inline-flex cursor-pointer items-center justify-center gap-2 font-sans font-bold leading-tight transition-colors disabled:cursor-not-allowed',
     'outline-none focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-olive',
     VARIANT[variant],
-    variant === 'ghost' ? GHOST_SIZE[size] : PADDED_SIZE[size],
+    variant === 'ghost' ? GHOST_SIZE[size] : padded,
     fullWidth ? 'w-full' : '',
     className,
   ]
@@ -111,9 +138,11 @@ export const iconHitClass = 'flex size-11 flex-none cursor-pointer items-center 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /** Mobil yerleşim — ekranlar zaten taşıdığı `compact` bayrağını olduğu gibi iletir. */
+  compact?: boolean;
   fullWidth?: boolean;
 }
 
-export function Button({ variant, size, fullWidth, className, type = 'button', ...rest }: ButtonProps) {
-  return <button type={type} className={buttonClass({ variant, size, fullWidth, className })} {...rest} />;
+export function Button({ variant, size, compact, fullWidth, className, type = 'button', ...rest }: ButtonProps) {
+  return <button type={type} className={buttonClass({ variant, size, compact, fullWidth, className })} {...rest} />;
 }

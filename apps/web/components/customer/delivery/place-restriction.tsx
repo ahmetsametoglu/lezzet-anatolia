@@ -11,7 +11,7 @@ import type { DeliveryPlace } from '@/lib/delivery/place-types';
 import { useDeliveryPlace } from './place-context';
 import { PlaceDialog } from './place-dialog';
 import { recordVariantStockNoticeAction, recordZoneNoticeAction } from '@/lib/delivery/notice-actions';
-import type { ActionResult } from '@/lib/error';
+import type { CustomerResult } from '@/lib/customer-error';
 import { NoticeDialog } from './notice-dialog';
 import messages from './restriction-messages.json';
 
@@ -89,12 +89,12 @@ export function restrictedLines(place: DeliveryPlace | null, lines: CartLine[]):
  * düşmüş olması, tutulamayacak bir sözün yarısını vermektir. Paneli hatayla döndürmek, müşterinin
  * tekrar denemesini sağlar (kayıt kısmi unique'li — ikinci deneme çift satır yazmaz).
  */
-async function recordVariantNotices(lines: CartLine[], email: string): Promise<ActionResult<true>> {
-  const ok: ActionResult<true> = { data: true, error: null };
+async function recordVariantNotices(lines: CartLine[], email: string): Promise<CustomerResult<true>> {
+  const ok: CustomerResult<true> = { data: true, errorKey: null };
   const results = await Promise.all(
     lines.map((line) => (line.variantId ? recordVariantStockNoticeAction(line.variantId, email) : Promise.resolve(ok))),
   );
-  return results.find((r) => r.error !== null) ?? ok;
+  return results.find((r) => r.errorKey !== null) ?? ok;
 }
 
 export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCents, compact = false, place: override, onChangePlace }: PlaceRestrictionProps) {
@@ -195,11 +195,11 @@ export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCe
           "üçüncü buton" gibi değil, "metne kaçmış link" gibi duruyordu. */}
       <div className="flex flex-wrap items-center gap-2.5">
         {canSplit && (
-          <Button size="sm" onClick={() => saveForLater(blocked.map(refOf))}>
+          <Button size="sm" compact={compact} onClick={() => saveForLater(blocked.map(refOf))}>
             {t.splitCta}
           </Button>
         )}
-        <Button variant="outlineOlive" size="sm" onClick={onChangePlace ?? (() => setPlaceOpen(true))}>
+        <Button variant="outlineOlive" size="sm" compact={compact} onClick={onChangePlace ?? (() => setPlaceOpen(true))}>
           {onChangePlace ? t.changeAddressCta : t.changeCta}
         </Button>
         <Button variant="ghost" size="sm" onClick={() => setNoticeOpen(true)}>

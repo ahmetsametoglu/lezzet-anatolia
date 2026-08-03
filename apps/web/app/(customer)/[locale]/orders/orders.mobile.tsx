@@ -65,6 +65,7 @@ export function OrdersMobile({
               <Button
                 variant="outlineOlive"
                 size="sm"
+                compact
                 fullWidth
                 disabled={busyOrderId !== null}
                 onClick={() => onReorder(order.id)}
@@ -73,7 +74,7 @@ export function OrdersMobile({
               </Button>
               <Link
                 href={{ pathname: '/orders/[reference]', params: { reference: order.id } }}
-                className={buttonClass({ variant: order.active ? 'primary' : 'outlineOlive', size: 'sm', fullWidth: true })}
+                className={buttonClass({ variant: order.active ? 'primary' : 'outlineOlive', size: 'sm', compact: true, fullWidth: true })}
               >
                 {t.detail}
               </Link>

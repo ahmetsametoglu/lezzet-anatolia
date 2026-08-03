@@ -115,12 +115,12 @@ function RouteAction({ view, t, locale, compact, totalCents }: RouteActionProps)
           type="button"
           disabled
           title={reason ?? undefined}
-          className={buttonClass({ variant: 'primary', size: 'md', fullWidth: compact, className: 'disabled:cursor-not-allowed' })}
+          className={buttonClass({ variant: 'primary', size: 'md', compact, fullWidth: compact, className: 'disabled:cursor-not-allowed' })}
         >
           {t.checkout}
         </button>
       ) : (
-        <Link href="/checkout" className={buttonClass({ variant: 'primary', size: 'md', fullWidth: compact })}>
+        <Link href="/checkout" className={buttonClass({ variant: 'primary', size: 'md', compact, fullWidth: compact })}>
           {t.checkout}
         </Link>
       )}
@@ -186,14 +186,14 @@ function ShippingAction({ view, t, locale, compact, itemsCents, totalCents, feeC
             type="button"
             disabled
             title={t.checkoutBlocked}
-            className={buttonClass({ variant: 'outlineOlive', size: 'md', fullWidth: compact, className: 'disabled:cursor-not-allowed' })}
+            className={buttonClass({ variant: 'outlineOlive', size: 'md', compact, fullWidth: compact, className: 'disabled:cursor-not-allowed' })}
           >
             {compact ? g.shippingCtaShort : g.shippingCta}
           </button>
         ) : (
           <Link
             href={{ pathname: '/checkout', query: { group: 'shipping' } }}
-            className={buttonClass({ variant: 'outlineOlive', size: 'md', fullWidth: compact })}
+            className={buttonClass({ variant: 'outlineOlive', size: 'md', compact, fullWidth: compact })}
           >
             {compact ? g.shippingCtaShort : g.shippingCta}
           </Link>

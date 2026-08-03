@@ -38,7 +38,7 @@ export function ListEmpty({ icon, title, body, action, compact = false }: ListEm
           yazmak aynı değeri iki yerde tutmaktır ve token değişince biri geride kalır. */}
       <span className="font-serif text-card-title-sm leading-tight text-ink">{title}</span>
       <span className="font-sans text-note leading-relaxed text-body">{body}</span>
-      <Link href={action.href} className={buttonClass({ className: 'mt-1' })}>
+      <Link href={action.href} className={buttonClass({ compact, className: 'mt-1' })}>
         {action.label}
       </Link>
     </div>

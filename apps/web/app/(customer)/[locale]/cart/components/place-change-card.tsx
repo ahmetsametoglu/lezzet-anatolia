@@ -80,7 +80,7 @@ export function PlaceChangeCard({ t, locale, compact = false }: PlaceChangeCardP
 
       <span className="font-sans text-micro leading-relaxed text-muted">{t.placeChange.note}</span>
 
-      <Button size="sm" fullWidth onClick={dismissPlaceChange}>
+      <Button size="sm" compact={compact} fullWidth onClick={dismissPlaceChange}>
         {t.placeChange.dismiss}
       </Button>
     </div>

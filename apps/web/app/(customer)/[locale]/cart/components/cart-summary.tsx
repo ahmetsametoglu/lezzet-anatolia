@@ -189,7 +189,7 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
               type="button"
               disabled
               title={reason ?? undefined}
-              className={buttonClass({ variant: 'primary', size: 'md', fullWidth: true, className: 'disabled:cursor-not-allowed' })}
+              className={buttonClass({ variant: 'primary', size: 'md', compact, fullWidth: true, className: 'disabled:cursor-not-allowed' })}
             >
               {t.checkout}
             </button>
@@ -199,7 +199,7 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
                siparişi açar ve malın bulunmadığı depodan sipariş üretirdi (19.15). */
             <Link
               href={view.shippingOnly ? { pathname: '/checkout', query: { group: 'shipping' } } : '/checkout'}
-              className={buttonClass({ variant: 'primary', size: 'md', fullWidth: true })}
+              className={buttonClass({ variant: 'primary', size: 'md', compact, fullWidth: true })}
             >
               {t.checkout}
             </Link>

@@ -27,7 +27,7 @@ export function HomeMobile({ t, locale, data }: HomeViewProps) {
           {t.hero.titleLead} <em className="text-olive">{t.hero.titleAccent}</em>
         </h1>
         <FramedImage src={null} alt={t.hero.imageAlt} ratio={RATIO_BAND} />
-        <Link href="/catalog" className={buttonClass({ fullWidth: true })}>
+        <Link href="/catalog" className={buttonClass({ compact: true, fullWidth: true })}>
           {t.hero.ctaCatalog}
         </Link>
         {/* K31 · Mobilde şerit kahramanın içinde kalır: ayrı bir bölüm açmak dar ekranda kategorileri
