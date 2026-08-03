@@ -17,6 +17,9 @@ function setting(over: Partial<Setting> & { key: string }): Setting {
     value: null,
     description: null,
     updatedAt: '2026-08-01T10:00:00Z',
+    // Arka uç `updated_by`'ı indirdi (talep §7c). Fixture onu AÇIKÇA null tutuyor: "izi yok" da bir
+    // hâl ve testin varsayılanı o olmalı — alanı atlamak tipi gevşetirdi.
+    updatedBy: null,
     ...over,
   };
 }

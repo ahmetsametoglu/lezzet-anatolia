@@ -1,22 +1,15 @@
 import { z } from 'zod';
 import { SettingScopeEnum, UserRoleEnum, type Setting, type UserProfile, type UserRole } from '@lezzet/types';
-import type { SettingDef, SettingValue } from './settings-catalog';
+import type { ExceptionScope, SettingDef, SettingValue } from './settings-catalog';
 import type { SettingsTab, SettingsUrlState } from './settings-url';
 
 // Ayarlar ekranının tipleri (09.16). Şema tek kaynak (`CLAUDE.md §1`): giriş şemaları
 // `packages/types`'ın `Setting`/`UserProfile` şemalarından türer, görünüm modelleri de onlardan.
 
-/**
- * İstisna açılabilen eksenler — `global` bir istisna değil, değerin kendisidir.
- *
- * **`warehouse` dahil (03.08).** Arka uç ekseni açtı (`SettingScopeEnum` beş değerli,
- * `SettingScopeContext.warehouseId`, çözücüde `warehouse > zone > channel > country > global`) ve
- * bu ekran da onu kablolayınca eksen uçtan uca çalışır hâle geldi. Bir tur boyunca dışarıda
- * tutulmuştu ve sebebi ekranın kendi ilkesiydi: **olmayan bir yeteneği varmış gibi göstermemek** —
- * seçenekleri boş bir eksen operatöre "Depo" yazıp seçecek bir şey vermezdi. Artık seçenekleri var.
- */
-export const ExceptionScopeEnum = SettingScopeEnum.exclude(['global']);
-export type ExceptionScope = z.infer<typeof ExceptionScopeEnum>;
+// `ExceptionScope` SÖZLÜKTE tanımlı (`settings-catalog`) — buradan yalnız yeniden dışa veriliyor ki
+// tüketicilerin import satırı değişmesin. Taşındı çünkü sözlük ona ihtiyaç duyuyor ve bu dosya da
+// sözlükten tip alıyor; iki yönlü bağ `pnpm boundaries`'te döngü hatasıydı.
+export type { ExceptionScope };
 
 // ── Yazma girişleri ─────────────────────────────────────────────────────────
 

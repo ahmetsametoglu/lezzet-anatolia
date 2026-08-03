@@ -1,4 +1,19 @@
-import type { ExceptionScope } from './settings-types';
+import type { z } from 'zod';
+import { SettingScopeEnum } from '@lezzet/types';
+
+/**
+ * İstisna açılabilen eksenler — `global` bir istisna değil, değerin kendisidir.
+ *
+ * **Burada, `settings-types`'ta DEĞİL** ve sebebi yapısal: sözlük bu tipe ihtiyaç duyuyor
+ * (`SettingDef.exceptionScopes`), `settings-types` de sözlükten `SettingDef`/`SettingValue`
+ * alıyor. Tip öteki dosyada kalınca ikisi birbirini import etti ve `pnpm boundaries` döngü hatası
+ * verdi. Eksen tanımı zaten sözlüğün konusu — "bu ayar hangi eksende bölünebilir" sorusunun evi.
+ *
+ * `warehouse` DAHİL (03.08): arka uç ekseni açtı (`SettingScopeEnum` beş değerli, çözücüde
+ * `warehouse > zone > channel > country > global`), bu ekran da kabloladı.
+ */
+export const ExceptionScopeEnum = SettingScopeEnum.exclude(['global']);
+export type ExceptionScope = z.infer<typeof ExceptionScopeEnum>;
 import { POINTS_SETTING_KEYS } from '@lezzet/domain-core';
 import { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY, POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY, SHIPPING_FEE_KEY } from '@/lib/settings-keys';
 
