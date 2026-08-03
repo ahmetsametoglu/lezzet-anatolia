@@ -75,7 +75,7 @@
   `mustDelete(db, tablo, (q) => q.eq(...))` hatayı fırlatır; kirlilik gürültüye döner. Purge'ün
   bilmediği bir hedef gerekiyorsa **purge'e ekle**, dosyaya elle silme yazma. → `02.12`
 - **Küresel sayıya bakan test yazma** (`toplam N rezervasyon süpürüldü` gibi): başka bir ajanın verisi o sayıyı oynatır. Kendi kurduğun satırları say.
-- **Şeritler arası talep `docs/talep/`** (kural + şablon README'de; kullanıcı kararı 03.08): dosya başına tek talep, hedef şerit **Cevap**'a yazar, talebi AÇAN karşılanınca dosyayı SİLER. Klasör repoya gitmez (yalnız kullanıcı `git add -f` ile gönderir); `docs/build`'e yeni talep dosyası AÇILMAZ.
+- **Şeritler arası talep VE alan-dışı gözlem `docs/talep/`** (kural + şablonlar README'de; kullanıcı kararı 03.08): talepte dosya başına tek iş, hedef şerit **Cevap**'a yazar, AÇAN karşılanınca siler; **not** (`not-<kime>-*.md`) "gördüm, alan senin" gözlemidir — ALAN şerit işleyip siler. Sohbette başka şeride laf iletme; dosya aç. Her oturum başında kendine bakan `not-*`/talep dosyalarına göz at. Klasör repoya gitmez (yalnız kullanıcı `git add -f` ile gönderir); `docs/build`'e yeni talep AÇILMAZ.
 
 ## 5. Doküman senkronu (her ajan için bağlayıcı)
 - **Durumun tek sahibi `docs/build/NN-*.md` görev satırıdır.** İş ilerlediyse aynı oturumda o satır `[x]`/`[~]` olur + altına **Durum** notu yazılır. `BACKLOG` kapsam tutar, ilerleme tutmaz; `build/README` özet tablosu **türetilir** (`pnpm docs:sync`), elle yazılmaz.

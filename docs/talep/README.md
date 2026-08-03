@@ -18,7 +18,30 @@ dosyalar kapanana dek yaşar, yenisi buraya gelir.
 - Kalıcı olması gereken hiçbir şeyi YALNIZ buraya yazma: klasör commit'lenmediği için buradaki
   metin yedeksizdir ve silinmek üzere doğar.
 
-## Şablon
+## İkinci tür: NOT (alan dışı gözlem — kullanıcı kararı 03.08)
+
+Çalışırken BAŞKA şeridin alanında gözüne bir şey çarpanlar bunu sohbette dile getiriyordu;
+kullanıcı kurye değildir. Böyle gözlemler artık buraya düşer:
+
+- **Ad:** `not-<kime>-<konu>.md`. Talep DEĞİLDİR: iş istemez, "gördüm, alan senin, karar senin" der.
+- **Yaşam döngüsü talebin TERSİ:** dosyayı **ALAN şerit** kapatır — ya kendi görev satırına indirir
+  ya gerekçesiyle almaz; iki hâlde de işleyince DOSYAYI SİLER (silinmişse işlenmiştir). Gözlemi
+  yazanın takip yükü yok.
+- Kanıt koy (dosya:satır, log, ölçüm) — "bir şey gördüm gibi" değil. Kanıtsız şüphe not edilmez.
+- Şerit her oturum başında kendine bakan `not-*` ve `<kendi-adı>-*` dosyalarına göz atar.
+
+```markdown
+# Not: <kısa başlık>
+
+- **Kimden → Kime:** <şerit> → <şerit>
+- **Tarih:** GG.AA.YYYY
+
+## Gözlem
+
+<Ne görüldü, nerede (dosya:satır / ekran / log), neden önemli olabilir. Karar alanın.>
+```
+
+## Şablon (talep)
 
 ```markdown
 # Talep: <kısa başlık>
