@@ -23,6 +23,11 @@ let productId: string;
 let variantId: string;
 let warehouseId: string;
 const createdProfiles: string[] = [];
+/**
+ * E-posta sayacı — `createdProfiles.length`'ten BAĞIMSIZ. Başarılı eklemeleri sayan bir sayaç, ilk
+ * ekleme düştüğünde ikincisine aynı e-postayı verir ve gerçek hatayı "duplicate key" diye maskeler.
+ */
+let profileSeq = 0;
 
 const B2C_FIYAT = 3_000;
 /** Toptan liste — B2C'den belirgin farklı ki "hangisini gördü" sorusu tek bakışta cevaplansın. */
@@ -33,11 +38,12 @@ const OZEL_FIYAT = 1_500;
 /** Damgalı müşteri; `company` + onay durumu çağırana bırakılır (CLAUDE §4b: küresel satır kirletilmez). */
 async function newCustomer(opts: { company?: boolean; approved?: boolean | null } = {}): Promise<string> {
   const profiles = new UserProfileService(db);
+  profileSeq += 1;
   const profile = await profiles.insert({
     roles: ['customer'],
     type: opts.company ? 'company' : 'individual',
     name: `Fiyat ${stamp}`,
-    email: `fiyat-${stamp}-${createdProfiles.length + 1}@example.test`,
+    email: `fiyat-${stamp}-${profileSeq}@example.test`,
     ...(opts.company ? { companyInfo: { legalName: `Test SARL ${stamp}` } } : {}),
   });
   createdProfiles.push(profile.id);

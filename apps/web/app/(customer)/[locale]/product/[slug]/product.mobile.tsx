@@ -82,7 +82,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect , reviews
       </div>
 
       <div className="px-4 pt-5">
-        <Reviews t={t} locale={locale} productId={product.id} data={reviews} compact />
+        <Reviews t={t} locale={locale} productId={product.id} productName={product.name} data={reviews} compact />
       </div>
 
       {product.similar.length > 0 && (

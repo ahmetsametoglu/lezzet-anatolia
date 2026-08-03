@@ -84,7 +84,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect , review
 
       <section className="grid grid-cols-[1.2fr_1fr] gap-10 px-12 pb-11">
         <Declaration t={t} locale={locale} declaration={product.declaration} netWeightG={selected?.netWeightG ?? null} />
-        <Reviews t={t} locale={locale} productId={product.id} data={reviews} />
+        <Reviews t={t} locale={locale} productId={product.id} productName={product.name} data={reviews} />
       </section>
 
       {product.similar.length > 0 && (

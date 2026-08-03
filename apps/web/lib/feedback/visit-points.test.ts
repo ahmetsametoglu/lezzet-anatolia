@@ -21,14 +21,23 @@ const entries = new PointsEntryService(db);
 
 const stamp = Date.now();
 const createdProfiles: string[] = [];
+/**
+ * E-posta sayacı — `createdProfiles.length` DEĞİL, ondan bağımsız.
+ *
+ * Sayaç başarılı eklemeleri sayarsa, ilk ekleme herhangi bir sebeple düştüğünde ikincisi AYNI
+ * e-postayı dener ve gerçek hata "duplicate key" diye maskelenir. Yaşandı: şema `referralCode`
+ * isterken kolon yoktu (bekleyen `db:refresh`), ama ekranda görünen sebep benzersizlik ihlaliydi.
+ */
+let profileSeq = 0;
 
 /** Damgalı müşteri — paylaşılan veritabanında başka bir koşunun satırlarına dokunmaz (CLAUDE §4b). */
 async function newCustomer(type: 'individual' | 'company' = 'individual'): Promise<string> {
+  profileSeq += 1;
   const profile = await profiles.insert({
     roles: ['customer'],
     type,
     name: `Ziyaret ${stamp}`,
-    email: `ziyaret-${stamp}-${createdProfiles.length + 1}@example.test`,
+    email: `ziyaret-${stamp}-${profileSeq}@example.test`,
   });
   createdProfiles.push(profile.id);
   return profile.id;

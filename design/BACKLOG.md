@@ -29,7 +29,7 @@ değişecek yer parantezde.
 | **Boş sepet kahraman görseli** (hasır sepet / tezgâh fotoğrafı, web 260×200 · mobil 180×140) | çizili | görsel künyesi yok; çerçeve tam boyutuyla duruyor, yer tutucu sepet işareti |
 | **Paketler kahraman görseli** (3:2, "kurulmuş sofra, birkaç paket bir arada") | çizili; çerçeve tam ölçüsüyle duruyor | görsel künyesi yok — paket sayfasının kendi kahramanı için ayrı bir varlık gerekiyor |
 | **Paketler listesi: etiket çipleri + `?etiket=` süzgeci** | çizili; sayfanın kendisi indi (kartlar, "Daha fazla", boş durum) | paketin etiket alanı yok — süzgeç uydurma bir sınıflandırma olurdu |
-| **Tüm Yorumlar paneli** (web modal · mobil tam ekran, yıldız süzgeci, 10'ar sayfalama, `?yorumlar=1`) | `Musteri - Urun Detay.dc.html` → `Tum Yorumlar Web/Mobil` | `17-geri-bildirim` |
+| ~~**Tüm Yorumlar paneli**~~ — **KAPANDI (04.08)** | `Musteri - Urun Detay.dc.html` → `Tum Yorumlar Web/Mobil` | indi: `build/08` 08.11 |
 | **Bölge haberi tetikleyicisi** — bölge genişleyince bekleyenlere TEK e-posta | `zone_notice` kaydı alınıyor, ekran "not aldık" diyor (söz vermiyor) | bölge kaydedilince kontrol eden iş + gönderim (`14-bildirim`) |
 | **Hesap sayfasında "sonraya kaydedilenler" + bölge haberi kartı** | çizili (`Musteri - Hesap.dc.html`) | hesap sayfası (`04-auth`); veri hazır (`cart.saved_items`, `zone_notice`) |
 | **Operasyon → Analitik "bölge dışı talep" listesi** | tasarımda anıldı | `postal_code_demand` doluyor; ekran operasyon yüzeyinin işi |
@@ -52,8 +52,11 @@ kalan iş yalnız yüzeydi. Tasarımın üç kuralı koda geçti:
 Yıldız ve metin **ikisi de tek başına yeterli** (kapı yalnız ikisinin birden boş olmasını reddediyor):
 zorunlu metin, yıldız vermek isteyen müşteriyi cümle kurmaya zorlardı.
 
-Panelin kendisi (`?yorumlar=1` modal/tam ekran) hâlâ açık — yukarıdaki tabloda duruyor ve kodda
-`BEKLEYEN(BACKLOG §1)` ile işaretli.
+**Panel de indi (04.08)** — `?reviews=1` modal/tam ekran, yıldız histogramı, dört süzgeç çipi,
+10'ar sayfalama. `BEKLEYEN(BACKLOG §1)` işareti kaldırıldı; ayrıntı `build/08` 08.11'de.
+
+Adres anahtarı **İngilizce** (`reviews`), tasarımın `?yorumlar=1` yazması Türkçe ekranın gösterimi:
+sorgu anahtarları bu projede dile göre çevrilmiyor (`?offers=1` ile aynı kural, `SEO_I18N`).
 
 ### 1e. Sepet kupon kutusu — KAPANDI (29.07)
 

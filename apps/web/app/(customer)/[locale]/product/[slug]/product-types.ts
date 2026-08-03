@@ -17,6 +17,19 @@ export type Messages = LocalizedCopy<typeof messages>;
  * veri sayfada okunur ve prop olarak geçer. Kendi başına bir action çağırmak her ürün sayfasında
  * ikinci bir tur atmak olurdu.
  */
+/**
+ * "Tüm yorumlar" panelinin sayfa boyu — tasarımın kuralı ("Sayfalama 10'ar").
+ *
+ * Ürün detayındaki `REVIEW_PAGE_SIZE = 3` ile karıştırılmamalı: o **seçki**, bu **liste**. İkisi
+ * ayrı sayılar çünkü ayrı sorulara cevap veriyorlar — sayfadaki üç yorum bir tadımlık, paneldeki
+ * on tane okunacak bir küme.
+ *
+ * Burada duruyor çünkü iki taraf da okuyor: server action (sorgu limiti) ve panel (footer'daki
+ * "N / M gösteriliyor" sayısı). Action dosyası `'use server'` olduğu için sabit orada duramaz —
+ * o dosya yalnız async fonksiyon dışa verebilir.
+ */
+export const REVIEW_PANEL_PAGE_SIZE = 10;
+
 export interface ReviewsData {
   score: ProductScore;
   /** İlk sayfa — tasarım ürün detayında ÜÇ yorum gösteriyor. */

@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
-import { formatDecimal, formatShortDate } from '@/lib/storefront/format';
+import { formatDecimal } from '@/lib/storefront/format';
 import type { Messages, ReviewsData } from '../product-types';
 import { ReviewForm } from './review-form';
+import { AllReviews } from './all-reviews';
+import { ReviewCard, Stars } from './review-card';
 
 /**
  * Yorumlar bölümü (17.1 müşteri yüzü) — puan kartı, ilk yorumlar ve "yorum yaz".
@@ -28,17 +30,43 @@ interface ReviewsProps {
   t: Messages;
   locale: Locale;
   productId: string;
+  /** Panel başlığındaki alt satır ("Antep Fıstıklı Baklava · N yorum") — tasarımın künyesi. */
+  productName: string;
   data: ReviewsData;
   compact?: boolean;
 }
 
-export function Reviews({ t, locale, productId, data, compact = false }: ReviewsProps) {
+export function Reviews({ t, locale, productId, productName, data, compact = false }: ReviewsProps) {
   const [writing, setWriting] = useState(false);
   // Gönderimden sonra liste TAZELENMEZ ve tazelenmemeli: yorum moderasyondan geçmeden yayına
   // girmiyor. "Kaydedildi" demek yeterli; listede aramak müşteriyi kendi yorumunu ararken bırakırdı.
   const [submitted, setSubmitted] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const { score, reviews, total, canReview, alreadyWrote } = data;
+
+  /**
+   * Panel GERİ TUŞUYLA kapanır (tasarımın kuralı) — bu yüzden açılış bir `history` kaydı bırakır.
+   *
+   * `router.push` KULLANILMIYOR: Next'in yönlendiricisi sunucu bileşenini yeniden çalıştırır ve
+   * tasarımın "sayfa konumu korunur" sözü tutulamazdı — müşteri galeriyi ve seçtiği boyu kaybederdi.
+   * `history.pushState` adresi değiştirir, ağaca dokunmaz.
+   */
+  const openPanel = () => {
+    window.history.pushState({ reviews: 1 }, '', `${window.location.pathname}?reviews=1`);
+    setPanelOpen(true);
+  };
+  // Kapatma da GERİ ile: `history.back()` bıraktığımız kaydı düşürür ve aşağıdaki `popstate`
+  // dinleyicisi paneli kapatır. Doğrudan `setPanelOpen(false)` deseydik adres çubuğunda
+  // `?reviews=1` asılı kalır, yenilemede panel kapalıyken açıkmış gibi görünürdü.
+  const closePanel = () => window.history.back();
+
+  useEffect(() => {
+    if (!panelOpen) return;
+    const onPop = () => setPanelOpen(false);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [panelOpen]);
 
   return (
     <section className="flex flex-col gap-4">
@@ -93,55 +121,39 @@ export function Reviews({ t, locale, productId, data, compact = false }: Reviews
       )}
 
       {reviews.map((review) => (
-        <article key={review.id} className="flex flex-col gap-2 rounded-card border border-sand-200 bg-card px-5.5 py-4.5">
-          <div className="flex items-center gap-2.5">
-            {/* Baş harf, avatar yerine: profil fotoğrafı diye bir alanımız yok ve olmayan bir
-                görselin yer tutucusu her yorumu aynı gri daireyle başlatırdı. */}
-            <span className="grid size-9.5 flex-none place-items-center rounded-full bg-olive-bg font-sans text-body-sm font-bold text-olive">
-              {initialOf(review.authorName)}
-            </span>
-            <div className="flex min-w-0 flex-col">
-              <span className="truncate font-sans text-body-sm font-bold text-ink">{review.authorName}</span>
-              <span className="font-sans text-micro text-muted">
-                {formatShortDate(review.createdAt, locale)} · {t.reviews.verified}
-              </span>
-            </div>
-            {review.rating !== null && (
-              <span className="ml-auto flex-none">
-                <Stars value={review.rating} small />
-              </span>
-            )}
-          </div>
-          {review.comment && <p className="font-sans text-body-sm leading-relaxed text-body">{review.comment}</p>}
-        </article>
+        <ReviewCard key={review.id} review={review} locale={locale} verifiedLabel={t.reviews.verified} />
       ))}
 
-      {/* BEKLEYEN(BACKLOG §1): "tüm yorumlar" paneli (web modal · mobil tam ekran, `?yorumlar=1`).
-          Bağlantı ancak üçten fazla yorum varken çizilir — tasarımın kuralı. Bugün panel yok, o
-          yüzden bağ da yok: tıklayınca hiçbir yere gitmeyen bir bağ, olmayan bir kapı gösterirdi. */}
-      {total > reviews.length && <span className="font-sans text-body-sm font-bold text-muted">{t.reviews.all.replace('{count}', String(total))}</span>}
+      {/* Satır ARTIK GERÇEK BİR KONTROL (08.11). Uzun süre düz metindi ve künyesi doğruydu:
+          "tıklayınca hiçbir yere gitmeyen bir bağ, olmayan bir kapı gösterirdi." Panel indi, kapı
+          açıldı. Kural değişmedi — bağlantı ancak gösterilenden FAZLA yorum varken çizilir. */}
+      {total > reviews.length && (
+        <button
+          type="button"
+          onClick={openPanel}
+          className="cursor-pointer text-left font-sans text-body-sm font-bold text-olive transition-colors hover:text-olive-dark"
+        >
+          {t.reviews.all.replace('{count}', String(total))}
+        </button>
+      )}
 
       {!canReview && <span className="font-sans text-micro leading-relaxed text-muted">{t.reviews.onlyBuyers}</span>}
+
+      {panelOpen && (
+        <AllReviews
+          t={t}
+          locale={locale}
+          productId={productId}
+          productName={productName}
+          breakdown={score.ratingBreakdown}
+          total={total}
+          fullScreen={compact}
+          onClose={closePanel}
+        />
+      )}
     </section>
   );
 }
 
-/** Yıldız satırı — dolu/boş, yarım yıldız yuvarlanmış hâliyle (skor onu zaten yuvarlıyor). */
-function Stars({ value, small = false }: { value: number; small?: boolean }) {
-  const full = Math.round(value);
-  return (
-    <span
-      aria-label={`${value} / 5`}
-      className={['tracking-[2px] text-honey', small ? 'text-note' : 'text-body'].join(' ')}
-    >
-      {'★'.repeat(full)}
-      <span className="text-sand-400">{'★'.repeat(5 - full)}</span>
-    </span>
-  );
-}
-
-/** Adın baş harfi; ad çözülemediyse (silinmiş profil) nötr bir işaret. */
-function initialOf(name: string): string {
-  const first = name.trim()[0];
-  return first && first !== '—' ? first.toLocaleUpperCase('tr') : '·';
-}
+// `Stars` ve `initialOf` buradan `review-card.tsx`'e taşındı: panel de aynı kartı ve aynı yıldız
+// satırını çiziyor, iki kopya aynı yorumu iki ekranda farklı gösterirdi (`CLAUDE.md §1`).

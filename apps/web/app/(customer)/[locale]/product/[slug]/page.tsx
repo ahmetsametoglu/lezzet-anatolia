@@ -105,7 +105,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
           reviews: page.rows,
           // Toplam YAZILI yorum sayısı skordan gelir: liste sayfalı, `rows.length` yalnız bu sayfayı
           // söyler ve "tümü" bağlantısı ona bakarsa hiç görünmezdi.
-          total: score.ratingCount,
+          //
+          // **`commentCount`, `ratingCount` DEĞİL** (04.08 düzeltmesi). Satırın künyesi baştan beri
+          // "YAZILI yorum sayısı" diyordu ama geçirilen değer yıldız sayısıydı; form yıldız YA DA
+          // metin kabul ettiği için (ikisinden biri yeterli) yalnız yıldız veren müşteriler de o
+          // sayıya giriyordu. 20 yıldız + 2 yazılı yorumu olan üründe bağ "20 yorumun tümü" der,
+          // panel 2 yorum gösterirdi. Alan motorda yoktu, arka uçtan istendi ve geldi.
+          total: score.commentCount,
           canReview: eligibility.canReview,
           alreadyWrote: eligibility.existing !== null,
         }}

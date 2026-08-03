@@ -52,7 +52,14 @@
       "submitted": "Yorumunuz alındı. Gözden geçirildikten sonra bu sayfada görünecek.",
       "emptyTitle": "Henüz yorum yok",
       "emptyBody": "Bu ürünü satın aldıysanız ilk yorumu siz yazabilirsiniz.",
-      "onlyBuyers": "Yorum yazma yalnız bu ürünü satın almış müşterilere açıktır."
+      "onlyBuyers": "Yorum yazma yalnız bu ürünü satın almış müşterilere açıktır.",
+      "close": "Kapat",
+      "shownCount": "{shown} yorum gösteriliyor",
+      "loadMore": "Daha fazla yükle",
+      "loading": "Yükleniyor…",
+      "retry": "Yorumlar yüklenemedi — yeniden dene",
+      "panelEmpty": "Bu üründe henüz yazılı yorum yok.",
+      "filters": { "all": "Tümü ({count})", "five": "5★ ({count})", "four": "4★ ({count})", "low": "3★ ve altı ({count})" }
     },
     "similar": "Bunları da sevebilirsiniz",
     "card": {
@@ -122,7 +129,14 @@
       "submitted": "Merci ! Votre avis apparaîtra ici après relecture.",
       "emptyTitle": "Pas encore d’avis",
       "emptyBody": "Si vous avez acheté ce produit, écrivez le premier avis.",
-      "onlyBuyers": "Seuls les clients ayant acheté ce produit peuvent laisser un avis."
+      "onlyBuyers": "Seuls les clients ayant acheté ce produit peuvent laisser un avis.",
+      "close": "Fermer",
+      "shownCount": "{shown} avis affichés",
+      "loadMore": "Charger plus",
+      "loading": "Chargement…",
+      "retry": "Impossible de charger les avis — réessayer",
+      "panelEmpty": "Aucun avis écrit pour ce produit pour l'instant.",
+      "filters": { "all": "Tous ({count})", "five": "5★ ({count})", "four": "4★ ({count})", "low": "3★ et moins ({count})" }
     },
     "similar": "Vous aimerez aussi",
     "card": {
@@ -192,7 +206,14 @@
       "submitted": "Vielen Dank! Ihre Bewertung erscheint hier nach der Prüfung.",
       "emptyTitle": "Noch keine Bewertungen",
       "emptyBody": "Wenn Sie dieses Produkt gekauft haben, schreiben Sie die erste Bewertung.",
-      "onlyBuyers": "Bewertungen können nur Kundinnen und Kunden schreiben, die dieses Produkt gekauft haben."
+      "onlyBuyers": "Bewertungen können nur Kundinnen und Kunden schreiben, die dieses Produkt gekauft haben.",
+      "close": "Schließen",
+      "shownCount": "{shown} Bewertungen angezeigt",
+      "loadMore": "Mehr laden",
+      "loading": "Wird geladen…",
+      "retry": "Bewertungen konnten nicht geladen werden — erneut versuchen",
+      "panelEmpty": "Für dieses Produkt gibt es noch keine geschriebenen Bewertungen.",
+      "filters": { "all": "Alle ({count})", "five": "5★ ({count})", "four": "4★ ({count})", "low": "3★ und weniger ({count})" }
     },
     "similar": "Das könnte Ihnen auch gefallen",
     "card": {
