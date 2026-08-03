@@ -242,6 +242,40 @@ const BULK_QUALIFIERS: Array<{ tr: string; fr: string; de: string }> = [
   { tr: 'özel tepsi', fr: 'plateau spécial', de: 'Spezialblech' },
 ];
 
+/**
+ * Alerjen desenleri — on dört yasal alerjenin TAMAMI en az bir üründe geçer.
+ *
+ * Gerçekçi kombinasyonlar seçildi (rastgele karışım değil): unlu tatlıda gluten+süt, susamlı
+ * çörekte susam, tahinlide susam+kuruyemiş, kurutulmuş meyvede sülfit, deniz ürünlü mezede balık
+ * ve yumuşakça. Uydurma bir bileşim, alerjen ekranını doldurur ama okuyana yalan söyler.
+ */
+const ALERJEN_DESENLERI: ProductAllergen[][] = [
+  ['gluten', 'sert_kabuklu'],
+  ['gluten', 'sut'],
+  ['gluten', 'yumurta', 'sut'],
+  ['susam', 'gluten'],
+  ['sert_kabuklu', 'soya'],
+  ['sut', 'yumurta'],
+  ['sulfit'],
+  ['yer_fistigi', 'gluten'],
+  ['balik', 'yumusaka'],
+  ['kabuklu', 'balik'],
+  ['kereviz', 'hardal'],
+  ['aci_bakla', 'gluten'],
+  ['soya', 'susam'],
+  ['hardal', 'sulfit'],
+];
+
+/** İz (çapraz bulaşma) desenleri — beyanın ikinci ayağı; alerjenle AYNI küme, farklı anlam. */
+const IZ_DESENLERI: ProductAllergen[][] = [
+  ['yer_fistigi'],
+  ['sert_kabuklu', 'susam'],
+  ['soya'],
+  ['sut'],
+  ['gluten', 'yumurta'],
+  ['kabuklu'],
+];
+
 /** Görselleri PAYLAŞILAN anahtarlar: 5 dosya bir kez yüklenir, tüm toplu ürünler bunlara işaret eder. */
 const SHARED_IMAGE_FILES = ['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg', '5.jpeg'];
 
@@ -321,8 +355,12 @@ async function seedBulkProducts(
         // Sürüm damgası public okuma URL'ini `?v=` ile sürümler — DOSYASI olan kayda yazılır;
         // görselsiz kayıtta damga olmayan bir dosyanın tarihi olurdu.
         imageUpdatedAt: imageKey ? NOW : null,
-        allergens: i % 7 === 0 ? [] : i % 2 === 0 ? ['gluten', 'sert_kabuklu'] : ['gluten', 'sut'],
-        traces: i % 4 === 0 ? ['yer_fistigi'] : [],
+        // ALERJEN DAĞILIMI on dört değerin tamamını dolaşır. Dördüyle yetinildiğinde alerjen
+        // süzgeci, rozetleri ve "şunu içermeyenler" filtresi kalan onunda hiç denenemiyordu —
+        // üstelik alerjen listesi yasal bir beyandır: eksik gösterim en pahalı hatadır.
+        // Boş liste de bir hâldir (`i % 7`): alerjensiz ürünün rozetsiz satırı da görünmeli.
+        allergens: i % 7 === 0 ? [] : (ALERJEN_DESENLERI[i % ALERJEN_DESENLERI.length] ?? ['gluten']),
+        traces: i % 4 === 0 ? (IZ_DESENLERI[i % IZ_DESENLERI.length] ?? ['yer_fistigi']) : [],
         // Beyan dörtlüsü ~her 3'ten 2'sinde DOLU: ölçüt bunları da saydığı için hepsi boş bırakılsaydı
         // 69 ürünün 69'u "beyan eksik" çıkar, süzgeç ayırt etmez olurdu.
         ingredients: beyanTam

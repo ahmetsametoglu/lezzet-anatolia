@@ -36,7 +36,14 @@ function goruntu(yasDk: number): SystemHealthMetrics {
   const dalga = (genlik: number, faz: number) => Math.sin(yasDk / 47 + faz) * genlik;
 
   // Disk YEDİ GÜNDE dolmuş: %60 → %84. Anlık değer değil, YÖN haberdir (tasarım O22).
-  const diskPct = Math.round((SIMDIKI_DISK_PCT - (SIMDIKI_DISK_PCT - HAFTA_ONCE_DISK_PCT) * t + dalga(0.6, 1)) * 10) / 10;
+  //
+  // İKİ GÜN ÖNCE bir OLAY var: disk kritik eşiği (%90) aşmış, sonra temizlik yapılmış. Pencere dar
+  // ve bilinçli geçmişte: hüküm `crit` yalnız orada doğar. Bugüne konsaydı ekran sürekli kırmızı
+  // kalır, kırmızının anlamı da kaybolurdu — alarm her zaman çalıyorsa alarm değildir.
+  const kritikPencere = yasDk > 2760 && yasDk < 3000; // ~46–50 saat önce
+  const diskPct = kritikPencere
+    ? 92.4
+    : Math.round((SIMDIKI_DISK_PCT - (SIMDIKI_DISK_PCT - HAFTA_ONCE_DISK_PCT) * t + dalga(0.6, 1)) * 10) / 10;
   const memAvailable = Math.round(1290 + 2600 * t + dalga(140, 3));
   const load1 = Math.round((2.1 - 1.5 * t + dalga(0.5, 5)) * 100) / 100;
 
@@ -71,7 +78,11 @@ function goruntu(yasDk: number): SystemHealthMetrics {
     },
     // Caddy `true`: seed sunucuyu taklit ediyor, geliştirme makinesini değil. `null` (ölçülemedi)
     // hâli zaten yerelde gerçek toplayıcıdan geliyor — ikisini birden uydurmak gerekmez.
-    services: { webUp: true, caddyActive: true, certDaysLeft: 12 },
+    //
+    // SERTİFİKA GÜNÜ ZAMANLA AZALIR ve bu, serinin üç hükmü de taşıması için şart: gün sabit 12
+    // bırakıldığında `cert-warn` sinyali YEDİ GÜN BOYUNCA yanıyor ve 481 satırın hepsi `warn`
+    // çıkıyordu — sağlık ekranı hiç yeşil, hiç kırmızı görülemiyordu. Gerçekte de gün geçtikçe azalır.
+    services: { webUp: true, caddyActive: true, certDaysLeft: Math.round(12 + yasDk / (24 * 60) * 9) },
     app: {
       errorLogsLastHour: yasDk < 60 ? 6 : 0,
       failedJobsLastHour: yasDk < 60 ? 2 : 0,
@@ -110,9 +121,15 @@ export async function seedSystemHealth(db: Db): Promise<void> {
     if (error) throw error;
   }
 
+  // Hüküm dağılımı SAYILIR, varsayılmaz: "üç hâl de var" ancak sayılınca bilinir. Bir eşik değişip
+  // seri tek renge düşerse burada görünür — sessizce tek renk kalmaz.
+  const dagilim = anlar.reduce<Record<string, number>>((m, dk) => {
+    const h = healthStatusOf(goruntu(dk));
+    return { ...m, [h]: (m[h] ?? 0) + 1 };
+  }, {});
   console.log(
-    `✓ sağlık görüntüsü: ${anlar.length} satır · 7 gün · son hüküm "${healthStatusOf(goruntu(0))}" ` +
-      `(disk %${HAFTA_ONCE_DISK_PCT} → %${SIMDIKI_DISK_PCT}, 6–9 sa arası disk ÖLÇÜLEMEDİ)`,
+    `✓ sağlık görüntüsü: ${anlar.length} satır · 7 gün · hüküm dağılımı ${Object.entries(dagilim).map(([k, v]) => `${k}=${v}`).join(' · ')} ` +
+      `· son hüküm "${healthStatusOf(goruntu(0))}" (disk %${HAFTA_ONCE_DISK_PCT} → %${SIMDIKI_DISK_PCT}, ~2 gün önce %92 KRİTİK, 6–9 sa arası ÖLÇÜLEMEDİ)`,
   );
 }
 

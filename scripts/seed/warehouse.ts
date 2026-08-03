@@ -106,5 +106,103 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
   });
 
   console.log(`  ✓ ${sonuc.referenceNo} · ${partiler.length} kalem · STR → KEHL (yolda)`);
-  console.log('✓ transfer: 1 kayıt (kabul edilmemiş — "yoldakiler" listesi dolsun)');
+
+  // ── Kapanmış transferler ────────────────────────────────────────────────────────────────────
+  // Transferin üç hâli var ve üçü ayrı şey gösterir. Yalnız "yolda" bırakmak sevkiyat GEÇMİŞİNİ hiç
+  // göstermez: kabul ekranı işleyecek bir kayıt bulur ama işlendikten SONRA neye benzediği, eksik
+  // gelen malın nasıl göründüğü ve iptal edilmiş bir sevkiyatın listede nasıl durduğu görülmez.
+  const digerPartiler = ((data ?? []) as Array<{ id: string; variant_id: string; physical_qty: number }>)
+    .filter((p) => !mesgulVaryantlar.has(p.variant_id) && !partiler.some((s) => s.id === p.id))
+    .slice(0, 3);
+
+  // 1) KABUL EDİLMİŞ — ama biri EKSİK geldi. Sevk 5, gelen 3: aradaki fark bir kayıptır ve kabul
+  //    ekranının asıl sınavı odur; tam gelen bir sevkiyat hiçbir soru sormaz.
+  if (digerPartiler.length >= 2) {
+    const kabul = await transfers.dispatch({
+      toWarehouseId: depolar.kehl,
+      lines: digerPartiler.slice(0, 2).map((p) => ({ sourceStockId: p.id, qty: Math.min(5, p.physical_qty) })),
+      note: 'Haftalık ikmal.',
+    });
+    const satirlar = await transfers.listLines(kabul.transferId);
+    const sonucKabul = await transfers.receive({
+      transferId: kabul.transferId,
+      // Her satır için miktar ZORUNLU: eksik geleni hiç bildirmemek kabulü bloklar — mal ne
+      // kaynakta ne hedefte kalırdı. İlk satır tam, ikincisi iki adet eksik gelir.
+      lines: satirlar.map((l, i) => ({ lineId: l.id, receivedQty: i === 1 ? Math.max(0, l.qty - 2) : l.qty })),
+    });
+    console.log(`  ✓ ${kabul.referenceNo} · KABUL EDİLDİ · ${sonucKabul.ok ? `bir kalem EKSİK geldi · ${sonucKabul.createdBatches} yeni parti` : 'reddedildi'}`);
+  }
+
+  // 2) İPTAL EDİLMİŞ — mal yola çıkmadan vazgeçildi. Servis kapısı yok: iptal bir stok hareketi
+  //    değil bir durum düzeltmesidir, o yüzden doğrudan yazılır.
+  const iptalParti = digerPartiler[2];
+  if (iptalParti) {
+    const iptal = await transfers.dispatch({
+      toWarehouseId: depolar.kehl,
+      lines: [{ sourceStockId: iptalParti.id, qty: Math.min(3, iptalParti.physical_qty) }],
+      note: 'Araç arızalandı — sevkiyat iptal edildi.',
+    });
+    const { error: iptalHatasi } = await db.from('warehouse_transfer').update({ status: 'cancelled' }).eq('id', iptal.transferId);
+    if (iptalHatasi) throw iptalHatasi;
+    console.log(`  ✓ ${iptal.referenceNo} · İPTAL`);
+  }
+
+  console.log('✓ transfer: 3 kayıt (yolda · kabul edilmiş + EKSİK gelen · iptal)');
+}
+
+// ── Depo bazlı asgari stok eşiği (19.x) ──────────────────────────────────────────────────────────
+// Eşik İKİ KATMANLI (`StockService`): varyantın kendi `minStockQty`'si varsayılandır, depo satırı onu
+// EZER. İkinci katman veride hiç yoksa ezme kuralının çalıştığı görülemez — ekran her iki hâlde de
+// aynı sayıyı gösterir ve kimse farkı bilmez.
+//
+// Kehl küçük depo: aynı ürün için eşiği DAHA DÜŞÜK olmalı. Ana depoda 20 adet azdır, sınır deposunda
+// normaldir — "az mı" sorusunun cevabı depoya göre değişir; kuralın söylediği tam olarak budur.
+
+export async function seedThresholds(db: Db, depolar: Depolar): Promise<void> {
+  if (await tabloDolu(db, 'warehouse_variant_threshold')) {
+    console.log('▸ depo stok eşikleri zaten dolu — atlandı');
+    return;
+  }
+  console.log('▸ DEPO STOK EŞİĞİ seed');
+
+  // Eşiğin ANLAMLI olması için kullanılabilir stoğu bilinen satırlar seçilir: eşiğin altına düşmüş
+  // ürün de rahat duran ürün de olmalı — liste tek renkse uyarı rengi hiç görünmez.
+  const { data, error } = await db
+    .from('available_stock')
+    .select('variant_id,warehouse_id,available_qty')
+    .order('available_qty', { ascending: true })
+    .limit(400);
+  if (error) throw error;
+  const satirlar = (data ?? []) as Array<{ variant_id: string; warehouse_id: string; available_qty: number }>;
+
+  const kayitlar: Array<{ warehouse_id: string; variant_id: string; min_stock_qty: number }> = [];
+  const gorulen = new Set<string>();
+  let strSayi = 0;
+  let kehlSayi = 0;
+  for (const s of satirlar) {
+    const anahtar = `${s.warehouse_id}:${s.variant_id}`;
+    if (gorulen.has(anahtar)) continue;
+    gorulen.add(anahtar);
+    const kehl = s.warehouse_id === depolar.kehl;
+    if (kehl ? kehlSayi >= 6 : strSayi >= 12) continue;
+    if (kehl) kehlSayi += 1;
+    else strSayi += 1;
+    // Bir kısmı bilinçli eşiğin ALTINDA (uyarı yansın), kalanı rahat.
+    const altinda = kayitlar.length % 2 === 0;
+    kayitlar.push({
+      warehouse_id: s.warehouse_id,
+      variant_id: s.variant_id,
+      min_stock_qty: altinda ? s.available_qty + 8 : Math.max(1, Math.floor(s.available_qty / 3)),
+    });
+  }
+
+  if (kayitlar.length === 0) {
+    console.log('  ▸ kullanılabilir stok satırı yok — eşik kurulmadı');
+    return;
+  }
+  const { error: yazmaHatasi } = await db.from('warehouse_variant_threshold').insert(kayitlar);
+  if (yazmaHatasi) throw yazmaHatasi;
+  console.log(
+    `✓ depo eşiği: ${kayitlar.length} satır (STR ${strSayi} · KEHL ${kehlSayi}) · yarısı eşiğin ALTINDA → yeniden sipariş uyarısı`,
+  );
 }

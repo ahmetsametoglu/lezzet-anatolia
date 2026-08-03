@@ -179,3 +179,77 @@ export async function seedZoneNotices(db: Db, kisiler: Kisiler): Promise<void> {
   console.log(`✓ haber-ver: ${kayitlar.length} kayıt (${kayitlar.filter((k) => !k.notified_at).length} bekliyor · 1 gönderildi · kayıtlı + kayıtsız)`);
 }
 
+// ── "Stok gelince haber ver" (0045 · 19.9) ───────────────────────────────────────────────────────
+// Bölge bildirimiyle (`zone_notice`) karıştırılmamalı: orada SEMT kapalıdır, burada ÜRÜN yoktur.
+// İkisi de bir söz verir ama farklı sorulara — biri "buraya ne zaman geleceksiniz", diğeri "bu boy
+// ne zaman gelecek".
+//
+// Kayıt VARYANT düzeyindedir: 700 g'ı bekleyene 1,5 kg geldi diye haber vermek sözü tutmak değil
+// bozmaktır. Yer de saklanır (ülke + posta kodu), çünkü mal bir depoya gelir ve o depo her yere
+// bakmaz — Kehl'e gelen mal Lyon'daki bekleyene "geldi" dedirtmemeli.
+//
+// KİMLİK ZORUNLU DEĞİL: "haber ver"in önüne giriş duvarı koymak, tam da vazgeçmeye en yakın anda
+// ikinci bir engel çıkarmaktır. Bu yüzden kayıtların bir kısmı bilinçli ziyaretçi (customerId null).
+
+export async function seedStockNotices(db: Db, kisiler: Kisiler): Promise<void> {
+  if (await tabloDolu(db, 'variant_stock_notice')) {
+    console.log('▸ stok bildirimleri zaten dolu — atlandı');
+    return;
+  }
+  console.log('▸ STOK GELİNCE HABER VER seed');
+
+  // Bekleyecek varyantlar: GERÇEKTEN tükenmiş olanlar önce. Stokta bol duran bir ürüne "haber ver"
+  // kaydı koymak, ekranın hemen tetiklenmesi gereken bir satır göstermesi demekti — bekleme listesi
+  // dolu ama sebebi yok.
+  const { data: tukenen, error } = await db
+    .from('available_stock_total')
+    .select('variant_id,available_qty')
+    .lte('available_qty', 0)
+    .limit(4);
+  if (error) throw error;
+  let varyantlar = ((tukenen ?? []) as Array<{ variant_id: string }>).map((r) => r.variant_id);
+
+  // Tükenen yoksa (stok bol kurulmuşsa) herhangi bir varyanta düşülür — liste boş kalmasın; ama
+  // bu bir TAVİZDİR ve söylenir, sessizce yapılmaz.
+  if (varyantlar.length === 0) {
+    const { data: herhangi } = await db.from('product_variant').select('id').limit(3);
+    varyantlar = ((herhangi ?? []) as Array<{ id: string }>).map((r) => r.id);
+    console.log('  ▸ tükenmiş varyant yok — bildirimler stoklu varyantlara bağlandı');
+  }
+  if (varyantlar.length === 0) {
+    console.log('  ▸ varyant yok — atlandı');
+    return;
+  }
+
+  const kayitlar: Array<{ variant_id: string; country: 'FR' | 'DE'; postal_code: string; email: string; customer_id?: string | null; notified_at?: string | null; not: string }> = [
+    // Aynı varyantı bekleyen ÜÇ kişi: mal gelince kaç kişiye haber gideceği ancak yığılma varsa görünür.
+    { variant_id: varyantlar[0]!, country: 'FR', postal_code: '67000', email: 'claire.weber@example.fr', customer_id: kisiler.get('b2cSadik') ?? null, not: 'bekliyor · KAYITLI müşteri' },
+    { variant_id: varyantlar[0]!, country: 'FR', postal_code: '67300', email: 'passant@example.fr', not: 'bekliyor · ziyaretçi (kimliksiz)' },
+    { variant_id: varyantlar[0]!, country: 'FR', postal_code: '67000', email: 'compta@bosphore-strasbourg.fr', customer_id: kisiler.get('b2bOnayli') ?? null, not: 'bekliyor · B2B müşteri' },
+    // BAŞKA ÜLKE: mal Strasbourg'a gelirse bu kayda haber gitmemeli — yer süzgecinin sınavı.
+    ...(varyantlar[1]
+      ? [{ variant_id: varyantlar[1], country: 'DE' as const, postal_code: '77694', email: 'einkauf@anadolu-markt.de', customer_id: kisiler.get('b2bAlman') ?? null, not: 'bekliyor · ALMANYA (yer süzgeci)' }]
+      : []),
+    // HABER VERİLMİŞ kayıt: söz tutulmuş hâli de görünsün. Damgalı satıra ikinci kez yazılmaz —
+    // "tek hatırlatma" sözü bu alanla tutulur.
+    ...(varyantlar[2]
+      ? [{ variant_id: varyantlar[2], country: 'FR' as const, postal_code: '67400', email: 'julien.fischer@example.fr', customer_id: kisiler.get('b2cKapaliKapida') ?? null, notified_at: an(-6), not: 'HABER VERİLDİ (mal geldi)' }]
+      : []),
+  ];
+
+  const { error: yazmaHatasi } = await db.from('variant_stock_notice').insert(
+    kayitlar.map((k) => ({
+      variant_id: k.variant_id,
+      country: k.country,
+      postal_code: k.postal_code,
+      email: k.email,
+      customer_id: k.customer_id ?? null,
+      notified_at: k.notified_at ?? null,
+      created_at: an(-12),
+    })),
+  );
+  if (yazmaHatasi) throw yazmaHatasi;
+  for (const k of kayitlar) console.log(`  ✓ ${k.postal_code} ${k.country} · ${k.email} — ${k.not}`);
+  console.log(`✓ stok bildirimi: ${kayitlar.length} kayıt (${kayitlar.filter((k) => !k.notified_at).length} bekliyor · 1 gönderildi · kayıtlı + ziyaretçi · iki ülke)`);
+}
+
