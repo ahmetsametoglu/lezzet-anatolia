@@ -225,9 +225,23 @@ Kabuğun zemini `--color-ops-bg`'dir (`#dedbd3` bej; koyu temada `#1b1e18`) ve `
 zeminini ÇİZMEZ — yalnız alt çizgisi vardır. Kök zemin taşımazsa başlık barı ve altındaki paneller
 kabuğun bejini gösterir; ekran "kahverengiye çalıyor" diye görünür. Kural on ekranın sekizinde
 FİİLEN uygulanıyordu ama yazılı değildi, o yüzden iki ekran (Talepler · Ayarlar) onsuz indi.
-Denetleniyor (`docs:check` §3f); ölçüt **`PageHeader` render eden `.desktop`/`.mobile` dosyası** —
+Denetleniyor (`docs:check` §3g); ölçüt **`PageHeader` render eden `.desktop`/`.mobile` dosyası** —
 cihaz forku komponentlerde de kullanılıyor ve dialog içindeki bir form zeminini `Dialog` panelinden
 alır, ona `bg-ops-card` dayatmak yanlış olurdu.
+
+**Yazı boyu HAM piksel yazılmaz — merdiven basamağı kullanılır (`docs:check` §3h).** Ölçek
+`globals.css`'te dokuz basamaklı kapalı bir merdivendir (`--text-ops-hero … -micro`) ve kapalı
+olması işin özü: kullanıcı iki kez *"okumakta zorlanıyorum"* dedi, iki düzeltme de TEK dosyada
+yapıldı — 186 kullanım yeri dolaşılmadı. Ham `text-[15px]` yazan satır o değeri merdivenin dışına
+çıkarır ve kayma **sessizce** oluşur: ölçek yükselince o satır yerinde kalır, aradaki mesafe kapanır,
+ekran bir gün "ötekilerden küçük" diye geri gelir. Sistem ekranında tam bu oldu — 34 yerde ham px
+vardı ve iki ölçek yükseltmesini de kaçırdılar. Kural yalnız **yazı boyu** içindir: `leading-[1.5]`,
+`tracking-[0.08em]`, `px-[22px]` serbest ve bu bilinçli — merdivenin künyesi satır yüksekliğinin
+token'a gömülmediğini söylüyor, yoğun tabloda `leading` yerel karardır.
+
+Merdivenin **üst iki ucu metin değil GÖSTERGE içindir** (`hero` 36 · `display` 29): sistem panelinin
+büyük değerleri, hüküm şeridinin başlığı, sipariş tutarı. Ham değeri en yakın metin basamağına
+yamamak yanlış olurdu — 29px bir başlık değil, bir sayıdır.
 
 **`<sayfa>-url.ts` sayfalar arası import EDİLEBİLİR — tek yazılı istisna (03.08, denetim D1).**
 Sayfaya-özel dosya sayfada kalır; bu dosya tipi ayrı tutulur çünkü işlevi farklı: `*-url.ts` bir

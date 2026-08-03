@@ -607,7 +607,7 @@ for (const root of TEARDOWN_ROOTS.filter((p) => existsSync(join(ROOT, p)))) {
   }
 }
 
-// ── 3f. Operasyon ekranı KENDİ zeminini çizmeli ──────────────────────────────
+// ── 3g. Operasyon ekranı KENDİ zeminini çizmeli ──────────────────────────────
 //
 // **Kullanıcı bildirimi (03.08):** *"header bölümünün rengi sayfadan sayfaya değişiyor, koyu
 // kahve gibi geliyor."* Sebep: kabuğun zemini `--color-ops-bg` (#dedbd3 bej; koyu temada #1b1e18)
@@ -641,6 +641,38 @@ for (const dir of ['apps/web/app/(operations)/operations']) {
     if (!rootTag.includes('bg-ops-')) {
       note(`${file}: ekranın kökü zemin sınıfı taşımıyor — \`bg-ops-card\` (kabuğun zemini bej, başlık barı onu gösterir)`);
     }
+  }
+}
+
+// ── 3h. Operasyon yüzeyinde HAM piksel yazı boyu yok ─────────────────────────
+//
+// Yazı ölçeği `globals.css`'te dokuz basamaklı KAPALI bir merdivendir (`--text-ops-*`). Kapalı
+// olması işin özü: kullanıcı iki kez *"okumakta zorlanıyorum"* dedi ve iki kez de düzeltme TEK
+// dosyada yapıldı — 186 kullanım yerinin dolaşılması gerekmedi. Merdivenin bütün değeri bu.
+//
+// Ham `text-[15px]` yazan her satır o değeri merdivenin DIŞINA çıkarır ve kayma sessizce oluşur:
+// ölçek yükselince o satır yerinde kalır, aradaki mesafe kapanır, ekran bir gün "ötekilerden küçük"
+// diye geri gelir. Sistem ekranında tam bu oldu — 34 yerde ham px vardı, iki ölçek yükseltmesini de
+// kaçırdılar ve üçüncü şikâyet oradan gelecekti.
+//
+// Kural yalnız YAZI BOYU içindir. `leading-[1.5]`, `tracking-[0.08em]`, `px-[22px]` serbest ve bu
+// bilinçli: merdivenin künyesi satır yüksekliğinin token'a GÖMÜLMEDİĞİNİ söylüyor — yoğun tabloda
+// `leading` yerel karardır.
+{
+  const scaleFile = 'apps/web/app/globals.css';
+  const steps = [...read(scaleFile).matchAll(/--text-ops-([a-z-]+):/g)].map((m) => m[1]);
+  const hits = [];
+  for (const dir of ['apps/web/app/(operations)', 'apps/web/components/operation']) {
+    if (!existsSync(join(ROOT, dir))) continue;
+    for (const file of walkSource(dir)) {
+      for (const [, px] of read(file).matchAll(/\btext-\[([0-9.]+)px\]/g)) hits.push(`${file} (${px}px)`);
+    }
+  }
+  if (hits.length > 0) {
+    note(
+      `operasyon yüzeyinde ${hits.length} ham piksel yazı boyu — merdiven basamağı kullanılmalı ` +
+        `(text-ops-{${steps.join('|')}}): ${hits.slice(0, 5).join(', ')}${hits.length > 5 ? ` … +${hits.length - 5}` : ''}`,
+    );
   }
 }
 
