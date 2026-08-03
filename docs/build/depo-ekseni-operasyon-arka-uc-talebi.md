@@ -359,6 +359,21 @@ O yüzden iki farklı gerçeği ayırıyorum, çünkü tek düğmeye sıkıştı
 Yani düğmenin metni "İptal" değil **"Sevk kaydını geri al"** olmalı — ne yaptığını söylüyor. Kapı
 19.6'da geliyor; o zamana kadar çizme, haklısın: ölü düğme yalan söyler.
 
+**Güncelleme (03.08): KAPI AÇILDI.** `WarehouseTransferService.cancel({ transferId, actorId, reason })`
+→ `cancel_transfer` RPC'si. Düğmeyi artık çizebilirsin.
+
+Sözleşme:
+- Yalnız `in_transit` geri alınır. `received` reddedilir (mal hedefte parti olarak doğdu, belki
+  satıldı bile) ve ikinci geri alma da reddedilir — stoğu iki kez geri yazardı.
+- Miktar **kaynak partiye** geri eklenir, yeni parti doğmaz. Hedef depoda hiçbir şey oluşmaz.
+- Kayıt SİLİNMEZ, damgalanır: `cancelledBy` · `cancelledAt` · `cancelReason` (üçü de `WarehouseTransfer`
+  şemasında). Gerekçe alanı isteğe bağlı ama ekranda sormanı öneririm — "neden geri alındı" sonradan
+  sorulan ilk soru.
+- `listInTransit` sonucundan kendiliğinden düşer.
+
+Gerekçe alanını `note`'a değil ayrı bir kolona koydum: `note` sevk anının notudur, bu ise onu iptal
+eden kararın. İkisi tek alanda birleşseydi geri alma gerekçesi sevk notunu ezerdi.
+
 **6b — test depoları: haklısın, ama önerdiğin ikinci yol sistemi bozar.** `is_active = false` doğan
 test deposu çalışmaz: `available_stock` görünümü `where w.is_active` süzüyor (0042), yani pasif
 depodaki stok hiçbir okumada görünmez ve stok testlerinin çoğu anında kırılır. İyi ki sormuşsun.

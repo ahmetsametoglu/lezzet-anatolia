@@ -65,10 +65,16 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 | reference_no | string | benzersiz — `TRF-STR-26-0007` (**kaynak** deponun kodu: kâğıt klasör orada durur) |
 | dispatched_by / dispatched_at | uuid \| null / timestamptz | sevk anı |
 | received_by / received_at | uuid \| null / timestamptz \| null | kabul anı |
+| cancelled_by / cancelled_at | uuid \| null / timestamptz \| null | geri alma anı (19.6); `received_*`'a bindirilmedi — "kabul edildi" ile "hiç çıkmamış" birbirinin yerine geçemez |
+| cancel_reason | string \| null | geri almanın gerekçesi; `note` sevk anının notudur, bu onu iptal eden kararın |
 | note | string \| null | |
 | created_at | timestamptz | |
 
-`draft` enum değeri **yoktur**: hazırlık ekranı henüz yok ve kullanılmayan bir enum değeri yalan söyler — sevk anı ilk kalıcı andır (`quick_sale`'in referansı sevkte üretmesiyle aynı mantık). `cancelled` var ama yazan yolu yok → `BEKLEYEN(19.6)`.
+Kısıt: `warehouse_transfer_cancel_stamp` — `status = 'cancelled'` ile `cancelled_at is not null` **birbirini gerektirir**. Kural veride durur: RPC'yi atlayan bir `update` damgasız iptal yazamaz.
+
+`draft` enum değeri **yoktur**: hazırlık ekranı henüz yok ve kullanılmayan bir enum değeri yalan söyler — sevk anı ilk kalıcı andır (`quick_sale`'in referansı sevkte üretmesiyle aynı mantık).
+
+Bu yüzden **`cancelled`'ın anlamı dardır** (19.6): iptal edilen şey her zaman *zaten sevk edilmiş* bir kayıttır ve yalnız tek hâli kapsar — **"sevk kaydı hatalıydı, mal hiç çıkmadı"**. Miktar kaynak partiye geri yazılır (yeni parti doğmaz; `initial_qty` ve geri çağırma izi bölünmesin — T4'ün ters yönü). Mal çıkıp geri döndüyse cevap bu değer DEĞİL, ters yönlü yeni bir transferdir: mal fiilen iki kez yol gitti, tek kayda indirmek soğuk zincir geçmişini silerdi. Ekranın düğmesi de bu yüzden "İptal" değil **"Sevk kaydını geri al"**.
 
 ## WarehouseTransferLine (sevk kalemi)
 

@@ -72,7 +72,9 @@ alter table public.warehouse_variant_threshold enable row level security;
 -- ── Depolar arası transfer (K11, T4) ────────────────────────────────────────
 -- `draft` YOK: hazırlık ekranı henüz yok ve kullanılmayan enum değeri yalan söyler — sevk anı ilk
 -- kalıcı andır (`quick_sale`'in `reference_no`'yu sevk anında üretmesiyle aynı mantık).
--- `cancelled` var ama RPC'si yok — BEKLEYEN(19.6): sevkin geri alınması (mal kaynağa döner).
+-- Bu yüzden `cancelled`'ın anlamı da DARDIR (19.6, `cancel_transfer`): iptal edilen şey her zaman
+-- zaten sevk edilmiş bir kayıttır ve yalnız "sevk kaydı hatalıydı, mal hiç çıkmadı" hâlini kapsar.
+-- Mal çıkıp geri döndüyse cevap ters yönlü YENİ transferdir — gerekçe fonksiyonun künyesinde.
 create type transfer_status as enum ('in_transit', 'received', 'cancelled');
 
 create table public.warehouse_transfer (
@@ -86,8 +88,20 @@ create table public.warehouse_transfer (
   dispatched_at timestamptz not null default now(),
   received_by uuid,
   received_at timestamptz,
+  -- Sevk kaydının GERİ ALINMASI (19.6). Ayrı alanlar, `received_*`'a bindirilmedi: "kabul edildi"
+  -- ile "hiç çıkmamış" birbirinin yerine geçemez; tek çift alanda tutulsaydı geçmiş okunamazdı.
+  cancelled_by uuid,
+  cancelled_at timestamptz,
+  -- Gerekçe ZORUNLU değil ama istenen alan: "neden geri alındı" sorusunun cevabı `note`'a
+  -- karışmamalı — `note` sevk anının notudur, bu ise onu iptal eden kararın.
+  cancel_reason text,
   note text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Durum ile izler birbirini tutar: `cancelled` damgasız olamaz, damga da başka durumda duramaz.
+  -- Kural veride durur (CLAUDE §1) — RPC'yi atlayan bir `update` bunu delemesin.
+  constraint warehouse_transfer_cancel_stamp check (
+    (status = 'cancelled') = (cancelled_at is not null)
+  )
 );
 -- "Yolda ne var" — sanal transit depo AÇILMADI (T4), bu sorunun kaynağı transfer kaydının kendisi.
 create index warehouse_transfer_status_idx on public.warehouse_transfer (status, dispatched_at desc);
@@ -668,3 +682,74 @@ end;
 $$;
 
 revoke execute on function public.receive_transfer(uuid, jsonb, uuid) from public, anon, authenticated;
+
+-- ── Sevk kaydının geri alınması (19.6) ──────────────────────────────────────
+-- **İki farklı gerçeği ayırıyoruz, çünkü tek düğmeye sıkıştırılırsa stok yalan söyler:**
+--
+--   1. Sevk kaydı HATALIYDI, mal hiç çıkmadı  → burası. Mal kaynağa geri yazılır, transfer
+--      `cancelled` olur. Bu bir DÜZELTMEDİR ve iz bırakır (kim, ne zaman, neden).
+--   2. Mal çıktı, sonra geri döndü            → BURASI DEĞİL, ters yönlü YENİ transfer. Mal fiilen
+--      iki kez yol gitti; tek kayda indirmek "hiç gitmedi" demek olur ve soğuk zincir geçmişini
+--      siler. Ekranın düğmesi bu yüzden "İptal" değil **"Sevk kaydını geri al"** demeli.
+--
+-- Neden kayıt SİLİNMEZ: transfer bir olay kaydıdır. Silinseydi `reference_no` (kâğıt klasördeki
+-- numara) karşılıksız kalırdı ve depocu elindeki belgeyi sistemde bulamazdı.
+--
+-- Neden hedef depoya değil KAYNAĞA yazılır: mal hiç çıkmadı iddiası bu yolun tanımı. Hedefe
+-- yazmak, olmayan bir kabulü uydururdu.
+--
+-- Parti KİMLİĞİ korunur: miktar orijinal satıra geri eklenir, yeni parti doğmaz. Yeni parti açmak
+-- `initial_qty`'yi ve geri çağırma izini bölerdi (T4 ile aynı gerekçe, ters yönü).
+create or replace function public.cancel_transfer(
+  p_transfer_id uuid,
+  p_actor_id uuid default null,
+  p_reason text default null
+) returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_status transfer_status;
+  v_restored int := 0;
+begin
+  select status into v_status
+    from public.warehouse_transfer where id = p_transfer_id for update;
+
+  if v_status is null then
+    raise exception 'cancel_transfer: transfer bulunamadı (%)', p_transfer_id;
+  end if;
+  -- `received` geri alınmaz: mal hedefte parti olarak DOĞDU, belki satıldı bile. O yolun cevabı
+  -- ters transferdir. `cancelled` de geri alınmaz — ikinci çağrı stoğu iki kez geri yazardı.
+  if v_status <> 'in_transit' then
+    raise exception 'cancel_transfer: transfer % durumunda, geri alınamaz', v_status;
+  end if;
+
+  -- Emniyet ağı: `in_transit` iken kabul edilmiş satır OLMAMALI (kabul hepsini birden yazar ve
+  -- durumu çevirir). Varsa veri bozulmuştur; sessizce stok geri yazmaktansa durmak doğrudur.
+  if exists (
+    select 1 from public.warehouse_transfer_line
+     where transfer_id = p_transfer_id and received_qty is not null
+  ) then
+    raise exception 'cancel_transfer: kabul edilmiş satır var — geri alma yolu kapalı, ters transfer açın';
+  end if;
+
+  -- Mal kaynağa geri: sevkte düşülen miktar, düşüldüğü PARTİYE eklenir.
+  with geri as (
+    update public.stock s
+       set physical_qty = s.physical_qty + tl.qty
+      from public.warehouse_transfer_line tl
+     where tl.transfer_id = p_transfer_id and s.id = tl.source_stock_id
+    returning 1
+  )
+  select count(*) into v_restored from geri;
+
+  update public.warehouse_transfer
+     set status = 'cancelled', cancelled_by = p_actor_id, cancelled_at = now(), cancel_reason = p_reason
+   where id = p_transfer_id;
+
+  return jsonb_build_object('ok', true, 'transfer_id', p_transfer_id, 'restored_lines', v_restored);
+end;
+$$;
+
+revoke execute on function public.cancel_transfer(uuid, uuid, text) from public, anon, authenticated;

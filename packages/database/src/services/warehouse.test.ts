@@ -210,6 +210,49 @@ describe('transfer — iki fiziksel gerçek an', () => {
     });
     expect(sonuc.createdBatches).toBe(1);
   });
+
+  it('sevk kaydı geri alınır: mal KAYNAK PARTİYE döner, yeni parti doğmaz (19.6)', async () => {
+    const kaynak = await stocks.insert({
+      variantId,
+      warehouseId: doluDepo,
+      physicalQty: 10,
+      expiryDate: dayOffset(150),
+      lotNumber: 'LOT-CANCEL',
+    });
+    const sevk = await transfers.dispatch({ toWarehouseId: bosDepo, lines: [{ sourceStockId: kaynak.id, qty: 4 }] });
+    expect((await stocks.getById(kaynak.id))?.physicalQty).toBe(6);
+
+    const geri = await transfers.cancel({ transferId: sevk.transferId, reason: 'Araca yüklenmedi, kayıt yanlış açıldı' });
+    expect(geri).toMatchObject({ ok: true, restoredLines: 1 });
+
+    // Mal AYNI partiye döndü: yeni parti açsaydık `initialQty` ve geri çağırma izi bölünürdü (T4).
+    expect(await stocks.getById(kaynak.id)).toMatchObject({ physicalQty: 10, initialQty: 10 });
+    expect(await stocks.listInStock(bosDepo, variantId)).toHaveLength(0); // hedefte hiçbir şey doğmadı
+
+    // Kayıt SİLİNMEDİ, damgalandı: `reference_no` kâğıt klasördeki numaradır, karşılıksız kalamaz.
+    const kayit = (await transfers.listForWarehouse(doluDepo)).rows.find((t) => t.id === sevk.transferId);
+    expect(kayit).toMatchObject({ status: 'cancelled', cancelReason: 'Araca yüklenmedi, kayıt yanlış açıldı' });
+    expect(kayit?.cancelledAt).not.toBeNull();
+
+    // Yolda listesinden düştü — "yolda ne var" sorusunun tek kaynağı bu kayıt.
+    expect((await transfers.listInTransit(bosDepo)).map((t) => t.id)).not.toContain(sevk.transferId);
+  });
+
+  it('geri alma İKİ KEZ çalışmaz ve kabul edilmiş transfer geri alınamaz', async () => {
+    const parti = await stocks.insert({ variantId, warehouseId: doluDepo, physicalQty: 8, expiryDate: dayOffset(160) });
+
+    // (1) İkinci geri alma stoğu İKİ KEZ geri yazardı — mal yoktan var olurdu.
+    const iptal = await transfers.dispatch({ toWarehouseId: bosDepo, lines: [{ sourceStockId: parti.id, qty: 3 }] });
+    await transfers.cancel({ transferId: iptal.transferId });
+    await expect(transfers.cancel({ transferId: iptal.transferId })).rejects.toThrow();
+    expect((await stocks.getById(parti.id))?.physicalQty).toBe(8); // 11 değil
+
+    // (2) Kabul edilmiş transfer: mal hedefte parti olarak DOĞDU, belki satıldı bile. Cevap ters transfer.
+    const kabul = await transfers.dispatch({ toWarehouseId: bosDepo, lines: [{ sourceStockId: parti.id, qty: 2 }] });
+    const [satir] = await transfers.listLines(kabul.transferId);
+    await transfers.receive({ transferId: kabul.transferId, lines: [{ lineId: satir!.id, receivedQty: 2 }] });
+    await expect(transfers.cancel({ transferId: kabul.transferId })).rejects.toThrow();
+  });
 });
 
 describe('tedarik — tek sipariş, iki depoda parçalı kabul (K6)', () => {

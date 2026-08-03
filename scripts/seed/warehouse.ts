@@ -16,40 +16,66 @@ export interface Depolar {
   kehl: string;
 }
 
+/**
+ * Depolar KOD BAZINDA kurulur — "tablo dolu mu" ölçütüyle değil.
+ *
+ * Diğer bölümlerin guard'ı "tablo doluysa atla"dır ve orada doğrudur. Burada DEĞİL: bu tablo seed'in
+ * kendi verisi dışında da dolabiliyor (entegrasyon testleri `T-…` kodlu depolar bırakıyor, operatör
+ * ekrandan depo açabiliyor). Eski hâl tablo doluysa atlıyor ve STR/KEHL bulamayınca **listenin ilk
+ * satırına** düşüyordu; o satır bir test artığı olduğunda seed'in tamamı yanlış depoya yazılıyordu —
+ * üstelik sessizce. Test kendi satırını silince de geriye FK'si kırık bir kurulum kalıyordu
+ * (`user_profiles.warehouse_ids: … diye bir depo yok` — yaşandı).
+ *
+ * Ölçüt bu yüzden varlıktır: STR ve KEHL kodlu satır var mı? Yoksa açılır. Böylece hem boş
+ * veritabanında hem yabancı satırlarla dolu bir tabloda aynı sonuç doğar.
+ */
 export async function seedWarehouses(db: Db): Promise<Depolar> {
   const warehouses = new WarehouseService(db);
-
-  if (await tabloDolu(db, 'warehouse')) {
-    console.log('▸ depolar zaten dolu — atlandı');
-    const mevcut = await warehouses.list();
-    const bul = (code: string) => mevcut.find((w) => w.code === code)?.id ?? mevcut[0]!.id;
-    return { str: bul('STR'), kehl: bul('KEHL') };
+  const mevcut = await warehouses.list();
+  const koduyla = new Map(mevcut.map((w) => [w.code, w.id]));
+  const yabanci = mevcut.filter((w) => w.code !== 'STR' && w.code !== 'KEHL');
+  if (yabanci.length > 0) {
+    // Yabancı satır SESSİZ geçilmez: operasyon ekranında görünen her depo veriyi etkiler.
+    console.log(`▸ DEPO — tabloda ${yabanci.length} yabancı depo var (${yabanci.map((w) => w.code).join(', ')}); seed yalnız STR/KEHL'i yönetir`);
   }
 
+  let strId = koduyla.get('STR');
+  let kehlId = koduyla.get('KEHL');
+  if (strId && kehlId) {
+    console.log('▸ depolar zaten kurulu (STR + KEHL) — atlandı');
+    return { str: strId, kehl: kehlId };
+  }
   console.log('▸ DEPO seed');
-  const str = await warehouses.insert({
-    code: 'STR',
-    name: 'Strasbourg — ana depo',
-    countryCode: 'FR',
-    address: { line1: '12 rue du Marché', postalCode: '67000', city: 'Strasbourg', country: 'FR' },
-    shipsOnline: true,
-    sortOrder: 1,
-  });
-  const kehl = await warehouses.insert({
-    code: 'KEHL',
-    name: 'Kehl — sınır deposu',
-    countryCode: 'DE',
-    address: { line1: 'Hauptstraße 8', postalCode: '77694', city: 'Kehl', country: 'DE' },
-    // Almanya'da HENÜZ kargo yok: DE deposundan DE müşterisine satış "yerel satış"tır ve vergi
-    // modelini değiştirir (DOMAIN §5/§17). Mali danışmana sorulmadan açılmaz.
-    shipsOnline: false,
-    sortOrder: 2,
-  });
 
-  console.log(`  ✓ ${str.code} · ${str.name} · kargo deposu`);
-  console.log(`  ✓ ${kehl.code} · ${kehl.name}`);
-  console.log('✓ depo: 2 kayıt (biri kargo çıkışı)');
-  return { str: str.id, kehl: kehl.id };
+  if (!strId) {
+    const str = await warehouses.insert({
+      code: 'STR',
+      name: 'Strasbourg — ana depo',
+      countryCode: 'FR',
+      address: { line1: '12 rue du Marché', postalCode: '67000', city: 'Strasbourg', country: 'FR' },
+      shipsOnline: true,
+      sortOrder: 1,
+    });
+    strId = str.id;
+    console.log(`  ✓ ${str.code} · ${str.name} · kargo deposu`);
+  }
+  if (!kehlId) {
+    const kehl = await warehouses.insert({
+      code: 'KEHL',
+      name: 'Kehl — sınır deposu',
+      countryCode: 'DE',
+      address: { line1: 'Hauptstraße 8', postalCode: '77694', city: 'Kehl', country: 'DE' },
+      // Almanya'da HENÜZ kargo yok: DE deposundan DE müşterisine satış "yerel satış"tır ve vergi
+      // modelini değiştirir (DOMAIN §5/§17). Mali danışmana sorulmadan açılmaz.
+      shipsOnline: false,
+      sortOrder: 2,
+    });
+    kehlId = kehl.id;
+    console.log(`  ✓ ${kehl.code} · ${kehl.name}`);
+  }
+
+  console.log('✓ depo: STR + KEHL hazır (biri kargo çıkışı)');
+  return { str: strId, kehl: kehlId };
 }
 
 /**
@@ -133,21 +159,24 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
     console.log(`  ✓ ${kabul.referenceNo} · KABUL EDİLDİ · ${sonucKabul.ok ? `bir kalem EKSİK geldi · ${sonucKabul.createdBatches} yeni parti` : 'reddedildi'}`);
   }
 
-  // 2) İPTAL EDİLMİŞ — mal yola çıkmadan vazgeçildi. Servis kapısı yok: iptal bir stok hareketi
-  //    değil bir durum düzeltmesidir, o yüzden doğrudan yazılır.
+  // 2) GERİ ALINMIŞ SEVK — kayıt açıldı ama mal hiç çıkmadı (19.6).
+  //
+  //    Burası eskiden `update({ status: 'cancelled' })` ile DOĞRUDAN yazıyordu ve künyesi "iptal bir
+  //    stok hareketi değil, durum düzeltmesidir" diyordu. O cümle yanlıştı: sevk anında mal zaten
+  //    kaynaktan DÜŞMÜŞTÜ ve durumu çevirmek onu geri getirmiyordu — demo dünyasında üç adet
+  //    sessizce buharlaşıyordu. Geri alma bir stok hareketidir, o yüzden RPC'den geçer.
   const iptalParti = digerPartiler[2];
   if (iptalParti) {
     const iptal = await transfers.dispatch({
       toWarehouseId: depolar.kehl,
       lines: [{ sourceStockId: iptalParti.id, qty: Math.min(3, iptalParti.physical_qty) }],
-      note: 'Araç arızalandı — sevkiyat iptal edildi.',
+      note: 'Haftalık ikmalin ikinci aracı.',
     });
-    const { error: iptalHatasi } = await db.from('warehouse_transfer').update({ status: 'cancelled' }).eq('id', iptal.transferId);
-    if (iptalHatasi) throw iptalHatasi;
-    console.log(`  ✓ ${iptal.referenceNo} · İPTAL`);
+    await transfers.cancel({ transferId: iptal.transferId, reason: 'Araç arızalandı, mal araca hiç yüklenmedi.' });
+    console.log(`  ✓ ${iptal.referenceNo} · GERİ ALINDI · mal kaynak partiye döndü`);
   }
 
-  console.log('✓ transfer: 3 kayıt (yolda · kabul edilmiş + EKSİK gelen · iptal)');
+  console.log('✓ transfer: 3 kayıt (yolda · kabul edilmiş + EKSİK gelen · geri alınmış)');
 }
 
 // ── Depo bazlı asgari stok eşiği (19.x) ──────────────────────────────────────────────────────────

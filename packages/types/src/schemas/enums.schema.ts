@@ -302,7 +302,10 @@ export type HealthStatus = z.infer<typeof HealthStatusEnum>;
  * Depolar arası transfer durumu (DOMAIN §17 · `0042_warehouse.sql`).
  *
  * `draft` YOK: hazırlık ekranı henüz yok ve kullanılmayan bir enum değeri yalan söyler — sevk anı
- * ilk kalıcı andır. `cancelled` var ama yazan yolu yok → BEKLEYEN(19.6): sevkin geri alınması.
+ * ilk kalıcı andır. Bu yüzden `cancelled`'ın anlamı da dardır: iptal edilen şey her zaman **zaten
+ * sevk edilmiş** bir kayıttır ve yalnız TEK hâli kapsar — "sevk kaydı hatalıydı, mal hiç çıkmadı"
+ * (`cancel_transfer`, 19.6). Mal çıkıp geri döndüyse cevap bu değer değil, ters yönlü yeni bir
+ * transferdir: mal fiilen iki kez yol gitti, tek kayda indirmek soğuk zincir geçmişini silerdi.
  */
 export const TransferStatusEnum = z.enum(['in_transit', 'received', 'cancelled']);
 export type TransferStatus = z.infer<typeof TransferStatusEnum>;

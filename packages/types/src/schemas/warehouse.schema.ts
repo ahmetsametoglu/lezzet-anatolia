@@ -94,6 +94,11 @@ export const WarehouseTransferSchema = z.object({
   dispatchedAt: z.string(),
   receivedBy: z.string().uuid().nullable(),
   receivedAt: z.string().nullable(),
+  /** Sevk kaydının geri alınması (19.6) — `received*`'tan AYRI: "kabul edildi" ile "hiç çıkmamış" aynı şey değil. */
+  cancelledBy: z.string().uuid().nullable(),
+  cancelledAt: z.string().nullable(),
+  /** Geri almanın gerekçesi — `note` sevk anının notudur, bu onu iptal eden kararın. */
+  cancelReason: z.string().nullable(),
   note: z.string().nullable(),
   createdAt: z.string(),
 });
@@ -141,6 +146,14 @@ export const ReceiveTransferResultSchema = z.object({
   createdBatches: z.number().int(),
 });
 export type ReceiveTransferResult = z.infer<typeof ReceiveTransferResultSchema>;
+
+/** `restoredLines` — kaynağa geri yazılan parti sayısı; ekran "3 parti geri alındı" diyebilsin. */
+export const CancelTransferResultSchema = z.object({
+  ok: z.boolean(),
+  transferId: z.string().uuid(),
+  restoredLines: z.number().int(),
+});
+export type CancelTransferResult = z.infer<typeof CancelTransferResultSchema>;
 
 // ── Tedarik ilerlemesi (K6) ─────────────────────────────────────────────────
 // `purchase_order_progress` görünümü: PO durumu saklanan sayaçtan değil BURADAN türer. Ölçü

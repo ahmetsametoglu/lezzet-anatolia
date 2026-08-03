@@ -4,12 +4,14 @@ import {
   WarehouseTransferLineSchema,
   DispatchTransferResultSchema,
   ReceiveTransferResultSchema,
+  CancelTransferResultSchema,
   type WarehouseTransfer,
   type WarehouseTransferLine,
   type DispatchLine,
   type DispatchTransferResult,
   type ReceiveLine,
   type ReceiveTransferResult,
+  type CancelTransferResult,
   type KeysetCursor,
   type Page,
   DEFAULT_PAGE_SIZE,
@@ -27,8 +29,9 @@ import { dbToApp } from '../utils/case-transformers';
  * Yazım yolları neden RPC (STACK §13 (b)): transfer kaydı + satırlar + parti düşümü tek gerçektir.
  * Yarısı yazılırsa "mal düştü ama transfer yok" hâli doğar ve stok elle düzeltilir.
  *
- * `update`/`delete` bilerek kullanılmaz: transfer bir OLAY kaydıdır, düzeltilmez. Yanlış sevk
- * yapıldıysa çözüm ters yönde bir transferdir — kayıt silmek geçmişi yalanlar.
+ * `update`/`delete` bilerek kullanılmaz: transfer bir OLAY kaydıdır, düzeltilmez. Mal çıkıp geri
+ * döndüyse çözüm ters yönde bir transferdir — kayıt silmek geçmişi yalanlar. Sevk kaydının kendisi
+ * hatalıysa (mal hiç çıkmadıysa) yol `cancel()`'dır ve o da bir RPC: kayıt silinmez, damgalanır.
  */
 export class WarehouseTransferService extends BaseDbService<WarehouseTransfer, never, never> {
   constructor(supabase: SupabaseClient) {
@@ -83,6 +86,31 @@ export class WarehouseTransferService extends BaseDbService<WarehouseTransfer, n
       p_actor_id: input.actorId ?? null,
     });
     return ReceiveTransferResultSchema.parse(dbToApp(raw as Record<string, unknown>));
+  }
+
+  /**
+   * Sevk kaydını GERİ AL (19.6) — "mal hiç çıkmadı" hâli.
+   *
+   * Adı bilerek `cancel` değil davranışı anlatan bir cümle: ekranın düğmesi de "İptal" değil
+   * **"Sevk kaydını geri al"** olmalı. Çünkü tek bir "iptal" iki ayrı gerçeği yutar ve stok yalan
+   * söyler:
+   *
+   * - **Sevk kaydı hatalıydı, mal hiç çıkmadı** → burası. Miktar kaynak PARTİYE geri yazılır
+   *   (yeni parti doğmaz — `initial_qty` ve geri çağırma izi bölünmesin), transfer `cancelled`
+   *   olur ve kim/ne zaman/neden damgası kalır.
+   * - **Mal çıktı, sonra geri döndü** → burası DEĞİL: ters yönlü yeni bir transfer. Mal fiilen iki
+   *   kez yol gitti; tek kayda indirmek soğuk zincir geçmişini silerdi.
+   *
+   * Kabul edilmiş transfer geri alınamaz (RPC reddeder): mal hedefte parti olarak doğdu, belki
+   * satıldı bile.
+   */
+  async cancel(input: { transferId: string; actorId?: string | null; reason?: string | null }): Promise<CancelTransferResult> {
+    const raw = await this.executeRpc('cancel_transfer', {
+      p_transfer_id: input.transferId,
+      p_actor_id: input.actorId ?? null,
+      p_reason: input.reason ?? null,
+    });
+    return CancelTransferResultSchema.parse(dbToApp(raw as Record<string, unknown>));
   }
 
   /**
