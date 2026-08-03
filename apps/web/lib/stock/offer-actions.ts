@@ -25,14 +25,14 @@ const OFFER_PATHS = ['/operations/stock', '/operations/prices'] as const;
  * bırakılmaz. Kapatma her hâlde serbesttir — yanlışlıkla açılmış bir teklifin geri alınması hiçbir
  * koşulda engellenmemeli.
  */
-export async function setOfferPriceAction(stockId: string, offerPrice: number | null): Promise<ActionResult> {
+export async function setOfferPriceAction(stockId: string, offerPriceCents: number | null): Promise<ActionResult> {
   try {
     await requireStaff();
     const db = serviceDb();
     const stockSvc = new StockService(db);
 
-    if (offerPrice !== null) {
-      if (offerPrice <= 0) throw new Error('Teklif fiyatı sıfırdan büyük olmalı.');
+    if (offerPriceCents !== null) {
+      if (offerPriceCents <= 0) throw new Error('Teklif fiyatı sıfırdan büyük olmalı.');
       const [[batch], thresholds] = await Promise.all([
         stockSvc.getBatchDetails([stockId]),
         readExpiryThresholds(new SettingsService(db)),
@@ -52,7 +52,7 @@ export async function setOfferPriceAction(stockId: string, offerPrice: number | 
       }
     }
 
-    await stockSvc.setOfferPrice(stockId, offerPrice);
+    await stockSvc.setOfferPrice(stockId, offerPriceCents);
     for (const path of OFFER_PATHS) revalidatePath(path);
     return { data: null, error: null };
   } catch (err) {

@@ -55,7 +55,7 @@ beforeEach(async () => {
   const ids = (previous.data ?? []).map((row) => row.id as string);
   if (ids.length > 0) await db.from('stock_adjustment').delete().in('stock_id', ids);
   await db.from('stock').delete().eq('variant_id', variantId);
-  batchId = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(30), purchasePrice: 4 })).id;
+  batchId = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(30), purchasePriceCents: 400 })).id;
 });
 
 afterAll(async () => {

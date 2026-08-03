@@ -17,10 +17,10 @@ Parti, rezervasyon, düzeltme, sıcaklık; tedarikçi ve satın alma zinciri.
 | initial_qty | number | **girişte** yazılan miktar — tarihtir, değişmez; trigger yazar. "Sipariş ettiğim kadar geldi mi" (§16 fark raporu) ve "bu partiden ne kadar tüketildi" buna dayanır |
 | expiry_date | date | partinin son tarihi; **tipi üründedir** (`Product.date_type`: DLC güvenlik / DDM kalite) — bu yüzden kolon adı tipten bağımsız |
 | lot_number | string \| null | tedarikçinin lot numarası — geri çağırma (rappel) eşleşmesi; girişte istenir |
-| purchase_price | number \| null | **birim (paket) başına** alış maliyeti — kâr/marj için; toptan alınıp paketlenirse giriş paket adediyle yapılır (ör. 1kg → 10×100gr), maliyet pakete bölünür |
+| purchase_price | numeric (€) \| null | **birim (paket) başına** alış maliyeti — kâr/marj için; toptan alınıp paketlenirse giriş paket adediyle yapılır (ör. 1kg → 10×100gr), maliyet pakete bölünür. Uygulamadaki adı `purchasePriceCents`, birimi **cent** (`STACK §8`) |
 | intake_id | uuid \| null | bağlı stok girişi/satın alma (bkz. `StockIntake`) |
 | purchase_order_item_id | uuid \| null | hangi tedarik KALEMİNİ karşıladı — parçalı kabulde fark raporunun bağı; transferle doğan partide null (`data-model/depo.md`) |
-| offer_price | number \| null | partiye bağlı indirimli teklif fiyatı; doluysa bu parti indirimli satışta (bkz. `DOMAIN.md §5`) |
+| offer_price | numeric (€) \| null | partiye bağlı indirimli teklif fiyatı; doluysa bu parti indirimli satışta (bkz. `DOMAIN.md §5`). Uygulamadaki adı `offerPriceCents`, birimi **cent** |
 | location | string \| null | depo İÇİ konum (dolap/raf) — hangi depo olduğu `warehouse_id`'de |
 | created_at | timestamptz | |
 
@@ -58,7 +58,7 @@ Stok azalışının satış dışı her sebebi kayıt altına alınır — "bu �
 | stock_id | uuid | hangi parti |
 | qty | number | **işaretli**: + stoktan düşüm, − stoğa geri ekleme. Tek alanda iki yön → "net kayıp" tek toplamla çıkar; rapor şişmez |
 | reason | enum(`expired`,`damaged`,`count_diff`,`lost`,`return_restock`) | DLC imhası / hasar / sayım farkı / kayıp / teslim-sonrası iade restoku |
-| unit_cost | number \| null | partinin alış fiyatı (snapshot) — fire maliyeti; parti sonradan düzeltilse kaymaz |
+| unit_cost | numeric (€) \| null | partinin alış fiyatı (snapshot) — fire maliyeti; parti sonradan düzeltilse kaymaz. Uygulamadaki adı `unitCostCents`, birimi **cent** |
 | note | string \| null | teslim-sonrası iade restoku gibi istisnalarda sebep — **geri eklemede zorunlu** (DB seviyesinde) |
 | created_by | uuid \| null | kaydı giren personel |
 | reference_no | string \| null | **OLAY belgesi** (`IMH-26-0012`) — aynı imhanın/sayımın bütün satırları paylaşır; geçmiş kayıtlarda null |

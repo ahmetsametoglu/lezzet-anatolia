@@ -1,6 +1,7 @@
 import {
   ProductService, ProductVariantService, StockAdjustmentService, StockIntakeService, StockService, TemperatureLogService,
 } from '@lezzet/database';
+import { toCents } from '@lezzet/helper';
 import { euro, gun, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
 import type { Depolar } from './warehouse';
 
@@ -53,6 +54,37 @@ export async function seedStock(
     })),
   });
 
+  // 1b) TAM gelen PO — sipariş edilen ne ise o kadarı gelir, sipariş `received`'a kapanır.
+  //     Eksik gelenle aynı ekranda ama AYRI rozet: "tam kapandı" hâli ancak böyle bir kayıtla
+  //     görünür. Miktarlar tedarik bölümündeki kalemlerle BİREBİR olmalı — bir adet fark, siparişi
+  //     sessizce `partially_received` bırakır ve bu bölüm hiçbir şey söylemeden amacını ıskalardı.
+  const tamGelenPo = tedarik.get('tamGelenPo');
+  if (tamGelenPo) {
+    const { data: poKalem, error: poHatasi } = await db
+      .from('purchase_order_item')
+      .select('variant_id,qty,unit_price')
+      .eq('purchase_order_id', tamGelenPo);
+    if (poHatasi) throw poHatasi;
+    const kalemler = (poKalem ?? []) as Array<{ variant_id: string; qty: number; unit_price: number }>;
+    if (kalemler.length > 0) {
+      await intakes.receive({
+        warehouseId: depolar.str,
+        supplierId: yerel,
+        purchaseOrderId: tamGelenPo,
+        date: gun(-6),
+        note: 'Alsace haftalık — sipariş edilen kadar geldi, eksiksiz.',
+        lines: kalemler.map((k, i) => ({
+          variantId: k.variant_id,
+          qty: k.qty, // TAM: sipariş miktarının aynısı
+          expiryDate: gun(60 + i * 25),
+          lotNumber: `ALS-${String(i + 1).padStart(2, '0')}`,
+          unitCost: euro(Number(k.unit_price)),
+          location: 'Soğuk oda',
+        })),
+      });
+    }
+  }
+
   // 2) PO'suz doğrudan alım — küçük/plansız alım da mümkündür (zincir zorunlu değil).
   await intakes.receive({
     warehouseId: depolar.str,
@@ -89,7 +121,7 @@ export async function seedStock(
         physicalQty: 6 + ((i + p * 5) % 40),
         expiryDate: gun(20 + ((i * 7 + p * 45) % 300)),
         lotNumber: `L${String(2600 + i)}-${p + 1}`,
-        purchasePrice: euro(2.1 + ((i + p) % 9) * 0.3),
+        purchasePriceCents: toCents(2.1 + ((i + p) % 9) * 0.3),
         location: `Dolap ${1 + ((i + p) % 4)}`,
       });
       ekParti += 1;
@@ -99,17 +131,17 @@ export async function seedStock(
   // 4) SINIR DURUMLAR — ekranların uyarı/engel hâlleri bunlarsız hiç görünmez.
   const ozel = satilabilir.slice(0, 8);
   // Yaklaşan son tarih + indirimli teklif (parti fiyatı): near-expiry havuzu
-  const teklifA = await stocks.insert({ warehouseId: depolar.str, variantId: ozel[0]!.id, physicalQty: 14, expiryDate: gun(4), lotNumber: 'NE-001', purchasePrice: 2.4, location: 'Dolap 1' });
-  await stocks.setOfferPrice(teklifA.id, euro(4.9));
-  const teklifB = await stocks.insert({ warehouseId: depolar.str, variantId: ozel[1]!.id, physicalQty: 9, expiryDate: gun(7), lotNumber: 'NE-002', purchasePrice: 3.1, location: 'Dolap 2' });
-  await stocks.setOfferPrice(teklifB.id, euro(5.5));
+  const teklifA = await stocks.insert({ warehouseId: depolar.str, variantId: ozel[0]!.id, physicalQty: 14, expiryDate: gun(4), lotNumber: 'NE-001', purchasePriceCents: 240, location: 'Dolap 1' });
+  await stocks.setOfferPrice(teklifA.id, 490);
+  const teklifB = await stocks.insert({ warehouseId: depolar.str, variantId: ozel[1]!.id, physicalQty: 9, expiryDate: gun(7), lotNumber: 'NE-002', purchasePriceCents: 310, location: 'Dolap 2' });
+  await stocks.setOfferPrice(teklifB.id, 550);
   // Yaklaşan ama HENÜZ indirime alınmamış — "sistem önerir, karar insanın" hâli
-  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[2]!.id, physicalQty: 11, expiryDate: gun(6), lotNumber: 'NE-003', purchasePrice: 2.8, location: 'Dolap 1' });
+  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[2]!.id, physicalQty: 11, expiryDate: gun(6), lotNumber: 'NE-003', purchasePriceCents: 280, location: 'Dolap 1' });
   // Tarihi GEÇMİŞ partiler: biri DLC (satılamaz — imha edilecek), biri DDM (satılabilir)
-  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[3]!.id, physicalQty: 5, expiryDate: gun(-2), lotNumber: 'EXP-DLC', purchasePrice: 3.4, location: 'Karantina' });
-  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[4]!.id, physicalQty: 8, expiryDate: gun(-6), lotNumber: 'EXP-DDM', purchasePrice: 2.2, location: 'Dolap 3' });
+  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[3]!.id, physicalQty: 5, expiryDate: gun(-2), lotNumber: 'EXP-DLC', purchasePriceCents: 340, location: 'Karantina' });
+  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[4]!.id, physicalQty: 8, expiryDate: gun(-6), lotNumber: 'EXP-DDM', purchasePriceCents: 220, location: 'Dolap 3' });
   // Tükenmiş parti (fiili 0): satır durur, miktarı biter — "geçmiş parti" görünümü
-  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[5]!.id, physicalQty: 0, expiryDate: gun(90), lotNumber: 'L-BITTI', purchasePrice: 2.6, location: 'Dolap 2' });
+  await stocks.insert({ warehouseId: depolar.str, variantId: ozel[5]!.id, physicalQty: 0, expiryDate: gun(90), lotNumber: 'L-BITTI', purchasePriceCents: 260, location: 'Dolap 2' });
   // Alış fiyatı GİRİLMEMİŞ parti: gerçek COGS bu partide hesaplanamaz (rapor bunu göstermeli)
   await stocks.insert({ warehouseId: depolar.str, variantId: ozel[6]!.id, physicalQty: 12, expiryDate: gun(120), lotNumber: 'L-MALIYETSIZ', location: 'Dolap 4' });
 
@@ -203,6 +235,29 @@ export async function seedTemperatureLogs(db: Db, kisiler: Kisiler, depolar: Dep
       }
     }
   }
-  console.log(`✓ sıcaklık: ${sayi} ölçüm · ${SICAKLIK_NOKTALARI.length} nokta (bir kısmı aralık DIŞI)`);
+
+  // İKİNCİ DEPONUN ölçümleri: soğuk zincir kaydı depo başına tutulur ve ekran depo süzgeciyle
+  // okunur. Yalnız ana depoda ölçüm olsaydı, süzgeci unutan bir sorgu Kehl'i seçince BOŞ liste
+  // döndürür — bu "ölçüm yok" mu, "süzgeç yanlış" mı, ayırt edilemezdi. Seri daha kısa (7 gün) ve
+  // tek noktalı: ikinci depo küçük, kayıt hacmi de öyle olmalı — eşit hacim gerçeği yalanlar.
+  const kehlNokta = SICAKLIK_NOKTALARI[0];
+  if (kehlNokta) {
+    for (let g = 7; g >= 0; g -= 1) {
+      for (const saat of [8, 17]) {
+        const zaman = new Date(Date.now() - g * 86_400_000);
+        zaman.setHours(saat, 0, 0, 0);
+        await logs.insert({
+          warehouseId: depolar.kehl,
+          location: kehlNokta.location,
+          // Kehl'de bir gün ARALIK DIŞI: uyarı ikinci depoda da tetiklenebilmeli.
+          temperatureC: euro(kehlNokta.taban + Math.sin(g + saat / 4) * kehlNokta.sapma + (g === 3 ? 6.2 : 0)),
+          recordedBy: depocu,
+          recordedAt: zaman.toISOString(),
+        });
+        sayi += 1;
+      }
+    }
+  }
+  console.log(`✓ sıcaklık: ${sayi} ölçüm · ${SICAKLIK_NOKTALARI.length} nokta · İKİ depo (bir kısmı aralık DIŞI)`);
 }
 

@@ -44,8 +44,8 @@ beforeEach(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
-  batchA = (await stocks.insert({ warehouseId, variantId, physicalQty: 4, expiryDate: dayOffset(20), purchasePrice: 2 })).id;
-  batchB = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 3 })).id;
+  batchA = (await stocks.insert({ warehouseId, variantId, physicalQty: 4, expiryDate: dayOffset(20), purchasePriceCents: 200 })).id;
+  batchB = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 300 })).id;
 });
 
 afterAll(async () => {

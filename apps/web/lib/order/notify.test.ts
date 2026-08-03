@@ -59,7 +59,7 @@ beforeEach(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
-  batchId = (await stocks.insert({ warehouseId, variantId, physicalQty: 20, expiryDate: dayOffset(30), purchasePrice: 4 })).id;
+  batchId = (await stocks.insert({ warehouseId, variantId, physicalQty: 20, expiryDate: dayOffset(30), purchasePriceCents: 400 })).id;
 });
 
 afterAll(async () => {

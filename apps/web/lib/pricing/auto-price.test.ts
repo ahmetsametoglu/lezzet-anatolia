@@ -35,15 +35,15 @@ async function priceRowCount(variantId: string): Promise<number> {
  * Alış geçmişini kurar — **en eskiden en yeniye** verilir, taban sonuncusudur (yenileme maliyeti).
  * Tek fiyat verilirse karşılaştıracak geçmiş yoktur ve fren devreye girmez.
  */
-async function setCostHistory(variantId: string, ...purchasePrices: number[]) {
+async function setCostHistory(variantId: string, ...purchasePricesCents: number[]) {
   await db.from('stock').delete().eq('variant_id', variantId);
   const stocks = new StockService(db);
-  for (const purchasePrice of purchasePrices) {
+  for (const purchasePriceCents of purchasePricesCents) {
     await stocks.insert({
       warehouseId,
       variantId,
       physicalQty: 10,
-      purchasePrice,
+      purchasePriceCents,
       expiryDate: new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10),
     });
   }
@@ -92,7 +92,7 @@ afterAll(async () => {
 
 describe('hedefe çekme', () => {
   it('otomatik üründe iki kanal da hedef marja gelir', async () => {
-    await setCostHistory(autoVariantId, 10);
+    await setCostHistory(autoVariantId, 1000);
     await prices.setPrice({ variantId: autoVariantId, channel: 'b2c', amountCents: 1200, customerId: null });
     await prices.setPrice({ variantId: autoVariantId, channel: 'b2b', amountCents: 1200, customerId: null });
 
@@ -105,24 +105,26 @@ describe('hedefe çekme', () => {
   });
 
   it('maliyet ARTINCA fiyat yükselir, DÜŞÜNCE iner — otomatik iki yönlüdür', async () => {
-    await setCostHistory(autoVariantId, 10);
+    await setCostHistory(autoVariantId, 1000);
     await prices.setPrice({ variantId: autoVariantId, channel: 'b2b', amountCents: 1200, customerId: null });
     await repriceVariants(db, [autoVariantId]);
     expect(await currentCents(autoVariantId, 'b2b')).toBe(1400);
 
-    // Kademeli artış: son alış 20, ortanca 19 → %5 sapma, fren devreye girmez.
-    await setCostHistory(autoVariantId, 18, 19, 20);
+    // Kademeli artış: son alış 20 €, ortanca 19 € → %5 sapma, fren devreye girmez.
+    await setCostHistory(autoVariantId, 1800, 1900, 2000);
     await repriceVariants(db, [autoVariantId]);
     expect(await currentCents(autoVariantId, 'b2b')).toBe(2800);
 
     // Kademeli düşüş de aynı yoldan geçer.
-    await setCostHistory(autoVariantId, 6, 5, 5);
+    await setCostHistory(autoVariantId, 600, 500, 500);
     await repriceVariants(db, [autoVariantId]);
     expect(await currentCents(autoVariantId, 'b2b')).toBe(700);
   });
 
   it('MALİYET SIÇRARSA fiyat oynamaz — karar admin\'e bırakılır', async () => {
-    // Geçmiş 2,10 civarında oturmuş, son alış 4,50 (yereldeki gerçek sıçrama).
+    // Geçmiş 2,10 civarında oturmuş, son alış 4,50 (yereldeki gerçek sıçrama). Bu yorum eskiden
+    // YANLIŞTI: alan euro'ydu, yani sayılar 210 € ve 450 € demekti; oran aynı olduğu için test yine
+    // geçiyordu. Alan cent olunca yorum ile veri aynı şeyi söylüyor (02.9).
     await setCostHistory(autoVariantId, 210, 210, 450);
     await prices.setPrice({ variantId: autoVariantId, channel: 'b2b', amountCents: 30000, customerId: null });
 
@@ -134,7 +136,7 @@ describe('hedefe çekme', () => {
   });
 
   it('ürün kimliğinden de çalışır (fiyat diyaloğunun yolu)', async () => {
-    await setCostHistory(autoVariantId, 10);
+    await setCostHistory(autoVariantId, 1000);
     await prices.setPrice({ variantId: autoVariantId, channel: 'b2b', amountCents: 1200, customerId: null });
 
     expect((await repriceProduct(db, autoProductId)).changes).toHaveLength(1);
@@ -142,7 +144,7 @@ describe('hedefe çekme', () => {
   });
 
   it('katalog geneli hizalama otomatik ürünü bulur', async () => {
-    await setCostHistory(autoVariantId, 10);
+    await setCostHistory(autoVariantId, 1000);
     await prices.setPrice({ variantId: autoVariantId, channel: 'b2b', amountCents: 1200, customerId: null });
 
     const { changes, truncated } = await repriceAllAuto(db);
@@ -154,7 +156,7 @@ describe('hedefe çekme', () => {
 
 describe('dokunulmayanlar', () => {
   it('otomatik OLMAYAN ürünün fiyatı sabit kalır', async () => {
-    await setCostHistory(manualVariantId, 10);
+    await setCostHistory(manualVariantId, 1000);
     await prices.setPrice({ variantId: manualVariantId, channel: 'b2b', amountCents: 1200, customerId: null });
 
     expect((await repriceVariants(db, [manualVariantId])).changes).toHaveLength(0);
@@ -162,7 +164,7 @@ describe('dokunulmayanlar', () => {
   });
 
   it('fiyatı olmayan kanal AÇILMAZ — satışa kapalı kanal kendiliğinden açılamaz', async () => {
-    await setCostHistory(autoVariantId, 10);
+    await setCostHistory(autoVariantId, 1000);
     await prices.setPrice({ variantId: autoVariantId, channel: 'b2b', amountCents: 1200, customerId: null });
 
     await repriceVariants(db, [autoVariantId]);
@@ -178,7 +180,7 @@ describe('dokunulmayanlar', () => {
   });
 
   it('fiyat zaten hedefteyse YENİ SATIR yazılmaz — geçmiş kopyayla şişmez', async () => {
-    await setCostHistory(autoVariantId, 10);
+    await setCostHistory(autoVariantId, 1000);
     await prices.setPrice({ variantId: autoVariantId, channel: 'b2b', amountCents: 1200, customerId: null });
     await repriceVariants(db, [autoVariantId]);
     const after = await priceRowCount(autoVariantId);

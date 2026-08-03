@@ -188,8 +188,8 @@ describe('BundleService', () => {
     await prices.setPrice({ variantId: variantA, channel: 'b2c', amountCents: 2500, validFrom: new Date(Date.now() - 86_400_000).toISOString() });
     // İki parti: 10 adet × 4 € + 30 adet × 8 € → ağırlıklı ortalama 7 €.
     const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
-    await stocks.insert({ variantId: variantA, warehouseId, physicalQty: 10, purchasePrice: 4, expiryDate: dayOffset(100) });
-    await stocks.insert({ variantId: variantA, warehouseId, physicalQty: 30, purchasePrice: 8, expiryDate: dayOffset(120) });
+    await stocks.insert({ variantId: variantA, warehouseId, physicalQty: 10, purchasePriceCents: 400, expiryDate: dayOffset(100) });
+    await stocks.insert({ variantId: variantA, warehouseId, physicalQty: 30, purchasePriceCents: 800, expiryDate: dayOffset(120) });
 
     const row = (await bundles.listRows()).find((r) => r.id === bundle.id)!;
     expect(row.listTotal).toBeCloseTo(25, 2); // "ayrı ayrı alınsa"

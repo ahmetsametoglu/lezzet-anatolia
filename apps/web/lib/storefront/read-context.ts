@@ -1,6 +1,5 @@
 import 'server-only';
 import { PriceService, ProductVariantService, StockService } from '@lezzet/database';
-import { toCents } from '@lezzet/helper';
 import type { ActiveOffer } from '@lezzet/domain-core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ProductWithRelations } from '@lezzet/types';
@@ -128,11 +127,11 @@ export async function listOfferProductIds(db: SupabaseClient, warehouseId: strin
  * `remainingQty` fiili miktardır. Partiye çıpalanmış rezervasyon burada düşülmez — bu değer yalnız
  * karttaki "en fazla N adet" etiketini besler; gerçek tavan sepete eklemede uygulanır (07).
  */
-function toOfferMap(batches: Array<{ variantId: string; offerPrice: number | null; physicalQty: number; id: string }>): Map<string, ActiveOffer> {
+function toOfferMap(batches: Array<{ variantId: string; offerPriceCents: number | null; physicalQty: number; id: string }>): Map<string, ActiveOffer> {
   const offers = new Map<string, ActiveOffer>();
   for (const b of batches) {
-    if (b.offerPrice == null || offers.has(b.variantId)) continue;
-    offers.set(b.variantId, { unitPriceCents: toCents(b.offerPrice), remainingQty: b.physicalQty, stockId: b.id });
+    if (b.offerPriceCents == null || offers.has(b.variantId)) continue;
+    offers.set(b.variantId, { unitPriceCents: b.offerPriceCents, remainingQty: b.physicalQty, stockId: b.id });
   }
   return offers;
 }

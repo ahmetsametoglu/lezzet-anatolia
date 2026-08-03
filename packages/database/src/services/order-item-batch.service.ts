@@ -10,6 +10,7 @@ import {
   type OrderStatus,
   type RecallHit,
 } from '@lezzet/types';
+import { toCents } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
 
 /**
@@ -133,7 +134,9 @@ export class OrderItemBatchService extends BaseDbService<OrderItemBatch, OrderIt
           costs.set(row.order_item_id, null);
           continue;
         }
-        costs.set(row.order_item_id, (current ?? 0) + Math.round(Number(purchasePrice) * 100) * row.qty);
+        // GÖMÜLÜ ilişki (`stock:stock(...)`) — `moneyFields` üst düzeye bakar, buraya inmez.
+        // Dönüşüm bu okumanın sınırında ve ortak `toCents` ile (elle `* 100` değil, STACK §8).
+        costs.set(row.order_item_id, (current ?? 0) + toCents(Number(purchasePrice)) * row.qty);
       }
     }
     return costs;

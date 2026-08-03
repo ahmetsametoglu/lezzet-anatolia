@@ -1,5 +1,4 @@
 import { needsExpiryAttention } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText, type AvailableStock, type ProductStockRow, type StockAdjustmentDetail } from '@lezzet/types';
 import type { UserProfileService } from '@lezzet/database';
 import type { BatchView } from '@/lib/stock/batch-types';
@@ -145,7 +144,7 @@ export function toLossRows(rows: StockAdjustmentDetail[], actorNames: Map<string
       ...row,
       title: titleOf(productName, variantLabel),
       // İşaret KORUNUR: geri ekleme (negatif) maliyeti de negatif çıkar, net kayıp doğru toplanır.
-      costCents: row.unitCost === null ? null : toCents(row.unitCost) * row.qty,
+      costCents: row.unitCostCents === null ? null : row.unitCostCents * row.qty,
       actorName: (row.createdBy && actorNames.get(row.createdBy)) || null,
     };
   });

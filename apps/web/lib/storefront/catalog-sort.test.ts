@@ -35,7 +35,7 @@ async function makeProduct(label: string, priceCents: number) {
   productIds.push(product.id);
   slugOf.set(label, product.slug);
   await prices.insert({ variantId: variants[0]!.id, channel: 'b2c', amountCents: priceCents });
-  await stocks.insert({ warehouseId, variantId: variants[0]!.id, physicalQty: 10, expiryDate: dayOffset(60), purchasePrice: 1 });
+  await stocks.insert({ warehouseId, variantId: variants[0]!.id, physicalQty: 10, expiryDate: dayOffset(60), purchasePriceCents: 100 });
   return { productId: product.id, variantId: variants[0]!.id };
 }
 
@@ -165,7 +165,7 @@ describe('süzgeçler sıralamayla birlikte çalışır', () => {
       variants: [{ label: { tr: '1 kg' } }],
     });
     productIds.push(product.id);
-    await stocks.insert({ warehouseId, variantId: variants[0]!.id, physicalQty: 5, expiryDate: dayOffset(60), purchasePrice: 1 });
+    await stocks.insert({ warehouseId, variantId: variants[0]!.id, physicalQty: 5, expiryDate: dayOffset(60), purchasePriceCents: 100 });
 
     try {
       const data = await getCatalogData('tr', { sort: 'priceAsc', search: String(stamp) }, { warehouseId: null, shippingWarehouseId: null });

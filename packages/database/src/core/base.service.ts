@@ -71,11 +71,15 @@ interface GetAllOptions extends FilterOptions {
  * Servis para kolonunu **cent** olarak döndürür; euro↔cent dönüşümü burada, TEK yerde yapılır
  * (`STACK §8`). Alt sınıf yalnız `moneyFields` beyan eder, gerisi otomatiktir.
  *
- * **İSTİSNA — projeksiyonlu okumalar otomatik eşlemenin DIŞINDADIR:** `getAllAs`/`getPageAs`
- * gömülü ilişkili (`alias:tablo(...)`) satır döndürür; şekli bu servisin tablosu değildir, bu
- * yüzden `moneyFields` oraya uygulanmaz. O okumalarda dönüşüm **okuma sınırında elle** yapılır
- * (`toCents`) ve şema alanı yine `…Cents` adını taşır. İki rejim geçicidir: kalıcı çözüm
- * `getPageAs`'e kendi para beyanını vermektir (`02.9`'un son dilimi).
+ * **Projeksiyonlu okumalar da kapsam İÇİNDE** (`getAllAs`/`getPageAs`): eşleme yalnız ÜST DÜZEY
+ * alanlara dokunur ve projeksiyonun üst düzeyi her zaman BU tablonun kolonlarıdır — gömülü
+ * ilişkiler (`alias:tablo(...)`) başka tablonundur ve onlara dokunulmaz. Orada para varsa dönüşüm
+ * okuma sınırında elle yapılır (`toCents`, elle `* 100` değil) ve alan yine `…Cents` adını taşır.
+ *
+ * Bu ayrım başta "projeksiyonlar tamamen dışarıda" diye çizilmişti (02.9 dilim 1) ve İKİ REJİM
+ * doğuruyordu: entite şemasından türeyen bir projeksiyon (`StockAdjustmentDetailSchema`) `…Cents`
+ * alanını miras alıyor ama değeri çevrilmiyordu — şema tamsayı beklerken euro geliyordu. İki rejim
+ * ertelenecek bir borç değil, doğrulamada patlayan bir çelişkiydi; tek rejime indirildi (dilim 3).
  */
 export abstract class BaseDbService<TDb, TInsert, TUpdate> {
   constructor(
@@ -261,11 +265,12 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
    * değildir → kendi şemasıyla doğrulanır. İlişkileri satır başına ayrı sorguyla çekmek (N+1) yerine
    * TEK sorguda getirmenin yolu budur — STACK §13: N+1'i kırmanın ilk aracı gömülü select, RPC değil.
    *
-   * Para eşlemesinin DIŞINDADIR (sınıf künyesi): dönen şekil bu tablonun satırı değil.
+   * Para eşlemesi ÜST DÜZEYDE burada da çalışır (sınıf künyesi): projeksiyonun üst düzeyi bu
+   * tablonun kolonlarıdır. Gömülü ilişkideki para, o okumanın kendi sınırında çevrilir.
    */
   protected async getAllAs<T>(rowSchema: ZodType<T, ZodTypeDef, unknown>, filters?: Record<string, unknown>, options?: GetAllOptions): Promise<T[]> {
     const rows = await this.selectRows(filters, options);
-    return rows.map((row) => rowSchema.parse(dbToApp(row)));
+    return rows.map((row) => rowSchema.parse(this.toApp(row)));
   }
 
   /** Tek satır getirir (verilen alanlara göre) ya da null. Kimlik anahtarı aramaları için. */
@@ -328,8 +333,7 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
   /**
    * `getPage`'in projeksiyonlu ikizi — gömülü ilişkili satırlar (bkz. `getAllAs`).
    *
-   * `getAllAs` gibi para eşlemesinin DIŞINDADIR (sınıf künyesi): dönen şekil bu tablonun satırı
-   * değil, gömülü ilişkilerden kurulmuş bir görünümdür. Para varsa okuma sınırında elle çevrilir.
+   * `getAllAs` gibi: para eşlemesi ÜST DÜZEYDE çalışır, gömülü ilişkilerde çalışmaz.
    */
   protected async getPageAs<T>(
     rowSchema: ZodType<T, ZodTypeDef, unknown>,
@@ -337,7 +341,7 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     options: GetAllOptions & { orderBy: string; limit: number; select: string },
   ): Promise<Page<T>> {
     const raw = await this.selectRows(filters, { ...options, limit: options.limit + 1, tiebreakById: true });
-    const rows = raw.map((row) => rowSchema.parse(dbToApp(row)));
+    const rows = raw.map((row) => rowSchema.parse(this.toApp(row)));
     return this.pageOf(rows, raw, options.limit, options.orderBy);
   }
 

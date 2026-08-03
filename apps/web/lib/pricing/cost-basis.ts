@@ -21,13 +21,13 @@ export async function readCostBasis(db: Db, variantIds: readonly string[]): Prom
   if (ids.length === 0) return result;
 
   // Son alış + karşılaştırma penceresi: motorun ihtiyacı kadar satır, fazlası değil.
-  const history = await new StockService(db).purchaseHistoryMap(ids, COST_HISTORY_SIZE + 1);
+  const history = await new StockService(db).purchaseHistoryCentsMap(ids, COST_HISTORY_SIZE + 1);
 
   const missing = ids.filter((id) => !history.has(id));
   const fallback = missing.length > 0 ? await lastPurchaseOf(db, missing) : new Map<string, number>();
 
   for (const id of ids) {
-    const purchases = history.get(id)?.map(toCents) ?? [];
+    const purchases = history.get(id) ?? []; // servis cent döndürüyor (02.9) — çeviri kalmadı
     if (purchases.length > 0) {
       result.set(id, replacementCost(purchases));
       continue;

@@ -21,8 +21,11 @@ export const StockAdjustmentSchema = z.object({
   /** İŞARETLİ: + stoktan düşüm, − stoğa geri ekleme. Net kayıp tek toplamla çıksın diye tek alan. */
   qty: z.number().int(),
   reason: StockAdjustmentReasonEnum,
-  /** Partinin alış fiyatı, işlem anında kopyalanır — parti sonradan düzeltilse fire maliyeti kaymaz. */
-  unitCost: dbNumeric.nullable(),
+  /**
+   * Partinin alış fiyatı (**cent**; DB kolonu `unit_cost`, euro), işlem anında kopyalanır — parti
+   * sonradan düzeltilse fire maliyeti kaymaz.
+   */
+  unitCostCents: z.number().int().nullable(),
   note: z.string().nullable(),
   createdBy: z.string().uuid().nullable(),
   /**
@@ -39,7 +42,7 @@ export const StockAdjustmentInsertSchema = z.object({
   stockId: z.string().uuid(),
   qty: z.number().int(),
   reason: StockAdjustmentReasonEnum,
-  unitCost: z.number().nullish(),
+  unitCostCents: z.number().int().nullish(),
   note: z.string().nullish(),
   createdBy: z.string().uuid().nullish(),
 });
@@ -65,8 +68,8 @@ export const AdjustBatchResultSchema = z.object({
   referenceNo: z.string(),
   lines: z.number().int(),
   totalQty: z.number().int(),
-  /** Olayın net maliyeti (euro); geri eklemeler toplamdan DÜŞER. */
-  costTotal: dbNumeric,
+  /** Olayın net maliyeti (**cent** — RPC sınırda çeviriyor); geri eklemeler toplamdan DÜŞER. */
+  costTotalCents: z.number().int(),
 });
 export type AdjustBatchResult = z.infer<typeof AdjustBatchResultSchema>;
 

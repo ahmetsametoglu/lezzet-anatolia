@@ -97,7 +97,7 @@ async function optionsForProducts(db: ReturnType<typeof serviceDb>, productIds: 
   const variantIds = poolRows.flatMap((p) => p.variants.map((v) => v.id));
   const [priceRows, unitCosts] = await Promise.all([
     new PriceService(db).findApplicableMap(variantIds, 'b2c'),
-    new StockService(db).unitCostMap(variantIds),
+    new StockService(db).unitCostCentsMap(variantIds),
   ]);
   const listPrices = new Map(
     [...priceRows].flatMap(([id, { channelPrice }]) => (channelPrice ? [[id, channelPrice.amountCents] as const] : [])),

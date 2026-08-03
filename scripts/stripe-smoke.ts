@@ -48,7 +48,7 @@ const warehouse = await new WarehouseService(db).insert({
   code: `SMOKE-${stamp}`,
   name: 'Duman testi deposu',
 });
-await new StockService(db).insert({ variantId, warehouseId: warehouse.id, physicalQty: 10, expiryDate: dayOffset(30), purchasePrice: 4 });
+await new StockService(db).insert({ variantId, warehouseId: warehouse.id, physicalQty: 10, expiryDate: dayOffset(30), purchasePriceCents: 400 });
 
 const { order } = await new OrderService(db).create(
   { customerId: profile.id, warehouseId: warehouse.id, channel: 'b2c', deliveryType: 'route', total: 24 },

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { dbNumeric } from './db-numeric';
 import { OrderStatusEnum } from './enums.schema';
 import { ProductSchema } from './product.schema';
 import { ProductVariantSchema } from './product-variant.schema';
@@ -21,11 +20,12 @@ export const StockSchema = z.object({
   initialQty: z.number().int(),
   expiryDate: z.string(),
   lotNumber: z.string().nullable(), // geri çağırmada (rappel) eşleşme anahtarı
-  purchasePrice: dbNumeric.nullable(), // birim (paket) başına alış — gerçek COGS
+  // Para **cent** (02.9 · STACK §8); DB kolonları `purchase_price` / `offer_price` euro `numeric`.
+  purchasePriceCents: z.number().int().nullable(), // birim (paket) başına alış — gerçek COGS
   intakeId: z.string().uuid().nullable(),
   /** Hangi tedarik kalemini karşıladı (T5) — parçalı kabulde fark raporunun bağı. */
   purchaseOrderItemId: z.string().uuid().nullable(),
-  offerPrice: dbNumeric.nullable(), // dolu → parti indirimli teklifte
+  offerPriceCents: z.number().int().nullable(), // dolu → parti indirimli teklifte
   location: z.string().nullable(), // depo İÇİ raf/dolap
   createdAt: z.string(),
 });
@@ -37,10 +37,10 @@ export const StockInsertSchema = z.object({
   physicalQty: z.number().int().nonnegative(),
   expiryDate: z.string(),
   lotNumber: z.string().nullish(),
-  purchasePrice: z.number().nonnegative().nullish(),
+  purchasePriceCents: z.number().int().nonnegative().nullish(),
   intakeId: z.string().uuid().nullish(),
   purchaseOrderItemId: z.string().uuid().nullish(),
-  offerPrice: z.number().nonnegative().nullish(),
+  offerPriceCents: z.number().int().nonnegative().nullish(),
   location: z.string().nullish(),
 });
 export type StockInsert = z.infer<typeof StockInsertSchema>;

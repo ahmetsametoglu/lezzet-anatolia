@@ -55,16 +55,28 @@ describe('parti ayrıntısı — gömülü boy etiketi', () => {
 
   it('sayısal alanlar metin gelse de sayıya çevrilir (numeric → number)', () => {
     const parsed = StockBatchDetailSchema.parse(toApp(batch({})));
-    expect(parsed.purchasePrice).toBe(2.9);
+    // Sürücü `numeric`'i metin verir; para alanı bunun üstüne CENT'e iner (02.9): '2.90' → 290.
+    expect(parsed.purchasePriceCents).toBe(290);
+    expect(parsed.offerPriceCents).toBeNull();
     expect(parsed.variant.product.vatRate).toBe(5.5);
   });
 });
 
-/** DB satırı snake_case gelir; servis katmanı camelCase'e çevirir — test o çevrimi taklit eder. */
+/**
+ * DB satırı snake_case gelir; servis katmanı camelCase'e çevirir — test o çevrimi taklit eder.
+ * Para alanları için `BaseDbService.moneyFields` eşlemesi de taklit edilir (`purchase_price` →
+ * `purchasePriceCents`): şema artık euro değil cent bekliyor ve testin zemini gerçeği yansıtmalı.
+ */
+const MONEY_COLUMNS = ['purchasePrice', 'offerPrice'];
+
 function toApp(row: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(row)) {
     const camel = key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+    if (MONEY_COLUMNS.includes(camel)) {
+      out[`${camel}Cents`] = value == null ? null : Math.round(Number(value) * 100);
+      continue;
+    }
     out[camel] = value !== null && typeof value === 'object' && !Array.isArray(value) ? toApp(value as Record<string, unknown>) : value;
   }
   return out;

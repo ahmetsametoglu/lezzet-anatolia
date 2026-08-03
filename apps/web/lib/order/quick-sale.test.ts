@@ -49,8 +49,8 @@ beforeEach(async () => {
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
   // A önce doluyor (yakın tarih) — FEFO onu önce çıkarmalı.
-  batchA = (await stocks.insert({ warehouseId, variantId, physicalQty: 3, expiryDate: dayOffset(10), purchasePrice: 2 })).id;
-  batchB = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(300), purchasePrice: 3 })).id;
+  batchA = (await stocks.insert({ warehouseId, variantId, physicalQty: 3, expiryDate: dayOffset(10), purchasePriceCents: 200 })).id;
+  batchB = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(300), purchasePriceCents: 300 })).id;
 });
 
 afterAll(async () => {

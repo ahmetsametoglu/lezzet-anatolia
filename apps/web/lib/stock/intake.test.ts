@@ -90,7 +90,7 @@ describe('PO’lu mal kabul', () => {
 
     expect(outcome.status).toBe('ok');
     const batch = await stocks.getById(outcome.status === 'ok' ? outcome.result.stockIds[0]! : '');
-    expect(batch?.purchasePrice).toBe(6); // depocunun hiç görmediği sayı
+    expect(batch?.purchasePriceCents).toBe(600); // depocunun hiç görmediği sayı
     expect(batch?.location).toBe('Dolap A');
     expect(batch?.lotNumber).toBe('LOT-1');
   });
@@ -138,9 +138,9 @@ describe('satın alma kaydı — maliyet admin yolundan gelir', () => {
 
     expect(outcome.status).toBe('ok');
     const batch = await stocks.getById(outcome.status === 'ok' ? outcome.result.stockIds[0]! : '');
-    // Giriş CENT (750), DB euro (7,50) — çevrim sınırda ve TEK yerde (`STACK §8`). Bu satır aynı
-    // zamanda birim karışıklığının kalkanı: 100× şaşan bir çevrim burada 750 diye görünürdü.
-    expect(batch?.purchasePrice).toBe(7.5);
+    // Giriş CENT (750), DB euro (7,50), okuma yine CENT — çevrim sınırda ve TEK yerde (`STACK §8`).
+    // Kolonun euro tuttuğunu doğrulayan satır `packages/database`'deki gidiş-dönüş testindedir.
+    expect(batch?.purchasePriceCents).toBe(750);
   });
 
   it('SATIR maliyeti PO’yu EZER — fatura gerçeği söyler', async () => {
@@ -154,7 +154,7 @@ describe('satın alma kaydı — maliyet admin yolundan gelir', () => {
     });
 
     const batch = await stocks.getById(outcome.status === 'ok' ? outcome.result.stockIds[0]! : '');
-    expect(batch?.purchasePrice).toBe(8);
+    expect(batch?.purchasePriceCents).toBe(800);
   });
 
   it('satır maliyeti YOKSA PO’dan eşleşir — admin yalnız sapanı düzeltir', async () => {
@@ -166,7 +166,7 @@ describe('satın alma kaydı — maliyet admin yolundan gelir', () => {
     });
 
     const batch = await stocks.getById(outcome.status === 'ok' ? outcome.result.stockIds[0]! : '');
-    expect(batch?.purchasePrice).toBe(6);
+    expect(batch?.purchasePriceCents).toBe(600);
   });
 
   it('AYNI varyantın iki satırı AYRI fiyat taşır — varyant anahtarlı harita bunu yutardı', async () => {
@@ -183,8 +183,8 @@ describe('satın alma kaydı — maliyet admin yolundan gelir', () => {
     expect(outcome.status).toBe('ok');
     const ids = outcome.status === 'ok' ? outcome.result.stockIds : [];
     const fiyatlar = [];
-    for (const id of ids) fiyatlar.push((await stocks.getById(id))?.purchasePrice);
-    expect(fiyatlar.sort()).toEqual([5, 9]);
+    for (const id of ids) fiyatlar.push((await stocks.getById(id))?.purchasePriceCents);
+    expect(fiyatlar.sort()).toEqual([500, 900]);
   });
 
   it('kalemsiz kayıt yazım YAPMAZ', async () => {

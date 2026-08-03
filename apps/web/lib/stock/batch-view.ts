@@ -8,7 +8,6 @@ import {
   offerDecisionOf,
   suggestedOfferPriceCents,
 } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText, type StockBatchDetail } from '@lezzet/types';
 import type { SettingsService } from '@lezzet/database';
 import type { BatchView } from './batch-types';
@@ -71,7 +70,7 @@ export function toBatchViews(
     const product = row.variant.product;
     const productName = resolveLocalizedText(product.name);
     const variantLabel = resolveLocalizedText(row.variant.label);
-    const offerPriceCents = row.offerPrice === null ? null : toCents(row.offerPrice);
+    const { offerPriceCents } = row; // servis cent döndürüyor (02.9) — çeviri kalmadı
 
     const { decision, flag, remainingPercent } = offerDecisionOf({
       dateType: product.dateType,
@@ -103,7 +102,7 @@ export function toBatchViews(
       offerDiscountPercent: opts.thresholds.offerDiscountPercent,
       mlorPercent: opts.thresholds.mlorPercent,
       offerPriceCents,
-      purchasePriceCents: row.purchasePrice === null ? null : toCents(row.purchasePrice),
+      purchasePriceCents: row.purchasePriceCents,
     };
   });
 }

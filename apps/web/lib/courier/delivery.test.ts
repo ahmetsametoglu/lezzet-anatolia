@@ -63,7 +63,7 @@ beforeEach(async () => {
   for (const id of [customerId, b2bCustomerId]) await db.from('order').delete().eq('customer_id', id);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
-  stockId = (await stocks.insert({ warehouseId, variantId, physicalQty: 30, expiryDate: dayOffset(60), purchasePrice: 4 })).id;
+  stockId = (await stocks.insert({ warehouseId, variantId, physicalQty: 30, expiryDate: dayOffset(60), purchasePriceCents: 400 })).id;
 });
 
 afterAll(async () => {

@@ -252,12 +252,12 @@ function cogsOf(
   stocks: readonly Stock[],
 ): number | null {
   if (batches.length === 0) return null;
-  const priceOfStock = new Map(stocks.map((s) => [s.id, s.purchasePrice]));
+  const priceOfStock = new Map(stocks.map((s) => [s.id, s.purchasePriceCents]));
   let total = 0;
   for (const batch of batches) {
-    const price = priceOfStock.get(batch.stockId);
-    if (price == null) return null; // tek bir eksik alış fiyatı bile toplamı yalancı yapar
-    total += toCents(price) * batch.qty;
+    const priceCents = priceOfStock.get(batch.stockId);
+    if (priceCents == null) return null; // tek bir eksik alış fiyatı bile toplamı yalancı yapar
+    total += priceCents * batch.qty;
   }
   return total;
 }

@@ -77,8 +77,8 @@ async function sell(variantId: string, qty: number, unitPrice: number, opts: { g
 describe('ürün kârlılığı GERÇEK partiden hesaplanır', () => {
   it('aynı üründen cheap ve pahalı batch çıkarsa maliyet ayrışır', async () => {
     // İki ayrı varyant, iki ayrı alış: pay etseydik ikisi de ortalamayı gösterirdi.
-    await stocks.insert({ warehouseId, variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 2 });
-    await stocks.insert({ warehouseId, variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 8 });
+    await stocks.insert({ warehouseId, variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 200 });
+    await stocks.insert({ warehouseId, variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 800 });
 
     await sell(cheapVariant, 2, 21.1); // 40 € HT ciro, 4 € maliyet
     await sell(costlyVariant, 2, 21.1); // 40 € HT ciro, 16 € maliyet
@@ -96,7 +96,7 @@ describe('ürün kârlılığı GERÇEK partiden hesaplanır', () => {
   });
 
   it('fire ürünün marjından düşer — çöpe giden mal gizlenmez', async () => {
-    const batch = await stocks.insert({ warehouseId, variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 2 });
+    const batch = await stocks.insert({ warehouseId, variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 200 });
     await sell(cheapVariant, 2, 21.1);
     const beforeRows = await productProfits(TODAY);
     const before = beforeRows.find((u) => u.variantId === cheapVariant)!;
@@ -114,7 +114,7 @@ describe('ürün kârlılığı GERÇEK partiden hesaplanır', () => {
 
 describe('şirket P&L', () => {
   it('genel gider ve fire bir kez düşülür; STOK ALIMI ikinci kez gider yazılmaz', async () => {
-    await stocks.insert({ warehouseId, variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 8 });
+    await stocks.insert({ warehouseId, variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 800 });
     const before = await companyPnl(TODAY);
 
     await sell(costlyVariant, 1, 21.1); // 20 € HT ciro, 8 € COGS
@@ -133,7 +133,7 @@ describe('şirket P&L', () => {
   });
 
   it('kanal kırılımı katkı payı seviyesindedir', async () => {
-    await stocks.insert({ warehouseId, variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 2 });
+    await stocks.insert({ warehouseId, variantId: cheapVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 200 });
     await sell(cheapVariant, 1, 21.1);
 
     const pnl = await companyPnl(TODAY);
@@ -145,7 +145,7 @@ describe('şirket P&L', () => {
   });
 
   it('patron ikramı kârda SAYILIR — yalnız export dışıdır', async () => {
-    await stocks.insert({ warehouseId, variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: 8 });
+    await stocks.insert({ warehouseId, variantId: costlyVariant, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 800 });
     const before = await companyPnl(TODAY);
 
     const gift = await sell(costlyVariant, 1, 21.1, { gift: true });

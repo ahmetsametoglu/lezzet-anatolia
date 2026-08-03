@@ -150,7 +150,7 @@ describe('transfer — iki fiziksel gerçek an', () => {
       physicalQty: 10,
       expiryDate: dayOffset(120),
       lotNumber: 'LOT-TRF-1',
-      purchasePrice: 3.5,
+      purchasePriceCents: 350,
     });
 
     const sevk = await transfers.dispatch({ toWarehouseId: bosDepo, lines: [{ sourceStockId: kaynak.id, qty: 4 }] });

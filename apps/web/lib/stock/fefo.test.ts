@@ -57,7 +57,7 @@ describe('FEFO önerisi (06.5)', () => {
   });
 
   it('teklife söz verilmiş (çıpalı) miktar o partiden düşülür — normal hazırlık onu yiyemez', async () => {
-    const offerBatch = await stocks.insert({ warehouseId, variantId, physicalQty: 4, expiryDate: dayOffset(10), offerPrice: 3 });
+    const offerBatch = await stocks.insert({ warehouseId, variantId, physicalQty: 4, expiryDate: dayOffset(10), offerPriceCents: 300 });
     const plain = await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(150) });
     await reservations.reserve({ orderId: crypto.randomUUID(), warehouseId, variantId, qty: 3, stockId: offerBatch.id });
 

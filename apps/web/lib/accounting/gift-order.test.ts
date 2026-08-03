@@ -34,7 +34,8 @@ const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 
 const QTY = 3;
 const UNIT_PRICE = 12;
-const PURCHASE_PRICE = 4;
+const PURCHASE_PRICE = 4; // euro — sipariş tarafı hâlâ euro (02.9 dilim 4)
+const PURCHASE_PRICE_CENTS = PURCHASE_PRICE * 100;
 const TOTAL = QTY * UNIT_PRICE; // 36 €
 
 beforeAll(async () => {
@@ -60,7 +61,7 @@ afterAll(async () => {
 
 describe('patron ikramı iç hesapların TAMAMINDA sayılır', () => {
   it('mal stoktan düşer, maliyet kâra biner, para kasaya girer — yalnız export dışıdır', async () => {
-    const batch = await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(200), purchasePrice: PURCHASE_PRICE });
+    const batch = await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: PURCHASE_PRICE_CENTS });
     const cashBefore = (await accounts.balance(cashAccount)).balance;
     // Export'un ikram öncesi hâli: karşılaştırma FARK üzerinden yapılır (rapor şirket genelini okur).
     const exportBefore = await buildExport({ from: dayOffset(0), to: dayOffset(0) });

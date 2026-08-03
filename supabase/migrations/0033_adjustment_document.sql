@@ -159,6 +159,7 @@ begin
     'lines', v_lines,
     'total_qty', v_total_qty,
     -- İşaret KORUNUR: geri ekleme toplamı düşürür → rapor NET kaybı gösterir (0010 ile aynı ilke).
+    -- Birim EURO (kolonlarla aynı); cent'e çevrim servis sınırında (`adjustBatch`, STACK §8).
     'cost_total', v_cost_total
   );
 end;

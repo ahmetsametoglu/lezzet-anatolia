@@ -53,22 +53,22 @@ const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 
 describe('stok düzeltmesi (06.6)', () => {
   it('imha kaydı fiiliyi düşürür ve maliyeti o anda kopyalar', async () => {
-    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 10, expiryDate: dayOffset(20), purchasePrice: 3.2 });
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 10, expiryDate: dayOffset(20), purchasePriceCents: 320 });
 
     const outcome = await adjustments.adjust({ stockId: batch.id, qty: 4, reason: 'expired' });
     expect(outcome).toMatchObject({ ok: true, remainingQty: 6 });
 
     expect((await stocks.getById(batch.id))?.physicalQty).toBe(6);
     const records = await adjustments.listByStock(batch.id);
-    expect(records[0]).toMatchObject({ qty: 4, reason: 'expired', unitCost: 3.2 });
+    expect(records[0]).toMatchObject({ qty: 4, reason: 'expired', unitCostCents: 320 });
   });
 
   it('maliyet SNAPSHOT: parti fiyatı sonradan değişse fire maliyeti kaymaz', async () => {
-    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(20), purchasePrice: 2 });
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(20), purchasePriceCents: 200 });
     await adjustments.adjust({ stockId: batch.id, qty: 1, reason: 'damaged' });
-    await stocks.update({ id: batch.id, purchasePrice: 9 });
+    await stocks.update({ id: batch.id, purchasePriceCents: 900 });
 
-    expect((await adjustments.listByStock(batch.id))[0]?.unitCost).toBe(2);
+    expect((await adjustments.listByStock(batch.id))[0]?.unitCostCents).toBe(200);
   });
 
   it('partide olmayan miktar düşülemez — kayıt da yazılmaz (bölünmez)', async () => {
@@ -95,7 +95,7 @@ describe('stok düzeltmesi (06.6)', () => {
   });
 
   it('fire raporu NET kaybı verir — geri eklemeler toplamdan düşer', async () => {
-    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 10, expiryDate: dayOffset(20), purchasePrice: 5 });
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 10, expiryDate: dayOffset(20), purchasePriceCents: 500 });
     await adjustments.adjust({ stockId: batch.id, qty: 4, reason: 'expired' });
     await adjustments.adjust({ stockId: batch.id, qty: -1, reason: 'count_diff', note: 'sayımda fazla çıktı' });
 
@@ -146,7 +146,7 @@ describe('imha/fire araması (09.18)', () => {
 
   it('terimsiz çağrı bugünkü davranışı korur ve şekil DEĞİŞMEZ', async () => {
     // Ekran iç içe `stock.variant.product` bekliyor; okuma görünüme taşındı ama şekil aynı kaldı.
-    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(10), purchasePrice: 2.5 });
+    const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(10), purchasePriceCents: 250 });
     await adjustments.adjust({ stockId: batch.id, qty: 3, reason: 'expired' });
 
     const row = (await adjustments.listRecent({ limit: 50 })).rows.find((r) => r.stockId === batch.id);

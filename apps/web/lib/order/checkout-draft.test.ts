@@ -89,8 +89,8 @@ beforeAll(async () => {
   // varmadan reddeder — teslimat/ödeme doğrulamaları o zaman hiç sınanmazdı.
   const stocks = new StockService(db);
   const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
-  await stocks.insert({ warehouseId, variantId, physicalQty: 50, expiryDate: gun(120), purchasePrice: 8 });
-  await stocks.insert({ warehouseId, variantId: coldVariantId, physicalQty: 50, expiryDate: gun(30), purchasePrice: 4 });
+  await stocks.insert({ warehouseId, variantId, physicalQty: 50, expiryDate: gun(120), purchasePriceCents: 800 });
+  await stocks.insert({ warehouseId, variantId: coldVariantId, physicalQty: 50, expiryDate: gun(30), purchasePriceCents: 400 });
 
   // Paket: iki kalem, payları BİLEREK katalog fiyatının altında — indirim tam da o farktır.
   const bundle = await new BundleService(db).create({

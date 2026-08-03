@@ -53,8 +53,8 @@ beforeEach(async () => {
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('stock').delete().eq('variant_id', variantId);
   // Yakın tarihli parti önce çıkmalı (FEFO) — konum da öneriyle birlikte gitmeli.
-  nearBatch = (await stocks.insert({ warehouseId, variantId, physicalQty: 4, expiryDate: dayOffset(10), purchasePrice: 4, location: 'Dolap A' })).id;
-  farBatch = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(90), purchasePrice: 5, location: 'Dolap B' })).id;
+  nearBatch = (await stocks.insert({ warehouseId, variantId, physicalQty: 4, expiryDate: dayOffset(10), purchasePriceCents: 400, location: 'Dolap A' })).id;
+  farBatch = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(90), purchasePriceCents: 500, location: 'Dolap B' })).id;
 });
 
 afterAll(async () => {

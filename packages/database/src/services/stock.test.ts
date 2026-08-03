@@ -167,7 +167,7 @@ describe('atomik ayırma (06.3)', () => {
   });
 
   it('partiye çıpalı ayırma yalnız O partinin kullanılabilirine bakar', async () => {
-    const offerBatch = await stocks.insert({ variantId, warehouseId, physicalQty: 2, expiryDate: dayOffset(30), offerPrice: 4.5 });
+    const offerBatch = await stocks.insert({ variantId, warehouseId, physicalQty: 2, expiryDate: dayOffset(30), offerPriceCents: 450 });
     await stocks.insert({ variantId, warehouseId, physicalQty: 20, expiryDate: dayOffset(300) });
 
     // Varyant toplamı 22 olsa da çıpalı istek partinin 2'siyle sınırlıdır.
@@ -247,35 +247,45 @@ describe('tahmini birim maliyet (fiyat kararının girdisi)', () => {
   it('eldeki partilerin alış fiyatını ADETLE ağırlıklı ortalar', async () => {
     // 10 adet × 4 € + 30 adet × 8 € → ortalama 7 €. Düz ortalama 6 € derdi: az kalan pahalı partiyi
     // ucuz göstermek marjı olduğundan yüksek hesaplattırır.
-    await stocks.insert({ variantId, warehouseId, physicalQty: 10, purchasePrice: 4, expiryDate: dayOffset(100) });
-    await stocks.insert({ variantId, warehouseId, physicalQty: 30, purchasePrice: 8, expiryDate: dayOffset(120) });
+    await stocks.insert({ variantId, warehouseId, physicalQty: 10, purchasePriceCents: 400, expiryDate: dayOffset(100) });
+    await stocks.insert({ variantId, warehouseId, physicalQty: 30, purchasePriceCents: 800, expiryDate: dayOffset(120) });
 
-    const costs = await stocks.unitCostMap([variantId]);
-    expect(costs.get(variantId)).toBeCloseTo(7, 6);
+    const costs = await stocks.unitCostCentsMap([variantId]);
+    expect(costs.get(variantId)).toBe(700);
   });
 
   it('alış fiyatı GİRİLMEMİŞ parti hesaba katılmaz (0 sayılsa maliyet düşük görünürdü)', async () => {
-    await stocks.insert({ variantId, warehouseId, physicalQty: 10, purchasePrice: 5, expiryDate: dayOffset(100) });
+    await stocks.insert({ variantId, warehouseId, physicalQty: 10, purchasePriceCents: 500, expiryDate: dayOffset(100) });
     await stocks.insert({ variantId, warehouseId, physicalQty: 90, expiryDate: dayOffset(120) }); // fiyatsız parti
 
-    expect((await stocks.unitCostMap([variantId])).get(variantId)).toBeCloseTo(5, 6);
+    expect((await stocks.unitCostCentsMap([variantId])).get(variantId)).toBe(500);
   });
 
   it('tükenmiş parti maliyeti sürüklemez — elde olmayan mal fiyat kararına girmez', async () => {
-    await stocks.insert({ variantId, warehouseId, physicalQty: 0, purchasePrice: 100, expiryDate: dayOffset(50) });
-    await stocks.insert({ variantId, warehouseId, physicalQty: 5, purchasePrice: 6, expiryDate: dayOffset(100) });
+    await stocks.insert({ variantId, warehouseId, physicalQty: 0, purchasePriceCents: 10_000, expiryDate: dayOffset(50) });
+    await stocks.insert({ variantId, warehouseId, physicalQty: 5, purchasePriceCents: 600, expiryDate: dayOffset(100) });
 
-    expect((await stocks.unitCostMap([variantId])).get(variantId)).toBeCloseTo(6, 6);
+    expect((await stocks.unitCostCentsMap([variantId])).get(variantId)).toBe(600);
   });
 
   it('fiyatlı partisi olmayan varyant haritada YER ALMAZ — "bilmiyorum" ile "sıfır" ayrı şeyler', async () => {
     await stocks.insert({ variantId, warehouseId, physicalQty: 7, expiryDate: dayOffset(100) });
 
-    const costs = await stocks.unitCostMap([variantId]);
+    const costs = await stocks.unitCostCentsMap([variantId]);
     expect(costs.has(variantId)).toBe(false);
   });
 
   it('boş kimlik listesinde sorgu ATILMAZ', async () => {
-    expect((await stocks.unitCostMap([])).size).toBe(0);
+    expect((await stocks.unitCostCentsMap([])).size).toBe(0);
+  });
+
+  // Ortalama ÖNCE euro'da alınır, kuruşa sonra inilir: parti başına yuvarlansaydı 333 + 333 = 666
+  // çıkar, oysa doğru cevap 667'dir. Bir kuruş küçük görünür ama sistematiktir — her partide aynı
+  // yöne kaçar ve maliyeti sürekli eksik gösterir.
+  it('bölünmeyen ortalamada kuruş kaçmaz', async () => {
+    await stocks.insert({ variantId, warehouseId, physicalQty: 1, purchasePriceCents: 1000, expiryDate: dayOffset(100) });
+    await stocks.insert({ variantId, warehouseId, physicalQty: 2, purchasePriceCents: 500, expiryDate: dayOffset(110) });
+
+    expect((await stocks.unitCostCentsMap([variantId])).get(variantId)).toBe(667);
   });
 });

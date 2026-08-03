@@ -204,6 +204,21 @@ items/
 - Ortak katman (veri, hook, action çağrıları, token) paylaşılır; yalnız sunum bileşeni dallanır.
 - Cihaz ipucu sunucudan header ile client'a prop geçilebilir (ağaç yine tek).
 
+**`<sayfa>-url.ts` sayfalar arası import EDİLEBİLİR — tek yazılı istisna (03.08, denetim D1).**
+Sayfaya-özel dosya sayfada kalır; bu dosya tipi ayrı tutulur çünkü işlevi farklı: `*-url.ts` bir
+sunum parçası değil, sayfanın **adres sözleşmesidir** — hangi parametre adı hangi anlama gelir,
+varsayılan nedir, hangi hâl adrese yazılır. Ekranlar birbirine köprü kuruyor (Depolar'ın karnesi
+→ Stok o depo bağlamıyla; sipariş sayacı → Siparişler süzgeçli) ve bu köprüyü kuran taraf ya
+sözleşmeyi çağırır ya `?depo=STR&scope=expiry` dizesini elle yazar. İkincisi parametre adını
+ikinci kez yazmak, yani sözleşmeyi delmektir.
+
+Sınırlar: **yalnız `*-url.ts`** (saf, bağımlılıksız, React'siz); dışarıya `<sayfa>Link(patch)`
+biçiminde tek giriş verilir (`stockLink`, `ordersLink`) ve iç kurucu (`stockUrl`) ile
+`DEFAULTS` sayfada kalır. Bağın sessizce kırılma riski yok — imza `Partial<StockUrlState>`
+olduğu için süzgeç adı değişince çağıran **derleme zamanında** düşer. Başka hiçbir sayfa-yerel
+dosya (komponent, `-read`, `-types`, action) kardeş sayfadan import EDİLMEZ; paylaşılan olan
+yükselir (`lib/` ya da ortak üst klasör).
+
 **Bu projeye özgü — canlı güncelleme: `postgres_changes` DEĞİL, broadcast** (`lib/realtime/`)
 
 Ekranın kendini tazelemesi gereken yerler var (ödeme onayı webhook'la geliyor ve müşterinin
@@ -259,12 +274,16 @@ Kolon adı `Cents` eki atılarak türetilir (`unitPriceCents` → `unit_price`).
 çevirir: okunan satır, yazılan satır ve **süzgeç değeri**. Üçüncüsü en sinsisidir — `{ amountCents: 1690 }`
 çevrilmezse sorgu 1690 € arar, hata patlamaz, yalnız liste boş görünür.
 
-> **İSTİSNA — projeksiyonlu okumalar otomatik eşlemenin DIŞINDADIR.** `getPageAs`/`getAllAs` gömülü
-> ilişkili (`alias:tablo(...)`) satır döndürür; şekli servisin tablosu değildir, bu yüzden `moneyFields`
-> oraya uygulanmaz. O okumalarda dönüşüm **okuma sınırında elle** yapılır (`toCents`) ve şema alanı yine
-> `…Cents` adını taşır. **İki rejim geçicidir**: kalıcı çözüm `getPageAs`'e kendi para beyanını vermektir
-> (`02.9`'un son dilimi). Ara dönemde ayrımın yazılı olması şart — yazılmayan istisna, bir sonraki ajanın
-> "burada da otomatik çevriliyordur" varsayımıdır.
+**Projeksiyonlu okumalar da kapsam içindedir** (`getPageAs`/`getAllAs`): eşleme yalnız **üst düzey**
+alanlara dokunur ve projeksiyonun üst düzeyi her zaman servisin kendi tablosudur. Gömülü ilişkiler
+(`alias:tablo(...)`) başka tablonundur; oradaki para okuma sınırında elle çevrilir — yine `toCents` ile,
+elle `* 100` yazarak değil. Aynısı **RPC dönüşleri** için geçerlidir: jsonb bir tablo satırı değildir,
+dönüşüm servis metodunda yapılır (`adjustBatch`).
+
+> Ayrım başta "projeksiyonlar tamamen dışarıda" diye çizilmişti ve İKİ REJİM doğuruyordu. Entite
+> şemasından türeyen bir projeksiyon (`StockAdjustmentDetailSchema`) `…Cents` alanını miras alıyor ama
+> değeri çevrilmiyordu: şema tamsayı beklerken euro geliyordu. İki rejim ertelenecek bir borç değil,
+> doğrulamada patlayan bir çelişkiydi — tek rejime indirildi (`02.9` dilim 3).
 
 **Güvence koda gömülüdür, ada güvenilmez:** `pnpm docs:check` bir `…Cents` şema alanının servis beyanında
 karşılığı olduğunu ve `dbNumeric` KULLANMADIĞINI doğrular. Beyansız bir `…Cents` alanı — adı doğru,
@@ -278,9 +297,9 @@ taşıyordu (`type`'a göre) ve hiçbir adla dürüst olamıyordu: `valueCents` 
 (`percent` + `amount`) ve hangisinin dolu olacağını bir kısıt tutar (`02.9`, `0031`). Aynı ölçüt
 görünüm tiplerinde ve form girdilerinde de geçerlidir: tek kutu, iki alan gönderir.
 
-> **AÇIK — göç sürüyor (`02.9`).** Beyan bugün **fiyat** ve **indirim** ailelerinde; stok · sipariş ·
-> para hareketi · profil aileleri hâlâ euro döndürüyor ve dönüşüm çağrı yerlerinde elle yapılıyor.
-> O aileler kapanana kadar savunma, yukarıdaki iki maddedir (ortak helper + `…Cents` adlandırması).
+> **AÇIK — göç sürüyor (`02.9`).** Beyan bugün **fiyat · indirim · stok** ailelerinde; sipariş ·
+> para hareketi · profil · tedarik aileleri hâlâ euro döndürüyor ve dönüşüm çağrı yerlerinde elle
+> yapılıyor. O aileler kapanana kadar savunma, yukarıdaki iki maddedir (ortak helper + `…Cents` adı).
 
 ## 9. UI: Tailwind + primitif/adaptör
 

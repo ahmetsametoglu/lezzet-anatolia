@@ -16,6 +16,7 @@ import {
   type StockUpdate,
   type StockWithProductDates,
 } from '@lezzet/types';
+import { toCents } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
 
@@ -41,6 +42,9 @@ const BATCH_DETAIL_SELECT =
  */
 export const LOT_SEARCH_LIMIT = 50;
 export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate> {
+  /** Kolonlar `stock.purchase_price` / `stock.offer_price` (euro numeric); app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ['purchasePriceCents', 'offerPriceCents'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'stock', StockSchema, StockInsertSchema, StockUpdateSchema);
   }
@@ -269,7 +273,7 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    * çağıran eksikliği söyleyebilsin diye ayrımı koruyoruz.
    */
   /**
-   * Varyant başına SON alışlar — en yeniden eskiye, en fazla `limit` tane (EURO).
+   * Varyant başına SON alışlar — en yeniden eskiye, en fazla `limit` tane (**cent**).
    *
    * `unitCostMap`'ten iki farkı var ve ikisi de bilinçli:
    * - **Tükenmiş parti de sayılır.** Soru "elimde ne var" değil, "bunu yeniden almak kaça" — alış
@@ -277,7 +281,7 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    * - **Ortalama alınmaz, sıra korunur.** Aykırı alım ancak komşularıyla karşılaştırılınca
    *   anlaşılır; ortalama onu zaten içine alıp saklardı (karar `domain-core/replacementCost`).
    */
-  async purchaseHistoryMap(variantIds: string[], limit: number): Promise<Map<string, number[]>> {
+  async purchaseHistoryCentsMap(variantIds: string[], limit: number): Promise<Map<string, number[]>> {
     const map = new Map<string, number[]>();
     if (variantIds.length === 0) return map;
 
@@ -297,13 +301,16 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
       if (!Number.isFinite(price) || price <= 0) continue;
       const list = map.get(row.variant_id) ?? [];
       if (list.length >= limit) continue;
-      list.push(price);
+      // Dar seçim `moneyFields` yolundan geçmiyor (ham sorgu) — dönüşüm burada, ama yine ortak
+      // `toCents` ile: elle `* 100` yazmak STACK §8'in adıyla yasakladığı biçim.
+      list.push(toCents(price));
       map.set(row.variant_id, list);
     }
     return map;
   }
 
-  async unitCostMap(variantIds: string[]): Promise<Map<string, number>> {
+  /** Eldeki partilerin ağırlıklı ortalama alışı, varyant başına (**cent**). */
+  async unitCostCentsMap(variantIds: string[]): Promise<Map<string, number>> {
     if (variantIds.length === 0) return new Map();
     // ÜÇ KOLON okunur, satırın tamamı değil: parti satırı geniş (lot, konum, tarihler, teklif fiyatı,
     // damgalar) ve yüz varyantlık bir okumada 58 KB taşıyordu — hesap için gereken üç sayı. Ham sorgu,
@@ -328,9 +335,10 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
       cur.total += qty * price;
       acc.set(row.variant_id, cur);
     }
-    // Yuvarlama YAPILMAZ: tüketici kuruşa çevirirken yuvarlar. Burada yuvarlamak, çok kalemli bir
-    // pakette her kalemde bir kuruş kaybettirip maliyeti sistematik olarak eksik gösterirdi.
-    return new Map([...acc].flatMap(([id, { qty, total }]) => (qty > 0 ? [[id, total / qty] as const] : [])));
+    // Ortalama ÖNCE euro'da alınır, kuruşa SONRA inilir: parti başına yuvarlamak çok partili bir
+    // varyantta her partide bir kuruş kaybettirirdi. Eskiden burası yuvarlanmamış euro döndürüyor ve
+    // her tüketici kendi `toCents`'ini çağırıyordu — sonuç aynı, dönüşümün yeri farklıydı (02.9).
+    return new Map([...acc].flatMap(([id, { qty, total }]) => (qty > 0 ? [[id, toCents(total / qty)] as const] : [])));
   }
 
   /**
@@ -380,8 +388,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /** Partiyi teklife açar/kapatır (near-expiry indirimi) — kararı insan verir, sistem önerir. */
-  async setOfferPrice(id: string, offerPrice: number | null): Promise<Stock> {
-    return this.update({ id, offerPrice });
+  async setOfferPrice(id: string, offerPriceCents: number | null): Promise<Stock> {
+    return this.update({ id, offerPriceCents });
   }
 
   /**

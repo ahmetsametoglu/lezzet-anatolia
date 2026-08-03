@@ -39,8 +39,8 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await db.from('stock').delete().eq('variant_id', variantId);
-  batchA = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(5), purchasePrice: 4 })).id;
-  batchB = (await stocks.insert({ warehouseId, variantId, physicalQty: 8, expiryDate: dayOffset(9), purchasePrice: 5 })).id;
+  batchA = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(5), purchasePriceCents: 400 })).id;
+  batchB = (await stocks.insert({ warehouseId, variantId, physicalQty: 8, expiryDate: dayOffset(9), purchasePriceCents: 500 })).id;
 });
 
 afterAll(async () => {
@@ -89,7 +89,7 @@ describe('olay belgesi', () => {
     });
 
     // 2 × 4 € + 1 × 5 € = 13 €; her parti KENDİ maliyetinden sayılır, ortalamadan değil.
-    expect(outcome.status === 'ok' ? outcome.result.costTotal : 0).toBe(13);
+    expect(outcome.status === 'ok' ? outcome.result.costTotalCents : 0).toBe(1300);
   });
 });
 
@@ -127,7 +127,7 @@ describe('bölünmezlik', () => {
     expect(outcome.status).toBe('ok');
     expect((await stocks.getById(batchA))?.physicalQty).toBe(12);
     // İşaret korunur: net kayıp eksiye döner, şişmiş bir "imha ettik" rakamı doğmaz.
-    expect(outcome.status === 'ok' ? outcome.result.costTotal : 0).toBe(-8);
+    expect(outcome.status === 'ok' ? outcome.result.costTotalCents : 0).toBe(-800);
   });
 });
 

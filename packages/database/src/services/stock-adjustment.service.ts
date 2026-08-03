@@ -18,6 +18,7 @@ import {
   type StockAdjustmentReason,
   type StockAdjustmentUpdate,
 } from '@lezzet/types';
+import { toCents } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
 
 import { dbToApp } from '../utils/case-transformers';
@@ -47,6 +48,9 @@ export interface AdjustInput {
  * Doğrudan `insert` çağrılırsa kayıt yazılır ama stok düşmez — o yüzden tek meşru yol `adjust()`.
  */
 export class StockAdjustmentService extends BaseDbService<StockAdjustment, StockAdjustmentInsert, StockAdjustmentUpdate> {
+  /** Kolon `stock_adjustment.unit_cost` (euro numeric); app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ['unitCostCents'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'stock_adjustment', StockAdjustmentSchema, StockAdjustmentInsertSchema, StockAdjustmentUpdateSchema);
   }
@@ -83,7 +87,11 @@ export class StockAdjustmentService extends BaseDbService<StockAdjustment, Stock
       p_note: input.note ?? null,
       p_created_by: input.createdBy ?? null,
     });
-    return AdjustBatchResultSchema.parse(dbToApp(raw));
+    // RPC dönüşü bir TABLO SATIRI değil (jsonb) — `moneyFields` yolundan geçmez. Dönüşüm bu sınırda
+    // ve ortak `toCents` ile: RPC euro döndürüyor, uygulamanın gördüğü her para sayısı cent (STACK §8).
+    const row = dbToApp<Record<string, unknown>>(raw);
+    const { costTotal, ...rest } = row as { costTotal: number | string };
+    return AdjustBatchResultSchema.parse({ ...rest, costTotalCents: toCents(Number(costTotal)) });
   }
 
   /** Bir olayın bütün satırları — "elimdeki kâğıdın karşılığı" araması. */
@@ -189,6 +197,13 @@ export class StockAdjustmentService extends BaseDbService<StockAdjustment, Stock
  * `StockAdjustmentDetail`'e eşlenir.
  */
 export class StockAdjustmentDetailService extends BaseDbService<StockAdjustmentDetailRow, never, never> {
+  /**
+   * Görünüm de `unit_cost`'u euro taşır — beyan burada da gerekli. Şema entiteden türediği için
+   * (`StockAdjustmentSchema.extend`) alan adı `unitCostCents`; beyan olmasaydı projeksiyon euro
+   * okuyup tamsayı bekleyen şemaya verirdi ve doğrulama patlardı.
+   */
+  protected override readonly moneyFields = ['unitCostCents'];
+
   constructor(supabase: SupabaseClient) {
     super(
       supabase,
