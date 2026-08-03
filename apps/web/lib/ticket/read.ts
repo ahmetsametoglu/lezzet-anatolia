@@ -262,3 +262,13 @@ export async function getStaffTicketDetail(locale: Locale, ticketId: string): Pr
 export function countOpenTickets(): Promise<number> {
   return new TicketService(serviceDb()).countOpen();
 }
+
+/**
+ * Kuyruk başlığının sayaçları — durum başına, TÜM kuyruk üzerinden.
+ *
+ * Yüklenmiş sayfadan saymak yanlış olurdu ve tam da sayının anlam kazandığı yerde: kuyruk keyset
+ * sayfalı, yani "2 işlemde" aslında "ilk sayfada 2 işlemde" demek olurdu (`CLAUDE.md §1`).
+ */
+export function countTicketsByStatus(): Promise<Record<Ticket['status'], number>> {
+  return new TicketService(serviceDb()).countByStatus();
+}

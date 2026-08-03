@@ -40,10 +40,9 @@ export function TicketsDesktop({
     <div className="flex h-full min-h-0 flex-col">
       <PageHeader
         title="Talepler"
-        // Sayaç YALNIZ bildiğini söyler: çizim "3 açık · 2 işlemde · 1 AI yürütüyor" yazıyor ama
-        // elde durum başına sayım yok (arka uçtan istendi, §8b). Yüklenmiş sayfadan saymak,
-        // kuyruk sayfalı olduğu için kalabalık kuyrukta yalan olurdu.
-        subtitle={`${data.openCount} açık talep · kuyruk son mesaja göre sıralı`}
+        // Çizimin iki sayısı yerinde; üçüncüsü ("AI yürütüyor") 16.5 ile gelir — bugün daima 0
+        // gösterirdi ve "AI çalışmıyor" değil "AI yok" diye okunurdu (`TicketsData.counts` künyesi).
+        subtitle={`${data.counts.open} açık · ${data.counts.in_progress} işlemde · kuyruk son mesaja göre sıralı`}
       >
         <Button variant="dark" size="sm" onClick={onNewTicket}>
           + Elle talep

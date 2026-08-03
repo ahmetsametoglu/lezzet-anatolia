@@ -37,7 +37,9 @@ export function TicketsMobile({
 }: TicketsViewProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <PageHeader compact title="Talepler" subtitle={`${data.openCount} açık talep`}>
+      {/* Telefonda iki sayı yan yana sığıyor; "kuyruk son mesaja göre sıralı" cümlesi düşüyor —
+          dar ekranda satırı ikiye bölerdi ve sıralama zaten listede görünüyor. */}
+      <PageHeader compact title="Talepler" subtitle={`${data.counts.open} açık · ${data.counts.in_progress} işlemde`}>
         <Button variant="dark" size="sm" onClick={onNewTicket}>
           + Elle
         </Button>

@@ -3,7 +3,7 @@ import { DEFAULT_LOCALE } from '@lezzet/i18n';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { detectDevice } from '@/lib/device';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
-import { countOpenTickets, getStaffTicketDetail, listTicketQueue } from '@/lib/ticket/read';
+import { countTicketsByStatus, getStaffTicketDetail, listTicketQueue } from '@/lib/ticket/read';
 import { TicketsClient } from './tickets-client';
 import { ageMinutesOf, toRowViews, toTicketFilter } from './tickets-read';
 import { parseTicketsUrl } from './tickets-url';
@@ -42,9 +42,9 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   const urlState = parseTicketsUrl(await searchParams);
   const device = await detectDevice();
 
-  const [queue, openCount] = await Promise.all([
+  const [queue, counts] = await Promise.all([
     listTicketQueue(toTicketFilter(urlState.f), undefined, DEFAULT_PAGE_SIZE),
-    countOpenTickets(),
+    countTicketsByStatus(),
   ]);
 
   /**
@@ -70,7 +70,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   const data: TicketsData = {
     rows: toRowViews(queue.rows, now),
     nextCursor: queue.nextCursor,
-    openCount,
+    counts,
     detail: detail && { ...detail, openedAgoMinutes: ageMinutesOf(detail.ticket.createdAt, now) },
   };
 

@@ -25,15 +25,15 @@ export interface TicketsData {
   rows: TicketRowView[];
   nextCursor: KeysetCursor | null;
   /**
-   * Kapanmamış talep sayısı — **tüm kuyruk üzerinden** (`countOpenTickets`), yüklenmiş sayfadan
-   * değil. Sayfadan saymak, kuyruk sayfalı olduğu için tam da sayının anlam kazandığı yerde
-   * (kalabalık kuyrukta) yalan söylerdi.
+   * Durum başına talep sayısı — **tüm kuyruk üzerinden** (`countTicketsByStatus`), yüklenmiş
+   * sayfadan değil. Sayfadan saymak, kuyruk sayfalı olduğu için tam da sayının anlam kazandığı
+   * yerde (kalabalık kuyrukta) yalan söylerdi.
    *
-   * Çizim üç sayı istiyor ("3 açık · 2 işlemde · 1 AI yürütüyor"); elde yalnız bu var. Durum başına
-   * sayım arka uçtan istendi (`operasyon-ekranlari-arka-uc-talebi.md §8b`) — gelene kadar alt satır
-   * bildiği tek sayıyı söyler, üçünü uydurmaz.
+   * Çizimin üçüncü sayısı ("1 AI yürütüyor") HÂLÂ YOK ve bilerek: `16.5` inene kadar her talep
+   * `human`, yani o sayaç daima 0 gösterirdi — ekranda "AI çalışmıyor" değil "AI yok" diye okunurdu
+   * ve ikisi ayrı şeydir. Kırılım 16.5 ile birlikte gelir.
    */
-  openCount: number;
+  counts: Record<TicketStatus, number>;
   /** Seçili talebin detayı; seçim yoksa ya da talep silinmişse null. */
   detail: TicketDetailView | null;
 }
