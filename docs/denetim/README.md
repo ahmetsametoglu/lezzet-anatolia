@@ -25,13 +25,13 @@ Dosyalar:
 
 - `denetim-dosya-agaci.md` — dosya ağacı standardı (D1-kural `docs:check` bekliyor · D3 sırada;
   D1/2 ve D2 kapalı)
-- `denetim-test-artigi.md` — DB'de artık bırakan testler (R1–R4 kapandı-doğrulandı; açık:
-  R4-devamı `02.12` — kural + 34 dosya süpürme, arka uç üstlendi)
 - `denetim-migration-parcalama.md` — migration dosya dengesi (P3 kapandı; P1/P2 kabul → `02.11`,
   P1'in `db:refresh` onayı KULLANICIDA)
 
 Kapanıp silinenler (02–03.08): operasyon ilk dosyası ve komponent taraması · arka uç ilk dosyası,
-**veritabanı/duplikasyon taraması** (A1–A9) ve yorum bayatlığı 1/3 (Y1–Y3) · müşteri ilk dosyası,
+**veritabanı/duplikasyon taraması** (A1–A9), yorum bayatlığı 1/3 (Y1–Y3) ve **test artığı**
+(R1–R4 — `purgeTestData`+`mustDelete`, iki bağımsız ölçüm sıfır artık; süpürme kuralı `02.12`'de
+izlenir) · müşteri ilk dosyası,
 komponent taraması (K1–K4, M2), **hata maskeleme** (H1–H4 — `customerErrorKey` anahtar funnel'ı,
 `08.15`/`08.17`), **server-actions** (S1–S3), **test kapsamı** (T1–T5 — fiyat-değişim testleri +
 `18.11` devri) ve yorum bayatlığı 3/3 (M-Y1–M-Y4) · operasyon yorum bayatlığı 2/3 (O-Y1–O-Y3) ·
