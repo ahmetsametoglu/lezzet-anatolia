@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { dbNumeric } from './db-numeric';
 
 // CourierDayClose — kurye gün kapanışı ve kasa mutabakatı (11.6). DOMAIN §7.
 //
@@ -14,12 +13,15 @@ export const CourierDayCloseSchema = z.object({
   id: z.string().uuid(),
   courierId: z.string().uuid(),
   date: z.string(),
-  expectedCash: dbNumeric,
-  expectedCard: dbNumeric,
-  expectedCheque: dbNumeric,
-  countedCash: dbNumeric,
-  countedCard: dbNumeric,
-  countedCheque: dbNumeric,
+  // Para alanları CENT (02.9). DB kolonları euro `numeric` kalır; dönüşüm sınırda
+  // (`CourierDayCloseService.moneyFields`). Mutabakat farkı tamsayı çıkarma oldu — kuruş altı
+  // kalıntı doğuran kayan nokta aritmetiği bu kayıttan tamamen kalktı.
+  expectedCashCents: z.number().int(),
+  expectedCardCents: z.number().int(),
+  expectedChequeCents: z.number().int(),
+  countedCashCents: z.number().int(),
+  countedCardCents: z.number().int(),
+  countedChequeCents: z.number().int(),
   /** Günün üç akıbeti — sayı değil kimlik: kapanıştan sonra "hangi sipariş" sorusu cevaplanabilsin. */
   deliveredOrders: z.array(z.string().uuid()),
   returnedOrders: z.array(z.string().uuid()),
@@ -40,9 +42,9 @@ export type CourierDayClose = z.infer<typeof CourierDayCloseSchema>;
 export const CourierDayCollectionSchema = z.object({
   courierId: z.string().uuid(),
   date: z.string(),
-  expectedCash: dbNumeric,
-  expectedCard: dbNumeric,
-  expectedCheque: dbNumeric,
+  expectedCashCents: z.number().int(),
+  expectedCardCents: z.number().int(),
+  expectedChequeCents: z.number().int(),
 });
 export type CourierDayCollection = z.infer<typeof CourierDayCollectionSchema>;
 
@@ -55,16 +57,19 @@ export const CourierDayCloseResultSchema = z.object({
   reason: z.literal('already_closed').optional(),
   id: z.string().uuid().optional(),
   closedAt: z.string().optional(),
-  expectedCash: dbNumeric.optional(),
-  expectedCard: dbNumeric.optional(),
-  expectedCheque: dbNumeric.optional(),
-  countedCash: dbNumeric.optional(),
-  countedCard: dbNumeric.optional(),
-  countedCheque: dbNumeric.optional(),
+  // RPC dönüşü bir TABLO SATIRI değil (jsonb), yani `moneyFields` yolundan geçmez — dönüşüm
+  // servis sınırında `rpcMoneyToCents` ile yapılır. Alanlar `optional`: `ok:false` dalında RPC
+  // hiçbirini döndürmez ve orada sıfır yazmak "hesaplandı, sıfır çıktı" demek olurdu.
+  expectedCashCents: z.number().int().optional(),
+  expectedCardCents: z.number().int().optional(),
+  expectedChequeCents: z.number().int().optional(),
+  countedCashCents: z.number().int().optional(),
+  countedCardCents: z.number().int().optional(),
+  countedChequeCents: z.number().int().optional(),
   /** Sayılan − beklenen. İşaret anlamlıdır: eksi eksik teslim, artı fazla para. */
-  differenceCash: dbNumeric.optional(),
-  differenceCard: dbNumeric.optional(),
-  differenceCheque: dbNumeric.optional(),
+  differenceCashCents: z.number().int().optional(),
+  differenceCardCents: z.number().int().optional(),
+  differenceChequeCents: z.number().int().optional(),
   reconciled: z.boolean().optional(),
   deliveredCount: z.number().int().optional(),
   returnedCount: z.number().int().optional(),

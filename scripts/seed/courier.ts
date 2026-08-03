@@ -1,5 +1,6 @@
 import { CourierDayCloseService, CourierDayCollectionService } from '@lezzet/database';
-import { euro, tabloDolu, type Db, type Kisiler } from './shared';
+import { fromCents } from '@lezzet/helper';
+import { tabloDolu, type Db, type Kisiler } from './shared';
 
 // ── Kurye gün kapanışı (0032 · 11.6) ─────────────────────────────────────────────────────────────
 // Kapanış bir MUTABAKAT kaydıdır, para hareketi değil: para kapıda tahsil edilirken zaten yazıldı
@@ -51,14 +52,14 @@ export async function seedCourierDayCloses(db: Db, kisiler: Kisiler): Promise<vo
     const sonuc = await closes.close({
       courierId: kurye,
       date: mutabik.date,
-      countedCash: beklenen?.expectedCash ?? 0,
-      countedCard: beklenen?.expectedCard ?? 0,
-      countedCheque: beklenen?.expectedCheque ?? 0,
+      countedCashCents: beklenen?.expectedCashCents ?? 0,
+      countedCardCents: beklenen?.expectedCardCents ?? 0,
+      countedChequeCents: beklenen?.expectedChequeCents ?? 0,
       actorId: admin,
     });
     console.log(
       sonuc.ok
-        ? `  ✓ ${mutabik.date} · MUTABIK · teslim ${sonuc.deliveredCount} · devreden ${sonuc.pendingCount} · nakit ${sonuc.countedCash} €`
+        ? `  ✓ ${mutabik.date} · MUTABIK · teslim ${sonuc.deliveredCount} · devreden ${sonuc.pendingCount} · nakit ${fromCents(sonuc.countedCashCents ?? 0)} €`
         : `  · ${mutabik.date} atlandı (${sonuc.reason})`,
     );
   }
@@ -72,15 +73,16 @@ export async function seedCourierDayCloses(db: Db, kisiler: Kisiler): Promise<vo
     const sonuc = await closes.close({
       courierId: kurye,
       date: farkli.date,
-      countedCash: euro(Math.max(0, (beklenen?.expectedCash ?? 0) - 15)),
-      countedCard: beklenen?.expectedCard ?? 0,
-      countedCheque: beklenen?.expectedCheque ?? 0,
+      // 15 € eksik — hesap artık tamsayı cent üstünde, `euro()` yuvarlamasına gerek kalmadı.
+      countedCashCents: Math.max(0, (beklenen?.expectedCashCents ?? 0) - 1500),
+      countedCardCents: beklenen?.expectedCardCents ?? 0,
+      countedChequeCents: beklenen?.expectedChequeCents ?? 0,
       note: 'Bir müşteri 15 € eksik ödedi, kalanı bir sonraki teslimatta verecek. Kendisiyle konuşuldu.',
       actorId: admin,
     });
     console.log(
       sonuc.ok
-        ? `  ✓ ${farkli.date} · FARK VAR · nakit fark ${sonuc.differenceCash} € · mutabık: ${sonuc.reconciled}`
+        ? `  ✓ ${farkli.date} · FARK VAR · nakit fark ${fromCents(sonuc.differenceCashCents ?? 0)} € · mutabık: ${sonuc.reconciled}`
         : `  · ${farkli.date} atlandı (${sonuc.reason})`,
     );
   }

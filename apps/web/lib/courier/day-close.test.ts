@@ -105,7 +105,7 @@ describe('kapanış taslağı', () => {
     const draft: DayCloseDraft = await openDayClose({ courierId, date: day });
 
     // Yöntemler karışırsa mutabakat yapılamaz: nakit sayımla, kart cihaz raporuyla karşılaşır.
-    expect(draft.expected).toEqual({ cash: 50, card: 40, cheque: 0 });
+    expect(draft.expected).toEqual({ cashCents: 5000, cardCents: 4000, chequeCents: 0 });
     expect(draft.delivered).toHaveLength(3);
   });
 
@@ -126,7 +126,7 @@ describe('kapanış taslağı', () => {
   it('tahsilatsız gün sıfır gösterir — "veri yok" ile "para yok" aynıdır', async () => {
     const draft = await openDayClose({ courierId, date: day });
 
-    expect(draft.expected).toEqual({ cash: 0, card: 0, cheque: 0 });
+    expect(draft.expected).toEqual({ cashCents: 0, cardCents: 0, chequeCents: 0 });
     expect(draft.closed).toBeNull();
   });
 });
@@ -135,27 +135,27 @@ describe('günü kapat', () => {
   it('sayılan beklenene eşitse gün MUTABIK kapanır', async () => {
     await deliverAndCollect(3, 'cash');
 
-    const result = await closeCourierDay({ courierId, date: day, countedCash: 30 });
+    const result = await closeCourierDay({ courierId, date: day, countedCashCents: 3000 });
 
-    expect(result).toMatchObject({ ok: true, reconciled: true, differenceCash: 0, deliveredCount: 1 });
+    expect(result).toMatchObject({ ok: true, reconciled: true, differenceCashCents: 0, deliveredCount: 1 });
   });
 
   it('fark AYNI GÜN görünür ve işareti anlamlıdır', async () => {
     await deliverAndCollect(5, 'cash'); // beklenen 50 €
 
-    const eksik = await closeCourierDay({ courierId, date: day, countedCash: 45, note: 'müşteri bozuk para veremedi' });
+    const eksik = await closeCourierDay({ courierId, date: day, countedCashCents: 4500, note: 'müşteri bozuk para veremedi' });
 
-    expect(eksik).toMatchObject({ ok: true, reconciled: false, differenceCash: -5 });
+    expect(eksik).toMatchObject({ ok: true, reconciled: false, differenceCashCents: -500 });
     // Eksi eksik teslim, artı fazla para: ikisi de açıklanmayı hak eder, mutlak değere indirilmez.
-    expect(eksik.differenceCash).toBeLessThan(0);
+    expect(eksik.differenceCashCents).toBeLessThan(0);
   });
 
   it('fazla para da fark sayılır', async () => {
     await deliverAndCollect(2, 'cash'); // beklenen 20 €
 
-    const fazla = await closeCourierDay({ courierId, date: day, countedCash: 25 });
+    const fazla = await closeCourierDay({ courierId, date: day, countedCashCents: 2500 });
 
-    expect(fazla).toMatchObject({ reconciled: false, differenceCash: 5 });
+    expect(fazla).toMatchObject({ reconciled: false, differenceCashCents: 500 });
   });
 
   it('sonuçlanmamış durak kapanışı ENGELLEMEZ, sayılır', async () => {
@@ -163,7 +163,7 @@ describe('günü kapat', () => {
     const { orderId } = await atTheDoor(1);
     await markUndelivered({ orderId, courierId, outcome: 'unreachable' });
 
-    const result = await closeCourierDay({ courierId, date: day, countedCash: 20 });
+    const result = await closeCourierDay({ courierId, date: day, countedCashCents: 2000 });
 
     // Kurye depoya döndüyse günü kapatabilmeli; ulaşılamayan sipariş yarına kalır.
     expect(result).toMatchObject({ ok: true, deliveredCount: 1, pendingCount: 1 });
@@ -171,24 +171,24 @@ describe('günü kapat', () => {
 
   it('kapanmış gün İKİNCİ kez kapatılamaz — kayıt ezilmez', async () => {
     await deliverAndCollect(2, 'cash');
-    const first = await closeCourierDay({ courierId, date: day, countedCash: 20 });
+    const first = await closeCourierDay({ courierId, date: day, countedCashCents: 2000 });
 
-    const second = await closeCourierDay({ courierId, date: day, countedCash: 999 });
+    const second = await closeCourierDay({ courierId, date: day, countedCashCents: 99900 });
 
     expect(second).toMatchObject({ ok: false, reason: 'already_closed', id: first.id });
     const draft = await openDayClose({ courierId, date: day });
-    expect(draft.closed?.countedCash).toBe(20); // ilk sayım yerinde
+    expect(draft.closed?.countedCashCents).toBe(2000); // ilk sayım yerinde
   });
 
   it('kapanış sonrası hareket düzeltilse bile BEKLENEN donmuş kalır', async () => {
     const orderId = await deliverAndCollect(3, 'cash'); // beklenen 30 €
-    await closeCourierDay({ courierId, date: day, countedCash: 30 });
+    await closeCourierDay({ courierId, date: day, countedCashCents: 3000 });
 
     // Ertesi gün biri hareketi düzeltiyor — o gün ne konuşulduğu değişmemeli.
     await db.from('money_movement').delete().eq('order_id', orderId);
 
     const draft = await openDayClose({ courierId, date: day });
-    expect(draft.closed?.expectedCash).toBe(30);
-    expect(draft.expected.cash).toBe(0); // canlı türetim değişti, kapanış kaydı değişmedi
+    expect(draft.closed?.expectedCashCents).toBe(3000);
+    expect(draft.expected.cashCents).toBe(0); // canlı türetim değişti, kapanış kaydı değişmedi
   });
 });

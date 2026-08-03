@@ -50,9 +50,9 @@ export async function openDayClose(input: { courierId: string; date?: string }):
     pending: stops.filter((stop) => stop.outcome === 'pending' || stop.outcome === 'unreachable'),
     returned: stops.filter((stop) => stop.outcome === 'refused'),
     expected: {
-      cash: collection?.expectedCash ?? 0,
-      card: collection?.expectedCard ?? 0,
-      cheque: collection?.expectedCheque ?? 0,
+      cashCents: collection?.expectedCashCents ?? 0,
+      cardCents: collection?.expectedCardCents ?? 0,
+      chequeCents: collection?.expectedChequeCents ?? 0,
     },
   };
 }
@@ -68,9 +68,10 @@ export async function openDayClose(input: { courierId: string; date?: string }):
 export function closeCourierDay(input: {
   courierId: string;
   date: string;
-  countedCash?: number;
-  countedCard?: number;
-  countedCheque?: number;
+  /** Kuryenin teslim ettiği tutarlar — **cent** (02.9). */
+  countedCashCents?: number;
+  countedCardCents?: number;
+  countedChequeCents?: number;
   /** Fark çıktığında kısa açıklama — fark gizlenmez, açıklanır (tasarım §3). */
   note?: string | null;
 }): Promise<CourierDayCloseResult> {
