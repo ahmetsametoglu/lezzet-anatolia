@@ -19,9 +19,8 @@ import { BaseDbService } from '../core/base.service';
 /**
  * Tedarikçi kartı (06.8) — müşteri kartının simetriği (DOMAIN §16).
  *
- * **Borç saklanmaz, türetilir:** Σ stok girişleri − Σ tedarikçiye ödemeler. Ödeme tarafı
- * `MoneyMovement` (modül 12) geldiğinde `debt()` o toplamı da düşecek; şimdilik giriş toplamı
- * döner ve eksik yarısı açıkça işaretlidir.
+ * **Borç saklanmaz, türetilir:** Σ stok girişleri − Σ tedarikçiye ödemeler (`debt()`, 12.3).
+ * İki yarım da hesaplanıyor; dönem daraltması ve cent dönüşümü orada.
  */
 export class SupplierService extends BaseDbService<Supplier, SupplierInsert, SupplierUpdate> {
   constructor(supabase: SupabaseClient) {

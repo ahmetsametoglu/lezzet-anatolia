@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
+import { mustDelete } from '../testing/cleanup';
 import { createTestWarehouse } from '../testing/warehouse';
 import { CategoryService } from './category.service';
 import { ProductService } from './product.service';
@@ -240,6 +241,29 @@ describe('eşik altı varyantlar (06.11 girdisi)', () => {
     await stocks.insert({ variantId, warehouseId, physicalQty: 10, expiryDate: dayOffset(200) });
     const above = await stocks.listBelowMinStock(warehouseId);
     expect(above.find((r) => r.variantId === variantId)).toBeUndefined();
+  });
+
+  it('DEPO İSTİSNASI varyantın varsayılanını ezer — eşik iki katmanlı (19.3)', async () => {
+    // Bu dal bugüne kadar testte HİÇ koşmamıştı: eşik istisnası tablosu boşken `.map` hiç
+    // çalışmıyor. O yüzden eksik bir projeksiyon (`warehouse_id` seçilmemişti) 846 birim testi ve
+    // tam paket yeşilken canlıda `/operations/procurement`'i tamamen çökertti — arıza kodun
+    // girdiği gün değil, o depoya ilk istisna yazıldığı gün doğdu. Satırı olan bir vaka şart.
+    await db.from('product_variant').update({ min_stock_qty: 2 }).eq('id', variantId);
+    await stocks.insert({ variantId, warehouseId, physicalQty: 4, expiryDate: dayOffset(200) });
+
+    // Varsayılan eşiğe göre 4 ≥ 2: listede olmamalı.
+    expect((await stocks.listBelowMinStock(warehouseId)).find((r) => r.variantId === variantId)).toBeUndefined();
+
+    // Bu depoda mal daha hızlı dönüyor: istisna 9. Aynı stok artık kritik.
+    await db.from('warehouse_variant_threshold').insert({ warehouse_id: warehouseId, variant_id: variantId, min_stock_qty: 9 });
+    try {
+      expect((await stocks.listBelowMinStock(warehouseId)).find((r) => r.variantId === variantId)).toMatchObject({
+        availableQty: 4,
+        minStockQty: 9, // varyantın 2'si değil, deponun 9'u
+      });
+    } finally {
+      await mustDelete(db, 'warehouse_variant_threshold', (q) => q.eq('warehouse_id', warehouseId).eq('variant_id', variantId));
+    }
   });
 });
 

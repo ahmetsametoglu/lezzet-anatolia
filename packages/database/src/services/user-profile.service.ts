@@ -5,6 +5,7 @@ import {
   UserProfileSchema,
   UserProfileUpdateSchema,
   DEFAULT_PAGE_SIZE,
+  STAFF_ROLES,
   type CustomerType,
   type KeysetCursor,
   type Page,
@@ -287,6 +288,26 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   /** Bir role sahip tüm profiller (personel listesi, kurye ataması) — dizi araması GIN indeksli. */
   async listByRole(role: UserRole): Promise<UserProfile[]> {
     const { data, error } = await this.supabase.from('user_profiles').select('*').contains('roles', [role]);
+    if (error) throw error;
+    return this.parseRows(data ?? []);
+  }
+
+  /**
+   * OPERASYON rolü taşıyan tüm profiller — Depolar (19.5) ve Ayarlar (09.16) ekranlarının kişi kümesi.
+   *
+   * `list()` müşteri kümesine kilitli, `listByRole` tek rol alıyor; çağıranlar bu yüzden dört tur
+   * atıp kimliğe göre tekilleştiriyordu (aynı kişi birden çok rol taşıyabilir — `admin` + `courier`
+   * sık). Tek turda doğrusu bu: **`overlaps` (`?|`) kesişim sorar** ve `contains` ile aynı GIN
+   * indeksinden yararlanır, yani dört tur bir tura inerken indeks kaybı yok.
+   *
+   * Tekilleştirme de kayboluyor: kesişim sorgusu satırı bir kez döndürür, `Map`'e gerek kalmaz.
+   */
+  async listStaff(): Promise<UserProfile[]> {
+    const { data, error } = await this.supabase
+      .from('user_profiles')
+      .select('*')
+      .overlaps('roles', [...STAFF_ROLES])
+      .order('name');
     if (error) throw error;
     return this.parseRows(data ?? []);
   }

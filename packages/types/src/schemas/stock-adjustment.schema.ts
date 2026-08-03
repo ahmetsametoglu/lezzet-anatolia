@@ -77,7 +77,7 @@ export type AdjustBatchResult = z.infer<typeof AdjustBatchResultSchema>;
  * İmha/fire geçmişi SATIRI (09.13) — kayıt + hangi partinin, hangi ürünün (gömülü `select`, N+1 yok).
  *
  * Kaydın kendisi yalnız `stockId` taşır; ekranda "hangi üründen ne kadar çöpe gitti" okunacaksa parti
- * ve ürün adı gerekir. Maliyet `unitCost`'tan gelir — o alan işlem anında KOPYALANMIŞTIR, yani parti
+ * ve ürün adı gerekir. Maliyet `unitCostCents`'ten gelir — o alan işlem anında KOPYALANMIŞTIR, yani parti
  * sonradan düzeltilse bile fire maliyeti kaymaz.
  */
 export const StockAdjustmentDetailSchema = StockAdjustmentSchema.extend({

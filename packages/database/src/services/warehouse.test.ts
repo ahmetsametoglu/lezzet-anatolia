@@ -7,6 +7,7 @@ import { StockService } from './stock.service';
 import { StockIntakeService } from './stock-intake.service';
 import { SupplierService } from './supplier.service';
 import { PurchaseOrderService } from './purchase-order.service';
+import { WarehouseService } from './warehouse.service';
 import { WarehouseTransferService } from './warehouse-transfer.service';
 import { createTestWarehouse, createTestWarehousePair } from '../testing/warehouse';
 import { purgeTestData } from '../testing/cleanup';
@@ -26,6 +27,7 @@ const db = serviceDb();
 const stocks = new StockService(db);
 const reservations = new ReservationService(db);
 const transfers = new WarehouseTransferService(db);
+const warehouses = new WarehouseService(db);
 const products = new ProductService(db);
 const categories = new CategoryService(db);
 const suppliers = new SupplierService(db);
@@ -280,6 +282,24 @@ describe('depo kaydı — kurallar veritabanında', () => {
       await db.from('warehouse').delete().eq('id', baskaUlke.id);
     } finally {
       await db.from('warehouse').delete().eq('id', ilk.id);
+    }
+  });
+
+  it('reorder TEK turda sıralar — yarı sıralı ara hâl yok (talep §5a)', async () => {
+    // Depo sırası her seçicide okunuyor (bağlam · süzgeç · transfer hedefi). Satır satır `update`
+    // atılırsa aradaki bir okuma iki depoyu aynı `sortOrder` ile görür; `reorderBy` tek turda yazar.
+    const a = await createTestWarehouse(db, { label: 'ORD1' });
+    const b = await createTestWarehouse(db, { label: 'ORD2' });
+    try {
+      await warehouses.reorder([b.id, a.id]);
+      const sirali = (await warehouses.list({ warehouseIds: [a.id, b.id] })).map((w) => w.id);
+      expect(sirali).toEqual([b.id, a.id]);
+
+      // Tersine çevir: sıra kalıcı bir alan, çağrının yan etkisi değil.
+      await warehouses.reorder([a.id, b.id]);
+      expect((await warehouses.list({ warehouseIds: [a.id, b.id] })).map((w) => w.id)).toEqual([a.id, b.id]);
+    } finally {
+      await purgeTestData(db, { warehouseIds: [a.id, b.id] });
     }
   });
 });

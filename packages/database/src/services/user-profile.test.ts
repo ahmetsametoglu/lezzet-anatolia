@@ -184,6 +184,26 @@ describe('liste: sunucu-taraflı arama + daraltma (09.9)', () => {
     expect(page.rows.every((r) => r.roles.includes('customer'))).toBe(true);
   });
 
+  it('listStaff: ÇOK ROLLÜ personel tek kez döner — dört tur bir tura indi (talep §5b)', async () => {
+    // Ekranlar bunu `STAFF_ROLES.map(listByRole)` ile kuruyordu ve kendi tekilleştirmesini
+    // yazıyordu; aynı kişi `admin` + `courier` taşıyabildiği için o adım şarttı. `overlaps` kesişim
+    // sorduğu için satır zaten bir kez dönüyor — tekilleştirmenin kendisi ortadan kalkıyor.
+    const depo = await createTestWarehouse(db, { label: 'STF' });
+    createdWarehouseIds.push(depo.id);
+    const cokRollu = await profiles.insert({
+      name: `Çok rollü ${stamp}`,
+      roles: ['admin', 'courier'],
+      warehouseIds: [depo.id],
+    });
+    createdIds.push(cokRollu.id);
+
+    const personel = await profiles.listStaff();
+    // Kendi satırımı sayıyorum: paylaşılan DB'de küresel sayıya bakmak başka ajanın verisine bağımlı olur (§4b).
+    expect(personel.filter((p) => p.id === cokRollu.id)).toHaveLength(1);
+    // Müşteri personel listesine karışmaz — ayrım rolde, tabloda değil.
+    expect(personel.map((p) => p.id)).not.toContain(customerId);
+  });
+
   it('sayaçlar TÜM müşteri kümesine ait, süzgeçli listeye değil', async () => {
     // Çip "3 taslak" derken kendi süzgecini saymamalı: "Taslak" çipine basan operatör sayının
     // değişmesini bekler, değişmeyince ekrana güvenmez.

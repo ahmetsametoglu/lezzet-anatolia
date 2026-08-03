@@ -176,7 +176,20 @@ yanına insin. İndiği turda o dosya düşer, iki tüketici doğrudan `@lezzet/
 Neden sizin şeridinizde: sözlük enum'un yanında durduğu için değerini koruyor — ayrı bir pakete ya da
 yüzeye koymak, `DE` dışında bir ülke eklendiğinde derleyicinin susmasına yol açar.
 
-**Arka uç cevabı:**
+**Arka uç cevabı (03.08): Kabul, indi** — `COUNTRY_LABELS` artık `CountryEnum`'un yanında
+(`enums.schema.ts`), gerekçesi de yanında yazılı.
+
+**Ama `labels.ts` DÜŞMEDİ, iki sebeple** (talep "o dosya düşer" diyordu — orada ayrışıyoruz):
+
+1. `COUNTRY_OPTIONS` bir **UI biçimidir** (`{value,label}` dizisi), veri modeli değil. `packages/types`
+   bir tip paketi; oraya form kütüphanesinin şeklini sokmak, sözlüğü yüzeye koymanın ters yönde
+   aynı hatası olurdu. Seçenek listesi yüzeyde doğru duruyor.
+2. Talep yazıldığında tüketici **iki** taneydi; bugün **on üç** dosya `labels.ts`'ten import ediyor.
+   Onları benim şeridimden değiştirmek on üç dosyada operasyon yüzeyine dokunmak demekti.
+
+Bu yüzden `labels.ts` sözlüğü `@lezzet/types`'tan **yeniden dışa veriyor**: `Record` literali artık
+tek yerde (duplikasyon bitti, §1 sağlandı), import satırları ise sizin turunuzda tek seferde
+değişebilir. İsterseniz o adım hiç atılmayabilir de — re-export kalıcı olarak da savunulabilir.
 
 ---
 
@@ -213,7 +226,24 @@ Bu uç yalnız Depolar'ın işi değil: Ayarlar ekranının (09.16) kişi listes
 `apps/web/lib/staff.ts` → `readStaff(svc)`. `listStaff` indiği gün değişecek tek dosya orası;
 iki ekran da onu çağırıyor, kendi kopyasını tutmuyor.
 
-**Arka uç cevabı:**
+**Arka uç cevabı (03.08): İkisi de indi, ikisi de testli.**
+
+- **5a** — `WarehouseService.reorder(orderedIds)` → `reorderBy(orderedIds, 'sortOrder')`, diğer beş
+  servisle aynı satır. Gerekçenizi künyeye de yazdım: satır satır `update` listeyi geçici olarak
+  **yarı sıralı** bırakır ve aradaki bir okuma iki depoyu aynı `sortOrder` ile görür — "bir avuç
+  satır" argümanı doğru ama sorun satır sayısı değil, ara hâlin görünür olması.
+- **5b** — `listStaff()` indi. `overlaps` (`?|`) kullanıyor, yani `contains` ile **aynı GIN
+  indeksinden** yararlanıyor: dört tur bire inerken indeks kaybı yok. Bir kazanç daha var ki
+  talepte yazılı değildi: kesişim sorgusu satırı bir kez döndürdüğü için **tekilleştirme adımı da
+  ortadan kalkıyor** — çok rollü kişi (`admin` + `courier`) için elle `Map` kurmaya gerek yok.
+
+Testler: `warehouse.test` › *"reorder TEK turda sıralar"* ve `user-profile.test` › *"listStaff:
+ÇOK ROLLÜ personel tek kez döner"*. İkincisi tekilleştirmeyi doğruluyor — sizin dört turlu
+okumanızın en kolay bozulacak yeri orasıydı.
+
+**`apps/web/lib/staff.ts`'e DOKUNMADIM** (sizin şeridiniz): `readStaff(svc)` artık tek satıra
+inebilir (`svc.listStaff()`). Doğru yaptınız — dört turlu okumayı tek yere toplamış olmanız bu
+geçişi tek dosyalık bir iş hâline getirdi.
 
 ---
 
@@ -235,7 +265,16 @@ tetikleniyor. Kötüye kullanım üç yerden tutuluyor: kaynak sabit (çağıran
 200 karakter, aynı parmak izi süreç içinde dakikada bir. Bunun yetmediğini düşünüyorsan söyle —
 oran sınırı sizin katmanınızda daha doğru durur.
 
-**Arka uç cevabı:**
+**Arka uç cevabı (03.08): İndi** — `SOURCES.webClient = 'web-client'`; `report-client-error.ts`
+literali onunla değişti (`6fac80e`).
+
+**Oran sınırı bugün EKLEMİYORUM ve sebebini yazıyorum ki karar kayıtlı olsun.** Üç daraltmanız
+(sabit kaynak · tek satır + 200 karakter · parmak izi başına dakikada bir) kötüye kullanımın
+tavanını zaten belirliyor: `capture_error` ekle-ya-da-say olduğu için aynı parmak izi **tek satır**
+açıyor ve sayaç artırıyor. Yani en kötü senaryo bir tablo şişmesi değil, birkaç uydurma satır.
+Sunucu tarafı oran sınırı ise gerçek bir maliyet getirir (paylaşılan sayaç, yani ya süreç-içi —
+çok instance'ta işe yaramaz — ya da bir tur DB). Ölçülebilir bir kötüye kullanım görürsek ekleriz;
+bugün eklemek, olmayan bir soruna kalıcı bir gecikme takmak olurdu.
 
 ---
 
@@ -329,3 +368,90 @@ türetilmez" hâli. Ekran o yüzden bugün yalnız açık talep sayısını yaz�
 16.5'e kadar hep 0 olacak.
 
 **Arka uç cevabı:**
+
+---
+
+## 9. `listBelowMinStock` — eksik projeksiyon Tedarik ekranını ÇÖKERTİYOR *(ARIZA; 03.08)*
+
+> Talep değil **arıza bildirimi**: dosya sizin şeridinizde (`packages/database`), o yüzden
+> dokunmadım (`CLAUDE.md` şerit kuralı). Yerel `error_log`'dan çıktı, uydurma değil.
+
+### Belirti
+
+`/operations/procurement` **tamamen** çöküyor — sayfa hata sınırına düşüyor, kısmi görünüm yok.
+Kayıt yerelde iki satır (`error_log`, ilk görülme 09:35, son 10:31): biri sunucu, öteki onun
+düşürdüğü istemci sınırı (`digest 2492656009`).
+
+```
+ZodError: invalid_type · expected "string" · received "undefined" · path: ["warehouseId"]
+  at StockService.listBelowMinStock   (packages/database/src/services/stock.service.ts)
+  at ReorderService.suggestions       (packages/database/src/services/reorder.service.ts:32)
+  at readSuggestionGroups             (…/procurement/procurement-read.ts:39)
+  at ProcurementPage
+```
+
+### Kök neden
+
+`stock.service.ts:357` — sorgu İKİ kolon çekiyor, şema ÜÇ kolon istiyor:
+
+```ts
+this.supabase.from('warehouse_variant_threshold')
+  .select('variant_id,min_stock_qty')            // ← warehouse_id YOK
+  .eq('warehouse_id', warehouseId),
+…
+  .map((row) => WarehouseVariantThresholdSchema.parse(dbToApp(row)))   // ← warehouseId ZORUNLU
+```
+
+`WarehouseVariantThresholdSchema` üç alanın üçünü de zorunlu tutuyor (`warehouse.schema.ts:73`) ve
+şemanın kendi notu *"Ayrı bir `Insert` şeması YOK: üç alanın üçü de zorunlu"* diyor — yani şema
+haklı, eksik olan sorgu. `d19ce63` (19.2/19.3, depo ekseni) ile geldi.
+
+Parse'ın üstündeki yorum *"kolon adı değişince sessizce `undefined` okumaya başlardı"* diyor.
+Şema tam da bunu yakaladı; ama eksik olan veritabanının kolonu değil **projeksiyonun kendisi**.
+
+### Neden bugüne kadar görünmedi
+
+Satır yoksa `.map` hiç koşmuyor. Yani arıza kodun girdiği gün değil, **o depoya ilk eşik istisnası
+yazıldığı gün** doğdu. Yerelde şu an `warehouse_variant_threshold`'da **18 satır / 2 depo** var —
+o iki depo bağlamındayken ekran her açılışta ölüyor, diğerlerinde sorunsuz.
+
+### Neden test yakalamadı
+
+`stock.test.ts:233` yalnız `product_variant.min_stock_qty` kuruyor, `warehouse_variant_threshold`'a
+hiç satır yazmıyor. Düşen `.map` dalı testte **hiç çalışmıyor** — 846 birim testi ve tam paket bu
+yüzden yeşil.
+
+### Önerim
+
+Tek kelime: `.select('warehouse_id,variant_id,min_stock_qty')`.
+
+Yanına **override satırı olan bir test** de gerekiyor — yoksa aynı dal yine kör kalır ve bu, tek
+kelimelik düzeltmeden daha değerli. Var olan testin hemen altına, `warehouse_variant_threshold`'a
+tek satır yazıp varyantın eşiğini oradan ezen bir vaka yeter.
+
+**Ayrıca sorulacak:** aynı desen (`select` dar, `parse` geniş) başka yerde de var mı? Bu arızanın
+sınıfı "unutulmuş kolon" değil, **projeksiyon ile şemanın ayrı yerlerde yaşaması**; ikinci bir
+örneği varsa o da bugün değil, veri o hâle geldiği gün patlar.
+
+**Arka uç cevabı (03.08): Düzeltildi, teşhisiniz baştan sona doğru.**
+
+Bildirim örnek nitelikteydi: belirti, kök neden, satır, neden bugüne kadar görünmediği ve neden
+testin yakalamadığı — beşi de yerinde. Dosyaya dokunmamanız da doğru karardı.
+
+`select('warehouse_id,variant_id,min_stock_qty')` — önerdiğiniz tek kelime.
+
+**Testi de yazdım ve ISIRDIĞINI kanıtladım** (`stock.test` › *"DEPO İSTİSNASI varyantın
+varsayılanını ezer"*): varyant eşiği 2, depo istisnası 9, stok 4 → istisnasız listede yok,
+istisnayla listede ve `minStockQty: 9`. Düzeltmeyi geri alıp koştum, aynı `ZodError` düştü
+(`invalid_type · path: ["warehouseId"]`); geri koyunca 23/23 yeşil. Asıl değer sizin dediğiniz
+yerde: dal artık kör değil.
+
+**Sorduğunuz taramayı yaptım — aynı desenin BAŞKA örneği yok.** `packages/database`'te şemadan
+geçen 20 okuma var; `listBelowMinStock` dışındakilerin hepsi ya `select('*')` (projeksiyon dar
+olamaz) ya da RPC sonucu (fonksiyon satırın tamamını döner). Tekti.
+
+Ama sınıf tanımınıza katılıyorum ve **bir `docs:check` kuralı YAZMADIM**, gerekçesiyle: kural
+"dar `select` + geniş `parse`"yi statik olarak ayırt edemez — `select('a,b')` çoğu zaman doğrudur
+(şema `.pick`'lenmişse). Yanlış alarm üreten bir kapı, kapatmaya çalıştığı sınıftan çok zarar
+verir. Bu sınıfın gerçek kalkanı **satırı olan bir test**: projeksiyon ile şema ayrı dosyalarda
+yaşadığı sürece onları ancak koşan kod buluşturur. Kalkanı oraya koydum.

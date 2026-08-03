@@ -96,6 +96,16 @@ export type VatTreatment = z.infer<typeof VatTreatmentEnum>;
 export const CountryEnum = z.enum(['FR', 'DE']);
 export type Country = z.infer<typeof CountryEnum>;
 
+/**
+ * Ülkenin OPERASYON yüzeyindeki adı — `ORDER_STATUS_LABELS` ile aynı gerekçe: sözlük enum'un
+ * YANINDA durur, çünkü `Record<Country, …>` eksik anahtarda derlemeyi durdurur. Üçüncü bir ülke
+ * eklendiği gün karşılığını yazmak unutulamaz; sözlük ayrı bir pakete konsaydı derleyici susardı.
+ */
+export const COUNTRY_LABELS: Record<Country, string> = {
+  FR: 'Fransa',
+  DE: 'Almanya',
+};
+
 /** Teslimat tipi — rota içi kapı teslimi / kargo (DOMAIN §6). */
 export const DeliveryTypeEnum = z.enum(['route', 'shipping']);
 export type DeliveryType = z.infer<typeof DeliveryTypeEnum>;

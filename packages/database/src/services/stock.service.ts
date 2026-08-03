@@ -354,7 +354,11 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   async listBelowMinStock(warehouseId: string): Promise<Array<AvailableStock & { minStockQty: number }>> {
     const [{ data: variantRows, error: variantError }, { data: overrideRows, error: overrideError }] = await Promise.all([
       this.supabase.from('product_variant').select('id,min_stock_qty').eq('is_active', true),
-      this.supabase.from('warehouse_variant_threshold').select('variant_id,min_stock_qty').eq('warehouse_id', warehouseId),
+      // Projeksiyon ŞEMANIN İSTEDİĞİ ÜÇ KOLONU da çeker. `warehouse_id` süzgeçte var diye
+      // seçilmemişti; şema onu zorunlu tuttuğu için `parse` `undefined` görüp patlıyordu ve
+      // `/operations/procurement` tamamen çöküyordu. Arıza kodun girdiği gün değil, o depoya
+      // İLK eşik istisnası yazıldığı gün doğdu — satır yoksa `.map` hiç koşmuyor.
+      this.supabase.from('warehouse_variant_threshold').select('warehouse_id,variant_id,min_stock_qty').eq('warehouse_id', warehouseId),
     ]);
     if (variantError) throw variantError;
     if (overrideError) throw overrideError;

@@ -4,7 +4,8 @@ import type { BankAmountMode, BankColumnMapping } from '@lezzet/types';
  * Sütun tanıma (12.4) — "hangi sütun hangi alan?" sorusunun cevabı.
  *
  * **Bu bir PORT'tur.** Bugün sezgisel bir uygulama dolduruyor; yarın yapay zekâ aynı imzayı
- * dolduracak (`packages/ai` henüz yok). Kural şu: girdi dosyanın küçük bir örneğidir (başlıklar +
+ * dolduracak (`packages/ai` bugün çeviri taşıyor — sütun-eşleme ucu oraya eklenir, İKİNCİ bir AI
+ * paketi açılmaz). Kural şu: girdi dosyanın küçük bir örneğidir (başlıklar +
  * birkaç satır), çıktı eşlemedir. Çağıran taraf hangisinin cevapladığını BİLMEZ — o yüzden gerçek
  * çağrı geldiğinde değişen tek şey bu dosyadaki uygulamadır.
  *

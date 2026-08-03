@@ -68,4 +68,15 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
     const rows = await this.getAll({ isActive: true });
     return [...new Set(rows.map((w) => w.countryCode))];
   }
+
+  /**
+   * Sürükle-bırak sıralamasının TEK turu (`reorderBy`, `category`/`collection`/`bundle` ile aynı).
+   *
+   * Depo sırası önemsiz bir tercih değil: sistemdeki **bütün** depo seçicileri bu sırayı okur
+   * (bağlam seçicisi, tablo süzgeci, transfer hedefi). Satır satır `update` atmak listeyi geçici
+   * olarak yarı sıralı bırakır — aradaki bir okuma iki depoyu aynı sırada görür.
+   */
+  async reorder(orderedIds: string[]): Promise<void> {
+    return this.reorderBy(orderedIds, 'sortOrder');
+  }
 }
