@@ -1,4 +1,18 @@
+import type { Locale } from '@lezzet/i18n';
 import { COUNTRY_LABELS, CountryEnum } from '@lezzet/types';
+
+/**
+ * OPERASYON YÜZEYİNİN DİLİ — çok dilli katalog metni personele bu dilde çözülür.
+ *
+ * Yüzey Türkçedir (CLAUDE.md §2) ve ekranların çoğu bunu `resolveLocalizedText(name)` ile
+ * parametresiz alıyor: kanonik yedek zinciri zaten TR → FR → DE. Sabit, bir okuma kapısı dili
+ * ZORUNLU parametre olarak istediğinde o parametresiz çağrının açıkça yazılmış hâlidir.
+ *
+ * **`DEFAULT_LOCALE` DEĞİL.** O sabit `'fr'` ve müşteri yüzeyinin varsayılanıdır. Adı yüzey
+ * söylemediği için doğru duruyor ve bir kez öyle kullanıldı: Talepler ekranı bir tur boyunca
+ * ürün adlarını Fransızca gösterdi, Fiyatlar ve Stok aynı ürünü Türkçe gösterirken (03.08).
+ */
+export const OPERATIONS_LOCALE: Locale = 'tr';
 
 /**
  * Operasyon yüzeyinin ülke sözlüğü — **artık kopya değil, türev** (talep §4, 03.08).

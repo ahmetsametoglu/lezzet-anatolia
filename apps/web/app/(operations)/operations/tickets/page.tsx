@@ -1,5 +1,5 @@
 import { DEFAULT_PAGE_SIZE } from '@lezzet/types';
-import { DEFAULT_LOCALE } from '@lezzet/i18n';
+import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { detectDevice } from '@/lib/device';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
@@ -59,9 +59,14 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
    */
   const selectedId = urlState.t || (device === 'mobile' ? '' : (queue.rows[0]?.id ?? ''));
 
-  // Ürün adları operasyon yüzeyinin geri kalanıyla AYNI dilde çözülür (`DEFAULT_LOCALE`): kalem
-  // adları katalogda çok dilli duruyor ve ekran hangisini göstereceğini kendi uydurmamalı.
-  const detail = selectedId ? await getStaffTicketDetail(DEFAULT_LOCALE, selectedId) : null;
+  // Ürün adları TÜRKÇE çözülür — operasyon yüzeyinin dili (CLAUDE.md §2) ve öteki ekranların da
+  // yaptığı bu (Fiyatlar, Stok: `resolveLocalizedText` kanonik sırayla, TR önce).
+  //
+  // Burada bir tur `DEFAULT_LOCALE` yazılıydı ve künyesi "yüzeyin geri kalanıyla aynı dil" diyordu;
+  // ikisi de yanlıştı — o sabit `'fr'`, yani MÜŞTERİ yüzeyinin varsayılanı. Sonuç: aynı ürün
+  // Talepler'de Fransızca, Fiyatlar'da Türkçe görünüyordu. Sabitin adı "varsayılan" olduğu için
+  // doğru duruyordu; hangi yüzeyin varsayılanı olduğu sorulmamıştı (03.08).
+  const detail = selectedId ? await getStaffTicketDetail(OPERATIONS_LOCALE, selectedId) : null;
 
   // Tek an, tüm yaşlar: kuyruk satırları ve detay künyesi aynı `now`'a göre hesaplanır — ikisi ayrı
   // okunsaydı aynı damga listede ve detayda farklı yaş gösterebilirdi.
