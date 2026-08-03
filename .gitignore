@@ -10,3 +10,10 @@ dist/
 temp/
 .DS_Store
 *.log
+
+# Ortak test koşusunun sonucu (tek uçuş — scripts/shared-test-run.mjs); her koşuda yeniden doğar
+.test-results/
+
+# Şeritler arası talepler: karşılanınca silinir, repoya YALNIZ kullanıcı isterse girer (git add -f)
+docs/talep/*
+!docs/talep/README.md

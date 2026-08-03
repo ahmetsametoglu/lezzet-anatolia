@@ -64,7 +64,7 @@
 > düşüş yavaş koşudan pahalıdır — olmayan bir hatanın teşhisine harcanan zaman geri gelmez.
 
 - **Çalışırken `pnpm test:unit` + dokunduğun dosyalar.** Birim projesi DB'siz ve paraleldir: 568 test ~1,3 sn. Kapsamlı koşu (`pnpm vitest run <yol>`) da serbesttir.
-- **Tam paket YALNIZ commit öncesi, ve `pnpm test` ile** — o script kilitlidir (`scripts/with-test-lock.mjs`), ajanlar çakışmak yerine sıraya girer. Çıplak `vitest run` ile tam paket koşma; kilidi atlar.
+- **Tam paket YALNIZ commit öncesi, ve `pnpm test` ile** — koşucu **TEK UÇUŞLUDUR** (`scripts/shared-test-run.mjs`, kullanıcı kararı 03.08): koşu sürerken tetikleyen YENİ koşu başlatmaz, sürene katılır ve aynı sonucu okur. Sonuç tek yerden: `.test-results/latest.json` + `run.log` (`pnpm test:status` koşturmadan basar); her koşu öncekini siler. Katıldıysan `startedAt`e bak — koşu senin değişikliğinden ÖNCE başladıysa sonuç seni içermez, bir kez daha tetikle. Çıplak `vitest run` ile tam paket koşma; kilidi atlar.
 - **Testler küresel tekil satırı kirletmez.** Damgayla (`Date.now()`) ayrılmış satırlar güvenlidir; `settings` gibi TÜM suite'in okuduğu satırlar değil. Değiştirmek şartsa **önce oku, sonra geri koy** (`afterAll`) — "boşa çek" de bir varsayımdır ve bir gün yanlış olur. Örnek desen: `lib/feedback/invite.test.ts` (`overrideSetting` + snapshot).
 - **DB'ye vuran test entegrasyon köküne yazılır** (`apps/web/lib`, `packages/database`, `apps/backend`). Birim projesinde `.env` yüklenmez ve DB env'i silinir; yanlış yere düşen test sessizce değil, ilk satırında "Supabase env eksik" diye patlar.
 - **Teardown'da elle silme YOK, `purgeTestData` + `mustDelete` var** (`@lezzet/database/testing`).
@@ -75,6 +75,7 @@
   `mustDelete(db, tablo, (q) => q.eq(...))` hatayı fırlatır; kirlilik gürültüye döner. Purge'ün
   bilmediği bir hedef gerekiyorsa **purge'e ekle**, dosyaya elle silme yazma. → `02.12`
 - **Küresel sayıya bakan test yazma** (`toplam N rezervasyon süpürüldü` gibi): başka bir ajanın verisi o sayıyı oynatır. Kendi kurduğun satırları say.
+- **Şeritler arası talep `docs/talep/`** (kural + şablon README'de; kullanıcı kararı 03.08): dosya başına tek talep, hedef şerit **Cevap**'a yazar, talebi AÇAN karşılanınca dosyayı SİLER. Klasör repoya gitmez (yalnız kullanıcı `git add -f` ile gönderir); `docs/build`'e yeni talep dosyası AÇILMAZ.
 
 ## 5. Doküman senkronu (her ajan için bağlayıcı)
 - **Durumun tek sahibi `docs/build/NN-*.md` görev satırıdır.** İş ilerlediyse aynı oturumda o satır `[x]`/`[~]` olur + altına **Durum** notu yazılır. `BACKLOG` kapsam tutar, ilerleme tutmaz; `build/README` özet tablosu **türetilir** (`pnpm docs:sync`), elle yazılmaz.
