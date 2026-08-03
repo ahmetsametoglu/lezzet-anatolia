@@ -1,5 +1,6 @@
 'use client';
 
+import { BottomSheet } from '@/components/operation/ui/bottom-sheet';
 import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
 import { PageHeader } from '@/components/operation/ui/page-header';
@@ -36,7 +37,7 @@ export function TicketsMobile({
   onNewTicket,
 }: TicketsViewProps) {
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       {/* Telefonda iki sayı yan yana sığıyor; "kuyruk son mesaja göre sıralı" cümlesi düşüyor —
           dar ekranda satırı ikiye bölerdi ve sıralama zaten listede görünüyor. */}
       <PageHeader compact title="Talepler" subtitle={`${data.counts.open} açık · ${data.counts.in_progress} işlemde`}>
@@ -47,7 +48,7 @@ export function TicketsMobile({
 
       {/* Çip şeridi yatay kaydırılır: dört çip dar ekranda alt alta düşerse kuyruk iki satır aşağı
           iner ve ilk bakışta görünen talep sayısı düşer. */}
-      <div className="flex gap-2 overflow-x-auto border-b border-ops-line-soft px-4 py-2.5">
+      <div className="flex gap-2 overflow-x-auto border-b border-ops-gray-100 px-4 py-2.5">
         {TICKET_FILTERS.map((key) => (
           <Chip key={key} active={urlState.f === key} onClick={() => onFilter(key)} className="flex-none">
             {TICKET_FILTER_LABELS[key]}
@@ -77,36 +78,21 @@ export function TicketsMobile({
       </div>
 
       {data.detail ? (
-        <div className="fixed inset-0 z-40 flex flex-col justify-end bg-ops-scrim" onClick={onCloseDetail}>
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[92vh] min-h-0 flex-col overflow-hidden rounded-t-ops-dialog border-t border-ops-line bg-ops-subtle"
-          >
-            {/* Tutamak: tabakanın kapanabilir olduğunu söyleyen tek işaret. Kapatma düğmesi ayrıca
-                var — tutamak bir ipucudur, tek çıkış yolu olamaz. */}
-            <button
-              type="button"
-              onClick={onCloseDetail}
-              aria-label="Talebi kapat"
-              className="flex cursor-pointer justify-center py-2.5"
-            >
-              <span className="h-1.5 w-10 rounded-full bg-ops-line-strong" />
-            </button>
-            <div className="flex min-h-0 flex-1 flex-col">
-              <TicketDetail
-                key={data.detail.ticket.id}
-                detail={data.detail}
-                busy={busy}
-                error={error}
-                compact
-                onStatus={onStatus}
-                onReply={onReply}
-                onTakeOver={onTakeOver}
-                onTriggerReturn={onTriggerReturn}
-              />
-            </div>
+        <BottomSheet label="Talep detayı" scrollable onClose={onCloseDetail}>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <TicketDetail
+              key={data.detail.ticket.id}
+              detail={data.detail}
+              busy={busy}
+              error={error}
+              compact
+              onStatus={onStatus}
+              onReply={onReply}
+              onTakeOver={onTakeOver}
+              onTriggerReturn={onTriggerReturn}
+            />
           </div>
-        </div>
+        </BottomSheet>
       ) : null}
     </div>
   );

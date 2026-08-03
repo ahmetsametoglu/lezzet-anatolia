@@ -8,8 +8,10 @@ import { Button } from '@/components/operation/ui/button';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { Textarea } from '@/components/operation/form/input';
+import { MultiToggle, type MultiToggleOption } from '@/components/operation/form/multi-toggle';
+import { CONTROL_H } from '@/components/operation/ui/control';
 import { CameraIcon, SearchOffIcon, WhatsAppIcon } from '@/components/operation/ui/icons';
-import { agoLabel, money, shortDateTime } from '@/components/operation/ui/format';
+import { agoLabel, agoShort, money, shortDateTime } from '@/components/operation/ui/format';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { TicketMessageView } from '@/lib/ticket/ticket-types';
 // Başka ekranların URL SÖZLEŞMESİ (STACK §7 istisnası): adres elle kurulmaz, sahibinden alınır.
@@ -63,6 +65,7 @@ const EDGE_CLASS: Record<OpsTone, string> = {
   red: 'border-l-ops-red',
   blue: 'border-l-ops-blue',
   slate: 'border-l-ops-slate',
+  violet: 'border-l-ops-violet',
 };
 
 export function QueueRow({ row, active, onSelect }: QueueRowProps) {
@@ -78,11 +81,17 @@ export function QueueRow({ row, active, onSelect }: QueueRowProps) {
       ].join(' ')}
     >
       <span className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 truncate font-ops-body text-ops-sm font-semibold text-ops-ink">{row.customerName}</span>
+        {/* Çizim 13px → merdivende `base` (künye: `base ← 13 · 13,5 · 14`). Satırın ADI en büyük
+            öğesi olmalı. Bir tur boyunca burası elle `lead`e çekilmişti — okunmuyordu diye; ama
+            doğru çözüm ekranı değil ÖLÇEĞİ büyütmekti (globals §0.0, 03.08 ikinci kalibrasyon),
+            yoksa bu ekran ötekilerden bir kademe büyük kalırdı. */}
+        <span className="min-w-0 flex-1 truncate font-ops-body text-ops-base font-semibold text-ops-ink">{row.customerName}</span>
         <Badge tone={tone}>{TICKET_TYPE_LABELS[row.type]}</Badge>
       </span>
 
-      <span className="truncate font-ops-body text-ops-xs text-ops-muted">{row.preview || 'Mesaj yok'}</span>
+      {/* Önizleme `body` (#6a7065), `muted` DEĞİL: çizimin değeri bu ve kuyruğun asıl okunan
+          satırı burası — bir kademe soluk token taramayı zorlaştırıyordu. */}
+      <span className="truncate font-ops-body text-ops-xs text-ops-body">{row.preview || 'Mesaj yok'}</span>
 
       <span className="flex flex-wrap items-center gap-1.5">
         <Badge tone={TICKET_STATUS_TONE[row.status]}>{TICKET_STATUS_LABELS[row.status]}</Badge>
@@ -91,14 +100,19 @@ export function QueueRow({ row, active, onSelect }: QueueRowProps) {
             Cevap bekliyor
           </Badge>
         ) : null}
-        {row.handledBy === 'ai' ? <Badge tone="slate">AI yürütüyor</Badge> : null}
+        {row.handledBy === 'ai' ? <Badge tone="violet">AI yürütüyor</Badge> : null}
+        {/* Fotoğraf işareti YALNIZ İKON — sipariş numarası buradan kalktı (03.08). İkisi birlikte
+            rozet şeridini taşırıp yaşı alt satıra atıyordu; sipariş bağı zaten detayda kartıyla
+            duruyor ve kuyrukta okunması gereken şey "kim, ne tipte, ne durumda, ne kadar bekledi". */}
         {row.hasAttachment ? (
           <span className="text-ops-faint" title="Fotoğraf var">
             <CameraIcon size={13} />
           </span>
         ) : null}
-        {row.orderReferenceNo ? <span className="font-ops-mono text-ops-micro text-ops-faint">{row.orderReferenceNo}</span> : null}
-        <span className="ml-auto flex-none font-ops-mono text-ops-micro text-ops-faint">{agoLabel(row.ageMinutes)}</span>
+        {/* Yaş KISA biçimde (`agoShort`): "önce" eki bu sütunda bilgi taşımıyor ama genişlik yiyordu
+            ve rozetlerin yanına sığmayıp satırı ikiye bölüyordu — kuyruk çizimin iki katı yükseklikte
+            görünüyordu. Tarama yüzeyinde satır sayısı bilginin kendisi. */}
+        <span className="ml-auto flex-none font-ops-mono text-ops-micro text-ops-faint">{agoShort(row.ageMinutes)}</span>
       </span>
     </button>
   );
@@ -149,7 +163,10 @@ export function TicketDetail({ detail, busy, error, compact, onStatus, onReply, 
                 → ad): aynı adlı iki müşteri varsa ad araması ikisini birden getirirdi. */}
             <Link
               href={customersUrl({ q: customer.email ?? customer.phone ?? customer.name, type: 'all', scope: 'all' })}
-              className="min-w-0 truncate font-ops-display text-ops-section font-semibold text-ops-ink hover:text-ops-olive"
+              // Çizim 15px → merdivende `lead` (künye: `lead ← 15 · 16`). `section` (19px) İKİ
+              // kademe büyüktü: detay panosunun künyesi bir kart adıdır, sayfa başlığı değil —
+              // `PageHeader`'daki "Talepler" ile aynı ağırlıkta görünmemeli.
+              className="min-w-0 truncate font-ops-display text-ops-lead font-semibold text-ops-ink hover:text-ops-olive"
             >
               {customer.name}
             </Link>
@@ -181,7 +198,14 @@ export function TicketDetail({ detail, busy, error, compact, onStatus, onReply, 
           ) : null}
         </div>
 
-        <StatusSegments status={ticket.status} allowed={detail.allowedTransitions} busy={busy} onStatus={onStatus} />
+        <MultiToggle
+          size="sm"
+          label="Talep durumu"
+          className="flex-none"
+          value={ticket.status}
+          options={statusOptions(ticket.status, detail.allowedTransitions, busy)}
+          onChange={onStatus}
+        />
       </div>
 
       <div className={`flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto ${compact ? 'px-4 py-3' : 'px-5 py-4'}`}>
@@ -190,7 +214,9 @@ export function TicketDetail({ detail, busy, error, compact, onStatus, onReply, 
         {first ? (
           <section className="flex flex-col gap-2">
             <SectionLabel>Müşterinin anlatımı</SectionLabel>
-            <div className="rounded-ops-card border border-ops-line bg-ops-white px-3.5 py-3 font-ops-body text-ops-sm leading-relaxed text-ops-body">
+            {/* Anlatım metni `strong` (#3a3f37) — çizimin değeri. Şikâyetin kendisi bu kutuda ve
+                ekranın en dikkatli okunan yeri; balon metniyle aynı kademede olmalı. */}
+            <div className="rounded-ops-card border border-ops-line bg-ops-white px-3.5 py-3 font-ops-body text-ops-base leading-relaxed text-ops-strong">
               {first.body}
             </div>
             <Attachments urls={first.attachmentUrls} compact={compact} />
@@ -213,11 +239,13 @@ export function TicketDetail({ detail, busy, error, compact, onStatus, onReply, 
             kendiliğinden görünür. Çizili olduğu için de yazıldı: sonradan eklenen bir uyarı, AI'ın
             ilk çalıştığı gün eksik kalırdı. */}
         {ticket.handledBy === 'ai' ? (
-          <div className="flex items-center gap-2.5 rounded-ops-card border border-ops-slate-line bg-ops-slate-bg px-3 py-2.5">
-            <span className="flex-1 font-ops-body text-ops-xs leading-[1.6] text-ops-slate">
+          <div className="flex items-center gap-2.5 rounded-ops-card border border-ops-violet-line bg-ops-violet-bg px-3 py-2.5">
+            <span className="flex-1 font-ops-body text-ops-xs leading-[1.6] text-ops-violet">
               Bu talebi şu an AI ajanı yürütüyor. Devralırsanız AI susturulur, sonraki cevaplar sizden gider.
             </span>
-            <Button size="sm" variant="secondary" onClick={onTakeOver} disabled={busy}>
+            {/* Çizimde DOLU mor: bu düğme kararın kendisi (AI susar, geri dönüşü yok), ikincil bir
+                seçenek değil. Çerçeveli `secondary` onu bir "isterseniz" gibi gösteriyordu. */}
+            <Button size="sm" variant="violet" onClick={onTakeOver} disabled={busy}>
               Devral
             </Button>
           </div>
@@ -229,27 +257,20 @@ export function TicketDetail({ detail, busy, error, compact, onStatus, onReply, 
           </p>
         ) : null}
 
-        <ReplyComposer busy={busy} compact={compact} onReply={onReply} />
+        {/* Kapalı düğmenin SEBEBİ yazılır, gizlenmez — ama SATIRIN ÜSTÜNDE: çizim üç kontrolü tek
+            satırda tutuyor ve araya sığdırılan bir açıklama o satırı bozuyordu. */}
+        {!returnTrigger.allowed ? (
+          <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">{RETURN_BLOCKED_REASON[returnTrigger.reason]}</span>
+        ) : null}
 
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="danger"
-            onClick={onTriggerReturn}
-            disabled={busy || !returnTrigger.allowed}
-            title={returnTrigger.allowed ? undefined : RETURN_BLOCKED_REASON[returnTrigger.reason]}
-            fullWidth={compact}
-          >
-            İade tetikle
-          </Button>
-          {/* Kapalı düğmenin SEBEBİ yazılır, gizlenmez: "neden basamıyorum" sorusu ekranda
-              cevaplanmazsa operatör onu bir arıza sanır. */}
-          {!returnTrigger.allowed && !compact ? (
-            <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
-              {RETURN_BLOCKED_REASON[returnTrigger.reason]}
-            </span>
-          ) : null}
-        </div>
+        <ReplyBar
+          busy={busy}
+          compact={compact}
+          returnAllowed={returnTrigger.allowed}
+          returnReason={returnTrigger.allowed ? undefined : RETURN_BLOCKED_REASON[returnTrigger.reason]}
+          onReply={onReply}
+          onTriggerReturn={onTriggerReturn}
+        />
       </div>
     </div>
   );
@@ -275,49 +296,31 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
-interface StatusSegmentsProps {
-  status: TicketStatus;
-  allowed: readonly TicketStatus[];
-  busy: boolean;
-  onStatus: (to: TicketStatus) => void;
-}
-
 /**
- * Durum kontrolü — üç segment, çizimdeki gibi.
+ * Durum kontrolünün SEÇENEKLERİ — kontrolün kendisi ortak (`MultiToggle`, Envanter O8).
  *
- * **İzinsiz geçiş DEVRE DIŞI çizilir, gizlenmez.** Motor "çözülmüş talepte yalnız `open`" diyor
- * (`allowedTicketTransitions`), yani çözülmüş bir talepte "İlgileniliyor" tıklanamaz. Segmenti
- * gizlemek kontrolün genişliğini talebe göre oynatır ve operatör aynı ekranı her seferinde farklı
- * bulurdu; kapalı ama görünür bir segment ise durumu da öğretir.
+ * Bu ekran bir tur boyunca kendi segmentini elden yazmıştı ve bedeli ölçülebilirdi: `role="radiogroup"`,
+ * ok tuşu gezinmesi, roving tabindex ve kayan hap yoktu; üstelik ray iki farklı gri tonda çiziliyordu
+ * (aynı uygulamada iki "segment"). Eksik olan tek şey seçenek başına `disabled`'dı — o da artık
+ * ortak komponentte.
+ *
+ * **İzinsiz geçiş DEVRE DIŞI, gizli DEĞİL.** Motor "çözülmüş talepte yalnız `open`" diyor
+ * (`allowedTicketTransitions`). Gizlemek kontrolün genişliğini talebe göre oynatır ve operatör aynı
+ * ekranı her seferinde farklı bulurdu; kapalı ama görünür bir seçenek kuralı da öğretir.
+ *
+ * **Ton VERİLMİYOR** (varsayılan olive) ve bu bilinçli bir geri adım: bir tur boyunca durum rozetiyle
+ * aynı sözlük geçilmişti (`TICKET_STATUS_TONE`) ve sonuç ekranda yanlış okunuyordu — kuyruğun
+ * VARSAYILAN hâli "Açık", yani hap neredeyse her zaman amber doluyordu ve nötr bir kontrol sürekli
+ * uyarı veriyormuş gibi duruyordu. Çizim orada beyaz/nötr bir hap gösteriyor; sistemin bu kontrolde
+ * beyazı yok (`MultiToggle` künyesindeki bilinçli sapma), en yakın nötr karşılık varsayılan olive.
+ * Rozet ile hap "aynı gerçeği iki kez söylemiyor" zaten: rozet DURUMU, hap SEÇİMİ gösteriyor.
  */
-function StatusSegments({ status, allowed, busy, onStatus }: StatusSegmentsProps) {
-  return (
-    <div role="group" aria-label="Talep durumu" className="flex flex-none rounded-ops-btn border border-ops-line-strong bg-ops-line-soft p-0.5">
-      {(Object.keys(TICKET_STATUS_LABELS) as TicketStatus[]).map((key) => {
-        const current = key === status;
-        const usable = current || allowed.includes(key);
-        return (
-          <button
-            key={key}
-            type="button"
-            onClick={() => onStatus(key)}
-            disabled={busy || current || !usable}
-            aria-pressed={current}
-            className={[
-              'rounded-[6px] px-2.5 py-1 font-ops-display text-ops-micro font-semibold transition-colors',
-              current
-                ? 'bg-ops-white text-ops-ink'
-                : usable
-                  ? 'cursor-pointer text-ops-muted hover:text-ops-ink'
-                  : 'cursor-not-allowed text-ops-faint',
-            ].join(' ')}
-          >
-            {TICKET_STATUS_LABELS[key]}
-          </button>
-        );
-      })}
-    </div>
-  );
+function statusOptions(status: TicketStatus, allowed: readonly TicketStatus[], busy: boolean): MultiToggleOption<TicketStatus>[] {
+  return (Object.keys(TICKET_STATUS_LABELS) as TicketStatus[]).map((key) => ({
+    key,
+    label: TICKET_STATUS_LABELS[key],
+    disabled: busy || (key !== status && !allowed.includes(key)),
+  }));
 }
 
 /** Bağlı sipariş + müşterinin işaretlediği kalemler — şikâyetin somut zemini (brief §2). */
@@ -325,7 +328,9 @@ function OrderCard({ order }: { order: NonNullable<TicketDetailView['order']> })
   return (
     <div className="flex flex-col gap-2 rounded-ops-card border border-ops-line bg-ops-white px-3.5 py-3">
       <div className="flex items-center justify-between gap-3">
-        <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">
+        {/* Çizim 12px → `xs`. Kart BAŞLIĞI ama kartın içeriğinden büyük değil: asıl okunacak şey
+            kalem satırları. */}
+        <span className="font-ops-display text-ops-xs font-semibold text-ops-ink">
           Bağlı sipariş {order.referenceNo ?? `#${order.id.slice(0, 8)}`}
         </span>
         <Link href={`${ORDERS_PATH}/${order.id}`} className="flex-none font-ops-display text-ops-xs font-semibold text-ops-olive hover:text-ops-olive-dark">
@@ -339,8 +344,9 @@ function OrderCard({ order }: { order: NonNullable<TicketDetailView['order']> })
               <span className="grid h-4 w-4 flex-none place-items-center rounded-[4px] bg-ops-red-bg font-ops-display text-ops-micro font-bold text-ops-red">
                 !
               </span>
-              <span className="min-w-0 flex-1 truncate font-ops-body text-ops-xs text-ops-body">{item.name}</span>
-              <span className="flex-none font-ops-mono text-ops-micro text-ops-muted">{item.qty} ad.</span>
+              {/* Çizim: kalem adı 12,5px → `sm`, adet 11,5px → `xs`. İkisi de bir kademe küçüktü. */}
+              <span className="min-w-0 flex-1 truncate font-ops-body text-ops-sm text-ops-body">{item.name}</span>
+              <span className="flex-none font-ops-mono text-ops-xs text-ops-muted">{item.qty} ad.</span>
             </li>
           ))}
         </ul>
@@ -353,27 +359,53 @@ function OrderCard({ order }: { order: NonNullable<TicketDetailView['order']> })
   );
 }
 
+/** Balonun zemin+kenarlığı; METİN buraya girmez — gerekçe `MessageBubble` künyesinde. */
+const BUBBLE_SKIN: Record<OpsTone, string> = {
+  olive: 'border-ops-olive-line bg-ops-olive-bg',
+  violet: 'border-ops-violet-line bg-ops-violet-bg',
+  neutral: 'border-ops-line bg-ops-white',
+  amber: 'border-ops-amber-line bg-ops-amber-bg',
+  red: 'border-ops-red-line bg-ops-red-bg',
+  blue: 'border-ops-blue-line bg-ops-blue-bg',
+  slate: 'border-ops-slate-line bg-ops-slate-bg',
+};
+
+/** Gönderici ADININ rengi — ayrımı taşıyan yer burası. */
+const SENDER_NAME: Record<OpsTone, string> = {
+  olive: 'text-ops-olive-dark',
+  violet: 'text-ops-violet',
+  neutral: 'text-ops-muted',
+  amber: 'text-ops-amber-dark',
+  red: 'text-ops-red',
+  blue: 'text-ops-blue',
+  slate: 'text-ops-slate',
+};
+
 /**
  * Yazışmadaki tek mesaj. Müşteri solda, operasyon ve AI sağda — ve **AI ayrı tonda**: "bunu kim
  * söyledi" sorusu sonradan da cevaplanabilmeli (`admin-talepler.md §6`).
+ *
+ * **RENK ADI TAŞIR, METNİ DEĞİL** — ve bu bir tur boyunca TERS kuruluydu: gönderici adı sabit gri,
+ * balon metni tonluydu. Çizim tam tersini yapıyor ve haklı: ayrımı taşıması gereken şey kimliktir,
+ * okunması gereken şey metindir. Tonlu bir metin, tonlu bir zeminin üstünde kontrastını kaybediyor
+ * — üstelik en çok okunan yerde.
  */
 function MessageBubble({ message, compact }: { message: TicketMessageView; compact: boolean }) {
   const mine = message.sender !== 'customer';
   const tone = TICKET_SENDER_TONE[message.sender];
   return (
     <div className={`flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>
-      <span className="flex items-center gap-1.5 font-ops-display text-ops-micro font-semibold text-ops-muted">
+      <span className={`flex items-center gap-1.5 font-ops-display text-ops-micro font-semibold ${SENDER_NAME[tone]}`}>
         {TICKET_SENDER_LABELS[message.sender]}
         <span className="font-ops-mono font-normal text-ops-faint">{shortDateTime(message.createdAt)}</span>
       </span>
       <div
         className={[
-          'max-w-[78%] rounded-ops-card border px-3 py-2 font-ops-body text-ops-xs leading-relaxed',
-          tone === 'olive'
-            ? 'border-ops-olive-line bg-ops-olive-bg text-ops-olive-dark'
-            : tone === 'slate'
-              ? 'border-ops-slate-line bg-ops-slate-bg text-ops-slate'
-              : 'border-ops-line bg-ops-white text-ops-body',
+          // Çizim 12,5px → merdivende `sm` (künye: `sm ← 12 · 12,5`). Burası ekranın EN ÇOK OKUNAN
+          // metni; okunabilirlik ölçeğin kendi kalibrasyonuyla çözüldü (globals §0.0), ekran
+          // özelinde bir sapmayla değil.
+          'max-w-[78%] rounded-ops-card border px-3 py-2 font-ops-body text-ops-sm leading-relaxed text-ops-strong',
+          BUBBLE_SKIN[tone],
         ].join(' ')}
       >
         {message.body}
@@ -405,14 +437,36 @@ function Attachments({ urls, compact, align = 'start' }: { urls: readonly string
   );
 }
 
+interface ReplyBarProps {
+  busy: boolean;
+  compact: boolean;
+  returnAllowed: boolean;
+  returnReason?: string;
+  onReply: (body: string) => Promise<boolean>;
+  onTriggerReturn: () => void;
+}
+
 /**
- * Cevap kutusu. Metin BURADA durur, üst durumda değil: her tuşta client kökünü yeniden çizmenin
- * karşılığı yok ve gönderilene kadar kimsenin bu metinle işi yok.
+ * Alt bar — **çizimdeki gibi TEK SATIR**: kutu, "İade tetikle", "Gönder".
  *
- * **Gönderilemeyen metin SİLİNMEZ:** kapı reddederse (ağ düştü, talep silindi) kutu olduğu gibi
- * kalır — operatörün yazdığı üç paragrafı bir hata mesajı uğruna kaybetmesi kabul edilemez.
+ * Bir tur boyunca üçe bölünmüştü (kutu · altında Gönder satırı · altında ayrı bir İade satırı) ve
+ * çizimin niyeti orada kayboluyordu: bu üçü aynı kararın parçası — operatör cevabı yazarken "bu
+ * para işi mi" sorusunu da veriyor. Üç kata yayılınca ikisi ayrı iş gibi okunuyordu.
+ *
+ * **Bir açıklama satırı da SİLİNDİ:** "cevap müşteriye e-posta ile de gider…" diye eklediğim cümle
+ * zaten placeholder'ın söylediğini (*"aynen müşteriye görünür"*) ikinci kez söylüyordu ve satırı
+ * bozan şeyin kendisiydi — `mr-auto` taşıyan bir yazı ile `fullWidth` bir düğme aynı flex satırında
+ * çakışıyordu (mobilde görünür arıza).
+ *
+ * **Kutu tek satırlık DEĞİL, `Textarea`** — çizimden bilinçli sapma: cevaplar paragraf uzunluğunda
+ * yazılıyor ve tek satırlık bir kutuda operatör yazdığını göremezdi. Satırın kendisi `items-end`
+ * hizalı, böylece kutu büyüse de düğmeler tabanda kalıyor.
+ *
+ * Metin BURADA durur, üst durumda değil: her tuşta client kökünü yeniden çizmenin karşılığı yok.
+ * **Gönderilemeyen metin SİLİNMEZ** — kapı reddederse kutu olduğu gibi kalır; operatörün yazdığı
+ * üç paragrafı bir hata mesajı uğruna kaybetmesi kabul edilemez.
  */
-function ReplyComposer({ busy, compact, onReply }: { busy: boolean; compact: boolean; onReply: (body: string) => Promise<boolean> }) {
+function ReplyBar({ busy, compact, returnAllowed, returnReason, onReply, onTriggerReturn }: ReplyBarProps) {
   const [body, setBody] = useState('');
   const empty = body.trim().length === 0;
 
@@ -423,26 +477,56 @@ function ReplyComposer({ busy, compact, onReply }: { busy: boolean; compact: boo
     });
   };
 
-  return (
-    <div className="flex flex-col gap-2">
-      <Textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        rows={compact ? 3 : 2}
-        placeholder="Müşteriye cevap yaz… (aynen müşteriye görünür)"
-        disabled={busy}
-        aria-label="Müşteriye cevap"
-      />
-      <div className="flex items-center gap-2">
-        {/* Ekranın en önemli cümlesi: yazılan metin AYNEN müşteriye gidiyor, iç not diye bir şey
-            yok (DOMAIN §15, brief §6 — "admin yazdığının müşteriye aynen görüneceğini bilmeli"). */}
-        <span className="mr-auto font-ops-body text-ops-micro text-ops-faint">
-          Cevap müşteriye e-posta ile de gider. Marj, maliyet ve müşteri karnesi bu metne girmez.
-        </span>
-        <Button size="sm" variant="primary" onClick={send} disabled={busy || empty} fullWidth={compact}>
-          {busy ? 'Gönderiliyor…' : 'Gönder'}
-        </Button>
+  // MASAÜSTÜNDE kutu TEK SATIR yüksekliğinde (`CONTROL_H.md` = 36px) ve düğmeler de `md` — çizimde
+  // üçünün dolgusu da `10px 13px`, yani AYNI yükseklik. Bir tur boyunca kutu iki satır (`rows=2`),
+  // düğmeler `sm` (32px) idi: satır hem kalın hem hizasızdı (kullanıcı bildirimi, 03.08).
+  // `Textarea` kalıyor (`Input` değil): tek satır GÖRÜNÜYOR ama yeni satır kabul ediyor ve
+  // taşınca kendi içinde kayıyor — cevaplar paragraf uzunluğunda yazılıyor.
+  const box = (
+    <Textarea
+      value={body}
+      onChange={(e) => setBody(e.target.value)}
+      rows={compact ? 3 : 1}
+      placeholder="Müşteriye cevap yaz… (aynen müşteriye görünür)"
+      disabled={busy}
+      aria-label="Müşteriye cevap"
+      className={compact ? undefined : `flex-1 ${CONTROL_H.md} py-[7px]`}
+    />
+  );
+
+  const size = compact ? 'sm' : 'md';
+  const iade = (
+    <Button size={size} variant="danger" onClick={onTriggerReturn} disabled={busy || !returnAllowed} title={returnReason}>
+      İade tetikle
+    </Button>
+  );
+  const gonder = (
+    <Button size={size} variant="primary" onClick={send} disabled={busy || empty}>
+      {busy ? 'Gönderiliyor…' : 'Gönder'}
+    </Button>
+  );
+
+  // TELEFONDA kutu üstte, iki düğme altında yan yana — çizimin mobil tabakasındaki oran da bu
+  // (`flex:1` iade · `flex:1.4` cevap): asıl iş cevap yazmak, iade ondan çıkan bir karar.
+  if (compact) {
+    return (
+      <div className="flex flex-col gap-2.5">
+        {box}
+        <div className="flex gap-2.5">
+          <span className="flex flex-1 [&>button]:w-full">{iade}</span>
+          <span className="flex flex-[1.4] [&>button]:w-full">{gonder}</span>
+        </div>
       </div>
+    );
+  }
+
+  // `items-center`: üçü de aynı yükseklikte olduğu için hizalama artık taban değil merkez —
+  // `items-end` iki farklı yükseklik varken gerekliydi, eşitlendiğinde gereksiz.
+  return (
+    <div className="flex items-center gap-2.5">
+      {box}
+      {iade}
+      {gonder}
     </div>
   );
 }

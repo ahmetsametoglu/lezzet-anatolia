@@ -38,7 +38,9 @@ export function TicketConfirmDialog({ kind, customerName, orderReferenceNo, busy
           <Button variant="secondary" onClick={onClose} disabled={busy} className="ml-auto">
             Vazgeç
           </Button>
-          <Button variant={isReturn ? 'destructive' : 'primary'} onClick={onConfirm} disabled={busy}>
+          {/* Devralma `violet`, `primary` DEĞİL: çizim düğmeyi dolu morla veriyor ve mor bu yüzeyde
+              "makine" demek. Olive yazsaydık, AI'ı susturan karar sıradan bir onaya benzerdi. */}
+          <Button variant={isReturn ? 'destructive' : 'violet'} onClick={onConfirm} disabled={busy}>
             {busy ? 'Uygulanıyor…' : isReturn ? 'Siparişte iade başlat' : 'Devral'}
           </Button>
         </>

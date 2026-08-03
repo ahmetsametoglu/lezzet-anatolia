@@ -294,6 +294,23 @@ açılan yere "Cevap bekliyor" ve tip çipleri gelebilir. AI çipi `16.5` ile bi
 Karar gelene kadar ekran **çizili çipleri** uyguluyor, eksik olanları uydurmuyor (`CLAUDE.md §3`);
 "AI yanıtladı" çizilmiyor çünkü arkasında hiçbir kayıt olamaz.
 
+**EK (03.08, kullanıcı) — AI süzgeci TEK DEĞİL İKİ, ve çizim bunu zaten söylüyormuş.** Kullanıcı
+ayrımı koydu: *"AI'ın yanıtladığı ve AI'ın kontrolünde olan farklı anlamlara geliyor; duruma göre
+her ikisini de süzmem gerekebilir."* Çizime dönüp bakınca ayrım orada duruyor ve iki ayrı kelimeyle
+yazılmış — süzgeç çipi **"AI yanıtladı"**, satır rozeti **"AI yürütüyor"**. Ben ikisini tek şey
+sanıp arka uçtan yalnız `handledBy` istemiştim; istek eksikti.
+
+Fark kalıcı ve önemli: operatör devralınca `handled_by` `human`'a döner ama AI'ın yazdığı mesaj
+yerinde kalır. Yani **devralınmış bir talep "AI yürütüyor" değildir ama "AI yanıtladı"dır** — ve
+kalite denetimi tam da o kümeye bakar (devralma zaten bir şeyin ters gittiğinin işareti).
+`handled_by` ile süzmek o soruyu sessizce yanlış cevaplardı: liste dolu görünür, en ilginç satırlar
+eksik olurdu.
+
+İki süzgeç de arka uçtan istendi (`docs/talep/arka-uc-talep-ai-suzgecleri.md`; `answeredByAi` için
+görünüme `exists(… sender='ai')` alanı gerekiyor). İkisi `16.5` ile birlikte gelecek — bugün her
+talep `human` ve hiç `ai` mesajı yok, yani ikisi de boş liste dönerdi. **Yukarıdaki "çip şeridi
+nasıl kurulsun" kararı bu yüzden altı çipli bir şerit üzerinden düşünülmeli**, beş değil.
+
 ### Talepler — "Elle talep aç" penceresinin içi çizilmemiş (03.08, 16.3)
 
 Çizimdeki modal genel bir kabuk: başlık + gövde metni + not + iki düğme. Gerçek pencerenin

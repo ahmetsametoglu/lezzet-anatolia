@@ -61,13 +61,15 @@ export const TICKET_SENDER_LABELS: Record<TicketSender, string> = {
  * Mesaj balonunun tonu. AI ayrı bir tondadır çünkü ayrımın tek amacı bu: "bunu kim söyledi"
  * sorusu sonradan da cevaplanabilmeli (`admin-talepler.md §6`).
  *
- * Çizim AI'ı morla ayırıyor; palette mor YOK ve ham hex yasak (`CLAUDE.md §3`) — en yakın ayrık ton
- * `slate` kullanıldı, kayıt `design/BACKLOG.md`'de.
+ * **`violet` çizimin kendi rengidir** (`#5a4a8a`) ve token'ı `--color-ops-violet` olarak zaten
+ * duruyordu. Bir tur boyunca `slate` yazılmıştı çünkü "palette mor yok" diye YANLIŞ bir tespit
+ * yapılmıştı — token 27.07'den beri vardı, yalnız `OpsTone` sözlüğüne girmemişti. Ders envantere
+ * ait: bir rengin yokluğuna, palete bakmadan karar verilmez.
  */
 export const TICKET_SENDER_TONE: Record<TicketSender, OpsTone> = {
   customer: 'neutral',
   admin: 'olive',
-  ai: 'slate',
+  ai: 'violet',
 };
 
 /** İade düğmesi kapalıysa sebebi — düğmenin gizlenmesi yerine SÖYLENMESİ (kapalı bir kapı da bilgidir). */

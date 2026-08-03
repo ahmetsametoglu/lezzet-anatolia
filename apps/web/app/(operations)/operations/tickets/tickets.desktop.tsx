@@ -37,7 +37,11 @@ export function TicketsDesktop({
   onNewTicket,
 }: TicketsViewProps) {
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    // `bg-ops-card` ŞART ve unutulmuştu: kabuğun zemini `ops-bg` (#dedbd3 — bej; koyu temada
+    // #1b1e18) ve zemin çizilmeyince başlık barı ile kuyruk sütunu onu gösteriyordu. Ekran
+    // "kahverengiye çalıyor" diye bildirildi (kullanıcı, 03.08); öteki sekiz operasyon ekranının
+    // hepsi bu sınıfı taşıyor — `min-h-0 flex-1` de onların kalıbı, `h-full` sapmaydı.
+    <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader
         title="Talepler"
         // Çizimin iki sayısı yerinde; üçüncüsü ("AI yürütüyor") 16.5 ile gelir — bugün daima 0
@@ -49,7 +53,9 @@ export function TicketsDesktop({
         </Button>
       </PageHeader>
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-ops-line-soft px-6 py-2.5">
+      {/* Ayraç `gray-100` (#eef0ea) — çizimin değeri; `line-soft` bir kademe açıktı ve çip şeridi
+          başlık barından ayrılmıyordu. */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-ops-gray-100 px-6 py-2.5">
         {TICKET_FILTERS.map((key) => (
           <Chip key={key} active={urlState.f === key} onClick={() => onFilter(key)}>
             {TICKET_FILTER_LABELS[key]}
