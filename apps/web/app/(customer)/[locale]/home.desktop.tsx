@@ -97,7 +97,7 @@ export function HomeDesktop({ t, locale, data }: HomeViewProps) {
       </section>
 
       <div className="mx-12 mb-11">
-        <CtaBand title={t.discover.title} body={t.discover.body} cta={{ label: t.discover.cta, href: '/' }} />
+        <CtaBand title={t.discover.title} body={t.discover.body} cta={{ label: t.discover.cta, href: '/discover' }} />
       </div>
       <div className="mx-12 mb-12">
         {/* Anasayfanın B2B çağrısı ana sayfaya dönüyordu (`/`) — tasarımın "gelinen yol" listesinde

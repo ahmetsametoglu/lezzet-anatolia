@@ -27,6 +27,10 @@ const STATIC_ROUTES: AppRoute[] = [
   // Professionnels (08.7) — ziyaretçiye açık ve aranan bir sayfa: "grossiste turc" türü sorgular
   // tam olarak buraya düşer. Adres dile göre çevrildiği için üç satırı da harita taşıyor.
   '/professionals',
+  // Keşif (08.7) — ziyaretçiye açık; menüden ulaşılıyor ve kimlik istemiyor. İçeriği (aday
+  // kartları) değişken ve satılık DEĞİL, yani sayfanın indekslenen değeri kartlar değil çerçevesi;
+  // yine de menüden ulaşılan her açık sayfa gibi haritada yeri var.
+  '/discover',
   '/legal/delivery',
   '/legal/faq',
   '/legal/sales',

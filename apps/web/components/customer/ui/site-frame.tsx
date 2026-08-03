@@ -256,7 +256,9 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
             >
               {t.nav.deals}
             </Link>
-            <span className={navClass('discover', activeNav)}>{t.nav.discover}</span>
+            <Link href="/discover" className={navClass('discover', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
+              {t.nav.discover}
+            </Link>
             {/* Professionnels ARTIK CANLI (08.7): sayfası açıldı, ölü `<span>` bağa döndü. Etiket
                 üç dilde de aynı marka sözcüğü, adres dile göre çevriliyor — gerekçe `PATHNAMES`te. */}
             <Link href="/professionals" className={navClass('pro', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>

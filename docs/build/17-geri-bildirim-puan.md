@@ -52,7 +52,8 @@ Değerli veri toplarken müşteriyi ödüllendiren döngü: yorum + beğeni + ü
   - **Durum (29.07):** **arka uç hazır** — `recordVote` iki bağlamı da yazıyor (`purchase` satın almayı, `candidate` ürünün aday olduğunu doğrular), `dwell_ms` toplanıyor.
     - **Sinyal kalitesi yazıldı** (`domain-core/feedback/signal-quality`): ağırlık = kart süresi × kaydıranın deseni. 400 ms altı kart görülmemiştir (sıfır ağırlık); hep aynı yöne savuran bilgi taşımaz (azınlık payı ölçüsü, 5 kaydırmadan az ise desen aranmaz). `listCandidateDemand` ham beğeniyi ve **ağırlıklı** beğeniyi yan yana verir, sıralama ağırlıklıya göre — 40 savurma beğenisi 8 gerçek beğeniyi geçemez. `trust` göstergesi tasarımın istediği "sade güven göstergesi".
     - **Müşterinin puanı bundan etkilenmez** (ödül ≠ güven): kalitesiz kaydırma da ödülünü alır.
-    - Eksik: keşif ve alım-sonrası kart ekranları (müşteri UI).
+    - **Müşteri UI indi (03.08, 08.7):** alım-sonrası kart akışı `feedback/[token]`, keşif turu `discover/`. İkisi de bu kapıyı çağırıyor; burada değişen bir şey olmadı.
+    - **Ziyaretçi kaydırması artık puana dönebiliyor** (kullanıcı kararı 03.08, `DOMAIN §13`): kimliksiz satırlar hesap açılınca bağlanıyor (`lib/feedback/discover-claim.ts`). Bağlama ÜRÜN başına — ziyaretçide `upsert` koruması olmadığı için satır başına bağlamak aynı ürüne beş kez puan öderdi.
 - [~] (17.4) **Puan (PointsEntry):** aksiyonlara puan (yorum/swipe/sipariş); bakiye **türetilir** (Σ points); tavanlar (aynı ürüne bir kez + günlük), B2C-only, süresiz; puan tamamlamaya bağlı (beğeniye değil)
   - *Bitti:* bakiye ledger'dan türeniyor; istismar tavanları çalışıyor
   - **Eksik (29.07, denetimde çıktı):** `reason='order'` — **sipariş puanı yazan üretim kodu yok**, yalnız testte geçiyor. Defter, ayar ve tavan hazır; bağlanacağı yer sipariş durum geçişidir (07). Görev bu yüzden `[~]`; önceki `[x]` yanlıştı.

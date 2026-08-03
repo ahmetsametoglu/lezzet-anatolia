@@ -78,7 +78,7 @@ export function HomeMobile({ t, locale, data }: HomeViewProps) {
       </section>
 
       <div className="mx-4 mb-3.5">
-        <CtaBand title={t.discover.title} body={t.discover.body} cta={{ label: t.discover.cta, href: '/' }} compact />
+        <CtaBand title={t.discover.title} body={t.discover.body} cta={{ label: t.discover.cta, href: '/discover' }} compact />
       </div>
       <div className="mx-4 mb-[18px]">
         {/* Bkz. masaüstü karşılığı: B2B çağrısı ana sayfaya dönüyordu, artık sayfası var (08.7). */}

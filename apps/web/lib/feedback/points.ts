@@ -20,6 +20,19 @@ import type { KeysetCursor, Page, PointsBalance, PointsEntry, ProductFeedback, R
  */
 
 /** Puan ayarları tek turda — her aksiyonda üç ayrı ayar sorgusu atmamak için. */
+/**
+ * Bir aksiyonun kaç puan ettiği + puanın kuruş değeri — EKRANIN sorusu (08.7 keşif bitiş kartı).
+ *
+ * Ayarı okumanın ikinci bir yolunu açmamak için buradan veriliyor: anahtar adı ve varsayılan tek
+ * yerde (`pointsSettings`) yaşıyor. Ekran kendi `getNumber('points_feedback_candidate', 2)`
+ * çağrısını yazsaydı varsayılan iki yerde durur ve biri bir gün ötekinden ayrılırdı — ekran
+ * sistemin vermeyeceği bir sayı söylerdi (hesap kartındaki eşik ayrışmasının aynısı, 29.07).
+ */
+export async function pointsValueOf(reason: EarnablePointsReason): Promise<{ points: number; centValue: number }> {
+  const settings = await pointsSettings();
+  return { points: settings.values[reason] ?? 0, centValue: settings.centValue };
+}
+
 async function pointsSettings(): Promise<{ values: Record<string, number>; dailyCap: number; minimum: number; centValue: number }> {
   const settings = new SettingsService(serviceDb());
   const [review, purchase, candidate, order, referral, dailyCap, minimum, centValue] = await Promise.all([

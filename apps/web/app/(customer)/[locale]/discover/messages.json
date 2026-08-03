@@ -1,0 +1,128 @@
+{
+  "tr": {
+    "meta": {
+      "title": "Keşif — yakında gelebilecek ürünler",
+      "description": "Henüz satışta olmayan aday ürünleri değerlendirin; beğenileriniz ne getireceğimize karar verirken bize yol gösterir."
+    },
+    "title": "Keşif",
+    "close": "Kapat",
+    "counter": "{index} / {total}",
+    "framing": "Bunlar yakında gelebilir — beğenileriniz \"ne getirelim\" kararımıza katkı olur.",
+    "points": "+{points} puan",
+    "skip": "Atla",
+    "like": "Beğen",
+    "dislike": "Geç",
+    "hintMobile": "Kartı sağa/sola kaydırabilirsiniz · beğeniler satın alma sözü değildir",
+    "hintDesktop": "← geç · → beğen · beğeniler satın alma sözü değildir",
+    "guestInvite": "Giriş yaparsanız değerlendirmeleriniz puan kazandırır",
+    "guestInviteCta": "Doğrulan",
+    "done": {
+      "title": "Hepsini değerlendirdiniz!",
+      "earned": "+{points} puan kazandınız",
+      "body": "Beğendikleriniz \"ne getirelim\" kararımıza katıldı. Yeni adaylar geldikçe burası yeniden dolar.",
+      "catalog": "Kataloğa dön",
+      "balance": "Puan bakiyem →"
+    },
+    "guestDone": {
+      "title": "Paylaştığınız için teşekkürler!",
+      "body": "Değerlendirmeleriniz \"ne getirelim\" kararımıza katıldı. Dilerseniz hesap açın, biriken {points} puanı ({money}) hesabınıza yükleyelim.",
+      "cta": "Hesap açın ve puanı alın",
+      "catalog": "Kataloğa dön"
+    },
+    "claimed": "{points} puan hesabınıza yüklendi.",
+    "empty": {
+      "title": "Şu an değerlendirecek yenilik yok",
+      "body": "Yeni adaylar geldikçe burası dolar.",
+      "catalog": "Kataloğa dön"
+    },
+    "errors": {
+      "unexpected": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
+      "session_expired": "Oturumunuz sona ermiş. Yeniden giriş yapın.",
+      "swipe_failed": "Bu kart şu anda kaydedilemedi."
+    }
+  },
+  "fr": {
+    "meta": {
+      "title": "Découverte — les produits qui pourraient arriver",
+      "description": "Donnez votre avis sur des produits pas encore en vente ; vos préférences nous guident sur ce que nous allons proposer."
+    },
+    "title": "Découverte",
+    "close": "Fermer",
+    "counter": "{index} / {total}",
+    "framing": "Ces produits pourraient bientôt arriver — vos avis nourrissent notre choix.",
+    "points": "+{points} points",
+    "skip": "Passer",
+    "like": "J'aime",
+    "dislike": "Passer",
+    "hintMobile": "Faites glisser la carte à droite/gauche · un avis n'est pas une promesse d'achat",
+    "hintDesktop": "← passer · → j'aime · un avis n'est pas une promesse d'achat",
+    "guestInvite": "Connectez-vous et vos avis vous rapportent des points",
+    "guestInviteCta": "Se connecter",
+    "done": {
+      "title": "Vous avez tout évalué !",
+      "earned": "+{points} points gagnés",
+      "body": "Vos avis ont rejoint notre choix de produits. De nouveaux candidats arriveront ici.",
+      "catalog": "Voir le catalogue",
+      "balance": "Mon solde de points →"
+    },
+    "guestDone": {
+      "title": "Merci pour vos avis !",
+      "body": "Vos avis ont rejoint notre choix de produits. Si vous le souhaitez, ouvrez un compte et nous y créditons les {points} points ({money}) accumulés.",
+      "cta": "Ouvrir un compte et récupérer les points",
+      "catalog": "Voir le catalogue"
+    },
+    "claimed": "{points} points ont été crédités sur votre compte.",
+    "empty": {
+      "title": "Rien de nouveau à évaluer pour l'instant",
+      "body": "De nouveaux candidats arriveront ici.",
+      "catalog": "Voir le catalogue"
+    },
+    "errors": {
+      "unexpected": "Une erreur est survenue. Merci de réessayer.",
+      "session_expired": "Votre session a expiré. Reconnectez-vous.",
+      "swipe_failed": "Cette carte n'a pas pu être enregistrée."
+    }
+  },
+  "de": {
+    "meta": {
+      "title": "Entdecken — Produkte, die bald kommen könnten",
+      "description": "Bewerten Sie Produkte, die noch nicht im Sortiment sind; Ihre Vorlieben helfen uns bei der Auswahl."
+    },
+    "title": "Entdecken",
+    "close": "Schließen",
+    "counter": "{index} / {total}",
+    "framing": "Diese Produkte könnten bald kommen — Ihre Bewertungen fließen in unsere Auswahl ein.",
+    "points": "+{points} Punkte",
+    "skip": "Überspringen",
+    "like": "Gefällt mir",
+    "dislike": "Weiter",
+    "hintMobile": "Karte nach rechts/links wischen · eine Bewertung ist kein Kaufversprechen",
+    "hintDesktop": "← weiter · → gefällt mir · eine Bewertung ist kein Kaufversprechen",
+    "guestInvite": "Mit Anmeldung bringen Ihre Bewertungen Punkte",
+    "guestInviteCta": "Anmelden",
+    "done": {
+      "title": "Sie haben alles bewertet!",
+      "earned": "+{points} Punkte erhalten",
+      "body": "Ihre Bewertungen sind in unsere Auswahl eingeflossen. Sobald neue Kandidaten da sind, füllt sich diese Seite wieder.",
+      "catalog": "Zum Katalog",
+      "balance": "Mein Punktestand →"
+    },
+    "guestDone": {
+      "title": "Danke für Ihre Bewertungen!",
+      "body": "Ihre Bewertungen sind in unsere Auswahl eingeflossen. Wenn Sie möchten, eröffnen Sie ein Konto — wir schreiben Ihnen die gesammelten {points} Punkte ({money}) gut.",
+      "cta": "Konto eröffnen und Punkte sichern",
+      "catalog": "Zum Katalog"
+    },
+    "claimed": "{points} Punkte wurden Ihrem Konto gutgeschrieben.",
+    "empty": {
+      "title": "Derzeit gibt es nichts Neues zu bewerten",
+      "body": "Sobald neue Kandidaten da sind, füllt sich diese Seite.",
+      "catalog": "Zum Katalog"
+    },
+    "errors": {
+      "unexpected": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+      "session_expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+      "swipe_failed": "Diese Karte konnte nicht gespeichert werden."
+    }
+  }
+}

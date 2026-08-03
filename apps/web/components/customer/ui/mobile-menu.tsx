@@ -74,7 +74,9 @@ export function MobileMenu({ locale }: MobileMenuProps) {
             <Link href={{ pathname: '/catalog', query: { offers: '1' } }} onClick={close} className={`${ITEM} text-terracotta`}>
               {t.nav.deals}
             </Link>
-            <span className={`${ITEM} text-muted`}>{t.nav.discover}</span>
+            <Link href="/discover" onClick={close} className={ITEM}>
+              {t.nav.discover}
+            </Link>
             <Link href="/professionals" onClick={close} className={ITEM}>
               {t.nav.pro}
             </Link>

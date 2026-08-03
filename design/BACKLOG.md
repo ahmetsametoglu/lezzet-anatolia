@@ -418,6 +418,22 @@ uydurulmadı, en yakın karşılıkla kuruldu ve buraya yazıldı — çizim gel
   sahibi), ya da tasarımın bu satırı koda indirmesi. O güne kadar kod gösteriliyor: okunması güç
   ama DOĞRU, ve adayın asıl doğrulayacağı iki satır (unvan, adres) zaten okunur.
 
+- **ADAY YOKKEN ANASAYFANIN KEŞİF ÇAĞRISI GİZLENMİYOR (03.08, 08.7).**
+  `Musteri - Kesif.dc.html`in boş durum kutusu şunu diyor: *"Ana sayfadaki keşif çağrısı da bu
+  durumda gizlenir."* Yapılmadı — anasayfa aday sayısını bilmiyor.
+
+  **Bilmesi ucuz değil:** yalnız bu bant için ikinci bir okuma açmak, HER ana sayfa isteğine bir
+  sorgu eklemek demek. Anasayfa vitrinin en sıcak yolu ve sorgu, kullanıcıların çoğu keşfe hiç
+  girmezken de koşardı.
+
+  **Bugünkü davranış çıkmaz değil:** çağrıya tıklayan ziyaretçi keşif sayfasının kendi boş hâlini
+  görüyor (🌱 "Şu an değerlendirecek yenilik yok" + kataloğa dönüş). Yani kayıp, bir tıklamalık
+  bir hayal kırıklığı; kazanç, her ana sayfa isteğinde bir sorgu.
+
+  **Ucuzlarsa yapılır:** vitrin okuması zaten tek turda birden çok şey getiriyor
+  (`lib/storefront/home.ts`); aday sayısı oraya bir alan olarak eklenebilirse bant koşullu hâle
+  gelir. Bugün eklenmedi çünkü o okuma satılabilir ürünlerin okuması ve aday ürün oraya ait değil.
+
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
 
 - **AB (ALMAN) YOLUNDA "FAALİYET" SORULMUYOR (03.08, 08.7).**
