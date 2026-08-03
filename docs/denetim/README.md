@@ -23,10 +23,6 @@ Cevap yazmadan önce dosyanın GÜNCEL hâli okunur.
 
 Dosyalar:
 
-- `denetim-dosya-agaci.md` — dosya ağacı standardı (D1-kural `docs:check` bekliyor · D3 sırada;
-  D1/2 ve D2 kapalı)
-- `denetim-servis-taban-sinifi.md` — DB servislerinde taban sınıf disiplini (sonuç: SAĞLAM —
-  ham yazma 1/gerekçeli, RPC tek kapı, bypass sıfır; TS1 üç nota, TS2 STACK §6 cümlesi)
 - `denetim-migration-parcalama.md` — migration dosya dengesi (P3 kapandı; P1/P2 kabul → `02.11`,
   P1'in `db:refresh` onayı KULLANICIDA)
 
@@ -37,4 +33,7 @@ izlenir) · müşteri ilk dosyası,
 komponent taraması (K1–K4, M2), **hata maskeleme** (H1–H4 — `customerErrorKey` anahtar funnel'ı,
 `08.15`/`08.17`), **server-actions** (S1–S3), **test kapsamı** (T1–T5 — fiyat-değişim testleri +
 `18.11` devri) ve yorum bayatlığı 3/3 (M-Y1–M-Y4) · operasyon yorum bayatlığı 2/3 (O-Y1–O-Y3) ·
-gözlemleme (G1–G4 — istemci hata kapısı + süreç kancaları + webhook izleri).
+gözlemleme (G1–G4 — istemci hata kapısı + süreç kancaları + webhook izleri) · **dosya ağacı**
+(D1–D4 — `*-url` istisnası STACK §7 + `docs:check` kuralı, checkout forku, `use-device.hook`
+29 import, aile-sözlük ölçümü) · **servis taban sınıfı** (TS1–TS2 — üç ham-gerekçe notu,
+STACK §6'ya "ham ne zaman serbest" kuralı + iki mutlak istisna).
