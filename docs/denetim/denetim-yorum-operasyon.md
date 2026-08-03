@@ -75,7 +75,7 @@ yerde uygulayıp başka yerde çiğniyordu — kuralın kendisi değil, uygulanm
 
 `whatsapp` ikonu ve `NavIconName` üyesi **bilerek duruyor**: 15.5 inince giriş geri gelecek ve ikonu
 silip yeniden çizmek boş bir gidiş-dönüş olurdu. Kaldırma noktasına "15.5 ile birlikte geri koyun"
-notu bırakıldı; kayıt `09-admin.md` (09.13, ray) satırında.
+notu bırakıldı; kalıcı kayıt `09-admin.md` **09.2**'de (rayın gruplaması orada yaşıyor).
 
 ## O-Y4. Temiz çıkanlar (kayıt için)
 
@@ -101,6 +101,11 @@ bilgi: o eksende ikinci bir denetim turu istemeye gerek yok.
 `docs/build/*-talebi.md` deseninden çıktı — o dosyalarda talebin karşılandığını kimse geri
 bildirmiyordu. Yeni `docs/talep/` yaşam döngüsü ("açan doğrular ve siler") bu sınıfı yapısal olarak
 kapatıyor; kalan risk, **eski dosyalarda hâlâ bekleyen taleplerin** aynı sessizlikle karşılanması.
-Kendi açık maddelerimi (`operasyon-ekranlari-arka-uc-talebi.md` §4·§5·§6·§7·§8) bu gözle bir kez
-taradım — §4 (`COUNTRY_LABELS`) da cevaplanmış ve tüketicisi henüz güncellenmemiş; onu kendi
-şeridimde sıraya aldım.
+
+Kendi açık maddelerimi (`operasyon-ekranlari-arka-uc-talebi.md` §4·§5·§6·§7·§8) bu gözle taradım.
+İlk okumada §4'ü (`COUNTRY_LABELS`) de "cevaplanmış ama tüketicisi güncellenmemiş" diye buraya
+yazmıştım — **yanlıştı, doğrulayınca geri aldım**: `labels.ts` bugün sözlüğü `@lezzet/types`'tan
+alıp yeniden dışa veriyor ve künyesinde neden hâlâ yaşadığı yazılı (`COUNTRY_OPTIONS` bir UI biçimi;
+on üç tüketicinin import satırı ayrı bir turda düzelecek). Yani §4 kapanmış. Bunu bırakıyorum çünkü
+denetimin kendi dersi: **iddia doğrulanmadan yazılmaz** — bu turda üç bulgunun ikisi tam da o
+sebepten doğdu.
