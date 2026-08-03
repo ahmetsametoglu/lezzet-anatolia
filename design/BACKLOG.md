@@ -565,6 +565,28 @@ içinde `sticky` arayarak yaptı — yapışkanlık çocuk bileşende olduğu i�
 bilinçli; ama yazılı olmadığı sürece her taramada yeniden bulgu olarak açılacak. Tasarım tarafı
 şeridi yeterli bulmazsa karar burada tartışılır.
 
+**Diyalog içi buton mobilde BÜYÜMEZ — karar, desenden türetildi (03.08).** Envanter mobil kademeyi
+(K1 48→52, K2 44→48) yalnız **sayfa düzeyindeki** eylemler için veriyor; diyalog içi butonun mobil
+ölçüsünü hiç söylemiyor. Karar: **söylemiyor çünkü aynı şey değil.** Tasarımın genel deseni,
+sınırlanmış yüzeylerin kendi ölçeğini koruması yönünde — kart kendi kademesini kullanıyor
+(`card`/`cardSm`), mobil şerit kendi ölçüsünü. Diyalog da sınırlanmış bir yüzey: dar ekranda panel
+zaten neredeyse tam genişlikte ve içindeki buton sayfanın değil panelin eylemi.
+
+Dolayısıyla diyaloglar web kademesinde kalıyor — ve bu bir ödün değil: `md` 48, `sm` 44, ikisi de
+envanterin 44px tabanında ya da üstünde. Tek koruma: **diyalog içinde dolgulu `xs` (36px) kullanılmaz**,
+o taban altında kalır. Ghost (yalnız metin) serbest, onun hedefi satır yüksekliğinden gelir.
+
+**Sepete `errors` sözlüğü EKLENMEDİ — karar, desenden türetildi (03.08).** Sepet ekranı arızayı
+zaten blok düzeyinde anlatıyor: `CartUnreachable` var ve künyesi ayrımı yazıyor — *"boş sepet bir
+DURUM, ulaşılamayan sepet bir ARIZA"*. Satır içi kırmızı bir hata cümlesi eklemek, aynı ekrana
+**ikinci bir hata dili** koymak olurdu.
+
+Eksik olan sözlük değil, davranış: **yazma düşerse ekran susuyor** (akış denetimi #12 —
+`cart-context` okumada `failed` bayrağı tutuyor, yazmada tutmuyor; iyimser adet ekranda kalıyor,
+sunucuda kalem yok). Doğru çare iyimser güncellemeyi geri almak ve sonucu sepetin **mevcut şerit
+desenine** söyletmek (`CartUndo` ile aynı aile), yeni bir metin bloğu açmak değil. Kendi işi;
+sözlük o iş yapılırken gerekirse doğar. Kapı bugün de `errorKey` döndürüyor, ekran isteyince tüketir.
+
 **Mobil katalog kartında dokunma hedefi 44px'in ALTINDA — bilinçli, kullanıcı kararı (03.08).**
 Envanter iki yerde taban veriyor: *"− ve + dokunma alanı en az 44px kare"* (`:162`) ve *"Mobil
 dokunma hedefleri en az 44px"* (`:630`). Ama aynı tasarım katalog kartını 26px'lik bir daireyle
