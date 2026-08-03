@@ -89,8 +89,16 @@ export const UserProfileSchema = z.object({
   /** VIES doğrulaması; null = hiç sorulmadı. Reverse charge YALNIZ true'da açılır (DOMAIN §5). */
   vatNumberValid: z.boolean().nullable(),
   creditEnabled: z.boolean(),
-  creditLimit: dbNumeric.nullable(),
+  /**
+   * Vade tavanı — **cent** (02.9 dilim: profil ailesi). DB kolonu `credit_limit` euro `numeric`
+   * kalır; dönüşüm sınırda, `UserProfileService.moneyFields` ile (`STACK §8`).
+   *
+   * Adının birimi söylemesi şart: bu alan üç ayrı yerde elle çevriliyordu ve biri
+   * `creditLimit * 100` yazıyordu — 74,17 € → 0,74 € hatasının doğduğu desenin ta kendisi.
+   */
+  creditLimitCents: z.number().int().nullable(),
   paymentTermDays: z.number().int().nullable(),
+  /** YÜZDE, para değil — 02.9'un kapsamı dışında (`dbNumeric` burada oran taşır). */
   discountPercent: dbNumeric.nullable(),
   codAllowed: z.boolean(),
   marketingConsent: MarketingConsentSchema,

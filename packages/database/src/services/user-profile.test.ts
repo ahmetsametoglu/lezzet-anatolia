@@ -112,7 +112,7 @@ describe('liste: sunucu-taraflı arama + daraltma (09.9)', () => {
       name: `Vadeli Firma ${stamp}`,
       type: 'company',
       creditEnabled: true,
-      creditLimit: 500,
+      creditLimitCents: 50000,
       paymentTermDays: 30,
     });
     vadeliId = vadeli.id;

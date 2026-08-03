@@ -12,7 +12,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { isPointsEligible } from '@lezzet/domain-core';
-import { fromCents, toCents } from '@lezzet/helper';
+import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, type Discount, type DiscountCode, type KeysetCursor } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -129,7 +129,7 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
         defaultTermDays: scorecard.defaultTermDays,
         customTermDays: profile.paymentTermDays,
         creditEnabled: profile.creditEnabled,
-        creditLimitCents: profile.creditLimit === null ? null : toCents(profile.creditLimit),
+        creditLimitCents: profile.creditLimitCents,
         codAllowed: profile.codAllowed,
         discountPercent: profile.discountPercent,
         addresses: toCustomerAddressRows(addresses),
@@ -235,7 +235,7 @@ export async function setCustomerCreditAction(customerId: string, input: CreditF
     await new UserProfileService(serviceDb()).update({
       id: customerId,
       creditEnabled: input.creditEnabled,
-      creditLimit: input.creditEnabled && input.creditLimitCents !== null ? fromCents(Math.round(input.creditLimitCents)) : null,
+      creditLimitCents: input.creditEnabled && input.creditLimitCents !== null ? Math.round(input.creditLimitCents) : null,
       paymentTermDays: input.creditEnabled ? input.paymentTermDays : null,
     });
     revalidatePath(CUSTOMERS_PATH);

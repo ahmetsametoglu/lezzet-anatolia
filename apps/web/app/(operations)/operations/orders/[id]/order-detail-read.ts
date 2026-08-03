@@ -136,8 +136,8 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     sub: variantSubs.get(item.variantId) ?? '',
     qty: item.qty,
     fulfilledQty: item.fulfilledQty,
-    unitPriceCents: toCents(item.unitPrice),
-    lineDiscountCents: toCents(item.lineDiscountAmount),
+    unitPriceCents: item.unitPriceCents,
+    lineDiscountCents: item.lineDiscountAmountCents,
     vatRate: item.vatRate,
     lineTotalCents: lineTotalOf(item),
     bundleId: item.bundleId,
@@ -159,8 +159,8 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
   // Ödeme durumu ve kalan MOTORDAN: ekranın gösterdiği "kalan" ile checkout'un tahsil edeceği tutar
   // aynı hesaptan çıkmalı.
   const derivation = derivePaymentStatusForOrder(order, items, {
-    collected: order.amountCollected,
-    refunded: order.amountRefunded,
+    collectedCents: order.amountCollectedCents,
+    refundedCents: order.amountRefundedCents,
   });
 
   const now = new Date();
@@ -185,9 +185,9 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       status: derivation.status,
       method: order.paymentMethod,
       onAccount: order.onAccount,
-      totalCents: toCents(order.total),
-      collectedCents: toCents(order.amountCollected),
-      refundedCents: toCents(order.amountRefunded),
+      totalCents: order.totalCents,
+      collectedCents: order.amountCollectedCents,
+      refundedCents: order.amountRefundedCents,
       openCents: derivation.amountToCollectCents,
       refundDueCents: derivation.refundDueCents,
       dueDate: order.onAccount ? dueDateOf(order.createdAt, termDays).toISOString().slice(0, 10) : null,
@@ -227,7 +227,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       credit: customer?.creditEnabled
         ? {
             openBalanceCents: openAmountCents(order),
-            limitCents: customer.creditLimit === null ? null : toCents(customer.creditLimit),
+            limitCents: customer.creditLimitCents,
             overdueDays: isOverdue(order, termDays, now)
               ? Math.floor((now.getTime() - dueDateOf(order.createdAt, termDays).getTime()) / 86_400_000)
               : null,
@@ -284,12 +284,12 @@ function financeOf(order: Order, items: readonly OrderItem[], batchCogsCents: nu
       saleDate: order.deliveryDate ?? order.createdAt.slice(0, 10),
       channel: order.channel,
       vatTreatment: order.vatTreatment,
-      shippingFee: order.shippingFee,
+      shippingFeeCents: order.shippingFeeCents,
       isGiftOrder: order.isGiftOrder,
-      cogsAmount: order.cogsAmount,
-      deliveryCost: order.deliveryCost,
-      paymentFee: order.paymentFee,
-      packagingCost: order.packagingCost,
+      cogsAmountCents: order.cogsAmountCents,
+      deliveryCostCents: order.deliveryCostCents,
+      paymentFeeCents: order.paymentFeeCents,
+      packagingCostCents: order.packagingCostCents,
     },
     items,
   );
@@ -424,7 +424,7 @@ function linksOf(
 
 /** Satır tutarı: sipariş edilen adet × birim − kalemin indirim payı. Kalemin TAMAMI için. */
 function lineTotalOf(item: OrderItem): number {
-  return toCents(item.unitPrice) * item.qty - toCents(item.lineDiscountAmount);
+  return item.unitPriceCents * item.qty - item.lineDiscountAmountCents;
 }
 
 /**
@@ -433,8 +433,8 @@ function lineTotalOf(item: OrderItem): number {
  */
 function totalsOf(order: Order, lines: OrderLineView[], settled: boolean): OrderTotalLine[] {
   const subtotal = lines.reduce((sum, l) => sum + l.lineTotalCents, 0);
-  const shipping = toCents(order.shippingFee);
-  const discount = toCents(order.discountAmount);
+  const shipping = order.shippingFeeCents;
+  const discount = order.discountAmountCents;
   // Karşılanmayan adet YALNIZ hazırlık kesinleştiyse bir düşümdür. Hazırlanmamış siparişte bu satır
   // "tamamı düşüldü" diye okunuyordu ve toplam kendi kendisiyle çelişiyordu.
   const short = settled
@@ -444,7 +444,7 @@ function totalsOf(order: Order, lines: OrderLineView[], settled: boolean): Order
         0,
       )
     : 0;
-  const refunded = toCents(order.amountRefunded);
+  const refunded = order.amountRefundedCents;
 
   const rows: OrderTotalLine[] = [{ label: 'Kalemler', amountCents: subtotal, kind: 'sum' }];
   if (discount > 0) rows.push({ label: 'Sepet indirimi', amountCents: discount, kind: 'deduction' });
@@ -453,7 +453,7 @@ function totalsOf(order: Order, lines: OrderLineView[], settled: boolean): Order
   // KDV bir DÜŞÜM DEĞİL, bilgi: b2c fiyatı zaten dahil, b2b'de fatura ayrı gösterir. Satırın işi
   // "bu siparişin vergisi ne" sorusunu tutarı bozmadan yanıtlamak.
   rows.push({ label: 'İçindeki KDV', amountCents: vatInsideOf(order.channel, lines), kind: 'note' });
-  rows.push({ label: 'Sipariş toplamı', amountCents: toCents(order.total), kind: 'grand' });
+  rows.push({ label: 'Sipariş toplamı', amountCents: order.totalCents, kind: 'grand' });
   if (refunded > 0) rows.push({ label: 'İade edildi', amountCents: refunded, kind: 'refund' });
   return rows;
 }

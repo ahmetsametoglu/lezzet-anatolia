@@ -100,7 +100,7 @@ export async function resolveCheckoutPayment(input: CheckoutOptionsInput): Promi
     codAllowed: customer.codAllowed,
     cashLegalLimitCents,
     creditEnabled: customer.creditEnabled,
-    creditLimitCents: customer.creditLimit != null ? Math.round(customer.creditLimit * 100) : null,
+    creditLimitCents: customer.creditLimitCents,
     openBalanceCents,
     hasOverdue,
   });

@@ -55,6 +55,12 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
     super(supabase, 'user_profiles', UserProfileSchema, UserProfileInsertSchema, UserProfileUpdateSchema, false);
   }
 
+  /**
+   * Tek para alanı: vade tavanı. `discountPercent` de `numeric` ama YÜZDE'dir — 02.9'un kapsamı
+   * yalnız para kolonları, oran çevirenler bilerek dışarıda.
+   */
+  protected override readonly moneyFields = ['creditLimitCents'];
+
   /** Telefonla arar — anahtar E.164 NORMALİZE gelmeli (normalize eden motordur). */
   findByPhone(phone: string): Promise<UserProfile | null> {
     return this.getOneBy({ phone });

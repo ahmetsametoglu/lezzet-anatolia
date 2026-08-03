@@ -35,7 +35,7 @@ beforeAll(async () => {
 
   const customer = await profiles.insert({ name: `Peşin müşteri ${stamp}` });
   customerId = customer.id;
-  const vadeli = await profiles.insert({ name: `Vadeli müşteri ${stamp}`, creditEnabled: true, creditLimit: 100 });
+  const vadeli = await profiles.insert({ name: `Vadeli müşteri ${stamp}`, creditEnabled: true, creditLimitCents: 10000 });
   creditCustomerId = vadeli.id;
   createdProfiles.push(customer.id, vadeli.id);
   SettingsService.invalidate();

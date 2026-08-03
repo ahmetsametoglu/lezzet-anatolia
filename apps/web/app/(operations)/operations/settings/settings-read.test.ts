@@ -38,7 +38,7 @@ function profile(over: Partial<UserProfile> & { id: string }): UserProfile {
     vatNumber: null,
     vatNumberValid: null,
     creditEnabled: false,
-    creditLimit: null,
+    creditLimitCents: null,
     paymentTermDays: null,
     discountPercent: null,
     codAllowed: true,
