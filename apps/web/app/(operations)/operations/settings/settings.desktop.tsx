@@ -21,7 +21,10 @@ export function SettingsDesktop({ data, urlState, navPending, rows, search, onTa
   const changed = data.rows.filter((r) => r.changed).length;
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    // `bg-ops-card` — gerekçe `tickets.desktop` künyesinde: zemin çizilmezse kabuğun beji görünür.
+    // Bu ekranın `loading.tsx`'i onu zaten taşıyordu, yani iskelet ile gerçek sayfa ayrışıyordu:
+    // yüklenirken doğru, yüklendikten sonra yanlış zemin.
+    <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader
         title="Ayarlar"
         subtitle={`${data.rows.length} parametre · ${changed} tanesi varsayılandan farklı · ${data.staff.length} personel`}

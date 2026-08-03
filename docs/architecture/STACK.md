@@ -220,6 +220,15 @@ items/
 - Ortak katman (veri, hook, action çağrıları, token) paylaşılır; yalnız sunum bileşeni dallanır.
 - Cihaz ipucu sunucudan header ile client'a prop geçilebilir (ağaç yine tek).
 
+**Operasyon ekranının kökü KENDİ zeminini çizer: `bg-ops-card` (03.08, kullanıcı bildirimi).**
+Kabuğun zemini `--color-ops-bg`'dir (`#dedbd3` bej; koyu temada `#1b1e18`) ve `PageHeader` kendi
+zeminini ÇİZMEZ — yalnız alt çizgisi vardır. Kök zemin taşımazsa başlık barı ve altındaki paneller
+kabuğun bejini gösterir; ekran "kahverengiye çalıyor" diye görünür. Kural on ekranın sekizinde
+FİİLEN uygulanıyordu ama yazılı değildi, o yüzden iki ekran (Talepler · Ayarlar) onsuz indi.
+Denetleniyor (`docs:check` §3f); ölçüt **`PageHeader` render eden `.desktop`/`.mobile` dosyası** —
+cihaz forku komponentlerde de kullanılıyor ve dialog içindeki bir form zeminini `Dialog` panelinden
+alır, ona `bg-ops-card` dayatmak yanlış olurdu.
+
 **`<sayfa>-url.ts` sayfalar arası import EDİLEBİLİR — tek yazılı istisna (03.08, denetim D1).**
 Sayfaya-özel dosya sayfada kalır; bu dosya tipi ayrı tutulur çünkü işlevi farklı: `*-url.ts` bir
 sunum parçası değil, sayfanın **adres sözleşmesidir** — hangi parametre adı hangi anlama gelir,

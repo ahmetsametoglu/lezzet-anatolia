@@ -607,6 +607,43 @@ for (const root of TEARDOWN_ROOTS.filter((p) => existsSync(join(ROOT, p)))) {
   }
 }
 
+// ── 3f. Operasyon ekranı KENDİ zeminini çizmeli ──────────────────────────────
+//
+// **Kullanıcı bildirimi (03.08):** *"header bölümünün rengi sayfadan sayfaya değişiyor, koyu
+// kahve gibi geliyor."* Sebep: kabuğun zemini `--color-ops-bg` (#dedbd3 bej; koyu temada #1b1e18)
+// ve `PageHeader` kendi zeminini ÇİZMEZ — yalnız alt çizgisi var. Ekranın kökü `bg-ops-card`
+// taşımazsa başlık barı ve altındaki paneller kabuğun bejini gösterir.
+//
+// On ekranın sekizi bu sınıfı taşıyordu, ikisi (Talepler · Ayarlar) taşımıyordu. Yani kural
+// FİİLEN vardı ama yazılı değildi — ve yazılı olmayan kural, onuncu ekranı yazan ajanı bağlamaz.
+//
+// Neden `typecheck`/`eslint` yakalayamaz: eksik olan bir tip ya da sözdizimi değil, bir SINIF.
+// Görsel bir eksiklik ancak böyle bir yapısal denetimle yakalanır — ya da kullanıcının gözüyle,
+// ki bu turda öyle oldu.
+//
+// **Ölçüt `PageHeader` RENDER EDEN dosya**, "adı `.desktop.tsx` olan her dosya" değil: cihaz forku
+// sayfalarda da komponentlerde de kullanılıyor (ör. dialog içindeki ürün formu) ve dialog kendi
+// zeminini `Dialog` panelinden alır — ona `bg-ops-card` dayatmak yanlış olurdu. Daraltma keyfî
+// değil, arızanın NEDENİNE bağlı: zemini gösteren şey başlık barının kendisi.
+for (const dir of ['apps/web/app/(operations)/operations']) {
+  if (!existsSync(join(ROOT, dir))) continue;
+  for (const file of walkSource(dir).filter((f) => /\.(desktop|mobile)\.tsx$/.test(f))) {
+    const src = read(file);
+    if (!src.includes('<PageHeader')) continue;
+    // Kök öğe: `return (` sonrası ilk JSX etiketi. Yalnız DOSYADAKİ ANA görünüm bileşeni denetlenir —
+    // aynı dosyadaki yardımcı bileşenlerin kendi kökleri zemin taşımak zorunda değil.
+    const exported = src.indexOf('export function ');
+    if (exported === -1) continue;
+    const head = src.slice(exported, exported + 4000);
+    const ret = head.indexOf('return (');
+    if (ret === -1) continue;
+    const rootTag = head.slice(ret, ret + 600);
+    if (!rootTag.includes('bg-ops-')) {
+      note(`${file}: ekranın kökü zemin sınıfı taşımıyor — \`bg-ops-card\` (kabuğun zemini bej, başlık barı onu gösterir)`);
+    }
+  }
+}
+
 // ── 4. build/README durum özeti güncel mi ──────────────────────────────────────
 const label = (m) =>
   m.total === 0 ? 'planlanıyor' : m.done === m.total ? 'tamam' : m.done + m.partial === 0 ? 'bekliyor' : 'sürüyor';

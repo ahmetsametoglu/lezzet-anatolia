@@ -23,7 +23,7 @@ export function SettingsMobile({ data, urlState, navPending, rows, search, onTab
   const searching = search.length > 0;
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader compact title="Ayarlar" search={{ value: search, onChange: onSearch, placeholder: 'Ayar ara…' }} />
 
       {/* Arama açıkken sekme çizilmez: sonuç zaten bölümler-üstü, altında duran bir sekme barı
