@@ -311,6 +311,45 @@ görünüme `exists(… sender='ai')` alanı gerekiyor). İkisi `16.5` ile birli
 talep `human` ve hiç `ai` mesajı yok, yani ikisi de boş liste dönerdi. **Yukarıdaki "çip şeridi
 nasıl kurulsun" kararı bu yüzden altı çipli bir şerit üzerinden düşünülmeli**, beş değil.
 
+### Geri Bildirim — üç bilinçli sapma (03.08, 17.1)
+
+**1. Yığın seçicisi (Bekleyen · Yayında · Reddedilen) çizimde YOK, eklendi.** Çizim yalnız bekleyen
+kuyruğu gösteriyor; onunla yetinseydim `moderateReview`'ın üç hâlinden ikisine — yayınlanmışı geri
+çekme, reddedilmişi yeniden yayınlama — ekrandan hiç ulaşılamazdı, arka uç hazırken. Sayfa dokümanı
+ikisini de istiyor (§2, §3). Uydurma değil, kapının kendi imzasının karşılığı:
+`listReviewsForModeration(status)` üç durumu da okuyor.
+
+**2. "Kupona çevrim" kolonu kupon SAYISI değil, çevrilen PUAN.** Çizim `2 kupon` yazıyor ama defter
+kupon adedini taşımıyor (`PointsBalance`: `balance`/`earned`/`spent`). Sayıyı uydurmaktansa elde
+olanı doğru adıyla göstermek yeğ; kolon başlığı da "Çevrilen" oldu. Sayı arka uçtan istendi.
+
+**3. "Son 30 gün" dönem seçicisi çizilmedi.** Hiçbir okuma kapısı dönem parametresi almıyor.
+Çalışmayan bir süzgeç, olmayan bir süzgeçten kötüdür — operatör süzdüğünü sanır. İstek açıldı.
+
+**Ürün skorları sekmesi İNDİ** — bir tur "kapı yok" diye çıkarıldıktan sonra. Kapı vardı
+(`ProductRatingService.listRanked`, künyesinde bu ekranı adıyla anıyor); envantere bakmadan "yok"
+denmişti. Tablo çizimin dört kolonunu taşıyor (Ürün · Skor · Beğeni · Sinyal), "en sevilen ↔ en
+sevilmeyen" yönü `MultiToggle` ile seçiliyor ve `confident` düşükse not satırı amber yazılıyor —
+tasarımın *"3 yorumla en kötü ürün damgası vurulmaz"* kuralı böyle görünür oluyor.
+
+**4. "Elle puan düzelt" düğmesi üst barda DEĞİL, satırda.** Çizim barın sağına tek koyu düğme
+koyuyor ve pencere müşteriyi kendi soruyor (bir seçici var). Bugün düzeltme puan satırından açılıyor,
+tablo da çizimde olmayan bir düğme kolonu taşıyor. Üst bara taşımak müşteri seçicisini gerektiriyor
+(`searchCustomerOptions` üzerinden, ayrı bir tur işi) ve müşterisiz bir düğme, basıldığında kime puan
+yazacağını bilmeyen bir pencere açardı. Kod `BEKLEYEN` işaretiyle bu maddeye bağlı.
+
+**5. Mobil, çizimin iki-kart düzeni yerine masaüstünün sekmeli kabuğunu daraltıyor.** Çizim telefonda
+sekme şeridi göstermiyor; alt alta iki kart var ("Onay bekleyen" rozetli · "Aday ürün talebi") ve
+puan/skor mobilde hiç yok. Bugünkü kod dört yerine üç sekmeyi mobilde de çiziyor ve puan tablosunu
+salt okunur gösteriyor. Çizimin telefon için verdiği somut kararlardan **yalnız biri uygulandı**:
+moderasyon düğmeleri tam genişlik ve "Onayla" daha geniş (`flex:1` / `flex:1.4`), yani başparmak
+hedefi. Kalan düzen farkı açık madde.
+
+> **Bu sapmaların çoğu ilk turda kayıtsızdı** ve kullanıcı bildirimiyle çıktı (03.08): *"tasarım
+> tutarsız, orijinalden çok uzak"*. Her biri tek tek gerekçelendirilmişti ve gerekçeler tek tek
+> makul görünüyordu; toplamı çizimden başka bir ekran çıkardı. Ders: sapmanın SAYISI da bir ölçüdür —
+> üçüncüsünden sonra soru "bu gerekçe geçerli mi" değil, "ben hâlâ bu çizimi mi uyguluyorum" olmalı.
+
 ### Talepler — "Elle talep aç" penceresinin içi çizilmemiş (03.08, 16.3)
 
 Çizimdeki modal genel bir kabuk: başlık + gövde metni + not + iki düğme. Gerçek pencerenin
