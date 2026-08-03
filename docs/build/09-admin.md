@@ -272,6 +272,20 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
     - ⚠ **`purchase_order`da referans no YOK** (`id · supplier_id · status · sent_at · note · created_at`). Satırda "sipariş referansı" isteniyorsa müşteri siparişindeki gibi insan-okur bir alan (`LA-26-7K4M2P` emsali) açılması gerekir — ayrı karar, şema değişikliği.
 - [ ] (09.15) **Rotalar** — bölge CRUD (posta kodları + haftalık günler; bir kod tek bölge), günün rota listesi (hazırlık durumu bağlamıyla), kurye atama, siparişi başka güne taşıma, kesim saati etkisi görünümü
   - *Bitti:* bölge değişikliği checkout gün hesabına yansıyor; atanmamış sipariş listede ayırt ediliyor
+  - **NAV TARAMASI (03.08) — rayda BEŞ ölü giriş var, biri de 404'ün kendisinde.** WhatsApp girişi
+    kaldırılırken (denetim O-Y3) yalnız o giriş bakılmış, ray taranmamıştı. Tam liste: `deliveries`
+    (09.15) · `finance` (12.x) · `reports` · `analytics` · `feedback` (17.x). Beşi de `[...rest]`
+    catch-all'a düşüyor, yani personel `not-found`'u görüyor — çökme değil, ama **var olmayan bir
+    yere giden düğme olmayan bir yetenek vaat ediyor** (yüzeyin kendi ilkesi, `ops-nav` künyesi).
+    - **Kurye için oran ağır:** `DAILY` rolünün üç girişinden biri (Teslimat & Rota) ölü.
+    - **404 sayfası ÖLÜ bir hedef öneriyor** (`not-found.tsx:57`): "Sık kullanılan ekranlar"
+      şeridinde `/operations/deliveries` duruyor. Yani Teslimat'a tıklayan 404'e düşüyor, 404 da ona
+      yine Teslimat'ı öneriyor — kendi üstüne kapanan bir döngü. Bu satır 09.15 inene kadar
+      kalmamalı; ötekiler nav'da kalabilir mi, ayrı bir karar (ray "bugün gidilebilecek yerlerin
+      listesi" mi, "modül planının ilanı" mı — `ops-nav` künyesi birinciyi söylüyor).
+    - Yanlış alarm değiller: `/operations/b2b-approvals` ve `/operations/whatsapp` kodda geçiyor ama
+      yalnız YORUMDA — ikisi de tarihsel açıklama, bağlantı değil. Palet (⌘K) aynı modelden okuduğu
+      için beş ölü giriş orada da çıkıyor; model tek olduğu için düzeltme de tek yerden.
 - [~] (09.16) **Ayarlar** — kapsamlı Setting yönetimi (genel değer + kanal/bölge/ülke istisnaları; anlaşılır ad/açıklama; alt sınır kontrolü — TTL 30 dk altına inemez; değişiklik izi) + kullanıcı/rol yönetimi (çoklu rol, pasifleştirme) · `touches: apps/web/app/(operations)/operations/settings/** · apps/web/lib/{staff,constraint-message}.ts`
   - *Bitti:* istisna eklenen ayar çözücüde globali eziyor; sınır ihlali anlaşılır reddediliyor
   - **Girdi (28.07, 09.13'ten):** `SettingsService` süreç içinde **statik önbellek** tutuyor ve dış değişiklikte düşmüyor — `set()` yalnız kendi sürecini geçersizler. Tek süreçte sorun yok; çok süreçli dağıtımda "ayarı değiştirdim, ekran değişmedi" olarak yaşanır. Bu ekran yazılmadan **TTL mi, yayın (notify) mı** kararı verilmeli; yoksa ayarlar ekranı yazdığı değerin uygulandığını gösteremez.
