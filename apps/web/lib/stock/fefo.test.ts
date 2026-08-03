@@ -32,8 +32,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId] });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], warehouseIds: [warehouseId] });
 });
 
 beforeEach(async () => {

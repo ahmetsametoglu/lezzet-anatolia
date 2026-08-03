@@ -79,8 +79,12 @@ afterAll(async () => {
   for (const id of [productId, candidateId]) await db.from('product_feedback').delete().eq('product_id', id);
   await db.from('discount').delete().in('customer_id', createdProfiles);
   for (const id of createdOrders) await db.from('order').delete().eq('id', id);
-  await purgeTestData(db, { productIds: [productId, candidateId], categoryIds: [categoryId], profileIds: createdProfiles });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId, candidateId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    warehouseIds: [warehouseId],
+  });
 });
 
 describe('bakiye defterden türetilir', () => {

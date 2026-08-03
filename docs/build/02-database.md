@@ -157,10 +157,13 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
   - **P4 — protokol:** tek ajan · tek commit (birleştirme + `index.md` yeniden yazımı + numara anan Durum notları) · `pnpm docs:check` · sonra **kullanıcı `db:refresh`**. Başka şerit migration'a dokunduğu sürece BAŞLAMAZ. Doğrulaması bende değil: `db:reset` kullanıcının komutudur.
   - **Aynı pencerede `vehicle` tablosu DÜŞER** (besleme şeridinin notu, 03.08): servisi yok, `from('vehicle')` hiç geçmiyor, 0 satır ve hiçbir tasarım sayfası aracı bir varlık olarak kullanmıyor — "araç" tasarımlarda yalnız fiziksel bağlam. Tüketilmeyen tablo, kullanılmayan enum değeriyle aynı sınıftır: okuyan var olmayan bir kabiliyeti varsayar ve `knip` yakalayamaz (SQL + Zod kapsamı dışı). Tek başına bir reset'e değmediği için buraya bağlandı. Gerekçe: `data-model/depo.md` › Vehicle.
   - **Pencere şimdi:** greenfield bitince (ilk üretim dağıtımı) bu birleştirme imkânsızlaşır.
-- [ ] (02.12) **Teardown'da elle silme kuralı + 34 dosyanın süpürülmesi (denetim R4-açık)** — `touches: **/*.test.ts, scripts/docs-check.mjs`
-    - `docs:check`'e kural: `*.test.ts` içinde `from('warehouse'|'account').delete()` yasak; sıra `purgeTestData`'nın işidir. **Kural ve süpürme AYNI commit'te** — kural tek başına inerse üç şerit 34 dosyada kırmızı bir kapıyla yaşar (denetim görüşü 03.08).
-    - Bugün 34 dosya depoyu elle siliyor. Çoğu belge numarası üretmediği için sızdırmıyor; sızıntı yalnız imha/sayım/transfer akışına dokunanlarda doğuyor (`document_counter` depo koduna çıpalı ve FK'siz — hiç hata üretmeden birikir). Kural olmazsa bir sonraki imha testi aynı sızıntıyı yeniden açar.
-    - Sıra: bu (küçük) → `02.11` (büyük); ikisi sakin pencereyi paylaşmasın.
+- [x] (02.12) **Teardown'da elle silme kuralı + 34 dosyanın süpürülmesi (denetim R4-açık)** — `touches: **/*.test.ts, scripts/docs-check.mjs`
+    - *Bitti:* `*.test.ts` içinde `from('warehouse'|'account').delete()` KALMADI; silme sırası tek yerde (`cleanup.ts`) ve kural `docs:check §3f` ile zorlanıyor.
+    - **Kural ve süpürme aynı commit'te** (denetim görüşü 03.08): kural tek başına inseydi üç şerit 34 dosyada kırmızı bir kapıyla yaşardı. Kuralın ısırdığı kanıtlandı — bir ihlal geri konup `docs:check` düşürüldü, sonra geri alındı.
+    - **Kapsam `account`'a da genişletildi:** R1'in kökü aynıydı ve orada da FK `restrict`. Süpürme sırasında `purgeTestData`'nın hesap bölümü eksik çıktı — `bank_import` hesabı `restrict` ile tutuyor, şablon `cascade` olduğu için tek başına görünmüyordu; ikisi de purge'e eklendi.
+    - **`stock.test`'te ikinci bir sessizlik daha vardı:** servis silmeleri `.catch(() => {})` ile susturuluyordu, yani ürün hiç silinmese de test yeşil kalıyordu. Purge'e devredildi.
+    - Ölçüm (tam paket, öncesi/sonrası): `warehouse 2→2 · account 5→5 · money_movement 41→41 · document_counter 1→1 · stock 196→196 · bank_import 1→1` — altı tabloda sıfır artık, 1675/1675 yeşil.
+    - Sıra: bu bitti → sırada `02.11` (büyük, kullanıcı penceresi).
 ## Netleşecekler
 
 - **Migration aracı:** Supabase CLI mi, kendi küçük runner'ımız mı — artı/eksi masaya konup karar verilecek (STACK §13 statü notu gereği).

@@ -65,13 +65,14 @@ beforeEach(async () => {
 afterAll(async () => {
   await db.from('webhook_event').delete().like('event_id', `evt_${stamp}_%`);
   await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('money_movement').delete().eq('account_id', providerAccount);
-  await db.from('money_movement').delete().eq('account_id', cashAccount);
   await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('account').delete().eq('id', providerAccount);
-  await db.from('account').delete().eq('id', cashAccount);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [customerId] });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: [customerId],
+    accountIds: [providerAccount, cashAccount],
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** Sahte sağlayıcı: çağrıları kaydeder, sonucu test söyler. */

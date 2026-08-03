@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AccountService, MoneyMovementService, serviceDb } from '@lezzet/database';
+import { purgeTestData } from '@lezzet/database/testing';
 import { recordMovement, transfer } from './movement';
 
 /**
@@ -22,11 +23,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  for (const id of createdAccounts) {
-    await db.from('money_movement').delete().eq('account_id', id);
-    await db.from('money_movement').delete().eq('counter_account_id', id);
-  }
-  for (const id of createdAccounts) await db.from('account').delete().eq('id', id);
+  // Hareket + hesap sırası `cleanup.ts`'te; burada tekrarlansaydı biri bir gün ötekinden ayrışırdı.
+  await purgeTestData(db, { accountIds: createdAccounts });
 });
 
 describe('elle hareket girişi', () => {

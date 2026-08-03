@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AccountService, MoneyMovementService, serviceDb } from '@lezzet/database';
+import { purgeTestData } from '@lezzet/database/testing';
 import { recordAdvertisingExpense, recordExpense } from './movement';
 
 /**
@@ -31,8 +32,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await db.from('money_movement').delete().eq('account_id', bankAccount);
-  await db.from('account').delete().eq('id', bankAccount);
+  await purgeTestData(db, { accountIds: [bankAccount] });
 });
 
 /** Dönemdeki kampanya kırılımı — testin açtığı satırlar dışındakiler bu pencereye düşmez. */

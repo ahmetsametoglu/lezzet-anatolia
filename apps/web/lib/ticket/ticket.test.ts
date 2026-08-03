@@ -72,8 +72,12 @@ beforeAll(async () => {
 afterAll(async () => {
   for (const id of createdTickets) await db.from('ticket').delete().eq('id', id);
   for (const id of createdOrders) await db.from('order').delete().eq('id', id);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** Siparişsiz genel talep — testlerin çoğu için yeterli zemin. */

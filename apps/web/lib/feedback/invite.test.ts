@@ -100,9 +100,13 @@ afterAll(async () => {
   await db.from('points_entry').delete().in('customer_id', createdProfiles);
   await db.from('feedback_request').delete().in('order_id', createdOrders);
   for (const id of createdOrders) await db.from('order').delete().eq('id', id);
-  await purgeTestData(db, { productIds: [productId, secondProductId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await purgeTestData(db, {
+    productIds: [productId, secondProductId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    warehouseIds: [warehouseId],
+  });
   await settings.restore();
-  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Bu siparişin davetini açar — taramanın yaptığını doğrudan yaparak. */

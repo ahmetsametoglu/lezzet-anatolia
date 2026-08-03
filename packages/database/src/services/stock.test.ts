@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
-import { mustDelete } from '../testing/cleanup';
+import { mustDelete, purgeTestData } from '../testing/cleanup';
 import { createTestWarehouse } from '../testing/warehouse';
 import { CategoryService } from './category.service';
 import { ProductService } from './product.service';
@@ -47,11 +47,10 @@ beforeAll(async () => {
 // operasyon listesinde çöp satır olarak görünür. Sıra zorunlu: `stock`/`reservation` varyanta
 // RESTRICT ile bağlı, önce onlar silinmezse ürün silinemez (varyant CASCADE'i engellenir).
 afterAll(async () => {
-  await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('stock').delete().eq('variant_id', variantId);
-  await products.delete(productId).catch(() => {});
-  await categories.delete(categoryId).catch(() => {});
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  // Elle silme dizisi purge'e devredildi (02.12): sıra tek yerde durur. Servis silmeleri
+  // `.catch(() => {})` ile susturuluyordu — bu, `mustDelete`'in bitirdiği sessiz teardown sınıfının
+  // ta kendisiydi: ürün silinmese de test yeşil kalırdı.
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], warehouseIds: [warehouseId] });
 });
 
 /** Her testin kendi zemini: varyantın partileri ve rezervasyonları sıfırlanır. */

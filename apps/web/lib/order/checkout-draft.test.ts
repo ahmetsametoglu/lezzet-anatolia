@@ -138,9 +138,9 @@ afterAll(async () => {
     categoryIds: [categoryId],
     profileIds: createdProfiles,
     authUserIds: [authUserId],
+    warehouseIds: [warehouseId],
   });
   SettingsService.invalidate();
-  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /**

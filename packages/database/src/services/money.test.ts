@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { AccountService, MoneyMovementService } from './money.service';
 import { serviceDb } from '../client';
+import { purgeTestData } from '../testing/cleanup';
 
 /**
  * Hesaplar + para hareketleri (12.1) — DOMAIN §9.
@@ -37,11 +38,8 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  for (const id of createdAccounts) {
-    await db.from('money_movement').delete().eq('account_id', id);
-    await db.from('money_movement').delete().eq('counter_account_id', id);
-  }
-  for (const id of createdAccounts) await db.from('account').delete().eq('id', id);
+  // Hareket → hesap sırası `cleanup.ts`'te; her dosya kendi sırasını uydurursa biri yanlış olur.
+  await purgeTestData(db, { accountIds: createdAccounts });
 });
 
 describe('hesap', () => {
@@ -208,7 +206,6 @@ describe('para hareketi — euro↔cent sınırı', () => {
     await movements.insert({ accountId: account.id, direction: 'out', amountCents: 2525, type: 'expense', category: 'test' });
 
     expect((await accounts.balance(account.id)).balanceCents).toBe(7525);
-    await db.from('money_movement').delete().eq('account_id', account.id);
-    await db.from('account').delete().eq('id', account.id);
+    await purgeTestData(db, { accountIds: [account.id] });
   });
 });

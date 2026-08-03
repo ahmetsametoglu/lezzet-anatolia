@@ -47,8 +47,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId); // kalemler + log CASCADE
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** Taslak sipariş + tek kalem. */

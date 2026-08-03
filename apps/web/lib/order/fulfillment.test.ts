@@ -50,8 +50,12 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** Sipariş aç → ayır → hazırla → yola çıkar. Teslime hazır hâle getirir. */

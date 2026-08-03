@@ -39,8 +39,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
   for (const id of createdOrders) await db.from('order').delete().eq('id', id);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [customerId] });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: [customerId],
+    warehouseIds: [warehouseId],
+  });
 });
 
 async function orderWith(

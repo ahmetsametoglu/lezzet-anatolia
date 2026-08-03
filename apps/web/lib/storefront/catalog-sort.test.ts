@@ -58,8 +58,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   for (const p of [ucuz, orta, pahali]) await db.from('stock').delete().eq('variant_id', p.variantId);
-  await purgeTestData(db, { productIds, categoryIds: [categoryId] });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, { productIds, categoryIds: [categoryId], warehouseIds: [warehouseId] });
 });
 
 /** Kendi ürünlerimizin adları — katalogda seed verisi de var. */

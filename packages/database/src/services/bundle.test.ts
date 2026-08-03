@@ -56,8 +56,7 @@ afterAll(async () => {
   // Paketler ÜRÜNDEN ÖNCE gider: kalemler varyanta `restrict` ile bağlı, ürün silme cascade'i orada
   // reddedilirdi. (Ortak `purgeTestData` ürün grafiğini toplar; paket onun kapsamında değil.)
   for (const id of bundleIds) await bundles.delete(id);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId] });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], warehouseIds: [warehouseId] });
 });
 
 async function createBundle(name: string, totalPrice: number, items: Array<{ variantId: string; qty: number; allocatedUnitPrice: number }>) {

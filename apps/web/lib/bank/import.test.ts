@@ -52,13 +52,16 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await db.from('money_movement').delete().eq('account_id', bankAccount);
-  await db.from('bank_import').delete().eq('account_id', bankAccount);
-  await db.from('bank_import_profile').delete().eq('account_id', bankAccount);
   await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('account').delete().eq('id', bankAccount);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  // Hareket + import zinciri (`bank_import`, `bank_import_profile`) hesapla birlikte gider — sıra
+  // `cleanup.ts`'te; burada tekrarlansaydı biri bir gün ötekinden ayrışırdı.
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    accountIds: [bankAccount],
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** Fransız bankası ekstresi görünümlü ham satırlar. */

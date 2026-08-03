@@ -577,6 +577,36 @@ for (const id of SIBLING_IMPORT_GRANDFATHER) {
   if (!grandfatherSeen.has(id)) note(`docs-check 3e: devralınan muafiyet BAYAT — "${id}" artık ihlal etmiyor, satırı listeden sil`);
 }
 
+// ── 3f. Teardown'da elle `warehouse`/`account` silme YOK ─────────────────────
+//
+// **Denetim bulgusu R (03.08), ölçümle.** Supabase `delete()` hatayı FIRLATMAZ, sonuç nesnesinde
+// döndürür; teardown'da kimse o nesneye bakmadığı için `restrict` FK'ye takılan bir silme "düşen
+// test" değil **görünmez bir hiç** olur. Ölçüldü: `money_movement` bir denetim oturumunda 41 → 187
+// satıra çıktı ve bu satırlar operasyonun Kasa ekranında GERÇEK hareket gibi görünüyordu.
+//
+// İki tablo özel olarak anılıyor çünkü ikisi de `restrict` FK'lerin toplandığı yer: depoya parti,
+// sipariş, kabul, transfer, bölge bağlanır; hesaba hareket ve banka import zinciri. Sıra tek yerde
+// (`cleanup.ts`) durmalı — her dosya kendi sırasını uydurursa biri mutlaka yanlış olur.
+//
+// **Kural neden script'e indi:** `typecheck` bunu göremez (çağrı tip olarak geçerli), `lint` de
+// göremez (proje disiplini, dil kuralı değil). Yazılı kural denetlenmezse çürür — ve bu kuralın
+// çürümesi sessiz: bir sonraki imha akışı testi aynı sızıntıyı yeniden açar ve kimse fark etmez.
+//
+// Kapsam TEST dosyaları: üretim kodu bu tabloları zaten servis üzerinden siliyor.
+const TEARDOWN_ROOTS = ['apps/web/lib', 'packages/database/src'];
+const FORBIDDEN_DELETE = /from\('(warehouse|account)'\)\s*\.delete\(\)/g;
+
+for (const root of TEARDOWN_ROOTS.filter((p) => existsSync(join(ROOT, p)))) {
+  for (const file of walkSource(root).filter((f) => f.endsWith('.test.ts'))) {
+    for (const m of read(file).matchAll(FORBIDDEN_DELETE)) {
+      note(
+        `${file}: teardown'da elle '${m[1]}' silme — CLAUDE.md §4b: purgeTestData({ ${m[1] === 'warehouse' ? 'warehouseIds' : 'accountIds'} }) kullan. ` +
+          `Supabase delete() hatayı fırlatmaz, döndürür: restrict FK'ye takılan silme sessizce yarım kalır`,
+      );
+    }
+  }
+}
+
 // ── 4. build/README durum özeti güncel mi ──────────────────────────────────────
 const label = (m) =>
   m.total === 0 ? 'planlanıyor' : m.done === m.total ? 'tamam' : m.done + m.partial === 0 ? 'bekliyor' : 'sürüyor';

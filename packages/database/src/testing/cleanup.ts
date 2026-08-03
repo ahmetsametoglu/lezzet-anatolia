@@ -109,6 +109,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   if (accountIds.length > 0) {
     await mustDelete(db, 'money_movement', (q) => q.in('account_id', accountIds));
     await mustDelete(db, 'money_movement', (q) => q.in('counter_account_id', accountIds));
+    // Banka import zinciri de hesaba bağlı ve `bank_import` `restrict` — şablon `cascade` olduğu
+    // için tek başına görünmez ama yükleme kaydı hesabı tutar. Sıra: yükleme → şablon (şablon
+    // silinince yükleme `set null` alır, tersi FK'yi ihlal eder).
+    await mustDelete(db, 'bank_import', (q) => q.in('account_id', accountIds));
+    await mustDelete(db, 'bank_import_profile', (q) => q.in('account_id', accountIds));
   }
 
   // 3) Tedarik grafiği: giriş → sipariş → tedarikçi. Girişler siparişe `set null`, partiler zaten gitti.

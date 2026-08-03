@@ -56,8 +56,12 @@ beforeEach(async () => {
 
 // Tedarik grafiği `restrict` FK'lerle bağlı: giriş → sipariş → tedarikçi sırasıyla toplanır.
 afterAll(async () => {
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], supplierIds: createdSuppliers });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    supplierIds: createdSuppliers,
+    warehouseIds: [warehouseId],
+  });
 });
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);

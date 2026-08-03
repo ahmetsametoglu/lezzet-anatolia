@@ -63,14 +63,17 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await db.from('money_movement').delete().eq('account_id', cashAccount);
   await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('account').delete().eq('id', cashAccount);
   // Rezervasyonun siparişe FK'sı YOKTUR (0007) — sipariş silinince kendiliğinden gitmez. Kalan
   // satır TTL süpürme testini yanıltır: o test genel sayı üzerinden çalışır.
   await db.from('reservation').delete().eq('variant_id', variantId);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    accountIds: [cashAccount],
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** Sipariş aç → ayır → onayla. Bildirim için yeterli en kısa yol. */

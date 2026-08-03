@@ -55,8 +55,12 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId); // kalemler + kullanım kaydı CASCADE
   await discounts.delete(discountId).catch(() => {});
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [customerId] });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: [customerId],
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** En sade geçerli sipariş: tek kalem, indirimsiz. Testler bunun üstüne tek alan değiştirir. */

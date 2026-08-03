@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DeliveryZoneService, SettingsService, serviceDb } from '@lezzet/database';
-import { settingsSnapshot, createTestWarehouse } from '@lezzet/database/testing';
+import { settingsSnapshot, createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { resolveDelivery } from './delivery';
 
 /**
@@ -31,9 +31,9 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.from('delivery_zone').delete().in('id', createdZones);
+  // Bölgeler de depoya bağlı ve purge sırayı biliyor — burada elle silinmesi gereken bir şey yok.
+  await purgeTestData(db, { warehouseIds: [warehouseId] });
   SettingsService.invalidate();
-  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 const pazartesiSabah = new Date(2026, 6, 27, 9, 0);

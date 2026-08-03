@@ -44,13 +44,16 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await db.from('money_movement').delete().eq('supplier_id', supplierId);
+  // Hareketin tedarikçi bağı `set null`: tedarikçiyi silmek hareketi bırakır, hareket de hesabı
+  // `restrict` ile tutar. Bu yüzden anahtar HESAP — sıra `cleanup.ts`'te.
   await db.from('stock').delete().eq('variant_id', variantId);
-  await db.from('stock_intake').delete().eq('supplier_id', supplierId);
-  await db.from('account').delete().eq('id', bankAccount);
-  await db.from('supplier').delete().eq('id', supplierId);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId] });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    accountIds: [bankAccount],
+    supplierIds: [supplierId], // kabulleri onunla gider
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** 10 × 4 € = 40 €'luk mal kabul. Maliyet **cent** verilir (02.9 · `STACK §8`). */

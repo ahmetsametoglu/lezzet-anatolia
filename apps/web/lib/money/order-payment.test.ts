@@ -44,11 +44,14 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await db.from('money_movement').delete().eq('account_id', cashAccount);
   await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('account').delete().eq('id', cashAccount);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    accountIds: [cashAccount],
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** 2 × 25 € = 50 € tutarında, tamamı karşılanmış sipariş. */

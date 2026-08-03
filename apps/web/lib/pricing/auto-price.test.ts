@@ -86,8 +86,7 @@ afterAll(async () => {
     await db.from('price').delete().eq('variant_id', id);
     await db.from('stock').delete().eq('variant_id', id);
   }
-  await purgeTestData(db, { productIds: [autoProductId, manualProductId], categoryIds: [categoryId] });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, { productIds: [autoProductId, manualProductId], categoryIds: [categoryId], warehouseIds: [warehouseId] });
 });
 
 describe('hedefe çekme', () => {

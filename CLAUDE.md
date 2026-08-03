@@ -74,7 +74,9 @@
   Supabase `delete()` hatayı **fırlatmaz, döndürür** — kimse bakmadığı için teardown sessizce
   yarım kalır, koşu yeşil görünür, kirlilik haftalarca birikir (ölçüldü: `money_movement` 41→187).
   `mustDelete(db, tablo, (q) => q.eq(...))` hatayı fırlatır; kirlilik gürültüye döner. Purge'ün
-  bilmediği bir hedef gerekiyorsa **purge'e ekle**, dosyaya elle silme yazma. → `02.12`
+  bilmediği bir hedef gerekiyorsa **purge'e ekle**, dosyaya elle silme yazma. İki tablo için
+  `docs:check §3f` makineyle zorluyor — `typecheck` göremez (çağrı tip olarak geçerli), `lint` de
+  göremez (proje disiplini, dil kuralı değil).
 - **Küresel sayıya bakan test yazma** (`toplam N rezervasyon süpürüldü` gibi): başka bir ajanın verisi o sayıyı oynatır. Kendi kurduğun satırları say.
 - **Şeritler arası talep VE alan-dışı gözlem `docs/talep/`** (kural + şablonlar README'de; kullanıcı kararı 03.08): talepte dosya başına tek iş, hedef şerit **Cevap**'a yazar, AÇAN karşılanınca siler; **not** (`not-<kime>-*.md`) "gördüm, alan senin" gözlemidir — ALAN şerit işleyip siler. Sohbette başka şeride laf iletme; dosya aç. Her oturum başında kendine bakan `not-*`/talep dosyalarına göz at. Klasör repoya gitmez (yalnız kullanıcı `git add -f` ile gönderir); `docs/build`'e yeni talep AÇILMAZ.
 

@@ -48,8 +48,11 @@ beforeAll(async () => {
 // varyant silinemez → ürün silme cascade'i orada reddedilir). Bu testin son senaryosu bilerek stok
 // partisi bırakıyor, yani sıra burada gerçekten gerekiyor; ama sırayı kendimiz uydurmuyoruz.
 afterAll(async () => {
-  await purgeTestData(db, { productIds: [productId].filter(Boolean), categoryIds: [categoryId].filter(Boolean) });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId].filter(Boolean),
+    categoryIds: [categoryId].filter(Boolean),
+    warehouseIds: [warehouseId],
+  });
 });
 
 describe('ProductVariantService.syncVariants', () => {

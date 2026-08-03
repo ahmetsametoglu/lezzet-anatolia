@@ -43,9 +43,13 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.from('order').delete().in('customer_id', createdProfiles);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    warehouseIds: [warehouseId],
+  });
   SettingsService.invalidate();
-  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 describe('kargo ücreti ve KDV (07.3)', () => {

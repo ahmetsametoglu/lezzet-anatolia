@@ -39,8 +39,12 @@ beforeAll(async () => {
 
 // Test kendi zeminini toplar — yerel veritabanında çöp satır bırakmaz (silme sırası: cleanup.ts).
 afterAll(async () => {
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], temperatureLocations: shelves });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    temperatureLocations: shelves,
+    warehouseIds: [warehouseId],
+  });
 });
 
 beforeEach(async () => {

@@ -65,13 +65,16 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await db.from('money_movement').delete().eq('account_id', stripeAccount);
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
   await db.from('webhook_event').delete().like('event_id', `evt_${stamp}_%`);
-  await db.from('account').delete().eq('id', stripeAccount);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    accountIds: [stripeAccount],
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** Taslak sipariş + (istenirse) aktif rezervasyon — ödeme onayının geldiği hâl. */

@@ -97,8 +97,8 @@ afterAll(async () => {
     productIds: [productId, otherProductId, candidateId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
+    warehouseIds: [warehouseId],
   });
-  await db.from('warehouse').delete().eq('id', warehouseId);
 });
 
 /** Onaylı yazılı yorum kurar — skor testlerinin zemini. */

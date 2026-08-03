@@ -27,8 +27,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await purgeTestData(db, { profileIds: createdIds });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, { profileIds: createdIds, warehouseIds: [warehouseId] });
 });
 
 describe('kural DB kısıtında zorlanır', () => {

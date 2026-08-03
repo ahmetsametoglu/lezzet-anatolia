@@ -60,8 +60,12 @@ beforeEach(async () => {
 afterAll(async () => {
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    warehouseIds: [warehouseId],
+  });
 });
 
 async function draftOrder(qty: number) {

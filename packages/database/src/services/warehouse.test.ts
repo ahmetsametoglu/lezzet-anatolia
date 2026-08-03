@@ -322,9 +322,9 @@ describe('depo kaydı — kurallar veritabanında', () => {
       // Aynı anda BAŞKA ülkede kargo deposu açılabilmeli — kısıt ülke başına.
       const baskaUlke = await createTestWarehouse(db, { label: 'SHIPFR', countryCode: 'FR', shipsOnline: false });
       expect(baskaUlke.id).toBeTruthy();
-      await db.from('warehouse').delete().eq('id', baskaUlke.id);
+      await purgeTestData(db, { warehouseIds: [baskaUlke.id] });
     } finally {
-      await db.from('warehouse').delete().eq('id', ilk.id);
+      await purgeTestData(db, { warehouseIds: [ilk.id] });
     }
   });
 
