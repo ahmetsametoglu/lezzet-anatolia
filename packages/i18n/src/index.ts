@@ -84,6 +84,11 @@ export const PATHNAMES = {
    * İç yol İngilizce kalır (`/legal/...`), dışarıya çıkan dile göre — `CLAUDE.md §2`'nin kuralı.
    */
   /**
+   * Keşif — aday ürün kaydırma (08.7 · 17.3). Segment üç dilde de fiilin kendisi: ziyaretçi
+   * "keşfet" diye arar, "aday ürün" diye değil (tasarım §6: iç kavramlar görünmez).
+   */
+  '/discover': { fr: '/decouverte', de: '/entdecken', tr: '/kesfet' },
+  /**
    * B2B tanıtım + self-servis kayıt (08.7). **Menüdeki etiket üç dilde de "Professionnels"**
    * (tasarımın kararı: marka sözcüğü), ama ADRES dile göre çevrilir ve bu ikisi çelişmez —
    * etiket bir marka işareti, URL bir ARAMA sözcüğüdür. Alman restoran sahibi "Professionnels"

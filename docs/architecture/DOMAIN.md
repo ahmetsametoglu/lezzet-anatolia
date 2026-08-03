@@ -565,7 +565,10 @@ Amaç: birkaç ürünü bir arada tek pakette, kendi fiyatıyla sunmak (sosyal m
 ### Aday ürün ve keşif (tinder-kart)
 
 - **Aday ürün** (`Product.is_candidate=true`): stokta olmayan ama tedarik edilebilecek ürün. **Satılamaz** — yalnız müşteri tarafındaki **keşif/beğeni bölümünde** (mobil-öncelikli tinder-kart) gösterilir. Normal (satılabilir) kataloğa karışmaz.
-- Müşteri kaydırır → **beğen/geç** = `ProductFeedback(context='candidate', vote)`. Giriş yaptıysa `customer_id` ile kişisel tercih; değilse kimliksiz kayıt (toplu talep sinyali, puan yok).
+- Müşteri kaydırır → **beğen/geç** = `ProductFeedback(context='candidate', vote)`. Giriş yaptıysa `customer_id` ile kişisel tercih; değilse kimliksiz kayıt (toplu talep sinyali).
+- **Ziyaretçinin kaydırması BOŞA GİTMEZ — sonradan açtığı hesaba puan olarak yüklenir** (kullanıcı kararı 03.08). Tur bitince ziyaretçiye hesap açması önerilir ("bu bilgileri paylaştığınız için teşekkürler; dilerseniz biriken puanı hesabınıza yükleyelim") ve giriş sonrası kaydırmalar hesaba **bağlanır**. Eski kural ziyaretçiye "puan yok" diyordu; değişimin sebebi ikisini birden kazanmak — sinyal zaten toplanıyordu, giriş daveti artık değerin gösterildiği anda geliyor.
+  - **Bağlama ÜRÜN başına yapılır, kaydırma başına değil.** Girişli müşteride "aynı ürüne bir kez puan" kuralını `upsert` sağlar (aynı satır güncellenir); ziyaretçide kimlik olmadığı için her kaydırma yeni satır açar, yani beş kez kaydıran beş satır üretir. Talep kapısı bu yüzden ürün başına yalnız **en yeni** kaydırmayı bağlar ve müşterinin o ürüne ait kaydı zaten varsa hiç bağlamaz — turu tekrarlayarak puan biriktirme yolu böyle kapanır (§14'ün kuralı, yeni bir kural değil).
+  - **Bir kez bağlanan satır artık kimliksiz değildir**, yani ikinci kez talep edilemez; sahiplik doğrulaması bunun üstüne kuruludur.
 - **Admin — Talep/İlgi panosu (analitik içinde):** swipe beğenileri + kataloğun **ürün-ilgi** sinyali (çok bakılıp az alınan) burada birleşir; adaylar talebe göre sıralanır. Yüksek talepli adayı admin **etkinleştirir** (varyant/stok/fiyat ekleyip satılabilir yapar).
 
 ---

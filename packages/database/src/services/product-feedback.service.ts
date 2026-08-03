@@ -71,6 +71,20 @@ export class ProductFeedbackService extends BaseDbService<ProductFeedback, Produ
   }
 
   /**
+   * Verilen kimlikler TEK sorguda — keşif turunu hesaba bağlayan talep kapısının girdisi (08.7).
+   *
+   * Ziyaretçi kaydırmaları kimliksiz yazılıyor; tarayıcı kendi satır kimliklerini saklıyor ve giriş
+   * sonrası onları getiriyor. Kimlikler tek tek okunsaydı 20 kartlık bir tur 20 sorgu ederdi.
+   *
+   * Kimliklerin sahipliği BURADA doğrulanmaz — çağıran her satırın gerçekten kimliksiz ve `candidate`
+   * bağlamında olduğuna bakar. Servis satır getirir, kural uygulamaz (`STACK §6`).
+   */
+  async listByIds(ids: readonly string[]): Promise<ProductFeedback[]> {
+    if (ids.length === 0) return [];
+    return this.getAll({ id: [...ids] });
+  }
+
+  /**
    * Keşif kaydırmaları — aday panosunun ağırlıklandırma girdisi (13.4 · 17.3), **en yeniden eskiye.**
    *
    * Ağırlık SQL'de hesaplanamaz: kaydıranın deseni tüm kaydırmalarına bakmayı ister ve kural
