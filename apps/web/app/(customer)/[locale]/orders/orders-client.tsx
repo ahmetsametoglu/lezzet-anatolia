@@ -42,9 +42,9 @@ export function OrdersClient({ t, locale, first, device }: OrdersClientProps) {
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
     void loadMoreOrdersAction(locale, cursor)
-      .then(({ data: page, error }) => {
+      .then(({ data: page, errorKey }) => {
         // Hata sessiz: liste olduğu yerde kalır, tetikleyici yeniden denenebilir (sunucu = gerçek).
-        if (error || !page) return;
+        if (errorKey || !page) return;
         setExtra((prev) => [...prev, ...page.orders]);
         setCursor(page.nextCursor);
       })
@@ -56,8 +56,8 @@ export function OrdersClient({ t, locale, first, device }: OrdersClientProps) {
     setBusyOrderId(orderId);
     setNotice(null);
     void reorderAction(locale, orderId)
-      .then(({ data, error }) => {
-        if (error || !data) return;
+      .then(({ data, errorKey }) => {
+        if (errorKey || !data) return;
         // Eklenemeyen sayısı sepete de geçer: müşteri sepete gittiğinde uyarı orada da durur
         // (boş sepetten "hepsini al" akışında kurulan davranışın aynısı).
         if (data.entries.length > 0) cart.addMany(data.entries, data.skipped.length);

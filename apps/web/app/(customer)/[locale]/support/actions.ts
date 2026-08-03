@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import type { KeysetCursor, Page } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
-import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { listCustomerTickets, getCustomerTicket } from '@/lib/ticket/read';
 import { requestTicketUploadUrl } from '@/lib/ticket/attachments';
 import { openTicket, replyAsCustomer } from '@/lib/ticket/write';
@@ -17,15 +17,22 @@ import type { CustomerTicketSummary, CustomerTicketView } from '@/lib/ticket/tic
  * **Kimlik her eylemde SUNUCUDA çözülür** (`currentCustomerId`) ve sahiplik `lib/ticket`'ın
  * imzasında duruyor — talep kimliği istemciden geliyor, o yüzden "senin mi" sorusunu kapı soruyor
  * ve "yok" ile "senin değil" aynı cevabı veriyor.
+ *
+ * **Hata kapısı müşteriye ait** (`customerErrorKey`, denetim H1/H2 · 03.08): dönen şey metin değil
+ * ANAHTAR, metin ekranın sözlüğünde. `lib/ticket`'ın ret sebepleri burada müşteri anahtarına
+ * ÇEVRİLİR (`ticketErrorKey`) — o sebepler iç sözcüklerdir (`attachment_not_yours`,
+ * `items_not_in_order`) ve müşteriye sistemin iç yapısını anlatırlar; ekranın sözlüğü davranışı
+ * anlatmalı. Çeviri kapıda duruyor çünkü `lib/ticket` operasyon tarafıyla PAYLAŞILAN bir motor:
+ * orada personel iç sebebi görmeli, müşteri yüzeyinde görmemeli.
  */
 
 /** Sonraki sayfa — imleç URL'e yazılmaz, istemcide yaşar (CLAUDE.md §1). */
-export async function loadMoreTicketsAction(cursor: KeysetCursor): Promise<ActionResult<Page<CustomerTicketSummary>>> {
+export async function loadMoreTicketsAction(cursor: KeysetCursor): Promise<CustomerResult<Page<CustomerTicketSummary>>> {
   try {
     const customerId = await requireCustomer();
-    return { data: await listCustomerTickets(customerId, cursor), error: null };
+    return { data: await listCustomerTickets(customerId, cursor), errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
@@ -44,19 +51,19 @@ export async function replyToTicketAction(
   ticketId: string,
   body: string,
   attachments: readonly string[],
-): Promise<ActionResult<CustomerTicketView>> {
+): Promise<CustomerResult<CustomerTicketView>> {
   try {
     const customerId = await requireCustomer();
     const result = await replyAsCustomer({ customerId, ticketId, body, attachments: [...attachments] });
-    if (!result.ok) throw new Error(result.reason);
+    if (!result.ok) throw new CustomerError(ticketErrorKey(result.reason));
 
     const view = await getCustomerTicket(locale, customerId, ticketId);
-    if (!view) throw new Error('not_found');
+    if (!view) throw new CustomerError('ticket_unavailable');
 
     revalidatePath('/[locale]/support', 'layout');
-    return { data: view, error: null };
+    return { data: view, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
@@ -72,14 +79,14 @@ export async function requestTicketPhotoAction(
   ticketId: string | null,
   filename: string,
   alreadyRequested: number,
-): Promise<ActionResult<{ key: string; uploadUrl: string }>> {
+): Promise<CustomerResult<{ key: string; uploadUrl: string }>> {
   try {
     const customerId = await requireCustomer();
     const result = await requestTicketUploadUrl({ customerId, ticketId, filename, alreadyRequested });
-    if (!result.ok) throw new Error(result.reason);
-    return { data: { key: result.key, uploadUrl: result.uploadUrl }, error: null };
+    if (!result.ok) throw new CustomerError(ticketErrorKey(result.reason));
+    return { data: { key: result.key, uploadUrl: result.uploadUrl }, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
@@ -99,7 +106,7 @@ export async function openTicketAction(input: {
   orderId: string | null;
   orderItemIds: readonly string[];
   attachments: readonly string[];
-}): Promise<ActionResult<{ ticketId: string }>> {
+}): Promise<CustomerResult<{ ticketId: string }>> {
   try {
     const customerId = await requireCustomer();
     const result = await openTicket({
@@ -111,17 +118,43 @@ export async function openTicketAction(input: {
       orderItemIds: [...input.orderItemIds],
       attachments: [...input.attachments],
     });
-    if (!result.ok) throw new Error(result.reason);
+    if (!result.ok) throw new CustomerError(ticketErrorKey(result.reason));
 
     revalidatePath('/[locale]/support', 'layout');
-    return { data: { ticketId: result.data.id }, error: null };
+    return { data: { ticketId: result.data.id }, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
 async function requireCustomer(): Promise<string> {
   const customerId = await currentCustomerId();
-  if (!customerId) throw new Error('Oturum bulunamadı');
+  if (!customerId) throw new CustomerError('session_expired');
   return customerId;
+}
+
+/**
+ * Motorun ret sebebi → müşteri yüzeyinin anahtarı.
+ *
+ * Üç iç sebep TEK anahtara iniyor (`not_found` · `order_not_found` · `items_not_in_order`) ve bu
+ * bilinçli: müşteri için üçü de aynı şey — "bu talebi/siparişi size bağlayamıyoruz". Ayrımı
+ * söylemek, başkasının sipariş kimliğini doğrulatmak olurdu (kapının kendi künyesi de aynı şeyi
+ * söylüyor: "yok" ile "senin değil" aynı cevabı verir).
+ *
+ * Tanımadığımız sebep `unexpected`e düşer — motora yeni bir ret eklendiğinde ekran iç sözcüğü
+ * göstermek yerine jenerik cümleyi kurar.
+ */
+function ticketErrorKey(reason: string): string {
+  const map: Record<string, string> = {
+    empty_body: 'message_empty',
+    not_found: 'ticket_unavailable',
+    order_not_found: 'ticket_unavailable',
+    items_not_in_order: 'ticket_unavailable',
+    // Ekin sahipliği tutmuyor: müşteri için sonuç "fotoğraf eklenemedi"dir, bir yetki dersi değil.
+    attachment_not_yours: 'photo_unavailable',
+    storage_unavailable: 'photo_unavailable',
+    unsupported_type: 'photo_unsupported',
+    too_many: 'photo_limit',
+  };
+  return map[reason] ?? 'unexpected';
 }

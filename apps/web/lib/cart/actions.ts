@@ -3,7 +3,7 @@
 import { CartService, serviceDb } from '@lezzet/database';
 import { hasLocale } from 'next-intl';
 import { currentCustomerId } from '@/lib/guard';
-import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { routing } from '@/i18n/routing';
 import type { CartItem } from '@lezzet/types';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
@@ -28,6 +28,12 @@ import { cartKey, entryOfItem, type CartEntry, type CartView } from './cart-type
  * Fiyat action'a girdi olarak ALINMAZ: istemciden gelen fiyat, istemcinin belirlediği fiyattır.
  * `CartService` fiyatı gösterim için saklar, bağlayıcı fiyat checkout'ta çözülür (DOMAIN §5) —
  * burada sunucunun kendi çözdüğü değer yazılır.
+ *
+ * **Hata kapısı müşteriye ait** (`customerErrorKey`, denetim H1/H2 · 03.08): dönen şey metin değil
+ * ANAHTAR. Burada müşteriye SÖYLENECEK bilinen bir hâl yok — sepet okuması ya çalışır ya arızadır,
+ * ikincisini bağlam kendi bayrağıyla anlatıyor (`failed` → `CartUnreachable`). Yani her hata
+ * `unexpected`e iner ve ham mesaj yalnız `error_log`'a gider; eskiden bu dize ekrana hiç
+ * ulaşmadığı için iç mesaj görünmüyordu ama funnel da yanlıştı: bir gün gösterilseydi sızacaktı.
  */
 
 /** İki listenin çözülmüş hâli — ekran ikisini de aynı anda gösterir (sepet + altındaki liste). */
@@ -64,7 +70,7 @@ export async function readCartAction(
    * karar verir (`resolveCartDiscount`); istemci yalnız "şu kodu denedim" der.
    */
   couponCode: string | null = null,
-): Promise<ActionResult<CartPayload & { merged: boolean }>> {
+): Promise<CustomerResult<CartPayload & { merged: boolean }>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     // Sepetin sahibi MÜŞTERİ kimliğidir, auth kimliği değil (`currentCustomerId`): `cart.customer_id`
@@ -73,7 +79,7 @@ export async function readCartAction(
     // boş sepet çiziyordu (28.07).
     const customerId = await currentCustomerId();
     if (!customerId) {
-      return { data: { ...(await resolveBoth(locale, entries, saved, { couponCode })), merged: false, serverCart: false }, error: null };
+      return { data: { ...(await resolveBoth(locale, entries, saved, { couponCode })), merged: false, serverCart: false }, errorKey: null };
     }
 
     const cart = new CartService(serviceDb());
@@ -99,10 +105,10 @@ export async function readCartAction(
         merged,
         serverCart: true,
       },
-      error: null,
+      errorKey: null,
     };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
@@ -117,12 +123,12 @@ export async function writeCartAction(
   entries: CartEntry[],
   saved: CartEntry[] = [],
   couponCode: string | null = null,
-): Promise<ActionResult<CartPayload>> {
+): Promise<CustomerResult<CartPayload>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     const customerId = await currentCustomerId();
     // Ziyaretçide yazacak yer yok — listeler tarayıcıda kalır, burada yalnız çözülür.
-    if (!customerId) return { data: { ...(await resolveBoth(locale, entries, saved, { couponCode })), serverCart: false }, error: null };
+    if (!customerId) return { data: { ...(await resolveBoth(locale, entries, saved, { couponCode })), serverCart: false }, errorKey: null };
 
     // Sunucuya yazılacak fiyat SUNUCUNUN çözdüğüdür; istemciden fiyat kabul edilmez.
     const cart = new CartService(serviceDb());
@@ -138,9 +144,9 @@ export async function writeCartAction(
       payload.view.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })),
     );
     await cart.replaceSaved(customerId, payload.saved.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })));
-    return { data: { ...payload, serverCart: true }, error: null };
+    return { data: { ...payload, serverCart: true }, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 

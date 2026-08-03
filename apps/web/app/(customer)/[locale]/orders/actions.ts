@@ -3,7 +3,7 @@
 import type { KeysetCursor } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
-import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { listCustomerOrders, type CustomerOrderPage } from '@/lib/order/customer-orders';
 import { planReorder } from '@/lib/order/reorder';
 import type { CartEntry } from '@/lib/cart/cart-types';
@@ -17,13 +17,13 @@ import type { CartEntry } from '@/lib/cart/cart-types';
  */
 
 /** Sonraki sayfa — imleç URL'e yazılmaz, istemcide yaşar (liste kaydırdıkça uzar). */
-export async function loadMoreOrdersAction(locale: Locale, cursor: KeysetCursor): Promise<ActionResult<CustomerOrderPage>> {
+export async function loadMoreOrdersAction(locale: Locale, cursor: KeysetCursor): Promise<CustomerResult<CustomerOrderPage>> {
   try {
     const customerId = await currentCustomerId();
-    if (!customerId) throw new Error('Oturum bulunamadı');
-    return { data: await listCustomerOrders(locale, customerId, cursor), error: null };
+    if (!customerId) throw new CustomerError('session_expired');
+    return { data: await listCustomerOrders(locale, customerId, cursor), errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
@@ -38,18 +38,18 @@ export async function loadMoreOrdersAction(locale: Locale, cursor: KeysetCursor)
 export async function reorderAction(
   locale: Locale,
   orderId: string,
-): Promise<ActionResult<{ entries: readonly CartEntry[]; skipped: readonly string[] }>> {
+): Promise<CustomerResult<{ entries: readonly CartEntry[]; skipped: readonly string[] }>> {
   try {
     const customerId = await currentCustomerId();
-    if (!customerId) throw new Error('Oturum bulunamadı');
+    if (!customerId) throw new CustomerError('session_expired');
 
     const plan = await planReorder(locale, customerId, orderId);
     // `null` = sipariş yok ya da başkasının. İkisi AYNI cevabı almalı: "yok" ile "senin değil"
     // arasındaki farkı söylemek, başkasının sipariş kimliğini doğrulatmak olurdu.
     if (!plan) throw new Error('Sipariş bulunamadı');
 
-    return { data: { entries: plan.entries, skipped: plan.skipped }, error: null };
+    return { data: { entries: plan.entries, skipped: plan.skipped }, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }

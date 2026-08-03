@@ -5,7 +5,7 @@ import { hasLocale } from 'next-intl';
 import { getCatalogData } from '@/lib/storefront/catalog';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { CATALOG_SORTS, type CatalogSort, type StorefrontProduct } from '@/lib/storefront/storefront-types';
-import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { routing } from '@/i18n/routing';
 
 /**
@@ -32,7 +32,7 @@ interface CatalogPageQuery {
   onlyOffers?: boolean;
 }
 
-export async function loadMoreCatalogAction(locale: string, q: CatalogPageQuery, cursor: KeysetCursor): Promise<ActionResult<CatalogPageResult>> {
+export async function loadMoreCatalogAction(locale: string, q: CatalogPageQuery, cursor: KeysetCursor): Promise<CustomerResult<CatalogPageResult>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     /**
@@ -58,8 +58,8 @@ export async function loadMoreCatalogAction(locale: string, q: CatalogPageQuery,
       onlyOffers: q.onlyOffers,
       cursor: safeCursor,
     }, await readPlaceWarehouses());
-    return { data: { products: data.products, nextCursor: data.nextCursor }, error: null };
+    return { data: { products: data.products, nextCursor: data.nextCursor }, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }

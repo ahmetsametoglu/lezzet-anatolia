@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { CustomerTicketView } from '@/lib/ticket/ticket-types';
+import { errorText } from '@/lib/customer-error-text';
 import { replyToTicketAction } from '../actions';
 import { useTicketPhoto } from '../use-ticket-photo.hook';
 import type { Messages } from '../support-types';
@@ -42,16 +43,18 @@ export function ReplyBox({ t, locale, ticketId, onReplied, compact = false }: Re
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   // Yükleme akışı ortak hook'ta (denetim M4): yeni talep formuyla gövdesi birebir aynıydı.
-  const photo = useTicketPhoto({ ticketId, busy, onFailed: () => setError(t.reply.photoFailed) });
+  // Sebep anahtarı hook'tan geliyor, cümle burada kuruluyor (denetim H1/H2): "dosya türü kabul
+  // edilmiyor" ile "şu an yükleyemedik" farklı şeyler — ikincisi tekrar denemeye değer, birincisi değil.
+  const photo = useTicketPhoto({ ticketId, busy, onFailed: (key) => setError(errorText(t.errors, key)) });
 
   const send = () => {
     if (busy || body.trim().length === 0) return;
     setBusy(true);
     setError(null);
     void replyToTicketAction(locale, ticketId, body, photo.attachments)
-      .then(({ data, error: failed }) => {
-        if (failed || !data) {
-          setError(t.reply.failed);
+      .then(({ data, errorKey }) => {
+        if (errorKey || !data) {
+          setError(errorText(t.errors, errorKey));
           return;
         }
         // Besteci ancak sunucu kabul ettikten sonra temizlenir: erken temizlemek, düşen bir istekte

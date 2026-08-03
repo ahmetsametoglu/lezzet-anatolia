@@ -52,12 +52,7 @@
       "submitted": "Yorumunuz alındı. Gözden geçirildikten sonra bu sayfada görünecek.",
       "emptyTitle": "Henüz yorum yok",
       "emptyBody": "Bu ürünü satın aldıysanız ilk yorumu siz yazabilirsiniz.",
-      "onlyBuyers": "Yorum yazma yalnız bu ürünü satın almış müşterilere açıktır.",
-      "formError": {
-        "empty_review": "Puan verin ya da birkaç cümle yazın.",
-        "not_purchased": "Yorum yazmak için bu ürünü satın almış olmanız gerekiyor.",
-        "failed": "Yorumunuz gönderilemedi. Biraz sonra tekrar deneyin."
-      }
+      "onlyBuyers": "Yorum yazma yalnız bu ürünü satın almış müşterilere açıktır."
     },
     "similar": "Bunları da sevebilirsiniz",
     "card": {
@@ -66,6 +61,12 @@
       "priceFrom": "başlangıç fiyatı — boy detayda seçilir",
       "offer": "Fırsat",
       "soldOut": "Tükendi — yakında yeniden"
+    },
+    "errors": {
+      "unexpected": "Yorumunuz gönderilemedi. Biraz sonra tekrar deneyin.",
+      "session_expired": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın.",
+      "review_empty": "Puan verin ya da birkaç cümle yazın.",
+      "purchase_required": "Yorum yazmak için bu ürünü satın almış olmanız gerekiyor."
     }
   },
   "fr": {
@@ -121,12 +122,7 @@
       "submitted": "Merci ! Votre avis apparaîtra ici après relecture.",
       "emptyTitle": "Pas encore d’avis",
       "emptyBody": "Si vous avez acheté ce produit, écrivez le premier avis.",
-      "onlyBuyers": "Seuls les clients ayant acheté ce produit peuvent laisser un avis.",
-      "formError": {
-        "empty_review": "Donnez une note ou écrivez quelques mots.",
-        "not_purchased": "Vous devez avoir acheté ce produit pour laisser un avis.",
-        "failed": "Votre avis n’a pas pu être envoyé. Réessayez dans un instant."
-      }
+      "onlyBuyers": "Seuls les clients ayant acheté ce produit peuvent laisser un avis."
     },
     "similar": "Vous aimerez aussi",
     "card": {
@@ -135,6 +131,12 @@
       "priceFrom": "prix de départ — le format se choisit en détail",
       "offer": "Offre",
       "soldOut": "Épuisé — bientôt de retour"
+    },
+    "errors": {
+      "unexpected": "Votre avis n’a pas pu être envoyé. Réessayez dans un instant.",
+      "session_expired": "Votre session semble expirée. Reconnectez-vous.",
+      "review_empty": "Donnez une note ou écrivez quelques mots.",
+      "purchase_required": "Vous devez avoir acheté ce produit pour laisser un avis."
     }
   },
   "de": {
@@ -190,12 +192,7 @@
       "submitted": "Vielen Dank! Ihre Bewertung erscheint hier nach der Prüfung.",
       "emptyTitle": "Noch keine Bewertungen",
       "emptyBody": "Wenn Sie dieses Produkt gekauft haben, schreiben Sie die erste Bewertung.",
-      "onlyBuyers": "Bewertungen können nur Kundinnen und Kunden schreiben, die dieses Produkt gekauft haben.",
-      "formError": {
-        "empty_review": "Vergeben Sie eine Note oder schreiben Sie ein paar Sätze.",
-        "not_purchased": "Sie müssen dieses Produkt gekauft haben, um es zu bewerten.",
-        "failed": "Ihre Bewertung konnte nicht gesendet werden. Bitte gleich noch einmal versuchen."
-      }
+      "onlyBuyers": "Bewertungen können nur Kundinnen und Kunden schreiben, die dieses Produkt gekauft haben."
     },
     "similar": "Das könnte Ihnen auch gefallen",
     "card": {
@@ -204,6 +201,12 @@
       "priceFrom": "Startpreis — Größe wird im Detail gewählt",
       "offer": "Angebot",
       "soldOut": "Ausverkauft — bald wieder da"
+    },
+    "errors": {
+      "unexpected": "Ihre Bewertung konnte nicht gesendet werden. Bitte gleich noch einmal versuchen.",
+      "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden.",
+      "review_empty": "Vergeben Sie eine Note oder schreiben Sie ein paar Sätze.",
+      "purchase_required": "Sie müssen dieses Produkt gekauft haben, um es zu bewerten."
     }
   }
 }

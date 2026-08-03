@@ -4,7 +4,7 @@ import { DeliveryZoneService, PostalCodePlaceService, WarehouseService, serviceD
 import { findZoneForPostalCode, placeLabel, resolvePlaceByPostalCode } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { Country } from '@lezzet/types';
-import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { resolveDelivery } from '@/lib/order/delivery';
 import { isValidPostalCode, normalizePostalCode, type PlaceLookup, type PlaceSuggestion } from './place-types';
 
@@ -18,10 +18,10 @@ import { isValidPostalCode, normalizePostalCode, type PlaceLookup, type PlaceSug
  * burada sepet bilinmez, o yüzden "kargo tamamen kapalı mı" sorusu sorulmaz (o karar sepetin
  * içeriğine bağlıdır ve kısıt bloğunun işidir).
  */
-export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: Country): Promise<ActionResult<PlaceLookup>> {
+export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: Country): Promise<CustomerResult<PlaceLookup>> {
   try {
     const postalCode = normalizePostalCode(rawPostalCode);
-    if (!isValidPostalCode(postalCode)) throw new Error('Posta kodu 5 haneli olmalı');
+    if (!isValidPostalCode(postalCode)) throw new CustomerError('postal_code_invalid');
 
     const db = serviceDb();
     const [matches, zones, warehouses] = await Promise.all([
@@ -44,7 +44,7 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
     // indiriyordu. Ekran belirsizlik seçicisini yazamıyordu: adayları göremiyor, hâli ancak hata
     // metnini ayrıştırarak anlayabilirdi — bir dizgi eşleştirmesi, üstelik üç dilde çalışmayan.
     // Metin ekranın işi (i18n orada); buradan çıkan şey VERİ.
-    if (lookup.kind === 'unknown') return { data: { kind: 'unknown' }, error: null };
+    if (lookup.kind === 'unknown') return { data: { kind: 'unknown' }, errorKey: null };
 
     if (lookup.kind === 'ambiguous') {
       /**
@@ -78,7 +78,7 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
             inRoute: c.inRoute,
           })),
         },
-        error: null,
+        errorKey: null,
       };
     }
 
@@ -90,12 +90,12 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
         source: SOURCES.webAction,
         context: { postalCode, country: lookup.country, reason: lookup.reason },
       });
-      return { data: { kind: 'unresolved', reason: lookup.reason }, error: null };
+      return { data: { kind: 'unresolved', reason: lookup.reason }, errorKey: null };
     }
 
     return await finishResolved(postalCode, { country: lookup.country, placeName: lookup.placeName, places: lookup.places }, zones);
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
@@ -108,7 +108,7 @@ async function finishResolved(
   postalCode: string,
   identity: { country: Country; placeName: string | null; places: readonly string[] },
   zones: Awaited<ReturnType<DeliveryZoneService['listWithCodes']>>,
-): Promise<ActionResult<PlaceLookup>> {
+): Promise<CustomerResult<PlaceLookup>> {
   const delivery = await resolveDelivery({ postalCode, country: identity.country });
 
   // Bölge adı yalnız rota içinde bilinir. Motor aday tipini döndürür (ad taşımaz — karar için
@@ -137,7 +137,7 @@ async function finishResolved(
         nextDate: delivery.availableDates[0] ?? null,
       },
     },
-    error: null,
+    errorKey: null,
   };
 }
 

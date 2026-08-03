@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useLocale } from 'next-intl';
 import { Button } from '@/components/customer/ui/button';
+import { errorText } from '@/lib/customer-error-text';
 import { submitReviewAction } from '../actions';
 import type { Messages } from '../product-types';
 
@@ -33,12 +34,12 @@ export function ReviewForm({ t, productId, onDone, onCancel }: ReviewFormProps) 
   const submit = async () => {
     setBusy(true);
     setError(null);
-    const { data, error: failure } = await submitReviewAction({ locale, productId, rating, comment });
+    const { data, errorKey } = await submitReviewAction({ locale, productId, rating, comment });
     setBusy(false);
     if (data) return onDone();
-    // Kapının sebebi sözlüğe çevrilir; tanımadığımız bir sebep gelirse genel cümle kalır — motora
-    // yeni bir ret eklendiğinde ekran boş kalmasın diye.
-    setError(failure && failure in t.reviews.formError ? t.reviews.formError[failure as keyof Messages['reviews']['formError']] : t.reviews.formError.failed);
+    // Sunucu ANAHTAR döner, cümle burada kurulur (denetim H1/H2); tanımadığımız anahtar genel
+    // cümleye düşer — motora yeni bir ret eklendiğinde ekran boş kalmasın diye.
+    setError(errorText(t.errors, errorKey));
   };
 
   return (

@@ -12,6 +12,7 @@ import { useDevice } from '@/lib/use-device';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { entryOf, splitByRoute } from '@/lib/cart/cart-types';
 import { clientStripe } from '@/lib/stripe-client';
+import { errorText } from '@/lib/customer-error-text';
 import { PaymentSection } from './components/payment-element';
 import { CheckoutDesktop } from './checkout.desktop';
 import { CheckoutMobile } from './checkout.mobile';
@@ -113,13 +114,13 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
   const refresh = useCallback(
     async (addressId: string | null) => {
       const ticket = ++seq.current;
-      const { data, error: failure } = await loadCheckoutAction(locale, cartEntries, addressId, coupon, shippingOrder);
+      const { data, errorKey } = await loadCheckoutAction(locale, cartEntries, addressId, coupon, shippingOrder);
       if (ticket !== seq.current) return;
       // Okuma düşse de bayrak kalkar: sonsuza kadar iskelet göstermek, hatayı gizlemenin bir
       // başka biçimi olurdu — ekran hata satırını gösterebilmeli.
       setSnapshotReady(true);
-      if (failure || !data) {
-        setError(failure);
+      if (errorKey || !data) {
+        setError(errorText(t.errors, errorKey));
         return;
       }
       setSnapshot(data);
@@ -132,7 +133,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
         return { ...prev, addressId: selected?.id ?? null, deliveryDate: keepDate };
       });
     },
-    [locale, cartEntries, coupon, shippingOrder],
+    [t, locale, cartEntries, coupon, shippingOrder],
   );
 
   useEffect(() => {
@@ -149,7 +150,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
     if (!state.addressId || !state.paymentMethod) return;
     setBusy(true);
     setError(null);
-    const { data, error: failure } = await confirmCheckoutAction({
+    const { data, errorKey } = await confirmCheckoutAction({
       locale,
       entries: cartEntries,
       addressId: state.addressId,
@@ -162,9 +163,9 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
       shippingOrder,
     });
 
-    if (failure || !data) {
+    if (errorKey || !data) {
       setBusy(false);
-      return setError(failure);
+      return setError(errorText(t.errors, errorKey));
     }
     if (data.status === 'rejected') {
       setBusy(false);
@@ -192,7 +193,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
    */
   const prepare = async (): Promise<{ ok: true; clientSecret: string; orderId: string } | { ok: false; error: string }> => {
     if (!state.addressId) return { ok: false, error: t.rejected.address_not_found };
-    const { data, error: failure } = await confirmCheckoutAction({
+    const { data, errorKey } = await confirmCheckoutAction({
       locale,
       entries: cartEntries,
       addressId: state.addressId,
@@ -202,7 +203,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
       couponCode: coupon,
       shippingOrder,
     });
-    if (failure || !data) return { ok: false, error: failure ?? t.pay.error };
+    if (errorKey || !data) return { ok: false, error: errorText(t.errors, errorKey) };
     if (data.status === 'rejected') return { ok: false, error: rejectionMessage(t, data.reason, data.detail) };
     if (data.status !== 'payment_required') return { ok: false, error: t.payment.unavailable };
     return { ok: true, clientSecret: data.clientSecret, orderId: data.orderId };

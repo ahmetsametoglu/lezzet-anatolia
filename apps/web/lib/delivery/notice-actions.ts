@@ -2,9 +2,17 @@
 
 import { VariantStockNoticeService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import { currentCustomerId } from '@/lib/guard';
-import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { isValidPostalCode, normalizePostalCode } from './place-types';
 import { readPlaceAnswer } from './read-place';
+
+/**
+ * ── HATA KAPISI MÜŞTERİYE AİT (denetim H1/H2 · 03.08) ───────────────────────────────────────
+ * Bu iki kapının hataları müşterinin EKRANINA basılıyordu ve `getErrorMessage` mesajı olduğu gibi
+ * geçiriyordu: Fransız müşteri geçersiz posta kodu yazdığında "Posta kodu 5 haneli olmalı" diye
+ * TÜRKÇE bir cümle görüyordu (`notice-dialog` `failure`'ı doğrudan yazıyor). Şimdi dönen şey
+ * anahtar; üç dilin cümlesi `restriction-messages.json`'da.
+ */
 
 /**
  * "Bölgeye gelince haber ver" kaydı (0030).
@@ -21,15 +29,15 @@ import { readPlaceAnswer } from './read-place';
  * Aynı kod + e-posta ikinci kez gelirse yeni satır AÇILMAZ (benzersiz indeks): düğmeye tekrar
  * basmak yeni bir bekleyiş değil, aynı bekleyişin tekrarıdır.
  */
-export async function recordZoneNoticeAction(rawPostalCode: string, rawEmail: string): Promise<ActionResult<true>> {
+export async function recordZoneNoticeAction(rawPostalCode: string, rawEmail: string): Promise<CustomerResult<true>> {
   try {
     const postalCode = normalizePostalCode(rawPostalCode);
-    if (!isValidPostalCode(postalCode)) throw new Error('Posta kodu 5 haneli olmalı');
+    if (!isValidPostalCode(postalCode)) throw new CustomerError('postal_code_invalid');
 
     const email = rawEmail.trim().toLowerCase();
     // Biçim kontrolü kaba ve bilinçli: e-postanın gerçekten çalıştığını ancak göndererek anlarız,
     // burada amaç yazım hatasını değil boş/anlamsız girdiyi elemek.
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Geçerli bir e-posta adresi girin');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new CustomerError('email_invalid');
 
     // `zone_notice.customer_id` de `user_profiles`'a FK'li: auth kimliği yazıldığında girişli
     // müşterinin kaydı FK ihlaliyle düşüyordu (ziyaretçininki null geçtiği için sorunsuz görünüyordu).
@@ -38,9 +46,9 @@ export async function recordZoneNoticeAction(rawPostalCode: string, rawEmail: st
     // çakışma hata sayılmıyor — düğmeye ikinci kez basmak yeni bir bekleyiş değil.
     await new ZoneNoticeService(serviceDb()).record({ postalCode, email, customerId });
 
-    return { data: true, error: null };
+    return { data: true, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
@@ -64,13 +72,13 @@ export async function recordZoneNoticeAction(rawPostalCode: string, rawEmail: st
  * düğmesi (`StockNoticeButton`) ve rota İÇİNDEKİ müşterinin kısıt bloğu — orada bölge notu
  * anlamsız (müşteri zaten bölgede), söz kalem kalem veriliyor ve kayıt da kalem kalem düşülüyor.
  */
-export async function recordVariantStockNoticeAction(variantId: string, rawEmail: string): Promise<ActionResult<true>> {
+export async function recordVariantStockNoticeAction(variantId: string, rawEmail: string): Promise<CustomerResult<true>> {
   try {
     const email = rawEmail.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Geçerli bir e-posta adresi girin');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new CustomerError('email_invalid');
 
     const answer = await readPlaceAnswer();
-    if (!answer) throw new Error('Önce teslimat yerinizi girin');
+    if (!answer) throw new CustomerError('place_unknown');
 
     const customerId = await currentCustomerId();
     await new VariantStockNoticeService(serviceDb()).record({
@@ -81,8 +89,8 @@ export async function recordVariantStockNoticeAction(variantId: string, rawEmail
       customerId,
     });
 
-    return { data: true, error: null };
+    return { data: true, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }

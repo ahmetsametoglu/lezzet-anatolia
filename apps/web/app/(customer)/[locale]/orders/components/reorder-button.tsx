@@ -38,8 +38,8 @@ export function ReorderButton({ locale, orderId, label, busyLabel, fullWidth }: 
     if (busy) return;
     setBusy(true);
     void reorderAction(locale, orderId)
-      .then(({ data, error }) => {
-        if (error || !data || data.entries.length === 0) return;
+      .then(({ data, errorKey }) => {
+        if (errorKey || !data || data.entries.length === 0) return;
         cart.addMany(data.entries, data.skipped.length);
         router.push('/cart');
       })

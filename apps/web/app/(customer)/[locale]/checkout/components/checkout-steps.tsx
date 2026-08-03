@@ -540,7 +540,7 @@ export function OrderSummary(props: CheckoutViewProps) {
       {error && <p className="font-sans text-note leading-relaxed font-semibold text-terracotta">{error}</p>}
 
       {showConfirm && (
-        <Button size="md" fullWidth disabled={busy || blocked} onClick={onConfirm}>
+        <Button size="md" compact={compact} fullWidth disabled={busy || blocked} onClick={onConfirm}>
           {t.summary.submit}
         </Button>
       )}

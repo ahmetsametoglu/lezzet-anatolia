@@ -38,9 +38,9 @@ export function SupportClient({ t, locale, device, mode, first, selected }: Supp
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
     void loadMoreTicketsAction(cursor)
-      .then(({ data, error }) => {
+      .then(({ data, errorKey }) => {
         // Hata sessiz: liste olduğu yerde kalır, tetikleyici yeniden denenebilir (sunucu = gerçek).
-        if (error || !data) return;
+        if (errorKey || !data) return;
         setExtra((prev) => [...prev, ...data.rows]);
         setCursor(data.nextCursor);
       })

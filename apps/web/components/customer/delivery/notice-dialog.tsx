@@ -5,7 +5,8 @@ import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
 import { Dialog } from '@/components/customer/ui/dialog';
 import { pillInputClass } from '@/components/customer/form/pill-input';
-import type { ActionResult } from '@/lib/error';
+import { errorText } from '@/lib/customer-error-text';
+import type { CustomerResult } from '@/lib/customer-error';
 import messages from './restriction-messages.json';
 
 /**
@@ -31,8 +32,13 @@ interface NoticeDialogProps {
   body: string;
   /** Kayıt sonrası görünen onay — aynı şekilde yerleştirilmiş. */
   doneText: string;
-  /** Kaydı yazan sunucu eylemi; hatayı `error` olarak döndürür, fırlatmaz. */
-  onSubmit: (email: string) => Promise<ActionResult<true>>;
+  /**
+   * Kaydı yazan sunucu eylemi; fırlatmaz, hatayı ANAHTAR olarak döndürür (denetim H1/H2 · 03.08).
+   *
+   * Eskiden dönen şey metindi ve bu kutu onu olduğu gibi basıyordu: Fransız müşteri geçersiz kod
+   * yazdığında sunucunun Türkçe cümlesini okuyordu. Cümle artık burada, kutunun kendi sözlüğünde.
+   */
+  onSubmit: (email: string) => Promise<CustomerResult<true>>;
   onClose: () => void;
 }
 
@@ -45,10 +51,10 @@ export function NoticeDialog({ locale, title, body, doneText, onSubmit, onClose 
 
   const submit = async () => {
     setBusy(true);
-    const { error: failure } = await onSubmit(email);
+    const { errorKey } = await onSubmit(email);
     setBusy(false);
-    if (failure) {
-      setError(failure);
+    if (errorKey) {
+      setError(errorText(t.errors, errorKey));
       return;
     }
     setDone(true);

@@ -3,8 +3,15 @@ import { captureError, SOURCES } from '@lezzet/observability';
 
 /**
  * Server Action hata normalizasyonu + sonuç sözleşmesi (referans deseni). Action'lar throw ETMEZ;
- * `{ data, error }` döner — UI hatayı bilinçli gösterir. `getErrorMessage` bilinen Error mesajını,
- * aksi halde genel metni verir (iç detay sızmaz).
+ * `{ data, error }` döner — UI hatayı bilinçli gösterir.
+ *
+ * **BU FUNNEL HAM MESAJ GEÇİRİR** ve artık yalnız OPERASYON yüzeyinindir (denetim H1 · 03.08).
+ * Künye bir dönem "iç detay sızmaz" diyordu; kod tam tersini yapıyordu — `Error` türevi olan her
+ * şey mesajını aynen döndürüyor, jenerik metin yalnız `Error` OLMAYAN fırlatmalara kalıyordu ve
+ * pratikte fırlatılan her şey `Error`. Personelin kısıt adını görmesi DOĞRU davranış; müşterinin
+ * görmesi değildi. Ayrım artık kapıda: **müşteri action'ları `lib/customer-error`'ü çağırır**
+ * (metin değil anahtar döner), bu kapı personele kalır. Yanlış kapıyı çağırmak import satırında
+ * görünür — bir bayrağın unutulması görünmez.
  *
  * **İZ BURADA DÜŞÜLÜR.** Normalize edilen hata bir dizeye dönüşüp sonuç nesnesine giriyor; çağıran
  * onu göstermezse (sepet sağlayıcısı yalnız `data` okur) hata **hiçbir yerde** görünmeden kayboluyor.

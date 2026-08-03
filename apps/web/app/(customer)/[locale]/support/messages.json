@@ -29,9 +29,7 @@
       "send": "Gönder",
       "sending": "Gönderiliyor…",
       "photo": "Fotoğraf ekle",
-      "removePhoto": "Fotoğrafı kaldır",
-      "failed": "Mesaj gönderilemedi, tekrar deneyin.",
-      "photoFailed": "Fotoğraf yüklenemedi."
+      "removePhoto": "Fotoğrafı kaldır"
     },
     "refunded": "↩ {amount} iade edildi — sipariş detayında da görünür",
     "reopenNote": "Sorun devam ediyorsa yazışmaya mesaj yazmanız yeterli — talep kendiliğinden yeniden açılır.",
@@ -57,10 +55,18 @@
       "submit": "Talebi gönder",
       "submitting": "Gönderiliyor…",
       "note": "Talebinizi aldığımızda ve yanıtladığımızda e-posta ile haber veririz.",
-      "failed": "Talep gönderilemedi, tekrar deneyin.",
       "sentTitle": "Aldık",
       "sentBody": "Cevabımızı e-posta ile bildireceğiz.",
       "sentCta": "Talebi aç"
+    },
+    "errors": {
+      "unexpected": "Bir şeyler ters gitti. Tekrar deneyin; sürerse bize yazın.",
+      "session_expired": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın.",
+      "message_empty": "Birkaç cümle yazın, boş mesaj gönderemeyiz.",
+      "ticket_unavailable": "Bu talebi açamadık. Listeden yeniden deneyin.",
+      "photo_unsupported": "Bu dosya türünü kabul edemiyoruz; fotoğraf gönderin.",
+      "photo_limit": "Bir mesaja daha fazla fotoğraf ekleyemiyoruz.",
+      "photo_unavailable": "Fotoğraf yüklenemedi. Mesajınızı fotoğrafsız da gönderebilirsiniz."
     }
   },
   "fr": {
@@ -93,9 +99,7 @@
       "send": "Envoyer",
       "sending": "Envoi…",
       "photo": "Ajouter une photo",
-      "removePhoto": "Retirer la photo",
-      "failed": "Message non envoyé, réessayez.",
-      "photoFailed": "Photo non envoyée."
+      "removePhoto": "Retirer la photo"
     },
     "refunded": "↩ {amount} remboursés — visible aussi dans le détail de la commande",
     "reopenNote": "Si le problème persiste, il suffit d'écrire un message — la demande se rouvre d'elle-même.",
@@ -121,10 +125,18 @@
       "submit": "Envoyer la demande",
       "submitting": "Envoi…",
       "note": "Nous vous préviendrons par e-mail à la réception et à la réponse.",
-      "failed": "Demande non envoyée, réessayez.",
       "sentTitle": "Bien reçue",
       "sentBody": "Nous vous répondrons par e-mail.",
       "sentCta": "Ouvrir la demande"
+    },
+    "errors": {
+      "unexpected": "Une erreur est survenue. Réessayez ; si cela persiste, écrivez-nous.",
+      "session_expired": "Votre session semble expirée. Reconnectez-vous.",
+      "message_empty": "Écrivez quelques mots ; nous ne pouvons pas envoyer un message vide.",
+      "ticket_unavailable": "Nous n'avons pas pu ouvrir cette demande. Réessayez depuis la liste.",
+      "photo_unsupported": "Ce type de fichier n'est pas accepté ; envoyez une photo.",
+      "photo_limit": "Nous ne pouvons pas ajouter plus de photos à un message.",
+      "photo_unavailable": "La photo n'a pas pu être envoyée. Vous pouvez envoyer votre message sans photo."
     }
   },
   "de": {
@@ -157,9 +169,7 @@
       "send": "Senden",
       "sending": "Wird gesendet…",
       "photo": "Foto hinzufügen",
-      "removePhoto": "Foto entfernen",
-      "failed": "Nachricht nicht gesendet, bitte erneut versuchen.",
-      "photoFailed": "Foto nicht hochgeladen."
+      "removePhoto": "Foto entfernen"
     },
     "refunded": "↩ {amount} erstattet — auch in den Bestelldetails sichtbar",
     "reopenNote": "Falls das Problem weiterbesteht, schreiben Sie einfach eine Nachricht — die Anfrage wird von selbst wieder geöffnet.",
@@ -185,10 +195,18 @@
       "submit": "Anfrage senden",
       "submitting": "Wird gesendet…",
       "note": "Wir melden uns per E-Mail, sobald wir Ihre Anfrage erhalten und beantwortet haben.",
-      "failed": "Anfrage nicht gesendet, bitte erneut versuchen.",
       "sentTitle": "Erhalten",
       "sentBody": "Wir antworten Ihnen per E-Mail.",
       "sentCta": "Anfrage öffnen"
+    },
+    "errors": {
+      "unexpected": "Etwas ist schiefgelaufen. Bitte erneut versuchen; wenn es bleibt, schreiben Sie uns.",
+      "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden.",
+      "message_empty": "Schreiben Sie ein paar Sätze; eine leere Nachricht können wir nicht senden.",
+      "ticket_unavailable": "Diese Anfrage konnten wir nicht öffnen. Bitte aus der Liste erneut versuchen.",
+      "photo_unsupported": "Diesen Dateityp können wir nicht annehmen; bitte ein Foto senden.",
+      "photo_limit": "Mehr Fotos können wir einer Nachricht nicht hinzufügen.",
+      "photo_unavailable": "Das Foto konnte nicht hochgeladen werden. Sie können Ihre Nachricht auch ohne Foto senden."
     }
   }
 }

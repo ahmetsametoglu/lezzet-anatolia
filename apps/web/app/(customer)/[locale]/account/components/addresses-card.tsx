@@ -5,6 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import type { Address } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
 import { AddressForm, toAddressFields, toFormInput } from '@/components/customer/delivery/address-form';
+import { errorText } from '@/lib/customer-error-text';
 import { addAddressAction, deleteAddressAction, setDefaultAddressAction, updateAddressAction } from '../actions';
 import { Card } from '@/components/customer/ui/card';
 import { CardHead } from './account-cards';
@@ -46,7 +47,7 @@ export function AddressesCard({ t, locale, addresses, compact }: AddressesCardPr
     setBusy(false);
     // Cümle EKRANDA kurulur (denetim H1/H2): sunucu anahtar döner, sözlük burada. Bilinmeyen bir
     // anahtar jenerik cümleye düşer — ekran asla boş kalmaz, ham mesaj da asla görünmez.
-    if (errorKey) return setError(t.errors[errorKey as keyof typeof t.errors] ?? t.errors.unexpected);
+    if (errorKey) return setError(errorText(t.errors, errorKey));
     setEditing(null);
     setConfirmDelete(null);
   };

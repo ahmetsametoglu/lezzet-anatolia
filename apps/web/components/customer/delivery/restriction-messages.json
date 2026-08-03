@@ -23,9 +23,15 @@
     "noticeSubmit": "Not al",
     "noticeDone": "Not aldık. {code} bölgemize girdiğinde haber vereceğiz.",
     "noticeDoneHere": "Not aldık — {code} için bu kalemleri bekleyenler arasındasınız.",
-    "noticeInvalid": "Geçerli bir e-posta adresi girin",
     "close": "Kapat",
-    "changeAddressCta": "Bölge içi bir adres seç"
+    "changeAddressCta": "Bölge içi bir adres seç",
+    "errors": {
+      "unexpected": "Not alamadık. Tekrar deneyin; sürerse bize yazın.",
+      "session_expired": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın.",
+      "email_invalid": "Geçerli bir e-posta adresi girin",
+      "postal_code_invalid": "Posta kodu 5 haneli olmalı",
+      "place_unknown": "Önce teslimat yerinizi girin"
+    }
   },
   "fr": {
     "title": "{n} article(s) ne peuvent pas être envoyés à cette adresse",
@@ -51,9 +57,15 @@
     "noticeSubmit": "Noter",
     "noticeDone": "C'est noté. Nous vous préviendrons dès que {code} entre dans notre zone.",
     "noticeDoneHere": "C'est noté — vous faites partie des personnes qui attendent ces articles pour {code}.",
-    "noticeInvalid": "Saisissez une adresse e-mail valide",
     "close": "Fermer",
-    "changeAddressCta": "Choisir une adresse dans la zone"
+    "changeAddressCta": "Choisir une adresse dans la zone",
+    "errors": {
+      "unexpected": "Nous n'avons pas pu enregistrer votre demande. Réessayez ; si cela persiste, écrivez-nous.",
+      "session_expired": "Votre session semble expirée. Reconnectez-vous.",
+      "email_invalid": "Saisissez une adresse e-mail valide",
+      "postal_code_invalid": "Le code postal doit comporter 5 chiffres",
+      "place_unknown": "Indiquez d'abord votre lieu de livraison"
+    }
   },
   "de": {
     "title": "{n} Artikel können nicht an diese Adresse geliefert werden",
@@ -79,8 +91,14 @@
     "noticeSubmit": "Vormerken",
     "noticeDone": "Vorgemerkt. Wir melden uns, sobald {code} in unserem Gebiet liegt.",
     "noticeDoneHere": "Notiert — Sie gehören zu denen, die diese Artikel für {code} erwarten.",
-    "noticeInvalid": "Geben Sie eine gültige E-Mail-Adresse ein",
     "close": "Schließen",
-    "changeAddressCta": "Adresse im Liefergebiet wählen"
+    "changeAddressCta": "Adresse im Liefergebiet wählen",
+    "errors": {
+      "unexpected": "Wir konnten Ihre Vormerkung nicht speichern. Bitte erneut versuchen; wenn es bleibt, schreiben Sie uns.",
+      "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden.",
+      "email_invalid": "Geben Sie eine gültige E-Mail-Adresse ein",
+      "postal_code_invalid": "Die Postleitzahl muss 5 Ziffern haben",
+      "place_unknown": "Geben Sie zuerst Ihren Lieferort an"
+    }
   }
 }

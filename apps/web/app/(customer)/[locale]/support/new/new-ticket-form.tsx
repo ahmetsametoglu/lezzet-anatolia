@@ -10,6 +10,7 @@ import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
 import { formatOrderDate } from '@/lib/storefront/format';
 import type { CustomerOrderDetail, CustomerOrderSummary } from '@/lib/order/customer-orders';
+import { errorText } from '@/lib/customer-error-text';
 import { openTicketAction } from '../actions';
 import { useTicketPhoto } from '../use-ticket-photo.hook';
 import type { Messages } from '../support-types';
@@ -66,7 +67,7 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
   const fileInput = useRef<HTMLInputElement>(null);
   // Yükleme akışı ortak hook'ta (denetim M4). `ticketId: null` — talep henüz açılmadı, dosya
   // taslak anahtarına yükleniyor ve kapı onu açılışta gerçek talebe bağlıyor.
-  const photo = useTicketPhoto({ ticketId: null, busy, onFailed: () => setError(t.reply.photoFailed) });
+  const photo = useTicketPhoto({ ticketId: null, busy, onFailed: (key) => setError(errorText(t.errors, key)) });
 
   const column = isMobile ? 'px-4 py-4' : 'mx-auto w-[560px] py-8';
 
@@ -156,9 +157,9 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
       orderItemIds: (order?.lines ?? []).filter((l) => markedLines.includes(l.id)).flatMap((l) => l.orderItemIds),
       attachments: photo.attachments,
     })
-      .then(({ data, error: failed }) => {
-        if (failed || !data) {
-          setError(t.new.failed);
+      .then(({ data, errorKey }) => {
+        if (errorKey || !data) {
+          setError(errorText(t.errors, errorKey));
           return;
         }
         setSentTicketId(data.ticketId);

@@ -5,6 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import type { PreferredLanguage } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
 import { FormInputField } from '@/components/customer/form/form-input-field';
+import { errorText } from '@/lib/customer-error-text';
 import { useRouter } from '@/i18n/navigation';
 import type { AccountView } from '@/lib/account/read';
 import { setPreferredLanguageAction } from '@/lib/identity/language-actions';
@@ -128,7 +129,7 @@ export function ProfileCard({ t, locale, profile, compact }: ProfileCardProps) {
     setBusy(false);
     // Cümle EKRANDA kurulur (denetim H1/H2): sunucu anahtar döner, sözlük burada. Bilinmeyen bir
     // anahtar gelirse jenerik cümleye düşeriz — ekran asla boş kalmaz.
-    if (errorKey) return setError(t.errors[errorKey as keyof typeof t.errors] ?? t.errors.unexpected);
+    if (errorKey) return setError(errorText(t.errors, errorKey));
     setEditing(false);
   };
 

@@ -140,6 +140,10 @@
       "title": "Sepetiniz",
       "edit": "Sepeti düzenle",
       "package": "Paket · {n} ürün"
+    },
+    "errors": {
+      "unexpected": "Bir şeyler ters gitti. Tekrar deneyin; sürerse bize yazın.",
+      "session_expired": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın."
     }
   },
   "fr": {
@@ -283,6 +287,10 @@
       "title": "Votre panier",
       "edit": "Modifier le panier",
       "package": "Coffret · {n} produits"
+    },
+    "errors": {
+      "unexpected": "Une erreur est survenue. Réessayez ; si cela persiste, écrivez-nous.",
+      "session_expired": "Votre session semble expirée. Reconnectez-vous."
     }
   },
   "de": {
@@ -426,6 +434,10 @@
       "title": "Ihr Warenkorb",
       "edit": "Warenkorb bearbeiten",
       "package": "Paket · {n} Produkte"
+    },
+    "errors": {
+      "unexpected": "Etwas ist schiefgelaufen. Bitte erneut versuchen; wenn es bleibt, schreiben Sie uns.",
+      "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden."
     }
   }
 }

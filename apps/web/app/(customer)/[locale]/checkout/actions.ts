@@ -6,7 +6,7 @@ import type { Address, AddressInsert, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
 import { updateAddress } from '@/lib/account/addresses';
-import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { captureError, SOURCES } from '@lezzet/observability';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { getCartView } from '@/lib/cart/read';
@@ -30,6 +30,11 @@ import { routing } from '@/i18n/routing';
  *
  * **İstemci hiçbir tutar göndermez.** Sepet niyeti (`entries`) ve seçimler (adres, gün, yöntem)
  * gelir; fiyat, kargo ücreti, indirim ve toplam her turda sunucuda yeniden çözülür.
+ *
+ * **Hata kapısı müşteriye ait** (`customerErrorKey`, denetim H1/H2 · 03.08): dönen şey metin değil
+ * ANAHTAR. Bilinen tek hâl oturumun düşmesi (`session_expired`); geri kalan her şey `unexpected`e
+ * iner ve ham mesaj yalnız `error_log`'a gider. Sipariş REDLERİ buradan geçmez — onlar bir hata
+ * değil bir cevaptır ve kendi sözlüğünde yaşar (`t.rejected.*`, `ConfirmOutcome.rejected`).
  */
 
 /** Ekranın bir adımda ihtiyacı olan her şey — tek turda, çünkü üçü birbirine bağlı. */
@@ -81,16 +86,16 @@ export async function loadCheckoutAction(
    * ödeme yöntemini seçer, onaylar ve kasada reddedilirdi.
    */
   shippingOrder = false,
-): Promise<ActionResult<CheckoutSnapshot>> {
+): Promise<CustomerResult<CheckoutSnapshot>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     const customerId = await currentCustomerId();
-    if (!customerId) return { data: { addresses: [], delivery: null, payment: null }, error: null };
+    if (!customerId) return { data: { addresses: [], delivery: null, payment: null }, errorKey: null };
 
     const db = serviceDb();
     const addresses = await new AddressService(db).listByCustomer(customerId);
     const selected = addresses.find((a) => a.id === addressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0];
-    if (!selected) return { data: { addresses, delivery: null, payment: null }, error: null };
+    if (!selected) return { data: { addresses, delivery: null, payment: null }, errorKey: null };
 
     const cart = await getCartView(locale as Locale, entries, { customerId, couponCode, ...(await readPlaceWarehouses()) });
     const delivery = await resolveDelivery({
@@ -134,10 +139,10 @@ export async function loadCheckoutAction(
           missingForMinBasketCents: options.missingForMinBasketCents,
         },
       },
-      error: null,
+      errorKey: null,
     };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
@@ -161,16 +166,16 @@ export async function updateCheckoutAddressAction(
   addressId: string,
   patch: Omit<AddressInsert, 'customerId'>,
   makeDefault: boolean,
-): Promise<ActionResult<true>> {
+): Promise<CustomerResult<true>> {
   try {
     const customerId = await currentCustomerId();
-    if (!customerId) throw new Error('Oturum gerekli');
+    if (!customerId) throw new CustomerError('session_expired');
     await updateAddress(customerId, addressId, patch);
     // Varsayılan TEKİLDİR (0013): servis eskisini düşürür, ekran o kuralı bilmez.
     if (makeDefault) await new AddressService(serviceDb()).setDefault(addressId);
-    return { data: true, error: null };
+    return { data: true, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
@@ -191,17 +196,17 @@ export async function updateCheckoutAddressAction(
 export async function addCheckoutAddressAction(
   fields: Omit<AddressInsert, 'customerId'>,
   makeDefault: boolean,
-): Promise<ActionResult<Address>> {
+): Promise<CustomerResult<Address>> {
   try {
     const customerId = await currentCustomerId();
-    if (!customerId) throw new Error('Oturum gerekli');
+    if (!customerId) throw new CustomerError('session_expired');
     const addresses = new AddressService(serviceDb());
     const created = await addresses.addForCustomer({ ...fields, customerId });
     // Varsayılan TEKİLDİR (0013): servis eskisini düşürür, ekran o kuralı bilmez.
     if (makeDefault) await addresses.setDefault(created.id);
-    return { data: created, error: null };
+    return { data: created, errorKey: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
@@ -243,11 +248,11 @@ export async function confirmCheckoutAction(input: {
   idempotencyKey?: string | null;
   /** Sepetin kargo grubundan açılan ikinci sipariş mi — `loadCheckoutAction` ile aynı bayrak. */
   shippingOrder?: boolean;
-}): Promise<ActionResult<ConfirmOutcome>> {
+}): Promise<CustomerResult<ConfirmOutcome>> {
   try {
     if (!hasLocale(routing.locales, input.locale)) throw new Error('Geçersiz dil');
     const customerId = await currentCustomerId();
-    if (!customerId) throw new Error('Oturum gerekli');
+    if (!customerId) throw new CustomerError('session_expired');
 
     /**
      * Aynı istek İKİNCİ kez geldiyse (çift tıklama, ağın yeniden denemesi) ikinci sipariş AÇILMAZ:
@@ -257,7 +262,7 @@ export async function confirmCheckoutAction(input: {
     if (input.idempotencyKey) {
       const already = await new OrderService(serviceDb()).findByIdempotencyKey(input.idempotencyKey);
       if (already && already.status !== 'draft' && already.status !== 'cancelled') {
-        return { data: { status: 'placed', orderId: already.id, totalCents: Math.round(already.total * 100) }, error: null };
+        return { data: { status: 'placed', orderId: already.id, totalCents: Math.round(already.total * 100) }, errorKey: null };
       }
     }
 
@@ -287,7 +292,7 @@ export async function confirmCheckoutAction(input: {
           source: SOURCES.webAction,
           context: { reason: draft.reason, customerId },
         });
-        return { data: { status: 'rejected', reason: draft.status, detail: draft.reason }, error: null };
+        return { data: { status: 'rejected', reason: draft.status, detail: draft.reason }, errorKey: null };
       }
       // Ürünün adı YETMEZ, sayısı da gerekir: "Kayseri Mantısı" cümlesi müşteriye ne yapacağını
       // söylemiyor, "Kayseri Mantısı (2)" söylüyor. Parantezin ne anlama geldiğini metin yazıyor —
@@ -300,7 +305,7 @@ export async function confirmCheckoutAction(input: {
             : draft.status === 'date_unavailable'
               ? draft.availableDates
               : undefined;
-      return { data: { status: 'rejected', reason: draft.status, detail }, error: null };
+      return { data: { status: 'rejected', reason: draft.status, detail }, errorKey: null };
     }
 
     /**
@@ -319,38 +324,38 @@ export async function confirmCheckoutAction(input: {
       // `createCheckoutDraft` içinde yapılıp satırlara yazıldı — ayırma da o yazılmış hâli
       // ayırmalı. Online yolda `createCheckoutSession` zaten aynı kaynaktan okuyor.
       const placed = await new OrderService(serviceDb()).getWithItems(draft.orderId);
-      if (!placed) return { data: { status: 'rejected', reason: 'order_not_placed' }, error: null };
+      if (!placed) return { data: { status: 'rejected', reason: 'order_not_placed' }, errorKey: null };
 
       const reserved = await reserveOrderStock({ orderId: draft.orderId, items: placed.items, expiring: false });
       if (!reserved.ok) {
         // Ayrılamadıysa sipariş taslak kalır ve kapatılır: müşteriye söz verilmemiş olur.
         await cancelDraft(draft.orderId);
-        return { data: { status: 'rejected', reason: 'insufficient_stock' }, error: null };
+        return { data: { status: 'rejected', reason: 'insufficient_stock' }, errorKey: null };
       }
 
       const moved = await transitionOrder({ orderId: draft.orderId, to: 'confirmed' });
       if (moved.status !== 'ok') {
         await releaseOrderStock(draft.orderId);
         await cancelDraft(draft.orderId);
-        return { data: { status: 'rejected', reason: 'order_not_placed' }, error: null };
+        return { data: { status: 'rejected', reason: 'order_not_placed' }, errorKey: null };
       }
 
       // Sipariş kesinleşti → sepetten O SİPARİŞİN kalemleri düşer. Toptan boşaltmak, iki gruplu
       // sepette kapıya siparişini veren müşterinin kargo grubunu da sessizce silerdi (19.7).
       await clearOrderedLines(customerId, draft.orderId);
-      return { data: { status: 'placed', orderId: draft.orderId, totalCents: draft.totalCents }, error: null };
+      return { data: { status: 'placed', orderId: draft.orderId, totalCents: draft.totalCents }, errorKey: null };
     }
 
     const session = await createCheckoutSession({ orderId: draft.orderId, marketingConsent: input.marketingConsent });
     if (session.status !== 'ok' || !session.clientSecret) {
-      return { data: { status: 'rejected', reason: session.status }, error: null };
+      return { data: { status: 'rejected', reason: session.status }, errorKey: null };
     }
     return {
       data: { status: 'payment_required', orderId: draft.orderId, clientSecret: session.clientSecret, totalCents: draft.totalCents },
-      error: null,
+      errorKey: null,
     };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 

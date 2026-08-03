@@ -115,7 +115,7 @@ export function GuestVerify({ t, locale, compact, onVerified }: GuestVerifyProps
         // sıkışık kaldığı için 480'e açıldı — kartın kenarlarıyla arasında nefes payı kalıyor ama
         // düğme artık bir başlık kadar geniş değil.
         <div className="mx-auto flex w-full max-w-[480px] flex-col gap-[18px] py-1">
-          <Button variant="secondary" fullWidth onClick={() => void google()}>
+          <Button variant="secondary" compact={compact} fullWidth onClick={() => void google()}>
             <GoogleIcon /> {t.verify.google}
           </Button>
 
@@ -137,7 +137,7 @@ export function GuestVerify({ t, locale, compact, onVerified }: GuestVerifyProps
               onKeyDown={(e) => e.key === 'Enter' && void send()}
               placeholder={t.verify.email}
             />
-            <Button fullWidth disabled={!validEmail || busy} onClick={() => void send()}>
+            <Button compact={compact} fullWidth disabled={!validEmail || busy} onClick={() => void send()}>
               {busy ? t.verify.sending : t.verify.send}
             </Button>
           </div>

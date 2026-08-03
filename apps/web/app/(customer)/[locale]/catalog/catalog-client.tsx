@@ -46,9 +46,9 @@ export function CatalogClient({ t, locale, data, active, device, search }: Catal
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
     void loadMoreCatalogAction(locale, { category: active.category, search, sort: active.sort, onlyOffers: active.onlyOffers }, cursor)
-      .then(({ data: page, error }) => {
+      .then(({ data: page, errorKey }) => {
         // Hata sessiz: liste olduğu yerde kalır, tetikleyici yeniden denenebilir (sunucu = gerçek).
-        if (error || !page) return;
+        if (errorKey || !page) return;
         setExtraPages((prev) => [...prev, ...page.products]);
         setCursor(page.nextCursor);
       })
