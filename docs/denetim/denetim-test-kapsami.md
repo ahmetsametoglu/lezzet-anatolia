@@ -67,7 +67,41 @@ sınanmıyor. Backend'te tek test dosyası var (`feedback-requests.test`); diğe
 edildiyse job katmanı incedir — ama "cron yanlış paramla çağırıyor" sınıfını yalnız job testi
 yakalar.
 
-**Cevap:** —
+**Cevap (arka uç şeridi): Kısmen kabul — hedefi kaydırıyorum, gerekçesiyle.**
+
+Kabul ettiğim kısım: "yanlış paramla çağırma" sınıfı gerçek ve bugün yakalanmıyor. Katılmadığım
+kısım: bu sınıfın adresi **dört ince iş dosyası değil**, ikisi.
+
+`sweep-reservations.ts` üç satır ve **parametresiz**: `new ReservationService(serviceDb()).sweepExpired()`.
+Testi, `stock.test`'in zaten kanıtladığı RPC'yi bir katman daha üstten çağırmaktan ibaret olurdu —
+tautolojiye yakın, bakım maliyeti gerçek. `collect-health` için de aynı: gövdesi ölçüm ve
+savunmacı dallar; hüküm zaten motorda ve testli (`healthStatusOf`).
+
+Yanlış-param sınıfının GERÇEKTEN durduğu iki yer var ve ikisini de üstleniyorum:
+
+- **`runner.ts`** — paylaşılan kabuk ve içinde gerçek mantık var: üst üste binme koruması, çifte iz
+  (`job_run` + `error_log`), hatada bile sürecin ayakta kalması. Testsiz. Bir iş düşse bile
+  sürecin devam etmesi burada kırılırsa **dört cron birden** susar; bulgunun asıl riski bu.
+- **`purge-observability.ts`** — VERİ SİLEN tek iş, ve iki parametresi var (90 gün / 14 gün).
+  "Çözülmemiş hata süpürülmez" bir değişmez; yanlış eşik ya da yanlış metot burada açık bir sorunu
+  sessizce yok eder. Yanlış-param sınıfının en pahalı örneği tam olarak bu.
+
+Görev satırına `18.11` olarak indi (`docs/build/18-operasyon-guvenlik.md`, `BEKLEYEN(18.11)`).
+Bu turda yazılmadı — teslim sözü olarak kayda geçiyorum, kapatmıyorum.
+
+**Karşı soru:** ince sarmalayıcıyı test etmemenin bedeli sizce nerede birikiyor? Ölçebildiğim
+bir örnek görürsem `sweep`/`collect-health`'i de alırım.
+
+**Denetim görüşü (03.08):** **Hedef kaydırmanız kabul — ölçülebilir örneğim YOK ve olmaması
+sizin lehinize.** İnce sarmalayıcının arıza sınıfı bağlama hatasıdır (yanlış import, yanlış
+zamanlama dizesi, servis kurulumu) ve o sınıf iki başka ağla zaten görünür: parametresiz çağrıyı
+`typecheck` tutar; bağlanmayan/düşen iş `runner`'ın `job_run` izinde bayatlama olarak sağlık
+ekranına düşer — G2'nin ikinci yarısı ("N dakikadır görüntü yok" uyarısı, 18.11) inince o ağın
+son deliği de kapanır. Yani sarmalayıcı testinin yakalayacağı hata, bugün başka yerde daha ucuza
+yakalanıyor; tautolojiye yakın testi bakım maliyetiyle taşımak net kayıp olurdu. Üstlendiğiniz
+iki hedef (`runner.ts` — dört cron'un ortak kırılma noktası; `purge-observability` — veri silen
+ve "çözülmemiş süpürülmez" değişmezi taşıyan tek iş) tam doğru adresler. **T4 bu dosyada
+kapanıyor** — teslim sözü `18.11` görev satırında izlenir (durumun tek sahibi orası, CLAUDE §5).
 
 ## T5. Gözlem (bulgu değil): test disiplin kuralları İŞLİYOR
 

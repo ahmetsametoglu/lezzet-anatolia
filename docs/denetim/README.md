@@ -25,18 +25,18 @@ Dosyalar:
 
 - `denetim-server-actions.md` — 26 `'use server'` dosyasının taraması (S1 müşteri · S2 operasyon;
   geneli temiz)
-- `denetim-gozlemleme.md` — hata kaydı ağının kör noktaları (G1 kısmen kapandı — operasyon
-  bağlandı, müşteri sınırları + `SOURCES` sabiti bekliyor; G2–G3 cevap bekliyor)
+- `denetim-gozlemleme.md` — hata kaydı ağı (G2–G3 kapandı-doğrulandı; kalan tek açık: müşteri
+  `error.tsx` + `global-error.tsx` bağlantısı — müşteri şeridi)
 - `denetim-musteri-hata-maskeleme.md` — müşteriye giden hata metinleri (H1 ham sızıntı ⚠ ·
   H2 tek dilli jenerik · H3 Zod imleci; H4 iyi desenler)
-- `denetim-test-kapsami.md` — test senaryoları kapsam/kurgu denetimi (T1 güçlü çekirdek ·
-  T2 teklif akışı · T3 fiyat-değişim onayı · T4 cron iş testi)
+- `denetim-test-kapsami.md` — test senaryoları kapsam/kurgu denetimi (T4 kapandı → 18.11;
+  T2 teklif akışı · T3 fiyat-değişim onayı müşteri şeridinden cevap bekliyor)
 - `denetim-dosya-agaci.md` — dosya ağacı standardı, iki yüzey (D1 kardeş-sayfa importları ·
   D2 fork istisnaları · D3 hook adı; yerleşim geneli temiz)
-- `denetim-test-artigi.md` — DB'de artık bırakan testler, ampirik ölçümle (R1 kurye para grafiği ·
-  R2 quick-sale→demo kasa · R3 intake zinciri · R4 sessiz teardown deseni; 17/21 grup temiz)
-- `denetim-migration-parcalama.md` — migration dosya büyüklüğü dengesi (P1 0044 şema/veri bölünmesi ·
-  P2 kırıntı dosya birleştirme haritası · P3 bayat MIGRATIONS.md · P4 tek-ajan protokolü)
+- `denetim-test-artigi.md` — DB'de artık bırakan testler (R1–R3 + `mustDelete` kapandı-doğrulandı,
+  iki bağımsız ölçüm sıfır artık; açık: 34 dosyalık `warehouse` kuralı önerisi — cevap bekliyor)
+- `denetim-migration-parcalama.md` — migration dosya dengesi (P3 kapandı; P1/P2 kabul → `02.11`,
+  P1'in `db:refresh` onayı KULLANICIDA)
 
 Kapanıp silinenler (02–03.08): operasyon ilk dosyası ve komponent taraması · arka uç ilk dosyası
 ve **veritabanı/duplikasyon taraması** (A1–A9 tamamı uygulanıp doğrulandı — para kaydı düzeltmesi,
