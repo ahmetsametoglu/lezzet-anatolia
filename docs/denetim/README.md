@@ -25,8 +25,8 @@ Dosyalar:
 
 - `denetim-server-actions.md` — 26 `'use server'` dosyasının taraması (S1 müşteri · S2 operasyon;
   geneli temiz)
-- `denetim-yorum-arka-uc.md` — yorum bayatlığı 1/3: arka uç (Y1 supplier künyesi · Y2 packages/ai ·
-  Y3 unitCost adı; örneklemin kalanı temiz — 2/3 operasyon ve 3/3 müşteri sırada)
+- `denetim-yorum-operasyon.md` — yorum bayatlığı 2/3: operasyon (O-Y1 Ayarlar "yok" ama var ·
+  O-Y2 dönemli toplam gelmiş, ekran eski · O-Y3 nav→olmayan whatsapp; ölçü ekseni temiz)
 - `denetim-musteri-hata-maskeleme.md` — müşteriye giden hata metinleri (H1 ham sızıntı ⚠ ·
   H2 tek dilli jenerik · H3 Zod imleci; H4 iyi desenler)
 - `denetim-test-kapsami.md` — test senaryoları kapsam/kurgu denetimi (T2 kapandı-doğrulandı,
