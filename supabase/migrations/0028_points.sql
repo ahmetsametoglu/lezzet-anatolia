@@ -88,10 +88,21 @@ create unique index points_entry_source_key
 -- indekslenemez. Fark, 23:50'de kazanıp 00:10'da yeniden kazanabilmek — 10 cent'lik bir sınır için
 -- kabul edilebilir, ve garantinin indekste kalması kodda kalmasından değerli.
 --
--- `created_at::date` UTC'dir, yani gün sınırı Fransa'da yazın 02:00'a düşer. `at time zone` sabiti
--- `IMMUTABLE` olmadığı için indekslenemiyor; not düşülüyor ki sonradan "neden 02:00" diye aranmasın.
+-- **Gün İŞLETMENİN günüdür (Europe/Paris), sunucunun değil** — `earnedToday`'in günlük tavanıyla
+-- BİREBİR aynı tanım. İkisi ayrı olsaydı yazın Paris'te 00:00–02:00 arasında tavan sıfırlanmış ama
+-- ziyaret puanı henüz açılmamış olurdu: müşteri "günlük hakkım doldu" da göremez, puanı da alamazdı.
+--
+-- İlk yazımda burada `created_at::date` vardı ve migration **`42P17` ile düştü**: `timestamptz`'den
+-- `date`'e cast STABLE'dır (sonuç oturumun `TimeZone` ayarına bağlı), indeks ifadesi olamaz.
+-- `at time zone <sabit>` ise IMMUTABLE — çünkü sabit bir dilime çevirmek oturumdan bağımsızdır.
+-- Yani engel sandığım şey çözümün ta kendisiymiş; UTC'ye razı olmaya hiç gerek yokmuş.
+--
+-- ⚠ **`'Europe/Paris'` burada ve `PointsService.BUSINESS_TIME_ZONE`'da AYRI AYRI yazılı** —
+-- biri SQL, öteki TypeScript; paylaşılamıyor. İşletme taşınır ya da ikinci şube açılırsa İKİSİ
+-- birden değişmeli: yalnız biri değişirse tavan ile ziyaret günü ayrışır ve hiçbir yerde hata
+-- vermez, yalnız müşteri gecenin bir saatinde puanını alamaz.
 create unique index points_entry_visit_day
-  on public.points_entry (customer_id, (created_at::date))
+  on public.points_entry (customer_id, ((created_at at time zone 'Europe/Paris')::date))
   where reason = 'visit';
 
 -- Bakiye ve geçmiş okuması.

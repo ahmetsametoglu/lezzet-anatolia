@@ -80,7 +80,7 @@ export async function awardPoints(input: {
   // çünkü ikinci bir yazma yolu açıldığı gün buradaki kontrol atlanabilir.
   const zatenVar = input.refId
     ? await entries.hasEntryFor(input.customerId, input.reason, input.refId)
-    : await entries.hasEntryOnUtcDate(input.customerId, input.reason);
+    : await entries.hasEntryOnBusinessDay(input.customerId, input.reason);
   if (zatenVar) return null;
 
   const [profile, settings] = await Promise.all([new UserProfileService(db).getById(input.customerId), pointsSettings()]);
