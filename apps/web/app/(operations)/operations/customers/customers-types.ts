@@ -112,9 +112,9 @@ export type ConsentView = Consent;
 export interface PersonalCouponRow {
   id: string;
   name: string;
-  /** Yüzde indirimde oran, sabit tutarda KURUŞ (tür `isPercent` ile ayrılır). */
-  value: number;
-  isPercent: boolean;
+  /** Tipine göre biri dolu, öteki `null` (02.9) — birimi komşu bayrağa bakarak anlaşılan sayı yok. */
+  percent: number | null;
+  amountCents: number | null;
   codes: string[];
   usedCount: number;
   maxUses: number | null;

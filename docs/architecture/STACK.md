@@ -272,7 +272,13 @@ dönüşümü yok — tam olarak 74,17 €'yu **0,74 €** gösteren hatadır (3
 yakaladı). Göç bitince kural yumuşamaz, sertleşir: sıra **branded tip**tedir (`Cents`), o gün güvence
 denetleyiciden derleyiciye geçer.
 
-> **AÇIK — göç sürüyor (`02.9`).** Beyan bugün yalnız **fiyat** ailesinde; indirim · stok · sipariş ·
+**Birimi başka alana bağlı bir para kolonu OLAMAZ.** `discount.value` yüzde de sabit tutar da
+taşıyordu (`type`'a göre) ve hiçbir adla dürüst olamıyordu: `valueCents` yüzde satırında yalan söyler,
+`value` sabit satırında birimini söylemez. Çözüm ada değil **şemaya** yazılır — kolon ikiye ayrılır
+(`percent` + `amount`) ve hangisinin dolu olacağını bir kısıt tutar (`02.9`, `0031`). Aynı ölçüt
+görünüm tiplerinde ve form girdilerinde de geçerlidir: tek kutu, iki alan gönderir.
+
+> **AÇIK — göç sürüyor (`02.9`).** Beyan bugün **fiyat** ve **indirim** ailelerinde; stok · sipariş ·
 > para hareketi · profil aileleri hâlâ euro döndürüyor ve dönüşüm çağrı yerlerinde elle yapılıyor.
 > O aileler kapanana kadar savunma, yukarıdaki iki maddedir (ortak helper + `…Cents` adlandırması).
 

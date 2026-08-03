@@ -161,7 +161,7 @@ begin
   end if;
 
   insert into public.discount (
-    name, trigger, type, value, scope, customer_id, max_uses, per_customer_limit, is_active
+    name, trigger, type, amount, scope, customer_id, max_uses, per_customer_limit, is_active
   ) values (
     'Puan çevrimi',
     'coupon',

@@ -205,7 +205,8 @@ describe('kupona çevirme', () => {
 
     // Kupon KİŞİSEL ve tek kullanımlık; değeri sabit tutar (yüzde değil).
     const discount = await new DiscountService(db).getById(result.discountId);
-    expect(discount).toMatchObject({ customerId: b2cId, type: 'fixed', value: 6, maxUses: 1, perCustomerLimit: 1 });
+    // 600 puan = 6,00 € → kolon 6 euro tutar, servis 600 cent döndürür (02.9 · STACK §8).
+    expect(discount).toMatchObject({ customerId: b2cId, type: 'fixed', amountCents: 600, percent: null, maxUses: 1, perCustomerLimit: 1 });
   });
 
   it('puan defterden DÜŞER — bakiye yeniden türetilir', async () => {

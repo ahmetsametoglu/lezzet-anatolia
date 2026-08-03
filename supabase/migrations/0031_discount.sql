@@ -43,9 +43,15 @@ create table public.discount (
   -- olabilir ve hepsi aynı kotayı paylaşır.
 
   type discount_type not null,
-  -- `percent` → yüzde (15 = %15) · `fixed` → EURO tutar. Uygulama katmanı motora verirken sabit
-  -- tutarı KURUŞA çevirir (STACK §8: DB'de euro, hesapta cent).
-  value numeric(10, 2) not null check (value > 0),
+  -- Değer İKİ AYRI KOLONDA (02.9): `percent` yüzdedir (15 = %15), `amount` EURO tutardır.
+  --
+  -- Tek `value` kolonu vardı ve birimi `type`'a bağlıydı. Böyle bir kolon hiçbir adla dürüst
+  -- olamaz: `value_cents` yüzde satırında yalan söyler, `value` sabit satırında birimini
+  -- söylemez — ve birimi söylenmeyen para alanı, 74,17 €'yu 0,74 € gösteren hatanın ta kendisi
+  -- (STACK §8). Ayrıca "yüzde 100'ü aşamaz" kısıtı `type <> 'percent' or …` diye yazılmak
+  -- zorundaydı; iki kolonda kısıt kolonun kendisine yapışıyor.
+  percent numeric(5, 2) check (percent > 0 and percent <= 100),
+  amount numeric(10, 2) check (amount > 0),
 
   scope discount_scope not null,
   -- Kapsam kategoriyse/koleksiyonsa hedefi; sepet kapsamında ikisi de boş.
@@ -77,8 +83,14 @@ create table public.discount (
     or (scope = 'category' and category_id is not null and collection_id is null)
     or (scope = 'collection' and collection_id is not null and category_id is null)
   ),
-  -- Yüzde 100'ü aşamaz; sabit tutarın tavanı yoktur (matrahla sınırlanır, motorun işi).
-  constraint discount_percent_range check (type <> 'percent' or value <= 100),
+  -- Tipin değeri VARDIR ve yalnız kendi kolonundadır: yüzde indirimde `amount`, sabit indirimde
+  -- `percent` dolu olamaz. İkisi de boş bir kural sessizce "sıfır indirim" uygulardı; ikisi de dolu
+  -- bir kural ise hangisinin geçerli olduğunu okuyana bırakırdı — ikisi de yazılı bir hata değil,
+  -- sessiz bir hata olurdu. Kısıt kuralı veride tutar (CLAUDE.md §1).
+  constraint discount_value_matches_type check (
+    (type = 'percent' and percent is not null and amount is null)
+    or (type = 'fixed' and amount is not null and percent is null)
+  ),
   -- Tarih aralığı ters yazılamaz — "31 Tem'den 24 Tem'e" hiç geçerli olmayan bir kampanyadır.
   constraint discount_valid_range check (valid_from is null or valid_to is null or valid_from <= valid_to)
 );

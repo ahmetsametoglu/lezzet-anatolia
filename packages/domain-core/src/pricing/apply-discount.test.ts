@@ -15,7 +15,8 @@ const kupon = (over: Partial<DiscountRule> = {}): DiscountRule => ({
   trigger: 'coupon',
   codes: ['BAYRAM15'],
   type: 'percent',
-  value: 15,
+  percent: 15,
+  amountCents: null,
   scope: 'cart',
   ...over,
 });
@@ -24,14 +25,14 @@ describe('tek-en-büyük kuralı', () => {
   it('iki uygun indirimden büyüğü seçilir, toplanmaz', () => {
     const r = applyBestDiscount(
       [line({ unitPriceCents: 2000 })],
-      [kupon({ id: 'kucuk', value: 10 }), kupon({ id: 'buyuk', value: 25 })],
+      [kupon({ id: 'kucuk', percent: 10 }), kupon({ id: 'buyuk', percent: 25 })],
       { enteredCouponCode: 'BAYRAM15' },
     );
     expect(r).toMatchObject({ discountId: 'buyuk', amountCents: 500 }); // %25 × 2000, %10 eklenmez
   });
 
   it('müşterinin genel oranı da havuzdadır — kupondan büyükse o kazanır', () => {
-    const r = applyBestDiscount([line({ unitPriceCents: 10_000 })], [kupon({ value: 5 })], {
+    const r = applyBestDiscount([line({ unitPriceCents: 10_000 })], [kupon({ percent: 5 })], {
       customerDiscountPercent: 12,
       enteredCouponCode: 'BAYRAM15',
     });
@@ -39,7 +40,7 @@ describe('tek-en-büyük kuralı', () => {
   });
 
   it('kupon müşteri oranından büyükse kupon kazanır — müşteri oranı KALKAR', () => {
-    const r = applyBestDiscount([line({ unitPriceCents: 10_000 })], [kupon({ value: 20 })], {
+    const r = applyBestDiscount([line({ unitPriceCents: 10_000 })], [kupon({ percent: 20 })], {
       customerDiscountPercent: 12,
       enteredCouponCode: 'BAYRAM15',
     });
@@ -114,7 +115,7 @@ describe('koşullar', () => {
 describe('kapsam', () => {
   it('kategori kapsamı yalnız o kategorinin kalemlerine iner', () => {
     const lines = [line({ unitPriceCents: 4000 }), line({ variantId: 'v2', categoryId: 'cat-borek', unitPriceCents: 6000 })];
-    const rule = kupon({ trigger: 'automatic', codes: [], scope: 'category', categoryId: TATLI, value: 10 });
+    const rule = kupon({ trigger: 'automatic', codes: [], scope: 'category', categoryId: TATLI, percent: 10 });
     const r = applyBestDiscount(lines, [rule], {});
     expect(r?.amountCents).toBe(400); // yalnız 4000 üzerinden
     expect(r?.lineShares).toEqual([400, 0]);
@@ -122,7 +123,7 @@ describe('kapsam', () => {
 
   it('koleksiyon kapsamı üyelikten süzer', () => {
     const lines = [line({ collectionIds: ['col-bayram'] }), line({ variantId: 'v2', collectionIds: [] })];
-    const rule = kupon({ trigger: 'automatic', codes: [], scope: 'collection', collectionId: 'col-bayram', value: 50 });
+    const rule = kupon({ trigger: 'automatic', codes: [], scope: 'collection', collectionId: 'col-bayram', percent: 50 });
     expect(applyBestDiscount(lines, [rule], {})?.amountCents).toBe(500);
   });
 
@@ -139,7 +140,7 @@ describe('muafiyetler ve dağıtım', () => {
       line({ variantId: 'paket', unitPriceCents: 9000, bundleId: 'b1' }),
       line({ variantId: 'teklif', unitPriceCents: 3000, offerStockId: 's1' }),
     ];
-    const r = applyBestDiscount(lines, [kupon({ trigger: 'automatic', codes: [], value: 10 })], {});
+    const r = applyBestDiscount(lines, [kupon({ trigger: 'automatic', codes: [], percent: 10 })], {});
     expect(r?.amountCents).toBe(500); // yalnız 5000 matrah
     expect(r?.lineShares).toEqual([500, 0, 0]);
   });
@@ -151,12 +152,25 @@ describe('muafiyetler ve dağıtım', () => {
 
   it('dağıtım oransaldır ve toplamı indirime EŞİTTİR', () => {
     const lines = [line({ unitPriceCents: 1690 }), line({ variantId: 'v2', unitPriceCents: 800 }), line({ variantId: 'v3', unitPriceCents: 510 })];
-    const r = applyBestDiscount(lines, [kupon({ trigger: 'automatic', codes: [], value: 15 })], {});
+    const r = applyBestDiscount(lines, [kupon({ trigger: 'automatic', codes: [], percent: 15 })], {});
     expect(r!.lineShares.reduce((a, b) => a + b, 0)).toBe(r!.amountCents);
   });
 
   it('sabit tutarlı indirim sepetten büyük olamaz', () => {
-    const r = applyBestDiscount([line({ unitPriceCents: 500 })], [kupon({ trigger: 'automatic', codes: [], type: 'fixed', value: 5000 })], {});
+    const sabit = kupon({ trigger: 'automatic', codes: [], type: 'fixed', percent: null, amountCents: 5000 });
+    const r = applyBestDiscount([line({ unitPriceCents: 500 })], [sabit], {});
     expect(r?.amountCents).toBe(500);
+  });
+
+  // Tipine uyan alanı boş bir kural DEĞERSİZDİR — 0 sayıp "sıfır indirim" uygulamak, bozuk kuralı
+  // sağlıklı gibi okumak olurdu. DB kısıtı bunu engelliyor ama motor kendi girdisine güvenmez.
+  it('değeri eksik kural aday olmaz (yüzde alanı boş)', () => {
+    const bozuk = kupon({ trigger: 'automatic', codes: [], percent: null });
+    expect(applyBestDiscount([line({ unitPriceCents: 10_000 })], [bozuk], {})).toBeNull();
+  });
+
+  it('değeri eksik kural aday olmaz (sabit tutar alanı boş)', () => {
+    const bozuk = kupon({ trigger: 'automatic', codes: [], type: 'fixed', percent: null, amountCents: null });
+    expect(applyBestDiscount([line({ unitPriceCents: 10_000 })], [bozuk], {})).toBeNull();
   });
 });

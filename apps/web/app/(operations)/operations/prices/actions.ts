@@ -11,7 +11,6 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { costOf } from '@lezzet/domain-core';
-import { fromCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Channel, type KeysetCursor, type LocalizedText, type Price } from '@lezzet/types';
 import { LOCALES } from '@lezzet/i18n';
 import { requireAdmin } from '@/lib/guard';
@@ -296,7 +295,7 @@ export async function loadMorePricesAction(
  * **Kod SATIRLARI ayrı yazılır** (`discount_code`): bir kuponun birden çok kapısı olur ve hepsi aynı
  * kotayı açar. Kural yazıldıktan SONRA eşitlenir — kodun bağlanacağı kural henüz yoksa yazılamaz.
  *
- * Sabit tutar KURUŞTAN euroya çevrilir (STACK §8: ekranda cent, DB'de euro).
+ * Para dönüşümü YOK (02.9): servis cent alır, euro'ya sınırda kendisi çevirir (`STACK §8`).
  */
 export async function saveDiscountAction(input: DiscountFormInput): Promise<ActionResult> {
   try {
@@ -312,11 +311,13 @@ export async function saveDiscountAction(input: DiscountFormInput): Promise<Acti
       publicLabel: trimmedLabel(input.publicLabel),
       trigger: input.trigger,
       type: input.type,
-      value: input.type === 'fixed' ? fromCents(Math.round(input.valueCents)) : input.valueCents,
+      // Tipine uyan alan dolu, öteki null — DB kısıtı (`discount_value_matches_type`) bunu bekliyor.
+      percent: input.type === 'percent' ? input.percent : null,
+      amountCents: input.type === 'fixed' ? Math.round(input.amountCents ?? 0) : null,
       scope: input.scope,
       categoryId: input.scope === 'category' ? input.targetId : null,
       collectionId: input.scope === 'collection' ? input.targetId : null,
-      minBasket: input.minBasketCents === null ? null : fromCents(Math.round(input.minBasketCents)),
+      minBasketCents: input.minBasketCents === null ? null : Math.round(input.minBasketCents),
       firstOrderOnly: input.firstOrderOnly,
       validFrom: input.validFrom,
       validTo: input.validTo,
@@ -340,7 +341,9 @@ export async function saveDiscountAction(input: DiscountFormInput): Promise<Acti
     // Kodsuz kupon hiç uygulanamaz: kapısı olmayan bir kural, kimsenin giremediği bir odadır.
     // (Kural DB'de kısıt olarak DURAMAZ — kod ayrı tabloda ve kural yazılmadan satırı olamaz.)
     if (payload.trigger === 'coupon' && codes.length === 0) throw new Error('En az bir kupon kodu girilmeli.');
-    if (!Number.isFinite(input.valueCents) || input.valueCents <= 0) throw new Error('İndirim değeri sıfırdan büyük olmalı.');
+    // Tipe göre hangi alanın dolu olması gerektiği tek yerde: ekranda tek kutu, gönderilen iki alan.
+    const entered = input.type === 'percent' ? input.percent : input.amountCents;
+    if (entered === null || !Number.isFinite(entered) || entered <= 0) throw new Error('İndirim değeri sıfırdan büyük olmalı.');
     if (payload.scope !== 'cart' && !input.targetId) throw new Error('Kapsam hedefi seçilmeli (kategori ya da koleksiyon).');
 
     const rule = input.id ? await svc.update({ id: input.id, ...payload }) : await svc.insert(payload);

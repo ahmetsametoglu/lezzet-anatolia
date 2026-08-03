@@ -23,6 +23,9 @@ import { DiscountCodeService } from './discount-code.service';
  * keyset'e döner ve ekrana müşteri süzgeci gerekir.
  */
 export class DiscountService extends BaseDbService<Discount, DiscountInsert, DiscountUpdate> {
+  /** Kolonlar `discount.amount` ve `discount.min_basket` (euro numeric); app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ['amountCents', 'minBasketCents'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'discount', DiscountSchema, DiscountInsertSchema, DiscountUpdateSchema);
   }

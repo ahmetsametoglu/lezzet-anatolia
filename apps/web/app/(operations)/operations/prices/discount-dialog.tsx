@@ -73,9 +73,10 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
   // TR kutusuna düşer — formun üç kutusu var ve kod bir yerde görünmek zorunda.
   const [codes, setCodes] = useState<Partial<Record<Locale, string>>>(() => codeMapOf(editing));
   const [type, setType] = useState<DiscountType>(editing?.type ?? 'percent');
-  // Tek alan, iki taban: yüzdede sayı, sabit tutarda KURUŞ tutulur.
+  // Tek GİRDİ KUTUSU var (tipe göre yüzde ya da para kipinde) ve kutu ekran birimiyle çalışır:
+  // yüzdede oran, sabit tutarda EURO. Gönderilen alanlar ayrıktır (`percent` / `amountCents`).
   const [value, setValue] = useState<number | null>(
-    editing === null ? null : editing.type === 'fixed' ? fromCents(editing.value) : editing.value,
+    editing === null ? null : editing.type === 'fixed' ? fromCents(editing.amountCents ?? 0) : editing.percent,
   );
   const [scope, setScope] = useState<DiscountScope>(editing?.scope ?? 'cart');
   const [targetId, setTargetId] = useState<string>('');
@@ -104,7 +105,8 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
       trigger,
       codes,
       type,
-      valueCents: value === null ? 0 : type === 'fixed' ? toCents(value) : value,
+      percent: type === 'percent' ? value : null,
+      amountCents: type === 'fixed' && value !== null ? toCents(value) : null,
       scope,
       targetId: scope === 'cart' ? null : targetId || null,
       minBasketCents: minBasket === null ? null : toCents(minBasket),

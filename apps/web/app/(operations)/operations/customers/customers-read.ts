@@ -79,8 +79,8 @@ export function toPersonalCouponRows(
   return rules.map((rule) => ({
     id: rule.id,
     name: rule.name,
-    value: rule.type === 'fixed' ? toCents(rule.value) : rule.value,
-    isPercent: rule.type === 'percent',
+    percent: rule.percent,
+    amountCents: rule.amountCents,
     codes: (codes.get(rule.id) ?? []).map((c) => c.code),
     usedCount: usage.get(rule.id)?.total ?? 0,
     maxUses: rule.maxUses,

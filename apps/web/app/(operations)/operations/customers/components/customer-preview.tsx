@@ -383,7 +383,7 @@ export function CustomerPreview({
                       </span>
                       <span className="ml-auto flex flex-none items-center gap-1.5">
                         <span className="font-ops-mono text-ops-sm font-medium text-ops-ink">
-                          {c.isPercent ? percent(c.value) : money(c.value)}
+                          {c.percent != null ? percent(c.percent) : c.amountCents != null ? money(c.amountCents) : '—'}
                         </span>
                         {/* Kotası dolmuş kupon KAPALI görünür: "geçerli" yazan ama uygulanamayan bir
                           kupon, müşteriye tutulmayan bir sözdür. */}

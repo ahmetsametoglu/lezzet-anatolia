@@ -124,7 +124,7 @@ function DiscountCard({ rule, onEdit }: DiscountCardProps) {
       </button>
 
       <span className="font-ops-mono text-ops-base font-medium text-ops-ink">
-        {rule.type === 'percent' ? percent(rule.value) : money(rule.value)}
+        {rule.percent != null ? percent(rule.percent) : rule.amountCents != null ? money(rule.amountCents) : '—'}
       </span>
 
       {/* Kullanım sayısı KAYITTAN gelir. Tavan varsa "3/100", yoksa yalnız kullanım adedi — sıfır da

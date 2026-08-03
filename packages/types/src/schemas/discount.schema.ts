@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { dbNumeric, dbNumericNullable } from './db-numeric';
+import { dbNumericNullable } from './db-numeric';
 import { DiscountScopeEnum, DiscountTriggerEnum, DiscountTypeEnum, PreferredLanguageEnum } from './enums.schema';
 import { LocalizedTextDraftSchema } from './localized-text.schema';
 
@@ -10,8 +10,12 @@ import { LocalizedTextDraftSchema } from './localized-text.schema';
 // Kural burada YAŞAMAZ: hangi indirimin kazandığı (tek-en-büyük), kimin matraha girdiği (pakete ve
 // teklife indirim binmez) ve tutarın nasıl dağıtıldığı motorun işidir.
 //
-// DEĞERİN TABANI: `percent` → yüzde (15 = %15); `fixed` → EURO. Motor sabit tutarı KURUŞ bekler
-// (STACK §8) — çeviri uygulama katmanındadır, saklanan değer eurodur.
+// DEĞER İKİ AYRI ALANDA (02.9): `percent` yüzdedir (15 = %15), `amountCents` sabit tutardır ve
+// **cent**tir (DB kolonu `amount`, euro `numeric`; dönüşümü `DiscountService.moneyFields` yapar).
+// Tek bir `value` alanı vardı ve birimi `type`'a bağlıydı — hiçbir adla dürüst olamayan bir alandı:
+// `value` sabit indirimde birimini söylemiyordu, `valueCents` yüzde satırında yalan söylerdi. Çeviri
+// de elle yapılıyordu (`Math.round(row.value * 100)`), ki STACK §8 bunu açıkça yasaklıyor.
+// Hangi alanın dolu olacağını DB kısıtı tutar (`discount_value_matches_type`).
 
 export const DiscountSchema = z.object({
   id: z.string().uuid(),
@@ -27,15 +31,18 @@ export const DiscountSchema = z.object({
   // kotayı paylaşır. Kural satırında kod kolonu YOK — olsaydı "asıl kod" diye ikinci bir kavram
   // doğar ve kotanın hangi koda ait olduğu tartışılırdı.
   type: DiscountTypeEnum,
-  value: dbNumeric,
+  /** `type='percent'` satırında dolu, sabit indirimde `null` (DB kısıtı). */
+  percent: dbNumericNullable,
+  /** `type='fixed'` satırında dolu, yüzde indirimde `null` (DB kısıtı). Birim: **cent**. */
+  amountCents: z.number().int().nullable(),
   scope: DiscountScopeEnum,
   categoryId: z.string().uuid().nullable(),
   collectionId: z.string().uuid().nullable(),
   /**
-   * Asgari sepet (euro). `null` = koşul YOK — 0 ile aynı şey değil: sıfır da bir eşiktir ve
-   * "koşulsuz" demek istemeyen bir operatörün yazdığı sayı olabilir.
+   * Asgari sepet (**cent**; DB kolonu `min_basket`, euro). `null` = koşul YOK — 0 ile aynı şey
+   * değil: sıfır da bir eşiktir ve "koşulsuz" demek istemeyen bir operatörün yazdığı sayı olabilir.
    */
-  minBasket: dbNumericNullable,
+  minBasketCents: z.number().int().nullable(),
   firstOrderOnly: z.boolean(),
   validFrom: z.string().nullable(),
   validTo: z.string().nullable(),
@@ -56,11 +63,14 @@ export const DiscountInsertSchema = z.object({
   publicLabel: LocalizedTextDraftSchema.nullish(),
   trigger: DiscountTriggerEnum,
   type: DiscountTypeEnum,
-  value: z.number().positive(),
+  // Tipe uyan alan dolu olmalı; ikisini birden ya da hiçbirini yazmayı DB reddeder.
+  // Tavan (%100) DB kısıtındadır — buraya da yazmak aynı kuralı iki eve koymak olurdu (CLAUDE.md §1).
+  percent: z.number().positive().nullish(),
+  amountCents: z.number().int().positive().nullish(),
   scope: DiscountScopeEnum,
   categoryId: z.string().uuid().nullish(),
   collectionId: z.string().uuid().nullish(),
-  minBasket: z.number().nonnegative().nullish(),
+  minBasketCents: z.number().int().nonnegative().nullish(),
   firstOrderOnly: z.boolean().optional(),
   validFrom: z.string().nullish(),
   validTo: z.string().nullish(),
@@ -104,8 +114,8 @@ export type DiscountCodeUpdate = z.infer<typeof DiscountCodeUpdateSchema>;
 /**
  * Kullanım KAYDI — sayaç değil. Sipariş tarafı yazar, tanım ekranı okur.
  *
- * `amount` kuralın değeri değil, o sepette GERÇEKTEN inen tutardır (matrah küçükse sabit tutar
- * kırpılır). Raporun ve "ne kadar indirim dağıttık" sorusunun cevabı budur.
+ * `amountCents` kuralın değeri değil, o sepette GERÇEKTEN inen tutardır (matrah küçükse sabit tutar
+ * kırpılır). Raporun ve "ne kadar indirim dağıttık" sorusunun cevabı budur. DB kolonu `amount` (euro).
  */
 export const DiscountUseSchema = z.object({
   id: z.string().uuid(),
@@ -117,7 +127,7 @@ export const DiscountUseSchema = z.object({
   discountCodeId: z.string().uuid().nullable(),
   customerId: z.string().uuid().nullable(),
   orderId: z.string().uuid().nullable(),
-  amount: dbNumeric,
+  amountCents: z.number().int(),
   usedAt: z.string(),
 });
 export type DiscountUse = z.infer<typeof DiscountUseSchema>;
@@ -127,7 +137,7 @@ export const DiscountUseInsertSchema = z.object({
   discountCodeId: z.string().uuid().nullish(),
   customerId: z.string().uuid().nullish(),
   orderId: z.string().uuid().nullish(),
-  amount: z.number().nonnegative(),
+  amountCents: z.number().int().nonnegative(),
 });
 export type DiscountUseInsert = z.infer<typeof DiscountUseInsertSchema>;
 

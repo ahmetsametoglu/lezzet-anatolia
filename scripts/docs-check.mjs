@@ -31,6 +31,10 @@ const ENTITIES = [
   { doc: 'Product (ürün)', part: 'katalog', table: 'product', schema: 'product.schema.ts', zod: 'ProductSchema' },
   { doc: 'ProductVariant (ürün varyantı)', part: 'katalog', table: 'product_variant', schema: 'product-variant.schema.ts', zod: 'ProductVariantSchema' },
   { doc: 'Price (fiyat)', part: 'katalog', table: 'price', schema: 'price.schema.ts', zod: 'PriceSchema' },
+  // İndirim listede YOKTU (02.9'da fark edildi): tablosu, doküman satırı ve şeması olan bir varlık
+  // denetimin dışında kalmıştı — üç katman ayrışsa kimse görmezdi.
+  { doc: 'Discount (indirim / kupon)', part: 'katalog', table: 'discount', schema: 'discount.schema.ts', zod: 'DiscountSchema' },
+  { doc: 'DiscountCode (kupon kodu)', part: 'katalog', table: 'discount_code', schema: 'discount.schema.ts', zod: 'DiscountCodeSchema' },
   // Stok ve tedarik (modül 06)
   { doc: 'Stock (stok partisi)', part: 'stok-tedarik', table: 'stock', schema: 'stock.schema.ts', zod: 'StockSchema' },
   { doc: 'Reservation (rezervasyon)', part: 'stok-tedarik', table: 'reservation', schema: 'stock.schema.ts', zod: 'ReservationSchema' },
@@ -97,12 +101,21 @@ function docFields(md, heading) {
 function tableColumns(sql, table) {
   const m = sql.match(new RegExp(`create table public\\.${table} \\(([\\s\\S]*?)\\n\\);`));
   if (!m) return null;
-  return m[1]
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l && !l.startsWith('--') && !/^(primary key|unique|constraint|foreign key|check)\b/i.test(l))
-    .map((l) => l.split(/\s+/)[0])
-    .filter(Boolean);
+  // ÇOK SATIRLI kısıtlar parantez derinliğiyle atlanır. Eskiden yalnız kısıtın İLK satırı
+  // eleniyordu; devam satırları (`or (scope = …`, `),`) kolon sanılıp "tabloda var, şemada yok"
+  // diye raporlanıyordu. Görünmemesinin tek sebebi böyle bir tablonun denetim listesinde
+  // olmamasıydı — yani hata, kendini gizleyen yerde duruyordu (02.9'da `discount` eklenince çıktı).
+  const columns = [];
+  let depth = 0;
+  for (const raw of m[1].split('\n')) {
+    const line = raw.trim();
+    const inside = depth > 0;
+    depth = Math.max(0, depth + (line.match(/\(/g)?.length ?? 0) - (line.match(/\)/g)?.length ?? 0));
+    if (inside || !line || line.startsWith('--')) continue;
+    if (/^(primary key|unique|constraint|foreign key|check|exclude)\b/i.test(line)) continue;
+    columns.push(line.split(/\s+/)[0]);
+  }
+  return columns.filter(Boolean);
 }
 
 /** `export const NAME = …` bildiriminin kaynağı (bir sonraki top-level `export`'a kadar). */

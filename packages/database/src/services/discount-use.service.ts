@@ -23,6 +23,9 @@ import { BaseDbService } from '../core/base.service';
  * ölür (`order_id … on delete cascade`).
  */
 export class DiscountUseService extends BaseDbService<DiscountUse, DiscountUseInsert, DiscountUseUpdate> {
+  /** Kolon `discount_use.amount` (euro numeric); app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ['amountCents'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'discount_use', DiscountUseSchema, DiscountUseInsertSchema, DiscountUseUpdateSchema, false);
   }

@@ -119,8 +119,9 @@ export interface DiscountRow {
    */
   codes: DiscountCodeRow[];
   type: DiscountType;
-  /** `percent` → yüzde · `fixed` → KURUŞ (ekranda para biçimlenir; DB euro tutar). */
-  value: number;
+  /** Tipine göre biri dolu, öteki `null` (02.9): yüzde oran, sabit tutar **cent**. */
+  percent: number | null;
+  amountCents: number | null;
   scope: DiscountScope;
   /** Kapsam hedefinin adı ("Baklava"); sepet kapsamında boş. */
   scopeName: string;
@@ -160,8 +161,12 @@ export interface DiscountFormInput {
    */
   codes: Partial<Record<Locale, string>>;
   type: DiscountType;
-  /** `percent` → yüzde değeri; `fixed` → KURUŞ. Tek alanda iki taban, çünkü tek girdi kutusu var. */
-  valueCents: number;
+  /**
+   * Formda tek girdi kutusu var ama gönderilen alan İKİ (02.9): tipine uyan dolu, öteki `null`.
+   * Tek alan `valueCents` adıyla yüzde de taşıyordu — adın yalan söylediği hâl.
+   */
+  percent: number | null;
+  amountCents: number | null;
   scope: DiscountScope;
   /** Kapsam hedefi (kategori ya da koleksiyon kimliği); sepet kapsamında `null`. */
   targetId: string | null;

@@ -44,8 +44,14 @@ export interface DiscountRule {
    */
   codes?: readonly string[];
   type: DiscountType;
-  /** `percent` → yüzde (15 = %15); `fixed` → cent. */
-  value: number;
+  /**
+   * Değer İKİ AYRI ALANDA (02.9): tipine uyan dolu, öteki `null`. Tek `value` alanı vardı ve birimi
+   * `type`'a bağlıydı — okuyanın hangi birimde olduğunu ancak komşu alana bakarak anlayabildiği bir
+   * sayı, para hesabında hata kaynağıdır (STACK §8). DB kısıtı da bu ayrımı tutuyor.
+   */
+  percent?: number | null;
+  /** Sabit indirim tutarı — **cent**. */
+  amountCents?: number | null;
   scope: DiscountScope;
   categoryId?: string | null;
   collectionId?: string | null;
@@ -113,7 +119,17 @@ export function applyBestDiscount(
     const inScope = lines.map((line, i) => (eligible[i] ?? false) && matchesScope(line, rule));
     const scopeBase = lineTotals.reduce((sum, total, i) => (inScope[i] ? sum + total : sum), 0);
     if (scopeBase <= 0) continue;
-    const amount = rule.type === 'percent' ? percentOf(scopeBase, rule.value) : Math.min(rule.value, scopeBase);
+    // Tipine uyan alan boşsa kural DEĞERSİZDİR — 0 sayıp "sıfır indirim" uygulamak, bozuk bir kuralı
+    // sağlıklı gibi okumak olurdu (CLAUDE.md §1). DB kısıtı bunu zaten engelliyor; motor yine de
+    // kendi girdisine güvenmez, çünkü çağıran her zaman DB olmayabilir.
+    const amount =
+      rule.type === 'percent'
+        ? rule.percent == null
+          ? 0
+          : percentOf(scopeBase, rule.percent)
+        : rule.amountCents == null
+          ? 0
+          : Math.min(rule.amountCents, scopeBase);
     if (amount > 0) candidates.push(build(rule.trigger, rule.id, amount, inScope));
   }
 

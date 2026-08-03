@@ -1,5 +1,4 @@
 import { costOf, isBelowTargetMargin, revenueHtOf, tightestMargin, type CostBasis } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText, type Channel, type Discount, type DiscountCode, type Price, type ProductPriceRow, type UserProfile } from '@lezzet/types';
 import type { DiscountUsage } from '@lezzet/database';
 import { titleOf } from '@/lib/catalog/title';
@@ -215,11 +214,12 @@ export function toDiscountRows({ rules, usage, codes, categoryNames, collectionN
         usedCount: ruleUsage?.byCode.get(code.id) ?? 0,
       })),
       type: rule.type,
-      // Sabit tutar KURUŞA çevrilir (STACK §8); yüzde olduğu gibi taşınır.
-      value: rule.type === 'fixed' ? toCents(rule.value) : rule.value,
+      // Dönüşüm KALMADI (02.9): servis cent döndürüyor, alanlar tipine göre ayrık.
+      percent: rule.percent,
+      amountCents: rule.amountCents,
       scope: rule.scope,
       scopeName,
-      minBasketCents: rule.minBasket === null ? null : toCents(rule.minBasket),
+      minBasketCents: rule.minBasketCents,
       firstOrderOnly: rule.firstOrderOnly,
       validFrom: rule.validFrom,
       validTo: rule.validTo,

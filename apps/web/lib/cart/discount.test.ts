@@ -68,12 +68,16 @@ async function makeDiscount(input: Parameters<DiscountService['insert']>[0]) {
  * yenebilir. Test o veriyi silemez (kullanıcının); onun yerine kuponu **baskın** yapıyoruz:
  * ölçülen şey kuponun uygulanıp uygulanmadığı, ortamda başka kural olup olmadığı değil.
  */
-async function coupon(code: string, overrides: Record<string, unknown> = {}) {
+// `overrides` TİPLİ: eskiden `Record<string, unknown>` idi ve yazım hatasını yutuyordu. 02.9'da
+// `minBasket` → `minBasketCents` olunca eski ad sessizce DÜŞTÜ; koşulsuz kalan kupon uygulandı ve
+// iki test "reddedilmeliydi" diye patladı — ama sebebi söylemeden. Derleyicinin göremediği yerde
+// test, kendi kurduğu zemini doğrulamaz.
+async function coupon(code: string, overrides: Partial<Parameters<DiscountService['insert']>[0]> = {}) {
   const rule = await makeDiscount({
     name: `Kupon ${code}`,
     trigger: 'coupon',
     type: 'percent',
-    value: 90,
+    percent: 90,
     scope: 'cart',
     ...overrides,
   });
@@ -104,7 +108,8 @@ describe('kupon uygulanır', () => {
 
   it('sabit tutarlı kupon EURO saklanır, KURUŞ uygulanır', async () => {
     // Kuruşlu bir değer bilerek: çeviri yuvarlarsa 7550 yerine 7500 çıkar ve test görür.
-    await coupon(`SABIT${stamp}`, { type: 'fixed', value: 75.5 });
+    // `percent: null` şart — kural tipine uymayan alanı DOLU bırakan satırı DB reddeder (0031).
+    await coupon(`SABIT${stamp}`, { type: 'fixed', percent: null, amountCents: 7_550 });
 
     const result = await resolveCartDiscount(db, { lines: basket, customerId, couponCode: `SABIT${stamp}` });
 
@@ -128,7 +133,7 @@ describe('ekranın dört ret hâli', () => {
   });
 
   it('asgari sepet tutmuyor — müşteri ürün ekleyerek kullanabilir, bu yüzden sebep AYRI', async () => {
-    await coupon(`BUYUK${stamp}`, { minBasket: 150 });
+    await coupon(`BUYUK${stamp}`, { minBasketCents: 15_000 });
 
     const result = await resolveCartDiscount(db, { lines: basket, customerId, couponCode: `BUYUK${stamp}` });
 
@@ -136,8 +141,8 @@ describe('ekranın dört ret hâli', () => {
   });
 
   it('otomatik indirim daha büyük: kupon reddedilir ama KAZANAN uygulanır', async () => {
-    await coupon(`KUCUK${stamp}`, { value: 5 });
-    await makeDiscount({ name: `Kampanya ${stamp}`, trigger: 'automatic', type: 'percent', value: 95, scope: 'cart' });
+    await coupon(`KUCUK${stamp}`, { percent: 5 });
+    await makeDiscount({ name: `Kampanya ${stamp}`, trigger: 'automatic', type: 'percent', percent: 95, scope: 'cart' });
 
     const result = await resolveCartDiscount(db, { lines: basket, customerId, couponCode: `KUCUK${stamp}` });
 
@@ -178,7 +183,7 @@ describe('kişisellik ve sınırlar', () => {
 
 describe('kupon girilmeden', () => {
   it('otomatik kampanya kendiliğinden iner', async () => {
-    await makeDiscount({ name: `Oto ${stamp}`, trigger: 'automatic', type: 'percent', value: 85, scope: 'cart' });
+    await makeDiscount({ name: `Oto ${stamp}`, trigger: 'automatic', type: 'percent', percent: 85, scope: 'cart' });
 
     const result = await resolveCartDiscount(db, { lines: basket, customerId });
 
@@ -213,7 +218,7 @@ describe('kupon girilmeden', () => {
  */
 describe('otomatik indirimin sebebi ekrana taşınır', () => {
   it('sepet kapsamlı yüzde kampanyasında ORAN da taşınır', async () => {
-    await makeDiscount({ name: `Sebep-sepet ${stamp}`, trigger: 'automatic', type: 'percent', value: 85, scope: 'cart' });
+    await makeDiscount({ name: `Sebep-sepet ${stamp}`, trigger: 'automatic', type: 'percent', percent: 85, scope: 'cart' });
 
     const result = await resolveCartDiscount(db, { lines: basket, customerId });
 
@@ -221,7 +226,7 @@ describe('otomatik indirimin sebebi ekrana taşınır', () => {
   });
 
   it('kategori kapsamlı kampanyada oran taşınmaz — sepetin tamamı için doğru değil', async () => {
-    await makeDiscount({ name: `Sebep-kategori ${stamp}`, trigger: 'automatic', type: 'percent', value: 95, scope: 'category', categoryId });
+    await makeDiscount({ name: `Sebep-kategori ${stamp}`, trigger: 'automatic', type: 'percent', percent: 95, scope: 'category', categoryId });
     // Kalemlerin hepsi kapsamda: ölçülen şey kapsamın DARLIĞI değil, dar kapsamlı bir kuralın
     // oranının müşteriye sepet oranı gibi gösterilmemesi.
     const inCategory: DiscountableLine[] = [{ variantId: 'v1', qty: 2, unitPriceCents: 5_000, categoryId }];
@@ -242,7 +247,7 @@ describe('otomatik indirimin sebebi ekrana taşınır', () => {
 
 describe('matrah muafiyetleri sepette de geçerli', () => {
   it('paket ve teklif satırı matrahı BÜYÜTMEZ, payı da 0 olur', async () => {
-    await makeDiscount({ name: `Oto2 ${stamp}`, trigger: 'automatic', type: 'percent', value: 90, scope: 'cart' });
+    await makeDiscount({ name: `Oto2 ${stamp}`, trigger: 'automatic', type: 'percent', percent: 90, scope: 'cart' });
     const mixed: DiscountableLine[] = [
       { variantId: 'v1', qty: 1, unitPriceCents: 4_000 },
       { variantId: '', qty: 1, unitPriceCents: 3_000, bundleId: 'b1' },
@@ -257,7 +262,7 @@ describe('matrah muafiyetleri sepette de geçerli', () => {
   });
 
   it('asgari sepet ölçütü de MUAF kalemleri saymaz', async () => {
-    await coupon(`ESIK${stamp}`, { minBasket: 60 });
+    await coupon(`ESIK${stamp}`, { minBasketCents: 6_000 });
     const mixed: DiscountableLine[] = [
       { variantId: 'v1', qty: 1, unitPriceCents: 4_000 },
       { variantId: '', qty: 1, unitPriceCents: 5_000, bundleId: 'b1' }, // 50 € paket

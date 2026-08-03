@@ -147,11 +147,12 @@ Tek varlık; hem kupon (kod) hem otomatik kampanya. Kupon daima sepet düzeyi (b
 | public_label | jsonb \| null | **müşteriye görünen ad**, üç dilde (`{"fr":"Offre de bienvenue",…}`) — sepet/ödeme özetinde ve mailde indirim satırının yanına yazılır. `null`/boş = ad yok → yüzey genel "İndirim / Remise / Rabatt"a düşer. `name`'den ayrı, çünkü iki farklı okuyucusu var: biri operasyonun kendi dili, öbürü vitrinin cümlesi. Sipariş bu değerin ANLIK KOPYASINI tutar (`order.discount_label`) |
 | trigger | enum(`coupon`,`automatic`) | kod mu, otomatik mi |
 | type | enum(`percent`,`fixed`) | oran / sabit tutar |
-| value | number | |
+| percent | numeric \| null | `type=percent` satırında dolu; oran (15 = %15). Tavan %100 (kolon kısıtı) |
+| amount | numeric (€) \| null | `type=fixed` satırında dolu. Uygulamadaki adı `amountCents`, birimi **cent** (`STACK §8`) |
 | scope | enum(`cart`,`category`,`collection`) | kupon → daima `cart` |
 | category_id | uuid \| null | scope=category |
 | collection_id | uuid \| null | scope=collection |
-| min_basket | number \| null | asgari sepet koşulu |
+| min_basket | numeric (€) \| null | asgari sepet koşulu. Uygulamadaki adı `minBasketCents`, birimi **cent** |
 | first_order_only | boolean | yalnız ilk sipariş |
 | valid_from | timestamptz \| null | |
 | valid_to | timestamptz \| null | |
@@ -159,8 +160,16 @@ Tek varlık; hem kupon (kod) hem otomatik kampanya. Kupon daima sepet düzeyi (b
 | per_customer_limit | int \| null | müşteri başına |
 | customer_id | uuid \| null | kişisel kupon (ör. geri bildirim ödülü) — yalnız o müşteri kullanır |
 | is_active | boolean | |
+| created_at | timestamptz | |
 
 **Kodlar burada DEĞİL, `DiscountCode`'da:** bir kuponun birden çok kodu olabilir (bkz. aşağı).
+
+**Değer neden iki kolon (02.9):** tek `value` kolonu vardı ve birimi `type`'a bağlıydı — yüzdede oran,
+sabitte euro. Böyle bir kolon hiçbir adla dürüst olamaz: `value_cents` yüzde satırında yalan söyler,
+`value` sabit satırında birimini söylemez. Birimi söylenmeyen para alanı, 74,17 €'yu 0,74 € gösteren
+hatanın zeminidir (`STACK §8`). Hangi kolonun dolu olacağını `discount_value_matches_type` kısıtı tutar:
+ikisi de boş bir kural sessizce "sıfır indirim" uygulardı, ikisi de dolu olan ise hangisinin geçerli
+olduğunu okuyana bırakırdı.
 
 ## DiscountCode (kupon kodu)
 

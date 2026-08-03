@@ -214,7 +214,7 @@ describe('sepet → taslak sipariş', () => {
       name: `Pay testi ${stamp}`,
       trigger: 'automatic',
       type: 'percent',
-      value: 10,
+      percent: 10,
       scope: 'category',
       categoryId,
     });
@@ -258,7 +258,7 @@ describe('sepet → taslak sipariş', () => {
       name: `Ret testi ${stamp}`,
       trigger: 'automatic',
       type: 'percent',
-      value: 10,
+      percent: 10,
       scope: 'category',
       categoryId,
     });
@@ -296,7 +296,7 @@ describe('sepet → taslak sipariş', () => {
       name: `Kota testi ${stamp}`,
       trigger: 'automatic',
       type: 'percent',
-      value: 10,
+      percent: 10,
       scope: 'category',
       categoryId,
     });
@@ -338,7 +338,7 @@ describe('sepet → taslak sipariş', () => {
       name: `Kapı testi ${stamp}`,
       trigger: 'coupon',
       type: 'percent',
-      value: 10,
+      percent: 10,
       scope: 'category',
       categoryId,
     });
@@ -372,7 +372,7 @@ describe('sepet → taslak sipariş', () => {
       name: `Idempotency testi ${stamp}`,
       trigger: 'automatic',
       type: 'percent',
-      value: 10,
+      percent: 10,
       scope: 'category',
       categoryId,
     });
@@ -386,7 +386,7 @@ describe('sepet → taslak sipariş', () => {
       // İkinci kayıt denemesi — yeniden denenen checkout / iki kez gelen webhook. Hata DEĞİL,
       // `false`: garanti tekil indekste, uygulamada bir kontrolde değil.
       const uses = new DiscountUseService(db);
-      const ilk = await uses.record({ discountId: kampanya.id, orderId: outcome.orderId, customerId, amount: 2 });
+      const ilk = await uses.record({ discountId: kampanya.id, orderId: outcome.orderId, customerId, amountCents: 200 });
       expect(ilk).toBe(false);
       expect((await discounts.usageCounts([kampanya.id])).get(kampanya.id)?.total).toBe(1);
     } finally {

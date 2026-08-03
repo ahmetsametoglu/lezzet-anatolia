@@ -144,7 +144,7 @@ function reasonOf(winner: AppliedDiscount, pool: readonly Discount[], customerPe
   if (winner.kind === 'customer_rate') return { kind: 'customer_rate', percent: customerPercent ?? 0 };
   const rule = pool.find((row) => row.id === winner.discountId);
   const wholeBasket = rule?.scope === 'cart' && rule.type === 'percent';
-  return { kind: 'campaign', percent: wholeBasket ? rule.value : null };
+  return { kind: 'campaign', percent: wholeBasket ? rule.percent : null };
 }
 
 /**
@@ -169,12 +169,14 @@ function toRule(
     // Kuralın tüm kapıları: girilen kod herhangi biriyle eşleşirse kupon tutar (hepsi aynı kota).
     codes: codes.map((c) => c.code),
     type: row.type,
-    // Saklanan değer EURO, motor KURUŞ bekler (STACK §8) — çeviri uygulama katmanında, tek yerde.
-    value: row.type === 'percent' ? row.value : Math.round(row.value * 100),
+    // Dönüşüm KALMADI (02.9): servis cent döndürüyor, motor cent bekliyor. Burada elle
+    // `Math.round(row.value * 100)` yazılıyordu — STACK §8'in açıkça yasakladığı biçim.
+    percent: row.percent,
+    amountCents: row.amountCents,
     scope: row.scope,
     categoryId: row.categoryId,
     collectionId: row.collectionId,
-    minBasketCents: row.minBasket == null ? null : Math.round(row.minBasket * 100),
+    minBasketCents: row.minBasketCents,
     firstOrderOnly: row.firstOrderOnly,
     validFrom: row.validFrom,
     validTo: row.validTo,
