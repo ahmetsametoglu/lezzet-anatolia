@@ -32,10 +32,14 @@ Bu doküman işletmenin künyesini ve ürün kataloğunu tek yerde toplar. Katal
 > **Barındırıcı künyesi neden burada:** LCEN md. 6 barındırıcının **unvanını, adresini ve telefonunu**
 > mentions légales'te zorunlu kılıyor — bu bir tercih değil. Künye burada tutuluyor ki sağlayıcı
 > değişirse tek yerden güncellensin; bugün üç dilde `legal/terms/content.json`'a yazılı.
-> **Sunucu bölgesi doğrulanmalı:** metin "AB içindeki veri merkezleri" diyor. Hetzner'ın Almanya
-> (Nürnberg/Falkenstein) ve Finlandiya (Helsinki) lokasyonları AB içindedir; ABD (Ashburn/Hillsboro)
-> ve Singapur **değildir**. Sunucu AB dışındaysa hem bu cümle hem gizlilik politikası değişmeli ve
-> veri aktarımı için ayrı bir hukuki dayanak gerekir.
+>
+> **Sunucu bölgesi: AB içi — kullanıcı doğruladı (03.08.2026).** Yani mentions légales ve gizlilik
+> politikasındaki "sunucular Avrupa Birliği içindedir" cümlesi olgudur, varsayım değil; kişisel veri
+> AB dışına çıkmıyor ve **ayrı bir aktarım dayanağına (SCC vb.) gerek yok.**
+> **Sunucu bir gün AB dışına taşınırsa üç şey birden değişir:** mentions légales `barindirma` bölümü ·
+> gizlilik politikasının hizmet sağlayıcı satırı · aktarım için hukuki dayanak gerekliliği. Hetzner'ın
+> ABD (Ashburn/Hillsboro) ve Singapur lokasyonları AB dışıdır — bölge değişimi sessiz bir taşıma
+> değil, yasal metni de ilgilendiren bir karardır.
 
 > **DÜZELTME (03.08.2026) — bu tablo üç yerinden yanlıştı ve yanlışı yasal sayfalara taşınmıştı.**
 > · **SIRET `…00018` DEĞİL `…00026`.** `00018` numaralı işletme (20 rue des Vignes) **01.09.2025'te

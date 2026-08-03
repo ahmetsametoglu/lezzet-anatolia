@@ -26,9 +26,11 @@ import content from './content.json';
  * md. 6 üçünü de zorunlu kılıyor ve sayfa bir süre "talep üzerine iletilir" diyerek geçici bir
  * dürüstlükle duruyordu. Künyenin kaynağı `BUSINESS_CATALOG.md` — sağlayıcı değişirse tek yerden.
  *
- * Sayfa sunucuların AB içinde olduğunu söylüyor. Hetzner'ın Almanya ve Finlandiya lokasyonları
- * öyledir, ABD ve Singapur değildir; lokasyon değişirse bu cümle de gizlilik politikası da
- * değişmek zorunda (kayıt `BUSINESS_CATALOG.md`'de).
+ * Sayfa sunucuların AB içinde olduğunu söylüyor ve bu **doğrulanmış bir olgudur** (kullanıcı,
+ * 03.08) — tahmin değil. Kişisel veri AB dışına çıkmadığı için gizlilik politikasında ayrı bir
+ * aktarım dayanağı (SCC vb.) anlatılmıyor; anlatılsaydı olmayan bir riski varmış gibi göstermek
+ * olurdu. Sunucu bir gün AB dışına taşınırsa bu cümle, gizlilik politikasının sağlayıcı satırı ve
+ * aktarım dayanağı birlikte değişmek zorunda (kayıt `BUSINESS_CATALOG.md`'de).
  */
 interface TermsPageProps {
   params: Promise<{ locale: string }>;
