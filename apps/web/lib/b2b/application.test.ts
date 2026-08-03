@@ -49,11 +49,20 @@ function application(overrides: Partial<B2bApplicationInput> = {}): B2bApplicati
   };
 }
 
+/**
+ * Benzersizlik sayacı `createdProfiles.length`ten AYRI — çünkü o yalnız insert BAŞARIRSA artıyor.
+ * Şema ile veritabanı ayrıştığı bir turda ilk insert parse hatasıyla düştü, sayaç 0'da kaldı ve
+ * sonraki üç test aynı e-postayı üretip "duplicate key" verdi: gerçek hata (tek satır) üç sahte
+ * hatanın altında kayboldu. Sayaç girişimde artar, sonuçta değil.
+ */
+let profileSeq = 0;
+
 async function newCustomer(fields: { name?: string; phone?: string | null } = {}): Promise<string> {
+  profileSeq += 1;
   const profile = await profiles.insert({
     roles: ['customer'],
     name: fields.name ?? '',
-    email: `pro-${stamp}-${createdProfiles.length}@example.test`,
+    email: `pro-${stamp}-${profileSeq}@example.test`,
     phone: fields.phone ?? null,
   });
   createdProfiles.push(profile.id);

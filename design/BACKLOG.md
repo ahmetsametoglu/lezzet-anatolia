@@ -325,9 +325,15 @@ uydurulmadı, en yakın karşılıkla kuruldu ve buraya yazıldı — çizim gel
   kararı çoğu kez fotoğraftan verilir"*) ve ikisinin de verisi görünümde hazırdı (`awaiting_reply`,
   `has_attachment`) — çizim onları hiç kullanmıyordu. Sipariş numarası da satıra kondu (aynı
   gerekçe: veri hazır, çizim kullanmıyor).
-- **AI'ın moru palette YOK.** Çizim AI mesajını ve rozetini `#5a4a8a` ile ayırıyor; envanterde mor
-  bir token yok ve ham hex yasak (`CLAUDE.md §3`). En yakın ayrık ton `slate` kullanıldı. **İstenen
-  karar:** AI için bir token açılsın mı, yoksa `slate` kalıcı mı olsun?
+- ~~**AI'ın moru palette YOK.**~~ **BU İDDİA YANLIŞTI — geri alındı (03.08).** Token **vardı**:
+  `--color-ops-violet` / `-violet-bg` / `-violet-line`, çizimin üç hex'iyle (`#5a4a8a` · `#ece8f5` ·
+  `#d8d0ec`) **birebir**, üstelik `f102c9a` ile **27 Temmuz**'da eklenmiş — yani Talepler ekranı
+  yazılmadan bir hafta önce. Envantere bakmadan "yok" dedim ve olmayan bir kısıtı gerekçe yaparak
+  `slate` kullandım; üstüne bunu **karar sorusu** diye buraya yazıp zaten verilmiş bir kararı
+  yeniden sordum. Sorulacak bir şey yok: AI moru kullanılacak.
+  **Yapılacak:** `OpsTone`'a `violet` girer (`tone.ts` + `badge.tsx`), sonra AI'ın beş yeri buna
+  döner — rozet, mesaj balonu, devralma şeridi, `TICKET_SENDER_TONE.ai` ve onay penceresindeki
+  "Devral" düğmesi (çizimde **dolu mor**, kodda ikincil/çerçeveli: renk kadar AĞIRLIK da yanlış).
 - **Personel mesajının başlığı "Operasyon", çizimdeki "Selim A. (siz)" değil.** Mesaj görünümü
   yazarın kimliğini taşımıyor (`TicketMessageView` — `authorId` müşteri yüzeyine sızmasın diye
   düşürülüyor) ve taşısa bile bir meslektaşın yazdığı cevaba "siz" demek yanlış olurdu. Ayrım
@@ -394,26 +400,6 @@ uydurulmadı, en yakın karşılıkla kuruldu ve buraya yazıldı — çizim gel
   **İstenen karar:** ya bir NAF etiket kaynağı (üçüncü parti veri seti / kendi tablomuz + bakım
   sahibi), ya da tasarımın bu satırı koda indirmesi. O güne kadar kod gösteriliyor: okunması güç
   ama DOĞRU, ve adayın asıl doğrulayacağı iki satır (unvan, adres) zaten okunur.
-
-- **REDDEDİLEN B2B BAŞVURUSU EKRANDA "İNCELENİYOR" GÖRÜNÜYOR (03.08, 08.7).**
-  `Musteri - Professionnels.dc.html` üç sonuç hâli çiziyor: *inceleniyor* · *onaylandı* ·
-  *"Başvurunuz şu an onaylanamadı — hesabınızla alışverişe devam edebilirsiniz"*. Kodlanan iki:
-  üçüncüsü **veriden üretilemiyor.**
-
-  Sebep tek alanda: `b2b_approved` üç değil iki hâl taşıyor. Reddedilen kayıt da `false` alıyor
-  (09.11'in kararı: "ret SİLMEZ, kayıt B2C olarak kalır") ve `user_profiles_b2b_pending_idx` kısmi
-  indeksi de **bekleyen kuyruğu aynı değerden** okuyor. Yani "sırasını bekliyor" ile "bakıldı,
-  olmadı" veride ayrışmıyor; operasyonun müşteri listesi de ikisini "Onay bekliyor" diye gösteriyor
-  (`customers-labels.ts:21`).
-
-  **Bedeli müşteride:** reddedilen aday sayfaya her girdiğinde hiç gelmeyecek bir cevabı beklediğini
-  okur. Ret kararı e-postayla bildiriliyor (tasarımın vaadi), ama ekran onu yalanlıyor.
-
-  **İstenen karar** yalnız tasarımın değil, veri modelinin: üçüncü bir değer nereye yazılacak —
-  `b2b_approved`'ı üç değerli bir duruma mı çevireceğiz, yoksa ret için ayrı bir işaret mi
-  (tarih/gerekçe, ki "aynı kişi yarın yeniden başvurursa geçmişi bilelim" kaydı da onu istiyor)?
-  Üç şeridi birden ilgilendiriyor; `docs/talep/`e yazıldı. Kod `BEKLEYEN(08.7)` ile işaretli
-  (`domain-core/identity/b2b-application.ts` · `b2bStatusOf`).
 
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
 

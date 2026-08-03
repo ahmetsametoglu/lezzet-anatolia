@@ -68,7 +68,8 @@
     },
     "status": {
       "pending": "Başvurunuz inceleniyor — sonuç e-posta ile.",
-      "approved": "Onaylandı! Toptan fiyat listeniz açıldı."
+      "approved": "Onaylandı! Toptan fiyat listeniz açıldı.",
+      "rejected": "Başvurunuz şu an onaylanamadı — hesabınızla alışverişe devam edebilirsiniz. Bilgilerinizi güncelleyip yeniden gönderebilirsiniz."
     },
     "errors": {
       "unexpected": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
@@ -149,7 +150,8 @@
     },
     "status": {
       "pending": "Votre demande est à l'étude — réponse par e-mail.",
-      "approved": "Validée ! Vos tarifs de gros sont ouverts."
+      "approved": "Validée ! Vos tarifs de gros sont ouverts.",
+      "rejected": "Votre demande n'a pas pu être validée pour le moment — vous pouvez continuer vos achats avec votre compte. Vous pouvez aussi corriger vos informations et renvoyer la demande."
     },
     "errors": {
       "unexpected": "Une erreur est survenue. Merci de réessayer.",
@@ -230,7 +232,8 @@
     },
     "status": {
       "pending": "Ihre Anfrage wird geprüft — Antwort per E-Mail.",
-      "approved": "Freigegeben! Ihre Großhandelspreise sind offen."
+      "approved": "Freigegeben! Ihre Großhandelspreise sind offen.",
+      "rejected": "Ihre Anfrage konnte derzeit nicht freigegeben werden — Sie können mit Ihrem Konto weiter einkaufen. Sie können Ihre Angaben auch korrigieren und die Anfrage erneut senden."
     },
     "errors": {
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
