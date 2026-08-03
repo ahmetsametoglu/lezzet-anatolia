@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
+import { AccountService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
 import { validateRoleSet } from '@lezzet/domain-core';
 import { UserRoleEnum } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
@@ -51,7 +51,10 @@ export async function saveSettingAction(input: unknown): Promise<ActionResult<{ 
     if (!def) return { data: null, error: 'Tanınmayan ayar.' };
 
     if (parsed.scopeType !== 'global') {
-      if (!def.exceptionScopes.includes(parsed.scopeType)) {
+      // `some`, `includes` değil: gelen eksen kümesi (`SettingScope`) sözlüğün sunduğundan
+      // (`ExceptionScope`) GENİŞ — `warehouse` arka uçta açık ama bu ekranda henüz kablolu değil.
+      // Karşılaştırmanın kendisi zaten aradığımız kapı: sözlükte izinli olmayan eksen reddedilir.
+      if (!def.exceptionScopes.some((scope) => scope === parsed.scopeType)) {
         return { data: null, error: 'Bu ayar için bu eksende istisna açılamaz.' };
       }
       if (!parsed.scopeId) return { data: null, error: 'İstisnanın hedefi seçilmeli.' };
@@ -59,6 +62,22 @@ export async function saveSettingAction(input: unknown): Promise<ActionResult<{ 
 
     const value = parseSettingValue(def, parsed.raw);
     if (!value.ok) return { data: null, error: value.error };
+
+    /**
+     * Hesap VARLIĞI burada doğrulanır — biçim `parseSettingValue`'da elendi, varlık orada
+     * elenemez (saf fonksiyon veritabanını görmez).
+     *
+     * Ekranın seçici sunması yeterli değil: action doğrudan çağrılabilir ve o zaman uydurma bir
+     * uuid ayara yazılırdı. Sonucu sessizdir ve geç anlaşılır — kapı önü satış olmayan bir hesaba
+     * para yazmaya başlar, gün sonu mutabakatı tutmaz, kimse ayara bakmaz.
+     *
+     * PASİF hesap da reddedilir: kapatılmış hesap yeni harekete kapalıdır.
+     */
+    if (def.kind === 'account') {
+      const account = await new AccountService(serviceDb()).getById(String(value.value));
+      if (!account) return { data: null, error: 'Seçilen hesap bulunamadı.' };
+      if (!account.isActive) return { data: null, error: `"${account.name}" kapatılmış bir hesap — yeni harekete kapalı.` };
+    }
 
     // Açıklama sözlükten yazılır: satırı veritabanında görenin de ne olduğunu okuyabilmesi için.
     await new SettingsService(serviceDb()).set(def.key, value.value, {
@@ -88,6 +107,12 @@ export async function resetSettingAction(input: { key: string }): Promise<Action
     await requireAdmin();
     const def = SETTING_BY_KEY.get(input.key);
     if (!def) return { data: null, error: 'Tanınmayan ayar.' };
+    // Fabrika değeri olmayan ayarda dönülecek bir yer yok (kurulum-özgü seçim). Ekran düğmeyi
+    // zaten çizmiyor; kapı yine de kendi kontrolünü yapar — action doğrudan çağrılabilir ve
+    // `undefined` yazmak ayarı sessizce boşaltırdı.
+    if (def.fallback === undefined) {
+      return { data: null, error: 'Bu ayarın fabrika değeri yok — kurulum-özgü bir seçim, sıfırlanamaz.' };
+    }
 
     await new SettingsService(serviceDb()).set(def.key, def.fallback, { scopeType: 'global', description: def.help });
     revalidatePath(SETTINGS_PATH);

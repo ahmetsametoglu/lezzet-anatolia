@@ -41,16 +41,45 @@ describe('kapsamlı çözüm', () => {
     expect(await settings.getNumber(key, 0)).toBe(4000);
   });
 
-  it('özgüllük sırası: bölge > kanal > ülke > global', async () => {
+  it('özgüllük sırası: depo > bölge > kanal > ülke > global', async () => {
     await settings.set(key, 1000);
     await settings.set(key, 2000, { scopeType: 'country', scopeId: 'DE' });
     await settings.set(key, 3000, { scopeType: 'channel', scopeId: 'b2b' });
     await settings.set(key, 4000, { scopeType: 'zone', scopeId: 'z1' });
+    await settings.set(key, 5000, { scopeType: 'warehouse', scopeId: 'w1' });
 
+    // Depo EN ÖZGÜL: bölgeden de dar, çünkü bir bölge tek depoya bağlıdır ama bir depo birden çok
+    // bölgeye hizmet eder. Sıra ters olsaydı bölge satırı depo satırını ezerdi ve operatörün
+    // girdiği "bu deponun paketleme maliyeti" hiç uygulanmazdı — sessizce.
+    expect(await settings.getNumber(key, 0, { warehouseId: 'w1', zoneId: 'z1', channel: 'b2b', country: 'DE' })).toBe(5000);
     expect(await settings.getNumber(key, 0, { zoneId: 'z1', channel: 'b2b', country: 'DE' })).toBe(4000);
     expect(await settings.getNumber(key, 0, { channel: 'b2b', country: 'DE' })).toBe(3000);
     expect(await settings.getNumber(key, 0, { country: 'DE' })).toBe(2000);
     expect(await settings.getNumber(key, 0, { country: 'FR' })).toBe(1000);
+
+    // Başka depo kendi satırını görmez, bir alt eksene düşer — kapsam sızmaz.
+    expect(await settings.getNumber(key, 0, { warehouseId: 'w2', zoneId: 'z1' })).toBe(4000);
+  });
+
+  it('DEPO kapsamlı satır okunabiliyor — kapı iki tarafta da açık (talep §7a)', async () => {
+    // Migration `warehouse` değerini baştan taşıyordu, Zod taşımıyordu: satır YAZILABİLİYOR ama
+    // okunurken `SettingSchema.parse`a takılıyordu. Yani arıza yazımda değil, geri okumada çıkardı.
+    await settings.set(key, 7500, { scopeType: 'warehouse', scopeId: 'w-str' });
+
+    const satirlar = await settings.listByKey(key);
+    expect(satirlar).toHaveLength(1);
+    expect(satirlar[0]).toMatchObject({ scopeType: 'warehouse', scopeId: 'w-str' });
+  });
+
+  it('listAll sözlükte OLMAYAN ayarı da getirir (talep §7b)', async () => {
+    // Ekran 27 anahtarı tek tek soruyordu; elle açılmış bir ayarın sistemde çalışan değeri olabilir
+    // ama yönetim ekranında hiç görünmüyordu — "ayarı buradan yönetiyorum" vaadindeki delik buydu.
+    await settings.set(key, 1234);
+
+    const hepsi = await settings.listAll();
+    expect(hepsi.find((s) => s.key === key)).toMatchObject({ value: 1234 });
+    // Seed'in tanıdık anahtarları da aynı turda geliyor: tek okuma, iki ihtiyaç.
+    expect(hepsi.map((s) => s.key)).toContain('reservation_ttl_minutes');
   });
 
   it('aynı anahtar+kapsam ikinci kez açılmaz — üzerine yazılır', async () => {

@@ -1,4 +1,4 @@
-import type { SettingScope } from '@lezzet/types';
+import type { ExceptionScope } from './settings-types';
 import { POINTS_SETTING_KEYS } from '@lezzet/domain-core';
 import { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY, POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY, SHIPPING_FEE_KEY } from '@/lib/settings-keys';
 
@@ -24,11 +24,15 @@ import { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY, POINTS_CENT_VALUE_KEY, POI
  * fabrika değeri burada da durur. Bu bilinçli bir kopyadır ve `settings-catalog.test.ts` onu
  * migration dosyasına karşı doğrular: sayı ayrışırsa test düşer, ekran yalan söylemez.
  *
- * ── KAPSAM: 'warehouse' BİLEREK YOK ──────────────────────────────────────────
- * `0016` migration'ının enum'unda `warehouse` var, `packages/types`'ın `SettingScopeEnum`'unda YOK
- * (ve `SettingScopeContext`'te `warehouseId` de yok). Yani depo kapsamlı bir satır bugün yazılsa
- * okuma tarafında Zod'a takılırdı. Ekran bu yüzden depo kapsamı SUNMUYOR — arka uç şeridine
- * bildirildi (`operasyon-ekranlari-arka-uc-talebi.md §7`). Şema açılınca burası da açılır.
+ * ── KAPSAM: 'warehouse' ARKA UÇTA AÇILDI, EKRAN HENÜZ KABLOLU DEĞİL (03.08) ──
+ * Talep karşılandı: `SettingScopeEnum` artık beş değerli, `SettingScopeContext.warehouseId` var ve
+ * çözücü depoyu EN ÖZGÜL eksen olarak arıyor (depo > bölge > kanal > ülke > global). Yani depo
+ * kapsamlı bir satır artık hem yazılıyor hem okunuyor.
+ *
+ * Ekranın eksiği kablolama: `ScopeOptions.warehouse` alanı ve `toScopeOptions`'ın depo listesini
+ * alması — veri zaten sayfada (`SettingsData.warehouseOptions`). O inene kadar `ExceptionScopeEnum`
+ * `warehouse`'u dışarıda tutuyor, çünkü seçenekleri boş bir eksen operatöre "Depo" yazıp seçecek
+ * bir şey vermezdi. Bu sözlüğün tipi de o enum'dan gelir: sözlük, ekranın SUNABİLDİĞİNİ anlatır.
  */
 
 /** Ayarın ekranda hangi sekmede durduğu. */
@@ -50,7 +54,7 @@ export const SETTING_GROUPS: readonly { key: SettingGroup; label: string }[] = [
  * kapsamı yine de `global`: kanal ayrımı değerin İÇİNDE yaşıyor, bir istisna satırı olarak değil.
  * İkisini birden sunmak aynı soruya iki cevap kapısı açmak olurdu.
  */
-export type SettingKind = 'money' | 'percent' | 'integer' | 'time' | 'boolean' | 'channelFlags' | 'text';
+export type SettingKind = 'money' | 'percent' | 'integer' | 'time' | 'boolean' | 'channelFlags' | 'text' | 'account';
 
 /** Ayarın değeri — `jsonb` sütununun ekranda karşılık gelen dar hâli. */
 export type SettingValue = string | number | boolean | Record<string, boolean>;
@@ -72,10 +76,28 @@ export interface SettingDef {
   limitReason?: string;
   /** Geniş etkili ayar: düzenleme penceresi bu cümleyi uyarı olarak gösterir. */
   impact?: string;
-  /** `global` dışında hangi eksenlerde istisna açılabilir. Boş = yalnız genel değer. */
-  exceptionScopes: readonly Exclude<SettingScope, 'global'>[];
-  /** Fabrika değeri — migration'ın yazdığı satır. `settings-catalog.test.ts` doğrular. */
-  fallback: SettingValue;
+  /**
+   * `global` dışında hangi eksenlerde istisna açılabilir. Boş = yalnız genel değer.
+   *
+   * Tip `ExceptionScope`'tan gelir (`settings-types`), `SettingScope`'tan değil: `warehouse` arka
+   * uçta açık ama bu ekranda henüz kablolu değil ve sözlük ekranın sunabildiğini anlatmalı.
+   * Gerekçe `ExceptionScopeEnum` künyesinde.
+   */
+  exceptionScopes: readonly ExceptionScope[];
+  /**
+   * Fabrika değeri — migration'ın yazdığı satır. `settings-catalog.test.ts` doğrular.
+   *
+   * **İSTEĞE BAĞLI, ve boş olması bir eksiklik değil karar.** Bazı ayarların fabrika değeri
+   * OLAMAZ: `door_cash_account_id` bir hesap kimliğidir ve o kimlik her kurulumda başkadır —
+   * migration'a bir uuid gömmek, o satırın hiçbir yerde karşılığı olmayan bir hesabı işaret
+   * etmesi demekti. Böyle ayarlarda ekran "Varsayılana dön" SUNMAZ (dönülecek bir yer yok) ve
+   * "varsayılandan farklı" işareti de anlamsızdır — kurulumun kendi seçimidir.
+   *
+   * Nöbet testi bunu İKİ YÖNLÜ doğrular: `fallback` verilen anahtar migration'da BULUNMALI,
+   * verilmeyen BULUNMAMALI. Tek yönlü olsaydı, migration'a sonradan eklenen bir fabrika değeri
+   * sözlükte görünmeden yaşardı.
+   */
+  fallback?: SettingValue;
 }
 
 const CHANNEL_ONLY = ['channel'] as const;
@@ -191,6 +213,20 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     max: 365,
     exceptionScopes: CHANNEL_ONLY,
     fallback: 30,
+  },
+  {
+    key: 'door_cash_account_id',
+    label: 'Kapı önü satış kasası',
+    help: 'Kapıda/dükkânda alınan paranın hangi hesaba yazılacağı. Satış anında hesap seçilmezse bu kullanılır.',
+    group: 'payment',
+    kind: 'account',
+    // Fabrika değeri YOK ve olamaz: değer bir hesap kimliği, her kurulumda başka. Migration'a uuid
+    // gömmek, hiçbir yerde karşılığı olmayan bir hesabı işaret eden bir satır bırakırdı.
+    impact:
+      'Bu hesap kapı önü satışın parasının indiği yerdir (`quick-sale`). Yanlış hesap seçilirse para kaydı yanlış kasada birikir ve gün sonu mutabakatı tutmaz — hareket silinmez, düzeltilmesi elle iş çıkarır.',
+    // İstisna ekseni YOK: hangi kasaya yazılacağı kanala ya da bölgeye göre değişmez; değişmesi
+    // gerekiyorsa o, ikinci bir depo/tesis demektir ve cevabı depo ekseninde aranır.
+    exceptionScopes: [],
   },
 
   // ── Stok & tazelik ────────────────────────────────────────────────────────

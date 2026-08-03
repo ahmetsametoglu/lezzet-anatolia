@@ -6,6 +6,7 @@ import {
   TicketMessageSchema,
   TicketQueueRowSchema,
   TicketSchema,
+  TicketStatusEnum,
   TicketUpdateSchema,
   type KeysetCursor,
   type Page,
@@ -145,6 +146,28 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   /** Kapanmamış talep sayısı — dashboard rozeti. */
   countOpen(): Promise<number> {
     return this.count(undefined, OPEN_TICKET_FILTER);
+  }
+
+  /**
+   * Durum başına talep sayısı — Talepler ekranının (16.3) başlık satırı: *"3 açık · 2 işlemde"*.
+   *
+   * **Yüklenmiş sayfadan sayılamaz** ve talep bunu doğru tespit etmişti: kuyruk keyset sayfalı, yani
+   * oradan türetilen "2 işlemde" aslında "ilk SAYFADA 2 işlemde" olurdu — ve sayı tam da anlam
+   * kazandığı yerde (kalabalık kuyrukta) yalan söylerdi. `CLAUDE.md §1`: sayfalayan okumanın sayacı
+   * sayfadan türetilmez.
+   *
+   * Her durum için AYRI bir sayım turu atılıyor; tek `group by` daha zarif olurdu ama PostgREST onu
+   * ancak bir RPC ile verir ve `STACK §13` okuma-RPC eşiği burada karşılanmıyor: küme üç değerli ve
+   * sayımlar indeksli — üç ucuz tur için şemaya fonksiyon eklemek, kazancından pahalı bir bağ olurdu.
+   *
+   * **`handledBy` kırılımı BİLEREK yok.** Talep de aynısını söylüyordu: `16.5` (AI işletme) inene
+   * kadar her talep `human`, yani üçüncü sayı daima 0 çıkardı. Sıfır gösteren bir sayaç, ekranda
+   * "AI çalışmıyor" değil "AI yok" der ve ikisi ayrı şeydir; kırılım 16.5 ile birlikte gelir.
+   */
+  async countByStatus(): Promise<Record<TicketStatus, number>> {
+    const statuses = TicketStatusEnum.options;
+    const counts = await Promise.all(statuses.map((status) => this.count({ status })));
+    return Object.fromEntries(statuses.map((status, i) => [status, counts[i] ?? 0])) as Record<TicketStatus, number>;
   }
 
   /**

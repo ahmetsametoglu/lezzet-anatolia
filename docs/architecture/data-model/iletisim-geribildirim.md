@@ -202,7 +202,7 @@ Parametrik değerler **env'e veya koda gömülmez** (blueprint STACK §10): kesi
 | --- | --- | --- |
 | id | uuid | |
 | key | string | ör. `order_cutoff_time` |
-| scope_type | enum(`global`,`channel`,`zone`,`country`) | ⚠ **`0016` migration'ında BEŞİNCİ bir değer var: `warehouse`.** Ne bu tablo ne `SettingScopeEnum` onu tanıyor ve `SettingScopeContext`'te `warehouseId` yok — yani depo kapsamlı bir satır yazılsa okumada Zod'a takılır. Üç kaynaktan ikisi dört diyor; hizalanması istendi (`build/operasyon-ekranlari-arka-uc-talebi.md §7a`). Ayarlar ekranı (09.16) o ekseni bu yüzden hiç sunmuyor |
+| scope_type | enum(`global`,`channel`,`zone`,`country`,`warehouse`) | Üç kaynak 03.08'de HİZALANDI (migration haklı sayıldı). Çözüm sırası **en özgülden en genele: `warehouse` > `zone` > `channel` > `country` > `global`** — depo bölgeden dardır (bir bölge tek depoya bağlıdır, bir depo çok bölgeye hizmet eder); sıra ters olsaydı bölge satırı depo satırını sessizce ezerdi. Gerekçe ölçüm doğruluğu: rota/paketleme birim maliyeti ve kesim saati depo başına farklılaşır, global kalırsa kâr sessizce yanlışlaşır (`0016` künyesi). Ayarlar ekranı (09.16) ekseni henüz SUNMUYOR — kablolama operasyon şeridinde, gerekçe `settings-catalog.ts` künyesinde |
 | scope_id | string \| null | kanal `b2b`, ülke `FR`, bölge uuid; global'de null. Üç farklı tipi taşıdığı için metin |
 | value | jsonb | ayar sayı, metin, saat, bayrak ya da nesne olabilir |
 | description | string \| null | admin ekranında ne işe yaradığı |

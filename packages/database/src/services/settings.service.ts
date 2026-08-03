@@ -24,7 +24,17 @@ import { BaseDbService } from '../core/base.service';
 export const SETTINGS_CACHE_TTL_MS = 30_000;
 
 /** Özgüllük sırası: en dar kapsam kazanır, hiçbiri yoksa global'e düşülür. */
-const SCOPE_PRIORITY: readonly SettingScope[] = ['zone', 'channel', 'country', 'global'];
+/**
+ * Kapsam önceliği — **en özgülden en genele.** İlk eşleşen kazanır.
+ *
+ * `warehouse` EN BAŞTA (03.08): depo, bir ayarın farklılaşabileceği en dar eksendir ve bölgeden de
+ * dardır — bir bölge tek bir depoya bağlıdır ama bir depo birden çok bölgeye hizmet eder. Sıra ters
+ * olsaydı bölge satırı depo satırını ezerdi ve "bu deponun paketleme maliyeti" hiçbir zaman
+ * uygulanmazdı; operatör değeri girer, sistem yok sayardı — sessizce.
+ *
+ * `country` en sonda (global'den önce): ülke bir kapsam eksenidir ama en geniş olanıdır.
+ */
+const SCOPE_PRIORITY: readonly SettingScope[] = ['warehouse', 'zone', 'channel', 'country', 'global'];
 
 /**
  * İşletme ayarı servisi (02.6) — DATA_MODEL "Setting", STACK §10.
@@ -105,6 +115,22 @@ export class SettingsService extends BaseDbService<Setting, SettingInsert, Setti
     return this.getAll({ key }, { orderBy: 'scopeType' });
   }
 
+  /**
+   * TÜM ayar satırları — Ayarlar ekranının (09.16) tek okuması.
+   *
+   * **Sayfalanmaz ve bu ölçülü bir karar** (`CLAUDE.md §1`): küme veriyle büyümez, operatörün elle
+   * kurduğu bir sözlüktür ve doğal tavanı vardır — anahtar sayısı kadar, kapsam satırlarıyla birkaç
+   * katı. Sipariş ya da stok gibi sınırsız büyüyen bir küme değil.
+   *
+   * İki gerçek bedeli kapatıyor (operasyon şeridinin talebi, 03.08): ekran sözlükteki 27 anahtar
+   * için 27 ayrı sorgu atıyordu, ve — daha önemlisi — **sözlükte olmayan bir satır ekranda hiç
+   * görünmüyordu.** Elle açılmış ya da sözlüğe henüz eklenmemiş bir ayarın sistemde çalışan bir
+   * değeri olabilir; yönetim ekranının onu göstermemesi, "ayarı buradan yönetiyorum" vaadini deler.
+   */
+  listAll(): Promise<Setting[]> {
+    return this.getAll(undefined, { orderBy: 'key' });
+  }
+
   /** Süreç içi önbelleği düşürür — testler ve dış kaynaklı değişiklik sonrası. */
   static invalidate(key?: string): void {
     if (key) SettingsService.cache.delete(key);
@@ -127,6 +153,7 @@ export class SettingsService extends BaseDbService<Setting, SettingInsert, Setti
 
 /** Bağlamdan kapsam kimliğini seçer — kapsam tipi hangi ekseni okuyacağını bilir. */
 function scopeIdFor(scopeType: SettingScope, scope: SettingScopeContext): string | null {
+  if (scopeType === 'warehouse') return scope.warehouseId ?? null;
   if (scopeType === 'zone') return scope.zoneId ?? null;
   if (scopeType === 'channel') return scope.channel ?? null;
   if (scopeType === 'country') return scope.country ?? null;

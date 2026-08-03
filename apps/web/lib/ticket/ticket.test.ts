@@ -283,6 +283,24 @@ describe('diğer yüzeylerin okumaları', () => {
     await changeTicketStatus({ ticketId: ticket.id, to: 'resolved', by: 'staff' });
     expect(await countOpenTickets()).toBe(before);
   });
+
+  it('durum başına sayım: talep durum değiştirince İKİ sayı birden oynar (16.3 başlığı)', async () => {
+    // Ekranın başlık satırı "N açık · M işlemde" diyor. Sayılar sayfadan türetilemez (kuyruk keyset
+    // sayfalı, "ilk sayfada M işlemde" olurdu) — bu yüzden ayrı bir sayım ucu var.
+    const oncesi = await tickets.countByStatus();
+    const ticket = await openPlainTicket();
+
+    // Kendi satırımı sayıyorum, küresel toplamı değil: paylaşılan DB'de mutlak sayı başka ajanın
+    // verisiyle oynar (§4b). Ölçüt FARK.
+    const acilinca = await tickets.countByStatus();
+    expect(acilinca.open).toBe(oncesi.open + 1);
+
+    await changeTicketStatus({ ticketId: ticket.id, to: 'in_progress', by: 'staff' });
+    const islemde = await tickets.countByStatus();
+    // Geçiş bir sayıyı artırıp ötekini azaltır — toplam sabit kalır, satır kaybolmaz.
+    expect(islemde.open).toBe(oncesi.open);
+    expect(islemde.in_progress).toBe(oncesi.in_progress + 1);
+  });
 });
 
 describe('operasyon kuyruğu', () => {

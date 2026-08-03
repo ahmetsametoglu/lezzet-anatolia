@@ -6,8 +6,19 @@ import type { SettingsTab, SettingsUrlState } from './settings-url';
 // Ayarlar ekranının tipleri (09.16). Şema tek kaynak (`CLAUDE.md §1`): giriş şemaları
 // `packages/types`'ın `Setting`/`UserProfile` şemalarından türer, görünüm modelleri de onlardan.
 
-/** İstisna açılabilen eksenler — `global` bir istisna değil, değerin kendisidir. */
-export const ExceptionScopeEnum = SettingScopeEnum.exclude(['global']);
+/**
+ * İstisna açılabilen eksenler — `global` bir istisna değil, değerin kendisidir.
+ *
+ * `warehouse` de ŞİMDİLİK dışarıda (03.08). Arka uçta eksen artık AÇIK — `SettingScopeEnum` beş
+ * değerli, `SettingScopeContext.warehouseId` var ve çözücü depoyu en özgül eksen olarak arıyor.
+ * Eksik olan yalnız bu ekranın kablolaması: `ScopeOptions.warehouse` ve `toScopeOptions`'ın depo
+ * listesini alması (veri zaten sayfada — `SettingsData.warehouseOptions`).
+ *
+ * Burada dışarıda tutulmasının sebebi ekranın kendi ilkesi: **olmayan bir yeteneği varmış gibi
+ * göstermemek.** Enum'a eklenip seçenekleri boş kalsaydı operatör "Depo" eksenini görür, seçecek
+ * bir şey bulamazdı. Kablolama operasyon şeridinin turunda; o gün bu satırdan `'warehouse'` düşer.
+ */
+export const ExceptionScopeEnum = SettingScopeEnum.exclude(['global', 'warehouse']);
 export type ExceptionScope = z.infer<typeof ExceptionScopeEnum>;
 
 // ── Yazma girişleri ─────────────────────────────────────────────────────────
@@ -60,7 +71,8 @@ export type SettingRowView = Omit<SettingDef, 'exceptionScopes'> & {
   /** Yürürlükteki genel değer — global satır yoksa fabrika değeri. */
   value: SettingValue;
   display: string;
-  fallbackDisplay: string;
+  /** Fabrika değerinin okunan hâli; `null` = fabrika değeri YOK (kurulum-özgü seçim). */
+  fallbackDisplay: string | null;
   /** Genel değer fabrika değerinden farklı mı — "elle değiştirilmiş" işareti. */
   changed: boolean;
   /** Global satırın kimliği; `null` = ayar hiç yazılmamış, kod varsayılanıyla çalışıyor. */
@@ -100,6 +112,12 @@ export interface SettingsData {
   staff: StaffRowView[];
   scopeOptions: ScopeOptions;
   warehouseOptions: { value: string; label: string }[];
+  /**
+   * `account` türündeki ayarın seçenekleri. YALNIZ AKTİF hesaplar: kapatılmış bir hesap listede
+   * kalır ama yeni harekete kapalıdır (`AccountService.deactivate` künyesi) — onu seçilebilir
+   * bırakmak, kapı önü satışın parasını kapalı bir kasaya yazmak olurdu.
+   */
+  accountOptions: { value: string; label: string }[];
   /** Değişikliğin tüm süreçlerde geçerli olacağı azami süre (sn) — ekranın operatöre verdiği söz. */
   propagationSeconds: number;
 }
@@ -131,4 +149,6 @@ export interface SettingsReadInput {
   staff: UserProfile[];
   zones: { id: string; name: string }[];
   warehouses: { id: string; code: string; name: string }[];
+  /** Hesaplar — `account` türündeki ayarın hem seçenekleri hem ad sözlüğü (`door_cash_account_id`). */
+  accounts: { id: string; name: string }[];
 }
