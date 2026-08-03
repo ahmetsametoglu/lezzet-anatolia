@@ -11,6 +11,7 @@ import { RootShell } from '@/components/root-shell';
 import { CartProvider } from '@/components/customer/cart/cart-context';
 import { PlaceProvider } from '@/components/customer/delivery/place-context';
 import { AccountProvider } from '@/components/customer/account/account-context';
+import { VisitPing } from '@/components/customer/account/visit-ping';
 import { getDeliveryZones } from '@/lib/delivery/read';
 import { currentCustomer } from '@/lib/guard';
 
@@ -69,6 +70,11 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
             ürün sayfası onu okumak için sepete bağımlı olurdu — oysa ikisi ayrı sorular. */}
         {/* Hesap künyesi de kökte: başlıktaki giriş her sayfada aynı kişiyi göstermeli. */}
         <AccountProvider account={account}>
+          {/* Günlük ziyaret puanı (17.4) — hiçbir şey çizmez, oturum başına bir kez "geldi" der.
+              Yalnız GİRİŞLİ müşteride monte edilir: kimlik zaten yukarıda okundu, ziyaretçi için
+              boşuna sunucu turu atılmaz. Yazma burada DEĞİL istemci efektinde olur — render yan
+              etkisizdir ve buraya bir defter yazımı koymak her prefetch'te tetiklenirdi. */}
+          {account && <VisitPing />}
           <PlaceProvider zones={zones}>
             <CartProvider locale={locale}>{children}</CartProvider>
           </PlaceProvider>
