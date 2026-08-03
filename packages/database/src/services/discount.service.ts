@@ -67,12 +67,18 @@ export class DiscountService extends BaseDbService<Discount, DiscountInsert, Dis
    * kampanyalar dahil), bu yalnız SAHİBİ o müşteri olanları. Müşteri kartında herkese açık bir
    * kampanyayı "bu kişinin kuponu" gibi göstermek yanlış olurdu.
    *
-   * BEKLEYEN(17.5): sayfalanmıyor. Kişisel kupon kümesi operatörün eliyle DEĞİL puan çevrimiyle büyür
-   * (her çevrim yeni bir kural doğurur), yani veriyle büyüyen bir küme — CLAUDE.md §1'e göre keyset
-   * ister. Bugün müşteri başına birkaç satır; puanı kupona çevirme ekranı açılınca sayfalanacak.
+   * BEKLEYEN(08.5): keyset sayfalama yok — bugün SABİT TAVAN var (`limit`). Kişisel kupon kümesi
+   * operatörün eliyle değil puan çevrimiyle büyür (her çevrim yeni bir kural doğurur), yani veriyle
+   * büyüyen bir küme ve `CLAUDE.md §1`'e göre keyset ister. Ekran (hesaptaki "Kuponlarım", 17.5)
+   * 03.08'de açıldı; okuyan taraf artık var ama tavanın ötesindeki eski kuponları göremiyor.
+   *
+   * Tavan geçici bir çözüm DEĞİL, yanlışın küçüğü: sayfalamasız sınırsız okuma, çok çevrim yapmış
+   * bir müşteride yüzlerce satırı tek kullanılabilir kuponu göstermek için getirirdi. Sınır en
+   * yenilerini verir — kullanılabilir kupon her zaman en yenilerin arasındadır, çünkü eskiler
+   * harcanmış ya da süresi geçmiştir. Yine de bir varsayımdır; keyset gelince kalkar.
    */
-  listByCustomer(customerId: string): Promise<Discount[]> {
-    return this.getAll({ customerId }, { orderBy: 'createdAt', orderDirection: 'desc' });
+  listByCustomer(customerId: string, limit = 50): Promise<Discount[]> {
+    return this.getAll({ customerId }, { orderBy: 'createdAt', orderDirection: 'desc', limit });
   }
 
   /** Aktiflik anahtarı — süresi dolmuş/kullanımı bitmiş kupon SİLİNMEZ, kapatılır (geçmişi kalsın). */

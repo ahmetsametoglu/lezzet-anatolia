@@ -4,6 +4,7 @@ import { statusPillClass } from '@/components/customer/ui/badge';
 import { Card } from '@/components/customer/ui/card';
 import { CardHead, ConsentSwitch, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { AddressesCard } from './components/addresses-card';
+import { CouponsCard } from './components/coupons-card';
 import { ProfileCard } from './components/profile-card';
 
 /**
@@ -69,11 +70,11 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
             <ZoneNoticeList t={t} notices={account.zoneNotices} />
           </Card>
 
-          {/* BEKLEYEN(17.5): kişisel kuponlar — puanın varış noktası burası; çevirme akışıyla
-              birlikte dolacak. Kart YERİNDE durur ki puan zincirinin nereye çıktığı görünsün. */}
+          {/* Kişisel kuponlar — puanın varış noktası. 17.5 ile doldu; kart o güne kadar boş ama
+              YERİNDE durmuştu ki puan zincirinin nereye çıktığı görünsün. */}
           <Card compact={compact}>
             <CardHead title={t.couponsTitle} compact={compact} />
-            <span className="font-sans text-note text-muted">{t.couponsEmpty}</span>
+            <CouponsCard t={t} locale={locale} coupons={account.coupons} />
           </Card>
 
           <Card compact={compact}>

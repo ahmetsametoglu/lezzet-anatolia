@@ -7,6 +7,7 @@ import { useCart } from '@/components/customer/cart/cart-context';
 import type { AccountView } from '@/lib/account/read';
 import { cancelZoneNoticeAction, setConsentAction } from '../actions';
 import type { Messages } from '../account-types';
+import { RedeemPoints } from './redeem-points';
 
 /**
  * Hesap sayfasının kart ailesi — masaüstü ve mobil AYNI parçaları kullanır, yalnız ölçüleri ve
@@ -145,7 +146,7 @@ export function PointsCard({
         </div>
         <div className="flex flex-none flex-col items-end gap-1.5">
           <span className="font-sans text-page-title-sm font-bold text-olive-light">{points.balance}</span>
-          <RedeemButton t={t} enough={enough} compact />
+          <RedeemPoints t={t} locale={locale} redeem={points.redeem} enough={enough} compact />
         </div>
       </section>
     );
@@ -165,7 +166,7 @@ export function PointsCard({
         <span className="font-sans text-note leading-relaxed font-semibold text-olive-light">
           {enough ? rule : `${t.pointsShort.replace('{missing}', String(minimumPoints - points.balance))} (${rule})`}
         </span>
-        <RedeemButton t={t} enough={enough} />
+        <RedeemPoints t={t} locale={locale} redeem={points.redeem} enough={enough} />
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -183,27 +184,6 @@ export function PointsCard({
         ))}
       </div>
     </section>
-  );
-}
-
-/**
- * BEKLEYEN(17.5): puanı kupona çevirme akışı — kapı hazır (`redeemPoints`), onay diyaloğu ve
- * "Kuponlarım" listesi bekliyor. Eşik altında düğme zaten pasif olacaktı; şimdilik her hâlde pasif
- * ve sebebi yazılı.
- */
-function RedeemButton({ t, enough, compact = false }: { t: Messages; enough: boolean; compact?: boolean }) {
-  return (
-    <button
-      type="button"
-      disabled
-      title={enough ? undefined : t.pointsRedeem}
-      className={[
-        'cursor-not-allowed rounded-pill bg-cream/10 font-sans font-bold text-cream/45',
-        compact ? 'px-3.5 py-2 text-micro' : 'px-4 py-2.5 text-note',
-      ].join(' ')}
-    >
-      {t.pointsRedeem} · {t.soon}
-    </button>
   );
 }
 

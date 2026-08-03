@@ -5,6 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
 import { entryOfItem, type CartLine } from '@/lib/cart/cart-types';
 import { getPointsBalance, listPointsHistory } from '@/lib/feedback/points';
+import { listCustomerCoupons, type CustomerCoupon } from './coupons';
 import { POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY } from '@/lib/settings-keys';
 
 /**
@@ -38,6 +39,11 @@ export interface AccountView {
      */
     redeem: { minimumPoints: number; valueCents: number };
   } | null;
+  /**
+   * Kullanılabilir kişisel kuponlar (17.5). B2B'de her zaman boş — puanla aynı koşula bağlı.
+   * Liste sayfalanmaz: tek kullanımlık kuponların doğal tavanı var, sınırsız büyüyen bir küme değil.
+   */
+  coupons: CustomerCoupon[];
   /** "Sonraya kaydedilenler" — sepetteki listeyle AYNI veri, ikinci bir yer yok. */
   saved: CartLine[];
   /**
@@ -66,7 +72,11 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
   // orada zaten hesaplanıyor. İkinci bir çözüm yazmak, aynı satırın iki görünümü demekti.
   const savedView = await getCartView(locale, cart.savedItems.map(entryOfItem), { customerId });
 
-  const points = company ? null : await readPoints(db, customerId);
+  // Puan ve kupon AYNI koşula bağlı: B2B'de ikisi de yok (tasarım — "B2B'de puan/kupon bölümü
+  // DOM'da hiç yoktur"). İkisini ayrı ayrı sormak, bir gün birinin B2B'de sızması demekti.
+  const [points, coupons] = company
+    ? [null, []]
+    : await Promise.all([readPoints(db, customerId), listCustomerCoupons(customerId)]);
 
   return {
     profile: {
@@ -82,6 +92,7 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
       whatsapp: Boolean(profile.marketingConsent?.whatsapp?.granted),
     },
     points,
+    coupons,
     saved: savedView.lines,
     zoneNotices,
   };

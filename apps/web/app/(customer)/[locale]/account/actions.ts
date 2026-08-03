@@ -6,6 +6,7 @@ import type { AddressInsert } from '@lezzet/types';
 import { revalidatePath } from 'next/cache';
 import { currentCustomerId } from '@/lib/guard';
 import { addAddress, deleteAddress, setDefaultAddress, updateAddress } from '@/lib/account/addresses';
+import { redeemPoints } from '@/lib/feedback/points';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 
 /**
@@ -173,6 +174,36 @@ export async function cancelZoneNoticeAction(postalCode: string): Promise<Custom
     await new ZoneNoticeService(serviceDb()).removeForCustomer(customerId, postalCode);
     revalidateAccount();
     return { data: true, errorKey: null };
+  } catch (err) {
+    return { data: null, errorKey: customerErrorKey(err) };
+  }
+}
+
+/**
+ * Puanı kişisel kupona ÇEVİRME (17.5) — motorun kapısı aylardır hazırdı, çağıranı yoktu.
+ *
+ * Kaç puanın harcanacağını İSTEMCİ SÖYLEMEZ: `redeemPoints` parametresiz çağrılıyor ve eşiği,
+ * karşılığı, bakiyeyi motor kendi okuyor (`canRedeem` + ayarlar). İstemciden bir sayı kabul
+ * etseydik ekranın gördüğü eşik ile motorun uyguladığı eşik ayrışabilirdi — hesap kartındaki
+ * "300 puan = 5 €" cümlesinin ayardan okunmasının sebebi de aynı denetimdi (29.07).
+ *
+ * Motorun iç sebepleri müşteri ANAHTARINA çevriliyor: `insufficient_balance` gibi adlar sistemin
+ * iç yapısını anlatır ve üç dilde karşılığı olmayan bir metin ekrana düşerdi. Üç sebep de tek bir
+ * anahtara iniyor, çünkü müşterinin görebileceği tek gerçek hâl "şu an çevrilemiyor"dur: bakiye
+ * yetmiyorsa kart zaten kalan puanı yazıyor, uygun değilse (B2B) bölüm hiç çizilmiyor.
+ */
+export async function redeemPointsAction(): Promise<CustomerResult<{ code: string }>> {
+  try {
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+
+    const result = await redeemPoints({ customerId });
+    // `ok:false` bir ARIZA değil, motorun verdiği bir cevap — `throw` etmek onu beklenmedik hata
+    // gibi gösterir ve `captureError`ı gereksiz yere kirletirdi.
+    if (!result.ok || !result.code) return { data: null, errorKey: 'redeem_unavailable' };
+
+    revalidateAccount();
+    return { data: { code: result.code }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }

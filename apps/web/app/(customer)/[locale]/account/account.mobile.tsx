@@ -4,6 +4,7 @@ import { statusPillClass } from '@/components/customer/ui/badge';
 import { Card } from '@/components/customer/ui/card';
 import { CardHead, ConsentSwitch, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { AddressesCard } from './components/addresses-card';
+import { CouponsCard } from './components/coupons-card';
 import { ProfileCard } from './components/profile-card';
 
 /**
@@ -23,6 +24,18 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
       <h1 className="font-serif text-page-title-sm leading-tight text-ink">{t.title}</h1>
 
       {account.points && <PointsCard t={t} locale={locale} points={account.points} compact={compact} />}
+
+      {/* KUPONLARIM MOBİLDE TASARIMDA YOK ama "Kupona çevir" düğmesi VAR (17.5, sapma
+          `design/BACKLOG`ta). Çizim eylemi mobilde veriyor, sonucunu göstermiyor: çeviren müşteri
+          "kupon Kuponlarım'da görünür" cümlesini okuyup gidecek bir yer bulamazdı — mobil menüde
+          yaşanan çıkmazın aynısı. Kutu YALNIZ kupon varken çiziliyor: boşken çizmek, tasarımın
+          bilerek sade tuttuğu ekrana kullanılmayan bir blok eklemek olurdu. */}
+      {account.coupons.length > 0 && (
+        <Card compact={compact}>
+          <CardHead title={t.couponsTitle} compact={compact} />
+          <CouponsCard t={t} locale={locale} coupons={account.coupons} />
+        </Card>
+      )}
 
       <Card compact={compact}>
         <Link href="/orders" className="flex items-center justify-between gap-3 border-b border-sand-100 pb-2.5 font-sans text-body-sm font-bold text-ink">

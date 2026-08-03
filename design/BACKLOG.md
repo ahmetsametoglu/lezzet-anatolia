@@ -327,6 +327,21 @@ mevcut form kitiyle kurulacak; çizim gelince birebir uygulanır.
 
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
 
+- **HESAP MOBİLDE "KUPONLARIM" ÇİZİLİ DEĞİL, AMA EKLENDİ (03.08, 17.5).**
+  `Musteri - Hesap.dc.html`in mobil karesi şu blokları taşıyor: Puanlarım (içinde **"Kupona çevir"**
+  düğmesi) · Profil · Adresler · Kampanya iletişimi · Gizlilik politikası. "Kuponlarım" yok — o yalnız
+  masaüstü karesinde var.
+
+  **Çizim eylemi mobilde veriyor ama sonucunu göstermiyor.** Puanını mobilde çeviren müşteri onay
+  diyaloğunda *"kupon Kuponlarım'da görünür"* cümlesini okuyup gidecek bir yer bulamazdı; kodu ne
+  görebilir ne kopyalayabilirdi. Mobil menüde yaşanan çıkmazın aynısı — tasarımın **söylediği**
+  yüzeyi, **çizmediği** için var saymamak.
+
+  **Uygulanan çözüm en dar olanı:** kutu mobile eklendi ama `coupons.length > 0` koşuluyla — kupon
+  yokken ekran tasarımın çizdiği gibi kalıyor, yalnız gerçekten bir kod varken beliriyor. Boşken de
+  çizmek, tasarımın bilerek sade tuttuğu mobil hesaba kullanılmayan bir blok eklemek olurdu.
+  Tasarım tarafı mobil kareye "Kuponlarım"ı eklerse bu koşul kalkar.
+
 - **AYARLAR: TESLİMAT BÖLGESİ TABLOSU BU EKRANDA DEĞİL, DEPOLAR'DA (03.08, 09.16 ↔ 19.5).**
   Tasarımın alt yarısındaki "Teslimat bölgeleri — posta kodu tanımı" tablosu (bölge · kodlar · gün ·
   min. sepet · durum) Ayarlar'a çizilmiş. Kodlanan yer **Depolar** ekranının tesis kartı. Sebep
