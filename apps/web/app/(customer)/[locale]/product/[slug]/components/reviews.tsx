@@ -121,7 +121,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
       )}
 
       {reviews.map((review) => (
-        <ReviewCard key={review.id} review={review} locale={locale} verifiedLabel={t.reviews.verified} />
+        <ReviewCard key={review.id} review={review} locale={locale} verifiedLabel={t.reviews.verified} translation={t.reviews.translation} />
       ))}
 
       {/* Satır ARTIK GERÇEK BİR KONTROL (08.11). Uzun süre düz metindi ve künyesi doğruydu:

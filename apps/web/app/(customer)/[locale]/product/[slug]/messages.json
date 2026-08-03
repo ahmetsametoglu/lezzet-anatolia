@@ -59,7 +59,8 @@
       "loading": "Yükleniyor…",
       "retry": "Yorumlar yüklenemedi — yeniden dene",
       "panelEmpty": "Bu üründe henüz yazılı yorum yok.",
-      "filters": { "all": "Tümü ({count})", "five": "5★ ({count})", "four": "4★ ({count})", "low": "3★ ve altı ({count})" }
+      "filters": { "all": "Tümü ({count})", "five": "5★ ({count})", "four": "4★ ({count})", "low": "3★ ve altı ({count})" },
+      "translation": { "badge": "otomatik çevrildi", "showOriginal": "Orijinali göster", "showTranslation": "Çeviriyi göster" }
     },
     "similar": "Bunları da sevebilirsiniz",
     "card": {
@@ -136,7 +137,8 @@
       "loading": "Chargement…",
       "retry": "Impossible de charger les avis — réessayer",
       "panelEmpty": "Aucun avis écrit pour ce produit pour l'instant.",
-      "filters": { "all": "Tous ({count})", "five": "5★ ({count})", "four": "4★ ({count})", "low": "3★ et moins ({count})" }
+      "filters": { "all": "Tous ({count})", "five": "5★ ({count})", "four": "4★ ({count})", "low": "3★ et moins ({count})" },
+      "translation": { "badge": "traduit automatiquement", "showOriginal": "Voir l'original", "showTranslation": "Voir la traduction" }
     },
     "similar": "Vous aimerez aussi",
     "card": {
@@ -213,7 +215,8 @@
       "loading": "Wird geladen…",
       "retry": "Bewertungen konnten nicht geladen werden — erneut versuchen",
       "panelEmpty": "Für dieses Produkt gibt es noch keine geschriebenen Bewertungen.",
-      "filters": { "all": "Alle ({count})", "five": "5★ ({count})", "four": "4★ ({count})", "low": "3★ und weniger ({count})" }
+      "filters": { "all": "Alle ({count})", "five": "5★ ({count})", "four": "4★ ({count})", "low": "3★ und weniger ({count})" },
+      "translation": { "badge": "automatisch übersetzt", "showOriginal": "Original anzeigen", "showTranslation": "Übersetzung anzeigen" }
     },
     "similar": "Das könnte Ihnen auch gefallen",
     "card": {
