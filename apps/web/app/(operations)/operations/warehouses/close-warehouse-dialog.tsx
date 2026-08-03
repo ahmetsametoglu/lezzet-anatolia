@@ -5,6 +5,7 @@ import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { Input } from '@/components/operation/form/input';
+import type { OpsTone } from '@/components/operation/ui/tone';
 import { setWarehouseActiveAction } from './actions';
 import { CLOSURE_WEIGHT_LABEL, CLOSURE_WEIGHT_ORDER, CLOSURE_WEIGHT_TONE } from './warehouses-labels';
 import { closureConsequences } from './warehouses-read';
@@ -130,11 +131,15 @@ export function CloseWarehouseDialog({ row, card, onClose, onDone }: CloseWareho
   );
 }
 
-const TONE = {
+// `Record<OpsTone, …>` ile ADLANDIRILDI (03.08): eskiden yalnız `as const`'tı ve palete yeni bir ton
+// eklendiğinde derleyici "eksik anahtar" demiyor, indeksleme yerinde anlaşılması güç bir `any` hatası
+// veriyordu. Adlandırılmış `Record`, eksikliği tam da tanımın olduğu satırda söyler.
+const TONE: Record<OpsTone, string> = {
   red: 'border-ops-red-line bg-ops-red-bg text-ops-red',
   amber: 'border-ops-amber-line bg-ops-amber-bg text-ops-amber',
   blue: 'border-ops-blue-line bg-ops-blue-bg text-ops-blue',
   neutral: 'border-ops-line bg-ops-line-soft text-ops-body',
   olive: 'border-ops-olive-line bg-ops-olive-bg text-ops-olive-dark',
   slate: 'border-ops-slate-line bg-ops-slate-bg text-ops-slate',
-} as const;
+  violet: 'border-ops-violet-line bg-ops-violet-bg text-ops-violet',
+};

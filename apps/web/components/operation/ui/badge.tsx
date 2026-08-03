@@ -13,6 +13,7 @@ const TONE: Record<OpsTone, { cls: string; outline: string; dot: string }> = {
   red: { cls: 'text-ops-red bg-ops-red-bg', outline: 'text-ops-red border-ops-red-line', dot: 'bg-ops-red-dot' },
   blue: { cls: 'text-ops-blue bg-ops-blue-bg', outline: 'text-ops-blue border-ops-blue-line', dot: 'bg-ops-blue' },
   slate: { cls: 'text-ops-slate bg-ops-slate-bg', outline: 'text-ops-slate border-ops-slate-line', dot: 'bg-ops-slate' },
+  violet: { cls: 'text-ops-violet bg-ops-violet-bg', outline: 'text-ops-violet border-ops-violet-line', dot: 'bg-ops-violet-dot' },
 };
 
 interface BadgeProps {

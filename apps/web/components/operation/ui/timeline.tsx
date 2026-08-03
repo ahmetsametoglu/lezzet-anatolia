@@ -45,6 +45,7 @@ const LABEL: Record<OpsTone, string> = {
   red: 'text-ops-red',
   blue: 'text-ops-blue',
   slate: 'text-ops-slate',
+  violet: 'text-ops-violet',
 };
 
 const DOT: Record<OpsTone, string> = {
@@ -54,6 +55,7 @@ const DOT: Record<OpsTone, string> = {
   red: 'bg-ops-red-dot',
   blue: 'bg-ops-blue',
   slate: 'bg-ops-slate',
+  violet: 'bg-ops-violet-dot',
 };
 
 export function Timeline({ steps, className }: TimelineProps) {

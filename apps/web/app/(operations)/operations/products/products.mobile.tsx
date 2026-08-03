@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { BottomSheet } from '@/components/operation/ui/bottom-sheet';
 import { Chip } from '@/components/operation/ui/chip';
 import { CameraIcon } from '@/components/operation/ui/icons';
 import { Input } from '@/components/operation/form/input';
@@ -51,9 +52,10 @@ function QuickEditSheet({
   };
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-50 flex flex-col justify-end bg-ops-scrim">
-      <div onClick={(e) => e.stopPropagation()} className="flex flex-col gap-3.5 rounded-t-[20px] bg-ops-card p-4">
-        <span className="mx-auto h-[5px] w-[42px] rounded-[3px] bg-ops-gray-500" />
+    // Ortak alt tabaka (03.08): bu kalıp burada ve Talepler'de ayrı ayrı yazılmıştı ve ayrışmıştı
+    // (z-index, köşe yarıçapı token'ı, tutamak ölçüsü). Tanım artık `ui/bottom-sheet`'te.
+    <BottomSheet label="Ürün hızlı bakış" onClose={onClose}>
+      <>
         <div className="flex items-center gap-3">
           <Thumbnail src={product.imageUrl} alt={displayName} size={56} iconSize={22} />
           <div className="flex flex-col gap-0.5">
@@ -125,8 +127,8 @@ function QuickEditSheet({
         >
           {pending ? 'Kaydediliyor…' : 'Kaydet'}
         </button>
-      </div>
-    </div>
+      </>
+    </BottomSheet>
   );
 }
 

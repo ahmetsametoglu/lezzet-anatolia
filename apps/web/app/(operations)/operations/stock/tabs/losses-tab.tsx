@@ -20,6 +20,7 @@ const REASON_CHIP: Record<OpsTone, string> = {
   red: 'border-ops-red-line bg-ops-red-bg text-ops-red',
   blue: 'border-ops-blue-line bg-ops-blue-bg text-ops-blue-dark',
   slate: 'border-ops-slate-line bg-ops-slate-bg text-ops-slate-dark',
+  violet: 'border-ops-violet-line bg-ops-violet-bg text-ops-violet',
 };
 
 // İmha / fire geçmişi — "bu üründen ne kadar çöpe gitti" görünür kalır. Ayrıntılı analiz raporlarda

@@ -126,6 +126,26 @@ export function agoLabel(minutes: number | null | undefined): string {
 }
 
 /**
+ * Aynı yaş, DAR sütun için: "12 dk" · "2 saat" · "dün" · "3 gün".
+ *
+ * "Önce" eki bir liste sütununda bilgi taşımıyor — o sütundaki her değer zaten geçmiş. Buna karşılık
+ * genişlik yiyor: talep kuyruğunda rozetlerin yanına sığmayıp satırı ikiye bölüyordu ve satır
+ * yüksekliği çizimin iki katına çıkıyordu. Tarama yüzeyinde satır sayısı bilginin kendisidir.
+ *
+ * "Dün" ÖZEL: 24–48 saat arası "1 gün" demek teknik olarak doğru ama insan öyle konuşmuyor, ve
+ * çizim de "dün" yazıyor.
+ */
+export function agoShort(minutes: number | null | undefined): string {
+  if (minutes == null) return '—';
+  if (minutes < 1) return 'şimdi';
+  if (minutes < 60) return `${Math.floor(minutes)} dk`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} saat`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? 'dün' : `${days} gün`;
+}
+
+/**
  * Son tarihe kalan süreyi operatörün diliyle söyler. Mutlak tarih tek başına yetmiyor: "3 gün kaldı"
  * ile "12 Ağustos" arasındaki fark, aciliyetin okunup okunmamasıdır.
  */

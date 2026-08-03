@@ -8,7 +8,7 @@ import { CONTROL_H, type ControlSize } from './control';
  * (kararın kendisi: iadeyi onayla, kısmi karşılamayı kaydet). Müşteri evreninin butonundan AYRI set
  * (components/customer/ui/button.tsx = "Aile Sofrası"). Tasarım büyüdükçe varyant eklenir.
  */
-type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'danger' | 'destructive' | 'warning';
+type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'danger' | 'destructive' | 'warning' | 'violet';
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary: 'bg-ops-olive text-ops-card hover:bg-ops-olive-dark disabled:bg-ops-gray-600',
@@ -19,6 +19,10 @@ const VARIANT: Record<ButtonVariant, string> = {
   // (iadeyi onayla · kısmi karşılamayı kaydet). Üç diyalog aynı sınıf zincirini elle kuruyordu.
   destructive: 'bg-ops-red text-ops-card hover:bg-ops-red-dark disabled:opacity-50',
   warning: 'bg-ops-amber text-ops-card hover:bg-ops-amber-dark disabled:opacity-50',
+  // `destructive`/`warning` ile aynı aile — DOLU, yani kararın kendisi. Ayrı olmasının sebebi
+  // anlamı: mor bu yüzeyde "makine" demek (`OpsTone.violet`), ve AI'dan devralmak yıkıcı da değil
+  // uyarı da değil — geri alınamayan bir SAHİPLENMEDİR. Kırmızı yazsaydık bir zarar sanılırdı.
+  violet: 'bg-ops-violet text-ops-card hover:bg-ops-violet-dot disabled:opacity-50',
 };
 
 // Yükseklik ORTAK (`CONTROL_H`), burada yalnız yatay dolgu ve yazı kademesi var: bir düğme yan yana
