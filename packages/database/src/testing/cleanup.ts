@@ -60,6 +60,19 @@ export interface PurgeTargets {
    * hareketler durdukça sessizce yarım kalır. Doğru sıra: önce hareket, sonra hesap.
    */
   accountIds?: string[];
+  /**
+   * Test iş adları — cron kabuğunun (`runJob`) BIRAKTIĞI İKİ İZ birden gider: `job_run` satırı ve
+   * `error_log` kayıtları (`context->>job`).
+   *
+   * İkisi tek hedefte, çünkü tek bir kabuk ikisini birden yazıyor: düşen bir tur hem "koştu mu"
+   * izini hem "neden koşamadı" kaydını bırakır. Ayrı hedefler olsaydı biri yazılıp öteki unutulur
+   * ve `error_log` sessizce birikirdi — üstelik kimse fark etmezdi, çünkü artık satır bir HATA gibi
+   * görünür ve "eski bir kayıt" sanılır.
+   *
+   * `job_run` iş adı başına TEK satır tutar: testler damgalı ad kullanmalı, gerçek iş adını
+   * kullanan bir test üretim izini ezer.
+   */
+  jobNames?: string[];
 }
 
 export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): Promise<void> {
@@ -78,6 +91,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     authUserIds,
     warehouseIds,
     accountIds,
+    jobNames,
   } = {
     productIds: clean(targets.productIds),
     categoryIds: clean(targets.categoryIds),
@@ -89,7 +103,15 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     authUserIds: clean(targets.authUserIds),
     warehouseIds: clean(targets.warehouseIds),
     accountIds: clean(targets.accountIds),
+    jobNames: clean(targets.jobNames),
   };
+
+  // 0) İş izleri: hiçbir şeye FK ile bağlı değiller, sıradan bağımsız — en başta gitsinler ki
+  // aşağıdaki grafiklerden biri düşse bile gözlemleme tabloları kirli kalmasın.
+  if (jobNames.length > 0) {
+    await mustDelete(db, 'job_run', (q) => q.in('name', jobNames));
+    for (const name of jobNames) await mustDelete(db, 'error_log', (q) => q.eq('context->>job', name));
+  }
 
   // 1) Ürün grafiği: varyantlara `restrict` ile bağlı ne varsa ÖNCE gider.
   if (productIds.length > 0) {
