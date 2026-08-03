@@ -9,6 +9,7 @@ import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
 import { money, num, shortDateTime } from '@/components/operation/ui/format';
 import type { Country } from '@lezzet/types';
 import { ordersLink } from '../orders/orders-url';
+import { settingsLink } from '../settings/settings-url';
 import { stockLink } from '../stock/stock-url';
 import {
   addressOneLine,
@@ -393,9 +394,15 @@ export function StaffChips({ staff }: { staff: readonly StaffChipView[] }) {
       {staff.map((p) => (
         <StaffChip key={p.id} name={p.name} role={p.roleText} note={p.onlyHere ? 'tek kapsamı burası' : null} />
       ))}
-      {/* Ayarlar ekranı henüz yok (09.16) — bağlantı KOYMUYORUZ: var olmayan bir yere giden düğme,
-          olmayan bir yetenek vaat eder. Cümle kapsamın nerede yönetildiğini söylemeye yeter. */}
-      <span className="self-center font-ops-body text-ops-xs text-ops-muted">Kapsam Ayarlar'da yönetilir</span>
+      {/* Kapsam Ayarlar'ın PERSONEL sekmesinde yönetilir — bağlantı doğrudan oraya, ekranın köküne
+          değil: operatörün sorusu "bu kişinin kapsamını nereden değiştiririm" ve cevabı bir sekme
+          uzakta bırakmak, bildiğimiz bir yolu yarım tarif etmek olurdu. */}
+      <Link
+        href={settingsLink({ tab: 'staff' })}
+        className="cursor-pointer self-center font-ops-body text-ops-xs text-ops-olive underline-offset-2 hover:underline"
+      >
+        Kapsam Ayarlar'da yönetilir →
+      </Link>
     </div>
   );
 }

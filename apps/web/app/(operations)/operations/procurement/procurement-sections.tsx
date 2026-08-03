@@ -132,9 +132,10 @@ export function SupplierCard({ supplier, onEdit }: { supplier: SupplierCardView;
           </span>
         </span>
         <span className="flex flex-col">
-          {/* Tasarım "Bu yıl" istiyor; dönemli toplam arka uç talebinde — o gelene dek dürüst etiket. */}
+          {/* "Bu yıl" — dönem süzgeci yılbaşından, okuma tarafında (`readSupplierCards`). Yanındaki
+              borç bilerek DÖNEMSİZ: ikisi ayrı soru, aynı pencereye sokmak borcu yalancı yapardı. */}
           <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-muted">
-            Toplam alım
+            Bu yıl alım
           </span>
           <span className="font-ops-mono text-ops-lead text-ops-ink">{money(supplier.intakeTotalCents)}</span>
         </span>

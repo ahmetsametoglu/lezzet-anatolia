@@ -272,9 +272,20 @@ function toOrderRowView(row: PurchaseOrderRow): PurchaseOrderRowView {
 }
 
 /**
+ * Yılbaşı — kartın "Bu yıl" penceresinin başlangıcı.
+ *
+ * Sunucuda okunur ve okunabilir: bu modül `server-only` ve kart bir RSC çıktısı — istemcide ikinci
+ * bir `Date` hiç kurulmuyor, yani hidrasyon uyuşmazlığı riski yok.
+ */
+const startOfYear = (): Date => new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1));
+
+/**
  * Tedarikçi kartları. Borç tedarikçi başına türetilir (`debt()`) — tedarikçi sayısı fiziksel olarak
  * sınırlı (sayfa sözleşmesi: "az sayıda tedarikçi beklenir, dev CRM değil"), döngü veriyle büyümez.
  * Küme büyürse toplu okuma servise eklenir (debt() künyesi bu kapıyı zaten bırakıyor).
+ *
+ * Tedarikçi başına İKİ `debt()` çağrısı var ve ikisi ayrı soruyu soruyor (dönemsiz borç · bu yılki
+ * alım). Tek çağrıya indirmenin yolu yok: dönem süzgeci ikisini birden kaydırır.
  */
 export async function readSupplierCards(db: Db): Promise<SupplierCardView[]> {
   const svc = new SupplierService(db);
@@ -283,8 +294,15 @@ export async function readSupplierCards(db: Db): Promise<SupplierCardView[]> {
 
   return Promise.all(
     suppliers.map(async (s) => {
-      const [{ intakeTotalCents, balanceCents }, pendingOrderCount] = await Promise.all([
+      const [{ balanceCents }, { intakeTotalCents }, pendingOrderCount] = await Promise.all([
+        // BORÇ dönemsizdir ve öyle kalmalı: tedarikçiye olan borç, bu yıl ne aldığımızdan bağımsız
+        // bir gerçektir. Dönemli çağrının `balanceCents`'i borç DEĞİLDİR (servis künyesi) — dönem
+        // içindeki ödemeler dönem dışındaki alımları kapatmaz ve sayı sessizce yalan söylerdi.
         svc.debt(s.id),
+        // ALIM ise dönemli: tasarım "Bu yıl" diyor. Dönem desteği arka uçtan geldi (tedarik talebi
+        // §6) ve bu okuma bir süre onu kullanmadan eski etiketle çalıştı — karşılanan talebin
+        // tüketicisi güncellenmeden talep bitmiş sayılamaz (denetim O-Y2).
+        svc.debt(s.id, { from: startOfYear() }),
         // "Bu firmadan yolda ne var" — kart tek başına okunabilsin: borç kadar bunun da cevabı
         // burada olmalı, yoksa operatör sipariş sekmesine gidip elle süzmek zorunda kalır.
         orders.countPending(s.id),
