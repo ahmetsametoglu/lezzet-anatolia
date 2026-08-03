@@ -47,6 +47,13 @@ let variantId: string;
 let customerId: string;
 let authUserId: string;
 let addressId: string;
+/**
+ * KDV testlerinin ŞİRKET müşterisi (03.10) — ayrı bir profil, çünkü var olanın tipini değiştirmek
+ * dosyadaki öteki testlere sızardı (`type: 'company'` ödeme seçeneklerini de oynatır).
+ */
+let b2bCustomerId: string;
+let b2bAuthUserId: string;
+let b2bAddressId: string;
 let zoneId: string;
 let routeWarehouseId: string;
 let shippingWarehouseId: string;
@@ -98,23 +105,50 @@ beforeAll(async () => {
       country: 'DE',
     })
   ).id;
+
+  // ── KDV testlerinin şirket müşterisi: DE + B2B + VIES'te DOĞRULANMIŞ numara ────
+  // Reverse charge dalının üç şartı da burada kuruluyor. `vatNumberValid` AYRI bir alan ve öyle
+  // olmalı: numaranın yazılmış olması doğrulanmış olması demek değil — motor yalnız `true`da %0
+  // açar, çünkü yanlış %0 uygulamanın bedelini biz öderiz.
+  const b2bAuth = await db.auth.admin.createUser({ email: `kargob2b${stamp}@ornek.de`, email_confirm: true });
+  b2bAuthUserId = b2bAuth.data.user!.id;
+  const b2bProfile = await new UserProfileService(db).findByAuthUserId(b2bAuthUserId);
+  if (!b2bProfile) throw new Error('auth→profil tetikleyicisi B2B profili açmadı');
+  b2bCustomerId = b2bProfile.id;
+  createdProfiles.push(b2bProfile.id);
+  await new UserProfileService(db).update({
+    id: b2bCustomerId,
+    type: 'company',
+    companyInfo: { legalName: `Testhandel GmbH ${stamp}` },
+    vatNumber: `DE${String(stamp).slice(-9)}`,
+    vatNumberValid: true,
+  });
+  b2bAddressId = (
+    await new AddressService(db).addForCustomer({
+      customerId: b2bCustomerId,
+      line1: 'Hauptstraße 12',
+      postalCode: rotaKodu,
+      city: 'Kehl',
+      country: 'DE',
+    })
+  ).id;
   SettingsService.invalidate();
 });
 
 beforeEach(async () => {
-  await db.from('order').delete().eq('customer_id', customerId);
+  await db.from('order').delete().in('customer_id', [customerId, b2bCustomerId]);
 });
 
 afterAll(async () => {
-  await db.from('order').delete().eq('customer_id', customerId);
+  await db.from('order').delete().in('customer_id', [customerId, b2bCustomerId]);
   await db.from('stock').delete().eq('variant_id', variantId);
-  await db.from('address').delete().eq('customer_id', customerId);
+  await db.from('address').delete().in('customer_id', [customerId, b2bCustomerId]);
   await db.from('delivery_zone').delete().eq('id', zoneId);
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
-    authUserIds: [authUserId],
+    authUserIds: [authUserId, b2bAuthUserId],
     warehouseIds: [routeWarehouseId, shippingWarehouseId],
   });
   SettingsService.invalidate();
@@ -164,5 +198,68 @@ describe('kargo siparişi taslağı', () => {
     // ödemeye geçtikten SONRA.
     const outcome = await createCheckoutDraft({ ...base(), entries: entries() });
     expect(outcome.status).toBe('blocked_lines');
+  });
+});
+
+/**
+ * KDV işlemi (03.10 · DOMAIN §5) — **sınanan şey motor değil, motorun ÇAĞRILDIĞI.**
+ *
+ * `resolveVatTreatment` yazılıydı, testliydi ve hiçbir yerden çağrılmıyordu: `vat_treatment`
+ * kolonunu yazan tek şey `default 'domestic'`ti. Motorun kendi testi bu açığı göremezdi — test
+ * motoru zaten elle çağırıyor. Görülebileceği tek yer burası: sepetten doğan gerçek bir siparişin
+ * satırına bakmak.
+ *
+ * Kurulum bu dosyada, ayrı bir dosyada DEĞİL: reverse charge DE'ye teslimat ister, DE teslimatı
+ * kargo deposu ister ve `warehouse_single_online` (0031) ülke başına tek aktif kargo deposuna izin
+ * verir. İkinci bir dosya kendi DE kargo deposunu kursaydı, paralel koşan bu dosyayla çakışır ve
+ * ortaya tekrarlanmayan bir düşüş çıkardı (`CLAUDE.md §4b`).
+ */
+describe('KDV işlemi — sipariş anında çözülür', () => {
+  const b2bBase = () => ({
+    locale: 'tr' as const,
+    customerId: b2bCustomerId,
+    addressId: b2bAddressId,
+    deliveryDate: null,
+    paymentMethod: 'online' as const,
+  });
+
+  it('DE + B2B + doğrulanmış vergi no → reverse charge; kalem KDV\'si %0 ve numara siparişe kopyalanır', async () => {
+    const outcome = await createCheckoutDraft({ ...b2bBase(), entries: entries(), shippingOrder: true });
+    expect(outcome.status).toBe('ok');
+    if (outcome.status !== 'ok') return;
+
+    const record = (await new OrderService(db).getWithItems(outcome.orderId))!;
+    expect(record.order.channel).toBe('b2b');
+    expect(record.order.vatTreatment).toBe('intra_eu_b2b_reverse_charge');
+    // Ürünün kendi oranı 5,5 (şema varsayılanı) — %0 kalemin ORANINDA uygulanmalı, yalnız başlıkta
+    // değil: muhasebe dışa aktarımı ve kâr hesabı kalem oranından da geçiyor.
+    expect(record.items.length).toBeGreaterThan(0);
+    expect(record.items.every((i) => i.vatRate === 0)).toBe(true);
+    // Denetim kanıtı: müşteri numarasını sonradan değiştirse bile sipariş neden KDV kesilmediğini
+    // kendi üstünde taşır (`addressSnapshot` ile aynı kural).
+    expect(record.order.vatNumberSnapshot).toBe(`DE${String(stamp).slice(-9)}`);
+  });
+
+  it('DOĞRULANMAMIŞ vergi numarası %0 açmaz — yurt içi kalır', async () => {
+    // Asıl riskli dal bu: yanlış %0 uygulamanın bedelini biz öderiz, eksik %0'ınkini müşteri geri
+    // ister. Motor `vatNumberValid === true` şartını koşuyor; burada sınanan, uygulama katmanının
+    // o üçüncü hâli (`null` = hiç sorulmadı) motora DOĞRU çevirdiği.
+    const profiles = new UserProfileService(db);
+    await profiles.update({ id: b2bCustomerId, vatNumberValid: null });
+    try {
+      const outcome = await createCheckoutDraft({ ...b2bBase(), entries: entries(), shippingOrder: true });
+      expect(outcome.status).toBe('ok');
+      if (outcome.status !== 'ok') return;
+
+      const record = (await new OrderService(db).getWithItems(outcome.orderId))!;
+      expect(record.order.vatTreatment).toBe('domestic');
+      expect(record.items.every((i) => i.vatRate > 0)).toBe(true);
+      // Kanıt yalnız %0 uygulandığında yazılır: yurt içi bir siparişte numara taşımak, kolonu okuyan
+      // denetçiye "burada reverse charge var" dedirtirdi.
+      expect(record.order.vatNumberSnapshot).toBeNull();
+    } finally {
+      // Değiştirdiğini geri koy (`CLAUDE.md §4b`): sıra değişirse ilk test bu satırı bozuk bulurdu.
+      await profiles.update({ id: b2bCustomerId, vatNumberValid: true });
+    }
   });
 });

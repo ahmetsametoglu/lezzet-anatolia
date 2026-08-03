@@ -8,7 +8,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { cityMatchesPlaces, deriveChannel } from '@lezzet/domain-core';
+import { cityMatchesPlaces, deriveChannel, resolveVatTreatment } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import type { DeliveryType, LocalizedText, OrderItemInsert, PaymentMethod } from '@lezzet/types';
@@ -134,6 +134,27 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
   const address = (await new AddressService(db).listByCustomer(customer.id)).find((a) => a.id === input.addressId);
   if (!address) return { status: 'address_not_found' };
 
+  // ── KDV İŞLEMİ: KANAL + TESLİMAT ÜLKESİ (03.10 · DOMAIN §5) ───────────────
+  // Motor (`resolveVatTreatment`) yazılıydı, testliydi ve HİÇBİR YERDEN ÇAĞRILMIYORDU: `vat_treatment`
+  // kolonunu yazan tek şey `default 'domestic'`ti. Somut sonucu bir özellik eksiği değil, YANLIŞ
+  // FATURAYDI — VIES ile doğrulanmış vergi numarası olan Alman B2B müşteriye Fransız KDV'si kesiliyor
+  // ve faturaya "Autoliquidation" ibaresi girmiyordu; müşteri kendi ülkesinde beyan edemediği bir
+  // KDV ödüyordu. Muhasebe dışa aktarımı (`accounting/export`) ve kâr hesabı bu kolonu ZATEN okuyor,
+  // yani kayıt hep "yurt içi" diyordu.
+  //
+  // Ülke ADRESTEN gelir, müşterinin kimliğinden değil: belirleyen malın gittiği yerdir. Kanal ise
+  // aşağıda siparişe yazılanla AYNI ifadeden çıkar — iki yerde ayrı türetilseydi biri bir gün
+  // ötekinden ayrılır ve sipariş kendi KDV'siyle çelişirdi.
+  const channel = deriveChannel({ isCompany: customer.type === 'company' });
+  // `vatNumberValid` üç değerlidir (`null` = hiç sorulmadı) ve motor ancak `true`da reverse charge
+  // dalını açar; `?? undefined` o üçüncü hâli motorun sözleşmesine çevirir — doğrulanmamış numara
+  // %0 açmaz, çünkü yanlış %0 uygulamak bizim riskimizdir.
+  const vat = resolveVatTreatment({
+    channel,
+    deliveryCountry: address.country,
+    vatNumberValid: customer.vatNumberValid ?? undefined,
+  });
+
   // 2) DEPO önce: sepet hangi deponun stoğuyla okunacağını bilmek zorunda (19.9). Tasarımın
   //    "adres kazanır" kuralı burada uygulanır — seçilen adresin kodu şeritteki koddan farklıysa
   //    sepet o anda o adrese göre değerlendirilir, şerit yalnız bir varsayılandı.
@@ -234,7 +255,10 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
 
   // 4) Ödeme seçenekleri + kargo ücreti + KDV kırılımı. Kalem oranları kalem kalem geçilir:
   //    kargonun KDV'si taşıdığı malın oranını izler, tek oran varsaymak karışık sepette yanlış.
-  const items = await expandToOrderItems(db, cart.lines, discountSharesOf(cart));
+  // Reverse charge'da kalem oranı SIFIRLANIR: `zeroRated` "ürünün kendi oranı geçerli değil"
+  // demektir. Kargonun KDV'si taşıdığı malın oranını izlediği için (`apportionShippingVat`) ücret
+  // de kendiliğinden sıfırlanır — ayrıca sıfırlamak, aynı kuralın ikinci bir tanımı olurdu.
+  const items = await expandToOrderItems(db, cart.lines, discountSharesOf(cart), vat.zeroRated);
   const options = await resolveCheckoutPayment({
     customerId: customer.id,
     deliveryType,
@@ -261,7 +285,7 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
       // Sipariş TEK depodan çıkar (DOMAIN §17) ve kaynağı ADRESİN posta kodudur — uzaktan siparişte
       // varsayılan depo kavramı yoktur (C2). Yer çözümü teslimat kararıyla aynı turda yapıldı.
       warehouseId: orderWarehouseId,
-      channel: deriveChannel({ isCompany: customer.type === 'company' }),
+      channel,
       orderSource: 'web',
       status: 'draft',
       idempotencyKey: input.idempotencyKey ?? null,
@@ -274,6 +298,12 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
       addressId: address.id,
       addressSnapshot: { ...address },
       deliveryCountry: address.country,
+      vatTreatment: vat.treatment,
+      // **Vergi numarasının o ANKİ kopyası** — yalnız %0 uygulandığında (kolonun künyesi: "reverse
+      // charge'da o anki geçerli no, denetim kanıtı"). Müşteri numarasını sonradan değiştirse ya da
+      // silse bile, altı ay sonra bir denetçi "bu siparişte neden KDV kesilmemiş" diye sorduğunda
+      // cevap siparişin kendisinde durur — `addressSnapshot` ile aynı kural.
+      vatNumberSnapshot: vat.zeroRated ? customer.vatNumber : null,
       // Servis cent alıyor (02.9): iki `fromCents` kalktı, motorun çıktısı doğrudan gidiyor.
       shippingFeeCents: options.shippingFeeCents,
       totalCents: options.orderTotalCents,
@@ -316,6 +346,8 @@ async function expandToOrderItems(
   db: ReturnType<typeof serviceDb>,
   lines: readonly CartLine[],
   shares: readonly number[],
+  /** Reverse charge (`vat.zeroRated`) — kalem oranı ürünün kendi oranı DEĞİL, sıfırdır. */
+  zeroRated: boolean,
 ): Promise<Omit<OrderItemInsert, 'orderId'>[]> {
   const items = new BundleItemService(db);
   const bundleItems = new Map(
@@ -333,7 +365,9 @@ async function expandToOrderItems(
   const variants = await new ProductVariantService(db).listByIds([...new Set(variantIds)]);
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
   const vatByProduct = new Map(products.map((p) => [p.id, p.vatRate]));
-  const vatByVariant = new Map(variants.map((v) => [v.id, vatByProduct.get(v.productId) ?? 0]));
+  // Sıfırlama HARİTANIN kendisinde: kalem ve paket parçası aynı haritadan okuyor, iki çağrı yerine
+  // ayrı ayrı koşul yazsaydık biri bir gün ötekinden ayrılır ve paketli sipariş KDV'li kalırdı.
+  const vatByVariant = new Map(variants.map((v) => [v.id, zeroRated ? 0 : (vatByProduct.get(v.productId) ?? 0)]));
 
   const rows: Omit<OrderItemInsert, 'orderId'>[] = [];
   lines.forEach((line, index) => {
