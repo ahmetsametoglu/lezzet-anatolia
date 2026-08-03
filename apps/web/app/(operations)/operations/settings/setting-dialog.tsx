@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
+import { FieldShell } from '@/components/operation/form/field-shell';
 import { InputField } from '@/components/operation/form/input';
 import { MoneyField, PercentField } from '@/components/operation/form/money-input';
 import { Select } from '@/components/operation/form/select';
@@ -33,12 +34,14 @@ import type { SettingValue } from './settings-catalog';
 interface SettingDialogProps {
   row: SettingRowView;
   scopeOptions: ScopeOptions;
+  /** `account` türündeki ayarın seçenekleri — yalnız aktif hesaplar (`page.tsx`). */
+  accountOptions: { value: string; label: string }[];
   propagationSeconds: number;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export function SettingDialog({ row, scopeOptions, propagationSeconds, onClose, onSaved }: SettingDialogProps) {
+export function SettingDialog({ row, scopeOptions, accountOptions, propagationSeconds, onClose, onSaved }: SettingDialogProps) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(row, row.value));
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -83,9 +86,13 @@ export function SettingDialog({ row, scopeOptions, propagationSeconds, onClose, 
       maxWidth={520}
       footer={
         <div className="flex w-full items-center gap-2.5">
-          <Button variant="secondary" disabled={pending || !row.changed} onClick={() => run(() => resetSettingAction({ key: row.key }))}>
-            Varsayılana dön
-          </Button>
+          {/* Dönülecek bir yer yoksa düğme HİÇ çizilmez, devre dışı da değil: devre dışı bir
+              "Varsayılana dön", bir varsayılanın var olduğunu ama şu an dönülemediğini söyler. */}
+          {row.fallbackDisplay === null ? null : (
+            <Button variant="secondary" disabled={pending || !row.changed} onClick={() => run(() => resetSettingAction({ key: row.key }))}>
+              Varsayılana dön
+            </Button>
+          )}
           <Button variant="primary" className="ml-auto" disabled={pending} onClick={saveGeneral}>
             {pending ? 'Kaydediliyor…' : 'Kaydet'}
           </Button>
@@ -94,8 +101,12 @@ export function SettingDialog({ row, scopeOptions, propagationSeconds, onClose, 
     >
       <div className="flex flex-col gap-4">
         <section className="flex flex-col gap-1.5">
-          <ValueEditor row={row} draft={draft} onChange={setDraft} label="Genel değer" />
-          <span className="font-ops-body text-ops-micro text-ops-faint">Varsayılan: {row.fallbackDisplay}</span>
+          <ValueEditor row={row} draft={draft} onChange={setDraft} label="Genel değer" accountOptions={accountOptions} />
+          {/* Fabrika değeri olmayan ayarda "Varsayılan: —" yazmak, olmayan bir normal uydurmak
+              olurdu; onun yerine değerin NİYE kurulum-özgü olduğu söyleniyor. */}
+          <span className="font-ops-body text-ops-micro text-ops-faint">
+            {row.fallbackDisplay === null ? 'Fabrika değeri yok — bu seçim kuruluma özgüdür.' : `Varsayılan: ${row.fallbackDisplay}`}
+          </span>
           {liveWarning ? <span className="font-ops-body text-ops-xs text-ops-red">{liveWarning}</span> : null}
         </section>
 
@@ -144,7 +155,13 @@ export function SettingDialog({ row, scopeOptions, propagationSeconds, onClose, 
                   placeholder={`${SCOPE_AXIS_LABELS[exceptionAxis]} seçin`}
                   options={scopeOptions[exceptionAxis]}
                 />
-                <ValueEditor row={row} draft={exceptionDraft} onChange={setExceptionDraft} label="Bu kapsamdaki değer" />
+                <ValueEditor
+                  row={row}
+                  draft={exceptionDraft}
+                  onChange={setExceptionDraft}
+                  label="Bu kapsamdaki değer"
+                  accountOptions={accountOptions}
+                />
                 <div className="flex items-center gap-2">
                   <Button size="sm" variant="secondary" disabled={pending} onClick={() => setExceptionAxis(null)}>
                     Vazgeç
@@ -205,9 +222,11 @@ interface ValueEditorProps {
   draft: Draft;
   onChange: (draft: Draft) => void;
   label: string;
+  /** `account` türü için seçenekler; başka türlerde kullanılmaz. */
+  accountOptions: { value: string; label: string }[];
 }
 
-function ValueEditor({ row, draft, onChange, label }: ValueEditorProps) {
+function ValueEditor({ row, draft, onChange, label, accountOptions }: ValueEditorProps) {
   switch (row.kind) {
     case 'money':
       return (
@@ -249,6 +268,24 @@ function ValueEditor({ row, draft, onChange, label }: ValueEditorProps) {
     case 'text':
       return (
         <InputField label={label} value={typeof draft.raw === 'string' ? draft.raw : ''} onChange={(e) => onChange({ raw: e.target.value, numeric: null })} />
+      );
+    /**
+     * Hesap SEÇİLİR, yazılmaz. Serbest kutu bırakmak operatörden bir uuid ezberlemesini istemek
+     * olurdu; seçici hem o işi yapıyor hem yanlış kimliğin ilk kapısını kapatıyor (ikincisi
+     * `saveSettingAction`'da, çünkü ekranın kısıtı action'ı bağlamaz).
+     *
+     * Liste YALNIZ aktif hesapları taşır (`page.tsx`) — kapatılmış hesap yeni harekete kapalıdır.
+     */
+    case 'account':
+      return (
+        <FieldShell label={label}>
+          <Select
+            value={typeof draft.raw === 'string' ? draft.raw : ''}
+            onChange={(v) => onChange({ raw: v, numeric: null })}
+            placeholder="Hesap seçin"
+            options={accountOptions}
+          />
+        </FieldShell>
       );
     case 'boolean':
       return <ToggleField label={label} on={draft.raw === true} onChange={(on) => onChange({ raw: on, numeric: null })} />;

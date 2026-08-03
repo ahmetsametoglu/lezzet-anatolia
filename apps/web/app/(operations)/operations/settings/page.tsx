@@ -1,4 +1,12 @@
-import { DeliveryZoneService, SettingsService, UserProfileService, WarehouseService, serviceDb, SETTINGS_CACHE_TTL_MS } from '@lezzet/database';
+import {
+  AccountService,
+  DeliveryZoneService,
+  SettingsService,
+  UserProfileService,
+  WarehouseService,
+  serviceDb,
+  SETTINGS_CACHE_TTL_MS,
+} from '@lezzet/database';
 import type { Setting } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { detectDevice } from '@/lib/device';
@@ -44,22 +52,31 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const urlState = parseSettingsUrl(await searchParams);
   const db = serviceDb();
 
-  const [settings, staff, zones, warehouses] = await Promise.all([
+  const [settings, staff, zones, warehouses, accounts] = await Promise.all([
     readAllSettings(new SettingsService(db)),
     readStaff(new UserProfileService(db)),
     new DeliveryZoneService(db).list(),
     new WarehouseService(db).list(),
+    // TÜM hesaplar (pasifler dahil): ad sözlüğü kapatılmış bir hesabın adını da bilmeli — ayar
+    // bugün ona işaret ediyorsa ekran ham uuid göstermemeli. Seçenek listesi ayrı ve dar.
+    new AccountService(db).list(),
   ]);
 
-  const { rows } = toSettingRows({ settings, zones });
+  const { rows } = toSettingRows({ settings, zones, accounts });
 
   const data: SettingsData = {
     rows,
     staff: toStaffRows(staff, warehouses),
-    scopeOptions: toScopeOptions(zones),
+    // İstisna hedefleri YALNIZ aktif depolardan: kapalı bir tesise ayar yazmak, hiç okunmayacak
+    // bir kural yazmaktır. Ad sözlüğü ayrı (`toSettingRows`) ve tam listeden — kapalı bir depoya
+    // yazılmış eski bir istisna adıyla görünmeli ki kaldırılabilsin.
+    scopeOptions: toScopeOptions(zones, warehouses.filter((w) => w.isActive)),
     // Kapsam seçimi YALNIZ aktif depolardan: kapalı bir tesise personel bağlamak, kişiye
     // göremeyeceği bir kapsam vermektir.
     warehouseOptions: warehouses.filter((w) => w.isActive).map((w) => ({ value: w.id, label: `${w.code} · ${w.name}` })),
+    // Seçenekler YALNIZ aktif hesaplardan (gerekçe `settings-types.ts`); ad sözlüğü ise
+    // yukarıdaki tam listeden — kapalı bir hesap seçilemez ama seçilmişse adıyla görünür.
+    accountOptions: accounts.filter((a) => a.isActive).map((a) => ({ value: a.id, label: a.name })),
     propagationSeconds: Math.round(SETTINGS_CACHE_TTL_MS / 1000),
   };
 

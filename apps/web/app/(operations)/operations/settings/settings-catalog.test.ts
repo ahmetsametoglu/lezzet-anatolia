@@ -49,6 +49,25 @@ describe('ayar sözlüğü ↔ migration', () => {
   });
 
   for (const def of SETTING_CATALOG) {
+    if (def.fallback === undefined) {
+      /**
+       * FABRİKA DEĞERİ OLMAYAN AYAR — ve bu bir eksiklik değil, karar.
+       *
+       * `door_cash_account_id` bir hesap kimliği taşıyor ve o kimlik her kurulumda başka;
+       * migration'a uuid gömmek, hiçbir yerde karşılığı olmayan bir hesabı işaret eden bir satır
+       * bırakırdı. Nöbetin bu yönü olmasaydı kural tek taraflı kalırdı: migration'a sonradan
+       * eklenen bir fabrika değeri sözlükte görünmeden yaşar, ekran "Varsayılana dön" sunmadığı
+       * bir ayarın aslında bir varsayılanı olduğunu hiç öğrenmezdi.
+       */
+      it(`${def.key} — fabrika değeri YOK, migration da yazmamalı`, () => {
+        expect(
+          seeded.has(def.key),
+          `${def.key} sözlükte fabrika değersiz ama migration onu yazıyor — ikisinden biri yanlış`,
+        ).toBe(false);
+      });
+      continue;
+    }
+
     it(`${def.key} — fabrika değeri migration ile aynı`, () => {
       expect(seeded.has(def.key), `${def.key} hiçbir migration'da tanımlı değil`).toBe(true);
       expect(seeded.get(def.key)).toEqual(def.fallback);

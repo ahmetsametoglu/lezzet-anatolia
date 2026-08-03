@@ -101,6 +101,80 @@ describe('toSettingRows', () => {
   });
 });
 
+describe('depo ekseni — arka uç açtı, ekran kabloladı (03.08)', () => {
+  const WAREHOUSES = [{ id: 'w-1', code: 'STR', name: 'Strasbourg' }];
+
+  it('istisna hedefleri arasında depo var — kod ÖNDE, ekranın geri kalanıyla aynı yazım', () => {
+    expect(toScopeOptions(ZONES, WAREHOUSES).warehouse).toEqual([{ value: 'w-1', label: 'STR · Strasbourg' }]);
+  });
+
+  it('depo listesi verilmezse eksen BOŞ kalır, çökmez', () => {
+    expect(toScopeOptions(ZONES).warehouse).toEqual([]);
+  });
+
+  it('depo istisnası adıyla okunur', () => {
+    const rows = toSettingRows({
+      settings: [setting({ key: 'order_cutoff_time', scopeType: 'warehouse', scopeId: 'w-1', value: '14:00' })],
+      zones: ZONES,
+      warehouses: WAREHOUSES,
+    }).rows;
+    expect(rows.find((r) => r.key === 'order_cutoff_time')!.exceptions[0]).toMatchObject({
+      scopeLabel: 'Depo: STR · Strasbourg',
+      display: '14:00',
+    });
+  });
+
+  it('SİLİNMİŞ deponun istisnası GİZLENMEZ — görünmeyen istisna kaldırılamaz', () => {
+    // Ad sözlüğünde yoksa satır yine listelenir; sessizce düşseydi okunmaya devam eden ama
+    // ekranda olmayan bir kural kalırdı.
+    const rows = toSettingRows({
+      settings: [setting({ key: 'order_cutoff_time', scopeType: 'warehouse', scopeId: 'w-yok', value: '14:00' })],
+      zones: ZONES,
+      warehouses: WAREHOUSES,
+    }).rows;
+    expect(rows.find((r) => r.key === 'order_cutoff_time')!.exceptions[0]!.scopeLabel).toBe('Depo: bilinmeyen depo');
+  });
+
+  it('depo ekseni HER ayarda açık değil — sözlük `0016`nın adaylarını izler', () => {
+    const rows = toSettingRows({ settings: [], zones: ZONES }).rows;
+    const has = (key: string) => rows.find((r) => r.key === key)!.exceptionScopes.includes('warehouse');
+    expect(has('order_cutoff_time')).toBe(true); // adaylardan: kesim saati
+    expect(has('route_delivery_unit_cost_cents')).toBe(true); // adaylardan: rota birim maliyeti
+    expect(has('near_expiry_percent')).toBe(false); // "raf ömrü eşikleri global kalır"
+  });
+});
+
+describe('fabrika değeri OLMAYAN ayar — kapı önü satış kasası (AÇIK 3)', () => {
+  const ACCOUNTS = [{ id: '1dd7ec2f-27bb-462a-9873-cbbf5a16d885', name: 'Kasa' }];
+  const row = (settings: Setting[] = [], accounts = ACCOUNTS) =>
+    toSettingRows({ settings, zones: ZONES, accounts }).rows.find((r) => r.key === 'door_cash_account_id')!;
+
+  it('kimlik değil AD gösterilir — operatör uuid okumaz', () => {
+    const view = row([setting({ key: 'door_cash_account_id', value: ACCOUNTS[0]!.id })]);
+    expect(view.display).toBe('Kasa');
+  });
+
+  it('ad sözlüğü yoksa HAM KİMLİK görünür — uydurma bir ad yazılmaz', () => {
+    // "Bilinmeyen hesap" demek, yanlış bir şeyin düzeldiğini düşündürürdü; kimlik en azından aranabilir.
+    const view = row([setting({ key: 'door_cash_account_id', value: ACCOUNTS[0]!.id })], []);
+    expect(view.display).toBe(ACCOUNTS[0]!.id);
+  });
+
+  it('hiç seçilmemişse "seçilmedi" der — boş bir tire değil', () => {
+    expect(row().display).toBe('— seçilmedi');
+  });
+
+  it('fabrika değeri YOK: dönülecek varsayılan da yok', () => {
+    // Ekran bu satırda "Varsayılana dön" düğmesini hiç çizmiyor; `null` o kararın kaynağı.
+    expect(row().fallbackDisplay).toBeNull();
+  });
+
+  it('"varsayılandan farklı" İŞARETLENMEZ — karşılaştırılacak bir normal yok', () => {
+    // Kurulumun kendi seçimi; onu "değiştirilmiş" saymak olmayan bir normalden sapma uydurmaktı.
+    expect(row([setting({ key: 'door_cash_account_id', value: ACCOUNTS[0]!.id })]).changed).toBe(false);
+  });
+});
+
 describe('filterSettingRows', () => {
   const { rows } = toSettingRows({ settings: [], zones: ZONES });
 

@@ -103,6 +103,18 @@ export interface SettingDef {
 const CHANNEL_ONLY = ['channel'] as const;
 const NONE = [] as const;
 
+/**
+ * Depo istisnası HANGİ ayarlarda açık — ve bu liste uydurulmadı, `0016`'nın kendi künyesinden
+ * geldi: *"Depo bazlı olmaya aday değerler: kesim saati, rota teslimat birim maliyeti (kâr
+ * hesabına girer — global kalırsa kâr sessizce yanlışlaşır), paketleme maliyeti, minimum sepet.
+ * TTL ve raf ömrü eşikleri global kalır."*
+ *
+ * Ekseni AÇMAK ile her ayara AÇMAK ayrı iki karar. İkincisini yapmadım: bir eşiğin depo başına
+ * ayrışabilir olması iş kuralıdır, ekranın tercihi değil — ve gereksiz açılan her eksen, operatöre
+ * "burası da bölünebilir" diye yanlış bir davet olur.
+ */
+const WITH_WAREHOUSE = (...rest: readonly ExceptionScope[]): readonly ExceptionScope[] => ['warehouse', ...rest];
+
 export const SETTING_CATALOG: readonly SettingDef[] = [
   // ── Sipariş & teslimat ────────────────────────────────────────────────────
   {
@@ -113,7 +125,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     kind: 'money',
     min: 0,
     impact: 'Geniş etkili: yükseltmek küçük sepetli müşterilerin siparişini engeller. Değişiklik geleceğe uygulanır, verilmiş siparişleri etkilemez.',
-    exceptionScopes: ['channel', 'zone', 'country'],
+    exceptionScopes: WITH_WAREHOUSE('channel', 'zone', 'country'),
     fallback: 0,
   },
   {
@@ -144,7 +156,9 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     group: 'order',
     kind: 'time',
     impact: 'Geniş etkili: kesim saatini öne çekmek, bugüne yetişeceğini sanan siparişleri yarına atar.',
-    exceptionScopes: ['zone'],
+    // `0016`'nın adayları arasında ADIYLA geçiyor: "depolar farklı şehirlerde, kurye anlaşmaları
+    // ve kesim saatleri ayrışır" — depo ekseninin en somut gerekçesi bu ayar.
+    exceptionScopes: WITH_WAREHOUSE('zone'),
     fallback: '16:00',
   },
   {
@@ -364,7 +378,9 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     kind: 'money',
     min: 0,
     impact: 'Geçmiş siparişlerin sabitlenmiş rakamlarını DEĞİŞTİRMEZ; yalnız bundan sonraki hesaplara girer.',
-    exceptionScopes: ['zone'],
+    // `0016` bu ayarı gerekçesiyle sayıyor: "kâr hesabına girer — global kalırsa kâr sessizce
+    // yanlışlaşır". İki depo iki ayrı kurye anlaşması demek; tek sayı ikisini de yanlış anlatır.
+    exceptionScopes: WITH_WAREHOUSE('zone'),
     fallback: 250,
   },
   {
@@ -374,7 +390,8 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     group: 'cost',
     kind: 'money',
     min: 0,
-    exceptionScopes: NONE,
+    // `0016`'nın dördüncü adayı. Paket malzemesi depoda alınır ve fiyatı tesise göre değişir.
+    exceptionScopes: WITH_WAREHOUSE(),
     fallback: 120,
   },
   {

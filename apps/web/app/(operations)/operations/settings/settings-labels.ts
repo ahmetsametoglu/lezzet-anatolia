@@ -18,10 +18,13 @@ import type { ExceptionScope } from './settings-types';
 
 const CHANNEL_LABELS: Record<string, string> = { b2b: 'B2B (toptan)', b2c: 'B2C (perakende)' };
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const SCOPE_AXIS_LABELS: Record<ExceptionScope, string> = {
   channel: 'Kanal',
   country: 'Ülke',
   zone: 'Bölge',
+  warehouse: 'Depo',
 };
 
 export const STAFF_ROLE_LABELS: Record<Exclude<UserRole, 'customer'>, string> = {
@@ -44,9 +47,26 @@ export function channelLabel(id: string): string {
   return CHANNEL_LABELS[id] ?? id.toLocaleUpperCase('tr');
 }
 
+/**
+ * Kimlik taşıyan değerlerin AD sözlüğü — `scopeLabel`'daki `names` deseninin aynısı.
+ *
+ * Ayar tablosunda `door_cash_account_id` bir uuid tutuyor; ekranda "Kasa" yazmalı. Çeviri burada
+ * yapılamaz (ad veritabanında), o yüzden dışarıdan gelir. Sözlük verilmezse ya da hesap silinmişse
+ * kimliğin kendisi görünür — uydurma bir ad ("Bilinmeyen hesap") operatöre yanlış bir şeyin
+ * düzeldiğini düşündürürdü; ham kimlik en azından aranabilir.
+ */
+interface SettingValueNames {
+  accounts?: ReadonlyMap<string, string>;
+}
+
 /** Değerin operatöre gösterilen hâli. */
-export function formatSettingValue(def: SettingDef, value: SettingValue): string {
+export function formatSettingValue(def: SettingDef, value: SettingValue, names: SettingValueNames = {}): string {
   switch (def.kind) {
+    case 'account': {
+      const id = String(value ?? '').trim();
+      if (!id) return '— seçilmedi';
+      return names.accounts?.get(id) ?? id;
+    }
     case 'money':
       return money(asNumber(value));
     case 'percent':
@@ -98,6 +118,17 @@ export function parseSettingValue(def: SettingDef, raw: string | boolean | Recor
 
   if (def.kind === 'text') return { ok: true, value: text };
 
+  /**
+   * Hesap seçimi. Biçim BURADA elenir, VARLIK burada elenemez — hangi hesapların var olduğunu bu
+   * saf fonksiyon bilmez. Varlık kontrolü kapıda (`saveSettingAction`), çünkü ekran bir seçici
+   * sunsa da action doğrudan çağrılabilir ve o zaman uydurma bir uuid ayara yazılırdı: kapı önü
+   * satış sessizce olmayan bir hesaba para yazmaya başlardı.
+   */
+  if (def.kind === 'account') {
+    if (!UUID.test(text)) return { ok: false, error: 'Listeden bir hesap seçin.' };
+    return { ok: true, value: text };
+  }
+
   if (def.kind === 'time') {
     // Saat 24 saatlik ve iki haneli: "9:5" gibi bir yazım veride sıralanamaz ve karşılaştırılamaz.
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(text)) return { ok: false, error: 'Saat SS:DD biçiminde olmalı (örnek: 16:00).' };
@@ -122,9 +153,16 @@ export function checkBounds(def: SettingDef, value: number): string | null {
 }
 
 /** Kapsam satırının ekseni + hedefi: "Kanal: B2B (toptan)". */
-export function scopeLabel(scope: ExceptionScope, scopeId: string, names: { zones: Map<string, string> }): string {
+export function scopeLabel(
+  scope: ExceptionScope,
+  scopeId: string,
+  names: { zones: Map<string, string>; warehouses?: Map<string, string> },
+): string {
   if (scope === 'channel') return `${SCOPE_AXIS_LABELS.channel}: ${channelLabel(scopeId)}`;
   if (scope === 'country') return `${SCOPE_AXIS_LABELS.country}: ${scopeId}`;
+  // Kapatılmış ya da silinmiş bir deponun istisnası ortada kalabilir — bölgede olduğu gibi kimliği
+  // GÖSTERİRİZ, satırı gizlemeyiz: görünmeyen bir istisna kaldırılamaz ve sessizce okunmaya devam eder.
+  if (scope === 'warehouse') return `${SCOPE_AXIS_LABELS.warehouse}: ${names.warehouses?.get(scopeId) ?? 'bilinmeyen depo'}`;
   // Silinmiş bir bölgenin istisnası ortada kalabilir: kimliği gösteririz, sessizce gizlemeyiz.
   return `${SCOPE_AXIS_LABELS.zone}: ${names.zones.get(scopeId) ?? 'bilinmeyen bölge'}`;
 }

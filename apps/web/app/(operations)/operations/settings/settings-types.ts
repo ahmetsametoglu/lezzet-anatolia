@@ -9,16 +9,13 @@ import type { SettingsTab, SettingsUrlState } from './settings-url';
 /**
  * İstisna açılabilen eksenler — `global` bir istisna değil, değerin kendisidir.
  *
- * `warehouse` de ŞİMDİLİK dışarıda (03.08). Arka uçta eksen artık AÇIK — `SettingScopeEnum` beş
- * değerli, `SettingScopeContext.warehouseId` var ve çözücü depoyu en özgül eksen olarak arıyor.
- * Eksik olan yalnız bu ekranın kablolaması: `ScopeOptions.warehouse` ve `toScopeOptions`'ın depo
- * listesini alması (veri zaten sayfada — `SettingsData.warehouseOptions`).
- *
- * Burada dışarıda tutulmasının sebebi ekranın kendi ilkesi: **olmayan bir yeteneği varmış gibi
- * göstermemek.** Enum'a eklenip seçenekleri boş kalsaydı operatör "Depo" eksenini görür, seçecek
- * bir şey bulamazdı. Kablolama operasyon şeridinin turunda; o gün bu satırdan `'warehouse'` düşer.
+ * **`warehouse` dahil (03.08).** Arka uç ekseni açtı (`SettingScopeEnum` beş değerli,
+ * `SettingScopeContext.warehouseId`, çözücüde `warehouse > zone > channel > country > global`) ve
+ * bu ekran da onu kablolayınca eksen uçtan uca çalışır hâle geldi. Bir tur boyunca dışarıda
+ * tutulmuştu ve sebebi ekranın kendi ilkesiydi: **olmayan bir yeteneği varmış gibi göstermemek** —
+ * seçenekleri boş bir eksen operatöre "Depo" yazıp seçecek bir şey vermezdi. Artık seçenekleri var.
  */
-export const ExceptionScopeEnum = SettingScopeEnum.exclude(['global', 'warehouse']);
+export const ExceptionScopeEnum = SettingScopeEnum.exclude(['global']);
 export type ExceptionScope = z.infer<typeof ExceptionScopeEnum>;
 
 // ── Yazma girişleri ─────────────────────────────────────────────────────────
@@ -105,6 +102,8 @@ export interface ScopeOptions {
   channel: { value: string; label: string }[];
   country: { value: string; label: string }[];
   zone: { value: string; label: string }[];
+  /** Depo istisnası — yalnız AKTİF depolar: kapalı bir tesise ayar yazmak, okunmayacak bir kural yazmaktır. */
+  warehouse: { value: string; label: string }[];
 }
 
 export interface SettingsData {

@@ -80,6 +80,7 @@ export function SettingsClient({ data, device, urlState }: SettingsClientProps) 
           key={editing.key}
           row={editing}
           scopeOptions={data.scopeOptions}
+          accountOptions={data.accountOptions}
           propagationSeconds={data.propagationSeconds}
           onClose={() => setEditingKey(null)}
           // Pencere AÇIK kalır ve veri tazelenir: bir istisna kaldırıldıktan sonra ikincisini de
