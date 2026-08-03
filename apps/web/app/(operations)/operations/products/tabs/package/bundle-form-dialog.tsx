@@ -15,7 +15,7 @@ import { FormNumber } from '@/components/operation/form/form-input';
 import { FormMoney, PercentField } from '@/components/operation/form/money-input';
 import { ImageCropField } from '@/components/operation/form/image-crop-field';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
-import { FormSection } from '../product/form-section';
+import { FormSection } from '../../components/form-section';
 import { suggestTranslationAction } from '@/lib/ai/translate';
 import {
   createBundleAction,

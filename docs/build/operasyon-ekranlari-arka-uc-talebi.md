@@ -294,3 +294,38 @@ Aktörü uygulama katmanı biliyor (`requireAdmin` zaten kullanıcıyı çözüy
 İndiği tur ekran ayar satırının altına "Murat Y. · 3 Ağustos 10:12" yazar.
 
 **Arka uç cevabı:**
+
+---
+
+## 8. Talepler ekranının (16.3) iki isteği
+
+Ekran yazılıyor; kuyruk sözleşmeniz tasarımın istediği her alanı **tek sorguda** veriyor
+(`ticket_queue` görünümü: müşteri adı · sipariş no · son mesaj · cevap-bekliyor · fotoğraf var mı).
+İki eksik var, ikisi de küçük.
+
+### 8a. `TicketQueueFilter`'a `handledBy` — tasarımın "AI yanıtladı" çipi
+
+Süzgeç beş alan taşıyor (`status · type · awaitingReply · hasOrder · openOnly`); `handled_by` yok,
+oysa görünüm o kolonu zaten veriyor (`ticket_queue` `t.*` seçiyor). Tasarımın çip şeridinde
+"AI yanıtladı" var ve `admin-talepler.md §2` gerekçesini yazıyor: *"AI ajanının otomatik
+karşıladığı talepler kuyrukta ayırt edilir — 'insan görmedi' demek 'izlenmiyor' demek değildir."*
+
+**İstek:** `handledBy?: TicketHandler` — `status`/`type` ile aynı desende tek satır.
+
+**Aciliyeti YOK ve bunu ben söylüyorum:** 16.5 (AI işletme) yazılmadığı için bugün her talep
+`human`; çip inse daima boş liste döner. O yüzden ekran çipi bu turda ÇİZMİYOR. Süzgeç 16.5 ile
+birlikte gelsin — birlikte gelmezse çip yine boş kalır.
+
+### 8b. Durum başına talep sayımı — başlık satırı
+
+Çizimin alt satırı `"3 açık · 2 işlemde · 1 AI yürütüyor"` diyor. Elde yalnız `countOpen()` var.
+
+Yüklenmiş sayfadan saymak YANLIŞ olurdu: kuyruk keyset sayfalı, yani "2 işlemde" aslında "ilk
+sayfada 2 işlemde" demek olurdu — `CLAUDE.md §1`'in "sayfalayan okumanın sayacı sayfadan
+türetilmez" hâli. Ekran o yüzden bugün yalnız açık talep sayısını yazıyor.
+
+**İstek:** `countByStatus(): Promise<Record<TicketStatus, number>>` — tek `group by`. İsterseniz
+`handledBy` kırılımını da aynı çağrıya koyun (çizimin üçüncü sayısı o); ama 8a'daki gibi, AI sayısı
+16.5'e kadar hep 0 olacak.
+
+**Arka uç cevabı:**

@@ -1,4 +1,4 @@
-import { FormSection } from './form-section';
+import { FormSection } from '../../components/form-section';
 import type { ProductFormFields } from './product-form-types';
 
 // Ürün formu — MOBİL sunumu (Sapma 3): tek sütun, alanlar alt alta (uygulama hissi). Görsel üstte

@@ -270,6 +270,45 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ---
 
+### Talepler kuyruğu — çip şeridi sistemin kendi birincil sorusunu sormuyor (03.08, 16.3)
+
+`Operasyon - Talepler.dc.html`'in çip şeridi beş çip taşıyor: **Açık · İşlemde · Çözüldü ·
+Siparişli · AI yanıtladı.** Üçü aynı ekseni (durum) bölüyor, biri sipariş bağı, biri de bugün
+karşılığı olmayan bir hâl (AI — `16.5` yazılmadı, her talep `human`, çip daima boş dönerdi).
+
+Buna karşılık **iki gerçek süzgeç ekranda yok**, ikisi de arka uçta hazır:
+
+- **"Cevap bekliyor"** (`awaitingReply`). Migration'ın kendi künyesi *"kuyruğun tek amacı cevap
+  bekleyeni bekletmemek"* diyor ve görünüm `awaiting_reply`'ı yalnız bunun için türetiyor. Yani
+  sistemin kendi tanımladığı birincil soru ekrandan sorulamıyor. Kuyruk zaten son mesaja göre
+  sıralı ama sıra ile süzgeç aynı şey değil: on beş satırlık kuyrukta "top kimde" ancak satır satır
+  bakılarak anlaşılıyor.
+- **Tip** (`bozuk · eksik · soru · diğer`). `admin-talepler.md §2` daraltma listesinde adıyla
+  yazıyor (*"durum, tip, siparişli/siparişsiz"*), `filter.type` hazır, çizimde çip yok. Tip
+  ayrımı ağırlık ayrımı: bozuk/eksik iade kararına gider, soru tek cevapla kapanır.
+
+**İstenen karar:** çip şeridi nasıl kurulsun? Bugünkü hâli tek eksende (durum) üç çip harcıyor.
+Bir öneri — karar sizin: durum çipleri tek bir seçiciye inip ("Açık/İşlemde/Çözüldü/Hepsi"),
+açılan yere "Cevap bekliyor" ve tip çipleri gelebilir. AI çipi `16.5` ile birlikte döner.
+
+Karar gelene kadar ekran **çizili çipleri** uyguluyor, eksik olanları uydurmuyor (`CLAUDE.md §3`);
+"AI yanıtladı" çizilmiyor çünkü arkasında hiçbir kayıt olamaz.
+
+### Talepler — "Elle talep aç" penceresinin içi çizilmemiş (03.08, 16.3)
+
+Çizimdeki modal genel bir kabuk: başlık + gövde metni + not + iki düğme. Gerçek pencerenin
+istediği alanların hiçbiri yok. Brief tek cümle veriyor (`§3`): *"WhatsApp/telefon
+konuşmasından; müşteri + varsa sipariş seçilir"*, `§4` de tipin belirlendiğini ima ediyor.
+
+Arka ucun beklediği alanlar belli (`openTicket`): **müşteri** (zorunlu) · **tip** (zorunlu) ·
+**anlatım** (zorunlu, boş olamaz) · sipariş (isteğe bağlı) · işaretli kalemler (sipariş seçiliyse)
+· başlık. Yani pencere en az dört alan taşıyacak ve ikisi arama gerektiriyor (müşteri, sipariş).
+
+**İstenen karar:** düzen. Bu ekranın kendi seçici deseni var (`Combobox` uzak arama), o yüzden
+kodlanabilir — ama dört alanlı bir formun çiziminin olmaması, ekranın geri kalanıyla aynı dilde
+durup durmayacağını belirsiz bırakıyor. Karar gelene kadar pencere brief'ten türetilerek, ekranın
+mevcut form kitiyle kurulacak; çizim gelince birebir uygulanır.
+
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
 
 - **AYARLAR: TESLİMAT BÖLGESİ TABLOSU BU EKRANDA DEĞİL, DEPOLAR'DA (03.08, 09.16 ↔ 19.5).**
