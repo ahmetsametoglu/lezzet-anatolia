@@ -89,6 +89,12 @@ hem sızıntısız. Tek satır.
 imleç bir arıza değil, geçersiz bir istek — müşteriye hata göstermek yerine listeyi baştan vermek
 onun göreceği en anlamlı cevap. Küçük ve H1'den bağımsız, ilk turda kapatılabilir.
 
+**Denetim doğrulaması (03.08): H3 KAPANDI** — `catalog/actions.ts:56` `safeParse` + ilk sayfa,
+künyesi bulguya işaret ediyor. H1'in de İLK ŞARTI yerine geldi: `lib/error.ts` künyesi
+dürüstleşti ("BU FUNNEL HAM MESAJ GEÇİRİR ve artık yalnız OPERASYON yüzeyinindir"). Kalan tek
+şey ikinci şart: `getCustomerError` görev satırı (henüz açılmadı) + uygulaması — H1-H2 onunla
+kapanır.
+
 ## H4. İyi desenler (kayıt için — H1'in çözümü bunların genelleşmesi)
 
 - `authErrorMessage(key, locale)` — login akışı: anahtar → yerel metin, bilinmeyene jenerik ✓
