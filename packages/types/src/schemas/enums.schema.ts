@@ -193,17 +193,26 @@ export type TicketStatus = z.infer<typeof TicketStatusEnum>;
  * Talep tür/durumunun OPERASYON yüzeyindeki adı — `ORDER_STATUS_LABELS` ile aynı gerekçe: enum'la
  * aynı dosyada durur ki yeni bir değer eklenince karşılığı da yazılsın. Müşteriye giden metin
  * BURADAN gelmez (yukarıdaki not: iç dil ≠ müşteri dili).
+ *
+ * **Kelimeler ÇİZİMİN kelimeleridir** (`Operasyon - Talepler.dc.html` script bloğu, 03.08 · operasyon
+ * şeridinin talebi). Üçü kodda ayrışmıştı ve biri görünür bir bozulma üretiyordu: `İlgileniliyor`,
+ * `MultiToggle`'ın eşit genişlikteki üç segmentine sığmayıp komşusunun üstüne taşıyordu.
+ *
+ * `Hasarlı geldi` → `Bozuk` değişiminde bir nüans kaybı var ve talebi açan bunu kendisi sordu:
+ * "Bozuk" ürünü, "Hasarlı geldi" olayı anlatır. Kısa olanı seçildi çünkü **ayrımı zaten enum
+ * anahtarı taşıyor** (`damaged` ≠ `defective`) ve etiket bir çipte okunuyor — dar sütunda iki
+ * kelime satırı büyütüyordu. Kaybedilen nüans kodda duruyor, kazanılan yer ekranda.
  */
 export const TICKET_TYPE_LABELS: Record<TicketType, string> = {
-  damaged: 'Hasarlı geldi',
-  missing: 'Eksik geldi',
+  damaged: 'Bozuk',
+  missing: 'Eksik',
   question: 'Soru',
   other: 'Diğer',
 };
 
 export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
   open: 'Açık',
-  in_progress: 'İlgileniliyor',
+  in_progress: 'İşlemde',
   resolved: 'Çözüldü',
 };
 
