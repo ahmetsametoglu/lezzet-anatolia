@@ -450,6 +450,132 @@
     </div>
   </div>
 
+  <!-- §1C -->
+  <div style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h2 style="margin:0;font:600 21px 'Space Grotesk'">§1C · Depo nesnesinin kendi ekranları <span style="font:400 13px 'Karla';color:#9a6416">— yeni (01.08)</span></h2>
+      <p style="margin:0;font:400 13.5px/1.65 'Karla';color:#6a7065;max-width:900px">§1B ekseni <em>davranışı</em> tanımlar; burada eksenin iki nesnesi var: <strong>tesis</strong> (<a href="Operasyon - Depolar.dc.html">Depolar</a> — künye ve kapatmanın sonuçları) ve <strong>sevkiyat</strong> (<a href="Operasyon - Transfer.dc.html">Transfer</a> — iki depo arasındaki mal). İkisi de yönetim nesnesidir: <strong>depo bağlamı Depolar listesini daraltmaz</strong>, Transfer'i daraltır (o bir veri ekranıdır).</p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:11px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O3F · Tesis kartı satırı — üç hâl</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Kod <strong>ekran etiketi değil belge parçasıdır</strong> (IMH-STR-…, TRF-STR-…): mono, nötr çerçeveli çip. Sıra numarası solda — bu sıra sistemdeki bütün depo seçicilerinde aynıdır. Durum rozeti kartın tonunu da belirler.</span>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <div style="border:1px solid #e6e7e1;background:#fff;border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+          <span style="font:500 11.5px 'IBM Plex Mono';color:#9aa094">1</span>
+          <span style="font:600 12px 'IBM Plex Mono';color:#22251f;background:#eef0ea;border:1px solid #dfe1d9;border-radius:6px;padding:3px 8px">STR</span>
+          <span style="font:600 13.5px 'Space Grotesk';color:#22251f">Strasbourg</span>
+          <span style="font:400 11.5px 'Karla';color:#8b9086;flex:1">Fransa</span>
+          <span style="font:600 10px 'Space Grotesk';color:#2f5a78;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:3px 8px">Kargo çıkışı</span>
+          <span style="font:600 10px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:6px;padding:3px 8px">Aktif</span>
+        </div>
+        <div style="border:1px solid #ecd9b4;background:#fffdf9;border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+          <span style="font:500 11.5px 'IBM Plex Mono';color:#9aa094">4</span>
+          <span style="font:600 12px 'IBM Plex Mono';color:#22251f;background:#eef0ea;border:1px solid #dfe1d9;border-radius:6px;padding:3px 8px">MUL</span>
+          <span style="font:600 13.5px 'Space Grotesk';color:#22251f">Mulhouse</span>
+          <span style="font:500 11px 'Karla';color:#a5443c;background:#fbe9e7;border:1px solid #e2c4c0;border-radius:14px;padding:3px 9px">bölge yok</span>
+          <span style="font:500 11px 'Karla';color:#a5443c;background:#fbe9e7;border:1px solid #e2c4c0;border-radius:14px;padding:3px 9px">personel yok</span>
+          <span style="flex:1"></span>
+          <span style="font:600 10px 'Space Grotesk';color:#8a6410;background:#fdf1e3;border-radius:6px;padding:3px 8px">Kurulumu eksik</span>
+        </div>
+        <div style="border:1px solid #e6e7e1;background:#f8f9f5;border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;opacity:.72">
+          <span style="font:500 11.5px 'IBM Plex Mono';color:#9aa094">5</span>
+          <span style="font:600 12px 'IBM Plex Mono';color:#22251f;background:#eef0ea;border:1px solid #dfe1d9;border-radius:6px;padding:3px 8px">OFB</span>
+          <span style="font:600 13.5px 'Space Grotesk';color:#22251f">Offenburg</span>
+          <span style="font:400 11.5px 'Karla';color:#8b9086;flex:1">geçmiş kayıtlarda 214 sipariş</span>
+          <span style="font:600 10px 'Space Grotesk';color:#6a7065;background:#eef0ea;border-radius:6px;padding:3px 8px">Kapalı</span>
+        </div>
+      </div>
+      <span style="font:400 12.5px/1.65 'Karla';color:#8b9086"><strong>Kurulumu eksik</strong> ve <strong>ülkede kargo deposu yok</strong> hâlleri veriden ölçülür ve sessiz bırakılmaz — ilki kart içi amber şerit, ikincisi liste üstü kırmızı şerittir. Kapalı depo <strong>silinmez</strong>: listede soluk kalır, hiçbir seçicide/süzgeçte/transfer hedefinde görünmez. Ekranda silme eylemi hiç yoktur.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:11px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O3G · Kapatma sonuç blokları — dört ayrı ağırlık</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Tek "emin misiniz?" cümlesi bu kararı anlatmaz. Her sonuç kendi bloğunda, <strong>ağırlık etiketiyle</strong> ve çözüm yoluyla durur. Renk aile: kırmızı = geri dönülmez sonuç, amber = insanı etkileyen, mavi = bekleyen kayıt.</span>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+        <div style="border:1px solid #e2c4c0;background:#fdf7f6;border-radius:10px;padding:10px 12px;display:flex;gap:9px;align-items:flex-start">
+          <span style="font:700 10px 'Space Grotesk';color:#a5443c;background:#fff;border:1px solid #e2c4c0;border-radius:6px;padding:2px 6px;flex:none">EN SERT</span>
+          <span style="font:400 11.5px/1.55 'Karla';color:#4a4f45"><strong style="font:600 12px 'Space Grotesk';color:#a5443c">Stoğu var</strong><br>Mal kayıtta durur, satış okumalarının hiçbirinde görünmez.</span>
+        </div>
+        <div style="border:1px solid #e2c4c0;background:#fdf7f6;border-radius:10px;padding:10px 12px;display:flex;gap:9px;align-items:flex-start">
+          <span style="font:700 10px 'Space Grotesk';color:#a5443c;background:#fff;border:1px solid #e2c4c0;border-radius:6px;padding:2px 6px;flex:none">AĞIR</span>
+          <span style="font:400 11.5px/1.55 'Karla';color:#4a4f45"><strong style="font:600 12px 'Space Grotesk';color:#a5443c">Bağlı bölgesi var</strong><br>Posta kodları sahipsiz kalır — Rotalar'dan devredin.</span>
+        </div>
+        <div style="border:1px solid #ecd9b4;background:#fdf1e3;border-radius:10px;padding:10px 12px;display:flex;gap:9px;align-items:flex-start">
+          <span style="font:700 10px 'Space Grotesk';color:#8a6410;background:#fff;border:1px solid #ecd9b4;border-radius:6px;padding:2px 6px;flex:none">AĞIR</span>
+          <span style="font:400 11.5px/1.55 'Karla';color:#4a4f45"><strong style="font:600 12px 'Space Grotesk';color:#8a6410">Tek kapsamı bu olan personel</strong><br>Kişi kapalı kapıya (O3E) düşer.</span>
+        </div>
+        <div style="border:1px solid #bcd0e0;background:#e6eef3;border-radius:10px;padding:10px 12px;display:flex;gap:9px;align-items:flex-start">
+          <span style="font:700 10px 'Space Grotesk';color:#2f5a78;background:#fff;border:1px solid #bcd0e0;border-radius:6px;padding:2px 6px;flex:none">BEKLEYEN</span>
+          <span style="font:400 11.5px/1.55 'Karla';color:#4a4f45"><strong style="font:600 12px 'Space Grotesk';color:#2f5a78">Yolda ona gelen sevkiyat</strong><br>Kabul edecek yer kalmaz — önce kabul ya da ters sevk.</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-top:1px solid #f0f1ec;padding-top:12px">
+        <div style="border:1px solid #d9dbd2;border-radius:9px;padding:9px 12px;font:500 13px 'IBM Plex Mono';background:#fff;color:#b3b7ac;flex:none">COL</div>
+        <span style="font:400 12.5px/1.65 'Karla';color:#8b9086;flex:1;min-width:240px">Geri dönülmezliği <strong>kodu yazdırarak</strong> teyit ederiz — kurulum işleri hız değil doğruluk ister. Aynı kalıp: ikinci kargo deposu reddi (sebep + <strong>rolü şu an kim taşıyor</strong> + oraya git), yeni ülkede ilk depo mali uyarısı.</span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:11px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O3H · Yoldakiler satırı — çift depo kodu + "yolda" rozeti</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Sevkiyat satırı <strong>iki depoyu da söyler</strong> (O3D'nin tek-kod sütunundan farkı budur): kaynak → hedef, aralarında ok. "Yolda" rozeti ulaşım süresine (Ayarlar, parametrik) göre renk alır — aşan sevkiyat kaybolmuş ya da kabul edilmeyi unutmuş maldır ve iki depoda da satılamaz.</span>
+      <div style="display:flex;flex-direction:column;gap:0;border:1px solid #eceee8;border-radius:10px;overflow:hidden;background:#fff">
+        <div style="display:grid;grid-template-columns:142px 1fr 84px 88px;gap:0 10px;padding:11px 13px;align-items:center;background:#fdf7f6;border-bottom:1px solid #f0e0dd">
+          <span style="font:500 11.5px 'IBM Plex Mono';color:#3a3f37">TRF-COL-26-0011</span>
+          <span style="display:flex;align-items:center;gap:7px"><span style="font:600 11px 'IBM Plex Mono';color:#2f5a78;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:2px 6px">COL</span><span style="color:#9aa094">→</span><span style="font:600 11px 'IBM Plex Mono';color:#2f5a78;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:2px 6px">STR</span></span>
+          <span style="justify-self:center;font:600 10px 'Space Grotesk';color:#a5443c;background:#fbe9e7;border:1px solid #e2c4c0;border-radius:7px;padding:3px 8px">4 gün</span>
+          <span style="justify-self:end;font:600 11px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:7px;padding:5px 10px">Kabul et</span>
+        </div>
+        <div style="display:grid;grid-template-columns:142px 1fr 84px 88px;gap:0 10px;padding:11px 13px;align-items:center">
+          <span style="font:500 11.5px 'IBM Plex Mono';color:#3a3f37">TRF-STR-26-0007</span>
+          <span style="display:flex;align-items:center;gap:7px"><span style="font:600 11px 'IBM Plex Mono';color:#2f5a78;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:2px 6px">STR</span><span style="color:#9aa094">→</span><span style="font:600 11px 'IBM Plex Mono';color:#2f5a78;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:2px 6px">KEHL</span></span>
+          <span style="justify-self:center;font:600 10px 'Space Grotesk';color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6;border-radius:7px;padding:3px 8px">1 gün</span>
+          <span style="justify-self:end;font:600 11px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:7px;padding:5px 10px">Kabul et</span>
+        </div>
+      </div>
+      <span style="font:400 12.5px/1.65 'Karla';color:#8b9086">Belge öneki <strong>kaynak</strong> deponun kodudur (kâğıt nüsha orada dosyalanır). Bu liste <strong>zamanla büyümez</strong> — her kabul birini düşürür; <strong>boş hâl sağlıklıdır</strong> ve "bir şey eksik" tonunda gösterilmez (§2'deki boş-durum kalıbının olumlu varyantı). Sanal "transit depo" çizilmez.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:11px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
+      <span style="font:600 16px 'Space Grotesk'">O3I · Kabul adet girişi — tam / kısmi / boş ≠ sıfır</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Kabul <strong>sayarak</strong> yapılan bir iştir: satır satır, telefon önceliklidir, −/+ ile tek elle. Hata en çok burada olur ve fark <strong>kalıcı kayda</strong> geçer; sessizce eşitlenmez.</span>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <div style="border:1px solid #cdd8b6;background:#f6f9f0;border-radius:10px;padding:11px 12px;display:flex;flex-direction:column;gap:7px">
+          <span style="font:600 12px 'Karla';color:#22251f">Tam kabul</span>
+          <div style="display:flex;align-items:center;gap:7px"><span style="width:28px;height:28px;border-radius:8px;background:#fff;border:1px solid #d9dbd2;color:#6a7065;font:600 15px 'Space Grotesk';display:grid;place-items:center">−</span><span style="flex:1;height:28px;border-radius:8px;background:#fff;border:1px solid #cdd8b6;display:grid;place-items:center;font:600 13px 'IBM Plex Mono';color:#22251f">24</span><span style="width:28px;height:28px;border-radius:8px;background:#fff;border:1px solid #d9dbd2;color:#6a7065;font:600 15px 'Space Grotesk';display:grid;place-items:center">+</span></div>
+          <span style="font:500 10.5px/1.5 'Karla';color:#4a6121">Sevk 24 · fark 0. Hedefte lot ve tarih kopyalanarak yeni parti doğar.</span>
+        </div>
+        <div style="border:1px solid #ecd9b4;background:#fffdf9;border-radius:10px;padding:11px 12px;display:flex;flex-direction:column;gap:7px">
+          <span style="font:600 12px 'Karla';color:#22251f">Kısmi / sıfır kabul</span>
+          <div style="display:flex;align-items:center;gap:7px"><span style="width:28px;height:28px;border-radius:8px;background:#fff;border:1px solid #d9dbd2;color:#6a7065;font:600 15px 'Space Grotesk';display:grid;place-items:center">−</span><span style="flex:1;height:28px;border-radius:8px;background:#fff;border:1px solid #ecd9b4;display:grid;place-items:center;font:600 13px 'IBM Plex Mono';color:#8a6410">14</span><span style="width:28px;height:28px;border-radius:8px;background:#fff;border:1px solid #d9dbd2;color:#6a7065;font:600 15px 'Space Grotesk';display:grid;place-items:center">+</span></div>
+          <span style="font:500 10.5px/1.5 'Karla';color:#8a6410">Sevk 16 · fark −2 kalıcıdır; kaynağa geri yazılmaz. "0" bir <strong>beyandır</strong>: kutu geldi, içi boştu.</span>
+        </div>
+        <div style="border:1px solid #e6e7e1;background:#fff;border-radius:10px;padding:11px 12px;display:flex;flex-direction:column;gap:7px">
+          <span style="font:600 12px 'Karla';color:#22251f">Girilmemiş satır</span>
+          <div style="display:flex;align-items:center;gap:7px"><span style="width:28px;height:28px;border-radius:8px;background:#fff;border:1px solid #d9dbd2;color:#6a7065;font:600 15px 'Space Grotesk';display:grid;place-items:center">−</span><span style="flex:1;height:28px;border-radius:8px;background:#fff;border:1px solid #d9dbd2;display:grid;place-items:center;font:600 13px 'IBM Plex Mono';color:#b3b7ac">—</span><span style="width:28px;height:28px;border-radius:8px;background:#fff;border:1px solid #d9dbd2;color:#6a7065;font:600 15px 'Space Grotesk';display:grid;place-items:center">+</span></div>
+          <span style="font:500 10.5px/1.5 'Karla';color:#8b9086">Eksik kayıt — kabul tamamlanmaz; birincil eylem <strong>pasif</strong> kalır ve hangi satırların beklediği söylenir.</span>
+        </div>
+      </div>
+      <span style="font:400 12.5px/1.65 'Karla';color:#8b9086">Sevk tarafında eşleniği: <strong>FEFO parti önerisi</strong> — sistem sıralar, operatör değiştirir, kilit yok. Karşılanamama <strong>iki ayrı cümledir</strong>: kullanılabilir mal yetmiyor (kırmızı, bir <em>sınır</em>) · mal var ama ömrü yolda yanacak (amber, bir <em>tercih</em> — uyarı engel değildir). Öneri her zaman <strong>kullanılabilir</strong> üzerinden yapılır; ayrılmış mal başka şehre gitmez.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <span style="font:600 16px 'Space Grotesk'">O3J · Kapalı sayfa hâli — tek depolu kurulum</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Transfer tek depoluyken <strong>boş liste göstermez</strong>: kilitli, sebebi ve açılma koşulu yazılı bir kapı. O3E'den farkı, eksik olanın kapsam değil <strong>ikinci tesis</strong> olmasıdır.</span>
+      <div style="max-width:420px;background:#f3f4f0;border:1px dashed #cdd0c6;border-radius:12px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+        <span style="font:600 13px 'Space Grotesk';color:#6a7065">Tek deponuz var</span>
+        <span style="font:400 11.5px/1.55 'Karla';color:#8b9086">İkinci depo açılınca burası çalışır. <a href="Operasyon - Depolar.dc.html">Depolar</a></span>
+      </div>
+      <span style="font:400 12.5px/1.65 'Karla';color:#8b9086">Simetrik hâl Depolar'da: tek satırlık liste + "ikinci depo eklemek sistemi çok depolu hâle geçirir" bilgisi <strong>onaydan önce</strong>. Eksenin doğduğu an bu ekleme akışıdır. Ayrıca <strong>geri alma iki ayrı gerçektir</strong> kartı (kayıt hatalıydı → sevk geri alınır · mal döndü → ters yönde yeni transfer); "iptal" adı ikisini de karşılar gibi durduğu için kullanılmaz.</span>
+    </div>
+
+    <div style="background:#e6eef3;border:1px solid #bcd0e0;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px">
+      <span style="font:600 13px 'Space Grotesk';color:#22251f">Nerede yaşıyor</span>
+      <span style="font:400 12.5px/1.7 'Karla';color:#2f5a78">O3F–O3G: <a href="Operasyon - Depolar.dc.html">Depolar</a> (yalnız yönetici; kenar çubuğunda <em>Sistem</em> grubunda) · O3H–O3J: <a href="Operasyon - Transfer.dc.html">Transfer</a> (<em>Katalog</em> grubunda, Satın Alma'dan sonra — ikisi de malın depoya giriş yoludur). Transfer <strong>tek ekrandır, rolüne göre daralır</strong>: depocu yalnız kendi deposunu, yönetici tüm ağı görür; fiyat/maliyet ve hedefin stoğu depocuya hiç gösterilmez.</span>
+    </div>
+  </div>
+
   <!-- §2 -->
   <div style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:22px">
     <h2 style="margin:0;font:600 21px 'Space Grotesk'">§2 · Liste, tablo, gösterge</h2>

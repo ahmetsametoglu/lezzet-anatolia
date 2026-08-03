@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Karla',sans-serif; }
+  a { color:#4a6121; text-decoration:none; }
+  a:hover { color:#3b4d1a; }
+</style>
+<script src="./doc-page.js"></script>
+</helmet>
+
+<doc-page lang="tr" size="a4" margin="15mm">
+
+  <div slot="header" style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #22251f;padding-bottom:6px;font-family:'Karla',sans-serif">
+    <span style="font:600 13px 'Space Grotesk';color:#22251f">Lezzet Anatolia</span>
+    <span style="font:400 12.5px 'Karla';color:#4a4f45;flex:1">Teslimat özeti — resmî fatura değildir</span>
+    <span style="font:600 13px 'IBM Plex Mono';color:#22251f">LA-26-RFRWKK</span>
+  </div>
+
+  <h1 style="margin:0 0 4px;font:600 30px 'Space Grotesk';color:#22251f;letter-spacing:-.01em">Teslimat özeti</h1>
+  <p style="margin:0 0 20px;font:400 15px/1.6 'Karla';color:#4a4f45">Kutunuzda ne olduğunu gösteren belgedir — sipariş anında değil, <strong>kutu hazırlandıktan sonra</strong> düzenlenir.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;border-top:2px solid #22251f;border-bottom:1px solid #d4d7ce;padding:14px 0 16px;margin-bottom:18px">
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <span style="font:600 11.5px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#6a7065">Gönderen</span>
+      <span style="font:600 16px 'Space Grotesk';color:#22251f">Lezzet Anatolia</span>
+      <span style="font:400 14px/1.55 'Karla';color:#22251f">14 Rue de la Course<br>67000 Strasbourg · Fransa</span>
+      <span style="font:400 14px/1.55 'Karla';color:#4a4f45">+33 3 88 00 00 00 · bonjour@lezzetanatolia.fr</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <span style="font:600 11.5px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#6a7065">Teslim edilen</span>
+      <sc-if value="{{ b2b }}" hint-placeholder-val="{{ false }}">
+        <span style="font:600 16px 'Space Grotesk';color:#22251f">Épicerie du Marché SARL</span>
+        <span style="font:400 13.5px 'Karla';color:#4a4f45">Vergi no FR 42 812 445 990 · Sorumlu: Léa Muller</span>
+      </sc-if>
+      <sc-if value="{{ b2c }}" hint-placeholder-val="{{ true }}">
+        <span style="font:600 16px 'Space Grotesk';color:#22251f">Ayşe Kaya</span>
+      </sc-if>
+      <span style="font:400 14px/1.55 'Karla';color:#22251f">8 Rue des Bouchers, 3e étage<br>67000 Strasbourg</span>
+      <span style="font:400 14px/1.55 'Karla';color:#4a4f45">Teslim günü: 12 Nisan 2026, Perşembe · kapıya teslim</span>
+    </div>
+  </div>
+
+  <table style="width:100%;border-collapse:collapse;margin-bottom:6px">
+    <thead>
+      <tr>
+        <th style="text-align:left;font:600 11.5px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#6a7065;padding:0 8px 7px 0;border-bottom:1.5px solid #22251f">Ürün</th>
+        <th style="text-align:right;font:600 11.5px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#6a7065;padding:0 8px 7px;border-bottom:1.5px solid #22251f;width:98px">Sipariş<br>edilen</th>
+        <th style="text-align:right;font:600 11.5px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#6a7065;padding:0 8px 7px;border-bottom:1.5px solid #22251f;width:98px">Kutuya<br>konan</th>
+        <th style="text-align:right;font:600 11.5px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#6a7065;padding:0 0 7px 8px;border-bottom:1.5px solid #22251f;width:92px">Tutar</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:11px 8px 11px 0;border-bottom:1px solid #e2e3dd;font:400 15px 'Karla';color:#22251f">Fıstıklı Baklava · 700 g</td>
+        <td style="padding:11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:400 15px 'IBM Plex Mono';color:#4a4f45">2</td>
+        <td style="padding:11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:500 15px 'IBM Plex Mono';color:#22251f">2</td>
+        <td style="padding:11px 0 11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:400 15px 'IBM Plex Mono';color:#22251f">37,00 €</td>
+      </tr>
+      <tr>
+        <td style="padding:11px 8px 11px 0;border-bottom:1px solid #e2e3dd;font:400 15px 'Karla';color:#22251f">Şöbiyet · 500 g</td>
+        <td style="padding:11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:400 15px 'IBM Plex Mono';color:#4a4f45">1</td>
+        <td style="padding:11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:500 15px 'IBM Plex Mono';color:#22251f">1</td>
+        <td style="padding:11px 0 11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:400 15px 'IBM Plex Mono';color:#22251f">14,50 €</td>
+      </tr>
+      <sc-if value="{{ kismi }}" hint-placeholder-val="{{ true }}">
+      <tr>
+        <td style="padding:11px 8px 11px 0;border-bottom:1px solid #e2e3dd;font:400 15px 'Karla';color:#22251f;background:#f3f4f0">
+          <span style="display:inline-block;font:700 11px 'Space Grotesk';letter-spacing:.06em;border:1.5px solid #22251f;border-radius:3px;padding:1px 6px;margin-right:8px">EKSİK</span>Zeytinyağı · 750 ml
+        </td>
+        <td style="padding:11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:400 15px 'IBM Plex Mono';color:#4a4f45;background:#f3f4f0">3</td>
+        <td style="padding:11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:700 15px 'IBM Plex Mono';color:#22251f;background:#f3f4f0">1</td>
+        <td style="padding:11px 0 11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:400 15px 'IBM Plex Mono';color:#22251f;background:#f3f4f0">12,90 €</td>
+      </tr>
+      <tr>
+        <td style="padding:11px 8px 11px 0;border-bottom:1px solid #e2e3dd;font:400 15px 'Karla';color:#22251f;background:#f3f4f0">
+          <span style="display:inline-block;font:700 11px 'Space Grotesk';letter-spacing:.06em;border:1.5px solid #22251f;border-radius:3px;padding:1px 6px;margin-right:8px">EKSİK</span>Antep Fıstığı · 250 g
+        </td>
+        <td style="padding:11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:400 15px 'IBM Plex Mono';color:#4a4f45;background:#f3f4f0">1</td>
+        <td style="padding:11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:700 15px 'IBM Plex Mono';color:#22251f;background:#f3f4f0">0</td>
+        <td style="padding:11px 0 11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:400 15px 'IBM Plex Mono';color:#22251f;background:#f3f4f0">—</td>
+      </tr>
+      </sc-if>
+      <tr>
+        <td style="padding:11px 8px 11px 0;border-bottom:1px solid #e2e3dd;font:400 15px 'Karla';color:#22251f">Kayseri Mantısı · 500 g</td>
+        <td style="padding:11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:400 15px 'IBM Plex Mono';color:#4a4f45">2</td>
+        <td style="padding:11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:500 15px 'IBM Plex Mono';color:#22251f">2</td>
+        <td style="padding:11px 0 11px 8px;border-bottom:1px solid #e2e3dd;text-align:right;font:400 15px 'IBM Plex Mono';color:#22251f">19,80 €</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="margin:0 0 20px;font:400 12.5px/1.5 'Karla';color:#6a7065">İki sayı da yazılır: sipariş edilen ile kutuya konan. Konulamayan kalem listeden düşürülmez — sıfır yazar.</p>
+
+  <sc-if value="{{ kismi }}" hint-placeholder-val="{{ true }}">
+  <div style="border:2px solid #22251f;border-radius:4px;padding:14px 16px;margin-bottom:20px;display:flex;flex-direction:column;gap:9px">
+    <span style="font:700 15px 'Space Grotesk';color:#22251f">Bu siparişte 2 kalem eksik gönderildi</span>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div style="display:flex;gap:10px;align-items:baseline;border-bottom:1px dotted #b9b4a4;padding-bottom:7px">
+        <span style="font:600 14.5px 'Karla';color:#22251f;flex:1">Zeytinyağı 750 ml</span>
+        <span style="font:500 14px 'IBM Plex Mono';color:#22251f;flex:none">2 adet eksik</span>
+        <span style="font:400 14px 'Karla';color:#4a4f45;width:200px;text-align:right">Stokta kalmadı</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:baseline">
+        <span style="font:600 14.5px 'Karla';color:#22251f;flex:1">Antep Fıstığı 250 g</span>
+        <span style="font:500 14px 'IBM Plex Mono';color:#22251f;flex:none">1 adet eksik</span>
+        <span style="font:400 14px 'Karla';color:#4a4f45;width:200px;text-align:right">Tazelik nedeniyle çıkarıldı</span>
+      </div>
+    </div>
+    <span style="font:400 13.5px/1.6 'Karla';color:#4a4f45"><strong>Eksik kalemlerin tutarı tahsil edilmez.</strong> Aşağıdaki toplam bu düzeltme yapılmış hâlidir; bir sorunuz olursa sipariş numarasıyla bize ulaşın.</span>
+  </div>
+  </sc-if>
+
+  <div style="display:grid;grid-template-columns:1fr 258px;gap:24px;align-items:start;margin-bottom:22px">
+    <div style="display:flex;gap:14px;align-items:flex-start;border:1px solid #d4d7ce;border-radius:4px;padding:13px 15px">
+      <div style="width:74px;height:74px;flex:none;border:1.5px solid #22251f;display:grid;place-items:center;font:600 10.5px 'Space Grotesk';color:#6a7065;text-align:center;line-height:1.3">QR<br>kodu</div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <span style="font:600 14.5px 'Space Grotesk';color:#22251f">Siparişinizin canlı sayfası</span>
+        <span style="font:400 13.5px/1.55 'Karla';color:#4a4f45">Bu kâğıt bir anlık görüntüdür. İade, düzeltme ve sonraki adımlar sayfada yaşar.</span>
+        <span style="font:500 14px 'IBM Plex Mono';color:#22251f">lezzet.fr/s/RFRWKK</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div style="display:flex;justify-content:space-between;font:400 14.5px 'Karla';color:#4a4f45"><span>Kalemler</span><span style="font-family:'IBM Plex Mono'">84,20 €</span></div>
+      <sc-if value="{{ kismi }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;justify-content:space-between;font:400 14.5px 'Karla';color:#4a4f45"><span>Eksik düzeltmesi</span><span style="font:500 14.5px 'IBM Plex Mono';color:#22251f">−25,80 €</span></div>
+      </sc-if>
+      <div style="display:flex;justify-content:space-between;font:400 14.5px 'Karla';color:#4a4f45;padding-bottom:8px;border-bottom:1px solid #d4d7ce"><span>Teslimat</span><span style="font-family:'IBM Plex Mono'">0,00 €</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:2px">
+        <span style="font:600 15px 'Space Grotesk';color:#22251f">Tahsil edilecek</span>
+        <span style="font:600 21px 'IBM Plex Mono';color:#22251f">{{ toplam }}</span>
+      </div>
+      <div style="border:1.5px solid #22251f;border-radius:4px;padding:9px 11px;display:flex;flex-direction:column;gap:2px">
+        <span style="font:700 12.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#22251f">{{ odemeBaslik }}</span>
+        <span style="font:400 13px/1.5 'Karla';color:#4a4f45">{{ odemeNot }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="border-top:2px solid #22251f;padding-top:12px;display:flex;gap:16px;align-items:flex-start">
+    <span style="font:700 13px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#22251f;border:1.5px solid #22251f;border-radius:3px;padding:5px 9px;flex:none">Resmî fatura değildir</span>
+    <span style="font:400 13px/1.6 'Karla';color:#4a4f45">Bu belge kutunun içeriğini gösterir; muhasebe kaydına fatura olarak konulamaz. Resmî faturanız ayrıca düzenlenir. Belge düzenlenme tarihi: 12 Nisan 2026.</span>
+  </div>
+
+  <div slot="footer" style="display:flex;align-items:baseline;gap:12px;border-top:1px solid #d4d7ce;padding-top:6px;font-family:'Karla',sans-serif">
+    <span style="font:500 12px 'IBM Plex Mono';color:#4a4f45;flex:1">LA-26-RFRWKK · 12.04.2026</span>
+    <span style="font:400 12px 'Karla';color:#6a7065">Sorularınız için: +33 3 88 00 00 00 · lezzet.fr/s/RFRWKK</span>
+  </div>
+
+</doc-page>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;teslimDurumu&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;kismi&quot;,&quot;tam&quot;],&quot;default&quot;:&quot;kismi&quot;,&quot;tsType&quot;:&quot;'kismi'|'tam'&quot;,&quot;section&quot;:&quot;Belge hâli&quot;},&quot;musteriTipi&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;b2c&quot;,&quot;b2b&quot;],&quot;default&quot;:&quot;b2c&quot;,&quot;tsType&quot;:&quot;'b2c'|'b2b'&quot;,&quot;section&quot;:&quot;Belge hâli&quot;},&quot;odeme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;kapida&quot;,&quot;odendi&quot;],&quot;default&quot;:&quot;kapida&quot;,&quot;tsType&quot;:&quot;'kapida'|'odendi'&quot;,&quot;section&quot;:&quot;Belge hâli&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() {
+    const go = () => document.querySelectorAll('doc-page').forEach(d => d._measure && d._measure());
+    go();
+    [60, 250, 700].forEach(t => setTimeout(go, t));
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(go);
+    if (typeof ResizeObserver === 'function') {
+      this._ro = new ResizeObserver(go);
+      document.querySelectorAll('doc-page > [slot="header"], doc-page > [slot="footer"]').forEach(el => this._ro.observe(el));
+    }
+  }
+  componentWillUnmount() { if (this._ro) this._ro.disconnect(); }
+  renderVals() {
+    const kismi = (this.props.teslimDurumu ?? 'kismi') === 'kismi';
+    const b2b = (this.props.musteriTipi ?? 'b2c') === 'b2b';
+    const kapida = (this.props.odeme ?? 'kapida') === 'kapida';
+    return {
+      kismi, b2b, b2c: !b2b,
+      toplam: kismi ? '58,40 €' : '84,20 €',
+      odemeBaslik: kapida ? 'Kapıda ödenecek' : 'Ödendi',
+      odemeNot: kapida
+        ? (kismi ? 'Kuryeye düzeltilmiş tutar ödenir — eksik kalemler tahsil edilmez.' : 'Kuryeye nakit veya kartla ödenir.')
+        : (kismi ? 'Ödeme alındı; eksik kalemlerin tutarı iade edilecektir.' : 'Ödeme alındı, teşekkür ederiz.'),
+    };
+  }
+}
+</script>
+</body>
+</html>

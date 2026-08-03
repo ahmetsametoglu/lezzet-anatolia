@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Depolar — liste &amp; kapatmanın sonuçları · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Yalnız yönetici. Liste veriyle büyümez. <strong>Depo bağlamı bu sayfayı daraltmaz</strong> — depolar yönetim nesnesidir, hepsi her zaman listelenir. Silme yok; yalnız kapatma.</span>
+    </div>
+
+    <div data-screen-label="Depolar Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:660px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="depolar" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">Depolar</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">3 aktif · 1 kapalı · 1 kurulumu eksik · sıra tüm depo seçicilerinde aynıdır</span>
+          </div>
+          <span onClick="{{ openEkle }}" style="font:600 12px 'Space Grotesk';color:#fbfbf9;background:#22251f;border-radius:7px;padding:9px 14px;cursor:pointer">+ Depo</span>
+        </div>
+
+        <div style="padding:9px 24px;background:#fdf7f6;border-bottom:1px solid #f0e0dd;display:flex;align-items:flex-start;gap:9px">
+          <span style="color:#a5443c;flex:none;margin-top:1px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span>
+          <span style="font:500 11.5px/1.55 'Karla';color:#8a3a33"><strong>Almanya'da kargo çıkış deposu yok</strong> — o ülkede bölge dışı müşteriye satış yapılamaz; sipariş deposu çözülemediği için hiç açılmaz. Ülke başına en fazla bir kargo deposu olabilir.</span>
+        </div>
+
+        <div style="overflow-y:auto;flex:1;min-height:0;padding:16px 24px;display:flex;flex-direction:column;gap:11px">
+          <sc-for list="{{ depolar }}" as="d" hint-placeholder-count="5">
+            <div onClick="{{ d.open }}" style="border:1px solid {{ d.bd }};background:{{ d.bg }};border-radius:10px;padding:13px 15px;display:flex;flex-direction:column;gap:9px;cursor:pointer;opacity:{{ d.dim }}">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font:500 12px 'IBM Plex Mono';color:#9aa094;flex:none">{{ d.order }}</span>
+                <span style="font:600 12.5px 'IBM Plex Mono';color:#22251f;background:#eef0ea;border:1px solid #dfe1d9;border-radius:6px;padding:3px 9px;flex:none">{{ d.code }}</span>
+                <span style="font:600 14.5px 'Space Grotesk';color:#22251f">{{ d.name }}</span>
+                <span style="font:400 12px 'Karla';color:#8b9086">{{ d.country }}</span>
+                <span style="flex:1"></span>
+                <sc-if value="{{ d.kargo }}" hint-placeholder-val="{{ true }}">
+                  <span style="font:600 10.5px 'Space Grotesk';color:#2f5a78;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:3px 9px;display:flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v13H1z"></path><path d="M14 8h4l3 3v5h-7"></path><circle cx="5.5" cy="18.5" r="2"></circle><circle cx="17.5" cy="18.5" r="2"></circle></svg>Kargo çıkışı</span>
+                </sc-if>
+                <span style="font:600 10.5px 'Space Grotesk';color:{{ d.stFg }};background:{{ d.stBg }};border-radius:6px;padding:3px 9px">{{ d.status }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font:400 11.5px 'Karla';color:#6a7065;margin-right:auto">{{ d.addr }}</span>
+                <sc-for list="{{ d.stats }}" as="s" hint-placeholder-count="3">
+                  <span style="font:500 11px 'Karla';color:{{ s.fg }};background:{{ s.bg }};border:1px solid {{ s.bd }};border-radius:14px;padding:3px 10px">{{ s.label }}</span>
+                </sc-for>
+              </div>
+              <sc-if value="{{ d.flag }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:8px;padding:8px 11px;display:flex;gap:8px;align-items:flex-start">
+                  <span style="color:#9a6416;flex:none;margin-top:1px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></span>
+                  <span style="font:500 11.5px/1.5 'Karla';color:#8a6410">{{ d.flag }}</span>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <span style="font:400 11.5px/1.6 'Karla';color:#8b9086;padding:2px 2px 4px">Kapalı depo listeden silinmez — geçmiş sipariş ve parti hangi tesisten çıktığını bilmek zorundadır. Hiçbir seçicide, süzgeçte ve transfer hedefinde görünmez.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEPO KARTI: KÜNYE · HİZMET ALANI · KARNE -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Depo kartı — künye · hizmet alanı · karne · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Üçü aynı nesneye ait olduğu için ayrılmaz. <strong>Karne sayar, listelemez</strong> — her sayı Stok'a o depo bağlamıyla giden bir kapıdır. Mal giriş/çıkışı burada değil.</span>
+    </div>
+
+    <div data-screen-label="Depo Karti Web" style="width:1360px;flex:none;height:720px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="depolar" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="width:186px;flex:none;border-right:1px solid #e6e7e1;background:#f8f9f5;display:flex;flex-direction:column;min-height:0">
+        <div style="padding:13px 14px;border-bottom:1px solid #e6e7e1;display:flex;flex-direction:column;gap:1px">
+          <span style="font:600 13px 'Space Grotesk'">Tesisler</span>
+          <span style="font:400 10.5px 'Karla';color:#8b9086">operatör sırası</span>
+        </div>
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:5px">
+          <div style="background:#fff;border:1px solid #5f7a2c;border-left:3px solid #5f7a2c;border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:baseline;gap:7px"><span style="font:600 12px 'IBM Plex Mono'">STR</span><span style="font:600 12.5px 'Space Grotesk';flex:1;min-width:0">Strasbourg</span></div>
+            <span style="font:400 10.5px 'Karla';color:#6a7065">Fransa · kargo çıkışı</span>
+          </div>
+          <div style="background:#fff;border:1px solid #e6e7e1;border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:baseline;gap:7px"><span style="font:600 12px 'IBM Plex Mono';color:#6a7065">COL</span><span style="font:600 12.5px 'Space Grotesk';flex:1;min-width:0">Colmar</span></div>
+            <span style="font:400 10.5px 'Karla';color:#8b9086">Fransa</span>
+          </div>
+          <div style="background:#fff;border:1px solid #e6e7e1;border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:baseline;gap:7px"><span style="font:600 12px 'IBM Plex Mono';color:#6a7065">KEHL</span><span style="font:600 12.5px 'Space Grotesk';flex:1;min-width:0">Kehl</span></div>
+            <span style="font:400 10.5px 'Karla';color:#8b9086">Almanya</span>
+          </div>
+          <div style="background:#fffdf9;border:1px solid #ecd9b4;border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:baseline;gap:7px"><span style="font:600 12px 'IBM Plex Mono';color:#8a6410">MUL</span><span style="font:600 12.5px 'Space Grotesk';flex:1;min-width:0">Mulhouse</span></div>
+            <span style="font:400 10.5px 'Karla';color:#8a6410">kurulumu eksik</span>
+          </div>
+          <div style="background:#f3f4f0;border:1px solid #e6e7e1;border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:2px;opacity:.72">
+            <div style="display:flex;align-items:baseline;gap:7px"><span style="font:600 12px 'IBM Plex Mono';color:#8b9086">OFB</span><span style="font:600 12.5px 'Space Grotesk';flex:1;min-width:0">Offenburg</span></div>
+            <span style="font:400 10.5px 'Karla';color:#8b9086">kapalı</span>
+          </div>
+        </div>
+        <div style="padding:10px 14px;border-top:1px solid #e6e7e1;font:400 10px/1.5 'Karla';color:#8b9086">Bağlam bu listeyi daraltmaz — depolar yönetim nesnesidir.</div>
+      </div>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="padding:14px 22px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span style="font:600 13px 'IBM Plex Mono';background:#eef0ea;border:1px solid #dfe1d9;border-radius:6px;padding:4px 10px">STR</span>
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto;min-width:0">
+            <span style="font:600 20px 'Space Grotesk'">Strasbourg</span>
+            <span style="font:400 11.5px 'Karla';color:#8b9086">14 Rue de la Course · 67000 Strasbourg · Fransa</span>
+          </div>
+          <span style="font:600 10.5px 'Space Grotesk';color:#2f5a78;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:4px 9px">Kargo çıkışı · Fransa</span>
+          <span style="font:600 10.5px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:6px;padding:4px 9px">Aktif</span>
+          <span onClick="{{ openDetay }}" style="font:600 12px 'Space Grotesk';color:#4a4f45;background:#fff;border:1px solid #d9dbd2;border-radius:7px;padding:8px 13px;cursor:pointer">Künyeyi düzenle</span>
+        </div>
+
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:18px">
+
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font:600 15px 'Space Grotesk'">Künye</span>
+              <span style="font:400 11.5px 'Karla';color:#8b9086">kim olduğu — belgelere basılan gerçek</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+              <div style="background:#fff;border:1px solid #e6e7e1;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Kod</span>
+                <span style="font:600 15px 'IBM Plex Mono'">STR</span>
+                <span style="font:400 10.5px 'Karla';color:#8b9086">IMH-STR-… · TRF-STR-…</span>
+              </div>
+              <div style="background:#fff;border:1px solid #e6e7e1;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Ülke</span>
+                <span style="font:600 14px 'Space Grotesk'">Fransa</span>
+                <span style="font:400 10.5px 'Karla';color:#8a6410">KDV modeline bağlı</span>
+              </div>
+              <div style="background:#fff;border:1px solid #e6e7e1;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Kargo çıkışı</span>
+                <span style="font:600 14px 'Space Grotesk'">Evet · Fransa</span>
+                <span style="font:400 10.5px 'Karla';color:#8b9086">ülke başına tek</span>
+              </div>
+              <div style="background:#fff;border:1px solid #e6e7e1;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Son hareket</span>
+                <span style="font:600 14px 'Space Grotesk'">Bugün 09:14</span>
+                <span style="font:400 10.5px 'Karla';color:#8b9086">mal kabul · Baklavacı Usta</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px;border-top:1px solid #f0f1ec;padding-top:16px">
+            <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+              <span style="font:600 15px 'Space Grotesk'">Hizmet alanı</span>
+              <span style="font:400 11.5px 'Karla';color:#8b9086">nereye hizmet ettiği · Teslimat'tan buraya taşındı (kurulum kurulumla durur)</span>
+              <span style="flex:1"></span>
+              <span style="font:500 12px 'IBM Plex Mono';color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6;border-radius:7px;padding:5px 11px">STR'ye 12 posta kodu bağlı</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 200px;gap:10px">
+              <div style="background:#fff;border:1px solid #e6e7e1;border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font:600 13.5px 'Space Grotesk';flex:1;min-width:0">Strasbourg Merkez</span>
+                  <span style="font:600 10px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:6px;padding:2px 8px">Aktif</span>
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap">
+                  <span style="font:600 10.5px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:12px;padding:3px 9px">Sal</span>
+                  <span style="font:600 10.5px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:12px;padding:3px 9px">Per</span>
+                  <span style="font:600 10.5px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:12px;padding:3px 9px">Cmt</span>
+                </div>
+                <span style="font:500 11.5px/1.6 'IBM Plex Mono';color:#6a7065">67000 · 67100 · 67200 · 67300 · 67800 · 67201 · 67540</span>
+                <span style="font:400 10.5px 'Karla';color:#8b9086">7 posta kodu</span>
+              </div>
+              <div style="background:#fff;border:1px solid #e6e7e1;border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font:600 13.5px 'Space Grotesk';flex:1;min-width:0">Kuzey hattı</span>
+                  <span style="font:600 10px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:6px;padding:2px 8px">Aktif</span>
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap">
+                  <span style="font:600 10.5px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:12px;padding:3px 9px">Çar</span>
+                </div>
+                <span style="font:500 11.5px/1.6 'IBM Plex Mono';color:#6a7065">67550 · 67450 · 67116 · 67610 · 67207</span>
+                <span style="font:400 10.5px 'Karla';color:#8b9086">5 posta kodu</span>
+              </div>
+              <div style="background:#f3f4f0;border:1px dashed #c9ccc2;border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;justify-content:center">
+                <span style="font:600 12.5px 'Space Grotesk'">Bölge ekle</span>
+                <span style="font:400 11px/1.55 'Karla';color:#6a7065">Kodlar <strong>haritadan</strong> seçilir; liste onun sonucudur. Serbest metin girişi yok.</span>
+                <a href="Depolar - Bolge Haritasi.html" style="font:600 11.5px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:9px 11px;text-align:center">Haritadan düzenle →</a>
+              </div>
+            </div>
+            <span style="font:400 11px/1.6 'Karla';color:#8b9086">Yapı gün taşıdığı için üç katmanlıdır: <strong>depo → bölge → kodlar</strong>. Bir kod yalnız tek bölgede olabilir; çakışma reddedilir ve tutan bölge/depo söylenir. Kodu çıkarmak o adresleri rota dışına düşürür, kargo yoluna geçirir.</span>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px;border-top:1px solid #f0f1ec;padding-top:16px">
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font:600 15px 'Space Grotesk'">Karne</span>
+              <span style="font:400 11.5px 'Karla';color:#8b9086">bugün nasıl durduğu — sayar, listelemez; her sayı Stok'a bu depo bağlamıyla gider</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+              <div style="background:#fff;border:1px solid #e6e7e1;border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Elde ne var</span>
+                <span style="font:500 22px 'IBM Plex Mono'">128</span>
+                <span style="font:400 11px 'Karla';color:#6a7065">varyantta stok · 296 parti</span>
+              </div>
+              <div style="background:#fffdf9;border:1px solid #ecd9b4;border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8a6410">Risk</span>
+                <div style="display:flex;align-items:baseline;gap:7px"><span style="font:500 22px 'IBM Plex Mono';color:#8a6410">4</span><span style="font:500 12px 'IBM Plex Mono';color:#8a6410">512,40 €</span></div>
+                <span style="font:400 11px 'Karla';color:#8a6410">yaklaşan tarihli parti · <strong>1</strong> süresi geçmiş (yalnız imha yolu)</span>
+              </div>
+              <div style="background:#fdf7f6;border:1px solid #e2c4c0;border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#a5443c">Eşik altı</span>
+                <span style="font:500 22px 'IBM Plex Mono';color:#a5443c">6</span>
+                <span style="font:400 11px 'Karla';color:#8a3a33">varyant — eşik depo bazlıdır</span>
+              </div>
+              <div style="background:#fff;border:1px solid #bcd0e0;border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#2f5a78">Yolda bekleyen</span>
+                <div style="display:flex;align-items:baseline;gap:9px"><span style="font:500 22px 'IBM Plex Mono';color:#2f5a78">1</span><span style="font:400 11px 'Karla';color:#2f5a78">gelen</span><span style="font:500 16px 'IBM Plex Mono';color:#2f5a78">2</span><span style="font:400 11px 'Karla';color:#2f5a78">giden</span></div>
+                <span style="font:400 11px 'Karla';color:#6a7065">yoldaki mal hiçbir depoda satılamaz</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+              <div style="background:#fff;border:1px solid #e6e7e1;border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Açık iş</span>
+                <span style="font:500 22px 'IBM Plex Mono'">14</span>
+                <span style="font:400 11px 'Karla';color:#6a7065">buradan çıkacak, teslim edilmemiş sipariş</span>
+              </div>
+              <div style="grid-column:span 3;background:#f8f9f5;border:1px solid #e6e7e1;border-radius:9px;padding:12px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <span style="font:400 11.5px/1.6 'Karla';color:#6a7065;flex:1;min-width:220px">Eşik altının iki yolu vardır ve ekran ikisini de açar: <strong>tedarik siparişi</strong> ya da <strong>başka depodan transfer</strong>. Sayıya dokunmak listeyi burada açmaz — Stok'a, bağlamı STR'ye alınmış hâlde gider.</span>
+                <a href="Operasyon - Satin Alma.dc.html" style="font:600 11.5px 'Space Grotesk';color:#4a4f45;background:#fff;border:1px solid #d9dbd2;border-radius:7px;padding:8px 12px">Tedarik siparişi</a>
+                <a href="Operasyon - Stok.dc.html" style="font:600 11.5px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:7px;padding:8px 12px">Stok'a git · bağlam STR</a>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px;border-top:1px solid #f0f1ec;padding-top:16px">
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font:600 15px 'Space Grotesk'">Bağlı personel</span>
+              <span style="font:400 11.5px 'Karla';color:#8b9086">okunur — kapsam ataması Ayarlar'daki kişi kartındadır, kişi tek yerden yönetilir</span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <span style="background:#fff;border:1px solid #e6e7e1;border-radius:14px;padding:6px 12px;font:500 12px 'Karla';color:#4a4f45">Yusuf D. · depocu <span style="font:400 11px 'Karla';color:#8b9086">tek kapsamı burası</span></span>
+              <span style="background:#fff;border:1px solid #e6e7e1;border-radius:14px;padding:6px 12px;font:500 12px 'Karla';color:#4a4f45">Emre K. · depocu</span>
+              <span style="background:#fff;border:1px solid #e6e7e1;border-radius:14px;padding:6px 12px;font:500 12px 'Karla';color:#4a4f45">Nadia B. · kurye</span>
+              <span style="background:#fff;border:1px solid #e6e7e1;border-radius:14px;padding:6px 12px;font:500 12px 'Karla';color:#4a4f45">Selim A. · yönetici <span style="font:400 11px 'Karla';color:#8b9086">tüm depolar</span></span>
+              <a href="Operasyon - Ayarlar.dc.html" style="border:1px dashed #c9ccc2;border-radius:14px;padding:6px 12px;font:600 11.5px 'Space Grotesk'">Ayarlar'da yönet</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBİL + TEK DEPO HÂLİ -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Depolar — mobil (okuma)</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Sahada sorulan şey künyedir: kod, adres, kim çalışıyor. Kapatma gibi geniş sonuçlu karar telefonda kazara verilemez.</span>
+    </div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+      <div data-screen-label="Depo Kunyesi Mobil" style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="font:600 17px 'Space Grotesk';color:#22251f;flex:1">Strasbourg</span>
+            <span style="font:600 10px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:9px;padding:3px 9px">Aktif</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;background:#eef0ea;border:1px solid #dfe1d9;border-radius:8px;padding:8px 10px">
+            <span style="font:600 15px 'IBM Plex Mono';color:#22251f;flex:1">STR</span>
+            <span style="font:500 10.5px 'Space Grotesk';color:#5f7a2c;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>Kopyala</span>
+          </div>
+          <span style="font:400 10.5px 'Karla';color:#8b9086">Belge öneki: IMH-STR-… · TRF-STR-… — kâğıt klasör bu tesiste durur.</span>
+        </div>
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:11px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Adres</span>
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="font:400 12.5px/1.5 'Karla';color:#22251f;flex:1">14 Rue de la Course<br>67000 Strasbourg · Fransa</span><span style="font:500 10.5px 'Space Grotesk';color:#5f7a2c;flex:none">Kopyala</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;border-top:1px solid #f0f1ec;padding-top:10px">
+            <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Kapsamında bu depo olan personel</span>
+            <sc-for list="{{ mobPersonel }}" as="p" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:9px;padding:5px 0">
+                <span style="width:24px;height:24px;border-radius:7px;background:#eef0ea;color:#6a7065;font:600 10px 'Space Grotesk';display:grid;place-items:center;flex:none">{{ p.ini }}</span>
+                <span style="font:600 12.5px 'Karla';color:#22251f;flex:1">{{ p.name }}</span>
+                <span style="font:400 11px 'Karla';color:#8b9086">{{ p.role }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;border-top:1px solid #f0f1ec;padding-top:10px">
+            <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Karne — sahada bakılır, karar verilmez</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+              <div style="background:#fff;border:1px solid #e6e7e1;border-radius:9px;padding:9px 11px;display:flex;flex-direction:column;gap:1px"><span style="font:500 17px 'IBM Plex Mono'">128</span><span style="font:400 10.5px 'Karla';color:#6a7065">varyant · 296 parti</span></div>
+              <div style="background:#fffdf9;border:1px solid #ecd9b4;border-radius:9px;padding:9px 11px;display:flex;flex-direction:column;gap:1px"><span style="font:500 17px 'IBM Plex Mono';color:#8a6410">4</span><span style="font:400 10.5px 'Karla';color:#8a6410">yaklaşan tarihli · 512,40 €</span></div>
+              <div style="background:#fdf7f6;border:1px solid #e2c4c0;border-radius:9px;padding:9px 11px;display:flex;flex-direction:column;gap:1px"><span style="font:500 17px 'IBM Plex Mono';color:#a5443c">6</span><span style="font:400 10.5px 'Karla';color:#8a3a33">eşik altı varyant</span></div>
+              <div style="background:#fff;border:1px solid #bcd0e0;border-radius:9px;padding:9px 11px;display:flex;flex-direction:column;gap:1px"><span style="font:500 17px 'IBM Plex Mono';color:#2f5a78">1 / 2</span><span style="font:400 10.5px 'Karla';color:#2f5a78">yolda gelen / giden</span></div>
+            </div>
+            <span style="font:400 10.5px/1.5 'Karla';color:#8b9086">Sayıya dokunmak Stok'a götürür (bağlam STR) — karar orada verilir.</span>
+          </div>
+          <div style="background:#eef0ea;border:1px solid #e0e2da;border-radius:9px;padding:9px 11px;font:400 11.5px/1.55 'Karla';color:#6a7065">Kapatma / yeniden açma ve künye düzenleme <strong>web'de</strong> yapılır — sonucu stoğa, bölgelere ve personele aynı anda dokunur.</div>
+        </div>
+      </div>
+
+      <div style="width:400px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:10px;padding:22px 24px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086">Tek depolu kurulum — ikinci depo burada doğar</span>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:600 13.5px 'Space Grotesk';color:#22251f">Bugünkü hâl</span>
+          <span style="font:400 12.5px/1.65 'Karla';color:#6a7065">Sayfa yine vardır ve <strong>tek satır</strong> gösterir. Operasyonun geri kalanında depo ekseni hiç görünmez: bağlam seçici yok, "Depo:" süzgeci yok, satırlar depo söylemez.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;border-top:1px solid #f0f1ec;padding-top:10px">
+          <span style="font:600 13.5px 'Space Grotesk';color:#22251f">İkinci depo eklenirken</span>
+          <div style="background:#e6eef3;border:1px solid #bcd0e0;border-radius:8px;padding:10px 12px;font:400 11.5px/1.6 'Karla';color:#2f5a78">Bu ekleme sistemi <strong>çok depolu hâle</strong> geçirir: kenar çubuğunda depo bağlamı belirir, Stok/Siparişler/Satın Alma listeleri depo söylemeye başlar, Transfer ekranı çalışır. Ekleme akışı bunu <strong>onaydan önce</strong> söyler.</div>
+          <span style="font:400 11.5px/1.6 'Karla';color:#8b9086">Transfer ekranı tek depoluyken boş değil <strong>kapalı</strong> hâldedir ve sebebini söyler.</span>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:300px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Sınırlar — burada yapılmayanlar</span>
+        <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+          <li><strong>Silme yok</strong> — yalnız kapatma; ekranda silme eylemi hiç bulunmaz.</li>
+          <li><strong>"Varsayılan depo" yok</strong> — depo ya adresin posta kodundan ya personelin kapsamından gelir.</li>
+          <li><strong>Bölge tanımı artık burada</strong> (Teslimat'tan taşındı, 01.08): kodlar ve teslim günleri hizmet alanı bölümünde kurulur. <a href="Operasyon - Rotalar.dc.html">Teslimat</a> bölgeyi okur, tanımlamaz; personel kapsamı <a href="Operasyon - Ayarlar.dc.html">Ayarlar</a>'da.</li>
+          <li>Stok sayıları yönetilmez, yalnız kapatma kararına bağlam olur. Raf/konum tanımı partinin alanıdır.</li>
+          <li>Kasa hesabı burada açılmaz (Para ekranının nesnesi); KDV kuralı Ayarlar'da — ülke alanı bir beyandır.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- KÜNYE + SONUÇLAR DIALOG -->
+  <sc-if value="{{ isDetay }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ close }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:520px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f;max-height:88vh">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto"><span style="font:600 18px 'Space Grotesk'">Colmar deposu</span><span style="font:400 12px 'Karla';color:#8b9086">COL · Fransa · sıra 2</span></div>
+          <span onClick="{{ close }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span>
+        </div>
+        <div style="overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;gap:10px">
+            <div style="flex:none;width:120px;display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Kod</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:600 13.5px 'IBM Plex Mono';background:#fff">COL</div></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Ülke <span style="font:400 11px 'Karla';color:#a7ac9f">· KDV modeline bağlı</span></span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';background:#fff;display:flex;align-items:center"><span style="flex:1">Fransa</span><span style="color:#9aa094">▾</span></div></div>
+          </div>
+          <span style="font:400 11px/1.5 'Karla';color:#8b9086;margin-top:-8px">Kodu değiştirmek geçmiş belgeleri değiştirmez — <strong>IMH-COL-26-0004</strong> ve öncesi eski önekle kalır. Yeni belgeler yeni öneki alır.</span>
+          <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Adres</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:400 13px/1.5 'Karla';background:#fff">7 Route de Rouffach<br>68000 Colmar · Fransa</div></div>
+
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #d9dbd2;background:#fff;border-radius:9px;padding:11px 13px">
+              <span style="width:34px;height:19px;border-radius:11px;background:#e0e2da;flex:none;display:flex;align-items:center;padding:0 2px"><span style="width:15px;height:15px;border-radius:9px;background:#fbfbf9;box-shadow:0 1px 3px rgba(0,0,0,.2)"></span></span>
+              <span style="font:500 13px 'Karla';flex:1">Kargo çıkış deposu</span>
+              <span style="font:600 10.5px 'Space Grotesk';color:#a5443c;background:#fbe9e7;border-radius:6px;padding:2px 8px">Reddedildi</span>
+            </div>
+            <div style="background:#fbe9e7;border:1px solid #e2c4c0;border-radius:9px;padding:9px 12px;display:flex;gap:8px;align-items:flex-start">
+              <span style="color:#a5443c;flex:none;font:700 12px 'Space Grotesk'">!</span>
+              <span style="font:500 11.5px/1.55 'Karla';color:#a5443c"><strong>Fransa'da bu rolü Strasbourg (STR) taşıyor.</strong> Ülke başına en fazla bir kargo çıkış deposu olabilir — kural veritabanındadır. Devretmek istiyorsanız önce STR'den kaldırın: <a href="#" style="color:#a5443c;text-decoration:underline">Strasbourg künyesine git</a>.</span>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid #f0f1ec;padding-top:14px;display:flex;flex-direction:column;gap:9px">
+            <span style="font:600 12.5px 'Space Grotesk';color:#22251f">Bu deponun varlığının sonuçları <span style="font:400 11.5px 'Karla';color:#8b9086">· okunur, buradan yönetilmez</span></span>
+            <sc-for list="{{ sonuclar }}" as="s" hint-placeholder-count="4">
+              <div style="border:1px solid #e6e7e1;background:#fff;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:11px">
+                <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+                  <span style="font:600 12.5px 'Karla';color:#22251f">{{ s.title }}</span>
+                  <span style="font:400 11.5px 'Karla';color:#8b9086">{{ s.sub }}</span>
+                </div>
+                <span style="font:600 11.5px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:7px;padding:5px 10px;flex:none">{{ s.cta }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5">
+          <span onClick="{{ openKapat }}" style="font:600 13px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:8px;padding:10px 16px;flex:none;white-space:nowrap;cursor:pointer;margin-right:auto">Depoyu kapat</span>
+          <span onClick="{{ close }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;flex:none;white-space:nowrap;cursor:pointer">İptal</span>
+          <span onClick="{{ close }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;flex:none;white-space:nowrap;cursor:pointer">Kaydet</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- KAPATMA ONAYI -->
+  <sc-if value="{{ isKapat }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ close }}" style="position:fixed;inset:0;background:rgba(34,37,31,.5);display:flex;align-items:center;justify-content:center;z-index:60;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:540px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.44);display:flex;flex-direction:column;overflow:hidden;color:#22251f;max-height:88vh">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:flex-start;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:2px;margin-right:auto"><span style="font:600 18px 'Space Grotesk'">Colmar deposunu kapat</span><span style="font:400 12px/1.5 'Karla';color:#8b9086">Dört ayrı sonucu var ve hepsi aynı ağırlıkta değil. Tek bir "emin misiniz?" cümlesi bunları anlatmaz.</span></div>
+          <span onClick="{{ close }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer;flex:none">✕</span>
+        </div>
+        <div style="overflow-y:auto;padding:18px 24px;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ kapatmaSonuc }}" as="k" hint-placeholder-count="4">
+            <div style="border:1px solid {{ k.bd }};background:{{ k.bg }};border-radius:10px;padding:11px 13px;display:flex;gap:10px;align-items:flex-start">
+              <span style="font:700 11px 'Space Grotesk';color:{{ k.fg }};background:#fff;border:1px solid {{ k.bd }};border-radius:6px;padding:2px 7px;flex:none">{{ k.weight }}</span>
+              <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                <span style="font:600 13px 'Space Grotesk';color:{{ k.fg }}">{{ k.title }}</span>
+                <span style="font:400 12px/1.6 'Karla';color:#4a4f45">{{ k.body }}</span>
+              </div>
+            </div>
+          </sc-for>
+          <div style="display:flex;flex-direction:column;gap:6px;border-top:1px solid #f0f1ec;padding-top:12px">
+            <span style="font:500 11.5px 'Karla';color:#6a7065">Onaylamak için deponun kodunu yazın</span>
+            <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'IBM Plex Mono';background:#fff;color:#b3b7ac">COL</div>
+            <span style="font:400 11px/1.55 'Karla';color:#8b9086">Kapatma geri alınabilir (yeniden açma), ama <strong>kapalı kaldığı süre boyunca</strong> bu deponun stoğu satış okumalarında yok sayılır — mal kayıtta durur.</span>
+          </div>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5">
+          <span onClick="{{ close }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;flex:none;white-space:nowrap;cursor:pointer;margin-left:auto">Vazgeç</span>
+          <span style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#b3b7ac;border-radius:8px;padding:10px 20px;flex:none;white-space:nowrap">Depoyu kapat</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- DEPO EKLE -->
+  <sc-if value="{{ isEkle }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ close }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:500px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f;max-height:88vh">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto"><span style="font:600 18px 'Space Grotesk'">Depo ekle</span><span style="font:400 12px 'Karla';color:#8b9086">Nadir ve sonuçları ağır bir kurulum işi</span></div>
+          <span onClick="{{ close }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span>
+        </div>
+        <div style="overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:10px">
+            <div style="flex:none;width:110px;display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Kod</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:600 13.5px 'IBM Plex Mono';background:#fff">BSL</div></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Ad</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';background:#fff">Basel</div></div>
+          </div>
+          <span style="font:400 11px/1.5 'Karla';color:#8b9086;margin-top:-6px">Kod belge parçasıdır: imha tutanağı ve transfer numarası bunu taşır, denetmen elle yazar. Kısa, okunur, karışmaz olmalı.</span>
+          <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Ülke</span><div style="border:1px solid #ecd9b4;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';background:#fff;display:flex;align-items:center"><span style="flex:1">İsviçre</span><span style="color:#9aa094">▾</span></div></div>
+          <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:10px;padding:11px 13px;display:flex;gap:9px;align-items:flex-start">
+            <span style="color:#9a6416;flex:none;margin-top:1px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span>
+            <span style="font:500 11.5px/1.6 'Karla';color:#8a6410"><strong>İsviçre'de ilk depo — vergi modeli değişir.</strong> Yeni bir ülkede depo açmak KDV kurulumunu etkiler; mali danışmana sorulmadan açılmaz. Kural Ayarlar'da tanımlıdır, bu alan yalnız beyandır.</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px"><span style="font:500 11.5px 'Karla';color:#6a7065">Adres</span><div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:400 13px 'Karla';background:#fff;color:#b3b7ac">Sokak, posta kodu, şehir…</div></div>
+          <div style="display:flex;align-items:center;gap:10px;border:1px solid #d9dbd2;background:#fff;border-radius:9px;padding:11px 13px">
+            <span style="width:34px;height:19px;border-radius:11px;background:#e0e2da;flex:none;display:flex;align-items:center;padding:0 2px"><span style="width:15px;height:15px;border-radius:9px;background:#fbfbf9;box-shadow:0 1px 3px rgba(0,0,0,.2)"></span></span>
+            <div style="display:flex;flex-direction:column;gap:1px;flex:1"><span style="font:500 13px 'Karla'">Kargo çıkış deposu</span><span style="font:400 11px 'Karla';color:#8b9086">İsviçre'de henüz kargo deposu yok — işaretlenebilir</span></div>
+          </div>
+          <div style="background:#eef0ea;border:1px solid #e0e2da;border-radius:9px;padding:10px 12px;font:400 11.5px/1.6 'Karla';color:#6a7065">Yeni depo <strong>kurulumu eksik</strong> doğar: bağlı bölgesi ve kargo çıkışı olmayan tesis hiçbir siparişi alamaz, kapsamlı personeli olmayan depoda mal kabul edilemez. Sıradaki adımlar: <a href="Depolar - Bolge Haritasi.html">haritadan bölge bağla</a> · <a href="Operasyon - Ayarlar.dc.html">personel kapsamı ver</a>.</div>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5">
+          <span onClick="{{ close }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;flex:none;white-space:nowrap;cursor:pointer;margin-left:auto">İptal</span>
+          <span onClick="{{ close }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 20px;flex:none;white-space:nowrap;cursor:pointer">Depoyu aç</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { modal: null };
+  renderVals() {
+    const chip = (label, tone) => {
+      const t = { n:['#6a7065','#eef0ea','#e0e2da'], b:['#2f5a78','#e6eef3','#bcd0e0'], w:['#8a6410','#fdf1e3','#ecd9b4'], r:['#a5443c','#fbe9e7','#e2c4c0'] }[tone || 'n'];
+      return { label, fg:t[0], bg:t[1], bd:t[2] };
+    };
+    const open = () => this.setState({ modal:'detay' });
+    const depolar = [
+      { order:'1', code:'STR', name:'Strasbourg', country:'Fransa', addr:'14 Rue de la Course · 67000 Strasbourg', kargo:true, status:'Aktif', tone:'ok',
+        stats:[chip('2 bölge · 12 posta kodu'), chip('4 personel'), chip('128 varyant · 296 parti'), chip('1 sevkiyat yolda','b')] },
+      { order:'2', code:'COL', name:'Colmar', country:'Fransa', addr:'7 Route de Rouffach · 68000 Colmar', kargo:false, status:'Aktif', tone:'ok',
+        stats:[chip('1 bölge · 9 posta kodu'), chip('2 personel'), chip('41 varyant · 88 parti'), chip('2 yaklaşan tarihli','w')] },
+      { order:'3', code:'KEHL', name:'Kehl', country:'Almanya', addr:'Hafenstraße 22 · 77694 Kehl', kargo:false, status:'Aktif', tone:'ok',
+        stats:[chip('1 bölge (pasif)'), chip('1 personel'), chip('18 varyant · 30 parti')],
+        flag:'Almanya\'da kargo çıkış deposu yok — bu ülkede bölge dışı müşteriye satış yapılamaz. Rolü bu depoya vermek için künyesinden işaretleyin.' },
+      { order:'4', code:'MUL', name:'Mulhouse', country:'Fransa', addr:'3 Rue de l\'Illberg · 68100 Mulhouse', kargo:false, status:'Kurulumu eksik', tone:'warn',
+        stats:[chip('bölge yok','r'), chip('personel yok','r'), chip('stok yok')],
+        flag:'Açık ama ulaşılamaz tesis: ne bağlı bölgesi ne kargo çıkışı var — hiçbir sipariş buraya çözülmez. Kapsamlı personeli olmadığı için mal kabul ve hazırlık da yapılamaz.' },
+      { order:'5', code:'OFB', name:'Offenburg', country:'Almanya', addr:'Zeller Straße 5 · 77654 Offenburg', kargo:false, status:'Kapalı', tone:'off',
+        stats:[chip('geçmiş kayıtlarda 214 sipariş'), chip('seçicilerde görünmez')] },
+    ].map(d => {
+      const t = { ok:['#4a6121','#eef4e2','#e6e7e1','#fff','1'], warn:['#8a6410','#fdf1e3','#ecd9b4','#fffdf9','1'], off:['#6a7065','#eef0ea','#e6e7e1','#f8f9f5','.72'] }[d.tone];
+      return { ...d, stFg:t[0], stBg:t[1], bd:t[2], bg:t[3], dim:t[4], flag:d.flag || null, open };
+    });
+
+    const sonuclar = [
+      { title:'Bağlı teslimat bölgeleri', sub:'Colmar çevresi · 12 posta kodu — kapanırsa bu adresler sahipsiz kalır', cta:'Hizmet alanı' },
+      { title:'Kapsamında bu depo olan personel', sub:'Yusuf D. (depocu, tek kapsamı burası) · Nadia B. (kurye)', cta:'Ayarlar' },
+      { title:'Deponun içindekiler', sub:'41 varyantta stok · 88 parti · 2 yaklaşan tarihli', cta:'Stok' },
+      { title:'Yolda bekleyen sevkiyat', sub:'TRF-STR-26-0007 · 3 kalem · 4 gündür yolda', cta:'Stok' },
+    ];
+
+    const kapatmaSonuc = [
+      { weight:'EN SERT', title:'Stoğu var — mal görünmez olur', fg:'#a5443c', bg:'#fdf7f6', bd:'#e2c4c0',
+        body:'41 varyantta 88 parti kayıtta durur ama satış okumalarının hiçbirinde görünmez. Bu bir arıza değil tanımdır: kapalı tesisten satış yapılmaz. Önce transferle taşımak isterseniz kapatmayı bekletin.' },
+      { weight:'AĞIR', title:'Bağlı bölgesi var — adresler sahipsiz kalır', fg:'#a5443c', bg:'#fdf7f6', bd:'#e2c4c0',
+        body:'Colmar çevresi (12 posta kodu) bu depoya bağlı. Bölge başka bir depoya bağlanana kadar bu adreslerin siparişi çözülmez — bu sayfanın Hizmet alanı bölümünden devredin.' },
+      { weight:'AĞIR', title:'Tek kapsamı burası olan personel var', fg:'#8a6410', bg:'#fdf1e3', bd:'#ecd9b4',
+        body:'Yusuf D. (depocu) kapsamsız kalır — depocu ve kurye kapsamsız olamaz, kişi kapalı kapı hâline düşer. Ayarlar\'daki kişi kartından yeni kapsam verin.' },
+      { weight:'BEKLEYEN', title:'Yolda ona gelen sevkiyat var', fg:'#2f5a78', bg:'#e6eef3', bd:'#bcd0e0',
+        body:'TRF-STR-26-0007 (4 gündür yolda) kabul edilecek yer bulamaz — yoldaki mal hiçbir deponun stoğunda değildir. Önce kabul edin ya da ters yönde sevk açın.' },
+    ];
+
+    const mobPersonel = [
+      { ini:'YD', name:'Yusuf D.', role:'Depocu' },
+      { ini:'NB', name:'Nadia B.', role:'Kurye' },
+      { ini:'SA', name:'Selim A.', role:'Yönetici · tüm depolar' },
+      { ini:'EK', name:'Emre K.', role:'Depocu' },
+    ];
+
+    return {
+      depolar, sonuclar, kapatmaSonuc, mobPersonel,
+      isDetay: this.state.modal === 'detay',
+      isKapat: this.state.modal === 'kapat',
+      isEkle: this.state.modal === 'ekle',
+      openDetay: () => this.setState({ modal:'detay' }),
+      openEkle: () => this.setState({ modal:'ekle' }),
+      openKapat: () => this.setState({ modal:'kapat' }),
+      close: () => this.setState({ modal:null }),
+      stop: (e) => e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

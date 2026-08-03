@@ -67,7 +67,7 @@
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:214,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;panel&quot;,&quot;options&quot;:[&quot;panel&quot;,&quot;siparisler&quot;,&quot;rotalar&quot;,&quot;urunler&quot;,&quot;fiyatlar&quot;,&quot;stok&quot;,&quot;satinalma&quot;,&quot;para&quot;,&quot;raporlar&quot;,&quot;analitik&quot;,&quot;musteriler&quot;,&quot;b2b&quot;,&quot;talepler&quot;,&quot;geribildirim&quot;,&quot;whatsapp&quot;,&quot;ayarlar&quot;,&quot;sistem&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;depoMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;all&quot;,&quot;options&quot;:[&quot;all&quot;,&quot;scoped&quot;,&quot;fixed&quot;,&quot;none&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;},&quot;depo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Tüm depolar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:214,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;panel&quot;,&quot;options&quot;:[&quot;panel&quot;,&quot;siparisler&quot;,&quot;rotalar&quot;,&quot;urunler&quot;,&quot;fiyatlar&quot;,&quot;stok&quot;,&quot;satinalma&quot;,&quot;transfer&quot;,&quot;para&quot;,&quot;raporlar&quot;,&quot;analitik&quot;,&quot;musteriler&quot;,&quot;b2b&quot;,&quot;talepler&quot;,&quot;geribildirim&quot;,&quot;whatsapp&quot;,&quot;depolar&quot;,&quot;ayarlar&quot;,&quot;sistem&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;depoMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;all&quot;,&quot;options&quot;:[&quot;all&quot;,&quot;scoped&quot;,&quot;fixed&quot;,&quot;none&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;},&quot;depo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Tüm depolar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;}}">
 class Component extends DCLogic {
   renderVals() {
     const active = this.props.active || 'panel';
@@ -93,6 +93,8 @@ class Component extends DCLogic {
       whatsapp: svg(P('M21 11.5a8.38 8.38 0 0 1-11.6 7.7L3 21l1.9-6.4A8.5 8.5 0 1 1 21 11.5z',1)),
       ayarlar: svg(C(12,12,3,1),P('M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1',2)),
       sistem: svg(R(2,4,20,13,2,1),P('M6 10.5h3l1.6-3.2 2.2 6.4 1.4-3.2H18',2),P('M8 21h8',3),P('M12 17v4',4)),
+      transfer: svg(P('M4 8h13l-3.5-3.5',1),P('M20 16H7l3.5 3.5',2)),
+      depolar: svg(P('M3 21V9l9-5 9 5v12',1),P('M3 21h18',2),P('M9 21v-6h6v6',3)),
     };
     const raw = [
       { label:'Günlük', items:[
@@ -105,6 +107,7 @@ class Component extends DCLogic {
         { key:'fiyatlar', label:'Fiyatlar' },
         { key:'stok', label:'Stok' },
         { key:'satinalma', label:'Satın Alma' },
+        { key:'transfer', label:'Transfer', badge:'3', tone:'n' },
       ]},
       { label:'Para & analiz', items:[
         { key:'para', label:'Para', badge:'7', tone:'a' },
@@ -119,6 +122,7 @@ class Component extends DCLogic {
         { key:'whatsapp', label:'WhatsApp', badge:'5', tone:'a' },
       ]},
       { label:'Sistem', items:[
+        { key:'depolar', label:'Depolar' },
         { key:'ayarlar', label:'Ayarlar' },
         { key:'sistem', label:'Sistem' },
       ]},
