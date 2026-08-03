@@ -1,3 +1,19 @@
+/**
+ * **Env ELLE yüklenir — ve bu bir arıza düzeltmesidir (03.08).**
+ *
+ * Backend Next.js DEĞİL: `tsx src/index.ts` ile koşar ve Node hiçbir `.env` dosyasını
+ * kendiliğinden okumaz. Yükleme hiç yazılmamıştı, yani süreç env'siz ayağa kalkıyordu ve **beş
+ * cron'un beşi de** ilk turunda `serviceDb()` üzerinde "Supabase env eksik" ile düşüyordu. Sessiz
+ * de değildi ama görünmüyordu: `runJob` hatayı yakalayıp `job_run`/`error_log`'a yazmaya çalışıyor,
+ * o yazma da AYNI eksik env yüzünden düşüyor — yani arızanın kaydı, arızanın kendisi yüzünden
+ * tutulamıyordu. Ölçüldü: `SUPABASE_SECRET_KEY: false`.
+ *
+ * **Yükleme bir YAN ETKİ olarak `./env` modülünde ve çağrı burada DEĞİL** — çünkü ESM'de
+ * `import`'lar hoist edilir: aradaki bir `loadEnv()` satırı, altındaki importlar DEĞERLENDİRİLDİKTEN
+ * sonra koşardı ve modül-üstü kod (`serviceDb()` tekili gibi) env'i boş görürdü. Modül grafiği
+ * sırayla ve derinlemesine değerlendirildiği için ilk sıradaki bu import garantiyi verir.
+ */
+import './env';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import cron from 'node-cron';
