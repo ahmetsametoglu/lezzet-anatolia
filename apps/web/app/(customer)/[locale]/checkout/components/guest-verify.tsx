@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { isValidEmail } from '@lezzet/helper';
 import { Button } from '@/components/customer/ui/button';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import type { Locale } from '@lezzet/i18n';
@@ -40,8 +41,6 @@ interface GuestVerifyProps {
   onVerified: () => void;
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export function GuestVerify({ t, locale, compact, onVerified }: GuestVerifyProps) {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
@@ -49,7 +48,7 @@ export function GuestVerify({ t, locale, compact, onVerified }: GuestVerifyProps
   const [error, setError] = useState<string | null>(null);
 
   const trimmed = email.trim();
-  const validEmail = EMAIL_RE.test(trimmed);
+  const validEmail = isValidEmail(trimmed);
 
   const google = async () => {
     setError(null);

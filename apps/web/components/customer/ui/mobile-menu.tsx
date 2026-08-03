@@ -68,9 +68,16 @@ export function MobileMenu({ locale }: MobileMenuProps) {
             <Link href="/packages" onClick={close} className={ITEM}>
               {t.nav.packages}
             </Link>
-            <span className={`${ITEM} text-terracotta`}>{t.nav.deals}</span>
+            {/* Fırsatlar ve Professionnels MASAÜSTÜNDE bağlanmıştı, burada ölü kalmıştı — aynı
+                menünün iki biçimi aynı yere gitmeli. Fırsatlar ayrı bir rota değil, katalogun
+                teklif süzgeçli hâli (`?offers=1`); üstteki menüyle birebir aynı hedef. */}
+            <Link href={{ pathname: '/catalog', query: { offers: '1' } }} onClick={close} className={`${ITEM} text-terracotta`}>
+              {t.nav.deals}
+            </Link>
             <span className={`${ITEM} text-muted`}>{t.nav.discover}</span>
-            <span className={`${ITEM} text-muted`}>{t.nav.pro}</span>
+            <Link href="/professionals" onClick={close} className={ITEM}>
+              {t.nav.pro}
+            </Link>
           </nav>
 
           {/* Hesap bölümü ayrı bir blok: gezinme "nereye gideyim", bu "kim olarak". */}

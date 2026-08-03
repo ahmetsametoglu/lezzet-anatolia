@@ -29,3 +29,19 @@ export function normalizeEmail(input: string): string | null {
   const e = input.trim().toLowerCase();
   return e.length > 0 ? e : null;
 }
+
+/**
+ * E-postanın BİÇİM denetimi — "kullanıcı yazarken elendi mi" sorusu, "bu adres var mı" değil.
+ *
+ * Kasten gevşek: tek `@`, iki yanında boşluksuz metin, sağda bir nokta. Daha sıkı bir desen
+ * (RFC 5322) meşru adresleri eler ve bunu **sessizce** yapar — müşteri neden reddedildiğini
+ * anlamaz. Adresin gerçekten var olup olmadığını zaten OTP kodu söylüyor; bu denetimin tek işi
+ * ekranın boşuna kod göndermesini engellemek.
+ *
+ * `normalizeEmail`den AYRI: o kimlik anahtarını tek biçime indirir (kayıt/eşleşme için) ve
+ * biçime bakmaz. İkisini birleştirmek, normalize eden 20 çağrı yerinin hepsine bir doğrulama
+ * kararı taşımak olurdu. Ev `helper`: hem müşteri formları hem sunucu kapıları okuyor.
+ */
+export function isValidEmail(raw: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.trim());
+}

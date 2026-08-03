@@ -41,7 +41,7 @@ export function FormTextareaField({
           (input'ta metni tarayıcı ortalıyor, çok satırlıda ortalayacak bir şey yok). */}
       <textarea
         id={fieldId}
-        className={controlClass(error, ['min-h-24 resize-y py-3', className].filter(Boolean).join(' '))}
+        className={controlClass(Boolean(error), ['min-h-24 resize-y py-3', className].filter(Boolean).join(' '))}
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={errorIdFor(fieldId, error)}
         rows={rows}

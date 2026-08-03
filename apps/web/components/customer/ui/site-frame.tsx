@@ -1,7 +1,7 @@
 import type { ComponentProps, ReactNode } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { LOCALES } from '@lezzet/i18n';
-import { brand } from '@lezzet/brand';
+import { brand, whatsappHref } from '@lezzet/brand';
 import { Link } from '@/i18n/navigation';
 import { LocaleLinks } from './locale-switch';
 import { MobileMenu } from './mobile-menu';
@@ -257,7 +257,11 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
               {t.nav.deals}
             </Link>
             <span className={navClass('discover', activeNav)}>{t.nav.discover}</span>
-            <span className={navClass('pro', activeNav)}>{t.nav.pro}</span>
+            {/* Professionnels ARTIK CANLI (08.7): sayfası açıldı, ölü `<span>` bağa döndü. Etiket
+                üç dilde de aynı marka sözcüğü, adres dile göre çevriliyor — gerekçe `PATHNAMES`te. */}
+            <Link href="/professionals" className={navClass('pro', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
+              {t.nav.pro}
+            </Link>
           </nav>
           <div className="ml-auto flex items-center gap-4.5 font-sans text-body-sm font-semibold text-muted">
             {/* K30 · Teslimat yeri — dil ve sepetin SOLUNDA: sepete girmeden önce cevaplanan bir
@@ -291,7 +295,18 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
           <div className="flex flex-col gap-1.5 font-sans text-body-sm">
             <span className="font-serif text-card-title-sm text-cream">{brand.name}</span>
             <span>{t.footer.address}</span>
-            <span>{t.footer.whatsapp}</span>
+            {/* Numara YER TUTUCUYDU ("+33 6 XX XX XX XX") ve aylardır öyle duruyordu — ziyaretçiye
+                arayamayacağı bir numara göstermek, hiç göstermemekten kötü. Gerçek numara artık
+                `@lezzet/brand`te tek yerde; satır da bağ oldu: bir WhatsApp satırının işlevi
+                WhatsApp'ı açmaktır (CLAUDE.md §3, "statik ≠ işlevsiz"). */}
+            <a
+              href={whatsappHref()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cursor-pointer transition-colors hover:text-cream"
+            >
+              {t.footer.whatsapp.replace('{phone}', brand.contact.phoneDisplay)}
+            </a>
           </div>
 
           <div className={['flex font-sans text-body-sm', isMobile ? 'gap-8' : 'gap-12'].join(' ')}>
@@ -308,7 +323,11 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
             />
             <FooterColumn
               title={t.footer.corporate}
-              items={[{ label: t.footer.about }, { label: t.nav.pro }, { label: t.footer.faq, href: '/legal/faq' }]}
+              items={[
+                { label: t.footer.about },
+                { label: t.nav.pro, href: '/professionals' },
+                { label: t.footer.faq, href: '/legal/faq' },
+              ]}
             />
             {/* Dil MASAÜSTÜNDE üçüncü sütun, MOBİLDE alttaki ayrı satır (aşağıda) — tasarımın kararı:
                 dar ekranda üç sütun yan yana sığmıyor, üçüncüsü alta kaçıp hizayı bozuyor. */}

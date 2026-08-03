@@ -100,7 +100,9 @@ export function HomeDesktop({ t, locale, data }: HomeViewProps) {
         <CtaBand title={t.discover.title} body={t.discover.body} cta={{ label: t.discover.cta, href: '/' }} />
       </div>
       <div className="mx-12 mb-12">
-        <InviteBand title={t.pro.title} body={t.pro.body} cta={{ label: t.pro.cta, href: '/' }} />
+        {/* Anasayfanın B2B çağrısı ana sayfaya dönüyordu (`/`) — tasarımın "gelinen yol" listesinde
+            ilk sırada duran bağ, sayfa açılana kadar ölüydü (08.7). */}
+        <InviteBand title={t.pro.title} body={t.pro.body} cta={{ label: t.pro.cta, href: '/professionals' }} />
       </div>
     </div>
   );

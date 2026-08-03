@@ -20,20 +20,27 @@ interface FormInputFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>
   optionalLabel?: string;
   labelAside?: ReactNode;
   error?: string;
+  /**
+   * Cümlesiz geçersizlik: kırmızı çerçeve + `aria-invalid`, ama alanın altında metin YOK.
+   * Alan alan cümle yazmayan, kırmızıları işaretleyip tek bir özet satır koyan formlar için
+   * (gerekçe `controlClass` künyesinde). `error` verilmişse o zaten geçersizlik demektir.
+   */
+  invalid?: boolean;
   id?: string;
   inputRef?: Ref<HTMLInputElement>;
 }
 
-export function FormInputField({ label, hideLabel, optional, optionalLabel, labelAside, error, id, inputRef, className, ...rest }: FormInputFieldProps) {
+export function FormInputField({ label, hideLabel, optional, optionalLabel, labelAside, error, invalid, id, inputRef, className, ...rest }: FormInputFieldProps) {
   const reactId = useId();
   const fieldId = id ?? reactId;
+  const isInvalid = Boolean(error) || Boolean(invalid);
 
   return (
     <FieldShell fieldId={fieldId} label={label} hideLabel={hideLabel} optional={optional} optionalLabel={optionalLabel} labelAside={labelAside} error={error}>
       <input
         id={fieldId}
-        className={controlClass(error, className)}
-        aria-invalid={error ? 'true' : undefined}
+        className={controlClass(isInvalid, className)}
+        aria-invalid={isInvalid ? 'true' : undefined}
         aria-describedby={errorIdFor(fieldId, error)}
         ref={inputRef}
         {...rest}

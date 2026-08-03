@@ -81,7 +81,8 @@ export function HomeMobile({ t, locale, data }: HomeViewProps) {
         <CtaBand title={t.discover.title} body={t.discover.body} cta={{ label: t.discover.cta, href: '/' }} compact />
       </div>
       <div className="mx-4 mb-[18px]">
-        <InviteBand title={t.pro.title} body={t.pro.body} cta={{ label: t.pro.cta, href: '/' }} compact />
+        {/* Bkz. masaüstü karşılığı: B2B çağrısı ana sayfaya dönüyordu, artık sayfası var (08.7). */}
+        <InviteBand title={t.pro.title} body={t.pro.body} cta={{ label: t.pro.cta, href: '/professionals' }} compact />
       </div>
 
       {/* K21 — gezinirken sepetin durumu ekranın altında kalır (sepet boşken hiç çizilmez). */}

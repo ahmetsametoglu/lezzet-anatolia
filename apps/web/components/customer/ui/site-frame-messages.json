@@ -15,7 +15,7 @@
     },
     "footer": {
       "address": "Strasbourg, Fransa · www.lezzetanatolie.com",
-      "whatsapp": "WhatsApp ile sipariş: +33 6 XX XX XX XX",
+      "whatsapp": "WhatsApp ile sipariş: {phone}",
       "shopping": "Alışveriş",
       "corporate": "Kurumsal",
       "language": "Dil",
@@ -56,7 +56,7 @@
     },
     "footer": {
       "address": "Strasbourg, France · www.lezzetanatolie.com",
-      "whatsapp": "Commander sur WhatsApp : +33 6 XX XX XX XX",
+      "whatsapp": "Commander sur WhatsApp : {phone}",
       "shopping": "Boutique",
       "corporate": "À propos",
       "language": "Langue",
@@ -97,7 +97,7 @@
     },
     "footer": {
       "address": "Straßburg, Frankreich · www.lezzetanatolie.com",
-      "whatsapp": "Bestellen per WhatsApp: +33 6 XX XX XX XX",
+      "whatsapp": "Bestellen per WhatsApp: {phone}",
       "shopping": "Einkaufen",
       "corporate": "Unternehmen",
       "language": "Sprache",

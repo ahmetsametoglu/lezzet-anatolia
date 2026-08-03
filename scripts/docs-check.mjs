@@ -504,6 +504,79 @@ for (const pkgFile of ['package.json', ...walkPackageJsons()]) {
   }
 }
 
+// ── 3e. Kardeş-sayfa importu YALNIZ `*-url` olabilir ─────────────────────────
+//
+// **Denetim bulgusu D1 (03.08).** `STACK §7` bir istisna yazıyor: sayfa-yerel dosyalar kardeş
+// sayfadan import EDİLMEZ, tek kapı `*-url.ts` (saf, React'siz, dışarıya yalnız `<sayfa>Link`).
+// İstisna daraltılarak yazıldı — fiilî durumu aklamak yerine bir kapı tanımlandı.
+//
+// **Kural neden script'e indi:** `typecheck` bu bağın İMZA kaymasını yakalar (`ordersLink` bir
+// alan kaybederse çağıran derlenmez) ama KAPSAM kaymasını yakalamaz — yarın bir ajan
+// `../orders/orders-types`'ı import ederse derleyici sessiz kalır ve yazılı kural fiilen ölür.
+// Denetimin cümlesi: *"yazılı kural denetlenmezse çürür."*
+//
+// **Aile içi muaf.** Bir sayfanın KENDİ alt klasörleri (`components/`, `tabs/`, `[id]/`) aynı
+// ailedir; oradaki `../` sayfa sınırını değil klasör sınırını geçer. Kural yalnız
+// `operations/<sayfa>/…` ile `operations/<başkaSayfa>/…` arasındaki geçişi görür.
+const PAGE_ROOTS = ['apps/web/app/(operations)/operations', 'apps/web/app/(customer)/[locale]'];
+
+/**
+ * DEVRALINAN ihlaller — kural indiğinde zaten var olanlar. Hepsi müşteri şeridinde ve `login`
+ * sayfasının action/ikonlarını paylaşıyor; sahibi o şerit, düzeltmesi de onun (not düşüldü).
+ *
+ * Liste KAPALI ve KENDİ KENDİNİ TEMİZLER: bir satır artık ihlal etmiyorsa denetim "liste bayat"
+ * diye HATA verir. Muafiyet listeleri tam da bu yüzden çürür — kural indiği gün dürüst, altı ay
+ * sonra kimsenin bakmadığı bir aklama olur. Bu liste büyüyemez de: yeni bir ihlal listede
+ * olmadığı için doğrudan düşer.
+ */
+const SIBLING_IMPORT_GRANDFATHER = new Set([
+  "apps/web/app/(customer)/[locale]/checkout/components/guest-verify.tsx → ../../login/login-icons",
+  "apps/web/app/(customer)/[locale]/checkout/components/guest-verify.tsx → ../../login/actions",
+  "apps/web/app/(customer)/[locale]/professionals/actions.ts → ../login/actions",
+  "apps/web/app/(customer)/[locale]/professionals/components/application-form.tsx → ../../login/actions",
+]);
+const grandfatherSeen = new Set();
+
+/** Bir dizini özyineli gezip `.ts`/`.tsx` dosyalarını verir. */
+function walkSource(dir) {
+  const out = [];
+  for (const e of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+    if (e.name === 'node_modules') continue;
+    const path = `${dir}/${e.name}`;
+    if (e.isDirectory()) out.push(...walkSource(path));
+    else if (/\.tsx?$/.test(e.name)) out.push(path);
+  }
+  return out;
+}
+
+for (const pageRoot of PAGE_ROOTS.filter((p) => existsSync(join(ROOT, p)))) {
+  for (const file of walkSource(pageRoot)) {
+    // Dosyanın hangi SAYFAYA ait olduğu: kökten sonraki ilk klasör.
+    const ownPage = file.slice(pageRoot.length + 1).split('/')[0];
+    for (const m of read(file).matchAll(/from\s+'(\.\.\/[^']+)'/g)) {
+      const spec = m[1];
+      // Hedefi çöz: dosyanın klasöründen göreli yolu normalize et.
+      const resolved = join(dirname(file), spec).replace(/\\/g, '/');
+      if (!resolved.startsWith(`${pageRoot}/`)) continue; // sayfa köklerinin dışına çıkan import (lib, components) serbest
+      const targetPage = resolved.slice(pageRoot.length + 1).split('/')[0];
+      if (targetPage === ownPage) continue; // aile içi
+      if (/-url$/.test(resolved)) continue; // yazılı istisna (STACK §7)
+
+      const id = `${file} → ${spec}`;
+      if (SIBLING_IMPORT_GRANDFATHER.has(id)) {
+        grandfatherSeen.add(id);
+        continue;
+      }
+      note(`${file}: kardeş sayfadan import — '${spec}'. STACK §7: kardeş sayfadan YALNIZ '*-url' import edilebilir`);
+    }
+  }
+}
+
+// Devralınan liste kendini temizler: düzelen satır listede kalırsa bir sonraki ihlali aklardı.
+for (const id of SIBLING_IMPORT_GRANDFATHER) {
+  if (!grandfatherSeen.has(id)) note(`docs-check 3e: devralınan muafiyet BAYAT — "${id}" artık ihlal etmiyor, satırı listeden sil`);
+}
+
 // ── 4. build/README durum özeti güncel mi ──────────────────────────────────────
 const label = (m) =>
   m.total === 0 ? 'planlanıyor' : m.done === m.total ? 'tamam' : m.done + m.partial === 0 ? 'bekliyor' : 'sürüyor';

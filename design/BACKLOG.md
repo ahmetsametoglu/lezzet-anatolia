@@ -378,7 +378,58 @@ uydurulmadı, en yakın karşılıkla kuruldu ve buraya yazıldı — çizim gel
 
   Karar verilene kadar kod bugünkü hâlinde; test künyesi kapsam dışı olduğunu söylüyor.
 
+- **FAALİYET ADI YOK, YALNIZ KOD VAR — İKİ EKRANDA (03.08, 08.7 ↔ 09.11).**
+  Professionnels başvurusunun doğrulama kartı `Faaliyet: Restoran işletmesi` diye çizilmiş; kod
+  `Faaliyet: 47.91B` gösteriyor. Onay kartı (09.11) da aynı kodu gösteriyor.
+
+  Sebep kaynakta: resmî kayıt uç noktası (*Annuaire des Entreprises*) faaliyetin insan diline
+  çevrilmiş adını **döndürmüyor** — yalnız NAF kodu ve tek harflik bir bölüm işareti
+  (`section_activite_principale`, ör. `G`). Ölçüldü, uydurulmadı.
+
+  **Neden kendi tablomuzu yazmadık:** NAF 730 satırdır ve üç dile çevrilmesi gerekir; kodda
+  tutulan böyle bir sözlük ilk yıl bakılır, sonra eskir ve "resmî kayıttan getirildi" cümlesinin
+  altında yanlış bir etiket durur. Bölüm harfini (21 satır) kullanmak da mümkündü ama o kadar
+  kaba ki doğrulama işini görmez ("G — Commerce" bir restoranı da bakkalı da kapsar).
+
+  **İstenen karar:** ya bir NAF etiket kaynağı (üçüncü parti veri seti / kendi tablomuz + bakım
+  sahibi), ya da tasarımın bu satırı koda indirmesi. O güne kadar kod gösteriliyor: okunması güç
+  ama DOĞRU, ve adayın asıl doğrulayacağı iki satır (unvan, adres) zaten okunur.
+
+- **REDDEDİLEN B2B BAŞVURUSU EKRANDA "İNCELENİYOR" GÖRÜNÜYOR (03.08, 08.7).**
+  `Musteri - Professionnels.dc.html` üç sonuç hâli çiziyor: *inceleniyor* · *onaylandı* ·
+  *"Başvurunuz şu an onaylanamadı — hesabınızla alışverişe devam edebilirsiniz"*. Kodlanan iki:
+  üçüncüsü **veriden üretilemiyor.**
+
+  Sebep tek alanda: `b2b_approved` üç değil iki hâl taşıyor. Reddedilen kayıt da `false` alıyor
+  (09.11'in kararı: "ret SİLMEZ, kayıt B2C olarak kalır") ve `user_profiles_b2b_pending_idx` kısmi
+  indeksi de **bekleyen kuyruğu aynı değerden** okuyor. Yani "sırasını bekliyor" ile "bakıldı,
+  olmadı" veride ayrışmıyor; operasyonun müşteri listesi de ikisini "Onay bekliyor" diye gösteriyor
+  (`customers-labels.ts:21`).
+
+  **Bedeli müşteride:** reddedilen aday sayfaya her girdiğinde hiç gelmeyecek bir cevabı beklediğini
+  okur. Ret kararı e-postayla bildiriliyor (tasarımın vaadi), ama ekran onu yalanlıyor.
+
+  **İstenen karar** yalnız tasarımın değil, veri modelinin: üçüncü bir değer nereye yazılacak —
+  `b2b_approved`'ı üç değerli bir duruma mı çevireceğiz, yoksa ret için ayrı bir işaret mi
+  (tarih/gerekçe, ki "aynı kişi yarın yeniden başvurursa geçmişi bilelim" kaydı da onu istiyor)?
+  Üç şeridi birden ilgilendiriyor; `docs/talep/`e yazıldı. Kod `BEKLEYEN(08.7)` ile işaretli
+  (`domain-core/identity/b2b-application.ts` · `b2bStatusOf`).
+
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
+
+- **AB (ALMAN) YOLUNDA "FAALİYET" SORULMUYOR (03.08, 08.7).**
+  Tasarımın "Alman şirketi yolu" kartı *"Adres/faaliyet elle doldurulur"* diyor. Adres soruluyor,
+  **faaliyet sorulmuyor.**
+
+  Sebep saklayacak bir yer olmaması: `company_info.activityCode` bir APE/NAF kodudur ve Alman
+  şirketinin öyle bir kodu yok. Serbest metni o alana yazmak, onay kartının gıda-ailesi sinyalini
+  (`isFoodActivityCode`) uydurma bir girdiyle beslemek olurdu — bugün "Belirtilmemiş" diyen dürüst
+  bir `warn`, yarın anlamsız bir eşleşmeye dönerdi. Ayrı bir serbest alan açmak ise onay kartında
+  hiçbir dallanmayı beslemeyen, yalnız okunan bir satır demekti.
+
+  **Bugünkü davranış:** AB yolunda faaliyet boş kalıyor ve onay kartı bunu `warn` ("bu bilgi YOK")
+  tonuyla gösteriyor — `bad` değil, çünkü eksik veri kötü veri değildir (`b2b-approval` künyesi).
+  Tasarım tarafı bu satırı gerçekten istiyorsa önce ne saklayacağımıza karar verilmeli.
 
 - **HESAP MOBİLDE "KUPONLARIM" ÇİZİLİ DEĞİL, AMA EKLENDİ (03.08, 17.5).**
   `Musteri - Hesap.dc.html`in mobil karesi şu blokları taşıyor: Puanlarım (içinde **"Kupona çevir"**

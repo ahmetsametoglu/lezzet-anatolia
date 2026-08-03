@@ -21,7 +21,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | --- | --- | --- |
 | id | uuid | |
 | type | enum(`individual`,`company`) | kanal bunu belirler |
-| company_info | jsonb \| null | şirket bilgisi — doluysa B2B |
+| company_info | jsonb \| null | şirket bilgisi — doluysa B2B. Alanlar (`CompanyInfoSchema`): `legalName` · `siret` · `activityCode` (APE/NAF) · `foundedYear` · `isActive`. Self-servis başvuruda (08.7) SIRET yolunda resmî kayıttan dolar, AB yolunda elle girilir. jsonb olduğu için yeni alan migration istemez |
 | vat_number | string \| null | AB vergi no (Alman USt-IdNr); reverse charge için |
 | vat_number_valid | boolean \| null | VIES doğrulaması (açık API) |
 | name | string | |

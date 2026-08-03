@@ -219,6 +219,15 @@ olduğu için süzgeç adı değişince çağıran **derleme zamanında** düşe
 dosya (komponent, `-read`, `-types`, action) kardeş sayfadan import EDİLMEZ; paylaşılan olan
 yükselir (`lib/` ya da ortak üst klasör).
 
+**Kural DENETLENİYOR** (`docs:check` §3e, 03.08). Yazılı ama denetlenmeyen bir istisna çürür ve
+`typecheck` bunu tek başına koruyamaz: imza kaymasını yakalar (`ordersLink` bir alan kaybederse
+çağıran derlenmez), **kapsam kaymasını yakalamaz** — kardeş sayfadan `-types` ya da `actions`
+import eden bir satır derleyiciye tamamen geçerli görünür. Denetim iki yüzeyin sayfa köklerini
+tarar; aile içi (`components/`, `tabs/`, `[id]/`) muaf. Kural indiğinde var olan dört ihlal
+(müşteri yüzeyi, `login/actions` paylaşımı) **adıyla listelenmiş** bir devralma listesinde durur ve
+o liste kendi kendini temizler: satır düzeldiğinde denetim "muafiyet bayat" diye hata verir —
+böylece liste bir aklama aracına dönüşemez.
+
 **Bu projeye özgü — canlı güncelleme: `postgres_changes` DEĞİL, broadcast** (`lib/realtime/`)
 
 Ekranın kendini tazelemesi gereken yerler var (ödeme onayı webhook'la geliyor ve müşterinin

@@ -83,6 +83,13 @@ export const PATHNAMES = {
    *
    * İç yol İngilizce kalır (`/legal/...`), dışarıya çıkan dile göre — `CLAUDE.md §2`'nin kuralı.
    */
+  /**
+   * B2B tanıtım + self-servis kayıt (08.7). **Menüdeki etiket üç dilde de "Professionnels"**
+   * (tasarımın kararı: marka sözcüğü), ama ADRES dile göre çevrilir ve bu ikisi çelişmez —
+   * etiket bir marka işareti, URL bir ARAMA sözcüğüdür. Alman restoran sahibi "Professionnels"
+   * diye aramaz; yasal sayfalarda verilen kararın aynısı (aşağıdaki künye).
+   */
+  '/professionals': { fr: '/professionnels', de: '/geschaeftskunden', tr: '/kurumsal' },
   '/legal/terms': { fr: '/mentions-legales', de: '/impressum', tr: '/yasal-bilgiler' },
   '/legal/sales': { fr: '/conditions-generales-de-vente', de: '/agb', tr: '/satis-kosullari' },
   '/legal/privacy': { fr: '/confidentialite', de: '/datenschutz', tr: '/gizlilik' },

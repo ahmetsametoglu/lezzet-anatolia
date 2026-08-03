@@ -14,6 +14,7 @@ export * from './order/channel';
 export * from './order/reference-no';
 export * from './order/decisions';
 export * from './order/customer-status';
+export * from './identity/b2b-application';
 export * from './identity/b2b-approval';
 export * from './identity/resolve-identity';
 export * from './identity/roles';

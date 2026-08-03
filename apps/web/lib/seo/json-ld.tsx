@@ -101,8 +101,8 @@ export function LocalBusinessJsonLd({ url }: { url: string }) {
         vatID: 'FR50907496640',
         url,
         image: `${siteOrigin()}/logo.jpg`,
-        email: 'lezzetanatolie@gmail.com',
-        telephone: '+33616990681',
+        email: brand.contact.email,
+        telephone: brand.contact.phoneE164,
         address: {
           '@type': 'PostalAddress',
           streetAddress: '46 rue des Prés',

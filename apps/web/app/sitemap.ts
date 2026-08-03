@@ -24,6 +24,9 @@ const STATIC_ROUTES: AppRoute[] = [
   '/',
   '/catalog',
   '/packages',
+  // Professionnels (08.7) — ziyaretçiye açık ve aranan bir sayfa: "grossiste turc" türü sorgular
+  // tam olarak buraya düşer. Adres dile göre çevrildiği için üç satırı da harita taşıyor.
+  '/professionals',
   '/legal/delivery',
   '/legal/faq',
   '/legal/sales',

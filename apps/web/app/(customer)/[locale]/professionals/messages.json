@@ -1,0 +1,245 @@
+{
+  "tr": {
+    "meta": {
+      "title": "Professionnels — restoran ve marketler için toptan tedarik",
+      "description": "Restoran, market ve kafeler için Türk gıda tedariki. SIRET'inizle bir dakikada başvurun; toptan fiyat listeniz onayla birlikte açılır."
+    },
+    "hero": {
+      "eyebrow": "Restoran & market için",
+      "title": "Mutfağınızın Türk lezzeti tedarikçisi",
+      "benefits": [
+        "Toptan fiyat listesi — onayla birlikte açılır",
+        "Bölge içi düzenli teslimat, kendi soğuk zincir aracımızla",
+        "Hacimli sipariş kolaylığı + tek tuşla tekrar sipariş",
+        "WhatsApp'tan sipariş ve doğrudan iletişim"
+      ],
+      "cta": "Hemen başvurun",
+      "whatsapp": "WhatsApp'tan sorun",
+      "imageAlt": "Restoran mutfağı ve teslimat aracı"
+    },
+    "steps": [
+      { "title": "Kaydolun", "body": "SIRET'inizle bir dakikada — bilgiler resmî kayıttan kendiliğinden dolar." },
+      { "title": "Onay", "body": "Başvurunuzu inceleyip hızla dönüş yaparız; sonuç e-posta ile." },
+      { "title": "Toptan sipariş", "body": "Fiyat listeniz açılır; dilediğiniz kanaldan sipariş verirsiniz." }
+    ],
+    "form": {
+      "title": "Başvuru",
+      "tabSiret": "Fransız şirketi (SIRET)",
+      "tabVat": "Alman şirketi",
+      "siret": "SIRET numaranız",
+      "fetch": "Getir",
+      "fetching": "Getiriliyor…",
+      "found": "Resmî kayıttan getirildi — doğrulayın",
+      "legalNameLabel": "Unvan",
+      "addressLabel": "Adres",
+      "activityLabel": "Faaliyet",
+      "activityUnknown": "Belirtilmemiş",
+      "legalName": "Şirket unvanı",
+      "vat": "AB vergi numarası (USt-IdNr)",
+      "vatChecking": "Kontrol ediliyor…",
+      "vatValid": "Doğrulandı",
+      "vatInvalid": "Bu numara doğrulanamadı — kontrol edin",
+      "vatUnknown": "Şu anda doğrulanamadı — başvurunuza engel değil",
+      "line1": "Sokak ve numara",
+      "postalCode": "Posta kodu",
+      "city": "Şehir",
+      "contactName": "Adınız",
+      "phone": "Telefon",
+      "email": "E-posta",
+      "submit": "Başvuruyu gönder",
+      "submitting": "Gönderiliyor…",
+      "note": "Gönderince e-postanıza tek kullanımlık kod gelir — hesabınız onunla açılır; şifre yok. Zaten hesabınız varsa aynı hesapla başvurursunuz.",
+      "noteSignedIn": "Başvurunuz mevcut hesabınıza bağlanır.",
+      "verifyTitle": "E-postanızı doğrulayın",
+      "back": "Forma dön"
+    },
+    "aside": {
+      "title": "Sorunuz mu var?",
+      "body": "Çoğu iş birliği bir konuşmayla başlar. Bize doğrudan ulaşın:",
+      "whatsapp": "WhatsApp: {phone}",
+      "noticeLead": "Onay gelene kadar kataloğu perakende fiyatlarla gezebilirsiniz.",
+      "noticeStrong": "Toptan fiyat listeniz onayla birlikte açılır."
+    },
+    "sent": {
+      "eyebrow": "Başvuru gönderildi",
+      "title": "Başvurunuz alındı",
+      "body": "İnceliyoruz — sonucu e-posta ile bildireceğiz. Bu sırada kataloğu perakende fiyatlarla gezebilirsiniz.",
+      "cta": "Kataloğa göz at"
+    },
+    "status": {
+      "pending": "Başvurunuz inceleniyor — sonuç e-posta ile.",
+      "approved": "Onaylandı! Toptan fiyat listeniz açıldı."
+    },
+    "errors": {
+      "unexpected": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
+      "session_expired": "Oturumunuz sona ermiş. Yeniden giriş yapın.",
+      "invalid_email": "Bu e-posta adresi geçerli görünmüyor.",
+      "invalid_application": "Formda eksik ya da hatalı alanlar var.",
+      "siret_not_found": "Bu SIRET ile kayıt bulamadık.",
+      "registry_down": "Resmî kayda şu anda ulaşamıyoruz — bilgileri elle doldurabilirsiniz.",
+      "incomplete": "Kırmızı alanları tamamlayın."
+    }
+  },
+  "fr": {
+    "meta": {
+      "title": "Professionnels — approvisionnement en gros pour restaurants et épiceries",
+      "description": "Produits turcs pour restaurants, épiceries et cafés. Inscrivez-vous en une minute avec votre SIRET ; vos tarifs de gros s'ouvrent après validation."
+    },
+    "hero": {
+      "eyebrow": "Pour restaurants & épiceries",
+      "title": "Le fournisseur turc de votre cuisine",
+      "benefits": [
+        "Tarifs de gros — ouverts après validation",
+        "Livraisons régulières dans la zone, avec notre propre camion frigorifique",
+        "Commandes en volume + recommande en un clic",
+        "Commande et contact direct par WhatsApp"
+      ],
+      "cta": "Faire une demande",
+      "whatsapp": "Une question sur WhatsApp",
+      "imageAlt": "Cuisine de restaurant et véhicule de livraison"
+    },
+    "steps": [
+      { "title": "Inscrivez-vous", "body": "En une minute avec votre SIRET — les informations viennent du registre officiel." },
+      { "title": "Validation", "body": "Nous étudions votre demande et revenons vers vous rapidement ; réponse par e-mail." },
+      { "title": "Commande en gros", "body": "Vos tarifs s'ouvrent ; vous commandez par le canal de votre choix." }
+    ],
+    "form": {
+      "title": "Demande",
+      "tabSiret": "Société française (SIRET)",
+      "tabVat": "Société allemande",
+      "siret": "Votre numéro SIRET",
+      "fetch": "Rechercher",
+      "fetching": "Recherche…",
+      "found": "Informations du registre officiel — vérifiez-les",
+      "legalNameLabel": "Dénomination",
+      "addressLabel": "Adresse",
+      "activityLabel": "Activité",
+      "activityUnknown": "Non précisée",
+      "legalName": "Dénomination sociale",
+      "vat": "Numéro de TVA intracommunautaire (USt-IdNr)",
+      "vatChecking": "Vérification…",
+      "vatValid": "Vérifié",
+      "vatInvalid": "Ce numéro n'a pas pu être vérifié — vérifiez-le",
+      "vatUnknown": "Vérification impossible pour le moment — cela ne bloque pas votre demande",
+      "line1": "Rue et numéro",
+      "postalCode": "Code postal",
+      "city": "Ville",
+      "contactName": "Votre nom",
+      "phone": "Téléphone",
+      "email": "E-mail",
+      "submit": "Envoyer la demande",
+      "submitting": "Envoi…",
+      "note": "Après l'envoi, vous recevez un code à usage unique par e-mail — votre compte s'ouvre avec ce code, sans mot de passe. Si vous avez déjà un compte, la demande y sera rattachée.",
+      "noteSignedIn": "Votre demande sera rattachée à votre compte actuel.",
+      "verifyTitle": "Vérifiez votre e-mail",
+      "back": "Revenir au formulaire"
+    },
+    "aside": {
+      "title": "Une question ?",
+      "body": "La plupart des collaborations commencent par une conversation. Écrivez-nous :",
+      "whatsapp": "WhatsApp : {phone}",
+      "noticeLead": "En attendant la validation, vous pouvez parcourir le catalogue aux prix de détail.",
+      "noticeStrong": "Vos tarifs de gros s'ouvrent avec la validation."
+    },
+    "sent": {
+      "eyebrow": "Demande envoyée",
+      "title": "Nous avons bien reçu votre demande",
+      "body": "Nous l'étudions — vous recevrez la réponse par e-mail. En attendant, le catalogue reste accessible aux prix de détail.",
+      "cta": "Voir le catalogue"
+    },
+    "status": {
+      "pending": "Votre demande est à l'étude — réponse par e-mail.",
+      "approved": "Validée ! Vos tarifs de gros sont ouverts."
+    },
+    "errors": {
+      "unexpected": "Une erreur est survenue. Merci de réessayer.",
+      "session_expired": "Votre session a expiré. Reconnectez-vous.",
+      "invalid_email": "Cette adresse e-mail ne semble pas valide.",
+      "invalid_application": "Certains champs sont manquants ou incorrects.",
+      "siret_not_found": "Aucun établissement trouvé avec ce SIRET.",
+      "registry_down": "Le registre officiel est injoignable pour le moment — vous pouvez saisir les informations manuellement.",
+      "incomplete": "Complétez les champs en rouge."
+    }
+  },
+  "de": {
+    "meta": {
+      "title": "Professionnels — Großhandel für Restaurants und Lebensmittelgeschäfte",
+      "description": "Türkische Lebensmittel für Restaurants, Märkte und Cafés. In einer Minute anmelden; Ihre Großhandelspreise werden nach der Freigabe sichtbar."
+    },
+    "hero": {
+      "eyebrow": "Für Restaurants & Märkte",
+      "title": "Der türkische Lieferant Ihrer Küche",
+      "benefits": [
+        "Großhandelspreise — sichtbar nach der Freigabe",
+        "Regelmäßige Lieferung im Gebiet, mit eigenem Kühlfahrzeug",
+        "Große Mengen einfach bestellen + Nachbestellung mit einem Klick",
+        "Bestellung und direkter Kontakt über WhatsApp"
+      ],
+      "cta": "Jetzt anfragen",
+      "whatsapp": "Frage über WhatsApp",
+      "imageAlt": "Restaurantküche und Lieferfahrzeug"
+    },
+    "steps": [
+      { "title": "Anmelden", "body": "Mit Ihrer USt-IdNr. in einer Minute — die Angaben tragen Sie einmal ein." },
+      { "title": "Freigabe", "body": "Wir prüfen Ihre Anfrage und melden uns zügig; die Antwort kommt per E-Mail." },
+      { "title": "Großhandel bestellen", "body": "Ihre Preisliste öffnet sich; Sie bestellen über den Kanal Ihrer Wahl." }
+    ],
+    "form": {
+      "title": "Anfrage",
+      "tabSiret": "Französisches Unternehmen (SIRET)",
+      "tabVat": "Deutsches Unternehmen",
+      "siret": "Ihre SIRET-Nummer",
+      "fetch": "Abrufen",
+      "fetching": "Wird abgerufen…",
+      "found": "Aus dem amtlichen Register — bitte prüfen",
+      "legalNameLabel": "Firma",
+      "addressLabel": "Anschrift",
+      "activityLabel": "Tätigkeit",
+      "activityUnknown": "Nicht angegeben",
+      "legalName": "Firmenname",
+      "vat": "Umsatzsteuer-Identifikationsnummer (USt-IdNr.)",
+      "vatChecking": "Wird geprüft…",
+      "vatValid": "Bestätigt",
+      "vatInvalid": "Diese Nummer konnte nicht bestätigt werden — bitte prüfen",
+      "vatUnknown": "Derzeit nicht prüfbar — Ihre Anfrage bleibt möglich",
+      "line1": "Straße und Hausnummer",
+      "postalCode": "Postleitzahl",
+      "city": "Stadt",
+      "contactName": "Ihr Name",
+      "phone": "Telefon",
+      "email": "E-Mail",
+      "submit": "Anfrage senden",
+      "submitting": "Wird gesendet…",
+      "note": "Nach dem Senden erhalten Sie einen Einmalcode per E-Mail — damit wird Ihr Konto eröffnet, ganz ohne Passwort. Wenn Sie bereits ein Konto haben, wird die Anfrage damit verknüpft.",
+      "noteSignedIn": "Ihre Anfrage wird mit Ihrem bestehenden Konto verknüpft.",
+      "verifyTitle": "Bestätigen Sie Ihre E-Mail",
+      "back": "Zurück zum Formular"
+    },
+    "aside": {
+      "title": "Noch Fragen?",
+      "body": "Die meisten Partnerschaften beginnen mit einem Gespräch. Schreiben Sie uns:",
+      "whatsapp": "WhatsApp: {phone}",
+      "noticeLead": "Bis zur Freigabe können Sie den Katalog zu Einzelhandelspreisen ansehen.",
+      "noticeStrong": "Ihre Großhandelspreise werden mit der Freigabe sichtbar."
+    },
+    "sent": {
+      "eyebrow": "Anfrage gesendet",
+      "title": "Ihre Anfrage ist eingegangen",
+      "body": "Wir prüfen sie — die Antwort erhalten Sie per E-Mail. In der Zwischenzeit bleibt der Katalog zu Einzelhandelspreisen offen.",
+      "cta": "Zum Katalog"
+    },
+    "status": {
+      "pending": "Ihre Anfrage wird geprüft — Antwort per E-Mail.",
+      "approved": "Freigegeben! Ihre Großhandelspreise sind offen."
+    },
+    "errors": {
+      "unexpected": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+      "session_expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+      "invalid_email": "Diese E-Mail-Adresse scheint nicht gültig zu sein.",
+      "invalid_application": "Einige Felder fehlen oder sind fehlerhaft.",
+      "siret_not_found": "Zu dieser SIRET-Nummer wurde kein Eintrag gefunden.",
+      "registry_down": "Das amtliche Register ist derzeit nicht erreichbar — Sie können die Angaben manuell eintragen.",
+      "incomplete": "Bitte füllen Sie die rot markierten Felder aus."
+    }
+  }
+}

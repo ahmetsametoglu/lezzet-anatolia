@@ -60,7 +60,16 @@ export function errorIdFor(fieldId: string, error?: string): string | undefined 
   return error ? `${fieldId}-error` : undefined;
 }
 
-/** Input/textarea/select ortak görünümü (Lezzet token'ları). `error` çerçeveyi kırmızıya çeker. */
+/**
+ * Input/textarea/select ortak görünümü (Lezzet token'ları). `invalid` çerçeveyi kırmızıya çeker.
+ *
+ * Parametre METİN değil BAYRAK (03.08): kırmızı çerçevenin şartı "bir hata cümlesi var" değil,
+ * "bu alan geçersiz". İkisi her zaman aynı şey değil — bazı formlar alan alan cümle yazmaz,
+ * kırmızıları işaretleyip altına tek bir "işaretli alanları tamamlayın" satırı koyar
+ * (Professionnels başvurusu böyle). Metin beklendiğinde o formlar boş dizgi geçirmek zorunda
+ * kalıyordu ve ekranda **içi boş bir `role="alert"`** doğuyordu: ekran okuyucu duyurur, kullanıcı
+ * hiçbir şey duymaz.
+ */
 /**
  * Girdi gövdesi = **K34 · Form Alanı** (envanter). Çizili künye:
  *   `48px` gövde (mobil 52) · yarıçap `14px` · odakta `2px zeytin` · hata `2px terracotta`
@@ -89,13 +98,13 @@ export function errorIdFor(fieldId: string, error?: string): string | undefined 
  * **Mobil 52px KALAN İŞ:** primitif cihazı bilmiyor ve `md:` akışkan responsive yasak (ADR Sapma 3).
  * 48px zaten erişilebilirlik tabanının (44px) üstünde; `size` desteği ayrı iş → `design/BACKLOG`.
  */
-export function controlClass(error?: string, extra?: string): string {
+export function controlClass(invalid?: boolean, extra?: string): string {
   return [
     'h-12 w-full rounded-soft border-[1.5px] bg-card px-4 font-sans text-body leading-tight text-ink outline-none transition-colors placeholder:text-sand-600',
     'focus:border-olive focus:ring-[0.5px] focus:ring-inset focus:ring-olive disabled:cursor-not-allowed disabled:opacity-60',
     // Salt-okunur (ülke gibi sabit değerler): krem zemin + soluk kenar ve metin — K34'ün beşinci hâli.
     'read-only:bg-sand-50 read-only:border-sand-300 read-only:text-muted',
-    error ? 'border-terracotta-bright ring-[0.5px] ring-inset ring-terracotta-bright' : 'border-sand-400',
+    invalid ? 'border-terracotta-bright ring-[0.5px] ring-inset ring-terracotta-bright' : 'border-sand-400',
     extra,
   ]
     .filter(Boolean)
