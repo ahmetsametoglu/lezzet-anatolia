@@ -242,8 +242,20 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
             <Link href="/packages" className={navClass('packages', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
               {t.nav.packages}
             </Link>
-            {/* Fırsatlar her sayfada terracotta — kampanya vurgusu sabittir, aktiflikten bağımsız. */}
-            <span className={navClass('deals', activeNav, 'text-terracotta')}>{t.nav.deals}</span>
+            {/* Fırsatlar her sayfada terracotta — kampanya vurgusu sabittir, aktiflikten bağımsız.
+                AYRI BİR ROTA DEĞİL: katalogun teklif süzgeçli hâli (`?offers=1`), o süzgeç zaten
+                çalışıyordu ama menüden ulaşılamıyordu — çipe basmadan fırsatları görmenin yolu
+                yoktu. Ayrı bir `/deals` rotası açmak, aynı listenin ikinci bir adresi olurdu. */}
+            <Link
+              href={{ pathname: '/catalog', query: { offers: '1' } }}
+              // Hover RENK DEĞİŞTİRMİYOR, saydamlaşıyor: öbür menü öğeleri `hover:text-olive`
+              // kullanıyor ama terracotta'nın koyu varyantı envanterde yok ve zeytine dönmek
+              // kampanya vurgusunu kaybettirirdi ("vurgu sabittir"). Ham renk yazmak yerine
+              // token'sız bir geri bildirim (CLAUDE.md §3: token yoksa kodlanmaz).
+              className={navClass('deals', activeNav, 'cursor-pointer text-terracotta transition-opacity hover:opacity-75')}
+            >
+              {t.nav.deals}
+            </Link>
             <span className={navClass('discover', activeNav)}>{t.nav.discover}</span>
             <span className={navClass('pro', activeNav)}>{t.nav.pro}</span>
           </nav>
@@ -283,8 +295,21 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
           </div>
 
           <div className={['flex font-sans text-body-sm', isMobile ? 'gap-8' : 'gap-12'].join(' ')}>
-            <FooterColumn title={t.footer.shopping} items={[t.nav.catalog, t.nav.packages, t.nav.deals]} />
-            <FooterColumn title={t.footer.corporate} items={[t.footer.about, t.nav.pro, t.footer.faq]} />
+            {/* Sütun satırları ölü `<span>`dı; sayfası OLANLAR bağlandı (03.08). "Fırsatlar" ayrı
+                bir rota değil, katalogun süzgeçli hâli (`?offers=1`) — üst menüdeki öğeyle aynı
+                hedef, iki yerde farklı davranmamalı. */}
+            <FooterColumn
+              title={t.footer.shopping}
+              items={[
+                { label: t.nav.catalog, href: '/catalog' },
+                { label: t.nav.packages, href: '/packages' },
+                { label: t.nav.deals, href: { pathname: '/catalog', query: { offers: '1' } } },
+              ]}
+            />
+            <FooterColumn
+              title={t.footer.corporate}
+              items={[{ label: t.footer.about }, { label: t.nav.pro }, { label: t.footer.faq, href: '/legal/faq' }]}
+            />
             {/* Dil MASAÜSTÜNDE üçüncü sütun, MOBİLDE alttaki ayrı satır (aşağıda) — tasarımın kararı:
                 dar ekranda üç sütun yan yana sığmıyor, üçüncüsü alta kaçıp hizayı bozuyor. */}
             {!isMobile && (
@@ -325,16 +350,27 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
 
 interface FooterColumnProps {
   title: string;
-  items: string[];
+  /**
+   * Sütun satırları. `href` VERİLMEYEN satır düz metin kalır — sayfası olmayan bir başlığı bağ
+   * yapmak ziyaretçiyi 404'e gönderir (`nav`'ın "açılmamış rotalar düz metin kalır" kuralı, aynı
+   * gerekçe). Bugün bağsız kalan ikisi: "Hakkımızda" (sayfası yok) ve "Professionnels" (08.7).
+   */
+  items: { label: string; href?: ComponentProps<typeof Link>['href'] }[];
 }
 
 function FooterColumn({ title, items }: FooterColumnProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <span className="font-bold text-cream">{title}</span>
-      {items.map((item) => (
-        <span key={item}>{item}</span>
-      ))}
+      {items.map((item) =>
+        item.href ? (
+          <Link key={item.label} href={item.href} className="cursor-pointer transition-colors hover:text-cream">
+            {item.label}
+          </Link>
+        ) : (
+          <span key={item.label}>{item.label}</span>
+        ),
+      )}
     </div>
   );
 }
