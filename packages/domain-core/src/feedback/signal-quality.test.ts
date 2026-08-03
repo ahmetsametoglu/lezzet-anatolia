@@ -7,6 +7,7 @@ import {
   dwellWeight,
   patternWeight,
   swipeWeight,
+  weighSwipesByProduct,
 } from './signal-quality';
 
 describe('kart süresi ağırlığı', () => {
@@ -143,5 +144,78 @@ describe('kişi başına tekilleştirme', () => {
       kisi('m1', 'like', 1, '2026-08-03T09:00:00.000Z'),
     ]);
     expect(signal.rawLikes).toBe(0);
+  });
+});
+
+describe('ham satırların ürün başına ağırlıklandırılması', () => {
+  const satir = (productId: string, swiperId: string | null, vote: 'like' | 'dislike', dwellMs: number, at: string) => ({
+    productId,
+    swiperId,
+    vote,
+    dwellMs,
+    at,
+  });
+
+  it('deseni TÜM örneklem üzerinden sayar, ürün başına değil', () => {
+    // Kişi beş ürünün beşini de beğenmiş: savurma deseni ancak hepsi birlikte sayılınca görünür.
+    // Ürün başına sayılsaydı her üründe "1 beğeni, 0 geçme" olurdu ve `patternWeight` eşiğin
+    // altında kalıp desen ARAMAZDI — savuran kişi hiç yakalanmazdı.
+    const rows = ['p1', 'p2', 'p3', 'p4', 'p5'].map((p, i) => satir(p, 'savuran', 'like', 3000, `2026-08-03T09:0${i}:00.000Z`));
+    const byProduct = weighSwipesByProduct(rows);
+
+    expect(byProduct.size).toBe(5);
+    // Beş beğeni, sıfır geçme → azınlık payı 0 → desen ağırlığı 0.
+    expect(byProduct.get('p1')?.[0]?.weight).toBe(0);
+  });
+
+  it('ayırt eden kişinin kaydırması YÜKSEK ağırlık alır (3/2 → 0,8)', () => {
+    // Tam 1 yalnız TAM dengede (%50/%50) olur; 3 beğeni + 2 geçmede azınlık payı 0,4 → ×2 = 0,8.
+    // Savuranın 0'ıyla arasındaki fark, ölçünün gerçekten çalıştığının kanıtı.
+    const rows = [
+      satir('p1', 'ayirt', 'like', 3000, '2026-08-03T09:00:00.000Z'),
+      satir('p2', 'ayirt', 'dislike', 3000, '2026-08-03T09:01:00.000Z'),
+      satir('p3', 'ayirt', 'like', 3000, '2026-08-03T09:02:00.000Z'),
+      satir('p4', 'ayirt', 'dislike', 3000, '2026-08-03T09:03:00.000Z'),
+      satir('p5', 'ayirt', 'like', 3000, '2026-08-03T09:04:00.000Z'),
+    ];
+    expect(weighSwipesByProduct(rows).get('p1')?.[0]?.weight).toBeCloseTo(0.8, 5);
+  });
+
+  it('kimliksiz kaydırmada desen ARANMAZ — nötr kabul edilir', () => {
+    // Hangisinin aynı ziyaretçi olduğu bilinmiyor; tahmin etmek tutmadığımız veriyi uydurmaktır.
+    const rows = Array.from({ length: 9 }, (_, i) => satir('p1', null, 'like', 3000, `2026-08-03T09:0${i}:00.000Z`));
+    const swipes = weighSwipesByProduct(rows).get('p1') ?? [];
+    expect(swipes).toHaveLength(9);
+    expect(swipes.every((s) => s.weight === 1)).toBe(true);
+  });
+
+  it('oysuz satırı hiç almaz — yalnız yıldız verilmiş kayıt bir kaydırma değildir', () => {
+    const rows = [{ productId: 'p1', swiperId: 'm1', vote: null, dwellMs: 3000, at: '2026-08-03T09:00:00.000Z' }];
+    expect(weighSwipesByProduct(rows).size).toBe(0);
+  });
+
+  it('aday panosu ile ürün skoru AYNI sayıyı üretir — iki ekran ayrışamaz', () => {
+    // Bu testin varlık sebebi: ağırlıklandırma iki yerde ayrı yazılsaydı fark hiçbir yerde hata
+    // vermez, yalnız aynı ürün için iki farklı güven gösterilirdi.
+    const rows = [
+      satir('p1', 'm1', 'like', 3000, '2026-08-03T09:00:00.000Z'),
+      satir('p1', 'm2', 'like', 500, '2026-08-03T09:01:00.000Z'),
+      satir('p2', 'm1', 'dislike', 3000, '2026-08-03T09:02:00.000Z'),
+    ];
+    const byProduct = weighSwipesByProduct(rows);
+    const p1 = candidateSignalOf(byProduct.get('p1') ?? []);
+    expect(p1.rawLikes).toBe(2);
+    // İkinci kaydırma eşiğe yakın (500 ms) → düşük ağırlık; güven 1'in altında kalmalı.
+    expect(p1.trust).toBeLessThan(1);
+    expect(p1.weightedLikes).toBeLessThan(2);
+  });
+
+  it('aynı kişinin aynı ürüne tekrarı TEK sayılır (dedupe ile birlikte)', () => {
+    const rows = [
+      satir('p1', 'm1', 'like', 3000, '2026-08-03T09:00:00.000Z'),
+      satir('p1', 'm1', 'like', 3000, '2026-08-03T10:00:00.000Z'),
+      satir('p1', 'm1', 'like', 3000, '2026-08-03T11:00:00.000Z'),
+    ];
+    expect(candidateSignalOf(weighSwipesByProduct(rows).get('p1') ?? []).rawLikes).toBe(1);
   });
 });

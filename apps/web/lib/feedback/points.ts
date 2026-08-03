@@ -1,5 +1,5 @@
 import 'server-only';
-import { PointsBalanceService, PointsEntryService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
+import { OrderService, PointsBalanceService, PointsEntryService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
 import {
   POINTS_SETTING_KEYS,
   canEarnPoints,
@@ -137,10 +137,60 @@ export function awardVisitPoints(customerId: string): Promise<PointsEntry | null
   return awardPoints({ customerId, reason: 'visit' });
 }
 
+/**
+ * **Sipariş puanı** (17.4) — sipariş müşterinin eline GEÇTİĞİNDE, verildiğinde değil.
+ *
+ * Denetim bunu 29.07'de eksik bulmuştu: defter, ayar (`points_order`) ve tavan hazırdı ama yazan
+ * üretim kodu yoktu — sebep yalnız testte geçiyordu. Yani müşteri sipariş verdiği için hiç puan
+ * kazanmıyordu ve bunu hiçbir yer söylemiyordu.
+ *
+ * **Neden sipariş VERİLİNCE değil:** iptal edilen ya da hiç ödenmeyen bir sipariş de puan öderdi.
+ * Ödül gerçekleşmiş bir alışverişindir; `delivered` ve `completed` bunun iki yüzüdür (kapıda satış
+ * doğrudan `completed`'a gider, teslimat `delivered`'da durur).
+ *
+ * **İkisinden hangisi önce gelirse o yazar, ikincisi sessizce düşer** — güvence `points_entry`in
+ * `(customer_id, reason, ref_id)` kısmi unique indeksinde. Bu yüzden çağıran taraf "acaba daha önce
+ * yazıldı mı" diye sormak zorunda değil ve üç ayrı yoldan çağrılması sorun değil; teslim edilip
+ * sonra kapatılan bir sipariş iki kez puan ödemez.
+ *
+ * **Bilinen sınır (yazılı olsun):** yeni bir "sipariş kapandı" yolu açılırsa buradan çağırmayı
+ * unutmak sessiz bir ödül kaybıdır — hata vermez, yalnız müşteri puanını almaz. Path-proof
+ * alternatifi `order_status_log` üzerinde tarayan bir cron olurdu; ödülün ANINDA görünmesi
+ * (müşteri teslimattan sonra hesabına bakar) o gecikmeye tercih edildi.
+ */
+async function awardOrderPoints(orderId: string, customerId: string): Promise<PointsEntry | null> {
+  return awardPoints({ customerId, reason: 'order', refId: orderId });
+}
+
+/**
+ * **Kapanan siparişin İKİ ödülü** — sipariş puanı (17.4) + getiren puanı (17.7).
+ *
+ * Tek kapı, çünkü tetikleri aynı: sipariş müşterinin eline geçtiği an. Ayrı ayrı çağrılsalardı üç
+ * yazma yolunun (teslimat · genel geçiş · kapıda satış) her birinde ikisini de hatırlamak
+ * gerekirdi ve biri mutlaka bir yerde unutulurdu.
+ *
+ * **Getiren ödülü KAYITTA değil BURADA** ve bu bilinçli: kayıt anında ödemek, sahte kayıtla puan
+ * basmaya kapı açardı. Getiren, getirdiği kişi gerçekten müşteri olunca kazanır. "İlk sipariş"
+ * kontrolü koda yazılmıyor — defterin tekillik indeksi (`customer_id`=getiren, `reason='referral'`,
+ * `ref_id`=getirilen) ikinci siparişte yazımı zaten düşürür; ayrıca sayarsak aynı kuralı iki yerde
+ * tutmuş olurduk.
+ *
+ * **Hiçbiri asıl işlemi durdurmaz** (DOMAIN §14 "ödül asıl işlemi durdurmaz"): ödül yazılamazsa
+ * sipariş yine kapanmıştır.
+ */
+export async function rewardCompletedOrder(orderId: string): Promise<void> {
+  const order = await new OrderService(serviceDb()).getById(orderId);
+  if (!order) return;
+  await Promise.all([
+    awardOrderPoints(orderId, order.customerId),
+    awardReferralPoints(order.customerId),
+  ]);
+}
+
 /** Müşterinin bakiyesi; hiç hareketi yoksa sıfır (null dolaştırılmaz). */
 export async function getPointsBalance(customerId: string): Promise<PointsBalance> {
   const row = await new PointsBalanceService(serviceDb()).getByCustomer(customerId);
-  return row ?? { customerId, balance: 0, earned: 0, spent: 0, lastActivityAt: new Date(0).toISOString() };
+  return row ?? { customerId, balance: 0, earned: 0, spent: 0, redemptionCount: 0, lastActivityAt: new Date(0).toISOString() };
 }
 
 /** Müşterinin puan geçmişi — hesap sayfasındaki "kazandın / harcadın" listesi. */
@@ -236,7 +286,13 @@ export async function awardReferralPoints(newCustomerId: string): Promise<Points
   return awardPoints({ customerId: profile.referredBy, reason: 'referral', refId: newCustomerId });
 }
 
-/** Operasyon puan tablosu — kim ne kadar biriktirmiş (genel resim, istisna avı değil). */
-export function listTopPointsBalances(limit?: number): Promise<PointsBalance[]> {
-  return new PointsBalanceService(serviceDb()).listTop(limit);
+/**
+ * Operasyon puan tablosu — kim ne kadar biriktirmiş (genel resim, istisna avı değil).
+ *
+ * `since` (ISO) verilirse **o dönemin DELTA'sı** okunur, cüzdan bakiyesi değil: 30 günlük pencerede
+ * "bakiye" diye bir sayı yoktur, o dönemde kazanılan eksi harcanan vardır. Ekranın başlığı zaten
+ * dönemi yazıyor (operasyon talebi 03.08 — seçici bu okuma olmadığı için hiç çizilememişti).
+ */
+export function listTopPointsBalances(limit?: number, since?: string): Promise<PointsBalance[]> {
+  return new PointsBalanceService(serviceDb()).listTop(limit, since);
 }

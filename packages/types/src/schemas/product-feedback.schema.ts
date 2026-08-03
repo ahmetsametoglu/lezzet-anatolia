@@ -106,6 +106,18 @@ export const ProductRatingSchema = z.object({
   dislikeCount: z.number().int(),
   /** Metin yazılmış kayıt sayısı — "kaç kişi puan verdi" ile "kaç kişi yazdı" farklı sorulardır. */
   commentCount: z.number().int(),
+  /**
+   * Yıldız dağılımı — **indis 0 = 1★ … indis 4 = 5★** (müşteri talebi 04.08). Panelin histogramı.
+   *
+   * Ekranda sayılamaz: liste sayfalı, yüklenmiş sayfadan sayılan dağılım yanlış olur ve
+   * yanlışlığı GÖRÜNMEZ (çubuklar hep bir şey gösterir).
+   *
+   * **Beş ayrı kolon değil tek dizi** — iki sebep. (1) `rating_1_count` gibi bir ad snake↔camel
+   * dönüştürücüsünden sağ çıkmıyor: `snakeToCamel` yalnız `_<harf>` eşliyor, rakamı görmüyor.
+   * (2) Bu beş sayı bağımsız alanlar değil, tek bir dağılımın parçaları — biri güncellenip öteki
+   * unutulamaz.
+   */
+  ratingBreakdown: z.tuple([z.number().int(), z.number().int(), z.number().int(), z.number().int(), z.number().int()]),
 });
 export type ProductRating = z.infer<typeof ProductRatingSchema>;
 

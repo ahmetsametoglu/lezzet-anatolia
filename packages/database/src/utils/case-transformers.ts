@@ -1,5 +1,17 @@
 // camelCase↔snake_case dönüştürücüler. Dışa yalnız obje dönüştürücüleri (dbToApp/appToDb)
 // verilir; string primitifleri (snakeToCamel/camelToSnake) iç ayrıntıdır — ihtiyaç olursa dışa açılır.
+//
+// ⚠ **KOLON ADINDA `_<rakam>` KULLANMAYIN** (yaşandı 04.08). Dönüşüm rakamı görmüyor:
+// `rating_1_count` → `rating_1Count` çıkar, `rating1Count` değil — şema alanı bulamaz ve satır
+// `Required` hatasıyla düşer. Hata okuma anında ve şemada patladığı için sebebi uzakta görünür.
+//
+// **Düzeltilmedi ve düzeltilmemeli:** regex'i rakam görecek hâle getirmek ters yönü kırar —
+// `camelToSnake('line1')` bugün `line1` veriyor (doğru, `address.line1`), rakama duyarlı bir
+// sürüm `line_1` üretir ve adres tablosu kırılır. Bir tarafı düzeltmek ötekini bozuyor.
+//
+// Çare ADLANDIRMADA: rakamı ayıran alt çizgi kullanmayın. Birden çok sayı taşınacaksa tek bir
+// dizi/jsonb kolonu (`rating_breakdown int[]`) hem bu tuzağı hem "biri güncellendi öteki unutuldu"
+// sınıfını birden kapatır.
 
 function snakeToCamel(str: string): string {
   return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());

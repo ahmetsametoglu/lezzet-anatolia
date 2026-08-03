@@ -1,6 +1,7 @@
 import { UserProfileService, serviceDb } from '@lezzet/database';
 import { resolveIdentity } from '@lezzet/domain-core';
 import type { UserProfile, UserProfileInsert } from '@lezzet/types';
+import { linkReferrer } from '../feedback/referral';
 
 /**
  * Bul-veya-oluştur: kimliğin **tek kapısı** (04.4/04.5) — DOMAIN §10.
@@ -25,6 +26,18 @@ interface FindOrCreateInput {
   asDraft?: boolean;
   /** Yeni kayıt açılırken uygulanacak ek alanlar (dil, ülke, izinler...). */
   defaults?: Partial<UserProfileInsert>;
+  /**
+   * Davet kodu (17.7) — kayıt bağlantısındaki `?ref=…`. **Yalnız YENİ kayıtta** getiren bağını
+   * kurar; mevcut müşteriye bağlanırken yok sayılır.
+   *
+   * Neden yalnız yeni kayıtta: davet, bir müşteriyi KAZANDIRMANIN ödülüdür. Zaten müşterimiz olan
+   * birinin bir davet bağlantısına tıklaması onu yeniden kazandırmaz — ve o kapı açık olsaydı iki
+   * müşteri birbirinin bağlantısına tıklayıp puanı birbirine yazdırırdı.
+   *
+   * **Geçersiz kod kaydı DURDURMAZ:** bağlantı yanlış kopyalanmış olabilir; bir dize yüzünden
+   * kazanılmış bir müşteriyi çevirmek olmaz. Kod sessizce düşer, kayıt tamamlanır.
+   */
+  referralCode?: string | null;
 }
 
 type FindOrCreateResult =
@@ -84,6 +97,13 @@ export async function findOrCreateCustomer(input: FindOrCreateInput): Promise<Fi
         authUserId: input.authUserId ?? null,
         isDraft: input.asDraft ?? false,
       });
+      // Getiren bağı kayıttan SONRA kurulur: `linkReferrer` kendini-getirme ve "ilk getiren kazanır"
+      // kurallarını taşıyor ve bunlar yeni satırın kimliğini bilmeden uygulanamaz. Ödül burada
+      // DOĞMAZ — o, getirilen kişinin ilk siparişinde doğar (`rewardCompletedOrder`).
+      if (input.referralCode) {
+        const bagli = await linkReferrer(profile.id, input.referralCode);
+        return { status: 'created', profile: bagli ? ((await profiles.getById(profile.id)) ?? profile) : profile };
+      }
       return { status: 'created', profile };
     }
   }

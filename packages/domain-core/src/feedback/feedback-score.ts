@@ -86,6 +86,15 @@ export interface ProductScore {
   /** Skora katılan toplam beyan sayısı — güven eşiğinin ölçütü. */
   totalCount: number;
   confident: boolean;
+  /**
+   * **YAZILI** yorum sayısı — `ratingCount` ile karıştırılması canlı bir hataydı (müşteri şeridi,
+   * 04.08): ürün sayfasındaki "{N} yorumun tümü" bağı `ratingCount` gösteriyordu, oysa form yıldız
+   * ya da metin kabul ediyor. 20 yıldız + 2 yazılı yorumu olan üründe bağ "20 yorumun tümü" diyor,
+   * panel 2 yorum gösteriyordu. Görünüm sayıyı zaten üretiyordu; motor onu çıktıya taşımıyordu.
+   */
+  commentCount: number;
+  /** Yıldız dağılımı — indis 0 = 1★ … indis 4 = 5★. Panelin histogramı. */
+  ratingBreakdown: readonly [number, number, number, number, number];
 }
 
 export interface RawProductRating {
@@ -93,6 +102,10 @@ export interface RawProductRating {
   ratingCount: number;
   likeCount: number;
   dislikeCount: number;
+  /** Yazılı yorum sayısı. Eski çağıranlar için opsiyonel — verilmezse 0 sayılır. */
+  commentCount?: number;
+  /** Yıldız dağılımı, indis 0 = 1★. Opsiyonel: yalnız ham dört sayıyı veren çağıranlar kırılmasın. */
+  ratingBreakdown?: readonly number[];
 }
 
 /**
@@ -127,6 +140,10 @@ export function productScoreOf(input: RawProductRating): ProductScore {
     likeRatio: likeRatio === null ? null : Math.round(likeRatio * 100) / 100,
     totalCount,
     confident: totalCount >= MIN_FEEDBACK_FOR_CONFIDENCE,
+    commentCount: input.commentCount ?? 0,
+    // Beş haneye SABİTLENİR: kaynak eksik ya da fazla verirse ekran indis kaydırmasıyla yanlış
+    // histogram çizerdi ve yanlışlığı görünmezdi (çubuklar hep bir şey gösterir).
+    ratingBreakdown: [0, 1, 2, 3, 4].map((i) => input.ratingBreakdown?.[i] ?? 0) as [number, number, number, number, number],
   };
 }
 
@@ -141,4 +158,6 @@ export const EMPTY_PRODUCT_SCORE: ProductScore = {
   likeRatio: null,
   totalCount: 0,
   confident: false,
+  commentCount: 0,
+  ratingBreakdown: [0, 0, 0, 0, 0],
 };

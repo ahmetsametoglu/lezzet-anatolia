@@ -1,8 +1,16 @@
 import 'server-only';
 import { ProductRatingService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
-import { resolveLocalizedText, type KeysetCursor, type Page, type ProductFeedback, type ReviewStatus } from '@lezzet/types';
-import { productScoreOf, type ProductScore } from '@lezzet/domain-core';
-import { listReviewsForModeration } from './product-feedback';
+import {
+  resolveLocalizedText,
+  type KeysetCursor,
+  type Page,
+  type ProductComplaintSignal,
+  type ProductFeedback,
+  type ReviewStatus,
+} from '@lezzet/types';
+import { productScoreOf, type CandidateSignal, type ProductScore } from '@lezzet/domain-core';
+import { getProductComplaintSignals } from '../ticket/read';
+import { getProductSignals, listReviewsForModeration } from './product-feedback';
 
 /**
  * MODERASYON KUYRUĞUNUN OKUMA KAPISI (17.1) — ham yorum satırı + ürün ve müşteri ADI.
@@ -82,14 +90,37 @@ export interface ScoreRowView {
   productId: string;
   productName: string;
   score: ProductScore;
+  /**
+   * **Bu sevgiye ne kadar güvenelim** (`trust` 0–1) — skorun cevaplamadığı ikinci soru
+   * (`DOMAIN §14`). `score.confident` "yeterince kişi konuştu mu"yu, bu "konuşanlar ayırt ediyor
+   * mu"yu söyler: kart süresi × kaydıranın deseni. Çizimin üç hâlli `Sinyal` kolonundaki
+   * "Düşük güven" budur.
+   *
+   * Hiç oy yoksa `null` — sıfır DEĞİL: "güven ölçülemedi" ile "güvenilmez" ayrı şeyler
+   * (`CLAUDE §1`).
+   */
+  signal: CandidateSignal | null;
+  /**
+   * Ürüne bağlı şikâyet yoğunluğu (16.6). Skorun YANINDA okunur: "çok beğenilmiş ama bozuk
+   * geliyor" ile "az beğenilmiş ama şikâyeti de yok" iki ayrı durumdur ve tek başına skor ikisini
+   * ayıramaz. Şikâyeti olmayan üründe `null`.
+   */
+  complaints: ProductComplaintSignal | null;
 }
 
-export async function listRankedScores(direction: 'asc' | 'desc', limit = 20): Promise<ScoreRowView[]> {
+export async function listRankedScores(direction: 'asc' | 'desc', limit = 20, since?: string): Promise<ScoreRowView[]> {
   const db = serviceDb();
   const rows = await new ProductRatingService(db).listRanked(direction, limit);
   if (rows.length === 0) return [];
 
-  const products = await new ProductService(db).listByIds(rows.map((r) => r.productId));
+  const productIds = rows.map((r) => r.productId);
+  // Üç okuma PARALEL ve hepsi TOPLU: satır başına sorgu, 20 satırlık tabloda 60 gidiş-dönüş demekti
+  // (aynı gerekçe adların toplu çözülmesinde de yazılı).
+  const [products, signals, complaints] = await Promise.all([
+    new ProductService(db).listByIds(productIds),
+    getProductSignals(productIds, since),
+    getProductComplaintSignals(productIds, since),
+  ]);
   const names = new Map(products.map((p) => [p.id, resolveLocalizedText(p.name)]));
 
   return rows
@@ -97,6 +128,8 @@ export async function listRankedScores(direction: 'asc' | 'desc', limit = 20): P
       productId: row.productId,
       productName: names.get(row.productId) || row.productId.slice(0, 8),
       score: productScoreOf(row),
+      signal: signals.get(row.productId) ?? null,
+      complaints: complaints.get(row.productId) ?? null,
     }))
     .sort((a, b) => (direction === 'desc' ? (b.score.average ?? 0) - (a.score.average ?? 0) : (a.score.average ?? 0) - (b.score.average ?? 0)));
 }

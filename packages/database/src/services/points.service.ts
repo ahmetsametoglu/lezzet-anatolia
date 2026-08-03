@@ -155,8 +155,18 @@ export class PointsBalanceService extends BaseDbService<PointsBalance, never, ne
    *
    * "Kim ne kadar biriktirmiş" sorusu bir istisna avı değil genel resim çizer (tasarım §4); bu
    * yüzden sıralama bakiyeye göredir, son hareket tarihine göre değil.
+   *
+   * **RPC üzerinden okunuyor, görünümden DEĞİL** (operasyon talebi 03.08): ekranın başlığındaki
+   * "Son 30 gün" seçicisi bir dönem ister ve toplamı dönemle daraltmanın yolu parametredir —
+   * görünüm parametre alamaz. `since` verilmezse fonksiyon tüm zamanları toplar, yani dönemli ve
+   * dönemsiz hâl AYNI kod yolundan geçer; iki ayrı uç olsaydı biri gün gelip ötekinden farklı bir
+   * kural uygular ve fark hiçbir yerde hata vermezdi.
+   *
+   * **`since` verildiğinde `balance` bir DELTA'dır**, cüzdan bakiyesi değil — 30 günlük pencerede
+   * "bakiye" diye okunacak bir sayı yoktur. Ekranın başlığı zaten dönemi yazıyor.
    */
-  listTop(limit = 50): Promise<PointsBalance[]> {
-    return this.getAll(undefined, { orderBy: 'balance', orderDirection: 'desc', limit });
+  async listTop(limit = 50, since?: string): Promise<PointsBalance[]> {
+    const rows = await this.executeRpc<unknown[]>('points_leaderboard', { p_since: since ?? null, p_limit: limit });
+    return this.parseRows(rows);
   }
 }

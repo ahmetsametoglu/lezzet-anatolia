@@ -250,3 +250,55 @@ $$;
 
 revoke all on function public.create_ticket(uuid, ticket_source, ticket_type, text, uuid, uuid[], uuid, text, text[], uuid, ticket_sender) from anon;
 revoke all on function public.reply_ticket(uuid, ticket_sender, text, text[], uuid, ticket_status) from anon;
+
+-- ── Ürün başına ŞİKÂYET YOĞUNLUĞU (16.6 zemini · operasyon talebi 03.08) ─────
+-- Geri Bildirim ekranının skor tablosu "şikâyet + düşük skor birleşiyor" diyor: kalite sorunuyla
+-- beğeni verisinin yan yana okunduğu yer. Zincir kurulabiliyordu (`order_item_ids` → kalem →
+-- varyant → ürün) ama okuma yoktu ve ekranda satır satır kurmak N+1 olurdu.
+--
+-- **Neden görünüm değil FONKSİYON:** dönem parametresi gerekiyor (ekranın "Son 30 gün" seçicisi) ve
+-- görünüm parametre alamaz. `p_since` null ise tüm zamanlar — dönemli ve dönemsiz hâl aynı kod
+-- yolundan geçer (`points_leaderboard` ile aynı gerekçe).
+--
+-- **`count(distinct t.id)` ve bu bir DOĞRULUK kararı:** bir talep aynı üründen üç kalem taşıyabilir;
+-- düz `count(*)` onu üç şikâyet sayardı ve tek bir müşteri, tek bir olayla ürünü listenin başına
+-- taşırdı. Sorulan şey "kaç şikâyet", "kaç kalem" değil.
+--
+-- **Yalnız `damaged` ve `missing`:** soru bir KALİTE sinyali. Bir ürün hakkındaki sorunun
+-- (`question`) ya da genel bir konunun (`other`) o ürünün kalitesi hakkında söylediği bir şey yok;
+-- hepsini saymak, en çok sorulan ürünü en bozuk ürün gibi gösterirdi.
+create or replace function public.product_complaint_signal(
+  p_since timestamptz default null,
+  p_product_ids uuid[] default null
+) returns table (
+  product_id uuid,
+  complaint_count int,
+  damaged_count int,
+  missing_count int,
+  last_complaint_at timestamptz
+)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select pv.product_id,
+         count(distinct t.id)::int                                          as complaint_count,
+         count(distinct t.id) filter (where t.type = 'damaged')::int        as damaged_count,
+         count(distinct t.id) filter (where t.type = 'missing')::int        as missing_count,
+         max(t.created_at)                                                  as last_complaint_at
+    from public.ticket t
+    cross join lateral unnest(t.order_item_ids) as kalem(id)
+    join public.order_item i on i.id = kalem.id
+    join public.product_variant pv on pv.id = i.variant_id
+   where t.type in ('damaged', 'missing')
+     and (p_since is null or t.created_at >= p_since)
+     and (p_product_ids is null or pv.product_id = any (p_product_ids))
+   group by pv.product_id;
+$$;
+
+comment on function public.product_complaint_signal(timestamptz, uuid[]) is
+  'Ürün başına şikâyet yoğunluğu (16.6). Talep başına TEK sayılır; yalnız damaged/missing.';
+
+revoke all on function public.product_complaint_signal(timestamptz, uuid[]) from anon, authenticated;
+grant execute on function public.product_complaint_signal(timestamptz, uuid[]) to service_role;

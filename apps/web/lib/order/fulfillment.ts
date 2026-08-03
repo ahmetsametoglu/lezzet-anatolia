@@ -1,6 +1,7 @@
 import { OrderService, SettingsService, serviceDb } from '@lezzet/database';
 import type { CloseResult, DeliverResult } from '@lezzet/types';
 import { notifyOrderStatus } from './notify';
+import { rewardCompletedOrder } from '../feedback/points';
 
 /**
  * Teslim ve kapanış kapısı (07.7) — **uygulama katmanı orkestrasyonu**.
@@ -25,7 +26,12 @@ export async function deliverOrder(
   opts: { actorId?: string | null; deliveryProof?: Record<string, unknown> | null } = {},
 ): Promise<DeliverResult> {
   const result = await new OrderService(serviceDb()).deliver(orderId, opts);
-  if (result.ok) await notifyOrderStatus(orderId, 'delivered');
+  if (result.ok) {
+    await notifyOrderStatus(orderId, 'delivered');
+    // Sipariş puanı (17.4) — teslim `transition_order_status`'tan geçmediği için buradan da
+    // çağrılmak zorunda. İki kez çağrılması zararsız: defterin tekillik indeksi ikinciyi düşürür.
+    await rewardCompletedOrder(orderId);
+  }
   return result;
 }
 

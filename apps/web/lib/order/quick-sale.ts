@@ -1,6 +1,7 @@
 import { OrderService, SettingsService, serviceDb } from '@lezzet/database';
 import { canTransition, generateReferenceNo, producesReferenceNo, stockEffectOf } from '@lezzet/domain-core';
 import type { OrderStatus, PaymentMethod, PreparationPick } from '@lezzet/types';
+import { rewardCompletedOrder } from '../feedback/points';
 import { recordOrderPayment } from '../money/order-payment';
 import { suggestPicksForVariant } from '../stock/fefo';
 
@@ -132,6 +133,12 @@ export async function quickSale(input: QuickSaleInput): Promise<QuickSaleOutcome
     });
     paymentRecorded = collected.status === 'ok';
   }
+
+  // 6) Sipariş puanı (17.4) — kapıda satış `completed`'a DOĞRUDAN gider, yani `transitionOrder`
+  //    yolundan geçmez; buradan çağrılmazsa kapıdan alan müşteri hiç puan kazanmazdı. Tahsilattan
+  //    SONRA ve ondan bağımsız: mal gitti, satış kapandı — ödülün hesabın belirsizliğine bakması
+  //    için bir sebep yok.
+  await rewardCompletedOrder(order.id);
 
   return {
     status: 'ok',

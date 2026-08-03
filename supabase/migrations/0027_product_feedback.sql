@@ -201,7 +201,36 @@ select f.product_id,
        count(*) filter (where f.rating is not null)                as rating_count,
        count(*) filter (where f.vote = 'like')                     as like_count,
        count(*) filter (where f.vote = 'dislike')                  as dislike_count,
-       count(*) filter (where length(btrim(coalesce(f.comment, ''))) > 0) as comment_count
+       count(*) filter (where length(btrim(coalesce(f.comment, ''))) > 0) as comment_count,
+       -- **Yıldız DAĞILIMI** (müşteri şeridinin talebi 04.08) — yorum panelindeki histogram.
+       --
+       -- Ekranda hesaplanamaz ve denenmemeli: liste 10'ar sayfalanıyor, yüklenmiş sayfadan sayılan
+       -- bir dağılım YANLIŞ olur — üstelik yanlışlığı görünmez, çünkü çubuklar hep bir şey gösterir.
+       --
+       -- Ayrı görünüm açılmadı: "bu ürün ne kadar sevildi" sorusunun tek bir cevap yeri olmalı.
+       -- İkinci bir görünüm aynı `where` süzgecini (onaylı + satın alma bağlamı) ikinci kez tanımlar
+       -- ve ikisi bir gün ayrışır — biri aday kaydırmalarını sayarken öteki saymaz, fark de hiçbir
+       -- yerde hata vermez.
+       -- **Beş kolon DEĞİL tek dizi** ve sebebi kozmetik değil: `rating_1_count` gibi bir ad
+       -- uygulamanın snake↔camel dönüştürücüsünden SAĞ ÇIKMIYOR. `snakeToCamel` yalnız `_<harf>`
+       -- eşliyor (`/_([a-z])/`), rakamı görmüyor → `rating_1Count` üretiyor ve şema onu bulamıyor.
+       -- Dönüştürücüyü rakam görecek şekilde düzeltmek de olmaz: ters yönde `line1` → `line_1`
+       -- olur ve `address` tablosu kırılır (bkz. `case-transformers.ts` künyesi).
+       --
+       -- Dizi ayrıca daha dürüst: bu beş sayı bağımsız alanlar değil, TEK bir dağılımın
+       -- parçalarıdır — biri güncellenip öteki unutulamaz.
+       --
+       -- **İndis 0 = 1★ … indis 4 = 5★.** Sıra burada ELLE kurulu ve öyle olmak zorunda: grup
+       -- bağlamında `generate_series` ile üretmek mümkün değil (alt sorgu `f`'in satırlarını
+       -- değil o anki satırı görür). Sırayı bir test sabitliyor — yer değiştirse histogram
+       -- sessizce ters döner ve hiçbir yerde hata vermezdi.
+       array[
+         count(*) filter (where f.rating = 1),
+         count(*) filter (where f.rating = 2),
+         count(*) filter (where f.rating = 3),
+         count(*) filter (where f.rating = 4),
+         count(*) filter (where f.rating = 5)
+       ]::int[]                                                    as rating_breakdown
   from public.product_feedback f
  where f.status = 'approved'
    and f.context = 'purchase'

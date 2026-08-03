@@ -129,6 +129,57 @@ export function dedupeBySwiper(swipes: readonly CandidateSwipe[]): CandidateSwip
   return [...kimlikli.values(), ...kimliksiz];
 }
 
+/** Ham kaydırma satırı — hangi tablodan geldiği önemsiz; motor yalnız bu dört alanı bilir. */
+export interface RawSwipe {
+  productId: string;
+  vote: 'like' | 'dislike' | null;
+  dwellMs: number | null;
+  swiperId: string | null;
+  at: string;
+}
+
+/**
+ * Ham satırlar → ürün başına **ağırlıklı** kaydırma listesi.
+ *
+ * **Neden motorda ve neden ortak:** bu, iki ekranın birden sorduğu aynı sorunun tek cevabı — aday
+ * panosu ("hangi ürün isteniyor") ve ürün skoru güven kolonu ("bu beğenilere ne kadar
+ * güvenelim"). İkisi ayrı yerlerde hesaplasaydı biri gün gelip ötekinden farklı ağırlık uygular ve
+ * fark hiçbir yerde hata VERMEZDİ: iki ekran aynı ürün için iki farklı güven gösterir, ikisi de
+ * makul görünürdü (`CLAUDE §1`).
+ *
+ * Ağırlık iki adımda kurulur ve sıra önemli: önce kişinin deseni TÜM örneklem üzerinden sayılır,
+ * sonra her kaydırma o desenle çarpılır. Desen ürün başına sayılsaydı "hep aynı yöne savuran"
+ * kişi hiç yakalanamazdı — savurma zaten ürünler arasına dağılır.
+ */
+export function weighSwipesByProduct(rows: readonly RawSwipe[]): Map<string, CandidateSwipe[]> {
+  // Kaydıranın deseni: kimlik başına beğeni/geçme sayıları. Kimliksiz kaydırmalar tek havuzda
+  // toplanamaz — hangisinin aynı kişi olduğu bilinmiyor; onlara desen ağırlığı uygulanmaz.
+  const kisiSayimi = new Map<string, { like: number; dislike: number }>();
+  for (const row of rows) {
+    if (!row.swiperId || !row.vote) continue;
+    const sayim = kisiSayimi.get(row.swiperId) ?? { like: 0, dislike: 0 };
+    if (row.vote === 'like') sayim.like += 1;
+    else sayim.dislike += 1;
+    kisiSayimi.set(row.swiperId, sayim);
+  }
+
+  const urunBasina = new Map<string, CandidateSwipe[]>();
+  for (const row of rows) {
+    if (!row.vote) continue;
+    const sayim = row.swiperId ? kisiSayimi.get(row.swiperId) : undefined;
+    const weight = swipeWeight({
+      dwellMs: row.dwellMs,
+      // Kimliksiz kaydırmada desen çıkarılamaz: nötr (dengeli) kabul edilir.
+      swiperLikeCount: sayim?.like ?? 1,
+      swiperDislikeCount: sayim?.dislike ?? 1,
+    });
+    const liste = urunBasina.get(row.productId) ?? [];
+    liste.push({ vote: row.vote, weight, swiperId: row.swiperId, at: row.at });
+    urunBasina.set(row.productId, liste);
+  }
+  return urunBasina;
+}
+
 export function candidateSignalOf(swipes: readonly CandidateSwipe[]): CandidateSignal {
   const likes = dedupeBySwiper(swipes).filter((s) => s.vote === 'like');
   const rawLikes = likes.length;

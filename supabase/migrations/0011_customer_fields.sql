@@ -53,6 +53,20 @@ alter table public.user_profiles
   -- Edinim kaynağı — İLK siparişte bir kez yazılır, sonra değişmez.
   add column acquisition_source jsonb,
   add column referred_by uuid references public.user_profiles (id) on delete set null,
+  -- **Davet kodu** (17.7) — müşterinin paylaştığı bağlantının ucundaki dize.
+  --
+  -- Neden `id` KULLANILMIYOR: davet bağlantısı WhatsApp'ta, sosyal medyada, ekran görüntüsünde
+  -- dolaşır. Orada bir uuid paylaşmak, kimliği tahmin edilemez sanılan bir alanı herkese açık hâle
+  -- getirir — ve o kimlik başka yerlerde (destek, admin URL'i) bir anahtardır.
+  --
+  -- **İSTEK ÜZERİNE üretilir, herkese peşin verilmez:** müşterilerin çoğu hiç davet etmez ve
+  -- kullanılmayacak bir kodu her satıra yazmak, tekillik çakışmalarını da boşuna göze almak olurdu.
+  -- `null` = bu müşteri henüz davet bağlantısı istemedi.
+  --
+  -- Sipariş referansı ve kupon koduyla AYNI okunabilir alfabe: telefonda elle yazılabilmeli,
+  -- karıştırılan harfler (O/0, I/1) alfabede yok.
+  add column referral_code text,
+
 
   -- Gerekçesiz ret YAZILAMAZ. Ret e-postayla bildiriliyor ve "neden" sorusunun cevabı yoksa soru
   -- desteğe düşer; damgayı atıp gerekçeyi atlamak, verilmiş kararı kayıt dışı bırakır.
@@ -148,6 +162,13 @@ create trigger user_profiles_reject_reason_translation_trg
   execute function public.reset_translation_on_text_change(
     'b2b_reject_reason', 'b2b_reject_reason_translations', 'b2b_reject_reason_translated_at'
   );
+
+-- Davet kodu TEKİLDİR — ama yalnız var olanlar arasında (kısmi indeks): kodu olmayan müşteriler
+-- birbiriyle çakışamaz. `null`'ları da kapsayan düz bir unique kısıt, Postgres'te çalışırdı ama
+-- indeksi gereksiz yere tüm tabloya yayardı.
+create unique index user_profiles_referral_code_key
+  on public.user_profiles (referral_code)
+  where referral_code is not null;
 
 -- Çeviri kuyruğu: gerekçesi yazılmış ama henüz çevrilmemiş retler.
 create index user_profiles_reject_reason_untranslated_idx

@@ -48,6 +48,12 @@ export const PointsBalanceSchema = z.object({
   earned: z.number().int(),
   /** Harcanan — **negatif** taşınır (defterin işaretiyle aynı). */
   spent: z.number().int(),
+  /**
+   * Kaç KEZ kupona çevirdi. `spent` ile aynı şey değil: biri muhasebe ("240 puan gitti"), bu
+   * davranış ("iki kez ödül aldı"). Sayım **sebebe** bakar (`redemption`), işarete değil — elle
+   * yapılan negatif bir düzeltme kupon değildir.
+   */
+  redemptionCount: z.number().int(),
   lastActivityAt: z.string(),
 });
 export type PointsBalance = z.infer<typeof PointsBalanceSchema>;

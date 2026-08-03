@@ -87,3 +87,35 @@ describe('ürün skoru — iki ölçü, tek puan', () => {
     expect(MIN_FEEDBACK_FOR_CONFIDENCE).toBe(3);
   });
 });
+
+describe('yıldız dağılımı ve yazılı yorum sayısı', () => {
+  it('dağılımın SIRASI sabittir — indis 0 = 1★, indis 4 = 5★', () => {
+    // Bu testin varlık sebebi: sıra görünümde ELLE kurulu (grup bağlamında üretilemiyor). Yer
+    // değiştirse histogram sessizce ters döner — hiçbir yerde hata vermez, yalnız 1★ ile 5★
+    // çubukları takas olur.
+    const score = productScoreOf({
+      ratingAvg: 4.5,
+      ratingCount: 6,
+      likeCount: 0,
+      dislikeCount: 0,
+      ratingBreakdown: [0, 0, 1, 2, 3],
+    });
+    expect(score.ratingBreakdown).toEqual([0, 0, 1, 2, 3]);
+    // Toplam yıldız sayısıyla tutarlı olmalı: dağılım aynı satırlardan sayılıyor.
+    expect(score.ratingBreakdown.reduce((a, b) => a + b, 0)).toBe(score.ratingCount);
+  });
+
+  it('eksik ya da fazla haneli dağılım BEŞE sabitlenir', () => {
+    // Kaynak bozuksa ekran indis kaydırmasıyla yanlış histogram çizerdi ve yanlışlığı görünmezdi.
+    expect(productScoreOf({ ratingAvg: 5, ratingCount: 1, likeCount: 0, dislikeCount: 0, ratingBreakdown: [1] }).ratingBreakdown).toEqual([1, 0, 0, 0, 0]);
+    expect(productScoreOf({ ratingAvg: null, ratingCount: 0, likeCount: 0, dislikeCount: 0 }).ratingBreakdown).toEqual([0, 0, 0, 0, 0]);
+  });
+
+  it('YAZILI yorum sayısı yıldız sayısından AYRIDIR', () => {
+    // Canlı hatanın testi: form yıldız YA DA metin kabul ediyor. 20 yıldız + 2 yazılı yorumu olan
+    // üründe "N yorumun tümü" bağı 20 diyordu, panel 2 gösteriyordu.
+    const score = productScoreOf({ ratingAvg: 4.2, ratingCount: 20, likeCount: 0, dislikeCount: 0, commentCount: 2 });
+    expect(score.ratingCount).toBe(20);
+    expect(score.commentCount).toBe(2);
+  });
+});

@@ -13,7 +13,14 @@ import {
   type TicketQueueFilter,
 } from '@lezzet/database';
 import { allowedTicketTransitions, canTriggerReturn, isReturnBound } from '@lezzet/domain-core';
-import { resolveLocalizedText, type KeysetCursor, type Page, type Ticket, type TicketMessage } from '@lezzet/types';
+import {
+  resolveLocalizedText,
+  type KeysetCursor,
+  type Page,
+  type ProductComplaintSignal,
+  type Ticket,
+  type TicketMessage,
+} from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { privateReadUrls } from '@lezzet/storage';
 import type {
@@ -271,4 +278,24 @@ export function countOpenTickets(): Promise<number> {
  */
 export function countTicketsByStatus(): Promise<Record<Ticket['status'], number>> {
   return new TicketService(serviceDb()).countByStatus();
+}
+
+/**
+ * **Ürün başına şikâyet yoğunluğu** (16.6 · operasyon talebi 03.08) — Geri Bildirim ekranının skor
+ * tablosunda, ürünün skorunun YANINDA okunur.
+ *
+ * Kalite sorunu ile beğeni verisinin yan yana durduğu yer: "çok beğenilmiş ama bozuk geliyor" ile
+ * "az beğenilmiş ama şikâyeti de yok" iki ayrı durumdur ve tek başına skor ikisini ayıramaz.
+ *
+ * Haritada olmayan ürünün şikâyeti YOKTUR; çağıran `?? 0` okur — her ürün için sıfırlı bir kayıt
+ * üretmek, şikâyetsiz bir katalogda yüzlerce boş nesne olurdu (`getProductScores` ile aynı desen).
+ *
+ * `since` (ISO) verilirse yalnız o dönemin şikâyetleri; ekranın "Son 30 gün" seçicisi budur.
+ */
+export async function getProductComplaintSignals(
+  productIds: readonly string[] = [],
+  since?: string,
+): Promise<Map<string, ProductComplaintSignal>> {
+  const rows = await new TicketService(serviceDb()).listComplaintSignals(productIds, since);
+  return new Map(rows.map((row) => [row.productId, row]));
 }

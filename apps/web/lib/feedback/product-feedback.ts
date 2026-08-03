@@ -18,10 +18,10 @@ import {
   initialFeedbackStatus,
   productScoreOf,
   resolveUserText,
-  swipeWeight,
+  weighSwipesByProduct,
   type CandidateSignal,
-  type CandidateSwipe,
   type ProductScore,
+  type RawSwipe,
 } from '@lezzet/domain-core';
 import type {
   FeedbackContext,
@@ -293,9 +293,11 @@ export async function listProductReviews(
   viewLanguage: PreferredLanguage,
   cursor?: KeysetCursor,
   limit?: number,
+  /** Yıldız aralığı — panelin çipleri (`5★` tek değer, `3★ ve altı` aralık). Sunucuda süzülür. */
+  rating?: { min?: number; max?: number },
 ): Promise<Page<PublishedReview>> {
   const db = serviceDb();
-  const page = await new ProductFeedbackService(db).listPublishedComments(productId, cursor, limit);
+  const page = await new ProductFeedbackService(db).listPublishedComments(productId, cursor, limit, rating);
   if (page.rows.length === 0) return { rows: [], nextCursor: page.nextCursor };
 
   const authorIds = page.rows.map((r) => r.customerId).filter((id): id is string => id !== null);
@@ -336,6 +338,31 @@ export async function getProductScores(productIds: readonly string[]): Promise<M
   if (productIds.length === 0) return new Map();
   const rows = await new ProductRatingService(serviceDb()).listByProducts(productIds);
   return new Map(rows.map((row) => [row.productId, productScoreOf(row)]));
+}
+
+/**
+ * **Ürünlerin SİNYAL KALİTESİ** (operasyon talebi 03.08 · `DOMAIN §14`) — skor tablosunun güven
+ * kolonu.
+ *
+ * `getProductScores` "ne kadar sevildi"yi söyler; bu "bu sevgiye ne kadar güvenelim"i. İkisi ayrı
+ * sorular ve ayrı okumalar: skor `product_rating` görünümünün HAM sayılarından türer, güven ise
+ * tek tek kaydırmaların süresini ve kaydıranın desenini ister — görünüm onları taşımaz.
+ *
+ * **Bağlam `purchase`**, aday panosunun tersine: burada soru "satın alan ne dedi", orada "henüz
+ * satmadığımız ürün isteniyor mu". Aynı üründe ikisi de bulunabilir ve karıştırılmaları ürünü
+ * hiç kimse almamışken yüksek puanlı gösterirdi (`product_rating`'in bağlamı süzmesinin sebebi).
+ *
+ * Ağırlıklandırma aday panosuyla **AYNI motor fonksiyonundan** geçiyor (`weighSwipesByProduct`) —
+ * iki ekran aynı ürün için iki farklı güven gösteremesin.
+ */
+export async function getProductSignals(
+  productIds: readonly string[],
+  since?: string,
+): Promise<Map<string, CandidateSignal>> {
+  if (productIds.length === 0) return new Map();
+  const rows = await new ProductFeedbackService(serviceDb()).listVotesByProducts(productIds, 'purchase', since);
+  const byProduct = weighSwipesByProduct(rows.map(toRawSwipe));
+  return new Map([...byProduct.entries()].map(([productId, swipes]) => [productId, candidateSignalOf(swipes)]));
 }
 
 /** Moderasyon kuyruğu (operasyon) — bekleyenler en eski önce; diğer hâller yeniden eskiye. */
@@ -398,41 +425,31 @@ export interface CandidateDemandRow {
  */
 const CANDIDATE_SAMPLE_SIZE = 5000;
 
-export async function listCandidateDemand(limit = 20): Promise<CandidateDemandRow[]> {
+/**
+ * DB satırı → motorun tanıdığı ham kaydırma. Tek yerde, çünkü iki okuma da (aday panosu · ürün
+ * skoru sinyali) aynı eşlemeyi yapıyor ve alan adları ayrışırsa (`customerId` ↔ `swiperId`)
+ * biri sessizce hep "kimliksiz" görürdü — desen ağırlığı da o an nötre düşerdi.
+ */
+const toRawSwipe = (row: ProductFeedback): RawSwipe => ({
+  productId: row.productId,
+  vote: row.vote,
+  dwellMs: row.dwellMs,
+  swiperId: row.customerId,
+  at: row.createdAt,
+});
+
+export async function listCandidateDemand(limit = 20, since?: string): Promise<CandidateDemandRow[]> {
   const db = serviceDb();
-  const rows = await new ProductFeedbackService(db).listCandidateVotes(CANDIDATE_SAMPLE_SIZE);
+  const rows = await new ProductFeedbackService(db).listCandidateVotes(CANDIDATE_SAMPLE_SIZE, since);
   if (rows.length === 0) return [];
   if (rows.length === CANDIDATE_SAMPLE_SIZE) {
     logger.warn({ context: 'feedback/candidateBoard', sampleSize: CANDIDATE_SAMPLE_SIZE }, 'örneklem tavana dayandı; sıralama en yeni kaydırmalara göre');
   }
 
-  // Kaydıranın deseni: kimlik başına beğeni/geçme sayıları. Kimliksiz kaydırmalar tek bir havuzda
-  // toplanamaz — hangisinin aynı kişi olduğu bilinmiyor; onlar için desen ağırlığı uygulanmaz.
-  const byCustomer = new Map<string, { like: number; dislike: number }>();
-  for (const row of rows) {
-    if (!row.customerId || !row.vote) continue;
-    const tally = byCustomer.get(row.customerId) ?? { like: 0, dislike: 0 };
-    if (row.vote === 'like') tally.like += 1;
-    else tally.dislike += 1;
-    byCustomer.set(row.customerId, tally);
-  }
-
-  const byProduct = new Map<string, CandidateSwipe[]>();
-
-  for (const row of rows) {
-    if (!row.vote) continue;
-    const tally = row.customerId ? byCustomer.get(row.customerId) : undefined;
-    const weight = swipeWeight({
-      dwellMs: row.dwellMs,
-      // Kimliksiz kaydırmada desen çıkarılamaz: nötr (dengeli) kabul edilir.
-      swiperLikeCount: tally?.like ?? 1,
-      swiperDislikeCount: tally?.dislike ?? 1,
-    });
-    byProduct.set(row.productId, [
-      ...(byProduct.get(row.productId) ?? []),
-      { vote: row.vote, weight, swiperId: row.customerId ?? null, at: row.createdAt },
-    ]);
-  }
+  // Ağırlıklandırma MOTORDA (`weighSwipesByProduct`) — ürün skorunun güven kolonu da aynı
+  // fonksiyonu çağırıyor. İki ekran iki ayrı hesap yapsaydı fark hiçbir yerde hata vermez, yalnız
+  // aynı ürün için iki farklı güven gösterirdi.
+  const byProduct = weighSwipesByProduct(rows.map(toRawSwipe));
 
   return [...byProduct.entries()]
     .map(([productId, swipes]) => {

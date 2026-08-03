@@ -143,6 +143,13 @@ export const UserProfileSchema = z.object({
   marketingConsent: MarketingConsentSchema,
   acquisitionSource: z.record(z.unknown()).nullable(),
   referredBy: z.string().uuid().nullable(),
+  /**
+   * Müşterinin davet kodu (17.7) — paylaştığı bağlantının ucundaki dize. `null` = henüz istemedi.
+   *
+   * Kimlik (`id`) KULLANILMAZ: davet bağlantısı WhatsApp'ta ve ekran görüntüsünde dolaşır; orada
+   * bir uuid paylaşmak, başka yerlerde anahtar olan bir alanı herkese açık hâle getirirdi.
+   */
+  referralCode: z.string().nullable(),
 
   createdAt: z.string(),
 });

@@ -77,6 +77,19 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }
 
   /**
+   * Davet kodunun sahibi (17.7). Kod tekildir (kısmi unique indeks), yani en fazla bir satır döner.
+   *
+   * Bulunamayan kod bir HATA DEĞİL `null`'dır: bağlantı yanlış kopyalanmış ya da kodun sahibi
+   * silinmiş olabilir. Çağıran kaydı yine de açar, yalnız getiren bağını kurmaz — geçersiz bir kod
+   * yüzünden müşteriyi kayıttan çevirmek, kazanılmış bir müşteriyi bir dize yüzünden kaybetmektir.
+   */
+  findByReferralCode(code: string): Promise<UserProfile | null> {
+    const temiz = code.trim().toUpperCase();
+    if (!temiz) return Promise.resolve(null);
+    return this.getOneBy({ referralCode: temiz });
+  }
+
+  /**
    * Kimlik çözümünün DB yarısı: iki anahtar TEK turda aranır. Motor bu iki adaya bakıp
    * bağlan/oluştur/çakışma kararını verir — servis hangisinin kazandığını bilmez.
    */

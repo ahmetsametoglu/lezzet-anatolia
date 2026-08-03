@@ -2,6 +2,7 @@ import { OrderService, serviceDb } from '@lezzet/database';
 import { canTransition, generateReferenceNo, producesReferenceNo } from '@lezzet/domain-core';
 import type { OrderStatus } from '@lezzet/types';
 import { notifyOrderStatus } from './notify';
+import { rewardCompletedOrder } from '../feedback/points';
 import { logger } from '@lezzet/observability';
 
 /**
@@ -69,6 +70,18 @@ export async function transitionOrder(input: TransitionInput): Promise<Transitio
   } catch (err) {
     // Bildirim yokluğu siparişi bozmaz (14.5) — ama sessizce kaybolmaz da.
     logger.warn({ context: 'order/transition', orderId: order.id, err: err instanceof Error ? err.message : String(err) }, 'bildirim gönderilemedi');
+  }
+
+  // 5) Sipariş puanı (17.4) — sipariş müşterinin eline GEÇTİĞİNDE. `delivered` ve `completed`
+  //    aynı gerçeğin iki yüzü; hangisi önce gelirse o yazar, ikincisi defterin tekillik indeksinde
+  //    sessizce düşer. **Ödül asıl işlemi durdurmaz** (DOMAIN §14): puan yazılamazsa sipariş yine
+  //    ilerlemiş sayılır — tersi, bir ödül yüzünden teslimatı geri almak olurdu.
+  if (input.to === 'delivered' || input.to === 'completed') {
+    try {
+      await rewardCompletedOrder(order.id);
+    } catch (err) {
+      logger.warn({ context: 'order/transition', orderId: order.id, err: err instanceof Error ? err.message : String(err) }, 'sipariş puanı yazılamadı');
+    }
   }
 
   return { status: 'ok', from: order.status, to: input.to, referenceNo: referenceNo ?? order.referenceNo };

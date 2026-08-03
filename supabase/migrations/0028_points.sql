@@ -121,6 +121,14 @@ select p.customer_id,
        coalesce(sum(p.points), 0)                                   as balance,
        coalesce(sum(p.points) filter (where p.points > 0), 0)        as earned,
        -abs(coalesce(sum(p.points) filter (where p.points < 0), 0))  as spent,
+       -- **Kaç KEZ kupona çevirdi** (operasyon talebi 03.08). `spent` bir muhasebe kaydıdır
+       -- ("240 puan gitti"), bu bir DAVRANIŞTIR ("iki kez ödül aldı") — ekran ikisini ayrı
+       -- okuyor ve çizim bunu istiyor.
+       --
+       -- Ölçüt **sebep**, işaret DEĞİL: negatif satırların hepsi kupon değil, `manual` bir
+       -- düzeltme de negatif olabilir. `points < 0` ile saymak, elle yapılan bir düşümü
+       -- müşterinin kazandığı ödül gibi gösterirdi.
+       count(*) filter (where p.reason = 'redemption')::int          as redemption_count,
        max(p.created_at)                                            as last_activity_at
   from public.points_entry p
  group by p.customer_id;
@@ -238,3 +246,58 @@ end;
 $$;
 
 revoke all on function public.redeem_points(uuid, int, int, int, text) from anon;
+
+-- ── Puan tablosu (operasyon) — DÖNEMLİ ──────────────────────────────────────
+-- Operasyon talebi (03.08): ekranın başlığında "Son 30 gün ▾" var ama hiçbir okuma dönem almıyordu,
+-- o yüzden seçici hiç çizilmemişti — çalışmayan bir süzgeç, olmayandan kötüdür.
+--
+-- **Neden görünüm değil FONKSİYON:** `customer_points_balance` bir toplamdır ve toplamı dönemle
+-- daraltmanın yolu parametredir; görünüm parametre alamaz. Aggregate'i uygulamada yapmak da
+-- seçenek değildi: defterin tamamını çekip TS'te toplamak, defter büyüdükçe sessizce yavaşlar
+-- (`CLAUDE §1` — veriyle büyüyen küme).
+--
+-- **Dönemsiz hâl de BURADAN geçer** (`p_since = null`): ekranın "tüm zamanlar" seçeneği ile
+-- "son 30 gün" seçeneği aynı kod yolunu kullanır. İki ayrı uç olsaydı biri gün gelip ötekinden
+-- farklı bir kural uygular ve fark hiçbir yerde hata vermezdi.
+--
+-- **`balance` dönem içinde bir DELTA'dır**, cüzdan bakiyesi değil — 30 günlük pencerede "bakiye"
+-- diye okunacak bir sayı yok, o dönemde kazanılan eksi harcanan var. Kolon adı ortak kalıyor
+-- (ekran aynı tabloyu çiziyor) ama anlamı `p_since` ile değişiyor; künye bunu söylüyor ve
+-- ekranın başlığı da zaten dönemi yazıyor.
+create or replace function public.points_leaderboard(
+  p_since timestamptz default null,
+  p_limit int default 50
+) returns table (
+  customer_id uuid,
+  balance int,
+  earned int,
+  spent int,
+  redemption_count int,
+  last_activity_at timestamptz
+)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select p.customer_id,
+         coalesce(sum(p.points), 0)::int                                  as balance,
+         coalesce(sum(p.points) filter (where p.points > 0), 0)::int      as earned,
+         -abs(coalesce(sum(p.points) filter (where p.points < 0), 0))::int as spent,
+         count(*) filter (where p.reason = 'redemption')::int             as redemption_count,
+         max(p.created_at)                                               as last_activity_at
+    from public.points_entry p
+   where p_since is null or p.created_at >= p_since
+   group by p.customer_id
+   -- Sıralama BAKİYEYE göre: "kim ne kadar biriktirmiş" genel resim çizer, son hareket tarihi
+   -- bir istisna avı olurdu (tasarım §4). Eşitlikte `customer_id` belirleyici — yoksa aynı
+   -- bakiyedeki iki müşterinin sırası koşudan koşuya değişir ve sayfa "oynar".
+   order by balance desc, p.customer_id
+   limit greatest(p_limit, 0);
+$$;
+
+comment on function public.points_leaderboard(timestamptz, int) is
+  'Operasyon puan tablosu (17.4). `p_since` null ise tüm zamanlar; doluysa o dönemin DELTA''sı.';
+
+revoke all on function public.points_leaderboard(timestamptz, int) from anon, authenticated;
+grant execute on function public.points_leaderboard(timestamptz, int) to service_role;

@@ -35,10 +35,37 @@ export class ProductFeedbackService extends BaseDbService<ProductFeedback, Produ
    * "Durum" bir parametre olsaydı, bir gün müşteri yüzeyi onu yanlış geçirir ve onaylanmamış metin
    * ürün sayfasında görünürdü — bu yüzden imzada yok.
    */
-  listPublishedComments(productId: string, cursor?: KeysetCursor, limit = DEFAULT_PAGE_SIZE): Promise<Page<ProductFeedback>> {
+  listPublishedComments(
+    productId: string,
+    cursor?: KeysetCursor,
+    limit = DEFAULT_PAGE_SIZE,
+    /**
+     * Yıldız ARALIĞI (müşteri şeridinin talebi 04.08) — panelin çipleri: `5★` tek değer,
+     * `3★ ve altı` bir aralık; tek değer alan bir imza ikincisini karşılayamazdı.
+     *
+     * **Sunucuda süzülür, istemcide değil:** istemcide süzmek sayfalamayı bozar — sayfa başına
+     * değişken sayıda satır düşer ve "daha fazla" bir noktadan sonra boş sayfa getirir. Katalogda
+     * aynı sebeple sunucuda süzülüyor.
+     *
+     * Yıldızsız (yalnız metinli) kayıtlar süzgeç VERİLDİĞİNDE düşer ve bu doğru: "5★ yorumlar"
+     * çipine yıldızı olmayan bir yorum giremez.
+     */
+    rating?: { min?: number; max?: number },
+  ): Promise<Page<ProductFeedback>> {
+    const araliklar = [
+      ...(rating?.min !== undefined ? [{ field: 'rating', operator: 'gte' as const, value: rating.min }] : []),
+      ...(rating?.max !== undefined ? [{ field: 'rating', operator: 'lte' as const, value: rating.max }] : []),
+    ];
     return this.getPage(
       { productId, status: 'approved' },
-      { orderBy: 'createdAt', orderDirection: 'desc', limit, keysetAfter: cursor, isNotNullFields: ['comment'] },
+      {
+        orderBy: 'createdAt',
+        orderDirection: 'desc',
+        limit,
+        keysetAfter: cursor,
+        isNotNullFields: araliklar.length > 0 ? ['comment', 'rating'] : ['comment'],
+        ...(araliklar.length > 0 ? { rangeFilters: araliklar } : {}),
+      },
     );
   }
 
@@ -97,10 +124,41 @@ export class ProductFeedbackService extends BaseDbService<ProductFeedback, Produ
    * getirelim" güncel ilgiyi sorar. Kırpıldığında çağıran bunu bilir (`rows.length === limit`) ve
    * ekrana söyler — sessiz tavan, "her şey sayıldı" gibi okunur.
    */
-  listCandidateVotes(limit = 5000): Promise<ProductFeedback[]> {
+  listCandidateVotes(limit = 5000, since?: string): Promise<ProductFeedback[]> {
     return this.getAll(
       { context: 'candidate' },
-      { isNotNullFields: ['vote'], orderBy: 'createdAt', orderDirection: 'desc', limit },
+      {
+        isNotNullFields: ['vote'],
+        // Dönem süzgeci (operasyon talebi 03.08): ekranın "Son 30 gün" seçicisi. Talep bir yan
+        // fayda da getiriyor — pencere daraldıkça örneklem tavanına dayanma ihtimali düşer, yani
+        // "bu ay ne isteniyor" sorusu "tüm zamanlar"dan daha KESİN cevaplanır.
+        ...(since ? { rangeFilters: [{ field: 'createdAt', operator: 'gte' as const, value: since }] } : {}),
+        orderBy: 'createdAt',
+        orderDirection: 'desc',
+        limit,
+      },
+    );
+  }
+
+  /**
+   * Belirli ürünlerin oy satırları — **sinyal kalitesi** hesabı için (17.3 · operasyon talebi 03.08).
+   *
+   * `product_rating` görünümü bu işi göremez: ham sayıları verir, `dwell_ms`'i ve kaydıranın
+   * kimliğini taşımaz — ağırlık ikisini birden ister.
+   *
+   * Ürünler TEK sorguda okunur (`in`): skor tablosu 20 satır çiziyor ve ürün başına sorgu 20
+   * gidiş-dönüş demekti. Tavan yok ve bilinçli: küme ürün kimlikleriyle zaten sınırlı.
+   */
+  listVotesByProducts(productIds: readonly string[], context: FeedbackContext, since?: string): Promise<ProductFeedback[]> {
+    if (productIds.length === 0) return Promise.resolve([]);
+    return this.getAll(
+      { productId: [...productIds], context },
+      {
+        isNotNullFields: ['vote'],
+        ...(since ? { rangeFilters: [{ field: 'createdAt', operator: 'gte' as const, value: since }] } : {}),
+        orderBy: 'createdAt',
+        orderDirection: 'desc',
+      },
     );
   }
 

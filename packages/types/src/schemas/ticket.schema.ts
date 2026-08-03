@@ -132,3 +132,23 @@ export const TicketQueueRowSchema = TicketSchema.extend({
   orderReferenceNo: z.string().nullable(),
 });
 export type TicketQueueRow = z.infer<typeof TicketQueueRowSchema>;
+
+/**
+ * **Ürün başına şikâyet yoğunluğu** (16.6 zemini · `product_complaint_signal` fonksiyonu).
+ *
+ * Geri Bildirim ekranının skor tablosunda, ürünün skorunun YANINDA okunur: "çok beğenilmiş ama
+ * bozuk geliyor" ile "az beğenilmiş ama şikâyeti de yok" farklı iki durumdur ve tek başına skor
+ * ikisini ayıramaz.
+ *
+ * Sayım **talep başına**, kalem başına değil: bir talep aynı üründen üç kalem taşıyabilir ve düz
+ * sayım tek bir olayı üç şikâyet gösterirdi.
+ */
+export const ProductComplaintSignalSchema = z.object({
+  productId: z.string().uuid(),
+  /** `damaged` + `missing` toplamı. Soru/diğer SAYILMAZ — onlar kalite sinyali değil. */
+  complaintCount: z.number().int(),
+  damagedCount: z.number().int(),
+  missingCount: z.number().int(),
+  lastComplaintAt: z.string(),
+});
+export type ProductComplaintSignal = z.infer<typeof ProductComplaintSignalSchema>;

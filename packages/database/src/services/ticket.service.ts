@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   DEFAULT_PAGE_SIZE,
   TicketInsertSchema,
+  ProductComplaintSignalSchema,
   TicketMessageInsertSchema,
   TicketMessageSchema,
   TicketMessageTranslationUpdateSchema,
@@ -13,6 +14,7 @@ import {
   type Page,
   type Ticket,
   type TicketInsert,
+  type ProductComplaintSignal,
   type TicketMessage,
   type TicketMessageInsert,
   type TicketMessageTranslationUpdate,
@@ -170,6 +172,24 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
     const statuses = TicketStatusEnum.options;
     const counts = await Promise.all(statuses.map((status) => this.count({ status })));
     return Object.fromEntries(statuses.map((status, i) => [status, counts[i] ?? 0])) as Record<TicketStatus, number>;
+  }
+
+  /**
+   * **Ürün başına şikâyet yoğunluğu** (16.6 · operasyon talebi 03.08) — Geri Bildirim ekranının
+   * skor tablosunda, ürünün skorunun yanında okunur.
+   *
+   * **Neden RPC:** zincir `order_item_ids` DİZİSİNDEN geçiyor (talep → kalem → varyant → ürün) ve
+   * dizi açımı (`unnest`) + join PostgREST'ten sorulamaz; ekranda satır satır kurmak N+1 olurdu.
+   * `STACK §13`'ün RPC eşiği burada karşılanıyor — "üç ucuz tur" değil, yapılamayan bir sorgu.
+   *
+   * `productIds` boşsa TÜM ürünler döner; kapsam vermek okumayı daraltır, zorunlu değil.
+   */
+  async listComplaintSignals(productIds: readonly string[] = [], since?: string): Promise<ProductComplaintSignal[]> {
+    const rows = await this.executeRpc<unknown[]>('product_complaint_signal', {
+      p_since: since ?? null,
+      p_product_ids: productIds.length > 0 ? [...productIds] : null,
+    });
+    return (rows ?? []).map((row) => ProductComplaintSignalSchema.parse(dbToApp(row)));
   }
 
   /**
