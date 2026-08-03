@@ -25,8 +25,6 @@ Dosyalar:
 
 - `denetim-server-actions.md` — 26 `'use server'` dosyasının taraması (S1 müşteri · S2 operasyon;
   geneli temiz)
-- `denetim-yorum-operasyon.md` — yorum bayatlığı 2/3: operasyon (O-Y1 kapandı-doğrulandı;
-  O-Y2 dönemli toplam · O-Y3 nav→olmayan whatsapp cevap bekliyor; ölçü ekseni temiz)
 - `denetim-yorum-musteri.md` — yorum bayatlığı 3/3: müşteri+lib (M-Y1 vitrin sözleşme künyesi ⚠ ·
   M-Y2 ana sayfa "stub" · M-Y3 404 yanlış engel · M-Y4 yorum bölümü engeli; dördü künye sınıfı)
 - `denetim-musteri-hata-maskeleme.md` — müşteriye giden hata metinleri (H1 ham sızıntı ⚠ ·
