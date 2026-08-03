@@ -33,6 +33,8 @@ Dosyalar:
   T2 teklif akışı · T3 fiyat-değişim onayı · T4 cron iş testi)
 - `denetim-dosya-agaci.md` — dosya ağacı standardı, iki yüzey (D1 kardeş-sayfa importları ·
   D2 fork istisnaları · D3 hook adı; yerleşim geneli temiz)
+- `denetim-test-artigi.md` — DB'de artık bırakan testler, ampirik ölçümle (R1 kurye para grafiği ·
+  R2 quick-sale→demo kasa · R3 intake zinciri · R4 sessiz teardown deseni; 17/21 grup temiz)
 
 Kapanıp silinenler (02–03.08): operasyon ilk dosyası ve komponent taraması · arka uç ilk dosyası
 ve **veritabanı/duplikasyon taraması** (A1–A9 tamamı uygulanıp doğrulandı — para kaydı düzeltmesi,
