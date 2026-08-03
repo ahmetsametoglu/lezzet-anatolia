@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
+import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { localizedUrl, type Locale } from '@lezzet/i18n';
 import { localeAlternates } from '@/lib/seo/alternates';
@@ -46,7 +47,10 @@ export default async function Home({ params }: HomeProps) {
   }
 
   const t: Messages = messages[locale];
-  const [data, device] = await Promise.all([getHomeData(locale, await readPlaceWarehouses()), detectDevice()]);
+  const [data, device] = await Promise.all([
+    getHomeData(locale, await readPlaceWarehouses(), await readPricingViewer()),
+    detectDevice(),
+  ]);
 
   return (
     <SiteFrame device={device} locale={locale}>

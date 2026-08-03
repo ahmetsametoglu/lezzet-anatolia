@@ -6,6 +6,7 @@ import type { Locale } from '@lezzet/i18n';
 import type { PlaceWarehouses } from '@/lib/delivery/place-types';
 import { FIXTURE_CATEGORIES } from './fixtures';
 import { listOfferProductIds, loadProductContext } from './read-context';
+import type { PricingViewer } from './read-viewer';
 import { EMPTY_PRODUCT_CONTEXT, toCategory, toProduct } from './map';
 import type { CatalogSort, StorefrontCatalog } from './storefront-types';
 
@@ -61,11 +62,15 @@ const noProducts = (categories: StorefrontCatalog['categories'], activeCategory:
  * kurtaran şey (T8) tam olarak parametrenin zorunluluğuydu, aynı disiplin burada da geçerli.
  *
  * `null` → depo-ÜSTÜ okuma: "tükendi" demenin tek dayanağı hiçbir depoda bulunmamasıdır (C3).
+ *
+ * `viewer` — **kim soruyor** (kanal/onay/kimlik); zorunlu ve `place` ile aynı sebeple ÇAĞIRANDAN
+ * gelir: çözümü çerez okur, kapının içine konsaydı bu dosya istek bağlamı olmadan çağrılamazdı.
  */
 export async function getCatalogData(
   locale: Locale,
   q: CatalogQuery = {},
   place: PlaceWarehouses,
+  viewer: PricingViewer,
 ): Promise<StorefrontCatalog> {
   const db = serviceDb();
   const categoryRows = await new CategoryService(db).list({ activeOnly: true });
@@ -89,7 +94,7 @@ export async function getCatalogData(
       : productSvc.listWithRelations({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE }),
     productSvc.counts(filters),
   ]);
-  const context = await loadProductContext(db, page.rows, place);
+  const context = await loadProductContext(db, page.rows, place, viewer);
 
   return {
     categories,

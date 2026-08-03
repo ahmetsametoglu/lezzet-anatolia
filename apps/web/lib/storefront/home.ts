@@ -5,6 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import type { PlaceWarehouses } from '@/lib/delivery/place-types';
 import { FIXTURE_CATEGORIES } from './fixtures';
 import { listOfferProductIds, loadProductContext } from './read-context';
+import type { PricingViewer } from './read-viewer';
 import { EMPTY_PRODUCT_CONTEXT, toCategory, toProduct } from './map';
 import { HOME_PACKAGE_LIMIT, listStorefrontPackages } from './packages';
 import type { StorefrontHome, StorefrontOffer, StorefrontProduct } from './storefront-types';
@@ -48,9 +49,10 @@ export async function readShowcase(
   db: SupabaseClient,
   locale: Locale,
   place: PlaceWarehouses,
+  viewer: PricingViewer,
 ): Promise<StorefrontProduct[]> {
   const page = await new ProductService(db).listWithRelations({ filters: { status: 'active' }, limit: SHOWCASE_LIMIT });
-  const context = await loadProductContext(db, page.rows, place);
+  const context = await loadProductContext(db, page.rows, place, viewer);
   return page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT));
 }
 
@@ -67,12 +69,12 @@ function isOffer(p: StorefrontProduct): p is StorefrontOffer {
  * çözdürür, teklif normal fiyatı yenemezse ürün fırsat sayılmaz ve banda girmez. Bant boş kalırsa
  * sayfa bölümü tamamen kaldırır — boş hâl gösterilmez (komponent envanteri K8).
  */
-async function readOffers(db: SupabaseClient, locale: Locale, place: PlaceWarehouses): Promise<StorefrontOffer[]> {
+async function readOffers(db: SupabaseClient, locale: Locale, place: PlaceWarehouses, viewer: PricingViewer): Promise<StorefrontOffer[]> {
   const productIds = await listOfferProductIds(db, place.warehouseId);
   if (!productIds.length) return [];
 
   const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds, status: 'active' }, limit: OFFER_LIMIT });
-  const context = await loadProductContext(db, page.rows, place);
+  const context = await loadProductContext(db, page.rows, place, viewer);
   return page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)).filter(isOffer);
 }
 
@@ -84,14 +86,19 @@ async function readOffers(db: SupabaseClient, locale: Locale, place: PlaceWareho
  * kurtaran şey (T8) tam olarak parametrenin zorunluluğuydu, aynı disiplin burada da geçerli.
  *
  * `null` → depo-ÜSTÜ okuma: "tükendi" demenin tek dayanağı hiçbir depoda bulunmamasıdır (C3).
+ *
+ * `viewer` — **kim soruyor** (kanal/onay/kimlik). Aynı gerekçeyle zorunlu ve aynı gerekçeyle
+ * ÇAĞIRANDAN gelir: çözümü çerezi okur (`readPricingViewer`), yani okuma kapısının içine konsaydı
+ * bu dosya istek bağlamı olmadan çağrılamaz olurdu — testler ve ileride sunucu görevleri dahil.
+ * `place` de tam olarak bu yüzden parametre.
  */
-export async function getHomeData(locale: Locale, place: PlaceWarehouses): Promise<StorefrontHome> {
+export async function getHomeData(locale: Locale, place: PlaceWarehouses, viewer: PricingViewer): Promise<StorefrontHome> {
   const db = serviceDb();
   const [categoryRows, featured, offers, packages] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
     // Vitrin seçkisi boş sepetle PAYLAŞILIR — tek kaynak (`readShowcase`).
-    readShowcase(db, locale, place),
-    readOffers(db, locale, place),
+    readShowcase(db, locale, place, viewer),
+    readOffers(db, locale, place, viewer),
     listStorefrontPackages(locale),
   ]);
 

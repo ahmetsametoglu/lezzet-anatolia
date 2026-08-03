@@ -6,6 +6,7 @@ import { cropOf, resolveLocalizedText } from '@lezzet/types';
 import type { AvailableStockTotal, Category, ImageMeta, Price, Product, ProductVariant } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import type { StockStatus, StorefrontCategory, StorefrontImage, StorefrontProduct, StorefrontVariant } from './storefront-types';
+import { VISITOR, type PricingViewer } from './read-viewer';
 
 /**
  * DB satırı → vitrin kartı indirgemesi. Anasayfa ve katalog AYNI indirgemeyi kullanır; ayrı yazılsa
@@ -28,6 +29,14 @@ export function toCategory(row: CategoryRow, locale: Locale): StorefrontCategory
 
 /** Ürünün karta indirgenmesi için gereken yan veriler — çağıran toplu okur, kart başına sorgu yok. */
 export interface ProductContext {
+  /**
+   * **Kim soruyor** — kanal, onay ve kimlik (`read-viewer.ts`).
+   *
+   * Fiyatın çözümü buna bağlı ve bağlam içinde taşınması şart: fiyat SATIRLARI zaten bu kanala
+   * göre okundu (`loadProductContext`), yani motora başka bir kanal söylemek elindeki listeyle
+   * çelişen bir soru sormak olurdu.
+   */
+  viewer: PricingViewer;
   variants: ProductVariant[];
   prices: Map<string, { channelPrice: Price | null; customerPrice: Price | null }>;
   /**
@@ -84,6 +93,9 @@ function stockStatusOf(
  * Toplu okuma bir ürünü ıskalarsa buraya düşülür; her okuma dosyası kendi boşunu tanımlamasın.
  */
 export const EMPTY_PRODUCT_CONTEXT: ProductContext = {
+  // Bağlamı olmayan ürünün fiyatı da yok; ziyaretçi künyesi burada bir varsayım değil, "soruyu
+  // soracak kimse yok"un yazılışı.
+  viewer: VISITOR,
   variants: [],
   prices: new Map(),
   stock: new Map(),
@@ -108,9 +120,11 @@ function sellingOf(variant: ProductVariant, ctx: ProductContext) {
   const customerCents = priceRows?.customerPrice?.amountCents ?? null;
 
   const resolved = resolvePrice({
-    channel: 'b2c',
-    b2bApproved: false,
-    channelPrices: listCents != null ? [{ channel: 'b2c', amountCents: listCents }] : [],
+    channel: ctx.viewer.channel,
+    b2bApproved: ctx.viewer.b2bApproved,
+    // Liste, okunduğu kanalın satırıdır — `viewer.channel` zaten daraltılmış hâl (onaysız şirket
+    // B2C'dir), yani motorun kendi daraltması bu listeyle çelişmez.
+    channelPrices: listCents != null ? [{ channel: ctx.viewer.channel, amountCents: listCents }] : [],
     customerPriceCents: customerCents,
     offer: ctx.offers.get(variant.id) ?? null,
   });

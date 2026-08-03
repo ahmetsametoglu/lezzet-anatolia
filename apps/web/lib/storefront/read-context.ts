@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ProductWithRelations } from '@lezzet/types';
 import type { PlaceWarehouses } from '@/lib/delivery/place-types';
 import type { ProductContext } from './map';
+import type { PricingViewer } from './read-viewer';
 
 /**
  * Bir ürün listesinin fiyat ve stok yan verilerini TOPLU okur (08.10).
@@ -13,8 +14,16 @@ import type { ProductContext } from './map';
  * katalog sayfası 30 fiyat + 30 stok sorgusu atarsa sayfa açılmaz (`CLAUDE.md`: N+1 kırılır).
  * `findApplicableMap` bu iş için `PriceService`'e eklendi; stokta `getAvailableMap` zaten vardı.
  *
- * Fiyat ziyaretçi kanalından (`b2c`) okunur. Giriş yapmış müşterinin kanalı ve özel fiyatı 04/07
- * bağlandığında buraya parametre olarak girer — kart ve sayfa değişmez.
+ * ── KİM SORUYOR (`viewer`) ───────────────────────────────────────────────────
+ * Fiyat uzun süre `'b2c'` SABİTİYLE okunuyordu ve künyesi "04/07 bağlandığında buraya parametre
+ * olarak girer" diye söz veriyordu. Söz tutulmadığı sürece iki şey sessizce ölüydü: **onaylanmış
+ * B2B müşteri toptan fiyat görmüyordu** ve **müşteriye özel fiyat hiç okunmuyordu** (kimlik
+ * verilmeyince `findApplicableMap` o satırları hiç aramıyor). İkisi de hata vermiyordu — sabit
+ * geçerli bir değerdi.
+ *
+ * Parametre ZORUNLU ve varsayılansız, tıpkı `warehouseId` gibi: varsayılan bıraksaydık argümanı
+ * unutan çağrı derlenir ve sessizce perakende okurdu — yani az önce kapattığımız açığın kendisi
+ * geri gelirdi, bu kez fark edilmesi daha da zor.
  *
  * ── YER BİLİNİYOR MU (DOMAIN §17) ────────────────────────────────────────────
  * `warehouseId` **null olabilir ve bu normaldir**: posta kodu zorunlu değil (K1), ziyaretçi
@@ -30,6 +39,7 @@ export async function loadProductContext(
   db: SupabaseClient,
   rows: ProductWithRelations[],
   place: PlaceWarehouses,
+  viewer: PricingViewer,
 ): Promise<Map<string, ProductContext>> {
   const { warehouseId, shippingWarehouseId } = place;
   const context = new Map<string, ProductContext>();
@@ -48,7 +58,9 @@ export async function loadProductContext(
 
   const stocks = new StockService(db);
   const [prices, stock, shippingStock, networkStock, offerBatches] = await Promise.all([
-    new PriceService(db).findApplicableMap(variantIds, 'b2c'),
+    // Kanal VE kimlik birlikte gider: kimlik olmadan `findApplicableMap` müşteriye özel fiyat
+    // satırlarını hiç sorgulamıyor ve motor her zaman `customerPriceCents: null` alıyordu.
+    new PriceService(db).findApplicableMap(variantIds, viewer.channel, viewer.customerId),
     warehouseId ? stocks.getAvailableMap(warehouseId, variantIds) : stocks.getNetworkAvailabilityMap(variantIds),
     // ── KARGO DEPOSU AYRI OKUNUR (19.10) ──────────────────────────────────────
     // "Yerel depoda yok" tek başına **tükendi demek DEĞİLDİR** (C3): ürün kargo deposunda duruyorsa
@@ -89,6 +101,7 @@ export async function loadProductContext(
   const offers = toOfferMap(offerBatches);
   for (const row of rows) {
     context.set(row.id, {
+      viewer,
       variants: variantsByProduct.get(row.id) ?? [],
       prices,
       stock,

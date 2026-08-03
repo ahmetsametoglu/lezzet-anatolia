@@ -7,6 +7,7 @@ import type { Locale } from '@lezzet/i18n';
 import { EMPTY_PRODUCT_CONTEXT, imageOf, toVariant } from '@/lib/storefront/map';
 import type { ProductContext } from '@/lib/storefront/map';
 import { loadProductContext } from '@/lib/storefront/read-context';
+import { pricingViewerOf } from '@/lib/storefront/read-viewer';
 import { getPackagesByIds } from '@/lib/storefront/packages';
 import type { StorefrontPackageDetail } from '@/lib/storefront/storefront-types';
 import {
@@ -105,7 +106,15 @@ export async function getCartView(
 
   const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds }, limit: productIds.length });
   const byProduct = new Map(page.rows.map((p) => [p.id, p]));
-  const context = await loadProductContext(db, page.rows, { warehouseId: opts.warehouseId ?? null, shippingWarehouseId: opts.shippingWarehouseId ?? null });
+  // Görüntüleyen OTURUMDAN değil, sepete verilen KİMLİKTEN çözülür: checkout taslağı müşteriyi
+  // misafir OTP çerezinden de çözebiliyor ve o yolda oturum yok. Oturuma bağlasaydık, misafir
+  // olarak doğrulanmış bir B2B müşteri ödeme adımında perakende fiyat görürdü.
+  const context = await loadProductContext(
+    db,
+    page.rows,
+    { warehouseId: opts.warehouseId ?? null, shippingWarehouseId: opts.shippingWarehouseId ?? null },
+    await pricingViewerOf(opts.customerId ?? null),
+  );
 
   const lines: CartLine[] = [];
   for (const entry of entries) {

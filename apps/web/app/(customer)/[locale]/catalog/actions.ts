@@ -4,6 +4,7 @@ import { KeysetCursorSchema, type KeysetCursor } from '@lezzet/types';
 import { hasLocale } from 'next-intl';
 import { getCatalogData } from '@/lib/storefront/catalog';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
+import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { CATALOG_SORTS, type CatalogSort, type StorefrontProduct } from '@/lib/storefront/storefront-types';
 import { customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { routing } from '@/i18n/routing';
@@ -64,7 +65,7 @@ export async function loadMoreCatalogAction(locale: string, q: CatalogPageQuery,
       onlyOffers: q.onlyOffers,
       onlyShippable: q.onlyShippable,
       cursor: safeCursor,
-    }, await readPlaceWarehouses());
+    }, await readPlaceWarehouses(), await readPricingViewer());
     return { data: { products: data.products, nextCursor: data.nextCursor }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };

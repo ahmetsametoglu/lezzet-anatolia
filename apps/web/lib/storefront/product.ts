@@ -8,6 +8,7 @@ import type { Locale } from '@lezzet/i18n';
 import type { PlaceWarehouses } from '@/lib/delivery/place-types';
 import { EMPTY_PRODUCT_CONTEXT, imageOf, toCategory, toProduct, toVariant } from './map';
 import { loadProductContext } from './read-context';
+import type { PricingViewer } from './read-viewer';
 import type { ProductContext } from './map';
 import type { StorefrontDeclaration, StorefrontImage, StorefrontProductDetail } from './storefront-types';
 
@@ -86,6 +87,7 @@ async function readSimilar(
   excludeId: string,
   locale: Locale,
   place: PlaceWarehouses,
+  viewer: PricingViewer,
 ) {
   if (!categoryId) return [];
   const page = await new ProductService(db).listWithRelations({
@@ -93,7 +95,7 @@ async function readSimilar(
     limit: SIMILAR_LIMIT + 1, // kendisi de gelebilir; elendikten sonra kart sayısı tutsun
   });
   const rows = page.rows.filter((p) => p.id !== excludeId).slice(0, SIMILAR_LIMIT);
-  const context = await loadProductContext(db, rows, place);
+  const context = await loadProductContext(db, rows, place, viewer);
   return rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT));
 }
 
@@ -115,16 +117,19 @@ export async function getProductDetail(
   locale: Locale,
   slug: string,
   place: PlaceWarehouses,
+  viewer: PricingViewer,
 ): Promise<StorefrontProductDetail | null> {
   const db = serviceDb();
   const product = await new ProductService(db).findBySlug(slug);
   if (!product || product.status !== 'active') return null;
 
   const [context, images, category, similar] = await Promise.all([
-    loadProductContext(db, [product], place),
+    loadProductContext(db, [product], place, viewer),
     new ProductImageService(db).listByProduct(product.id),
     product.categoryId ? new CategoryService(db).getById(product.categoryId) : Promise.resolve(null),
-    readSimilar(db, product.categoryId, product.id, locale, place),
+    // Aynı künye "benzer ürünler"e de gider: detay B2B fiyat gösterirken altındaki kartların
+    // perakende göstermesi, sayfayı kendi kendisiyle çelişkiye düşürürdü.
+    readSimilar(db, product.categoryId, product.id, locale, place, viewer),
   ]);
 
   const ctx: ProductContext = context.get(product.id) ?? EMPTY_PRODUCT_CONTEXT;

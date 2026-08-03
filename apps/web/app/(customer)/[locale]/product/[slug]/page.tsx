@@ -6,6 +6,7 @@ import { localeAlternates } from '@/lib/seo/alternates';
 import { ProductJsonLd } from '@/lib/seo/json-ld';
 import { setRequestLocale } from 'next-intl/server';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
+import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { detectDevice } from '@/lib/device';
 import { getProductDetail } from '@/lib/storefront/product';
 import { getProductScore, getReviewEligibility, listProductReviews } from '@/lib/feedback/product-feedback';
@@ -46,7 +47,7 @@ interface ProductPageProps {
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) return {};
-  const product = await getProductDetail(locale, slug, await readPlaceWarehouses());
+  const product = await getProductDetail(locale, slug, await readPlaceWarehouses(), await readPricingViewer());
   if (!product) return {};
 
   return {
@@ -62,7 +63,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
   setRequestLocale(locale);
 
   const t: Messages = messages[locale];
-  const [product, device] = await Promise.all([getProductDetail(locale, slug, await readPlaceWarehouses()), detectDevice()]);
+  const [product, device] = await Promise.all([
+    getProductDetail(locale, slug, await readPlaceWarehouses(), await readPricingViewer()),
+    detectDevice(),
+  ]);
   if (!product) notFound();
 
   /**

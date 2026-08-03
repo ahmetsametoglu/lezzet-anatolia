@@ -4,6 +4,7 @@ import { hasLocale } from 'next-intl';
 import { localeAlternates } from '@/lib/seo/alternates';
 import { setRequestLocale } from 'next-intl/server';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
+import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { detectDevice } from '@/lib/device';
 import { getCatalogData } from '@/lib/storefront/catalog';
 import { CATALOG_SORTS, type CatalogSort } from '@/lib/storefront/storefront-types';
@@ -51,7 +52,12 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
 
   const t: Messages = messages[locale];
   const [data, device] = await Promise.all([
-    getCatalogData(locale, { categorySlug: category, search: q, sort: activeSort, onlyOffers, onlyShippable }, await readPlaceWarehouses()),
+    getCatalogData(
+      locale,
+      { categorySlug: category, search: q, sort: activeSort, onlyOffers, onlyShippable },
+      await readPlaceWarehouses(),
+      await readPricingViewer(),
+    ),
     detectDevice(),
   ]);
 
