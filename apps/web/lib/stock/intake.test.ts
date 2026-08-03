@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   CategoryService, ProductService, PurchaseOrderService, StockService, SupplierService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
 import {
   openIntakeForm,
   receiveGoods,
@@ -28,7 +28,6 @@ let warehouseId: string;
 let productId: string;
 let categoryId: string;
 let supplierId: string;
-const createdOrders: string[] = [];
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
@@ -53,17 +52,21 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await db.from('stock').delete().eq('variant_id', variantId);
-  for (const id of createdOrders) await db.from('purchase_order').delete().eq('id', id);
-  await db.from('supplier').delete().eq('id', supplierId);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId] });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  // Mal kabul satırları (`stock_intake`) burada elle silinmiyordu ve tedarikçiyi/depoyu `restrict`
+  // ile tutuyordu: iki silme de sessizce başarısız oluyor, her koşu +9 kabul · +1 tedarikçi ·
+  // +1 depo · +2 numaratör bırakıyordu (denetim R3). Sıra artık tek yerde — `purgeTestData`'da.
+  await mustDelete(db, 'stock', (q) => q.eq('variant_id', variantId));
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    supplierIds: [supplierId], // kabuller + tedarik siparişleri onunla gider
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** Tedarik siparişi — beklenen adet ve birim maliyetle (**cent**; admin girer, depocu görmez). */
 async function draftPurchaseOrder(qty: number, unitPriceCents: number) {
   const { order } = await new PurchaseOrderService(db).createDraft(supplierId, [{ variantId, qty, unitPriceCents }]);
-  createdOrders.push(order.id);
   return order.id;
 }
 

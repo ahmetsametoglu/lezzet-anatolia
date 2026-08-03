@@ -68,6 +68,10 @@ Fiilen tüm modüllerin ürettiği yüzeyler; ama **VPS kurulumu, CI ve staging 
 - [ ] (18.8) **CI + staging:** GitHub Actions (typecheck+lint+birim test her push); entegrasyon testleri lokal Supabase'de (özellikle **paralel rezervasyon yarışı** + para RPC'leri); staging = ikinci ücretsiz Supabase projesi + ikinci PM2 app; migration provası önce staging. *Öneri:* erken kur — geliştirmeyi hızlandırır.
 - [ ] (18.9) **VPS kurulumu:** Caddy (TLS + reverse proxy), PM2 (web + backend), env yönetimi; Caddyfile/PM2 ecosystem repo'da. *Öneri:* erken kur, canlı ortamı baştan gerçekçi tut.
 - [ ] (18.10) **Paket sınırı aracı son kontrolü:** `apps/*` sipariş/stok/para yazımını yalnız domain-core üzerinden yapıyor; database servislerini doğrudan import edemiyor (00'da kurulan kural üretimde sağlam mı).
+- [~] (18.11) **Süreç emniyet ağı + cron kabuğu testi** (denetim G2 · T4). `touches: apps/backend/**`
+    - **Durum (03.08) — süreç ağı YAPILDI, testler bekliyor.** `apps/backend/src/index.ts`'e iki kanca takıldı: `unhandledRejection` (yazar, süreç yaşar) ve `uncaughtException` (yazar, sonra temiz çıkar — süpervizör yeniden başlatır). Kaynak yeni bir sabit: `SOURCES.backendProcess`. Sarmalın DIŞINDA doğan bir başıboş promise reddi süreci öldürüyordu ve ölüm hiçbir yere yazılmıyordu: dört cron birden susar, `job_run` bayatlar, sağlık toplayıcısı da aynı süreçte olduğu için ekran son görüntüde donardı.
+    - **BEKLEYEN(18.11):** `runner.ts` testi (üst üste binme koruması · `job_run` + `error_log` çifte izi · hatada sürecin ayakta kalması) ve `purge-observability` iş testi (**çözülmemiş hata süpürülmez** değişmezi + iki saklama eşiği). Denetim T4'e verilen cevabın gerekçesi: ince sarmalayıcıların (`sweep-reservations`, `collect-health`) kendi testi yerine, gerçek mantığın ve veri SİLEN işin testi.
+    - **BEKLEYEN(18.11):** "backend N dakikadır görüntü yazmadı" uyarısı (denetim G2'nin ikinci yarısı) — `system_health` tazeliğinden türetilir, eşiği yok. 18.6 gecikme alarmıyla birlikte kapanır.
 
 ## Not
 

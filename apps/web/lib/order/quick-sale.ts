@@ -107,8 +107,7 @@ export async function quickSale(input: QuickSaleInput): Promise<QuickSaleOutcome
     actorId: input.actorId,
     referenceNo,
     paymentMethod: input.paymentMethod,
-    // Ayarlar cent'te tutulur (STACK §8); sipariş tablosundaki para kolonları euro numeric.
-    packagingUnitCost: packagingCents / 100,
+    packagingUnitCostCents: packagingCents,
   });
 
   if (!result.ok) {

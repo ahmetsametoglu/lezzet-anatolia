@@ -50,8 +50,19 @@ export const SOURCES = {
   backendHttp: 'backend-http',
   /** Zamanlanmış iş (`runJob` kabuğu). */
   backendCron: 'backend-cron',
+  /**
+   * Backend SÜRECİNİN kendisi — hiçbir sarmala düşmeyen hata (`unhandledRejection` /
+   * `uncaughtException`). Cron'dan ayrı tutulur: "bir iş düştü" ile "süreç öldü, tüm işler durdu"
+   * aynı ekranda aynı renkte görünmemeli.
+   */
+  backendProcess: 'backend-process',
   /** Sağlayıcı bildirimi (Stripe, 360dialog). */
   webhook: 'webhook',
+  /**
+   * TARAYICIDA doğan hata (`reportClientErrorAction` kapısı). Sunucu kancaları bunu görmez —
+   * hata sınırındaki render çökmesi buradan gelmezse hiçbir yerde iz bırakmaz (denetim G1).
+   */
+  webClient: 'web-client',
 } as const;
 
 export async function captureError(error: unknown, ctx: CaptureContext): Promise<void> {

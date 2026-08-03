@@ -1,5 +1,6 @@
 import type Stripe from 'stripe';
 import { AccountService, serviceDb } from '@lezzet/database';
+import { logger } from '@lezzet/observability';
 import { handleStripeEvent, type VerifiedEvent } from '@/lib/order/stripe-webhook';
 import { stripeClient, stripeWebhookSecret } from '@/lib/stripe';
 
@@ -68,7 +69,10 @@ export async function POST(request: Request): Promise<Response> {
   if (!stripe || !secret) return new Response('stripe not configured', { status: 503 });
 
   const signature = request.headers.get('stripe-signature');
-  if (!signature) return new Response('missing signature', { status: 400 });
+  if (!signature) {
+    logger.warn({ reason: 'missing' }, 'stripe webhook imzasız istek reddedildi');
+    return new Response('missing signature', { status: 400 });
+  }
 
   const body = await request.text();
 
@@ -77,6 +81,13 @@ export async function POST(request: Request): Promise<Response> {
     event = await stripe.webhooks.constructEventAsync(body, signature, secret);
   } catch (error) {
     // İmza tutmuyor: bu istek Stripe'tan gelmemiş olabilir. 400 — tekrar denemesi anlamsız.
+    //
+    // İZ BIRAKILIR (denetim G3): imzasız/imzası tutmayan istek ya yanlış yapılandırmadır (sırlar
+    // ortam dosyalarında karışmış — ödemeler sessizce işlenmiyordur) ya da bir deneme; ikisi de
+    // görülmeye değer. `captureError` DEĞİL `logger.warn`: bu bir uygulama arızası değil, kapının
+    // beklenen reddi — sistem ekranındaki hata sayacını şişirse gerçek arızayı gizlerdi.
+    // Gövde LOGLANMAZ (§5): doğrulanmamış içeriktir, sayı ve sebep yeter.
+    logger.warn({ reason: 'invalid' }, 'stripe webhook imza doğrulaması başarısız');
     return new Response(`invalid signature: ${error instanceof Error ? error.message : 'unknown'}`, { status: 400 });
   }
 

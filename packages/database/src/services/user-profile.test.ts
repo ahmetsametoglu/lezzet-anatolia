@@ -19,6 +19,8 @@ const addresses = new AddressService(db);
 const stamp = Date.now();
 let customerId: string;
 const createdIds: string[] = [];
+/** Testin açtığı depolar — künye "sonunda toplanıyor" diyordu ama toplayan yoktu (denetim R). */
+const createdWarehouseIds: string[] = [];
 
 beforeAll(async () => {
   const profile = await profiles.insert({ name: `Test Profil ${stamp}`, email: `musteri${stamp}@ornek.fr` });
@@ -27,7 +29,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await purgeTestData(db, { profileIds: createdIds });
+  // Depo profillerden SONRA gider ve sırayı purge biliyor: personel kapsamında geçen depo silinemez.
+  await purgeTestData(db, { profileIds: createdIds, warehouseIds: createdWarehouseIds });
 });
 
 describe('kimlik anahtarları tekildir (04.5)', () => {
@@ -172,6 +175,7 @@ describe('liste: sunucu-taraflı arama + daraltma (09.9)', () => {
     // olabildiği için ölçüt "içerir", eşitlik değil.
     // Depocu kapsamsız açılamaz (DOMAIN §17) — testin kendi deposu, sonunda toplanıyor.
     const depo = await createTestWarehouse(db, { label: 'PRF' });
+    createdWarehouseIds.push(depo.id);
     const depocu = await profiles.insert({ name: `Depocu ${stamp}`, roles: ['warehouse'], warehouseIds: [depo.id] });
     createdIds.push(depocu.id);
 

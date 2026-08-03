@@ -67,6 +67,13 @@
 - **Tam paket YALNIZ commit öncesi, ve `pnpm test` ile** — o script kilitlidir (`scripts/with-test-lock.mjs`), ajanlar çakışmak yerine sıraya girer. Çıplak `vitest run` ile tam paket koşma; kilidi atlar.
 - **Testler küresel tekil satırı kirletmez.** Damgayla (`Date.now()`) ayrılmış satırlar güvenlidir; `settings` gibi TÜM suite'in okuduğu satırlar değil. Değiştirmek şartsa **önce oku, sonra geri koy** (`afterAll`) — "boşa çek" de bir varsayımdır ve bir gün yanlış olur. Örnek desen: `lib/feedback/invite.test.ts` (`overrideSetting` + snapshot).
 - **DB'ye vuran test entegrasyon köküne yazılır** (`apps/web/lib`, `packages/database`, `apps/backend`). Birim projesinde `.env` yüklenmez ve DB env'i silinir; yanlış yere düşen test sessizce değil, ilk satırında "Supabase env eksik" diye patlar.
+- **Teardown'da elle silme YOK, `purgeTestData` + `mustDelete` var** (`@lezzet/database/testing`).
+  Silme SIRASI tek yerde durur (`cleanup.ts`); her dosya kendi sırasını uydurursa biri mutlaka
+  yanlış olur. Özellikle `warehouse` ve `account`: ikisi de `restrict` FK'lerle korunuyor ve
+  Supabase `delete()` hatayı **fırlatmaz, döndürür** — kimse bakmadığı için teardown sessizce
+  yarım kalır, koşu yeşil görünür, kirlilik haftalarca birikir (ölçüldü: `money_movement` 41→187).
+  `mustDelete(db, tablo, (q) => q.eq(...))` hatayı fırlatır; kirlilik gürültüye döner. Purge'ün
+  bilmediği bir hedef gerekiyorsa **purge'e ekle**, dosyaya elle silme yazma. → `02.12`
 - **Küresel sayıya bakan test yazma** (`toplam N rezervasyon süpürüldü` gibi): başka bir ajanın verisi o sayıyı oynatır. Kendi kurduğun satırları say.
 
 ## 5. Doküman senkronu (her ajan için bağlayıcı)

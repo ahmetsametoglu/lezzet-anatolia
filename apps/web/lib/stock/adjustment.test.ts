@@ -44,9 +44,12 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await db.from('stock').delete().eq('variant_id', variantId);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId] });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  // Elle `stock` silmesi BURADAN KALKTI: bu dosya düzeltme kaydı yazıyor ve `stock_adjustment`
+  // partiye `restrict` ile bağlı — silme her koşuda sessizce başarısız oluyordu, partiler kalıyor,
+  // onlar da depoyu tutuyordu. Sıra tek yerde: `purgeTestData` önce düzeltme kaydını temizler.
+  // Depo da purge'e devredildi; belge numaratörü (`IMH-<kod>`, `SAY-<kod>`) depo koduna çıpalı ve
+  // FK'si YOK — elle depo silmesi sayacı geride bırakıyordu, üstelik hiçbir hata üretmeden.
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], warehouseIds: [warehouseId] });
 });
 
 describe('olay belgesi', () => {

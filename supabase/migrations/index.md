@@ -58,6 +58,12 @@ dağıtımdan itibaren bu serbestlik biter.
 > alınca yeniden yazıldı) ve orada kayıtlı. Numarayı geri kullanmıyoruz — uygulanmış bir migration
 > numarasının anlamı değişirse, aynı numarayı farklı içerikle görmüş iki ortam sessizce ayrışır.
 >
+> **TEK indeks burasıdır** (denetim P3, 03.08): `supabase/MIGRATIONS.md` silindi. 0003'te donmuş
+> ikinci bir indeksti — 41 migration'ı hiç görmemiş, repo genelinde tek referansı yoktu ve okuyan
+> ajana yanlış gerçeklik öğretiyordu (*"`customer` tablosu şu alanlarla büyüyecek"* diyordu; oysa
+> ayrı `customer` tablosu hiç doğmadı, kimlik tek tabloda toplandı — 0013). Taşınacak tekil içeriği
+> yoktu: numara-çakışması vakası `docs-check.mjs:184`'te yaşıyor, büyüme planı ise zaten yanlıştı.
+>
 > **Tablo artık makine tarafından denetleniyor** (denetim A5, 03.08): `docs:check` her
 > `NNNN_*.sql` dosyasının burada bir satırı olduğunu doğruluyor. Önceki hâlde tablo 0031'de
 > donmuştu ve künyesindeki *"yazan ajanlar tamamlar"* sözü tutulmamıştı — yumuşak kural okunmayan

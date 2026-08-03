@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, OrderItemBatchService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, settingsSnapshot, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
 import { quickSale } from './quick-sale';
 import { transitionOrder } from './transition';
 
@@ -54,11 +54,14 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await db.from('money_movement').delete().eq('account_id', cashAccount);
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('account').delete().eq('id', cashAccount);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    accountIds: [cashAccount], // hareketleri de onunla gider
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** Kapıda açılan taslak: kaynak `door`, teslimat yok. */
@@ -102,7 +105,9 @@ describe('hızlı satış (07.10)', () => {
 
   it('adım atlandı diye İZ atlanmaz: parti kaydı ve geçiş logu yazılır', async () => {
     const { order } = await doorDraft(2);
-    await quickSale({ orderId: order.id, paymentMethod: 'card' });
+    // Hesap AÇIKÇA verilir: verilmezse `door_cash_account_id` ayarına düşülür ve o ayar yerelde
+    // demo kasayı gösterir — tahsilat kullanıcının gerçek kasasına yazılırdı (denetim R2).
+    await quickSale({ orderId: order.id, paymentMethod: 'card', paymentAccountId: cashAccount });
 
     // Geri çağırma ("bu parti kime gitti") hızlı satışta da çalışır.
     const partiler = await itemBatches.listByOrder(order.id);
@@ -118,7 +123,7 @@ describe('hızlı satış (07.10)', () => {
     // Online sepetini açmış, kapıya gelip almış: kendi ayırdığı mal kendisini engellemez.
     await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty: 2 });
 
-    expect((await quickSale({ orderId: order.id, paymentMethod: 'cash' })).status).toBe('ok');
+    expect((await quickSale({ orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount })).status).toBe('ok');
     expect(await reservations.listActiveByOrder(order.id)).toHaveLength(0);
     expect((await stocks.getById(batchA))?.physicalQty).toBe(1);
   });
@@ -184,6 +189,28 @@ describe('hızlı satış (07.10)', () => {
     expect(line.fulfilledQty).toBe(2);
   });
 
+  it('hesap verilmezse tahsilat AYARDAKİ çekmeceye yazılır', async () => {
+    // Kapıdaki kasiyer ekranı hesabı çoğu zaman göndermez; düşülen yol ayardır ve bu yol bugüne
+    // kadar HİÇ sınanmamıştı — hesapsız çağrılar sessizce yereldeki demo kasaya yazıyordu
+    // (denetim R2). Ayar bilinen bir duruma getirilir, sonra bulunduğu gibi geri konur (§4b).
+    const settings = settingsSnapshot(db);
+    const ayarKasasi = (await new AccountService(db).insert({ name: `Ayar kasası ${stamp}`, type: 'cash' })).id;
+    await settings.override('door_cash_account_id', ayarKasasi);
+
+    try {
+      const { order } = await doorDraft(3);
+      const outcome = await quickSale({ orderId: order.id, paymentMethod: 'cash' }); // hesap YOK, ayar var
+      expect(outcome).toMatchObject({ status: 'ok', paymentRecorded: true });
+
+      // Para uydurulmadı ve DOĞRU çekmeceye girdi: testin kendi kasası boş kaldı.
+      expect((await new AccountService(db).balance(ayarKasasi)).balanceCents).toBe(3000);
+    } finally {
+      await settings.restore();
+      await mustDelete(db, 'money_movement', (q) => q.eq('account_id', ayarKasasi));
+      await mustDelete(db, 'account', (q) => q.eq('id', ayarKasasi));
+    }
+  });
+
   it('hesap belirsizse satış YİNE kapanır — mal gitti, para kayıtsız görünür', async () => {
     // Uydurulmuş bir "ödendi"den, kaydedilmemiş ama görünür bir tahsilat iyidir.
     // Ayar seed'de dolu olabilir; bu senaryo tam da onun BOŞ olduğu hâli sınıyor → geçici olarak kaldır.
@@ -210,8 +237,9 @@ describe('hızlı satış (07.10)', () => {
 
   it('iki kez satılamaz — stok bir kez düşer', async () => {
     const { order } = await doorDraft(2);
-    await quickSale({ orderId: order.id, paymentMethod: 'cash' });
+    await quickSale({ orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
 
+    // İkincide hesap gerekmez: satış zaten reddediliyor, tahsilat adımına hiç gelinmiyor.
     const ikinci = await quickSale({ orderId: order.id, paymentMethod: 'cash' });
     expect(ikinci.status).toBe('forbidden'); // `completed` terminal
     expect((await stocks.getById(batchA))?.physicalQty).toBe(1);

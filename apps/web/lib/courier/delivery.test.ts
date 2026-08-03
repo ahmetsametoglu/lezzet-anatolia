@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, OrderItemBatchService, OrderService, ProductService, ReservationService,
   StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, settingsSnapshot, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
 import { confirmDoorDelivery, type DeliveryProofInput, type DoorCollectionInput } from './delivery';
 import { transitionOrder } from '../order/transition';
 
@@ -67,11 +67,17 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  for (const id of [customerId, b2bCustomerId]) await db.from('order').delete().eq('customer_id', id);
-  await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('account').delete().eq('id', accountId);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  // Sipariş ÖNCE gider ama hareketin anahtarı hesaptır: `money_movement.order_id` `set null`'dur,
+  // sipariş silinince hareket siparişten bulunamaz olur (denetim R1). Hesap → `purgeTestData`.
+  for (const id of [customerId, b2bCustomerId]) await mustDelete(db, 'order', (q) => q.eq('customer_id', id));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    accountIds: [accountId],
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** Kapıya varmış sipariş: hazırlanmış, partisi yazılmış, yola çıkmış. */

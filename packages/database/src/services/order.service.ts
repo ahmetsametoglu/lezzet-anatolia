@@ -416,7 +416,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     actorId?: string | null;
     referenceNo?: string | null;
     paymentMethod?: PaymentMethod | null;
-    packagingUnitCost?: number;
+    /** Paketleme birim maliyeti — **cent** (02.9). Euro'ya çeviren yer burasıdır, çağıran değil. */
+    packagingUnitCostCents?: number;
   }): Promise<QuickSaleResult> {
     if (input.picks.length === 0) throw new Error('order: kalem seçimi boş olamaz');
 
@@ -429,7 +430,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       p_actor_id: input.actorId ?? null,
       p_reference_no: input.referenceNo ?? null,
       p_payment_method: input.paymentMethod ?? null,
-      p_packaging_unit_cost: input.packagingUnitCost ?? 0,
+      p_packaging_unit_cost: fromCents(input.packagingUnitCostCents ?? 0),
     });
     return QuickSaleResultSchema.parse(rpcMoneyToCents(dbToApp(raw), ['cogsAmount']));
   }

@@ -1,6 +1,6 @@
 'use server';
 
-import { captureError } from '@lezzet/observability';
+import { captureError, SOURCES } from '@lezzet/observability';
 
 /**
  * İSTEMCİ hatasını sunucuya bildirir — hata sınırlarının tek kapısı (denetim G1).
@@ -54,11 +54,10 @@ export async function reportClientErrorAction(input: {
   // Harita sınırsız büyümesin: pencere geçmiş girdiler temizlenir (küme zaten küçük).
   for (const [k, t] of gonderildi) if (simdi - t >= PENCERE_MS) gonderildi.delete(k);
 
-  // Kaynak dizesi SABİT. `SOURCES` sözlüğünde `webClient` yok ve o dosya arka uç şeridinde
-  // (`packages/observability`) — sabitin oraya eklenmesi istendi
-  // (`docs/build/operasyon-ekranlari-arka-uc-talebi.md §6`). İnince bu literal onunla değişir.
+  // Kaynak dizesi SABİT: çağıran seçemez. Sözlükten gelir (`SOURCES.webClient`) — elle yazılan
+  // `'web-client'` ile `'web client'` ekranda iki ayrı kaynak gibi görünürdü.
   await captureError(new Error(message), {
-    source: 'web-client',
+    source: SOURCES.webClient,
     path,
     context: digest ? { digest } : {},
   });

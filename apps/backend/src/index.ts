@@ -11,6 +11,31 @@ import { runJob } from './jobs/runner';
 import { SEND_FEEDBACK_INVITES, sendFeedbackInvitesJob } from './jobs/send-feedback-invites';
 import { SWEEP_RESERVATIONS, sweepReservations } from './jobs/sweep-reservations';
 
+/**
+ * SÜREÇ DÜZEYİ EMNİYET AĞI (denetim G2). `runJob` her cron'u sarıyor, Hono `onError` her isteği —
+ * ama sarmalın DIŞINDA doğan bir başıboş promise reddi hiçbirine düşmez. Modern Node'da bu süreci
+ * ÖLDÜRÜR ve ölüm hiçbir yere yazılmaz: tüm cron'lar durur, `job_run` bayatlar, sağlık toplayıcısı
+ * da aynı süreçte olduğu için ekran son görüntüde donup kalır. "Ölçülemeyen değer sıfır değildir"
+ * kuralının süreç hâli — sistem iyi görünürken aslında yoktur.
+ *
+ * İki kancanın işi AYRI:
+ * - `unhandledRejection`: süreç ayakta kalır (Node bunu ölümcül saymaya geçse bile kayıt önce düşer).
+ * - `uncaughtException`: durum artık güvenilmez, TEMİZ ÇIKILIR — süpervizör (pm2) yeniden başlatır.
+ *   Bozuk bellekle koşmaya devam eden bir süreç, düşen bir süreçten tehlikelidir.
+ *
+ * Kayıt `await` edilir: `process.exit` kaydı yarıda kesmesin — asıl amaç o satırın yazılması.
+ */
+process.on('unhandledRejection', (reason) => {
+  void captureError(reason, { source: SOURCES.backendProcess, context: { fatal: false, hook: 'unhandledRejection' } });
+});
+
+process.on('uncaughtException', (error) => {
+  void captureError(error, { source: SOURCES.backendProcess, context: { fatal: true, hook: 'uncaughtException' } }).finally(() => {
+    logger.error({ err: error.message }, 'yakalanmamış istisna — süreç kapanıyor, süpervizör yeniden başlatacak');
+    process.exit(1);
+  });
+});
+
 const app = new Hono<AppEnv>();
 
 // İstek izi ÖNCE takılır: sonraki her şey `reqId` taşısın (OBSERVABILITY §3).

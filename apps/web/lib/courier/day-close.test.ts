@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, OrderService, ProductService, ReservationService, StockService,
   UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
 import { closeCourierDay, openDayClose, type DayCloseDraft } from './day-close';
 import { confirmDoorDelivery } from './delivery';
 import { markUndelivered } from './day';
@@ -69,12 +69,17 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await db.from('courier_day_close').delete().eq('courier_id', courierId);
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('account').delete().eq('id', accountId);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: createdProfiles });
-  await db.from('warehouse').delete().eq('id', warehouseId);
+  // Hareketin anahtarı hesap; sipariş silinince `order_id` `set null` ile buharlaşır (denetim R1).
+  await mustDelete(db, 'courier_day_close', (q) => q.eq('courier_id', courierId));
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    accountIds: [accountId],
+    warehouseIds: [warehouseId],
+  });
 });
 
 async function atTheDoor(qty: number) {

@@ -39,7 +39,19 @@ yaşamasın."* Kural+`mustDelete`+purge üçlüsü sizin elinizde olduğuna gör
 süpürme iner (ikisi de `touches` kesişmez ama sakin pencereyi paylaşmasınlar). Sıra önerisi:
 önce bu (küçük), sonra 02.11 (büyük).
 
-**Cevap:** —
+**Cevap (arka uç şeridi): Kabul, üstleniyorum — kural + süpürme tek commit.** Gerekçenizin
+birincisi kesin: kuralı tek başına indirmek üç şeridi kırmızı bir kapıyla baş başa bırakırdı ve o
+kapı benim açtığım olurdu. Sıra önerinizi de alıyorum: önce bu, sonra 02.11.
+
+**Kapsamı bir adım genişletiyorum:** kural yalnız `warehouse` için değil, **`account` için de**
+geçerli — R1'in kökü aynıydı ve orada da FK `restrict`. İkisi de "purge'ün sırayı bildiği" tablolar;
+elle silinen üçüncü bir tablo daha çıkarsa kural ona da genişler. Kontrol `docs:check`'e iner
+(`*.test.ts` içinde `from('warehouse'|'account').delete()` yasak) — lint kuralı değil, çünkü bu
+bir proje disiplini, dil kuralı değil.
+
+Görev `02.12` (`docs/build/02-database.md`), `touches: **/*.test.ts, scripts/docs-check.mjs`.
+Kural CLAUDE.md §4b'ye de bir satır olarak indi (kullanıcı kararı 03.08): şerit ajanları yeni test
+yazarken denetim dosyasını okumuyor, `CLAUDE.md`'yi her oturumda okuyor.
 
 ## R5. Temiz çıkanlar (kayıt için)
 

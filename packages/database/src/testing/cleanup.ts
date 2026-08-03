@@ -1,5 +1,28 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+/** `delete()` çağrısının daraltılabilir hâli — `mustDelete`'in süzgeç geri çağrısı bunu alır. */
+type DeleteBuilder = ReturnType<ReturnType<SupabaseClient['from']>['delete']>;
+
+/**
+ * Silme — **hatası fırlatılan** hâli (denetim R4).
+ *
+ * Supabase `delete()` hatayı FIRLATMAZ, sonuç nesnesinde döndürür. Teardown'larda kimse o nesneye
+ * bakmadığı için `restrict` FK'ye takılan bir silme *düşen bir test* değil, **görünmez bir hiç**
+ * oluyordu: satırlar kalıyor, koşu yeşil görünüyor, kirlilik haftalarca birikiyordu (ölçüldü:
+ * `money_movement` 41 → 187). Fırlatılan hata vitest çıktısında görünür — sessiz birikim biter.
+ *
+ * Teardown'da fırlamak "testi düşürmek" değil, **teardown'un yalan söylemesini engellemektir**;
+ * zaten testin kendisi çoktan geçmiş ya da kalmıştır.
+ */
+export async function mustDelete(
+  db: SupabaseClient,
+  table: string,
+  narrow: (q: DeleteBuilder) => DeleteBuilder,
+): Promise<void> {
+  const { error } = await narrow(db.from(table).delete());
+  if (error) throw new Error(`teardown: '${table}' silinemedi — ${error.message}`);
+}
+
 /**
  * Entegrasyon testlerinin **zemin toplama** yardımcısı. Testler yerel veritabanını kirletmemeli:
  * kalan satırlar operasyon ekranlarında çöp olarak görünür, sonraki koşuşların sayımlarını bozar
@@ -28,6 +51,15 @@ export interface PurgeTargets {
   authUserIds?: string[];
   /** Test depoları (`createTestWarehouse`) — bağlı transfer/eşik/bölge satırları burada gider. */
   warehouseIds?: string[];
+  /**
+   * Test hesapları (kasa/banka) — **para hareketleri burada gider** (denetim R1).
+   *
+   * Hareketi silmenin anahtarı HESAPTIR, sipariş değil: `money_movement.order_id`
+   * `on delete set null`'dur, yani sipariş silindiği anda o anahtar buharlaşır ve hareket
+   * bulunamaz hâle gelir. `account_id` ise `restrict` — hesabı silmeye çalışan teardown
+   * hareketler durdukça sessizce yarım kalır. Doğru sıra: önce hareket, sonra hesap.
+   */
+  accountIds?: string[];
 }
 
 export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): Promise<void> {
@@ -45,6 +77,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     verificationEmails,
     authUserIds,
     warehouseIds,
+    accountIds,
   } = {
     productIds: clean(targets.productIds),
     categoryIds: clean(targets.categoryIds),
@@ -55,6 +88,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     verificationEmails: clean(targets.verificationEmails),
     authUserIds: clean(targets.authUserIds),
     warehouseIds: clean(targets.warehouseIds),
+    accountIds: clean(targets.accountIds),
   };
 
   // 1) Ürün grafiği: varyantlara `restrict` ile bağlı ne varsa ÖNCE gider.
@@ -62,47 +96,73 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     const variantIds = await idsOf(db, 'product_variant', 'product_id', productIds);
     if (variantIds.length > 0) {
       const stockIds = await idsOf(db, 'stock', 'variant_id', variantIds);
-      if (stockIds.length > 0) await db.from('stock_adjustment').delete().in('stock_id', stockIds);
-      await db.from('reservation').delete().in('variant_id', variantIds);
-      await db.from('purchase_order_item').delete().in('variant_id', variantIds);
-      await db.from('stock').delete().in('variant_id', variantIds);
+      if (stockIds.length > 0) await mustDelete(db, 'stock_adjustment', (q) => q.in('stock_id', stockIds));
+      await mustDelete(db, 'reservation', (q) => q.in('variant_id', variantIds));
+      await mustDelete(db, 'purchase_order_item', (q) => q.in('variant_id', variantIds));
+      await mustDelete(db, 'stock', (q) => q.in('variant_id', variantIds));
     }
   }
 
-  // 2) Tedarik grafiği: giriş → sipariş → tedarikçi. Girişler siparişe `set null`, partiler zaten gitti.
-  if (supplierIds.length > 0) {
-    await db.from('stock_intake').delete().in('supplier_id', supplierIds);
-    await db.from('purchase_order').delete().in('supplier_id', supplierIds); // kalemleri CASCADE
-    await db.from('supplier').delete().in('id', supplierIds); // eşlemeleri CASCADE
+  // 2) Para grafiği ÖNDE: hareket hem tedarik girişine hem siparişe hem hesaba bağlanır. Hesap
+  //    silmesi `restrict` ile korunuyor, yani hareketler durdukça hesap gitmez (denetim R1).
+  //    Karşı hesap da sayılır: transfer TEK satırdır ve karşı uçtan da `restrict` ile tutulur.
+  if (accountIds.length > 0) {
+    await mustDelete(db, 'money_movement', (q) => q.in('account_id', accountIds));
+    await mustDelete(db, 'money_movement', (q) => q.in('counter_account_id', accountIds));
   }
 
-  // 3) Katalog ve müşteri kökleri.
-  if (productIds.length > 0) await db.from('product').delete().in('id', productIds);
-  if (categoryIds.length > 0) await db.from('category').delete().in('id', categoryIds);
-  if (collectionIds.length > 0) await db.from('collection').delete().in('id', collectionIds);
-  if (profileIds.length > 0) await db.from('user_profiles').delete().in('id', profileIds); // adresleri CASCADE
+  // 3) Tedarik grafiği: giriş → sipariş → tedarikçi. Girişler siparişe `set null`, partiler zaten gitti.
+  if (supplierIds.length > 0) {
+    await mustDelete(db, 'stock_intake', (q) => q.in('supplier_id', supplierIds));
+    await mustDelete(db, 'purchase_order', (q) => q.in('supplier_id', supplierIds)); // kalemleri CASCADE
+    await mustDelete(db, 'supplier', (q) => q.in('id', supplierIds)); // eşlemeleri CASCADE
+  }
 
-  // 4) Bağımsız kayıtlar.
-  if (temperatureLocations.length > 0) await db.from('temperature_log').delete().in('location', temperatureLocations);
-  if (verificationEmails.length > 0) await db.from('email_verifications').delete().in('email', verificationEmails);
+  // 4) Katalog ve müşteri kökleri.
+  if (productIds.length > 0) await mustDelete(db, 'product', (q) => q.in('id', productIds));
+  if (categoryIds.length > 0) await mustDelete(db, 'category', (q) => q.in('id', categoryIds));
+  if (collectionIds.length > 0) await mustDelete(db, 'collection', (q) => q.in('id', collectionIds));
+  if (profileIds.length > 0) await mustDelete(db, 'user_profiles', (q) => q.in('id', profileIds)); // adresleri CASCADE
 
-  // 5) Auth kullanıcısı EN SON: profil satırı ona `set null` ile bağlı, silinince profil yetim kalır —
+  // 5) Bağımsız kayıtlar.
+  if (temperatureLocations.length > 0) await mustDelete(db, 'temperature_log', (q) => q.in('location', temperatureLocations));
+  if (verificationEmails.length > 0) await mustDelete(db, 'email_verifications', (q) => q.in('email', verificationEmails));
+
+  // 6) Auth kullanıcısı EN SON: profil satırı ona `set null` ile bağlı, silinince profil yetim kalır —
   //    o yüzden profil de burada gider (trigger'ın açtığı satırın sahibi testtir).
   if (authUserIds.length > 0) {
-    await db.from('user_profiles').delete().in('auth_user_id', authUserIds);
+    await mustDelete(db, 'user_profiles', (q) => q.in('auth_user_id', authUserIds));
     for (const id of authUserIds) await db.auth.admin.deleteUser(id);
   }
 
-  // 6) Depolar EN SON, profillerden de sonra: depoya `restrict` ile bağlı ne varsa (parti, sipariş,
+  // 7) Hesaplar, hareketleri gittikten sonra.
+  if (accountIds.length > 0) await mustDelete(db, 'account', (q) => q.in('id', accountIds));
+
+  // 8) Depolar EN SON, profillerden de sonra: depoya `restrict` ile bağlı ne varsa (parti, sipariş,
   //    giriş, sıcaklık kaydı, bölge) yukarıda gitti; personel kapsamı ise ayrı bir tetikleyiciyle
   //    korunuyor — kapsamda geçen depo silinemez, o yüzden profiller önce gitmek zorunda.
   if (warehouseIds.length > 0) {
-    await db.from('warehouse_transfer').delete().in('from_warehouse_id', warehouseIds); // satırları CASCADE
-    await db.from('warehouse_transfer').delete().in('to_warehouse_id', warehouseIds);
-    await db.from('warehouse_variant_threshold').delete().in('warehouse_id', warehouseIds);
-    await db.from('delivery_zone').delete().in('warehouse_id', warehouseIds); // posta kodları CASCADE
-    await db.from('warehouse').delete().in('id', warehouseIds);
+    // Tedarikçisi olmayan mal kabulü de vardır (elle giriş) — o satır §3'te yakalanmaz ve depoyu
+    // `restrict` ile tutar (denetim R3).
+    await mustDelete(db, 'stock_intake', (q) => q.in('warehouse_id', warehouseIds));
+    await mustDelete(db, 'warehouse_transfer', (q) => q.in('from_warehouse_id', warehouseIds)); // satırları CASCADE
+    await mustDelete(db, 'warehouse_transfer', (q) => q.in('to_warehouse_id', warehouseIds));
+    await mustDelete(db, 'warehouse_variant_threshold', (q) => q.in('warehouse_id', warehouseIds));
+    await mustDelete(db, 'delivery_zone', (q) => q.in('warehouse_id', warehouseIds)); // posta kodları CASCADE
+    // Belge numaratörü depo KODUNA çıpalı (`next_document_no('KBL-' || kod, yıl)`): test deposunun
+    // sayacı depoyla birlikte gitmeli, yoksa her koşu tabloya iki ölü satır bırakır. FK yok, o
+    // yüzden bu satır sessizce birikirdi — sayacı silmemek hiçbir yerde hata üretmez.
+    const codes = await codesOf(db, warehouseIds);
+    for (const code of codes) await mustDelete(db, 'document_counter', (q) => q.like('prefix', `%-${code}`));
+    await mustDelete(db, 'warehouse', (q) => q.in('id', warehouseIds));
   }
+}
+
+/** Depo kodları — belge numaratörü kimliğe değil KODA çıpalı olduğu için gerekli. */
+async function codesOf(db: SupabaseClient, warehouseIds: string[]): Promise<string[]> {
+  const { data, error } = await db.from('warehouse').select('code').in('id', warehouseIds);
+  if (error) throw error;
+  return (data ?? []).map((row) => (row as { code: string }).code);
 }
 
 /** Bir üst kaydın alt satır kimlikleri — silme sırası için gerekli ara adım. */
