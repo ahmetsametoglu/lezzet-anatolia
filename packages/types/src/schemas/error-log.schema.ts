@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ErrorLogLevelEnum } from './enums.schema';
 
 // ErrorLog — sunucu tarafı hataların gruplanmış kaydı (18.5). Kararlar `OBSERVABILITY §2`,
-// alanlar `data-model/operasyon.md`, tablo `0039_error_log.sql`.
+// alanlar `data-model/operasyon.md`, tablo `0008_observability.sql`.
 //
 // **İş kaydı DEĞİL:** saklama süresi var, şeması bilerek gevşek (`context`). "Sipariş ne zaman
 // teslim oldu" `order_status_log`'da; "checkout neden 500 döndü" burada (`OBSERVABILITY §1`).

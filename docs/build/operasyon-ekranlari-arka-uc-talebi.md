@@ -296,7 +296,7 @@ Ekran yazıldı ve çalışıyor; aşağıdaki üçü olmadan da ayakta ama ikis
 
 ### 7a. `SettingScopeEnum`'da `warehouse` YOK — şema ile migration ayrışmış
 
-`0016_settings.sql` enum'u beş değerli: `global · channel · zone · country · warehouse`. Migration'ın
+`0013_settings.sql` enum'u beş değerli: `global · channel · zone · country · warehouse`. Migration'ın
 kendi künyesi depo bazlı olmaya aday değerleri de sayıyor (kesim saati, rota teslimat birim maliyeti,
 paketleme maliyeti, minimum sepet — "kâr hesabına girer, global kalırsa kâr sessizce yanlışlaşır").
 

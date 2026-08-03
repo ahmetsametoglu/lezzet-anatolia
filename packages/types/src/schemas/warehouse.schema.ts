@@ -43,28 +43,13 @@ export type WarehouseInsert = z.infer<typeof WarehouseInsertSchema>;
 export const WarehouseUpdateSchema = WarehouseSchema.partial().required({ id: true });
 export type WarehouseUpdate = z.infer<typeof WarehouseUpdateSchema>;
 
-// ── Vehicle ─────────────────────────────────────────────────────────────────
-// Araçlar sisteme girer ama DEPOYA BAĞLANMAZ (K8): kurye günü ve kapanışı kurye/gün ekseninde
-// kalır, araç o gün hangi depodan yüklediyse oradan yükler.
-
-export const VehicleSchema = z.object({
-  id: z.string().uuid(),
-  plate: z.string(),
-  label: z.string().nullable(),
-  isActive: z.boolean(),
-  createdAt: z.string(),
-});
-export type Vehicle = z.infer<typeof VehicleSchema>;
-
-export const VehicleInsertSchema = z.object({
-  plate: z.string().min(1),
-  label: z.string().nullish(),
-  isActive: z.boolean().optional(),
-});
-export type VehicleInsert = z.infer<typeof VehicleInsertSchema>;
-
-export const VehicleUpdateSchema = VehicleSchema.partial().required({ id: true });
-export type VehicleUpdate = z.infer<typeof VehicleUpdateSchema>;
+// ── Vehicle — KALDIRILDI (02.11, 03.08) ─────────────────────────────────────
+// Şema `vehicle` tablosuyla birlikte düştü: tablonun servisi yoktu, `from('vehicle')` hiçbir yerde
+// geçmiyordu ve hiçbir tasarım sayfası aracı bir VARLIK olarak kullanmıyordu.
+//
+// Tip tek başına bırakılsaydı daha kötü olurdu: karşılığı olmayan bir `Vehicle` tipi, okuyanı
+// "araçlar sistemde tutuluyor" diye inandırır ve ilk kullananı çalışma zamanında (tablo yok)
+// karşılar. Gerekçe: `data-model/depo.md` › Vehicle.
 
 // ── Depo bazlı asgari stok eşiği (C6) ───────────────────────────────────────
 // Varyanttaki `minStockQty` VARSAYILAN kalır; bu satır yalnız İSTİSNA yazar (fiyatın

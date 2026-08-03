@@ -166,6 +166,6 @@ create index address_customer_idx on public.address (customer_id);
 
 alter table public.address enable row level security;
 
--- Müşteriye özel fiyat satırı (0006'da FK'siz açılmıştı — kimlik tablosu hazır, bağ kuruldu).
+-- Müşteriye özel fiyat satırı (0005'te FK'siz açılmıştı — kimlik tablosu hazır, bağ kuruldu).
 alter table public.price add constraint price_customer_fk
   foreign key (customer_id) references public.user_profiles (id) on delete cascade;

@@ -81,7 +81,7 @@ create table public.purchase_order_item (
   -- İSTEĞE BAĞLI hedef depo (DOMAIN §17): "20 koli STR'ye, 10 koli KEHL'e" — tedarikçi listesine
   -- yazılabilir, kabul eden depocu kendi payını listeden okur. Boşsa hedefi kabul eden depo söyler:
   -- niyet beyanıdır, kısıt değil — mal fiilen nereye indiyse oraya girer.
-  -- FK YOK: `warehouse` 0042'de açılır.
+  -- FK YOK: `warehouse` 0031'de açılır.
   target_warehouse_id uuid
 );
 create index purchase_order_item_order_idx on public.purchase_order_item (purchase_order_id);
@@ -93,7 +93,7 @@ create table public.stock_intake (
   purchase_order_id uuid references public.purchase_order (id) on delete set null,
   -- **MAL KABUL DEPOYA YAPILIR** (DOMAIN §17) — parçalı kabulün kalbi: satın alma siparişi
   -- depo-üstüdür, ama mal fiziksel olarak bir kapıdan girer. Depo bağı PO'ya değil BURAYA takılır;
-  -- aynı PO'nun ikinci kabulü başka depoda olabilir. FK YOK: `warehouse` 0042'de açılır.
+  -- aynı PO'nun ikinci kabulü başka depoda olabilir. FK YOK: `warehouse` 0031'de açılır.
   warehouse_id uuid not null,
   date date not null default current_date,
   total_amount numeric(10, 2) not null default 0,
@@ -102,7 +102,7 @@ create table public.stock_intake (
 );
 create index stock_intake_supplier_idx on public.stock_intake (supplier_id, date desc);
 
--- Partiler girişe bağlanır (0007'de FK'siz açılmıştı — tablo geldi, bağ kuruldu).
+-- Partiler girişe bağlanır (0006'da FK'siz açılmıştı — tablo geldi, bağ kuruldu).
 alter table public.stock add constraint stock_intake_fk
   foreign key (intake_id) references public.stock_intake (id) on delete set null;
 
@@ -121,7 +121,7 @@ alter table public.stock_intake enable row level security;
 -- `p_warehouse_id` zorunlu: mal fiziksel olarak bir kapıdan girer. Tek PO birden çok depoda parça
 -- parça kabul edilebilir — bu yüzden PO kapanışı artık KOŞULSUZ DEĞİL: eskiden ilk kabul siparişi
 -- `received` yapıyordu ve "20 koli STR'ye, 10 koli KEHL'e" senaryosunda ikinci depo malı beklerken
--- sipariş kapanmış görünüyordu. Durum artık `purchase_order_progress`'ten TÜRETİLİR (0042).
+-- sipariş kapanmış görünüyordu. Durum artık `purchase_order_progress`'ten TÜRETİLİR (0031).
 --
 -- p_lines: [{"variant_id":…,"qty":…,"expiry_date":…,"lot_number":…,"unit_cost":…,"location":…,
 --            "purchase_order_item_id":…}]
@@ -242,8 +242,8 @@ begin
 
   -- Sipariş durumu KABULLERDEN TÜRER, bu kabulden değil (K6). Eskiden burada koşulsuz `received`
   -- yazılıyordu; çok depoda bu, ikinci depo malı beklerken siparişi kapatmak demekti.
-  -- Ölçü `purchase_order_progress` (0042) — `initial_qty` üzerinden kümülatif karşılaştırma.
-  -- Fonksiyon gövdesi geç bağlanır: görünüm 0042'de doğar, ilk çağrıya kadar yerindedir.
+  -- Ölçü `purchase_order_progress` (0031) — `initial_qty` üzerinden kümülatif karşılaştırma.
+  -- Fonksiyon gövdesi geç bağlanır: görünüm 0031'de doğar, ilk çağrıya kadar yerindedir.
   if p_purchase_order_id is not null then
     select count(*) into v_open
       from public.purchase_order_progress

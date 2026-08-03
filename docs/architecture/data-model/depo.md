@@ -4,7 +4,7 @@ Depo, araç, depo bazlı eşik, depolar arası transfer ve posta kodu ↔ bölge
 
 > Bu dosya `../DATA_MODEL.md`'nin parçasıdır. Ortak ilkeler ve **kalıcı kararlar** ana dosyadadır (01.08 bloğu); kurallar `../DOMAIN.md §17`'de. **Karar oraya, alan buraya** yazılır.
 
-Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek bir sayıydı, posta kodu yalnız rota gününü belirlerdi. Bu dosyadaki varlıklar o varsayımın kalktığı yerdir (migration `0042_warehouse.sql`).
+Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek bir sayıydı, posta kodu yalnız rota gününü belirlerdi. Bu dosyadaki varlıklar o varsayımın kalktığı yerdir (migration `0031_warehouse.sql`).
 
 ---
 

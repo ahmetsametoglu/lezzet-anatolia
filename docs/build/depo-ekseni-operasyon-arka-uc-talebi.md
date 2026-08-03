@@ -127,7 +127,7 @@ olduğu için (C12) bu kuyruk zaten depo-taneli düşünmek zorunda.
 ### Sorun
 
 - `OrderListFilters.warehouseId?: string` — tek uuid (`order.service.ts:73`)
-- `order_counts(… p_warehouse_id uuid default null)` — tek uuid (`0015_order.sql:279`)
+- `order_counts(… p_warehouse_id uuid default null)` — tek uuid (`0012_order.sql:279`)
 
 İki değer ifade edilebiliyor: **bir depo** ya da **hepsi** (`null`). Arada bir şey yok. Ama
 tasarımın rol davranışı (`§4`) üç hâl tanımlıyor ve ortadaki tam da bu:

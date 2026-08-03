@@ -12,7 +12,7 @@
 altta 8 dosya < 40 satır (kırıntı), üstte tek dosya 17.019 satır (`0044`, toplamın %76'sı).
 Aradaki 35 dosya (52–670 satır) modül başına tek dosya ilkesine oturuyor ve İYİ durumda.
 
-## P1. `0044_postal_code_place.sql` — 1,8 MB'lık tek dosya: 74 satır şema + 16.945 satır üretilmiş veri ⚠
+## P1. `0033_postal_code_place.sql` — 1,8 MB'lık tek dosya: 74 satır şema + 16.945 satır üretilmiş veri ⚠
 
 **Gözlem:** Dosyanın 1–74. satırları elle yazılmış, gerekçesi zengin bir şema (tablo + yorumlar);
 75'ten sonrası `pnpm postal:build` üreteci çıktısı (GeoNames, 16.878 satır INSERT). Tek dosya
@@ -20,8 +20,8 @@ Aradaki 35 dosya (52–670 satır) modül başına tek dosya ilkesine oturuyor v
 var: başlık "ÜRETİLMİŞ DOSYA — elle düzenlenmez" diyor ama şema yorumları elle bakılan/güncellenen
 metin (şu an da bir şeridin elinde, düzenleniyor).
 
-**Öneri:** ikiye böl — *(a)* `0044_postal_code_place.sql`: yalnız şema, elle düzenlenir, 74 satır;
-*(b)* `0046_postal_code_place_data.sql` (yeni numara): yalnız INSERT'ler, başlığı "ÜRETİLMİŞ VERİ —
+**Öneri:** ikiye böl — *(a)* `0033_postal_code_place.sql`: yalnız şema, elle düzenlenir, 74 satır;
+*(b)* `0034_postal_code_place_data.sql` (yeni numara): yalnız INSERT'ler, başlığı "ÜRETİLMİŞ VERİ —
 OKUMA, üreteç: `scripts/build-postal-codes.mjs`". Üreteç yalnız veri dosyasını yazar; şema
 değişikliği üreteci ellemeyi gerektirmez. "Veri tanımın parçası" argümanı (künyedeki haklı tespit)
 bozulmaz — iki dosya da migration zincirinde, reset ikisini de uygular. `0045`'in FK'leri
@@ -145,3 +145,50 @@ yok — 02.9 cent göçü şemaya değil uygulama katmanına dokundu ve kapandı
 değil, `index.md` tablosunu da kapsıyor — `docs:check` her `NNNN_*.sql` için orada bir satır arıyor
 (A5 kuralı), yani birleşen dosyaların satırları da aynı commit'te düzeltilmeli. Yoksa iş kendi
 denetiminden geçemez; bu iyi bir şey.
+
+---
+
+## Kapanış (arka uç şeridi, 03.08): İŞ YAPILDI — 43 dosya → 34, boşluksuz `0001`–`0034`
+
+**P1 (bölme) — ve plandan FAZLASI çıktı.** Şema `0033`, veri `0034`. Bölmeyi mekanik yaptım ama
+**üreteci ÖNCE düzelttim**, yani bir sonraki `postal:build` aynı düzeni yeniden üretir; veri
+kısmının bayt bayt aynı kaldığını sağlamayla doğruladım (`shasum` eşit).
+
+Fazlası şu: **üreteçteki şablon BAYATMIŞ.** Dosyada `text_pattern_ops` vardı (19.19 ölçümü,
+`like '672%'` 36,9 ms → 0,11 ms), üreteçte YOKTU. `pnpm postal:build` bugün koşsaydı ölçülmüş bir
+kazancı sessizce geri alacaktı. Kök sebep tam da sizin tarif ettiğiniz çelişkiydi: "elle
+düzenlenmez" diyen dosyanın şema yorumları elle düzenleniyordu — ve fiilen bir düzeltme oraya
+yazılmıştı. Yani P1 bir okunabilirlik maddesi değil, **çalışan bir arıza**ymış.
+
+Bu yüzden bölmeyi sizin önerinizden bir adım öteye taşıdım: üreteç artık **yalnız veri dosyasını**
+yazıyor, şema tamamen elle bakılan ayrı bir dosya. Ürettiği dosyada elle bakılacak tek satır
+kalmadığı için kayma yüzeyi sıfır — aynı hata bir daha doğamaz.
+
+**P2 (birleştirme) — yapıldı,** ve ikisi bir arada: gözlemleme (üç → `0008`), para (dört →
+`0018`), bildirimler (üç → `0023`), katalog fiyat, sıcaklık kaydı, düzeltme tutanağı, sepet →
+sipariş. Her taşınan bloğun başında ayrı bir dosyadan geldiğini söyleyen ayraç var; içerik
+değişmedi. Birleşme "aynı dosyada" demek, "aynı şey" değil — `0023`'ün üç tablosu birbirinden
+ayrı kalıyor.
+
+**Boşluklu numaralama kararı DEĞİŞTİ — ve değiştiren kullanıcı oldu (03.08).** İkimiz de
+"numaralar yeniden verilmez, boşluk bırakılır"da anlaşmıştık; gerekçem 28.07 çakışma vakasıydı.
+Kullanıcı greenfield'de bunun karşılığı olmadığını söyledi ve haklı: canlı yok, veri yok, tek
+ortam var, iş tek ajanın tek penceresinde yapıldı ve arkasından `db:reset` geldi. Numaralar
+sıfırdan sıralandı, boşluk kalmadı. **Bu kapı ilk üretim dağıtımında kapanır** ve `index.md`
+bunu açıkça yazıyor.
+
+**Sıra doğruluğunu reset'ten ÖNCE makineyle sınadım** (kullanıcının penceresini boşa harcamamak
+için): 34 dosyada şema düzeyinde ileri-atıf yok — ne FK, ne enum tipi, ne görünüm. Tek istisna
+`auth.users`, Supabase'in kendi şeması. `adjust_stock_batch`'in `warehouse`'a değmesi fonksiyon
+gövdesindedir; plpgsql geç çözer, taşımadan önce de sonra da aynı.
+
+**`vehicle` tablosu da düştü** (aynı pencere) — Zod şemasıyla birlikte. Tablosuz bir tip, okuyanı
+"araçlar sistemde tutuluyor" diye inandırırdı.
+
+**Yan iş: 75 bayat atıf onarıldı** (27 dosya). Yeniden adlandırma dokümanlarda ve kod künyelerinde
+asılı referanslar bıraktı; aynı commit'te düzelttim (02.12 emsali — kural tek başına inseydi üç
+şerit kırmızı bir kapıyla yaşardı). Numara değişince bozulan Türkçe ekler de düzeltildi
+(`0006'de` → `0006'da`; sayı sesli okunur).
+
+**Doğrulama:** kullanıcı `db:refresh` + seed koştu, ikisi de temiz. Tam paket **1694/1694**.
+`docs:check` · `lint` · `typecheck` yeşil. P1–P4 kapandı; bu dosyada açık madde kalmadı.

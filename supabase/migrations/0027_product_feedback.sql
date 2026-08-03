@@ -3,7 +3,7 @@
 -- **Müşterinin bize VERMEYİ SEÇTİĞİ değerlendirme.** Üç biçim tek varlıkta: yıldız, yazılı yorum,
 -- beğen/geç. Ayrımları biçimden ibarettir — müşteri, ürün, tarih, puan kazanımı, "aynı ürüne bir
 -- kez" tekilliği, ürün skoruna katkı ve GDPR silme yolu üçünde de aynıdır. `discount`'ın kuponu ve
--- otomatik kampanyayı tek tabloda tutmasıyla aynı gerekçe (0031): iki tablo, aynı yedi alanı iki kez
+-- otomatik kampanyayı tek tabloda tutmasıyla aynı gerekçe (0024): iki tablo, aynı yedi alanı iki kez
 -- tanımlamak ve skoru iki ayrı yerden toplamak olurdu.
 --
 -- ── BURASI BEYAN, `analytics_event` İZ ────────────────────────────────────────
@@ -97,7 +97,7 @@ alter table public.product_feedback enable row level security;
 --
 -- Ziyaretçide (`customer_id` null) tekillik YOKTUR ve olamaz: tekilleştirmek kimlik tutmayı
 -- gerektirirdi. Aday panosundaki sayı bu yüzden mutlak bir "kişi" değil ilgi yoğunluğudur —
--- `postal_code_demand` ile aynı bilinçli kabul (0029).
+-- `postal_code_demand` ile aynı bilinçli kabul (0023).
 create unique index product_feedback_customer_key
   on public.product_feedback (customer_id, product_id, context)
   where customer_id is not null;

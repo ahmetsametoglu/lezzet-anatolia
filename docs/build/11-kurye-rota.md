@@ -45,7 +45,7 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
   - **Not:** `14.6` ile AYNI iştir; tek yerde yapılır (PDF üretimi + `delivered` mailine ek). Yeni bir PDF bağımlılığı gerektirdiği için ayrı ele alınıyor.
 - [x] (11.6) **Gün kapanışı (RPC):** `CourierDayClose` — teslim edilenler, yöntem bazında toplam, iadeler; beklenen vs sayılan farkı aynı gün; kapanmış gün salt-okunur
   - *Bitti:* fark hesabı doğru; kapanan gün değiştirilemiyor
-  - **Durum (28.07) — TAMAM.** `0032_courier_day_close.sql` (görünüm + tablo + RPC), `CourierDayCloseService`, kapı `apps/web/lib/courier/day-close.ts`. 9 test. Ekran yüzey ajanının.
+  - **Durum (28.07) — TAMAM.** `0025_courier_day_close.sql` (görünüm + tablo + RPC), `CourierDayCloseService`, kapı `apps/web/lib/courier/day-close.ts`. 9 test. Ekran yüzey ajanının.
   - **Kapanış bir MUTABAKATTIR, para hareketi değil:** para kapıda tahsil edilirken yazıldı (11.3). Burada beklenen ile sayılan yan yana konur, fark aynı gün görünür.
   - **Beklenen toplam tek yerde toplanır:** `courier_day_collection` görünümü — hem kapanış öncesi ekran hem RPC oradan okur. Yalnız kapıda toplanan üç yöntem sayılır; online/havale kuryenin eline hiç girmez.
   - **`expected_*` saklanır ama `reconciled` SAKLANMAZ:** beklenen tutar kapanış anının fotoğrafıdır (sonradan bir hareket düzeltilse de o gün ne konuşulduğu değişmemeli — testli); "fark var/yok" ise iki kolondan generated kolonla türer, çelişme şemada kapalıdır.

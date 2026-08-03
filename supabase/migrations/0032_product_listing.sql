@@ -18,7 +18,7 @@
 -- Teklif fiyatı bir PARTİYE bağlıdır ve parti bir depoda durur — yani efektif fiyat fiilen depoya
 -- göre değişir (liste fiyatı değişmez; DOMAIN §17 "fiyat depo boyutu almaz" LİSTE fiyatı için
 -- doğrudur). Görünüm bu yüzden aktif depolara cross join yapmak zorunda ve `warehouse` tablosunu
--- bekliyor; dosya numarası da 0042'nin arkasına geçti. Alternatifi görünümü ikiye bölmekti
+-- bekliyor; dosya numarası da 0031'in arkasına geçti. Alternatifi görünümü ikiye bölmekti
 -- (yerli/yersiz ayrı görünüm) — aynı CTE'leri iki kez yazmak olurdu, tek sözleşme yerine iki yarım.
 
 -- ── Varyantın ziyaretçi fiyatı ───────────────────────────────────────────────
@@ -27,7 +27,7 @@
 -- yerin bilinip bilinmemesidir.
 create or replace view public.variant_effective_price as
 with list_price as (
-  -- "Geçmiş ve en yeni kazanır" (0006): aynı varyant+kanal için birden çok satır olabilir.
+  -- "Geçmiş ve en yeni kazanır" (0005): aynı varyant+kanal için birden çok satır olabilir.
   -- Müşteriye özel satırlar HARİÇ — ziyaretçi onları görmez. Liste fiyatı depodan BAĞIMSIZDIR.
   select distinct on (p.variant_id) p.variant_id, p.amount
     from public.price p

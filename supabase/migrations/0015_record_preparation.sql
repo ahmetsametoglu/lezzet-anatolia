@@ -62,7 +62,7 @@ begin
     loop
       v_stock_id := (v_batch ->> 'stock_id')::uuid;
 
-      -- Parti siparişin deposundan olmak zorunda (DOMAIN §17). Değişmez 0042'deki ertelenmiş kısıtta
+      -- Parti siparişin deposundan olmak zorunda (DOMAIN §17). Değişmez 0031'deki ertelenmiş kısıtta
       -- da duruyor — orası son savunma, burası ERKEN ve okunur hata: depocu hangi partiyi yanlış
       -- okuttuğunu COMMIT anındaki soyut ihlal mesajından değil, buradan öğrenir.
       select warehouse_id into v_batch_warehouse from public.stock where id = v_stock_id;

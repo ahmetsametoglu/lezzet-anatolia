@@ -280,7 +280,7 @@ export const FeedbackChannelEnum = z.enum(['email', 'whatsapp']);
 export type FeedbackChannel = z.infer<typeof FeedbackChannelEnum>;
 
 /**
- * Hata kaydı önem seviyesi (18.5 · `0039_error_log.sql`).
+ * Hata kaydı önem seviyesi (18.5 · `0008_observability.sql`).
  *
  * `warning` = beklenen ama izlenmeli (dış servis geçici hata döndü, yeniden denendi) ·
  * `error` = beklenmeyen istisna · `fatal` = akış tamamen koptu, kullanıcı sonuç alamadı.
@@ -292,14 +292,14 @@ export const ErrorLogLevelEnum = z.enum(['warning', 'error', 'fatal']);
 export type ErrorLogLevel = z.infer<typeof ErrorLogLevelEnum>;
 
 /**
- * Sistem sağlığı hükmü (18.5 · `0040_system_health.sql`) — eşiklerden TÜRETİLİR, elle yazılmaz.
+ * Sistem sağlığı hükmü (18.5 · `0008_observability.sql`) — eşiklerden TÜRETİLİR, elle yazılmaz.
  * `crit` = servis/kaynak arızası · `warn` = baskı altında · `ok` = rahat.
  */
 export const HealthStatusEnum = z.enum(['ok', 'warn', 'crit']);
 export type HealthStatus = z.infer<typeof HealthStatusEnum>;
 
 /**
- * Depolar arası transfer durumu (DOMAIN §17 · `0042_warehouse.sql`).
+ * Depolar arası transfer durumu (DOMAIN §17 · `0031_warehouse.sql`).
  *
  * `draft` YOK: hazırlık ekranı henüz yok ve kullanılmayan bir enum değeri yalan söyler — sevk anı
  * ilk kalıcı andır. Bu yüzden `cancelled`'ın anlamı da dardır: iptal edilen şey her zaman **zaten

@@ -104,7 +104,7 @@ insert into public.settings (key, value, description) values
   ('points_daily_cap',          '100', 'Bir müşterinin GÜNDE kazanabileceği azami puan — istismar freni.'),
   ('points_redeem_min',         '500', 'Kupona çevirmek için asgari puan (500 puan = 5 €).'),
   ('points_cent_value',         '1',   'Bir puanın kuruş değeri. 1 = puan başına 1 cent.')
--- Global satırın kısmi unique indeksi `scope_id is null` üzerindedir (0016).
+-- Global satırın kısmi unique indeksi `scope_id is null` üzerindedir (0013).
 on conflict (key) where scope_id is null do nothing;
 
 -- ── Puan → kişisel kupon (17.5) ─────────────────────────────────────────────

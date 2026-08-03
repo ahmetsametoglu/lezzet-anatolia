@@ -5,7 +5,7 @@
 -- kayarsa izi bulunamaz). Bu yüzden burada `reserved_qty` kolonu yoktur — arayan `available_stock`
 -- görünümünü okur.
 --
--- Atomik ayırma bu dosyada değil, `0008_reserve_stock.sql`'deki RPC'dedir (STACK §13 yazma eşiği:
+-- Atomik ayırma bu dosyada değil, `0007_reserve_stock.sql`'deki RPC'dedir (STACK §13 yazma eşiği:
 -- eşzamanlılık yarışı olan yazım RPC'ye ödenir).
 -- RLS deny-by-default (0001 deseni); erişim sunucudan service_role ile.
 
@@ -13,7 +13,7 @@ create table public.stock (
   id uuid primary key default gen_random_uuid(),
   -- Stok VARYANT seviyesindedir (satılabilir birim varyanttır). Parti silinmez → restrict.
   variant_id uuid not null references public.product_variant (id) on delete restrict,
-  -- PARTİ BİR DEPODA DURUR (DOMAIN §17). FK YOK: `warehouse` tablosu 0042'de açılır — kolon burada
+  -- PARTİ BİR DEPODA DURUR (DOMAIN §17). FK YOK: `warehouse` tablosu 0031'de açılır — kolon burada
   -- doğar, bağ orada kurulur (`intake_id` emsali). `not null` bilinçli: deposuz parti fiziksel
   -- olarak imkânsızdır, "sonra gireriz" diye bir hâli yoktur.
   warehouse_id uuid not null,
@@ -32,7 +32,7 @@ create table public.stock (
   -- Bağlı stok girişi. FK YOK: `stock_intake` tablosu 06.10'da açılır (greenfield — o gün eklenir).
   intake_id uuid,
   -- Hangi TEDARİK KALEMİNİN karşılığı (DOMAIN §17, parçalı kabul). FK YOK: `purchase_order_item`
-  -- 0012'de açılır. Tek PO iki depoda parça parça kabul edilebildiği için "sipariş ettiğim kadar
+  -- 0010'da açılır. Tek PO iki depoda parça parça kabul edilebildiği için "sipariş ettiğim kadar
   -- geldi mi" artık intake üzerinden hesaplanamaz — giriş kalemi hangi PO satırını karşıladığını
   -- KENDİ taşır. Null: PO'suz doğrudan giriş, ya da transferle doğan parti (kökeni transfer kaydı).
   purchase_order_item_id uuid,
@@ -78,7 +78,7 @@ create table public.reservation (
   -- Siparişten türetilemez: normal rezervasyonun partisi yoktur (parti seçimi hazırlıkta) ve bu
   -- tablonun `order`'a FK'sı yok; türetmek `available_stock`ın sıcak yoluna join eklerdi.
   -- Yan fayda: `reserve_stock` kilidi depoya daralır, iki depo birbirini beklemez.
-  -- FK YOK: `warehouse` 0042'de açılır. Sipariş deposuyla eşitliği orada ertelenmiş kısıt tutar.
+  -- FK YOK: `warehouse` 0031'de açılır. Sipariş deposuyla eşitliği orada ertelenmiş kısıt tutar.
   warehouse_id uuid not null,
   -- YALNIZ partiye bağlı teklif satırında dolu (batch-pinned). Normal rezervasyon varyant-toplamı
   -- seviyesindedir; parti seçimi hazırlıkta FEFO ile yapılır (DOMAIN §4).
@@ -102,7 +102,7 @@ create index reservation_stock_idx on public.reservation (stock_id) where stock_
 -- Kullanılabilir stok — TÜRETİLİR, saklanmaz. Süresi dolmuş rezervasyon sayılmaz (cron onu zaten
 -- geri bırakır; görünüm cron'u beklemez).
 --
--- **GÖRÜNÜM BU DOSYADA DEĞİL, `0042_warehouse.sql`'DE.** Grain'i `(warehouse_id, variant_id)` ve
+-- **GÖRÜNÜM BU DOSYADA DEĞİL, `0031_warehouse.sql`'DE.** Grain'i `(warehouse_id, variant_id)` ve
 -- "her aktif depo için bir satır" sözleşmesi `warehouse` tablosuna cross join gerektiriyor; o tablo
 -- bu dosyadan sonra doğuyor. Kolon FK'siz doğabilir (yukarıda öyle yaptık) ama görünüm tabloyu
 -- BEKLEMEK zorunda — SQL'de "sonra bağlanacak join" diye bir şey yok.
@@ -113,3 +113,31 @@ create index reservation_stock_idx on public.reservation (stock_id) where stock_
 
 alter table public.stock enable row level security;
 alter table public.reservation enable row level security;
+
+
+-- ═══ SICAKLIK KAYDI (06.7) ═══
+-- Buraya AYRI BİR MIGRATION dosyasından taşındı (02.11 · denetim P2 — aile içi
+-- birleştirme). İçerik değişmedi; eski dosya numarasıyla anılmıyor, çünkü o numara artık yok.
+
+-- Modül 06 — Sıcaklık kaydı (06.7). DOMAIN §4 / hijyen denetimi.
+--
+-- Hijyen denetiminin İLK istediği veri budur: dolabın/aracın sıcaklığı düzenli ölçülmüş mü.
+-- Sensör entegrasyonu YOK — günde bir-iki elle giriş yeter. Basit tutulur ki gerçekten girilsin.
+
+create table public.temperature_log (
+  id uuid primary key default gen_random_uuid(),
+  -- HANGİ TESİS (DOMAIN §17): hijyen denetimi tesis bazındadır — denetmen bir depoya gelir ve o
+  -- deponun kayıtlarını ister. FK YOK: `warehouse` 0031'de açılır.
+  -- Araç kaydı da bir depoya yazılır (aracın çıktığı depo): araçlar depoya BAĞLANMAZ (K8) ama
+  -- soğuk zincir kaydının bir tesis sahibi olmak zorundadır, yoksa denetimde sahipsiz kalır.
+  warehouse_id uuid not null,
+  location text not null,                            -- depo İÇİ dolap adı / araç plakası
+  temperature_c numeric(4, 1) not null,              -- −18.5 gibi; donukta negatif normaldir
+  recorded_by uuid,                                  -- FK yok: personel kimliği auth şemasında
+  recorded_at timestamptz not null default now()
+);
+
+-- Denetim sorgusu: depo + konum + tarih aralığı ("şu depodaki şu dolabın geçen ayki kayıtları").
+create index temperature_log_location_date_idx on public.temperature_log (warehouse_id, location, recorded_at desc);
+
+alter table public.temperature_log enable row level security;

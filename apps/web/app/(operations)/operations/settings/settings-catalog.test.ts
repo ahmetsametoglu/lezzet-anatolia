@@ -14,7 +14,7 @@ import { SETTING_CATALOG, type SettingValue } from './settings-catalog';
  */
 
 const ROOT = new URL('../../../../../../', import.meta.url).pathname;
-const MIGRATIONS = ['0016_settings.sql', '0037_points.sql', '0038_feedback_request.sql'];
+const MIGRATIONS = ['0013_settings.sql', '0028_points.sql', '0029_feedback_request.sql'];
 
 /** `insert into public.settings … values (…);` bloğundaki anahtar → değer eşlemesi. */
 function seededSettings(): Map<string, SettingValue> {

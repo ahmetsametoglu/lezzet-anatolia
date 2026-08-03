@@ -11,7 +11,7 @@ create table public.delivery_zone (
   name text not null,                                -- iç etiket ("Strasbourg Kuzey")
   -- **BÖLGE TEK DEPOYA BAĞLIDIR** (DOMAIN §17): posta kodu → bölge → depo zincirinin orta halkası.
   -- Zincir bu yüzden tek yönlü ve tekil çözülür; "hangi depo bakar" sorusunun ikinci cevabı yoktur.
-  -- FK YOK: `warehouse` 0042'de açılır.
+  -- FK YOK: `warehouse` 0031'de açılır.
   warehouse_id uuid not null,
   -- Haftalık teslimat günleri, ISO: 1=Pazartesi … 7=Pazar.
   weekdays int[] not null default '{}',
@@ -51,7 +51,7 @@ create index delivery_zone_postal_zone_idx on public.delivery_zone_postal_code (
 alter table public.delivery_zone enable row level security;
 alter table public.delivery_zone_postal_code enable row level security;
 
--- Sipariş bölgeye bağlanır (0015'te FK'siz açılmıştı — tablo geldi, bağ kuruldu).
+-- Sipariş bölgeye bağlanır (0012'de FK'siz açılmıştı — tablo geldi, bağ kuruldu).
 -- `restrict` DEĞİL `set null`: bölge kapatılsa bile geçmiş sipariş silinmemeli; siparişteki alan
 -- zaten snapshot niteliğindedir (bölge sınırı sonradan değişebilir).
 alter table public.order add constraint order_delivery_zone_fk

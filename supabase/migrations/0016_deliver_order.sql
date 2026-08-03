@@ -10,7 +10,7 @@
 -- Yarıda kesilirse "stok düştü ama sipariş teslim görünmüyor" gibi elle düzeltilecek hâl doğar.
 
 -- ── Teslim ────────────────────────────────────────────────────────────────────
--- Stok, hazırlıkta yazılan KALEM–PARTİ kaydından düşer (0018): hangi partiden kaç adet çıktığı
+-- Stok, hazırlıkta yazılan KALEM–PARTİ kaydından düşer (0015): hangi partiden kaç adet çıktığı
 -- zaten belli. Rezervasyon da burada biter — mal artık müşterinin.
 create or replace function public.deliver_order(
   p_order_id uuid,
@@ -104,7 +104,7 @@ begin
   end if;
 
   -- Gerçek COGS: tüketilen partilerin kendi alış fiyatı (DOMAIN §12). İade edilip stoğa dönen mal
-  -- kalem–parti kaydından düşüldüğü için (0026) buraya kendiliğinden girmez; imha/jest edilenin
+  -- kalem–parti kaydından düşüldüğü için (0020) buraya kendiliğinden girmez; imha/jest edilenin
   -- maliyeti ise kaydı korunduğu için burada KALIR — kayıp o siparişin kârında görünür.
   select coalesce(sum(b.qty * coalesce(s.purchase_price, 0)), 0) into v_cogs
     from public.order_item_batch b

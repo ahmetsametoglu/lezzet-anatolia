@@ -34,7 +34,7 @@ create table public.user_profiles (
   country country_code not null default 'FR',
   -- ROLÜN İKİNCİ EKSENİ: ne yapar (`roles`) × NEREDE yapar (DOMAIN §17). `roles` ile aynı karar,
   -- aynı gerekçe — kapsam okuması guard'ın sıcak yolunda, bağ tablosu her istekte join demekti.
-  -- FK YOK (dizi kolonda zaten kurulamaz): `warehouse` 0042'de açılır, kısıt orada tetikleyiciyle.
+  -- FK YOK (dizi kolonda zaten kurulamaz): `warehouse` 0031'de açılır, kısıt orada tetikleyiciyle.
   -- **BOŞ DİZİ = HİÇBİR DEPO**, "hepsi" değil (fail-closed): depocu/kurye kapsamsız kalırsa kapı
   -- kapanır, sessizce tüm depolara açılmaz. Admin/muhasebe depo-ÜSTÜdür, kapsamı hiç okunmaz.
   warehouse_ids uuid[] not null default '{}',

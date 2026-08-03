@@ -11,7 +11,7 @@ import {
 import { BaseDbService } from '../core/base.service';
 
 /**
- * Hata kaydı (18.5) — `OBSERVABILITY §2`, tablo `0039_error_log.sql`.
+ * Hata kaydı (18.5) — `OBSERVABILITY §2`, tablo `0008_observability.sql`.
  *
  * Servis SAF I/O'dur (STACK §4) ama **parmak izi hesabı burada**, çünkü o bir depolama kararıdır,
  * iş kuralı değil: hangi hataların "aynı hata" sayıldığını gruplama anahtarı tanımlar. SQL'de

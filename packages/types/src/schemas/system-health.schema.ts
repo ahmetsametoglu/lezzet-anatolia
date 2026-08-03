@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { HealthStatusEnum } from './enums.schema';
 
 // SystemHealthSnapshot — sunucunun iki dakikalık anlık görüntüsü (18.5). `OBSERVABILITY §2`,
-// tablo `0040_system_health.sql`.
+// tablo `0008_observability.sql`.
 //
 // Tabloda tek `jsonb` var; alan doğrulamasının TEK sahibi bu dosyadır. Kolon açmadığımız için
 // şemanın sıkılığı burada telafi ediliyor — gevşek bırakılsaydı jsonb gerçekten çöp kutusu olurdu.

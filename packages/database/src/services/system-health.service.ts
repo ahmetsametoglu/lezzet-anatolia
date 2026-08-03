@@ -14,7 +14,7 @@ import {
 import { BaseDbService } from '../core/base.service';
 
 /**
- * Sistem sağlığı anlık görüntüleri (18.5) — `OBSERVABILITY §2`, tablo `0040_system_health.sql`.
+ * Sistem sağlığı anlık görüntüleri (18.5) — `OBSERVABILITY §2`, tablo `0008_observability.sql`.
  * Backend cron'u yazar, operasyon sistem sayfası okur.
  */
 export class SystemHealthService extends BaseDbService<

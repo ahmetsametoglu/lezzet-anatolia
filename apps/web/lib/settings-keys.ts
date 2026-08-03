@@ -46,7 +46,7 @@ export const FREE_SHIPPING_THRESHOLD_DEFAULT = 6_000;
  * puanlı müşteri "300 puan = 5 € kuponu" cümlesini okuyup düğmeye basacak, motor reddedecekti —
  * ekranın söylediği kural sistemin kuralı değildi.
  *
- * Anahtarlar `0037_points.sql`'de tanımlı; `lib/feedback/points.ts` de aynı satırları okur (bugün
+ * Anahtarlar `0028_points.sql`'de tanımlı; `lib/feedback/points.ts` de aynı satırları okur (bugün
  * dize sabitiyle). İkisi buluşturulmalı — kapı 17.5 ile açılırken buradan okumalı.
  */
 export const POINTS_REDEEM_MIN_KEY = 'points_redeem_min';

@@ -267,7 +267,7 @@ depo kimliği üzerinden `in` sorgusu olur — sayfalama bozulmaz.
 
 ## 4. Ürün bazlı "Gelince haber ver" — yanlış tabloya bakıyoruz
 
-Elimizde `zone_notice` var (`supabase/migrations/0030_zone_notice.sql`, anahtar
+Elimizde `zone_notice` var (`supabase/migrations/0023_notices.sql`, anahtar
 `postal_code + email`). Onun anlamı: **"bölgenize henüz gelmiyoruz"**.
 
 Tasarımdaki düğme bambaşka bir hâlde duruyor: bölgeye **geliyoruz**, ama o üründe stok yok ve ürün
@@ -459,7 +459,7 @@ uyarınca UI'ı tam yazıp arka ucu stub bırakacağım (düğme görünür, kay
 
 **Katalogdaki "adresime gönderilebilir" çipinin SQL süzgeci kimin turunda?** 19.10 satırı onu
 `BEKLEYEN(19.7)` diye bana bırakmış ("bugün çip yalnız yerel depoya bakıyor") ama işin durduğu yer
-`0043_product_listing.sql` + `ProductListingService` — ikisi de senin `touches` kümen, benimki
+`0032_product_listing.sql` + `ProductListingService` — ikisi de senin `touches` kümen, benimki
 değil. Çipin doğru anlamı iki depo kimliği üzerinden bir `in` sorgusu (madde 3'te öyle
 cevaplamıştın) ve keyset'i bozmamak için sorgunun İÇİNDE olmak zorunda; sonuç çekildikten sonra
 elenemez.

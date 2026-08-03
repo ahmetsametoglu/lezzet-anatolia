@@ -6,12 +6,12 @@
 -- ── NEDEN KOLONLAR BAŞKA DOSYALARDA, TABLO BURADA ────────────────────────────
 -- `warehouse_id` kolonları doğdukları tablonun dosyasında FK'siz açıldı (0007 stok, 0012 tedarik,
 -- 0015 sipariş, …); bu dosya tabloyu kurar ve TÜM bağları birden bağlar. Emsal `stock.intake_id`:
--- 0007'de FK'siz doğdu, tablosu gelince 0012'de bağlandı. Böylece "depo tablosu stoktan önce yok"
+-- 0006'da FK'siz doğdu, tablosu gelince 0010'da bağlandı. Böylece "depo tablosu stoktan önce yok"
 -- sıralama sorunu hiç doğmaz ve ara numaralı dosya (0006_1 gibi) açmak gerekmez.
 --
 -- Aynı gerekçenin GÖRÜNÜM tarafı da var ve daha katı: kolon FK'siz doğabilir ama görünüm tabloyu
 -- BEKLEMEK zorundadır — SQL'de "sonra bağlanacak join" yoktur. Bu yüzden `available_stock` bu
--- dosyada kurulur, doğduğu 0007'de değil.
+-- dosyada kurulur, doğduğu 0006'da değil.
 
 -- ── Depo ────────────────────────────────────────────────────────────────────
 create table public.warehouse (
@@ -44,18 +44,18 @@ create index warehouse_active_idx on public.warehouse (is_active, sort_order, co
 
 alter table public.warehouse enable row level security;
 
--- ── Araç (K8) ───────────────────────────────────────────────────────────────
--- Araçlar sisteme girer ama DEPOYA BAĞLANMAZ: kurye günü ve gün kapanışı kurye/gün ekseninde kalır
--- (DOMAIN §7), araç o gün hangi depodan yüklediyse oradan yükler. Depo FK'sı eklemek, bugün
--- olmayan bir kısıtı (araç bir depoya aittir) veriye yazmak olurdu.
-create table public.vehicle (
-  id uuid primary key default gen_random_uuid(),
-  plate text not null unique,
-  label text,                                        -- "Küçük kamyonet" — ekranda okunan ad
-  is_active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-alter table public.vehicle enable row level security;
+-- ── Araç (K8) — TABLO DÜŞÜRÜLDÜ (02.11, 03.08) ──────────────────────────────
+-- `vehicle` burada tanımlıydı: plaka, etiket, aktiflik. Servisi yoktu, `from('vehicle')` hiçbir
+-- yerde geçmiyordu, sıfır satır taşıyordu ve hiçbir tasarım sayfası aracı bir VARLIK olarak
+-- kullanmıyordu — tasarımlarda "araç" yalnız fiziksel bağlam ("araca yükle").
+--
+-- Tüketilmeyen tablo, kullanılmayan enum değeriyle aynı sınıftır: okuyan, var olmayan bir
+-- kabiliyeti varsayar. Üstelik `knip` bunu YAKALAYAMAZ (SQL ve Zod onun kapsamı dışında), yani
+-- ölü şema kendiliğinden hiç görünmez.
+--
+-- Gerçekten gerekince geri gelir ve o gün doğru soruyu sorarız: araç bir depoya mı, bir güne mi,
+-- bir kuryeye mi bağlanır. Bugün cevabı olmayan bir soruyu veride donduruyorduk.
+-- Gerekçe: `data-model/depo.md` › Vehicle.
 
 -- ── Depo bazlı asgari stok eşiği (C6) ───────────────────────────────────────
 -- Varyanttaki `min_stock_qty` VARSAYILAN kalır; bu tablo yalnız İSTİSNA yazar. Fiyatın
@@ -211,7 +211,7 @@ create trigger warehouse_scope_guard_trg
 create index user_profiles_warehouse_ids_idx on public.user_profiles using gin (warehouse_ids);
 
 -- ── Kullanılabilir stok — grain (depo, varyant) ─────────────────────────────
--- 0007'den taşındı (dosya başındaki gerekçe). Denklem aynı: KULLANILABİLİR = FİİLİ − AKTİF
+-- 0006'dan taşındı (dosya başındaki gerekçe). Denklem aynı: KULLANILABİLİR = FİİLİ − AKTİF
 -- REZERVASYON; değişen tek şey hesabın DEPO İÇİNDE yapılması. Birleştirilmiş stok kimsenin stoğu
 -- değildir: 3 STR'de + 2 KEHL'de duran maldan 5 kişilik sipariş çıkmaz.
 --
@@ -413,7 +413,7 @@ create constraint trigger order_warehouse_batches
   for each row execute function public.order_warehouse_check();
 
 -- ── Değişmez: rezervasyonun deposu siparişin deposu (T1) ────────────────────
--- Rezervasyon depoyu AÇIKÇA taşıyor (türetme ilkesinin gerekçeli istisnası, 0007'deki not);
+-- Rezervasyon depoyu AÇIKÇA taşıyor (türetme ilkesinin gerekçeli istisnası, 0006'daki not);
 -- bedeli iki alanın ayrışabilmesi, panzehiri bu kısıt. `order` bulunamazsa denetim atlanır:
 -- rezervasyonun `order`'a FK'sı yok ve sipariş kapanınca satırlar zaten silinir.
 create or replace function public.reservation_warehouse_check() returns trigger
