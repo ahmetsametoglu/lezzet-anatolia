@@ -39,7 +39,7 @@ WhatsApp'ın satış yüzeyi olarak kurulması — **iki adımda, ikisi de Faz 1
 ### Adım 2 — Canlı (webhook + AI ajanı)
 
 - [ ] (15.6) **[Önce netleştir]** 360dialog onboarding (aşağıdaki "Netleşecekler") — hesap kurulmadan kod yazılmaz
-- [ ] (15.7) **Webhook alıcısı (`apps/backend`):** imza doğrulama + `WebhookEvent` idempotency (provider+event_id unique, tekrar = no-op) + gelen mesajın `Conversation`/`Message`'a yazımı + 24s pencere güncellemesi (`window_expires_at`)
+- [ ] (15.7) **Webhook alıcısı (`apps/backend` — yer KESİN DEĞİL: Stripe webhook'u aynı gerekçeyle `apps/web`'e indi, bkz. 07.5 sapması; implementte yeniden değerlendirilecek):** imza doğrulama + `WebhookEvent` idempotency (provider+event_id unique, tekrar = no-op) + gelen mesajın `Conversation`/`Message`'a yazımı + 24s pencere güncellemesi (`window_expires_at`)
   - *Bitti:* aynı olay iki kez gönderilince tek kayıt; pencere bitişi doğru hesaplanıyor; imzasız istek reddediliyor
   - **İmza doğrulaması artık rutin hijyen DEĞİL, kimlik kurgusunun TEMELİ (30.07).** `04.10`'daki güvenlik kodu "kod doğru **ve** doğru numaradan geldi" şartına dayanıyor; numaranın doğruluğunu ise bize Meta beyan ediyor. İmzasız uç noktaya erişebilen biri "şu numaradan geliyorum" diyebilirse geriye yalnız 6 haneyi tahmin etmek kalır. Yani imza düşerse **güvenlik kodu da düşer** — "geliştirmede kapatalım" denince neyin gittiği görünsün diye buraya yazıldı.
   - **Gönderen numarası E.164'e normalize edilerek karşılaştırılır** (`normalizePhone`): `wa_id` numarayı `+` olmadan verir, kimlik kaydımız `+33…` tutar. Atlanırsa kontrol doğru kodda bile **hep** başarısız olur; asıl tehlike de birinin bunu karşılaştırmayı gevşeterek "düzeltmesi"dir.
