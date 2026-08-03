@@ -110,6 +110,37 @@ export class ProductFeedbackService extends BaseDbService<ProductFeedback, Produ
   }
 
   /**
+   * **Bu ürünü isteyen, haberi HENÜZ verilmemiş müşteriler** (17.8 zemini) — "elimize geldi,
+   * ister misiniz" bildiriminin alıcı listesi.
+   *
+   * Dört süzgecin dördü de gerekli: `candidate` (alım-sonrası beğeni bir talep beyanı değil,
+   * yaşanmış deneyimdir) · `like` (geçilen ürün istenmemiştir) · kimlikli (kime haber vereceğimizi
+   * bilmiyorsak liste işe yaramaz) · haberi verilmemiş (aynı sözü iki kez tutmak spam'dir).
+   * Kısmi indeks bunlarla birebir (`product_feedback_awaiting_notice_idx`).
+   *
+   * **Tekillik zaten satırda:** `product_feedback_customer_key` (müşteri, ürün, bağlam) üzerinde
+   * tekil, yani bir kişi bu listede bir kez görünür — mükerrer kaydırma burada bir sorun değildir.
+   */
+  listAwaitingArrivalNotice(productId: string, limit = 500): Promise<ProductFeedback[]> {
+    return this.getAll(
+      { productId, context: 'candidate', vote: 'like' },
+      { isNotNullFields: ['customerId'], isNullFields: ['notifiedAt'], orderBy: 'createdAt', limit },
+    );
+  }
+
+  /**
+   * Haber verildi damgası — **toplu**, çünkü bildirim ürün başına bir turda gider.
+   *
+   * Damga GÖNDERİM SONRASI atılır: önce damgalayıp sonra göndermek, gönderim düşerse müşteriyi
+   * kalıcı olarak sessizliğe mahkûm ederdi (bir daha listeye girmez). Tersi hâlde en kötü ihtimal
+   * ikinci bir haberdir — biri kaybı, öteki fazlalığı seçer ve fazlalık geri alınabilir.
+   */
+  async markArrivalNotified(ids: readonly string[], at: string = new Date().toISOString()): Promise<void> {
+    if (ids.length === 0) return;
+    await this.updateWhereIn('id', ids, { notifiedAt: at });
+  }
+
+  /**
    * Moderasyon kararı. Damga duruma BAĞLI yazılır (DB kısıtı da zorlar). Geçişin meşruluğu ve
    * "okunacak bir şey var mı" sorusu çağırana aittir (`canModerate`).
    */

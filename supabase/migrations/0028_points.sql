@@ -26,6 +26,14 @@ create type points_reason as enum (
   'order',
   -- Getiren müşteri (17.7 zemini).
   'referral',
+  -- **Günlük ziyaret** — günde bir kez, site/keşif ziyareti için. Öteki sebeplerden AYRI durur ve
+  -- ayrılması şart: onlar "veri bedeli"dir (müşteri bir beyanda bulundu), bu "gelme bedeli"dir
+  -- (müşteri geri döndü). Aynı sebebe yığılsalardı aday panosunu okuyan kişi, ziyaretle beslenen
+  -- puanı bir ürün sinyali sanardı.
+  --
+  -- Oy puanının ürün başına TEK olması bu satırla değişmiyor: her ziyarette yeniden ödemek,
+  -- `signal-quality`'nin bastırmak için var olduğu davranışı satın almak olurdu.
+  'visit',
   -- Kupona çevirme — NEGATİF satır.
   'redemption',
   -- Personelin elle düzeltmesi (jest ya da hata telafisi); sebebi `note`'ta yazılı.
@@ -66,6 +74,26 @@ create unique index points_entry_source_key
   on public.points_entry (customer_id, reason, ref_id)
   where ref_id is not null;
 
+-- **Günde bir ziyaret puanı** — ve tekilliğin BURADA durması şart.
+--
+-- Yukarıdaki `points_entry_source_key` bu işi göremez: `ref_id is not null` ile sınırlı ve
+-- ziyaretin işaret edeceği bir kaynak satır yok. `ref_id`ye tarihten türetilmiş sentetik bir uuid
+-- yazmayı bilerek elemedim — o kolonun sözleşmesi "kaynak satır"dır, içine gerçek olmayan bir
+-- kimlik koymak onu okuyan herkesi yanıltırdı.
+--
+-- Güvence uygulamada DEĞİL veride: `awardPoints` "bugün yazılmış mı" diye baksa bile iki eşzamanlı
+-- istek arasına giren üçüncü bir istek iki satır yazardı ve kimse fark etmezdi.
+--
+-- **Takvim günü, yuvarlanan 24 saat DEĞİL** (kullanıcıya iletildi): yuvarlanan pencere
+-- indekslenemez. Fark, 23:50'de kazanıp 00:10'da yeniden kazanabilmek — 10 cent'lik bir sınır için
+-- kabul edilebilir, ve garantinin indekste kalması kodda kalmasından değerli.
+--
+-- `created_at::date` UTC'dir, yani gün sınırı Fransa'da yazın 02:00'a düşer. `at time zone` sabiti
+-- `IMMUTABLE` olmadığı için indekslenemiyor; not düşülüyor ki sonradan "neden 02:00" diye aranmasın.
+create unique index points_entry_visit_day
+  on public.points_entry (customer_id, (created_at::date))
+  where reason = 'visit';
+
 -- Bakiye ve geçmiş okuması.
 create index points_entry_customer_idx on public.points_entry (customer_id, created_at desc);
 -- Günlük tavan sayımı: müşterinin bugünkü kazanımları.
@@ -101,6 +129,7 @@ insert into public.settings (key, value, description) values
   ('points_feedback_candidate', '2',   'Keşifte aday ürün kaydırma puanı — en ucuz aksiyon.'),
   ('points_order',              '10',  'Sipariş başına puan.'),
   ('points_referral',           '50',  'Getiren müşteriye puan (17.7).'),
+  ('points_visit',              '10',  'Günde bir kez site/keşif ziyareti puanı (≈0,10 €) — geri getirme enstrümanı, veri bedeli değil.'),
   ('points_daily_cap',          '100', 'Bir müşterinin GÜNDE kazanabileceği azami puan — istismar freni.'),
   ('points_redeem_min',         '500', 'Kupona çevirmek için asgari puan (500 puan = 5 €).'),
   ('points_cent_value',         '1',   'Bir puanın kuruş değeri. 1 = puan başına 1 cent.')

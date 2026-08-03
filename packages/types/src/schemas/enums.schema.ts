@@ -267,6 +267,13 @@ export const PointsReasonEnum = z.enum([
   'feedback_candidate',
   'order',
   'referral',
+  /**
+   * Günlük ziyaret — günde bir kez. Öteki sebeplerden AYRI ve ayrılması şart: onlar **veri
+   * bedeli**dir (müşteri bir beyanda bulundu), bu **gelme bedeli**dir (müşteri geri döndü).
+   * Aynı sebebe yığılsalardı aday panosunu okuyan kişi ziyaretle beslenen puanı ürün sinyali
+   * sanardı. Tekillik gün bazlı kısmi unique indekste (`points_entry_visit_day`).
+   */
+  'visit',
   'redemption',
   'manual',
 ]);

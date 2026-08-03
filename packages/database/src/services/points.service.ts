@@ -86,6 +86,28 @@ export class PointsEntryService extends BaseDbService<PointsEntry, PointsEntryIn
   }
 
   /**
+   * KAYNAKSIZ sebepler için günlük tekillik nezaketi (bugün ziyaret puanı yazıldı mı).
+   *
+   * **Gün UTC'dir ve bu bilinçli bir SEÇİM DEĞİL, indeksle EŞLEŞME zorunluluğu:** garanti
+   * `points_entry_visit_day` kısmi unique indeksinde ve o indeks `created_at::date` kullanıyor —
+   * `at time zone` sabiti `IMMUTABLE` olmadığı için indekslenemiyor. Buradaki kontrol başka bir gün
+   * tanımı kullansaydı uygulama "kazanabilirsin" der, veritabanı reddederdi.
+   *
+   * **`earnedToday`'in gününden FARKLI ve fark gerçek:** o işletme günüdür (Europe/Paris), çünkü
+   * tavan bizim günümüzün sınırıdır. Sonuç: yazın Paris'te 00:00–02:00 arasında tavan sıfırlanmış
+   * ama ziyaret puanı henüz açılmamış olur. 10 cent'lik bir sınır için kabul edilen bedel; garantinin
+   * indekste kalması, kodda kalmasından değerli.
+   */
+  async hasEntryOnUtcDate(customerId: string, reason: PointsReason, now: Date = new Date()): Promise<boolean> {
+    const gunBasi = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const rows = await this.getAll(
+      { customerId, reason },
+      { rangeFilters: [{ field: 'createdAt', operator: 'gte', value: gunBasi.toISOString() }], limit: 1 },
+    );
+    return rows.length > 0;
+  }
+
+  /**
    * **Puan → kişisel kupon** (`redeem_points`, 17.5). Puan düşümü ve kuponun doğuşu tek
    * transaction'da: ayrı olsalardı ikincisi düştüğünde müşterinin puanı gider, kuponu doğmazdı.
    *

@@ -486,6 +486,28 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     if (error) throw error;
   }
 
+  /**
+   * Aynı yamayı BİRÇOK satıra tek turda yazar (`in (…)`) — damga atma işlerinin yolu.
+   *
+   * **Neden tabana eklendi, alt sınıfta ham yazılmadı:** `STACK §6` "kendi tablosuna tabanı
+   * atlayarak yazmak" için MUTLAK istisna koyuyor — doğrulama ve para eşlemesi atlanır. Tek
+   * çağıranı olduğu için (YAGNI) alt sınıfta bırakmak isterdim; ama oradaki tek seçenek ham yazım
+   * olurdu ve o yasak. Kural ile kolaylık çatıştığında kural kazanır, taban büyür.
+   *
+   * Alternatifi satır başına bir `update()` turuydu: 500 alıcılı bir bildirimde 500 istek.
+   *
+   * Dönüş `void` ve satır SAYISI da dönmüyor: bu bir damga işidir, "kaç satır damgalandı" sorusunu
+   * çağıran zaten biliyor (elindeki kimlik listesi). Sayı gerekseydi `select()` eklenirdi.
+   */
+  protected async updateWhereIn(field: string, values: readonly string[], patch: Record<string, unknown>): Promise<void> {
+    if (values.length === 0) return;
+    const { error } = await this.supabase
+      .from(this.tableName)
+      .update(this.toDbRow(patch))
+      .in(this.column(field), values as string[]);
+    if (error) throw error;
+  }
+
   /** Filtreye göre siler (bileşik anahtarlı tablolar için; en az bir filtre zorunlu). */
   protected async deleteWhere(filters: Record<string, unknown>): Promise<void> {
     const entries = Object.entries(filters).filter(([, v]) => v !== undefined && v !== null);

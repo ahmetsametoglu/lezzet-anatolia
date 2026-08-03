@@ -25,7 +25,20 @@ export const POINTS_SETTING_KEYS: Record<EarnablePointsReason, string> = {
   feedback_candidate: 'points_feedback_candidate',
   order: 'points_order',
   referral: 'points_referral',
+  visit: 'points_visit',
 };
+
+/**
+ * **Kaynak satırı OLMAYAN sebepler** — tekillikleri `ref_id` üzerinden kurulamaz.
+ *
+ * `points_entry_source_key` kısmi indeksi `ref_id is not null` ile sınırlı; ziyaretin işaret
+ * edeceği bir satır yok. Bu küme, "puan yaz" kapısının `ref_id` beklememesi gerektiğini SÖYLER —
+ * yoksa kapı sessizce `null` bir ref ile yazar ve tekillik hiçbir yerde tutulmaz.
+ *
+ * Bugün tek üyesi var; küme olarak yazılmasının sebebi ikinci üye çıktığında kapının değil bu
+ * listenin değişmesi (`referral` bir gün kaynaksız hâle gelirse aynı yoldan geçer).
+ */
+export const SOURCELESS_POINTS_REASONS: readonly EarnablePointsReason[] = ['visit'];
 
 export type EarnCheck = { allowed: true; points: number } | { allowed: false; reason: 'b2b' | 'daily_cap' | 'no_value' };
 

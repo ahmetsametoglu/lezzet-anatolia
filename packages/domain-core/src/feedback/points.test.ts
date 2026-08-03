@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PointsReasonEnum } from '@lezzet/types';
 import { POINTS_SETTING_KEYS, canEarnPoints, canRedeem, feedbackPointsReason } from './points';
 
 describe('puan kazanımı', () => {
@@ -64,9 +65,19 @@ describe('geri bildirimin puan sebebi', () => {
     expect(feedbackPointsReason({ context: 'candidate', hasText: false })).toBe('feedback_candidate');
   });
 
+  /**
+   * Ölçüt ENUM'DAN türer, sabit sayıdan değil. Önce `toHaveLength(5)` yazıyordu ve bu, korumak
+   * istediği şeyi korumuyordu: yeni bir kazanım sebebi eklendiğinde test "6 ≠ 5" diye düşer, ama
+   * cümlesi ("her sebebin anahtarı var") hâlâ doğru olabilir — yani gürültü üretir, hata değil.
+   * Tersi daha kötü: anahtar EKLENİP sebep eklenmeseydi sayı yine tutar, sessizce geçerdi.
+   */
   it('her kazanım sebebinin bir ayar anahtarı vardır', () => {
     expect(POINTS_SETTING_KEYS.review).toBe('points_review');
     expect(POINTS_SETTING_KEYS.feedback_candidate).toBe('points_feedback_candidate');
-    expect(Object.keys(POINTS_SETTING_KEYS)).toHaveLength(5);
+
+    const kazanilabilir = PointsReasonEnum.options.filter((r) => r !== 'redemption' && r !== 'manual');
+    expect(Object.keys(POINTS_SETTING_KEYS).sort()).toEqual([...kazanilabilir].sort());
+    // Her anahtar `points_` önekli ve sebebiyle aynı adı taşır — ayar tablosuyla eşleşmenin şartı.
+    for (const reason of kazanilabilir) expect(POINTS_SETTING_KEYS[reason]).toBe(`points_${reason}`);
   });
 });

@@ -14,10 +14,12 @@ import {
   EMPTY_PRODUCT_SCORE,
   candidateSignalOf,
   canModerate,
+  dedupeBySwiper,
   initialFeedbackStatus,
   productScoreOf,
   swipeWeight,
   type CandidateSignal,
+  type CandidateSwipe,
   type ProductScore,
 } from '@lezzet/domain-core';
 import type { FeedbackContext, FeedbackVote, KeysetCursor, Page, PreferredLanguage, ProductFeedback, ReviewStatus } from '@lezzet/types';
@@ -389,9 +391,7 @@ export async function listCandidateDemand(limit = 20): Promise<CandidateDemandRo
     byCustomer.set(row.customerId, tally);
   }
 
-  const byProduct = new Map<string, Array<{ vote: 'like' | 'dislike'; weight: number }>>();
-  const dislikes = new Map<string, number>();
-  const identified = new Map<string, number>();
+  const byProduct = new Map<string, CandidateSwipe[]>();
 
   for (const row of rows) {
     if (!row.vote) continue;
@@ -402,18 +402,25 @@ export async function listCandidateDemand(limit = 20): Promise<CandidateDemandRo
       swiperLikeCount: tally?.like ?? 1,
       swiperDislikeCount: tally?.dislike ?? 1,
     });
-    byProduct.set(row.productId, [...(byProduct.get(row.productId) ?? []), { vote: row.vote, weight }]);
-    if (row.vote === 'dislike') dislikes.set(row.productId, (dislikes.get(row.productId) ?? 0) + 1);
-    if (row.vote === 'like' && row.customerId) identified.set(row.productId, (identified.get(row.productId) ?? 0) + 1);
+    byProduct.set(row.productId, [
+      ...(byProduct.get(row.productId) ?? []),
+      { vote: row.vote, weight, swiperId: row.customerId ?? null, at: row.createdAt },
+    ]);
   }
 
   return [...byProduct.entries()]
-    .map(([productId, swipes]) => ({
-      productId,
-      dislikeCount: dislikes.get(productId) ?? 0,
-      identifiedLikeCount: identified.get(productId) ?? 0,
-      signal: candidateSignalOf(swipes),
-    }))
+    .map(([productId, swipes]) => {
+      // **Üç sayı da AYNI tekilleştirilmiş listeden türer.** Ayrı ayrı sayılsalardı biri bir gün
+      // ötekinden ayrışırdı: pano "12 beğeni, 3 kimlikli" derken ikisi farklı kümeyi sayıyor olurdu
+      // ve fark hiçbir yerde hata vermezdi. Aynı kişinin aynı ürüne tekrarı hepsinde bir kez sayılır.
+      const tekil = dedupeBySwiper(swipes);
+      return {
+        productId,
+        dislikeCount: tekil.filter((s) => s.vote === 'dislike').length,
+        identifiedLikeCount: tekil.filter((s) => s.vote === 'like' && s.swiperId).length,
+        signal: candidateSignalOf(tekil),
+      };
+    })
     .sort((a, b) => b.signal.weightedLikes - a.signal.weightedLikes)
     .slice(0, limit);
 }

@@ -32,6 +32,15 @@ export const ProductFeedbackSchema = z.object({
   status: ReviewStatusEnum,
   moderatedAt: z.string().nullable(),
   moderatedBy: z.string().uuid().nullable(),
+  /**
+   * "Bu ürün geldi" haberi bu kişiye verildi mi (17.8 zemini). `null` = verilmedi.
+   *
+   * Aday kaydırması bir TALEP BEYANIDIR ("bunu isterim"); ürün kataloğa girince o beyanı yapana
+   * haber vermek, keşif turunun karşılığını ödediği andır. Ayrı bir "ilgi" tablosu açılmadı —
+   * kim hangi ürünü istiyor bilgisi zaten bu satırda ve `product_feedback_customer_key` onu kişi
+   * başına tek satıra indiriyor; ikinci bir tablo aynı gerçeği iki yerde tutardı.
+   */
+  notifiedAt: z.string().nullable(),
   createdAt: z.string(),
 });
 export type ProductFeedback = z.infer<typeof ProductFeedbackSchema>;

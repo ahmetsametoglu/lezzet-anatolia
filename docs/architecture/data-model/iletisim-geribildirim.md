@@ -91,6 +91,7 @@ Müşterinin bir ürün hakkında **bize vermeyi seçtiği** değerlendirme. Ü�
 | feedback_request_id | uuid \| null | alım-sonrası davetten geldiyse (`FeedbackRequest`) |
 | status | enum(`pending`,`approved`,`rejected`) | **moderasyon yalnız METİN içindir**; metinsiz kayıt doğrudan `approved` doğar |
 | moderated_at / moderated_by | timestamptz \| null / uuid \| null | kim ne zaman karar verdi (iz) |
+| notified_at | timestamptz \| null | **"bu ürün geldi" haberi bu kişiye verildi mi** (17.8 zemini). Aday kaydırması bir TALEP BEYANIDIR; ürün kataloğa girince beyanı yapana haber vermek, keşif turunun karşılığını ödediği andır. **Ayrı "ilgi" tablosu AÇILMADI:** kim hangi ürünü istiyor bilgisi zaten bu satırda (`customer_id` + `product_id` + `vote='like'` + `context='candidate'`) ve `product_feedback_customer_key` onu kişi başına teke indiriyor — ikinci tablo aynı gerçeği iki yerde tutar ve ayrışır. Eksik olan ilgi değil **teslimat muhasebesiydi**. Damga gönderimden SONRA atılır: tersi, gönderim düşerse müşteriyi kalıcı sessizliğe mahkûm ederdi |
 | created_at | timestamptz | |
 
 **Neden tek tablo:** ayrımları biçimden ibarettir — müşteri, ürün, tarih, puan kazanımı, "aynı ürüne bir kez" tekilliği, ürün skoruna katkı ve GDPR silme yolu üçünde de aynıdır. `Discount`'ın kuponu ve otomatik kampanyayı tek varlıkta tutmasıyla aynı gerekçe: iki tablo, aynı yedi alanı iki kez tanımlamak ve skoru iki yerden toplamak olurdu.

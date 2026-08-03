@@ -86,6 +86,21 @@ create table public.product_feedback (
     length(btrim(coalesce(comment, ''))) > 0 or status = 'approved'
   ),
 
+  -- **"Bu ürün geldi" haberi bu kişiye VERİLDİ Mİ** (17.8 zemini · kullanıcı kararı 03.08).
+  --
+  -- Aday kaydırması bir talep beyanıdır: "bunu isterim". Ürün kataloğa girdiğinde o beyanı yapan
+  -- müşteriye haber vermek, keşif turunun karşılığını ödediği andır — aksi hâlde topladığımız
+  -- talep hiçbir işe yaramaz, yalnız bir panoda durur.
+  --
+  -- **Ayrı tablo AÇILMADI ve açılmamalı:** "kim hangi ürünü istiyor" bilgisi zaten BU satırdadır
+  -- (`customer_id` + `product_id` + `vote='like'`) ve `product_feedback_customer_key` onu kişi
+  -- başına tek satıra indirger. İkinci bir "ilgi" tablosu aynı gerçeği iki yerde tutar ve ikisi bir
+  -- gün ayrışır (CLAUDE §1). Eksik olan tek şey **teslimat muhasebesiydi**, ilginin kendisi değil.
+  --
+  -- `null` = haber verilmedi. Emsal `variant_stock_notice.notified_at` ve `feedback_request`:
+  -- söz bir kez tutulur, ikinci kez duyurmak müşteriye spam'dir.
+  notified_at timestamptz,
+
   created_at timestamptz not null default now()
 );
 
@@ -108,6 +123,19 @@ create index product_feedback_pending_idx on public.product_feedback (created_at
 -- Ürün sayfasının okuması: o ürünün yayınlanmış YAZILI yorumları, yeniden eskiye.
 create index product_feedback_published_idx on public.product_feedback (product_id, created_at desc)
   where status = 'approved' and comment is not null;
+-- **"Bu ürünü isteyen, haberi verilmemiş müşteriler"** — ürün kataloğa girdiğinde süpürülecek küme.
+--
+-- Süzgeç DÖRT koşulu birden taşıyor ve dördü de gerekli: `candidate` (alım-sonrası beğeni bir
+-- talep beyanı değil, yaşanmış bir deneyimdir) · `like` (geçilen ürün istenmemiştir) ·
+-- `customer_id is not null` (kime haber vereceğimizi bilmiyorsak liste bir işe yaramaz) ·
+-- `notified_at is null` (aynı sözü iki kez tutmak spam'dir).
+--
+-- Kısmi indeks bilinçli: bu küme tablonun küçük bir dilimidir ve haber verildikçe İNDEKSTEN DÜŞER —
+-- yani indeks zamanla küçülür, büyümez.
+create index product_feedback_awaiting_notice_idx
+  on public.product_feedback (product_id)
+  where context = 'candidate' and vote = 'like' and customer_id is not null and notified_at is null;
+
 -- Skor ve pano toplamaları.
 create index product_feedback_product_idx on public.product_feedback (product_id, context);
 create index product_feedback_customer_idx on public.product_feedback (customer_id) where customer_id is not null;

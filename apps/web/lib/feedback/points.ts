@@ -35,18 +35,19 @@ export async function pointsValueOf(reason: EarnablePointsReason): Promise<{ poi
 
 async function pointsSettings(): Promise<{ values: Record<string, number>; dailyCap: number; minimum: number; centValue: number }> {
   const settings = new SettingsService(serviceDb());
-  const [review, purchase, candidate, order, referral, dailyCap, minimum, centValue] = await Promise.all([
+  const [review, purchase, candidate, order, referral, visit, dailyCap, minimum, centValue] = await Promise.all([
     settings.getNumber(POINTS_SETTING_KEYS.review, 20),
     settings.getNumber(POINTS_SETTING_KEYS.feedback_purchase, 5),
     settings.getNumber(POINTS_SETTING_KEYS.feedback_candidate, 2),
     settings.getNumber(POINTS_SETTING_KEYS.order, 10),
     settings.getNumber(POINTS_SETTING_KEYS.referral, 50),
+    settings.getNumber(POINTS_SETTING_KEYS.visit, 10),
     settings.getNumber('points_daily_cap', 100),
     settings.getNumber('points_redeem_min', 500),
     settings.getNumber('points_cent_value', 1),
   ]);
   return {
-    values: { review, feedback_purchase: purchase, feedback_candidate: candidate, order, referral },
+    values: { review, feedback_purchase: purchase, feedback_candidate: candidate, order, referral, visit },
     dailyCap,
     minimum,
     centValue,
@@ -63,12 +64,24 @@ async function pointsSettings(): Promise<{ values: Record<string, number>; daily
 export async function awardPoints(input: {
   customerId: string;
   reason: EarnablePointsReason;
-  refId: string;
+  /**
+   * Kaynak satır. **Kaynaksız sebeplerde verilmez** (`SOURCELESS_POINTS_REASONS`) — ziyaretin
+   * işaret edeceği bir satır yok ve `ref_id`ye tarihten türetilmiş sentetik bir uuid yazmak, o
+   * kolonun sözleşmesini ("kaynak satır") okuyan herkesi yanıltırdı.
+   */
+  refId?: string;
 }): Promise<PointsEntry | null> {
   const db = serviceDb();
   const entries = new PointsEntryService(db);
 
-  if (await entries.hasEntryFor(input.customerId, input.reason, input.refId)) return null;
+  // Tekillik iki AYRI indekste duruyor, çünkü iki ayrı soru: kaynaklı sebepte "bu satırdan zaten
+  // verildi mi" (`points_entry_source_key`), kaynaksızda "bugün zaten verildi mi"
+  // (`points_entry_visit_day`). Buradaki kontroller ikisinin de NEZAKETİ — asıl güvence veritabanında,
+  // çünkü ikinci bir yazma yolu açıldığı gün buradaki kontrol atlanabilir.
+  const zatenVar = input.refId
+    ? await entries.hasEntryFor(input.customerId, input.reason, input.refId)
+    : await entries.hasEntryOnUtcDate(input.customerId, input.reason);
+  if (zatenVar) return null;
 
   const [profile, settings] = await Promise.all([new UserProfileService(db).getById(input.customerId), pointsSettings()]);
   if (!profile) return null;
@@ -106,6 +119,22 @@ export function awardFeedbackPoints(feedback: ProductFeedback): Promise<PointsEn
     hasText: (feedback.comment?.trim().length ?? 0) > 0,
   });
   return awardPoints({ customerId: feedback.customerId, reason, refId: feedback.id });
+}
+
+/**
+ * **Günlük ziyaret puanı** (17.4 · müşteri şeridinin talebi) — günde bir kez, 10 puan (parametrik).
+ *
+ * Oy puanından AYRI bir enstrüman ve ayrılması şart: oy puanı ürün başına tek kalır (her ziyarette
+ * yeniden ödemek, `signal-quality`'nin bastırmak için var olduğu davranışı satın almak olurdu),
+ * bu ise geri getirme ödülüdür. Defter böylece dürüst kalıyor — "veri bedeli" ile "gelme bedeli"
+ * ayrı satırlarda duruyor ve aday panosunu okuyan ikisini karıştırmıyor.
+ *
+ * **İkinci geliş sessizce boş döner** (`null`), hata değil: gün içinde ikinci ziyaret bir arıza
+ * değil normal davranıştır. Ekran dönen değere bakar — doluysa "10 puan kazandın" der, boşsa hiçbir
+ * şey demez.
+ */
+export function awardVisitPoints(customerId: string): Promise<PointsEntry | null> {
+  return awardPoints({ customerId, reason: 'visit' });
 }
 
 /** Müşterinin bakiyesi; hiç hareketi yoksa sıfır (null dolaştırılmaz). */

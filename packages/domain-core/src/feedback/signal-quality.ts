@@ -87,8 +87,50 @@ export interface CandidateSignal {
   trust: number;
 }
 
-export function candidateSignalOf(swipes: readonly { vote: 'like' | 'dislike'; weight: number }[]): CandidateSignal {
-  const likes = swipes.filter((s) => s.vote === 'like');
+export interface CandidateSwipe {
+  vote: 'like' | 'dislike';
+  weight: number;
+  /** Kaydıran kimlik; ziyaretçide `null` — o zaman tekilleştirilemez (bkz. aşağıdaki not). */
+  swiperId: string | null;
+  /** Kaydırma anı (ISO). Aynı kişinin aynı ürüne birden çok kaydırmasında EN YENİSİ geçerlidir. */
+  at: string;
+}
+
+/**
+ * Aynı kişinin aynı ürüne attığı fazla kaydırmalar TEKİLLEŞTİRİLİR — en yenisi kalır.
+ *
+ * **Neden burada ve neden silmeden:** pano "kaç kaydırma oldu"yu değil **"kaç kişi istiyor"u**
+ * soruyor; bir kişinin aynı ürüne beş kez bakması beş kişilik talep değildir. Fazla satırları
+ * VERİDEN silmek de doğru değil — geri bildirim geçmişi, kaydıranın desenini (`patternWeight`)
+ * besleyen ham malzemedir ve o desen tam da istismarı yakalamak için var. Yani satır durur, panoda
+ * bir kez sayılır.
+ *
+ * **En yenisi kazanır, en yükseği değil:** kişi fikrini değiştirmiş olabilir ("beğendim" → "geçtim").
+ * En yüksek ağırlığı seçmek, kişinin son sözü yerine en emin göründüğü ânı almak olurdu.
+ *
+ * **Kimliksiz kaydırma tekilleştirilemez** ve bu bilinçli bir sınır: hangisinin aynı ziyaretçi
+ * olduğunu bilmiyoruz, tahmin etmek (IP, parmak izi) hem yanlış hem de tutmadığımız veri.
+ * Kimliksiz gürültü, tur hesaba bağlandığında kendiliğinden azalır — o an kaydırmaların aynı kişiye
+ * ait olduğunu KESİN biliriz ve orada hiçbir tahmin yoktur.
+ */
+export function dedupeBySwiper(swipes: readonly CandidateSwipe[]): CandidateSwipe[] {
+  const kimlikli = new Map<string, CandidateSwipe>();
+  const kimliksiz: CandidateSwipe[] = [];
+  for (const s of swipes) {
+    if (!s.swiperId) {
+      kimliksiz.push(s);
+      continue;
+    }
+    const onceki = kimlikli.get(s.swiperId);
+    // Karşılaştırma METİNLE değil TARİHLE: damgalar ofset taşıyabilir ve
+    // `…T09:00+00:00` ile `…T10:00+02:00` aynı anı gösterdiği hâlde metin olarak ters sıralanır.
+    if (!onceki || Date.parse(s.at) > Date.parse(onceki.at)) kimlikli.set(s.swiperId, s);
+  }
+  return [...kimlikli.values(), ...kimliksiz];
+}
+
+export function candidateSignalOf(swipes: readonly CandidateSwipe[]): CandidateSignal {
+  const likes = dedupeBySwiper(swipes).filter((s) => s.vote === 'like');
   const rawLikes = likes.length;
   const weightedLikes = likes.reduce((sum, s) => sum + s.weight, 0);
   return {

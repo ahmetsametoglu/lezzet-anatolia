@@ -9,12 +9,22 @@ export default [
   {
     // CLI/seed script'leri kullanıcıya konsoldan konuşur; Node ortamında koşarlar.
     //
-    // Zamanlayıcılar da Node küresellerinin parçası: sözlük elle sayıldığı için her yeni küresel
-    // `no-undef` ile patlıyor (yaşandı 03.08 — test koşucusunun `setTimeout`'u lint kapısını
-    // kırdı). Elle sayım kısa listede ucuz; büyürse `globals.node` sözlüğüne geçilir.
+    // Sözlük ELLE sayılıyor, yani her yeni küresel `no-undef` ile lint kapısını kırıyor — ve kapı
+    // üç şeride birden kapanıyor. **İkinci kez yaşandı (03.08):** önce test koşucusunun
+    // `setTimeout`'u, sonra `ui-shot.mjs`'in `fetch`/`AbortSignal`'i. İkisi de kod hatası değildi.
+    //
+    // Aynı sınıf hata iki kez çıktığına göre elle sayım artık ucuz değil: **üçüncüde `globals.node`
+    // sözlüğüne geçilmeli** (`eslint-config` paketine bağımlılık ekler, o yüzden bugün eklenmedi).
     files: ['scripts/**/*.{ts,mjs}'],
     languageOptions: {
-      globals: { process: 'readonly', console: 'readonly', setTimeout: 'readonly', clearTimeout: 'readonly' },
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        fetch: 'readonly',
+        AbortSignal: 'readonly',
+      },
     },
     rules: { 'no-console': 'off' },
   },
