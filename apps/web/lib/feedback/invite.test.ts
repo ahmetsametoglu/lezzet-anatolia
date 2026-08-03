@@ -202,3 +202,30 @@ describe('akışın tamamlanması', () => {
     expect(await completeFeedbackInvite('GECERSIZTOKEN123')).toBeNull();
   });
 });
+
+/**
+ * Ekranın SÖZ VERDİĞİ alanlar (08.7 · 03.08) — karşılama ekranı bunları basıyor.
+ *
+ * Ayrı bir bölüm, çünkü sınanan şey akış değil **sözleşme**: davet sayfası müşteriye "tamamlayınca
+ * +N puan sizindir" diye bir söz veriyor ve o N ayardan gelmek zorunda. Kodlanmış olsaydı ayar
+ * değiştiği gün ekran, sistemin vermeyeceği bir sayı söylerdi — hesap kartındaki eşiğin 300/500
+ * ayrışması (29.07 denetimi) tam olarak bu hataydı ve orada müşteri reddedilecek bir düğmeye
+ * basıyordu. Aynı tuzağa iki kez düşmemek için kural burada sınanıyor.
+ */
+describe('karşılama ekranının alanları', () => {
+  it('tamamlama puanı AYARDAN okunur, koda gömülmez', async () => {
+    await settings.override('points_feedback_purchase', '42');
+    const request = await inviteForOrder();
+
+    expect((await openFeedbackInvite('tr', request.token))?.completionPoints).toBe(42);
+  });
+
+  it('müşteri adı ve sipariş tarihi gelir — karşılama ve teşekkür ekranı ikisini de yazıyor', async () => {
+    const request = await inviteForOrder();
+
+    const view = await openFeedbackInvite('tr', request.token);
+    expect(view?.customerName).toBeTruthy();
+    // Tarih HAM ISO gelir; biçimleme ekranın işi (dil orada belli).
+    expect(view?.orderedOn).toMatch(/^\d{4}-\d{2}-\d{2}/);
+  });
+});

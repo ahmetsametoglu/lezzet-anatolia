@@ -7,9 +7,10 @@ import {
   ProductService,
   ProductVariantService,
   SettingsService,
+  UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { feedbackOutcomeOf, type FeedbackOutcome } from '@lezzet/domain-core';
+import { feedbackOutcomeOf, POINTS_SETTING_KEYS, type FeedbackOutcome } from '@lezzet/domain-core';
 import { resolveLocalizedText, type ProductFeedback } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { publicImageUrl } from '@lezzet/storage';
@@ -37,10 +38,23 @@ export interface FeedbackCard {
 export interface FeedbackInviteView {
   requestId: string;
   customerId: string;
+  /** Karşılama ve teşekkür ekranı adla hitap ediyor ("Teşekkürler Ayşe Hanım!"). Yoksa genel cümle. */
+  customerName: string | null;
   orderReferenceNo: string | null;
+  /** Siparişin tarihi — karşılama ekranı "LZA-2417 · 8 Temmuz" diyor; ham ISO, biçimleme ekranın. */
+  orderedOn: string | null;
   cards: FeedbackCard[];
   /** "2 / 5" — türetilir, saklanmaz. */
   progress: { rated: number; total: number };
+  /**
+   * Tamamlamanın kazandıracağı puan — **AYARDAN** (`points_feedback_purchase`), ekrana gömülmez.
+   *
+   * Karşılama ekranı bunu bir SÖZ olarak veriyor ("Tamamlayınca +N puan sizindir"). Tasarımdaki
+   * `30` bir maket sayısı; kodlanmış olsaydı ayar değiştiği gün ekran müşteriye sistemin
+   * vermeyeceği bir sayı söylerdi — hesap kartındaki eşiğin 300/500 ayrışması tam olarak buydu
+   * (29.07 denetimi).
+   */
+  completionPoints: number;
   /** Tamamlanmış davet tekrar açılırsa: teşekkür durumu, puan ikinci kez verilmez. */
   completedAt: string | null;
   pointsAwarded: number | null;
@@ -59,11 +73,14 @@ export async function openFeedbackInvite(locale: Locale, token: string): Promise
   const request = await new FeedbackRequestService(db).findByToken(token);
   if (!request) return null;
 
-  const [order, items, progress, given] = await Promise.all([
+  const [order, items, progress, given, customer, completionPoints] = await Promise.all([
     new OrderService(db).getById(request.orderId),
     new OrderItemService(db).listByOrder(request.orderId),
     new FeedbackProgressService(db).getByRequest(request.id),
     new ProductFeedbackService(db).listByRequest(request.id),
+    new UserProfileService(db).getById(request.customerId),
+    // Sözün sayısı ayardan; ekran kendi rakamını uydurmaz (alanın künyesi).
+    new SettingsService(db).getNumber(POINTS_SETTING_KEYS.feedback_purchase, 5),
   ]);
 
   // Kalem varyanta bağlı, kart ürüne: aynı ürünün iki boyu TEK karttır.
@@ -75,7 +92,10 @@ export async function openFeedbackInvite(locale: Locale, token: string): Promise
   return {
     requestId: request.id,
     customerId: request.customerId,
+    customerName: customer?.name ?? null,
     orderReferenceNo: order?.referenceNo ?? null,
+    orderedOn: order?.createdAt ?? null,
+    completionPoints,
     cards: products.map((product) => {
       const existing = givenByProduct.get(product.id);
       return {
