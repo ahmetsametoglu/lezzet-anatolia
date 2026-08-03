@@ -11,6 +11,14 @@ import content from './content.json';
  * geliyor" oldu. Metin sistemin GERÇEK davranışını anlatıyor (posta kodu süzgeci, eksik kalemin
  * otomatik iadesi, kapıda ödemede tahsilatın düşmesi); bunlar uydurulmuş vaatler değil, kodda
  * karşılığı olan kurallar — bir gün değişirlerse bu sayfa da değişmek zorunda.
+ *
+ * BEKLEYEN(08.8): **yukarıdaki söz KARGO BÖLÜMÜNDE tutulmuyor.** §1 *"bölge dışındaki adreslere
+ * Fransa ve Almanya genelinde soğuk zincir kargo paketiyle gönderim yapıyoruz"* diyor; gerçek
+ * bunun tersi — soğuk zincir ürünleri yalnız kendi aracımızla bölge içinde gidiyor, kargo paketi
+ * raf ürünlerini taşıyor (kullanıcı, 03.08). §3'teki *"kargo paketlerinde yalıtımlı kutu ve
+ * soğutucu kullanılır"* aynı yanlışın devamı. **Sayfa kendi içinde de çelişiyor:** §2 doğruyu
+ * söylüyor (*"bazı ürünler yapıları gereği yalnız bölge içinde teslim edilebilir"*) ve o cümle
+ * `Product.shippable` ile birebir örtüşüyor. Kanal ayrıca henüz aktif değil. Ayrıntı `build/08` 08.8.
  */
 interface DeliveryPageProps {
   params: Promise<{ locale: string }>;

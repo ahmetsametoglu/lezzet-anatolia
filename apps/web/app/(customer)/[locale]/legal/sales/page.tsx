@@ -15,9 +15,19 @@ import content from './content.json';
  * (Code de la consommation L221-28). Sayfa bunu saklamıyor, gerekçesiyle yazıyor ve hemen ardından
  * hatalı teslimattaki hakların DURDUĞUNU söylüyor — müşteri "hiçbir hakkım yok" diye okumasın.
  *
- * BEKLEYEN(08.8): tüketici arabulucusunun adı ve iletişim bilgisi — işletmenin hangi arabuluculuk
- * kuruluşuna üye olduğu belgede yok ve rastgele bir kurum adı yazmak, müşteriyi olmayan bir kapıya
- * göndermek olurdu. Gelince `uyusmazlik` bölümünün son paragrafına yazılır.
+ * BEKLEYEN(08.8): teslimat bölümü *"bölge dışına soğuk zincir kargo paketiyle teslim ediyoruz"*
+ * diyor ve bu YANLIŞ — soğuk zincir ürünleri yalnız kendi aracımızla, bölge içinde gidiyor; kargo
+ * paketi raf ürünlerini taşıyor (kullanıcı, 03.08). Kanal ayrıca henüz aktif değil. Aynı bölümdeki
+ * "kargo firmasından kaynaklanan gecikmeler" ve giriş bölümündeki "Ürünlerimiz dondurulmuş
+ * gıdadır" cümleleri de aynı turda düzeltilecek. Metnin nasıl yazılacağı kanalın açılış kararına
+ * bağlı; ayrıntı ve öteki üç sayfa `docs/build/08` 08.8'de.
+ *
+ * **Tüketici arabulucusu KAPSAM DIŞI** (kullanıcı kararı 03.08): ilk aşamada bir arabuluculuk
+ * kuruluşuyla anlaşma düşünülmüyor, dolayısıyla bekleyen bir iş değil — kapanmış bir karar.
+ * `uyusmazlik` bölümü arabulucuya başvurmanın MÜMKÜN olduğunu söylüyor ve bu doğru; söylemediği
+ * şey hangi kuruma başvurulacağı. Anlaşma yapıldığı gün eklenecek tek şey o kurumun adı ve
+ * iletişimi. (Fransız mevzuatı satıcının kendi arabulucusunu bildirmesini bekler — karar
+ * kullanıcınındır ve bilinerek verilmiştir, `docs/build/08` 08.8'de kayıtlı.)
  */
 interface SalesPageProps {
   params: Promise<{ locale: string }>;

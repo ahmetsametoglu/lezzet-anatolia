@@ -15,6 +15,12 @@ import content from './content.json';
  * kayıtlarında kişisel verinin yalnız maskeli göründüğü — üçü de kodda karşılığı olan kurallar
  * (`lib/delivery/place-store.ts`, `account/actions.ts`, `packages/observability/src/mask.ts`).
  * Uydurulmuş bir gizlilik metni, tutulmayacak bir söz vermek olurdu.
+ *
+ * BEKLEYEN(08.8): **alıcı listesinde OLMAYAN bir alıcı sayılıyor** — *"Kargo firması: bölge dışı
+ * gönderimlerde adınız ve teslimat adresiniz"*. Kargo kanalı henüz aktif değil, yani bugün böyle
+ * bir paylaşım yok. Öteki üç sayfadaki kargo cümlelerinden AYRI ele alınmalı ve daha ağır: orada
+ * yanlış olan bir hizmet tarifi, burada bir **veri paylaşımı beyanı**. Satır kanal açıldığında
+ * doğru hâle gelecek; o güne kadar gerçekleşmeyen bir işlemeyi beyan ediyor. Ayrıntı `build/08` 08.8.
  */
 interface PrivacyPageProps {
   params: Promise<{ locale: string }>;
