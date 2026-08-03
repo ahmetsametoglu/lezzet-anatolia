@@ -22,7 +22,9 @@ interface HomeProps {
 
 /**
  * Vitrin ana sayfası (08.10). Veri `lib/storefront` KAPISINDAN okunur — servis burada doğrudan
- * çağrılmaz; bugün fiyat/fırsat/paket stub, kaynak geldiğinde bu sayfa değişmez.
+ * çağrılmaz. Kapının arkasındaki kaynaklar değişse de bu sayfa değişmez; kaynakların bugünkü hâli
+ * kapının kendi künyesinde yaşar (`storefront-types.ts`), burada tekrarlanmaz — iki yerde tutulan
+ * bir durum listesinin biri mutlaka eskir (denetim M-Y2: burada tam olarak o olmuştu).
  */
 /** Ana sayfanın `hreflang`ı (08.1). Başlık layout'tan gelir — marka adı burada tekrarlanmaz. */
 export async function generateMetadata({ params }: HomeProps): Promise<Metadata> {

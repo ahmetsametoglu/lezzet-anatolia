@@ -1,7 +1,7 @@
 import { OtpCodeInput } from '@/components/customer/auth/otp-code-input';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { Button } from '@/components/customer/ui/button';
-import { GoogleIcon, WhatsAppIcon } from './login-icons';
+import { GoogleIcon, WhatsAppIcon } from '@/components/customer/auth/provider-icons';
 import type { LoginViewProps } from './login-types';
 
 // Sıcak degrade — tasarımdaki hero image-slot yerine geçici placeholder (gerçek foto gelince değişir).

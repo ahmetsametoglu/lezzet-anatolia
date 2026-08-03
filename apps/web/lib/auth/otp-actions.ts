@@ -8,9 +8,23 @@ import { createServiceRoleClient, EmailVerificationService, UserProfileService }
 import { captureError, maskEmail, SOURCES } from '@lezzet/observability';
 import { OtpCodeEmail, otpSubject, sendEmail } from '@lezzet/email';
 import { createClient } from '@/lib/supabase/server';
-import { resolvePostLoginRedirect } from '@/lib/auth/redirect';
-import type { AuthErrorKey } from '@/lib/auth/errors';
+import { resolvePostLoginRedirect } from './redirect';
+import type { AuthErrorKey } from './errors';
 import { seedPreferredLanguage } from '@/lib/identity/preferred-language';
+
+/**
+ * **E-posta OTP kapıları — ÜÇ sayfanın paylaştığı oturum açma yolu** (denetim D1, 03.08).
+ *
+ * Bu dosya `login/actions.ts` idi ve orada durması bir süre doğruydu: tek tüketicisi giriş
+ * sayfasıydı. Sonra checkout'un misafir doğrulaması (`guest-verify`) ve Professionnels başvurusu
+ * da aynı iki fonksiyonu çağırmaya başladı — üç sayfa, biri sahibi. `CLAUDE.md §2`'nin kuralı
+ * tam olarak bunu ayırıyor: *"server action'lar sayfa klasöründe kolokasyon; paylaşılan yardımcı
+ * `lib/`"*. Kardeş sayfadan import artık `docs:check` §3e ile de yasak.
+ *
+ * `lib/auth/` seçildi çünkü ailenin geri kalanı zaten orada: `signOutAction` (`actions.ts`),
+ * yönlendirme (`redirect.ts`), hata anahtarları (`errors.ts`). Ad `otp-actions`: `actions.ts`
+ * çıkışın evi ve ikisini birleştirmek "auth ne yapıyor" sorusunu tek dosyada 200 satıra çıkarırdı.
+ */
 
 /**
  * **Yüzeyin TEK dönüş sözleşmesi** (`CustomerResult`) — denetim S1.

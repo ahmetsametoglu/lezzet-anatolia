@@ -25,9 +25,14 @@ export type StockStatus =
 /**
  * Vitrin görünüm tipleri — müşteri yüzeyinin TEK veri sözleşmesi (08.10).
  *
- * Sayfalar servisi doğrudan çağırmaz; `lib/storefront` üzerinden okur. Bugün bu fonksiyonların bir
- * kısmı fixture döner (fiyat motoru 05.4, paket 05.5, indirim 05.6 henüz yok); kaynak geldiğinde
- * YALNIZ bu dizinin içi değişir — sayfa, komponent ve `messages.json` dosyalarına dokunulmaz.
+ * Sayfalar servisi doğrudan çağırmaz; `lib/storefront` üzerinden okur. **Tek yedek KATEGORİLER**
+ * (`fixtures.ts`) ve o da yalnız katalog tamamen boşken devreye girer; ürün, fiyat, stok, fırsat
+ * ve paketler gerçek okunuyor. Bir kaynak daha değişirse YALNIZ bu dizinin içi değişir — sayfa,
+ * komponent ve `messages.json` dosyalarına dokunulmaz.
+ *
+ * (Künye bir süre "fiyat motoru 05.4, paket 05.5, indirim 05.6 henüz yok" diyordu; üçü de inmişti
+ * ve aynı dizindeki `fixtures.ts` bugünü doğru anlatıyordu — sözleşme dosyası ile yedek dosyası
+ * iki ayrı gerçeklik öğretiyordu, üstelik yeni ajanın İLK okuduğu bu dosya. Denetim M-Y1.)
  *
  * Alan seçimi bilinçli: DB satırının tamamı taşınmaz. Vitrin kartının gösterdiği kadarı taşınır —
  * fazlası tele gider, ayrıca "müşteriye sızmayacak bilgi" (maliyet, stok, parti) yanlışlıkla
@@ -239,9 +244,14 @@ export interface StorefrontDeclaration {
 /**
  * Ürün detay okumasının sonucu. Sayfanın tüm bölümleri TEK turda gelir — bölüm başına çağrı yok.
  *
- * `reviews` alanı YOK ama BÖLÜM VAR: yorum ve puan 17-geri-bildirim'e ait, model henüz kurulmadı —
- * yani bugün her ürünün yorum sayısı GERÇEKTEN sıfırdır. Tasarımın "yorum yok" boş hâli bu durumun
- * doğru karşılığıdır; uydurma yorum basmakla bölümü hiç çizmemek arasında üçüncü ve doğru yol budur.
+ * **`reviews` alanı YOK ve olmayacak** — ama bölüm sayfada var ve gerçek veriyle çalışıyor (17.1).
+ * Yorum/puan bu sözleşmeye değil geri bildirim modülüne ait: sayfa onları ayrı okuyor
+ * (`lib/feedback/product-feedback`), çünkü moderasyon durumu ve "kim yazabilir" kararı orada
+ * yaşıyor. Buraya alınsaydı vitrin sözleşmesi onay akışını bilmek zorunda kalırdı.
+ *
+ * (Künye bir süre "model henüz kurulmadı, bugün her ürünün yorum sayısı GERÇEKTEN sıfırdır"
+ * diyordu — bu artık bayat değil YANLIŞtı: yorumlar okunuyor ve sıfır değil. Denetim M-Y4'ün
+ * bulguda anılmayan ikinci satırı.)
  */
 export interface StorefrontProductDetail {
   id: string;

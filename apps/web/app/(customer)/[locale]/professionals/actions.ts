@@ -7,7 +7,7 @@ import { currentCustomerId } from '@/lib/guard';
 import { lookupCompanyBySiret, type CompanyRegistryRecord, type CompanyLookupFailure } from '@/lib/b2b/company-registry';
 import { checkEuVatNumber } from '@/lib/b2b/vat-check';
 import { submitB2bApplication } from '@/lib/b2b/application';
-import { verifyEmailOtp } from '../login/actions';
+import { verifyEmailOtp } from '@/lib/auth/otp-actions';
 
 /**
  * Professionnels — B2B self-servis kaydının yazma kapıları (08.7).

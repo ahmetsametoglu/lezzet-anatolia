@@ -521,20 +521,20 @@ for (const pkgFile of ['package.json', ...walkPackageJsons()]) {
 const PAGE_ROOTS = ['apps/web/app/(operations)/operations', 'apps/web/app/(customer)/[locale]'];
 
 /**
- * DEVRALINAN ihlaller — kural indiğinde zaten var olanlar. Hepsi müşteri şeridinde ve `login`
- * sayfasının action/ikonlarını paylaşıyor; sahibi o şerit, düzeltmesi de onun (not düşüldü).
+ * DEVRALINAN ihlaller — kural indiğinde zaten var olanlar.
  *
  * Liste KAPALI ve KENDİ KENDİNİ TEMİZLER: bir satır artık ihlal etmiyorsa denetim "liste bayat"
  * diye HATA verir. Muafiyet listeleri tam da bu yüzden çürür — kural indiği gün dürüst, altı ay
  * sonra kimsenin bakmadığı bir aklama olur. Bu liste büyüyemez de: yeni bir ihlal listede
  * olmadığı için doğrudan düşer.
+ *
+ * **BUGÜN BOŞ ve mekanizma bir kez işledi (03.08):** kural indiğinde dört ihlal vardı, dördü de
+ * müşteri şeridinde ve `login` sayfasının action/ikonlarını paylaşıyordu. Paylaşılan parçalar
+ * sahiplerine taşındı (`lib/auth/otp-actions.ts` · `components/customer/auth/provider-icons.tsx`)
+ * ve satırlar listeden düştü. Boş kalması listenin işe yaramadığı anlamına gelmiyor — tersine,
+ * çürümeden kapanan bir muafiyet listesi tam olarak böyle görünür.
  */
-const SIBLING_IMPORT_GRANDFATHER = new Set([
-  "apps/web/app/(customer)/[locale]/checkout/components/guest-verify.tsx → ../../login/login-icons",
-  "apps/web/app/(customer)/[locale]/checkout/components/guest-verify.tsx → ../../login/actions",
-  "apps/web/app/(customer)/[locale]/professionals/actions.ts → ../login/actions",
-  "apps/web/app/(customer)/[locale]/professionals/components/application-form.tsx → ../../login/actions",
-]);
+const SIBLING_IMPORT_GRANDFATHER = new Set([]);
 const grandfatherSeen = new Set();
 
 /** Bir dizini özyineli gezip `.ts`/`.tsx` dosyalarını verir. */

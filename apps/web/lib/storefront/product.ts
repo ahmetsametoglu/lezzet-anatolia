@@ -20,11 +20,15 @@ import type { StorefrontDeclaration, StorefrontImage, StorefrontProductDetail } 
  *
  * Bugünkü kaynak durumu:
  *   ürün · varyant · fiyat · stok · fırsat · beyan · galeri · benzer ürünler → GERÇEK
- *   yorumlar ve puan                                                        → YOK (17-geri-bildirim)
  *   sepete ekleme                                                           → 07-siparis
  *
- * Yorum bölümü için fixture ÜRETİLMEZ: uydurma sosyal kanıt, eksik sosyal kanıttan kötüdür. Model
- * gelene kadar bölüm sözleşmede de sayfada da yoktur.
+ * **Yorum ve puan bu kapıdan GEÇMİYOR ama sayfada VAR** (17.1): `page.tsx` onları
+ * `lib/feedback/product-feedback`ten ayrı okuyor (`listProductReviews` · `getProductScore` ·
+ * `getReviewEligibility`) ve `reviews.tsx` çiziyor. Ayrı durmasının sebebi sahiplik: yorum
+ * vitrinin değil geri bildirim modülünün verisi, moderasyon durumu ve "kim yazabilir" kararı da
+ * orada yaşıyor. Buraya taşınsaydı vitrin sözleşmesi moderasyonu bilmek zorunda kalırdı.
+ * (Künye bir süre "yorumlar → YOK, model gelene kadar bölüm sözleşmede de sayfada da yoktur"
+ * diyordu; model de bölüm de inmişti — denetim M-Y4.)
  */
 
 /** Benzer ürün şeridinde kaç kart — tasarımda dörtlü ızgara. */

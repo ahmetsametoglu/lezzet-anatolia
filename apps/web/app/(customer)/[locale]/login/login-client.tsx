@@ -10,7 +10,7 @@ import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device';
 import { authErrorMessage, type AuthErrorKey } from '@/lib/auth/errors';
 import type { OtpResendResult, OtpVerifyResult } from '@/components/customer/auth/otp-code-input';
-import { sendEmailOtp, verifyEmailOtp } from './actions';
+import { sendEmailOtp, verifyEmailOtp } from '@/lib/auth/otp-actions';
 import type { LoginErrors, LoginViewProps, Messages, Stage } from './login-types';
 import { LoginDesktop } from './login.desktop';
 import { LoginMobile } from './login.mobile';

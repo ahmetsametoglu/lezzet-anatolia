@@ -9,8 +9,8 @@ import { OtpCodeInput, type OtpResendResult, type OtpVerifyResult } from '@/comp
 import { createClient } from '@/lib/supabase/client';
 import { authErrorMessage, type AuthErrorKey } from '@/lib/auth/errors';
 import { StepShell } from './checkout-steps';
-import { GoogleIcon } from '../../login/login-icons';
-import { sendEmailOtp, verifyEmailOtp } from '../../login/actions';
+import { GoogleIcon } from '@/components/customer/auth/provider-icons';
+import { sendEmailOtp, verifyEmailOtp } from '@/lib/auth/otp-actions';
 import type { Messages } from '../checkout-types';
 
 /**

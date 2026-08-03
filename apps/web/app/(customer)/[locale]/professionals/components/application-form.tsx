@@ -16,7 +16,7 @@ import { Link } from '@/i18n/navigation';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { OtpCodeInput } from '@/components/customer/auth/otp-code-input';
 import { authErrorMessage, type AuthErrorKey } from '@/lib/auth/errors';
-import { sendEmailOtp } from '../../login/actions';
+import { sendEmailOtp } from '@/lib/auth/otp-actions';
 import { applyAsCustomerAction, checkVatAction, lookupSiretAction, verifyAndApplyAction } from '../actions';
 import type { ApplicationDefaults, ApplicationStep, Messages } from '../professionals-types';
 import { CompanyFacts } from './company-facts';
