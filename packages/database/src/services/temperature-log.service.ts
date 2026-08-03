@@ -51,6 +51,10 @@ export class TemperatureLogService extends BaseDbService<TemperatureLog, Tempera
    *
    * Depo süzgeci: "Dolap 1" iki depoda da vardır; depocuya öteki tesisin dolap adlarını sunmak
    * yanlış kayıt davetidir.
+   *
+   * **Ham `this.supabase` sebebi** (`STACK §6`): istenen şey satır değil, tek kolonun BENZERSİZ
+   * kümesi. Tabanın okumaları entity döndürür (`parseRows`'tan geçer); burada dönen şey bir varlık
+   * değil bir sözlük. Tabana `distinct` yardımcısı eklenMEDİ — bugün tek tüketicisi var (YAGNI).
    */
   async listLocations(warehouseId?: string): Promise<string[]> {
     const query = this.supabase.from('temperature_log').select('location');

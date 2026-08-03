@@ -146,6 +146,22 @@ export type LocalizedText = z.infer<typeof LocalizedText>;
 
 Ölçüt aynı: yeni entity = 1 şema + ~20 satır servis + 1 migration.
 
+**Ham `this.supabase` ne zaman serbest (denetim TS2, 03.08):** `CLAUDE.md §1`'in *"servis ham
+`this.supabase` yazmaz"* cümlesi mutlak okunabiliyor; kuralın tam hâli şudur — **taban yüzeyi o
+okumayı karşılamıyorsa ham serbesttir, ama gerekçesi künyeye YAZILIR.** Meşru sınıflar bugün
+ölçüldü ve dördü var: *(a)* görünüm okuması (`account_balance`), *(b)* çapraz-tablo türetimi
+(`debt()`, `orderVsReceived()` — taban tek tablo etrafında kuruludur), *(c)* tabanın `eq` temelli
+süzgecinin taşımadığı operatör (`lt`, `distinct`, `contains`/`overlaps`), *(d)* entity DEĞİL bir
+sözlük/fark satırı döndüren okuma.
+
+İki şey bu serbestliğin dışındadır ve istisnası yoktur: **kendi tablosuna tabanı atlayarak YAZMAK**
+(doğrulama ve para eşlemesi atlanır) ve **entity döndüren ham okumanın `parseRows`'u atlaması** —
+ikincisinin bedeli yaşandı (`findByProviderRef`, 02.9: satır euro taşırken şema cent istedi, hata
+webhook'ta yutuldu ve panelden yapılan iade deftere hiç düşmedi).
+
+Tabanı genişletmek varsayılan değil: bir operatörün **ikinci** tüketicisi çıkınca taşınır. Tek
+tüketici için taban yüzeyi büyütmek, herkesin taşıdığı bir soyutlamayı tek çağıran için şişirir.
+
 **Süzme nerede yapılır (karar 27.07):** ölçüt **listenin doğal tavanı** ve arayüzün tamamına ihtiyacı olup olmadığıdır.
 - **Sunucuda süz + sayfala:** üretimde ~200 satırı geçebilen her liste — ürün, sipariş, müşteri, parti, fatura, para hareketi. Süzgeçler **URL'de** taşınır (paylaşılabilir + yenilemeye dayanıklı + RSC okuyabilir), servise parametre olarak iner ve okuma **keyset (cursor)** paginasyonludur (CLAUDE.md: tüm listeler infinite scroll). Sayaç/özet de sunucuda hesaplanır — client tam listeye sahip olmadığı için türetemez.
 - **Client'ta süz (tamamını çek):** onlarla sınırlı, tavanı belli ve arayüzün **zaten tamamını** istediği kümeler — kategori, koleksiyon, enum listeleri (alerjen/KDV). Bunlar açılır menü ve filtre çipini beslediği için parça parça çekmek anlamsızdır.

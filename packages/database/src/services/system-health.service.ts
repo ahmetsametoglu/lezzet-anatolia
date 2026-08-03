@@ -82,7 +82,15 @@ export class SystemHealthService extends BaseDbService<
     });
   }
 
-  /** Saklama süresi süpürmesi (14 gün) — kaç satır silindiğini döner, iş bunu izine yazar. */
+  /**
+   * Saklama süresi süpürmesi (14 gün) — kaç satır silindiğini döner, iş bunu izine yazar.
+   *
+   * **Ham `this.supabase` İKİ sebeple** (`STACK §6`: taban karşılamıyorsa ham + gerekçe):
+   * `deleteWhere` yalnız `eq` süzgeçli — burada gereken `lt('created_at')`; ve `void` dönüyor —
+   * burada gereken SAYI. İkincisi taban genişletilse bile ayrı bir imza isterdi.
+   *
+   * Tabana taşınMADI çünkü bugün tek tüketicisi var (YAGNI); ikinciye çıktığında taşınır.
+   */
   async deleteBefore(cutoff: string): Promise<number> {
     const { data, error } = await this.supabase.from(this.tableName).delete().lt('created_at', cutoff).select('id');
     if (error) throw error;

@@ -34,7 +34,20 @@ toplaması · threshold'un üç-tur okuması · `listByRole`'un GIN notu). Üç�
 var; kullanım ikiye çıktığında taşınır (YAGNI). Not, bir sonraki okuyanın "tabana taşıyayım mı"
 sorusunu kapatır — kuralın kendisi ("benzersiz durumda ham serbest") zaten doğru işliyor.
 
-**Cevap:** —
+**Cevap (arka uç şeridi): Kabul, üçüne de yazıldı.** Tabanı genişletmeme kararınıza da katılıyorum
+ve gerekçesini `STACK §6`'ya taşıdım: bir operatörün **ikinci** tüketicisi çıkınca taşınır; tek
+tüketici için taban yüzeyi büyütmek, herkesin taşıdığı bir soyutlamayı tek çağıran için şişirir.
+
+**Bir maddede sizden fazla gerekçe çıktı** — `deleteBefore`'da iki sebep var, siz birini yazmışsınız:
+`deleteWhere` yalnız `eq` süzgeçli **ve `void` dönüyor.** İkincisi bağımsız: taban `lt` desteklese
+bile "kaç satır silindi" sayısını veremezdi ve o sayı işin izine yazılıyor (`job_run`). Künyeye
+ikisini de yazdım, çünkü tek sebep yazılsaydı bir sonraki okuyan "taban `lt` alsın, sorun biter"
+diye düşünüp yarım bir taşıma yapardı.
+
+Öteki ikisinin sebebini de sizin sınıflandırmanızdan biraz daha dar yazdım: `listLocations`'ta asıl
+mesele `distinct`in yokluğu değil, **dönen şeyin entity olmaması** (taban okumaları `parseRows`'tan
+geçer, burada dönen bir sözlük); `orderVsReceived`'da ise **okumanın bu servisin tablosunda
+olmaması** — taban `this.tableName` etrafında kurulu ve burada iki farklı tablo karşılaştırılıyor.
 
 ## TS2 (kayıt). Kuralın yazılı hâli kod davranışıyla birebir
 
@@ -43,4 +56,16 @@ fiilî (ve doğru) yorum "taban karşılamıyorsa ham + gerekçe". STACK §6'da 
 netleşirse kural ile pratik arasında boşluk kalmaz — kullanıcının bu denetimi tarif ederken
 kullandığı cümle ("tabanın karşılamadığı benzersiz durumlarda doğrudan supabase") birebir o cümledir.
 
-**Cevap:** —
+**Cevap (arka uç şeridi): Kabul, `STACK §6`'ya indi.** Yazarken bir şey daha ekledim, çünkü "ham
+serbest" cümlesi tek başına fazla geniş: **serbestliğin İKİ istisnası var ve onların istisnası yok.**
+
+1. **Kendi tablosuna tabanı atlayarak YAZMAK** — doğrulama ve para eşlemesi atlanır.
+2. **Entity döndüren ham okumanın `parseRows`'u atlaması** — bedeli yaşandı: `findByProviderRef`
+   (02.9) satır euro taşırken şema cent istedi, `ZodError` webhook'ta yutuldu ve panelden yapılan
+   iade deftere hiç düşmedi. Denetiminizin *"entity dönen her ham okuma `parseRows`'tan geçiyor"*
+   tespiti bugün doğru; o cümlenin bir KURAL olarak da yazılı olması gerekiyordu, çünkü bugünkü
+   doğruluk yarınki ajanı bağlamaz.
+
+Meşru sınıfları da sizin sayımınızdan türetip dörde indirdim (görünüm · çapraz-tablo türetimi ·
+`eq` dışı operatör · entity olmayan dönüş) — sınıf listesi, "benzersiz durum" ifadesinden daha
+denetlenebilir.

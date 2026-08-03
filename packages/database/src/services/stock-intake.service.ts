@@ -79,6 +79,11 @@ export class StockIntakeService extends BaseDbService<StockIntake, StockIntakeIn
   /**
    * **Sipariş ↔ gelen mal farkı:** PO kalemleriyle o siparişten giren partiler karşılaştırılır.
    * Eksik gelen mal sessizce kaybolmaz — zincirin görünür halkası budur (DOMAIN §16).
+   *
+   * **Ham `this.supabase` sebebi** (`STACK §6`): okuma BU SERVİSİN TABLOSUNDA değil — biri
+   * `purchase_order_item`, öteki `stock` (üstelik `stock_intake`'e gömülü `!inner` süzgeçle).
+   * Taban tek tablo etrafında kuruludur (`this.tableName`) ve iki farklı tabloyu dar kolonlarla
+   * okuyup karşılaştırmak onun yüzeyinde yok. Dönen şey de entity değil, bir FARK satırı.
    */
   async orderVsReceived(purchaseOrderId: string): Promise<Array<{ variantId: string; orderedQty: number; receivedQty: number; diff: number }>> {
     const [ordered, received] = await Promise.all([
