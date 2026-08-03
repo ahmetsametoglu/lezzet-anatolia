@@ -35,6 +35,8 @@ Dosyalar:
   D2 fork istisnaları · D3 hook adı; yerleşim geneli temiz)
 - `denetim-test-artigi.md` — DB'de artık bırakan testler, ampirik ölçümle (R1 kurye para grafiği ·
   R2 quick-sale→demo kasa · R3 intake zinciri · R4 sessiz teardown deseni; 17/21 grup temiz)
+- `denetim-migration-parcalama.md` — migration dosya büyüklüğü dengesi (P1 0044 şema/veri bölünmesi ·
+  P2 kırıntı dosya birleştirme haritası · P3 bayat MIGRATIONS.md · P4 tek-ajan protokolü)
 
 Kapanıp silinenler (02–03.08): operasyon ilk dosyası ve komponent taraması · arka uç ilk dosyası
 ve **veritabanı/duplikasyon taraması** (A1–A9 tamamı uygulanıp doğrulandı — para kaydı düzeltmesi,
