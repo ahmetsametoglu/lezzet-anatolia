@@ -58,7 +58,7 @@ export async function matchQueue(accountId: string, opts: { limit?: number } = {
 
   return bankRows.map((movement) => {
     const suggestions = suggestOrderMatches(
-      { valueDate: movement.valueDate, amount: movement.amount, direction: movement.direction, label: movement.description ?? '' },
+      { valueDate: movement.valueDate, amountCents: movement.amountCents, direction: movement.direction, label: movement.description ?? '' },
       candidates,
     );
     return { movement, suggestions, unambiguous: isUnambiguous(suggestions) };

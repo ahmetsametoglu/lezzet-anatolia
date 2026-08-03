@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { dbNumeric } from './db-numeric';
 import { CurrencyEnum } from './enums.schema';
 
 // Para ve ön muhasebe (DOMAIN §9, data-model/para.md).
@@ -70,7 +69,9 @@ export const MoneyMovementSchema = z.object({
   id: z.string().uuid(),
   accountId: z.string().uuid(),
   direction: MovementDirectionEnum,
-  amount: dbNumeric,
+  /** **Cent** (02.9 · STACK §8); DB kolonu `money_movement.amount` euro `numeric`. İşARETSİZ — yön
+   *  `direction`tadır, işaretli hâli defter satırındadır (`signedAmountCents`). */
+  amountCents: z.number().int(),
   type: MovementTypeEnum,
   /** Gider/gelir alt kategorisi (kira, akaryakıt, maaş, `advertising`…). Serbest metin: kategori
    *  listesi işletmeyle büyür, enum'a hapsedilirse her yeni gider kalemi migration ister. */
@@ -102,7 +103,7 @@ export type MoneyMovement = z.infer<typeof MoneyMovementSchema>;
 export const MoneyMovementInsertSchema = z.object({
   accountId: z.string().uuid(),
   direction: MovementDirectionEnum,
-  amount: z.number().positive(),
+  amountCents: z.number().int().positive(),
   type: MovementTypeEnum,
   category: z.string().nullish(),
   meta: z.record(z.unknown()).nullish(),
@@ -130,8 +131,8 @@ export type MoneyMovementUpdate = z.infer<typeof MoneyMovementUpdateSchema>;
 export const AccountLedgerRowSchema = MoneyMovementSchema.extend({
   /** Satırın ait olduğu hesap — transferde `accountId`'den farklı olabilir. */
   ledgerAccountId: z.string().uuid(),
-  /** Bu hesap için işaretli tutar: girişte +, çıkışta −; transferin karşı ucunda ters. */
-  signedAmount: dbNumeric,
+  /** Bu hesap için işaretli tutar (**cent**): girişte +, çıkışta −; transferin karşı ucunda ters. */
+  signedAmountCents: z.number().int(),
 });
 export type AccountLedgerRow = z.infer<typeof AccountLedgerRowSchema>;
 
@@ -142,15 +143,16 @@ export type AccountLedgerRow = z.infer<typeof AccountLedgerRowSchema>;
 export const OrderAmountsSchema = z.object({
   ok: z.boolean(),
   movementId: z.string().uuid().optional(),
-  amountCollected: dbNumeric,
-  amountRefunded: dbNumeric,
+  // RPC euro döndürür; cent'e çevrim servis sınırında (`rpcMoneyToCents`, 02.9 · STACK §8).
+  amountCollectedCents: z.number().int(),
+  amountRefundedCents: z.number().int(),
 });
 export type OrderAmounts = z.infer<typeof OrderAmountsSchema>;
 
 /** `account_balance` görünümü — bakiye SAKLANMAZ, defter satırlarından toplanır. */
 export const AccountBalanceSchema = z.object({
   accountId: z.string().uuid(),
-  balance: dbNumeric,
+  balanceCents: z.number().int(),
   movementCount: z.number().int(),
 });
 export type AccountBalance = z.infer<typeof AccountBalanceSchema>;

@@ -25,8 +25,7 @@ async function openAccount(ad: string, type: 'cash' | 'bank' | 'provider' = 'ban
 }
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
-/** Kayan nokta artığını kırp — para 2 ondalıktır (1020.4000000000001 gibi farklar karşılaştırmayı bozar). */
-const euro = (v: number) => Math.round(v * 100) / 100;
+// `euro()` kırpıcısı KALKTI (02.9): toplamlar tamsayı cent, kırpılacak kayan-nokta artığı yok.
 
 let cashAccount: Awaited<ReturnType<typeof openAccount>>;
 let bankAccount: Awaited<ReturnType<typeof openAccount>>;
@@ -47,7 +46,7 @@ afterAll(async () => {
 
 describe('hesap', () => {
   it('yeni hesap 0 bakiyeyle görünür — hiç hareketi yok diye listeden düşmez', async () => {
-    expect(await accounts.balance(cashAccount.id)).toMatchObject({ balance: 0, movementCount: 0 });
+    expect(await accounts.balance(cashAccount.id)).toMatchObject({ balanceCents: 0, movementCount: 0 });
   });
 
   it('kapatma SİLME değil pasifleştirmedir — geçmiş hareketleri ona bağlı', async () => {
@@ -60,84 +59,84 @@ describe('hesap', () => {
 
 describe('bakiye TÜRETİLİR (saklanmaz)', () => {
   it('giriş artırır, çıkış azaltır', async () => {
-    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 250, type: 'capital', description: 'Açılış' });
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 90.5, type: 'expense', category: 'kira' });
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 25_000, type: 'capital', description: 'Açılış' });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 9050, type: 'expense', category: 'kira' });
 
-    expect((await accounts.balance(cashAccount.id)).balance).toBe(159.5);
+    expect((await accounts.balance(cashAccount.id)).balanceCents).toBe(15_950);
     expect((await accounts.balance(cashAccount.id)).movementCount).toBe(2);
   });
 
   it('tüm hesapların bakiyesi TEK sorguda gelir (N+1 yok)', async () => {
-    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 100, type: 'capital' });
-    await movements.insert({ accountId: bankAccount.id, direction: 'in', amount: 40, type: 'capital' });
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 10_000, type: 'capital' });
+    await movements.insert({ accountId: bankAccount.id, direction: 'in', amountCents: 4000, type: 'capital' });
 
     const byId = await accounts.balances();
-    expect(byId.get(cashAccount.id)?.balance).toBe(100);
-    expect(byId.get(bankAccount.id)?.balance).toBe(40);
+    expect(byId.get(cashAccount.id)?.balanceCents).toBe(10_000);
+    expect(byId.get(bankAccount.id)?.balanceCents).toBe(4000);
   });
 });
 
 describe('transfer — tek satır, iki hesap', () => {
   it('gönderenden düşer, alana girer; toplam servet DEĞİŞMEZ', async () => {
-    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 800, type: 'capital' });
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 500, type: 'transfer', counterAccountId: bankAccount.id, description: 'Bankaya yatırıldı' });
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 80_000, type: 'capital' });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 50_000, type: 'transfer', counterAccountId: bankAccount.id, description: 'Bankaya yatırıldı' });
 
-    expect((await accounts.balance(cashAccount.id)).balance).toBe(300); // 800 − 500
-    expect((await accounts.balance(bankAccount.id)).balance).toBe(500);
+    expect((await accounts.balance(cashAccount.id)).balanceCents).toBe(30_000); // 800 − 500
+    expect((await accounts.balance(bankAccount.id)).balanceCents).toBe(50_000);
 
     // Transfer serveti değiştirmez, yerini değiştirir.
     const byId = await accounts.balances();
-    expect(byId.get(cashAccount.id)!.balance + byId.get(bankAccount.id)!.balance).toBe(800);
+    expect(byId.get(cashAccount.id)!.balanceCents + byId.get(bankAccount.id)!.balanceCents).toBe(80_000);
   });
 
   it('transfer İKİ hesabın da ekstresinde görünür — karşı uçta işaret ters', async () => {
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 120, type: 'transfer', counterAccountId: bankAccount.id });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 12_000, type: 'transfer', counterAccountId: bankAccount.id });
 
     const cashLedger = await movements.ledger(cashAccount.id);
     const bankLedger = await movements.ledger(bankAccount.id);
     expect(cashLedger.rows).toHaveLength(1);
     expect(bankLedger.rows).toHaveLength(1);
-    expect(cashLedger.rows[0]!.signedAmount).toBe(-120);
-    expect(bankLedger.rows[0]!.signedAmount).toBe(120);
+    expect(cashLedger.rows[0]!.signedAmountCents).toBe(-12_000);
+    expect(bankLedger.rows[0]!.signedAmountCents).toBe(12_000);
     // Aynı hareket, iki defter satırı: id ortak.
     expect(cashLedger.rows[0]!.id).toBe(bankLedger.rows[0]!.id);
   });
 
   it('karşı ucu olmayan transfer VERİTABANINDA reddedilir — yarım transfer bakiyeyi kaydırırdı', async () => {
-    await expect(movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 50, type: 'transfer' })).rejects.toThrow();
+    await expect(movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 5000, type: 'transfer' })).rejects.toThrow();
   });
 
   it('transfer olmayan harekette karşı hesap veritabanında reddedilir', async () => {
     await expect(
-      movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 50, type: 'expense', counterAccountId: bankAccount.id }),
+      movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 5000, type: 'expense', counterAccountId: bankAccount.id }),
     ).rejects.toThrow();
   });
 
   it('sıfır ve negatif tutar veritabanında reddedilir', async () => {
-    await expect(movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 0, type: 'misc' })).rejects.toThrow();
+    await expect(movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 0, type: 'misc' })).rejects.toThrow();
   });
 });
 
 describe('ekstre ve dönem', () => {
   it('değer tarihine göre en yeni önce; tarih aralığı süzülür', async () => {
-    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 10, type: 'misc', valueDate: dayOffset(-20) });
-    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 20, type: 'misc', valueDate: dayOffset(-5) });
-    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 30, type: 'misc', valueDate: dayOffset(-1) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 1000, type: 'misc', valueDate: dayOffset(-20) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 2000, type: 'misc', valueDate: dayOffset(-5) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 3000, type: 'misc', valueDate: dayOffset(-1) });
 
     const all = await movements.ledger(cashAccount.id);
-    expect(all.rows.map((r) => r.amount)).toEqual([30, 20, 10]);
+    expect(all.rows.map((r) => r.amountCents)).toEqual([3000, 2000, 1000]);
 
     const aralik = await movements.ledger(cashAccount.id, { from: dayOffset(-10), to: dayOffset(0) });
-    expect(aralik.rows.map((r) => r.amount)).toEqual([30, 20]);
+    expect(aralik.rows.map((r) => r.amountCents)).toEqual([3000, 2000]);
   });
 
   it('eşleşmemiş satırlar süzülebilir — banka eşleştirme kuyruğu (12.4)', async () => {
-    const eslesen = await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 15, type: 'misc' });
-    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 25, type: 'misc' });
+    const eslesen = await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 1500, type: 'misc' });
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 2500, type: 'misc' });
     await movements.markReconciled(eslesen.id);
 
     const queue = await movements.ledger(cashAccount.id, { unreconciledOnly: true });
-    expect(queue.rows.map((r) => r.amount)).toEqual([25]);
+    expect(queue.rows.map((r) => r.amountCents)).toEqual([2500]);
   });
 
   it('dönem toplamları tip+yön kırılımında toplanır; dönem dışı satır girmez', async () => {
@@ -145,27 +144,71 @@ describe('ekstre ve dönem', () => {
     // bakılır: test kendi eklediğinin toplama ne kattığını ölçer, veritabanındaki diğer
     // hareketlerden (seed, paralel test) etkilenmez.
     const oku = async (tip: 'expense' | 'capital') =>
-      (await movements.periodTotals(dayOffset(-10), dayOffset(0))).find((t) => t.type === tip) ?? { total: 0, count: 0 };
+      (await movements.periodTotals(dayOffset(-10), dayOffset(0))).find((t) => t.type === tip) ?? { totalCents: 0, count: 0 };
     const expenseBefore = await oku('expense');
     const capitalBefore = await oku('capital');
 
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 900, type: 'expense', category: 'kira', valueDate: dayOffset(-3) });
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 120.4, type: 'expense', category: 'akaryakıt', valueDate: dayOffset(-2) });
-    await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 60, type: 'capital', valueDate: dayOffset(-2) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 90_000, type: 'expense', category: 'kira', valueDate: dayOffset(-3) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 12_040, type: 'expense', category: 'akaryakıt', valueDate: dayOffset(-2) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 6000, type: 'capital', valueDate: dayOffset(-2) });
     // Dönem DIŞI — toplama girmemeli.
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amount: 5000, type: 'expense', valueDate: dayOffset(-90) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 500_000, type: 'expense', valueDate: dayOffset(-90) });
 
     const expenseAfter = await oku('expense');
-    expect(euro(expenseAfter.total - expenseBefore.total)).toBe(1020.4); // 5000'lik satır dönem dışı
+    // `euro()` sarmalayıcısı KALKTI: toplam tamsayı cent, düzeltilecek kayan-nokta artığı yok (02.9).
+    expect(expenseAfter.totalCents - expenseBefore.totalCents).toBe(102_040); // 5000'lik satır dönem dışı
     expect(expenseAfter.count - expenseBefore.count).toBe(2);
 
     const capitalAfter = await oku('capital');
-    expect(euro(capitalAfter.total - capitalBefore.total)).toBe(60);
+    expect(capitalAfter.totalCents - capitalBefore.totalCents).toBe(6000);
   });
 
   it('değer tarihi kayıt tarihinden AYRIDIR: dünkü nakit bugün girilebilir', async () => {
-    const movement = await movements.insert({ accountId: cashAccount.id, direction: 'in', amount: 75, type: 'misc', valueDate: dayOffset(-7) });
+    const movement = await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 7500, type: 'misc', valueDate: dayOffset(-7) });
     expect(movement.valueDate).toBe(dayOffset(-7));
     expect(movement.createdAt.slice(0, 10)).toBe(dayOffset(0));
+  });
+});
+
+/**
+ * SINIR TESTİ (02.9 · STACK §8) — para hareketi ailesi euro↔cent.
+ *
+ * Bu ailede DÖRT ayrı yol var ve dördü ayrı kodda:
+ *   1. **Tablo** (`moneyFields`) — `money_movement.amount` euro, dönen alan cent.
+ *   2. **Görünüm** (`account_movement`) — `signed_amount` görünümün TÜRETTİĞİ kolon; işaret kuralı
+ *      SQL'de yaşıyor, birim çevrimi burada.
+ *   3. **Bakiye görünümü** (`account_balance`) — Σ defter satırı.
+ *   4. **RPC** (`record_order_movement`) — girdi euro'ya iner, dönüş cent'e çıkar.
+ *
+ * Kolonlar HAM okunur: iki tarafı da servisten okuyan bir test, aynı yanlış sabitle çarpılsa geçerdi.
+ */
+describe('para hareketi — euro↔cent sınırı', () => {
+  it('cent yazılır, kolon euro tutar, cent okunur (tablo + görünüm + bakiye)', async () => {
+    const movement = await movements.insert({
+      accountId: cashAccount.id,
+      direction: 'out',
+      amountCents: 1234,
+      type: 'expense',
+      category: 'sınır testi',
+    });
+    expect(movement.amountCents).toBe(1234);
+
+    const { data } = await db.from('money_movement').select('amount').eq('id', movement.id).single();
+    expect(Number((data as { amount: number | string }).amount)).toBe(12.34);
+
+    // Görünümün türettiği işaretli tutar da cent: çıkışta negatif.
+    const ledger = await movements.ledger(cashAccount.id, { limit: 1 });
+    expect(ledger.rows[0]?.amountCents).toBe(1234);
+    expect(ledger.rows[0]?.signedAmountCents).toBe(-1234);
+  });
+
+  it('bakiye görünümü de cent döndürür — Σ defter satırı', async () => {
+    const account = await openAccount('Sınır kasası');
+    await movements.insert({ accountId: account.id, direction: 'in', amountCents: 10_050, type: 'capital' });
+    await movements.insert({ accountId: account.id, direction: 'out', amountCents: 2525, type: 'expense', category: 'test' });
+
+    expect((await accounts.balance(account.id)).balanceCents).toBe(7525);
+    await db.from('money_movement').delete().eq('account_id', account.id);
+    await db.from('account').delete().eq('id', account.id);
   });
 });

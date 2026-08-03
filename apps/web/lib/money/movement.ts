@@ -24,7 +24,7 @@ export async function recordMovement(input: MoneyMovementInsert): Promise<Moveme
   const verdict = validateMovement({
     accountId: input.accountId,
     direction: input.direction,
-    amount: input.amount,
+    amountCents: input.amountCents,
     type: input.type,
     counterAccountId: input.counterAccountId,
     orderId: input.orderId,
@@ -44,7 +44,8 @@ export async function recordMovement(input: MoneyMovementInsert): Promise<Moveme
 export function recordSupplierPayment(input: {
   supplierId: string;
   accountId: string;
-  amount: number;
+  /** **Cent** (02.9 · STACK §8) — işaretsiz; yönü fonksiyonun kendisi belirler. */
+  amountCents: number;
   stockIntakeId?: string | null;
   valueDate?: string;
   description?: string | null;
@@ -52,7 +53,7 @@ export function recordSupplierPayment(input: {
   return recordMovement({
     accountId: input.accountId,
     direction: 'out',
-    amount: input.amount,
+    amountCents: input.amountCents,
     type: 'purchase',
     supplierId: input.supplierId,
     stockIntakeId: input.stockIntakeId,
@@ -67,7 +68,8 @@ export function recordSupplierPayment(input: {
  */
 export function recordExpense(input: {
   accountId: string;
-  amount: number;
+  /** **Cent** (02.9 · STACK §8) — işaretsiz; yönü fonksiyonun kendisi belirler. */
+  amountCents: number;
   category: string;
   meta?: Record<string, unknown> | null;
   valueDate?: string;
@@ -76,7 +78,7 @@ export function recordExpense(input: {
   return recordMovement({
     accountId: input.accountId,
     direction: 'out',
-    amount: input.amount,
+    amountCents: input.amountCents,
     type: 'expense',
     category: input.category,
     meta: input.meta,
@@ -97,7 +99,8 @@ export function recordExpense(input: {
  */
 export function recordAdvertisingExpense(input: {
   accountId: string;
-  amount: number;
+  /** **Cent** (02.9 · STACK §8) — işaretsiz; yönü fonksiyonun kendisi belirler. */
+  amountCents: number;
   campaign?: string | null;
   valueDate?: string;
   description?: string | null;
@@ -105,7 +108,7 @@ export function recordAdvertisingExpense(input: {
   const campaign = input.campaign?.trim();
   return recordExpense({
     accountId: input.accountId,
-    amount: input.amount,
+    amountCents: input.amountCents,
     category: ADVERTISING_CATEGORY,
     // Boş etiket yazılmaz: `{campaign: ''}` raporda kendi kovasını açar, etiketsizden ayrı düşerdi.
     meta: campaign ? { campaign } : null,
@@ -121,7 +124,8 @@ export function recordAdvertisingExpense(input: {
 export function transfer(input: {
   fromAccountId: string;
   toAccountId: string;
-  amount: number;
+  /** **Cent** (02.9 · STACK §8) — işaretsiz; yönü fonksiyonun kendisi belirler. */
+  amountCents: number;
   valueDate?: string;
   description?: string | null;
 }): Promise<MovementOutcome> {
@@ -129,7 +133,7 @@ export function transfer(input: {
     accountId: input.fromAccountId,
     counterAccountId: input.toAccountId,
     direction: 'out',
-    amount: input.amount,
+    amountCents: input.amountCents,
     type: 'transfer',
     valueDate: input.valueDate,
     description: input.description,

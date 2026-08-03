@@ -143,7 +143,7 @@ async function reconcileRefund(event: VerifiedEvent, accountId: string | null): 
   await recordOrderRefund({
     orderId,
     accountId: refundAccountId,
-    amount: missingCents / 100,
+    amountCents: missingCents,
     description: 'Sağlayıcı panelinden iade — mutabakat',
     meta: { providerRef: event.paymentIntentId },
   });
@@ -223,7 +223,7 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null): P
     await recordOrderPayment({
       orderId: order.id,
       accountId,
-      amount: event.amountTotalCents / 100,
+      amountCents: event.amountTotalCents,
       description: 'Stripe tahsilatı',
       // **Ödeme künyesi burada saklanır (07.11)** — iade bu referansın üzerinden döner. Tahsilat
       // anında yazılmazsa bir daha bulunamaz: sağlayıcıda niyeti sipariş kimliğinden aramak
@@ -296,7 +296,7 @@ async function refundAndCancel(event: VerifiedEvent, orderId: string, accountId:
 
   // Tahsilat hiç yazılmadığı için kasada iz bırakmayız; iptal kapısı rezervasyonu bırakır ve
   // bildirimi gönderir. `refundAccountId` yalnız hareket yazılacaksa anlamlıdır.
-  await cancelOrder(orderId, { refundAccountId: accountId, refundAmount: 0 });
+  await cancelOrder(orderId, { refundAccountId: accountId, refundAmountCents: 0 });
   // İptal de bir cevaptır: ekran "onaylanıyor"da asılı kalmaz, iadeyi öğrenir.
   await broadcastOrderChanged(orderId);
 }

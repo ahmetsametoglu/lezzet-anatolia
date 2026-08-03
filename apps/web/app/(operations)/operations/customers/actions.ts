@@ -12,7 +12,6 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { isPointsEligible } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 import { DEFAULT_PAGE_SIZE, type Discount, type DiscountCode, type KeysetCursor } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -117,7 +116,7 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
     return {
       data: {
         customerId,
-        revenueCents: toCents(totals.revenue),
+        revenueCents: totals.revenueCents,
         orderCount: totals.orderCount,
         avgPaymentDays: scorecard.avgPaymentDays,
         paidOrderCount: scorecard.paidOrderCount,

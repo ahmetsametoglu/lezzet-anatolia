@@ -84,7 +84,7 @@ async function returnOutcomeOf(ticket: Ticket): Promise<TicketReturnOutcome | nu
   const movements = await new MoneyMovementService(serviceDb()).listByOrder(ticket.orderId);
   const refunded = movements
     .filter((m) => m.type === 'order_refund')
-    .reduce((sum, m) => sum + Math.round(m.amount * 100), 0);
+    .reduce((sum, m) => sum + m.amountCents, 0); // servis cent döndürüyor (02.9) — elle `* 100` kalktı
   return { triggeredAt: ticket.returnTriggeredAt, refundedCents: refunded };
 }
 

@@ -2,8 +2,8 @@ import {
   AccountService, AddressService, CartService, DeliveryZoneService, DiscountService, MoneyMovementService,
   OrderService, ReservationService, StockService, UserProfileService,
 } from '@lezzet/database';
-import { derivePaymentStatusForOrder, generateReferenceNo } from '@lezzet/domain-core';
-import { distributeDiscount } from '@lezzet/helper';
+import { derivePaymentStatusForOrder, generateReferenceNo, resolveVatTreatment } from '@lezzet/domain-core';
+import { distributeDiscount, toCents } from '@lezzet/helper';
 import type { OrderStatus } from '@lezzet/types';
 import type { Kuponlar } from './discount';
 import { an, euro, gun, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
@@ -103,8 +103,11 @@ export async function seedOrders(
   // yakın gerçek profilin tercihi. Böylece yerelde üç dilli mail de denenebilir. Okuma KİMLİKLE
   // yapılır, sayfalı listeyle değil — tavanlı bir okuma, tavanı aşan kişilerin siparişini sessizce
   // dilsiz bırakırdı.
-  const musteriDili = new Map(
-    (await new UserProfileService(db).listByIds([...new Set(kisiler.values())])).map((p) => [p.id, p.preferredLanguage]),
+  // Profil bir bütün olarak taşınır: dil siparişe kopyalanır, KDV numarasının doğrulanmışlığı ise
+  // vergi modelini belirler (`resolveVatTreatment`). İkisi için iki ayrı okuma yapmak, aynı satırı
+  // iki kez getirmek olurdu.
+  const profiller = new Map(
+    (await new UserProfileService(db).listByIds([...new Set(kisiler.values())])).map((p) => [p.id, p]),
   );
   const satilabilir = varyantlar.filter((v) => v.status !== 'candidate');
   const kurye = kisiler.get('kurye') ?? null;
@@ -118,14 +121,37 @@ export async function seedOrders(
   const toplam = (kalemler: SiparisKalem[], kargo = 0) => euro(kalemler.reduce((s, k) => s + k.unitPrice * k.qty, 0) + kargo);
 
   /**
+   * İkinci deponun siparişleri YALNIZ orada stoğu olan varyantlardan kurulur.
+   *
+   * Partilerin depoya dağılımı indise bağlı (`stock.ts`) ve hangi varyantın Kehl'de olduğu oradan
+   * okunmaz — okunsaydı iki dosya aynı formülü paylaşırdı ve biri değişince diğeri sessizce yanlış
+   * sipariş üretirdi. Bu yüzden GERÇEĞE sorulur: Kehl'de fiili stoğu olan varyantlar.
+   */
+  const kehlStoklu = await (async () => {
+    const { data, error } = await db
+      .from('stock')
+      .select('variant_id,physical_qty')
+      .eq('warehouse_id', depolar.kehl)
+      .gt('physical_qty', 8);
+    if (error) throw error;
+    const idler = new Set(((data ?? []) as Array<{ variant_id: string }>).map((r) => r.variant_id));
+    return satilabilir.filter((v) => idler.has(v.id));
+  })();
+  /** Kehl kalemi — dizide dönerek seçer; adet parti tavanının altında tutulur (rezervasyon geçsin). */
+  const kehlKalem = (i: number, qty: number): SiparisKalem => {
+    const v = kehlStoklu[i % kehlStoklu.length]!;
+    return { variantId: v.id, qty, unitPrice: euro(7 + (i % 9) * 1.6), vatRate: v.vatRate };
+  };
+
+  /**
    * Kalemin karşılanabileceği partileri FEFO sırasıyla toplar (hazırlık onayının girdisi).
    *
    * **Yalnız SİPARİŞİN DEPOSUNDAN** (DOMAIN §17): partiler iki depoya dağıtılmış durumda ve süzgeç
    * olmadan FEFO en yakın tarihli partiyi seçer — o parti Kehl'de olabilir. `record_preparation`
    * bunu reddeder ("başka deponun malı") ve haklıdır: bir sipariş tek depodan çıkar.
    */
-  async function partiSec(variantId: string, qty: number): Promise<Array<{ stockId: string; qty: number }>> {
-    const partiler = await stocks.listInStock(depolar.str, variantId);
+  async function partiSec(variantId: string, qty: number, warehouseId: string): Promise<Array<{ stockId: string; qty: number }>> {
+    const partiler = await stocks.listInStock(warehouseId, variantId);
     const secim: Array<{ stockId: string; qty: number }> = [];
     let kalan = qty;
     for (const p of partiler) {
@@ -146,9 +172,9 @@ export async function seedOrders(
    * Tahsilat/iade bir HAREKETTİR (12.2): siparişteki `amount_*` ondan türer. Hareket + cache tek
    * transaction'da (`recordForOrder`), ödeme durumu ardından motordan.
    */
-  async function tahsilatYaz(orderId: string, tutar: number, tip: 'order_payment' | 'order_refund'): Promise<void> {
-    if (!kasaId || tutar <= 0) return;
-    await movements.recordForOrder({ orderId, accountId: kasaId, amount: tutar, type: tip, valueDate: gun(-1) });
+  async function tahsilatYaz(orderId: string, tutarCents: number, tip: 'order_payment' | 'order_refund'): Promise<void> {
+    if (!kasaId || tutarCents <= 0) return;
+    await movements.recordForOrder({ orderId, accountId: kasaId, amountCents: tutarCents, type: tip, valueDate: gun(-1) });
   }
 
   /**
@@ -161,8 +187,8 @@ export async function seedOrders(
     if (!bulunan) return;
     const { order, items } = bulunan;
     const durum = derivePaymentStatusForOrder(order, items, {
-      collected: order.amountCollected,
-      refunded: order.amountRefunded,
+      collectedCents: order.amountCollectedCents,
+      refundedCents: order.amountRefundedCents,
     }).status;
     if (durum !== order.paymentStatus) await orders.update({ id: orderId, paymentStatus: durum });
   }
@@ -191,6 +217,14 @@ export async function seedOrders(
     kuponTutari?: number;
     /** Teslim gününü bugüne göre kaydır — kurye gün kapanışı ancak farklı günlerle denenebilir. */
     teslimGunu?: number;
+    /**
+     * Siparişin ÇIKTIĞI depo. Varsayılan ana depo; `kehl` verildiğinde partiler de oradan seçilir.
+     * Tek depolu bir veri setinde depo süzgecini unutan sorgu DOĞRU cevap verir ve hata görünmez
+     * (CLAUDE.md §1) — ikinci deponun siparişi o kör noktayı açar.
+     */
+    depo?: 'str' | 'kehl';
+    /** Müşteriye GERİ ÖDENEN tutar — `order_refund` hareketi; ödeme durumu `refunded`'a döner. */
+    iade?: number;
     etiket: string;
   }): Promise<string | null> {
     const customerId = kisiler.get(opts.musteri);
@@ -212,6 +246,18 @@ export async function seedOrders(
     // o satışı kuryenin gün kapanışına sokar (`courier_day_collection` gün + kurye ile gruplar) ve
     // kuryeden hiç taşımadığı bir paranın hesabı sorulur.
     const kapiOnu = opts.kaynak === 'door';
+    const depoId = opts.depo === 'kehl' ? depolar.kehl : depolar.str;
+    // TESLİMAT ÜLKESİ adresten gelir, varsayılandan değil: Almanya'ya giden bir siparişi `FR`
+    // bırakmak hem OSS eşiği izlemini hem vergi modelini sessizce yanlışlar.
+    const teslimUlkesi = adres?.country ?? 'FR';
+    // VERGİ MODELİ MOTORUN kararı (`resolveVatTreatment`): DE + B2B + doğrulanmış KDV no →
+    // reverse charge (%0 + "Autoliquidation" ibaresi). Seed kuralı kendi hesaplamaz, sorar —
+    // yoksa aynı karar iki yerde yaşar ve bir gün ayrışır.
+    const vergi = resolveVatTreatment({
+      channel: opts.channel,
+      deliveryCountry: teslimUlkesi,
+      vatNumberValid: profiller.get(customerId)?.vatNumberValid ?? undefined,
+    });
 
     // İNDİRİMİN KALEM PAYI (07.4 / d931a0e ile aynı kural). Yalnız başlığa yazmak yetmez: ödeme
     // motoru "müşteri ne kadar borçlu" sorusunu kalemlerden topluyor ve payı 0 gördüğü sürece
@@ -229,26 +275,36 @@ export async function seedOrders(
         // Sipariş TEK depodan çıkar (DOMAIN §17). Kaynağı ya adresin bölgesi ya kapı önü satışta
         // personelin sabit deposudur — seed'de ikisi de STR: bölgelerin üçü de oraya bağlı ve
         // kapıdaki satış ana depoda yapılıyor. Partiler de o depodan seçilecek (DB kısıtı tutar).
-        warehouseId: depolar.str,
+        warehouseId: depoId,
+        deliveryCountry: teslimUlkesi,
+        vatTreatment: vergi.treatment,
         channel: opts.channel,
         orderSource: opts.kaynak ?? 'web',
         deliveryType,
         deliveryZoneId: kapiOnu ? null : (zone?.id ?? null),
         deliveryDate: deliveryType === 'route' && !kapiOnu ? gun(teslimKaydirma) : null,
         discountId: indirim,
-        discountAmount: indirimTutari,
+        discountAmountCents: toCents(indirimTutari),
         discountLabel: indirim ? (kuralEtiketi.get(indirim) ?? null) : null,
-        locale: musteriDili.get(customerId) ?? null,
+        locale: profiller.get(customerId)?.preferredLanguage ?? null,
         addressId: adres?.id ?? null,
         addressSnapshot: adres ? { line1: adres.line1, postalCode: adres.postalCode, city: adres.city, country: adres.country } : null,
         courierId: !kapiOnu && ['out_for_delivery', 'delivered', 'completed', 'returned'].includes(opts.hedef) ? kurye : null,
         onAccount: opts.onAccount ?? false,
         paymentMethod: opts.paymentMethod ?? null,
         isGiftOrder: opts.hediye ?? false,
-        shippingFee: opts.kargo ?? 0,
-        total: euro(toplam(opts.kalemler, opts.kargo ?? 0) - indirimTutari),
+        // Seed'in kendi aritmetiği EURO kalıyor (okunurluk: "7 + i*1.6"); çevrim servis sınırında,
+        // ortak `toCents` ile (02.9 · STACK §8). Paylar zaten cent — motor öyle döndürüyor.
+        shippingFeeCents: toCents(opts.kargo ?? 0),
+        totalCents: toCents(toplam(opts.kalemler, opts.kargo ?? 0) - indirimTutari),
       },
-      opts.kalemler.map((k, i) => ({ ...k, lineDiscountAmount: (paylar[i] ?? 0) / 100 })),
+      opts.kalemler.map((k, i) => ({
+        variantId: k.variantId,
+        qty: k.qty,
+        vatRate: k.vatRate,
+        unitPriceCents: toCents(k.unitPrice),
+        lineDiscountAmountCents: paylar[i] ?? 0,
+      })),
     );
 
     // Kullanım kaydı BURADA YAZILMAZ — `OrderService.create` siparişin `discountId`'sinden türetiyor
@@ -264,7 +320,7 @@ export async function seedOrders(
     // Hızlı satış AYRI YOLDUR: rezervasyon yok, fiiliden anında düşer (07.10).
     if (opts.kaynak === 'door' && opts.hedef === 'completed') {
       const picks = [];
-      for (const item of items) picks.push({ orderItemId: item.id, batches: await partiSec(item.variantId, item.qty) });
+      for (const item of items) picks.push({ orderItemId: item.id, batches: await partiSec(item.variantId, item.qty, depoId) });
       const sonuc = await orders.quickSale({
         orderId: order.id,
         picks,
@@ -276,7 +332,7 @@ export async function seedOrders(
       // Tahsilat AYRI yazılır (12.2): kapı önü nakdi kasanın bakiyesine de düşsün. Durum da
       // hareketten türetilir — üretimde bunu kapı yapar (`lib/order/quick-sale`), seed onu taklit eder.
       if (sonuc.ok) {
-        await tahsilatYaz(order.id, opts.tahsilat ?? toplam(opts.kalemler), 'order_payment');
+        await tahsilatYaz(order.id, toCents(opts.tahsilat ?? toplam(opts.kalemler)), 'order_payment');
         await odemeDurumuTazele(order.id);
       }
       console.log(`  ✓ ${opts.etiket} · ${sonuc.ok ? 'kapandı' : `atlandı (${sonuc.reason})`}`);
@@ -285,13 +341,13 @@ export async function seedOrders(
 
     if (opts.hedef === 'draft') {
       // Online checkout başlamış, ödeme bekleniyor: rezervasyon TTL'li (süre dolarsa cron bırakır).
-      for (const item of items) await reservations.reserve({ orderId: order.id, variantId: item.variantId, warehouseId: depolar.str, qty: item.qty, ttlMinutes: opts.ttlDk ?? 30 });
+      for (const item of items) await reservations.reserve({ orderId: order.id, variantId: item.variantId, warehouseId: depoId, qty: item.qty, ttlMinutes: opts.ttlDk ?? 30 });
       console.log(`  ✓ ${opts.etiket} · taslak (TTL'li rezervasyon)`);
       return order.id;
     }
 
     // Tam yol: önce ayır (kapıda/vadeli → süresiz), sonra ilerlet.
-    for (const item of items) await reservations.reserve({ orderId: order.id, variantId: item.variantId, warehouseId: depolar.str, qty: item.qty });
+    for (const item of items) await reservations.reserve({ orderId: order.id, variantId: item.variantId, warehouseId: depoId, qty: item.qty });
 
     // İptal/iade kendi hedefine doğrudan gitmez: siparişin oraya gelmiş olması gerekir. İptal
     // `confirmed`'dan, iade ise teslim SONRASINDAN olur — yol farkı budur (ORDER_LIFECYCLE).
@@ -307,7 +363,7 @@ export async function seedOrders(
       if (hedef === 'preparing') {
         // Hazırlık onayı: fiilen çıkan partiler yazılır (geri çağırma + gerçek COGS bunun üstünde).
         const picks = [];
-        for (const item of items) picks.push({ orderItemId: item.id, batches: await partiSec(item.variantId, item.qty) });
+        for (const item of items) picks.push({ orderItemId: item.id, batches: await partiSec(item.variantId, item.qty, depoId) });
         await orders.transition({ orderId: order.id, from: onceki, to: 'preparing', actorId: depocu });
         await orders.recordPreparation(order.id, picks);
         onceki = 'preparing';
@@ -319,7 +375,7 @@ export async function seedOrders(
         continue;
       }
       if (hedef === 'completed') {
-        await orders.close(order.id, { actorId: depocu, routeUnitCost: 2.5, packagingUnitCost: 1.2 });
+        await orders.close(order.id, { actorId: depocu, routeUnitCostCents: 250, packagingUnitCostCents: 120 });
         onceki = 'completed';
         continue;
       }
@@ -340,7 +396,11 @@ export async function seedOrders(
     }
 
     // Tahsilat bir HAREKETTİR (12.2): siparişteki `amount_*` ondan türer, doğrudan yazılmaz.
-    if (opts.tahsilat) await tahsilatYaz(order.id, opts.tahsilat, 'order_payment');
+    if (opts.tahsilat) await tahsilatYaz(order.id, toCents(opts.tahsilat), 'order_payment');
+    // GERİ ÖDEME de bir harekettir, ters yönlü. Ayrı bir "iade edildi" bayrağı yok ve olmamalı:
+    // `payment_status='refunded'` tahsil edilenle iade edilenin FARKINDAN türer. İade hareketi
+    // olmadan o durumu elle yazmak, parası hâlâ kasada duran bir siparişi iade edilmiş göstermekti.
+    if (opts.iade) await tahsilatYaz(order.id, toCents(opts.iade), 'order_refund');
     // Ödeme durumu her hâlükârda tazelenir: tahsilatı olmayan sipariş de doğru durumda kalsın
     // (vadeli sipariş `pending`, iptal edilen `pending`…).
     await odemeDurumuTazele(order.id);
@@ -464,6 +524,62 @@ export async function seedOrders(
   await siparis({ musteri: 'b2cKapaliKapida', kalemler: [kalem(36, 1)], hedef: 'out_for_delivery', channel: 'b2c', paymentMethod: 'cash', tahsilat: 0, teslimGunu: -1, etiket: 'Kurye günü (dün) — DEVREDEN (ulaşılamadı)' });
   // Bir gün öncesi: kapanışı yapılmamış İKİNCİ gün — "açık gün" uyarısı görünsün.
   await siparis({ musteri: 'b2cSadik', kalemler: [kalem(37, 3)], hedef: 'completed', channel: 'b2c', paymentMethod: 'cash', tahsilat: toplam([kalem(37, 3)]), teslimGunu: -2, yasi: 4, etiket: 'Kurye günü (2 gün önce) — kapanış BEKLİYOR' });
+
+  // — SINIR ÖTESİ: teslimat ülkesi ve vergi modeli (0022 · DOMAIN §5) ────────────────────────────
+  // Üç ayrı vergi hâli vardır ve üçü de FATURAYI değiştirir; hiçbiri kod tarafında seçilmez, motor
+  // karar verir. Yerelde yalnız `domestic` bulunması, diğer ikisinin hiç görülmemesi demekti.
+  //   · FR yurt içi        → normal KDV (zaten yukarıdaki siparişlerin hepsi)
+  //   · DE + B2B + KDV no  → reverse charge: %0 + faturada "Autoliquidation"
+  //   · DE + B2C           → normal KDV ama OSS eşiği izlemine girer
+  await siparis({
+    musteri: 'b2bAlman', kalemler: [kalem(39, 8), kalem(40, 6)], hedef: 'completed', channel: 'b2b',
+    deliveryType: 'shipping', kargo: 12.5, onAccount: true, tahsilat: 0, yasi: 14,
+    etiket: 'SINIR ÖTESİ B2B — reverse charge (Autoliquidation)',
+  });
+  await siparis({
+    musteri: 'b2cAlman', kalemler: [kalem(41, 2)], hedef: 'out_for_delivery', channel: 'b2c',
+    deliveryType: 'shipping', kargo: 9.9, paymentMethod: 'online', tahsilat: toplam([kalem(41, 2)], 9.9),
+    etiket: 'DE B2C kargo — OSS eşiği izlemi (yolda)',
+  });
+
+  // — PARA İADESİ: `refunded` ödeme durumu tahsilat ile iadenin FARKINDAN türer ─────────────────
+  // İki hâl ayrı ayrı gerekli: tamamı geri ödenmiş (iptal sonrası) ve kısmen geri ödenmiş (eksik
+  // çıkan kalemin bedeli). Muhasebe listesinde ikisi farklı satırlardır.
+  await siparis({
+    musteri: 'b2cSadik', kalemler: [kalem(42, 2)], hedef: 'cancelled', channel: 'b2c',
+    paymentMethod: 'online', tahsilat: toplam([kalem(42, 2)]), iade: toplam([kalem(42, 2)]), yasi: 7,
+    etiket: 'İPTAL — parası TAMAMEN iade edildi (refunded)',
+  });
+  await siparis({
+    musteri: 'b2cKapaliKapida', kalemler: [kalem(43, 3), kalem(44, 2)], hedef: 'completed', channel: 'b2c',
+    paymentMethod: 'online', tahsilat: toplam([kalem(43, 3), kalem(44, 2)]), iade: euro(toplam([kalem(43, 3)]) / 3),
+    yasi: 5, etiket: 'Kapandı — bir kalemin bedeli KISMEN iade edildi',
+  });
+
+  // — İKİNCİ DEPO: siparişin deposu bir boyut değil DEĞİŞMEZDİR (CLAUDE.md §1) ──────────────────
+  // Tüm siparişler tek depodaysa, depo süzgecini unutan her sorgu doğru cevap verir ve hata
+  // görünmez. Kehl siparişleri o kör noktayı açar: hazırlıkta parti seçimi de oradan yapılır, yanlış
+  // deponun partisi RPC tarafından reddedilir.
+  if (kehlStoklu.length >= 3) {
+    await siparis({
+      musteri: 'b2bAlman', kalemler: [kehlKalem(0, 4)], hedef: 'preparing', channel: 'b2b', depo: 'kehl',
+      deliveryType: 'shipping', kargo: 6.5, onAccount: true, etiket: 'KEHL deposundan — hazırlanıyor',
+    });
+    await siparis({
+      musteri: 'b2cAlman', kalemler: [kehlKalem(1, 2)], hedef: 'completed', channel: 'b2c', depo: 'kehl',
+      deliveryType: 'shipping', kargo: 6.5, paymentMethod: 'online', tahsilat: toplam([kehlKalem(1, 2)], 6.5),
+      yasi: 11, etiket: 'KEHL deposundan — kapandı',
+    });
+    // Kehl'de bekleyen taze sipariş: depo kuyruğu ikinci depoda da dolu görünsün.
+    await siparis({
+      musteri: 'b2bAlman', kalemler: [kehlKalem(2, 5), kehlKalem(3, 3)], hedef: 'confirmed', channel: 'b2b', depo: 'kehl',
+      deliveryType: 'shipping', kargo: 6.5, onAccount: true, tahsilat: 0, etiket: 'KEHL deposundan — onaylı, kuyrukta',
+    });
+  } else {
+    // Sessizce atlamak yok: ikinci deponun siparişsiz kalması bir VERİ hâlidir ve söylenmeli —
+    // yoksa depo süzgeci kör noktası kapanmış sanılır.
+    console.log(`  ▸ KEHL siparişleri atlandı: orada 8+ adetli parti yok (${kehlStoklu.length} varyant)`);
+  }
 
   const { count } = await db.from('order').select('*', { count: 'exact', head: true });
   console.log(`✓ sipariş: ${count ?? 0} kayıt (9 durumun hepsi · 4 kaynak · kuponlu · kısmi iade · kurye günleri)`);

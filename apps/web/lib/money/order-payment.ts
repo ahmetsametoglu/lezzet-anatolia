@@ -1,6 +1,5 @@
 import { MoneyMovementService, OrderService, serviceDb } from '@lezzet/database';
 import { derivePaymentStatusForOrder, type PaymentDerivation } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
 import type { Order, OrderItem, PaymentStatus } from '@lezzet/types';
 
 /**
@@ -24,7 +23,8 @@ interface OrderMovementInput {
   orderId: string;
   /** Paranın girdiği/çıktığı hesap (kasa, banka, Stripe). */
   accountId: string;
-  amount: number;
+  /** **Cent** (02.9 · STACK §8). */
+  amountCents: number;
   valueDate?: string;
   description?: string | null;
   source?: 'manual' | 'bank_import';
@@ -51,9 +51,8 @@ async function writeOrderMovement(input: OrderMovementInput, type: 'order_paymen
   if (!found) return { status: 'not_found' };
 
   const amounts = await new MoneyMovementService(db).recordForOrder({ ...input, type });
-  // `OrderAmounts` (RPC dönüşü) hâlâ euro — para hareketi ailesi henüz göçmedi (02.9 dilim 5).
-  // Çevrim burada, ortak `toCents` ile; o dilim gelince bu iki satır de düşecek.
-  return finalize(db, found.order, found.items, toCents(amounts.amountCollected), toCents(amounts.amountRefunded));
+  // Para hareketi ailesi de cent'e geçti (02.9 dilim 6) — buradaki iki `toCents` düştü.
+  return finalize(db, found.order, found.items, amounts.amountCollectedCents, amounts.amountRefundedCents);
 }
 
 /**
@@ -68,9 +67,8 @@ export async function syncOrderPaymentStatus(orderId: string): Promise<PaymentOu
 
   // Cache'i de tazele: hareket elle silinmiş/düzeltilmiş olabilir.
   const amounts = await new MoneyMovementService(db).resyncOrder(orderId);
-  // `OrderAmounts` (RPC dönüşü) hâlâ euro — para hareketi ailesi henüz göçmedi (02.9 dilim 5).
-  // Çevrim burada, ortak `toCents` ile; o dilim gelince bu iki satır de düşecek.
-  return finalize(db, found.order, found.items, toCents(amounts.amountCollected), toCents(amounts.amountRefunded));
+  // Para hareketi ailesi de cent'e geçti (02.9 dilim 6) — buradaki iki `toCents` düştü.
+  return finalize(db, found.order, found.items, amounts.amountCollectedCents, amounts.amountRefundedCents);
 }
 
 async function finalize(

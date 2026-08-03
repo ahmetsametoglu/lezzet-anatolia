@@ -205,8 +205,10 @@ describe('eşleştirme önerisi', () => {
   const candidate = (over: Partial<MatchCandidate> = {}): MatchCandidate => ({
     orderId: 'o1', referenceNo: 'LA-26-7K4M2P', outstandingCents: 4590, saleDate: '2026-07-13', ...over,
   });
-  const row = (over: Partial<{ valueDate: string; amount: number; direction: 'in' | 'out'; label: string }> = {}) => ({
-    valueDate: '2026-07-13', amount: 45.9, direction: 'in' as const, label: 'VIR SEPA LA-26-7K4M2P', ...over,
+  // Eşleştirme CENT'te çalışır (02.9): ekstre satırı euro okunur ama `money_movement` cent döndürür,
+  // motorun iki tarafı da aynı birimde karşılaştırması gerekir.
+  const row = (over: Partial<{ valueDate: string; amountCents: number; direction: 'in' | 'out'; label: string }> = {}) => ({
+    valueDate: '2026-07-13', amountCents: 4590, direction: 'in' as const, label: 'VIR SEPA LA-26-7K4M2P', ...over,
   });
 
   it('referans açıklamada geçiyorsa güçlü öneri çıkar', () => {
@@ -232,7 +234,7 @@ describe('eşleştirme önerisi', () => {
   });
 
   it('küçük fark tolere edilir — banka masrafı eşleşmeyi öldürmesin', () => {
-    const [suggestion] = suggestOrderMatches(row({ amount: 45.6, label: 'VIREMENT' }), [candidate()]);
+    const [suggestion] = suggestOrderMatches(row({ amountCents: 4560, label: 'VIREMENT' }), [candidate()]);
     expect(suggestion?.reasons).toContain('close_amount');
   });
 

@@ -1,5 +1,6 @@
 import { AccountService, BankImportProfileService, BankImportService, MoneyMovementService, SettingsService } from '@lezzet/database';
 import { fingerprintRows, heuristicColumnMapper, parseBankRows } from '@lezzet/domain-core';
+import { toCents } from '@lezzet/helper';
 import { euro, gun, tabloDolu, type Db } from './shared';
 
 // ── Hesaplar + para hareketleri (12) ─────────────────────────────────────────────────────────────
@@ -53,7 +54,7 @@ export async function seedMoney(db: Db): Promise<void> {
       await movements.insert({
         accountId: created.id,
         direction: 'in',
-        amount: h.acilis,
+        amountCents: toCents(h.acilis),
         type: 'capital',
         description: 'Açılış bakiyesi',
         valueDate: gun(-90),
@@ -67,7 +68,7 @@ export async function seedMoney(db: Db): Promise<void> {
     await movements.insert({
       accountId: hesapId.get(g.hesap)!,
       direction: 'out',
-      amount: g.amount,
+      amountCents: toCents(g.amount),
       type: 'expense',
       category: g.category,
       description: g.description,
@@ -86,7 +87,7 @@ export async function seedMoney(db: Db): Promise<void> {
       accountId: hesapId.get('cm')!,
       direction: 'out',
       // Kısmi ödeme: borç sıfırlanmasın, tedarikçi kartında açık bakiye görünsün.
-      amount: euro(Number(giris.total_amount) * 0.6),
+      amountCents: toCents(Number(giris.total_amount) * 0.6),
       type: 'purchase',
       stockIntakeId: giris.id,
       supplierId: giris.supplier_id,
@@ -100,7 +101,7 @@ export async function seedMoney(db: Db): Promise<void> {
     accountId: hesapId.get('kasa')!,
     counterAccountId: hesapId.get('cm')!,
     direction: 'out',
-    amount: 600,
+    amountCents: 60_000,
     type: 'transfer',
     description: 'Kasa fazlası bankaya yatırıldı',
     valueDate: gun(-7),
@@ -109,7 +110,7 @@ export async function seedMoney(db: Db): Promise<void> {
     accountId: hesapId.get('stripe')!,
     counterAccountId: hesapId.get('revolut')!,
     direction: 'out',
-    amount: 1240.5,
+    amountCents: 124_050,
     type: 'transfer',
     description: 'Stripe payout',
     valueDate: gun(-2),
@@ -123,7 +124,7 @@ export async function seedMoney(db: Db): Promise<void> {
   await seedBankImport(db, hesapId.get('cm')!);
 
   const bakiyeler = await accounts.balances();
-  const ozet = HESAPLAR.map((h) => `${h.name}: ${bakiyeler.get(hesapId.get(h.key)!)?.balance ?? 0} €`).join(' · ');
+  const ozet = HESAPLAR.map((h) => `${h.name}: ${euro((bakiyeler.get(hesapId.get(h.key)!)?.balanceCents ?? 0) / 100)} €`).join(' · ');
   console.log(`  ✓ bakiye (türetilmiş) → ${ozet}`);
   console.log(`✓ para: ${HESAPLAR.length} hesap · ${GIDERLER.length} gider · 2 transfer · tedarikçi ödemesi · banka import`);
 }
@@ -174,7 +175,8 @@ async function seedBankImport(db: Db, accountId: string): Promise<void> {
     fingerprintRows(accountId, rows).map((row) => ({
       accountId,
       direction: row.direction,
-      amount: row.amount,
+      // Ekstre satırı euro okur (banka dosyası öyle gelir); hareket cent yazar (02.9 · STACK §8).
+      amountCents: toCents(row.amount),
       // Tip sınıflandırma bekliyor: banka "para girdi" der, sebebini söylemez.
       type: 'misc' as const,
       description: row.label,

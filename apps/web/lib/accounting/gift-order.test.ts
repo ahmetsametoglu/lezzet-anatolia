@@ -36,7 +36,7 @@ const QTY = 3;
 const UNIT_PRICE_CENTS = 1200; // 12,00 €
 const PURCHASE_PRICE_CENTS = 400; // 4,00 €
 const TOTAL_CENTS = QTY * UNIT_PRICE_CENTS; // 36,00 €
-/** Kasa bakiyesi hâlâ euro okunuyor (para hareketi ailesi göçmedi — 02.9 dilim 5). */
+/** Muhasebe export ÖZETİ euro yazar (muhasebeciye giden belge) — kasa bakiyesi artık cent. */
 const TOTAL_EURO = TOTAL_CENTS / 100;
 
 beforeAll(async () => {
@@ -63,7 +63,7 @@ afterAll(async () => {
 describe('patron ikramı iç hesapların TAMAMINDA sayılır', () => {
   it('mal stoktan düşer, maliyet kâra biner, para kasaya girer — yalnız export dışıdır', async () => {
     const batch = await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: PURCHASE_PRICE_CENTS });
-    const cashBefore = (await accounts.balance(cashAccount)).balance;
+    const cashBefore = (await accounts.balance(cashAccount)).balanceCents;
     // Export'un ikram öncesi hâli: karşılaştırma FARK üzerinden yapılır (rapor şirket genelini okur).
     const exportBefore = await buildExport({ from: dayOffset(0), to: dayOffset(0) });
 
@@ -86,7 +86,7 @@ describe('patron ikramı iç hesapların TAMAMINDA sayılır', () => {
 
     // 3) KASA: parayı patron ödedi, hesabın bakiyesine girdi.
     expect(result.paymentRecorded).toBe(true);
-    expect((await accounts.balance(cashAccount)).balance).toBe(cashBefore + TOTAL_EURO);
+    expect((await accounts.balance(cashAccount)).balanceCents).toBe(cashBefore + TOTAL_CENTS);
     expect(await orders.getById(order.id)).toMatchObject({ amountCollectedCents: TOTAL_CENTS, paymentStatus: 'paid' });
 
     // 4) EXPORT: TEK fark burada — satır dosyaya girmez, ama tutarı özet'te açıkça durur.

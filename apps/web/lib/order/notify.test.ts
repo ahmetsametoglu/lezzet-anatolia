@@ -152,11 +152,11 @@ describe('bildirim verisi siparişten türer', () => {
 describe('istisna bildirimleri — zaman çizgisi yok, para çözümü var', () => {
   it('iptalde tahsil edilenin TAMAMI iade tutarı olarak yazılır', async () => {
     const { orderId } = await confirmOrder(3);
-    await recordOrderPayment({ orderId, accountId: cashAccount, amount: 30 });
+    await recordOrderPayment({ orderId, accountId: cashAccount, amountCents: 3000 });
     await cancelOrder(orderId);
 
     // İade yazıldıktan SONRA kurulur: borç sıfırlanmıştır, tutar kapıdan gelir.
-    const bundle = await buildOrderNotification(orderId, 'order_cancelled', { refundedAmount: 30 });
+    const bundle = await buildOrderNotification(orderId, 'order_cancelled', { refundedAmountCents: 3000 });
 
     expect(bundle?.data.steps).toHaveLength(0); // istisna bildiriminde çizgi yok
     expect(bundle?.data.statusAt).toBeTruthy();
@@ -168,7 +168,7 @@ describe('istisna bildirimleri — zaman çizgisi yok, para çözümü var', () 
     const { orderId } = await confirmOrder(2);
     await cancelOrder(orderId);
 
-    const bundle = await buildOrderNotification(orderId, 'order_cancelled', { refundedAmount: 0 });
+    const bundle = await buildOrderNotification(orderId, 'order_cancelled', { refundedAmountCents: 0 });
 
     expect(bundle?.data.refund).toBeNull(); // "0,00 € iade edildi" diyen mail gürültüdür
   });
@@ -187,7 +187,7 @@ describe('istisna bildirimleri — zaman çizgisi yok, para çözümü var', () 
 
   it('peşin ödenmiş eksik karşılanmada aynı tutar iade tarafına düşer', async () => {
     const { orderId, itemId } = await confirmOrder(5);
-    await recordOrderPayment({ orderId, accountId: cashAccount, amount: 50 });
+    await recordOrderPayment({ orderId, accountId: cashAccount, amountCents: 5000 });
     await orders.recordPreparation(orderId, [{ orderItemId: itemId, batches: [{ stockId: batchId, qty: 4 }] }]);
 
     const bundle = await buildOrderNotification(orderId, 'order_shortfall');

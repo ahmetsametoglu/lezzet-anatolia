@@ -198,7 +198,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       when: m.valueDate,
       kind: m.type === 'order_refund' ? 'İade' : 'Tahsilat',
       accountName: accounts.find((a) => a.id === m.accountId)?.name ?? '—',
-      amountCents: toCents(m.amount),
+      amountCents: m.amountCents,
       isRefund: m.type === 'order_refund',
     })),
 

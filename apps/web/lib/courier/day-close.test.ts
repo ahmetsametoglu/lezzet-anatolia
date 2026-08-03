@@ -92,7 +92,7 @@ async function atTheDoor(qty: number) {
 /** Teslim + kapıda tahsilat — kapanışın beklenen toplamını besleyen tek yol. */
 async function deliverAndCollect(qty: number, method: 'cash' | 'card' | 'cheque') {
   const { orderId } = await atTheDoor(qty);
-  await confirmDoorDelivery({ orderId, courierId, collection: { method, amount: qty * 10, accountId } });
+  await confirmDoorDelivery({ orderId, courierId, collection: { method, amountCents: qty * 1000, accountId } });
   return orderId;
 }
 

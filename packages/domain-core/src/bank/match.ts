@@ -1,4 +1,3 @@
-import { toCents } from '@lezzet/helper';
 
 /**
  * Banka satırının eşleştirilmesi (12.4) — **öneri üretir, karar VERMEZ.**
@@ -51,13 +50,13 @@ function normalize(s: string): string {
  * ödemesidir, onların eşleştirmesi başka bir sorudur.
  */
 export function suggestOrderMatches(
-  row: { valueDate: string; amount: number; direction: 'in' | 'out'; label: string; reference?: string | null },
+  row: { valueDate: string; amountCents: number; direction: 'in' | 'out'; label: string; reference?: string | null },
   candidates: readonly MatchCandidate[],
 ): MatchSuggestion[] {
   if (row.direction !== 'in') return [];
 
   const haystack = normalize(`${row.label} ${row.reference ?? ''}`);
-  const rowCents = toCents(row.amount);
+  const { amountCents: rowCents } = row; // hareket cent döndürüyor (02.9) — çeviri kalmadı
 
   return candidates
     .map((candidate) => {

@@ -44,7 +44,8 @@ export type MovementCheck =
 export interface MovementInput {
   accountId: string;
   direction: MovementDirection;
-  amount: number;
+  /** **Cent** (02.9 · STACK §8) — işaretsiz; yön `direction`tadır. */
+  amountCents: number;
   type: MovementType;
   counterAccountId?: string | null;
   orderId?: string | null;
@@ -57,7 +58,7 @@ export interface MovementInput {
  * `{data, error}` sözleşmesine çevirir ve kullanıcıya sebebi gösterir.
  */
 export function validateMovement(input: MovementInput): MovementCheck {
-  if (!(input.amount > 0)) return { valid: false, reason: 'amount_not_positive' };
+  if (!(input.amountCents > 0)) return { valid: false, reason: 'amount_not_positive' };
 
   const expected = expectedDirection(input.type);
   if (expected && input.direction !== expected) return { valid: false, reason: 'direction_mismatch' };
@@ -92,11 +93,11 @@ export function validateMovement(input: MovementInput): MovementCheck {
  * burası tek satırın önizlemesi (form "bu hareket kasadan −50 € düşecek" der). İkisi aynı üç satırı
  * anlatır; ayrıştıklarında bu fonksiyonun testi sessiz kalmaz.
  */
-export function signedAmountFor(
-  movement: { accountId: string; counterAccountId?: string | null; direction: MovementDirection; amount: number },
+export function signedAmountCentsFor(
+  movement: { accountId: string; counterAccountId?: string | null; direction: MovementDirection; amountCents: number },
   accountId: string,
 ): number {
-  if (movement.accountId === accountId) return movement.direction === 'in' ? movement.amount : -movement.amount;
-  if (movement.counterAccountId === accountId) return movement.direction === 'in' ? -movement.amount : movement.amount;
+  if (movement.accountId === accountId) return movement.direction === 'in' ? movement.amountCents : -movement.amountCents;
+  if (movement.counterAccountId === accountId) return movement.direction === 'in' ? -movement.amountCents : movement.amountCents;
   return 0; // hareket bu hesaba dokunmuyor
 }

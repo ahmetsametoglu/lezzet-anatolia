@@ -97,7 +97,7 @@ async function paidOrder(opts: { providerRef?: string | null; accountId?: string
   await recordOrderPayment({
     orderId: order.id,
     accountId: opts.accountId ?? providerAccount,
-    amount: 20,
+    amountCents: 2000,
     description: 'Stripe tahsilatı',
     meta: opts.providerRef === null ? null : { providerRef: opts.providerRef ?? `pi_${stamp}_${order.id.slice(0, 8)}` },
   });
@@ -111,7 +111,7 @@ describe('sıra: önce sağlayıcı, sonra hareket', () => {
 
     const result = await cancelOrder(orderId, { refunder });
 
-    expect(result).toMatchObject({ status: 'ok', refundedAmount: 20 });
+    expect(result).toMatchObject({ status: 'ok', refundedAmountCents: 2000 });
     expect(refunder.calls).toHaveLength(1);
     // Tutar CENT gider: sağlayıcı euro bilmez, yuvarlama burada bir kez yapılır.
     expect(refunder.calls[0]).toMatchObject({ paymentIntentId: 'pi_test_ok', amountCents: 2000 });
@@ -128,7 +128,7 @@ describe('sıra: önce sağlayıcı, sonra hareket', () => {
     const result = await cancelOrder(orderId, { refunder: fakeRefunder({ status: 'failed', error: 'card_declined' }) });
 
     // İptal geçerli (mal serbest kaldı), iade yazılmadı ve sebebi SÖYLENİYOR.
-    expect(result).toMatchObject({ status: 'ok', refundedAmount: 0, refundBlocked: 'provider_failed' });
+    expect(result).toMatchObject({ status: 'ok', refundedAmountCents: 0, refundBlocked: 'provider_failed' });
 
     const movements = await money.listByOrder(orderId);
     expect(movements.filter((m) => m.type === 'order_refund')).toHaveLength(0);
@@ -141,7 +141,7 @@ describe('sıra: önce sağlayıcı, sonra hareket', () => {
 
     const result = await cancelOrder(orderId, { refunder: fakeRefunder({ status: 'unavailable' }) });
 
-    expect(result).toMatchObject({ refundedAmount: 0, refundBlocked: 'provider_unavailable' });
+    expect(result).toMatchObject({ refundedAmountCents: 0, refundBlocked: 'provider_unavailable' });
     expect(await money.listByOrder(orderId).then((m) => m.filter((x) => x.type === 'order_refund'))).toHaveLength(0);
   });
 
@@ -151,7 +151,7 @@ describe('sıra: önce sağlayıcı, sonra hareket', () => {
 
     const result = await cancelOrder(orderId, { refunder });
 
-    expect(result).toMatchObject({ refundedAmount: 0, refundBlocked: 'provider_ref_missing' });
+    expect(result).toMatchObject({ refundedAmountCents: 0, refundBlocked: 'provider_ref_missing' });
     expect(refunder.calls).toHaveLength(0);
   });
 });
@@ -163,7 +163,7 @@ describe('sağlayıcı çağrısı hesabın TÜRÜNE bağlı', () => {
 
     const result = await cancelOrder(orderId, { refundAccountId: cashAccount, refunder });
 
-    expect(result).toMatchObject({ status: 'ok', refundedAmount: 20 });
+    expect(result).toMatchObject({ status: 'ok', refundedAmountCents: 2000 });
     expect(refunder.calls).toHaveLength(0);
   });
 
@@ -173,7 +173,7 @@ describe('sağlayıcı çağrısı hesabın TÜRÜNE bağlı', () => {
 
     const result = await cancelOrder(orderId, { refunder });
 
-    expect(result).toMatchObject({ status: 'ok', refundedAmount: 20 });
+    expect(result).toMatchObject({ status: 'ok', refundedAmountCents: 2000 });
     expect(refunder.calls).toHaveLength(0);
   });
 });
@@ -215,7 +215,7 @@ describe('charge.refunded mutabakatı', () => {
 
   it('kısmi iadede yalnız FARK yazılır', async () => {
     const orderId = await paidOrder({ providerRef: `pi_part_${stamp}` });
-    await cancelOrder(orderId, { refundAmount: 5, refunder: fakeRefunder({ status: 'ok', refundId: 're_part' }) });
+    await cancelOrder(orderId, { refundAmountCents: 500, refunder: fakeRefunder({ status: 'ok', refundId: 're_part' }) });
 
     // Sağlayıcıda toplam 12 € iade görünüyor: 5 € bizim, 7 € panelden eklenmiş.
     await handleStripeEvent(refundEvent(`pi_part_${stamp}`, 1200, 'part'), providerAccount);
@@ -237,7 +237,7 @@ describe('yeniden deneme', () => {
 
     const retried = await retryRefund(orderId, { refunder: fakeRefunder({ status: 'ok', refundId: 're_retry' }) });
 
-    expect(retried).toMatchObject({ status: 'ok', refundedAmount: 20 });
+    expect(retried).toMatchObject({ status: 'ok', refundedAmountCents: 2000 });
     expect((await orders.getById(orderId))?.amountRefundedCents).toBe(2000);
   });
 
@@ -263,7 +263,7 @@ describe('yeniden deneme', () => {
     const retried = await retryRefund(orderId, { refunder: again });
 
     // Borç türetimden geliyor ve kapandı: sağlayıcıya hiç gidilmez.
-    expect(retried).toMatchObject({ status: 'ok', refundedAmount: 0 });
+    expect(retried).toMatchObject({ status: 'ok', refundedAmountCents: 0 });
     expect(again.calls).toHaveLength(0);
     expect((await orders.getById(orderId))?.amountRefundedCents).toBe(2000);
   });

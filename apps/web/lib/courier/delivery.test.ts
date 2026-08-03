@@ -115,7 +115,7 @@ describe('teslim onayı (11.2)', () => {
     const { orderId } = await atTheDoor({ channel: 'b2b' });
     // Ekranın göndereceği şekiller — kanıt görsel anahtarı taşır, tahsilat üç yöntemle sınırlıdır.
     const proof: DeliveryProofInput = { kind: 'signature', imageKey: 'proofs/abc.png', receivedBy: 'Şef Murat' };
-    const collection: DoorCollectionInput = { method: 'cash', amount: 40, accountId };
+    const collection: DoorCollectionInput = { method: 'cash', amountCents: 4000, accountId };
 
     const outcome = await confirmDoorDelivery({ orderId, courierId, proof, collection });
 
@@ -148,10 +148,10 @@ describe('eksik/reddedilen kalem (11.2)', () => {
     const outcome = await confirmDoorDelivery({
       orderId, courierId,
       adjustments: [{ orderItemId: itemId, fulfilledQty: 3 }],
-      collection: { method: 'cash', amount: 30, accountId },
+      collection: { method: 'cash', amountCents: 3000, accountId },
     });
 
-    expect(outcome).toMatchObject({ status: 'ok', collected: 30, amountDue: 0, paymentStatus: 'paid' });
+    expect(outcome).toMatchObject({ status: 'ok', collectedCents: 3000, amountDueCents: 0, paymentStatus: 'paid' });
     // Reddedilen adet HİÇ çıkmadı: fiiliden yalnız 3 düştü, 1 adet depoda kaldı.
     expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(27);
   });
@@ -162,7 +162,7 @@ describe('eksik/reddedilen kalem (11.2)', () => {
     await confirmDoorDelivery({
       orderId, courierId,
       adjustments: [{ orderItemId: itemId, fulfilledQty: 2 }],
-      collection: { method: 'cash', amount: 20, accountId },
+      collection: { method: 'cash', amountCents: 2000, accountId },
     });
 
     // Kalem–parti kaydı 2'ye inmiş olmalı: teslimde bundan düşülür (0026 "tam bir kez say").
@@ -178,10 +178,10 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
 
     const outcome = await confirmDoorDelivery({
       orderId, courierId,
-      collection: { method: 'cash', amount: 2_000, accountId },
+      collection: { method: 'cash', amountCents: 200_000, accountId },
     });
 
-    expect(outcome).toMatchObject({ status: 'ok', cashLimitExceeded: true, collected: 2_000, paymentStatus: 'paid' });
+    expect(outcome).toMatchObject({ status: 'ok', cashLimitExceeded: true, collectedCents: 200_000, paymentStatus: 'paid' });
     expect((await orders.getById(orderId))?.status).toBe('delivered'); // engellenmedi
   });
 
@@ -190,7 +190,7 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
 
     const outcome = await confirmDoorDelivery({
       orderId, courierId,
-      collection: { method: 'card', amount: 2_000, accountId },
+      collection: { method: 'card', amountCents: 200_000, accountId },
     });
 
     expect(outcome).toMatchObject({ status: 'ok', cashLimitExceeded: false });
@@ -206,7 +206,7 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
     try {
       const outcome = await confirmDoorDelivery({
         orderId, courierId,
-        collection: { method: 'cash', amount: 40, accountId },
+        collection: { method: 'cash', amountCents: 4000, accountId },
       });
       expect(outcome).toMatchObject({ cashLimitExceeded: true });
     } finally {
@@ -219,6 +219,6 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
 
     const outcome = await confirmDoorDelivery({ orderId, courierId });
 
-    expect(outcome).toMatchObject({ status: 'ok', collected: 0, amountDue: 40, paymentStatus: 'pending' });
+    expect(outcome).toMatchObject({ status: 'ok', collectedCents: 0, amountDueCents: 4000, paymentStatus: 'pending' });
   });
 });

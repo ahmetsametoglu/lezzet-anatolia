@@ -142,8 +142,7 @@ describe('gün listesi (11.1)', () => {
 
   it('önceden ödenmiş durakta borç NULL — kapıda para konuşulmaz', async () => {
     const { orderId } = await dispatched({ totalCents: 2000 });
-    // `recordOrderPayment` hâlâ euro alıyor (para hareketi ailesi göçmedi — 02.9 dilim 5).
-    await recordOrderPayment({ orderId, accountId, amount: 20, description: 'Online ödeme' });
+    await recordOrderPayment({ orderId, accountId, amountCents: 2000, description: 'Online ödeme' });
 
     expect(mine(await listCourierDay({ courierId }), orderId).payment.dueAmountCents).toBeNull();
   });

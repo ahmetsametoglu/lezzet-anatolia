@@ -3,6 +3,7 @@ import {
   companyProfit, orderContribution, variantProfit,
   type CompanyProfit, type OrderContribution, type SoldLine, type VariantProfit,
 } from '@lezzet/domain-core';
+import { fromCents } from '@lezzet/helper';
 import type { OrderItem, OrderSale } from '@lezzet/types';
 
 /**
@@ -83,10 +84,12 @@ export async function companyPnl(period: ProfitPeriod): Promise<CompanyProfit> {
     new MoneyMovementService(db).periodTotals(period.from, period.to),
   ]);
 
-  const overhead = totals
+  // Toplama CENT'te ve tamsayıda; euro'ya yalnız motorun girdisi için inilir (02.9). Eskiden
+  // `Math.round(overhead * 100) / 100` ile kayan-nokta artığı süpürülüyordu — artık artık yok.
+  const overheadCents = totals
     .filter((t) => t.type === 'expense')
-    .reduce((sum, t) => sum + (t.direction === 'out' ? t.total : -t.total), 0);
+    .reduce((sum, t) => sum + (t.direction === 'out' ? t.totalCents : -t.totalCents), 0);
   const lossCost = products.reduce((sum, u) => sum + u.lossCost, 0);
 
-  return companyProfit(period, contributions, { lossCost, overhead: Math.round(overhead * 100) / 100 });
+  return companyProfit(period, contributions, { lossCost, overhead: fromCents(overheadCents) });
 }

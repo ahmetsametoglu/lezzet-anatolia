@@ -100,11 +100,11 @@ async function sendOut(qty: number, extra: { shippingFeeCents?: number; lineDisc
 describe('kısmi karşılama (07.8)', () => {
   it('peşin ödenmiş siparişte eksik kalemin farkı OTOMATİK iade edilir', async () => {
     const { orderId, itemId } = await sendOut(3);
-    await recordOrderPayment({ orderId, accountId: cashAccount, amount: 30 });
+    await recordOrderPayment({ orderId, accountId: cashAccount, amountCents: 3000 });
 
     const outcome = await adjustFulfillment(orderId, [{ orderItemId: itemId, fulfilledQty: 2 }]);
 
-    expect(outcome).toMatchObject({ status: 'ok', refundedAmount: 10, paymentStatus: 'paid' });
+    expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 1000, paymentStatus: 'paid' });
     const order = await orders.getById(orderId);
     expect(order).toMatchObject({ amountCollectedCents: 3000, amountRefundedCents: 1000, paymentStatus: 'paid' });
   });
@@ -112,12 +112,12 @@ describe('kısmi karşılama (07.8)', () => {
   it('kuponlu + kargolu siparişte iade tutarı KALEMİN payından hesaplanır', async () => {
     // 3 × 10 € = 30, kupon payı 6 €, kargo 5 € → tahsilat 29 €.
     const { orderId, itemId } = await sendOut(3, { shippingFeeCents: 500, lineDiscountAmountCents: 600 });
-    await recordOrderPayment({ orderId, accountId: cashAccount, amount: 29 });
+    await recordOrderPayment({ orderId, accountId: cashAccount, amountCents: 2900 });
 
     const outcome = await adjustFulfillment(orderId, [{ orderItemId: itemId, fulfilledQty: 2 }]);
 
     // Karşılanan: 2 × 10 − (6 × 2/3) + 5 kargo = 21 → iade 8. Kupon payı bölünmeseydi 10 çıkardı.
-    expect(outcome).toMatchObject({ status: 'ok', refundedAmount: 8, paymentStatus: 'paid' });
+    expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 800, paymentStatus: 'paid' });
   });
 
   it('kapıda ödenecek siparişte iade YAZILMAZ, tahsil edilecek tutar düşer', async () => {
@@ -125,7 +125,7 @@ describe('kısmi karşılama (07.8)', () => {
 
     const outcome = await adjustFulfillment(orderId, [{ orderItemId: itemId, fulfilledQty: 1 }]);
 
-    expect(outcome).toMatchObject({ status: 'ok', refundedAmount: 0, paymentStatus: 'pending', amountToCollect: 15 });
+    expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 0, paymentStatus: 'pending', amountToCollectCents: 1500 });
     expect((await orders.getById(orderId))?.amountRefundedCents).toBe(0);
   });
 
@@ -153,7 +153,7 @@ describe('kısmi karşılama (07.8)', () => {
 describe('teslim sonrası iade — malın nereye gittiği maliyeti belirler (DOMAIN §8)', () => {
   it('restock: mal depoya geri girer, maliyeti siparişten çıkar', async () => {
     const { orderId, itemId } = await sendOut(3);
-    await recordOrderPayment({ orderId, accountId: cashAccount, amount: 30 });
+    await recordOrderPayment({ orderId, accountId: cashAccount, amountCents: 3000 });
     await deliverOrder(orderId);
     expect((await stocks.getById(batchId))?.physicalQty).toBe(7);
 
@@ -161,37 +161,37 @@ describe('teslim sonrası iade — malın nereye gittiği maliyeti belirler (DOM
       { orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'restock', note: 'Müşteri iade etti' },
     ]);
 
-    expect(outcome).toMatchObject({ status: 'ok', restockedQty: 2, refundedAmount: 20 });
+    expect(outcome).toMatchObject({ status: 'ok', restockedQty: 2, refundedAmountCents: 2000 });
     expect((await stocks.getById(batchId))?.physicalQty).toBe(9); // 7 + 2
     expect(await closeOrder(orderId)).toMatchObject({ ok: true, cogsAmountCents: 400 }); // yalnız kalan 1 adet
   });
 
   it('discard: fiili stok DEĞİŞMEZ (ikinci kez düşemez), maliyet siparişte kalır', async () => {
     const { orderId, itemId } = await sendOut(3);
-    await recordOrderPayment({ orderId, accountId: cashAccount, amount: 30 });
+    await recordOrderPayment({ orderId, accountId: cashAccount, amountCents: 3000 });
     await deliverOrder(orderId);
 
     const outcome = await adjustFulfillment(orderId, [
       { orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'discard', note: 'Soğuk zincir kırıldı' },
     ]);
 
-    expect(outcome).toMatchObject({ status: 'ok', restockedQty: 0, refundedAmount: 20 });
+    expect(outcome).toMatchObject({ status: 'ok', restockedQty: 0, refundedAmountCents: 2000 });
     expect((await stocks.getById(batchId))?.physicalQty).toBe(7); // teslimdeki düşüm, tek sefer
     expect(await closeOrder(orderId)).toMatchObject({ ok: true, cogsAmountCents: 1200 }); // 3 × 4 — kayıp kârda görünür
   });
 
   it('goodwill: mal müşteride kalır — miktar da stok da değişmez, tutarı operatör verir', async () => {
     const { orderId, itemId } = await sendOut(2);
-    await recordOrderPayment({ orderId, accountId: cashAccount, amount: 20 });
+    await recordOrderPayment({ orderId, accountId: cashAccount, amountCents: 2000 });
     await deliverOrder(orderId);
 
     const outcome = await adjustFulfillment(
       orderId,
       [{ orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill' }],
-      { refundAmount: 20 },
+      { refundAmountCents: 2000 },
     );
 
-    expect(outcome).toMatchObject({ status: 'ok', refundedAmount: 20, paymentStatus: 'refunded' });
+    expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 2000, paymentStatus: 'refunded' });
     expect((await stocks.getById(batchId))?.physicalQty).toBe(8); // mal geri gelmedi
     const items = await orders.getWithItems(orderId);
     expect(items?.items[0]).toMatchObject({ fulfilledQty: 2, returnDisposition: 'goodwill' });
@@ -210,11 +210,11 @@ describe('teslim sonrası iade — malın nereye gittiği maliyeti belirler (DOM
 describe('iptal (07.9)', () => {
   it('ödenmiş sipariş iptalinde TAMAMI iade edilir, ayrılmış geri bırakılır', async () => {
     const { orderId } = await prepare(3);
-    await recordOrderPayment({ orderId, accountId: cashAccount, amount: 30 });
+    await recordOrderPayment({ orderId, accountId: cashAccount, amountCents: 3000 });
 
     const outcome = await cancelOrder(orderId);
 
-    expect(outcome).toMatchObject({ status: 'ok', refundedAmount: 30, paymentStatus: 'refunded', releasedQty: 3 });
+    expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 3000, paymentStatus: 'refunded', releasedQty: 3 });
     expect((await orders.getById(orderId))?.status).toBe('cancelled');
     expect(await reservations.listActiveByOrder(orderId)).toHaveLength(0);
     expect((await stocks.getById(batchId))?.physicalQty).toBe(10); // mal hiç çıkmadı
@@ -225,7 +225,7 @@ describe('iptal (07.9)', () => {
 
     const outcome = await cancelOrder(orderId);
 
-    expect(outcome).toMatchObject({ status: 'ok', refundedAmount: 0, paymentStatus: 'pending' });
+    expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 0, paymentStatus: 'pending' });
     expect((await orders.getById(orderId))?.amountRefundedCents).toBe(0);
   });
 

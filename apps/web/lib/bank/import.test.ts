@@ -96,17 +96,17 @@ describe('mükerrer koruması', () => {
     expect(result.duplicates).toBe(0);
     expect(result.failures).toEqual([]);
     // 45.90 − 120 − 20 − 20 = −114.10
-    expect((await accounts.balance(bankAccount)).balance).toBe(-114.1);
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(-11_410);
   });
 
   it('AYNI DOSYA ikinci kez yüklenirse tek satır bile yazılmaz — para iki kez sayılmaz', async () => {
     await importStatement();
-    const balanceAfterFirst = (await accounts.balance(bankAccount)).balance;
+    const balanceAfterFirst = (await accounts.balance(bankAccount)).balanceCents;
 
     const second = await importStatement(STATEMENT, 'releve-tekrar.csv');
     expect(second.inserted).toBe(0);
     expect(second.duplicates).toBe(4);
-    expect((await accounts.balance(bankAccount)).balance).toBe(balanceAfterFirst);
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(balanceAfterFirst);
   });
 
   it('ÇAKIŞAN DÖNEM: eski satırlar atlanır, yalnız yeniler girer', async () => {
@@ -185,7 +185,7 @@ describe('eşleştirme kuyruğu', () => {
     const reference = `LA-26-${(stamp + 1) % 100000}`;
     const order = await unpaidSale(reference, 4590, 3);
     await importStatement([{ Date: frDate(-3), 'Libellé': `VIR SEPA ${reference}`, Montant: '45,90', Solde: '100,00' }], 'onay.csv');
-    const balanceBefore = (await accounts.balance(bankAccount)).balance;
+    const balanceBefore = (await accounts.balance(bankAccount)).balanceCents;
 
     const row = (await matchQueue(bankAccount))[0]!;
     expect(await applyOrderMatch(row.movement.id, order.id)).toEqual({ status: 'ok', movementId: row.movement.id });
@@ -193,7 +193,7 @@ describe('eşleştirme kuyruğu', () => {
     // Sipariş tahsilatı yazıldı ve durumu türedi…
     expect(await orders.getById(order.id)).toMatchObject({ amountCollectedCents: 4590, paymentStatus: 'paid' });
     // …ama hesabın bakiyesi DEĞİŞMEDİ: import satırı yerini tahsilata bıraktı, para iki kez sayılmadı.
-    expect((await accounts.balance(bankAccount)).balance).toBe(balanceBefore);
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(balanceBefore);
     expect(await matchQueue(bankAccount)).toEqual([]);
   });
 
@@ -205,13 +205,13 @@ describe('eşleştirme kuyruğu', () => {
 
     const row = (await matchQueue(bankAccount))[0]!;
     await applyOrderMatch(row.movement.id, order.id);
-    const balanceAfterMatch = (await accounts.balance(bankAccount)).balance;
+    const balanceAfterMatch = (await accounts.balance(bankAccount)).balanceCents;
 
     // Aynı dosya bir daha yüklenir: satırın parmak izi hâlâ yerinde olduğu için hiçbir şey girmez.
     const again = await importStatement(rows, 'yeniden-2.csv');
     expect(again.inserted).toBe(0);
     expect(again.duplicates).toBe(1);
-    expect((await accounts.balance(bankAccount)).balance).toBe(balanceAfterMatch);
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(balanceAfterMatch);
     expect(await orders.getById(order.id)).toMatchObject({ amountCollectedCents: 4590 });
   });
 
@@ -237,10 +237,10 @@ describe('eşleştirme kuyruğu', () => {
   it('"bağlanmıyor" denen satır da kuyruktan düşer ama parası kasada kalır', async () => {
     await importStatement([{ Date: frDate(-1), 'Libellé': 'FRAIS BANCAIRES', Montant: '-3,50', Solde: '0,00' }], 'masraf.csv');
     const row = (await matchQueue(bankAccount))[0]!;
-    const balance = (await accounts.balance(bankAccount)).balance;
+    const balance = (await accounts.balance(bankAccount)).balanceCents;
 
     expect(await dismissRow(row.movement.id)).toMatchObject({ status: 'ok' });
     expect(await matchQueue(bankAccount)).toEqual([]);
-    expect((await accounts.balance(bankAccount)).balance).toBe(balance);
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(balance);
   });
 });

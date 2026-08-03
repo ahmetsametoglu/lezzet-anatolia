@@ -55,7 +55,7 @@ interface NotificationBundle {
 export async function buildOrderNotification(
   orderId: string,
   event: NotifyEventName,
-  opts: { refundedAmount?: number | null } = {},
+  opts: { refundedAmountCents?: number | null } = {},
 ): Promise<NotificationBundle | null> {
   const db = serviceDb();
   const found = await new OrderService(db).getWithItems(orderId);
@@ -101,7 +101,7 @@ export async function buildOrderNotification(
     // Para çözümü istisna bildirimlerinin ilk kartıdır. İki sayı da TÜRETİLİR: iade borcu motordan
     // (`refundDueCents`), iptalde ise net tahsilatın tamamı — karşılanan 0 sayıldığı için aynı
     // hesap kendiliğinden tamamını verir (ORDER_LIFECYCLE).
-    refund: buildRefund(order, refundAmountCents(items, event, opts.refundedAmount, derivation.refundDueCents), event, locale),
+    refund: buildRefund(order, refundAmountCents(items, event, opts.refundedAmountCents, derivation.refundDueCents), event, locale),
     paidOnline: order.amountCollectedCents > 0,
     paymentNote: paymentNote(order, derivation.amountToCollectCents, locale),
     delivery: buildDelivery(order, locale),
@@ -285,13 +285,13 @@ function buildRefund(order: Order, amountCents: number, event: NotifyEventName, 
 function refundAmountCents(
   items: readonly OrderItem[],
   event: NotifyEventName,
-  refundedAmount: number | null | undefined,
+  refundedAmountCents: number | null | undefined,
   refundDueCents: number,
 ): number {
   if (event === 'order_shortfall') {
     return items.reduce((sum, item) => sum + item.unitPriceCents * Math.max(0, item.qty - item.fulfilledQty), 0);
   }
-  return refundedAmount != null ? Math.round(refundedAmount * 100) : refundDueCents;
+  return refundedAmountCents ?? refundDueCents; // iki taraf da cent (02.9) — çevrim kalmadı
 }
 
 /** Ödeme hapı: peşin ödenmişse "ödendi", kalan varsa tahsil edilecek tutar (türetimden). */

@@ -32,7 +32,8 @@ export interface DeliveryProofInput {
 /** Kapıda tahsilat. Yöntem üçle sınırlıdır: online ve havale kuryenin eline hiç girmez. */
 export interface DoorCollectionInput {
   method: 'cash' | 'card' | 'cheque';
-  amount: number;
+  /** **Cent** (02.9 · STACK §8). */
+  amountCents: number;
   /** Paranın gireceği hesap (kurye kasası / kapı tahsilatı). */
   accountId: string;
 }
@@ -40,10 +41,10 @@ export interface DoorCollectionInput {
 type DoorDeliveryOutcome =
   | {
       status: 'ok';
-      /** Fiilen yazılan tahsilat (€); tahsilat yoksa 0. */
-      collected: number;
-      /** Teslim sonrası kalan borç (€) — kapıda ödenmediyse ya da eksik ödendiyse pozitif. */
-      amountDue: number;
+      /** Fiilen yazılan tahsilat (**cent**); tahsilat yoksa 0. */
+      collectedCents: number;
+      /** Teslim sonrası kalan borç (**cent**) — kapıda ödenmediyse ya da eksik ödendiyse pozitif. */
+      amountDueCents: number;
       paymentStatus: PaymentStatus;
       /**
        * Nakit yasal sınırı aşıldı mı (FR ~1.000 €). **Engel DEĞİL, bilgi:** tahsilat tamamlanır,
@@ -100,15 +101,15 @@ export async function confirmDoorDelivery(input: {
 
   // ── Para ───────────────────────────────────────────────────────────────────
   const cashLimitExceeded =
-    input.collection?.method === 'cash' && input.collection.amount * 100 > (await cashLegalLimitCents(db));
+    input.collection?.method === 'cash' && input.collection.amountCents > (await cashLegalLimitCents(db));
 
   if (!input.collection) {
     const synced = await syncOrderPaymentStatus(input.orderId);
     if (synced.status !== 'ok') return { status: 'not_found' };
     return {
       status: 'ok',
-      collected: 0,
-      amountDue: synced.derivation.amountToCollectCents / 100,
+      collectedCents: 0,
+      amountDueCents: synced.derivation.amountToCollectCents,
       paymentStatus: synced.paymentStatus,
       cashLimitExceeded: false,
       adjustedLines: adjustments.length,
@@ -121,15 +122,15 @@ export async function confirmDoorDelivery(input: {
   const paid = await recordOrderPayment({
     orderId: input.orderId,
     accountId: input.collection.accountId,
-    amount: input.collection.amount,
+    amountCents: input.collection.amountCents,
     description: 'Kapıda tahsilat',
   });
   if (paid.status !== 'ok') return { status: 'not_found' };
 
   return {
     status: 'ok',
-    collected: input.collection.amount,
-    amountDue: paid.derivation.amountToCollectCents / 100,
+    collectedCents: input.collection.amountCents,
+    amountDueCents: paid.derivation.amountToCollectCents,
     paymentStatus: paid.paymentStatus,
     cashLimitExceeded,
     adjustedLines: adjustments.length,

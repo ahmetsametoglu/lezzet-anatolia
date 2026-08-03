@@ -304,9 +304,11 @@ doğar. Bu yüzden RPC'ye giden gövde `rpcMoneyToEuro`, dönen gövde `rpcMoney
 "gönderme" (kolon varsayılanını alır), ikincisi "boşalt" — ikisini birleştirmek `not null default`
 kolonları kırar (`shipping_fee`de kırdı).
 
-> **AÇIK — göç sürüyor (`02.9`).** Beyan bugün **fiyat · indirim · stok · tedarik · sipariş**
-> ailelerinde; **para hareketi** ve **profil** hâlâ euro döndürüyor, dönüşüm çağrı yerlerinde elle
-> yapılıyor. O iki aile kapanana kadar savunma, yukarıdaki iki maddedir (ortak helper + `…Cents` adı).
+**GÖÇ BİTTİ (`02.9`, 03.08).** Altı ailenin altısı da beyanlı: fiyat · indirim · stok · tedarik ·
+sipariş · para hareketi (profil zaten cent'teydi). Uygulamada euro yalnız İKİ yerde görünür ve ikisi
+de bilinçlidir: **DB kolonları** (`numeric`, sınırda çevrilir) ve **muhasebeciye giden export satırı**
+(bir belge, uygulama içi model değil). Sıra **branded tip**tedir (`type Cents = number & {…}`):
+bugün güvence `docs:check`'te, o gün derleyiciye geçer.
 
 ## 9. UI: Tailwind + primitif/adaptör
 

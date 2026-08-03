@@ -46,7 +46,7 @@ export async function notifyOrderStatus(orderId: string, status: OrderStatus): P
  * İSTİSNA bildirimleri (14.5) — iptal, eksik karşılanma, iade. Durum geçişine değil, PARA
  * ÇÖZÜMÜNE bağlıdırlar: iptal `cancel_order`'dan, diğer ikisi kalem düzeltmesinden doğar.
  *
- * `refundedAmount` kapının fiilen yazdığı iade tutarıdır — türetilen borç o anda sıfırlanmış olur.
+ * `refundedAmountCents` kapının fiilen yazdığı iade tutarıdır — türetilen borç o anda sıfırlanmış olur.
  *
  * Bunlarda "tek haber" kuralı UYGULANMAZ: her düzeltme ayrı bir olaydır. İki kez eksik çıkarsa
  * müşteri iki kez haber almalıdır; birleştirme kararı gönderim anının değil, tasarımın işidir
@@ -55,7 +55,7 @@ export async function notifyOrderStatus(orderId: string, status: OrderStatus): P
 export function notifyOrderException(
   orderId: string,
   event: 'order_cancelled' | 'order_shortfall' | 'order_refunded',
-  opts: { refundedAmount?: number | null } = {},
+  opts: { refundedAmountCents?: number | null } = {},
 ): Promise<NotifyResult[]> {
   return notifyOrderEvent(orderId, event, opts);
 }
@@ -64,7 +64,7 @@ export function notifyOrderException(
  * Olayı doğrudan gönderir (yeniden gönderme, elle tetikleme). Bildirim kurulamıyorsa sessiz atlar:
  * mail yokluğu siparişi bozmaz — sipariş kaydedilmişken haber yüzünden geri almak yanlış olurdu.
  */
-async function notifyOrderEvent(orderId: string, event: NotifyEventName, opts: { refundedAmount?: number | null } = {}): Promise<NotifyResult[]> {
+async function notifyOrderEvent(orderId: string, event: NotifyEventName, opts: { refundedAmountCents?: number | null } = {}): Promise<NotifyResult[]> {
   const bundle = await buildOrderNotification(orderId, event, opts);
   if (!bundle) return [{ status: 'skipped', channel: 'email', reason: 'order_not_found' }];
 

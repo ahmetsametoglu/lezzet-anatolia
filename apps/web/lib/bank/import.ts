@@ -5,6 +5,7 @@ import {
   fingerprintRows, heuristicColumnMapper, parseBankRows,
   type ColumnSample, type MappingSuggestion, type RowParseFailure,
 } from '@lezzet/domain-core';
+import { toCents } from '@lezzet/helper';
 import type { BankImport, BankImportProfile, MoneyMovementInsert, RawBankRow } from '@lezzet/types';
 
 /**
@@ -77,7 +78,8 @@ export async function importBankRows(input: {
   const movements: MoneyMovementInsert[] = fingerprinted.map((row) => ({
     accountId: input.accountId,
     direction: row.direction,
-    amount: row.amount,
+    // Ekstre satırı euro okur (banka dosyası öyle gelir); hareket cent yazar (02.9 · STACK §8).
+    amountCents: toCents(row.amount),
     // Tip HENÜZ BİLİNMİYOR: banka "para girdi" der, sebebini söylemez. `misc` sınıflandırılmamış
     // demektir; eşleştirme onaylandığında gerçek tipine döner. Baştan `order_payment` deseydik
     // siparişi olmayan bir tahsilat uydurmuş olurduk.

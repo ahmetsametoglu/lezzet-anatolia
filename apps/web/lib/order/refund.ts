@@ -21,11 +21,11 @@ import { stripeRefunder, type ProviderRefunder } from './provider-refund';
  */
 
 interface RefundOutcome {
-  /** Fiilen yazılan iade tutarı (€). 0 = iade borcu yoktu **ya da** yazılamadı (`refundBlocked`). */
-  refundedAmount: number;
+  /** Fiilen yazılan iade tutarı (**cent**). 0 = iade borcu yoktu **ya da** yazılamadı (`refundBlocked`). */
+  refundedAmountCents: number;
   paymentStatus: PaymentStatus;
-  /** Kapıda/vadeli tahsil edilmeyi bekleyen kalan (€) — kısmi karşılamada düşmüş hâli. */
-  amountToCollect: number;
+  /** Kapıda/vadeli tahsil edilmeyi bekleyen kalan (**cent**) — kısmi karşılamada düşmüş hâli. */
+  amountToCollectCents: number;
   /**
    * Borç vardı ama iade YAZILAMADI — sebebiyle. Yokluğu "iade tamam" demektir.
    *
@@ -63,7 +63,7 @@ interface RefundOptions {
    * Tutarı elle vermek. Tek gerçek kullanımı **jest iadesidir** (`goodwill`): mal müşteride kaldığı
    * için karşılanan tutar düşmez, borç türetilemez — tutarı operatör söyler (DOMAIN §8).
    */
-  refundAmount?: number | null;
+  refundAmountCents?: number | null;
   valueDate?: string;
   description?: string | null;
   /**
@@ -97,7 +97,7 @@ export async function adjustFulfillment(
   // Haberin hangisi olduğunu malın nerede olduğu belirler: mal daha çıkmadıysa bu bir EKSİK
   // KARŞILANMA (müşteri kapıda sürprizle karşılaşmasın), çıktıysa bir İADE (para geri döndü).
   const delivered = result.currentStatus === 'delivered' || result.currentStatus === 'completed';
-  await notifyOrderException(orderId, delivered ? 'order_refunded' : 'order_shortfall', { refundedAmount: settled.refundedAmount });
+  await notifyOrderException(orderId, delivered ? 'order_refunded' : 'order_shortfall', { refundedAmountCents: settled.refundedAmountCents });
 
   return {
     status: 'ok',
@@ -131,7 +131,7 @@ export async function cancelOrder(
   const settled = await settleRefund(orderId, { description: 'Sipariş iptali — iade', ...opts });
   if (!settled) return { status: 'not_found' };
 
-  await notifyOrderException(orderId, 'order_cancelled', { refundedAmount: settled.refundedAmount });
+  await notifyOrderException(orderId, 'order_cancelled', { refundedAmountCents: settled.refundedAmountCents });
 
   return { status: 'ok', releasedQty: result.releasedQty ?? 0, ...settled };
 }
@@ -174,15 +174,17 @@ async function settleRefund(orderId: string, opts: RefundOptions): Promise<Refun
   const before = await syncOrderPaymentStatus(orderId);
   if (before.status !== 'ok') return null;
 
-  const dueAmount = opts.refundAmount ?? before.derivation.refundDueCents / 100;
+  // Motor zaten cent veriyordu; `/ 100` ile euro'ya inip sonra tekrar `* 100` ile çıkmak, aynı
+  // sayının iki kez çevrilmesiydi — birim karışıklığının tipik izi (02.9).
+  const dueCents = opts.refundAmountCents ?? before.derivation.refundDueCents;
   const unsettled = (refundBlocked?: RefundBlockReason): RefundOutcome => ({
-    refundedAmount: 0,
+    refundedAmountCents: 0,
     paymentStatus: before.paymentStatus,
-    amountToCollect: before.derivation.amountToCollectCents / 100,
+    amountToCollectCents: before.derivation.amountToCollectCents,
     ...(refundBlocked ? { refundBlocked } : {}),
   });
 
-  if (dueAmount <= 0) return unsettled();
+  if (dueCents <= 0) return unsettled();
 
   const payment = await lastPayment(orderId);
   const accountId = opts.refundAccountId ?? payment?.accountId ?? null;
@@ -205,8 +207,8 @@ async function settleRefund(orderId: string, opts: RefundOptions): Promise<Refun
     const refunder = opts.refunder ?? stripeRefunder();
     const result = await refunder({
       paymentIntentId: providerRef,
-      amountCents: Math.round(dueAmount * 100),
-      idempotencyKey: await refundIdempotencyKey(orderId, dueAmount),
+      amountCents: dueCents,
+      idempotencyKey: await refundIdempotencyKey(orderId, dueCents),
     });
     if (result.status === 'unavailable') return unsettled('provider_unavailable');
     if (result.status === 'failed') return unsettled('provider_failed');
@@ -217,7 +219,7 @@ async function settleRefund(orderId: string, opts: RefundOptions): Promise<Refun
   const after = await recordOrderRefund({
     orderId,
     accountId,
-    amount: dueAmount,
+    amountCents: dueCents,
     valueDate: opts.valueDate,
     description: opts.description ?? 'Sipariş iadesi',
     meta: refundMeta,
@@ -231,9 +233,9 @@ async function settleRefund(orderId: string, opts: RefundOptions): Promise<Refun
   }
 
   return {
-    refundedAmount: dueAmount,
+    refundedAmountCents: dueCents,
     paymentStatus: after.paymentStatus,
-    amountToCollect: after.derivation.amountToCollectCents / 100,
+    amountToCollectCents: after.derivation.amountToCollectCents,
   };
 }
 

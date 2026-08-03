@@ -48,7 +48,7 @@ import {
   type Page,
   type TransitionResult,
 } from '@lezzet/types';
-import { fromCents } from '@lezzet/helper';
+import { fromCents, toCents } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
 import { ilikeContains, ilikeTerm } from '../utils/filter-term';
 import { appToDb, dbToApp } from '../utils/case-transformers';
@@ -484,7 +484,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    * olmadan hiç uygulanmaz (RPC'nin başındaki not). Ayrıca bu okuma iptal edilen siparişi ciroya
    * katmaz — vazgeçilen sipariş müşterinin kazandırdığı para değildir.
    */
-  async customerTotals(customerId: string): Promise<{ orderCount: number; revenue: number }> {
+  async customerTotals(customerId: string): Promise<{ orderCount: number; revenueCents: number }> {
     const rows = await this.executeRpc<Array<{ order_count: number; revenue: number }>>('customer_order_totals', {
       p_customer_id: customerId,
     });
@@ -492,7 +492,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       orderCount: number;
       revenue: number;
     };
-    return { orderCount: Number(row.orderCount), revenue: Number(row.revenue) };
+    // RPC euro toplar (kolonlarla aynı taban); dönüş cent — çevrim bu sınırda (02.9 · STACK §8).
+    return { orderCount: Number(row.orderCount), revenueCents: toCents(Number(row.revenue)) };
   }
 
   /**

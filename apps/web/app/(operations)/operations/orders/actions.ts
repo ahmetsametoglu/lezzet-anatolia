@@ -107,8 +107,8 @@ export async function adjustFulfillmentAction(
    * motor borcu türetemez ve tutarı operatör söyler (DOMAIN §8). Diğer her durumda `null` — tutarı
    * ekranın söylemesi, türetimi ekrandan ezmek olurdu.
    */
-  opts: { refundAccountId?: string | null; refundAmount?: number | null } = {},
-): Promise<ActionResult<{ refundedAmount: number; amountToCollect: number; refundNotice: string | null; refundBlocked: RefundBlockReason | null }>> {
+  opts: { refundAccountId?: string | null; refundAmountCents?: number | null } = {},
+): Promise<ActionResult<{ refundedAmountCents: number; amountToCollectCents: number; refundNotice: string | null; refundBlocked: RefundBlockReason | null }>> {
   try {
     const actor = await requireAdmin();
     const result = await adjustFulfillment(orderId, lines, { actorId: actor.id, ...opts });
@@ -124,8 +124,8 @@ export async function adjustFulfillmentAction(
     revalidatePath(ORDERS_PATH);
     return {
       data: {
-        refundedAmount: result.refundedAmount,
-        amountToCollect: result.amountToCollect,
+        refundedAmountCents: result.refundedAmountCents,
+        amountToCollectCents: result.amountToCollectCents,
         refundNotice: refundNotice(result.refundBlocked),
         refundBlocked: result.refundBlocked ?? null,
       },
@@ -140,7 +140,7 @@ export async function adjustFulfillmentAction(
 export async function cancelOrderAction(
   orderId: string,
   opts: { refundAccountId?: string | null } = {},
-): Promise<ActionResult<{ refundedAmount: number; refundNotice: string | null; refundBlocked: RefundBlockReason | null }>> {
+): Promise<ActionResult<{ refundedAmountCents: number; refundNotice: string | null; refundBlocked: RefundBlockReason | null }>> {
   try {
     const actor = await requireAdmin();
     const result = await cancelOrder(orderId, { actorId: actor.id, ...opts });
@@ -163,7 +163,7 @@ export async function cancelOrderAction(
     revalidatePath(ORDERS_PATH);
     return {
       data: {
-        refundedAmount: result.refundedAmount,
+        refundedAmountCents: result.refundedAmountCents,
         refundNotice: refundNotice(result.refundBlocked),
         refundBlocked: result.refundBlocked ?? null,
       },
@@ -183,7 +183,7 @@ export async function cancelOrderAction(
 export async function retryRefundAction(
   orderId: string,
   opts: { refundAccountId?: string | null } = {},
-): Promise<ActionResult<{ refundedAmount: number; refundNotice: string | null; refundBlocked: RefundBlockReason | null }>> {
+): Promise<ActionResult<{ refundedAmountCents: number; refundNotice: string | null; refundBlocked: RefundBlockReason | null }>> {
   try {
     await requireAdmin();
     const result = await retryRefund(orderId, opts);
@@ -193,7 +193,7 @@ export async function retryRefundAction(
     revalidatePath(ORDERS_PATH);
     return {
       data: {
-        refundedAmount: result.refundedAmount,
+        refundedAmountCents: result.refundedAmountCents,
         refundNotice: refundNotice(result.refundBlocked),
         refundBlocked: result.refundBlocked ?? null,
       },

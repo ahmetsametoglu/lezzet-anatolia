@@ -27,7 +27,7 @@ Tüm para hareketleri **tek tablo**; kasa/banka ayrımı yok — hareketin **hes
 | id | uuid | |
 | account_id | uuid | hangi hesap |
 | direction | enum(`in`,`out`) | giriş / çıkış |
-| amount | number | |
+| amount | numeric (€) | İŞARETSİZ — yön `direction`tadır. Uygulamadaki adı `amountCents`, birimi **cent** (`STACK §8`); `account_movement` görünümü işaretli hâlini `signed_amount` olarak türetir (app: `signedAmountCents`) |
 | type | enum(`order_payment`,`order_refund`,`purchase`,`expense`,`transfer`,`capital`,`misc`) | hareketin sebebi |
 | category | string \| null | gider/gelir alt kategorisi (kira, akaryakıt, maaş, `advertising`…) |
 | meta | jsonb \| null | ek etiket — reklam giderinde `{campaign}`: kampanya gider↔ciro (gerçek ROI) raporu |

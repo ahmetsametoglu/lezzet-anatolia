@@ -24,8 +24,10 @@ import {
   type OrderAmounts,
   type Page,
 } from '@lezzet/types';
+import { fromCents, toCents } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
+import { rpcMoneyToCents } from '../utils/rpc-money';
 
 /**
  * Hesap servisi (12.1) — DOMAIN §9. Kasa, bankalar ve Stripe: hepsi birer hesap; "online havuz"
@@ -53,7 +55,9 @@ export class AccountService extends BaseDbService<Account, AccountInsert, Accoun
   async balance(accountId: string): Promise<AccountBalance> {
     const { data, error } = await this.supabase.from('account_balance').select('*').eq('account_id', accountId).maybeSingle();
     if (error) throw error;
-    return data ? AccountBalanceSchema.parse(dbToApp(data)) : { accountId, balance: 0, movementCount: 0 };
+    if (!data) return { accountId, balanceCents: 0, movementCount: 0 };
+    // Görünüm `balance`ı euro toplar; app cent konuşur (02.9 · STACK §8).
+    return AccountBalanceSchema.parse(rpcMoneyToCents(dbToApp(data), ['balance']));
   }
 
   /**
@@ -63,7 +67,7 @@ export class AccountService extends BaseDbService<Account, AccountInsert, Accoun
   async balances(): Promise<Map<string, AccountBalance>> {
     const { data, error } = await this.supabase.from('account_balance').select('*');
     if (error) throw error;
-    const rows = (data ?? []).map((row) => AccountBalanceSchema.parse(dbToApp(row)));
+    const rows = (data ?? []).map((row) => AccountBalanceSchema.parse(rpcMoneyToCents(dbToApp(row), ['balance'])));
     return new Map(rows.map((row) => [row.accountId, row]));
   }
 }
@@ -78,6 +82,9 @@ export class AccountService extends BaseDbService<Account, AccountInsert, Accoun
  * `MoneyMovementService` üzerinden yapılır.
  */
 class AccountLedgerService extends BaseDbService<AccountLedgerRow, never, never> {
+  /** Görünüm hareketin `amount`ını ve türetilmiş `signed_amount`ı taşır — ikisi de euro (STACK §8). */
+  protected override readonly moneyFields = ['amountCents', 'signedAmountCents'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'account_movement', AccountLedgerRowSchema, AccountLedgerRowSchema as never, AccountLedgerRowSchema as never, false);
   }
@@ -107,7 +114,7 @@ class AccountLedgerService extends BaseDbService<AccountLedgerRow, never, never>
 export interface PeriodTotal {
   type: MovementType;
   direction: 'in' | 'out';
-  total: number;
+  totalCents: number;
   count: number;
 }
 
@@ -115,8 +122,8 @@ export interface PeriodTotal {
 export interface CampaignSpend {
   /** `meta.campaign` etiketi. **Etiketsiz reklam gideri `null` kovasında toplanır**, atılmaz. */
   campaign: string | null;
-  /** NET gider: çıkışlar artı, geri gelen para (reklam iadesi/kredisi) eksi. */
-  total: number;
+  /** NET gider (**cent**): çıkışlar artı, geri gelen para (reklam iadesi/kredisi) eksi. */
+  totalCents: number;
   count: number;
 }
 
@@ -133,6 +140,9 @@ export interface CampaignSpend {
  * RPC eşiğini o karşılar.
  */
 export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMovementInsert, MoneyMovementUpdate> {
+  /** Kolon `money_movement.amount` (euro numeric); app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ['amountCents'];
+
   private readonly ledgerView: AccountLedgerService;
 
   constructor(supabase: SupabaseClient) {
@@ -182,7 +192,7 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   async recordForOrder(input: {
     orderId: string;
     accountId: string;
-    amount: number;
+    amountCents: number;
     type: 'order_payment' | 'order_refund';
     valueDate?: string;
     description?: string | null;
@@ -193,14 +203,15 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     const raw = await this.executeRpc('record_order_movement', {
       p_order_id: input.orderId,
       p_account_id: input.accountId,
-      p_amount: input.amount,
+      // RPC euro konuşuyor (kolonlarla aynı taban); uygulama cent — çevrim bu sınırda (02.9).
+      p_amount: fromCents(input.amountCents),
       p_type: input.type,
       p_value_date: input.valueDate ?? new Date().toISOString().slice(0, 10),
       p_description: input.description ?? null,
       p_source: input.source ?? 'manual',
       p_meta: input.meta ?? null,
     });
-    return OrderAmountsSchema.parse(dbToApp(raw));
+    return OrderAmountsSchema.parse(rpcMoneyToCents(dbToApp(raw), ['amountCollected', 'amountRefunded']));
   }
 
   /**
@@ -218,7 +229,10 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
       .order('created_at', { ascending: false })
       .limit(1);
     if (error) throw error;
-    return data?.[0] ? this.dbSchema.parse(dbToApp(data[0])) : null;
+    // `parseRows` ile: `dbSchema.parse(dbToApp(...))` para eşlemesini ATLIYORDU (02.9) ve satır
+    // euro `amount` taşırken şema `amountCents` istediği için doğrulama patlıyordu. Webhook o hatayı
+    // yutup `status: 'error'` dönüyordu — panelden yapılan iade deftere hiç düşmüyordu.
+    return data?.[0] ? (this.parseRows([data[0]])[0] ?? null) : null;
   }
 
   /**
@@ -228,7 +242,7 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
    */
   async resyncOrder(orderId: string): Promise<OrderAmounts> {
     const raw = await this.executeRpc('resync_order_amounts', { p_order_id: orderId });
-    return OrderAmountsSchema.parse(dbToApp(raw));
+    return OrderAmountsSchema.parse(rpcMoneyToCents(dbToApp(raw), ['amountCollected', 'amountRefunded']));
   }
 
   /** Tedarikçiye yapılan ödemeler — borç türetimi (Σ giriş − Σ ödeme, 12.3). */
@@ -251,8 +265,10 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     const buckets = new Map<string, PeriodTotal>();
     for (const row of (data ?? []) as Array<{ type: MovementType; direction: 'in' | 'out'; amount: string | number }>) {
       const key = `${row.type}:${row.direction}`;
-      const current = buckets.get(key) ?? { type: row.type, direction: row.direction, total: 0, count: 0 };
-      current.total = Math.round((current.total + Number(row.amount)) * 100) / 100;
+      const current = buckets.get(key) ?? { type: row.type, direction: row.direction, totalCents: 0, count: 0 };
+      // Toplama CENT'te ve tamsayıda: `Math.round((toplam + x) * 100) / 100` her satırda kayan
+      // nokta artığını süpüren bir yamaydı; tamsayıda süpürülecek artık yok (02.9).
+      current.totalCents += toCents(Number(row.amount));
       current.count += 1;
       buckets.set(key, current);
     }
@@ -284,14 +300,14 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
       const tag = row.meta?.['campaign'];
       const campaign = typeof tag === 'string' && tag.trim() ? tag.trim() : null;
       // Geri gelen para gideri AZALTIR — iptal edilen reklamın parası gider olarak kalmamalı.
-      const net = row.direction === 'out' ? Number(row.amount) : -Number(row.amount);
+      const netCents = toCents(Number(row.amount)) * (row.direction === 'out' ? 1 : -1);
 
-      const current = buckets.get(campaign) ?? { campaign, total: 0, count: 0 };
-      current.total = Math.round((current.total + net) * 100) / 100;
+      const current = buckets.get(campaign) ?? { campaign, totalCents: 0, count: 0 };
+      current.totalCents += netCents;
       current.count += 1;
       buckets.set(campaign, current);
     }
-    return [...buckets.values()].sort((a, b) => b.total - a.total);
+    return [...buckets.values()].sort((a, b) => b.totalCents - a.totalCents);
   }
 
   /** Banka ekstresiyle eşleşti işareti (12.4) — eşleşme kuyruğu bunu boşaltır. */

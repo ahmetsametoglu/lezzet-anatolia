@@ -1,6 +1,5 @@
 import { OrderService, SettingsService, serviceDb } from '@lezzet/database';
 import { canTransition, generateReferenceNo, producesReferenceNo, stockEffectOf } from '@lezzet/domain-core';
-import { fromCents } from '@lezzet/helper';
 import type { OrderStatus, PaymentMethod, PreparationPick } from '@lezzet/types';
 import { recordOrderPayment } from '../money/order-payment';
 import { suggestPicksForVariant } from '../stock/fefo';
@@ -129,9 +128,7 @@ export async function quickSale(input: QuickSaleInput): Promise<QuickSaleOutcome
     const collected = await recordOrderPayment({
       orderId: order.id,
       accountId,
-      // `recordOrderPayment` hâlâ euro alıyor (para hareketi ailesi göçmedi — 02.9 dilim 5);
-      // çevrim burada, ortak `fromCents` ile. O dilim gelince bu satır de sadeleşecek.
-      amount: fromCents(input.collectedAmountCents ?? order.totalCents),
+      amountCents: input.collectedAmountCents ?? order.totalCents,
       description: 'Kapı önü satış',
     });
     paymentRecorded = collected.status === 'ok';

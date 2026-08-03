@@ -92,7 +92,7 @@ describe('hızlı satış (07.10)', () => {
     });
 
     // Para uydurulmadı: nakit gerçekten kasanın bakiyesine girdi.
-    expect((await new AccountService(db).balance(cashAccount)).balance).toBe(40);
+    expect((await new AccountService(db).balance(cashAccount)).balanceCents).toBe(4000);
 
     // FEFO: önce süresi dolan çıktı — 3 × A (2 €) + 1 × B (3 €) = 9 €.
     expect((await stocks.getById(batchA))?.physicalQty).toBe(0);

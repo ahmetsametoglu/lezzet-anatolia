@@ -67,7 +67,7 @@ describe('tedarikçi borcu TÜRETİLİR', () => {
   it('ödeme borcu kapatır; kalan doğru türetilir', async () => {
     await malKabul();
 
-    const result = await recordSupplierPayment({ supplierId, accountId: bankAccount, amount: 25, description: 'Kısmi ödeme' });
+    const result = await recordSupplierPayment({ supplierId, accountId: bankAccount, amountCents: 2500, description: 'Kısmi ödeme' });
     expect(result.status).toBe('ok');
 
     expect(await suppliers.debt(supplierId)).toMatchObject({ intakeTotalCents: 4000, paidCents: 2500, balanceCents: 1500 });
@@ -75,15 +75,15 @@ describe('tedarikçi borcu TÜRETİLİR', () => {
 
   it('tamamı ödenince borç sıfırlanır', async () => {
     await malKabul();
-    await recordSupplierPayment({ supplierId, accountId: bankAccount, amount: 40 });
+    await recordSupplierPayment({ supplierId, accountId: bankAccount, amountCents: 4000 });
     expect((await suppliers.debt(supplierId)).balanceCents).toBe(0);
   });
 
   it('birden çok giriş ve ödeme toplanır', async () => {
     await malKabul(10, 400); // 40 €
     await malKabul(5, 600); // 30 €
-    await recordSupplierPayment({ supplierId, accountId: bankAccount, amount: 20 });
-    await recordSupplierPayment({ supplierId, accountId: bankAccount, amount: 15.5 });
+    await recordSupplierPayment({ supplierId, accountId: bankAccount, amountCents: 2000 });
+    await recordSupplierPayment({ supplierId, accountId: bankAccount, amountCents: 1550 });
 
     // 15,50 €'luk ödeme bilinçli: kuruşlu bir tutar euro toplamında artık bırakırdı (34.499…),
     // cent tamsayısında bırakmaz — çıkarma kesin.
@@ -92,7 +92,7 @@ describe('tedarikçi borcu TÜRETİLİR', () => {
 
   it('ödeme mal kabule bağlanabilir — hangi girişin kapandığı görünür', async () => {
     const intake = await malKabul();
-    const result = await recordSupplierPayment({ supplierId, accountId: bankAccount, amount: 40, stockIntakeId: intake.intakeId });
+    const result = await recordSupplierPayment({ supplierId, accountId: bankAccount, amountCents: 4000, stockIntakeId: intake.intakeId });
 
     expect(result.status).toBe('ok');
     if (result.status !== 'ok') return;
@@ -100,15 +100,15 @@ describe('tedarikçi borcu TÜRETİLİR', () => {
   });
 
   it('ödeme hesabın bakiyesinden de düşer — tek defter', async () => {
-    const before = (await accounts.balance(bankAccount)).balance;
+    const before = (await accounts.balance(bankAccount)).balanceCents;
     await malKabul();
-    await recordSupplierPayment({ supplierId, accountId: bankAccount, amount: 40 });
+    await recordSupplierPayment({ supplierId, accountId: bankAccount, amountCents: 4000 });
 
-    expect((await accounts.balance(bankAccount)).balance).toBe(before - 40);
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(before - 4000);
   });
 
   it('bağsız alım reddedilir — borç bu bağın üstünde duruyor', async () => {
-    expect(await recordMovement({ accountId: bankAccount, direction: 'out', amount: 10, type: 'purchase' })).toMatchObject({
+    expect(await recordMovement({ accountId: bankAccount, direction: 'out', amountCents: 1000, type: 'purchase' })).toMatchObject({
       status: 'invalid',
       reason: 'supply_link_missing',
     });
