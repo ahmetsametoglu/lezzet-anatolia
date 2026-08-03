@@ -65,7 +65,8 @@ interface SeedKisi {
   vatNumberValid?: boolean;
   b2bApproved?: boolean;
   creditEnabled?: boolean;
-  creditLimit?: number;
+  /** Vade tavanı — CENT (02.9 profil dilimi). 250000 = 2.500,00 €. */
+  creditLimitCents?: number;
   paymentTermDays?: number;
   discountPercent?: number;
   codAllowed?: boolean;
@@ -87,7 +88,7 @@ const KISILER: SeedKisi[] = [
     vatNumberValid: true,
     b2bApproved: true,
     creditEnabled: true,
-    creditLimit: 2500,
+    creditLimitCents: 250000,
     paymentTermDays: 30,
     discountPercent: 5,
     codAllowed: true,
@@ -124,7 +125,7 @@ const KISILER: SeedKisi[] = [
     vatNumberValid: true,
     b2bApproved: true,
     creditEnabled: true,
-    creditLimit: 1200,
+    creditLimitCents: 120000,
     paymentTermDays: 14,
     codAllowed: false,
     note: 'Sınır ötesi B2B — reverse charge.',
