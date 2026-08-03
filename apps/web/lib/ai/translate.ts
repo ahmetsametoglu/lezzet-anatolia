@@ -1,21 +1,53 @@
 'use server';
 
-import type { LocalizedText } from '@lezzet/types';
+import { runTask, suggestLocalizedTask, type SuggestLocalizedInput } from '@lezzet/ai';
+import { LOCALIZED_TEXT_KEYS, type LocalizedText } from '@lezzet/types';
+import { logger } from '@lezzet/observability';
 import { requireStaff } from '@/lib/guard';
 
 /**
- * AI çeviri önerisi — TR metinden FR/DE önerir.
+ * AI çeviri önerisi — operatörün yazdığı dilden ötekileri ÖNERİR (05.8 · 09.4).
  *
  * **Yeri `lib/`, bir sayfa klasörü değil** (CLAUDE.md §2): ürün formu, katalog dialogu, paket
  * dialogu ve indirim dialogu — dördü de aynı öneriyi istiyor. Sayfa altında kalsaydı ikinci sayfa
  * ya import sınırını aşar ya kendi kopyasını yazardı.
  *
- * BEKLEYEN(09.4): çevirinin arka ucu (`packages/ai`). Bugün THROW eder ve bu bilinçli — öneri
- * akışıdır, mutasyon değil: alan sessizce boş kalmaz, çağıran hatayı kendi yanında gösterir
- * (`LocalizedTextField` amber not satırı). Sessiz bir `{}` dönseydi operatör düğmenin çalıştığını
- * ama modelin cevap vermediğini sanırdı.
+ * **Arka uç bağlandı** (`packages/ai`, 20.4) — `BEKLEYEN(09.4)` kapandı.
+ *
+ * **Hata hâlâ FIRLATIR ve bu bilinçli**: bu bir öneri akışıdır, mutasyon değil. Sessiz bir `{}`
+ * dönseydi operatör düğmenin çalıştığını ama modelin cevap vermediğini sanırdı; şimdi çağıran
+ * hatayı kendi yanında gösteriyor (`LocalizedTextField` amber not satırı).
  */
-export async function suggestTranslationAction(_text: LocalizedText): Promise<LocalizedText> {
+export async function suggestTranslationAction(
+  text: LocalizedText,
+  /**
+   * Alanın türü — ton ve uzunluk buradan çıkar (ürün adı ile saklama talimatı aynı ölçüde
+   * çevrilmez). Opsiyonel: bugünkü dört çağıran bunu geçirmiyor ve dosyaları benim şeridimde
+   * değil. Geçen çağıran daha isabetli öneri alır — `docs/talep/not-operasyon-*`.
+   */
+  field: SuggestLocalizedInput['field'] = 'aciklama',
+): Promise<LocalizedText> {
   await requireStaff();
-  throw new Error('AI çeviri önerisi sonraki dilimde bağlanacak (packages/ai).');
+
+  // Kaynak dil: DOLU olan ilk dil (kanonik sıra TR → FR → DE, `resolveLocalizedText` ile aynı).
+  // Formun hangi sekmede olduğunu sormuyoruz — boş bir sekmeden çeviri istemek anlamsız.
+  const sourceLanguage = LOCALIZED_TEXT_KEYS.find((lang) => text[lang]?.trim());
+  const kaynak = sourceLanguage ? text[sourceLanguage]?.trim() : undefined;
+  if (!sourceLanguage || !kaynak) throw new Error('Çevrilecek metin yok — önce bir dilde yazın.');
+
+  const res = await runTask(suggestLocalizedTask, { text: kaynak, sourceLanguage, field });
+  if (!res.ok) {
+    // Ölçüm ve sebep loga, METİN loga DEĞİL (`CLAUDE §1`).
+    logger.warn({ task: 'suggest.localized-text', reason: res.reason, field }, 'AI çeviri önerisi alınamadı');
+    throw new Error(
+      res.reason === 'not_configured'
+        ? 'AI çevirisi yapılandırılmamış — sağlayıcı anahtarı eksik.'
+        : 'AI çevirisi şu an alınamadı, tekrar deneyin.',
+    );
+  }
+
+  logger.info({ task: 'suggest.localized-text', field, model: res.modelId, tokens: res.usage.totalTokens }, 'AI çeviri önerisi');
+  // **Operatörün yazdığı dil KORUNUR:** model o alanı da doldurur ama önerisi asıl metnin yerine
+  // geçemez — yazanın cümlesini değiştirmek, istenmemiş bir düzeltmedir.
+  return { ...res.data, [sourceLanguage]: kaynak };
 }

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TicketHandlerEnum, TicketSenderEnum, TicketSourceEnum, TicketStatusEnum, TicketTypeEnum } from './enums.schema';
+import { SourceLanguageSchema, TranslationBagSchema } from './user-text.schema';
 
 // Ticket / TicketMessage — müşteri talebi ve şikâyeti (16.1, migration 0035). DOMAIN §15.
 //
@@ -65,6 +66,17 @@ export const TicketMessageSchema = z.object({
   /** Yazan personel — yalnız `admin` mesajında dolu; müşteri talebin sahibi, AI'ın kimliği yok. */
   authorId: z.string().uuid().nullable(),
   body: z.string(),
+  /**
+   * Mesajın GERÇEK dili — `null` = tespit henüz koşmadı. Yalnız çeviri işi yazar (20.2).
+   *
+   * Yazışma İKİ YÖNLÜ çevrilir: müşteri kendi dilinde yazar personel Türkçe okur, personel Türkçe
+   * yazar müşteri kendi dilinde okur.
+   */
+  language: SourceLanguageSchema.nullable(),
+  /** Makine çevirileri; kaynak dil torbada yoktur (orijinal `body`'de durur). */
+  translations: TranslationBagSchema.nullable(),
+  /** Çeviri işi bu satıra baktı mı — başarısızlıkta da dolar. */
+  translatedAt: z.string().nullable(),
   /** R2 anahtarları (`r2Keys.ticketAttachment`) — bozuk ürün fotoğrafı. İsteğe bağlı. */
   attachments: z.array(z.string()),
   createdAt: z.string(),
@@ -79,6 +91,24 @@ export const TicketMessageInsertSchema = z.object({
   attachments: z.array(z.string()).optional(),
 });
 export type TicketMessageInsert = z.infer<typeof TicketMessageInsertSchema>;
+
+/**
+ * Mesajın güncellenebilir TEK yanı: çeviri (20.2).
+ *
+ * Servisin `TUpdate`'i eskiden `never`'dı — "gönderilmiş mesaj değişmez" değişmezi tipe yazılıydı ve
+ * doğruydu. Çeviri o değişmezi bozmuyor: `body`'ye dokunmuyor, yanına bir okuma kolaylığı koyuyor.
+ * Bu yüzden şema GENİŞLETİLMEDİ, DAR bir güncelleme şeması eklendi — `body`/`sender` alanları
+ * burada yok, yani bir gün biri "mesajı düzelt" demek istese derleme durdurur.
+ */
+export const TicketMessageTranslationUpdateSchema = TicketMessageSchema.pick({
+  id: true,
+  language: true,
+  translations: true,
+  translatedAt: true,
+})
+  .partial()
+  .required({ id: true });
+export type TicketMessageTranslationUpdate = z.infer<typeof TicketMessageTranslationUpdateSchema>;
 
 /**
  * `ticket_queue` görünümü — talep + türetilen kuyruk bilgisi. Ekran bu satırı okur, ikinci bir

@@ -17,12 +17,22 @@ import {
   dedupeBySwiper,
   initialFeedbackStatus,
   productScoreOf,
+  resolveUserText,
   swipeWeight,
   type CandidateSignal,
   type CandidateSwipe,
   type ProductScore,
 } from '@lezzet/domain-core';
-import type { FeedbackContext, FeedbackVote, KeysetCursor, Page, PreferredLanguage, ProductFeedback, ReviewStatus } from '@lezzet/types';
+import type {
+  FeedbackContext,
+  FeedbackVote,
+  KeysetCursor,
+  Page,
+  PreferredLanguage,
+  ProductFeedback,
+  ReviewStatus,
+  SourceLanguage,
+} from '@lezzet/types';
 import { awardFeedbackPoints } from './points';
 import { logger } from '@lezzet/observability';
 
@@ -103,15 +113,12 @@ async function upsertFeedback(input: {
   rating?: number | null;
   vote?: FeedbackVote | null;
   comment?: string | null;
-  language?: PreferredLanguage | null;
   dwellMs?: number | null;
 }): Promise<ProductFeedback> {
   const service = new ProductFeedbackService(serviceDb());
   const comment = input.comment?.trim() || null;
   // Metin varsa kuyruğa, yoksa doğrudan yayına — kural motorda (`initialFeedbackStatus`).
   const status = initialFeedbackStatus(comment);
-  // Dil METNİN dilidir: metin yoksa taşınacak bir dil de yoktur (DB kısıtı da bunu zorlar).
-  const language = comment ? (input.language ?? null) : null;
 
   const existing = await service.findByCustomerProduct(input.customerId, input.productId, input.context);
   if (existing) {
@@ -127,7 +134,8 @@ async function upsertFeedback(input: {
       ...(touchesComment
         ? {
             comment,
-            language,
+            // Dil ve çeviri BURADA sıfırlanmıyor — tetikleyici yapıyor (`0011`'deki genel
+            // fonksiyon). Metin değişince bayat çeviri düşer, satır kuyruğa geri girer.
             // Değişen metin yeniden kuyruğa girer: onaylanmış metni sonradan değiştirebilmek
             // moderasyonu tamamen anlamsız kılardı.
             status,
@@ -149,7 +157,6 @@ async function upsertFeedback(input: {
     rating: input.rating ?? null,
     vote: input.vote ?? null,
     comment,
-    language,
     dwellMs: input.dwellMs ?? null,
     status,
   });
@@ -164,7 +171,6 @@ async function upsertFeedback(input: {
 export async function submitReview(input: {
   customerId: string;
   productId: string;
-  language: PreferredLanguage;
   rating?: number | null;
   comment?: string | null;
   feedbackRequestId?: string | null;
@@ -257,13 +263,19 @@ export async function getReviewEligibility(
   return { canReview: orderId !== null, existing };
 }
 
-/** Ürün sayfasında görünen yorum — yazarın adı çözülmüş hâliyle. */
+/** Ürün sayfasında görünen yorum — yazarın adı ve OKUYUCUNUN DİLİ çözülmüş hâliyle. */
 export interface PublishedReview {
   id: string;
   authorName: string;
   rating: number | null;
+  /** Okuyucunun dilinde gösterilecek metin (çeviri yoksa orijinal). */
   comment: string | null;
-  language: PreferredLanguage | null;
+  /** Gösterilen metin makine çevirisi mi — ekran bunu işaretlemeli ("otomatik çevrildi"). */
+  commentTranslated: boolean;
+  /** ORİJİNALİN dili — `lang` özniteliği ve "orijinali göster" için. `null` = tespit koşmadı. */
+  language: SourceLanguage | null;
+  /** Orijinal metin — ekran "orijinali göster" derse bunu basar; çeviri onun yerine GEÇMEZ. */
+  originalComment: string | null;
   createdAt: string;
 }
 
@@ -271,8 +283,17 @@ export interface PublishedReview {
  * Ürün sayfasının yorum listesi — **yalnız yayınlanmış YAZILI** yorumlar, keyset sayfalı.
  *
  * Beğeniler burada görünmez: onlar okunacak değil sayılacak şeylerdir, skora girerler.
+ *
+ * **`viewLanguage` zorunlu ve bilerek** (20.2): yorum artık okuyucunun dilinde gösteriliyor, yani
+ * "hangi dil" bu okumanın bir parametresidir. Varsayılan koysaydık dilini vermeyi unutan bir ekran
+ * herkese Türkçe gösterir ve bu hiçbir yerde hata vermezdi — sessizce yanlış çalışan bir sayfa.
  */
-export async function listProductReviews(productId: string, cursor?: KeysetCursor, limit?: number): Promise<Page<PublishedReview>> {
+export async function listProductReviews(
+  productId: string,
+  viewLanguage: PreferredLanguage,
+  cursor?: KeysetCursor,
+  limit?: number,
+): Promise<Page<PublishedReview>> {
   const db = serviceDb();
   const page = await new ProductFeedbackService(db).listPublishedComments(productId, cursor, limit);
   if (page.rows.length === 0) return { rows: [], nextCursor: page.nextCursor };
@@ -282,14 +303,19 @@ export async function listProductReviews(productId: string, cursor?: KeysetCurso
   const nameById = new Map(authors.map((a) => [a.id, a.name]));
 
   return {
-    rows: page.rows.map((r) => ({
-      id: r.id,
-      authorName: (r.customerId && nameById.get(r.customerId)) || '—',
-      rating: r.rating,
-      comment: r.comment,
-      language: r.language,
-      createdAt: r.createdAt,
-    })),
+    rows: page.rows.map((r) => {
+      const gosterilen = resolveUserText({ text: r.comment, language: r.language, translations: r.translations }, viewLanguage);
+      return {
+        id: r.id,
+        authorName: (r.customerId && nameById.get(r.customerId)) || '—',
+        rating: r.rating,
+        comment: gosterilen.text,
+        commentTranslated: gosterilen.isTranslated,
+        language: r.language,
+        originalComment: r.comment,
+        createdAt: r.createdAt,
+      };
+    }),
     nextCursor: page.nextCursor,
   };
 }

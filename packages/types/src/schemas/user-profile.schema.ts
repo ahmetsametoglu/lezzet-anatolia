@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { dbNumeric } from './db-numeric';
 import { CountryEnum, CustomerTypeEnum, PreferredLanguageEnum } from './enums.schema';
+import { TranslationBagSchema } from './user-text.schema';
 
 // Kullanıcı profili (kimlik) — 0001 + 0013 migration ile birebir. TEK tablo: müşteri + personel;
 // ROL ayırır. "customer" bir ROLDÜR, ayrı tablo değil.
@@ -99,6 +100,16 @@ export const UserProfileSchema = z.object({
   b2bRejectedBy: z.string().uuid().nullable(),
   /** Ret gerekçesi. DB kısıtı damgasız/gerekçesiz reddi yazdırmaz — ikisi birlikte var ya da yok. */
   b2bRejectReason: z.string().nullable(),
+  /**
+   * Ret gerekçesinin makine çevirileri (20.2) — gerekçe müşteriye E-POSTAYLA gidiyor, yani
+   * personelin Türkçe cümlesi Fransızca/Almanca konuşan birine ulaşıyor.
+   *
+   * Ayrı bir kaynak-dil kolonu yok: operasyon yüzeyi tek dilli (CLAUDE §2) ve torbada olmayan dil
+   * zaten "orijinal o dilde" demeye yeter — `resolveUserText` bu hâlde orijinale düşer.
+   */
+  b2bRejectReasonTranslations: TranslationBagSchema.nullable(),
+  /** Çeviri işi baktı mı — başarısızlıkta da dolar. */
+  b2bRejectReasonTranslatedAt: z.string().nullable(),
   /**
    * "Onay kuyruğunda mı" — **DB üretiyor** (`generated always as … stored`), uygulama YAZMAZ.
    * Künyesi var + onaylanmamış + (hiç reddedilmemiş veya reddi eskimiş).

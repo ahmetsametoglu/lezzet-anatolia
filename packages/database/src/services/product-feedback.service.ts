@@ -152,6 +152,17 @@ export class ProductFeedbackService extends BaseDbService<ProductFeedback, Produ
   countPending(): Promise<number> {
     return this.count({ status: 'pending' });
   }
+
+  /**
+   * **Çeviri kuyruğu** (20.2) — metni olup çeviri işinden HENÜZ geçmemiş yorumlar, en eski önce.
+   * Kısmi indeksle birebir (`product_feedback_untranslated_idx`).
+   *
+   * Süzgeç `translations is null` DEĞİL `translated_at is null`: çevrilemeyen bir metin (anlamsız
+   * harf dizisi) torbasız ama damgalı kalır ve kuyruğa geri düşmemelidir.
+   */
+  listUntranslated(limit = 20): Promise<ProductFeedback[]> {
+    return this.getAll({}, { isNotNullFields: ['comment'], isNullFields: ['translatedAt'], orderBy: 'createdAt', limit });
+  }
 }
 
 /**

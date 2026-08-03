@@ -8,11 +8,19 @@ import { z } from 'zod';
  * kullanıcı yazıp sildiğinde değer `{tr:''}` olur; zorunlu şemayla doğrulanırsa form haksızca geçersiz
  * olurdu. Zorunlu alanlar `LocalizedTextSchema` kullanır (bu şemadan türer — alanlar tek yerde).
  */
-export const LocalizedTextDraftSchema = z.object({
+/**
+ * Site dilleri başına opsiyonel metin — **iki ayrı anlamın ORTAK iskeleti**, o yüzden tek yerde:
+ * yazılmış metin (`LocalizedText`, aşağıda) ve makineyle türetilmiş çeviri
+ * (`TranslationBag`, `user-text.schema.ts`). Şekilleri aynı olduğu için ikisini ayrı ayrı
+ * yazmak, bir gün dil eklendiğinde birini güncelleyip ötekini unutmak demekti (`CLAUDE §1`).
+ */
+export const perLanguageTextShape = {
   tr: z.string().optional(),
   fr: z.string().optional(),
   de: z.string().optional(),
-});
+} as const;
+
+export const LocalizedTextDraftSchema = z.object(perLanguageTextShape);
 
 /**
  * `LocalizedText`'in dil anahtarları — ŞEMADAN türetilir, elle liste yazılmaz. `@lezzet/i18n`'in

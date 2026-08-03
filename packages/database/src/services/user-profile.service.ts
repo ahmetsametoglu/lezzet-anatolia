@@ -258,6 +258,26 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
     return this.update({ id: profileId, b2bApproved: false, b2bRejectedBy: opts.actorId, b2bRejectReason: reason });
   }
 
+  /**
+   * **Çeviri kuyruğu** (20.2) — gerekçesi yazılmış ama çevirisi koşmamış retler, en eski önce.
+   * Kısmi indeksle birebir (`user_profiles_reject_reason_untranslated_idx`).
+   *
+   * Ret gerekçesi personelin Türkçe cümlesidir ve müşteriye e-postayla gider; çevrilmezse
+   * Fransızca konuşan aday "neden" sorusunun cevabını okuyamaz ve soru desteğe düşer — yani
+   * gerekçe alanının var oluş sebebi boşa çıkar.
+   */
+  listUntranslatedRejectReasons(limit = 20): Promise<UserProfile[]> {
+    return this.getAll(
+      {},
+      {
+        isNotNullFields: ['b2bRejectReason'],
+        isNullFields: ['b2bRejectReasonTranslatedAt'],
+        orderBy: 'b2bRejectedAt',
+        limit,
+      },
+    );
+  }
+
   /** Auth kullanıcısını mevcut profile bağlar (giriş doğrulandığında); taslağı kapatır. */
   linkAuthUser(profileId: string, authUserId: string): Promise<UserProfile> {
     return this.update({ id: profileId, authUserId, isDraft: false });

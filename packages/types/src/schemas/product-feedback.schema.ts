@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { dbNumericNullable } from './db-numeric';
-import { FeedbackContextEnum, FeedbackVoteEnum, PreferredLanguageEnum, ReviewStatusEnum } from './enums.schema';
+import { FeedbackContextEnum, FeedbackVoteEnum, ReviewStatusEnum } from './enums.schema';
+import { SourceLanguageSchema, TranslationBagSchema } from './user-text.schema';
 
 // ProductFeedback — müşterinin bir ürün hakkında bize VERMEYİ SEÇTİĞİ değerlendirme (17.1, 17.3;
 // migration 0036). DOMAIN §14.
@@ -25,8 +26,15 @@ export const ProductFeedbackSchema = z.object({
   rating: z.number().int().min(1).max(5).nullable(),
   vote: FeedbackVoteEnum.nullable(),
   comment: z.string().nullable(),
-  /** Metnin dili — **çevrilmez**; metinsiz kayıtta boş. */
-  language: PreferredLanguageEnum.nullable(),
+  /**
+   * Metnin GERÇEK dili — site dili değil, müşterinin yazdığı dil (Boşnakça da olabilir).
+   * `null` = tespit henüz koşmadı. **Yalnız çeviri işi yazar** (20.2).
+   */
+  language: SourceLanguageSchema.nullable(),
+  /** Makine çevirileri; kaynak dil torbada yoktur (orijinal `comment`'te durur). */
+  translations: TranslationBagSchema.nullable(),
+  /** Çeviri işi bu satıra baktı mı — **başarısızlıkta da dolar**, yoksa kuyruk tıkanır. */
+  translatedAt: z.string().nullable(),
   /** Kartta geçirilen süre — sinyal kalitesi (DOMAIN §14). Yalnız kaydırmada anlamlı. */
   dwellMs: z.number().int().nullable(),
   status: ReviewStatusEnum,
@@ -55,6 +63,10 @@ export type ProductFeedback = z.infer<typeof ProductFeedbackSchema>;
  * veritabanında.
  *
  * Üç biçimden **en az biri** gerekir (DB kısıtı da zorlar).
+ *
+ * **`language` girişte YOK ve bu bir düzeltmedir:** eskiden kapı müşterinin SİTE dilini yazıyordu.
+ * O bir kanıt değil bir tahmindi ve tam da bu işin var oluş sebebinde (Fransız sayfasında yazılan
+ * Boşnakça yorum) yanlıştı. Dili artık metne bakan taraf yazar (20.2).
  */
 export const ProductFeedbackInsertSchema = z
   .object({
@@ -66,7 +78,6 @@ export const ProductFeedbackInsertSchema = z
     rating: z.number().int().min(1).max(5).nullish(),
     vote: FeedbackVoteEnum.nullish(),
     comment: z.string().nullish(),
-    language: PreferredLanguageEnum.nullish(),
     dwellMs: z.number().int().nonnegative().nullish(),
     status: ReviewStatusEnum.optional(),
   })

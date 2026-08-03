@@ -50,6 +50,13 @@ module.exports = {
       to: { path: '^@lezzet/(?!(types|helper)$)' },
     },
     {
+      name: 'ai-scope',
+      severity: 'error',
+      comment: 'ai yalnız types bilir — DB/logger/iş kuralı yok (bkz. packages/ai/src/types.ts).',
+      from: { path: '^packages/ai/' },
+      to: { path: '^@lezzet/(?!types$)' },
+    },
+    {
       name: 'no-orphans',
       severity: 'warn',
       comment: 'Bağlantısız modül (config/kabuk dosyaları hariç).',

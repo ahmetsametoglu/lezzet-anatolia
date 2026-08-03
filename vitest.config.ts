@@ -45,6 +45,7 @@ export default defineConfig({
             'packages/email/src/**/*.test.ts?(x)',
             'packages/brand/src/**/*.test.ts?(x)',
             'packages/i18n/src/**/*.test.ts?(x)',
+            'packages/ai/src/**/*.test.ts?(x)',
             'apps/web/app/**/*.test.ts?(x)',
             'apps/web/components/**/*.test.ts?(x)',
           ],

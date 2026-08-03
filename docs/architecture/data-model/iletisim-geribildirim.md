@@ -86,7 +86,9 @@ Müşterinin bir ürün hakkında **bize vermeyi seçtiği** değerlendirme. Ü�
 | rating | int \| null | 1–5 yıldız |
 | vote | enum(`like`,`dislike`) \| null | beğen / geç |
 | comment | text \| null | yazılı yorum |
-| language | enum(`tr`,`fr`,`de`) \| null | metnin dili — **çevrilmez**; metinsiz kayıtta boş |
+| language | text \| null | metnin GERÇEK dili (ISO 639; enum DEĞİL — Boşnakça yorum da gelir). `null` = tespit koşmadı; metinsiz kayıtta boş |
+| translations | jsonb \| null | makine çevirileri `{tr?,fr?,de?}` — **kaynak dil torbada YOKTUR** |
+| translated_at | timestamptz \| null | çeviri işi baktı mı; **başarısızlıkta da dolar** |
 | dwell_ms | int \| null | kartta geçirilen süre — **sinyal kalitesi** için (yalnız kaydırmada) |
 | feedback_request_id | uuid \| null | alım-sonrası davetten geldiyse (`FeedbackRequest`) |
 | status | enum(`pending`,`approved`,`rejected`) | **moderasyon yalnız METİN içindir**; metinsiz kayıt doğrudan `approved` doğar |
@@ -97,6 +99,8 @@ Müşterinin bir ürün hakkında **bize vermeyi seçtiği** değerlendirme. Ü�
 **Neden tek tablo:** ayrımları biçimden ibarettir — müşteri, ürün, tarih, puan kazanımı, "aynı ürüne bir kez" tekilliği, ürün skoruna katkı ve GDPR silme yolu üçünde de aynıdır. `Discount`'ın kuponu ve otomatik kampanyayı tek varlıkta tutmasıyla aynı gerekçe: iki tablo, aynı yedi alanı iki kez tanımlamak ve skoru iki yerden toplamak olurdu.
 
 **En az bir beyan şart:** `rating`, `vote` ve `comment`'tan biri dolu olmalı. Üçü de boşsa ortada bir değerlendirme yoktur.
+
+**Yorum ÇEVRİLİR ama DEĞİŞMEZ (20.2 · kullanıcı kararı 03.08 — eski "çevrilmez" kararı geri alındı).** Eski gerekçe *"yorum müşterinin kendi cümlesidir, makine çevirisi onu söylemediği bir hâle sokar"* idi; endişe doğruydu, sonucu yanlıştı — çevirmemek, Fransız okuyucuya Türkçe yorumu okuyamayacağı hâlde göstermektir, yani hiç göstermemektir. Doğru çözüm **orijinali korumak ve çeviriyi yanına koymak**: `comment` hiç değişmez, `translations` yanında durur, `resolveUserText` site dilinde okutur ve ekran "otomatik çevrildi" der. **Kaynak dil torbaya girmez** — böylece torbadan okunan her metin gerçekten çeviridir ve karışamaz. **Metin değişirse çeviri VERİ TARAFINDAN düşürülür** (`reset_translation_on_text_change` tetikleyicisi, `0011`): kapıya bırakılsaydı bir yazma yolu unutulur ve okuyucu, müşterinin artık yazmadığı bir cümlenin Fransızcasını görürdü.
 
 **Moderasyon metnin işidir.** Yıldızı ya da beğeniyi "reddetmek" anlamsızdır — okunacak bir şey yoktur. Metinsiz kayıt kuyruğa hiç düşmez, doğrudan yayına girer; kuyruk yalnız insanın okuyacağı bir cümle olduğunda anlamlıdır.
 
@@ -186,8 +190,15 @@ Basit yaşam döngüsü; siparişe ve ürünlere isteğe bağlı bağlanır (bkz
 | sender | enum(`customer`,`admin`,`ai`) | **`ai` ayrı bir göndericidir** — insanınkinden ayırt edilmeden gösterilemez |
 | author_id | uuid \| null | yazan personel (`admin`); müşteri ve AI mesajında boş |
 | body | text | |
+| language | text \| null | metnin GERÇEK dili (ISO 639; enum değil — müşteri Boşnakça yazabilir). `null` = tespit koşmadı |
+| translations | jsonb \| null | makine çevirileri `{tr?,fr?,de?}` — **kaynak dil torbada YOKTUR** |
+| translated_at | timestamptz \| null | çeviri işi baktı mı; **başarısızlıkta da dolar** (sonsuz retry yok) |
 | attachments | text[] | storage yolu (fotoğraf vb.) |
 | created_at | timestamptz | |
+
+**Yazışma İKİ YÖNLÜ çevrilir (20.2):** müşteri kendi dilinde yazar personel Türkçe okur, personel Türkçe yazar müşteri kendi dilinde okur. Tek yön çevirmek yazışmanın yarısını anlaşılmaz bırakırdı. Orijinal `body`'de kalır, çeviri yanına yazılır — makine çevirisi hiçbir zaman yazanın cümlesi sanılamaz. Gösterim `resolveUserText` (domain-core): site dili → yoksa orijinal.
+
+**Mesajda "metin değişti, çeviriyi düşür" tetikleyicisi YOK ve gerekmiyor:** gönderilmiş mesaj değişmez — güncelleyen bir yol yok, yazışma bir defterdir. `TicketMessageService`'in güncelleme şeması bu yüzden DAR (`TicketMessageTranslationUpdate`: yalnız çeviri alanları); `body` orada olmadığı için "mesajı düzelt" demek isteyen bir kod derlemede durur.
 
 **Neden `ai` üçüncü bir gönderici:** "AI yazdı" bilgisini `admin` içine gömmek, sonradan "bunu kim söyledi" sorusunu cevapsız bırakırdı. Müşteriye giden metin aynıdır; ayrım **iç izlenebilirlik** içindir ve admin ekranında görünür (tasarım: "AI'nın yanıtları admin'e kendi yazmış gibi gösterilmez").
 

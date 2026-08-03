@@ -69,7 +69,8 @@ export async function reviewAction(
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     const { customerId, requestId } = await resolveInvite(token);
 
-    const result = await submitReview({ customerId, productId, language: locale, rating, comment, feedbackRequestId: requestId });
+    // Dil YAZILMIYOR (20.2): arayüz dili metnin dili değildir; tespiti çeviri işi yapar.
+    const result = await submitReview({ customerId, productId, rating, comment, feedbackRequestId: requestId });
     // `empty_review` GERÇEK bir kullanıcı hatası ve ayrı cümleyi hak ediyor: müşteri "kaydet"e
     // bastı ama ne yıldız ne metin var. Öbür sebepler (satın almamış) tek anahtara iner.
     if (!result.ok) return { data: null, errorKey: result.reason === 'empty_review' ? 'review_empty' : 'vote_failed' };

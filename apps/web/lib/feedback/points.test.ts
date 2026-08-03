@@ -108,7 +108,7 @@ describe('bakiye defterden türetilir', () => {
 
 describe('geri bildirim puanı', () => {
   it('yorum yazan müşteri puan kazanır', async () => {
-    await submitReview({ customerId: b2cId, productId, language: 'tr', rating: 5, comment: 'Harika.' });
+    await submitReview({ customerId: b2cId, productId, rating: 5, comment: 'Harika.' });
     const balance = await getPointsBalance(b2cId);
     expect(balance.balance).toBe(20); // points_review
   });
@@ -131,7 +131,7 @@ describe('geri bildirim puanı', () => {
 
   it('beğeniden sonra yorum yazmak AYRI bir puan doğurur', async () => {
     await recordVote({ customerId: b2cId, productId, context: 'purchase', vote: 'like' });
-    await submitReview({ customerId: b2cId, productId, language: 'tr', rating: 5, comment: 'Sonradan yazdım.' });
+    await submitReview({ customerId: b2cId, productId, rating: 5, comment: 'Sonradan yazdım.' });
     // 5 (beğeni) + 20 (yorum) — ikisi ayrı beyan, ayrı sebep.
     expect((await getPointsBalance(b2cId)).balance).toBe(25);
   });
@@ -143,7 +143,7 @@ describe('geri bildirim puanı', () => {
   });
 
   it('B2B kazanmaz ama yorumu yine de kaydedilir', async () => {
-    const result = await submitReview({ customerId: b2bId, productId, language: 'fr', rating: 4, comment: 'Correct.' });
+    const result = await submitReview({ customerId: b2bId, productId, rating: 4, comment: 'Correct.' });
     // Asıl işlem tamamlandı...
     expect(result.ok).toBe(true);
     // ...ama puan yazılmadı.
@@ -153,7 +153,7 @@ describe('geri bildirim puanı', () => {
   it('günlük tavana takılan müşterinin aksiyonu yine de kaydedilir', async () => {
     // Tavan 100; elle 95 puan yazıp yorum puanının (20) sığmamasını sağlıyoruz.
     await adjustPointsManually({ customerId: b2cId, points: 95, note: 'tavan zemini', staffId });
-    const result = await submitReview({ customerId: b2cId, productId, language: 'tr', rating: 5, comment: 'Sığmayan.' });
+    const result = await submitReview({ customerId: b2cId, productId, rating: 5, comment: 'Sığmayan.' });
 
     expect(result.ok).toBe(true);
     // Tavan KISMİ uygulanmaz: 5 puan yazmak yerine hiç yazılmaz.

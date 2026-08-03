@@ -30,7 +30,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 02 | `02-database.md` | `packages/database`: Taban Servis ve İlk Şema | sürüyor | 10/13 (+3 kısmi) |
 | 03 | `03-domain-core.md` | `packages/domain-core`: İş Kuralları Motoru | sürüyor | 10/11 (+1 kısmi) |
 | 04 | `04-auth-kimlik.md` | Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama | sürüyor | 8/10 |
-| 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 9/13 (+2 kısmi) |
+| 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 10/13 (+2 kısmi) |
 | 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | tamam | 12/12 |
 | 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 11/12 (+1 kısmi) |
 | 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 11/20 (+7 kısmi) |
@@ -45,6 +45,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 17 | `17-geri-bildirim-puan.md` | Geri Bildirim, Yorum ve Puan | sürüyor | 2/7 (+5 kısmi) |
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/11 (+1 kısmi) |
 | 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 14/20 (+4 kısmi) |
+| 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 2/4 |
 <!-- durum:son -->
 
 Sıra katı değildir ama bağımlılıklar bağlayıcıdır (her dosyada yazılı). 08–09, tasarımdan gelen **komponent envanterinin kodlanmasıyla** başlar: önce komponentler, sonra sayfalar.

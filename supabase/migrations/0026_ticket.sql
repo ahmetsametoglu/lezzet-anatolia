@@ -102,6 +102,22 @@ create table public.ticket_message (
   author_id uuid references public.user_profiles (id) on delete set null,
 
   body text not null check (length(btrim(body)) > 0),
+
+  -- ── ÇEVİRİ (20.2) — burada YAZIŞMA İKİ YÖNLÜ, o yüzden çeviri de iki yönlü ─────
+  --
+  -- Yorumdan farkı bu: müşteri kendi dilinde yazar, personel Türkçe okur; personel Türkçe yazar,
+  -- müşteri kendi dilinde okur. Yani her iki taraf da karşısındakinin cümlesini çeviriyle görür.
+  -- Tek yön çevirmek, yazışmanın yarısını sessizce anlaşılmaz bırakırdı.
+  --
+  -- `language` metnin GERÇEK dili (ISO 639; müşteri Boşnakça yazabilir), `translations` yalnız
+  -- makine çevirileri — kaynak dil torbaya girmez, orijinal `body`'de durur. `translated_at`
+  -- başarısızlıkta da yazılır (sonsuz retry yok). Ayrıntılı gerekçe: `0027_product_feedback.sql`.
+  --
+  -- Öteki iki kaynaktaki "metin değişti, çeviriyi düşür" tetikleyicisi BURADA YOK ve gerekmiyor:
+  -- gönderilmiş mesaj değişmez (güncelleyen bir yol yok — yazışma bir defterdir, bir form değil).
+  language text check (language ~ '^[a-z]{2,3}$'),
+  translations jsonb,
+  translated_at timestamptz,
   -- R2 anahtarları (`r2Keys.ticketAttachment`). Bozuk ürün fotoğrafı: isteğe bağlı ama çözümü
   -- hızlandırır — mobilde kameradan doğrudan çekilir.
   attachments text[] not null default '{}',
@@ -117,6 +133,9 @@ alter table public.ticket_message enable row level security;
 
 -- Yazışmanın tek okuma deseni: bir talebin mesajları, eskiden yeniye.
 create index ticket_message_ticket_idx on public.ticket_message (ticket_id, created_at);
+
+-- Çeviri kuyruğu (20.2) — çevrilmemiş mesajlar, en eski önce. Çevrildikçe indeksten düşer.
+create index ticket_message_untranslated_idx on public.ticket_message (created_at) where translated_at is null;
 
 -- ── Kuyruk görünümü ──────────────────────────────────────────────────────────
 -- Kuyruğun tek amacı **cevap bekleyeni bekletmemek** — o yüzden sıralama alanı da bekleme alanı da

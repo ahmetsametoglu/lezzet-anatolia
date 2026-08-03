@@ -4,6 +4,7 @@ import {
   TicketInsertSchema,
   TicketMessageInsertSchema,
   TicketMessageSchema,
+  TicketMessageTranslationUpdateSchema,
   TicketQueueRowSchema,
   TicketSchema,
   TicketStatusEnum,
@@ -14,6 +15,7 @@ import {
   type TicketInsert,
   type TicketMessage,
   type TicketMessageInsert,
+  type TicketMessageTranslationUpdate,
   type TicketQueueRow,
   type TicketStatus,
   type TicketType,
@@ -259,9 +261,9 @@ export class TicketQueueService extends BaseDbService<TicketQueueRow, never, nev
  * Talep yazışması (16.1). Talebin ilk açıklaması da bir mesajdır — ayrı bir `description` alanı
  * olsaydı "müşterinin anlatımı" ile sonraki cevapları iki ayrı yerde dururdu.
  */
-export class TicketMessageService extends BaseDbService<TicketMessage, TicketMessageInsert, never> {
+export class TicketMessageService extends BaseDbService<TicketMessage, TicketMessageInsert, TicketMessageTranslationUpdate> {
   constructor(supabase: SupabaseClient) {
-    super(supabase, 'ticket_message', TicketMessageSchema, TicketMessageInsertSchema, TicketMessageSchema as never, false);
+    super(supabase, 'ticket_message', TicketMessageSchema, TicketMessageInsertSchema, TicketMessageTranslationUpdateSchema, false);
   }
 
   /**
@@ -272,5 +274,16 @@ export class TicketMessageService extends BaseDbService<TicketMessage, TicketMes
    */
   listByTicket(ticketId: string): Promise<TicketMessage[]> {
     return this.getAll({ ticketId }, { orderBy: 'createdAt' });
+  }
+
+  /**
+   * **Çeviri kuyruğu** (20.2) — çevirisi henüz koşmamış mesajlar, en eski önce.
+   * Kısmi indeksle birebir (`ticket_message_untranslated_idx`).
+   *
+   * Yazışmanın İKİ yönü de kuyruktadır: müşterinin mesajını personel Türkçe okuyacak, personelin
+   * mesajını müşteri kendi dilinde okuyacak. Gönderene göre süzmek yarısını dilsiz bırakırdı.
+   */
+  listUntranslated(limit = 20): Promise<TicketMessage[]> {
+    return this.getAll({}, { isNullFields: ['translatedAt'], orderBy: 'createdAt', limit });
   }
 }

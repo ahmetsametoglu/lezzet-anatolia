@@ -103,7 +103,7 @@ afterAll(async () => {
 
 /** Onaylı yazılı yorum kurar — skor testlerinin zemini. */
 async function approvedReview(rating: number, comment = 'Fıstık cömertti.') {
-  const result = await submitReview({ customerId: buyerId, productId, language: 'tr', rating, comment });
+  const result = await submitReview({ customerId: buyerId, productId, rating, comment });
   if (!result.ok) throw new Error(`yorum yazılamadı: ${result.reason}`);
   await moderateReview({ reviewId: result.data.id, to: 'approved', moderatorId: staffId });
   return result.data;
@@ -114,7 +114,6 @@ describe('yalnız satın alan yazar', () => {
     const result: FeedbackWriteResult<ProductFeedback> = await submitReview({
       customerId: buyerId,
       productId,
-      language: 'tr',
       rating: 5,
       comment: 'Fıstık cömertti.',
     });
@@ -124,21 +123,21 @@ describe('yalnız satın alan yazar', () => {
   });
 
   it('almamış müşteri yazamaz', async () => {
-    expect(await submitReview({ customerId: strangerId, productId, language: 'fr', rating: 5 })).toEqual({
+    expect(await submitReview({ customerId: strangerId, productId, rating: 5 })).toEqual({
       ok: false,
       reason: 'not_purchased',
     });
   });
 
   it('almadığı BAŞKA ürüne yazamaz', async () => {
-    expect(await submitReview({ customerId: buyerId, productId: otherProductId, language: 'tr', rating: 4 })).toEqual({
+    expect(await submitReview({ customerId: buyerId, productId: otherProductId, rating: 4 })).toEqual({
       ok: false,
       reason: 'not_purchased',
     });
   });
 
   it('yıldızsız ve metinsiz yorum yazılamaz', async () => {
-    expect(await submitReview({ customerId: buyerId, productId, language: 'tr', comment: '   ' })).toEqual({
+    expect(await submitReview({ customerId: buyerId, productId, comment: '   ' })).toEqual({
       ok: false,
       reason: 'empty_review',
     });
@@ -147,24 +146,25 @@ describe('yalnız satın alan yazar', () => {
 
 describe('moderasyon metnin işidir', () => {
   it('metinli yorum kuyruğa düşer', async () => {
-    await submitReview({ customerId: buyerId, productId, language: 'tr', rating: 4, comment: 'Güzeldi.' });
+    await submitReview({ customerId: buyerId, productId, rating: 4, comment: 'Güzeldi.' });
     const pending = await listReviewsForModeration('pending', undefined, 100);
     expect(pending.rows.some((r) => r.productId === productId)).toBe(true);
   });
 
   it('yalnız yıldız verilmiş kayıt kuyruğa DÜŞMEZ, doğrudan yayına girer', async () => {
-    const result = await submitReview({ customerId: buyerId, productId, language: 'tr', rating: 5 });
+    const result = await submitReview({ customerId: buyerId, productId, rating: 5 });
     if (!result.ok) throw new Error(result.reason);
     expect(result.data.status).toBe('approved');
-    // Dil de taşınmaz: ortada dili olan bir metin yok.
+    // Dil ve çeviri de taşınmaz: ortada dili olan bir metin yok (DB kısıtı da zorluyor).
     expect(result.data.language).toBeNull();
+    expect(result.data.translations).toBeNull();
 
     const pending = await listReviewsForModeration('pending', undefined, 100);
     expect(pending.rows.some((r) => r.id === result.data.id)).toBe(false);
   });
 
   it('okunacak bir şey olmayan kayıt moderasyona sokulamaz', async () => {
-    const result = await submitReview({ customerId: buyerId, productId, language: 'tr', rating: 5 });
+    const result = await submitReview({ customerId: buyerId, productId, rating: 5 });
     if (!result.ok) throw new Error(result.reason);
     expect(await moderateReview({ reviewId: result.data.id, to: 'rejected', moderatorId: staffId })).toEqual({
       ok: false,
@@ -174,17 +174,18 @@ describe('moderasyon metnin işidir', () => {
 
   it('onaylanınca yayınlanır, geri çekilince kaybolur', async () => {
     const review = await approvedReview(5, 'Harika.');
-    const published = await listProductReviews(productId);
+    const published = await listProductReviews(productId, 'tr');
     const first: PublishedReview | undefined = published.rows[0];
-    expect(first).toMatchObject({ authorName: 'Ayşe Kaya', rating: 5, comment: 'Harika.', language: 'tr' });
+    // Çeviri işi henüz koşmadı: dil boş, metin orijinal ve "çevrildi" işareti YOK.
+    expect(first).toMatchObject({ authorName: 'Ayşe Kaya', rating: 5, comment: 'Harika.', commentTranslated: false, language: null });
 
     await moderateReview({ reviewId: review.id, to: 'rejected', moderatorId: staffId });
-    expect((await listProductReviews(productId)).rows).toHaveLength(0);
+    expect((await listProductReviews(productId, 'tr')).rows).toHaveLength(0);
   });
 
   it('onaylanmış yorumun güncellenmesi onu yeniden kuyruğa sokar', async () => {
     const review = await approvedReview(5);
-    await submitReview({ customerId: buyerId, productId, language: 'tr', rating: 1, comment: 'Fikrim değişti.' });
+    await submitReview({ customerId: buyerId, productId, rating: 1, comment: 'Fikrim değişti.' });
 
     const after = await feedback.getById(review.id);
     expect(after).toMatchObject({ status: 'pending', moderatedAt: null });
@@ -192,7 +193,7 @@ describe('moderasyon metnin işidir', () => {
 
   it('bekleyen sayacı kuyrukla aynı kümeyi sayar', async () => {
     const before = await countPendingReviews();
-    await submitReview({ customerId: buyerId, productId, language: 'tr', rating: 4, comment: 'Fena değil.' });
+    await submitReview({ customerId: buyerId, productId, rating: 4, comment: 'Fena değil.' });
     expect(await countPendingReviews()).toBe(before + 1);
   });
 });
@@ -235,7 +236,7 @@ describe('beğen / geç', () => {
     // Müşteri önce beğenir, sonra (belki günler sonra) yorumunu yazar. İki beyan da o satırda durur:
     // güncelleme kısmi değilse beğeni ürün puanından sessizce düşerdi.
     await recordVote({ customerId: buyerId, productId, context: 'purchase', vote: 'like', dwellMs: 2400 });
-    const written = await submitReview({ customerId: buyerId, productId, language: 'tr', rating: 5, comment: 'Çok iyiydi.' });
+    const written = await submitReview({ customerId: buyerId, productId, rating: 5, comment: 'Çok iyiydi.' });
     if (!written.ok) throw new Error(written.reason);
 
     expect(written.data).toMatchObject({ vote: 'like', rating: 5, comment: 'Çok iyiydi.', dwellMs: 2400 });
@@ -247,12 +248,12 @@ describe('beğen / geç', () => {
 
     // Metne dokunulmadı: yeniden okunacak bir şey yok, moderasyon damgası da yerinde kalmalı.
     expect(await feedback.getById(review.id)).toMatchObject({ comment: 'Harika.', status: 'approved', vote: 'like' });
-    expect((await listProductReviews(productId)).rows).toHaveLength(1);
+    expect((await listProductReviews(productId, 'tr')).rows).toHaveLength(1);
   });
 
   it('yalnız yıldız gönderen istek yazılmış yorumu silmez', async () => {
     await approvedReview(4, 'İlk yorumum.');
-    await submitReview({ customerId: buyerId, productId, language: 'tr', rating: 2 });
+    await submitReview({ customerId: buyerId, productId, rating: 2 });
 
     const row = (await feedback.listByCustomer(buyerId)).find((r) => r.productId === productId);
     expect(row).toMatchObject({ rating: 2, comment: 'İlk yorumum.' });
@@ -275,7 +276,7 @@ describe('beğen / geç', () => {
 
 describe('ürün skoru — iki ayak', () => {
   it('yalnız onaylı beyanlardan türer', async () => {
-    await submitReview({ customerId: buyerId, productId, language: 'tr', rating: 1, comment: 'Beğenmedim.' });
+    await submitReview({ customerId: buyerId, productId, rating: 1, comment: 'Beğenmedim.' });
     // Henüz onaylanmadı: skor oluşmamalı.
     expect(await getProductScore(productId)).toMatchObject({ average: null, totalCount: 0 });
 
@@ -391,7 +392,7 @@ describe('yorum yazma hakkı', () => {
   it('satın alan yazabilir; yazdıysa mevcut kaydı döner', async () => {
     expect(await getReviewEligibility(buyerId, productId)).toMatchObject({ canReview: true, existing: null });
 
-    await submitReview({ customerId: buyerId, productId, language: 'tr', rating: 5 });
+    await submitReview({ customerId: buyerId, productId, rating: 5 });
     const after = await getReviewEligibility(buyerId, productId);
     expect(after).toMatchObject({ canReview: true, existing: { rating: 5 } });
   });

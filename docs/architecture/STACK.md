@@ -43,6 +43,7 @@ Tek markalı, tek veritabanlı, orta ölçekli bir web ürünü: müşteriye aç
 | **E-posta** | **`resend`** (gönderim) + **`@react-email/components`** (şablon) | Supabase mail yapısı KULLANILMAZ; Auth OTP dahil tüm mail `packages/email`'den (§10, `14-bildirim-email`) |
 | **Dosya deposu** | **`@aws-sdk/client-s3`** + **`@aws-sdk/s3-request-presigner`** | Cloudflare R2, S3-uyumlu API. Presigner özel kova için süreli okuma/yükleme adresi üretir (§10 "iki kova") |
 | **Lint** | **ESLint flat config** + **`typescript-eslint`** | Kuralı zorlayan yer: `console` yasağı, ölü kod, `any` (`packages/eslint-config`) |
+| **Yapay zekâ** | **`ai`** (Vercel AI SDK) + **`@ai-sdk/anthropic`** · **`@ai-sdk/google`** | Sağlayıcı-agnostik katman ELLE yazılmaz — kütüphane yapar; seçim env'den (`AI_PROVIDER`). Çıktı `generateObject` + Zod ile yapısal. Yalnız `packages/ai` (§4 `ai-scope`) → `docs/build/20-yapay-zeka.md` |
 
 > **`next-intl` SINIRI (denetim B1, 02.08):** yalnız **routing/locale yönlendirmesi** için kullanılır
 > (`middleware.ts`, `i18n/routing.ts`, `i18n/request.ts`). **Mesaj API'si (`useTranslations`,

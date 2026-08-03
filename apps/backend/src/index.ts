@@ -10,6 +10,7 @@ import { PURGE_OBSERVABILITY, purgeObservabilityJob } from './jobs/purge-observa
 import { runJob } from './jobs/runner';
 import { SEND_FEEDBACK_INVITES, sendFeedbackInvitesJob } from './jobs/send-feedback-invites';
 import { SWEEP_RESERVATIONS, sweepReservations } from './jobs/sweep-reservations';
+import { TRANSLATE_USER_TEXT, translateUserTextJob } from './jobs/translate-user-text';
 
 /**
  * SÜREÇ DÜZEYİ EMNİYET AĞI (denetim G2). `runJob` her cron'u sarıyor, Hono `onError` her isteği —
@@ -102,6 +103,18 @@ cron.schedule(`*/${HEALTH_COLLECT_INTERVAL_MIN} * * * *`, () => {
 cron.schedule('20 3 * * *', () => {
   void runJob(PURGE_OBSERVABILITY, purgeObservabilityJob);
 }, { timezone: 'Europe/Paris' });
+
+// Kullanıcı metinlerinin çevirisi (20.2) — beş dakikada bir, partili (20 metin/tur).
+//
+// **Sıklık bir GÖRÜNÜRLÜK kararıdır:** yazılan yorum ne kadar sürede öteki dillerdeki okuyucuya
+// açılır. Beş dakika, ürün sayfasını yenileyen birinin fark etmeyeceği kadar kısa; her dakika
+// koşmak ise boş turlarla sağlayıcıya gereksiz istek atardı — kuyruk çoğu zaman boştur.
+//
+// AI yapılandırılmamışsa tur kendini atlar (`not_configured`) ve HİÇBİR satırı damgalamaz:
+// anahtar sonradan geldiğinde geçmişin tamamı çevrilebilir kalır.
+cron.schedule('*/5 * * * *', () => {
+  void runJob(TRANSLATE_USER_TEXT, translateUserTextJob);
+});
 
 const port = Number(process.env.BACKEND_PORT ?? 8787);
 serve({ fetch: app.fetch, port }, (info) => {

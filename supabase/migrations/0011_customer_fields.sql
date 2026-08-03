@@ -28,6 +28,16 @@ alter table public.user_profiles
   add column b2b_rejected_at timestamptz,
   add column b2b_rejected_by uuid references public.user_profiles (id) on delete set null,
   add column b2b_reject_reason text,
+  -- **Ret gerekçesi MÜŞTERİYE gider** (e-postayla) — yani personelin Türkçe cümlesi, Fransızca ya da
+  -- Almanca konuşan bir muhataba ulaşır. Çevrilmezse gerekçe olmayan bir gerekçedir. Torba yalnız
+  -- makine çevirilerini taşır; orijinal `b2b_reject_reason`'da durur (20.2).
+  --
+  -- Dil kolonu YOK ve gerekmiyor: operasyon yüzeyi tek dilli (CLAUDE §2, Türkçe) ve torbada
+  -- olmayan bir dil "orijinal zaten o dildedir" demeye yeter — `resolveUserText` bu hâlde orijinale
+  -- düşer, ki doğrusu da odur. Nadiren yazılan bir alan için üçüncü bir kolon taşımıyoruz.
+  add column b2b_reject_reason_translations jsonb,
+  -- Çeviri işi baktı mı. Başarısızlıkta da yazılır (sonsuz retry yok) — bkz. 0027.
+  add column b2b_reject_reason_translated_at timestamptz,
 
   -- Vade (DOMAIN §7): yetkidir, varsayılan KAPALI; admin elle açar. Açık bakiye saklanmaz —
   -- ödenmemiş vadeli siparişlerden türetilir.
@@ -102,6 +112,47 @@ $$;
 create trigger user_profiles_b2b_stamp_trg
   before insert or update on public.user_profiles
   for each row execute function public.stamp_b2b_application();
+
+-- ── ÇEVİRİ BAYATLAMASINI VERİ ÖNLER (20.2) ───────────────────────────────────
+-- Kaynak metin değişince eski çeviri ARTIK YANLIŞTIR ve sessizce yanlıştır: müşteri, personelin
+-- SİLDİĞİ bir gerekçenin Fransızcasını okur. Aynı tehlike ürün yorumunda da var (yorumunu
+-- düzenleyen müşteri).
+--
+-- Kural kapıya değil VERİYE konuyor: kapı bir yol unutabilir, ikinci bir yazar hiç bilmeyebilir.
+-- Fonksiyon GENEL — kolon adlarını `tg_argv`'den alır — çünkü üç tabloda aynı kural üç kez
+-- yazılsaydı biri mutlaka ötekilerden ayrışırdı (CLAUDE §1).
+--
+-- **Neden burada tanımlı:** ilk kullanan tablo bu (0011). `create trigger` fonksiyonun O ANDA var
+-- olmasını ister; 0027'de tanımlanmış bir fonksiyonu buradan bağlamak migration'ı kırardı.
+create or replace function public.reset_translation_on_text_change() returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  metin_kolonu text := tg_argv[0];
+  torba_kolonu text := tg_argv[1];
+  damga_kolonu text := tg_argv[2];
+begin
+  -- Kolonlara dinamik erişim: `new.<değişken>` plpgsql'de yazılamaz, jsonb köprüsü kullanılır.
+  -- `is distinct from` null-güvenlidir — metnin silinmesi de bir değişikliktir.
+  if (to_jsonb(new) ->> metin_kolonu) is distinct from (to_jsonb(old) ->> metin_kolonu) then
+    new := jsonb_populate_record(new, jsonb_build_object(torba_kolonu, null, damga_kolonu, null));
+  end if;
+  return new;
+end;
+$$;
+
+create trigger user_profiles_reject_reason_translation_trg
+  before update on public.user_profiles
+  for each row
+  execute function public.reset_translation_on_text_change(
+    'b2b_reject_reason', 'b2b_reject_reason_translations', 'b2b_reject_reason_translated_at'
+  );
+
+-- Çeviri kuyruğu: gerekçesi yazılmış ama henüz çevrilmemiş retler.
+create index user_profiles_reject_reason_untranslated_idx
+  on public.user_profiles (b2b_rejected_at)
+  where b2b_reject_reason is not null and b2b_reject_reason_translated_at is null;
 
 -- "Onay bekliyor" hâli — ÜRETİLMİŞ kolon, çünkü kuralın tek bir yerde durması gerekiyor.
 --

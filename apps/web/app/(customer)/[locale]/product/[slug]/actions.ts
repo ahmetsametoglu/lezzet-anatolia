@@ -1,7 +1,6 @@
 'use server';
 
 import { hasLocale } from 'next-intl';
-import type { PreferredLanguage } from '@lezzet/types';
 import { currentCustomerId } from '@/lib/guard';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { submitReview } from '@/lib/feedback/product-feedback';
@@ -14,9 +13,10 @@ import { routing } from '@/i18n/routing';
  * gelemez. Satın alma şartını da bu action DEĞİL, kapının kendisi denetler (`submitReview`
  * siparişleri okur); buradaki iş yalnız oturumu çözüp kapıya vermek.
  *
- * **Dil yorumun kendi alanıdır** ve o anki arayüz dilinden gelir: yorumlar çevrilmiyor (17.1
- * kararı), bu yüzden hangi dilde yazıldığı kayda geçmeli — yoksa Fransızca bir yorum Türkçe
- * sayfada çevrilmiş sanılırdı.
+ * **Dil artık BURADAN yazılmıyor** (20.2 düzeltmesi). Eskiden arayüz dili yorumun dili sayılıyordu;
+ * o bir kanıt değil tahmindi ve tam da bu işin sebebinde yanılıyordu — Fransızca sayfada Boşnakça
+ * yazan müşterinin yorumu "Fransızca" diye damgalanır, bir daha hiç çevrilmezdi. Dili artık metne
+ * BAKAN taraf yazıyor (çeviri işi).
  *
  * **Hata kapısı müşteriye ait** (`customerErrorKey`, denetim H1/H2 · 03.08). Ret sebebi zaten
  * anahtar olarak dönüyordu ama funnel'ı ATLIYORDU: `error_log`'a hiç iz düşmüyor, buna karşılık
@@ -37,7 +37,6 @@ export async function submitReviewAction(input: {
     const result = await submitReview({
       customerId,
       productId: input.productId,
-      language: input.locale as PreferredLanguage,
       rating: input.rating,
       comment: input.comment,
     });

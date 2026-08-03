@@ -1,4 +1,8 @@
 {
   "extends": "@lezzet/typescript-config/base.json",
+  "comment": "Sağlayıcı çözümü env okur (process.env) — Node tipleri bu yüzden gerekli.",
+  "compilerOptions": {
+    "types": ["node"]
+  },
   "include": ["src"]
 }

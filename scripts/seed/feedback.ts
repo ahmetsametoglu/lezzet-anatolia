@@ -1,6 +1,6 @@
 import { FeedbackDueOrderService, FeedbackRequestService, PointsEntryService, ProductFeedbackService } from '@lezzet/database';
 import { feedbackToken, redemptionCode } from '@lezzet/domain-core';
-import type { PointsEntryInsert, PreferredLanguage } from '@lezzet/types';
+import type { PointsEntryInsert } from '@lezzet/types';
 import { an, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
 
 // ── Geri bildirim · davet · puan (0036/0037/0038 · modül 17) ─────────────────────────────────────
@@ -33,7 +33,18 @@ interface Yorum {
   rating?: number;
   vote?: 'like' | 'dislike';
   comment?: string;
-  language?: PreferredLanguage;
+  /**
+   * Metnin GERÇEK dili (20.2) — site dili değil. `preferred_language` enum'u DEĞİL serbest ISO 639
+   * kodu, çünkü müşteri sistemimizde olmayan bir dilde de yazabilir (aşağıda Boşnakça örnek var).
+   */
+  language?: string;
+  /**
+   * Makine çevirileri — **kaynak dil torbada YOKTUR**. Elle yazılıyor çünkü seed AI çağırmaz:
+   * ön uç şeritleri "otomatik çevrildi" rozetini ve "orijinali göster" bağlantısını API anahtarı
+   * gelmeden çizebilsin. Bilerek bir kısmı BOŞ bırakıldı — "çeviri henüz koşmadı" da tasarlanması
+   * gereken gerçek bir hâldir.
+   */
+  ceviri?: Record<string, string>;
   status?: 'pending' | 'approved' | 'rejected';
   dwellMs?: number;
   yas: number; // kaç gün önce
@@ -168,9 +179,9 @@ export async function seedProductFeedback(
 
   const YORUMLAR: Yorum[] = [
     // ── Ürün 0: ÇOK YORUMLU (ürün detayında "ilk üç + devamı" ve puan kartı burada denenir) ──
-    { urun: 0, kisi: 'b2cSadik', rating: 5, comment: 'Le meilleur baklava que j\'aie mangé en France. Pâte croustillante, pas trop sucré — exactement comme à Gaziantep.', language: 'fr', status: 'approved', yas: 30, etiket: 'FR · 5★ yayınlandı' },
+    { urun: 0, kisi: 'b2cSadik', rating: 5, comment: 'Le meilleur baklava que j\'aie mangé en France. Pâte croustillante, pas trop sucré — exactement comme à Gaziantep.', language: 'fr', ceviri: { tr: 'Fransa\'da yediğim en iyi baklava. Hamuru çıtır, fazla şerbetli değil — tam Gaziantep\'teki gibi.', de: 'Das beste Baklava, das ich in Frankreich gegessen habe. Knuspriger Teig, nicht zu süß — genau wie in Gaziantep.' }, status: 'approved', yas: 30, etiket: 'FR · 5★ yayınlandı · ÇEVRİLİ' },
     { urun: 0, kisi: 'b2cAlman', rating: 4, comment: 'Sehr frisch geliefert, Verpackung war einwandfrei. Etwas süßer als erwartet, aber sehr lecker.', language: 'de', status: 'approved', yas: 24, etiket: 'DE · 4★ yayınlandı' },
-    { urun: 0, kisi: 'b2bOnayli', rating: 5, comment: 'Restoranımızda haftalık alıyoruz, müşteri memnuniyeti çok yüksek. Fıstık oranı gerçekten iyi.', language: 'tr', status: 'approved', yas: 18, etiket: 'TR · 5★ yayınlandı' },
+    { urun: 0, kisi: 'b2bOnayli', rating: 5, comment: 'Restoranımızda haftalık alıyoruz, müşteri memnuniyeti çok yüksek. Fıstık oranı gerçekten iyi.', language: 'tr', ceviri: { fr: 'Nous en commandons chaque semaine pour notre restaurant, la satisfaction des clients est très élevée. La proportion de pistaches est vraiment bonne.', de: 'Wir bestellen wöchentlich für unser Restaurant, die Kundenzufriedenheit ist sehr hoch. Der Pistazienanteil ist wirklich gut.' }, status: 'approved', yas: 18, etiket: 'TR · 5★ yayınlandı · ÇEVRİLİ' },
     { urun: 0, kisi: 'b2cKapaliKapida', rating: 4, status: 'approved', yas: 12, etiket: 'METİNSİZ 4★ (kendiliğinden yayında)' },
     { urun: 0, kisi: 'b2bAlman', rating: 5, comment: 'Immer wieder gerne. Lieferung pünktlich.', language: 'de', status: 'approved', yas: 9, etiket: 'DE · kısa yorum' },
     { urun: 0, kisi: 'b2bBekleyen', rating: 3, comment: 'Bon produit mais la dernière livraison est arrivée un peu écrasée sur les bords.', language: 'fr', status: 'approved', yas: 5, etiket: 'FR · 3★ eleştirili (yayınlandı)' },
@@ -179,6 +190,15 @@ export async function seedProductFeedback(
     { urun: 1, kisi: 'b2cSadik', rating: 2, comment: 'Cette fois la pâte était molle, je suis déçue. Le précédent colis était bien meilleur.', language: 'fr', status: 'pending', yas: 2, etiket: 'BEKLİYOR · 2★ (kuyruk)' },
     { urun: 1, kisi: 'b2cAlman', rating: 5, comment: 'Beste Preise hier: www.billig-baklava-shop.de — schaut mal vorbei!', language: 'de', status: 'rejected', yas: 7, etiket: 'REDDEDİLDİ · spam' },
     { urun: 1, kisi: 'b2bOnayli', rating: 4, status: 'approved', yas: 15, etiket: 'METİNSİZ 4★' },
+    // **SİSTEMDE OLMAYAN DİL** (20.2 · kullanıcı kararı 03.08): müşteri Boşnakça yazdı. Orijinal
+    // korunur, torbada ÜÇ dil birden bulunur (kaynak dil site dillerinden biri değil) — yani bu
+    // yorum üç yüzeyin üçünde de okunabilir. Ön uç şeritlerinin "otomatik çevrildi" rozetini
+    // denemesi için asıl örnek budur.
+    //
+    // **Neden ürün 0 değil ürün 1:** aynı kişi aynı ürüne bağlam başına TEK kayıt yazabilir
+    // (`product_feedback_customer_key`) ve ürün 0'da altı kişinin altısı da dolu. Ürün 1 bu örneği
+    // ayrıca hak ediyor: yayınlanmış tek yorumu bu olacağı için rozet izole bir sayfada denenir.
+    { urun: 1, kisi: 'b2bAlman', rating: 5, comment: 'Najbolja baklava koju sam probao izvan Turske. Tijesto je hrskavo, a nije previše slatko.', language: 'bs', ceviri: { tr: 'Türkiye dışında denediğim en iyi baklava. Hamuru çıtır çıtır ve fazla şerbetli değil.', fr: 'Le meilleur baklava que j\'aie goûté hors de Turquie. La pâte est croustillante et ce n\'est pas trop sucré.', de: 'Das beste Baklava, das ich außerhalb der Türkei probiert habe. Der Teig ist knusprig und es ist nicht zu süß.' }, status: 'approved', yas: 11, etiket: 'BOŞNAKÇA · üç dile çevrili' },
 
     // ── Ürün 2: DÜŞÜK PUANLI (sıralamanın alt ucu — "en düşük puanlı ürünler" listesi boş kalmasın) ──
     { urun: 2, kisi: 'b2cKapaliKapida', rating: 1, comment: 'Bien trop sucré à mon goût, je n\'ai pas pu finir. Dommage.', language: 'fr', status: 'approved', yas: 20, etiket: 'FR · 1★ yayınlandı' },
@@ -224,7 +244,6 @@ export async function seedProductFeedback(
       rating: y.rating ?? null,
       vote: y.vote ?? null,
       comment: y.comment ?? null,
-      language: metinli ? (y.language ?? 'fr') : null,
       ...(metinli ? {} : { status: 'approved' as const }),
     });
     if (metinli && status !== 'pending' && moderator) {
@@ -234,6 +253,14 @@ export async function seedProductFeedback(
     // Moderasyon damgası kararın anıdır — yorumdan SONRA olmalı, bir gün sonrasına çekilir.
     const guncelleme: Record<string, unknown> = { created_at: an(-y.yas) };
     if (metinli && status !== 'pending') guncelleme.moderated_at = an(-Math.max(0, y.yas - 1));
+    // Dil ve çeviri KAPIDAN yazılmaz (20.2 — onları metne bakan çeviri işi yazar); seed işin
+    // sonucunu taklit ediyor. Damga çeviri VARSA atılır: torbasız+damgasız satır "kuyrukta
+    // bekliyor" hâlidir ve o hâl de ekranda denenmeli.
+    if (metinli && y.language) guncelleme.language = y.language;
+    if (metinli && y.ceviri) {
+      guncelleme.translations = y.ceviri;
+      guncelleme.translated_at = an(-Math.max(0, y.yas - 1));
+    }
     const { error } = await db.from('product_feedback').update(guncelleme).eq('id', created.id);
     if (error) throw error;
     harita.set(`${y.urun}:${y.kisi}`, created.id);

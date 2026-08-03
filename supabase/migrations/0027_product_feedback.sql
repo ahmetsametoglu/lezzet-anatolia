@@ -51,11 +51,31 @@ create table public.product_feedback (
     rating is not null or vote is not null or length(btrim(coalesce(comment, ''))) > 0
   ),
 
-  -- Metnin dili. **Çevrilmez**: yorum müşterinin kendi cümlesidir, makine çevirisi onu söylemediği
-  -- bir hâle sokar. Metinsiz kayıtta boştur — ortada dil taşıyan bir şey yoktur.
-  language preferred_language,
+  -- ── METNİN DİLİ VE ÇEVİRİSİ (20.2) ─────────────────────────────────────────
+  --
+  -- **Eski karar geri alındı** (kullanıcı 03.08). Burada bir zamanlar *"çevrilmez: yorum müşterinin
+  -- kendi cümlesidir"* yazıyordu. Endişe doğruydu ama sonucu yanlıştı: çevirmemek, Fransız bir
+  -- okuyucuya Türkçe bir yorumu OKUYAMAYACAĞI hâlde göstermek demek — yani yorumu hiç göstermemek.
+  -- Doğru çözüm çevirmemek değil, **orijinali korumak ve çeviriyi YANINA koymak**.
+  --
+  -- `language` artık müşterinin site dili DEĞİL, metnin GERÇEKTEN yazıldığı dil — ve
+  -- `preferred_language` enum'u (tr|fr|de) bu işi göremez: müşteri Boşnakça yorum yazabilir.
+  -- Serbest metin + ISO 639 deseni. `null` = tespit henüz koşmadı.
+  --
+  -- Yazan: **yalnız çeviri işi** (`translate-user-text`). Kapı yazmaz — yazma anında elimizdeki tek
+  -- bilgi müşterinin o an baktığı sayfanın dilidir ve o, metnin dili hakkında bir kanıt değildir.
+  -- Yanlış dil etiketi dilsizlikten kötüdür: "bu zaten Fransızca" diyen bir satır asla çevrilmez.
+  language text check (language ~ '^[a-z]{2,3}$'),
+  -- Makine çevirileri {tr?,fr?,de?} — **kaynak dil torbada BULUNMAZ** (orijinal zaten `comment`'te).
+  -- Ayrı çeviri tablosu bilinçli reddedildi: kaynak üç ayrı tabloda olduğu için `source_id`
+  -- polimorfik, yani FK'siz olurdu — silinen yorumun çevirisi öksüz kalır ve kimse görmez.
+  translations jsonb,
+  -- Çeviri işi bu satıra BAKTI MI. **Başarısızlıkta da yazılır** — yoksa çevrilemeyen tek bir satır
+  -- her turda yeniden denenir ve kuyruğun önünü sonsuza dek tıkar. `translations` null + damga dolu
+  -- = denendi, olmadı; okuyan taraf orijinali gösterir.
+  translated_at timestamptz,
   constraint feedback_language_needs_text check (
-    (length(btrim(coalesce(comment, ''))) > 0) = (language is not null)
+    length(btrim(coalesce(comment, ''))) > 0 or (language is null and translations is null)
   ),
 
   -- Kartta geçirilen süre — **sinyal kalitesi** için (DOMAIN §14 "ödül ≠ güven"). Yalnız kaydırmada
@@ -106,6 +126,14 @@ create table public.product_feedback (
 
 alter table public.product_feedback enable row level security;
 
+-- Yorumunu DEĞİŞTİREN müşterinin eski çevirisi silinir — yoksa bir okuyucu, müşterinin artık
+-- söylemediği bir cümlenin Fransızcasını okurdu. Kural genel fonksiyonda (0011), üç tabloda tek
+-- tanım. Moderasyon damgası da aynı sebeple kapıda sıfırlanıyor (`upsertFeedback`).
+create trigger product_feedback_comment_translation_trg
+  before update on public.product_feedback
+  for each row
+  execute function public.reset_translation_on_text_change('comment', 'translations', 'translated_at');
+
 -- **Aynı ürüne bir müşteriden, bağlam başına tek kayıt.** İkinci kez alan müşteri görüşünü
 -- GÜNCELLER; aynı kişinin iki yıldızı ortalamayı iki kez etkilerdi. Puan tavanı ("aynı ürüne bir
 -- kez puan") da bu tekliğe yaslanır.
@@ -135,6 +163,15 @@ create index product_feedback_published_idx on public.product_feedback (product_
 create index product_feedback_awaiting_notice_idx
   on public.product_feedback (product_id)
   where context = 'candidate' and vote = 'like' and customer_id is not null and notified_at is null;
+
+-- **Çeviri kuyruğu** (20.2): metni olup henüz çeviri işinden geçmemiş yorumlar, en eski önce.
+--
+-- `notified_idx` ile aynı iyi huy: satır çevrildikçe (damga dolunca) indeksten DÜŞER — kuyruk
+-- indeksi tablonun boyuyla değil, işlenmemiş işin boyuyla büyür. Damga başarısızlıkta da yazıldığı
+-- için çevrilemeyen bir satır burada sonsuza dek dönüp durmaz.
+create index product_feedback_untranslated_idx
+  on public.product_feedback (created_at)
+  where translated_at is null and comment is not null;
 
 -- Skor ve pano toplamaları.
 create index product_feedback_product_idx on public.product_feedback (product_id, context);

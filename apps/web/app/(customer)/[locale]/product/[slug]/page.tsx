@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { localizedUrl, type Locale } from '@lezzet/i18n';
+import type { PreferredLanguage } from '@lezzet/types';
 import { localeAlternates } from '@/lib/seo/alternates';
 import { ProductJsonLd } from '@/lib/seo/json-ld';
 import { setRequestLocale } from 'next-intl/server';
@@ -78,7 +79,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const customerId = await currentCustomerId();
   const [score, page, eligibility] = await Promise.all([
     getProductScore(product.id),
-    listProductReviews(product.id, undefined, REVIEW_PAGE_SIZE),
+    // Dil ZORUNLU: yorumlar okuyucunun dilinde gösteriliyor (20.2 — orijinal korunur, çeviri yanına konur).
+    listProductReviews(product.id, locale as PreferredLanguage, undefined, REVIEW_PAGE_SIZE),
     getReviewEligibility(customerId, product.id),
   ]);
 
