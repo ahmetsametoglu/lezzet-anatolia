@@ -1,4 +1,5 @@
 {
+  "//": "scripts/ AYRI bir typecheck projesidir; `pnpm typecheck` onu turbo'dan sonra koşar (kökün `exclude`'u apps+packages olduğu için buraya girmiyor). Ayrı durmasının sebebi yaşanmış bir zarardır (03.08): kapsam dışıyken 02.9 cent göçü `DiscountInsert`'i değiştirdi, `seed/discount.ts` eski alan adlarında kaldı ve hiçbir kapı uyarmadı — hata ancak seed koşunca ZodError olarak yüzeye çıktı. Seed 17 dosya ve neredeyse tüm servis imzalarına dokunuyor, yani şema göçlerinden en çok etkilenen yer burasıdır. Bu proje `pnpm typecheck`ten çıkarılırsa o sessiz kayma geri gelir.",
   "extends": "@lezzet/typescript-config/base.json",
   "compilerOptions": {
     "noEmit": true,

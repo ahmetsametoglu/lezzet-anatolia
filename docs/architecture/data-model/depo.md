@@ -40,6 +40,20 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 
 **Depo FK'sı YOK** (K8): kurye günü ve gün kapanışı kurye/gün ekseninde kalır (`DOMAIN §7`); araç o gün hangi depodan yüklediyse oradan yükler. Depo bağı eklemek, bugün olmayan bir kısıtı ("araç bir depoya aittir") veriye yazmak olurdu.
 
+> ⚠ **KARAR (03.08): tablo DÜŞECEK — tüketeni yok** (`02.11` penceresinde, besleme şeridinin notu üzerine).
+> Bugün servisi yok, `from('vehicle')` çağrısı hiç geçmiyor, yerelde 0 satır ve **hiçbir tasarım
+> sayfası aracı bir varlık olarak kullanmıyor** — `design/pages/kurye-*` ve `admin-teslimat`'ta "araç"
+> yalnız fiziksel bağlam ("ekran araçta kullanılır", "araç çıkarken atanmamış kalmamalı"); ne kuryeye
+> ne siparişe araç ATANIYOR. Yani bu tablo bir ihtiyacın karşılığı değil, ileri tarihli bir tahmin.
+>
+> Gerekçe projenin kendi kuralı: `transfer_status`'ta `draft` değerini *"kullanılmayan bir enum değeri
+> yalan söyler"* diye eklemedik; tüketilmeyen bir TABLO da aynı sınıftır — okuyan kişi var olmayan bir
+> kabiliyeti varsayar ve `knip` bunu yakalayamaz (SQL + Zod ikisi de kapsamı dışında).
+>
+> Şimdi düşürülmedi çünkü tek başına bir `db:refresh` gerektirir; `02.11` zaten o pencereyi açıyor —
+> iki reset yerine bir reset. Araç bir ekranda gerçekten gerekirse (11.x) o gün yeniden eklenir;
+> greenfield'da bunun bedeli bir tablo tanımıdır, tahminin bedeli ise kalıcı bir soru işaretidir.
+
 ---
 
 ## WarehouseVariantThreshold (depo bazlı asgari stok)

@@ -18,7 +18,7 @@
  * ve bu koşucu birbirini görür, DB'ye aynı anda iki paket vurmaz.
  */
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, createWriteStream } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync, createWriteStream } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -63,15 +63,26 @@ function summaryLine(result) {
 if (process.argv.includes('--status')) {
   const result = readJson(LATEST);
   console.log(summaryLine(result));
+  const previous = readJson(join(RESULTS, 'previous.json'));
+  if (previous) console.log(`[test] bir önceki: ${summaryLine(previous)} (log: .test-results/previous.log)`);
   process.exit(result?.status === 'passed' ? 0 : result?.status === 'failed' ? 1 : 2);
 }
 
 // ── Kilidi almayı dene: alan KOŞUCU olur, alamayan KATILIMCI ─────────────────
-function tryAcquire() {
+//
+// **DDL kuyruğu döngünün İÇİNDE** (besleme şeridinin notu, 03.08): kilidi `db:reset`/migration
+// tutuyorsa (`--kind=ddl`) katılımcı yoluna girilmez, boşalması BEKLENİR ve baştan denenir.
+// Ayrım şart: katılımcı `latest.json`'ın "running" olmaktan çıkmasını bekler, ama bir DDL sırasında
+// o dosya zaten ÖNCEKİ koşunun bitmiş sonucudur — ayrım olmasaydı kilit bırakılır bırakılmaz o
+// bayat sonuç okunup "geçti" denirdi, hiçbir test koşmadan.
+//
+// Kontrol döngünün içinde, çünkü dışarıda yapılan bir kontrol ile `mkdir` arasına giren bir
+// `db:reset` aynı tuzağı geri getirirdi — yarışı kapatan şey tekrar denemektir.
+async function tryAcquire() {
   for (;;) {
     try {
       mkdirSync(LOCK);
-      writeFileSync(join(LOCK, 'owner.json'), JSON.stringify({ pid: process.pid, at: Date.now() }));
+      writeFileSync(join(LOCK, 'owner.json'), JSON.stringify({ pid: process.pid, at: Date.now(), kind: 'test' }));
       return true;
     } catch {
       const owner = readJson(join(LOCK, 'owner.json'));
@@ -82,12 +93,17 @@ function tryAcquire() {
         rmSync(LOCK, { recursive: true, force: true });
         continue;
       }
-      return false; // canlı bir koşu var → katılımcı yolu
+      if ((owner.kind ?? 'test') !== 'test') {
+        console.warn(`[test] şema işi sürüyor (${owner.kind}, pid ${owner.pid}) — bitmesini bekliyorum, sonra KOŞUCU olacağım…`);
+        await sleep(POLL_MS);
+        continue;
+      }
+      return false; // canlı bir TEST koşusu var → katılımcı yolu
     }
   }
 }
 
-if (!tryAcquire()) {
+if (!(await tryAcquire())) {
   // KATILIMCI: yeni koşu BAŞLATMA, süreni bekle, aynı sonucu oku (single-flight).
   const running = readJson(LATEST);
   console.log(`[test] koşu zaten sürüyor — katılıyorum, sonucu bekliyorum (${running?.startedAt ?? 'başlangıç bilinmiyor'})`);
@@ -123,7 +139,16 @@ for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
   });
 }
 
-rmSync(RESULTS, { recursive: true, force: true }); // her koşu önceki veriyi siler (kullanıcı kararı)
+// Her koşu önceki veriyi siler (kullanıcı kararı) — **ama bir öncekinin KANITINI değil.**
+// Bulgu (besleme şeridi, 03.08): kırmızı bir paketi teşhis ederken yapılacak ilk şey ikinci bir
+// koşu tetiklemektir; eski hâlde o tetikleme elindeki tek kanıtı siliyordu ve düşen dosyaların
+// listesi sohbete elle kopyalanmak zorunda kalıyordu. Son koşu `run.log`, bir önceki
+// `previous.log`. İki tur yeter: üçüncüsünü tutmak arşiv olurdu, bu ise teşhis penceresi.
+if (existsSync(LATEST)) {
+  renameSync(LATEST, join(RESULTS, 'previous.json'));
+  if (existsSync(LOG)) renameSync(LOG, join(RESULTS, 'previous.log'));
+}
+rmSync(VITEST_JSON, { force: true });
 mkdirSync(RESULTS, { recursive: true });
 const startedAt = new Date().toISOString();
 const startMs = Date.now();
