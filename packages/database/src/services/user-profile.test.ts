@@ -67,7 +67,7 @@ describe('varsayılanlar ve işaretler', () => {
     expect(profile?.companyInfo).toBeNull(); // kanal buradan türer, ayrı kolon yok
   });
 
-  it('B2B onayı verilebilir/geri alınabilir — reddedilen kayıt silinmez', async () => {
+  it('B2B onayı verilebilir — reddedilen kayıt silinmez', async () => {
     const company = await profiles.insert({
       name: `Restoran ${stamp}`,
       type: 'company',
@@ -76,9 +76,89 @@ describe('varsayılanlar ve işaretler', () => {
     });
     createdIds.push(company.id);
 
-    expect((await profiles.setB2bApproval(company.id, true)).b2bApproved).toBe(true);
-    expect((await profiles.setB2bApproval(company.id, false)).b2bApproved).toBe(false);
+    expect((await profiles.approveB2b(company.id)).b2bApproved).toBe(true);
     expect(await profiles.getById(company.id)).not.toBeNull();
+  });
+
+  /**
+   * 08.7'nin kapattığı açık: ret ile "sırasını bekliyor" veride ayrışmıyordu ve reddedilen aday
+   * ekranda hiç gelmeyecek bir cevabı beklediğini okuyordu.
+   */
+  it('ret kuyruktan düşürür, gerekçeyi saklar ve hâli ayrıştırır', async () => {
+    const company = await profiles.insert({
+      name: `Reddedilen ${stamp}`,
+      type: 'company',
+      companyInfo: { legalName: 'SARL Ret', siret: '99999999999999', activityCode: '5610A' },
+      b2bApproved: false,
+    });
+    createdIds.push(company.id);
+
+    // Başvuru anı: kuyrukta ve "bekliyor".
+    const basvurmus = await profiles.getById(company.id);
+    expect(basvurmus?.b2bPending).toBe(true);
+
+    const reddedilmis = await profiles.rejectB2b(company.id, { actorId: customerId, reason: 'Faaliyet kodu uyuşmuyor' });
+    // `b2bApproved` DEĞİŞMEDİ — ayrım tam da bu yüzden damgada.
+    expect(reddedilmis.b2bApproved).toBe(false);
+    expect(reddedilmis.b2bRejectReason).toBe('Faaliyet kodu uyuşmuyor');
+    expect(reddedilmis.b2bPending).toBe(false);
+
+    // Kuyruk süzgeci reddedileni GÖRMEZ.
+    const kuyruk = await profiles.list({ b2bPending: true, limit: 100 });
+    expect(kuyruk.rows.some((r) => r.id === company.id)).toBe(false);
+  });
+
+  it('künye düzeltilip yeniden başvurulunca ret ESKİR — kayıt kuyruğa döner, geçmiş durur', async () => {
+    const company = await profiles.insert({
+      name: `Yeniden ${stamp}`,
+      type: 'company',
+      companyInfo: { legalName: 'SARL Yeniden', siret: '88888888888888', activityCode: '4711D' },
+      b2bApproved: false,
+    });
+    createdIds.push(company.id);
+    await profiles.rejectB2b(company.id, { actorId: customerId, reason: 'SIRET doğrulanamadı' });
+
+    // Aday künyeyi DÜZELTİP yeniden başvuruyor; damgayı tetikleyici atar, uygulama yazmaz.
+    const yeniden = await profiles.update({
+      id: company.id,
+      companyInfo: { legalName: 'SARL Yeniden', siret: '88888888888888', activityCode: '5610A' },
+    });
+
+    expect(yeniden.b2bPending).toBe(true);
+    // Ret SİLİNMEDİ — 09.11'in istediği geçmiş duruyor.
+    expect(yeniden.b2bRejectReason).toBe('SIRET doğrulanamadı');
+    expect(yeniden.b2bRejectedAt).not.toBeNull();
+  });
+
+  it('aynı künyeyle yeniden göndermek yeni başvuru DEĞİLDİR — ret ayakta kalır', async () => {
+    const kunye = { legalName: 'SARL Aynı', siret: '77777777777777', activityCode: '5610A' };
+    const company = await profiles.insert({ name: `Aynı ${stamp}`, type: 'company', companyInfo: kunye, b2bApproved: false });
+    createdIds.push(company.id);
+    await profiles.rejectB2b(company.id, { actorId: customerId, reason: 'Adres rota dışı' });
+
+    // Künye değişmeden yeniden yazılıyor: taşıdığı yeni bilgi yok, operatörü aynı karara çağırır.
+    const tekrar = await profiles.update({ id: company.id, companyInfo: kunye });
+    expect(tekrar.b2bPending).toBe(false);
+  });
+
+  it('alakasız bir güncelleme reddedileni kuyruğa geri sokmaz', async () => {
+    const company = await profiles.insert({
+      name: `Telefonlu ${stamp}`,
+      type: 'company',
+      companyInfo: { legalName: 'SARL Telefon', siret: '66666666666666', activityCode: '5610A' },
+      b2bApproved: false,
+    });
+    createdIds.push(company.id);
+    await profiles.rejectB2b(company.id, { actorId: customerId, reason: 'Künye eksik' });
+
+    // Alakasız alan olarak `name` seçildi, telefon DEĞİL: telefon tekil indeksli ve aynı dosyadaki
+    // liste kurgusuyla çakışıyordu — testin ölçtüğü şeyle ilgisi olmayan bir kısıt ihlali.
+    const adiDegisen = await profiles.update({ id: company.id, name: `Telefonlu ${stamp} (düzeltildi)` });
+    expect(adiDegisen.b2bPending).toBe(false);
+  });
+
+  it('gerekçesiz ret yazılamaz — servis kapıda durdurur', async () => {
+    await expect(profiles.rejectB2b(customerId, { actorId: customerId, reason: '   ' })).rejects.toThrow(/gerekçesiz/);
   });
 
   it('taslak listesi yalnız taslakları getirir', async () => {

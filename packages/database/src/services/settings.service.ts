@@ -96,15 +96,26 @@ export class SettingsService extends BaseDbService<Setting, SettingInsert, Setti
     return Number.isFinite(value) ? value : fallback;
   }
 
-  /** Ayarı yazar/günceller (admin ekranı). Aynı anahtar+kapsam ikinci kez açılmaz — üzerine yazılır. */
-  async set(key: string, value: unknown, opts: { scopeType?: SettingScope; scopeId?: string | null; description?: string } = {}): Promise<Setting> {
+  /**
+   * Ayarı yazar/günceller (admin ekranı). Aynı anahtar+kapsam ikinci kez açılmaz — üzerine yazılır.
+   *
+   * `actorId` — değişikliğin izini bırakan alan (09.16). **Opsiyonel, çünkü her yazan bir insan
+   * değil:** tohum/göç ve iş süreçleri de ayar yazabilir ve onlara uydurma bir aktör atamak, izi
+   * güvenilir sanılan bir yalana çevirirdi. Verilmediğinde alan `null` kalır ve ekran bunu "sistem"
+   * diye okur — "bilinmiyor" diye değil.
+   */
+  async set(
+    key: string,
+    value: unknown,
+    opts: { scopeType?: SettingScope; scopeId?: string | null; description?: string; actorId?: string | null } = {},
+  ): Promise<Setting> {
     const scopeType = opts.scopeType ?? 'global';
     const scopeId = scopeType === 'global' ? null : (opts.scopeId ?? null);
 
     const existing = (await this.rowsFor(key)).find((row) => row.scopeType === scopeType && row.scopeId === scopeId);
     const saved = existing
-      ? await this.update({ id: existing.id, value, updatedAt: new Date().toISOString() })
-      : await this.insert({ key, value, scopeType, scopeId, description: opts.description });
+      ? await this.update({ id: existing.id, value, updatedAt: new Date().toISOString(), updatedBy: opts.actorId ?? null })
+      : await this.insert({ key, value, scopeType, scopeId, description: opts.description, updatedBy: opts.actorId ?? null });
 
     SettingsService.cache.delete(key);
     return saved;

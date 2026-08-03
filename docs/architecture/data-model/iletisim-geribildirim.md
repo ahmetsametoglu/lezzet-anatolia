@@ -207,6 +207,7 @@ Parametrik değerler **env'e veya koda gömülmez** (blueprint STACK §10): kesi
 | value | jsonb | ayar sayı, metin, saat, bayrak ya da nesne olabilir |
 | description | string \| null | admin ekranında ne işe yaradığı |
 | updated_at | timestamptz | |
+| updated_by | uuid \| null → user_profiles | Değişikliğin AKTÖRÜ (09.16). **`null` = "sistem kurdu", "bilinmiyor" DEĞİL** — tohum satırlarını kimse değiştirmedi; ekran boş aktörü "sistem varsayılanı" diye okur, uydurma isim yazmaz. `set(…, { actorId })` opsiyonel, çünkü ayar yazan her şey insan değil (tohum, göç, iş süreçleri) ve onlara sahte aktör atamak, izi *güvenilir sanılan* bir yalana çevirirdi. `on delete set null`: ayrılan personel izi götürür, ayarı değil |
 
 **Kapsamlı (scoped) çözüm:** aynı anahtar kanala/bölgeye/ülkeye göre farklılaşabilir; çözücü **en özgül** kapsamı seçer (bölge > kanal > ülke > global), yoksa global'e düşer. Hiç satır yoksa **çağıranın verdiği varsayılana** düşülür — varsayılan koda gömülü kalmaz, çağrı yerinde görünür. Aynı anahtar + aynı kapsam iki kez tanımlanamaz (kısmi unique indeks). Önbellekli çözücü; yazmada önbellek düşer.
 

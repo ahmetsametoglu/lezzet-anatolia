@@ -28,6 +28,12 @@ export const SettingSchema = z.object({
   value: z.unknown(),
   description: z.string().nullable(),
   updatedAt: z.string(),
+  /**
+   * Değişikliği yapan personel (09.16). **`null` = "sistem kurdu", "bilinmiyor" değil** — tohum
+   * satırları kimse tarafından değiştirilmemiştir; ekran boş aktörü "sistem varsayılanı" diye
+   * okur, uydurma bir isim yazmaz.
+   */
+  updatedBy: z.string().uuid().nullable(),
 });
 export type Setting = z.infer<typeof SettingSchema>;
 
@@ -37,6 +43,7 @@ export const SettingInsertSchema = z.object({
   scopeId: z.string().nullish(),
   value: z.unknown(),
   description: z.string().nullish(),
+  updatedBy: z.string().uuid().nullish(),
 });
 export type SettingInsert = z.infer<typeof SettingInsertSchema>;
 

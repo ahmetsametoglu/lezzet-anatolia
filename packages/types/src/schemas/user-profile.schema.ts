@@ -80,6 +80,34 @@ export const UserProfileSchema = z.object({
   authUserId: z.string().uuid().nullable(),
   /** B2B self-servis kayıt onayı — onaylanana dek toptan fiyat görünmez. B2C/personelde null. */
   b2bApproved: z.boolean().nullable(),
+  /**
+   * Başvuru damgası — kuyruğun SIRALAMA ölçütü (`created_at` değil: o profilin doğduğu andır ve
+   * B2C açılıp sonra başvuran müşteriyi listenin dibine gönderirdi). DB tetikleyicisi yazar
+   * (`stamp_b2b_application`), uygulama elle yazmaz.
+   */
+  b2bAppliedAt: z.string().datetime({ offset: true }).nullable(),
+  /**
+   * Ret damgası. **`b2bApproved === false` tek başına "bekliyor" DEMEK DEĞİLDİR** — reddedilen
+   * kayıt da o değeri taşır (09.11: ret silmez). Hâl ayrımı için `b2bStatusOf` kullanılır; alanı
+   * doğrudan okuyup çip çizen ekran reddedilene "inceleniyor" der.
+   *
+   * Ret silinmez, ESKİR: aday künyesini düzeltip yeniden başvurursa kuyruğa geri gelir ve ret
+   * kaydı geçmiş olarak durur. Bu alan artık "ne zaman reddedildi"yi göstermek içindir.
+   */
+  b2bRejectedAt: z.string().datetime({ offset: true }).nullable(),
+  /** Reddi veren personel — `settings.updatedBy` ile aynı izleme ihtiyacı ("kim karar verdi"). */
+  b2bRejectedBy: z.string().uuid().nullable(),
+  /** Ret gerekçesi. DB kısıtı damgasız/gerekçesiz reddi yazdırmaz — ikisi birlikte var ya da yok. */
+  b2bRejectReason: z.string().nullable(),
+  /**
+   * "Onay kuyruğunda mı" — **DB üretiyor** (`generated always as … stored`), uygulama YAZMAZ.
+   * Künyesi var + onaylanmamış + (hiç reddedilmemiş veya reddi eskimiş).
+   *
+   * Kural veride duruyor çünkü üç yer birden soruyor: kısmi indeks, kuyruk süzgeci ve
+   * `b2bStatusOf`. Üçüne ayrı yazılsaydı biri gün gelip ayrışırdı ve ayrıştığında hata vermezdi —
+   * yalnız yanlış bir liste üretirdi.
+   */
+  b2bPending: z.boolean(),
   /** Taslak (WhatsApp telefonuyla otomatik açılan); doğrulanınca false. Birleştirme adayı işareti. */
   isDraft: z.boolean(),
 
@@ -111,11 +139,19 @@ export type UserProfile = z.infer<typeof UserProfileSchema>;
 
 // id/role/createdAt DB-üretimli/varsayılanlı → insert'te opsiyonel. Ticari alanların hepsi de
 // varsayılanlı ya da nullable: personel profili hiçbirini vermeden açılır.
-export const UserProfileInsertSchema = UserProfileSchema.omit({ createdAt: true }).partial();
+//
+// Üç alan YAZILAMAZ, hepsi DB'nin malı: `b2bPending` üretilmiş kolon (Postgres yazmayı reddeder),
+// iki damgayı ise tetikleyici atar. Damgaların DB'de kalması bir tercih değil şart: ikisi
+// birbiriyle karşılaştırılıyor ve ayrı saatlerden gelirlerse aradaki kayma başvurunun hâlini ters
+// çevirebilir. Şemadan çıkarmak bunu ÇAĞRI YERİNDE hata hâline getirir — yoksa yanlış yazan kod
+// ancak veritabanına vardığında öğrenir.
+const DB_YAZAR = { b2bPending: true, b2bAppliedAt: true, b2bRejectedAt: true } as const;
+
+export const UserProfileInsertSchema = UserProfileSchema.omit({ createdAt: true, ...DB_YAZAR }).partial();
 export type UserProfileInsert = z.infer<typeof UserProfileInsertSchema>;
 
 // Update: id zorunlu, kalanı opsiyonel (yalnız verilen alanlar yazılır).
-export const UserProfileUpdateSchema = UserProfileSchema.partial().required({ id: true });
+export const UserProfileUpdateSchema = UserProfileSchema.omit(DB_YAZAR).partial().required({ id: true });
 export type UserProfileUpdate = z.infer<typeof UserProfileUpdateSchema>;
 
 // Bul-veya-oluştur girişi (taslak müşteri): en az bir kimlik anahtarı (telefon veya e-posta).

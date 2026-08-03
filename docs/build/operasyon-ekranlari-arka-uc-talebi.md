@@ -155,8 +155,19 @@ Bir farkla: sipariş numarası ilk KALICI durumda üretiliyor (taslak numara alm
 karşılığı **gönderim**: taslak bizim içimizde, numara karşı tarafa verilen sözdür. `markSent`
 üretecek.
 
-⚠ **Migration işi** — madde 2 ile aynı `db:reset`e binecek, ayrı bir sıkıntı çıkarmıyor.
-Kolon geldiğinde sütunu ekle; gelene kadar bugünkü tanıtım (tedarikçi + tarih) doğru davranış.
+**İNDİ (03.08) — sütunu ekleyebilirsiniz.** `purchase_order.reference_no` (unique) + veride duran
+kural: `sent_at` doluysa numara ZORUNLU. Ölçüt `status` değil `sent_at`, çünkü `receive_intake` bir
+siparişi `draft`tan doğrudan `received`'a taşıyabiliyor.
+
+**Vaadimin bir kısmını başka yere koydum, söylemem lazım:** "`markSent` üretecek" demiştim; numara
+`markSent`'te DEĞİL, `apps/web/lib/stock/purchase-order-send.ts`'te üretiliyor. Sebep `STACK §4`:
+numarayı motor üretir (rastgelelik orada), benzersizliği veritabanı tutar (unique indeks); servis
+ikisini birden bilemez, ortada duran uygulama katmanı bilir. Çağıracağınız uç `sendPurchaseOrder(orderId)`.
+
+Çarpışma "önce sorgula, boşsa yaz" ile çözülMÜYOR — iki eşzamanlı gönderim aynı anda sorgulasa
+ikisi de "boş" görürdü. Reddi veritabanından yakalayıp üç kez yeniden üretiyoruz; üçü de çarpışırsa
+hata yukarı gider. Sessizce numarasız göndermek, kısıtın reddettiği şeyi uygulamanın kabul etmesi
+olurdu.
 
 ---
 
@@ -332,7 +343,22 @@ yokken güvenilir sanılır.
 Aktörü uygulama katmanı biliyor (`requireAdmin` zaten kullanıcıyı çözüyor), yazması bir alan.
 İndiği tur ekran ayar satırının altına "Murat Y. · 3 Ağustos 10:12" yazar.
 
-**Arka uç cevabı:**
+**Arka uç cevabı (03.08): Kabul, indi** — `settings.updated_by` (`references user_profiles`,
+`on delete set null`) + `SettingsService.set(key, value, { actorId })`.
+
+**Yarım iz gerekçenize katılıyorum ve o yüzden bir ayrım daha yazdım:** `updatedBy = null`
+**"bilinmiyor" değil, "sistem kurdu" demektir.** Tohum satırlarını kimse değiştirmedi; ekran boş
+aktörü "sistem varsayılanı" diye okusun, "?" ya da uydurma bir isim yazmasın. Aynı sebeple
+`actorId` opsiyonel: ayarı yazan her şey insan değil (tohum, göç, iş süreçleri) ve onlara sahte bir
+aktör atamak, izi *güvenilir sanılan* bir yalana çevirirdi — tam da sizin itiraz ettiğiniz şeyin
+daha kötüsü.
+
+`on delete set null` bilinçli: ayrılan personelin kaydı silinince iz kaybolur ama AYAR kalır.
+Kaskad olsaydı bir çalışanın ayrılması teslimat maliyeti ayarını da götürürdü.
+
+⚠ **Kolon `db:refresh` bekliyor** (B2B ret hâliyle aynı pencerede). Ekran tarafını yazabilirsiniz;
+alan gelene kadar `updatedBy` her satırda `null` döner, yani "sistem varsayılanı" hâli zaten
+doğru davranış.
 
 ---
 
@@ -367,7 +393,19 @@ türetilmez" hâli. Ekran o yüzden bugün yalnız açık talep sayısını yaz�
 `handledBy` kırılımını da aynı çağrıya koyun (çizimin üçüncü sayısı o); ama 8a'daki gibi, AI sayısı
 16.5'e kadar hep 0 olacak.
 
-**Arka uç cevabı:**
+**Arka uç cevabı (03.08): İNDİ** — `TicketService.countByStatus(): Promise<Record<TicketStatus, number>>`.
+Başlık satırını bağlayabilirsiniz.
+
+*Bu cevabı geç yazdım: uç `f1cd2a8`'te inmişti ama buraya işlenmemişti — yani ekran, elindeki bir
+şeyi beklemiş olabilir. Kusura bakmayın.*
+
+**`handledBy` kırılımını koymadım ve gerekçeniz benim de gerekçem:** 16.5 inene kadar üçüncü sayı
+daima 0 çıkardı. Sıfır gösteren bir sayaç ekranda "AI çalışmıyor" demez, "AI yok" der — ikisi ayrı
+şeydir ve ilki bir arıza raporu doğurur. Kırılım 16.5 ile birlikte gelsin (8a ile aynı karar).
+
+**Tek `group by` yerine durum başına ayrı sayım turu** attım. Daha zarif olanı PostgREST'te ancak
+bir RPC ile gelirdi ve `STACK §13`'ün okuma-RPC eşiği burada karşılanmıyor: küme üç değerli,
+sayımlar indeksli. Üç ucuz tur için şemaya fonksiyon eklemek, kazancından pahalı bir bağ olurdu.
 
 ---
 

@@ -171,16 +171,32 @@ export function b2bApplicationIssues(input: B2bApplicationInput): B2bApplication
  * TÜRETİLİR; ayrı bir "başvuru durumu" kolonu yok. Motorda olmasının sebebi çift tüketim: aynı
  * ayrımı hem tanıtım sayfası hem hesap ekranı okuyacak.
  *
- * **`rejected` bugün ÜRETİLEMİYOR** ve bu gizlenmiş bir hata değil, veri modelinin bilinen sınırı:
- * reddedilen kayıt da `b2bApproved = false` alıyor (09.11 · "ret SİLMEZ, kayıt B2C olarak kalır")
- * ve `user_profiles_b2b_pending_idx` kısmi indeksi de bekleyen kuyruğu aynı değerden okuyor. Yani
- * "inceleniyor" ile "onaylanamadı" veride ayrışmıyor; ayırmak üçüncü bir değer ister ve o karar
- * üç şeridi birden ilgilendirir.
- * BEKLEYEN(08.7): reddedilen başvuru ekranda hâlâ "inceleniyor" görünüyor.
+ * **`rejected` ARTIK üretiliyor** (08.7 · şema turu 03.08). Eskiden üretilemiyordu çünkü reddedilen
+ * kayıt da `b2bApproved = false` taşıyordu (09.11 · "ret SİLMEZ, kayıt B2C olarak kalır") ve ekran
+ * reddedilen adaya hiç gelmeyecek bir cevabı beklediğini söylüyordu. Ayrım artık damgalarda:
+ * `b2bRejectedAt` (+ zorunlu gerekçe) ret kararını, `b2bAppliedAt` başvuru anını taşıyor.
+ *
+ * **Ret silinmez, ESKİR.** Aday künyesini düzeltip yeniden başvurduğunda `b2bAppliedAt` tazelenir
+ * (DB tetikleyicisi) ve ret damgasının önüne geçer — hâl `pending`'e döner, ret kaydı geçmiş olarak
+ * durur. Temizleseydik 09.11'in istediği geçmiş ilk yeniden başvuruda kaybolurdu.
+ *
+ * **`b2bApproved === false`'u doğrudan okuyup "bekliyor" demeyin** — bu fonksiyon tam da onun için
+ * var; alan tek başına iki hâli birden taşıyor.
  */
-export type B2bApplicationStatus = 'none' | 'pending' | 'approved';
+export type B2bApplicationStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
-export function b2bStatusOf(profile: { companyInfo: CompanyInfo | null; b2bApproved: boolean | null } | null): B2bApplicationStatus {
+export function b2bStatusOf(
+  profile: { companyInfo: CompanyInfo | null; b2bApproved: boolean | null; b2bPending: boolean } | null,
+): B2bApplicationStatus {
   if (!profile?.companyInfo) return 'none';
-  return profile.b2bApproved === true ? 'approved' : 'pending';
+  if (profile.b2bApproved === true) return 'approved';
+  // "Bekliyor mu" kararını motor YENİDEN HESAPLAMAZ, DB'den okur (`user_profiles.b2b_pending`,
+  // üretilmiş kolon). Aynı karşılaştırmayı burada bir kez daha yazmak, kısmi indeksle sessizce
+  // ayrışabilecek ikinci bir kural olurdu; ayrıştığı gün de kimse fark etmez — reddedilen aday
+  // kuyrukta görünür ama hiçbir yerde hata yoktur.
+  //
+  // Alan OPSİYONEL DEĞİL, bilerek: eksik geçilse "bekliyor" varsayılırdı ve reddedilen adaya yine
+  // "inceleniyor" denirdi — 08.7'nin kapattığı hatanın aynısı, bu kez tip yüzünden. Ölçülemeyen
+  // değer varsayılana düşürülmez (CLAUDE §1); burada eksiklik derlemede durur.
+  return profile.b2bPending ? 'pending' : 'rejected';
 }

@@ -124,6 +124,11 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
       query?: string;
       type?: CustomerType;
       isDraft?: boolean;
+      /**
+       * Onay KUYRUĞU — reddedilenler dışarıda. `b2bApproved === false` ile süzmek yanlış olurdu:
+       * reddedilen kayıt da o değeri taşıyor (09.11: ret silmez) ve operatör onay bekleyenler
+       * listesinde kararını çoktan verdiği başvuruları görürdü.
+       */
       b2bPending?: boolean;
       /** Vade yetkisi açık olanlar (`credit_enabled`) — "vadeli müşteriler" daraltması. */
       creditEnabled?: boolean;
@@ -135,7 +140,7 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
     if (opts.type) filters.type = opts.type;
     if (opts.isDraft !== undefined) filters.isDraft = opts.isDraft;
     if (opts.creditEnabled !== undefined) filters.creditEnabled = opts.creditEnabled;
-    if (opts.b2bPending) filters.b2bApproved = false;
+    if (opts.b2bPending) filters.b2bPending = true;
 
     // Terim VERİLDİ ama kaçıştan sonra boşaldıysa (yalnız `"` `(` `)` `,` yazılmış) liste
     // SÜZGEÇSİZ dönmemeli: operatör aradığını bulduğunu sanır, oysa 312 satırın hepsi orada.
@@ -208,11 +213,49 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }
 
   /**
-   * B2B başvurusunu onaylar/reddeder (DOMAIN §10). Onaya kadar toptan fiyat görünmez; reddedilen
-   * kayıt B2C olarak kalır — silinmez.
+   * @deprecated `approveB2b` / `rejectB2b` kullanın.
+   *
+   * **Ret hâlini ÜRETEMEZ** ve imzası gereği üretemez: reddin damgası, gerekçesi ve kararı veren
+   * personel bu çağrıya sığmıyor. `false` yazdığında kayıt "onay bekliyor" olarak kalır — 08.7'nin
+   * kapattığı tam da bu davranıştı (aday ekranda hiç gelmeyecek bir cevabı bekler).
+   *
+   * Silmedim çünkü çağıranı operasyon yüzeyinde (`customers/actions.ts`) ve o dosya benim şeridimde
+   * değil; kaldırmak üç şerit için derlemeyi kırardı. Çağrı yeri `rejectB2b`'ye geçince silinecek —
+   * `docs/talep/not-operasyon-b2b-ret-hali.md`.
    */
   setB2bApproval(profileId: string, approved: boolean): Promise<UserProfile> {
     return this.update({ id: profileId, b2bApproved: approved });
+  }
+
+  /**
+   * B2B başvurusunu ONAYLAR (DOMAIN §10) — onaya kadar toptan fiyat görünmez.
+   *
+   * Varsa eski ret damgası SİLİNMEZ: onaylanmış bir müşterinin geçmişte bir kez reddedildiği bilgisi
+   * onay kartının işine yarar ve `b2bStatusOf` zaten `approved`'ı ret damgasından önce döndürür.
+   */
+  approveB2b(profileId: string): Promise<UserProfile> {
+    return this.update({ id: profileId, b2bApproved: true });
+  }
+
+  /**
+   * B2B başvurusunu REDDEDER (09.11) — kayıt B2C olarak kalır, silinmez.
+   *
+   * **Gerekçe zorunlu, ve bunu tip DEĞİL veri zorluyor** (`user_profiles_b2b_reject_stamp`): ret
+   * e-postayla bildiriliyor, "neden" sorusunun cevabı yoksa soru desteğe düşer. Damgayı atıp
+   * gerekçeyi atlamak verilmiş kararı kayıt dışı bırakır.
+   *
+   * `b2bApproved` `false`'ta KALIR; hâli ret damgası ayırır. Reddedilen aday kuyruktan düşer
+   * (kısmi indeks), künyesini düzeltip yeniden başvurursa geri gelir — o damgayı tetikleyici atar.
+   */
+  // `async` şart: gövde erken FIRLATIYOR ve async olmasaydı hata eşzamanlı çıkardı — `Promise`
+  // döndüren bir imzaya bakıp `.catch()` yazan çağıran onu hiç yakalayamazdı.
+  async rejectB2b(profileId: string, opts: { actorId: string; reason: string }): Promise<UserProfile> {
+    const reason = opts.reason.trim();
+    if (!reason) throw new Error('user_profiles: gerekçesiz B2B reddi yazılamaz');
+    // Ret DAMGASI burada yazılmaz — tetikleyici atar. Gerekçe: damga başvuru damgasıyla
+    // karşılaştırılıyor ve ikisi ayrı saatten gelirse (uygulama ↔ veritabanı) aradaki kayma hâli
+    // ters çevirebilir. Uygulama "reddedildi" der, "ne zaman"ı veritabanı söyler.
+    return this.update({ id: profileId, b2bApproved: false, b2bRejectedBy: opts.actorId, b2bRejectReason: reason });
   }
 
   /** Auth kullanıcısını mevcut profile bağlar (giriş doğrulandığında); taslağı kapatır. */

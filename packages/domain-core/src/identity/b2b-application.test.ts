@@ -143,17 +143,30 @@ describe('başvuru durumu', () => {
 
   it('künyesi olmayan ziyaretçi hiç başvurmamıştır', () => {
     expect(b2bStatusOf(null)).toBe('none');
-    expect(b2bStatusOf({ companyInfo: null, b2bApproved: null })).toBe('none');
+    expect(b2bStatusOf({ companyInfo: null, b2bApproved: null, b2bPending: false })).toBe('none');
     // Künye YOKSA `b2bApproved` ne olursa olsun başvuru yoktur — kanal künyeden türer.
-    expect(b2bStatusOf({ companyInfo: null, b2bApproved: false })).toBe('none');
+    expect(b2bStatusOf({ companyInfo: null, b2bApproved: false, b2bPending: false })).toBe('none');
   });
 
   it('künye var, onay yoksa inceleniyor', () => {
-    expect(b2bStatusOf({ companyInfo: company, b2bApproved: false })).toBe('pending');
-    expect(b2bStatusOf({ companyInfo: company, b2bApproved: null })).toBe('pending');
+    expect(b2bStatusOf({ companyInfo: company, b2bApproved: false, b2bPending: true })).toBe('pending');
+    expect(b2bStatusOf({ companyInfo: company, b2bApproved: null, b2bPending: true })).toBe('pending');
   });
 
   it('yalnız açık onay toptan fiyatı açar', () => {
-    expect(b2bStatusOf({ companyInfo: company, b2bApproved: true })).toBe('approved');
+    expect(b2bStatusOf({ companyInfo: company, b2bApproved: true, b2bPending: false })).toBe('approved');
+  });
+
+  /**
+   * 08.7'nin açığı: ret ile "sırasını bekliyor" ayrışmadığı için sayfa reddedilen adaya hiç
+   * gelmeyecek bir cevabı beklediğini söylüyordu.
+   */
+  it('reddedilen aday "inceleniyor" GÖRMEZ', () => {
+    expect(b2bStatusOf({ companyInfo: company, b2bApproved: false, b2bPending: false })).toBe('rejected');
+  });
+
+  it('onay ret damgasını yener — geçmişte reddedilmiş olmak bugünkü hâli değiştirmez', () => {
+    // Kayıt hem onaylı hem "kuyrukta değil"; okuma sırası önemli, çünkü ikisi aynı anda doğrudur.
+    expect(b2bStatusOf({ companyInfo: company, b2bApproved: true, b2bPending: false })).toBe('approved');
   });
 });

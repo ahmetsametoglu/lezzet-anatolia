@@ -25,7 +25,18 @@ create table public.settings (
   scope_id text,
   value jsonb not null,
   description text,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  -- Değişikliğin AKTÖRÜ (09.16 · `admin-ayarlar.md §2`). "Ne zaman" tek başına yarım bir izdir ve
+  -- yarım iz tam iz gibi okunur: ekran "3 Ağustos 10:12'de değişti" yazdığında okuyan "kim" sorusunun
+  -- cevabının da bir yerde durduğunu varsayar. Bir ayar kararı — kesim saati, teslimat maliyeti —
+  -- geri dönüp sorulacak türdendir.
+  --
+  -- `on delete set null`: ayrılan personelin sildiği iz, ayarın kendisini silmemeli. İz kaybolur,
+  -- kayıt kalır — tersi (kaskad) çalışan ayrıldığında ayarı da götürürdü.
+  --
+  -- Tohum satırlarında NULL ve bu doğru: onları kimse değiştirmedi, sistem kurdu. Ekran boş aktörü
+  -- "sistem varsayılanı" diye okur, uydurma bir isim yazmaz.
+  updated_by uuid references public.user_profiles (id) on delete set null
 );
 
 -- Aynı anahtar + aynı kapsam iki kez tanımlanamaz: hangisinin geçerli olduğu belirsiz kalmamalı.
