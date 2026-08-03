@@ -28,6 +28,10 @@ kullanıcı kurye değildir. Böyle gözlemler artık buraya düşer:
   ya gerekçesiyle almaz; iki hâlde de işleyince DOSYAYI SİLER (silinmişse işlenmiştir). Gözlemi
   yazanın takip yükü yok.
 - Kanıt koy (dosya:satır, log, ölçüm) — "bir şey gördüm gibi" değil. Kanıtsız şüphe not edilmez.
+- **Görsel kanıt YORUM + ADRES olarak verilir (kullanıcı kararı 03.08):** yalnız betimlemek
+  yetmez — okuyan ajan resme kendisi bakabilmeli. `.ui-shots/` her çekimde silinir; nota
+  iliştirilecek görüntü `docs/talep/ekler/<dosya-adı>/` altına KOPYALANIR ve not o yolu verir.
+  Not silinince ekleri de silinir.
 - Şerit her oturum başında kendine bakan `not-*` ve `<kendi-adı>-*` dosyalarına göz atar.
 
 ```markdown
