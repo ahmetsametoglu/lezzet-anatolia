@@ -2,6 +2,15 @@
  * Paket sınırı kuralları — STACK §4 "bağımlılık tek yönlü".
  * İhlal `pnpm boundaries` ile hata olarak yakalanır.
  * Workspace bağımlılığı modül adıyla (`@lezzet/<ad>`) eşlenir.
+ *
+ * **`boundaries` komutu neden İKİ parçalı** (sadeleştirmeyin): `apps/web`'in `@/` takma adı
+ * `apps/web/tsconfig.json`'un `paths`'inde tanımlı ve depcruise bunu ancak `--ts-config` ile
+ * çözebiliyor. Kökten `--ts-config apps/web/tsconfig.json` ÇALIŞMAZ — TS, `include` yollarını
+ * cwd'ye göre çözüp `TS18003` verir; o yüzden web koşusu `pnpm -C apps/web` ile o dizinden
+ * başlatılır. Tek parçaya indirilirse `@/` ile yazılan her import HİÇBİR YERE GİTMEYEN bir kenar
+ * olur (ölçüldü: 4106 kenarın 1352'si, %33) ve iki bekçi birden körleşir: `no-orphans`'ın tamamı
+ * yanlış pozitife döner (yalan söyleyen uyarı okunmaz), `no-circular` ise yalnız GÖRELİ
+ * importlardan kurulu döngüleri görür — `@/` üzerinden kurulan bir döngü sessiz kalır.
  */
 module.exports = {
   forbidden: [

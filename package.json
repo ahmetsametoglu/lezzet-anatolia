@@ -19,7 +19,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "boundaries": "depcruise apps packages",
+    "boundaries": "depcruise packages apps/backend && pnpm -C apps/web exec depcruise --config ../../.dependency-cruiser.cjs --ts-config tsconfig.json .",
     "knip": "knip",
     "docs:check": "node scripts/docs-check.mjs",
     "docs:sync": "node scripts/docs-check.mjs --fix",
