@@ -5,6 +5,7 @@ import { Lora, Karla } from 'next/font/google';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { brand } from '@lezzet/brand';
+import { siteOrigin } from '@lezzet/i18n';
 import { routing } from '@/i18n/routing';
 import { RootShell } from '@/components/root-shell';
 import { CartProvider } from '@/components/customer/cart/cart-context';
@@ -17,7 +18,18 @@ import { currentCustomer } from '@/lib/guard';
 const lora = Lora({ subsets: ['latin', 'latin-ext'], variable: '--font-lora', display: 'swap' });
 const karla = Karla({ subsets: ['latin', 'latin-ext'], variable: '--font-karla', display: 'swap' });
 
+/**
+ * `metadataBase` (08.1) — göreli `alternates` adreslerini mutlak hâle getiren kök.
+ *
+ * `hreflang` ve `canonical` MUTLAK adres ister; olmadan Next göreli değerleri olduğu gibi basar ve
+ * tarayıcı onları "geçersiz" sayıp yok sayar. Yani bu satır olmadan bütün hreflang işi sessizce
+ * çalışmaz — hata da vermez, sadece etkisiz kalır.
+ *
+ * Köken tek kaynaktan (`siteOrigin`): mailin gösterdiği adres ile sayfanın kanonik adresi aynı
+ * olmalı, yoksa arama motoru mailden gelen bağı ayrı bir sayfa sanar.
+ */
 export const metadata: Metadata = {
+  metadataBase: new URL(siteOrigin()),
   title: brand.name,
   description: `${brand.name} — donuk Türk gıdası`,
 };

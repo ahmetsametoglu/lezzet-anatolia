@@ -47,7 +47,8 @@ Yani içerik seçili dilde boşsa önce Türkçe, o da boşsa Fransızca, o da b
 - **Mobil/masaüstü çatallanması içeriği kırpmaz.** Google mobil-öncelikli indeksler; mobil sunum içerik-tam olmalı, sadece düzen değişir (bkz. `ARCHITECTURE_DECISIONS.md` Sapma 3).
 - **User-agent'e göre ayrı HTML sunma** (cloaking riski). Sunucu herkese aynı içeriği verir; çatallanma client'ta. Bu desen zaten SEO-güvenli.
 - Meta başlık/açıklama dil başına, çok dilli içerikten türetilir.
-- Ürün sayfaları için yapısal veri (schema.org Product) — Faz 2'de değerlendirilir.
+- **Yapısal veri (schema.org) Faz 1'de indi** (08.1, 03.08). Bu satır bir ara *"Faz 2'de değerlendirilir"* diyordu; görev satırı `Product`/`LocalBusiness` istiyordu ve doğrusu oydu — sayfalar zaten sunucuda çizildiği için maliyeti neredeyse sıfır, ertelemenin kazandırdığı bir şey yoktu. `lib/seo/json-ld.tsx`: ürün sayfasında `Product` (varyant başına `Offer`, puan varsa `AggregateRating`), ana sayfada `GroceryStore`.
+  **Kural: yalnız elimizde GERÇEKTEN olan alan yazılır.** Puan yoksa `aggregateRating` bloğu hiç doğmaz, fiyatı olmayan varyant `offers`a girmez, tam adres olmadığı için `address` yalnız şehir+ülke taşır. Yapısal veride uydurma değer yaptırıma uğrar — boş alan yazmaktansa alanı hiç yazmamak.
 
 ---
 

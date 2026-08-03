@@ -1,9 +1,12 @@
+import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import type { Locale } from '@lezzet/i18n';
+import { localizedUrl, type Locale } from '@lezzet/i18n';
+import { localeAlternates } from '@/lib/seo/alternates';
+import { LocalBusinessJsonLd } from '@/lib/seo/json-ld';
 import { getSessionUser } from '@/lib/guard';
 import { detectDevice } from '@/lib/device';
 import { getHomeData } from '@/lib/storefront/home';
@@ -21,6 +24,13 @@ interface HomeProps {
  * Vitrin ana sayfası (08.10). Veri `lib/storefront` KAPISINDAN okunur — servis burada doğrudan
  * çağrılmaz; bugün fiyat/fırsat/paket stub, kaynak geldiğinde bu sayfa değişmez.
  */
+/** Ana sayfanın `hreflang`ı (08.1). Başlık layout'tan gelir — marka adı burada tekrarlanmaz. */
+export async function generateMetadata({ params }: HomeProps): Promise<Metadata> {
+  const { locale } = await params;
+  if (!hasLocale(routing.locales, locale)) return {};
+  return { alternates: localeAlternates('/', locale) };
+}
+
 export default async function Home({ params }: HomeProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
@@ -38,6 +48,9 @@ export default async function Home({ params }: HomeProps) {
 
   return (
     <SiteFrame device={device} locale={locale}>
+      {/* İşletme künyesi YALNIZ ana sayfada (08.1): `LocalBusiness` sitenin tamamını tanıtır, her
+          sayfada tekrarlamak aynı beyanı çoğaltmak olurdu. */}
+      <LocalBusinessJsonLd url={localizedUrl('/', locale as Locale)} />
       <HomeClient t={t} locale={locale as Locale} data={data} device={device} />
     </SiteFrame>
   );

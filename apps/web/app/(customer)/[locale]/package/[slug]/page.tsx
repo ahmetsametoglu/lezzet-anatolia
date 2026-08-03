@@ -1,5 +1,7 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
+import { localeAlternates } from '@/lib/seo/alternates';
 import { setRequestLocale } from 'next-intl/server';
 import { detectDevice } from '@/lib/device';
 import { getPackageDetail } from '@/lib/storefront/packages';
@@ -23,6 +25,15 @@ interface PackagePageProps {
  * Satılmayan paket 404: pasif ya da kalemi satıştan kalkmış paketin doğrudan linkle açılabilmesi,
  * listeden düşmüş olmayı anlamsız kılardı (okuma bu kararı `listSellable` ile verir).
  */
+/** Paket sayfasının başlığı ve `hreflang`ı (08.1) — slug dilden bağımsız, ürün sayfasıyla aynı kural. */
+export async function generateMetadata({ params }: PackagePageProps): Promise<Metadata> {
+  const { locale, slug } = await params;
+  if (!hasLocale(routing.locales, locale)) return {};
+  const pack = await getPackageDetail(slug, locale);
+  if (!pack) return {};
+  return { title: pack.name, alternates: localeAlternates('/package/[slug]', locale, { slug }) };
+}
+
 export default async function PackagePage({ params }: PackagePageProps) {
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();

@@ -1,7 +1,9 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import type { Locale } from '@lezzet/i18n';
+import type { AppRoute, Locale } from '@lezzet/i18n';
+import { localeAlternates } from '@/lib/seo/alternates';
 import { detectDevice } from '@/lib/device';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { formatOrderDate } from '@/lib/storefront/format';
@@ -21,6 +23,20 @@ import messages from './legal-messages.json';
  *
  * **Sunucu bileşeni**: `detectDevice` ve tarih biçimleme burada, çatal bir alt katmanda.
  */
+/**
+ * Beş statik sayfanın ORTAK meta kurucusu (08.1) — başlık + `hreflang`.
+ *
+ * `generateMetadata` bir sayfa dosyasından export edilmek zorunda, yani beş `page.tsx`'in beşi de
+ * kendi fonksiyonunu yazacaktı; gövde birebir aynı olurdu. Ortak kurucu sayesinde her sayfada
+ * kalan tek satır, hangi rota ve hangi başlık olduğunu söylemek.
+ *
+ * Dil geçersizse boş dönüyor: sayfa zaten `notFound`'a düşecek, meta üretmenin anlamı yok.
+ */
+export function legalMetadata(route: AppRoute, locale: string, title: string): Metadata {
+  if (!hasLocale(routing.locales, locale)) return {};
+  return { title, alternates: localeAlternates(route, locale) };
+}
+
 interface LegalPageProps {
   locale: string;
   /** Belgeler dile göre ayrı yazılır; sayfa doğru olanı seçip verir. */

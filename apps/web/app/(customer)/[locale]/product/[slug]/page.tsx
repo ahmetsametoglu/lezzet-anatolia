@@ -1,5 +1,9 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
+import { localizedUrl, type Locale } from '@lezzet/i18n';
+import { localeAlternates } from '@/lib/seo/alternates';
+import { ProductJsonLd } from '@/lib/seo/json-ld';
 import { setRequestLocale } from 'next-intl/server';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { detectDevice } from '@/lib/device';
@@ -28,6 +32,30 @@ interface ProductPageProps {
  * Çerçeve metinleri (duyuru şeridi, gezinme, arama) anasayfanın `messages.json`'undan gelir —
  * `SiteFrame` her sayfada aynı metni gösterir, kopyalanırsa diller birbirinden kayar.
  */
+/**
+ * Ürün sayfasının başlığı, açıklaması ve `hreflang`ı (08.1).
+ *
+ * Slug DİLDEN BAĞIMSIZ (`PATHNAMES` künyesi: içerikten türer), yani üç dilin karşılığı aynı slug'ı
+ * taşır ve yalnız segment kelimesi değişir (`/produit/…` · `/urun/…`). Bu yüzden `alternates`
+ * parametreyi olduğu gibi geçirebiliyor — dil başına ayrı slug çözmek gerekmiyor.
+ *
+ * Ürün bulunamazsa boş dönülüyor: sayfa zaten 404 verecek, meta üretmek için ikinci bir sorgu
+ * atmanın anlamı yok. Next iki çağrıyı da aynı istekte önbellekliyor, yani ürün okuması iki kez
+ * yapılmıyor.
+ */
+export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
+  const { locale, slug } = await params;
+  if (!hasLocale(routing.locales, locale)) return {};
+  const product = await getProductDetail(locale, slug, await readPlaceWarehouses());
+  if (!product) return {};
+
+  return {
+    title: product.name,
+    ...(product.description ? { description: product.description } : {}),
+    alternates: localeAlternates('/product/[slug]', locale, { slug }),
+  };
+}
+
 export default async function ProductPage({ params }: ProductPageProps) {
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
@@ -52,6 +80,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   return (
     <SiteFrame device={device} locale={locale} activeNav="catalog" mobileChrome="detail" back={{ label: t.back, href: '/catalog' }}>
+      {/* Yapısal veri (08.1): arama sonucunda fiyat, stok ve puanın görünmesini sağlar. Puan
+          YALNIZ gerçekten varsa yazılıyor — `average` null ise (hiç beyan yok) blok hiç doğmuyor,
+          çünkü uydurma bir puan yapısal veride yaptırıma uğrar. */}
+      <ProductJsonLd
+        product={product}
+        locale={locale as Locale}
+        url={localizedUrl('/product/[slug]', locale as Locale, { slug })}
+        rating={score.average !== null ? { average: score.average, count: score.totalCount } : null}
+      />
       <ProductClient
         t={t}
         locale={locale}

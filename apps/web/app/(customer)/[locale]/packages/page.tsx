@@ -1,5 +1,7 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
+import { localeAlternates } from '@/lib/seo/alternates';
 import { setRequestLocale } from 'next-intl/server';
 import { detectDevice } from '@/lib/device';
 import { listStorefrontPackages } from '@/lib/storefront/packages';
@@ -23,6 +25,13 @@ interface PackagesPageProps {
  * (CLAUDE.md §1) — veriyle büyümez, keyset sayfalama gerektirmez. Tasarımın "12 + Daha fazla"
  * düzeni bir gösterim kararıdır ve ekranda çözülür.
  */
+/** Başlık ve `hreflang` (08.1) — üç dilin karşılıkları `routing.ts` tablosundan türer. */
+export async function generateMetadata({ params }: PackagesPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  if (!hasLocale(routing.locales, locale)) return {};
+  return { title: messages[locale].title, alternates: localeAlternates('/packages', locale) };
+}
+
 export default async function PackagesPage({ params }: PackagesPageProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();

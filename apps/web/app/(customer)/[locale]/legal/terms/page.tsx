@@ -1,5 +1,6 @@
+import type { Metadata } from 'next';
 import type { Locale } from '@lezzet/i18n';
-import { LegalPage } from '@/components/customer/legal/legal-page';
+import { LegalPage, legalMetadata } from '@/components/customer/legal/legal-page';
 import content from './content.json';
 
 /**
@@ -19,6 +20,11 @@ import content from './content.json';
  */
 interface TermsPageProps {
   params: Promise<{ locale: string }>;
+}
+
+export async function generateMetadata({ params }: TermsPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  return legalMetadata('/legal/terms', locale, (content[locale as Locale] ?? content.fr).title);
 }
 
 export default async function TermsPage({ params }: TermsPageProps) {

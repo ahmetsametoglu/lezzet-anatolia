@@ -100,13 +100,22 @@ export function localizedPath(route: AppRoute, locale: Locale, params: Record<st
 }
 
 /**
- * Dış dünyaya verilecek TAM adres (mail, WhatsApp, paylaşılan bağlantı) — dil öneki dâhil.
+ * Sitenin dış dünyaya görünen KÖKENİ — mail bağlantısı, site haritası ve mutlak adreslerin ortak
+ * başlangıcı.
  *
- * Köken ortamdan gelir; yereldeki geliştirme sunucusu da üretimdeki alan adı da aynı çağrıyı
- * kullanır. Varsayılan üretim alan adıdır: kökeni okuyamayan bir gönderim, bağlantısız bir mail
- * yollamaktansa doğru adrese yollamayı denemelidir.
+ * Ortamdan gelir; yereldeki geliştirme sunucusu da üretimdeki alan adı da aynı çağrıyı kullanır.
+ * Varsayılan üretim alan adıdır: kökeni okuyamayan bir gönderim, bağlantısız bir mail yollamaktansa
+ * doğru adrese yollamayı denemelidir.
+ *
+ * Ayrı bir fonksiyon (08.1): site haritası da aynı kökeni istiyor ama tam bir rota adresi değil,
+ * yalnız başlangıcı. İkinci bir yerde `?? 'https://…'` yazmak, iki varsayılanın bir gün ayrışması
+ * ve mailin gösterdiği adresle haritanın verdiği adresin farklı olması demekti.
  */
+export function siteOrigin(): string {
+  return process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.lezzetanatolia.fr';
+}
+
+/** Dış dünyaya verilecek TAM adres (mail, WhatsApp, paylaşılan bağlantı) — dil öneki dâhil. */
 export function localizedUrl(route: AppRoute, locale: Locale, params: Record<string, string> = {}): string {
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.lezzetanatolia.fr';
-  return `${origin}/${locale}${localizedPath(route, locale, params)}`;
+  return `${siteOrigin()}/${locale}${localizedPath(route, locale, params)}`;
 }

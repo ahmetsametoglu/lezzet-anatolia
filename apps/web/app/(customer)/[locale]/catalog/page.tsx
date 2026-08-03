@@ -1,5 +1,7 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
+import { localeAlternates } from '@/lib/seo/alternates';
 import { setRequestLocale } from 'next-intl/server';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { detectDevice } from '@/lib/device';
@@ -24,6 +26,18 @@ interface CatalogPageProps {
  * Çerçeve metinleri (duyuru şeridi, gezinme, arama) anasayfanın `messages.json`'undan gelir:
  * `SiteFrame` her sayfada aynı metni gösterir, kopyalanırsa diller birbirinden kayar.
  */
+/**
+ * Başlık ve `hreflang` (08.1). Süzgeçli hâlleri AYRI bir kanonik almaz: `canonical` her zaman
+ * süzgeçsiz katalogu gösterir (`localeAlternates` sorgu dizesi taşımaz), çünkü "zeytinli börek
+ * süzgeçli katalog" ayrı bir sayfa değil, aynı sayfanın bir görünümü — indekste ayrı tutulsaydı
+ * yüzlerce neredeyse-aynı sayfa doğardı.
+ */
+export async function generateMetadata({ params }: CatalogPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  if (!hasLocale(routing.locales, locale)) return {};
+  return { title: messages[locale].title, alternates: localeAlternates('/catalog', locale) };
+}
+
 export default async function CatalogPage({ params, searchParams }: CatalogPageProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
