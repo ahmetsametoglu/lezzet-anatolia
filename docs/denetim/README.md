@@ -23,23 +23,16 @@ Cevap yazmadan önce dosyanın GÜNCEL hâli okunur.
 
 Dosyalar:
 
-- `denetim-server-actions.md` — 26 `'use server'` dosyasının taraması (S1 müşteri · S2 operasyon;
-  geneli temiz)
-- `denetim-yorum-musteri.md` — yorum bayatlığı 3/3: müşteri+lib (M-Y1 vitrin sözleşme künyesi ⚠ ·
-  M-Y2 ana sayfa "stub" · M-Y3 404 yanlış engel · M-Y4 yorum bölümü engeli; dördü künye sınıfı)
-- `denetim-musteri-hata-maskeleme.md` — müşteriye giden hata metinleri (H1 ham sızıntı ⚠ ·
-  H2 tek dilli jenerik · H3 Zod imleci; H4 iyi desenler)
-- `denetim-test-kapsami.md` — test senaryoları kapsam/kurgu denetimi (T2 kapandı-doğrulandı,
-  T4 → 18.11; kalan tek açık: T3 fiyat-değişim onayı — müşteri şeridi)
-- `denetim-dosya-agaci.md` — dosya ağacı standardı, iki yüzey (D1 kardeş-sayfa importları ·
-  D2 fork istisnaları · D3 hook adı; yerleşim geneli temiz)
-- `denetim-test-artigi.md` — DB'de artık bırakan testler (R1–R3 + `mustDelete` kapandı-doğrulandı,
-  iki bağımsız ölçüm sıfır artık; açık: 34 dosyalık `warehouse` kuralı önerisi — cevap bekliyor)
+- `denetim-dosya-agaci.md` — dosya ağacı standardı (D1-kural `docs:check` bekliyor · D3 sırada;
+  D1/2 ve D2 kapalı)
+- `denetim-test-artigi.md` — DB'de artık bırakan testler (R1–R4 kapandı-doğrulandı; açık:
+  R4-devamı `02.12` — kural + 34 dosya süpürme, arka uç üstlendi)
 - `denetim-migration-parcalama.md` — migration dosya dengesi (P3 kapandı; P1/P2 kabul → `02.11`,
   P1'in `db:refresh` onayı KULLANICIDA)
 
-Kapanıp silinenler (02–03.08): operasyon ilk dosyası ve komponent taraması · arka uç ilk dosyası
-ve **veritabanı/duplikasyon taraması** (A1–A9 tamamı uygulanıp doğrulandı — para kaydı düzeltmesi,
-`postal-code`/`date`/`bundle-qty` tek evleri, `ZoneNoticeService`, migration indeksi + `docs:check`
-§3c2 kuralı, PII maskeleme, DOMAIN ödeme pasajları; 02.9 cent göçü `02-database.md` görev satırında
-izlenir) · müşteri ilk dosyası ve komponent taraması (K1–K4, M2 dahil).
+Kapanıp silinenler (02–03.08): operasyon ilk dosyası ve komponent taraması · arka uç ilk dosyası,
+**veritabanı/duplikasyon taraması** (A1–A9) ve yorum bayatlığı 1/3 (Y1–Y3) · müşteri ilk dosyası,
+komponent taraması (K1–K4, M2), **hata maskeleme** (H1–H4 — `customerErrorKey` anahtar funnel'ı,
+`08.15`/`08.17`), **server-actions** (S1–S3), **test kapsamı** (T1–T5 — fiyat-değişim testleri +
+`18.11` devri) ve yorum bayatlığı 3/3 (M-Y1–M-Y4) · operasyon yorum bayatlığı 2/3 (O-Y1–O-Y3) ·
+gözlemleme (G1–G4 — istemci hata kapısı + süreç kancaları + webhook izleri).
