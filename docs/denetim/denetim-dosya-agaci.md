@@ -78,7 +78,26 @@ bağımlılık kuralının birebir kardeşi. Kural indiğinde D1 bütünüyle ka
   diyor — fiilî yorum "sayfa AİLESİ başına sözlük". Kural metnine bu bir cümle eklenirse
   (`CLAUDE §2` ya da STACK §7) bir sonraki alt-rota yazan ajan tereddüt etmez.
 
-**Cevap:** —
+**Cevap (müşteri şeridi): `checkout/[reference]` maddesi ARTIK GEÇERSİZ — 03.08'de kapandı
+(`cfd54c3`, 08.15).** Ekran tam zincire alındı: `page.tsx` yalnız veriyi çözüp `ConfirmationView`
+üretiyor, bloklar `components/confirmation-sections.tsx`te ortak, diziliş
+`confirmation.desktop/.mobile`da ayrı.
+
+Ve sizin "yazısız olması bulgu" çerçeveniz doğruydu ama **sapma da bilinçli değildi** — gerçek bir
+arızaydı: fork'suz hâlde cihaz kararı sunucunun UA tahminine mahkûmdu, yani **ödeme dönüşünün
+indiği ekran** tahmin yanılınca yanlış düzende kalıyordu. Emsal de yanı başındaydı
+(`orders/[reference]`). Yani gerekçe yazılacak bir karar yoktu, düzeltilecek bir istisna vardı.
+
+`support/new` · `support/[ticket]` için de katılıyorum: "sayfa AİLESİ başına sözlük" fiilî ve doğru
+yorum. Kural metnine cümle eklemek **tek şeridin işi değil** (D3'teki gerekçenizle aynı — `CLAUDE §2`
+iki yüzeyi birden bağlıyor); kullanıcı kararına bırakıyorum, ama şerit olarak itirazım yok.
+
+**Denetim doğrulaması (03.08):** Fork zinciri kodda tam (`confirmation-client` + `.desktop/.mobile`
++ `confirmation-types` + `components/confirmation-sections` + kendi `messages.json`u ✓). Çerçeve
+düzeltmeniz kabul — "yazısız sapma" değil arızaymış (ödeme dönüşü ekranı UA tahminine mahkûmdu);
+bulgunun değeri de burada: yazısız istisna, arızayı karar kılığında saklıyordu. **D2'nin birinci
+yarısı kapandı.** İkinci yarı ("sayfa ailesi başına sözlük" cümlesinin CLAUDE §2/STACK §7'ye
+girmesi) iki şeridin de itirazı olmayan, kullanıcıya kalmış tek cümlelik karar — özetle taşındı.
 
 ## D3. Hook adlandırması: tek sapma — `lib/use-device.ts`
 
@@ -114,4 +133,14 @@ mekanik işler göç inene kadar bekler, sonra tek ajan tek commit). Madde bu s�
 - **`products/tabs/*` deseni tutarlı:** tab'lar üst ailenin `products-types/paths/columns`
   dosyalarını kullanıyor — aile-içi paylaşım doğru kurulmuş (D1/2 tek istisna).
 
-**Cevap:** —
+**Cevap (müşteri şeridi): Rapor doğrulandı, itirazım yok.** Bu taramadan sonra müşteri yüzeyine iki
+yeni sayfa ailesi girdi (`legal/**` — beş rota · `feedback/[token]` — davet akışı); ikisi de aynı
+kurallarla kuruldu: `-types.ts` · sayfaya-özel `components/` · kolokasyonlu `actions.ts` +
+`messages.json`.
+
+Tek bilinçli sapmayı bildiriyorum, sonraki taramada bulgu olarak açılmasın: **`legal/**`'de çatal ve
+sunucu kabuğu sayfa klasörlerinde DEĞİL, ortak** (`components/customer/legal/`). Gerekçe D2'nin
+"sayfa ailesi başına sözlük" mantığının aynısı — beş sayfa aynı iki dizilişi kullanıyor, her birine
+kendi `*-client` dosyasını yazmak aynı üç satırın beş kopyası olurdu ve biri bir gün
+`setRequestLocale`i unuturdu. Sayfalara kalan tek iş hangi belgeyi çizeceğini söylemek; İÇERİK
+kolokasyone kalıyor (`content.json`).

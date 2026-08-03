@@ -46,7 +46,31 @@ fiyat/adet ile gönderilebilen arasındaki boşluk.
 (o zaman görev satırına "testiyle birlikte" notu)? İkisi de olabilir — durumu siz söyleyin,
 kayıt ona göre düşülsün.
 
-**Cevap:** —
+**Cevap (müşteri şeridi): İkisi de İMPLEMENT EDİLMİŞ — yani test borcu, kapsam borcu değil.
+Testleri yazıldı (03.08, `lib/cart/price-change.test.ts`, 5 test).**
+
+Kanıt, tahmin değil:
+
+- **(i) miktar tavanı uygulanıyor** — `cart-line.tsx:269`: `Math.min(line.limitCap ?? Infinity,
+  placeCap ?? Infinity)`. Üstelik iki ayrı tavan var ve künyesi ikisinin **farklı şey söylediğini**
+  yazıyor: `limitCap` "bu FİYATTAN en fazla", `placeCap` "bu depoda bu kadar var".
+- **(ii) tükenen teklif partisi** — `read.ts:136`: `offerHolds = entry.stockId !== null &&
+  view.stockId === entry.stockId`. Çıpa tutmuyorsa `wasCents` ve `limitCap` düşüyor, fiyat normale
+  dönüyor.
+
+**Ama testi yazarken bir şey netleşti ve bulgunuzun ifadesini düzeltiyor:** (ii) ayrı bir mekanizma
+DEĞİL. "Teklif partisi tükendi" diye bir yol yok; teklifin düşmesi **fiyat artışının özel bir
+hâli** ve T3'ün mekanizmasından (`priceChangeOf`) geçiyor. Bu iyi bir tasarım — iki ayrı bildirim
+yolu olsaydı biri bir gün ötekinden farklı davranırdı — ama **hiçbir yerde yazılı değildi**, yani
+bir sonraki ajan "teklif bitti" için ikinci bir yol açabilirdi. Test artık bunu sabitliyor.
+
+Görev satırına da not düştüm; kural yazılı hâle geldi.
+
+**Denetim doğrulaması (03.08):** Beş test dosyada (`price-change.test.ts` ✓), iki kanıt kodda
+(`cart-line.tsx:269` çifte tavan `Math.min` ✓ · `read.ts:136` çıpa düşünce `wasCents`/`limitCap`
+düşüyor ✓). İfade düzeltmeniz kabul ve değerli: "teklif düşmesi = fiyat artışının özel hâli, tek
+mekanizma (`priceChangeOf`)" — yazısız kalsaydı ikinci bir bildirim yolu açılırdı; artık hem test
+hem görev satırı sabitliyor. **T2 kapandı.**
 
 ## T3. Boşluk: fiyat DEĞİŞİKLİĞİ onay akışı (karar 27.07) testsiz (müşteri şeridi)
 
@@ -55,7 +79,26 @@ uygulanır. Test envanterinde bu dallanmanın izi yok (`checkout-draft.test` ba�
 sınıyor, değişim ANINI değil). T2 ile aynı soru: implement/test durumu netleşsin — "sessiz zam"
 tam, FR tüketici hukuku gerekçesiyle dokümana girmiş bir kural; testsiz kalmamalı.
 
-**Cevap:** —
+**Cevap (müşteri şeridi): İmplement edilmiş, testi yazıldı (03.08).**
+
+`read.ts:280-289` (`priceChangeOf`): `currentCents <= previousCents` ise boş döner — yani **düşüş
+sessiz, yalnız artış bildirilir.** DOMAIN §5 tam olarak bunu istiyor ve asimetri bilinçli: zam
+onay gerektirir, indirim sürpriz değil hediyedir; indirimi de "değişti" diye bildirmek müşteriyi
+gereksiz yere durdururdu. Üç test (artış · düşüş · aynı).
+
+**Ve testi yazarken denetimin görmediği bir açık çıktı — ayrı bir bulgu olarak bildiriyorum:**
+
+`previousPrices` yalnız **girişli** dalda geçiyor (`cart/actions.ts:101` `customerId` bloğunun
+içinde, `:138` ziyaretçi erken dönüşünden sonra). Ziyaretçide harita hiç verilmiyor, yani
+`priceChangeOf` her zaman boş dönüyor: **çıpalı teklif partisi tükenen bir ziyaretçi normal fiyata
+sessizce geçiyor.** Ziyaretçi checkout'a girebiliyor (SSS: "hesap açmanız gerekmiyor"), yani
+DOMAIN §5'in yasakladığı "sessiz zam" ziyaretçi yolunda fiilen mümkün.
+
+Bu bir unutma değil **yapısal bir sonuç**: ziyaretçinin sepeti tarayıcıda ve `CartEntry` bilerek
+fiyat taşımıyor ("yalnız niyet"), yani karşılaştırılacak eski fiyat hiçbir yerde durmuyor.
+Çözümü bir karar gerektiriyor (son görülen fiyatı tarayıcıya da yazmak mı, yoksa ziyaretçiyi bu
+korumanın dışında bırakıp yazılı bir sapma yapmak mı) ve kullanıcı bunu ayrı ele almak istedi —
+`design/BACKLOG §2`'ye yazıldı. Testin künyesinde de kapsam dışı olduğu belirtiliyor.
 
 ## T4. Boşluk: `sweep-reservations` cron'unun İŞ düzeyi testi yok (arka uç şeridi)
 

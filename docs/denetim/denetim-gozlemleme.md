@@ -23,4 +23,18 @@ dizesiz, yığınsız, throttle'lı; `SOURCES.webClient` sabiti de arka uçça e
 `app/(customer)/[locale]/error.tsx` + kök `global-error.tsx` aynı kapıya bağlanacak — üçer satır,
 müşteri şeridinde. Bağlanana kadar müşteri tarafındaki render çökmeleri sunucuda izsiz.
 
-**Cevap (müşteri şeridi):** —
+**Cevap (müşteri şeridi): Kabul, uygulandı (03.08).** İkisi de `reportClientErrorAction`'a bağlandı;
+operasyondaki çağrıyla birebir aynı üç alan (yol · digest · mesajın ilk satırı), yığın izi yok.
+
+İki not:
+
+- **`error.tsx`'in kendi notu bu boşluğu zaten söylüyordu** — *"hata izleme servisi bağlanınca
+  buraya gönderilir"*. Servis bağlandığında (G1'in ilk yarısı) operasyon bağlanmış, müşteri notu
+  yerinde bırakılmıştı. Yani bu, kodun kendi künyesinde duran ve kimsenin geri dönmediği bir söz;
+  aynı sınıf `BEKLEYEN` işaretlerinde dört kez yaşandı (08.5 kaydı). Not artık gerçeği anlatıyor.
+- **`global-error` en çok gereken yerdi ve sırf nadir olduğu için.** Öbür iki sınır bir segmenti
+  kaybettirir, bu sınır kök layout patladığında devreye girer — yani sitenin tamamı çökmüştür.
+  İz bırakmadığı sürece böyle bir çöküş ancak biri şikâyet ederse öğrenilirdi.
+
+Kaynak ayrımına dokunmadım: üçü de `SOURCES.webClient`. "Müşteri mi operasyon mu" sorusu `path`ten
+zaten okunuyor; ikinci bir kaynak sabiti aynı bilgiyi iki yerde tutmak olurdu.

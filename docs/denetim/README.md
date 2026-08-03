@@ -25,12 +25,12 @@ Dosyalar:
 
 - `denetim-server-actions.md` — 26 `'use server'` dosyasının taraması (S1 müşteri · S2 operasyon;
   geneli temiz)
-- `denetim-gozlemleme.md` — hata kaydı ağı (G2–G3 kapandı-doğrulandı; kalan tek açık: müşteri
-  `error.tsx` + `global-error.tsx` bağlantısı — müşteri şeridi)
+- `denetim-yorum-arka-uc.md` — yorum bayatlığı 1/3: arka uç (Y1 supplier künyesi · Y2 packages/ai ·
+  Y3 unitCost adı; örneklemin kalanı temiz — 2/3 operasyon ve 3/3 müşteri sırada)
 - `denetim-musteri-hata-maskeleme.md` — müşteriye giden hata metinleri (H1 ham sızıntı ⚠ ·
   H2 tek dilli jenerik · H3 Zod imleci; H4 iyi desenler)
-- `denetim-test-kapsami.md` — test senaryoları kapsam/kurgu denetimi (T4 kapandı → 18.11;
-  T2 teklif akışı · T3 fiyat-değişim onayı müşteri şeridinden cevap bekliyor)
+- `denetim-test-kapsami.md` — test senaryoları kapsam/kurgu denetimi (T2 kapandı-doğrulandı,
+  T4 → 18.11; kalan tek açık: T3 fiyat-değişim onayı — müşteri şeridi)
 - `denetim-dosya-agaci.md` — dosya ağacı standardı, iki yüzey (D1 kardeş-sayfa importları ·
   D2 fork istisnaları · D3 hook adı; yerleşim geneli temiz)
 - `denetim-test-artigi.md` — DB'de artık bırakan testler (R1–R3 + `mustDelete` kapandı-doğrulandı,
