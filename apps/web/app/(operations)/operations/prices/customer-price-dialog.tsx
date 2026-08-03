@@ -18,7 +18,8 @@ import {
   setCustomerPriceAction,
 } from './actions';
 import type { Channel } from '@lezzet/types';
-import type { CustomerOption, CustomerPriceRow, VariantOption } from './prices-types';
+import type { CustomerOption } from '@/lib/customer-options';
+import type { CustomerPriceRow, VariantOption } from './prices-types';
 
 // Müşteriye özel fiyat — ekleme ve düzenleme AYNI diyalog.
 //

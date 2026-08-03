@@ -7,7 +7,6 @@ import {
   DiscountService,
   PriceService,
   ProductService,
-  UserProfileService,
   serviceDb,
 } from '@lezzet/database';
 import { costOf } from '@lezzet/domain-core';
@@ -15,12 +14,13 @@ import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Channel, type KeysetCurso
 import { LOCALES } from '@lezzet/i18n';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { searchCustomerOptions, type CustomerOption } from '@/lib/customer-options';
 import { repriceAllAuto, repriceProduct } from '@/lib/pricing/auto-price';
 import { readCostBasis } from '@/lib/pricing/cost-basis';
 import { toPriceRows, type ChannelPriceMaps } from './prices-read';
 import { parsePricesUrl, toPriceFilters, PRICES_PATH } from './prices-url';
 import { titleOf } from '@/lib/catalog/title';
-import { type CustomerOption, type DiscountFormInput, type PriceRow, type VariantOption } from './prices-types';
+import { type DiscountFormInput, type PriceRow, type VariantOption } from './prices-types';
 
 // Fiyat ekranı server action'ları — 'use server' + requireAdmin ilk + servise devret +
 // `{ data, error }` DÖNER (throw yok) + revalidatePath.
@@ -224,20 +224,11 @@ export async function searchVariantsAction(term: string): Promise<ActionResult<V
   }
 }
 
+/** Müşteri seçicisi — satırın biçimi ORTAK (`lib/customer-options`), burada kalan guard ve sarmal. */
 export async function searchCustomersAction(term: string): Promise<ActionResult<CustomerOption[]>> {
   try {
     await requireAdmin();
-    const rows = await new UserProfileService(serviceDb()).search(term);
-    return {
-      data: rows.map((r) => ({
-        id: r.id,
-        name: r.name || r.phone || r.email || r.id.slice(0, 8),
-        // İkinci satır KİMLİĞİ ayırt eder: aynı adlı iki müşteri telefonuyla ayrılır.
-        hint: [r.phone, r.email].filter(Boolean).join(' · ') || 'iletişim bilgisi yok',
-        isCompany: Boolean(r.companyInfo),
-      })),
-      error: null,
-    };
+    return { data: await searchCustomerOptions(term), error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

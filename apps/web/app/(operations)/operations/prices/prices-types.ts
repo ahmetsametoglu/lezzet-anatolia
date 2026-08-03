@@ -208,14 +208,6 @@ export interface VariantOption {
   targetMarginPercent: number | null;
 }
 
-/** Müşteri arama sonucu — seçicide gösterilen asgari kimlik. */
-export interface CustomerOption {
-  id: string;
-  name: string;
-  hint: string;
-  isCompany: boolean;
-}
-
 /**
  * Başlık sayaçları. **Yüklenmiş sayfa üzerinden** hesaplanır ve ekran bunu böyle söyler: marj bir
  * karardır, SQL süzgecine çevrilemez; tüm katalogun marjını saymak katalogun tamamını taşımak
