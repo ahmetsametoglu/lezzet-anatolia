@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { PaymentMethod } from '@lezzet/types';
+import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/customer/ui/button';
 import { Card } from '@/components/customer/ui/card';
 import { SummaryRow } from '@/components/customer/ui/summary-row';
@@ -545,7 +546,16 @@ export function OrderSummary(props: CheckoutViewProps) {
         </Button>
       )}
 
-      <span className="font-sans text-micro leading-relaxed text-muted">{t.summary.terms}</span>
+      {/* Koşul cümlesi bir süredir bağsızdı: "kabul etmiş olursunuz" diyor ama kabul edilen metnin
+          okunacağı yer yoktu. Sayfa 08.8'de doğdu, bağ verildi — onay isteyen bir cümlenin
+          okunacak bir karşılığı olmalı. Ayrı satır, çünkü yerelleştirilmiş cümleyi parçalayıp
+          içine bağ gömmek üç dilde de kırılgan olurdu. */}
+      <span className="font-sans text-micro leading-relaxed text-muted">
+        {t.summary.terms}{' '}
+        <Link href="/legal/sales" className="cursor-pointer font-bold text-olive transition-colors hover:text-olive-dark">
+          {t.summary.termsLink}
+        </Link>
+      </span>
 
       {/* Soğuk zincir güvencesi: kapıya teslimde ve gün belliyken. Kargoda söylenmez — o zincire
           biz kefil olamayız, zaten soğuk zincir kalemi kargoya hiç girmiyor. */}

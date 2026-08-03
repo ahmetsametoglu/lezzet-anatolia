@@ -1,0 +1,191 @@
+{
+  "tr": {
+    "title": "Yasal bilgiler",
+    "sections": [
+      {
+        "id": "isletme",
+        "heading": "Site sahibi",
+        "body": [
+          "Bu site YİGİT Bilgin QUALITE S.A.S. tarafından işletilmektedir."
+        ],
+        "bullets": [
+          "Ticari unvan: YİGİT Bilgin QUALITE S.A.S.",
+          "Hukuki biçim: Société par actions simplifiée (S.A.S.)",
+          "SIRET: 907 496 640 00018",
+          "KDV numarası: FR50907496640",
+          "Merkez: Strasbourg, Fransa",
+          "E-posta: lezzetanatolie@gmail.com",
+          "Telefon: +33 (0)6 16 99 06 81"
+        ]
+      },
+      {
+        "id": "yayin",
+        "heading": "Yayın sorumlusu",
+        "body": [
+          "Yayın sorumlusu, şirketin yasal temsilcisidir. İçerikle ilgili her talep yukarıdaki e-posta adresine iletilebilir."
+        ]
+      },
+      {
+        "id": "barindirma",
+        "heading": "Barındırma",
+        "body": [
+          "Site ve veritabanı, Avrupa Birliği içindeki veri merkezlerinde barındırılmaktadır. Barındırıcının kimlik ve iletişim bilgileri talep üzerine iletilir."
+        ]
+      },
+      {
+        "id": "fikri-mulkiyet",
+        "heading": "Fikri mülkiyet",
+        "body": [
+          "Bu sitedeki metinler, ürün fotoğrafları, logo ve tasarım öğeleri site sahibine aittir ve Fransız fikri mülkiyet mevzuatı ile korunmaktadır.",
+          "Bunların tamamının ya da bir kısmının izinsiz çoğaltılması, yayımlanması veya ticari amaçla kullanılması yasaktır. Kişisel ve ticari olmayan kullanım için tarayıcınızda görüntüleme ve yazdırma serbesttir."
+        ]
+      },
+      {
+        "id": "sorumluluk",
+        "heading": "Sorumluluk",
+        "body": [
+          "Site içeriğinin güncel ve doğru olması için özen gösterilir. Ürün bilgileri, fiyatlar ve stok durumu değişebilir; sipariş anında sepette görünen bilgi geçerlidir.",
+          "Sitenin geçici olarak erişilemez olmasından ya da bakım nedeniyle kesintiye uğramasından doğan zararlardan sorumluluk kabul edilmez."
+        ]
+      },
+      {
+        "id": "uyusmazlik",
+        "heading": "Uygulanacak hukuk",
+        "body": [
+          "Bu yasal bilgiler Fransız hukukuna tabidir. Satışa ilişkin koşullar için satış koşulları sayfasına bakınız."
+        ]
+      }
+    ],
+    "notice": {
+      "text": "Satın almaya ilişkin koşullar ayrı bir sayfada:",
+      "sales": "Satış koşulları",
+      "privacy": "Gizlilik politikası"
+    }
+  },
+  "fr": {
+    "title": "Mentions légales",
+    "sections": [
+      {
+        "id": "isletme",
+        "heading": "Éditeur du site",
+        "body": [
+          "Ce site est édité par YİGİT Bilgin QUALITE S.A.S."
+        ],
+        "bullets": [
+          "Dénomination sociale : YİGİT Bilgin QUALITE S.A.S.",
+          "Forme juridique : société par actions simplifiée (S.A.S.)",
+          "SIRET : 907 496 640 00018",
+          "Numéro de TVA intracommunautaire : FR50907496640",
+          "Siège : Strasbourg, France",
+          "E-mail : lezzetanatolie@gmail.com",
+          "Téléphone : +33 (0)6 16 99 06 81"
+        ]
+      },
+      {
+        "id": "yayin",
+        "heading": "Directeur de la publication",
+        "body": [
+          "Le directeur de la publication est le représentant légal de la société. Toute demande relative au contenu peut être adressée à l'adresse e-mail ci-dessus."
+        ]
+      },
+      {
+        "id": "barindirma",
+        "heading": "Hébergement",
+        "body": [
+          "Le site et la base de données sont hébergés dans des centres de données situés dans l'Union européenne. L'identité et les coordonnées de l'hébergeur sont communiquées sur demande."
+        ]
+      },
+      {
+        "id": "fikri-mulkiyet",
+        "heading": "Propriété intellectuelle",
+        "body": [
+          "Les textes, photographies de produits, le logo et les éléments graphiques de ce site appartiennent à l'éditeur et sont protégés par le code de la propriété intellectuelle.",
+          "Toute reproduction, publication ou exploitation commerciale, totale ou partielle, sans autorisation est interdite. La consultation et l'impression dans un cadre privé et non commercial restent libres."
+        ]
+      },
+      {
+        "id": "sorumluluk",
+        "heading": "Responsabilité",
+        "body": [
+          "Nous veillons à l'exactitude et à l'actualité du contenu du site. Les informations produits, les prix et les disponibilités peuvent évoluer ; l'information affichée dans le panier au moment de la commande fait foi.",
+          "Notre responsabilité ne saurait être engagée en cas d'indisponibilité temporaire du site ou d'interruption pour maintenance."
+        ]
+      },
+      {
+        "id": "uyusmazlik",
+        "heading": "Droit applicable",
+        "body": [
+          "Les présentes mentions légales sont soumises au droit français. Pour les conditions relatives à la vente, veuillez consulter la page des conditions générales de vente."
+        ]
+      }
+    ],
+    "notice": {
+      "text": "Les conditions relatives à l'achat figurent sur une page distincte :",
+      "sales": "Conditions générales de vente",
+      "privacy": "Politique de confidentialité"
+    }
+  },
+  "de": {
+    "title": "Impressum",
+    "sections": [
+      {
+        "id": "isletme",
+        "heading": "Betreiber der Website",
+        "body": [
+          "Diese Website wird betrieben von YİGİT Bilgin QUALITE S.A.S."
+        ],
+        "bullets": [
+          "Firma: YİGİT Bilgin QUALITE S.A.S.",
+          "Rechtsform: Société par actions simplifiée (S.A.S.)",
+          "SIRET: 907 496 640 00018",
+          "USt-IdNr.: FR50907496640",
+          "Sitz: Straßburg, Frankreich",
+          "E-Mail: lezzetanatolie@gmail.com",
+          "Telefon: +33 (0)6 16 99 06 81"
+        ]
+      },
+      {
+        "id": "yayin",
+        "heading": "Verantwortlich für den Inhalt",
+        "body": [
+          "Verantwortlich für den Inhalt ist der gesetzliche Vertreter der Gesellschaft. Anfragen zum Inhalt richten Sie bitte an die oben genannte E-Mail-Adresse."
+        ]
+      },
+      {
+        "id": "barindirma",
+        "heading": "Hosting",
+        "body": [
+          "Website und Datenbank werden in Rechenzentren innerhalb der Europäischen Union gehostet. Identität und Kontaktdaten des Hosters werden auf Anfrage mitgeteilt."
+        ]
+      },
+      {
+        "id": "fikri-mulkiyet",
+        "heading": "Urheberrecht",
+        "body": [
+          "Die Texte, Produktfotos, das Logo und die Gestaltungselemente dieser Website gehören dem Betreiber und sind nach französischem Urheberrecht geschützt.",
+          "Jede unerlaubte Vervielfältigung, Veröffentlichung oder kommerzielle Nutzung, ganz oder teilweise, ist untersagt. Das Ansehen und Ausdrucken für private, nicht kommerzielle Zwecke bleibt frei."
+        ]
+      },
+      {
+        "id": "sorumluluk",
+        "heading": "Haftung",
+        "body": [
+          "Wir achten auf Aktualität und Richtigkeit der Inhalte. Produktangaben, Preise und Verfügbarkeiten können sich ändern; maßgeblich ist die im Warenkorb zum Zeitpunkt der Bestellung angezeigte Information.",
+          "Für Schäden aus vorübergehender Nichterreichbarkeit der Website oder Unterbrechungen wegen Wartungsarbeiten wird keine Haftung übernommen."
+        ]
+      },
+      {
+        "id": "uyusmazlik",
+        "heading": "Anwendbares Recht",
+        "body": [
+          "Dieses Impressum unterliegt französischem Recht. Für die Bedingungen des Kaufs sehen Sie bitte die Seite mit den allgemeinen Geschäftsbedingungen ein."
+        ]
+      }
+    ],
+    "notice": {
+      "text": "Die Bedingungen für den Kauf stehen auf einer eigenen Seite:",
+      "sales": "Allgemeine Geschäftsbedingungen",
+      "privacy": "Datenschutzerklärung"
+    }
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "tr": {
+    "title": "Sık sorulan sorular",
+    "questions": [
+      {
+        "id": "donmus",
+        "question": "Ürünler donmuş mu geliyor?",
+        "answer": "Evet — tüm ürünlerimiz şoklanmış halde, soğuk zincir hiç bozulmadan kapınıza gelir. Teslim aldığınızda dondurucunuza koymanız yeterli. Kargo paketlerinde yalıtımlı kutu ve soğutucu kullanılır; ürünlerin kenarları hafif yumuşamış olabilir, bu normaldir."
+      },
+      {
+        "id": "asgari-sepet",
+        "question": "Minimum sipariş tutarı var mı?",
+        "answer": "Bölge içi teslimatta asgari bir sepet tutarı uygulanır; tutar sepette görünür ve altında kaldığınızda ne kadar kaldığı yazar. Kargo gönderiminde asgari tutar yoktur, ancak belirli bir tutarın üzerinde kargo ücretsizdir."
+      },
+      {
+        "id": "teslimat-gunu",
+        "question": "Siparişim ne zaman gelir?",
+        "answer": "Bölge içindeyseniz teslimat gününüz bölgenizin takvimine göre belirlenir ve siparişi verirken görürsünüz. Kargo gönderimlerinde paket hazırlandıktan sonra yola çıkar; siparişinizin durumunu \"Siparişlerim\" bölümünden takip edebilir, her adımda e-posta alırsınız."
+      },
+      {
+        "id": "kapida-odeme",
+        "question": "Kapıda ödeyebilir miyim?",
+        "answer": "Bölge içi teslimatlarda kapıda ödeme seçilebilir. Kargo gönderimlerinde ödeme sipariş sırasında alınır. Kapıda ödemede bir kalem eksik çıkarsa o kalemin bedeli teslimat anında zaten düşülür — sonradan iade beklemezsiniz."
+      },
+      {
+        "id": "eksik-kalem",
+        "question": "Bir ürün eksik geldi, ne yapmalıyım?",
+        "answer": "Bir şey yapmanız gerekmez: kutunuzdan çıkmayan kalemin bedeli otomatik olarak hesaplanır ve iade edilir. Yine de durumu bize anlatmak isterseniz \"Taleplerim\" bölümünden siparişinizi seçip yazabilirsiniz."
+      },
+      {
+        "id": "toptan",
+        "question": "Restoranım için toptan fiyat alabilir miyim?",
+        "answer": "Evet. \"Professionnels\" sayfasından SIRET numaranızla başvurabilirsiniz; başvurunuz onaylandığında hesabınız işletme hesabına dönüşür ve fiyatlar buna göre görünür."
+      },
+      {
+        "id": "alerjen",
+        "question": "Alerjen bilgilerini nereden görebilirim?",
+        "answer": "Her ürünün sayfasında içindekiler ve alerjen bilgisi yer alır. Ürünlerimiz gluten, süt, yumurta ve kuruyemiş içerebilecek bir mutfakta hazırlanır; ciddi bir alerjiniz varsa sipariş öncesi bize yazmanızı öneririz."
+      },
+      {
+        "id": "hesap-gerekli",
+        "question": "Sipariş vermek için hesap açmam gerekiyor mu?",
+        "answer": "Hayır. Sepetinizi hesap açmadan doldurabilir, siparişi e-posta adresinizle tamamlayabilirsiniz. Hesap açtığınızda siparişleriniz, adresleriniz ve puanınız saklanır; tek tuşla tekrar sipariş verebilirsiniz."
+      },
+      {
+        "id": "dil",
+        "question": "Site ve e-postaların dilini nasıl değiştiririm?",
+        "answer": "Sitenin üst şeridinden ya da hesap sayfanızdaki dil satırından değiştirebilirsiniz. Bildirim e-postalarınız da aynı dile geçer — siteyi Türkçe gezen birinin maillerinin Fransızca gelmesi anlamsız olurdu."
+      }
+    ]
+  },
+  "fr": {
+    "title": "Questions fréquentes",
+    "questions": [
+      {
+        "id": "donmus",
+        "question": "Les produits arrivent-ils surgelés ?",
+        "answer": "Oui — tous nos produits sont surgelés et la chaîne du froid n'est pas rompue jusqu'à votre porte. À la réception, il vous suffit de les placer au congélateur. Les colis sont expédiés en caisse isotherme avec accumulateurs de froid ; les bords des produits peuvent être légèrement ramollis, c'est normal."
+      },
+      {
+        "id": "asgari-sepet",
+        "question": "Y a-t-il un montant minimum de commande ?",
+        "answer": "Un montant minimum s'applique pour la livraison dans notre zone ; il est affiché dans le panier et, si vous êtes en dessous, le montant restant est indiqué. Il n'y a pas de minimum pour les expéditions, mais les frais sont offerts au-delà d'un certain montant."
+      },
+      {
+        "id": "teslimat-gunu",
+        "question": "Quand ma commande arrive-t-elle ?",
+        "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, le colis part une fois préparé ; vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail à chaque étape."
+      },
+      {
+        "id": "kapida-odeme",
+        "question": "Puis-je payer à la livraison ?",
+        "answer": "Le paiement à la livraison est possible pour les livraisons dans notre zone. Pour les expéditions, le paiement est encaissé au moment de la commande. En paiement à la livraison, si un article manque, son montant est déduit dès la livraison — vous n'attendez pas un remboursement."
+      },
+      {
+        "id": "eksik-kalem",
+        "question": "Un produit manque dans ma commande, que faire ?",
+        "answer": "Vous n'avez rien à faire : le montant de l'article absent de votre colis est calculé et remboursé automatiquement. Si vous souhaitez tout de même nous en parler, ouvrez une demande depuis « Mes demandes » en sélectionnant votre commande."
+      },
+      {
+        "id": "toptan",
+        "question": "Puis-je obtenir des tarifs professionnels pour mon restaurant ?",
+        "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence."
+      },
+      {
+        "id": "alerjen",
+        "question": "Où puis-je voir les informations sur les allergènes ?",
+        "answer": "Les ingrédients et les allergènes figurent sur la fiche de chaque produit. Nos produits sont préparés dans un atelier où sont également manipulés gluten, lait, œufs et fruits à coque ; en cas d'allergie sévère, nous vous conseillons de nous écrire avant de commander."
+      },
+      {
+        "id": "hesap-gerekli",
+        "question": "Dois-je créer un compte pour commander ?",
+        "answer": "Non. Vous pouvez remplir votre panier sans compte et finaliser la commande avec votre adresse e-mail. Avec un compte, vos commandes, vos adresses et vos points sont conservés, et vous pouvez recommander en un clic."
+      },
+      {
+        "id": "dil",
+        "question": "Comment changer la langue du site et des e-mails ?",
+        "answer": "Depuis le bandeau en haut du site ou depuis la ligne « Langue » de votre compte. Vos e-mails de notification passent dans la même langue — il serait absurde que quelqu'un qui navigue en français reçoive ses messages en turc."
+      }
+    ]
+  },
+  "de": {
+    "title": "Häufige Fragen",
+    "questions": [
+      {
+        "id": "donmus",
+        "question": "Kommen die Produkte gefroren an?",
+        "answer": "Ja — alle unsere Produkte sind schockgefrostet, und die Kühlkette bleibt bis zu Ihrer Tür ununterbrochen. Nach dem Empfang legen Sie sie einfach in den Gefrierschrank. Versandpakete werden in Isolierboxen mit Kühlakkus verschickt; die Ränder der Produkte können leicht angetaut sein, das ist normal."
+      },
+      {
+        "id": "asgari-sepet",
+        "question": "Gibt es einen Mindestbestellwert?",
+        "answer": "Für die Lieferung in unserem Gebiet gilt ein Mindestbestellwert; er wird im Warenkorb angezeigt, und wenn Sie darunter liegen, sehen Sie den fehlenden Betrag. Für den Versand gibt es keinen Mindestwert, ab einem bestimmten Betrag entfallen jedoch die Versandkosten."
+      },
+      {
+        "id": "teslimat-gunu",
+        "question": "Wann kommt meine Bestellung an?",
+        "answer": "Innerhalb des Liefergebiets richtet sich Ihr Liefertag nach dem Kalender Ihres Gebiets, und Sie sehen ihn bei der Bestellung. Beim Versand geht das Paket nach der Vorbereitung raus; den Status verfolgen Sie unter „Meine Bestellungen“ und erhalten bei jedem Schritt eine E-Mail."
+      },
+      {
+        "id": "kapida-odeme",
+        "question": "Kann ich bei Lieferung bezahlen?",
+        "answer": "Bei Lieferungen in unserem Gebiet ist Zahlung bei Lieferung möglich. Beim Versand wird die Zahlung bei der Bestellung eingezogen. Fehlt bei Zahlung bei Lieferung ein Artikel, wird sein Betrag bereits bei der Lieferung abgezogen — Sie warten nicht auf eine Erstattung."
+      },
+      {
+        "id": "eksik-kalem",
+        "question": "Ein Produkt fehlt in meiner Bestellung, was tun?",
+        "answer": "Sie müssen nichts tun: Der Betrag des in Ihrem Paket fehlenden Artikels wird automatisch berechnet und erstattet. Möchten Sie uns dennoch davon berichten, eröffnen Sie unter „Meine Anfragen“ eine Anfrage und wählen Ihre Bestellung aus."
+      },
+      {
+        "id": "toptan",
+        "question": "Bekomme ich Großhandelspreise für mein Restaurant?",
+        "answer": "Ja. Sie können sich über die Seite „Professionnels“ mit Ihrer SIRET-Nummer bewerben; sobald Ihre Anfrage bestätigt ist, wird Ihr Konto zu einem Geschäftskonto und die Preise werden entsprechend angezeigt."
+      },
+      {
+        "id": "alerjen",
+        "question": "Wo finde ich Angaben zu Allergenen?",
+        "answer": "Zutaten und Allergene stehen auf der Seite jedes Produkts. Unsere Produkte werden in einer Küche zubereitet, in der auch Gluten, Milch, Eier und Schalenfrüchte verarbeitet werden; bei einer schweren Allergie empfehlen wir, uns vor der Bestellung zu schreiben."
+      },
+      {
+        "id": "hesap-gerekli",
+        "question": "Brauche ich ein Konto, um zu bestellen?",
+        "answer": "Nein. Sie können Ihren Warenkorb ohne Konto füllen und die Bestellung mit Ihrer E-Mail-Adresse abschließen. Mit einem Konto werden Ihre Bestellungen, Adressen und Punkte gespeichert, und Sie können mit einem Klick nachbestellen."
+      },
+      {
+        "id": "dil",
+        "question": "Wie ändere ich die Sprache der Website und der E-Mails?",
+        "answer": "Oben auf der Seite oder über die Zeile „Sprache“ in Ihrem Konto. Ihre Benachrichtigungs-E-Mails wechseln in dieselbe Sprache — es wäre unsinnig, wenn jemand die Seite auf Deutsch nutzt und seine Nachrichten auf Französisch bekommt."
+      }
+    ]
+  }
+}

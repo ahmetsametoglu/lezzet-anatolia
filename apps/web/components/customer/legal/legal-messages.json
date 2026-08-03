@@ -1,0 +1,26 @@
+{
+  "tr": {
+    "onThisPage": "Bu sayfada",
+    "updatedAt": "Son güncelleme: {date}",
+    "searchPlaceholder": "Soru arayın…",
+    "noMatch": "Bu aramaya uyan soru yok.",
+    "notFoundTitle": "Cevabını bulamadınız mı?",
+    "notFoundCta": "Bize yazın"
+  },
+  "fr": {
+    "onThisPage": "Sur cette page",
+    "updatedAt": "Dernière mise à jour : {date}",
+    "searchPlaceholder": "Rechercher une question…",
+    "noMatch": "Aucune question ne correspond à cette recherche.",
+    "notFoundTitle": "Vous ne trouvez pas votre réponse ?",
+    "notFoundCta": "Écrivez-nous"
+  },
+  "de": {
+    "onThisPage": "Auf dieser Seite",
+    "updatedAt": "Zuletzt aktualisiert: {date}",
+    "searchPlaceholder": "Frage suchen…",
+    "noMatch": "Keine Frage passt zu dieser Suche.",
+    "notFoundTitle": "Antwort nicht gefunden?",
+    "notFoundCta": "Schreiben Sie uns"
+  }
+}

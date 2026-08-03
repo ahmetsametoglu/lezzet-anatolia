@@ -96,6 +96,22 @@ interface SiteFrameProps {
 const SHELL = 'mx-auto w-full max-w-[1360px]';
 
 /**
+ * Footer'ın yasal satırı (08.8) — sıra tasarımın sırası: künye → satış koşulları → gizlilik →
+ * teslimat → SSS. Genelden özele iniyor ve sonuncusu ziyaretçinin en çok tıklayacağı olan.
+ *
+ * Dizi burada, `messages.json`da değil: metin dile göre değişir ama HANGİ sayfaların olduğu ve
+ * hangi sırayla durdukları dile göre değişmez. Sözlüğe gömülseydi bir dilde bir satır eksik
+ * kalabilir ve o dilin ziyaretçisi sayfayı hiç göremezdi.
+ */
+const LEGAL_LINKS = [
+  { key: 'terms', href: '/legal/terms' },
+  { key: 'sales', href: '/legal/sales' },
+  { key: 'privacy', href: '/legal/privacy' },
+  { key: 'delivery', href: '/legal/delivery' },
+  { key: 'faq', href: '/legal/faq' },
+] as const;
+
+/**
  * Aktif gezinme öğesi: zeytin metin + 2px alt çizgi (tasarım K12).
  *
  * Alt çizgi HER öğede vardır, aktif olmayanda ŞEFFAFtır. Yalnız aktif öğeye verilirse o öğe 4px
@@ -286,6 +302,20 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
             </div>
           )}
         </div>
+        )}
+
+        {/* YASAL SATIR (08.8) — statik sayfaların tasarımında footer'ın en altında, tek satır:
+            "Mentions légales · CGV · Gizlilik · Teslimat/İade · SSS".
+            Üstteki sütunların aksine bunlar GERÇEK bağ: beş sayfanın beşi de var. Mobil detay
+            çerçevesinde çizilmez — o ekranın altı sabit satın alma çubuğunundur. */}
+        {!isMobileDetail && (
+          <div className={[SHELL, 'flex flex-wrap gap-x-5 gap-y-1.5 border-t border-neutral-400/20 font-sans text-body-sm', isMobile ? 'px-4 py-3.5' : 'px-12 py-4'].join(' ')}>
+            {LEGAL_LINKS.map((item) => (
+              <Link key={item.href} href={item.href} className="cursor-pointer transition-colors hover:text-cream">
+                {t.legal[item.key]}
+              </Link>
+            ))}
+          </div>
         )}
       </footer>
       )}

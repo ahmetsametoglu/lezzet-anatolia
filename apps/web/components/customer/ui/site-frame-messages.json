@@ -22,6 +22,13 @@
       "about": "Hakkımızda",
       "faq": "SSS"
     },
+    "legal": {
+      "terms": "Yasal bilgiler",
+      "sales": "Satış koşulları",
+      "privacy": "Gizlilik",
+      "delivery": "Teslimat/İade",
+      "faq": "SSS"
+    },
     "share": "WhatsApp ile paylaş",
     "cart": "Sepetim",
     "accountNav": {
@@ -56,6 +63,13 @@
       "about": "Qui sommes-nous",
       "faq": "FAQ"
     },
+    "legal": {
+      "terms": "Mentions légales",
+      "sales": "CGV",
+      "privacy": "Confidentialité",
+      "delivery": "Livraison/Retours",
+      "faq": "FAQ"
+    },
     "share": "Partager sur WhatsApp",
     "cart": "Mon panier",
     "accountNav": {
@@ -88,6 +102,13 @@
       "corporate": "Unternehmen",
       "language": "Sprache",
       "about": "Über uns",
+      "faq": "FAQ"
+    },
+    "legal": {
+      "terms": "Impressum",
+      "sales": "AGB",
+      "privacy": "Datenschutz",
+      "delivery": "Lieferung/Rücksendung",
       "faq": "FAQ"
     },
     "share": "Über WhatsApp teilen",

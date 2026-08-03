@@ -309,6 +309,22 @@ kodlanabilir — ama dört alanlı bir formun çiziminin olmaması, ekranın ger
 durup durmayacağını belirsiz bırakıyor. Karar gelene kadar pencere brief'ten türetilerek, ekranın
 mevcut form kitiyle kurulacak; çizim gelince birebir uygulanır.
 
+- **UZUN METİN İÇİN OKUMA KADEMESİ YOK — statik sayfalar bunu bekliyor (03.08, 08.8).**
+  `Musteri - Statik.dc.html` gövde metnini `15.5px/1.75` ve `#4a4f44` ile çiziyor. Envanterde
+  ikisinin de karşılığı yok: en yakın punto `text-body` (15px), en yakın renk `--color-body`
+  (`#6d7261`) ve satır aralığı token'ı `leading-relaxed` (1.625). Sayfalar bugün bu üçüyle kuruldu —
+  ham değer yazmak `CLAUDE.md §3`'ün ihlaliydi.
+
+  **Fark küçük ama rastgele değil:** tasarım bu sayfalarda bilerek bir tık daha KOYU ve bir tık daha
+  SEYREK yazmış. Sebebi de belli — yüzeyin geri kalanı kart başlığı, fiyat, rozet gibi kısa metinler
+  taşırken burada ekran dolusu hukuki metin var ve bunlar farklı okuma işleridir. `--color-body`
+  bir kart alt satırı için doğru tondur, üç ekran süren bir CGV için açık kalır.
+
+  **İstenen karar:** envantere bir **okuma kademesi** eklenip eklenmeyeceği (uzun metin puntosu +
+  gövde tonunun koyu varyantı + 1.75 satır aralığı). Eklenirse `legal-sections.tsx` tek dosyada o
+  token'lara geçer. Eklenmezse bugünkü hâli kalır ve tasarımın statik sayfa çizimi bu üç değerde
+  envantere uydurulur — ikisinden biri, ama ikisi birden değil.
+
 ## 3. Bilinçli sapmalar (kapanmış — yeniden tartışılmasın)
 
 - **AYARLAR: TESLİMAT BÖLGESİ TABLOSU BU EKRANDA DEĞİL, DEPOLAR'DA (03.08, 09.16 ↔ 19.5).**

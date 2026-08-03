@@ -1,0 +1,284 @@
+{
+  "tr": {
+    "title": "Satış koşulları",
+    "sections": [
+      {
+        "id": "kapsam",
+        "heading": "Kapsam",
+        "body": [
+          "Bu koşullar, YİGİT Bilgin QUALITE S.A.S. (SIRET 907 496 640 00018) tarafından bu site üzerinden yapılan tüm satışlara uygulanır. Sipariş vermekle bu koşulları kabul etmiş olursunuz.",
+          "Koşullar değişebilir; siparişinize uygulanacak olan, siparişi verdiğiniz tarihte yürürlükte olan sürümdür. Sayfanın başındaki güncelleme tarihi hangi sürüme baktığınızı gösterir."
+        ]
+      },
+      {
+        "id": "urunler",
+        "heading": "Ürünler ve bilgiler",
+        "body": [
+          "Ürünlerimiz dondurulmuş gıdadır. Her ürünün sayfasında içindekiler, alerjen bilgisi ve net miktar yer alır.",
+          "Ürün fotoğrafları tanıtım amaçlıdır; sunum ve görünüm ürünler arasında farklılık gösterebilir. Bağlayıcı olan, ürün sayfasındaki yazılı bilgidir.",
+          "Bazı ürünler yapıları gereği yalnız teslimat bölgemiz içinde satılabilir. Bu ürünler katalogda işaretlenir ve bölge dışı bir adres seçildiğinde sipariş edilemez."
+        ]
+      },
+      {
+        "id": "siparis",
+        "heading": "Siparişin kurulması",
+        "body": [
+          "Sipariş, sepetinizi onaylayıp ödeme adımını tamamladığınızda kurulur. Onay ekranını gördüğünüz ve onay e-postanız ulaştığı anda sipariş bizim tarafımızdan da kabul edilmiş sayılır.",
+          "Fiyatlar sepette gösterildiği anda sabitlenir. Sipariş verdikten sonra katalogdaki fiyat değişse de siparişinizin tutarı değişmez.",
+          "Stokta olmadığı sonradan anlaşılan bir kalem varsa siparişiniz iptal edilmez: eksik kalem çıkarılır, bedeli tahsil edilmez ya da iade edilir ve durum size bildirilir."
+        ]
+      },
+      {
+        "id": "fiyat",
+        "heading": "Fiyatlar",
+        "body": [
+          "Fiyatlar euro cinsindendir ve yürürlükteki KDV dâhildir. Uygulanan KDV oranı ürün türüne göre değişir.",
+          "İşletme (B2B) hesaplarında fiyatlar farklıdır ve hesabınız onaylandıktan sonra görünür.",
+          "Teslimat ücreti fiyata dâhil değildir; sepette ayrı satır olarak gösterilir ve siparişi tamamlamadan önce görürsünüz."
+        ]
+      },
+      {
+        "id": "odeme",
+        "heading": "Ödeme",
+        "body": [
+          "Kartla ödeme, güvenli bir ödeme sağlayıcısı üzerinden alınır. Kart bilgileriniz bize hiçbir aşamada ulaşmaz ve tarafımızca saklanmaz.",
+          "Teslimat bölgemiz içinde kapıda ödeme seçilebilir. Kapıda ödemede tahsil edilecek tutar, teslim edilen kalemlerin tutarıdır — eksik çıkan kalem baştan düşülür.",
+          "Ödeme tamamlanmadan sipariş hazırlığa alınmaz."
+        ]
+      },
+      {
+        "id": "teslimat",
+        "heading": "Teslimat",
+        "body": [
+          "Bölge içi adreslere kendi soğuk zincir aracımızla, bölge dışına soğuk zincir kargo paketiyle teslim ediyoruz. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
+          "Belirtilen teslimat günleri tahminidir. Hava koşulları, trafik ya da kargo firmasından kaynaklanan gecikmeler teslimatı öteleyebilir; bu durumda sizi bilgilendiririz.",
+          "Teslimat sırasında adreste bulunulmaması nedeniyle teslim edilemeyen soğuk zincir ürünlerin yeniden gönderimi mümkün olmayabilir. Ayrıntılar teslimat ve iade sayfasındadır."
+        ]
+      },
+      {
+        "id": "cayma",
+        "heading": "Cayma hakkı",
+        "body": [
+          "Fransız tüketici mevzuatı uyarınca, çabuk bozulabilen gıda ürünlerinde mesafeli satışın 14 günlük cayma hakkı UYGULANMAZ (Code de la consommation, md. L221-28).",
+          "Bu, hatalı teslimattaki haklarınızı ortadan kaldırmaz: eksik, hasarlı, çözülmüş ya da yanlış gönderilen ürünlerde bedel iade edilir veya yeniden gönderim yapılır. Koşullar ve süreler teslimat ve iade sayfasında yazılıdır."
+        ]
+      },
+      {
+        "id": "garanti",
+        "heading": "Yasal garantiler",
+        "body": [
+          "Ürünlerimiz, Fransız hukukundaki uygunluk garantisi (garantie légale de conformité) ve gizli ayıplara karşı garanti (garantie des vices cachés) kapsamındadır.",
+          "Bu garantiler yasal olup ayrıca ücret talep edilmez ve ticari bir taahhütle sınırlandırılamaz."
+        ]
+      },
+      {
+        "id": "kisisel-veri",
+        "heading": "Kişisel veriler",
+        "body": [
+          "Siparişiniz için gereken kişisel verilerin nasıl işlendiği gizlilik politikası sayfasında ayrıntılı olarak açıklanmıştır."
+        ]
+      },
+      {
+        "id": "uyusmazlik",
+        "heading": "Uyuşmazlık ve uygulanacak hukuk",
+        "body": [
+          "Bir sorun yaşarsanız önce bize yazmanızı rica ederiz; talepler \"Taleplerim\" bölümünden açılabilir ve takip edilebilir.",
+          "Çözülemeyen uyuşmazlıklarda tüketici, ücretsiz olarak bir tüketici arabulucusuna başvurabilir. Bu koşullar Fransız hukukuna tabidir."
+        ]
+      }
+    ],
+    "notice": {
+      "text": "Teslimat, kargo ve iade ayrıntıları ayrı bir sayfada:",
+      "delivery": "Teslimat ve iade",
+      "support": "bize yazın"
+    }
+  },
+  "fr": {
+    "title": "Conditions générales de vente",
+    "sections": [
+      {
+        "id": "kapsam",
+        "heading": "Champ d'application",
+        "body": [
+          "Les présentes conditions s'appliquent à toutes les ventes réalisées via ce site par YİGİT Bilgin QUALITE S.A.S. (SIRET 907 496 640 00018). En passant commande, vous acceptez ces conditions.",
+          "Ces conditions peuvent évoluer ; la version applicable à votre commande est celle en vigueur à la date de la commande. La date de mise à jour en haut de page indique la version que vous consultez."
+        ]
+      },
+      {
+        "id": "urunler",
+        "heading": "Produits et informations",
+        "body": [
+          "Nos produits sont des denrées alimentaires surgelées. Les ingrédients, les allergènes et la quantité nette figurent sur la fiche de chaque produit.",
+          "Les photographies sont fournies à titre d'illustration ; la présentation et l'aspect peuvent varier d'un produit à l'autre. Seules les informations écrites sur la fiche produit sont contractuelles.",
+          "Certains produits ne peuvent, par nature, être vendus qu'à l'intérieur de notre zone de livraison. Ils sont signalés dans le catalogue et ne peuvent pas être commandés si une adresse hors zone est sélectionnée."
+        ]
+      },
+      {
+        "id": "siparis",
+        "heading": "Formation de la commande",
+        "body": [
+          "La commande est formée lorsque vous validez votre panier et finalisez l'étape de paiement. Dès l'affichage de la page de confirmation et la réception de votre e-mail de confirmation, la commande est également acceptée par nos soins.",
+          "Les prix sont figés au moment où ils s'affichent dans le panier. Même si le prix du catalogue change après votre commande, le montant de votre commande reste inchangé.",
+          "Si un article s'avère indisponible après coup, votre commande n'est pas annulée : l'article manquant est retiré, son montant n'est pas encaissé ou vous est remboursé, et vous en êtes informé."
+        ]
+      },
+      {
+        "id": "fiyat",
+        "heading": "Prix",
+        "body": [
+          "Les prix sont indiqués en euros, toutes taxes comprises. Le taux de TVA applicable varie selon le type de produit.",
+          "Les comptes professionnels (B2B) bénéficient de tarifs distincts, visibles une fois le compte validé.",
+          "Les frais de livraison ne sont pas inclus dans le prix ; ils apparaissent sur une ligne distincte du panier et vous les voyez avant de finaliser la commande."
+        ]
+      },
+      {
+        "id": "odeme",
+        "heading": "Paiement",
+        "body": [
+          "Le paiement par carte est encaissé via un prestataire de paiement sécurisé. Vos données de carte ne nous parviennent à aucun moment et ne sont pas conservées par nos soins.",
+          "Le paiement à la livraison est possible dans notre zone de livraison. Dans ce cas, le montant encaissé correspond aux articles effectivement livrés : un article manquant est déduit d'emblée.",
+          "Aucune commande n'est mise en préparation avant la finalisation du paiement."
+        ]
+      },
+      {
+        "id": "teslimat",
+        "heading": "Livraison",
+        "body": [
+          "Nous livrons les adresses de la zone avec notre propre véhicule frigorifique et les adresses hors zone en colis frigorifique. Le jour et les options de livraison sont affichés au moment de la commande selon le code postal de votre adresse.",
+          "Les jours de livraison indiqués sont estimatifs. Les conditions météorologiques, la circulation ou un retard du transporteur peuvent décaler la livraison ; le cas échéant, nous vous en informons.",
+          "Si la livraison ne peut être effectuée parce que personne n'est présent à l'adresse, une réexpédition des produits surgelés peut ne pas être possible. Les détails figurent sur la page livraison et retours."
+        ]
+      },
+      {
+        "id": "cayma",
+        "heading": "Droit de rétractation",
+        "body": [
+          "Conformément au code de la consommation (art. L221-28), le droit de rétractation de 14 jours applicable à la vente à distance NE S'APPLIQUE PAS aux denrées alimentaires susceptibles de se détériorer rapidement.",
+          "Cela ne supprime pas vos droits en cas de livraison non conforme : en cas d'article manquant, endommagé, décongelé ou erroné, le montant est remboursé ou le produit réexpédié. Les conditions et les délais sont précisés sur la page livraison et retours."
+        ]
+      },
+      {
+        "id": "garanti",
+        "heading": "Garanties légales",
+        "body": [
+          "Nos produits bénéficient de la garantie légale de conformité et de la garantie des vices cachés prévues par le droit français.",
+          "Ces garanties sont légales, ne donnent lieu à aucun frais supplémentaire et ne peuvent être limitées par un engagement commercial."
+        ]
+      },
+      {
+        "id": "kisisel-veri",
+        "heading": "Données personnelles",
+        "body": [
+          "Le traitement des données personnelles nécessaires à votre commande est détaillé sur la page de politique de confidentialité."
+        ]
+      },
+      {
+        "id": "uyusmazlik",
+        "heading": "Litiges et droit applicable",
+        "body": [
+          "En cas de problème, nous vous invitons à nous écrire en premier lieu ; les demandes peuvent être ouvertes et suivies depuis la rubrique « Mes demandes ».",
+          "En l'absence de solution, le consommateur peut recourir gratuitement à un médiateur de la consommation. Les présentes conditions sont soumises au droit français."
+        ]
+      }
+    ],
+    "notice": {
+      "text": "Les détails de livraison, d'expédition et de retour figurent sur une page distincte :",
+      "delivery": "Livraison et retours",
+      "support": "écrivez-nous"
+    }
+  },
+  "de": {
+    "title": "Allgemeine Geschäftsbedingungen",
+    "sections": [
+      {
+        "id": "kapsam",
+        "heading": "Geltungsbereich",
+        "body": [
+          "Diese Bedingungen gelten für alle über diese Website getätigten Verkäufe der YİGİT Bilgin QUALITE S.A.S. (SIRET 907 496 640 00018). Mit Ihrer Bestellung erkennen Sie diese Bedingungen an.",
+          "Die Bedingungen können sich ändern; für Ihre Bestellung gilt die zum Bestelldatum gültige Fassung. Das Aktualisierungsdatum oben auf der Seite zeigt, welche Fassung Sie einsehen."
+        ]
+      },
+      {
+        "id": "urunler",
+        "heading": "Produkte und Angaben",
+        "body": [
+          "Unsere Produkte sind tiefgekühlte Lebensmittel. Zutaten, Allergene und Nettomenge stehen auf der Seite jedes Produkts.",
+          "Produktfotos dienen der Veranschaulichung; Darstellung und Aussehen können von Produkt zu Produkt abweichen. Verbindlich sind allein die schriftlichen Angaben auf der Produktseite.",
+          "Einige Produkte können ihrer Beschaffenheit nach nur innerhalb unseres Liefergebiets verkauft werden. Sie sind im Katalog gekennzeichnet und können bei Auswahl einer Adresse außerhalb des Gebiets nicht bestellt werden."
+        ]
+      },
+      {
+        "id": "siparis",
+        "heading": "Zustandekommen der Bestellung",
+        "body": [
+          "Die Bestellung kommt zustande, wenn Sie Ihren Warenkorb bestätigen und den Zahlungsschritt abschließen. Mit der Bestätigungsseite und der Bestätigungs-E-Mail gilt die Bestellung auch von unserer Seite als angenommen.",
+          "Die Preise werden in dem Moment festgeschrieben, in dem sie im Warenkorb angezeigt werden. Ändert sich der Katalogpreis nach Ihrer Bestellung, bleibt der Betrag Ihrer Bestellung unverändert.",
+          "Stellt sich nachträglich heraus, dass ein Artikel nicht verfügbar ist, wird Ihre Bestellung nicht storniert: Der fehlende Artikel wird entfernt, sein Betrag nicht eingezogen oder erstattet, und Sie werden informiert."
+        ]
+      },
+      {
+        "id": "fiyat",
+        "heading": "Preise",
+        "body": [
+          "Die Preise verstehen sich in Euro einschließlich der geltenden Mehrwertsteuer. Der anwendbare Steuersatz richtet sich nach der Produktart.",
+          "Für Geschäftskonten (B2B) gelten abweichende Preise, die nach Bestätigung des Kontos sichtbar sind.",
+          "Lieferkosten sind nicht im Preis enthalten; sie werden als eigene Zeile im Warenkorb ausgewiesen und sind vor dem Abschluss der Bestellung sichtbar."
+        ]
+      },
+      {
+        "id": "odeme",
+        "heading": "Zahlung",
+        "body": [
+          "Kartenzahlungen werden über einen sicheren Zahlungsdienstleister eingezogen. Ihre Kartendaten erreichen uns zu keinem Zeitpunkt und werden von uns nicht gespeichert.",
+          "Innerhalb unseres Liefergebiets ist Zahlung bei Lieferung möglich. Dabei entspricht der eingezogene Betrag den tatsächlich gelieferten Artikeln — ein fehlender Artikel wird von vornherein abgezogen.",
+          "Vor Abschluss der Zahlung wird keine Bestellung in Vorbereitung genommen."
+        ]
+      },
+      {
+        "id": "teslimat",
+        "heading": "Lieferung",
+        "body": [
+          "Adressen im Liefergebiet beliefern wir mit unserem eigenen Kühlfahrzeug, Adressen außerhalb per Kühlversandpaket. Liefertag und Lieferoptionen werden bei der Bestellung anhand der Postleitzahl Ihrer Adresse angezeigt.",
+          "Die angegebenen Liefertage sind Schätzungen. Wetter, Verkehr oder Verzögerungen des Versanddienstleisters können die Lieferung verschieben; in diesem Fall informieren wir Sie.",
+          "Kann nicht zugestellt werden, weil an der Adresse niemand angetroffen wird, ist ein erneuter Versand tiefgekühlter Ware unter Umständen nicht möglich. Einzelheiten finden Sie auf der Seite Lieferung und Rücksendung."
+        ]
+      },
+      {
+        "id": "cayma",
+        "heading": "Widerrufsrecht",
+        "body": [
+          "Nach französischem Verbraucherrecht (Code de la consommation, Art. L221-28) findet das 14-tägige Widerrufsrecht im Fernabsatz auf schnell verderbliche Lebensmittel KEINE ANWENDUNG.",
+          "Ihre Rechte bei fehlerhafter Lieferung bleiben davon unberührt: Bei fehlenden, beschädigten, aufgetauten oder falsch gelieferten Produkten wird der Betrag erstattet oder erneut versendet. Bedingungen und Fristen stehen auf der Seite Lieferung und Rücksendung."
+        ]
+      },
+      {
+        "id": "garanti",
+        "heading": "Gesetzliche Gewährleistung",
+        "body": [
+          "Für unsere Produkte gelten die im französischen Recht vorgesehene Konformitätsgarantie und die Gewährleistung für versteckte Mängel.",
+          "Diese Gewährleistungen sind gesetzlich, verursachen keine zusätzlichen Kosten und können nicht durch eine kommerzielle Zusage eingeschränkt werden."
+        ]
+      },
+      {
+        "id": "kisisel-veri",
+        "heading": "Personenbezogene Daten",
+        "body": [
+          "Wie die für Ihre Bestellung erforderlichen personenbezogenen Daten verarbeitet werden, ist auf der Seite zur Datenschutzerklärung ausführlich beschrieben."
+        ]
+      },
+      {
+        "id": "uyusmazlik",
+        "heading": "Streitigkeiten und anwendbares Recht",
+        "body": [
+          "Bei Problemen bitten wir Sie, sich zuerst an uns zu wenden; Anfragen können unter „Meine Anfragen“ eröffnet und verfolgt werden.",
+          "Kommt keine Lösung zustande, kann der Verbraucher kostenlos eine Verbraucherschlichtungsstelle anrufen. Diese Bedingungen unterliegen französischem Recht."
+        ]
+      }
+    ],
+    "notice": {
+      "text": "Einzelheiten zu Lieferung, Versand und Rücksendung stehen auf einer eigenen Seite:",
+      "delivery": "Lieferung und Rücksendung",
+      "support": "schreiben Sie uns"
+    }
+  }
+}

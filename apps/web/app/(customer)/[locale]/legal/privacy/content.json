@@ -1,0 +1,266 @@
+{
+  "tr": {
+    "title": "Gizlilik politikası",
+    "sections": [
+      {
+        "id": "sorumlu",
+        "heading": "Verilerinizden kim sorumlu",
+        "body": [
+          "Bu sitede toplanan kişisel verilerin sorumlusu YİGİT Bilgin QUALITE S.A.S. (SIRET 907 496 640 00018), Strasbourg, Fransa.",
+          "Veri koruma ile ilgili her konuda lezzetanatolie@gmail.com adresinden bize ulaşabilirsiniz."
+        ]
+      },
+      {
+        "id": "hangi-veri",
+        "heading": "Hangi verileri topluyoruz",
+        "body": [
+          "Yalnız işi yürütmek için gereken verileri topluyoruz. Toplananlar şunlardır:"
+        ],
+        "bullets": [
+          "Kimlik ve iletişim: adınız, e-posta adresiniz, telefon numaranız.",
+          "Teslimat: kayıtlı adresleriniz ve posta kodunuz. Posta kodu, hesabınız olmasa da tarayıcınızda saklanır — kataloğun size gönderilebilir kısmını gösterebilmek için.",
+          "Sipariş: verdiğiniz siparişler, kalemleri, tutarları ve durumları.",
+          "İletişim tercihleri: kampanya izinleri ve tercih ettiğiniz dil.",
+          "Talepleriniz: bize yazdığınız mesajlar ve eklediğiniz fotoğraflar.",
+          "İşletme müşterisiyseniz: SIRET numaranız ve şirket künyeniz."
+        ]
+      },
+      {
+        "id": "neden",
+        "heading": "Neden topluyoruz",
+        "body": [
+          "Adınız ve adresiniz olmadan sipariş teslim edilemez; e-posta adresiniz olmadan siparişinizin ne durumda olduğunu size söyleyemeyiz. Bu veriler sözleşmenin yerine getirilmesi için işlenir.",
+          "Kampanya iletileri yalnız açıkça izin verdiyseniz gönderilir ve izni istediğiniz an geri alabilirsiniz. İzin kaydı bayrak olarak değil, ne zaman ve nereden verildiği bilgisiyle birlikte saklanır — bu, izin sorulduğunda gösterebileceğimiz kanıttır.",
+          "Muhasebe ve yasal yükümlülükler için sipariş ve ödeme kayıtlarını saklamak zorundayız; bunlar izne bağlı değildir."
+        ]
+      },
+      {
+        "id": "ne-kadar",
+        "heading": "Ne kadar saklıyoruz",
+        "body": [
+          "Hesap verileriniz hesabınız açık olduğu sürece saklanır. Hesabınızı sildirdiğinizde kimlik ve iletişim verileriniz silinir.",
+          "Sipariş ve fatura kayıtları, Fransız ticaret ve vergi mevzuatının gerektirdiği süre boyunca saklanır; bu kayıtlar hesap silinse de yasal süre dolana kadar korunur.",
+          "Teknik hata kayıtlarımızda kişisel veri tutulmaz. Bir arızayı bulmak için gereken durumlarda e-posta ve telefon gibi bilgiler yalnız maskelenmiş biçimde yazılır (örneğin a***@example.com); tek amaç hangi kaydın konuşulduğunu ayırt etmektir, kim olduğunu söylemek değil."
+        ]
+      },
+      {
+        "id": "kiminle",
+        "heading": "Kimlerle paylaşıyoruz",
+        "body": [
+          "Verilerinizi satmıyoruz. Yalnız işi yürütmek için gereken hizmet sağlayıcılarla paylaşılır:"
+        ],
+        "bullets": [
+          "Ödeme sağlayıcısı: kart bilgileriniz bize hiç ulaşmaz, doğrudan ödeme sağlayıcısında işlenir.",
+          "E-posta gönderim servisi: bildirim e-postalarını iletmek için.",
+          "Kargo firması: bölge dışı gönderimlerde adınız ve teslimat adresiniz.",
+          "Barındırma ve veritabanı altyapımız."
+        ]
+      },
+      {
+        "id": "haklariniz",
+        "heading": "Haklarınız",
+        "body": [
+          "GDPR (AB 2016/679) kapsamında aşağıdaki haklara sahipsiniz. Bunları kullanmak için lezzetanatolie@gmail.com adresine yazmanız yeterli; talebinize en geç bir ay içinde dönüş yapılır."
+        ],
+        "bullets": [
+          "Verilerinize erişme ve bir kopyasını isteme",
+          "Yanlış veya eksik verilerin düzeltilmesini isteme",
+          "Verilerinizin silinmesini isteme",
+          "İşlemenin sınırlandırılmasını isteme",
+          "Verilerinizi taşınabilir bir biçimde alma",
+          "Kampanya iletilerine itiraz etme ve izni geri alma",
+          "CNIL'e (Fransız veri koruma kurumu) şikâyette bulunma"
+        ]
+      },
+      {
+        "id": "cerez",
+        "heading": "Çerezler ve tarayıcı kaydı",
+        "body": [
+          "Reklam veya takip çerezi kullanmıyoruz. Tarayıcınızda tutulanlar sitenin çalışması için gerekli olanlardır: oturumunuz, sepetiniz ve seçtiğiniz posta kodu.",
+          "Sepetiniz hesap açmadan da korunur; giriş yaptığınızda tarayıcıdaki sepetiniz hesabınıza devredilir ve tarayıcıdan silinir."
+        ]
+      }
+    ],
+    "notice": {
+      "text": "Verilerinizle ilgili bir talebiniz mi var?",
+      "account": "Hesabınızdan tercihlerinizi yönetin",
+      "support": "ya da bize yazın"
+    }
+  },
+  "fr": {
+    "title": "Politique de confidentialité",
+    "sections": [
+      {
+        "id": "sorumlu",
+        "heading": "Qui est responsable de vos données",
+        "body": [
+          "Le responsable du traitement des données personnelles collectées sur ce site est YİGİT Bilgin QUALITE S.A.S. (SIRET 907 496 640 00018), Strasbourg, France.",
+          "Pour toute question relative à la protection des données, vous pouvez nous écrire à lezzetanatolie@gmail.com."
+        ]
+      },
+      {
+        "id": "hangi-veri",
+        "heading": "Quelles données nous collectons",
+        "body": [
+          "Nous ne collectons que les données nécessaires à l'activité. Il s'agit de :"
+        ],
+        "bullets": [
+          "Identité et contact : votre nom, votre adresse e-mail, votre numéro de téléphone.",
+          "Livraison : vos adresses enregistrées et votre code postal. Le code postal est conservé dans votre navigateur même sans compte — afin de pouvoir vous montrer la partie du catalogue qui peut vous être livrée.",
+          "Commandes : vos commandes, leurs articles, leurs montants et leurs états.",
+          "Préférences de communication : vos consentements marketing et votre langue.",
+          "Vos demandes : les messages que vous nous envoyez et les photos que vous joignez.",
+          "Si vous êtes un client professionnel : votre numéro SIRET et les informations de votre société."
+        ]
+      },
+      {
+        "id": "neden",
+        "heading": "Pourquoi nous les collectons",
+        "body": [
+          "Sans votre nom et votre adresse, une commande ne peut pas être livrée ; sans votre adresse e-mail, nous ne pouvons pas vous informer de l'état de votre commande. Ces données sont traitées pour l'exécution du contrat.",
+          "Les messages promotionnels ne sont envoyés que si vous y avez expressément consenti, et vous pouvez retirer ce consentement à tout moment. Le consentement n'est pas enregistré comme un simple indicateur mais avec la date et l'origine — c'est la preuve que nous pouvons produire si le consentement est contesté.",
+          "Pour la comptabilité et nos obligations légales, nous sommes tenus de conserver les enregistrements de commande et de paiement ; ceux-ci ne dépendent pas du consentement."
+        ]
+      },
+      {
+        "id": "ne-kadar",
+        "heading": "Combien de temps nous les conservons",
+        "body": [
+          "Les données de votre compte sont conservées tant que votre compte est actif. À la suppression du compte, vos données d'identité et de contact sont effacées.",
+          "Les enregistrements de commande et de facturation sont conservés pendant la durée exigée par la réglementation commerciale et fiscale française ; ils sont préservés jusqu'à l'expiration de ce délai, même après la suppression du compte.",
+          "Nos journaux techniques ne contiennent pas de données personnelles. Lorsqu'un diagnostic l'exige, des informations telles que l'e-mail ou le téléphone n'y figurent que sous forme masquée (par exemple a***@example.com) ; l'objectif est uniquement de distinguer de quel enregistrement il s'agit, pas de savoir qui c'est."
+        ]
+      },
+      {
+        "id": "kiminle",
+        "heading": "Avec qui nous les partageons",
+        "body": [
+          "Nous ne vendons pas vos données. Elles ne sont partagées qu'avec les prestataires nécessaires à l'activité :"
+        ],
+        "bullets": [
+          "Prestataire de paiement : vos données de carte ne nous parviennent jamais, elles sont traitées directement chez le prestataire.",
+          "Service d'envoi d'e-mails : pour acheminer les e-mails de notification.",
+          "Transporteur : votre nom et votre adresse de livraison pour les expéditions hors zone.",
+          "Notre infrastructure d'hébergement et de base de données."
+        ]
+      },
+      {
+        "id": "haklariniz",
+        "heading": "Vos droits",
+        "body": [
+          "Au titre du RGPD (UE 2016/679), vous disposez des droits suivants. Pour les exercer, il vous suffit d'écrire à lezzetanatolie@gmail.com ; une réponse vous est apportée dans un délai maximal d'un mois."
+        ],
+        "bullets": [
+          "Accéder à vos données et en demander une copie",
+          "Demander la rectification de données inexactes ou incomplètes",
+          "Demander l'effacement de vos données",
+          "Demander la limitation du traitement",
+          "Recevoir vos données dans un format portable",
+          "Vous opposer aux messages promotionnels et retirer votre consentement",
+          "Introduire une réclamation auprès de la CNIL"
+        ]
+      },
+      {
+        "id": "cerez",
+        "heading": "Cookies et stockage navigateur",
+        "body": [
+          "Nous n'utilisons ni cookies publicitaires ni traceurs. Ce qui est conservé dans votre navigateur est nécessaire au fonctionnement du site : votre session, votre panier et le code postal que vous avez choisi.",
+          "Votre panier est conservé même sans compte ; à la connexion, le panier de votre navigateur est transféré vers votre compte puis supprimé du navigateur."
+        ]
+      }
+    ],
+    "notice": {
+      "text": "Vous avez une demande concernant vos données ?",
+      "account": "Gérez vos préférences depuis votre compte",
+      "support": "ou écrivez-nous"
+    }
+  },
+  "de": {
+    "title": "Datenschutzerklärung",
+    "sections": [
+      {
+        "id": "sorumlu",
+        "heading": "Wer für Ihre Daten verantwortlich ist",
+        "body": [
+          "Verantwortlich für die auf dieser Website erhobenen personenbezogenen Daten ist YİGİT Bilgin QUALITE S.A.S. (SIRET 907 496 640 00018), Straßburg, Frankreich.",
+          "Bei allen Fragen zum Datenschutz erreichen Sie uns unter lezzetanatolie@gmail.com."
+        ]
+      },
+      {
+        "id": "hangi-veri",
+        "heading": "Welche Daten wir erheben",
+        "body": [
+          "Wir erheben nur die Daten, die für den Geschäftsbetrieb erforderlich sind. Das sind:"
+        ],
+        "bullets": [
+          "Identität und Kontakt: Ihr Name, Ihre E-Mail-Adresse, Ihre Telefonnummer.",
+          "Lieferung: Ihre gespeicherten Adressen und Ihre Postleitzahl. Die Postleitzahl wird auch ohne Konto in Ihrem Browser gespeichert — damit wir Ihnen den für Sie lieferbaren Teil des Katalogs zeigen können.",
+          "Bestellungen: Ihre Bestellungen, deren Artikel, Beträge und Status.",
+          "Kommunikationseinstellungen: Ihre Marketing-Einwilligungen und Ihre Sprache.",
+          "Ihre Anfragen: die Nachrichten, die Sie uns schreiben, und die Fotos, die Sie anhängen.",
+          "Wenn Sie Geschäftskunde sind: Ihre SIRET-Nummer und Ihre Unternehmensangaben."
+        ]
+      },
+      {
+        "id": "neden",
+        "heading": "Warum wir sie erheben",
+        "body": [
+          "Ohne Ihren Namen und Ihre Adresse kann eine Bestellung nicht zugestellt werden; ohne Ihre E-Mail-Adresse können wir Ihnen den Status Ihrer Bestellung nicht mitteilen. Diese Daten werden zur Erfüllung des Vertrags verarbeitet.",
+          "Werbenachrichten senden wir nur, wenn Sie ausdrücklich eingewilligt haben, und Sie können die Einwilligung jederzeit widerrufen. Die Einwilligung wird nicht als bloßes Kennzeichen gespeichert, sondern mit Zeitpunkt und Herkunft — das ist der Nachweis, den wir vorlegen können, wenn die Einwilligung bestritten wird.",
+          "Für Buchhaltung und gesetzliche Pflichten sind wir verpflichtet, Bestell- und Zahlungsunterlagen aufzubewahren; diese hängen nicht von einer Einwilligung ab."
+        ]
+      },
+      {
+        "id": "ne-kadar",
+        "heading": "Wie lange wir sie speichern",
+        "body": [
+          "Ihre Kontodaten werden gespeichert, solange Ihr Konto besteht. Bei Löschung des Kontos werden Ihre Identitäts- und Kontaktdaten gelöscht.",
+          "Bestell- und Rechnungsunterlagen werden für die nach französischem Handels- und Steuerrecht vorgeschriebene Dauer aufbewahrt; sie bleiben bis zum Ablauf dieser Frist erhalten, auch wenn das Konto gelöscht wurde.",
+          "Unsere technischen Protokolle enthalten keine personenbezogenen Daten. Wo es zur Fehlersuche erforderlich ist, erscheinen Angaben wie E-Mail oder Telefon dort nur maskiert (zum Beispiel a***@example.com); der Zweck ist allein, zu unterscheiden, um welchen Datensatz es geht, nicht, wer dahintersteht."
+        ]
+      },
+      {
+        "id": "kiminle",
+        "heading": "Mit wem wir sie teilen",
+        "body": [
+          "Wir verkaufen Ihre Daten nicht. Sie werden nur mit den für den Betrieb notwendigen Dienstleistern geteilt:"
+        ],
+        "bullets": [
+          "Zahlungsdienstleister: Ihre Kartendaten erreichen uns nie, sie werden direkt beim Dienstleister verarbeitet.",
+          "E-Mail-Versanddienst: zur Zustellung der Benachrichtigungs-E-Mails.",
+          "Versanddienstleister: Ihr Name und Ihre Lieferadresse bei Sendungen außerhalb des Liefergebiets.",
+          "Unsere Hosting- und Datenbankinfrastruktur."
+        ]
+      },
+      {
+        "id": "haklariniz",
+        "heading": "Ihre Rechte",
+        "body": [
+          "Nach der DSGVO (EU 2016/679) stehen Ihnen die folgenden Rechte zu. Um sie auszuüben, genügt eine Nachricht an lezzetanatolie@gmail.com; wir antworten spätestens innerhalb eines Monats."
+        ],
+        "bullets": [
+          "Auskunft über Ihre Daten und eine Kopie davon verlangen",
+          "Berichtigung unrichtiger oder unvollständiger Daten verlangen",
+          "Löschung Ihrer Daten verlangen",
+          "Einschränkung der Verarbeitung verlangen",
+          "Ihre Daten in einem übertragbaren Format erhalten",
+          "Werbenachrichten widersprechen und die Einwilligung widerrufen",
+          "Beschwerde bei der CNIL (französische Datenschutzbehörde) einlegen"
+        ]
+      },
+      {
+        "id": "cerez",
+        "heading": "Cookies und Browser-Speicher",
+        "body": [
+          "Wir verwenden weder Werbe- noch Tracking-Cookies. Was in Ihrem Browser gespeichert wird, ist für den Betrieb der Website erforderlich: Ihre Sitzung, Ihr Warenkorb und die von Ihnen gewählte Postleitzahl.",
+          "Ihr Warenkorb bleibt auch ohne Konto erhalten; bei der Anmeldung wird der Warenkorb aus dem Browser in Ihr Konto übernommen und aus dem Browser gelöscht."
+        ]
+      }
+    ],
+    "notice": {
+      "text": "Haben Sie ein Anliegen zu Ihren Daten?",
+      "account": "Verwalten Sie Ihre Einstellungen im Konto",
+      "support": "oder schreiben Sie uns"
+    }
+  }
+}

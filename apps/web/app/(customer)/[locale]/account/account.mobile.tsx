@@ -63,8 +63,12 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
         <ConsentSwitch channel="whatsapp" label={t.consentWhatsapp} on={account.consent.whatsapp} onLabel={t.consentOn} offLabel={t.consentOff} />
       </Card>
 
-      {/* Veri notu mobilde KART DEĞİL, sayfanın altındaki ince satır (tasarım). */}
+      {/* Veri notu mobilde KART DEĞİL, sayfanın altındaki ince satır (tasarım). Gizlilik bağı
+          08.8 ile açıldı; masaüstündeki kartla aynı hedef, buradaki kabuğu ince satır. */}
       <span className="px-1 font-sans text-micro leading-relaxed text-muted">{t.dataBody.replace('{email}', CONTACT_EMAIL)}</span>
+      <Link href="/legal/privacy" className="px-1 font-sans text-micro font-bold text-olive transition-colors hover:text-olive-dark">
+        {t.dataLink}
+      </Link>
     </div>
   );
 }

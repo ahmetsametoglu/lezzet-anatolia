@@ -71,6 +71,23 @@ export const PATHNAMES = {
   // gönderiminden önce burada duruyor: bağlantıyı üreten backend, sayfayı yazan müşteri yüzeyi —
   // ikisi de aynı satırı okusun ki yol tek kararla belirlensin.
   '/feedback/[token]': { fr: '/avis/[token]', de: '/bewertung/[token]', tr: '/degerlendirme/[token]' },
+  /**
+   * Statik/yasal sayfalar (08.8). **Beş ayrı rota, tek `[slug]` DEĞİL** — ve sebebi burada yazılı
+   * olmalı çünkü ilk bakışta dinamik segment daha ekonomik görünür.
+   *
+   * Dinamik segmentin değeri dile göre değişmez (`/product/[slug]` künyesinde yazdığı gibi, slug
+   * içerikten türer ve paylaşılan bağ hangi dilde açılırsa açılsın aynı yere düşsün diye böyledir).
+   * Yasal sayfalarda ise dile göre değişmesi gereken tam olarak segmentin KENDİSİDİR: Fransız
+   * ziyaretçi `mentions-legales`, Alman `impressum` arar ve bu sayfalar trafiğin çoğunu arama
+   * motorundan alır. `/legal/[slug]` yazılsaydı üç dilde de aynı İngilizce slug görünürdü.
+   *
+   * İç yol İngilizce kalır (`/legal/...`), dışarıya çıkan dile göre — `CLAUDE.md §2`'nin kuralı.
+   */
+  '/legal/terms': { fr: '/mentions-legales', de: '/impressum', tr: '/yasal-bilgiler' },
+  '/legal/sales': { fr: '/conditions-generales-de-vente', de: '/agb', tr: '/satis-kosullari' },
+  '/legal/privacy': { fr: '/confidentialite', de: '/datenschutz', tr: '/gizlilik' },
+  '/legal/delivery': { fr: '/livraison-et-retours', de: '/lieferung-und-ruecksendung', tr: '/teslimat-ve-iade' },
+  '/legal/faq': { fr: '/questions-frequentes', de: '/haeufige-fragen', tr: '/sikca-sorulan-sorular' },
 } as const satisfies Record<string, PathEntry>;
 
 export type AppRoute = keyof typeof PATHNAMES;

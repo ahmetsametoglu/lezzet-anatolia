@@ -47,8 +47,12 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
 
           <Card compact={compact}>
             <CardHead title={t.dataTitle} compact={compact} />
-            {/* BEKLEYEN(08.8): gizlilik politikası sayfası — bağ VERİLMEZ, ölü link 404'e düşerdi. */}
+            {/* Bağ 08.8 ile AÇILDI: metin bir süredir "gizlilik politikasında bulabilirsiniz"
+                diyordu ama gidilecek sayfa yoktu; şimdi var. */}
             <span className="font-sans text-note leading-relaxed text-body">{t.dataBody.replace('{email}', CONTACT_EMAIL)}</span>
+            <Link href="/legal/privacy" className="cursor-pointer font-sans text-note font-bold text-olive transition-colors hover:text-olive-dark">
+              {t.dataLink}
+            </Link>
           </Card>
         </div>
 
