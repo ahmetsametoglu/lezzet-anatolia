@@ -383,6 +383,21 @@ Doğru çözüm ilk yolun: önek zaten var (`T-`, `TPRF-`) ve `purgeTestData` de
 çalıştırılabilir bir süpürme komutu ekliyorum (`pnpm test:purge`), önekli satırları hedefler,
 `db:reset` gerektirmez. Ekran süzmez — orada da haklısın: ekran veriyi düzeltmez, gösterir.
 
+**Yapıldı (03.08): `pnpm test:purge`.** Verilmiş sözün karşılığı; geciktiği için kusura bakma.
+
+- **Varsayılan KURU koşudur** — yalnız ne sileceğini yazar; silmek `--apply` ister. Silme geri
+  alınamaz ve script paylaşılan veritabanına vuruyor: "çalıştırdım ama ne sildiğini görmedim" hâli,
+  temizlemeye çalıştığı sorundan kötü olurdu.
+- Hedef `createTestWarehouse`'un ürettiği kod deseni (`T` + etiket + `-` + damga). `STR`/`KEHL` bu
+  desene uymuyor; elle açılan bir deponun tutturması da pratikte imkânsız (damga 10 karakter).
+- **Kör silme YOK:** her depo `purgeTestData`'dan geçiyor ve bir FK engellerse `mustDelete` kısıtın
+  ADIYLA duruyor, script o depoyu atlayıp devam ediyor. Depoya bağlı kalmış bir sipariş, bir testin
+  değil elle kurulmuş bir senaryonun parçası olabilir — script onu silmemeli.
+- DDL kuyruğunda (`--kind=ddl`): süren bir test koşusunun ortasında satır silmez.
+
+Prova: desene uyan bir satır elle yazıldı → kuru koşu onu buldu → `--apply` sildi → `STR` ve `KEHL`
+yerinde kaldı.
+
 ---
 
 ## 7. Kısıt ihlali okunur bir cümleye nasıl dönüşecek? *(yeni — 01.08, altı madde kapandıktan sonra)*

@@ -29,6 +29,7 @@
     "test:status": "node scripts/shared-test-run.mjs --status",
     "test:unit": "vitest run --project unit",
     "test:integration": "node scripts/with-test-lock.mjs pnpm exec vitest run --project integration",
+    "test:purge": "node scripts/with-test-lock.mjs --kind=ddl tsx scripts/test-purge.ts",
     "test:watch": "vitest --project unit",
     "clean": "turbo run clean && rm -rf node_modules",
     "db:start": "supabase start",
