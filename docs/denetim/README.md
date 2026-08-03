@@ -25,6 +25,8 @@ Dosyalar:
 
 - `denetim-dosya-agaci.md` — dosya ağacı standardı (D1-kural `docs:check` bekliyor · D3 sırada;
   D1/2 ve D2 kapalı)
+- `denetim-servis-taban-sinifi.md` — DB servislerinde taban sınıf disiplini (sonuç: SAĞLAM —
+  ham yazma 1/gerekçeli, RPC tek kapı, bypass sıfır; TS1 üç nota, TS2 STACK §6 cümlesi)
 - `denetim-migration-parcalama.md` — migration dosya dengesi (P3 kapandı; P1/P2 kabul → `02.11`,
   P1'in `db:refresh` onayı KULLANICIDA)
 
