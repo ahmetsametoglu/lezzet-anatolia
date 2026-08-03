@@ -163,10 +163,16 @@ export function PointsRow({ row, onAdjust }: { row: PointsRowView; onAdjust?: (c
     <div className={`grid ${POINTS_GRID(Boolean(onAdjust))} items-center gap-x-2.5 border-b border-ops-line-soft px-6 py-3 last:border-b-0`}>
       <span className="truncate font-ops-body text-ops-sm font-semibold text-ops-ink">{row.customerName}</span>
       <span className="text-right font-ops-mono text-ops-sm font-medium text-ops-ink">{row.balance}</span>
-      {/* `spent` defterin işaretiyle NEGATİF taşınıyor; hiç harcanmadıysa "—" — sıfır yazmak
-          "çevirdi ama sıfır" gibi okunurdu. */}
-      <span className={`text-center font-ops-mono text-ops-xs ${row.spent < 0 ? 'text-ops-olive-dark' : 'text-ops-faint'}`}>
-        {row.spent < 0 ? `${row.spent} puan` : '—'}
+      {/* Çizimin istediği "2 kupon" — SAYI, harcanan puan değil (04.08, `redemptionCount` geldi).
+          Sayım sebebe bakıyor (`reason='redemption'`), işarete değil: elle yapılan bir düşüm de
+          negatiftir ve işaretle sayılsaydı operatörün düzeltmesi müşterinin ödülü gibi görünürdü.
+          Harcanan puan ikinci satırda kalıyor — ikisi ayrı sorular ("kaç kez çevirdi" · "ne kadar
+          harcadı") ve çizimin kolon başlığı birinciyi soruyor. */}
+      <span className="flex flex-col items-center">
+        <span className={`font-ops-mono text-ops-xs ${row.redemptionCount > 0 ? 'text-ops-olive-dark' : 'text-ops-faint'}`}>
+          {row.redemptionCount > 0 ? `${row.redemptionCount} kupon` : '—'}
+        </span>
+        {row.spent < 0 ? <span className="font-ops-mono text-ops-micro text-ops-muted">{row.spent} puan</span> : null}
       </span>
       <span className="text-right font-ops-mono text-ops-xs text-ops-muted">{row.lastAgoLabel}</span>
       {/* Etiket "Geçmiş" — pencere önce defteri gösteriyor, düzeltme onun altında. "Düzelt"
@@ -198,7 +204,7 @@ export function PointsHeader({ withAction = false }: { withAction?: boolean }) {
     >
       <span>Müşteri</span>
       <span className="text-right">Bakiye</span>
-      <span className="text-center">Çevrilen</span>
+      <span className="text-center">Kupona çevrim</span>
       <span className="text-right">Son</span>
       {withAction ? <span /> : null}
     </div>
@@ -229,39 +235,48 @@ export function ScoreHeader() {
 }
 
 export function ScoreRow({ row }: { row: ScoreRowView }) {
-  const { score } = row;
+  const { score, signal, complaints } = row;
 
   /**
    * SİNYAL, SKORUN KENDİSİ DEĞİL — "bu sayıya ne kadar güvenebilirim" sorusunun cevabı.
    *
-   * Ayrım önemli çünkü tablo zaten iki ölçü gösteriyor: `Skor` (ürün ne kadar sevilmiş) ve `Beğeni`
-   * (kaç kişi sevmiş). Sinyal ÜÇÜNCÜ bir eksen olmalı, ilk ikisinin tekrarı değil.
+   * Üç hâl, üç ayrı sebep ve sırası ÖNEMLİ:
+   *  1. **Az veri** — örneklem küçük (`confident:false`). Hiçbir şey söylenemez, önce bu.
+   *  2. **Düşük güven** — veri var ama kaydırmalar güvenilmez (`trust` düşük): hep aynı yöne
+   *     savuran, kartta hiç durmayan hareketler (DOMAIN §14). Çizimin notu bunu birebir söylüyor:
+   *     *"beğeni yüksek, güven düşük"*.
+   *  3. **Güçlü** — ikisi de değil.
    *
-   * **Bir tur boyunca burada beğeni oranı vardı** (`likeRatio < 0.5` → "Düşük güven") ve bu bir
-   * mantık hatasıydı: düşük beğeni oranı bir güven sorunu değil, ürünün SEVİLMEDİĞİdir — ve o
-   * bilgi zaten `Skor` kolonunda duruyor (oran düşünce birleşik puan da düşer). Yani kolon, komşu
-   * kolonu yanlış bir adla tekrar ediyordu; "Düşük güven" rozeti gören operatör "ölçüme güvenme"
-   * diye okur, oysa söylenen "ürün beğenilmemiş"ti.
-   *
-   * Bugün TEK eksen var ve o da dürüst: **örneklem büyüklüğü** (`confident` = en az 3 beyan).
-   * Çizimin üçüncü hâli ("Düşük güven"), kaydırmaların KALİTESİNİ ölçüyor — hep aynı yöne savuran,
-   * kartta hiç durmayan kaydırmalar (`signal-quality.trust`). O ölçü aday panosunda var ama
-   * `product_rating` görünümünde yok; uydurulmadı, arka uçtan istendi.
+   * Bir tur boyunca 2. hâlin yerinde `likeRatio < 0.5` vardı ve bu bir MANTIK hatasıydı: düşük
+   * beğeni oranı ürünün sevilmediğidir, ölçümün güvenilmezliği değil — ve o bilgi zaten `Skor`
+   * kolonunda duruyordu. Kolon komşusunu yanlış bir adla tekrar ediyordu. Gerçek ölçü arka uçtan
+   * geldi (`getProductSignals`, 04.08) ve eksen artık gerçekten üçüncü bir eksen.
    */
-  const signal = score.confident ? { label: 'Güçlü', tone: 'olive' as const } : { label: 'Az veri', tone: 'neutral' as const };
+  const trust = signal?.trust ?? null;
+  const signalView = !score.confident
+    ? { label: 'Az veri', tone: 'neutral' as const }
+    : trust !== null && trustLabel(trust).label === 'düşük'
+      ? { label: 'Düşük güven', tone: 'amber' as const }
+      : { label: 'Güçlü', tone: 'olive' as const };
 
-  // Not satırı beyanın BİLEŞİMİNİ söyler: kaç yorum + kaç kaydırma. Çizim "128 yorum" yazıyor ama
-  // skor iki ayaktan geliyor ve yalnız yorumu saymak, 5 yorumlu 60 beğenili bir ürünü "5 yorum"
-  // diye gösterip skorun nereden geldiğini gizlerdi.
+  /**
+   * Not satırı — beyanın bileşimi, üstüne varsa ŞİKÂYET.
+   *
+   * Şikâyet en sona ve amber yazılıyor çünkü tablonun en ağır bilgisi o: "az beğenilmiş" ile
+   * "sürekli bozuk geliyor" farklı iki durumdur ve skor tek başına ikisini ayıramaz. Çizimin
+   * *"şikâyet + düşük skor birleşiyor"* satırı tam olarak bu birleşimi görünür kılmak içindi.
+   */
   const voteCount = score.likeCount + score.dislikeCount;
   const parts = [score.ratingCount > 0 ? `${score.ratingCount} yorum` : null, voteCount > 0 ? `${voteCount} kaydırma` : null].filter(Boolean);
-  const note = score.confident ? parts.join(' · ') : `${parts.join(' · ') || 'beyan yok'} · örneklem küçük`;
+  const base = score.confident ? parts.join(' · ') : `${parts.join(' · ') || 'beyan yok'} · örneklem küçük`;
+  const note = complaints ? `${base} · ${complaints.complaintCount} şikâyet` : base;
+  const noteBad = !score.confident || Boolean(complaints);
 
   return (
     <div className={`grid ${SCORE_GRID} items-center gap-x-2.5 border-b border-ops-line-soft px-6 py-3 last:border-b-0`}>
       <div className="flex min-w-0 flex-col gap-px">
         <span className="truncate font-ops-body text-ops-sm font-semibold text-ops-ink">{row.productName}</span>
-        <span className={`truncate font-ops-body text-ops-xs ${score.confident ? 'text-ops-muted' : 'text-ops-amber-dark'}`}>{note}</span>
+        <span className={`truncate font-ops-body text-ops-xs ${noteBad ? 'text-ops-amber-dark' : 'text-ops-muted'}`}>{note}</span>
       </div>
       {/* Skoru olmayan satır buraya düşmez (`product_rating` yalnız beyanı olan ürün için satır
           üretir), ama tip `null` diyor ve ekran ona uymak zorunda: "—" yazmak, uydurma bir 0'dan iyi. */}
@@ -270,7 +285,7 @@ export function ScoreRow({ row }: { row: ScoreRowView }) {
       </span>
       <span className="justify-self-center font-ops-mono text-ops-xs text-ops-body">{signedCount(score.likeCount - score.dislikeCount)}</span>
       <span className="justify-self-end">
-        <Badge tone={signal.tone}>{signal.label}</Badge>
+        <Badge tone={signalView.tone}>{signalView.label}</Badge>
       </span>
     </div>
   );

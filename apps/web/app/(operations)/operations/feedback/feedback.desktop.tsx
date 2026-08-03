@@ -145,7 +145,7 @@ export function FeedbackDesktop({
             <span className="min-w-0 flex-1 font-ops-body text-ops-xs text-ops-muted">
               Puan yalnız son tüketici içindir (B2C). Kurallar Ayarlar'da; burası bakiye ve hareket.
             </span>
-            {/* BEKLEYEN(17.4): çizimdeki "Elle puan düzelt" düğmesi buraya gelecek (design/BACKLOG,
+            {/* BEKLEYEN(17.1): çizimdeki "Elle puan düzelt" düğmesi buraya gelecek (design/BACKLOG,
                 "Geri Bildirim — sapmalar", madde 4).
                 Üst bardan açılan pencere müşteriyi KENDİ sormalı (çizimde bir seçici var) ve o
                 seçici `searchCustomerOptions` üzerinden ayrı bir tur işi; düğmeyi müşterisiz
