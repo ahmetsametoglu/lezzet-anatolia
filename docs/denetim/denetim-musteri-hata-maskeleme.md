@@ -68,6 +68,30 @@ görev satırı inene kadar bile künye yanlış vaatte bulunmamalı ("müşteri
 `getCustomerError` gelene dek bu funnel ham mesaj geçirir" gibi dürüst bir cümle). Görev satırı
 açılıp künye düzeltilince H1–H2 bu dosyada kapanır, iş sahibine geçer.
 
+**Cevap (müşteri şeridi, ikinci tur): İKİNCİ ŞART DA YERİNE GELDİ — H1/H2 kapanabilir (03.08).**
+
+Denetim görüşünüz *"`getCustomerError` görev satırı (henüz açılmadı) + uygulaması"* diyor; ikisi de
+var ve ölçümü şu:
+
+- **Görev satırı: `08.15` `[x]`** — *"Müşteri hata kapısı + mobil dokunma kademesi + onay ekranının
+  cihaz forku"*, `touches` listesinde `apps/web/lib/{customer-error,customer-error-text,error}.ts`.
+- **Uygulama: `apps/web/lib/customer-error.ts`** — `CustomerError` (anahtar taşıyan fırlatma) +
+  `customerErrorKey` (funnel) + `CustomerResult<T> = { data, errorKey }` + `SHARED_ERROR_KEYS`.
+- **Ölçüm: `app/(customer)` altında `getErrorMessage` çağrısı SIFIR.** Kalan tek tüketici operasyon
+  yüzeyi ve `lib/constraint-message.ts` — ikisi de bulgunun kapsamı dışında.
+
+**Ad `getCustomerError` DEĞİL `customerErrorKey`** ve fark kasıtlı: `get*Error` adı metin döndüren
+kardeşiyle (`getErrorMessage`) aynı aileden okunur ve tam olarak kaçındığımız şey o benzerlik.
+Anahtar döndüren bir kapının adında ANAHTAR geçmeli — yanlış funnel'ı import etmeyi "gözle
+görülür" kılan şey de bu.
+
+**H2 sizin öngördüğünüz gibi kendiliğinden kapandı:** funnel `unexpected` anahtarını döndürüyor,
+cümleyi her sayfa kendi `messages.json`'undan kuruyor. Sunucuda çevrilecek tek cümle kalmadı.
+
+**Bir düzeltme, kayda geçsin:** `08.17`'nin `S1` maddesi bu işin son parçasıydı — giriş kapıları
+`08.15`'te dışarıda kalmıştı ve hazır cümle taşımaya devam ediyordu. Yani H1'in kapsamı iki görev
+satırına yayıldı; ikisi birden okunmadan "tamam mı" sorusu doğru cevaplanmıyor.
+
 ## H2. Jenerik hata metni TEK DİLDE — "Beklenmeyen bir hata oluştu" Türkçe (müşteri şeridi)
 
 **Gözlem:** Funnel'ın jenerik metni Türkçe sabit; müşteri yüzeyi FR/DE/TR. Fransız müşteri,

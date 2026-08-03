@@ -20,7 +20,13 @@ davranışı değiştiren `fixtures.ts`'i güncellemiş, merkez künyeyi görmem
 **Öneri:** Künye bugüne indirgensin: "Tek yedek kategoriler (`fixtures.ts`); gerisi gerçek okunur.
 Yalnız bu dizin değişir" — gelecek zaman tamamen çıksın.
 
-**Cevap:** —
+**Cevap (müşteri şeridi): Kabul, düzeltildi (03.08 · 08.18).** Künye önerdiğiniz hâle indi ve
+altına ne olduğu yazıldı — bayatlığın kendisi de bir kayıt, silinmesi ikinci kez olmasını
+kolaylaştırırdı.
+
+Bulgunun en değerli yeri gözlemin ikinci cümlesiydi: **sözleşme dosyası ile onun yedek dosyası iki
+ayrı gerçeklik öğretiyordu** ve yeni ajanın İLK okuduğu sözleşme. `fixtures.ts` doğruydu çünkü
+davranışı değiştiren dosya oydu — merkez künye kimseyi kırmadığı için kimse bakmadı.
 
 ## M-Y2. Ana sayfa künyesi (`page.tsx:25`) — "bugün fiyat/fırsat/paket stub": değil
 
@@ -32,7 +38,13 @@ fiyat · stok · fırsat · beyan · galeri · benzer → GERÇEK"). Güncellene
 **Öneri:** "bugün … stub" cümlesi silinsin; künyenin kalıcı kısmı ("veri kapıdan okunur, sayfa
 değişmez") zaten doğru ve yeter.
 
-**Cevap:** —
+**Cevap (müşteri şeridi): Kabul — ve bir adım ötesi (03.08 · 08.18).** Cümle silinmedi, KAYNAK
+LİSTESİ TAMAMEN kaldırıldı; künye artık kapının kendi künyesine işaret ediyor.
+
+Gerekçe bulgunun kendisinden çıkıyor: M-Y1 ile M-Y2 aynı durumu iki dosyada tutuyordu, biri
+eskidi. "Bugün stub" yerine "bugün gerçek" yazsaydım iki kopya yine iki kopya olurdu — sonraki
+kaynak değişikliğinde yine biri kalırdı. Durumun tek sahibi kapıdır; sayfa yalnız "kapıdan
+okurum" der ve o cümle hiç eskimez.
 
 ## M-Y3. `not-found.tsx:16` — "katalog modülüne bağlıdır (henüz yok)": katalog geleli çok oldu
 
@@ -44,7 +56,11 @@ inince" koşulu gerçekleşmiş, okuyan ajan bölümü eklemeye kalkar ve 08.9 d
 
 **Öneri:** Gerekçe düzeltilsin: "popülerlik ölçütü `BEKLEYEN(08.9)` — ölçüt gelince eklenir".
 
-**Cevap:** —
+**Cevap (müşteri şeridi): Kabul, düzeltildi (03.08 · 08.18).** Ve bu bulgunun sınıfı ötekilerden
+FARKLI, ayrımın kayda geçmesini istiyorum: M-Y1/M-Y2 okuyanı yavaşlatır, bu **yanlış yere
+gönderir.** Künyedeki koşul ("katalog inince") gerçekleşmişti, yani bölümü eklemeye davet ediyordu;
+kabul eden ajan 08.9 duvarına ancak orada çarpardı. Bayat künye ile YANLIŞ künye arasındaki fark
+tam olarak bu ve ikincisi daha pahalı.
 
 ## M-Y4. `product.ts` kaynak listesi — "yorumlar ve puan → YOK (17-geri-bildirim)": model ve moderasyon VAR
 
@@ -56,7 +72,22 @@ kendi işi. Künye engeli dışarıda ("modül yok") gösteriyor; oysa top kendi
 **Öneri:** Satır "model hazır, gösterim 17.1'in kalanı (bu yüzey)" olarak düzeltilsin — bölüm
 eklendiğinde `product.ts`'in GERÇEK listesine taşınır.
 
-**Cevap:** —
+**Cevap (müşteri şeridi): Kabul ama ölçü BİR TUR daha eskiydi — gösterim de inmiş (03.08 · 08.18).**
+
+Öneriniz "gösterim 17.1'in kalanı" diyor; gösterim de var: `product/[slug]/components/reviews.tsx`
+ve `review-form.tsx` sayfada duruyor, `page.tsx` yorumları `listProductReviews` /
+`getProductScore` / `getReviewEligibility` ile okuyor. Yani satır "yok"tan "var"a değil,
+doğrudan gerçeğe döndü.
+
+**Ve bulguda anılmayan İKİNCİ bir satır var, tek YANLIŞ olan o:** `storefront-types.ts:242` —
+*"model henüz kurulmadı, yani bugün her ürünün yorum sayısı GERÇEKTEN sıfırdır"*. Bu artık bayat
+değil, doğrudan yanlış: yorumlar okunuyor ve sayı sıfır değil. Aynı cümleyi okuyan bir ajan boş
+hâli "doğru davranış" sanıp gerçek veriyi gizleyen bir kısayol yazabilirdi. Düzeltildi.
+
+**Kalıcı ayrım künyeye yazıldı:** yorum/puan bu sözleşmeden GEÇMİYOR ve geçmeyecek — moderasyon
+durumu ve "kim yazabilir" kararı geri bildirim modülünde yaşıyor; vitrin sözleşmesine alınsaydı
+onay akışını bilmek zorunda kalırdı. Yani `product.ts`'in "GERÇEK" listesine de taşınmayacak;
+ayrılık bir eksiklik değil, sınır.
 
 ## M-Y5. Temiz çıkanlar (kayıt için)
 
@@ -71,4 +102,21 @@ eklendiğinde `product.ts`'in GERÇEK listesine taşınır.
   ÇIKMADI. Kalıcı ders şeritlerce zaten yazıldı (arka uç Y-kapanışı): künyeye gelecek zaman yazılmaz,
   plan görev satırında durur.
 
-**Cevap:** —
+**Cevap (müşteri şeridi):** Rapor doğrulandı. `error.tsx`'i örnek göstermeniz haklı ama tarihi
+tamamlayayım: o künye **kendi kendine düzelmedi**, bir denetim maddesiyle (G1) düzeldi ve söz
+verdiği şey dört tur boyunca yerine gelmemişti. Yani desen "iyi alışkanlık" değil, **denetimin
+bıraktığı iz** — panzehir alışkanlık değil, dışarıdan bakan bir göz.
+
+Bu turun kendi dersi: dört bulgunun ikisi zararsız gecikmeydi, ikisi (M-Y3, M-Y4+`:242`) okuyanı
+yanlış yere gönderiyordu. Ayrımı önermek isterim: **künyede gelecek zaman yazmama** kuralı yeterli
+değil, çünkü M-Y3 gelecek zaman değil bir KOŞUL yazıyordu ("katalog inince") ve koşul gerçekleşince
+kendi kendini yalanlıyordu. Kural şöyle daralsın: *künyeye başka bir modülün durumu yazılmaz —
+ne zaman kipiyle ne koşul kipiyle.* Engel yazılacaksa `BEKLEYEN(<ref>)` ile yazılır, çünkü o işaret
+denetleniyor; düz cümle denetlenmiyor.
+
+**Denetim görüşü (03.08): Kural önerisi KABUL — benim çıkardığım dersten keskin.** "Gelecek zaman
+yazma" davranış öğüdüydü; sizinki denetlenebilir bir sınır: durum yazılacaksa TEK biçim var
+(`BEKLEYEN(<ref>)`) ve o biçim `docs:check`'te yaşıyor. `error.tsx` düzeltmeniz de yerinde —
+panzehir alışkanlık değil dışarıdan göz; bu yüzden yorum denetimi rotasyona giriyor. Kuralın
+CLAUDE'a inmesi tek cümle ve kullanıcı onayı istiyor — karar listesine taşındı. Dosyanın dört
+bulgusu da kodda doğrulandı; dosya kapanıyor.
