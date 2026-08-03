@@ -82,11 +82,13 @@ export function ProductJsonLd({ product, locale, url, rating }: ProductJsonLdPro
 /**
  * `LocalBusiness` — ana sayfada, işletmenin kim ve nerede olduğu.
  *
- * Künye `docs/architecture/BUSINESS_CATALOG.md`'den; tam sokak adresi orada da yok, o yüzden
- * `address` yalnız şehir ve ülke taşıyor. Uydurma bir sokak adı, yapısal veride yalan beyandır.
- * BEKLEYEN(08.8): tam sokak adresi — gelince `streetAddress` ve `postalCode` buraya eklenir.
- * İşaret 08.8'e bağlı çünkü aynı eksik oradaki mentions légales sayfasını da bekletiyor; tek bir
- * bilgi iki yeri birden açar ve iki ayrı kayda bölünmesi, birinin unutulması demekti.
+ * Künye `docs/architecture/BUSINESS_CATALOG.md`'den ve o tablo 03.08'de **resmî kayıt belgesiyle
+ * düzeltildi** (INPI/RNE): adres Strasbourg değil Lingolsheim, SIRET `…00018` değil `…00026` —
+ * eskisi 01.09.2025'te kapanmış bir işletmeye aitti.
+ *
+ * `legalName` ile `name` AYRI ve bu bilinçli: ziyaretçi markayı arar ("Lezzet Anatolia"), yasal
+ * kayıt ise şirketin unvanını taşır ("QUALITE"). İkisini tek alana sıkıştırmak, ya arama sonucunda
+ * tanınmayan bir ad göstermek ya da yapısal veride yanlış tüzel kişi beyan etmek olurdu.
  */
 export function LocalBusinessJsonLd({ url }: { url: string }) {
   return (
@@ -95,11 +97,19 @@ export function LocalBusinessJsonLd({ url }: { url: string }) {
         '@context': 'https://schema.org',
         '@type': 'GroceryStore',
         name: brand.name,
+        legalName: 'QUALITE SAS',
+        vatID: 'FR50907496640',
         url,
         image: `${siteOrigin()}/logo.jpg`,
         email: 'lezzetanatolie@gmail.com',
         telephone: '+33616990681',
-        address: { '@type': 'PostalAddress', addressLocality: 'Strasbourg', addressCountry: 'FR' },
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: '46 rue des Prés',
+          postalCode: '67380',
+          addressLocality: 'Lingolsheim',
+          addressCountry: 'FR',
+        },
         // Hizmet bölgesi: dükkânsız işletmeyiz, teslimat bölgeye ve kargoya dayanıyor (DOMAIN §14).
         areaServed: [
           { '@type': 'Country', name: 'France' },

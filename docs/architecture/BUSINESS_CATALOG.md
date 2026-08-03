@@ -6,20 +6,39 @@ Bu doküman işletmenin künyesini ve ürün kataloğunu tek yerde toplar. Katal
 
 ## İşletme künyesi
 
+> **Kaynak:** INPI / Registre national des entreprises resmî kayıt belgesi (03.08.2026 tarihli çıktı).
+> Aşağıdaki satırlar o belgeden birebir alınmıştır — tahmin ya da hatırlanan değer yoktur.
+
 | Alan | Değer |
 | --- | --- |
-| Ticari unvan | YİGİT Bilgin QUALITE S.A.S. |
-| SIRET | 907 496 640 00018 |
+| Ticari unvan (dénomination sociale) | **QUALITE** |
+| Hukuki biçim | SAS — société par actions simplifiée |
+| Sermaye | 500 EUR |
+| SIREN | 907 496 640 |
+| **SIRET (etkin merkez)** | **907 496 640 00026** |
+| APE / NAF | 4791B — Vente à distance sur catalogue spécialisé |
 | TVA (KDV no) | FR50907496640 |
+| Yasal temsilci | Yigit Bilgin — Président de SAS |
+| Merkez adresi | 46 rue des Prés, 67380 Lingolsheim, Fransa |
+| RNE tescili | 25.11.2021 · faaliyet başlangıcı 01.09.2025 |
 | Web | www.lezzetanatolie.com |
 | E-posta | lezzetanatolie@gmail.com |
 | Telefon | +33 (0)6 16 99 06 81 |
 | Instagram | LezzetAnatolie |
-| Merkez | Strasbourg, Fransa |
 | Pazar | Fransa ve Almanya |
 | Diller | Türkçe, Fransızca, Almanca |
 
-> **Not — marka adı:** Logolarda "Lezzet Anatolia", domain/Instagram'da "Lezzet Anatolie". Tek yazıma karar verilecek (`BACKLOG.md §0`). Bu dokümanda domain ile tutarlı olması için "Anatolie" kullanıldı.
+> **DÜZELTME (03.08.2026) — bu tablo üç yerinden yanlıştı ve yanlışı yasal sayfalara taşınmıştı.**
+> · **SIRET `…00018` DEĞİL `…00026`.** `00018` numaralı işletme (20 rue des Vignes) **01.09.2025'te
+>   KAPANMIŞ**; aynı gün 46 rue des Prés adresinde `00026` açılmış. Kapanmış bir işletme numarasını
+>   mentions légales'e yazmak yanlış beyandır.
+> · **Unvan "YİGİT Bilgin QUALITE S.A.S." değil, sadece `QUALITE`.** "Yigit Bilgin" şirketin adı
+>   değil, **başkanının** adı — ikisi karışmış. Yasal temsilci olarak kendi satırında duruyor.
+> · **Merkez Strasbourg değil, Lingolsheim** (67380). Lingolsheim Strasbourg büyükşehir alanında,
+>   yani "Strasbourg ve çevresi" teslimat anlatımı doğru kalır; ama **künye gerçek adresi yazmak
+>   zorunda** — mentions légales'te şehir yaklaşık olamaz.
+
+> **Not — marka adı:** Logolarda "Lezzet Anatolia", domain/Instagram'da "Lezzet Anatolie". Tek yazıma karar verilecek (`BACKLOG.md §0`). Bu dokümanda domain ile tutarlı olması için "Anatolie" kullanıldı. **Yasal künyede marka adı değil TİCARİ UNVAN yazılır** (`QUALITE`); marka adı "nom commercial" olarak ayrıca anılır.
 
 > **Güvenlik notu:** Hesap şifreleri bu dokümana bilinçli olarak konmadı. Şifreler dokümantasyonda tutulmaz; ayrı ve güvenli bir yerde saklanmalı. Paylaşılmış olan şifrelerin değiştirilmesi önerilir.
 

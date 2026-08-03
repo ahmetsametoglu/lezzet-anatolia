@@ -7,16 +7,25 @@ import content from './content.json';
  * Yasal bilgiler / mentions légales (08.8) — Fransa'da ticari bir sitenin taşımak ZORUNDA olduğu
  * künye sayfası (LCEN md. 6).
  *
- * Künye uydurulmadı, `docs/architecture/BUSINESS_CATALOG.md`'den geldi (unvan, SIRET, KDV numarası,
- * merkez, iletişim). İki alan bilerek genel yazıldı çünkü belgede karşılığı yok ve doğrusu yerine
- * yakınını yazmak, yanlış yazmakla aynı şeydir: **tam sokak adresi** ve **barındırıcının künyesi**.
- * BEKLEYEN(08.8): tam sokak adresi ve barındırıcının künyesi — LCEN md. 6 ikisini de istiyor,
- * belgede karşılığı yok ve yerine yakınını yazmak yanlış yazmakla aynı şey. İşletme verdiğinde
- * `content.json`daki künye listesine iki satır olarak eklenir.
+ * Künye **resmî kayıt belgesinden** geliyor (INPI / Registre national des entreprises, 03.08.2026)
+ * ve o belge `BUSINESS_CATALOG.md`'yi üç yerinden düzeltti — bu sayfa bir ara o yanlışları
+ * taşıyordu:
  *
- * Not: marka adı logolarda "Lezzet Anatolia", domain/Instagram'da "Lezzet Anatolie" olarak geçiyor
- * ve tek yazıma karar verilmedi. Bu sayfa TİCARİ UNVANI yazıyor, marka adını değil — yasal künyede
- * tartışmalı olan ad kullanılmaz, unvan zaten tek ve resmîdir.
+ *  · **SIRET `…00018` değil `…00026`.** `00018` numaralı işletme 01.09.2025'te KAPANDI; aynı gün
+ *    yeni adreste `00026` açıldı. Kapanmış bir işletme numarasıyla künye vermek yanlış beyandır.
+ *  · **Unvan `QUALITE`**, "YİGİT Bilgin QUALITE S.A.S." değil — "Yigit Bilgin" şirketin adı değil
+ *    BAŞKANININ adı ve doğru yeri "yayın sorumlusu" satırı.
+ *  · **Merkez Lingolsheim (67380)**, Strasbourg değil. Teslimat anlatımında "Strasbourg ve çevresi"
+ *    doğru kalır (Lingolsheim büyükşehir alanında), ama künyede şehir yaklaşık olamaz.
+ *
+ * Marka adı ile unvan AYRI satırlarda: yasal künye ticari unvanı yazmak zorunda, ama ziyaretçinin
+ * tanıdığı ad marka adıdır — ikisinden birini gizlemek okuyanı "yanlış siteye mi geldim" diye
+ * düşündürürdü.
+ *
+ * BEKLEYEN(08.8): barındırıcının ticari unvanı, adresi ve telefonu — LCEN md. 6 üçünü de istiyor.
+ * Sitenin nerede barındırıldığı henüz bildirilmedi; sayfa şimdilik "talep üzerine iletilir" diyor
+ * ve bu yasal olarak yeterli DEĞİL, geçici bir dürüstlük. Bilgi gelince `barindirma` bölümüne
+ * üç satır olarak yazılır.
  */
 interface TermsPageProps {
   params: Promise<{ locale: string }>;
