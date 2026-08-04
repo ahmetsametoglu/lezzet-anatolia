@@ -140,6 +140,37 @@ export interface ProductsData {
   collections: CollectionView[];
   /** Paketler TAM gelir ama ÖZET olarak — kalemler diyalog açılınca okunur. */
   bundles: BundleView[];
+  /**
+   * Aileler ÜYELERİYLE BİRLİKTE tam gelir (`CLAUDE §1`): aile operatörün elle kurduğu, doğal tavanı
+   * olan bir küme — sayfalanmaz, tek turda okunur. Üyeler burada çünkü sağ raydaki "öteki çeşitler"
+   * bloğu da aynı veriden besleniyor; ikinci bir okuma iki ayrı gerçek doğururdu.
+   */
+  families: FamilyView[];
+}
+
+/** Ailenin listedeki satırı — adı, üyeleri ve sırası. */
+export interface FamilyView {
+  id: string;
+  name: string;
+  isActive: boolean;
+  memberCount: number;
+  /** `familyPosition` sırasında — sıra ailenin kararı, ürünün `sortOrder`'ı DEĞİL (o katalog sırası). */
+  members: FamilyMemberView[];
+}
+
+export interface FamilyMemberView {
+  productId: string;
+  /** Ürünün kendi adı ("Limonlu kek") — operasyon tek dilli. */
+  productName: string;
+  /**
+   * Aile içi etiket ("Limonlu") — ÜÇ DİLLİ ve müşteriye görünen budur.
+   *
+   * Ürün adından türetilemez: ortak eki kırpmak "Çilekli Kek" ile "Kek Dilimi"nde bozulur. Bu yüzden
+   * ayrı alan ve `family_id` doluyken veri kısıtı zorunlu kılıyor.
+   */
+  label: LocalizedText;
+  imageUrl: string | null;
+  status: ProductStatus;
 }
 
 /**

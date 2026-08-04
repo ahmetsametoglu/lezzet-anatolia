@@ -140,7 +140,7 @@ export function ProductsTab(props: ProductsViewProps) {
             footer={<LoadMoreSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />}
           />
         </div>
-        <ProductPreview product={selected} onEdit={openEdit} />
+        <ProductPreview product={selected} onEdit={openEdit} families={data.families} onSelectProduct={onSelect} />
       </div>
     </>
   );

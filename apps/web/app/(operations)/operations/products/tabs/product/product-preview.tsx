@@ -6,7 +6,7 @@ import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { StatusBadge } from './status-badge';
 import { missingDeclarations, resolveLocalizedText } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
-import { filledContentLangs, type ProductView } from '../../products-types';
+import { filledContentLangs, type FamilyView, type ProductView } from '../../products-types';
 
 // Seçili ürün paneli — Ürünler ekranının sağ sütunu. SALT görünüm: türetilmiş bilgi gösterir,
 // düzenleme modal'da (Düzenle) yapılır. Fiyat/stok burada düzenlenmez, kendi ekranlarına köprü verir.
@@ -84,9 +84,85 @@ function DeclarationNote({ product }: { product: ProductView }) {
 interface ProductPreviewProps {
   product: ProductView | null;
   onEdit: () => void;
+  /** Tüm aileler — seçili ürünün ailesi bunlardan çözülür (ayrı bir okuma açılmadı). */
+  families: FamilyView[];
+  /** Kardeşe tıklayınca SOLDAKİ tabloda o ürün seçilir — rayda gezinmek listeyi de takip etsin. */
+  onSelectProduct: (productId: string) => void;
 }
 
-export function ProductPreview({ product, onEdit }: ProductPreviewProps) {
+/**
+ * **Ailenin öteki çeşitleri** (05.15) — müşterinin ürün sayfasında gördüğü kartların operasyon
+ * karşılığı.
+ *
+ * Ailenin hangi ürünü tuttuğu `families` listesinden çözülüyor, `ProductView`e bir `familyId` alanı
+ * eklenmedi: liste zaten bütün hâlinde geliyor (doğal tavanlı küme) ve ürün görünüm modelini
+ * yalnız bu blok için genişletmek, sayfalanan her satıra taşınacak bir alan doğururdu.
+ *
+ * **Sıra ailenin sırası** (`familyPosition`) — müşteri kartları hangi sırada görüyorsa operatör de
+ * onu görür; iki yerde iki ayrı sıra, "kartlar neden böyle dizili" sorusunu cevapsız bırakırdı.
+ */
+function FamilySiblings({
+  product,
+  families,
+  onSelectProduct,
+}: {
+  product: ProductView;
+  families: FamilyView[];
+  onSelectProduct: (productId: string) => void;
+}) {
+  const family = families.find((candidate) => candidate.members.some((member) => member.productId === product.id));
+  if (!family) return null;
+
+  const siblings = family.members.filter((member) => member.productId !== product.id);
+
+  return (
+    <div className="flex flex-col gap-2 border-t border-ops-line pt-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] text-ops-muted">
+          Ailenin öteki çeşitleri
+        </span>
+        <span className="truncate font-ops-body text-ops-micro text-ops-faint">{family.name}</span>
+      </div>
+
+      {siblings.length === 0 ? (
+        // Tek üyeli aile bir hata değil, bir BAŞLANGIÇ: operatör aileyi kurmuş, ikinci çeşidi henüz
+        // eklememiş. Müşteri tarafında kart şeridi hiç çizilmiyor — tek kart bir seçim sunmaz.
+        <p className="font-ops-body text-ops-xs text-ops-faint">
+          Bu ailenin tek üyesi bu ürün. İkinci çeşit eklenene kadar müşteriye çeşit kartları görünmez.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {siblings.map((sibling) => (
+            <li key={sibling.productId}>
+              <button
+                type="button"
+                onClick={() => onSelectProduct(sibling.productId)}
+                className="flex w-full cursor-pointer items-center gap-2.5 rounded-ops-card px-1.5 py-1.5 text-left transition-colors hover:bg-ops-surface-sunken"
+              >
+                <Thumbnail src={sibling.imageUrl} alt={sibling.productName} size={28} />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  {/* Kartta okunan AİLE İÇİ ETİKET ("Limonlu"), ürün adı değil — müşterinin gördüğü
+                      de budur. Ürün adı altta, çünkü operatör listede onu arıyor. */}
+                  <span className="truncate font-ops-body text-ops-sm text-ops-ink">
+                    {sibling.label.tr || sibling.productName}
+                  </span>
+                  <span className="truncate font-ops-body text-ops-micro text-ops-faint">{sibling.productName}</span>
+                </div>
+                {sibling.status !== 'active' ? (
+                  <Badge tone="slate" outline>
+                    {sibling.status === 'candidate' ? 'aday' : 'pasif'}
+                  </Badge>
+                ) : null}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export function ProductPreview({ product, onEdit, families, onSelectProduct }: ProductPreviewProps) {
   return (
     <div className="flex min-h-0 flex-col overflow-y-auto bg-ops-subtle">
       {/* Sticky başlık */}
@@ -164,6 +240,8 @@ export function ProductPreview({ product, onEdit }: ProductPreviewProps) {
               Düzenle
             </button>
           </div>
+
+          <FamilySiblings product={product} families={families} onSelectProduct={onSelectProduct} />
         </div>
       )}
     </div>

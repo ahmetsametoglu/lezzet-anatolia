@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/operation/ui/page-header';
 import { SearchInput } from '@/components/operation/ui/search-input';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { CatalogTab } from './tabs/catalog/catalog-tab';
+import { FamilyTab } from './tabs/family/family-tab';
 import { PackagesTab } from './tabs/package/package-tab';
 import { ProductsTab } from './tabs/product/product-tab.desktop';
 import type { ProductTab } from './products-paths';
@@ -20,6 +21,7 @@ const TABS: Array<{ key: ProductTab; label: string }> = [
   { key: 'categories', label: 'Kategoriler' },
   { key: 'collections', label: 'Koleksiyonlar' },
   { key: 'packages', label: 'Paketler' },
+  { key: 'families', label: 'Aileler' },
 ];
 
 // "Yeni …" düğmesinin etiketi sekmeden gelir — düğme sekme çubuğunun sağında durur ve neyi
@@ -30,6 +32,7 @@ const CREATE_LABEL: Record<ProductTab, string> = {
   categories: 'Kategori',
   collections: 'Koleksiyon',
   packages: 'Paket',
+  families: 'Aile',
 };
 
 // Arama da sekmeye BAĞLI: yer tutucu neyin arandığını söyler. Eskiden tek bir "Ürün ara…" kutusu
@@ -39,6 +42,7 @@ const SEARCH_PLACEHOLDER: Record<ProductTab, string> = {
   categories: 'Kategori ara…',
   collections: 'Koleksiyon ara…',
   packages: 'Paket ara…',
+  families: 'Aile ara…',
 };
 
 export function ProductsDesktop(props: ProductsViewProps) {
@@ -54,6 +58,7 @@ export function ProductsDesktop(props: ProductsViewProps) {
     categories: `${data.categories.length} kategori`,
     collections: `${data.collections.length} koleksiyon`,
     packages: `${data.bundles.length} paket`,
+    families: `${data.families.length} aile · ${data.families.reduce((sum, f) => sum + f.memberCount, 0)} üye`,
   };
 
   return (
@@ -95,6 +100,9 @@ export function ProductsDesktop(props: ProductsViewProps) {
       )}
       {tab === 'packages' && (
         <PackagesTab bundles={data.bundles} device="desktop" creating={creating} onCreateClose={closeCreate} />
+      )}
+      {tab === 'families' && (
+        <FamilyTab rows={data.families} filter={search} creating={creating} onCreateClose={closeCreate} />
       )}
     </div>
   );

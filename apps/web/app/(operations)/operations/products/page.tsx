@@ -1,11 +1,11 @@
-import { BundleService, CategoryService, CollectionService, ProductService, serviceDb } from '@lezzet/database';
+import { BundleService, CategoryService, CollectionService, ProductFamilyService, ProductService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { publicImageUrl } from '@lezzet/storage';
 import { detectDevice } from '@/lib/device';
 import { ProductsClient } from './products-client';
 import { toBundleViews, toProductViews } from './products-read';
 import { parseProductsUrl, toProductFilters } from './products-url';
-import type { CategoryView, CollectionView } from './products-types';
+import type { CategoryView, CollectionView, FamilyView } from './products-types';
 
 // Admin katalog yönetimi — Ürünler. Okuma burada (RSC) yapılır, DB satırları serileştirilebilir
 // view-model'e (& ile TÜRETİLEREK) indirilir; yalnız türetilmiş/join alanlar eklenir.
@@ -36,14 +36,21 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   // açılınca, yalnız o paket için okunur. Fiyat ve parti verisi de sayfaya hiç gelmez: listenin
   // ihtiyacı birkaç sayı, oysa uygulamada hesaplamak katalogun tamamını taşımayı gerektiriyordu.
   // Ürün formu da bu satırlardan besleniyor ("bu ürün N pakette kullanılıyor" — `variantIds`).
-  const [productPage, { byCategory, ...counts }, categories, collectionRows, bundleRows] = await Promise.all([
+  const [productPage, { byCategory, ...counts }, categories, collectionRows, bundleRows, families] = await Promise.all([
     productSvc.listWithRelations({ filters, limit: DEFAULT_PAGE_SIZE }),
     // Dört sayı TEK okumada (`product_counts`): başlık sayaçları + kategori başına ürün sayısı.
     productSvc.counts(filters),
     categorySvc.list(),
     collectionSvc.listWithProductIds(),
     new BundleService(db).listRows(),
+    new ProductFamilyService(db).list(),
   ]);
+
+  // Üyeler aile başına okunuyor. **N+1 ama bilinçli:** aile operatörün elle kurduğu, doğal tavanlı
+  // bir küme (`CLAUDE §1`) — bugün bir avuç, yarın birkaç düzine. Tek turda okumak için ürün
+  // servisine "ailesi olan hepsi" diye bir kapı açmak gerekirdi ve o kapı yalnız bu ekranı
+  // ilgilendiriyor. Sayı büyürse kapı istenir, bugün istenmez.
+  const familyMembers = await Promise.all(families.map((family) => productSvc.listFamilyMembers(family.id)));
 
   // Ürün indirgemesi action ile PAYLAŞILIR (products-read) — ilk sayfa ve sonraki sayfalar aynı şekli
   // üretsin diye. Koleksiyon ADLARI üyelik id'lerinden çözülür; id'ler ürünle gömülü geldi (join yok).
@@ -70,6 +77,25 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   const bundleViews = toBundleViews(bundleRows);
 
+  const familyViews: FamilyView[] = families.map((family, index) => {
+    const members = familyMembers[index] ?? [];
+    return {
+      id: family.id,
+      name: family.name,
+      isActive: family.isActive,
+      memberCount: members.length,
+      members: members.map((member) => ({
+        productId: member.id,
+        productName: resolveLocalizedText(member.name),
+        // Kısıt doluyken etiketi zorunlu kılıyor, ama tip `nullable` — okuma tarafı boşu da
+        // karşılayabilmeli (elle SQL'le yazılmış bir satır kısıtı atlamış olabilir).
+        label: member.familyLabel ?? { tr: '', fr: '', de: '' },
+        imageUrl: publicImageUrl(member.imageKey, member.imageUpdatedAt),
+        status: member.status,
+      })),
+    };
+  });
+
   const device = await detectDevice();
 
   return (
@@ -81,6 +107,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         categories: categoryViews,
         collections: collectionViews,
         bundles: bundleViews,
+        families: familyViews,
       }}
       device={device}
       urlState={urlState}
