@@ -74,19 +74,21 @@ export interface MatchCandidateView {
 }
 
 /**
- * Listenin OKUNABİLİRLİK hâli — analitik ekranının `ready`/`warming`/`absent` ayrımının aynısı.
+ * Listenin hâli.
  *
- * `blocked` bu ekrana özgü ve geçici: veri var, ekran hazır, **okuma kapısı yok**. Boş listeyle
- * karıştırılmaması şart — "hiç hareket yok" ile "hepsini gösteremiyorum" farklı cümlelerdir ve
- * ikincisini birincisi gibi göstermek, dolu bir kasayı boş göstermek olurdu.
+ * Bir tur ÜÇÜNCÜ bir hâl vardı (`blocked`: veri var, ekran hazır, okuma kapısı yok) ve işini
+ * gördü — "hiç hareket yok" ile "hepsini gösteremiyorum" farklı cümlelerdir, ikincisini birincisi
+ * gibi göstermek dolu bir kasayı boş göstermek olurdu. Kapı gelince (`LedgerFilter.accountId`
+ * isteğe bağlı oldu) hâl kendiliğinden ölü kaldı ve silindi: geçici bir dürüstlük aracıydı,
+ * kalıcı bir kavram değil.
  */
-export type LedgerState = 'ready' | 'empty' | 'blocked';
+export type LedgerState = 'ready' | 'empty';
 
 export interface LedgerView {
   state: LedgerState;
   rows: MovementRowView[];
   nextCursor: string | null;
-  /** `blocked`/`empty` hâlinde ekranın basacağı cümle. */
+  /** `empty` hâlinde ekranın basacağı cümle. */
   note: string | null;
 }
 

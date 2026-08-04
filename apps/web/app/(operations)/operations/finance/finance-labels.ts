@@ -25,11 +25,34 @@ export const MOVEMENT_TYPE_LABEL: Record<MovementType, string> = {
   misc: 'sınıflandırılmadı',
 };
 
-// **Tür süzgecinin çip sözlüğü ve sırası BURADA DEĞİL** — `BEKLEYEN(12.8)`. Defterin okuma kapısı
-// tür almadığı için süzgeç ekrandan kalktı, sözlüğü de onunla birlikte: tüketicisi olmayan bir
-// sabit ölü koddur (`knip` geçirmez) ve "ileride lazım olur" diye bırakılan kod, lazım olduğunda
-// çoktan eskimiş oluyor. Kapı gelince çip adları ve sıra kararı (enum sırası DEĞİL, ekranın kendi
-// önceliği: tahsilat → gider → içeriden hareket → sınıflanmamış) yeniden yazılır.
+/** Süzgeç seçeneği — cümle içinde değil tek başına durduğu için büyük harfle başlar. */
+export const MOVEMENT_TYPE_CHIP: Record<MovementType, string> = {
+  order_payment: 'Sipariş ödemesi',
+  order_refund: 'İade',
+  purchase: 'Stok alımı',
+  expense: 'Gider',
+  transfer: 'Transfer',
+  capital: 'Sermaye',
+  misc: 'Sınıflandırılmamış',
+};
+
+/**
+ * Süzgeç SIRASI — `MovementTypeEnum.options` DEĞİL.
+ *
+ * Enum sırası bir veri kararıdır (şemadaki yazım sırası) ve ekranı bağlamaz. Burada sıra anlam
+ * taşıyor: önce paranın düzenli akışı (tahsilat · iade), sonra işletme giderleri (alım · gider),
+ * sonra içeriden hareketler (transfer · sermaye), en sonda cevabı olmayan (`misc`). Enum'a
+ * bırakılsaydı yeni bir tip eklendiğinde ekranın sırası da sessizce değişirdi.
+ */
+export const MOVEMENT_TYPE_ORDER = [
+  'order_payment',
+  'order_refund',
+  'purchase',
+  'expense',
+  'transfer',
+  'capital',
+  'misc',
+] as const satisfies readonly MovementType[];
 
 /**
  * Hesap türü — arayüzde "tip" demiyoruz, çünkü aynı ekranda hareketin de bir tipi var ve iki ayrı

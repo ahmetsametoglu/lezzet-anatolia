@@ -58,7 +58,7 @@ export function MatchDialog({ row, busy, onPick, onClose }: MatchDialogProps) {
         // operatörü yanlış onaya sürükler. Burada gösterecek bir şey yoksa doğrusu susmaktır.
         <p className="font-ops-body text-ops-sm text-ops-muted">
           Bu satıra uyan sipariş bulunamadı. Referans numarasını bilerek bağlamak için sipariş
-          araması gerekiyor — o kapı henüz yok (<span className="font-ops-mono">BEKLEYEN(12.8)</span>). Şimdilik satırı
+          araması gerekiyor — o kapı henüz yok (<span className="font-ops-mono">BEKLEYEN(12.10)</span>). Şimdilik satırı
           gider olarak sınıflayabilir ya da kuyruktan düşürebilirsiniz.
         </p>
       ) : (

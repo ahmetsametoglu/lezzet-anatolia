@@ -7,6 +7,8 @@ import { EmptyState } from '@/components/operation/ui/empty-state';
 import { Select } from '@/components/operation/form/select';
 import { amount, dayMonth, money, num } from '@/components/operation/ui/format';
 import {
+  MOVEMENT_TYPE_CHIP,
+  MOVEMENT_TYPE_ORDER,
   NOTES,
   QUICK_CATEGORIES,
   RECONCILE_LABEL,
@@ -150,11 +152,19 @@ export function FilterBar({ accounts, urlState, unmatchedCount, onChange, stacke
           duruyordu) ve tarayıcının yerleştirdiği okun hizasını — ok çipin sağ kenarına yapışıyordu.
           Kitin çip kipi tam bu şerit için yazılmış; ikinci bir biçim icat etmeye gerek yoktu.
 
-          **TÜR SÜZGECİ BURADA YOK ve bu bilinçli** — `BEKLEYEN(12.8)`: defterin okuma kapısı tür
-          almıyor. Bir tur "kapalı ama görünür" bırakıldı; ölçüldü ki daha kötü — kullanıcı kontrolü
-          görüp tıklıyor ve hiçbir şey seçemiyor. Çalışmayan bir düğme göstermemek yüzeyin kendi
-          ilkesi. Kapı gelince `MOVEMENT_TYPE_CHIP` sözlüğü ve `?type=` alanı yerinde, tek çağrıyla
-          bağlanır. */}
+          Tür süzgeci bir tur ekranda YOKTU (kapısı gelmemişti) — arka uç `LedgerFilter.type`'ı
+          açınca bağlandı; süzme sunucuda, yani liste kuyruğuyla birlikte daralıyor. */}
+      <Select
+        variant="chip"
+        value={urlState.type}
+        onChange={(value) => onChange({ type: value as FinanceUrlState['type'] })}
+        placeholder="+ tür"
+        options={[
+          { value: 'all', label: '+ tür' },
+          ...MOVEMENT_TYPE_ORDER.map((type) => ({ value: type, label: MOVEMENT_TYPE_CHIP[type] })),
+        ]}
+      />
+
       <Select
         variant="chip"
         value={urlState.period}
@@ -196,7 +206,7 @@ export function MovementList({ ledger, stacked = false }: MovementListProps) {
   if (ledger.state !== 'ready') {
     return (
       <EmptyState
-        title={ledger.state === 'blocked' ? 'Liste henüz gösterilemiyor' : 'Hareket yok'}
+        title="Hareket yok"
         description={ledger.note ?? NOTES.emptyLedger}
       />
     );

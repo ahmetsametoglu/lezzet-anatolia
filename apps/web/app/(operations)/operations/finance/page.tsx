@@ -13,17 +13,19 @@ import { ALL_ACCOUNTS, parseFinanceUrl, periodRange, resolveAccount } from './fi
 // Para (12) — **yönetici VEYA muhasebeci** (`requireFinance`). Tasarım §1: paranın tek mantıkla
 // izlendiği yer — para bir hesapta durur, hareketlerle girer/çıkar.
 //
-// ── LİSTENİN "TÜMÜ" HÂLİ BUGÜN OKUNAMIYOR ───────────────────────────────────
-// `MoneyMovementService.ledger(accountId, …)` hesap kimliğini ZORUNLU tutuyor ve alttaki sayfalama
-// `protected`; yani defterin hesap-üstü hâli için bir kapı yok. Ekran bunu boş listeymiş gibi
-// GÖSTERMİYOR — `LedgerView.state = 'blocked'` ayrı bir hâl ve sebebini yazıyor. Talep açık:
-// `docs/talep/arka-uc-para-defteri-hesap-ustu-okuma.md`. Kapı gelince değişecek tek yer bu dosya.
-// BEKLEYEN(12.8)
+// ── DEFTER HESAP-ÜSTÜ OKUNUR ────────────────────────────────────────────────
+// `ledger({ accountId? })` — hesap verilmezse defterin tamamı sayfalanır. Bir tur bu kapı yoktu ve
+// ekran "Tümü" hâlini boş listeymiş gibi göstermeyip ayrı bir durum (`blocked`) taşıyordu; kapı
+// gelince o hâl kendiliğinden ölü kaldı ve silindi.
 //
-// ── SAYAÇ DA AYNI SEBEPLE YOK ───────────────────────────────────────────────
-// "Eşleşmemiş satır" rozeti hesap-üstü tek bir sayı ister; sayfayı saymak listenin kuyruğunu es
-// geçerdi. `null` dönüyor ve rozet hiç basılmıyor — sıfır yazmak dolu bir kuyruğu "her şey mutabık"
-// diye okuturdu (CLAUDE.md §1).
+// **Transferin İKİ satırı da gelir** ve bu doğru: hareket iki hesabı birden etkiliyor, birini
+// seçip ötekini gizlemek keyfî olurdu. İkisi birbirini götürdüğü için "Tümü"nün toplamı da doğru
+// çıkıyor — para işletmeden çıkmadı.
+//
+// ── SAYAÇ SÜZGEÇTEN BAĞIMSIZ ────────────────────────────────────────────────
+// `unreconciledCount()` ham `money_movement`tan sayar, defter görünümünden değil: görünüm transferi
+// iki satır üretiyor ve eşleşmemiş bir transfer iki kez sayılırdı. Rozet "toplam ne kadar iş
+// bekliyor" diyor; süzgece bağlansaydı bir hesabı seçen operatör kuyruğun küçüldüğünü sanardı.
 
 interface FinancePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -53,17 +55,23 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
   const accountSelected = urlState.acct !== ALL_ACCOUNTS;
   const range = periodRange(urlState.period, new Date());
 
-  // Defter ve kuyruk yalnız hesap seçiliyken okunur; ikisi de hesaba bağlı kapılardan geçiyor.
-  const [ledgerPage, queue] = await Promise.all([
-    accountSelected
-      ? new MoneyMovementService(db).ledger(urlState.acct, {
-          limit: DEFAULT_PAGE_SIZE,
-          from: range?.from,
-          to: range?.to,
-          unreconciledOnly: urlState.scope === 'unmatched' || undefined,
-        })
-      : null,
+  // Defter HER HÂLDE okunur — `accountId` verilmezse defterin tamamı sayfalanır. Kuyruk ise hesaba
+  // bağlı kalır ve bu doğal: banka dosyası bir hesaba yüklenir.
+  const movements = new MoneyMovementService(db);
+  const [ledgerPage, queue, unmatchedCount] = await Promise.all([
+    movements.ledger({
+      // Hesap bir DARALTMA: `all` iken alan hiç geçilmez, süzgeç de kurulmaz.
+      accountId: accountSelected ? urlState.acct : undefined,
+      type: urlState.type === 'all' ? undefined : urlState.type,
+      limit: DEFAULT_PAGE_SIZE,
+      from: range?.from,
+      to: range?.to,
+      unreconciledOnly: urlState.scope === 'unmatched' || undefined,
+    }),
     accountSelected ? matchQueue(urlState.acct) : [],
+    // Sayaç SÜZGEÇTEN BAĞIMSIZ ve hesap-üstü: rozet "toplam ne kadar iş bekliyor" diyor. Süzgece
+    // bağlansaydı bir hesabı seçen operatör kuyruğun küçüldüğünü sanardı.
+    movements.unreconciledCount(),
   ]);
 
   // Sipariş referansları TEK turda: defter satırlarının ve önerilerin bağlı olduğu siparişler bir
@@ -80,29 +88,19 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
 
   const accountNames = new Map(accountViews.map((account) => [account.id, account.name] as const));
 
-  const ledger: LedgerView = ledgerPage
-    ? {
-        state: ledgerPage.rows.length > 0 ? 'ready' : 'empty',
-        rows: toMovementRows(ledgerPage.rows, accountNames, orderRefs),
-        nextCursor: ledgerPage.nextCursor ? JSON.stringify(ledgerPage.nextCursor) : null,
-        note: ledgerPage.rows.length > 0 ? null : NOTES.emptyLedger,
-      }
-    : {
-        // "Boş" DEĞİL "gösterilemiyor": kasa dolu olabilir, eksik olan okuma kapısı. İkisini aynı
-        // cümleyle karşılamak, dolu bir kasayı boş göstermek olurdu.
-        state: 'blocked',
-        rows: [],
-        nextCursor: null,
-        note:
-          'Bütün hesapların hareketleri tek listede henüz gösterilemiyor — defterin hesap-üstü okuması arka uçta bekliyor. Bir hesap seçerseniz o hesabın tamamı görünür.',
-      };
+  const ledger: LedgerView = {
+    state: ledgerPage.rows.length > 0 ? 'ready' : 'empty',
+    rows: toMovementRows(ledgerPage.rows, accountNames, orderRefs),
+    nextCursor: ledgerPage.nextCursor ? JSON.stringify(ledgerPage.nextCursor) : null,
+    note: ledgerPage.rows.length > 0 ? null : NOTES.emptyLedger,
+  };
 
   const data: FinanceData = {
     accounts: accountViews,
     totalCents: totalBalance(accountViews),
     ledger,
     queue: toMatchRows(queue, orderRefs),
-    unmatchedCount: null,
+    unmatchedCount,
   };
 
   return (

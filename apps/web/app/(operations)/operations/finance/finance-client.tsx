@@ -75,7 +75,7 @@ export function FinanceClient({ data, device, urlState, writableAccounts }: Fina
     // (`strength === 'strong'`), ekran ikinci bir soru sormuyor.
     onApprove: (row: MatchRowView) =>
       void runQueueAction(row, () => applyMatchAction(row.movementId, row.candidates[0]!.orderId)),
-    // Çoklu adayda seçim gerekiyor; seçim penceresi henüz yok — BEKLEYEN(12.8).
+    // "Seç" ve "Düzelt" aynı pencereyi açar: ikisi de "bu satır hangi siparişin parası" diye sorar.
     onPick: (row: MatchRowView) => setPicking(row),
     onClassify: (row: MatchRowView, category: string) =>
       void runQueueAction(row, () => classifyExpenseAction(row.movementId, category)),
