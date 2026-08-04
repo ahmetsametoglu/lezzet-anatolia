@@ -117,11 +117,14 @@
   içinde hamdan sorulur), olay sırası/sekans (saat bazlı huni), gün-aşırı tekil ziyaretçi
   (kimliksizlik kararının zaten tanımsız kıldığı sayı). Özetten çıkmayan sayı "analitik bozuk"
   değildir; sınır budur. **Ayrım (04.08, operasyonun sorusu üzerine):** "özet taşımaz" ≠ "rapor
-  imkânsız" — kaynağı başka olan bloklar KALICI SINIR DEĞİL, sıradaki kapının işidir: trafik
-  kaynağı → `analytics_session`'dan · aranıp bulunamayan listesi → ham defterden (`search.query`
-  yalnız orada) · çok bakılıp az alınan → ürün kırılımlı ayrı toplama (13.4'ün asıl işi) · günlük
-  tekil oturum → ayrı sayım (gün-AŞIRI tekil ise kalıcı sınırdır). Ekran bu blokları "veri
-  birikiyor" değil "kapısı sırada" diye anlatır.
+  imkânsız" — kaynağı başka olan bloklar KALICI SINIR DEĞİL, ayrı özetlerin işidir ve indiler
+  (0036): trafik kaynağı → `analytics_daily_source` · aranıp bulunamayan → `analytics_daily_search`
+  · çok bakılıp az alınan → `analytics_daily_product` (satılabilir-görüntülenme paydasıyla) ·
+  günlük tekil oturum → ayrı sayım (gün-AŞIRI tekil ise kalıcı sınırdır). Üçü ayrı tablo çünkü
+  ürünü/terimi `analytics_daily`'ye boyut olarak eklemek satır sayısını katalogla çarpardı.
+  **Arama özeti `search.query`'nin ikinci yaşama yeridir** (scrub'lanmış hâliyle) ve bu yüzden
+  günlük özetin "süresiz" kuralından AYRILIR: oturum künyesiyle birlikte ham defterin 25 ayına
+  tabidir (`purge_analytics_before`).
 - **Kapıları sırada olan bloklar İNDİ (04.08) ve üçü de AYRI ÖZET oldu, ham okuma değil.** Yukarıdaki
   ayrımda *"aranıp bulunamayan listesi ham defterden"* yazıyordu; kasıt "kaynağı `analytics_daily`
   değil" idi ve o kısım aynen geçerli. Ama okumayı hama bağlamadık, çünkü **ham okuma iki yerden

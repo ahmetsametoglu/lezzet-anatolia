@@ -34,6 +34,12 @@ kullanıcı kurye değildir. Böyle gözlemler artık buraya düşer:
   Not silinince ekleri de silinir.
 - Şerit her oturum başında kendine bakan `not-*` ve `<kendi-adı>-*` dosyalarına göz atar.
 
+## İstisna: `analitik-ortak-calisma.md` (kullanıcı kararı 04.08)
+
+"Dosya başına tek muhatap" kuralının ANALİTİĞE ÖZEL istisnası: üç şeridin işi iç içe olduğu için
+üçü de aynı dosyada diyalog kurar (kurallar dosyanın başında). Başka konuya emsal DEĞİLDİR —
+yeni bir ortak dosya ancak kullanıcı kararıyla açılır.
+
 ```markdown
 # Not: <kısa başlık>
 
