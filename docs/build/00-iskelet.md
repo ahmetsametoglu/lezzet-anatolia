@@ -39,7 +39,19 @@ Yok — ilk modül.
   - **Durum (03.08) — ÇEKİRDEK KURULDU (denetim ajanı, kullanıcı talimatıyla):** `pnpm ui:shot <yol>` (desktop+mobile+ops-karanlık görüntü + konsol dökümü → `.ui-shots/`, dev kapalıysa net mesaj) · `playwright.config.ts` (iki proje = fork'un iki yüzü; `webServer` bilerek yok — dev'i kullanıcı yönetir; artefakt yalnız düşüşte) · `pnpm test:e2e` (test kilidine bağlı) · iki DENEME dumanı (`e2e/customer/storefront` · `e2e/operations/panel` — kaba yapısal iddialar, örnek olsun diye) · **şerit disiplini `e2e/README.md`'de beş kural** (senaryo kaynağı tasarım+DOMAIN; çapraz yazım; §4b veri disiplini; görüntü=artefakt; iki proje).
   - **DUYURU — Kademe 2 senaryolarını DENETİM AJANI yazar (kullanıcı kararı 03.08, çapraz-yazım kararının yerine geçti):** denetmen hiçbir ekranın kodunu yazmadı ("bilen ama yazmayan"), kaynak yine tasarım+DOMAIN. **HENÜZ BAŞLAMADI** — kullanıcı işaret edince başlar. Şeritler `e2e/`ye senaryo AÇMAZ; senaryolara itiraz/katkı `e2e/README`'deki döngüyle. **Bakım ekran sahibinde** (ekranı değiştirip testi kızartan düzeltir). Sınırların tamamı `e2e/README.md`'de.
   - **Canlı doğrulama yapıldı (03.08):** `ui:shot` 5 görüntü + konsol dökümü; duman 8/8 yeşil (iki kurulum pürüzü giderildi: dev-yoklama 15 sn, mobil profil chromium'a sabit — gerçek WebKit Kademe 3).
-  - Kalan: Kademe 2 senaryo yazımı (denetim, kullanıcı işaretiyle) + müşteri OTP kod-yakalama kapısı.
+  - **Kademe 2 · Parti 1 İNDİ (04.08, denetim — kullanıcı işaretiyle):** iki müşteri salt-okur
+    yolculuğu (`katalog → ürün → sepete ekle → sepette görünür` · `fr/de/tr rota sözlüğü + İngilizce
+    iç yolun dış kelimeye yönlenişi`). Yol üstünde iki ortam kararı: gezinmeler `domcontentloaded`
+    sözleşmesine bağlandı (`load` dev'de asılı kalıyor — ölçüldü) ve **tam paket sakin pencere
+    ister** (şerit kaydedince aynı URL 0,3 sn → 60 sn+; `e2e/README` "Koşu gerçeği"). Her senaryo
+    en az bir koşuda yeşil doğrulandı; sıradaki partiler: operasyon salt-okur → yazan akışlar.
+  - **Kademe 2 · Parti 2 İNDİ (04.08):** üç operasyon salt-okur ilk bakış (sipariş kuyruğu ·
+    müşteriler · analitik ekranı) — iddialar İÇERİK esaslı (özet satırı/durum etiketi; operasyon
+    listeleri `<a>/<table>` değil, ölçüldü). "Rol yönlendirmesi" BİLİNÇLİ dışarıda: dev bypass tek
+    kimlik verir (DEV_ADMIN), gerçek giriş akışı ister → OTP kapısıyla birlikte. **Tam paket
+    20/20 yeşil (1,3 dk, sakin pencere)** — pencere kuralı doğrulandı.
+  - Kalan: Kademe 2 Parti 3 (müşteri yazan: yer/posta kodu · checkout taslağı) + Parti 4
+    (operasyon yazan: kuyruk→hazırlık · mal kabul) + müşteri OTP kod-yakalama kapısı.
   - **Kademe 1 — `pnpm ui:shot <yol>`:** ÇALIŞAN dev server'daki sayfayı açar (`reuseExistingServer` — build YOK), **desktop + mobile** (cihaz forku gereği ikisi de) ve operasyon yollarında **karanlık mod** görüntüsünü `.ui-shots/`a yazar; sayfanın konsol hatalarını da yanına döker. Amaç test değil, ajanlara GÖZ: ekran yapan şerit anlık çağırır, tasarım/fork denetimi görüntüden okunur. DB şartı yok.
   - **Kademe 2 — ~10 duman yolculuğu** (aynı kurulum, dev server'a karşı): müşteri (vitrin→ürün→sepet→checkout taslağı Stripe sınırına dek · misafir OTP · fr/de/tr rotaları · sipariş onayı) + operasyon (rol yönlendirmesi · kuyruk→hazırlık · mal kabul · para ekranı). **Veri disiplini entegrasyon testleriyle AYNI** (§4b): okuyan test seed'in deterministik satırları, yazan test damgalı veri + `purgeTestData`; **`db:refresh` hiçbir koşuda ön şart DEĞİL.** Koşu test kilidine girer (DB'ye vuruyor). Görüntüler assertion değil ARTEFAKT (piksel-diff yok — UI oynakken kırmızı gürültü üretir).
   - **Kademe 3 — ERTELENDİ (canlı öncesi):** production-build koşusu + geniş regresyon + piksel-diff kararı. Bugün kurulmaz.

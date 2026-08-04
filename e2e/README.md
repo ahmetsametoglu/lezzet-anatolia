@@ -23,7 +23,16 @@ Anlık ekran bakışı için test yazmaya gerek yok: `pnpm ui:shot <yol>`.
 5. **Her senaryo iki projede koşar** (desktop + mobile — cihaz forkunun iki yüzü). Mobilde
    kırılan bir akış, forkun mobil yarısının işidir; testi daraltma (`test.skip` yazma), ekranı düzelt.
 
-## Kademe 2 kapsamı — denetim yazacak (HENÜZ BAŞLAMADI, kullanıcı işaretiyle başlar)
+## Koşu gerçeği (04.08 ölçümü) — tam paket SAKİN pencerede koşulur
+
+Dev server üç şeritle paylaşılıyor ve bir şerit kaydettiği an rotalar yeniden derleniyor: aynı
+URL sakin anda 0,3 sn, patlama anında 60 sn+ (ölçüldü). Bu yüzden: *(1)* tüm gezinmeler
+`domcontentloaded` sözleşmesiyle yazılır (`NAV` sabiti — `load` olayı dev'de asılı kalabiliyor;
+hazır-olma güvencesi web-first iddialarda) · *(2)* tam paket, şeritler kod itmiyorken koşulur —
+yoğun saatte düşen testler koşudan koşuya DEĞİŞİR, bu senaryo hatası değil ortam imzasıdır ·
+*(3)* kalıcı çözüm Kademe 3'ün kendi build'ine karşı koşusudur.
+
+## Kademe 2 kapsamı — denetim yazıyor (Parti 1 İNDİ 04.08; küçük partilerle ilerler)
 
 Planlanan ~10 yolculuk (tasarım+DOMAIN'den; liste taslak, yazım sırasında daralabilir/gerekçeyle değişir):
 
@@ -32,8 +41,9 @@ Planlanan ~10 yolculuk (tasarım+DOMAIN'den; liste taslak, yazım sırasında da
   rota değişimi · sipariş onay ekranı (`/checkout/[reference]`) · sepette fiyat-artışı onayı.
 - **Operasyon:** rol yönlendirmesi · sipariş kuyruğu → hazırlık onayı · mal kabul · Kasa/para
   ekranı ilk bakış.
-- **Dışarıda kalanlar (bilinçli):** OTP akışı (kod-yakalama kapısı inene dek) · Stripe ödeme
-  tamamlama · piksel karşılaştırma · WebKit — hepsi Kademe 3 konusu.
+- **Dışarıda kalanlar (bilinçli):** OTP akışı (kod-yakalama kapısı inene dek) · **rol
+  yönlendirmesi** (dev bypass TEK kimlik verir — DEV_ADMIN; gerçek giriş akışı OTP kapısıyla
+  birlikte gelir) · Stripe ödeme tamamlama · piksel karşılaştırma · WebKit — Kademe 3 konusu.
 
 Denetmenin sınırı: senaryo YAZAR, ekran koduna DOKUNMAZ — duman kırmızıysa bulgu/not açar,
 düzeltme ekran sahibinin. Deneme dumanlarındaki kaba iddialar Kademe 2'de gerçek yolculuklara

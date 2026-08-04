@@ -20,6 +20,10 @@ export default defineConfig({
   outputDir: './.test-results/e2e',
   fullyParallel: false, // paylaşılan DB + paylaşılan dev server — sıra, yarıştan ucuz
   retries: 0, // deneme evresi: flake gizlenmesin, görülsün (00.9 Kademe 3'te yeniden bakılır)
+  // Dev server paylaşımlı ve sıcaklığı öngörülemez: üç şerit kod ittikçe rotalar yeniden derlenir,
+  // soğuk derleme 30 sn'yi aşabilir (ölçüldü, 04.08). 60 sn bunu karşılar; gerçek bir asılmayı
+  // yine yakalar. Kademe 3'ün build'e karşı koşusunda bu pay geri daraltılır.
+  timeout: 60_000,
   reporter: [['list'], ['html', { outputFolder: '.test-results/e2e-report', open: 'never' }]],
   use: {
     baseURL: process.env.E2E_BASE ?? 'http://localhost:3000',
