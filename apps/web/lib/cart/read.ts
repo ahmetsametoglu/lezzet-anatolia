@@ -13,6 +13,7 @@ import type { StorefrontPackageDetail } from '@/lib/storefront/storefront-types'
 import {
   FREE_SHIPPING_THRESHOLD_DEFAULT,
   FREE_SHIPPING_THRESHOLD_KEY,
+  MIN_BASKET_DEFAULT,
   MIN_BASKET_KEY,
   SHIPPING_FEE_DEFAULT,
   SHIPPING_FEE_KEY,
@@ -80,7 +81,7 @@ export async function getCartView(
   // ve öyle bir ayar hiç yoktu — okuma sessizce varsayılana düşüyor, checkout ise gerçek ayarı
   // okuyordu. İkisi tesadüfen aynı değerde olduğu için görünmüyordu (29.07).
   const [minBasketCents, freeShippingCents, shippingTariffCents] = await Promise.all([
-    settings.getNumber(MIN_BASKET_KEY, 0),
+    settings.getNumber(MIN_BASKET_KEY, MIN_BASKET_DEFAULT),
     settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT),
     // Tarife de aynı sebeple ortak anahtardan: kargo grubunun blokunda yazdığımız sayı, checkout'un
     // keseceği sayının ta kendisi olmalı.

@@ -13,6 +13,7 @@ import type { DeliveryType, PaymentMethod } from '@lezzet/types';
 import {
   FREE_SHIPPING_THRESHOLD_DEFAULT,
   FREE_SHIPPING_THRESHOLD_KEY,
+  MIN_BASKET_DEFAULT,
   MIN_BASKET_KEY,
   SHIPPING_FEE_DEFAULT,
   SHIPPING_FEE_KEY,
@@ -69,11 +70,12 @@ export async function resolveCheckoutPayment(input: CheckoutOptionsInput): Promi
 
   const [customer, codMaxCents, cashLegalLimitCents, freeThresholdCents, feeCents, minBasketCents] = await Promise.all([
     new UserProfileService(db).getById(input.customerId),
-    settings.getNumber('cod_max_cents', 30_000, scope),
+    // Kapıda ödeme tavanı 500 € (kullanıcı kararı 04.08) — SSS ve satış koşulları bu sayıyı yazıyor.
+    settings.getNumber('cod_max_cents', 50_000, scope),
     settings.getNumber('cash_legal_limit_cents', 100_000, scope),
     settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT, scope),
     settings.getNumber(SHIPPING_FEE_KEY, SHIPPING_FEE_DEFAULT, scope),
-    settings.getNumber(MIN_BASKET_KEY, 0, scope),
+    settings.getNumber(MIN_BASKET_KEY, MIN_BASKET_DEFAULT, scope),
   ]);
   if (!customer) throw new Error(`checkout: müşteri bulunamadı (${input.customerId})`);
 

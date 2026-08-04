@@ -14,16 +14,16 @@
         "id": "urunler",
         "heading": "Ürünler ve bilgiler",
         "body": [
-          "Ürünlerimiz dondurulmuş gıdadır. Her ürünün sayfasında içindekiler, alerjen bilgisi ve net miktar yer alır.",
+          "Sattığımız ürünler dondurulmuş ve raf ömürlü gıdalardır. Ürünleri kendimiz üretmiyor, seçtiğimiz üreticilerden tedarik ediyoruz. Her ürünün sayfasında içindekiler, alerjen bilgisi ve net miktar yer alır; bu bilgiler ürünü üreten firmanın beyanına dayanır.",
           "Ürün fotoğrafları tanıtım amaçlıdır; sunum ve görünüm ürünler arasında farklılık gösterebilir. Bağlayıcı olan, ürün sayfasındaki yazılı bilgidir.",
-          "Bazı ürünler yapıları gereği yalnız teslimat bölgemiz içinde satılabilir. Bu ürünler katalogda işaretlenir ve bölge dışı bir adres seçildiğinde sipariş edilemez."
+          "Dondurulmuş ürünler yalnız teslimat bölgemiz içinde satılabilir: soğuk zinciri kargo koşullarında güvenle koruyamadığımız için bu ürünler kargoya çıkmaz. Katalogda işaretlenirler ve bölge dışı bir adres seçildiğinde sipariş edilemezler."
         ]
       },
       {
         "id": "siparis",
         "heading": "Siparişin kurulması",
         "body": [
-          "Sipariş, sepetinizi onaylayıp ödeme adımını tamamladığınızda kurulur. Onay ekranını gördüğünüz ve onay e-postanız ulaştığı anda sipariş bizim tarafımızdan da kabul edilmiş sayılır.",
+          "Sipariş, sepetinizi onaylayıp ödeme adımını tamamladığınızda kurulur — kapıda ödemeyi seçtiyseniz bu adımda ödeme yöntemini onaylamanız yeterlidir. Onay ekranını gördüğünüz ve onay e-postanız ulaştığı anda sipariş bizim tarafımızdan da kabul edilmiş sayılır.",
           "Fiyatlar sepette gösterildiği anda sabitlenir. Sipariş verdikten sonra katalogdaki fiyat değişse de siparişinizin tutarı değişmez.",
           "Stokta olmadığı sonradan anlaşılan bir kalem varsa siparişiniz iptal edilmez: eksik kalem çıkarılır, bedeli tahsil edilmez ya da iade edilir ve durum size bildirilir."
         ]
@@ -42,17 +42,19 @@
         "heading": "Ödeme",
         "body": [
           "Kartla ödeme, güvenli bir ödeme sağlayıcısı üzerinden alınır. Kart bilgileriniz bize hiçbir aşamada ulaşmaz ve tarafımızca saklanmaz.",
-          "Teslimat bölgemiz içinde kapıda ödeme seçilebilir. Kapıda ödemede tahsil edilecek tutar, teslim edilen kalemlerin tutarıdır — eksik çıkan kalem baştan düşülür.",
-          "Ödeme tamamlanmadan sipariş hazırlığa alınmaz."
+          "Teslimat bölgemiz içinde, 500 €'ya kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla. Kapıda ödemede tahsil edilecek tutar, teslim edilen kalemlerin tutarıdır; eksik çıkan kalem baştan düşülür.",
+          "Havale ve çekle ödeme yalnız onaylı işletme hesaplarına açıktır; ödeme koşullarınız hesabınıza tanımlanır.",
+          "Peşin ödemeli siparişler, ödeme tamamlanmadan hazırlığa alınmaz. Kapıda ödemede tahsilat teslimat anında yapılır ve sipariş onaylandığı anda hazırlığa girer."
         ]
       },
       {
         "id": "teslimat",
         "heading": "Teslimat",
         "body": [
-          "Bölge içi adreslere kendi soğuk zincir aracımızla, bölge dışına soğuk zincir kargo paketiyle teslim ediyoruz. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
+          "Bölge içi adreslere kendi soğuk zincir aracımızla teslim ediyoruz; bölge dışına yalnız raf ömürlü ürünlerimizi normal kargoyla gönderiyoruz. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
+          "Asgari sepet tutarı 40 €'dur ve her iki gönderim yolunda da geçerlidir. Kargo ücreti 7,90 €'dur ve 60 € üzeri siparişlerde alınmaz; paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, Almanya'da bir gün fazlasında teslim edilir.",
           "Belirtilen teslimat günleri tahminidir. Hava koşulları, trafik ya da kargo firmasından kaynaklanan gecikmeler teslimatı öteleyebilir; bu durumda sizi bilgilendiririz.",
-          "Teslimat sırasında adreste bulunulmaması nedeniyle teslim edilemeyen soğuk zincir ürünlerin yeniden gönderimi mümkün olmayabilir. Ayrıntılar teslimat ve iade sayfasındadır."
+          "Adreste bulunulmaması nedeniyle teslim edilemeyen siparişlerde teslimatı bir kez daha, ücretsiz deneriz. İkinci denemede de teslim edemezsek dondurulmuş ürünler satılamaz hâle geldiği için bedel iade edilmez. Ayrıntılar teslimat ve iade sayfasındadır."
         ]
       },
       {
@@ -82,8 +84,8 @@
         "id": "uyusmazlik",
         "heading": "Uyuşmazlık ve uygulanacak hukuk",
         "body": [
-          "Bir sorun yaşarsanız önce bize yazmanızı rica ederiz; talepler \"Taleplerim\" bölümünden açılabilir ve takip edilebilir.",
-          "Çözülemeyen uyuşmazlıklarda tüketici, ücretsiz olarak bir tüketici arabulucusuna başvurabilir. Bu koşullar Fransız hukukuna tabidir."
+          "Bir sorun yaşarsanız bize yazın; talepler \"Taleplerim\" bölümünden açılabilir ve takip edilebilir.",
+          "Her türlü sorununuzu memnuniyetle çözeriz ve bir talebi çözüme ulaşmadan kapatmayız. Bu koşullar Fransız hukukuna tabidir."
         ]
       }
     ],
@@ -108,16 +110,16 @@
         "id": "urunler",
         "heading": "Produits et informations",
         "body": [
-          "Nos produits sont des denrées alimentaires surgelées. Les ingrédients, les allergènes et la quantité nette figurent sur la fiche de chaque produit.",
+          "Les produits que nous vendons sont des denrées alimentaires surgelées ou de longue conservation. Nous ne les fabriquons pas nous-mêmes : nous les achetons auprès de producteurs que nous sélectionnons. Les ingrédients, les allergènes et la quantité nette figurent sur la fiche de chaque produit ; ces informations proviennent de la déclaration du fabricant.",
           "Les photographies sont fournies à titre d'illustration ; la présentation et l'aspect peuvent varier d'un produit à l'autre. Seules les informations écrites sur la fiche produit sont contractuelles.",
-          "Certains produits ne peuvent, par nature, être vendus qu'à l'intérieur de notre zone de livraison. Ils sont signalés dans le catalogue et ne peuvent pas être commandés si une adresse hors zone est sélectionnée."
+          "Les produits surgelés ne peuvent être vendus qu'à l'intérieur de notre zone de livraison : ne pouvant pas garantir la chaîne du froid dans les conditions d'expédition, nous ne les envoyons pas en colis. Ils sont signalés dans le catalogue et ne peuvent pas être commandés si une adresse hors zone est sélectionnée."
         ]
       },
       {
         "id": "siparis",
         "heading": "Formation de la commande",
         "body": [
-          "La commande est formée lorsque vous validez votre panier et finalisez l'étape de paiement. Dès l'affichage de la page de confirmation et la réception de votre e-mail de confirmation, la commande est également acceptée par nos soins.",
+          "La commande est formée lorsque vous validez votre panier et finalisez l'étape de paiement — si vous avez choisi le paiement à la livraison, il vous suffit de confirmer le moyen de paiement à cette étape. Dès l'affichage de la page de confirmation et la réception de votre e-mail de confirmation, la commande est également acceptée par nos soins.",
           "Les prix sont figés au moment où ils s'affichent dans le panier. Même si le prix du catalogue change après votre commande, le montant de votre commande reste inchangé.",
           "Si un article s'avère indisponible après coup, votre commande n'est pas annulée : l'article manquant est retiré, son montant n'est pas encaissé ou vous est remboursé, et vous en êtes informé."
         ]
@@ -136,17 +138,19 @@
         "heading": "Paiement",
         "body": [
           "Le paiement par carte est encaissé via un prestataire de paiement sécurisé. Vos données de carte ne nous parviennent à aucun moment et ne sont pas conservées par nos soins.",
-          "Le paiement à la livraison est possible dans notre zone de livraison. Dans ce cas, le montant encaissé correspond aux articles effectivement livrés : un article manquant est déduit d'emblée.",
-          "Aucune commande n'est mise en préparation avant la finalisation du paiement."
+          "Le paiement à la livraison est possible dans notre zone de livraison, jusqu'à 500 € de commande — en espèces ou par carte. Dans ce cas, le montant encaissé correspond aux articles effectivement livrés : un article manquant est déduit d'emblée.",
+          "Le virement et le chèque sont réservés aux comptes professionnels validés ; vos conditions de règlement sont définies sur votre compte.",
+          "Les commandes payées d'avance ne sont pas mises en préparation avant la finalisation du paiement. En paiement à la livraison, l'encaissement a lieu au moment de la livraison et la commande entre en préparation dès sa validation."
         ]
       },
       {
         "id": "teslimat",
         "heading": "Livraison",
         "body": [
-          "Nous livrons les adresses de la zone avec notre propre véhicule frigorifique et les adresses hors zone en colis frigorifique. Le jour et les options de livraison sont affichés au moment de la commande selon le code postal de votre adresse.",
+          "Nous livrons les adresses de la zone avec notre propre véhicule frigorifique ; hors zone, nous n'expédions que nos produits de longue conservation, en colis standard. Le jour et les options de livraison sont affichés au moment de la commande selon le code postal de votre adresse.",
+          "Le montant minimum de commande est de 40 € et s'applique aux deux modes d'envoi. Les frais d'expédition sont de 7,90 € et sont offerts au-delà de 60 € ; une fois le colis préparé, comptez 2 à 4 jours ouvrés en France et un jour de plus pour l'Allemagne.",
           "Les jours de livraison indiqués sont estimatifs. Les conditions météorologiques, la circulation ou un retard du transporteur peuvent décaler la livraison ; le cas échéant, nous vous en informons.",
-          "Si la livraison ne peut être effectuée parce que personne n'est présent à l'adresse, une réexpédition des produits surgelés peut ne pas être possible. Les détails figurent sur la page livraison et retours."
+          "Si la livraison ne peut être effectuée parce que personne n'est présent à l'adresse, nous présentons la commande une seconde fois, sans frais. Si ce second passage échoue également, les produits surgelés ne sont plus commercialisables et le montant n'est pas remboursé. Les détails figurent sur la page livraison et retours."
         ]
       },
       {
@@ -176,8 +180,8 @@
         "id": "uyusmazlik",
         "heading": "Litiges et droit applicable",
         "body": [
-          "En cas de problème, nous vous invitons à nous écrire en premier lieu ; les demandes peuvent être ouvertes et suivies depuis la rubrique « Mes demandes ».",
-          "En l'absence de solution, le consommateur peut recourir gratuitement à un médiateur de la consommation. Les présentes conditions sont soumises au droit français."
+          "En cas de problème, écrivez-nous ; les demandes peuvent être ouvertes et suivies depuis la rubrique « Mes demandes ».",
+          "Nous résolvons volontiers tout problème que vous rencontrez et ne clôturons pas une demande sans solution. Les présentes conditions sont soumises au droit français."
         ]
       }
     ],
@@ -202,16 +206,16 @@
         "id": "urunler",
         "heading": "Produkte und Angaben",
         "body": [
-          "Unsere Produkte sind tiefgekühlte Lebensmittel. Zutaten, Allergene und Nettomenge stehen auf der Seite jedes Produkts.",
+          "Die von uns verkauften Produkte sind tiefgekühlte und lagerfähige Lebensmittel. Wir stellen sie nicht selbst her, sondern beziehen sie von ausgewählten Herstellern. Zutaten, Allergene und Nettomenge stehen auf der Seite jedes Produkts; diese Angaben stammen aus der Deklaration des Herstellers.",
           "Produktfotos dienen der Veranschaulichung; Darstellung und Aussehen können von Produkt zu Produkt abweichen. Verbindlich sind allein die schriftlichen Angaben auf der Produktseite.",
-          "Einige Produkte können ihrer Beschaffenheit nach nur innerhalb unseres Liefergebiets verkauft werden. Sie sind im Katalog gekennzeichnet und können bei Auswahl einer Adresse außerhalb des Gebiets nicht bestellt werden."
+          "Tiefgekühlte Produkte können nur innerhalb unseres Liefergebiets verkauft werden: Da wir die Kühlkette unter Versandbedingungen nicht sicher gewährleisten können, versenden wir sie nicht als Paket. Sie sind im Katalog gekennzeichnet und können bei Auswahl einer Adresse außerhalb des Gebiets nicht bestellt werden."
         ]
       },
       {
         "id": "siparis",
         "heading": "Zustandekommen der Bestellung",
         "body": [
-          "Die Bestellung kommt zustande, wenn Sie Ihren Warenkorb bestätigen und den Zahlungsschritt abschließen. Mit der Bestätigungsseite und der Bestätigungs-E-Mail gilt die Bestellung auch von unserer Seite als angenommen.",
+          "Die Bestellung kommt zustande, wenn Sie Ihren Warenkorb bestätigen und den Zahlungsschritt abschließen — bei Zahlung bei Lieferung genügt es, in diesem Schritt das Zahlungsmittel zu bestätigen. Mit der Bestätigungsseite und der Bestätigungs-E-Mail gilt die Bestellung auch von unserer Seite als angenommen.",
           "Die Preise werden in dem Moment festgeschrieben, in dem sie im Warenkorb angezeigt werden. Ändert sich der Katalogpreis nach Ihrer Bestellung, bleibt der Betrag Ihrer Bestellung unverändert.",
           "Stellt sich nachträglich heraus, dass ein Artikel nicht verfügbar ist, wird Ihre Bestellung nicht storniert: Der fehlende Artikel wird entfernt, sein Betrag nicht eingezogen oder erstattet, und Sie werden informiert."
         ]
@@ -230,17 +234,19 @@
         "heading": "Zahlung",
         "body": [
           "Kartenzahlungen werden über einen sicheren Zahlungsdienstleister eingezogen. Ihre Kartendaten erreichen uns zu keinem Zeitpunkt und werden von uns nicht gespeichert.",
-          "Innerhalb unseres Liefergebiets ist Zahlung bei Lieferung möglich. Dabei entspricht der eingezogene Betrag den tatsächlich gelieferten Artikeln — ein fehlender Artikel wird von vornherein abgezogen.",
-          "Vor Abschluss der Zahlung wird keine Bestellung in Vorbereitung genommen."
+          "Innerhalb unseres Liefergebiets ist Zahlung bei Lieferung bis zu einem Bestellwert von 500 € möglich — bar oder mit Karte. Dabei entspricht der eingezogene Betrag den tatsächlich gelieferten Artikeln: Ein fehlender Artikel wird von vornherein abgezogen.",
+          "Überweisung und Scheck stehen ausschließlich bestätigten Geschäftskonten offen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt.",
+          "Im Voraus bezahlte Bestellungen werden erst nach Abschluss der Zahlung in Vorbereitung genommen. Bei Zahlung bei Lieferung erfolgt der Einzug bei der Übergabe, und die Bestellung geht unmittelbar nach ihrer Bestätigung in Vorbereitung."
         ]
       },
       {
         "id": "teslimat",
         "heading": "Lieferung",
         "body": [
-          "Adressen im Liefergebiet beliefern wir mit unserem eigenen Kühlfahrzeug, Adressen außerhalb per Kühlversandpaket. Liefertag und Lieferoptionen werden bei der Bestellung anhand der Postleitzahl Ihrer Adresse angezeigt.",
+          "Adressen im Liefergebiet beliefern wir mit unserem eigenen Kühlfahrzeug; außerhalb des Gebiets versenden wir nur unsere lagerfähigen Produkte als normales Paket. Liefertag und Lieferoptionen werden bei der Bestellung anhand der Postleitzahl Ihrer Adresse angezeigt.",
+          "Der Mindestbestellwert beträgt 40 € und gilt für beide Versandwege. Die Versandkosten betragen 7,90 € und entfallen ab 60 €; nach der Vorbereitung des Pakets rechnen Sie mit 2 bis 4 Werktagen in Frankreich und einem Tag mehr in Deutschland.",
           "Die angegebenen Liefertage sind Schätzungen. Wetter, Verkehr oder Verzögerungen des Versanddienstleisters können die Lieferung verschieben; in diesem Fall informieren wir Sie.",
-          "Kann nicht zugestellt werden, weil an der Adresse niemand angetroffen wird, ist ein erneuter Versand tiefgekühlter Ware unter Umständen nicht möglich. Einzelheiten finden Sie auf der Seite Lieferung und Rücksendung."
+          "Kann nicht zugestellt werden, weil an der Adresse niemand angetroffen wird, versuchen wir die Zustellung ein zweites Mal kostenfrei. Scheitert auch dieser zweite Versuch, sind die tiefgekühlten Produkte nicht mehr verkehrsfähig und der Betrag wird nicht erstattet. Einzelheiten finden Sie auf der Seite Lieferung und Rücksendung."
         ]
       },
       {
@@ -270,8 +276,8 @@
         "id": "uyusmazlik",
         "heading": "Streitigkeiten und anwendbares Recht",
         "body": [
-          "Bei Problemen bitten wir Sie, sich zuerst an uns zu wenden; Anfragen können unter „Meine Anfragen“ eröffnet und verfolgt werden.",
-          "Kommt keine Lösung zustande, kann der Verbraucher kostenlos eine Verbraucherschlichtungsstelle anrufen. Diese Bedingungen unterliegen französischem Recht."
+          "Bei Problemen schreiben Sie uns; Anfragen können unter „Meine Anfragen“ eröffnet und verfolgt werden.",
+          "Wir lösen jedes Problem gerne und schließen keine Anfrage ohne Lösung. Diese Bedingungen unterliegen französischem Recht."
         ]
       }
     ],

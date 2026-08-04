@@ -38,7 +38,7 @@
         "id": "ne-kadar",
         "heading": "Ne kadar saklıyoruz",
         "body": [
-          "Hesap verileriniz hesabınız açık olduğu sürece saklanır. Hesabınızı sildirdiğinizde kimlik ve iletişim verileriniz silinir.",
+          "Hesap verileriniz hesabınız açık olduğu sürece saklanır. Hesabınızın silinmesini lezzetanatolie@gmail.com adresine yazarak isteyebilirsiniz; talebiniz en geç bir ay içinde karşılanır ve kimlik ile iletişim verileriniz silinir.",
           "Sipariş ve fatura kayıtları, Fransız ticaret ve vergi mevzuatının gerektirdiği süre boyunca saklanır; bu kayıtlar hesap silinse de yasal süre dolana kadar korunur.",
           "Teknik hata kayıtlarımızda kişisel veri tutulmaz. Bir arızayı bulmak için gereken durumlarda e-posta ve telefon gibi bilgiler yalnız maskelenmiş biçimde yazılır (örneğin a***@example.com); tek amaç hangi kaydın konuşulduğunu ayırt etmektir, kim olduğunu söylemek değil."
         ]
@@ -77,6 +77,7 @@
         "heading": "Çerezler ve tarayıcı kaydı",
         "body": [
           "Reklam veya takip çerezi kullanmıyoruz. Tarayıcınızda tutulanlar sitenin çalışması için gerekli olanlardır: oturumunuz, sepetiniz ve seçtiğiniz posta kodu.",
+          "Sayfaların ne sıklıkla görüntülendiğini ölçüyoruz, ama bu ölçüm çerezsizdir ve kimliğe bağlanamaz: ziyaretler her gün değişen, ertesi gün atılan bir anahtarla sayılır ve kişiye ait hiçbir kayıt tutulmaz.",
           "Sepetiniz hesap açmadan da korunur; giriş yaptığınızda tarayıcıdaki sepetiniz hesabınıza devredilir ve tarayıcıdan silinir."
         ]
       }
@@ -126,7 +127,7 @@
         "id": "ne-kadar",
         "heading": "Combien de temps nous les conservons",
         "body": [
-          "Les données de votre compte sont conservées tant que votre compte est actif. À la suppression du compte, vos données d'identité et de contact sont effacées.",
+          "Les données de votre compte sont conservées tant que votre compte est actif. Vous pouvez demander la suppression de votre compte en écrivant à lezzetanatolie@gmail.com ; votre demande est traitée dans un délai maximum d'un mois et vos données d'identité et de contact sont alors effacées.",
           "Les enregistrements de commande et de facturation sont conservés pendant la durée exigée par la réglementation commerciale et fiscale française ; ils sont préservés jusqu'à l'expiration de ce délai, même après la suppression du compte.",
           "Nos journaux techniques ne contiennent pas de données personnelles. Lorsqu'un diagnostic l'exige, des informations telles que l'e-mail ou le téléphone n'y figurent que sous forme masquée (par exemple a***@example.com) ; l'objectif est uniquement de distinguer de quel enregistrement il s'agit, pas de savoir qui c'est."
         ]
@@ -165,6 +166,7 @@
         "heading": "Cookies et stockage navigateur",
         "body": [
           "Nous n'utilisons ni cookies publicitaires ni traceurs. Ce qui est conservé dans votre navigateur est nécessaire au fonctionnement du site : votre session, votre panier et le code postal que vous avez choisi.",
+          "Nous mesurons la fréquentation des pages, mais cette mesure est sans cookie et ne peut être rattachée à une personne : les visites sont comptées à l'aide d'une clé qui change chaque jour et qui est détruite le lendemain, et aucun enregistrement nominatif n'est conservé.",
           "Votre panier est conservé même sans compte ; à la connexion, le panier de votre navigateur est transféré vers votre compte puis supprimé du navigateur."
         ]
       }
@@ -214,7 +216,7 @@
         "id": "ne-kadar",
         "heading": "Wie lange wir sie speichern",
         "body": [
-          "Ihre Kontodaten werden gespeichert, solange Ihr Konto besteht. Bei Löschung des Kontos werden Ihre Identitäts- und Kontaktdaten gelöscht.",
+          "Ihre Kontodaten werden gespeichert, solange Ihr Konto besteht. Die Löschung Ihres Kontos können Sie per E-Mail an lezzetanatolie@gmail.com verlangen; Ihre Anfrage wird innerhalb von höchstens einem Monat bearbeitet, und Ihre Identitäts- und Kontaktdaten werden gelöscht.",
           "Bestell- und Rechnungsunterlagen werden für die nach französischem Handels- und Steuerrecht vorgeschriebene Dauer aufbewahrt; sie bleiben bis zum Ablauf dieser Frist erhalten, auch wenn das Konto gelöscht wurde.",
           "Unsere technischen Protokolle enthalten keine personenbezogenen Daten. Wo es zur Fehlersuche erforderlich ist, erscheinen Angaben wie E-Mail oder Telefon dort nur maskiert (zum Beispiel a***@example.com); der Zweck ist allein, zu unterscheiden, um welchen Datensatz es geht, nicht, wer dahintersteht."
         ]
@@ -253,6 +255,7 @@
         "heading": "Cookies und Browser-Speicher",
         "body": [
           "Wir verwenden weder Werbe- noch Tracking-Cookies. Was in Ihrem Browser gespeichert wird, ist für den Betrieb der Website erforderlich: Ihre Sitzung, Ihr Warenkorb und die von Ihnen gewählte Postleitzahl.",
+          "Wir messen, wie häufig Seiten aufgerufen werden, doch diese Messung kommt ohne Cookies aus und lässt sich keiner Person zuordnen: Besuche werden mit einem Schlüssel gezählt, der täglich wechselt und am Folgetag verworfen wird; ein personenbezogener Eintrag entsteht dabei nicht.",
           "Ihr Warenkorb bleibt auch ohne Konto erhalten; bei der Anmeldung wird der Warenkorb aus dem Browser in Ihr Konto übernommen und aus dem Browser gelöscht."
         ]
       }

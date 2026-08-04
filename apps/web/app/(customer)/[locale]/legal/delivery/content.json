@@ -11,19 +11,27 @@
         ]
       },
       {
+        "id": "asgari",
+        "heading": "Asgari sepet tutarı",
+        "body": [
+          "Asgari sepet tutarı 40 €'dur ve her iki gönderim yolunda da geçerlidir. Sepetiniz bu tutarın altındaysa ne kadar kaldığı sepette yazar."
+        ]
+      },
+      {
         "id": "kargo",
         "heading": "Kargo ile gönderim",
         "body": [
-          "Bölge dışındaki adreslere Fransa ve Almanya genelinde soğuk zincir kargo paketiyle gönderim yapıyoruz. Kargo ücreti sepette, siparişi tamamlamadan önce görünür; eşik üzeri siparişlerde ücretsizdir.",
-          "Bazı ürünler yapıları gereği yalnız bölge içinde teslim edilebilir. Bu ürünler katalogda ve ürün sayfasında açıkça işaretlenir; kargo adresi seçtiğinizde sepetten çıkarılmaları gerekir."
+          "Bölge dışındaki adreslere yalnız raf ömürlü ürünlerimizi gönderiyoruz — Fransa ve Almanya geneline. Dondurulmuş ürünler kargoya çıkmaz: soğuk zinciri kargo koşullarında güvenle koruyamayacağımız için bu ürünleri yalnız kendi aracımızla, bölge içinde teslim ediyoruz.",
+          "Kargo ücreti 7,90 €'dur ve 60 € üzeri siparişlerde alınmaz. Ücret sepette, siparişi tamamlamadan önce görünür. Paketiniz hazırlandıktan sonra Fransa içinde 2-4 iş gününde, Almanya'da bir gün fazlasında elinizde olur.",
+          "Hangi ürünün kargoya çıkabildiğini katalogda ve ürün sayfasında görürsünüz. Bölge dışı bir adres seçtiğinizde, yalnız bölge içinde teslim edilebilen kalemlerin sepetten çıkarılması gerekir."
         ]
       },
       {
         "id": "soguk-zincir",
         "heading": "Soğuk zincir",
         "body": [
-          "Ürünlerimiz şoklanmış halde hazırlanır ve size ulaşana kadar soğuk zincir bozulmaz. Teslim aldığınızda doğrudan dondurucunuza koymanız yeterlidir.",
-          "Kargo paketlerinde yalıtımlı kutu ve soğutucu kullanılır. Paketin size ulaştığı anda ürünler kısmen yumuşamış olabilir; bu normaldir ve ürünün kalitesini etkilemez. Ancak paket sızdırmış, yırtılmış ya da içindekiler tamamen çözülmüş geldiyse dondurucuya koymayın ve bize aynı gün yazın."
+          "Dondurulmuş ürünlerimiz üreticisinden şoklanmış olarak gelir; depomuzda da aracımızda da soğuk zincir bozulmaz. Teslim aldığınızda doğrudan dondurucunuza koymanız yeterlidir.",
+          "Bu ürünleri kendimiz teslim ettiğimiz için yolda geçen süre kısadır. Yine de teslim anında ürünlerin kenarları hafif yumuşamış olabilir; bu normaldir ve kaliteyi etkilemez. Ürünler tamamen çözülmüş geldiyse dondurucuya koymayın ve aşağıdaki gibi bize bildirin."
         ]
       },
       {
@@ -35,9 +43,10 @@
         ],
         "bullets": [
           "Eksik gelen kalem: kutunuzdan çıkmayan ürünün bedeli otomatik olarak iade edilir, ayrıca talep açmanız gerekmez.",
-          "Hasarlı ya da çözülmüş gelen ürün: teslimattan sonraki 24 saat içinde fotoğrafla bildirin.",
+          "Hasarlı ya da çözülmüş gelen ürün: teslimattan sonraki 48 saat içinde fotoğrafla bildirin.",
           "Yanlış gönderilen ürün: doğrusunu gönderir ya da bedelini iade ederiz.",
-          "Teslim edilemeyen sipariş: bizden kaynaklı bir sebeple teslim edilemediyse tahsilat yapılmaz, yapılmışsa iade edilir."
+          "Teslim edilemeyen sipariş: bizden kaynaklı bir sebeple teslim edilemediyse tahsilat yapılmaz, yapılmışsa iade edilir.",
+          "Adreste bulunamadığımızda: teslimatı bir kez daha, ücretsiz deneriz. İkinci denemede de teslim edemezsek dondurulmuş ürünler satılamaz hâle geldiği için bedel iade edilmez."
         ]
       },
       {
@@ -68,19 +77,27 @@
         ]
       },
       {
+        "id": "asgari",
+        "heading": "Montant minimum de commande",
+        "body": [
+          "Le montant minimum de commande est de 40 €. Il s'applique aux deux modes d'envoi. Si votre panier est en dessous, le montant restant est indiqué dans le panier."
+        ]
+      },
+      {
         "id": "kargo",
         "heading": "Expédition",
         "body": [
-          "Pour les adresses hors zone, nous expédions dans toute la France et en Allemagne en colis frigorifique. Les frais d'expédition sont affichés dans le panier avant la validation de la commande ; ils sont offerts au-delà d'un certain montant.",
-          "Certains produits ne peuvent, par nature, être livrés qu'à l'intérieur de la zone. Ils sont clairement signalés dans le catalogue et sur la fiche produit ; si vous choisissez une adresse d'expédition, ils doivent être retirés du panier."
+          "Hors de notre zone, nous n'expédions que nos produits de longue conservation, dans toute la France et en Allemagne. Les produits surgelés ne partent pas en colis : ne pouvant pas garantir la chaîne du froid dans les conditions d'expédition, nous ne les livrons qu'avec notre propre véhicule, à l'intérieur de la zone.",
+          "Les frais d'expédition sont de 7,90 € et ils sont offerts au-delà de 60 € de commande. Le montant est affiché dans le panier avant la validation. Une fois votre colis préparé, comptez 2 à 4 jours ouvrés en France, un jour de plus pour l'Allemagne.",
+          "Vous voyez dans le catalogue et sur chaque fiche produit ce qui peut être expédié. Si vous choisissez une adresse hors zone, les articles livrables uniquement dans la zone doivent être retirés du panier."
         ]
       },
       {
         "id": "soguk-zincir",
         "heading": "Chaîne du froid",
         "body": [
-          "Nos produits sont surgelés à la préparation et la chaîne du froid n'est pas rompue jusqu'à votre porte. À la réception, il vous suffit de les placer directement au congélateur.",
-          "Les colis sont expédiés en caisse isotherme avec des accumulateurs de froid. À l'arrivée, les produits peuvent être légèrement ramollis : c'est normal et sans effet sur la qualité. En revanche, si le colis est percé, déchiré ou si le contenu est entièrement décongelé, ne le congelez pas et écrivez-nous le jour même."
+          "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant ; la chaîne du froid n'est rompue ni dans notre entrepôt ni dans notre véhicule. À la réception, il vous suffit de les placer directement au congélateur.",
+          "Comme nous livrons ces produits nous-mêmes, le trajet est court. Les bords des produits peuvent tout de même être légèrement ramollis à la réception : c'est normal et sans effet sur la qualité. Si le contenu est entièrement décongelé, ne le congelez pas et signalez-le nous comme indiqué ci-dessous."
         ]
       },
       {
@@ -92,9 +109,10 @@
         ],
         "bullets": [
           "Article manquant : le montant du produit absent de votre colis est remboursé automatiquement, sans démarche de votre part.",
-          "Produit endommagé ou décongelé : signalez-le avec une photo dans les 24 heures suivant la livraison.",
+          "Produit endommagé ou décongelé : signalez-le avec une photo dans les 48 heures suivant la livraison.",
           "Produit erroné : nous envoyons le bon produit ou nous vous remboursons.",
-          "Commande non livrée : si la livraison n'a pas pu être faite pour une raison qui nous incombe, aucun encaissement n'est effectué, ou il est remboursé."
+          "Commande non livrée : si la livraison n'a pas pu être faite pour une raison qui nous incombe, aucun encaissement n'est effectué, ou il est remboursé.",
+          "Absence à l'adresse : nous présentons la commande une seconde fois, sans frais. Si nous ne pouvons pas livrer lors de ce second passage non plus, les produits surgelés ne sont plus commercialisables et le montant n'est pas remboursé."
         ]
       },
       {
@@ -125,19 +143,27 @@
         ]
       },
       {
+        "id": "asgari",
+        "heading": "Mindestbestellwert",
+        "body": [
+          "Der Mindestbestellwert beträgt 40 € und gilt für beide Versandwege. Liegt Ihr Warenkorb darunter, wird der fehlende Betrag im Warenkorb angezeigt."
+        ]
+      },
+      {
         "id": "kargo",
         "heading": "Versand",
         "body": [
-          "Adressen außerhalb des Liefergebiets beliefern wir in ganz Frankreich und Deutschland per Kühlversandpaket. Die Versandkosten werden im Warenkorb vor dem Abschluss der Bestellung angezeigt; ab einem bestimmten Bestellwert entfallen sie.",
-          "Einige Produkte können ihrer Beschaffenheit nach nur innerhalb des Liefergebiets zugestellt werden. Sie sind im Katalog und auf der Produktseite deutlich gekennzeichnet; wenn Sie eine Versandadresse wählen, müssen sie aus dem Warenkorb entfernt werden."
+          "Außerhalb unseres Liefergebiets versenden wir nur unsere lagerfähigen Produkte — in ganz Frankreich und Deutschland. Tiefgekühlte Produkte gehen nicht als Paket auf die Reise: Da wir die Kühlkette unter Versandbedingungen nicht sicher gewährleisten können, liefern wir sie ausschließlich mit unserem eigenen Fahrzeug innerhalb des Gebiets.",
+          "Die Versandkosten betragen 7,90 € und entfallen ab 60 € Bestellwert. Der Betrag wird im Warenkorb vor dem Abschluss der Bestellung angezeigt. Nach der Vorbereitung Ihres Pakets rechnen Sie in Frankreich mit 2 bis 4 Werktagen, in Deutschland mit einem Tag mehr.",
+          "Was versandfähig ist, sehen Sie im Katalog und auf jeder Produktseite. Wenn Sie eine Adresse außerhalb des Gebiets wählen, müssen die nur im Gebiet lieferbaren Artikel aus dem Warenkorb entfernt werden."
         ]
       },
       {
         "id": "soguk-zincir",
         "heading": "Kühlkette",
         "body": [
-          "Unsere Produkte werden schockgefrostet zubereitet, und die Kühlkette bleibt bis zu Ihnen ununterbrochen. Nach dem Empfang legen Sie sie einfach direkt in Ihren Gefrierschrank.",
-          "Versandpakete werden in Isolierboxen mit Kühlakkus verschickt. Bei der Ankunft können die Produkte leicht angetaut sein; das ist normal und beeinträchtigt die Qualität nicht. Ist das Paket dagegen undicht oder aufgerissen oder der Inhalt vollständig aufgetaut, frieren Sie ihn nicht ein und schreiben Sie uns noch am selben Tag."
+          "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller; die Kühlkette wird weder in unserem Lager noch in unserem Fahrzeug unterbrochen. Nach dem Empfang legen Sie sie einfach direkt in Ihren Gefrierschrank.",
+          "Da wir diese Produkte selbst ausliefern, ist der Weg kurz. Dennoch können die Ränder der Produkte bei der Übergabe leicht angetaut sein; das ist normal und beeinträchtigt die Qualität nicht. Ist der Inhalt vollständig aufgetaut, frieren Sie ihn nicht ein und melden Sie es uns wie unten beschrieben."
         ]
       },
       {
@@ -149,9 +175,10 @@
         ],
         "bullets": [
           "Fehlender Artikel: Der Betrag des in Ihrem Paket fehlenden Produkts wird automatisch erstattet, ohne dass Sie etwas tun müssen.",
-          "Beschädigtes oder aufgetautes Produkt: Melden Sie es innerhalb von 24 Stunden nach der Lieferung mit einem Foto.",
+          "Beschädigtes oder aufgetautes Produkt: Melden Sie es innerhalb von 48 Stunden nach der Lieferung mit einem Foto.",
           "Falsch geliefertes Produkt: Wir senden das richtige Produkt oder erstatten den Betrag.",
-          "Nicht zugestellte Bestellung: Konnte aus einem von uns zu vertretenden Grund nicht zugestellt werden, erfolgt kein Einzug beziehungsweise eine Erstattung."
+          "Nicht zugestellte Bestellung: Konnte aus einem von uns zu vertretenden Grund nicht zugestellt werden, erfolgt kein Einzug beziehungsweise eine Erstattung.",
+          "Niemand an der Adresse angetroffen: Wir versuchen die Zustellung ein zweites Mal, kostenfrei. Können wir auch dann nicht zustellen, sind die tiefgekühlten Produkte nicht mehr verkehrsfähig und der Betrag wird nicht erstattet."
         ]
       },
       {

@@ -5,22 +5,22 @@
       {
         "id": "donmus",
         "question": "Ürünler donmuş mu geliyor?",
-        "answer": "Evet — tüm ürünlerimiz şoklanmış halde, soğuk zincir hiç bozulmadan kapınıza gelir. Teslim aldığınızda dondurucunuza koymanız yeterli. Kargo paketlerinde yalıtımlı kutu ve soğutucu kullanılır; ürünlerin kenarları hafif yumuşamış olabilir, bu normaldir."
+        "answer": "Dondurulmuş ürünlerimiz üreticisinden şoklanmış olarak gelir ve soğuk zincir bozulmadan kapınıza ulaşır — bu ürünleri yalnız kendi aracımızla, teslimat bölgemiz içinde getiriyoruz. Teslim aldığınızda dondurucunuza koymanız yeterli. Bölge dışına yalnız raf ömürlü ürünlerimizi kargoyla gönderiyoruz; dondurulmuş ürünler kargoya çıkmaz."
       },
       {
         "id": "asgari-sepet",
         "question": "Minimum sipariş tutarı var mı?",
-        "answer": "Bölge içi teslimatta asgari bir sepet tutarı uygulanır; tutar sepette görünür ve altında kaldığınızda ne kadar kaldığı yazar. Kargo gönderiminde asgari tutar yoktur, ancak belirli bir tutarın üzerinde kargo ücretsizdir."
+        "answer": "Evet, 40 €. Hem bölge içi teslimatta hem kargo gönderiminde geçerlidir; altında kaldığınızda ne kadar kaldığı sepette yazar. Kargo ücreti ayrıca 7,90 €'dur ve 60 € üzeri siparişlerde alınmaz."
       },
       {
         "id": "teslimat-gunu",
         "question": "Siparişim ne zaman gelir?",
-        "answer": "Bölge içindeyseniz teslimat gününüz bölgenizin takvimine göre belirlenir ve siparişi verirken görürsünüz. Kargo gönderimlerinde paket hazırlandıktan sonra yola çıkar; siparişinizin durumunu \"Siparişlerim\" bölümünden takip edebilir, her adımda e-posta alırsınız."
+        "answer": "Bölge içindeyseniz teslimat gününüz bölgenizin takvimine göre belirlenir ve siparişi verirken görürsünüz. Kargo gönderimlerinde paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, Almanya'da bir gün fazlasında elinizde olur. Siparişinizin durumunu \"Siparişlerim\" bölümünden takip edebilir, her adımda e-posta alırsınız."
       },
       {
         "id": "kapida-odeme",
         "question": "Kapıda ödeyebilir miyim?",
-        "answer": "Bölge içi teslimatlarda kapıda ödeme seçilebilir. Kargo gönderimlerinde ödeme sipariş sırasında alınır. Kapıda ödemede bir kalem eksik çıkarsa o kalemin bedeli teslimat anında zaten düşülür — sonradan iade beklemezsiniz."
+        "answer": "Bölge içi teslimatlarda, 500 €'ya kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla. Daha yüksek tutarlarda ve tüm kargo gönderimlerinde ödeme sipariş sırasında alınır. Kapıda ödemede bir kalem eksik çıkarsa o kalemin bedeli teslimat anında zaten düşülür — sonradan iade beklemezsiniz."
       },
       {
         "id": "eksik-kalem",
@@ -30,17 +30,17 @@
       {
         "id": "toptan",
         "question": "Restoranım için toptan fiyat alabilir miyim?",
-        "answer": "Evet. \"Professionnels\" sayfasından SIRET numaranızla başvurabilirsiniz; başvurunuz onaylandığında hesabınız işletme hesabına dönüşür ve fiyatlar buna göre görünür."
+        "answer": "Evet. \"Professionnels\" sayfasından SIRET numaranızla başvurabilirsiniz; başvurunuz onaylandığında hesabınız işletme hesabına dönüşür ve fiyatlar buna göre görünür. İşletme hesaplarında havale ve çekle ödeme de açılır; ödeme koşullarınız hesabınıza tanımlanır."
       },
       {
         "id": "alerjen",
         "question": "Alerjen bilgilerini nereden görebilirim?",
-        "answer": "Her ürünün sayfasında içindekiler ve alerjen bilgisi yer alır. Ürünlerimiz gluten, süt, yumurta ve kuruyemiş içerebilecek bir mutfakta hazırlanır; ciddi bir alerjiniz varsa sipariş öncesi bize yazmanızı öneririz."
+        "answer": "Her ürünün sayfasında içindekiler, alerjen bilgisi ve varsa çapraz bulaşma uyarısı yer alır. Bu bilgiler ürünü üreten firmanın beyanına dayanır — ürünlerimizi kendimiz üretmiyor, seçtiğimiz üreticilerden tedarik ediyoruz. Ciddi bir alerjiniz varsa sipariş öncesi bize yazın; üreticiden teyit alırız."
       },
       {
         "id": "hesap-gerekli",
         "question": "Sipariş vermek için hesap açmam gerekiyor mu?",
-        "answer": "Hayır. Sepetinizi hesap açmadan doldurabilir, siparişi e-posta adresinizle tamamlayabilirsiniz. Hesap açtığınızda siparişleriniz, adresleriniz ve puanınız saklanır; tek tuşla tekrar sipariş verebilirsiniz."
+        "answer": "Parola kurmanız gerekmez: sepetinizi doldurup e-posta adresinizle siparişi tamamlayabilirsiniz — size gönderdiğimiz kodu girdiğinizde hesabınız arka planda açılır ve siparişiniz ona bağlanır. Böylece siparişleriniz, adresleriniz ve puanınız saklanır; sonraki siparişinizde adresinizi yeniden yazmazsınız."
       },
       {
         "id": "dil",
@@ -55,22 +55,22 @@
       {
         "id": "donmus",
         "question": "Les produits arrivent-ils surgelés ?",
-        "answer": "Oui — tous nos produits sont surgelés et la chaîne du froid n'est pas rompue jusqu'à votre porte. À la réception, il vous suffit de les placer au congélateur. Les colis sont expédiés en caisse isotherme avec accumulateurs de froid ; les bords des produits peuvent être légèrement ramollis, c'est normal."
+        "answer": "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant et arrivent chez vous sans rupture de la chaîne du froid — nous les livrons uniquement avec notre propre véhicule, à l'intérieur de notre zone de livraison. À la réception, il vous suffit de les placer au congélateur. Hors zone, nous n'expédions que nos produits de longue conservation : les surgelés ne partent pas en colis."
       },
       {
         "id": "asgari-sepet",
         "question": "Y a-t-il un montant minimum de commande ?",
-        "answer": "Un montant minimum s'applique pour la livraison dans notre zone ; il est affiché dans le panier et, si vous êtes en dessous, le montant restant est indiqué. Il n'y a pas de minimum pour les expéditions, mais les frais sont offerts au-delà d'un certain montant."
+        "answer": "Oui, 40 €. Il s'applique aussi bien à la livraison dans notre zone qu'à l'expédition ; si vous êtes en dessous, le montant restant est indiqué dans le panier. Les frais d'expédition sont par ailleurs de 7,90 € et sont offerts au-delà de 60 €."
       },
       {
         "id": "teslimat-gunu",
         "question": "Quand ma commande arrive-t-elle ?",
-        "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, le colis part une fois préparé ; vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail à chaque étape."
+        "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, comptez 2 à 4 jours ouvrés en France une fois le colis préparé, un jour de plus pour l'Allemagne. Vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail à chaque étape."
       },
       {
         "id": "kapida-odeme",
         "question": "Puis-je payer à la livraison ?",
-        "answer": "Le paiement à la livraison est possible pour les livraisons dans notre zone. Pour les expéditions, le paiement est encaissé au moment de la commande. En paiement à la livraison, si un article manque, son montant est déduit dès la livraison — vous n'attendez pas un remboursement."
+        "answer": "Le paiement à la livraison est possible pour les livraisons dans notre zone, jusqu'à 500 € de commande — en espèces ou par carte. Au-delà, et pour toutes les expéditions, le paiement est encaissé au moment de la commande. En paiement à la livraison, si un article manque, son montant est déduit dès la livraison — vous n'attendez pas un remboursement."
       },
       {
         "id": "eksik-kalem",
@@ -80,17 +80,17 @@
       {
         "id": "toptan",
         "question": "Puis-je obtenir des tarifs professionnels pour mon restaurant ?",
-        "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence."
+        "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence. Les comptes professionnels ont également accès au virement et au paiement par chèque ; vos conditions de règlement sont définies sur votre compte."
       },
       {
         "id": "alerjen",
         "question": "Où puis-je voir les informations sur les allergènes ?",
-        "answer": "Les ingrédients et les allergènes figurent sur la fiche de chaque produit. Nos produits sont préparés dans un atelier où sont également manipulés gluten, lait, œufs et fruits à coque ; en cas d'allergie sévère, nous vous conseillons de nous écrire avant de commander."
+        "answer": "Les ingrédients, les allergènes et, le cas échéant, l'avertissement de contamination croisée figurent sur la fiche de chaque produit. Ces informations proviennent de la déclaration du fabricant — nous ne fabriquons pas nos produits, nous les achetons auprès de producteurs que nous sélectionnons. En cas d'allergie sévère, écrivez-nous avant de commander : nous demandons confirmation au fabricant."
       },
       {
         "id": "hesap-gerekli",
         "question": "Dois-je créer un compte pour commander ?",
-        "answer": "Non. Vous pouvez remplir votre panier sans compte et finaliser la commande avec votre adresse e-mail. Avec un compte, vos commandes, vos adresses et vos points sont conservés, et vous pouvez recommander en un clic."
+        "answer": "Vous n'avez pas besoin de créer un mot de passe : remplissez votre panier et finalisez la commande avec votre adresse e-mail — en saisissant le code que nous vous envoyons, votre compte est ouvert en arrière-plan et votre commande y est rattachée. Vos commandes, vos adresses et vos points y sont conservés, et vous ne ressaisissez pas votre adresse à la commande suivante."
       },
       {
         "id": "dil",
@@ -105,22 +105,22 @@
       {
         "id": "donmus",
         "question": "Kommen die Produkte gefroren an?",
-        "answer": "Ja — alle unsere Produkte sind schockgefrostet, und die Kühlkette bleibt bis zu Ihrer Tür ununterbrochen. Nach dem Empfang legen Sie sie einfach in den Gefrierschrank. Versandpakete werden in Isolierboxen mit Kühlakkus verschickt; die Ränder der Produkte können leicht angetaut sein, das ist normal."
+        "answer": "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller und kommen ohne Unterbrechung der Kühlkette bei Ihnen an — wir liefern sie ausschließlich mit unserem eigenen Fahrzeug innerhalb unseres Liefergebiets. Nach dem Empfang legen Sie sie einfach in den Gefrierschrank. Außerhalb des Gebiets versenden wir nur unsere lagerfähigen Produkte; Tiefkühlware geht nicht als Paket auf die Reise."
       },
       {
         "id": "asgari-sepet",
         "question": "Gibt es einen Mindestbestellwert?",
-        "answer": "Für die Lieferung in unserem Gebiet gilt ein Mindestbestellwert; er wird im Warenkorb angezeigt, und wenn Sie darunter liegen, sehen Sie den fehlenden Betrag. Für den Versand gibt es keinen Mindestwert, ab einem bestimmten Betrag entfallen jedoch die Versandkosten."
+        "answer": "Ja, 40 €. Er gilt sowohl für die Lieferung in unserem Gebiet als auch für den Versand; liegen Sie darunter, sehen Sie den fehlenden Betrag im Warenkorb. Die Versandkosten betragen darüber hinaus 7,90 € und entfallen ab 60 €."
       },
       {
         "id": "teslimat-gunu",
         "question": "Wann kommt meine Bestellung an?",
-        "answer": "Innerhalb des Liefergebiets richtet sich Ihr Liefertag nach dem Kalender Ihres Gebiets, und Sie sehen ihn bei der Bestellung. Beim Versand geht das Paket nach der Vorbereitung raus; den Status verfolgen Sie unter „Meine Bestellungen“ und erhalten bei jedem Schritt eine E-Mail."
+        "answer": "Innerhalb des Liefergebiets richtet sich Ihr Liefertag nach dem Kalender Ihres Gebiets, und Sie sehen ihn bei der Bestellung. Beim Versand rechnen Sie nach der Vorbereitung des Pakets mit 2 bis 4 Werktagen in Frankreich, in Deutschland mit einem Tag mehr. Den Status verfolgen Sie unter „Meine Bestellungen“ und erhalten bei jedem Schritt eine E-Mail."
       },
       {
         "id": "kapida-odeme",
         "question": "Kann ich bei Lieferung bezahlen?",
-        "answer": "Bei Lieferungen in unserem Gebiet ist Zahlung bei Lieferung möglich. Beim Versand wird die Zahlung bei der Bestellung eingezogen. Fehlt bei Zahlung bei Lieferung ein Artikel, wird sein Betrag bereits bei der Lieferung abgezogen — Sie warten nicht auf eine Erstattung."
+        "answer": "Bei Lieferungen in unserem Gebiet ist Zahlung bei Lieferung bis zu einem Bestellwert von 500 € möglich — bar oder mit Karte. Darüber hinaus und bei allen Versandbestellungen wird die Zahlung bei der Bestellung eingezogen. Fehlt bei Zahlung bei Lieferung ein Artikel, wird sein Betrag bereits bei der Lieferung abgezogen — Sie warten nicht auf eine Erstattung."
       },
       {
         "id": "eksik-kalem",
@@ -130,17 +130,17 @@
       {
         "id": "toptan",
         "question": "Bekomme ich Großhandelspreise für mein Restaurant?",
-        "answer": "Ja. Sie können sich über die Seite „Professionnels“ mit Ihrer SIRET-Nummer bewerben; sobald Ihre Anfrage bestätigt ist, wird Ihr Konto zu einem Geschäftskonto und die Preise werden entsprechend angezeigt."
+        "answer": "Ja. Sie können sich über die Seite „Professionnels“ mit Ihrer SIRET-Nummer bewerben; sobald Ihre Anfrage bestätigt ist, wird Ihr Konto zu einem Geschäftskonto und die Preise werden entsprechend angezeigt. Geschäftskonten können zusätzlich per Überweisung und Scheck bezahlen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt."
       },
       {
         "id": "alerjen",
         "question": "Wo finde ich Angaben zu Allergenen?",
-        "answer": "Zutaten und Allergene stehen auf der Seite jedes Produkts. Unsere Produkte werden in einer Küche zubereitet, in der auch Gluten, Milch, Eier und Schalenfrüchte verarbeitet werden; bei einer schweren Allergie empfehlen wir, uns vor der Bestellung zu schreiben."
+        "answer": "Zutaten, Allergene und gegebenenfalls der Hinweis auf Kreuzkontamination stehen auf der Seite jedes Produkts. Diese Angaben stammen aus der Deklaration des Herstellers — wir stellen unsere Produkte nicht selbst her, sondern beziehen sie von ausgewählten Herstellern. Bei einer schweren Allergie schreiben Sie uns bitte vor der Bestellung; wir holen die Bestätigung beim Hersteller ein."
       },
       {
         "id": "hesap-gerekli",
         "question": "Brauche ich ein Konto, um zu bestellen?",
-        "answer": "Nein. Sie können Ihren Warenkorb ohne Konto füllen und die Bestellung mit Ihrer E-Mail-Adresse abschließen. Mit einem Konto werden Ihre Bestellungen, Adressen und Punkte gespeichert, und Sie können mit einem Klick nachbestellen."
+        "answer": "Ein Passwort brauchen Sie nicht: Füllen Sie Ihren Warenkorb und schließen Sie die Bestellung mit Ihrer E-Mail-Adresse ab — sobald Sie den zugesandten Code eingeben, wird Ihr Konto im Hintergrund angelegt und Ihre Bestellung damit verknüpft. Ihre Bestellungen, Adressen und Punkte werden dort gespeichert, und bei der nächsten Bestellung geben Sie Ihre Adresse nicht erneut ein."
       },
       {
         "id": "dil",

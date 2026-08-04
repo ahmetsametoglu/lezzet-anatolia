@@ -19,6 +19,16 @@ export const FREE_SHIPPING_THRESHOLD_KEY = 'free_shipping_threshold_cents';
 export const MIN_BASKET_KEY = 'min_basket_cents';
 
 /**
+ * Asgari sepetin varsayılanı (cent) — ayar satırı yoksa geçerli.
+ *
+ * 40,00 € · kullanıcı kararı 04.08, **her iki kanalda** geçerli (bölge içi teslimat + kargo).
+ * Varsayılan uzun süre `0` idi ve iki okuma yerinde ayrı ayrı yazılıydı: statik metin "asgari sepet
+ * uygulanır" diye söz verirken sistem hiçbir sepeti engellemiyordu — söz vardı, kural yoktu. Sayı
+ * artık tek yerde durur; işletme ayarı girildiğinde bu değer hiç okunmaz.
+ */
+export const MIN_BASKET_DEFAULT = 4_000;
+
+/**
  * Kargo ücreti (cent). Checkout'ta kesilen tutar; sepette **kargo grubunun** blokunda yazılır.
  *
  * Sepet uzun süre ücreti hiç yazmadı ve bu doğruydu: ücret teslimat türüne bağlı, tür de adresten
@@ -34,8 +44,10 @@ export const SHIPPING_FEE_DEFAULT = 790;
 /**
  * Ücretsiz kargo eşiğinin varsayılanı (cent) — ayar satırı yoksa geçerli.
  *
- * 60,00 €: soğuk zincir kargosunun kendisi ~7-8 € tuttuğu için eşik onun belirgin üstünde olmalı,
- * yoksa her sepet ücretsiz olur. Admin ayarı girildiğinde bu değer hiç okunmaz.
+ * 60,00 € · kullanıcı kararı 04.08. Eşik, kargo ücretinin (7,90 €) belirgin üstünde olmalı; yoksa
+ * her sepet ücretsiz olur ve ücret satırı anlamını yitirir. **Kargo soğuk zincir taşımaz** — bölge
+ * dışına yalnız raf ömürlü ürünler çıkar (`Product.shippable`), dondurulmuş ürünler yalnız kendi
+ * aracımızla teslim edilir. Admin ayarı girildiğinde bu değer hiç okunmaz.
  */
 export const FREE_SHIPPING_THRESHOLD_DEFAULT = 6_000;
 
