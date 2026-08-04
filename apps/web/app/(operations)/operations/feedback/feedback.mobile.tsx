@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/operation/ui/empty-state';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { CandidateRow, ModerationCard, ModerationEmpty, PointsHeader, PointsRow, ScoreHeader, ScoreRow } from './feedback-sections';
 import { FEEDBACK_TABS, FEEDBACK_TAB_LABELS, REVIEW_STACK_LABELS, REVIEW_STACKS, SCORE_DIRECTION_LABELS, SCORE_DIRECTIONS } from './feedback-url';
-import type { FeedbackViewProps } from './feedback-client';
+import type { FeedbackViewProps } from './feedback-types';
 
 /**
  * Geri Bildirim — mobil (17.1 · 17.3 · 17.4).

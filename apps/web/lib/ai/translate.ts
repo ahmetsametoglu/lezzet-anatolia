@@ -18,14 +18,21 @@ import { requireStaff } from '@/lib/guard';
  * dönseydi operatör düğmenin çalıştığını ama modelin cevap vermediğini sanırdı; şimdi çağıran
  * hatayı kendi yanında gösteriyor (`LocalizedTextField` amber not satırı).
  */
+/**
+ * Çevrilecek alanın TÜRÜ — ekran tarafının okuyacağı ad. Tip motorun kendi birliğinden TÜRER
+ * (`packages/ai`), elle yeniden yazılmaz: yeni bir alan türü eklendiği gün ekran da derlemede görür.
+ */
+export type TranslateField = SuggestLocalizedInput['field'];
+
 export async function suggestTranslationAction(
   text: LocalizedText,
   /**
    * Alanın türü — ton ve uzunluk buradan çıkar (ürün adı ile saklama talimatı aynı ölçüde
-   * çevrilmez). Opsiyonel: bugünkü dört çağıran bunu geçirmiyor ve dosyaları benim şeridimde
-   * değil. Geçen çağıran daha isabetli öneri alır — `docs/talep/not-operasyon-*`.
+   * çevrilmez). Varsayılan `aciklama` KALIYOR ama artık bir "kimse geçmiyor" varsayılanı değil:
+   * ürün/katalog/paket formları alanına göre geçiyor (04.08); varsayılan yalnız gerçekten
+   * açıklama olan alanlar için.
    */
-  field: SuggestLocalizedInput['field'] = 'aciklama',
+  field: TranslateField = 'aciklama',
 ): Promise<LocalizedText> {
   await requireStaff();
 

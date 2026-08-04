@@ -1,4 +1,4 @@
-import type { B2bSignal, SignalTone } from '@lezzet/domain-core';
+import type { B2bApplicationStatus, B2bSignal, SignalTone } from '@lezzet/domain-core';
 import type {
   Address,
   Consent,
@@ -9,7 +9,7 @@ import type {
   PaymentStatus,
   UserProfile,
 } from '@lezzet/types';
-import type { CustomerScope, CustomersUrlState } from './customers-url';
+import type { CustomerScope, CustomersUrlState, MarketingChannelFilter } from './customers-url';
 
 // Müşteri ekranının view-model'i (09.9).
 //
@@ -33,8 +33,12 @@ import type { CustomerScope, CustomersUrlState } from './customers-url';
  *
  * Varlıktan İNDİRGENİR: roller, depo kapsamı, kredi limiti, pazarlama izni ve edinim kaynağı bu
  * dilimde hiç taşınmaz — liste onları göstermiyor ve otuz satırın yükünü taşımanın karşılığı yok.
- * `b2bApproved` seçilenler arasında: B2C'de `null` ve o "sorulmamış bir soru" demek, rozet bunu
- * "hayır"dan ayırıyor.
+ *
+ * **`b2bApproved` ARTIK TAŞINMIYOR, yerine `b2bStatus` var.** O alan tek başına iki hâli birden
+ * taşıyor (`false` = hem "bekliyor" hem "reddedildi") ve ekran onu doğrudan okuduğu için
+ * REDDETTİĞİMİZ başvuru listede hâlâ bizden karar bekliyor görünüyordu (arka uç bildirimi 03.08).
+ * Ayrımı motor yapıyor (`b2bStatusOf`) ve satır onun sonucunu taşıyor — aynı karşılaştırmayı
+ * ekranda yeniden yazmak, kısmi indeksle sessizce ayrışabilecek ikinci bir kural olurdu.
  */
 export type CustomerRow = Pick<
   UserProfile,
@@ -45,12 +49,13 @@ export type CustomerRow = Pick<
   | 'type'
   | 'country'
   | 'isDraft'
-  | 'b2bApproved'
   | 'creditEnabled'
   | 'preferredLanguage'
   | 'vatNumber'
   | 'createdAt'
 > & {
+  /** Başvurunun dört hâli (`none · pending · approved · rejected`) — motordan gelir, ekranda türetilmez. */
+  b2bStatus: B2bApplicationStatus;
   /** Avatar baş harfleri — addan TÜRETİLİR, saklanmaz. */
   initials: string;
   /**
@@ -226,8 +231,13 @@ export interface B2bCheckView {
   /** Tek satırlık adres; `null` = kayıtlı adresi yok. */
   addressLine: string | null;
   mapsHref: string | null;
-  /** `null` = B2C (soru hiç sorulmadı), `false` = onay bekliyor, `true` = onaylı. */
-  approved: boolean | null;
+  /**
+   * Başvurunun DÖRT hâli — bir tur `approved: boolean | null` yazılıydı ve o alan iki hâli birden
+   * taşıdığı için diyalogda ölçülebilir bir arıza üretti: "Reddet" düğmesi `approved === false`
+   * iken kilitleniyordu, yani **onay bekleyen bir başvuru bu ekrandan hiç reddedilemiyordu** —
+   * kilit tam da reddedilmesi gereken hâle basıyordu (04.08).
+   */
+  status: B2bApplicationStatus;
   signals: B2bSignal[];
   flag: { label: string; tone: SignalTone };
   duplicates: B2bDuplicateRow[];
@@ -255,6 +265,8 @@ export interface CustomersViewProps {
   onSearch: (q: string) => void;
   onScope: (scope: CustomerScope) => void;
   onType: (type: CustomerType | 'all') => void;
+  /** Pazarlama kanalı — yalnız `scope === 'marketing'` iken çizilir (kapsamı da birlikte yazar). */
+  onChannel: (mc: MarketingChannelFilter) => void;
   hasMore: boolean;
   loadingMore: boolean;
   /**

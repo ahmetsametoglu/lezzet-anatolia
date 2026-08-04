@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { ORDER_STATUS_LABELS } from '@lezzet/types';
+import type { B2bApplicationStatus } from '@lezzet/domain-core';
 import { Badge } from '@/components/operation/ui/badge';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { Button } from '@/components/operation/ui/button';
@@ -11,7 +12,8 @@ import { StepButton } from '@/components/operation/ui/step-button';
 import { money, shortDate } from '@/components/operation/ui/format';
 import { InlineMetric } from '@/components/operation/ui/inline-metric';
 import { Skeleton, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
-import { statusHint, statusOf } from './customers-labels';
+import { B2B_STATUS_VIEW, statusHint, statusOf } from './customers-labels';
+import { MARKETING_CHANNEL_LABEL, SCOPE_LABEL } from './customers-url';
 import type { CustomerDetail, CustomersViewProps } from './customers-types';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 
@@ -33,8 +35,9 @@ import { EmptyState } from '@/components/operation/ui/empty-state';
 const LIMIT_STEP_EUR = 50;
 
 export function CustomersMobile(props: CustomersViewProps) {
-  // `onType` ve `onScope` BİLİNÇLİ olarak alınmıyor: tasarımın mobil bölümünde çip şeridi yok.
-  const { rows, search, onSearch, hasMore, loadingMore, onLoadMore } = props;
+  // Çip ŞERİDİ yok (tasarım), ama `onScope` yine de alınıyor — süzgeci KALDIRABİLMEK için.
+  // `onType`/`onChannel` alınmıyor: telefonda süzgeç kurulmuyor, yalnız gelmiş olanı kaldırıyoruz.
+  const { rows, urlState, search, onSearch, onScope, hasMore, loadingMore, onLoadMore } = props;
   const { selectedId, onSelect, detail, detailLoading, detailError, onOpenOrder, onEditCredit, onOpenB2b } = props;
   const { saving, saveError, onSaveCreditLimit } = props;
 
@@ -47,6 +50,27 @@ export function CustomersMobile(props: CustomersViewProps) {
         compact
         search={{ value: search, onChange: onSearch, placeholder: 'Telefon veya ad…' }}
       />
+
+      {/* SÜZÜLÜYOR ŞERİDİ — telefonda çip yok ama süzgeç ADRESTEN gelebiliyor: analitik ekranı
+          "N kişi pazarlama izinli" derken buraya `?scope=marketing&mc=email` ile köprü kuruyor
+          (`ANALYTICS §6`). Şerit olmasaydı operatör süzülmüş bir listeyi tam liste sanırdı ve
+          aradığı müşteriyi "yok" diye okurdu — sessiz süzgeç, boş sonuçla yalan söyler.
+          Kaldırma yolu da burada: kurulamayan bir süzgecin hiç değilse kapısı olmalı. */}
+      {urlState.scope !== 'all' ? (
+        <div className="flex items-center justify-between gap-3 border-b border-ops-line bg-ops-subtle px-4 py-2">
+          <span className="min-w-0 truncate font-ops-body text-ops-xs text-ops-body">
+            Süzülüyor: <span className="font-semibold text-ops-ink">{SCOPE_LABEL[urlState.scope]}</span>
+            {urlState.scope === 'marketing' && urlState.mc !== 'any' ? ` · ${MARKETING_CHANNEL_LABEL[urlState.mc]}` : ''}
+          </span>
+          <button
+            type="button"
+            onClick={() => onScope('all')}
+            className="flex-none cursor-pointer font-ops-body text-ops-xs font-semibold text-ops-olive-dark underline-offset-2 hover:underline"
+          >
+            Kaldır
+          </button>
+        </div>
+      ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {rows.length === 0 ? (
@@ -94,7 +118,7 @@ export function CustomersMobile(props: CustomersViewProps) {
                     // B2B kutusu satırın TİPİNE bakıyor, detaya değil: detay okunurken de görünmesi
                     // gerekiyor ve tip zaten satırda taşınıyor.
                     isCompany={row.type === 'company'}
-                    b2bApproved={row.b2bApproved}
+                    b2bStatus={row.b2bStatus}
                     onOpenB2b={onOpenB2b}
                     detail={detail}
                     loading={detailLoading}
@@ -125,7 +149,7 @@ export function CustomersMobile(props: CustomersViewProps) {
  */
 interface MobileDetailProps {
   isCompany: boolean;
-  b2bApproved: boolean | null;
+  b2bStatus: B2bApplicationStatus;
   onOpenB2b: () => void;
   detail: CustomerDetail | null;
   loading: boolean;
@@ -140,7 +164,7 @@ interface MobileDetailProps {
 
 function MobileDetail({
   isCompany,
-  b2bApproved,
+  b2bStatus,
   onOpenB2b,
   detail,
   loading,
@@ -167,7 +191,7 @@ function MobileDetail({
       <div className="flex flex-col gap-3 bg-ops-subtle px-4 py-3.5">
         {/* B2B kutusu detay beklemez — kararı verecek bilgi (tip + onay hâli) satırda zaten var ve
             tasarımın mobil kuralı "karar telefonda anında". */}
-        {isCompany ? <B2bBox approved={b2bApproved} onOpen={onOpenB2b} /> : null}
+        {isCompany ? <B2bBox status={b2bStatus} onOpen={onOpenB2b} /> : null}
         {/* İSKELET, tek satır "Yükleniyor…" değil: telefonda kart bir kez açılıp içerik gelince
             uzuyordu ve altındaki müşteri satırı ekrandan kayıyordu — operatörün baktığı yer değişiyor.
             İskelet gelen içerikle aynı yüksekliği kaplıyor. */}
@@ -193,7 +217,7 @@ function MobileDetail({
 
   return (
     <div className="flex flex-col gap-3 bg-ops-subtle px-4 py-3.5">
-      {isCompany ? <B2bBox approved={b2bApproved} onOpen={onOpenB2b} /> : null}
+      {isCompany ? <B2bBox status={b2bStatus} onOpen={onOpenB2b} /> : null}
 
       {/* Ödeme karnesi — kutunun rengi durumu söyler. */}
       <div
@@ -381,18 +405,18 @@ function LimitStepper({
  * anında"* diyor. Onay geri dönüşsüz DEĞİL (ret kaydı silmez, onay geri alınabilir), yani mobilin
  * "geri dönüşsüz işlem yok" kuralına takılmıyor.
  */
-function B2bBox({ approved, onOpen }: { approved: boolean | null; onOpen: () => void }) {
-  const bekliyor = approved === false;
+function B2bBox({ status, onOpen }: { status: B2bApplicationStatus; onOpen: () => void }) {
+  const view = B2B_STATUS_VIEW[status];
   return (
     <div
       className={`flex flex-col gap-2 rounded-ops-card border px-3 py-2.5 ${
-        bekliyor ? 'border-ops-amber-line bg-ops-amber-bg' : 'border-ops-line bg-ops-white'
+        view.highlight ? 'border-ops-amber-line bg-ops-amber-bg' : 'border-ops-line bg-ops-white'
       }`}
     >
       <div className="flex items-center gap-2">
         <span className="mr-auto font-ops-body text-ops-xs font-medium text-ops-ink">B2B onayı</span>
-        <Badge tone={approved === true ? 'olive' : bekliyor ? 'amber' : 'neutral'} outline>
-          {approved === true ? 'Onaylı' : bekliyor ? 'Bekliyor' : 'Başvuru yok'}
+        <Badge tone={view.tone} outline>
+          {view.badge}
         </Badge>
       </div>
       <Button variant="secondary" size="sm" fullWidth onClick={onOpen}>

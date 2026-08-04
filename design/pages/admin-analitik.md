@@ -15,6 +15,9 @@ Yöneticinin "site nasıl gidiyor, reklam çalışıyor mu, müşteri ne istiyor
 - **Ürün-ilgi sinyali** — çok bakılıp az alınan ürünler: fiyat mı sorun, görsel mi, açıklama mı — bakma/alma oranı karar tetikler
 - **Segment görünümü** — siparişten türetilen müşteri segmentleri: iyi müşteriler, uyuyanlar (eskiden alıp uzun süredir almayan), yeniler (RFM mantığı — insan diliyle sunulur); segmentler **dışa alınabilir** (izinli kampanya listesi hazırlamak için)
 - **AI içgörü anlatısı** — toplu veriden çıkarılmış kısa, dille yazılmış gözlemler ve anormallikler: "X kaynağından gelen trafik bu hafta düştü", "Y ürünü çok bakılıp az alınıyor". Rakam okumayı sevmeyen an için özet akıl; içgörü karar önerebilir ama karar insanındır
+- **Pazarlama izni sayısı + köprü (kullanıcı kararı 04.08, `ANALYTICS §6`)** — kanal bazlı "kaç kişi izin verdi"; **liste burada DEĞİL**, Müşteriler ekranında. Analitik *kaç* der, Müşteriler *kim* der; kişi bazlı bir ekran açılmaz. Sayı ile listenin aynı ölçütten çıkması şart, yoksa köprünün iki ucu farklı sayı gösterir
+- **Bölge dışı talep — yalnız işaret ve köprü (kullanıcı kararı 04.08)** — posta kodu talep tablosunun kendisi **Depolar** ekranındadır, çünkü bölgeyi açma kararı orada veriliyor. Burada iki ekranda iki tablo olsaydı aynı soru iki farklı cevap verirdi
+- **Verinin ÜÇ hâli ayrı konuşur** — "sayı var" · "veri birikiyor" (kapı hazır, ölçüm başlamadı) · "bu sayı hesaplanmıyor" (kapı yok ya da özet o boyutu taşımıyor). Son ikisi ekranda aynı görünmemeli: biri beklemeyi, öteki beklememeyi söyler; birleştirilirse yönetici hiç dolmayacak bir bloğun dolmasını bekler
 
 ## 3. Aksiyonlar
 

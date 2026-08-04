@@ -1,3 +1,4 @@
+import { b2bStatusOf } from '@lezzet/domain-core';
 import type { Address, Discount, DiscountCode, Order, UserProfile } from '@lezzet/types';
 import type { ConsentView, CustomerAddressRow, CustomerOrderRow, CustomerRow, PersonalCouponRow } from './customers-types';
 
@@ -35,7 +36,8 @@ export function toCustomerRows(profiles: readonly UserProfile[], overdueIds: Rea
     country: p.country,
     initials: initialsOf(p),
     isDraft: p.isDraft,
-    b2bApproved: p.b2bApproved,
+    // Dört hâli MOTOR ayırıyor — `b2bApproved` tek başına "bekliyor" ile "reddedildi"yi ayıramaz.
+    b2bStatus: b2bStatusOf(p),
     creditEnabled: p.creditEnabled,
     hasOverdue: overdueIds.has(p.id),
     preferredLanguage: p.preferredLanguage,
@@ -91,7 +93,11 @@ export function toPersonalCouponRows(
 /**
  * Edinim kaynağının okunabilir hâli. `acquisition_source` serbest bir jsonb: hangi anahtarın
  * dolduğu kaynağa göre değişir. Ekran TEK cümle ister, bu yüzden bilinen anahtarlar sırayla denenir
- * ve hiçbiri yoksa `null` döner — boş bir küme "kaynak yok" demektir, "bilinmiyor" demez.
+ * ve hiçbiri yoksa `null` döner.
+ *
+ * **`null`'ın anlamını burası değil ÇAĞIRAN söyler** ve bugünkü anlamı "henüz ölçülmüyor"dur: yazma
+ * kapısı duruyor ama UTM'i yakalayan taraf yok, yani alan her müşteride boş. Bir tur bu künyede
+ * "boş küme kaynak yok demektir" yazıyordu — ölçüm hiç kurulmamışken doğru değildi. → BEKLEYEN(13.2)
  */
 export function acquisitionLabel(source: Record<string, unknown> | null): string | null {
   if (!source) return null;

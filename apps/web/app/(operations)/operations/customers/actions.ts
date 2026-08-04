@@ -194,14 +194,25 @@ export async function readB2bCheckAction(customerId: string): Promise<ActionResu
  * ayrı diyalogda verilir. Burada `creditEnabled`e dokunulmaması bilinçli — onayla birlikte vade açmak,
  * hiç değerlendirilmemiş bir müşteriye limitsiz vade vermek olurdu.
  *
- * **Ret SİLMEZ**: kayıt B2C olarak kalır (`b2bApproved = false`), müşteri perakende fiyatla alışverişe
- * devam eder. Reddedilen bir başvuruyu silmek, aynı kişinin yarın yeniden başvurmasında geçmişi
- * bilmemek demekti.
+ * **Ret SİLMEZ**: kayıt B2C olarak kalır, müşteri perakende fiyatla alışverişe devam eder.
+ * Reddedilen bir başvuruyu silmek, aynı kişinin yarın yeniden başvurmasında geçmişi bilmemek demekti.
+ *
+ * ── RET ARTIK DAMGALANIYOR (04.08, arka uç bildirimi) ────────────────────────
+ * Bir tur ret `setB2bApproval(id, false)` ile yazılıyordu ve o çağrı yalnız `b2bApproved`'ı `false`
+ * yapıyordu — yani **ret fiilen kaydedilmiyordu**: aynı değeri hiç karar verilmemiş başvuru da
+ * taşıdığı için reddettiğimiz kayıt listede "Onay bekliyor" olarak durmaya devam ediyordu.
+ * `rejectB2b` kim/ne zaman/neden damgasını basıyor; gerekçenin zorunluluğunu da tip değil VERİ
+ * zorluyor (`user_profiles_b2b_reject_stamp`).
+ *
+ * **Kararı veren KİŞİ yazılır** (`actorId`): "bu başvuruyu kim reddetti" sorusunun cevabı, ret
+ * müşteriye e-postayla gittiği için gerekli — cevabı olmayan bir karar savunulamaz.
  */
-export async function setB2bApprovalAction(customerId: string, approved: boolean): Promise<ActionResult> {
+export async function setB2bApprovalAction(customerId: string, approved: boolean, reason = ''): Promise<ActionResult> {
   try {
-    await requireAdmin();
-    await new UserProfileService(serviceDb()).setB2bApproval(customerId, approved);
+    const actor = await requireAdmin();
+    const profiles = new UserProfileService(serviceDb());
+    if (approved) await profiles.approveB2b(customerId);
+    else await profiles.rejectB2b(customerId, { actorId: actor.id, reason });
     revalidatePath(CUSTOMERS_PATH);
     return { data: null, error: null };
   } catch (err) {

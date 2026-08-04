@@ -132,23 +132,3 @@ export function FeedbackClient({ data, device, urlState }: FeedbackClientProps) 
   );
 }
 
-/** İki cihaz görünümünün ortak sözleşmesi — ikisi de AYNI durumu alır, yalnız dizilim değişir. */
-export interface FeedbackViewProps {
-  data: FeedbackData;
-  urlState: FeedbackUrlState;
-  busy: boolean;
-  error: string | null;
-  /** Kuyruğun devamı var mı (imleç null değil) — nöbetçi buna göre çizilir. */
-  hasMore: boolean;
-  loadingMore: boolean;
-  onLoadMore: () => void;
-  onTab: (tab: FeedbackTab) => void;
-  onStack: (rs: ReviewStack) => void;
-  /** Skor tablosunun yönünü değiştirir (en sevilen ↔ en sevilmeyen). */
-  onScoreDirection: (sd: ScoreDirection) => void;
-  onModerate: (reviewId: string, to: 'approved' | 'rejected') => void;
-  /** Elle puan düzeltmesini açar — yalnız masaüstünde çağrılır (mobilde form yok). */
-  onAdjustPoints: (customerId: string, customerName: string) => void;
-  /** Adayı ürün yönetiminde açar (aday panosunun tek eylemi). */
-  onActivate: (productId: string) => void;
-}

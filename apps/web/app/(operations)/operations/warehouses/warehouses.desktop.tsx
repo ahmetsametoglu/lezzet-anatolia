@@ -19,6 +19,7 @@ import {
   StaffChips,
   WarehouseListRow,
   ZoneCard,
+  ZoneDemandTable,
 } from './warehouses-sections';
 import type { WarehouseCardView, WarehouseRowView, WarehousesData, ZoneCardView } from './warehouses-types';
 import type { WarehousesUrlState } from './warehouses-url';
@@ -83,6 +84,11 @@ function ListView({ data, navPending, onSelect, onNewWarehouse }: WarehousesView
           Kapalı depo listeden silinmez — geçmiş sipariş ve parti hangi tesisten çıktığını bilmek zorundadır. Hiçbir
           seçicide, süzgeçte ve transfer hedefinde görünmez.
         </p>
+
+        {/* Talep tablosu TESİS panelinde değil LİSTE görünümünde: sorduğu şey "hangi tesis nasıl
+            duruyor" değil, "ağ olarak nereye açılmalıyız". Bir tesisin altına konsaydı aynı tablo
+            her tesiste tekrarlanır ve hiçbirine ait olmazdı. */}
+        <ZoneDemandTable rows={data.zoneDemand} />
       </div>
     </div>
   );

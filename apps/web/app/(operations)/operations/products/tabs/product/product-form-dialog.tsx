@@ -19,7 +19,7 @@ import { FormLocalizedText } from '@/components/operation/form/form-localized-te
 import { FormNutrition } from '@/components/operation/form/form-nutrition';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { ProductPhotos } from './product-photos';
-import { suggestTranslationAction } from '@/lib/ai/translate';
+import { suggestTranslationAction, type TranslateField } from '@/lib/ai/translate';
 import { createProductAction, updateProductAction, uploadProductImageAction } from './actions';
 import { VariantEditor } from './variant-editor';
 import { ProductFormDeclaration } from './product-form-declaration';
@@ -65,8 +65,15 @@ export function ProductFormDialog({ mode, product, categories, bundles, device, 
   });
   const { control, handleSubmit, formState } = form;
 
-  // AI çeviri: TR metinden FR/DE önerir (arka uç stub — UI hazır). Dönüş eksik dilleri doldurur.
-  const aiTranslate = (text: LocalizedText): Promise<LocalizedText> => suggestTranslationAction(text);
+  /**
+   * AI çeviri: TR metinden FR/DE önerir; dönüş eksik dilleri doldurur.
+   *
+   * **Alan türü geçiliyor** (04.08, arka uç bildirimi): ton ve uzunluk ondan çıkıyor. Ürün ADI iki
+   * kelimelik bir vitrin metnidir, SAKLAMA TALİMATI bir yönergedir, İÇİNDEKİLER ise yasal bir
+   * listedir — üçünü aynı ölçüde çevirmek, birini mutlaka bozar. Varsayılan `aciklama` idi ve
+   * dördü de onunla gidiyordu.
+   */
+  const aiTranslate = (field: TranslateField) => (text: LocalizedText) => suggestTranslationAction(text, field);
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
@@ -86,10 +93,10 @@ export function ProductFormDialog({ mode, product, categories, bundles, device, 
   // Çok dilli alan tanımları TEK yerde; `lang` verilmezse alan kendi sekmesini gösterir (mobil),
   // verilirse dilini dışarıdan alır (web'de dil kartının içi).
   const nameField = (lang?: Locale) => (
-    <FormLocalizedText control={control} name="name" label="Ürün adı" required placeholder="Ürün adı" lang={lang} onAiTranslate={aiTranslate} />
+    <FormLocalizedText control={control} name="name" label="Ürün adı" required placeholder="Ürün adı" lang={lang} onAiTranslate={aiTranslate('ad')} />
   );
   const descriptionField = (lang?: Locale) => (
-    <FormLocalizedText control={control} name="description" label="Ürün açıklaması" multiline placeholder="Açıklama" lang={lang} onAiTranslate={aiTranslate} />
+    <FormLocalizedText control={control} name="description" label="Ürün açıklaması" multiline placeholder="Açıklama" lang={lang} onAiTranslate={aiTranslate('aciklama')} />
   );
 
   // Görsel: kaynak 3:2, odak + zoom kırpması form değeri; düzenleme ayrı diyalogda. Kayıt yoksa yükleme
@@ -147,7 +154,7 @@ export function ProductFormDialog({ mode, product, categories, bundles, device, 
               emphasisHint="Alerjeni listede yazdığı hâliyle vurgula"
               placeholder="Un, su, tuz…"
               lang={lang}
-              onAiTranslate={aiTranslate}
+              onAiTranslate={aiTranslate('icindekiler')}
             />
             <FormLocalizedText
               control={control}
@@ -159,13 +166,14 @@ export function ProductFormDialog({ mode, product, categories, bundles, device, 
               emphasisHint="Önemli uyarıyı vurgula"
               placeholder="Saklama ve hazırlama"
               lang={lang}
-              onAiTranslate={aiTranslate}
+              onAiTranslate={aiTranslate('saklama')}
             />
           </>
         )}
       </LocaleCard>
     ),
-    variants: <VariantEditor control={control} onAiTranslate={aiTranslate} />,
+    // Varyant adı bir ÜRÜN ADIDIR ("1 kg kutu"), açıklama değil.
+    variants: <VariantEditor control={control} onAiTranslate={aiTranslate('ad')} />,
     shippable: <FormSwitch control={control} name="shippable" label="Kargo izni" />,
     autoPrice: <FormSwitch control={control} name="autoPrice" label="Otomatik fiyat" />,
     margin: <FormNumber control={control} name="targetMarginPercent" label="Hedef marj (%)" placeholder="ör. 42" />,

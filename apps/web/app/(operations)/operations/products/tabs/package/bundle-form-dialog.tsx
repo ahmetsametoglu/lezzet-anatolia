@@ -16,7 +16,7 @@ import { FormMoney, PercentField } from '@/components/operation/form/money-input
 import { ImageCropField } from '@/components/operation/form/image-crop-field';
 import { useImageCrop } from '@/components/operation/form/use-image-crop.hook';
 import { FormSection } from '../../components/form-section';
-import { suggestTranslationAction } from '@/lib/ai/translate';
+import { suggestTranslationAction, type TranslateField } from '@/lib/ai/translate';
 import {
   createBundleAction,
   loadBundleFormAction,
@@ -101,7 +101,9 @@ export function BundleFormDialog({ bundle, device, onClose }: BundleFormDialogPr
   }, [bundle?.id]);
   const { control, handleSubmit, formState, setValue } = form;
 
-  const aiTranslate = (text: LocalizedText): Promise<LocalizedText> => suggestTranslationAction(text);
+  // Alan türü geçiliyor (04.08): paket ADI kısa bir vitrin metni, açıklaması "hangi durum için
+  // uygun" diye okunan bir cümle — ton ve uzunluk buradan çıkıyor.
+  const aiTranslate = (field: TranslateField) => (text: LocalizedText) => suggestTranslationAction(text, field);
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
@@ -191,7 +193,7 @@ export function BundleFormDialog({ bundle, device, onClose }: BundleFormDialogPr
                       required
                       placeholder="ör. Bayram Sofrası"
                       lang={lang}
-                      onAiTranslate={aiTranslate}
+                      onAiTranslate={aiTranslate('ad')}
                     />
                     <FormLocalizedText
                       control={control}
@@ -201,7 +203,7 @@ export function BundleFormDialog({ bundle, device, onClose }: BundleFormDialogPr
                       rows={3}
                       placeholder="Hangi durum için uygun"
                       lang={lang}
-                      onAiTranslate={aiTranslate}
+                      onAiTranslate={aiTranslate('aciklama')}
                     />
                   </>
                 )}

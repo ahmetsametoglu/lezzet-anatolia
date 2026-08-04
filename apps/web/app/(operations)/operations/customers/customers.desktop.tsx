@@ -9,7 +9,7 @@ import { Table, withCells, type Column } from '@/components/operation/ui/table';
 import { CustomerPreview } from './components/customer-preview';
 import { statusHint, statusOf, typeTone } from './customers-labels';
 import { CustomerTypeEnum } from '@lezzet/types';
-import { CUSTOMER_SCOPES, SCOPE_LABEL, TYPE_LABEL } from './customers-url';
+import { CUSTOMER_SCOPES, MARKETING_CHANNELS, MARKETING_CHANNEL_LABEL, SCOPE_LABEL, TYPE_LABEL } from './customers-url';
 import type { CustomerRow, CustomersViewProps } from './customers-types';
 
 // Müşteriler — web: liste + seçili önizleme paneli (ürünler ekranının deseni, 1.95fr / 1fr).
@@ -44,7 +44,7 @@ const COLUMNS: Column<CustomerRow>[] = withCells<CustomerRow>(CUSTOMERS_COLUMN_T
 });
 
 export function CustomersDesktop(props: CustomersViewProps) {
-  const { data, rows, urlState, search, onSearch, onScope, onType, hasMore, loadingMore, onLoadMore, navPending } = props;
+  const { data, rows, urlState, search, onSearch, onScope, onType, onChannel, hasMore, loadingMore, onLoadMore, navPending } = props;
   const { selectedId, onSelect, detail, detailLoading, detailError, onOpenOrder, onEditCredit, onEdit, onOpenB2b, saving, saveError } = props;
   const selected = rows.find((r) => r.id === selectedId) ?? null;
   const { total, draft } = data.counts;
@@ -86,6 +86,22 @@ export function CustomersDesktop(props: CustomersViewProps) {
           </Chip>
         ))}
       </div>
+
+      {/* Kanal daraltması YALNIZ pazarlama kümesi seçiliyken — ve ikinci bir sırada, çip sırasının
+          içinde değil: kanal bir daraltma değil, seçili kümenin İÇİNDEKİ bir ayrım. Aynı sıraya
+          konsaydı "E-posta" çipi "Vadeli"nin kardeşi gibi okunurdu; oysa biri kimi gösterdiğimizi,
+          öteki hangi izne baktığımızı söylüyor.
+          Ayrım şart (tasarım §2): e-postaya izin verenle WhatsApp'a izin veren aynı küme değil. */}
+      {urlState.scope === 'marketing' ? (
+        <div className="flex flex-wrap items-center gap-2 border-b border-ops-gray-100 px-6 py-2">
+          <span className="font-ops-body text-ops-xs text-ops-muted">İzin kanalı</span>
+          {MARKETING_CHANNELS.map((c) => (
+            <Chip key={c} active={urlState.mc === c} onClick={() => onChannel(c)}>
+              {MARKETING_CHANNEL_LABEL[c]}
+            </Chip>
+          ))}
+        </div>
+      ) : null}
 
       <div className="grid min-h-0 flex-1 grid-cols-[1.4fr_1fr] overflow-hidden">
         <div className="flex min-h-0 flex-col border-r border-ops-line">

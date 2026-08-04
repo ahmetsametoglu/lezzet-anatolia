@@ -7,6 +7,7 @@ import { Chip } from '@/components/operation/ui/chip';
 import { CameraIcon } from '@/components/operation/ui/icons';
 import { Input } from '@/components/operation/form/input';
 import { SearchInput } from '@/components/operation/ui/search-input';
+import { PageHeader } from '@/components/operation/ui/page-header';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Toggle, ToggleField } from '@/components/operation/form/toggle';
@@ -152,17 +153,20 @@ export function ProductsMobile({
 
   return (
     <div className="flex h-full flex-col bg-ops-card">
-      {/* Başlık */}
-      <div className="flex items-center justify-between border-b border-ops-line px-4 py-3.5">
-        <span className="font-ops-display text-ops-section font-semibold text-ops-ink">Ürünler</span>
+      {/* Başlık barı ORTAK (`PageHeader compact`) — elden yazılmıştı ve bedeli ölçüldü (04.08,
+          `ui:shot`): ray çekmeceye dönünce hamburger `PageHeader`'a kondu, bu ekran onu kullanmadığı
+          için **telefonda gezinmeye hiçbir yerden ulaşılamıyordu**. Operasyonun on iki mobil
+          ekranından tek istisnası buydu; kopya bir başlık, ortak bir yeteneği sessizce kaybetti. */}
+      <PageHeader title="Ürünler" compact>
         <button
           type="button"
           onClick={openCreate}
+          aria-label="Yeni ürün"
           className="grid h-[30px] w-[30px] cursor-pointer place-items-center rounded-ops-btn bg-ops-ink font-ops-display text-ops-section font-semibold text-ops-card"
         >
           +
         </button>
-      </div>
+      </PageHeader>
 
       {/* Arama + süzgeç (İşlevsel) */}
       <div className="flex flex-col gap-2.5 px-4 py-3">

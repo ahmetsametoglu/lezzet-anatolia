@@ -162,7 +162,7 @@ export function TicketDetail({ detail, busy, error, compact, onStatus, onReply, 
                 bu yüzden köprü aramadır. Terim en ayırt edici kimlikten seçilir (e-posta → telefon
                 → ad): aynı adlı iki müşteri varsa ad araması ikisini birden getirirdi. */}
             <Link
-              href={customersUrl({ q: customer.email ?? customer.phone ?? customer.name, type: 'all', scope: 'all' })}
+              href={customersUrl({ q: customer.email ?? customer.phone ?? customer.name, type: 'all', scope: 'all', mc: 'any' })}
               // Çizim 15px → merdivende `lead` (künye: `lead ← 15 · 16`). `section` (19px) İKİ
               // kademe büyüktü: detay panosunun künyesi bir kart adıdır, sayfa başlığı değil —
               // `PageHeader`'daki "Talepler" ile aynı ağırlıkta görünmemeli.
@@ -215,10 +215,12 @@ export function TicketDetail({ detail, busy, error, compact, onStatus, onReply, 
           <section className="flex flex-col gap-2">
             <SectionLabel>Müşterinin anlatımı</SectionLabel>
             {/* Anlatım metni `strong` (#3a3f37) — çizimin değeri. Şikâyetin kendisi bu kutuda ve
-                ekranın en dikkatli okunan yeri; balon metniyle aynı kademede olmalı. */}
-            <div className="rounded-ops-card border border-ops-line bg-ops-white px-3.5 py-3 font-ops-body text-ops-base leading-relaxed text-ops-strong">
-              {first.body}
-            </div>
+                ekranın en dikkatli okunan yeri; balon metniyle aynı kademede olmalı.
+                Çeviri rozeti BURADA en gerekli: iade kararının dayanağı tam olarak bu cümle. */}
+            <TranslatedBody
+              message={first}
+              className="rounded-ops-card border border-ops-line bg-ops-white px-3.5 py-3 font-ops-body text-ops-base leading-relaxed text-ops-strong"
+            />
             <Attachments urls={first.attachmentUrls} compact={compact} />
           </section>
         ) : null}
@@ -390,6 +392,51 @@ const SENDER_NAME: Record<OpsTone, string> = {
  * okunması gereken şey metindir. Tonlu bir metin, tonlu bir zeminin üstünde kontrastını kaybediyor
  * — üstelik en çok okunan yerde.
  */
+/**
+ * Müşteri metninin ÇEVİRİLİ gösterimi (20.2) — anlatım kutusu ve yazışma balonu bunu paylaşır.
+ *
+ * ── ÇEVİRİ ORİJİNALİN YERİNE GEÇMEZ ─────────────────────────────────────────
+ * Varsayılan çeviridir (operatör kuyruğu tarayabilmeli), ama orijinal bir tık uzakta durur:
+ * personel müşterinin cümlesini bazen aynen alıntılamak zorunda (iade kararı, kargo şikâyeti) ve
+ * makine çevirisi bir yorum katmanıdır — "kutu ezilmişti" ile "kutu hasarlıydı" aynı tazminat
+ * kararını vermez.
+ *
+ * Tek komponent çünkü aynı üçlü iki yerde çiziliyor; iki kopya bir gün ayrışır ve ayrıştığı gün
+ * biri rozeti unutur, yani personel makine cümlesini müşterinin cümlesi sanar.
+ */
+function TranslatedBody({ message, className, align = 'start' }: { message: TicketMessageView; className: string; align?: 'start' | 'end' }) {
+  const [showOriginal, setShowOriginal] = useState(false);
+  const translated = message.bodyTranslated;
+  const original = translated && showOriginal;
+
+  return (
+    <>
+      <div
+        className={className}
+        // Gösterilen metin ORİJİNALSE dilini söylüyoruz: ekran okuyucusu ve tarayıcı çevirisi
+        // Fransızca bir cümleyi Türkçe sanmasın. Çeviri gösteriliyorsa dil zaten yüzeyin dili.
+        lang={original ? (message.language ?? undefined) : undefined}
+      >
+        {original ? message.originalBody : message.body}
+      </div>
+      {translated ? (
+        <span className={`flex items-center gap-2 ${align === 'end' ? 'self-end' : ''}`}>
+          {/* MOR = makine konuştu (`ui/tone.ts` sözlüğü): rozet bir durum değil, KİMİN yazdığını
+              söylüyor — personelin okuduğu cümle müşterinin kendi cümlesi değil. */}
+          <Badge tone="violet">otomatik çevrildi</Badge>
+          <button
+            type="button"
+            onClick={() => setShowOriginal((v) => !v)}
+            className="cursor-pointer font-ops-body text-ops-micro font-semibold text-ops-olive-dark underline-offset-2 hover:underline"
+          >
+            {showOriginal ? 'Çeviriyi göster' : 'Orijinali göster'}
+          </button>
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 function MessageBubble({ message, compact }: { message: TicketMessageView; compact: boolean }) {
   const mine = message.sender !== 'customer';
   const tone = TICKET_SENDER_TONE[message.sender];
@@ -399,7 +446,9 @@ function MessageBubble({ message, compact }: { message: TicketMessageView; compa
         {TICKET_SENDER_LABELS[message.sender]}
         <span className="font-ops-mono font-normal text-ops-faint">{shortDateTime(message.createdAt)}</span>
       </span>
-      <div
+      <TranslatedBody
+        message={message}
+        align={mine ? 'end' : 'start'}
         className={[
           // Çizim 12,5px → merdivende `sm` (künye: `sm ← 12 · 12,5`). Burası ekranın EN ÇOK OKUNAN
           // metni; okunabilirlik ölçeğin kendi kalibrasyonuyla çözüldü (globals §0.0), ekran
@@ -407,9 +456,7 @@ function MessageBubble({ message, compact }: { message: TicketMessageView; compa
           'max-w-[78%] rounded-ops-card border px-3 py-2 font-ops-body text-ops-sm leading-relaxed text-ops-strong',
           BUBBLE_SKIN[tone],
         ].join(' ')}
-      >
-        {message.body}
-      </div>
+      />
       <Attachments urls={message.attachmentUrls} compact={compact} align={mine ? 'end' : 'start'} />
     </div>
   );

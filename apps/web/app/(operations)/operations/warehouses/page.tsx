@@ -11,6 +11,7 @@ import {
 import { CountryEnum, type Country, type UserProfile } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { detectDevice } from '@/lib/device';
+import { readZoneDemand } from '@/lib/delivery/zone-demand';
 import { readStaff } from '@/lib/staff';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
@@ -61,13 +62,17 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
   const db = serviceDb();
   const stockSvc = new StockService(db);
 
-  const [warehouses, zones, staff, thresholds, transfers, warehouseLabels] = await Promise.all([
+  const [warehouses, zones, staff, thresholds, transfers, warehouseLabels, zoneDemand] = await Promise.all([
     new WarehouseService(db).list(),
     new DeliveryZoneService(db).listWithCodes(),
     readStaff(new UserProfileService(db)),
     readExpiryThresholds(new SettingsService(db)),
     new WarehouseTransferService(db).listInTransit(),
     readWarehouseLabels(),
+    // Bölge dışı talep — TESİSE bağlı değil, AĞA bağlı bir soru ("nereye açılmalıyız"), o yüzden
+    // liste görünümünde ve ilk dalgada okunuyor. Tavan kapının kendi varsayılanı (50): bir liderlik
+    // tablosu, sayfalanan bir liste değil.
+    readZoneDemand(),
   ]);
 
   // Partiler YALNIZ aktif depolardan: kapalı tesisin stoğu kayıtta durur ama satış okumalarında
@@ -95,6 +100,7 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
     // satış yapılamaz ve sipariş hiç açılmaz. Görünür bir eksiklik hâlidir, sessiz bırakılmaz.
     countriesWithoutShipping: CountryEnum.options.filter((c) => activeCountries.has(c) && !shippingCountries.has(c)),
     countriesWithWarehouse: [...activeCountries] as Country[],
+    zoneDemand,
   };
 
   return <WarehousesClient data={data} device={await detectDevice()} urlState={urlState} />;

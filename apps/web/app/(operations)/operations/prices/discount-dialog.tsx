@@ -214,6 +214,8 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
       <LocaleCard title="Müşteriye görünen" completenessOf={publicLabel}>
         {(lang) => (
           <>
+            {/* Çeviri alan türü `ad`: indirim etiketi sepette tek satır ve kısa. Açıklama tonunda
+                çevrilse "Hoş geldin indirimi" bir cümleye dönüşür ve satıra sığmaz. */}
             <LocalizedTextField
               value={publicLabel}
               onChange={setPublicLabel}
@@ -221,7 +223,7 @@ export function DiscountDialog({ editing, categories, collections, onClose }: Di
               label="Ad"
               placeholder={(l) => `${PUBLIC_LABEL_PLACEHOLDER[l]}…`}
               maxLength={PUBLIC_LABEL_MAX}
-              onAiTranslate={suggestTranslationAction}
+              onAiTranslate={(t) => suggestTranslationAction(t, 'ad')}
               hint="Sepette ve mailde indirim satırının yanına yazılır (“İndirim — Hoş geldin indirimi”) — kısa tutun. Boş bırakılırsa müşteri yalnız “İndirim” görür."
             />
 

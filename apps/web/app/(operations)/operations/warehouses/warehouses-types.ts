@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ZoneDemandRow } from '@/lib/delivery/zone-demand';
 import {
   AddressSchema,
   CountryEnum,
@@ -159,4 +160,12 @@ export interface WarehousesData {
   countriesWithoutShipping: Country[];
   /** Aktif deposu olan ülkeler — "yeni ülkede ilk depo" mali uyarısı bundan türer. */
   countriesWithWarehouse: Country[];
+  /**
+   * **Bölge dışı talep — hangi posta kodu bizi arıyor** (kullanıcı kararı 04.08, `ANALYTICS §6`).
+   *
+   * Tablo ANALİTİKTE değil BURADA çünkü **kararın verildiği yer burası**: harita "nereyi
+   * açabilirim"i, bu liste "nereyi açmalıyım"ı söyler. Analitikte yalnız işaret + köprü var; iki
+   * ekranda iki tablo, aynı soruya iki cevap demekti.
+   */
+  zoneDemand: ZoneDemandRow[];
 }

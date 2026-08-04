@@ -10,6 +10,7 @@ Müşteri kayıtlarının izlendiği ve müşteriye bağlı kararların (vade/li
 
 - **Müşteri satırı** — ad, tip (bireysel/şirket), telefon/e-posta, ülke; arama telefon ve ada göre (telefon kimlik anahtarıdır — WhatsApp'tan gelen müşteri telefonla bulunur)
 - **Daraltma** — B2B/B2C, vadeli müşteriler, taslak kayıtlar (WhatsApp'tan otomatik açılmış, birleştirme adayı), onay bekleyen B2B
+- **Pazarlama izinli daraltması (kullanıcı kararı 04.08, `ANALYTICS §6`)** — "kim izin verdi" sorusunun cevabı BURADADIR; analitik yalnız "kaç kişi" der ve buraya köprü kurar. Ayrı bir "pazarlama listesi" ekranı yoktur: aynı kümenin iki sahibi olurdu ve ikisi bir gün ayrışırdı. **Kanal ayrımı şart** — e-postaya izin verenle WhatsApp'a izin veren aynı küme değildir ve kampanya kanal seçerek kurulur; tek bir "izinli" kovası, e-posta listesine WhatsApp'çıları karıştırırdı (izinsiz gönderim demek). Kanal daraltması yalnız bu küme seçiliyken görünür — hiçbir zaman ayrı bir çip sırası açmaz
 
 ### Detay
 
@@ -54,8 +55,10 @@ Gidilen: sipariş detay, fiyatlar (özel fiyat), talep detay, B2B onay kaydı.
 - Pazarlama izni admin eliyle "verildi" yapılamaz — yalnız görüntülenir; aksi GDPR kanıtını bozar
 - Puan bakiyesi ve açık bakiye gibi türetilmiş değerler elle düzeltilmez — kaynağı (hareketler/siparişler) düzeltilir
 - Müşterinin şifre/oturum bilgisi ve kişisel analitik izleri burada gösterilmez — karar için gerekmez
+- **Pazarlama izinli listesinden GÖNDERİM yapılmaz** — daraltma "kim izin verdi"yi gösterir, kampanyayı başlatmaz. Gönderim kendi modülünün işidir (`14`/`15`) ve orada kanal, içerik, vazgeçme bağı ve gönderim izi birlikte durur; listeye bir "hepsine yaz" düğmesi konsaydı izin kontrolü iki yerde yaşardı
 
 ## 7. Web / mobil notları (yalnız işlevsel)
 
 - Telefon önceliklidir: en sık senaryolar telefonla müşteri bulma (WhatsApp yazışması sırasında), vadeli sipariş kararı öncesi karneye bakma ve limit değiştirme — hepsi telefonda hızla erişilmeli
 - Birleştirme ve GDPR silme gibi geri dönüşsüz işlemler telefonda da güvenle (yanlışlıkla tetiklenmeden) yapılabilmeli
+- **Telefonda çip şeridi yok ama "süzülüyor" şeridi VAR** (04.08) — daraltma kurulmaz, ama başka ekrandan bağlantıyla GELMİŞ bir daraltma görünmek zorundadır: analitik "N kişi pazarlama izinli" derken doğrudan süzülmüş listeye getiriyor. Şerit neyin süzdüğünü söyler ve kaldırma kapısını verir; olmasaydı operatör süzülmüş listeyi tam liste sanar ve aradığı müşteriyi "yok" diye okurdu — sessiz süzgeç boş sonuçla yalan söyler

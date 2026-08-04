@@ -6,6 +6,7 @@ import type { SignalTone } from '@lezzet/domain-core';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
+import { Textarea } from '@/components/operation/form/input';
 import { Skeleton, SkeletonCard, SkeletonText } from '@/components/operation/ui/skeleton';
 import type { B2bCheckView, B2bDuplicateRow } from '../customers-types';
 import { CUSTOMERS_PATH } from '../customers-url';
@@ -32,7 +33,8 @@ interface B2bApprovalDialogProps {
   /** Okuma hatası — yutulursa diyalog sonsuza kadar "Yükleniyor…" kalır. */
   error: string | null;
   saving: boolean;
-  onDecide: (approved: boolean) => void;
+  /** Ret'te `reason` DOLU gelir (veri kısıtı gerekçesiz reddi zaten yazdırmıyor); onayda boş. */
+  onDecide: (approved: boolean, reason: string) => void;
   onClose: () => void;
 }
 
@@ -61,7 +63,7 @@ export function B2bApprovalDialog({ check, error, saving, onDecide, onClose }: B
           approve={step.approve}
           saving={saving}
           onBack={() => setStep({ kind: 'card' })}
-          onConfirm={() => onDecide(step.approve)}
+          onConfirm={(reason) => onDecide(step.approve, reason)}
         />
       ) : (
         <CheckPane check={check} saving={saving} onDecide={(approve) => setStep({ kind: 'confirm', approve })} />
@@ -196,18 +198,22 @@ function CheckPane({
       <p className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
         Onay yalnız <strong>toptan fiyatı</strong> açar — vade/limit ayrı karardır ve müşteri panelinden
         verilir. Ret kaydı silmez: hesap B2C olarak kalır.
-        {/* BEKLEYEN(09.11): resmî kayıt (Sirene/Annuaire) ve VIES çağrıları bağlı değil — künye
-            başvuru anındaki hâliyle okunuyor, KDV numarası doğrulanmıyor. */}
+        {/* Resmî kayıt künyesi kart AÇILIRKEN tazeleniyor (04.08): bugün kapanmış bir şirket dünkü
+            "Aktif" ile görünmüyor. BEKLEYEN(09.11): VIES çağrısı kartın turunda değil — KDV
+            numarası başvuru anında doğrulandıysa doğrulanmış, sonradan tazelenmiyor. */}
       </p>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-ops-line pt-3">
         {/* Onaylı kayıtta da düğmeler duruyor: onay geri alınabilir bir karardır (işletme kapanır,
-            ödememe çıkar) ve geri alma yolu kapatılırsa operatör kaydı elle bozmaya çalışır. */}
-        <Button variant="primary" onClick={() => onDecide(true)} disabled={saving || check.approved === true}>
-          {check.approved === true ? 'Onaylı' : 'Onayla'}
+            ödememe çıkar) ve geri alma yolu kapatılırsa operatör kaydı elle bozmaya çalışır.
+            Kilit YALNIZ zaten verilmiş kararı tekrarlamayı engeller — bir tur `approved === false`
+            kilitliyordu ve o değer "reddedildi"yi değil "BEKLİYOR"u da taşıdığı için, reddedilmesi
+            gereken başvuru tam olarak reddedilemeyen başvuruydu (04.08). */}
+        <Button variant="primary" onClick={() => onDecide(true)} disabled={saving || check.status === 'approved'}>
+          {check.status === 'approved' ? 'Onaylı' : 'Onayla'}
         </Button>
-        <Button variant="danger" onClick={() => onDecide(false)} disabled={saving || check.approved === false}>
-          {check.approved === false ? 'Reddedildi' : 'Reddet'}
+        <Button variant="danger" onClick={() => onDecide(false)} disabled={saving || check.status === 'rejected'}>
+          {check.status === 'rejected' ? 'Reddedildi' : 'Reddet'}
         </Button>
       </div>
     </div>
@@ -231,8 +237,13 @@ function ConfirmStep({
   approve: boolean;
   saving: boolean;
   onBack: () => void;
-  onConfirm: () => void;
+  onConfirm: (reason: string) => void;
 }) {
+  const [reason, setReason] = useState('');
+  // Gerekçe RET'te zorunlu — ve kuralı asıl veri zorluyor (`user_profiles_b2b_reject_stamp`).
+  // Düğmeyi burada da kilitliyoruz ki operatör kısıt ihlaline çarpmadan önce ne istendiğini görsün.
+  const eksik = !approve && reason.trim().length === 0;
+
   return (
     <div className="flex flex-col gap-3.5">
       <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">
@@ -243,6 +254,26 @@ function ConfirmStep({
           ? `${check.name} toptan fiyatları görmeye başlayacak.`
           : `${check.name} reddedilecek; hesap B2C olarak kalır, toptan fiyat açılmaz.`}
       </p>
+      {approve ? null : (
+        // GEREKÇE bir form alanı değil, kararın kendisidir: ret müşteriye e-postayla bildiriliyor ve
+        // gerekçesiz bir ret "neden" sorusunun cevabını hiçbir yerde bırakmıyordu. Aday künyesini
+        // düzeltip yeniden başvurabildiği için (ret ESKİR, silinmez) cümle ona yol da gösteriyor.
+        <label className="flex flex-col gap-1.5">
+          <span className="font-ops-body text-ops-xs font-semibold text-ops-ink">
+            Ret gerekçesi <span className="font-normal text-ops-red">(zorunlu)</span>
+          </span>
+          <Textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            placeholder="Örn: faaliyet kodu gıda toptan satışıyla uyuşmuyor."
+            disabled={saving}
+          />
+          <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-muted">
+            Müşteriye e-postayla iletilir — kısa ve düzeltilebilir bir cümle yazın.
+          </span>
+        </label>
+      )}
       <p className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
         Onay yalnız toptan fiyatı açar. Vade/limit açmaz — gerekiyorsa müşteri panelinden ayrıca
         verirsiniz.
@@ -251,7 +282,7 @@ function ConfirmStep({
         <Button variant="secondary" onClick={onBack} disabled={saving}>
           Vazgeç
         </Button>
-        <Button variant={approve ? 'primary' : 'destructive'} onClick={onConfirm} disabled={saving}>
+        <Button variant={approve ? 'primary' : 'destructive'} onClick={() => onConfirm(reason.trim())} disabled={saving || eksik}>
           {saving ? 'Kaydediliyor…' : approve ? 'Onayla' : 'Reddet'}
         </Button>
       </div>

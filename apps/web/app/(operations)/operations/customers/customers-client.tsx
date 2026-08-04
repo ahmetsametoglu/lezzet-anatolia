@@ -22,7 +22,7 @@ import { CustomerEditDialog } from './components/customer-edit-dialog';
 import { OrderDialog } from './components/order-dialog';
 import { CustomersDesktop } from './customers.desktop';
 import { CustomersMobile } from './customers.mobile';
-import { customersUrl, type CustomerScope, type CustomersUrlState } from './customers-url';
+import { customersUrl, type CustomerScope, type CustomersUrlState, type MarketingChannelFilter } from './customers-url';
 import type {
   B2bCheckView,
   CreditFormInput,
@@ -267,6 +267,10 @@ export function CustomersClient({ data, device, urlState }: CustomersClientProps
     onSearch,
     onScope: (scope: CustomerScope) => applyFilters({ scope }),
     onType: (type: CustomerType | 'all') => applyFilters({ type }),
+    // Kanal daraltması kendi başına bir daraltma DEĞİL, `marketing` kümesinin içindeki bir ayrım —
+    // bu yüzden hep `scope` ile birlikte yazılır: bir bağlantıdan `?scope=marketing&mc=email` ile
+    // gelinip çipe basıldığında kapsamın da yerinde kalması gerekiyor.
+    onChannel: (mc: MarketingChannelFilter) => applyFilters({ scope: 'marketing', mc }),
     navPending: pending,
     hasMore: cursor !== null,
     loadingMore,
@@ -357,16 +361,18 @@ export function CustomersClient({ data, device, urlState }: CustomersClientProps
           check={b2bCheck}
           error={b2bError}
           saving={saving}
-          onDecide={(approved) =>
+          onDecide={(approved, reason) =>
             void runWrite(
               async () => {
-                const sonuc = await setB2bApprovalAction(selected.id, approved);
+                const sonuc = await setB2bApprovalAction(selected.id, approved, reason);
                 if (!sonuc.error) {
-                  // Satır rozeti ("Onay bekliyor") `b2bApproved`'a bağlı; liste yeniden okunmadan
-                  // doğru olsun diye yerelde yamalanıyor (`router.refresh()` seçimi düşürürdü).
+                  // Satır rozeti `b2bStatus`'a bağlı; liste yeniden okunmadan doğru olsun diye
+                  // yerelde yamalanıyor (`router.refresh()` seçimi düşürürdü). Ret'in karşılığı
+                  // `rejected` — `pending` yazsaydık az önce verdiğimiz karar ekranda hiç olmamış
+                  // gibi görünürdü.
                   setRowPatch((prev) => ({
                     ...prev,
-                    [selected.id]: { ...prev[selected.id], b2bApproved: approved },
+                    [selected.id]: { ...prev[selected.id], b2bStatus: approved ? 'approved' : 'rejected' },
                   }));
                 }
                 return sonuc;

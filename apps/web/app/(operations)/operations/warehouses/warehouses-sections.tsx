@@ -6,8 +6,9 @@ import { cardClass } from '@/components/operation/ui/card';
 import { Button } from '@/components/operation/ui/button';
 import { AlertIcon, InfoIcon, WarehouseIcon } from '@/components/operation/ui/icons';
 import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
-import { money, num, shortDateTime } from '@/components/operation/ui/format';
+import { decimal, money, num, shortDateTime } from '@/components/operation/ui/format';
 import type { Country } from '@lezzet/types';
+import type { ZoneDemandRow } from '@/lib/delivery/zone-demand';
 import { ordersLink } from '../orders/orders-url';
 import { settingsLink } from '../settings/settings-url';
 import { stockLink } from '../stock/stock-url';
@@ -447,5 +448,85 @@ function StaffChip({ name, role, note }: { name: string; role: string; note: str
       {name} · {role}
       {note ? <span className="font-ops-body text-ops-xs text-ops-muted">{note}</span> : null}
     </span>
+  );
+}
+
+/**
+ * **Bölge dışı talep — hangi kodlar bizi arıyor** (kullanıcı kararı 04.08, `ANALYTICS §6`;
+ * çizim `Operasyon - Analitik.dc.html` alt bölümü, karar onu bu ekrana taşıdı).
+ *
+ * Harita "nereyi açabilirim"i gösterir, bu tablo **"nereyi açmalıyım"ı**. Bölge kurulumunun eksik
+ * girdisi buydu: hizmet vermediğimiz kodlardan gelen talep zaten sayılıyordu (`postal_code_demand`)
+ * ve hiçbir ekranda görünmüyordu.
+ *
+ * ── İKİ SAYI, İKİ SÜTUN, TOPLANMAZ ──────────────────────────────────────────
+ * `Talep` anonim bir sayaçtır (aynı ziyaretçinin tekrarı ayrı sayılır), `Haber bekleyen` ise
+ * izin vermiş, kimlikli kişidir. Aynı olgunun iki ayrı defteri (`ANALYTICS §2`'nin kendi emsali:
+ * `postal_code_demand` ↔ `zone_notice`). Tek bir "ilgi" sayısına indirmek, anonim sayacı geriye
+ * dönük kimliklendirmek olurdu — o yüzden ekran ikisini asla toplamıyor.
+ *
+ * **Kapsananlar listeden ATILMAZ, işaretlenir:** "buraya zaten gidiyoruz ama talep yoğun" da bir
+ * bilgi (teslim günü sıklığı sorusunu doğurur). Sıralamayı kapı yapıyor, kapsanmayanlar önde.
+ */
+export function ZoneDemandTable({ rows }: { rows: readonly ZoneDemandRow[] }) {
+  return (
+    <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
+      <SectionHead
+        title="Posta kodu talebi"
+        hint="hangi kod ne sıklıkla soruluyor ve karşılığında ne sipariş çıkıyor — bölgeyi nereye genişleteceğimizin ve nerede sorun olduğunun verisi"
+      />
+      {rows.length === 0 ? (
+        // Boş hâl bir SONUÇTUR, gizlenmez: "kimse sormadı" da bölge açma kararının cevabı olabilir.
+        <p className={cardClass('px-3.5 py-3 font-ops-body text-ops-sm leading-relaxed text-ops-muted')}>
+          Henüz bölge dışından bir posta kodu girilmemiş. Bir ziyaretçi hizmet alanımız dışında bir kod girdiğinde burada
+          birikmeye başlar.
+        </p>
+      ) : (
+        <div className="overflow-hidden rounded-ops-card border border-ops-line">
+          <div className="grid grid-cols-[1fr_84px_104px_84px_92px] gap-x-3 border-b border-ops-line bg-ops-subtle px-4 py-2 font-ops-display text-ops-micro font-semibold uppercase tracking-wide text-ops-muted">
+            <span>Posta kodu</span>
+            <span className="text-right">Talep</span>
+            <span className="text-right">Haber bekleyen</span>
+            <span className="text-right">Sipariş</span>
+            <span className="text-right">Sip./talep</span>
+          </div>
+          {rows.map((row) => (
+            <div
+              key={row.postalCode}
+              className="grid grid-cols-[1fr_84px_104px_84px_92px] items-center gap-x-3 border-b border-ops-line-soft px-4 py-2 last:border-b-0"
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="truncate font-ops-mono text-ops-sm font-medium text-ops-ink">{row.postalCode}</span>
+                {/* Kapsanan satır NÖTR rozetle kalır: bir iş değil, bir bağlam. */}
+                {row.covered ? <Badge tone="neutral">rotada</Badge> : null}
+                <span className="font-ops-mono text-ops-micro text-ops-faint">{shortDateTime(row.lastSeenAt)}</span>
+              </span>
+              <span className="text-right font-ops-mono text-ops-sm text-ops-ink">{num(row.requestCount)}</span>
+              {/* Sıfır bekleyen `—` değil `0`: burada sıfır ölçülmüş bir sonuçtur, eksik ölçüm değil. */}
+              <span className={`text-right font-ops-mono text-ops-sm ${row.waitingCount > 0 ? 'text-ops-olive-dark' : 'text-ops-muted'}`}>
+                {num(row.waitingCount)}
+              </span>
+              {/* Kapsam DIŞI kodda sipariş zaten olamaz — sıfır bir eksiklik değil, tanımın kendisi;
+                  o yüzden soluk. Asıl okunacak satırlar "rotada" olup da siparişi düşük olanlar. */}
+              <span className={`text-right font-ops-mono text-ops-sm ${row.covered ? 'text-ops-ink' : 'text-ops-faint'}`}>
+                {num(row.orderCount)}
+              </span>
+              <span className="text-right font-ops-mono text-ops-micro text-ops-muted">
+                {row.orderRatio === null ? '—' : decimal(row.orderRatio, 2)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="px-0.5 font-ops-body text-ops-xs leading-relaxed text-ops-muted">
+        <strong>Talep</strong> ile <strong>Haber bekleyen</strong> toplanmaz: biri anonim bir sayaçtır (kim olduğu
+        tutulmaz), öteki izin vermiş kişidir. <strong>Sip./talep bir dönüşüm yüzdesi DEĞİL</strong>, bir sıralama
+        sinyalidir — payda aynı ziyaretçinin tekrar sormasını da sayıyor, yani gerçek dönüşümden küçüktür ve kodlar
+        arasında karşılaştırmak için anlamlıdır. Sipariş ve talep <strong>tüm zamana</strong> aittir; dönem süzgeci yok,
+        çünkü biri süzülüp öteki süzülmese oran pencere daraldıkça sessizce düşer ve düşüş bir sinyal sanılırdı.{' '}
+        Bir kodu bölgeye ekleyip kaydettiğinizde o koddaki bekleyenlere haber gider — BEKLEYEN(19.21): gönderim işi
+        henüz bağlı değil.
+      </p>
+    </section>
   );
 }

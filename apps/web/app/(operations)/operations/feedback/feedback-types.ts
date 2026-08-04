@@ -1,6 +1,7 @@
 import type { KeysetCursor, PointsBalance } from '@lezzet/types';
 import type { CandidateDemandRow } from '@/lib/feedback/product-feedback';
 import type { ModerationRowView, ScoreRowView } from '@/lib/feedback/moderation-read';
+import type { FeedbackTab, FeedbackUrlState, ReviewStack, ScoreDirection } from './feedback-url';
 
 // Geri Bildirim ekranının görünüm tipleri (17.1 · 17.3 · 17.4). Şema tek kaynak (CLAUDE.md §1):
 // hepsi `packages/types` ve okuma kapılarının tiplerinden TÜRER, elle yeniden yazılmaz.
@@ -60,6 +61,31 @@ export interface FeedbackData {
   highDemandCount: number;
 }
 
-// Cihaz görünümlerinin ortak sözleşmesi (`FeedbackViewProps`) `feedback-client`'ta durur, burada
-// DEĞİL: içinde callback'ler var ve onlar istemci kökünün kendi sözleşmesidir. İki yerde tanımlanıp
-// biri eksik kalırsa (ilk yazımda öyle oldu) derleyici değil, ekran söyler.
+/**
+ * İki cihaz görünümünün ortak sözleşmesi — ikisi de AYNI durumu alır, yalnız dizilim değişir.
+ *
+ * **Bir tur `feedback-client`'ta duruyordu ve künyesi "callback'ler istemci kökünün sözleşmesidir"
+ * diyordu; gerekçe yanlıştı ve bedeli ölçüldü:** cihaz dosyaları tipi client'tan geri import edince
+ * `client → desktop → client` halkası doğdu ve `pnpm boundaries` iki hatayla düştü (denetim
+ * bildirimi 04.08). Callback'lerin İMZASI bir tiptir, çağrının kendisi değil — ve `CLAUDE §2` zaten
+ * sayfaya-özel tipin `-types.ts`'te durmasını söylüyordu. Öteki ekranların hepsi de burada tutuyor.
+ */
+export interface FeedbackViewProps {
+  data: FeedbackData;
+  urlState: FeedbackUrlState;
+  busy: boolean;
+  error: string | null;
+  /** Kuyruğun devamı var mı (imleç null değil) — nöbetçi buna göre çizilir. */
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
+  onTab: (tab: FeedbackTab) => void;
+  onStack: (rs: ReviewStack) => void;
+  /** Skor tablosunun yönünü değiştirir (en sevilen ↔ en sevilmeyen). */
+  onScoreDirection: (sd: ScoreDirection) => void;
+  onModerate: (reviewId: string, to: 'approved' | 'rejected') => void;
+  /** Elle puan düzeltmesini açar — yalnız masaüstünde çağrılır (mobilde form yok). */
+  onAdjustPoints: (customerId: string, customerName: string) => void;
+  /** Adayı ürün yönetiminde açar (aday panosunun tek eylemi). */
+  onActivate: (productId: string) => void;
+}

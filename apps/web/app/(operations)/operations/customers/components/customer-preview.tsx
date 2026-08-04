@@ -9,7 +9,7 @@ import { InlineMetric } from '@/components/operation/ui/inline-metric';
 import { Metric } from '@/components/operation/ui/metric';
 import { Skeleton, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
 import { money, percent, shortDate } from '@/components/operation/ui/format';
-import { paymentTone, statusHint, statusOf, typeTone } from '../customers-labels';
+import { B2B_STATUS_VIEW, paymentTone, statusHint, statusOf, typeTone } from '../customers-labels';
 import { TYPE_LABEL } from '../customers-url';
 import type { ConsentView, CustomerDetail, CustomerOrderRow, CustomerRow } from '../customers-types';
 
@@ -187,21 +187,15 @@ export function CustomerPreview({
             {row.type === 'company' ? (
               <div
                 className={`flex flex-wrap items-center gap-2.5 rounded-ops-card border px-3.5 py-3 ${
-                  row.b2bApproved === false ? 'border-ops-amber-line bg-ops-amber-bg' : 'border-ops-line bg-ops-white'
+                  B2B_STATUS_VIEW[row.b2bStatus].highlight ? 'border-ops-amber-line bg-ops-amber-bg' : 'border-ops-line bg-ops-white'
                 }`}
               >
                 <span className="mr-auto flex min-w-0 flex-col gap-px">
                   <span className="font-ops-display text-ops-xs font-semibold text-ops-ink">B2B onayı</span>
-                  <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
-                    {row.b2bApproved === true
-                      ? 'Onaylı — toptan fiyatları görüyor.'
-                      : row.b2bApproved === false
-                        ? 'Onay bekliyor — toptan fiyat görmüyor, perakende fiyatla alışveriş yapıyor.'
-                        : 'Başvuru kaydı yok; şirket olarak işaretli ama onay süreci hiç başlamamış.'}
-                  </span>
+                  <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">{B2B_STATUS_VIEW[row.b2bStatus].sentence}</span>
                 </span>
-                <Badge tone={row.b2bApproved === true ? 'olive' : row.b2bApproved === false ? 'amber' : 'neutral'} outline>
-                  {row.b2bApproved === true ? 'Onaylı' : row.b2bApproved === false ? 'Bekliyor' : 'Başvuru yok'}
+                <Badge tone={B2B_STATUS_VIEW[row.b2bStatus].tone} outline>
+                  {B2B_STATUS_VIEW[row.b2bStatus].badge}
                 </Badge>
                 <Button variant="secondary" size="sm" onClick={onOpenB2b} disabled={saving}>
                   Başvuruyu incele
@@ -435,7 +429,13 @@ export function CustomerPreview({
                   </>
                 ) : (
                   <>
-                    <InlineMetric label="Edinim" value={detail.acquisitionSource ?? 'kayıtlı değil'} />
+                    {/* BEKLEYEN(13.2): boş edinim "kaynak yok" DEĞİL, "henüz ölçülmüyor" demek.
+                    `acquisition_source`'un yazma kapısı var (`checkout-session.ts:145`, ilk kaynak
+                    kazanır) ama besleyeni yok — UTM hiçbir yerde yakalanmıyor, yani alan bugün her
+                    müşteride boş. "Kayıtlı değil" yazmak bozuk bir ölçümü sağlıklı gibi okutur
+                    (CLAUDE §1). 13.2 inince metin "kayıtlı değil"e döner: o gün boş küme gerçekten
+                    doğrudan gelen ziyaretçi demek olacak. */}
+                    <InlineMetric label="Edinim" value={detail.acquisitionSource ?? 'henüz ölçülmüyor'} />
                     {detail.referredByName ? <InlineMetric label="Getiren" value={detail.referredByName} /> : null}
                     <div className="flex flex-col gap-px">
                       <span className="font-ops-body text-ops-micro text-ops-muted">Talepler</span>

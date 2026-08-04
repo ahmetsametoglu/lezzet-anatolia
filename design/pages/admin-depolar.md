@@ -47,6 +47,20 @@ Bölge kararı coğrafi bir karardır: operatör kodu değil YOLU bilir — iki 
 - **Teknik karar (bağlayıcı, 02.08): MapLibre GL JS + OpenFreeMap vektör karoları.** Gerekçe: binlerce kod noktası GPU'da tek veri katmanı olarak akıcı çizilir (DOM tabanlı kütüphaneler bu sayıda tıkanır); vektör stil, taban haritayı sakinleştirip işaretlerimizi öne çıkaran ve operasyon paletiyle uyumlu bir görünüme izin verir (görsel ayar Claude Design'ın — stil JSON'u ona göre kurulur, koyu tema karşılığı stil varyantıyla gelir); anahtar/hesap/ücret gerektirmez ve aynı karolar ileride kendi sunucumuzda barındırılabilir — ekran kodu değişmeden dış bağımlılık sıfırlanır (kendi karo dosyası backlog)
 - ⚠ **Arka uç ön koşulu:** `postal_code_place` bugün koordinat taşımıyor; GeoNames dökümünde zaten olan enlem/boylam üretece ve tabloya eklenmeli (`scripts/build-postal-codes.mjs` + `0044` — kod başına merkez nokta yeter). Bu gelmeden harita kodları basamaz. Talep kullanıcı üzerinden arka uç şeridine iletildi (02.08)
 
+#### Bölge dışı talep — hangi kodlar bizi arıyor (kullanıcı kararı, 04.08)
+
+Harita "nereyi açabilirim"i gösterir, bu tablo **"nereyi açmalıyım"ı** gösterir. Bölge kurulumunun tek eksik girdisi buydu: operatör bugün bölgeyi kendi sezgisiyle çiziyor, oysa hizmet vermediğimiz kodlardan gelen talep zaten sayılıyor (`postal_code_demand`) ve hiçbir ekranda görünmüyor. Tablo bu yüzden hizmet alanı bölümünün içindedir, ayrı bir "analitik" köşesinde değil — **kararın verildiği yerde durur** (analitik ekranında yalnız işareti ve buraya köprüsü olur).
+
+- **Satır = posta kodu**, yanında yerleşim adı (`postal_code_place`) — operatör kodu değil yeri tanır
+- **Kaç kez soruldu** (dönem seçilebilir) — asıl sıralama ölçütü budur
+- **Kapsanıyor mu** — kapsananlar listeden ATILMAZ, işaretlenir: hangi bölge, hangi depo. "Zaten bizimki" satırı da bilgidir (bir kodun talebi patlıyorsa teslim günü sıklığı sorusu doğar); ama sıralama kapsanmayanları öne alır
+- **Kaç kişi haber bekliyor** — `zone_notice`, yani izin vermiş, kimlikli kişiler. **Bu sayı talep sayısıyla TOPLANMAZ ve onun bir alt kümesi değildir:** biri anonim bir sayaç, öteki kayıt bırakmış bir kişidir; aynı olgunun iki ayrı defteri (`ANALYTICS §2`). Ekran ikisini iki sütun olarak gösterir, tek bir "ilgi" sayısına indirmez
+- **Sepeti bölünen / vazgeçen** — aynı satırın iki sayacı daha (`ANALYTICS §3`: bu kırılım olay defterine değil, buraya iner). ⚠ İki sayacı yan yana koymak bir **huni** ilişkisi ima eder ("sordu → bölündü → vazgeçti"); ilişki gerçekten kurulmuyorsa çizilmemeli — sayılar farklı yerlerden düşüyor ve küçük sapma tasarımdır, arıza değil
+- **Ülke kırılımı** — FR/DE ayrı okunur; hizmet verilmeyen ülkenin kodu talep olarak gelmiş olabilir ve bu ayrı bir karardır (yeni ülkede depo = mali karar, §2 künye uyarısı)
+- **Boş hâl bir sonuçtur:** hiç talep yoksa "kimse sormadı" denir, tablo gizlenmez — bölge açma kararının cevabı da olabilir
+
+**Bölge aktifleşince bekleyene haber gider — bir OLAY olarak, düğmeyle değil.** Bir kod aktif bir bölgeye girip kaydedildiğinde o kodda haber bekleyenlere gönderim kendiliğinden başlar; "haber ver" düğmesi konsaydı bölgeyi açan kişi unutabilirdi ve sistemin zaten bildiği bir şey insana bırakılmış olurdu. Ekran tarafındaki üç beklenti: kaydetme **beklemez** (gönderim arka planda; ekran "N kişiye haber gidecek" der), aynı kişiye **iki kez gitmez**, ve gönderilen **işaretlenir** — işaret yoksa "kime gitti" sorusunun cevabı da kalmaz. Bugün yalnız e-posta gidiyorsa ekran öyle yazar; WhatsApp `15.x` inmeden "gitti" gösterilmez.
+
 ### Karne (bu depo nasıl duruyor)
 
 Karne **SAYAR, listelemez**: her sayı Stok ekranına o depo bağlamıyla giden bir kapıdır. Satırların kendisi orada yaşar — burada tekrarlanması aynı listenin iki sahibi olması demekti.
@@ -69,6 +83,7 @@ Karne **SAYAR, listelemez**: her sayı Stok ekranına o depo bağlamıyla giden 
 - **Kapatma / yeniden açma** — kapatma öncesi sonuçlar açıkça gösterilir ve onay istenir
 - Kargo çıkış rolünü işaretleme/kaldırma (ret hâli §4'te)
 - **Bölge ekleme/düzenleme/pasifleştirme** — teslim günleri + posta kodları; kod ekleme/çıkarma **haritadan tıklayarak** (asıl yol) ya da listeden (§2 harita bloğu)
+- **Talep tablosundan bölgeye geçiş** — bir koda "bölgeye ekle" demek onu haritadaki/listedeki bölge kurulumuna taşır; kararın verildiği yerden uygulandığı yere tek adım
 - Karnedeki bir sayıdan Stok'a geçiş (bağlam o depoya alınmış hâlde)
 - Personele (Ayarlar), gün planına (Teslimat) geçiş
 
@@ -93,6 +108,7 @@ Gidilen: **Stok** (karneden — bağlam o depoya alınır: seviyeler, hareketler
 - **Mal giriş/çıkışı burada yapılmaz ve listelenmez** — kabul, sevk, kabul, imha, hazırlık hepsi Stok'un hareket defterindedir. Burada yalnız SAYILARI görünür ve o sayılar oraya götürür
 - **Parti listesi yoktur** — karne "6 parti risk altında" der, hangi partiler olduğunu Stok söyler
 - **Depo silinmez** — yalnız kapatılır; silme eylemi hiç bulunmaz
+- **Talep tablosu KİŞİ listelemez** — "kim sordu" burada yoktur ve açılmaz: sayaç anonimdir, haber bekleyenler ise izinli ve kimliklidir; ikisini aynı tabloda kişi satırına indirmek anonim sayacı geriye dönük kimliklendirmek olurdu. Kişi sorusunun sahibi Müşteriler ekranıdır (`ANALYTICS §6`)
 - **"Varsayılan depo" işareti yoktur ve icat edilmez** — depo ya adresin posta kodundan ya personelin kapsamından gelir
 - **Depo ekseninin bağlam seçicisi bu sayfayı daraltmaz** — depolar yönetim nesnesidir, hepsi her zaman listelenir
 - Personel rolü/kapsamı burada atanmaz (Ayarlar'ın işi); gün planı ve kurye ataması burada yapılmaz (Teslimat'ın işi) — bölge TANIMI burada, bölgenin GÜNLÜK kullanımı orada

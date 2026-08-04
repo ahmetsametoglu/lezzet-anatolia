@@ -1,3 +1,4 @@
+import type { B2bApplicationStatus } from '@lezzet/domain-core';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { CustomerType } from '@lezzet/types';
 import type { CustomerRow } from './customers-types';
@@ -18,10 +19,49 @@ export function statusOf(row: CustomerRow): { label: string; tone: OpsTone } {
   // ise pasif bir hâl (tasarım da gri veriyor).
   if (row.isDraft) return { label: 'Taslak', tone: 'neutral' };
   // Onay bekleyen B2B: toptan fiyatı göremiyor, yani müşteri fiilen kapıda bekliyor → amber.
-  if (row.b2bApproved === false) return { label: 'Onay bekliyor', tone: 'amber' };
+  if (row.b2bStatus === 'pending') return { label: 'Onay bekliyor', tone: 'amber' };
+  // REDDEDİLEN başvuru amber DEĞİL, nötr: amber "senden karar bekliyorum" demek, oysa karar
+  // verilmiş. Bir tur ikisi de amber "Onay bekliyor" görünüyordu — reddettiğin başvuru listede
+  // hâlâ senden karar bekler gibi duruyordu (arka uç bildirimi 03.08). Rozet KALIYOR ama: hâli
+  // hiç göstermemek, aynı kişi yarın yeniden başvurduğunda geçmişi görünmez kılardı.
+  if (row.b2bStatus === 'rejected') return { label: 'Reddedildi', tone: 'neutral' };
   if (row.creditEnabled) return { label: 'Vadeli', tone: 'blue' };
   return { label: 'Aktif', tone: 'olive' };
 }
+
+/**
+ * B2B başvurusunun DÖRT hâli, tek sözlükte — web paneli ve mobil kutu bunu paylaşır.
+ *
+ * `Record<B2bApplicationStatus, …>` olması bilinçli: motora yeni bir hâl eklendiği gün derleyici
+ * burayı gösterir. Bir tur her iki ekran üçlü bir `? :` zinciriyle kendi cümlesini kuruyordu ve
+ * ikisi de dördüncü hâli (reddedildi) hiç bilmiyordu.
+ *
+ * `highlight` = kutunun amber zeminle öne çıkması. YALNIZ `pending`'de: amber "senden karar
+ * bekliyorum" demek; reddedilmiş bir başvuru bir iş değil, bir geçmiştir.
+ */
+export const B2B_STATUS_VIEW: Record<B2bApplicationStatus, { badge: string; tone: OpsTone; sentence: string; highlight: boolean }> = {
+  none: {
+    badge: 'Başvuru yok',
+    tone: 'neutral',
+    sentence: 'Başvuru kaydı yok; şirket olarak işaretli ama onay süreci hiç başlamamış.',
+    highlight: false,
+  },
+  pending: {
+    badge: 'Bekliyor',
+    tone: 'amber',
+    sentence: 'Onay bekliyor — toptan fiyat görmüyor, perakende fiyatla alışveriş yapıyor.',
+    highlight: true,
+  },
+  approved: { badge: 'Onaylı', tone: 'olive', sentence: 'Onaylı — toptan fiyatları görüyor.', highlight: false },
+  rejected: {
+    badge: 'Reddedildi',
+    tone: 'neutral',
+    // Ret SİLMEZ: kayıt B2C olarak yaşamaya devam eder ve aday künyesini düzeltip yeniden
+    // başvurabilir (o gün hâl `pending`'e döner, ret kaydı geçmiş olarak kalır).
+    sentence: 'Reddedildi — kayıt B2C olarak duruyor. Aday künyesini düzeltip yeniden başvurabilir.',
+    highlight: false,
+  },
+};
 
 /**
  * Müşteri TİPİNİN rengi — envanter O6: "ince çip kanal — B2B amber / B2C olive".
@@ -40,7 +80,8 @@ export function typeTone(type: CustomerType): OpsTone {
 export function statusHint(row: CustomerRow): string {
   if (row.hasOverdue) return 'Vadesi geçmiş açık borcu var — checkout\'ta vadeli seçenek otomatik kapalı';
   if (row.isDraft) return 'WhatsApp telefonuyla kendiliğinden açılmış kayıt — eksik bilgili, birleştirme adayı';
-  if (row.b2bApproved === false) return 'B2B başvurusu onay bekliyor — onaylanana dek toptan fiyat görmüyor';
+  if (row.b2bStatus === 'pending') return 'B2B başvurusu onay bekliyor — onaylanana dek toptan fiyat görmüyor';
+  if (row.b2bStatus === 'rejected') return 'B2B başvurusu reddedildi — kayıt B2C olarak duruyor, perakende fiyatla alışveriş yapabiliyor';
   if (row.creditEnabled) return 'Vade yetkisi açık — hesaba (vadeli) sipariş verebilir';
   return 'Olağan müşteri: peşin ödeme, vade yetkisi kapalı';
 }

@@ -219,7 +219,9 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
             <LocaleCard title="İçerik" completenessOf={nameValue}>
               {(lang) => (
                 <>
-                  <FormLocalizedText control={form.control} name="name" label="Ad" required placeholder="Ad" lang={lang} onAiTranslate={suggestTranslationAction} />
+                  {/* Alan türü geçiliyor: kategori/koleksiyon ADI kısa bir vitrin metni, açıklaması
+                      ise paylaşım kartında okunan bir cümle — ikisi aynı ölçüde çevrilmemeli. */}
+                  <FormLocalizedText control={form.control} name="name" label="Ad" required placeholder="Ad" lang={lang} onAiTranslate={(t) => suggestTranslationAction(t, 'ad')} />
                   <FormLocalizedText
                     control={form.control}
                     name="description"
@@ -228,13 +230,13 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
                     rows={3}
                     placeholder="Açıklama"
                     lang={lang}
-                    onAiTranslate={suggestTranslationAction}
+                    onAiTranslate={(t) => suggestTranslationAction(t, 'aciklama')}
                   />
                 </>
               )}
             </LocaleCard>
           ) : (
-            <FormLocalizedText control={form.control} name="name" label="Ad" required placeholder="Ad" layout="stacked" onAiTranslate={suggestTranslationAction} />
+            <FormLocalizedText control={form.control} name="name" label="Ad" required placeholder="Ad" layout="stacked" onAiTranslate={(t) => suggestTranslationAction(t, 'ad')} />
           )}
 
         </div>
