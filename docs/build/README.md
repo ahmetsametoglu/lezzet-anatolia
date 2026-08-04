@@ -30,14 +30,14 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 02 | `02-database.md` | `packages/database`: Taban Servis ve İlk Şema | sürüyor | 11/13 (+2 kısmi) |
 | 03 | `03-domain-core.md` | `packages/domain-core`: İş Kuralları Motoru | sürüyor | 10/11 (+1 kısmi) |
 | 04 | `04-auth-kimlik.md` | Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama | sürüyor | 8/10 |
-| 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 11/14 (+2 kısmi) |
+| 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 11/15 (+3 kısmi) |
 | 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | tamam | 12/12 |
 | 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 11/12 (+1 kısmi) |
 | 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 11/21 (+8 kısmi) |
 | 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 4/19 (+10 kısmi) |
 | 10 | `10-depo.md` | Depo Yüzeyi | sürüyor | 0/6 (+5 kısmi) |
 | 11 | `11-kurye-rota.md` | Kurye ve Rota Teslimat | sürüyor | 1/6 (+4 kısmi) |
-| 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | sürüyor | 6/10 (+2 kısmi) |
+| 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | sürüyor | 7/10 (+2 kısmi) |
 | 13 | `13-analitik.md` | Analitik | sürüyor | 1/8 (+7 kısmi) |
 | 14 | `14-bildirim-email.md` | Bildirim ve E-posta: `packages/email` + `packages/notify` | sürüyor | 7/10 |
 | 15 | `15-whatsapp.md` | WhatsApp: Zemin ve Canlı Kanal | bekliyor | 0/14 |

@@ -11,27 +11,38 @@ import { fromCents } from '@lezzet/helper';
 /**
  * "12,60" — sabit basamaklı ondalık, virgüllü, **binlik ayracısız**.
  *
- * Para yazımının çekirdeği: `money`, `amount` ve para GİRDİ kutusu (`money-input`) üçü de bunu
- * kullanır. Kutu ayrı yazıyordu ve fark görünmezdi — bir gün biri üç haneye geçse öteki ikide
- * kalırdı; aynı sayı kutuda başka, sütunda başka okunurdu.
- *
- * Ayracın olmaması bilinçli: kutuya yazılan metin geri okunabilir olmalı ("1.234,50" yazımını
- * ayrıştırmak, noktayı ondalık sanan bir hataya davettir). Sayaç ve ölçüler ayraç ister → `num`.
+ * **Para GİRDİ kutusunun (`money-input`) biçimi budur** — kutuya yazılan metin geri okunabilir
+ * olmalı ve ayraç oraya girerse ayrıştırma noktayı ondalık sanar. Gösterim tarafı (`money`,
+ * `amount`) 04.08'de buradan ayrıldı: okunur tutar ayraç ister, yazılabilir tutar istemez.
+ * Sayaç ve ölçüler için → `num`.
  */
 export function decimal(value: number, digits = 2): string {
   return value.toFixed(digits).replace('.', ',');
 }
 
-/** "12,60 €" — cent girer, okunur tutar çıkar. `null` bilinmiyor demektir, sıfır değil. */
-export function money(cents: number | null | undefined): string {
-  if (cents == null) return '—';
-  return `${decimal(fromCents(cents))} €`;
+/**
+ * "1.234,50" — GÖSTERİM tutarı: binlik ayraçlı, iki basamaklı.
+ *
+ * `decimal`den ayrılmasının sebebi ikisinin farklı işler yapması: `decimal` bir metin kutusuna
+ * yazılıp geri okunacak değeri üretir (ayraç oraya girerse "1.234,50" ayrıştırılırken noktayı
+ * ondalık sanan bir hataya davet olur), bu ise yalnız okunur. **Ayraç bir süs değil:** para
+ * ekranındaki "12931,53 €" ölçüldü ve okunmuyordu — tasarımın bütün çizimleri de ayraçlı yazıyor
+ * ("21.340 €", "−1.240,00"). Dört haneden sonra göz basamak sayamıyor.
+ */
+function grouped(value: number): string {
+  return value.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-/** "12,60" — para birimi SİMGESİZ (sütun başlığı zaten "€" diyorsa simge iki kez yazılmasın). */
+/** "1.234,50 €" — cent girer, okunur tutar çıkar. `null` bilinmiyor demektir, sıfır değil. */
+export function money(cents: number | null | undefined): string {
+  if (cents == null) return '—';
+  return `${grouped(fromCents(cents))} €`;
+}
+
+/** "1.234,50" — para birimi SİMGESİZ (sütun başlığı zaten "€" diyorsa simge iki kez yazılmasın). */
 export function amount(cents: number | null | undefined): string {
   if (cents == null) return '—';
-  return decimal(fromCents(cents));
+  return grouped(fromCents(cents));
 }
 
 /**

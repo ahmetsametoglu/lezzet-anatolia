@@ -113,7 +113,7 @@ import { seedAddresses, seedDeliveryZones, seedPostalDemand, seedStockNotices, s
 import { seedDiscounts } from './seed/discount';
 import { seedFeedbackRequests, seedPoints, seedProductFeedback } from './seed/feedback';
 import { seedJobRuns } from './seed/jobs';
-import { seedMoney } from './seed/money';
+import { seedBankQueue, seedMoney } from './seed/money';
 import { seedErrorLog, seedSystemHealth } from './seed/observability';
 import { seedCarts, seedOrders } from './seed/orders';
 import { seedDraftCustomers, seedKisiler } from './seed/people';
@@ -167,6 +167,10 @@ async function main(): Promise<void> {
   // Kuponlar SİPARİŞLERDEN ÖNCE: sipariş kuponu uygular ve kullanım kaydını yazar; tanım hazır olmalı.
   const kuponlar = await seedDiscounts(db, kisiler);
   await seedOrders(db, kisiler, varyantlar, kuponlar, depolar);
+  // Banka ekstresi SİPARİŞLERDEN SONRA: eşleştirme kuyruğunun satırları açık siparişlerin
+  // tutarlarından türüyor (güçlü aday · çoklu aday · öneri yok). `seedMoney` içinde kalsaydı
+  // sipariş tablosu henüz boş olur ve kuyruk tek hâlinde donardı.
+  await seedBankQueue(db);
   // Transfer siparişlerden SONRA: sevk kullanılabilir stoğa bakar, rezervasyonlu malı yola çıkarmaz.
   await seedTransfer(db, depolar);
   // Eşikler TRANSFERDEN SONRA: "eşiğin altında mı" sorusu kullanılabilir stoğa bakar ve sevk edilen

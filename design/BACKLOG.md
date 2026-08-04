@@ -780,6 +780,38 @@ bu ekran **alarmın yerini tutmak zorunda** — "kötü durum, bakmayan gözü y
 görsel kararın merkezinde durmalı. Envanterde bu yükümlülük yazılı; kodlamadan önce çizim gelmeli
 (`CLAUDE.md §3`: implement ederken improvise edilmez).
 
+**Para ekranının MOBİL yüzeyi — çizilmedi, kararla kuruldu (04.08).** `Operasyon - Para.dc.html`
+tek bir `data-screen-label="Para Tezgah"` bloğu taşıyor ve o blok masaüstü (1360px, `AdminSidebar`
++ iki sütunlu gövde). Mobil bölümü hiç açılmamış — oysa sayfa dokümanı §7 telefonu **öncelikli**
+sayıyor: *"gider girişi çoğu zaman anlık yapılır (akaryakıt alındı, nakit çıktı) — hızlı elle giriş
+telefonda tek dakikalık iş olmalı"*. Yani ekran çizilmemiş bir yüzeyde çizilmiş bir yükümlülük
+taşıyor; kodlanmaması bir seçenek değildi (`12.8`).
+
+Kurulan yüzey ve gerekçeleri: *(a)* **"+ Hareket" birincil düğme** (masaüstünde ikincil) — §7'nin
+tarif ettiği saha işi bu; *(b)* iki sütunlu gövde **sekmeye** iniyor (Hareketler | Eşleştirme) —
+kuyruk gizlenmiyor, çünkü §7 onu "oturarak yapılan iş" diyor, "telefonda yapılamaz" demiyor;
+*(c)* bakiye şeridi **yatay kaydırılır tek satır**, toplam başta. Bu üçüncüsü ölçümle düzeldi: ilk
+yazımda iki sütunlu ızgaraydı ve beş hesap altı hücre ederek ekranın ilk katının tamamını yiyordu
+(`ui:shot`), yani Para'yı telefonda açan operatör yalnız bakiyeleri görüyordu.
+
+Çizim istenirken bilinmesi gereken: bu bir **çizim değil, sayfa dokümanının işlevsel notlarına
+dayanan bir yerleştirme.** Özellikle karar bekleyen iki şey — kuyruğun telefonda sekme mi yoksa
+alt sayfa (bottom sheet) mı olacağı, ve bakiye şeridinin kaydırılabilir mi yoksa katlanabilir mi
+olması gerektiği.
+
+**Hesap rengi: sağlayıcı `violet` değil `slate` (04.08, bilinçli).** Tasarım Stripe'a mavi-mor bir
+nokta veriyor (`#6a5acd`). Operasyon paletinde `violet` **"makine konuştu"** demek (AI çevirisi, AI
+önerisi — `OpsTone` sözlüğü); Stripe bir makine değil bir hesap. Mor verilseydi operatör aynı rengi
+iki ayrı anlamda okumak zorunda kalırdı. `slate` seçildi: mavi-griye en yakın nötr ton.
+
+**Para biçimi binlik ayraçlı oldu — `format.ts` ikiye ayrıldı (04.08, ölçümle).** `money`/`amount`
+ayraçsız yazıyordu ("12931,53 €") ve Para ekranının bakiye şeridinde okunmadığı `ui:shot` ile
+görüldü. Tasarımın bütün çizimleri zaten ayraçlı ("21.340 €", "−1.240,00"). Ayraçsızlığın gerekçesi
+geçerliydi ama **yalnız girdi kutusu için**: kutuya yazılan metin geri okunabilir olmalı ve "1.234,50"
+ayrıştırılırken nokta ondalık sanılır. `money-input` zaten `decimal()`i doğrudan kullanıyordu, yani
+gösterim tarafını ayırmak kutuyu hiç etkilemedi. **Değişiklik operasyon yüzeyinin tamamını
+kapsıyor** — her para sayısı artık ayraçlı; tasarımla uyum bu yöndeydi.
+
 **Teslimat yeri panelinin dört hâli + öneri listesi — çizilmedi, kodlandı (03.08).** Envanter K30-K31
 hapı ve şeridi çiziyor; panelin `ambiguous` / `unknown` / `unresolved` hâlleri ile posta kodu **öneri
 listesi** hiçbir `.dc.html`'de yok. İkisi de sonradan doğdu: dört hâl 19.16b'nin ayrık sonucundan,
