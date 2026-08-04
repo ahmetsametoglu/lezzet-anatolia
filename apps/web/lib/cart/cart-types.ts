@@ -357,6 +357,38 @@ export interface AddToCartIntent {
 }
 
 /**
+ * **Turun künyesi** — istemci ANI beyan eder, sunucu SONUCU görür (08.9).
+ *
+ * Sepet uçları durum eşitler; "az önce ne oldu" bilgisi yalnız istemcide var ve sunucu onu
+ * hesaplayamaz (ziyaretçide saklanmış önceki liste yok). Ölçümün ihtiyacı da tam olarak o an:
+ * kupon **denendiği** turda reddedildiyse bir sinyaldir, sonraki her adet değişiminde tekrar
+ * okunması gürültüdür.
+ *
+ * Künye YALNIZ ölçüme akar; yazma nesnesine tip düzeyinde giremez.
+ */
+export interface CartSignal {
+  /** Bu turu ne başlattı — sebep yalnız kendi turunda sayılır. */
+  trigger?: 'add' | 'coupon' | 'place';
+  added?: AddToCartIntent[];
+  /**
+   * Tur ÖNCESİNDE sepet iki gruba bölünmüş müydü. Bölünme süregelen bir HÂLDİR; her turda
+   * saysaydık tek bölünme onlarca kez sayılırdı. Ölçülen şey geçiş.
+   */
+  wasSplit?: boolean;
+}
+
+/**
+ * Sepet iki gruba bölündü mü (19.7) — kapıya giden VE kargoyla giden kalem birlikte var.
+ *
+ * Müşteri için bu iki ayrı sipariş, iki ayrı ödeme demek; huninin en pahalı sürtünmelerinden biri
+ * ve tasarımın "Sepeti bölünen" sayacı buradan doğuyor.
+ */
+export function isSplitCart(view: Pick<CartView, 'lines'>): boolean {
+  const { route, shipping } = splitByRoute(view.lines);
+  return route.length > 0 && shipping.length > 0;
+}
+
+/**
  * Ekranın engelini DEFTERİN sebebine çevirir (08.9 · `ANALYTICS §3`).
  *
  * Defterin kümesi ekranınkinden İNCE ve bu iyi: ekran tek cümle kurar ("çıkarılmadan devam

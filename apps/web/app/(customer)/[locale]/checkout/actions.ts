@@ -354,6 +354,14 @@ export async function confirmCheckoutAction(input: {
 
     const session = await createCheckoutSession({ orderId: draft.orderId, marketingConsent: input.marketingConsent });
     if (session.status !== 'ok' || !session.clientSecret) {
+      // Ödeme oturumu açılamadı: müşteri her şeyi doğru yaptı, kasa açılmadı. Huninin son
+      // adımındaki kayıpların en pahalısı bu — sepet ve adres tamam, ödeme yolu yok.
+      //
+      // **Kartın REDDİ burada değil** ve bilerek: o karar Stripe'ın kendi arayüzünde veriliyor,
+      // sunucuya hiç uğramıyor. Ölçmek için istemciden çağrılabilir ikinci bir yazma ucu açmak
+      // gerekirdi (haritanın tek istisnası paylaşma) — üstelik red sebepleri zaten sağlayıcının
+      // panosunda, bizden daha ayrıntılı duruyor.
+      void recordEvent({ type: 'checkout_blocked', reason: 'payment_failed' });
       return { data: { status: 'rejected', reason: session.status }, errorKey: null };
     }
     // Kart yolunun huni adımı BURADA kapanır (08.9 · kullanıcı kararı 04.08). Buraya gelinmesi

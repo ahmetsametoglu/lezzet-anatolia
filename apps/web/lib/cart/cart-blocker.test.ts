@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_CART, cartBlockReason, cartBlockedAnalyticsReason, type CartLine, type CartView } from './cart-types';
+import { EMPTY_CART, cartBlockReason, cartBlockedAnalyticsReason, isSplitCart, type CartLine, type CartView } from './cart-types';
 
 /**
  * Sepetin ilerleyememe sebebi — SIRA sınanıyor, koşullar değil.
@@ -62,5 +62,30 @@ describe('cartBlockedAnalyticsReason', () => {
   it('iki engel birden varken kalem sebebi kazanır (ekrandaki sırayla aynı)', () => {
     const view = viewOf({ hasBlocked: true, minBasketOk: false, lines: [blockedLine('unavailable')] });
     expect(cartBlockedAnalyticsReason(view)).toBe('out_of_stock');
+  });
+});
+
+/**
+ * Sepetin İKİ GRUBA bölünmesi (08.9) — tasarımın "Sepeti bölünen" sayacının ölçütü.
+ *
+ * Bölünme müşteri için iki ayrı sipariş, iki ayrı ödeme demek: huninin en pahalı sürtünmelerinden
+ * biri ve bugüne kadar hiç ölçülmüyordu. Testin işi ölçütü çivilemek — "kargo kalemi var" ile
+ * "sepet bölündü" aynı şey DEĞİL.
+ */
+describe('isSplitCart', () => {
+  it('yalnız kapıya giden kalemler → bölünme yok', () => {
+    expect(isSplitCart({ lines: [blockedLine('local'), blockedLine('local')] })).toBe(false);
+  });
+
+  it('sepetin TAMAMI kargoda → bölünme yok (tek sipariş doğar)', () => {
+    expect(isSplitCart({ lines: [blockedLine('shipping')] })).toBe(false);
+  });
+
+  it('iki grup birden → bölünme', () => {
+    expect(isSplitCart({ lines: [blockedLine('local'), blockedLine('shipping')] })).toBe(true);
+  });
+
+  it('yolu çözülmemiş sepette bölünme yoktur — yer bilinmiyorken grup da yok', () => {
+    expect(isSplitCart({ lines: [blockedLine(null), blockedLine(null)] })).toBe(false);
   });
 });

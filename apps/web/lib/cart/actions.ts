@@ -9,7 +9,7 @@ import type { CartItem } from '@lezzet/types';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { recordEvent } from '@/lib/analytics/record';
 import { getCartView } from './read';
-import { cartBlockedAnalyticsReason, cartKey, entryOfItem, type AddToCartIntent, type CartEntry, type CartView } from './cart-types';
+import { cartBlockedAnalyticsReason, cartKey, entryOfItem, isSplitCart, type CartEntry, type CartSignal, type CartView } from './cart-types';
 
 /**
  * Sepet server action'ları (08.4).
@@ -71,6 +71,8 @@ export async function readCartAction(
    * karar verir (`resolveCartDiscount`); istemci yalnız "şu kodu denedim" der.
    */
   couponCode: string | null = null,
+  /** Turun künyesi — YALNIZ ölçüme akar (`CartSignal`). Kupon ve yer sürtünmeleri burada doğuyor. */
+  signal: CartSignal | null = null,
 ): Promise<CustomerResult<CartPayload & { merged: boolean }>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
@@ -80,7 +82,9 @@ export async function readCartAction(
     // boş sepet çiziyordu (28.07).
     const customerId = await currentCustomerId();
     if (!customerId) {
-      return { data: { ...(await resolveBoth(locale, entries, saved, { couponCode })), merged: false, serverCart: false }, errorKey: null };
+      const payload = await resolveBoth(locale, entries, saved, { couponCode });
+      measureRead(payload.view, signal);
+      return { data: { ...payload, merged: false, serverCart: false }, errorKey: null };
     }
 
     const cart = new CartService(serviceDb());
@@ -96,18 +100,13 @@ export async function readCartAction(
       }
     }
     const stored = await cart.get(customerId);
-    return {
-      data: {
-        ...(await resolveBoth(locale, stored.items.map(entryOfItem), stored.savedItems.map(entryOfItem), {
-          previousPrices: storedPrices(stored.items),
-          customerId,
-          couponCode,
-        })),
-        merged,
-        serverCart: true,
-      },
-      errorKey: null,
-    };
+    const payload = await resolveBoth(locale, stored.items.map(entryOfItem), stored.savedItems.map(entryOfItem), {
+      previousPrices: storedPrices(stored.items),
+      customerId,
+      couponCode,
+    });
+    measureRead(payload.view, signal);
+    return { data: { ...payload, merged, serverCart: true }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
@@ -134,7 +133,7 @@ export async function writeCartAction(
    * Bu yüzden niyeti İSTEMCİ BEYAN EDER. Beyan edilmiş olay gözlenen olay değildir: sayısı sepet
    * satırlarıyla tutmaz ve **bu bir arıza değildir.** Parametre yazma nesnesine hiç girmez.
    */
-  addedIntent: AddToCartIntent[] | null = null,
+  signal: CartSignal | null = null,
 ): Promise<CustomerResult<CartPayload>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
@@ -142,7 +141,7 @@ export async function writeCartAction(
     // Ziyaretçide yazacak yer yok — listeler tarayıcıda kalır, burada yalnız çözülür.
     if (!customerId) {
       const payload = await resolveBoth(locale, entries, saved, { couponCode });
-      measureCart(payload.view, addedIntent);
+      measureWrite(payload.view, signal);
       return { data: { ...payload, serverCart: false }, errorKey: null };
     }
 
@@ -160,7 +159,7 @@ export async function writeCartAction(
       payload.view.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })),
     );
     await cart.replaceSaved(customerId, payload.saved.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })));
-    measureCart(payload.view, addedIntent);
+    measureWrite(payload.view, signal);
     return { data: { ...payload, serverCart: true }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
@@ -176,12 +175,40 @@ export async function writeCartAction(
  *
  * Ölçüm akışı kesmez: `void`, ve kapı zaten fırlatmıyor.
  */
-function measureCart(view: CartView, added: AddToCartIntent[] | null): void {
-  for (const item of added ?? []) {
+function measureWrite(view: CartView, signal: CartSignal | null): void {
+  for (const item of signal?.added ?? []) {
     void recordEvent({ type: 'add_to_cart', subjectType: item.subjectType, subjectId: item.subjectId, productId: null, qty: item.qty });
   }
   const reason = cartBlockedAnalyticsReason(view);
   if (reason) void recordEvent({ type: 'cart_blocked', reason });
+  measureSplit(view, signal);
+}
+
+/**
+ * OKUMA turunun ölçümü — **engeller burada sayılmaz.**
+ *
+ * Okuma her sayfa açılışında koşuyor; engel süregelen bir hâl olduğu için buradan da saysaydık tek
+ * bir engelli sepet, müşteri sayfayı her açtığında yeniden sayılırdı. Burada yalnız **o turda
+ * doğan** sürtünmeler var ve üçü de tetikleyicisine bağlı.
+ */
+function measureRead(view: CartView, signal: CartSignal | null): void {
+  // Kupon SONUCU okuma turunda doğuyor: kod değişince sepet yeniden okunuyor (`cart-context`),
+  // yazma turu değil. Yalnız denendiği turda sayılır — sonraki adet değişimlerinde reddedilmiş kod
+  // hâlâ oradadır ama yeni bir bilgi değildir.
+  if (signal?.trigger === 'coupon' && view.discount.status === 'rejected') {
+    void recordEvent({ type: 'cart_blocked', reason: 'coupon_invalid' });
+  }
+  // Yer değişince kalem düştü mü. İstemci farkı kendisi hesaplıyor (`diffCartByPlace`) ama burada
+  // sonucu sunucu okuyor: yeni yerde gönderilemeyen satır varsa müşteri bir şey kaybetti.
+  if (signal?.trigger === 'place' && view.hasBlocked) {
+    void recordEvent({ type: 'cart_blocked', reason: 'place_change' });
+  }
+  measureSplit(view, signal);
+}
+
+/** Bölünme GEÇİŞİ — hâl değil. Önceki durumu yalnız istemci bilir, o yüzden künyeden okunur. */
+function measureSplit(view: CartView, signal: CartSignal | null): void {
+  if (signal?.wasSplit === false && isSplitCart(view)) void recordEvent({ type: 'cart_blocked', reason: 'split' });
 }
 
 /**

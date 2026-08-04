@@ -7,7 +7,17 @@ import { readCartAction, writeCartAction } from '@/lib/cart/actions';
 import { clearGuestCart, mergeEntry, readGuestCart, setEntryQty, writeGuestCart } from '@/lib/cart/cart-store';
 import { clearSaved, readSaved, writeSaved } from '@/lib/cart/saved-store';
 import { readCoupon, writeCoupon } from '@/lib/cart/coupon-store';
-import { EMPTY_CART, cartKey, entryOf, viewWithEntries, type AddToCartIntent, type CartEntry, type CartRef, type CartView } from '@/lib/cart/cart-types';
+import {
+  EMPTY_CART,
+  cartKey,
+  entryOf,
+  isSplitCart,
+  viewWithEntries,
+  type AddToCartIntent,
+  type CartEntry,
+  type CartRef,
+  type CartView,
+} from '@/lib/cart/cart-types';
 import { diffCartByPlace, type CartLineChange } from '@/lib/cart/place-change';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { CartUndo } from './cart-undo';
@@ -175,6 +185,21 @@ export function CartProvider({ locale, children }: CartProviderProps) {
    */
   const [placeChange, setPlaceChange] = useState<CartLineChange[] | null>(null);
   const compareTo = useRef<CartView | null>(null);
+  /**
+   * Son okumada geçerli olan kupon kodu — ölçüm için (08.9).
+   *
+   * `ref`, çünkü okunması yeni bir okuma doğurmamalı: state olsaydı `load`'un bağımlılığı olur ve
+   * her kupon denemesi iki tur koşardı. "Kod değişti mi" sorusunun cevabı yalnız bu turda lazım.
+   */
+  const couponAtLastRead = useRef<string | null>(null);
+  /**
+   * Sepet ŞU AN bölünmüş mü — ölçüm için (08.9).
+   *
+   * `ref` ve state DEĞİL, iki sebeple: `load` bunu okumak zorunda ve state olsaydı bağımlılığına
+   * girerdi — `load` her okumada `view`i güncellediği için bu **sonsuz bir okuma döngüsü** olurdu.
+   * Bağımlılığa eklemeseydik de kapanış bayatlar ve geçiş yanlış ölçülürdü.
+   */
+  const splitNow = useRef(false);
   // Yarışı kesmek için: geç dönen eski yanıt yeni durumu ezmesin.
   const seq = useRef(0);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -206,6 +231,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
      * bir ekleme değil, bir düzeltme; sayılsalardı aynı ürün defterde iki kez eklenmiş görünürdü.
      */
     (next: CartEntry[], nextSaved: CartEntry[], added?: AddToCartIntent[]) => {
+      // Bölünme GEÇİŞİNİ ölçebilmek için turun ÖNCESİNDEKİ hâl gerekiyor; sunucu onu bilemez.
+      const wasSplit = splitNow.current;
       setEntries(next);
       setSavedEntries(nextSaved);
       // Tarayıcı deposu YALNIZ ziyaretçide yazılır. Girişli müşteride de yazılıyordu: depo
@@ -216,12 +243,13 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         writeSaved(nextSaved);
       }
       const ticket = ++seq.current;
-      void writeCartAction(locale, next, nextSaved, coupon, added ?? null)
+      void writeCartAction(locale, next, nextSaved, coupon, { trigger: added ? 'add' : undefined, added, wasSplit })
         .then(({ data }) => {
           // Bilet eskiyse kullanıcı bu arada bir şey daha yaptı: eski cevap YOK SAYILIR. Kilide gerek
           // bırakmayan şey bu — arayüz açık kalır, sonuncu yazma kazanır.
           if (ticket !== seq.current) return;
           if (!data) return rollback();
+          splitNow.current = isSplitCart(data.view);
           setView(data.view);
           setSavedView(data.saved);
           // Sunucu satırı düşürdüyse (ürün silinmiş) niyet listeleri de ona uyar.
@@ -272,7 +300,14 @@ export function CartProvider({ locale, children }: CartProviderProps) {
     // Yeniden okuma, düşen yazmanın haberini de kapatır: şerit "tekrar dene" diyor ve denenen bu.
     setWriteFailed(false);
     const ticket = ++seq.current;
-    void readCartAction(locale, guest, guestSaved, code)
+    /**
+     * Turun künyesi (08.9): okuma üç sebeple koşuyor ve sürtünme yalnız KENDİ turunda sayılıyor —
+     * ilk açılış · kupon denemesi (`coupon` state değişti) · yer değişimi (`compareTo` dolu).
+     * Sebebi taşımasaydık reddedilmiş bir kupon her sayfa açılışında yeniden sayılırdı.
+     */
+    const trigger = compareTo.current ? ('place' as const) : code !== couponAtLastRead.current ? ('coupon' as const) : undefined;
+    couponAtLastRead.current = code;
+    void readCartAction(locale, guest, guestSaved, code, { trigger, wasSplit: splitNow.current })
       .then(({ data }) => {
         if (ticket !== seq.current) return;
         if (!data) return setFailed(true);
@@ -292,6 +327,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
           compareTo.current = null;
           setPlaceChange(changes.length > 0 ? changes : null);
         }
+        splitNow.current = isSplitCart(data.view);
         setView(data.view);
         setSavedView(data.saved);
         // Geri sarma noktası da BURADA doğar: okuma, sunucunun onayladığı ilk hâldir.
