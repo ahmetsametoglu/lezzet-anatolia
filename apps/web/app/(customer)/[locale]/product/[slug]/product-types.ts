@@ -49,5 +49,9 @@ export interface ProductViewProps {
   /** Seçili boy — stok rozeti, fiyat ve besin tablosunun net ağırlığı bundan türer. Varyantsız ürün yok. */
   selected: StorefrontVariant | null;
   onSelect: (variantId: string) => void;
+  /** Bakılan çeşidin aile içi etiketi ("Fıstıklı") — ailesiz üründe null. Boy başlığına bağlam verir. */
+  familyLabel: string | null;
+  /** Ürün hiç alınamıyor — çeşit bloğunun başlığı ve aktif işareti buna bakar (`family-block`). */
+  unavailable: boolean;
   reviews: ReviewsData;
 }

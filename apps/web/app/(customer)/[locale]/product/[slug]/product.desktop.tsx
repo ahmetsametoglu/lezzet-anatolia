@@ -6,6 +6,7 @@ import { Badge } from '@/components/customer/ui/badge';
 import { SectionHeading } from '@/components/customer/ui/section';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { Declaration } from './components/declaration';
+import { FamilyBlock } from './components/family-block';
 import { Gallery } from './components/gallery';
 import { PurchaseBar, VariantPicker } from './components/purchase-panel';
 import { Reviews } from './components/reviews';
@@ -19,7 +20,7 @@ import type { ProductViewProps } from './product-types';
  * kaldırılırsa beyan sütunu tek başına uzar, sağ taraf boşluk olarak kalır ve sayfa dengesizleşir —
  * tasarımın iki sütunlu ritmi de bozulur.
  */
-export function ProductDesktop({ t, locale, product, selected, onSelect , reviews }: ProductViewProps) {
+export function ProductDesktop({ t, locale, product, selected, onSelect, familyLabel, unavailable, reviews }: ProductViewProps) {
   return (
     <div className="flex flex-col">
       <nav className="flex gap-1.5 px-12 pt-5 font-sans text-body-sm text-muted">
@@ -53,9 +54,12 @@ export function ProductDesktop({ t, locale, product, selected, onSelect , review
 
           {product.description && <p className="font-sans text-lead text-body">{product.description}</p>}
 
+          {/* Çeşit bloğu boy seçicinin ÜSTÜNDE: karar sırası "hangisi? → hangi boy?" (`§1b`). */}
+          <FamilyBlock t={t.family} locale={locale} members={product.family} currentUnavailable={unavailable} />
+
           {selected && (
             <>
-              <VariantPicker t={t} locale={locale} variants={product.variants} selected={selected} onSelect={onSelect} />
+              <VariantPicker t={t} locale={locale} variants={product.variants} selected={selected} onSelect={onSelect} familyLabel={familyLabel} />
               <PurchaseBar t={t} locale={locale} selected={selected} routeOnly={!product.shippable} />
             </>
           )}
@@ -89,6 +93,9 @@ export function ProductDesktop({ t, locale, product, selected, onSelect , review
 
       {product.similar.length > 0 && (
         <section className="flex flex-col gap-5 bg-cream-deep px-12 py-11">
+          {/* Açıklama satırı YOK. Bir süre "aile üyeleri burada tekrar edilmez" yazıyordu; kural
+              değişti (04.08 — her aileden bir temsilci gelebilir) ve cümle yalan oldu. Yerine
+              yenisi konmadı: karışık bir liste kendini anlatır, kuralını anlatmasına gerek yok. */}
           <SectionHeading
             title={t.similar}
             action={product.category ? { label: `${product.category.name} →`, href: { pathname: '/catalog', query: { category: product.category.slug } } } : undefined}

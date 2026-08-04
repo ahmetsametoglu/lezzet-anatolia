@@ -1,4 +1,5 @@
 import { Declaration } from './components/declaration';
+import { FamilyBlock } from './components/family-block';
 import { Gallery } from './components/gallery';
 import { PurchaseBar, VariantPicker } from './components/purchase-panel';
 import { Reviews } from './components/reviews';
@@ -22,7 +23,7 @@ import type { ProductViewProps } from './product-types';
  * yorumlar → benzer ürün şeridi. Adet + sepete ekle bu akışta DEĞİL: ekranın altına sabitlenir,
  * kaydırma boyunca yerinde kalır.
  */
-export function ProductMobile({ t, locale, product, selected, onSelect , reviews }: ProductViewProps) {
+export function ProductMobile({ t, locale, product, selected, onSelect, familyLabel, unavailable, reviews }: ProductViewProps) {
   return (
     // Alt boşluk sabit çubuğun yüksekliği kadar: çubuk son bölümü ve footer'ı örtmesin.
     <div className="flex flex-col pb-24">
@@ -50,8 +51,12 @@ export function ProductMobile({ t, locale, product, selected, onSelect , reviews
 
         {product.description && <p className="font-sans text-body-sm leading-relaxed text-body">{product.description}</p>}
 
+        {/* Çeşit bloğu boy seçicinin ÜSTÜNDE — masaüstüyle aynı karar sırası (`§1b`). Mobilde de
+            sabit çubuğun üstünde, akışın içinde kalır: sabitlense ekranın yarısını yerdi. */}
+        <FamilyBlock t={t.family} locale={locale} members={product.family} currentUnavailable={unavailable} compact />
+
         {selected && (
-          <VariantPicker t={t} locale={locale} variants={product.variants} selected={selected} onSelect={onSelect} compact />
+          <VariantPicker t={t} locale={locale} variants={product.variants} selected={selected} onSelect={onSelect} familyLabel={familyLabel} compact />
         )}
 
         {/* Kargo kısıtı sepete eklemeden ÖNCE görünür (`musteri-urun-detay.md §2`). Mobilde etiketler

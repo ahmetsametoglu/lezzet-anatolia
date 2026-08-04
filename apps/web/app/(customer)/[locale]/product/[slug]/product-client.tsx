@@ -5,6 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import type { StorefrontProductDetail } from '@/lib/storefront/storefront-types';
+import { isProductUnavailable } from './components/family-block';
 import type { Messages, ReviewsData } from './product-types';
 import { ProductDesktop } from './product.desktop';
 import { ProductMobile } from './product.mobile';
@@ -33,6 +34,12 @@ export function ProductClient({ t, locale, product, device, reviews }: ProductCl
   const [selectedId, setSelectedId] = useState(product.variants[0]?.id ?? '');
   const selected = product.variants.find((v) => v.id === selectedId) ?? product.variants[0] ?? null;
 
-  const view = { t, locale, product, selected, onSelect: setSelectedId, reviews };
+  // Aile bağlamı BURADA türetilir, iki görünümde ayrı ayrı değil (05.15): ikisi de aynı iki cevabı
+  // istiyor — hangi çeşide bakılıyor, ürün hiç alınabiliyor mu. Cihaz çatalı düzeni ikiye böler,
+  // KURALI bölmez; iki yerde hesaplansaydı biri değişince öteki sessizce eski kuralla kalırdı.
+  const familyLabel = product.family.find((m) => m.isCurrent)?.label ?? null;
+  const unavailable = isProductUnavailable(product.variants);
+
+  const view = { t, locale, product, selected, onSelect: setSelectedId, familyLabel, unavailable, reviews };
   return resolved === 'mobile' ? <ProductMobile {...view} /> : <ProductDesktop {...view} />;
 }

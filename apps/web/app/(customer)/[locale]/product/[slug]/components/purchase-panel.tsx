@@ -61,6 +61,14 @@ interface VariantPickerProps {
   variants: StorefrontVariant[];
   selected: StorefrontVariant;
   onSelect: (variantId: string) => void;
+  /**
+   * Bakılan çeşidin aile içi etiketi ("Fıstıklı") — yalnız aileli üründe dolu.
+   *
+   * Boy başlığına bağlam ekler ("Fıstıklı çeşidin boyları"): hemen üstte çeşit kartları varken
+   * çıplak "Boy seçin" başlığı hangi çeşidin boyu olduğunu söylemiyordu ve iki seçici arka arkaya
+   * durduğu için tam da karışması istenmeyen yer burasıydı.
+   */
+  familyLabel?: string | null;
   compact?: boolean;
 }
 
@@ -71,7 +79,7 @@ interface VariantPickerProps {
  * İkisini birden göstermek fiyatı iki kez yazardı; hiçbirini göstermemek tek boylu ürünü fiyatsız
  * bırakırdı (ilk kodlamada bu oldu).
  */
-export function VariantPicker({ t, locale, variants, selected, onSelect, compact = false }: VariantPickerProps) {
+export function VariantPicker({ t, locale, variants, selected, onSelect, familyLabel = null, compact = false }: VariantPickerProps) {
   const multi = variants.length > 1;
 
   /** "500 g · 15,00 €/kg" — boy adı ve kıyas fiyatı; ikisi de yoksa satır hiç çizilmez. */
@@ -84,7 +92,12 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, compact
       {/* Tek boylu üründe seçim adımı HİÇ gösterilmez (`musteri-urun-detay.md §2`) — yerine fiyat. */}
       {multi ? (
         <div className="flex flex-col gap-2.5">
-          <span className={['font-sans font-bold text-ink', compact ? 'text-body-sm' : 'text-body'].join(' ')}>{t.chooseSize}</span>
+          <span className="flex flex-col gap-0.5">
+            <span className={['font-sans font-bold text-ink', compact ? 'text-body-sm' : 'text-body'].join(' ')}>{t.chooseSize}</span>
+            {familyLabel && (
+              <span className="font-sans text-micro text-muted">{t.family.sizesOf.replace('{label}', familyLabel)}</span>
+            )}
+          </span>
           {/* Mobilde kartlar YAN YANA ve eşit paylı (tasarım `flex:1`) — alt alta dizmek boy
               karşılaştırmasını bozar, kıyas ancak yan yana yapılır. */}
           <div className={['flex', compact ? 'gap-2.5' : 'flex-wrap gap-3'].join(' ')}>

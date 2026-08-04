@@ -269,8 +269,57 @@ export interface StorefrontProductDetail {
   declaration: StorefrontDeclaration;
   /** false → "yalnız bölge içi kapıya teslim" uyarısı, sepete eklemeden ÖNCE görünür. */
   shippable: boolean;
-  /** Aynı kategoriden başka ürünler; boşsa bölüm render edilmez. */
+  /**
+   * **Ailenin öteki çeşitleri** (05.15) — resimli kartlar, sayfanın üst bölgesinde.
+   *
+   * Boşsa bölüm HİÇ çizilmez: ailesiz üründe de, ailesi tek üyeye düşmüş üründe de. (Tek üyeli
+   * aile operatörün aile kurarken geçtiği bir ara hâldir; veri onu yasaklamıyor, ekran göstermiyor.)
+   *
+   * **Varyant seçicisiyle KARIŞTIRILMAMALI:** varyant aynı ürünün boyudur ve yalnız fiyatı
+   * değiştirir; çeşit kartı kardeş ürünün sayfasına götürür.
+   */
+  family: StorefrontFamilyMember[];
+  /**
+   * Aynı kategoriden başka ürünler; boşsa bölüm render edilmez.
+   *
+   * **Aile üyeleri ELENMEZ, SEYRELTİLİR** (kullanıcı kararı 04.08): her aileden en çok bir
+   * temsilci girer — bakılan ürünün kendi ailesi dâhil. Böylece dört kartın dördü aynı ailenin
+   * dört gramajı olamaz. Dörtlü bu kuralla dolmazsa kural kalkar ve ailedaşlarla tamamlanır;
+   * seçim `lib/storefront/similar.ts`de, saf ve testli.
+   */
   similar: StorefrontProduct[];
+}
+
+/**
+ * Ailedeki bir çeşit kartı (05.15).
+ *
+ * Çizim: görsel + etiket + **başlangıç fiyatı** ("14,90 €'dan"); bakılan çeşitte fiyatın yerini
+ * "Bakıyorsunuz" alır ve karta ✓ rozeti düşer.
+ *
+ * ⚠ **Bir tur fiyat BİLEREK ÇIKARILMIŞTI ve yanlıştı** (04.08): gerekçe "kart satın alma öğesi
+ * değil, geçiş öğesi" idi ve kulağa doğru geliyordu — ama görsel karar `.dc.html`'de verilidir ve
+ * orada fiyat var (`CLAUDE §3`: implement ederken improvise etme). Kullanıcı yakaladı. Çeşitler
+ * arasında fiyat farkı olması, seçimin bir parçası: 14,90 € ile 18,90 € arasındaki fark müşterinin
+ * bilmek isteyeceği şey.
+ *
+ * Tükenmiş çeşitler listeye HİÇ girmez (brief §1b), o yüzden bir "tükendi" hâli yok.
+ */
+export interface StorefrontFamilyMember {
+  slug: string;
+  /** **Aile içi etiket** ("Limonlu") — ürün adı ("Limonlu kek") DEĞİL. */
+  label: string;
+  image: StorefrontImage;
+  /**
+   * **Başlangıç fiyatı** — çeşidin en ucuz aktif varyantı, kartta "…'dan" ekiyle yazılır.
+   * `null` = fiyat çözülemedi (kanal fiyatı girilmemiş); ekran o kartta fiyat satırını çizmez.
+   * Sıfır YAZILMAZ (`CLAUDE §1`): ölçülemeyen değer sıfır değildir, bedava görünürdü.
+   *
+   * Bakılan çeşitte de dolu gelir — "Bakıyorsunuz" metnine geçme kararı EKRANIN
+   * (`isCurrent`), verinin değil.
+   */
+  fromPriceCents: number | null;
+  /** Şu an bakılan çeşit — kart ✓ ile işaretlenir, fiyat yerine "Bakıyorsunuz" yazılır. */
+  isCurrent: boolean;
 }
 
 /** Katalog okumasının sonucu — sayfa ve süzgeç bileşenlerinin paylaştığı şekil. */

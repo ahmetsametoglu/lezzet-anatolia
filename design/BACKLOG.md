@@ -157,6 +157,24 @@ Türetme, parti sözlüğü, teklif eylemi ve teklif diyaloğu paylaşılan yere
 
 ## 2. Karar bekleyen (tasarım tarafında netleşmeli)
 
+- **"BUNLARI DA SEVEBİLİRSİNİZ" — SIRALAMA ÖLÇÜTÜ ERTELENDİ (kullanıcı kararı 04.08).**
+  Bölümün *hangi ürünleri* alacağı çözüldü (kendi ailesi dışarıda, öteki ailelerden birer üye —
+  `lib/storefront/similar.ts`). Çözülmeyen, **hangi sırayla** alacağı: bugün katalog sırası, o da
+  alfabetik. Yani ölçüt yok, alfabe var.
+  **Kullanıcının istediği ilgiye göre seçim, mümkün değilse rastgele.** Veri ikisi için de hazır:
+  `product_rating` (puan + yorum sayısı) ve `analytics_daily_product` (görüntüleme, sepete atma);
+  arka uç kapıyı açmayı teklif etti.
+  **Yine de ERTELENDİ ve gerekçesi ölçütün kendisinde:** *"en çok bakılan"* ya da *"en çok
+  beğenilen"* tek başına alınırsa **hep aynı ürünler çıkar** — bölüm bir keşif daveti olmaktan
+  çıkıp sabit bir vitrine döner, ve popüler olan daha da popüler olur (kendi kendini besleyen
+  döngü). Tek eksenli bir ölçüt, ölçütsüzlükten daha iyi değil.
+  **İleride düşünülen kurgu — dört kart, dört FARKLI eksen:** biri en çok beğenilenlerden, biri en
+  sık satın alınanlardan, biri yenilerden, biri (ör.) rastgele/keşif. Böylece bölüm her kartıyla
+  başka bir soruya cevap verir ve doğal olarak çeşitlenir. Bu bir tasarım işi: kartların ekseni
+  müşteriye söylenecek mi (*"Yeni"*, *"Çok beğenilen"* rozeti gibi) yoksa sessiz mi kalacak?
+  **Bugünkü davranış bozuk DEĞİL, yalnız ölçütsüz** — o yüzden `BEKLEYEN` işareti konmadı: söz
+  verilmiş bir iş değil, ileride yapılabilecek bir iyileştirme.
+
 - **FORM KİTİNE `size` EKSENİ — üç ham girdi bunu bekliyor (02.08, denetim M5).**
   `controlClass` bugün **tek ölçü** biliyor: sabit `h-12` (48px) + `text-body` (15px) + `FieldShell`
   etiket/hata iskeleti. Envanterin K34'ü de böyle çiziyor ve doğru — **gerçek form alanı** için.
