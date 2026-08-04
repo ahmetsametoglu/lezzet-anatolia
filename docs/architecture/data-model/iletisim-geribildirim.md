@@ -49,24 +49,68 @@ Stripe/360dialog webhook'ları için tekrar-işleme kilidi (idempotency): aynı 
 
 ## AnalyticsEvent (analitik olayı)
 
-Cookie'siz, sunucu-tarafı, toplu ölçüm (bkz. `FEATURES.md` Analitik). Kişisel kimlik yok; giriş yapılmışsa `customer_id` opsiyonel.
+Cookie'siz, sunucu-tarafı, toplu ölçüm. **Kuralların tamamı `ANALYTICS.md`'de** (sınır · kimlik · olay şekli · kapı · saklama); burada yalnız ALANLAR durur.
+
+**`customer_id` kolonu YOKTUR — nullable bile değil** (kullanıcı kararı 04.08). Eskiden *"yalnız giriş yaptıysa (opsiyonel)"* diye duruyordu ve üç yerle çelişiyordu: tasarım kişi bazlı gezinme ekranını yasaklıyor, yasal gerekçemiz toplu ölçüme dayanıyor, silme talebinde ne yapılacağı tanımsız kalıyordu. Kimlikli davranış defteri ayrı bir tablonun ve ayrı bir hukuki dayanağın işidir → `ANALYTICS.md §2`.
+
+**Vekil anahtar (`id`) de YOKTUR** (0035): satır asla kimliğiyle okunmuyor — defter yalnız yazılıyor ve
+toplanıyor. En çok yazılan tabloya, hiçbir okumanın kullanmadığı bir indeks eklenmez (ayrıca
+bölümlenmiş tabloda birincil anahtar bölüm anahtarını içermek zorundadır). Tablo **aya göre
+bölümlenmiştir**; saklama satır silerek değil bölüm düşürerek işler.
+
+**`source` ve `utm` bu tabloda DEĞİL, `AnalyticsSession`'da** (aşağıda): kampanya künyesi oturum
+başına bir kez düşer. Her olaya kopyalansaydı aynı bilgi ziyaret sayısı kadar tekrarlanır ve
+oturumun künyesi olayların arasında ayrışabilirdi.
 
 | Alan | Tip | Not |
 | --- | --- | --- |
-| id | uuid | |
-| type | enum(`page_view`,`product_view`,`add_to_cart`,`checkout_start`,`order_placed`,`share`,`search`) | |
-| session_key | string | sunucu-tarafı geçici oturum (kişisel değil) |
-| source | string \| null | trafik kaynağı |
-| utm | jsonb \| null | kampanya (source/medium/campaign) — reklam ROI |
-| path | string \| null | |
-| product_id | uuid \| null | |
-| variant_id | uuid \| null | |
-| customer_id | uuid \| null | yalnız giriş yaptıysa (opsiyonel) |
-| device | enum(`web`,`mobile`) | |
-| country | enum(`FR`,`DE`) \| null | |
+| created_at | timestamptz | **bölüm anahtarı** |
+| type | enum(`page_view`,`product_view`,`search`,`place_resolved`,`add_to_cart`,`cart_blocked`,`checkout_start`,`checkout_blocked`,`order_placed`,`share`) | |
+| session_key | string | sunucu-tarafı günlük oturum (kişisel değil; tuz her gün döner) |
+| path | string \| null | **ROTA KALIBI** (`/product/[slug]`), somut değer asla |
+| subject_type | enum(`product`,`variant`,`bundle`,`category`,`collection`) \| null | ölçülen nesne; FK YOK |
+| subject_id | uuid \| null | |
+| product_id | uuid \| null | ürün kırılımı için denormalize anlık görüntü |
+| channel | enum(`b2c`,`b2b`) \| null | |
+| warehouse_id | uuid \| null | **DEPO granülü**, posta kodu değil (k-anonimlik). `null` = yer seçilmemiş, bir KOVA |
+| availability | enum(`sellable`,`sold_out`,`closed`,`not_here`) \| null | görüntüleme anındaki hâl (snapshot) |
+| blocked_reason | enum(`min_basket`,`split`,`place_change`,`coupon_invalid`,`out_of_stock`,`payment_failed`,`not_shippable`) \| null | yalnız `cart_blocked`/`checkout_blocked` |
+| device | enum(`mobile`,`desktop`) \| null | uygulamanın `Device` tipiyle aynı küme |
+| country | enum(`FR`,`DE`) \| null | IP'den türetilir; IP saklanmaz |
 | language | enum(`tr`,`fr`,`de`) \| null | |
-| meta | jsonb \| null | tipe özel (ör. `search`: `{query, result_count}` — sıfır-sonuç aramalar talep/çeşit sinyali) |
-| created_at | timestamptz | |
+| meta | jsonb \| null | tipe özel, **kapalı sözlük** (Zod ayrık birliği). `search`: `{query, resultCount, zeroResultKind}` |
+
+## AnalyticsSession (oturumun kampanya künyesi)
+
+UTM oturum başına **bir kez** düşer; ikinci yazım sessizce yutulur (ilk kaynak kazanır — `acquisition_source` kuralıyla aynı). Satır yalnız künyeli gelişte doğar: doğrudan gelen ziyaretçi için satır açmak, tabloyu defterin ikinci kopyasına çevirirdi.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| session_key | string | **birincil anahtar** |
+| utm | jsonb \| null | **kapalı sözlük**: `{source, medium, campaign, content, term}` — kapı indirger (`normalizeUtm`) |
+| source | string \| null | yönlendiren ALAN ADI (ham URL değil) |
+| first_seen_at | timestamptz | |
+
+**Sözlüğün kapalı olması bir gizlilik kararıdır:** açık bırakılsaydı reklam aracının linke eklediği her parametre — `gclid`/`fbclid` gibi **tıklama kimlikleri** dâhil — anonim deftere girerdi. O kimlikler reklam ağının tarafında tek kullanıcıya çözülür.
+
+**Saklama:** ham defterle aynı 25 ay (`purge_analytics_before`). Bölüm düşürmek burada işe yaramaz — tablo bölümlenmemiş; künyesi kalan bir oturum "defteri sildik" cümlesini yarım bırakırdı.
+
+## AnalyticsDaily (+ üç sinyal özeti) — **ekranların okuduğu yer**
+
+Ekranlar ham deftere BAĞLANMAZ (`ANALYTICS §5`); ham yalnız detay içindir.
+
+| Tablo | Anahtar | Ne cevaplar |
+| --- | --- | --- |
+| `analytics_daily` | gün × tip × rota × depo × kanal × satılabilirlik × **terk sebebi** | huni · seri · ısı haritası |
+| `analytics_daily_product` | gün × ürün | çok bakılıp az alınan (13.4) + vitrin seçkisi (08.9) |
+| `analytics_daily_search` | gün × terim × sıfır-sonuç kovası | aranıp bulunamayan (13.4) |
+| `analytics_daily_source` | gün × kaynak × kampanya × ortam | trafik kaynağı + kaynak dönüşümü (13.2) |
+
+- `analytics_daily` satırı **24 öğeli saat kırılımı dizisi** taşır — ayrı saatlik tablo YOK; hafta/ay/yıl da türetilir.
+- **`session_count` YAKLAŞIKTIR** (aynı oturum birden çok boyut satırına düşer). Toplanabilir tek sayı `event_count`.
+- Tekil anahtarlar **`nulls not distinct`**: boyutların çoğu nullable ve SQL'de `null <> null` — standart `unique` aynı kovayı defalarca yazdırır, özet sessizce çoğalırdı.
+- **Ürün/kaynak özeti SÜRESİZ** (sayı, kişisel veri değil); **arama özeti 25 ay** — sistemdeki tek kalıcı serbest metin, ham metnin ömrünü özet kılığında uzatmamalı.
+- Ürün ve arama kırılımı `analytics_daily`'ye BOYUT olarak eklenmedi: satır sayısını katalog büyüklüğüyle çarpar, huni/ısı okumaları da o şişmiş tabloyu taramak zorunda kalırdı.
 
 **Burada YALNIZ İZ vardır, beyan yoktur.** Analitik, müşteriyi tanımadan topladığımız gezinme izidir; "toplu ölçüm" ve "çerez banner'ı gerekmez" iddiası (bkz. `FEATURES.md` Analitik) buna dayanır. Müşterinin bize **vermeyi seçtiği** her şey — yorum, beğeni, talep, bölge haberi — kendi kalıcı tablosunda yaşar.
 

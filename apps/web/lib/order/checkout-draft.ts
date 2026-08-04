@@ -12,6 +12,7 @@ import { cityMatchesPlaces, deriveChannel, resolveVatTreatment } from '@lezzet/d
 import { toCents } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import type { DeliveryType, LocalizedText, OrderItemInsert, PaymentMethod } from '@lezzet/types';
+import { rememberAcquisition } from '@/lib/analytics/attribution';
 import { getCartView } from '@/lib/cart/read';
 import { placesForPostalCode } from '@/lib/delivery/places';
 import { discountAmountOf, type CartDiscount, type CartEntry, type CartLine, type CartView } from '@/lib/cart/cart-types';
@@ -322,6 +323,16 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
     // KAPIDAN girildiği — kotayı bölmez, "hangi dil karşılık buldu" sorusunu yanıtlar.
     { discountCodeId: discountCodeIdOf(cart) },
   );
+
+  // Edinim kaynağı (13.2) — oturumun kampanya künyesi müşteriye kopyalanır, YALNIZ alan boşsa.
+  //
+  // **Neden burası, `createCheckoutSession` değil:** checkout'un iki ödeme dalı var (online / kapıda
+  // ya da vadeli) ve ikincisi ödeme oturumunu hiç açmıyor. Kaynağı orada yazsaydık nakit ve vadeli
+  // müşterilerin tamamı sessizce "kaynağı ölçülmemiş" kalırdı — B2B'nin ana yolu tam olarak o dal.
+  // Taslak ise iki dalın da geçtiği tek nokta ve "onayla"ya basılmış an demek; niyet bellidir.
+  //
+  // Beklenmez (`void`): kampanya künyesi bir ölçümdür, siparişin açılmasını geciktirmemeli.
+  void rememberAcquisition(customer.id);
 
   return { status: 'ok', orderId: order.id, totalCents: options.orderTotalCents, deliveryType };
 }

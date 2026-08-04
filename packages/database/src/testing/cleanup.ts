@@ -45,6 +45,22 @@ export interface PurgeTargets {
   profileIds?: string[];
   /** Sıcaklık kaydı konumları (testler benzersiz konum adı üretir). */
   temperatureLocations?: string[];
+  /**
+   * Analitik oturum anahtarları — olay ve oturum satırları burada gider.
+   *
+   * Anahtar `session_key`, `id` DEĞİL: olay defterinde vekil anahtar yok (bilinçli — bkz. `0035`).
+   * Testler damgalı bir anahtar üretir, yani silme kendi satırlarına kilitli kalır ve başka bir
+   * ajanın ölçümüne dokunmaz (`CLAUDE §4b`).
+   */
+  analyticsSessionKeys?: string[];
+  /**
+   * Arama özeti satırları — anahtar TERİMİN KENDİSİ (`analytics_daily_search.query`).
+   *
+   * Oturum anahtarıyla silinemezler: özet gruplama sırasında oturumu kaybeder. Damgalı bir terim
+   * kullanan test kendi satırını buradan bildirir; bildirmezse satır günlerce birikir ve
+   * "aranıp bulunamayan" listesini test verisiyle kirletir.
+   */
+  analyticsSearchQueries?: string[];
   /** OTP satırları (servis silme kapalı olduğu için doğrudan). */
   verificationEmails?: string[];
   /** Auth kullanıcıları — profil satırı `on delete set null` olduğu için ayrıca temizlenir. */
@@ -92,7 +108,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     warehouseIds,
     accountIds,
     jobNames,
+    analyticsSessionKeys,
+    analyticsSearchQueries,
   } = {
+    analyticsSessionKeys: clean(targets.analyticsSessionKeys),
+    analyticsSearchQueries: clean(targets.analyticsSearchQueries),
     productIds: clean(targets.productIds),
     categoryIds: clean(targets.categoryIds),
     collectionIds: clean(targets.collectionIds),
@@ -105,6 +125,23 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     accountIds: clean(targets.accountIds),
     jobNames: clean(targets.jobNames),
   };
+
+  // 0a) Analitik: defterin hiçbir FK'si yok (bilinçli — `0035`), o yüzden sıradan bağımsız.
+  //     GÜN özeti (`analytics_daily`) SİLİNMEZ: gün bazlıdır ve testin damgalı anahtarıyla
+  //     eşleşmez; testler özeti kendi ürettiği güne bakarak sınar, küresel sayıya değil.
+  if (analyticsSessionKeys.length > 0) {
+    await mustDelete(db, 'analytics_event', (q) => q.in('session_key', analyticsSessionKeys));
+    await mustDelete(db, 'analytics_session', (q) => q.in('session_key', analyticsSessionKeys));
+  }
+  //     Ama ÜRÜN ve ARAMA özetleri damgalı bir anahtar taşıyor (test ürünü, damgalı terim) — yani
+  //     bırakılırlarsa gün geçtikçe biriken, kimsenin sahiplenmediği satırlar olurlar. Ürün özeti
+  //     ürünle birlikte gider (anahtar `product_id`), arama özeti kendi hedefiyle.
+  if (productIds.length > 0) {
+    await mustDelete(db, 'analytics_daily_product', (q) => q.in('product_id', productIds));
+  }
+  if (analyticsSearchQueries.length > 0) {
+    await mustDelete(db, 'analytics_daily_search', (q) => q.in('query', analyticsSearchQueries));
+  }
 
   // 0) İş izleri: hiçbir şeye FK ile bağlı değiller, sıradan bağımsız — en başta gitsinler ki
   // aşağıdaki grafiklerden biri düşse bile gözlemleme tabloları kirli kalmasın.

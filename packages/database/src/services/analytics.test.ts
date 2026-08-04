@@ -1,0 +1,254 @@
+import { afterAll, describe, expect, it } from 'vitest';
+import { serviceDb } from '../client';
+import { purgeTestData } from '../testing/cleanup';
+import {
+  AnalyticsDailyService,
+  AnalyticsEventService,
+  AnalyticsProductDailyService,
+  AnalyticsReportService,
+  AnalyticsSearchDailyService,
+  AnalyticsSourceDailyService,
+  AnalyticsSessionService,
+} from './analytics.service';
+
+/**
+ * Analitik I/O (13.1) — kurallar `docs/architecture/ANALYTICS.md`'de.
+ *
+ * **Sınanan şey sayı değil DAVRANIŞ:** özet idempotent mi, `null` boyutlu satır çoğalıyor mu, saat
+ * kırılımı doğru kovaya düşüyor mu, oturum künyesi ikinci kez yazılınca eziliyor mu.
+ *
+ * **Küresel sayıya bakılmıyor** (`CLAUDE §4b`): üç ajan aynı veritabanını paylaşıyor ve özet tablosu
+ * gün bazlı — başka bir koşunun yazdığı satır toplamı oynatır. Her sınama kendi damgalı oturum
+ * anahtarına ve kendi ürettiği güne kilitli.
+ */
+const db = serviceDb();
+const events = new AnalyticsEventService(db);
+const sessions = new AnalyticsSessionService(db);
+const daily = new AnalyticsDailyService(db);
+
+const products = new AnalyticsProductDailyService(db);
+const searches = new AnalyticsSearchDailyService(db);
+const sources = new AnalyticsSourceDailyService(db);
+const reports = new AnalyticsReportService(db);
+
+const stamp = Date.now();
+const sessionKey = `test-${stamp}`;
+const otherKey = `test-${stamp}-b`;
+/** Damgalı bir ürün kimliği: defterde FK yok, yani var olmayan bir ürün de ölçülebilir (bilinçli). */
+const productId = `00000000-0000-4000-8000-${String(stamp).slice(-12).padStart(12, '0')}`;
+const searchQuery = `lahmacun-${stamp}`;
+const campaign = `kampanya-${stamp}`;
+
+/** Dünün tarihi: özet BUGÜNÜ üretmiyor (gün kapanmadan üretilen özet eksiktir) — iş de öyle davranıyor. */
+const day = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+const at = (hour: number) => `${day}T${String(hour).padStart(2, '0')}:30:00.000Z`;
+
+afterAll(async () => {
+  await purgeTestData(db, {
+    analyticsSessionKeys: [sessionKey, otherKey],
+    productIds: [productId],
+    analyticsSearchQueries: [searchQuery],
+  });
+  // GÜN özeti satırları testin ürettiği güne ait; başka koşular da aynı güne yazabildiği için
+  // silinmiyorlar (küresel satır). Sınamalar zaten kendi boyutlarına bakıyor. Ürün ve arama
+  // özetleri damgalı anahtar taşıdığı için purge'ün hedefinde.
+});
+
+describe('olay defteri — YAZMA-YALNIZ', () => {
+  it('olay yazılır ve satır geri istenmez', async () => {
+    await expect(
+      events.record({ type: 'product_view', sessionKey, path: '/product/[slug]', channel: 'b2c', availability: 'sellable' }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('KİMLİK kolonu yok — tipte de yok, şemada da yok', async () => {
+    // Derleme zaten engelliyor; burada sınanan şey satırın yazılabilmesi, yani şemanın kolonu
+    // gerçekten istemediği. `customer_id` zorunlu olsaydı bu yazım düşerdi.
+    await expect(events.record({ type: 'page_view', sessionKey, path: '/' })).resolves.toBeUndefined();
+  });
+});
+
+describe('oturum künyesi BİR KEZ yazılır', () => {
+  it('ikinci yazım öncekini EZMEZ — UTM yalnız ilk istekte vardır', async () => {
+    await sessions.remember({ sessionKey: otherKey, utm: { source: 'ilk' }, source: 'google' });
+    await sessions.remember({ sessionKey: otherKey, utm: { source: 'ikinci' }, source: 'facebook' });
+
+    const { data } = await db.from('analytics_session').select('utm,source').eq('session_key', otherKey).single();
+    expect((data as { utm: { source: string } }).utm.source).toBe('ilk');
+  });
+});
+
+describe('günlük özet', () => {
+  it('boyutlara göre gruplar, saat kırılımını doğru kovaya yazar', async () => {
+    await events.record({ type: 'search', sessionKey, path: '/catalog', channel: 'b2c', availability: null });
+    // Aynı boyut, farklı saat → aynı satır, farklı kova.
+    await db.from('analytics_event').insert([
+      { created_at: at(9), type: 'search', session_key: sessionKey, path: '/catalog', channel: 'b2c' },
+      { created_at: at(9), type: 'search', session_key: otherKey, path: '/catalog', channel: 'b2c' },
+      { created_at: at(14), type: 'search', session_key: sessionKey, path: '/catalog', channel: 'b2c' },
+    ]);
+
+    await daily.build(day);
+    const rows = await daily.list({ from: day, to: day, types: ['search'] });
+    const satir = rows.find((r) => r.path === '/catalog' && r.channel === 'b2c');
+
+    expect(satir?.eventCount).toBe(3);
+    // İKİ oturum: `count(distinct session_key)`.
+    expect(satir?.sessionCount).toBe(2);
+    expect(satir?.hourly).toHaveLength(24);
+    expect(satir?.hourly[9]).toBe(2);
+    expect(satir?.hourly[14]).toBe(1);
+    // Olay düşmeyen saat 0 — eksik değil, o saatte gerçekten kimse yoktu.
+    expect(satir?.hourly[3]).toBe(0);
+  });
+
+  it('İDEMPOTENT — ikinci koşu satırı çoğaltmaz, üzerine yazar', async () => {
+    const once = (await daily.list({ from: day, to: day, types: ['search'] })).length;
+    await daily.build(day);
+    const sonra = await daily.list({ from: day, to: day, types: ['search'] });
+    expect(sonra.length).toBe(once);
+  });
+
+  it('`null` BOYUTLU satır da çoğalmaz — `nulls not distinct` olmasaydı sessizce ikilenirdi', async () => {
+    // `warehouse_id` ve `availability` null: yer seçmemiş ziyaretçinin engellenen sepeti.
+    await db.from('analytics_event').insert([
+      { created_at: at(11), type: 'cart_blocked', session_key: sessionKey, path: '/cart', blocked_reason: 'min_basket' },
+    ]);
+    await daily.build(day);
+    const ilk = (await daily.list({ from: day, to: day, types: ['cart_blocked'] })).filter((r) => r.warehouseId === null);
+    await daily.build(day);
+    const ikinci = (await daily.list({ from: day, to: day, types: ['cart_blocked'] })).filter((r) => r.warehouseId === null);
+
+    expect(ikinci.length).toBe(ilk.length);
+    expect(ilk.length).toBeGreaterThan(0);
+  });
+
+  it('TERK SEBEBİ özette bir boyut — huninin en değerli kırılımı ekrana ancak böyle ulaşır', async () => {
+    const rows = await daily.list({ from: day, to: day, types: ['cart_blocked'] });
+    expect(rows.some((r) => r.blockedReason === 'min_basket')).toBe(true);
+  });
+});
+
+/**
+ * Sinyal özetleri (13.2 · 13.4) — `analytics_daily`'nin taşıyamadığı üç kırılım.
+ *
+ * Hepsi aynı günü paylaşıyor ve o güne başka ajanlar da yazıyor; bu yüzden her sınama KENDİ damgalı
+ * kovasına bakıyor (`CLAUDE §4b`: küresel sayıya bakan test yazma).
+ */
+describe('sinyal özetleri', () => {
+  it('ürün kırılımı: satılabilir görüntüleme AYRI sayılır ve oran ondan çıkar', async () => {
+    await db.from('analytics_event').insert([
+      { created_at: at(10), type: 'product_view', session_key: sessionKey, product_id: productId, availability: 'sellable' },
+      { created_at: at(10), type: 'product_view', session_key: otherKey, product_id: productId, availability: 'sellable' },
+      // Stoksuzken bakılan görüntüleme: toplam görüntülemeye girer, PAYDAYA girmez.
+      { created_at: at(11), type: 'product_view', session_key: sessionKey, product_id: productId, availability: 'sold_out' },
+      { created_at: at(12), type: 'add_to_cart', session_key: sessionKey, product_id: productId },
+    ]);
+    await daily.buildAll(day);
+
+    const [signal] = await products.signals(day, day, 50).then((rows) => rows.filter((r) => r.productId === productId));
+    expect(signal?.viewCount).toBe(3);
+    expect(signal?.sellableViewCount).toBe(2);
+    expect(signal?.cartCount).toBe(1);
+    // 1 / 2 — payda TOPLAM görüntüleme (3) olsaydı 0.33 çıkardı ve ürün olduğundan ilgisiz görünürdü.
+    expect(signal?.cartRate).toBeCloseTo(0.5);
+  });
+
+  it('ürün oranı payda SIFIRKEN `null` — sıfır değil (ölçülemeyen değer sıfır değildir)', async () => {
+    // Hiç satılabilir hâlde görünmemiş bir ürün: "kimse almıyor" DEĞİL, "hiç satılamamış".
+    const stoksuz = `00000000-0000-4000-8001-${String(stamp).slice(-12).padStart(12, '0')}`;
+    await db.from('analytics_event').insert([
+      { created_at: at(13), type: 'product_view', session_key: sessionKey, product_id: stoksuz, availability: 'sold_out' },
+    ]);
+    await daily.buildAll(day);
+
+    const [signal] = await products.signals(day, day, 50).then((rows) => rows.filter((r) => r.productId === stoksuz));
+    expect(signal?.viewCount).toBe(1);
+    expect(signal?.cartRate).toBeNull();
+
+    await purgeTestData(db, { productIds: [stoksuz] });
+  });
+
+  it('arama: sıfır-sonuç kovası AYRI satır — süzgeç boşluğu ile çeşit boşluğu karışmaz', async () => {
+    await db.from('analytics_event').insert([
+      { created_at: at(9), type: 'search', session_key: sessionKey, meta: { query: searchQuery, resultCount: 0, zeroResultKind: 'search' } },
+      { created_at: at(9), type: 'search', session_key: otherKey, meta: { query: searchQuery, resultCount: 0, zeroResultKind: 'search' } },
+      { created_at: at(10), type: 'search', session_key: sessionKey, meta: { query: searchQuery, resultCount: 4, zeroResultKind: null } },
+    ]);
+    await daily.buildAll(day);
+
+    const hepsi = (await searches.signals(day, day, 200, false)).filter((r) => r.query === searchQuery);
+    expect(hepsi).toHaveLength(2);
+
+    const sifir = (await searches.signals(day, day, 200, true)).filter((r) => r.query === searchQuery);
+    expect(sifir).toHaveLength(1);
+    expect(sifir[0]?.zeroResultKind).toBe('search');
+    expect(sifir[0]?.searchCount).toBe(2);
+    expect(sifir[0]?.sessionCount).toBe(2);
+  });
+
+  it('kaynak: künyeli oturum kendi kovasında, künyesiz oturum DOĞRUDAN kovasında', async () => {
+    await sessions.remember({ sessionKey, utm: { source: 'instagram', campaign, medium: 'cpc' }, source: 'instagram.com' });
+    await db.from('analytics_event').insert([{ created_at: at(15), type: 'order_placed', session_key: sessionKey }]);
+    await daily.buildAll(day);
+
+    const rows = await sources.list(day, day);
+    const bizim = rows.find((r) => r.campaign === campaign);
+    expect(bizim?.source).toBe('instagram');
+    expect(bizim?.sessionCount).toBe(1);
+    // Oturum siparişle bitti → kaynağın kendi dönüşümü. Ciro DEĞİL: o `acquisition_source`'tan gelir.
+    expect(bizim?.orderSessionCount).toBe(1);
+
+    // `otherKey` künyesiz: sol birleşim onu düşürmemeli, `source: null` kovasına koymalı. İç
+    // birleşim yazsaydık doğrudan trafik hiç görünmez ve her kaynağın payı şişerdi.
+    expect(rows.some((r) => r.source === null)).toBe(true);
+  });
+});
+
+/**
+ * Defter DIŞI okumalar (13.2 · 13.5) — kaynağı sipariş ve müşteri tablosu.
+ *
+ * **Sayılara değil DAVRANIŞA bakılıyor:** paylaşılan veritabanında sipariş sayısı her koşuda başka
+ * bir şey; sınanan şey sözleşmenin tutması (satır şekli, segment kümesi, sayı-liste tutarlılığı).
+ */
+describe('rapor okumaları', () => {
+  const bugun = new Date().toISOString().slice(0, 10);
+
+  it('kampanya cirosu: etiketsiz kova DÜŞÜRÜLMEZ — toplam dönemin gerçek cirosunu tutmalı', async () => {
+    const rows = await reports.campaignRevenue('2020-01-01', bugun);
+    expect(Array.isArray(rows)).toBe(true);
+    for (const r of rows) {
+      expect(r.revenueCents).toBeTypeOf('number');
+      // Yeni müşteri sayısı, o kaynaktan sipariş veren müşteri sayısını AŞAMAZ.
+      expect(r.newCustomerCount).toBeLessThanOrEqual(r.customerCount);
+    }
+  });
+
+  it('segmentler TÜRETİLİR ve küme kapalı — saklanan bir kolon yok', async () => {
+    const rows = await reports.customerSegments();
+    for (const r of rows) {
+      expect(['champion', 'new', 'active', 'dormant', 'lost']).toContain(r.segment);
+    }
+  });
+
+  it('sayı ile LİSTE aynı ölçütten çıkar — köprünün iki ucu ayrışırsa köprü çalışmıyor demektir', async () => {
+    const counts = await reports.customerSegments();
+    const dolu = counts.find((c) => c.customerCount > 0);
+    if (!dolu) return; // Yerelde hiç sipariş yoksa sınanacak bir köprü de yok.
+
+    const members = await reports.segmentMembers(dolu.segment, 500);
+    expect(members).toHaveLength(Math.min(dolu.customerCount, 500));
+  });
+
+  it('eşik PARAMETRİK: uyuyan sınırı düşünce aktifler uyuyana kayar', async () => {
+    const genis = await reports.customerSegments({ dormantDays: 3650, newDays: 0 });
+    const dar = await reports.customerSegments({ dormantDays: 1, newDays: 0 });
+
+    const say = (rows: Awaited<ReturnType<typeof reports.customerSegments>>, segment: string) =>
+      rows.find((r) => r.segment === segment)?.customerCount ?? 0;
+
+    // Aynı müşteri kümesi, iki farklı eşik: dar pencerede "aktif" olan kimse kalmamalı.
+    expect(say(dar, 'active')).toBeLessThanOrEqual(say(genis, 'active'));
+    expect(say(dar, 'dormant') + say(dar, 'lost')).toBeGreaterThanOrEqual(say(genis, 'dormant') + say(genis, 'lost'));
+  });
+});

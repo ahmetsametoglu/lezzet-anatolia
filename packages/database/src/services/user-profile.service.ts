@@ -5,8 +5,10 @@ import {
   UserProfileSchema,
   UserProfileUpdateSchema,
   DEFAULT_PAGE_SIZE,
+  MarketingChannelEnum,
   STAFF_ROLES,
   type CustomerType,
+  type MarketingChannel,
   type KeysetCursor,
   type Page,
   type UserProfile,
@@ -39,6 +41,24 @@ const PROFILE_SEARCH_FIELDS = ['name', 'phone', 'email'] as const;
 const IMPOSSIBLE_ID = '00000000-0000-0000-0000-000000000000';
 
 const CUSTOMERS_ONLY = { containsFilters: [{ field: 'roles', values: ['customer'] as const }] } as const;
+
+/** İzin bayrağının jsonb yolu — `marketing_consent -> <kanal> ->> granted`. */
+const consentPath = (channel: MarketingChannel) => `marketing_consent->${channel}->>granted`;
+
+/**
+ * Pazarlama izni süzgecini PostgREST parçalarına çevirir — **liste ve sayaç bunu PAYLAŞIR.**
+ *
+ * Tek kanal düz bir yol eşitliğidir (VE ile bağlanır); `'any'` bir `or` grubudur. İkisinin ayrı
+ * çıkması şart: `'any'`ı yol eşitlikleri olarak yazsaydık ikisi VE ile bağlanır ve yalnız HER İKİ
+ * kanala birden izin verenler dönerdi — istenenin tersi.
+ */
+function consentFilter(channel?: MarketingChannel | 'any'): { orFilters: string[]; jsonPathFilters: Array<{ path: string; value: string }> } {
+  if (!channel) return { orFilters: [], jsonPathFilters: [] };
+  if (channel === 'any') {
+    return { orFilters: [MarketingChannelEnum.options.map((c) => `${consentPath(c)}.eq.true`).join(',')], jsonPathFilters: [] };
+  }
+  return { orFilters: [], jsonPathFilters: [{ path: consentPath(channel), value: 'true' }] };
+}
 
 /**
  * Kullanıcı profili erişimi (kimlik) — TEK tablo `user_profiles`; müşteri + personel, ROL ayırır.
@@ -145,6 +165,19 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
       b2bPending?: boolean;
       /** Vade yetkisi açık olanlar (`credit_enabled`) — "vadeli müşteriler" daraltması. */
       creditEnabled?: boolean;
+      /**
+       * **Pazarlama izni olanlar** — analitikteki "N kişi" sayısının gittiği liste (`ANALYTICS §6`:
+       * analitik "kaç" der, Müşteriler "kim" der).
+       *
+       * **Kanal ayrımı ŞART:** e-postaya izin verenle WhatsApp'a izin veren aynı küme değildir ve
+       * kampanya kanal seçerek kurulur. Tek bir "izinli" kovası, e-posta listesine WhatsApp'çıları
+       * karıştırırdı — izinsiz gönderim demek.
+       *
+       * `'any'` ikisinden BİRİ (or), `'email'`/`'whatsapp'` tek kanal. İzin yoksa ya da hiç
+       * sorulmamışsa satır düşer; ikisi arasındaki fark burada değil ekranda taşınır (09.10:
+       * "reddetti" ile "hiç sorulmadı" ayrı gösterilir, birleştirmek GDPR kanıtını bozar).
+       */
+      marketingConsent?: MarketingChannel | 'any';
       cursor?: KeysetCursor;
       limit?: number;
     } = {},
@@ -162,6 +195,8 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
     const bosalanTerim = Boolean(opts.query?.trim()) && term === '';
     if (bosalanTerim) filters.id = IMPOSSIBLE_ID;
 
+    const izin = consentFilter(opts.marketingConsent);
+
     return this.getPage(filters, {
       ...CUSTOMERS_ONLY,
       orderBy: 'createdAt',
@@ -171,8 +206,23 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
       // Tek `or` grubu: üç alandan biri tutarsa satır kalır. Ayrı süzgeç olarak yazılsalar
       // AND'lenirdi ve hiçbir müşteri hem adında hem telefonunda terimi taşımadığı için liste
       // her aramada boş dönerdi.
-      orFilters: term ? [PROFILE_SEARCH_FIELDS.map((f) => ilikeContains(f, term)).join(',')] : undefined,
+      // İzin `any` ise KENDİ or grubu olur — arama grubuyla birleştirilseydi ikisi VEYA ile
+      // bağlanır ve "izinli VE aranan" yerine "izinli VEYA aranan" süzülürdü.
+      orFilters: [...(term ? [PROFILE_SEARCH_FIELDS.map((f) => ilikeContains(f, term)).join(',')] : []), ...izin.orFilters],
+      jsonPathFilters: izin.jsonPathFilters,
     });
+  }
+
+  /**
+   * Pazarlama izni sayacı — analitiğin "N kişi" satırı.
+   *
+   * **Listeyle AYNI ölçütten çıkar** (`consentFilter`) ve bu şart: köprünün iki ucu farklı sayı
+   * gösterirse köprü zaten çalışmıyor demektir (operasyon şeridinin talebi, 04.08). Ölçüt iki yere
+   * yazılsaydı biri gün gelip ötekinden ayrışırdı ve fark hiçbir yerde hata vermezdi.
+   */
+  countByMarketingConsent(channel: MarketingChannel | 'any'): Promise<number> {
+    const izin = consentFilter(channel);
+    return this.count({}, { ...CUSTOMERS_ONLY, orFilters: izin.orFilters, jsonPathFilters: izin.jsonPathFilters });
   }
 
   /**

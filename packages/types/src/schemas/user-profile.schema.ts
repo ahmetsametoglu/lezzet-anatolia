@@ -40,6 +40,16 @@ export const MarketingConsentSchema = z.object({
 });
 export type MarketingConsent = z.infer<typeof MarketingConsentSchema>;
 
+/**
+ * İzin KANALLARI — şemanın kendi anahtarlarından TÜRER (`.keyof()`), elle ikinci bir liste yazılmaz.
+ *
+ * Gerekçe pratikte yaşandı: kanal listesi ayrı yazılsaydı üçüncü kanal (SMS) eklendiğinde şema
+ * büyür, liste unutulur ve "izinli müşteriler" süzgeci yeni kanalı sessizce saymazdı. Türetilmiş
+ * hâlde derleme durur.
+ */
+export const MarketingChannelEnum = MarketingConsentSchema.keyof();
+export type MarketingChannel = z.infer<typeof MarketingChannelEnum>;
+
 export const UserRoleEnum = z.enum(['customer', 'admin', 'warehouse', 'courier', 'accounting']);
 export type UserRole = z.infer<typeof UserRoleEnum>;
 

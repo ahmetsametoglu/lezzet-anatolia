@@ -7,6 +7,12 @@ export { runTask } from './run';
 export { EMPTY_USAGE, addUsage, estimateCost, toAiUsage, type ModelRate } from './usage';
 export { TranslateOutputSchema, translateTask, type TranslateInput, type TranslateOutput } from './tasks/translate';
 export {
+  AnalyticsInsightOutputSchema,
+  analyticsInsightTask,
+  type AnalyticsInsightInput,
+  type AnalyticsInsightOutput,
+} from './tasks/analytics-insight';
+export {
   SuggestLocalizedOutputSchema,
   suggestLocalizedTask,
   type SuggestLocalizedInput,

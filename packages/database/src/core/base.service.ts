@@ -21,6 +21,18 @@ interface FilterOptions {
    */
   orFilters?: string[];
   /**
+   * **jsonb YOL eşitliği** — `marketing_consent->email->>granted` gibi bir yolu bir değere eşitler.
+   *
+   * Düz `filters` ile YAPILAMAZ: orada anahtar bir ALAN ADIdır ve `column()` onu camelCase→snake
+   * çevirir; yol ifadesi o dönüşümden geçemez (ok işaretleri bozulur). Bu yüzden `path` HAM verilir
+   * ve dokunulmadan PostgREST'e gider — çağıranın yolu doğru yazma sorumluluğu vardır.
+   *
+   * Değer METİNDİR çünkü `->>` metin döndürür: mantıksal `true` için `'true'` yazılır. `->` ile
+   * jsonb karşılaştırması da mümkündü ama tip eşleşmesi sağlayıcıya göre değişiyor; metin tarafı
+   * her yerde aynı davranıyor.
+   */
+  jsonPathFilters?: Array<{ path: string; value: string }>;
+  /**
    * DİZİ kolonu İÇERİR süzgeci (`@>`) — "roles dizisi 'customer' içeriyor mu" gibi.
    *
    * Düz `filters` ile YAPILAMAZ: orada dizi değer `IN (…)` demek, yani "kolon bu değerlerden birine
@@ -168,6 +180,8 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     for (const rf of options.rangeFilters ?? []) {
       query = query[rf.operator](this.column(rf.field), this.filterValue(rf.field, rf.value));
     }
+    // Yol HAM gider: `column()` çağrılmaz (bkz. `jsonPathFilters` künyesi).
+    for (const jf of options.jsonPathFilters ?? []) query = query.eq(jf.path, jf.value);
     for (const sf of options.searchFilters ?? []) query = query.ilike(this.column(sf.field), `%${sf.query}%`);
     for (const pf of options.prefixFilters ?? []) query = query.like(this.column(pf.field), `${pf.value}%`);
     for (const cf of options.containsFilters ?? []) query = query.contains(this.column(cf.field), [...cf.values]);
@@ -376,6 +390,22 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     const { data, error } = await this.supabase.from(this.tableName).insert(dbData).select().single();
     if (error) throw error;
     return this.dbSchema.parse(this.toApp(data));
+  }
+
+  /**
+   * Tek satır yazar ve **SATIRI GERİ İSTEMEZ** (`select()` yok).
+   *
+   * `insert()` yazdığı satırı geri okur ve şemayla doğrular — çoğu tabloda doğru davranış, çünkü
+   * kimliği ve varsayılanları çağıran kullanır. Ama **yazılıp bir daha okunmayan** tablolarda
+   * (olay defteri gibi) o dönüş yolu bedava değil: en çok yazılan tabloda her satır için gereksiz
+   * bir gövde taşınır ve hiçbir çağıran ona bakmaz.
+   *
+   * Doğrulama yine YAPILIR (`insertSchema.parse`) — atlanmayan tek şey dönüşün doğrulanmasıdır.
+   */
+  protected async insertWithoutReturn(insertData: TInsert): Promise<void> {
+    const dbData = this.toDbRow(this.insertSchema.parse(insertData) as Record<string, unknown>);
+    const { error } = await this.supabase.from(this.tableName).insert(dbData);
+    if (error) throw error;
   }
 
   /**

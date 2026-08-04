@@ -58,4 +58,39 @@ export class ZoneNoticeService extends BaseDbService<ZoneNotice, ZoneNoticeInser
   async removeForCustomer(customerId: string, postalCode: string): Promise<void> {
     await this.deleteWhere({ customerId, postalCode });
   }
+
+  /**
+   * **Haberi henüz gitmemiş** bekleyişler (19.21 · 14.x) — en eski önce.
+   *
+   * `notified_at is null` idempotentliğin dayanağıdır: gönderim damgayı yazar, ikinci tur aynı
+   * kişiyi hiç görmez. Damga olmasaydı "kime gitti" sorusunun cevabı kalmaz ve bölge iki kez
+   * kaydedildiğinde (ya da bir kod bölgeden çıkıp geri girdiğinde) aynı müşteri iki mail alırdı.
+   */
+  listPending(limit = 200): Promise<ZoneNotice[]> {
+    return this.getAll({}, { isNullFields: ['notifiedAt'], orderBy: 'createdAt', limit });
+  }
+
+  /**
+   * Haber gönderildi damgası. **Toplu**, çünkü bir bölge açılınca onlarca kişiye birden gider ve
+   * satır satır damgalamak turu kişi sayısıyla çarpardı.
+   */
+  async markNotified(ids: readonly string[], at: string): Promise<void> {
+    if (ids.length === 0) return;
+    const { error } = await this.supabase.from('zone_notice').update({ notified_at: at }).in('id', [...ids]);
+    if (error) throw error;
+  }
+
+  /**
+   * Posta kodu başına BEKLEYEN sayısı — Depolar ekranının ikinci sütunu (19.21).
+   *
+   * Uygulamada sayılıyor, `group by` ile değil: PostgREST'te toplama fonksiyonları bu kurulumda
+   * KAPALI ("Use of aggregate functions is not allowed" — aynı sapma katalog sayımında da yazılı).
+   * Küme sınırlı (bekleyen kişi sayısı), yani tek turda okunup bellekte sayılması güvenli.
+   */
+  async pendingCountByPostalCode(): Promise<Map<string, number>> {
+    const rows = await this.getAll({}, { isNullFields: ['notifiedAt'] });
+    const counts = new Map<string, number>();
+    for (const row of rows) counts.set(row.postalCode, (counts.get(row.postalCode) ?? 0) + 1);
+    return counts;
+  }
 }

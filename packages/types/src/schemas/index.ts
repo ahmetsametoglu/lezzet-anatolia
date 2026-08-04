@@ -39,3 +39,5 @@ export * from './points.schema';
 export * from './feedback-request.schema';
 export * from './error-log.schema';
 export * from './system-health.schema';
+export * from './analytics.schema';
+export * from './postal-code-demand.schema';

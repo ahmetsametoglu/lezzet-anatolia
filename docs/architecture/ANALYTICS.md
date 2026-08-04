@@ -68,9 +68,22 @@
   istemciden çağrılabilir yazma ucu AÇILMAZ; haritadaki tek istisna olurdu, model istisnasız kalır.
 - **Yer kapısı huninin İLK adımıdır:** `place_resolved` — oturumda yer çözülmeden düşen ziyaretçi
   en erken ve muhtemelen en büyük kayıptır; `postal_code_demand` yalnız onaylayanı sayar.
-- **UTM: middleware GÖRÜR, kapı YAZAR.** Middleware UTM'i üstbilgiye taşır (emsal:
-  `OPERATIONS_PATH_HEADER`); olay kapısı oturumun ilk olayında `analytics_session`'a bir kez
-  kalıcılaştırır. Middleware'e DB işi konmaz (kenar paketi, en sıcak yol).
+- **UTM: SAYFA görür, kapı YAZAR** *(düzeltme 04.08 — müşteri+arka uç ölçümüyle; ilk metin
+  "middleware görür" idi)*: müşteri sayfaları `searchParams`'ı zaten görür ve UTM oturumun ilk
+  `page_view`'ıyla kapıya gelir; kapı `analytics_session`'a BİR KEZ kalıcılaştırır, ikinci yazım
+  yutulur (ilk kaynak kazanır — `acquisition_source` kuralıyla aynı). Middleware'e dokunulmaz:
+  müşteri dalı erken dönüyor ve intl yönlendirmesi üstbilgiyi sessizce düşürebilirdi; DB işi de
+  kenar paketine konmaz. Ayrı bir kampanya kapısı da YOK — atıcının iki şeyi hatırlaması
+  gerekirdi, biri unutulurdu.
+- **UTM KAPALI SÖZLÜKTÜR** (04.08): kapı gelen parametreleri `{source, medium, campaign, content,
+  term}`e indirger (`normalizeUtm`) ve üç yazımı da tanır (`utm_source` · `utmSource` · `source`).
+  Açık bırakılsaydı reklam aracının linke eklediği her parametre anonim deftere girerdi —
+  `gclid`/`fbclid` gibi **tıklama kimlikleri** dâhil; onlar reklam ağının tarafında tek kullanıcıya
+  çözülür, yani "defterde kimlik kolonu yok" cümlesi teknik olarak doğru, fiilen yanlış olurdu.
+- **`acquisition_source`'u besleyen yer TASLAK SİPARİŞTİR, ödeme oturumu değil** (04.08). Checkout'un
+  iki ödeme dalı var ve kapıda/vadeli dal ödeme oturumunu hiç açmıyor; orada beslesek **nakit ve
+  vadeli müşterilerin tamamı** kaynağı ölçülmemiş kalırdı — B2B'nin ana yolu tam olarak o dal.
+  Eşleşme sipariş anında TÜKETİLİR: oturum anahtarı hiçbir yere yazılmaz, kalan bağ kampanya adıdır.
 
 ## 4. Kapı kuralları (yazım tek kapıdan geçer)
 
@@ -103,8 +116,33 @@
 - **Özetin TAŞIMADIKLARI (bilinçli sınır):** çapraz saat kırılımı (saat × kanal/depo/ürün — 25 ay
   içinde hamdan sorulur), olay sırası/sekans (saat bazlı huni), gün-aşırı tekil ziyaretçi
   (kimliksizlik kararının zaten tanımsız kıldığı sayı). Özetten çıkmayan sayı "analitik bozuk"
-  değildir; sınır budur.
-- **AI içgörüye (13.7) HAM SATIR GİTMEZ, ÖZET GİDER** — sözleşme maddesi, tercih değil.
+  değildir; sınır budur. **Ayrım (04.08, operasyonun sorusu üzerine):** "özet taşımaz" ≠ "rapor
+  imkânsız" — kaynağı başka olan bloklar KALICI SINIR DEĞİL, sıradaki kapının işidir: trafik
+  kaynağı → `analytics_session`'dan · aranıp bulunamayan listesi → ham defterden (`search.query`
+  yalnız orada) · çok bakılıp az alınan → ürün kırılımlı ayrı toplama (13.4'ün asıl işi) · günlük
+  tekil oturum → ayrı sayım (gün-AŞIRI tekil ise kalıcı sınırdır). Ekran bu blokları "veri
+  birikiyor" değil "kapısı sırada" diye anlatır.
+- **Kapıları sırada olan bloklar İNDİ (04.08) ve üçü de AYRI ÖZET oldu, ham okuma değil.** Yukarıdaki
+  ayrımda *"aranıp bulunamayan listesi ham defterden"* yazıyordu; kasıt "kaynağı `analytics_daily`
+  değil" idi ve o kısım aynen geçerli. Ama okumayı hama bağlamadık, çünkü **ham okuma iki yerden
+  çürür**: her açılışta ayın tüm bölümünü tarar, ve 25 ay dolunca listenin geçmişi sessizce kısalır.
+  Yerine üç dar özet: `analytics_daily_product` (gün × ürün) · `analytics_daily_search`
+  (gün × terim × sıfır-sonuç kovası) · `analytics_daily_source` (gün × kaynak × kampanya).
+  **`analytics_daily`'ye BOYUT olarak eklenmediler** — satır sayısını katalog büyüklüğüyle ve arama
+  çeşitliliğiyle çarparlardı; huni/ısı/seri okumaları da o şişmiş tabloyu taramak zorunda kalırdı.
+- **Kaynak dökümü OTURUM tablosundan değil DEFTERDEN üretilir.** `analytics_session` yalnız künyeli
+  gelişte satır açar; oradan sayılsaydı **doğrudan gelen ziyaretçi dökümde hiç görünmez** ve her
+  kaynağın payı olduğundan büyük çıkardı. Özet defterin oturumlarını sayar, künyeye sol birleşimle
+  bakar; `source is null` gerçek bir kovadır.
+- **Sayı özetleri süresiz, SERBEST METİN özeti değil:** `analytics_daily_search` ham defterle aynı
+  25 ayı yaşar (`purge_analytics_before`). Süresiz saklamak, ham metnin ömrünü özet kılığında
+  sonsuza uzatmak olurdu. Aynı süpürme `analytics_session`'ı da alır — tablo bölümlenmemiş, yani
+  bölüm düşürmek oraya işlemiyor ve künyesi kalan bir oturum "defteri sildik" cümlesini yarım bırakır.
+- **Terk sebebi GÜNLÜK ÖZETİN boyutudur** (04.08 düzeltmesi). Yalnız ham defterde durduğu sürece
+  huninin en değerli kolonu hiçbir ekrana ulaşmıyordu: *"checkout'ta %38 düşüyor"* tek başına aksiyon
+  üretmez, *"%38'in yarısı asgari sepet"* üretir.
+- **AI içgörüye (13.7) HAM SATIR GİTMEZ, ÖZET GİDER** — sözleşme maddesi, tercih değil. **Artık bir
+  tiple zorlanıyor:** `AnalyticsInsightInput` yalnız toplanmış sayı taşır; satır geçiremez.
 
 ## 6. Ekran yerleşimi (kullanıcı kararı 04.08)
 

@@ -30,6 +30,7 @@ export { DeliveryZoneService, DeliveryZonePostalCodeService } from './services/d
 export { PostalCodePlaceService, type PostalCodeSuggestion } from './services/postal-code-place.service';
 export { VariantStockNoticeService } from './services/variant-stock-notice.service';
 export { ZoneNoticeService } from './services/zone-notice.service';
+export { PostalCodeDemandService } from './services/postal-code-demand.service';
 export { WarehouseService } from './services/warehouse.service';
 export { WarehouseTransferService } from './services/warehouse-transfer.service';
 export { CartService } from './services/cart.service';
@@ -57,6 +58,17 @@ export { JobRunService } from './services/job-run.service';
 export { WebhookEventService } from './services/webhook-event.service';
 export { ErrorLogService, errorFingerprint, type ListErrorLogsOptions } from './services/error-log.service';
 export { SystemHealthService } from './services/system-health.service';
+export {
+  AnalyticsDailyService,
+  AnalyticsEventService,
+  AnalyticsProductDailyService,
+  AnalyticsReportService,
+  AnalyticsSearchDailyService,
+  AnalyticsSessionService,
+  AnalyticsSourceDailyService,
+  type AnalyticsDailyFilter,
+  type SegmentOptions,
+} from './services/analytics.service';
 export { CourierDayCloseService, CourierDayCollectionService } from './services/courier-day-close.service';
 export { TicketService, TicketQueueService, TicketMessageService, type TicketQueueFilter } from './services/ticket.service';
 export { ProductFeedbackService, ProductRatingService } from './services/product-feedback.service';

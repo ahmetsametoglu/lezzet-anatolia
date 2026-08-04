@@ -23,6 +23,8 @@ import { requestLog, type AppEnv } from './http/request-log';
 import { COLLECT_HEALTH, collectHealthJob } from './jobs/collect-health';
 import { CREATE_FEEDBACK_REQUESTS, createFeedbackRequestsJob } from './jobs/feedback-requests';
 import { PURGE_OBSERVABILITY, purgeObservabilityJob } from './jobs/purge-observability';
+import { ANALYTICS_INSIGHT, analyticsInsightJob } from './jobs/analytics-insight';
+import { ANALYTICS_ROLLUP, analyticsRollupJob } from './jobs/analytics-rollup';
 import { runJob } from './jobs/runner';
 import { SEND_FEEDBACK_INVITES, sendFeedbackInvitesJob } from './jobs/send-feedback-invites';
 import { SWEEP_RESERVATIONS, sweepReservations } from './jobs/sweep-reservations';
@@ -118,6 +120,32 @@ cron.schedule(`*/${HEALTH_COLLECT_INTERVAL_MIN} * * * *`, () => {
 // silinince kaybolmaz, yalnız görünmez olur.
 cron.schedule('20 3 * * *', () => {
   void runJob(PURGE_OBSERVABILITY, purgeObservabilityJob);
+}, { timezone: 'Europe/Paris' });
+
+// Analitik özet + bakım (13.1) — günde bir, gözlemleme süpürmesinden SONRA.
+//
+// Üç iş tek turda ve sıraları kritik: bölüm bakımı → günlük özet → saklama süpürmesi. **Özet ÖNCE,
+// silme SONRA** (`ANALYTICS §5`): ters sırada bir gün özet koşmazsa o günün verisi hem özette hem
+// ham defterde yok olur ve kayıp sessiz kalır.
+//
+// Gece 3'ten sonra çünkü gün kapanmış olmalı: iş DÜNÜ özetliyor, bugünü değil — gün kapanmadan
+// üretilen özet eksiktir ve eksik bir sayıyı ekranda bir gün boyunca göstermek, hiç göstermemekten
+// kötüdür.
+cron.schedule('40 3 * * *', () => {
+  void runJob(ANALYTICS_ROLLUP, analyticsRollupJob);
+}, { timezone: 'Europe/Paris' });
+
+// Haftalık AI içgörü (13.7) — pazartesi sabahı, özet turundan SONRA.
+//
+// **Sıra şart:** özet dünü işliyor, içgörü de dün dahil son yedi günü okuyor. İçgörü önce koşsaydı
+// pazar gününün satırları henüz yazılmamış olurdu ve model haftanın son gününü boş görüp "hafta
+// sonu çöktü" derdi — yanlış olmakla kalmaz, inandırıcı olurdu.
+//
+// **Pazartesi ve haftada bir:** anlatının sorusu "geçen hafta ne oldu". Her gün üretilseydi hem
+// fatura yedi katına çıkar hem yönetici her gün biraz farklı bir hikâye okurdu; günlük dalgalanma
+// bir haftalık eğilim değildir.
+cron.schedule('20 4 * * 1', () => {
+  void runJob(ANALYTICS_INSIGHT, analyticsInsightJob);
 }, { timezone: 'Europe/Paris' });
 
 // Kullanıcı metinlerinin çevirisi (20.2) — beş dakikada bir, partili (20 metin/tur).

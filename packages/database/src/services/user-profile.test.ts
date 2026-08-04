@@ -308,6 +308,65 @@ describe('liste: sunucu-taraflı arama + daraltma (09.9)', () => {
   });
 });
 
+/**
+ * **Pazarlama izni süzgeci** (`ANALYTICS §6` · operasyon şeridinin talebi 04.08) — analitikteki
+ * "N kişi" sayısının gittiği liste.
+ *
+ * Sınanan şey jsonb yolunun çalışması DEĞİL yalnız; asıl sınanan **kanal ayrımı**: e-postaya izin
+ * verenle WhatsApp'a izin veren aynı küme değil ve karıştırılmaları izinsiz gönderim demek.
+ */
+describe('pazarlama izni süzgeci (ANALYTICS §6)', () => {
+  let epostaIzinli: string;
+  let whatsappIzinli: string;
+  let izinsiz: string;
+
+  beforeAll(async () => {
+    const e = await profiles.insert({ name: `İzin E ${stamp}`, email: `izin-e${stamp}@ornek.fr` });
+    const w = await profiles.insert({ name: `İzin W ${stamp}`, email: `izin-w${stamp}@ornek.fr` });
+    // REDDEDEN müşteri: `granted:false`. "Hiç sorulmadı" (torba boş) ile aynı kovaya düşmemeli —
+    // ikisi ayrı hâller (09.10) ama süzgeç açısından ikisi de listenin DIŞINDA kalır.
+    const r = await profiles.insert({ name: `İzin Yok ${stamp}`, email: `izin-yok${stamp}@ornek.fr` });
+    epostaIzinli = e.id;
+    whatsappIzinli = w.id;
+    izinsiz = r.id;
+    createdIds.push(e.id, w.id, r.id);
+
+    await profiles.update({ id: e.id, marketingConsent: { email: { granted: true, at: new Date().toISOString(), source: 'test' } } });
+    await profiles.update({ id: w.id, marketingConsent: { whatsapp: { granted: true, at: new Date().toISOString(), source: 'test' } } });
+    await profiles.update({ id: r.id, marketingConsent: { email: { granted: false, at: new Date().toISOString(), source: 'test' } } });
+  });
+
+  it('kanal AYRIMI tutar — e-posta süzgeci WhatsApp izinlisini GETİRMEZ', async () => {
+    const page = await profiles.list({ marketingConsent: 'email', limit: 200 });
+    const idler = page.rows.map((r) => r.id);
+    expect(idler).toContain(epostaIzinli);
+    expect(idler).not.toContain(whatsappIzinli);
+    expect(idler).not.toContain(izinsiz);
+  });
+
+  it('`any` ikisinden birini de getirir', async () => {
+    const page = await profiles.list({ marketingConsent: 'any', limit: 200 });
+    const idler = page.rows.map((r) => r.id);
+    expect(idler).toEqual(expect.arrayContaining([epostaIzinli, whatsappIzinli]));
+    expect(idler).not.toContain(izinsiz);
+  });
+
+  it('REDDEDEN listeye girmez — `granted:false` izin değildir', async () => {
+    const page = await profiles.list({ marketingConsent: 'email', limit: 200 });
+    expect(page.rows.map((r) => r.id)).not.toContain(izinsiz);
+  });
+
+  it('sayaç ile liste AYNI ölçütten çıkar — köprünün iki ucu aynı sayıyı göstermeli', async () => {
+    // Küresel sayıya bakılmıyor (`CLAUDE §4b`): başka ajanın verisi toplamı oynatır. Ölçüt şu —
+    // sayaç, bu testin kurduğu satırları kapsayacak kadar büyük VE listeyle tutarlı olmalı.
+    const [sayac, page] = await Promise.all([
+      profiles.countByMarketingConsent('email'),
+      profiles.list({ marketingConsent: 'email', limit: 1000 }),
+    ]);
+    expect(sayac).toBe(page.rows.length);
+  });
+});
+
 describe('adresler (04.4)', () => {
   it('ilk adres otomatik varsayılandır', async () => {
     const address = await addresses.addForCustomer({ customerId, line1: '1 rue de la Paix', postalCode: '67000', city: 'Strasbourg' });
