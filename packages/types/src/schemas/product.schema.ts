@@ -158,6 +158,23 @@ export const ProductSchema = z.object({
   targetMarginPercent: dbNumericNullable,
   autoPrice: z.boolean(),
   sortOrder: z.number().int(),
+
+  /**
+   * **ÇEŞİT EKSENİ** (05.15) — ürün bir ailenin üyesi mi. `null` = ailesiz, çeşit bloğu HİÇ çizilmez.
+   *
+   * Varyanttan ayrı: varyant aynı ürünün boyudur (500 g / 1 kg), aile kimlik seçimidir
+   * (limonlu / mangolu). Üye = tam bir ürün — kendi sayfası, beyanı, görseli, fiyatı var.
+   */
+  familyId: z.string().uuid().nullable(),
+  /**
+   * Ailedeki kart etiketi — ürün adından AYRI ve üç dilli. Ürün "Limonlu kek", etiket "Limonlu";
+   * kartta okunan ikincisidir. Ürün adından türetilemez (ortak eki kırpmak "Çilekli Kek" ile
+   * "Kek Dilimi" yan yana gelince bozulur). `familyId` doluyken **veri kısıtı zorunlu kılıyor**.
+   */
+  familyLabel: LocalizedTextSchema.nullable(),
+  /** Aile İÇİNDEKİ sıra (operatörün sürüklediği). `sortOrder` katalog sırasıdır, karışmaz. */
+  familyPosition: z.number().int(),
+
   createdAt: z.string(),
 }).merge(ImageMetaSchema); // görsel alanları (anahtar + odak + alt metin) ortak şemadan gelir
 export type Product = z.infer<typeof ProductSchema>;
@@ -181,8 +198,48 @@ export const ProductInsertSchema = z.object({
   targetMarginPercent: z.number().nullish(),
   autoPrice: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
+  // Aile üç alan birden verilir ya da hiç verilmez — kısmi gönderim veri kısıtına takılır
+  // (`family_id` doluyken etiket zorunlu) ve bu doğru davranıştır.
+  familyId: z.string().uuid().nullish(),
+  familyLabel: LocalizedTextSchema.nullish(),
+  familyPosition: z.number().int().optional(),
 }).merge(ImageMetaInsertSchema);
 export type ProductInsert = z.infer<typeof ProductInsertSchema>;
+
+/**
+ * **ÜRÜN AİLESİ** (05.15) — çeşit ekseninin kendisi.
+ *
+ * `name` TEK DİLLİ ve bu bilinçli: aile adı müşteriye görünmez (kullanıcı kararı 04.08).
+ * Müşterinin gördüğü başlık arayüz metnidir ("Çeşitler"); bu ad yalnız operatörün panelde aileyi
+ * tanımasına yarar ve operasyon yüzeyi zaten tek dillidir (`CLAUDE §2`).
+ */
+export const ProductFamilySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  isActive: z.boolean(),
+  createdAt: z.string(),
+});
+export type ProductFamily = z.infer<typeof ProductFamilySchema>;
+
+export const ProductFamilyInsertSchema = ProductFamilySchema.pick({ name: true }).extend({
+  isActive: z.boolean().optional(),
+});
+export type ProductFamilyInsert = z.infer<typeof ProductFamilyInsertSchema>;
+
+export const ProductFamilyUpdateSchema = ProductFamilySchema.partial().required({ id: true });
+export type ProductFamilyUpdate = z.infer<typeof ProductFamilyUpdateSchema>;
+
+/**
+ * Ailedeki bir üyenin sırası — **tüm aile birden yazılır** (`replacePostalCodes` deseni).
+ *
+ * Kısmi güncelleme yazsaydık iki eşzamanlı sürükleme sıralamada delik bırakırdı ve hiçbir yer hata
+ * vermezdi: kartlar bir gün kendiliğinden başka sırada görünürdü.
+ */
+export const ProductFamilyOrderSchema = z.object({
+  productId: z.string().uuid(),
+  position: z.number().int(),
+});
+export type ProductFamilyOrder = z.infer<typeof ProductFamilyOrderSchema>;
 
 // `isIncomplete` ÜRETİLMİŞ kolondur (0005) — yazılamaz, o yüzden güncelleme şemasından çıkarılır;
 // yoksa forma dokunmamış bir alan bile update'e sızıp "cannot insert into generated column" verir.

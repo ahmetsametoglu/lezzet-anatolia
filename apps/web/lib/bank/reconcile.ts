@@ -33,7 +33,7 @@ const addDays = (iso: string, n: number) => new Date(new Date(`${iso}T00:00:00.0
  */
 export async function matchQueue(accountId: string, opts: { limit?: number } = {}): Promise<QueueRow[]> {
   const db = serviceDb();
-  const ledgerPage = await new MoneyMovementService(db).ledger(accountId, { unreconciledOnly: true, limit: opts.limit ?? 50 });
+  const ledgerPage = await new MoneyMovementService(db).ledger({ accountId, unreconciledOnly: true, limit: opts.limit ?? 50 });
   const bankRows = ledgerPage.rows.filter((r) => r.source === 'bank_import');
   if (bankRows.length === 0) return [];
 

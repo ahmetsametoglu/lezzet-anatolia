@@ -1,4 +1,12 @@
-import { BundleService, CategoryService, CollectionService, PriceService, ProductImageService, ProductService } from '@lezzet/database';
+import {
+  BundleService,
+  CategoryService,
+  CollectionService,
+  PriceService,
+  ProductFamilyService,
+  ProductImageService,
+  ProductService,
+} from '@lezzet/database';
 import { bundleBalance, rebalanceAllocations } from '@lezzet/domain-core';
 import { PRODUCT_GALLERY_MAX, resolveLocalizedText, type LocalizedText, type Nutrition, type ProductAllergen, type ProductStatus } from '@lezzet/types';
 import { NOW, euro, r2Keys, uploadImage, type Db } from './shared';
@@ -316,8 +324,8 @@ export async function seedCatalog(db: Db): Promise<void> {
   // GERÇEK katalog (kullanıcı kararı 04.08): uydurulmuş 69 ürünün yerine Lezza Foods'un 141 ürünü.
   // Hacim gerekçesi aynı kalıyor — sayfalama ve sonsuz kaydırma ancak birkaç sayfa dolunca
   // denenebilir — ama artık gerçek adlar, gerçek görseller ve gerçek boy/kanal dağılımıyla.
-  const lezza = await seedLezzaProducts(categories, products, images, catId, PRODUCTS.length);
-  console.log(`  ✓ ${lezza.made} Lezza ürünü · ${lezza.variants} varyant · ${lezza.photos} galeri fotoğrafı`);
+  const lezza = await seedLezzaProducts(categories, products, images, new ProductFamilyService(db), catId, PRODUCTS.length);
+  console.log(`  ✓ ${lezza.made} Lezza ürünü · ${lezza.variants} varyant · ${lezza.photos} galeri fotoğrafı · ${lezza.families} ürün ailesi`);
   console.log(`✓ katalog: ${catId.size} kategori, ${PRODUCTS.length + lezza.made} ürün`);
 }
 

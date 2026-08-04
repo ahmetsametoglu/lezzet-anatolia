@@ -90,14 +90,22 @@ describe('transfer — tek satır, iki hesap', () => {
   it('transfer İKİ hesabın da ekstresinde görünür — karşı uçta işaret ters', async () => {
     await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 12_000, type: 'transfer', counterAccountId: bankAccount.id });
 
-    const cashLedger = await movements.ledger(cashAccount.id);
-    const bankLedger = await movements.ledger(bankAccount.id);
+    const cashLedger = await movements.ledger({ accountId: cashAccount.id });
+    const bankLedger = await movements.ledger({ accountId: bankAccount.id });
     expect(cashLedger.rows).toHaveLength(1);
     expect(bankLedger.rows).toHaveLength(1);
     expect(cashLedger.rows[0]!.signedAmountCents).toBe(-12_000);
     expect(bankLedger.rows[0]!.signedAmountCents).toBe(12_000);
     // Aynı hareket, iki defter satırı: id ortak.
     expect(cashLedger.rows[0]!.id).toBe(bankLedger.rows[0]!.id);
+
+    // **HESAP-ÜSTÜ okumada transferin İKİ AYAĞI DA kalır** (karar 04.08, operasyon şeridinin
+    // talebi). Birini seçip ötekini gizlemek keyfî olurdu ve "hangi ayak" sorusunun cevabı yok.
+    // İkisi birbirini götürdüğü için "Tümü"nün toplamı da doğru çıkar: para işletmeden çıkmadı.
+    const hepsi = await movements.ledger();
+    const ayaklar = hepsi.rows.filter((r) => r.id === cashLedger.rows[0]!.id);
+    expect(ayaklar).toHaveLength(2);
+    expect(ayaklar.reduce((a, r) => a + r.signedAmountCents, 0)).toBe(0);
   });
 
   it('karşı ucu olmayan transfer VERİTABANINDA reddedilir — yarım transfer bakiyeyi kaydırırdı', async () => {
@@ -121,10 +129,10 @@ describe('ekstre ve dönem', () => {
     await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 2000, type: 'misc', valueDate: dayOffset(-5) });
     await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 3000, type: 'misc', valueDate: dayOffset(-1) });
 
-    const all = await movements.ledger(cashAccount.id);
+    const all = await movements.ledger({ accountId: cashAccount.id });
     expect(all.rows.map((r) => r.amountCents)).toEqual([3000, 2000, 1000]);
 
-    const aralik = await movements.ledger(cashAccount.id, { from: dayOffset(-10), to: dayOffset(0) });
+    const aralik = await movements.ledger({ accountId: cashAccount.id, from: dayOffset(-10), to: dayOffset(0) });
     expect(aralik.rows.map((r) => r.amountCents)).toEqual([3000, 2000]);
   });
 
@@ -133,8 +141,32 @@ describe('ekstre ve dönem', () => {
     await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 2500, type: 'misc' });
     await movements.markReconciled(eslesen.id);
 
-    const queue = await movements.ledger(cashAccount.id, { unreconciledOnly: true });
+    const queue = await movements.ledger({ accountId: cashAccount.id, unreconciledOnly: true });
     expect(queue.rows.map((r) => r.amountCents)).toEqual([2500]);
+  });
+
+  it('TİP süzgeci — tasarımın "+ tip" çipi (12.4)', async () => {
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 700, type: 'expense' });
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 900, type: 'misc' });
+
+    const giderler = await movements.ledger({ accountId: cashAccount.id, type: 'expense' });
+    expect(giderler.rows.every((r) => r.type === 'expense')).toBe(true);
+    expect(giderler.rows.map((r) => r.amountCents)).toContain(700);
+    expect(giderler.rows.map((r) => r.amountCents)).not.toContain(900);
+  });
+
+  it('eşleşmemiş SAYACI sayfadan değil defterden gelir — kuyruğu es geçmesin', async () => {
+    // Sayfa ilk N satırı taşır; ekran onu sayarsa "7" yerine "20+" yazar (sayaç olmayan bir sayaç).
+    // Küresel sayıya bakılmıyor (`CLAUDE §4b`) — ölçüt kendi eklediğimizin FARKI.
+    const once = await movements.unreconciledCount();
+    await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 111, type: 'misc' });
+    const sonra = await movements.unreconciledCount();
+    expect(sonra).toBe(once + 1);
+
+    // Sayfa sınırından bağımsız: tek satırlık sayfa istesek bile sayaç değişmez.
+    const tekSatir = await movements.ledger({ accountId: cashAccount.id, unreconciledOnly: true, limit: 1 });
+    expect(tekSatir.rows).toHaveLength(1);
+    expect(await movements.unreconciledCount()).toBe(sonra);
   });
 
   it('dönem toplamları tip+yön kırılımında toplanır; dönem dışı satır girmez', async () => {
@@ -195,7 +227,7 @@ describe('para hareketi — euro↔cent sınırı', () => {
     expect(Number((data as { amount: number | string }).amount)).toBe(12.34);
 
     // Görünümün türettiği işaretli tutar da cent: çıkışta negatif.
-    const ledger = await movements.ledger(cashAccount.id, { limit: 1 });
+    const ledger = await movements.ledger({ accountId: cashAccount.id, limit: 1 });
     expect(ledger.rows[0]?.amountCents).toBe(1234);
     expect(ledger.rows[0]?.signedAmountCents).toBe(-1234);
   });

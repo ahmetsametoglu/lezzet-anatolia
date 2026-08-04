@@ -89,16 +89,20 @@ class AccountLedgerService extends BaseDbService<AccountLedgerRow, never, never>
     super(supabase, 'account_movement', AccountLedgerRowSchema, AccountLedgerRowSchema as never, AccountLedgerRowSchema as never, false);
   }
 
-  page(
-    accountId: string,
-    opts: { cursor?: KeysetCursor; limit?: number; from?: string; to?: string; unreconciledOnly?: boolean } = {},
-  ): Promise<Page<AccountLedgerRow>> {
+  page(opts: LedgerFilter = {}): Promise<Page<AccountLedgerRow>> {
     const rangeFilters: Array<{ field: string; operator: 'gte' | 'lte'; value: string }> = [];
     if (opts.from) rangeFilters.push({ field: 'valueDate', operator: 'gte', value: opts.from });
     if (opts.to) rangeFilters.push({ field: 'valueDate', operator: 'lte', value: opts.to });
 
     return this.getPage(
-      { ledgerAccountId: accountId, ...(opts.unreconciledOnly ? { reconciled: false } : {}) },
+      {
+        // **Hesap artık ZORUNLU DEĞİL, bir SÜZGEÇ** (12.4 · operasyon şeridinin talebi 04.08).
+        // `admin-para.md §6`: *"tek liste, hesap yalnız bir filtredir"*. Zorunlu imza bunun tersini
+        // varsayıyordu — ekran açılışta boş kalır ya da bir hesabı keyfî olarak öne alırdı.
+        ledgerAccountId: opts.accountId,
+        type: opts.type,
+        ...(opts.unreconciledOnly ? { reconciled: false } : {}),
+      },
       {
         orderBy: 'valueDate',
         orderDirection: 'desc',
@@ -108,6 +112,43 @@ class AccountLedgerService extends BaseDbService<AccountLedgerRow, never, never>
       },
     );
   }
+
+  /**
+   * Eşleşmemiş satır SAYISI — süzgeçten bağımsız, hesap-üstü tek sayı.
+   *
+   * **Sayfadan sayılamaz** ve talep bunu doğru tespit etmiş: sayfa ilk N satırı taşır, ekran onu
+   * sayarsa listenin kuyruğunu es geçer ve "7" yerine "20+" gibi bir şey yazar — sayaç olmayan bir
+   * sayaç. Tasarım bu rozeti bir İŞ KUYRUĞU ilan ediyor ve **sıfırken de basıyor** ("her şey
+   * mutabık" iyi haberdir), yani sayının doğru olması gerekiyor.
+   *
+   * Ham `money_movement`'tan sayılıyor, `account_movement` görünümünden DEĞİL: görünüm transferi iki
+   * satır üretir ve eşleşmemiş bir transfer iki kez sayılırdı.
+   */
+  async unreconciledCount(): Promise<number> {
+    const { count, error } = await this.supabase
+      .from('money_movement')
+      .select('id', { count: 'exact', head: true })
+      .eq('reconciled', false);
+    if (error) throw error;
+    return count ?? 0;
+  }
+}
+
+/**
+ * Defter süzgeci (12.4). **Hepsi isteğe bağlı** — süzgeçsiz çağrı defterin tamamını sayfalar.
+ *
+ * `accountId` bir EKSEN değil bir daraltmadır (`admin-para.md §6`): kasa ile banka aynı kavram,
+ * hesap yalnız bir çip.
+ */
+export interface LedgerFilter {
+  accountId?: string;
+  /** Hareket tipi — tasarımın süzgeç barındaki "+ tip" çipi. Kapalı enum, ek indeks istemiyor. */
+  type?: MovementType;
+  cursor?: KeysetCursor;
+  limit?: number;
+  from?: string;
+  to?: string;
+  unreconciledOnly?: boolean;
 }
 
 /** Dönem toplamı — kâr ve nakit akışı raporlarının ham girdisi (12.6). */
@@ -151,14 +192,26 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   }
 
   /**
-   * **Hesap ekstresi** — defterden okunur (transferin karşı ucu dâhil, işareti ters). Değer tarihine
-   * göre en yeni önce, keyset sayfalı (sonsuz kaydırma).
+   * **Defter listesi** — hesap seçili ya da HESAP-ÜSTÜ (12.4). Değer tarihine göre en yeni önce,
+   * keyset sayfalı (sonsuz kaydırma).
+   *
+   * ── TRANSFERİN İKİ AYAĞI "TÜMÜ"NDE DE İKİ SATIRDIR (karar 04.08) ───────────
+   * Görünüm transferi iki satır üretiyor (gönderende −, alanda +) ve hesap-üstü okumada ikisi de
+   * kalıyor. Operasyon şeridinin görüşü kabul: transfer gerçekten iki hesabı birden etkiliyor,
+   * birini seçip ötekini gizlemek keyfî olurdu ve "hangi ayak" sorusunun cevabı yok. **Toplam da
+   * bu yüzden doğru çıkıyor:** iki satır birbirini götürür, yani "Tümü"nün toplamı *"para
+   * işletmeden çıkmadı"* der. Tek satır isteyen okuma ham `money_movement`'a bakar.
+   *
+   * **Listenin toplamı buna bağlı olduğu için ekran bunu bilmek zorunda** — talep haklı olarak
+   * künyeye yazılmasını istedi.
    */
-  ledger(
-    accountId: string,
-    opts: { cursor?: KeysetCursor; limit?: number; from?: string; to?: string; unreconciledOnly?: boolean } = {},
-  ): Promise<Page<AccountLedgerRow>> {
-    return this.ledgerView.page(accountId, opts);
+  ledger(opts: LedgerFilter = {}): Promise<Page<AccountLedgerRow>> {
+    return this.ledgerView.page(opts);
+  }
+
+  /** Eşleşmemiş satır sayısı — süzgeçten bağımsız iş kuyruğu rozeti (12.4). */
+  unreconciledCount(): Promise<number> {
+    return this.ledgerView.unreconciledCount();
   }
 
   /** Siparişin para hareketleri — tahsilat/iade toplamı (`amount_*` cache'inin kaynağı, 12.2). */

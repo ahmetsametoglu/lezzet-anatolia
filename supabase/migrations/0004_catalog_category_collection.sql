@@ -47,6 +47,39 @@ create table public.collection (
 );
 create unique index collection_slug_key on public.collection (slug);
 
+-- ── product_family — ÇEŞİT ekseni (05.15 · kullanıcı kararları 04.08) ────────
+-- Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâlleri. **Üye = bugünkü
+-- ÜRÜN** — kendi sayfası, kendi beyanı, kendi görseli, kendi fiyatı olan tam bir ürün. Aile bunların
+-- üstünde ince bir gruplamadır, yeni bir varlık türü değil.
+--
+-- **VARYANTTAN AYRI EKSEN:** varyant aynı ürünün boyudur (500 g / 1 kg), aile kimlik seçimidir.
+--
+-- ── NEDEN KOLEKSİYON DEĞİL ──────────────────────────────────────────────────
+-- `collection` tasarım gereği ÇOKTAN-ÇOĞADIR. Bir ürün iki koleksiyondayken "öteki çeşitler"
+-- sorusunun İKİ cevabı olur ve hiçbir yer hata vermez. `product.family_id` kolonu "en çok bir aile"
+-- değişmezini yapısal kılar — kural veride durur. Emsal bu şemada yaşandı: `delivery_zone_postal_code`
+-- dizi kolonundan kendi tablosuna taşındı, çünkü aynı kodu iki bölgeye yazmak serbestti ve çözücü
+-- sessizce birini seçiyordu (0014).
+--
+-- Serbest metin bir `family_key` de elendi: `limonlu-kek` ile `limonlu_kek` sessizce iki aile yapar.
+create table public.product_family (
+  id uuid primary key default gen_random_uuid(),
+  -- **TEK DİLLİ ve bu bilinçli** (kullanıcı kararı): aile adı MÜŞTERİYE GÖRÜNMEZ. Müşterinin
+  -- gördüğü başlık arayüz metnidir ("Çeşitler"); bu ad yalnız operatörün panelde aileyi tanımasına
+  -- yarar ve operasyon yüzeyi zaten tek dillidir (CLAUDE §2). Çok dilli yapmak, hiç okunmayacak iki
+  -- alanı her ailede doldurtmak olurdu.
+  name text not null,
+  -- Aile pasifleştirilebilir: üyeleri satışta kalır ama çeşit bloğu çizilmez. Silmek yerine
+  -- pasifleştirme, `family_id`'si `set null` olan üyelerin etiket ve sırasını da düşürürdü.
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+comment on table public.product_family is
+  'Ürün ailesi (05.15) — çeşit ekseni. Üye = ürün; ad yalnız operasyona görünür.';
+
+alter table public.product_family enable row level security;
+
 -- RLS — deny-by-default (0001 deseni). Erişim sunucudan service_role ile.
 alter table public.category enable row level security;
 alter table public.collection enable row level security;

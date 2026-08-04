@@ -3,6 +3,9 @@ import { z } from 'zod';
 import {
   ProductSchema,
   ProductInsertSchema,
+  ProductFamilySchema,
+  ProductFamilyInsertSchema,
+  ProductFamilyUpdateSchema,
   ProductUpdateSchema,
   ProductPoolSchema,
   ProductStockRowSchema,
@@ -25,6 +28,10 @@ import {
   type ProductPool,
   type ProductStockRow,
   type ProductPriceRow,
+  type ProductFamily,
+  type ProductFamilyInsert,
+  type ProductFamilyUpdate,
+  type ProductFamilyOrder,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { ilikeContains, ilikeTerm } from '../utils/filter-term';
@@ -40,6 +47,8 @@ interface ProductFilters {
   /** Ad araması; üç dilde birden aranır. */
   query?: string;
   categoryId?: string;
+  /** Ürün ailesi (05.15) — "öteki çeşitler" okuması ve operatörün aile diyaloğu. */
+  familyId?: string;
   status?: ProductStatus;
   /** Belirli ürünler — çağıran kimlikleri başka bir okumadan türetmişse (ör. teklifli partiler). */
   ids?: string[];
@@ -111,6 +120,7 @@ function buildProductQuery(f?: ProductFilters): { filters: Record<string, unknow
   const filters: Record<string, unknown> = {};
   const orFilters: string[] = [];
   if (f?.categoryId) filters.categoryId = f.categoryId;
+  if (f?.familyId) filters.familyId = f.familyId;
   if (f?.ids) filters.id = f.ids; // dizi → IN (base sorgu kurucusu çevirir)
   if (f?.status) filters.status = f.status; // tek kolon → düz eşitlik (eski ikili bayrak çevrimi kalktı)
 
@@ -443,5 +453,55 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
    */
   async updateDetails(id: string, input: ProductDetailsUpdate): Promise<Product> {
     return this.update({ id, ...input });
+  }
+
+  /**
+   * **Bir ailenin üyeleri, sırasıyla** (05.15).
+   *
+   * `status` süzgeci ÇAĞIRANA bırakılır — `findBySlug` ile aynı gerekçe: vitrin yalnız satıştakini
+   * ister, operasyonun düzenleme diyaloğu ise **tüm aileyi** görmek zorundadır (kullanıcı kararı:
+   * "her ürünün düzenleme diyaloğunda tüm aile görünür"). Süzgeci buraya gömseydik operatör
+   * pasiflediği üyeyi listede bulamaz ve sırasını düzeltemezdi.
+   *
+   * Sayfalanmıyor ve bu bilinçli: aile operatörün elle kurduğu, doğal tavanı olan bir kümedir
+   * (`CLAUDE §1`) — brief 2 ile 10+ arası bir boy öngörüyor.
+   */
+  listFamilyMembers(familyId: string, opts: { status?: ProductStatus } = {}): Promise<Product[]> {
+    return this.getAll(
+      { familyId, status: opts.status },
+      { orderBy: 'familyPosition', orderDirection: 'asc' },
+    );
+  }
+
+  /**
+   * **Aile sırasını TÜM AİLE İÇİN birden yazar** (`replacePostalCodes` deseni).
+   *
+   * Kısmi güncelleme yazsaydık iki operatör iki ayrı üyenin diyaloğundan aynı anda sürüklediğinde
+   * sıralama delik kalırdı — ve hiçbir yer hata vermezdi, kartlar yalnız bir gün başka sırada
+   * görünürdü. Tüm aile tek turda yazılınca son yazan kazanır ve sonuç her hâlde tutarlıdır.
+   */
+  async reorderFamily(orders: readonly ProductFamilyOrder[]): Promise<void> {
+    if (orders.length === 0) return;
+    for (const { productId, position } of orders) {
+      await this.update({ id: productId, familyPosition: position });
+    }
+  }
+}
+
+/**
+ * **ÜRÜN AİLESİ** (05.15) — çeşit ekseninin kendisi.
+ *
+ * Tablo ince: kimlik + operasyona görünen ad + aktiflik. Bütün ağırlık `product` tarafında
+ * (`family_id` · `family_label` · `family_position`), çünkü **üye = ürün**; aile onların üstünde
+ * ince bir gruplamadır, yeni bir varlık türü değil.
+ */
+export class ProductFamilyService extends BaseDbService<ProductFamily, ProductFamilyInsert, ProductFamilyUpdate> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'product_family', ProductFamilySchema, ProductFamilyInsertSchema, ProductFamilyUpdateSchema);
+  }
+
+  /** Operatörün aile seçicisi — doğal tavanlı küme, tek turda (`CLAUDE §1`). */
+  list(opts: { activeOnly?: boolean } = {}): Promise<ProductFamily[]> {
+    return this.getAll(opts.activeOnly ? { isActive: true } : undefined, { orderBy: 'name', orderDirection: 'asc' });
   }
 }

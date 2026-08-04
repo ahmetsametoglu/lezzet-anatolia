@@ -15,7 +15,14 @@ export { UserProfileService } from './services/user-profile.service';
 export { EmailVerificationService, type RequestCodeResult, type VerifyCodeResult } from './services/email-verification.service';
 export { CategoryService, type CreateCategoryInput } from './services/category.service';
 export { CollectionService, type CreateCollectionInput } from './services/collection.service';
-export { ProductService, ProductListingService, VARIANT_POOL_LIMIT, type CreateProductInput, type CreateVariantInput } from './services/product.service';
+export {
+  ProductService,
+  ProductListingService,
+  ProductFamilyService,
+  VARIANT_POOL_LIMIT,
+  type CreateProductInput,
+  type CreateVariantInput,
+} from './services/product.service';
 export { ProductVariantService } from './services/product-variant.service';
 export { ProductImageService } from './services/product-image.service';
 export { BundleService, type CreateBundleInput } from './services/bundle.service';
@@ -51,7 +58,7 @@ export { SupplierService, SupplierProductService } from './services/supplier.ser
 export { PurchaseOrderService, PurchaseOrderItemService, type DraftLine, type PurchaseListLine } from './services/purchase-order.service';
 export { StockIntakeService, type ReceiveIntakeInput } from './services/stock-intake.service';
 export { ReorderService, type ReorderGroup, type ReorderLine } from './services/reorder.service';
-export { AccountService, MoneyMovementService, type CampaignSpend, type PeriodTotal } from './services/money.service';
+export { AccountService, MoneyMovementService, type CampaignSpend, type LedgerFilter, type PeriodTotal } from './services/money.service';
 export { OrderSaleService } from './services/accounting.service';
 export { BankImportProfileService, BankImportService } from './services/bank-import.service';
 export { JobRunService } from './services/job-run.service';

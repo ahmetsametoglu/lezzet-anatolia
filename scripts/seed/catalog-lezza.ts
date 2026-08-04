@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { CategoryService, ProductImageService, ProductService } from '@lezzet/database';
+import type { CategoryService, ProductFamilyService, ProductImageService, ProductService } from '@lezzet/database';
 import type { LocalizedText, Nutrition, ProductAllergen, ProductStatus } from '@lezzet/types';
 import { NOW, r2Keys, uploadImageFromUrl } from './shared';
 
@@ -208,10 +208,13 @@ export async function seedLezzaProducts(
   categories: CategoryService,
   products: ProductService,
   images: ProductImageService,
+  families: ProductFamilyService,
   catId: Map<string, string>,
   startOrder: number,
-): Promise<{ made: number; photos: number; variants: number }> {
+): Promise<{ made: number; photos: number; variants: number; families: number }> {
   const katalog = readLezzaCatalog();
+  /** Aile bağı ÜRÜNLER KURULDUKTAN SONRA yazılır: bağ iki ucun da var olmasını ister. */
+  const urunIdBySlug = new Map<string, string>();
 
   // Aile kategorileri — elle yazılan dördün YANINA gelir, onların yerine değil: eski dört kategori
   // elle yazılmış beş ürünün evi ve koleksiyonlar o slug'lara bağlı.
@@ -225,7 +228,14 @@ export async function seedLezzaProducts(
   let photos = 0;
   let varyantSayisi = 0;
 
-  for (const [i, p] of katalog.products.entries()) {
+  // **`… Mono Pack` ürünleri SEED'E ALINMIYOR** (kullanıcı kararı 04.08). Kaynak katalog tek
+  // porsiyonluk paketi AYRI BİR ÜRÜN olarak kurmuş; modelde doğrusu aynı ürünün bir paket BOYU
+  // (varyant) olmasıydı. Ayrı ürün kaldıkları sürece limonlu kekin sayfasında üstte dört çeşit,
+  // altta "bunlarla da ilgilenebilirsiniz"de AYNI dört kek çıkıyordu. Bu bir test verisi; kaynağın
+  // kurgusunu düzeltmek yerine o dört satırı hiç almamak hem daha dürüst hem daha sade.
+  const urunler = katalog.products.filter((p) => !/\bmono\s*pack\b/i.test(p.name.tr ?? ''));
+
+  for (const [i, p] of urunler.entries()) {
     const ad = p.name.tr ?? '';
     const alerjenler = alerjenTuret(`${ad} ${p.description}`);
 
@@ -288,7 +298,189 @@ export async function seedLezzaProducts(
       await images.insert({ productId: product.id, imageKey: key, sortOrder: n, imageUpdatedAt: NOW, imageFocalX: 50, imageFocalY: 50, imageZoom: 100 });
       photos += 1;
     }
+    urunIdBySlug.set(p.slug, product.id);
   }
 
-  return { made, photos, variants: varyantSayisi };
+  // Süzülmüş liste geçilir: aile kurucusu `urunIdBySlug`'a bakıyor ve süzülen ürünlerin kimliği
+  // orada yok — ama listeyi de süzmek, "üyesi bulunamadı" diye sessizce eksilen bir aile yerine
+  // hiç kurulmayan bir aile üretir. İkisi arasındaki fark, bir gün birinin gözden kaçmasıdır.
+  const aileler = await aileleriKur(families, products, urunler, urunIdBySlug);
+
+  return { made, photos, variants: varyantSayisi, families: aileler };
+}
+
+// ── ÜRÜN AİLELERİ (05.15) ────────────────────────────────────────────────────
+// Gerçek katalogda aileler ZATEN VAR ve uydurmaya gerek yok: *"E-Shaped Börek with Cheese / Meat /
+// Potato / Spinach & Cheese"* tam olarak bir ailedir — aynı ürünün dolgusu değişiyor. Aynı desen
+// Spiral Pie, Mini Roll ve daha birçok dalda tekrarlanıyor.
+//
+// **Aile addan TÜRETİLİYOR, elle listelenmiyor:** katalog 141 üründen ibaret değil, yarın büyüyecek;
+// elle yazılmış bir aile listesi ilk güncellemede bayatlardı.
+
+/**
+ * `"E-Shaped Börek with Cheese"` → `{ taban: "E-Shaped Börek", dolgu: "Cheese" }`
+ *
+ * ── DOLGUDAN BOY EKİ SÖKÜLÜR ve bu düzeltme ölçümle geldi (04.08) ────────────
+ * İlk hâl dolguyu ham alıyordu ve **boyu çeşit sanıyordu** — tam olarak tasarımın uyardığı
+ * karışıklık ("iki seçici asla karışmaz"). Gerçek katalogda sonucu şuydu:
+ *   Baklava → `Pistachio (12 Pieces)` · `Pistachio (36 Pieces)` · `Pistachio (6 Pieces)` …
+ *   Spiral Rose Börek → `Cheese` · `Cheese 6x80g` (aynı çeşit, iki kart, ikisi de "Peynirli")
+ * Parça sayısı ve paket ölçüsü BOYDUR; çeşit ekseninde yeri yoktur.
+ */
+function aileParcala(ad: string): { taban: string; dolgu: string } | null {
+  const m = /^(.+?)\s+with\s+(.+)$/i.exec(ad.trim());
+  if (!m?.[1] || !m[2]) return null;
+  const dolgu = m[2]
+    .replace(/\(\s*\d+\s*pieces?\s*\)/gi, '') // "(12 Pieces)"
+    .replace(/\b\d+\s*x\s*\d+\s*g\b/gi, '') // "6x80g"
+    .replace(/\b\d+\s*(g|kg|gr)\b/gi, '') // "1250g"
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  if (!dolgu) return null;
+  return { taban: m[1].trim(), dolgu };
+}
+
+/**
+ * Dolgu adının üç dilli karşılığı. Kaynak katalog YALNIZ İNGİLİZCE (`sourceLanguage: 'en'`), yani
+ * çeviri uydurulacak değil TÜRETİLECEK — alerjen tablosuyla aynı yaklaşım.
+ *
+ * Sözlükte olmayan dolgu üç dile de İngilizcesiyle yazılır: ürün ADLARI da bugün öyle duruyor
+ * (üreteç aynı metni üç dile koyuyor), yani seed kendi içinde tutarlı kalır ve **var olmayan bir
+ * çeviri varmış gibi görünmez.**
+ */
+const DOLGU_SOZLUK: Record<string, LocalizedText> = {
+  cheese: { tr: 'Peynirli', fr: 'Fromage', de: 'Käse' },
+  meat: { tr: 'Kıymalı', fr: 'Viande', de: 'Hackfleisch' },
+  potato: { tr: 'Patatesli', fr: 'Pomme de terre', de: 'Kartoffel' },
+  'spinach & cheese': { tr: 'Ispanaklı peynirli', fr: 'Épinards & fromage', de: 'Spinat & Käse' },
+  spinach: { tr: 'Ispanaklı', fr: 'Épinards', de: 'Spinat' },
+  walnut: { tr: 'Cevizli', fr: 'Noix', de: 'Walnuss' },
+  pistachio: { tr: 'Fıstıklı', fr: 'Pistache', de: 'Pistazie' },
+  chocolate: { tr: 'Çikolatalı', fr: 'Chocolat', de: 'Schokolade' },
+  // Sıfat-önde ailelerin çeşitleri (kek · cheesecake · dondurma).
+  lemon: { tr: 'Limonlu', fr: 'Citron', de: 'Zitrone' },
+  mango: { tr: 'Mangolu', fr: 'Mangue', de: 'Mango' },
+  strawberry: { tr: 'Çilekli', fr: 'Fraise', de: 'Erdbeere' },
+  raspberry: { tr: 'Frambuazlı', fr: 'Framboise', de: 'Himbeere' },
+  'toffee caramel': { tr: 'Karamelli', fr: 'Caramel', de: 'Karamell' },
+  cocoa: { tr: 'Kakaolu', fr: 'Cacao', de: 'Kakao' },
+  plain: { tr: 'Sade', fr: 'Nature', de: 'Natur' },
+};
+
+function dolguEtiketi(dolgu: string): LocalizedText {
+  return DOLGU_SOZLUK[dolgu.toLowerCase()] ?? { tr: dolgu, fr: dolgu, de: dolgu };
+}
+
+/**
+ * **SIFAT-ÖNDE aileler — elle doğrulanmış, türetilmiyor** (04.08, kullanıcı sorusu üzerine).
+ *
+ * Kaynak katalog aileyi İKİ FARKLI biçimde adlandırıyor:
+ *   1. `"E-Shaped Börek with Cheese"` — dolgu sonda, `aileParcala` bunu güvenle çözüyor.
+ *   2. `"Artisan Lemon Cake"` — çeşit ORTADA. Tasarımın kendi örneği (limonlu/mangolu kek) tam
+ *      olarak bu biçimde ve ilk turda TAMAMEN KAÇIRILMIŞTI.
+ *
+ * **İkincisi neden türetilmiyor:** "aynı uzunlukta, tek konumda ayrışan adlar aynı ailedendir"
+ * kuralı denendi ve ÖLÇÜLDÜ — 26 aile üretti ama içinde `Hummus | Lahmacun | Şakşuka | Tiramisu`
+ * (birbiriyle ilgisiz dört ürün) ve `10 | 5` (parça sayısı çeşit sanılmış) gibi uydurmalar vardı.
+ * Seed'de **isabet kapsamdan önemlidir:** yanlış bir aile, ekranı çizen ajana ve kullanıcıya
+ * kavramı yanlış öğretir. Az ve doğru, çok ve gürültülüden iyidir.
+ *
+ * Liste kısa kalmalı — uzarsa bu, kaynağın adlandırmasının değiştiğinin işaretidir.
+ */
+const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: string }> }> = [
+  {
+    ad: 'Artisan Cake',
+    uyeler: [
+      { slug: 'artisan-lemon-cake', dolgu: 'Lemon' },
+      { slug: 'artisan-mango-cake', dolgu: 'Mango' },
+      { slug: 'artisan-pistachio-cake', dolgu: 'Pistachio' },
+      { slug: 'artisan-strawberry-cake', dolgu: 'Strawberry' },
+    ],
+  },
+  // **`… Mono Pack` ürünleri BİLEREK AİLE YAPILMADI** (kullanıcı kararı 04.08). Bir tur ayrı bir
+  // aile olarak kurulmuşlardı ve sonucu ölçüldü: limonlu kekin sayfasında üstte dört çeşit,
+  // ALTTA "bunlarla da ilgilenebilirsiniz"de **aynı dört kek** tek porsiyonluk hâliyle çıkıyordu.
+  // Modelde doğrusu bunların ayrı ürün değil aynı ürünün bir PAKET BOYU olmasıydı; kaynak katalog
+  // öyle kurmadı ve bu bir test verisi, kaynağın kurgusunu düzeltmek seed'in işi değil.
+  {
+    ad: 'Cake Cup',
+    uyeler: [
+      { slug: 'chocolate-cake-cup', dolgu: 'Chocolate' },
+      { slug: 'pistachio-cake-cup', dolgu: 'Pistachio' },
+      { slug: 'toffee-caramel-cake-cup', dolgu: 'Toffee Caramel' },
+    ],
+  },
+  {
+    // `raspberry-cheesecake-cup` ve `lemon-cheesecake-slice` BİLEREK YOK: ikisi de format
+    // (boy) ekseni, çeşit değil. `san-sebastian-cheesecake` de yok — o bir çeşit değil ayrı bir
+    // tarif, aynı ailede göstermek "limonlu/frambuazlı" seçimini bozardı.
+    ad: 'Cheesecake',
+    uyeler: [
+      { slug: 'lemon-cheesecake', dolgu: 'Lemon' },
+      { slug: 'raspberry-cheesecake', dolgu: 'Raspberry' },
+    ],
+  },
+  {
+    ad: 'Maraş Ice Cream',
+    uyeler: [
+      { slug: 'maras-ice-cream-plain', dolgu: 'Plain' },
+      { slug: 'maras-ice-cream-cocoa', dolgu: 'Cocoa' },
+      { slug: 'maras-ice-cream-pistachio', dolgu: 'Pistachio' },
+    ],
+  },
+  {
+    ad: 'Maraş Ice Cream Slice',
+    uyeler: [
+      { slug: 'maras-ice-cream-slice-plain', dolgu: 'Plain' },
+      { slug: 'maras-ice-cream-slice-cocoa', dolgu: 'Cocoa' },
+      { slug: 'maras-ice-cream-slice-lemon', dolgu: 'Lemon' },
+    ],
+  },
+];
+
+/**
+ * Aynı tabanı paylaşan **iki ya da daha çok** ürünü bir aileye bağlar.
+ *
+ * Tek üyeli grup aile SAYILMAZ: bir çeşidi olan ürün ailesizdir ve ekranda çeşit bloğu hiç
+ * çizilmez (brief §1b). Veri buna izin verirdi ama seed'in gerçekçi olması gerekiyor.
+ */
+async function aileleriKur(
+  families: ProductFamilyService,
+  products: ProductService,
+  kaynak: readonly { slug: string; name: LocalizedText }[],
+  urunIdBySlug: Map<string, string>,
+): Promise<number> {
+  const gruplar = new Map<string, Array<{ slug: string; dolgu: string }>>();
+  for (const p of kaynak) {
+    const parca = aileParcala(p.name.tr ?? '');
+    if (!parca) continue;
+    const grup = gruplar.get(parca.taban) ?? [];
+    // **AYNI ÇEŞİT İKİNCİ KEZ ALINMAZ.** Katalogda aynı dolgu birden çok pakette geçiyor
+    // (`Cheese` + `Cheese 6x80g`) ve ikisi de üye olsaydı yan yana AYNI ETİKETLİ iki kart
+    // çıkardı — müşteri iki "Peynirli" arasında seçim yapamaz. Modelde doğrusu bunların tek
+    // ürünün iki VARYANTI olmasıydı; kaynak katalog öyle kurmadığı için seed ilkini alıyor,
+    // ötekiler ailesiz normal ürün olarak kalıyor. Seed'in işi gerçekçi veri üretmek, kaynağın
+    // kurgusunu düzeltmek değil.
+    if (grup.some((u) => u.dolgu.toLowerCase() === parca.dolgu.toLowerCase())) continue;
+    grup.push({ slug: p.slug, dolgu: parca.dolgu });
+    gruplar.set(parca.taban, grup);
+  }
+
+  // Elle doğrulanmış aileler türetilenlerin YANINA gelir; slug'ları `… with …` desenine uymadığı
+  // için ikisi çakışmaz.
+  for (const aile of ELLE_AILELER) gruplar.set(aile.ad, [...aile.uyeler]);
+
+  let kurulan = 0;
+  for (const [taban, uyeler] of gruplar) {
+    if (uyeler.length < 2) continue;
+    // Aile adı TEK DİLLİ: yalnız operatör görüyor (kullanıcı kararı 04.08).
+    const aile = await families.insert({ name: taban });
+    for (const [sira, uye] of uyeler.entries()) {
+      const id = urunIdBySlug.get(uye.slug);
+      if (!id) continue;
+      await products.update({ id, familyId: aile.id, familyLabel: dolguEtiketi(uye.dolgu), familyPosition: sira });
+    }
+    kurulan += 1;
+  }
+  return kurulan;
 }

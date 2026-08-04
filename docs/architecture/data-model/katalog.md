@@ -47,6 +47,25 @@ Esnek pazarlama grubu (Bayram, Yeni, İndirimde). Bir ürün birden çok koleksi
 
 `product_collections`: (`product_id`, `collection_id`) çoklu bağ + `position` (int) — koleksiyon **içindeki** vitrin sırası; admin sürükle-bırakla kürasyon yapar. Üyeler koleksiyon başına `position` ile sıralı okunur.
 
+## ProductFamily (ürün ailesi — çeşit ekseni)
+
+Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâlleri. **Üye = ürünün kendisi** — kendi sayfası, beyanı, görseli, fiyatı olan tam bir ürün. Aile onların üstünde ince bir gruplamadır, yeni bir varlık türü DEĞİL.
+
+**Varyanttan ayrı eksen:** varyant aynı ürünün boyudur (500 g / 1 kg), aile kimlik seçimidir.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| name | string | **TEK DİLLİ ve bilinçli:** aile adı MÜŞTERİYE GÖRÜNMEZ (kullanıcı kararı 04.08). Müşterinin gördüğü başlık arayüz metnidir ("Çeşitler"); bu ad yalnız operatörün panelde aileyi tanımasına yarar ve operasyon yüzeyi tek dillidir |
+| is_active | boolean | pasif aile: üyeler satışta kalır, çeşit bloğu çizilmez |
+| created_at | timestamptz | |
+
+Üyelik `product` tarafında üç alanla durur: `family_id` · `family_label` · `family_position` (aşağıda).
+
+**Neden `Collection` DEĞİL:** koleksiyon tasarım gereği çoktan-çoğadır. Bir ürün iki koleksiyondayken *"öteki çeşitler"* sorusunun **iki cevabı** olur ve hiçbir yer hata vermez. `family_id` kolonu "en çok bir aile" değişmezini yapısal kılar — kural veride durur. Emsal bu şemada yaşandı: `delivery_zone_postal_code` dizi kolonundan kendi tablosuna taşındı, çünkü aynı kodu iki bölgeye yazmak serbestti ve çözücü sessizce birini seçiyordu.
+
+**Neden serbest metin bir `family_key` değil:** `limonlu-kek` ile `limonlu_kek` sessizce iki aile yapar; üstelik aileye ad/aktiflik asacak yer kalmazdı.
+
 ## Product (ürün)
 
 | Alan | Tip | Not |
@@ -76,6 +95,9 @@ Esnek pazarlama grubu (Bayram, Yeni, İndirimde). Bir ürün birden çok koleksi
 | target_margin_percent | number \| null | hedef kâr marjı (maliyet üzerine markup %); marj uyarısı / otomatik fiyat için |
 | auto_price | boolean | otomatik fiyatlandırma açık mı (varsayılan false) — açıksa fiyat hedef marja göre otomatik güncellenir, kapalıysa sistem uyarır |
 | sort_order | int | |
+| family_id | uuid \| null | **ÇEŞİT EKSENİ** (`ProductFamily`, yukarıda). `null` = ailesiz → çeşit bloğu HİÇ çizilmez. `on delete set null` |
+| family_label | LocalizedText (jsonb) \| null | **Aile içi kart etiketi — ürün adından AYRI ve üç dilli.** Ürün "Limonlu kek", etiket "Limonlu"; kartta okunan ikincisidir (kartlar yan yanayken her birinde "kek"i tekrar etmek seçimi zorlaştırır). **Türetilemez:** ortak eki kırpmak "Çilekli Kek" ile "Kek Dilimi" yan yana gelince bozulur. **Veri kısıtı zorunlu kılıyor** (`family_id` doluyken): ekranda unutulursa kart ürün adına düşer, DOĞRU GÖRÜNÜR ve kısa etiketin amacı sessizce kaybolur |
+| family_position | int | **Aile İÇİNDEKİ sıra** — operatörün sürüklediği sıra. `sort_order` KULLANILMAZ: o katalog sırasıdır ve iki kararı tek kolona bağlamak, ailedeki sırayı değiştirene katalog sırasını da farkında olmadan değiştirtirdi. Yazma **tüm aileyi birden** günceller |
 | created_at | timestamptz | |
 
 Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre değişir.

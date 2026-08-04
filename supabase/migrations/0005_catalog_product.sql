@@ -57,8 +57,36 @@ create table public.product (
   target_margin_percent numeric(5, 2),              -- hedef kâr marjı (markup %); marj uyarısı / oto-fiyat
   auto_price boolean not null default false,         -- açıksa fiyat hedef marja göre otomatik (motor sonraki modül)
   sort_order int not null default 0,
+
+  -- ── ÜRÜN AİLESİ — ÇEŞİT EKSENİ (05.15) ────────────────────────────────────
+  -- `on delete set null`: aile silinirse üyeler ürün olarak yaşamaya devam eder. Aşağıdaki kısıt
+  -- etiketin de aileyle birlikte düşmesini zorluyor — ailesiz bir üründe duran "Limonlu" etiketi,
+  -- hiçbir yerde okunmayan ve bir gün yanlış aileye taşınacak ölü veridir.
+  family_id uuid references public.product_family (id) on delete set null,
+
+  -- **AİLE İÇİ ETİKET — ürün adından AYRI ve ÜÇ DİLLİ** (kullanıcı kararı 04.08).
+  -- Ürün adı "Limonlu kek", kart etiketi "Limonlu". Kartta okunan ikincisidir: kartlar yan yana
+  -- dururken her birinde "kek" kelimesini tekrar etmek seçimi zorlaştırır.
+  -- **Türetilemez:** ortak eki kırpmak "Çilekli Kek" ile "Kek Dilimi" yan yana gelince bozulur.
+  family_label jsonb,                                -- LocalizedText {tr?,fr?,de?}
+
+  -- **SIRA AİLE İÇİNDEDİR** ve operatörün sürüklediği sıradır. `sort_order` KULLANILMAZ: o katalog
+  -- sırasıdır ve iki kararı tek kolona bağlamak, ailedeki sırayı değiştiren operatöre katalog
+  -- sırasını da farkında olmadan değiştirtirdi. Yazma tüm aileyi birden değiştirir, o yüzden
+  -- (family_id, family_position) tekilliği ARANMAZ: toplu güncellemenin ara hâli geçici olarak
+  -- çakışır ve ertelenmiş bir kısıt bu kadar küçük bir küme için fazla makine olurdu.
+  family_position int not null default 0,
+
+  -- **Ailedeki üyenin etiketi ZORUNLU.** Kural veride duruyor çünkü ekranda unutulduğunda hata
+  -- vermez: kart ürün adına düşer, "Limonlu kek" yazar ve DOĞRU GÖRÜNÜR — kısa etiketin bütün
+  -- amacı sessizce kaybolur. Gürültülü bir kayıt hatası, sessiz bir tasarım kaybından iyidir.
+  constraint product_family_label_required check (family_id is null or family_label is not null),
+
   created_at timestamptz not null default now()
 );
+
+-- Bir üyenin sayfasında "öteki çeşitler" okuması: aile + sıra.
+create index product_family_idx on public.product (family_id, family_position) where family_id is not null;
 create unique index product_slug_key on public.product (slug);
 create index product_incomplete_idx on public.product (is_incomplete) where is_incomplete;
 create index product_category_idx on public.product (category_id);

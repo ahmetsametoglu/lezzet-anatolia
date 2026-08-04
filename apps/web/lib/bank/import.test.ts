@@ -124,7 +124,7 @@ describe('mükerrer koruması', () => {
 
   it('aynı gün aynı tutarlı İKİ GERÇEK çekim ikisi de yazılır — biri yutulmaz', async () => {
     await importStatement();
-    const ledger = await movements.ledger(bankAccount, { limit: 50 });
+    const ledger = await movements.ledger({ accountId: bankAccount, limit: 50 });
     expect(ledger.rows.filter((r) => r.description === 'RETRAIT DAB')).toHaveLength(2);
   });
 
