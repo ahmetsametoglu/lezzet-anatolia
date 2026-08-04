@@ -1,0 +1,4789 @@
+{
+  "_generated": {
+    "by": "scripts/build-lezza-catalog.mjs (pnpm lezza:catalog)",
+    "source": "https://lezzafoods.eu/wp-json/wc/store/v1/products",
+    "sourceRecords": 168,
+    "note": "ÜRETİLMİŞ DOSYA — elle düzenlenmez. Fiyat, stok, alerjen, içindekiler, besin değeri ve raf ömrü KAYNAKTA YOKTUR ve burada UYDURULMAZ; onlar seed fikstürüdür. Yasal beyanlar bilerek boştur."
+  },
+  "categories": [
+    {
+      "key": "bakery",
+      "name": {
+        "tr": "Fırın",
+        "fr": "Boulangerie",
+        "de": "Backwaren"
+      }
+    },
+    {
+      "key": "dessert",
+      "name": {
+        "tr": "Tatlı",
+        "fr": "Desserts",
+        "de": "Süßspeisen"
+      }
+    },
+    {
+      "key": "cake",
+      "name": {
+        "tr": "Pasta",
+        "fr": "Gâteaux",
+        "de": "Torten"
+      }
+    },
+    {
+      "key": "chicken",
+      "name": {
+        "tr": "Tavuk Ürünleri",
+        "fr": "Produits de volaille",
+        "de": "Geflügelprodukte"
+      }
+    },
+    {
+      "key": "ice-cream",
+      "name": {
+        "tr": "Dondurma",
+        "fr": "Glaces",
+        "de": "Speiseeis"
+      }
+    },
+    {
+      "key": "anatolian",
+      "name": {
+        "tr": "Anadolu Mutfağı",
+        "fr": "Cuisine anatolienne",
+        "de": "Anatolische Küche"
+      }
+    }
+  ],
+  "products": [
+    {
+      "slug": "adana-borek-with-cheese",
+      "name": {
+        "tr": "Adana Börek with Cheese",
+        "fr": "Adana Börek with Cheese",
+        "de": "Adana Börek with Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Adana Börek with Cheese 1250g – 6 frozen pre-cut slices with crisp buttered yufka and stretch-cheese filling. Authentic Turkish regional börek for horeca.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Adana-Borek-with-Cheese-1250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Adana-Borek-with-Cheese-1250g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1250g",
+            "fr": "1250g",
+            "de": "1250g"
+          },
+          "netWeightG": 1250,
+          "sku": "700404",
+          "sourceId": 9753,
+          "sourceSlug": "adana-borek-with-cheese-1250g"
+        }
+      ]
+    },
+    {
+      "slug": "artisan-lemon-cake",
+      "name": {
+        "tr": "Artisan Lemon Cake",
+        "fr": "Artisan Lemon Cake",
+        "de": "Artisan Lemon Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Artisan Lemon Cake 90g – frozen individual lemon-shaped artisan cake, thaw and plate. Premium horeca dessert with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-Lemon-Cake-90g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-lemon-Cake-90g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "90g",
+            "fr": "90g",
+            "de": "90g"
+          },
+          "netWeightG": 90,
+          "sku": "901016B",
+          "sourceId": 10199,
+          "sourceSlug": "artisan-lemon-cake-90g"
+        }
+      ]
+    },
+    {
+      "slug": "artisan-lemon-cake-mono-pack",
+      "name": {
+        "tr": "Artisan Lemon Cake Mono Pack",
+        "fr": "Artisan Lemon Cake Mono Pack",
+        "de": "Artisan Lemon Cake Mono Pack"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": null,
+      "description": "Artisan Lemon Cake Mono Pack 90g – frozen individually wrapped lemon artisan cake. Premium retail format with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Artisan-Lemon-Cake-Mono-Pack-90g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-Lemon-Cake-90g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "90g",
+            "fr": "90g",
+            "de": "90g"
+          },
+          "netWeightG": 90,
+          "sku": "901026B",
+          "sourceId": 10358,
+          "sourceSlug": "artisan-lemon-cake-mono-pack-90g"
+        }
+      ]
+    },
+    {
+      "slug": "artisan-mango-cake",
+      "name": {
+        "tr": "Artisan Mango Cake",
+        "fr": "Artisan Mango Cake",
+        "de": "Artisan Mango Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Artisan Mango Cake 90g – frozen individual mango-shaped artisan cake, thaw and plate. Premium horeca dessert with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-Mango-Cake-90g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-mango-Cake-90g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "90g",
+            "fr": "90g",
+            "de": "90g"
+          },
+          "netWeightG": 90,
+          "sku": "901023B",
+          "sourceId": 10195,
+          "sourceSlug": "artisan-mango-cake-90g"
+        }
+      ]
+    },
+    {
+      "slug": "artisan-mango-cake-mono-pack",
+      "name": {
+        "tr": "Artisan Mango Cake Mono Pack",
+        "fr": "Artisan Mango Cake Mono Pack",
+        "de": "Artisan Mango Cake Mono Pack"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Artisan Mango Cake Mono Pack 90g – frozen individually wrapped mango artisan cake. Premium retail pack, wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Artisan-Mango-Cake-Mono-Pack-90g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-Mango-Cake-90g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "90g",
+            "fr": "90g",
+            "de": "90g"
+          },
+          "netWeightG": 90,
+          "sku": "901025B",
+          "sourceId": 10356,
+          "sourceSlug": "artisan-mango-cake-mono-pack-90g"
+        }
+      ]
+    },
+    {
+      "slug": "artisan-pistachio-cake",
+      "name": {
+        "tr": "Artisan Pistachio Cake",
+        "fr": "Artisan Pistachio Cake",
+        "de": "Artisan Pistachio Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Artisan Pistachio Cake 90g – frozen pistachio-shaped artisan cake, thaw and plate. Premium horeca dessert with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-Pistachio-Cake-90g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-Pistachio-Cake-90g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "90g",
+            "fr": "90g",
+            "de": "90g"
+          },
+          "netWeightG": 90,
+          "sku": "901015B",
+          "sourceId": 10201,
+          "sourceSlug": "artisan-pistachio-cake-90g"
+        }
+      ]
+    },
+    {
+      "slug": "artisan-pistachio-cake-mono-pack",
+      "name": {
+        "tr": "Artisan Pistachio Cake Mono Pack",
+        "fr": "Artisan Pistachio Cake Mono Pack",
+        "de": "Artisan Pistachio Cake Mono Pack"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Artisan Pistachio Cake Mono Pack 90g – frozen individually wrapped pistachio artisan cake. Retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Artisan-Pistachio-Cake-Mono-Pack-90g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-Pistachio-Cake-90g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "90g",
+            "fr": "90g",
+            "de": "90g"
+          },
+          "netWeightG": 90,
+          "sku": "901028B",
+          "sourceId": 10362,
+          "sourceSlug": "artisan-pistachio-cake-mono-pack-90g"
+        }
+      ]
+    },
+    {
+      "slug": "artisan-strawberry-cake",
+      "name": {
+        "tr": "Artisan Strawberry Cake",
+        "fr": "Artisan Strawberry Cake",
+        "de": "Artisan Strawberry Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Artisan Strawberry Cake 90g – frozen strawberry-shaped artisan cake, thaw and plate. Premium horeca dessert with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-Strawberry-Cake-90g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-strawberry-Cake-90g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "90g",
+            "fr": "90g",
+            "de": "90g"
+          },
+          "netWeightG": 90,
+          "sku": "901024B",
+          "sourceId": 10200,
+          "sourceSlug": "artisan-strawberry-cake-90g"
+        }
+      ]
+    },
+    {
+      "slug": "artisan-strawberry-cake-mono-pack",
+      "name": {
+        "tr": "Artisan Strawberry Cake Mono Pack",
+        "fr": "Artisan Strawberry Cake Mono Pack",
+        "de": "Artisan Strawberry Cake Mono Pack"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Artisan Strawberry Cake Mono Pack 90g – frozen individually wrapped strawberry artisan cake. Retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Artisan-Strawberry-Cake-Mono-Pack-90g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Artisan-Strawberry-Cake-90g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "90g",
+            "fr": "90g",
+            "de": "90g"
+          },
+          "netWeightG": 90,
+          "sku": "901027B",
+          "sourceId": 10360,
+          "sourceSlug": "artisan-strawberry-cake-mono-pack-90g"
+        }
+      ]
+    },
+    {
+      "slug": "assorted-baklava",
+      "name": {
+        "tr": "Assorted Baklava",
+        "fr": "Assorted Baklava",
+        "de": "Assorted Baklava"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Assorted Baklava 450g – 12 frozen baklava pieces in pistachio, walnut, and chocolate. Sharing retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Assorted-Baklava-450g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Assorted-Baklava.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Assorted-Baklava-225g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "450g",
+            "fr": "450g",
+            "de": "450g"
+          },
+          "netWeightG": 450,
+          "sku": "601201",
+          "sourceId": 10243,
+          "sourceSlug": "assorted-baklava-450g"
+        },
+        {
+          "label": {
+            "tr": "225g",
+            "fr": "225g",
+            "de": "225g"
+          },
+          "netWeightG": 225,
+          "sku": "601202",
+          "sourceId": 10239,
+          "sourceSlug": "assorted-baklava-225g"
+        }
+      ]
+    },
+    {
+      "slug": "baklava-with-pistachio-12-pieces",
+      "name": {
+        "tr": "Baklava with Pistachio (12 Pieces)",
+        "fr": "Baklava with Pistachio (12 Pieces)",
+        "de": "Baklava with Pistachio (12 Pieces)"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Frozen pistachio baklava in 450g pack with 12 pieces. Ideal for retail and small horeca use. Authentic taste, consistent quality, and flexible serving options.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Pistachio-450g-12-Pieces-packed.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Pistachio-450g-12-Pieces.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "450g",
+            "fr": "450g",
+            "de": "450g"
+          },
+          "netWeightG": 450,
+          "sku": "600102",
+          "sourceId": 9245,
+          "sourceSlug": "baklava-with-pistachio-450g-12-pieces"
+        }
+      ]
+    },
+    {
+      "slug": "baklava-with-pistachio-36-pieces",
+      "name": {
+        "tr": "Baklava with Pistachio (36 Pieces)",
+        "fr": "Baklava with Pistachio (36 Pieces)",
+        "de": "Baklava with Pistachio (36 Pieces)"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Premium frozen baklava with pistachio 1250g, designed for wholesale and horeca. Consistent quality, authentic taste, and reliable supply for professional food service.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Pistachio-1250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Pistachio-1250g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1250g",
+            "fr": "1250g",
+            "de": "1250g"
+          },
+          "netWeightG": 1250,
+          "sku": "600214",
+          "sourceId": 9215,
+          "sourceSlug": "baklava-with-pistachio-1250g"
+        }
+      ]
+    },
+    {
+      "slug": "baklava-with-pistachio-6-pieces",
+      "name": {
+        "tr": "Baklava with Pistachio (6 Pieces)",
+        "fr": "Baklava with Pistachio (6 Pieces)",
+        "de": "Baklava with Pistachio (6 Pieces)"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Baklava with Pistachio 225g – 6 baklava pieces in a retail-ready pack. Wholesale supply and private label available for retail distributors.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Pistachio-225g-packed.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Pistachio-225g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "225g",
+            "fr": "225g",
+            "de": "225g"
+          },
+          "netWeightG": 225,
+          "sku": "600106",
+          "sourceId": 9241,
+          "sourceSlug": "baklava-with-pistachio-225g-6-pieces"
+        }
+      ]
+    },
+    {
+      "slug": "baklava-with-pistachio-72-pieces",
+      "name": {
+        "tr": "Baklava with Pistachio (72 Pieces)",
+        "fr": "Baklava with Pistachio (72 Pieces)",
+        "de": "Baklava with Pistachio (72 Pieces)"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Baklava with Pistachio 2500g – 72 portions for large-scale horeca and wholesale procurement. Direct manufacturer supply with private label options.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Pistachio-2500g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Pistachio-1250g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "2500g",
+            "fr": "2500g",
+            "de": "2500g"
+          },
+          "netWeightG": 2500,
+          "sku": "600101",
+          "sourceId": 9218,
+          "sourceSlug": "baklava-with-pistachio-2500g-72-pieces"
+        }
+      ]
+    },
+    {
+      "slug": "baklava-with-walnut",
+      "name": {
+        "tr": "Baklava with Walnut",
+        "fr": "Baklava with Walnut",
+        "de": "Baklava with Walnut"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Baklava with walnut 2500g, bulk format with 72 pre-portioned pieces. Authentic Mediterranean recipe for large-scale horeca, catering, and private label supply. By Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Walnut-2500g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Walnut-1250g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Walnut-1250g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "2500g",
+            "fr": "2500g",
+            "de": "2500g"
+          },
+          "netWeightG": 2500,
+          "sku": "600201",
+          "sourceId": 9416,
+          "sourceSlug": "baklava-with-walnut-2500g"
+        },
+        {
+          "label": {
+            "tr": "1250g",
+            "fr": "1250g",
+            "de": "1250g"
+          },
+          "netWeightG": 1250,
+          "sku": "600207",
+          "sourceId": 9412,
+          "sourceSlug": "baklava-with-walnut-1250g"
+        }
+      ]
+    },
+    {
+      "slug": "baklava-with-walnut-12-pieces",
+      "name": {
+        "tr": "Baklava with Walnut (12 Pieces)",
+        "fr": "Baklava with Walnut (12 Pieces)",
+        "de": "Baklava with Walnut (12 Pieces)"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Baklava with Walnut 450g – 12 frozen pre-portioned pieces with authentic walnut filling. Ideal for specialty retail, gifting displays, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Walnut-450g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Walnut-1250g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "450g",
+            "fr": "450g",
+            "de": "450g"
+          },
+          "netWeightG": 450,
+          "sku": "600202",
+          "sourceId": 9420,
+          "sourceSlug": "baklava-with-walnut-450g-12-pieces"
+        }
+      ]
+    },
+    {
+      "slug": "baklava-with-walnut-6-pieces",
+      "name": {
+        "tr": "Baklava with Walnut (6 Pieces)",
+        "fr": "Baklava with Walnut (6 Pieces)",
+        "de": "Baklava with Walnut (6 Pieces)"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Baklava with Walnut 225g – 6 frozen pre-portioned pieces with authentic Mediterranean recipe. Perfect for retail, grab-and-go, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Walnut-225g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-with-Walnut-2500g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "225g",
+            "fr": "225g",
+            "de": "225g"
+          },
+          "netWeightG": 225,
+          "sku": "600208",
+          "sourceId": 9418,
+          "sourceSlug": "baklava-with-walnut-225g-6-pieces"
+        }
+      ]
+    },
+    {
+      "slug": "black-forest-whole-cake",
+      "name": {
+        "tr": "Black Forest Whole Cake",
+        "fr": "Black Forest Whole Cake",
+        "de": "Black Forest Whole Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Black Forest Whole Cake 1600g – 12-slice frozen Black Forest cake, thaw and serve. Classic European format for horeca dessert menus, wholesale supply, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Black-Forest-Whole-Cake.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Black-Forest-Whole-Cake-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "900401",
+          "sourceId": 10015,
+          "sourceSlug": "black-forest-whole-cake"
+        }
+      ]
+    },
+    {
+      "slug": "blueberry-peach-cake",
+      "name": {
+        "tr": "Blueberry & Peach Cake",
+        "fr": "Blueberry & Peach Cake",
+        "de": "Blueberry & Peach Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Blueberry & Peach Cake 580g – 7-slice frozen fruit cake with blueberry and peach, thaw and serve. Wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Blueberry-Peach-Cake-580g.webp"
+      ],
+      "channels": [
+        "b2b",
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "580g",
+            "fr": "580g",
+            "de": "580g"
+          },
+          "netWeightG": 580,
+          "sku": "900308",
+          "sourceId": 10174,
+          "sourceSlug": "blueberry-peach-cake-580g"
+        }
+      ]
+    },
+    {
+      "slug": "carrot-slice-baklava",
+      "name": {
+        "tr": "Carrot Slice Baklava",
+        "fr": "Carrot Slice Baklava",
+        "de": "Carrot Slice Baklava"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Carrot Slice Baklava 420g – 4 frozen triangle-cut pistachio baklava slices. Premium retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Carrot-Slice-Baklava-420g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Baklava-producer-04.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Carrot-Slice-Baklava-2000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Carrot-Slice-Baklava-1350g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Carrot-Slice-Baklava-1350g.webp"
+      ],
+      "channels": [
+        "b2c",
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "420g",
+            "fr": "420g",
+            "de": "420g"
+          },
+          "netWeightG": 420,
+          "sku": "600402",
+          "sourceId": 10244,
+          "sourceSlug": "carrot-slice-baklava-420g"
+        },
+        {
+          "label": {
+            "tr": "2000g",
+            "fr": "2000g",
+            "de": "2000g"
+          },
+          "netWeightG": 2000,
+          "sku": "600403",
+          "sourceId": 9431,
+          "sourceSlug": "carrot-slice-baklava-2000g"
+        },
+        {
+          "label": {
+            "tr": "1350g",
+            "fr": "1350g",
+            "de": "1350g"
+          },
+          "netWeightG": 1350,
+          "sku": "600404",
+          "sourceId": 9428,
+          "sourceSlug": "carrot-slice-baklava-1350g"
+        }
+      ]
+    },
+    {
+      "slug": "carrot-tarator",
+      "name": {
+        "tr": "Carrot Tarator",
+        "fr": "Carrot Tarator",
+        "de": "Carrot Tarator"
+      },
+      "sourceLanguage": "en",
+      "category": "anatolian",
+      "brand": "Lezza",
+      "description": "Carrot Tarator 1000g – frozen havuç tarator, defrost and serve. Creamy carrot mezze for horeca, wholesale B2B supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Carrot-Tarator-1000g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "200413",
+          "sourceId": 10338,
+          "sourceSlug": "carrot-tarator-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "cheese-calzone",
+      "name": {
+        "tr": "Cheese Calzone",
+        "fr": "Cheese Calzone",
+        "de": "Cheese Calzone"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Cheese Calzone 80g – frozen uncooked individual cheese calzone for horeca service. Bake from frozen, wholesale B2B supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Cheese-Calzone-80g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "80g",
+            "fr": "80g",
+            "de": "80g"
+          },
+          "netWeightG": 80,
+          "sku": "701424",
+          "sourceId": 10232,
+          "sourceSlug": "cheese-calzone-80g"
+        }
+      ]
+    },
+    {
+      "slug": "cheese-filled-pastry",
+      "name": {
+        "tr": "Cheese Filled Pastry",
+        "fr": "Cheese Filled Pastry",
+        "de": "Cheese Filled Pastry"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Cheese Filled Pastry 130g – frozen uncooked Turkish cheese poğaça for wholesale and horeca supply. Bulk orders, authentic soft bakery, and private label manufacturing available.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Filled-Pastry-130g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "130g",
+            "fr": "130g",
+            "de": "130g"
+          },
+          "netWeightG": 130,
+          "sku": "700210",
+          "sourceId": 9767,
+          "sourceSlug": "cheese-filled-pastry-130g"
+        }
+      ]
+    },
+    {
+      "slug": "cheese-filled-pastry-4x80g",
+      "name": {
+        "tr": "Cheese Filled Pastry 4x80g",
+        "fr": "Cheese Filled Pastry 4x80g",
+        "de": "Cheese Filled Pastry 4x80g"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Cheese Filled Pastry 4x80g – 4 pre-baked Turkish cheese poğaça portions, heat and eat. For grocery retail, wholesale distribution, and private label supply.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Filled-Pastry-4x80g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Filled-Pastry-4x80g-01.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "700202",
+          "sourceId": 9770,
+          "sourceSlug": "cheese-filled-pastry-4x80g"
+        }
+      ]
+    },
+    {
+      "slug": "cheese-pastry-su-borek",
+      "name": {
+        "tr": "Cheese Pastry (Su Börek)",
+        "fr": "Cheese Pastry (Su Börek)",
+        "de": "Cheese Pastry (Su Börek)"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Cheese Pastry (Su Börek) 800g – frozen fully baked round Turkish su böreği, heat and eat. Authentic layered white cheese pastry for sharing occasions and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Pastry-Su-Borek-800g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Pastry-Su-Borek-800g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Pastry-Su-Borek-500g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Pastry-Su-Borek-500g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Pastry-Su-Borek-2500g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Pastry-Su-Borek-2500g-01.webp"
+      ],
+      "channels": [
+        "b2c",
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "800g",
+            "fr": "800g",
+            "de": "800g"
+          },
+          "netWeightG": 800,
+          "sku": "700402",
+          "sourceId": 9759,
+          "sourceSlug": "cheese-pastry-su-borek-800g"
+        },
+        {
+          "label": {
+            "tr": "500g",
+            "fr": "500g",
+            "de": "500g"
+          },
+          "netWeightG": 500,
+          "sku": "700401",
+          "sourceId": 9756,
+          "sourceSlug": "cheese-pastry-su-borek-500g"
+        },
+        {
+          "label": {
+            "tr": "2500g",
+            "fr": "2500g",
+            "de": "2500g"
+          },
+          "netWeightG": 2500,
+          "sku": "700405",
+          "sourceId": 9750,
+          "sourceSlug": "cheese-pastry-su-borek-2500g"
+        }
+      ]
+    },
+    {
+      "slug": "cheese-rolls-handmade",
+      "name": {
+        "tr": "Cheese Rolls Handmade",
+        "fr": "Cheese Rolls Handmade",
+        "de": "Cheese Rolls Handmade"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Cheese Rolls Handmade 480g – 12 frozen handmade cheese rolls in a retail pack. Authentic hand-rolled yufka pastry for grocery retail, wholesale distribution, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Rolls-Handmade-480g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Rolls-Handmade-40g.webp"
+      ],
+      "channels": [
+        "b2c",
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "480g",
+            "fr": "480g",
+            "de": "480g"
+          },
+          "netWeightG": 480,
+          "sku": "700901",
+          "sourceId": 9849,
+          "sourceSlug": "cheese-rolls-handmade-480g"
+        },
+        {
+          "label": {
+            "tr": "40g",
+            "fr": "40g",
+            "de": "40g"
+          },
+          "netWeightG": 40,
+          "sku": "700708",
+          "sourceId": 9846,
+          "sourceSlug": "cheese-rolls-handmade-40g"
+        }
+      ]
+    },
+    {
+      "slug": "chicken-tender-fillet",
+      "name": {
+        "tr": "Chicken Tender Fillet",
+        "fr": "Chicken Tender Fillet",
+        "de": "Chicken Tender Fillet"
+      },
+      "sourceLanguage": "en",
+      "category": "chicken",
+      "brand": "Lezita",
+      "description": "Chicken Tender Fillet 700g – frozen pre-cooked breaded chicken tenders, heat and eat. Retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Chicken-Tender-Fillet-700g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "700g",
+            "fr": "700g",
+            "de": "700g"
+          },
+          "netWeightG": 700,
+          "sku": "312241",
+          "sourceId": 10386,
+          "sourceSlug": "chicken-tender-fillet-700g"
+        }
+      ]
+    },
+    {
+      "slug": "chocolate-baklava",
+      "name": {
+        "tr": "Chocolate Baklava",
+        "fr": "Chocolate Baklava",
+        "de": "Chocolate Baklava"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Chocolate Baklava 2000g – 54 baklava pieces in a large-format tray. Authentic Anatolian craftsmanship for wholesale, catering, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Chocolate-Baklava-2000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Chocolate-Baklava-2000g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Chocolate-Baklava-1250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Chocolate-Baklava-1250g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "2000g",
+            "fr": "2000g",
+            "de": "2000g"
+          },
+          "netWeightG": 2000,
+          "sku": "600903",
+          "sourceId": 9566,
+          "sourceSlug": "chocolate-baklava-2000g"
+        },
+        {
+          "label": {
+            "tr": "1250g",
+            "fr": "1250g",
+            "de": "1250g"
+          },
+          "netWeightG": 1250,
+          "sku": "600904",
+          "sourceId": 9563,
+          "sourceSlug": "chocolate-baklava-1250g"
+        }
+      ]
+    },
+    {
+      "slug": "chocolate-cake-cup",
+      "name": {
+        "tr": "Chocolate Cake Cup",
+        "fr": "Chocolate Cake Cup",
+        "de": "Chocolate Cake Cup"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Chocolate Cake Cup 165g – frozen individual chocolate dessert cup, thaw and serve. 12-piece horeca box with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Chocolate-Cake-165g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "165g",
+            "fr": "165g",
+            "de": "165g"
+          },
+          "netWeightG": 165,
+          "sku": "900415",
+          "sourceId": 10210,
+          "sourceSlug": "chocolate-cake-cup-165g"
+        }
+      ]
+    },
+    {
+      "slug": "chocolate-souffle-lava-cake",
+      "name": {
+        "tr": "Chocolate Soufflé (Lava Cake)",
+        "fr": "Chocolate Soufflé (Lava Cake)",
+        "de": "Chocolate Soufflé (Lava Cake)"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Chocolate-Souffle.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Chocolate-Souffle-01.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "200g",
+            "fr": "200g",
+            "de": "200g"
+          },
+          "netWeightG": 200,
+          "sku": "500111",
+          "sourceId": 9676,
+          "sourceSlug": "chocolate-souffle-lava-cake-200g"
+        }
+      ]
+    },
+    {
+      "slug": "cold-baklava-with-pistachio",
+      "name": {
+        "tr": "Cold Baklava with Pistachio",
+        "fr": "Cold Baklava with Pistachio",
+        "de": "Cold Baklava with Pistachio"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Cold Baklava with Pistachio 1850g – 28 milk-infused pieces with cocoa topping. A modern pistachio baklava for cafés, horeca, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cold-Baklava-with-Pistachio-1850g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cold-Baklava-with-Pistachio-1850g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1850g",
+            "fr": "1850g",
+            "de": "1850g"
+          },
+          "netWeightG": 1850,
+          "sku": "600807",
+          "sourceId": 9622,
+          "sourceSlug": "cold-baklava-with-pistachio-1850g"
+        }
+      ]
+    },
+    {
+      "slug": "cold-baklava-with-walnut",
+      "name": {
+        "tr": "Cold Baklava with Walnut",
+        "fr": "Cold Baklava with Walnut",
+        "de": "Cold Baklava with Walnut"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Cold Baklava with Walnut 400g – 10 frozen chilled walnut baklava pieces with cocoa topping. Retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Cold-Baklava-with-Walnut-400g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cold-Baklava-with-Walnut-1850g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cold-Baklava-with-Walnut-1850g-01.webp"
+      ],
+      "channels": [
+        "b2c",
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "400g",
+            "fr": "400g",
+            "de": "400g"
+          },
+          "netWeightG": 400,
+          "sku": "600810",
+          "sourceId": 10326,
+          "sourceSlug": "cold-baklava-with-walnut-400g"
+        },
+        {
+          "label": {
+            "tr": "1850g",
+            "fr": "1850g",
+            "de": "1850g"
+          },
+          "netWeightG": 1850,
+          "sku": "600809",
+          "sourceId": 9625,
+          "sourceSlug": "cold-baklava-with-walnut-1850g"
+        }
+      ]
+    },
+    {
+      "slug": "crispy-chicken-burger",
+      "name": {
+        "tr": "Crispy Chicken Burger",
+        "fr": "Crispy Chicken Burger",
+        "de": "Crispy Chicken Burger"
+      },
+      "sourceLanguage": "en",
+      "category": "chicken",
+      "brand": "Lezita",
+      "description": "Crispy Chicken Burger 1080g – frozen pre-cooked chicken burger, heat and serve. Horeca wholesale supply and private label manufacturing from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Crispy-Chicken-Burger-1080g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Crispy-Chicken-Burger-720g.webp"
+      ],
+      "channels": [
+        "b2b",
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1080g",
+            "fr": "1080g",
+            "de": "1080g"
+          },
+          "netWeightG": 1080,
+          "sku": "312681",
+          "sourceId": 10390,
+          "sourceSlug": "crispy-chicken-burger-1080g"
+        },
+        {
+          "label": {
+            "tr": "720g",
+            "fr": "720g",
+            "de": "720g"
+          },
+          "netWeightG": 720,
+          "sku": "312682",
+          "sourceId": 10377,
+          "sourceSlug": "crispy-chicken-burger-720g"
+        }
+      ]
+    },
+    {
+      "slug": "crispy-chicken-nugget",
+      "name": {
+        "tr": "Crispy Chicken Nugget",
+        "fr": "Crispy Chicken Nugget",
+        "de": "Crispy Chicken Nugget"
+      },
+      "sourceLanguage": "en",
+      "category": "chicken",
+      "brand": "Lezita",
+      "description": "Crispy Chicken Nugget 1000g – frozen pre-cooked chicken nuggets, heat and serve. Horeca wholesale supply and private label manufacturing from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Crispy-Chicken-Nugget-1000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Crispy-Chicken-Nugget-720g.webp"
+      ],
+      "channels": [
+        "b2b",
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "311101",
+          "sourceId": 10392,
+          "sourceSlug": "crispy-chicken-nugget-1000g"
+        },
+        {
+          "label": {
+            "tr": "720g",
+            "fr": "720g",
+            "de": "720g"
+          },
+          "netWeightG": 720,
+          "sku": "312141",
+          "sourceId": 10379,
+          "sourceSlug": "crispy-chicken-nugget-720g"
+        }
+      ]
+    },
+    {
+      "slug": "crispy-chicken-wings",
+      "name": {
+        "tr": "Crispy Chicken Wings",
+        "fr": "Crispy Chicken Wings",
+        "de": "Crispy Chicken Wings"
+      },
+      "sourceLanguage": "en",
+      "category": "chicken",
+      "brand": "Lezita",
+      "description": "Crispy Chicken Wings 1000g – frozen pre-cooked breaded chicken wings, heat and serve. Horeca wholesale supply and private label manufacturing from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Crispy-Chicken-Wings-1000g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "311501",
+          "sourceId": 10394,
+          "sourceSlug": "crispy-chicken-wings-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "crispy-spicy-chicken-wings",
+      "name": {
+        "tr": "Crispy Spicy Chicken Wings",
+        "fr": "Crispy Spicy Chicken Wings",
+        "de": "Crispy Spicy Chicken Wings"
+      },
+      "sourceLanguage": "en",
+      "category": "chicken",
+      "brand": "Lezita",
+      "description": "Crispy Spicy Chicken Wings 1000g – frozen pre-cooked spicy chicken wings, heat and serve. Horeca wholesale supply and private label manufacturing from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Crispy-Spicy-Chicken-Wings-1000g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "311401",
+          "sourceId": 10396,
+          "sourceSlug": "crispy-spicy-chicken-wings-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "crispy-spicy-tender-fillet",
+      "name": {
+        "tr": "Crispy Spicy Tender Fillet",
+        "fr": "Crispy Spicy Tender Fillet",
+        "de": "Crispy Spicy Tender Fillet"
+      },
+      "sourceLanguage": "en",
+      "category": "chicken",
+      "brand": null,
+      "description": "Crispy Spicy Tender Fillet 1000g – frozen pre-cooked spicy chicken tenders, heat and serve. Horeca wholesale supply and private label manufacturing from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Crispy-Spicy-Tender-Fillet-1000g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "311301",
+          "sourceId": 10398,
+          "sourceSlug": "crispy-spicy-tender-fillet-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "crispy-tender-fillet",
+      "name": {
+        "tr": "Crispy Tender Fillet",
+        "fr": "Crispy Tender Fillet",
+        "de": "Crispy Tender Fillet"
+      },
+      "sourceLanguage": "en",
+      "category": "chicken",
+      "brand": "Lezita",
+      "description": "Crispy Tender Fillet 1000g – frozen pre-cooked breaded chicken tenders, heat and serve. Horeca wholesale supply and private label manufacturing from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Crispy-Tender-Fillet-1000g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "311201",
+          "sourceId": 10400,
+          "sourceSlug": "crispy-tender-fillet-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "dark-chocolate-profiterol-cake",
+      "name": {
+        "tr": "Dark Chocolate Profiterol Cake",
+        "fr": "Dark Chocolate Profiterol Cake",
+        "de": "Dark Chocolate Profiterol Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Dark Chocolate Profiterol Cake 175g – frozen individual profiterol slice, thaw and serve. Mono and mono pack formats, wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Dark-Chocolate-Profiterol-Cake-175g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Dark-Chocolate-Profiterol-Cake-175g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "175g",
+            "fr": "175g",
+            "de": "175g"
+          },
+          "netWeightG": 175,
+          "sku": "901817",
+          "sourceId": 10186,
+          "sourceSlug": "dark-chocolate-profiterol-cake-175g"
+        }
+      ]
+    },
+    {
+      "slug": "dark-chocolate-profiterol-whole-cake",
+      "name": {
+        "tr": "Dark Chocolate Profiterol Whole Cake",
+        "fr": "Dark Chocolate Profiterol Whole Cake",
+        "de": "Dark Chocolate Profiterol Whole Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Dark Chocolate Profiterol Whole Cake 1750g – 12-slice frozen profiterol cake, thaw and serve. Dark chocolate horeca dessert, wholesale supply and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Dark-Chocolate-Profiterol-Whole-Cake.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Dark-Chocolate-Profiterol-Whole-Cake-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "902301",
+          "sourceId": 10024,
+          "sourceSlug": "dark-chocolate-profiterol-whole-cake"
+        }
+      ]
+    },
+    {
+      "slug": "dark-chocolate-whole-cake",
+      "name": {
+        "tr": "Dark Chocolate Whole Cake",
+        "fr": "Dark Chocolate Whole Cake",
+        "de": "Dark Chocolate Whole Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Dark Chocolate Whole Cake 1600g – 12-slice frozen dark chocolate layer cake, thaw and serve. Wholesale horeca supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Dark-Chocolate-Whole-Cake.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Dark-Chocolate-Whole-Cake-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "900201",
+          "sourceId": 10009,
+          "sourceSlug": "dark-chocolate-whole-cake"
+        }
+      ]
+    },
+    {
+      "slug": "doner-lavash",
+      "name": {
+        "tr": "Doner Lavash",
+        "fr": "Doner Lavash",
+        "de": "Doner Lavash"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Doner Lavash 120g – frozen cooked Turkish lavash for horeca kebap and dürüm service. Thaw and use format with wholesale B2B supply and private label manufacturing available.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Doner-Lavash-120g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "120g",
+            "fr": "120g",
+            "de": "120g"
+          },
+          "netWeightG": 120,
+          "sku": "701305",
+          "sourceId": 9850,
+          "sourceSlug": "doner-lavash-120g"
+        }
+      ]
+    },
+    {
+      "slug": "dough-leaves",
+      "name": {
+        "tr": "Dough Leaves",
+        "fr": "Dough Leaves",
+        "de": "Dough Leaves"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Dough Leaves 1000g – 8 frozen raw Turkish yufka sheets for börek production. Authentic pastry ingredient for horeca kitchens, retail consumers, wholesale supply, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Dough-Leaves-1000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Dough-Leaves-1000g-01.webp"
+      ],
+      "channels": [
+        "b2b",
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "700604",
+          "sourceId": 9954,
+          "sourceSlug": "dough-leaves-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "e-shaped-borek-with-cheese",
+      "name": {
+        "tr": "E-Shaped Börek with Cheese",
+        "fr": "E-Shaped Börek with Cheese",
+        "de": "E-Shaped Börek with Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "E-Shaped Börek with Cheese 200g – frozen uncooked cheese börek for horeca and wholesale supply. Direct manufacturer pricing, bulk ordering, and private label available.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/E-Shaped-Borek-200g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "200g",
+            "fr": "200g",
+            "de": "200g"
+          },
+          "netWeightG": 200,
+          "sku": "700904",
+          "sourceId": 9778,
+          "sourceSlug": "e-shaped-borek-with-cheese-200g"
+        }
+      ]
+    },
+    {
+      "slug": "e-shaped-borek-with-meat",
+      "name": {
+        "tr": "E-Shaped Börek with Meat",
+        "fr": "E-Shaped Börek with Meat",
+        "de": "E-Shaped Börek with Meat"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "E-Shaped Börek with Meat 200g – frozen uncooked meat börek for horeca and wholesale supply. Protein-rich Anatolian filling, bulk B2B ordering, and private label manufacturing.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/E-Shaped-Borek-with-Meat-200g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "200g",
+            "fr": "200g",
+            "de": "200g"
+          },
+          "netWeightG": 200,
+          "sku": "700914",
+          "sourceId": 9806,
+          "sourceSlug": "e-shaped-borek-with-meat-200g"
+        }
+      ]
+    },
+    {
+      "slug": "e-shaped-borek-with-potato",
+      "name": {
+        "tr": "E-Shaped Börek with Potato",
+        "fr": "E-Shaped Börek with Potato",
+        "de": "E-Shaped Börek with Potato"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "E-Shaped Börek with Potato 200g – frozen uncooked potato börek for horeca and B2B wholesale. Hearty Anatolian filling with bulk ordering and private label manufacturing.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/E-Shaped-Borek-with-Potato-200g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "200g",
+            "fr": "200g",
+            "de": "200g"
+          },
+          "netWeightG": 200,
+          "sku": "700911",
+          "sourceId": 9804,
+          "sourceSlug": "e-shaped-borek-with-potato-200g"
+        }
+      ]
+    },
+    {
+      "slug": "e-shaped-borek-with-spinach-cheese",
+      "name": {
+        "tr": "E-Shaped Börek with Spinach & Cheese",
+        "fr": "E-Shaped Börek with Spinach & Cheese",
+        "de": "E-Shaped Börek with Spinach & Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "E-Shaped Börek with Spinach & Cheese 200g – frozen uncooked spinach and cheese börek for horeca and B2B supply. Bulk wholesale ordering and private label manufacturing available.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/E-Shaped-Borek-with-Spinach-Cheese-200g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "200g",
+            "fr": "200g",
+            "de": "200g"
+          },
+          "netWeightG": 200,
+          "sku": "700905",
+          "sourceId": 9802,
+          "sourceSlug": "e-shaped-borek-with-spinach-cheese-200g"
+        }
+      ]
+    },
+    {
+      "slug": "eggplant-with-yogurt",
+      "name": {
+        "tr": "Eggplant with Yogurt",
+        "fr": "Eggplant with Yogurt",
+        "de": "Eggplant with Yogurt"
+      },
+      "sourceLanguage": "en",
+      "category": "anatolian",
+      "brand": "Lezza",
+      "description": "Eggplant with Yogurt 1000g – frozen yoğurtlu patlıcan, defrost and serve. Smoky aubergine mezze for horeca, wholesale B2B supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Eggplant-with-Yogurt-1000g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": null,
+          "sourceId": 10344,
+          "sourceSlug": "eggplant-with-yogurt-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "falafel-hummus-filled",
+      "name": {
+        "tr": "Falafel Hummus Filled",
+        "fr": "Falafel Hummus Filled",
+        "de": "Falafel Hummus Filled"
+      },
+      "sourceLanguage": "en",
+      "category": "anatolian",
+      "brand": "Lezza",
+      "description": "Falafel Hummus Filled 300g – heat and serve. Plant-based retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Falafel-Hummus-Filled-300g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "300g",
+            "fr": "300g",
+            "de": "300g"
+          },
+          "netWeightG": 300,
+          "sku": "201401",
+          "sourceId": 10325,
+          "sourceSlug": "falafel-hummus-filled-300g"
+        }
+      ]
+    },
+    {
+      "slug": "gobit-bread",
+      "name": {
+        "tr": "Gobit Bread",
+        "fr": "Gobit Bread",
+        "de": "Gobit Bread"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Gobit Bread 150g – frozen cooked Turkish gobit flatbread with pocket interior for döner and kebap service. Wholesale horeca supply and private label manufacturing from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Gobit-Bread-150g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "150g",
+            "fr": "150g",
+            "de": "150g"
+          },
+          "netWeightG": 150,
+          "sku": "701306",
+          "sourceId": 9921,
+          "sourceSlug": "gobit-bread-150g"
+        }
+      ]
+    },
+    {
+      "slug": "gobit-bread-4x150g",
+      "name": {
+        "tr": "Gobit Bread 4x150g",
+        "fr": "Gobit Bread 4x150g",
+        "de": "Gobit Bread 4x150g"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Gobit Bread 4x150g – 4 frozen cooked Turkish gobit pocket bread portions, heat and serve. Authentic flatbread for home kebap and sandwich use. Wholesale supply and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Gobit-Bread-4x150g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Gobit-Bread-150g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "701304",
+          "sourceId": 9923,
+          "sourceSlug": "gobit-bread-4x150g"
+        }
+      ]
+    },
+    {
+      "slug": "homemade-style-walnut-baklava",
+      "name": {
+        "tr": "Homemade Style Walnut Baklava",
+        "fr": "Homemade Style Walnut Baklava",
+        "de": "Homemade Style Walnut Baklava"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Homemade Style Walnut Baklava 1250g – 28 walnut baklava pieces with authentic Anatolian home-baking character. For specialty retail, deli, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Homemade-Style-Walnut-Baklava-1250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Homemade-Style-Walnut-Baklava-1250g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1250g",
+            "fr": "1250g",
+            "de": "1250g"
+          },
+          "netWeightG": 1250,
+          "sku": "600211",
+          "sourceId": 9619,
+          "sourceSlug": "homemade-style-walnut-baklava-1250g"
+        }
+      ]
+    },
+    {
+      "slug": "hummus",
+      "name": {
+        "tr": "Hummus",
+        "fr": "Hummus",
+        "de": "Hummus"
+      },
+      "sourceLanguage": "en",
+      "category": "anatolian",
+      "brand": "Lezza",
+      "description": "Hummus 1000g – frozen hummus, defrost and serve. Authentic plant-based mezze for horeca and wholesale B2B supply. Private label manufacturing from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Hummus-1000g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "200412",
+          "sourceId": 10340,
+          "sourceSlug": "hummus-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "italian-tiramisu-cup",
+      "name": {
+        "tr": "Italian Tiramisu Cup",
+        "fr": "Italian Tiramisu Cup",
+        "de": "Italian Tiramisu Cup"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Italian Tiramisu Cup 165g – frozen tiramisu in a transparent cup, thaw and serve. 12-piece horeca box, wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Italian-Tiramisu-165g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "165g",
+            "fr": "165g",
+            "de": "165g"
+          },
+          "netWeightG": 165,
+          "sku": "900411",
+          "sourceId": 10202,
+          "sourceSlug": "italian-tiramisu-cup-165g"
+        }
+      ]
+    },
+    {
+      "slug": "izmir-boyoz",
+      "name": {
+        "tr": "İzmir Boyoz",
+        "fr": "İzmir Boyoz",
+        "de": "İzmir Boyoz"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "İzmir Boyoz 75g – frozen uncooked authentic İzmir boyoz, bake from frozen. Laminated Aegean pastry for horeca breakfast service, wholesale supply and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Izmir-Boyoz-75g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "75g",
+            "fr": "75g",
+            "de": "75g"
+          },
+          "netWeightG": 75,
+          "sku": "700310",
+          "sourceId": 10227,
+          "sourceSlug": "izmir-boyoz-75g"
+        }
+      ]
+    },
+    {
+      "slug": "kumru-bagel",
+      "name": {
+        "tr": "Kumru Bagel",
+        "fr": "Kumru Bagel",
+        "de": "Kumru Bagel"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Kumru Bagel 140g – frozen uncooked sesame kumru bread roll, bake from frozen. Authentic Çeşme format for horeca sandwich service, wholesale supply and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Kumru-Bagel-140g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "140g",
+            "fr": "140g",
+            "de": "140g"
+          },
+          "netWeightG": 140,
+          "sku": "700110",
+          "sourceId": 10225,
+          "sourceSlug": "kumru-bagel-140g"
+        }
+      ]
+    },
+    {
+      "slug": "kunefe-bulk",
+      "name": {
+        "tr": "Kunefe Bulk",
+        "fr": "Kunefe Bulk",
+        "de": "Kunefe Bulk"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Kunefe Bulk 145g – frozen classic künefe portion with 65g ready-prepared syrup. Authentic Anatolian hot cheese pastry for horeca, food service, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Kunefe-Bulk-145g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "145g",
+            "fr": "145g",
+            "de": "145g"
+          },
+          "netWeightG": 145,
+          "sku": "500102",
+          "sourceId": 9661,
+          "sourceSlug": "kunefe-bulk-145g-65g-syrup"
+        }
+      ]
+    },
+    {
+      "slug": "kunefe-including-syrup",
+      "name": {
+        "tr": "Kunefe Including Syrup",
+        "fr": "Kunefe Including Syrup",
+        "de": "Kunefe Including Syrup"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Kunefe 420g – 2 frozen künefe portions with 2 syrup sachets included. Authentic Anatolian hot cheese pastry, complete and ready to serve. For retail and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Kunefe-420g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Kunefe-420g-01.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "420g",
+            "fr": "420g",
+            "de": "420g"
+          },
+          "netWeightG": 420,
+          "sku": "500103",
+          "sourceId": 9663,
+          "sourceSlug": "kunefe-420g-including-syrup"
+        }
+      ]
+    },
+    {
+      "slug": "lahmacun-3x180g",
+      "name": {
+        "tr": "Lahmacun 3x180g",
+        "fr": "Lahmacun 3x180g",
+        "de": "Lahmacun 3x180g"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Lahmacun 3x180g – 3 frozen cooked Turkish lahmacun portions, heat and eat. Authentic spiced meat flatbread for retail, wholesale supply, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lahmacun-3x180g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lahmacun-3x180g-01.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "200103",
+          "sourceId": 9973,
+          "sourceSlug": "lahmacun-3x180g"
+        }
+      ]
+    },
+    {
+      "slug": "lahmacun-5x170g",
+      "name": {
+        "tr": "Lahmacun 5x170g",
+        "fr": "Lahmacun 5x170g",
+        "de": "Lahmacun 5x170g"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Lahmacun 5x170g – 5 frozen Turkish lahmacun for family meals. Authentic spiced flatbread with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lahmacun-3x180g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "200105",
+          "sourceId": 9976,
+          "sourceSlug": "lahmacun-5x170g"
+        }
+      ]
+    },
+    {
+      "slug": "latte-whole-cake",
+      "name": {
+        "tr": "Latte Whole Cake",
+        "fr": "Latte Whole Cake",
+        "de": "Latte Whole Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Latte Whole Cake 1600g – 12-slice frozen white cream cake with caramel drizzle, thaw and serve. Horeca wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Latte-Whole-Cake.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Latte-Whole-Cake-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "900801",
+          "sourceId": 10021,
+          "sourceSlug": "latte-whole-cake"
+        }
+      ]
+    },
+    {
+      "slug": "lemon-cheesecake",
+      "name": {
+        "tr": "Lemon Cheesecake",
+        "fr": "Lemon Cheesecake",
+        "de": "Lemon Cheesecake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Lemon Cheesecake 1800g – 12-slice frozen lemon cheesecake, thaw and serve. Wholesale horeca supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lemon-Cheesecake.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lemon-Cheesecake-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "901809",
+          "sourceId": 10031,
+          "sourceSlug": "lemon-cheesecake"
+        }
+      ]
+    },
+    {
+      "slug": "lemon-cheesecake-slice",
+      "name": {
+        "tr": "Lemon Cheesecake Slice",
+        "fr": "Lemon Cheesecake Slice",
+        "de": "Lemon Cheesecake Slice"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Lemon Cheesecake Slice 150g – frozen individual triangle lemon cheesecake slice, thaw and serve. Wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lemon-Cheesecake-Slice-150g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lemon-Cheesecake-Slice-150g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "150g",
+            "fr": "150g",
+            "de": "150g"
+          },
+          "netWeightG": 150,
+          "sku": "902804",
+          "sourceId": 10194,
+          "sourceSlug": "lemon-cheesecake-slice-150g"
+        }
+      ]
+    },
+    {
+      "slug": "lotus-caramel-cake-with-nutella",
+      "name": {
+        "tr": "Lotus Caramel Cake with Nutella",
+        "fr": "Lotus Caramel Cake with Nutella",
+        "de": "Lotus Caramel Cake with Nutella"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Lotus Caramel Cake with Nutella 800g – with Biscoff, thaw and serve. Retail and horeca with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lotus-Caramel-Cake-with-Nutella-800g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lotus-Caramel-Cake-with-Nutella-800g-01.webp"
+      ],
+      "channels": [
+        "b2b",
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "900808",
+          "sourceId": 10169,
+          "sourceSlug": "lotus-caramel-cake-with-nutella"
+        }
+      ]
+    },
+    {
+      "slug": "maras-ice-cream-cocoa",
+      "name": {
+        "tr": "Maraş Ice Cream Cocoa",
+        "fr": "Maraş Ice Cream Cocoa",
+        "de": "Maraş Ice Cream Cocoa"
+      },
+      "sourceLanguage": "en",
+      "category": "ice-cream",
+      "brand": "Lezza",
+      "description": "Maraş Ice Cream Cocoa 250g – salep-based Turkish ice cream with rich cocoa. Retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Maras-Ice-Cream-Cocoa-250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Maras-Ice-Cream-Cocoa.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "250g",
+            "fr": "250g",
+            "de": "250g"
+          },
+          "netWeightG": 250,
+          "sku": "111107",
+          "sourceId": 9963,
+          "sourceSlug": "maras-ice-cream-cocoa-250g"
+        }
+      ]
+    },
+    {
+      "slug": "maras-ice-cream-pistachio",
+      "name": {
+        "tr": "Maraş Ice Cream Pistachio",
+        "fr": "Maraş Ice Cream Pistachio",
+        "de": "Maraş Ice Cream Pistachio"
+      },
+      "sourceLanguage": "en",
+      "category": "ice-cream",
+      "brand": "Lezza",
+      "description": "Maraş Ice Cream Pistachio 250g – premium salep-based Turkish ice cream with pistachio. Retail pack, wholesale supply, and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Maras-Ice-Cream-Pistachio-250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Maras-Ice-Cream-Pistachio.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "250g",
+            "fr": "250g",
+            "de": "250g"
+          },
+          "netWeightG": 250,
+          "sku": "111112",
+          "sourceId": 9966,
+          "sourceSlug": "maras-ice-cream-pistachio-250g"
+        }
+      ]
+    },
+    {
+      "slug": "maras-ice-cream-plain",
+      "name": {
+        "tr": "Maraş Ice Cream Plain",
+        "fr": "Maraş Ice Cream Plain",
+        "de": "Maraş Ice Cream Plain"
+      },
+      "sourceLanguage": "en",
+      "category": "ice-cream",
+      "brand": "Lezza",
+      "description": "Maraş Ice Cream Plain 500g – larger retail salep Turkish ice cream for sharing. Wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Maras-Ice-Cream-Plain-500g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Maras-Ice-Cream-Plain.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Maras-Ice-Cream-Plain-250g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "500g",
+            "fr": "500g",
+            "de": "500g"
+          },
+          "netWeightG": 500,
+          "sku": "111101",
+          "sourceId": 9962,
+          "sourceSlug": "maras-ice-cream-plain-500g"
+        },
+        {
+          "label": {
+            "tr": "250g",
+            "fr": "250g",
+            "de": "250g"
+          },
+          "netWeightG": 250,
+          "sku": "111106",
+          "sourceId": 9958,
+          "sourceSlug": "maras-ice-cream-plain-250g"
+        }
+      ]
+    },
+    {
+      "slug": "maras-ice-cream-slice-cocoa",
+      "name": {
+        "tr": "Maraş Ice Cream Slice Cocoa",
+        "fr": "Maraş Ice Cream Slice Cocoa",
+        "de": "Maraş Ice Cream Slice Cocoa"
+      },
+      "sourceLanguage": "en",
+      "category": "ice-cream",
+      "brand": "Lezza",
+      "description": "Maraş Ice Cream Slice Cocoa 70g – pre-portioned cocoa salep Turkish ice cream slice. Rich Maraş dondurması for horeca, wholesale supply and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/MARAS-ICE-CREAM-slice-cocoa-70g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/MARAS-ICE-CREAM-slice-cocoa-70g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "70g",
+            "fr": "70g",
+            "de": "70g"
+          },
+          "netWeightG": 70,
+          "sku": "111141",
+          "sourceId": 10350,
+          "sourceSlug": "maras-ice-cream-slice-cocoa-70g"
+        }
+      ]
+    },
+    {
+      "slug": "maras-ice-cream-slice-lemon",
+      "name": {
+        "tr": "Maraş Ice Cream Slice Lemon",
+        "fr": "Maraş Ice Cream Slice Lemon",
+        "de": "Maraş Ice Cream Slice Lemon"
+      },
+      "sourceLanguage": "en",
+      "category": "ice-cream",
+      "brand": "Lezza",
+      "description": "Maraş Ice Cream Slice Lemon 70g – pre-portioned lemon salep Turkish ice cream slice. Refreshing Maraş dondurması for horeca, wholesale supply and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/MARAS-ICE-CREAM-slice-lemon-70g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/MARAS-ICE-CREAM-slice-lemon-70g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "70g",
+            "fr": "70g",
+            "de": "70g"
+          },
+          "netWeightG": 70,
+          "sku": "111131",
+          "sourceId": 10353,
+          "sourceSlug": "maras-ice-cream-slice-lemon-70g"
+        }
+      ]
+    },
+    {
+      "slug": "maras-ice-cream-slice-plain",
+      "name": {
+        "tr": "Maraş Ice Cream Slice Plain",
+        "fr": "Maraş Ice Cream Slice Plain",
+        "de": "Maraş Ice Cream Slice Plain"
+      },
+      "sourceLanguage": "en",
+      "category": "ice-cream",
+      "brand": "Lezza",
+      "description": "Maraş Ice Cream Slice Plain 70g – frozen pre-portioned plain salep Turkish ice cream slice. Authentic Maraş dondurması for horeca, wholesale supply and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/MARAS-ICE-CREAM-slice-plain-70g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/MARAS-ICE-CREAM-slice-plain-70g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "70g",
+            "fr": "70g",
+            "de": "70g"
+          },
+          "netWeightG": 70,
+          "sku": "111121",
+          "sourceId": 10347,
+          "sourceSlug": "maras-ice-cream-slice-plain-70g"
+        }
+      ]
+    },
+    {
+      "slug": "maras-ice-cream-trio-mix",
+      "name": {
+        "tr": "Maraş Ice Cream Trio Mix",
+        "fr": "Maraş Ice Cream Trio Mix",
+        "de": "Maraş Ice Cream Trio Mix"
+      },
+      "sourceLanguage": "en",
+      "category": "ice-cream",
+      "brand": "Lezza",
+      "description": "Maraş Ice Cream Trio Mix 500g – plain, cocoa, pistachio salep Turkish ice cream in one retail pack. Wholesale and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Maras-Ice-Cream-Trio-Mix-500g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Maras-Ice-Cream-Trio-Mix.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "500g",
+            "fr": "500g",
+            "de": "500g"
+          },
+          "netWeightG": 500,
+          "sku": "111113",
+          "sourceId": 9969,
+          "sourceSlug": "maras-ice-cream-trio-mix-500g"
+        }
+      ]
+    },
+    {
+      "slug": "mini-pide-with-cheese",
+      "name": {
+        "tr": "Mini Pide with Cheese",
+        "fr": "Mini Pide with Cheese",
+        "de": "Mini Pide with Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Mini Pide with Cheese 250g – 5 x 50g frozen uncooked Turkish cheese pide portions. Authentic pide for home baking, retail, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Mini-Pide-with-Cheese-250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Mini-Pide-with-Cheese-250g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Mini-Pide-with-Cheese-50g.webp"
+      ],
+      "channels": [
+        "b2c",
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "250g",
+            "fr": "250g",
+            "de": "250g"
+          },
+          "netWeightG": 250,
+          "sku": "701221",
+          "sourceId": 9740,
+          "sourceSlug": "mini-pide-with-cheese-250g"
+        },
+        {
+          "label": {
+            "tr": "50g",
+            "fr": "50g",
+            "de": "50g"
+          },
+          "netWeightG": 50,
+          "sku": "701223",
+          "sourceId": 9736,
+          "sourceSlug": "mini-pide-with-cheese-50g"
+        }
+      ]
+    },
+    {
+      "slug": "mini-pide-with-spinach-cheese",
+      "name": {
+        "tr": "Mini Pide with Spinach & Cheese",
+        "fr": "Mini Pide with Spinach & Cheese",
+        "de": "Mini Pide with Spinach & Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Mini Pide with Spinach & Cheese 250g – 5 x 50g frozen Turkish pide portions with spinach and cheese. Authentic format for retail and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Mini-Pide-with-Spinach-Cheese-250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Mini-Pide-with-Spinach-Cheese-250g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Mini-Pide-with-Spinach-Cheese-50g.webp"
+      ],
+      "channels": [
+        "b2c",
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "250g",
+            "fr": "250g",
+            "de": "250g"
+          },
+          "netWeightG": 250,
+          "sku": "701222",
+          "sourceId": 9743,
+          "sourceSlug": "mini-pide-with-spinach-cheese-250g"
+        },
+        {
+          "label": {
+            "tr": "50g",
+            "fr": "50g",
+            "de": "50g"
+          },
+          "netWeightG": 50,
+          "sku": "701224",
+          "sourceId": 9738,
+          "sourceSlug": "mini-pide-with-spinach-cheese-50g"
+        }
+      ]
+    },
+    {
+      "slug": "mini-roll-borek-with-cheese",
+      "name": {
+        "tr": "Mini Roll Börek with Cheese",
+        "fr": "Mini Roll Börek with Cheese",
+        "de": "Mini Roll Börek with Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Mini Roll Börek with Cheese 500g – 10x50g frozen uncooked cheese börek rolls, bake from frozen. Retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Mini-Roll-Borek-with-Cheese-500g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Mini-Roll-Borek-with-Cheese-500g-01.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "500g",
+            "fr": "500g",
+            "de": "500g"
+          },
+          "netWeightG": 500,
+          "sku": "700801",
+          "sourceId": 10233,
+          "sourceSlug": "mini-roll-borek-with-cheese-500g"
+        }
+      ]
+    },
+    {
+      "slug": "mini-roll-borek-with-spinach-cheese",
+      "name": {
+        "tr": "Mini Roll Börek with Spinach & Cheese",
+        "fr": "Mini Roll Börek with Spinach & Cheese",
+        "de": "Mini Roll Börek with Spinach & Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Mini Roll Börek with Spinach & Cheese 500g – 10x50g frozen spinach cheese rolls, bake from frozen. Retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Mini-Roll-Borek-with-Spinach-Cheese-500g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Mini-Roll-Borek-with-Spinach-Cheese-500g-01.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "500g",
+            "fr": "500g",
+            "de": "500g"
+          },
+          "netWeightG": 500,
+          "sku": "700802",
+          "sourceId": 10238,
+          "sourceSlug": "mini-roll-borek-with-spinach-cheese-500g"
+        }
+      ]
+    },
+    {
+      "slug": "mussel-baklava",
+      "name": {
+        "tr": "Mussel Baklava",
+        "fr": "Mussel Baklava",
+        "de": "Mussel Baklava"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Mussel Baklava 2000g – 48 pistachio and cream filled midye baklava pieces. Authentic recipe for large-scale catering, wholesale, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Mussel-Baklava-2000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Mussel-Baklava-2000g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Mussel-Baklava-1250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Mussel-Baklava-1250g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "2000g",
+            "fr": "2000g",
+            "de": "2000g"
+          },
+          "netWeightG": 2000,
+          "sku": "600802",
+          "sourceId": 9553,
+          "sourceSlug": "mussel-baklava-2000g"
+        },
+        {
+          "label": {
+            "tr": "1250g",
+            "fr": "1250g",
+            "de": "1250g"
+          },
+          "netWeightG": 1250,
+          "sku": "600808",
+          "sourceId": 9550,
+          "sourceSlug": "mussel-baklava-1250g"
+        }
+      ]
+    },
+    {
+      "slug": "olive-filled-pastry",
+      "name": {
+        "tr": "Olive Filled Pastry",
+        "fr": "Olive Filled Pastry",
+        "de": "Olive Filled Pastry"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Olive Filled Pastry 130g – frozen uncooked Turkish olive poğaça for horeca and wholesale supply. Bold Mediterranean bakery format with private label manufacturing available.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Olive-Filled-Pastry-130g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "130g",
+            "fr": "130g",
+            "de": "130g"
+          },
+          "netWeightG": 130,
+          "sku": "700212",
+          "sourceId": 9774,
+          "sourceSlug": "olive-filled-pastry-130g"
+        }
+      ]
+    },
+    {
+      "slug": "pista-leaves",
+      "name": {
+        "tr": "Pista Leaves",
+        "fr": "Pista Leaves",
+        "de": "Pista Leaves"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Pista Leaves 150g – single-portion pistachio and cream katmer with crisp layers. Authentic Gaziantep pastry for specialty retail and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Pista-Leaves-150g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Pista-Leaves-150g-01.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "150g",
+            "fr": "150g",
+            "de": "150g"
+          },
+          "netWeightG": 150,
+          "sku": "500107",
+          "sourceId": 9673,
+          "sourceSlug": "pista-leaves-150g"
+        }
+      ]
+    },
+    {
+      "slug": "pista-leaves-bulk",
+      "name": {
+        "tr": "Pista Leaves Bulk",
+        "fr": "Pista Leaves Bulk",
+        "de": "Pista Leaves Bulk"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Pista Leaves Bulk 300g – rectangular pistachio and cream filled portions. Gaziantep dessert with crisp layers for horeca, catering, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Pista-Leaves-Bulk-300g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "300g",
+            "fr": "300g",
+            "de": "300g"
+          },
+          "netWeightG": 300,
+          "sku": "500106",
+          "sourceId": 9671,
+          "sourceSlug": "pista-leaves-bulk-300g"
+        }
+      ]
+    },
+    {
+      "slug": "pistachio-cake-cup",
+      "name": {
+        "tr": "Pistachio Cake Cup",
+        "fr": "Pistachio Cake Cup",
+        "de": "Pistachio Cake Cup"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Pistachio Cake Cup 165g – frozen individual pistachio dessert cup, thaw and serve. 12-piece horeca box with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Pistachio-Cake-165g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "165g",
+            "fr": "165g",
+            "de": "165g"
+          },
+          "netWeightG": 165,
+          "sku": "900414",
+          "sourceId": 10208,
+          "sourceSlug": "pistachio-cake-cup-165g"
+        }
+      ]
+    },
+    {
+      "slug": "pistachio-cream-cake",
+      "name": {
+        "tr": "Pistachio Cream Cake",
+        "fr": "Pistachio Cream Cake",
+        "de": "Pistachio Cream Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Pistachio Cream Cake 550g – 7-slice, thaw and serve. Retail and horeca format with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Pistachio-Cream-Cake.webp"
+      ],
+      "channels": [
+        "b2b",
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "900104",
+          "sourceId": 10167,
+          "sourceSlug": "pistachio-cream-cake"
+        }
+      ]
+    },
+    {
+      "slug": "pistachio-kadaifi",
+      "name": {
+        "tr": "Pistachio Kadaifi",
+        "fr": "Pistachio Kadaifi",
+        "de": "Pistachio Kadaifi"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Pistachio Kadaifi 2000g – large-format frozen pistachio kadaifi tray for high-volume operations. Authentic Anatolian stranded pastry for wholesale, catering, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Pistachio-Kadaifi-2000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Pistachio-Kadaifi-2000g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Pistachio-Kadaifi-1250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Pistachio-Kadaifi-1250g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "2000g",
+            "fr": "2000g",
+            "de": "2000g"
+          },
+          "netWeightG": 2000,
+          "sku": "600301",
+          "sourceId": 9631,
+          "sourceSlug": "pistachio-kadaifi-2000g"
+        },
+        {
+          "label": {
+            "tr": "1250g",
+            "fr": "1250g",
+            "de": "1250g"
+          },
+          "netWeightG": 1250,
+          "sku": "600608",
+          "sourceId": 9628,
+          "sourceSlug": "pistachio-kadaifi-1250g"
+        }
+      ]
+    },
+    {
+      "slug": "pistachio-rolls-baklava",
+      "name": {
+        "tr": "Pistachio Rolls Baklava",
+        "fr": "Pistachio Rolls Baklava",
+        "de": "Pistachio Rolls Baklava"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Pistachio Rolls Baklava 2000g – 56 pistachio roll baklava pieces in a large-format tray. Authentic taste for wholesale, catering, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Pistachio-Rolls-Baklava-2000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Pistachio-Rolls-Baklava-2000g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Pistachio-Rolls-Baklava-1250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Pistachio-Rolls-Baklava-1250g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "2000g",
+            "fr": "2000g",
+            "de": "2000g"
+          },
+          "netWeightG": 2000,
+          "sku": "600503",
+          "sourceId": 9593,
+          "sourceSlug": "pistachio-rolls-baklava-2000g"
+        },
+        {
+          "label": {
+            "tr": "1250g",
+            "fr": "1250g",
+            "de": "1250g"
+          },
+          "netWeightG": 1250,
+          "sku": "600505",
+          "sourceId": 9590,
+          "sourceSlug": "pistachio-rolls-baklava-1250g"
+        }
+      ]
+    },
+    {
+      "slug": "plain-pastry",
+      "name": {
+        "tr": "Plain Pastry",
+        "fr": "Plain Pastry",
+        "de": "Plain Pastry"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Plain Pastry 130g – frozen uncooked Turkish poğaça for wholesale and horeca supply. Bulk orders, authentic soft bakery format, and private label manufacturing available.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Plain-Pastry-130g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "130g",
+            "fr": "130g",
+            "de": "130g"
+          },
+          "netWeightG": 130,
+          "sku": "700209",
+          "sourceId": 9762,
+          "sourceSlug": "plain-pastry-130g"
+        }
+      ]
+    },
+    {
+      "slug": "plain-pastry-4x80g",
+      "name": {
+        "tr": "Plain Pastry 4x80g",
+        "fr": "Plain Pastry 4x80g",
+        "de": "Plain Pastry 4x80g"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Plain Pastry 4x80g – 4 pre-baked Turkish poğaça portions, heat and eat. Authentic soft bakery for grocery retail, wholesale supply, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Plain-Pastry-320g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Plain-Pastry-4x80g-01.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "700201",
+          "sourceId": 9765,
+          "sourceSlug": "plain-pastry-4x80g"
+        }
+      ]
+    },
+    {
+      "slug": "potato-filled-pastry",
+      "name": {
+        "tr": "Potato Filled Pastry",
+        "fr": "Potato Filled Pastry",
+        "de": "Potato Filled Pastry"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Potato Filled Pastry 130g – frozen uncooked Turkish potato poğaça for horeca and wholesale supply. Hearty bakery format with bulk ordering and private label manufacturing available.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Potato-Filled-Pastry-130g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "130g",
+            "fr": "130g",
+            "de": "130g"
+          },
+          "netWeightG": 130,
+          "sku": "700211",
+          "sourceId": 9772,
+          "sourceSlug": "potato-filled-pastry-130g"
+        }
+      ]
+    },
+    {
+      "slug": "rainbow-velvet-cake",
+      "name": {
+        "tr": "Rainbow Velvet Cake",
+        "fr": "Rainbow Velvet Cake",
+        "de": "Rainbow Velvet Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": null,
+      "description": "Rainbow Velvet Cake 150g – frozen individual rainbow layer cake portion, thaw and serve. Mono and mono pack formats for horeca and retail, wholesale and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Rainbow-Velvet-Cake-150g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Rainbow-Velvet-Cake-150g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "150g",
+            "fr": "150g",
+            "de": "150g"
+          },
+          "netWeightG": 150,
+          "sku": "903109",
+          "sourceId": 10180,
+          "sourceSlug": "rainbow-velvet-cake-150g"
+        }
+      ]
+    },
+    {
+      "slug": "raspberry-cheesecake",
+      "name": {
+        "tr": "Raspberry Cheesecake",
+        "fr": "Raspberry Cheesecake",
+        "de": "Raspberry Cheesecake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Raspberry Cheesecake 1800g – 12-slice frozen cheesecake with raspberry topping, thaw and serve. Horeca wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Raspberry-Cheesecake.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Raspberry-Cheesecake-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "901804",
+          "sourceId": 10027,
+          "sourceSlug": "raspberry-cheesecake"
+        }
+      ]
+    },
+    {
+      "slug": "raspberry-cheesecake-cup",
+      "name": {
+        "tr": "Raspberry Cheesecake Cup",
+        "fr": "Raspberry Cheesecake Cup",
+        "de": "Raspberry Cheesecake Cup"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Raspberry Cheesecake Cup 165g – frozen raspberry cheesecake cup, thaw and serve. 12-piece horeca box with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Rasperry-CheesCake-165g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "165g",
+            "fr": "165g",
+            "de": "165g"
+          },
+          "netWeightG": 165,
+          "sku": "900416",
+          "sourceId": 10212,
+          "sourceSlug": "raspberry-cheesecake-cup-165g"
+        }
+      ]
+    },
+    {
+      "slug": "raspberry-cheesecake-slice",
+      "name": {
+        "tr": "Raspberry Cheesecake Slice",
+        "fr": "Raspberry Cheesecake Slice",
+        "de": "Raspberry Cheesecake Slice"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Raspberry Cheesecake Slice 150g – frozen triangle cheesecake slice with raspberry topping, thaw and serve. Wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Raspberry-Cheesecake-Slice-150g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Raspberry-Cheesecake-Slice-150g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "150g",
+            "fr": "150g",
+            "de": "150g"
+          },
+          "netWeightG": 150,
+          "sku": "902803",
+          "sourceId": 10189,
+          "sourceSlug": "raspberry-cheesecake-slice-150g"
+        }
+      ]
+    },
+    {
+      "slug": "red-velvet-cake",
+      "name": {
+        "tr": "Red Velvet Cake",
+        "fr": "Red Velvet Cake",
+        "de": "Red Velvet Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Red Velvet Cake 165g – frozen individual red velvet portion, thaw and serve. Mono and mono pack formats for horeca and retail, wholesale supply and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Red-Velvet-Cake-165g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Red-Velvet-Cake-165g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "165g",
+            "fr": "165g",
+            "de": "165g"
+          },
+          "netWeightG": 165,
+          "sku": "900906",
+          "sourceId": 10177,
+          "sourceSlug": "red-velvet-cake-165g"
+        }
+      ]
+    },
+    {
+      "slug": "red-velvet-cup",
+      "name": {
+        "tr": "Red Velvet Cup",
+        "fr": "Red Velvet Cup",
+        "de": "Red Velvet Cup"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Red Velvet Cup 165g – frozen red velvet dessert cup, thaw and serve. 12-piece horeca box with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Red-Velvet-165g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "165g",
+            "fr": "165g",
+            "de": "165g"
+          },
+          "netWeightG": 165,
+          "sku": "900412",
+          "sourceId": 10204,
+          "sourceSlug": "red-velvet-cup-165g"
+        }
+      ]
+    },
+    {
+      "slug": "red-velvet-whole-cake",
+      "name": {
+        "tr": "Red Velvet Whole Cake",
+        "fr": "Red Velvet Whole Cake",
+        "de": "Red Velvet Whole Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Red Velvet Whole Cake 1600g – 12-slice frozen red velvet cake, thaw and serve. Striking visual format for horeca dessert menus, wholesale supply, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Red-Velvet-Whole-Cake.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Red-Velvet-Whole-Cake-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "900901",
+          "sourceId": 10012,
+          "sourceSlug": "red-velvet-whole-cake"
+        }
+      ]
+    },
+    {
+      "slug": "saksuka",
+      "name": {
+        "tr": "Şakşuka",
+        "fr": "Şakşuka",
+        "de": "Şakşuka"
+      },
+      "sourceLanguage": "en",
+      "category": "anatolian",
+      "brand": "Lezza",
+      "description": "Şakşuka 1000g – frozen Turkish şakşuka with fried vegetables in tomato sauce, defrost and serve. Horeca wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Saksuka-1000g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "200411",
+          "sourceId": 10342,
+          "sourceSlug": "saksuka-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "san-sebastian-cheesecake",
+      "name": {
+        "tr": "San Sebastian Cheesecake",
+        "fr": "San Sebastian Cheesecake",
+        "de": "San Sebastian Cheesecake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "San Sebastian Cheesecake 1400g – 12-slice frozen Basque burnt cheesecake, thaw and serve. Wholesale horeca supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/San-Sebastian-Cheesecake.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/San-Sebastian-Cheesecake-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "901807",
+          "sourceId": 10034,
+          "sourceSlug": "san-sebastian-cheesecake"
+        }
+      ]
+    },
+    {
+      "slug": "savoury-bun",
+      "name": {
+        "tr": "Savoury Bun",
+        "fr": "Savoury Bun",
+        "de": "Savoury Bun"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Savoury Bun 130g – frozen uncooked Turkish açma bun, ready to bake. Soft spiral bakery format for horeca. Private label available.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Savoury-Bun-130g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "130g",
+            "fr": "130g",
+            "de": "130g"
+          },
+          "netWeightG": 130,
+          "sku": "700302",
+          "sourceId": 9729,
+          "sourceSlug": "savoury-bun-130g"
+        }
+      ]
+    },
+    {
+      "slug": "savoury-bun-acma",
+      "name": {
+        "tr": "Savoury Bun (Acma)",
+        "fr": "Savoury Bun (Acma)",
+        "de": "Savoury Bun (Acma)"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Savoury Bun (Acma) 320g – 4 x 80g frozen 80% pre-baked Turkish açma portions. Heat and eat for fresh-baked softness at home. For grocery retail and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Savoury-Bun-Acma-320g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Savoury-Bun-Acma-320g-01.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "320g",
+            "fr": "320g",
+            "de": "320g"
+          },
+          "netWeightG": 320,
+          "sku": "700301",
+          "sourceId": 9733,
+          "sourceSlug": "savoury-bun-acma-320g"
+        }
+      ]
+    },
+    {
+      "slug": "savoury-bun-with-cheese",
+      "name": {
+        "tr": "Savoury Bun with Cheese",
+        "fr": "Savoury Bun with Cheese",
+        "de": "Savoury Bun with Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Savoury Bun with Cheese 130g – frozen uncooked cheese-filled Turkish açma, ready to bake. Soft spiral bakery format for café, hotel buffet, and horeca service.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Savoury-Bun-with-Cheese-130g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "130g",
+            "fr": "130g",
+            "de": "130g"
+          },
+          "netWeightG": 130,
+          "sku": "700305",
+          "sourceId": 9731,
+          "sourceSlug": "savoury-bun-with-cheese-130g"
+        }
+      ]
+    },
+    {
+      "slug": "sobiyet-baklava",
+      "name": {
+        "tr": "Sobiyet Baklava",
+        "fr": "Sobiyet Baklava",
+        "de": "Sobiyet Baklava"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Sobiyet Baklava 2000g by Lezza – 40 cream and pistachio sobiyet baklava pieces in a large-format tray. For wholesale, catering, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Sobiyet-Baklava-2000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Sobiyet-Baklava-2000g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Sobiyet-Baklava-1250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Sobiyet-Baklava-1250g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "2000g",
+            "fr": "2000g",
+            "de": "2000g"
+          },
+          "netWeightG": 2000,
+          "sku": "600702",
+          "sourceId": 9559,
+          "sourceSlug": "sobiyet-baklava-2000g"
+        },
+        {
+          "label": {
+            "tr": "1250g",
+            "fr": "1250g",
+            "de": "1250g"
+          },
+          "netWeightG": 1250,
+          "sku": "601402",
+          "sourceId": 9556,
+          "sourceSlug": "sobiyet-baklava-1250g"
+        }
+      ]
+    },
+    {
+      "slug": "special-antep-baklava",
+      "name": {
+        "tr": "Special Antep Baklava",
+        "fr": "Special Antep Baklava",
+        "de": "Special Antep Baklava"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Special Antep Baklava 2000g – 76 small pistachio-rich Antep baklava pieces in a bulk tray. Gaziantep-inspired recipe for large-scale wholesale and catering.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Special-Antep-Baklava-2000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Special-Antep-Baklava-2000g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Special-Antep-Baklava-1250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Special-Antep-Baklava-1250g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "2000g",
+            "fr": "2000g",
+            "de": "2000g"
+          },
+          "netWeightG": 2000,
+          "sku": "601102",
+          "sourceId": 9615,
+          "sourceSlug": "special-antep-baklava-2000g"
+        },
+        {
+          "label": {
+            "tr": "1250g",
+            "fr": "1250g",
+            "de": "1250g"
+          },
+          "netWeightG": 1250,
+          "sku": "601103",
+          "sourceId": 9612,
+          "sourceSlug": "special-antep-baklava-1250g"
+        }
+      ]
+    },
+    {
+      "slug": "special-pistachio-garden-whole-cake",
+      "name": {
+        "tr": "Special Pistachio Garden Whole Cake",
+        "fr": "Special Pistachio Garden Whole Cake",
+        "de": "Special Pistachio Garden Whole Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Special Pistachio Garden Whole Cake 1600g – 12-slice frozen pistachio layer cake, thaw and serve. Wholesale horeca supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Special-Pistachio-Garden-Whole-Cake.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Special-Pistachio-Garden-Whole-Cake-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "900105",
+          "sourceId": 10005,
+          "sourceSlug": "special-pistachio-garden-whole-cake"
+        }
+      ]
+    },
+    {
+      "slug": "special-square-baklava",
+      "name": {
+        "tr": "Special Square Baklava",
+        "fr": "Special Square Baklava",
+        "de": "Special Square Baklava"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Special Square Baklava 2000g – 28 square pieces at wholesale. Premium presentation for multi-outlet distribution and upscale catering contracts.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Special-Square-Baklava-2000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Special-Square-Baklava-2000g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Special-Square-Baklava-1250g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Special-Square-Baklava-1250g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "2000g",
+            "fr": "2000g",
+            "de": "2000g"
+          },
+          "netWeightG": 2000,
+          "sku": "600602",
+          "sourceId": 9599,
+          "sourceSlug": "special-square-baklava-2000g"
+        },
+        {
+          "label": {
+            "tr": "1250g",
+            "fr": "1250g",
+            "de": "1250g"
+          },
+          "netWeightG": 1250,
+          "sku": "600601",
+          "sourceId": 9596,
+          "sourceSlug": "special-square-baklava-1250g"
+        }
+      ]
+    },
+    {
+      "slug": "spicy-chicken-tender-fillet",
+      "name": {
+        "tr": "Spicy Chicken Tender Fillet",
+        "fr": "Spicy Chicken Tender Fillet",
+        "de": "Spicy Chicken Tender Fillet"
+      },
+      "sourceLanguage": "en",
+      "category": "chicken",
+      "brand": "Lezita",
+      "description": "Spicy Chicken Tender Fillet 700g – frozen pre-cooked spicy chicken tenders, heat and eat. Retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Spicy-Chicken-Tender-Fillet-700g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "700g",
+            "fr": "700g",
+            "de": "700g"
+          },
+          "netWeightG": 700,
+          "sku": "312341",
+          "sourceId": 10383,
+          "sourceSlug": "spicy-chicken-tender-fillet-700g"
+        }
+      ]
+    },
+    {
+      "slug": "spicy-chicken-wings",
+      "name": {
+        "tr": "Spicy Chicken Wings",
+        "fr": "Spicy Chicken Wings",
+        "de": "Spicy Chicken Wings"
+      },
+      "sourceLanguage": "en",
+      "category": "chicken",
+      "brand": "Lezita",
+      "description": "Spicy Chicken Wings 700g – frozen pre-cooked spicy chicken wings, heat and eat. Retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Spicy-Chicken-Wings-700g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "700g",
+            "fr": "700g",
+            "de": "700g"
+          },
+          "netWeightG": 700,
+          "sku": "312442",
+          "sourceId": 10381,
+          "sourceSlug": "spicy-chicken-wings-700g"
+        }
+      ]
+    },
+    {
+      "slug": "spicy-turkish-tomato-dip",
+      "name": {
+        "tr": "Spicy Turkish Tomato Dip",
+        "fr": "Spicy Turkish Tomato Dip",
+        "de": "Spicy Turkish Tomato Dip"
+      },
+      "sourceLanguage": "en",
+      "category": "anatolian",
+      "brand": "Lezza",
+      "description": "Spicy Turkish Tomato Dip 1000g – frozen acılı ezme, defrost and serve. Authentic Turkish mezze for horeca, wholesale B2B supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Spicy-Turkish-Tomato-Dip-1000g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "200414",
+          "sourceId": 10336,
+          "sourceSlug": "spicy-turkish-tomato-dip-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "spiral-pie-borek-with-cheese",
+      "name": {
+        "tr": "Spiral Pie Börek with Cheese",
+        "fr": "Spiral Pie Börek with Cheese",
+        "de": "Spiral Pie Börek with Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Frozen spiral börek with cheese (800g). Traditional Turkish pastry, ready to bake at home. Ideal for retail, family meals, and bakery-style serving.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Spiral-Pie-Borek-with-Cheese-800-g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Spiral-Pie-Borek.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "800g",
+            "fr": "800g",
+            "de": "800g"
+          },
+          "netWeightG": 800,
+          "sku": "700501",
+          "sourceId": 9328,
+          "sourceSlug": "spiral-pie-borek-with-cheese-800-g"
+        }
+      ]
+    },
+    {
+      "slug": "spiral-pie-borek-with-potato",
+      "name": {
+        "tr": "Spiral Pie Börek with Potato",
+        "fr": "Spiral Pie Börek with Potato",
+        "de": "Spiral Pie Börek with Potato"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "A traditional Mediterranean spiral börek with a seasoned potato filling. Made from thin layered pastry sheets, shaped into a classic spiral and individually quick-frozen to preserve texture and flavour. Ready to bake from frozen — ideal for retail, food service, and wholesale distribution.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Spiral-Pie-Borek-with-Potato-800-g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Spiral-Pie-Borek-with-Potato.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "800g",
+            "fr": "800g",
+            "de": "800g"
+          },
+          "netWeightG": 800,
+          "sku": "700504",
+          "sourceId": 9341,
+          "sourceSlug": "spiral-pie-borek-with-potato-800-g"
+        }
+      ]
+    },
+    {
+      "slug": "spiral-pie-borek-with-spinach-cheese",
+      "name": {
+        "tr": "Spiral Pie Börek with Spinach & Cheese",
+        "fr": "Spiral Pie Börek with Spinach & Cheese",
+        "de": "Spiral Pie Börek with Spinach & Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Frozen spiral börek with spinach and cheese (800g). Ready-to-bake Turkish pastry with balanced flavor, ideal for retail and convenient home meals.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Spiral-Pie-Borek-with-Spinach-Cheese-800-g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Spiral-Pie-Borek-with-Spinach-Cheese.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "800g",
+            "fr": "800g",
+            "de": "800g"
+          },
+          "netWeightG": 800,
+          "sku": "700503",
+          "sourceId": 9331,
+          "sourceSlug": "spiral-pie-borek-with-spinach-cheese-800-g"
+        }
+      ]
+    },
+    {
+      "slug": "spiral-rose-borek-with-cheese",
+      "name": {
+        "tr": "Spiral Rose Börek with Cheese",
+        "fr": "Spiral Rose Börek with Cheese",
+        "de": "Spiral Rose Börek with Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Spiral Rose Börek with Cheese 200g – frozen individual cheese börek in a rose spiral form. Premium horeca display format with wholesale supply and private label manufacturing.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Spiral-Rose-Borek-with-Cheese-200g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "200g",
+            "fr": "200g",
+            "de": "200g"
+          },
+          "netWeightG": 200,
+          "sku": "700906",
+          "sourceId": 9816,
+          "sourceSlug": "spiral-rose-borek-with-cheese-200g"
+        }
+      ]
+    },
+    {
+      "slug": "spiral-rose-borek-with-cheese-6x80g",
+      "name": {
+        "tr": "Spiral Rose Börek with Cheese 6x80g",
+        "fr": "Spiral Rose Börek with Cheese 6x80g",
+        "de": "Spiral Rose Börek with Cheese 6x80g"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Spiral Rose Börek with Cheese 6x80g – 6 frozen rose spiral cheese börek, bake from frozen. Retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Spiral-Rose-Borek-with-Cheese-6x80g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Spiral-Rose-Borek-with-Cheese-6x80g-01.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "700701",
+          "sourceId": 10219,
+          "sourceSlug": "spiral-rose-borek-with-cheese-6x80g"
+        }
+      ]
+    },
+    {
+      "slug": "spiral-rose-borek-with-meat",
+      "name": {
+        "tr": "Spiral Rose Börek with Meat",
+        "fr": "Spiral Rose Börek with Meat",
+        "de": "Spiral Rose Börek with Meat"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Spiral Rose Börek with Meat 200g – premium frozen meat börek in a rose spiral for elevated horeca menus. Direct manufacturer supply, bulk wholesale, and private label available.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Spiral-Rose-Borek-with-Meat-200g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "200g",
+            "fr": "200g",
+            "de": "200g"
+          },
+          "netWeightG": 200,
+          "sku": "700913",
+          "sourceId": 9822,
+          "sourceSlug": "spiral-rose-borek-with-meat-200g"
+        }
+      ]
+    },
+    {
+      "slug": "spiral-rose-borek-with-potato",
+      "name": {
+        "tr": "Spiral Rose Börek with Potato",
+        "fr": "Spiral Rose Börek with Potato",
+        "de": "Spiral Rose Börek with Potato"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Spiral Rose Börek with Potato 200g – frozen potato börek in a rose spiral form for horeca service. Bulk wholesale supply and private label manufacturing from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Spiral-Rose-Borek-with-Potato-200g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "200g",
+            "fr": "200g",
+            "de": "200g"
+          },
+          "netWeightG": 200,
+          "sku": "700912",
+          "sourceId": 9820,
+          "sourceSlug": "spiral-rose-borek-with-potato-200g"
+        }
+      ]
+    },
+    {
+      "slug": "spiral-rose-borek-with-spinach-cheese",
+      "name": {
+        "tr": "Spiral Rose Börek with Spinach & Cheese",
+        "fr": "Spiral Rose Börek with Spinach & Cheese",
+        "de": "Spiral Rose Börek with Spinach & Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Spiral Rose Börek with Spinach & Cheese 200g – frozen spinach cheese börek in a rose spiral form. Premium horeca display format with B2B wholesale and private label supply.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Spiral-Rose-Borek-with-Spinach-Cheese-200g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "200g",
+            "fr": "200g",
+            "de": "200g"
+          },
+          "netWeightG": 200,
+          "sku": "700907",
+          "sourceId": 9819,
+          "sourceSlug": "spiral-rose-borek-with-spinach-cheese-200g"
+        }
+      ]
+    },
+    {
+      "slug": "spiral-rose-borek-with-spinach-cheese-6x80g",
+      "name": {
+        "tr": "Spiral Rose Börek with Spinach & Cheese 6x80g",
+        "fr": "Spiral Rose Börek with Spinach & Cheese 6x80g",
+        "de": "Spiral Rose Börek with Spinach & Cheese 6x80g"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Spiral Rose Börek with Spinach & Cheese 6x80g – 6 frozen rose spiral spinach börek, bake from frozen. Retail pack, wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Spiral-Rose-Borek-with-Spinach-Cheese-6x80g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Spiral-Rose-Borek-with-Spinach-Cheese-6x80g-01.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": null,
+          "sourceId": 10224,
+          "sourceSlug": "spiral-rose-borek-with-spinach-cheese-6x80g"
+        }
+      ]
+    },
+    {
+      "slug": "stick-borek-with-cheese",
+      "name": {
+        "tr": "Stick Börek with Cheese",
+        "fr": "Stick Börek with Cheese",
+        "de": "Stick Börek with Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Stick Börek with Cheese 150g – slim frozen cheese börek rolls for grab-and-go and buffet service. Wholesale horeca supply and private label manufacturing from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Stick-Borek-with-Cheese-150g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "150g",
+            "fr": "150g",
+            "de": "150g"
+          },
+          "netWeightG": 150,
+          "sku": "700908",
+          "sourceId": 9808,
+          "sourceSlug": "stick-borek-with-cheese-150g"
+        }
+      ]
+    },
+    {
+      "slug": "stick-borek-with-meat",
+      "name": {
+        "tr": "Stick Börek with Meat",
+        "fr": "Stick Börek with Meat",
+        "de": "Stick Börek with Meat"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Stick Börek with Meat 150g – premium frozen meat börek rolls for elevated horeca menus and B2B wholesale. Private label manufacturing and bulk supply from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Stick-Borek-with-Meat-150g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "150g",
+            "fr": "150g",
+            "de": "150g"
+          },
+          "netWeightG": 150,
+          "sku": "700917",
+          "sourceId": 9814,
+          "sourceSlug": "stick-borek-with-meat-150g"
+        }
+      ]
+    },
+    {
+      "slug": "stick-borek-with-potato",
+      "name": {
+        "tr": "Stick Börek with Potato",
+        "fr": "Stick Börek with Potato",
+        "de": "Stick Börek with Potato"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Stick Börek with Potato 150g – frozen potato börek rolls for lunch counters and high-volume horeca. Bulk wholesale supply and private label manufacturing from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Stick-Borek-with-Potato-150g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "150g",
+            "fr": "150g",
+            "de": "150g"
+          },
+          "netWeightG": 150,
+          "sku": "700910",
+          "sourceId": 9812,
+          "sourceSlug": "stick-borek-with-potato-150g"
+        }
+      ]
+    },
+    {
+      "slug": "stick-borek-with-spinach-cheese",
+      "name": {
+        "tr": "Stick Börek with Spinach & Cheese",
+        "fr": "Stick Börek with Spinach & Cheese",
+        "de": "Stick Börek with Spinach & Cheese"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Stick Börek with Spinach & Cheese 150g – frozen spinach cheese börek rolls for horeca operators seeking vegetable-based pastry variety. B2B wholesale and private label supply.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Stick-Borek-with-Spinach-Cheese-150g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "150g",
+            "fr": "150g",
+            "de": "150g"
+          },
+          "netWeightG": 150,
+          "sku": "700909",
+          "sourceId": 9810,
+          "sourceSlug": "stick-borek-with-spinach-cheese-150g"
+        }
+      ]
+    },
+    {
+      "slug": "stuffed-vine-leaves",
+      "name": {
+        "tr": "Stuffed Vine Leaves",
+        "fr": "Stuffed Vine Leaves",
+        "de": "Stuffed Vine Leaves"
+      },
+      "sourceLanguage": "en",
+      "category": "anatolian",
+      "brand": "Lezza",
+      "description": "Stuffed Vine Leaves 500g – frozen Turkish yaprak sarması with spiced rice. Retail pack, wholesale supply, and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Stuffed-Vine-Leaves-500g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Stuffed-Vine-Leaves-1000g.webp"
+      ],
+      "channels": [
+        "b2c",
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "500g",
+            "fr": "500g",
+            "de": "500g"
+          },
+          "netWeightG": 500,
+          "sku": "200201",
+          "sourceId": 9980,
+          "sourceSlug": "stuffed-vine-leaves-500g"
+        },
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "200202",
+          "sourceId": 9977,
+          "sourceSlug": "stuffed-vine-leaves-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "sweet-turkish-bagel-simit",
+      "name": {
+        "tr": "Sweet Turkish Bagel (Simit)",
+        "fr": "Sweet Turkish Bagel (Simit)",
+        "de": "Sweet Turkish Bagel (Simit)"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Frozen Sweet Turkish Bagel (Simit) 160g by Lezza Foods BV. Unbaked, sesame-coated with a lightly sweet taste. Bulk carton of 80 pieces, ideal for bakeries, horeca, and retail with fresh-bake convenience and consistent quality.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Sweet-Turkish-Bagel-Simit-160g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Sweet-Turkish-Bagel-Simit-135g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "160g",
+            "fr": "160g",
+            "de": "160g"
+          },
+          "netWeightG": 160,
+          "sku": "700103",
+          "sourceId": 9308,
+          "sourceSlug": "sweet-turkish-bagel-simit-160g"
+        },
+        {
+          "label": {
+            "tr": "135g",
+            "fr": "135g",
+            "de": "135g"
+          },
+          "netWeightG": 135,
+          "sku": "700107",
+          "sourceId": 9276,
+          "sourceSlug": "sweet-turkish-bagel-simit-135g"
+        }
+      ]
+    },
+    {
+      "slug": "tiramisu",
+      "name": {
+        "tr": "Tiramisu",
+        "fr": "Tiramisu",
+        "de": "Tiramisu"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Tiramisu 145g – frozen individual tiramisu portion, thaw and serve. Mono and mono pack for horeca and retail, wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/tiramisu-145g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/tiramisu-145g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "145g",
+            "fr": "145g",
+            "de": "145g"
+          },
+          "netWeightG": 145,
+          "sku": "900306",
+          "sourceId": 10183,
+          "sourceSlug": "tiramisu-145g"
+        }
+      ]
+    },
+    {
+      "slug": "tiramisu-cake",
+      "name": {
+        "tr": "Tiramisu Cake",
+        "fr": "Tiramisu Cake",
+        "de": "Tiramisu Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Tiramisu Cake 600g – 7-slice frozen tiramisu cake, thaw and serve. Retail and horeca format with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Tiramisu-Cake-600g.webp"
+      ],
+      "channels": [
+        "b2b",
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "600g",
+            "fr": "600g",
+            "de": "600g"
+          },
+          "netWeightG": 600,
+          "sku": "900304",
+          "sourceId": 10172,
+          "sourceSlug": "tiramisu-cake-600g"
+        }
+      ]
+    },
+    {
+      "slug": "tiramisu-whole-cake",
+      "name": {
+        "tr": "Tiramisu Whole Cake",
+        "fr": "Tiramisu Whole Cake",
+        "de": "Tiramisu Whole Cake"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Tiramisu Whole Cake 1450g – 12-slice frozen tiramisu cake, thaw and serve. Authentic Italian dessert for horeca menus, wholesale supply, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Tiramisu-Whole-Cake.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Tiramisu-Whole-Cake-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": null,
+          "netWeightG": null,
+          "sku": "900301",
+          "sourceId": 10018,
+          "sourceSlug": "tiramisu-whole-cake"
+        }
+      ]
+    },
+    {
+      "slug": "toffee-caramel-cake-cup",
+      "name": {
+        "tr": "Toffee Caramel Cake Cup",
+        "fr": "Toffee Caramel Cake Cup",
+        "de": "Toffee Caramel Cake Cup"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Toffee Caramel Cake Cup 165g – frozen individual caramel dessert cup, thaw and serve. 12-piece horeca box with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Toffe-Caramel-Cake-165g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "165g",
+            "fr": "165g",
+            "de": "165g"
+          },
+          "netWeightG": 165,
+          "sku": "900413",
+          "sourceId": 10206,
+          "sourceSlug": "toffee-caramel-cake-cup-165g"
+        }
+      ]
+    },
+    {
+      "slug": "tres-leches-caramel",
+      "name": {
+        "tr": "Tres Leches Caramel",
+        "fr": "Tres Leches Caramel",
+        "de": "Tres Leches Caramel"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Tres Leches Caramel 2000g – 9 pre-cut frozen trilece pieces with three-milk sponge and caramel sauce. Authentic chilled dessert for horeca, retail, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Tres-Leches-Caramel-2000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Tres-Leches-Caramel-2000g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "2000g",
+            "fr": "2000g",
+            "de": "2000g"
+          },
+          "netWeightG": 2000,
+          "sku": "500115",
+          "sourceId": 9652,
+          "sourceSlug": "tres-leches-caramel-2000g"
+        }
+      ]
+    },
+    {
+      "slug": "tres-leches-caramel-cup",
+      "name": {
+        "tr": "Tres Leches Caramel Cup",
+        "fr": "Tres Leches Caramel Cup",
+        "de": "Tres Leches Caramel Cup"
+      },
+      "sourceLanguage": "en",
+      "category": "cake",
+      "brand": "Lezza",
+      "description": "Tres Leches Caramel Cup 165g – frozen tres leches caramel cup, thaw and serve. 12-piece horeca box with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Tres-Leches-Caramel-165g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "165g",
+            "fr": "165g",
+            "de": "165g"
+          },
+          "netWeightG": 165,
+          "sku": "900417",
+          "sourceId": 10214,
+          "sourceSlug": "tres-leches-caramel-cup-165g"
+        }
+      ]
+    },
+    {
+      "slug": "tres-leches-raspberry",
+      "name": {
+        "tr": "Tres Leches Raspberry",
+        "fr": "Tres Leches Raspberry",
+        "de": "Tres Leches Raspberry"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Tres Leches Raspberry 2000g – 9 pre-cut frozen trilece pieces with three-milk sponge and raspberry sauce. Fruit-forward chilled dessert for horeca, retail, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Tres-Leches-Raspberry-2000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Tres-Leches-Raspberry-2000g-01.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "2000g",
+            "fr": "2000g",
+            "de": "2000g"
+          },
+          "netWeightG": 2000,
+          "sku": "500125",
+          "sourceId": 9656,
+          "sourceSlug": "tres-leches-raspberry-2000g"
+        }
+      ]
+    },
+    {
+      "slug": "tulumba-dessert",
+      "name": {
+        "tr": "Tulumba Dessert",
+        "fr": "Tulumba Dessert",
+        "de": "Tulumba Dessert"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Tulumba Dessert 400g – approx. 25 frozen tulumba pieces in a retail-ready pack. Authentic Anatolian syrup-soaked pastry for grocery retail and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Tulumba-Dessert-400g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Tulumba-Dessert-400g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Tulumba-Dessert-5000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Tulumba-Dessert-5000g-01.webp"
+      ],
+      "channels": [
+        "b2c",
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "400g",
+            "fr": "400g",
+            "de": "400g"
+          },
+          "netWeightG": 400,
+          "sku": "601002",
+          "sourceId": 9641,
+          "sourceSlug": "tulumba-dessert-400g"
+        },
+        {
+          "label": {
+            "tr": "5000g",
+            "fr": "5000g",
+            "de": "5000g"
+          },
+          "netWeightG": 5000,
+          "sku": "601001",
+          "sourceId": 9638,
+          "sourceSlug": "tulumba-dessert-5000g"
+        }
+      ]
+    },
+    {
+      "slug": "turkish-bagel-simit",
+      "name": {
+        "tr": "Turkish Bagel (Simit)",
+        "fr": "Turkish Bagel (Simit)",
+        "de": "Turkish Bagel (Simit)"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Authentic Turkish Bagel (Simit) 125g by Lezza Foods BV. Bulk carton with 80 pieces, traditional sesame-coated, ideal for retail and horeca use. Premium Anatolian bakery product with consistent quality and convenience.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Turkish-Bagel-Simit-125g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "125g",
+            "fr": "125g",
+            "de": "125g"
+          },
+          "netWeightG": 125,
+          "sku": "700102",
+          "sourceId": 9274,
+          "sourceSlug": "turkish-bagel-simit-125g"
+        }
+      ]
+    },
+    {
+      "slug": "turkish-bagel-simit-4-x",
+      "name": {
+        "tr": "Turkish Bagel (Simit) 4 x",
+        "fr": "Turkish Bagel (Simit) 4 x",
+        "de": "Turkish Bagel (Simit) 4 x"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Turkish Bagel (Simit) 4 x 105g by Lezza Foods BV. Partially baked (80% cooked) and ready to heat and serve. A convenient retail pack with authentic sesame simit, offering quick preparation, fresh taste, and consistent",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Turkish-Bagel-Simit-4-x-105g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Turkish-Bagel-Simit-125g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "105g",
+            "fr": "105g",
+            "de": "105g"
+          },
+          "netWeightG": 105,
+          "sku": "700101",
+          "sourceId": 9310,
+          "sourceSlug": "turkish-bagel-simit-4-x-105g"
+        }
+      ]
+    },
+    {
+      "slug": "turkish-fermented-bagel",
+      "name": {
+        "tr": "Turkish Fermented Bagel",
+        "fr": "Turkish Fermented Bagel",
+        "de": "Turkish Fermented Bagel"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Turkish Fermented Bagel 135g – frozen pre-fermented bagel, bake directly. Saves 2hrs fermentation. Larger horeca format with wholesale supply and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Turkish-Fermented-Bagel-135g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Turkish-Fermented-Bagel-125g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "135g",
+            "fr": "135g",
+            "de": "135g"
+          },
+          "netWeightG": 135,
+          "sku": "700108",
+          "sourceId": 10334,
+          "sourceSlug": "turkish-fermented-bagel-135g"
+        },
+        {
+          "label": {
+            "tr": "125g",
+            "fr": "125g",
+            "de": "125g"
+          },
+          "netWeightG": 125,
+          "sku": "700109",
+          "sourceId": 10332,
+          "sourceSlug": "turkish-fermented-bagel-125g"
+        }
+      ]
+    },
+    {
+      "slug": "turkish-ravioli-with-meat-manti",
+      "name": {
+        "tr": "Turkish Ravioli with Meat (Mantı)",
+        "fr": "Turkish Ravioli with Meat (Mantı)",
+        "de": "Turkish Ravioli with Meat (Mantı)"
+      },
+      "sourceLanguage": "en",
+      "category": "anatolian",
+      "brand": "Lezza",
+      "description": "Turkish Ravioli with Meat (Mantı) 1000g – frozen uncooked Turkish mantı with minced meat. Retail and wholesale supply, private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Turkish-Ravioli-with-Meat-Manti-1000g.webp"
+      ],
+      "channels": [
+        "b2b",
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "201503",
+          "sourceId": 9988,
+          "sourceSlug": "turkish-ravioli-with-meat-manti-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "turkish-ring-churros",
+      "name": {
+        "tr": "Turkish Ring Churros",
+        "fr": "Turkish Ring Churros",
+        "de": "Turkish Ring Churros"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Turkish Ring Churros 300g – 4 frozen ring-shaped Anatolian pastry pieces in a retail pack. Authentic halka tatlı with a familiar churros appeal for grocery retail.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Turkish-Ring-Churros-320g-1.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Turkish-Ring-Churros-320g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Turkish-Ring-Churros-4200g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Turkish-Ring-Churros-4200g-01.webp"
+      ],
+      "channels": [
+        "b2c",
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "300g",
+            "fr": "300g",
+            "de": "300g"
+          },
+          "netWeightG": 300,
+          "sku": "601004",
+          "sourceId": 9649,
+          "sourceSlug": "turkish-ring-churros-300g"
+        },
+        {
+          "label": {
+            "tr": "4200g",
+            "fr": "4200g",
+            "de": "4200g"
+          },
+          "netWeightG": 4200,
+          "sku": "601003",
+          "sourceId": 9644,
+          "sourceSlug": "turkish-ring-churros-4200g"
+        }
+      ]
+    },
+    {
+      "slug": "vegan-cig-kofte",
+      "name": {
+        "tr": "Vegan Çiğ Köfte",
+        "fr": "Vegan Çiğ Köfte",
+        "de": "Vegan Çiğ Köfte"
+      },
+      "sourceLanguage": "en",
+      "category": "anatolian",
+      "brand": "Lezza",
+      "description": "Vegan Çiğ Köfte 400g – frozen ready-to-eat Turkish çiğ köfte with pomegranate molasses and chilli sauce. Plant-based retail pack, wholesale supply and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/06/Vegan-CIG-KOFTE-400g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "400g",
+            "fr": "400g",
+            "de": "400g"
+          },
+          "netWeightG": 400,
+          "sku": "201302",
+          "sourceId": 10330,
+          "sourceSlug": "vegan-cig-kofte-400g"
+        }
+      ]
+    },
+    {
+      "slug": "vegan-falafel",
+      "name": {
+        "tr": "Vegan Falafel",
+        "fr": "Vegan Falafel",
+        "de": "Vegan Falafel"
+      },
+      "sourceLanguage": "en",
+      "category": "anatolian",
+      "brand": "Lezza",
+      "description": "Vegan Falafel 500g – 20x25g frozen cooked falafel, heat and serve. Plant-based retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Vegan-Falafel-500g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Vegan-Falafel-1000g.webp"
+      ],
+      "channels": [
+        "b2c",
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "500g",
+            "fr": "500g",
+            "de": "500g"
+          },
+          "netWeightG": 500,
+          "sku": "200702",
+          "sourceId": 10002,
+          "sourceSlug": "vegan-falafel-500g"
+        },
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "200701",
+          "sourceId": 9999,
+          "sourceSlug": "vegan-falafel-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "vegan-kibbeh-10-x",
+      "name": {
+        "tr": "Vegan Kibbeh 10 x",
+        "fr": "Vegan Kibbeh 10 x",
+        "de": "Vegan Kibbeh 10 x"
+      },
+      "sourceLanguage": "en",
+      "category": "anatolian",
+      "brand": "Lezza",
+      "description": "Frozen vegan kibbeh 10 x 70 g for horeca, catering, and retail. Plant-based Middle Eastern specialty with consistent quality, ideal for bulk supply and foodservice use.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Vegan-Kibbeh-10-x-70-g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "70g",
+            "fr": "70g",
+            "de": "70g"
+          },
+          "netWeightG": 70,
+          "sku": "200302",
+          "sourceId": 9321,
+          "sourceSlug": "vegan-kibbeh-10-x-70-g"
+        }
+      ]
+    },
+    {
+      "slug": "vegan-kibbeh-5-x",
+      "name": {
+        "tr": "Vegan Kibbeh 5 x",
+        "fr": "Vegan Kibbeh 5 x",
+        "de": "Vegan Kibbeh 5 x"
+      },
+      "sourceLanguage": "en",
+      "category": "anatolian",
+      "brand": "Lezza",
+      "description": "Retail-ready vegan kibbeh 5 x 70 g. Frozen plant-based snack with authentic Middle Eastern flavor, ideal for quick meals and everyday vegan consumption.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Vegan-Kibbeh-5-x-70-g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Vegan-Kibbeh-10-x-70-g.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "70g",
+            "fr": "70g",
+            "de": "70g"
+          },
+          "netWeightG": 70,
+          "sku": "200301",
+          "sourceId": 9323,
+          "sourceSlug": "vegan-kibbeh-5-x-70-g"
+        }
+      ]
+    },
+    {
+      "slug": "vegan-raw-meatballs",
+      "name": {
+        "tr": "Vegan Raw Meatballs",
+        "fr": "Vegan Raw Meatballs",
+        "de": "Vegan Raw Meatballs"
+      },
+      "sourceLanguage": "en",
+      "category": "anatolian",
+      "brand": "Lezza",
+      "description": "Vegan Raw Meatballs 500g – frozen Turkish çiğköfte, ready to serve. Plant-based retail pack with wholesale supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Vegan-Raw-Meatballs-500g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Vegan-Raw-Meatballs-1000g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Vegan-Raw-Meatballs-1000g-01.webp"
+      ],
+      "channels": [
+        "b2c",
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "500g",
+            "fr": "500g",
+            "de": "500g"
+          },
+          "netWeightG": 500,
+          "sku": "201300",
+          "sourceId": 9998,
+          "sourceSlug": "vegan-raw-meatballs-500g"
+        },
+        {
+          "label": {
+            "tr": "1000g",
+            "fr": "1000g",
+            "de": "1000g"
+          },
+          "netWeightG": 1000,
+          "sku": "201301",
+          "sourceId": 9994,
+          "sourceSlug": "vegan-raw-meatballs-1000g"
+        }
+      ]
+    },
+    {
+      "slug": "vegetable-calzone",
+      "name": {
+        "tr": "Vegetable Calzone",
+        "fr": "Vegetable Calzone",
+        "de": "Vegetable Calzone"
+      },
+      "sourceLanguage": "en",
+      "category": "bakery",
+      "brand": "Lezza",
+      "description": "Vegetable Calzone 80g – frozen uncooked individual vegetable calzone for horeca service. Bake from frozen, wholesale B2B supply and private label from Lezza Foods.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Vegetable-Calzone-80g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "80g",
+            "fr": "80g",
+            "de": "80g"
+          },
+          "netWeightG": 80,
+          "sku": "701423",
+          "sourceId": 10229,
+          "sourceSlug": "vegetable-calzone-80g"
+        }
+      ]
+    },
+    {
+      "slug": "wreathing-kunefe-bulk",
+      "name": {
+        "tr": "Wreathing Kunefe Bulk",
+        "fr": "Wreathing Kunefe Bulk",
+        "de": "Wreathing Kunefe Bulk"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Wreathing Kunefe Bulk 150g – spiral pistachio kadayıf portion with 65g syrup included. Authentic format for horeca, catering, and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Wreathing-Kunefe-Bulk-150g.webp"
+      ],
+      "channels": [
+        "b2b"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "150g",
+            "fr": "150g",
+            "de": "150g"
+          },
+          "netWeightG": 150,
+          "sku": "501001",
+          "sourceId": 9666,
+          "sourceSlug": "wreathing-kunefe-bulk-150g"
+        }
+      ]
+    },
+    {
+      "slug": "wreathing-kunefe-including-syrup",
+      "name": {
+        "tr": "Wreathing Kunefe Including Syrup",
+        "fr": "Wreathing Kunefe Including Syrup",
+        "de": "Wreathing Kunefe Including Syrup"
+      },
+      "sourceLanguage": "en",
+      "category": "dessert",
+      "brand": "Lezza",
+      "description": "Wreathing Kunefe 210g – spiral pistachio kadayıf with syrup sachet included. Authentic Anatolian retail pack for specialty grocery and private label.",
+      "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Wreathing-Kunefe-210g.png",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Wreathing-Kunefe-210g-01.webp"
+      ],
+      "channels": [
+        "b2c"
+      ],
+      "variants": [
+        {
+          "label": {
+            "tr": "210g",
+            "fr": "210g",
+            "de": "210g"
+          },
+          "netWeightG": 210,
+          "sku": "501101",
+          "sourceId": 9668,
+          "sourceSlug": "wreathing-kunefe-210g-including-syrup"
+        }
+      ]
+    }
+  ]
+}

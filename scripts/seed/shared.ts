@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { ProductService, type createServiceRoleClient } from '@lezzet/database';
 import { getR2, r2Keys } from '@lezzet/storage';
 import { resolveLocalizedText, type ProductStatus } from '@lezzet/types';
@@ -48,6 +48,43 @@ export async function uploadImage(file: string, key: string): Promise<string | n
   }
 }
 
+/**
+ * UZAKTAKİ görseli indirir ve R2'ye yükler (Lezza kataloğu — 05, kullanıcı kararı 04.08).
+ *
+ * **İndirilen dosya `temp/lezza-cache/` altında ÖNBELLEKLENİR** ve sebebi ölçülebilir: katalogda
+ * 141 ürün × 2 görsel var; her `db:refresh` bunları yeniden indirseydi seed'e üç yüz ağ turu
+ * eklenirdi. Önbellek dizini `.gitignore`'da — veri repoya girmez, ama ikinci koşu ağa hiç çıkmaz.
+ *
+ * **R2 ayarsızsa `null`** — `uploadImage` ile aynı davranış: kayıt görselsiz oluşur, seed durmaz.
+ * İnternet yoksa da aynı: önbellekte varsa oradan okunur, yoksa o ürün görselsiz kalır.
+ */
+export async function uploadImageFromUrl(url: string, key: string): Promise<string | null> {
+  const r2 = getR2();
+  if (!r2) return null;
+  const dosya = join(process.cwd(), 'temp', 'lezza-cache', url.split('/').pop() || 'image');
+  try {
+    let bytes: Buffer;
+    if (existsSync(dosya)) {
+      bytes = readFileSync(dosya);
+    } else {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      bytes = Buffer.from(await res.arrayBuffer());
+      mkdirSync(dirname(dosya), { recursive: true });
+      writeFileSync(dosya, bytes);
+    }
+    // İçerik tipi UZANTIDAN: kaynak webp veriyor ve hepsini `image/jpeg` diye yüklemek tarayıcıyı
+    // yanıltmasa da CDN'i ve ileride yapılacak dönüşümleri yanıltır.
+    const uzanti = (url.split('.').pop() || '').toLowerCase();
+    const tip = uzanti === 'png' ? 'image/png' : uzanti === 'webp' ? 'image/webp' : 'image/jpeg';
+    await r2.uploadFile(key, bytes, tip);
+    return key;
+  } catch (err) {
+    console.warn(`  ⚠ uzak görsel atlandı (${url.split('/').pop()}): ${(err as Error).message}`);
+    return null;
+  }
+}
+
 export { r2Keys };
 
 /** `key → profil id` haritası; ticari zemin bölümleri kişilere bununla ulaşır. */
@@ -60,6 +97,15 @@ export interface VaryantRef {
   vatRate: number;
   status: ProductStatus;
   shelfLifeDays: number | null;
+  /**
+   * Net ağırlık (g) — fiyatın gerçekçi olması için (05, gerçek katalog 04.08).
+   *
+   * Fiyat eskiden yalnız indise bağlıydı ve uydurma katalogda görünmüyordu: orada her varyant
+   * 500–1000 g arasındaydı. Gerçek katalogda 40 g'lık poğaça ile 2,5 kg'lık baklava tepsisi yan
+   * yana duruyor; ağırlıksız bir fiyat ikisini aynı banda koyar ve ekrandaki her fiyat listesi
+   * bariz yanlış görünür. `null` = boysuz ürün (bütün pastalar) — çağıran kendi tabanını kullanır.
+   */
+  netWeightG: number | null;
 }
 
 /** Fiyat/stok/sipariş bölümlerinin ortak girdisi: satılabilir birimler TEK sorguda (N+1 yok). */
@@ -73,6 +119,7 @@ export async function katalogVaryantlari(db: Db): Promise<VaryantRef[]> {
       vatRate: p.vatRate,
       status: p.status,
       shelfLifeDays: p.shelfLifeDays,
+      netWeightG: v.netWeightG ?? null,
     })),
   );
 }

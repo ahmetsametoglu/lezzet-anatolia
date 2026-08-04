@@ -24,6 +24,7 @@
     "docs:check": "node scripts/docs-check.mjs",
     "docs:sync": "node scripts/docs-check.mjs --fix",
     "postal:build": "node scripts/build-postal-codes.mjs",
+    "lezza:catalog": "node scripts/build-lezza-catalog.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
     "test": "node scripts/shared-test-run.mjs",
     "test:status": "node scripts/shared-test-run.mjs --status",

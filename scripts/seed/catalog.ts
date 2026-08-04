@@ -2,6 +2,7 @@ import { BundleService, CategoryService, CollectionService, PriceService, Produc
 import { bundleBalance, rebalanceAllocations } from '@lezzet/domain-core';
 import { PRODUCT_GALLERY_MAX, resolveLocalizedText, type LocalizedText, type Nutrition, type ProductAllergen, type ProductStatus } from '@lezzet/types';
 import { NOW, euro, r2Keys, uploadImage, type Db } from './shared';
+import { seedLezzaProducts } from './catalog-lezza';
 
 // Katalog (05): kategori · ürün · varyant · galeri · koleksiyon.
 
@@ -209,72 +210,11 @@ const PRODUCTS: SeedProduct[] = [
   },
 ];
 
-// ── Toplu ürün üretimi ───────────────────────────────────────────────────────────────────────────
-// Elle yazılanlar VİTRİNİN tam-veri örnekleridir; BOŞLUK örnekleri buradadır (eksik dil, alerjensiz,
-// beyansız, görselsiz, pasif, aday, kargolanamaz).
-// Ama sayfalama/sonsuz kaydırma ve süzgeçler ancak GERÇEKÇİ HACİMDE denenebilir: ~30'luk sayfa boyutu
-// birkaç sayfa doldurmalı. Bu yüzden aşağıdaki taban adlar × nitelemeler çarpımından ürün türetilir —
-// adlar üç dilde kurulur (elle 60×3 metin yazmadan), durumlar indise göre serpiştirilir.
-
-const BULK_BASES: Array<{ cat: string; tr: string; fr: string; de: string }> = [
-  { cat: 'baklava', tr: 'Baklava', fr: 'Baklava', de: 'Baklava' },
-  { cat: 'baklava', tr: 'Kuru Baklava', fr: 'Baklava sec', de: 'Trockenes Baklava' },
-  { cat: 'baklava', tr: 'Şöbiyet', fr: 'Şöbiyet', de: 'Schöbiyet' },
-  { cat: 'baklava', tr: 'Bülbül Yuvası', fr: 'Nid de rossignol', de: 'Nachtigallnest' },
-  { cat: 'baklava', tr: 'Havuç Dilimi', fr: 'Tranche carotte', de: 'Karottenschnitte' },
-  { cat: 'serbetli', tr: 'Kadayıf', fr: 'Kadaïf', de: 'Kadayif' },
-  { cat: 'serbetli', tr: 'Künefe', fr: 'Künefe', de: 'Künefe' },
-  { cat: 'serbetli', tr: 'Şekerpare', fr: 'Şekerpare', de: 'Şekerpare' },
-  { cat: 'serbetli', tr: 'Revani', fr: 'Revani', de: 'Revani' },
-  { cat: 'serbetli', tr: 'Tulumba', fr: 'Tulumba', de: 'Tulumba' },
-  { cat: 'borek', tr: 'Su Böreği', fr: 'Börek à l’eau', de: 'Wasser-Börek' },
-  { cat: 'borek', tr: 'Sigara Böreği', fr: 'Börek cigare', de: 'Zigarren-Börek' },
-  { cat: 'borek', tr: 'Kol Böreği', fr: 'Börek roulé', de: 'Rollen-Börek' },
-  { cat: 'borek', tr: 'Talaş Böreği', fr: 'Börek feuilleté', de: 'Blätter-Börek' },
-  { cat: 'malzeme', tr: 'Antep Fıstığı', fr: 'Pistache d’Antep', de: 'Antep-Pistazie' },
-  { cat: 'malzeme', tr: 'Tahin', fr: 'Tahini', de: 'Tahin' },
-];
-
-const BULK_QUALIFIERS: Array<{ tr: string; fr: string; de: string }> = [
-  { tr: 'fıstıklı', fr: 'aux pistaches', de: 'mit Pistazien' },
-  { tr: 'cevizli', fr: 'aux noix', de: 'mit Walnüssen' },
-  { tr: 'sade', fr: 'nature', de: 'natur' },
-  { tr: 'özel tepsi', fr: 'plateau spécial', de: 'Spezialblech' },
-];
-
-/**
- * Alerjen desenleri — on dört yasal alerjenin TAMAMI en az bir üründe geçer.
- *
- * Gerçekçi kombinasyonlar seçildi (rastgele karışım değil): unlu tatlıda gluten+süt, susamlı
- * çörekte susam, tahinlide susam+kuruyemiş, kurutulmuş meyvede sülfit, deniz ürünlü mezede balık
- * ve yumuşakça. Uydurma bir bileşim, alerjen ekranını doldurur ama okuyana yalan söyler.
- */
-const ALERJEN_DESENLERI: ProductAllergen[][] = [
-  ['gluten', 'sert_kabuklu'],
-  ['gluten', 'sut'],
-  ['gluten', 'yumurta', 'sut'],
-  ['susam', 'gluten'],
-  ['sert_kabuklu', 'soya'],
-  ['sut', 'yumurta'],
-  ['sulfit'],
-  ['yer_fistigi', 'gluten'],
-  ['balik', 'yumusaka'],
-  ['kabuklu', 'balik'],
-  ['kereviz', 'hardal'],
-  ['aci_bakla', 'gluten'],
-  ['soya', 'susam'],
-  ['hardal', 'sulfit'],
-];
-
-/** İz (çapraz bulaşma) desenleri — beyanın ikinci ayağı; alerjenle AYNI küme, farklı anlam. */
-const IZ_DESENLERI: ProductAllergen[][] = [
-  ['yer_fistigi'],
-  ['sert_kabuklu', 'susam'],
-  ['soya'],
-  ['sut'],
-  ['gluten', 'yumurta'],
-  ['kabuklu'],
-];
+// ── Hacim: GERÇEK katalog (kullanıcı kararı 04.08) ───────────────────────────────────────────────
+// Elle yazılanlar VİTRİNİN tam-veri örnekleridir. Hacim ise artık uydurma taban×niteleme çarpımından
+// değil, Lezza Foods'un gerçek 141 ürününden geliyor (`catalog-lezza.ts` + `data/lezza-catalog.json`).
+// Boşluk örnekleri (eksik dil, beyansız, görselsiz, pasif, aday) orada, SEYREK oranlarla serpiştiriliyor —
+// gerçekçilik ile süzgeçlerin denenebilirliği arasındaki denge o dosyanın künyesinde yazılı.
 
 /** Görselleri PAYLAŞILAN anahtarlar: 5 dosya bir kez yüklenir, tüm toplu ürünler bunlara işaret eder. */
 const SHARED_IMAGE_FILES = ['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg', '5.jpeg'];
@@ -321,94 +261,6 @@ async function seedGallery(images: ProductImageService, productId: string, keys:
  * [fıstıklı, cevizli, kazandibi, künefe, su böreği(pasif), antep fıstığı(aday)]
  */
 const HAND_GALLERY_COUNTS = [PRODUCT_GALLERY_MAX, 3, 4, 2, 0, 1];
-
-/**
- * Toplu ürünleri oluşturur. Durum çeşitliliği İNDİSE göre serpiştirilir ki her süzgeç gerçekten
- * sonuç döndürsün: ~her 9'uncu pasif, ~her 11'inci aday, ~her 7'nci alerjensiz (beyan eksik),
- * ~her 5'incinin yalnız TR adı var (dil eksik), ~her 6'ncısı görselsiz.
- * `sortOrder` açıkça verilir → servis sona-ekleme için sayım sorgusu atmaz.
- */
-async function seedBulkProducts(
-  products: ProductService,
-  images: ProductImageService,
-  catId: Map<string, string>,
-  sharedKeys: string[],
-  startOrder: number,
-): Promise<{ made: number; photos: number }> {
-  let made = 0;
-  let photos = 0;
-  for (const [b, base] of BULK_BASES.entries()) {
-    for (const [q, qual] of BULK_QUALIFIERS.entries()) {
-      const i = b * BULK_QUALIFIERS.length + q;
-      const trOnly = i % 5 === 0; // dil eksik → "beyan eksik" süzgecine düşer
-      const beyanTam = i % 3 !== 0; // içindekiler + besin + saklama dolu mu
-      const imageKey = i % 6 === 0 ? null : (sharedKeys[i % sharedKeys.length] ?? null);
-      const name: LocalizedText = trOnly
-        ? { tr: `${base.tr} ${qual.tr}` }
-        : { tr: `${base.tr} ${qual.tr}`, fr: `${base.fr} ${qual.fr}`, de: `${base.de} ${qual.de}` };
-
-      const { product } = await products.create({
-        name,
-        description: trOnly ? null : { tr: `${base.tr} — ${qual.tr}.`, fr: `${base.fr} — ${qual.fr}.`, de: `${base.de} — ${qual.de}.` },
-        categoryId: catId.get(base.cat) ?? null,
-        imageKey,
-        // Sürüm damgası public okuma URL'ini `?v=` ile sürümler — DOSYASI olan kayda yazılır;
-        // görselsiz kayıtta damga olmayan bir dosyanın tarihi olurdu.
-        imageUpdatedAt: imageKey ? NOW : null,
-        // ALERJEN DAĞILIMI on dört değerin tamamını dolaşır. Dördüyle yetinildiğinde alerjen
-        // süzgeci, rozetleri ve "şunu içermeyenler" filtresi kalan onunda hiç denenemiyordu —
-        // üstelik alerjen listesi yasal bir beyandır: eksik gösterim en pahalı hatadır.
-        // Boş liste de bir hâldir (`i % 7`): alerjensiz ürünün rozetsiz satırı da görünmeli.
-        allergens: i % 7 === 0 ? [] : (ALERJEN_DESENLERI[i % ALERJEN_DESENLERI.length] ?? ['gluten']),
-        traces: i % 4 === 0 ? (IZ_DESENLERI[i % IZ_DESENLERI.length] ?? ['yer_fistigi']) : [],
-        // Beyan dörtlüsü ~her 3'ten 2'sinde DOLU: ölçüt bunları da saydığı için hepsi boş bırakılsaydı
-        // 69 ürünün 69'u "beyan eksik" çıkar, süzgeç ayırt etmez olurdu.
-        ingredients: beyanTam
-          ? {
-              tr: `**Buğday unu**, su, tuz, ${base.tr.toLocaleLowerCase('tr')}, şeker.`,
-              fr: `**Farine de blé**, eau, sel, ${base.fr.toLocaleLowerCase('fr')}, sucre.`,
-              de: `**Weizenmehl**, Wasser, Salz, ${base.de.toLocaleLowerCase('de')}, Zucker.`,
-            }
-          : null,
-        storageInstructions: beyanTam
-          ? {
-              tr: 'Serin ve kuru yerde saklayın; açtıktan sonra 3 gün içinde tüketin, **tekrar dondurmayın**.',
-              fr: 'Conserver au frais et au sec ; à consommer sous 3 jours après ouverture, **ne pas recongeler**.',
-              de: 'Kühl und trocken lagern; nach dem Öffnen innerhalb von 3 Tagen verzehren, **nicht wieder einfrieren**.',
-            }
-          : null,
-        nutrition: beyanTam
-          ? { energyKj: 1600 + i * 5, energyKcal: 380 + i, fatG: 18 + (i % 7), saturatedFatG: 7 + (i % 4), carbohydrateG: 45 + (i % 9), sugarsG: 22 + (i % 6), proteinG: 6 + (i % 3), saltG: 0.3 }
-          : null,
-        vatRate: base.cat === 'malzeme' ? 20 : 5.5,
-        shelfLifeDays: base.cat === 'borek' ? 120 : 180,
-        shippable: i % 13 !== 0, // bazıları yalnız rota/kapı teslim (soğuk zincir)
-        targetMarginPercent: 35 + (i % 5) * 3,
-        autoPrice: i % 4 === 0,
-        // Tek alan → çakışma imkânsız (eskiden iki bayrak birbirini ezebiliyordu).
-        status: i % 9 === 0 ? 'passive' : i % 11 === 0 ? 'candidate' : 'active',
-        sortOrder: startOrder + i,
-        // Çok boylu ürünlerde etiket üç dilli; tek boylularda 4'te 1'i bilinçli TR-only kalır ki
-        // varyant editörünün "eksik dil" göstergesi toplu veride de görünsün.
-        variants:
-          i % 3 === 0
-            ? [
-                { label: { tr: '700 g tepsi', fr: 'plateau 700 g', de: 'Platte 700 g' }, netWeightG: 700 },
-                { label: { tr: '1 kg tepsi', fr: 'plateau 1 kg', de: 'Platte 1 kg' }, netWeightG: 1000 },
-              ]
-            : [{ label: i % 4 === 0 ? { tr: '500 g' } : { tr: '500 g', fr: '500 g', de: '500 g' }, netWeightG: 500 }],
-      });
-      made += 1;
-
-      // Galeri dağılımı — arayüzün her durumu listede bulunabilsin diye: ~her 13'ü DOLU (sınır notu),
-      // ~her 4'ü iki fotoğraflı, ~her 6'sı tek. Kapaksız ürünler de (i%6) galeri alıyor: "Kapak yap"
-      // takası ancak kapağı olmayan bir üründe denendiğinde satırın galeriden çıktığı görülür.
-      const galleryCount = i % 13 === 0 ? PRODUCT_GALLERY_MAX : i % 4 === 0 ? 2 : i % 6 === 0 ? 1 : 0;
-      photos += await seedGallery(images, product.id, sharedKeys, galleryCount, i);
-    }
-  }
-  return { made, photos };
-}
 
 export async function seedCatalog(db: Db): Promise<void> {
   const products = new ProductService(db);
@@ -461,10 +313,12 @@ export async function seedCatalog(db: Db): Promise<void> {
     );
   }
 
-  // Hacim: sayfalama ve sonsuz kaydırma ancak birkaç sayfa dolunca denenebilir.
-  const bulk = await seedBulkProducts(products, images, catId, sharedKeys, PRODUCTS.length);
-  console.log(`  ✓ ${bulk.made} toplu ürün (sayfalama/süzgeç denemesi için) · ${bulk.photos} galeri fotoğrafı`);
-  console.log(`✓ katalog: ${CATEGORIES.length} kategori, ${PRODUCTS.length + bulk.made} ürün`);
+  // GERÇEK katalog (kullanıcı kararı 04.08): uydurulmuş 69 ürünün yerine Lezza Foods'un 141 ürünü.
+  // Hacim gerekçesi aynı kalıyor — sayfalama ve sonsuz kaydırma ancak birkaç sayfa dolunca
+  // denenebilir — ama artık gerçek adlar, gerçek görseller ve gerçek boy/kanal dağılımıyla.
+  const lezza = await seedLezzaProducts(categories, products, images, catId, PRODUCTS.length);
+  console.log(`  ✓ ${lezza.made} Lezza ürünü · ${lezza.variants} varyant · ${lezza.photos} galeri fotoğrafı`);
+  console.log(`✓ katalog: ${catId.size} kategori, ${PRODUCTS.length + lezza.made} ürün`);
 }
 
 // ── Koleksiyon + üyelik (05) ─────────────────────────────────────────────────────────────────────

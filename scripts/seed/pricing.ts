@@ -9,6 +9,28 @@ import { euro, gun, tabloDolu, type Db, type Kisiler, type VaryantRef } from './
 // TABAN FARKI (DOMAIN §5): b2c satırı KDV DAHİL (TTC), b2b satırı KDV HARİÇ (HT). Aynı ürünün iki
 // satırı bu yüzden birbirine eşit değildir — b2b sayısının küçük görünmesi hata değil, tabandır.
 
+/**
+ * Liste fiyatı (b2c, KDV dahil) — **ağırlıktan türer** (gerçek katalog, 04.08).
+ *
+ * Eskiden yalnız indise bağlıydı (`6,5 + (i%14)×1,75`) ve uydurma katalogda kimse fark etmiyordu:
+ * orada her varyant 500–1000 g arasındaydı. Gerçek katalogda 40 g'lık el böreği ile 2,5 kg'lık
+ * baklava tepsisi yan yana duruyor — ağırlıksız bir fiyat ikisini aynı banda koyar ve **ekrandaki
+ * her fiyat listesi bariz yanlış görünür**; üstelik marj, kâr ve sepet tutarı da onunla birlikte.
+ *
+ * Kilo başına taban + sabit paketleme payı: küçük boyun kilo fiyatı doğal olarak yüksek çıkar
+ * (gerçek perakendede de öyledir). İndis yalnız ±%12'lik bir SAPMA verir — yoksa aynı gramajdaki
+ * tüm ürünler kuruşu kuruşuna aynı fiyatı gösterir ve liste kopyala-yapıştır görünürdü.
+ *
+ * Boysuz ürün (bütün pastalar) 1 kg sayılır: tepsi ürünüdür, tek dilim değil.
+ */
+function listeFiyati(netWeightG: number | null, i: number): number {
+  const kg = (netWeightG ?? 1000) / 1000;
+  const KILO_TABANI = 14.5; // €/kg, KDV dahil
+  const PAKETLEME = 1.2; // € — boydan bağımsız sabit pay
+  const sapma = 1 + ((i % 7) - 3) * 0.04; // 0,88 … 1,12
+  return euro(Math.max(1.5, (kg * KILO_TABANI + PAKETLEME) * sapma));
+}
+
 export async function seedPrices(db: Db, varyantlar: VaryantRef[], kisiler: Kisiler): Promise<void> {
   if (await tabloDolu(db, 'price')) {
     console.log('▸ fiyatlar zaten dolu — atlandı');
@@ -22,7 +44,7 @@ export async function seedPrices(db: Db, varyantlar: VaryantRef[], kisiler: Kisi
     // Aday ürün satışta değildir; fiyatı da olmasın (fiyatsız aday = gerçekçi boş durum).
     if (v.status === 'candidate') continue;
 
-    const b2cTtc = euro(6.5 + (i % 14) * 1.75);
+    const b2cTtc = listeFiyati(v.netWeightG, i);
     // Toptan: KDV'siz tabana in, üstüne toptan indirimi uygula.
     const b2bHt = euro((b2cTtc / (1 + v.vatRate / 100)) * 0.82);
 
@@ -47,7 +69,9 @@ export async function seedPrices(db: Db, varyantlar: VaryantRef[], kisiler: Kisi
   const satilabilir = varyantlar.filter((v) => v.status !== 'candidate');
   if (ozelMusteri) {
     for (const v of satilabilir.slice(0, 6)) {
-      const liste = euro(6.5 + (satilabilir.indexOf(v) % 14) * 1.75);
+      // Liste fiyatı AYNI fonksiyondan okunur: iki formül olsaydı "özel fiyat listeden iyi" kuralı
+      // bir gün kendiliğinden bozulur ve pazarlıklı müşteri listeden pahalıya alırdı.
+      const liste = listeFiyati(v.netWeightG, varyantlar.indexOf(v));
       await prices.setPrice({
         variantId: v.id,
         channel: 'b2b',
