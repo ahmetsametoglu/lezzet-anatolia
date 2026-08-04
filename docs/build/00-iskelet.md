@@ -50,7 +50,12 @@ Yok — ilk modül.
     listeleri `<a>/<table>` değil, ölçüldü). "Rol yönlendirmesi" BİLİNÇLİ dışarıda: dev bypass tek
     kimlik verir (DEV_ADMIN), gerçek giriş akışı ister → OTP kapısıyla birlikte. **Tam paket
     20/20 yeşil (1,3 dk, sakin pencere)** — pencere kuralı doğrulandı.
-  - Kalan: Kademe 2 Parti 3 (müşteri yazan: yer/posta kodu · checkout taslağı) + Parti 4
+  - **Kademe 2 · Parti 3 İNDİ (04.08):** `e2e/customer/place-checkout.smoke.ts` — kapsam-içi
+    yer seçimi (67000; öneri→onay niyet kapısından, çip kalıcılığı çerezle) + yerli ziyaretçinin
+    sepetle checkout'a ulaşıp KİMLİK SINIRINDA durduğu yolculuk ("Envoyer le code" görünür —
+    ötesi OTP kapısı inince Parti 3b). Bilinçli dar: bölge-DIŞI kod denenmez (küresel sayacı
+    kirletir, §4b); kalıcı satır yazılmaz. Dosya 4/4 yeşil (28 sn, sakin pencere).
+  - Kalan: Parti 3b (OTP kapısı inince: doğrulama+adres+taslak sipariş, damgalı+purge) + Parti 4
     (operasyon yazan: kuyruk→hazırlık · mal kabul) + müşteri OTP kod-yakalama kapısı.
   - **Kademe 1 — `pnpm ui:shot <yol>`:** ÇALIŞAN dev server'daki sayfayı açar (`reuseExistingServer` — build YOK), **desktop + mobile** (cihaz forku gereği ikisi de) ve operasyon yollarında **karanlık mod** görüntüsünü `.ui-shots/`a yazar; sayfanın konsol hatalarını da yanına döker. Amaç test değil, ajanlara GÖZ: ekran yapan şerit anlık çağırır, tasarım/fork denetimi görüntüden okunur. DB şartı yok.
   - **Kademe 2 — ~10 duman yolculuğu** (aynı kurulum, dev server'a karşı): müşteri (vitrin→ürün→sepet→checkout taslağı Stripe sınırına dek · misafir OTP · fr/de/tr rotaları · sipariş onayı) + operasyon (rol yönlendirmesi · kuyruk→hazırlık · mal kabul · para ekranı). **Veri disiplini entegrasyon testleriyle AYNI** (§4b): okuyan test seed'in deterministik satırları, yazan test damgalı veri + `purgeTestData`; **`db:refresh` hiçbir koşuda ön şart DEĞİL.** Koşu test kilidine girer (DB'ye vuruyor). Görüntüler assertion değil ARTEFAKT (piksel-diff yok — UI oynakken kırmızı gürültü üretir).
