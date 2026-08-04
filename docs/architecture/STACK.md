@@ -225,7 +225,7 @@ items/
 Kabuğun zemini `--color-ops-bg`'dir (`#dedbd3` bej; koyu temada `#1b1e18`) ve `PageHeader` kendi
 zeminini ÇİZMEZ — yalnız alt çizgisi vardır. Kök zemin taşımazsa başlık barı ve altındaki paneller
 kabuğun bejini gösterir; ekran "kahverengiye çalıyor" diye görünür. Kural on ekranın sekizinde
-FİİLEN uygulanıyordu ama yazılı değildi, o yüzden iki ekran (Talepler · Ayarlar) onsuz indi.
+FİİLEN uygulanıyordu ama yazılı değildi, o yüzden iki ekran (Talepler · Ayarlar) onsuz yazıldı.
 Denetleniyor (`docs:check` §3g); ölçüt **`PageHeader` render eden `.desktop`/`.mobile` dosyası** —
 cihaz forku komponentlerde de kullanılıyor ve dialog içindeki bir form zeminini `Dialog` panelinden
 alır, ona `bg-ops-card` dayatmak yanlış olurdu.
@@ -263,7 +263,7 @@ yükselir (`lib/` ya da ortak üst klasör).
 `typecheck` bunu tek başına koruyamaz: imza kaymasını yakalar (`ordersLink` bir alan kaybederse
 çağıran derlenmez), **kapsam kaymasını yakalamaz** — kardeş sayfadan `-types` ya da `actions`
 import eden bir satır derleyiciye tamamen geçerli görünür. Denetim iki yüzeyin sayfa köklerini
-tarar; aile içi (`components/`, `tabs/`, `[id]/`) muaf. Kural indiğinde var olan dört ihlal
+tarar; aile içi (`components/`, `tabs/`, `[id]/`) muaf. Kural yürürlüğe girdiğinde var olan dört ihlal
 (müşteri yüzeyi, `login/actions` paylaşımı) **adıyla listelenmiş** bir devralma listesinde durur ve
 o liste kendi kendini temizler: satır düzeldiğinde denetim "muafiyet bayat" diye hata verir —
 böylece liste bir aklama aracına dönüşemez.

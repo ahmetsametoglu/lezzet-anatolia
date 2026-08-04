@@ -1,6 +1,7 @@
 'use server';
 
 import { VariantStockNoticeService, ZoneNoticeService, serviceDb } from '@lezzet/database';
+import type { PreferredLanguage } from '@lezzet/types';
 import { currentCustomerId } from '@/lib/guard';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { isValidPostalCode, normalizePostalCode } from './place-types';
@@ -29,7 +30,17 @@ import { readPlaceAnswer } from './read-place';
  * Aynı kod + e-posta ikinci kez gelirse yeni satır AÇILMAZ (benzersiz indeks): düğmeye tekrar
  * basmak yeni bir bekleyiş değil, aynı bekleyişin tekrarıdır.
  */
-export async function recordZoneNoticeAction(rawPostalCode: string, rawEmail: string): Promise<CustomerResult<true>> {
+export async function recordZoneNoticeAction(
+  rawPostalCode: string,
+  rawEmail: string,
+  /**
+   * Kaydın bırakıldığı sayfanın dili (14.10). **Ziyaretçide bunu kaydetmezsek bir daha
+   * öğrenemeyiz:** kayıt hesapsız olabildiği için haber gönderilirken dili çözecek bir profil
+   * yoktur ve mail tahminle gider — Alman müşteri Fransızca bir haber okur. Verilmezse `null`
+   * yazılır ("bilinmiyor"), varsayılan uydurulmaz.
+   */
+  locale?: PreferredLanguage,
+): Promise<CustomerResult<true>> {
   try {
     const postalCode = normalizePostalCode(rawPostalCode);
     if (!isValidPostalCode(postalCode)) throw new CustomerError('postal_code_invalid');
@@ -44,7 +55,7 @@ export async function recordZoneNoticeAction(rawPostalCode: string, rawEmail: st
     const customerId = await currentCustomerId();
     // Servis üzerinden (denetim A4): tekillik yine veritabanında (`zone_notice_unique_idx`),
     // çakışma hata sayılmıyor — düğmeye ikinci kez basmak yeni bir bekleyiş değil.
-    await new ZoneNoticeService(serviceDb()).record({ postalCode, email, customerId });
+    await new ZoneNoticeService(serviceDb()).record({ postalCode, email, customerId, locale: locale ?? null });
 
     return { data: true, errorKey: null };
   } catch (err) {

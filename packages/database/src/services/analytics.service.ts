@@ -10,6 +10,7 @@ import {
   AnalyticsSessionInsertSchema,
   AnalyticsSessionSchema,
   AnalyticsSourceDailySchema,
+  OrderRevenueDailySchema,
   CustomerSegmentCountSchema,
   CustomerSegmentMemberSchema,
   type AnalyticsCampaignRevenue,
@@ -24,6 +25,7 @@ import {
   type CustomerSegment,
   type CustomerSegmentCount,
   type CustomerSegmentMember,
+  type OrderRevenueDaily,
 } from '@lezzet/types';
 import { z } from 'zod';
 import { BaseDbService } from '../core/base.service';
@@ -311,6 +313,38 @@ export class AnalyticsReportService {
     const { data, error } = await this.supabase.rpc('analytics_campaign_revenue', { p_from: from, p_to: to });
     if (error) throw error;
     return ((data ?? []) as unknown[]).map((row) => AnalyticsCampaignRevenueSchema.parse(dbToApp(row as Record<string, unknown>)));
+  }
+
+  /**
+   * **Dönem cirosu — gün × kanal** (13.2). Tek çağrı üç soruyu birden karşılıyor: dönem toplamı,
+   * B2C/B2B ayrımı ve günlük seri. Üç ayrı okuma yazsaydık üçü de aynı ciro tanımını tekrarlardı.
+   *
+   * **Süzgeç SİPARİŞ tarihinde** — `order_counts`'un teslim günü süzgeci analitiğin sorusunu
+   * karşılamıyor; teslim gününe göre okunan bir dönem cirosu kampanya giderinin dönemiyle
+   * hizalanmaz.
+   */
+  async orderRevenue(from: string, to: string): Promise<OrderRevenueDaily[]> {
+    const { data, error } = await this.supabase.rpc('analytics_order_revenue', { p_from: from, p_to: to });
+    if (error) throw error;
+    return ((data ?? []) as unknown[]).map((row) => OrderRevenueDailySchema.parse(dbToApp(row as Record<string, unknown>)));
+  }
+
+  /**
+   * **Posta kodu başına sipariş/ciro** — talep sayacının karşı ucu (kullanıcı sorusu 04.08).
+   *
+   * Anahtar `address_snapshot`'tır, canlı adres değil: adres sonradan düzeltilebilir ve geçmiş
+   * dönüşüm oranları bugün değişirdi.
+   *
+   * **Kod listesi ZORUNLU** (tümünü dönen bir hâli yok): ekranın göstereceği liste zaten sınırlı,
+   * tüm siparişleri posta koduna toplamak hiç bakılmayacak yüzlerce kova hesaplamak olurdu.
+   * Boş liste verilirse sorgu hiç koşmaz.
+   */
+  async postalCodeOrders(codes: readonly string[]): Promise<Map<string, { orderCount: number; revenueCents: number }>> {
+    if (codes.length === 0) return new Map();
+    const { data, error } = await this.supabase.rpc('analytics_postal_code_orders', { p_codes: codes });
+    if (error) throw error;
+    const rows = (data ?? []) as Array<{ postal_code: string; order_count: number; revenue_cents: number | string }>;
+    return new Map(rows.map((r) => [r.postal_code, { orderCount: r.order_count, revenueCents: Number(r.revenue_cents) }]));
   }
 
   /**

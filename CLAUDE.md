@@ -52,8 +52,23 @@
 
 ## 4. Çalışma disiplini & kullanıcı
 - **Tek seferde tek kritik konu** çöz-geç; uzun liste dökme.
+- **İş birimi TALEP değil ALANDIR** (kullanıcı kararı 03.08, iki kez söylendi). Bir modül hiç
+  başlanmamışken oradan istenen küçük parçayı tek başına yapmak verimsizdir: bağlamı bir kez kurup
+  bir kez bırakmak, aynı bağlamı üç kez kurmaktan ucuzdur — ve yarım teslim edilen parça, teslim
+  edildiği gün kullanılamadığı için değer de üretmez. **Hiç dokunulmamış alan BÜTÜN alınır.**
+- **Talepler çalışmayı BÖLMEZ, aralarına girer.** Sıra: bir iş birimini bitir → bekleyen talepleri
+  topluca gider → sıradaki birime geç. İstisna gerçekten acil olandır (ön ucu durduran arıza,
+  yanlış veri yazan hata) — o hemen yapılır. **Acil olmayan bir talep, girdiği modül sırası gelince
+  o modülle birlikte tamamlanır**; cevabına gerekçesi ve tasarımı yazılır ki o gün mekanik bir
+  ekleme olsun.
+- **Aynı konudaki talepler KÜMELENİR:** biri karşılanıp ötekiler beklemez. Bir kümenin tamamı tek
+  turda ve mümkünse **tek `db:refresh` penceresinde** iner.
 - **Parametrik değer** (eşik/oran/süre) **sorma** — makul varsayılan koy, parametrik yap, bildir. "Sistem + bize ne kazandırır" ekseninde konuş.
 - **Sade ve açık yaz;** teknik terimin yanına düz Türkçe karşılığı.
+- **"İndi / inen / inecek" YASAK** (kullanıcı kararı 04.08). İngilizce *"a change landed"*ın birebir
+  çevirisiydi ve Türkçede karşılığı YOK: "inmek" aşağı inmektir, teslim etmek değil. Doğrusu
+  **tamamlandı · teslim edildi · yazıldı ve çalışıyor · yayında**. *("Eşiğin altına inen parti",
+  "net 0'a indi" gibi gerçek kullanımlar elbette serbest — yasak yalnız "teslim edildi" anlamına.)*
 - **Petit referans:** `~/dev/petitcigogne` kanonik; işe başlamadan karşılığına bak, saptığında (ne/neden) bildir.
 - Her tasarım/modül implementinden sonra **kural-uygunluk kontrolü** yap.
 - **Dev server'ı KULLANICI yönetir** (başlatır/durdurur). Dev çalışırken `next build` **çalıştırma** — aynı `.next`'i bozar (webpack "Cannot find module './vendor-chunks/…'" runtime hataları). Doğrulamayı dev'e dokunmayan `typecheck`/`lint`/`knip`/`boundaries` ile yap; gerçek build şartsa dev'i durdurmasını iste. Bozulursa çare: `rm -rf apps/web/.next` + kullanıcı dev'i yeniden başlatır.

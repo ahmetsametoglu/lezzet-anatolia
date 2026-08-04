@@ -1,5 +1,5 @@
 import 'server-only';
-import { DeliveryZoneService, PostalCodeDemandService, ZoneNoticeService, serviceDb } from '@lezzet/database';
+import { AnalyticsReportService, DeliveryZoneService, PostalCodeDemandService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import { isInRoute } from '@lezzet/domain-core';
 import type { Country } from '@lezzet/types';
 
@@ -33,6 +33,24 @@ export interface ZoneDemandRow {
    * zaten gidiyoruz ama talep yoğun" bilgisini de görmek isteyebilir (talebin kendi isteği).
    */
   covered: boolean;
+  /**
+   * Bu koddan kaç sipariş çıktı (TÜM ZAMAN) — kullanıcının sorusunun karşı ucu (04.08):
+   * *"insanlar bir posta kodu giriyor ve genelde bir şey almadan çıkıyor."*
+   *
+   * Kapsam DIŞI kodlarda bu sayı doğal olarak 0'dır; **listenin asıl anlamı kapsam İÇİ satırlarda**:
+   * gidebildiğimiz hâlde sorulup alınmayan yer bir fiyat, çeşit ya da teslimat günü sorunudur.
+   */
+  orderCount: number;
+  revenueCents: number;
+  /**
+   * Sipariş / talep. **Bir dönüşüm ORANI DEĞİL, bir sıralama sinyalidir** ve karıştırılmamalı:
+   * payda aynı ziyaretçinin tekrar sormasını da sayıyor (tekilleştirmek kimlik tutmayı
+   * gerektirirdi, tutmuyoruz). Yani sayı gerçek dönüşümden her zaman KÜÇÜKTÜR; kodlar arası
+   * karşılaştırma için anlamlıdır, mutlak bir yüzde olarak okunamaz.
+   *
+   * Talep 0 ise `null` — sıfır değil (`CLAUDE §1`).
+   */
+  orderRatio: number | null;
   firstSeenAt: string;
   lastSeenAt: string;
 }
@@ -56,14 +74,24 @@ export async function readZoneDemand(limit = 50): Promise<ZoneDemandRow[]> {
     new ZoneNoticeService(db).pendingCountByPostalCode(),
   ]);
 
-  return demands.map((d) => ({
-    postalCode: d.postalCode,
-    requestCount: d.requestCount,
-    waitingCount: waiting.get(d.postalCode) ?? 0,
-    // Eşleştirme MOTORUN işi (`domain-core/delivery`): kendi karşılaştırmamızı yazsaydık üçüncü bir
-    // kopya olurdu ve kopyalar bir gün ayrışır (aynı gerekçe `b2b-check.ts`'te de yazılı).
-    covered: COUNTRIES.some((country) => isInRoute({ country, postalCode: d.postalCode }, zones)),
-    firstSeenAt: d.firstSeenAt,
-    lastSeenAt: d.lastSeenAt,
-  }));
+  // Sipariş tarafı, YALNIZ listedeki kodlar için — tüm siparişleri posta koduna göre toplamak,
+  // ekranın hiç göstermeyeceği yüzlerce kovayı hesaplamak olurdu. Liste zaten sınırlı (`limit`).
+  const orders = await new AnalyticsReportService(db).postalCodeOrders(demands.map((d) => d.postalCode));
+
+  return demands.map((d) => {
+    const siparis = orders.get(d.postalCode);
+    return {
+      postalCode: d.postalCode,
+      requestCount: d.requestCount,
+      waitingCount: waiting.get(d.postalCode) ?? 0,
+      // Eşleştirme MOTORUN işi (`domain-core/delivery`): kendi karşılaştırmamızı yazsaydık üçüncü bir
+      // kopya olurdu ve kopyalar bir gün ayrışır (aynı gerekçe `b2b-check.ts`'te de yazılı).
+      covered: COUNTRIES.some((country) => isInRoute({ country, postalCode: d.postalCode }, zones)),
+      orderCount: siparis?.orderCount ?? 0,
+      revenueCents: siparis?.revenueCents ?? 0,
+      orderRatio: d.requestCount > 0 ? (siparis?.orderCount ?? 0) / d.requestCount : null,
+      firstSeenAt: d.firstSeenAt,
+      lastSeenAt: d.lastSeenAt,
+    };
+  });
 }

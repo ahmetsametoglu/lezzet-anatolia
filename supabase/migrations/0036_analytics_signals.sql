@@ -375,6 +375,66 @@ $$;
 comment on function public.analytics_search_signals(date, date, integer, boolean) is
   'Dönemin arama sinyalleri (13.4) — sıfır-sonuç süzgeci kovayı korur.';
 
+-- ═══ "HANGİ SİPARİŞ CİRO SAYILIR" — TEK TANIM ════════════════════════════════
+-- Aşağıdaki üç okuma da (kampanya cirosu · dönem cirosu · segment) aynı soruyu soruyor ve cevabı
+-- ÜÇ KEZ yazılsaydı bir gün ayrışırlardı: biri iadeyi düşer öteki düşmez, aynı ekranda iki farklı
+-- ciro görünür ve **hiçbiri hata vermez**. Tanım burada, tek yerde.
+--
+-- Taslak SAYILMAZ (hiç sipariş olmadı), iptal SAYILMAZ (ciro değil), iade SAYILMAZ (parası geri
+-- gitmiş bir satış ne kampanyanın getirisi ne dönemin cirosudur).
+create or replace view public.analytics_order_base as
+  select o.id, o.customer_id, o.channel, o.total, o.created_at, o.address_snapshot
+    from public.order o
+   where o.status not in ('draft', 'cancelled', 'returned');
+
+comment on view public.analytics_order_base is
+  'Analitik ciro tanımı (13.2 · 13.5) — hangi siparişin ciro sayıldığı TEK yerde; üç okuma da bunu kullanır.';
+
+/**
+ * **DÖNEM CİROSU — gün × kanal** (13.2 · operasyon şeridinin isteği 04.08).
+ *
+ * ── NEDEN AYRI BİR OKUMA, `order_counts` YETMİYOR ───────────────────────────
+ * Var olan sayaç tarih süzgecini **TESLİM gününe** uyguluyor (`deliveryFrom/To`); analitiğin sorusu
+ * ise **sipariş tarihidir**. İkisi aynı değil: bugün verilen bir sipariş üç gün sonra teslim edilir,
+ * yani teslim gününe göre okunan bir "dönem cirosu" kampanya giderinin dönemiyle hiç hizalanmaz.
+ * Operasyon şeridi bu yüzden "yaklaşık doğru" bir ciro yazmayı reddetti — doğru yaptı.
+ *
+ * ── NEDEN GÜN × KANAL, DÜZ TOPLAM DEĞİL ─────────────────────────────────────
+ * Tek çağrı üç soruyu birden karşılıyor: dönem toplamı (satırların toplamı), B2C/B2B ayrımı
+ * (hero şeridi) ve günlük seri (zaman grafiği + önceki dönemin hayalet çizgisi). Üç ayrı RPC
+ * yazsaydık üçü de aynı tanımı tekrarlardı.
+ *
+ * **Karışık ölçüm yalan söyler** (`ANALYTICS §3`): B2B'nin tek siparişi B2C'nin ortalamasını
+ * savurur, o yüzden kanal ayrı satır — toplamak okuyanın kararı.
+ *
+ * Satır sayısı doğal tavanlı (gün × 2), yani sayfalama gerekmez.
+ */
+create or replace function public.analytics_order_revenue(p_from date, p_to date)
+returns table (
+  day date,
+  channel channel,
+  order_count integer,
+  revenue_cents bigint
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select o.created_at::date as day,
+         o.channel,
+         count(*)::int as order_count,
+         -- Euro → cent TAMSAYIDA (`STACK §8`): kayan noktada toplamak her satırda kuruş artığı bırakır.
+         round(sum(o.total) * 100)::bigint as revenue_cents
+    from public.analytics_order_base o
+   where o.created_at >= p_from and o.created_at < p_to + 1
+   group by 1, 2
+   order by 1;
+$$;
+
+comment on function public.analytics_order_revenue(date, date) is
+  'Dönem cirosu gün × kanal (13.2) — süzgeç SİPARİŞ tarihinde, teslim gününde değil.';
+
 -- ═══ KAMPANYA CİROSU — İLK TEMAS ATFI (13.2) ═════════════════════════════════
 /**
  * Dönemin siparişlerini müşterinin EDİNİM KAYNAĞINA göre toplar.
@@ -408,13 +468,9 @@ stable
 security definer
 set search_path = public
 as $$
-  with sip as (
-    -- Taslak ve iptal SAYILMAZ: taslak hiç sipariş olmadı, iptal edilen ciro değil. İade edilen
-    -- sipariş (`returned`) de düşer — parası geri gitmiş bir satış kampanyanın getirisi değildir.
-    select o.id, o.customer_id, o.total, o.created_at
-      from public.order o
-     where o.status not in ('draft', 'cancelled', 'returned')
-  ),
+  -- Ciro tanımı `analytics_order_base`'ten gelir — üç okuma da aynı yerden, yoksa aynı ekranda
+  -- iki farklı ciro belirir ve hiçbiri hata vermez.
+  with sip as (select * from public.analytics_order_base),
   ilk as (
     select s.customer_id, min(s.created_at) as ilk_at from sip s group by 1
   )
@@ -436,6 +492,47 @@ $$;
 
 comment on function public.analytics_campaign_revenue(date, date) is
   'Kampanya cirosu — İLK TEMAS atfı (13.2): tekrar siparişler de müşteriyi kazandıran kaynağa yazılır.';
+
+/**
+ * **POSTA KODU BAŞINA SİPARİŞ** — "çok soruluyor, az alınıyor" listesinin karşı ucu.
+ *
+ * ── KULLANICI SORUSU (04.08) ────────────────────────────────────────────────
+ * *"İnsanlar bir posta kodu giriyor ve genelde bir şey almadan çıkıyor — sıralamada en üstteki
+ * kodu bilebilecek miyim?"* Talep tarafı zaten sayılıyordu (`postal_code_demand`, **bölge içi
+ * kodlar dâhil** — 0023'ün kendi künyesi öyle diyor). Eksik olan sipariş tarafıydı.
+ *
+ * ── YENİ TABLO AÇILMADI ve bu kullanıcının şartıydı ─────────────────────────
+ * Sayaç var, sipariş var; ortada olmayan tek şey ikisini yan yana koyan okumaydı. Ayrı bir
+ * "çözülme" defteri açmak aynı olguyu üçüncü kez kaydetmek olurdu (`postal_code_demand` anonim
+ * sayaç ↔ `zone_notice` kimlikli kişi zaten var).
+ *
+ * ── ANAHTAR `address_snapshot`, `address` TABLOSU DEĞİL ─────────────────────
+ * Adres sonradan düzeltilebilir ya da silinebilir; siparişin nereye gittiği siparişte durur
+ * (kolonun kendi gerekçesi). Canlı adresten okusaydık geçmiş dönüşüm oranları bugün değişirdi.
+ *
+ * ⚠ **DÖNEM SÜZGECİ YOK ve bu bilinçli bir eksiklik:** `postal_code_demand` zaman kırılımı
+ * taşımıyor (kod başına tek satır, tek sayı). Siparişi döneme süzüp talebi tüm zamandan alsaydık
+ * oran pencere daraldıkça sessizce düşerdi — ve düşüşü bir sinyal sanılırdı. İkisi de TÜM ZAMAN.
+ * Zaman kırılımı gerçekten gerekirse sayaç gün boyutu kazanmalı; o ayrı bir karardır.
+ */
+create or replace function public.analytics_postal_code_orders(p_codes text[])
+returns table (postal_code text, order_count integer, revenue_cents bigint)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select upper(regexp_replace(o.address_snapshot->>'postal_code', '\s', '', 'g')) as postal_code,
+         count(*)::int,
+         round(sum(o.total) * 100)::bigint
+    from public.analytics_order_base o
+   where o.address_snapshot->>'postal_code' is not null
+     and upper(regexp_replace(o.address_snapshot->>'postal_code', '\s', '', 'g')) = any (p_codes)
+   group by 1;
+$$;
+
+comment on function public.analytics_postal_code_orders(text[]) is
+  'Posta kodu başına sipariş/ciro (13.4) — talep sayacının karşı ucu; kod normalleştirmesi 0023 ile aynı.';
 
 -- ═══ MÜŞTERİ SEGMENTLERİ (13.5) ══════════════════════════════════════════════
 /**
@@ -467,11 +564,9 @@ stable
 security definer
 set search_path = public
 as $$
-  with sip as (
-    select o.customer_id, o.total, o.created_at
-      from public.order o
-     where o.status not in ('draft', 'cancelled', 'returned')
-  ),
+  -- Segment de aynı ciro tanımından okur (`analytics_order_base`): "iyi müşteri" yargısı ile
+  -- "dönem cirosu" farklı sipariş kümelerinden çıksaydı ekran kendiyle çelişirdi.
+  with sip as (select * from public.analytics_order_base),
   musteri as (
     select s.customer_id,
            count(*)::int as siparis,
@@ -526,11 +621,9 @@ stable
 security definer
 set search_path = public
 as $$
-  with sip as (
-    select o.customer_id, o.total, o.created_at
-      from public.order o
-     where o.status not in ('draft', 'cancelled', 'returned')
-  ),
+  -- Segment de aynı ciro tanımından okur (`analytics_order_base`): "iyi müşteri" yargısı ile
+  -- "dönem cirosu" farklı sipariş kümelerinden çıksaydı ekran kendiyle çelişirdi.
+  with sip as (select * from public.analytics_order_base),
   musteri as (
     select s.customer_id,
            count(*)::int as siparis,

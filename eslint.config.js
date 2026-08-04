@@ -3,7 +3,20 @@ import { baseConfig } from '@lezzet/eslint-config/base';
 /** Kök ESLint (flat config). Paket-özel kurallar ilgili modülde eklenir. */
 export default [
   {
-    ignores: ['**/node_modules/**', '**/.next/**', '**/dist/**', '**/.turbo/**', '**/*.cjs', '**/next-env.d.ts', 'design/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/.next/**',
+      '**/dist/**',
+      '**/.turbo/**',
+      '**/*.cjs',
+      '**/next-env.d.ts',
+      'design/**',
+      // Test çıktıları ve Playwright rapor artefaktları (04.08). Klasör `.gitignore`'daydı ama
+      // eslint'te değildi: bir e2e koşusundan sonra rapordaki paketlenmiş JS lint'e giriyor ve
+      // `pnpm lint` ÜÇ ŞERİT İÇİN BİRDEN kırmızıya dönüyordu — üstelik kaynak kodda hiçbir hata
+      // yokken. Üretilmiş dosya denetlenmez.
+      '.test-results/**',
+    ],
   },
   ...baseConfig,
   {

@@ -15,7 +15,6 @@ import {
   StoredAnalyticsInsightSchema,
   resolveLocalizedText,
   type AnalyticsSearchSignal,
-  type AnalyticsZeroResultKind,
   type CustomerSegment,
   type StoredAnalyticsInsight,
 } from '@lezzet/types';
@@ -83,11 +82,6 @@ export async function readProductInterest(from: string, to: string, limit = 20):
  */
 export function readZeroResultSearches(from: string, to: string, limit = 20): Promise<AnalyticsSearchSignal[]> {
   return new AnalyticsSearchDailyService(serviceDb()).signals(from, to, limit, true);
-}
-
-/** Sıfır olmayan aramalar da lazım olduğunda aynı kapı — ekranın "en çok aranan" listesi. */
-export function readTopSearches(from: string, to: string, limit = 20): Promise<AnalyticsSearchSignal[]> {
-  return new AnalyticsSearchDailyService(serviceDb()).signals(from, to, limit, false);
 }
 
 /** Trafik kaynağı satırı — `source: null` DOĞRUDAN trafiktir. */
@@ -189,6 +183,55 @@ export async function readCampaignRoi(from: string, to: string): Promise<Campaig
     .sort((a, b) => b.spendCents - a.spendCents || b.revenueCents - a.revenueCents);
 }
 
+/**
+ * Dönem cirosu — hero şeridi ve Ticaret modunun zaman serisi (13.2).
+ *
+ * Dışa AÇILMADI: tipi adıyla anan bir çağıran yok, dönüş tipi zaten çıkarsanıyor. Adı gerekince
+ * (ör. ekran bir yardımcıya geçirmek isterse) `export` tek kelime.
+ */
+interface RevenueView {
+  totalCents: number;
+  orderCount: number;
+  /** Kanal ayrımı — karışık ölçüm yalan söyler (`ANALYTICS §3`). */
+  split: { b2cCents: number; b2bCents: number };
+  /** Günlük seri; ciro olmayan gün listede YOKTUR (sıfır satırı üretilmez, gün gerçekten boştur). */
+  daily: Array<{ day: string; revenueCents: number; orderCount: number }>;
+}
+
+/**
+ * **Dönem cirosu** (13.2) — ekranın Ticaret modunun kaynağı.
+ *
+ * **Yetki `order` tablosundadır, defter değil** (`ANALYTICS §4`): defterdeki `order_placed` "bu
+ * oturum siparişle bitti" der ve tabloya göre AZ olması tasarımdır. Ciroyu defterden okumak, ödeme
+ * dalına ve oturuma bağlı bir sayıyı para sayısı gibi göstermek olurdu.
+ *
+ * **Süzgeç SİPARİŞ tarihinde**, teslim gününde değil — teslim gününe göre okunan bir dönem cirosu
+ * kampanya giderinin dönemiyle hizalanmaz ve ROI tablosunun iki sütunu farklı dönemleri anlatırdı.
+ */
+export async function readOrderRevenue(from: string, to: string): Promise<RevenueView> {
+  const rows = await new AnalyticsReportService(serviceDb()).orderRevenue(from, to);
+
+  const gunler = new Map<string, { revenueCents: number; orderCount: number }>();
+  let b2cCents = 0;
+  let b2bCents = 0;
+
+  for (const r of rows) {
+    const gun = gunler.get(r.day) ?? { revenueCents: 0, orderCount: 0 };
+    gun.revenueCents += r.revenueCents;
+    gun.orderCount += r.orderCount;
+    gunler.set(r.day, gun);
+    if (r.channel === 'b2b') b2bCents += r.revenueCents;
+    else b2cCents += r.revenueCents;
+  }
+
+  return {
+    totalCents: b2cCents + b2bCents,
+    orderCount: rows.reduce((acc, r) => acc + r.orderCount, 0),
+    split: { b2cCents, b2bCents },
+    daily: [...gunler.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([day, v]) => ({ day, ...v })),
+  };
+}
+
 /** Segment satırı — analitik "kaç" der, Müşteriler "kim" der (`ANALYTICS §6`). */
 export interface CustomerSegmentRow {
   segment: CustomerSegment;
@@ -226,15 +269,15 @@ export async function readCustomerSegments(options: SegmentOptions = {}): Promis
 }
 
 /**
- * Bir segmentin üyeleri (13.5) — dışa almanın ve Müşteriler köprüsünün kaynağı.
+ * **Segment ÜYELERİ için burada bir kapı YOK** ve sebebi kayda geçsin: dışa alma ile Müşteriler
+ * köprüsü henüz çizilmedi, yani buraya yazılacak sarmalayıcının bugün çağıranı olmazdı — bu
+ * oturumda defalarca adını koyduğum arıza sınıfının ta kendisi ("motor yazılmış, çağrılmamış").
  *
- * Sayfalı: müşteri kümesi veriyle sınırsız büyür (`CLAUDE §1`). İmleç yerine `offset` çünkü sıra
- * ölçütü (son sipariş) TÜRETİLMİŞ bir alandır ve keyset imleci ancak sabit bir sıralama anahtarıyla
- * kurulabilir — burada onu kurmak segmentin kendisini tabloya yazmayı gerektirirdi.
+ * Servis tarafı hazır ve tek satır uzakta:
+ * `new AnalyticsReportService(serviceDb()).segmentMembers(segment, limit, offset, options)`.
+ * Ekran o listeyi okumaya başladığı gün kapı buraya, sayacın yanına iner — köprünün iki ucu aynı
+ * dosyadan okunsun diye.
  */
-export function readSegmentMembers(segment: CustomerSegment, limit = 50, offset = 0, options: SegmentOptions = {}) {
-  return new AnalyticsReportService(serviceDb()).segmentMembers(segment, limit, offset, options);
-}
 
 /**
  * Haftalık AI anlatısı (13.7) — **üretilmiş olanı okur, üretmez.**
@@ -256,9 +299,6 @@ export async function readWeeklyInsight(): Promise<StoredAnalyticsInsight | null
   return parsed.success ? parsed.data : null;
 }
 
-/** Arama kovasının okunabilir hâli — ekran ikisini ayrı anlatmak zorunda. */
-export function zeroResultKindLabel(kind: AnalyticsZeroResultKind | null): string {
-  if (kind === 'filter') return 'Süzgeç boş küme verdi';
-  if (kind === 'search') return 'Aradı, bizde yok';
-  return 'Sonuç döndü';
-}
+// Sıfır-sonuç kovasının OKUNABİLİR HÂLİ burada değil, operasyon ekranının sözlüğündedir
+// (`analytics-labels.ts`): Türkçe arayüz metni ekranın malıdır, veri kapısının değil. İki yerde
+// tutulsaydı biri gün gelip "süzgeç boş" derken öteki "filtre sonuçsuz" derdi.

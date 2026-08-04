@@ -26,3 +26,9 @@ export {
 
 // Alım-sonrası değerlendirme daveti (17.2) — aynı iskelet, tek eylem.
 export { FeedbackInviteEmail, feedbackInviteSubject, type FeedbackInviteEmailProps } from './templates/feedback-invite';
+export { ZoneAvailableEmail, zoneAvailableSubject, type ZoneAvailableEmailProps } from './templates/zone-available';
+export {
+  B2bApplicationResultEmail,
+  b2bApplicationResultSubject,
+  type B2bApplicationResultEmailProps,
+} from './templates/b2b-application-result';

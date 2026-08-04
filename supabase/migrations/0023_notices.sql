@@ -70,6 +70,11 @@ create table public.zone_notice (
   email text not null,
   -- Girişli müşteride kim olduğu; ziyaretçide null. Hesap sayfası kendi kayıtlarını bununla bulur.
   customer_id uuid references public.user_profiles (id) on delete set null,
+  -- Kaydı bıraktığı SAYFANIN dili (14.10). Ziyaretçi kaydı hesapsızdır, yani haber gönderilirken
+  -- dili çözecek bir profil çoğu zaman YOKTUR — kaydetmezsek tahmin etmek zorunda kalırdık ve
+  -- Alman müşteriye Fransızca mail giderdi. `null` = bilinmiyor (eski kayıtlar); okuyan taraf
+  -- önce profile, sonra varsayılana düşer.
+  locale preferred_language,
   created_at timestamptz not null default now(),
   -- Haber gönderildiğinde damgalanır. **Tek hatırlatma** sözü (tasarım) bu alanla tutulur: dolu
   -- olan satıra ikinci kez yazılmaz.

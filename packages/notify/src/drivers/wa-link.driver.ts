@@ -96,6 +96,33 @@ const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => string } =
       fr: `Comment étaient les produits de votre commande ${d.orderReferenceNo} ? Cela prend quelques secondes : ${d.feedbackUrl}`,
       de: `Wie waren die Produkte Ihrer Bestellung ${d.orderReferenceNo}? Es dauert nur Sekunden: ${d.feedbackUrl}`,
     }),
+  // Bölge haberi tek cümle: kod + "artık geliyoruz" + bağlantı. Katalogda ne olduğu, hangi gün
+  // gidildiği, kaydın kapandığı — hepsi mailin işi; WhatsApp'ın işi haberi vermek.
+  zone_available: (d) =>
+    say(d.locale, {
+      tr: `${d.postalCode} artık teslimat bölgemizde. Katalog: ${d.catalogUrl}`,
+      fr: `Nous livrons désormais le ${d.postalCode}. Catalogue : ${d.catalogUrl}`,
+      de: `Wir liefern jetzt nach ${d.postalCode}. Katalog: ${d.catalogUrl}`,
+    }),
+  /**
+   * Başvuru sonucu.
+   *
+   * **RET GEREKÇESİ WhatsApp'a YAZILMIYOR ve bu bilinçli:** gerekçe operatörün serbest metnidir,
+   * uzunluğu belirsizdir ve bağlantı öncesinde kesilirse müşteri yarım bir cümle okur. Mesaj
+   * "bir eksik var" der ve hesaba yönlendirir; gerekçenin tam hâli mailde ve ekranda durur.
+   */
+  b2b_application_result: (d) =>
+    d.approved
+      ? say(d.locale, {
+          tr: `Toptan hesabınız açıldı. Toptan fiyatlar: ${d.actionUrl}`,
+          fr: `Votre compte professionnel est ouvert. Tarifs pros : ${d.actionUrl}`,
+          de: `Ihr Geschäftskonto ist freigeschaltet. Großhandelspreise: ${d.actionUrl}`,
+        })
+      : say(d.locale, {
+          tr: `Toptan başvurunuzda bir eksik var; ayrıntı hesabınızda: ${d.actionUrl}`,
+          fr: `Il manque un élément à votre demande professionnelle ; détails dans votre compte : ${d.actionUrl}`,
+          de: `In Ihrem Geschäftskundenantrag fehlt etwas; Details in Ihrem Konto: ${d.actionUrl}`,
+        }),
 };
 
 /** Telefonu wa.me biçimine indirger: yalnız rakamlar (uluslararası ön ek dâhil). */

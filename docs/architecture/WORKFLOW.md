@@ -24,7 +24,7 @@ Rapor dürüstlüğü: test düştüyse çıktısıyla birlikte söyle; adım at
 
 > **Şu an istisna — greenfield.** Proje canlıya çıkmadı: üretim ortamı, gerçek müşteri, gerçek sipariş yok. Bu süre boyunca **mevcut migration dosyaları doğrudan düzenlenir** — alan eklemek/yeniden adlandırmak/kaldırmak için üstüne yama migration'ı yazılmaz. Şema temiz ve okunur kalsın; `pnpm db:reset` ile sıfırdan kurulur. Aşağıdaki "donar" kuralı **ilk üretim dağıtımından itibaren** yürürlüğe girer; o gün bu not silinir. Geriye uyum kaygısı (eski kayıt/eski kolon) bugün için yoktur.
 
-Bir migration canlıya indiği an **donar**. Sonraki her değişiklik yeni numaralı dosyadır.
+Bir migration canlıya çıktığı an **donar**. Sonraki her değişiklik yeni numaralı dosyadır.
 
 - ✅ Yeni dosya: `028_add_item_status.sql` → `alter table ... add column`, `create or replace function`
 - ❌ Uygulanmış `019_*.sql` dosyasını açıp düzenlemek

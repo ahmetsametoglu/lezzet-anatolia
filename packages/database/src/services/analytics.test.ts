@@ -61,6 +61,25 @@ describe('olay defteri — YAZMA-YALNIZ', () => {
     ).resolves.toBeUndefined();
   });
 
+  it('AYNI oturumda aynı tip İKİ KEZ yazılabilir — tekilleştirme YOK ve bu bir karar', async () => {
+    // Sepeti bölünen müşteri iki sipariş verir, kartı reddedilen tekrar dener: ikisi de gerçek
+    // birer NİYETTİR (kullanıcı kararı 04.08). Bir tur "oturum başına bir kez" kuralı yazılmıştı;
+    // olay dönüş SAYFASINDAN atılacak sanılıyordu. Artık sunucu eyleminden atılıyor, yani
+    // yenileme sorunu yok — kural kalsaydı ikinci niyeti sessizce yutardı.
+    const taze = `test-${stamp}-niyet`;
+    await events.record({ type: 'order_placed', sessionKey: taze });
+    await events.record({ type: 'order_placed', sessionKey: taze });
+
+    const { count } = await db
+      .from('analytics_event')
+      .select('type', { count: 'exact', head: true })
+      .eq('session_key', taze)
+      .eq('type', 'order_placed');
+    expect(count).toBe(2);
+
+    await purgeTestData(db, { analyticsSessionKeys: [taze] });
+  });
+
   it('KİMLİK kolonu yok — tipte de yok, şemada da yok', async () => {
     // Derleme zaten engelliyor; burada sınanan şey satırın yazılabilmesi, yani şemanın kolonu
     // gerçekten istemediği. `customer_id` zorunlu olsaydı bu yazım düşerdi.
@@ -222,6 +241,32 @@ describe('rapor okumaları', () => {
       // Yeni müşteri sayısı, o kaynaktan sipariş veren müşteri sayısını AŞAMAZ.
       expect(r.newCustomerCount).toBeLessThanOrEqual(r.customerCount);
     }
+  });
+
+  it('İKİ CİRO AYNI TANIMDAN ÇIKAR — dönem cirosu ile kampanya cirosunun toplamı eşit', async () => {
+    // Bu testin koruduğu şey bir sayı değil, `analytics_order_base` görünümünün VAR OLMA sebebi:
+    // "hangi sipariş ciro sayılır" üç yerde ayrı yazılsaydı biri iadeyi düşer öteki düşmezdi ve
+    // aynı ekranda iki farklı ciro belirirdi — hiçbiri hata vermeden.
+    const donem = await reports.orderRevenue('2020-01-01', bugun);
+    const kampanya = await reports.campaignRevenue('2020-01-01', bugun);
+
+    const topla = (rows: Array<{ revenueCents: number; orderCount: number }>) => ({
+      ciro: rows.reduce((a, r) => a + r.revenueCents, 0),
+      siparis: rows.reduce((a, r) => a + r.orderCount, 0),
+    });
+
+    expect(topla(donem)).toEqual(topla(kampanya));
+  });
+
+  it('dönem cirosu KANALA göre ayrışır — karışık ölçüm yalan söyler', async () => {
+    const rows = await reports.orderRevenue('2020-01-01', bugun);
+    for (const r of rows) {
+      expect(['b2c', 'b2b']).toContain(r.channel);
+      expect(r.orderCount).toBeGreaterThan(0);
+    }
+    // Aynı gün iki kanal varsa AYRI satırdır (aynı satırda toplanmaz).
+    const anahtarlar = rows.map((r) => `${r.day}|${r.channel}`);
+    expect(new Set(anahtarlar).size).toBe(anahtarlar.length);
   });
 
   it('segmentler TÜRETİLİR ve küme kapalı — saklanan bir kolon yok', async () => {

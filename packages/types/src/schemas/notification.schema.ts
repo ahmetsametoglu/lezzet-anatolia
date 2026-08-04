@@ -199,3 +199,56 @@ export const FeedbackInviteNotificationSchema = z.object({
   notificationPreferencesUrl: z.string(),
 });
 export type FeedbackInviteNotification = z.infer<typeof FeedbackInviteNotificationSchema>;
+
+/**
+ * **BEKLENEN BÖLGE AÇILDI** (14.10 · 19.21).
+ *
+ * Müşteri bir posta kodu için "gelince haber verin" demişti (`zone_notice`) — kayıt bir SÖZ
+ * değildi, bir nottu; bu mail o notun karşılığıdır.
+ *
+ * **Kimlik taşımıyor ve taşımamalı:** `zone_notice` ziyaretçiden de kayıt alıyor (`customerId`
+ * null olabilir), yani elimizde çoğu zaman yalnız e-posta ve posta kodu var. Şablon bir sipariş
+ * künyesi ya da hesap bilgisi isteseydi kayıtların yarısı gönderilemezdi.
+ *
+ * **`customerName` null olabilir ve normali budur** — ziyaretçi adını hiç vermedi.
+ */
+export const ZoneAvailableNotificationSchema = z.object({
+  customerName: z.string().nullable(),
+  locale: PreferredLanguageEnum,
+  /** Hangi kod açıldı — müşterinin kaydettiği kodun aynısı. */
+  postalCode: z.string(),
+  /** Alışverişe başlanacak yer; tek eylem, tek buton. */
+  catalogUrl: z.string(),
+  notificationPreferencesUrl: z.string(),
+});
+export type ZoneAvailableNotification = z.infer<typeof ZoneAvailableNotificationSchema>;
+
+/**
+ * **B2B BAŞVURU SONUCU** (14.10) — onay ya da ret.
+ *
+ * **Boşluğun tarifi:** gerekçe veride ZORUNLU, 20.2 onu üç dile çeviriyor ve bugüne dek hiçbir
+ * okuyucuya ulaşmıyordu; künye "müşteriye e-postayla gidiyor" diyordu ama öyle bir şablon hiç
+ * yazılmamıştı (müşteri şeridinin ölçümü, 04.08).
+ *
+ * **Tek olay, iki sonuç** — ayrı olaylar değil: alıcı aynı, kanal aynı, tetikleyen aynı karar.
+ * İki olay olsaydı sürücü listesine iki satır, şablon klasörüne iki dosya girer ve ikisi bir gün
+ * ayrışırdı. Ayrım `approved` bayrağında.
+ */
+export const B2bApplicationResultNotificationSchema = z.object({
+  customerName: z.string().nullable(),
+  locale: PreferredLanguageEnum,
+  companyName: z.string().nullable(),
+  approved: z.boolean(),
+  /**
+   * Ret gerekçesi — **müşterinin dilinde çözülmüş hâli** (20.2 `resolveUserText`). Onayda `null`.
+   *
+   * Operatör gerekçeyi Türkçe yazıyor; çeviri işi onu müşterinin diline çeviriyor. Ham metni
+   * geçirseydik Fransız müşteri Türkçe bir cümle okurdu — gerekçenin zorunlu olmasının sebebi de
+   * tam olarak okunabilmesiydi.
+   */
+  reason: z.string().nullable(),
+  /** Onayda toptan vitrine, rette hesaba — çağıran çözer, şablon yalnız çizer. */
+  actionUrl: z.string(),
+  notificationPreferencesUrl: z.string(),
+});
+export type B2bApplicationResultNotification = z.infer<typeof B2bApplicationResultNotificationSchema>;

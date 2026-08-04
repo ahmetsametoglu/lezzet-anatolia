@@ -1,4 +1,11 @@
-import type { FeedbackInviteNotification, OrderNotification, PreferredLanguage, TicketNotification } from '@lezzet/types';
+import type {
+  B2bApplicationResultNotification,
+  FeedbackInviteNotification,
+  OrderNotification,
+  PreferredLanguage,
+  TicketNotification,
+  ZoneAvailableNotification,
+} from '@lezzet/types';
 
 /**
  * Bildirim sözleşmesi (14.4). **İş kodu kanal bilmez**: "müşteriye haber ver" der, hangi kanaldan
@@ -37,6 +44,21 @@ export interface NotifyPayloads {
    * bakması. Zamanlı işin kendi gönderim yolunu açması, bir gün iki farklı kanal sırası demekti.
    */
   feedback_invite: FeedbackInviteNotification;
+  /**
+   * **Müşterinin BEKLEDİĞİ bir şey oldu ve ona söylenmesi gerekiyor** (14.10) — iki olay, aynı
+   * boşluk sınıfı.
+   *
+   * `zone_available` bu ailenin ÜÇÜNCÜ zamanlı olayıdır (`feedback_invite` gibi bir işten doğar),
+   * ama farkı şu: onu bir saat değil bir **DURUM** doğuruyor — kod kapsanmış hâle geldi. Tetik
+   * bölgenin kaydedilmesine bağlanmadı; bir kod bölgeye migration'la, elle SQL'le ya da bugün
+   * olmayan ikinci bir ekrandan da girebilir ve o yolların hiçbiri tetiği çalıştırmazdı. Kaçan
+   * gönderim hata vermez, yalnız müşteri hiç haber almaz.
+   *
+   * `b2b_application_result` ise bir KARARDAN doğar. Gerekçe veride zorunlu ve üç dile çevriliyordu
+   * ama hiçbir okuyucuya ulaşmıyordu — künye "e-postayla gidiyor" diyordu, şablon hiç yazılmamıştı.
+   */
+  zone_available: ZoneAvailableNotification;
+  b2b_application_result: B2bApplicationResultNotification;
 }
 export type NotifyEventName = keyof NotifyPayloads;
 

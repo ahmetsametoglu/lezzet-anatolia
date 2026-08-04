@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PreferredLanguageEnum } from './enums.schema';
 
 /**
  * Bölge haberi (`zone_notice`, 0030) — *"bölgenize henüz gelmiyoruz, açılınca haber verelim."*
@@ -21,6 +22,12 @@ export const ZoneNoticeSchema = z.object({
   email: z.string(),
   /** Girişli müşteride kim olduğu; ziyaretçide null. */
   customerId: z.string().uuid().nullable(),
+  /**
+   * Kaydı bıraktığı sayfanın dili. **`null` = bilinmiyor**, "Fransızca" değil: ziyaretçi kaydı
+   * hesapsız olduğu için haber gönderilirken dili çözecek bir profil çoğu zaman yoktur ve
+   * kaydetmeseydik tahmin etmek zorunda kalırdık (`CLAUDE §1`: ölçülemeyen değer varsayılan değildir).
+   */
+  locale: PreferredLanguageEnum.nullable(),
   createdAt: z.string(),
   /** Haber gönderildiğinde damgalanır — **tek hatırlatma** sözü bununla tutulur. */
   notifiedAt: z.string().nullable(),
@@ -29,6 +36,7 @@ export type ZoneNotice = z.infer<typeof ZoneNoticeSchema>;
 
 export const ZoneNoticeInsertSchema = ZoneNoticeSchema.omit({ id: true, createdAt: true }).partial({
   customerId: true,
+  locale: true,
   notifiedAt: true,
 });
 export type ZoneNoticeInsert = z.infer<typeof ZoneNoticeInsertSchema>;

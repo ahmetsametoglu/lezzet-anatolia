@@ -69,6 +69,15 @@ export const AnalyticsBlockedReasonEnum = z.enum([
   'out_of_stock',
   'payment_failed',
   'not_shippable',
+  /**
+   * Seçilen güne teslimat yok. **Bizim arızamız olan hâller BU LİSTEDE YOK ve bu bir karar**
+   * (müşteri şeridinin ayrımı, 04.08): `cart_unreachable` sepet okumasının düşmesidir,
+   * `warehouse_unresolved` bölgenin çözülememesidir — huniye yazılsalardı müşteri VAZGEÇMİŞ
+   * görünürdü, oysa biz cevap verememişiz; yerleri `error_log`. `address_missing` de yok, çünkü
+   * o checkout'un normal ilk hâli: engel sayılsaydı her oturum bir `checkout_blocked` üretir ve
+   * olay değerini kaybederdi.
+   */
+  'date_unavailable',
 ]);
 export type AnalyticsBlockedReason = z.infer<typeof AnalyticsBlockedReasonEnum>;
 
@@ -327,6 +336,23 @@ export const AnalyticsSearchSignalSchema = z.object({
   sessionCount: z.number().int(),
 });
 export type AnalyticsSearchSignal = z.infer<typeof AnalyticsSearchSignalSchema>;
+
+/**
+ * **DÖNEM CİROSU — gün × kanal** (13.2).
+ *
+ * Süzgeç **SİPARİŞ tarihindedir**, teslim gününde değil: bugün verilen sipariş üç gün sonra teslim
+ * edilir, yani teslim gününe göre okunan bir dönem cirosu kampanya giderinin dönemiyle hizalanmaz.
+ *
+ * Kanal ayrı satır çünkü **karışık ölçüm yalan söyler** (`ANALYTICS §3`): B2B'nin tek siparişi
+ * B2C'nin ortalamasını savurur. Toplamak okuyanın kararı.
+ */
+export const OrderRevenueDailySchema = z.object({
+  day: z.string(),
+  channel: ChannelEnum,
+  orderCount: z.number().int(),
+  revenueCents: z.coerce.number().int(),
+});
+export type OrderRevenueDaily = z.infer<typeof OrderRevenueDailySchema>;
 
 /**
  * Kampanya cirosu — **İLK TEMAS atfı** (13.2). Satır "o kampanyanın reklamına tıklayıp sipariş

@@ -17,6 +17,7 @@ import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readOrderSummary, type OrderSummaryView } from '@/lib/order/summary';
 import { readB2bCheck } from '@/lib/customer/b2b-check';
+import { notifyB2bDecision } from '@/lib/b2b/application';
 import { readCustomerScorecard, readOverdueCustomerIds, SCORECARD_WINDOW } from '@/lib/customer/scorecard';
 import {
   acquisitionLabel,
@@ -213,6 +214,12 @@ export async function setB2bApprovalAction(customerId: string, approved: boolean
     const profiles = new UserProfileService(serviceDb());
     if (approved) await profiles.approveB2b(customerId);
     else await profiles.rejectB2b(customerId, { actorId: actor.id, reason });
+    // Sonuç başvurana bildirilir (14.10 · arka uç şeridi). Bu satır YAZILANA KADAR gerekçe veride
+    // zorunluydu, üç dile çevriliyordu ve hiçbir okuyucuya ulaşmıyordu — yukarıdaki künyenin
+    // "müşteriye e-postayla gidiyor" sözü karşılıksızdı.
+    //
+    // Beklenmiyor (`void`): mail gitmedi diye kararı geri almak yanlış olurdu; karar zaten yazıldı.
+    void notifyB2bDecision(customerId, approved);
     revalidatePath(CUSTOMERS_PATH);
     return { data: null, error: null };
   } catch (err) {

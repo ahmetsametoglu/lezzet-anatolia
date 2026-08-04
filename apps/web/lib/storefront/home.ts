@@ -1,15 +1,10 @@
 import 'server-only';
-import {
-  AnalyticsProductDailyService,
-  CategoryService,
-  ProductService,
-  SettingsService,
-  serviceDb,
-  type ProductWithRelations,
-} from '@lezzet/database';
+import { AnalyticsProductDailyService, CategoryService, ProductService, SettingsService, serviceDb } from '@lezzet/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Locale } from '@lezzet/i18n';
-import type { AnalyticsProductSignal } from '@lezzet/types';
+// `ProductWithRelations` şema tipidir, servis tipi değil — kaynağı `@lezzet/types` (`CLAUDE §1`:
+// şema tek kaynak). `@lezzet/database`'ten yeniden dışa açmak aynı tipe ikinci bir yol açardı.
+import type { AnalyticsProductSignal, ProductWithRelations } from '@lezzet/types';
 import type { PlaceWarehouses } from '@/lib/delivery/place-types';
 import { FIXTURE_CATEGORIES } from './fixtures';
 import { listOfferProductIds, loadProductContext } from './read-context';

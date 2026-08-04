@@ -31,6 +31,23 @@ import { normalizeUtm } from './utm';
 const BOT = /bot|crawl|spider|slurp|bingpreview|headless|lighthouse|preview|monitor|curl|wget|python-requests/i;
 
 /**
+ * ── TEKİLLEŞTİRME YOK, VE BU BİR KARAR (04.08) ──────────────────────────────
+ * Bir tur "oturum başına bir kez `order_placed`" kuralı yazıldı, sonra KALDIRILDI. Gerekçesi
+ * kayda değer çünkü ikinci kez yazılmaya aday:
+ *
+ * Kural, olayın dönüş SAYFASINDAN atılacağı varsayımıyla kurulmuştu — o sayfa her yenilemede
+ * yeniden render olur, yani dönüşüm oranı %100'ü aşardı. Ama kullanıcı kararı ölçünün tanımını
+ * değiştirdi: *"ödemenin gerçekleştiğine bakmamıza gerek yok, biz bir NİYET ölçüyoruz."* Olay artık
+ * iki SUNUCU EYLEMİNDEN atılıyor (`confirmCheckoutAction`), hiçbiri render değil — yenileme sorunu
+ * ortadan kalktı.
+ *
+ * **Kural kalsaydı zarar verirdi:** sepeti bölünen müşterinin ikinci siparişini ve kartı reddedilip
+ * tekrar deneyen müşterinin ikinci denemesini sessizce yutardı. İkisi de gerçek birer niyettir.
+ * Sipariş/ciro SAYISI zaten `order` tablosunun yetkisinde (`ANALYTICS §4`); defterin işi niyeti
+ * saymak.
+ */
+
+/**
  * Personel mi — **istek başına bir kez** sorulur (`cache`), olay başına DEĞİL.
  *
  * Personel kendi vitrinini de geziyor ve küçük hacimde bu oranları hissedilir biçimde oynatır
@@ -70,9 +87,12 @@ export async function recordEvent(input: AnalyticsInput): Promise<void> {
     const [salt, viewer, place] = await Promise.all([dailySalt(), readPricingViewer(), readPlaceWarehouses()]);
     const ip = clientIp(h);
 
+    const sessionKey = sessionKeyOf(salt, ip, ua);
+    const events = new AnalyticsEventService(serviceDb());
+
     const satir: AnalyticsEventInsert = {
       type: girdi.type,
-      sessionKey: sessionKeyOf(salt, ip, ua),
+      sessionKey,
       // Yol ROTA KALIBI olarak yazılır; atıcı yol göndermez, kapı üstbilgiden okur.
       path: routePattern(h.get('x-invoke-path') ?? h.get('referer')?.replace(/^https?:\/\/[^/]+/, '') ?? '/'),
       channel: viewer.channel,
@@ -101,7 +121,7 @@ export async function recordEvent(input: AnalyticsInput): Promise<void> {
       }
     }
 
-    await new AnalyticsEventService(serviceDb()).record(satir);
+    await events.record(satir);
   } catch (err) {
     // Yutuluyor ama SESSİZ DEĞİL (`CLAUDE §1`). `captureError` DEĞİL `logger.warn`: kapı istek
     // başına çalışıyor ve bir sağlayıcı arızasında her olay bir `error_log` satırı yazsaydı, ölçüm

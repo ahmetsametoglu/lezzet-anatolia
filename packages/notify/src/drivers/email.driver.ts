@@ -1,4 +1,5 @@
 import {
+  B2bApplicationResultEmail,
   FeedbackInviteEmail,
   OrderCancelledEmail,
   OrderConfirmedEmail,
@@ -9,6 +10,8 @@ import {
   TicketReceivedEmail,
   TicketRepliedEmail,
   TicketStatusChangedEmail,
+  ZoneAvailableEmail,
+  b2bApplicationResultSubject,
   feedbackInviteSubject,
   orderCancelledSubject,
   orderConfirmedSubject,
@@ -20,6 +23,7 @@ import {
   ticketReceivedSubject,
   ticketRepliedSubject,
   ticketStatusChangedSubject,
+  zoneAvailableSubject,
 } from '@lezzet/email';
 import type { ReactElement } from 'react';
 import type { NotifyDriver, NotifyEventName, NotifyPayloads, NotifyRecipient, NotifyResult } from '../types';
@@ -58,6 +62,8 @@ const TEMPLATES: { [E in NotifyEventName]: Template<E> } = {
   ticket_replied: { subject: ticketRepliedSubject, render: TicketRepliedEmail },
   ticket_status_changed: { subject: ticketStatusChangedSubject, render: TicketStatusChangedEmail },
   feedback_invite: { subject: feedbackInviteSubject, render: FeedbackInviteEmail },
+  zone_available: { subject: zoneAvailableSubject, render: ZoneAvailableEmail },
+  b2b_application_result: { subject: b2bApplicationResultSubject, render: B2bApplicationResultEmail },
 };
 
 export function emailDriver(options: EmailDriverOptions): NotifyDriver {

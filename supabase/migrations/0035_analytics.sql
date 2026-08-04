@@ -59,7 +59,15 @@ create type analytics_blocked_reason as enum (
   'coupon_invalid',    -- kupon kodu geçersiz
   'out_of_stock',      -- checkout anında stok yetmedi
   'payment_failed',    -- ödeme düştü
-  'not_shippable'      -- seçilen yere gönderilemiyor
+  'not_shippable',     -- seçilen yere gönderilemiyor
+  -- Seçilen güne teslimat yok (müşteri şeridinin ölçümü, 04.08). Gerçek bir sürtünme ve müşterinin
+  -- kendi seçiminden doğuyor — bizim arızamız değil, o yüzden huniye girer.
+  -- **`warehouse_unresolved` ve `order_not_placed` BİLEREK YOK:** ikisi de BİZİM arızamız
+  -- (bölge çözülemedi / sipariş açılamadı). Huniye yazılsalardı müşteri vazgeçmiş görünürdü;
+  -- yerleri `error_log`. Aynı gerekçe `cart_unreachable` ve `address_missing` için de geçerli —
+  -- ikincisi zaten checkout'un normal ilk hâli, engel sayılsaydı her oturum bir
+  -- `checkout_blocked` üretir ve olay değerini kaybederdi.
+  'date_unavailable'
 );
 
 -- Cihaz: uygulamanın `Device` tipiyle AYNI küme (`lib/device.ts`: mobile | desktop). Veri modelinde

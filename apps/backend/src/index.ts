@@ -25,6 +25,7 @@ import { CREATE_FEEDBACK_REQUESTS, createFeedbackRequestsJob } from './jobs/feed
 import { PURGE_OBSERVABILITY, purgeObservabilityJob } from './jobs/purge-observability';
 import { ANALYTICS_INSIGHT, analyticsInsightJob } from './jobs/analytics-insight';
 import { ANALYTICS_ROLLUP, analyticsRollupJob } from './jobs/analytics-rollup';
+import { ZONE_AVAILABLE, zoneAvailableJob } from './jobs/zone-available';
 import { runJob } from './jobs/runner';
 import { SEND_FEEDBACK_INVITES, sendFeedbackInvitesJob } from './jobs/send-feedback-invites';
 import { SWEEP_RESERVATIONS, sweepReservations } from './jobs/sweep-reservations';
@@ -133,6 +134,19 @@ cron.schedule('20 3 * * *', () => {
 // kötüdür.
 cron.schedule('40 3 * * *', () => {
   void runJob(ANALYTICS_ROLLUP, analyticsRollupJob);
+}, { timezone: 'Europe/Paris' });
+
+// Bölge açıldı → bekleyenlere haber (14.10 · 19.21) — saatte bir.
+//
+// **Olay değil UZLAŞTIRMA işi:** bölgenin kaydedilmesine bağlı bir tetik tek bir yazma yolunu
+// varsayardı; oysa bir kod bölgeye migration'la, elle SQL'le ya da bugün olmayan ikinci bir ekrandan
+// da girebilir ve kaçan gönderim HATA VERMEZ — müşteri yalnız hiç haber almaz. İş her turda
+// "kapsanmış hâle gelmiş ve haberi gitmemiş" bekleyişleri arar, yani sistem kendini onarır.
+//
+// **Saatte bir yeter:** bölge açmak günlerce süren bir karardır, dakikalık bir olay değil. Daha sık
+// koşmak boş turlarla veritabanını meşgul ederdi; daha seyrek koşmak müşteriyi bir gün bekletirdi.
+cron.schedule('15 * * * *', () => {
+  void runJob(ZONE_AVAILABLE, zoneAvailableJob);
 }, { timezone: 'Europe/Paris' });
 
 // Haftalık AI içgörü (13.7) — pazartesi sabahı, özet turundan SONRA.
