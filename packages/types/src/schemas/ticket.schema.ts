@@ -127,6 +127,20 @@ export const TicketQueueRowSchema = TicketSchema.extend({
   returnTriggered: z.boolean(),
   /** Son mesajın TAM metni; kuyruk önizlemesini yüzey kırpar (kısaltma bir sunum kararıdır). */
   lastMessageBody: z.string().nullable(),
+  /**
+   * Son mesajın ÇEVİRİ bağlamı (20.2) — önizleme de okuyucunun dilinde gösterilebilsin diye.
+   *
+   * Detay çevrilip kuyruk çevrilmeseydi personel talebi ancak açarak triyaj edebilirdi; oysa
+   * kuyruğun tek işi açmadan sıralamaktır.
+   */
+  lastMessageLanguage: SourceLanguageSchema.nullable(),
+  lastMessageTranslations: TranslationBagSchema.nullable(),
+  /**
+   * AI bu talepte HİÇ konuştu mu (16.5). `handledBy`'dan ayrı bir soru: devralınan talepte
+   * `handledBy` `human`'a döner ama AI'ın mesajı yerinde kalır — kalite denetimi o kümeye bakar.
+   * Bir kez `true` olduktan sonra `false`'a dönmez, yani "şu an" değil "hiç" sorusudur.
+   */
+  answeredByAi: z.boolean(),
   /** Kuyruk satırında okunan iki bağlam — ayrı sorgu ATILMAZ, görünüm birlikte getirir. */
   customerName: z.string(),
   orderReferenceNo: z.string().nullable(),

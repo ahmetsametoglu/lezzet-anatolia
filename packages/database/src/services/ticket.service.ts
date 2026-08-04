@@ -13,6 +13,7 @@ import {
   type KeysetCursor,
   type Page,
   type Ticket,
+  type TicketHandler,
   type TicketInsert,
   type ProductComplaintSignal,
   type TicketMessage,
@@ -237,6 +238,19 @@ export interface TicketQueueFilter {
    * hâlde duruyor — ham `ticket` satırından okumak sayfa başına iki ek tur demekti.
    */
   customerId?: string;
+  /**
+   * Talebi ŞU AN kim yürütüyor (16.5) — satır rozetinin süzgeci.
+   *
+   * `answeredByAi` ile karıştırılmamalı ve fark kalıcı: bu "şu an", öteki "hiç" sorusudur.
+   */
+  handledBy?: TicketHandler;
+  /**
+   * AI bu talepte HİÇ konuştu mu (16.5 · operasyon talebi 03.08) — kalite denetiminin kümesi.
+   *
+   * `handledBy: 'ai'` ile süzmek bu soruyu sessizce yanlış cevaplardı: devralınmış talepler dışarıda
+   * kalırdı, oysa denetim en çok onlara bakar — devralma zaten bir şeyin ters gittiğinin işareti.
+   */
+  answeredByAi?: boolean;
 }
 
 /**
@@ -263,7 +277,14 @@ export class TicketQueueService extends BaseDbService<TicketQueueRow, never, nev
     const orFilters: string[] = [];
     if (filter.openOnly) orFilters.push('status.eq.open,status.eq.in_progress');
     return this.getPage(
-      { status: filter.status, type: filter.type, awaitingReply: filter.awaitingReply, customerId: filter.customerId },
+      {
+        status: filter.status,
+        type: filter.type,
+        awaitingReply: filter.awaitingReply,
+        customerId: filter.customerId,
+        handledBy: filter.handledBy,
+        answeredByAi: filter.answeredByAi,
+      },
       {
         orderBy: 'lastMessageAt',
         orderDirection: 'desc',

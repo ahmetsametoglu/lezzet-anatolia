@@ -157,6 +157,17 @@ select t.*,
        -- Kuyrukta okunan önizleme; tam metin detayda. Satır sonu ekranda yer açmasın diye
        -- kırpma yapılmaz — kısaltma bir SUNUM kararıdır, veri kapısına ait değildir.
        m.last_body                               as last_message_body,
+       -- **Önizlemenin ÇEVİRİSİ de buradan gelir** (20.2): detay çevrilip kuyruk çevrilmezse
+       -- personel talebi ancak AÇARAK triyaj edebilir — kuyruğun tek işi ise açmadan sıralamaktır.
+       -- Satır satır mesaj tablosuna gitmek 30 satırlık kuyrukta 30 ek tur olurdu; görünüm zaten o
+       -- mesajı okuduğu için iki alan bedavaya geliyor.
+       m.last_language                           as last_message_language,
+       m.last_translations                       as last_message_translations,
+       -- **AI bu talepte HİÇ konuştu mu** (16.5 · operasyon talebi 03.08) — `handled_by`'dan AYRI
+       -- bir soru ve fark kalıcı: operatör devralınca `handled_by` `human`'a döner ama AI'ın yazdığı
+       -- mesaj yerinde kalır. Kalite denetimi tam da o kümeye bakar; `handled_by` ile süzmek onu
+       -- sessizce dışarıda bırakırdı. Bir kez `true` olduktan sonra `false`'a DÖNMEZ (mesaj silinmiyor).
+       coalesce(m.answered_by_ai, false)         as answered_by_ai,
        c.name                                    as customer_name,
        o.reference_no                            as order_reference_no
   from public.ticket t
@@ -166,8 +177,11 @@ select t.*,
     select max(created_at) as last_message_at,
            count(*)        as message_count,
            bool_or(cardinality(attachments) > 0) as has_attachment,
+           bool_or(sender = 'ai')                as answered_by_ai,
            (array_agg(sender order by created_at desc))[1] as last_sender,
-           (array_agg(body   order by created_at desc))[1] as last_body
+           (array_agg(body   order by created_at desc))[1] as last_body,
+           (array_agg(language     order by created_at desc))[1] as last_language,
+           (array_agg(translations order by created_at desc))[1] as last_translations
       from public.ticket_message
      where ticket_id = t.id
   ) m on true;

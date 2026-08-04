@@ -1,4 +1,4 @@
-import type { Ticket, TicketMessage, TicketQueueRow } from '@lezzet/types';
+import type { SourceLanguage, Ticket, TicketMessage, TicketQueueRow } from '@lezzet/types';
 
 /**
  * Talep görünüm sözleşmesi (16.1) — **iki yüzeyin ortak veri kapısı.**
@@ -11,11 +11,27 @@ import type { Ticket, TicketMessage, TicketQueueRow } from '@lezzet/types';
  * `design/pages/musteri-talep.md` + `design/pages/admin-talepler.md` bağlayıcı.
  */
 
-/** Yazışmadaki tek mesaj — ekranın gördüğü hâl. */
+/**
+ * Yazışmadaki tek mesaj — ekranın gördüğü hâl.
+ *
+ * **Metin OKUYUCUNUN dilinde gelir** (20.2) ve yazışmada bu iki yönlüdür: müşteri kendi dilinde
+ * yazar personel Türkçe okur, personel Türkçe yazar müşteri kendi dilinde okur. Tek yön çevirmek
+ * yazışmanın yarısını anlaşılmaz bırakırdı — sorusu okunan ama cevabı okunamayan bir talep.
+ *
+ * Alan üçlüsü ürün yorumundakiyle (`PublishedReview`) BİLEREK aynı: iki ekran aynı rozeti ve aynı
+ * "orijinali göster" bağını çiziyor, iki ayrı adlandırma ikisini iki ayrı komponente zorlardı.
+ */
 export interface TicketMessageView {
   id: string;
   sender: TicketMessage['sender'];
+  /** Okuyucunun dilinde gösterilecek metin; o dile çeviri yoksa orijinalin kendisi. */
   body: string;
+  /** Gösterilen metin makine çevirisi mi — ekran bunu işaretlemeli ("otomatik çevrildi"). */
+  bodyTranslated: boolean;
+  /** ORİJİNALİN dili — `lang` özniteliği ve "orijinali göster" için. `null` = tespit koşmadı. */
+  language: SourceLanguage | null;
+  /** Orijinal metin — ekran "orijinali göster" derse bunu basar; çeviri onun yerine GEÇMEZ. */
+  originalBody: string;
   /** Public okuma URL'leri; anahtar değil (ekran anahtarla bir şey yapamaz). */
   attachmentUrls: string[];
   createdAt: string;
@@ -86,10 +102,18 @@ export interface TicketQueueItem {
   customerName: string;
   type: Ticket['type'];
   status: Ticket['status'];
+  /** Talebi ŞU AN kim yürütüyor — satır rozeti ("AI yürütüyor"). */
   handledBy: Ticket['handledBy'];
+  /**
+   * AI bu talepte HİÇ konuştu mu — rozetten AYRI bir bilgi (16.5): devralınan talep "AI yürütüyor"
+   * değildir ama "AI yanıtladı"dır. Kalite denetimi tam da o kümeye bakar.
+   */
+  answeredByAi: boolean;
   source: Ticket['source'];
-  /** Son mesajın ilk satırı — kuyrukta okunan önizleme. */
+  /** Son mesajın ilk satırı, okuyucunun dilinde — kuyrukta okunan önizleme. */
   preview: string;
+  /** Önizleme makine çevirisi mi — ekran isterse küçük bir işaret koyar. */
+  previewTranslated: boolean;
   lastMessageAt: string;
   /** Son sözü müşteri söyledi: top bizde. */
   awaitingReply: boolean;

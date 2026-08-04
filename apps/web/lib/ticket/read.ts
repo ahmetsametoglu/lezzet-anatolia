@@ -12,11 +12,12 @@ import {
   serviceDb,
   type TicketQueueFilter,
 } from '@lezzet/database';
-import { allowedTicketTransitions, canTriggerReturn, isReturnBound } from '@lezzet/domain-core';
+import { allowedTicketTransitions, canTriggerReturn, isReturnBound, resolveUserText } from '@lezzet/domain-core';
 import {
   resolveLocalizedText,
   type KeysetCursor,
   type Page,
+  type PreferredLanguage,
   type ProductComplaintSignal,
   type Ticket,
   type TicketMessage,
@@ -96,7 +97,7 @@ async function returnOutcomeOf(ticket: Ticket): Promise<TicketReturnOutcome | nu
 }
 
 /**
- * Mesajı ekranın gördüğü hâle çevirir — ekler **süreli imzalı adrese** dönüşerek.
+ * Mesajı ekranın gördüğü hâle çevirir — metin **okuyucunun diline**, ekler **süreli imzalı adrese**.
  *
  * Şikâyet fotoğrafı private kovada durur ve public adresi yoktur; adres burada, yani yetkinin
  * doğrulandığı yerin içinde üretilir. Anahtarın kendisi dışarı çıkmaz: ekranın anahtarla
@@ -104,19 +105,33 @@ async function returnOutcomeOf(ticket: Ticket): Promise<TicketReturnOutcome | nu
  *
  * Bir talebin mesajları birlikte imzalanır (`Promise.all`) — mesaj başına sıra beklemek, on
  * mesajlık bir yazışmayı on tur uzatırdı.
+ *
+ * **Çeviri yönü ÇAĞIRANIN dilinden gelir** (20.2): müşteri kapısı `locale` geçer, operasyon kapısı
+ * `OPERATIONS_LOCALE`. Yani aynı işlev bir yazışmayı iki tarafa iki dilde açar ve hangi yön olduğunu
+ * kendi bilmez — bilmesi de gerekmez, çünkü "kim okuyor" sorusunun cevabı yalnız çağıranda vardır.
+ * `viewLanguage` varsayılansız ve bilerek: varsayılan koysaydık dilini vermeyi unutan bir ekran
+ * herkese aynı dili gösterir ve bu hiçbir yerde hata vermezdi (aynı gerekçe `listProductReviews`'ta).
  */
-async function toMessageView(message: TicketMessage): Promise<TicketMessageView> {
+async function toMessageView(message: TicketMessage, viewLanguage: PreferredLanguage): Promise<TicketMessageView> {
+  const gosterilen = resolveUserText(
+    { text: message.body, language: message.language, translations: message.translations },
+    viewLanguage,
+  );
   return {
     id: message.id,
     sender: message.sender,
-    body: message.body,
+    // Motor boş metinde `null` döner; mesaj gövdesi boş olamaz (`min(1)`) ama tip yalan söylemesin.
+    body: gosterilen.text ?? message.body,
+    bodyTranslated: gosterilen.isTranslated,
+    language: message.language,
+    originalBody: message.body,
     attachmentUrls: await privateReadUrls(message.attachments),
     createdAt: message.createdAt,
   };
 }
 
-const toMessageViews = (messages: readonly TicketMessage[]): Promise<TicketMessageView[]> =>
-  Promise.all(messages.map(toMessageView));
+const toMessageViews = (messages: readonly TicketMessage[], viewLanguage: PreferredLanguage): Promise<TicketMessageView[]> =>
+  Promise.all(messages.map((m) => toMessageView(m, viewLanguage)));
 
 /**
  * Müşterinin "Taleplerim" listesi (08.6) — keyset sayfalı (talep sayısı veriyle büyür).
@@ -177,7 +192,8 @@ export async function getCustomerTicket(locale: Locale, customerId: string, tick
     subject: ticket.subject,
     createdAt: ticket.createdAt,
     order,
-    messages: await toMessageViews(messages),
+    // Müşteri yazışmayı KENDİ dilinde okur: personelin Türkçe cevabı burada çevrilir.
+    messages: await toMessageViews(messages, locale),
     returnOutcome,
     allowedTransitions: allowedTicketTransitions(ticket.status, 'customer'),
   };
@@ -197,26 +213,37 @@ export async function listTicketsForOrder(customerId: string, orderId: string): 
  * kararını ekler — önizlemenin kırpılması.
  */
 export async function listTicketQueue(
+  viewLanguage: PreferredLanguage,
   filter: TicketQueueFilter = { openOnly: true },
   cursor?: KeysetCursor,
   limit?: number,
 ): Promise<Page<TicketQueueItem>> {
   const page = await new TicketQueueService(serviceDb()).list(filter, cursor, limit);
   return {
-    rows: page.rows.map((row) => ({
-      id: row.id,
-      customerName: row.customerName,
-      type: row.type,
-      status: row.status,
-      handledBy: row.handledBy,
-      source: row.source,
-      preview: previewOf(row.lastMessageBody ?? ''),
-      lastMessageAt: row.lastMessageAt,
-      awaitingReply: row.awaitingReply,
-      hasAttachment: row.hasAttachment,
-      orderReferenceNo: row.orderReferenceNo,
-      returnBound: isReturnBound(row.type),
-    })),
+    rows: page.rows.map((row) => {
+      // Önizleme de ÇEVRİLİR (20.2): detay çevrilip kuyruk çevrilmeseydi personel talebi ancak
+      // açarak triyaj edebilirdi — kuyruğun tek işi ise açmadan sıralamaktır.
+      const gosterilen = resolveUserText(
+        { text: row.lastMessageBody, language: row.lastMessageLanguage, translations: row.lastMessageTranslations },
+        viewLanguage,
+      );
+      return {
+        id: row.id,
+        customerName: row.customerName,
+        type: row.type,
+        status: row.status,
+        handledBy: row.handledBy,
+        answeredByAi: row.answeredByAi,
+        source: row.source,
+        preview: previewOf(gosterilen.text ?? ''),
+        previewTranslated: gosterilen.isTranslated,
+        lastMessageAt: row.lastMessageAt,
+        awaitingReply: row.awaitingReply,
+        hasAttachment: row.hasAttachment,
+        orderReferenceNo: row.orderReferenceNo,
+        returnBound: isReturnBound(row.type),
+      };
+    }),
     nextCursor: page.nextCursor,
   };
 }
@@ -258,7 +285,9 @@ export async function getStaffTicketDetail(locale: Locale, ticketId: string): Pr
       totalTickets: customerTickets,
     },
     order,
-    messages: await toMessageViews(messages),
+    // Ters yön: müşterinin kendi dilinde yazdığı şikâyet personele operasyon dilinde açılır. Çağıran
+    // `OPERATIONS_LOCALE` geçiyor — burada `'tr'` sabitlemek o kararı ikinci bir yere kopyalardı.
+    messages: await toMessageViews(messages, locale),
     returnOutcome,
     allowedTransitions: allowedTicketTransitions(row.status, 'staff'),
     returnTrigger: canTriggerReturn(row),

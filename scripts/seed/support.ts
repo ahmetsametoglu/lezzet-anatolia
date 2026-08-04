@@ -26,6 +26,17 @@ interface Mesaj {
   body: string;
   /** Personelin bu cevapla talebi getirdiği durum; müşteri mesajında karar MOTORUNdur. */
   durum?: Exclude<TicketStatus, 'open'>;
+  /**
+   * Metnin GERÇEK dili (20.2) — serbest ISO 639 kodu, `preferred_language` enum'u DEĞİL: müşteri
+   * sistemimizde olmayan bir dilde de yazabilir (aşağıda Boşnakça örnek var).
+   */
+  dil?: string;
+  /**
+   * Hazır çeviriler. **Seed'de duruyor çünkü çeviri işi API anahtarı ister** ve ön uç şeritleri
+   * rozeti ("otomatik çevrildi") anahtar gelmeden çizebilmeli. Kaynak dil torbada YOKTUR —
+   * `buildTranslationBag` de onu düşürür; orijinal `body`'de duruyor.
+   */
+  ceviri?: Record<string, string>;
 }
 
 interface Talep {
@@ -34,6 +45,9 @@ interface Talep {
   type: 'damaged' | 'missing' | 'question' | 'other';
   subject: string;
   ilkMesaj: string;
+  /** İlk mesajın dili ve çevirisi — `Mesaj.dil`/`Mesaj.ceviri` ile aynı anlam. */
+  ilkMesajDil?: string;
+  ilkMesajCeviri?: Record<string, string>;
   /** Siparişe bağlansın mı — `order` kaynağı zorunlu kılar (DB kısıtı). */
   siparisli?: boolean;
   /** Kaç kalem işaretlensin (siparişli talepte). */
@@ -177,7 +191,69 @@ const TALEPLER: Talep[] = [
     yas: 4,
     etiket: 'AÇIK · 5 mesajlık yazışma · cevap bekliyor',
   },
+  // 9) **SİSTEMDE OLMAYAN DİL, İKİ YÖNLÜ ÇEVİRİ** (20.2 · kullanıcı kararı 03.08).
+  //
+  //    Yazışmanın iki yönü de burada görülür ve ölçüt tam olarak budur: müşteri Boşnakça yazar,
+  //    PERSONEL Türkçe okur; personel Türkçe yazar, MÜŞTERİ kendi dilinde okur. Tek yön çevirmek
+  //    yazışmanın yarısını anlaşılmaz bırakırdı — sorusu okunan ama cevabı okunamayan bir talep.
+  //
+  //    Orijinaller `body`'de olduğu gibi durur; çeviri yanına yazılır, yerine GEÇMEZ.
+  {
+    kisi: 'b2cKapaliKapida',
+    source: 'form',
+    type: 'damaged',
+    subject: 'Hasarlı geldi · Künefe',
+    ilkMesaj: 'Poštovani, kutija je stigla oštećena, dva komada su se razlila. Šaljem fotografiju.',
+    ilkMesajDil: 'bs',
+    ilkMesajCeviri: {
+      tr: 'Merhaba, kutu hasarlı geldi, iki parça dağılmış. Fotoğraf gönderiyorum.',
+      fr: "Bonjour, le colis est arrivé endommagé, deux pièces se sont renversées. Je vous envoie une photo.",
+      de: 'Guten Tag, die Schachtel kam beschädigt an, zwei Stücke sind ausgelaufen. Ich schicke ein Foto.',
+    },
+    yazisma: [
+      {
+        sender: 'admin',
+        body: 'Merhaba, çok üzgünüm. Hasarı depo kaydıyla karşılaştırdım — haklısınız. Telafisini bir sonraki teslimatınıza ekliyorum.',
+        dil: 'tr',
+        // Kaynak dil (`tr`) torbada YOK: orijinal zaten Türkçe. Boşnakça da yok ve olmayacak —
+        // müşteri o dilde YAZABİLİR ama site o dilde konuşmaz; okuma orijinale düşer.
+        ceviri: {
+          fr: "Bonjour, je suis vraiment désolé. J'ai comparé les dégâts avec le registre de l'entrepôt — vous avez raison. J'ajoute le remplacement à votre prochaine livraison.",
+          de: 'Guten Tag, das tut mir sehr leid. Ich habe den Schaden mit dem Lagerbestand abgeglichen — Sie haben recht. Den Ersatz lege ich Ihrer nächsten Lieferung bei.',
+        },
+        durum: 'in_progress',
+      },
+    ],
+    yas: 2,
+    etiket: 'İŞLEMDE · BOŞNAKÇA müşteri + TÜRKÇE personel · İKİ YÖN ÇEVRİLİ',
+  },
 ];
+
+/**
+ * Hazır çevirileri mesaj satırlarına damgalar (20.2).
+ *
+ * **Neden seed'de:** çeviri işi API anahtarı ister; anahtarsız bir kurulumda hiçbir satırda çeviri
+ * olmaz ve ön uç şeritleri rozeti ("otomatik çevrildi") ile "orijinali göster" bağını ÇİZEMEZ.
+ * Ürün yorumlarında da aynı sebeple aynı şey yapıldı.
+ *
+ * Eşleşme METİNLE yapılır, sırayla değil: fotoğraf mesajı araya girdiğinde indis kayardı ve kayma
+ * hiçbir yerde hata vermez — yalnız yanlış mesaj yanlış dille işaretlenirdi.
+ */
+async function ceviriDamgala(db: Db, ticketId: string, t: Talep): Promise<void> {
+  const damgalar = [
+    { body: t.ilkMesaj, dil: t.ilkMesajDil, ceviri: t.ilkMesajCeviri },
+    ...(t.yazisma ?? []).map((m) => ({ body: m.body, dil: m.dil, ceviri: m.ceviri })),
+  ].filter((d) => d.dil);
+
+  for (const d of damgalar) {
+    const { error } = await db
+      .from('ticket_message')
+      .update({ language: d.dil, translations: d.ceviri ?? null, translated_at: an(0) })
+      .eq('ticket_id', ticketId)
+      .eq('body', d.body);
+    if (error) throw error;
+  }
+}
 
 export async function seedTickets(db: Db, kisiler: Kisiler): Promise<void> {
   if (await tabloDolu(db, 'ticket')) {
@@ -250,6 +326,8 @@ export async function seedTickets(db: Db, kisiler: Kisiler): Promise<void> {
     if (t.devralindi) await tickets.takeOver(ticket.id);
     if (t.iadeTetiklendi) await tickets.markReturnTriggered(ticket.id);
 
+    await ceviriDamgala(db, ticket.id, t);
+
     // Fotoğraf: GERÇEK dosya yüklenir (R2 varsa) — ek görüntüleyicisi ancak açılabilen bir anahtarla
     // denenebilir. R2 ayarsızsa `uploadImage` null döner ve talep eksiz kalır (graceful).
     if (t.fotograf) {
@@ -265,5 +343,5 @@ export async function seedTickets(db: Db, kisiler: Kisiler): Promise<void> {
     sayi += 1;
     console.log(`  ✓ ${t.subject} · ${t.etiket}`);
   }
-  console.log(`✓ talep: ${sayi} kayıt (3 durum · 4 kaynak · AI + devralma · iade tetikli · fotoğraflı)`);
+  console.log(`✓ talep: ${sayi} kayıt (3 durum · 4 kaynak · AI + devralma · iade tetikli · fotoğraflı · iki yönlü çevrili)`);
 }

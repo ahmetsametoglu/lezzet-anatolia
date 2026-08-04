@@ -43,7 +43,7 @@ export default async function ProfessionalsPage({ params }: ProfessionalsPagePro
   setRequestLocale(locale);
 
   const t: Messages = messages[locale];
-  const [device, applicant] = await Promise.all([detectDevice(), readB2bApplicant()]);
+  const [device, applicant] = await Promise.all([detectDevice(), readB2bApplicant(locale as Locale)]);
 
   return (
     <SiteFrame device={device} locale={locale as Locale} activeNav="pro">

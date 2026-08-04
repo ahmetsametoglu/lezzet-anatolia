@@ -14,6 +14,7 @@ import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { searchCustomerOptions, type CustomerOption } from '@/lib/customer-options';
 import { shortDate } from '@/components/operation/ui/format';
+import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { listTicketQueue } from '@/lib/ticket/read';
 import { changeTicketStatus, openTicket, replyAsStaff, takeOverTicket, triggerReturnFromTicket } from '@/lib/ticket/write';
 import { toRowViews, toTicketFilter } from './tickets-read';
@@ -165,7 +166,7 @@ export async function loadMoreTicketsAction(
   try {
     await requireAdmin();
     const urlState = parseTicketsUrl(Object.fromEntries(new URLSearchParams(search)));
-    const page = await listTicketQueue(toTicketFilter(urlState.f), cursor, DEFAULT_PAGE_SIZE);
+    const page = await listTicketQueue(OPERATIONS_LOCALE, toTicketFilter(urlState.f), cursor, DEFAULT_PAGE_SIZE);
     return { data: { rows: toRowViews(page.rows, Date.now()), nextCursor: page.nextCursor }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };

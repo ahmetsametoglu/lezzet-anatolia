@@ -1,5 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { CategoryService, OrderItemService, OrderService, ProductService, TicketService, UserProfileService, serviceDb } from '@lezzet/database';
+import {
+  CategoryService,
+  OrderItemService,
+  OrderService,
+  ProductService,
+  TicketMessageService,
+  TicketService,
+  UserProfileService,
+  serviceDb,
+} from '@lezzet/database';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { r2Keys } from '@lezzet/storage';
 import type { Ticket } from '@lezzet/types';
@@ -307,21 +316,84 @@ describe('diğer yüzeylerin okumaları', () => {
   });
 });
 
+/**
+ * **Yazışmanın İKİ YÖNÜ de çevrilir** (20.2) — sınanan şey tek bir alan değil, yönün kendisi.
+ *
+ * Tek yön çevirmek yazışmanın yarısını anlaşılmaz bırakırdı ve bu hiçbir yerde hata vermezdi: ham
+ * metin de geçerli bir metindir, ekran onu sorunsuz basar. O yüzden sınama iki yöne de bakar.
+ */
+describe('talep yazışmasının çevirisi', () => {
+  /** Çeviri işi API anahtarı ister; test onu beklemez — satırı doğrudan kurar (işin ÇIKTISI taklit). */
+  async function ceviriYaz(messageId: string, language: string, translations: Record<string, string>) {
+    const { error } = await db
+      .from('ticket_message')
+      .update({ language, translations, translated_at: new Date().toISOString() })
+      .eq('id', messageId);
+    if (error) throw error;
+  }
+
+  it('müşteri Boşnakça yazar, PERSONEL Türkçe okur; personel Türkçe yazar, MÜŞTERİ Fransızca okur', async () => {
+    const ticket = await openPlainTicket('Kutija je stigla oštećena.');
+    const cevap = await replyAsStaff({ ticketId: ticket.id, authorId: staffId, body: 'Telafisini teslimata ekliyorum.' });
+    if (!cevap.ok) throw new Error('personel cevabı yazılamadı');
+
+    const mesajlar = await new TicketMessageService(db).listByTicket(ticket.id);
+    await ceviriYaz(mesajlar[0]!.id, 'bs', { tr: 'Kutu hasarlı geldi.', fr: 'Le colis est arrivé endommagé.', de: 'Die Schachtel kam beschädigt an.' });
+    await ceviriYaz(mesajlar[1]!.id, 'tr', { fr: "J'ajoute le remplacement à la livraison.", de: 'Ich lege den Ersatz der Lieferung bei.' });
+
+    const personel = await getStaffTicketDetail('tr', ticket.id);
+    expect(personel?.messages[0]).toMatchObject({ body: 'Kutu hasarlı geldi.', bodyTranslated: true, language: 'bs' });
+    // Personelin KENDİ mesajı çevrilmez: kaynak dil okuma diliyle aynı → orijinal.
+    expect(personel?.messages[1]).toMatchObject({ body: 'Telafisini teslimata ekliyorum.', bodyTranslated: false });
+
+    const musteri = await getCustomerTicket('fr', customerId, ticket.id);
+    expect(musteri?.messages[0]).toMatchObject({ body: 'Le colis est arrivé endommagé.', bodyTranslated: true });
+    expect(musteri?.messages[1]).toMatchObject({ body: "J'ajoute le remplacement à la livraison.", bodyTranslated: true });
+  });
+
+  it('ORİJİNAL daima taşınır — çeviri onun yerine geçmez', async () => {
+    const ticket = await openPlainTicket('Poštovani, gdje je moja narudžba?');
+    const mesajlar = await new TicketMessageService(db).listByTicket(ticket.id);
+    await ceviriYaz(mesajlar[0]!.id, 'bs', { tr: 'Merhaba, siparişim nerede?', fr: 'Bonjour, où est ma commande ?', de: 'Guten Tag, wo ist meine Bestellung?' });
+
+    const personel = await getStaffTicketDetail('tr', ticket.id);
+    expect(personel?.messages[0]?.originalBody).toBe('Poštovani, gdje je moja narudžba?');
+  });
+
+  it('çeviri koşmamışsa ORİJİNAL gösterilir ve çevrilmiş İŞARETLENMEZ', async () => {
+    const ticket = await openPlainTicket('Henüz çevrilmemiş bir mesaj.');
+    const personel = await getStaffTicketDetail('tr', ticket.id);
+
+    expect(personel?.messages[0]).toMatchObject({ body: 'Henüz çevrilmemiş bir mesaj.', bodyTranslated: false, language: null });
+  });
+
+  it('kuyruk ÖNİZLEMESİ de çevrilir — personel talebi açmadan triyaj edebilmeli', async () => {
+    const ticket = await openPlainTicket('Dva komada su se razlila u kutiji.');
+    const mesajlar = await new TicketMessageService(db).listByTicket(ticket.id);
+    await ceviriYaz(mesajlar[0]!.id, 'bs', { tr: 'Kutuda iki parça dağılmış.', fr: 'Deux pièces se sont renversées.', de: 'Zwei Stücke sind ausgelaufen.' });
+
+    const page = await listTicketQueue('tr', { openOnly: true }, undefined, 100);
+    const row = page.rows.find((r) => r.id === ticket.id);
+    expect(row?.preview).toBe('Kutuda iki parça dağılmış.');
+    expect(row?.previewTranslated).toBe(true);
+  });
+});
+
 describe('operasyon kuyruğu', () => {
   it('cevap bekleyen talep işaretlenir; personel yazınca işaret düşer', async () => {
     const ticket = await openPlainTicket('Kargo ne zaman çıkar?');
 
-    const beforeReply = await listTicketQueue({ openOnly: true }, undefined, 100);
+    const beforeReply = await listTicketQueue('tr', { openOnly: true }, undefined, 100);
     expect(beforeReply.rows.find((r) => r.id === ticket.id)?.awaitingReply).toBe(true);
 
     await replyAsStaff({ ticketId: ticket.id, authorId: staffId, body: 'Yarın çıkıyor.' });
-    const afterReply = await listTicketQueue({ openOnly: true }, undefined, 100);
+    const afterReply = await listTicketQueue('tr', { openOnly: true }, undefined, 100);
     expect(afterReply.rows.find((r) => r.id === ticket.id)?.awaitingReply).toBe(false);
   });
 
   it('kuyruk satırı müşteri adını ve önizlemeyi tek turda taşır', async () => {
     const ticket = await openPlainTicket('Gözlemeler ezilmiş gelmiş.');
-    const page = await listTicketQueue({ openOnly: true }, undefined, 100);
+    const page = await listTicketQueue('tr', { openOnly: true }, undefined, 100);
     const row = page.rows.find((r) => r.id === ticket.id);
 
     expect(row?.customerName).toBe('Ayşe Kaya');

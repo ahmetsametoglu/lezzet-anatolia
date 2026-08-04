@@ -6,11 +6,12 @@ import {
   b2bStatusOf,
   normalizeSiret,
   normalizeVatNumber,
+  resolveUserText,
   type B2bApplicationInput,
   type B2bApplicationStatus,
   type B2bCompanyFacts,
 } from '@lezzet/domain-core';
-import type { CompanyInfo, UserProfile } from '@lezzet/types';
+import type { CompanyInfo, PreferredLanguage, UserProfile } from '@lezzet/types';
 import { currentCustomerId } from '@/lib/guard';
 import { CustomerError } from '@/lib/customer-error';
 import { checkEuVatNumber } from './vat-check';
@@ -133,6 +134,16 @@ interface B2bApplicantView {
   contactName: string;
   email: string;
   phone: string;
+  /**
+   * Reddedilmişse GEREKÇE, başvuru sahibinin dilinde (20.2). Reddedilmemişse ya da operatör
+   * gerekçe yazmamışsa `null`.
+   *
+   * Gerekçeyi göstermek bir nezaket değil, akışın kendisi: sebebini bilmeyen başvuru sahibi aynı
+   * eksikle yeniden başvurur ve aynı kuyruğu ikinci kez meşgul eder.
+   */
+  rejectReason: string | null;
+  /** Gerekçe makine çevirisi mi — ekran "otomatik çevrildi" der (öteki iki yüzeyle aynı rozet). */
+  rejectReasonTranslated: boolean;
 }
 
 /**
@@ -142,16 +153,35 @@ interface B2bApplicantView {
  * de boş doldurursa aynı hesapta iki ayrı iletişim kişisi yaşamaya başlar. Adres burada
  * OKUNMUYOR — başvuru işletme adresini soruyor, müşterinin teslimat adresini değil; ikisi aynı
  * olabilir ama aynı olduğunu varsaymak, ev adresini işletme künyesine yazmak demekti.
+ *
+ * **`viewLanguage` varsayılansız** (20.2): ret gerekçesini operatör Türkçe yazar, başvuru sahibi
+ * kendi dilinde okur. Varsayılan koysaydık dilini vermeyi unutan bir ekran Fransız bir kasaba
+ * Türkçe gerekçe gösterir ve bu hiçbir yerde hata vermezdi.
  */
-export async function readB2bApplicant(): Promise<B2bApplicantView | null> {
+export async function readB2bApplicant(viewLanguage: PreferredLanguage): Promise<B2bApplicantView | null> {
   const customerId = await currentCustomerId();
   if (!customerId) return null;
   const profile = await new UserProfileService(serviceDb()).getById(customerId);
   if (!profile) return null;
+
+  // Kaynak dil SABİT `'tr'` ve bu şemanın kendi kararı: ret gerekçesinde kaynak-dil kolonu yok,
+  // çünkü operasyon yüzeyi tek dillidir (`CLAUDE §2`). Operatör yanlışlıkla başka dilde yazsa bile
+  // sonuç doğru kalır — o dilin çevirisi torbada bulunmaz ve okuma orijinale düşer.
+  //
+  // ORİJİNAL dışarı VERİLMİYOR — ötekilerin tersine ve bilerek. Ürün yorumunda "orijinali göster"
+  // anlamlıdır (müşterinin kendi cümlesidir, okuyucu merak eder); ret gerekçesinin orijinali
+  // Türkçedir ve Fransız bir başvuru sahibinin onunla yapabileceği bir şey yoktur.
+  const gerekce = resolveUserText(
+    { text: profile.b2bRejectReason, language: 'tr', translations: profile.b2bRejectReasonTranslations },
+    viewLanguage,
+  );
+
   return {
     status: b2bStatusOf(profile),
     contactName: profile.name ?? '',
     email: profile.email ?? '',
     phone: profile.phone ?? '',
+    rejectReason: gerekce.text,
+    rejectReasonTranslated: gerekce.isTranslated,
   };
 }

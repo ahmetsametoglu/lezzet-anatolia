@@ -12,6 +12,10 @@
 // Çare ADLANDIRMADA: rakamı ayıran alt çizgi kullanmayın. Birden çok sayı taşınacaksa tek bir
 // dizi/jsonb kolonu (`rating_breakdown int[]`) hem bu tuzağı hem "biri güncellendi öteki unutuldu"
 // sınıfını birden kapatır.
+//
+// **Tarandı (04.08):** ne migration'larda `_<rakam>` içeren bir kolon adı var, ne şemalarda ters
+// yönü kıracak bir alan (`[a-z]+[0-9][A-Z]`), ne de canlı şemada. Yani bugün YALNIZ bu künye var,
+// sessizce yanlış okunan bir alan yok — tuzak kayıtlı, örneği yok.
 
 function snakeToCamel(str: string): string {
   return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());

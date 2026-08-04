@@ -43,7 +43,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   const device = await detectDevice();
 
   const [queue, counts] = await Promise.all([
-    listTicketQueue(toTicketFilter(urlState.f), undefined, DEFAULT_PAGE_SIZE),
+    listTicketQueue(OPERATIONS_LOCALE, toTicketFilter(urlState.f), undefined, DEFAULT_PAGE_SIZE),
     countTicketsByStatus(),
   ]);
 
