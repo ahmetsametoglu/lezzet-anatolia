@@ -55,8 +55,15 @@ Yok — ilk modül.
     sepetle checkout'a ulaşıp KİMLİK SINIRINDA durduğu yolculuk ("Envoyer le code" görünür —
     ötesi OTP kapısı inince Parti 3b). Bilinçli dar: bölge-DIŞI kod denenmez (küresel sayacı
     kirletir, §4b); kalıcı satır yazılmaz. Dosya 4/4 yeşil (28 sn, sakin pencere).
-  - Kalan: Parti 3b (OTP kapısı inince: doğrulama+adres+taslak sipariş, damgalı+purge) + Parti 4
-    (operasyon yazan: kuyruk→hazırlık · mal kabul) + müşteri OTP kod-yakalama kapısı.
+  - **Kademe 2 · Parti 4a İNDİ (04.08):** yazan-taraf FİKSTÜR ALTYAPISI
+    (`e2e/fixtures/order-fixture.ts` — damgalı depo+kategori+ürün+stok+sipariş; desen
+    `preparation.test.ts`'ten, `purgeTestData` ile toplar; sipariş `confirmed`'a yükseltilir çünkü
+    kuyruk draft listelemez) + kuyruk senaryosu (`queue.smoke.ts`): damgalı sipariş kuyrukta
+    görünür, detayı müşteri+ürünle açılır. 2/2 yeşil (8,7 sn); koşu sonrası DB'de sıfır artık
+    (ölçüldü). Bundan sonraki her yazan parti bu fikstüre basar.
+  - Kalan: Parti 4b (UI'dan durum geçişi/hazırlık onayı + mal kabul — geçiş diyaloğu akışıyla) +
+    Parti 3b (OTP kapısı inince) + Parti 5 (uç durumlar: tükenen ürün, sepetteyken stok düşmesi)
+    + müşteri OTP kod-yakalama kapısı.
   - **Kademe 1 — `pnpm ui:shot <yol>`:** ÇALIŞAN dev server'daki sayfayı açar (`reuseExistingServer` — build YOK), **desktop + mobile** (cihaz forku gereği ikisi de) ve operasyon yollarında **karanlık mod** görüntüsünü `.ui-shots/`a yazar; sayfanın konsol hatalarını da yanına döker. Amaç test değil, ajanlara GÖZ: ekran yapan şerit anlık çağırır, tasarım/fork denetimi görüntüden okunur. DB şartı yok.
   - **Kademe 2 — ~10 duman yolculuğu** (aynı kurulum, dev server'a karşı): müşteri (vitrin→ürün→sepet→checkout taslağı Stripe sınırına dek · misafir OTP · fr/de/tr rotaları · sipariş onayı) + operasyon (rol yönlendirmesi · kuyruk→hazırlık · mal kabul · para ekranı). **Veri disiplini entegrasyon testleriyle AYNI** (§4b): okuyan test seed'in deterministik satırları, yazan test damgalı veri + `purgeTestData`; **`db:refresh` hiçbir koşuda ön şart DEĞİL.** Koşu test kilidine girer (DB'ye vuruyor). Görüntüler assertion değil ARTEFAKT (piksel-diff yok — UI oynakken kırmızı gürültü üretir).
   - **Kademe 3 — ERTELENDİ (canlı öncesi):** production-build koşusu + geniş regresyon + piksel-diff kararı. Bugün kurulmaz.
