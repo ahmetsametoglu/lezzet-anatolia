@@ -6,6 +6,7 @@ import { captureError, SOURCES } from '@lezzet/observability';
 import type { Country } from '@lezzet/types';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { resolveDelivery } from '@/lib/order/delivery';
+import { recordEvent } from '@/lib/analytics/record';
 import { isValidPostalCode, normalizePostalCode, type PlaceLookup, type PlaceSuggestion } from './place-types';
 
 /**
@@ -44,7 +45,12 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
     // indiriyordu. Ekran belirsizlik seçicisini yazamıyordu: adayları göremiyor, hâli ancak hata
     // metnini ayrıştırarak anlayabilirdi — bir dizgi eşleştirmesi, üstelik üç dilde çalışmayan.
     // Metin ekranın işi (i18n orada); buradan çıkan şey VERİ.
-    if (lookup.kind === 'unknown') return { data: { kind: 'unknown' }, errorKey: null };
+    if (lookup.kind === 'unknown') {
+      // Huninin İLK adımı burada kapanıyor (08.9): kodunu girip cevap alamayan ziyaretçi, kapının
+      // gördüğü ama hiçbir sayacın saymadığı hâldi — `postal_code_demand` yalnız çözülen kodu sayar.
+      void recordEvent({ type: 'place_resolved', resolved: false });
+      return { data: { kind: 'unknown' }, errorKey: null };
+    }
 
     if (lookup.kind === 'ambiguous') {
       /**
@@ -120,6 +126,12 @@ async function finishResolved(
   // Talep sayacı sonucu BEKLETMEZ ve hata verirse akışı kesmez: müşterinin sorusuna cevap
   // vermek asıl iş, sayaç yan üründür. Sayamamak yüzünden ekranın boş kalması saçma olurdu.
   void recordDemand(postalCode);
+
+  // **Huninin İLK adımı** (13.1 · `ANALYTICS §3`): yer kapısında çözülen ziyaretçi. `postal_code_demand`
+  // yalnız burayı sayıyordu; huni için kaç kişinin kapıya gelip ÇÖZDÜĞÜ de gerekiyor — çözmeden
+  // düşenin karşılığı bu olayın yokluğudur. Posta kodu deftere GİRMEZ (`ANALYTICS §3`: yer ekseni
+  // depo granülünde); iki kayıt aynı niyetten çıkar ama aynı şeyi saymaz.
+  void recordEvent({ type: 'place_resolved', resolved: true });
 
   return {
     data: {

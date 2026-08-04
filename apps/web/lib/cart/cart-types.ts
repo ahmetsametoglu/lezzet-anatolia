@@ -1,6 +1,6 @@
 import { meetsMinBasket, resolveShippingFee } from '@lezzet/domain-core';
 import type { CouponRejection, ShippingFeeResult } from '@lezzet/domain-core';
-import type { CartItem } from '@lezzet/types';
+import type { AnalyticsBlockedReason, CartItem } from '@lezzet/types';
 import type { LocalizedText } from '@lezzet/types';
 import type { CartLineRoute } from '@lezzet/domain-core';
 import type { StorefrontImage } from '@/lib/storefront/storefront-types';
@@ -311,6 +311,69 @@ export const EMPTY_CART: CartView = {
   shippingTariffCents: 0,
   shippingOnly: false,
 };
+
+/**
+ * Sepetin ilerleyememe SEBEBİ — metin değil, TİP.
+ *
+ * **Neden tip:** sebep üç ekranda birden lazım (özet kartı · rota grubu · mobil alt çubuk) ve üçü
+ * de aynı iki koşulu kendi başına yazıyordu (`view.hasBlocked || !view.minBasketOk`). Aynı kararın
+ * üç kopyası bir gün ayrışır — ayrıştığı gün ekranın biri düğmeyi açar, öteki kapatır ve hangisinin
+ * doğru olduğunu söyleyecek bir yer kalmaz (`CLAUDE §1`).
+ *
+ * **Sıra anlamlı:** gönderilemeyen kalem asgari sepetten ÖNCE gelir, çünkü kalem çıkarılınca tutar
+ * da değişir. Önce "bu ürünü çıkarın", sonra kalan tutarı konuşmak doğru sıradır; tersi müşteriye
+ * karşılayamayacağı bir eşik gösterip ardından sepeti küçültmesini istemek olurdu.
+ *
+ * Sebebi CÜMLEYE çeviren yer ekrandır (`cart/components/cart-summary`): karar burada, metin orada.
+ * Analitiğin terk sebebi de (`ANALYTICS §3` — *"sebep TİPLİDİR, serbest metin yasak"*) buradan
+ * okunacak; bugün sebep yalnız yerelleştirilmiş bir cümle olarak vardı ve o cümle ölçülemez.
+ *
+ * Tip bilerek DIŞA AÇILMIYOR: bugün onu adıyla anan bir çağıran yok (`!== null` yetiyor) ve
+ * kullanılmayan bir dışa açım `knip`'in doğru saydığı bir gürültüdür. `cart_blocked` atıcısı
+ * (08.9) sebebi adıyla taşıdığı gün açılır.
+ */
+type CartBlockReason = 'undeliverable_line' | 'min_basket';
+
+export function cartBlockReason(view: Pick<CartView, 'hasBlocked' | 'minBasketOk'>): CartBlockReason | null {
+  if (view.hasBlocked) return 'undeliverable_line';
+  if (!view.minBasketOk) return 'min_basket';
+  return null;
+}
+
+/**
+ * İstemcinin beyan ettiği ekleme — YALNIZ ölçüme akar (bkz. `writeCartAction`).
+ *
+ * Tip burada, `actions.ts`'te değil: `'use server'` dosyası bir uçtur, tip sözlüğü değil.
+ *
+ * **`productId` bugün TAŞINMIYOR** ve bu bilinçli bir sınır: istemcinin elindeki `CartEntry` ürünü
+ * değil VARYANTI tanıyor, sunucuda doldurmak ise en sıcak yazma yoluna fazladan bir okuma eklerdi.
+ * Kayıp sınırlı — `subjectId` varyantın kendisi ve ürün kırılımı varyant tablosundan çözülebiliyor;
+ * denormalize alanın işi "varyant silinse de ürün okunabilsin"di. Sınır 08.9 görev satırında yazılı.
+ */
+export interface AddToCartIntent {
+  subjectType: 'variant' | 'bundle';
+  subjectId: string;
+  qty: number;
+}
+
+/**
+ * Ekranın engelini DEFTERİN sebebine çevirir (08.9 · `ANALYTICS §3`).
+ *
+ * Defterin kümesi ekranınkinden İNCE ve bu iyi: ekran tek cümle kurar ("çıkarılmadan devam
+ * edilemez"), defter ise nedenini ayırır — `not_shippable` (buraya gönderilemiyor) ile
+ * `out_of_stock` (hiçbir depoda yok) aynı rakama düşerse "neyi tedarik edelim" ile "nereye
+ * genişleyelim" soruları tek kovada karışırdı. Ayrımı satırın kendi `route`'u zaten taşıyor.
+ */
+export function cartBlockedAnalyticsReason(view: CartView): AnalyticsBlockedReason | null {
+  switch (cartBlockReason(view)) {
+    case 'min_basket':
+      return 'min_basket';
+    case 'undeliverable_line':
+      return view.lines.some((l) => l.route === 'not_shippable_here') ? 'not_shippable' : 'out_of_stock';
+    case null:
+      return null;
+  }
+}
 
 /**
  * Sepetin İKİ GRUBU (19.7) — kapıya gidenler + kargoyla gidenler.

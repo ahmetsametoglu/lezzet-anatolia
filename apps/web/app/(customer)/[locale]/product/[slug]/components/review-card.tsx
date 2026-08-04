@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import { TranslationNote } from '@/components/customer/ui/translation-note';
 import type { PublishedReview } from '@/lib/feedback/product-feedback';
 import { formatShortDate } from '@/lib/storefront/format';
 
@@ -78,19 +79,18 @@ export function ReviewCard({ review, locale, verifiedLabel, translation, boxed =
         </p>
       )}
 
+      {/* Rozet + bağlantı ORTAK şeritten (`TranslationNote`): aynı bilgiyi talep yazışması ve B2B
+          ret gerekçesi de gösteriyor, üç kopya üç ekranda üç türlü görünürdü. */}
       {translated && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          {/* Rozet bir ETİKET, uyarı değil: çeviri normal ve faydalı bir şey. Sessiz kalmak ise
-              müşteriye yazarın kendi cümlesini okuduğunu düşündürürdü. */}
-          <span className="rounded-pill bg-sand-100 px-2 py-0.5 font-sans text-micro text-muted">{translation.badge}</span>
-          <button
-            type="button"
-            onClick={() => setShowingOriginal((v) => !v)}
-            className="cursor-pointer font-sans text-micro font-bold text-olive transition-colors hover:text-olive-dark"
-          >
-            {showingOriginal ? translation.showTranslation : translation.showOriginal}
-          </button>
-        </div>
+        <TranslationNote
+          badge={translation.badge}
+          toggle={{
+            showingOriginal,
+            onToggle: () => setShowingOriginal((v) => !v),
+            showOriginal: translation.showOriginal,
+            showTranslation: translation.showTranslation,
+          }}
+        />
       )}
     </article>
   );

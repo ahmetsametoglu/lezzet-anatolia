@@ -95,7 +95,7 @@ interface RouteActionProps {
  */
 function RouteAction({ view, t, locale, compact, totalCents }: RouteActionProps) {
   const reason = checkoutBlockReason(view, t, locale);
-  const blocked = view.hasBlocked || !view.minBasketOk;
+  const blocked = reason !== null;
 
   return (
     <div

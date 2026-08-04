@@ -12,11 +12,12 @@ import errorMessages from './error-messages.json';
  * Sayfa hangi dildeyse hata da o dilde (getLocale). Çerçeve korunur; müşteriye ileri bir yol
  * (kataloğa/ana sayfaya dönüş) her zaman sunulur. Durum kodu 404 (Next varsayılanı) korunur.
  *
- * Kapsam: tasarımdaki "çok sevilenler" ızgarası ve kategori çipleri hâlâ yok, ama engel KATALOG
- * DEĞİL — katalog indi ve vitrin ondan okuyor. Gerçek engel popülerlik ölçütü: hangi ürünün "çok
- * sevilen" olduğunu söyleyecek görüntüleme/sipariş sayımı yok, `BEKLEYEN(08.9)`. Ölçüt gelince
- * eklenir. (Künye bir süre "katalog inince eklenir" diyordu; koşul gerçekleşmişti, yani okuyan
- * ajanı bölümü eklemeye çağırıp 08.9 duvarına çarptırıyordu — denetim M-Y3.)
+ * Kapsam: tasarımdaki "çok sevilenler" ızgarası ve kategori çipleri hâlâ yok — ama artık **engel
+ * yok, sıra var.** Popülerlik ölçütü 04.08'de indi (`readShowcase` günlük ürün sinyalinden okuyor)
+ * ve seçkiyi çizen parçalar da hazır (`ProductCard` · `SectionHeading`); kalan iş bu sayfanın
+ * kendi yerleşimi. Künyenin iki kez eskimesinin dersi burada: **engel geçtiğinde işaret de
+ * geçmeli**, yoksa okuyan ajan olmayan bir duvara çarpar (bir süre "katalog inince eklenir"
+ * diyordu, katalog inmişti; sonra "ölçüt yok" dedi, ölçüt indi — denetim M-Y3).
  */
 export default async function CustomerNotFound() {
   const locale = (await getLocale()) as Locale;

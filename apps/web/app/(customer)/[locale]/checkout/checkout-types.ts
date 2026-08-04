@@ -87,3 +87,41 @@ export interface CheckoutViewProps extends StepProps {
 
 
 export type { NewAddressInput };
+
+/**
+ * Siparişin verilememe SEBEBİ — sepettekinin checkout karşılığı (`lib/cart` → `cartBlockReason`).
+ *
+ * **Neden ayrı bir birlik:** buradaki engeller sepettekilerin üstüne iki tane daha ekliyor ve
+ * ikisi de ADRESİN cevabı — teslimat çözülemiyor (`delivery.blocked`: rota dışı + soğuk zincir)
+ * ve adres hiç seçilmemiş. Sepet bunları soramaz, çünkü sepette adres yok.
+ *
+ * **Neden tek yerde:** aynı karar iki yerde AYRI yazılmıştı ve ikisi tutmuyordu —
+ * `OrderSummary` beş koşula bakıyor, kart ödemesinin formu üçüne. Yani sepette gönderilemeyen bir
+ * kalem varken kartsız yolun düğmesi pasifken **kart formu açık kalıyordu**: müşteri kart
+ * bilgilerini giriyor, basıyor ve reddi ancak sunucudan öğreniyordu. Para açığı değil (sunucu
+ * `confirmCheckoutAction`'da aynı kontrolü yapıyor ve reddediyor), ama gereksiz bir emek ve iki
+ * yoldan biri müşteriye önceden söylüyor, öteki söylemiyordu.
+ *
+ * **Sıra anlamlı:** önce "cevap yok" hâlleri (sepet okunamadı, adres seçilmedi) — bunlar
+ * bilinmezliktir, hüküm değil; sonra teslimat, en sonra tutar. Sepetteki sıranın aynısı: kalem
+ * çıkarılınca tutar da değişir.
+ */
+// Sepet tarafındaki eşiyle aynı gerekçeyle dışa açılmıyor: bugün sebebi adıyla anan çağıran yok
+// (`!== null` yetiyor), `checkout_blocked` atıcısı (08.9) geldiğinde açılır.
+type CheckoutBlockReason = 'cart_unreachable' | 'address_missing' | 'undeliverable_line' | 'min_basket';
+
+export function checkoutBlocker(input: {
+  cartFailed: boolean;
+  /** Sepet görünümünün "çıkarılmadan geçilemez satır var" cevabı. */
+  cartHasBlocked: boolean;
+  snapshot: CheckoutSnapshot;
+  addressId: string | null;
+}): CheckoutBlockReason | null {
+  if (input.cartFailed) return 'cart_unreachable';
+  // Ödeme bloğu adresin cevabıdır: adres yokken `null` gelir ve o hâl bir engel DEĞİL, henüz
+  // sorulmamış bir sorudur — adı da onu söylemeli.
+  if (!input.addressId || !input.snapshot.payment) return 'address_missing';
+  if (input.snapshot.delivery?.blocked || input.cartHasBlocked) return 'undeliverable_line';
+  if (!input.snapshot.payment.minBasketOk) return 'min_basket';
+  return null;
+}

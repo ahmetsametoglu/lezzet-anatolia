@@ -8,6 +8,7 @@ import { detectDevice } from '@/lib/device';
 import { getSessionUser } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { imageOf } from '@/lib/storefront/map';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { OrderWatch } from './components/order-watch';
 import { ConfirmationClient } from './confirmation-client';
@@ -41,6 +42,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
   const { locale, reference } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView();
 
   const t = messages[locale];
   const [device, user] = await Promise.all([detectDevice(), getSessionUser()]);

@@ -4,6 +4,7 @@ import { setRequestLocale } from 'next-intl/server';
 import type { Locale } from '@lezzet/i18n';
 import { detectDevice } from '@/lib/device';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { SupportClient } from '../support-client';
 import { NewTicketLink } from '../components/new-ticket-link';
@@ -31,6 +32,7 @@ export default async function TicketPage({ params }: TicketPageProps) {
   const { locale, ticket: ticketId } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView();
 
   const t: Messages = messages[locale];
   const [device, data] = await Promise.all([detectDevice(), loadSupport(locale as Locale, ticketId)]);

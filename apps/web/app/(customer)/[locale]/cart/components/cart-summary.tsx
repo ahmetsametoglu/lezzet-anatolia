@@ -5,7 +5,7 @@ import { buttonClass } from '@/components/customer/ui/button';
 import { cardClass } from '@/components/customer/ui/card';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
-import { shippingGroupFee, type CartView } from '@/lib/cart/cart-types';
+import { cartBlockReason, shippingGroupFee, type CartView } from '@/lib/cart/cart-types';
 import { discountLabel } from '@/lib/cart/discount-label';
 import type { Messages } from '../cart-types';
 
@@ -30,15 +30,24 @@ import type { Messages } from '../cart-types';
  * özet kartını akışta, aksiyonu sabit çubukta tutar.
  */
 
-/** İki engel de SEBEBİYLE söylenir; sessizce pasif bir düğme ne yapılacağını anlatmaz. */
+/**
+ * Engelin CÜMLESİ — sessizce pasif bir düğme ne yapılacağını anlatmaz.
+ *
+ * Kararı vermez, `cartBlockReason`'ı okur: hangi engelin önce geldiği bir sepet kuralıdır, ekranın
+ * tercihi değil. `switch`'in `default`'u BİLEREK yok — üçüncü bir sebep eklendiğinde derleme durur
+ * ve cümlesi yazılmadan geçemez; `default` koysaydık yeni sebep sessizce boş metne düşerdi.
+ */
 export function checkoutBlockReason(view: CartView, t: Messages, locale: Locale): string | null {
-  if (view.hasBlocked) return t.checkoutBlocked;
-  if (!view.minBasketOk) {
-    return t.minBasket
-      .replace('{min}', formatPrice(view.minBasketCents, locale))
-      .replace('{missing}', formatPrice(view.missingForMinBasketCents, locale));
+  switch (cartBlockReason(view)) {
+    case 'undeliverable_line':
+      return t.checkoutBlocked;
+    case 'min_basket':
+      return t.minBasket
+        .replace('{min}', formatPrice(view.minBasketCents, locale))
+        .replace('{missing}', formatPrice(view.missingForMinBasketCents, locale));
+    case null:
+      return null;
   }
-  return null;
 }
 
 /**
@@ -96,11 +105,12 @@ interface CartSummaryProps {
 }
 
 export function CartSummary({ view, t, locale, compact = false, grouped = false }: CartSummaryProps) {
-  // Devam etmeyi GERÇEKTEN engelleyen iki hâl: çıkarılmadan geçilemeyecek satır, ve asgari sepetin
-  // altı. İkisi de checkout'ta yeniden kontrol ediliyor; buradaki kilit müşteriyi boşuna bir adım
-  // ilerletmemek için (sunucu güvenliği ekranın kilidine dayanmaz).
-  const blocked = view.hasBlocked || !view.minBasketOk;
+  // Engelin kendisi TEK yerde kararlaşır (`cartBlockReason`); burada yalnız okunur. Koşul üç
+  // ekranda elle yazılıyordu ve üçünün ayrışması hiçbir hata vermeden düğmelerin bir kısmını
+  // açık bırakırdı. Kilit yine de bir NEZAKET: sunucu güvenliği ekranın kilidine dayanmaz,
+  // checkout aynı iki koşulu kendisi de kontrol ediyor.
   const reason = checkoutBlockReason(view, t, locale);
+  const blocked = reason !== null;
   // İndirim tutarı türetilir, yeniden hesaplanmaz — kararın sahibi motor, yazan sunucu.
   const discountCents = view.subtotalCents - view.totalCents;
   /**

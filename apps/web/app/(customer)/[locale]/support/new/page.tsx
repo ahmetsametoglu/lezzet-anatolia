@@ -6,6 +6,7 @@ import { detectDevice } from '@/lib/device';
 import { currentCustomerId } from '@/lib/guard';
 import { getCustomerOrderDetail, listCustomerOrders } from '@/lib/order/customer-orders';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { NewTicketForm } from './new-ticket-form';
 import type { Messages } from '../support-types';
@@ -33,6 +34,7 @@ export default async function NewTicketPage({ params, searchParams }: NewTicketP
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView();
 
   const { order: orderId } = await searchParams;
   const t: Messages = messages[locale];

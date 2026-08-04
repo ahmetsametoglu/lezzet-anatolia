@@ -13,6 +13,9 @@ import { getProductDetail } from '@/lib/storefront/product';
 import { getProductScore, getReviewEligibility, listProductReviews } from '@/lib/feedback/product-feedback';
 import { currentCustomerId } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
+import { recordEvent } from '@/lib/analytics/record';
+import { recordPageView } from '@/lib/analytics/page-view';
+import { availabilityOf } from '@/lib/analytics/availability';
 import { routing } from '@/i18n/routing';
 import { ProductClient } from './product-client';
 import type { Messages } from './product-types';
@@ -23,6 +26,8 @@ const REVIEW_PAGE_SIZE = 3;
 
 interface ProductPageProps {
   params: Promise<{ locale: string; slug: string }>;
+  /** Yalnız kampanya etiketleri için (08.9) — reklam bağı sıkça doğrudan ürüne iner. */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
@@ -58,10 +63,11 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   };
 }
 
-export default async function ProductPage({ params }: ProductPageProps) {
+export default async function ProductPage({ params, searchParams }: ProductPageProps) {
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView(await searchParams);
 
   const t: Messages = messages[locale];
   const [product, device] = await Promise.all([
@@ -69,6 +75,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
     detectDevice(),
   ]);
   if (!product) notFound();
+
+  // Ürün görüntülemesi (08.9). Prefetch/bot/personel elemesi KAPIDA — atıcı ne olduğunu söyler,
+  // neyin sayılacağına kapı karar verir (`ANALYTICS §4`).
+  void recordEvent({
+    type: 'product_view',
+    subjectType: 'product',
+    subjectId: product.id,
+    productId: product.id,
+    availability: availabilityOf(product.variants),
+  });
 
   /**
    * Yorum bölümünün verisi (17.1). Ürün bulunduktan SONRA okunur — 404'e düşecek bir sayfa için
@@ -85,7 +101,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
   ]);
 
   return (
-    <SiteFrame device={device} locale={locale} activeNav="catalog" mobileChrome="detail" back={{ label: t.back, href: '/catalog' }}>
+    <SiteFrame
+      device={device}
+      locale={locale}
+      activeNav="catalog"
+      mobileChrome="detail"
+      back={{ label: t.back, href: '/catalog' }}
+      share={{ subjectType: 'product', subjectId: product.id, productId: product.id }}
+    >
       {/* Yapısal veri (08.1): arama sonucunda fiyat, stok ve puanın görünmesini sağlar. Puan
           YALNIZ gerçekten varsa yazılıyor — `average` null ise (hiç beyan yok) blok hiç doğmuyor,
           çünkü uydurma bir puan yapısal veride yaptırıma uğrar. */}

@@ -71,6 +71,8 @@
       "approved": "Onaylandı! Toptan fiyat listeniz açıldı.",
       "rejected": "Başvurunuz şu an onaylanamadı — hesabınızla alışverişe devam edebilirsiniz. Bilgilerinizi güncelleyip yeniden gönderebilirsiniz."
     },
+    "rejectReasonTitle": "İnceleme notu",
+    "translation": { "badge": "otomatik çevrildi" },
     "errors": {
       "unexpected": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
       "session_expired": "Oturumunuz sona ermiş. Yeniden giriş yapın.",
@@ -153,6 +155,8 @@
       "approved": "Validée ! Vos tarifs de gros sont ouverts.",
       "rejected": "Votre demande n'a pas pu être validée pour le moment — vous pouvez continuer vos achats avec votre compte. Vous pouvez aussi corriger vos informations et renvoyer la demande."
     },
+    "rejectReasonTitle": "Note d'examen",
+    "translation": { "badge": "traduit automatiquement" },
     "errors": {
       "unexpected": "Une erreur est survenue. Merci de réessayer.",
       "session_expired": "Votre session a expiré. Reconnectez-vous.",
@@ -235,6 +239,8 @@
       "approved": "Freigegeben! Ihre Großhandelspreise sind offen.",
       "rejected": "Ihre Anfrage konnte derzeit nicht freigegeben werden — Sie können mit Ihrem Konto weiter einkaufen. Sie können Ihre Angaben auch korrigieren und die Anfrage erneut senden."
     },
+    "rejectReasonTitle": "Prüfhinweis",
+    "translation": { "badge": "automatisch übersetzt" },
     "errors": {
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
       "session_expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",

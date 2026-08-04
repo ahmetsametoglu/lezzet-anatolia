@@ -10,6 +10,7 @@ import { currentCustomerId } from '@/lib/guard';
 import { openDiscoverDeck } from '@/lib/feedback/discover';
 import { pointsValueOf } from '@/lib/feedback/points';
 import { formatPrice } from '@/lib/storefront/format';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { DiscoverClient } from './discover-client';
 import type { Messages } from './discover-types';
@@ -32,6 +33,8 @@ import messages from './messages.json';
  */
 interface DiscoverPageProps {
   params: Promise<{ locale: string }>;
+  /** Yalnız kampanya etiketleri için (08.9). */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
@@ -46,10 +49,11 @@ export async function generateMetadata({ params }: DiscoverPageProps): Promise<M
   return { title: t.meta.title, description: t.meta.description, alternates: localeAlternates('/discover', locale) };
 }
 
-export default async function DiscoverPage({ params }: DiscoverPageProps) {
+export default async function DiscoverPage({ params, searchParams }: DiscoverPageProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView(await searchParams);
 
   const t: Messages = messages[locale];
   const customerId = await currentCustomerId();

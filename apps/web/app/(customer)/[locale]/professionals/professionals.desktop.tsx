@@ -13,7 +13,7 @@ import type { ProfessionalsViewProps } from './professionals-types';
  *
  * Bu dosya KOMPOZİSYONDUR: formu ve durum satırını yerleştirir, kendi mantığını kurmaz.
  */
-export function ProfessionalsDesktop({ t, status, signedIn, defaults, whatsappHref, whatsappNumber, locale }: ProfessionalsViewProps) {
+export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults, whatsappHref, whatsappNumber, locale }: ProfessionalsViewProps) {
   return (
     <div className="flex flex-col">
       {/* Kahraman — koyu blok tam genişlikte; solda vaat, sağda görsel (tasarım 1.1fr / 1fr). */}
@@ -56,7 +56,7 @@ export function ProfessionalsDesktop({ t, status, signedIn, defaults, whatsappHr
 
       <section id="application" className="grid grid-cols-2 items-start gap-10 px-12 pb-12">
         <Card>
-          <StatusNote t={t} status={status} />
+          <StatusNote t={t} status={status} rejection={rejection} />
           {/* Başvurusu ONAYLANMIŞ müşteriye form çizilmiyor: ikinci bir künye göndermenin
               karşılığı yok, kayıt zaten açık. Bekleyen başvuruda form duruyor — aday bir
               alanını yanlış yazdıysa yeniden gönderebilmeli. */}

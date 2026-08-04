@@ -33,7 +33,7 @@ interface CartCheckoutBarProps {
 
 export function CartCheckoutBar({ view, t, locale, lines }: CartCheckoutBarProps) {
   const reason = checkoutBlockReason(view, t, locale);
-  const blocked = view.hasBlocked || !view.minBasketOk;
+  const blocked = reason !== null;
   const totalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
   // Koyu çubuğun içindeki aksiyon: dolgu açık yeşile, metin antrasite döner (envanter §2 —
   // koyu zemin varyantı). Pasifken kum dolgu; ikisi de aynı kutuyu verir, zıplama olmaz.

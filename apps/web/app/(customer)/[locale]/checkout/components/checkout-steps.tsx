@@ -13,7 +13,7 @@ import { AddressForm, toFormInput } from '@/components/customer/delivery/address
 import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel } from '@/lib/cart/discount-label';
 import { formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
-import type { CheckoutViewProps } from '../checkout-types';
+import { checkoutBlocker, type CheckoutViewProps } from '../checkout-types';
 
 /**
  * Checkout'un üç adımı — masaüstü ve mobil AYNI bloklar (tasarım: numaralı 1·2·3 kartları).
@@ -467,8 +467,10 @@ export function OrderSummary(props: CheckoutViewProps) {
   // Onay düğmesi kart ödemesinde ÇİZİLMEZ: orada onayı Stripe formunun kendi düğmesi veriyor
   // (önce kartı valide etmesi gerekiyor). İki düğme müşteriye hangisinin bitirdiğini sordururdu.
   const showConfirm = state.paymentMethod !== null && state.paymentMethod !== 'online';
-  // Sepet OKUNAMADIYSA sipariş verilemez: ekrandaki 0,00 € bir toplam değil, cevapsızlıktır.
-  const blocked = cartFailed || delivery?.blocked || !payment?.minBasketOk || !state.addressId || cart.hasBlocked;
+  // Engel TEK yerde kararlaşır (`checkoutBlocker`) — burada ve kart ödemesinin formunda aynı
+  // cevap okunur. Koşul iki yerde ayrı yazılıyken ikisi tutmuyordu ve fark hiçbir hata vermiyordu.
+  // (Sepet okunamadıysa da sipariş verilemez: ekrandaki 0,00 € bir toplam değil, cevapsızlıktır.)
+  const blocked = checkoutBlocker({ cartFailed, cartHasBlocked: cart.hasBlocked, snapshot, addressId: state.addressId }) !== null;
 
   return (
     // Tasarım künyesi: `radius 18 · ped 22/24 · gap 12` — adım kartlarıyla aynı aile, bir tık dar.

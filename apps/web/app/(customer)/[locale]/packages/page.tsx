@@ -6,6 +6,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { detectDevice } from '@/lib/device';
 import { listStorefrontPackages } from '@/lib/storefront/packages';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { PackagesClient } from './packages-client';
 import type { Messages } from './packages-types';
@@ -13,6 +14,8 @@ import messages from './messages.json';
 
 interface PackagesPageProps {
   params: Promise<{ locale: string }>;
+  /** Yalnız kampanya etiketleri için (08.9) — paket kampanyası doğrudan buraya iner. */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
@@ -32,10 +35,11 @@ export async function generateMetadata({ params }: PackagesPageProps): Promise<M
   return { title: messages[locale].title, alternates: localeAlternates('/packages', locale) };
 }
 
-export default async function PackagesPage({ params }: PackagesPageProps) {
+export default async function PackagesPage({ params, searchParams }: PackagesPageProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView(await searchParams);
 
   const t: Messages = messages[locale];
   const [packages, device] = await Promise.all([listStorefrontPackages(locale), detectDevice()]);

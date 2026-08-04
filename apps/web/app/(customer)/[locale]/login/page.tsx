@@ -4,6 +4,7 @@ import { setRequestLocale } from 'next-intl/server';
 import type { Locale } from '@lezzet/i18n';
 import { authErrorMessage } from '@/lib/auth/errors';
 import { detectDevice } from '@/lib/device';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { LoginClient } from './login-client';
 import type { Messages } from './login-types';
@@ -18,6 +19,7 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView();
 
   const { next, reason, error } = await searchParams;
   const t: Messages = messages[locale];

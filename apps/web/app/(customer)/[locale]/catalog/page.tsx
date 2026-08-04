@@ -9,6 +9,8 @@ import { detectDevice } from '@/lib/device';
 import { getCatalogData } from '@/lib/storefront/catalog';
 import { CATALOG_SORTS, type CatalogSort } from '@/lib/storefront/storefront-types';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
+import { recordEvent } from '@/lib/analytics/record';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { CatalogClient } from './catalog-client';
 import type { Messages } from './catalog-types';
@@ -43,6 +45,7 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView(await searchParams);
 
   const { category, sort, offers, shippable, q } = await searchParams;
   const activeSort: CatalogSort = CATALOG_SORTS.includes(sort as CatalogSort) ? (sort as CatalogSort) : 'featured';
@@ -60,6 +63,30 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
     ),
     detectDevice(),
   ]);
+
+  /**
+   * Arama ve SÜZGEÇ boşluğu (08.9 · `ANALYTICS §4`).
+   *
+   * **İkisi ayrı raporlanır ve ayrımı burada yapıyoruz:** süzgeç boşluğu SIK bir arayüz sinyalidir
+   * (üç çipi üst üste seçen müşteri), arama boşluğu SEYREK bir çeşit sinyali ("müşterinin istediği
+   * ama bizde olmayan şey"). Aynı listeye düşerlerse sık olan seyreği boğar ve o liste kullanılamaz
+   * hâle gelir.
+   *
+   * Metin varsa kaynak ARAMADIR — süzgeç de açık olsa: müşterinin yazdığı kelime, tıkladığı çipten
+   * daha güçlü bir niyet beyanıdır.
+   *
+   * **Yalnız ilk sayfa ölçülür.** Sonraki sayfalar `loadMoreCatalogAction`'dan geliyor ve oradan da
+   * atsaydık tek arama, kaydırma sayısı kadar sayılırdı.
+   */
+  const filtered = Boolean(category || onlyOffers || onlyShippable);
+  if (q || filtered) {
+    void recordEvent({
+      type: 'search',
+      query: q ?? '',
+      resultCount: data.products.length,
+      zeroResultKind: data.products.length > 0 ? null : q ? 'search' : 'filter',
+    });
+  }
 
   return (
     <SiteFrame device={device} locale={locale} activeNav="catalog">

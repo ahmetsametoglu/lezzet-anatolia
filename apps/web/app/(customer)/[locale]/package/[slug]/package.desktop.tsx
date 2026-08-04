@@ -45,7 +45,7 @@ export function PackageDesktop({ t, locale, pack }: PackageViewProps) {
             <h1 className="font-serif text-page-title text-ink">{pack.name}</h1>
             {/* Paylaş masaüstünde de var: sosyal medya birincil senaryo, link her yüzeyden çıkabilmeli. */}
             <span className="grid size-11 flex-none place-items-center rounded-full border border-sand-200 bg-card">
-              <ShareButton label={t.share} />
+              <ShareButton label={t.share} subject={{ subjectType: 'bundle', subjectId: pack.id }} />
             </span>
           </div>
 

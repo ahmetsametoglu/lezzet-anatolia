@@ -7,7 +7,7 @@ import { readCartAction, writeCartAction } from '@/lib/cart/actions';
 import { clearGuestCart, mergeEntry, readGuestCart, setEntryQty, writeGuestCart } from '@/lib/cart/cart-store';
 import { clearSaved, readSaved, writeSaved } from '@/lib/cart/saved-store';
 import { readCoupon, writeCoupon } from '@/lib/cart/coupon-store';
-import { EMPTY_CART, cartKey, entryOf, viewWithEntries, type CartEntry, type CartRef, type CartView } from '@/lib/cart/cart-types';
+import { EMPTY_CART, cartKey, entryOf, viewWithEntries, type AddToCartIntent, type CartEntry, type CartRef, type CartView } from '@/lib/cart/cart-types';
 import { diffCartByPlace, type CartLineChange } from '@/lib/cart/place-change';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { CartUndo } from './cart-undo';
@@ -200,7 +200,12 @@ export function CartProvider({ locale, children }: CartProviderProps) {
 
   /** Niyeti yazar ve çözülmüş görünümü alır. Ziyaretçide tarayıcıya, girişlide sunucuya gider. */
   const sync = useCallback(
-    (next: CartEntry[], nextSaved: CartEntry[]) => {
+    /**
+     * `added` YALNIZ ölçüm için (08.9): uç eşitleme ucudur, "neyi eklediğim" bilgisi yalnız burada
+     * var. Geri alma (`undo`) ve "sonraya kaydedilenden geri taşıma" bunu GEÇMİYOR — ikisi de yeni
+     * bir ekleme değil, bir düzeltme; sayılsalardı aynı ürün defterde iki kez eklenmiş görünürdü.
+     */
+    (next: CartEntry[], nextSaved: CartEntry[], added?: AddToCartIntent[]) => {
       setEntries(next);
       setSavedEntries(nextSaved);
       // Tarayıcı deposu YALNIZ ziyaretçide yazılır. Girişli müşteride de yazılıyordu: depo
@@ -211,7 +216,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         writeSaved(nextSaved);
       }
       const ticket = ++seq.current;
-      void writeCartAction(locale, next, nextSaved, coupon)
+      void writeCartAction(locale, next, nextSaved, coupon, added ?? null)
         .then(({ data }) => {
           // Bilet eskiyse kullanıcı bu arada bir şey daha yaptı: eski cevap YOK SAYILIR. Kilide gerek
           // bırakmayan şey bu — arayüz açık kalır, sonuncu yazma kazanır.
@@ -357,12 +362,16 @@ export function CartProvider({ locale, children }: CartProviderProps) {
       add: (entry) => {
         closeUndo();
         setAddSkipped(null);
-        sync(mergeEntry(entries, entry), savedEntries);
+        sync(mergeEntry(entries, entry), savedEntries, [intentOf(entry)]);
       },
       addMany: (incoming, skipped) => {
         closeUndo();
         setAddSkipped(skipped && skipped > 0 ? skipped : null);
-        sync(incoming.reduce<CartEntry[]>((acc, entry) => mergeEntry(acc, entry), entries), savedEntries);
+        sync(
+          incoming.reduce<CartEntry[]>((acc, entry) => mergeEntry(acc, entry), entries),
+          savedEntries,
+          incoming.map(intentOf),
+        );
       },
       addSkipped,
       justRemoved: undo !== null,
@@ -438,4 +447,16 @@ export function CartProvider({ locale, children }: CartProviderProps) {
       <CartWriteFailed locale={locale} open={writeFailed} onRetry={load} onClose={() => setWriteFailed(false)} />
     </CartContext.Provider>
   );
+}
+
+/**
+ * Ekleme niyetinin ölçüm karşılığı (08.9) — istemcinin elindeki tek gerçek bu.
+ *
+ * `CartEntry` ürünü değil varyantı tanıyor; defterin `subjectId`'si de o varyant. Ürün kırılımı
+ * gerektiğinde varyant tablosundan çözülür (gerekçe `writeCartAction` künyesinde).
+ */
+function intentOf(entry: CartEntry): AddToCartIntent {
+  return entry.kind === 'bundle'
+    ? { subjectType: 'bundle', subjectId: entry.bundleId, qty: entry.qty }
+    : { subjectType: 'variant', subjectId: entry.variantId, qty: entry.qty };
 }

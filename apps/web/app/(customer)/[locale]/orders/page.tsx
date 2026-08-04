@@ -6,6 +6,7 @@ import { detectDevice } from '@/lib/device';
 import { currentCustomerId } from '@/lib/guard';
 import { listCustomerOrders } from '@/lib/order/customer-orders';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { Link } from '@/i18n/navigation';
 import frameMessages from '@/components/customer/ui/site-frame-messages.json';
@@ -32,6 +33,7 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView();
 
   const t: Messages = messages[locale];
   const [device, customerId] = await Promise.all([detectDevice(), currentCustomerId()]);

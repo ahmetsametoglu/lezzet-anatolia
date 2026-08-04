@@ -14,7 +14,7 @@ import type { ProfessionalsViewProps } from './professionals-types';
  * Düşen tek İÇERİK üç adım kartı; "onaya kadar perakende fiyat" cümlesi formun altında duruyor,
  * çünkü o bir tanıtım değil bir beklenti sözü ve onsuz aday fiyatları neden göremediğini sormaz.
  */
-export function ProfessionalsMobile({ t, status, signedIn, defaults, whatsappHref, whatsappNumber, locale }: ProfessionalsViewProps) {
+export function ProfessionalsMobile({ t, status, rejection, signedIn, defaults, whatsappHref, whatsappNumber, locale }: ProfessionalsViewProps) {
   return (
     <div className="flex flex-col">
       <section className="flex flex-col gap-3 bg-ink px-5 py-6.5 text-on-image">
@@ -34,7 +34,7 @@ export function ProfessionalsMobile({ t, status, signedIn, defaults, whatsappHre
 
       <section id="application" className="flex flex-col gap-3 px-4 py-4">
         <Card compact>
-          <StatusNote t={t} status={status} compact />
+          <StatusNote t={t} status={status} rejection={rejection} compact />
           {status !== 'approved' && (
             <ApplicationForm t={t} locale={locale} signedIn={signedIn} defaults={defaults} compact />
           )}

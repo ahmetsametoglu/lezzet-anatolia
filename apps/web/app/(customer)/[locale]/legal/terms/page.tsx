@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { Locale } from '@lezzet/i18n';
 import { LegalPage, legalMetadata } from '@/components/customer/legal/legal-page';
+import { recordPageView } from '@/lib/analytics/page-view';
 import content from './content.json';
 
 /**
@@ -44,6 +45,7 @@ export async function generateMetadata({ params }: TermsPageProps): Promise<Meta
 export default async function TermsPage({ params }: TermsPageProps) {
   const { locale } = await params;
   const copy = content[locale as Locale] ?? content.fr;
+  void recordPageView();
 
   return (
     <LegalPage

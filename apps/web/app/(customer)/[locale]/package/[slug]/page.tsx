@@ -6,6 +6,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { detectDevice } from '@/lib/device';
 import { getPackageDetail } from '@/lib/storefront/packages';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { PackageClient } from './package-client';
 import type { Messages } from './package-types';
@@ -13,6 +14,8 @@ import messages from './messages.json';
 
 interface PackagePageProps {
   params: Promise<{ locale: string; slug: string }>;
+  /** Yalnız kampanya etiketleri için (08.9). */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
@@ -34,17 +37,27 @@ export async function generateMetadata({ params }: PackagePageProps): Promise<Me
   return { title: pack.name, alternates: localeAlternates('/package/[slug]', locale, { slug }) };
 }
 
-export default async function PackagePage({ params }: PackagePageProps) {
+export default async function PackagePage({ params, searchParams }: PackagePageProps) {
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView(await searchParams);
 
   const t: Messages = messages[locale];
   const [pack, device] = await Promise.all([getPackageDetail(slug, locale), detectDevice()]);
   if (!pack) notFound();
 
   return (
-    <SiteFrame device={device} locale={locale} activeNav="packages" mobileChrome="detail" back={{ label: t.back, href: '/packages' }}>
+    <SiteFrame
+      device={device}
+      locale={locale}
+      activeNav="packages"
+      mobileChrome="detail"
+      back={{ label: t.back, href: '/packages' }}
+      // Paket bir ürün DEĞİL: `productId` yok, çünkü paket birden çok ürünü tek fiyata sunuyor —
+      // birini seçip ona yazmak ölçümü o ürüne haksızca yüklerdi.
+      share={{ subjectType: 'bundle', subjectId: pack.id }}
+    >
       <PackageClient t={t} locale={locale} pack={pack} device={device} />
     </SiteFrame>
   );

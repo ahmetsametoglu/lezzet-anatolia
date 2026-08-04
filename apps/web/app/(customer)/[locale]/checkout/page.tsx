@@ -6,6 +6,7 @@ import { detectDevice } from '@/lib/device';
 import { getSessionUser } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { routing } from '@/i18n/routing';
+import { recordEvent } from '@/lib/analytics/record';
 import { CheckoutClient } from './checkout-client';
 import type { Messages } from './checkout-types';
 import messages from './messages.json';
@@ -44,6 +45,13 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   const t: Messages = messages[locale];
   const [device, user] = await Promise.all([detectDevice(), getSessionUser()]);
   const profile = user ? await new UserProfileService(serviceDb()).findByAuthUserId(user.id) : null;
+
+  /**
+   * Huninin dördüncü adımı (08.9). **`loadCheckoutAction`'dan DEĞİL sayfadan atılıyor:** o eylem
+   * adres her değiştiğinde yeniden çağrılıyor ve oradan atsaydık huninin ikinci adımı birincisinden
+   * büyük çıkardı. Sayfa render'ı ise checkout'a girişin kendisidir — ziyaret başına bir kez.
+   */
+  void recordEvent({ type: 'checkout_start' });
 
   return (
     <SiteFrame device={device} locale={locale}>

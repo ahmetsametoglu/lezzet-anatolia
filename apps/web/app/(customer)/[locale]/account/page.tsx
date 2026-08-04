@@ -6,6 +6,7 @@ import { detectDevice } from '@/lib/device';
 import { currentCustomerId } from '@/lib/guard';
 import { getAccountView } from '@/lib/account/read';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { AccountClient } from './account-client';
 import type { Messages } from './account-types';
@@ -29,6 +30,7 @@ export default async function AccountPage({ params }: AccountPageProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView();
 
   const t: Messages = messages[locale];
   const [device, customerId] = await Promise.all([detectDevice(), currentCustomerId()]);

@@ -6,6 +6,7 @@ import { detectDevice } from '@/lib/device';
 import { currentCustomerId } from '@/lib/guard';
 import { getCustomerOrderDetail } from '@/lib/order/customer-orders';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { ReorderButton } from '../components/reorder-button';
 import { DetailClient } from './detail-client';
@@ -33,6 +34,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const { locale, reference } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView();
 
   const t: Messages = messages[locale];
   const listT: ListMessages = listMessages[locale];

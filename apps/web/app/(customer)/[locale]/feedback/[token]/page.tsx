@@ -4,6 +4,7 @@ import { setRequestLocale } from 'next-intl/server';
 import type { Locale } from '@lezzet/i18n';
 import { detectDevice } from '@/lib/device';
 import { openFeedbackInvite } from '@/lib/feedback/invite';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { FeedbackClient } from './feedback-client';
 import type { Messages } from './feedback-types';
@@ -35,6 +36,7 @@ export default async function FeedbackPage({ params }: FeedbackPageProps) {
   const { locale, token } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView();
 
   const t: Messages = messages[locale];
   const [invite, device] = await Promise.all([openFeedbackInvite(locale as Locale, token), detectDevice()]);

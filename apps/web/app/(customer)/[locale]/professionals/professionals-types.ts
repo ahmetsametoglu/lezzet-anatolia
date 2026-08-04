@@ -23,6 +23,14 @@ export interface ProfessionalsViewProps {
   locale: Locale;
   /** Girişli ziyaretçinin başvuru hâli; girişsizde daima `none`. */
   status: B2bApplicationStatus;
+  /**
+   * Reddin gerekçesi — **başvuru sahibinin dilinde** (20.2). Reddedilmemişse `null`.
+   *
+   * `translated` yalnız makine çevirisinde `true` ve ekran bunu söylemek zorunda. Orijinal
+   * TAŞINMIYOR ve bu bilinçli: gerekçenin orijinali Türkçedir, Fransız bir başvuru sahibinin
+   * onunla yapabileceği bir şey yok — yorumdaki iki yönlü bağlantı burada rozete iniyor.
+   */
+  rejection: { reason: string; translated: boolean } | null;
   /** Girişliyse kod adımı atlanır ve form kimlik alanlarını hazır getirir. */
   signedIn: boolean;
   /** Hesaptan gelen ön dolgu (ad/e-posta/telefon) — girişsizde boş. */

@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { brand } from '@lezzet/brand';
 import type { Locale } from '@lezzet/i18n';
+import { TranslationNote } from '@/components/customer/ui/translation-note';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CustomerTicketView, TicketMessageView } from '@/lib/ticket/ticket-types';
 import { messageStamp } from './ticket-labels';
@@ -72,6 +74,17 @@ function MessageBubble({
   // (16.5 geldiğinde bile müşteri "bir robotla mı konuşuyorum" sorusuyla baş başa bırakılmaz).
   const mine = message.sender === 'customer';
 
+  /**
+   * Müşteri orijinali görmek istedi mi (20.2) — ürün yorumundaki kararın aynısı ve bilerek aynısı.
+   *
+   * Varsayılan ÇEVİRİ: yazışmanın işi anlaşılmaktır. Ama **çeviri orijinalin yerine GEÇMEZ** —
+   * makine çevirisi bir şikâyeti yumuşatabilir; müşteri kendi cümlesine de personelinkine de
+   * ulaşabilmeli. Rozet yalnız gerçekten çevrilmiş metinde çizilir: aynı dilde yazılmış bir
+   * mesaja "otomatik çevrildi" demek, olmayan bir işlemi bildirmek olurdu.
+   */
+  const [showingOriginal, setShowingOriginal] = useState(false);
+  const shown = message.bodyTranslated && showingOriginal ? message.originalBody : message.body;
+
   return (
     <div
       className={[
@@ -83,7 +96,28 @@ function MessageBubble({
       ].join(' ')}
     >
       {!mine && <span className="font-sans text-micro font-bold text-olive">{brand.name}</span>}
-      <span className={`font-sans text-note leading-relaxed ${mine ? '' : 'text-ink'}`}>{message.body}</span>
+      {/* `lang` GERÇEK dili söyler: orijinal gösteriliyorsa metnin kendi dili, çeviri
+          gösteriliyorsa okuyucunun dili. Ekran okuyucuları ve tarayıcı çevirisi buna bakar. */}
+      <span
+        lang={showingOriginal ? (message.language ?? undefined) : locale}
+        className={`font-sans text-note leading-relaxed ${mine ? '' : 'text-ink'}`}
+      >
+        {shown}
+      </span>
+
+      {message.bodyTranslated && (
+        <TranslationNote
+          badge={t.translation.badge}
+          toggle={{
+            showingOriginal,
+            onToggle: () => setShowingOriginal((v) => !v),
+            showOriginal: t.translation.showOriginal,
+            showTranslation: t.translation.showTranslation,
+          }}
+          // Müşterinin kendi balonu koyu zeytin: kum rozeti orada okunmuyor.
+          onDark={mine}
+        />
+      )}
 
       {message.attachmentUrls.map((url) => (
         // Ek daima fotoğraftır (`checkAttachment` yalnız görsel uzantı geçiriyor); ham `<img>`

@@ -18,6 +18,7 @@ import { transitionOrder } from '@/lib/order/transition';
 import { createCheckoutSession } from '@/lib/order/checkout-session';
 import { resolveCheckoutPayment } from '@/lib/order/checkout-options';
 import { resolveDelivery } from '@/lib/order/delivery';
+import { recordEvent } from '@/lib/analytics/record';
 import { routing } from '@/i18n/routing';
 
 /**
@@ -305,6 +306,7 @@ export async function confirmCheckoutAction(input: {
             : draft.status === 'date_unavailable'
               ? draft.availableDates
               : undefined;
+      measureRejection(draft.status);
       return { data: { status: 'rejected', reason: draft.status, detail }, errorKey: null };
     }
 
@@ -330,6 +332,7 @@ export async function confirmCheckoutAction(input: {
       if (!reserved.ok) {
         // Ayrılamadıysa sipariş taslak kalır ve kapatılır: müşteriye söz verilmemiş olur.
         await cancelDraft(draft.orderId);
+        measureRejection('insufficient_stock');
         return { data: { status: 'rejected', reason: 'insufficient_stock' }, errorKey: null };
       }
 
@@ -343,6 +346,9 @@ export async function confirmCheckoutAction(input: {
       // Sipariş kesinleşti → sepetten O SİPARİŞİN kalemleri düşer. Toptan boşaltmak, iki gruplu
       // sepette kapıya siparişini veren müşterinin kargo grubunu da sessizce silerdi (19.7).
       await clearOrderedLines(customerId, draft.orderId);
+      // Huninin son adımı (08.9). Tutar ve müşteri TAŞINMAZ — olay yalnız "bu oturum siparişle
+      // bitti" der (`ANALYTICS §1`, İlke 2'nin bilinçli istisnası).
+      void recordEvent({ type: 'order_placed' });
       return { data: { status: 'placed', orderId: draft.orderId, totalCents: draft.totalCents }, errorKey: null };
     }
 
@@ -350,6 +356,16 @@ export async function confirmCheckoutAction(input: {
     if (session.status !== 'ok' || !session.clientSecret) {
       return { data: { status: 'rejected', reason: session.status }, errorKey: null };
     }
+    // Kart yolunun huni adımı BURADA kapanır (08.9 · kullanıcı kararı 04.08). Buraya gelinmesi
+    // müşterinin ödeme düğmesine bastığı anlamına gelir — sipariş henüz `draft`, ama huni bir
+    // NİYET ölçüyor, muhasebe değil: bankadan dönmeyen bir onay müşterinin kararını değiştirmez.
+    // Sipariş ve ciro SAYISI zaten defterin değil `order` tablosunun yetkisinde (`ANALYTICS §4`).
+    //
+    // Alternatifleri elemek: webhook'ta atmak imkânsız (orada ziyaretçinin oturumu yok, anahtar
+    // istekten türüyor), dönüş sayfasında atmak yenilemede çift sayardı ve kapıdan tekilleştirme
+    // beklemek gerekirdi. Kart reddedilip müşteri tekrar denerse ikinci olay yazılır — o da ikinci
+    // bir niyettir, düzeltilecek bir sapma değil.
+    void recordEvent({ type: 'order_placed' });
     return {
       data: { status: 'payment_required', orderId: draft.orderId, clientSecret: session.clientSecret, totalCents: draft.totalCents },
       errorKey: null,
@@ -396,4 +412,26 @@ async function cancelDraft(orderId: string): Promise<void> {
 
 async function releaseOrderStock(orderId: string): Promise<void> {
   await new ReservationService(serviceDb()).releaseByOrder(orderId);
+}
+
+/**
+ * Checkout REDDİNİN ölçüm karşılığı (08.9 · `ANALYTICS §3`).
+ *
+ * **Her ret ölçülmez** ve bu bir eksiklik değil, sınırın kendisi: defterin sebep kümesi müşterinin
+ * SÜRTÜNMESİNİ anlatır, bizim arızalarımızı değil. Ölçülmeyen üçü —
+ *   · `warehouse_unresolved` (aynı kod iki bölgede / kargo deposu yok) bizim yapılandırma
+ *     hatamızdır ve zaten `captureError` ile `error_log`'a gidiyor; huniye yazılsaydı müşteri
+ *     vazgeçmiş gibi görünürdü, oysa biz cevap verememişiz.
+ *   · `order_not_placed` iç bir arıza, aynı gerekçe.
+ *   · `date_unavailable` gerçek bir sürtünme ama enum'da karşılığı YOK; uydurmak yerine
+ *     ölçmüyoruz. Karşılığı açılırsa tek satır (13.1'e bildirildi).
+ */
+function measureRejection(reason: string): void {
+  const mapped =
+    reason === 'blocked_lines'
+      ? 'not_shippable'
+      : reason === 'insufficient_here' || reason === 'insufficient_stock'
+        ? 'out_of_stock'
+        : null;
+  if (mapped) void recordEvent({ type: 'checkout_blocked', reason: mapped });
 }

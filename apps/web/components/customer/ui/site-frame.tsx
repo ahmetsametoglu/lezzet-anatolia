@@ -5,7 +5,7 @@ import { brand, whatsappHref } from '@lezzet/brand';
 import { Link } from '@/i18n/navigation';
 import { LocaleLinks } from './locale-switch';
 import { MobileMenu } from './mobile-menu';
-import { ShareButton } from './share-button';
+import { ShareButton, type ShareSubject } from './share-button';
 import { PlaceChip } from '@/components/customer/delivery/place-chip';
 import { CartBadge } from '@/components/customer/cart/cart-badge';
 import { AccountEntry } from '@/components/customer/account/account-entry';
@@ -62,6 +62,14 @@ interface SiteFrameProps {
    * Neden `SiteFrame` içinde ve ayrı bir bileşen değil: `main` ve footer aynı kalıyor. Ayrı bir
    * çerçeve yazmak footer'ı ikinci kez tanımlamak, yani dil listesini iki yerde tutmak olurdu.
    */
+  /**
+   * Mobil detay başlığındaki paylaş düğmesinin KONUSU (08.9).
+   *
+   * Çerçeve hangi sayfada olduğunu bilmez; düğme adresi paylaşır ama defter adresi tanımaz (yol
+   * rota kalıbı olarak yazılıyor). Verilmezse düğme HİÇ çizilmez — konusu bilinmeyen bir paylaşım
+   * ölçülemez ve ölçülemeyen bir düğmeyi çizmek, defterde karşılığı olmayan bir tıklama üretirdi.
+   */
+  share?: ShareSubject;
   accountChrome?: {
     /** Masaüstünde sekme gezinmesi — geri bağıyla birlikte kullanılmaz (tasarımda ikisi ayrı ekran). */
     nav?: AccountTab;
@@ -130,7 +138,7 @@ function tabClass(key: AccountTab, active: AccountTab | undefined, base = ''): s
   return [base, 'border-b-2 pb-0.5', active === key ? 'border-olive text-olive' : 'border-transparent'].filter(Boolean).join(' ');
 }
 
-export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default', back, accountChrome, fill, children }: SiteFrameProps) {
+export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default', back, share, accountChrome, fill, children }: SiteFrameProps) {
   const t = messages[locale];
   const isMobile = device === 'mobile';
   // Mobil detayda çerçevenin tamamı sadeleşir: şerit yok, arama yok, footer tek satır.
@@ -206,7 +214,7 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
             <img src="/logo.jpg" alt={brand.name} className="h-9 mix-blend-multiply" />
           </Link>
           <div className="flex items-center gap-3.5">
-            <ShareButton label={t.share} />
+            {share && <ShareButton label={t.share} subject={share} />}
             <CartBadge label={t.cart} compact />
           </div>
         </header>

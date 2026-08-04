@@ -105,8 +105,13 @@ Aşağıdaki eski gerekçe **sosyal kanıt** riskini doğru görüyordu ama bede
 alanı boş bırakmak ekranın bittiğini düşündüren bir boşluk üretiyor — müşteri o noktada siteyi
 terk ediyor. Dört ürün göstermek "bunlar en çok satanlar" diye bir iddiada bulunmuyor; başlık bir
 seçki başlığı olarak da okunuyor. Kaynak anasayfanın bandıyla AYNI (`readShowcase`) — iki ekran iki
-farklı "seçki" göstermiyor; ölçüt geldiğinde (`BEKLEYEN(08.9)`) yalnız o fonksiyonun sıralaması
-değişiyor, iki ekran da onu izliyor.
+farklı "seçki" göstermiyor.
+
+**Ölçüt İNDİ (04.08 · 08.9):** sıralama artık son N günün görüntüleme + sepete ekleme toplamından
+geliyor (`analytics_daily_product`, pencere ayardan). Katalog yedeği KALDIRILMADI — veri
+birikmemişken (ilk günler, yeni kurulum) yine devrede ve seçki boş kalmıyor. Yani kullanıcının
+kararı kalıcı oldu: yedek bir geçiş çözümü değil, **ilk-gün hâlinin kendisi**. Sözün tutulduğu yer
+tekti (`readShowcase`), değişen de tek yer oldu — iki ekran da onu izledi.
 
 <details><summary>Eski gerekçe (arşiv — kararı anlamak için)</summary>
 

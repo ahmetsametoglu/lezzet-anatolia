@@ -12,6 +12,7 @@ import { getSessionUser } from '@/lib/guard';
 import { detectDevice } from '@/lib/device';
 import { getHomeData } from '@/lib/storefront/home';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { HomeClient } from './home-client';
 import type { Messages } from './home-types';
@@ -19,6 +20,8 @@ import messages from './messages.json';
 
 interface HomeProps {
   params: Promise<{ locale: string }>;
+  /** Yalnız kampanya etiketleri için (08.9) — sayfanın kendi süzgeci yok. */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
@@ -34,10 +37,12 @@ export async function generateMetadata({ params }: HomeProps): Promise<Metadata>
   return { alternates: localeAlternates('/', locale) };
 }
 
-export default async function Home({ params }: HomeProps) {
+export default async function Home({ params, searchParams }: HomeProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  // Kampanya bağlarının en olası indiği yer: UTM burada yakalanır (`lib/analytics/page-view`).
+  void recordPageView(await searchParams);
 
   // İki-yüzey kuralı: personel ana sayfada karşılanmaz → Operasyon'a. (Vitrini görmek isterse
   // kataloğa doğrudan gidebilir; yalnız kök `/` yönlendirir.)

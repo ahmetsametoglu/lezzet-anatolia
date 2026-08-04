@@ -8,6 +8,7 @@ import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { detectDevice } from '@/lib/device';
 import { localeAlternates } from '@/lib/seo/alternates';
 import { readB2bApplicant } from '@/lib/b2b/application';
+import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { ProfessionalsClient } from './professionals-client';
 import type { Messages } from './professionals-types';
@@ -28,6 +29,8 @@ import messages from './messages.json';
  */
 interface ProfessionalsPageProps {
   params: Promise<{ locale: string }>;
+  /** Yalnız kampanya etiketleri için (08.9) — B2B kampanyası doğrudan buraya iner. */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: ProfessionalsPageProps): Promise<Metadata> {
@@ -37,10 +40,11 @@ export async function generateMetadata({ params }: ProfessionalsPageProps): Prom
   return { title: t.meta.title, description: t.meta.description, alternates: localeAlternates('/professionals', locale) };
 }
 
-export default async function ProfessionalsPage({ params }: ProfessionalsPageProps) {
+export default async function ProfessionalsPage({ params, searchParams }: ProfessionalsPageProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  void recordPageView(await searchParams);
 
   const t: Messages = messages[locale];
   const [device, applicant] = await Promise.all([detectDevice(), readB2bApplicant(locale as Locale)]);
@@ -53,6 +57,9 @@ export default async function ProfessionalsPage({ params }: ProfessionalsPagePro
         device={device}
         // Girişsiz ziyaretçide durum daima "hiç başvurulmadı": kimliği olmayanın başvurusu da yok.
         status={applicant?.status ?? 'none'}
+        // Gerekçe yalnız GERÇEKTEN varsa taşınır: reddedilmemiş ya da operatörün gerekçe yazmadığı
+        // kayıtta `null` — ekran boş bir kutu çizmesin.
+        rejection={applicant?.rejectReason ? { reason: applicant.rejectReason, translated: applicant.rejectReasonTranslated } : null}
         signedIn={applicant !== null}
         defaults={{
           contactName: applicant?.contactName ?? '',

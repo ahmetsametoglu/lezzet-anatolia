@@ -7,8 +7,9 @@ import { customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { routing } from '@/i18n/routing';
 import type { CartItem } from '@lezzet/types';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
+import { recordEvent } from '@/lib/analytics/record';
 import { getCartView } from './read';
-import { cartKey, entryOfItem, type CartEntry, type CartView } from './cart-types';
+import { cartBlockedAnalyticsReason, cartKey, entryOfItem, type AddToCartIntent, type CartEntry, type CartView } from './cart-types';
 
 /**
  * Sepet server action'ları (08.4).
@@ -123,12 +124,27 @@ export async function writeCartAction(
   entries: CartEntry[],
   saved: CartEntry[] = [],
   couponCode: string | null = null,
+  /**
+   * **ÖLÇÜM İÇİN, yazma için değil** (08.9 · `ANALYTICS §3`). Uç bir "ekleme" ucu değil eşitleme
+   * ucudur: sunucuya tam liste gelir, niyet gelmez. Farkı sunucuda hesaplamak yalnız girişli
+   * müşteride mümkün (ziyaretçide saklanmış liste yok) ve o zaman huninin "sepete ekleme" adımı
+   * sistematik olarak yalnız girişlileri sayardı — oysa huninin asıl sorusu ziyaretçinin nerede
+   * düştüğü.
+   *
+   * Bu yüzden niyeti İSTEMCİ BEYAN EDER. Beyan edilmiş olay gözlenen olay değildir: sayısı sepet
+   * satırlarıyla tutmaz ve **bu bir arıza değildir.** Parametre yazma nesnesine hiç girmez.
+   */
+  addedIntent: AddToCartIntent[] | null = null,
 ): Promise<CustomerResult<CartPayload>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     const customerId = await currentCustomerId();
     // Ziyaretçide yazacak yer yok — listeler tarayıcıda kalır, burada yalnız çözülür.
-    if (!customerId) return { data: { ...(await resolveBoth(locale, entries, saved, { couponCode })), serverCart: false }, errorKey: null };
+    if (!customerId) {
+      const payload = await resolveBoth(locale, entries, saved, { couponCode });
+      measureCart(payload.view, addedIntent);
+      return { data: { ...payload, serverCart: false }, errorKey: null };
+    }
 
     // Sunucuya yazılacak fiyat SUNUCUNUN çözdüğüdür; istemciden fiyat kabul edilmez.
     const cart = new CartService(serviceDb());
@@ -144,10 +160,28 @@ export async function writeCartAction(
       payload.view.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })),
     );
     await cart.replaceSaved(customerId, payload.saved.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })));
+    measureCart(payload.view, addedIntent);
     return { data: { ...payload, serverCart: true }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
+}
+
+/**
+ * Sepet turunun ölçümü (08.9) — iki olay, tek yer.
+ *
+ * **`cart_blocked` bir DURUM değil bir AN olarak yazılıyor:** engel her okumada var olabilir, ama
+ * burası müşterinin sepetini DEĞİŞTİRDİĞİ an. Her okumada atsaydık defter aynı engeli onlarca kez
+ * sayar ve huninin en kıymetli olayı gürültüye dönerdi; hiç atmasaydık terkin sebebi ölçülemezdi.
+ *
+ * Ölçüm akışı kesmez: `void`, ve kapı zaten fırlatmıyor.
+ */
+function measureCart(view: CartView, added: AddToCartIntent[] | null): void {
+  for (const item of added ?? []) {
+    void recordEvent({ type: 'add_to_cart', subjectType: item.subjectType, subjectId: item.subjectId, productId: null, qty: item.qty });
+  }
+  const reason = cartBlockedAnalyticsReason(view);
+  if (reason) void recordEvent({ type: 'cart_blocked', reason });
 }
 
 /**

@@ -24,7 +24,7 @@ import {
   updateCheckoutAddressAction,
   type CheckoutSnapshot,
 } from './actions';
-import type { CheckoutState, CheckoutViewProps, Messages, NewAddressInput } from './checkout-types';
+import { checkoutBlocker, type CheckoutState, type CheckoutViewProps, type Messages, type NewAddressInput } from './checkout-types';
 
 /**
  * Checkout'un karar merkezi (08.13) — durum ve sunucu turları burada, yerleşim iki ekran dosyasında.
@@ -234,7 +234,10 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
           returnUrlBase={returnUrlBase}
           onPrepare={prepare}
           onError={setError}
-          disabled={busy || !snapshot.payment.minBasketOk || Boolean(snapshot.delivery?.blocked)}
+          // Özet kartıyla AYNI kapıdan: burası üç koşula bakıyordu, özet beşe — sepette
+          // gönderilemeyen kalem varken kart formu açık kalıyor, müşteri reddi ancak
+          // bastıktan sonra öğreniyordu.
+          disabled={busy || checkoutBlocker({ cartFailed, cartHasBlocked: view.hasBlocked, snapshot, addressId: state.addressId }) !== null}
           labels={{
             submit: t.summary.submit,
             validating: t.pay.validating,

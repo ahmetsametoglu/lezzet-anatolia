@@ -36,6 +36,7 @@
     "loadMore": "Daha eski talepler ↓",
     "loading": "Yükleniyor…",
     "photoAlt": "Talep fotoğrafı",
+    "translation": { "badge": "otomatik çevrildi", "showOriginal": "Orijinali göster", "showTranslation": "Çeviriyi göster" },
     "new": {
       "title": "Sorun bildir",
       "generalTitle": "Bize yazın",
@@ -106,6 +107,7 @@
     "loadMore": "Demandes plus anciennes ↓",
     "loading": "Chargement…",
     "photoAlt": "Photo de la demande",
+    "translation": { "badge": "traduit automatiquement", "showOriginal": "Voir l'original", "showTranslation": "Voir la traduction" },
     "new": {
       "title": "Signaler un problème",
       "generalTitle": "Écrivez-nous",
@@ -176,6 +178,7 @@
     "loadMore": "Ältere Anfragen ↓",
     "loading": "Wird geladen…",
     "photoAlt": "Foto zur Anfrage",
+    "translation": { "badge": "automatisch übersetzt", "showOriginal": "Original anzeigen", "showTranslation": "Übersetzung anzeigen" },
     "new": {
       "title": "Problem melden",
       "generalTitle": "Schreiben Sie uns",
