@@ -524,8 +524,9 @@ export function ZoneDemandTable({ rows }: { rows: readonly ZoneDemandRow[] }) {
         sinyalidir — payda aynı ziyaretçinin tekrar sormasını da sayıyor, yani gerçek dönüşümden küçüktür ve kodlar
         arasında karşılaştırmak için anlamlıdır. Sipariş ve talep <strong>tüm zamana</strong> aittir; dönem süzgeci yok,
         çünkü biri süzülüp öteki süzülmese oran pencere daraldıkça sessizce düşer ve düşüş bir sinyal sanılırdı.{' '}
-        Bir kodu bölgeye ekleyip kaydettiğinizde o koddaki bekleyenlere haber gider — BEKLEYEN(19.21): gönderim işi
-        henüz bağlı değil.
+        Bir kodu bölgeye ekleyip kaydettiğinizde o koddaki bekleyenlere <strong>e-postayla haber gider</strong> —
+        gönderimi kaydetme akışı beklemez, arka plandaki iş her turda “kapsanmış ama haberi gitmemiş” bekleyişleri
+        arar ve bir kez gönderir. Kanal bugün yalnız e-posta.
       </p>
     </section>
   );
