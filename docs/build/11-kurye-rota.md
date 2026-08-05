@@ -22,6 +22,14 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
 - [~] (11.1) **Gün listesi:** kuryenin o günkü teslimatları rota sırasıyla (adres, müşteri, ödeme beklentisi + tutar, içerik özeti); yalnız kendi teslimatları
   - *Bitti:* başka kuryenin teslimatı görünmüyor; ulaşılamayanlar listede kalıyor
   - **Durum (28.07) — ARKA UÇ HAZIR, ekran yok.** Kapı `apps/web/lib/courier/day.ts`: `listCourierDay` (adres anlık kopyadan, ödeme beklentisi, içerik özeti, "yoldayım" bağlantısı). Ekranı yüzey ajanı yazacak; bu kapı onun sözleşmesidir.
+  - **Durum (05.08) — EKRAN YAZILDI:** `/operations/deliveries` (cihaz forklu, `requireCourier`). **Rayın son ölü girişi kapandı** — on beş nav hedefinin hepsinin artık rotası var.
+    - **Kurye kimliği GUARD'dan, adresten DEĞİL.** `?courierId=` gibi bir parametre olsaydı bir kurye başkasının gününü açardı; kapının zorunlu imzası da aynı sınırı yapısal kılıyor.
+    - **Rota bilerek TEK adres:** sevkiyatçının gün planı (`09.15`) aynı sayfaya ikinci bir dal olarak gelecek — nav zaten tek giriş taşıyor ("Teslimat & Rota") ve ikisi aynı veriye bakıyor. Ayrı rotalar açmak aynı günü iki adresten anlatmak olurdu. Sevkiyatçı dalı bugün YOK çünkü kapısı yok (`BEKLEYEN(09.15)`, talep açık).
+    - **Tahsilat toplamı güne EŞLİK ediyor** (tasarım §2: "kapanışta sürpriz olmaz"): kurye akşam kasayı sayarken beklenen tutarı ilk kez görmemeli. Yalnız **kapıda ödenecek** duraklar toplanıyor — önceden ödenmiş sipariş kuryenin eline hiç girmiyor, toplama katılsaydı kasa fazla görünürdü.
+    - **"Ödendi" kapısında rakam GÖSTERİLMİYOR**, tek cümle yazılıyor: tutar basmak kuryeyi olmayan bir tahsilata hazırlardı.
+    - **Sonuçlanan duraklar listede KALIYOR ve yeniden sıralanmıyor** — soluklaşıyor. Dibe atmak, kuryenin gün ortasındaki "ne yaptım" haritasını bozardı; gizlemek ulaşılamayanların geri dönülecek adresini yutardı.
+    - **Çalışmayan düğme yok:** telefon/WhatsApp/adres bağlantısı olmayan durakta o düğme hiç çizilmiyor. Sahada çalışmayan bir düğme en kötü şeydir.
+    - **Masaüstü dar sütunda** (560 px): bu ekranın bilgisi telefonda dizilmek üzere kuruldu; 1360 px'e yaymak kartı seyreltip okunmaz kılardı. Masaüstü hâli sevkiyatçının omuz üstünden bakması ve geliştirme içindir.
   - **"Yalnız kendi teslimatları" İMZADA durur:** `courierId` zorunlu parametredir, seçenek değil — çağıranın süzmeyi hatırlamasına bağlı bırakılmadı. `OrderService.listByCourier` de aynı imzayı taşır.
   - **Kurye tek bir para görür: tahsil edeceği tutar.** Maliyet, kâr, marj, alış fiyatı, vade/limit/borç dönen görünüm modelinde YOK (depo kuyruğuyla aynı yapısal sınır) — test serileştirilmiş çıktıda arıyor.
   - **"Ulaşılamadı" ile "henüz sıra gelmedi" TÜRETİLİR:** ikisi de `ready`'dir; ayrım `out_for_delivery → ready` geçiş sayısından çıkar, ayrı kolon açılmadı.
