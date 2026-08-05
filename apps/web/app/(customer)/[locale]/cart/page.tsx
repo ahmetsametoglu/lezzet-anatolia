@@ -28,7 +28,7 @@ export default async function CartPage({ params }: CartPageProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView();
+  void recordPageView('/cart');
 
   const t: Messages = messages[locale];
   const [device, emptyContext] = await Promise.all([detectDevice(), getEmptyCartContext(locale)]);

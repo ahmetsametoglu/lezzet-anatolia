@@ -34,7 +34,7 @@ export default async function NewTicketPage({ params, searchParams }: NewTicketP
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView();
+  void recordPageView('/support/new');
 
   const { order: orderId } = await searchParams;
   const t: Messages = messages[locale];

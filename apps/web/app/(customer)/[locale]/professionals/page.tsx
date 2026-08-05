@@ -44,7 +44,7 @@ export default async function ProfessionalsPage({ params, searchParams }: Profes
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView(await searchParams);
+  void recordPageView('/professionals', await searchParams);
 
   const t: Messages = messages[locale];
   const [device, applicant] = await Promise.all([detectDevice(), readB2bApplicant(locale as Locale)]);

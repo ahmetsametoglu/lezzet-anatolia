@@ -33,7 +33,7 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView();
+  void recordPageView('/orders');
 
   const t: Messages = messages[locale];
   const [device, customerId] = await Promise.all([detectDevice(), currentCustomerId()]);

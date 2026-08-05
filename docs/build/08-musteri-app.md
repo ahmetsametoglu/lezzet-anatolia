@@ -244,6 +244,21 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
     · **`date_unavailable` reddi ölçülmüyor:** gerçek bir sürtünme ama enum'da karşılığı yok; uydurmak yerine ölçmüyoruz (13.1'e bildirildi). `warehouse_unresolved` ve `order_not_placed` ise bizim arızalarımız — yerleri `error_log`, huni değil.
     **`add_to_cart` `productId` taşımıyor:** istemcinin elindeki `CartEntry` ürünü değil varyantı tanıyor; `subjectId` varyantın kendisi olduğu için ürün kırılımı varyant tablosundan çözülebiliyor.
   - **Sıra:** 13.1 → 08.9. Şerit görüşüm `13-analitik.md` → *Müşteri yüzeyi*; günlük konuşma `docs/talep/analitik-ortak-calisma.md`.
+  - **Durum (04.08 · denetim P1 — `path` BAŞTAN YANLIŞ yazılıyormuş, atıcı ayağı düzeltildi):** denetim canlıda ölçtü, ben deftere bakıp doğruladım: `/fr/produit/…` ziyareti `product_view path=/catalogue` yazıyordu — **ziyaret edilen değil GELİNEN sayfa.** Kök kapıdaydı (`x-invoke-path ?? referer`; `x-invoke-path` Next 15'te yok, tek okuyucusu o satırdı) ama imza bendeydi.
+    **Kendi payım — bu bir denetim bulgusundan çok bir DERS:** 08.9'u "bitti" derken atıcı tarafını ölçtüm (*"olay atılıyor mu"*) ama **yazılan satırı hiç okumadım.** Defterden tek bir `select` ilk gün gösterirdi. Hata sessizdi çünkü `path` hep dolu ve hep makul görünüyordu — "boş değil"i "doğru" sanmak, bu modülde ikinci kez oldu.
+    **Ölçtüğümde ikinci yüz de çıktı:** `page_view | /urun/artisan-lemon-cake | 24` — slug HAM yazılıyordu (18 karakter, emniyet ağı 20+ arıyor). Yani rota boyutu hem yanlış sayfayı gösteriyor hem katalog büyüklüğüyle çarpılıyordu; `0036`'nın özetten uzak tuttuğu şişme deftere `path` üzerinden geri giriyordu. O yarısı arka uçta çözüldü (sözlük silindi, kalıplar `PATHNAMES`'ten türetiliyor).
+    **Yapılan:** `recordPageView(path, searchParams?)` — 22 sayfa kendi kalıbını geçiyor; render anında atılan öteki üç olay da (`product_view` · `search` · `checkout_start`) `{ path }` alıyor. 25 çağrı yeri.
+    **Kalıp serbest dize DEĞİL, `AppRoute`** (`keyof typeof PATHNAMES`): yanlış yazılan yol derlemede patlıyor, yeni rota eklendiği an burada da geçerli oluyor — ikinci liste tutulmuyor. Arka ucun sözlüğü silip `PATHNAMES`'e bağlama kararıyla aynı kaynak.
+    **Sunucu eylemlerine kalıp GEÇİRİLMEDİ:** `path` yalnız render anında yanlıştı — eylemde tarayıcı `Referer`'a bulunulan sayfayı yazıyor, kapının türetimi orada doğru cevabı veriyor. Geçirmek istemcinin rotasını sunucuya taşımak olurdu: her eylem imzasına bir alan daha, unutulduğunda sessizce yanlış.
+    **CANLI DOĞRULANDI (04.08, beş sayfa · üç dil):**
+    ```
+    page_view    | /product/[slug] | 6     ← /fr/produit/… VE /tr/urun/… aynı kalıba indi
+    product_view | /product/[slug] | 6
+    page_view    | /catalog        | 1     · page_view | /legal/faq | 1  (/de/haeufige-fragen)
+    place_resolved | /cart         | 2     ← EYLEM: referer bulunulan sayfayı veriyor
+    ```
+    Ham slug kalmadı; üç dil tek kalıba iniyor. **Sunucu eylemi maddesi de artık gerekçe değil ölçüm:** `place_resolved | /cart` satırı, eylemin bulunulan sayfayı doğru yazdığını gösteriyor.
+    **Path artık ZORUNLU parametre** — yoksayılan bir `recordPageView` çağrısı derlemeden geçemiyor; yani "unutulmuş sayfa" diye bir sınıf kalmadı.
 
 - [~] (08.10) **Vitrin veri sözleşmesi + fixture katmanı — müşteri yüzeyinin açılış işi** · `touches: apps/web/lib/storefront/**, apps/web/app/(customer)/**, apps/web/components/customer/**, apps/web/i18n/routing.ts`
   - *Bitti:* müşteri sayfaları gerçek servis olmadan tasarımına birebir uygun açılıyor; eksik veri kaynağı geldiğinde **yalnız `lib/storefront` içi** değişiyor — bağlama commit'inin diff'i o dizinle sınırlı kalıyor (sayfa/komponent/`messages.json` dosyalarına dokunulmuyor).

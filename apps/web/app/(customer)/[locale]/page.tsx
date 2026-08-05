@@ -42,7 +42,7 @@ export default async function Home({ params, searchParams }: HomeProps) {
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
   // Kampanya bağlarının en olası indiği yer: UTM burada yakalanır (`lib/analytics/page-view`).
-  void recordPageView(await searchParams);
+  void recordPageView('/', await searchParams);
 
   // İki-yüzey kuralı: personel ana sayfada karşılanmaz → Operasyon'a. (Vitrini görmek isterse
   // kataloğa doğrudan gidebilir; yalnız kök `/` yönlendirir.)

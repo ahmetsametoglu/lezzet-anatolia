@@ -1,5 +1,6 @@
 import 'server-only';
 import { headers } from 'next/headers';
+import type { AppRoute } from '@lezzet/i18n';
 import { recordEvent } from './record';
 
 /**
@@ -30,9 +31,28 @@ import { recordEvent } from './record';
  */
 type RawSearchParams = Record<string, string | string[] | undefined>;
 
-export async function recordPageView(searchParams?: RawSearchParams): Promise<void> {
+/**
+ * ── ROTA KALIBINI SAYFA GEÇER, KAPI TÜRETMEZ (denetim P1, 04.08) ─────────────
+ * Kapı yolu `x-invoke-path ?? referer` ile türetiyordu; `x-invoke-path` Next 15'te YOK ve müşteri
+ * dalı middleware'den erken döndüğü için yol üstbilgisi de yazılmıyor. Geriye `referer` kalıyordu —
+ * o da render anında **bir önceki sayfa**. Ölçüldü: `/fr/produit/…` ziyareti deftere
+ * `product_view path=/catalogue` yazıyordu. Hata vermiyordu çünkü `path` hep dolu ve hep makul.
+ *
+ * Kalıp `AppRoute` tipinde, serbest dize DEĞİL: yanlış yazılan bir yol derlemede patlar ve
+ * `PATHNAMES`'e yeni rota eklendiği an burada da geçerli olur — ikinci bir liste tutulmaz.
+ * Dilsizdir (`/product/[slug]`), yoksa aynı ekran üç dilde üç satır olurdu.
+ *
+ * ── SUNUCU EYLEMLERİ KALIP GEÇMEZ ve bu bir eksik değil ──────────────────────
+ * `path` yalnız RENDER anında yanlıştı. Sunucu eyleminde (`add_to_cart`, `place_resolved`,
+ * `share`…) tarayıcı `Referer`'a **bulunulan sayfayı** yazar — kapının türetimi orada zaten doğru
+ * cevabı veriyor. Eylemlere de kalıp geçirmek, istemcinin rotasını sunucuya taşımak demekti:
+ * her eylem imzasına bir alan daha, unutulduğunda sessizce yanlış. Bilen taraf söyler ilkesi
+ * burada da geçerli — render anında bilen SAYFA, eylem anında bilen TARAYICI.
+ * (Gerekçeye dayanıyor; canlı ölçüm render tarafı için yapıldı, eylem tarafı için bekliyor.)
+ */
+export async function recordPageView(path: AppRoute, searchParams?: RawSearchParams): Promise<void> {
   const params = flatten(searchParams);
-  void recordEvent({ type: 'page_view', utm: params, source: params ? null : await externalReferrer() });
+  void recordEvent({ type: 'page_view', utm: params, source: params ? null : await externalReferrer() }, { path });
 }
 
 /**

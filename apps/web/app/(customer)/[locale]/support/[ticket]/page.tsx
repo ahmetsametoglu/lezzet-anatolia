@@ -32,7 +32,7 @@ export default async function TicketPage({ params }: TicketPageProps) {
   const { locale, ticket: ticketId } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView();
+  void recordPageView('/support/[ticket]');
 
   const t: Messages = messages[locale];
   const [device, data] = await Promise.all([detectDevice(), loadSupport(locale as Locale, ticketId)]);

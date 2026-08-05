@@ -51,7 +51,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
    * adres her değiştiğinde yeniden çağrılıyor ve oradan atsaydık huninin ikinci adımı birincisinden
    * büyük çıkardı. Sayfa render'ı ise checkout'a girişin kendisidir — ziyaret başına bir kez.
    */
-  void recordEvent({ type: 'checkout_start' });
+  void recordEvent({ type: 'checkout_start' }, { path: '/checkout' });
 
   return (
     <SiteFrame device={device} locale={locale}>

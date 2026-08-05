@@ -26,7 +26,7 @@ export default async function SupportPage({ params }: SupportPageProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView();
+  void recordPageView('/support');
 
   const t: Messages = messages[locale];
   const [device, data] = await Promise.all([detectDevice(), loadSupport(locale as Locale)]);

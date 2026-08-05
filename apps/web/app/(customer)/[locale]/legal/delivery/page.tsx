@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: DeliveryPageProps): Promise<M
 export default async function DeliveryPage({ params }: DeliveryPageProps) {
   const { locale } = await params;
   const copy = content[locale as Locale] ?? content.fr;
-  void recordPageView();
+  void recordPageView('/legal/delivery');
 
   return (
     <LegalPage

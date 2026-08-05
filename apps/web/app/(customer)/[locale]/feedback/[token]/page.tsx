@@ -36,7 +36,7 @@ export default async function FeedbackPage({ params }: FeedbackPageProps) {
   const { locale, token } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView();
+  void recordPageView('/feedback/[token]');
 
   const t: Messages = messages[locale];
   const [invite, device] = await Promise.all([openFeedbackInvite(locale as Locale, token), detectDevice()]);

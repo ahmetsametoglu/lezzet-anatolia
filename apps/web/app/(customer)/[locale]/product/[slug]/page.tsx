@@ -67,7 +67,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView(await searchParams);
+  void recordPageView('/product/[slug]', await searchParams);
 
   const t: Messages = messages[locale];
   const [product, device] = await Promise.all([
@@ -78,13 +78,18 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
 
   // Ürün görüntülemesi (08.9). Prefetch/bot/personel elemesi KAPIDA — atıcı ne olduğunu söyler,
   // neyin sayılacağına kapı karar verir (`ANALYTICS §4`).
-  void recordEvent({
-    type: 'product_view',
-    subjectType: 'product',
-    subjectId: product.id,
-    productId: product.id,
-    availability: availabilityOf(product.variants),
-  });
+  void recordEvent(
+    {
+      type: 'product_view',
+      subjectType: 'product',
+      subjectId: product.id,
+      productId: product.id,
+      availability: availabilityOf(product.variants),
+    },
+    // Render anında atılan her olay kendi kalıbını geçer (denetim P1). Ölçülen hata tam buradaydı:
+    // `/fr/produit/…` ziyareti deftere `product_view path=/catalogue` yazıyordu.
+    { path: '/product/[slug]' },
+  );
 
   /**
    * Yorum bölümünün verisi (17.1). Ürün bulunduktan SONRA okunur — 404'e düşecek bir sayfa için

@@ -30,7 +30,7 @@ export default async function AccountPage({ params }: AccountPageProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView();
+  void recordPageView('/account');
 
   const t: Messages = messages[locale];
   const [device, customerId] = await Promise.all([detectDevice(), currentCustomerId()]);

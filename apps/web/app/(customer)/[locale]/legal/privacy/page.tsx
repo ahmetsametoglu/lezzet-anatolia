@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: PrivacyPageProps): Promise<Me
 export default async function PrivacyPage({ params }: PrivacyPageProps) {
   const { locale } = await params;
   const copy = content[locale as Locale] ?? content.fr;
-  void recordPageView();
+  void recordPageView('/legal/privacy');
 
   return (
     <LegalPage

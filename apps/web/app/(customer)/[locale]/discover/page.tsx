@@ -53,7 +53,7 @@ export default async function DiscoverPage({ params, searchParams }: DiscoverPag
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView(await searchParams);
+  void recordPageView('/discover', await searchParams);
 
   const t: Messages = messages[locale];
   const customerId = await currentCustomerId();

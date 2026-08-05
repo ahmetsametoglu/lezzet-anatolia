@@ -19,7 +19,7 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView();
+  void recordPageView('/login');
 
   const { next, reason, error } = await searchParams;
   const t: Messages = messages[locale];

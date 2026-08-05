@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: SalesPageProps): Promise<Meta
 export default async function SalesPage({ params }: SalesPageProps) {
   const { locale } = await params;
   const copy = content[locale as Locale] ?? content.fr;
-  void recordPageView();
+  void recordPageView('/legal/sales');
 
   return (
     <LegalPage

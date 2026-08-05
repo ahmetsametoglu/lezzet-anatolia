@@ -42,7 +42,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
   const { locale, reference } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView();
+  void recordPageView('/checkout/[reference]');
 
   const t = messages[locale];
   const [device, user] = await Promise.all([detectDevice(), getSessionUser()]);

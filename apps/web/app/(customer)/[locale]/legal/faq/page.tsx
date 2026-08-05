@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: FaqPageProps): Promise<Metada
 export default async function FaqPage({ params }: FaqPageProps) {
   const { locale } = await params;
   const copy = content[locale as Locale] ?? content.fr;
-  void recordPageView();
+  void recordPageView('/legal/faq');
 
   return (
     <LegalPage

@@ -45,7 +45,7 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView(await searchParams);
+  void recordPageView('/catalog', await searchParams);
 
   const { category, sort, offers, shippable, q } = await searchParams;
   const activeSort: CatalogSort = CATALOG_SORTS.includes(sort as CatalogSort) ? (sort as CatalogSort) : 'featured';
@@ -80,12 +80,17 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
    */
   const filtered = Boolean(category || onlyOffers || onlyShippable);
   if (q || filtered) {
-    void recordEvent({
-      type: 'search',
-      query: q ?? '',
-      resultCount: data.products.length,
-      zeroResultKind: data.products.length > 0 ? null : q ? 'search' : 'filter',
-    });
+    void recordEvent(
+      {
+        type: 'search',
+        query: q ?? '',
+        resultCount: data.products.length,
+        zeroResultKind: data.products.length > 0 ? null : q ? 'search' : 'filter',
+      },
+      // Render anında atılan her olay kendi kalıbını geçer (denetim P1): kapının `referer`
+      // türetimi bu anda BİR ÖNCEKİ sayfayı gösteriyor.
+      { path: '/catalog' },
+    );
   }
 
   return (

@@ -41,7 +41,7 @@ export default async function PackagePage({ params, searchParams }: PackagePageP
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView(await searchParams);
+  void recordPageView('/package/[slug]', await searchParams);
 
   const t: Messages = messages[locale];
   const [pack, device] = await Promise.all([getPackageDetail(slug, locale), detectDevice()]);

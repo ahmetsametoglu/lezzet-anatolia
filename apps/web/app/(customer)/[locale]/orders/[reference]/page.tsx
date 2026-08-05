@@ -34,7 +34,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const { locale, reference } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView();
+  void recordPageView('/orders/[reference]');
 
   const t: Messages = messages[locale];
   const listT: ListMessages = listMessages[locale];
