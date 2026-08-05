@@ -57,8 +57,34 @@ export async function dailySalt(): Promise<string> {
  * muafiyetindedir; analitiğe kullanıldıkları an o muafiyetin gerekçesi düşer ve banner tartışması
  * geri gelir.
  */
+/**
+ * IPv6'nın ilk 48 biti — sıkıştırık gösterim açıldıktan sonra. Saf ve sınanabilir.
+ *
+ * `2001:db8::1` ile `2001:0db8:0000:0000:0000:0000:0000:0001` aynı adres; `::` yerine eksik grup
+ * sayısı kadar sıfır konur. Açmadan kırpsaydık ikisi iki farklı anahtar üretirdi.
+ */
+export function ipv6Prefix(ip: string): string {
+  const [sol, sag] = ip.split('::');
+  const solGruplar = sol ? sol.split(':').filter(Boolean) : [];
+  const sagGruplar = sag ? sag.split(':').filter(Boolean) : [];
+  const gruplar =
+    sag === undefined
+      ? solGruplar
+      : [...solGruplar, ...Array<string>(Math.max(0, 8 - solGruplar.length - sagGruplar.length)).fill('0'), ...sagGruplar];
+  // Baştaki sıfırlar da normalleştirilir (`0db8` ↔ `db8`), yoksa aynı adres iki yazımla iki anahtar olur.
+  return gruplar
+    .slice(0, 3)
+    .map((g) => g.replace(/^0+(?=.)/, '').toLowerCase())
+    .join(':');
+}
+
 export function sessionKeyOf(salt: string, ip: string, ua: string): string {
-  const kirpik = ip.includes(':') ? ip.split(':').slice(0, 4).join(':') : ip.split('.').slice(0, 3).join('.');
+  // IPv6'da **ilk 3 grup** tutulur (48 bit): tartışmanın kararı "son 80 bit atılır" idi ve kod 4
+  // grup tutuyordu — 16 bit fazla, yani tahsis bloğu içinde daha dar bir iz (denetim P3).
+  // `::` sıkıştırık gösterim ÖNCE AÇILIR: `2001:db8::1` ile `2001:0db8:0000:0000:...:1` aynı
+  // adrestir ama düz `split(':')` ikisine iki farklı anahtar üretirdi — kimlik riski değil, oturum
+  // gürültüsü: aynı ziyaretçi iki oturum sayılır ve dönüşüm oranı sessizce düşerdi.
+  const kirpik = ip.includes(':') ? ipv6Prefix(ip) : ip.split('.').slice(0, 3).join('.');
   return createHash('sha256').update(`${salt}|${kirpik}|${ua}|lezzet`).digest('hex').slice(0, 32);
 }
 

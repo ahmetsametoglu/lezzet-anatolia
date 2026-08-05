@@ -23,7 +23,8 @@ import { normalizeUtm } from './utm';
  *
  * ── ÖLÇÜM ASLA AKIŞI KESMEZ ──────────────────────────────────────────────────
  * Fonksiyon fırlatmaz ve çağıranın beklemesi gerekmez (`void record(...)`). Hata yutulur ama
- * SESSİZ DEĞİL: `console.warn` ile iz bırakır (`CLAUDE §1` — sessiz catch yok). Emsal:
+ * SESSİZ DEĞİL: `logger.warn` ile iz bırakır (`CLAUDE §1` — sessiz catch yok; künye bir tur
+ * `console.warn` diyordu, kod hep doğruydu — denetim P3). Emsal:
  * `recordDemand`'ın gerekçeli catch'i.
  */
 
@@ -61,6 +62,31 @@ const isStaffRequest = cache(async (): Promise<boolean> => {
   return new UserProfileService(serviceDb()).isStaff(user.id);
 });
 
+/**
+ * **Atıcının BİLDİĞİ bağlam** — bugün tek alan: sayfanın iç rota kalıbı.
+ *
+ * ── NEDEN ATICIDAN GELİYOR (düzeltme 04.08 · denetim P1, KIRMIZI) ───────────
+ * Künye *"atıcı yol göndermez, kapı üstbilgiden okur"* diyordu; gerekçesi sağlamdı ama DAYANDIĞI
+ * VARSAYIM yanlıştı. Kapının okuduğu `x-invoke-path` Next 15'te YOK (repoda tek kullanıcısı bu
+ * satırdı) ve müşteri dalı middleware'den erken dönüyor, yani yol üstbilgisi de yazılmıyor. Geriye
+ * `referer` kalıyordu — o da ziyaret edilen sayfayı değil **GELİNEN sayfayı** söyler.
+ *
+ * Denetim canlıda ölçtü: `/fr/produit/fistikli-baklava` ziyareti deftere `path=/catalogue` yazmış.
+ * Rota boyutu — günlük özet dâhil — baştan yanlıştı ve hiçbir yerde hata vermiyordu.
+ *
+ * **Sayfa kendi kalıbını DERLEME ZAMANINDA bilir; kapı çalışma zamanında tahmin ediyordu.** Bilen
+ * taraf söylemeli. Bu, "atıcı ne olduğunu söyler, neyin sayılacağına kapı karar verir" ilkesiyle
+ * çelişmiyor: rota kalıbı bir OLGU, bir karar değil — kapı hâlâ düşürme, temizleme ve
+ * normalleştirme kararlarının tek sahibi.
+ *
+ * Verilmezse eski türetim **emniyet ağı** olarak sürüyor: yanlış ama boş değil, ve atıcılar tek tek
+ * geçtikçe kendiliğinden doğruya döner.
+ */
+interface EventContext {
+  /** İç rota kalıbı — `/product/[slug]`. Dilsiz ve slug'sız; kapı yine `routePattern`'dan geçirir. */
+  path?: string;
+}
+
 /** Serbest metnin tek girdiği yer — temizlik TEK kapıda (atıcı ham yazar). */
 const SEARCH_QUERY_MAX = 100;
 function cleanQuery(raw: string): string {
@@ -72,7 +98,7 @@ function cleanQuery(raw: string): string {
  *
  * Çağrı biçimi: `void recordEvent({ type: 'product_view', … })`
  */
-export async function recordEvent(input: AnalyticsInput): Promise<void> {
+export async function recordEvent(input: AnalyticsInput, context: EventContext = {}): Promise<void> {
   try {
     const girdi = AnalyticsInputSchema.parse(input);
     const h = await headers();
@@ -93,12 +119,21 @@ export async function recordEvent(input: AnalyticsInput): Promise<void> {
     const satir: AnalyticsEventInsert = {
       type: girdi.type,
       sessionKey,
-      // Yol ROTA KALIBI olarak yazılır; atıcı yol göndermez, kapı üstbilgiden okur.
-      path: routePattern(h.get('x-invoke-path') ?? h.get('referer')?.replace(/^https?:\/\/[^/]+/, '') ?? '/'),
+      // Yol ROTA KALIBI olarak yazılır. Atıcı kendi kalıbını veriyorsa O kullanılır (denetim P1);
+      // vermiyorsa `referer`'dan türetilen emniyet ağı devreye girer — o da GELİNEN sayfayı yazar,
+      // yani yanlıştır ama boş değildir. Her iki hâlde `routePattern`'dan geçer: atıcı yanlışlıkla
+      // somut bir yol gönderse bile slug ve jeton deftere giremez.
+      path: routePattern(context.path ?? h.get('referer')?.replace(/^https?:\/\/[^/]+/, '') ?? '/'),
       channel: viewer.channel,
       // `null` bir KOVADIR (yer seçilmemiş), eksik veri değil — huninin ilk adımı orada.
       warehouseId: place.warehouseId,
       device: await detectDevice(),
+      // **BEKLEYEN(13.1): ikisinin de besleyeni yok ve bu künyeye yazılmak zorunda** (denetim P3).
+      // `null` burada "ölçülmedi" demek, "bilinmiyor bir hâl" değil — okuyan ekran bunu bir kova
+      // sanmamalı. Ülke IP'den türer ve IP hiçbir yerde durmuyor (`ANALYTICS §2`), yani besleyen
+      // ancak kenar katmanının ülke üstbilgisi olabilir; dil ise atıcının bağlamında var ve
+      // `EventContext`e eklenebilir. İkisi de "yol var, besleyen yok" sınıfına dördüncü ve beşinci
+      // üye olmasın diye burada yazılı duruyor.
       country: null,
       language: null,
       ...contextOf(girdi),

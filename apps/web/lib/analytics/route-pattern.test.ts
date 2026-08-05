@@ -73,3 +73,44 @@ describe('emniyet ağı — beyaz listede OLMAYAN rotada da kimlik maskelenir', 
     expect(routePattern('/account/orders')).toBe('/account/orders');
   });
 });
+
+/**
+ * **GERÇEK URL'LER — dış kelimeli** (denetim P2, 04.08).
+ *
+ * Önceki testler yalnız İÇ İngilizce yolla sınıyordu ve yeşildi; ama gerçek ziyaret
+ * `/fr/produit/fistikli-baklava` diye geliyor. Yani testler geçerken üretim yanlış çalışıyordu —
+ * girdinin gerçeği temsil etmediği bir test, olmayan bir güven üretir.
+ */
+describe('routePattern — gerçek dış URL', () => {
+  it('üç dil AYNI kalıba çözülür — path boyutu üçe katlanmaz', () => {
+    expect(routePattern('/fr/produit/fistikli-baklava')).toBe('/product/[slug]');
+    expect(routePattern('/de/produkt/fistikli-baklava')).toBe('/product/[slug]');
+    expect(routePattern('/tr/urun/fistikli-baklava')).toBe('/product/[slug]');
+  });
+
+  it('KISA slug da ham yazılmaz — kalıp tablosu onu değişken segment sayar', () => {
+    // Emniyet ağı 20+ karakter arıyor; `fistikli-baklava` ondan kısa ve eskiden HAM yazılıyordu.
+    // Sonucu: path boyutu katalog büyüklüğüyle çarpılıyordu.
+    expect(routePattern('/fr/produit/kunefe')).not.toContain('kunefe');
+  });
+
+  it('dış kelimeli statik yollar da tanınır', () => {
+    expect(routePattern('/fr/catalogue')).toBe('/catalog');
+    expect(routePattern('/de/warenkorb')).toBe('/cart');
+    expect(routePattern('/tr/odeme')).toBe('/checkout');
+  });
+
+  it('SIR taşıyan iki rota dış kelimeyle de maskelenir', () => {
+    expect(routePattern('/fr/avis/AbCdEfGhIjKlMnOpQrStUvWx')).toBe('/feedback/[token]');
+    expect(routePattern('/de/bestellungen/LZA-26-7K4M2P')).toBe('/orders/[reference]');
+  });
+
+  it('SABİT segment DEĞİŞKENİ yener — "yeni talep" bir talep kimliği değildir', () => {
+    expect(routePattern('/fr/assistance/nouvelle')).toBe('/support/new');
+    expect(routePattern('/fr/assistance/8f14e45f-ceea-467a-9f0a-1c2e3d4b5a67')).toBe('/support/[ticket]');
+  });
+
+  it('bilinen dinamik rotanın DERİN hâli aynı kalıba iner', () => {
+    expect(routePattern('/fr/produit/baklava/avis')).toBe('/product/[slug]');
+  });
+});
