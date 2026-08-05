@@ -61,9 +61,19 @@ Yok — ilk modül.
     kuyruk draft listelemez) + kuyruk senaryosu (`queue.smoke.ts`): damgalı sipariş kuyrukta
     görünür, detayı müşteri+ürünle açılır. 2/2 yeşil (8,7 sn); koşu sonrası DB'de sıfır artık
     (ölçüldü). Bundan sonraki her yazan parti bu fikstüre basar.
-  - Kalan: Parti 4b (UI'dan durum geçişi/hazırlık onayı + mal kabul — geçiş diyaloğu akışıyla) +
-    Parti 3b (OTP kapısı inince) + Parti 5 (uç durumlar: tükenen ürün, sepetteyken stok düşmesi)
-    + müşteri OTP kod-yakalama kapısı.
+  - **Kademe 2 · Parti 4b + 5 İNDİ (05.08, iki alt-ajan yazdı, denetim doğruladı):**
+    `order-advance.smoke.ts` (onaylı sipariş detaydan Hazırlanıyor'a; kanıt çift katlı — birincil
+    düğme "Hazır"a döner + rozet; fork'a göre ayrı geçiş yolu) · `stock-intake.smoke.ts` +
+    `intake-fixture.ts` (mal kabul: EKRAN henüz yok — 10.4 çizim bekliyor; giriş ekranın da
+    kullanacağı üretim RPC'sinden, iddia stok seviyeleri ekranında "parti yok"→"1 parti"+miktar) ·
+    `edge-stock.smoke.ts` + `product-fixture.ts` (kullanıcının uç senaryoları: stoksuz ürün
+    "Épuisé" basar ve ekleme yolu tamamen kapalı; sepetteyken stok sıfırlanınca sepet engel şeridi
+    basar, checkout düğmesi pasif). **`workers: 1`** yapılandırmaya girdi (iki proje paralel
+    işçide dev server'ı ezip yazan eylemleri zaman aşırıyordu — ölçüldü). **TAM PAKET 34/34
+    yeşil (2,5 dk)**; koşu sonrası damgalı artık SIFIR (profil/ürün/depo/bölge sorgularıyla).
+  - Kalan: Parti 3b (OTP kod-yakalama kapısı inince — `musteri-otp-test-kapisi` talebi açık;
+    misafir doğrulama → adres → taslak sipariş) + mal kabulün UI adımı (10.4 ekranı inince
+    `stock-intake` yazım adımı UI'a taşınır, iddialar aynı kalır).
   - **Kademe 1 — `pnpm ui:shot <yol>`:** ÇALIŞAN dev server'daki sayfayı açar (`reuseExistingServer` — build YOK), **desktop + mobile** (cihaz forku gereği ikisi de) ve operasyon yollarında **karanlık mod** görüntüsünü `.ui-shots/`a yazar; sayfanın konsol hatalarını da yanına döker. Amaç test değil, ajanlara GÖZ: ekran yapan şerit anlık çağırır, tasarım/fork denetimi görüntüden okunur. DB şartı yok.
   - **Kademe 2 — ~10 duman yolculuğu** (aynı kurulum, dev server'a karşı): müşteri (vitrin→ürün→sepet→checkout taslağı Stripe sınırına dek · misafir OTP · fr/de/tr rotaları · sipariş onayı) + operasyon (rol yönlendirmesi · kuyruk→hazırlık · mal kabul · para ekranı). **Veri disiplini entegrasyon testleriyle AYNI** (§4b): okuyan test seed'in deterministik satırları, yazan test damgalı veri + `purgeTestData`; **`db:refresh` hiçbir koşuda ön şart DEĞİL.** Koşu test kilidine girer (DB'ye vuruyor). Görüntüler assertion değil ARTEFAKT (piksel-diff yok — UI oynakken kırmızı gürültü üretir).
   - **Kademe 3 — ERTELENDİ (canlı öncesi):** production-build koşusu + geniş regresyon + piksel-diff kararı. Bugün kurulmaz.

@@ -19,6 +19,11 @@ export default defineConfig({
 
   outputDir: './.test-results/e2e',
   fullyParallel: false, // paylaşılan DB + paylaşılan dev server — sıra, yarıştan ucuz
+  // TEK işçi: iki proje (desktop+mobile) paralel işçilere düşünce dev server'ı aynı anda eziyor ve
+  // yazan akışların eylemleri zaman aşıyordu (ölçüldü 05.08: order-advance yalnızken 3,5 sn yeşil,
+  // paralelde iki proje de kırmızı). Süre bedeli kabul — istikrar önce; Kademe 3 kendi build'inde
+  // yeniden değerlendirilir.
+  workers: 1,
   retries: 0, // deneme evresi: flake gizlenmesin, görülsün (00.9 Kademe 3'te yeniden bakılır)
   // Dev server paylaşımlı ve sıcaklığı öngörülemez: üç şerit kod ittikçe rotalar yeniden derlenir,
   // soğuk derleme 30 sn'yi aşabilir (ölçüldü, 04.08). 60 sn bunu karşılar; gerçek bir asılmayı

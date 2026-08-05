@@ -15,7 +15,7 @@ import { join } from 'node:path';
  * Playwright süreci `.env`'i kendiliğinden yüklemez (Next yükler, biz Next değiliz). Kök `.env`
  * elle okunur; yalnız EKSİK anahtarlar doldurulur (kabuktan gelen değer kazanır).
  */
-function loadRootEnv(): void {
+export function loadRootEnv(): void {
   try {
     const raw = readFileSync(join(process.cwd(), '.env'), 'utf8');
     for (const line of raw.split('\n')) {
