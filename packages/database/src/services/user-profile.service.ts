@@ -364,6 +364,37 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }
 
   /**
+   * **GDPR silme** (05.08) — kişisel alanları boşaltır, kişiye ait kayıtları siler, giriş yolunu kapatır.
+   *
+   * Kararın TAMAMI `anonymize_customer` (0037) içinde: hangi tablo silinir, hangisi kimliksizleşir,
+   * hangisi yasal saklama yüzünden kalır. Servis o kararı tekrarlamaz, yalnız çağırır — burada
+   * tablo tablo silme yazsaydık aynı liste iki yerde yaşar ve yarın eklenen bir tablo birinde
+   * unutulurdu; unutulduğunda da hata vermez, silme sessizce yarım kalırdı.
+   *
+   * **İki taraf ayrı ayrı kapatılır ve sıra bilinçli:** önce profil (veri), sonra `auth.users`
+   * (giriş). Ters sırada auth satırı gittiği an profildeki bağ `set null` olur ve fonksiyonun
+   * göreceği bir kimlik kalmazdı. Auth silinmesi başarısız olursa **hata fırlatır**: veri
+   * anonimleşmiş ama giriş açık kalmış bir hesap, ikisinin de yapılmamasından beterdir — çağıran
+   * bunu görmeli, yeniden çalıştırmalı. `anonymize_customer` idempotent olduğu için tekrar zararsız.
+   */
+  async anonymize(customerId: string): Promise<void> {
+    const profile = await this.getById(customerId);
+    if (!profile) throw new Error(`anonymize: profil bulunamadı (${customerId})`);
+    const authUserId = profile.authUserId;
+
+    const { error } = await this.supabase.rpc('anonymize_customer', { p_customer_id: customerId });
+    if (error) throw new Error(`anonymize: ${error.message}`);
+
+    if (authUserId) {
+      const { error: authError } = await this.supabase.auth.admin.deleteUser(authUserId);
+      // "Zaten yok" bir hata değil, istenen sonucun ta kendisi — yeniden çalıştırmada buraya düşer.
+      if (authError && authError.status !== 404) {
+        throw new Error(`anonymize: auth kullanıcısı silinemedi (${customerId}): ${authError.message}`);
+      }
+    }
+  }
+
+  /**
    * Rol kümesini — ve gerekiyorsa DEPO KAPSAMINI — yazar.
    *
    * **Kümenin geçerliliğini SERVİS denetlemez** (STACK §4) — kuralı motor bilir (`validateRoleSet`),

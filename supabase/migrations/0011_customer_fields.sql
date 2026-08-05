@@ -65,6 +65,12 @@ alter table public.user_profiles
   --
   -- Sipariş referansı ve kupon koduyla AYNI okunabilir alfabe: telefonda elle yazılabilmeli,
   -- karıştırılan harfler (O/0, I/1) alfabede yok.
+  -- **GDPR silme damgası** (05.08 · `anonymize_customer`, 0037). Satır SİLİNMEZ, kimliği boşaltılır:
+  -- `order` bu profile `restrict` ile bağlı ve sipariş/fatura kaydı yasal olarak duruyor.
+  --
+  -- Damga bir "silindi mi" bayrağı DEĞİL, bir TARİHTİR: "ne zaman" sorusu denetimde sorulur ve
+  -- boolean'a düşürülmüş bir kayıt o soruyu bir daha cevaplayamaz. `null` = hiç silinmedi.
+  add column anonymized_at timestamptz,
   add column referral_code text,
 
 

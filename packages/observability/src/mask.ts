@@ -27,6 +27,27 @@ const EMAIL_IN_TEXT = /[\w.+-]+@[\w-]+\.[\w.-]+/g;
 const PG_KEY_PAYLOAD = /Key \([^)]*\)=\([^)]*\)/g;
 
 /**
+ * Metin içinde TELEFON GÖRÜNÜMLÜ dizi (05.08 · statik metin söz denetimi, ölçüm 4).
+ *
+ * `maskPhone` yazılıydı ama serbest metin taramasına bağlı değildi: gizlilik metni *"hata
+ * kayıtlarında kişisel veri yalnız maskelenmiş biçimde tutulur"* diye söz veriyor, e-posta
+ * maskeleniyordu, telefon maskelenmiyordu. Misafir OTP ve adres doğrulama yolları telefonla
+ * çalışıyor — bir kısıt ihlali ya da sağlayıcı hatası numarayı olduğu gibi `error_log`'a düşürürdü.
+ *
+ * Kalıp BİLEREK kaba, kararı `scrubMessage` içindeki hane sayımı veriyor. Ters kurgu — regex'i
+ * daraltıp "yalnız gerçek telefonu yakala" demek — kaçırdığında sessizce sızdırır; fazla yakalayıp
+ * sayımla elemek, en kötü ihtimalle bir sayıyı gereksiz maskeler.
+ *
+ * Sınır koruması (`(?<![\w.])` … `(?!\w)`) uzun bir jetonun ortasından parça koparmayı engeller;
+ * yoksa uuid ya da damga içinden telefon "bulunur" ve okunmaz bir mesaj kalırdı.
+ */
+const PHONE_IN_TEXT = /(?<![\w.])(?:\+\d[\d\s.-]{5,17}\d|0\d[\d\s.-]{6,13}\d)(?!\w)/g;
+
+/** Telefon sayılabilecek hane aralığı — E.164 tavanı 15, altı hanenin altı numara değildir. */
+const PHONE_MIN_DIGITS = 7;
+const PHONE_MAX_DIGITS = 15;
+
+/**
  * `ahmet@example.com` → `a***@example.com`. Ayrıştırılamayan girdi tamamen gider: biçimi
  * tanımadığımız bir dizgede neyin kişisel olduğunu da bilemeyiz.
  */
@@ -48,10 +69,21 @@ export function maskPhone(raw: string | null | undefined): string {
 }
 
 /**
- * Serbest metinden kişisel veriyi çıkarır. `captureError` bunu HER mesaja uygular — tek kapı,
- * çünkü sızıntı çoğu zaman bizim yazmadığımız bir metinden geliyor ve her çağıranın hatırlaması
- * gereken bir kural, bir gün hatırlanmayacak bir kuraldır.
+ * Serbest metinden kişisel veriyi çıkarır. `captureError` bunu HER mesaja **ve yığın izine**
+ * uygular — tek kapı, çünkü sızıntı çoğu zaman bizim yazmadığımız bir metinden geliyor ve her
+ * çağıranın hatırlaması gereken bir kural, bir gün hatırlanmayacak bir kuraldır.
+ *
+ * Sıra önemli: PG gövdesi önce düşer (içindeki değerlerin tamamını birden alır), sonra kalan
+ * metinde e-posta ve telefon tek tek maskelenir.
  */
 export function scrubMessage(message: string): string {
-  return message.replace(PG_KEY_PAYLOAD, 'Key (…)=(…)').replace(EMAIL_IN_TEXT, (m) => maskEmail(m));
+  return message
+    .replace(PG_KEY_PAYLOAD, 'Key (…)=(…)')
+    .replace(EMAIL_IN_TEXT, (m) => maskEmail(m))
+    .replace(PHONE_IN_TEXT, (m) => {
+      // Kararı hane sayısı verir, kalıp değil: sürüm numarası, tutar, damga telefon değildir ve
+      // maskelenirse hata mesajı okunamaz hâle gelir — teşhis için mesajın kendisi de lazım.
+      const digits = m.replace(/\D/g, '').length;
+      return digits >= PHONE_MIN_DIGITS && digits <= PHONE_MAX_DIGITS ? maskPhone(m) : m;
+    });
 }

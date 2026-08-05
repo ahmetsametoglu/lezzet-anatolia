@@ -18,6 +18,8 @@ let customerId: string;
 // Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
 let warehouseId: string;
 let creditCustomerId: string;
+let businessCustomerId: string;
+let pendingBusinessId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -37,7 +39,13 @@ beforeAll(async () => {
   customerId = customer.id;
   const vadeli = await profiles.insert({ name: `Vadeli müşteri ${stamp}`, creditEnabled: true, creditLimitCents: 10000 });
   creditCustomerId = vadeli.id;
-  createdProfiles.push(customer.id, vadeli.id);
+  // ONAYLI işletme: havale/çek kapısının açılması için şirket olmak YETMEZ, başvurunun onaylanmış
+  // olması gerekir — onaysız şirket kaydı zaten perakende fiyat görüyor.
+  const isletme = await profiles.insert({ name: `İşletme ${stamp}`, type: 'company', b2bApproved: true });
+  businessCustomerId = isletme.id;
+  const isletmeOnaysiz = await profiles.insert({ name: `Onaysız işletme ${stamp}`, type: 'company' });
+  pendingBusinessId = isletmeOnaysiz.id;
+  createdProfiles.push(customer.id, vadeli.id, isletme.id, isletmeOnaysiz.id);
   SettingsService.invalidate();
 });
 
@@ -85,16 +93,31 @@ describe('kargo ücreti ve KDV (07.3)', () => {
 });
 
 describe('ödeme yöntemleri', () => {
-  it('rota içi + tavan altı → kapıda ödeme açık', async () => {
+  // `customerId` BİREYSEL bir müşteri: havale ve çek ona kapalı (kullanıcı kararı 04.08). Beklenti
+  // 05.08'de değişti — eskiden `bank_transfer` misafire bile açıktı, yani ödeme alınmadan hazırlığa
+  // geçilebiliyordu ve tahsilat riski tümüyle bizdeydi.
+  it('rota içi + tavan altı → kapıda ödeme açık (bireysel: havale/çek yok)', async () => {
     const r = await resolveCheckoutPayment({ customerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
-    expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card', 'cheque']);
+    expect(r.methods).toEqual(['online', 'cash', 'card']);
     expect(r.codBlockedReason).toBeNull();
   });
 
-  it('kargoda kapıda ödeme yok — peşin', async () => {
+  it('kargoda kapıda ödeme yok — bireysel müşteriye YALNIZ kart kalır', async () => {
     const r = await resolveCheckoutPayment({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES });
-    expect(r.methods).toEqual(['online', 'bank_transfer']);
+    expect(r.methods).toEqual(['online']);
     expect(r.codBlockedReason).toBe('shipping');
+  });
+
+  it('ONAYLI işletmede havale ve çek açılır', async () => {
+    const r = await resolveCheckoutPayment({ customerId: businessCustomerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
+    expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card', 'cheque']);
+  });
+
+  it('ONAYSIZ şirket kaydına havale AÇILMAZ — yoksa kapı kendi kendini onaylardı', async () => {
+    // "Şirketim" yazan herkes ödemeden sipariş açabilseydi onay sürecinin bir anlamı kalmazdı.
+    const r = await resolveCheckoutPayment({ customerId: pendingBusinessId, deliveryType: 'route', basketCents: 4000, lines: LINES });
+    expect(r.methods).not.toContain('bank_transfer');
+    expect(r.methods).not.toContain('cheque');
   });
 
   it('tavan aşan sipariş kapıda ödemeyi kapatır (ayardan okunur)', async () => {

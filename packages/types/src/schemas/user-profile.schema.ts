@@ -161,6 +161,19 @@ export const UserProfileSchema = z.object({
    */
   referralCode: z.string().nullable(),
 
+  /**
+   * GDPR silme damgası (05.08) — `null` = hiç silinmedi.
+   *
+   * Satır SİLİNMEZ, kimliği boşaltılır: `order` bu profile `restrict` ile bağlı ve sipariş/fatura
+   * kaydı yasal olarak duruyor. Kararın tamamı `anonymize_customer` (0037) içinde, tek yerde.
+   *
+   * **Bayrak değil TARİH:** "ne zaman silindi" denetimde sorulan bir sorudur ve boolean'a
+   * düşürülmüş bir kayıt onu bir daha cevaplayamaz. Ekran bunu okuyup anonim kaydı normal bir
+   * müşteriden ayırabilmeli — adı boş bir satır, silinmiş bir hesap ile yarım kalmış bir taslak
+   * arasında ayrım yapamayan gözde aynı görünür.
+   */
+  anonymizedAt: z.string().datetime({ offset: true }).nullable(),
+
   createdAt: z.string(),
 });
 export type UserProfile = z.infer<typeof UserProfileSchema>;

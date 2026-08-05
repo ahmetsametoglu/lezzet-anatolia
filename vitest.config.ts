@@ -46,6 +46,9 @@ export default defineConfig({
             'packages/brand/src/**/*.test.ts?(x)',
             'packages/i18n/src/**/*.test.ts?(x)',
             'packages/ai/src/**/*.test.ts?(x)',
+            // Maskeleme saf metin işi, DB'siz (05.08). Liste eksik olsaydı `mask.test.ts` sessizce
+            // hiç koşmazdı — "test yazdım" ile "test koşuyor" arasındaki fark tam olarak budur.
+            'packages/observability/src/**/*.test.ts?(x)',
             'apps/web/app/**/*.test.ts?(x)',
             'apps/web/components/**/*.test.ts?(x)',
           ],

@@ -2,6 +2,7 @@ import { OrderService, SettingsService, UserProfileService, serviceDb } from '@l
 import {
   apportionShippingVat,
   creditPosition,
+  deriveChannel,
   meetsMinBasket,
   resolveCheckoutOptions,
   resolveShippingFee,
@@ -95,8 +96,21 @@ export async function resolveCheckoutPayment(input: CheckoutOptionsInput): Promi
     customer.paymentTermDays ?? (await settings.getNumber('payment_term_days', 30)),
   );
 
+  /**
+   * Ödeme yöntemi kanalı — **ONAYLI işletme** (04.08). Siparişe yazılan kanaldan bilerek ayrılıyor:
+   * `checkout-draft.ts` kanalı `type === 'company'` ile türetiyor ve orada doğru, çünkü o kanal
+   * KDV'nin ve muhasebenin kanalı — şirket, başvurusu onaylanmasa da şirkettir.
+   *
+   * Ertelenmiş tahsilat (havale/çek) ise bir GÜVEN kararıdır ve güveni veren şey başvurunun
+   * onaylanmasıdır. Onaysız bir şirket kaydı bugün zaten perakende fiyat görüyor
+   * (`read-viewer.ts:70`); ona havale açsaydık kendi kendini onaylayan bir kapı olurdu — "şirketim"
+   * yazan herkes ödemeden sipariş açabilirdi.
+   */
+  const paymentChannel = deriveChannel({ isCompany: customer.type === 'company' && customer.b2bApproved === true });
+
   const options = resolveCheckoutOptions({
     orderTotalCents,
+    channel: paymentChannel,
     deliveryType: input.deliveryType,
     codMaxCents,
     codAllowed: customer.codAllowed,

@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { resolveCheckoutOptions, type CheckoutOptionsInput } from './checkout-options';
 
 const TAVAN = 15_000; // 150 € kapıda ödeme tavanı
+// Varsayılan kanal `b2b`: bu dosyanın çoğu vade/tavan davranışını sınıyor ve vade zaten işletme
+// yetkisidir. Kanalın KENDİ kuralı ayrı bir bölümde, iki kanal karşılaştırılarak sınanır.
 const base = (over: Partial<CheckoutOptionsInput> = {}): CheckoutOptionsInput => ({
   orderTotalCents: 5000,
+  channel: 'b2b',
   deliveryType: 'route',
   codMaxCents: TAVAN,
   ...over,
@@ -35,6 +38,33 @@ describe('kapıda ödeme (03.8)', () => {
     const r = resolveCheckoutOptions(base({ orderTotalCents: 120_000, codMaxCents: 200_000, cashLegalLimitCents: 100_000 }));
     expect(r.cashWarning).toBe(true);
     expect(r.methods).toContain('cash'); // engel yok — karar sahada
+  });
+});
+
+describe('ertelenmiş tahsilat yalnız işletmeye (kullanıcı kararı 04.08)', () => {
+  it('bireysel müşteride havale YOK — kart ve kapıda ödeme açık kalır', () => {
+    const r = resolveCheckoutOptions(base({ channel: 'b2c' }));
+    expect(r.methods).toEqual(['online', 'cash', 'card']);
+    expect(r.codBlockedReason).toBeNull(); // kapıda ödeme kapanmıyor, yalnız havale/çek düşüyor
+  });
+
+  it('bireysel müşteride çek YOK — kapıda ödeme açık olsa bile', () => {
+    // Ayrımın kendisi: çek kapıda ALINIR ama karşılığı sonra tahsil edilir. Nakit/kartla aynı
+    // kovaya konsaydı "kapıda ödeme açık" kararı sessizce bir vade kararına dönerdi.
+    const r = resolveCheckoutOptions(base({ channel: 'b2c' }));
+    expect(r.methods).toContain('cash');
+    expect(r.methods).not.toContain('cheque');
+  });
+
+  it('kargoda bireysel müşteriye YALNIZ kart kalır', () => {
+    const r = resolveCheckoutOptions(base({ channel: 'b2c', deliveryType: 'shipping' }));
+    expect(r.methods).toEqual(['online']);
+  });
+
+  it('aynı sipariş işletmede havale ve çeki açar — fark yalnız kanal', () => {
+    const b2c = resolveCheckoutOptions(base({ channel: 'b2c' }));
+    const b2b = resolveCheckoutOptions(base({ channel: 'b2b' }));
+    expect(b2b.methods.filter((m) => !b2c.methods.includes(m))).toEqual(['bank_transfer', 'cheque']);
   });
 });
 

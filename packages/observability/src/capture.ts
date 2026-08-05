@@ -74,7 +74,14 @@ export async function captureError(error: unknown, ctx: CaptureContext): Promise
    * bu yüzden kural çağıranda değil burada.
    */
   const message = scrubMessage(error instanceof Error ? error.message : String(error));
-  const stack = error instanceof Error ? (error.stack ?? null) : null;
+  /**
+   * **Yığın izi de maskelenir** (05.08 · statik metin söz denetimi, ölçüm 4) ve bu bir düzeltme
+   * değil bir DELİK KAPATMAsıdır: `error.stack`in ilk satırı `Error: <mesaj>`tır. Yani yukarıda
+   * maskelediğimiz mesaj, bir kolon yanda **maskesiz** duruyordu — maskeleme fiilen boşa çıkıyordu.
+   * Ölçülebilir bir örnek: kısıt ihlalinde `message` `Key (…)=(…)` olurken `stack` aynı satırda
+   * e-postayı olduğu gibi taşıyordu.
+   */
+  const stack = error instanceof Error && error.stack ? scrubMessage(error.stack) : null;
 
   logger.error({ source: ctx.source, path: ctx.path, ctx: ctx.context, err: { message, stack } }, message);
 
