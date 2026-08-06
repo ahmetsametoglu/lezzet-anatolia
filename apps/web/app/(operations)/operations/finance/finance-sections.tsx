@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
 import { EmptyState } from '@/components/operation/ui/empty-state';
-import { Select } from '@/components/operation/form/select';
+import { FilterChip } from '@/components/operation/ui/filter-chip';
 import { amount, dayMonth, money, num } from '@/components/operation/ui/format';
 import {
   MOVEMENT_TYPE_CHIP,
@@ -154,26 +154,24 @@ export function FilterBar({ accounts, urlState, unmatchedCount, onChange, stacke
 
           Tür süzgeci bir tur ekranda YOKTU (kapısı gelmemişti) — arka uç `LedgerFilter.type`'ı
           açınca bağlandı; süzme sunucuda, yani liste kuyruğuyla birlikte daralıyor. */}
-      <Select
-        variant="chip"
+      <FilterChip
         value={urlState.type}
-        onChange={(value) => onChange({ type: value as FinanceUrlState['type'] })}
+        emptyValue="all"
         placeholder="+ tür"
-        options={[
-          { value: 'all', label: '+ tür' },
-          ...MOVEMENT_TYPE_ORDER.map((type) => ({ value: type, label: MOVEMENT_TYPE_CHIP[type] })),
-        ]}
+        options={MOVEMENT_TYPE_ORDER.map((type) => ({ value: type, label: MOVEMENT_TYPE_CHIP[type] }))}
+        onChange={(type) => onChange({ type })}
       />
 
-      <Select
-        variant="chip"
+      <FilterChip
         value={urlState.period}
-        onChange={(value) => onChange({ period: value as FinanceUrlState['period'] })}
+        emptyValue="all"
         placeholder="+ tarih"
-        options={FINANCE_PERIODS.map((period) => ({
+        menuWidth={150}
+        options={FINANCE_PERIODS.filter((period) => period !== 'all').map((period) => ({
           value: period,
-          label: period === 'all' ? '+ tarih' : PERIOD_LABEL[period],
+          label: PERIOD_LABEL[period],
         }))}
+        onChange={(period) => onChange({ period })}
       />
 
       {/* Sayaç `null` ise HİÇ BASILMAZ — "0 eşleşmemiş" yazmak, sayacı olmayan bir ekranda dolu bir

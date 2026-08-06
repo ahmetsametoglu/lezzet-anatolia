@@ -1,10 +1,9 @@
 'use client';
 
-import { useRef, useState } from 'react';
 import { PRODUCTS_COLUMN_TRACKS } from '../../products-columns';
-import { AnchoredMenu } from '@/components/operation/ui/anchored-menu';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
+import { FilterChip } from '@/components/operation/ui/filter-chip';
 import { withCells, Table, type Column } from '@/components/operation/ui/table';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { PRODUCT_STATUS_LABELS, resolveLocalizedText } from '@lezzet/types';
@@ -35,41 +34,19 @@ const COLUMNS: Column<ProductView>[] = withCells<ProductView>(PRODUCTS_COLUMN_TR
   status: (r) => <StatusBadge status={r.status} />,
 });
 
-// "+ durum" — dashed çip açılır durum menüsü; seçilince aktif çip + ✕ ile temizlenir (İşlevsel süzgeç).
+// "+ durum" — süzgeç çipi. Davranış 05.08'de KİTE taşındı (`ui/filter-chip`): burada elle
+// yazılmıştı ve Para ekranı aynı şeridi kurarken form kontrolüne (`Select`) uzanmak zorunda kalmıştı;
+// sonuç iki ekranda iki ayrı süzgeç davranışıydı. Doğru olanı çoğaltmak yerine ortaklaştırıldı.
 function StatusFilterChip({ value, onChange }: { value: StatusFilter; onChange: (s: StatusFilter) => void }) {
-  const [open, setOpen] = useState(false);
-  const anchorRef = useRef<HTMLDivElement>(null);
-
-  if (value !== 'all') {
-    return (
-      <Chip active onClick={() => onChange('all')}>
-        {PRODUCT_STATUS_LABELS[value]} ✕
-      </Chip>
-    );
-  }
   return (
-    <>
-      <div ref={anchorRef} className="inline-flex">
-        <Chip dashed onClick={() => setOpen((v) => !v)}>
-          + durum
-        </Chip>
-      </div>
-      <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width={140} className="flex flex-col">
-        {STATUS_ORDER.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => {
-              onChange(s);
-              setOpen(false);
-            }}
-            className="cursor-pointer px-[13px] py-2.5 text-left font-ops-body text-ops-base text-ops-strong hover:bg-ops-subtle"
-          >
-            {PRODUCT_STATUS_LABELS[s]}
-          </button>
-        ))}
-      </AnchoredMenu>
-    </>
+    <FilterChip
+      value={value}
+      emptyValue="all"
+      placeholder="+ durum"
+      menuWidth={140}
+      options={STATUS_ORDER.map((s) => ({ value: s, label: PRODUCT_STATUS_LABELS[s] }))}
+      onChange={onChange}
+    />
   );
 }
 
