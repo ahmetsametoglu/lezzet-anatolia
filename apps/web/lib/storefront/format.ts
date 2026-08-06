@@ -22,6 +22,16 @@ const INTL_LOCALE: Record<Locale, string> = { tr: 'tr-TR', fr: 'fr-FR', de: 'de-
 /** Sayı ile simge arasında BÖLÜNMEYEN boşluk: satır sonu tutarı ikiye ayırmasın (Fransız dizgisi). */
 const EURO_SUFFIX = ' €';
 
+/**
+ * Tutarı BİLİNMEYEN satırın değeri — sıfır DEĞİL, cevapsızlık (`CLAUDE §1`).
+ *
+ * Burada duruyor çünkü tutarın nasıl yazıldığını bilen modül bu: "bilinmiyor" da bir yazım
+ * biçimidir ve `formatPrice`ın yanında olmazsa çağıranlar kendi işaretini uydurur — biri "—",
+ * biri "?", biri sessizce `formatPrice(0)`. Sepetin kalem satırları zaten "—" yazıyordu; sabit
+ * onların idiyomunu paylaşılabilir hâle getiriyor.
+ */
+export const UNKNOWN_AMOUNT = '—';
+
 export function formatPrice(cents: number, locale: Locale): string {
   const amount = new Intl.NumberFormat(INTL_LOCALE[locale], {
     minimumFractionDigits: 2,

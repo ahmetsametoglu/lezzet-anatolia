@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/customer/ui/skeleton';
 import { AddressForm, toFormInput } from '@/components/customer/delivery/address-form';
 import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel } from '@/lib/cart/discount-label';
-import { formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
+import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
 import { checkoutBlocker, type CheckoutViewProps } from '../checkout-types';
 
 /**
@@ -459,8 +459,19 @@ export function OrderSummary(props: CheckoutViewProps) {
   const payment = snapshot.payment;
   const delivery = snapshot.delivery;
 
-  const shippingLabel =
-    payment && payment.shippingFeeCents > 0 ? formatPrice(payment.shippingFeeCents, locale) : t.summary.free;
+  /**
+   * Teslimat satırı — **`payment` yokken "Ücretsiz" YAZILMAZ** (denetim notu 04.08).
+   *
+   * Ücretin bilindiği tek an taslak okunduktan sonrasıdır: rota teslimatı ücretsiz, kargo 7,90 €
+   * ve hangisi olduğu ADRESTEN çıkıyor. Adres seçilmeden "Ücretsiz" yazmak, kargoyla alacak
+   * müşteriye tutmayacağımız bir söz vermekti — üstelik en görünür yerde, toplamın hemen üstünde.
+   * Bilinmeyen tutar bu blokta zaten "—" ile yazılıyor (kalem satırları), aynı idiyom.
+   */
+  const shippingLabel = !payment
+    ? UNKNOWN_AMOUNT
+    : payment.shippingFeeCents > 0
+      ? formatPrice(payment.shippingFeeCents, locale)
+      : t.summary.free;
   const totalCents = payment?.orderTotalCents ?? cart.totalCents;
   const discountCents = cart.discount.status === 'applied' || cart.discount.status === 'automatic' ? cart.discount.amountCents : 0;
 
@@ -503,7 +514,7 @@ export function OrderSummary(props: CheckoutViewProps) {
               // Paket satırı adetle değil KÜNYESİYLE anılır (tasarım: "Bayram Sofrası (paket)"):
               // paketin adedi tek, satılan şey bütünün kendisi.
               label={line.kind === 'bundle' ? `${line.name} ${t.summary.packageSuffix}` : `${line.name} × ${line.qty}`}
-              value={line.lineTotalCents === null ? '—' : formatPrice(line.lineTotalCents, locale)}
+              value={line.lineTotalCents === null ? UNKNOWN_AMOUNT : formatPrice(line.lineTotalCents, locale)}
             />
           ))}
         {discountCents > 0 && (
@@ -511,12 +522,27 @@ export function OrderSummary(props: CheckoutViewProps) {
           <SummaryRow label={discountLabel(cart.discount, t.summary, locale)} value={`−${formatPrice(discountCents, locale)}`} tone="olive" />
         )}
         {/* Ücretsizde YALNIZ tutar yeşil (tasarım): ücret bir maliyet, ücretsizlik bir kazanç. */}
-        <SummaryRow label={t.summary.delivery} value={shippingLabel} tone={payment?.shippingFeeCents ? 'default' : 'oliveValue'} />
+        {/* Yeşil ton bir KAZANÇ söyler ("Ücretsiz"); bilinmeyen tutar bir kazanç değil, o yüzden
+            `payment` yokken ton da nötr kalır — yoksa "—" yeşil çıkar ve iyi haber gibi okunur. */}
+        <SummaryRow
+          label={t.summary.delivery}
+          value={shippingLabel}
+          tone={!payment || payment.shippingFeeCents > 0 ? 'default' : 'oliveValue'}
+        />
         {/* Toplam satırı tasarımda **Karla 700/18** — serif DEĞİL. Serif yapmak onu bir başlığa
             çeviriyor; oysa bu bir sayı satırı ve üstündeki satırlarla aynı ailede okunmalı. */}
         <div className="flex items-baseline justify-between gap-3 border-t border-sand-200 pt-2.5">
           <span className="font-sans text-card-title-sm font-bold text-ink">{t.summary.total}</span>
-          <span className="font-sans text-card-title-sm font-bold text-ink">{formatPrice(totalCents, locale)}</span>
+          {/* Sepet OKUNMADAN toplam yazılmaz (denetim notu 04.08). Burada `formatPrice(0)` basılıyordu
+              ve ekranda **0,00 €** görünüyordu: kalem satırları iskelet gösterirken toplam kendinden
+              emin bir sayı söylüyordu. Ziyaretçi checkout'unda bu hâl kalıcı — misafir doğrulanana
+              kadar taslak hiç okunmuyor — yani "sepetim boş / bedava" diye okunabilecek bir sayı
+              ekranda öylece duruyordu. `CLAUDE §1`: ölçülemeyen değer sıfır değildir. */}
+          {cartReady ? (
+            <span className="font-sans text-card-title-sm font-bold text-ink">{formatPrice(totalCents, locale)}</span>
+          ) : (
+            <Skeleton className="h-4 w-20" />
+          )}
         </div>
         <span className="font-sans text-micro text-muted">{t.summary.vatIncluded}</span>
       </div>

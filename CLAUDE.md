@@ -14,6 +14,14 @@
 - **Çalışma ağacını topluca silen komut YOK** — `git checkout -- .`, `git restore .`, `git reset --hard`, `git clean`, yolsuz `git stash`. Bunlar KULLANICININ komutudur. Geri alma daima **yol adı vererek** ve önce doğrulanarak yapılır. → WORKFLOW §5
 - Canlı DB'ye bağlanma / prod env dosyası okuma yok. → WORKFLOW §4
 - Kanıtsız "oldu/geçti" deme; çıktıyı göster. → WORKFLOW §1
+- **Sebebi KANITLANMADAN müdahale YOK; pansuman çözüm YOK** (kullanıcı kararı 05.08). Bir arıza
+  gördüğünde önce kökünü **ölç** — hangi satır, hangi veri, hangi an; belirtiden teori kurup o
+  teoriye göre kod yazmak, olmayan bir soruna makine kurmaktır. Belirtiyi susturan düzeltme
+  (ekranda sayıyı gizlemek, hatayı yutmak, "böyle de çalışıyor" demek) **çözüm değil, arızayı
+  gözden saklamaktır** — arıza yerinde durur ve artık görünmez. Ölçemiyorsan "ölçemedim" de ve
+  DUR; yanlış teoriyle yazılmış kod, hiç yazılmamış koddan pahalıdır (yaşandı 05.08: ekranda
+  "0,00 €" görülünce "demek fiyatsız ürün var" diye üç dosya değiştirildi, ölçünce fiyatsız ürün
+  olmadığı ve sebebin sayacın niyetten sayılması olduğu çıktı — hepsi geri alındı). → WORKFLOW §1
 
 ## 1. Mimari değişmezler
 - **Hiçbir türde duplication yok** — kod/tip/komponent/sabit. Önce "var mı, türetebilir miyim?" diye bak. → STACK §10, WORKFLOW §6

@@ -40,7 +40,7 @@
       {
         "id": "hesap-gerekli",
         "question": "Sipariş vermek için hesap açmam gerekiyor mu?",
-        "answer": "Parola kurmanız gerekmez: sepetinizi doldurup e-posta adresinizle siparişi tamamlayabilirsiniz — size gönderdiğimiz kodu girdiğinizde hesabınız arka planda açılır ve siparişiniz ona bağlanır. Böylece siparişleriniz, adresleriniz ve puanınız saklanır; sonraki siparişinizde adresinizi yeniden yazmazsınız."
+        "answer": "Parola kurmanız gerekmez: sepetinizi doldurup e-posta adresinizle siparişi tamamlayabilirsiniz — size gönderdiğimiz kodu girdiğinizde hesabınız arka planda açılır ve siparişiniz ona bağlanır. Böylece siparişleriniz, adresleriniz ve puanınız saklanır; adresinizi bir daha yazmanız gerekmez ve geçmiş bir siparişinizi \"Siparişlerim\"den tek tuşla tekrarlayabilirsiniz."
       },
       {
         "id": "dil",
@@ -90,7 +90,7 @@
       {
         "id": "hesap-gerekli",
         "question": "Dois-je créer un compte pour commander ?",
-        "answer": "Vous n'avez pas besoin de créer un mot de passe : remplissez votre panier et finalisez la commande avec votre adresse e-mail — en saisissant le code que nous vous envoyons, votre compte est ouvert en arrière-plan et votre commande y est rattachée. Vos commandes, vos adresses et vos points y sont conservés, et vous ne ressaisissez pas votre adresse à la commande suivante."
+        "answer": "Vous n'avez pas besoin de créer un mot de passe : remplissez votre panier et finalisez la commande avec votre adresse e-mail — en saisissant le code que nous vous envoyons, votre compte est ouvert en arrière-plan et votre commande y est rattachée. Vos commandes, vos adresses et vos points y sont conservés : vous ne ressaisissez plus votre adresse et vous pouvez relancer une commande passée en un clic depuis « Mes commandes »."
       },
       {
         "id": "dil",
@@ -140,7 +140,7 @@
       {
         "id": "hesap-gerekli",
         "question": "Brauche ich ein Konto, um zu bestellen?",
-        "answer": "Ein Passwort brauchen Sie nicht: Füllen Sie Ihren Warenkorb und schließen Sie die Bestellung mit Ihrer E-Mail-Adresse ab — sobald Sie den zugesandten Code eingeben, wird Ihr Konto im Hintergrund angelegt und Ihre Bestellung damit verknüpft. Ihre Bestellungen, Adressen und Punkte werden dort gespeichert, und bei der nächsten Bestellung geben Sie Ihre Adresse nicht erneut ein."
+        "answer": "Ein Passwort brauchen Sie nicht: Füllen Sie Ihren Warenkorb und schließen Sie die Bestellung mit Ihrer E-Mail-Adresse ab — sobald Sie den zugesandten Code eingeben, wird Ihr Konto im Hintergrund angelegt und Ihre Bestellung damit verknüpft. Ihre Bestellungen, Adressen und Punkte werden dort gespeichert: Sie geben Ihre Adresse nicht erneut ein und können eine frühere Bestellung unter „Meine Bestellungen“ mit einem Klick wiederholen."
       },
       {
         "id": "dil",
