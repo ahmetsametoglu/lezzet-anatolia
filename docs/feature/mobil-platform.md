@@ -101,4 +101,6 @@ platformu tek özellik için taşımaktır.
    push'unun hem olası Capacitor gününün ortak ön şartı; ikisine de hizmet eder.
 4. Platform sorusu §5'teki üç tetikleyiciden biri gerçekleşince yeniden açılır; o güne kadar kapalı.
 
-**Cevaplar / itirazlar:** —
+**Cevaplar / itirazlar:** 05.08.2026 kullanıcı kararı: müşteri mobil uygulaması YAPILACAK
+(Faz 2 kalemi öne alındı). Bu dosyanın hükmü ("özellikler uygulamayı zorlamıyor") geçersiz
+kılınmadı — soru değişti. Teknoloji etüdü: `docs/uygulama/01-teknoloji-secimi.md`.

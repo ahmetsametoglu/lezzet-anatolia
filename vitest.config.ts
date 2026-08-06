@@ -60,7 +60,13 @@ export default defineConfig({
         test: {
           name: 'integration',
           environment: 'node',
-          include: ['apps/web/lib/**/*.test.ts?(x)', 'packages/database/src/**/*.test.ts?(x)', 'apps/backend/src/**/*.test.ts?(x)'],
+          include: [
+            'apps/web/lib/**/*.test.ts?(x)',
+            'packages/database/src/**/*.test.ts?(x)',
+            'apps/backend/src/**/*.test.ts?(x)',
+            // Mobile-api entegrasyon köküdür (21.1): auth testleri yerel Supabase'e vurur.
+            'apps/mobile-api/src/**/*.test.ts?(x)',
+          ],
           setupFiles: ['./vitest.setup.ts'],
           // Aynı satırlara giren testler paralel koşamaz; suite küçük, seri kalması sorun değil.
           fileParallelism: false,
