@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { CourierStop } from '@/lib/courier/day';
 import { Badge } from '@/components/operation/ui/badge';
 import { money, num } from '@/components/operation/ui/format';
@@ -66,13 +67,17 @@ export function StopCard({ stop, index }: { stop: CourierStop; index: number }) 
         {/* Sıra numarası rota sırasıdır — kurye "kaçıncı duraktayım" diye düşünüyor, sipariş
             numarasıyla değil. */}
         <span className="mt-0.5 shrink-0 font-ops-mono text-ops-sm text-ops-faint">{index + 1}</span>
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="font-ops-body text-ops-base text-ops-ink">{stop.address ?? 'Adres yok'}</span>
+        {/* Durağın KENDİSİ kapıdaki ekrana açılır (11.2). Bağlantı yalnız künyeyi sarıyor; "Ara" ve
+            "Yol tarifi" ayrı hedefler, onları da içine alsaydık iç içe bağlantı olurdu. */}
+        <Link href={`/operations/deliveries/${stop.orderId}`} className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="font-ops-body text-ops-base text-ops-ink hover:text-ops-olive">
+            {stop.address ?? 'Adres yok'}
+          </span>
           <span className="font-ops-body text-ops-sm text-ops-muted">
             {stop.customerName}
             {stop.channel === 'b2b' ? ' · B2B' : ''}
           </span>
-        </div>
+        </Link>
         <Badge tone={view.tone}>{view.label}</Badge>
       </div>
 
@@ -102,40 +107,45 @@ export function StopCard({ stop, index }: { stop: CourierStop; index: number }) 
         {stop.attempts > 1 ? <span className="text-ops-amber-dark">{num(stop.attempts)}. deneme</span> : null}
       </div>
 
-      {/* Kapı bulunamadı senaryosu: ara ya da yaz. Bağlantı yoksa düğme HİÇ çizilmiyor —
-          çalışmayan bir düğme sahada en kötü şeydir. */}
-      {!settled && (stop.phone || stop.whatsAppLink) ? (
-        <div className="flex gap-2 pl-7">
-          {stop.phone ? (
-            <a
-              href={`tel:${stop.phone}`}
-              className="cursor-pointer rounded-ops-btn border border-ops-line px-3 py-1.5 font-ops-display text-ops-xs font-semibold text-ops-muted transition-colors hover:bg-ops-surface-sunken"
-            >
-              Ara
-            </a>
-          ) : null}
-          {stop.whatsAppLink ? (
-            <a
-              href={stop.whatsAppLink}
-              target="_blank"
-              rel="noreferrer"
-              className="cursor-pointer rounded-ops-btn border border-ops-line px-3 py-1.5 font-ops-display text-ops-xs font-semibold text-ops-muted transition-colors hover:bg-ops-surface-sunken"
-            >
-              Yoldayım
-            </a>
-          ) : null}
-          {stop.address ? (
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stop.address)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="ml-auto cursor-pointer rounded-ops-btn bg-ops-ink px-3 py-1.5 font-ops-display text-ops-xs font-semibold text-ops-card transition-colors hover:bg-ops-ink-hover"
-            >
-              Yol tarifi →
-            </a>
-          ) : null}
-        </div>
-      ) : null}
+      {!settled ? <StopContactActions stop={stop} className="pl-7" /> : null}
     </li>
+  );
+}
+
+const LINK_CLASS =
+  'cursor-pointer rounded-ops-btn border border-ops-line px-3 py-1.5 font-ops-display text-ops-xs font-semibold text-ops-muted transition-colors hover:bg-ops-surface-sunken';
+
+/**
+ * **Kapı bulunamadı senaryosu:** ara, yaz, yolu aç.
+ *
+ * Gün listesindeki kart ile kapıdaki durak ekranı aynı üç düğmeyi taşıyor — ikinci kez yazılmadı.
+ * Bağlantı yoksa düğme HİÇ çizilmiyor: sahada çalışmayan bir düğme en kötü şeydir.
+ */
+export function StopContactActions({ stop, className }: { stop: CourierStop; className?: string }) {
+  if (!stop.phone && !stop.whatsAppLink && !stop.address) return null;
+
+  return (
+    <div className={`flex gap-2 ${className ?? ''}`}>
+      {stop.phone ? (
+        <a href={`tel:${stop.phone}`} className={LINK_CLASS}>
+          Ara
+        </a>
+      ) : null}
+      {stop.whatsAppLink ? (
+        <a href={stop.whatsAppLink} target="_blank" rel="noreferrer" className={LINK_CLASS}>
+          Yoldayım
+        </a>
+      ) : null}
+      {stop.address ? (
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stop.address)}`}
+          target="_blank"
+          rel="noreferrer"
+          className="ml-auto cursor-pointer rounded-ops-btn bg-ops-ink px-3 py-1.5 font-ops-display text-ops-xs font-semibold text-ops-card transition-colors hover:bg-ops-ink-hover"
+        >
+          Yol tarifi →
+        </a>
+      ) : null}
+    </div>
   );
 }

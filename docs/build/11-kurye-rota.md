@@ -19,7 +19,7 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
 
 ## Görevler
 
-- [~] (11.1) **Gün listesi:** kuryenin o günkü teslimatları rota sırasıyla (adres, müşteri, ödeme beklentisi + tutar, içerik özeti); yalnız kendi teslimatları
+- [x] (11.1) **Gün listesi:** kuryenin o günkü teslimatları rota sırasıyla (adres, müşteri, ödeme beklentisi + tutar, içerik özeti); yalnız kendi teslimatları
   - *Bitti:* başka kuryenin teslimatı görünmüyor; ulaşılamayanlar listede kalıyor
   - **Durum (28.07) — ARKA UÇ HAZIR, ekran yok.** Kapı `apps/web/lib/courier/day.ts`: `listCourierDay` (adres anlık kopyadan, ödeme beklentisi, içerik özeti, "yoldayım" bağlantısı). Ekranı yüzey ajanı yazacak; bu kapı onun sözleşmesidir.
   - **Durum (05.08) — EKRAN YAZILDI:** `/operations/deliveries` (cihaz forklu, `requireCourier`). **Rayın son ölü girişi kapandı** — on beş nav hedefinin hepsinin artık rotası var.
@@ -39,15 +39,28 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
   - **Sıra kuralın kendisidir:** kanıt kapısı (hiçbir yazım yapılmadan) → MAL → teslim → PARA. Kanıt sonda kalsaydı yarısı yazılmış teslimat üstüne "olmadı" denirdi; kalem düzeltmesi teslimden sonra yapılsaydı aynı mal iki kez oynatılırdı (0026'nın "tam bir kez say" kuralı); tahsilat teslimden önce yazılsaydı `stale` dönüşte karşılıksız para kalırdı.
   - **Kurye hesap yapmaz:** eksik işaretlendiğinde tutarı düşüren şey bir çarpma değil, ödeme durumu türetimidir (`domain-core/payment`) — tutar tek yerde hesaplanır.
   - **Ayar okunamazsa kanıt zorunlu SAYILMAZ:** eksik ayar yüzünden kuryenin kapıda kilitlenmesi, kanıtsız bir teslimattan pahalıdır.
-- [~] (11.3) **Teslimat ekranı — tahsilat:** nakit/kart/çek + tutar; nakit yasal sınır aşımında uyarı (engel yok); kapıda tavan/`cod_allowed` zaten checkout'ta uygulandı
+  - **Durum (06.08) — EKRAN YAZILDI, KANIT YAKALAMA AÇIK DEĞİL.** `/operations/deliveries/<orderId>` (`requireCourier`, sahiplik gün listesinden). Kalem sayacı, tahsilat ve iki olumsuz sonuç çalışıyor; **imza/fotoğraf yakalama yok** ve bu yüzden satır `[~]` kalıyor: kanıtın zorunlu olduğu kanalda (varsayılan B2B) teslim kapanamıyor. Eksik olan bir depolama kapısı — `DeliveryProofInput.imageKey` bir R2 anahtarı bekliyor, `r2Keys`'te teslim kanıtı anahtarı ve imzalı yükleme kapısı yok (talep açık: `docs/talep/arka-uc-teslim-kaniti-yukleme.md`). **BEKLEYEN(11.2)**
+    - **Uydurma anahtar YAZILMADI.** En kolay yol `imageKey: 'pending'` gibi bir dize geçip teslimi kapatmaktı; o da kanıtı VAR göstermek olurdu — "eksik geldi" ihtilafının tek sigortası açıldığında boş çıkardı. Ekran bunun yerine kapalı bir düğme ve yazılı bir sebep gösteriyor.
+    - **Sayaç yalnız DÜŞER** (tavan bugünkü karşılanan adet): karşılananı artırmak "mal nereden çıktı" sorusunu cevapsız bırakır, `adjust_fulfillment` da reddeder.
+    - **Satır başına tutar YOK, toplam tek yerde.** Kurye hesap yapmaz; rakam satıra da yazılsaydı kafadan toplamaya davet olurdu.
+    - **Tutar ekranda hesaplanmıyor, motorda:** `derivePaymentStatusForOrder` istemcide de koşuyor (motor saf, DB bilmez) — kapıda her dokunuşta sunucuya sormak, şebekesi zayıf sokakta rakamı bekleten bir ekran demekti. Aynı fonksiyon yazımdan sonra sunucuda da koşuyor; görünen tutarla kaydedilen tutar bu yüzden ayrışamaz.
+    - **"Yola çıktım" kuryenin ekranında:** teslim de, ulaşılamadı da yoldaki siparişten olur (`0016_deliver_order`). Sevkiyatçı bunu toplu işaretleyecek (09.15) ama kapısı yok; kuryenin kendi eliyle söylemesi bugün tek çalışan yol ve sahada da doğrusu.
+- [x] (11.3) **Teslimat ekranı — tahsilat:** nakit/kart/çek + tutar; nakit yasal sınır aşımında uyarı (engel yok); kapıda tavan/`cod_allowed` zaten checkout'ta uygulandı
   - *Bitti:* nakit sınır uyarısı çıkıyor ama tahsilat tamamlanabiliyor
   - **Durum (28.07) — arka uç hazır.** Aynı kapıdan (`confirmDoorDelivery`) geçer; `cashLimitExceeded` dönen bir BİLGİDİR, akış durmaz (DOMAIN §7). Sınır ayardan (`cash_legal_limit_cents`), yalnız nakde ait — aynı tutar kartla alınırsa uyarı yok.
   - **Yöntem siparişe yazılır:** gün kapanışının yöntem bazlı beklenen toplamı bundan türer; ayrıca bir "kurye tahsil etti mi" bayrağı tutulmadı.
-- [~] (11.4) **Ulaşılamadı / reddedildi:** iki ayrı işaret; ulaşılamadı → `ready` (mal ayrılmış kalır), reddedildi → `returned` (depoya döner); `wa.me` "yoldayım" tek tık
+  - **Durum (06.08) — EKRAN YAZILDI.** Kapıda üç yöntem (nakit/kart/çek), tutar kutusu türetilen tutarla açılıyor, nakit eşiği aşınca amber uyarı çıkıyor ve **onay açık kalıyor**.
+    - **Kutu değiştirilebilir olmalı:** kapıda müşteri elindekini verir; yazılan tutar da o olmalıdır, sistemin beklediği değil. Eksik girilirse kalan borç açıkça yazılıyor — sessizce yutulmuyor.
+    - **Hesap seçilmemişse tahsilat YAZILMAZ, kutu da açılmaz** (`door_cash_account_id`). Açık bırakıp yazmamak en kötüsü olurdu: kurye parayı alır, kayıt doğmaz, fark gün kapanışında patlar. Ekran sebebi yazıp teslimi tahsilatsız kapatmaya izin veriyor, borç açık kalıyor.
+    - **Yöntem sözlüğü şemaya bağlandı** (`Record<PaymentMethod, …>`): serbest `Record<string, …>` iken iki anahtar ayrışmıştı (`check`/`transfer` yazılmış, şemada `cheque`/`bank_transfer`) — çek bekleyen kapıda ekran ham `cheque` yazıyordu. Tip artık ayrışmayı derlemede yakalıyor.
+- [x] (11.4) **Ulaşılamadı / reddedildi:** iki ayrı işaret; ulaşılamadı → `ready` (mal ayrılmış kalır), reddedildi → `returned` (depoya döner); `wa.me` "yoldayım" tek tık
   - *Bitti:* iki durumun stok sonucu 07/06 kurallarına uygun
   - **Durum (28.07) — arka uç hazır.** `markUndelivered` (day.ts) + saf motor `domain-core/delivery/on-the-way.ts` (6 birim testi).
   - **"Yoldayım" mesajı MÜŞTERİNİN dilinde** kurulur, kuryenin değil: operasyon yüzeyi Türkçedir, ekranın diline uyulsaydı Fransız müşteriye Türkçe giderdi. Metin bu yüzden motorda; bir sayfa `messages.json`'una konsaydı operasyon sözlüğüne düşer, müşteri dilleri hiç doğmazdı.
   - **Numara biçimi normalize edilir:** `+33 6…`, `0033 6…` ve yerel `06…` aynı sonuca iner; ayırt edilemeyecek kadar kısa girdide bağlantı üretilmez (çalışmayan düğme gösterilmez).
+  - **Durum (06.08) — EKRAN YAZILDI.** Tek pencere, iki sonuç: soru aynı ("ne oldu?"), akıbet farklı. Ayrımı başlığın ve onay düğmesinin tonu taşıyor, ve **pencerenin alt başlığı stok sonucunu düz Türkçe yazıyor** ("mal araçta kalır" ↔ "mal depoya döner") — kurye doğru olanı seçebilsin diye; iç terim ("rezervasyon", `returned`) hiç görünmüyor.
+    - Not **serbest ve kısa** (200 karakter, isteğe bağlı): sebebi standartlaştırmak sahada doğru seçeneği aramaya zorlar, kurye de en yakınına basar — yanlış veri doğru görünümlü olur.
+    - **"Ara / Yoldayım / Yol tarifi" şeridi tek yerde:** gün kartı ile durak ekranı aynı üç düğmeyi taşıyor, ikinci kez yazılmadı (`StopContactActions`).
 - [ ] (11.5) **Teslimat özeti PDF:** teslimde e-postalı müşteriye otomatik (parametrik); kurye isterse çıktı ("resmî fatura değildir")
   - *Bitti:* teslimde PDF üretiliyor + gönderiliyor; çıktı alınabiliyor
   - **Not:** `14.6` ile AYNI iştir; tek yerde yapılır (PDF üretimi + `delivered` mailine ek). Yeni bir PDF bağımlılığı gerektirdiği için ayrı ele alınıyor.
@@ -58,6 +71,13 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
   - **Beklenen toplam tek yerde toplanır:** `courier_day_collection` görünümü — hem kapanış öncesi ekran hem RPC oradan okur. Yalnız kapıda toplanan üç yöntem sayılır; online/havale kuryenin eline hiç girmez.
   - **`expected_*` saklanır ama `reconciled` SAKLANMAZ:** beklenen tutar kapanış anının fotoğrafıdır (sonradan bir hareket düzeltilse de o gün ne konuşulduğu değişmemeli — testli); "fark var/yok" ise iki kolondan generated kolonla türer, çelişme şemada kapalıdır.
   - **Sonuçlanmamış durak kapanışı engellemez** (tasarım §4): kurye depoya döndüyse günü kapatabilmeli; `pendingCount` uyarı içindir. Kapanmış gün salt-okunur — ikinci çağrı `already_closed` döner, kayıt ezilmez.
+  - **Durum (06.08) — EKRAN DA YAZILDI:** `/operations/deliveries/close`. Gün listesi "kasa mutabakatı için gün kapanışına geçebilirsiniz" diyor ve gidilecek yer yoktu; bir ekranın söz verip tutmadığı şey onun en zayıf yeridir.
+    - **Sayılan tutarlar BOŞ başlar (`null`), sıfır ya da beklenen tutar değil.** Kutuları beklenenle doldurmak en "yardımsever" seçenekti ve en tehlikelisi: kurye bakmadan onaylar, mutabakat kendi kendini doğrular, fark hiç doğmaz — oysa ekranın varlık sebebi o farkı görünür kılmak. Sıfır da yanlış olurdu: "saydım, hiç yok" ile "henüz saymadım" aynı şey değil (CLAUDE.md §1).
+    - **Fark varsa açıklama ZORUNLU.** Tasarım §3 "fark gizlenmez, açıklanır" diyor; açıklamasız kaydedilen bir fark ertesi gün kimsenin hatırlamayacağı bir sayıdır. Fark yoksa not isteğe bağlı.
+    - **Farkın İŞARETİ korunur** ("2,00 € eksik" ↔ "2,00 € fazla"): mutlak değere indirmek iki ayrı gerçeği aynı gösterirdi. Dil suçlayıcı değil — değerlendirme admin'in işi.
+    - **Beklenen hiç yoksa para adımı çizilmiyor** (tasarım §4 "tahsilatsız gün"): üç sıfır kutusu, olmayan bir işi varmış gibi okutur.
+    - **Getirilen mal listesinde "teslim ettim" düğmesi YOK** ve olmayacak: malın akıbeti depocunun kararıdır (DOMAIN §8) ve depo iade girişinde sonuçlanır — buradaki bir onay hiçbir yere yazılmazdı.
+    - Kapanış sonrası başka ekrana GÖTÜRMÜYOR, aynı ekran salt-okunur hâliyle tazeleniyor: kurye ne kaydettiğini görmeden çıkmamalı.
 
 ## Netleşecekler
 
