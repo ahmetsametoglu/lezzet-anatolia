@@ -1,7 +1,6 @@
 import { DEFAULT_PAGE_SIZE } from '@lezzet/types';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { guarded, requireAdmin } from '@/lib/guard';
-import { detectDevice } from '@/lib/device';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { countTicketsByStatus, getStaffTicketDetail, listTicketQueue } from '@/lib/ticket/read';
 import { TicketsClient } from './tickets-client';
@@ -40,7 +39,6 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   }
 
   const urlState = parseTicketsUrl(await searchParams);
-  const device = await detectDevice();
 
   const [queue, counts] = await Promise.all([
     listTicketQueue(OPERATIONS_LOCALE, toTicketFilter(urlState.f), undefined, DEFAULT_PAGE_SIZE),
@@ -48,16 +46,10 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   ]);
 
   /**
-   * **Seçim yoksa masaüstünde ilk satır açılır, telefonda açılmaz.**
-   *
-   * Masaüstünde detay panosu ekranın yarısı: boş bırakmak operatöre iki tıklık bir "önce bir şey
-   * seç" adımı dayatırdı. Telefonda ise detay bir alt tabakadır — kendiliğinden açılsaydı ekran
-   * kuyruğu hiç göstermeden bir talebin üstüne düşerdi.
-   *
-   * Ayrım sunucuda yapılıyor çünkü asıl kazanç OKUMANIN kendisi: telefonda kimse bakmayacakken
-   * beş sorgu atmanın karşılığı yok.
+   * **Seçim yoksa ilk satır açılır.** Detay panosu ekranın yarısı: boş bırakmak operatöre iki
+   * tıklık bir "önce bir şey seç" adımı dayatırdı.
    */
-  const selectedId = urlState.t || (device === 'mobile' ? '' : (queue.rows[0]?.id ?? ''));
+  const selectedId = urlState.t || (queue.rows[0]?.id ?? '');
 
   // Ürün adları TÜRKÇE çözülür — operasyon yüzeyinin dili (CLAUDE.md §2) ve öteki ekranların da
   // yaptığı bu (Fiyatlar, Stok: `resolveLocalizedText` kanonik sırayla, TR önce).
@@ -79,5 +71,5 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     detail: detail && { ...detail, openedAgoMinutes: ageMinutesOf(detail.ticket.createdAt, now) },
   };
 
-  return <TicketsClient data={data} device={device} urlState={{ ...urlState, t: selectedId }} />;
+  return <TicketsClient data={data} urlState={{ ...urlState, t: selectedId }} />;
 }

@@ -2,14 +2,12 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { ReportsDesktop } from './reports.desktop';
-import { ReportsMobile } from './reports.mobile';
 import { reportsUrl, type ReportsUrlState } from './reports-url';
 import type { ReportsData } from './reports-types';
 
-// Raporlar client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil çatallanır.
+// Raporlar client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
+// mobil deneyim native uygulamada — `docs/uygulama`.
 //
 // Sekme ve dönem GERÇEK GEZİNMEDİR: veriyi sunucu okuyor ve "temmuzun şirket kârı" bağlantısı
 // paylaşılabilir olmalı. İstemci durumunda tutulsaydı her sekme bir istemci turu olur, paylaşılan
@@ -17,14 +15,12 @@ import type { ReportsData } from './reports-types';
 
 interface ReportsClientProps {
   data: ReportsData;
-  device: Device;
   urlState: ReportsUrlState;
   months: string[];
   canSeeProfit: boolean;
 }
 
-export function ReportsClient({ data, device, urlState, months, canSeeProfit }: ReportsClientProps) {
-  const resolvedDevice = useDevice(device);
+export function ReportsClient({ data, urlState, months, canSeeProfit }: ReportsClientProps) {
   const router = useRouter();
   const [navPending, startNav] = useTransition();
 
@@ -45,5 +41,5 @@ export function ReportsClient({ data, device, urlState, months, canSeeProfit }: 
     onFilter: go,
   };
 
-  return resolvedDevice === 'mobile' ? <ReportsMobile {...view} /> : <ReportsDesktop {...view} />;
+  return <ReportsDesktop {...view} />;
 }

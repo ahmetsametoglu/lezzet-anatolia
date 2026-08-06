@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { fromCents } from '@lezzet/helper';
 import { resolveLocalizedText, type LocalizedText } from '@lezzet/types';
-import type { Device } from '@/lib/device';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
 import { LocaleCard } from '@/components/operation/form/locale-card';
 import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
@@ -33,18 +32,16 @@ import type { BundleView, VariantOption } from '../../products-types';
 // Paket oluştur/düzenle — KAP: RHF + zodResolver, action'lar, Dialog kabuğu ve footer burada.
 // Referans ürün form diyaloğu; ondan AYRILAN tek yer sekme yokluğu: paketin alanı çok daha az
 // (ad · açıklama · görsel · fiyat · kişilik · kalemler), ürün formunu ikiye bölen yasal beyan yığını
-// burada yok. Cihaz forku da yok — brief kararı: "paket kurma ve çok dilli yoğun giriş WEB'de kalır",
-// mobilde yalnız liste ve hızlı düzeltme var.
+// burada yok.
 
 const FORM_ID = 'bundle-form';
 
 interface BundleFormDialogProps {
   bundle: BundleView | null;
-  device: Device;
   onClose: () => void;
 }
 
-export function BundleFormDialog({ bundle, device, onClose }: BundleFormDialogProps) {
+export function BundleFormDialog({ bundle, onClose }: BundleFormDialogProps) {
   const editing = bundle !== null;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -163,7 +160,7 @@ export function BundleFormDialog({ bundle, device, onClose }: BundleFormDialogPr
     <Dialog
       open
       onClose={onClose}
-      maxWidth={device === 'mobile' ? 520 : 1160}
+      maxWidth={1160}
       title={editing ? 'Paket düzenle' : 'Yeni paket'}
       subtitle={
         editing

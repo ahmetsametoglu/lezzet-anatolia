@@ -64,14 +64,9 @@ interface PageHeaderProps {
   status?: ReactNode;
   /** Ekran aksiyonları (+Yeni, araç düğmeleri). En fazla bir BİRİNCİL düğme — fazlası araç çubuğudur. */
   children?: ReactNode;
-  /**
-   * Dar ekran kademesi — cihaz forkunun mobil dalı verir (`md:` ile akışkan responsive YOK, Sapma 3).
-   * Başlık bir kademe küçülür, yatay dolgu daralır, ⌘K kutusu metin yerine tek düğmeye iner.
-   */
-  compact?: boolean;
 }
 
-export function PageHeader({ title, subtitle, status, search, children, compact = false }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, status, search, children }: PageHeaderProps) {
   const shell = useOpsShell();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const openPalette = useCallback(() => setPaletteOpen(true), []);
@@ -81,40 +76,13 @@ export function PageHeader({ title, subtitle, status, search, children, compact 
   return (
     <>
       <header
-        className={[
-          'flex flex-wrap items-center gap-3.5 border-b border-ops-line',
-          compact ? 'px-4 py-3' : 'px-6 py-4',
-        ].join(' ')}
+        className="flex flex-wrap items-center gap-3.5 border-b border-ops-line px-6 py-4"
       >
-        {/* HAMBURGER — yalnız telefonda (`nav !== null`). Rayın çekmeceye dönmesiyle geldi (04.08):
-            gezinme artık akışta durmuyor, bir yerden açılması gerekiyor ve o yer başlığın solu.
-            Masaüstünde çizilmiyor çünkü orada ray zaten görünür — kapatılamayan bir şeyi açan bir
-            düğme, ne işe yaradığı anlaşılmayan bir düğmedir. */}
-        {shell?.nav ? (
-          <button
-            type="button"
-            onClick={shell.nav.toggle}
-            aria-label="Gezinme"
-            aria-expanded={shell.nav.open}
-            className="-ml-1 flex-none cursor-pointer rounded-ops-btn p-1.5 text-ops-body transition-colors hover:bg-ops-line hover:text-ops-ink"
-          >
-            <span aria-hidden className="flex w-[18px] flex-col gap-[3px]">
-              <span className="h-[2px] rounded-full bg-current" />
-              <span className="h-[2px] rounded-full bg-current" />
-              <span className="h-[2px] rounded-full bg-current" />
-            </span>
-          </button>
-        ) : null}
+        {/* Hamburger yok: operasyon web'i masaüstü-yalnız (06.08), ray hep görünür; mobil deneyim
+            native uygulamada — `docs/uygulama`. */}
         <div className="mr-auto flex min-w-0 flex-col gap-px">
           <div className="flex min-w-0 items-center gap-2.5">
-            <h1
-              className={[
-                'truncate font-ops-display font-semibold text-ops-ink',
-                compact ? 'text-ops-section' : 'text-ops-title',
-              ].join(' ')}
-            >
-              {title}
-            </h1>
+            <h1 className="truncate font-ops-display font-semibold text-ops-ink text-ops-title">{title}</h1>
             {/* Hâl rozetleri başlığın YANINDA: 24px başlık ile 21px rozet doğal bir eş. Daralmazlar
                 (`flex-none`) — kısalması gereken şey uzun bir tesis adıdır, "Kapalı" değil. */}
             {status ? <span className="flex flex-none items-center gap-1.5">{status}</span> : null}
@@ -127,8 +95,8 @@ export function PageHeader({ title, subtitle, status, search, children, compact 
             value={search.value}
             onChange={search.onChange}
             placeholder={search.placeholder}
-            size={compact ? 'sm' : 'md'}
-            className={compact ? 'w-full order-last' : 'w-[210px]'}
+            size="md"
+            className="w-[210px]"
           />
         ) : null}
 
@@ -138,8 +106,8 @@ export function PageHeader({ title, subtitle, status, search, children, compact 
         {shell ? (
           <div className="flex items-center gap-2.5 border-l border-ops-line-soft pl-2.5">
             <WarehouseContextPicker {...shell.warehouse} variant="bar" />
-            <PaletteTrigger compact={compact} onOpen={openPalette} />
-            <UserAvatar email={shell.user.email} roles={shell.user.roles} compact={compact} />
+            <PaletteTrigger onOpen={openPalette} />
+            <UserAvatar email={shell.user.email} roles={shell.user.roles} />
           </div>
         ) : null}
       </header>
@@ -157,25 +125,12 @@ const NOOP = () => {};
  * ⌘K tetikleyicisi. Geniş ekranda kutu gibi görünür (kısayolu ÖĞRETİR — kimse denemeden bilmez),
  * dar ekranda tek düğmeye düşer: telefonda klavye kısayolu diye bir şey yok, kutu yalnız yer kaplardı.
  */
-function PaletteTrigger({ compact, onOpen }: { compact: boolean; onOpen: () => void }) {
-  const h = compact ? CONTROL_H.sm : CONTROL_H.md;
-  if (compact) {
-    return (
-      <button
-        type="button"
-        onClick={onOpen}
-        aria-label="Ekrana git"
-        className={`grid ${h} w-8 flex-none cursor-pointer place-items-center rounded-ops-btn border border-ops-line-strong text-ops-faint transition-colors hover:border-ops-olive hover:text-ops-olive`}
-      >
-        <SearchIcon />
-      </button>
-    );
-  }
+function PaletteTrigger({ onOpen }: { onOpen: () => void }) {
   return (
     <button
       type="button"
       onClick={onOpen}
-      className={`flex ${h} cursor-pointer items-center gap-2 rounded-ops-btn border border-ops-gray-300 bg-ops-line px-2.5 text-ops-faint transition-colors hover:border-ops-olive hover:text-ops-olive`}
+      className={`flex ${CONTROL_H.md} cursor-pointer items-center gap-2 rounded-ops-btn border border-ops-gray-300 bg-ops-line px-2.5 text-ops-faint transition-colors hover:border-ops-olive hover:text-ops-olive`}
     >
       <SearchIcon />
       <span className="font-ops-body text-ops-sm">Ekrana git…</span>
@@ -201,7 +156,7 @@ function PaletteTrigger({ compact, onOpen }: { compact: boolean; onOpen: () => v
  * tarafında vardı, personel tarafında çağıranı yoktu — dükkândaki tablette biri açık oturumu kapatmak
  * isterse yapabileceği bir şey yoktu. Avatar o kapıya ev sahipliği yapıyor.
  */
-function UserAvatar({ email, roles, compact }: { email: string; roles: readonly UserRole[]; compact: boolean }) {
+function UserAvatar({ email, roles }: { email: string; roles: readonly UserRole[] }) {
   const anchorRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -209,7 +164,6 @@ function UserAvatar({ email, roles, compact }: { email: string; roles: readonly 
   const local = email.split('@')[0] || 'personel';
   const initials = local.slice(0, 2).toLocaleUpperCase('tr');
   const label = roleText(roles);
-  const size = compact ? 'h-8 w-8' : 'h-9 w-9';
 
   const signOut = () => {
     setBusy(true);
@@ -237,8 +191,7 @@ function UserAvatar({ email, roles, compact }: { email: string; roles: readonly 
             // (zemin `ops-card`) kenar kaybolmuyor.
             'grid flex-none cursor-pointer place-items-center rounded-full bg-ops-olive font-ops-display font-semibold text-ops-card outline-none transition-all',
             'ring-2 ring-ops-olive-bg hover:ring-ops-olive-line',
-            size,
-            compact ? 'text-ops-micro' : 'text-ops-sm',
+            'h-9 w-9 text-ops-sm',
             open ? 'ring-ops-olive-line' : '',
           ]
             .filter(Boolean)

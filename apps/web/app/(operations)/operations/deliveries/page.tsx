@@ -1,6 +1,5 @@
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { listCourierDay } from '@/lib/courier/day';
-import { detectDevice } from '@/lib/device';
 import { guarded, requireCourier } from '@/lib/guard';
 import { DeliveriesClient } from './deliveries-client';
 
@@ -33,5 +32,5 @@ export default async function DeliveriesPage() {
 
   const stops = await listCourierDay({ courierId: access.user.id });
 
-  return <DeliveriesClient stops={stops} device={await detectDevice()} />;
+  return <DeliveriesClient stops={stops} />;
 }

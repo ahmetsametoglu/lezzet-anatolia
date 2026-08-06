@@ -46,7 +46,7 @@ export interface TicketsData {
  */
 export type TicketDetailView = StaffTicketDetail & { openedAgoMinutes: number };
 
-/** Web/mobil dallarının ORTAK sözleşmesi — durum ağacı client kökünde, sunum burada çatallanır. */
+/** Masaüstü görünümünün sözleşmesi — durum ağacı client kökünde. */
 export interface TicketsViewProps {
   data: TicketsData;
   urlState: TicketsUrlState;
@@ -61,8 +61,6 @@ export interface TicketsViewProps {
   onLoadMore: () => void;
   onFilter: (f: TicketFilterKey) => void;
   onSelect: (id: string) => void;
-  /** Mobilde alt tabakayı kapatır (adresten seçimi düşürür). */
-  onCloseDetail: () => void;
   /** Cevabı gönderir; `true` dönerse yazma kutusu temizlenir (gönderilmiş metni silmemek için). */
   onReply: (body: string) => Promise<boolean>;
   onStatus: (to: TicketStatus) => void;

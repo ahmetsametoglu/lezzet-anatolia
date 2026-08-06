@@ -93,7 +93,6 @@ export function TicketsDesktop({
             detail={data.detail}
             busy={busy}
             error={error}
-            compact={false}
             onStatus={onStatus}
             onReply={onReply}
             onTakeOver={onTakeOver}

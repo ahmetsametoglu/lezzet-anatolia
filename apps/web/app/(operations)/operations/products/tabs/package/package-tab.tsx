@@ -10,7 +10,6 @@ import { money, percent } from '@/components/operation/ui/format';
 import { ImageIcon } from '@/components/operation/ui/icons';
 import { Table, type Column } from '@/components/operation/ui/table';
 import { Toggle } from '@/components/operation/form/toggle';
-import type { Device } from '@/lib/device';
 import { reorderBundlesAction, setBundleActiveAction } from './actions';
 import { BundleFormDialog } from './bundle-form-dialog';
 import type { BundleView } from '../../products-types';
@@ -197,13 +196,12 @@ function bundleColumns(pricingById: PricingMap, onToggle: (id: string, next: boo
 
 interface PackagesTabProps {
   bundles: BundleView[];
-  device: Device;
   /** Oluşturma niyeti kabuktan (sekme çubuğundaki "+ Paket"); diyalog burada. */
   creating: boolean;
   onCreateClose: () => void;
 }
 
-export function PackagesTab({ bundles, device, creating, onCreateClose }: PackagesTabProps) {
+export function PackagesTab({ bundles, creating, onCreateClose }: PackagesTabProps) {
   // Düzenlenen kayıt KİMLİKLE tutulur, verisi taze listeden türetilir (katalog sekmesinin deseni):
   // kopya tutulursa dialog içindeki görsel yüklemesi `router.refresh()` sonrası görünmez.
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -258,9 +256,9 @@ export function PackagesTab({ bundles, device, creating, onCreateClose }: Packag
         }
       />
 
-      {creating ? <BundleFormDialog bundle={null} device={device} onClose={onCreateClose} /> : null}
+      {creating ? <BundleFormDialog bundle={null} onClose={onCreateClose} /> : null}
       {editing ? (
-        <BundleFormDialog key={editing.id} bundle={editing} device={device} onClose={() => setEditingId(null)} />
+        <BundleFormDialog key={editing.id} bundle={editing} onClose={() => setEditingId(null)} />
       ) : null}
     </div>
   );

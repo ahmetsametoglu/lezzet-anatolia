@@ -28,11 +28,9 @@ import {
 import type { TicketDetailView, TicketRowView } from './tickets-types';
 
 /**
- * Talepler ekranının ORTAK parçaları (16.3) — web ve mobil ikisini de kullanır.
- *
- * Kuyruk satırı ve detay panosu iki yüzeyde de AYNI: telefonda bir talebe bakan operatör ile
- * masaüstünde bakan aynı bilgiyi görmeli, yoksa "telefonda görünmüyordu" diye bir cevapsızlık
- * doğar. Farklı olan yalnız KABUK — masaüstünde iki sütun, telefonda alt tabaka.
+ * Talepler ekranının ORTAK parçaları (16.3) — kuyruk satırı ve detay panosu tek yerde durur ki
+ * aynı talep iki yerde farklı okunmasın. Operasyon web'i masaüstü-yalnız; mobil deneyim native
+ * uygulamada (`docs/uygulama`).
  */
 
 // ── Kuyruk satırı ────────────────────────────────────────────────────────────
@@ -139,14 +137,13 @@ interface TicketDetailProps {
   detail: TicketDetailView;
   busy: boolean;
   error: string | null;
-  compact: boolean;
   onStatus: (to: TicketStatus) => void;
   onReply: (body: string) => Promise<boolean>;
   onTakeOver: () => void;
   onTriggerReturn: () => void;
 }
 
-export function TicketDetail({ detail, busy, error, compact, onStatus, onReply, onTakeOver, onTriggerReturn }: TicketDetailProps) {
+export function TicketDetail({ detail, busy, error, onStatus, onReply, onTakeOver, onTriggerReturn }: TicketDetailProps) {
   const { ticket, customer, order, messages, returnOutcome, returnTrigger } = detail;
   // İlk mesaj MÜŞTERİNİN ANLATIMIDIR (`TicketMessage` künyesi: ayrı bir `description` alanı yok).
   // Çizim onu "Müşterinin anlatımı" başlığı altında, yazışmadan ayrı gösteriyor — aynı kayıt, iki
@@ -155,7 +152,7 @@ export function TicketDetail({ detail, busy, error, compact, onStatus, onReply, 
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-ops-subtle">
-      <div className={`flex items-start gap-3 border-b border-ops-line ${compact ? 'px-4 py-3' : 'px-5 py-3.5'}`}>
+      <div className="flex items-start gap-3 border-b border-ops-line px-5 py-3.5">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="flex min-w-0 items-center gap-2">
             {/* Müşteri köprüsü (brief §2). Müşteri ekranının DETAY rotası yok — liste + pencere;
@@ -208,7 +205,7 @@ export function TicketDetail({ detail, busy, error, compact, onStatus, onReply, 
         />
       </div>
 
-      <div className={`flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto ${compact ? 'px-4 py-3' : 'px-5 py-4'}`}>
+      <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-5 py-4">
         {order ? <OrderCard order={order} /> : null}
 
         {first ? (
@@ -221,7 +218,7 @@ export function TicketDetail({ detail, busy, error, compact, onStatus, onReply, 
               message={first}
               className="rounded-ops-card border border-ops-line bg-ops-white px-3.5 py-3 font-ops-body text-ops-base leading-relaxed text-ops-strong"
             />
-            <Attachments urls={first.attachmentUrls} compact={compact} />
+            <Attachments urls={first.attachmentUrls} />
           </section>
         ) : null}
 
@@ -229,13 +226,13 @@ export function TicketDetail({ detail, busy, error, compact, onStatus, onReply, 
           <section className="flex flex-col gap-2">
             <SectionLabel>Yazışma</SectionLabel>
             {rest.map((message) => (
-              <MessageBubble key={message.id} message={message} compact={compact} />
+              <MessageBubble key={message.id} message={message} />
             ))}
           </section>
         ) : null}
       </div>
 
-      <div className={`flex flex-col gap-2.5 border-t border-ops-line ${compact ? 'px-4 py-3' : 'px-5 py-3.5'}`}>
+      <div className="flex flex-col gap-2.5 border-t border-ops-line px-5 py-3.5">
         {/* AI şeridi yalnız AI yürütürken: bugün her talep `human` (16.5 yazılmadı), yani bu şerit
             pratikte hiç çıkmıyor — ama kapısı (`takeOverTicket`) hazır ve şerit AI geldiğinde
             kendiliğinden görünür. Çizili olduğu için de yazıldı: sonradan eklenen bir uyarı, AI'ın
@@ -267,7 +264,6 @@ export function TicketDetail({ detail, busy, error, compact, onStatus, onReply, 
 
         <ReplyBar
           busy={busy}
-          compact={compact}
           returnAllowed={returnTrigger.allowed}
           returnReason={returnTrigger.allowed ? undefined : RETURN_BLOCKED_REASON[returnTrigger.reason]}
           onReply={onReply}
@@ -437,7 +433,7 @@ function TranslatedBody({ message, className, align = 'start' }: { message: Tick
   );
 }
 
-function MessageBubble({ message, compact }: { message: TicketMessageView; compact: boolean }) {
+function MessageBubble({ message }: { message: TicketMessageView }) {
   const mine = message.sender !== 'customer';
   const tone = TICKET_SENDER_TONE[message.sender];
   return (
@@ -457,7 +453,7 @@ function MessageBubble({ message, compact }: { message: TicketMessageView; compa
           BUBBLE_SKIN[tone],
         ].join(' ')}
       />
-      <Attachments urls={message.attachmentUrls} compact={compact} align={mine ? 'end' : 'start'} />
+      <Attachments urls={message.attachmentUrls} align={mine ? 'end' : 'start'} />
     </div>
   );
 }
@@ -470,9 +466,9 @@ function MessageBubble({ message, compact }: { message: TicketMessageView; compa
  * Adres SÜRELİ ve imzalı (`privateReadUrl`, 15 dk): bozuk ürün fotoğrafı private kovada durur.
  * Yeni sekmede açılır çünkü karar çoğu kez fotoğraftan verilir ve küçük kutu buna yetmez.
  */
-function Attachments({ urls, compact, align = 'start' }: { urls: readonly string[]; compact: boolean; align?: 'start' | 'end' }) {
+function Attachments({ urls, align = 'start' }: { urls: readonly string[]; align?: 'start' | 'end' }) {
   if (urls.length === 0) return null;
-  const size = compact ? 80 : 72;
+  const size = 72;
   return (
     <div className={`flex flex-wrap gap-2 ${align === 'end' ? 'justify-end' : ''}`}>
       {urls.map((url, i) => (
@@ -486,7 +482,6 @@ function Attachments({ urls, compact, align = 'start' }: { urls: readonly string
 
 interface ReplyBarProps {
   busy: boolean;
-  compact: boolean;
   returnAllowed: boolean;
   returnReason?: string;
   onReply: (body: string) => Promise<boolean>;
@@ -503,7 +498,7 @@ interface ReplyBarProps {
  * **Bir açıklama satırı da SİLİNDİ:** "cevap müşteriye e-posta ile de gider…" diye eklediğim cümle
  * zaten placeholder'ın söylediğini (*"aynen müşteriye görünür"*) ikinci kez söylüyordu ve satırı
  * bozan şeyin kendisiydi — `mr-auto` taşıyan bir yazı ile `fullWidth` bir düğme aynı flex satırında
- * çakışıyordu (mobilde görünür arıza).
+ * çakışıyordu.
  *
  * **Kutu tek satırlık DEĞİL, `Textarea`** — çizimden bilinçli sapma: cevaplar paragraf uzunluğunda
  * yazılıyor ve tek satırlık bir kutuda operatör yazdığını göremezdi. Satırın kendisi `items-end`
@@ -513,7 +508,7 @@ interface ReplyBarProps {
  * **Gönderilemeyen metin SİLİNMEZ** — kapı reddederse kutu olduğu gibi kalır; operatörün yazdığı
  * üç paragrafı bir hata mesajı uğruna kaybetmesi kabul edilemez.
  */
-function ReplyBar({ busy, compact, returnAllowed, returnReason, onReply, onTriggerReturn }: ReplyBarProps) {
+function ReplyBar({ busy, returnAllowed, returnReason, onReply, onTriggerReturn }: ReplyBarProps) {
   const [body, setBody] = useState('');
   const empty = body.trim().length === 0;
 
@@ -524,7 +519,7 @@ function ReplyBar({ busy, compact, returnAllowed, returnReason, onReply, onTrigg
     });
   };
 
-  // MASAÜSTÜNDE kutu TEK SATIR yüksekliğinde (`CONTROL_H.md` = 36px) ve düğmeler de `md` — çizimde
+  // Kutu TEK SATIR yüksekliğinde (`CONTROL_H.md` = 36px) ve düğmeler de `md` — çizimde
   // üçünün dolgusu da `10px 13px`, yani AYNI yükseklik. Bir tur boyunca kutu iki satır (`rows=2`),
   // düğmeler `sm` (32px) idi: satır hem kalın hem hizasızdı (kullanıcı bildirimi, 03.08).
   // `Textarea` kalıyor (`Input` değil): tek satır GÖRÜNÜYOR ama yeni satır kabul ediyor ve
@@ -533,39 +528,24 @@ function ReplyBar({ busy, compact, returnAllowed, returnReason, onReply, onTrigg
     <Textarea
       value={body}
       onChange={(e) => setBody(e.target.value)}
-      rows={compact ? 3 : 1}
+      rows={1}
       placeholder="Müşteriye cevap yaz… (aynen müşteriye görünür)"
       disabled={busy}
       aria-label="Müşteriye cevap"
-      className={compact ? undefined : `flex-1 ${CONTROL_H.md} py-[7px]`}
+      className={`flex-1 ${CONTROL_H.md} py-[7px]`}
     />
   );
 
-  const size = compact ? 'sm' : 'md';
   const iade = (
-    <Button size={size} variant="danger" onClick={onTriggerReturn} disabled={busy || !returnAllowed} title={returnReason}>
+    <Button size="md" variant="danger" onClick={onTriggerReturn} disabled={busy || !returnAllowed} title={returnReason}>
       İade tetikle
     </Button>
   );
   const gonder = (
-    <Button size={size} variant="primary" onClick={send} disabled={busy || empty}>
+    <Button size="md" variant="primary" onClick={send} disabled={busy || empty}>
       {busy ? 'Gönderiliyor…' : 'Gönder'}
     </Button>
   );
-
-  // TELEFONDA kutu üstte, iki düğme altında yan yana — çizimin mobil tabakasındaki oran da bu
-  // (`flex:1` iade · `flex:1.4` cevap): asıl iş cevap yazmak, iade ondan çıkan bir karar.
-  if (compact) {
-    return (
-      <div className="flex flex-col gap-2.5">
-        {box}
-        <div className="flex gap-2.5">
-          <span className="flex flex-1 [&>button]:w-full">{iade}</span>
-          <span className="flex flex-[1.4] [&>button]:w-full">{gonder}</span>
-        </div>
-      </div>
-    );
-  }
 
   // `items-center`: üçü de aynı yükseklikte olduğu için hizalama artık taban değil merkez —
   // `items-end` iki farklı yükseklik varken gerekliydi, eşitlendiğinde gereksiz.

@@ -10,7 +10,6 @@ import {
 } from '@lezzet/database';
 import { needsExpiryAttention } from '@lezzet/domain-core';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
-import { detectDevice } from '@/lib/device';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 import { warehouseFilterOf } from '@/lib/warehouse/filter';
 import { StockClient } from './stock-client';
@@ -107,8 +106,6 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   const levels = toLevelRows({ products: productPage.rows, batches: rowBatches, available, categoryNames, warehouseLabels });
   const attention = batches.filter((b) => needsExpiryAttention(b.decision));
 
-  const device = await detectDevice();
-
   return (
     <StockClient
       data={{
@@ -150,7 +147,6 @@ export default async function StockPage({ searchParams }: StockPageProps) {
           options: warehouse.options,
         },
       }}
-      device={device}
       urlState={urlState}
     />
   );

@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
 import { serviceDb } from '@lezzet/database';
-import { detectDevice } from '@/lib/device';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { OrderDetailClient } from './order-detail-client';
 import { readOrderDetail } from './order-detail-read';
@@ -26,6 +25,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const order = await readOrderDetail(serviceDb(), id);
   if (!order) notFound();
 
-  return <OrderDetailClient order={order} device={await detectDevice()} />;
+  return <OrderDetailClient order={order} />;
 }
 

@@ -12,7 +12,6 @@ import {
   type LocalizedText,
   type ProductDetailsUpdate,
   type ProductImage,
-  type ProductStatus,
   type ProductVariantEntry,
 } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
@@ -37,21 +36,6 @@ type ProductFormInput = ProductDetailsUpdate & { variants: ProductVariantEntry[]
 function requireName(name: LocalizedText | undefined): LocalizedText {
   if (!name || !resolveLocalizedText(name)) throw new Error('Ürün adı gerekli.');
   return name;
-}
-
-/**
- * Ürünün satış durumunu yazar. Listedeki hızlı anahtar yalnız satışta ↔ pasif arasında gidip gelir;
- * ADAY'a geçiş formdaki durum seçicisinden yapılır (keşiften kataloğa çıkış bir karar, kaza değil).
- */
-export async function setProductStatusAction(id: string, status: ProductStatus): Promise<ActionResult> {
-  try {
-    await requireStaff();
-    await new ProductService(serviceDb()).setStatus(id, status);
-    revalidatePath(PRODUCTS_PATH);
-    return { data: null, error: null };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
 }
 
 /** Mevcut ürünü günceller (Temel + çok dilli + alerjen + marj) ve varyantları senkronlar. Slug sabit. */
@@ -87,23 +71,6 @@ export async function createProductAction(input: ProductFormInput): Promise<Acti
         isActive: v.isActive,
       })),
     });
-    revalidatePath(PRODUCTS_PATH);
-    return { data: null, error: null };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
-}
-
-/** Mobil hızlı düzeltme: yalnız TR adı günceller (mevcut FR/DE korunur). */
-export async function updateProductNameAction(id: string, nameTr: string): Promise<ActionResult> {
-  try {
-    await requireStaff();
-    const tr = nameTr.trim();
-    if (!tr) throw new Error('Ürün adı gerekli.');
-    const svc = new ProductService(serviceDb());
-    const existing = await svc.getById(id);
-    if (!existing) throw new Error('Ürün bulunamadı.');
-    await svc.updateDetails(id, { name: { ...existing.name, tr } });
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
   } catch (err) {

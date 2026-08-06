@@ -3,8 +3,6 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CustomerType } from '@lezzet/types';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import type { OrderSummaryView } from '@/lib/order/summary';
 import {
@@ -21,7 +19,6 @@ import { CreditDialog } from './components/credit-dialog';
 import { CustomerEditDialog } from './components/customer-edit-dialog';
 import { OrderDialog } from './components/order-dialog';
 import { CustomersDesktop } from './customers.desktop';
-import { CustomersMobile } from './customers.mobile';
 import { customersUrl, type CustomerScope, type CustomersUrlState, type MarketingChannelFilter } from './customers-url';
 import type {
   B2bCheckView,
@@ -32,7 +29,8 @@ import type {
   CustomersData,
 } from './customers-types';
 
-// Müşteri ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
+// Müşteri ekranı client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız; mobil deneyim
+// native uygulamada (`docs/uygulama`).
 //
 // SÜZGEÇ AKIŞI: süzgeç bir client durumu DEĞİL, URL durumudur — kullanıcı değiştirince URL yazılır →
 // RSC yeniden okur → süzülmüş İLK SAYFA gelir. **Burada client-side filtreleme YOK** ve bu, fiyat/stok
@@ -41,12 +39,10 @@ import type {
 
 interface CustomersClientProps {
   data: CustomersData;
-  device: Device;
   urlState: CustomersUrlState;
 }
 
-export function CustomersClient({ data, device, urlState }: CustomersClientProps) {
-  const resolvedDevice = useDevice(device);
+export function CustomersClient({ data, urlState }: CustomersClientProps) {
   const router = useRouter();
 
   /**
@@ -108,8 +104,8 @@ export function CustomersClient({ data, device, urlState }: CustomersClientProps
 
   // ── Seçim ve seçilinin türetilmiş bilgisi ──
   // Seçim KİMLİKLE tutulur; kayıt taze listeden türetilir (kopya tutulursa güncelleme yansımaz).
-  // İlk satır kendiliğinden seçilmez: web'de panel "seç" der, mobilde liste kartlara açılır — bir
-  // müşterinin ödeme bilgisini istemeden ekrana getirmek bu ekranda uygun değil.
+  // İlk satır kendiliğinden seçilmez, panel "seç" der — bir müşterinin ödeme bilgisini istemeden
+  // ekrana getirmek bu ekranda uygun değil.
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -293,25 +289,13 @@ export function CustomersClient({ data, device, urlState }: CustomersClientProps
       setSaveError(null);
       setB2bOpen(true);
     },
-    // Mobilin satır-içi adımlayıcısı: yalnız LİMİT değişir. Yetki ve süre mevcut hâliyle geri
-    // yazılıyor — action üçünü tek karar sayıyor ve eksik alan geçilse temizlerdi.
-    onSaveCreditLimit: (cents: number | null) => {
-      if (!selectedId || !detail) return;
-      void runWrite(() =>
-        setCustomerCreditAction(selectedId, {
-          creditEnabled: detail.creditEnabled,
-          creditLimitCents: cents,
-          paymentTermDays: detail.customTermDays,
-        }),
-      );
-    },
     saving,
     saveError,
   };
 
   return (
     <>
-      {resolvedDevice === 'mobile' ? <CustomersMobile {...view} /> : <CustomersDesktop {...view} />}
+      <CustomersDesktop {...view} />
       {creditOpen && selected && detail ? (
         <CreditDialog
           key={`credit-${selected.id}`}

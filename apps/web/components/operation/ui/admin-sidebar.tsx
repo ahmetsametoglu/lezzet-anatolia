@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import type { UserRole } from '@lezzet/types';
 import { NavIcon } from './icons';
 import { isActive, sectionsFor } from './ops-nav';
-import { useOpsShell } from './ops-shell';
 import { ThemeToggle } from './theme-toggle';
 
 /**
@@ -30,48 +29,11 @@ interface AdminSidebarProps {
 export function AdminSidebar({ roles }: AdminSidebarProps) {
   const pathname = usePathname();
   const sections = sectionsFor(roles);
-  const shell = useOpsShell();
-  const nav = shell?.nav ?? null;
 
-  /**
-   * TELEFONDA RAY BİR ÇEKMECEDİR (04.08, denetim bildirimi + `ui:shot` ölçümü).
-   *
-   * Sabit 214px her cihazda çiziliyordu; 390px'te içeriğe 176px kalıyordu — yüzeyin yarısından
-   * fazlası gezinmeye gidiyordu ve sonuç ölçülebilir bir arızaydı: ürün adları "Fıst…" diye
-   * kırpılıyor, "Onayla" düğmesi ekrandan taşıyor, dört sekmenin yalnız biri sığıyordu.
-   *
-   * Çekmece `fixed` + kaydırma ile açılıyor, `hidden` ile DEĞİL: kapalıyken de ağaçta duruyor,
-   * yani açılışta bir kare boyunca boş görünmüyor ve odak sırası korunuyor. Kapalıyken
-   * `pointer-events-none` — görünmeyen bir menünün altındaki içeriğe basılabilmeli.
-   *
-   * Masaüstünde (`nav === null`) hiçbir şey değişmiyor: ray akışın parçası, kapatılamaz.
-   */
-  const drawer = nav !== null;
-
+  // Operasyon web'i masaüstü-yalnız (06.08): telefon çekmecesi söküldü, ray akışın parçası ve hep
+  // açık; mobil deneyim native uygulamada — `docs/uygulama`.
   return (
-    <>
-      {/* Örtü YALNIZ çekmece açıkken. Dışarı basmak kapatır — üç kapanma yolundan biri (öteki ikisi:
-          bir bağlantıya basmak ve Esc). */}
-      {drawer && nav.open ? (
-        <button
-          type="button"
-          aria-label="Gezinmeyi kapat"
-          onClick={nav.close}
-          className="fixed inset-0 z-40 cursor-pointer bg-ops-scrim"
-        />
-      ) : null}
-      <aside
-        onKeyDown={(e) => {
-          if (drawer && e.key === 'Escape') nav.close();
-        }}
-        className={[
-          'flex flex-col overflow-y-auto border-r border-ops-line bg-ops-panel py-4 font-ops-body',
-          drawer
-            ? `fixed inset-y-0 left-0 z-50 w-[240px] transition-transform duration-200 ${nav.open ? 'translate-x-0' : '-translate-x-full pointer-events-none'}`
-            : 'sticky top-0 h-screen w-[214px] flex-none',
-        ].join(' ')}
-        aria-hidden={drawer && !nav.open}
-      >
+    <aside className="sticky top-0 flex h-screen w-[214px] flex-none flex-col overflow-y-auto border-r border-ops-line bg-ops-panel py-4 font-ops-body">
       {/* Marka */}
       <div className="flex items-center gap-2.5 px-4 pb-3">
         <span className="grid h-[30px] w-[30px] place-items-center rounded-lg bg-ops-ink font-ops-display text-ops-lead font-bold text-ops-olive-light">
@@ -127,7 +89,6 @@ export function AdminSidebar({ roles }: AdminSidebarProps) {
       <div className="mt-auto">
         <ThemeToggle />
       </div>
-      </aside>
-    </>
+    </aside>
   );
 }

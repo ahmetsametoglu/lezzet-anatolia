@@ -141,8 +141,8 @@ export function CustomerPreview({
             gerekçeyle düştü. (1) Vade durumu bir alttaki vade/limit kutusunda zaten okunuyor — orada
             hem rozet hem açık bakiye hem kutunun rengi söylüyor; iki yerde söylenen bir uyarı,
             operatörün ikisini de saymasına yol açar. (2) Gecikme sayısı KARNE ölçüsüdür ve karnenin
-            yaşadığı iki yer var: mobil karne kutusu ve vade/limit diyaloğu. Limit yazılırken görünmesi
-            gereken sayı, panelde bir vitrin sayısı olmak zorunda değil.
+            yaşadığı yer vade/limit diyaloğu. Limit yazılırken görünmesi gereken sayı, panelde bir
+            vitrin sayısı olmak zorunda değil.
             Kutular bir SARMAL KARTIN içinde değil: `Metric`in kendi kenarı ve beyaz zemini var,
             sarılınca kart-içinde-kart oluyordu. */}
             <div className="grid grid-cols-3 gap-2.5">

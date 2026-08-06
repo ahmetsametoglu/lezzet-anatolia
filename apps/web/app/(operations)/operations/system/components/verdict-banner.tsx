@@ -100,18 +100,16 @@ interface VerdictBannerProps {
   health: HealthView;
   /** Ölçüm yaşı istemcide ilerler — sunucudan gelen sayı donmuştur. */
   ageMinutes: number;
-  compact?: boolean;
 }
 
-export function VerdictBanner({ health, ageMinutes, compact = false }: VerdictBannerProps) {
+export function VerdictBanner({ health, ageMinutes }: VerdictBannerProps) {
   const t = THEME[health.tone];
   const loud = health.tone === 'crit' || health.tone === 'stale';
-  const reasons = compact ? health.reasons.slice(0, 3) : health.reasons;
-  const gizlenen = health.reasons.length - reasons.length;
+  const reasons = health.reasons;
 
   return (
-    <div className={`flex flex-wrap items-start gap-[26px] rounded-[12px] ${t.box} ${compact ? 'gap-3 p-3.5' : t.pad}`}>
-      <div className={`flex flex-col gap-1.5 ${compact ? 'w-full' : 'min-w-[210px]'}`}>
+    <div className={`flex flex-wrap items-start gap-[26px] rounded-[12px] ${t.box} ${t.pad}`}>
+      <div className="flex flex-col gap-1.5 min-w-[210px]">
         <span className="flex items-center gap-2.5">
           <span className={`h-2.5 w-2.5 rounded-full ${t.dot} ${t.pulse ? 'animate-pulse' : ''}`} aria-hidden="true" />
           <span className={`font-ops-display text-ops-micro font-semibold uppercase tracking-[0.16em] ${t.label}`}>
@@ -120,24 +118,22 @@ export function VerdictBanner({ health, ageMinutes, compact = false }: VerdictBa
             {health.stale ? 'Ölçüm akmıyor' : 'Hüküm'}
           </span>
         </span>
-        <span className={`font-ops-display font-bold leading-[1.05] tracking-[-0.02em] ${t.title} ${compact ? 'text-ops-title' : t.titleSize}`}>
+        <span className={`font-ops-display font-bold leading-[1.05] tracking-[-0.02em] ${t.title} ${t.titleSize}`}>
           {health.title}
         </span>
         <span className={`font-ops-mono text-ops-sm font-medium ${t.age}`}>{agoLabel(ageMinutes)} ölçüldü</span>
       </div>
 
-      <div className={`flex flex-col gap-2.5 ${compact ? 'w-full' : 'min-w-[260px] flex-1'}`}>
-        {!compact ? (
-          <span className={`font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] ${t.label}`}>
-            {health.reasons.length === 0
-              ? 'Gerekçe'
-              : health.stale
-                ? 'Neden arıza sayılıyor'
-                : health.tone === 'crit'
-                  ? 'Neden kritik'
-                  : 'Hangi koşul tuttu'}
-          </span>
-        ) : null}
+      <div className="flex flex-col gap-2.5 min-w-[260px] flex-1">
+        <span className={`font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] ${t.label}`}>
+          {health.reasons.length === 0
+            ? 'Gerekçe'
+            : health.stale
+              ? 'Neden arıza sayılıyor'
+              : health.tone === 'crit'
+                ? 'Neden kritik'
+                : 'Hangi koşul tuttu'}
+        </span>
 
         {reasons.length > 0 ? (
           <div className="flex flex-col gap-[7px]">
@@ -152,13 +148,6 @@ export function VerdictBanner({ health, ageMinutes, compact = false }: VerdictBa
                 </div>
               );
             })}
-            {gizlenen > 0 ? (
-              // Kırpılan gerekçe SESSİZ GEÇMEZ: üç satır gösterip gerisini yutmak, telefonda bakan
-              // kişiye "hepsi bu" demek olurdu.
-              <span className={`font-ops-body text-ops-xs ${loud ? 'text-ops-alarm-muted' : 'text-ops-muted'}`}>
-                +{gizlenen} gerekçe daha — masaüstünde tamamı görünür.
-              </span>
-            ) : null}
           </div>
         ) : (
           <span className="font-ops-body text-ops-base leading-[1.6] text-ops-strong">{health.summary}</span>

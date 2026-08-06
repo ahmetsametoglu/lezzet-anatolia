@@ -2,14 +2,12 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { AnalyticsDesktop } from './analytics.desktop';
-import { AnalyticsMobile } from './analytics.mobile';
 import { analyticsUrl, type AnalyticsUrlState } from './analytics-url';
 import type { AnalyticsData } from './analytics-types';
 
-// Analitik client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil çatallanır.
+// Analitik client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
+// mobil deneyim native uygulamada — `docs/uygulama`.
 //
 // Mod/dönem/kanal GERÇEK GEZİNMEDİR (`?mode=…&period=…&ch=…`) çünkü veriyi sunucu okuyor ve
 // "şu döneme bak" bağlantısı paylaşılabilir olmalı — analitikte bir bulguyu göstermenin tek yolu
@@ -18,12 +16,10 @@ import type { AnalyticsData } from './analytics-types';
 
 interface AnalyticsClientProps {
   data: AnalyticsData;
-  device: Device;
   urlState: AnalyticsUrlState;
 }
 
-export function AnalyticsClient({ data, device, urlState }: AnalyticsClientProps) {
-  const resolvedDevice = useDevice(device);
+export function AnalyticsClient({ data, urlState }: AnalyticsClientProps) {
   const router = useRouter();
   const [navPending, startNav] = useTransition();
 
@@ -42,5 +38,5 @@ export function AnalyticsClient({ data, device, urlState }: AnalyticsClientProps
     onChannel: (channel: AnalyticsUrlState['channel']) => go({ channel }),
   };
 
-  return resolvedDevice === 'mobile' ? <AnalyticsMobile {...view} /> : <AnalyticsDesktop {...view} />;
+  return <AnalyticsDesktop {...view} />;
 }

@@ -2,18 +2,16 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { SettingDialog } from './setting-dialog';
 import { SettingsDesktop } from './settings.desktop';
-import { SettingsMobile } from './settings.mobile';
 import { StaffDialog } from './staff-dialog';
 import { filterSettingRows } from './settings-read';
 import { isSettingGroup, settingsUrl, type SettingsTab, type SettingsUrlState } from './settings-url';
 import type { SettingRowView, SettingsData, StaffRowView } from './settings-types';
 
-// Ayarlar ekranı client kökü (Sapma 3): durum burada, sunum web/mobil olarak çatallanır.
+// Ayarlar ekranı client kökü: durum burada. Operasyon web'i masaüstü-yalnız; mobil deneyim native
+// uygulamada (`docs/uygulama`).
 //
 // SEKME ve ARAMA gerçek gezinmedir (`?tab=…&q=…`): bir ayarın adresi paylaşılabilir olmalı
 // ("kesim saatini şuradan değiştir"). Süzme İSTEMCİDE yapılıyor çünkü küme sözlük kadar — sabit,
@@ -21,15 +19,13 @@ import type { SettingRowView, SettingsData, StaffRowView } from './settings-type
 
 interface SettingsClientProps {
   data: SettingsData;
-  device: Device;
   urlState: SettingsUrlState;
 }
 
 /** Personel penceresinin üç hâli: kapalı · yeni · düzenlenen kişi. */
 type StaffState = 'closed' | 'new' | string;
 
-export function SettingsClient({ data, device, urlState }: SettingsClientProps) {
-  const resolvedDevice = useDevice(device);
+export function SettingsClient({ data, urlState }: SettingsClientProps) {
   const router = useRouter();
   const [navPending, startNav] = useTransition();
 
@@ -73,7 +69,7 @@ export function SettingsClient({ data, device, urlState }: SettingsClientProps) 
 
   return (
     <>
-      {resolvedDevice === 'mobile' ? <SettingsMobile {...view} /> : <SettingsDesktop {...view} />}
+      <SettingsDesktop {...view} />
 
       {editing ? (
         <SettingDialog

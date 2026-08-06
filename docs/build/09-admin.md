@@ -407,6 +407,10 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
   - *Bitti:* on ekranın hiçbirinde elle yazılmış başlık barı kalmadı; depo seçimi ve kullanıcı künyesi rayda değil üstte
 
 
+- [x] (09.20) **Operasyon web-mobil forkunun SÖKÜMÜ (kullanıcı kararı 06.08)** · `touches: apps/web/app/(operations)/** · apps/web/components/operation/ui/{ops-shell,admin-sidebar,page-header}.tsx · apps/web/app/(operations)/operations/layout.tsx · playwright.config.ts · e2e/operations/** · scripts/ui-shot.mjs` *(denetim yürüttü, iki alt-ajanla)* — operasyon web'i YALNIZ MASAÜSTÜ; personelin mobil deneyimi native uygulamanın işi (`docs/uygulama/README.md` yüzey formülü; CLAUDE §2 istisnası işlendi).
+  - **Durum (06.08) — SÖKÜM TAMAM:** 17 `*.mobile.tsx` + `bottom-sheet` silindi; 16 client'ta fork dalı ve atıl `useDevice`/`device`→`page.tsx` zinciri söküldü; kabuğun telefon çekmecesi, rayın çekmece modu ve başlıktaki hamburger kaldırıldı (`OpsShellProvider` saf context taşıyıcı); `PageHeader.compact` + `VerdictBanner.compact` ölü kademeleri temizlendi; e2e mobil projesi müşteri-yalnız (`testMatch`), `ui:shot` operasyonda desktop+karanlık. Ölü action'lar da gitti (`setProductStatusAction`, `updateProductNameAction` — yalnız mobil çağırıyordu). Doğrulama: typecheck/lint/knip temiz (tek kalan hata `deliveries/[orderId]` — başka şeridin süren işi, forka ilişkisiz).
+  - Kayda değer iki not: *(1)* sipariş detayının mobil dalı asimetrikti ("telefonda karar yok" — `onDecision` almıyordu); native uygulama tasarımında bu kuralın akıbeti MOBİL şeridin bilinçli kararı olmalı. *(2)* `ProductService.setStatus` web'de çağıransız kalmış olabilir — arka uç şeridi bakmalı (talep klasörüne not düşüldü).
+
 ## Netleşecekler
 
 - **Admin izolasyon ayrıntısı (STACK §13 taslak):** middleware kapsamı, anon key'in tarayıcı kapsamı, RLS'nin admin tablolarındaki rolü — ilk görevden önce tek konuşmada karar.

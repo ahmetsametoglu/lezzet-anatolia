@@ -12,24 +12,21 @@ import { cardClass } from '@/components/operation/ui/card';
  *
  * **Kolon ölçüleri gerçek tablodan** (`ERROR_COLUMN_TRACKS`) — iskelet ile tablo tek kaynağı paylaşır.
  *
- * **SENKRON ve cihaz forku CSS ile**, müşteriler rotasındaki gerekçenin aynısı: (a) `async` bir
- * fallback, React'in Suspense sınırını basmasını geciktirir — beklemeyi gösteren şeyin kendisi
- * beklerdi; (b) UA ile karar veren bir iskelet, mount'ta `matchMedia` ile yeniden karar veren
- * ekranla çakışır ve dar pencerede kabuk baştan değişir. İki kabuk da basılır, `useDevice` ile
- * AYNI eşikte (md = 768px) CSS seçer.
+ * **SENKRON**: `async` bir fallback, React'in Suspense sınırını basmasını geciktirir — beklemeyi
+ * gösteren şeyin kendisi beklerdi. Operasyon web'i masaüstü-yalnız (06.08); mobil deneyim native
+ * uygulamada — `docs/uygulama`.
  */
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Sistem durumu yükleniyor">
       <DesktopShell />
-      <MobileShell />
     </LoadingRegion>
   );
 }
 
 function DesktopShell() {
   return (
-    <div className="hidden min-h-0 flex-1 flex-col md:flex">
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* Kontrol barı — `PageHeader` ölçüsü (px-6 py-4) + canlı göstergesi + iki düğme. */}
       <header className="flex flex-wrap items-center gap-3.5 border-b border-ops-line px-6 py-4">
         <span className="mr-auto flex flex-col gap-px">
@@ -125,30 +122,6 @@ function DesktopShell() {
             <SkeletonTable tracks={ERROR_COLUMN_TRACKS} rows={6} />
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function MobileShell() {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col md:hidden">
-      <div className="flex items-center gap-2.5 border-b border-ops-line px-4 py-3.5">
-        <Skeleton className="mr-auto h-5 w-20" />
-        <Skeleton className="h-6 w-24 rounded-[14px]" />
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-hidden px-4 py-3.5">
-        <Skeleton className="h-[120px] w-full rounded-[13px]" />
-        <Skeleton className="h-3.5 w-28" />
-        {[0, 1, 2].map((i) => (
-          <span key={i} className="flex flex-col gap-1.5 rounded-[11px] border border-ops-line bg-ops-white px-3 py-2.5">
-            <Skeleton className="h-2.5 w-24" />
-            <Skeleton className={`h-3.5 ${i % 2 === 0 ? 'w-4/5' : 'w-3/5'}`} />
-            <Skeleton className="h-2.5 w-2/5" />
-          </span>
-        ))}
-        <Skeleton className="h-3.5 w-20" />
-        <Skeleton className="h-[140px] w-full rounded-[11px]" />
       </div>
     </div>
   );

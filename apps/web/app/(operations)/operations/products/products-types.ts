@@ -183,7 +183,7 @@ export type CatalogKind = 'category' | 'collection';
 export type StatusFilter = ProductStatus | 'all';
 
 /**
- * products-client'ın tuttuğu durum + eylemler; desktop/mobile görünümleri bunu tüketir.
+ * products-client'ın tuttuğu durum + eylemler; masaüstü görünümü bunu tüketir.
  *
  * Süzgeçler artık SUNUCUDA uygulanıyor (STACK §6): `visibleProducts` diye ayrı bir client-süzülmüş
  * liste YOK — `products` zaten süzülmüş gelir, kullanıcı süzgeci değiştirince URL yazılır ve RSC
@@ -223,6 +223,4 @@ export interface ProductsViewProps {
   openCreate: () => void;
   closeCreate: () => void;
   openEdit: () => void;
-  /** Ürünü satışa aç/kapa (kalıcı; mobil hızlı iş). */
-  onToggleActive: (id: string, isActive: boolean) => void;
 }

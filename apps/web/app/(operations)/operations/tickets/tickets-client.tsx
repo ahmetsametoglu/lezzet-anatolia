@@ -3,8 +3,6 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { TicketStatus } from '@lezzet/types';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { ORDERS_PATH } from '../orders/orders-url';
 import {
   changeTicketStatusAction,
@@ -16,26 +14,24 @@ import {
 import { ManualTicketDialog } from './manual-ticket-dialog';
 import { TicketConfirmDialog } from './ticket-confirm-dialog';
 import { TicketsDesktop } from './tickets.desktop';
-import { TicketsMobile } from './tickets.mobile';
 import { ticketsUrl, type TicketFilterKey, type TicketsUrlState } from './tickets-url';
 import type { TicketRowView, TicketsData } from './tickets-types';
 
-// Talepler ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
+// Talepler ekranı client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız; mobil
+// deneyim native uygulamada (`docs/uygulama`).
 //
 // SÜZGEÇ ve SEÇİM gerçek gezinmedir (`?f=…&t=…`): detay sunucuda okunuyor ve bir talebin bağlantısı
 // paylaşılabilir olmalı ("şuna bir bak").
 
 interface TicketsClientProps {
   data: TicketsData;
-  device: Device;
   urlState: TicketsUrlState;
 }
 
 /** Onay penceresinin hâli — çizimdeki tek modal kabuğu iki karara hizmet ediyor. */
 type ConfirmKind = 'return' | 'takeover' | null;
 
-export function TicketsClient({ data, device, urlState }: TicketsClientProps) {
-  const resolvedDevice = useDevice(device);
+export function TicketsClient({ data, urlState }: TicketsClientProps) {
   const router = useRouter();
   const [navPending, startNav] = useTransition();
 
@@ -134,7 +130,6 @@ export function TicketsClient({ data, device, urlState }: TicketsClientProps) {
     onFilter: (f: TicketFilterKey) => go({ f }),
     // Süzgeç değişmiyor, seçim değişiyor: aynı adres iki soruyu birden taşıyor.
     onSelect: (t: string) => go({ t }),
-    onCloseDetail: () => go({ t: '' }),
     onReply,
     onStatus,
     onTakeOver: () => setConfirm('takeover'),
@@ -144,7 +139,7 @@ export function TicketsClient({ data, device, urlState }: TicketsClientProps) {
 
   return (
     <>
-      {resolvedDevice === 'mobile' ? <TicketsMobile {...view} /> : <TicketsDesktop {...view} />}
+      <TicketsDesktop {...view} />
 
       {confirm && detail ? (
         <TicketConfirmDialog

@@ -1,5 +1,5 @@
 import { LoadingRegion } from '@/components/loading-region';
-import { Skeleton, SkeletonBlock, SkeletonTable } from '@/components/operation/ui/skeleton';
+import { Skeleton, SkeletonTable } from '@/components/operation/ui/skeleton';
 import { CUSTOMERS_COLUMN_TRACKS } from './customers-columns';
 
 /**
@@ -12,31 +12,14 @@ import { CUSTOMERS_COLUMN_TRACKS } from './customers-columns';
  * **Kolon ölçüleri gerçek tablodan** (`CUSTOMERS_COLUMN_TRACKS`) — iskelet ile tablo tek kaynağı
  * paylaşıyor, elle senkron tutulmuyor.
  *
- * **SENKRON ve cihaz forku CSS ile — ikisi de bilinçli sapma.** Bir tur bu dosya `async` idi ve
- * `detectDevice()` (UA) ile karar veriyordu; iki ayrı arıza üretiyordu:
- *  1. *Fallback'in kendisi await ediyordu.* React, Suspense sınırını basmadan önce fallback'i çözmek
- *     zorunda — yani "anında görünmesi" gereken iskelet bir tur gecikiyordu. Beklemeyi gösteren şeyin
- *     kendisi bekliyordu.
- *  2. *Kesin uyuşmazlık.* İskelet UA'ya bakıyor, gerçek ekran mount'ta `matchMedia('(max-width:767px)')`
- *     ile YENİDEN karar veriyor (`useDevice`). Dar pencereli bir masaüstünde iskelet masaüstü kabuğunu,
- *     hemen ardından sayfa mobil kabuğu çiziyordu — ekran tamamen değişiyordu.
- * İkisini birden çözen tek yol: iki kabuğu da basıp **`useDevice` ile AYNI eşiği** kullanan bir CSS
- * forkuyla seçmek (`md` = 768px = hook'un eşiğinin bir üstü). ADR Sapma 3 (`md:` ile akışkan responsive
- * YAPMA) gerçek arayüzün YETENEK forkuna dair bir kuraldır; burada yetenek yok, yalnız bir bekleme
- * göstergesi var ve tek doğru davranışı "sayfanın seçeceği kabuğun aynısını seçmek".
+ * **SENKRON — bilinçli.** Bir tur bu dosya `async` idi ve `detectDevice()` bekliyordu; React,
+ * Suspense sınırını basmadan önce fallback'i çözmek zorunda — yani "anında görünmesi" gereken
+ * iskelet bir tur gecikiyordu. Operasyon web'i artık masaüstü-yalnız (mobil deneyim native
+ * uygulamada — `docs/uygulama`), tek kabuk senkron çizilir.
  */
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Müşteriler yükleniyor">
-      <DesktopShell />
-      <MobileShell />
-    </LoadingRegion>
-  );
-}
-
-function DesktopShell() {
-  return (
-    <div className="hidden min-h-0 flex-1 flex-col md:flex">
       {/* Başlık şeridi — `PageHeader` ölçüsü (px-6 py-4). */}
       <header className="flex flex-wrap items-center gap-3.5 border-b border-ops-line px-6 py-4">
         <span className="mr-auto flex flex-col gap-px">
@@ -64,32 +47,6 @@ function DesktopShell() {
           Soldan bir müşteri seçin.
         </div>
       </div>
-    </div>
-  );
-}
-
-function MobileShell() {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col md:hidden">
-      <div className="flex items-center border-b border-ops-line px-4 py-3.5">
-        <Skeleton className="h-5 w-28" />
-      </div>
-      <div className="px-4 py-3">
-        <Skeleton className="h-9 w-full rounded-ops-btn" />
-      </div>
-      <div className="min-h-0 flex-1 overflow-hidden">
-        {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="flex items-center gap-3 border-b border-ops-line-soft px-4 py-3">
-            {/* Avatar mobil LİSTEDE var (tasarım); DOLU bir alan olduğu için çubuk değil blok. */}
-            <SkeletonBlock className="h-10 w-10 flex-none rounded-[10px]" />
-            <span className="flex min-w-0 flex-1 flex-col gap-1">
-              <Skeleton className={`h-3.5 ${i % 2 === 0 ? 'w-3/5' : 'w-2/5'}`} />
-              <Skeleton className="h-2.5 w-28" />
-            </span>
-            <Skeleton className="h-5 w-16 flex-none rounded-[7px]" />
-          </div>
-        ))}
-      </div>
-    </div>
+    </LoadingRegion>
   );
 }

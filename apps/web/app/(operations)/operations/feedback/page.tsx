@@ -1,7 +1,6 @@
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { ProductService, UserProfileService, serviceDb } from '@lezzet/database';
 import { guarded, requireAdmin } from '@/lib/guard';
-import { detectDevice } from '@/lib/device';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { agoShort } from '@/components/operation/ui/format';
 import { listModerationQueue, listRankedScores } from '@/lib/feedback/moderation-read';
@@ -50,7 +49,6 @@ export default async function FeedbackPage({ searchParams }: FeedbackPageProps) 
   }
 
   const urlState = parseFeedbackUrl(await searchParams);
-  const device = await detectDevice();
 
   // Tek an, tüm yaşlar: kartların ve puan satırlarının yaşı aynı `now`'a göre hesaplanır — ayrı
   // okunsaydı aynı damga iki blokta farklı yaş gösterirdi.
@@ -113,5 +111,5 @@ export default async function FeedbackPage({ searchParams }: FeedbackPageProps) 
     }
   }
 
-  return <FeedbackClient data={data} device={device} urlState={urlState} />;
+  return <FeedbackClient data={data} urlState={urlState} />;
 }

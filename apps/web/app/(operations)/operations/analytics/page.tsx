@@ -10,7 +10,6 @@ import {
   readZeroResultSearches,
 } from '@/lib/analytics/read';
 import { money, num, percent } from '@/components/operation/ui/format';
-import { detectDevice } from '@/lib/device';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { customersUrl } from '../customers/customers-url';
 import { AnalyticsClient } from './analytics-client';
@@ -48,7 +47,6 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   }
 
   const urlState = parseAnalyticsUrl(await searchParams);
-  const device = await detectDevice();
 
   // TEK an, tüm bloklar: dönem sınırları bir kez hesaplanır. İki blok kendi `now`'unu okusaydı
   // gece yarısını geçen bir istekte biri dünü, öteki bugünü sayardı (`ANALYTICS §5` kıyas omurgası).
@@ -241,5 +239,5 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     },
   };
 
-  return <AnalyticsClient data={data} device={device} urlState={urlState} />;
+  return <AnalyticsClient data={data} urlState={urlState} />;
 }

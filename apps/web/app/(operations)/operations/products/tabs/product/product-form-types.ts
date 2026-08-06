@@ -11,9 +11,8 @@ import type { ReactNode } from 'react';
 export type ProductPhotoView = ProductImage & { imageUrl: string | null };
 
 /**
- * Kurulmuş alan elemanları — .desktop/.mobile sunumları bunları yalnız YERLEŞTİRİR (tek kaynak).
- * Her sunum kendi alt kümesini kullanır: çok dilli içerik web'de tek dil kartında (`content`), mobilde
- * ayrı bölümlerde (`name` + `description`); `priceNote` yalnız mobilde.
+ * Kurulmuş alan elemanları — sunum düzenleri bunları yalnız YERLEŞTİRİR (tek kaynak).
+ * Çok dilli içerik tek dil kartında (`content`).
  */
 /** Form sekmeleri — uzun form tek kolonda duvara döndüğü için ikiye bölündü (05.10). */
 export type ProductFormTab = 'product' | 'declaration';
@@ -25,19 +24,15 @@ export interface ProductFormFields {
   traces: ReactNode;
   /** İçindekiler + saklama TEK dil kartında: ikisi de çok dilli, dil bir kez seçilir (ad/açıklama gibi). */
   declarationTexts: ReactNode;
-  /** Web: ad + açıklama tek dil kartında (dil sekmesi kartın başlığında). */
+  /** Ad + açıklama tek dil kartında (dil sekmesi kartın başlığında). */
   content: ReactNode;
-  /** Mobil: ad ve açıklama ayrı bölümlerde, her biri kendi dil sekmesiyle. */
-  name: ReactNode;
   category: ReactNode;
   vat: ReactNode;
   dateType: ReactNode;
   shelfLife: ReactNode;
-  description: ReactNode;
   allergens: ReactNode;
   variants: ReactNode;
   shippable: ReactNode;
   autoPrice: ReactNode;
   margin: ReactNode;
-  priceNote: ReactNode;
 }

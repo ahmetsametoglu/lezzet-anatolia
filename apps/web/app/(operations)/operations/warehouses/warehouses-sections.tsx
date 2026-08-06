@@ -21,8 +21,8 @@ import {
 } from './warehouses-labels';
 import type { ScorecardView, StaffChipView, WarehouseRowView, ZoneCardView } from './warehouses-types';
 
-// Depolar ekranının bölümleri — web ve mobil AYNI parçaları kullanır (yerleşim çatallanır, içerik
-// değil). Bölümler burada durur ki "karne mobilde başka şey sayar" gibi bir ayrışma doğmasın.
+// Depolar ekranının bölümleri — liste ve kart görünümü AYNI parçaları kullanır. Bölümler burada
+// durur ki "karne başka yerde başka şey sayar" gibi bir ayrışma doğmasın.
 
 /**
  * Kargo çıkışı olmayan ülke uyarısı — ekranın en üstünde, listeden ÖNCE.

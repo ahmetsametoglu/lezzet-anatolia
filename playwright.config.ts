@@ -4,8 +4,9 @@ import { defineConfig, devices } from '@playwright/test';
  * Playwright — duman katmanı (00.9 Kademe 2). ÇALIŞAN dev server'a karşı koşar; build YOK,
  * `webServer` bloğu BİLEREK yok: dev server'ı KULLANICI yönetir (CLAUDE §4), test başlatmaz.
  *
- * İki proje = cihaz forkunun iki yüzü (CLAUDE §2): her senaryo desktop + mobile koşar.
- * Görüntü/iz YALNIZ düşüşte toplanır ve `.test-results/e2e/` altına düşer — ajanların inceleme
+ * İki proje: desktop her şeyi koşar; mobile YALNIZ müşteri testlerini — operasyon web'i
+ * masaüstü-yalnız (kullanıcı kararı 06.08), operasyonun mobil forku native uygulamada
+ * (`docs/uygulama`). Görüntü/iz YALNIZ düşüşte toplanır ve `.test-results/e2e/` altına düşer — ajanların inceleme
  * kaynağı (anlık bakış için ayrı araç: `pnpm ui:shot`).
  *
  * Veri disiplini CLAUDE §4b'nin AYNISI: okuyan test seed'in deterministik satırlarını kullanır,
@@ -39,6 +40,7 @@ export default defineConfig({
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
     // iPhone profili varsayılanda WebKit ister; deneme katmanı TEK motorda (chromium) koşar —
     // UA/viewport/touch emülasyonu fork kararı için yeter. Gerçek WebKit Kademe 3'ün konusu.
-    { name: 'mobile', use: { ...devices['iPhone 13'], browserName: 'chromium' } },
+    // YALNIZ müşteri: operasyon web'i masaüstü-yalnız (06.08), mobil fork native uygulamada.
+    { name: 'mobile', testMatch: 'e2e/customer/**/*.smoke.ts', use: { ...devices['iPhone 13'], browserName: 'chromium' } },
   ],
 });

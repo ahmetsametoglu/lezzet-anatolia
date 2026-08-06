@@ -14,7 +14,7 @@ import type { ProcurementData, PurchaseOrderRowView, SupplierCardView } from './
 // sipariş listesi tablo, tedarikçi kartları iki kolon. Başlıktaki "+ Stok girişi" düğmesi burada
 // YOK ve bu bilinçli: mal kabul bu sayfadan çıktı, Stok ekranının işi (kapsam kararı 02.08).
 
-export interface ProcurementViewProps {
+interface ProcurementViewProps {
   data: ProcurementData;
   urlState: ProcurementUrlState;
   onFilter: (patch: Partial<ProcurementUrlState>) => void;

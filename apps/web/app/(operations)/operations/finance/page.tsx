@@ -2,7 +2,6 @@ import { AccountService, MoneyMovementService, OrderService, serviceDb } from '@
 import { DEFAULT_PAGE_SIZE, type AccountLedgerRow } from '@lezzet/types';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { matchQueue } from '@/lib/bank/reconcile';
-import { detectDevice } from '@/lib/device';
 import { guarded, requireFinance } from '@/lib/guard';
 import { FinanceClient } from './finance-client';
 import { NOTES } from './finance-labels';
@@ -106,7 +105,6 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
   return (
     <FinanceClient
       data={data}
-      device={await detectDevice()}
       urlState={urlState}
       // Pasif hesap listede kalır (geçmişi ona bağlı) ama YENİ harekete kapanır — diyalogların
       // seçicisi bu yüzden ayrı bir küme okur, hesap şeridiyle aynı diziyi değil.

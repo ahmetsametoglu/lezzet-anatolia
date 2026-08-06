@@ -99,7 +99,7 @@ export function ProductsDesktop(props: ProductsViewProps) {
         />
       )}
       {tab === 'packages' && (
-        <PackagesTab bundles={data.bundles} device="desktop" creating={creating} onCreateClose={closeCreate} />
+        <PackagesTab bundles={data.bundles} creating={creating} onCreateClose={closeCreate} />
       )}
       {tab === 'families' && (
         <FamilyTab rows={data.families} filter={search} creating={creating} onCreateClose={closeCreate} />

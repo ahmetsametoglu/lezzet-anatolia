@@ -92,7 +92,7 @@ export function SystemDesktop(props: SystemViewProps) {
  * sıfırlar göstermek, izlemenin hiç başlamadığı bir sistemi sorunsuz gibi okutur — bu ekranın
  * yapabileceği en tehlikeli şey. O yüzden kutu hükmün DURDUĞU yerde ve onun sesiyle duruyor.
  */
-export function NoSnapshot() {
+function NoSnapshot() {
   return (
     <div className="flex flex-col gap-2 rounded-[12px] border-[1.5px] border-ops-amber-line bg-ops-amber-bg px-[22px] py-5">
       <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.16em] text-ops-amber">Ölçüm yok</span>

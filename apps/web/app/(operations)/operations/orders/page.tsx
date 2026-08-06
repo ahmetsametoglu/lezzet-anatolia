@@ -1,5 +1,4 @@
 import { serviceDb } from '@lezzet/database';
-import { detectDevice } from '@/lib/device';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { OrdersClient } from './orders-client';
 import { readOrdersPage } from './orders-page-read';
@@ -23,9 +22,8 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
 
   const urlState = parseOrdersUrl(await searchParams);
   const data = await readOrdersPage(serviceDb(), urlState);
-  const device = await detectDevice();
 
   // Bugün SUNUCUDAN: gün süzgecinin etiketleri iki tarafta aynı günü göstersin (bkz. `deliveryDayOptions`).
-  return <OrdersClient data={data} device={device} urlState={urlState} today={new Date().toISOString().slice(0, 10)} />;
+  return <OrdersClient data={data} urlState={urlState} today={new Date().toISOString().slice(0, 10)} />;
 }
 

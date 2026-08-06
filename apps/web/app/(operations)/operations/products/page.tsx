@@ -1,7 +1,6 @@
 import { BundleService, CategoryService, CollectionService, ProductFamilyService, ProductService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { publicImageUrl } from '@lezzet/storage';
-import { detectDevice } from '@/lib/device';
 import { ProductsClient } from './products-client';
 import { toBundleViews, toProductViews } from './products-read';
 import { parseProductsUrl, toProductFilters } from './products-url';
@@ -96,8 +95,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     };
   });
 
-  const device = await detectDevice();
-
   return (
     <ProductsClient
       data={{
@@ -109,7 +106,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         bundles: bundleViews,
         families: familyViews,
       }}
-      device={device}
       urlState={urlState}
     />
   );

@@ -32,7 +32,7 @@ import type { WarehousesUrlState } from './warehouses-url';
 // barına (09.19) TAŞINDI: iki bar üst üste dikey alanı ikinci kez öderdi ve barın var oluş sebebi
 // tam tersiydi. Rozetler ve "Künyeyi düzenle" barın ekran-işleri yuvasında duruyor.
 
-export interface WarehousesViewProps {
+interface WarehousesViewProps {
   data: WarehousesData;
   urlState: WarehousesUrlState;
   navPending: boolean;

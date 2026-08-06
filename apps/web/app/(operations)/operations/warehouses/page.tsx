@@ -10,7 +10,6 @@ import {
 } from '@lezzet/database';
 import { CountryEnum, type Country, type UserProfile } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
-import { detectDevice } from '@/lib/device';
 import { readZoneDemand } from '@/lib/delivery/zone-demand';
 import { readStaff } from '@/lib/staff';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
@@ -103,7 +102,7 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
     zoneDemand,
   };
 
-  return <WarehousesClient data={data} device={await detectDevice()} urlState={urlState} />;
+  return <WarehousesClient data={data} urlState={urlState} />;
 }
 
 

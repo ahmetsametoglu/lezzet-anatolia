@@ -2,20 +2,16 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { loadMoreProductsAction } from './actions/list';
-import { setProductStatusAction } from './tabs/product/actions';
 import { ProductFormDialog } from './tabs/product/product-form-dialog';
 import { ProductsDesktop } from './products.desktop';
-import { ProductsMobile } from './products.mobile';
 import { productsUrl, type ProductsUrlState } from './products-url';
 import type { ProductTab } from './products-paths';
 import type { ProductsData, ProductView, StatusFilter } from './products-types';
 
-// Ürünler ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
-// İlk boya sunucu cihaz ipucuyla; mount sonrası viewport'a göre düzeltilir. Modal her iki yüzeyin üstünde.
+// Ürünler ekranı client kökü: tek durum ağacı burada, modal görünümün üstünde. Operasyon web'i
+// masaüstü-yalnız; mobil deneyim native uygulamada (`docs/uygulama`).
 //
 // SÜZGEÇ AKIŞI: süzgeç bir client durumu DEĞİL, URL durumudur (STACK §6). Kullanıcı süzgeci değiştirince
 // URL yazılır → RSC yeniden okur → süzülmüş İLK SAYFA gelir. Burada client-side filtreleme YOK.
@@ -23,19 +19,15 @@ import type { ProductsData, ProductView, StatusFilter } from './products-types';
 
 interface ProductsClientProps {
   data: ProductsData;
-  device: Device;
   /** URL'den çözülmüş ekran durumu (sekme + süzgeçler) — sunucu doğrulamış hâlde verir. */
   urlState: ProductsUrlState;
 }
 
-export function ProductsClient({ data, device, urlState }: ProductsClientProps) {
-  const resolvedDevice = useDevice(device);
+export function ProductsClient({ data, urlState }: ProductsClientProps) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
   /**
    * Süzgeç/sekme turu sürüyor mu — `router.replace` bir RSC okumasıdır (bu sayfada 5 paralel sorgu) ve
-   * dönene kadar ekranda hiçbir karşılık yoktu. Yazma turunun `startTransition`'ından AYRI: ikisi aynı
-   * bayrağı paylaşırsa bir kaydetme de listeyi soluklaştırırdı. (Bağımsız ajan denetimi, 30.07.)
+   * dönene kadar ekranda hiçbir karşılık yoktu. (Bağımsız ajan denetimi, 30.07.)
    */
   const [pending, startNav] = useTransition();
 
@@ -124,15 +116,6 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
   const [editing, setEditing] = useState(false);
   const selected = products.find((p) => p.id === selectedId) ?? products[0] ?? null;
 
-  // Aktiflik geçişi kalıcı (server action) — başarınca RSC listeyi tazeler (hata sessiz; sunucu = gerçek).
-  // Anahtar iki durumlu, durum alanı üç: aday'a geçiş formdaki seçicide (kazayla adaylığa düşmesin).
-  const onToggleActive = (id: string, isActive: boolean) => {
-    startTransition(async () => {
-      const { error } = await setProductStatusAction(id, isActive ? 'active' : 'passive');
-      if (!error) router.refresh();
-    });
-  };
-
   const view = {
     data,
     products,
@@ -156,7 +139,6 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
     openCreate: () => setCreatingIntent(true),
     closeCreate: () => setCreatingIntent(false),
     openEdit: () => setEditing(true),
-    onToggleActive,
   };
 
   // ÜRÜN formu burada; kategori/koleksiyon formları kendi sekme modüllerinde. Kabuk yalnız niyeti
@@ -165,7 +147,7 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
 
   return (
     <>
-      {resolvedDevice === 'mobile' ? <ProductsMobile {...view} /> : <ProductsDesktop {...view} />}
+      <ProductsDesktop {...view} />
       {productDialog ? (
         <ProductFormDialog
           key={`${productDialog}-${selected?.id ?? 'new'}`}
@@ -173,7 +155,6 @@ export function ProductsClient({ data, device, urlState }: ProductsClientProps) 
           product={selected}
           categories={data.categories}
           bundles={data.bundles}
-          device={resolvedDevice}
           onClose={() => (productDialog === 'create' ? setCreatingIntent(false) : setEditing(false))}
         />
       ) : null}

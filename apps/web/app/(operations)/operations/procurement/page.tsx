@@ -1,5 +1,4 @@
 import { serviceDb } from '@lezzet/database';
-import { detectDevice } from '@/lib/device';
 import { guarded, requireAdmin, requireFinance } from '@/lib/guard';
 import { ProcurementClient } from './procurement-client';
 import {
@@ -32,7 +31,7 @@ export default async function ProcurementPage({ searchParams }: ProcurementPageP
   const urlState = parseProcurementUrl(await searchParams);
   const db = serviceDb();
 
-  const [suggestions, suppliers, orders, pendingOrderCount, supplierOptions, device] = await Promise.all([
+  const [suggestions, suppliers, orders, pendingOrderCount, supplierOptions] = await Promise.all([
     urlState.tab === 'suggestions' ? readSuggestionGroups(db) : Promise.resolve(null),
     urlState.tab === 'suppliers' ? readSupplierCards(db) : Promise.resolve(null),
     urlState.tab === 'orders' ? readOrderPage(db, toOrderFilters(urlState)) : Promise.resolve(null),
@@ -42,7 +41,6 @@ export default async function ProcurementPage({ searchParams }: ProcurementPageP
     urlState.tab === 'orders' ? readPendingOrderCount(db) : Promise.resolve(null),
     // Süzgeç şeridi ve elle sipariş penceresi aynı listeyi kullanır — ikisi de sipariş sekmesinde.
     urlState.tab === 'orders' ? readSupplierOptions(db) : Promise.resolve(null),
-    detectDevice(),
   ]);
 
   // Hedef depo seçenekleri BAĞLAMDAN gelir: kapsam dışı depo hiçbir seçicide görünmez (kapının
@@ -67,7 +65,6 @@ export default async function ProcurementPage({ searchParams }: ProcurementPageP
         // istemci gece yarısını geçen bir istekte farklı gün üretirdi (sipariş ekranının deseni).
         today: new Date().toISOString().slice(0, 10),
       }}
-      device={device}
       urlState={urlState}
       canCancelOrders={canCancelOrders}
     />

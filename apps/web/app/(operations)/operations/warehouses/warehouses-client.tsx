@@ -2,32 +2,28 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { CloseWarehouseDialog } from './close-warehouse-dialog';
 import { WarehouseDialog } from './warehouse-dialog';
 import { WarehousesDesktop } from './warehouses.desktop';
-import { WarehousesMobile } from './warehouses.mobile';
 import { ZoneDialog } from './zone-dialog';
 import { warehousesUrl, type WarehousesUrlState } from './warehouses-url';
 import type { WarehousesData, WarehouseRowView, ZoneCardView } from './warehouses-types';
 
-// Depolar ekranı client kökü (Sapma 3): durum burada, sunum web/mobil olarak çatallanır.
+// Depolar ekranı client kökü: durum burada. Operasyon web'i masaüstü-yalnız; mobil deneyim native
+// uygulamada (`docs/uygulama`).
 //
 // SEÇİM GERÇEK gezinmedir (`?depo=STR`): kartın karnesi sunucuda okunuyor (eşik altı, açık iş) —
 // sığ bir istemci durumu olsaydı seçim değişince sayılar eski tesise ait kalırdı.
 
 interface WarehousesClientProps {
   data: WarehousesData;
-  device: Device;
   urlState: WarehousesUrlState;
 }
 
 /** Künye penceresinin üç hâli: kapalı · yeni · düzenlenen tesis. */
 type FormState = 'closed' | 'new' | string;
 
-export function WarehousesClient({ data, device, urlState }: WarehousesClientProps) {
-  const resolvedDevice = useDevice(device);
+export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
   const router = useRouter();
   const [navPending, startNav] = useTransition();
 
@@ -59,7 +55,7 @@ export function WarehousesClient({ data, device, urlState }: WarehousesClientPro
 
   return (
     <>
-      {resolvedDevice === 'mobile' ? <WarehousesMobile {...view} /> : <WarehousesDesktop {...view} />}
+      <WarehousesDesktop {...view} />
 
       {formState !== 'closed' ? (
         <WarehouseDialog

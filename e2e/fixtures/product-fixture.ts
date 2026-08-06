@@ -47,7 +47,7 @@ export interface StampedProduct {
   cleanup: () => Promise<void>;
 }
 
-export interface StampedProductOptions {
+interface StampedProductOptions {
   /** Damgalı depoya konacak parti miktarı; 0 = hiç parti açılmaz (tükendi senaryosu). */
   stockQty?: number;
   /** Damgalı depoya bölge + posta kodu bağı kur (ziyaretçi yer seçebilsin diye). */

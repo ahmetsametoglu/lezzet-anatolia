@@ -2,31 +2,26 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { loadMoreLevelsAction, loadMoreLossesAction } from './actions';
 import { OfferDialog } from '@/components/operation/stock/offer-dialog';
 import { RecallDialog } from './recall-dialog';
 import { StockDesktop } from './stock.desktop';
-import { StockMobile } from './stock.mobile';
 import { stockUrl, type LossPeriod, type StockScope, type StockTab, type StockUrlState } from './stock-url';
 import type { BatchView, StockData, StockLevelRow } from './stock-types';
 
-// Stok ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
-// Diyaloglar (teklif · geri çağırma) iki yüzeyin de üstünde — ikisinde de aynı iş yapılır.
+// Stok ekranı client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
+// mobil deneyim native uygulamada — `docs/uygulama`.
 //
 // SEKME SIĞ yazılır (`replaceState`): üç sekme de AYNI okumadan besleniyor, sunucuya gitmenin
 // getireceği veri yok. Süzgeçler ise RSC'yi yeniden okutur — süzme sunucuda yapılıyor (STACK §6).
 
 interface StockClientProps {
   data: StockData;
-  device: Device;
   urlState: StockUrlState;
 }
 
-export function StockClient({ data, device, urlState }: StockClientProps) {
-  const resolvedDevice = useDevice(device);
+export function StockClient({ data, urlState }: StockClientProps) {
   const router = useRouter();
   /**
    * Süzgeç/sekme turu SÜRÜYOR MU — `router.replace` bir RSC okumasıdır ve dönene kadar ekranda hiçbir
@@ -191,7 +186,7 @@ export function StockClient({ data, device, urlState }: StockClientProps) {
 
   return (
     <>
-      {resolvedDevice === 'mobile' ? <StockMobile {...view} /> : <StockDesktop {...view} />}
+      <StockDesktop {...view} />
       {offerBatch ? (
         <OfferDialog key={offerBatch.id} batch={offerBatch} onClose={() => setOfferStockId(null)} />
       ) : null}

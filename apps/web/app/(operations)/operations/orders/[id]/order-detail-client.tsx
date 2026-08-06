@@ -4,16 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { OrderDecision } from '@lezzet/domain-core';
 import type { FulfillmentAdjustment, OrderStatus } from '@lezzet/types';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { adjustFulfillmentAction, advanceOrderStatusAction, cancelOrderAction, retryRefundAction } from '../actions';
 import { CancelDialog } from './components/cancel-dialog';
 import { DecisionDialog } from './components/decision-dialog';
 import { OrderDetailDesktop } from './order-detail.desktop';
-import { OrderDetailMobile } from './order-detail.mobile';
 import type { OrderDetailView } from './order-detail-types';
 
-// Detay client kökü (Sapma 3): tek durum ağacı burada, sunum web/telefon olarak çatallanır.
+// Detay client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08); mobil deneyim
+// native uygulamada — `docs/uygulama`.
 // Durum ilerletme LİSTEYLE AYNI action'ı çağırır — iki ekran aynı kapıdan geçmezse biri motorun
 // izin kontrolünü atlayabilirdi.
 //
@@ -24,7 +22,6 @@ import type { OrderDetailView } from './order-detail-types';
 
 interface OrderDetailClientProps {
   order: OrderDetailView;
-  device: Device;
 }
 
 /**
@@ -41,8 +38,7 @@ function noticeOf(data: unknown): { text: string; retryable: boolean } | null {
   return { text: refundNotice, retryable: refundBlocked === 'provider_failed' };
 }
 
-export function OrderDetailClient({ order, device }: OrderDetailClientProps) {
-  const resolvedDevice = useDevice(device);
+export function OrderDetailClient({ order }: OrderDetailClientProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,13 +118,7 @@ export function OrderDetailClient({ order, device }: OrderDetailClientProps) {
         </div>
       ) : null}
 
-      {/* Telefonda KARAR YOK (tasarım notu): kısmi karşılama ve iade kalem kalem adet ve akıbet
-          seçtiriyor — küçük ekranda yanlış dokunuşun bedeli para. Ekran bunu cümleyle söyler. */}
-      {resolvedDevice === 'mobile' ? (
-        <OrderDetailMobile order={order} onAdvance={onAdvance} busy={busy} error={error} />
-      ) : (
-        <OrderDetailDesktop order={order} onAdvance={onAdvance} onDecision={onDecision} busy={busy} error={error} />
-      )}
+      <OrderDetailDesktop order={order} onAdvance={onAdvance} onDecision={onDecision} busy={busy} error={error} />
       {dialog === 'cancel' ? (
         <CancelDialog
           order={order}

@@ -42,6 +42,9 @@
 ## 2. Web & i18n (apps/web)
 - **İki yüzey:** müşteri (i18n, `/…`) + operasyon (personel, Türkçe, `/operations`); girişte `staff_role`'e göre yönlenir (tek `/connexion`). → DOMAIN, build/04-auth-kimlik
 - **Cihaz forku, responsive DEĞİL:** `page → *-client (useDevice) → *.desktop/*.mobile`. `md:` ile akışkan responsive YAPMA. → ADR Sapma 3
+  **İstisna — OPERASYON yüzeyi YALNIZ MASAÜSTÜ (kullanıcı kararı 06.08):** operasyonda `*.mobile`
+  forku YAZILMAZ ve mevcutları söküldü — personelin mobil deneyimi native uygulamanın işidir
+  (`docs/uygulama/README.md` yüzey formülü). Müşteri yüzeyinde fork aynen sürer.
 - **Dosya adları:** `page` · `<f>-client` · `<f>.desktop/.mobile` · `<f>-types.ts` (tip dosyası "view" değil).
 - **Komponent yerleşimi:** paylaşılan → `components/{customer,operation}/` (`ui/`+`form/`); sayfaya-özel → `<sayfa>/components/`. Ham `<input>/<select>` son çare, form kitini kullan. → STACK §7,§9
 - **URL:** iç yol İngilizce, dış URL dile göre (fr/de/tr); operasyon öneksiz ama segment yine İngilizce (`/operations/products`). Yeni müşteri rotası → `routing.ts` pathnames. → SEO_I18N

@@ -12,15 +12,15 @@ import { CustomerTypeEnum } from '@lezzet/types';
 import { CUSTOMER_SCOPES, MARKETING_CHANNELS, MARKETING_CHANNEL_LABEL, SCOPE_LABEL, TYPE_LABEL } from './customers-url';
 import type { CustomerRow, CustomersViewProps } from './customers-types';
 
-// Müşteriler — web: liste + seçili önizleme paneli (ürünler ekranının deseni, 1.95fr / 1fr).
-// Tasarımın "Web → tam detay" kuralı: geri dönüşsüz işlemler (birleştirme, GDPR) ve izin görünümü
-// buraya ait; mobil bilinçli olarak daha dar (bkz. `customers.mobile`).
+// Müşteriler — liste + seçili önizleme paneli (ürünler ekranının deseni, 1.95fr / 1fr).
+// Geri dönüşsüz işlemler (birleştirme, GDPR) ve izin görünümü buraya ait. Operasyon web'i
+// masaüstü-yalnız; mobil deneyim native uygulamada (`docs/uygulama`).
 //
 // Sütun sırası kararın sırası: KİM (ad + telefon — telefon kimlik anahtarıdır) → NE TÜR → HANGİ HÂLDE.
 
 const COLUMNS: Column<CustomerRow>[] = withCells<CustomerRow>(CUSTOMERS_COLUMN_TRACKS, {
-  // Avatar YOK: tasarımın web listesi iki satırlık metin (ad + telefon). Avatar yalnız mobil
-  // listede ve önizleme panelinde var — listede de göstermek satırı gereksiz şişiriyordu.
+  // Avatar YOK: tasarımın web listesi iki satırlık metin (ad + telefon). Avatar yalnız önizleme
+  // panelinde var — listede de göstermek satırı gereksiz şişiriyordu.
   name: (r) => (
     <span className="flex min-w-0 flex-col gap-px">
       <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{r.name}</span>

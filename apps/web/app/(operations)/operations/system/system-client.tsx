@@ -3,18 +3,16 @@
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { resolveErrorAction } from './actions';
 import { ErrorDetailDialog } from './components/error-detail-dialog';
 import { SystemDesktop } from './system.desktop';
-import { SystemMobile } from './system.mobile';
 import { systemUrl, type ErrorTab, type SystemUrlState, type TrendWindow } from './system-url';
 import type { SystemData } from './system-types';
 
 /**
- * Sistem ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
+ * Sistem ekranı client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
+ * mobil deneyim native uygulamada — `docs/uygulama`.
  *
  * İki zamanlı iş var ve ikisi de ekranın DÜRÜSTLÜĞÜ için:
  *  1. **Ölçüm yaşı ilerler.** Sunucudan gelen "2 dk önce" donmuş bir sayıdır; sekme açık kalırsa
@@ -38,12 +36,10 @@ function nextCollectSeconds(now: number): number {
 interface SystemClientProps {
   data: SystemData;
   serverAgeMinutes: number | null;
-  device: Device;
   urlState: SystemUrlState;
 }
 
-export function SystemClient({ data, serverAgeMinutes, device, urlState }: SystemClientProps) {
-  const resolvedDevice = useDevice(device);
+export function SystemClient({ data, serverAgeMinutes, urlState }: SystemClientProps) {
   const router = useRouter();
   const [pending, startNav] = useTransition();
 
@@ -143,14 +139,12 @@ export function SystemClient({ data, serverAgeMinutes, device, urlState }: Syste
     resolveError,
   };
 
-  // Diyalog YALNIZ masaüstünde: telefonda detay kendi yüzeyinde açılıyor (`system.mobile`), üstüne
-  // bir de modal koymak aynı bilgiyi iki kabuğa sarmak olurdu.
   const acik = openId ? (data.errors.find((r) => r.id === openId) ?? null) : null;
 
   return (
     <>
-      {resolvedDevice === 'mobile' ? <SystemMobile {...view} /> : <SystemDesktop {...view} />}
-      {resolvedDevice !== 'mobile' && acik ? (
+      <SystemDesktop {...view} />
+      {acik ? (
         <ErrorDetailDialog
           key={acik.id}
           row={acik}

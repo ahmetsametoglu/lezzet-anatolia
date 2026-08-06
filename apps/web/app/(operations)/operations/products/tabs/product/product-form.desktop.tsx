@@ -1,6 +1,6 @@
 import type { ProductFormFields } from './product-form-types';
 
-// Ürün formu — MASAÜSTÜ sunumu (Sapma 3).
+// Ürün formu — masaüstü sunumu (operasyon web'i masaüstü-yalnız).
 //   ANA ALAN (sol): üst [görsel (geniş) | içerik: ad · açıklama · kategori · (tarih | raf)] +
 //     ALTINDA Varyantlar (tam genişlik).
 //   SAĞ RAIL (dar): tek küme — Kargo · Satışta · Otomatik fiyat · KDV · Hedef marj · Alerjenler; akış

@@ -8,15 +8,14 @@ import type { ScoreRowView } from '@/lib/feedback/moderation-read';
 import type { CandidateCardView, ModerationCardView, PointsRowView } from './feedback-types';
 import type { ReviewStack } from './feedback-url';
 
-// Geri Bildirim ekranının paylaşılan parçaları — web ve mobil İKİSİ de bunları çiziyor.
-// Ölçüler cihaza göre çağırandan gelir (`compact`); kararın kendisi burada tek yerde durur.
+// Geri Bildirim ekranının paylaşılan parçaları — sekme panelleri bunları çizer; kararın kendisi
+// burada tek yerde durur.
 
 interface ModerationCardProps {
   card: ModerationCardView;
   stack: ReviewStack;
   pending: boolean;
   onModerate: (reviewId: string, to: 'approved' | 'rejected') => void;
-  compact?: boolean;
 }
 
 /**
@@ -28,7 +27,7 @@ interface ModerationCardProps {
  * **Dil rozeti künyede** (`TR · FR · DE`): yorumlar üç dilden geliyor (§7) ve moderatör Almanca bir
  * metinle karşılaştığında bunu şaşırarak değil, bekleyerek görmeli.
  */
-export function ModerationCard({ card, stack, pending, onModerate, compact = false }: ModerationCardProps) {
+export function ModerationCard({ card, stack, pending, onModerate }: ModerationCardProps) {
   const { review } = card;
   // Yayındaki bir yorumun tek kararı GERİ ÇEKMEK, reddedilenin tek kararı YAYINLAMAK. Üç yığında da
   // iki düğme çizilseydi biri daima anlamsız olurdu ("onaylanmışı onayla").
@@ -36,7 +35,7 @@ export function ModerationCard({ card, stack, pending, onModerate, compact = fal
   const canReject = stack !== 'rejected';
 
   return (
-    <div className={`flex flex-col gap-2 rounded-ops-card border border-ops-line bg-ops-white ${compact ? 'p-3' : 'px-4 py-3.5'}`}>
+    <div className="flex flex-col gap-2 rounded-ops-card border border-ops-line bg-ops-white px-4 py-3.5">
       <div className="flex items-center gap-2.5">
         <div className="flex min-w-0 flex-1 flex-col gap-px">
           <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{card.productName}</span>
@@ -60,36 +59,18 @@ export function ModerationCard({ card, stack, pending, onModerate, compact = fal
         <span className="whitespace-pre-wrap font-ops-body text-ops-sm leading-[1.6] text-ops-strong">{review.comment}</span>
       ) : null}
 
-      {/* MOBİLDE düğmeler TAM GENİŞLİK ve Onayla daha geniş (çizim: `flex:1` / `flex:1.4`).
-          `§7`'nin tek somut talebi bu — "boş anda iki dakika" işi başparmakla yapılır; sağa sıkışmış
-          iki küçük düğme o işin tam tersiydi. İpucu cümlesi de mobilde düşüyor: dar ekranda satırı
-          bölüyor ve zaten karttaki iki düğme ne olacağını söylüyor. */}
-      <div className={`flex border-t border-ops-line-soft pt-2 ${compact ? 'gap-2' : 'items-center gap-2'}`}>
-        {compact ? null : <span className="min-w-0 flex-1 font-ops-body text-ops-xs text-ops-muted">{STACK_HINTS[stack]}</span>}
+      <div className="flex items-center gap-2 border-t border-ops-line-soft pt-2">
+        <span className="min-w-0 flex-1 font-ops-body text-ops-xs text-ops-muted">{STACK_HINTS[stack]}</span>
         {/* `danger` (çerçeveli kırmızı), `destructive` (dolu) DEĞİL: ret geri alınabilir bir karar —
             reddedilen yorum duruyor ve yeniden yayınlanabilir. Dolu kırmızı, geri alınamayan işler
             için ayrıldı. */}
         {canReject ? (
-          <Button
-            variant="danger"
-            size="sm"
-            disabled={pending}
-            onClick={() => onModerate(review.id, 'rejected')}
-            className={compact ? 'flex-1' : undefined}
-          >
+          <Button variant="danger" size="sm" disabled={pending} onClick={() => onModerate(review.id, 'rejected')}>
             Reddet
           </Button>
         ) : null}
         {canApprove ? (
-          <Button
-            variant="primary"
-            size="sm"
-            disabled={pending}
-            onClick={() => onModerate(review.id, 'approved')}
-            // Onayla DAHA GENİŞ (çizim `flex:1.4`): kuyruğun beklenen kararı onaydır ve iki eşit
-            // düğme, sık yapılan işi nadir yapılanla aynı ağırlıkta gösterirdi.
-            className={compact ? 'flex-[1.4]' : undefined}
-          >
+          <Button variant="primary" size="sm" disabled={pending} onClick={() => onModerate(review.id, 'approved')}>
             {stack === 'rejected' ? 'Yayınla' : 'Onayla'}
           </Button>
         ) : null}
@@ -116,14 +97,14 @@ export function ModerationEmpty({ stack }: { stack: ReviewStack }) {
  * gösterilseydi 40 savurma beğenisi 8 gerçek beğeniden büyük görünürdü; yalnız ağırlık gösterilseydi
  * operatör kaç kişinin ilgilendiğini hiç bilemezdi. Karar ikisinin arasında.
  */
-export function CandidateRow({ card, onActivate, compact = false }: { card: CandidateCardView; onActivate: (id: string) => void; compact?: boolean }) {
+export function CandidateRow({ card, onActivate }: { card: CandidateCardView; onActivate: (id: string) => void }) {
   const trust = trustLabel(card.signal.trust);
 
   // Bir tur boyunca burada bir `Badge` daha vardı ve alt satırın söylediğini ("güvenilirlik yüksek")
   // ikinci kez söylüyordu. Çizimde rozet YOK — çizimin rozeti *Ürün skorları* tablosunun `Sinyal`
   // kolonuydu, aday satırının değil. Uydurulmuş bir öğe, üstelik tekrar eden bir bilgi.
   return (
-    <div className={`flex items-center gap-3 ${compact ? 'border-b border-ops-line-soft py-2 last:border-b-0' : 'rounded-ops-card border border-ops-line bg-ops-white px-4 py-3'}`}>
+    <div className="flex items-center gap-3 rounded-ops-card border border-ops-line bg-ops-white px-4 py-3">
       <span className="grid h-[30px] w-[30px] flex-none place-items-center rounded-ops-chip bg-ops-olive-bg font-ops-mono text-ops-sm font-semibold text-ops-olive-dark">
         {card.rank}
       </span>
@@ -133,20 +114,16 @@ export function CandidateRow({ card, onActivate, compact = false }: { card: Cand
           {signedCount(card.identifiedLikeCount)} beğeni · güvenilirlik {trust.label}
         </span>
       </div>
-      {!compact ? (
-        <>
-          <span className="h-[7px] w-[120px] flex-none overflow-hidden rounded-ops-chip bg-ops-gray-100">
-            <span className="block h-full bg-ops-olive" style={{ width: `${card.barPct}%` }} />
-          </span>
-          {/* Panonun TEK eylemi (çizim + `admin-geri-bildirim.md §3`): yüksek talepli adayı ürün
-              yönetiminde etkinleştirmeye gitmek. Bir tur boyunca `onActivate` opsiyoneldi ve
-              hiçbir yerden geçilmiyordu — yani düğme hiç çizilmedi, pano da okunacak ama üzerine
-              hiçbir şey yapılamayacak bir listeye dönüştü. Artık zorunlu. */}
-          <Button variant="primary" size="sm" onClick={() => onActivate(card.productId)}>
-            Satışa aç →
-          </Button>
-        </>
-      ) : null}
+      <span className="h-[7px] w-[120px] flex-none overflow-hidden rounded-ops-chip bg-ops-gray-100">
+        <span className="block h-full bg-ops-olive" style={{ width: `${card.barPct}%` }} />
+      </span>
+      {/* Panonun TEK eylemi (çizim + `admin-geri-bildirim.md §3`): yüksek talepli adayı ürün
+          yönetiminde etkinleştirmeye gitmek. Bir tur boyunca `onActivate` opsiyoneldi ve
+          hiçbir yerden geçilmiyordu — yani düğme hiç çizilmedi, pano da okunacak ama üzerine
+          hiçbir şey yapılamayacak bir listeye dönüştü. Artık zorunlu. */}
+      <Button variant="primary" size="sm" onClick={() => onActivate(card.productId)}>
+        Satışa aç →
+      </Button>
     </div>
   );
 }

@@ -3,8 +3,8 @@ import type { OpsTone } from '@/components/operation/ui/tone';
 import type { CustomerType } from '@lezzet/types';
 import type { CustomerRow } from './customers-types';
 
-// Ekran metinleri ve renk anlamları — TEK yerde, iki cihaz görünümü paylaşır. Kopyalansaydı mobil ve
-// web aynı müşteriye farklı rozet yazabilirdi.
+// Ekran metinleri ve renk anlamları — TEK yerde; liste, panel ve diyaloglar paylaşır. Kopyalansaydı
+// iki yer aynı müşteriye farklı rozet yazabilirdi.
 //
 // Renk ANLAM taşır (envanter §0): olive=yolunda · amber=dikkat/karar bekliyor · mavi=bilgi ·
 // gri=pasif/kapanmış. Rozet seçerken sorulan soru "hangisi güzel" değil, "operatör bunu görünce ne
@@ -30,7 +30,7 @@ export function statusOf(row: CustomerRow): { label: string; tone: OpsTone } {
 }
 
 /**
- * B2B başvurusunun DÖRT hâli, tek sözlükte — web paneli ve mobil kutu bunu paylaşır.
+ * B2B başvurusunun DÖRT hâli, tek sözlükte — panel ve onay diyaloğu bunu paylaşır.
  *
  * `Record<B2bApplicationStatus, …>` olması bilinçli: motora yeni bir hâl eklendiği gün derleyici
  * burayı gösterir. Bir tur her iki ekran üçlü bir `? :` zinciriyle kendi cümlesini kuruyordu ve

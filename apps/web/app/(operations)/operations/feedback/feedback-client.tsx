@@ -2,18 +2,16 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import type { KeysetCursor } from '@lezzet/types';
 import { productsUrl } from '../products/products-url';
 import { loadMoreReviewsAction, moderateReviewAction } from './actions';
 import { FeedbackDesktop } from './feedback.desktop';
-import { FeedbackMobile } from './feedback.mobile';
 import { PointsAdjustDialog } from './points-adjust-dialog';
 import { feedbackUrl, type FeedbackTab, type FeedbackUrlState, type ReviewStack, type ScoreDirection } from './feedback-url';
 import type { FeedbackData, ModerationCardView } from './feedback-types';
 
-// Geri Bildirim ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil çatallanır.
+// Geri Bildirim ekranı client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız; mobil
+// deneyim native uygulamada (`docs/uygulama`).
 //
 // SEKME ve YIĞIN gerçek gezinmedir (`?tab=…&rs=…`): veriyi sunucu okuyor ve "aday panosuna bak"
 // bağlantısı paylaşılabilir olmalı. İstemci durumunda tutulsaydı her sekme bir istemci turu olur,
@@ -21,12 +19,10 @@ import type { FeedbackData, ModerationCardView } from './feedback-types';
 
 interface FeedbackClientProps {
   data: FeedbackData;
-  device: Device;
   urlState: FeedbackUrlState;
 }
 
-export function FeedbackClient({ data, device, urlState }: FeedbackClientProps) {
-  const resolvedDevice = useDevice(device);
+export function FeedbackClient({ data, urlState }: FeedbackClientProps) {
   const router = useRouter();
   const [navPending, startNav] = useTransition();
   const [actionPending, startAction] = useTransition();
@@ -119,7 +115,7 @@ export function FeedbackClient({ data, device, urlState }: FeedbackClientProps) 
 
   return (
     <>
-      {resolvedDevice === 'mobile' ? <FeedbackMobile {...view} /> : <FeedbackDesktop {...view} />}
+      <FeedbackDesktop {...view} />
       {adjusting ? (
         <PointsAdjustDialog
           customerId={adjusting.customerId}

@@ -7,8 +7,8 @@ import { InfoIcon } from '@/components/operation/ui/icons';
 import { money } from '@/components/operation/ui/format';
 import type { SuggestionGroupView, SuggestionLineView, SupplierCardView } from './procurement-types';
 
-// İki cihaz görünümünün ORTAK içerik parçaları — masaüstü/mobil yalnız yerleşimi değiştirir
-// (grid ↔ tek kolon); kart ve satırların kendisi tek nüsha.
+// Ekranın ORTAK içerik parçaları — panolar yalnız yerleşimi değiştirir; kart ve satırların
+// kendisi tek nüsha.
 
 /** Vade rozeti — kart ve grup başlığı aynı sözlüğü kullanır. */
 function TermBadge({ days }: { days: number | null }) {

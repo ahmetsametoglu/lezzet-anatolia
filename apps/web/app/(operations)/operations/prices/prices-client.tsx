@@ -2,8 +2,6 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { loadMorePricesAction } from './actions';
 import { OfferDialog } from '@/components/operation/stock/offer-dialog';
@@ -11,24 +9,21 @@ import { CustomerPriceDialog } from './customer-price-dialog';
 import { DiscountDialog } from './discount-dialog';
 import { PriceDialog } from './price-dialog';
 import { PricesDesktop } from './prices.desktop';
-import { PricesMobile } from './prices.mobile';
 import { pricesUrl, type PriceScope, type PriceTab, type PricesUrlState } from './prices-url';
 import type { CustomerPriceRow, DiscountRow, PriceRow, PricesData } from './prices-types';
 
-// Fiyat ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
-// Fiyat diyaloğu iki yüzeyin de üstünde — ikisinde de aynı iş yapılır.
+// Fiyat ekranı client kökü: tek durum ağacı burada, diyaloglar görünümün üstünde. Operasyon web'i
+// masaüstü-yalnız; mobil deneyim native uygulamada (`docs/uygulama`).
 //
 // SEKME GERÇEK gezinmedir (sığ değil): sekmelerin veri ihtiyacı ayrı, okuma sunucuda sekmeye bağlı.
 // Sığ yazsaydık müşteriye özel sekmesi boş açılırdı.
 
 interface PricesClientProps {
   data: PricesData;
-  device: Device;
   urlState: PricesUrlState;
 }
 
-export function PricesClient({ data, device, urlState }: PricesClientProps) {
-  const resolvedDevice = useDevice(device);
+export function PricesClient({ data, urlState }: PricesClientProps) {
   const router = useRouter();
   /**
    * Süzgeç/sekme turu SÜRÜYOR MU — `router.replace` bir RSC okumasıdır ve dönene kadar ekranda hiçbir
@@ -155,7 +150,7 @@ export function PricesClient({ data, device, urlState }: PricesClientProps) {
 
   return (
     <>
-      {resolvedDevice === 'mobile' ? <PricesMobile {...view} /> : <PricesDesktop {...view} />}
+      <PricesDesktop {...view} />
       {editing ? <PriceDialog key={editing.variantId} row={editing} onClose={() => setEditingId(null)} /> : null}
       {offerBatch ? (
         <OfferDialog key={offerBatch.id} batch={offerBatch} onClose={() => setOfferStockId(null)} />

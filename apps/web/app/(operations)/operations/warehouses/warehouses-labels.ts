@@ -37,13 +37,13 @@ export function statusTone(row: Pick<WarehouseRowView, 'isActive' | 'setupGap'>)
  * Adres YOKSA `null` döner ve ekran o zaman adres yazmaz. Boş bir satır çizmek "adres girilmiş ama
  * boş" gibi okunurdu; eksiklik kendi cümlesiyle söylenir.
  */
-export function addressLines(address: WarehouseAddressView, countryCode: keyof typeof COUNTRY_LABELS): string[] | null {
+function addressLines(address: WarehouseAddressView, countryCode: keyof typeof COUNTRY_LABELS): string[] | null {
   if (!address) return null;
   const second = [address.postalCode, address.city].filter(Boolean).join(' ');
   return [address.line1, `${second} · ${COUNTRY_LABELS[countryCode]}`].filter((line) => line.trim().length > 0);
 }
 
-/** Tek satırlık adres (liste satırı, mobil künye) — ayraç `·` çünkü satır sarılabilir. */
+/** Tek satırlık adres (liste satırı) — ayraç `·` çünkü satır sarılabilir. */
 export function addressOneLine(address: WarehouseAddressView, countryCode: keyof typeof COUNTRY_LABELS): string | null {
   const lines = addressLines(address, countryCode);
   return lines ? lines.join(' · ') : null;

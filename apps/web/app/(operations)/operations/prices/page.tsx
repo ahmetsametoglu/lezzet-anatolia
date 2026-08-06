@@ -13,7 +13,6 @@ import {
 } from '@lezzet/database';
 import { costOf, needsExpiryAttention } from '@lezzet/domain-core';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Price } from '@lezzet/types';
-import { detectDevice } from '@/lib/device';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readCostBasis } from '@/lib/pricing/cost-basis';
 import { guarded, requireAdmin } from '@/lib/guard';
@@ -56,8 +55,6 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
   const offers = urlState.tab === 'offers' ? await readOffersTab(db) : null;
   const coupons = urlState.tab === 'coupons' ? await readCouponsTab(db, categoryNames) : null;
 
-  const device = await detectDevice();
-
   return (
     <PricesClient
       data={{
@@ -70,7 +67,6 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
         categories: categories.map((c) => ({ id: c.id, name: resolveLocalizedText(c.name) })),
         collections: coupons?.collections ?? [],
       }}
-      device={device}
       urlState={urlState}
     />
   );

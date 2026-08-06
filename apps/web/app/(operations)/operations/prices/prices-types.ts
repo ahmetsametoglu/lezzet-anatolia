@@ -242,7 +242,7 @@ export interface PricesData {
   collections: CategoryOption[];
 }
 
-/** prices-client'ın tuttuğu durum + eylemler; desktop/mobile görünümleri bunu tüketir. */
+/** prices-client'ın tuttuğu durum + eylemler; masaüstü görünümü bunu tüketir. */
 export interface PricesViewProps {
   data: PricesData;
   /** Süzgeçten geçmiş liste (`data.rows` ham ilk sayfadır — sayaçlar ondan çıkar). */

@@ -256,7 +256,7 @@ export interface CustomersData {
   counts: CustomerCounts;
 }
 
-/** İki cihaz görünümünün paylaştığı sözleşme (Sapma 3: tek durum ağacı client kökünde). */
+/** Masaüstü görünümünün sözleşmesi — tek durum ağacı client kökünde. */
 export interface CustomersViewProps {
   data: CustomersData;
   rows: CustomerRow[];
@@ -295,10 +295,10 @@ export interface CustomersViewProps {
    * kullanıcının (30.07).
    */
   onOpenOrder: (orderId: string) => void;
-  /** Vade/limit diyaloğunu açar (web ve mobil aynı diyaloğu paylaşır). */
+  /** Vade/limit diyaloğunu açar. */
   onEditCredit: () => void;
   /**
-   * Müşteri bilgisi düzenleme diyaloğu — yalnız web (tasarım: geniş form). Kapıda ödeme izni ve
+   * Müşteri bilgisi düzenleme diyaloğu (tasarım: geniş form). Kapıda ödeme izni ve
    * indirim oranı da bu formun içinde; panelde canlı kontrol YOK (kullanıcı kararı 30.07).
    */
   onEdit: () => void;
@@ -307,11 +307,6 @@ export interface CustomersViewProps {
    * (kullanıcı kararı 30.07). Yalnız şirket müşterisinde çizilir.
    */
   onOpenB2b: () => void;
-  /**
-   * YALNIZ limiti yazar (mobilin satır-içi adımlayıcısı). Vade yetkisi ve süresi DEĞİŞMEZ — telefonda
-   * yapılan iş "limiti oynat", yetkiyi açıp kapamak değil (tasarımın mobil kuralı).
-   */
-  onSaveCreditLimit: (cents: number | null) => void;
   /** Yazma işlemi sürüyor (anahtar/kaydet düğmeleri kilitlenir). */
   saving: boolean;
   /** Son yazma hatası — sessiz düşen bir kaydetme, operatörün yanlış sandığı bir limittir. */

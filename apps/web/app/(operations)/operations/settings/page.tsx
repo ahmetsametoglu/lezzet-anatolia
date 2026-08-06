@@ -9,7 +9,6 @@ import {
 } from '@lezzet/database';
 import type { Setting } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
-import { detectDevice } from '@/lib/device';
 import { readStaff } from '@/lib/staff';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { SettingsClient } from './settings-client';
@@ -80,7 +79,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     propagationSeconds: Math.round(SETTINGS_CACHE_TTL_MS / 1000),
   };
 
-  return <SettingsClient data={data} device={await detectDevice()} urlState={urlState} />;
+  return <SettingsClient data={data} urlState={urlState} />;
 }
 
 /** Sözlükteki her anahtarın TÜM kapsam satırları — genel değer + istisnalar tek listede. */

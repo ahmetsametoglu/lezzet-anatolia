@@ -1,7 +1,6 @@
 import { UserProfileService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE } from '@lezzet/types';
 import { readOverdueCustomerIds } from '@/lib/customer/scorecard';
-import { detectDevice } from '@/lib/device';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { CustomersClient } from './customers-client';
 import { toCustomerRows } from './customers-read';
@@ -35,8 +34,6 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
     readOverdueCustomerIds(db),
   ]);
 
-  const device = await detectDevice();
-
   return (
     <CustomersClient
       data={{
@@ -44,7 +41,6 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
         nextCursor: page.nextCursor,
         counts: { ...counts, overdue: overdueIds.size },
       }}
-      device={device}
       urlState={urlState}
     />
   );

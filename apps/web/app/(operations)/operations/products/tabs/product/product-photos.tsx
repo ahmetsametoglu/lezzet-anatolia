@@ -40,10 +40,9 @@ interface ProductPhotosProps {
   coverCrop: ImageCrop;
   onCoverCropChange: (crop: ImageCrop) => void;
   uploadCover?: (form: FormData) => Promise<ActionResult>;
-  camera?: boolean;
 }
 
-export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChange, uploadCover, camera }: ProductPhotosProps) {
+export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChange, uploadCover }: ProductPhotosProps) {
   const [photos, setPhotos] = useState<ProductPhotoView[]>([]);
   /**
    * İlk okuma DÖNDÜ MÜ — `photos.length` tek başına iki durumu ayırmıyor.
@@ -91,7 +90,6 @@ export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChang
         onCropChange={onCoverCropChange}
         upload={uploadCover}
         uploadDisabledHint="Ürünü kaydedince görsel eklenebilir — R2 anahtarı slug'a bağlı."
-        camera={camera}
       />
 
       {/* Galeri — yalnız kayıtlı üründe; kapak yokken de eklenebilir (ilki kapak yapılabilir) */}
@@ -142,7 +140,6 @@ export function ProductPhotos({ productId, coverUrl, coverCrop, onCoverCropChang
               <ImageUploadButton
                 upload={(fd) => uploadGalleryPhotoAction(productId, fd)}
                 multiple
-                camera={camera}
                 className="grid aspect-[3/2] cursor-pointer place-items-center gap-1 rounded-ops-card border border-dashed border-ops-line-strong text-ops-muted transition-colors hover:border-ops-olive hover:text-ops-olive"
               >
                 <PlusIcon />

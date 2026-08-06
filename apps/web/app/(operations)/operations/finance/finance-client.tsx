@@ -2,16 +2,14 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { applyMatchAction, classifyExpenseAction, dismissMatchAction } from './actions';
 import { MatchDialog } from './match-dialog';
 import { FinanceDesktop } from './finance.desktop';
-import { FinanceMobile } from './finance.mobile';
 import { financeUrl, type FinanceUrlState } from './finance-url';
 import type { DialogKind, FinanceData, MatchRowView } from './finance-types';
 
-// Para client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil çatallanır.
+// Para client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
+// mobil deneyim native uygulamada — `docs/uygulama`.
 //
 // Süzgeçler GERÇEK GEZİNMEDİR (`?acct=…&type=…`) çünkü veriyi sunucu okuyor ve "şu hesabın
 // hareketleri" bağlantısı paylaşılabilir olmalı. İstemci durumunda tutulsaydı her çip bir istemci
@@ -19,13 +17,11 @@ import type { DialogKind, FinanceData, MatchRowView } from './finance-types';
 
 interface FinanceClientProps {
   data: FinanceData;
-  device: Device;
   urlState: FinanceUrlState;
   writableAccounts: FinanceData['accounts'];
 }
 
-export function FinanceClient({ data, device, urlState, writableAccounts }: FinanceClientProps) {
-  const resolvedDevice = useDevice(device);
+export function FinanceClient({ data, urlState, writableAccounts }: FinanceClientProps) {
   const router = useRouter();
   const [navPending, startNav] = useTransition();
   const [dialog, setDialog] = useState<DialogKind>(null);
@@ -84,9 +80,7 @@ export function FinanceClient({ data, device, urlState, writableAccounts }: Fina
 
   return (
     <>
-      {resolvedDevice === 'mobile' ? <FinanceMobile {...view} /> : <FinanceDesktop {...view} />}
-      {/* Pencere cihaz görünümlerinin DIŞINDA: ikisinde de aynı, ve her birine ayrı ayrı
-          yerleştirilseydi açık/kapalı durumu iki yerde tutulurdu. */}
+      <FinanceDesktop {...view} />
       {picking ? (
         <MatchDialog
           row={picking}

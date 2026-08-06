@@ -37,23 +37,18 @@ test.describe('kademe 2 · sipariş durum geçişi (damgalı fikstür)', () => {
     await page.goto(`/operations/orders/${fixture.orderId}`, NAV);
     await expect(page.getByText(fixture.customerName).first()).toBeVisible({ timeout: 15_000 });
 
-    // Cihaz forku farklı çizer (Sapma 3): masaüstünde başlıktaki birincil düğme ("Hazırlanıyor ▾")
-    // izinli geçiş ŞERİDİNİ açar, geçiş şeritteki düğmeden yapılır; telefonda alttaki tek birincil
-    // düğme geçişin kendisidir. Son dokunuş iki forkta da "Hazırlanıyor" adlı düğme.
-    if (test.info().project.name === 'desktop') {
-      await page.getByRole('button', { name: 'Hazırlanıyor ▾' }).click();
-      // Şerit açıldı mı — tıklamadan önce iddia: düşerse "düğme yok" değil "şerit açılmadı" denir.
-      await expect(page.getByText('İzinli geçişler')).toBeVisible({ timeout: 10_000 });
-    }
+    // Tek yol (desktop — operasyon web'i masaüstü-yalnız, 06.08): başlıktaki birincil düğme
+    // ("Hazırlanıyor ▾") izinli geçiş ŞERİDİNİ açar, geçiş şeritteki düğmeden yapılır.
+    await page.getByRole('button', { name: 'Hazırlanıyor ▾' }).click();
+    // Şerit açıldı mı — tıklamadan önce iddia: düşerse "düğme yok" değil "şerit açılmadı" denir.
+    await expect(page.getByText('İzinli geçişler')).toBeVisible({ timeout: 10_000 });
     const advance = page.getByRole('button', { name: 'Hazırlanıyor', exact: true });
     await expect(advance).toBeVisible({ timeout: 15_000 });
     await advance.click();
 
-    // Yeni durumun kanıtı iki katlı: (1) birincil geçiş artık "Hazır" — bu YALNIZ preparing
+    // Yeni durumun kanıtı iki katlı: (1) birincil geçiş artık "Hazır ▾" — bu YALNIZ preparing
     // durumunda çizilir, eski durumun düğmesiyle karışamaz; (2) durum rozeti "Hazırlanıyor" yazar.
-    // (Rozet iddiası tek başına yetmezdi: telefonda geçiş ÖNCESİNİN düğmesi de aynı sözcük.)
-    const nextPrimary = test.info().project.name === 'desktop' ? 'Hazır ▾' : 'Hazır';
-    await expect(page.getByRole('button', { name: nextPrimary, exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('button', { name: 'Hazır ▾', exact: true })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('Hazırlanıyor', { exact: true }).first()).toBeVisible();
   });
 });

@@ -142,20 +142,3 @@ export function ErrorMetaGrid({ row, columns = 'auto' }: { row: ErrorRowView; co
     </div>
   );
 }
-
-/**
- * Bağlamın kopyalanabilir metni — telefonda "bağlamı kopyala" düğmesinin yazdığı şey.
- * Köprüler ve biçim düşer; kalan, bir yere yapıştırılabilir düz anahtar-değer listesidir.
- */
-export function contextText(row: ErrorRowView): string {
-  const satirlar = [
-    `mesaj: ${row.message}`,
-    `kaynak: ${row.source}`,
-    `yol: ${row.path ?? '—'}`,
-    `kez: ${row.count}`,
-    `ilk: ${row.firstSeenAt}`,
-    `son: ${row.lastSeenAt}`,
-    ...Object.entries(row.context).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`),
-  ];
-  return satirlar.join('\n');
-}

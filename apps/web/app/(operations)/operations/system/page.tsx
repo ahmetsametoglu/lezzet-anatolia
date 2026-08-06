@@ -1,5 +1,4 @@
 import { ErrorLogService, SystemHealthService, UserProfileService, serviceDb } from '@lezzet/database';
-import { detectDevice } from '@/lib/device';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { SystemClient } from './system-client';
 import { ageMinutesOf, toErrorRows, toHealthView, toTrendCharts, windowCutoff } from './system-read';
@@ -62,7 +61,6 @@ export default async function SystemPage({ searchParams }: SystemPageProps) {
   const names = new Map(staff.map((p) => [p.id, p.name]));
 
   const trend = toTrendCharts(trendPoints, urlState.win);
-  const device = await detectDevice();
 
   return (
     <SystemClient
@@ -78,7 +76,6 @@ export default async function SystemPage({ searchParams }: SystemPageProps) {
       // Yaş SUNUCUDA hesaplanıp geçiyor: istemcide `Date.now()` ile yeniden hesaplansaydı ilk boyama
       // sunucununkinden farklı çıkar ve hidrasyon uyuşmazlığı doğardı. İstemci bu sayıyı ilerletir.
       serverAgeMinutes={snapshot ? ageMinutesOf(snapshot.createdAt, now) : null}
-      device={device}
       urlState={urlState}
     />
   );

@@ -4,6 +4,9 @@ import { test, expect } from '@playwright/test';
  * DENEME dumanı (00.9 çekirdek kurulumu — denetim). Operasyon yüzeyi dev auth bypass'ıyla açılır
  * (guard.ts + seed'li DEV_ADMIN) — giriş adımı yok. İddialar kaba yapısal; gerçek yolculuklar
  * çapraz yazımla gelir: bu dosyayı MÜŞTERİ şeridi devralıp genişletir (`e2e/README.md` kural 2).
+ *
+ * YALNIZ desktop projesinde koşar (playwright.config.ts): operasyon web'i masaüstü-yalnız (06.08),
+ * mobil deneyim native uygulamada — `docs/uygulama`.
  */
 // Gezinme `domcontentloaded`'a bağlı — gerekçe `customer/storefront.smoke.ts` başındaki
 // gezinme sözleşmesinde (dev server'da `load` asılı kalabiliyor; hazır-olma güvencesi iddialarda).
@@ -14,8 +17,8 @@ test.describe('operasyon paneli — ilk bakış', () => {
     const response = await page.goto('/operations/products', NAV);
     expect(response?.ok()).toBeTruthy();
 
-    // Mobil fork başlığı h1/h2 taşımıyor (ölçüldü — ui:shot) — iddia İÇERİĞE bağlanır:
-    // seed kataloğu deterministik (§4b okuyan-test kuralı), ürün adları listede görünmeli.
+    // İddia İÇERİĞE bağlı: seed kataloğu deterministik (§4b okuyan-test kuralı), ürün adları
+    // listede görünmeli — başlık yapısına bağlanmak ekran sahibinin elini bağlardı.
     await expect(page.getByText(/baklava/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
@@ -51,8 +54,7 @@ test.describe('kademe 2 · operasyon ekranları ilk bakış', () => {
   test('müşteriler ekranı açılır ve seed profillerini listeler', async ({ page }) => {
     const response = await page.goto('/operations/customers', NAV);
     expect(response?.ok()).toBeTruthy();
-    // Mobil fork özet satırını çizmiyor (kart listesi) — ortak payda: başlık + kartlardaki
-    // durum etiketi. Seed doluyken en az bir "Aktif" müşteri görünür.
+    // İddia başlık + durum etiketi üzerinden. Seed doluyken en az bir "Aktif" müşteri görünür.
     await expect(page.getByRole('heading', { name: /Müşteriler/ }).first()).toBeVisible();
     await expect(page.getByText(/Aktif/).first()).toBeVisible();
   });

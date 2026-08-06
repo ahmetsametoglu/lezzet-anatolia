@@ -3,7 +3,6 @@ import { toCents } from '@lezzet/helper';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { buildExport, pendingInvoices } from '@/lib/accounting/export';
 import { companyPnl, productProfits } from '@/lib/accounting/profit';
-import { detectDevice } from '@/lib/device';
 import { guarded, requireAdmin, requireFinance } from '@/lib/guard';
 import { ReportsClient } from './reports-client';
 import { toChannelCards, toPnlRows, toProductMetrics, toVariantRows } from './reports-read';
@@ -118,7 +117,6 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   return (
     <ReportsClient
       data={data}
-      device={await detectDevice()}
       urlState={urlState}
       months={selectableMonths(now)}
       canSeeProfit={canSeeProfit}

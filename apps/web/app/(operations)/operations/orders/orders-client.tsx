@@ -2,29 +2,24 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { loadMoreOrdersAction } from './actions';
 import { OrderDialog } from './order-dialog';
 import { OrdersDesktop } from './orders.desktop';
-import { OrdersMobile } from './orders.mobile';
 import { ordersUrl, type OrdersUrlState } from './orders-url';
 import type { OrderRow, OrdersData } from './orders-types';
 
-// Sipariş ekranı client kökü (Sapma 3): tek durum ağacı burada, sunum web/mobil olarak çatallanır.
-// Hızlı bakış diyaloğu iki yüzeyin de üstünde — telefonda da masaüstünde de aynı karar verilir.
+// Sipariş ekranı client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
+// mobil deneyim native uygulamada — `docs/uygulama`.
 
 interface OrdersClientProps {
   data: OrdersData;
-  device: Device;
   urlState: OrdersUrlState;
   /** Bugünün günü (YYYY-AA-GG) — SUNUCUDAN; gün süzgecinin etiketleri buradan doğar. */
   today: string;
 }
 
-export function OrdersClient({ data, device, urlState, today }: OrdersClientProps) {
-  const resolvedDevice = useDevice(device);
+export function OrdersClient({ data, urlState, today }: OrdersClientProps) {
   const router = useRouter();
   /**
    * Süzgeç/sekme turu SÜRÜYOR MU — `router.replace` bir RSC okumasıdır ve dönene kadar ekranda hiçbir
@@ -95,7 +90,7 @@ export function OrdersClient({ data, device, urlState, today }: OrdersClientProp
 
   return (
     <>
-      {resolvedDevice === 'mobile' ? <OrdersMobile {...view} /> : <OrdersDesktop {...view} />}
+      <OrdersDesktop {...view} />
       {open ? <OrderDialog key={open.id} row={open} onClose={() => setOpenId(null)} /> : null}
     </>
   );

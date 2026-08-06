@@ -2,31 +2,27 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Device } from '@/lib/device';
-import { useDevice } from '@/lib/use-device.hook';
 import { createDraftFromSuggestionAction, loadMorePurchaseOrdersAction } from './actions';
 import { ManualOrderDialog } from './manual-order-dialog';
 import { PurchaseOrderDialog } from './purchase-order-dialog';
 import { ProcurementDesktop } from './procurement.desktop';
-import { ProcurementMobile } from './procurement.mobile';
 import { SupplierDialog } from './supplier-dialog';
 import { procurementUrl, toOrderFilters, type ProcurementUrlState } from './procurement-url';
 import type { ProcurementData, PurchaseOrderRowView, SupplierCardView } from './procurement-types';
 
-// Tedarik ekranı client kökü (Sapma 3): durum burada, sunum web/mobil olarak çatallanır.
+// Tedarik ekranı client kökü: durum burada. Operasyon web'i masaüstü-yalnız; mobil deneyim native
+// uygulamada (`docs/uygulama`).
 // SEKME GERÇEK gezinmedir: okuma sunucuda sekmeye bağlı — sığ yazsaydık öteki sekme boş açılırdı.
 // Süzgeçler de öyle: sunucuda uygulanıyorlar (`listRows`), yani adres değişmeli.
 
 interface ProcurementClientProps {
   data: ProcurementData;
-  device: Device;
   urlState: ProcurementUrlState;
   /** İptal yalnız yöneticinin — muhasebeci zinciri okur, akışı durdurmaz (kapı action'da da var). */
   canCancelOrders: boolean;
 }
 
-export function ProcurementClient({ data, device, urlState, canCancelOrders }: ProcurementClientProps) {
-  const resolvedDevice = useDevice(device);
+export function ProcurementClient({ data, urlState, canCancelOrders }: ProcurementClientProps) {
   const router = useRouter();
   // Sekme/süzgeç turu sürerken ekran karşılık vermeli (09.2 navPending dersi): içerik soluklaşır.
   const [pending, startNav] = useTransition();
@@ -124,7 +120,7 @@ export function ProcurementClient({ data, device, urlState, canCancelOrders }: P
 
   return (
     <>
-      {resolvedDevice === 'mobile' ? <ProcurementMobile {...view} /> : <ProcurementDesktop {...view} />}
+      <ProcurementDesktop {...view} />
       {supplierState !== 'closed' ? (
         <SupplierDialog key={supplierState} editing={editingSupplier} onClose={() => setSupplierState('closed')} />
       ) : null}
