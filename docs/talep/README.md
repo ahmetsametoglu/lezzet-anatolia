@@ -7,7 +7,8 @@ dosyalar kapanana dek yaşar, yenisi buraya gelir.
 ## Kurallar
 
 - **Dosya başına TEK talep.** Ad: `<kime>-<konu>.md` (ör. `arka-uc-stok-toplu-okuma.md`).
-  Küçük harf, tire; şerit adları: `arka-uc` · `operasyon` · `musteri`.
+  Küçük harf, tire; şerit adları: `arka-uc` · `operasyon` · `musteri` · `mobil` (06.08'de katıldı —
+  native uygulama şeridi; sahiplik `docs/uygulama/README.md`).
 - **Yapı sabittir** (aşağıdaki şablon): kimden/kime/tarih/ilgili görev başta; talep "ne + neden"
   anlatır, çözümü dayatmaz; hedef şerit **Cevap** bölümüne yazar (karşı öneri serbest).
 - **Talebi AÇAN kapatır:** karşılandığını doğrulayınca DOSYAYI SİLER. Durum güncellemesi,
