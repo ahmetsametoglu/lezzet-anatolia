@@ -17,6 +17,22 @@
 
 > "Analitiği kuruyoruz — ama çerez koymadan. Ölçümü sunucu tarafında, kişiyi tanımadan, toplu yapıyoruz; bu yüzden çerez banner'ı gerekmiyor (CNIL uyumlu). Reklam linklerindeki etiketleri (UTM) siparişle eşleştirip 'hangi kampanya kaç satış getirdi'yi görüyoruz. Müşterinin bizi hangi reklamdan bulduğunu bir kez kaydediyoruz ki 'bu kampanyadan gelen tekrar alıyor mu' sorusuna cevap verebilelim. Yapay zekâ toplu veriden anlatı çıkarıyor: 'şu kaynak düştü', 'şu ürün çok bakılıp az alınıyor'."
 
+> **SATIRLAR 06.08'DE GERÇEĞE ÇEKİLDİ — ve gecikmenin kendisi kayda değer.** Kullanıcı *"analitik
+> ekranları entegre etti ve bitirdi diye biliyorum"* dedi; ölçüldü, **haklıydı.** `13.2 · 13.3 · 13.4
+> · 13.7` bitti-kriterlerini 04.08'de karşılamıştı ama satırları `[~]` duruyordu. Özet tablo bu
+> yüzden modülü **1/8** gösteriyordu; gerçek **5/8**.
+>
+> Sebebi tek cümlede: her satırın Durum notu *"kalan yalnız ekranın bağlaması"* ya da *"atıcıları
+> bekliyor"* diyordu, o engeller aynı gün ya ertesi gün kalktı (ekran yayına girdi, atıcılar 22
+> sayfada canlı doğrulandı) — **ama engeli kaldıran taraf satırı geri dönüp kapatmadı.** `CLAUDE §5`
+> "durumun tek sahibi görev satırıdır" diyor; sahibi güncellenmeyince tablo da, tabloyu okuyan da
+> yanılıyor. Aynı ders `08-musteri-app.md` 08.5'te bir kez daha yaşanmıştı: *"bir `BEKLEYEN`'i
+> doğuran engel kalktığında, o engeli kaldıran commit işaretin kendisini de aramak zorunda."*
+> Buradaki hâli daha geniş: engeli kaldıran **başka bir şerit** olduğunda satırı kapatacak kişi de
+> belirsizleşiyor. Kural şu olmalı — **engeli kaldıran haber verir, satırın sahibi kapatır.**
+>
+> `13.1` ve `13.5` bilerek açık kaldı; ikisinin de eksiği aşağıda adıyla yazılı.
+
 ## Görevler
 
 - [~] (13.1) **Olay toplama:** sunucu-tarafı `AnalyticsEvent`; çerezsiz oturum anahtarı; **kişisel kimlik YOK** · `touches: supabase/migrations/0035_analytics.sql, packages/types/src/schemas/analytics.schema.ts, packages/database/src/services/analytics.service.ts, apps/web/lib/analytics/**, apps/backend/src/jobs/analytics-rollup.ts`
@@ -38,8 +54,9 @@
     - **`sessionCount` YAKLAŞIKTIR** ve künyeye yazılması şart: aynı oturum birden çok boyut satırına düşebilir, yani satırların toplamı gerçek oturum sayısından büyüktür. **Toplanabilir tek sayı `eventCount`.** Bilmeyen ekran "toplam ziyaretçi" diye yanlış bir sayı üretir.
     - **İş (`analytics_rollup`, günde bir 03:40):** bölüm bakımı → günlük özet → saklama süpürmesi. **Özet ÖNCE, silme SONRA**; ters sırada bir gün özet koşmazsa o günün verisi hem özette hem hamda yok olur. Bugün değil DÜN özetlenir (gün kapanmadan üretilen özet eksiktir) ve üç gün geriye kadar yeniden üretilir — idempotent olduğu için emniyet payı yalnız bir upsert.
     - **Şema 04.08'de İKİ KEZ büyüdü (aynı gün, `db:refresh` bir kez):** günlük özet `blocked_reason` boyutu kazandı (13.3 — sebep yalnız ham defterde durduğu sürece hiçbir ekrana ulaşmıyordu) ve `0036` üç sinyal özeti ekledi (13.2 · 13.4). `AnalyticsDaily` tipi de bir alan büyüdüğü için operasyon ekranının test fabrikasına tek satır eklendi (`blockedReason: null`) — şerit dışı ama mekanik bir sonuç, ayrıca bildirildi.
-    - **BEKLEYEN(08.9):** atıcılar müşteri şeridinde; kapı ve sözleşme hazır, harita `08-musteri-app.md`'de yazılı.
-- [~] (13.2) **UTM → sipariş eşleşmesi:** link UTM → sunucu oturumu → sipariş; `acquisition_source` ilk siparişte (07 ile); kampanya ROI raporu (ciro + gider yan yana, 12'den) · `touches: supabase/migrations/0036_analytics_signals.sql, apps/web/lib/analytics/{attribution,utm,read}.ts, apps/web/lib/order/checkout-draft.ts`
+    - ~~**BEKLEYEN(08.9):** atıcılar müşteri şeridinde~~ — **KAPANDI (04–05.08).** Atıcılar yazıldı ve canlı doğrulandı: 22 sayfa kendi rota kalıbını geçiyor, defterde `/product/[slug]` üç dilden tek kalıpta toplanıyor (ölçüm `08-musteri-app.md`'de).
+    - **SATIR NEDEN HÂLÂ `[~]`:** `country` ve `language` boyutlarının **besleyeni yok** — kolonlar var, her satırda `null`. `BEKLEYEN(13.1)` kodun içinde (`record.ts`) ve gerekçesiyle duruyor: ülke IP'den türer, IP hiçbir yerde durmuyor (`ANALYTICS §2`), yani besleyen ancak kenar katmanının ülke üstbilgisi olabilir; dil ise atıcının bağlamında zaten var ve `EventContext`e eklenebilir. "Olay toplama" görevi bu iki boyut ölçülmeden tam sayılmaz — uydurulmuş bir dil boş dilden kötüdür, ama boş bir dil de eksiktir.
+- [x] (13.2) **UTM → sipariş eşleşmesi:** link UTM → sunucu oturumu → sipariş; `acquisition_source` ilk siparişte (07 ile); kampanya ROI raporu (ciro + gider yan yana, 12'den) · `touches: supabase/migrations/0036_analytics_signals.sql, apps/web/lib/analytics/{attribution,utm,read}.ts, apps/web/lib/order/checkout-draft.ts`
   - *Bitti:* "kampanya X → N sipariş / € ciro / € gider" tablosu çıkıyor
   - **Gider sütunu HAZIR** (12.5, 28.07): `MoneyMovementService.campaignSpend(from, to)` kampanya başına net reklam giderini veriyor; etiketsiz gider `campaign: null` kovasında görünür. Bu görev ciro sütununu (UTM↔sipariş) ekleyip ikisini yan yana koyacak — gider tarafı yeniden hesaplanmaz.
   - **Durum (04.08) — ZİNCİRİN TAMAMI BİTTİ; kalan yalnız ekranın tabloyu bağlaması (13.8).**
@@ -54,7 +71,7 @@
       - **Süzgeç SİPARİŞ tarihinde, teslim gününde değil.** Var olan `order_counts` teslim gününe bakıyor; bugün verilen sipariş üç gün sonra teslim edilir, yani teslim gününe göre okunan bir dönem cirosu kampanya giderinin dönemiyle **hiç hizalanmaz** ve ROI tablosunun iki sütunu farklı dönemleri anlatırdı. Operasyon şeridi bu yüzden "yaklaşık doğru" bir ciro yazmayı reddetmişti — doğru yapmıştı.
       - **"Hangi sipariş ciro sayılır" artık TEK TANIM** (`analytics_order_base` görünümü): taslak/iptal/iade dışarıda. Üç okuma (kampanya cirosu · dönem cirosu · segment) aynı yerden okuyor — üç kez yazılsaydı biri iadeyi düşer öteki düşmezdi ve **aynı ekranda iki farklı ciro** belirirdi, hiçbiri hata vermeden. Bir test tam olarak bunu çiviliyor: iki okumanın toplamı eşit.
       - **Kanal ayrı satır:** karışık ölçüm yalan söyler (`ANALYTICS §3`) — B2B'nin tek siparişi B2C'nin ortalamasını savurur. Toplamak okuyanın kararı.
-- [~] (13.3) **Huni + sepette bırakma:** ziyaret → ürün → sepet → checkout → sipariş dönüşüm oranları; terk noktası
+- [x] (13.3) **Huni + sepette bırakma:** ziyaret → ürün → sepet → checkout → sipariş dönüşüm oranları; terk noktası
   - *Bitti:* huni her aşamada sayı/oran veriyor
   - **Durum (04.08) — TERK KIRILIMI TAMAMLANDI; huninin kendisi 13.8'de çizili, atıcıları bekliyor.**
     - **Özet `blocked_reason`'ı taşımıyordu ve bu sessiz bir kayıptı** (0035 düzeltildi): sebep yalnız ham defterde duruyordu, yani huninin en değerli kolonu hiçbir ekrana ulaşmıyordu. *"Checkout'ta %38 düşüyor"* tek başına aksiyon üretmez; *"%38'in yarısı asgari sepet"* üretir.
@@ -66,7 +83,7 @@
       - **Defterde bir okuma açıldı** (`wasRecordedInSession`) ve "okuma metodu yok" kuralını çiğnemiyor: yasak EKRAN okumasınadır. Bu bir varlık sorgusu — tek satır, `(session_key, created_at)` indeksinden, yalnız oturum başına bir kez sayılan tiplerde. Tarih süzgeci **bölüm budaması** için şart, yoksa 25 ayın tüm bölümleri taranırdı.
       - **Yarış kabul edildi:** iki eşzamanlı render ikisi de "yok" görebilir. Yenileme sıralıdır ve ters ödünleşme (kilit) en sıcak yola yazma maliyeti eklerdi. En kötü hâlde bir oturum iki kez sayılır; bugünkü hâlde ise HİÇ sayılmıyor.
       - **`date_unavailable` terk sebebi eklendi** (müşteri şeridinin ölçümü): "seçtiğiniz güne teslimat yok" gerçek bir sürtünme. **Dört hâl bilerek EKLENMEDİ** — `cart_unreachable` · `warehouse_unresolved` · `order_not_placed` bizim arızamız (huniye yazılsalardı müşteri vazgeçmiş görünürdü; yerleri `error_log`), `address_missing` ise checkout'un normal ilk hâli (engel sayılsaydı her oturum bir `checkout_blocked` üretir ve olay değerini kaybederdi).
-- [~] (13.4) **Talep sinyalleri:** ürün-ilgi (çok bakılıp az alınan), site içi arama + **sıfır-sonuç** (talep/çeşit sinyali), aday ürün talep panosu (**beğeniler `ProductFeedback`'ten okunur**, analitikten değil)
+- [x] (13.4) **Talep sinyalleri:** ürün-ilgi (çok bakılıp az alınan), site içi arama + **sıfır-sonuç** (talep/çeşit sinyali), aday ürün talep panosu (**beğeniler `ProductFeedback`'ten okunur**, analitikten değil)
   - *Bitti:* sıfır-sonuç aramalar listeleniyor; ürün-ilgi sıralaması çıkıyor
   - **Durum (04.08) — İKİ SİNYAL DE TAMAMLANDI. Aday ürün panosu bu görevde DEĞİL, `/operations/feedback`'te çalışıyor** (operasyon + arka uç şeritlerinin ortak tespiti; görev satırının kendi cümlesi zaten öyle diyordu).
     - **İki ayrı özet tablosu, `analytics_daily`'ye kolon DEĞİL:** ürünü ya da arama terimini günlük özete boyut olarak eklemek satır sayısını katalog büyüklüğüyle (ve arama çeşitliliğiyle) çarpardı; huni/ısı/seri okumaları da o şişmiş tabloyu taramak zorunda kalırdı.
@@ -95,11 +112,12 @@
     **Sayı ile liste AYNI ölçütten çıkar** (aynı `case` ifadesi) — köprünün iki ucu farklı sayı gösterirse köprü zaten çalışmıyor demektir; test bunu sınıyor.
     **Kohort tarafı 13.2'nin `newCustomerCount` sütunundan gelir:** "bu kampanyadan gelen tekrar alıyor mu" sorusu ayrı bir tabloya değil, kampanya cirosu satırının içine düştü — sipariş sayısı ile yeni müşteri sayısının farkı zaten tekrar siparişi anlatıyor.
     **Boş segment de dönülür** (`customerCount: 0`): "uyuyan müşteri yok" ile "uyuyan müşteri hesaplanmıyor" farklı cümlelerdir; satırı hiç göndermeseydik ekran ikisini ayıramazdı.
+  - **SATIR NEDEN HÂLÂ `[~]` (06.08 ölçümü):** bitti-kriteri iki şey istiyor — liste **ve export**. Liste çıkıyor, **dışa alma yok.** 13.8 künyesi "Dışa al ↓" düğmesini bilerek kodlamamıştı ve o gün gerekçesi doğruydu: *"bugün dışa alınacak tek küme müşteri grupları ve o blok `absent`"* — boş bir dışa alma düğmesi tutulmayan bir söz olurdu. **Ama o gerekçe aynı gün eskidi:** segment bloğu bağlandı, blok artık `absent` değil. Yani düğmenin önündeki engel kalktı, düğme eklenmedi. Kalan iş: `analytics_segment_members` çıktısını CSV'ye veren bir kapı (emsal `lib/accounting/export.ts` — sütunlar açık yazılır) + ekranda düğme (13.8, operasyon şeridi).
 - [x] (13.6) **Kaydırma sinyal kalitesi:** `ProductFeedback.dwell_ms` + desen ile düşük kaliteli kaydırmayı zayıflatma (domain-core ağırlık); ödül müşteriye tam, analiz korunur
   - *Bitti:* hep-aynı/çok-hızlı swipe analizde zayıf ağırlıkta
   - **Durum (04.08) — İŞİ 17.3'TE TAMAMLANMIŞTI, satır bugüne dek yanlış bilgi veriyordu.** `weighSwipesByProduct` + `signal-quality` motorda, `getProductSignals` üzerinden iki ekranda kullanılıyor (aday panosu + ürün skorları). Analitiğin ekleyeceği yeni bir hesap yok; olsa olsa bu ağırlığı görselleştirir ve o 13.8'in işidir.
   - **Neden kapatıldı:** `CLAUDE §5` tamamlanmış satırın vaadini denetliyor; **tersi de yanlıştır** — işi inmişken `[ ]` duran satırı okuyan ajan aynı şeyi ikinci kez yazar ve aynı soru iki ekranda iki cevap verir. Üç şerit de aynı tespiti yapmıştı.
-- [~] (13.7) **AI içgörü:** `packages/ai` toplu veriden anlatı/anormallik ("X kaynağı düştü", "Y çok bakılıp az alınıyor")
+- [x] (13.7) **AI içgörü:** `packages/ai` toplu veriden anlatı/anormallik ("X kaynağı düştü", "Y çok bakılıp az alınıyor")
   - *Bitti:* haftalık özet anlatısı üretiliyor
   - **Durum (04.08) — GÖREV + İŞ + OKUMA KAPISI TAMAMLANDI; ekranın bloğu 13.8'de bağlanacak.** `analyticsInsightTask` (`packages/ai`) · `analytics_insight` işi (pazartesi 04:20) · `readWeeklyInsight()`.
     - **"Modele ham satır GİTMEZ, özet gider" artık bir cümle değil, bir TİP.** `AnalyticsInsightInput` yalnız toplanmış sayılar taşıyor — olay satırı, oturum anahtarı, yol ya da müşteri kimliği geçemez. Serbest bir "veri" alanı bıraksaydık kural bir temenni olurdu; şimdi derleme hatası.
