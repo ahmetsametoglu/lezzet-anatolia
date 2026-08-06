@@ -5,7 +5,7 @@ import { normalizeEmail } from '@lezzet/helper';
 import { brand } from '@lezzet/brand';
 import type { Locale } from '@lezzet/i18n';
 import { createServiceRoleClient, EmailVerificationService, UserProfileService } from '@lezzet/database';
-import { captureError, maskEmail, SOURCES } from '@lezzet/observability';
+import { captureError, logger, maskEmail, SOURCES } from '@lezzet/observability';
 import { OtpCodeEmail, otpSubject, sendEmail } from '@lezzet/email';
 import { createClient } from '@/lib/supabase/server';
 import { resolvePostLoginRedirect } from './redirect';
@@ -45,6 +45,39 @@ import { seedPreferredLanguage } from '@/lib/identity/preferred-language';
 type AuthResult<T> = { data: T | null; errorKey: AuthErrorKey | null };
 
 /**
+ * **Deterministik dev kodu** (00.9 Parti 3b · `docs/talep/musteri-otp-test-kapisi.md`).
+ *
+ * E2E misafir checkout'un kimlik adımında duruyordu: kod e-postayla gidiyor ve test onu bilemiyor.
+ * Kodu bir dosyaya ya da log'a yazmak ÇÖZÜM DEĞİL (`OBSERVABILITY §5`: OTP hiçbir hâlde, maskeli
+ * bile yazılmaz — kaydı okuyan biri o kodla giriş yapabilirdi). Geriye tek yol kalıyor: testin
+ * bildiği bir kodu kullanmak.
+ *
+ * **Sınadığı şey akışın TAMAMI:** hash eşleşmesi, süre, deneme sayacı, kilitlenme, tek-kullanım,
+ * `auth.users` → `Customer` trigger zinciri. Sabit olan yalnız kodun kendisi — üretimi ve gerçek
+ * teslimatı sınamak ayrı bir senaryonun işi (Katman 2).
+ *
+ * ── İKİ KİLİT, `DEV_AUTH_BYPASS` emsali (`guard.ts`) ─────────────────────────
+ *   1. `NODE_ENV === 'production'` → env ne olursa olsun `null`.
+ *   2. `OTP_TEST_CODE` VAR ve tam altı rakam olmalı; bozuk değer sessizce yok sayılır.
+ * İkincisi bir biçim kontrolünden fazlası: yarım yazılmış bir env değeri "kod sabitlendi" sanılıp
+ * gerçek akışı zayıflatamaz — koşul tutmazsa rastgele koda geri düşülür.
+ *
+ * Kod LOGLANMAZ, uyarı yalnız modun açık olduğunu söyler.
+ */
+let otpTestWarned = false;
+
+function devOtpCode(): string | null {
+  if (process.env.NODE_ENV === 'production') return null;
+  const raw = process.env.OTP_TEST_CODE;
+  if (!raw || !/^\d{6}$/.test(raw)) return null;
+  if (!otpTestWarned) {
+    otpTestWarned = true;
+    logger.warn({ context: 'auth/otp' }, 'OTP_TEST_CODE AKTİF — sabit doğrulama kodu, mail gönderilmiyor (yalnız dev/test)');
+  }
+  return raw;
+}
+
+/**
  * Tek kullanımlık kod gönderir. Kendi OTP tablomuza (SHA-256 hash) yazar; plain kodu
  * Resend ile yollar. Supabase mail göndermez. Kod sızdırmamak için hata mesajları geneldir.
  */
@@ -53,8 +86,15 @@ export async function sendEmailOtp(emailRaw: string): Promise<AuthResult<true>> 
   if (!email) return { data: null, errorKey: 'invalid_email' };
 
   const service = new EmailVerificationService(createServiceRoleClient());
-  const requested = await service.requestCode(email);
+  // Deterministik dev kodu: e2e'nin kodu bilebilmesi için (aşağıdaki künye).
+  const testCode = devOtpCode();
+  const requested = await service.requestCode(email, testCode ?? undefined);
   if (requested.status !== 'ok') return { data: null, errorKey: requested.status };
+
+  // **Test kodundayken Resend'e HİÇ GİDİLMEZ.** Gönderilseydi her e2e koşusu gerçek bir mail
+  // üretirdi (kota, gürültü, kontrolsüz alıcı). Kodun kendisi zaten biliniyor; mailin taşıyacağı
+  // yeni bir bilgi yok. Gerçek teslimat zinciri ayrı bir senaryonun işi (Katman 2, seyrek koşar).
+  if (testCode) return { data: true, errorKey: null };
 
   // Dil MAİL için okunuyor, hata cümlesi için değil: cümleyi artık ekran kuruyor (`AuthResult`
   // künyesi). Kodun gittiği mailin dili ise sunucuda belli olmak zorunda.

@@ -40,8 +40,21 @@ export class EmailVerificationService extends BaseDbService<EmailVerification, E
   }
 
   /** Yeni kod üretir, hash'ini DB'ye yazdırır; plain kodu (mail için) döner. */
-  async requestCode(email: string): Promise<RequestCodeResult> {
-    const code = generateSixDigitCode();
+  /**
+   * @param code Kodu ÇAĞIRAN verebilir; verilmezse rastgele üretilir.
+   *
+   * Parametre e2e için açıldı (00.9 Parti 3b · `docs/talep/musteri-otp-test-kapisi.md`): testin
+   * kodu bilebilmesi lazım ama kod hiçbir yere YAZILAMAZ (`OBSERVABILITY §5` — OTP maskeli bile
+   * loglanmaz). Geriye tek yol kalıyor: kodu çağıranın belirlemesi.
+   *
+   * **Yönü de doğru:** "hangi kod" bir I/O kararı değil, uygulama politikasıdır (`CLAUDE §1` —
+   * database saf I/O'dur). Servis artık yalnız hash'liyor ve yazıyor; süre, deneme sayacı,
+   * kilitlenme ve tek-kullanım kuralları değişmedi, yani test gerçek akışı sınıyor.
+   *
+   * **Üretimde kimse kod GEÇMEZ** ve tek kilit bu değil: geçen tek yer `sendEmailOtp` ve orası
+   * `NODE_ENV !== 'production'` + biçimi doğrulanmış `OTP_TEST_CODE` şartına bağlı.
+   */
+  async requestCode(email: string, code: string = generateSixDigitCode()): Promise<RequestCodeResult> {
     const tokenHash = sha256(code);
     const expiresAt = new Date(Date.now() + TTL_MINUTES * 60_000).toISOString();
 
