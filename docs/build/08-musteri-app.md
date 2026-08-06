@@ -185,6 +185,25 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
     **Havale · çek · vadeli yalnız B2B'ye** (kullanıcı kararı). Bugün `resolveCheckoutOptions:55` `bank_transfer`i HER siparişte, misafire bile sunuyor — kod tarafı arka uç şeridine düştü; metin şimdiden doğruyu yazıyor.
     **Gizlilik politikasına analitik cümlesi eklendi:** sayfa "takip çerezi kullanmıyoruz" diyordu ama ölçümden hiç söz etmiyordu. Ölçümün çerezsiz ve kimliksiz olduğu (günlük değişen, ertesi gün atılan anahtar) üç dilde yazıldı — `ANALYTICS.md` ile birebir.
     **Arabulucu:** 178'deki karar tekrarlandı (kullanıcı, 04.08). Uyarı bir kez daha yapıldı — L612-1/R616-1 aboneliği ve CGV'de ad belirtmeyi zorunlu kılıyor, cümleyi kaldırmak yükümlülüğü kaldırmıyor. Kullanıcı bilerek bu yönde karar verdi; `uyusmazlik` bölümü artık arabulucudan hiç söz etmiyor, yerine "her türlü sorununuzu memnuniyetle çözeriz, bir talebi çözüme ulaşmadan kapatmayız" var. Açığın kaydı bu satırdır: arabuluculuk üyeliği alındığı gün `uyusmazlik` bölümüne kurumun adı ve iletişimi eklenecek.
+  - **KURAL (kullanıcı kararı 06.08): statik metinler YAYIN ÖNCESİ bir kez daha değerlendirilir.**
+    Bu beş sayfa bir "içerik" değil, **müşteriyle aramızdaki mutabakat** — sipariş verildiğinde
+    yürürlüğe giren bir sözleşme metni. Kodun geri kalanı yanlışsa hata verir; bu metinler yanlışsa
+    sessizce bağlayıcı olur. O yüzden yayın günü ayrı bir kapı: tek tek okunur ve o günün gerçeğiyle
+    karşılaştırılır. Tek seferlik bir iş değil, **yayın kontrol listesinin maddesi**.
+    **Bugün bilinen ve o kapıda karara bağlanacak olanlar:**
+    · **Taşıyıcı** — Sendcloud düşünülüyor, netleşmedi (`docs/talep/arka-uc-kargo-sendcloud.md`).
+      Gizlilik listesindeki "kargo firması" satırı bugün **var olmayan bir alıcıyı** sayıyor; kanal
+      açılınca taşıyıcının ADIYLA yazılacak, açılmazsa satır düşecek. Teslimat/SSS/satış koşullarının
+      kargo bölümleri de aynı karara bağlı (08.5 takip ekranı dâhil).
+    · **AI sağlayıcısı** — Claude düşünülüyor, netleşmedi. Talep metinlerini süzen sağlayıcı bir
+      **alt-işleyicidir** ve müşterinin KENDİ YAZDIĞI serbest metni işliyor; gizlilik listesinde adı
+      hiç geçmiyor. Bugünkü üçlü ("ödeme sağlayıcısı / e-posta servisi / kargo firması") onu
+      kapsamıyor. Sağlayıcı netleşince adı + yeri + aktarım dayanağı yazılacak.
+    · **Aktarım dayanağı** — Stripe İrlanda (AB içi), Resend ve AI sağlayıcıları **ABD**. Metin
+      bugün "sunucular AB içindedir" deyip aktarımdan hiç söz etmiyor; barındırma için doğru, alt
+      işleyiciler için eksik.
+    · **Tüketici arabulucusu** — üyelik alınmadı (karar 04.08, gerekçe yukarıda). Yayın öncesi
+      yeniden bakılacak maddelerden biri.
   - **Neden hâlâ `[~]`:** gizlilik politikası hizmet sağlayıcıları hâlâ **kategori adıyla** anıyor ("ödeme sağlayıcısı", "e-posta gönderim servisi"). GDPR şeffaflığı ad ister ve barındırıcıda bu zaten yapıldı (170). Hangi sağlayıcıların gerçekte kullanıldığı arka uç şeridine soruldu (`docs/talep/statik-metin-soz-denetimi.md`); cevap gelince üç dilde adıyla yazılacak ve satır kapanır.
 - [~] (08.9) **Analitik olay atma:** sunucu tarafı `page_view/product_view/place_resolved/search/add_to_cart/cart_blocked/checkout_start/checkout_blocked/order_placed/share`; UTM'in ilk olaya bindirilmesi (13'e besleme)
   - *Bitti:* olaylar çerezsiz kaydediliyor; kampanya etiketi oturumun ilk olayıyla kapıya ulaşıyor
