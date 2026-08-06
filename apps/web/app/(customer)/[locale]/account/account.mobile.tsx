@@ -5,6 +5,7 @@ import { Card } from '@/components/customer/ui/card';
 import { CardHead, ConsentSwitch, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { AddressesCard } from './components/addresses-card';
 import { CouponsCard } from './components/coupons-card';
+import { DeleteAccount } from './components/delete-account';
 import { ProfileCard } from './components/profile-card';
 
 /**
@@ -82,6 +83,10 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
       <Link href="/legal/privacy" className="px-1 font-sans text-micro font-bold text-olive transition-colors hover:text-olive-dark">
         {t.dataLink}
       </Link>
+      {/* Mobilde de veri satırının hemen altında — aynı bağlam, kabuğu ince (08.21). */}
+      <span className="px-1">
+        <DeleteAccount t={t} />
+      </span>
     </div>
   );
 }

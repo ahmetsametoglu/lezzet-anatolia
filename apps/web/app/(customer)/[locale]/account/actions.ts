@@ -208,3 +208,35 @@ export async function redeemPointsAction(): Promise<CustomerResult<{ code: strin
     return { data: null, errorKey: customerErrorKey(err) };
   }
 }
+
+/**
+ * **Hesabı silme** (08.21 · GDPR md. 17) — geri alınamaz.
+ *
+ * ── KİMLİK İSTEMCİDEN HİÇ ALINMAZ ────────────────────────────────────────────
+ * Eylem parametre almıyor ve bu bilinçli bir kalkan: `anonymize` kime ait olduğuna BAKMAZ, verilen
+ * kimliği anonimleştirir (arka ucun künyesi bunu açıkça söylüyor). Bir kimlik parametresi olsaydı
+ * guard'ın "bu benim hesabım mı" sorusunu doğru sorması gerekirdi; hiç sormamanın tek güvenli yolu
+ * soruyu ortadan kaldırmak — silinecek hesap, oturumun kendisidir.
+ *
+ * ── SİLME BİR `DELETE` DEĞİL ─────────────────────────────────────────────────
+ * Kimlik alanları boşalır, sipariş ve fatura kayıtları YASAL OLARAK kalır (faturadaki ad ve adres
+ * dâhil — `order.address_snapshot` Fransız hukukunda zorunlu). Ürün puanı da kimliksiz kalır:
+ * silmek başka müşterilerin gördüğü skoru geriye dönük değiştirirdi. Ekran bunu onay diyaloğunda
+ * AÇIKÇA söyler; söylemezse "hesabımı sildim" diyen müşteri faturasında adını gördüğü gün haklı
+ * olarak yanıltıldığını düşünür.
+ *
+ * `revalidateAccount` ÇAĞRILMAZ: oturum bu çağrıyla ölüyor, tazelenecek bir hesap sayfası yok.
+ * Yönlendirmeyi istemci yapar — sunucudan `redirect` atmak, eylemin sonucunu ekrana söyleme
+ * fırsatını da kapatırdı.
+ */
+export async function deleteAccountAction(): Promise<CustomerResult<true>> {
+  try {
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+
+    await new UserProfileService(serviceDb()).anonymize(customerId);
+    return { data: true, errorKey: null };
+  } catch (err) {
+    return { data: null, errorKey: customerErrorKey(err) };
+  }
+}

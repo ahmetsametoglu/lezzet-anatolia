@@ -5,6 +5,7 @@ import { Card } from '@/components/customer/ui/card';
 import { CardHead, ConsentSwitch, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { AddressesCard } from './components/addresses-card';
 import { CouponsCard } from './components/coupons-card';
+import { DeleteAccount } from './components/delete-account';
 import { ProfileCard } from './components/profile-card';
 
 /**
@@ -54,6 +55,10 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
             <Link href="/legal/privacy" className="cursor-pointer font-sans text-note font-bold text-olive transition-colors hover:text-olive-dark">
               {t.dataLink}
             </Link>
+            {/* Silme BU kartın içinde: veri kartı "verilerinize ne oluyor" sorusunun evi ve
+                silme o sorunun en uç cevabı. Ayrı bir kart olsaydı sayfada kendi başına bir
+                bölüm gibi durur, hesabın normal işlerinden biri gibi okunurdu (08.21). */}
+            <DeleteAccount t={t} />
           </Card>
         </div>
 
