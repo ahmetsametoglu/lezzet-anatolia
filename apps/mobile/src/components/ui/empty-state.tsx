@@ -40,18 +40,18 @@ const styles = StyleSheet.create((theme) => ({
   container: {
     alignItems: 'center',
     gap: theme.space.xl,
-    paddingVertical: theme.space['8xl'],
-    paddingHorizontal: theme.space['7xl'],
+    paddingVertical: theme.space['9xl'],
+    paddingHorizontal: theme.space['8xl'],
   },
   title: {
-    fontFamily: theme.font.display,
+    fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
     fontSize: theme.text['card-title-sm'],
     fontWeight: theme.text['card-title-sm--font-weight'],
     color: theme.colors.ink,
     textAlign: 'center',
   },
   description: {
-    fontFamily: theme.font.body,
+    fontFamily: theme.font.body[400],
     fontSize: theme.text.note,
     // Gövde satır aralığı: oran da token (`lead--line-height`) — ham çarpan yazılmadı.
     lineHeight: theme.text.note * theme.text['lead--line-height'],

@@ -68,7 +68,7 @@ const styles = StyleSheet.create((theme) => ({
   pill: {
     alignSelf: 'flex-start',
     height: theme.size.controlSm,
-    paddingHorizontal: theme.space['5xl'],
+    paddingHorizontal: theme.space['6xl'],
     borderRadius: theme.radius.pill,
   },
   shadow: {
@@ -81,7 +81,7 @@ const styles = StyleSheet.create((theme) => ({
   disabled: { borderColor: theme.colors['disabled-line'] },
   disabledLabel: { color: theme.colors['disabled-text'] },
   label: {
-    fontFamily: theme.font.body,
+    fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.button,
     fontWeight: theme.text['button--font-weight'],
   },

@@ -56,7 +56,7 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors['sand-50'],
   },
   glyph: {
-    fontFamily: theme.font.body,
+    fontFamily: theme.font.body[400],
     fontSize: theme.text.icon,
     color: theme.colors.ink,
     // Tek karakterlik chevron optik olarak yukarıda durur; satır yüksekliği hizayı düzeltir.

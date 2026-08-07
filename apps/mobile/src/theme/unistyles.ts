@@ -10,6 +10,7 @@ import {
 } from '@lezzet/design-tokens';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { appFont } from './fonts';
 import { parseLinearGradient } from './gradient';
 import { appMetrics } from './metrics';
 import { mapTokens } from './parse';
@@ -58,16 +59,11 @@ const gradient = {
 
 /*
   FONT AİLELERİ — token paketinin BİLİNÇLİ boşluğu: `customer.ts` "fontlar bilerek dışarıda…
-  RN tarafı fontlarını kendi yükleyicisiyle kurar" diyor. Ad burada, TEK yerde durur ki
-  yükleyici (expo-font + varlıklar; ayrı iş) geldiğinde tek dosya değişsin — 15 komponent değil.
-  Yüklenene kadar RN sistem fontuna düşer.
+  RN tarafı fontlarını kendi yükleyicisiyle kurar" diyor. Aile adları ve yüklenen varlıklar
+  `fonts.ts`te, TEK yerde; burada yalnız temaya bağlanır. Seam AĞIRLIKLA indekslenir
+  (`font.body[700]`) çünkü RN'de ağırlık ailenin ADININ İÇİNDEDİR — gerekçe `fonts.ts` başlığında.
 */
-const font = {
-  /** Başlık ailesi — Lora (tasarımda 88 kullanım; yalnız başlık ve ürün adı). */
-  display: 'Lora',
-  /** Metin ailesi — Karla (gövde, etiket, düğme, rozet). */
-  body: 'Karla',
-} as const;
+const font = appFont;
 
 /** Test tarafı bağlantı kanıtı için de ihraç edilir (`unistyles.test.ts`). */
 export const lightTheme = {

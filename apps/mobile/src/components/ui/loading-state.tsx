@@ -87,7 +87,7 @@ const styles = StyleSheet.create((theme) => ({
     borderWidth: theme.border.spinner,
   },
   label: {
-    fontFamily: theme.font.body,
+    fontFamily: theme.font.body[theme.text['card-title-sm--font-weight']],
     fontSize: theme.text.helper,
     fontWeight: theme.text['card-title-sm--font-weight'],
     color: theme.colors.muted,

@@ -54,7 +54,7 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.space['2xs'],
   },
   eyebrow: {
-    fontFamily: theme.font.body,
+    fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
     fontWeight: theme.text['eyebrow--font-weight'],
     letterSpacing: emToDp(theme.text['eyebrow--letter-spacing'], theme.text.eyebrow),
@@ -62,7 +62,7 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.terracotta,
   },
   title: {
-    fontFamily: theme.font.display,
+    fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],
     // Tasarım bu başlığı 21 px çiziyor; token'da o durak YOK, bölüm başlığının mobil kademesi
     // `h2-sm` (20). Ham değer kodlanmadı — 21'lik durak raporlandı.
     fontSize: theme.text['h2-sm'],

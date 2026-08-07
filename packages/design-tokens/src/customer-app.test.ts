@@ -14,6 +14,7 @@
 */
 import { describe, expect, it } from 'vitest';
 import {
+  customerAppBlur,
   customerAppColors,
   customerAppGradient,
   customerAppRadius,
@@ -39,8 +40,35 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     expect(composedColors.star).toBe('#d9a441'); // taban #d99a2b
     expect(composedColors['closed-bg']).toBe('#e9e2cf'); // taban #f0e9d6
     expect(composedColors['disabled-fill']).toBe('#b9b29e'); // taban #c9c3b0
+    // Token Kararlari #15: rolün RESMÎ değeri artık SICAK; web kendi turunda buna çekilecek.
+    expect(composedColors['on-image-soft']).toBe('#d5d0c2'); // taban #dfe3cf
     expect(composedRadius.card).toBe('20px'); // taban 18px
     expect(composedRadius.pill).toBe('22px'); // taban 26px
+  });
+
+  it('foto-üstü ROL ikilisi ayrışmaz: ad `on-image`, altyazı `on-image-soft`', () => {
+    /* Token Kararlari #14 tasarımı `on-image`e ÇEKTİ (`on-image-bright` açılmadı), #15 ise
+       `on-image-soft`u sıcak değere aldı. İkisi bir ÇİFT: ad ile altyazı aynı fotoğrafın üstünde
+       yan yana durur ve biri değişip öteki kalırsa çift soğuk/sıcak diye ayrışır. `on-image`
+       tabandan gelmeye devam ediyor (uygulama ezmiyor) — bu test o hizanın bekçisi. */
+    expect(composedColors['on-image']).toBe('#f5f1e6');
+    expect(customerAppColors).not.toHaveProperty('on-image');
+    expect(composedColors).not.toHaveProperty('on-image-bright');
+  });
+
+  it('örtü ailesinde `.72` KENDİ durağıdır — `.82`ye yuvarlanmaz', () => {
+    // #18: .82 metni okunur kılar (gradyanın ucu), .72 fotoğrafı soldurur (tükendi örtüsü).
+    // Aynı değere çekilseler "bu ürün alınamaz" bilgisi görsel olarak kaybolurdu.
+    expect(composedColors['scrim-72']).toBe('rgba(21, 23, 15, 0.72)');
+    expect(composedColors['scrim-heavy']).toBe('rgba(21, 23, 15, 0.82)');
+  });
+
+  it('krem cam iki durak + bulanıklık kuralı birlikte durur', () => {
+    // #17: saydamlık ile bulanıklık TEK yüzeyi tarif eder; biri token olup öteki olmasaydı
+    // çağıran yarım bir yüzey kurar ve altından akan metin çubuğu kirletirdi.
+    expect(composedColors['cream-glass-soft']).toBe('rgba(243, 239, 226, 0.90)');
+    expect(composedColors['cream-glass']).toBe('rgba(243, 239, 226, 0.96)');
+    expect(customerAppBlur.glass).toBe('8px');
   });
 
   it('üstbaşlık ÜÇ alt-anahtarıyla birlikte ezilir — yarım ezme yok', () => {
@@ -61,11 +89,23 @@ describe('customer-app ↔ customer kompozisyonu', () => {
   });
 
   it('uygulamaya-YENİ anahtarlar tabanda yok, birleşimde var', () => {
-    for (const key of ['sand-150', 'sand-250', 'error', 'error-bg', 'scrim', 'brand-google']) {
+    for (const key of [
+      'sand-150',
+      'sand-250',
+      'error',
+      'error-bg',
+      'scrim',
+      'scrim-72',
+      'cream-glass',
+      'cream-glass-soft',
+      'accent-leaf',
+      'ink-deep',
+      'brand-google',
+    ]) {
       expect(customerColors, `${key} tabanda olmamalı`).not.toHaveProperty(key);
       expect(composedColors, `${key} birleşimde olmalı`).toHaveProperty(key);
     }
-    for (const key of ['screen-title', 'sheet-title', 'helper', 'button']) {
+    for (const key of ['screen-title', 'sheet-title', 'helper', 'button', 'badge', 'badge-sm']) {
       expect(customerText, `${key} tabanda olmamalı`).not.toHaveProperty(key);
       expect(composedText, `${key} birleşimde olmalı`).toHaveProperty(key);
     }
@@ -75,8 +115,19 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     }
   });
 
-  it('fark/yeni dağılımı sabit: 7 fark (5 renk + 2 yarıçap), 30 yeni', () => {
-    expect(sharedKeys(customerColors, customerAppColors)).toHaveLength(5);
+  it('rozet kademesi TEK kaynaktan: küçük boy yalnız ÖLÇÜ farkıdır', () => {
+    /* #16 — ağırlık/aralık `badge-sm` için ikinci kez YAZILMAZ; `badge`inkinden okunur. Alt
+       anahtarların doğması, iki rozetin bir gün farklı görünmeye başlaması demek olurdu. */
+    expect(composedText.badge).toBe('12.5px');
+    expect(composedText['badge--font-weight']).toBe('700');
+    expect(composedText['badge--letter-spacing']).toBe('0.06em');
+    expect(composedText['badge-sm']).toBe('10px');
+    expect(composedText).not.toHaveProperty('badge-sm--font-weight');
+    expect(composedText).not.toHaveProperty('badge-sm--letter-spacing');
+  });
+
+  it('fark/yeni dağılımı sabit: 8 fark (6 renk + 2 yarıçap), 41 yeni', () => {
+    expect(sharedKeys(customerColors, customerAppColors)).toHaveLength(6);
     expect(sharedKeys(customerRadius, customerAppRadius)).toHaveLength(2);
     // Tipografide tek çakışma üstbaşlığın üç alt-anahtarıdır; dördüncü bir çakışma bilinçsizdir.
     expect(sharedKeys(customerText, customerAppText)).toEqual([
@@ -90,14 +141,15 @@ describe('customer-app ↔ customer kompozisyonu', () => {
       Object.keys(customerAppText).length +
       Object.keys(customerAppRadius).length +
       Object.keys(customerAppShadow).length +
+      Object.keys(customerAppBlur).length +
       Object.keys(customerAppGradient).length;
-    expect(appTotal).toBe(37); // 7 fark + 30 uygulamaya-yeni
+    expect(appTotal).toBe(49); // 8 fark + 41 uygulamaya-yeni
   });
 
   it('birleşim tabanı BÜYÜTÜR, küçültmez — hiçbir taban anahtarı kaybolmaz', () => {
     for (const key of Object.keys(customerColors)) expect(composedColors).toHaveProperty(key);
     expect(Object.keys(composedColors)).toHaveLength(
-      Object.keys(customerColors).length + Object.keys(customerAppColors).length - 5,
+      Object.keys(customerColors).length + Object.keys(customerAppColors).length - 6,
     );
   });
 

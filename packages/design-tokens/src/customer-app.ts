@@ -18,11 +18,13 @@
   ait olduğu adından değil, geldiği dosyadan okunur.
 
   İKİ TÜR TOKEN var, ikisi de burada:
-    (1) FARK (7) — tabanla AYNI adı taşıyan, uygulamada başka değerde olan token. Web değeri
+    (1) FARK (8) — tabanla AYNI adı taşıyan, uygulamada başka değerde olan token. Web değeri
         `customer.ts`te dokunulmadan durur; kompozisyonda uygulama değeri kazanır.
-    (2) UYGULAMAYA-YENİ (30) — tabanda hiç olmayan token: hata ailesi · örtü · gölge · fotoğraf
-        gradyanı · marka renkleri · uygulama tipografi kademeleri · yarıçap setinin iki kademesi.
-  Kaynak: `design/project/Mobil - Token Kararlari.md` (13 karar) + `Mobil - Musteri v3.dc.html`.
+    (2) UYGULAMAYA-YENİ (41) — tabanda hiç olmayan token: hata ailesi · örtü · krem cam · vurgu
+        yaprağı · gölge · fotoğraf gradyanı · bulanıklık · marka renkleri · uygulama tipografi
+        kademeleri · yarıçap setinin iki kademesi.
+  Kaynak: `design/project/Mobil - Token Kararlari.md` (24 karar; 14–24 ikinci tur) +
+  `Mobil - Musteri v3.dc.html`.
 
   Değerler tabandaki gibi CSS dizgesi tutulur ("20px", "0.18em", "rgba(…)"); birim/parse
   dönüşümü tüketicinin (Unistyles teması) işidir, kaynağın değil — `customer.ts` başlığındaki
@@ -44,6 +46,12 @@ export const customerAppOverrides = {
      uygulamada bir tık daha gri; bant zemini ile rozet arkası artık ayırt edilebilir. */
   'closed-bg': '#e9e2cf', // "Teslim edildi" rozet zemini (taban: #f0e9d6)
   'disabled-fill': '#b9b29e', // engelli düğme dolgusu (taban: #c9c3b0)
+  /* Fotoğraf üstü ALTYAZI (çeşit satırı, imza) — Token Kararlari #15: rolün RESMÎ değeri artık
+     SICAK #d5d0c2 ve referansı mobildir. Tabandaki #dfe3cf soğuk yeşilimsi bir gri; krem paletin
+     üstünde yeşile kaçıyordu ve fotoğrafın rengine göre bazen yosun gibi okunuyordu.
+     Web kullanımları AYRI bir turda (web şeridi) bu değere çekilecek — `customer.ts` bu turda
+     bilerek DEĞİŞMEDİ, yani parite testi ve `globals.css` ikizliği bozulmadı. */
+  'on-image-soft': '#d5d0c2',
 } as const satisfies Record<string, string>;
 
 /* ── (2) KUM SKALASININ İKİ YENİ KADEMESİ — Token Kararlari #2 ───────────────
@@ -78,7 +86,40 @@ export const customerAppError = {
 export const customerAppScrim = {
   'scrim-soft': 'rgba(21, 23, 15, 0.28)', // fotoğrafın ÜST kenarı, hafif karartma
   scrim: 'rgba(21, 23, 15, 0.45)', // sayfa örtüsü (sheet/dialog arkası)
+  /* TÜKENDİ/PASİF örtüsü — Token Kararlari #18. `.82`'ye YUVARLANMADI ve bu bir incelik değil,
+     iki ayrı iş: `.82` metin koruma gradyanının ucudur ve işi FOTOĞRAFI OKUNUR KILMAK; `.72`'nin
+     işi fotoğrafı SOLDURMAK. Aynı değere çekilseler rozet ile gradyanın ucu birbirine karışır ve
+     "bu ürün alınamaz" bilgisi görsel olarak kaybolurdu. Ad kararın kendi adıdır (`scrim-72`):
+     ailenin soft/heavy sıfatları yoğunluk sırasını anlatıyor, bu durak ise bir ROL taşıyor. */
+  'scrim-72': 'rgba(21, 23, 15, 0.72)',
   'scrim-heavy': 'rgba(21, 23, 15, 0.82)', // fotoğrafın ALT kenarı, üstünde başlık okunur
+} as const satisfies Record<string, string>;
+
+/* ── KREM CAM (cream-glass) — Token Kararlari #17 ─────────────────────────────
+   Yarı saydam krem: ARKASINDAKİ İÇERİĞİ ELEYEN ama tamamen kapatmayan yüzey. Rengi `sand-50`
+   (#f3efe2) ile aynı mürekkeptir; taşıdığı yeni bilgi renk değil SAYDAMLIKTIR — opak `sand-50`
+   ile kurulduğunda çubuk sayfadan kopuk bir şerit gibi duruyor, altından akan liste kayboluyordu.
+
+   İKİ DURAK, iki farklı iş:
+   · `.90` — fotoğrafın ÜSTÜNDE yüzen yuvarlak düğme (geri, paylaş). Altında fotoğraf var,
+     biraz daha geçirgen olması düğmenin fotoğrafa ait olduğunu söylüyor.
+   · `.96` — YAPIŞKAN çubuk ve alt sekme çubuğu. Altından metin akıyor; okunabilirlik için
+     neredeyse opak, ama "neredeyse" kısmı kaydırmanın sürdüğünü gösteriyor.
+   Tasarımdaki .92/.94 rozet zeminleri buraya DAHİL DEĞİL — onlar rozet ailesinin işi (#16). */
+export const customerAppCreamGlass = {
+  'cream-glass-soft': 'rgba(243, 239, 226, 0.90)', // foto üstü yüzen daire
+  'cream-glass': 'rgba(243, 239, 226, 0.96)', // yapışkan çubuk, alt sekme çubuğu
+} as const satisfies Record<string, string>;
+
+/* ── VURGU YAPRAĞI + DERİN MÜREKKEP — Token Kararlari #19 ────────────────────
+   "TAKİP" çipinin ikilisi. `accent-leaf` paletin zeytininden (`olive`) AYRI bir tondur: zeytin
+   markanın rengi, bu ise bir DURUM işareti (kargo takibi açık) ve zeytin zeminli bir sayfada
+   zeytin bir rozet görünmez olurdu. `ink-deep` ise scrim ailesinin rgb(21,23,15) mürekkebinin
+   KATI hâli — örtüde zaten kullanılan renk, burada metin olarak resmî ad alıyor; `ink`
+   (#343b41) yerine o seçildi çünkü açık yeşil zeminde #343b41 mavimsi duruyor. */
+export const customerAppAccent = {
+  'accent-leaf': '#a9c46b', // "TAKİP" çipi zemini
+  'ink-deep': '#15170f', // "TAKİP" çipi metni (scrim mürekkebinin katısı)
 } as const satisfies Record<string, string>;
 
 /* ── MARKA renkleri — Token Kararlari #5 ─────────────────────────────────────
@@ -88,8 +129,9 @@ export const customerAppScrim = {
 export const customerAppBrand = {
   /* AD ÇARPIŞMASI: Token Kararlari #5 bunu "brand-whatsapp" diye yazmıştı, ama o ad ZATEN
      operasyonun koyultulmuş ikon yeşiline (#128c4b) ait — aynı CSS adı iki değer taşıyamaz.
-     Geçici resmî ad `brand-whatsapp-pure`: WhatsApp'ın kanonik marka yeşili. Tasarım onayı
-     bekleniyor (iki adın tek ada indirilmesi ya da operasyon tonunun ayrılması). */
+     `brand-whatsapp-pure` (WhatsApp'ın kanonik marka yeşili) Token Kararlari #21 ile RESMÎ ad
+     oldu; operasyonun `brand-whatsapp`ı ayrı bir kayıt olarak yerinde kalıyor — ikisi aynı
+     markanın iki farklı bağlamdaki tonudur, tek ada indirilmedi. */
   'brand-whatsapp-pure': '#25d366',
   'brand-google': '#4285f4', // Google ile giriş düğmesi
   /* Apple Pay / Apple ile giriş — ham siyah. `ink`e ÇEKİLMEZ: marka işareti paletin mürekkebi
@@ -103,13 +145,15 @@ export const customerAppBrand = {
   'brand-mastercard-alt': '#f79e1b',
 } as const satisfies Record<string, string>;
 
-/* Uygulamaya-özgü renklerin tam kümesi (19): 5 fark + 14 yeni. Tabanla birleştirilerek
+/* Uygulamaya-özgü renklerin tam kümesi (25): 6 fark + 19 yeni. Tabanla birleştirilerek
    kullanılır — `{ ...customerColors, ...customerAppColors }`. */
 export const customerAppColors = {
   ...customerAppOverrides,
   ...customerAppSand,
   ...customerAppError,
   ...customerAppScrim,
+  ...customerAppCreamGlass,
+  ...customerAppAccent,
   ...customerAppBrand,
 } as const satisfies Record<string, string>;
 
@@ -151,6 +195,21 @@ export const customerAppText = {
   eyebrow: '10px',
   'eyebrow--font-weight': '700',
   'eyebrow--letter-spacing': '0.18em',
+
+  /* ── ROZET kademesi — Token Kararlari #16 ──────────────────────────────────
+     v3'ün EN ÇOK YİNELENEN öğesinin (~18 kullanım: fiyat çipi · TÜKENDİ · İNDİRİM · TOPTAN ·
+     geri sayım · TAKİP) kendi kademesi. Daha önce `field-label` (12,5) ölçüsü + `button` (700)
+     ağırlığı KARIŞTIRILARAK kuruluyordu; iki ayrı kademeden devşirilen bir üçüncü kademe, ikisi
+     de kendi gerekçesiyle değiştiği gün rozeti sessizce bozardı.
+     Aralık `.06em`: üstbaşlığın `.18em`i büyük harfli bir SATIR içindir; rozet tek kelimedir ve
+     .18em'de harfler dağılıyordu. */
+  badge: '12.5px',
+  'badge--font-weight': '700',
+  'badge--letter-spacing': '0.06em',
+  /* Küçük rozet — fotoğrafın ÜSTÜNDEKİ durum etiketi (TÜKENDİ/İNDİRİM). Yalnız ÖLÇÜ farkıdır:
+     ağırlık ve harf aralığı `badge`in kendisinden okunur, ikinci kez YAZILMAZ (CLAUDE §1) —
+     iki yerde duran aynı değer bir gün ayrışır ve iki rozet farklı görünmeye başlar. */
+  'badge-sm': '10px',
 } as const satisfies Record<string, string>;
 
 /* ── KÖŞE YARIÇAPLARI — Token Kararlari #7'nin RESMÎ SETİ ────────────────────
@@ -179,6 +238,24 @@ export const customerAppRadius = {
 export const customerAppShadow = {
   soft: '0 1px 3px rgba(58, 65, 71, 0.08)',
   hard: `3px 3px 0 ${customerSurface.ink}`,
+  /* · `badge` — Token Kararlari #16'nın TEK DURAĞI. Rozet fotoğrafın ya da kartın üstünde YÜZER;
+     `soft`un 1 px'lik yüksekliği orada yetmiyor, rozet fotoğrafa yapışık duruyordu. Tasarımda
+     .18/.20/.22/.25 dörtlüsü ölçüldü, karar hepsini .22'ye çekti — bir rozetin ne kadar
+     yükseldiği içeriğine göre değişmemeli. Mürekkebi `soft`unkinden farklı (rgb 21,23,15):
+     gölge fotoğrafın üstüne düşüyor ve orada mavimsi bir gri kirli duruyor. */
+  badge: '0 3px 8px rgba(21, 23, 15, 0.22)',
+} as const satisfies Record<string, string>;
+
+/* ── BULANIKLIK — Token Kararlari #17'nin "blur(8px) kalır ve kurala bağlanır" hükmü ─────────
+   Krem cam yüzeyin ARKASINDAKİ içeriğe uygulanan bulanıklık yarıçapı. Renk değil, ama krem camla
+   birlikte TEK bir yüzey tarif ediyorlar: saydamlık olmadan bulanıklık görünmez, bulanıklık
+   olmadan saydamlık altındaki metni okunur bırakır ve çubuk kirlenir. Bu yüzden token — çağıran
+   "yarı saydam krem" derken ikisini birden almalı.
+   Değer CSS yarıçapıdır (`backdrop-filter: blur(8px)`); RN tarafında `expo-blur` yarıçap değil
+   1–100 arası bir YOĞUNLUK ister ve px↔yoğunluk için tanımlı bir dönüşüm YOKTUR — çeviri
+   tüketicinin işidir ve gerekçesi orada durur (`apps/mobile/src/theme/metrics.ts`). */
+export const customerAppBlur = {
+  glass: '8px',
 } as const satisfies Record<string, string>;
 
 /* ── FOTOĞRAF GRADYANLARI — Token Kararlari #5 ───────────────────────────────

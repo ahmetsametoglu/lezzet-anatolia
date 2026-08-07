@@ -1,4 +1,4 @@
-import { customerAppText, customerColors } from '@lezzet/design-tokens';
+import { customerAppColors, customerAppText, customerColors } from '@lezzet/design-tokens';
 import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
@@ -31,8 +31,17 @@ describe('AppBar', () => {
       color: customerColors.ink,
     });
     expect(screen.getByTestId('bar')).toHaveStyle({
-      backgroundColor: customerColors['sand-50'],
       borderBottomColor: customerColors.ink,
+    });
+  });
+
+  it('zemin KREM CAM (%96) — opak `sand-50` yaması kalktı (Token Kararlari #17)', async () => {
+    // Çubuğun KENDİSİ bulanık yüzeydir; krem tonu onun üstündeki katmandan gelir, o yüzden
+    // zemin çubuğun stilinde değil cam katmanının stilinde aranır.
+    await render(<AppBar title="Keşif" testID="bar" />);
+
+    expect(screen.getByTestId('bar-glass')).toHaveStyle({
+      backgroundColor: customerAppColors['cream-glass'],
     });
   });
 });

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { CATALOG_SORTS } from '@lezzet/types';
 
 import { CatalogScreen } from './catalog-screen';
 import { catalogCategory, catalogProduct } from './catalog-fixture';
@@ -42,6 +43,9 @@ const page = (products: ReturnType<typeof catalogProduct>[], nextCursor: string 
 });
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
+
+/** Çağrılan adresler — sorgu dizesinin doğru kurulduğu buradan okunur. */
+const requestedUrls = (): string[] => fetchMock.mock.calls.map(([url]) => String(url));
 
 /** Kategori rayı hep gelir; ürün cevabını her test kendi kurar. */
 function mockCatalog(products: unknown, secondPage?: unknown) {
@@ -181,6 +185,63 @@ describe('CatalogScreen', () => {
     await fireEvent.press(screen.getByTestId('catalog-clear-filter'));
 
     await waitFor(() => expect(screen.getByRole('button', { name: t.all, selected: true })).toBeOnTheScreen());
+  });
+
+  it('arama kutusuna yazmak `q` parametresini uca taşır — ama HER TUŞTA değil', async () => {
+    mockCatalog(page([catalogProduct(1)], null), page([catalogProduct(4)], null));
+
+    await render(<CatalogScreen />);
+    await waitFor(() => expect(screen.getByText('Ürün 1')).toBeOnTheScreen());
+    const callsBefore = fetchMock.mock.calls.length;
+
+    await fireEvent.changeText(screen.getByTestId('catalog-search'), 'bak');
+
+    // Kutu ANINDA yazdığını gösterir; uç henüz çağrılmaz (gecikme penceresi).
+    expect(screen.getByTestId('catalog-search').props.value).toBe('bak');
+    expect(fetchMock.mock.calls).toHaveLength(callsBefore);
+
+    await waitFor(() => expect(String(fetchMock.mock.calls.at(-1)?.[0])).toContain('q=bak'));
+    await waitFor(() => expect(screen.getByText('Ürün 4')).toBeOnTheScreen());
+  });
+
+  it('boş arama sorguya HİÇ girmez — "arama yok" ile "boş dize aradım" aynı şey değil', async () => {
+    mockCatalog(page([catalogProduct(1)], null));
+
+    await render(<CatalogScreen />);
+    await waitFor(() => expect(screen.getByText('Ürün 1')).toBeOnTheScreen());
+
+    expect(requestedUrls().some((url) => url.includes('q='))).toBe(false);
+  });
+
+  it('süzgeç düğmesi sıralama sayfasını açar; seçim uca gider ve sayfa kapanır', async () => {
+    mockCatalog(page([catalogProduct(1)], null), page([catalogProduct(5)], null));
+
+    await render(<CatalogScreen />);
+    await waitFor(() => expect(screen.getByText('Ürün 1')).toBeOnTheScreen());
+
+    await fireEvent.press(screen.getByTestId('catalog-filter'));
+    expect(screen.getByTestId('catalog-sort-featured')).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByTestId('catalog-sort-priceAsc'));
+
+    await waitFor(() => expect(String(fetchMock.mock.calls.at(-1)?.[0])).toContain('sort=priceAsc'));
+    // Seçim ANINDA uygulanır ve sayfa kapanır — ayrı bir "Göster" düğmesi ekranda duranın kopyası olurdu.
+    expect(screen.queryByTestId('catalog-sort-featured')).toBeNull();
+    await waitFor(() => expect(screen.getByText('Ürün 5')).toBeOnTheScreen());
+  });
+
+  it('sıralama seçenekleri ŞEMADAN türer — elle yazılmış bir liste değil', async () => {
+    mockCatalog(page([catalogProduct(1)], null));
+
+    await render(<CatalogScreen />);
+    await waitFor(() => expect(screen.getByText('Ürün 1')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('catalog-filter'));
+
+    for (const option of CATALOG_SORTS) {
+      expect(screen.getByTestId(`catalog-sort-${option}`)).toBeOnTheScreen();
+    }
+    // Seçili olma bilgisi ekran okuyucuya da gider (görsel ✓ tek başına yetmez).
+    expect(screen.getByRole('button', { name: t.sort.featured, selected: true })).toBeOnTheScreen();
   });
 
   it('karta basınca ürün detay rotasına slug ile gider', async () => {

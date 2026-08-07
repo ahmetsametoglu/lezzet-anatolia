@@ -127,7 +127,7 @@ const styles = StyleSheet.create((theme) => ({
     top: theme.space.lg,
   },
   name: {
-    fontFamily: theme.font.display,
+    fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
     fontSize: theme.text['body-sm'],
     fontWeight: theme.text['card-title-sm--font-weight'],
     // Sıkı başlık satır aralığı — oran da token (`h1--line-height`), ham çarpan yazılmadı.
@@ -136,7 +136,7 @@ const styles = StyleSheet.create((theme) => ({
     textAlign: 'center',
   },
   options: {
-    fontFamily: theme.font.body,
+    fontFamily: theme.font.body[400],
     fontSize: theme.text.helper,
     color: theme.colors.muted,
     textAlign: 'center',

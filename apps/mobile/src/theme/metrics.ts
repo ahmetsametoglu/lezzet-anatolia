@@ -24,11 +24,21 @@ export const appMetrics = {
     '2xl': 14,
     '3xl': 16,
     '4xl': 18,
-    '5xl': 22,
-    '6xl': 26,
-    '7xl': 30,
+    /**
+     * IZGARA SATIR ARASI — Token Kararlari #22 ile açıldı ve ölçeğin ORTASINA girdi.
+     * Katalog ızgarası `gap:20px 14px` diyor; 20 daha önce ölçekte yoktu ve 22'ye yukarı
+     * yuvarlanmıştı. Karar "boşluklar gerçek listeyle aynı (20/14)" diyerek 20'yi resmîleştirdi,
+     * yani yuvarlamanın kapanmasını değil DURAĞIN AÇILMASINI istedi.
+     * Ölçeğe ortadan girdiği için sonraki adların hepsi bir basamak kaydı (22→6xl · 26→7xl ·
+     * 30→8xl · 70→9xl); ad kaydırmak, ölçeği artan sırada tutmanın bedelidir — 20'yi sona
+     * eklemek ölçeği okunmaz yapardı.
+     */
+    '5xl': 20,
+    '6xl': 22,
+    '7xl': 26,
+    '8xl': 30,
     /** Boş durumun dikey nefesi (tasarım: `padding:70px 30px`). */
-    '8xl': 70,
+    '9xl': 70,
   },
 
   size: {
@@ -52,8 +62,8 @@ export const appMetrics = {
     /**
      * Ürün dairesi İKİ boyutu (tasarım: vitrin 146 · benzerler 96).
      * Izgaranın 138'lik dairesi EMEKLİ (kullanıcı kararı 07.08): katalog kare karta geçti
-     * (`ProductPhotoCard`), dolayısıyla o çapın tek tüketicisi kalmadı. Şablonun katalog
-     * iskeleti hâlâ 138'lik daire çiziyor — orası kare ızgarayla birlikte güncellenecek.
+     * (`ProductPhotoCard`), dolayısıyla o çapın tek tüketicisi kalmadı. Şablonun iskeleti de
+     * Token Kararlari #22 ile kareye çekildi — 138 artık tasarımda da yok.
      */
     circleLg: 146,
     circleSm: 96,
@@ -65,8 +75,20 @@ export const appMetrics = {
     spinnerLg: 44,
     spinnerMd: 40,
     spinnerSm: 18,
-    /** Boş durum ikonu (tasarım: 44–46). */
+    /** Boş durum ikonu (tasarım: 40–46). */
     emptyIcon: 44,
+    /**
+     * Hata bloğunun ikonu (tasarım: 34). Boş durumdan AYRI bir durak çünkü tasarım onu bilerek
+     * küçük çiziyor: hata bloğu kesikli çerçevenin içinde dar bir kutudur ve 44'lük bir ikon
+     * orada başlığın önüne geçiyor. Boş durumdaki ikon ise sayfanın tek öğesi.
+     */
+    errorIcon: 34,
+    /** Sekme çubuğu ikonu (tasarım: 23). */
+    tabIcon: 23,
+    /** Girdi/düğme içinde satıra giren ikon (tasarım: arama büyüteci 17 · süzgeç çizgileri 19×17). */
+    inlineIcon: 17,
+    /** Yüzen sayfanın tutamağı (tasarım: 44×5). */
+    sheetHandle: 44,
   },
 
   /**
@@ -87,6 +109,17 @@ export const appMetrics = {
     /** Yükleniyor halkasının kalınlığı (tasarım: küçükte 3, büyükte 4). */
     spinner: 4,
     spinnerSm: 3,
+    /**
+     * İKON ÇİZGİSİ — tasarımın BASKIN değeri (1,8 · 19 kullanım). Şablon 1,5–2,2 arasında
+     * geziniyor ama sistemli değil: kalınlık ikon BOYUYLA ters oynuyor (küçük ikon kalın, büyük
+     * ikon ince) — optik ağırlığı sabit tutmanın elle yapılmış hâli. İki durak o davranışı
+     * kurala çeviriyor; aradaki tek-onda farklar (1,7 · 1,9 · 2,0 · 2,2) en yakın durağa çekildi.
+     */
+    iconStroke: 1.8,
+    /** 34 dp ve üstü ikonun ince çizgisi (tasarım: 1,5–1,7). */
+    iconStrokeLarge: 1.6,
+    /** Yüzen sayfa tutamağının kalınlığı (tasarım: 5). Yarıçapı bundan TÜREtilir. */
+    sheetHandle: 5,
   },
 
   /**
@@ -114,6 +147,43 @@ export const appMetrics = {
   /** Yükleniyor halkasının tam turu (tasarım: `animation:spin .8s linear infinite`). */
   spinDurationMs: 800,
 
+  /** Yüzen sayfanın ekrandan alabileceği en yüksek pay (tasarım: `max-height:82%`). */
+  sheetMaxHeightRatio: 0.82,
+
+  /**
+   * ARAMA GECİKMESİ (ms) — her tuşa basışta uca gitmemek için. Tasarımda karşılığı YOK (şablon
+   * yerel bir dizide süzüyor, ağ yok); değer PARAMETRİK bir varsayılan (CLAUDE §4): 350 ms,
+   * ortalama bir yazma temposunda kelimenin bitmesini bekleyecek kadar uzun, yazmayı bırakan
+   * parmağın altında listenin durduğu hissini vermeyecek kadar kısa.
+   */
+  searchDebounceMs: 350,
+
   /** Tükendi ürün kartının solması (tasarım: `opacity:.45`). */
   soldOutOpacity: 0.45,
+
+  /**
+   * SEÇİLİ SEKME ikonunun vurgusu (tasarım: `transform:translateY(-2px) scale(1.12)`).
+   * Basılı geri bildirimden AYRI: o dokunma ANINI anlatır ve bırakınca geçer, bu ise DURUMU
+   * anlatır ve seçili kaldığı sürece durur. Aynı sözlüğe koymak ikisini karıştırırdı.
+   */
+  tabSelected: {
+    lift: -2,
+    scale: 1.12,
+  },
+
+  /**
+   * KREM CAMIN BULANIKLIĞI — `customerAppBlur.glass` token'ının RN karşılığı.
+   *
+   * Token CSS yarıçapı taşır (`blur(8px)`); `expo-blur` ise 1–100 arası bir YOĞUNLUK ister ve
+   * ikisi arasında TANIMLI BİR DÖNÜŞÜM YOK — iOS'ta değer sistem materyalinin ilerleme yüzdesi,
+   * Android'de kütüphanenin kendi ölçeği; belgelerin hiçbirinde px karşılığı verilmiyor
+   * (ölçülemedi, bkz. docs.expo.dev/versions/v57.0.0/sdk/blur-view). Uydurma bir çarpan yazmak
+   * ("8 × 3 = 24") ölçülmemiş bir şeyi ölçülmüş gibi gösterirdi.
+   *
+   * O yüzden PARAMETRİK bir varsayılan (CLAUDE §4): 20 = hafif buğu. Gerekçesi yüzeyin kendisi —
+   * krem cam zaten %96 opak, yani bulanıklığın görebildiği alan yüzeyin %4'ü; ağır bir yoğunluk
+   * orada görünmez ama iOS'ta gereksiz bir çizim maliyeti olurdu. Tek yerde durur; tasarımla
+   * cihaz üstünde karşılaştırıldığında buradan ayarlanır.
+   */
+  glassBlurIntensity: 20,
 } as const;

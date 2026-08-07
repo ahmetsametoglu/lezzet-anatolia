@@ -1,7 +1,17 @@
-import { customerAppColors, customerAppRadius, customerAppShadow, customerColors } from '@lezzet/design-tokens';
+import {
+  customerAppColors,
+  customerAppRadius,
+  customerAppShadow,
+  customerAppText,
+  customerColors,
+} from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { Tag } from './tag';
+import { emToDp, mapTokens } from '../../theme/parse';
+
+// Beklenenler PAKETTEN türetilir; `mapTokens` aynı çeviriyi uygular, böylece test ham değer taşımaz.
+const appText = mapTokens(customerAppText);
 
 describe('Tag', () => {
   it('etiketi gösterir ve dokunulamayan rozette düğme rolü ÜRETMEZ', async () => {
@@ -37,10 +47,22 @@ describe('Tag', () => {
     expect(screen.getByTestId('tag')).toHaveStyle({ backgroundColor: customerAppColors['sand-150'] });
   });
 
-  it('gölge istendiğinde token dizgesini aynen uygular', async () => {
+  it('gölge istendiğinde ROZET gölgesini aynen uygular (Token Kararlari #16)', async () => {
+    // `soft` DEĞİL: rozet fotoğrafın üstünde yüzer ve 1 px yükseklik orada görünmüyordu.
     await render(<Tag label="9,90 €" shadow testID="tag" />);
 
-    expect(screen.getByTestId('tag')).toHaveStyle({ boxShadow: customerAppShadow.soft });
+    expect(screen.getByTestId('tag')).toHaveStyle({ boxShadow: customerAppShadow.badge });
+  });
+
+  it('yazı kademesi ROZETİN kendisidir — devşirilmiş kademe karışımı değil', async () => {
+    await render(<Tag label="9,90 €" testID="tag" />);
+
+    expect(screen.getByText('9,90 €')).toHaveStyle({
+      fontSize: appText.badge,
+      fontWeight: appText['badge--font-weight'],
+      // `.06em` × 12,5 dp = 0,75 dp — çeviri `emToDp`de, tek yerde.
+      letterSpacing: emToDp(appText['badge--letter-spacing'], appText.badge),
+    });
   });
 
   it('dönüş açısı prop’tan gelir', async () => {

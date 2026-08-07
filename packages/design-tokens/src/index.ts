@@ -26,11 +26,14 @@ export {
   customerAppSand,
   customerAppError,
   customerAppScrim,
+  customerAppCreamGlass,
+  customerAppAccent,
   customerAppBrand,
   customerAppColors,
   customerAppText,
   customerAppRadius,
   customerAppShadow,
+  customerAppBlur,
   customerAppGradient,
 } from './customer-app';
 export {

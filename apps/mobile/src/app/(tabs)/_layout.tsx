@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import type { LocalizedCopy } from '@lezzet/i18n';
 
 import { BottomTabBar } from '@/components/ui/bottom-tab-bar';
+import type { IconName } from '@/components/ui/icon-paths';
 import { deviceLocale } from '@/lib/i18n/locale';
 // `typeof messages` için DEĞER bağı gerek (Messages tipi JSON'dan türer) — `import type` olmaz.
 import messages from './messages.json';
@@ -24,11 +25,24 @@ import messages from './messages.json';
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/** Sekme sırası TASARIMIN sırasıdır; rota adları İngilizce (CLAUDE §2 — iç yol İngilizce). */
-const TABS = ['index', 'catalog', 'orders', 'account'] as const;
-type TabName = (typeof TABS)[number];
+/**
+ * Sekme sırası TASARIMIN sırasıdır; rota adları İngilizce (CLAUDE §2 — iç yol İngilizce).
+ *
+ * İKON EŞLEMESİ BURADA çünkü "hangi rota hangi ikonu taşır" navigasyonun bilgisidir — kit yalnız
+ * çizer. Şablonun `IC` sözlüğü (v3:1745) ile aynı eşleme; tek fark ana rotanın adıdır: dosya adı
+ * `index` (expo-router'ın kök rotası), tasarımın ikonu `home`.
+ */
+const TABS = {
+  index: 'home',
+  catalog: 'catalog',
+  orders: 'orders',
+  account: 'account',
+} as const satisfies Record<string, IconName>;
+type TabName = keyof typeof TABS;
 
-const isTabName = (name: string): name is TabName => TABS.some((tab) => tab === name);
+const TAB_ORDER = Object.keys(TABS) as TabName[];
+
+const isTabName = (name: string): name is TabName => TAB_ORDER.some((tab) => tab === name);
 
 export default function TabsLayout() {
   const t: Messages = messages[deviceLocale()];
@@ -46,6 +60,11 @@ export default function TabsLayout() {
             // Tanınmayan rota adı SESSİZCE gizlenmez, ham adıyla görünür: sekme eklenip sözlüğe
             // yazılmadığında eksiklik ekranda fark edilsin (boş bir etiketten iyidir).
             label: isTabName(route.name) ? t.tabs[route.name] : route.name,
+            /* Tanınmayan rotanın ikonu ne olacak sorusunun DÜRÜST cevabı yok — bir ikon uydurmak
+               (ör. hep `home`) yanlış bir yere gidiyormuş izlenimi verirdi. Katalog dört kare
+               çizer ve "listelenmemiş" demenin en yakın karşılığıdır; etiket zaten ham adı
+               gösterdiği için eksiklik ekranda görünür kalıyor. */
+            icon: isTabName(route.name) ? TABS[route.name] : ('catalog' as const),
             selected: state.index === index,
             onPress: () => {
               /* React Navigation sözleşmesi: dokunuş önce OLAY olarak duyurulur; bir dinleyici
@@ -59,7 +78,7 @@ export default function TabsLayout() {
       )}
     >
       {/* Sıra DOSYA adına göre değil, bu bildirime göre: alfabetik sıra "account" ile başlardı. */}
-      {TABS.map((name) => (
+      {TAB_ORDER.map((name) => (
         <Tabs.Screen key={name} name={name} />
       ))}
     </Tabs>

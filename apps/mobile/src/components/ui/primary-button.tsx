@@ -66,7 +66,7 @@ const styles = StyleSheet.create((theme) => ({
   pill: {
     alignSelf: 'flex-start',
     height: theme.size.controlSm,
-    paddingHorizontal: theme.space['6xl'],
+    paddingHorizontal: theme.space['7xl'],
     borderRadius: theme.radius.pill,
   },
   shadow: {
@@ -79,7 +79,7 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors['disabled-fill'],
   },
   label: {
-    fontFamily: theme.font.body,
+    fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.button,
     fontWeight: theme.text['button--font-weight'],
   },

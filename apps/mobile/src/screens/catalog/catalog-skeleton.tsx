@@ -7,14 +7,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 /*
   KATALOG İSKELETİ — ilk yükte ızgaranın yerini tutar.
 
-  ⚠ ŞABLONDAN BİLİNÇLİ SAPMA (kullanıcı kararı 07.08): v3'ün iskeleti (satır 202-205) hâlâ 138'lik
-  DAİRE + altında iki çubuk çiziyor, çünkü katalog kartı daireyken öyle çizilmişti. Kart artık KARE
-  ve adı fotoğrafın İÇİNDE (`ProductPhotoCard`) — daire iskelet, yerini tuttuğu şeye benzemiyor ve
-  yükleme bitince ekran biçim değiştiriyor gibi görünürdü. İskelet burada kare kartın kendisidir:
-  ad ve fiyat için ayrı çubuk YOK (ikisi de kartın içinde).
-
-  Şablonun iskeletinin güncellenmesi TASARIM işidir ve envanterde kayıtlı
-  (`docs/uygulama/03-tasarim-envanteri.md §3d` — "Katalog İSKELETİ bayat").
+  ŞABLONLA ARTIK BİREBİR (Token Kararlari #22): v3'ün iskeleti 138'lik daire çizerken kart kare
+  olmuştu; karar iskeleti KAREYE çekti (`aspect-ratio:1` · yarıçap 20) ve ızgara boşluklarını
+  gerçek listeyle eşitledi (satır 20 · sütun 14). İkisi de burada aynen uygulanıyor — ad ve fiyat
+  için ayrı çubuk YOK, çünkü ikisi de kartın İÇİNDE.
 
   Dört kart + altında dönen halka: şablonun kendi kurgusu (2×2 ızgara + "Yükleniyor…" satırı).
   a11y'de yalnız halka konuşur — `Skeleton` kendini ekran okuyucudan gizler.
@@ -35,7 +31,7 @@ export function CatalogSkeleton({ loadingLabel, testID }: CatalogSkeletonProps) 
   /* Kare kartın kenarı SÜTUNDAN gelir; `Skeleton` sayısal ölçü ister (yerini tuttuğu şeyin
      ölçüsünü ekran bilir, kit bilmez). Hesap ızgaranın kendi ölçüleriyle: ekran genişliği eksi
      iki yan boşluk, eksi sütun arası, bölü iki. */
-  const cardSize = (rt.screen.width - theme.space['5xl'] * 2 - theme.space['2xl']) / 2;
+  const cardSize = (rt.screen.width - theme.space['6xl'] * 2 - theme.space['2xl']) / 2;
 
   return (
     <View style={styles.grid} testID={testID}>
@@ -56,9 +52,10 @@ export function CatalogSkeleton({ loadingLabel, testID }: CatalogSkeletonProps) 
 
 const styles = StyleSheet.create((theme) => ({
   grid: {
-    // Şablon: `padding:20px 22px 10px` + satır arası 22. 20 ölçekte ara değer, yukarı yuvarlandı.
+    // Şablon: `padding:20px 22px 10px` + `gap:20px 14px` — hepsi ölçekte tam karşılığıyla var
+    // (20'lik durak Token Kararlari #22 ile açıldı).
     paddingTop: theme.space['5xl'],
-    paddingHorizontal: theme.space['5xl'],
+    paddingHorizontal: theme.space['6xl'],
     gap: theme.space['5xl'],
   },
   row: {

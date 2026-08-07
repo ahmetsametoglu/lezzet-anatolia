@@ -107,52 +107,20 @@ Tasarım 9 kademe kullanıyor, token 3 taşıyor. **`16px` ×46 en sık ve token
 > satır çözülünce buradan silinir, kalıcı gerekçesi karar dosyalarına gider. *(07.08'de
 > `design/BACKLOG` yalnız web envanterine daraltılınca eski §6 buraya devredildi — içerik birebir.)*
 
-Komponent kiti kodlanırken tasarımda kullanılan ama envanterde karşılığı olmayan değerler.
-Kural gereği KODLANMADI (ham değer yasak) — en yakın token'la kuruldu ya da yapılmadı; Claude
-Design'ın envanter kararı bekliyor. Kaynak: `Mobil - Musteri v3.dc.html` + kit raporu.
+2\. tur kararları (Token Kararları 14–24) **08.08'de uygulandı** — çözülen satırlar silindi
+(kare-kart tablosunun tamamı + ana tablonun altı satırı; iz: `docs/build/21` 21.5/21.7 Durum).
+Kalanlar:
 
 | Ne | Tasarımdaki değer | Bugünkü durum |
 | --- | --- | --- |
-| Yapışkan çubuk örtüsü + foto-üstü geri düğmesi | `rgba(243,239,226,.9–.97)` (+ `blur(8px)`) | opak `sand-50` kullanıldı; alfalı krem token'ı + blur kararı (expo-blur) bekliyor |
-| Rozet/fiyat çipi gölgesi | `0 3px 8px rgba(21,23,15,.22)` (ve .18/.28 türevleri) | `shadow.soft` kullanıldı — tasarımdan gözle hafif; ayrı `badge` gölge token'ı önerilir |
-| Rozet yazı kademesi | 12,5px/700 | `field-label`(12,5) + `button`(700) karışımı; ayrı `badge` kademesi önerilir |
-| Çip / metin-eylem yazısı | 12,5/700 | `control` (13,5/700) — kontrol kademesinde yuvarlama yok kuralı gereği var olan durak |
-| Vitrin bölüm başlığı | 21px Lora 600 | `h2-sm` (20) kullanıldı |
-| Zeytin dolgu üstü metin | beyaz | `card` (#ffffff, aynı değer) — `on-olive` takma adı önerilir |
-| "TAKİP" çipi ikilisi | `#a9c46b` zemin + `#15170f` metin | ön plan token'ı yok — bu Tag tonu YAPILMADI |
-| Boşluk/ölçü ailesi | 4-24 dp aralığı | paket taşımıyor → `apps/mobile/src/theme/metrics.ts` (tek yer, kaynak yorumlu) — design-tokens'a terfi adayı |
-| Font varlıkları | Lora + Karla | tema seam'i hazır (`font.display/body`); `expo-font` + dosya yükleme ayrı iş, o güne dek sistem fontu |
-| Katalog İSKELETİ bayat | yer tutucu 138'lik daire (v3 satır 202-205) | kart kararı KARE ve kit düzeltildi (iz: `docs/build/21` 21.5 Durum); **tasarım işi: iskelet kare karta dönmeli** |
-
-**Kare katalog kartından gelen ek açıklar (21.5 düzeltmesi, 07.08)** — kart en-yakın token'la
-kuruldu, sapmalar kayıtlı (kaynak: `product-photo-card.tsx` yorumları):
-
-| Ne | Şablon | Bağlanan | Fark |
-| --- | --- | --- | --- |
-| Alt gradyan durağı | `0 42% → .8` | `gradient.photo-bottom` (40% → .82) | durak −2, alfa +.02 |
-| Çeşit alt-satırı kademesi | 10,5px | `micro` (11,5) | ~10,5'lik alt-satır durağı yok |
-| Foto-üstü altyazı rengi | `#d5d0c2` | `sand-400` (#d8cfb6) | rol token'ı `on-image-soft` ama değeri sapıyor — SICAK bir on-image-soft gerekiyor |
-| Tükendi örtüsü | `rgba(21,23,15,.72)` | `scrim-heavy` (.82) | alfa +.10 |
-| Rozet harf aralığı | `.06em` | `eyebrow-sm` (.1em) | rozet kademesi ayrışmalı (üstteki satırla birlikte) |
-| Rozet yarıçapı | 9 | `badge` (12) | resmî sette 9 yok |
-| Basılı ölçek | `.96` | `press.scale` (.97) | tek kademe tutuldu |
-| Foto-üstü ad: rol ↔ değer ayrışması | `#faf6ec` | değeri birebir `cream`; ROL token'ı `on-image` ise `#f5f1e6` | ya tasarım `on-image`e çekilir ya `on-image-bright` açılır |
-
-**Katalog ekranından (21.7) gelen ek açıklar:**
-
-| Ne | Şablon | Bağlanan | Fark |
-| --- | --- | --- | --- |
-| Sekme çubuğu etiketi | 10,5/700 | `micro` (11,5) + `eyebrow` ağırlığı (700) | ~10,5 durak yok (çeşit alt-satırıyla aynı boşluk) |
-| Sekme çubuğu zemini | `rgba(243,239,226,.96)` + `blur(8px)` | opak `sand-50` | AppBar'la aynı alfalı-krem açığı |
-| Izgara satır arası | 20 dp | 22 (yukarı yuvarlama) | ölçekte 20 yok |
-| Hata kutusu çerçevesi | 2 px | `border.base` (1,5) | kalın vurgu durağı yok |
-
-> **2. TUR CEVAPLARI GELDİ (07.08, `Mobil - Token Kararlari.md` 14–24):** foto-üstü ad →
-> `on-image` (tasarım çekildi) · `on-image-soft` resmî değeri `#d5d0c2` · badge ailesi (yazı+gölge;
-> yarıçap 12'de) · `cream-glass` .90/.96 + blur kalır · `scrim-72` · `accent-leaf`+`ink-deep` ·
-> küçük duraklar token'a çekildi (kit zaten doğru) · iskelet karesi tasarımda düzeltildi ·
-> `brand-whatsapp-pure` onaylı · font: Lora 400/600 + Karla 400/600/700. **Uygulama dilimi
-> sırada** — uygulanan her satır bu tablodan silinecek.
+| Çip / metin-eylem yazısı | 12,5/700 | `control` (13,5/700) — kararlar değinmedi; var olan durak kullanılıyor |
+| Zeytin dolgu üstü metin | beyaz | `card` (#ffffff, aynı değer) — `on-olive` takma adı önerisi açık |
+| "TAKİP" çipi | `accent-leaf` + `ink-deep` | **token'lar AÇILDI (karar 19)**; çip varyantı bilinçli bekliyor — bağlanacağı ekran yazılınca |
+| `cream-glass-soft` (.90) | foto-üstü yüzen daire | token açıldı; tüketicisi (foto-üstü geri düğmesi ekranı) henüz yazılmadı |
+| Boşluk/ölçü ailesi | 4-24 dp | `apps/mobile/src/theme/metrics.ts` (20 durağı eklendi, karar 22) — design-tokens'a terfi adayı |
+| Sekme çubuğu etiketi | 10,5/700 | `micro` (11,5) + 700 — ~10,5 durağı hâlâ yok (kararlar değinmedi) |
+| Hata kutusu çerçevesi | 2 px | `border.base` (1,5) — kalın vurgu durağı yok |
+| Android'de cam bulanıklığı | `blur(8px)` | iOS'ta var; Android `BlurTargetView` bağı `BEKLEYEN(21.7)` |
 
 ## 4. Navigasyon modeli
 

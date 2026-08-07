@@ -88,33 +88,46 @@ describe('ProductPhotoCard', () => {
     expect(screen.queryByText('İndirim')).toBeNull();
   });
 
-  it('indirim rozeti terracotta metin taşır ve üstbaşlık kademesinde büyük harfe döner', async () => {
+  it('indirim rozeti terracotta metin taşır ve KÜÇÜK ROZET kademesinde büyük harfe döner', async () => {
+    // Token Kararlari #16: kademe artık `badge`/`badge-sm`; üstbaşlıktan devşirme bitti ve
+    // harf aralığı da şablonun kendi değerine (.06em) döndü.
     await render(<ProductPhotoCard name="Bal" priceLabel="14 €" onPress={jest.fn()} discountLabel="İndirim" />);
 
     expect(screen.getByText('İndirim')).toHaveStyle({
       color: customerColors.terracotta,
-      fontSize: appText.eyebrow,
-      fontWeight: appText['eyebrow--font-weight'],
-      letterSpacing: emToDp(appText['eyebrow-sm--letter-spacing'], appText.eyebrow),
+      fontSize: appText['badge-sm'],
+      fontWeight: appText['badge--font-weight'],
+      letterSpacing: emToDp(appText['badge--letter-spacing'], appText['badge-sm']),
       textTransform: 'uppercase',
     });
   });
 
-  it('ad fotoğrafın ÜSTÜNDE krem renkte ve sıkı satır aralığıyla durur', async () => {
+  it('tükendi rozetinin örtüsü KENDİ durağıdır (`scrim-72`), gradyanın ucuna yuvarlanmaz', async () => {
+    // Token Kararlari #18: .72 fotoğrafı SOLDURUR, .82 metni okunur kılar — iki ayrı iş.
+    await render(<ProductPhotoCard name="Kekik" priceLabel="4 €" onPress={jest.fn()} soldOut soldOutLabel="Tükendi" />);
+
+    expect(screen.getByText('Tükendi').parent).toHaveStyle({
+      backgroundColor: customerAppColors['scrim-72'],
+    });
+  });
+
+  it('ad fotoğraf-üstü ROL token’ıyla yazılır (`on-image`), sıkı satır aralığıyla durur', async () => {
+    // Token Kararlari #14: tasarım `on-image`e çekildi; rol ile değer artık ayrışmıyor.
     await render(<ProductPhotoCard name="Bulgur" priceLabel="3 €" onPress={jest.fn()} />);
 
     expect(screen.getByText('Bulgur')).toHaveStyle({
-      color: customerColors.cream,
+      color: customerColors['on-image'],
       fontSize: appText.body,
       lineHeight: appText.body * appText['h1--line-height'],
     });
   });
 
-  it('çeşit satırı verilince fotoğraf-üstü yumuşak tonda çıkar', async () => {
+  it('çeşit satırı fotoğraf-üstü altyazı rolündedir ve SICAK tona bağlıdır', async () => {
+    // Token Kararlari #15: `on-image-soft`un resmî değeri #d5d0c2; uygulama tabanı EZER.
     await render(<ProductPhotoCard name="Salça" priceLabel="7 €" onPress={jest.fn()} optionsLabel="3 seçenek" />);
 
     expect(screen.getByText('3 seçenek')).toHaveStyle({
-      color: customerColors['on-image-soft'],
+      color: customerAppColors['on-image-soft'],
       fontSize: appText.micro,
     });
   });

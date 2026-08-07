@@ -71,12 +71,13 @@ const styles = StyleSheet.create((theme) => ({
   },
   warmText: { color: theme.colors.ink },
   title: {
-    fontFamily: theme.font.body,
+    fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,
     fontWeight: theme.text['button--font-weight'],
   },
   description: {
-    fontFamily: theme.font.body,
+    // Ağırlıksız gövde — RN'in varsayılanı da 400; aile o ağırlıkla indekslenir.
+    fontFamily: theme.font.body[400],
     fontSize: theme.text.helper,
     // Gövde satır aralığı: oran da token (`lead--line-height`) — ham çarpan yazılmadı.
     lineHeight: theme.text.helper * theme.text['lead--line-height'],

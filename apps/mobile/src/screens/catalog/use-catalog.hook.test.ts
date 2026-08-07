@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { catalogCategory, catalogProduct } from './catalog-fixture';
 import { useCatalog } from './use-catalog.hook';
+import { appMetrics } from '@/theme/metrics';
 
 /*
   GERÇEK AĞ YOK: `fetch` sarmalanıp taklit ediliyor, ama zarf istemcisi (`apiFetch`) ve Zod
@@ -207,6 +208,60 @@ describe('useCatalog', () => {
 
     expect(result.current.products).toHaveLength(3);
     expect(result.current.tailFailed).toBe(false);
+  });
+
+  it('sıralama seçimi sorguya girer ve süzgeç düğmesini "etkin" yapar', async () => {
+    mockOpening();
+    const result = await openCatalog();
+
+    // Varsayılan sıralamada süzgeç düğmesi SÖNÜK: rayda görünmeyen bir süzgeç yok demektir.
+    expect(result.current.filtersActive).toBe(false);
+
+    fetchMock.mockResolvedValueOnce(okResponse(page([3], null)));
+    await act(() => result.current.selectSort('priceDesc'));
+
+    expect(requestedUrls().at(-1)).toContain('sort=priceDesc');
+    expect(result.current.filtersActive).toBe(true);
+  });
+
+  it('yazılan metin ANINDA görünür, uca GECİKMEYLE gider (her tuş bir uçuş değildir)', async () => {
+    jest.useFakeTimers();
+    try {
+      mockOpening();
+      const result = await openCatalog();
+      const before = fetchMock.mock.calls.length;
+
+      await act(() => result.current.search('bak'));
+
+      // Kutu yazdığını hemen gösterir; istek henüz atılmadı.
+      expect(result.current.searchText).toBe('bak');
+      expect(fetchMock.mock.calls).toHaveLength(before);
+
+      fetchMock.mockResolvedValueOnce(okResponse(page([6], null)));
+      await act(() => jest.advanceTimersByTime(appMetrics.searchDebounceMs));
+
+      expect(requestedUrls().at(-1)).toContain('q=bak');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('yaz-sil: metin başladığı yere dönerse yeni okuma YAPILMAZ', async () => {
+    jest.useFakeTimers();
+    try {
+      mockOpening();
+      const result = await openCatalog();
+      const before = fetchMock.mock.calls.length;
+
+      await act(() => result.current.search('b'));
+      await act(() => result.current.search(''));
+      await act(() => jest.advanceTimersByTime(appMetrics.searchDebounceMs));
+
+      expect(fetchMock.mock.calls).toHaveLength(before);
+      expect(result.current.searchText).toBe('');
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('süzgeç değişince UÇUŞTAKİ eski cevap yazılmaz (eskimiş koşu düşer)', async () => {

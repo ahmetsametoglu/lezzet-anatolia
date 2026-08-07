@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { PressableSurface } from './pressable-surface';
+import { emToDp } from '../../theme/parse';
 
 /*
   EĞİK ROZET — v3'ün en çok yinelenen öğesi (~18 kullanım): fiyat çipi · "Tükendi" · "İNDİRİM" ·
@@ -10,6 +11,11 @@ import { PressableSurface } from './pressable-surface';
 
   Dört ton, hepsi token: terracotta (fiyat/fırsat) · ink (koyu vurgu) · cream (fotoğraf ve koyu
   blok üstünde) · sand (puan, yumuşak vurgu).
+
+  YAZI VE GÖLGE ARTIK KENDİ KADEMESİNDE (Token Kararlari #16): daha önce ölçü `field-label`den,
+  ağırlık `button`dan devşiriliyor ve gölge `shadow.soft`la kuruluyordu — üç ayrı kademeden
+  toplanan bir dördüncü kademe, üçünden biri kendi gerekçesiyle değiştiği gün rozeti sessizce
+  bozardı. Bugün üçü de `badge` adını taşıyor ve tek karardan değişiyor.
 
   DÖNÜŞ NEDEN DIŞ SARMALAYICIDA: basılı durum `scale` uyguluyor ve RN'de `transform` dizisi
   BÜTÜN olarak değişir — dönüş iç yüzeyde olsaydı basıldığı an kaybolurdu. Dışta durunca ikisi
@@ -69,14 +75,14 @@ const styles = StyleSheet.create((theme) => ({
     borderRadius: theme.radius.badge,
   },
   shadow: {
-    boxShadow: theme.shadow.soft,
+    // Rozetin KENDİ gölgesi (#16): `soft`un 1 px yüksekliği fotoğraf üstünde yetmiyordu.
+    boxShadow: theme.shadow.badge,
   },
   label: {
-    fontFamily: theme.font.body,
-    // Rozetin kendi yazı kademesi YOK: ölçü tasarımdaki değerin aynısı olan `field-label`
-    // (12,5), ağırlık düğme kademesinden (700). Ayrı bir rozet kademesi envantere önerildi.
-    fontSize: theme.text['field-label'],
-    fontWeight: theme.text['button--font-weight'],
+    fontFamily: theme.font.body[theme.text['badge--font-weight']],
+    fontSize: theme.text.badge,
+    fontWeight: theme.text['badge--font-weight'],
+    letterSpacing: emToDp(theme.text['badge--letter-spacing'], theme.text.badge),
   },
   terracotta: { backgroundColor: theme.colors.terracotta },
   terracottaLabel: { color: theme.colors.card },

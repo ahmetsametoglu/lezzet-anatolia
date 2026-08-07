@@ -4,6 +4,19 @@
     "all": "Tümü",
     "loading": "Yükleniyor…",
     "listEnd": "— hepsi bu kadar —",
+    "search": {
+      "placeholder": "Ürün ara…",
+      "label": "Ürün ara"
+    },
+    "filter": {
+      "label": "Sırala ve filtrele",
+      "title": "Sırala & filtrele"
+    },
+    "sort": {
+      "featured": "Önerilen",
+      "priceAsc": "Fiyat: önce düşük",
+      "priceDesc": "Fiyat: önce yüksek"
+    },
     "empty": {
       "title": "Aradığınızı bulamadık",
       "body": "Farklı bir yazım deneyin ya da kategorilere göz atın.",
@@ -25,6 +38,19 @@
     "all": "Tout",
     "loading": "Chargement…",
     "listEnd": "— c'est tout —",
+    "search": {
+      "placeholder": "Rechercher un produit…",
+      "label": "Rechercher un produit"
+    },
+    "filter": {
+      "label": "Trier et filtrer",
+      "title": "Trier & filtrer"
+    },
+    "sort": {
+      "featured": "Recommandés",
+      "priceAsc": "Prix : croissant",
+      "priceDesc": "Prix : décroissant"
+    },
     "empty": {
       "title": "Nous n'avons rien trouvé",
       "body": "Essayez une autre orthographe ou parcourez les catégories.",
@@ -46,6 +72,19 @@
     "all": "Alle",
     "loading": "Wird geladen…",
     "listEnd": "— das war alles —",
+    "search": {
+      "placeholder": "Produkt suchen…",
+      "label": "Produkt suchen"
+    },
+    "filter": {
+      "label": "Sortieren und filtern",
+      "title": "Sortieren & filtern"
+    },
+    "sort": {
+      "featured": "Empfohlen",
+      "priceAsc": "Preis: aufsteigend",
+      "priceDesc": "Preis: absteigend"
+    },
     "empty": {
       "title": "Nichts gefunden",
       "body": "Versuchen Sie eine andere Schreibweise oder stöbern Sie in den Kategorien.",

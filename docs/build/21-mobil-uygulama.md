@@ -227,9 +227,22 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     hata metninden "Sepetiniz güvende" çıktı (sepet yok, tutulamayacak söz verilmez).
     Doğrulama (yönetici tekrarı): mobil 31 suite/156 test · birim 1068 · entegrasyon 34+28 ·
     typecheck/eslint/boundaries/knip/docs:check temiz; ham hex sıfır (tek eşleşme karar yorumu).
-    **Kalan (bu görev `[~]`):** ikon sistemi kararı+kurulumu (`react-native-svg` + v3 yolları —
-    arama kutusu/süzgeç düğmesi buna bağlı, ikisi de ekrana o zaman girer) · `app.json`
-    `supportedLocales`'in `LOCALES`ten türemesi (`app.config.ts` geçişi) · sekme kabuğuna
+    ~~Kalan: ikon sistemi · app.config.ts geçişi~~ (aşağıda kapandı).
+  - **Durum (08.08 — Token Kararları 14–24 UYGULANDI + ikon/font):** `customer-app.ts` yeni
+    aile/duraklar: badge yazı+gölge (16) · `cream-glass`/`cream-glass-soft` + blur kuralı (17,
+    `expo-blur`; AppBar+sekme çubuğu cam zemine geçti) · `scrim-72` (18) · `accent-leaf`+`ink-deep`
+    (19, varyant ekranıyla) · `on-image-soft` app-override `#d5d0c2` (15 — `customer.ts`e
+    dokunulmadı, parite istisnasız) · kart adı `on-image` (14) · metrics 20 durağı, ızgara 20/14
+    (22). Fontlar: Lora 400/600 + Karla 400/600/700 (`@expo-google-fonts/*`; seam ağırlıkla
+    indekslenir — RN'de ağırlık aile adındadır). İkon sistemi: `react-native-svg` + v3 yol sözlüğü
+    (`icon-paths.ts`) + `Icon`; sekme ikonları, katalog ARAMA kutusu + SÜZGEÇ (yeni `BottomSheet`,
+    sıralama `CATALOG_SORTS`tan) ekranda. `app.json` → `app.config.ts` (`supportedLocales` =
+    `LOCALES`, ikinci yazım kalktı). Bilinçli sapma: "Sadece indirimliler" anahtarı çizilmedi —
+    sözleşmede yok, istemcide süzmek sayfalı listeyi yalan söyletir. Doğrulama (yönetici tekrarı):
+    mobil 33 suite/187 test · design-tokens 19 (parite istisnasız) · typecheck/eslint/boundaries
+    temiz; ham hex yalnız `app.config.ts` splash (`BEKLEYEN(21.3)`). **Üç yerel modül eklendi →
+    dev-client YENİDEN DERLENMELİ.** **Kalan (bu görev `[~]`):** Android cam bulanıklığı
+    (`BlurTargetView` bağı) · `BottomSheet` çift-eğri animasyonu (Reanimated'la) · sekme kabuğuna
     çalışma-zamanı smoke testi · `ui:shot:mobile` aracı.
 - [~] (21.8) **Operasyon yüzeyi ön hazırlık — rol × senaryo etüdü + tasarım brief seti:**
   `docs/uygulama/04-operasyon-rolleri-ve-senaryolar.md` (kullanıcı kararları: tek kabuk + rol

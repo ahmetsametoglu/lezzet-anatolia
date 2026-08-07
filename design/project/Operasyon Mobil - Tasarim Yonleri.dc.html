@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400..700&family=Karla:wght@400..800&family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; padding:36px; }
+  a { color:#5f7a2c; text-decoration:none; } a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-direction:column;gap:26px;align-items:flex-start;margin-bottom:56px">
+
+  <div style="max-width:900px;display:flex;flex-direction:column;gap:8px">
+    <span style="font:700 20px 'Space Grotesk';color:#22251f">2. tur — <a href="#1a">1a</a> ↔ <a href="#1b">1b</a> ekseni</span>
+    <span style="font:400 13.5px/1.6 'Karla';color:#4a4f45">Karar verisi: <a href="#1b">1b</a> daha okunaklı, <a href="#1a">1a</a> gözü daha az yoruyor. İki yeni yön eksene iki uçtan yaklaşır: <strong>2a</strong> Tezgâh iskeletini sakinleştirir, <strong>2b</strong> Veri Masası'nın puntosunu büyütür. İkisinde de kural: renk yalnız karar gerektiren yerde (kapıda ödeme günün en kritik bilgisi — tek "yüksek sesli" öğe o), gerisi sessiz.</span>
+  </div>
+
+  <div style="display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start">
+
+    <!-- ============ 2a ============ -->
+    <div id="2a" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="background:#343b41;color:#f5f1e6;font:700 13px 'Space Grotesk';border-radius:8px;padding:4px 10px">2a</span>
+        <div style="display:flex;flex-direction:column">
+          <span style="font:700 15px 'Space Grotesk';color:#22251f">Sakin Tezgâh</span>
+          <span style="font:400 12px 'Karla';color:#6a7065">1b'nin iskeleti ve iri yazısı, 1a'nın sükuneti — soğutulmuş krem, tek vurgu rengi, sert gölge yalnız ana eylemde</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px">
+        <div data-screen-label="2a Kurye Günüm" style="width:390px;background:#f2f0e8;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.14);color:#343b41;display:flex;flex-direction:column">
+          <div style="padding:20px 22px 6px;display:flex;align-items:flex-start;justify-content:space-between">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">7 AĞUSTOS · STR · MUSA K.</span>
+              <span style="font:600 24px 'Lora';color:#343b41">Günüm</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+              <span style="font:800 20px 'Karla'">4<span style="font-weight:400;color:#8a8270">/9</span></span>
+              <span style="font:700 11px 'Karla';color:#8a8270">cepte 86,50 €</span>
+            </div>
+          </div>
+          <div style="margin:10px 22px 4px;height:7px;border-radius:4px;background:#e2ddcc;overflow:hidden"><div style="width:44%;height:100%;background:#5f7a2c;border-radius:4px"></div></div>
+          <span style="margin:0 22px;font:700 11.5px 'Karla';color:#b05c2e">3 kapıda ödeme kaldı · 74,50 €</span>
+          <div style="flex:1;padding:6px 22px;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1.5px dashed #ddd6c4;opacity:.5">
+              <span style="width:30px;height:30px;border-radius:50%;background:#e3ecd2;color:#4a6121;font:700 13px 'Karla';display:grid;place-items:center;flex:none">✓</span>
+              <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:700 14px 'Karla';text-decoration:line-through">Rue des Orfèvres 12</span><span style="font:400 12px 'Karla';color:#8a8270">A. Yıldız · teslim edildi</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1.5px dashed #ddd6c4">
+              <span style="width:30px;height:30px;border-radius:50%;background:#343b41;color:#f5f1e6;font:700 13px 'Karla';display:grid;place-items:center;flex:none">5</span>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 15px 'Karla'">Quai des Bateliers 3</span>
+                <span style="font:400 12px 'Karla';color:#8a8270">Restaurant Bosphore · B2B · 6 koli</span>
+                <span style="background:#b05c2e;color:#fff;font:700 11px 'Karla';letter-spacing:.04em;padding:4px 10px;border-radius:12px;width:max-content">KAPIDA · 42,00 € NAKİT</span>
+              </div>
+              <span style="font:400 20px 'Karla';color:#b3ab97">›</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1.5px dashed #ddd6c4">
+              <span style="width:30px;height:30px;border-radius:50%;border:1.5px solid #cdc4a8;color:#8a8270;font:700 13px 'Karla';display:grid;place-items:center;flex:none">6</span>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 15px 'Karla'">Av. de Colmar 88, Illkirch</span>
+                <span style="font:400 12px 'Karla';color:#8a8270">S. Demir · 1 koli · <strong style="color:#4a6121">✓ ödendi</strong></span>
+              </div>
+              <span style="font:400 20px 'Karla';color:#b3ab97">›</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 0">
+              <span style="width:30px;height:30px;border-radius:50%;background:#f4e3e0;color:#a44a3f;font:700 13px 'Karla';display:grid;place-items:center;flex:none">2</span>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 15px 'Karla'">Rue de la Krutenau 41</span>
+                <span style="font:400 12px 'Karla';color:#a44a3f">Ulaşılamadı — tekrar denenecek</span>
+              </div>
+              <span style="font:400 20px 'Karla';color:#b3ab97">›</span>
+            </div>
+          </div>
+          <div style="padding:12px 20px 22px">
+            <div style="background:#343b41;color:#f5f1e6;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:3px 3px 0 #b8b09a">Günü kapat · 5 açık</div>
+          </div>
+        </div>
+
+        <div data-screen-label="2a Teslimat" style="width:390px;background:#f2f0e8;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.14);color:#343b41;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+            <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:grid;place-items:center;font:400 22px 'Karla'">‹</span>
+            <span style="font:600 17px 'Lora'">Durak 5/9</span>
+            <span style="margin-left:auto;font:700 10.5px 'Karla';letter-spacing:.06em;color:#343b41;border:1.5px solid #343b41;border-radius:12px;padding:4px 10px">B2B · ONAY ZORUNLU</span>
+          </div>
+          <div style="padding:8px 22px 0;display:flex;flex-direction:column;gap:14px;flex:1">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 21px/1.25 'Lora'">Quai des Bateliers 3, Strasbourg</span>
+              <span style="font:400 13px 'Karla';color:#6d7261">Restaurant Bosphore · Hakan Bey · arka kapı, 11:00'e kadar</span>
+            </div>
+            <div style="display:flex;gap:10px">
+              <span style="flex:1.4;text-align:center;font:700 13.5px 'Karla';color:#fff;background:#5f7a2c;border-radius:16px;padding:14px 0;box-shadow:3px 3px 0 #343b41">⌖ Navigasyon</span>
+              <span style="flex:1;text-align:center;font:700 13.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:14px 0">✆ Ara</span>
+              <span style="flex:1;text-align:center;font:700 13.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:14px 0">WA</span>
+            </div>
+            <div style="background:#fbfaf4;border:1.5px solid #b05c2e;border-radius:20px;padding:14px 17px;display:flex;flex-direction:column;gap:2px">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">KAPIDA ÖDENECEK · NAKİT</span>
+              <span style="font:800 30px 'Karla';color:#343b41">42,00 €</span>
+              <span style="font:400 12px 'Karla';color:#8a8270">tutar değiştirilemez</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">KOLİLER · 6</span>
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1.5px dashed #ddd6c4"><span style="width:26px;height:26px;border-radius:8px;background:#5f7a2c;color:#fff;display:grid;place-items:center;font:700 13px 'Karla';flex:none">✓</span><span style="font:700 13.5px 'Karla';flex:1">K1–K4 · baklava, şerbetli</span><span style="font:700 11.5px 'Karla';color:#4a6121">❄ soğuk</span></div>
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 0"><span style="width:26px;height:26px;border-radius:8px;border:1.5px solid #343b41;background:#fbfaf4;flex:none"></span><span style="font:700 13.5px 'Karla';flex:1">K5–K6 · börek (donuk)</span></div>
+            </div>
+          </div>
+          <div style="padding:12px 20px 22px;display:flex;flex-direction:column;gap:9px">
+            <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:3px 3px 0 #343b41">Teslim edildi — onay al</div>
+            <div style="display:flex;gap:9px">
+              <span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:13px 0">Ulaşılamadı</span>
+              <span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:#a44a3f;border:1.5px solid #a44a3f;border-radius:16px;padding:13px 0">Reddedildi</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <span style="font:400 12px/1.6 'Karla';color:#6a7065;max-width:800px"><strong>1b'den kalan:</strong> dashed satır ritmi, iri Karla, rozet ailesi, basılı durum. <strong>1a'dan gelen:</strong> soğutulmuş zemin, tek vurgu (terracotta yalnız kapıda ödemede), sessiz ikincil durumlar, gölge yalnız ana eylemde.</span>
+    </div>
+
+    <!-- ============ 2b ============ -->
+    <div id="2b" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="background:#22251f;color:#fbfbf9;font:700 13px 'Space Grotesk';border-radius:8px;padding:4px 10px">2b</span>
+        <div style="display:flex;flex-direction:column">
+          <span style="font:700 15px 'Space Grotesk';color:#22251f">Veri Masası, İri Punto</span>
+          <span style="font:400 12px 'Karla';color:#6a7065">1a'nın dili ve sükuneti, 1b'nin okunurluğu — büyük adresler, kritik durumda dolgulu çip, gerisi düz metin</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px">
+        <div data-screen-label="2b Kurye Günüm" style="width:390px;background:#fbfbf9;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.16);color:#22251f;display:flex;flex-direction:column">
+          <div style="padding:18px 20px 12px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:1px;flex:1">
+              <span style="font:600 20px 'Space Grotesk'">Günüm</span>
+              <span style="font:400 12px 'Karla';color:#8b9086">7 Ağustos · STR · Musa K.</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
+              <span style="font:600 20px 'IBM Plex Mono'">4/9</span>
+              <span style="font:500 11px 'IBM Plex Mono';color:#5c6157">86,50 € cepte</span>
+            </div>
+          </div>
+          <div style="padding:9px 20px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:8px;background:#fdf7ec">
+            <span style="font:600 12px 'Space Grotesk';color:#9a6416">3 kapıda ödeme kaldı</span>
+            <span style="margin-left:auto;font:500 12px 'IBM Plex Mono';color:#9a6416">74,50 €</span>
+          </div>
+          <div style="flex:1">
+            <div style="padding:15px 20px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:13px;opacity:.5">
+              <span style="width:28px;height:28px;border-radius:9px;background:#eef4e2;color:#4a6121;font:600 13px 'Space Grotesk';display:grid;place-items:center;flex:none">✓</span>
+              <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:700 15px 'Karla';text-decoration:line-through">Rue des Orfèvres 12</span><span style="font:400 12px 'Karla';color:#8b9086">A. Yıldız · teslim edildi</span></div>
+            </div>
+            <div style="padding:15px 17px 15px 20px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:13px;background:#f8f9f5;border-left:3px solid #5f7a2c">
+              <span style="width:28px;height:28px;border-radius:9px;background:#22251f;color:#fbfbf9;font:600 13px 'Space Grotesk';display:grid;place-items:center;flex:none">5</span>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 15.5px 'Karla'">Quai des Bateliers 3</span>
+                <span style="font:400 12px 'Karla';color:#6a7065">Restaurant Bosphore · B2B · 6 koli</span>
+                <span style="background:#9a6416;color:#fff;font:600 11.5px 'Space Grotesk';letter-spacing:.03em;padding:4px 10px;border-radius:8px;width:max-content">Kapıda · 42,00 € nakit</span>
+              </div>
+              <span style="color:#9aa094;font:500 17px 'Space Grotesk'">›</span>
+            </div>
+            <div style="padding:15px 20px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:13px">
+              <span style="width:28px;height:28px;border-radius:9px;border:1px solid #d9dbd2;color:#5c6157;font:600 13px 'Space Grotesk';display:grid;place-items:center;flex:none">6</span>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:700 15.5px 'Karla'">Av. de Colmar 88, Illkirch</span>
+                <span style="font:400 12px 'Karla';color:#6a7065">S. Demir · 1 koli · <strong style="color:#4a6121">✓ ödendi</strong></span>
+              </div>
+              <span style="color:#9aa094;font:500 17px 'Space Grotesk'">›</span>
+            </div>
+            <div style="padding:15px 20px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:13px">
+              <span style="width:28px;height:28px;border-radius:9px;background:#fbe9e7;color:#a5443c;font:600 13px 'Space Grotesk';display:grid;place-items:center;flex:none">2</span>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:700 15.5px 'Karla';color:#a5443c">Rue de la Krutenau 41</span>
+                <span style="font:400 12px 'Karla';color:#a5443c">Ulaşılamadı — tekrar denenecek</span>
+              </div>
+              <span style="color:#9aa094;font:500 17px 'Space Grotesk'">›</span>
+            </div>
+          </div>
+          <div style="padding:12px 16px 20px;border-top:1px solid #e6e7e1">
+            <div style="background:#22251f;color:#fbfbf9;font:600 15px 'Space Grotesk';border-radius:14px;height:54px;display:flex;align-items:center;justify-content:center;gap:10px">Günü kapat <span style="font:500 11px 'IBM Plex Mono';color:#a9c46b">5 açık</span></div>
+          </div>
+        </div>
+
+        <div data-screen-label="2b Teslimat" style="width:390px;background:#fbfbf9;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.16);color:#22251f;display:flex;flex-direction:column">
+          <div style="padding:14px 18px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px">
+            <span style="font:500 22px 'Space Grotesk';color:#5c6157">‹</span>
+            <span style="font:600 17px 'Space Grotesk'">Durak 5<span style="color:#9aa094">/9</span></span>
+            <span style="margin-left:auto;font:600 10.5px 'Space Grotesk';color:#2f5a78;background:#e6eef3;border-radius:7px;padding:4px 9px">B2B · onay zorunlu</span>
+          </div>
+          <div style="padding:16px 20px;display:flex;flex-direction:column;gap:15px;flex:1">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font:700 20px/1.25 'Karla'">Quai des Bateliers 3, 67000 Strasbourg</span>
+              <span style="font:400 13px 'Karla';color:#6a7065">Restaurant Bosphore · Hakan Bey · arka kapı, 11:00'e kadar</span>
+            </div>
+            <div style="display:flex;gap:9px">
+              <span style="flex:1.4;text-align:center;font:600 14px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:14px;padding:15px 0">⌖ Navigasyon</span>
+              <span style="flex:1;text-align:center;font:600 14px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:14px;padding:15px 0">✆ Ara</span>
+              <span style="flex:1;text-align:center;font:600 14px 'Space Grotesk';color:#128c4b;border:1px solid #d9dbd2;border-radius:14px;padding:15px 0">WA</span>
+            </div>
+            <div style="background:#fdf1e3;border:2px solid #9a6416;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:2px">
+              <span style="font:600 10.5px 'Space Grotesk';letter-spacing:.08em;color:#9a6416">KAPIDA ÖDENECEK · NAKİT</span>
+              <span style="font:600 30px 'IBM Plex Mono';color:#22251f">42,00 €</span>
+              <span style="font:400 12px 'Karla';color:#8a6410">tutar değiştirilemez</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:500 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Koliler · 6</span>
+              <div style="display:flex;align-items:center;gap:12px;border:1px solid #cdd8b6;background:#f2f6ea;border-radius:12px;padding:13px 14px"><span style="width:26px;height:26px;border-radius:8px;background:#5f7a2c;color:#fff;display:grid;place-items:center;font:600 14px 'Space Grotesk';flex:none">✓</span><span style="font:700 14px 'Karla';flex:1">K1–K4 · baklava, şerbetli</span><span style="font:500 11.5px 'IBM Plex Mono';color:#3a6b8a">❄ 4°C</span></div>
+              <div style="display:flex;align-items:center;gap:12px;border:1px solid #e2e3dd;border-radius:12px;padding:13px 14px"><span style="width:26px;height:26px;border-radius:8px;border:1.5px solid #c9ccc3;flex:none"></span><span style="font:700 14px 'Karla';flex:1">K5–K6 · börek (donuk)</span></div>
+            </div>
+          </div>
+          <div style="padding:12px 16px 20px;display:flex;flex-direction:column;gap:9px;border-top:1px solid #e6e7e1">
+            <div style="background:#5f7a2c;color:#fff;font:600 15px 'Space Grotesk';border-radius:14px;height:54px;display:flex;align-items:center;justify-content:center">Teslim edildi — onay al</div>
+            <div style="display:flex;gap:9px">
+              <span style="flex:1;text-align:center;font:600 13px 'Space Grotesk';color:#9a6416;border:1.5px solid #ecd9b4;border-radius:14px;padding:14px 0">Ulaşılamadı</span>
+              <span style="flex:1;text-align:center;font:600 13px 'Space Grotesk';color:#a5443c;border:1.5px solid #f0cfc9;border-radius:14px;padding:14px 0">Reddedildi</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <span style="font:400 12px/1.6 'Karla';color:#6a7065;max-width:800px"><strong>1a'dan kalan:</strong> nötr zemin, Space Grotesk + mono rakam, web operasyonla tek envanter. <strong>1b'den gelen:</strong> 15,5px adresler, geniş satırlar, kritik durumda dolgulu çip (kapıda = tek koyu amber), aktif durak sol kenar çizgisi.</span>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:26px;align-items:flex-start">
+
+  <div style="max-width:900px;display:flex;flex-direction:column;gap:8px">
+    <span style="font:700 20px 'Space Grotesk';color:#22251f">Operasyon Mobil — tasarım yönleri · 1. tur</span>
+    <span style="font:400 13.5px/1.6 'Karla';color:#4a4f45">Üç yön de aynı iki ekranı çizer: <strong>Kurye — Günüm</strong> (rota listesi) ve <strong>Teslimat</strong> (tek durak). Ortak sözleşme her yönde geçerli: yarıçap seti 12·16·20·22 · basılı durum kuralı (sert gölge → translate, gölgesiz → scale .97) · error ailesi #a44a3f/#f4e3e0 · 44px+ hedefler · kurye fiyat göremez/değiştiremez. Ayrışmasına izin verilen: font çifti, renk sıcaklığı, yoğunluk, gölge dili.</span>
+  </div>
+
+  <div style="display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start">
+
+    <!-- ============ 1a ============ -->
+    <div id="1a" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="background:#22251f;color:#fbfbf9;font:700 13px 'Space Grotesk';border-radius:8px;padding:4px 10px">1a</span>
+        <div style="display:flex;flex-direction:column">
+          <span style="font:700 15px 'Space Grotesk';color:#22251f">Veri Masası Cebe</span>
+          <span style="font:400 12px 'Karla';color:#6a7065">Operasyon web'inin dili telefonda — tam süreklilik, aynı çipler ve mono rakamlar</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px">
+        <div data-screen-label="1a Kurye Günüm" style="width:390px;background:#f3f4f0;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.16);color:#22251f;display:flex;flex-direction:column">
+          <div style="background:#fbfbf9;border-bottom:1px solid #e6e7e1;padding:14px 18px;display:flex;align-items:center;gap:10px">
+            <span style="width:30px;height:30px;border-radius:8px;background:#22251f;color:#a9c46b;font:700 15px 'Space Grotesk';display:grid;place-items:center">L</span>
+            <div style="display:flex;flex-direction:column">
+              <span style="font:600 16px 'Space Grotesk'">Günüm</span>
+              <span style="font:400 11px 'Karla';color:#8b9086">7 Ağustos · Perşembe</span>
+            </div>
+            <span style="margin-left:auto;font:500 11px 'IBM Plex Mono';color:#5c6157;background:#e4e6de;border-radius:6px;padding:3px 8px">STR · Musa K.</span>
+          </div>
+          <div style="margin:12px 16px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:14px">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font:600 22px 'Space Grotesk'">4<span style="color:#9aa094">/9</span></span>
+              <span style="font:500 10px 'Space Grotesk';letter-spacing:.08em;color:#8b9086">DURAK</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+              <div style="height:6px;border-radius:3px;background:#e4e6de;overflow:hidden"><div style="width:44%;height:100%;background:#5f7a2c"></div></div>
+              <span style="font:500 11px 'IBM Plex Mono';color:#5c6157">biriken tahsilat 86,50 €</span>
+            </div>
+            <span style="font:600 10.5px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:7px;padding:3px 8px">3 kapıda</span>
+          </div>
+          <div style="flex:1;background:#fbfbf9;border-top:1px solid #e6e7e1">
+            <div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid #f0f1ec;opacity:.55">
+              <span style="width:26px;height:26px;border-radius:8px;background:#e4e6de;color:#5c6157;font:500 12px 'IBM Plex Mono';display:grid;place-items:center;flex:none">4</span>
+              <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+                <span style="font:600 13.5px 'Karla';text-decoration:line-through">Rue des Orfèvres 12, Strasbourg</span>
+                <span style="font:400 11px 'Karla';color:#8b9086">A. Yıldız · 1 koli</span>
+              </div>
+              <span style="font:600 10.5px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:7px;padding:3px 9px">Teslim ✓</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid #f0f1ec;background:#f2f6ea">
+              <span style="width:26px;height:26px;border-radius:8px;background:#5f7a2c;color:#fff;font:500 12px 'IBM Plex Mono';display:grid;place-items:center;flex:none">5</span>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:600 13.5px 'Karla'">Quai des Bateliers 3, Strasbourg</span>
+                <span style="font:400 11px 'Karla';color:#8b9086">Restaurant Bosphore <span style="font:500 9.5px 'IBM Plex Mono';color:#3a6b8a;background:#e6eef3;border-radius:5px;padding:1px 5px">B2B</span> · 6 koli · baklava, börek</span>
+                <span style="font:600 10.5px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:7px;padding:2px 8px;width:max-content">Kapıda · 42,00 € · nakit</span>
+              </div>
+              <span style="color:#9aa094;font:500 16px 'Space Grotesk'">›</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid #f0f1ec">
+              <span style="width:26px;height:26px;border-radius:8px;background:#fff;border:1px solid #d9dbd2;color:#5c6157;font:500 12px 'IBM Plex Mono';display:grid;place-items:center;flex:none">6</span>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:600 13.5px 'Karla'">Av. de Colmar 88, Illkirch</span>
+                <span style="font:400 11px 'Karla';color:#8b9086">S. Demir · 1 koli · künefe seti</span>
+                <span style="font:600 10.5px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:7px;padding:2px 8px;width:max-content">Ödendi</span>
+              </div>
+              <span style="color:#9aa094;font:500 16px 'Space Grotesk'">›</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid #f0f1ec">
+              <span style="width:26px;height:26px;border-radius:8px;background:#fbe9e7;color:#a5443c;font:500 12px 'IBM Plex Mono';display:grid;place-items:center;flex:none">2</span>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:600 13.5px 'Karla'">Rue de la Krutenau 41, Strasbourg</span>
+                <span style="font:400 11px 'Karla';color:#8b9086">E. Kaya · 2 koli</span>
+                <span style="font:600 10.5px 'Space Grotesk';color:#a5443c;background:#fbe9e7;border-radius:7px;padding:2px 8px;width:max-content">Ulaşılamadı · tekrar denenecek</span>
+              </div>
+              <span style="color:#9aa094;font:500 16px 'Space Grotesk'">›</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:11px;padding:12px 16px">
+              <span style="width:26px;height:26px;border-radius:8px;background:#fff;border:1px solid #d9dbd2;color:#5c6157;font:500 12px 'IBM Plex Mono';display:grid;place-items:center;flex:none">7</span>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:600 13.5px 'Karla'">Rue du Jeu des Enfants 7</span>
+                <span style="font:400 11px 'Karla';color:#8b9086">M. Aksoy · 1 koli</span>
+                <span style="font:600 10.5px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:7px;padding:2px 8px;width:max-content">Kapıda · 18,50 € · kart</span>
+              </div>
+              <span style="color:#9aa094;font:500 16px 'Space Grotesk'">›</span>
+            </div>
+          </div>
+          <div style="padding:12px 16px 18px;background:#fbfbf9;border-top:1px solid #e6e7e1">
+            <div style="background:#22251f;color:#fbfbf9;font:600 14px 'Space Grotesk';border-radius:12px;height:50px;display:flex;align-items:center;justify-content:center;gap:8px">Günü kapat <span style="font:500 10.5px 'IBM Plex Mono';color:#a9c46b">5 durak açık</span></div>
+          </div>
+        </div>
+
+        <div data-screen-label="1a Teslimat" style="width:390px;background:#fbfbf9;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.16);color:#22251f;display:flex;flex-direction:column">
+          <div style="padding:14px 18px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:10px">
+            <span style="font:500 20px 'Space Grotesk';color:#5c6157">‹</span>
+            <span style="font:600 16px 'Space Grotesk'">Durak 5<span style="color:#9aa094">/9</span></span>
+            <span style="margin-left:auto;font:500 9.5px 'IBM Plex Mono';color:#3a6b8a;background:#e6eef3;border-radius:5px;padding:2px 6px">B2B · onay zorunlu</span>
+          </div>
+          <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;flex:1">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font:600 19px/1.25 'Space Grotesk'">Quai des Bateliers 3, 67000 Strasbourg</span>
+              <span style="font:400 12.5px 'Karla';color:#6a7065">Restaurant Bosphore · Hakan Bey · arka kapı, saat 11'e kadar</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <span style="flex:1;text-align:center;font:600 13px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:12px;padding:13px 0">⌖ Navigasyon</span>
+              <span style="flex:1;text-align:center;font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:12px;padding:13px 0">✆ Ara</span>
+              <span style="flex:1;text-align:center;font:600 13px 'Space Grotesk';color:#128c4b;border:1px solid #d9dbd2;border-radius:12px;padding:13px 0">WhatsApp</span>
+            </div>
+            <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:2px">
+              <span style="font:500 10px 'Space Grotesk';letter-spacing:.08em;color:#9a6416">KAPIDA ÖDENECEK</span>
+              <span style="font:600 24px 'IBM Plex Mono';color:#22251f">42,00 €</span>
+              <span style="font:400 11.5px 'Karla';color:#8a6410">beklenen: nakit · tutar değiştirilemez</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Koliler · 6</span>
+              <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2e3dd;border-radius:10px;padding:10px 12px"><span style="width:22px;height:22px;border-radius:6px;background:#5f7a2c;color:#fff;display:grid;place-items:center;font:600 12px 'Space Grotesk'">✓</span><span style="font:500 13px 'Karla';flex:1">K1–K4 · baklava, şerbetli (soğuk zincir)</span><span style="font:500 10.5px 'IBM Plex Mono';color:#3a6b8a">❄ 4°C</span></div>
+              <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2e3dd;border-radius:10px;padding:10px 12px"><span style="width:22px;height:22px;border-radius:6px;border:1.5px solid #c9ccc3;flex:none"></span><span style="font:500 13px 'Karla';flex:1">K5–K6 · börek (donuk)</span></div>
+            </div>
+          </div>
+          <div style="padding:12px 16px 18px;display:flex;flex-direction:column;gap:8px;border-top:1px solid #e6e7e1">
+            <div style="background:#5f7a2c;color:#fff;font:600 14.5px 'Space Grotesk';border-radius:12px;height:52px;display:flex;align-items:center;justify-content:center">Teslim edildi — onay al</div>
+            <div style="display:flex;gap:8px">
+              <span style="flex:1;text-align:center;font:600 12.5px 'Space Grotesk';color:#9a6416;border:1px solid #ecd9b4;border-radius:12px;padding:12px 0">Ulaşılamadı</span>
+              <span style="flex:1;text-align:center;font:600 12.5px 'Space Grotesk';color:#a5443c;border:1px solid #f0cfc9;border-radius:12px;padding:12px 0">Reddedildi</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <span style="font:400 12px/1.6 'Karla';color:#6a7065;max-width:800px"><strong>Ortak:</strong> operasyon web ile birebir çip/renk/font — tek envanter. <strong>Risk:</strong> müşteri uygulamasıyla komponent paylaşımı az; güneşte pastel çipler zayıf kalabilir.</span>
+    </div>
+
+    <!-- ============ 1b ============ -->
+    <div id="1b" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="background:#343b41;color:#f3efe2;font:700 13px 'Space Grotesk';border-radius:8px;padding:4px 10px">1b</span>
+        <div style="display:flex;flex-direction:column">
+          <span style="font:700 15px 'Space Grotesk';color:#22251f">Tezgâh İskeleti, Saha Tonu</span>
+          <span style="font:400 12px 'Karla';color:#6a7065">Müşteri v3'ün komponent kemikleri (sert gölge, basılı durum, krem) — kolaj oyunu yok, iş rengi var</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px">
+        <div data-screen-label="1b Kurye Günüm" style="width:390px;background:#f3efe2;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);color:#343b41;display:flex;flex-direction:column">
+          <div style="padding:20px 22px 4px;display:flex;align-items:flex-start;justify-content:space-between">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">7 AĞUSTOS · STR</span>
+              <span style="font:600 24px 'Lora';color:#343b41">Günüm</span>
+            </div>
+            <span style="width:42px;height:42px;border-radius:50%;background:#ece3c8;display:grid;place-items:center;font:700 14px 'Karla';color:#5f7a2c">MK</span>
+          </div>
+          <div style="margin:12px 18px;background:#efdfc2;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:14px">
+            <span style="font:800 26px 'Karla';color:#343b41">4<span style="font-weight:400;color:#8a8270">/9</span></span>
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+              <div style="height:8px;border-radius:4px;background:rgba(255,255,255,.6);overflow:hidden"><div style="width:44%;height:100%;background:#5f7a2c;border-radius:4px"></div></div>
+              <span style="font:700 11.5px 'Karla';color:#6d7261">Cepte 86,50 € · 3 kapıda ödeme kaldı</span>
+            </div>
+          </div>
+          <div style="flex:1;padding:2px 22px;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1.5px dashed #d8cfb6;opacity:.5">
+              <span style="width:30px;height:30px;border-radius:50%;background:#e3ecd2;color:#4a6121;font:700 13px 'Karla';display:grid;place-items:center;flex:none">✓</span>
+              <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:700 13.5px 'Karla';text-decoration:line-through">Rue des Orfèvres 12</span><span style="font:400 11.5px 'Karla';color:#8a8270">A. Yıldız · 1 koli · teslim edildi</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1.5px dashed #d8cfb6">
+              <span style="width:30px;height:30px;border-radius:50%;background:#343b41;color:#f3efe2;font:700 13px 'Karla';display:grid;place-items:center;flex:none">5</span>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 14px 'Karla'">Quai des Bateliers 3</span>
+                <span style="font:400 11.5px 'Karla';color:#8a8270">Restaurant Bosphore · <strong style="color:#4a6121">B2B</strong> · 6 koli</span>
+                <span style="background:#b05c2e;color:#fff;font:700 11px 'Karla';letter-spacing:.06em;padding:4px 9px;border-radius:12px;width:max-content">KAPIDA · 42,00 € NAKİT</span>
+              </div>
+              <span style="font:400 20px 'Karla';color:#8a8270">›</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1.5px dashed #d8cfb6">
+              <span style="width:30px;height:30px;border-radius:50%;border:1.5px solid #cdc4a8;color:#8a8270;font:700 13px 'Karla';display:grid;place-items:center;flex:none">6</span>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 14px 'Karla'">Av. de Colmar 88, Illkirch</span>
+                <span style="font:400 11.5px 'Karla';color:#8a8270">S. Demir · 1 koli · künefe seti</span>
+                <span style="background:#e3ecd2;color:#4a6121;font:700 11px 'Karla';letter-spacing:.06em;padding:4px 9px;border-radius:12px;width:max-content">ÖDENDİ</span>
+              </div>
+              <span style="font:400 20px 'Karla';color:#8a8270">›</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:13px 0">
+              <span style="width:30px;height:30px;border-radius:50%;background:#f4e3e0;color:#a44a3f;font:700 13px 'Karla';display:grid;place-items:center;flex:none">2</span>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 14px 'Karla'">Rue de la Krutenau 41</span>
+                <span style="font:400 11.5px 'Karla';color:#8a8270">E. Kaya · 2 koli</span>
+                <span style="background:#f4e3e0;color:#a44a3f;font:700 11px 'Karla';letter-spacing:.06em;padding:4px 9px;border-radius:12px;width:max-content">ULAŞILAMADI · TEKRAR DENE</span>
+              </div>
+              <span style="font:400 20px 'Karla';color:#8a8270">›</span>
+            </div>
+          </div>
+          <div style="padding:12px 18px 22px">
+            <div style="background:#343b41;color:#f3efe2;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:3px 3px 0 #b05c2e">Günü kapat <span style="font:700 11px 'Karla';color:#efdfc2;background:rgba(255,255,255,.14);border-radius:9px;padding:3px 8px">5 açık</span></div>
+          </div>
+        </div>
+
+        <div data-screen-label="1b Teslimat" style="width:390px;background:#f3efe2;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);color:#343b41;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+            <span style="width:40px;height:40px;border-radius:50%;background:#ece3c8;display:grid;place-items:center;font:400 22px 'Karla'">‹</span>
+            <span style="font:600 17px 'Lora'">Durak 5/9</span>
+            <span style="margin-left:auto;background:#343b41;color:#f3efe2;font:700 10px 'Karla';letter-spacing:.06em;padding:5px 10px;border-radius:12px;transform:rotate(2deg)">B2B · ONAY ZORUNLU</span>
+          </div>
+          <div style="padding:8px 22px 0;display:flex;flex-direction:column;gap:14px;flex:1">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 22px/1.2 'Lora'">Quai des Bateliers 3, Strasbourg</span>
+              <span style="font:400 13px 'Karla';color:#6d7261">Restaurant Bosphore · Hakan Bey · arka kapı, 11:00'e kadar</span>
+            </div>
+            <div style="display:flex;gap:10px">
+              <span style="flex:1.4;text-align:center;font:700 13.5px 'Karla';color:#fff;background:#5f7a2c;border-radius:16px;padding:14px 0;box-shadow:3px 3px 0 #343b41">⌖ Navigasyon</span>
+              <span style="flex:1;text-align:center;font:700 13.5px 'Karla';color:#343b41;border:1.5px solid #343b41;border-radius:16px;padding:14px 0;background:#f3efe2">✆ Ara</span>
+              <span style="flex:1;text-align:center;font:700 13.5px 'Karla';color:#343b41;border:1.5px solid #343b41;border-radius:16px;padding:14px 0;background:#f3efe2">WA</span>
+            </div>
+            <div style="background:#efdfc2;border-radius:20px;padding:15px 17px;display:flex;flex-direction:column;gap:3px;position:relative">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">KAPIDA ÖDENECEK</span>
+              <span style="font:800 30px 'Karla';color:#343b41">42,00 €</span>
+              <span style="font:400 12px 'Karla';color:#8a8270">beklenen: nakit · tutar değiştirilemez</span>
+              <span style="position:absolute;right:14px;top:-10px;background:#b05c2e;color:#fff;font:700 11px 'Karla';padding:5px 10px;border-radius:12px;transform:rotate(3deg)">NAKİT</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">KOLİLER · 6</span>
+              <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1.5px dashed #d8cfb6"><span style="width:26px;height:26px;border-radius:8px;background:#5f7a2c;color:#fff;display:grid;place-items:center;font:700 13px 'Karla';flex:none">✓</span><span style="font:700 13px 'Karla';flex:1">K1–K4 · baklava, şerbetli</span><span style="font:700 11px 'Karla';color:#4a6121">❄ soğuk</span></div>
+              <div style="display:flex;align-items:center;gap:12px;padding:11px 0"><span style="width:26px;height:26px;border-radius:8px;border:1.5px solid #343b41;background:#f3efe2;flex:none;box-shadow:2px 2px 0 #343b41"></span><span style="font:700 13px 'Karla';flex:1">K5–K6 · börek (donuk)</span></div>
+            </div>
+          </div>
+          <div style="padding:12px 18px 22px;display:flex;flex-direction:column;gap:9px">
+            <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:3px 3px 0 #343b41">Teslim edildi — onay al</div>
+            <div style="display:flex;gap:9px">
+              <span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:#343b41;border:1.5px solid #343b41;border-radius:16px;padding:13px 0">Ulaşılamadı</span>
+              <span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:#a44a3f;border:1.5px solid #a44a3f;border-radius:16px;padding:13px 0;background:#f4e3e0">Reddedildi</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <span style="font:400 12px/1.6 'Karla';color:#6a7065;max-width:800px"><strong>Ortak:</strong> müşteri v3 ile aynı komponent kütüphanesi (buton, rozet, basılı durum, dashed satır) — tek codebase'e en yakın yön. <strong>Risk:</strong> krem zemin sahada "market" hissi verebilir; iş ekranı ciddiyeti tartışılır.</span>
+    </div>
+
+    <!-- ============ 1c ============ -->
+    <div id="1c" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="background:#15170f;color:#fff;font:700 13px 'Space Grotesk';border-radius:8px;padding:4px 10px">1c</span>
+        <div style="display:flex;flex-direction:column">
+          <span style="font:700 15px 'Space Grotesk';color:#22251f">Güneş Modu — Görev Fişi</span>
+          <span style="font:400 12px 'Karla';color:#6a7065">Saha önceliği: beyaz zemin, dev tipografi, dolgulu durum blokları — kısa bakışta okunur, eldivenle basılır</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px">
+        <div data-screen-label="1c Kurye Günüm" style="width:390px;background:#fff;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.18);color:#15170f;display:flex;flex-direction:column">
+          <div style="padding:16px 20px 10px;display:flex;align-items:baseline;gap:10px;border-bottom:2px solid #15170f">
+            <span style="font:800 22px 'Karla'">GÜNÜM</span>
+            <span style="font:500 12px 'IBM Plex Mono';color:#5c6157">7 AĞU · STR · MUSA K.</span>
+            <span style="margin-left:auto;font:600 14px 'IBM Plex Mono'">4/9</span>
+          </div>
+          <div style="display:flex;border-bottom:2px solid #15170f">
+            <div style="flex:1;padding:10px 20px;display:flex;flex-direction:column;gap:1px;border-right:2px solid #15170f">
+              <span style="font:500 9.5px 'IBM Plex Mono';color:#5c6157">CEPTE</span>
+              <span style="font:600 19px 'IBM Plex Mono'">86,50 €</span>
+            </div>
+            <div style="flex:1;padding:10px 20px;display:flex;flex-direction:column;gap:1px;background:#fdf1e3">
+              <span style="font:500 9.5px 'IBM Plex Mono';color:#9a6416">KAPIDA KALAN</span>
+              <span style="font:600 19px 'IBM Plex Mono';color:#9a6416">3 · 74,50 €</span>
+            </div>
+          </div>
+          <div style="flex:1">
+            <div style="padding:14px 20px;border-bottom:1.5px solid #d9dbd2;display:flex;align-items:center;gap:12px;opacity:.45">
+              <span style="font:600 15px 'IBM Plex Mono';flex:none">04</span>
+              <span style="font:700 15px 'Karla';flex:1;text-decoration:line-through">Rue des Orfèvres 12</span>
+              <span style="background:#4a6121;color:#fff;font:800 11px 'Karla';letter-spacing:.06em;padding:5px 9px">TESLİM</span>
+            </div>
+            <div style="padding:14px 20px;border-bottom:1.5px solid #d9dbd2;display:flex;align-items:center;gap:12px;border-left:6px solid #15170f">
+              <span style="font:600 15px 'IBM Plex Mono';flex:none">05</span>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:800 16px 'Karla'">Quai des Bateliers 3</span>
+                <span style="font:400 12px 'Karla';color:#5c6157">Bosphore · B2B · 6 koli</span>
+              </div>
+              <span style="background:#b05c2e;color:#fff;font:800 12px 'Karla';letter-spacing:.04em;padding:7px 10px;text-align:center">KAPIDA<br>42,00 €</span>
+            </div>
+            <div style="padding:14px 20px;border-bottom:1.5px solid #d9dbd2;display:flex;align-items:center;gap:12px">
+              <span style="font:600 15px 'IBM Plex Mono';flex:none">06</span>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:800 16px 'Karla'">Av. de Colmar 88</span>
+                <span style="font:400 12px 'Karla';color:#5c6157">S. Demir · 1 koli</span>
+              </div>
+              <span style="border:2px solid #4a6121;color:#4a6121;font:800 11px 'Karla';letter-spacing:.06em;padding:5px 9px">ÖDENDİ</span>
+            </div>
+            <div style="padding:14px 20px;display:flex;align-items:center;gap:12px;background:#f4e3e0">
+              <span style="font:600 15px 'IBM Plex Mono';color:#a44a3f;flex:none">02</span>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:800 16px 'Karla';color:#a44a3f">Rue de la Krutenau 41</span>
+                <span style="font:400 12px 'Karla';color:#a44a3f">E. Kaya · tekrar denenecek</span>
+              </div>
+              <span style="background:#a44a3f;color:#fff;font:800 11px 'Karla';letter-spacing:.06em;padding:5px 9px">ULAŞILAMADI</span>
+            </div>
+          </div>
+          <div style="background:#15170f;color:#fff;padding:16px 20px 20px;display:flex;align-items:center;justify-content:space-between">
+            <span style="font:800 15px 'Karla'">GÜNÜ KAPAT</span>
+            <span style="font:500 12px 'IBM Plex Mono';color:#a9c46b">5 DURAK AÇIK →</span>
+          </div>
+        </div>
+
+        <div data-screen-label="1c Teslimat" style="width:390px;background:#fff;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.18);color:#15170f;display:flex;flex-direction:column">
+          <div style="padding:14px 20px;border-bottom:2px solid #15170f;display:flex;align-items:center;gap:12px">
+            <span style="font:400 24px 'Karla'">‹</span>
+            <span style="font:800 17px 'Karla'">DURAK 05/09</span>
+            <span style="margin-left:auto;background:#15170f;color:#fff;font:800 10px 'Karla';letter-spacing:.08em;padding:4px 8px">B2B · ONAY</span>
+          </div>
+          <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px;flex:1">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font:800 21px/1.2 'Karla'">Quai des Bateliers 3, Strasbourg</span>
+              <span style="font:400 13px 'Karla';color:#5c6157">Bosphore · Hakan Bey · arka kapı, 11:00'e kadar</span>
+            </div>
+            <div style="display:flex;gap:0;border:2px solid #15170f">
+              <span style="flex:1.4;text-align:center;font:800 13px 'Karla';color:#fff;background:#15170f;padding:15px 0">⌖ NAVİGASYON</span>
+              <span style="flex:1;text-align:center;font:800 13px 'Karla';padding:15px 0;border-right:2px solid #15170f">✆ ARA</span>
+              <span style="flex:1;text-align:center;font:800 13px 'Karla';color:#128c4b;padding:15px 0">WA</span>
+            </div>
+            <div style="border:2px solid #b05c2e;display:flex">
+              <div style="background:#b05c2e;color:#fff;padding:12px 14px;display:flex;flex-direction:column;justify-content:center"><span style="font:800 11px 'Karla';letter-spacing:.06em">KAPIDA</span><span style="font:800 11px 'Karla';letter-spacing:.06em">NAKİT</span></div>
+              <div style="flex:1;padding:10px 14px;display:flex;flex-direction:column;gap:1px">
+                <span style="font:600 28px 'IBM Plex Mono'">42,00 €</span>
+                <span style="font:400 11.5px 'Karla';color:#5c6157">tutar değiştirilemez</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:500 10px 'IBM Plex Mono';letter-spacing:.1em;color:#5c6157">KOLİLER · 6</span>
+              <div style="display:flex;align-items:center;gap:12px;border:2px solid #4a6121;background:#eef4e2;padding:12px 14px"><span style="width:26px;height:26px;background:#4a6121;color:#fff;display:grid;place-items:center;font:800 14px 'Karla';flex:none">✓</span><span style="font:700 14px 'Karla';flex:1">K1–K4 · soğuk zincir ❄</span></div>
+              <div style="display:flex;align-items:center;gap:12px;border:2px solid #15170f;padding:12px 14px"><span style="width:26px;height:26px;border:2px solid #15170f;flex:none"></span><span style="font:700 14px 'Karla';flex:1">K5–K6 · donuk</span></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <div style="background:#4a6121;color:#fff;font:800 16px 'Karla';letter-spacing:.04em;height:58px;display:flex;align-items:center;justify-content:center">TESLİM EDİLDİ — ONAY AL</div>
+            <div style="display:flex;border-top:2px solid #fff">
+              <span style="flex:1;text-align:center;font:800 13px 'Karla';color:#fff;background:#9a6416;padding:16px 0">ULAŞILAMADI</span>
+              <span style="flex:1;text-align:center;font:800 13px 'Karla';color:#fff;background:#a44a3f;padding:16px 0;border-left:2px solid #fff">REDDEDİLDİ</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <span style="font:400 12px/1.6 'Karla';color:#6a7065;max-width:800px"><strong>Ortak:</strong> renk aileleri ve mono rakamlar envanterden; komponentler kendine özgü (dolgulu blok, keskin köşe). <strong>Risk:</strong> üçüncü bir dil doğurur — bakım maliyeti; sertlik markadan uzaklaşabilir.</span>
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400..700&family=Karla:wght@400..800&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; display:flex; justify-content:center; padding:36px 16px; }
+  a { color:#5f7a2c; text-decoration:none; } a:hover { color:#4a6121; }
+  @keyframes pageIn { from { opacity:0; transform:translateX(14px); } to { opacity:1; transform:none; } }
+  @keyframes tabIn { from { opacity:0; } to { opacity:1; } }
+</style>
+</helmet>
+
+<div style="width:390px;height:800px;background:#f2f0e8;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.16);color:#343b41;display:flex;flex-direction:column;position:relative">
+
+  <div style="flex:1;overflow-y:auto;min-height:0">
+    <sc-if value="{{ vGun }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="Günüm" style="animation:tabIn .25s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="padding:20px 22px 6px;display:flex;align-items:flex-start;justify-content:space-between">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">7 AĞUSTOS · STR · MUSA K.</span>
+            <span style="font:600 24px 'Lora';color:#343b41">Günüm</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+            <span style="font:800 20px 'Karla';color:#343b41">{{ done }}<span style="font-weight:400;color:#8a8270">/{{ total }}</span></span>
+            <span style="font:700 11px 'Karla';color:#8a8270">cepte {{ cepteF }}</span>
+          </div>
+        </div>
+        <div style="margin:10px 22px 4px;height:7px;border-radius:4px;background:#e2ddcc;overflow:hidden"><div style="width:{{ pct }};height:100%;background:#5f7a2c;border-radius:4px;transition:width .3s"></div></div>
+        <sc-if value="{{ kapidaKaldi }}" hint-placeholder-val="{{ true }}"><span style="margin:0 22px;font:700 11.5px 'Karla';color:#b05c2e">{{ kapidaKaldi }} kapıda ödeme kaldı · {{ kapidaTutarF }}</span></sc-if>
+        <div style="flex:1;padding:6px 22px 8px;display:flex;flex-direction:column">
+          <sc-for list="{{ stops }}" as="s" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1.5px dashed #ddd6c4;opacity:{{ s.op }};transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ s.open }}">
+              <span style="width:30px;height:30px;border-radius:50%;background:{{ s.cBg }};border:1.5px solid {{ s.cBd }};color:{{ s.cFg }};font:700 13px 'Karla';display:flex;align-items:center;justify-content:center;flex:none">{{ s.cTx }}</span>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 15px 'Karla';color:{{ s.addrFg }};text-decoration:{{ s.deco }}">{{ s.addr }}</span>
+                <span style="font:400 12px 'Karla';color:{{ s.subFg }}">{{ s.sub }}</span>
+                <sc-if value="{{ s.chip }}"><span style="background:#b05c2e;color:#fff;font:700 11px 'Karla';letter-spacing:.04em;padding:4px 10px;border-radius:12px;width:max-content">{{ s.chip }}</span></sc-if>
+              </div>
+              <span style="font:400 20px 'Karla';color:#b3ab97">›</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="position:sticky;bottom:0;padding:12px 20px 22px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 40%)">
+          <div style="background:#343b41;color:#f5f1e6;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:3px 3px 0 #b8b09a;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ goKapanis }}">Günü kapat<sc-if value="{{ acik }}"><span style="font:700 11px 'Karla';color:#efdfc2;background:rgba(255,255,255,.14);border-radius:9px;padding:3px 8px">{{ acik }} açık</span></sc-if></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ vTeslimat }}">
+      <div data-screen-label="Teslimat" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <span style="font:600 17px 'Lora';color:#343b41">Durak {{ ts.no }}/{{ total }}</span>
+          <sc-if value="{{ ts.b2b }}"><span style="margin-left:auto;font:700 10.5px 'Karla';letter-spacing:.06em;color:#343b41;border:1.5px solid #343b41;border-radius:12px;padding:4px 10px">B2B · ONAY ZORUNLU</span></sc-if>
+        </div>
+        <div style="padding:8px 22px 0;display:flex;flex-direction:column;gap:14px;flex:1">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font:600 21px/1.25 'Lora';color:#343b41">{{ ts.addr }}</span>
+            <span style="font:400 13px 'Karla';color:#6d7261">{{ ts.detail }}</span>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="flex:1.4;text-align:center;font:700 13.5px 'Karla';color:#fff;background:#5f7a2c;border-radius:16px;padding:14px 0;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)">⌖ Navigasyon</span>
+            <span style="flex:1;text-align:center;font:700 13.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:14px 0;transition:transform .12s" style-active="transform:scale(.97)">✆ Ara</span>
+            <span style="flex:1;text-align:center;font:700 13.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:14px 0;transition:transform .12s" style-active="transform:scale(.97)">WA</span>
+          </div>
+          <sc-if value="{{ ts.kapida }}">
+            <div style="background:#fbfaf4;border:1.5px solid #b05c2e;border-radius:20px;padding:14px 17px;display:flex;flex-direction:column;gap:2px">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">KAPIDA ÖDENECEK · {{ ts.method }}</span>
+              <span style="font:800 30px 'Karla';color:#343b41">{{ ts.amountF }}</span>
+              <span style="font:400 12px 'Karla';color:#8a8270">tutar değiştirilemez</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ ts.odendi }}">
+            <div style="background:#e3ecd2;border-radius:20px;padding:13px 17px;display:flex;align-items:center;gap:10px">
+              <span style="font:700 14px 'Karla';color:#4a6121">✓ Ödendi</span>
+              <span style="font:400 12px 'Karla';color:#6d7261">bu kapıda para konuşulmaz</span>
+            </div>
+          </sc-if>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">KOLİLER · {{ ts.koli }}</span>
+            <sc-for list="{{ ts.kutular }}" as="k" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1.5px dashed #ddd6c4" onClick="{{ k.t }}">
+                <sc-if value="{{ k.on }}" hint-placeholder-val="{{ true }}"><span style="width:26px;height:26px;border-radius:8px;background:#5f7a2c;color:#fff;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';flex:none">✓</span></sc-if>
+                <sc-if value="{{ k.off }}"><span style="width:26px;height:26px;border-radius:8px;border:1.5px solid #343b41;background:#fbfaf4;flex:none"></span></sc-if>
+                <span style="font:700 13.5px 'Karla';flex:1;color:#343b41">{{ k.n }}</span>
+                <sc-if value="{{ k.cold }}"><span style="font:700 11.5px 'Karla';color:#4a6121">❄ soğuk</span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="padding:12px 20px 22px;display:flex;flex-direction:column;gap:9px">
+          <div style="background:{{ ts.okBg }};color:{{ ts.okFg }};font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:{{ ts.okSh }};transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ ts.teslim }}">{{ ts.okL }}</div>
+          <div style="display:flex;gap:9px">
+            <span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:13px 0;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ ts.ulasilamadi }}">Ulaşılamadı</span>
+            <span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:#a44a3f;border:1.5px solid #a44a3f;border-radius:16px;padding:13px 0;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ ts.red }}">Reddedildi</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ vKapanis }}">
+      <div data-screen-label="Gün Kapanışı" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <span style="font:600 17px 'Lora';color:#343b41">Gün Kapanışı</span>
+        </div>
+        <div style="padding:8px 22px;display:flex;flex-direction:column;gap:16px;flex:1">
+          <sc-if value="{{ kp.uyari }}">
+            <div style="background:#fbfaf4;border:1.5px solid #b05c2e;border-radius:16px;padding:12px 15px;display:flex;flex-direction:column;gap:2px">
+              <span style="font:700 12.5px 'Karla';color:#b05c2e">{{ kp.uyari }}</span>
+              <span style="font:400 12px 'Karla';color:#8a8270">Ulaşılamayan duraklar yarın tekrar denenir; koliler depoya iade edilir.</span>
+            </div>
+          </sc-if>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div style="background:#e3ecd2;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:1px;align-items:center"><span style="font:800 24px 'Karla';color:#4a6121">{{ kp.teslim }}</span><span style="font:700 10.5px 'Karla';color:#4a6121">TESLİM</span></div>
+            <div style="background:#f4e3e0;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:1px;align-items:center"><span style="font:800 24px 'Karla';color:#a44a3f">{{ kp.sorun }}</span><span style="font:700 10.5px 'Karla';color:#a44a3f">SORUNLU</span></div>
+            <div style="background:#e7e2d2;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:1px;align-items:center"><span style="font:800 24px 'Karla';color:#343b41">{{ kp.bekleyen }}</span><span style="font:700 10.5px 'Karla';color:#8a8270">AÇIK</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">TAHSİLAT — DEPOYA TESLİM EDİLECEK</span>
+            <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13.5px 'Karla';color:#6d7261">Nakit</span><span style="font:800 15px 'Karla'">{{ kp.nakitF }}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13.5px 'Karla';color:#6d7261">Kart (cihaz)</span><span style="font:800 15px 'Karla'">{{ kp.kartF }}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:12px 0"><span style="font:700 14px 'Karla'">Toplam</span><span style="font:800 18px 'Karla';color:#4a6121">{{ kp.toplamF }}</span></div>
+          </div>
+          <sc-if value="{{ kp.iade }}">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">İADE KOLİLER</span>
+              <sc-for list="{{ kp.iadeList }}" as="i" hint-placeholder-count="1">
+                <div style="display:flex;justify-content:space-between;padding:11px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:700 13px 'Karla'">{{ i.a }}</span><span style="font:400 12px 'Karla';color:#a44a3f">{{ i.b }}</span></div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div style="padding:12px 20px 22px">
+          <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ goBack }}">Günü bitir — depoya bildir</div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:460,&quot;height&quot;:880},&quot;gunFazi&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;gunici&quot;,&quot;options&quot;:[&quot;baslangic&quot;,&quot;gunici&quot;,&quot;gunsonu&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;}}">
+class Component extends DCLogic {
+  state = { view: 'gun', sel: 0, st: {}, kutu: {}, key: 0 };
+  renderVals() {
+    const fmt = v => v.toFixed(2).replace('.', ',') + ' \u20ac';
+    const faz = this.props.gunFazi ?? 'gunici';
+    const base = [
+      { no:1, addr:'Grand Rue 24', cust:'T. Arslan', b2b:false, koli:1, ozet:'1 koli \u00b7 baklava', pay:{ t:'odendi' }, st0:'teslim' },
+      { no:2, addr:'Rue de la Krutenau 41', cust:'E. Kaya', b2b:false, koli:2, ozet:'2 koli', pay:{ t:'kapida', a:14.0, m:'NAK\u0130T' }, st0:'ulasilamadi' },
+      { no:3, addr:'Pl. du March\u00e9 Gayot 2', cust:'D. \u00d6zt\u00fcrk', b2b:false, koli:1, ozet:'1 koli \u00b7 k\u00fcnefe', pay:{ t:'odendi' }, st0:'teslim' },
+      { no:4, addr:'Rue des Orf\u00e8vres 12', cust:'A. Y\u0131ld\u0131z', b2b:false, koli:1, ozet:'1 koli', pay:{ t:'kapida', a:22.5, m:'KART' }, st0:'teslim' },
+      { no:5, addr:'Quai des Bateliers 3', cust:'Restaurant Bosphore', b2b:true, koli:6, ozet:'6 koli \u00b7 baklava, b\u00f6rek', detail:'Hakan Bey \u00b7 arka kap\u0131, 11:00\u2019e kadar', pay:{ t:'kapida', a:42.0, m:'NAK\u0130T' }, st0:'bekliyor', cold:true },
+      { no:6, addr:'Av. de Colmar 88, Illkirch', cust:'S. Demir', b2b:false, koli:1, ozet:'1 koli \u00b7 k\u00fcnefe seti', pay:{ t:'odendi' }, st0:'bekliyor' },
+      { no:7, addr:'Rue du Jeu des Enfants 7', cust:'M. Aksoy', b2b:false, koli:1, ozet:'1 koli', pay:{ t:'kapida', a:18.5, m:'KART' }, st0:'bekliyor' },
+      { no:8, addr:'Rue de Zurich 15', cust:'Pastane Merve', b2b:true, koli:4, ozet:'4 koli \u00b7 \u015ferbetli', pay:{ t:'odendi' }, st0:'bekliyor', cold:true },
+      { no:9, addr:'Route du Rhin 102', cust:'B. \u015een', b2b:false, koli:1, ozet:'1 koli', pay:{ t:'kapida', a:64.0, m:'NAK\u0130T' }, st0:'teslim' },
+    ];
+    const stOf = s => {
+      if (faz === 'baslangic') return 'bekliyor';
+      if (faz === 'gunsonu') return this.state.st[s.no] || (s.st0 === 'bekliyor' ? 'teslim' : s.st0);
+      return this.state.st[s.no] || s.st0;
+    };
+    const done = base.filter(s => stOf(s) === 'teslim').length;
+    const sorun = base.filter(s => ['ulasilamadi','red'].includes(stOf(s))).length;
+    const acik = base.length - done - sorun;
+    const cepte = base.filter(s => stOf(s) === 'teslim' && s.pay.t === 'kapida').reduce((t, s) => t + s.pay.a, 0);
+    const kapidaAcik = base.filter(s => stOf(s) !== 'teslim' && stOf(s) !== 'red' && s.pay.t === 'kapida');
+    const stops = base.map((s, i) => {
+      const st = stOf(s);
+      const c = st === 'teslim' ? { cBg:'#e3ecd2', cBd:'#e3ecd2', cFg:'#4a6121', cTx:'\u2713' }
+        : st === 'ulasilamadi' || st === 'red' ? { cBg:'#f4e3e0', cBd:'#f4e3e0', cFg:'#a44a3f', cTx:String(s.no) }
+        : st === 'bekliyor' && s.no === base.find(x => stOf(x) === 'bekliyor')?.no ? { cBg:'#343b41', cBd:'#343b41', cFg:'#f5f1e6', cTx:String(s.no) }
+        : { cBg:'transparent', cBd:'#cdc4a8', cFg:'#8a8270', cTx:String(s.no) };
+      const subBits = [s.cust + (s.b2b ? ' \u00b7 B2B' : ''), s.ozet];
+      let sub = subBits.join(' \u00b7 '), subFg = '#8a8270';
+      if (st === 'teslim') { sub = s.cust + ' \u00b7 teslim edildi' + (s.pay.t === 'kapida' ? ' \u00b7 ' + fmt(s.pay.a) + ' al\u0131nd\u0131' : ''); }
+      if (st === 'ulasilamadi') { sub = s.cust + ' \u00b7 ula\u015f\u0131lamad\u0131 \u2014 tekrar denenecek'; subFg = '#a44a3f'; }
+      if (st === 'red') { sub = s.cust + ' \u00b7 reddedildi \u2014 koli iade'; subFg = '#a44a3f'; }
+      if (s.pay.t === 'odendi' && st === 'bekliyor') sub += ' \u00b7 \u2713 \u00f6dendi';
+      return { ...c,
+        addr: s.addr, sub, subFg,
+        addrFg: st === 'teslim' ? '#8a8270' : '#343b41',
+        deco: st === 'teslim' ? 'line-through' : 'none',
+        op: st === 'teslim' ? '.55' : '1',
+        chip: s.pay.t === 'kapida' && st === 'bekliyor' ? 'KAPIDA \u00b7 ' + fmt(s.pay.a) + ' ' + s.pay.m : null,
+        open: () => this.setState(k => ({ view:'teslimat', sel:i, key:k.key + 1 })) };
+    });
+    const cur = base[this.state.sel];
+    const curSt = stOf(cur);
+    const mark = (r) => this.setState(k => ({ st: Object.assign({}, k.st, { [cur.no]: r }), view:'gun' }));
+    const kut = cur.koli > 2
+      ? [{ id:'a', n:'K1\u2013K4 \u00b7 baklava, \u015ferbetli', cold:cur.cold }, { id:'b', n:'K5\u2013K' + cur.koli + ' \u00b7 b\u00f6rek (donuk)' }]
+      : [{ id:'a', n:'K1' + (cur.koli > 1 ? '\u2013K' + cur.koli : '') + ' \u00b7 ' + cur.ozet.split(' \u00b7 ').pop(), cold:cur.cold }];
+    const kOn = id => this.state.kutu[cur.no + id] !== false;
+    const allOn = kut.every(k => kOn(k.id));
+    const ts = {
+      no: cur.no, addr: cur.addr + ', Strasbourg', b2b: cur.b2b,
+      detail: cur.detail || cur.cust + ' \u00b7 ' + cur.ozet,
+      kapida: cur.pay.t === 'kapida', odendi: cur.pay.t === 'odendi',
+      amountF: cur.pay.a ? fmt(cur.pay.a) : '', method: cur.pay.m || '',
+      koli: cur.koli,
+      kutular: kut.map(k => ({ n:k.n, cold:!!k.cold, on:kOn(k.id), off:!kOn(k.id),
+        t: () => this.setState(s => ({ kutu: Object.assign({}, s.kutu, { [cur.no + k.id]: !kOn(k.id) }) })) })),
+      okL: cur.pay.t === 'kapida' ? 'Teslim edildi \u2014 ' + fmt(cur.pay.a) + ' al\u0131nd\u0131' : (cur.b2b ? 'Teslim edildi \u2014 onay al' : 'Teslim edildi'),
+      okBg: allOn ? '#5f7a2c' : '#b9b29e', okFg: '#fff',
+      okSh: allOn ? '3px 3px 0 #343b41' : 'none',
+      teslim: () => { if (allOn) mark('teslim'); },
+      ulasilamadi: () => mark('ulasilamadi'),
+      red: () => mark('red'),
+    };
+    const nakit = base.filter(s => stOf(s) === 'teslim' && s.pay.t === 'kapida' && s.pay.m === 'NAK\u0130T').reduce((t, s) => t + s.pay.a, 0);
+    const kart = cepte - nakit;
+    const iadeList = base.filter(s => ['ulasilamadi','red'].includes(stOf(s))).map(s => ({ a: s.addr, b: (stOf(s) === 'red' ? 'reddedildi' : 'ula\u015f\u0131lamad\u0131') + ' \u00b7 ' + s.koli + ' koli' }));
+    return {
+      vGun: this.state.view === 'gun', vTeslimat: this.state.view === 'teslimat', vKapanis: this.state.view === 'kapanis',
+      pageKey: this.state.key,
+      stops, total: base.length, done, acik: acik || null,
+      pct: Math.round((done / base.length) * 100) + '%',
+      cepteF: fmt(cepte),
+      kapidaKaldi: kapidaAcik.length || null,
+      kapidaTutarF: fmt(kapidaAcik.reduce((t, s) => t + s.pay.a, 0)),
+      ts,
+      kp: {
+        teslim: done, sorun, bekleyen: acik,
+        uyari: acik ? acik + ' durak hen\u00fcz sonu\u00e7lanmad\u0131 \u2014 yine de kapatabilirsiniz' : null,
+        nakitF: fmt(nakit), kartF: fmt(kart), toplamF: fmt(cepte),
+        iade: iadeList.length > 0, iadeList,
+      },
+      goKapanis: () => this.setState({ view:'kapanis' }),
+      goBack: () => this.setState({ view:'gun' }),
+    };
+  }
+}
+</script>
+</body>
+</html>

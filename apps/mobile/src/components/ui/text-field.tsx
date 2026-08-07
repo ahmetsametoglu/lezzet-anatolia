@@ -100,7 +100,8 @@ const styles = StyleSheet.create((theme) => ({
     paddingHorizontal: theme.space['3xl'],
     backgroundColor: theme.colors.card,
     borderWidth: theme.border.base,
-    fontFamily: theme.font.body,
+    // Girdinin YAZDIĞI metin ağırlıksızdır (RN varsayılanı 400) — aile o ağırlıkla indekslenir.
+    fontFamily: theme.font.body[400],
     fontSize: theme.text['body-sm'],
     color: theme.colors.ink,
   },
@@ -122,13 +123,13 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors['disabled-text'],
   },
   label: {
-    fontFamily: theme.font.body,
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text['field-label'],
     fontWeight: theme.text['field-label--font-weight'],
     color: theme.colors.ink,
   },
   helper: {
-    fontFamily: theme.font.body,
+    fontFamily: theme.font.body[400],
     fontSize: theme.text.helper,
     color: theme.colors.muted,
   },

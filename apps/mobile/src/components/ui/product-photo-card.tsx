@@ -127,9 +127,10 @@ export function ProductPhotoCard({
           )}
         </View>
       </View>
-      {/* Fiyat çipi `Tag` ile birebir örtüşür (terracotta zemin · beyaz metin · 12,5/700 ·
-          yarıçap `badge` · +4°); tek fark yumuşak gölgenin değeri (`shadow.soft` ≠ şablonun
-          `0 3px 8px`), o da raporlandı. Fiyatı olmayan üründe çip HİÇ ÇİZİLMEZ (bkz. prop künyesi). */}
+      {/* Fiyat çipi `Tag` ile BİREBİR örtüşür: terracotta zemin · beyaz metin · rozet kademesi
+          (12,5/700 · .06em) · yarıçap `badge` · gölge `shadow.badge` · +4°. Token Kararlari #16
+          ile gölge farkı da kapandı — kitte artık şablonun kendi değeri (`0 3px 8px …/.22`) var.
+          Fiyatı olmayan üründe çip HİÇ ÇİZİLMEZ (bkz. prop künyesi). */}
       {priceLabel === undefined ? null : (
         <View style={styles.priceBadge}>
           <Tag label={priceLabel} rotate={4} shadow />
@@ -173,17 +174,17 @@ const styles = StyleSheet.create((theme) => ({
     paddingHorizontal: theme.space.lg,
     borderRadius: theme.radius.badge,
   },
-  // Şablonun örtüsü rgba(21,23,15,.72); `scrim` ailesinin en yakın kademesi `scrim-heavy` (.82).
-  soldOutBadge: { backgroundColor: theme.colors['scrim-heavy'] },
-  // Şablon %94 opak krem; alfalı krem token'ı YOK — opak `sand-50` ile kuruldu (aynı krem).
+  /* Tükendi örtüsü KENDİ durağında (Token Kararlari #18): `.72`nin işi fotoğrafı SOLDURMAK,
+     `.82`nin işi (gradyanın ucu) metni okunur kılmak — ikisi ayrı iş, ayrı durak. */
+  soldOutBadge: { backgroundColor: theme.colors['scrim-72'] },
+  // Şablon %94 opak krem; rozet zeminleri krem-cam ailesine DAHİL DEĞİL (#17) — opak `sand-50`.
   discountBadge: { backgroundColor: theme.colors['sand-50'] },
   statusLabel: {
-    fontFamily: theme.font.body,
-    fontSize: theme.text.eyebrow,
-    fontWeight: theme.text['eyebrow--font-weight'],
-    /* Şablonun aralığı .06em; uygulama `eyebrow`i .18em (üstbaşlık için) — rozette üç kat geniş
-       durur. En yakın durak tabandaki `eyebrow-sm` (.1em); fark 10 px kademede 0,4 dp. */
-    letterSpacing: emToDp(theme.text['eyebrow-sm--letter-spacing'], theme.text.eyebrow),
+    fontFamily: theme.font.body[theme.text['badge--font-weight']],
+    // Rozet ailesinin KÜÇÜK boyu (#16): fotoğraf üstündeki durum etiketi 10 px.
+    fontSize: theme.text['badge-sm'],
+    fontWeight: theme.text['badge--font-weight'],
+    letterSpacing: emToDp(theme.text['badge--letter-spacing'], theme.text['badge-sm']),
     // Şablonda rozet metni büyük harf; büyütmeyi komponent yapar ki i18n dizgesi bağırmasın.
     textTransform: 'uppercase',
   },
@@ -197,23 +198,24 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.space['2xs'],
   },
   name: {
-    fontFamily: theme.font.display,
+    fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
     fontSize: theme.text.body,
     fontWeight: theme.text['card-title-sm--font-weight'],
     // Sıkı başlık satır aralığı — oran da token (`h1--line-height`), ham çarpan yazılmadı.
     lineHeight: theme.text.body * theme.text['h1--line-height'],
-    /* Şablonun #faf6ec'i `cream` (= `sand-25`) ile birebir aynıdır. Rol token'ı `on-image`
-       (fotoğraf üstü başlık) DEĞERİ tutmuyor (#f5f1e6) — değer eşleşmesi tercih edildi, rol ile
-       değerin ayrıştığı raporlandı. */
-    color: theme.colors.cream,
+    /* ROL TOKEN'I (Token Kararlari #14): fotoğraf üstü ad `on-image`tır. Daha önce şablonun
+       #faf6ec'i `cream` ile birebir tuttuğu için değer eşleşmesi seçilmişti; karar tasarımı
+       `on-image`e (#f5f1e6) ÇEKTİ ve `on-image-bright` açılmadı — yani rol ile değer artık aynı
+       şeyi söylüyor ve altyazıyla (`on-image-soft`) aynı aileden okunuyor. */
+    color: theme.colors['on-image'],
   },
   options: {
-    fontFamily: theme.font.body,
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     // Şablon 10,5; ölçekte o durak yok. `micro` (11,5) alındı: `eyebrow` (10) sayıca daha yakın
     // ama üstbaşlık kademesidir — cümle biçimli bir alt satır onun ağırlığı/aralığıyla döner.
     fontSize: theme.text.micro,
     fontWeight: theme.text['field-label--font-weight'],
-    // Şablon #d5d0c2; rol token'ı `on-image-soft` (fotoğraf üstü altyazı) — değeri #dfe3cf.
+    // Fotoğraf üstü ALTYAZI rolü; değeri #d5d0c2 (Token Kararlari #15 — rol ile değer örtüştü).
     color: theme.colors['on-image-soft'],
   },
   /* Fiyat çipi kartın SAĞ ÜST köşesinden taşar (şablon: `top:-8px;right:-5px`). Yatay ofset

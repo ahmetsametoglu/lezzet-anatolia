@@ -9,6 +9,7 @@ import {
   customerText,
 } from '@lezzet/design-tokens';
 
+import { appFontAssets } from './fonts';
 import { lightTheme } from './unistyles';
 
 // Bağlantı kanıtı: tema değerleri design-tokens paketinden GELİYOR — beklenenler de paketten
@@ -63,6 +64,44 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
   it('gölge token dizgesini AYNEN taşır (RN boxShadow CSS söz dizimini kabul eder)', () => {
     expect(lightTheme.shadow.hard).toBe(customerAppShadow.hard);
     expect(lightTheme.shadow.soft).toBe(customerAppShadow.soft);
+    expect(lightTheme.shadow.badge).toBe(customerAppShadow.badge);
+  });
+
+  it('krem cam ailesi ve tükendi örtüsü temaya geçer (Token Kararlari #17, #18)', () => {
+    expect(lightTheme.colors['cream-glass']).toBe(customerAppColors['cream-glass']);
+    expect(lightTheme.colors['cream-glass-soft']).toBe(customerAppColors['cream-glass-soft']);
+    expect(lightTheme.colors['scrim-72']).toBe(customerAppColors['scrim-72']);
+    // "TAKİP" çipinin ikilisi de envanterde (#19) — çip varyantı henüz yok, token var.
+    expect(lightTheme.colors['accent-leaf']).toBe(customerAppColors['accent-leaf']);
+    expect(lightTheme.colors['ink-deep']).toBe(customerAppColors['ink-deep']);
+  });
+
+  it('fotoğraf-üstü ROL ikilisi uygulamada aynı aileden okunur (#14 + #15)', () => {
+    // Ad tabandan (`on-image`), altyazı uygulamadan (`on-image-soft` ezildi) — ikisi bir ÇİFT.
+    expect(lightTheme.colors['on-image']).toBe(customerColors['on-image']);
+    expect(lightTheme.colors['on-image-soft']).toBe(customerAppColors['on-image-soft']);
+    expect(lightTheme.colors['on-image-soft']).not.toBe(customerColors['on-image-soft']);
+  });
+
+  it('FONT SEAM ağırlıkla indekslenir ve yüklenen aile adlarını verir (Token Kararlari #24)', () => {
+    /* RN'de ağırlık ailenin ADININ İÇİNDEDİR; seam ağırlıkla indekslenmezse `fontWeight` ile
+       aile ayrışır ve cihaz sahte kalın üretir. Anahtarlar `appFontAssets`in anahtarlarıdır —
+       yani yüklenmeyen bir aileye stil bağlanamaz (bağ derlemede de kurulu). */
+    expect(lightTheme.font.display[600]).toBe('Lora_600SemiBold');
+    expect(lightTheme.font.body[lightTheme.text['button--font-weight']]).toBe('Karla_700Bold');
+    expect(Object.keys(appFontAssets).sort()).toEqual([
+      'Karla_400Regular',
+      'Karla_600SemiBold',
+      'Karla_700Bold',
+      'Lora_400Regular',
+      'Lora_600SemiBold',
+    ]);
+  });
+
+  it('İTALİK ve kullanılmayan ağırlıklar YÜKLENMEZ (paket boyu + açılış süresi)', () => {
+    // Karar 24'ün açık hükmü: yalnız Lora 400·600 ve Karla 400·600·700.
+    expect(Object.keys(appFontAssets).some((name) => name.includes('Italic'))).toBe(false);
+    expect(appFontAssets).not.toHaveProperty('Lora_700Bold');
   });
 
   it('gradyanlar expo-linear-gradient prop’larına çevrilmiş hâlde durur', () => {

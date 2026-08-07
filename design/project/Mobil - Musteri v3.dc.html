@@ -116,7 +116,7 @@
               </sc-for>
             </div>
             <div style="padding:28px 0 0;display:flex;flex-direction:column;gap:2px">
-              <div style="display:flex;justify-content:space-between;align-items:baseline;margin:0 22px"><div style="display:flex;flex-direction:column;gap:3px"><span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">VİTRİNDEKİLER</span><span style="font:600 21px 'Lora';color:#343b41">Bu haftanın seçkisi</span></div><span style="font:700 12.5px 'Karla';color:#b05c2e;transition:opacity .12s" style-active="opacity:.55" onClick="{{ goCatalog }}">Tüm katalog ›</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin:0 22px"><div style="display:flex;flex-direction:column;gap:3px"><span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">VİTRİNDEKİLER</span><span style="font:600 20px 'Lora';color:#343b41">Bu haftanın seçkisi</span></div><span style="font:700 12.5px 'Karla';color:#b05c2e;transition:opacity .12s" style-active="opacity:.55" onClick="{{ goCatalog }}">Tüm katalog ›</span></div>
               <div style="display:flex;gap:18px;overflow-x:auto;padding:10px 22px 6px">
                 <sc-for list="{{ vitrin }}" as="p" hint-placeholder-count="4">
                   <div style="flex:none;width:150px;display:flex;flex-direction:column;align-items:center;gap:7px;transition:transform .12s" style-active="transform:scale(.95)" onClick="{{ p.open }}">
@@ -130,15 +130,15 @@
               </div>
             </div>
             <div style="padding:28px 0 0;display:flex;flex-direction:column;gap:2px">
-              <div style="margin:0 22px;display:flex;flex-direction:column;gap:3px"><span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">SOFRADAN FİKİRLER</span><span style="font:600 21px 'Lora';color:#343b41">Bu sofra nasıl kurulur?</span></div>
+              <div style="margin:0 22px;display:flex;flex-direction:column;gap:3px"><span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">SOFRADAN FİKİRLER</span><span style="font:600 20px 'Lora';color:#343b41">Bu sofra nasıl kurulur?</span></div>
               <div style="display:flex;gap:14px;overflow-x:auto;padding:12px 22px 6px">
                 <sc-for list="{{ rcps }}" as="r" hint-placeholder-count="3">
-                  <div style="flex:none;width:220px;height:280px;position:relative;border-radius:20px;overflow:hidden;transition:transform .12s" style-active="transform:scale(.96)" onClick="{{ r.open }}">
+                  <div style="flex:none;width:220px;height:280px;position:relative;border-radius:20px;overflow:hidden;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ r.open }}">
                     <image-slot id="m-rcp-{{ r.id }}" shape="rect" placeholder="{{ r.n }} — servis edilmiş"></image-slot>
                     <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,23,15,0) 40%,rgba(21,23,15,.82));pointer-events:none"></div>
                     <span style="position:absolute;top:10px;left:10px;background:rgba(243,239,226,.92);color:#343b41;font:700 10.5px 'Karla';padding:5px 10px;border-radius:10px;transform:rotate(-3deg)">{{ r.time }}</span>
                     <div style="position:absolute;left:14px;right:14px;bottom:12px;display:flex;flex-direction:column;gap:3px">
-                      <span style="font:600 19px/1.1 'Lora';color:#faf6ec">{{ r.n }}</span>
+                      <span style="font:600 19px/1.1 'Lora';color:#f5f1e6">{{ r.n }}</span>
                       <span style="font:700 11.5px 'Karla';color:#a9c46b">{{ r.cnt }} malzeme · Tarifi gör ›</span>
                     </div>
                   </div>
@@ -152,9 +152,9 @@
                   <sc-if value="{{ pk.photo }}"><image-slot id="{{ pk.img }}" shape="rect" src="{{ pk.photo }}" placeholder=" "></image-slot></sc-if>
                   <sc-if value="{{ pk.noPh }}"><div style="width:100%;height:100%;background:#e2d8bd;display:flex;align-items:center;justify-content:center"><span style="font:600 60px 'Lora';color:#b05c2e;opacity:.35">{{ pk.init }}</span></div></sc-if>
                 </div>
-                <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,23,15,0) 32%,rgba(21,23,15,.8));pointer-events:none"></div>
+                <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,23,15,0) 32%,rgba(21,23,15,.82));pointer-events:none"></div>
                 <div style="position:absolute;left:16px;right:16px;bottom:13px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px">
-                  <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:700 9.5px 'Karla';letter-spacing:.14em;color:#a9c46b">HAZIR PAKET · {{ pk.cnt }}</span><span style="font:600 20px 'Lora';color:#faf6ec">{{ pk.n }}</span></div>
+                  <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:700 9.5px 'Karla';letter-spacing:.14em;color:#a9c46b">HAZIR PAKET · {{ pk.cnt }}</span><span style="font:600 20px 'Lora';color:#f5f1e6">{{ pk.n }}</span></div>
                   <span style="background:#b05c2e;color:#fff;font:600 16px 'Lora';padding:8px 14px;border-radius:14px;transform:rotate(3deg);flex:none;box-shadow:0 4px 10px rgba(21,23,15,.3)">{{ pk.prF }}</span>
                 </div>
               </div>
@@ -198,11 +198,11 @@
               </div>
             </sc-if>
             <sc-if value="{{ catSkel }}">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px 12px;padding:20px 22px 10px;animation:skel 1.1s ease infinite">
-                <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:138px;height:138px;border-radius:50%;background:#e2d8bd"></div><div style="width:96px;height:12px;border-radius:6px;background:#e2d8bd"></div><div style="width:58px;height:10px;border-radius:5px;background:#ece3c8"></div></div>
-                <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:138px;height:138px;border-radius:50%;background:#e2d8bd"></div><div style="width:96px;height:12px;border-radius:6px;background:#e2d8bd"></div><div style="width:58px;height:10px;border-radius:5px;background:#ece3c8"></div></div>
-                <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:138px;height:138px;border-radius:50%;background:#e2d8bd"></div><div style="width:96px;height:12px;border-radius:6px;background:#e2d8bd"></div><div style="width:58px;height:10px;border-radius:5px;background:#ece3c8"></div></div>
-                <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:138px;height:138px;border-radius:50%;background:#e2d8bd"></div><div style="width:96px;height:12px;border-radius:6px;background:#e2d8bd"></div><div style="width:58px;height:10px;border-radius:5px;background:#ece3c8"></div></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px 14px;padding:20px 22px 10px;animation:skel 1.1s ease infinite">
+                <div style="width:100%;aspect-ratio:1;border-radius:20px;background:#e2d8bd"></div>
+                <div style="width:100%;aspect-ratio:1;border-radius:20px;background:#e2d8bd"></div>
+                <div style="width:100%;aspect-ratio:1;border-radius:20px;background:#e2d8bd"></div>
+                <div style="width:100%;aspect-ratio:1;border-radius:20px;background:#e2d8bd"></div>
               </div>
               <div style="display:flex;align-items:center;justify-content:center;gap:9px;padding:14px"><div style="width:18px;height:18px;border-radius:50%;border:3px solid #e2d8bd;border-top-color:#5f7a2c;animation:spin .8s linear infinite"></div><span style="font:600 12px 'Karla';color:#8a8270">Yükleniyor…</span></div>
             </sc-if>
@@ -216,15 +216,15 @@
             </sc-if>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px 14px;padding:20px 22px 12px">
               <sc-for list="{{ catProds }}" as="p" hint-placeholder-count="6">
-                <div style="position:relative;aspect-ratio:1;transition:transform .12s" style-active="transform:scale(.96)" onClick="{{ p.open }}">
+                <div style="position:relative;aspect-ratio:1;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ p.open }}">
                   <div style="position:absolute;inset:0;border-radius:20px;overflow:hidden;opacity:{{ p.imgOp }}">
                     <image-slot id="{{ p.img }}" shape="rect" src="{{ p.photo }}" placeholder=" "></image-slot>
-                    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,23,15,0) 42%,rgba(21,23,15,.8));pointer-events:none"></div>
+                    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,23,15,0) 40%,rgba(21,23,15,.82));pointer-events:none"></div>
                     <sc-if value="{{ p.so }}"><span style="position:absolute;top:10px;left:10px;background:rgba(21,23,15,.72);color:#f3efe2;font:700 10px 'Karla';letter-spacing:.06em;padding:4px 9px;border-radius:9px">TÜKENDİ</span></sc-if>
                     <sc-if value="{{ p.disc }}"><span style="position:absolute;top:10px;left:10px;background:rgba(243,239,226,.94);color:#b05c2e;font:700 10px 'Karla';letter-spacing:.06em;padding:4px 9px;border-radius:9px">İNDİRİM</span></sc-if>
                     <div style="position:absolute;left:12px;right:12px;bottom:10px;display:flex;flex-direction:column;gap:2px">
-                      <span style="font:600 15px/1.15 'Lora';color:#faf6ec">{{ p.n }}</span>
-                      <sc-if value="{{ p.opts }}"><span style="font:600 10.5px 'Karla';color:#d5d0c2">{{ p.opts }}</span></sc-if>
+                      <span style="font:600 15px/1.15 'Lora';color:#f5f1e6">{{ p.n }}</span>
+                      <sc-if value="{{ p.opts }}"><span style="font:600 11.5px 'Karla';color:#d5d0c2">{{ p.opts }}</span></sc-if>
                     </div>
                   </div>
                   <span style="position:absolute;top:-8px;right:-5px;background:#b05c2e;color:#fff;font:700 12.5px 'Karla';padding:6px 11px;border-radius:12px;transform:rotate(4deg);box-shadow:0 3px 8px rgba(21,23,15,.25)">{{ p.priceF }}</span>
@@ -317,7 +317,7 @@
 
         <sc-if value="{{ vPackage }}">
           <div data-screen-label="Paket Detay" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
-            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
               <span style="font:600 17px 'Lora';color:#343b41;flex:1">Hazır Paket</span>
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background .15s" style-active="background:#ece5d2" onClick="{{ pkShare }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#343b41" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 6.5 12 3l4 3.5M6.5 10H5.8A1.8 1.8 0 0 0 4 11.8v7A1.8 1.8 0 0 0 5.8 20.5h12.4a1.8 1.8 0 0 0 1.8-1.7v-7a1.8 1.8 0 0 0-1.8-1.8h-.7"></path></svg></div>
@@ -350,7 +350,7 @@
 
         <sc-if value="{{ vKesif }}">
           <div data-screen-label="Keşif" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
-            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
               <span style="font:600 17px 'Lora';color:#343b41;flex:1">Keşif</span>
               <span style="font:700 12.5px 'Karla';color:#8a8270">{{ kv.prog }}</span>
@@ -367,7 +367,7 @@
                   <div style="position:absolute;inset:0;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 12px 32px rgba(58,65,71,.14);display:flex;flex-direction:column;animation:{{ kv.anim }}">
                     <div style="flex:1;min-height:0"><image-slot id="{{ kv.cur.img }}" shape="rect" placeholder="{{ kv.cur.n }} — iştah açan fotoğraf"></image-slot></div>
                     <div style="padding:16px 18px 18px;display:flex;flex-direction:column;gap:6px">
-                      <span style="font:600 21px 'Lora';color:#343b41">{{ kv.cur.n }}</span>
+                      <span style="font:600 20px 'Lora';color:#343b41">{{ kv.cur.n }}</span>
                       <span style="font:400 13.5px/1.5 'Karla';color:#6d7261">{{ kv.cur.d }}</span>
                     </div>
                   </div>
@@ -476,7 +476,7 @@
 
         <sc-if value="{{ vCheckout }}">
           <div data-screen-label="Checkout" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
-            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
               <span style="font:600 17px 'Lora';color:#343b41">Siparişi tamamla</span>
             </div>
@@ -692,7 +692,7 @@
 
         <sc-if value="{{ vOrder }}">
           <div data-screen-label="Sipariş Detay" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
-            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
               <span style="font:600 17px 'Lora';color:#343b41;flex:1">{{ od.ref }}</span>
               <span style="font:700 11.5px 'Karla';color:{{ od.stFg }};background:{{ od.stBg }};border-radius:11px;padding:5px 11px;transform:rotate(2deg);flex:none">{{ od.st }}</span>
@@ -843,7 +843,7 @@
                   <span style="font:400 12px/1.5 'Karla';color:#6d7261">Kodunuzla ilk siparişini veren arkadaşınız 5 € indirim kazanır; teslimattan sonra size de 5 € kupon yüklenir.</span>
                   <div style="display:flex;gap:8px;align-items:center">
                     <span style="flex:1;background:#fff;border:1.5px dashed #cdc4a8;border-radius:14px;padding:12px 14px;font:700 14px 'Karla';color:#343b41;letter-spacing:.06em;text-align:center">{{ hv.refCode }}</span>
-                    <div style="height:46px;padding:0 18px;border-radius:22px;background:#5f7a2c;color:#fff;font:700 13px 'Karla';display:flex;align-items:center;flex:none;transition:transform .12s" style-active="transform:scale(.96)" onClick="{{ hv.refShare }}">Paylaş</div>
+                    <div style="height:46px;padding:0 18px;border-radius:22px;background:#5f7a2c;color:#fff;font:700 13px 'Karla';display:flex;align-items:center;flex:none;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ hv.refShare }}">Paylaş</div>
                   </div>
                 </div>
               </sc-if>
@@ -898,7 +898,7 @@
 
         <sc-if value="{{ vTalepler }}">
           <div data-screen-label="Talepler" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
-            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
               <span style="font:600 17px 'Lora';color:#343b41;flex:1">Taleplerim</span>
               <span style="font:700 12.5px 'Karla';color:#5f7a2c" onClick="{{ tv.nw }}">＋ Yeni</span>
@@ -925,7 +925,7 @@
 
         <sc-if value="{{ vTalepD }}">
           <div data-screen-label="Talep Detay" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
-            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
               <div style="display:flex;flex-direction:column;flex:1"><span style="font:600 17px 'Lora';color:#343b41">{{ td.tp }}</span><span style="font:400 11.5px 'Karla';color:#8a8270">{{ td.ord }} · {{ td.dt }}</span></div>
               <span style="font:700 11.5px 'Karla';color:{{ td.stFg }};background:{{ td.stBg }};border-radius:11px;padding:5px 11px;transform:rotate(2deg);flex:none">{{ td.st }}</span>
@@ -948,7 +948,7 @@
 
         <sc-if value="{{ vTalepNew }}">
           <div data-screen-label="Yeni Talep" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
-            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
               <span style="font:600 17px 'Lora';color:#343b41">Bize yazın</span>
             </div>
@@ -999,7 +999,7 @@
 
         <sc-if value="{{ vFb }}">
           <div data-screen-label="Geri Bildirim" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
-            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
               <span style="font:600 17px 'Lora';color:#343b41;flex:1">Siparişiniz nasıldı?</span>
               <sc-if value="{{ fv.stage0 }}"><span style="font:700 12.5px 'Karla';color:#8a8270">{{ fv.prog }}</span></sc-if>
@@ -1012,7 +1012,7 @@
                   <span style="position:absolute;top:14px;right:16px;background:#f3efe2;color:#343b41;font:700 11.5px 'Karla';padding:6px 12px;border-radius:12px;transform:rotate(3deg);box-shadow:0 3px 8px rgba(21,23,15,.22)">{{ fv.ordRef }}</span>
                   <div style="position:absolute;left:22px;right:22px;bottom:18px;display:flex;flex-direction:column;gap:3px">
                     <span style="font:700 10px 'Karla';letter-spacing:.16em;color:#a9c46b">BU ÜRÜN NASILDI?</span>
-                    <span style="font:600 27px/1.1 'Lora';color:#faf6ec">{{ fv.cur.n }}</span>
+                    <span style="font:600 27px/1.1 'Lora';color:#f5f1e6">{{ fv.cur.n }}</span>
                   </div>
                 </div>
                 <div style="padding:20px 22px;display:flex;justify-content:center;gap:16px">
@@ -1024,7 +1024,7 @@
             </sc-if>
             <sc-if value="{{ fv.stage1 }}">
               <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
-                <span style="font:600 21px 'Lora';color:#343b41">Teşekkürler! Bir şey eklemek ister misiniz?</span>
+                <span style="font:600 20px 'Lora';color:#343b41">Teşekkürler! Bir şey eklemek ister misiniz?</span>
                 <span style="font:400 13px/1.5 'Karla';color:#6d7261">Kısa bir yorum bırakabilirsiniz — incelendikten sonra ürün sayfasında yayınlanır. Zorunlu değil.</span>
                 <textarea value="{{ fv.comment }}" onChange="{{ fv.onC }}" placeholder="Örn. Börek tam annemin yaptığı gibiydi…" style="border:1.5px solid #d8cfb6;border-radius:16px;padding:14px 16px;font:400 14px/1.5 'Karla';color:#343b41;background:#fff;outline:none;min-height:100px;resize:none"></textarea>
                 <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s;box-shadow:3px 3px 0 #343b41" style-active="transform:translate(2px,2px)" onClick="{{ fv.finish }}">Değerlendirmeyi tamamla</div>
@@ -1057,7 +1057,7 @@
 
         <sc-if value="{{ vPro }}">
           <div data-screen-label="Professionnels" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
-            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
               <span style="font:600 17px 'Lora';color:#343b41">Professionnels</span>
             </div>
@@ -1127,7 +1127,7 @@
 
         <sc-if value="{{ vStatic }}">
           <div data-screen-label="Bilgi Sayfası" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
-            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
               <span style="font:600 17px 'Lora';color:#343b41">{{ sx.t }}</span>
             </div>
@@ -1137,7 +1137,7 @@
 
         <sc-if value="{{ vNotif }}">
           <div data-screen-label="Bildirimler" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
-            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
               <span style="font:600 17px 'Lora';color:#343b41">Bildirimler</span>
             </div>
@@ -1226,7 +1226,7 @@
       </div>
 
       <sc-if value="{{ vProduct }}">
-        <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(243,239,226,.97);backdrop-filter:blur(8px);border-top:1.5px solid #343b41;padding:12px 18px 22px">
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);border-top:1.5px solid #343b41;padding:12px 18px 22px">
           <sc-if value="{{ pd.ok }}">
             <div style="display:flex;align-items:center;gap:12px">
               <div style="display:flex;align-items:center;background:#ece3c8;border-radius:16px;flex:none">
@@ -1245,14 +1245,14 @@
           <sc-if value="{{ pd.so }}">
             <div style="display:flex;align-items:center;gap:12px">
               <span style="flex:1;font:600 12.5px/1.4 'Karla';color:#8a8270">Tükendi — yakında yeniden gelecek</span>
-              <div style="background:{{ pd.alertBg }};color:{{ pd.alertFg }};border:1.5px solid #cddbb0;font:700 13px 'Karla';border-radius:22px;height:46px;padding:0 18px;display:flex;align-items:center;flex:none;transition:transform .12s" style-active="transform:scale(.96)" onClick="{{ pd.alertT }}">{{ pd.alertL }}</div>
+              <div style="background:{{ pd.alertBg }};color:{{ pd.alertFg }};border:1.5px solid #cddbb0;font:700 13px 'Karla';border-radius:22px;height:46px;padding:0 18px;display:flex;align-items:center;flex:none;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ pd.alertT }}">{{ pd.alertL }}</div>
             </div>
           </sc-if>
         </div>
       </sc-if>
 
       <sc-if value="{{ vPackage }}">
-        <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(243,239,226,.97);backdrop-filter:blur(8px);border-top:1.5px solid #343b41;padding:12px 18px 22px">
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);border-top:1.5px solid #343b41;padding:12px 18px 22px">
           <sc-if value="{{ pk.ok }}">
             <div style="display:flex;align-items:center;gap:12px">
               <div style="display:flex;align-items:center;background:#ece3c8;border-radius:16px;flex:none">
@@ -1270,14 +1270,14 @@
       </sc-if>
 
       <sc-if value="{{ vRecipe }}">
-        <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(243,239,226,.97);backdrop-filter:blur(8px);border-top:1.5px solid #343b41;padding:12px 18px 24px">
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);border-top:1.5px solid #343b41;padding:12px 18px 24px">
           <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ rc.addAll }}">{{ rc.addAllF }}</div>
         </div>
       </sc-if>
 
       <sc-if value="{{ vCart }}">
         <sc-if value="{{ cv.notEmpty }}">
-          <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(243,239,226,.97);backdrop-filter:blur(8px);border-top:1.5px solid #343b41;padding:10px 18px 24px;display:flex;align-items:center;gap:14px">
+          <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);border-top:1.5px solid #343b41;padding:10px 18px 24px;display:flex;align-items:center;gap:14px">
             <div style="flex:1;background:{{ cv.ckBg }};color:#fff;border-radius:16px;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 20px;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ cv.goCk }}">
               <span style="font:700 15px 'Karla'">Siparişi tamamla →</span>
               <span style="background:rgba(21,23,15,.22);border-radius:11px;padding:9px 14px;font:700 15px 'Karla'">{{ cv.grandF }}</span>
