@@ -257,6 +257,9 @@ importers:
       '@lezzet/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@lezzet/application':
+        specifier: workspace:*
+        version: link:../../packages/application
       '@lezzet/brand':
         specifier: workspace:*
         version: link:../../packages/brand
@@ -266,9 +269,6 @@ importers:
       '@lezzet/domain-core':
         specifier: workspace:*
         version: link:../../packages/domain-core
-      '@lezzet/email':
-        specifier: workspace:*
-        version: link:../../packages/email
       '@lezzet/helper':
         specifier: workspace:*
         version: link:../../packages/helper

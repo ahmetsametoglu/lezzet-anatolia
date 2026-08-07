@@ -1,20 +1,18 @@
 import type { Locale } from '@lezzet/i18n';
+import type { AuthErrorKey } from '@lezzet/types';
 
 /**
  * Kullanıcıya dönen auth hata anahtarları. Ham Supabase mesajı yerine anlamsal anahtar
  * taşınır; çeviri tek yerde ({@link AUTH_MESSAGES}) tutulur (DRY + i18n).
+ *
+ * **Anahtar kümesi burada TANIMLANMIYOR, `@lezzet/types`ten geliyor** (`AuthErrorKeyEnum`,
+ * 21.4a — benimseme 07.08). Küme iki yüzeyin ortak dili: aynı akışı web server action'ı da
+ * mobil `/api/v1/auth/*` ucu da çağırıyor. Elle yazılmış ikinci bir liste, bir gün paket yeni bir
+ * hâl eklediğinde sessizce eksik kalırdı — şimdi eksik anahtar aşağıdaki `Record`ta derleme
+ * hatası. **Metin ise paylaşılmaz ve paylaşılmayacak:** cümleyi ekran kurar (web sözlüğü burada,
+ * RN sözlüğü RN'de) — ortak olan yalnız anahtar.
  */
-export type AuthErrorKey =
-  | 'invalid_email'
-  | 'send_failed'
-  | 'rate_limit'
-  | 'cooldown'
-  | 'invalid_code'
-  | 'code_expired'
-  | 'code_locked'
-  | 'no_active_code'
-  | 'google_unavailable'
-  | 'oauth_failed';
+export type { AuthErrorKey };
 
 const AUTH_MESSAGES: Record<AuthErrorKey, Record<Locale, string>> = {
   invalid_email: {

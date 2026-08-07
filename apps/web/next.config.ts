@@ -88,8 +88,11 @@ const config: NextConfig = {
     '@lezzet/types',
     '@lezzet/helper',
     '@lezzet/domain-core',
+    '@lezzet/application',
     '@lezzet/database',
     '@lezzet/storage',
+    // Web artık DOĞRUDAN import etmiyor (OTP maili `@lezzet/application`a taşındı, 07.08) ama
+    // grafikte duruyor: listeden düşerse transpile edilmemiş TS olarak paketlenmeye çalışılır.
     '@lezzet/email',
     '@lezzet/notify',
     '@lezzet/ai',

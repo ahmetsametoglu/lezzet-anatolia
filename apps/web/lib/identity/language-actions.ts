@@ -16,8 +16,9 @@ import { currentCustomerId } from '@/lib/guard';
  * müşteri, o tek tıklamayla maillerinin dilini kaybetmemeli. Ayrım "URL'de hangi dil var" değil,
  * "müşteri dili seçti mi".
  *
- * İlk değeri kayıt anında tarayıcının dili koyar (04.9, `seedPreferredLanguage`); buradan sonrası
- * müşterinin kendi seçimidir.
+ * İlk değeri kayıt anında tarayıcının dili koyar (04.9; tohum artık `@lezzet/application/auth`
+ * içinde — giriş akışının parçası, iki yüzeyin ortak işi); buradan sonrası müşterinin kendi
+ * seçimidir.
  *
  * **Sessizce başarısız olur ve bu bilinçli:** ziyaretçide yazacak kart yok, hata da yok — dil
  * değiştirmek bir gezinme eylemi, önüne "giriş yapın" koymak saçma olurdu. Yazma düşerse de
