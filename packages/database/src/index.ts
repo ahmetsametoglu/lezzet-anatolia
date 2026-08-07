@@ -3,7 +3,7 @@
 // Not: BaseDbService ve case-transformers paket-içi altyapıdır; dışa yalnız kamu API'si (istemci + servisler) verilir.
 
 // İstemci
-export { createServiceRoleClient, serviceDb, type Db } from './client';
+export { createServiceRoleClient, serviceDb, createAnonClient, anonDb, type Db } from './client';
 // Reset/restart sonrası ilk istek 502 alır (PostgREST şema önbelleğini yüklüyor) — seed ve testler
 // ilk sorgudan önce bunu bekler.
 export { waitForRest, type WaitForRestOptions } from './core/ready';

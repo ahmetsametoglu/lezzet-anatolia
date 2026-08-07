@@ -63,6 +63,19 @@ export const SOURCES = {
    * hata sınırındaki render çökmesi buradan gelmezse hiçbir yerde iz bırakmaz (denetim G1).
    */
   webClient: 'web-client',
+  /** Mobil API HTTP isteği (21.1) — web'inkinden ayrı: iki yüzeyin arızası aynı kovaya düşmemeli. */
+  mobileApiHttp: 'mobile-api-http',
+  /**
+   * Mobil API SÜRECİNİN kendisi — `backendProcess` ile aynı ayrımın karşılığı: "bir istek düştü"
+   * ile "süreç öldü, tüm uçlar sustu" aynı ekranda aynı renkte görünmemeli.
+   */
+  mobileApiProcess: 'mobile-api-process',
+  /**
+   * Paylaşılan auth akışı (`packages/application/src/auth`) — OTP isteme/doğrulama. Çağıranı iki
+   * yüzey birden (web + mobil), o yüzden kaynağı çağırana değil AKIŞA bağlı: hata akışın
+   * kendisindeyse iki yüzeyde de aynı adla görünmeli, yoksa aynı arıza iki kova arasında bölünür.
+   */
+  applicationAuth: 'application-auth',
 } as const;
 
 export async function captureError(error: unknown, ctx: CaptureContext): Promise<void> {
