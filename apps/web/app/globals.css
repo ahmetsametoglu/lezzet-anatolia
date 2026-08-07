@@ -5,6 +5,18 @@
   Her semantik aile DÖRT katman taşır: metin · koyu · zemin · kenarlık (+ grafik/nokta).
   KURAL (envanter §0): ham hex yasak — bir ton burada yoksa kodlanmaz, envantere eklenir.
   Karanlık mod yalnız operasyon yüzeyindedir (dosyanın sonu); müşteri vitrini tek temalıdır.
+
+  ── BU BLOK NEDEN `packages/design-tokens`TEN ÜRETİLMİYOR (karar 07.08) ──────────────────
+  Paket aynı 223 token'ın TS karşılığını taşıyor (mobil Unistyles teması oradan besleniyor) ve
+  `renderThemeCss()` bu bloğun üretilmiş hâlini deterministik verebiliyor. Kurmadık, çünkü üretici
+  KAYIPLI: yalnız `--ad: değer;` satırı basıyor. Bu dosyanın ~200 satırı yorum — her token'ın
+  nerede kullanıldığı, yukarıdaki ham-hex kuralı, tek-mürekkep kararı, yuvarlama istisnaları.
+  Kazanılacak şey makineyle KİLİTLİ bir ikizlik (`packages/design-tokens/src/parity.test.ts` iki
+  yönlü karşılaştırıyor — sessiz ayrışma zaten imkânsız), kaybedilecek şey token'ları okuyan
+  herkesin ilk açtığı dosyadaki dokümantasyon. Takas kötü.
+  Doğru yön TERS: kaynak burası kalsın, TS modülü BURADAN üretilsin — parite testi zaten bir CSS
+  parser'ı taşıyor, aynı parser yorumları da toplayabilir. Karar paketin şeridinde
+  (`docs/talep/musteri-design-tokens-benimseme.md` cevabı).
 */
 @theme {
   /* Fontlar — next/font değişkenlerine bağlanır (layout.tsx) */
@@ -62,8 +74,12 @@
   --color-closed-bg: #f0e9d6; /* kapanmış rozet arkası (= sand-100) */
   --color-closed-line: #c9cdc2; /* pasif çerçeve (= neutral-400) */
 
-  /* ── §0.4 Etkileşim durumları ─────────────────────────────────────────────
-     Odak halkası ayrı renk taşımaz: 2px zeytin outline, 3px offset. */
+  /* ── §0.4a Etkileşim durumları ────────────────────────────────────────────
+     Odak halkası ayrı renk taşımaz: 2px zeytin outline, 3px offset.
+     NOT — envanterin §0.4'ü ÜÇ konuyu birden taşıyor (etkileşim durumları · tipografi ölçeği ·
+     köşe yarıçapları); burada üç ayrı bloğa bölündüler. Numara bu yüzden `a/b/c` ekiyle
+     yürüyor: aynı numarayı çıplak taşıyan iki başlık "biri yanlış yazılmış" diye okunuyordu
+     (mobil şeridinin gözlemi, 07.08) — oysa ikisi de doğru, kaynak tek bölüm. */
   --color-hover-bg: #f3efe2; /* liste/kart hover (= sand-50) */
   --color-disabled-fill: #c9c3b0; /* tükendi/disabled buton zemini */
   --color-disabled-line: #c9cdc2; /* pasif girdi ve çip çerçevesi */
@@ -74,7 +90,7 @@
      ham hex koda dağılmasın diye tek yerde durur. */
   --color-hero-mid: #6f7d3f;
 
-  /* ── §0.4 Tipografi ölçeği ────────────────────────────────────────────────
+  /* ── §0.4b Tipografi ölçeği (aynı envanter bölümü — §0.4a notu) ───────────
      Envanter: Lora "h1 52/600 · h2 28/600 · kart başlığı 24/600"; Karla "gövde 14-18/400 ·
      etiket/buton 13-16/700 · üstbaşlık 13-14/600 harf aralıklı büyük harf".
      KURAL (renk kuralının ölçü karşılığı): ham `text-[NNpx]` YAZILMAZ — bir kademe burada yoksa
@@ -149,7 +165,8 @@
   --text-eyebrow-sm--font-weight: 600;
   --text-eyebrow-sm--letter-spacing: 0.1em;
 
-  /* Köşe yarıçapları — §0.4: kart 18 · küçük kart 14-16 · buton/hap tam yuvarlak */
+  /* ── §0.4c Köşe yarıçapları (aynı envanter bölümü — §0.4a notu) ───────────
+     Envanter: kart 18 · küçük kart 14-16 · buton/hap tam yuvarlak (radius ≥ 22px) */
   --radius-card: 18px;
   --radius-soft: 14px;
   --radius-pill: 26px;
@@ -304,8 +321,10 @@
 
   /* §0.4 Etkileşim durumları — odak halkası ayrı renk taşımaz (2px olive, 2px offset) */
   --color-ops-ink-hover: #33372e; /* koyu butonun hover/active durumu */
-  --color-ops-disabled-fill: #c9ccc3; /* disabled buton zemini (= gray-600) */
-  --color-ops-disabled-text: #8b9086; /* disabled buton/girdi metni (= muted) */
+  /* Eşdeğerlik notları AÇIK TEMA için geçerli — karanlıkta iki token da ayrı kademeye kayıyor
+     ve bu bilinçli (koyu bloğun künyesi). Ekini yazmasak "yorum yanlış" diye okunuyordu. */
+  --color-ops-disabled-fill: #c9ccc3; /* disabled buton zemini (açıkta = gray-600) */
+  --color-ops-disabled-text: #8b9086; /* disabled buton/girdi metni (açıkta = muted) */
   --color-ops-row-selected: #eef0ea; /* tablo satırı hover ve seçim (= gray-100) */
 
   /* Köşe yarıçapları (operasyon) */
@@ -421,7 +440,12 @@ body {
 
   /* §0.6 Etkileşim — koyu buton açık zemine döner (mürekkep ters) */
   --color-ops-ink-hover: #d3d8ca;
-  --color-ops-disabled-fill: #3c4038;
-  --color-ops-disabled-text: #757c6d;
+  /* DEĞERLER DOĞRU, açıktaki eşdeğerlik burada BİLEREK bozulur (ölçüldü 07.08, mobil gözlemi).
+     Açıkta dolgu = gray-600, metin = muted; karanlıkta o eşleme korunsaydı dolgu #757c6d, metin
+     #8f9688 olurdu — birbirine yapışık iki ton, yani okunmayan bir buton. Karanlıkta dolgu bir
+     kademe daha koyuya (= koyu gray-200), metin bir kademe daha açığa (= koyu faint) taşınıyor;
+     korunan şey renk eşleşmesi değil, dolgu ile metin arasındaki KONTRAST. */
+  --color-ops-disabled-fill: #3c4038; /* karanlıkta = gray-200 */
+  --color-ops-disabled-text: #757c6d; /* karanlıkta = faint */
   --color-ops-row-selected: #31352c;
 }
