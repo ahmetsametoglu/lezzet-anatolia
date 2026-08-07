@@ -9,8 +9,13 @@ import { requireStaff } from '@/lib/guard';
  * AI çeviri önerisi — operatörün yazdığı dilden ötekileri ÖNERİR (05.8 · 09.4).
  *
  * **Yeri `lib/`, bir sayfa klasörü değil** (CLAUDE.md §2): ürün formu, katalog dialogu, paket
- * dialogu ve indirim dialogu — dördü de aynı öneriyi istiyor. Sayfa altında kalsaydı ikinci sayfa
- * ya import sınırını aşar ya kendi kopyasını yazardı.
+ * dialogu, indirim dialogu ve ürün AİLESİ dialogu — **beşi de** aynı öneriyi istiyor. Sayfa
+ * altında kalsaydı ikinci sayfa ya import sınırını aşar ya kendi kopyasını yazardı.
+ *
+ * *Sayı 07.08'de düzeltildi: künye "dört" diyordu, aile dialogu (05.15) sonradan eklenmiş ama
+ * künye büyümemişti. Bayat sayı bir hata üretti — tarif görev satırları bu cümleden kopyalanınca
+ * "dört dialog" diye yazıldı ve denetim düzeltti. Çağıran sayısı yazan künye, çağıran eklendiğinde
+ * büyümezse yanlış bilginin KAYNAĞI olur.*
  *
  * **Arka uç bağlandı** (`packages/ai`, 20.4) — `BEKLEYEN(09.4)` kapandı.
  *
