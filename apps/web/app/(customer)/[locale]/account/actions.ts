@@ -1,6 +1,6 @@
 'use server';
 
-import { UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
+import { UserProfileService, ZoneNoticeService, constraintOf, serviceDb } from '@lezzet/database';
 import { normalizePhone } from '@lezzet/helper';
 import type { AddressInsert } from '@lezzet/types';
 import { revalidatePath } from 'next/cache';
@@ -75,7 +75,26 @@ export async function updateProfileAction(input: { name?: string; phone?: string
       }
     }
 
-    await new UserProfileService(serviceDb()).update(patch);
+    try {
+      await new UserProfileService(serviceDb()).update(patch);
+    } catch (err) {
+      /**
+       * **Numara başka bir hesapta** — bugüne dek müşteri bunu `unexpected` olarak görüyordu
+       * ("Bir şeyler ters gitti. Tekrar deneyin"), yani kendi yazdığı doğru numarayı sonsuza
+       * kadar tekrar denerdi. Ölçüldü (07.08): kısıt `user_profiles_phone_key` (0001:49) ihlali
+       * `CustomerError` olmadığı için jenerik dala düşüyordu.
+       *
+       * Bu **04.10'un kapanışı DEĞİL** ve öyle okunmamalı: numaranın doğrulanmadan kimlik
+       * anahtarına yazılması sürüyor (yukarıdaki işaret). Burada değişen tek şey, çarpışmanın
+       * artık GÖRÜNÜR olması — sessizce jenerik hataya düşen bir kural, altı ay sonra kimsenin
+       * sebebini bulamayacağı bir destek talebidir.
+       *
+       * Kısıt adından okunuyor, önceden sorgu atılmıyor: iki okuma arasındaki yarışta "boştu ama
+       * doldu" hâli sessizce geri gelirdi — kuralın tuttuğu yer veritabanı, ekran değil.
+       */
+      if (constraintOf(err) === 'user_profiles_phone_key') throw new CustomerError('phone_taken');
+      throw err;
+    }
     revalidateAccount();
     return { data: true, errorKey: null };
   } catch (err) {

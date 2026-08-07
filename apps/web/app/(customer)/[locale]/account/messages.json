@@ -103,6 +103,7 @@
       "session_expired": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın.",
       "name_required": "Adınızı boş bırakamayız.",
       "phone_invalid": "Numarayı anlayamadık — ülke koduyla yazmayı deneyin (+33…).",
+      "phone_taken": "Bu numara başka bir hesapta kayıtlı. Numara sizinse bize yazın, hesabınıza taşıyalım.",
       "redeem_unavailable": "Puanınız şu anda kupona çevrilemiyor. Bakiyenizi kontrol edin."
     }
   },
@@ -210,6 +211,7 @@
       "session_expired": "Votre session semble expirée. Reconnectez-vous.",
       "name_required": "Le nom ne peut pas être vide.",
       "phone_invalid": "Numéro non reconnu — essayez avec l'indicatif du pays (+33…).",
+      "phone_taken": "Ce numéro est déjà associé à un autre compte. S'il est bien le vôtre, écrivez-nous et nous le rattacherons à votre compte.",
       "redeem_unavailable": "Vos points ne peuvent pas être convertis pour le moment. Vérifiez votre solde."
     }
   },
@@ -317,6 +319,7 @@
       "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden.",
       "name_required": "Der Name darf nicht leer sein.",
       "phone_invalid": "Nummer nicht erkannt — bitte mit Ländervorwahl versuchen (+33…).",
+      "phone_taken": "Diese Nummer gehört bereits zu einem anderen Konto. Wenn es Ihre ist, schreiben Sie uns — wir übertragen sie auf Ihr Konto.",
       "redeem_unavailable": "Ihre Punkte können derzeit nicht umgewandelt werden. Bitte prüfen Sie Ihr Guthaben."
     }
   }
