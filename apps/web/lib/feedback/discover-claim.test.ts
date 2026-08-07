@@ -48,8 +48,10 @@ beforeAll(async () => {
   productA = first.product.id;
   productB = second.product.id;
   // Aday olmayan ürün keşif kartlarına düşmez; `recordVote` bunu doğruluyor.
-  await products.setStatus(productA, 'candidate');
-  await products.setStatus(productB, 'candidate');
+  // `setStatus` sarmalayıcısı 07.08'de silindi (üretimde çağıranı kalmamıştı, 09.20 fork sökümü);
+  // yalnız testin ayakta tuttuğu bir metot, ölü koddur.
+  await products.update({ id: productA, status: 'candidate' });
+  await products.update({ id: productB, status: 'candidate' });
 });
 
 afterAll(async () => {

@@ -1,13 +1,15 @@
 import 'server-only';
 import { cache } from 'react';
 import { headers } from 'next/headers';
+import { getLocale } from 'next-intl/server';
+import { LOCALES, type Locale } from '@lezzet/i18n';
 import { AnalyticsEventService, AnalyticsSessionService, UserProfileService, serviceDb } from '@lezzet/database';
 import { AnalyticsInputSchema, type AnalyticsEventInsert, type AnalyticsInput } from '@lezzet/types';
 import { logger } from '@lezzet/observability';
 import { scrubMessage } from '@lezzet/observability/mask';
 import { getSessionUser } from '@/lib/guard';
 import { readPricingViewer } from '@/lib/storefront/read-viewer';
-import { readPlaceWarehouses } from '@/lib/delivery/read-place';
+import { readPlaceAnswer, readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { detectDevice } from '@/lib/device';
 import { routePattern } from './route-pattern';
 import { clientIp, dailySalt, sessionKeyOf } from './session-key';
@@ -87,6 +89,25 @@ interface EventContext {
   path?: string;
 }
 
+/**
+ * Sitenin o anki dili — çözülemezse `null`.
+ *
+ * `getLocale()` bir İSTEK BAĞLAMI ister ve ölçüm her yerden çağrılabiliyor (bağlamın kurulmadığı
+ * bir yol, bir arka plan işi). Fırlatmasına izin verseydik dil uğruna **olayın tamamı** düşerdi —
+ * ölçüm akışı kesmez ilkesinin küçük hâli. `null` burada "dil ölçülemedi" demek ve bu dürüst:
+ * uydurulmuş bir dil, boş dilden kötüdür.
+ */
+async function currentLocale(): Promise<Locale | null> {
+  try {
+    const locale = await getLocale();
+    // Doğrulama şart: `getLocale()` bir dize döner, tipimiz ise kapalı bir küme. Doğrulamasaydık
+    // sözlük dışı bir değer enum kolonuna gider ve yazma **veritabanında** patlardı.
+    return LOCALES.includes(locale as Locale) ? (locale as Locale) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Serbest metnin tek girdiği yer — temizlik TEK kapıda (atıcı ham yazar). */
 const SEARCH_QUERY_MAX = 100;
 function cleanQuery(raw: string): string {
@@ -108,6 +129,12 @@ export async function recordEvent(input: AnalyticsInput, context: EventContext =
     // Kural burada, tek yerde. Atıcılara dağıtılsaydı biri unutur ve payda sessizce şişerdi.
     if (h.get('next-router-prefetch') === '1' || h.get('purpose') === 'prefetch') return;
     if (!ua || BOT.test(ua)) return; // UA'sız istek = ISR/arka plan yeniden üretimi ya da bot
+    // **E2E koşuları deftere yazıyordu** (denetim gözlemi, 05.08). Playwright cihaz profilleri
+    // GERÇEK tarayıcı UA'sı taşır — `BOT` süzgeci onları görmez ve göremez. Her duman koşusu
+    // ziyaret, ürün görüntülemesi ve sipariş niyeti üretiyordu: paydayı da payı da şişiriyor, yani
+    // dönüşüm oranını sessizce bozuyordu. Üstbilgiyi e2e gönderir, düşürmeyi kapı yapar — kural
+    // öteki üçüyle aynı yerde durur.
+    if (h.get('x-e2e') === '1') return;
     if (await isStaffRequest()) return;
 
     const [salt, viewer, place] = await Promise.all([dailySalt(), readPricingViewer(), readPlaceWarehouses()]);
@@ -128,14 +155,23 @@ export async function recordEvent(input: AnalyticsInput, context: EventContext =
       // `null` bir KOVADIR (yer seçilmemiş), eksik veri değil — huninin ilk adımı orada.
       warehouseId: place.warehouseId,
       device: await detectDevice(),
-      // **BEKLEYEN(13.1): ikisinin de besleyeni yok ve bu künyeye yazılmak zorunda** (denetim P3).
-      // `null` burada "ölçülmedi" demek, "bilinmiyor bir hâl" değil — okuyan ekran bunu bir kova
-      // sanmamalı. Ülke IP'den türer ve IP hiçbir yerde durmuyor (`ANALYTICS §2`), yani besleyen
-      // ancak kenar katmanının ülke üstbilgisi olabilir; dil ise atıcının bağlamında var ve
-      // `EventContext`e eklenebilir. İkisi de "yol var, besleyen yok" sınıfına dördüncü ve beşinci
-      // üye olmasın diye burada yazılı duruyor.
-      country: null,
-      language: null,
+      /**
+       * ── ÜLKE: IP'den DEĞİL, ÇÖZÜLMÜŞ YERDEN (07.08 · `ANALYTICS §2` düzeltildi) ──────────
+       * Künye "IP saklanmaz, yalnız `country` türetilir" diyordu ve bu **hiç uygulanmadı**; sebebi
+       * de kolonun kendi TİPİNDE yazılıydı: `CountryEnum = ['FR','DE']`. IP'den türeyen bir ülke
+       * kolonu tam ISO listesi ister — Belçika'dan gelen bir ziyaretçi bu kolona **yazılamazdı
+       * bile.** Yani belgelenen anlam, seçilen tiple baştan çelişiyordu.
+       *
+       * Doğru besleyen zaten elimizde: müşterinin posta koduyla çözdüğü YER. Ticari olarak anlamlı
+       * eksen de bu — "hangi ülkenin bölgesine bakıyor", "nereden IP alıyor" değil. Okuma istek
+       * başına önbellekli (`cache`), yani ek sorgu yok.
+       *
+       * **`null` gerçek bir KOVADIR:** yer henüz çözülmedi. Huninin ilk adımı tam olarak orada ve
+       * `warehouseId` de aynı hâli aynı sebeple taşıyor.
+       */
+      country: (await readPlaceAnswer())?.country ?? null,
+      /** Sitenin o anki dili — ziyaretçinin beyanı (`/fr/…` öneki), tarayıcı tahmini değil. */
+      language: await currentLocale(),
       ...contextOf(girdi),
     };
 

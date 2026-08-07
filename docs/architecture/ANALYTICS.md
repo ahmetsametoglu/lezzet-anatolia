@@ -94,7 +94,17 @@
   `recordDemand`'ın gerekçeli catch'i).
 - **`search.query` defterdeki TEK serbest metindir:** `scrubMessage`'dan geçer + normalleştirilir
   (kırp/küçült/tek boşluk) + ~100 karakter tavan. Başka hiçbir olaya serbest metin girmez; adres,
-  e-posta, telefon, not gövdesi hiçbir olayda yer almaz. IP saklanmaz (yalnız `country` türetilir).
+  e-posta, telefon, not gövdesi hiçbir olayda yer almaz. **IP saklanmaz ve hiçbir yerden
+  türetilmez** — oturum anahtarında bile yalnız kırpılmış hâli hash'e girer.
+- **`country` IP'DEN DEĞİL, ÇÖZÜLMÜŞ YERDEN gelir (düzeltme 07.08).** Bu satır bir dönem *"IP
+  saklanmaz, yalnız `country` türetilir"* diyordu ve o hâliyle hiç uygulanmadı — üstelik
+  uygulanamazdı: kolonun tipi `CountryEnum = ['FR','DE']`, yani iki değerli bir **teslimat**
+  kümesi. IP'den türeyen bir ülke tam ISO listesi ister; Belçika'dan gelen ziyaretçi o kolona
+  yazılamazdı bile. Belgelenen anlam seçilen tiple baştan çelişiyordu. Doğru besleyen müşterinin
+  posta koduyla çözdüğü yerdir ve ticari olarak anlamlı eksen de odur: *"hangi ülkenin bölgesine
+  bakıyor"*, *"nereden IP alıyor"* değil. **`null` gerçek bir kovadır** — yer henüz çözülmedi;
+  huninin ilk adımı orada. `language` da aynı mantıkla ziyaretçinin BEYANIDIR (`/fr/…` öneki),
+  tarayıcı tahmini değil.
 - **Yetki ayrımı:** oturum hunisi → defter yetkili; sipariş/ciro SAYISI → `order` tablosu yetkili,
   defter asla. Defterdeki sipariş sayısının tablodan az olması arıza değil tasarımdır.
 - **Süzgeç sıfır-sonucu ile arama sıfır-sonucu ayrı raporlanır** (aynı olay tipi olabilir): süzgeç

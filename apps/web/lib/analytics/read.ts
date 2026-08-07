@@ -269,14 +269,20 @@ export async function readCustomerSegments(options: SegmentOptions = {}): Promis
 }
 
 /**
- * **Segment ÜYELERİ için burada bir kapı YOK** ve sebebi kayda geçsin: dışa alma ile Müşteriler
- * köprüsü henüz çizilmedi, yani buraya yazılacak sarmalayıcının bugün çağıranı olmazdı — bu
- * oturumda defalarca adını koyduğum arıza sınıfının ta kendisi ("motor yazılmış, çağrılmamış").
+ * **Segment ÜYELERİ için burada hâlâ bir kapı YOK — ve 07.08'de bir kez yazılıp GERİ ALINDI.**
+ *
+ * Dışa alma kapısı (`export.ts`) yazıldı, test edildi, sonra silindi: **çağıranı yoktu.** İndirme
+ * düğmesi operasyon şeridinin klasöründe (`operations/analytics/**`, 13.8) ve oraya dokunmuyorum;
+ * yani kapı, tüketicisi olmayan bir dışa açık fonksiyon olarak kalacaktı. `knip` bunu 1 ile
+ * kesti ve haklıydı — bu oturumda üç kez adını koyduğum arıza sınıfının ("motor yazılmış,
+ * çağrılmamış") tam olarak kendisiydi, üstelik bu sefer yapan bendim.
+ *
+ * Tasarımın tamamı boşa gitmedi, `docs/talep`'e yazıldı (izin sütunu üç hâlli, tavan + `truncated`,
+ * kimlik birleştirmesi uygulama katmanında). Düğme yazıldığı gün kapı buraya, sayacın yanına gelir —
+ * köprünün iki ucu aynı dosyadan okunsun diye.
  *
  * Servis tarafı hazır ve tek satır uzakta:
  * `new AnalyticsReportService(serviceDb()).segmentMembers(segment, limit, offset, options)`.
- * Ekran o listeyi okumaya başladığı gün kapı buraya, sayacın yanına iner — köprünün iki ucu aynı
- * dosyadan okunsun diye.
  */
 
 /**

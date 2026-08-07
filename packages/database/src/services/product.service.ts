@@ -413,11 +413,6 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     return { product, variants: created };
   }
 
-  /** Satış durumunu yazar (satışta / pasif / aday). */
-  async setStatus(id: string, status: ProductStatus): Promise<Product> {
-    return this.update({ id, status });
-  }
-
   /** Görsel anahtarını + sürüm damgasını yazar (R2 yüklemesinden sonra). Relative key; prefix R2'de. */
   async setImageKey(id: string, imageKey: string): Promise<Product> {
     return this.writeImageKey(id, imageKey);
