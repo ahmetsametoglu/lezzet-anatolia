@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import {
   AddressService,
   BundleService,
+  CartService,
   CategoryService,
   DeliveryZoneService,
   DiscountCodeService,
@@ -528,6 +529,92 @@ describe('sepet → taslak sipariş', () => {
 
       expect(outcome.status).toBe('ok');
     });
+  });
+});
+
+/**
+ * **Zam ONAY İSTER — bağlayıcı fiyat sabitlenirken** (07.13 · DOMAIN §5).
+ *
+ * Kural sepette işliyordu ve testliydi (`lib/cart/price-change.test.ts`) ama fiyatın BAĞLAYICI
+ * olduğu anda hiç sorulmuyordu: taslak sepeti `previousPrices` geçmeden okuyordu. Yani checkout
+ * ekranı açıkken teklif partisi tükenirse sipariş tam fiyattan sessizce açılıyordu.
+ *
+ * "Önceki" fiyat SUNUCU SEPETİNDE saklanan değerdir — müşterinin sepette en son gördüğü ve
+ * yazılmış olan. Testler onu doğrudan yazıyor (`cart` satırı), çünkü ölçülen şey taslağın
+ * karşılaştırmayı yapıp yapmadığı; sepetin o değeri nasıl yazdığı ayrı bir testin işi.
+ */
+describe('bağlayıcı fiyat sabitlenirken ZAM onay ister', () => {
+  /** Sunucu sepetine kalemi VERİLEN fiyatla yazar — "müşterinin gördüğü fiyat" budur. */
+  async function sepeteYaz(unitPriceEuro: number) {
+    await new CartService(db).replace(customerId, [{ variantId, bundleId: null, qty: 1, unitPrice: unitPriceEuro, stockId: null }]);
+  }
+
+  afterEach(async () => {
+    await new CartService(db).clear(customerId);
+  });
+
+  it('fiyat ARTTIYSA taslak AÇILMAZ — eski ve yeni tutar birlikte döner', async () => {
+    // Müşteri kalemi 15 €'ya görmüştü; bugünkü bağlayıcı fiyat 20 €.
+    await sepeteYaz(15);
+    const once = await siparisSayisi();
+
+    const outcome = await createCheckoutDraft({
+      ...(await base()),
+      entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }],
+    });
+
+    expect(outcome.status).toBe('price_changed');
+    if (outcome.status !== 'price_changed') return;
+    expect(outcome.lines).toHaveLength(1);
+    expect(outcome.lines[0]).toMatchObject({ fromCents: 1500, toCents: 2000 });
+    // Adı da taşır: "bir kalemin fiyatı arttı" cümlesi müşteriye ne yapacağını söylemez.
+    expect(outcome.lines[0]!.name).toBeTruthy();
+    // Reddedilen denemeden ortada taslak KALMAZ.
+    expect(await siparisSayisi()).toBe(once);
+  });
+
+  /**
+   * ⚠ **Bu testin varlık sebebi bir SONSUZ DÖNGÜ riski.**
+   *
+   * Karşılaştırmanın "önceki"si sunucu sepetindeki fiyattır ve onu yalnız `writeCartAction`
+   * tazeliyor. Taslak reddederken saklanan fiyatı GÜNCELLEMESEYDİ müşteri uyarıyı okuyup tekrar
+   * "onayla"ya bastığında aynı reddi alırdı — ve hiçbir yerde hata görünmezdi, yalnız sipariş
+   * verilemezdi. Kural sepettekiyle aynı: **bir kez bildir, sonra sakla.**
+   */
+  it('İKİNCİ deneme geçer — bildirilen fiyat saklandı, döngü yok', async () => {
+    await sepeteYaz(15);
+
+    const ilk = await createCheckoutDraft({
+      ...(await base()),
+      entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }],
+    });
+    expect(ilk.status).toBe('price_changed');
+
+    const ikinci = await createCheckoutDraft({
+      ...(await base()),
+      entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }],
+    });
+
+    expect(ikinci.status).toBe('ok');
+    if (ikinci.status !== 'ok') return;
+    // Sipariş YENİ fiyattan yazılır — onaylanan tutar buydu.
+    const { items } = (await new OrderService(db).getWithItems(ikinci.orderId))!;
+    expect(items[0]!.unitPriceCents).toBe(2000);
+  });
+
+  it('fiyat DÜŞTÜYSE hiç sorulmaz — indirim için müşteri durdurulmaz', async () => {
+    // Müşteri 25 €'ya görmüştü; bugün 20 €. Sürpriz değil, hediye.
+    await sepeteYaz(25);
+
+    const outcome = await createCheckoutDraft({
+      ...(await base()),
+      entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }],
+    });
+
+    expect(outcome.status).toBe('ok');
+    if (outcome.status !== 'ok') return;
+    const { items } = (await new OrderService(db).getWithItems(outcome.orderId))!;
+    expect(items[0]!.unitPriceCents).toBe(2000);
   });
 });
 

@@ -5,11 +5,10 @@ import { hasLocale } from 'next-intl';
 import { currentCustomerId } from '@/lib/guard';
 import { customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { routing } from '@/i18n/routing';
-import type { CartItem } from '@lezzet/types';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { recordEvent } from '@/lib/analytics/record';
 import { getCartView } from './read';
-import { cartBlockedAnalyticsReason, cartKey, entryOfItem, isSplitCart, type CartEntry, type CartSignal, type CartView } from './cart-types';
+import { cartBlockedAnalyticsReason, entryOf, entryOfItem, isSplitCart, itemOfEntry, storedPrices, type CartEntry, type CartSignal, type CartView } from './cart-types';
 
 /**
  * Sepet server action'ları (08.4).
@@ -91,11 +90,11 @@ export async function readCartAction(
     const merged = entries.length > 0 || saved.length > 0;
     if (merged) {
       // Fiyat sunucunun çözdüğüdür; istemciden gelen fiyat kabul edilmez (0 yazılır, checkout çözer).
-      if (entries.length > 0) await cart.takeOver(customerId, entries.map(toItem));
+      if (entries.length > 0) await cart.takeOver(customerId, entries.map((e) => itemOfEntry(e)));
       // Liste devralınırken BİRLEŞTİRİLİR: sunucudakiler korunur, ziyaretçininkiler eklenir.
       if (saved.length > 0) {
         const current = (await cart.get(customerId)).savedItems;
-        const incoming = saved.map(toItem).filter((row) => !current.some((c) => sameKey(c, row)));
+        const incoming = saved.map((e) => itemOfEntry(e)).filter((row) => !current.some((c) => sameKey(c, row)));
         await cart.replaceSaved(customerId, [...current, ...incoming]);
       }
     }
@@ -156,9 +155,9 @@ export async function writeCartAction(
     });
     await cart.replace(
       customerId,
-      payload.view.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })),
+      payload.view.lines.map((l) => (itemOfEntry(entryOf(l), (l.unitPriceCents ?? 0) / 100))),
     );
-    await cart.replaceSaved(customerId, payload.saved.lines.map((l) => ({ ...toItem(l), unitPrice: (l.unitPriceCents ?? 0) / 100 })));
+    await cart.replaceSaved(customerId, payload.saved.lines.map((l) => (itemOfEntry(entryOf(l), (l.unitPriceCents ?? 0) / 100))));
     measureWrite(payload.view, signal);
     return { data: { ...payload, serverCart: true }, errorKey: null };
   } catch (err) {
@@ -231,35 +230,6 @@ async function resolveBoth(
     getCartView(locale, saved),
   ]);
   return { view, saved: savedView };
-}
-
-/**
- * Sunucu sepetinde saklanan fiyatlar (`cartKey` → cent) — bugünkü çözümle karşılaştırılır (DOMAIN §5).
- *
- * Ziyaretçide böyle bir harita YOKTUR ve olmamalı: niyet listesi bilerek fiyatsızdır, tarayıcıdan
- * gelen bir "önceki fiyat" da müşterinin belirlediği fiyat olurdu.
- */
-function storedPrices(items: readonly CartItem[]): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const item of items) {
-    if (!item.unitPrice) continue; // 0 = henüz çözülmemiş, geçerli bir "önceki" değil
-    map.set(cartKey(entryOfItem(item)), Math.round(item.unitPrice * 100));
-  }
-  return map;
-}
-
-/**
- * Niyet → sunucu sepeti kalemi. Fiyat 0 girer ve bu doğrudur: istemciden gelen fiyat kabul edilmez,
- * çağıran gerekiyorsa kendi çözdüğü değeri üstüne yazar (`writeCartAction`).
- */
-function toItem(entry: CartEntry): { variantId: string | null; bundleId: string | null; qty: number; unitPrice: number; stockId: string | null } {
-  return {
-    variantId: entry.variantId ?? null,
-    bundleId: entry.bundleId ?? null,
-    qty: entry.qty,
-    unitPrice: 0,
-    stockId: entry.stockId ?? null,
-  };
 }
 
 /** Devralmada çakışma kontrolü — `CartService.sameLine` ile aynı kural (paket kendi kimliğiyle). */

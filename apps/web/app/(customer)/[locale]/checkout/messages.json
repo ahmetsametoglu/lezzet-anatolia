@@ -123,7 +123,8 @@
       "stale": "Bu sipariş zaten işleme alınmış.",
       "customer_not_found": "Hesabınız çözümlenemedi, lütfen tekrar giriş yapın.",
       "order_not_placed": "Sipariş kesinleştirilemedi. Lütfen tekrar deneyin.",
-      "warehouse_unresolved": "Adresiniz için teslimat noktası belirlenemedi. Ekibimize haber verildi — lütfen bizimle iletişime geçin."
+      "warehouse_unresolved": "Adresiniz için teslimat noktası belirlenemedi. Ekibimize haber verildi — lütfen bizimle iletişime geçin.",
+      "price_changed": "Siz ekrandayken bazı fiyatlar değişti: {detail}. Sipariş vermeden önce görmenizi istedik — onaylıyorsanız tekrar \"Siparişi tamamla\"ya basın."
     },
     "eyebrow": "sepetiniz · ödeme",
     "shippingEyebrow": "kargo siparişi · ayrı ödeme",
@@ -271,7 +272,8 @@
       "stale": "Cette commande est déjà en cours de traitement.",
       "customer_not_found": "Votre compte n'a pas pu être identifié, reconnectez-vous.",
       "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer.",
-      "warehouse_unresolved": "Nous n'avons pas pu déterminer le point de livraison pour votre adresse. Notre équipe a été prévenue — merci de nous contacter."
+      "warehouse_unresolved": "Nous n'avons pas pu déterminer le point de livraison pour votre adresse. Notre équipe a été prévenue — merci de nous contacter.",
+      "price_changed": "Certains prix ont changé pendant que vous étiez sur cette page : {detail}. Nous tenions à vous le montrer avant de valider — si cela vous convient, appuyez à nouveau sur « Finaliser la commande »."
     },
     "eyebrow": "votre panier · commande",
     "shippingEyebrow": "commande en colis · paiement séparé",
@@ -419,7 +421,8 @@
       "stale": "Diese Bestellung wird bereits bearbeitet.",
       "customer_not_found": "Ihr Konto konnte nicht ermittelt werden, bitte erneut anmelden.",
       "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
-      "warehouse_unresolved": "Für Ihre Adresse konnte kein Lieferpunkt bestimmt werden. Unser Team wurde benachrichtigt — bitte kontaktieren Sie uns."
+      "warehouse_unresolved": "Für Ihre Adresse konnte kein Lieferpunkt bestimmt werden. Unser Team wurde benachrichtigt — bitte kontaktieren Sie uns.",
+      "price_changed": "Während Sie auf dieser Seite waren, haben sich einige Preise geändert: {detail}. Wir wollten es Ihnen vor der Bestellung zeigen — wenn das für Sie in Ordnung ist, tippen Sie erneut auf „Bestellung abschließen“."
     },
     "eyebrow": "Ihr Warenkorb · Kasse",
     "shippingEyebrow": "Versandbestellung · separate Zahlung",

@@ -10,6 +10,7 @@ import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/cust
 import { captureError, SOURCES } from '@lezzet/observability';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { getCartView } from '@/lib/cart/read';
+import { formatPrice } from '@/lib/storefront/format';
 import { clearOrderedLines } from '@/lib/cart/settle';
 import type { CartEntry } from '@/lib/cart/cart-types';
 import { createCheckoutDraft } from '@/lib/order/checkout-draft';
@@ -305,7 +306,16 @@ export async function confirmCheckoutAction(input: {
             ? draft.lines.map((l) => `${l.name} (${l.available})`)
             : draft.status === 'date_unavailable'
               ? draft.availableDates
-              : undefined;
+              : // Zamda ESKİ ve YENİ tutar BİRLİKTE taşınır (07.13): yalnız yeniyi göstermek
+                // müşteriyi "ne kadar arttı" diye sepete geri döndürürdü. Tutar burada
+                // biçimlendiriliyor çünkü `detail` bir DİZE listesi (öteki üç hâlle aynı sözleşme)
+                // — ve biçimlendirici ekranınkiyle AYNI (`formatPrice`, dile duyarlı), yani
+                // "12,50 €" ile "€12.50" ayrımı bir kez tanımlı.
+                draft.status === 'price_changed'
+                ? draft.lines.map(
+                    (l) => `${l.name}: ${formatPrice(l.fromCents, input.locale as Locale)} → ${formatPrice(l.toCents, input.locale as Locale)}`,
+                  )
+                : undefined;
       measureRejection(draft.status);
       return { data: { status: 'rejected', reason: draft.status, detail }, errorKey: null };
     }
@@ -435,6 +445,10 @@ async function releaseOrderStock(orderId: string): Promise<void> {
  *     ölçmüyoruz. Karşılığı açılırsa tek satır (13.1'e bildirildi).
  */
 function measureRejection(reason: string): void {
+  // `price_changed` BİLEREK ölçülmüyor (07.13): `checkout_blocked` sebep kümesi tiplidir
+  // (`AnalyticsBlockedReason` — `not_shippable · out_of_stock · min_basket`) ve zam o sözlüğün
+  // konusu değil; müşteri engellenmiyor, onayı yenileniyor. Kümeye yeni bir değer eklemek
+  // analitiğin şemasını (13.x) ilgilendirir — unutulduğu için değil, ait olmadığı için yok.
   const mapped =
     reason === 'blocked_lines'
       ? 'not_shippable'

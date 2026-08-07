@@ -476,6 +476,45 @@ export function entryOfItem(item: CartItem): CartEntry {
 }
 
 /**
+ * NİYET → sunucu sepeti kalemi (`entryOfItem`'in tersi).
+ *
+ * Fiyat PARAMETRE ve varsayılanı 0: istemciden gelen fiyat kabul edilmez, çağıran gerekiyorsa
+ * kendi ÇÖZDÜĞÜ değeri geçer (`writeCartAction` yazarken, checkout taslağı zam bildirirken —
+ * 07.13). İki çağıranın da aynı eşlemeyi kendi yerinde kurması, birleşimin hangi alanı hangi
+ * türde taşıdığı bilgisini dağıtırdı; `entryOfItem` künyesinin uyardığı tuzak bu.
+ *
+ * Birim EURO, cent değil — `cart.unit_price` numeric(10,2) (`CartItem` şeması).
+ */
+export function itemOfEntry(entry: CartEntry, unitPrice = 0): { variantId: string | null; bundleId: string | null; qty: number; unitPrice: number; stockId: string | null } {
+  return {
+    variantId: entry.variantId ?? null,
+    bundleId: entry.bundleId ?? null,
+    qty: entry.qty,
+    unitPrice,
+    stockId: entry.stockId ?? null,
+  };
+}
+
+/**
+ * Sunucu sepetinde SAKLANAN fiyatlar (`cartKey` → cent) — bugünkü çözümle karşılaştırılır (DOMAIN §5).
+ *
+ * Ziyaretçide böyle bir harita YOKTUR ve olmamalı: niyet listesi bilerek fiyatsızdır, tarayıcıdan
+ * gelen bir "önceki fiyat" da müşterinin belirlediği fiyat olurdu.
+ *
+ * **Evi `actions.ts` değil burası** (07.08): `'use server'` dosyası bir UÇTUR, tip ya da yardımcı
+ * sözlüğü değil (`CLAUDE §2`). İkinci tüketici doğduğu an taşınması gerekiyordu — checkout taslağı
+ * da aynı karşılaştırmayı yapıyor (07.13) ve kopyalansaydı iki "önceki fiyat" tanımı olurdu.
+ */
+export function storedPrices(items: readonly CartItem[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const item of items) {
+    if (!item.unitPrice) continue; // 0 = henüz çözülmemiş, geçerli bir "önceki" değil
+    map.set(cartKey(entryOfItem(item)), Math.round(item.unitPrice * 100));
+  }
+  return map;
+}
+
+/**
  * Çözülmüş satırdan NİYETE geri dönüş — sunucu yanıtı geldiğinde istemcinin listesi buna göre
  * tazelenir. Tek yerde durur çünkü iki tür satırın hangi alanları taşıdığı bilgisi budur; her
  * çağrı yerinde elle kurulsaydı paket satırı bir yerde varyant satırına dönüşürdü.

@@ -2,6 +2,7 @@ import 'server-only';
 import {
   AddressService,
   BundleItemService,
+  CartService,
   OrderService,
   ProductService,
   ProductVariantService,
@@ -15,7 +16,7 @@ import type { DeliveryType, LocalizedText, OrderItemInsert, PaymentMethod } from
 import { rememberAcquisition } from '@/lib/analytics/attribution';
 import { getCartView } from '@/lib/cart/read';
 import { placesForPostalCode } from '@/lib/delivery/places';
-import { discountAmountOf, type CartDiscount, type CartEntry, type CartLine, type CartView } from '@/lib/cart/cart-types';
+import { discountAmountOf, entryOf, itemOfEntry, storedPrices, type CartDiscount, type CartEntry, type CartLine, type CartView } from '@/lib/cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
 import { resolveDelivery } from './delivery';
 
@@ -82,6 +83,20 @@ type CheckoutDraftOutcome =
   | { status: 'cold_chain_unshippable' }
   | { status: 'date_unavailable'; availableDates: string[] }
   | { status: 'payment_not_allowed'; methods: PaymentMethod[] }
+  /**
+   * **Fiyat müşteriye SÖYLENDİĞİNDEN yüksek çıktı — onay yenilenmeden sipariş açılmaz** (07.13).
+   *
+   * DOMAIN §5'in kuralı asimetriktir: *artarsa bildirilir, düşerse sessiz uygulanır.* Zam
+   * müşterinin onayını gerektirir, indirim sürpriz değil hediyedir. Kural sepette işliyordu
+   * (`priceChangeOf` + `previousPrices`, testli) ama fiyatın **bağlayıcı olduğu** anda — taslak
+   * açılırken — hiç sorulmuyordu: `createCheckoutDraft` sepeti `previousPrices` GEÇMEDEN okuyor,
+   * reddetme hâlleri arasında da böyle bir hâl yoktu. Yani checkout ekranı açıkken teklif partisi
+   * tükenirse sipariş tam fiyattan sessizce açılıyordu (ölçüldü 07.08).
+   *
+   * Kural dokümana Fransız tüketici hukuku gerekçesiyle girdi ve sessizce bozulması en pahalı
+   * sınıf: hiçbir şey patlamaz, müşteri yalnız beklemediği bir tutar öder.
+   */
+  | { status: 'price_changed'; lines: { name: string; fromCents: number; toCents: number }[] }
   | { status: 'customer_not_found' };
 
 interface CheckoutDraftInput {
@@ -179,11 +194,18 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
   //    Kargo siparişinde sepet KARGO deposuyla okunur: kalemlerin bulunduğu yer orası. Satırların
   //    `route`'u o hâlde `local` görünür ve bu bir çelişki değil — o alan "sepet ekranında hangi
   //    gruba düşüyor" sorusunun cevabıdır; burada grup zaten seçilmiş, sipariş türü ayrı taşınıyor.
+  //
+  //    **Saklanan fiyatlar okumadan ÖNCE alınır** (07.13, `writeCartAction` ile aynı sıra gerekçesi):
+  //    karşılaştırmanın "önceki"si, müşterinin sepette en son GÖRDÜĞÜ ve sunucuya yazılmış fiyattır.
+  //    Sonra okunsaydı karşılaştırma her zaman "değişmedi" derdi.
+  const cartService = new CartService(db);
+  const previousPrices = storedPrices((await cartService.get(customer.id)).items);
   const cart = await getCartView(input.locale, input.entries, {
     customerId: customer.id,
     couponCode: input.couponCode,
     warehouseId: orderWarehouseId,
     shippingWarehouseId: place.shippingWarehouseId,
+    previousPrices,
   });
   if (cart.lines.length === 0) return { status: 'empty_cart' };
 
@@ -275,6 +297,37 @@ export async function createCheckoutDraft(input: CheckoutDraftInput): Promise<Ch
   // taşınır — "bölge dışısınız" ile "kargo deposu tanımlı değil" aynı cümle olamaz.
   if (!orderWarehouseId) {
     return { status: 'warehouse_unresolved', reason: delivery.unresolvedReason ?? 'no_shipping_warehouse' };
+  }
+
+  /**
+   * **Zam ONAY İSTER — ve bu kapı en sonda** (07.13).
+   *
+   * Yeri bilinçli: sırası gelmemiş bir onay sormak anlamsızdır. Kalemi alınamayan, günü kapanmış
+   * ya da ödeme yöntemi reddedilen bir sipariş zaten açılmayacak; müşteriye önce "şu fiyatı kabul
+   * eder misin" deyip ardından "zaten olmuyor" demek, iki kez durdurmak olurdu.
+   *
+   * **Reddederken saklanan fiyatlar GÜNCELLENİR** ve bu şart, süs değil: karşılaştırmanın "önceki"si
+   * sunucu sepetindeki fiyat ve onu yalnız `writeCartAction` tazeliyor. Yazmasaydık müşteri
+   * uyarıyı okuyup tekrar "onayla"ya bastığında aynı reddi alırdı — sonsuz döngü. Yazınca kural
+   * sepettekiyle birebir aynı davranışa oturuyor: **bir kez bildir, sonra sakla.**
+   *
+   * Düşen fiyat buraya HİÇ gelmez (`priceChangeOf` yalnız artışta işaret koyar) — indirimi
+   * onaylatmak müşteriyi hediyesi için durdurmak olurdu.
+   */
+  const raised = cart.lines.filter((l) => l.priceChange);
+  if (raised.length > 0) {
+    await cartService.replace(
+      customer.id,
+      cart.lines.map((l) => itemOfEntry(entryOf(l), (l.unitPriceCents ?? 0) / 100)),
+    );
+    return {
+      status: 'price_changed',
+      lines: raised.map((l) => ({
+        name: l.name,
+        fromCents: l.priceChange!.previousCents,
+        toCents: l.unitPriceCents ?? 0,
+      })),
+    };
   }
 
   // 5) Taslak. Kanal müşteri tipinden TÜRER ve bir daha değişmez (DOMAIN §3); adres ANLIK GÖRÜNTÜ
