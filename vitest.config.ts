@@ -68,6 +68,8 @@ export default defineConfig({
             'apps/backend/src/**/*.test.ts?(x)',
             // Mobile-api entegrasyon köküdür (21.1): auth testleri yerel Supabase'e vurur.
             'apps/mobile-api/src/**/*.test.ts?(x)',
+            // Application da entegrasyon köküdür (21.4a): orkestrasyonlar servislerle DB'ye vurur.
+            'packages/application/src/**/*.test.ts?(x)',
           ],
           setupFiles: ['./vitest.setup.ts'],
           // Aynı satırlara giren testler paralel koşamaz; suite küçük, seri kalması sorun değil.

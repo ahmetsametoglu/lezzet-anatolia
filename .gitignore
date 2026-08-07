@@ -20,4 +20,7 @@ docs/talep/*
 
 # Playwright (00.9): anlık ekran bakışları + e2e raporu (düşüş artefaktları .test-results/ altında)
 .ui-shots/
+# Mobil uygulama ekran görüntüleri (21, kullanıcı kararı 07.08): YALNIZ native uygulama görüntüleri —
+# web'in .ui-shots/'u her çekimde silindiği için ayrı klasör; Maestro screenshot çıktıları da buraya.
+.ui-shots-mobile/
 playwright-report/

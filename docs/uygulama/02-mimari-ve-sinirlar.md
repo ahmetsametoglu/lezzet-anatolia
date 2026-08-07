@@ -89,6 +89,12 @@ doğrular. OTP akışı web'le AYNI sunucu servislerini kullanır (`email-verifi
 yalnız sunucuda (mobile-api dahil), asla mobil bundle'da. Müşteri okumaları API üzerinden
 (iş kuralı sunucuda kalır); RLS ikinci savunma hattı.
 
+**Tek kapı + rol-bazlı yüzey (kullanıcı kararı 07.08):** uygulamada giriş TEK yerden — web'in
+tek-`/connexion` modelinin aynısı. Girişte kullanıcının operasyon hakkı varsa (`/me` `roles`
+alanı — sözleşmede zaten var) OPERASYON arayüzü açılır; yoksa müşteri arayüzü. **Oturumsuz
+kullanım = müşteri gezinmesi** (katalog vb. girişsiz gezilir; giriş gereken akışta kapı
+çıkar). Kabuk seçimi kökte tek karardır; iki yüzey iki ayrı navigasyon ağacıdır.
+
 ## 5. İlk iş birimleri
 
 - **21.1** `apps/mobile-api` iskeleti — apps/backend desenleri ayna (env, logger, `{data,error}`

@@ -1,15 +1,20 @@
 import { Hono } from 'hono';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { fail, ok } from '../../lib/respond';
+import { authOtp } from './auth-otp';
 import { bearerAuth, type V1Env } from './auth';
 import { MeSchema } from './contract';
 
 /**
- * `/api/v1` router'ı — mobil uygulamanın tek kapısı. Tüm uçlar Bearer doğrulamasının ARKASINDA;
- * herkese açık bir uç gerektiğinde (katalog gibi) o bilinçli bir karar olacak ve middleware'in
- * ÖNÜNE ayrıca yazılacak — varsayılan kapalıdır.
+ * `/api/v1` router'ı — mobil uygulamanın tek kapısı. VARSAYILAN KAPALI: uçlar Bearer
+ * doğrulamasının arkasında yaşar. Açık uç bilinçli bir İSTİSNADIR ve `bearerAuth`tan ÖNCE
+ * bağlanır — Hono zinciri kayıt sırasıyla kurulur, yani buradaki sıra güvenlik kararının
+ * kendisidir: `authOtp` middleware'den önce eşleşir (giriş uçları doğası gereği oturumsuz;
+ * kötüye kullanım kilidi DB RPC'sindedir — 5/saat + cooldown), geri kalan her şey sonra.
  */
 export const v1 = new Hono<V1Env>();
+
+v1.route('/auth/otp', authOtp);
 
 v1.use('*', bearerAuth);
 

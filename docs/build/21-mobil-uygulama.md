@@ -71,11 +71,39 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     kayması) web şeridine talep dosyasında raporlandı.
 - [ ] (21.4) **Auth akışı:** OTP uçları (`/api/v1/auth/*`) — web'le aynı sunucu servisleri
   (`email-verification`, `notify`); cihazda supabase-js oturumu + SecureStore; oturum
-  yenileme. `touches: apps/mobile-api, apps/mobile`
+  yenileme. **Karar (07.08, kullanıcı + yönetici):** verify orkestrasyonu `packages/application`'a
+  (uygulama katmanının ilk vatandaşı) — web `otp-actions.ts` geçiş köprüsü olarak kalır,
+  benimseme talebi açılacak; cihazdan doğrudan supabase-js OTP yolu ELENDİ (web akışı özel
+  tablo+RPC, Supabase auth OTP'si değil — keşif 07.08).
+  `touches: apps/mobile-api, apps/mobile, packages/application (yeni), packages/types (yalnız ekleme), vitest.config.ts`
+  - **Durum (07.08 — API ayağı tamam, `[~]`):** `packages/application` kuruldu (uygulama
+    katmanının ilk vatandaşı): `requestOtpCode`/`verifyOtpCode` taşıma-nötr (Next/Hono importu
+    SIFIR — elle doğrulandı); `devOtpCode` ve dil tohumunun KAYNAĞI artık paket (web kopyaları
+    geçiş köprüsü, benimseme talebi `docs/talep/musteri-application-otp-benimseme.md`).
+    `token_hash` tüketimi bilinçli olarak taşıma katmanında: web çerez yazacak, mobil kısa
+    ömürlü anon istemciyle (`ephemeralAnonClient` — süreç istemcisini kirletmeme kuralı)
+    session zarflıyor. Uçlar: `/api/v1/auth/otp/{request,verify}` — 429'da `Retry-After`,
+    yanıt `AuthSessionSchema.parse` son kapısından. Types ekleri: `OtpCodeSchema` ·
+    `AuthSessionSchema` · `AuthErrorKeyEnum` (yalnız ekleme; index'e tek satır). Doğrulama
+    (yönetici tekrarı): 3 dosya / 14 test (altın yol: request → verify → dönen token'la
+    `/me` 200; dil tohumu kanıtı; tek kullanım; cooldown 429), 3 paket typecheck, eslint,
+    boundaries 2×temiz, knip sıfır. Purge kapsamı yeterli çıktı (verificationEmails +
+    authUserIds + profileIds — ekleme gerekmedi). KALAN: cihaz ayağı (supabase-js oturumu +
+    SecureStore + API istemcisi — Expo ajanı) ve giriş EKRANI (kullanıcının tasarım-öncesi
+    konuşma şartına bağlı).
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden
 kurguyla; push bildirim (notify'a driver — 14 ile koordineli), Maestro E2E hattı,
 mağaza/dağıtım süreci. **Müşteri sayfa tasarımına BAŞLAMADAN ÖNCE kullanıcıyla konuşulacak
-konular var (kullanıcı notu 07.08) — ekran işine onunla konuşmadan girilmez.**
+konular var (kullanıcı notu 07.08) — ekran işine onunla konuşmadan girilmez. Tasarım hattı:
+Claude Design mobil tasarımlar üstünde ÇALIŞIYOR (07.08); bilgi kullanıcıdan gelecek, yerel
+kopya/tahminle ekran yapılmaz.** Giriş modeli kararı için `docs/uygulama/02 §4` (tek kapı,
+rol-bazlı yüzey; oturumsuz = müşteri).
+
+**Mobil ekran görüntüleri (kullanıcı kararı 07.08):** tüm mobil uygulama görüntüleri —
+E2E/Maestro `takeScreenshot` çıktıları ve web'deki `ui:shot`'un mobil muadili — YALNIZ
+`.ui-shots-mobile/` altına düşer (kökte, git dışı; web'in `.ui-shots/`'u her çekimde silindiği
+için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın durumunu görmek istiyor;
+`ui:shot:mobile` aracı ilk ekran dilimiyle birlikte kurulur (simülatör + dev build ister).

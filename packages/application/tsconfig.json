@@ -1,0 +1,10 @@
+{
+  "extends": "@lezzet/typescript-config/node.json",
+  "compilerOptions": {
+    // Paket JSX YAZMAZ ama `@lezzet/email` üzerinden mail şablonlarını (.tsx) çözümlüyor
+    // (OTP kodu maili). Derleyicinin o dosyaları okuyabilmesi için ayar burada da gerekli —
+    // apps/backend'in `@lezzet/notify` için verdiği kararın aynısı.
+    "jsx": "react-jsx"
+  },
+  "include": ["src"]
+}

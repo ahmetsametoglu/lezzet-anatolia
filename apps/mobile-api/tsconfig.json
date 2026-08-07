@@ -1,4 +1,10 @@
 {
   "extends": "@lezzet/typescript-config/node.json",
+  "compilerOptions": {
+    // Mobile-api JSX YAZMAZ ama `@lezzet/application` → `@lezzet/email` üzerinden mail
+    // şablonlarını (.tsx) çözümlüyor (21.4a OTP maili). apps/backend'in `@lezzet/notify` için
+    // verdiği kararın aynısı: `react-jsx` = otomatik runtime.
+    "jsx": "react-jsx"
+  },
   "include": ["src"]
 }

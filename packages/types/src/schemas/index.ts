@@ -6,6 +6,7 @@ export * from './pagination.schema';
 export * from './image.schema';
 export * from './user-profile.schema';
 export * from './email-verification.schema';
+export * from './auth.schema';
 export * from './category.schema';
 export * from './collection.schema';
 export * from './product.schema';

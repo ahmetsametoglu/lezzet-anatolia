@@ -196,6 +196,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.13.7
         version: 1.19.14(hono@4.12.31)
+      '@lezzet/application':
+        specifier: workspace:*
+        version: link:../../packages/application
       '@lezzet/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -211,6 +214,9 @@ importers:
       hono:
         specifier: ^4.6.15
         version: 4.12.31
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
     devDependencies:
       '@lezzet/typescript-config':
         specifier: workspace:*
@@ -351,6 +357,40 @@ importers:
       zod:
         specifier: ^3.25.76
         version: 3.25.76
+    devDependencies:
+      '@lezzet/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.20.1
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/application:
+    dependencies:
+      '@lezzet/brand':
+        specifier: workspace:*
+        version: link:../brand
+      '@lezzet/database':
+        specifier: workspace:*
+        version: link:../database
+      '@lezzet/email':
+        specifier: workspace:*
+        version: link:../email
+      '@lezzet/helper':
+        specifier: workspace:*
+        version: link:../helper
+      '@lezzet/observability':
+        specifier: workspace:*
+        version: link:../observability
+      '@lezzet/types':
+        specifier: workspace:*
+        version: link:../types
+      '@supabase/supabase-js':
+        specifier: ^2.48.1
+        version: 2.110.8
     devDependencies:
       '@lezzet/typescript-config':
         specifier: workspace:*
