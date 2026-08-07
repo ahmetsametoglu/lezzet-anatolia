@@ -296,7 +296,10 @@ async function refundAndCancel(event: VerifiedEvent, orderId: string, accountId:
 
   // Tahsilat hiç yazılmadığı için kasada iz bırakmayız; iptal kapısı rezervasyonu bırakır ve
   // bildirimi gönderir. `refundAccountId` yalnız hareket yazılacaksa anlamlıdır.
-  await cancelOrder(orderId, { refundAccountId: accountId, refundAmountCents: 0 });
+  // **Sebep `out_of_stock` ve müşteriye kurulan cümle buna bağlı** (07.14): bu dalda para GERÇEKTEN
+  // çekildi ve geri verildi. Onay ekranı sebep gelmeden "tahsilat yapılmadı" diyordu — üç yolun
+  // ikisinde doğru, burada yanlış. `paymentStatus` ayırmıyor, çünkü bu dalda tahsilat hiç yazılmıyor.
+  await cancelOrder(orderId, { refundAccountId: accountId, refundAmountCents: 0, reason: 'out_of_stock' });
   // İptal de bir cevaptır: ekran "onaylanıyor"da asılı kalmaz, iadeyi öğrenir.
   await broadcastOrderChanged(orderId);
 }

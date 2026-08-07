@@ -1,6 +1,6 @@
 import { AccountService, MoneyMovementService, OrderService, serviceDb } from '@lezzet/database';
 import { canTransition } from '@lezzet/domain-core';
-import type { FulfillmentAdjustment, OrderStatus, PaymentStatus } from '@lezzet/types';
+import type { FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus } from '@lezzet/types';
 import { recordOrderRefund, syncOrderPaymentStatus } from '../money/order-payment';
 import { notifyOrderException } from './notify';
 import { stripeRefunder, type ProviderRefunder } from './provider-refund';
@@ -114,7 +114,7 @@ export async function adjustFulfillment(
  */
 export async function cancelOrder(
   orderId: string,
-  opts: RefundOptions & { actorId?: string | null } = {},
+  opts: RefundOptions & { actorId?: string | null; reason?: OrderCancelReason | null } = {},
 ): Promise<CancelOutcome> {
   const orders = new OrderService(serviceDb());
 
@@ -125,7 +125,7 @@ export async function cancelOrder(
   const verdict = canTransition(order.status, 'cancelled');
   if (!verdict.allowed) return { status: 'forbidden', reason: verdict.reason };
 
-  const result = await orders.cancel(orderId, order.status, opts.actorId);
+  const result = await orders.cancel(orderId, order.status, opts.actorId, opts.reason);
   if (!result.ok) return { status: 'stale', currentStatus: result.currentStatus };
 
   const settled = await settleRefund(orderId, { description: 'Sipariş iptali — iade', ...opts });

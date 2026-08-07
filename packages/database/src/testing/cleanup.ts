@@ -41,6 +41,12 @@ export interface PurgeTargets {
   collectionIds?: string[];
   /** Tarifler — kalemleri CASCADE ile gider (`recipe_item.recipe_id`). */
   recipeIds?: string[];
+  /**
+   * Ürün aileleri (05.15). Üyelik ayrı tabloda DEĞİL — `product.family_id` kolonudur ve FK'si
+   * `set null`, yani aile üyeleri dururken de silinebilir. Sıra baskısı yok; yine de burada
+   * olması şart (`CLAUDE §4b`): silme bilgisi tek yerde durmalı, test dosyasına sızmamalı.
+   */
+  familyIds?: string[];
   /** Tedarikçiler — kod eşlemeleri CASCADE, siparişleri burada elle silinir. */
   supplierIds?: string[];
   /** Kimlik profilleri (`user_profiles`) — adresleri CASCADE ile gider. Ayrı müşteri tablosu yok. */
@@ -103,6 +109,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     categoryIds,
     collectionIds,
     recipeIds,
+    familyIds,
     supplierIds,
     profileIds,
     temperatureLocations,
@@ -120,6 +127,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     categoryIds: clean(targets.categoryIds),
     collectionIds: clean(targets.collectionIds),
     recipeIds: clean(targets.recipeIds),
+    familyIds: clean(targets.familyIds),
     supplierIds: clean(targets.supplierIds),
     profileIds: clean(targets.profileIds),
     temperatureLocations: clean(targets.temperatureLocations),
@@ -196,6 +204,9 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   // ile tutuyor. Ters sırada ürün silinemez ve hata BAŞKA bir testin teardown'unda görünürdü.
   if (recipeIds.length > 0) await mustDelete(db, 'recipe', (q) => q.in('id', recipeIds));
   if (productIds.length > 0) await mustDelete(db, 'product', (q) => q.in('id', productIds));
+  // Aile ÜRÜNDEN SONRA: `product.family_id` FK'si `set null`, yani sıra zorunlu değil — ama ürünler
+  // gittikten sonra silmek, aradaki bir hatada yarım kalan üyelik bırakmaz.
+  if (familyIds.length > 0) await mustDelete(db, 'product_family', (q) => q.in('id', familyIds));
   if (categoryIds.length > 0) await mustDelete(db, 'category', (q) => q.in('id', categoryIds));
   if (collectionIds.length > 0) await mustDelete(db, 'collection', (q) => q.in('id', collectionIds));
   if (profileIds.length > 0) await mustDelete(db, 'user_profiles', (q) => q.in('id', profileIds)); // adresleri CASCADE

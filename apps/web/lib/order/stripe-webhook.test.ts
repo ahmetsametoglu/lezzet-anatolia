@@ -153,7 +153,14 @@ describe('geç ödeme — rezervasyon düşmüşken onay gelirse (DOMAIN §4)', 
     const outcome = await handleStripeEvent(paidEvent(orderId, 4000), stripeAccount);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'refunded' });
-    expect((await orders.getById(orderId))?.status).toBe('cancelled');
+    const cancelled = await orders.getById(orderId);
+    expect(cancelled?.status).toBe('cancelled');
+    // **SEBEP YAZILIR (07.14) ve müşteriye kurulan cümle buna bağlı:** bu dalda para GERÇEKTEN
+    // çekildi ve geri verildi. Sebep gelmeden onay ekranı "tahsilat yapılmadı" diyordu — üç yolun
+    // ikisinde doğru, burada yanlış. `paymentStatus` ayırt etmiyor, çünkü bu dalda tahsilat hiç
+    // yazılmıyor ve durum `pending` kalıyor; test o ayrımın sebepten geldiğini çiviliyor.
+    expect(cancelled?.cancelReason).toBe('out_of_stock');
+    expect(cancelled?.paymentStatus).toBe('pending');
   });
 });
 

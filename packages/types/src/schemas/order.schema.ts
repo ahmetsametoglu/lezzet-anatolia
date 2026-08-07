@@ -6,6 +6,7 @@ import {
   CountryEnum,
   DeliveryTypeEnum,
   OrderSourceEnum,
+  OrderCancelReasonEnum,
   OrderStatusEnum,
   PaymentMethodEnum,
   PaymentStatusEnum,
@@ -33,6 +34,14 @@ export const OrderSchema = z.object({
   isGiftOrder: z.boolean(),
 
   status: OrderStatusEnum,
+  /**
+   * İptalin sebebi — `null` = iptal edilmedi (07.14).
+   *
+   * Onay ekranı iptal edilmiş her siparişte "tahsilat yapılmadı" diyordu ve `out_of_stock`
+   * dalında bu YANLIŞTI: para çekilmiş ve iade edilmişti. `paymentStatus` da ayırmıyor, çünkü o
+   * dalda tahsilat hiç yazılmıyor ve durum `pending` kalıyor.
+   */
+  cancelReason: OrderCancelReasonEnum.nullable(),
   paymentStatus: PaymentStatusEnum,
   paymentMethod: PaymentMethodEnum.nullable(),
   /** Vadeli mi — vade bir ödeme YÖNTEMİ değil, siparişin bayrağıdır (DOMAIN §7). */

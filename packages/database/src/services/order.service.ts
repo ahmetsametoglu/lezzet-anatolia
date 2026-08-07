@@ -30,6 +30,7 @@ import {
   type OrderItem,
   type OrderItemInsert,
   type OrderItemUpdate,
+  type OrderCancelReason,
   type OrderStatus,
   type CancelResult,
   type CloseResult,
@@ -390,11 +391,18 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    * tek transaction'da yazılır. Geçişin izinli olduğuna motor karar verir; buradaki tek kural
    * koşulludur — başkası ilerletmişse `stale` döner.
    */
-  async cancel(orderId: string, from: OrderStatus, actorId?: string | null): Promise<CancelResult> {
+  async cancel(
+    orderId: string,
+    from: OrderStatus,
+    actorId?: string | null,
+    /** İptalin sebebi (07.14) — ekran buna göre farklı cümle kurar; `null` "sebep yazılmadı" demek. */
+    reason?: OrderCancelReason | null,
+  ): Promise<CancelResult> {
     const raw = await this.executeRpc('cancel_order', {
       p_order_id: orderId,
       p_from: from,
       p_actor_id: actorId ?? null,
+      p_reason: reason ?? null,
     });
     return CancelResultSchema.parse(dbToApp(raw));
   }

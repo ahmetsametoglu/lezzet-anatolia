@@ -20,6 +20,8 @@ const BASE_SALE: OrderSale = {
   orderSource: 'web',
   isGiftOrder: false,
   status: 'completed',
+  // Tamamlanmış satışta iptal sebebi yoktur (07.14) — `null` "iptal edilmedi" demek.
+  cancelReason: null,
   paymentStatus: 'paid',
   paymentMethod: 'card',
   onAccount: false,

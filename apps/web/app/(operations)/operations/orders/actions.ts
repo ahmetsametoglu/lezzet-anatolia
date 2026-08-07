@@ -143,7 +143,9 @@ export async function cancelOrderAction(
 ): Promise<ActionResult<{ refundedAmountCents: number; refundNotice: string | null; refundBlocked: RefundBlockReason | null }>> {
   try {
     const actor = await requireAdmin();
-    const result = await cancelOrder(orderId, { actorId: actor.id, ...opts });
+    // Sebep `staff` (07.14): iptali operasyon istedi. Müşterinin kendi iptali ayrı bir sebeptir ve
+    // ayrı bir kapıdan gelir — ikisini tek kovaya koymak "neden iptal oldu" sorusunu geri alırdı.
+    const result = await cancelOrder(orderId, { actorId: actor.id, reason: 'staff', ...opts });
 
     if (result.status === 'not_found') throw new Error('Sipariş bulunamadı.');
     if (result.status === 'forbidden') {

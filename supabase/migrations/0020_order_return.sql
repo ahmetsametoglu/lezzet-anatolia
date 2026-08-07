@@ -189,7 +189,10 @@ $$;
 create or replace function public.cancel_order(
   p_order_id uuid,
   p_from order_status,
-  p_actor_id uuid default null
+  p_actor_id uuid default null,
+  -- İptalin SEBEBİ (07.14). Varsayılan `null` — sebep vermeyen eski çağıran kırılmaz, ama sebepsiz
+  -- iptal ekranda "neden" sütununu boş bırakır ve müşteriye kurulacak cümleyi belirsizleştirir.
+  p_reason order_cancel_reason default null
 ) returns jsonb
 language plpgsql
 security invoker
@@ -219,7 +222,9 @@ begin
   -- gerçeğini de sıfırlamak iki kaynağın aynı şeyi söylemesini sağlar.
   update public.order_item set fulfilled_qty = 0 where order_id = p_order_id;
 
-  update public.order set status = 'cancelled' where id = p_order_id;
+  -- Sebep AYNI güncellemede yazılır: ayrı bir `update` olsaydı ikisinin arasında sebepsiz bir
+  -- iptal hâli doğardı ve o aralıkta okuyan ekran yanlış cümleyi kurardı.
+  update public.order set status = 'cancelled', cancel_reason = p_reason where id = p_order_id;
 
   insert into public.order_status_log (order_id, from_status, to_status, actor_id)
   values (p_order_id, v_current, 'cancelled', p_actor_id);
@@ -229,4 +234,4 @@ end;
 $$;
 
 revoke execute on function public.adjust_fulfillment(uuid, jsonb, uuid) from public, anon, authenticated;
-revoke execute on function public.cancel_order(uuid, order_status, uuid) from public, anon, authenticated;
+revoke execute on function public.cancel_order(uuid, order_status, uuid, order_cancel_reason) from public, anon, authenticated;

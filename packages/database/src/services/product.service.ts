@@ -11,6 +11,7 @@ import {
   ProductStockRowSchema,
   ProductPriceRowSchema,
   ProductWithRelationsSchema,
+  ProductListingRowSchema,
   pickImageMeta,
   resolveLocalizedText,
   LOCALIZED_TEXT_KEYS,
@@ -20,6 +21,7 @@ import {
   type ProductStatus,
   type Product,
   type ProductWithRelations,
+  type ProductListingRow,
   type ProductInsert,
   type ProductUpdate,
   type ProductVariantInsert,
@@ -143,20 +145,21 @@ function buildProductQuery(f?: ProductFilters): { filters: Record<string, unknow
  *
  * Kendi sınıfı olmasının sebebi teknik: keyset sayfalama `tableName`'e bağlıdır ve sıralama anahtarı
  * (`sort_price`) yalnız görünümde vardır (`OrderSaleService` ile aynı gerekçe). Süzgeçler paylaşılır
- * (`buildProductQuery`), satır şeması paylaşılır (`ProductWithRelationsSchema`) — ayrışan tek şey
- * hangi kaynaktan ve hangi sıraya göre okunduğu.
+ * (`buildProductQuery`); satır şeması ise ürününkinden TÜRER ama aynısı DEĞİL
+ * (`ProductListingRowSchema` = ürün + görünümün hesapladığı iki kolon) — ayrışan şey hangi
+ * kaynaktan, hangi sıraya göre ve hangi türetilmiş alanlarla okunduğu.
  *
  * **Sıralamanın kullandığı fiyat, kartta yazan fiyattır.** Görünüm motorun ziyaretçi dalını yeniden
  * ifade eder (0043 başlığındaki ödünleşme); ikisinin ayrışmadığı testle tutulur.
  */
-export class ProductListingService extends BaseDbService<ProductWithRelations, never, never> {
+export class ProductListingService extends BaseDbService<ProductListingRow, never, never> {
   constructor(supabase: SupabaseClient) {
     super(
       supabase,
       'product_listing',
-      ProductWithRelationsSchema,
-      ProductWithRelationsSchema as never,
-      ProductWithRelationsSchema as never,
+      ProductListingRowSchema,
+      ProductListingRowSchema as never,
+      ProductListingRowSchema as never,
       false,
     );
   }
@@ -177,12 +180,16 @@ export class ProductListingService extends BaseDbService<ProductWithRelations, n
    */
   async listByPrice(
     opts: ProductListOptions & { direction: 'asc' | 'desc'; warehouseId?: string | null },
-  ): Promise<Page<ProductWithRelations>> {
+  ): Promise<Page<ProductListingRow>> {
     const { filters, orFilters } = buildProductQuery(opts.filters);
     // Yer belliyse depo satırı, belli değilse `warehouse_id is null` satırı — ikisi ayrı süzgeç
     // biçimi: null'a `eq` uygulanamaz.
     const scoped = opts.warehouseId ? { ...filters, warehouseId: opts.warehouseId } : filters;
-    return this.getPageAs(ProductWithRelationsSchema, scoped, {
+    // **Şema GÖRÜNÜMÜN satırı, ürünün değil** (07.08): önceki hâl `ProductWithRelationsSchema` ile
+    // parse ediyordu ve Zod tanımadığı alanları düşürüyordu — görünüm `effective_price` ile
+    // `has_near_expiry_offer`i hesaplıyor, servis çöpe atıyordu. Hiçbir yerde hata vermiyordu;
+    // yalnız her tüketici ziyaretçi fiyatını ikinci kez hesaplamak zorunda kalıyordu.
+    return this.getPageAs(ProductListingRowSchema, scoped, {
       select: '*,variants:product_variant(*),collections:product_collections(collection_id)',
       orderBy: 'sortPrice',
       orderDirection: opts.direction,

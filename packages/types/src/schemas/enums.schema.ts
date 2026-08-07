@@ -162,6 +162,21 @@ export const PaymentStatusEnum = z.enum(['pending', 'paid', 'partial', 'refunded
 export type PaymentStatus = z.infer<typeof PaymentStatusEnum>;
 
 /**
+ * **İptalin SEBEBİ** (07.14) — `null` = iptal edilmedi.
+ *
+ * Ayrım paranın yolunu izler, çünkü müşteriye kurulacak cümlenin dayanağı budur:
+ *   · `payment_failed` · `superseded` → para ÇEKİLMEDİ
+ *   · `out_of_stock` → para ÇEKİLDİ ve İADE EDİLDİ (ödeme geçti, mal kalmadı)
+ *   · `customer` · `staff` → iptali kim istedi
+ *
+ * Neden bir `refundIssued` bayrağı değil: o yalnız onay ekranının sorusunu cevaplardı. Sebep iki
+ * soruyu birden cevaplıyor — müşteriye hangi cümle kurulacak VE operasyonun iptal listesinde
+ * "neden" sütunu (bugün sipariş kaydından hiç cevaplanamıyor).
+ */
+export const OrderCancelReasonEnum = z.enum(['payment_failed', 'superseded', 'out_of_stock', 'customer', 'staff']);
+export type OrderCancelReason = z.infer<typeof OrderCancelReasonEnum>;
+
+/**
  * İade edilen kalemin MALA ne olduğu (DOMAIN §8). Para tarafı üçünde de aynıdır (iade hareketi);
  * ayrışan stok ve maliyet tarafıdır:
  * - `restock`  — mal depoya girdi, tekrar satılabilir → ayrılmıştan serbest

@@ -11,6 +11,18 @@ create type order_status as enum (
 -- *Nereden kapandı* — kanaldan (b2b/b2c) BAĞIMSIZ eksen (CHANNELS §2).
 create type order_source as enum ('web', 'whatsapp', 'door', 'manual');
 create type payment_status as enum ('pending', 'paid', 'partial', 'refunded');
+/**
+ * İptalin SEBEBİ (07.14). Serbest metin DEĞİL: ekran buna göre farklı cümle kuruyor ve elle yazılan
+ * bir sebep üç dile çevrilemez, süzülemez, sayılamaz.
+ *
+ * Ayrım paranın yolunu izliyor — müşteriye kurulacak cümlenin dayanağı bu:
+ *   · `payment_failed` — ödeme hiç geçmedi. Para ÇEKİLMEDİ.
+ *   · `superseded`     — müşteri yeni bir taslak açtı, eskisi süpürüldü. Para ÇEKİLMEDİ.
+ *   · `out_of_stock`   — ödeme geçti ama mal kalmadı → otomatik iade. **Para ÇEKİLDİ ve İADE EDİLDİ.**
+ *   · `customer`       — müşteri iptal etti.
+ *   · `staff`          — operasyon iptal etti.
+ */
+create type order_cancel_reason as enum ('payment_failed', 'superseded', 'out_of_stock', 'customer', 'staff');
 -- `on_account` (vadeli) BU LİSTEDE DEĞİL: vade bir yöntem değil, siparişin bayrağıdır (DOMAIN §7).
 create type payment_method as enum ('online', 'cash', 'card', 'cheque', 'bank_transfer');
 create type delivery_type as enum ('route', 'shipping');
@@ -32,6 +44,24 @@ create table public.order (
   is_gift_order boolean not null default false,
 
   status order_status not null default 'draft',
+  -- NEDEN iptal oldu (07.14 · müşteri şeridinin ölçümü). `null` = iptal edilmedi.
+  --
+  -- Kolon bir raporlama süsü değil, MÜŞTERİYE YANLIŞ CÜMLE KURULMASINI engelliyor: onay ekranı
+  -- iptal edilmiş her siparişte "Kartınızdan tahsilat yapılmadı" diyordu ve bu üç yolun ikisinde
+  -- doğru, birinde YANLIŞ — stok kalmadığı için otomatik iade edilen siparişte para GERÇEKTEN
+  -- çekilmiş ve geri verilmişti (`stripe-webhook.ts` → `stripe.refunds.create`). Ekranın ayırt
+  -- edecek sinyali yoktu; `payment_status` da ayırmıyor, çünkü iade dalında tahsilat hiç yazılmıyor
+  -- ve durum `pending` kalıyor.
+  --
+  -- Neden `refund_issued boolean` DEĞİL: o alan yalnız bu ekranın sorusunu cevaplardı. Sebep iki
+  -- soruyu birden cevaplıyor — müşteriye hangi cümle kurulacak VE operasyonun iptal listesindeki
+  -- "neden" sütunu (bugün sipariş kaydından hiç cevaplanamıyor).
+  --
+  -- Para izi AYRI bir sorudur ve bilinçle burada değil: iade dalında ne tahsilat ne iade hareketi
+  -- yazılıyor (`refundAndCancel` künyesi) — defter bakiye olarak doğru, ikisi de yok. Bu kolon
+  -- "para hareket etti mi" demez, "neden iptal oldu" der; `out_of_stock` ile `payment_failed`
+  -- farkı zaten paranın çekilip çekilmediğini söylüyor.
+  cancel_reason order_cancel_reason,
   -- TÜRETİLİR (net tahsilat vs karşılanan tutar) — elle set edilmez, motor hesaplar (03.6).
   payment_status payment_status not null default 'pending',
   payment_method payment_method,

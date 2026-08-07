@@ -259,6 +259,27 @@ export const ProductWithRelationsSchema = ProductSchema.extend({
 export type ProductWithRelations = z.infer<typeof ProductWithRelationsSchema>;
 
 /**
+ * **`product_listing` görünümünün satırı** (08.10 · 21.6) — ürün + ilişkiler + görünümün HESAPLADIĞI
+ * iki kolon.
+ *
+ * Ayrı şema olmasının sebebi bir arıza: servis cevabı `ProductWithRelationsSchema` ile parse
+ * ediyordu ve Zod tanımadığı alanları düşürüyor — **görünüm hesaplıyor, servis çöpe atıyordu.**
+ * Hiçbir yerde hata vermiyordu; yalnız ziyaretçi fiyatı okumanın ucuna hiç varmıyordu ve her
+ * tüketici onu ikinci kez hesaplamak zorunda kalıyordu (mobil şeridin ölçümü, 07.08).
+ *
+ * `product` TABLOSUNDA bu iki kolon YOK ve olmamalı: fiyat kanaldan, müşteriden, depodan ve
+ * yaklaşan son tarihli partiden türer — saklanan bir "geçerli fiyat" ilk gün yalan söyler. Görünüm
+ * o türetimi tek yerde yapıyor (`0032`), bu şema da onun çıktısını tarif ediyor.
+ */
+export const ProductListingRowSchema = ProductWithRelationsSchema.extend({
+  /** Ziyaretçinin göreceği birim fiyat; `null` = kanal fiyatı girilmemiş (satışa kapalı). */
+  effectivePrice: dbNumericNullable,
+  /** Fiyat yaklaşan son tarihli parti teklifinden mi geliyor — kartta "fırsat" rozeti. */
+  hasNearExpiryOffer: z.boolean(),
+});
+export type ProductListingRow = z.infer<typeof ProductListingRowSchema>;
+
+/**
  * Paket seçicisinin HAVUZU — ürünün yalnız kimlik/fiyat/durum alanları + boyların adı.
  *
  * Tam ürün okumak bu iş için 113 KB taşıyordu (besin değerleri, beyan metinleri, alerjenler,

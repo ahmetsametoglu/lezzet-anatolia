@@ -100,6 +100,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | order_source | enum(`web`,`whatsapp`,`door`,`manual`) | *nereden kapandı* — kanaldan bağımsız eksen (bkz. `CHANNELS.md §2`) |
 | is_gift_order | boolean | patron ikramı (arkadaşa hediye); **yalnız muhasebe export'una girmez** — gelir/kâr/kasa/ortaklık dahil gerisi tam normal, parayı patron öder (bkz. `DOMAIN.md §9`) |
 | status | enum | bkz. `ORDER_LIFECYCLE.md` |
+| cancel_reason | enum? | **NEDEN iptal oldu** (07.14); `null` = iptal edilmedi. `payment_failed` · `superseded` → para **çekilmedi**; `out_of_stock` → para **çekildi ve iade edildi** (ödeme geçti, mal kalmadı); `customer` · `staff` → iptali kim istedi. Kolon bir raporlama süsü değil: onay ekranı iptal edilen HER siparişte *"tahsilat yapılmadı"* diyordu ve `out_of_stock` dalında bu yanlıştı. `payment_status` ayırt etmiyor — o dalda tahsilat hiç yazılmıyor, durum `pending` kalıyor. Bir `refund_issued` bayrağı yalnız o ekranın sorusunu cevaplardı; sebep operasyonun "neden" sütununu da cevaplıyor |
 | payment_status | enum(`pending`,`paid`,`partial`,`refunded`) | ayrı eksen; **türetilir** (`amount_collected`−`amount_refunded` vs karşılanan tutar) — bkz. Kalıcı kararlar |
 | payment_method | enum(`online`,`cash`,`card`,`cheque`,`bank_transfer`) \| null | `bank_transfer` = havale (peşin veya vadeli tahsilat) |
 | on_account | boolean | vadeli sipariş mi — yalnız `credit_enabled` müşteride true; peşin ödemesiz `confirmed` (bkz. `DOMAIN.md §7`) |
