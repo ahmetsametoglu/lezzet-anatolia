@@ -33,7 +33,26 @@ export interface AuthUser {
 // Kimlik UYDURMA DEĞİL: seed aynı id ile gerçek bir admin profili açar (`DEV_ADMIN_PROFILE_ID`).
 // Gerekli, çünkü `actor_id` gibi alanlar `user_profiles`'a FK'lidir — profilsiz sahte bir kullanıcı
 // ilk durum geçişinde FK ihlali verirdi. Seed atılmamışsa aktör yazan ekranlar bu yüzden düşer.
-const DEV_BYPASS_USER: AuthUser = { id: DEV_ADMIN_PROFILE_ID, email: 'dev-admin@lezzet.local' };
+//
+// ── KİMLİK SEÇİLEBİLİR: `DEV_AUTH_BYPASS_USER_ID` (07.08, operasyon şeridinin talebi) ──────────
+// Bypass her zaman ADMİN kimliği veriyordu ve bunun görünmeyen bir bedeli vardı: kurye ekranları
+// hiçbir ajan tarafından DOLU hâliyle görülemiyordu. `listCourierDay(courierId)` kimliği zorunlu
+// tutuyor (ve tutmalı — o imza bir güvenlik sınırı), dolayısıyla admin kimliğiyle bakan her koşu
+// boş bir gün görüyordu. Ekranlar boş değildi, GÖREN yoktu — dört ekran (11.1 · 11.2 · 11.6) yalnız
+// erişimsiz hâliyle doğrulanabiliyordu.
+//
+// **Güvenlik sınırı DEĞİŞMEDİ:** bypass zaten yalnız `NODE_ENV !== 'production'` iken çalışıyor,
+// yani üretimde bu env okunsa da hiçbir şey yapmaz. Değişen tek şey, dev'de hangi profille
+// bakılacağı.
+//
+// Verilen kimliğin GERÇEK bir profil olması gerekir (aynı gerekçe: `actor_id` FK'li). Doğrulamayı
+// burada yapmıyoruz — guard'ın sıcak yoluna her istekte bir sorgu koymak, yalnız dev'de işe yarayan
+// bir kolaylık için ödenecek yanlış bedel. Yanlış kimlik verilirse ekran ilk aktör yazımında düşer
+// ve sebebi bellidir.
+const DEV_BYPASS_USER: AuthUser = {
+  id: process.env.DEV_AUTH_BYPASS_USER_ID || DEV_ADMIN_PROFILE_ID,
+  email: 'dev-admin@lezzet.local',
+};
 
 let bypassWarned = false;
 function devBypassActive(): boolean {

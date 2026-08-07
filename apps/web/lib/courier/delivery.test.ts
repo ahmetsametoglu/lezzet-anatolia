@@ -5,6 +5,7 @@ import {
 } from '@lezzet/database';
 import { purgeTestData, settingsSnapshot, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
 import { confirmDoorDelivery, type DeliveryProofInput, type DoorCollectionInput } from './delivery';
+import { readDeliveryProof, requestDeliveryProofUploadUrl } from './proof';
 import { transitionOrder } from '../order/transition';
 
 /**
@@ -226,5 +227,88 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
     const outcome = await confirmDoorDelivery({ orderId, courierId });
 
     expect(outcome).toMatchObject({ status: 'ok', collectedCents: 0, amountDueCents: 4000, paymentStatus: 'pending' });
+  });
+});
+
+/**
+ * Teslim kanıtının YÜKLEME kapısı (11.2).
+ *
+ * Bu blok kendi fikstürünü kurmuyor, yukarıdakini kullanıyor (`atTheDoor`): ikinci bir sipariş
+ * kurulumu yazmak aynı seksen satırı ikinci kez yazmak olurdu ve ikisi bir gün ayrışırdı
+ * (`CLAUDE §1`). Sınanan üç kural: **anahtarı kapı seçer**, **başkasının siparişine yüklenemez**,
+ * **yalnız görsel kabul edilir**.
+ */
+describe('teslim kanıtı yükleme kapısı (11.2)', () => {
+  it('kuryesi olduğu siparişe imzalı adres üretir ve ANAHTARI kapı seçer', async () => {
+    const { orderId } = await atTheDoor();
+
+    const result = await requestDeliveryProofUploadUrl({ orderId, courierId, filename: 'imza.png' });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Anahtar sipariş kimliğine göre klasörlü: kanıt siparişle birlikte temizlenebilsin diye.
+    expect(result.key).toMatch(new RegExp(`^delivery/proofs/${orderId}/[a-z0-9-]+\\.png$`));
+    expect(result.uploadUrl).toContain('https://');
+  });
+
+  it('aynı siparişe iki kanıt AYRI anahtar alır — biri ötekini ezmez', async () => {
+    // Bir teslimatta hem imza hem fotoğraf olabilir; üzerine yazılan şey, "eksik geldi"
+    // ihtilafının tek sigortasıdır.
+    const { orderId } = await atTheDoor();
+
+    const ilk = await requestDeliveryProofUploadUrl({ orderId, courierId, filename: 'imza.png' });
+    const ikinci = await requestDeliveryProofUploadUrl({ orderId, courierId, filename: 'kapi.jpg' });
+
+    expect(ilk.ok && ikinci.ok).toBe(true);
+    if (!ilk.ok || !ikinci.ok) return;
+    expect(ilk.key).not.toBe(ikinci.key);
+  });
+
+  it('BAŞKA kuryenin siparişine yüklenemez — ve cevap "yok" ile aynı', async () => {
+    // Ayrı cevap verseydik kimlik deneyerek hangi siparişlerin var olduğu haritalanabilirdi.
+    const { orderId } = await atTheDoor();
+
+    const result = await requestDeliveryProofUploadUrl({
+      orderId,
+      courierId: '00000000-0000-0000-0000-000000000000',
+      filename: 'imza.png',
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'not_found' });
+  });
+
+  it('görsel olmayan dosya reddedilir — yetki sorusuna hiç gelinmeden', async () => {
+    const { orderId } = await atTheDoor();
+
+    const result = await requestDeliveryProofUploadUrl({ orderId, courierId, filename: 'kanit.pdf' });
+
+    expect(result).toEqual({ ok: false, reason: 'unsupported_type' });
+  });
+
+  it('yazılan kanıt OKUNABİLİYOR — yazılıp hiç açılmayan sigorta, olmayan sigortadır', async () => {
+    // Sözleşmenin iki ucu bir kez ayrışmıştı: yazan `imageKey` koyuyordu, ekran `photos[]`
+    // arıyordu. Bu test o turu kapatıyor — yazılan kayıt aynı şemadan geri okunuyor.
+    const { orderId } = await atTheDoor({ channel: 'b2b' });
+    const upload = await requestDeliveryProofUploadUrl({ orderId, courierId, filename: 'imza.png' });
+    expect(upload.ok).toBe(true);
+    if (!upload.ok) return;
+
+    await confirmDoorDelivery({
+      orderId,
+      courierId,
+      proof: { kind: 'signature', imageKey: upload.key, receivedBy: 'Mehmet Yılmaz' },
+    });
+
+    const stored = (await orders.getById(orderId))?.deliveryProof;
+    const view = await readDeliveryProof(stored);
+    expect(view).toMatchObject({ kind: 'signature', imageKey: upload.key, receivedBy: 'Mehmet Yılmaz', courierId });
+    // Açılabilir adres: kanıtın tek amacı ihtilafta AÇILMAK.
+    expect(view?.imageUrl).toContain('https://');
+  });
+
+  it('tanınmayan biçimdeki blok null döner — yarım kanıt "kanıt var" der', async () => {
+    // Eski biçimde yazılmış bir blok varsa yarım göstermektense hiç göstermemek doğru.
+    expect(await readDeliveryProof({ photos: ['x'], by: 'biri' })).toBeNull();
+    expect(await readDeliveryProof(null)).toBeNull();
   });
 });

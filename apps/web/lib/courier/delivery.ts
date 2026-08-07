@@ -1,5 +1,5 @@
 import { OrderService, SettingsService, serviceDb } from '@lezzet/database';
-import type { FulfillmentAdjustment, Order, PaymentStatus } from '@lezzet/types';
+import type { DeliveryProofRecord, FulfillmentAdjustment, Order, PaymentStatus } from '@lezzet/types';
 import { deliverOrder } from '../order/fulfillment';
 import { adjustFulfillment } from '../order/refund';
 import { recordOrderPayment, syncOrderPaymentStatus } from '../money/order-payment';
@@ -155,8 +155,16 @@ function cashLegalLimitCents(db: ReturnType<typeof serviceDb>): Promise<number> 
   return new SettingsService(db).getNumber('cash_legal_limit_cents', 100_000);
 }
 
-/** Siparişe yazılan kanıt: ne, kim, ne zaman — "eksik geldi" ihtilafının tek sigortası (DOMAIN §6). */
-function proofRecord(proof: DeliveryProofInput, courierId: string): Record<string, unknown> {
+/**
+ * Siparişe yazılan kanıt: ne, kim, ne zaman — "eksik geldi" ihtilafının tek sigortası (DOMAIN §6).
+ *
+ * **Şekil `packages/types`'tan geliyor** (`DeliveryProofRecord`), burada elle yazılmıyor. Eskiden
+ * yazılıyordu ve okuyan ekran BAŞKA alan adları arıyordu (`photos[]`, `by`, `note`) — ortak tek
+ * alan `at` idi. İki taraf da kendi içinde tutarlı olduğu için hiçbir yerde hata vermiyordu; ekran
+ * kanıtı "var" gösteriyor, ama neyin var olduğunu söyleyemiyordu. Tipe bağlanınca yanlış alan adı
+ * derleme hatasına döndü.
+ */
+function proofRecord(proof: DeliveryProofInput, courierId: string): DeliveryProofRecord {
   return {
     kind: proof.kind,
     imageKey: proof.imageKey,

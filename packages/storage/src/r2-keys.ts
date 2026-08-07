@@ -66,6 +66,22 @@ export const r2Keys = {
    */
   ticketDraftAttachment: (customerId: string, photoToken: string, sourceFilename: string): string =>
     `support/tickets/drafts/${sanitize(customerId)}/${sanitize(photoToken)}.${extOf(sourceFilename)}`,
+
+  /**
+   * **Teslim kanıtı** (11.2) — imza çizimi ya da kapı fotoğrafı. Şikâyet fotoğrafıyla aynı aile:
+   * PRIVATE kova, public adresi YOK.
+   *
+   * Deterministik DEĞİL ve sebebi katalogunkinden farklı: bir teslimatta hem imza hem fotoğraf
+   * olabilir, üstelik ikinci deneme (ilk teslimatta bulunulamadı) da aynı siparişe yazar. Anahtar
+   * yalnız sipariş kimliğinden türeseydi ikincisi **birincisinin üzerine yazardı** — ve üzerine
+   * yazılan şey, "eksik geldi" ihtilafının tek sigortasıdır.
+   *
+   * Sipariş kimliğine göre klasörlenir: sipariş kaydı GDPR ile anonimleştirilirse (0037)
+   * `delivery/proofs/{orderId}/` tek seferde temizlenebilir. Kanıt, siparişin kendisi gibi yasal
+   * saklamaya tabidir — silme kararı buranın değil, saklama süresinin işidir.
+   */
+  deliveryProof: (orderId: string, photoToken: string, sourceFilename: string): string =>
+    `delivery/proofs/${sanitize(orderId)}/${sanitize(photoToken)}.${extOf(sourceFilename)}`,
 } as const;
 
 /**
