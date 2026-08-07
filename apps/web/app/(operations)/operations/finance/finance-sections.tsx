@@ -14,6 +14,7 @@ import {
   RECONCILE_LABEL,
   SUGGESTION_VIEW,
 } from './finance-labels';
+import { ledgerRowKey } from './finance-types';
 import type { AccountView, LedgerView, MatchRowView, MovementRowView } from './finance-types';
 import { ALL_ACCOUNTS, FINANCE_PERIODS, PERIOD_LABEL, type FinanceUrlState } from './finance-url';
 
@@ -214,7 +215,7 @@ export function MovementList({ ledger, stacked = false }: MovementListProps) {
     return (
       <ul className="flex flex-col">
         {ledger.rows.map((row) => (
-          <MovementCard key={row.id} row={row} />
+          <MovementCard key={ledgerRowKey(row)} row={row} />
         ))}
       </ul>
     );
@@ -233,7 +234,7 @@ export function MovementList({ ledger, stacked = false }: MovementListProps) {
       </div>
       <ul className="min-h-0 flex-1 overflow-y-auto">
         {ledger.rows.map((row) => (
-          <li key={row.id} className={`${ROW_GRID} border-b border-ops-line-soft px-6 py-2.5`}>
+          <li key={ledgerRowKey(row)} className={`${ROW_GRID} border-b border-ops-line-soft px-6 py-2.5`}>
             <span className="font-ops-mono text-ops-xs text-ops-faint">{dayMonth(row.valueDate)}</span>
             <div className="flex min-w-0 flex-col gap-0.5">
               <span className="truncate font-ops-body text-ops-sm text-ops-ink">{row.title}</span>

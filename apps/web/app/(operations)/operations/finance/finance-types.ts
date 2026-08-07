@@ -28,7 +28,10 @@ export type AccountView = Pick<Account, 'id' | 'name' | 'type' | 'isActive'> & {
  * kendi eksisini koysaydı transferin karşı ucunda yanılırdı — orada işaret ters ve sebebi hareketin
  * yönü değil, satırın hangi hesabın defterinde durduğu.
  */
-export type MovementRowView = Pick<AccountLedgerRow, 'id' | 'valueDate' | 'type' | 'reconciled' | 'signedAmountCents'> & {
+export type MovementRowView = Pick<
+  AccountLedgerRow,
+  'id' | 'ledgerAccountId' | 'valueDate' | 'type' | 'reconciled' | 'signedAmountCents'
+> & {
   /** Operatörün okuduğu cümle — açıklama yoksa tipin adı (boş hücre bırakmaktansa). */
   title: string;
   /**
@@ -42,6 +45,23 @@ export type MovementRowView = Pick<AccountLedgerRow, 'id' | 'valueDate' | 'type'
   /** "gider · akaryakıt" — tip ve kategori tek hücrede, kategori varsa. */
   typeLabel: string;
 };
+
+/**
+ * Defter satırının KİMLİĞİ — `id` tek başına değil, `(id, ledgerAccountId)` ÇİFTİ.
+ *
+ * Ölçüldü (06.08, kullanıcı bildirimi — React "iki çocuk aynı anahtarla" uyarısı): `account_movement`
+ * bir transferi İKİ satır olarak veriyor (gönderen hesabın defteri + alanın defteri) ve ikisinin
+ * `id`'si aynı hareketin kimliği. Hesap süzgeci yokken ("Tüm hesaplar") her iki bacak da aynı listede
+ * duruyor, yani `id` orada tekil DEĞİL. Görünümün künyesi bunu zaten söylüyordu: *"bir hareket
+ * dokunduğu her hesapta bir satır üretir: normal hareket bir, transfer iki."*
+ *
+ * Satırdan `id`'yi ATMADIM ve atmamalıyım: o gerçek bir hareket kimliği ve mutabakat eylemi onunla
+ * çalışıyor. Eksik olan ikinci yarısıydı; anahtar bu yüzden burada, tek yerde kuruluyor — iki listede
+ * elle birleştirilseydi biri bir gün ötekinden ayrışırdı.
+ */
+export function ledgerRowKey(row: Pick<MovementRowView, 'id' | 'ledgerAccountId'>): string {
+  return `${row.id}:${row.ledgerAccountId}`;
+}
 
 /** Eşleştirme kuyruğunun kartı — banka satırı + sistemin önerisi. */
 export interface MatchRowView {

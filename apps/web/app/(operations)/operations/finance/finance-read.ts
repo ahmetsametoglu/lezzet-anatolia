@@ -90,6 +90,8 @@ export function toMovementRows(
     const { ref, refTone } = refOf(row, accountNames, orderRefs);
     return {
       id: row.id,
+      // Satırın hangi hesabın defterinde durduğu — kimliğin ikinci yarısı (`ledgerRowKey`).
+      ledgerAccountId: row.ledgerAccountId,
       valueDate: row.valueDate,
       type: row.type,
       reconciled: row.reconciled,
