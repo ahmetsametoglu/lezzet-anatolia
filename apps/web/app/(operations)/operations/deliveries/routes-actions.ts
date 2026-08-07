@@ -11,6 +11,7 @@ import {
   type PostalCodeSuggestion,
 } from '@lezzet/database';
 import { requireAdmin } from '@/lib/guard';
+import { readPostalCodesForMap } from '@/lib/delivery/map-codes';
 import { constraintMessage } from '@/lib/constraint-message';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { ZoneFormSchema, type PostalCodePick } from './routes-types';
@@ -121,6 +122,41 @@ export async function searchPostalCodesAction(term: string): Promise<ActionResul
   }
 }
 
-// `zoneMapPointsAction` KALDIRILDI (07.08): koordinatlar artık sayfanın kendi okumasından geliyor
-// (`routes-read`), yani sunucu turu zaten atılıyor. İkinci bir eylem, aynı veriyi ikinci bir yoldan
-// getiren ölü koddu — diyalogda gerekiyordu çünkü orada sunucu okuması yoktu.
+/**
+ * **Görüş alanındaki posta kodları** — haritanın "boşta" kodları çizebilmesinin tek yolu (19.20).
+ *
+ * Sayfanın kendi okuması (`routes-read`) yalnız TANIMLI kodları ve önerileri getiriyor; boştakiler
+ * hiçbir rotada olmadığı için hiçbir listede yoklar. Bu uç onları getiriyor ve **kaydırmaya bağlı**
+ * olduğu için sayfa okumasında değil ayrı bir eylemde: operatör haritayı gezdirdikçe küme değişiyor,
+ * sayfayı yeniden çizdirmek gerekmiyor.
+ *
+ * Kutu ZORUNLU ve tavan var (`readPostalCodesForMap` varsayılanı 1200): ülkenin tamamı 6.065 kod ve
+ * hiçbir ekran onu kullanmaz. Ekran ayrıca `truncated`'i YAZAR — sessiz kesme, operatöre olmayan
+ * kodu "yok" diye okuturdu.
+ */
+const BboxSchema = z.object({
+  minLat: z.number(),
+  maxLat: z.number(),
+  minLng: z.number(),
+  maxLng: z.number(),
+});
+
+/**
+ * Dönüş tipi KAPIDAN TÜRETİLİYOR, elle yazılmıyor.
+ *
+ * `MapPostalCodes` arka uç şeridinde bilerek dışa açılmamış (künyesi: *"tüketicisi doğduğu gün
+ * export eklenir"*) ve o dosya onların. Türetmek hem sınırı koruyor hem de kopya bir şekil
+ * bırakmıyor — kapı değişirse burası derlemede kırılır, sessizce ayrışmaz (`CLAUDE §1`).
+ */
+type MapCodesResult = Awaited<ReturnType<typeof readPostalCodesForMap>>;
+
+export async function readMapCodesAction(input: unknown): Promise<ActionResult<MapCodesResult>> {
+  try {
+    await requireAdmin();
+    const bbox = BboxSchema.parse(input);
+    return { data: await readPostalCodesForMap({ bbox }), error: null };
+  } catch (error) {
+    // Salt OKUMA — çarpabileceği bir kısıt yok, `readable` bağlanmıyor (aynı gerekçe `searchPostalCodesAction`'da).
+    return { data: null, error: getErrorMessage(error) };
+  }
+}

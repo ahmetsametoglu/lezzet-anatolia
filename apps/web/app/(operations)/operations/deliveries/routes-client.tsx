@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FREE_CODE_MIN_ZOOM,
@@ -8,7 +8,7 @@ import {
   type MapViewport,
   type ZoneMapPoint,
 } from '@/components/operation/ui/zone-map-model';
-import { saveZoneAction } from './routes-actions';
+import { readMapCodesAction, saveZoneAction } from './routes-actions';
 import { RoutesDesktop } from './routes.desktop';
 import { ROUTE_NOTES } from './deliveries-labels';
 import type { RoutesData, RouteView } from './routes-read';
@@ -36,9 +36,13 @@ export function RoutesClient({ data, routeId, warehouseId }: { data: RoutesData;
   // Tıklamanın kısa geri bildirimi (tasarımın `hint` şeridi). `error`den AYRI: biri olanı anlatır,
   // öteki olmayanı — ikisini tek alanda toplamak, bir eklemeyi hata gibi kırmızıya boyardı.
   const [hint, setHint] = useState<string | null>(null);
-  // Haritanın görüş alanı. Bugün yalnız lejant satırını belirliyor; "boşta" kod okuması gelince
-  // isteğin kendisi de bundan doğacak (`arka-uc-harita-icin-posta-kodu-okumasi`).
   const [viewport, setViewport] = useState<MapViewport | null>(null);
+  /**
+   * Görüş alanındaki BOŞTA kodlar. `null` = henüz okunmadı — boş dizi "hiç yok" demek ve ikisi aynı
+   * şey değil (`CLAUDE §1`); lejant da bu ikisini ayrı cümleyle söylüyor.
+   */
+  const [freePoints, setFreePoints] = useState<ZoneMapPoint[] | null>(null);
+  const [truncated, setTruncated] = useState(false);
 
   const selected: RouteView | null = routeId ? (data.routes.find((route) => route.id === routeId) ?? null) : null;
   // Kod aramasında ülke etiketi yalnız YABANCI kod için basılır; "kendi ülkemiz" seçili rotanın
@@ -128,9 +132,55 @@ export function RoutesClient({ data, routeId, warehouseId }: { data: RoutesData;
   const zoom = viewport?.zoom ?? FREE_CODE_MIN_ZOOM;
   const tooFar = zoom < FREE_CODE_MIN_ZOOM;
 
+  /**
+   * **Görüş alanı okuması** — haritanın boştaki kodları çizebilmesinin tek yolu (19.20).
+   *
+   * Eşiğin ALTINDA istek atılmıyor: o yakınlıkta noktalar birbirine değip tıklanamaz hâle geliyor
+   * (ölçüm `FREE_CODE_MIN_ZOOM` künyesinde), yani getirilen veri kullanılamazdı. Kaydırma zaten
+   * haritada 250 ms geciktiriliyor; burada ikinci bir gecikme yok.
+   *
+   * Yarış koşulu: iki kaydırma arka arkaya yapıldığında ikinci istek daha önce dönebilir ve eski
+   * cevap yenisini ezerdi. `latest` damgası son isteğin dışındaki cevapları atıyor.
+   */
+  const latestRequest = useRef(0);
+  useEffect(() => {
+    if (!viewport || viewport.zoom < FREE_CODE_MIN_ZOOM) {
+      setFreePoints(null);
+      setTruncated(false);
+      return;
+    }
+    const stamp = ++latestRequest.current;
+    void readMapCodesAction({
+      minLat: viewport.minLat,
+      maxLat: viewport.maxLat,
+      minLng: viewport.minLng,
+      maxLng: viewport.maxLng,
+    }).then((result) => {
+      if (stamp !== latestRequest.current) return;
+      if (!result.data) {
+        // Okuma düştü: elde veri YOK demek, "boşta kod yok" demek değil — `null` bırakılıyor.
+        setFreePoints(null);
+        setTruncated(false);
+        return;
+      }
+      setFreePoints(
+        result.data.points.map((point) => ({
+          country: point.country,
+          postalCode: point.postalCode,
+          lat: point.lat,
+          lng: point.lng,
+          place: point.place ?? undefined,
+        })),
+      );
+      setTruncated(result.data.truncated);
+    });
+  }, [viewport]);
+
   return (
     <RoutesDesktop
       tooFar={tooFar}
+      freePoints={freePoints}
+      truncated={truncated}
       data={data}
       selected={selected}
       draft={draft}

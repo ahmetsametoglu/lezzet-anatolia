@@ -7,6 +7,7 @@ import {
   ZoneNoticeService,
   serviceDb,
 } from '@lezzet/database';
+import { placeLabel } from '@lezzet/domain-core';
 import type { ZoneMapPoint } from '@/components/operation/ui/zone-map-model';
 import { buildSuggestions, type LocatedPlace } from './routes-suggest';
 import type { CodeStatsView, PostalCodePick, SuggestionView } from './routes-types';
@@ -53,19 +54,16 @@ export interface RoutesData {
 }
 
 /**
- * Bölge = posta kodunun ilk iki hanesi. Fransa'da departman (`67` = Bas-Rhin), Almanya'da
- * Leitregion. Bir dağıtım güzergâhı bu ölçekte kurulur; üç hane fazla dar (komşu kasabayı dışarıda
- * bırakır), tek hane fazla geniş (yarım ülke gelir).
+ * **Bölge öneki havuzu KALDIRILDI (07.08, aynı gün).**
+ *
+ * Bir süre boştaki kodlar "rotaların dokunduğu bölgelerin" (kodun ilk iki hanesi) kodlarından
+ * çiziliyordu — `bbox` okuması yokken işi yürüten bir çözümdü ve bilinen bir sınırı vardı: hiç
+ * rotası olmayan bir bölgeye kaydırınca hiçbir şey görünmüyordu. Kullanıcı bunu ekranda gördü
+ * (*"Paris tarafına gittiğim zaman herhangi bir şey görünmüyor, bu normal mi?"*).
+ *
+ * Aynı gün arka uç şeridi `readPostalCodesForMap({bbox})` kapısını teslim etti; havuz artık görüş
+ * alanının kendisi. Sayfa okumasından dört sorgu düştü ve sınır kalktı.
  */
-const REGION_PREFIX_LEN = 2;
-
-/**
- * Bir bölge önekinin aday tavanı. Ölçüldü: iki ülke toplamında en kalabalık iki haneli önek 335
- * kod (`59`). 400 hiçbir bölgeyi kesmez — kesseydi `searchPrefix` kod sırasına göre sıralayıp
- * kuyruğu atardı ve iki ülke aynı sayı aralığını paylaştığı için atılan kodlar sessizce Fransa'dan
- * olurdu.
- */
-const REGION_CODE_LIMIT = 400;
 
 /** Talep liderlik tablosundan kaç satır okunuyor — öneri havuzunun anonim ayağı. */
 const DEMAND_POOL = 50;
@@ -92,52 +90,17 @@ export async function readRoutes(): Promise<RoutesData> {
   const definedKeys = new Set(allCodes.map((code) => `${code.country}:${code.postalCode}`));
 
   /**
-   * **Aday kodlar — rotaların DOKUNDUĞU bölgelerden** (07.08).
+   * Öneri havuzu: TANIMLI kodlar + talep sayacının işaret ettikleri.
    *
-   * Haritanın var olma sebebi yeni kod EKLEMEK; bunun için "boşta" kodların çizilmesi gerekiyor ve
-   * onlar hiçbir rotada olmadığı için hiçbir listede yoklar. İdeal okuma görüş alanına göredir
-   * (`bbox`) ve o kapı açık bir taleple bekliyor — ama beklemek gerekmiyordu: **kapsam bölgeyle
-   * sınırlandığında iş mevcut açık kapılarla yapılabiliyor.**
-   *
-   * Kural: bir rotanın kodları hangi bölgelerdeyse (ülke + posta kodunun ilk iki hanesi = Fransa'da
-   * departman, Almanya'da Leitregion), aday havuzu o bölgelerdir. Ölçüldü — küme küçük: FR `67`
-   * 96 kod, DE `77` 69 kod; en kalabalık iki haneli önek iki ülke toplamı 335. Yani havuz operatörün
-   * kendi kurduğu rotalarla sınırlı, veriyle büyümüyor (`CLAUDE §1`) ve tek turda çekilir.
-   *
-   * **Bilinen sınır:** operatör haritayı hiç rotası olmayan bir bölgeye (ör. Colmar, `68`) kaydırırsa
-   * orada aday çizilmez — o bölge havuzda yok. Görüş alanına göre okuma gelince bu sınır kalkar.
-   * BEKLEYEN(19.20)
-   *
-   * Ülke süzgeci ÇAĞRIDAN SONRA: `searchPrefix` bilerek ülke almıyor (müşteri yüzeyinde ülke
-   * seçilmiyor) ve `67` hem Fransa'da hem Almanya'da geçerli — süzülmeseydi Strasbourg rotasına
-   * aday diye 200 km kuzeydeki Pfalz kodları çizilirdi.
-   */
-  const regions = new Set(allCodes.map((code) => `${code.country}:${code.postalCode.slice(0, REGION_PREFIX_LEN)}`));
-  const candidateKeys = (
-    await Promise.all(
-      [...regions].map(async (region) => {
-        const [country, prefix] = region.split(':');
-        const rows = await placeSvc.searchPrefix(prefix!, REGION_CODE_LIMIT);
-        return rows.filter((row) => row.country === country).map((row) => `${row.country}:${row.postalCode}`);
-      }),
-    )
-  ).flat();
-
-  /**
-   * Talep sayacındaki kodlar bölge havuzunun DIŞINDA olabilir ve tam da bu yüzden değerliler:
-   * `68000` (Colmar) hiçbir rotamızın bölgesinde değil ama 18 kez sorulmuş. Havuzla sınırlı kalsaydı
-   * öneri motoru yalnız zaten baktığımız yeri önerirdi — yani hiçbir şey keşfetmezdi.
+   * Sayaçtaki kodlar haritanın o anki görüş alanının dışında olabilir ve tam da bu yüzden
+   * değerliler: `68000` (Colmar) ekranda hiç görünmese bile 18 kez sorulmuş, 1 kişi bekliyor.
+   * Öneri operatörün BAKMADIĞI yeri de göstermeli, yoksa yalnız zaten baktığı yeri önerir.
    *
    * Sayaçta ÜLKE yok (tablo yalnız kodu tutuyor, `0023`): koordinat okuması iki ülkeyi de getirir,
-   * hangisinin gerçek aday olduğuna uzaklık süzgeci karar verir.
+   * ikisi de aday olarak listelenir — ayrımı yer adı ve haritadaki yeri yapar.
    */
   const demandCodes = new Set(demands.map((demand) => demand.postalCode));
-
-  const regionKeys = new Set([...definedKeys, ...candidateKeys]);
-  // Koordinat okuması kodla yapılıyor (ülkesiz); ülke ayrımı aşağıdaki süzgeçte yapılır.
-  const uniqueCodes = [
-    ...new Set([...[...regionKeys].map((key) => key.slice(key.indexOf(':') + 1)), ...demandCodes]),
-  ];
+  const uniqueCodes = [...new Set([...allCodes.map((code) => code.postalCode), ...demandCodes])];
 
   /**
    * Koordinat + ağırlık TEK turda.
@@ -168,14 +131,10 @@ export async function readRoutes(): Promise<RoutesData> {
   }
 
   const requestOf = new Map(demands.map((demand) => [demand.postalCode, demand]));
-  // Koordinatı olan ve bizi ilgilendiren her yer: bölge havuzu + talep sayacının işaret ettikleri.
+  // Koordinatı olmayan kod ATLANIR: haritada `(0, 0)`a düşen nokta Gine Körfezi'nde durur ve
+  // operatöre "bu kod orada" der (19.18'in kendi kuralı).
   const located: LocatedPlace[] = places
-    .filter(
-      (place) =>
-        place.lat !== null &&
-        place.lng !== null &&
-        (regionKeys.has(`${place.country}:${place.postalCode}`) || demandCodes.has(place.postalCode)),
-    )
+    .filter((place) => place.lat !== null && place.lng !== null)
     .map((place) => ({
       country: place.country,
       postalCode: place.postalCode,
@@ -184,18 +143,10 @@ export async function readRoutes(): Promise<RoutesData> {
       lng: place.lng!,
     }));
 
-  // Uzaklık ölçüsünün referansı: rotalarda TANIMLI kodların kendisi. Depo değil — bir güzergâhın
-  // ucu depodan 40 km ötede olabilir ve bir sonraki durak oraya göre yakındır, depoya göre değil.
-  const routeAnchors = located.filter((place) => definedKeys.has(`${place.country}:${place.postalCode}`));
-
   // "Şimdi" okumanın işi, motorun değil: motor saf kalsın ve testi tarihe bağlı olmasın.
-  const suggestions = buildSuggestions(located, {
-    definedKeys,
-    routeAnchors,
-    stats,
-    requestOf,
-    now: Date.now(),
-  });
+  // Uzaklık BURADA hesaplanmıyor: gösterilen mesafe DÜZENLENEN rotaya göredir ve o seçim
+  // istemcide değişiyor (`routes.desktop`) — sunucuda hesaplansaydı rota değişince bayatlardı.
+  const suggestions = buildSuggestions(located, { definedKeys, stats, requestOf, now: Date.now() });
 
   return {
     routes: zones.map((zone) => ({
@@ -216,22 +167,17 @@ export async function readRoutes(): Promise<RoutesData> {
     stats,
     suggestions,
     /**
-     * Koordinatı olmayan kod ATLANIR (`located` süzgeci): haritada `(0, 0)`a düşen nokta Gine
-     * Körfezi'nde durur ve operatöre "bu kod orada" der (19.18'in kendi kuralı).
+     * Sayfanın getirdiği noktalar: TANIMLI kodlar + önerilenler. Boştakiler burada YOK — onları
+     * haritanın kendi görüş alanı okuması getiriyor (`readMapCodesAction`), çünkü hangi kutuya
+     * bakıldığı kaydırmayla değişiyor ve her kaydırmada sayfayı yeniden çizdirmek gerekmiyor.
      *
-     * `place` TEK ad: haritanın z13 etiketi "67550 · Vendenheim" diye okunuyor (tasarım) ve bir
-     * kodun kapsadığı yerleşim listesinin tamamı etikete sığmaz. İlk ad kodun taşıyıcı yerleşimidir;
-     * tamamı gerektiğinde `findPlaces` zaten var.
-     *
-     * **Uzaktaki talep kodu haritaya ÇİZİLMEZ.** `75011` (Paris) sayaçta var ama 400 km ötede;
-     * çizilseydi operatör haritayı Strasbourg'da tutarken göremeyeceği, uzaklaştırdığında ise
-     * güzergâhla ilgisi olmayan bir nokta görürdü. Onun evi Depolar'daki talep tablosudur (19.21) —
-     * orası "yeni depo/bölge açmalı mıyım" sorusunun ekranı, burası "bu rotaya ne ekleyeyim"in.
+     * Öneriler BURADA çünkü onlar görüş alanına bağlı DEĞİL: `68000` ekranda görünmese bile
+     * önerilir — öneri operatörün bakmadığı yeri de göstermeli.
      */
     points: located
       .filter(
         (place) =>
-          regionKeys.has(`${place.country}:${place.postalCode}`) ||
+          definedKeys.has(`${place.country}:${place.postalCode}`) ||
           suggestions.some((row) => row.country === place.country && row.postalCode === place.postalCode),
       )
       .map((place) => ({
@@ -239,7 +185,10 @@ export async function readRoutes(): Promise<RoutesData> {
         postalCode: place.postalCode,
         lat: place.lat,
         lng: place.lng,
-        place: place.places[0],
+        // Ad KARARI motorun (`placeLabel`): çok yerleşimli kodda `null` döner. `places[0]` keyfi bir
+        // seçimdir ve otorite gibi okunur — `67800` "Strasbourg" değil, Bischheim/Hœnheim (arka uç
+        // şeridinin uyarısı 07.08; bu tablo o hatayı bir kez yaşamış, kodların ~%39'unu etkilemiş).
+        place: placeLabel(place.places) ?? undefined,
       })),
   };
 }

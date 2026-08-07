@@ -20,6 +20,7 @@ import {
 } from '@/components/operation/ui/zone-map-model';
 import { agoShort, money, num } from '@/components/operation/ui/format';
 import { PostalCodePicker } from './postal-code-picker';
+import { distanceKm } from './routes-suggest';
 import { ROUTE_NOTES } from './deliveries-labels';
 import type { RouteView, RoutesData } from './routes-read';
 import type { CodeStatsView, SuggestionView } from './routes-types';
@@ -43,8 +44,12 @@ interface RoutesViewProps {
   onSave: () => void;
   /** Haritanın görüş alanı oturunca — yakınlık eşiği buradan hesaplanıyor. */
   onViewport: (viewport: MapViewport) => void;
-  /** Yakınlık ölçülen eşiğin (`FREE_CODE_MIN_ZOOM`) altında mı — boştaki kodlar gizlenir. */
+  /** Yakınlık ölçülen eşiğin (`FREE_CODE_MIN_ZOOM`) altında mı — boştaki kodlar okunmaz. */
   tooFar: boolean;
+  /** Görüş alanındaki boştaki kodlar. `null` = okunmadı; boş dizi = gerçekten yok. */
+  freePoints: ZoneMapPoint[] | null;
+  /** Okuma tavana dayandı mı — ekran bunu YAZMAK zorunda, sessiz kesme "yok" diye okunur. */
+  truncated: boolean;
   /** Tıklamanın kısa geri bildirimi — haritanın altında belirir, 2,6 sn sonra söner. */
   hint: string | null;
   /** Kod aramasında ülke etiketini bastırmak için: kendi ülkemizin kodu sade yazılır. */
@@ -91,19 +96,41 @@ export function RoutesDesktop(props: RoutesViewProps) {
    * Tanımlı kodlar her yakınlıkta kalır: onlar aday değil, güzergâhın kendisidir ve haritanın
    * şeklini onlar veriyor.
    */
+  /**
+   * Haritanın çizdiği küme İKİ KAYNAKTAN birleşiyor ve ayrım kasıtlı:
+   *
+   * - **Sayfa okuması** (`data.points`): tanımlı kodlar + öneriler. Görüş alanına bağlı DEĞİL —
+   *   önerilen `68000` ekranda görünmese bile listede durmalı, harita oraya kaydırılınca çizilmeli.
+   * - **Görüş alanı okuması** (`freePoints`): boştaki kodlar. Kaydırmayla değişiyor.
+   *
+   * Çakışma sayfanın lehine: aynı kod iki kaynakta da varsa (tanımlı ya da önerilen bir kod görüş
+   * alanına da düşer) sayfanınki kalır, yoksa "boşta" diye çizilip hâlini kaybederdi.
+   */
   const points = useMemo(() => {
+    const seen = new Set(data.points.map(keyOfPoint));
     // Önerilen kodun GEREKÇESİ etikete iliştiriliyor: "üzerine gelince neden önerildiği görünsün"
     // (kullanıcı isteği 07.08). Harita metni kurmuyor, taşıyor — sözlük ekranın tarafında.
-    const withNote = data.points.map((point) => {
+    const own = data.points.map((point) => {
       const row = suggested.get(keyOfPoint(point));
       return row ? { ...point, note: ROUTE_NOTES.suggestionReason(row) } : point;
     });
-    // Öneriler HER YAKINLIKTA çizilir, sade boş kodlar uzakta gizlenir: öneri az sayıda ve ekranın
-    // asıl mesajı — onu da saklamak, operatörü aramaya geri yollardı.
-    return tooFar ? withNote.filter((point) => stateOf(point) !== 'free') : withNote;
-  }, [data.points, stateOf, suggested, tooFar]);
+    return [...own, ...(props.freePoints ?? []).filter((point) => !seen.has(keyOfPoint(point)))];
+  }, [data.points, props.freePoints, suggested]);
 
   const freeCount = useMemo(() => points.filter((point) => stateOf(point) === 'free').length, [points, stateOf]);
+
+  /**
+   * Önerinin uzaklığı DÜZENLENEN rotanın kendi kodlarına göre ölçülüyor, tüm rotalara göre değil.
+   *
+   * Sunucuda hesaplanırken bu bir kusurdu (07.08, kontrol sırasında bulundu): Strasbourg'u
+   * düzenlerken Kehl rotasının 5 km yanındaki kod da "rotaya 5 km" diye görünüyordu — oysa onu
+   * Strasbourg'un güzergâhına eklemek coğrafi olarak anlamsız. İstemcide, taslağa göre hesaplanınca
+   * hem doğru oluyor hem de kod ekledikçe canlı güncelleniyor.
+   */
+  const anchors = useMemo(() => {
+    const coords = new Map(data.points.map((point) => [keyOfPoint(point), point]));
+    return (draft?.codes ?? []).map((code) => coords.get(keyOfPoint(code))).filter((point) => point !== undefined);
+  }, [data.points, draft?.codes]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -120,7 +147,13 @@ export function RoutesDesktop(props: RoutesViewProps) {
           stateOf={stateOf}
           onPick={props.onPick}
           onViewport={props.onViewport}
-          note={tooFar ? ROUTE_NOTES.mapTooFar : ROUTE_NOTES.mapFree(freeCount)}
+          note={
+            tooFar
+              ? ROUTE_NOTES.mapTooFar
+              : props.freePoints === null
+                ? ROUTE_NOTES.mapUnread
+                : ROUTE_NOTES.mapFree(freeCount, props.truncated)
+          }
           hint={props.hint}
         />
       </div>
@@ -201,7 +234,7 @@ export function RoutesDesktop(props: RoutesViewProps) {
             {/* Haritanın durumu LEJANTTA (`note`): operatörün gözü haritadayken cümleyi sağ rayda
                 aramak, aynı bilgiyi iki yere yazmak demekti. */}
 
-            <Suggestions rows={data.suggestions} mine={membership.mine} onPick={props.onPick} />
+            <Suggestions rows={data.suggestions} mine={membership.mine} anchors={anchors} onPick={props.onPick} />
 
             <CodeWeights codes={draft.codes} stats={data.stats} />
 
@@ -246,13 +279,20 @@ export function RoutesDesktop(props: RoutesViewProps) {
 function Suggestions({
   rows,
   mine,
+  anchors,
   onPick,
 }: {
   rows: readonly SuggestionView[];
   mine: ReadonlySet<string>;
+  /** Düzenlenen rotanın kodlarının koordinatları — uzaklık bunlara göre ölçülür. */
+  anchors: ReadonlyArray<{ lat: number; lng: number }>;
   onPick: (point: ZoneMapPoint) => void;
 }) {
   const open = rows.filter((row) => !mine.has(keyOfPoint(row)));
+  // Rotanın hiç kodu yoksa uzaklık ÖLÇÜLEMEZ ve yazılmaz — "0 km" demek, ölçemediğimizi ölçmüş
+  // göstermek olurdu (`CLAUDE §1`).
+  const distanceOf = (row: SuggestionView): number | null =>
+    anchors.length === 0 ? null : Math.round(Math.min(...anchors.map((anchor) => distanceKm(anchor, row))));
 
   return (
     <FieldShell label="Önerilen kodlar" labelAside={open.length > 0 ? num(open.length) : undefined}>
@@ -271,7 +311,7 @@ function Suggestions({
                   <span className="flex items-baseline gap-2">
                     <span className="font-ops-mono text-ops-xs text-ops-ink">{row.postalCode}</span>
                     <span className="truncate font-ops-body text-ops-xs text-ops-muted">
-                      {ROUTE_NOTES.suggestionWhere(row.distanceKm, row.place)}
+                      {ROUTE_NOTES.suggestionWhere(distanceOf(row), row.place)}
                     </span>
                     {/* Talebin YAŞI: üç ay önce susmuş bir ilgi, dünkü kadar davet etmez. */}
                     {row.lastAskedMinutes !== null ? (

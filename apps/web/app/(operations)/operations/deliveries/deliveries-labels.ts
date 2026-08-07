@@ -172,15 +172,18 @@ export const ROUTE_NOTES = {
   // ölçülemeyen değer sıfır değildir). Operatör hangisinde olduğunu bilmeli.
   /** Eşiğin ALTINDA: sorun veri değil, noktaların ayırt edilememesi. Sebebi yazılır ki keyfi görünmesin. */
   mapTooFar: 'Bu uzaklıkta boştaki kodlar çizilmez — noktalar üst üste biner. Yakınlaşın, ayrışacaklar.',
+  /** Okuma HENÜZ dönmedi ya da düştü. "Kod yok" DEĞİL: ölçülemeyen değer sıfır değildir (`CLAUDE §1`). */
+  mapUnread: 'Boştaki kodlar okunuyor…',
   /**
-   * Eşiğin üstünde: boştaki kodlar çizili. Sıfır hâli **kapsamı da söylüyor** — çıplak "hiç yok"
-   * operatöre yanlış bir kesinlik verirdi; aday havuzu rotaların dokunduğu bölgelerle sınırlı ve
-   * başka bir bölgeye kaydırıldığında orası havuzda olmayabilir.
+   * Eşiğin üstünde ve okuma döndü. **`truncated` sessiz kalamaz:** kesilen kuyruk yazılmazsa
+   * operatör görmediği kodu "yok" sanar ve olmayan bir boşluğa göre karar verir.
    */
-  mapFree: (count: number): string =>
-    count === 0
-      ? 'Bu alanda boşta kod yok. Adaylar rotaların bulunduğu bölgelerden gelir — başka bir bölgeye kaydırdıysanız orası henüz havuzda değildir.'
-      : `${count} boşta kod çizili — rotaya eklemek için noktaya tıklayın.`,
+  mapFree: (count: number, truncated: boolean): string => {
+    if (truncated) return `${count} boşta kod çizili — ama bu alanda daha fazlası var. Yakınlaşın, hepsi görünsün.`;
+    return count === 0
+      ? 'Bu alanda boşta kod yok — görünen kodların tamamı bir rotada tanımlı.'
+      : `${count} boşta kod çizili — rotaya eklemek için noktaya tıklayın.`;
+  },
   // ── Kodların ağırlığı (analitik rayı) ─────────────────────────────────────
   /**
    * Rayın tek sorusu: *"bu kod rotada yerini hak ediyor mu?"* Ürün kırılımı, marj, geri bildirim
@@ -218,9 +221,14 @@ export const ROUTE_NOTES = {
   /** Sinyal yoksa öneri de yok; bu bir arıza değil, sessiz bir dönem. */
   suggestionEmpty:
     'Şimdilik öneri yok — rota dışında kalan kodlarda talep, bekleyen ya da sipariş izi görünmüyor.',
-  /** Uzaklık KARAR verdirmez, bağlam verir: 6 siparişi olan ama 70 km ötedeki kod ayrı bir karardır. */
-  suggestionWhere: (distanceKm: number, place?: string): string =>
-    place ? `${place} · rotaya ${distanceKm} km` : `rotaya ${distanceKm} km`,
+  /**
+   * Uzaklık KARAR VERDİRMEZ, bağlam verir (kullanıcı kararı 07.08: eleme kalktı) — 6 siparişi olan
+   * ama 70 km ötedeki kod ayrı bir karardır ve o karar operatörün.
+   *
+   * `null` = rotanın hiç kodu yok, ölçülemiyor: "0 km" yazmak ölçemediğimizi ölçmüş göstermek olurdu.
+   */
+  suggestionWhere: (distanceKm: number | null, place?: string): string =>
+    [place, distanceKm === null ? null : `rotaya ${distanceKm} km`].filter(Boolean).join(' · '),
 
   // ── Tıklamanın geri bildirimi (tasarımın `hint` şeridi) ───────────────────
   added: (code: string, place?: string): string => `${place ? `${code} ${place}` : code} rotaya eklendi`,

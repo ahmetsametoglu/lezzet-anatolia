@@ -67,8 +67,6 @@ export interface SuggestionView extends ZoneMapPoint {
    * ve hidrasyon uyuşmazlığı doğar).
    */
   lastAskedMinutes: number | null;
-  /** En yakın rota koduna kuş uçuşu uzaklık (km) — "yolun üstünde mi" sorusunun ölçüsü. */
-  distanceKm: number;
 }
 
 /** Rota formunun şeması — yazma eyleminin (`saveZoneAction`) girdisi. */

@@ -1,3 +1,4 @@
+import { placeLabel } from '@lezzet/domain-core';
 import type { Country } from '@lezzet/types';
 import type { CodeStatsView, SuggestionView } from './routes-types';
 
@@ -21,19 +22,26 @@ import type { CodeStatsView, SuggestionView } from './routes-types';
  * bekleyen kişi e-postasını verip izin işaretledi (en pahalı), sipariş veren ödeme yaptı ama zaten
  * kargoyla hizmet alıyor, soru soran yalnız bir kutuya yazıp çıktı (en ucuz, ama hacmi anlamlı).
  */
-export const WAITING_WEIGHT = 10;
-export const ORDER_WEIGHT = 6;
-export const REQUEST_WEIGHT = 1;
+const WAITING_WEIGHT = 10;
+const ORDER_WEIGHT = 6;
+const REQUEST_WEIGHT = 1;
 
 /**
- * **Uzaklık tavanı (km).** Bunun ötesi bir rota adayı değil, bir KARGO müşterisidir — ve onun
- * kararı ("yeni bölge/depo açmalı mıyım") Depolar'daki talep tablosunun işi (19.21).
+ * **Uzaklık SÜZGECİ YOK — kullanıcı kararı 07.08.**
  *
- * 80 km, tek depodan çıkan bir aracın gün içinde dönebileceği makul yarıçap. Ölçüldü (seed verisi):
- * `67500` rotaya 18 km, `77652` 14 km, `68000` (Colmar) 56 km — üçü de gerçek aday; `54000` (Nancy)
- * ~120 km, `75011` (Paris) ~400 km — ikisi de değil. Eşik bu ikiliyi temiz ayırıyor.
+ * Bir süre 80 km'lik bir tavan vardı ve onu ben koymuştum (`CLAUDE §4`: parametrik değer sorulmaz,
+ * makul varsayılan konur ve bildirilir). Kullanıcı sorguladı — *"böyle bir sınırdan bahsettiğimi
+ * hatırlamıyorum, neden var?"* — ve kaldırılmasına karar verdi: **karar operatöründür.** Uzak bir
+ * kodu rotaya eklemek anlamsız olabilir, ama bunu ekranın operatör adına kararlaştırması, ona
+ * veriyi göstermemek demekti.
+ *
+ * Yerine geçen şey bir süzgeç değil, SIRALAMA: kanıtı güçlü olan üste çıkıyor ve tavan (altı satır)
+ * zaten zayıf sinyalleri dışarıda bırakıyor. Paris'in iki sorusu, Haguenau'nun 47 sorusu + 3
+ * bekleyeni ile aynı listede yarışıyor ve kaybediyor — eleyerek değil, hak ederek.
+ *
+ * Uzaklık YİNE GÖSTERİLİYOR ama ekranda ve seçili rotaya göre (`routes.desktop`): bilgi olarak
+ * kalıyor, karar olarak değil.
  */
-export const SUGGESTION_MAX_KM = 80;
 
 /** Rayda kaç öneri gösterilir. Liste değil DAVET: on satır karar kolaylaştırmaz, erteletir. */
 export const SUGGESTION_LIMIT = 6;
@@ -67,8 +75,6 @@ export interface LocatedPlace {
 export interface SuggestionInputs {
   /** `ülke:kod` — bir rotada TANIMLI olanlar; bunlar aday değil. */
   definedKeys: ReadonlySet<string>;
-  /** Uzaklığın ölçüldüğü çapalar: rotalarda tanımlı kodların koordinatları. */
-  routeAnchors: ReadonlyArray<{ lat: number; lng: number }>;
   /** Kod → sipariş/ciro/bekleyen. Anahtar yalnız posta kodu (RPC de öyle eşliyor). */
   stats: Record<string, CodeStatsView>;
   /** Kod → anonim talep sayacı satırı. */
@@ -80,17 +86,16 @@ export interface SuggestionInputs {
 /**
  * Önerileri kurar: **boştaki** kodlardan, en az bir sinyali olan ve güzergâha yakın olanlar.
  *
- * Üç eleme sırayla ve her biri ayrı bir soruya bakıyor:
- * *(1)* zaten bir rotada mı — öyleyse öneri değil, *(2)* hiç sinyali var mı — yoksa bu yalnızca
- * haritadaki yüzlerce boş noktadan biri, *(3)* güzergâha yakın mı — değilse rota adayı değil.
+ * İki eleme, iki soru: *(1)* zaten bir rotada mı — öyleyse öneri değil, *(2)* hiç sinyali var mı —
+ * yoksa bu yalnızca haritadaki yüzlerce boş noktadan biri.
  *
- * **Yakınlık tek başına ÖNERİ SEBEBİ DEĞİL** ve bu bilinçli: bölge havuzundaki kodların neredeyse
- * hepsi "yakın". Yakınlığı da sebep saysaydık öneri listesi haritanın kopyası olurdu ve hiçbir şey
- * söylemezdi. Yakınlık bir SÜZGEÇTİR, sinyal değil.
+ * **Yakınlık ne süzgeç ne sinyal** (kullanıcı kararı 07.08): eleme yapmıyor, sıralamaya da girmiyor.
+ * Ekranda gösteriliyor ama kararı operatör veriyor. Sıralamanın tek ölçütü KANIT — uzak bir kod
+ * listeye ancak güçlü kanıtla girer ve altı satırlık tavan zayıfları zaten dışarıda bırakır.
  */
 export function buildSuggestions(
   located: readonly LocatedPlace[],
-  { definedKeys, routeAnchors, stats, requestOf, now }: SuggestionInputs,
+  { definedKeys, stats, requestOf, now }: SuggestionInputs,
 ): SuggestionView[] {
   const rows: Array<SuggestionView & { score: number }> = [];
 
@@ -104,35 +109,26 @@ export function buildSuggestions(
     const requestCount = demand?.requestCount ?? 0;
     if (waitingCount === 0 && orderCount === 0 && requestCount === 0) continue;
 
-    const point = { lat: place.lat, lng: place.lng };
-    /**
-     * Hiç rota kodu yoksa (ilk kurulum) uzaklık ÖLÇÜLEMEZ — süzgeç uygulanmaz ve mesafe 0 yazılmaz
-     * gibi davranılmaz: ölçemediğimiz bir şeye dayanarak eleme yapmak, sinyali olan kodu sessizce
-     * yutmak olurdu (`CLAUDE §1`). İlk rotayı kuran operatörün tam olarak bu önerilere ihtiyacı var.
-     */
-    const measurable = routeAnchors.length > 0;
-    const distance = measurable ? Math.min(...routeAnchors.map((anchor) => distanceKm(anchor, point))) : 0;
-    if (measurable && distance > SUGGESTION_MAX_KM) continue;
-
     rows.push({
       country: place.country,
       postalCode: place.postalCode,
-      place: place.places[0],
-      lat: point.lat,
-      lng: point.lng,
+      // Ad KARARI motorun: çok yerleşimli kodda `null` — keyfi bir ilk ad otorite gibi okunur.
+      place: placeLabel(place.places) ?? undefined,
+      lat: place.lat,
+      lng: place.lng,
       waitingCount,
       orderCount,
       revenueCents: stat?.revenueCents ?? 0,
       requestCount,
       lastAskedMinutes: demand ? Math.max(0, Math.round((now - Date.parse(demand.lastSeenAt)) / 60_000)) : null,
-      distanceKm: Math.round(distance),
       score: waitingCount * WAITING_WEIGHT + orderCount * ORDER_WEIGHT + requestCount * REQUEST_WEIGHT,
     });
   }
 
-  // Eşitlikte YAKIN olan önce: aynı kanıta sahip iki koddan güzergâha yakın olanı eklemek ucuzdur.
+  // Eşitlikte KOD sırası: uzaklık artık sıralamaya girmiyor ve rastgele bir sıra, aynı ekranı iki
+  // kez açan operatöre listeyi değişmiş gibi gösterirdi.
   return rows
-    .sort((a, b) => b.score - a.score || a.distanceKm - b.distanceKm)
+    .sort((a, b) => b.score - a.score || a.postalCode.localeCompare(b.postalCode))
     .slice(0, SUGGESTION_LIMIT)
     .map(({ score: _score, ...row }) => row);
 }

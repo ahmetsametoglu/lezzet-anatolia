@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   SUGGESTION_LIMIT,
-  SUGGESTION_MAX_KM,
   buildSuggestions,
   distanceKm,
   type LocatedPlace,
@@ -29,7 +28,6 @@ function northOf(km: number): { lat: number; lng: number } {
 function inputs(over: Partial<SuggestionInputs> = {}): SuggestionInputs {
   return {
     definedKeys: new Set(['FR:67000']),
-    routeAnchors: [STRASBOURG],
     stats: {},
     requestOf: new Map(),
     now: NOW,
@@ -63,28 +61,26 @@ describe('buildSuggestions', () => {
     ).toEqual(['67100']);
   });
 
-  it('uzaklık tavanının ÖTESİ elenir — orası rota adayı değil, kargo müşterisi', () => {
-    const far = place('75011', northOf(SUGGESTION_MAX_KM + 40), 'Paris');
-    const near = place('67500', northOf(SUGGESTION_MAX_KM - 40));
-    const rows = buildSuggestions([far, near], inputs({
+  it('UZAKLIK ELEMEZ — kanıtı olan kod ne kadar uzak olursa olsun listeye girer', () => {
+    // Kullanıcı kararı 07.08: bir zamanlar 80 km'lik tavan vardı ve onu ekran koymuştu. Kaldırıldı —
+    // uzak bir kodu rotaya almak anlamsız olabilir ama bu operatörün kararıdır, ekranın değil.
+    const rows = buildSuggestions([place('75011', northOf(400), 'Paris')], inputs({
+      requestOf: new Map([['75011', { requestCount: 5, lastSeenAt: '2026-08-06T00:00:00Z' }]]),
+    }));
+    expect(rows.map((row) => row.postalCode)).toEqual(['75011']);
+  });
+
+  it('uzaklık SIRALAMAYA da girmez — sıralamanın tek ölçütü kanıt', () => {
+    const far = place('75011', northOf(400), 'Paris');
+    const near = place('67500', northOf(10));
+    const rows = buildSuggestions([near, far], inputs({
       requestOf: new Map([
-        // Uzaktaki DAHA ÇOK sorulmuş: eleme sinyalin gücüne değil mesafeye bakıyor.
-        ['75011', { requestCount: 900, lastSeenAt: '2026-08-06T00:00:00Z' }],
+        ['75011', { requestCount: 90, lastSeenAt: '2026-08-06T00:00:00Z' }],
         ['67500', { requestCount: 2, lastSeenAt: '2026-08-06T00:00:00Z' }],
       ]),
     }));
-    expect(rows.map((row) => row.postalCode)).toEqual(['67500']);
-  });
-
-  it('HİÇ rota kodu yokken uzaklık süzgeci uygulanmaz — ölçülemeyen ölçüt eleme yapmaz', () => {
-    // İlk rotayı kuran operatörün tam olarak bu önerilere ihtiyacı var; "uzak" diye elemek,
-    // ölçemediğimiz bir şeye dayanarak sinyali olan kodu yutmak olurdu.
-    const rows = buildSuggestions([place('75011', northOf(400))], inputs({
-      routeAnchors: [],
-      requestOf: new Map([['75011', { requestCount: 5, lastSeenAt: '2026-08-06T00:00:00Z' }]]),
-    }));
-    expect(rows).toHaveLength(1);
-    expect(rows[0]!.distanceKm).toBe(0);
+    // Uzaktaki kanıtı güçlü olduğu için ÜSTTE; yakınlık onu aşağı itmiyor.
+    expect(rows.map((row) => row.postalCode)).toEqual(['75011', '67500']);
   });
 
   it('sıra sinyalin AĞIRLIĞINA göre: bekleyen kişi > sipariş > soru', () => {
@@ -104,7 +100,7 @@ describe('buildSuggestions', () => {
     expect(rows.map((row) => row.postalCode)).toEqual(['67100', '67200', '67300']);
   });
 
-  it('eşit sinyalde YAKIN olan önce — aynı kanıtta ucuz olanı eklemek doğrudur', () => {
+  it('eşit sinyalde sıra KODA göre — aynı ekranı iki kez açan aynı listeyi görmeli', () => {
     const rows = buildSuggestions(
       [place('67900', northOf(50)), place('67100', northOf(5))],
       inputs({
