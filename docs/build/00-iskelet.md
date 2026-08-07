@@ -71,9 +71,19 @@ Yok — ilk modül.
     basar, checkout düğmesi pasif). **`workers: 1`** yapılandırmaya girdi (iki proje paralel
     işçide dev server'ı ezip yazan eylemleri zaman aşırıyordu — ölçüldü). **TAM PAKET 34/34
     yeşil (2,5 dk)**; koşu sonrası damgalı artık SIFIR (profil/ürün/depo/bölge sorgularıyla).
-  - Kalan: Parti 3b (OTP kod-yakalama kapısı inince — `musteri-otp-test-kapisi` talebi açık;
-    misafir doğrulama → adres → taslak sipariş) + mal kabulün UI adımı (10.4 ekranı inince
-    `stock-intake` yazım adımı UI'a taşınır, iddialar aynı kalır).
+  - **Kademe 2 · Parti 3b İNDİ (07.08):** misafir OTP doğrulaması kimlik SINIRININ ötesine geçti
+    (`checkout-otp.smoke.ts` + `otp-fixture.ts`) — Katman 1 kapısıyla (`OTP_TEST_CODE`, müşteri
+    şeridi) kod Resend'siz sabitlenir, hash/tek-kullanım/auth zinciri GERÇEK akıştan işler;
+    kilitli adımların açılması kanıttır. 2/2 yeşil (21,9 sn), artık SIFIR (auth+doğrulama).
+    **Üç saha dersi:** *(1)* env TUZAĞI — Next dev KÖK `.env`'i okumaz, `OTP_TEST_CODE`
+    `apps/web/.env.local`'da olmalı (iki restart'a mal oldu); *(2)* kod girişi 6 AYRI kutu —
+    tek-alan fill "incorrect" üretir, klavyeden yazılır; *(3)* doğrulama bu aşamada YALNIZ
+    `auth.users` açıyor (profil sonra bağlanıyor) — temizlik admin API'den e-postayla bulur.
+    **Sınır:** sabit kodla TEK doğrulama (`BEKLEYEN(08.22)` — hash tekilliği kısıtı arka uçta);
+    her koşu kendi satırını purge'ler, iki proje bu sayede sırayla temiz. Katman 2 (gerçek Resend
+    teslimat provası, kod API'den geri okunur) Kademe 3'ün işi.
+  - Kalan: mal kabulün UI adımı (10.4 ekranı inince `stock-intake` yazım adımı UI'a taşınır,
+    iddialar aynı kalır) + Katman 2 gerçek-OTP provası (Kademe 3).
   - **Kademe 1 — `pnpm ui:shot <yol>`:** ÇALIŞAN dev server'daki sayfayı açar (`reuseExistingServer` — build YOK), **desktop + mobile** (cihaz forku gereği ikisi de) ve operasyon yollarında **karanlık mod** görüntüsünü `.ui-shots/`a yazar; sayfanın konsol hatalarını da yanına döker. Amaç test değil, ajanlara GÖZ: ekran yapan şerit anlık çağırır, tasarım/fork denetimi görüntüden okunur. DB şartı yok.
   - **Kademe 2 — ~10 duman yolculuğu** (aynı kurulum, dev server'a karşı): müşteri (vitrin→ürün→sepet→checkout taslağı Stripe sınırına dek · misafir OTP · fr/de/tr rotaları · sipariş onayı) + operasyon (rol yönlendirmesi · kuyruk→hazırlık · mal kabul · para ekranı). **Veri disiplini entegrasyon testleriyle AYNI** (§4b): okuyan test seed'in deterministik satırları, yazan test damgalı veri + `purgeTestData`; **`db:refresh` hiçbir koşuda ön şart DEĞİL.** Koşu test kilidine girer (DB'ye vuruyor). Görüntüler assertion değil ARTEFAKT (piksel-diff yok — UI oynakken kırmızı gürültü üretir).
   - **Kademe 3 — ERTELENDİ (canlı öncesi):** production-build koşusu + geniş regresyon + piksel-diff kararı. Bugün kurulmaz.
