@@ -1,5 +1,5 @@
 import type { TextSegment } from '@lezzet/helper';
-import type { ImageCrop, KeysetCursor, Nutrition, ProductAllergen, StockStatus } from '@lezzet/types';
+import type { ImageCrop, KeysetCursor, Nutrition, ProductAllergen, PurchaseMode, StockStatus } from '@lezzet/types';
 
 /**
  * **Vitrin veri sözleşmesi** — katalog orkestrasyonunun DÖNÜŞ şekli (terfi 21.6).
@@ -57,8 +57,12 @@ export interface StorefrontCategory {
  * Satın alma yolu — kart aksiyonunu belirler. `quick`: tek varyantlı, listeden doğrudan eklenir.
  * `options`: çok varyantlı, ekleme listeden YAPILAMAZ (varyant seçimi atlanamaz — `musteri-katalog.md §3`),
  * kart detaya götürür.
+ *
+ * **Tanım burada DEĞİL, `@lezzet/types`ta** (`PurchaseModeEnum` — terfi 21.6): mobil sözleşme şeması
+ * aynı birliği zod olarak ifade etmek zorunda ve iki ayrı tanım bir gün ayrışırdı. Buradan
+ * re-export ediliyor ki paketin dış API'si değişmesin — çağıran hâlâ `@lezzet/application`dan alır.
  */
-export type PurchaseMode = 'quick' | 'options';
+export type { PurchaseMode };
 
 /**
  * Ürün kartı. `priceCents` HAM değerdir — biçimlendirme görünüm katmanının işi, çünkü para
@@ -83,6 +87,18 @@ export interface StorefrontProduct {
   variantId: string | null;
   /** Teklif kalemi hangi partiye çıpalı — sepete o parti ile girer (DOMAIN §5). */
   stockId: string | null;
+  /**
+   * **AKTİF varyant sayısı** — kartın çeşit satırı ("3 seçenek") bundan kurulur.
+   *
+   * Sayı taşınır, LİSTE değil: kart yalnız kaç seçenek olduğunu söyler, hangileri olduğunu değil —
+   * seçim detayda yapılır ve boyların tamamını her kartla birlikte tele vermek hiç kullanılmayacak
+   * bir veriyi taşımak olurdu. Ölçüt `purchaseMode` ile AYNI kümedir (aktif boylar), o yüzden ikisi
+   * çelişemez: `variantCount > 1` ⇔ `purchaseMode === 'options'`.
+   *
+   * `0` = aktif boyu olmayan ürün (satılacak birim yok, `variantId` de null). Satır 0 ve 1'de
+   * çizilmez — "1 seçenek" yazmak seçim varmış izlenimi verirdi.
+   */
+  variantCount: number;
   /** Kilogram başına fiyat (ham cent) — INCO gereği raf fiyatının yanında; net ağırlık yoksa null. */
   comparisonCents: number | null;
   /** null = bu kanalda fiyatı yok → ürün SATIŞA KAPALI (DOMAIN §5); kart fiyat göstermez. */

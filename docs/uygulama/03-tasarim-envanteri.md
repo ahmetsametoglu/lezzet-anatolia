@@ -138,6 +138,22 @@ kuruldu, sapmalar kayıtlı (kaynak: `product-photo-card.tsx` yorumları):
 | Basılı ölçek | `.96` | `press.scale` (.97) | tek kademe tutuldu |
 | Foto-üstü ad: rol ↔ değer ayrışması | `#faf6ec` | değeri birebir `cream`; ROL token'ı `on-image` ise `#f5f1e6` | ya tasarım `on-image`e çekilir ya `on-image-bright` açılır |
 
+**Katalog ekranından (21.7) gelen ek açıklar:**
+
+| Ne | Şablon | Bağlanan | Fark |
+| --- | --- | --- | --- |
+| Sekme çubuğu etiketi | 10,5/700 | `micro` (11,5) + `eyebrow` ağırlığı (700) | ~10,5 durak yok (çeşit alt-satırıyla aynı boşluk) |
+| Sekme çubuğu zemini | `rgba(243,239,226,.96)` + `blur(8px)` | opak `sand-50` | AppBar'la aynı alfalı-krem açığı |
+| Izgara satır arası | 20 dp | 22 (yukarı yuvarlama) | ölçekte 20 yok |
+| Hata kutusu çerçevesi | 2 px | `border.base` (1,5) | kalın vurgu durağı yok |
+
+> **2. TUR CEVAPLARI GELDİ (07.08, `Mobil - Token Kararlari.md` 14–24):** foto-üstü ad →
+> `on-image` (tasarım çekildi) · `on-image-soft` resmî değeri `#d5d0c2` · badge ailesi (yazı+gölge;
+> yarıçap 12'de) · `cream-glass` .90/.96 + blur kalır · `scrim-72` · `accent-leaf`+`ink-deep` ·
+> küçük duraklar token'a çekildi (kit zaten doğru) · iskelet karesi tasarımda düzeltildi ·
+> `brand-whatsapp-pure` onaylı · font: Lora 400/600 + Karla 400/600/700. **Uygulama dilimi
+> sırada** — uygulanan her satır bu tablodan silinecek.
+
 ## 4. Navigasyon modeli
 
 4 sekme (home/catalog/orders/hesap; etkin `#b05c2e`) · **Sepet sekme DEĞİL** — FAB + yapışkan

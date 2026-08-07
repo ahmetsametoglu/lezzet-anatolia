@@ -1,0 +1,65 @@
+{
+  "tr": {
+    "title": "Katalog",
+    "all": "Tümü",
+    "loading": "Yükleniyor…",
+    "listEnd": "— hepsi bu kadar —",
+    "empty": {
+      "title": "Aradığınızı bulamadık",
+      "body": "Farklı bir yazım deneyin ya da kategorilere göz atın.",
+      "cta": "Tüm katalog"
+    },
+    "error": {
+      "title": "Bağlantı kurulamadı",
+      "body": "İnternet bağlantınızı kontrol edin. Bağlantı gelince kaldığınız yerden devam edersiniz.",
+      "retry": "Tekrar dene"
+    },
+    "card": {
+      "soldOut": "Tükendi",
+      "offer": "Fırsat",
+      "options": "{n} seçenek"
+    }
+  },
+  "fr": {
+    "title": "Catalogue",
+    "all": "Tout",
+    "loading": "Chargement…",
+    "listEnd": "— c'est tout —",
+    "empty": {
+      "title": "Nous n'avons rien trouvé",
+      "body": "Essayez une autre orthographe ou parcourez les catégories.",
+      "cta": "Tout le catalogue"
+    },
+    "error": {
+      "title": "Connexion impossible",
+      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez où vous en étiez.",
+      "retry": "Réessayer"
+    },
+    "card": {
+      "soldOut": "Épuisé",
+      "offer": "Offre",
+      "options": "{n} options"
+    }
+  },
+  "de": {
+    "title": "Katalog",
+    "all": "Alle",
+    "loading": "Wird geladen…",
+    "listEnd": "— das war alles —",
+    "empty": {
+      "title": "Nichts gefunden",
+      "body": "Versuchen Sie eine andere Schreibweise oder stöbern Sie in den Kategorien.",
+      "cta": "Ganzer Katalog"
+    },
+    "error": {
+      "title": "Keine Verbindung",
+      "body": "Prüfen Sie Ihre Internetverbindung. Sobald sie wieder da ist, geht es weiter.",
+      "retry": "Erneut versuchen"
+    },
+    "card": {
+      "soldOut": "Ausverkauft",
+      "offer": "Angebot",
+      "options": "{n} Optionen"
+    }
+  }
+}

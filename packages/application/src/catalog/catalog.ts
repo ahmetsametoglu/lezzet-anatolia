@@ -65,6 +65,20 @@ export interface CatalogInput {
    * Verilmezse yedek yoktur; web bugünkü davranışını fixture'ı geçirerek birebir korur.
    */
   fallbackCategories?: readonly CatalogCategoryRow[];
+  /**
+   * **Sayfa boyutu — çağıranın kararı** (varsayılan `DEFAULT_PAGE_SIZE`).
+   *
+   * Web'in katalog sayfası sayfa boyutunu hiç sormuyor (sonsuz kaydırma tek ölçüde akar), o yüzden
+   * sayı buraya sabit yazılmıştı. Mobil uç `?limit=` sunuyor ve sunmak ZORUNDA: HTTP istemcisi ilk
+   * boyayı küçük bir sayfayla açıp gerisini kaydırmayla isteyebilir, tek ölçü dayatmak cihazın
+   * bant genişliği kararını sunucuya taşımak olur.
+   *
+   * Alan **opsiyonel ve varsayılanı eskisiyle aynı**: geçirmeyen çağıran (web köprüsü dâhil) bit
+   * bazında aynı sorguyu atar — davranış değişikliği yok, yalnız kararın yeri açıldı. Tavan
+   * BURADA yok, çağıranda: "en çok kaç" bir taşıma politikasıdır (mobil uçta 50), orkestrasyonun
+   * iş kuralı değil.
+   */
+  limit?: number;
 }
 
 /** Ürün bulunmayan katalog cevabı — süzgeç hiçbir şeyi getirmediğinde sorgu boşa atılmasın. */
@@ -87,6 +101,7 @@ const noProducts = (
 export async function getCatalogData(db: SupabaseClient, input: CatalogInput): Promise<StorefrontCatalog> {
   const { locale, place, viewer } = input;
   const q = input.query ?? {};
+  const limit = input.limit ?? DEFAULT_PAGE_SIZE;
 
   const categoryRows = await new CategoryService(db).list({ activeOnly: true });
   const source = categoryRows.length ? categoryRows : (input.fallbackCategories ?? []);
@@ -115,11 +130,11 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
       ? new ProductListingService(db).listByPrice({
           filters,
           cursor: q.cursor,
-          limit: DEFAULT_PAGE_SIZE,
+          limit,
           direction,
           warehouseId: place.warehouseId,
         })
-      : productSvc.listWithRelations({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE }),
+      : productSvc.listWithRelations({ filters, cursor: q.cursor, limit }),
     productSvc.counts(filters),
   ]);
   const context = await loadProductContext(db, page.rows, place, viewer);

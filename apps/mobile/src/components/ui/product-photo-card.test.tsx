@@ -119,6 +119,14 @@ describe('ProductPhotoCard', () => {
     });
   });
 
+  it('fiyat verilmezse çip hiç çizilmez ve a11y adı fiyatsız kurulur (satışa kapalı ürün)', async () => {
+    await render(<ProductPhotoCard name="Kavurma" onPress={jest.fn()} soldOut soldOutLabel="Tükendi" testID="card" />);
+
+    // Yer tutucu bir tutar ("—" ya da "0,00 €") YAZILMAZ: ikisi de olmayan bir şey söyler.
+    expect(screen.queryByText('—')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Kavurma · Tükendi' })).toBeOnTheScreen();
+  });
+
   it('fotoğraf yoksa baş harfe DÜŞMEZ — kum zemin kalır, ad zaten kartın üstünde', async () => {
     await render(<ProductPhotoCard name="Bulgur" priceLabel="3 €" onPress={jest.fn()} testID="card" />);
 

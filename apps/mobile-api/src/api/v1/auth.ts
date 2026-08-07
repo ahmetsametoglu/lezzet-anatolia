@@ -15,6 +15,22 @@ export interface V1Env {
 }
 
 /**
+ * `Authorization: Bearer <jwt>` başlığından ham token — **ayrıştırma tek yerde**.
+ *
+ * İki çağıranı var ve ikisinin KARARI farklı: `bearerAuth` token yoksa kapıyı kapatır (401),
+ * katalog uçları ziyaretçiye düşer (200). Ayrıştırmanın kendisi ise aynı ve iki kez yazılsaydı
+ * biri gün gelip `Bearer` önekini ya da boşluk kırpmayı ötekinden farklı ele alırdı.
+ *
+ * Hono başlığı imzasız verdiği için parametre ham dize: bağlam tipine (`AppEnv`/`V1Env`) bağlanmak
+ * bu yardımcıyı iki ayrı Hono kuşağına da bağlardı.
+ */
+export function bearerTokenOf(header: string | undefined): string | undefined {
+  if (!header?.startsWith('Bearer ')) return undefined;
+  const token = header.slice('Bearer '.length).trim();
+  return token.length > 0 ? token : undefined;
+}
+
+/**
  * Bearer doğrulaması — web'in çerez guard'ının API karşılığı (02-mimari "duplikasyon sayılmayan"
  * taşıma katmanı adaptörü): cihazdaki supabase-js oturumunun access token'ı `Authorization:
  * Bearer <jwt>` ile gelir, Supabase auth sunucusunda doğrulanır (`auth.getUser(token)` — anon
@@ -25,8 +41,7 @@ export interface V1Env {
  * uçlar kimliği İSTEKTEN değil bağlamdan okur.
  */
 export async function bearerAuth(c: Context<V1Env>, next: Next): Promise<Response | void> {
-  const header = c.req.header('authorization');
-  const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : undefined;
+  const token = bearerTokenOf(c.req.header('authorization'));
   if (!token) return fail(c, 'unauthorized', 401);
 
   const { data, error } = await anonDb().auth.getUser(token);

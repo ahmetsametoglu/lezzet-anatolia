@@ -13,6 +13,8 @@ export * from './product.schema';
 export * from './discount.schema';
 export * from './product-variant.schema';
 export * from './product-image.schema';
+// Katalog SÖZLEŞMESİ — kategori/ürün/varyant şemalarından TÜRER, o yüzden onlardan sonra.
+export * from './catalog-api.schema';
 export * from './bundle.schema';
 export * from './recipe.schema';
 export * from './price.schema';

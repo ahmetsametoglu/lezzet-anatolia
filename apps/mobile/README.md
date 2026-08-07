@@ -26,11 +26,35 @@ yeniden başlat (gömme önbelleklidir).
 
 - **CNG (prebuild) disiplini:** `ios/`/`android/` üretilir ve git dışıdır (`.gitignore`); native
   dosya elle DÜZENLENMEZ, her native ihtiyaç config plugin ile gelir.
-- **Tema:** `src/theme/unistyles.ts` şimdilik boş iskelet — BEKLEYEN(21.3): gerçek token seti
-  `design-tokens` paketinden gelecek, ham renk değeri bu pakete yazılmaz. `app.json`'daki splash/ikon
-  arka planları (nötr `#FFFFFF`) da 21.3'te token kaynağından güncellenecek (JSON yorum taşıyamadığı
-  için not burada).
-- **Ekran yok:** tasarımlar ayrı hatta kurgulanıyor; tek sade `index` rotası + yer tutucu komponent var.
+- **Tema:** `src/theme/unistyles.ts` `@lezzet/design-tokens` kompozisyonunu (ortak taban +
+  `customerApp*`) bağlar; ham renk/ölçü değeri koda yazılmaz. `app.json`'daki splash/ikon arka
+  planları (nötr `#FFFFFF`) hâlâ token kaynağından GELMİYOR — BEKLEYEN(21.3) (JSON yorum
+  taşıyamadığı için not burada; kalıcı çözüm `app.config.ts`).
 - **Auth tesisatı (21.4b, ekransız):** `src/lib/api/client.ts` zarf istemcisi (`{data,error}` +
   Zod parse + Retry-After), `src/lib/auth/` oturum katmanı (SecureStore + supabase-js, OTP uçları,
   401→refresh→retry, signOut). UI bağlanınca ekranlar yalnız bu fonksiyonları çağırır.
+
+## Ekranlar ve gezinme (21.7)
+
+- **Kabuk:** kök `Stack` → `(tabs)` grubu (dört sekme: Vitrin · Katalog · Siparişler · Hesap) +
+  grubun DIŞINDA yığın ekranları (`product/[slug]`). Yığına girildiğinde sekme çubuğu kendiliğinden
+  gizlenir (tasarımın davranışı) çünkü rota grubun dışındadır.
+- **Rota dosyaları İNCE:** `src/app/**` yalnız adres tanımıdır; ekranın gövdesi (görünüm · hook ·
+  metinler) `src/screens/<ekran>/`ta yaşar — expo-router bu klasördeki her `.tsx`i rota sayardı.
+- **Metin kolokasyonu:** ekran başına `messages.json` (fr/de/tr), tip `LocalizedCopy<typeof messages>`
+  ile türer. Global sözlük YOK (CLAUDE §2). JSON dosyaları `app/` altında da durabilir: yönlendirici
+  yalnız `.js/.jsx/.ts/.tsx` uzantılarını tarar.
+- **Dil:** cihazın tercih sırasından çözülür (`src/lib/i18n/locale.ts` — `expo-localization`), yedek
+  zinciri web ile aynı (desteklenen ilk dil, yoksa `DEFAULT_LOCALE` = fr). Dil kümesi ve varsayılan
+  `@lezzet/i18n`den gelir, burada ikinci kez tanımlanmaz.
+  **DİKKAT — `app.json`'daki `supportedLocales` bu kümenin İKİNCİ yazımıdır:** iOS `getLocales()`
+  cevabını uygulamanın `CFBundleLocalizations` listesiyle SÜZER, yani liste eksikse Alman cihaz da
+  Fransızca açılır. JSON import edemediği için değer orada elle duruyor; kalıcı çözüm `app.config.ts`
+  (aynı dosyadaki splash rengi notuyla birlikte değerlendirilecek — yöneticiye raporlandı).
+- **Fiyat cihazda biçimlenir:** sözleşme ham cent taşır (`priceCents`), gösterim
+  `src/lib/format/price.ts`te. **BEKLEYEN(21.7):** bu fonksiyon `@lezzet/helper`a terfi etmeli
+  (02-mimari §3.4) — bugün web'in ikizi `apps/web/lib/storefront/format.ts`te ve oradan import
+  edilemiyor; gövde birebir aynı tutuldu ki terfi bir BİRLEŞTİRME değil bir SİLME olsun.
+- **İkon sistemi YOK — BEKLEYEN(21.7):** tasarımın SVG yolları var (`Mobil - Musteri v3.dc.html`)
+  ama çizecek bir araç yok (`react-native-svg` kurulu değil). Sekme çubuğu etiketle, durum blokları
+  ikonsuz çalışıyor; karar yöneticinin.

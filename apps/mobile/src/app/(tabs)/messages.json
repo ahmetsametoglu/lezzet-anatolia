@@ -1,0 +1,26 @@
+{
+  "tr": {
+    "tabs": {
+      "index": "Vitrin",
+      "catalog": "Katalog",
+      "orders": "Siparişler",
+      "account": "Hesap"
+    }
+  },
+  "fr": {
+    "tabs": {
+      "index": "Vitrine",
+      "catalog": "Catalogue",
+      "orders": "Commandes",
+      "account": "Compte"
+    }
+  },
+  "de": {
+    "tabs": {
+      "index": "Schaufenster",
+      "catalog": "Katalog",
+      "orders": "Bestellungen",
+      "account": "Konto"
+    }
+  }
+}

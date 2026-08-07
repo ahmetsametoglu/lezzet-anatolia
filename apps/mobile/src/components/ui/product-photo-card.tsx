@@ -39,8 +39,16 @@ import { emToDp } from '../../theme/parse';
 interface ProductPhotoCardProps {
   /** Ürün adı — i18n gerektirmez, veriden gelir. */
   name: string;
-  /** Biçimlenmiş fiyat ("12,90 €") — biçimleme çağıranın (`@lezzet/helper`) işi. */
-  priceLabel: string;
+  /**
+   * Biçimlenmiş fiyat ("12,90 €") — biçimleme çağıranın işi (sözleşme ham cent taşır).
+   *
+   * VERİLMEZSE ÇİP HİÇ ÇİZİLMEZ. Tasarımda fiyatsız kart yok ama VERİDE var: `priceCents: null`
+   * "bu kanalda fiyatı yok → ürün satışa kapalı" demektir (`StorefrontProduct` sözleşmesi) ve web
+   * o durumda fiyat öğesini hiç render etmiyor (`components/customer/ui/price.tsx` — `cents ===
+   * null` → `null`). Uydurma bir yer tutucu ("—", "0,00 €") yazmak iki yüzeyi ayırır ve ikisi de
+   * yanlış şey söyler: biri "bilinmiyor", öteki "bedava".
+   */
+  priceLabel?: string;
   onPress: () => void;
   photoUri?: string | null;
   soldOut?: boolean;
@@ -78,7 +86,7 @@ export function ProductPhotoCard({
      olurdu — tükenmiş kart hâlâ açılır, ürün sayfası çeşit ve haber-ver seçeneğini gösterir.
      Rozet metni de sessizce düşürülemez: `accessibilityLabel` verildiği an RN çocuk metinleri
      okumaz, yani rozet ekran okuyucuda tamamen kaybolurdu. */
-  const composedLabel = statusLabel === undefined ? `${name} · ${priceLabel}` : `${name} · ${priceLabel} · ${statusLabel}`;
+  const composedLabel = [name, priceLabel, statusLabel].filter((part) => part !== undefined).join(' · ');
 
   return (
     <PressableSurface
@@ -119,12 +127,14 @@ export function ProductPhotoCard({
           )}
         </View>
       </View>
-      {/* Fiyat çipi ZORUNLUDUR: tasarımda fiyatsız ürün kartı yok. `Tag` ile birebir örtüşür
-          (terracotta zemin · beyaz metin · 12,5/700 · yarıçap `badge` · +4°); tek fark yumuşak
-          gölgenin değeri (`shadow.soft` ≠ şablonun `0 3px 8px`), o da raporlandı. */}
-      <View style={styles.priceBadge}>
-        <Tag label={priceLabel} rotate={4} shadow />
-      </View>
+      {/* Fiyat çipi `Tag` ile birebir örtüşür (terracotta zemin · beyaz metin · 12,5/700 ·
+          yarıçap `badge` · +4°); tek fark yumuşak gölgenin değeri (`shadow.soft` ≠ şablonun
+          `0 3px 8px`), o da raporlandı. Fiyatı olmayan üründe çip HİÇ ÇİZİLMEZ (bkz. prop künyesi). */}
+      {priceLabel === undefined ? null : (
+        <View style={styles.priceBadge}>
+          <Tag label={priceLabel} rotate={4} shadow />
+        </View>
+      )}
     </PressableSurface>
   );
 }

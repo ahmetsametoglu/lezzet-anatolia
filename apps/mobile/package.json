@@ -15,6 +15,8 @@
   "dependencies": {
     "@babel/runtime": "^7.28.4",
     "@lezzet/design-tokens": "workspace:*",
+    "@lezzet/helper": "workspace:*",
+    "@lezzet/i18n": "workspace:*",
     "@lezzet/types": "workspace:*",
     "@supabase/supabase-js": "^2.48.1",
     "expo": "~57.0.11",
@@ -22,6 +24,7 @@
     "expo-dev-client": "~57.0.10",
     "expo-linear-gradient": "~57.0.1",
     "expo-linking": "~57.0.5",
+    "expo-localization": "~57.0.1",
     "expo-router": "~57.0.11",
     "expo-secure-store": "~57.0.1",
     "expo-splash-screen": "~57.0.5",

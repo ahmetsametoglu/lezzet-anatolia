@@ -1,57 +1,70 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { anonDb, CategoryService, serviceDb, UserProfileService } from '@lezzet/database';
 import {
-  CategoryService,
-  ProductImageService,
-  ProductListingService,
-  ProductService,
-  serviceDb,
-} from '@lezzet/database';
-import { parseEmphasis } from '@lezzet/helper';
-import { publicImageUrl } from '@lezzet/storage';
+  getCatalogData,
+  getProductDetail,
+  pricingViewerOf,
+  toCategory,
+  VISITOR,
+  type PlaceWarehouses,
+  type PricingViewer,
+} from '@lezzet/application';
 import {
-  cropOf,
-  hasNutrition,
-  resolveLocalizedText,
+  CatalogCategoryListSchema,
+  CatalogPageSchema,
+  CatalogProductDetailSchema,
   CatalogSortEnum,
   DEFAULT_PAGE_SIZE,
   KeysetCursorSchema,
   PreferredLanguageEnum,
-  type Category,
-  type ImageMeta,
   type KeysetCursor,
-  type LocalizedText,
-  type PreferredLanguage,
-  type Product,
-  type ProductVariant,
-  type ProductWithRelations,
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
-import {
-  CatalogCategorySchema,
-  CatalogPageSchema,
-  CatalogProductDetailSchema,
-  CatalogProductSchema,
-} from './contract';
+import { bearerTokenOf } from './auth';
 
 /**
  * Katalog uçları (21.6) — **oturumsuz gezilir** (02-mimari §4: "oturumsuz kullanım = müşteri
- * gezinmesi"). `router.ts`te `bearerAuth`tan ÖNCE bağlanırlar; Authorization başlığı gelse bile
- * okunmaz, çünkü kimliğin bugün değiştireceği tek şey FİYAT ve fiyat bu dilimde hiç yok
- * (`contract.ts`'in ticari-bağlam notu). Bearer'lı okuma, terfi gelip B2B fiyat bağlandığı gün
- * anlam kazanır — o gün bu uçlar `bearerAuth`ın ALTINA değil, isteğe bağlı bir kimlik çözümüne
- * bağlanır (katalog kapanmaz).
+ * gezinmesi"). `router.ts`te `bearerAuth`tan ÖNCE bağlanırlar ve öyle kalırlar: kimliğin
+ * değiştirdiği tek şey FİYATTIR, erişim değil. Bearer varsa okunur (B2B/özel fiyat açılır), yoksa
+ * ya da geçersizse ziyaretçi fiyatı gösterilir — katalog hiçbir hâlde 401 dönmez.
  *
  * ── BU DOSYA KURAL HESAPLAMAZ ────────────────────────────────────────────────
- * Yaptığı üç şey var: (1) sorgu dizesini servis süzgeçlerine çevirmek, (2) servisin döndürdüğü
- * satırı sözleşme şekline indirgemek, (3) zarflamak. Fiyat/stok/teklif/seçki kararlarının hiçbiri
- * burada yok — hepsi terfi bekliyor (bkz. `contract.ts`).
+ * Yaptığı dört şey var: (1) sorgu dizesini orkestrasyonun girdisine çevirmek, (2) isteğe bağlı
+ * kimliği çözmek, (3) dönüşü sözleşme şekline indirgemek, (4) zarflamak. Fiyat/stok/teklif/aile/
+ * seçki kararlarının HİÇBİRİ burada değil — hepsi `@lezzet/application`ın katalog orkestrasyonunda
+ * (`getCatalogData` · `getProductDetail`), yani webin okuduğu kararların TAM AYNISI. Web ile mobil
+ * arasında ayrışabilecek tek yer taşımadır ve taşıma da bu dosyanın tamamıdır.
  */
 
 /** Sayfa boyutu tavanı — istemci daha büyüğünü isteyemez (tek istekle katalogu boşaltmak sayfalamayı anlamsız kılar). */
 const MAX_PAGE_SIZE = 50;
+
+/**
+ * **Yer bağlamı: "BİLİNMİYOR"** — web'in POSTA KODU VERMEMİŞ ziyaretçisiyle birebir aynı hâl.
+ *
+ * Ölçüldü, varsayılmadı: web depoyu `lezzet.place.v2` çerezinden çözüyor ve çerez yoksa
+ * `apps/web/lib/delivery/read-place.ts:66` doğrudan `EMPTY`'ye dönüyor — o da `:50`'de
+ * `{ warehouseId: null, shippingWarehouseId: null }` olarak tanımlı. Aynı satır çözülemeyen
+ * (`ambiguous`/`unknown`) posta kodunda da geçerli (`:83-85`).
+ *
+ * Mobilde çerezin karşılığı cihazdaki `onbZip` ama posta kodunu depoya çeviren orkestrasyon
+ * (`resolvePlaceByPostalCode` + bölge/depo girdileri + kargo deposu seçimi) HÂLÂ web lib'inde —
+ * terfisi 21.6'nın (B) parçası ve yapılmadı (`storefront-types.ts` `PlaceWarehouses` notu).
+ * Kopyalanmaz, o yüzden mobil bugün yeri bilmeyen ziyaretçidir.
+ *
+ * **Bunun ölçülebilir bedeli:** yer bilinmezken teklif TUTARI hiç okunmaz
+ * (`product-context.ts` — `warehouseId ? listOfferBatches(…) : []`), yani mobil katalogda
+ * yakın-SKT indirimi bugün GÖRÜNMEZ ve `wasCents` hiç dolmaz. Bu bir eksik değil bir SÖZ: teklif
+ * bir partiye bağlıdır, parti bir depodadır ve ziyaretçinin adresi oraya düşmeyebilir — indirimli
+ * fiyatı gösterip ödemede yükseltmek verilmiş bir sözü bozmak olurdu (web de aynısını yapıyor).
+ *
+ * BEKLEYEN(21.6): yer çözümü `@lezzet/application`a terfi edince bu sabit, istekten (`postalCode`)
+ * çözülen gerçek yere bırakır ve teklifler mobilde de görünür.
+ */
+const UNKNOWN_PLACE: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null };
 
 /**
  * `locale` ZORUNLU ve varsayılansız.
@@ -68,7 +81,7 @@ const ProductQuerySchema = z.object({
   locale: LocaleSchema,
   /** Ad araması — üç dilde birden (`ProductService` SQL'de çözer). */
   q: z.string().trim().min(1).optional(),
-  /** Kategori SLUG'ı (dil-bağımsız). Tanınmayan slug 400 alır — bkz. `resolveCategoryId`. */
+  /** Kategori SLUG'ı (dil-bağımsız). Tanınmayan slug 400 alır — bkz. `/products` ucu. */
   category: z.string().trim().min(1).optional(),
   /**
    * Bozuk sıralama değeri hata DEĞİL: istemci ya da kayıtlı bir bağlantı eskimiş olabilir, ve
@@ -87,8 +100,8 @@ const ProductQuerySchema = z.object({
  * İmleç TELDE opak bir dize (base64url'lenmiş keyset nesnesi) — saf TAŞIMA adaptörü, kural değil.
  *
  * İstemci imlecin içini bilmez ve bilmemeli: keyset'in `{value,id}` şekli bir uygulama ayrıntısı,
- * yarın değişirse istemci kırılmamalı. Web'de bu soru yok çünkü nesne server action'a olduğu gibi
- * geçiyor; HTTP'de sorgu dizesi düz metin olduğu için kodlama şart.
+ * yarın değişirse istemci kırılmamalı. Orkestrasyon `KeysetCursor` NESNESİ konuşur; dizeye çeviren
+ * ve geri çözen taraf yalnız burasıdır.
  */
 function encodeCursor(cursor: KeysetCursor): string {
   return Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url');
@@ -112,137 +125,74 @@ function decodeCursor(raw: string | undefined): KeysetCursor | undefined {
   }
 }
 
-/** Çok dilli metni çözer; boş/boşluk metin YOK sayılır (bölüm başlığı boşuna açılmasın). */
-function textOf(value: LocalizedText | null, locale: PreferredLanguage): string | null {
-  if (!value) return null;
-  const resolved = resolveLocalizedText(value, locale).trim();
-  return resolved.length > 0 ? resolved : null;
-}
-
-/** Görsel künyesi → çözülmüş URL + kırpma. `publicImageUrl` tek kaynak (anahtar→adres kuralı orada). */
-function imageOf(row: ImageMeta) {
-  return { url: publicImageUrl(row.imageKey, row.imageUpdatedAt), crop: cropOf(row) };
-}
-
-function toCategory(row: Category, locale: PreferredLanguage) {
-  return CatalogCategorySchema.parse({
-    id: row.id,
-    slug: row.slug,
-    name: resolveLocalizedText(row.name, locale),
-    image: imageOf(row),
-  });
-}
-
 /**
- * Aktif boylar, SIRASI SABİTLENMİŞ.
+ * **İSTEĞE BAĞLI KİMLİK** — fiyatın kişiselleşmesi için; erişim için DEĞİL.
  *
- * PostgREST gömülü ilişkinin sırasını garanti ETMEZ; sabitlenmezse aynı ürün iki istekte farklı
- * "ilk boy" (dolayısıyla farklı `unitLabel`) gösterir. Ölçüt uydurulmadı: `product_listing`
- * görünümünün `primary_variant` CTE'si de tam olarak `sort_order, created_at` diyor (0032) —
- * yani okuma ile sıralama aynı boyu birinci sayar.
- */
-function activeVariants(row: ProductWithRelations): ProductVariant[] {
-  return row.variants
-    .filter((v) => v.isActive)
-    .sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt));
-}
-
-function toProduct(row: ProductWithRelations, locale: PreferredLanguage) {
-  const variants = activeVariants(row);
-  return CatalogProductSchema.parse({
-    id: row.id,
-    slug: row.slug,
-    shippable: row.shippable,
-    name: resolveLocalizedText(row.name, locale),
-    image: imageOf(row),
-    unitLabel: variants[0] ? resolveLocalizedText(variants[0].label, locale) : '',
-    variants: variants.map((v) => ({ id: v.id, netWeightG: v.netWeightG, label: resolveLocalizedText(v.label, locale) })),
-  });
-}
-
-/**
- * Kategori slug'ı → kimlik. **Tanınmayan slug 400 alır ve bu web'den BİLİNÇLİ bir sapmadır.**
+ * Üç yol da 200 döner ve üçünün de karşılığı webde var:
+ *   · başlık yok            → ziyaretçi (webde çerezsiz gezinme)
+ *   · başlık var ama geçersiz/süresi dolmuş → ziyaretçi (webde süresi dolmuş oturum çerezi:
+ *     `getSessionUser` null döner, `currentCustomerId` null, fiyat liste fiyatına düşer)
+ *   · geçerli token         → müşterinin künyesi (B2B kanalı + müşteriye özel fiyat satırları)
  *
- * Web tanınmayan slug'ı sessizce yok sayıp süzgeçsiz katalogu gösteriyor
- * (`lib/storefront/catalog.ts` — `find(...) ?? null`), çünkü orada çip görünür durumda: müşteri
- * seçiminin uygulanmadığını ekrandan anlar. HTTP istemcisinde öyle bir geri bildirim yok; sessizce
- * daha GENİŞ bir küme dönmek, süzgecin bir kopyadan düşmesiyle aynı sınıf arıza olurdu
- * (`catalog-types.ts`'in `onlyShippable` anlatısı).
+ * Geçersiz token'a 401 vermek katalogu kapatırdı: uygulamanın haftalarca açılmadığı bir cihazda
+ * token süresi dolmuş olur ve müşteri vitrini değil bir hata ekranını görürdü. Kayıt da düşülmez —
+ * süresi dolmuş token bir arıza değil, oturumun normal sonu.
  *
- * Pasif kategori de tanınmaz: `activeOnly` süzgeci hem `/categories` cevabının hem bu çözümün
- * kaynağı, yani istemcinin göremediği bir kategoriyle süzme yapılamaz.
+ * **Auth kimliği ≠ müşteri kimliği** (ölçüldü: `apps/web/lib/guard.ts:70-74` — `currentCustomerId`
+ * oturumdaki auth kullanıcısını `UserProfileService.findByAuthUserId` ile profil satırına çevirir,
+ * `user_profiles.id` ile `auth.users.id` AYRI kolonlardır). Aynı zincir burada da kurulur; auth
+ * kimliğini doğrudan `pricingViewerOf`a vermek profili hiç bulamaz ve her müşteriyi sessizce
+ * ziyaretçi fiyatına düşürürdü.
  */
-async function resolveCategoryId(db: SupabaseClient, slug: string): Promise<string | null> {
-  // Kategori DOĞAL TAVANLI bir küme (operatör elle kurar) → tek turda, sayfalamasız (`CLAUDE §1`).
-  const categories = await new CategoryService(db).list({ activeOnly: true });
-  return categories.find((c) => c.slug === slug)?.id ?? null;
-}
+async function readViewer(db: SupabaseClient, authorization: string | undefined): Promise<PricingViewer> {
+  const token = bearerTokenOf(authorization);
+  if (!token) return VISITOR;
 
-/**
- * Galeri — kapak HER ZAMAN ilk sırada, ek görseller `product_image` sırasını korur. Kapak listede
- * zaten varsa iki kez basılmaz; kapağı olmayan üründe galeri ek görsellerden ibarettir (galeri asla
- * ürünün kapağıyla çelişen bir görselle açılmaz).
- */
-function galleryOf(cover: { url: string | null }, extras: Array<{ url: string | null }>) {
-  if (!cover.url) return extras;
-  return [cover, ...extras.filter((img) => img.url !== cover.url)];
-}
+  const { data, error } = await anonDb().auth.getUser(token);
+  if (error || !data.user) return VISITOR;
 
-/**
- * Yasal beyan. Net ağırlık BURADA YOK: paketin ağırlığı boya göre değişir, dolayısıyla varyanta
- * aittir; beyanın kendisi 100 g üzerinden sabittir ve ürüne aittir.
- *
- * Hiçbir kalemi girilmemiş besin künyesi `null` döner (`hasNutrition`) — boş bir tablo çizdirmek
- * "beyan var" izlenimi verirdi, ki yoktur.
- */
-function declarationOf(
-  product: Pick<Product, 'ingredients' | 'storageInstructions' | 'nutrition' | 'allergens' | 'traces'>,
-  locale: PreferredLanguage,
-) {
-  const segmentsOf = (value: LocalizedText | null) => {
-    const text = textOf(value, locale);
-    return text ? parseEmphasis(text) : null;
-  };
-  return {
-    ingredients: segmentsOf(product.ingredients),
-    storage: segmentsOf(product.storageInstructions),
-    nutrition: hasNutrition(product.nutrition) ? product.nutrition : null,
-    allergens: product.allergens,
-    traces: product.traces,
-  };
+  const profile = await new UserProfileService(db).findByAuthUserId(data.user.id);
+  // Profil yoksa (trigger boşluğu / silinmiş kayıt) `pricingViewerOf` zaten ziyaretçiye düşer.
+  return pricingViewerOf(db, profile?.id ?? null);
 }
 
 export const catalog = new Hono<AppEnv>();
 
 /**
- * Kategoriler — tek tur, `sort_order` sırasında. Web `fixtures.ts` yedeğine düşüyor (katalog
- * tamamen boşken kabuk çizilsin diye); API düşmez: boş liste doğru cevaptır ve uydurma kimliklerle
- * ürün isteyen bir istemci üretmek, boş bir şerit çizmekten pahalıya patlar.
+ * Kategoriler — tek tur, `sort_order` sırasında.
+ *
+ * Orkestrasyonun kategori kapısı `getCatalogData`nın İÇİNDE (sayfa ikisini birlikte döndürür) ama
+ * bu uç oradan geçmez: `getCatalogData` kategorileri getirirken bir ürün SAYFASI + fiyat/stok
+ * bağlamı da okur ve bu uç ürün döndürmüyor — uygulama açılışında atılan bu istek için tamamı boşa
+ * bir tur olurdu. Kategori listesi zaten kural içermeyen düz bir okumadır; kararın olmadığı yerde
+ * orkestrasyon da yoktur. İndirgeme yine de PAYLAŞILIR (`toCategory`, `@lezzet/application`), yani
+ * kartın şekli iki uçta ayrışamaz.
+ *
+ * Web `fixtures.ts` yedeğine düşüyor (katalog tamamen boşken kabuk çizilsin diye); API düşmez: boş
+ * liste doğru cevaptır ve uydurma kimliklerle ürün isteyen bir istemci üretmek, boş bir şerit
+ * çizmekten pahalıya patlar. `getCatalogData`nın `fallbackCategories` parametresi de bu yüzden
+ * çağırana bırakılmıştı — mobil onu bilerek geçirmiyor.
  */
 catalog.get('/categories', async (c) => {
   const locale = LocaleSchema.safeParse(c.req.query('locale'));
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
+  // Kategori DOĞAL TAVANLI bir küme (operatör elle kurar) → tek turda, sayfalamasız (`CLAUDE §1`).
   const rows = await new CategoryService(serviceDb()).list({ activeOnly: true });
-  return ok(c, { categories: rows.map((r) => toCategory(r, locale.data)) });
+  const categories = rows.map((row) => toCategory(row, locale.data));
+  // Zarf da sözleşmedir: satırlar tek tek değil, zarf bütün hâlinde tek kaynaktan doğrulanır.
+  return ok(c, CatalogCategoryListSchema.parse({ categories } satisfies z.input<typeof CatalogCategoryListSchema>));
 });
 
 /**
- * Ürün listesi — keyset sayfalama + arama + kategori + sıralama.
+ * Ürün listesi — keyset sayfalama + arama + kategori + sıralama, ticari bağlamıyla birlikte.
  *
- * ── DEPO BAĞLAMI: "YER BİLİNMİYOR" (`warehouseId = null`) ────────────────────
- * Bu, web'in POSTA KODU VERMEMİŞ ZİYARETÇİSİYLE birebir aynı hâldir: web depoyu
- * `lezzet.place.v2` çerezinden çözüyor (`lib/delivery/read-place.ts`), çerez yoksa
- * `warehouseId: null` geçiyor ve okuma depo-ÜSTÜNE düşüyor. Mobilde o çerezin karşılığı cihazdaki
- * `onbZip` ama posta kodunu depoya çeviren çözüm (`resolvePlaceByPostalCode` + bölge/depo girdileri
- * + kargo deposu seçimi) web lib'inde yaşayan bir orkestrasyon — kopyalanmaz, terfi eder
- * (02-mimari §3.1). Bugünkü tek tüketicisi fiyat sıralamasıdır ve `null` orada da meşru bir
- * değerdir: görünümün `warehouse_id is null` satırı LİSTE fiyatıyla sıralar, parti-bağlı teklif
- * tutarını hiç kullanmaz (0032'nin kararı — verilmemiş bir söz bozulamaz).
+ * Fiyat, stok hâli, "tükendi" ve satın alma yolu artık cevapta: hepsi `getCatalogData`'dan gelir,
+ * yani web katalogunun okuduğu kararların aynısıdır. Bu uçta hesaplanan tek şey yok.
  *
- * Yani bu uç "depo süzgeçsiz okuma" YAPMIYOR: depo boyutunda bilinçli olarak *yeri bilinmeyen*
- * satırı seçiyor. `CLAUDE §1`'in yasakladığı şey süzgeci UNUTMAKTIR; burada süzgeç var, değeri
- * `null` ve `null`ın anlamı sözleşmede yazılı.
+ * **`total` semantiği değişmedi:** sayaç arama + kategori + durum süzgecini tanır ve bu uç yalnız
+ * o üçünü sunar (orkestrasyonun `onlyOffers`/`onlyShippable` süzgeçleri buradan AÇILMADI), yani sayı
+ * listeyle tutarlıdır.
  */
 catalog.get('/products', async (c) => {
   const parsed = ProductQuerySchema.safeParse(c.req.query());
@@ -252,32 +202,32 @@ catalog.get('/products', async (c) => {
   const { locale, q, category, sort, limit } = parsed.data;
 
   const db = serviceDb();
-  // Kategori listesi YALNIZ süzgeç varken okunur: `/products` kategorileri döndürmüyor (kendi ucu
-  // var), yani süzgeçsiz her istekte o sorguyu atmak boşa bir tur olurdu.
-  const categoryId = category ? await resolveCategoryId(db, category) : null;
-  if (category && !categoryId) return fail(c, 'unknown_category', 400);
+  const viewer = await readViewer(db, c.req.header('authorization'));
+  const data = await getCatalogData(db, {
+    locale,
+    query: { search: q, categorySlug: category, sort, cursor: decodeCursor(parsed.data.cursor) },
+    place: UNKNOWN_PLACE,
+    viewer,
+    limit,
+  });
 
-  // Aday ve pasif ürün katalogda GÖRÜNMEZ (`status: 'active'` — DOMAIN §13).
-  const filters = { query: q, categoryId: categoryId ?? undefined, status: 'active' as const };
-  const cursor = decodeCursor(parsed.data.cursor);
-  const productSvc = new ProductService(db);
-  // Fiyat sıralaması AYRI kaynaktan okunur (`product_listing` görünümü, 0032): sıralama anahtarı
-  // ürün tablosunda yok. Süzgeçler ve satır şeması ortak — ayrışan tek şey sıra.
-  const direction = sort === 'priceAsc' ? 'asc' : sort === 'priceDesc' ? 'desc' : null;
-  const [page, counts] = await Promise.all([
-    direction
-      ? new ProductListingService(db).listByPrice({ filters, cursor, limit, direction, warehouseId: null })
-      : productSvc.listWithRelations({ filters, cursor, limit }),
-    productSvc.counts(filters),
-  ]);
+  // **Tanınmayan kategori slug'ı 400 ve bu web'den BİLİNÇLİ bir sapma.** Web slug'ı sessizce yok
+  // sayıp süzgeçsiz katalogu gösteriyor, çünkü orada çip görünür durumda: müşteri seçiminin
+  // uygulanmadığını ekrandan anlar. HTTP istemcisinde öyle bir geri bildirim yok; sessizce daha
+  // GENİŞ bir küme dönmek, süzgecin bir kopyadan düşmesiyle aynı sınıf arıza olurdu.
+  //
+  // Kontrol SONRADA, çünkü cevabın kendisi kanıttır: `activeCategory` yalnız AKTİF kategoriler
+  // arasından çözülür (pasif kategori de tanınmaz). Önden ayrı bir kategori sorgusu atmak, geçerli
+  // her istekte bir tur daha demekti — bedelin geçersiz isteğe yüklenmesi doğrusu.
+  if (category && !data.activeCategory) return fail(c, 'unknown_category', 400);
 
   return ok(
     c,
     CatalogPageSchema.parse({
-      products: page.rows.map((row) => toProduct(row, locale)),
-      total: counts.total,
-      nextCursor: page.nextCursor ? encodeCursor(page.nextCursor) : null,
-    }),
+      products: data.products,
+      total: data.total,
+      nextCursor: data.nextCursor ? encodeCursor(data.nextCursor) : null,
+    } satisfies z.input<typeof CatalogPageSchema>),
   );
 });
 
@@ -285,32 +235,29 @@ catalog.get('/products', async (c) => {
  * Ürün detayı. Aday ve pasif ürün doğrudan bağlantıyla da AÇILMAZ (404): katalogda görünmeyen bir
  * ürünün linkle satılabilir olması `status`'ün taşıdığı kararı boşa çıkarırdı (DOMAIN §13).
  *
- * Sayfanın bölümleri TEK turda gelir; bölüm başına çağrı yok. Bugün eksik olan bölümler
- * (`family` · `similar` · fiyat · stok) sözleşmede HİÇ YOK — boş dizi gönderseydik istemci
- * "ailesi yok" diye okur ve terfi geldiğinde kimse farkı görmezdi.
+ * Sayfanın TÜM bölümleri tek turda gelir — boylar fiyatlarıyla, aile çeşitleri, benzer ürünler,
+ * galeri, kategori ve yasal beyan; bölüm başına çağrı yok.
  */
 catalog.get('/products/:slug', async (c) => {
   const locale = LocaleSchema.safeParse(c.req.query('locale'));
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
   const db = serviceDb();
-  const product = await new ProductService(db).findBySlug(c.req.param('slug'));
-  if (!product || product.status !== 'active') return fail(c, 'product_not_found', 404);
+  const viewer = await readViewer(db, c.req.header('authorization'));
+  const detail = await getProductDetail(db, {
+    locale: locale.data,
+    slug: c.req.param('slug'),
+    place: UNKNOWN_PLACE,
+    viewer,
+  });
+  if (!detail) return fail(c, 'product_not_found', 404);
 
-  const [images, category] = await Promise.all([
-    new ProductImageService(db).listByProduct(product.id),
-    product.categoryId ? new CategoryService(db).getById(product.categoryId) : Promise.resolve(null),
-  ]);
-
-  const cover = imageOf(product);
-  return ok(
-    c,
-    CatalogProductDetailSchema.parse({
-      ...toProduct(product, locale.data),
-      description: textOf(product.description, locale.data),
-      gallery: galleryOf(cover, images.map(imageOf)),
-      category: category ? toCategory(category, locale.data) : null,
-      declaration: declarationOf(product, locale.data),
-    }),
-  );
+  // ── SÖZLEŞMENİN KİLİDİ ────────────────────────────────────────────────────
+  // Gövde `z.input<…>` ile TİPLENİR, `parse`a `unknown` gibi girmez: orkestrasyonun döndürdüğü
+  // `StorefrontProductDetail` sözleşmeye alan alan uymak zorunda ve uymadığı gün burası DERLENMEZ.
+  // Bu, `packages/types`ın `@lezzet/helper`a bağlanamaması yüzünden oraya konamayan
+  // `satisfies z.ZodType<TextSegment>` kilidinin yerini de tutar — üstelik daha geniş: yalnız
+  // metin parçasını değil, ürünün/boyun/ailenin tüm alanlarını çiviler.
+  const body: z.input<typeof CatalogProductDetailSchema> = detail;
+  return ok(c, CatalogProductDetailSchema.parse(body));
 });

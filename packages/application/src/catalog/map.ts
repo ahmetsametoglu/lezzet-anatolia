@@ -237,6 +237,9 @@ export function toProduct(row: CatalogProductRow, locale: PreferredLanguage, ctx
     unitLabel: primary ? resolveLocalizedText(primary.label, locale) : '',
     variantId: primary?.id ?? null,
     stockId: selling?.stockId ?? null,
+    // Kartın çeşit satırının sayısı — `purchaseMode` ile AYNI kümeden (aktif boylar), ikinci bir
+    // sayım yapılmaz ki ikisi bir gün çelişmesin.
+    variantCount: variants.length,
     comparisonCents: selling?.comparisonCents ?? null,
     priceCents: selling?.priceCents ?? null,
     wasCents: selling?.wasCents,

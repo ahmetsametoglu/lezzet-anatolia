@@ -1,0 +1,32 @@
+import type { Locale } from '@lezzet/i18n';
+
+/*
+  PARA GÖSTERİMİ — terfi 21.7: gövde webin `apps/web/lib/storefront/format.ts` `formatPrice`ının
+  BİREBİR aynısıdır ve artık tek kaynak burasıdır (02-mimari §3.4: "para/tarih/slug `@lezzet/helper`;
+  RN tarafında bunların hiçbiri yeniden yazılmaz"). İki yazımın ayrışması "aynı fiyat webde
+  75,53 €, mobilde €75,53" demekti ve o hata bu projede BİR KEZ YAŞANDI (web format.ts künyesi,
+  29.07). Mobil buradan tüketiyor; web kopyası geçiş köprüsüdür, benimseme talebiyle silinecek
+  (`musteri-application-storefront-benimseme.md`). Webin format ailesinin KALANI (tarih/ağırlık/
+  UNKNOWN_AMOUNT) bilerek taşınmadı: bugün tek tüketenleri web, ikinci tüketen doğunca teker teker
+  aynı yolla iner.
+
+  Mobil sözleşme HAM cent taşır (`CatalogProduct.priceCents`), biçim CİHAZDA kurulur — sunucu
+  biçimli metin göndermez: aynı ürün üç dilde üç ayrı yazımla görünür ve dil değişince sunucuya
+  sormak gerekirdi.
+
+  Simge SAYININ ARDINDA, üç dilde de: `Intl`in `style:'currency'`si Türkçede simgeyi öne koyar
+  (`€75,53`) ama müşterimiz Fransa'da yaşıyor ve tasarımın Türkçe maketlerinde de fiyat "113,20 €"
+  yazılı. Ayraçlar dilin (`1.234,50` ⟷ `1 234,50`), elle kurulan tek şey simgenin yeri.
+*/
+const INTL_LOCALE: Record<Locale, string> = { tr: 'tr-TR', fr: 'fr-FR', de: 'de-DE' };
+
+/** Sayı ile simge arasında BÖLÜNMEYEN boşluk: satır sonu tutarı ikiye ayırmasın (Fransız dizgisi). */
+const EURO_SUFFIX = ' €';
+
+export function formatPrice(cents: number, locale: Locale): string {
+  const amount = new Intl.NumberFormat(INTL_LOCALE[locale], {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+  return `${amount}${EURO_SUFFIX}`;
+}
