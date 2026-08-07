@@ -44,6 +44,8 @@ export interface StampedProduct {
   variantId: string;
   /** Stok partilerinin fiziksel miktarını sıfırlar — "kalem sepetteyken stok düştü" ânı. */
   clearStock: () => Promise<void>;
+  /** Fiziksel miktarı verilen değere çeker — KISMÎ azalma ânı (sepette 2, stok 1: tavan cümlesi). */
+  setStockQty: (qty: number) => Promise<void>;
   cleanup: () => Promise<void>;
 }
 
@@ -121,6 +123,13 @@ export async function createStampedProduct(opts: StampedProductOptions = {}): Pr
     }
   }
 
+  // Parti SİLİNMEZ, miktarı çekilir: satırı silmek `stock_adjustment` zincirini sürüklerdi ve o
+  // sıra purge'ün bilgisidir. Kullanılabilir stok fiziksel miktardan türer — değer yeter.
+  const setStockQty = async (qty: number) => {
+    const { error } = await db.from('stock').update({ physical_qty: qty }).eq('variant_id', variantId);
+    if (error) throw new Error(`stok ayarlanamadı — ${error.message}`);
+  };
+
   return {
     stamp,
     productName,
@@ -129,12 +138,8 @@ export async function createStampedProduct(opts: StampedProductOptions = {}): Pr
     postalCode,
     warehouseId,
     variantId,
-    clearStock: async () => {
-      // Parti SİLİNMEZ, sıfırlanır: satırı silmek `stock_adjustment` zincirini de sürüklerdi ve o
-      // sıra purge'ün bilgisidir. Kullanılabilir stok fiziksel miktardan türediği için sıfır yeter.
-      const { error } = await db.from('stock').update({ physical_qty: 0 }).eq('variant_id', variantId);
-      if (error) throw new Error(`stok sıfırlanamadı — ${error.message}`);
-    },
+    clearStock: async () => setStockQty(0),
+    setStockQty,
     cleanup: async () => {
       await purgeTestData(db, {
         productIds: [product.id],

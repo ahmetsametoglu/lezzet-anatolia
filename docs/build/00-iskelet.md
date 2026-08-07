@@ -82,6 +82,12 @@ Yok — ilk modül.
     **Sınır:** sabit kodla TEK doğrulama (`BEKLEYEN(08.22)` — hash tekilliği kısıtı arka uçta);
     her koşu kendi satırını purge'ler, iki proje bu sayede sırayla temiz. Katman 2 (gerçek Resend
     teslimat provası, kod API'den geri okunur) Kademe 3'ün işi.
+  - **Parti 5b İNDİ (07.08, kullanıcı sorusundan doğdu):** KISMÎ stok azalması — sepette 2 adet
+    varken stok 1'e düşer: adet DEĞİŞMEZ (sessiz eksiltme yok), tavan cümlesi + "Réduire à 1"
+    düğmesi çıkar; düzeltme MÜŞTERİNİN tıklamasıyla iner, cümle tavandayken bilgi olarak kalır
+    (kod sözleşmesi: `capNote` overCap→düğme, atCap→span). 6/6 yeşil (28,3 sn), artık sıfır.
+    Fikstüre `setStockQty` eklendi. Yazım sırasında bir iddia dersi: cümlenin tümden kalkmasını
+    beklemek YANLIŞTI — sözleşme kodda okundu, iddia ona hizalandı (bulgu-doğrulama disiplini).
   - Kalan: mal kabulün UI adımı (10.4 ekranı inince `stock-intake` yazım adımı UI'a taşınır,
     iddialar aynı kalır) + Katman 2 gerçek-OTP provası (Kademe 3).
   - **Kademe 1 — `pnpm ui:shot <yol>`:** ÇALIŞAN dev server'daki sayfayı açar (`reuseExistingServer` — build YOK), **desktop + mobile** (cihaz forku gereği ikisi de) ve operasyon yollarında **karanlık mod** görüntüsünü `.ui-shots/`a yazar; sayfanın konsol hatalarını da yanına döker. Amaç test değil, ajanlara GÖZ: ekran yapan şerit anlık çağırır, tasarım/fork denetimi görüntüden okunur. DB şartı yok.

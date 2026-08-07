@@ -120,3 +120,60 @@ test.describe('kademe 2 · sepetteyken stok düşen kalem sepeti engeller (ziyar
     await expect(page.getByText(/Retirez l.article épuisé/i).first()).toBeVisible();
   });
 });
+
+test.describe('kademe 2 · 5b — KISMÎ stok azalması: sepet sessizce eksiltmez, tavanı söyler', () => {
+  let fixture: StampedProduct;
+
+  test.beforeAll(async () => {
+    fixture = await createStampedProduct({ stockQty: 3, withZone: true });
+  });
+
+  test.afterAll(async () => {
+    await fixture.cleanup();
+  });
+
+  test('sepette 2 adet varken stok 1e düşer: adet DEĞİŞMEZ, tavan cümlesi çıkar; düzeltme MÜŞTERİNİN tıklamasıyla', async ({ page }) => {
+    test.slow();
+
+    // Yer (damgalı bölge kodu — "Afficher" yolu) + ürün + 2 adet (ekle, sonra +1).
+    await page.goto('/fr', NAV);
+    await page.getByRole('button', { name: /code postal/i }).first().click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('textbox').first().fill(fixture.postalCode!);
+    await dialog.getByRole('button', { name: /afficher/i }).click();
+    await expect(dialog.getByText(/la livraison est offerte/i)).toBeVisible({ timeout: 15_000 });
+
+    await page.goto(fixture.urlFr, NAV);
+    const addToCart = page.getByRole('button', { name: /panier|ajouter/i }).first();
+    await expect(addToCart).toBeEnabled({ timeout: 15_000 });
+    const plus = page.getByRole('button', { name: '+' }).first();
+    await expect(async () => {
+      if (await plus.isVisible()) return;
+      await addToCart.click({ timeout: 2_000 });
+      await expect(plus).toBeVisible({ timeout: 2_500 });
+    }).toPass({ timeout: 30_000 });
+    await plus.click();
+
+    // Kalem sepetteyken stok KISMÎ düşer (3 → 1; sepette 2 var).
+    await fixture.setStockQty(1);
+
+    // Sepet: görünüm sunucuda yeniden çözülür. İddia SABIRLI (bulgu-doğrulama dersi, 07.08:
+    // asenkron değerin ilk karesi kanıt değildir) — tavan cümlesi web-first beklemeyle aranır.
+    await page.goto('/fr/panier', NAV);
+    await expect(page.getByText(/au maximum 1 à cette adresse/i).first()).toBeVisible({ timeout: 20_000 });
+
+    // SESSİZ EKSİLTME YOK: adet hâlâ müşterinin beyanı (2). Tasarım felsefesinin kanıtı —
+    // sistem sepeti kullanıcının haberi olmadan değiştirmez; cümle söyler, kararı müşteri verir.
+    await expect(page.getByText('2', { exact: true }).first()).toBeVisible();
+
+    // Düzeltme MÜŞTERİNİN tıklaması: "Réduire à 1" düğmesi adedi tavana indirir. Sonrasında
+    // DÜĞME kaybolur; tavan cümlesi ise bilgi olarak (düğmesiz) KALIR — adet artık tavana eşit,
+    // "+" neden ilerlemiyor sorusunun cevabı ekranda durmalı (kod sözleşmesi: capNote overCap→
+    // düğme, atCap→span). İlk yazımım cümlenin tümden kalkmasını beklemişti — yanlış İDDİAYDI.
+    const fixButton = page.getByRole('button', { name: /Réduire à 1/i }).first();
+    await expect(fixButton).toBeVisible();
+    await fixButton.click();
+    await expect(page.getByRole('button', { name: /Réduire à/i })).toHaveCount(0, { timeout: 15_000 });
+    await expect(page.getByText(/au maximum 1 à cette adresse/i).first()).toBeVisible();
+  });
+});
