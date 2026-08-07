@@ -17,11 +17,24 @@ describe('ProductCircleCard', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('üç boyut kademesi ölçü katmanından gelir', async () => {
-    await render(<ProductCircleCard name="Zeytin" priceLabel="8 €" onPress={jest.fn()} size="sm" testID="card" />);
+  // Izgaranın 138'lik kademesi 07.08'de emekli edildi (katalog kare karta geçti); kalan iki
+  // boyutun ikisi de ölçü katmanından okunuyor ve varsayılan vitrin çapıdır.
+  it('iki boyut kademesi ölçü katmanından gelir, varsayılan vitrin çapıdır', async () => {
+    await render(
+      <>
+        <ProductCircleCard name="Zeytin" priceLabel="8 €" onPress={jest.fn()} size="sm" testID="small" />
+        <ProductCircleCard name="Zeytin" priceLabel="8 €" onPress={jest.fn()} testID="default" />
+      </>,
+    );
 
-    const frame = screen.getByTestId('card').children[0];
-    expect(frame).toHaveStyle({ width: appMetrics.size.circleSm, height: appMetrics.size.circleSm });
+    expect(screen.getByTestId('small').children[0]).toHaveStyle({
+      width: appMetrics.size.circleSm,
+      height: appMetrics.size.circleSm,
+    });
+    expect(screen.getByTestId('default').children[0]).toHaveStyle({
+      width: appMetrics.size.circleLg,
+      height: appMetrics.size.circleLg,
+    });
   });
 
   it('tükendi: daire solar ve rozet çıkar', async () => {

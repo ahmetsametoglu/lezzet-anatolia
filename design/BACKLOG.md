@@ -1286,4 +1286,18 @@ Design'ın envanter kararı bekliyor. Kaynak: `Mobil - Musteri v3.dc.html` + kit
 | "TAKİP" çipi ikilisi | `#a9c46b` zemin + `#15170f` metin | ön plan token'ı yok — bu Tag tonu YAPILMADI |
 | Boşluk/ölçü ailesi | 4-24 dp aralığı | paket taşımıyor → `apps/mobile/src/theme/metrics.ts` (tek yer, kaynak yorumlu) — design-tokens'a terfi adayı |
 | Font varlıkları | Lora + Karla | tema seam'i hazır (`font.display/body`); `expo-font` + dosya yükleme ayrı iş, o güne dek sistem fontu |
-| **Tasarım tutarsızlığı:** katalog kartı | ızgara köşeli foto-kart (r20+gradyan) çizerken aynı ekranın iskeleti DAİRE (138) çiziyor | kit daire kartı uyguladı (vitrin 146 · katalog 138 · benzer 96) — hangisi doğru, tasarım söylemeli |
+| ~~Tasarım tutarsızlığı: katalog kartı~~ — **KARAR (kullanıcı 07.08): katalog KARE** (r20+gradyan şablonu doğru); daire yalnız vitrin rayı (146) + benzerlerde (96) kalır | ızgara şablonu kare, iskelet bayat daire | kit düzeltiliyor (`ProductPhotoCard`); **tasarım tarafında kalan iş: katalog İSKELETİNİN dairesi kareye dönmeli** (yer tutucu gerçek kartla aynı biçimde olmalı) |
+
+**Kare katalog kartından gelen ek açıklar (21.5 düzeltmesi, 07.08)** — kart en-yakın token'la
+kuruldu, sapmalar kayıtlı (kaynak: `product-photo-card.tsx` yorumları):
+
+| Ne | Şablon | Bağlanan | Fark |
+| --- | --- | --- | --- |
+| Alt gradyan durağı | `0 42% → .8` | `gradient.photo-bottom` (40% → .82) | durak −2, alfa +.02 |
+| Çeşit alt-satırı kademesi | 10,5px | `micro` (11,5) | ~10,5'lik alt-satır durağı yok |
+| Foto-üstü altyazı rengi | `#d5d0c2` | `sand-400` (#d8cfb6) | rol token'ı `on-image-soft` ama değeri sapıyor — SICAK bir on-image-soft gerekiyor |
+| Tükendi örtüsü | `rgba(21,23,15,.72)` | `scrim-heavy` (.82) | alfa +.10 |
+| Rozet harf aralığı | `.06em` | `eyebrow-sm` (.1em) | rozet kademesi ayrışmalı (üstteki satırla birlikte) |
+| Rozet yarıçapı | 9 | `badge` (12) | resmî sette 9 yok |
+| Basılı ölçek | `.96` | `press.scale` (.97) | tek kademe tutuldu |
+| Foto-üstü ad: rol ↔ değer ayrışması | `#faf6ec` | değeri birebir `cream`; ROL token'ı `on-image` ise `#f5f1e6` | ya tasarım `on-image`e çekilir ya `on-image-bright` açılır |

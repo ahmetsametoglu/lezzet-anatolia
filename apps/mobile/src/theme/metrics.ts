@@ -49,9 +49,13 @@ export const appMetrics = {
     iconButton: 40,
     /** Fotoğraf üstündeki geri düğmesi (tasarım: 42). */
     iconButtonOnPhoto: 42,
-    /** Ürün dairesi üç boyutu (tasarım: vitrin 146 · ızgara 138 · benzerler 96). */
+    /**
+     * Ürün dairesi İKİ boyutu (tasarım: vitrin 146 · benzerler 96).
+     * Izgaranın 138'lik dairesi EMEKLİ (kullanıcı kararı 07.08): katalog kare karta geçti
+     * (`ProductPhotoCard`), dolayısıyla o çapın tek tüketicisi kalmadı. Şablonun katalog
+     * iskeleti hâlâ 138'lik daire çiziyor — orası kare ızgarayla birlikte güncellenecek.
+     */
     circleLg: 146,
-    circleMd: 138,
     circleSm: 96,
     /** Avatar üç boyutu (tasarım aralığı 34–56; kullanılan üç durak). */
     avatarLg: 56,

@@ -6,8 +6,14 @@ import { PressableSurface } from './pressable-surface';
 import { Tag } from './tag';
 
 /*
-  YUVARLAK ÜRÜN KARTI — vitrin rayı, katalog ızgarası ve "bunları da sevebilirsiniz" rayı
-  (ekran 1 · 2 · 3). Üç boyut: 146 (vitrin) · 138 (ızgara) · 96 (benzerler).
+  YUVARLAK ÜRÜN KARTI — vitrin rayı ve "bunları da sevebilirsiniz" rayı. İki boyut: 146 (vitrin,
+  `lg`) · 96 (benzerler, `sm`).
+
+  IZGARANIN 138'LİK KADEMESİ (`md`) EMEKLİ EDİLDİ — kullanıcı kararı 07.08: katalog ızgarası
+  daireden KARE karta geçti (`ProductPhotoCard`), o kademenin tek tüketicisi oydu. Kullanılmayan
+  bir boyutu "ileride lazım olur" diye tutmak, kartın kaç biçimi olduğu sorusunu kodun içinde
+  cevapsız bırakırdı; ara kademe gerçekten geri gelirse ölçüsüyle birlikte yeniden açılır.
+  Varsayılan bu yüzden `lg`: geriye kalan iki kullanımın baskını vitrindir.
 
   FİYAT ÇİPİ ZORUNLUDUR: tasarımda fiyatsız bir ürün dairesi YOK — fiyat dairenin sağ alt
   köşesine taşan eğik bir rozettir (Tag) ve kartın kimliğidir. Zorunlu prop olması bilinçli;
@@ -24,7 +30,8 @@ interface ProductCircleCardProps {
   /** Biçimlenmiş fiyat ("12,90 €") — biçimleme çağıranın (`@lezzet/helper`) işi. */
   priceLabel: string;
   onPress: () => void;
-  size?: 'sm' | 'md' | 'lg';
+  /** `lg` vitrin rayı (146) · `sm` benzer ürünler rayı (96). */
+  size?: 'sm' | 'lg';
   photoUri?: string | null;
   /** Fotoğraf yoksa dairede görünecek baş harf. */
   initial?: string;
@@ -44,7 +51,7 @@ export function ProductCircleCard({
   name,
   priceLabel,
   onPress,
-  size = 'md',
+  size = 'lg',
   photoUri,
   initial,
   soldOut = false,
@@ -55,8 +62,8 @@ export function ProductCircleCard({
   testID,
 }: ProductCircleCardProps) {
   const { theme } = useUnistyles();
-  const diameter = { sm: theme.size.circleSm, md: theme.size.circleMd, lg: theme.size.circleLg }[size];
-  const initialFontSize = { sm: theme.text['h2-sm'], md: theme.text['h1-sm'], lg: theme.text['h1-sm'] }[size];
+  const diameter = { sm: theme.size.circleSm, lg: theme.size.circleLg }[size];
+  const initialFontSize = { sm: theme.text['h2-sm'], lg: theme.text['h1-sm'] }[size];
 
   return (
     <PressableSurface
