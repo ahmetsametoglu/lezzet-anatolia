@@ -165,7 +165,66 @@ export const DOOR_METHODS: Array<{ key: DoorMethod; label: string }> = [
 export const ROUTE_NOTES = {
   pickRoute: 'Soldaki haritada tanımlı güzergâhlar görünüyor. Düzenlemek için listeden bir rota seçin, ya da "+ Rota" ile yenisini kurun.',
   noCodes: 'Henüz kod yok — bu rota hiçbir adrese hizmet etmiyor.',
-  /** Ekleme kapısı yok; eksik olanı GİZLEMEK operatöre "harita bozuk" dedirtirdi. */
-  addPending:
-    'Haritadan şimdilik yalnız ÇIKARABİLİRSİNİZ: noktaya tıklayın, rotadan düşer. Yeni kod eklemek için haritanın "boşta" kodları da çizmesi gerekiyor — o okuma hazırlanıyor.',
+
+  // ── Haritanın lejant altı satırı ──────────────────────────────────────────
+  // İki AYRI gerçeği ayrı cümlelerle söyler ve ikisi de bugün doğrudur. Tek bir "boşta kod yok"
+  // cümlesi ikisini de yutardı — oysa "çizilmiyor" ile "yok" aynı şey değil (`CLAUDE.md §1`:
+  // ölçülemeyen değer sıfır değildir). Operatör hangisinde olduğunu bilmeli.
+  /** Eşiğin ALTINDA: sorun veri değil, noktaların ayırt edilememesi. Sebebi yazılır ki keyfi görünmesin. */
+  mapTooFar: 'Bu uzaklıkta boştaki kodlar çizilmez — noktalar üst üste biner. Yakınlaşın, ayrışacaklar.',
+  /**
+   * Eşiğin üstünde: boştaki kodlar çizili. Sıfır hâli **kapsamı da söylüyor** — çıplak "hiç yok"
+   * operatöre yanlış bir kesinlik verirdi; aday havuzu rotaların dokunduğu bölgelerle sınırlı ve
+   * başka bir bölgeye kaydırıldığında orası havuzda olmayabilir.
+   */
+  mapFree: (count: number): string =>
+    count === 0
+      ? 'Bu alanda boşta kod yok. Adaylar rotaların bulunduğu bölgelerden gelir — başka bir bölgeye kaydırdıysanız orası henüz havuzda değildir.'
+      : `${count} boşta kod çizili — rotaya eklemek için noktaya tıklayın.`,
+  // ── Kodların ağırlığı (analitik rayı) ─────────────────────────────────────
+  /**
+   * Rayın tek sorusu: *"bu kod rotada yerini hak ediyor mu?"* Ürün kırılımı, marj, geri bildirim
+   * puanı ve kohort BİLEREK dışarıda — onlar Analitik'in işi ve rota kurarken verilecek kararı
+   * değiştirmiyorlar. Rota ekranındaki her sayı, o ekranda verilen kararı değiştirebilmeli.
+   */
+  weightHint: 'Tüm zamanların siparişi. Yükü hangi kodun taşıdığını gösterir — düşük satır, güzergâhtan çıkarma adayıdır.',
+  /** Henüz kaydedilmemiş kod ölçülmedi. "0 sipariş" YAZILMAZ: ölçülemeyen değer sıfır değildir. */
+  weightUnmeasured: 'Yeni eklenen kodlar kaydedildikten sonra ölçülür.',
+  /** Haber bekleyen KİMLİKLİ ve izinlidir; anonim talep sayacıyla toplanmaz (evi Depolar'daki tablo). */
+  waiting: (count: number): string => `${count} kişi haber bekliyor`,
+
+  // ── Öneriler ──────────────────────────────────────────────────────────────
+  /**
+   * Önerinin GEREKÇESİ — haritada üzerine gelince, rayda satırın altında.
+   *
+   * Puan YAZILMAZ, kanıt yazılır. Bir "87 puan" operatöre hiçbir şey söylemez ve sorgulanamaz;
+   * *"3 kişi bekliyor · 6 sipariş gitti · 47 kez soruldu"* hem sebebi hem de büyüklüğü verir ve
+   * operatör istemezse reddeder. Öneri bir emir değil, bir hatırlatmadır.
+   *
+   * Sıra sinyalin AĞIRLIĞINA göre: bekleyen kişi (iletişim bilgisi verdi) → sipariş (ödedi) →
+   * soru (yalnız yazdı). Boş sinyal cümleye HİÇ girmez; "0 sipariş" yazmak gerekçeyi seyreltirdi.
+   */
+  suggestionReason: (parts: { waitingCount: number; orderCount: number; requestCount: number }): string =>
+    [
+      parts.waitingCount > 0 ? `${parts.waitingCount} kişi haber bekliyor` : null,
+      parts.orderCount > 0 ? `${parts.orderCount} sipariş gitti` : null,
+      parts.requestCount > 0 ? `${parts.requestCount} kez soruldu` : null,
+    ]
+      .filter(Boolean)
+      .join(' · '),
+  /** Rayın başlığı altındaki tek cümle: önerinin ne OLMADIĞINI da söyler. */
+  suggestionHint:
+    'Hiçbir rotada olmayan, ama veride izi olan kodlar. Sıra sinyalin gücüne göre — eklemek için tıklayın, haritada mor noktalar bunlar.',
+  /** Sinyal yoksa öneri de yok; bu bir arıza değil, sessiz bir dönem. */
+  suggestionEmpty:
+    'Şimdilik öneri yok — rota dışında kalan kodlarda talep, bekleyen ya da sipariş izi görünmüyor.',
+  /** Uzaklık KARAR verdirmez, bağlam verir: 6 siparişi olan ama 70 km ötedeki kod ayrı bir karardır. */
+  suggestionWhere: (distanceKm: number, place?: string): string =>
+    place ? `${place} · rotaya ${distanceKm} km` : `rotaya ${distanceKm} km`,
+
+  // ── Tıklamanın geri bildirimi (tasarımın `hint` şeridi) ───────────────────
+  added: (code: string, place?: string): string => `${place ? `${code} ${place}` : code} rotaya eklendi`,
+  /** Çıkarmanın SONUCU yazılır: kod düşünce o adresler kargo yoluna geçer — sessiz bir çıkarma bunu saklardı. */
+  removed: (code: string, place?: string): string =>
+    `${place ? `${code} ${place}` : code} rotadan çıkarıldı — bu adresler kargo yoluna geçer`,
 } as const;

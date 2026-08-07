@@ -19,23 +19,46 @@ interface ToggleProps {
 
 export function Toggle({ on, onChange, size = 'md', label }: ToggleProps) {
   const s = SIZE[size];
+  const track = [
+    'relative flex-none rounded-full transition-colors',
+    s.track,
+    on ? 'bg-ops-olive' : 'bg-ops-gray-600',
+    // onChange'siz = dekoratif (ör. ToggleField içindeki iç anahtar): pointer olaylarını yutMA →
+    // hover/tıklama dıştaki tıklanabilir karta geçer, el işareti kaybolmaz.
+    onChange ? 'cursor-pointer' : 'pointer-events-none',
+  ].join(' ');
+  const knob = (
+    <span className={['absolute top-0.5 rounded-full bg-ops-white transition-all', s.knob, on ? s.on : s.off].join(' ')} />
+  );
+
+  /**
+   * **Dekoratif hâlde `<button>` ÜRETİLMEZ** (ölçüldü 07.08). Bu anahtar çoğu zaman tıklanabilir bir
+   * satırın (`ToggleField`) İÇİNDE duruyor ve iç içe `<button>` geçersiz HTML'dir: React bunu
+   * hidrasyon hatası sayıyordu (*"`<button>` cannot be a descendant of `<button>`"*) ve tarayıcı
+   * iç düğümü dışarı taşıyarak ağacı sunucudakinden farklı kuruyordu.
+   *
+   * Rol KALIYOR: tıklanamayan bir anahtar da durum GÖSTERİR (ör. kilitliyken kupon satırı) ve
+   * ekran okuyucu "switch, açık" diyebilmeli. Kaybolan tek şey odaklanabilirlik — zaten
+   * tıklanamayan bir öğenin sekme sırasında yeri yoktu.
+   */
+  if (!onChange) {
+    return (
+      <span role="switch" aria-checked={on} aria-label={label} className={track}>
+        {knob}
+      </span>
+    );
+  }
+
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
       aria-label={label}
-      onClick={onChange ? () => onChange(!on) : undefined}
-      className={[
-        'relative flex-none rounded-full transition-colors',
-        s.track,
-        on ? 'bg-ops-olive' : 'bg-ops-gray-600',
-        // onChange'siz = dekoratif (ör. ToggleField içindeki iç anahtar): pointer olaylarını yutMA →
-        // hover/tıklama dıştaki tıklanabilir karta geçer, el işareti kaybolmaz.
-        onChange ? 'cursor-pointer' : 'pointer-events-none',
-      ].join(' ')}
+      onClick={() => onChange(!on)}
+      className={track}
     >
-      <span className={['absolute top-0.5 rounded-full bg-ops-white transition-all', s.knob, on ? s.on : s.off].join(' ')} />
+      {knob}
     </button>
   );
 }
@@ -75,7 +98,9 @@ export function ToggleField({ label, on, onChange, size = 'md', stop = false, ba
       }
     >
       <span className={bare ? 'whitespace-nowrap font-ops-body text-ops-sm text-ops-body' : 'font-ops-body text-ops-sm text-ops-ink'}>{label}</span>
-      {/* İç anahtar salt görsel — tıklama dıştaki button'da işlenir (çift toggle olmasın). */}
+      {/* İç anahtar salt görsel — tıklama dıştaki button'da işlenir (çift toggle olmasın).
+          `onChange` VERİLMEZ ve bu bir ayrıntı değil: `Toggle` onsuz `<span>` üretiyor, yoksa
+          burada iç içe `<button>` doğar (geçersiz HTML + hidrasyon hatası). */}
       <Toggle on={on} size={size} label={label} />
     </button>
   );

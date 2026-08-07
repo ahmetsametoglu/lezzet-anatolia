@@ -429,13 +429,17 @@ export function CustomerPreview({
                   </>
                 ) : (
                   <>
-                    {/* BEKLEYEN(13.2): boş edinim "kaynak yok" DEĞİL, "henüz ölçülmüyor" demek.
-                    `acquisition_source`'un yazma kapısı var (`checkout-session.ts:145`, ilk kaynak
-                    kazanır) ama besleyeni yok — UTM hiçbir yerde yakalanmıyor, yani alan bugün her
-                    müşteride boş. "Kayıtlı değil" yazmak bozuk bir ölçümü sağlıklı gibi okutur
-                    (CLAUDE §1). 13.2 inince metin "kayıtlı değil"e döner: o gün boş küme gerçekten
-                    doğrudan gelen ziyaretçi demek olacak. */}
-                    <InlineMetric label="Edinim" value={detail.acquisitionSource ?? 'henüz ölçülmüyor'} />
+                    {/* Metin "henüz ölçülmüyor"dan "kaynak bilinmiyor"a döndü (07.08): 13.2 kapandı
+                    ve besleyen gerçekten yazıldı — `rememberAcquisition` checkout'ta çağrılıyor
+                    (`lib/order/checkout-draft.ts:335`), UTM oturum künyesinden ilk siparişte
+                    müşteriye geçiyor. Doğrulandı, bildirime güvenilmedi.
+
+                    Ama "doğrudan gelmiş" de YAZILMAZ: boş alan iki ayrı gerçeği taşıyor — künyesiz
+                    ziyaretçi ya da kaybolmuş künye (oturum tuzu gün dönümünde değişiyor, 23:50'de
+                    tıklayıp 00:10'da sipariş veren müşterinin kaynağı boş kalır). İkisini ayırt
+                    edemiyoruz; edebiliyormuş gibi yazmak ölçemediğimizi ölçmüş göstermek olurdu
+                    (CLAUDE §1). */}
+                    <InlineMetric label="Edinim" value={detail.acquisitionSource ?? 'kaynak bilinmiyor'} />
                     {detail.referredByName ? <InlineMetric label="Getiren" value={detail.referredByName} /> : null}
                     <div className="flex flex-col gap-px">
                       <span className="font-ops-body text-ops-micro text-ops-muted">Talepler</span>

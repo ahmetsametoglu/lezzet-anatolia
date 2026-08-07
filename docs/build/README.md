@@ -44,9 +44,9 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 16 | `16-talep-sikayet.md` | Talep / Şikâyet | sürüyor | 2/6 (+2 kısmi) |
 | 17 | `17-geri-bildirim-puan.md` | Geri Bildirim, Yorum ve Puan | sürüyor | 6/8 (+1 kısmi) |
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/12 (+2 kısmi) |
-| 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 15/21 (+4 kısmi) |
+| 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 15/21 (+5 kısmi) |
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 2/4 |
-| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 4/6 (+2 kısmi) |
+| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 4/7 (+3 kısmi) |
 <!-- durum:son -->
 
 Sıra katı değildir ama bağımlılıklar bağlayıcıdır (her dosyada yazılı). 08–09, tasarımdan gelen **komponent envanterinin kodlanmasıyla** başlar: önce komponentler, sonra sayfalar.

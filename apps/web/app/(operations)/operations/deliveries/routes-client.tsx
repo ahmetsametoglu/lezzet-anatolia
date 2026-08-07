@@ -2,9 +2,15 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ZoneMapPoint } from '@/components/operation/ui/zone-map';
+import {
+  FREE_CODE_MIN_ZOOM,
+  keyOfPoint,
+  type MapViewport,
+  type ZoneMapPoint,
+} from '@/components/operation/ui/zone-map-model';
 import { saveZoneAction } from './routes-actions';
 import { RoutesDesktop } from './routes.desktop';
+import { ROUTE_NOTES } from './deliveries-labels';
 import type { RoutesData, RouteView } from './routes-read';
 import type { PostalCodePick } from './routes-types';
 import type { Country } from '@lezzet/types';
@@ -27,6 +33,12 @@ export function RoutesClient({ data, routeId, warehouseId }: { data: RoutesData;
   const router = useRouter();
   const [busy, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Tıklamanın kısa geri bildirimi (tasarımın `hint` şeridi). `error`den AYRI: biri olanı anlatır,
+  // öteki olmayanı — ikisini tek alanda toplamak, bir eklemeyi hata gibi kırmızıya boyardı.
+  const [hint, setHint] = useState<string | null>(null);
+  // Haritanın görüş alanı. Bugün yalnız lejant satırını belirliyor; "boşta" kod okuması gelince
+  // isteğin kendisi de bundan doğacak (`arka-uc-harita-icin-posta-kodu-okumasi`).
+  const [viewport, setViewport] = useState<MapViewport | null>(null);
 
   const selected: RouteView | null = routeId ? (data.routes.find((route) => route.id === routeId) ?? null) : null;
   // Kod aramasında ülke etiketi yalnız YABANCI kod için basılır; "kendi ülkemiz" seçili rotanın
@@ -41,30 +53,46 @@ export function RoutesClient({ data, routeId, warehouseId }: { data: RoutesData;
 
   const select = (id: string | null) => {
     setError(null);
+    setHint(null);
     router.push(`/operations/deliveries?tab=routes${id ? `&route=${id}` : ''}`);
   };
 
   /**
-   * Haritadaki (ya da çipteki) bir koda dokunma. **Yalnız KENDİ kodunu çıkarır.** Başka rotanın
-   * tuttuğu koda tıklamak bir işlem değil bir SORUDUR ("kim tutuyor?") ve cevabı yazılır — sessizce
-   * hiçbir şey yapmayan tıklama operatöre "bozuk" der.
+   * Haritadaki (ya da çipteki) bir koda dokunma — tasarımın tek etkileşimi: *"noktaya tıkla →
+   * ekle / çıkar."*
+   *
+   * Üç dal, üç kod hâline birebir karşılık geliyor:
+   * **benim** → çıkar · **başka rotada** → çıkarılamaz, kimin tuttuğu yazılır · **boşta** → ekle.
+   *
+   * Üçüncü dal bugün de ULAŞILABİLİR ve bu önemli: operatör kendi kodunu çıkardığında nokta
+   * "boşta"ya döner ve aynı noktaya ikinci kez tıklamak onu geri getirmelidir. O dal olmasaydı
+   * yanlışlıkla çıkarılan bir kod geri konulamaz, tıklama sessizce hiçbir şey yapmazdı — ki
+   * sessiz tıklama operatöre "bozuk" der.
    */
   const pick = (point: ZoneMapPoint) => {
     if (!draft) return;
-    const key = `${point.country}:${point.postalCode}`;
-    if (draft.codes.some((code) => `${code.country}:${code.postalCode}` === key)) {
-      setDraft({ ...draft, codes: draft.codes.filter((code) => `${code.country}:${code.postalCode}` !== key) });
-      setError(null);
+    const key = keyOfPoint(point);
+    setError(null);
+
+    if (draft.codes.some((code) => keyOfPoint(code) === key)) {
+      setDraft({ ...draft, codes: draft.codes.filter((code) => keyOfPoint(code) !== key) });
+      setHint(ROUTE_NOTES.removed(point.postalCode, point.place));
       return;
     }
+
     const holder = data.routes.find(
-      (route) => route.id !== routeId && route.postalCodes.some((code) => `${code.country}:${code.postalCode}` === key),
+      (route) => route.id !== routeId && route.postalCodes.some((code) => keyOfPoint(code) === key),
     );
-    setError(
-      holder
-        ? `${point.postalCode} eklenemez — ${holder.name} rotasında tanımlı. Bir kod tek rotada olabilir; taşımak için önce oradan çıkarın.`
-        : null,
-    );
+    if (holder) {
+      setHint(null);
+      setError(
+        `${point.postalCode} eklenemez — ${holder.name} rotasında tanımlı. Bir kod tek rotada olabilir; taşımak için önce oradan çıkarın.`,
+      );
+      return;
+    }
+
+    setDraft({ ...draft, codes: [...draft.codes, { country: point.country, postalCode: point.postalCode }] });
+    setHint(ROUTE_NOTES.added(point.postalCode, point.place));
   };
 
   const save = () => {
@@ -95,8 +123,14 @@ export function RoutesClient({ data, routeId, warehouseId }: { data: RoutesData;
     });
   };
 
+  // Harita ilk kez `zoom: 11` ile doğuyor; ilk `moveend` gelene kadar eşiğin ÜSTÜNDE saymak doğru
+  // olan — aksi hâlde ekran bir an "yakınlaşın" deyip sonra kendi kendine düzelirdi.
+  const zoom = viewport?.zoom ?? FREE_CODE_MIN_ZOOM;
+  const tooFar = zoom < FREE_CODE_MIN_ZOOM;
+
   return (
     <RoutesDesktop
+      tooFar={tooFar}
       data={data}
       selected={selected}
       draft={draft}
@@ -104,6 +138,8 @@ export function RoutesClient({ data, routeId, warehouseId }: { data: RoutesData;
       onDraft={(patch) => setDraft((current) => (current ? { ...current, ...patch } : current))}
       onPick={pick}
       onSave={save}
+      onViewport={setViewport}
+      hint={hint}
       homeCountry={(home?.countryCode ?? 'FR') as Country}
       busy={busy}
       error={error}
