@@ -1,0 +1,103 @@
+import type { ReactNode } from 'react';
+import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+
+/*
+  Basılı geri bildirimin TEK kaynağı. Web'de her etkileşimli öğe `cursor-pointer` + hover
+  geri bildirimi taşımak zorunda (CLAUDE §2); RN'de imleç yok, karşılığı BASILI DURUMDUR —
+  o yüzden kitteki her dokunulabilir öğe bu yüzeyin üstünde durur, kimse kendi `Pressable`ını
+  kurmaz (aksi hâlde geri bildirim kuralı komponent başına yeniden karar konusu olurdu).
+
+  Beş davranış — ilk üçü Token Kararlari #8'in kendisi, son ikisi tasarımın o karara girmemiş
+  ama tekrar eden iki çözümü:
+  · `shadow`  — sert gölgeli yüzey `translate(2,2)` ile kayar (gölge öğenin kutusuna ait,
+                birlikte kayar; tasarımın `style-active`i de aynen böyle davranıyor)
+  · `scale`   — gölgesiz yüzey `.97`
+  · `scale-small` — küçük öğe (rozet, yuvarlak ikon düğmesi) `.9`
+  · `opacity` — metin eylemi; küçültme metin bağlantısında titrek durur, tasarım opaklık kullanır
+  · `tint`    — başlık çubuğundaki zeminsiz yuvarlak düğme; tasarım orada 15 kez küçültme değil
+                zemin değişimi (`sand-200`) kullanıyor, çünkü çubuk hizası kaymamalı
+
+  DOKUNMA HEDEFİ: görsel ölçüsü 44 dp'nin (Apple HIG) altında kalan öğeler `compact` işaretiyle
+  gelir ve `theme.touchSlop` payını alır — pay tek değerdir, öğe başına hesaplanmaz.
+*/
+
+type PressFeedback = 'shadow' | 'scale' | 'scale-small' | 'opacity' | 'tint';
+
+interface PressableSurfaceProps {
+  children: ReactNode;
+  onPress: () => void;
+  feedback: PressFeedback;
+  /** Yüzeyin görsel stili (zemin, çerçeve, yarıçap, dolgu) — çağıranın işi. */
+  style?: StyleProp<ViewStyle>;
+  disabled?: boolean;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+  /** Varsayılan `button`; süzgeç/sekme gibi rollerde çağıran değiştirir. */
+  accessibilityRole?: 'button' | 'link' | 'tab';
+  /** Seçili durum a11y'ye de bildirilir — renk farkı ekran okuyucuya ulaşmaz. */
+  selected?: boolean;
+  /** Görsel yüksekliği 44 dp'nin altındaki öğe: dokunma payı eklenir. */
+  compact?: boolean;
+  testID?: string;
+}
+
+export function PressableSurface({
+  children,
+  onPress,
+  feedback,
+  style,
+  disabled = false,
+  accessibilityLabel,
+  accessibilityHint,
+  accessibilityRole = 'button',
+  selected,
+  compact = false,
+  testID,
+}: PressableSurfaceProps) {
+  const { theme } = useUnistyles();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={compact ? theme.touchSlop : undefined}
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled, ...(selected === undefined ? {} : { selected }) }}
+    >
+      {/* testID görsel yüzeyde durur (Pressable'da değil): stil oradadır ve `fireEvent.press`
+          zaten üst öğedeki işleyiciye tırmanır — böylece tek kimlikle hem davranış hem değer
+          doğrulanabiliyor. */}
+      {({ pressed }) => (
+        <View testID={testID} style={[style, pressed && !disabled ? pressFeedbackStyles[feedback] : undefined]}>
+          {children}
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+/**
+ * Basılı durum stilleri — İHRAÇ EDİLİR çünkü kuralın kendisi budur ve testi de doğrudan bunu
+ * okur: RN'in `Pressable`ı basılı durumu iç `Pressability` sorumlusu üzerinden yürütüyor, RNTL
+ * o geçici durumu dışarıdan tetikleyemiyor. Kuralı ölçmenin tek dürüst yolu haritayı ölçmek.
+ */
+export const pressFeedbackStyles = StyleSheet.create((theme) => ({
+  shadow: {
+    transform: [{ translateX: theme.press.translate }, { translateY: theme.press.translate }],
+  },
+  scale: {
+    transform: [{ scale: theme.press.scale }],
+  },
+  'scale-small': {
+    transform: [{ scale: theme.press.scaleSmall }],
+  },
+  opacity: {
+    opacity: theme.press.opacity,
+  },
+  tint: {
+    backgroundColor: theme.colors['sand-200'],
+  },
+}));

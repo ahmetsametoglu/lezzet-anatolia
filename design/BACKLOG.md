@@ -1266,3 +1266,24 @@ söylüyor: `ops-card` = "kart, tablo, sidebar zemini" · `ops-white` = "dialog 
 
 Karar gelene kadar hiçbiri değiştirilmedi: 70 satırı bir tahminle çevirmek, tasarımın söylemediği
 bir kararı kodda vermek olurdu (`CLAUDE.md §3`). Aynı sınıf: K2 (hap girdinin kenar tonu).
+
+---
+
+## 6. Mobil uygulama — kit'in token/tasarım açıkları (21.5, 07.08)
+
+Komponent kiti kodlanırken tasarımda kullanılan ama envanterde karşılığı olmayan değerler.
+Kural gereği KODLANMADI (ham değer yasak) — en yakın token'la kuruldu ya da yapılmadı; Claude
+Design'ın envanter kararı bekliyor. Kaynak: `Mobil - Musteri v3.dc.html` + kit raporu.
+
+| Ne | Tasarımdaki değer | Bugünkü durum |
+| --- | --- | --- |
+| Yapışkan çubuk örtüsü + foto-üstü geri düğmesi | `rgba(243,239,226,.9–.97)` (+ `blur(8px)`) | opak `sand-50` kullanıldı; alfalı krem token'ı + blur kararı (expo-blur) bekliyor |
+| Rozet/fiyat çipi gölgesi | `0 3px 8px rgba(21,23,15,.22)` (ve .18/.28 türevleri) | `shadow.soft` kullanıldı — tasarımdan gözle hafif; ayrı `badge` gölge token'ı önerilir |
+| Rozet yazı kademesi | 12,5px/700 | `field-label`(12,5) + `button`(700) karışımı; ayrı `badge` kademesi önerilir |
+| Çip / metin-eylem yazısı | 12,5/700 | `control` (13,5/700) — kontrol kademesinde yuvarlama yok kuralı gereği var olan durak |
+| Vitrin bölüm başlığı | 21px Lora 600 | `h2-sm` (20) kullanıldı |
+| Zeytin dolgu üstü metin | beyaz | `card` (#ffffff, aynı değer) — `on-olive` takma adı önerilir |
+| "TAKİP" çipi ikilisi | `#a9c46b` zemin + `#15170f` metin | ön plan token'ı yok — bu Tag tonu YAPILMADI |
+| Boşluk/ölçü ailesi | 4-24 dp aralığı | paket taşımıyor → `apps/mobile/src/theme/metrics.ts` (tek yer, kaynak yorumlu) — design-tokens'a terfi adayı |
+| Font varlıkları | Lora + Karla | tema seam'i hazır (`font.display/body`); `expo-font` + dosya yükleme ayrı iş, o güne dek sistem fontu |
+| **Tasarım tutarsızlığı:** katalog kartı | ızgara köşeli foto-kart (r20+gradyan) çizerken aynı ekranın iskeleti DAİRE (138) çiziyor | kit daire kartı uyguladı (vitrin 146 · katalog 138 · benzer 96) — hangisi doğru, tasarım söylemeli |
