@@ -49,5 +49,6 @@ export * from './feedback/feedback-score';
 export * from './feedback/points';
 export * from './feedback/invite';
 export * from './feedback/signal-quality';
+export * from './catalog/similar';
 export * from './content/user-text';
 export * from './observability/health-status';

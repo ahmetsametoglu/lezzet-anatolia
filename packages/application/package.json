@@ -14,9 +14,11 @@
   "dependencies": {
     "@lezzet/brand": "workspace:*",
     "@lezzet/database": "workspace:*",
+    "@lezzet/domain-core": "workspace:*",
     "@lezzet/email": "workspace:*",
     "@lezzet/helper": "workspace:*",
     "@lezzet/observability": "workspace:*",
+    "@lezzet/storage": "workspace:*",
     "@lezzet/types": "workspace:*",
     "@supabase/supabase-js": "^2.48.1"
   },

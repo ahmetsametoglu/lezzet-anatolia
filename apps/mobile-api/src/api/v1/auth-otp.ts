@@ -1,13 +1,11 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { requestOtpCode, verifyOtpCode } from '@lezzet/application';
-import { serviceDb } from '@lezzet/database';
-import { captureError, maskEmail } from '@lezzet/observability';
+import { createAnonClient, serviceDb } from '@lezzet/database';
+import { captureError, maskEmail, SOURCES } from '@lezzet/observability';
 import { AuthSessionSchema, OtpCodeSchema, PreferredLanguageEnum } from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
-import { ephemeralAnonClient } from '../../lib/supabase';
-import { MOBILE_API_SOURCES } from '../../lib/sources';
 
 /**
  * `/api/v1/auth/otp/*` — BİLİNÇLİ AÇIK uçlar (giriş doğası gereği oturumsuz; `router.ts`te
@@ -73,13 +71,14 @@ authOtp.post('/verify', async (c) => {
     return fail(c, result.status, 401);
   }
 
-  // Oturum kısa ömürlü istemciyle alınır (gerekçe `lib/supabase.ts`): token_hash tüketimi
-  // istemciye oturum yazar, paylaşılan istemci kirlenemez.
-  const { data, error } = await ephemeralAnonClient().auth.verifyOtp({ token_hash: result.hashedToken, type: 'email' });
+  // Oturum HER SEFERİNDE YENİ istemciyle alınır (gerekçe fabrikanın künyesinde —
+  // `packages/database/src/client.ts` `createAnonClient`): token_hash tüketimi istemciye oturum
+  // yazar, paylaşılan tekil (`anonDb`) kirlenemez — iki müşterinin oturumu karışırdı.
+  const { data, error } = await createAnonClient().auth.verifyOtp({ token_hash: result.hashedToken, type: 'email' });
   if (error || !data.session) {
     // Kod doğruydu ama oturum kurulamadı — müşteri anahtarı web'le aynı (`send_failed`), ayrıntı kayda.
     await captureError(new Error(`oturum açılamadı: ${error?.message ?? 'session boş'}`), {
-      source: MOBILE_API_SOURCES.http,
+      source: SOURCES.mobileApiHttp,
       path: c.req.path,
       context: { reqId: c.get('reqId'), flow: 'auth/otp/verify', email: maskEmail(body.data.email) },
     });

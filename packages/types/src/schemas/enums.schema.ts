@@ -325,3 +325,41 @@ export type HealthStatus = z.infer<typeof HealthStatusEnum>;
  */
 export const TransferStatusEnum = z.enum(['in_transit', 'received', 'cancelled']);
 export type TransferStatus = z.infer<typeof TransferStatusEnum>;
+
+/**
+ * Katalog sıralama seçenekleri (K18 · terfi 21.6).
+ *
+ * Burada, çünkü **üç yüzey birden okuyor**: web'in süzgeç bileşenleri (`CATALOG_SORTS`), mobil
+ * API'nin sorgu şeması ve terfi eden orkestrasyon. Terfiden önce her biri kendi kopyasını
+ * taşıyordu; kopyalar bir gün ayrışır ve ayrıştığında hiçbiri patlamaz — yalnız bir yüzey
+ * ötekinden farklı sıralar. Değer kümesi bir DOMAIN sözlüğüdür, yüzey ayrıntısı değil.
+ *
+ * Sıra ANLAMLIDIR: `featured` varsayılan (tanınmayan değer buna düşer, `.catch('featured')`).
+ */
+export const CatalogSortEnum = z.enum(['featured', 'priceAsc', 'priceDesc']);
+export type CatalogSort = z.infer<typeof CatalogSortEnum>;
+
+/**
+ * Seçenek listesi ŞEMADAN türer, elle yazılmaz (`CLAUDE §1`) — enum'a bir değer eklenip listeye
+ * eklenmediğinde süzgeç çubuğu o seçeneği sessizce göstermezdi. `readonly`: liste bir sabittir,
+ * okuyanın sıralamasını değiştirebileceği bir tampon değil.
+ */
+export const CATALOG_SORTS = CatalogSortEnum.options;
+
+/**
+ * Ürünün/varyantın YERE göre stok hâli (19.10) — dört cevap, dört ayrı cümle.
+ *
+ * Tek bir `soldOut` bayrağı bu soruyu cevaplayamıyor. 19.9 yeri sunucuya taşıyınca `availableQty`
+ * depo süzgeçli hâle geldi ve `soldOut = availableQty <= 0` sessizce anlam değiştirdi: "hiçbir
+ * depoda yok"tan "senin deponda yok"a. Sonuç bir GERİLEMEYDİ — posta kodunu giren müşteri,
+ * kargoyla gönderebileceğimiz ürünü "Tükendi" ve pasif bir düğme olarak görüyordu. Sistem
+ * müşteriyi tanıdıkça daha az satıyordu, ki C3 tam olarak bunu yasaklıyor: "tükendi" yalnız ürün
+ * HİÇBİR depoda yokken söylenebilir.
+ *
+ *   `available`    — yerel depoda var (yer bilinmiyorsa: ağda var). Normal satış.
+ *   `shipping`     — yerelde yok ama kargo deposunda var ve ürün kargolanabilir.
+ *   `elsewhere`    — ağda var ama ne yerelde ne kargoda (soğuk zincir başka bölgede).
+ *   `out_of_stock` — hiçbir depoda yok. Tek meşru "Tükendi".
+ */
+export const StockStatusEnum = z.enum(['available', 'shipping', 'elsewhere', 'out_of_stock']);
+export type StockStatus = z.infer<typeof StockStatusEnum>;

@@ -23,7 +23,7 @@ try {
 } catch {
   // Dosya yoksa süreç DURMAZ: dağıtımda değerler gerçek ortam değişkeninden gelebilir (PM2/systemd)
   // ve orada bu dosya hiç bulunmaz. Eksikliği asıl bildiren yer env'i gerçekten arayan taraftır
-  // (`serviceDb()` ve `anonClient()` "Supabase env eksik" diye fırlatır) — burada yalnız yolu
+  // (`serviceDb()` ve `anonDb()` "Supabase env eksik" diye fırlatır) — burada yalnız yolu
   // göstermek yeter.
   //
   // **Sessiz başarısızlık YOK.** Uyarı `logger` yerine `console`'a düşüyor ve bu bilinçli: logger

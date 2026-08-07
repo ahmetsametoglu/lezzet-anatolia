@@ -1,9 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
-import { captureError, logger } from '@lezzet/observability';
+import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { v1 } from './api/v1/router';
 import { fail } from './lib/respond';
-import { MOBILE_API_SOURCES } from './lib/sources';
 import type { AppEnv } from './context';
 
 /**
@@ -38,7 +37,7 @@ app.use('*', async (c, next) => {
  */
 app.onError((err, c) => {
   void captureError(err, {
-    source: MOBILE_API_SOURCES.http,
+    source: SOURCES.mobileApiHttp,
     path: c.req.path,
     context: { reqId: c.get('reqId'), method: c.req.method },
   });

@@ -400,6 +400,9 @@ importers:
       '@lezzet/database':
         specifier: workspace:*
         version: link:../database
+      '@lezzet/domain-core':
+        specifier: workspace:*
+        version: link:../domain-core
       '@lezzet/email':
         specifier: workspace:*
         version: link:../email
@@ -409,6 +412,9 @@ importers:
       '@lezzet/observability':
         specifier: workspace:*
         version: link:../observability
+      '@lezzet/storage':
+        specifier: workspace:*
+        version: link:../storage
       '@lezzet/types':
         specifier: workspace:*
         version: link:../types

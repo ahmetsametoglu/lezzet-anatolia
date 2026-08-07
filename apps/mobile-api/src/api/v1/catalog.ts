@@ -13,6 +13,7 @@ import {
   cropOf,
   hasNutrition,
   resolveLocalizedText,
+  CatalogSortEnum,
   DEFAULT_PAGE_SIZE,
   KeysetCursorSchema,
   PreferredLanguageEnum,
@@ -48,9 +49,6 @@ import {
  * satırı sözleşme şekline indirgemek, (3) zarflamak. Fiyat/stok/teklif/seçki kararlarının hiçbiri
  * burada yok — hepsi terfi bekliyor (bkz. `contract.ts`).
  */
-
-/** Katalog sıralaması. Değer kümesi web'in `CATALOG_SORTS`u ile AYNI; terfi ile ortak kaynağa çıkacak. */
-const CatalogSortEnum = z.enum(['featured', 'priceAsc', 'priceDesc']);
 
 /** Sayfa boyutu tavanı — istemci daha büyüğünü isteyemez (tek istekle katalogu boşaltmak sayfalamayı anlamsız kılar). */
 const MAX_PAGE_SIZE = 50;

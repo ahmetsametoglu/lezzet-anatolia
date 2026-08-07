@@ -100,6 +100,44 @@ token'da yalnız `.12/.1em`.
 Tasarım 9 kademe kullanıyor, token 3 taşıyor. **`16px` ×46 en sık ve token'da YOK**; ayrıca
 12 ×16 · 22 ×14 · 24 ×11 · 10/11 ×21 · 20 ×9.
 
+### 3d. KALAN açıklar — Claude Design'ın envanter kararı bekliyor (canlı liste)
+
+> §3a–3c yukarıda ham ölçümdür ve büyük kısmı `customer-app.ts`'in doğuşunu besledi (sand-150/250,
+> error çifti, scrim ailesi… — kapananlar orada). AŞAĞISI kapanmayanların canlı listesidir; bir
+> satır çözülünce buradan silinir, kalıcı gerekçesi karar dosyalarına gider. *(07.08'de
+> `design/BACKLOG` yalnız web envanterine daraltılınca eski §6 buraya devredildi — içerik birebir.)*
+
+Komponent kiti kodlanırken tasarımda kullanılan ama envanterde karşılığı olmayan değerler.
+Kural gereği KODLANMADI (ham değer yasak) — en yakın token'la kuruldu ya da yapılmadı; Claude
+Design'ın envanter kararı bekliyor. Kaynak: `Mobil - Musteri v3.dc.html` + kit raporu.
+
+| Ne | Tasarımdaki değer | Bugünkü durum |
+| --- | --- | --- |
+| Yapışkan çubuk örtüsü + foto-üstü geri düğmesi | `rgba(243,239,226,.9–.97)` (+ `blur(8px)`) | opak `sand-50` kullanıldı; alfalı krem token'ı + blur kararı (expo-blur) bekliyor |
+| Rozet/fiyat çipi gölgesi | `0 3px 8px rgba(21,23,15,.22)` (ve .18/.28 türevleri) | `shadow.soft` kullanıldı — tasarımdan gözle hafif; ayrı `badge` gölge token'ı önerilir |
+| Rozet yazı kademesi | 12,5px/700 | `field-label`(12,5) + `button`(700) karışımı; ayrı `badge` kademesi önerilir |
+| Çip / metin-eylem yazısı | 12,5/700 | `control` (13,5/700) — kontrol kademesinde yuvarlama yok kuralı gereği var olan durak |
+| Vitrin bölüm başlığı | 21px Lora 600 | `h2-sm` (20) kullanıldı |
+| Zeytin dolgu üstü metin | beyaz | `card` (#ffffff, aynı değer) — `on-olive` takma adı önerilir |
+| "TAKİP" çipi ikilisi | `#a9c46b` zemin + `#15170f` metin | ön plan token'ı yok — bu Tag tonu YAPILMADI |
+| Boşluk/ölçü ailesi | 4-24 dp aralığı | paket taşımıyor → `apps/mobile/src/theme/metrics.ts` (tek yer, kaynak yorumlu) — design-tokens'a terfi adayı |
+| Font varlıkları | Lora + Karla | tema seam'i hazır (`font.display/body`); `expo-font` + dosya yükleme ayrı iş, o güne dek sistem fontu |
+| Katalog İSKELETİ bayat | yer tutucu 138'lik daire (v3 satır 202-205) | kart kararı KARE ve kit düzeltildi (iz: `docs/build/21` 21.5 Durum); **tasarım işi: iskelet kare karta dönmeli** |
+
+**Kare katalog kartından gelen ek açıklar (21.5 düzeltmesi, 07.08)** — kart en-yakın token'la
+kuruldu, sapmalar kayıtlı (kaynak: `product-photo-card.tsx` yorumları):
+
+| Ne | Şablon | Bağlanan | Fark |
+| --- | --- | --- | --- |
+| Alt gradyan durağı | `0 42% → .8` | `gradient.photo-bottom` (40% → .82) | durak −2, alfa +.02 |
+| Çeşit alt-satırı kademesi | 10,5px | `micro` (11,5) | ~10,5'lik alt-satır durağı yok |
+| Foto-üstü altyazı rengi | `#d5d0c2` | `sand-400` (#d8cfb6) | rol token'ı `on-image-soft` ama değeri sapıyor — SICAK bir on-image-soft gerekiyor |
+| Tükendi örtüsü | `rgba(21,23,15,.72)` | `scrim-heavy` (.82) | alfa +.10 |
+| Rozet harf aralığı | `.06em` | `eyebrow-sm` (.1em) | rozet kademesi ayrışmalı (üstteki satırla birlikte) |
+| Rozet yarıçapı | 9 | `badge` (12) | resmî sette 9 yok |
+| Basılı ölçek | `.96` | `press.scale` (.97) | tek kademe tutuldu |
+| Foto-üstü ad: rol ↔ değer ayrışması | `#faf6ec` | değeri birebir `cream`; ROL token'ı `on-image` ise `#f5f1e6` | ya tasarım `on-image`e çekilir ya `on-image-bright` açılır |
+
 ## 4. Navigasyon modeli
 
 4 sekme (home/catalog/orders/hesap; etkin `#b05c2e`) · **Sepet sekme DEĞİL** — FAB + yapışkan

@@ -1,8 +1,8 @@
 import type { Context, Next } from 'hono';
 import type { User } from '@supabase/supabase-js';
 import type { AppEnv } from '../../context';
+import { anonDb } from '@lezzet/database';
 import { fail } from '../../lib/respond';
-import { anonClient } from '../../lib/supabase';
 
 /**
  * `/api/v1` bağlam tipi — kök `AppEnv`'den TÜRER (reqId taşımaya devam eder) ve doğrulanmış
@@ -29,7 +29,7 @@ export async function bearerAuth(c: Context<V1Env>, next: Next): Promise<Respons
   const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : undefined;
   if (!token) return fail(c, 'unauthorized', 401);
 
-  const { data, error } = await anonClient().auth.getUser(token);
+  const { data, error } = await anonDb().auth.getUser(token);
   if (error || !data.user) return fail(c, 'unauthorized', 401);
 
   c.set('authUser', data.user);

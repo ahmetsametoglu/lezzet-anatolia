@@ -6,9 +6,8 @@
  */
 import './env';
 import { serve } from '@hono/node-server';
-import { captureError, logger } from '@lezzet/observability';
+import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { app } from './app';
-import { MOBILE_API_SOURCES } from './lib/sources';
 
 /**
  * SÜREÇ DÜZEYİ EMNİYET AĞI (apps/backend denetim G2'nin aynısı). Hono `onError` her isteği sarar
@@ -19,11 +18,11 @@ import { MOBILE_API_SOURCES } from './lib/sources';
  *   Kayıt `await` edilir: `process.exit` kaydı yarıda kesmesin.
  */
 process.on('unhandledRejection', (reason) => {
-  void captureError(reason, { source: MOBILE_API_SOURCES.process, context: { fatal: false, hook: 'unhandledRejection' } });
+  void captureError(reason, { source: SOURCES.mobileApiProcess, context: { fatal: false, hook: 'unhandledRejection' } });
 });
 
 process.on('uncaughtException', (error) => {
-  void captureError(error, { source: MOBILE_API_SOURCES.process, context: { fatal: true, hook: 'uncaughtException' } }).finally(() => {
+  void captureError(error, { source: SOURCES.mobileApiProcess, context: { fatal: true, hook: 'uncaughtException' } }).finally(() => {
     logger.error({ err: error.message }, 'yakalanmamış istisna — süreç kapanıyor, süpervizör yeniden başlatacak');
     process.exit(1);
   });
