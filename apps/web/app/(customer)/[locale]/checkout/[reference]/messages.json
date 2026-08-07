@@ -8,6 +8,8 @@
     "pendingBody": "Bankanızdan onay bekliyoruz. Bu genelde birkaç saniye sürer — sayfayı kapatabilirsiniz, sonucu e-posta ile bildireceğiz.",
     "failed": "Ödeme tamamlanmadı",
     "failedBody": "Kartınızdan tahsilat yapılmadı. Sepetiniz duruyor; dilerseniz başka bir kartla ya da kapıda ödeme ile tekrar deneyebilirsiniz.",
+    "refunded": "Siparişiniz iptal edildi, paranız iade edildi",
+    "refundedBody": "Ödemeniz alındıktan sonra ürünlerden biri tükendi ve siparişi tamamlayamadık. Tahsil edilen tutarın tamamı kartınıza iade edildi — bankanıza göre 3-5 iş günü içinde hesabınıza döner. Özür dileriz.",
     "retry": "Ödemeyi tekrar dene",
     "delivery": {
       "title": "Teslimat",
@@ -59,6 +61,8 @@
     "pendingBody": "Nous attendons la confirmation de votre banque. Cela prend généralement quelques secondes — vous pouvez fermer cette page, nous vous informerons par e-mail.",
     "failed": "Paiement non abouti",
     "failedBody": "Aucun montant n'a été débité. Votre panier est intact ; réessayez avec une autre carte ou choisissez le paiement à la livraison.",
+    "refunded": "Commande annulée, vous avez été remboursé",
+    "refundedBody": "Après votre paiement, l'un des produits s'est retrouvé en rupture et nous n'avons pas pu honorer la commande. La totalité du montant débité a été remboursée sur votre carte — le délai est de 3 à 5 jours ouvrés selon votre banque. Nous vous prions de nous en excuser.",
     "retry": "Réessayer le paiement",
     "delivery": {
       "title": "Livraison",
@@ -110,6 +114,8 @@
     "pendingBody": "Wir warten auf die Bestätigung Ihrer Bank. Das dauert meist wenige Sekunden — Sie können die Seite schließen, wir melden uns per E-Mail.",
     "failed": "Zahlung nicht abgeschlossen",
     "failedBody": "Es wurde nichts abgebucht. Ihr Warenkorb bleibt bestehen; versuchen Sie es mit einer anderen Karte oder wählen Sie Zahlung bei Lieferung.",
+    "refunded": "Bestellung storniert, Ihr Geld wurde erstattet",
+    "refundedBody": "Nach Ihrer Zahlung war eines der Produkte nicht mehr verfügbar und wir konnten die Bestellung nicht ausführen. Der gesamte abgebuchte Betrag wurde auf Ihre Karte erstattet — je nach Bank dauert das 3 bis 5 Werktage. Wir bitten um Entschuldigung.",
     "retry": "Zahlung erneut versuchen",
     "delivery": {
       "title": "Lieferung",

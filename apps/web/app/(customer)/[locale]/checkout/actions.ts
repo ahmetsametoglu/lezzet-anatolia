@@ -2,7 +2,7 @@
 
 import { AddressService, OrderService, ReservationService, serviceDb } from '@lezzet/database';
 import { hasLocale } from 'next-intl';
-import type { Address, AddressInsert, PaymentMethod } from '@lezzet/types';
+import type { Address, AddressInsert, OrderCancelReason, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
 import { updateAddress } from '@/lib/account/addresses';
@@ -341,7 +341,10 @@ export async function confirmCheckoutAction(input: {
       const reserved = await reserveOrderStock({ orderId: draft.orderId, items: placed.items, expiring: false });
       if (!reserved.ok) {
         // Ayrılamadıysa sipariş taslak kalır ve kapatılır: müşteriye söz verilmemiş olur.
-        await cancelDraft(draft.orderId);
+        // Sebep `out_of_stock` — gerçekten mal kalmadı. **Bu yolda PARA HİÇ ÇEKİLMEDİ** (kapıda/vadeli
+        // ödeme, sipariş `draft`): ekranın "iade edildi" cümlesi bu sebebi tek başına okuyarak
+        // kurulamaz, ödeme yöntemiyle birlikte okunur (`confirmation-types` künyesi, 07.14).
+        await cancelDraft(draft.orderId, 'out_of_stock');
         measureRejection('insufficient_stock');
         return { data: { status: 'rejected', reason: 'insufficient_stock' }, errorKey: null };
       }
@@ -349,7 +352,10 @@ export async function confirmCheckoutAction(input: {
       const moved = await transitionOrder({ orderId: draft.orderId, to: 'confirmed' });
       if (moved.status !== 'ok') {
         await releaseOrderStock(draft.orderId);
-        await cancelDraft(draft.orderId);
+        // Sebep `null` ve bilerek: geçiş motorca reddedildi — kümedeki beş sebepten hiçbiri bunu
+        // anlatmıyor. Uydurulmuş bir sebep, ekranı yanlış cümleye götürürdü; `null` "sebep
+        // yazılmadı" der ve ekran nötr cümleye düşer.
+        await cancelDraft(draft.orderId, null);
         return { data: { status: 'rejected', reason: 'order_not_placed' }, errorKey: null };
       }
 
@@ -419,13 +425,20 @@ async function supersedeOpenDrafts(customerId: string): Promise<void> {
     // Sıra ÖNEMLİ: önce mal geri bırakılır, sonra sipariş kapanır. Tersi olsaydı iptal edilmiş bir
     // siparişin rezervasyonu ortada kalabilirdi.
     await releaseOrderStock(order.id);
-    await cancelDraft(order.id);
+    // Müşteri yeni bir denemeye geçti; bu taslak onun YERİNE geçildiği için kapanıyor (07.14).
+    await cancelDraft(order.id, 'superseded');
   }
 }
 
-/** Ayrılamayan siparişin taslağı kapatılır: ortada söz verilmemiş yarım bir sipariş kalmaz. */
-async function cancelDraft(orderId: string): Promise<void> {
-  await new OrderService(serviceDb()).cancel(orderId, 'draft');
+/**
+ * Ayrılamayan siparişin taslağı kapatılır: ortada söz verilmemiş yarım bir sipariş kalmaz.
+ *
+ * **Sebep ZORUNLU parametre** (07.14): `null` "sebep yazılmadı" demektir, "sebep yok" değil — ve
+ * onay ekranı iptalin sebebine göre farklı cümle kuruyor. Varsayılan bıraksaydık yeni bir kapatma
+ * yolu sessizce sebepsiz yazar, ekran da müşteriye yanlış cümleyi gösterirdi.
+ */
+async function cancelDraft(orderId: string, reason: OrderCancelReason | null): Promise<void> {
+  await new OrderService(serviceDb()).cancel(orderId, 'draft', null, reason);
 }
 
 async function releaseOrderStock(orderId: string): Promise<void> {

@@ -8,7 +8,7 @@ import { Card } from '@/components/customer/ui/card';
 import { SummaryRow } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
 import { formatDeliveryDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
-import type { ConfirmationViewProps } from '../confirmation-types';
+import { isRefundedCancellation, type ConfirmationViewProps } from '../confirmation-types';
 
 /**
  * Sipariş alındı ekranının blokları (tasarım: `Musteri - Checkout.dc.html` · "Sipariş Alındı").
@@ -54,7 +54,9 @@ export function CelebrationBand({ t, locale, view, compact }: ConfirmationViewPr
             başlık arası tasarımın iki katı açılıyordu (aynı tuzak `controlClass`'ta da yaşandı). */}
         <h1 className={['font-serif leading-tight text-ink', compact ? 'text-page-title-sm' : 'text-page-title'].join(' ')}>
           {view.cancelled
-            ? t.failed
+            ? isRefundedCancellation(view)
+              ? t.refunded
+              : t.failed
             : view.placed
               ? view.customerFirstName
                 ? t.title.replace('{name}', view.customerFirstName)
@@ -66,7 +68,9 @@ export function CelebrationBand({ t, locale, view, compact }: ConfirmationViewPr
 
         <p className="max-w-[620px] font-sans text-body leading-relaxed text-body">
           {view.cancelled ? (
-            t.failedBody
+            // İptalde İKİ ayrı cümle (07.14): parası iade edilmişe "tahsilat yapılmadı" demek,
+            // ekstresinde eksik para gören müşteriye söylenebilecek en pahalı yalandı.
+            isRefundedCancellation(view) ? t.refundedBody : t.failedBody
           ) : view.placed ? (
             // E-posta KALIN (tasarım): cümlenin içinde müşterinin gözünün aradığı tek şey kendi
             // adresidir — doğru yere gitti mi diye bakar. Düz metinde kayboluyordu.

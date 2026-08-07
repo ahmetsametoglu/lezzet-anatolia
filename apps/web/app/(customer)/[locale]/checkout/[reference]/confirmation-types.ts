@@ -1,6 +1,6 @@
 import type { Locale } from '@lezzet/i18n';
 import type { LocalizedCopy } from '@lezzet/i18n';
-import type { PaymentMethod } from '@lezzet/types';
+import type { OrderCancelReason, PaymentMethod } from '@lezzet/types';
 import type { StorefrontImage } from '@/lib/storefront/storefront-types';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir).
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
@@ -48,6 +48,23 @@ export interface ConfirmationView {
   /** Sipariş KESİNLEŞTİ mi (taslak değil, iptal değil) — "ödendi" ile aynı şey DEĞİL (DOMAIN §7). */
   placed: boolean;
   cancelled: boolean;
+  /**
+   * **İptalin SEBEBİ** (07.14) — ekran iptalde buna göre farklı cümle kurar.
+   *
+   * Bulunan arıza şuydu: iptal edilmiş her siparişte ekran *"Ödeme tamamlanmadı — kartınızdan
+   * tahsilat yapılmadı"* diyordu. Üç yolun ikisinde doğru, birinde YANLIŞ: stok kalmadığı için
+   * parası çekilip **otomatik iade edilmiş** siparişte de aynı cümle çıkıyordu. İade ekstreye
+   * günler sonra düşer; o aralıkta müşteri "tahsilat yapılmadı" okur ama hesabında para eksiktir.
+   *
+   * **Sebep TEK BAŞINA yetmiyor ve bu ölçüldü.** `cancel_reason = 'out_of_stock'` iki ayrı yolda
+   * yazılıyor: webhook'un iade dalında (kart — para çekildi) ve kapıda/vadeli ödemede rezervasyon
+   * tutmayınca (`checkout/actions.ts` — para HİÇ çekilmedi, sipariş `draft`ta kaldı). Sebebi tek
+   * başına okuyup "iade edildi" demek, ikinci yolda yeni bir yalan üretirdi. Ayrım ödeme
+   * yöntemiyle birlikte kuruluyor: **`out_of_stock` + `online`**.
+   *
+   * `null` sebep nötr cümleye düşer — "sebep yazılmadı" demek, "tahsilat yapılmadı" demek değil.
+   */
+  cancelReason: OrderCancelReason | null;
   /** "Bankanızdan onay bekliyoruz" YALNIZ kart ödemesinde doğru; kapıda ödemede beklenen banka yok. */
   awaitingCard: boolean;
   onRoute: boolean;
@@ -87,4 +104,20 @@ export interface ConfirmationViewProps {
   view: ConfirmationView;
   /** Mobil yerleşim (cihaz forku — `md:` yok). */
   compact: boolean;
+}
+
+/**
+ * **Parası iade edilmiş bir iptal mi** — onay ekranının iptalde hangi cümleyi kuracağı (07.14).
+ *
+ * Saf ve ayrı bir fonksiyon, çünkü bu kural bir kez YANLIŞ kuruldu: ekran yalnız "iptal mi" diye
+ * sorup üç yolun hepsine *"kartınızdan tahsilat yapılmadı"* diyordu. Kuralı bir satır ifade olarak
+ * sayfanın içinde bırakmak, aynı yanlışın ikinci kez sessizce kurulmasına açık kapı bırakırdı.
+ *
+ * **İki koşul birden şart.** `out_of_stock` sebebi İKİ ayrı yolda yazılıyor:
+ *   · webhook'un iade dalı — kart, para çekildi ve geri verildi
+ *   · kapıda/vadeli ödemede rezervasyon tutmadı — para HİÇ çekilmedi, sipariş `draft`ta kaldı
+ * Sebebi tek başına okumak ikincisinde yeni bir yalan üretirdi.
+ */
+export function isRefundedCancellation(view: Pick<ConfirmationView, 'cancelled' | 'cancelReason' | 'paymentMethod'>): boolean {
+  return view.cancelled && view.cancelReason === 'out_of_stock' && view.paymentMethod === 'online';
 }
