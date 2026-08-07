@@ -56,8 +56,18 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Teklifler her testte sıfırlanır: biri diğerinin sırasını taşımasın.
-  for (const p of [ucuz, orta, pahali]) await db.from('stock').update({ offer_price: null }).eq('variant_id', p.variantId);
+  /**
+   * Parti her testte İLK HÂLİNE döner: teklif silinir **ve miktar geri konur**.
+   *
+   * Miktar 07.08'de eklendi ve bir tuzağı kapatıyor: "tükenmiş teklif partisi" testi
+   * `physical_qty: 0` yazıyor, oysa sıfırlama yalnız `offer_price`ı geri alıyordu — o testten
+   * SONRA yazılan her test, adı geçmeyen bir sebeple boş partiyle koşuyordu. Yeni sayaç testleri
+   * tam buna çarptı: teklif yazıldı ama `listOfferBatches` `physical_qty > 0` istediği için hiç
+   * parti bulunamadı ve katalog boş döndü. Kurulum ne bırakıyorsa onu geri koymalı, yarısını değil.
+   */
+  for (const p of [ucuz, orta, pahali]) {
+    await db.from('stock').update({ offer_price: null, physical_qty: 10 }).eq('variant_id', p.variantId);
+  }
 });
 
 afterAll(async () => {
@@ -158,6 +168,56 @@ describe('süzgeçler sıralamayla birlikte çalışır', () => {
     expect(data.products[0]?.name).toContain('Orta');
     // Sayaç listeyle AYNI süzgeci kullanır: "1 sonuç" yazıp 3 satır göstermez.
     expect(data.total).toBe(1);
+  });
+
+  /**
+   * ⚠ **SAYAÇ, RPC'YE İLETİLMEYEN süzgeçlerle sınanır** (denetim kararı 07.08).
+   *
+   * Yukarıdaki test bu kuralı zaten iddia ediyordu ama `search` ile ölçüyordu — ve `search`
+   * eski sayacın (`product_counts`) RPC'ye ilettiği dört süzgeçten biriydi. Yani test ÇALIŞAN
+   * yolu sınayıp "kural tutuyor" diyordu. Kırık olan ikisi (`ids` = "yalnız indirimliler",
+   * `onlyShippable` = "adresime gönderilebilir") hiçbir testin uğramadığı yoldu: iki kelime tüm
+   * test dosyalarında sıfır kez geçiyordu ve başlık, liste 1 ürün basarken 131 diyordu.
+   *
+   * Sınıfın adı: *kuralı yazan yorum, kuralın tek örneğini ölçüyor.* `typecheck` göremez (çağrı
+   * tip olarak kusursuz), `lint` göremez. Bu iki test o boşluğun kapağıdır — sayaç artık
+   * `countMatching` ile listeyle aynı kurucudan geçtiği için ikisi de yapısal olarak tutmalı.
+   */
+  it('SAYAÇ "yalnız indirimliler" çipini de sayar (eski sayacın körlüğü)', async () => {
+    // Üç üründen YALNIZ birine teklif: liste 1 satır basmalı, başlık da 1 demeli.
+    await db.from('stock').update({ offer_price: 3 }).eq('variant_id', pahali.variantId);
+
+    const data = await getCatalogData(
+      'tr',
+      { search: String(stamp), onlyOffers: true },
+      { warehouseId, shippingWarehouseId: null },
+      VISITOR,
+    );
+
+    expect(data.products).toHaveLength(1);
+    expect(data.products[0]?.name).toContain('Pahalı');
+    // Kırıkken burası 3 (hatta seed dahil tüm katalog) derdi — çip sayaca hiç ulaşmıyordu.
+    expect(data.total).toBe(1);
+  });
+
+  it('SAYAÇ "adresime gönderilebilir" çipini de sayar', async () => {
+    // Üç üründen birini kargoya kapat: süzgeç onu düşürünce sayaç da düşürmeli.
+    await db.from('product').update({ shippable: false }).eq('id', orta.productId);
+
+    try {
+      const data = await getCatalogData(
+        'tr',
+        { search: String(stamp), onlyShippable: true },
+        { warehouseId: null, shippingWarehouseId: null },
+        VISITOR,
+      );
+
+      expect(data.products.map((p) => p.name.split(' ')[0]).sort()).toEqual(['Pahalı', 'Ucuz']);
+      expect(data.total).toBe(2);
+    } finally {
+      // Ürün alanı testler arası paylaşılıyor (`beforeEach` yalnız teklifi sıfırlar) — geri koy.
+      await db.from('product').update({ shippable: true }).eq('id', orta.productId);
+    }
   });
 
   it('fiyatı olmayan ürün listeden DÜŞMEZ, sonda durur', async () => {

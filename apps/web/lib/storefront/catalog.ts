@@ -88,11 +88,23 @@ export async function getCatalogData(
   // Fiyat sıralaması AYRI kaynaktan okunur (`product_listing` görünümü, 0043): sıralama anahtarı
   // ürün tablosunda yoktur. Süzgeçler ve satır şeması ortaktır — ayrışan tek şey sıra.
   const direction = q.sort === 'priceAsc' ? 'asc' : q.sort === 'priceDesc' ? 'desc' : null;
-  const [page, counts] = await Promise.all([
+  const [page, total] = await Promise.all([
     direction
       ? new ProductListingService(db).listByPrice({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE, direction, warehouseId: place.warehouseId })
       : productSvc.listWithRelations({ filters, cursor: q.cursor, limit: DEFAULT_PAGE_SIZE }),
-    productSvc.counts(filters),
+    /**
+     * Başlıktaki "N ürün" — `counts()` DEĞİL (07.08, denetim kararı B).
+     *
+     * `counts()` operasyon ekranı için yazılmış bir RPC'yi çağırıyor ve süzgeçlerin yalnız dördünü
+     * iletiyor; buradaki `ids` ("yalnız indirimliler") ile `onlyShippable` sessizce düşüyordu —
+     * yerelde ölçüldü: liste 1 ürün basarken başlık **131** diyordu. Üstelik vitrin o okumanın
+     * öteki üç sayısını (aday · beyan eksik · kategori kırılımı) hiç kullanmıyordu; hepsi operatör
+     * kavramı, ve `0019` künyesi zaten *"müşteri yüzeyine açılmaz"* diyor.
+     *
+     * `countMatching` listeyle AYNI nesneyi AYNI kurucudan geçirir — tutarlılık yapısaldır, bir
+     * sonraki çip eklendiğinde kimsenin sayacı ayrıca güncellemesi gerekmez.
+     */
+    productSvc.countMatching(filters),
   ]);
   const context = await loadProductContext(db, page.rows, place, viewer);
 
@@ -100,7 +112,7 @@ export async function getCatalogData(
     categories,
     activeCategory,
     products: page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)),
-    total: counts.total,
+    total,
     nextCursor: page.nextCursor,
   };
 }

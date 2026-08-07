@@ -326,6 +326,12 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
    *
    * `byCategory` bilinçli olarak SÜZGEÇSİZ: kategori listesinin kendi sayısıdır, ürün süzgecinden
    * bağımsız. Aday sayacı da durum süzgecini yok sayar (aday kuyruğu her hâlde görünmeli).
+   *
+   * ⚠ **SÜZGEÇ KÜMESİ DAR ve bu bir sınır, eksik değil:** RPC'ye yalnız dördü gidiyor
+   * (`query · category · status · onlyIncomplete`). `ids` ve `onlyShippable` ile çağırırsanız
+   * **sessizce yok sayılırlar** — bu okumayı OPERASYON ekranı için tasarlandığı gibi kullanın
+   * (`0019` künyesi: *"müşteri yüzeyine açılmaz"*). Süzgeciyle eşleşen sayıyı isteyen çağıran
+   * {@link countMatching} kullanır; vitrin 07.08'de oraya taşındı.
    */
   async counts(filters?: ProductFilters): Promise<ProductCounts> {
     const rows = await this.executeRpc<unknown[]>('product_counts', {
@@ -341,6 +347,28 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
       incomplete: row.incomplete,
       byCategory: new Map(Object.entries(row.byCategory)),
     };
+  }
+
+  /**
+   * Süzgeçle EŞLEŞEN ürün sayısı — listenin kullandığı çeviriden (`buildProductQuery`), tek `HEAD`.
+   *
+   * **Neden `counts()` yetmedi** (07.08, ölçüldü): o okuma RPC'ye yalnız dört süzgeç iletiyor;
+   * vitrin ise altı ile çağırıyordu (`ids` = "yalnız indirimliler" köprüsü, `onlyShippable` =
+   * "adresime gönderilebilir"). İkisi sessizce düşüyor ve başlık listeyle çelişiyordu — yerelde
+   * ölçüldü: liste 1 ürün basarken başlık **131** diyordu. Hata fırlatmıyordu, çünkü çağrı tip
+   * olarak kusursuz: tam nesne veriliyor, içeride dördü kullanılıp ikisi atılıyor.
+   *
+   * **Tutarlılık burada YAPISAL:** sayaç da liste de aynı `ProductFilters` nesnesini aynı
+   * kurucudan geçiriyor. Yeni bir süzgeç eklendiğinde ikisi birden büyür — kimsenin bir RPC'yi
+   * güncellemeyi hatırlaması gerekmez. Kırılan tam olarak buydu.
+   *
+   * Bedeli bir tur: `counts()` dört sayıyı tek okumada veriyordu, bu yalnız birini verir. Vitrin
+   * zaten öteki üçünü (aday · beyan eksik · kategori kırılımı) hiç okumuyordu — operatör
+   * kavramları. (Denetim kararı 07.08: A yerine B; ölçüm gerekirse uygulandıktan sonra.)
+   */
+  async countMatching(filters?: ProductFilters): Promise<number> {
+    const { filters: eq, orFilters } = buildProductQuery(filters);
+    return this.count(eq, { orFilters });
   }
 
   private buildQuery(f?: ProductFilters): { filters: Record<string, unknown>; orFilters: string[] } {
