@@ -76,7 +76,15 @@ kaynağa terfi adayıdır).
    `apps/mobile-api`. İki alanı birden ilgilendiren iş (API sözleşmesi değişikliği gibi)
    ajanlara bölünmeden önce yönetici tarafından iki ayrı, alanına-sınırlı göreve çevrilir;
    sözleşmenin kendisi yöneticinin sahipliğindedir.
-4. **Desen uygunluğu denetlenir:** iki ajan da projenin mevcut KOD desenine (STACK — servis
+4. **Alt ajanlar Opus 5 modeliyle koşturulur** (kullanıcı kararı 07.08) — Expo ve
+   mobil-backend görev atamaları `opus` model seçimiyle başlatılır; süren ajanın modeli
+   değiştirilemediğinden kural yeni görev atamalarında uygulanır.
+4b. **YALNIZ İKİ AJAN ve ajanlar ajan açamaz (kullanıcı kararı 07.08):** mobil şeridin alt
+   ajanları yalnız `expo-ajani` ve `mobil-backend-ajani`dir (`.claude/agents/*.md` — araç
+   setlerinde Agent/Workflow YOK, yani alt ajan açmaları teknik olarak imkânsız; model
+   tanımda `opus`). Yönetici başka ajan OLUŞTURMAZ; iki ajana sığmayan iş (analiz, doküman,
+   denetim) yöneticinin kendisinindir.
+5. **Desen uygunluğu denetlenir:** iki ajan da projenin mevcut KOD desenine (STACK — servis
    deseni, zarf sözleşmesi, logger, adlandırma) ve TASARIM desenine (müşteri tarafında mevcut
    müşteri tasarım dili; token zorunluluğu, ham hex yasağı) uymak zorundadır; yönetici her
    teslimatta bunu doğrular, sapma düzelttirilir ya da gerekçesiyle kullanıcıya taşınır.

@@ -42,9 +42,10 @@ Tek markalı, tek veritabanlı, orta ölçekli bir web ürünü: müşteriye aç
 | **Form** | **`react-hook-form`** + **`@hookform/resolvers`** (Zod resolver) | Doğrulama şeması zaten Zod (§5); resolver aynı şemayı forma bağlar — ikinci bir kural kaynağı doğmaz |
 | **E-posta** | **`resend`** (gönderim) + **`@react-email/components`** (şablon) | Supabase mail yapısı KULLANILMAZ; Auth OTP dahil tüm mail `packages/email`'den (§10, `14-bildirim-email`) |
 | **Dosya deposu** | **`@aws-sdk/client-s3`** + **`@aws-sdk/s3-request-presigner`** | Cloudflare R2, S3-uyumlu API. Presigner özel kova için süreli okuma/yükleme adresi üretir (§10 "iki kova") |
+| **Harita** | **`maplibre-gl`** | Bölge kurulumu haritadan (19.20). Karolar OpenFreeMap'ten (`tiles.openfreemap.org` — CSP'de açık, `next.config.ts` `MAP_TILES` künyesi). **Noktalar bizim**: 16.878 posta kodu `postal_code_place`ten; dışarı giden yalnız karo koordinatı. Yalnız `components/operation/ui/zone-map.tsx` |
 | **Lint** | **ESLint flat config** + **`typescript-eslint`** | Kuralı zorlayan yer: `console` yasağı, ölü kod, `any` (`packages/eslint-config`) |
 | **Yapay zekâ** | **`ai`** (Vercel AI SDK) + **`@ai-sdk/anthropic`** · **`@ai-sdk/google`** | Sağlayıcı-agnostik katman ELLE yazılmaz — kütüphane yapar; seçim env'den (`AI_PROVIDER`). Çıktı `generateObject` + Zod ile yapısal. Yalnız `packages/ai` (§4 `ai-scope`) → `docs/build/20-yapay-zeka.md` |
-| **Mobil (uygulama)** | **Expo SDK** + **`expo-router`** + **`expo-dev-client`** | Native uygulama `apps/mobile` (21.2). CNG: native klasörler üretilir, git'e girmez; **Expo Go test hattında YASAK** — dev-client (`docs/uygulama/01 §10`). Çekirdek Expo modülleri: `expo-constants` · `expo-linking` · `expo-splash-screen` · `expo-status-bar` · `expo-system-ui` · `expo-secure-store` (oturum token'ları Keychain/Keystore'da — 21.4) |
+| **Native uygulama** | **Expo SDK** + **`expo-router`** + **`expo-dev-client`** | Native uygulama `apps/mobile` (21.2). CNG: native klasörler üretilir, git'e girmez; **Expo Go test hattında YASAK** — dev-client (`docs/uygulama/01 §10`). Çekirdek Expo modülleri: `expo-constants` · `expo-linking` · `expo-splash-screen` · `expo-status-bar` · `expo-system-ui` · `expo-secure-store` (oturum token'ları Keychain/Keystore'da — 21.4) |
 | **Mobil stil** | **`react-native-unistyles`** (+ `react-native-nitro-modules`) | Komponent kütüphanesi YOK; tema düz TS nesnesi → token tek-kaynağına bağlanır (21.3); resmî Jest mock'ları test hattını cihazsız tutar (`docs/uygulama/01 §11`) |
 | **Mobil platform** | `react-native` 0.86 (New Architecture) · `react-native-screens` · `react-native-safe-area-context` · `react-native-edge-to-edge` · `@babel/runtime` | RN 0.85+ yalnız New Arch — her native bağımlılıkta eleme ölçütü. screens/safe-area expo-router zorunluluğu; edge-to-edge SDK 57 Android varsayılanı; `@babel/runtime` babel-preset-expo'nun opsiyonel peer'ı (unistyles Babel eklentisinin etkinleşme şartı) |
 
@@ -215,7 +216,7 @@ items/
 ├── page.tsx                 # Sunucu: veri çeker, yetki (blueprint aynen)
 ├── items-page-client.tsx    # 'use client': cihazı algılar, dallanır
 │     ├── items.desktop.tsx  # masaüstü sunumu
-│     └── items.mobile.tsx   # mobil sunumu
+│     └── items.mobile.tsx   # mobil web sunumu (cihaz forku — native uygulama değil, CLAUDE §2)
 ├── actions/actions.ts       # Server Action'lar
 └── components/              # yalnız bu sayfaya ait
 ```

@@ -11,7 +11,13 @@
   (bkz. customer.ts / operations.ts başlık yorumları) — web'deki üretim adımı o satırları
   kendi tarafında tutar.
 */
-import { customerColors, customerRadius, customerText } from './customer';
+import {
+  customerColors,
+  customerGradient,
+  customerRadius,
+  customerShadow,
+  customerText,
+} from './customer';
 import {
   operationsColors,
   operationsDarkColors,
@@ -21,7 +27,10 @@ import {
 
 /* Token ailesi → CSS custom property öneki. Anahtar + önek = tam CSS adı; adlandırma
    kayıpsız geri üretilir (`--color-` + `ink` → `--color-ink`). */
-type TokenGroup = readonly [prefix: '--color-' | '--text-' | '--radius-', tokens: Record<string, string>];
+type TokenGroup = readonly [
+  prefix: '--color-' | '--text-' | '--radius-' | '--shadow-' | '--gradient-',
+  tokens: Record<string, string>,
+];
 
 /* AÇIK tema (`@theme`) grupları — globals.css dosya sırasıyla: müşteri renkleri → müşteri
    tipografi → müşteri yarıçap → operasyon tipografi → operasyon renkleri → operasyon yarıçap.
@@ -31,6 +40,12 @@ const lightGroups: readonly TokenGroup[] = [
   ['--color-', customerColors],
   ['--text-', customerText],
   ['--radius-', customerRadius],
+  /* `--shadow-` ve `--gradient-` Token Kararlari #5 ile geldi ve BUGÜN yalnız modülde var
+     (parite testinin `MOBILE_ONLY` listesi). Üretim adımı onları da basıyor ki web senkronu
+     gelince tek kaynak hazır olsun; müşteri bloğunun sonunda duruyorlar — üretilen çıktı hâlâ
+     "önce müşteri, sonra operasyon" sırasında okunur. */
+  ['--shadow-', customerShadow],
+  ['--gradient-', customerGradient],
   ['--text-', operationsText],
   ['--color-', operationsColors],
   ['--radius-', operationsRadius],

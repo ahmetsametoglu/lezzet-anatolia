@@ -9,11 +9,16 @@ export {
   customerOlive,
   customerTerracotta,
   customerHoney,
+  customerError,
   customerClosed,
   customerInteraction,
+  customerScrim,
+  customerBrand,
   customerColors,
   customerText,
   customerRadius,
+  customerShadow,
+  customerGradient,
 } from './customer';
 export {
   operationsText,

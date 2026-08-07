@@ -45,6 +45,10 @@ uyguladığı denetimi bu şeride de uygular.
   Hono); üç kişilik mobil şeridi (yönetici + Expo ajanı + mobil-backend ajanı) ve alan
   sınırları; **bağlayıcı duplikasyon tüzüğü** (terfi-kopya-değil, sözleşme tek kaynak); auth
   yönü; ilk iş birimleri (21.1–21.3).
+- `03-tasarim-envanteri.md` — **ENVANTER** (07.08): `Mobil - Musteri v3.dc.html` analizi —
+  21 ekran, ~35 tekrar kullanılabilir komponent adayı, token açıkları (renk/yazı/yarıçap),
+  navigasyon modeli, eksik durumlar, API imaları ve **18 maddelik karar listesi** (§8 —
+  kullanıcıyla konuşulacak; ekran işi bu kararlar verilmeden başlamaz).
 
 ## Planlanan (teknoloji kararı kesinleşince)
 

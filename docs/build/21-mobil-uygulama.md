@@ -69,6 +69,19 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     expo-doctor 20/20, iOS bundle 1266 modül (paket Metro grafiğinde). globals.css'te
     parser'ın bulduğu iki içerik gözlemi (çift "§0.4" başlığı; iki karanlık-eşdeğerlik yorum
     kayması) web şeridine talep dosyasında raporlandı.
+  - **Durum (07.08 — tasarım mutabakatı işlendi):** `Mobil - Token Kararlari.md`'nin 13 kararı
+    pakete girdi: 30 yeni token (sand-150/250 · error · scrim · shadow · gradient · brand
+    ailesi · 5 tipografi kademesi · radius badge/control) + 7 değer değişikliği (sand-300,
+    olive-line, star, closed-bg, disabled-fill, radius card 18→20 / pill 26→22). Parite testi
+    BEYANLI sapma mekanizması kazandı: `TRANSITION` (CSS eski / modül yeni — ikisi ayrı ayrı
+    kilitli) + `MOBILE_ONLY`; listeler kendi kendini denetler (web çekince satır testi kırar
+    ve silinmeyi zorlar — negatif kontrol koşuldu). `sand-250` adı KULLANICI ONAYLI (07.08;
+    karar dosyası "sand-100" demişti, ad doluydu). **Üretim yönü kararı revize:** web'in
+    itirazı haklı (renderThemeCss yorum-kayıplı) — TS→CSS üretimi rafa, kalıcı mekanizma iki
+    yönlü parite kilidi; web senkronu `docs/talep/musteri-token-senkronu.md`. Doğrulama
+    (yönetici tekrarı): design-tokens 9/9 · apps/mobile 22/22 · typecheck/eslint temiz.
+    Kalan: web'in 7+30'u çekmesi (talepte) · `brand-whatsapp-pure` adı tasarımdan ·
+    shadow/gradient'in mobil temaya bağlanması (komponent kiti işiyle — Expo ajanı).
 - [x] (21.4) **Auth akışı:** OTP uçları (`/api/v1/auth/*`) — web'le aynı sunucu servisleri
   (`email-verification`, `notify`); cihazda supabase-js oturumu + SecureStore; oturum
   yenileme. **Karar (07.08, kullanıcı + yönetici):** verify orkestrasyonu `packages/application`'a
@@ -105,9 +118,9 @@ Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** 
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden
 kurguyla; push bildirim (notify'a driver — 14 ile koordineli), Maestro E2E hattı,
 mağaza/dağıtım süreci. **Müşteri sayfa tasarımına BAŞLAMADAN ÖNCE kullanıcıyla konuşulacak
-konular var (kullanıcı notu 07.08) — ekran işine onunla konuşmadan girilmez. Tasarım hattı:
-Claude Design mobil tasarımlar üstünde ÇALIŞIYOR (07.08); bilgi kullanıcıdan gelecek, yerel
-kopya/tahminle ekran yapılmaz.** Giriş modeli kararı için `docs/uygulama/02 §4` (tek kapı,
+konular var (kullanıcı notu 07.08) — ekran işine onunla konuşmadan girilmez. Tasarım GELDİ
+(07.08): `design/project/Mobil - Musteri v3.dc.html` (~21 ekran; müşteri yüzeyinin tamamı) —
+kullanıcı vurgusu: tekrar kullanılabilir komponentlerle inşa.** Giriş modeli kararı için `docs/uygulama/02 §4` (tek kapı,
 rol-bazlı yüzey; oturumsuz = müşteri).
 
 **Mobil ekran görüntüleri (kullanıcı kararı 07.08):** tüm mobil uygulama görüntüleri —

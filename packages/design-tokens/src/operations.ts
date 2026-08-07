@@ -157,8 +157,10 @@ export const operationsScrim = {
 /* §0.4 Etkileşim durumları — odak halkası ayrı renk taşımaz (2px olive, 2px offset) */
 export const operationsInteraction = {
   'ops-ink-hover': '#33372e', // koyu butonun hover/active durumu
-  'ops-disabled-fill': '#c9ccc3', // disabled buton zemini (= gray-600)
-  'ops-disabled-text': '#8b9086', // disabled buton/girdi metni (= muted)
+  // Eşdeğerlik notları AÇIK TEMA için geçerli; karanlıkta ikisi de ayrı kademeye kayar (aşağıdaki
+  // koyu bloğun künyesi — bilinçli, kontrastı korumak için).
+  'ops-disabled-fill': '#c9ccc3', // disabled buton zemini (açıkta = gray-600)
+  'ops-disabled-text': '#8b9086', // disabled buton/girdi metni (açıkta = muted)
   'ops-row-selected': '#eef0ea', // tablo satırı hover ve seçim (= gray-100)
 } as const satisfies Record<string, string>;
 
@@ -276,7 +278,10 @@ export const operationsDarkColors = {
 
   /* §0.6 Etkileşim — koyu buton açık zemine döner (mürekkep ters) */
   'ops-ink-hover': '#d3d8ca',
-  'ops-disabled-fill': '#3c4038',
-  'ops-disabled-text': '#757c6d',
+  // DEĞERLER DOĞRU, açıktaki eşdeğerlik burada BİLEREK bozulur (ölçüldü 07.08): eşleme korunsaydı
+  // dolgu #757c6d, metin #8f9688 olurdu — birbirine yapışık iki ton, yani okunmayan bir buton.
+  // Korunan şey renk eşleşmesi değil, dolgu ile metin arasındaki KONTRAST.
+  'ops-disabled-fill': '#3c4038', // karanlıkta = gray-200
+  'ops-disabled-text': '#757c6d', // karanlıkta = faint
   'ops-row-selected': '#31352c',
 } as const satisfies Record<string, string>;
