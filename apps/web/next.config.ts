@@ -43,27 +43,21 @@ const STRIPE_FRAME = 'https://js.stripe.com https://*.js.stripe.com https://hook
 const STRIPE_API = 'https://api.stripe.com';
 const STRIPE_IMG = 'https://*.stripe.com';
 
-// Harita karoları (19.20) — bölge kurulumu haritadan yapılıyor (`Depolar - Bolge Haritasi.html`).
+// Harita karoları (19.20) — rota kurulumu haritadan (`Depolar - Bolge Haritasi.html`).
 //
-// **NEDEN BİR DIŞ HOST GEREKİYOR:** haritanın İKİ yarısı var ve yalnız biri dışarıdan geliyor.
-// Noktalar bizim — 16.878 posta kodu enlem/boylamıyla `postal_code_place`ta duruyor ve `'self'`ten
-// gelir. Dışarıdan gelen şey noktaların ALTINDAKİ zemin: sokaklar, nehirler, yer adları. Tasarımın
-// gerekçesi bu zemindir — *"karar 'bu yol üstünde mi' olduğu için taban harita yol ağını gösterir"*;
-// zemin olmadan ekran haritaya benzer ama kararı vermez, yani bugünkü kod listesinden farkı kalmaz.
+// **Haritanın İKİ yarısı var, yalnız biri dışarıdan geliyor.** Noktalar bizim: 16.878 posta kodu
+// enlem/boylamıyla `postal_code_place`ta ve `'self'`ten gelir. Dışarıdan gelen şey noktaların
+// ALTINDAKİ zemin — sokaklar, nehirler, yer adları. Tasarımın gerekçesi bu zemindir (*"karar 'bu yol
+// üstünde mi' olduğu için taban harita yol ağını gösterir"*); zemin olmadan ekran haritaya benzer ama
+// kararı vermez.
 //
-// **Bu host bizim verimizi GÖRMEZ:** giden istek yalnız karo koordinatıdır (z/x/y). Posta kodları,
-// bölgeler, müşteriler — hiçbiri o tarafa geçmiyor; noktalar tarayıcıda, bizim yanıtımızdan çizilir.
+// **Bu host bizim verimizi GÖRMEZ:** giden istek yalnız karo koordinatıdır (z/x/y).
 //
-// İki yön birden şart:
-//   connect-src → stil JSON'u, vektör karolar, glifler ve sprite'ların HEPSİ `fetch` ile gider
-//   worker-src  → MapLibre karo çözmeyi bir Web Worker'a verir ve worker'ı `blob:` URL'inden kurar;
-//                 `default-src 'self'`e düştüğü için worker hiç doğmuyordu, harita da hiç başlamıyordu
-//
-// SAYFAYA ÖZEL YAPILMADI ve bu bilinçli: tarayıcı birden çok CSP başlığı geldiğinde KESİŞİMLERİNİ
-// uygular — ikinci bir başlık gevşetmez, daha da kısar. Yalnız harita rotasına açmak, o rotayı global
-// eşleşmeden çıkarmayı gerektirirdi; sessizce çalışmayan bir harita bırakma riski tek bir dış
-// host'tan pahalı.
-const MAP_TILES = 'https://tiles.openfreemap.org';
+// **YALNIZ `img-src` gerekiyor** (07.08): karolar Leaflet'te `<img>` olarak yüklenir. Bir tur
+// MapLibre denendi ve `connect-src` + `worker-src 'self' blob:` gerekmişti — vektör karoyu bir Web
+// Worker'da çözüp WebGL ile boyadığı için. O zincir ekranda BOŞ TUVAL bıraktı ve tasarımın hiç
+// ihtiyaç duymadığı bir yüzeydi; ikisi de geri çıkarıldı. Daha az izin, daha az arıza.
+const MAP_TILES = 'https://tile.openstreetmap.org';
 
 /**
  * Güvenlik başlıkları (referans deseninden uyarlandı). CSP host'ları modül geldikçe genişler.
@@ -80,10 +74,9 @@ function securityHeaders(): Array<{ key: string; value: string }> {
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline' ${STRIPE_SCRIPT}${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
-    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${STRIPE_API} ${MAP_TILES}`.replace(/\s+/g, ' ').trim(),
-    // MapLibre'ın karo çözücüsü blob URL'inden kurulan bir Web Worker'dır (bkz. MAP_TILES künyesi).
-    "worker-src 'self' blob:",
-    `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS} ${STRIPE_IMG}`.replace(/\s+/g, ' ').trim(),
+    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${STRIPE_API}`.replace(/\s+/g, ' ').trim(),
+    // Harita karoları BURADA ve yalnız burada: Leaflet onları `<img>` olarak yükler.
+    `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS} ${STRIPE_IMG} ${MAP_TILES}`.replace(/\s+/g, ' ').trim(),
     "font-src 'self' data:",
     `frame-src 'self' ${STRIPE_FRAME}`,
     "object-src 'none'",

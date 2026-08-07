@@ -30,7 +30,7 @@
     "@stripe/stripe-js": "^9.12.1",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.48.1",
-    "maplibre-gl": "^6.2.0",
+    "leaflet": "^1.9.4",
     "next": "^15.1.6",
     "next-intl": "^4.13.3",
     "react": "^19.0.0",
@@ -43,6 +43,7 @@
   "devDependencies": {
     "@lezzet/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4.0.0",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",

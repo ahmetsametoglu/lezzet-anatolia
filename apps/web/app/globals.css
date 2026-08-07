@@ -449,3 +449,10 @@ body {
   --color-ops-disabled-text: #757c6d; /* karanlıkta = faint */
   --color-ops-row-selected: #31352c;
 }
+
+/* Harita karolarının soluklaştırması (19.20) — tasarımın kendi değerleri
+   (`Depolar - Bolge Haritasi.html`: `.tiles`). Zemin sönükleşir, posta kodu noktaları öne çıkar.
+   Raster karo olduğu için tek filtre yetiyor; vektörde stil katmanlarını yeniden boyamak gerekirdi. */
+.ops-map-tiles {
+  filter: saturate(0.32) brightness(1.06) contrast(0.94);
+}
