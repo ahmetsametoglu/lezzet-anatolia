@@ -3,23 +3,36 @@
 // Web şeridi `@theme` üretimini benimseyince yön döner: modül kaynak, CSS türev olur.
 // RN tarafı (Unistyles teması) bu modülü doğrudan import eder — sınıf adı değil TOKEN
 // paylaşılır (docs/uygulama/01 §11), "ham hex yasak" kuralı iki platformda da aynı kalır.
+//
+// İKİ AİLE, İKİ DOSYA (kullanıcı kararı 07.08): `customer*` CSS ikizidir (web + ortak taban),
+// `customerApp*` mobil uygulamanın kendi token'larıdır. Uygulama teması ikisini KOMPOZİSYONLA
+// birleştirir ve aynı addaki anahtarda uygulama kazanır:
+//     { ...customerColors, ...customerAppColors }   ·   { ...customerRadius, ...customerAppRadius }
+// Web tarafı `customerApp*` ihraçlarını hiç görmez — ayrım sonekle değil DOSYAYLA kuruludur.
 export {
   customerSurface,
   customerSand,
   customerOlive,
   customerTerracotta,
   customerHoney,
-  customerError,
   customerClosed,
   customerInteraction,
-  customerScrim,
-  customerBrand,
   customerColors,
   customerText,
   customerRadius,
-  customerShadow,
-  customerGradient,
 } from './customer';
+export {
+  customerAppOverrides,
+  customerAppSand,
+  customerAppError,
+  customerAppScrim,
+  customerAppBrand,
+  customerAppColors,
+  customerAppText,
+  customerAppRadius,
+  customerAppShadow,
+  customerAppGradient,
+} from './customer-app';
 export {
   operationsText,
   operationsSurface,

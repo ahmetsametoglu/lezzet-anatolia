@@ -10,14 +10,12 @@
   FONT SATIRLARI BİLEREK YOK: `--font-*` token'ları next/font değişkenlerine bağlı
   (bkz. customer.ts / operations.ts başlık yorumları) — web'deki üretim adımı o satırları
   kendi tarafında tutar.
+
+  `customer-app.ts` DE BİLEREK YOK: mobil uygulamanın token'ları CSS'in ikizi değildir, web
+  tarafında üretilecek bir karşılıkları YOKTUR (kullanıcı kararı 07.08 — ayrım dosyayla).
+  Buraya eklenirlerse `globals.css` mobil kararlarla büyümeye başlar; tam da kaçınılan şey.
 */
-import {
-  customerColors,
-  customerGradient,
-  customerRadius,
-  customerShadow,
-  customerText,
-} from './customer';
+import { customerColors, customerRadius, customerText } from './customer';
 import {
   operationsColors,
   operationsDarkColors,
@@ -26,9 +24,11 @@ import {
 } from './operations';
 
 /* Token ailesi → CSS custom property öneki. Anahtar + önek = tam CSS adı; adlandırma
-   kayıpsız geri üretilir (`--color-` + `ink` → `--color-ink`). */
+   kayıpsız geri üretilir (`--color-` + `ink` → `--color-ink`).
+   Üç önek yeter: CSS ikizinde `--shadow-`/`--gradient-` ailesi YOK — gölge ve fotoğraf
+   gradyanı yalnız mobil uygulamanındır (`customer-app.ts`) ve bu üretim onları basmaz. */
 type TokenGroup = readonly [
-  prefix: '--color-' | '--text-' | '--radius-' | '--shadow-' | '--gradient-',
+  prefix: '--color-' | '--text-' | '--radius-',
   tokens: Record<string, string>,
 ];
 
@@ -40,12 +40,6 @@ const lightGroups: readonly TokenGroup[] = [
   ['--color-', customerColors],
   ['--text-', customerText],
   ['--radius-', customerRadius],
-  /* `--shadow-` ve `--gradient-` Token Kararlari #5 ile geldi ve BUGÜN yalnız modülde var
-     (parite testinin `MOBILE_ONLY` listesi). Üretim adımı onları da basıyor ki web senkronu
-     gelince tek kaynak hazır olsun; müşteri bloğunun sonunda duruyorlar — üretilen çıktı hâlâ
-     "önce müşteri, sonra operasyon" sırasında okunur. */
-  ['--shadow-', customerShadow],
-  ['--gradient-', customerGradient],
   ['--text-', operationsText],
   ['--color-', operationsColors],
   ['--radius-', operationsRadius],

@@ -56,6 +56,15 @@ CLAUDE.md "hiçbir türde duplication yok" değişmezinin mobildeki uygulaması.
 5. **Denetim her PR'da.** Yönetici her iş biriminde duplikasyon taraması yapar: `knip` +
    `boundaries` + elle "bu mantık depoda var mı, türetebilir miyim?" sorusu. Şüphede: yazma,
    sor.
+6. **KÜÇÜK AYAK İZİ + ORTAKLIK ZORLANMAZ (kullanıcı kararı 07.08, iki yönlü):** mobil bir
+   karar, öteki şeritlere tur/refactor faturası ÇIKARMAZ — paylaşılan token/sözleşme değerinin
+   değiştirilmesi tek başına mobil kararıyla olmaz. Tersi de geçerli: web ile mobil aynı stil
+   token'ını kullanmaya ZORLANMAZ. Mekanizma YAPISALDIR (sonek değil, DOSYA — kullanıcı
+   kararı 07.08): mobilin kendine-özgü token'ları `design-tokens` içinde AYRI dosyada yaşar
+   (`customer-app.ts`), tema "ortak taban + uygulama farkları" KOMPOZİSYONUYLA kurulur — aynı
+   addaki anahtarda uygulama kazanır; web ikizi (`customer.ts` ↔ globals.css) istisnasız
+   parite kilidinde kalır. Ad çakışmasında var olan ikiye bölünmez; boş bir ad seçilir
+   (emsal: `sand-250`).
 
 **Duplikasyon SAYILMAYANLAR** (bilinçli ayrım): taşıma katmanı adaptörleri (web'in çerez
 guard'ı vs API'nin Bearer guard'ı — kural aynı `identity` motorundan gelir, sarmalayıcı farklı),
