@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#22251f; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<div style="max-width:1200px;margin:0 auto;padding:48px 40px 72px;display:flex;flex-direction:column;gap:32px;color:#22251f">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <span style="font:700 28px 'Space Grotesk'">Ekran haritası</span>
+    <span style="font:400 14px/1.6 'Karla';color:#6a7065;max-width:640px">Tüm ekranlara buradan girilir. Operasyon ekranlarında sol menü gerçek bağlantıdır — ekranlar arasında gezinebilirsiniz. Müşteri ekranlarında üst menü (Katalog · Paketler · Keşif · Professionnels) ve logo çalışır.</span>
+  </div>
+
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px">
+        <span style="font:600 12px 'Space Grotesk';letter-spacing:.14em;text-transform:uppercase;color:#8b9086">{{ g.label }}</span>
+        <span style="flex:1;height:1px;background:#cbc8bf;display:block"></span>
+        <span style="font:500 12px 'Space Grotesk';color:#a7ac9f">{{ g.count }}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(214px,1fr));gap:10px">
+        <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="8">
+          <a href="{{ it.href }}" style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:10px;padding:13px 15px;display:flex;flex-direction:column;gap:3px" style-hover="border-color:#5f7a2c;background:#f2f6ea">
+            <span style="font:600 13.5px 'Space Grotesk';color:#22251f">{{ it.name }}</span>
+            <span style="font:400 11.5px 'Karla';color:#8b9086">{{ it.note }}</span>
+          </a>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const href = f => encodeURI('./' + f);
+    const G = [
+      { label:'Müşteri', items:[
+        ['Musteri - Anasayfa.dc.html','Anasayfa','web + mobil'],
+        ['Musteri - Katalog.dc.html','Katalog','filtre · liste'],
+        ['Musteri - Urun Detay.dc.html','Ürün Detay','çeşit · varyant · yorum'],
+        ['Musteri - Paketler.dc.html','Paketler',''],
+        ['Musteri - Paket Detay.dc.html','Paket Detay',''],
+        ['Musteri - Kesif.dc.html','Keşif','aday ürünler'],
+        ['Musteri - Sepet.dc.html','Sepet','teslim grupları'],
+        ['Musteri - Checkout.dc.html','Checkout','ödeme akışı'],
+        ['Musteri - Siparisler.dc.html','Siparişlerim',''],
+        ['Musteri - Siparis Detay.dc.html','Sipariş Detay','takip'],
+        ['Musteri - Hesap.dc.html','Hesap','adres · tercih'],
+        ['Musteri - Giris.dc.html','Giriş','OTP'],
+        ['Musteri - Talep.dc.html','Talep','özel sipariş'],
+        ['Musteri - Geri Bildirim.dc.html','Geri Bildirim',''],
+        ['Musteri - Professionnels.dc.html','Professionnels','B2B'],
+        ['Musteri - Statik.dc.html','Statik sayfalar','SSS · yasal'],
+        ['Musteri - Hata Sayfalari.dc.html','Hata sayfaları','404 · 500'],
+        ['Anasayfa - Gorsel Yonler.dc.html','Anasayfa · görsel yönler','keşif'],
+      ]},
+      { label:'Operasyon', items:[
+        ['Operasyon - Dashboard.dc.html','Panel','gün özeti'],
+        ['Operasyon - Siparisler.dc.html','Siparişler',''],
+        ['Operasyon - Siparis Detay.dc.html','Sipariş Detay',''],
+        ['Operasyon - Rotalar.dc.html','Rotalar','planlama'],
+        ['Operasyon - Kurye Gun.dc.html','Kurye · Gün',''],
+        ['Operasyon - Kurye Teslimat.dc.html','Kurye · Teslimat',''],
+        ['Operasyon - Kurye Kapanis.dc.html','Kurye · Kapanış',''],
+        ['Operasyon - Depo Hazirlik.dc.html','Depo · Hazırlık',''],
+        ['Operasyon - Depo Stok Giris.dc.html','Depo · Stok Giriş',''],
+        ['Operasyon - Depo Imha Sayim.dc.html','Depo · İmha & Sayım',''],
+        ['Operasyon - Urunler.dc.html','Ürünler','katalog · aileler'],
+        ['Operasyon - Fiyatlar.dc.html','Fiyatlar',''],
+        ['Operasyon - Stok.dc.html','Stok','partiler'],
+        ['Operasyon - Satin Alma.dc.html','Satın Alma',''],
+        ['Operasyon - Transfer.dc.html','Transfer','depolar arası'],
+        ['Operasyon - Para.dc.html','Para','tahsilat'],
+        ['Operasyon - Raporlar.dc.html','Raporlar',''],
+        ['Operasyon - Analitik.dc.html','Analitik',''],
+        ['Operasyon - Musteriler.dc.html','Müşteriler',''],
+        ['Operasyon - B2B Onay.dc.html','B2B Onay',''],
+        ['Operasyon - Talepler.dc.html','Talepler',''],
+        ['Operasyon - Geri Bildirim.dc.html','Geri Bildirim',''],
+        ['Operasyon - WhatsApp.dc.html','WhatsApp',''],
+        ['Operasyon - Depolar.dc.html','Depolar',''],
+        ['Operasyon - Ayarlar.dc.html','Ayarlar',''],
+        ['Operasyon - Sistem.dc.html','Sistem','log · sağlık'],
+        ['Operasyon - Komponentler.dc.html','Komponentler',''],
+        ['Operasyon - Hata Sayfalari.dc.html','Hata sayfaları',''],
+      ]},
+      { label:'Bildirim şablonları', items:[
+        ['Email - Siparis Bildirimleri.dc.html','E-posta seti','tüm durumlar'],
+        ['WhatsApp - Siparis Bildirimleri.dc.html','WhatsApp seti',''],
+        ['Email - Siparis Onaylandi.html','E-posta · Onaylandı','tek dosya'],
+        ['Email - Siparis Yolda.html','E-posta · Yolda','tek dosya'],
+        ['Email - Siparis Teslim Edildi.html','E-posta · Teslim','tek dosya'],
+        ['Email - Siparis Iptal.html','E-posta · İptal','tek dosya'],
+        ['Email - Siparis Iade.html','E-posta · İade','tek dosya'],
+        ['Email - Siparis Eksik Karsilanma.html','E-posta · Eksik karşılanma','tek dosya'],
+      ]},
+      { label:'Belgeler', items:[
+        ['Belge - Hazirlik Kagidi.dc.html','Hazırlık kâğıdı','yazdırılır'],
+        ['Belge - Tedarik Siparisi.dc.html','Tedarik siparişi','yazdırılır'],
+        ['Belge - Teslimat Ozeti.dc.html','Teslimat özeti','yazdırılır'],
+      ]},
+      { label:'Sistem & envanter', items:[
+        ['Komponent Envanteri - Musteri.dc.html','Komponent envanteri · müşteri',''],
+        ['Komponent Envanteri - Operasyon.dc.html','Komponent envanteri · operasyon',''],
+        ['AdminSidebar.dc.html','AdminSidebar','paylaşılan menü'],
+        ['Depolar - Bolge Haritasi.html','Depolar · bölge haritası',''],
+      ]},
+    ];
+    return { groups: G.map(g => ({
+      label: g.label, count: g.items.length + ' ekran',
+      items: g.items.map(([f, name, note]) => ({ href: href(f), name, note })),
+    })) };
+  }
+}
+
+</script>
+</body>
+</html>

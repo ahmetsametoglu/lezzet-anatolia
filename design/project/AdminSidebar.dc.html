@@ -48,7 +48,7 @@
   <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="5">
     <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.15em;text-transform:uppercase;color:#a7ac9f;padding:13px 16px 5px">{{ sec.label }}</span>
     <sc-for list="{{ sec.items }}" as="it" hint-placeholder-count="3">
-      <a style="display:flex;align-items:center;gap:11px;padding:7px 15px;border-left:2px solid {{ it.edge }};background:{{ it.bg }};color:{{ it.iconColor }};text-decoration:none;cursor:pointer">
+      <a href="{{ it.href }}" style="display:flex;align-items:center;gap:11px;padding:7px 15px;border-left:2px solid {{ it.edge }};background:{{ it.bg }};color:{{ it.iconColor }};text-decoration:none;cursor:pointer">
         {{ it.icon }}
         <span style="font-family:'Space Grotesk';font-size:13px;font-weight:{{ it.weight }};color:{{ it.labelFg }};flex:1">{{ it.label }}</span>
         <sc-if value="{{ it.badge }}" hint-placeholder-val="{{ false }}">
@@ -58,6 +58,7 @@
     </sc-for>
   </sc-for>
 
+  <a href="./Harita.dc.html" style="margin:14px 15px 0;font:500 11px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#a7ac9f;text-decoration:none">↩ Ekran haritası</a>
   <div style="margin-top:auto;padding:12px 15px 0;margin-left:15px;margin-right:15px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px">
     <span style="width:30px;height:30px;border-radius:8px;background:#5f7a2c;color:#fff;font:600 12px 'Space Grotesk';display:grid;place-items:center">SA</span>
     <div style="display:flex;flex-direction:column;flex:1;min-width:0">
@@ -127,15 +128,26 @@ class Component extends DCLogic {
         { key:'sistem', label:'Sistem' },
       ]},
     ];
+    const files = {
+      panel:'Operasyon - Dashboard', siparisler:'Operasyon - Siparisler', rotalar:'Operasyon - Rotalar',
+      urunler:'Operasyon - Urunler', fiyatlar:'Operasyon - Fiyatlar', stok:'Operasyon - Stok',
+      satinalma:'Operasyon - Satin Alma', transfer:'Operasyon - Transfer', para:'Operasyon - Para',
+      raporlar:'Operasyon - Raporlar', analitik:'Operasyon - Analitik', musteriler:'Operasyon - Musteriler',
+      b2b:'Operasyon - B2B Onay', talepler:'Operasyon - Talepler', geribildirim:'Operasyon - Geri Bildirim',
+      whatsapp:'Operasyon - WhatsApp', depolar:'Operasyon - Depolar', ayarlar:'Operasyon - Ayarlar',
+      sistem:'Operasyon - Sistem',
+    };
     const sections = raw.map(sec => ({
       label: sec.label,
       items: sec.items.map(it => {
         const on = it.key === active;
+        const href = files[it.key] ? encodeURI('./' + files[it.key] + '.dc.html') : null;
         const tone = it.tone === 'a'
           ? { badgeFg:'#9a6416', badgeBg:'#fdf1e3' }
           : { badgeFg:'#5c6157', badgeBg:'#e4e6de' };
         return {
           label: it.label,
+          href,
           icon: icons[it.key],
           badge: it.badge || null,
           badgeFg: tone.badgeFg, badgeBg: tone.badgeBg,

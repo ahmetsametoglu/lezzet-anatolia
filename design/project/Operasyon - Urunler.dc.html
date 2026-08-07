@@ -95,6 +95,7 @@
                   <div style="display:flex;gap:6px;margin-top:2px">
                     <span style="font:600 10px 'Space Grotesk';color:{{ det.actFg }};background:{{ det.actBg }};border-radius:6px;padding:2px 8px">{{ det.act }}</span>
                     <span style="font:600 10px 'Space Grotesk';color:#5c6157;background:#e4e6de;border-radius:6px;padding:2px 8px">{{ det.variants }} varyant</span>
+                    <span style="font:600 10px 'Space Grotesk';color:{{ det.famFg }};background:{{ det.famBg }};border-radius:6px;padding:2px 8px">{{ det.famChip }}</span>
                   </div>
                 </div>
               </div>
@@ -169,6 +170,61 @@
           </div>
         </sc-if>
 
+        <sc-if value="{{ isFamilies }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+            <div style="padding:11px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center">
+              <span style="font:400 12px 'Karla';color:#8b9086;margin-right:auto">Her üye kendi ürünüdür — aile yeni ürün yaratmaz. Sıra, müşteri sayfasındaki çeşit kartlarının sırasıdır.</span>
+              <span onClick="{{ openCreate }}" style="font:600 12px 'Space Grotesk';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 14px;cursor:pointer">+ Aile</span>
+            </div>
+            <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:14px">
+              <sc-for list="{{ families }}" as="f" hint-placeholder-count="3">
+                <div style="flex:none;border:1px solid #e6e7e1;border-radius:11px;background:#fff;overflow:hidden">
+                  <div style="padding:12px 16px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px">
+                    <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto;min-width:0">
+                      <span style="font:600 14px 'Space Grotesk';color:#22251f">{{ f.name }}</span>
+                      <span style="font:400 11px 'Karla';color:#8b9086">slug: {{ f.slug }} · {{ f.langs }}</span>
+                    </div>
+                    <span style="font:500 12px 'IBM Plex Mono';color:#6a7065">{{ f.count }} üye</span>
+                    <span style="font:600 10.5px 'Space Grotesk';color:{{ f.stFg }};background:{{ f.stBg }};border-radius:7px;padding:3px 9px">{{ f.status }}</span>
+                    <span style="font:600 11px 'Karla';color:#5f7a2c;cursor:pointer">Düzenle</span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:16px 44px 1.5fr 1fr 78px 76px;gap:0 12px;padding:8px 16px;border-bottom:1px solid #f0f1ec;font:500 10px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">
+                    <span></span><span></span><span>Üye ürün</span><span>Aile içi ad</span><span>Varyant</span><span style="text-align:right">Durum</span>
+                  </div>
+                  <sc-for list="{{ f.members }}" as="m" hint-placeholder-count="3">
+                    <div style="display:grid;grid-template-columns:16px 44px 1.5fr 1fr 78px 76px;gap:0 12px;align-items:center;padding:9px 16px;border-bottom:1px solid #f0f1ec;cursor:pointer">
+                      <span style="color:#c9ccc3;font-size:13px">⠿</span>
+                      <span style="width:44px;aspect-ratio:1;border:1px solid #e0e2da;border-radius:7px;overflow:hidden;background:#f0f1ec;display:block"><image-slot id="{{ m.slotId }}" radius="6" placeholder=""></image-slot></span>
+                      <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+                        <span style="font:600 13px 'Karla';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.name }}</span>
+                        <span style="font:400 10.5px 'IBM Plex Mono';color:#8b9086">{{ m.slug }}</span>
+                      </div>
+                      <span style="border:1px solid #d9dbd2;border-radius:7px;background:#fbfbf9;padding:6px 9px;font:500 12.5px 'Karla';color:{{ m.shortFg }}">{{ m.short }}</span>
+                      <span style="font:500 12px 'IBM Plex Mono';color:#3a3f37">{{ m.variants }}</span>
+                      <span style="justify-self:end;font:600 10.5px 'Space Grotesk';color:{{ m.stFg }};background:{{ m.stBg }};border-radius:7px;padding:3px 9px">{{ m.status }}</span>
+                    </div>
+                  </sc-for>
+                  <div style="padding:10px 16px;display:flex;align-items:center;gap:12px">
+                    <span style="font:600 11.5px 'Karla';color:#5f7a2c;cursor:pointer">+ üye ekle</span>
+                    <span style="font:400 11px 'Karla';color:#8b9086">{{ f.note }}</span>
+                  </div>
+                </div>
+              </sc-for>
+              <div style="flex:none;border:1.5px dashed #cdd0c7;border-radius:11px;padding:16px 18px;display:flex;flex-direction:column;gap:6px">
+                <span style="font:700 12.5px 'Space Grotesk';color:#3a4147">Ailenin kuralları</span>
+                <ul style="margin:0;padding-left:18px;font:400 11.5px/1.7 'Karla';color:#6a7065">
+                  <li>Aile <strong>gruplamadır</strong>: üyeler ayrı ürünlerdir, kendi içindekiler/besin/görsel/fiyat ve kendi sayfalarını taşır. Varyanttan (boy/porsiyon) ayrı eksendir.</li>
+                  <li><strong>Aile içi ad</strong> çeşit kartında yazan kısa addır ("Fıstıklı Baklava 1kg" → "Fıstıklı"). Boşsa ürün adı kullanılır; kart adı uzun düşer.</li>
+                  <li>Bir ürün <strong>en fazla bir ailede</strong> bulunur — koleksiyondan farkı budur. Aileden çıkarmak ürünü silmez.</li>
+                  <li>Sıra sürüklenerek kurulur; müşteri sayfasında kartlar bu sırayla, bakılan çeşit ilk sırada gösterilir.</li>
+                  <li>Tükenen ya da pasif üye müşteride karttan düşer; operasyonda listede kalır ve durumu görünür.</li>
+                  <li>Tek üyeli aile müşteride hiç basılmaz — blok yalnız 2+ alınabilir üye varken çıkar.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
         <sc-if value="{{ isPackages }}" hint-placeholder-val="{{ false }}">
           <div style="flex:1;min-height:0;display:flex;flex-direction:column">
             <div style="padding:11px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center"><span style="font:400 12px 'Karla';color:#8b9086;margin-right:auto">Kalem fiyatları toplamı = paket fiyatı · sistem doğrular · yeni ürün yaratmaz</span><span onClick="{{ openCreate }}" style="font:600 12px 'Space Grotesk';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 14px;cursor:pointer">+ Paket</span></div>
@@ -239,6 +295,38 @@
                 <div style="flex:1;display:flex;align-items:center;justify-content:space-between;border:1px solid #d9dbd2;border-radius:9px;padding:10px 13px">
                   <span style="font:500 12.5px 'Karla'">Satışta (aktif)</span>
                   <span style="width:40px;height:23px;border-radius:12px;background:#5f7a2c;position:relative"><span style="position:absolute;top:2px;left:19px;width:19px;height:19px;border-radius:50%;background:#fff"></span></span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Aile</span>
+                <span style="font:400 11px 'Karla';color:#8b9086">çeşit ekseni — varyanttan ayrı</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1.35fr 1fr 78px;gap:10px">
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  <span style="font:500 11.5px 'Karla';color:#6a7065">Ait olduğu aile</span>
+                  <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';background:#fff;display:flex;justify-content:space-between;align-items:center">{{ formFamily }}<span style="color:#9aa094">▾</span></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  <span style="font:500 11.5px 'Karla';color:#6a7065">Aile içi ad <span style="color:#b0561f">*</span></span>
+                  <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';color:{{ formShortFg }};background:#fff">{{ formShort }}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  <span style="font:500 11.5px 'Karla';color:#6a7065">Sıra</span>
+                  <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'IBM Plex Mono';background:#fff">{{ formOrder }}</div>
+                </div>
+              </div>
+              <div style="border:1px solid #e6e7e1;background:#f8f9f5;border-radius:9px;padding:12px 14px;display:flex;gap:14px;align-items:center">
+                <div style="width:88px;flex:none;border:2px solid #5f7a2c;border-radius:12px;background:#fff;padding:5px;display:flex;flex-direction:column;gap:5px">
+                  <div style="aspect-ratio:1"><image-slot id="aile-onizleme" radius="8" placeholder=""></image-slot></div>
+                  <span style="font:700 11.5px 'Karla';color:#22251f;padding:0 2px 2px">{{ formShortPreview }}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                  <span style="font:600 12px 'Space Grotesk';color:#3a3f37">Müşteri sayfasındaki çeşit kartı</span>
+                  <span style="font:400 11.5px/1.55 'Karla';color:#6a7065">Kartta <strong>aile içi ad</strong> ve 1. fotoğraf görünür. Boş bırakılırsa tam ürün adı basılır ve kart taşar. Ad üç dilde ayrı girilir — çok dilli içerik sekmelerinden çevrilir.</span>
+                  <span style="font:400 11.5px 'Karla';color:#8b9086">Aileden çıkarmak ürünü silmez; sayfası kalır, yalnız çeşit bloğundan düşer.</span>
                 </div>
               </div>
             </div>
@@ -436,6 +524,16 @@
             <span style="width:44px;height:26px;border-radius:13px;background:#5f7a2c;position:relative"><span style="position:absolute;top:2px;left:20px;width:22px;height:22px;border-radius:50%;background:#fff"></span></span>
           </div>
           <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 11px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086">Aile</span>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #e0e2da;background:#f8f9f5;border-radius:9px;padding:10px 13px">
+              <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+                <span style="font:500 13px 'Karla';color:#22251f">Baklava Çeşitleri</span>
+                <span style="font:400 11px 'Karla';color:#8b9086">aile içi ad: <strong>Fıstıklı</strong> · sıra 1</span>
+              </div>
+              <span style="margin-left:auto;font:600 11px 'Karla';color:#5f7a2c;flex:none">web'de düzenle</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
             <span style="font:500 11px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086">Koleksiyonlar</span>
             <div style="display:flex;gap:7px;flex-wrap:wrap">
               <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;background:#eef4e2;border:1px solid #cdd8b6;border-radius:13px;padding:6px 11px">Bayram ✕</span>
@@ -451,7 +549,7 @@
       <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
         <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
         <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
-          <li><strong>Web</strong> → tam katalog: varyant, çok dilli içerik + AI çeviri, yasal beyan (alerjen listesi), paket kurma, slug, marj/auto_price, aday etkinleştirme.</li>
+          <li><strong>Web</strong> → tam katalog: varyant, aile kurma/sıralama + aile içi ad, çok dilli içerik + AI çeviri, yasal beyan (alerjen listesi), paket kurma, slug, marj/auto_price, aday etkinleştirme.</li>
           <li><strong>Mobil</strong> → hızlı işler: ürün arama, aktiflik toggle, ad düzeltme, koleksiyon ekle/çıkar, kameradan görsel. Yoğun giriş için "web'de aç" yönlendirir.</li>
           <li><strong>Ortak kural</strong> → fiyat ve stok hiçbir yüzeyde burada düzenlenmez; kendi ekranlarına köprü. Beyan eksikliği her iki yüzeyde görünür kalır.</li>
         </ul>
@@ -569,7 +667,8 @@ class Component extends DCLogic {
 
     const tab = this.state.tab;
     const tabDefs = [
-      { key:'products', label:'Ürünler' }, { key:'categories', label:'Kategoriler' },
+      { key:'products', label:'Ürünler' }, { key:'families', label:'Aileler' },
+      { key:'categories', label:'Kategoriler' },
       { key:'collections', label:'Koleksiyonlar' }, { key:'packages', label:'Paketler' },
     ];
     const tabs = tabDefs.map(t => ({
@@ -577,6 +676,44 @@ class Component extends DCLogic {
       fg: tab===t.key ? '#22251f' : '#8b9086', edge: tab===t.key ? '#5f7a2c' : 'transparent',
     }));
     const okB=['#4a6121','#eef4e2'], pasB=['#6a7065','#eef0ea'], warnB=['#9a6416','#fdf1e3'];
+    const memSt = { 'Aktif':okB, 'Tükendi':warnB, 'Pasif':pasB };
+    const famDefs = [
+      { name:'Baklava Çeşitleri', slug:'baklava-cesitleri', langs:'TR · FR · DE dolu', status:'Aktif', st:okB,
+        note:'Müşteride 4 kart görünür — «Bademli» tükendiği için düşer.',
+        members:[
+          { name:'Fıstıklı Baklava 1kg', short:'Fıstıklı', variants:'2', status:'Aktif' },
+          { name:'Cevizli Baklava 1kg', short:'Cevizli', variants:'2', status:'Aktif' },
+          { name:'Kaymaklı Baklava 1kg', short:'Kaymaklı', variants:'1', status:'Aktif' },
+          { name:'Çikolatalı Baklava 1kg', short:'Çikolatalı', variants:'2', status:'Aktif' },
+          { name:'Bademli Baklava 1kg', short:'Bademli', variants:'1', status:'Tükendi' },
+        ] },
+      { name:'Kek Çeşitleri', slug:'kek-cesitleri', langs:'TR dolu · FR/DE öneri bekliyor', status:'Aktif', st:okB,
+        note:'12 üye — müşteride tek satırda kaydırılır.',
+        members:[
+          { name:'Limonlu Kek 400g', short:'Limonlu', variants:'1', status:'Aktif' },
+          { name:'Mangolu Kek 400g', short:'Mangolu', variants:'1', status:'Tükendi' },
+          { name:'Çilekli Kek 400g', short:'Çilekli', variants:'1', status:'Aktif' },
+          { name:'Kakaolu Kek 400g', short:'Kakaolu', variants:'2', status:'Aktif' },
+        ] },
+      { name:'Börek Çeşitleri', slug:'borek-cesitleri', langs:'TR dolu', status:'Taslak', st:warnB,
+        note:'Tek üye — müşteride çeşit bloğu basılmaz; ikinci üye eklenene dek taslak.',
+        members:[
+          { name:'Peynirli Börek', short:'Peynirli', variants:'1', status:'Aktif' },
+        ] },
+    ];
+    const families = famDefs.map(f => ({
+      name:f.name, slug:f.slug, langs:f.langs, status:f.status, note:f.note,
+      stFg:f.st[0], stBg:f.st[1], count:String(f.slug==='kek-cesitleri' ? 12 : f.members.length),
+      members: f.members.map((m,i) => {
+        const st = memSt[m.status] || pasB;
+        return { name:m.name, short:m.short, variants:m.variants, status:m.status,
+          shortFg: m.short ? '#22251f' : '#9aa094',
+          slug: f.slug + ' · ' + (i+1), slotId: 'aile-' + f.slug + '-' + (i+1),
+          stFg: st[0], stBg: st[1] };
+      }),
+    }));
+    const inFamily = cur.cat === 'Baklava';
+    const curShort = cur.name.split(' ')[0];
     const categories = [
       { name:'Baklava', slug:'baklava', count:'18', status:'Aktif', st:okB },
       { name:'Şerbetli Tatlılar', slug:'serbetli', count:'12', status:'Aktif', st:okB },
@@ -598,6 +735,10 @@ class Component extends DCLogic {
     ].map(pk => ({ ...pk, slotId:'paket-'+pk.slug,
       okLabel: pk.ok ? 'Toplam tutar' : 'Toplam tutmuyor',
       okFg: pk.ok ? '#4a6121' : '#a5443c', okBg: pk.ok ? '#eef4e2' : '#fbe9e7' }));
+
+    Object.assign(det, inFamily
+      ? { famChip: 'Aile: Baklava Çeşitleri · ' + curShort, famFg:'#4a6121', famBg:'#eef4e2' }
+      : { famChip: 'Ailesiz', famFg:'#6a7065', famBg:'#eef0ea' });
 
     const isCreate = this.state.modalMode === 'create';
 
@@ -654,8 +795,13 @@ class Component extends DCLogic {
     return {
       fotos, focal, fotoVerdict,
       tabs, isProducts: tab==='products', isCategories: tab==='categories',
-      isCollections: tab==='collections', isPackages: tab==='packages',
-      categories, collections, packages,
+      isCollections: tab==='collections', isPackages: tab==='packages', isFamilies: tab==='families',
+      categories, collections, packages, families,
+      formFamily: isCreate ? 'Aile seç (isteğe bağlı)' : (inFamily ? 'Baklava Çeşitleri' : 'Ailesiz'),
+      formShort: isCreate ? 'Kısa ad — ör. Fıstıklı' : (inFamily ? curShort : '—'),
+      formShortFg: isCreate || !inFamily ? '#9aa094' : '#22251f',
+      formShortPreview: isCreate ? 'Kısa ad' : (inFamily ? curShort : cur.name),
+      formOrder: isCreate ? '—' : (inFamily ? '1' : '—'),
       shown, more, onScroll: this.onScroll, det, mobList,
       modalOpen: this.state.modalOpen,
       modalTitle: isCreate ? 'Yeni ürün' : 'Ürün düzenle',

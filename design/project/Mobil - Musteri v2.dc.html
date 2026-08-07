@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+  body { margin:0; background:#e9e6df; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; } a:hover { color:#4a6121; }
+  * { scrollbar-width:none; -webkit-tap-highlight-color:transparent; box-sizing:border-box; }
+  *::-webkit-scrollbar { display:none; }
+  input, button, textarea { font-family:'Karla',sans-serif; }
+  @keyframes pageIn { from { opacity:0; transform:translateX(22px); } to { opacity:1; transform:none; } }
+  @keyframes tabIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes shUp { from { transform:translateY(100%); } to { transform:none; } }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes kOutL { to { transform:translateX(-130%) rotate(-9deg); opacity:0; } }
+  @keyframes kOutR { to { transform:translateX(130%) rotate(9deg); opacity:0; } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes pop { 0% { transform:scale(.5); opacity:0; } 70% { transform:scale(1.08); } 100% { transform:scale(1); opacity:1; } }
+</style>
+</helmet>
+
+<section style="min-height:100vh;background:#e9e6df;display:flex;flex-direction:column;align-items:center;gap:14px;padding:36px 20px 48px;font-family:'Karla',sans-serif">
+  <span style="font:600 15px 'Karla';color:#3a4147">Lezzet Anatolia — Mobil Uygulama · Müşteri</span>
+  <span style="font:400 12.5px 'Karla';color:#8a8270">Persona (misafir / B2C / B2B) sağdaki Tweaks panelinden değiştirilebilir</span>
+
+  <div style="width:390px;height:844px;background:#15170f;border-radius:56px;padding:10px;box-shadow:0 24px 70px rgba(38,44,30,.35);flex:none">
+    <div style="position:relative;width:100%;height:100%;border-radius:46px;overflow:hidden;background:#faf6ec">
+
+      <div style="position:absolute;top:0;left:0;right:0;height:46px;z-index:40;display:flex;align-items:center;justify-content:space-between;padding:0 28px;pointer-events:none">
+        <span style="font:700 14px 'Karla';color:#343b41">9:41</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <svg width="17" height="12" viewBox="0 0 17 12"><g fill="#343b41"><rect x="0" y="7" width="3" height="5" rx="1"></rect><rect x="4.5" y="4.5" width="3" height="7.5" rx="1"></rect><rect x="9" y="2" width="3" height="10" rx="1"></rect><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".35"></rect></g></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="0" width="21" height="12" rx="3.5" fill="none" stroke="#343b41" stroke-opacity=".5"></rect><rect x="2" y="2" width="13" height="8" rx="2" fill="#343b41"></rect><rect x="22.5" y="3.5" width="2" height="5" rx="1" fill="#343b41" fill-opacity=".5"></rect></svg>
+        </div>
+      </div>
+
+      <div ref="{{ scRef }}" onTouchStart="{{ tchS }}" onTouchEnd="{{ tchE }}" style="position:absolute;inset:0;overflow-y:auto;padding-top:46px;padding-bottom:{{ padB }}px">
+
+        <sc-if value="{{ vHome }}" hint-placeholder-val="{{ true }}">
+          <div data-screen-label="Vitrin" style="animation:tabIn .25s ease;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;gap:12px;padding:16px 18px 4px">
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:600 22px 'Lora';color:#343b41">{{ greet }}</span>
+                <div style="display:flex;align-items:center;gap:5px;font:700 12px 'Karla';color:#8a8270" onClick="{{ pillTap }}"><svg width="11" height="13" viewBox="0 0 12 14" fill="none" stroke="#8a8270" stroke-width="1.6"><path d="M6 13C6 13 11 8.6 11 5.4 11 2.9 8.8 1 6 1 3.2 1 1 2.9 1 5.4 1 8.6 6 13 6 13Z"></path><circle cx="6" cy="5.2" r="1.7"></circle></svg> 67000 Strasbourg <span style="color:#5f7a2c">▾</span></div>
+              </div>
+              <sc-if value="{{ b2bChip }}"><span style="background:#343b41;color:#f3efe2;font:700 10.5px 'Karla';padding:5px 9px;border-radius:12px;flex:none">TOPTAN</span></sc-if>
+              <div style="width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(58,65,71,.12);display:flex;align-items:center;justify-content:center;flex:none;transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ searchGo }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#343b41" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20.5 20.5-4.2-4.2"></path></svg></div>
+              <div style="width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(58,65,71,.12);display:flex;align-items:center;justify-content:center;flex:none;position:relative;transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goNotif }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#343b41" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5c0-3.3-2.7-5.5-6-5.5S6 5.2 6 8.5c0 6-2.5 7-2.5 7h17s-2.5-1-2.5-7"></path><path d="M10 19.5a2.2 2.2 0 0 0 4 0"></path></svg><sc-if value="{{ notifBadge }}"><span style="position:absolute;top:8px;right:9px;width:9px;height:9px;border-radius:50%;background:#b05c2e;border:2px solid #fff"></span></sc-if></div>
+            </div>
+            <sc-if value="{{ liveOrder }}">
+              <div style="margin:12px 18px 2px;background:#3a4147;color:#f3efe2;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ liveOrder.open }}">
+                <div style="width:42px;height:42px;border-radius:50%;background:rgba(169,196,107,.16);display:flex;align-items:center;justify-content:center;flex:none"><svg width="21" height="17" viewBox="0 0 24 19" fill="none" stroke="#a9c46b" stroke-width="1.8"><path d="M1 1h13v12H1zM14 5h5l4 4v4h-9"></path><circle cx="6" cy="16" r="2.2"></circle><circle cx="18" cy="16" r="2.2"></circle></svg></div>
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                  <span style="font:700 13.5px 'Karla'">Siparişiniz {{ liveOrder.stL }} · {{ liveOrder.ref }}</span>
+                  <span style="font:400 12px 'Karla';color:#c9cdc2">{{ liveOrder.day }}</span>
+                </div>
+                <span style="color:#a9c46b;font-size:16px;flex:none">›</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ lastOrder }}">
+              <div style="margin:12px 18px 2px;background:#eef2e2;border-radius:18px;padding:13px 15px;display:flex;align-items:center;gap:11px;transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ lastOrder.re }}">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4a6121" stroke-width="2.2" stroke-linecap="round" style="flex:none"><path d="M20 12a8 8 0 1 1-2.5-5.8M20 3.5V7h-3.5"></path></svg>
+                <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:700 13px 'Karla';color:#3a4147">Geçen siparişinizi tekrarlayın</span><span style="font:400 11.5px 'Karla';color:#6d7261">{{ lastOrder.sum }}</span></div>
+                <span style="color:#4a6121;flex:none">›</span>
+              </div>
+            </sc-if>
+            <div style="padding:16px 0 4px;display:flex;flex-direction:column;gap:10px">
+              <h2 style="margin:0 18px;font:600 19px 'Lora';color:#343b41">Ne arıyorsunuz?</h2>
+              <div style="display:flex;gap:12px;overflow-x:auto;padding:4px 18px 8px">
+                <sc-for list="{{ homeCats }}" as="c" hint-placeholder-count="6">
+                  <div style="flex:none;width:74px;display:flex;flex-direction:column;gap:7px;align-items:center;transition:transform .12s" style-active="transform:scale(.93)" onClick="{{ c.open }}">
+                    <div style="width:68px;height:68px"><image-slot id="m-cat-{{ $index }}" shape="circle" placeholder="{{ c.n }}"></image-slot></div>
+                    <span style="font:700 11.5px 'Karla';color:#3a4147;text-align:center">{{ c.n }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <sc-if value="{{ flash }}">
+              <div style="margin:16px 18px 2px;background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(58,65,71,.08);overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;background:#b05c2e;color:#fff;padding:9px 16px">
+                  <span style="font:700 11px 'Karla';letter-spacing:.09em;text-transform:uppercase">Günün fırsatı</span>
+                  <div style="display:flex;align-items:center;gap:4px;font:700 12.5px 'Karla'"><span style="background:rgba(255,255,255,.18);border-radius:7px;padding:3px 7px">{{ flash.h }}</span>:<span style="background:rgba(255,255,255,.18);border-radius:7px;padding:3px 7px">{{ flash.m }}</span>:<span style="background:rgba(255,255,255,.18);border-radius:7px;padding:3px 7px">{{ flash.sec }}</span></div>
+                </div>
+                <div style="display:flex;gap:14px;align-items:center;padding:14px 16px;transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ flash.open }}">
+                  <div style="width:84px;height:84px;flex:none"><image-slot id="m-flash" radius="14" placeholder="{{ flash.n }}"></image-slot></div>
+                  <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                    <span style="font:700 15px 'Karla';color:#3a4147">{{ flash.n }}</span>
+                    <div style="display:flex;align-items:baseline;gap:8px"><span style="font:700 19px 'Karla';color:#b05c2e">{{ flash.prF }}</span><span style="font:400 13px 'Karla';color:#b3ab97;text-decoration:line-through">{{ flash.wasF }}</span></div>
+                    <span style="font:600 11px 'Karla';color:#8a8270">Yalnız bugün · {{ flash.lim }}</span>
+                  </div>
+                  <div style="width:42px;height:42px;border-radius:50%;background:#b05c2e;color:#fff;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';flex:none;transition:transform .12s" style-active="transform:scale(.85)" onClick="{{ flash.add }}">+</div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ offersOn }}">
+              <div style="background:#f0e9d6;padding:16px 0;display:flex;flex-direction:column;gap:10px;margin-top:8px">
+                <div style="display:flex;align-items:baseline;gap:10px;margin:0 18px"><h2 style="margin:0;font:600 19px 'Lora';color:#343b41">Bu haftanın fırsatları</h2><span style="font:600 12px 'Karla';color:#b05c2e">Stokla sınırlı</span></div>
+                <div style="display:flex;gap:12px;overflow-x:auto;padding:2px 18px 4px">
+                  <sc-for list="{{ offers }}" as="o" hint-placeholder-count="2">
+                    <div style="flex:none;width:240px;background:#fff;border-radius:16px;padding:12px;display:flex;gap:12px;align-items:center;transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ o.open }}">
+                      <div style="width:70px;height:70px;flex:none"><image-slot id="m-frs-{{ $index }}" radius="10" placeholder="Ürün"></image-slot></div>
+                      <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                        <span style="font:700 13.5px 'Karla';color:#3a4147">{{ o.n }}</span>
+                        <div style="display:flex;align-items:center;gap:7px"><span style="font:700 16px 'Karla';color:#b05c2e">{{ o.prF }}</span><sc-if value="{{ o.wasF }}"><span style="font:400 12.5px 'Karla';color:#b3ab97;text-decoration:line-through">{{ o.wasF }}</span></sc-if></div>
+                        <span style="font:600 10.5px 'Karla';color:#b05c2e;background:#f9ede2;border-radius:9px;padding:2px 7px;width:max-content">{{ o.lim }}</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <div style="padding:18px 18px 6px;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between"><h2 style="margin:0;font:600 19px 'Lora';color:#343b41">Vitrindekiler</h2><span style="font:700 13px 'Karla';color:#5f7a2c" onClick="{{ goCatalog }}">Tüm katalog →</span></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <sc-for list="{{ vitrin }}" as="p" hint-placeholder-count="4">
+                  <div style="background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(58,65,71,.08);overflow:hidden;display:flex;flex-direction:column">
+                    <div style="aspect-ratio:4/3" onClick="{{ p.open }}"><image-slot id="{{ p.img }}" shape="rect" placeholder="{{ p.n }}"></image-slot></div>
+                    <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px">
+                      <span style="font:700 13.5px 'Karla';color:#3a4147" onClick="{{ p.open }}">{{ p.n }}</span>
+                      <span style="font:400 11.5px 'Karla';color:#8a8270">{{ p.w }}</span>
+                      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+                        <div style="display:flex;flex-direction:column"><sc-if value="{{ p.wasF }}"><span style="font:400 11px 'Karla';color:#b3ab97;text-decoration:line-through">{{ p.wasF }}</span></sc-if><span style="font:700 15.5px 'Karla';color:{{ p.prCol }}">{{ p.priceF }}</span></div>
+                        <div style="width:38px;height:38px;border-radius:50%;background:#5f7a2c;color:#fff;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';flex:none;transition:transform .12s" style-active="transform:scale(.85)" onClick="{{ p.add }}">+</div>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="padding:14px 18px 4px;display:flex;flex-direction:column;gap:12px">
+              <h2 style="margin:0;font:600 19px 'Lora';color:#343b41">Hazır paketler</h2>
+              <sc-for list="{{ pkgsHome }}" as="pk" hint-placeholder-count="2">
+                <div style="background:#3a4147;color:#f3efe2;border-radius:18px;padding:16px;display:flex;gap:14px;align-items:center;transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ pk.open }}">
+                  <div style="width:86px;height:86px;flex:none"><image-slot id="{{ pk.img }}" radius="12" placeholder="Paket"></image-slot></div>
+                  <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                    <span style="font:600 10.5px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#a9c46b">Hazır Paket · {{ pk.cnt }}</span>
+                    <span style="font:600 17px 'Lora'">{{ pk.n }}</span>
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:3px"><span style="font:700 16px 'Karla'">{{ pk.prF }}</span><span style="border:1.5px solid #a9c46b;color:#a9c46b;font:700 11.5px 'Karla';padding:5px 12px;border-radius:14px">İncele</span></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="margin:16px 18px 0;background:#eef2e2;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:8px" onClick="{{ goKesif }}">
+              <span style="font:600 17px 'Lora';color:#343b41">Yeni lezzetleri ilk siz deneyin ✦</span>
+              <span style="font:400 12.5px 'Karla';color:#6d7261">Aday ürünlere göz atın, beğendiklerinizi söyleyin — her tur puan kazandırır.</span>
+              <span style="background:#5f7a2c;color:#fff;font:700 13px 'Karla';padding:11px 20px;border-radius:20px;width:max-content;margin-top:2px">Keşfe başla</span>
+            </div>
+            <div style="margin:12px 18px 0;border:1.5px dashed #cdc4a8;border-radius:18px;padding:15px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px" onClick="{{ goPro }}">
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="font:700 13.5px 'Karla';color:#3a4147">Restoran ya da market misiniz?</span><span style="font:400 11.5px 'Karla';color:#8a8270">Toptan fiyatlar için profesyonel hesap açın.</span></div>
+              <span style="font:700 13px 'Karla';color:#5f7a2c;flex:none">→</span>
+            </div>
+            <div style="height:10px"></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vCatalog }}">
+          <div data-screen-label="Katalog" style="animation:tabIn .25s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:#faf6ec;padding:8px 18px 10px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #ece5d2">
+              <div style="display:flex;gap:10px;align-items:center">
+                <div style="flex:1;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e0d8c2;border-radius:22px;padding:0 16px;height:46px">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9a917c" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20.5 20.5-4.2-4.2"></path></svg>
+                  <input ref="{{ qRef }}" value="{{ q }}" onChange="{{ onQ }}" placeholder="Ürün ara…" style="border:none;outline:none;background:none;font:400 14.5px 'Karla';color:#3a4147;width:100%">
+                </div>
+                <div style="width:46px;height:46px;border-radius:50%;background:{{ filterBg }};border:1px solid {{ filterBd }};display:flex;align-items:center;justify-content:center;flex:none" onClick="{{ filterOpen }}">
+                  <svg width="19" height="17" viewBox="0 0 19 17" fill="none" stroke="{{ filterFg }}" stroke-width="1.8" stroke-linecap="round"><path d="M1 3.5h17M4 8.5h11M7 13.5h5"></path></svg>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;overflow-x:auto;margin:0 -18px;padding:0 18px">
+                <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+                  <span style="flex:none;font:700 12.5px 'Karla';padding:9px 15px;border-radius:18px;background:{{ c.bg }};color:{{ c.fg }};border:1px solid {{ c.bd }};transition:transform .12s" style-active="transform:scale(.93)" onClick="{{ c.pick }}">{{ c.n }}</span>
+                </sc-for>
+              </div>
+            </div>
+            <sc-if value="{{ zeroRes }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:70px 40px;text-align:center">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20.5 20.5-4.2-4.2"></path></svg>
+                <span style="font:600 17px 'Lora';color:#343b41">Aradığınızı bulamadık</span>
+                <span style="font:400 13px 'Karla';color:#8a8270">Farklı bir yazım deneyin ya da kategorilere göz atın.</span>
+                <span style="background:#5f7a2c;color:#fff;font:700 13px 'Karla';padding:11px 22px;border-radius:20px;margin-top:6px" onClick="{{ clearSearch }}">Tüm katalog</span>
+              </div>
+            </sc-if>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px 18px 8px">
+              <sc-for list="{{ catProds }}" as="p" hint-placeholder-count="6">
+                <div style="background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(58,65,71,.08);overflow:hidden;display:flex;flex-direction:column;position:relative">
+                  <sc-if value="{{ p.so }}"><span style="position:absolute;top:10px;left:10px;z-index:2;background:#3a4147;color:#f3efe2;font:700 10.5px 'Karla';padding:4px 9px;border-radius:10px">Tükendi</span></sc-if>
+                  <sc-if value="{{ p.disc }}"><span style="position:absolute;top:10px;left:10px;z-index:2;background:#b05c2e;color:#fff;font:700 10.5px 'Karla';padding:4px 9px;border-radius:10px">İndirim</span></sc-if>
+                  <div style="aspect-ratio:4/3;opacity:{{ p.imgOp }}" onClick="{{ p.open }}"><image-slot id="{{ p.img }}" shape="rect" placeholder="{{ p.n }}"></image-slot></div>
+                  <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px">
+                    <span style="font:700 13.5px 'Karla';color:#3a4147" onClick="{{ p.open }}">{{ p.n }}</span>
+                    <span style="font:400 11.5px 'Karla';color:#8a8270">{{ p.w }}</span>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+                      <div style="display:flex;flex-direction:column"><sc-if value="{{ p.wasF }}"><span style="font:400 11px 'Karla';color:#b3ab97;text-decoration:line-through">{{ p.wasF }}</span></sc-if><span style="font:700 15.5px 'Karla';color:{{ p.prCol }}">{{ p.priceF }}</span></div>
+                      <sc-if value="{{ p.canAdd }}"><div style="width:38px;height:38px;border-radius:50%;background:#5f7a2c;color:#fff;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';flex:none;transition:transform .12s" style-active="transform:scale(.85)" onClick="{{ p.add }}">+</div></sc-if>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vProduct }}">
+          <div data-screen-label="Ürün Detay" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(250,246,236,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #ece5d2">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 16px 'Lora';color:#343b41;flex:1">Ürün</span>
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background .15s" style-active="background:#ece5d2" onClick="{{ pd.share }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#343b41" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 6.5 12 3l4 3.5M6.5 10H5.8A1.8 1.8 0 0 0 4 11.8v7A1.8 1.8 0 0 0 5.8 20.5h12.4a1.8 1.8 0 0 0 1.8-1.7v-7a1.8 1.8 0 0 0-1.8-1.8h-.7"></path></svg></div>
+            </div>
+            <div style="aspect-ratio:4/3;position:relative">
+              <image-slot id="{{ pd.img }}" shape="rect" placeholder="{{ pd.n }} — iştah açan yakın çekim"></image-slot>
+              <sc-if value="{{ pd.so }}"><span style="position:absolute;top:14px;left:14px;background:#3a4147;color:#f3efe2;font:700 12px 'Karla';padding:6px 12px;border-radius:12px">Tükendi</span></sc-if>
+              <sc-if value="{{ pd.disc }}"><span style="position:absolute;top:14px;left:14px;background:#b05c2e;color:#fff;font:700 12px 'Karla';padding:6px 12px;border-radius:12px">İndirim</span></sc-if>
+            </div>
+            <div style="padding:16px 18px 8px;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font:700 11.5px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:10px;padding:4px 10px">{{ pd.c }}</span>
+                <span style="font:700 13px 'Karla';color:#343b41">★ {{ pd.rt }}</span><span style="font:400 12px 'Karla';color:#8a8270">{{ pd.rc }}</span>
+              </div>
+              <h1 style="margin:0;font:600 24px/1.2 'Lora';color:#343b41">{{ pd.n }}</h1>
+              <div style="display:flex;align-items:baseline;gap:10px">
+                <sc-if value="{{ pd.wasF }}"><span style="font:400 15px 'Karla';color:#b3ab97;text-decoration:line-through">{{ pd.wasF }}</span></sc-if>
+                <span style="font:700 24px 'Karla';color:#343b41">{{ pd.priceF }}</span>
+                <span style="font:400 12.5px 'Karla';color:#8a8270">{{ pd.unitF }} · KDV dahil</span>
+              </div>
+              <sc-if value="{{ pd.lim }}"><span style="font:600 12px 'Karla';color:#b05c2e;background:#f9ede2;border-radius:10px;padding:4px 10px;width:max-content">{{ pd.lim }}</span></sc-if>
+              <sc-if value="{{ pd.noShip }}"><span style="font:600 12px 'Karla';color:#4a6121;background:#eef2e2;border-radius:10px;padding:5px 10px;width:max-content"><svg width="15" height="12" viewBox="0 0 24 19" fill="none" stroke="#4a6121" stroke-width="1.8" style="vertical-align:-1px;margin-right:6px"><path d="M1 1h13v12H1zM14 5h5l4 4v4h-9"></path><circle cx="6" cy="16" r="2.2"></circle><circle cx="18" cy="16" r="2.2"></circle></svg>Yalnız bölge içi kapıya teslim — kargoya verilmez</span></sc-if>
+              <sc-if value="{{ pd.multi }}">
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <sc-for list="{{ pd.vars }}" as="v" hint-placeholder-count="2">
+                    <div style="display:flex;flex-direction:column;gap:1px;padding:9px 15px;border-radius:14px;background:{{ v.bg }};border:1.5px solid {{ v.bd }}" onClick="{{ v.pick }}">
+                      <span style="font:700 13px 'Karla';color:#3a4147">{{ v.l }}</span><span style="font:600 12px 'Karla';color:#4a6121">{{ v.prF }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <p style="margin:2px 0 0;font:400 14px/1.55 'Karla';color:#6d7261">{{ pd.d }}</p>
+            </div>
+            <div style="margin:6px 18px;display:flex;flex-direction:column;border-radius:20px;box-shadow:0 1px 3px rgba(58,65,71,.08);background:#fff;overflow:hidden">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px" onClick="{{ pd.tI }}"><span style="font:700 13.5px 'Karla';color:#3a4147">İçindekiler &amp; alerjenler</span><span style="color:#8a8270">▾</span></div>
+              <sc-if value="{{ pd.accI }}"><div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:6px"><span style="font:400 13px/1.5 'Karla';color:#6d7261">{{ pd.ing }}</span><span style="font:700 12.5px 'Karla';color:#b05c2e">Alerjenler: {{ pd.alg }}</span></div></sc-if>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-top:1px solid #f0e9d6" onClick="{{ pd.tN }}"><span style="font:700 13.5px 'Karla';color:#3a4147">Besin değerleri &amp; net ağırlık</span><span style="color:#8a8270">▾</span></div>
+              <sc-if value="{{ pd.accN }}"><div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:6px"><span style="font:400 13px/1.5 'Karla';color:#6d7261">100 g için: {{ pd.nut }}</span><span style="font:600 12.5px 'Karla';color:#3a4147">{{ pd.net }}</span></div></sc-if>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-top:1px solid #f0e9d6" onClick="{{ pd.tS }}"><span style="font:700 13.5px 'Karla';color:#3a4147">Saklama &amp; tazelik</span><span style="color:#8a8270">▾</span></div>
+              <sc-if value="{{ pd.accS }}"><div style="padding:0 16px 14px"><span style="font:400 13px/1.5 'Karla';color:#6d7261">{{ pd.sto }}</span></div></sc-if>
+            </div>
+            <div style="padding:12px 18px 4px;display:flex;flex-direction:column;gap:10px">
+              <span style="font:600 17px 'Lora';color:#343b41">Değerlendirmeler</span>
+              <sc-if value="{{ pd.hasRev }}">
+                <sc-for list="{{ pd.revs }}" as="r" hint-placeholder-count="2">
+                  <div style="background:#fff;border-radius:18px;box-shadow:0 1px 3px rgba(58,65,71,.08);padding:12px 14px;display:flex;flex-direction:column;gap:4px">
+                    <div style="display:flex;justify-content:space-between"><span style="font:700 12.5px 'Karla';color:#3a4147">{{ r.a }}</span><span style="font:400 12px 'Karla';color:#d9a441">{{ r.stars }}</span></div>
+                    <span style="font:400 13px/1.5 'Karla';color:#6d7261">{{ r.t }}</span>
+                  </div>
+                </sc-for>
+              </sc-if>
+              <sc-if value="{{ pd.noRev }}"><span style="font:400 13px/1.5 'Karla';color:#8a8270;background:#f0e9d6;border-radius:14px;padding:14px 16px">Henüz yorum yok — bu ürünü satın alırsanız teslimattan sonra ilk yorumu siz bırakabilirsiniz.</span></sc-if>
+            </div>
+            <sc-if value="{{ pd.hasRel }}">
+              <div style="padding:12px 0 4px;display:flex;flex-direction:column;gap:10px">
+                <span style="font:600 17px 'Lora';color:#343b41;margin:0 18px">Benzer lezzetler</span>
+                <div style="display:flex;gap:12px;overflow-x:auto;padding:2px 18px 6px">
+                  <sc-for list="{{ pd.rel }}" as="p" hint-placeholder-count="3">
+                    <div style="flex:none;width:132px;background:#fff;border-radius:18px;box-shadow:0 1px 3px rgba(58,65,71,.08);overflow:hidden" onClick="{{ p.open }}">
+                      <div style="aspect-ratio:4/3"><image-slot id="rel-{{ p.img }}" shape="rect" placeholder="{{ p.n }}"></image-slot></div>
+                      <div style="padding:9px 11px;display:flex;flex-direction:column;gap:2px"><span style="font:700 12px 'Karla';color:#3a4147">{{ p.n }}</span><span style="font:700 13px 'Karla';color:#4a6121">{{ p.priceF }}</span></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <div style="height:108px"></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vPackage }}">
+          <div data-screen-label="Paket Detay" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(250,246,236,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #ece5d2">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 16px 'Lora';color:#343b41;flex:1">Hazır Paket</span>
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background .15s" style-active="background:#ece5d2" onClick="{{ pkShare }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#343b41" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 6.5 12 3l4 3.5M6.5 10H5.8A1.8 1.8 0 0 0 4 11.8v7A1.8 1.8 0 0 0 5.8 20.5h12.4a1.8 1.8 0 0 0 1.8-1.7v-7a1.8 1.8 0 0 0-1.8-1.8h-.7"></path></svg></div>
+            </div>
+            <div style="aspect-ratio:16/10;position:relative">
+              <image-slot id="{{ pk.img }}" shape="rect" placeholder="{{ pk.n }} — kutu açılmış, ürünler bir arada"></image-slot>
+              <sc-if value="{{ pk.so }}"><span style="position:absolute;top:14px;left:14px;background:#3a4147;color:#f3efe2;font:700 12px 'Karla';padding:6px 12px;border-radius:12px">Tükendi</span></sc-if>
+            </div>
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+              <h1 style="margin:0;font:600 24px/1.2 'Lora';color:#343b41">{{ pk.n }}</h1>
+              <span style="font:700 24px 'Karla';color:#343b41">{{ pk.prF }} <span style="font:400 12.5px 'Karla';color:#8a8270">tek paket fiyatı · KDV dahil</span></span>
+              <sc-if value="{{ pk.noShip }}"><span style="font:600 12px 'Karla';color:#4a6121;background:#eef2e2;border-radius:10px;padding:5px 10px;width:max-content"><svg width="15" height="12" viewBox="0 0 24 19" fill="none" stroke="#4a6121" stroke-width="1.8" style="vertical-align:-1px;margin-right:6px"><path d="M1 1h13v12H1zM14 5h5l4 4v4h-9"></path><circle cx="6" cy="16" r="2.2"></circle><circle cx="18" cy="16" r="2.2"></circle></svg>Yalnız bölge içi kapıya teslim — kargoya verilmez</span></sc-if>
+              <p style="margin:0;font:400 14px/1.55 'Karla';color:#6d7261">{{ pk.d }}</p>
+              <span style="font:600 16px 'Lora';color:#343b41;margin-top:6px">Pakette neler var?</span>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ pk.items }}" as="it" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:18px;box-shadow:0 1px 3px rgba(58,65,71,.08);padding:10px 12px" onClick="{{ it.open }}">
+                    <div style="width:46px;height:46px;flex:none"><image-slot id="pkit-{{ it.img }}" radius="10" placeholder="Ürün"></image-slot></div>
+                    <span style="font:700 13px 'Karla';color:#3a4147;flex:1">{{ it.label }}</span>
+                    <span style="font:700 12.5px 'Karla';color:#8a8270">{{ it.q }}</span>
+                    <span style="color:#b3ab97;font-size:16px">›</span>
+                  </div>
+                </sc-for>
+              </div>
+              <span style="font:400 12px/1.5 'Karla';color:#8a8270">İçindekiler ve alerjen bilgileri için her ürünün kendi sayfasına bakabilirsiniz. Paket bütün olarak eklenir; içeriği değiştirilemez.</span>
+            </div>
+            <div style="height:108px"></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vKesif }}">
+          <div data-screen-label="Keşif" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(250,246,236,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #ece5d2">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 16px 'Lora';color:#343b41;flex:1">Keşif</span>
+              <span style="font:700 12.5px 'Karla';color:#8a8270">{{ kv.prog }}</span>
+            </div>
+            <sc-if value="{{ kv.cur }}">
+              <div style="padding:14px 18px 0;display:flex;flex-direction:column;gap:14px">
+                <span style="font:400 13px/1.5 'Karla';color:#6d7261;text-align:center">Bunlar <strong style="color:#4a6121">yakında gelebilir</strong> — beğendikleriniz ne getireceğimize yön verir. Henüz satışta değiller.</span>
+                <div style="position:relative;height:470px">
+                  <sc-if value="{{ kv.hasNext }}">
+                    <div style="position:absolute;inset:0;transform:scale(.94) translateY(14px);opacity:.55;background:#fff;border-radius:24px;overflow:hidden">
+                      <div style="height:65%"><image-slot id="{{ kv.next.img }}" shape="rect" placeholder="Sıradaki aday"></image-slot></div>
+                    </div>
+                  </sc-if>
+                  <div style="position:absolute;inset:0;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 12px 32px rgba(58,65,71,.14);display:flex;flex-direction:column;animation:{{ kv.anim }}">
+                    <div style="flex:1;min-height:0"><image-slot id="{{ kv.cur.img }}" shape="rect" placeholder="{{ kv.cur.n }} — iştah açan fotoğraf"></image-slot></div>
+                    <div style="padding:16px 18px 18px;display:flex;flex-direction:column;gap:6px">
+                      <span style="font:600 21px 'Lora';color:#343b41">{{ kv.cur.n }}</span>
+                      <span style="font:400 13.5px/1.5 'Karla';color:#6d7261">{{ kv.cur.d }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:center;gap:26px;padding:4px 0 20px">
+                  <div style="width:64px;height:64px;border-radius:50%;background:#fff;border:2px solid #d8cfb6;display:flex;align-items:center;justify-content:center;font:400 26px 'Karla';color:#8a8270;box-shadow:0 4px 14px rgba(58,65,71,.1);transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ kv.pass }}">✕</div>
+                  <div style="width:64px;height:64px;border-radius:50%;background:#5f7a2c;display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;box-shadow:0 6px 18px rgba(95,122,44,.4);transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ kv.like }}"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M12 20.5C6 15.5 3 12.3 3 8.8 3 6.2 5 4.5 7.3 4.5c1.8 0 3.4 1 4.7 2.7 1.3-1.7 2.9-2.7 4.7-2.7C19 4.5 21 6.2 21 8.8c0 3.5-3 6.7-9 11.7z" fill="#fff"></path></svg></div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ kv.done }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:80px 36px;text-align:center">
+                <div style="width:88px;height:88px;border-radius:50%;background:#eef2e2;display:flex;align-items:center;justify-content:center;font-size:38px;animation:pop .5s ease">✦</div>
+                <span style="font:600 22px 'Lora';color:#343b41">Hepsi bu kadardı — teşekkürler!</span>
+                <span style="font:400 13.5px/1.55 'Karla';color:#6d7261">Beğenileriniz hangi lezzetleri getireceğimize yön veriyor. Yeni adaylar geldikçe burası yeniden dolar.</span>
+                <sc-if value="{{ kv.ptsShow }}"><span style="background:#f9ede2;color:#b05c2e;font:700 14px 'Karla';padding:9px 18px;border-radius:18px">{{ kv.award }}</span></sc-if>
+                <sc-if value="{{ kv.loginHint }}"><span style="font:400 12.5px 'Karla';color:#8a8270">Giriş yaparsanız keşif turları puan kazandırır.</span><span style="border:1.5px solid #cddbb0;color:#4a6121;font:700 13px 'Karla';padding:10px 20px;border-radius:20px" onClick="{{ kv.loginGo }}">Hızlı doğrulama</span></sc-if>
+                <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:24px;margin-top:6px" onClick="{{ kv.goCat }}">Kataloğa dön</span>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vCart }}">
+          <div data-screen-label="Sepet" style="animation:tabIn .25s ease;display:flex;flex-direction:column;gap:12px;padding:10px 18px 0">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;padding-top:6px"><h1 style="margin:0;font:600 24px 'Lora';color:#343b41">Sepet</h1><span style="font:600 13px 'Karla';color:#8a8270">{{ cv.cnt }}</span></div>
+            <sc-if value="{{ cv.empty }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:70px 30px;text-align:center">
+                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.5 11h-13zM8 9c0-4.5 8-4.5 8 0"></path></svg>
+                <span style="font:600 19px 'Lora';color:#343b41">Sepetiniz boş</span>
+                <span style="font:400 13.5px 'Karla';color:#8a8270">Anadolu'nun lezzetleri sizi bekliyor.</span>
+                <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:12px 24px;border-radius:22px;margin-top:4px" onClick="{{ cv.browse }}">Kataloğa göz at</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ cv.notEmpty }}">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ cv.pkgs }}" as="l" hint-placeholder-count="1">
+                  <div style="background:#3a4147;color:#f3efe2;border-radius:16px;padding:12px 14px;display:flex;gap:12px;align-items:center">
+                    <div style="width:56px;height:56px;flex:none"><image-slot id="crtp-{{ l.img }}" radius="10" placeholder="Paket"></image-slot></div>
+                    <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                      <span style="font:600 10px 'Karla';letter-spacing:.09em;text-transform:uppercase;color:#a9c46b">Hazır Paket</span>
+                      <span style="font:700 13.5px 'Karla'">{{ l.n }}</span>
+                      <span style="font:400 11px/1.4 'Karla';color:#c9cdc2">{{ l.cnt }}</span>
+                      <span style="font:700 14px 'Karla';margin-top:2px">{{ l.totF }}</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                      <div style="display:flex;align-items:center;background:rgba(243,239,226,.12);border-radius:18px">
+                        <div style="width:34px;height:36px;display:flex;align-items:center;justify-content:center;font:400 19px 'Karla';color:#f3efe2" onClick="{{ l.dec }}">−</div>
+                        <span style="width:22px;text-align:center;font:700 14px 'Karla'">{{ l.qty }}</span>
+                        <div style="width:34px;height:36px;display:flex;align-items:center;justify-content:center;font:400 19px 'Karla';color:#f3efe2" onClick="{{ l.inc }}">+</div>
+                      </div>
+                      <span style="font:600 11px 'Karla';color:#c9cdc2;text-decoration:underline" onClick="{{ l.del }}">kaldır</span>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-for list="{{ cv.lines }}" as="l" hint-placeholder-count="2">
+                  <div style="background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(58,65,71,.08);padding:12px 14px;display:flex;gap:12px;align-items:center">
+                    <div style="width:56px;height:56px;flex:none"><image-slot id="crt-{{ l.img }}" radius="10" placeholder="Ürün"></image-slot></div>
+                    <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                      <span style="font:700 13.5px 'Karla';color:#3a4147">{{ l.n }}</span>
+                      <span style="font:400 11.5px 'Karla';color:#8a8270">{{ l.l }} · {{ l.unitF }}</span>
+                      <sc-if value="{{ l.disc }}"><span style="font:600 10.5px 'Karla';color:#b05c2e;background:#f9ede2;border-radius:9px;padding:2px 7px;width:max-content">İndirimli fiyat</span></sc-if>
+                      <span style="font:700 14px 'Karla';color:#343b41;margin-top:2px">{{ l.totF }}</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                      <div style="display:flex;align-items:center;border:1.5px solid #e0d8c2;border-radius:18px">
+                        <div style="width:34px;height:36px;display:flex;align-items:center;justify-content:center;font:400 19px 'Karla';color:#5f7a2c" onClick="{{ l.dec }}">−</div>
+                        <span style="width:22px;text-align:center;font:700 14px 'Karla';color:#343b41">{{ l.qty }}</span>
+                        <div style="width:34px;height:36px;display:flex;align-items:center;justify-content:center;font:400 19px 'Karla';color:#5f7a2c" onClick="{{ l.inc }}">+</div>
+                      </div>
+                      <span style="font:600 11px 'Karla';color:#8a8270;text-decoration:underline" onClick="{{ l.del }}">kaldır</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-if value="{{ cv.applied }}">
+                  <div style="display:flex;align-items:center;justify-content:space-between;background:#eef2e2;border:1px solid #cddbb0;border-radius:14px;padding:11px 14px">
+                    <span style="font:700 13px 'Karla';color:#4a6121"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4a6121" stroke-width="1.8" style="vertical-align:-2px;margin-right:6px"><path d="M3 9V6h18v3a2 2 0 0 0 0 6v3H3v-3a2 2 0 0 0 0-6z"></path></svg>{{ cv.applied }} uygulandı</span>
+                    <span style="font:600 12px 'Karla';color:#4a6121;text-decoration:underline" onClick="{{ cv.removeC }}">kaldır</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ cv.noCoupon }}">
+                  <div style="display:flex;gap:8px">
+                    <div style="flex:1;display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:18px;box-shadow:0 1px 3px rgba(58,65,71,.08);padding:14px 16px;transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ cv.couponOpen }}"><span style="display:flex;align-items:center;gap:9px;font:700 13px 'Karla';color:#3a4147"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b05c2e" stroke-width="1.8"><path d="M3 9V6h18v3a2 2 0 0 0 0 6v3H3v-3a2 2 0 0 0 0-6z"></path></svg>Kupon kodu ekle</span><span style="color:#b3ab97">›</span></div>
+                  </div>
+                </sc-if>
+                
+              </div>
+              <div style="background:#f0e9d6;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;font:400 13.5px 'Karla';color:#6d7261"><span>Ara toplam</span><span>{{ cv.subF }}</span></div>
+                <sc-if value="{{ cv.discRow }}"><div style="display:flex;justify-content:space-between;font:600 13.5px 'Karla';color:#4a6121"><span>{{ cv.discLabel }}</span><span>{{ cv.discF }}</span></div></sc-if>
+                <div style="display:flex;justify-content:space-between;font:700 16px 'Karla';color:#343b41;border-top:1px solid #e0d8c2;padding-top:8px"><span>Toplam</span><span>{{ cv.grandF }}</span></div>
+                <span style="font:400 11.5px/1.45 'Karla';color:#8a8270">Fiyatlar KDV dahildir. Teslimat şekli ve varsa kargo ücreti bir sonraki adımda adresinize göre belirlenir.</span>
+              </div>
+              <sc-if value="{{ cv.minMsg }}"><span style="font:600 12.5px 'Karla';color:#b05c2e;background:#f9ede2;border-radius:12px;padding:10px 14px">{{ cv.minMsg }}</span></sc-if>
+              <span style="font:700 13.5px 'Karla';color:#5f7a2c;text-align:center;padding:2px" onClick="{{ cv.browse }}">← Alışverişe devam et</span>
+              <div style="height:120px"></div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vCheckout }}">
+          <div data-screen-label="Checkout" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(250,246,236,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #ece5d2">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 16px 'Lora';color:#343b41">Siparişi tamamla</span>
+            </div>
+            <div style="padding:14px 18px 30px;display:flex;flex-direction:column;gap:16px">
+              <sc-if value="{{ ck.logged }}">
+                <div style="display:flex;align-items:center;gap:10px;background:#eef2e2;border:1px solid #cddbb0;border-radius:14px;padding:12px 14px">
+                  <span style="font:700 14px 'Karla';color:#4a6121">✓</span><span style="font:600 13px 'Karla';color:#3a4147">{{ ck.who }}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ ck.guest }}">
+                <div style="background:#fff;border:1.5px solid #d8cfb6;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px">
+                  <span style="font:700 14px 'Karla';color:#3a4147">Siparişinizi tamamlamak için hızlı doğrulama</span>
+                  <span style="font:400 12.5px 'Karla';color:#8a8270">Şifre yok — birkaç saniyede doğrulanın, kaldığınız yerden devam edin.</span>
+                  <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:12px 22px;border-radius:22px;width:max-content" onClick="{{ ck.loginGo }}">Doğrulan ve devam et</span>
+                </div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:600 16px 'Lora';color:#343b41">Teslimat adresi</span>
+                <sc-for list="{{ ck.addrs }}" as="a" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:10px;padding:13px 15px;border-radius:14px;background:{{ a.bg }};border:1.5px solid {{ a.bd }}" onClick="{{ a.pick }}">
+                    <div style="display:flex;flex-direction:column;gap:2px;flex:1"><span style="font:700 13px 'Karla';color:#3a4147">{{ a.n }} <sc-if value="{{ a.def }}"><span style="font:600 10.5px 'Karla';color:#4a6121;background:#eef2e2;border-radius:8px;padding:2px 7px">varsayılan</span></sc-if></span><span style="font:400 12px 'Karla';color:#8a8270">{{ a.line }}</span></div>
+                  </div>
+                </sc-for>
+                <span style="font:700 13px 'Karla';color:#5f7a2c;padding:2px" onClick="{{ ck.addNew }}">＋ Yeni adres ekle</span>
+              </div>
+              <sc-if value="{{ ck.noShipBlock }}">
+                <div style="background:#f4e3e0;border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:4px">
+                  <span style="font:700 13px 'Karla';color:#a44a3f">Bu ürünler yalnız teslimat bölgemizde</span>
+                  <span style="font:400 12.5px/1.45 'Karla';color:#a44a3f">{{ ck.noShipNames }} kargoyla gönderilemiyor. Bölge içi (67) bir adres seçin ya da bu ürünleri sepetten çıkarın.</span>
+                </div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:600 16px 'Lora';color:#343b41">Teslimat</span>
+                <div style="background:#fff;border-radius:18px;box-shadow:0 1px 3px rgba(58,65,71,.08);padding:13px 15px;display:flex;flex-direction:column;gap:3px">
+                  <span style="font:700 13.5px 'Karla';color:#3a4147">{{ ck.modeT }}</span>
+                  <span style="font:400 12.5px 'Karla';color:#8a8270">{{ ck.modeSub }}</span>
+                  <sc-if value="{{ ck.kargoRow }}"><span style="font:600 13px 'Karla';color:#4a6121;margin-top:3px">Kargo ücreti: {{ ck.feeF }}</span></sc-if>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <sc-for list="{{ ck.days }}" as="d" hint-placeholder-count="2">
+                    <span style="font:700 12.5px 'Karla';color:#3a4147;padding:11px 16px;border-radius:14px;background:{{ d.bg }};border:1.5px solid {{ d.bd }}" onClick="{{ d.pick }}">{{ d.d }}</span>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:600 16px 'Lora';color:#343b41">Ödeme</span>
+                <sc-for list="{{ ck.pays }}" as="p" hint-placeholder-count="2">
+                  <div style="display:flex;flex-direction:column;gap:2px;padding:13px 15px;border-radius:14px;background:{{ p.bg }};border:1.5px solid {{ p.bd }}" onClick="{{ p.pick }}">
+                    <span style="font:700 13.5px 'Karla';color:#3a4147">{{ p.l }}</span><span style="font:400 12px 'Karla';color:#8a8270">{{ p.sb }}</span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ ck.kapidaNote }}"><span style="font:400 12px 'Karla';color:#8a8270">{{ ck.kapidaNote }}</span></sc-if>
+              </div>
+              <div style="background:#f0e9d6;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:7px">
+                <span style="font:600 15px 'Lora';color:#343b41">Özet</span>
+                <sc-for list="{{ ck.sumLines }}" as="l" hint-placeholder-count="2">
+                  <div style="display:flex;justify-content:space-between;gap:10px;font:400 12.5px 'Karla';color:#6d7261"><span>{{ l.t }}</span><span style="flex:none">{{ l.f }}</span></div>
+                </sc-for>
+                <div style="display:flex;justify-content:space-between;font:400 13px 'Karla';color:#6d7261;border-top:1px solid #e0d8c2;padding-top:7px"><span>Ara toplam</span><span>{{ ck.subF }}</span></div>
+                <sc-if value="{{ ck.discRow }}"><div style="display:flex;justify-content:space-between;font:600 13px 'Karla';color:#4a6121"><span>İndirim</span><span>{{ ck.discF }}</span></div></sc-if>
+                <div style="display:flex;justify-content:space-between;font:400 13px 'Karla';color:#6d7261"><span>Teslimat</span><span>{{ ck.feeF }}</span></div>
+                <div style="display:flex;justify-content:space-between;font:700 16px 'Karla';color:#343b41"><span>Genel toplam</span><span>{{ ck.grandF }}</span></div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start" onClick="{{ ck.mktT }}">
+                <div style="width:22px;height:22px;border-radius:7px;border:1.5px solid #cdc4a8;background:{{ ck.mktBg }};display:flex;align-items:center;justify-content:center;color:#fff;font:700 13px 'Karla';flex:none">✓</div>
+                <span style="font:400 12.5px/1.45 'Karla';color:#6d7261">Kampanya ve yeni ürünlerden e-posta/WhatsApp ile haberdar olmak istiyorum. (İsteğe bağlı — siparişinizi etkilemez.)</span>
+              </div>
+              <sc-if value="{{ ck.block }}"><span style="font:600 12.5px 'Karla';color:#b05c2e;text-align:center">{{ ck.block }}</span></sc-if>
+              <div style="background:{{ ck.btnBg }};color:#fff;font:700 15.5px 'Karla';border-radius:26px;height:54px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ ck.confirm }}">{{ ck.confirmLabel }}</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vPayment }}">
+          <div data-screen-label="Ödeme" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%;background:#f0e9d6">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 14px">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ pm.cancel }}">‹</div>
+              <span style="font:600 16px 'Lora';color:#343b41;flex:1">Güvenli ödeme</span>
+              <span style="font:700 11px 'Karla';color:#8a8270;letter-spacing:.06em">🔒 LEZZET·PAY</span>
+            </div>
+            <div style="margin:18px;background:#fff;border-radius:20px;padding:22px 20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 10px 30px rgba(58,65,71,.1)">
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="font:400 12.5px 'Karla';color:#8a8270">Ödenecek tutar</span><span style="font:700 30px 'Karla';color:#343b41">{{ pm.amountF }}</span></div>
+              <sc-if value="{{ pm.idle }}">
+                <input placeholder="Kart numarası" style="border:1.5px solid #d8cfb6;border-radius:14px;padding:14px 16px;font:400 15px 'Karla';color:#3a4147;outline:none;letter-spacing:.05em">
+                <div style="display:flex;gap:10px">
+                  <input placeholder="AA/YY" style="width:110px;border:1.5px solid #d8cfb6;border-radius:14px;padding:14px 16px;font:400 15px 'Karla';color:#3a4147;outline:none">
+                  <input placeholder="CVC" style="flex:1;border:1.5px solid #d8cfb6;border-radius:14px;padding:14px 16px;font:400 15px 'Karla';color:#3a4147;outline:none">
+                </div>
+                <div style="background:#5f7a2c;color:#fff;font:700 15.5px 'Karla';border-radius:26px;height:54px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ pm.pay }}">{{ pm.amountF }} öde</div>
+                <span style="font:400 11.5px 'Karla';color:#8a8270;text-align:center">Demo ödeme sayfası — herhangi bir değerle devam edebilirsiniz.</span>
+              </sc-if>
+              <sc-if value="{{ pm.busy }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:26px 0">
+                  <div style="width:44px;height:44px;border-radius:50%;border:4px solid #eef2e2;border-top-color:#5f7a2c;animation:spin .8s linear infinite"></div>
+                  <span style="font:600 14px 'Karla';color:#6d7261">Ödemeniz işleniyor…</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ pm.ok }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px 0">
+                  <div style="width:64px;height:64px;border-radius:50%;background:#5f7a2c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;animation:pop .45s ease">✓</div>
+                  <span style="font:600 16px 'Lora';color:#343b41">Ödeme alındı</span>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vConfirm }}">
+          <div data-screen-label="Sipariş Onayı" style="animation:pageIn .28s ease;display:flex;flex-direction:column;align-items:center;gap:14px;padding:70px 30px 30px;text-align:center">
+            <div style="width:92px;height:92px;border-radius:50%;background:#5f7a2c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:42px;animation:pop .5s ease">✓</div>
+            <h1 style="margin:0;font:600 26px 'Lora';color:#343b41">Siparişiniz alındı!</h1>
+            <span style="font:600 14px 'Karla';color:#8a8270">Sipariş no: <span style="color:#343b41">{{ cf.ref }}</span></span>
+            <div style="background:#f0e9d6;border-radius:16px;padding:14px 18px;display:flex;flex-direction:column;gap:6px;width:100%">
+              <div style="display:flex;justify-content:space-between;font:600 13px 'Karla';color:#3a4147"><span>Teslimat</span><span>{{ cf.day }}</span></div>
+              <div style="display:flex;justify-content:space-between;font:600 13px 'Karla';color:#3a4147"><span>Ödeme</span><span>{{ cf.label }}</span></div>
+              <div style="display:flex;justify-content:space-between;font:700 15px 'Karla';color:#343b41;border-top:1px solid #e0d8c2;padding-top:6px"><span>Toplam</span><span>{{ cf.totF }}</span></div>
+            </div>
+            <sc-if value="{{ cf.ptsF }}"><span style="background:#f9ede2;color:#b05c2e;font:700 13.5px 'Karla';padding:9px 18px;border-radius:18px">✦ {{ cf.ptsF }}</span></sc-if>
+            <span style="font:400 12.5px/1.5 'Karla';color:#8a8270">Sipariş durumunuzu e-posta ve WhatsApp bildirimlerinden takip edebilirsiniz.</span>
+            <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:8px">
+              <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ cf.goOrders }}">Siparişlerimi görüntüle</div>
+              <div style="border:1.5px solid #d8cfb6;color:#3a4147;font:700 14.5px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ cf.goHome }}">Alışverişe dön</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vOrders }}">
+          <div data-screen-label="Siparişler" style="animation:tabIn .25s ease;display:flex;flex-direction:column;gap:12px;padding:10px 18px 20px">
+            <h1 style="margin:0;font:600 24px 'Lora';color:#343b41;padding-top:6px">Siparişlerim</h1>
+            <sc-if value="{{ ov.guest }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 30px;text-align:center">
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3h11v18l-1.9-1.5L13.7 21l-1.8-1.5L10 21l-1.8-1.5L6.5 21zM9.5 8h5M9.5 12h4"></path></svg>
+                <span style="font:600 18px 'Lora';color:#343b41">Siparişleriniz için hızlı doğrulama</span>
+                <span style="font:400 13px/1.5 'Karla';color:#8a8270">Şifre yok — e-posta, Google veya WhatsApp ile birkaç saniyede doğrulanın.</span>
+                <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:24px" onClick="{{ ov.loginGo }}">Hızlı doğrulama</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ ov.show }}">
+              <sc-for list="{{ ov.rows }}" as="o" hint-placeholder-count="3">
+                <div style="background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(58,65,71,.08);padding:14px 16px;display:flex;flex-direction:column;gap:9px">
+                  <div style="display:flex;align-items:center;justify-content:space-between" onClick="{{ o.open }}">
+                    <div style="display:flex;flex-direction:column;gap:2px"><span style="font:700 14px 'Karla';color:#3a4147">{{ o.ref }}</span><span style="font:400 12px 'Karla';color:#8a8270">{{ o.dt }} · {{ o.cnt }}</span></div>
+                    <span style="font:700 11.5px 'Karla';color:{{ o.stFg }};background:{{ o.stBg }};border-radius:11px;padding:5px 11px">{{ o.st }}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #f0e9d6;padding-top:9px">
+                    <span style="font:700 15px 'Karla';color:#343b41" onClick="{{ o.open }}">{{ o.totF }}</span>
+                    <div style="display:flex;gap:8px">
+                      <span style="border:1.5px solid #cddbb0;color:#4a6121;font:700 12px 'Karla';padding:9px 14px;border-radius:18px" onClick="{{ o.re }}">↻ Tekrar sipariş</span>
+                      <span style="font:700 12px 'Karla';color:#8a8270;padding:9px 6px" onClick="{{ o.open }}">Detay ›</span>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vOrder }}">
+          <div data-screen-label="Sipariş Detay" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(250,246,236,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #ece5d2">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 16px 'Lora';color:#343b41;flex:1">{{ od.ref }}</span>
+              <span style="font:700 11.5px 'Karla';color:{{ od.stFg }};background:{{ od.stBg }};border-radius:11px;padding:5px 11px">{{ od.st }}</span>
+            </div>
+            <div style="padding:16px 18px 30px;display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;flex-direction:column;gap:10px;background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(58,65,71,.08);padding:16px">
+                <sc-for list="{{ od.timeline }}" as="t" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:10px"><div style="width:12px;height:12px;border-radius:50%;background:{{ t.dot }};flex:none"></div><span style="font:{{ t.w }} 13px 'Karla';color:{{ t.col }}">{{ t.n }}</span></div>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:600 16px 'Lora';color:#343b41">Kalemler</span>
+                <sc-for list="{{ od.items }}" as="l" hint-placeholder-count="3">
+                  <div style="display:flex;justify-content:space-between;gap:10px;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(58,65,71,.07);padding:11px 14px">
+                    <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 13px 'Karla';color:#3a4147">{{ l.t }}</span><span style="font:400 11.5px 'Karla';color:#8a8270">{{ l.l2 }}</span></div>
+                    <span style="font:700 13px 'Karla';color:#343b41;flex:none">{{ l.f }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="background:#f0e9d6;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;justify-content:space-between;font:400 13px 'Karla';color:#6d7261"><span>Teslimat</span><span style="text-align:right">{{ od.day }}</span></div>
+                <div style="display:flex;justify-content:space-between;gap:14px;font:400 13px 'Karla';color:#6d7261"><span style="flex:none">Adres</span><span style="text-align:right">{{ od.addr }}</span></div>
+                <div style="display:flex;justify-content:space-between;font:400 13px 'Karla';color:#6d7261"><span>Ödeme</span><span>{{ od.pay }}</span></div>
+                <div style="display:flex;justify-content:space-between;font:700 15px 'Karla';color:#343b41;border-top:1px solid #e0d8c2;padding-top:7px"><span>Toplam</span><span>{{ od.totF }}</span></div>
+              </div>
+              <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ od.re }}">↻ Tekrar sipariş ver</div>
+              <sc-if value="{{ od.delivered }}"><div style="border:1.5px solid #cddbb0;color:#4a6121;font:700 14px 'Karla';border-radius:26px;height:50px;display:flex;align-items:center;justify-content:center" onClick="{{ od.fb }}">★ Ürünleri değerlendir</div></sc-if>
+              <span style="font:700 13px 'Karla';color:#b05c2e;text-align:center;padding:4px" onClick="{{ od.talep }}">Bir sorun mu var? Bize yazın</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vLogin }}">
+          <div data-screen-label="Hızlı Doğrulama" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 14px">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ lg.cancel }}">‹</div>
+            </div>
+            <div style="padding:20px 26px;display:flex;flex-direction:column;gap:16px">
+              <img src="assets/logo.jpg" style="height:52px;mix-blend-mode:multiply;align-self:flex-start" alt="Lezzet Anatolia">
+              <h1 style="margin:0;font:600 26px/1.25 'Lora';color:#343b41">Birkaç saniyede<br>doğrulanın</h1>
+              <span style="font:400 13.5px/1.5 'Karla';color:#6d7261">Şifre yok, form yok. İster yeni ister dönen müşteri olun — aynı yoldan devam edersiniz.</span>
+              <sc-if value="{{ lg.mNull }}">
+                <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+                  <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #d8cfb6;border-radius:26px;height:54px;padding:0 20px" onClick="{{ lg.g }}"><span style="font:700 16px 'Karla';color:#4285f4">G</span><span style="font:700 14px 'Karla';color:#3a4147">Google ile devam et</span></div>
+                  <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #d8cfb6;border-radius:26px;height:54px;padding:0 20px" onClick="{{ lg.w }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#25d366" stroke-width="1.9" stroke-linejoin="round"><path d="M21 11.5c0 3.9-4 7-9 7-1.1 0-2.1-.15-3.1-.42L4.5 19.5l1.3-3.1C4.3 15.1 3 13.4 3 11.5c0-3.9 4-7 9-7s9 3.1 9 7z"></path></svg><span style="font:700 14px 'Karla';color:#3a4147">WhatsApp ile devam et</span></div>
+                  <div style="display:flex;align-items:center;gap:12px;background:#5f7a2c;border-radius:26px;height:54px;padding:0 20px" onClick="{{ lg.e }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2"></rect><path d="m4 7.5 8 6 8-6"></path></svg><span style="font:700 14px 'Karla';color:#fff">E-posta ile devam et</span></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ lg.emailShown }}">
+                <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+                  <sc-if value="{{ lg.notSent }}">
+                    <input value="{{ lg.email }}" onChange="{{ lg.onEmail }}" placeholder="E-posta adresiniz" style="border:1.5px solid #d8cfb6;border-radius:26px;height:54px;padding:0 22px;font:400 15px 'Karla';color:#3a4147;background:#fff;outline:none">
+                    <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:26px;height:54px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ lg.send }}">Tek kullanımlık kod gönder</div>
+                  </sc-if>
+                  <sc-if value="{{ lg.sent }}">
+                    <span style="font:600 13.5px 'Karla';color:#3a4147">{{ lg.email }} adresine kod gönderdik.</span>
+                    <input value="{{ lg.code }}" onChange="{{ lg.onCode }}" placeholder="• • • •" inputMode="numeric" style="border:1.5px solid #5f7a2c;border-radius:20px;height:62px;padding:0 22px;font:700 26px 'Karla';color:#343b41;background:#fff;outline:none;text-align:center;letter-spacing:.5em">
+                    <span style="font:400 12px 'Karla';color:#8a8270;text-align:center">Demo: herhangi 4 rakam girin</span>
+                    <span style="font:700 13px 'Karla';color:#5f7a2c;text-align:center" onClick="{{ lg.resend }}">Kod gelmedi mi? Yeniden gönder</span>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <sc-if value="{{ lg.busy }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:26px 0">
+                  <div style="width:40px;height:40px;border-radius:50%;border:4px solid #eef2e2;border-top-color:#5f7a2c;animation:spin .8s linear infinite"></div>
+                  <span style="font:600 13.5px 'Karla';color:#6d7261">Doğrulanıyor…</span>
+                </div>
+              </sc-if>
+              <span style="font:400 11.5px/1.5 'Karla';color:#9a917c;margin-top:10px">Doğrulanarak <span style="color:#5f7a2c;text-decoration:underline" onClick="{{ goGizlilik }}">gizlilik politikamızı</span> kabul etmiş olursunuz. Hangi yolu seçerseniz seçin aynı hesabınıza ulaşırsınız.</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vHesap }}">
+          <div data-screen-label="Hesap" style="animation:tabIn .25s ease;display:flex;flex-direction:column;gap:14px;padding:10px 18px 20px">
+            <h1 style="margin:0;font:600 24px 'Lora';color:#343b41;padding-top:6px">Hesabım</h1>
+            <sc-if value="{{ hv.guest }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 30px;text-align:center">
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 20c1.5-3.8 5.5-4.8 7.5-4.8s6 1 7.5 4.8"></path></svg>
+                <span style="font:600 18px 'Lora';color:#343b41">Hoş geldiniz</span>
+                <span style="font:400 13px/1.5 'Karla';color:#8a8270">Hesabınıza ulaşmak için birkaç saniyede doğrulanın — şifre yok.</span>
+                <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:24px" onClick="{{ hv.loginGo }}">Hızlı doğrulama</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ hv.show }}">
+              <div style="background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(58,65,71,.08);padding:16px;display:flex;align-items:center;gap:14px">
+                <div style="width:52px;height:52px;border-radius:50%;background:#eef2e2;display:flex;align-items:center;justify-content:center;font:600 20px 'Lora';color:#4a6121;flex:none">{{ hv.initial }}</div>
+                <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+                  <span style="font:700 15px 'Karla';color:#3a4147">{{ hv.pf.name }}</span>
+                  <span style="font:400 12px 'Karla';color:#8a8270">{{ hv.pf.mail }}</span>
+                  <span style="font:400 12px 'Karla';color:#8a8270">{{ hv.pf.tel }}</span>
+                </div>
+                <span style="font:700 12.5px 'Karla';color:#5f7a2c;flex:none" onClick="{{ hv.edit }}">Düzenle</span>
+              </div>
+              <sc-if value="{{ hv.comp }}">
+                <div style="background:#3a4147;color:#f3efe2;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:4px">
+                  <span style="font:600 10.5px 'Karla';letter-spacing:.09em;text-transform:uppercase;color:#a9c46b">Onaylı profesyonel hesap</span>
+                  <span style="font:700 14.5px 'Karla'">{{ hv.comp.n }}</span>
+                  <span style="font:400 12px 'Karla';color:#c9cdc2">{{ hv.comp.siret }} · {{ hv.comp.vat }}</span>
+                  <span style="font:400 11.5px 'Karla';color:#c9cdc2;margin-top:4px">Şirket bilgilerinde değişiklik için <span style="color:#a9c46b;text-decoration:underline" onClick="{{ hv.write }}">bize yazın</span>.</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ hv.ptsShow }}">
+                <div style="background:#eef2e2;border:1px solid #cddbb0;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font:600 15px 'Lora';color:#343b41">Puanlarım</span><span style="font:700 22px 'Karla';color:#4a6121">✦ {{ hv.pts }}</span></div>
+                  <span style="font:400 12px/1.45 'Karla';color:#6d7261">Sipariş, yorum ve keşif turlarıyla birikir. 200 puan = 5 € indirim kuponu.</span>
+                  <sc-if value="{{ hv.convGap }}"><span style="font:600 12px 'Karla';color:#8a8270">{{ hv.convGap }}</span></sc-if>
+                  <div style="background:{{ hv.convBg }};color:#fff;font:700 13px 'Karla';border-radius:20px;height:44px;display:flex;align-items:center;justify-content:center" onClick="{{ hv.conv }}">200 puanı 5 € kupona çevir</div>
+                  <sc-if value="{{ hv.hasCoupons }}">
+                    <sc-for list="{{ hv.coupons }}" as="c" hint-placeholder-count="1">
+                      <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px dashed #cddbb0;border-radius:12px;padding:10px 14px"><span style="font:700 13px 'Karla';color:#b05c2e"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b05c2e" stroke-width="1.8" style="vertical-align:-2px;margin-right:6px"><path d="M3 9V6h18v3a2 2 0 0 0 0 6v3H3v-3a2 2 0 0 0 0-6z"></path></svg>{{ c.code }}</span><span style="font:400 12px 'Karla';color:#8a8270">{{ c.v }}</span></div>
+                    </sc-for>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <sc-if value="{{ hv.refOn }}">
+                <div style="background:#f0e9d6;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:8px">
+                  <span style="font:600 15px 'Lora';color:#343b41">Arkadaşını getir, ikiniz de kazanın</span>
+                  <span style="font:400 12px/1.5 'Karla';color:#6d7261">Kodunuzla ilk siparişini veren arkadaşınız 5 € indirim kazanır; teslimattan sonra size de 5 € kupon yüklenir.</span>
+                  <div style="display:flex;gap:8px;align-items:center">
+                    <span style="flex:1;background:#fff;border:1.5px dashed #cdc4a8;border-radius:14px;padding:12px 14px;font:700 14px 'Karla';color:#343b41;letter-spacing:.06em;text-align:center">{{ hv.refCode }}</span>
+                    <div style="height:46px;padding:0 18px;border-radius:22px;background:#5f7a2c;color:#fff;font:700 13px 'Karla';display:flex;align-items:center;flex:none;transition:transform .12s" style-active="transform:scale(.96)" onClick="{{ hv.refShare }}">Paylaş</div>
+                  </div>
+                </div>
+              </sc-if>
+              <div style="background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(58,65,71,.08);overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 16px" onClick="{{ hv.goOrders }}"><span style="font:700 13.5px 'Karla';color:#3a4147"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:8px"><path d="M6.5 3h11v18l-1.9-1.5L13.7 21l-1.8-1.5L10 21l-1.8-1.5L6.5 21zM9.5 8h5M9.5 12h4"></path></svg>Siparişlerim</span><span style="color:#b3ab97">›</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-top:1px solid #f0e9d6" onClick="{{ hv.goTaleps }}"><span style="font:700 13.5px 'Karla';color:#3a4147"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.7" stroke-linejoin="round" style="vertical-align:-3px;margin-right:8px"><path d="M21 11.5c0 3.9-4 7-9 7-1.1 0-2.1-.15-3.1-.42L4.5 19.5l1.3-3.1C4.3 15.1 3 13.4 3 11.5c0-3.9 4-7 9-7s9 3.1 9 7z"></path></svg>Taleplerim</span><span style="color:#b3ab97">›</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-top:1px solid #f0e9d6" onClick="{{ hv.write }}"><span style="font:700 13.5px 'Karla';color:#3a4147"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.7" stroke-linejoin="round" style="vertical-align:-3px;margin-right:8px"><rect x="3" y="5.5" width="18" height="13" rx="2"></rect><path d="m4 7.5 8 6 8-6"></path></svg>Bize yazın</span><span style="color:#b3ab97">›</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-top:1px solid #f0e9d6" onClick="{{ hv.teslimat }}"><span style="display:flex;align-items:center;gap:10px;font:700 13.5px 'Karla';color:#3a4147"><svg width="17" height="14" viewBox="0 0 24 19" fill="none" stroke="#8a8270" stroke-width="1.8"><path d="M1 1h13v12H1zM14 5h5l4 4v4h-9"></path><circle cx="6" cy="16" r="2.2"></circle><circle cx="18" cy="16" r="2.2"></circle></svg>Teslimat &amp; soğuk zincir</span><span style="color:#b3ab97">›</span></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:600 16px 'Lora';color:#343b41">Adreslerim</span>
+                <sc-for list="{{ hv.addrs }}" as="a" hint-placeholder-count="2">
+                  <div style="background:#fff;border-radius:18px;box-shadow:0 1px 3px rgba(58,65,71,.08);padding:13px 15px;display:flex;align-items:center;gap:10px">
+                    <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                      <span style="font:700 13px 'Karla';color:#3a4147">{{ a.n }} <sc-if value="{{ a.def }}"><span style="font:600 10.5px 'Karla';color:#4a6121;background:#eef2e2;border-radius:8px;padding:2px 7px">varsayılan</span></sc-if></span>
+                      <span style="font:400 12px 'Karla';color:#8a8270">{{ a.line }}</span>
+                    </div>
+                    <sc-if value="{{ a.notDef }}"><span style="font:600 11.5px 'Karla';color:#8a8270;text-decoration:underline;flex:none" onClick="{{ a.mkDef }}">varsayılan yap</span></sc-if>
+                    <span style="font:700 12.5px 'Karla';color:#5f7a2c;flex:none" onClick="{{ a.edit }}">Düzenle</span>
+                  </div>
+                </sc-for>
+                <span style="font:700 13px 'Karla';color:#5f7a2c;padding:2px" onClick="{{ hv.addNew }}">＋ Yeni adres ekle</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:600 16px 'Lora';color:#343b41">Dil tercihi</span>
+                <div style="display:flex;gap:8px">
+                  <sc-for list="{{ hv.langs }}" as="l" hint-placeholder-count="3">
+                    <span style="flex:1;text-align:center;font:700 13px 'Karla';padding:12px 0;border-radius:14px;background:{{ l.bg }};color:{{ l.fg }};border:1px solid #e0d8c2" onClick="{{ l.pick }}">{{ l.l }}</span>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font:600 16px 'Lora';color:#343b41">Kampanya iletişimi</span>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 2px">
+                  <span style="font:600 13.5px 'Karla';color:#3a4147">E-posta</span>
+                  <div style="width:50px;height:30px;border-radius:16px;padding:3px;background:{{ hv.mktEBg }};display:flex;justify-content:{{ hv.mktEJc }};transition:background .2s" onClick="{{ hv.mktET }}"><div style="width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2)"></div></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 2px;border-top:1px solid #f0e9d6">
+                  <span style="font:600 13.5px 'Karla';color:#3a4147">WhatsApp</span>
+                  <div style="width:50px;height:30px;border-radius:16px;padding:3px;background:{{ hv.mktWBg }};display:flex;justify-content:{{ hv.mktWJc }};transition:background .2s" onClick="{{ hv.mktWT }}"><div style="width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2)"></div></div>
+                </div>
+                <span style="font:400 11.5px/1.45 'Karla';color:#9a917c">Kapalıyken hiçbir kampanya iletişimi almazsınız. Sipariş bildirimleri bundan etkilenmez.</span>
+              </div>
+              <div style="background:#f0e9d6;border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:4px">
+                <span style="font:700 12.5px 'Karla';color:#3a4147">Verileriniz</span>
+                <span style="font:400 11.5px/1.5 'Karla';color:#6d7261">Bilgilerinizi bu sayfada görebilir ve düzenleyebilirsiniz. Verilerinizin silinmesini bonjour@lezzetanatolia.fr adresine yazarak talep edebilirsiniz. <span style="color:#5f7a2c;text-decoration:underline" onClick="{{ hv.gizlilik }}">Gizlilik politikası</span></span>
+              </div>
+              <span style="font:700 13.5px 'Karla';color:#b05c2e;text-align:center;padding:8px" onClick="{{ hv.logout }}">Çıkış yap</span>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vTalepler }}">
+          <div data-screen-label="Talepler" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(250,246,236,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #ece5d2">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 16px 'Lora';color:#343b41;flex:1">Taleplerim</span>
+              <span style="font:700 12.5px 'Karla';color:#5f7a2c" onClick="{{ tv.nw }}">＋ Yeni</span>
+            </div>
+            <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px">
+              <sc-if value="{{ tv.empty }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 30px;text-align:center">
+                  <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.6" stroke-linejoin="round"><path d="M21 11.5c0 3.9-4 7-9 7-1.1 0-2.1-.15-3.1-.42L4.5 19.5l1.3-3.1C4.3 15.1 3 13.4 3 11.5c0-3.9 4-7 9-7s9 3.1 9 7z"></path></svg>
+                  <span style="font:600 18px 'Lora';color:#343b41">Henüz talebiniz yok</span>
+                  <span style="font:400 13px 'Karla';color:#8a8270">Bir sorunuz ya da sorununuz olursa buradan yazabilirsiniz.</span>
+                  <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:12px 24px;border-radius:22px" onClick="{{ tv.nw }}">Bize yazın</span>
+                </div>
+              </sc-if>
+              <sc-for list="{{ tv.rows }}" as="t" hint-placeholder-count="2">
+                <div style="background:#fff;border-radius:18px;box-shadow:0 1px 3px rgba(58,65,71,.08);padding:13px 15px;display:flex;align-items:center;gap:10px" onClick="{{ t.open }}">
+                  <div style="display:flex;flex-direction:column;gap:2px;flex:1"><span style="font:700 13.5px 'Karla';color:#3a4147">{{ t.tp }}</span><span style="font:400 12px 'Karla';color:#8a8270">{{ t.ord }} · {{ t.dt }}</span></div>
+                  <span style="font:700 11.5px 'Karla';color:{{ t.stFg }};background:{{ t.stBg }};border-radius:11px;padding:5px 11px">{{ t.st }}</span>
+                  <span style="color:#b3ab97">›</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vTalepD }}">
+          <div data-screen-label="Talep Detay" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(250,246,236,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #ece5d2">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <div style="display:flex;flex-direction:column;flex:1"><span style="font:600 15px 'Lora';color:#343b41">{{ td.tp }}</span><span style="font:400 11.5px 'Karla';color:#8a8270">{{ td.ord }} · {{ td.dt }}</span></div>
+              <span style="font:700 11.5px 'Karla';color:{{ td.stFg }};background:{{ td.stBg }};border-radius:11px;padding:5px 11px">{{ td.st }}</span>
+            </div>
+            <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;flex:1">
+              <sc-if value="{{ td.res }}"><div style="background:#eef2e2;border:1px solid #cddbb0;border-radius:12px;padding:11px 14px"><span style="font:600 12.5px 'Karla';color:#4a6121">✓ Sonuç: {{ td.res }}</span></div></sc-if>
+              <sc-for list="{{ td.msgs }}" as="m" hint-placeholder-count="3">
+                <div style="display:flex;justify-content:{{ m.jc }}">
+                  <span style="max-width:78%;background:{{ m.bg }};color:{{ m.fg }};border:1px solid #ece5d2;border-radius:16px;padding:11px 15px;font:400 13px/1.5 'Karla'">{{ m.t }}</span>
+                </div>
+              </sc-for>
+              <span style="font:400 11.5px 'Karla';color:#9a917c;text-align:center">Cevap geldiğinde e-posta ile haber veririz.</span>
+            </div>
+            <div style="position:sticky;bottom:0;background:#faf6ec;border-top:1px solid #ece5d2;padding:10px 18px 14px;display:flex;gap:8px">
+              <input value="{{ td.reply }}" onChange="{{ td.onReply }}" placeholder="Mesaj yazın…" style="flex:1;border:1.5px solid #d8cfb6;border-radius:22px;padding:0 18px;height:46px;font:400 13.5px 'Karla';color:#3a4147;background:#fff;outline:none">
+              <div style="width:46px;height:46px;border-radius:50%;background:#5f7a2c;color:#fff;display:flex;align-items:center;justify-content:center;flex:none;transition:transform .12s" style-active="transform:scale(.88)" onClick="{{ td.send }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linejoin="round"><path d="M21 3 3 10.5l7 3 3 7L21 3zM10 13.5 21 3"></path></svg></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vTalepNew }}">
+          <div data-screen-label="Yeni Talep" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(250,246,236,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #ece5d2">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 16px 'Lora';color:#343b41">Bize yazın</span>
+            </div>
+            <div style="padding:16px 18px 30px;display:flex;flex-direction:column;gap:14px">
+              <sc-if value="{{ tn.step0 }}">
+                <span style="font:600 19px 'Lora';color:#343b41">Bir siparişle mi ilgili?</span>
+                <span style="font:400 13px/1.5 'Karla';color:#6d7261">Sorununuzu doğru yere iletmemiz için soruyoruz.</span>
+                <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+                  <div style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';border-radius:24px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ tn.yes }}">Evet, bir siparişimle ilgili</div>
+                  <div style="border:1.5px solid #d8cfb6;color:#3a4147;font:700 14px 'Karla';border-radius:24px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ tn.no }}">Hayır, genel bir konu</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ tn.step1 }}">
+                <span style="font:600 19px 'Lora';color:#343b41">Hangi sipariş?</span>
+                <sc-for list="{{ tn.orders }}" as="o" hint-placeholder-count="3">
+                  <div style="background:#fff;border-radius:18px;box-shadow:0 1px 3px rgba(58,65,71,.08);padding:14px 16px;display:flex;justify-content:space-between;align-items:center" onClick="{{ o.pick }}">
+                    <span style="font:700 13.5px 'Karla';color:#3a4147">{{ o.ref }}</span><span style="font:400 12px 'Karla';color:#8a8270">{{ o.dt }}</span>
+                  </div>
+                </sc-for>
+              </sc-if>
+              <sc-if value="{{ tn.step2 }}">
+                <sc-if value="{{ tn.hasOrd }}">
+                  <span style="font:600 13px 'Karla';color:#8a8270">Sipariş {{ tn.ordRef }}</span>
+                  <span style="font:600 16px 'Lora';color:#343b41">Hangi ürünlerle ilgili?</span>
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <sc-for list="{{ tn.items }}" as="it" hint-placeholder-count="3">
+                      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 15px;border-radius:13px;background:{{ it.bg }};border:1.5px solid {{ it.bd }}" onClick="{{ it.tog }}">
+                        <span style="font:600 13px 'Karla';color:#3a4147">{{ it.t }}</span><span style="font:700 14px 'Karla';color:#4a6121">{{ it.mark }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <span style="font:600 16px 'Lora';color:#343b41">Konu</span>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <sc-for list="{{ tn.types }}" as="t" hint-placeholder-count="4">
+                      <span style="font:700 12.5px 'Karla';padding:10px 16px;border-radius:18px;background:{{ t.bg }};color:{{ t.fg }};border:1px solid {{ t.bd }};transition:transform .12s" style-active="transform:scale(.93)" onClick="{{ t.pick }}">{{ t.t }}</span>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <span style="font:600 16px 'Lora';color:#343b41">Bize anlatın</span>
+                <textarea value="{{ tn.msg }}" onChange="{{ tn.onMsg }}" placeholder="Kısaca anlatın — ne oldu, nasıl yardımcı olabiliriz?" style="border:1.5px solid #d8cfb6;border-radius:16px;padding:14px 16px;font:400 14px/1.5 'Karla';color:#3a4147;background:#fff;outline:none;min-height:110px;resize:none"></textarea>
+                <div style="border:1.5px dashed #cdc4a8;border-radius:14px;padding:13px 16px;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';color:#5f7a2c" onClick="{{ tn.photoT }}">{{ tn.photoL }}</div>
+                <span style="font:400 11.5px/1.45 'Karla';color:#9a917c">Fotoğraf, özellikle hasarlı ürünlerde çözümü hızlandırır — zorunlu değil.</span>
+                <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ tn.submit }}">Gönder</div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vFb }}">
+          <div data-screen-label="Geri Bildirim" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(250,246,236,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #ece5d2">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 16px 'Lora';color:#343b41;flex:1">Siparişiniz nasıldı?</span>
+              <sc-if value="{{ fv.stage0 }}"><span style="font:700 12.5px 'Karla';color:#8a8270">{{ fv.prog }}</span></sc-if>
+            </div>
+            <sc-if value="{{ fv.stage0 }}">
+              <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
+                <span style="font:400 13px/1.5 'Karla';color:#6d7261;text-align:center">{{ fv.ordRef }} siparişinizdeki ürünleri tek tek değerlendirin — bir dakikanızı almaz.</span>
+                <div style="background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 10px 28px rgba(58,65,71,.12)">
+                  <div style="aspect-ratio:4/3"><image-slot id="fb-{{ fv.cur.img }}" shape="rect" placeholder="{{ fv.cur.n }}"></image-slot></div>
+                  <div style="padding:16px 18px"><span style="font:600 20px 'Lora';color:#343b41">{{ fv.cur.n }}</span></div>
+                </div>
+                <div style="display:flex;justify-content:center;gap:26px">
+                  <div style="height:56px;padding:0 22px;border-radius:28px;background:#fff;border:2px solid #d8cfb6;display:flex;align-items:center;gap:8px;font:700 14px 'Karla';color:#8a8270" transition:transform .12s" style-active="transform:scale(.94)" onClick="{{ fv.no }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.8" stroke-linejoin="round" transform="rotate(180)"><path d="M7 11v9H4v-9h3zm3 9h7.5a2 2 0 0 0 2-1.6l1.3-6A2 2 0 0 0 18.8 10H14l.8-4.2A1.8 1.8 0 0 0 11.3 4L8 10.5V20z"></path></svg>Beğenmedim</div>
+                  <div style="height:56px;padding:0 22px;border-radius:28px;background:#5f7a2c;display:flex;align-items:center;gap:8px;font:700 14px 'Karla';color:#fff" transition:transform .12s" style-active="transform:scale(.94)" onClick="{{ fv.like }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"><path d="M7 11v9H4v-9h3zm3 9h7.5a2 2 0 0 0 2-1.6l1.3-6A2 2 0 0 0 18.8 10H14l.8-4.2A1.8 1.8 0 0 0 11.3 4L8 10.5V20z"></path></svg>Beğendim</div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ fv.stage1 }}">
+              <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+                <span style="font:600 21px 'Lora';color:#343b41">Teşekkürler! Bir şey eklemek ister misiniz?</span>
+                <span style="font:400 13px/1.5 'Karla';color:#6d7261">Kısa bir yorum bırakabilirsiniz — incelendikten sonra ürün sayfasında yayınlanır. Zorunlu değil.</span>
+                <textarea value="{{ fv.comment }}" onChange="{{ fv.onC }}" placeholder="Örn. Börek tam annemin yaptığı gibiydi…" style="border:1.5px solid #d8cfb6;border-radius:16px;padding:14px 16px;font:400 14px/1.5 'Karla';color:#3a4147;background:#fff;outline:none;min-height:100px;resize:none"></textarea>
+                <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ fv.finish }}">Değerlendirmeyi tamamla</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ fv.stage2 }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:60px 32px;text-align:center">
+                <div style="width:88px;height:88px;border-radius:50%;background:#eef2e2;display:flex;align-items:center;justify-content:center;animation:pop .5s ease"><svg width="38" height="38" viewBox="0 0 24 24"><path d="M12 20.5C6 15.5 3 12.3 3 8.8 3 6.2 5 4.5 7.3 4.5c1.8 0 3.4 1 4.7 2.7 1.3-1.7 2.9-2.7 4.7-2.7C19 4.5 21 6.2 21 8.8c0 3.5-3 6.7-9 11.7z" fill="#5f7a2c"></path></svg></div>
+                <span style="font:600 22px 'Lora';color:#343b41">Değerlendirmeniz için teşekkürler</span>
+                <sc-if value="{{ fv.ptsF }}"><span style="background:#f9ede2;color:#b05c2e;font:700 14px 'Karla';padding:9px 18px;border-radius:18px">✦ {{ fv.ptsF }}</span></sc-if>
+                <sc-if value="{{ fv.allLiked }}">
+                  <span style="font:400 13px/1.5 'Karla';color:#6d7261">Memnuniyetinizi Google'da paylaşırsanız çok seviniriz — bir dakikanızı alır.</span>
+                  <span style="background:#fff;border:1.5px solid #d8cfb6;color:#3a4147;font:700 13.5px 'Karla';padding:12px 24px;border-radius:24px" onClick="{{ fv.google }}">Google'da değerlendir ↗</span>
+                </sc-if>
+                <sc-if value="{{ fv.notAllLiked }}">
+                  <span style="font:400 13px/1.5 'Karla';color:#6d7261">Beğenmediğiniz bir ürün mü vardı? Sorunu bize iletin, düzeltelim.</span>
+                  <span style="background:#fff;border:1.5px solid #d8cfb6;color:#b05c2e;font:700 13.5px 'Karla';padding:12px 24px;border-radius:24px" onClick="{{ fv.sorun }}">Sorun bildir</span>
+                </sc-if>
+                <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:24px;margin-top:4px" onClick="{{ fv.goHome }}">Vitrine dön</span>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vPro }}">
+          <div data-screen-label="Professionnels" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(250,246,236,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #ece5d2">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 16px 'Lora';color:#343b41">Professionnels</span>
+            </div>
+            <sc-if value="{{ pr.notSent }}">
+              <div style="padding:18px;display:flex;flex-direction:column;gap:16px">
+                <div style="background:#3a4147;color:#f3efe2;border-radius:20px;padding:22px 20px;display:flex;flex-direction:column;gap:10px">
+                  <span style="font:600 10.5px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#a9c46b">Restoran · Market · Toplu Mutfak</span>
+                  <span style="font:600 23px/1.25 'Lora'">Toptan fiyatlarla, düzenli teslimat</span>
+                  <span style="font:400 13px/1.55 'Karla';color:#c9cdc2">Hacimli sipariş kolaylığı, bölge içi düzenli teslimat ve tek dokunuşla tekrar sipariş. Başvurun, hızla dönüş yapalım.</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;gap:10px;align-items:center"><span style="width:26px;height:26px;border-radius:50%;background:#eef2e2;color:#4a6121;font:700 13px 'Karla';display:flex;align-items:center;justify-content:center;flex:none">1</span><span style="font:600 13px 'Karla';color:#3a4147">Kaydolun — bir dakikada</span></div>
+                  <div style="display:flex;gap:10px;align-items:center"><span style="width:26px;height:26px;border-radius:50%;background:#eef2e2;color:#4a6121;font:700 13px 'Karla';display:flex;align-items:center;justify-content:center;flex:none">2</span><span style="font:600 13px 'Karla';color:#3a4147">Başvurunuzu inceleyelim — sonuç e-posta ile</span></div>
+                  <div style="display:flex;gap:10px;align-items:center"><span style="width:26px;height:26px;border-radius:50%;background:#eef2e2;color:#4a6121;font:700 13px 'Karla';display:flex;align-items:center;justify-content:center;flex:none">3</span><span style="font:600 13px 'Karla';color:#3a4147">Onayla birlikte fiyat listeniz açılır</span></div>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <span style="flex:1;text-align:center;font:700 13px 'Karla';padding:12px 0;border-radius:14px;background:{{ pr.frBg }};color:{{ pr.frFg }};border:1px solid #e0d8c2" onClick="{{ pr.setFr }}">Fransız şirketi</span>
+                  <span style="flex:1;text-align:center;font:700 13px 'Karla';padding:12px 0;border-radius:14px;background:{{ pr.deBg }};color:{{ pr.deFg }};border:1px solid #e0d8c2" onClick="{{ pr.setDe }}">Alman şirketi</span>
+                </div>
+                <sc-if value="{{ pr.fr }}">
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <span style="font:400 12.5px/1.5 'Karla';color:#6d7261">SIRET numaranızı girin — şirket bilgileriniz resmî kayıttan otomatik dolar.</span>
+                    <div style="display:flex;gap:8px">
+                      <input value="{{ pr.siret }}" onChange="{{ pr.onSiret }}" placeholder="SIRET (14 hane)" inputMode="numeric" style="flex:1;border:1.5px solid #d8cfb6;border-radius:22px;padding:0 18px;height:50px;font:600 14px 'Karla';color:#3a4147;background:#fff;outline:none;letter-spacing:.04em">
+                      <div style="height:50px;padding:0 20px;border-radius:22px;background:#3a4147;color:#f3efe2;font:700 13px 'Karla';display:flex;align-items:center" onClick="{{ pr.lookup }}">Bul</div>
+                    </div>
+                    <sc-if value="{{ pr.found }}">
+                      <div style="background:#eef2e2;border:1px solid #cddbb0;border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:3px">
+                        <span style="font:700 13px 'Karla';color:#4a6121">✓ {{ pr.comp }}</span>
+                        <span style="font:400 12px 'Karla';color:#6d7261">{{ pr.cadr }}</span>
+                        <span style="font:400 11.5px 'Karla';color:#8a8270">Bilgiler doğruysa iletişim bilgilerinizle devam edin.</span>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ pr.de }}">
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <input value="{{ pr.compIn }}" onChange="{{ pr.onComp }}" placeholder="Şirket unvanı" style="border:1.5px solid #d8cfb6;border-radius:22px;padding:0 18px;height:50px;font:400 14px 'Karla';color:#3a4147;background:#fff;outline:none">
+                    <div style="display:flex;gap:8px;align-items:center">
+                      <input value="{{ pr.vat }}" onChange="{{ pr.onVat }}" placeholder="USt-IdNr (DE + 9 hane)" style="flex:1;border:1.5px solid #d8cfb6;border-radius:22px;padding:0 18px;height:50px;font:600 14px 'Karla';color:#3a4147;background:#fff;outline:none">
+                      <span style="font:700 12px 'Karla';color:#4a6121;flex:none">{{ pr.vatMark }}</span>
+                    </div>
+                    <span style="font:400 11.5px 'Karla';color:#8a8270">AB vergi numaranız otomatik doğrulanır.</span>
+                  </div>
+                </sc-if>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <span style="font:600 16px 'Lora';color:#343b41">İletişim</span>
+                  <input value="{{ pr.name }}" onChange="{{ pr.onName }}" placeholder="Ad soyad" style="border:1.5px solid #d8cfb6;border-radius:22px;padding:0 18px;height:50px;font:400 14px 'Karla';color:#3a4147;background:#fff;outline:none">
+                  <input value="{{ pr.mail }}" onChange="{{ pr.onMail }}" placeholder="E-posta" style="border:1.5px solid #d8cfb6;border-radius:22px;padding:0 18px;height:50px;font:400 14px 'Karla';color:#3a4147;background:#fff;outline:none">
+                  <input value="{{ pr.tel }}" onChange="{{ pr.onTel }}" placeholder="Telefon (WhatsApp)" style="border:1.5px solid #d8cfb6;border-radius:22px;padding:0 18px;height:50px;font:400 14px 'Karla';color:#3a4147;background:#fff;outline:none">
+                </div>
+                <sc-if value="{{ pr.err }}"><span style="font:600 12.5px 'Karla';color:#b05c2e">{{ pr.err }}</span></sc-if>
+                <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ pr.submit }}">Başvuruyu gönder</div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:4px" onClick="{{ pr.wa }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#25d366" stroke-width="1.9" stroke-linejoin="round"><path d="M21 11.5c0 3.9-4 7-9 7-1.1 0-2.1-.15-3.1-.42L4.5 19.5l1.3-3.1C4.3 15.1 3 13.4 3 11.5c0-3.9 4-7 9-7s9 3.1 9 7z"></path></svg><span style="font:700 13px 'Karla';color:#5f7a2c">Sorunuz mu var? WhatsApp'tan yazın</span></div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ pr.sent }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:70px 32px;text-align:center">
+                <div style="width:88px;height:88px;border-radius:50%;background:#eef2e2;display:flex;align-items:center;justify-content:center;animation:pop .5s ease"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#4a6121" stroke-width="1.6" stroke-linejoin="round"><path d="M21 3 3 10.5l7 3 3 7L21 3zM10 13.5 21 3"></path></svg></div>
+                <span style="font:600 22px 'Lora';color:#343b41">Başvurunuz alındı</span>
+                <span style="font:400 13.5px/1.55 'Karla';color:#6d7261">İnceliyoruz — sonucu e-posta ile bildireceğiz. Fiyat listeniz onayla birlikte açılır; bu sırada kataloğu perakende fiyatlarla gezebilirsiniz.</span>
+                <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:24px;margin-top:6px" onClick="{{ pr.goCat }}">Kataloğa göz at</span>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vStatic }}">
+          <div data-screen-label="Bilgi Sayfası" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(250,246,236,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #ece5d2">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 16px 'Lora';color:#343b41">{{ sx.t }}</span>
+            </div>
+            <div style="padding:20px 22px"><p style="margin:0;font:400 14px/1.7 'Karla';color:#6d7261">{{ sx.b }}</p></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vNotif }}">
+          <div data-screen-label="Bildirimler" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(250,246,236,.95);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #ece5d2">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 16px 'Lora';color:#343b41">Bildirimler</span>
+            </div>
+            <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ nv.rows }}" as="n" hint-placeholder-count="3">
+                <div style="display:flex;gap:12px;align-items:center;background:#fff;border-radius:18px;box-shadow:0 1px 3px rgba(58,65,71,.08);padding:13px 15px;transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ n.go }}">
+                  <div style="width:40px;height:40px;border-radius:50%;background:#eef2e2;display:flex;align-items:center;justify-content:center;flex:none"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4a6121" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.ic }}"></path></svg></div>
+                  <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+                    <span style="font:700 13px 'Karla';color:#3a4147">{{ n.t }}</span>
+                    <span style="font:400 12px/1.4 'Karla';color:#8a8270">{{ n.sb }}</span>
+                    <span style="font:600 10.5px 'Karla';color:#b3ab97;margin-top:2px">{{ n.tm }}</span>
+                  </div>
+                  <sc-if value="{{ n.un }}"><span style="width:9px;height:9px;border-radius:50%;background:#b05c2e;flex:none"></span></sc-if>
+                </div>
+              </sc-for>
+              <span style="font:400 11.5px/1.5 'Karla';color:#9a917c;text-align:center;padding:6px 12px">Bildirim tercihlerinizi Hesap bölümündeki Kampanya iletişimi ayarlarından yönetebilirsiniz.</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <!--@views-->
+      </div>
+
+      <sc-if value="{{ vProduct }}">
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(250,246,236,.97);backdrop-filter:blur(8px);border-top:1px solid #e6dfcd;padding:12px 18px 22px">
+          <sc-if value="{{ pd.ok }}">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="display:flex;align-items:center;border:1.5px solid #d8cfb6;border-radius:24px;background:#fff;flex:none">
+                <div style="width:44px;height:48px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#5f7a2c" onClick="{{ pd.dec }}">−</div>
+                <span style="width:30px;text-align:center;font:700 16px 'Karla';color:#343b41">{{ pd.qty }}</span>
+                <div style="width:44px;height:48px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#5f7a2c" onClick="{{ pd.inc }}">+</div>
+              </div>
+              <div style="flex:1;background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ pd.add }}">{{ pd.addF }}</div>
+            </div>
+            <sc-if value="{{ b2bChip }}">
+              <div style="display:flex;gap:6px;justify-content:center;margin-top:8px">
+                <sc-for list="{{ pd.chips }}" as="c" hint-placeholder-count="3"><span style="font:700 12px 'Karla';color:#5f7a2c;border:1px solid #cddbb0;border-radius:14px;padding:6px 12px" onClick="{{ c.pick }}">{{ c.n }}</span></sc-for>
+              </div>
+            </sc-if>
+          </sc-if>
+          <sc-if value="{{ pd.so }}">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="flex:1;font:600 12.5px/1.4 'Karla';color:#8a8270">Tükendi — yakında yeniden gelecek</span>
+              <div style="background:{{ pd.alertBg }};color:{{ pd.alertFg }};border:1.5px solid #cddbb0;font:700 13px 'Karla';border-radius:22px;height:46px;padding:0 18px;display:flex;align-items:center;flex:none;transition:transform .12s" style-active="transform:scale(.96)" onClick="{{ pd.alertT }}">{{ pd.alertL }}</div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ vPackage }}">
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(250,246,236,.97);backdrop-filter:blur(8px);border-top:1px solid #e6dfcd;padding:12px 18px 22px">
+          <sc-if value="{{ pk.ok }}">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="display:flex;align-items:center;border:1.5px solid #d8cfb6;border-radius:24px;background:#fff;flex:none">
+                <div style="width:44px;height:48px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#5f7a2c" onClick="{{ pk.dec }}">−</div>
+                <span style="width:30px;text-align:center;font:700 16px 'Karla';color:#343b41">{{ pk.qty }}</span>
+                <div style="width:44px;height:48px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#5f7a2c" onClick="{{ pk.inc }}">+</div>
+              </div>
+              <div style="flex:1;background:#5f7a2c;color:#fff;font:700 14px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ pk.add }}">{{ pk.addF }}</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ pk.so }}">
+            <div style="background:#e9e2cf;color:#8a8270;font:700 14.5px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center">Tükendi — yakında yeniden gelecek</div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ vCart }}">
+        <sc-if value="{{ cv.notEmpty }}">
+          <div style="position:absolute;left:0;right:0;bottom:76px;z-index:44;background:rgba(250,246,236,.97);backdrop-filter:blur(8px);border-top:1px solid #e6dfcd;padding:10px 18px 12px;display:flex;align-items:center;gap:14px">
+            <div style="display:flex;flex-direction:column"><span style="font:400 11.5px 'Karla';color:#8a8270">Toplam</span><span style="font:700 19px 'Karla';color:#343b41">{{ cv.grandF }}</span></div>
+            <div style="flex:1;background:{{ cv.ckBg }};color:#fff;font:700 14.5px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ cv.goCk }}">Siparişi tamamla →</div>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ tabsVisible }}">
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:45;background:rgba(250,246,236,.96);backdrop-filter:blur(8px);border-top:1px solid #e6dfcd;padding:8px 8px 6px;display:flex">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 4px;color:{{ t.col }};position:relative" onClick="{{ t.go }}">
+              <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .18s;transform:{{ t.tf }}"><path d="{{ t.icon }}"></path></svg>
+              <span style="font:700 10.5px 'Karla'">{{ t.l }}</span>
+              <sc-if value="{{ t.badge }}"><span style="position:absolute;top:0;left:calc(50% + 6px);background:#b05c2e;color:#fff;font:700 10px 'Karla';border-radius:9px;padding:1px 6px">{{ t.badge }}</span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div style="position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:130px;height:5px;border-radius:3px;background:#343b41;opacity:.25;z-index:46"></div>
+      </sc-if>
+
+      <sc-if value="{{ shOn }}">
+        <div style="position:absolute;inset:0;z-index:70">
+          <div style="position:absolute;inset:0;background:rgba(30,33,26,.45);animation:fadeIn .25s ease" onClick="{{ shClose }}"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:#faf6ec;border-radius:26px 26px 0 0;padding:10px 20px 30px;animation:shUp .32s cubic-bezier(.2,.8,.25,1);max-height:82%;overflow-y:auto;display:flex;flex-direction:column;gap:14px">
+            <div style="width:44px;height:5px;border-radius:3px;background:#d8cfb6;margin:2px auto 0"></div>
+
+            <sc-if value="{{ shVar }}">
+              <span style="font:600 19px 'Lora';color:#343b41">{{ sv.n }}</span>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ sv.vars }}" as="v" hint-placeholder-count="2">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:14px;background:{{ v.bg }};border:1.5px solid {{ v.bd }}" onClick="{{ v.pick }}">
+                    <span style="font:700 14px 'Karla';color:#3a4147">{{ v.l }}</span><span style="font:700 14.5px 'Karla';color:#4a6121">{{ v.prF }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px">
+                <div style="display:flex;align-items:center;border:1.5px solid #d8cfb6;border-radius:22px;overflow:hidden">
+                  <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#5f7a2c" onClick="{{ sv.dec }}">−</div>
+                  <span style="width:34px;text-align:center;font:700 16px 'Karla';color:#343b41">{{ sv.qty }}</span>
+                  <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#5f7a2c" onClick="{{ sv.inc }}">+</div>
+                </div>
+                <sc-if value="{{ b2bChip }}">
+                  <div style="display:flex;gap:6px">
+                    <sc-for list="{{ sv.chips }}" as="c" hint-placeholder-count="3"><span style="font:700 12px 'Karla';color:#5f7a2c;border:1px solid #cddbb0;border-radius:14px;padding:7px 11px" onClick="{{ c.pick }}">{{ c.n }}</span></sc-for>
+                  </div>
+                </sc-if>
+              </div>
+              <div style="background:#5f7a2c;color:#fff;font:700 15.5px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ sv.add }}">{{ sv.addF }}</div>
+            </sc-if>
+
+            <sc-if value="{{ shFilter }}">
+              <span style="font:600 19px 'Lora';color:#343b41">Sırala &amp; filtrele</span>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ sf.sorts }}" as="o" hint-placeholder-count="3">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-radius:14px;background:{{ o.bg }};border:1.5px solid {{ o.bd }}" onClick="{{ o.pick }}">
+                    <span style="font:700 13.5px 'Karla';color:#3a4147">{{ o.l }}</span><sc-if value="{{ o.sel }}"><span style="color:#4a6121;font:700 15px 'Karla'">✓</span></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 2px">
+                <span style="font:700 14px 'Karla';color:#3a4147">Sadece indirimliler</span>
+                <div style="width:50px;height:30px;border-radius:16px;padding:3px;background:{{ sf.tBg }};display:flex;justify-content:{{ sf.tJc }};transition:background .2s" onClick="{{ sf.discT }}"><div style="width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2)"></div></div>
+              </div>
+              <div style="display:flex;gap:10px">
+                <div style="flex:1;border:1.5px solid #d8cfb6;color:#3a4147;font:700 14px 'Karla';border-radius:24px;height:48px;display:flex;align-items:center;justify-content:center" onClick="{{ sf.clear }}">Temizle</div>
+                <div style="flex:1.4;background:#5f7a2c;color:#fff;font:700 14px 'Karla';border-radius:24px;height:48px;display:flex;align-items:center;justify-content:center" onClick="{{ shClose }}">Göster</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ shAddr }}">
+              <span style="font:600 19px 'Lora';color:#343b41">{{ sa.title }}</span>
+              <input value="{{ sa.n }}" onChange="{{ sa.onN }}" placeholder="Etiket (Ev, Ofis…)" style="border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#3a4147;background:#fff;outline:none">
+              <input value="{{ sa.l }}" onChange="{{ sa.onL }}" placeholder="Adres" style="border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#3a4147;background:#fff;outline:none">
+              <div style="display:flex;gap:10px">
+                <input value="{{ sa.zip }}" onChange="{{ sa.onZ }}" placeholder="Posta kodu" style="width:120px;border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#3a4147;background:#fff;outline:none">
+                <input value="{{ sa.city }}" onChange="{{ sa.onC }}" placeholder="Şehir" style="flex:1;border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#3a4147;background:#fff;outline:none">
+              </div>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">67 ile başlayan posta kodları teslimat bölgemizdedir — kapıya ücretsiz teslim.</span>
+              <div style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ sa.save }}">Kaydet</div>
+              <sc-if value="{{ sa.del }}"><span style="font:700 13px 'Karla';color:#b05c2e;text-align:center;padding:4px" onClick="{{ sa.del }}">Adresi sil</span></sc-if>
+            </sc-if>
+
+            <sc-if value="{{ shCoupon }}">
+              <span style="font:600 19px 'Lora';color:#343b41">Kupon kodu</span>
+              <input value="{{ cv.couponIn }}" onChange="{{ cv.onCoupon }}" placeholder="Örn. HOSGELDIN10" style="border:1.5px solid #d8cfb6;border-radius:16px;padding:14px 16px;font:700 15px 'Karla';color:#3a4147;background:#fff;outline:none;text-transform:uppercase">
+              <sc-if value="{{ cv.cMsg }}"><span style="font:600 12.5px 'Karla';color:{{ cv.cCol }}">{{ cv.cMsg.t }}</span></sc-if>
+              <div style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ cv.applySheet }}">Uygula</div>
+            </sc-if>
+
+            <sc-if value="{{ shShare }}">
+              <span style="font:600 19px 'Lora';color:#343b41">Paylaş</span>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:#fff;border:1px solid #ece5d2" onClick="{{ shareWa }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#25d366" stroke-width="1.8" stroke-linejoin="round"><path d="M21 11.5c0 3.9-4 7-9 7-1.1 0-2.1-.15-3.1-.42L4.5 19.5l1.3-3.1C4.3 15.1 3 13.4 3 11.5c0-3.9 4-7 9-7s9 3.1 9 7z"></path></svg><span style="font:700 14px 'Karla';color:#3a4147">WhatsApp ile paylaş</span></div>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:#fff;border:1px solid #ece5d2" onClick="{{ shareCopy }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round"><path d="M9.5 14.5a4 4 0 0 0 5.7 0l3.5-3.5a4 4 0 0 0-5.7-5.7l-1.5 1.5M14.5 9.5a4 4 0 0 0-5.7 0L5.3 13a4 4 0 0 0 5.7 5.7l1.5-1.5"></path></svg><span style="font:700 14px 'Karla';color:#3a4147">Bağlantıyı kopyala</span></div>
+            </sc-if>
+
+            <sc-if value="{{ shPf }}">
+              <span style="font:600 19px 'Lora';color:#343b41">Profili düzenle</span>
+              <input value="{{ sp.name }}" onChange="{{ sp.onName }}" placeholder="Ad soyad" style="border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#3a4147;background:#fff;outline:none">
+              <input value="{{ sp.mail }}" onChange="{{ sp.onMail }}" placeholder="E-posta" style="border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#3a4147;background:#fff;outline:none">
+              <input value="{{ sp.tel }}" onChange="{{ sp.onTel }}" placeholder="Telefon (WhatsApp)" style="border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#3a4147;background:#fff;outline:none">
+              <span style="font:400 11.5px 'Karla';color:#8a8270">Telefon numaranız WhatsApp bildirimleri için kullanılır.</span>
+              <div style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';border-radius:26px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ sp.save }}">Kaydet</div>
+            </sc-if>
+
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ toast }}">
+        <div style="position:absolute;left:20px;right:20px;bottom:104px;z-index:80;display:flex;justify-content:center;pointer-events:none">
+          <span style="background:#343b41;color:#f3efe2;font:600 13px 'Karla';padding:12px 20px;border-radius:22px;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:pop .3s ease;text-align:center">{{ toast }}</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ splash }}">
+        <div style="position:absolute;inset:0;z-index:90;background:#5f7a2c;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;opacity:{{ splashOp }};transition:opacity .5s ease">
+          <div style="width:104px;height:104px;border-radius:50%;background:#f3efe2;display:flex;align-items:center;justify-content:center;overflow:hidden;animation:pop .6s ease"><img src="assets/logo.jpg" style="height:86px;mix-blend-mode:multiply" alt=""></div>
+          <span style="font:600 27px 'Lora';color:#f3efe2">Lezzet Anatolia</span>
+          <span style="font:500 12.5px 'Karla';color:#dfe7cb;letter-spacing:.08em">ANADOLU'NUN LEZZETİ, KAPINIZDA</span>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:520,&quot;height&quot;:980},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;b2c&quot;,&quot;options&quot;:[&quot;misafir&quot;,&quot;b2c&quot;,&quot;b2b&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;,&quot;description&quot;:&quot;Oturum durumu: misafir girişsiz gezer, B2B toptan fiyat görür&quot;},&quot;offersActive&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;,&quot;description&quot;:&quot;İndirimli fırsat bölümü (yokken vitrinde hiç görünmez)&quot;}}">
+class Component extends DCLogic {
+  CATS = ['Börekler','Tatlılar','Hamur İşleri','Çerezler','Kahvaltılık','Et Ürünleri'];
+  P = [
+    {id:'sub',n:'Ispanaklı Su Böreği',c:'Börekler',d:'El açması yufka, bol ıspanak ve beyaz peynirle klasik su böreği. Pişirilmeye hazır, donuk gönderilir.',vs:[{id:'s5',l:'500 g',w:.5,p:8.9,pb:6.9},{id:'s1',l:'1 kg',w:1,p:16.5,pb:12.9}],stk:true,ship:true,ing:'Buğday unu, ıspanak (%28), beyaz peynir, yumurta, süt, tereyağı, tuz',alg:'Gluten, süt, yumurta',nut:'Enerji 245 kcal · Yağ 12 g · Karbonhidrat 24 g · Protein 9 g',sto:'-18°C\u2019de saklayınız. Asgari tazelik tarihi paket üzerindedir. Çözündükten sonra tekrar dondurmayınız.',rt:'4,8',rc:24,rev:[{a:'Selin K.',t:'Annemin böreğinden farksız — misafirlerim tarifini sordu.',r:5},{a:'Marc D.',t:'Très bon produit, cuisson facile au four.',r:5}]},
+    {id:'kol',n:'Kıymalı Kol Böreği',c:'Börekler',d:'Dana kıyma ve soğanla sarılmış kol böreği; fırında 25 dakikada hazır.',vs:[{id:'k4',l:'400 g',w:.4,p:7.5,pb:5.9}],disc:{vid:'k4',pr:5.9,was:7.5,lim:3},stk:true,ship:true,ing:'Buğday unu, dana kıyma (%24), soğan, ayçiçek yağı, baharat, tuz',alg:'Gluten, yumurta',nut:'Enerji 268 kcal · Yağ 14 g · Karbonhidrat 25 g · Protein 11 g',sto:'-18°C\u2019de saklayınız. Çözündükten sonra tekrar dondurmayınız.',rt:'4,6',rc:11,rev:[{a:'Deniz A.',t:'Fırsattan 3 tane aldım, hepsi tertemiz paketlenmişti.',r:5}]},
+    {id:'bak',n:'Fıstıklı Baklava',c:'Tatlılar',d:'Gaziantep fıstığıyla, tereyağlı el açması baklava. Şerbetiyle birlikte gelir.',vs:[{id:'b1',l:'250 g',w:.25,p:9.9,pb:7.9},{id:'b2',l:'500 g',w:.5,p:18.5,pb:14.9},{id:'b3',l:'1 kg',w:1,p:34,pb:27.5}],stk:true,ship:true,ing:'Buğday unu, Antep fıstığı (%22), tereyağı, şeker, glukoz şurubu',alg:'Gluten, süt, sert kabuklu meyve (fıstık)',nut:'Enerji 512 kcal · Yağ 28 g · Karbonhidrat 58 g · Protein 9 g',sto:'Serin ve kuru yerde saklayınız. Asgari tazelik tarihi paket üzerindedir.',rt:'4,9',rc:37,rev:[{a:'Leyla T.',t:'Şerbeti ayrı gelmesi çok iyi düşünülmüş, çıtır kaldı.',r:5},{a:'Julien R.',t:'Meilleur baklava de Strasbourg, sans hésiter.',r:5}]},
+    {id:'man',n:'El Mantısı',c:'Hamur İşleri',d:'Tek tek elle kapatılmış, kıymalı minik mantı. Kaynar suda 12 dakikada sofrada.',vs:[{id:'m5',l:'500 g',w:.5,p:9.2,pb:7.2}],stk:true,ship:true,ing:'Buğday unu, dana kıyma (%30), soğan, yumurta, tuz, baharat',alg:'Gluten, yumurta',nut:'Enerji 231 kcal · Yağ 6 g · Karbonhidrat 32 g · Protein 12 g',sto:'-18°C\u2019de saklayınız. Çözdürmeden pişiriniz.',rt:'4,7',rc:19,rev:[{a:'Zeynep B.',t:'Boyutu tam kayınvalide standardı, elinize sağlık.',r:5}]},
+    {id:'sar',n:'Cevizli Sarma',c:'Tatlılar',d:'İnce yufkada bol cevizli, şerbetli sarma dilimleri.',vs:[{id:'r3',l:'350 g',w:.35,p:11.4,pb:9.2}],stk:false,ship:true,ing:'Buğday unu, ceviz (%26), tereyağı, şeker',alg:'Gluten, süt, sert kabuklu meyve (ceviz)',nut:'Enerji 495 kcal · Yağ 27 g · Karbonhidrat 55 g · Protein 8 g',sto:'Serin ve kuru yerde saklayınız.',rt:'4,5',rc:8,rev:[]},
+    {id:'fis',n:'Kavrulmuş Antep Fıstığı',c:'Çerezler',d:'Taş fırında günlük kavrulan, hafif tuzlu Antep fıstığı.',vs:[{id:'f2',l:'200 g',w:.2,p:7.8,pb:6.2},{id:'f5',l:'500 g',w:.5,p:17.9,pb:14.5}],stk:true,ship:true,ing:'Antep fıstığı, deniz tuzu',alg:'Sert kabuklu meyve (fıstık)',nut:'Enerji 582 kcal · Yağ 46 g · Karbonhidrat 18 g · Protein 21 g',sto:'Ağzı kapalı, serin ve kuru yerde saklayınız.',rt:'4,9',rc:31,rev:[{a:'Hakan Y.',t:'Taze kavrulmuş olduğu her tanesinden belli.',r:5}]},
+    {id:'sig',n:'Sigara Böreği · 24\u2019lü',c:'Börekler',d:'Peynirli, elde sarılmış sigara böreği; dondurulmuş, kızartmaya hazır.',vs:[{id:'g4',l:'450 g · 24 adet',w:.45,p:6.9,pb:5.4}],stk:true,ship:false,ing:'Buğday unu (yufka), beyaz peynir (%30), maydanoz, ayçiçek yağı',alg:'Gluten, süt',nut:'Enerji 297 kcal · Yağ 15 g · Karbonhidrat 30 g · Protein 10 g',sto:'-18°C\u2019de saklayınız. Çözdürmeden kızartınız.',rt:'4,7',rc:15,rev:[{a:'Elif S.',t:'Çocuklar bayılıyor, dolapta hep hazır duruyor.',r:4}]},
+    {id:'pey',n:'Ezine Beyaz Peynir',c:'Kahvaltılık',d:'Tam yağlı, koyun sütü ağırlıklı Ezine beyaz peynir; salamurasıyla gelir.',vs:[{id:'y3',l:'350 g',w:.35,p:6.4,pb:5.1},{id:'y7',l:'700 g',w:.7,p:11.9,pb:9.6}],stk:true,ship:true,ing:'Koyun sütü, keçi sütü, inek sütü, tuz, maya',alg:'Süt',nut:'Enerji 289 kcal · Yağ 24 g · Karbonhidrat 1 g · Protein 17 g',sto:'+4°C\u2019de, salamurası içinde saklayınız.',rt:'4,8',rc:22,rev:[{a:'Fatma G.',t:'Fransa\u2019da bu kalite peynir bulmak mucize.',r:5}]},
+    {id:'kof',n:'Izgara Köfte (Donuk)',c:'Et Ürünleri',d:'Baharatı ustasından, ızgaraya hazır dana köfte.',vs:[{id:'o4',l:'450 g · 12 adet',w:.45,p:10.9,pb:8.7}],stk:true,ship:false,ing:'Dana eti (%88), galeta unu, soğan, baharat, tuz',alg:'Gluten',nut:'Enerji 254 kcal · Yağ 18 g · Karbonhidrat 6 g · Protein 17 g',sto:'-18°C\u2019de saklayınız. Çözdürmeden pişirilebilir.',rt:'4,6',rc:13,rev:[]},
+    {id:'kun',n:'Künefe · 2 Kişilik',c:'Tatlılar',d:'Hatay usulü tel kadayıf ve künefe peyniriyle; tavasında fırına girmeye hazır.',vs:[{id:'n4',l:'400 g · 2 kişilik',w:.4,p:8.4,pb:6.7}],disc:{vid:'n4',pr:6.9,was:8.4,lim:2},stk:true,ship:true,ing:'Tel kadayıf, künefe peyniri (%38), tereyağı, şeker',alg:'Gluten, süt',nut:'Enerji 398 kcal · Yağ 19 g · Karbonhidrat 48 g · Protein 10 g',sto:'-18°C\u2019de saklayınız.',rt:'4,8',rc:26,rev:[{a:'Murat Ö.',t:'Tavasıyla gelmesi işi çok kolaylaştırıyor.',r:5}]},
+    {id:'acm',n:'Zeytinli Açma · 6\u2019lı',c:'Kahvaltılık',d:'Yumuşacık hamurlu, zeytinli açma; fırında 8 dakikada gün taze.',vs:[{id:'a4',l:'420 g · 6 adet',w:.42,p:5.6,pb:4.4}],stk:true,ship:true,ing:'Buğday unu, zeytin (%14), süt, maya, ayçiçek yağı',alg:'Gluten, süt',nut:'Enerji 312 kcal · Yağ 11 g · Karbonhidrat 44 g · Protein 8 g',sto:'-18°C\u2019de saklayınız.',rt:'4,4',rc:9,rev:[]}
+  ];
+  K = [
+    {id:'bayram',n:'Bayram Paketi',pr:49.9,d:'Bayram sofrasını tek kutuda kurar: baklava, su böreği, fıstık ve künefe.',it:[['bak','500 g fıstıklı baklava',1],['sub','1 kg su böreği',1],['fis','200 g Antep fıstığı',1],['kun','2 kişilik künefe',1]],ship:true},
+    {id:'kahvalti',n:'Hafta Sonu Kahvaltı Paketi',pr:32.9,d:'Kalabalık bir pazar kahvaltısı: Ezine peyniri, açma ve sıcacık sigara böreği.',it:[['pey','350 g Ezine peyniri',1],['acm','6\u2019lı zeytinli açma',2],['sig','24\u2019lü sigara böreği',1]],ship:false}
+  ];
+  KS = [
+    {n:'İçli Köfte · 12\u2019li',d:'Bulgur kabuğunda cevizli-kıymalı iç; kızartmaya hazır donuk.'},
+    {n:'Kazandibi',d:'Karamelize tabanlı, klasik tavuk göğsüz kazandibi.'},
+    {n:'Mıhlama Seti',d:'Trabzon peyniri ve mısır unu, adım adım tarifiyle.'},
+    {n:'Susamlı Simit · 5\u2019li',d:'Taş fırın simidi; fırında 8 dakikada gün taze.'},
+    {n:'Acılı Ezme',d:'Taş dövme usulü, közlenmiş biberli ezme.'}
+  ];
+  state = {
+    splash:true, splashHide:false, tab:'home', stack:[], li:null, lang:'TR',
+    q:'', cat:'Tümü', sort:'onerilen', onlyDisc:false,
+    pv:{}, pq:1, acc:{d:true},
+    cart:[{pid:'sub',vid:'s5',qty:1},{pid:'bak',vid:'b1',qty:1}], cartPkgs:[],
+    couponIn:'', coupon:null, cMsg:null,
+    co:{addr:1,day:null,pay:null,mkt:false}, payBusy:false, payOk:false,
+    orders:[
+      {ref:'LA-2417',dt:'28 Temmuz 2026',st:'Yolda',t:43.3,items:[{pid:'sub',vid:'s5',qty:2},{pid:'bak',vid:'b1',qty:1},{pid:'man',vid:'m5',qty:1},{pid:'pey',vid:'y3',qty:1}],pkgs:[],pay:'Online ödendi',addr:'Ev — 12 Rue des Orfèvres, 67000 Strasbourg',day:'30 Temmuz, Çarşamba'},
+      {ref:'LA-2331',dt:'12 Temmuz 2026',st:'Teslim edildi',t:34.2,items:[{pid:'kol',vid:'k4',qty:2},{pid:'sar',vid:'r3',qty:1},{pid:'fis',vid:'f2',qty:1}],pkgs:[],pay:'Kapıda ödendi',addr:'Ev — 12 Rue des Orfèvres, 67000 Strasbourg',day:'15 Temmuz, Çarşamba'},
+      {ref:'LA-2250',dt:'27 Haziran 2026',st:'Teslim edildi',t:19.6,items:[{pid:'kun',vid:'n4',qty:1},{pid:'acm',vid:'a4',qty:2}],pkgs:[],pay:'Online ödendi',addr:'Ev — 12 Rue des Orfèvres, 67000 Strasbourg',day:'1 Temmuz, Çarşamba'}
+    ],
+    talepler:[{id:'T-108',tp:'Eksik ürün',ord:'LA-2331',dt:'14 Temmuz 2026',st:'Çözüldü',res:'11,40 € iade edildi',msg:[{who:'m',t:'Cevizli sarma pakette çıkmadı, kontrol edebilir misiniz?'},{who:'i',t:'Merhaba! Depo kaydını kontrol ettik, haklısınız — tutarı aynı karta iade ettik. Özür dileriz.'},{who:'m',t:'Hızlı dönüş için teşekkürler.'}]}],
+    tReply:'',
+    kIdx:0, kAnim:null, kAward:false,
+    points:240, myCoupons:[],
+    login:{m:null,email:'',sent:false,code:'',busy:false},
+    pro:{mode:'fr',siret:'',found:false,comp:'',cadr:'',name:'',mail:'',tel:'',vat:'',vatOk:false,err:null,sent:false},
+    tn:{ord:null,step:0,items:[],tp:null,msg:'',photo:false},
+    fb:{ord:null,idx:0,votes:[],comment:'',stage:0},
+    addresses:[{id:1,n:'Ev',l:'12 Rue des Orfèvres',zip:'67000',city:'Strasbourg',def:true},{id:2,n:'Ofis',l:'4 Avenue de la Forêt-Noire',zip:'68100',city:'Mulhouse',def:false}],
+    aE:null, pfO:null, pfE:null,
+    mkt:{email:true,wa:false},
+    sheet:null, toast:null,
+    now:Date.now(), stockAlerts:{},
+    notifs:[
+      {ic:'truck',t:'Siparişiniz yolda',sb:'LA-2417 bugün 14:00–17:00 arasında kapınızda',tm:'2 sa önce',un:true,ord:'LA-2417'},
+      {ic:'tag',t:'Günün fırsatı başladı',sb:'Kıymalı kol böreği bugün 5,90 €',tm:'6 sa önce',un:true,pid:'kol'},
+      {ic:'star',t:'+15 puan kazandınız',sb:'Değerlendirmeniz için teşekkürler',tm:'12 Temmuz',un:false}
+    ]
+  };
+  componentDidMount(){ setTimeout(()=>this.setState({splashHide:true}),1400); setTimeout(()=>this.setState({splash:false}),1950); this._iv=setInterval(()=>this.setState({now:Date.now()}),1000); }
+  componentWillUnmount(){ clearInterval(this._iv); clearTimeout(this._tt); }
+  per(){ return this.props.persona ?? 'b2c'; }
+  logged(){ return this.state.li ?? (this.per()!=='misafir'); }
+  isB2B(){ return this.per()==='b2b' && this.logged(); }
+  prod(id){ return this.P.find(p=>p.id===id); }
+  vOf(p,vid){ return p.vs.find(v=>v.id===vid)||p.vs[0]; }
+  discOf(p,v){ return (!this.isB2B() && p.disc && p.disc.vid===v.id) ? p.disc : null; }
+  uPrice(p,v){ const d=this.discOf(p,v); return d?d.pr:(this.isB2B()?v.pb:v.p); }
+  fmt(x){ return x.toFixed(2).replace('.',',')+' €'; }
+  toastM(m){ clearTimeout(this._tt); this.setState({toast:m}); this._tt=setTimeout(()=>this.setState({toast:null}),2400); }
+  st0(){ if(this.sc) this.sc.scrollTop=0; }
+  go(pg){ this.setState(s=>({stack:[...s.stack,pg],pq:1}),()=>this.st0()); }
+  back(){ this.setState(s=>({stack:s.stack.slice(0,-1)})); }
+  goTab(t){ this.setState({stack:[],tab:t},()=>this.st0()); }
+  top(){ const st=this.state.stack; return st[st.length-1]||null; }
+  openSheet(sh){ this.setState({sheet:sh}); }
+  closeSheet(){ this.setState({sheet:null}); }
+  addLine(pid,vid,qty){
+    const p=this.prod(pid), v=this.vOf(p,vid), d=this.discOf(p,v);
+    let msg='Sepete eklendi ✓';
+    this.setState(s=>{
+      const c=[...s.cart]; const i=c.findIndex(l=>l.pid===pid&&l.vid===vid);
+      let q=i>=0?c[i].qty+qty:qty;
+      if(d&&q>d.lim){ q=d.lim; msg='Bu fiyattan en fazla '+d.lim+' adet eklenebilir'; }
+      if(i>=0)c[i]={...c[i],qty:q}; else c.push({pid,vid,qty:q});
+      return {cart:c};
+    });
+    this.toastM(msg);
+  }
+  quickAdd(p){ if(!p.stk)return; if(p.vs.length>1)this.openSheet({t:'var',pid:p.id,vid:p.vs[0].id,qty:1}); else this.addLine(p.id,p.vs[0].id,1); }
+  addPkg(kid,qty){
+    const k=this.K.find(x=>x.id===kid);
+    if(!k.it.every(i=>this.prod(i[0]).stk)){ this.toastM('Paket şu an tükendi'); return; }
+    this.setState(s=>{ const cp=[...s.cartPkgs]; const i=cp.findIndex(l=>l.kid===kid); if(i>=0)cp[i]={...cp[i],qty:cp[i].qty+qty}; else cp.push({kid,qty}); return {cartPkgs:cp}; });
+    this.toastM('Paket sepete eklendi ✓');
+  }
+  lines(){ return this.state.cart.map(l=>{ const p=this.prod(l.pid), v=this.vOf(p,l.vid), d=this.discOf(p,v); const u=this.uPrice(p,v); return {...l,p,v,d,unit:u,tot:u*l.qty}; }); }
+  pkgLines(){ return this.state.cartPkgs.map(l=>{ const k=this.K.find(x=>x.id===l.kid); return {...l,k,tot:k.pr*l.qty}; }); }
+  subT(){ return this.lines().reduce((a,l)=>a+l.tot,0)+this.pkgLines().reduce((a,l)=>a+l.tot,0); }
+  coupBase(){ return this.lines().filter(l=>!l.d).reduce((a,l)=>a+l.tot,0); }
+  codes(){ const o={'HOSGELDIN10':{type:'pct',v:10,min:30}}; this.state.myCoupons.forEach(c=>o[c.code]={type:'amt',v:c.v,min:0}); return o; }
+  discount(){ const c=this.state.coupon; if(!c)return 0; const b=this.coupBase(); return c.type==='pct'?b*c.v/100:Math.min(c.v,b); }
+  applyCoupon(){
+    const code=this.state.couponIn.trim().toUpperCase(); if(!code)return;
+    const c=this.codes()[code];
+    if(!c){ this.setState({cMsg:{ok:false,t:'Kod geçersiz veya süresi dolmuş.'}}); return; }
+    if(this.coupBase()<c.min){ this.setState({cMsg:{ok:false,t:'Bu kod için paket ve indirimli ürünler dışında en az '+c.min+' € sepet gerekir.'}}); return; }
+    this.setState({coupon:{...c,code},cMsg:{ok:true,t:code+' uygulandı ✓'},couponIn:''});
+  }
+  hasNoShip(){ return this.lines().some(l=>!l.p.ship)||this.pkgLines().some(l=>!l.k.ship); }
+  addrSel(){ return this.state.addresses.find(a=>a.id===this.state.co.addr)||this.state.addresses[0]; }
+  inRegion(){ const a=this.addrSel(); return !!a && a.zip.slice(0,2)==='67'; }
+  shipFee(){ if(this.inRegion())return 0; const t=this.subT()-this.discount(); return t>=60?0:6.9; }
+  grandCo(){ return this.subT()-this.discount()+this.shipFee(); }
+  minGap(){ return Math.max(0,25-(this.subT()-this.discount())); }
+  payOpts(){
+    if(this.isB2B())return [['online','Online ödeme','Kart ile güvenli ödeme'],['havale','Banka havalesi','IBAN bilgileri e-posta ile gelir'],['vade','Hesaba (vadeli)','Ay sonu faturalandırma']];
+    if(this.inRegion()){ const o=[['online','Online ödeme','Kart ile güvenli ödeme']]; if(this.grandCo()<=150)o.push(['kapida','Kapıda ödeme','Nakit, kart veya çek']); return o; }
+    return [['online','Online ödeme','Kart ile güvenli ödeme']];
+  }
+  confirmBlock(){
+    const s=this.state;
+    if(!this.logged())return 'Devam etmek için hızlı doğrulama gerekli';
+    if(this.hasNoShip()&&!this.inRegion())return 'Sepetinizdeki bazı ürünler yalnız teslimat bölgemize gönderilebilir';
+    if(this.minGap()>0)return 'Asgari sepet 25 € — '+this.fmt(this.minGap())+' eksik';
+    if(this.inRegion()&&!s.co.day)return 'Teslimat günü seçin';
+    if(!s.co.pay)return 'Ödeme yolu seçin';
+    return null;
+  }
+  coConfirm(){
+    const r=this.confirmBlock(); if(r){ this.toastM(r); return; }
+    const pay=this.state.co.pay;
+    if(pay==='online'){ this.setState({payBusy:false,payOk:false}); this.go({n:'payment'}); }
+    else this.finalize(pay==='kapida'?'Kapıda ödenecek':pay==='havale'?'Havale bekleniyor':'Vadeli hesaba işlendi');
+  }
+  finalize(label){
+    const s=this.state; const total=this.grandCo(); const a=this.addrSel(); const inR=this.inRegion();
+    const day=inR?s.co.day:'Kargo ile · 2–4 iş günü';
+    const ref='LA-'+(2418+s.orders.length);
+    const pts=(!this.isB2B()&&this.logged())?Math.round(total):0;
+    const order={ref,dt:'7 Ağustos 2026',st:'Alındı',t:total,items:s.cart.map(l=>({...l})),pkgs:s.cartPkgs.map(l=>({...l})),pay:label,addr:a.n+' — '+a.l+', '+a.zip+' '+a.city,day};
+    this.setState(st=>({orders:[order,...st.orders],cart:[],cartPkgs:[],coupon:null,cMsg:null,points:st.points+pts,payBusy:false,payOk:false,co:{...st.co,day:null,pay:null},stack:[{n:'confirm',ref,day,pts,label,total}]}),()=>this.st0());
+  }
+  payNow(){ this.setState({payBusy:true}); setTimeout(()=>{ this.setState({payOk:true}); setTimeout(()=>this.finalize('Online ödendi'),900); },1500); }
+  reorder(o){
+    const skipped=[]; const add=[];
+    o.items.forEach(l=>{ const p=this.prod(l.pid); if(!p||!p.stk){ if(p)skipped.push(p.n); return; } add.push({pid:l.pid,vid:l.vid,qty:l.qty}); });
+    const addP=[]; (o.pkgs||[]).forEach(l=>{ const k=this.K.find(x=>x.id===l.kid); const ok=k&&k.it.every(i=>this.prod(i[0]).stk); if(ok)addP.push({kid:l.kid,qty:l.qty}); else if(k)skipped.push(k.n); });
+    this.setState(s=>{
+      const cart=[...s.cart]; add.forEach(a=>{ const i=cart.findIndex(c=>c.pid===a.pid&&c.vid===a.vid); if(i>=0)cart[i]={...cart[i],qty:cart[i].qty+a.qty}; else cart.push({...a}); });
+      const cp=[...s.cartPkgs]; addP.forEach(a=>{ const i=cp.findIndex(c=>c.kid===a.kid); if(i>=0)cp[i]={...cp[i],qty:cp[i].qty+a.qty}; else cp.push({...a}); });
+      return {cart,cartPkgs:cp,tab:'cart',stack:[]};
+    },()=>this.st0());
+    this.toastM(skipped.length?skipped.join(', ')+' eklenemedi (tükendi)':'Kalemler güncel fiyatlarla sepete eklendi ✓');
+  }
+  kGo(dir){
+    if(this.state.kAnim||this.state.kIdx>=this.KS.length)return;
+    this.setState({kAnim:dir});
+    setTimeout(()=>{ this.setState(s=>{ const i=s.kIdx+1; let pts=s.points,aw=s.kAward; if(i>=this.KS.length&&!aw&&this.logged()&&!this.isB2B()){pts+=10;aw=true;} return {kIdx:i,kAnim:null,points:pts,kAward:aw}; }); },330);
+  }
+  loginOpen(){ this.setState({login:{m:null,email:'',sent:false,code:'',busy:false}}); this.go({n:'login'}); }
+  gLogin(){ this.setState(s=>({login:{...s.login,busy:true}})); setTimeout(()=>this.finishLogin(),1100); }
+  finishLogin(){ this.setState(s=>({li:true,login:{m:null,email:'',sent:false,code:'',busy:false},stack:s.stack.filter(p=>p.n!=='login')})); this.toastM('Doğrulandı — hoş geldiniz ✓'); }
+  sendCode(){ const e=this.state.login.email; if(!/.+@.+\..+/.test(e)){ this.toastM('Geçerli bir e-posta girin'); return; } this.setState(s=>({login:{...s.login,sent:true}})); }
+  onCode(e){ const v=e.target.value.replace(/\D/g,'').slice(0,4); this.setState(s=>({login:{...s.login,code:v}})); if(v.length===4)setTimeout(()=>this.finishLogin(),400); }
+  logout(){ this.setState({li:false,tab:'home',stack:[]}); this.toastM('Çıkış yapıldı'); }
+  setLang(l){ this.setState({lang:l}); this.toastM(l==='TR'?'Dil: Türkçe':'Dil tercihi kaydedildi — prototip arayüzü Türkçe kalır'); }
+  convertPoints(){ if(this.state.points<200)return; this.setState(s=>({points:s.points-200,myCoupons:[...s.myCoupons,{code:'PUAN5',v:5}]})); this.toastM('PUAN5 kuponu oluşturuldu — sepette kod olarak girin'); }
+  pf(){ const d=this.isB2B()?{name:'Emre Aydın',mail:'emre@anadolu-restaurant.fr',tel:'+33 6 12 45 78 90'}:{name:'Ayşe Demir',mail:'ayse.demir@gmail.com',tel:'+33 6 24 51 09 88'}; return this.state.pfO||d; }
+  openAddr(a){ this.setState({aE:a?{...a}:{id:null,n:'',l:'',zip:'',city:'',def:false}}); this.openSheet({t:'addr'}); }
+  saveA(){
+    const a=this.state.aE;
+    if(!a.n||!a.l||!a.zip){ this.toastM('Etiket, adres ve posta kodu gerekli'); return; }
+    this.setState(s=>{ let list; const nu={...a,id:a.id==null?Date.now():a.id}; if(a.id==null)list=[...s.addresses,nu]; else list=s.addresses.map(x=>x.id===a.id?nu:x); if(nu.def)list=list.map(x=>({...x,def:x.id===nu.id})); return {addresses:list}; });
+    this.closeSheet(); this.toastM('Adres kaydedildi ✓');
+  }
+  openTalepNew(ord){ this.setState({tn:{ord,step:ord?2:0,items:[],tp:null,msg:'',photo:false}}); this.go({n:'talepNew'}); }
+  tnSubmit(){
+    const t=this.state.tn;
+    if(!t.msg.trim()&&!t.items.length){ this.toastM('Kısa bir açıklama yazın'); return; }
+    const id='T-'+(109+this.state.talepler.length);
+    const rec={id,tp:t.tp||(t.ord?'Sipariş sorunu':'Mesaj'),ord:t.ord,dt:'7 Ağustos 2026',st:'Açık',res:null,msg:[{who:'m',t:t.msg||'(ürünler işaretlendi)'}]};
+    this.setState(s=>({talepler:[rec,...s.talepler],stack:[{n:'talepler'}]}),()=>this.st0());
+    this.toastM('Talebiniz alındı — cevabı e-posta ile bildireceğiz');
+  }
+  tSend(){
+    if(!this.state.tReply.trim())return; const id=this.top().id;
+    this.setState(s=>({talepler:s.talepler.map(t=>t.id===id?{...t,st:t.st==='Çözüldü'?'Yeniden açıldı':t.st,msg:[...t.msg,{who:'m',t:s.tReply}]}:t),tReply:''}));
+    this.toastM('Mesajınız iletildi');
+  }
+  openFb(ord){ this.setState({fb:{ord,idx:0,votes:[],comment:'',stage:0}}); this.go({n:'fb'}); }
+  fbVote(v){ this.setState(s=>{ const o=s.orders.find(x=>x.ref===s.fb.ord); const n=s.fb.idx+1; return {fb:{...s.fb,idx:n,votes:[...s.fb.votes,v],stage:n>=o.items.length?1:0}}; }); }
+  fbFinish(){ const pts=(this.logged()&&!this.isB2B())?15:0; this.setState(s=>({fb:{...s.fb,stage:2},points:s.points+pts})); }
+  proLookup(){
+    const p=this.state.pro;
+    if(p.siret.length!==14){ this.setState(s=>({pro:{...s.pro,err:'SIRET 14 haneli olmalı. Bulamadıysanız elle devam edin veya bize yazın.'}})); return; }
+    this.setState(s=>({pro:{...s.pro,found:true,err:null,comp:'RESTAURANT ANADOLU SARL',cadr:'12 Quai des Bateliers, 67000 Strasbourg · Restauration traditionnelle'}}));
+  }
+  proSubmit(){
+    const p=this.state.pro;
+    const okId=p.mode==='fr'?p.found:(p.vatOk&&p.comp);
+    if(!okId){ this.setState(s=>({pro:{...s.pro,err:p.mode==='fr'?'Önce SIRET numaranızla şirketinizi bulun.':'Şirket adı ve geçerli USt-IdNr gerekli (örn. DE123456789).'}})); return; }
+    if(!p.name||!/.+@.+\..+/.test(p.mail)){ this.setState(s=>({pro:{...s.pro,err:'Ad soyad ve geçerli bir e-posta gerekli.'}})); return; }
+    this.setState(s=>({pro:{...s.pro,sent:true,err:null}}),()=>this.st0());
+  }
+  renderVals(){
+    const s=this.state, b2b=this.isB2B(), logged=this.logged();
+    const top=this.top(); const cur=top?top.n:s.tab;
+    const F=n=>cur===n;
+    const cartCount=s.cart.reduce((a,l)=>a+l.qty,0)+s.cartPkgs.reduce((a,l)=>a+l.qty,0);
+    const card=p=>{ const v=p.vs[0]; const d=this.discOf(p,v);
+      return {n:p.n,img:'m-prd-'+p.id,w:p.vs.map(x=>x.l).join(' · '),priceF:this.fmt(this.uPrice(p,v)),wasF:d?this.fmt(d.was):null,disc:!!d&&p.stk,prCol:d?'#b05c2e':'#343b41',so:!p.stk,imgOp:p.stk?1:.45,canAdd:p.stk,add:()=>this.quickAdd(p),open:()=>this.go({n:'product',id:p.id})}; };
+    const V={};
+    // chrome
+    V.padB = top?24:96;
+    V.tabsVisible = !top;
+    V.toast = s.toast;
+    V.splash = s.splash; V.splashOp = s.splashHide?0:1;
+    V.scRef = el=>{ this.sc=el; };
+    V.b2bChip = b2b;
+    V.pageKey = cur+'-'+(top?(top.id||top.ref||top.k||''):'');
+    V.goBack = ()=>this.back();
+    const IC={home:'M3 11.5 12 4l9 7.5M5.5 10V20h13v-10',catalog:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',cart:'M4 9h16l-1.5 11h-13zM8 9c0-4.5 8-4.5 8 0',orders:'M6.5 3h11v18l-1.9-1.5L13.7 21l-1.8-1.5L10 21l-1.8-1.5L6.5 21zM9.5 8h5M9.5 12h4',hesap:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20c1.5-3.8 5.5-4.8 7.5-4.8s6 1 7.5 4.8'};
+    V.tabs = [['home','Vitrin'],['catalog','Katalog'],['cart','Sepet'],['orders','Siparişler'],['hesap','Hesap']].map(([id,l])=>({id,l,icon:IC[id],col:s.tab===id?'#4a6121':'#8a8270',tf:s.tab===id?'translateY(-2px) scale(1.12)':'none',go:()=>this.goTab(id),badge:id==='cart'&&cartCount>0?cartCount:null}));
+    // flags
+    V.vHome=F('home'); V.vCatalog=F('catalog'); V.vCart=F('cart'); V.vOrders=F('orders'); V.vHesap=F('hesap');
+    V.vProduct=F('product'); V.vPackage=F('package'); V.vKesif=F('kesif'); V.vCheckout=F('checkout'); V.vPayment=F('payment'); V.vConfirm=F('confirm'); V.vOrder=F('order'); V.vLogin=F('login'); V.vPro=F('pro'); V.vTalepler=F('talepler'); V.vTalepD=F('talepD'); V.vTalepNew=F('talepNew'); V.vFb=F('fb'); V.vStatic=F('static'); V.vNotif=F('notif');
+    // home
+    V.pillTap = ()=>this.toastM('Adresleriniz Hesap bölümünde yönetilir');
+    V.searchGo = ()=>{ this.goTab('catalog'); setTimeout(()=>this.qRef&&this.qRef.focus(),350); };
+    V.goCatalog = ()=>this.goTab('catalog');
+    V.goKesif = ()=>this.go({n:'kesif'});
+    V.goPro = ()=>this.go({n:'pro'});
+    V.goWrite = ()=>{ if(!logged){this.loginOpen();return;} this.openTalepNew(null); };
+    V.goGizlilik = ()=>this.go({n:'static',k:'gizlilik'});
+    V.goTeslimatInfo = ()=>this.go({n:'static',k:'teslimat'});
+    V.homeCats = this.CATS.map(c=>({n:c,open:()=>this.setState({tab:'catalog',cat:c,q:'',stack:[]},()=>this.st0())}));
+    const lo=logged?s.orders.find(o=>o.st==='Alındı'||o.st==='Hazırlanıyor'||o.st==='Yolda'):null;
+    V.liveOrder=lo?{ref:lo.ref,stL:lo.st==='Yolda'?'yolda':lo.st==='Hazırlanıyor'?'hazırlanıyor':'alındı',day:lo.day,open:()=>this.go({n:'order',ref:lo.ref})}:null;
+    const ld=(logged&&!lo)?s.orders.find(o=>o.st==='Teslim edildi'):null;
+    V.lastOrder=ld?{sum:ld.ref+' · '+this.fmt(ld.t),re:()=>this.reorder(ld)}:null;
+    const hr=new Date().getHours();
+    V.greet=logged?((hr<11?'Günaydın':hr<18?'Merhaba':'İyi akşamlar')+', '+this.pf().name.split(' ')[0]):'Hoş geldiniz';
+    V.goNotif=()=>{ this.go({n:'notif'}); setTimeout(()=>this.setState(st=>({notifs:st.notifs.map(n=>({...n,un:false}))})),700); };
+    V.notifBadge=s.notifs.some(n=>n.un);
+    const NIC={truck:'M1.5 5h12.5v10H1.5zM14 9h4.5l3.5 3.5V15H14M5 18.2a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 1 0-3.6 0M15.5 18.2a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 1 0-3.6 0',tag:'M3 9V6h18v3a2 2 0 0 0 0 6v3H3v-3a2 2 0 0 0 0-6z',star:'M12 3l2.7 5.8 6.3.7-4.7 4.3 1.3 6.2-5.6-3.2-5.6 3.2 1.3-6.2L3 9.5l6.3-.7z'};
+    V.nv={rows:s.notifs.map(n=>({t:n.t,sb:n.sb,tm:n.tm,un:n.un,ic:NIC[n.ic],
+      go:()=>{ if(n.ord)this.go({n:'order',ref:n.ord}); else if(n.pid)this.go({n:'product',id:n.pid}); }}))};
+    const fp=this.prod('kol');
+    if(fp.disc&&fp.stk&&!b2b){ const end=new Date(); end.setHours(23,59,59,999); const rem=Math.max(0,end.getTime()-s.now); const z=x=>String(x).padStart(2,'0');
+      V.flash={n:fp.n,prF:this.fmt(fp.disc.pr),wasF:this.fmt(fp.disc.was),lim:'kişi başı '+fp.disc.lim+' adet',h:z(Math.floor(rem/3.6e6)),m:z(Math.floor(rem%3.6e6/6e4)),sec:z(Math.floor(rem%6e4/1e3)),
+        open:()=>this.go({n:'product',id:'kol'}),add:e=>{ e.stopPropagation(); this.quickAdd(fp); }};
+    } else V.flash=null;
+    V.tchS=e=>{const t=e.touches[0];this._sw=t.clientX<32?{x:t.clientX,y:t.clientY}:null;};
+    V.tchE=e=>{if(!this._sw)return;const t=e.changedTouches[0];if(t.clientX-this._sw.x>70&&Math.abs(t.clientY-this._sw.y)<60&&this.state.stack.length)this.back();this._sw=null;};
+    const offers=this.P.filter(p=>p.disc&&p.stk&&p.id!=='kol').map(p=>{ const v=p.vs.find(x=>x.id===p.disc.vid);
+      return {n:p.n,l:v.l,prF:this.fmt(p.disc.pr),wasF:this.fmt(p.disc.was),lim:'En fazla '+p.disc.lim+' adet',open:()=>this.go({n:'product',id:p.id})}; });
+    V.offers=offers; V.offersOn=(this.props.offersActive??true)&&offers.length>0&&!b2b;
+    V.vitrin = ['sub','man','pey','kun'].map(id=>card(this.prod(id)));
+    V.pkgsHome = this.K.map(k=>({n:k.n,d:k.d,prF:this.fmt(k.pr),cnt:k.it.length+' çeşit',img:'m-pkg-'+k.id,open:()=>this.go({n:'package',id:k.id})}));
+    // catalog
+    V.q=s.q; V.onQ=e=>this.setState({q:e.target.value});
+    V.qRef=el=>{ this.qRef=el; };
+    V.clearSearch=()=>this.setState({q:'',cat:'Tümü',onlyDisc:false});
+    V.chips=['Tümü',...this.CATS].map(c=>({n:c,bg:s.cat===c?'#5f7a2c':'#fff',fg:s.cat===c?'#fff':'#3a4147',bd:s.cat===c?'#5f7a2c':'#e0d8c2',pick:()=>this.setState({cat:c})}));
+    let list=this.P.filter(p=>(s.cat==='Tümü'||p.c===s.cat)&&(!s.q||p.n.toLowerCase().includes(s.q.toLowerCase()))&&(!s.onlyDisc||(p.disc&&p.stk)));
+    if(s.sort==='artan')list=[...list].sort((a,b)=>this.uPrice(a,a.vs[0])-this.uPrice(b,b.vs[0]));
+    if(s.sort==='azalan')list=[...list].sort((a,b)=>this.uPrice(b,b.vs[0])-this.uPrice(a,a.vs[0]));
+    V.catProds=list.map(card); V.zeroRes=list.length===0;
+    const fAct=s.onlyDisc||s.sort!=='onerilen';
+    V.filterBg=fAct?'#eef2e2':'#fff'; V.filterBd=fAct?'#cddbb0':'#e0d8c2'; V.filterFg=fAct?'#4a6121':'#3a4147';
+    V.filterOpen=()=>this.openSheet({t:'filter'});
+    // sheet
+    const sh=s.sheet;
+    V.shOn=!!sh; V.shClose=()=>this.closeSheet();
+    V.shVar=sh&&sh.t==='var'; V.shFilter=sh&&sh.t==='filter'; V.shAddr=sh&&sh.t==='addr'; V.shShare=sh&&sh.t==='share'; V.shPf=sh&&sh.t==='pf'; V.shCoupon=sh&&sh.t==='coupon';
+    if(V.shVar){ const p=this.prod(sh.pid); const v=this.vOf(p,sh.vid);
+      V.sv={n:p.n,qty:sh.qty,
+        vars:p.vs.map(x=>({l:x.l,prF:this.fmt(this.uPrice(p,x)),bg:x.id===sh.vid?'#eef2e2':'#fff',bd:x.id===sh.vid?'#5f7a2c':'#ece5d2',pick:()=>this.setState(st=>({sheet:{...st.sheet,vid:x.id}}))})),
+        inc:()=>this.setState(st=>({sheet:{...st.sheet,qty:Math.min(99,st.sheet.qty+1)}})),
+        dec:()=>this.setState(st=>({sheet:{...st.sheet,qty:Math.max(1,st.sheet.qty-1)}})),
+        chips:[5,10,20].map(n=>({n:'×'+n,pick:()=>this.setState(st=>({sheet:{...st.sheet,qty:n}}))})),
+        addF:'Sepete ekle · '+this.fmt(this.uPrice(p,v)*sh.qty),
+        add:()=>{ this.addLine(sh.pid,sh.vid,sh.qty); this.closeSheet(); }};
+    } else V.sv={};
+    V.sf={sorts:[['onerilen','Önerilen'],['artan','Fiyat: önce düşük'],['azalan','Fiyat: önce yüksek']].map(([id,l])=>({l,sel:s.sort===id,bg:s.sort===id?'#eef2e2':'#fff',bd:s.sort===id?'#5f7a2c':'#ece5d2',pick:()=>this.setState({sort:id})})),
+      tBg:s.onlyDisc?'#5f7a2c':'#d8cfb6',tJc:s.onlyDisc?'flex-end':'flex-start',discT:()=>this.setState(st=>({onlyDisc:!st.onlyDisc})),
+      clear:()=>this.setState({sort:'onerilen',onlyDisc:false})};
+    const aE=s.aE||{};
+    V.sa={title:aE.id==null?'Yeni adres':'Adresi düzenle',n:aE.n||'',l:aE.l||'',zip:aE.zip||'',city:aE.city||'',
+      onN:e=>this.setState(st=>({aE:{...st.aE,n:e.target.value}})),onL:e=>this.setState(st=>({aE:{...st.aE,l:e.target.value}})),
+      onZ:e=>this.setState(st=>({aE:{...st.aE,zip:e.target.value.replace(/\D/g,'').slice(0,5)}})),onC:e=>this.setState(st=>({aE:{...st.aE,city:e.target.value}})),
+      save:()=>this.saveA(),
+      del:aE.id!=null?()=>{ const id=aE.id; this.setState(st=>({addresses:st.addresses.filter(x=>x.id!==id)})); this.closeSheet(); this.toastM('Adres silindi'); }:null};
+    V.shareWa=()=>{ this.closeSheet(); this.toastM('WhatsApp paylaşımı açılıyor (demo)'); };
+    V.shareCopy=()=>{ this.closeSheet(); this.toastM('Bağlantı kopyalandı ✓'); };
+    const pfE=s.pfE||{};
+    V.sp={name:pfE.name||'',mail:pfE.mail||'',tel:pfE.tel||'',
+      onName:e=>this.setState(st=>({pfE:{...st.pfE,name:e.target.value}})),onMail:e=>this.setState(st=>({pfE:{...st.pfE,mail:e.target.value}})),onTel:e=>this.setState(st=>({pfE:{...st.pfE,tel:e.target.value}})),
+      save:()=>{ this.setState(st=>({pfO:st.pfE})); this.closeSheet(); this.toastM('Profil güncellendi ✓'); }};
+    // product page
+    if(V.vProduct){ const p=this.prod(top.id); const selVid=s.pv[p.id]||p.vs[0].id; const v=this.vOf(p,selVid); const d=this.discOf(p,v);
+      V.pd={n:p.n,c:p.c,d:p.d,img:'m-prd-'+p.id,rt:p.rt,rc:p.rc+' değerlendirme',
+        priceF:this.fmt(this.uPrice(p,v)),wasF:d?this.fmt(d.was):null,disc:!!d,lim:d?'Bu fiyattan en fazla '+d.lim+' adet':null,
+        unitF:this.fmt(this.uPrice(p,v)/v.w)+' / kg',net:'Net ağırlık: '+v.l,so:!p.stk,ok:p.stk,noShip:!p.ship,
+        ing:p.ing,alg:p.alg,nut:p.nut,sto:p.sto,
+        multi:p.vs.length>1,
+        vars:p.vs.map(x=>({l:x.l,prF:this.fmt(this.uPrice(p,x)),bg:x.id===selVid?'#eef2e2':'#fff',bd:x.id===selVid?'#5f7a2c':'#ece5d2',pick:()=>this.setState(st=>({pv:{...st.pv,[p.id]:x.id},pq:1}))})),
+        qty:s.pq,inc:()=>this.setState(st=>({pq:Math.min(99,st.pq+1)})),dec:()=>this.setState(st=>({pq:Math.max(1,st.pq-1)})),
+        chips:[5,10,20].map(n=>({n:'×'+n,pick:()=>this.setState({pq:n})})),
+        addF:'Sepete ekle · '+this.fmt(this.uPrice(p,v)*s.pq),add:()=>this.addLine(p.id,selVid,s.pq),
+        hasRev:p.rev.length>0,noRev:p.rev.length===0,revs:p.rev.map(r=>({a:r.a,t:r.t,stars:'★★★★★'.slice(0,r.r)})),
+        rel:this.P.filter(x=>x.c===p.c&&x.id!==p.id&&x.stk).slice(0,4).map(card),hasRel:this.P.filter(x=>x.c===p.c&&x.id!==p.id&&x.stk).length>0,
+        share:()=>this.openSheet({t:'share'}),
+        alertL:s.stockAlerts[p.id]?'✓ Haber verilecek':'Stok gelince haber ver',alertBg:s.stockAlerts[p.id]?'#eef2e2':'#5f7a2c',alertFg:s.stockAlerts[p.id]?'#4a6121':'#fff',
+        alertT:()=>{ const on=!this.state.stockAlerts[p.id]; this.setState(st=>({stockAlerts:{...st.stockAlerts,[p.id]:on}})); this.toastM(on?'Stok gelince e-posta ile haber vereceğiz ✓':'Hatırlatma kaldırıldı'); },
+        accI:!!s.acc.i,tI:()=>this.setState(st=>({acc:{...st.acc,i:!st.acc.i}})),
+        accN:!!s.acc.n,tN:()=>this.setState(st=>({acc:{...st.acc,n:!st.acc.n}})),
+        accS:!!s.acc.s,tS:()=>this.setState(st=>({acc:{...st.acc,s:!st.acc.s}}))};
+    } else V.pd={};
+    // package page
+    if(V.vPackage){ const k=this.K.find(x=>x.id===top.id); const so=!k.it.every(i=>this.prod(i[0]).stk);
+      V.pk={n:k.n,d:k.d,prF:this.fmt(k.pr),img:'m-pkg-'+k.id,so,ok:!so,noShip:!k.ship,
+        items:k.it.map(([pid,label,q])=>({label,q:'×'+q,img:'m-prd-'+pid,open:()=>this.go({n:'product',id:pid})})),
+        qty:s.pq,inc:()=>this.setState(st=>({pq:Math.min(20,st.pq+1)})),dec:()=>this.setState(st=>({pq:Math.max(1,st.pq-1)})),
+        addF:'Paketi sepete ekle · '+this.fmt(k.pr*s.pq),add:()=>{ this.addPkg(k.id,s.pq); }};
+    } else V.pk={};
+    // kesif
+    const kT=this.KS.length; const kDone=s.kIdx>=kT;
+    V.kv={done:kDone,prog:Math.min(s.kIdx+1,kT)+' / '+kT,pct:Math.round(Math.min(s.kIdx,kT)/kT*100)+'%',
+      cur:kDone?null:{n:this.KS[s.kIdx].n,d:this.KS[s.kIdx].d,img:'m-ks-'+s.kIdx},
+      hasNext:s.kIdx+1<kT,next:s.kIdx+1<kT?{img:'m-ks-'+(s.kIdx+1)}:null,
+      anim:s.kAnim==='like'?'kOutR .33s ease-in forwards':s.kAnim==='pass'?'kOutL .33s ease-in forwards':'none',
+      like:()=>this.kGo('like'),pass:()=>this.kGo('pass'),
+      ptsShow:logged&&!b2b,award:'+10 puan kazandınız',loginHint:!logged,
+      goCat:()=>this.goTab('catalog'),loginGo:()=>this.loginOpen()};
+    // cart
+    const lines=this.lines(), pkgs=this.pkgLines(); const disc=this.discount(); const sub=this.subT(); const gap=this.minGap();
+    const mkL=(l,i)=>({n:l.p.n,l:l.v.l,img:'m-prd-'+l.pid,qty:l.qty,unitF:this.fmt(l.unit),totF:this.fmt(l.tot),disc:!!l.d,
+      inc:()=>{ if(l.d&&l.qty>=l.d.lim){this.toastM('Bu fiyattan en fazla '+l.d.lim+' adet');return;} this.setState(st=>({cart:st.cart.map((x,j)=>j===i?{...x,qty:x.qty+1}:x)})); },
+      dec:()=>this.setState(st=>({cart:st.cart.map((x,j)=>j===i?{...x,qty:Math.max(1,x.qty-1)}:x)})),
+      del:()=>this.setState(st=>({cart:st.cart.filter((x,j)=>j!==i)}))});
+    V.cv={lines:lines.map(mkL),
+      pkgs:pkgs.map((l,i)=>({n:l.k.n,cnt:l.k.it.map(x=>x[1]).join(' · '),img:'m-pkg-'+l.kid,qty:l.qty,totF:this.fmt(l.tot),
+        inc:()=>this.setState(st=>({cartPkgs:st.cartPkgs.map((x,j)=>j===i?{...x,qty:x.qty+1}:x)})),
+        dec:()=>this.setState(st=>({cartPkgs:st.cartPkgs.map((x,j)=>j===i?{...x,qty:Math.max(1,x.qty-1)}:x)})),
+        del:()=>this.setState(st=>({cartPkgs:st.cartPkgs.filter((x,j)=>j!==i)}))})),
+      empty:!lines.length&&!pkgs.length,notEmpty:!!(lines.length||pkgs.length),cnt:cartCount+' ürün',
+      subF:this.fmt(sub),discRow:disc>0,discF:'−'+this.fmt(disc),discLabel:s.coupon?'Kupon · '+s.coupon.code:'İndirim',
+      grandF:this.fmt(sub-disc),
+      couponIn:s.couponIn,onCoupon:e=>this.setState({couponIn:e.target.value,cMsg:null}),apply:()=>this.applyCoupon(),
+      couponOpen:()=>{this.setState({cMsg:null});this.openSheet({t:'coupon'});},
+      applySheet:()=>{this.applyCoupon();setTimeout(()=>{if(this.state.coupon)this.closeSheet();},60);},
+      applied:s.coupon?s.coupon.code:null,noCoupon:!s.coupon,removeC:()=>{ this.setState({coupon:null,cMsg:null}); this.toastM('Kupon kaldırıldı'); },
+      cMsg:s.cMsg,cCol:s.cMsg&&s.cMsg.ok?'#4a6121':'#b05c2e',
+      minMsg:gap>0&&(lines.length||pkgs.length)?'Asgari sepet 25 € — '+this.fmt(gap)+' eksik':null,
+      canGo:(lines.length||pkgs.length)&&gap<=0,ckBg:(lines.length||pkgs.length)&&gap<=0?'#5f7a2c':'#b9b29e',
+      goCk:()=>{ if(gap>0){this.toastM('Asgari sepet 25 €');return;} this.go({n:'checkout'}); },browse:()=>this.goTab('catalog')};
+    // checkout
+    const inR=this.inRegion(); const fee=this.shipFee(); const grand=this.grandCo(); const block=this.confirmBlock();
+    V.pkShare=()=>this.openSheet({t:'share'});
+    V.ck={logged,guest:!logged,kargoRow:!inR,who:this.pf().name+' · '+this.pf().mail,loginGo:()=>this.loginOpen(),
+      addrs:s.addresses.map(a=>({n:a.n,line:a.l+', '+a.zip+' '+a.city,def:a.def,bg:a.id===s.co.addr?'#eef2e2':'#fff',bd:a.id===s.co.addr?'#5f7a2c':'#ece5d2',pick:()=>this.setState(st=>({co:{...st.co,addr:a.id,day:null,pay:null}}))})),
+      addNew:()=>this.openAddr(null),
+      inR,modeT:inR?'Kapıya teslim — ücretsiz':'Kargo ile (soğuk zincir)',modeSub:inR?'Teslimat gününüzü seçin':'2–4 iş günü içinde teslim · 60 € üzeri kargo ücretsiz',
+      days:inR?['Çarşamba 13 Ağustos','Cumartesi 16 Ağustos'].map(d=>({d,bg:s.co.day===d?'#eef2e2':'#fff',bd:s.co.day===d?'#5f7a2c':'#ece5d2',pick:()=>this.setState(st=>({co:{...st.co,day:d}}))})):[],
+      feeF:fee>0?this.fmt(fee):'Ücretsiz',
+      noShipBlock:this.hasNoShip()&&!inR,noShipNames:lines.filter(l=>!l.p.ship).map(l=>l.p.n).concat(pkgs.filter(l=>!l.k.ship).map(l=>l.k.n)).join(', '),
+      pays:this.payOpts().map(([id,l,sb])=>({l,sb,bg:s.co.pay===id?'#eef2e2':'#fff',bd:s.co.pay===id?'#5f7a2c':'#ece5d2',pick:()=>this.setState(st=>({co:{...st.co,pay:id}}))})),
+      kapidaNote:(!b2b&&inR&&grand>150)?'Bu tutarda kapıda ödeme sunulamıyor — online ödeme gerekir.':null,
+      sumLines:lines.map(l=>({t:l.qty+'× '+l.p.n+' · '+l.v.l,f:this.fmt(l.tot)})).concat(pkgs.map(l=>({t:l.qty+'× '+l.k.n,f:this.fmt(l.tot)}))),
+      subF:this.fmt(sub),discRow:disc>0,discF:'−'+this.fmt(disc),grandF:this.fmt(grand),
+      mkt:s.co.mkt,mktBg:s.co.mkt?'#5f7a2c':'#fff',mktT:()=>this.setState(st=>({co:{...st.co,mkt:!st.co.mkt}})),
+      block,btnBg:block?'#b9b29e':'#5f7a2c',
+      confirmLabel:s.co.pay==='online'?'Ödemeye geç · '+this.fmt(grand):'Siparişi onayla · '+this.fmt(grand),
+      confirm:()=>this.coConfirm()};
+    // payment
+    V.pm={amountF:this.fmt(grand),busy:s.payBusy,ok:s.payOk,idle:!s.payBusy&&!s.payOk,pay:()=>this.payNow(),cancel:()=>this.back()};
+    // confirm
+    V.cf=top&&top.n==='confirm'?{ref:top.ref,day:top.day,totF:this.fmt(top.total),label:top.label,ptsF:top.pts?'+'+top.pts+' puan kazandınız':null,
+      goOrders:()=>this.goTab('orders'),goHome:()=>this.goTab('home')}:{};
+    // orders
+    const stC={'Alındı':['#eef2e2','#4a6121'],'Hazırlanıyor':['#f9ede2','#b05c2e'],'Yolda':['#f9ede2','#b05c2e'],'Teslim edildi':['#efe9db','#6d7261'],'İptal':['#f4e3e0','#a44a3f'],'Açık':['#f9ede2','#b05c2e'],'İlgileniyoruz':['#f9ede2','#b05c2e'],'Çözüldü':['#eef2e2','#4a6121'],'Yeniden açıldı':['#f9ede2','#b05c2e']};
+    V.ov={logged,guest:!logged,show:logged,loginGo:()=>this.loginOpen(),empty:!s.orders.length,browse:()=>this.goTab('catalog'),
+      rows:s.orders.map(o=>({ref:o.ref,dt:o.dt,st:o.st,stBg:(stC[o.st]||stC['Alındı'])[0],stFg:(stC[o.st]||stC['Alındı'])[1],totF:this.fmt(o.t),cnt:(o.items.reduce((a,l)=>a+l.qty,0)+(o.pkgs||[]).reduce((a,l)=>a+l.qty,0))+' ürün',
+        open:()=>this.go({n:'order',ref:o.ref}),re:()=>this.reorder(o)}))};
+    // order detail
+    if(V.vOrder){ const o=s.orders.find(x=>x.ref===top.ref);
+      const steps=['Alındı','Hazırlanıyor','Yolda','Teslim edildi']; const si={'Alındı':0,'Hazırlanıyor':1,'Yolda':2,'Teslim edildi':3}[o.st];
+      V.od={ref:o.ref,dt:o.dt,st:o.st,stBg:(stC[o.st]||stC['Alındı'])[0],stFg:(stC[o.st]||stC['Alındı'])[1],
+        timeline:steps.map((n,i)=>({n,dot:si!=null&&i<=si?'#5f7a2c':'#d8cfb6',col:si!=null&&i<=si?'#343b41':'#9a917c',w:si!=null&&i<=si?700:400})),
+        items:o.items.map(l=>{ const p=this.prod(l.pid), v=this.vOf(p,l.vid); return {t:l.qty+'× '+p.n,l2:v.l,f:this.fmt(this.uPrice(p,v)*l.qty)}; })
+          .concat((o.pkgs||[]).map(l=>{ const k=this.K.find(x=>x.id===l.kid); return {t:l.qty+'× '+k.n,l2:'Hazır paket',f:this.fmt(k.pr*l.qty)}; })),
+        totF:this.fmt(o.t),pay:o.pay,addr:o.addr,day:o.day,delivered:o.st==='Teslim edildi',
+        re:()=>this.reorder(o),talep:()=>this.openTalepNew(o.ref),fb:()=>this.openFb(o.ref)};
+    } else V.od={};
+    // talepler
+    V.tv={rows:s.talepler.map(t=>({id:t.id,tp:t.tp,ord:t.ord?('Sipariş '+t.ord):'Genel',dt:t.dt,st:t.st,stBg:(stC[t.st]||stC['Açık'])[0],stFg:(stC[t.st]||stC['Açık'])[1],open:()=>this.go({n:'talepD',id:t.id})})),
+      empty:!s.talepler.length,nw:()=>this.openTalepNew(null)};
+    if(V.vTalepD){ const t=s.talepler.find(x=>x.id===top.id);
+      V.td={id:t.id,tp:t.tp,dt:t.dt,ord:t.ord?'Sipariş '+t.ord:'Genel talep',st:t.st,stBg:(stC[t.st]||stC['Açık'])[0],stFg:(stC[t.st]||stC['Açık'])[1],res:t.res,
+        msgs:t.msg.map(m=>({me:m.who==='m',jc:m.who==='m'?'flex-end':'flex-start',bg:m.who==='m'?'#5f7a2c':'#fff',fg:m.who==='m'?'#fff':'#3a4147',t:m.t})),
+        reply:s.tReply,onReply:e=>this.setState({tReply:e.target.value}),send:()=>this.tSend()};
+    } else V.td={};
+    // talep new
+    const tnOrd=s.tn.ord?s.orders.find(x=>x.ref===s.tn.ord):null;
+    V.tn={step0:s.tn.step===0,step1:s.tn.step===1,step2:s.tn.step===2,hasOrd:!!s.tn.ord,ordRef:s.tn.ord,
+      yes:()=>{ if(!logged){this.loginOpen();return;} this.setState(st=>({tn:{...st.tn,step:1}})); },
+      no:()=>this.setState(st=>({tn:{...st.tn,step:2,ord:null}})),
+      orders:s.orders.map(o=>({ref:o.ref,dt:o.dt,pick:()=>this.setState(st=>({tn:{...st.tn,ord:o.ref,step:2}}))})),
+      items:tnOrd?tnOrd.items.map(l=>{ const p=this.prod(l.pid); const on=s.tn.items.includes(l.pid);
+        return {t:l.qty+'× '+p.n,on,bg:on?'#eef2e2':'#fff',bd:on?'#5f7a2c':'#ece5d2',mark:on?'✓':'',tog:()=>this.setState(st=>({tn:{...st.tn,items:on?st.tn.items.filter(x=>x!==l.pid):[...st.tn.items,l.pid]}}))}; }):[],
+      types:['Bozuk ürün','Eksik ürün','Soru','Diğer'].map(t=>({t,bg:s.tn.tp===t?'#5f7a2c':'#fff',fg:s.tn.tp===t?'#fff':'#3a4147',bd:s.tn.tp===t?'#5f7a2c':'#e0d8c2',pick:()=>this.setState(st=>({tn:{...st.tn,tp:t}}))})),
+      msg:s.tn.msg,onMsg:e=>this.setState(st=>({tn:{...st.tn,msg:e.target.value}})),
+      photo:s.tn.photo,photoT:()=>{ this.setState(st=>({tn:{...st.tn,photo:!st.tn.photo}})); if(!s.tn.photo)this.toastM('Fotoğraf eklendi (demo)'); },
+      photoL:s.tn.photo?'✓ 1 fotoğraf eklendi':'Fotoğraf ekle',
+      submit:()=>this.tnSubmit()};
+    // feedback
+    if(V.vFb){ const o=s.orders.find(x=>x.ref===s.fb.ord); const prods=o.items.map(l=>this.prod(l.pid));
+      const allLiked=s.fb.votes.length>0&&s.fb.votes.every(v=>v===1);
+      V.fv={stage0:s.fb.stage===0,stage1:s.fb.stage===1,stage2:s.fb.stage===2,ordRef:o.ref,
+        cur:s.fb.idx<prods.length?{n:prods[s.fb.idx].n,img:'m-prd-'+prods[s.fb.idx].id}:null,
+        prog:Math.min(s.fb.idx+1,prods.length)+' / '+prods.length,
+        like:()=>this.fbVote(1),no:()=>this.fbVote(0),
+        comment:s.fb.comment,onC:e=>this.setState(st=>({fb:{...st.fb,comment:e.target.value}})),
+        finish:()=>this.fbFinish(),allLiked,notAllLiked:!allLiked,
+        ptsF:(logged&&!b2b)?'+15 puan hesabınıza eklendi':null,
+        google:()=>this.toastM('Google yorum sayfası açılıyor (demo)'),
+        sorun:()=>this.openTalepNew(o.ref),goHome:()=>this.goTab('home')};
+    } else V.fv={};
+    // hesap
+    V.hv={logged,guest:!logged,show:logged,initial:this.pf().name.charAt(0),loginGo:()=>this.loginOpen(),isB2B:b2b,pf:this.pf(),
+      edit:()=>{ this.setState({pfE:{...this.pf()}}); this.openSheet({t:'pf'}); },
+      comp:b2b?{n:'RESTAURANT ANADOLU SARL',siret:'SIRET 842 156 337 00021',vat:'TVA FR 84 842156337'}:null,
+      addrs:s.addresses.map(a=>({n:a.n,line:a.l+', '+a.zip+' '+a.city,def:a.def,notDef:!a.def,edit:()=>this.openAddr(a),mkDef:()=>{ this.setState(st=>({addresses:st.addresses.map(x=>({...x,def:x.id===a.id}))})); this.toastM(a.n+' varsayılan yapıldı'); }})),
+      addNew:()=>this.openAddr(null),
+      langs:['TR','FR','DE'].map(l=>({l,bg:s.lang===l?'#5f7a2c':'#fff',fg:s.lang===l?'#fff':'#3a4147',pick:()=>this.setLang(l)})),
+      mktE:s.mkt.email,mktEBg:s.mkt.email?'#5f7a2c':'#d8cfb6',mktEJc:s.mkt.email?'flex-end':'flex-start',mktET:()=>this.setState(st=>({mkt:{...st.mkt,email:!st.mkt.email}})),
+      mktW:s.mkt.wa,mktWBg:s.mkt.wa?'#5f7a2c':'#d8cfb6',mktWJc:s.mkt.wa?'flex-end':'flex-start',mktWT:()=>this.setState(st=>({mkt:{...st.mkt,wa:!st.mkt.wa}})),
+      refOn:logged&&!b2b,refCode:'LEZZET-'+this.pf().name.split(' ')[0].toUpperCase(),refShare:()=>this.openSheet({t:'share'}),
+      ptsShow:logged&&!b2b,pts:s.points,canConv:s.points>=200,convBg:s.points>=200?'#5f7a2c':'#b9b29e',
+      convGap:s.points>=200?null:'Çevirmek için '+(200-s.points)+' puan daha gerekli',
+      conv:()=>this.convertPoints(),
+      coupons:s.myCoupons.map(c=>({code:c.code,v:c.v+' € indirim — sepette kod olarak girin'})),hasCoupons:s.myCoupons.length>0,
+      goOrders:()=>this.goTab('orders'),goTaleps:()=>this.go({n:'talepler'}),write:()=>this.openTalepNew(null),
+      gizlilik:()=>this.go({n:'static',k:'gizlilik'}),teslimat:()=>this.go({n:'static',k:'teslimat'}),
+      logout:()=>this.logout()};
+    // login
+    V.lg={m:s.login.m,busy:s.login.busy,mNull:!s.login.m&&!s.login.busy,
+      g:()=>this.gLogin(),w:()=>this.gLogin(),e:()=>this.setState(st=>({login:{...st.login,m:'email'}})),
+      email:s.login.email,onEmail:e=>this.setState(st=>({login:{...st.login,email:e.target.value}})),
+      send:()=>this.sendCode(),sent:s.login.sent,notSent:!s.login.sent,emailShown:s.login.m==='email'&&!s.login.busy,
+      code:s.login.code,onCode:e=>this.onCode(e),resend:()=>this.toastM('Kod yeniden gönderildi'),
+      cancel:()=>this.back()};
+    // pro
+    const pr=s.pro;
+    V.pr={fr:pr.mode==='fr',de:pr.mode==='de',sent:pr.sent,notSent:!pr.sent,err:pr.err,
+      frBg:pr.mode==='fr'?'#5f7a2c':'#fff',frFg:pr.mode==='fr'?'#fff':'#3a4147',deBg:pr.mode==='de'?'#5f7a2c':'#fff',deFg:pr.mode==='de'?'#fff':'#3a4147',
+      setFr:()=>this.setState(st=>({pro:{...st.pro,mode:'fr',err:null}})),setDe:()=>this.setState(st=>({pro:{...st.pro,mode:'de',err:null}})),
+      siret:pr.siret,onSiret:e=>{ const v=e.target.value.replace(/\D/g,'').slice(0,14); this.setState(st=>({pro:{...st.pro,siret:v,err:null,found:false}})); },
+      lookup:()=>this.proLookup(),found:pr.found,comp:pr.comp,cadr:pr.cadr,
+      compIn:pr.comp,onComp:e=>this.setState(st=>({pro:{...st.pro,comp:e.target.value}})),
+      vat:pr.vat,onVat:e=>{ const v=e.target.value.toUpperCase().replace(/\s/g,'').slice(0,11); this.setState(st=>({pro:{...st.pro,vat:v,vatOk:/^DE[0-9]{9}$/.test(v)}})); },
+      vatOk:pr.vatOk,vatMark:pr.vatOk?'✓ Geçerli':'',
+      name:pr.name,onName:e=>this.setState(st=>({pro:{...st.pro,name:e.target.value}})),
+      mail:pr.mail,onMail:e=>this.setState(st=>({pro:{...st.pro,mail:e.target.value}})),
+      tel:pr.tel,onTel:e=>this.setState(st=>({pro:{...st.pro,tel:e.target.value}})),
+      submit:()=>this.proSubmit(),wa:()=>this.toastM('WhatsApp sohbeti açılıyor (demo)'),goCat:()=>this.goTab('catalog')};
+    // static
+    const ST={gizlilik:{t:'Gizlilik Politikası',b:'Kişisel verileriniz yalnız siparişinizi hazırlamak, teslim etmek ve (izin verdiyseniz) kampanyalarımızı iletmek için işlenir. Verileriniz üçüncü taraflara satılmaz. Dilediğiniz an hesabınızdan izinlerinizi değiştirebilir, verilerinizin silinmesini bonjour@lezzetanatolia.fr adresine yazarak talep edebilirsiniz.'},
+      teslimat:{t:'Teslimat & Soğuk Zincir',b:'Strasbourg ve çevresinde (67 posta bölgesi) siparişleriniz kendi soğutuculu araçlarımızla kapınıza ücretsiz teslim edilir. Bölge dışına gönderiler soğuk zincir korumalı özel ambalajla kargoya verilir; 60 € üzeri kargo ücretsizdir. Donuk ürünler -18°C bozulmadan ulaşır — teslim aldığınızda dondurucuya koymanız yeterli.'}};
+    const stt=top&&top.n==='static'?ST[top.k]:null;
+    V.sx=stt?{t:stt.t,b:stt.b}:{};
+    return V;
+  }
+}
+</script>
+</body>
+</html>
