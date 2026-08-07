@@ -31,7 +31,8 @@ import type { CatalogKind } from '../../products-types';
 // Kategori/Koleksiyon oluştur + düzenle — tek dialog, `kind` ile çatallanır (no-duplication).
 //
 // KATEGORİ tek kısa alan (ad) → diller doğrudan alt alta (`layout="stacked"`), sekme yok. Görseli
-// anasayfa kategori şeridinde görünür (web 3:2 kart, mobil daire) → kaynak 3:2 (`role="category"`).
+// anasayfa kategori şeridinde görünür (masaüstü web 3:2 kart, mobil webde daire) → kaynak 3:2
+// (`role="category"`).
 // KOLEKSİYON çok dilli İKİ alan taşır (ad + açıklama) → ikisi bir DİL KARTINDA toplanır: kartın içi
 // seçili dilin alanı, dışı dilden bağımsız (slug/kapak/aktiflik). Kip görünür olur.
 // Koleksiyon ayrıca paylaşılabilir bir vitrin sayfasıdır (DOMAIN §13): slug + kapak + açıklama OG
@@ -158,7 +159,7 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
   });
 
   // Görsel alanı TEK yerde kurulur; yerleşim `kind`'a göre farklı yere koyar (tekrar yok). Rol oranı
-  // belirler: kategori 3:2 (anasayfa şeridi · mobilde daire), koleksiyon 16:9 (yalnız OG kartı).
+  // belirler: kategori 3:2 (anasayfa şeridi · mobil webde daire), koleksiyon 16:9 (yalnız OG kartı).
   // Yükleme kayıt gerektirir (R2 anahtarı slug'a bağlı) → oluşturmada istem gösterilir.
   const imageField = (
     <ImageCropField

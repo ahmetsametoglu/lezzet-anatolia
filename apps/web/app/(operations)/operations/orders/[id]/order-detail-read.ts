@@ -41,6 +41,7 @@ import {
 } from '@lezzet/domain-core';
 import { addVat, toCents, vatPortion } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
+import { readDeliveryProof } from '@/lib/courier/proof';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
 import type {
   OrderBundleGroup,
@@ -212,7 +213,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       date: order.deliveryDate,
       address: addressOf(order.addressSnapshot),
       courierName: courier?.name ?? null,
-      proof: proofOf(order.deliveryProof),
+      proof: await proofOf(order.deliveryProof),
       warehouse: warehouseLabels.get(order.warehouseId) ?? null,
     },
 
@@ -557,19 +558,18 @@ function addressOf(snapshot: Record<string, unknown> | null): string {
 }
 
 /**
- * Teslim kanıtı. Kopya `jsonb`'dir ve şeması teslim anına aittir; ekran ne bulduysa onu söyler —
- * "imza var" diye yazıp olmayan bir kanıtı varmış göstermek, ihtilafta en kötü yalandır.
+ * Teslim kanıtı — **ham `jsonb` BURADA ayrıştırılmıyor** (07.08).
+ *
+ * Eskiden ayrıştırılıyordu ve tam da bu yüzden sözleşme ayrıştı: ekran `signature`/`photos[]`
+ * arıyordu, yazan taraf `kind`/`imageKey` yazıyordu. İki uç da kendi içinde tutarlı olduğu için
+ * hiçbir yerde hata vermedi; kanıt "var" göründü, hiç açılamadı. Şekil artık tek şemada ve okuma
+ * tek kapıda (`readDeliveryProof`) — burada yapılan iş yalnız ekranın alan adlarına çevirmek.
+ *
+ * Kapı şema tutmayan bloğa `null` diyor: yarım bir kanıt göstermektense hiç göstermemek doğru,
+ * çünkü yarım kanıt yine "kanıt var" der.
  */
-function proofOf(proof: Record<string, unknown> | null): OrderDetailView['delivery']['proof'] {
+async function proofOf(raw: unknown): Promise<OrderDetailView['delivery']['proof']> {
+  const proof = await readDeliveryProof(raw);
   if (!proof) return null;
-  const parts: string[] = [];
-  if (proof.signature) parts.push('imza');
-  const photos = Array.isArray(proof.photos) ? proof.photos.length : 0;
-  if (photos > 0) parts.push(photos === 1 ? 'foto' : `foto ×${photos}`);
-  if (proof.note) parts.push('not');
-  return {
-    when: typeof proof.at === 'string' ? proof.at : null,
-    by: typeof proof.by === 'string' ? proof.by : null,
-    parts,
-  };
+  return { when: proof.at, receivedBy: proof.receivedBy, kind: proof.kind, imageUrl: proof.imageUrl };
 }

@@ -2,7 +2,7 @@ import type { OrderDecision } from '@lezzet/domain-core';
 import type { OrderSource } from '@lezzet/types';
 import { money, shortDateTime } from '@/components/operation/ui/format';
 import type { TimelineStep } from '@/components/operation/ui/timeline';
-import type { OrderDetailView } from './order-detail-types';
+import type { DeliveryProofView, OrderDetailView } from './order-detail-types';
 
 // Detay sayfasının SÖZLERİ ve türetilmiş gösterim değerleri — masaüstü ve telefon aynı cümleyi
 // kursun diye tek yerde. Hesap yok; hesaplanmışın nasıl okunacağı var.
@@ -167,3 +167,23 @@ export function creditFill(order: OrderDetailView): string {
   if (credit?.limitCents && credit.openBalanceCents / credit.limitCents > 0.75) return 'bg-ops-amber';
   return 'bg-ops-olive';
 }
+
+/**
+ * Kanıt türünün yüzü. Ham `kind` ekrana yazılmaz (`signature`/`photo`); ihtilafta sorulan soru
+ * "imza mı foto mu" diye Türkçe sorulur.
+ */
+export const PROOF_KIND_LABEL: Record<DeliveryProofView['kind'], string> = {
+  signature: 'imza',
+  photo: 'foto',
+};
+
+/** Sipariş detayının kısa cümleleri — ekranda tekrarlanan metin koda gömülmez. */
+export const ORDER_NOTES = {
+  /**
+   * Kanıt KAYDI var ama görseli açılamıyor. Boş bir çerçeve "kanıt bozuk" derdi; oysa kayıt
+   * yerinde, açılamayan şey depolama bağlantısı. Sebebi yazmak, ihtilafta neye bakılacağını da
+   * söylüyor — anahtar kayıtta duruyor.
+   */
+  proofImageUnavailable:
+    'Kanıt kaydı var ama görsel açılamıyor — depolama bağlantısı yok ya da anahtar geçersiz. Kayıt siparişte duruyor.',
+} as const;

@@ -144,12 +144,30 @@ export interface OrderFinanceView {
   costNote: string | null;
 }
 
-/** Teslim kanıtı — "eksik geldi" ihtilafının dayanağı. */
+/**
+ * Teslim kanıtı — "eksik geldi" ihtilafının dayanağı.
+ *
+ * **Alanlar 07.08'de DEĞİŞTİ ve sebebi bir arızaydı** (arka uç şeridinin ölçümü): bu görünüm
+ * `signature` · `photos[]` · `note` · `by` okuyordu, yazan taraf ise `kind` · `imageKey` ·
+ * `receivedBy` · `courierId` yazıyordu. Ortak tek alan `at` idi — yani `parts` her zaman boş,
+ * `by` her zaman `null` ve **kanıt görseli hiç açılamıyordu.** İki taraf da kendi içinde tutarlı
+ * olduğu için hiçbir yerde hata vermiyordu; ekran "kanıt var" diyor, neyin var olduğunu
+ * söyleyemiyordu. Açılamayan bir sigorta, olmayan sigortadır.
+ *
+ * Şekil artık tek kaynakta (`DeliveryProofRecordSchema`) ve okuma tek kapıdan (`readDeliveryProof`);
+ * yanlış alan adı bugün derleme hatası.
+ */
 export interface DeliveryProofView {
   when: string | null;
-  by: string | null;
-  /** Kanıt türleri ("imza", "foto ×2") — kopyada ne varsa. */
-  parts: string[];
+  /** Kapıda teslim ALAN kişi — B2B'de "kim imzaladı" ihtilafın asıl cevabıdır. */
+  receivedBy: string | null;
+  /** Kanıt türü — imza çizimi mi kapı fotoğrafı mı. */
+  kind: 'signature' | 'photo';
+  /**
+   * SÜRELİ imzalı adres (15 dk, private kova). `null` = kova yapılandırılmamış ya da anahtar ölü.
+   * Kalıcı bir bağlantı DEĞİL: ekranda saklanmaz, paylaşılmaz.
+   */
+  imageUrl: string | null;
 }
 
 /** Sağ rayın müşteri kartı: kim, ne kadar borcu var, limiti ne. */

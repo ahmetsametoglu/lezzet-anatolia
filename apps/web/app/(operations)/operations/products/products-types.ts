@@ -29,7 +29,7 @@ export type ProductView = Product & {
 };
 
 // Kategori view-model — `count` bu kategorideki ürün sayısı; `imageUrl` görselin public okuma URL'i
-// (kategori görseli anasayfa şeridinde görünür: web 3:2 kart, mobil daire).
+// (kategori görseli anasayfa şeridinde görünür: masaüstü web 3:2 kart, mobil webde daire).
 export type CategoryView = Category & { count: number; imageUrl: string | null };
 // Koleksiyon = adı olan ürün listesi (DOMAIN §13) → üyelik id'leri view-model'in parçası (vitrin
 // sırasında); üyelik dialogu bunlarla ön-dolar. `count` bağımsız sayaç DEĞİL, productIds.length'ten

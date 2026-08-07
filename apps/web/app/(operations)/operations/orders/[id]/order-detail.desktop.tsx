@@ -11,6 +11,8 @@ import { statusLabel, statusTone } from '../orders-labels';
 import { OrderLines } from './components/order-lines';
 import {
   DECISION_COPY,
+  ORDER_NOTES,
+  PROOF_KIND_LABEL,
   creditFill,
   creditPercent,
   initialsOf,
@@ -451,34 +453,40 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               ) : null}
               {/* Kurye YALNIZ GÖRÜNÜR: atama günün planıdır (Rotalar), tek siparişin özelliği değil. */}
               <InfoRow label="Kurye" value={order.delivery.courierName ?? 'atanmadı · Rotalar'} />
-              {/* Kanıt PARÇA PARÇA gösterilir (tasarım): "imza" ile "foto ×2" ayrı çipler, çünkü
-                  ihtilafta hangisinin bulunduğu tek tek sorulur — bir cümleye eritilince aranan
-                  parça göz taramasıyla bulunamıyordu. */}
+              {/* Kanıt AÇILABİLİR olmalı (07.08): türünü yazmak yetmiyor, ihtilafta bakılan şey
+                  görselin kendisi. `imageUrl` süreli imzalı adres — sayfa her açıldığında yeniden
+                  doğuyor, saklanmıyor. Kova yoksa görsel yerine SEBEP yazılır; boş bir çerçeve
+                  "kanıt bozuk" der, oysa kayıt yerinde. */}
               {order.delivery.proof ? (
                 <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-olive-line bg-ops-olive-bg px-3 py-2.5">
                   <span className="font-ops-display text-ops-xs font-semibold text-ops-olive-dark">Teslim kanıtı</span>
                   <div className="flex flex-wrap items-center gap-2">
-                    {order.delivery.proof.parts.length > 0 ? (
-                      order.delivery.proof.parts.map((part) => (
-                        <span
-                          key={part}
-                          className="rounded-[6px] border border-ops-olive-line bg-ops-white px-2 py-1 font-ops-mono text-ops-micro font-medium text-ops-olive-dark"
-                        >
-                          {part}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="font-ops-body text-ops-micro text-ops-olive-dark">kayıt var</span>
-                    )}
+                    <span className="rounded-[6px] border border-ops-olive-line bg-ops-white px-2 py-1 font-ops-mono text-ops-micro font-medium text-ops-olive-dark">
+                      {PROOF_KIND_LABEL[order.delivery.proof.kind]}
+                    </span>
                     {order.delivery.proof.when ? (
                       <span className="ml-auto font-ops-mono text-ops-micro text-ops-olive-dark">
                         {shortDateTime(order.delivery.proof.when)}
                       </span>
                     ) : null}
                   </div>
+                  {order.delivery.proof.imageUrl ? (
+                    // Ham `<img>` BİLEREK (emsal `support/components/ticket-thread.tsx`): adres
+                    // R2'nin imzalı ve SÜRELİ adresi (15 dk), `next/image` onu önbelleğe alıp
+                    // süresi dolduktan sonra kırık gösterirdi.
+                    <img
+                      src={order.delivery.proof.imageUrl}
+                      alt={`Teslim kanıtı — ${PROOF_KIND_LABEL[order.delivery.proof.kind]}`}
+                      className="max-h-56 w-full rounded-ops-btn border border-ops-olive-line bg-ops-white object-contain"
+                    />
+                  ) : (
+                    <span className="rounded-ops-btn border border-ops-olive-line bg-ops-white px-2.5 py-2 font-ops-body text-ops-micro leading-[1.45] text-ops-olive-dark">
+                      {ORDER_NOTES.proofImageUnavailable}
+                    </span>
+                  )}
                   <span className="font-ops-body text-ops-micro leading-[1.45] text-ops-olive-dark">
-                    {order.delivery.proof.by ? `Onaylayan: ${order.delivery.proof.by} · ` : ''}"eksik geldi" ihtilafında
-                    dayanak budur.
+                    {order.delivery.proof.receivedBy ? `Teslim alan: ${order.delivery.proof.receivedBy} · ` : ''}
+                    "eksik geldi" ihtilafında dayanak budur.
                   </span>
                 </div>
               ) : null}
