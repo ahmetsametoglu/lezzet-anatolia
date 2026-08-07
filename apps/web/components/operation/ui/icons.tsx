@@ -29,6 +29,7 @@ export type NavIconName =
   | 'rotalar'
   | 'urunler'
   | 'fiyatlar'
+  | 'tarifler'
   | 'stock'
   | 'satinalma'
   | 'depolar'
@@ -69,6 +70,14 @@ const NAV_PATHS: Record<NavIconName, ReactNode> = {
     <>
       <path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10z" />
       <circle cx="7" cy="7" r="1.3" />
+    </>
+  ),
+  // Tarif = AÇIK DEFTER. Şef külahı da adaydı ama o "mutfak" der, oysa buradaki nesne yazılan
+  // metnin kendisi; ürün etiketiyle (`urunler`) karışmaması da önemli, ikisi yan yana duruyor.
+  tarifler: (
+    <>
+      <path d="M12 6.5C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 2 1.5-1.5 3.5-2 8-2v-13c-4.5 0-6.5.5-8 2z" />
+      <path d="M12 6.5v13" />
     </>
   ),
   fiyatlar: (

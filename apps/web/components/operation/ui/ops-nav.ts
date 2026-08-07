@@ -64,6 +64,9 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { key: 'urunler', label: 'Ürünler', href: '/operations/products', roles: ADMIN_ONLY },
       { key: 'fiyatlar', label: 'Fiyatlar', href: '/operations/prices', roles: ADMIN_ONLY },
+      // Tarifler KATALOĞUN altında, kendi başlığında değil (tasarım `AdminSidebar active="tarifler"`):
+      // tarif satılan bir şey değil, satılanı ANLATAN bir şey — ürünlerin komşusu olması bunu söylüyor.
+      { key: 'tarifler', label: 'Tarifler', href: '/operations/recipes', roles: ADMIN_ONLY },
     ],
   },
   {
