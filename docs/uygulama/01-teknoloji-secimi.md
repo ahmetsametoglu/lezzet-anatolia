@@ -257,8 +257,8 @@ hedefler; Tailwind 4 uyumlu v5 "preview — not intended for production use"; Je
 sorunu açık ve "post-5.0"a ertelenmiş (elle doğrulandı §11a). Test-birincil ölçütte bugün elenir.
 İlke: **web'le sınıf adı değil TOKEN paylaşılır** — duplikasyon yasağını sağlayan token'dır.
 
-**Token tek-kaynak deseni:** bugün 229 token `apps/web/app/globals.css` `@theme` bloğunda (elle
-sayıldı). Plan: `design-tokens` paketi (düz TS sabit modülü; 21.3'te kurulur) tek kaynak olur → web'de küçük bir
+**Token tek-kaynak deseni:** bugün 223 token `apps/web/app/globals.css`'te (158 `@theme` + 60
+karanlık blok + 5 font istisnası; 21.3 parser'ı ile ölçüldü — ilk elle sayım 229 idi). Plan: `design-tokens` paketi (düz TS sabit modülü; 21.3'te kurulur) tek kaynak olur → web'de küçük bir
 üretim adımı `@theme` CSS'ini bu modülden türetir, RN'de Unistyles teması modülü doğrudan import
 eder. "Ham hex yasak" kuralı RN'de de aynen lint'lenir. Token seti büyürse Style Dictionary 5.x
 (DTCG) hazır yükseltme yolu.

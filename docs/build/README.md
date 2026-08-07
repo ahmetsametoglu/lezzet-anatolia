@@ -33,12 +33,12 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 11/15 (+3 kısmi) |
 | 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | tamam | 12/12 |
 | 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 11/12 (+1 kısmi) |
-| 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 11/22 (+10 kısmi) |
+| 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 11/22 (+11 kısmi) |
 | 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 5/20 (+10 kısmi) |
 | 10 | `10-depo.md` | Depo Yüzeyi | sürüyor | 0/6 (+5 kısmi) |
 | 11 | `11-kurye-rota.md` | Kurye ve Rota Teslimat | sürüyor | 4/6 (+1 kısmi) |
 | 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | sürüyor | 7/10 (+2 kısmi) |
-| 13 | `13-analitik.md` | Analitik | sürüyor | 5/8 (+3 kısmi) |
+| 13 | `13-analitik.md` | Analitik | sürüyor | 6/8 (+2 kısmi) |
 | 14 | `14-bildirim-email.md` | Bildirim ve E-posta: `packages/email` + `packages/notify` | sürüyor | 7/10 |
 | 15 | `15-whatsapp.md` | WhatsApp: Zemin ve Canlı Kanal | bekliyor | 0/14 |
 | 16 | `16-talep-sikayet.md` | Talep / Şikâyet | sürüyor | 2/6 (+2 kısmi) |
@@ -46,7 +46,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/12 (+2 kısmi) |
 | 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 15/21 (+4 kısmi) |
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 2/4 |
-| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 2/4 |
+| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 2/4 (+1 kısmi) |
 <!-- durum:son -->
 
 Sıra katı değildir ama bağımlılıklar bağlayıcıdır (her dosyada yazılı). 08–09, tasarımdan gelen **komponent envanterinin kodlanmasıyla** başlar: önce komponentler, sonra sayfalar.

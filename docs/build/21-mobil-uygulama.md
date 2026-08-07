@@ -55,9 +55,20 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     `app.json`'daki nötr `#FFFFFF` splash/ikon zemini 21.3'te token'dan güncellenecek
     (README'de beyanlı — app.json statik JSON, token import edemez; 21.3'te `app.config.ts`
     değerlendirilir). RN bağımlılık beyanları STACK §2 tablosuna eklendi (üç mobil satır).
-- [ ] (21.3) **`design-tokens` paketi (yeni kurulacak):** tek kaynak TS token modülü; web `@theme` CSS'i
+- [~] (21.3) **`design-tokens` paketi:** tek kaynak TS token modülü; web `@theme` CSS'i
   bu modülden türetilir (web şeridiyle koordineli — talep), RN Unistyles teması doğrudan
   import eder. `touches: packages/design-tokens, apps/web/app/globals.css`
+  - **Durum (07.08):** paket kuruldu + mobil tema bağlandı; `[x]` olmamasının tek eksiği web
+    türetimi (talep açıldı, müşteri şeridinde — o güne dek İKİ YÖNLÜ parite testi köprüyü
+    tutuyor: `packages/design-tokens/src/parity.test.ts`, birim projesinde, globals.css ↔
+    modül 218 token değer-değer + 5 font istisnası; mutasyon kontrolü yapıldı — bozulan tek
+    hex testi kızartıyor). Sayım: 223 custom property (158 `@theme` + 60 karanlık).
+    `renderThemeCss()` üretici hazır. `apps/mobile` teması `customerColors/Text/Radius`'tan,
+    ham değer SIFIR; müşteri vitrini tek temalı (karanlık yalnız operasyon evreni — envanter
+    kuralı, operasyon teması ileriki operasyon işinde). Mobil doğrulama: 3 suite / 5 test,
+    expo-doctor 20/20, iOS bundle 1266 modül (paket Metro grafiğinde). globals.css'te
+    parser'ın bulduğu iki içerik gözlemi (çift "§0.4" başlığı; iki karanlık-eşdeğerlik yorum
+    kayması) web şeridine talep dosyasında raporlandı.
 - [ ] (21.4) **Auth akışı:** OTP uçları (`/api/v1/auth/*`) — web'le aynı sunucu servisleri
   (`email-verification`, `notify`); cihazda supabase-js oturumu + SecureStore; oturum
   yenileme. `touches: apps/mobile-api, apps/mobile`
@@ -66,4 +77,5 @@ Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** 
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
 katalog/sepet/sipariş uçları + ekranları); operasyon ekran seti SONRA ve komple yeniden
 kurguyla; push bildirim (notify'a driver — 14 ile koordineli), Maestro E2E hattı,
-mağaza/dağıtım süreci.
+mağaza/dağıtım süreci. **Müşteri sayfa tasarımına BAŞLAMADAN ÖNCE kullanıcıyla konuşulacak
+konular var (kullanıcı notu 07.08) — ekran işine onunla konuşmadan girilmez.**

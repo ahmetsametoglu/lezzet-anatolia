@@ -49,6 +49,8 @@ export default defineConfig({
             // Maskeleme saf metin işi, DB'siz (05.08). Liste eksik olsaydı `mask.test.ts` sessizce
             // hiç koşmazdı — "test yazdım" ile "test koşuyor" arasındaki fark tam olarak budur.
             'packages/observability/src/**/*.test.ts?(x)',
+            // Token paritesi saf dosya-okuma, DB'siz (21.3): globals.css ↔ design-tokens modülü.
+            'packages/design-tokens/src/**/*.test.ts?(x)',
             'apps/web/app/**/*.test.ts?(x)',
             'apps/web/components/**/*.test.ts?(x)',
           ],
