@@ -122,6 +122,49 @@ export class PostalCodePlaceService extends BaseDbService<PostalCodePlace, never
           : Number(b.inRoute) - Number(a.inRoute),
       );
   }
+
+  /**
+   * **GÖRÜNEN ALANDAKİ kodlar** (19.20) — haritanın sorusu ötekilerin tersi: üç okuma kodu BİLEREK
+   * sorar, biri önek arar; bu, "şu anda ekranda ne var" der.
+   *
+   * ── `bbox` ZORUNLU ve bu bir başarım ayarı değil ────────────────────────────
+   * Operasyon şeridi ölçtü: ülke süzgeci yükü üçte bire indiriyor (16.878 → 6.065), `bbox` bir
+   * şehre. Ülkenin tamamını dönen bir dal açsaydık, hiçbir ekranın kullanmayacağı 6.000 satırlık
+   * bir yol açılırdı — ve bir gün biri onu çağırırdı.
+   *
+   * ── KOORDİNATSIZ KAYIT KENDİLİĞİNDEN DÜŞER ─────────────────────────────────
+   * `lat >= x` karşılaştırması `null` için `null`dur, yani satır süzgeci geçmez. Ayrıca bir
+   * `is not null` yazmıyoruz: aynı kuralı iki kez ifade etmek, biri değiştiğinde ötekinin
+   * unutulacağı yerdir. Kural zaten veride (`postal_code_place_point`: ikisi birlikte var ya da
+   * birlikte yok).
+   *
+   * ── TAVAN AŞILDIĞINDA SESSİZ KALINMAZ ──────────────────────────────────────
+   * `limit + 1` istenir; fazlası varsa çağırana `truncated` denir. Ekran bunu YAZMAK zorunda:
+   * eksik çizilen bir harita, operatöre olmayan kodu "yok" diye okutur.
+   *
+   * Sıra `postalCode` — kesme olduğunda hangi satırların düştüğü belirli olsun diye. Sırasız bir
+   * sorgu her kaydırmada başka bir küme döndürür ve harita titrer; belirlilik, kesme yanlılığından
+   * daha değerli (kesme zaten çağırana bildiriliyor).
+   */
+  async listInBounds(input: {
+    bbox: { minLat: number; maxLat: number; minLng: number; maxLng: number };
+    country?: Country;
+    limit?: number;
+  }): Promise<{ rows: PostalCodePlace[]; truncated: boolean }> {
+    const limit = input.limit ?? 1200;
+    const rows = await this.getAll(input.country ? { country: input.country } : undefined, {
+      rangeFilters: [
+        { field: 'lat', operator: 'gte', value: input.bbox.minLat },
+        { field: 'lat', operator: 'lte', value: input.bbox.maxLat },
+        { field: 'lng', operator: 'gte', value: input.bbox.minLng },
+        { field: 'lng', operator: 'lte', value: input.bbox.maxLng },
+      ],
+      orderBy: 'postalCode',
+      limit: limit + 1,
+    });
+
+    return { rows: rows.slice(0, limit), truncated: rows.length > limit };
+  }
 }
 
 /** Autocomplete satırı — ekran etiketi buradan KURAR, burada kurulmaz. */
