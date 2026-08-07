@@ -1,8 +1,9 @@
-import type { PaymentMethod } from '@lezzet/types';
+import type { Carrier, PaymentMethod } from '@lezzet/types';
 import type { StopOutcome } from '@/lib/courier/day';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import { money } from '@/components/operation/ui/format';
 import type { DoorMethod } from './[orderId]/delivery-types';
+import type { PrepStage } from './dispatch-types';
 
 // Kurye gün ekranının SÖZLÜĞÜ. Bu yüzeyin kullanıcısı sahada, telefonda, çoğu zaman ayaküstü —
 // cümleler kısa ve KAPIDAKİ dille kurulu: "bekliyor" değil sistemin `ready`'si, "ulaşılamadı" değil
@@ -73,6 +74,56 @@ export const METHOD_LABEL: Record<PaymentMethod, string> = {
   cheque: 'çek',
   bank_transfer: 'havale',
   online: 'online',
+};
+
+/**
+ * Sevkiyatçının gün planının sözlüğü (09.15). İç terim ham kullanılmaz (tasarım §6): "bölge",
+ * "teslim günü", "sipariş kesim saati" denir — `DeliveryZone`, `delivery_date`, `cut-off` değil.
+ */
+export const DISPATCH_NOTES = {
+  /** Kesim saati geçti: liste artık araç yüklenirken büyümez — bu bir güven cümlesidir (tasarım §2). */
+  settled: 'Bu günün listesi kesinleşti — sipariş kesim saati geçti, yeni sipariş bu güne düşmez.',
+  open: (time: string): string =>
+    `Liste hâlâ büyüyebilir: ${time}'a kadar gelen sipariş bu güne düşer, sonrası bir sonraki teslim gününe.`,
+  /**
+   * Hazır olmayanlar ADIYLA anılır: yalnız sayı vermek sevkiyatçıyı listede aramaya gönderirdi.
+   * Üçten fazlasında ad yığılır, o zaman sayıya dönülür — uyarı bir liste değil, bir işarettir.
+   */
+  notReady: (names: readonly string[]): string =>
+    names.length <= 3
+      ? `${names.join(', ')} henüz hazır değil — hazırlık depoda; araca yüklemeden önce bekleyin.`
+      : `${names.length} sipariş henüz hazır değil — hazırlık depoda; araca yüklemeden önce bekleyin.`,
+  /**
+   * Kargonun günü rotanınkinden farklı çalışır ve ekran bu farkı GİZLEMEZ (tasarım §2). Bu bölüm bir
+   * güne ait değil, bir kuyruktur: kargoda teslim günü şema gereği yoktur (`0012_order.sql`).
+   */
+  shipping:
+    'Gün süzgeci uygulanmaz: kargoda teslim günü bizim vaadimiz değil taşıyıcınındır. Bu bir kuyruktur — hazırlanmış, henüz taşıyıcıya verilmemiş paketler. Takip numarasını hazırlık ekranı yazar.',
+  shippingTruncated: 'Kuyruk tavana dayandı — burada görünenden daha fazla paket bekliyor.',
+  emptyDay: 'Bu güne düşen çıkış yok. Bölgelerin haftalık günleri Depolar sayfasında tanımlanır — bugün hiçbirinin günü olmayabilir.',
+  noAccess: 'Günün planını kurmak ve kurye atamak yöneticinin işidir. Kuryeyseniz kendi gününüz burada açılır.',
+} as const;
+
+/**
+ * Hazırlık kademesinin yüzü — tasarımın kendi sözlüğü (Hazır · Hazırlanıyor · Hazır değil · Teslim).
+ * `ready` HİÇ ROZET ÇİZDİRMEZ: normal olan hâl için rozet basmak, listeyi tek renge boyayıp asıl
+ * uyarıları (hazır değil) görünmez kılardı — rozet bir sapmadır, bir etiket değil.
+ */
+export const PREP_VIEW: Record<PrepStage, { label: string; tone: OpsTone } | null> = {
+  ready: null,
+  not_started: { label: 'Hazır değil', tone: 'red' },
+  preparing: { label: 'Hazırlanıyor', tone: 'amber' },
+  delivered: { label: 'Teslim', tone: 'olive' },
+  returned: { label: 'İade döndü', tone: 'slate' },
+};
+
+/** Taşıyıcı adları — ham enum değeri ekrana yazılmaz. */
+export const CARRIER_LABEL: Record<Carrier, string> = {
+  colissimo: 'Colissimo',
+  chronopost: 'Chronopost',
+  dhl: 'DHL',
+  ups: 'UPS',
+  other: 'diğer',
 };
 
 /**

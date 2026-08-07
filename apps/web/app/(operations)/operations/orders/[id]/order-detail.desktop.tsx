@@ -520,19 +520,20 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               kurye atanmadı" ile "kurye buradan atanmaz" farklı şeylerdir. Aramayı kesen not budur;
               yolu olan hedef bağlanır, henüz yazılmamış ekran düz metin kalır.
 
-              BEKLEYEN(09.15): Rotalar ekranı — "gün rotası ve kurye ataması" oraya bağlanacak; adı
-              bugün bilerek DÜZ, ölü link 404'e düşerdi ve okuyan "ekran var ama bozuk" diye anlardı.
-              Kuryenin kendi listesi 06.08'de yazıldı (11.1) ve artık bağlı. */}
+              Notun iki hedefi de artık YAZILDI ve bağlı: gün planı + kurye ataması Teslimat'ta
+              (09.15, 07.08), kuryenin kendi listesi de aynı adresin öbür dalında (11.1, 06.08). */}
           <div className="flex flex-col gap-1.5 rounded-ops-card border border-dashed border-ops-line-strong px-3.5 py-[11px]">
             <span className="font-ops-display text-ops-xs font-semibold text-ops-body">Buraya girmeyenler</span>
             <span className="font-ops-body text-ops-micro leading-[1.55] text-ops-muted">
-              Gün rotası ve kurye ataması → Rotalar · hazırlık kuyruğu ve parti seçimi →{' '}
-              <Link href="/operations/stock" className="cursor-pointer font-medium text-ops-olive-dark hover:underline">
-                Depo
-              </Link>{' '}
-              · kuryenin kendi listesi →{' '}
+              {/* Gün planı ile kuryenin listesi TEK giriş: ikisi aynı adresin iki dalı, iki ayrı
+                  bağlantı yazmak aynı yeri iki farklı yer gibi gösterirdi. */}
+              Gün planı, kurye ataması ve kuryenin kendi listesi →{' '}
               <Link href="/operations/deliveries" className="cursor-pointer font-medium text-ops-olive-dark hover:underline">
                 Teslimat
+              </Link>{' '}
+              · hazırlık kuyruğu ve parti seçimi →{' '}
+              <Link href="/operations/stock" className="cursor-pointer font-medium text-ops-olive-dark hover:underline">
+                Depo
               </Link>{' '}
               · müşteriye giden metin → bildirim şablonları.
             </span>

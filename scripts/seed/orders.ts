@@ -218,6 +218,11 @@ export async function seedOrders(
     /** Teslim gününü bugüne göre kaydır — kurye gün kapanışı ancak farklı günlerle denenebilir. */
     teslimGunu?: number;
     /**
+     * Kurye ATANMIŞ ama sipariş henüz yola çıkmamış. Sevkiyatçının sabah yaptığı işin sonucu budur
+     * ve gün planı ekranı (09.15) tam bu aralıkta çalışır — hâl seed'de hiç doğmuyordu.
+     */
+    atanmis?: boolean;
+    /**
      * Siparişin ÇIKTIĞI depo. Varsayılan ana depo; `kehl` verildiğinde partiler de oradan seçilir.
      * Tek depolu bir veri setinde depo süzgecini unutan sorgu DOĞRU cevap verir ve hata görünmez
      * (CLAUDE.md §1) — ikinci deponun siparişi o kör noktayı açar.
@@ -225,10 +230,22 @@ export async function seedOrders(
     depo?: 'str' | 'kehl';
     /** Müşteriye GERİ ÖDENEN tutar — `order_refund` hareketi; ödeme durumu `refunded`'a döner. */
     iade?: number;
+    /**
+     * Kargoya verilmiş sipariş: taşıyıcı + takip numarası (`setShipment`).
+     *
+     * Yalnız `shipping` siparişe yazılabilir — kural VERİDE (`order_carrier_only_shipping`).
+     * Her kargo siparişine yazılMAZ: "kargoya verilmedi henüz" da bir hâldir ve müşteri sipariş
+     * detayında takip kutusunun boş hâli de görünmelidir.
+     */
+    tasiyici?: { carrier: 'colissimo' | 'chronopost' | 'dhl' | 'ups' | 'other'; takipNo: string | null };
     etiket: string;
   }): Promise<string | null> {
     const customerId = kisiler.get(opts.musteri);
-    if (!customerId) return null;
+    // SESSİZ `return null` DEĞİL (yaşandı 07.08): bilinmeyen bir müşteri anahtarı yazıldığında —
+    // benim `b2cYeni` yazım hatam — iki sipariş hiç doğmadı ve seed "tamam" dedi. Yerel veri
+    // sessizce eksik kaldı; eksiklik ancak ekranda bir bölümün hiç dolmamasıyla fark edilirdi ve
+    // orada da sebebi seed sanılmazdı. Yazım hatası gürültü çıkarmalı.
+    if (!customerId) throw new Error(`seed: bilinmeyen müşteri anahtarı "${opts.musteri}" (${opts.etiket})`);
 
     const adres = await varsayilanAdres(customerId);
     const deliveryType = opts.deliveryType ?? 'route';
@@ -289,7 +306,13 @@ export async function seedOrders(
         locale: profiller.get(customerId)?.preferredLanguage ?? null,
         addressId: adres?.id ?? null,
         addressSnapshot: adres ? { line1: adres.line1, postalCode: adres.postalCode, city: adres.city, country: adres.country } : null,
-        courierId: !kapiOnu && ['out_for_delivery', 'delivered', 'completed', 'returned'].includes(opts.hedef) ? kurye : null,
+        // Kurye YOLA ÇIKMIŞ siparişte kendiliğinden yazılır; `atanmis` ise sevkiyatçının SABAH yaptığı
+        // atamayı kurar. Bu ikisi ayrı hâllerdir ve gün planı ekranı (09.15) tam aralarında çalışır:
+        // "atandı ama henüz çıkmadı" seed'de hiç doğmuyordu, ekranın en kalabalık hâli görülemiyordu.
+        courierId:
+          !kapiOnu && (opts.atanmis || ['out_for_delivery', 'delivered', 'completed', 'returned'].includes(opts.hedef))
+            ? kurye
+            : null,
         onAccount: opts.onAccount ?? false,
         paymentMethod: opts.paymentMethod ?? null,
         isGiftOrder: opts.hediye ?? false,
@@ -316,6 +339,9 @@ export async function seedOrders(
     if (opts.yasi) await orders.update({ id: order.id, createdAt: an(-opts.yasi) });
     // Fatura numarası DIŞARIDA doğar, sistem yalnız eşleştirir (12.7) — burada eşleşmiş hâli kurulur.
     if (opts.faturaNo) await orders.update({ id: order.id, invoiceNo: opts.faturaNo });
+    // Kargo bilgisi KAPIDAN geçer (`setShipment`): "rota siparişine taşıyıcı yazılamaz" kuralı hem
+    // serviste hem veride duruyor, doğrudan `update` o kapıyı atlardı.
+    if (opts.tasiyici) await orders.setShipment(order.id, opts.tasiyici.carrier, opts.tasiyici.takipNo);
 
     // Hızlı satış AYRI YOLDUR: rezervasyon yok, fiiliden anında düşer (07.10).
     if (opts.kaynak === 'door' && opts.hedef === 'completed') {
@@ -525,6 +551,53 @@ export async function seedOrders(
   // Bir gün öncesi: kapanışı yapılmamış İKİNCİ gün — "açık gün" uyarısı görünsün.
   await siparis({ musteri: 'b2cSadik', kalemler: [kalem(37, 3)], hedef: 'completed', channel: 'b2c', paymentMethod: 'cash', tahsilat: toplam([kalem(37, 3)]), teslimGunu: -2, yasi: 4, etiket: 'Kurye günü (2 gün önce) — kapanış BEKLİYOR' });
 
+  // — BUGÜNÜN GÜN PLANI: sevkiyatçı ekranı (09.15) ─────────────────────────────────────────────
+  // Seed'in teslim günleri BUGÜNE GÖRE üretiliyor ama hepsi geçmişe ya da +2'ye düşüyordu; yani
+  // `db:refresh`ten hemen sonra bile "bugün" boştu ve ekran ölü görünüyordu (ölçüldü 07.08: en yeni
+  // teslim günü dünde kalmıştı). Aşağıdaki blok bugünü doldurur ve ekranın HER HÂLİNİ üretir —
+  // atanmamış, atanmış, hazırlanıyor, hiç başlanmamış, kapıda ödemeli, önceden ödenmiş.
+  //
+  // Bölge AYRIMI önemli: müşteriler farklı posta kodlarında olduğu için satırlar iki ayrı bölge
+  // grubuna düşer. Tek gruba yığılsaydı gruplama doğru görünür ama hiç sınanmamış olurdu.
+  await siparis({
+    musteri: 'b2cSadik', kalemler: [kalem(40, 2)], hedef: 'ready', channel: 'b2c', paymentMethod: 'cash',
+    tahsilat: 0, teslimGunu: 0, etiket: 'Bugün — hazır, ATANMAMIŞ (kapıda nakit)',
+  });
+  await siparis({
+    musteri: 'b2bOnayli', kalemler: [kalem(41, 4)], hedef: 'ready', channel: 'b2b', paymentMethod: 'card',
+    tahsilat: 0, teslimGunu: 0, atanmis: true, etiket: 'Bugün — hazır ve ATANMIŞ, henüz yola çıkmadı',
+  });
+  // Hazırlığı SÜREN sipariş: gün planındaki "Hazırlanıyor" kademesi ancak böyle görünür.
+  await siparis({
+    musteri: 'b2cKapaliKapida', kalemler: [kalem(42, 1)], hedef: 'preparing', channel: 'b2c', paymentMethod: 'cash',
+    tahsilat: 0, teslimGunu: 0, etiket: 'Bugün — HAZIRLANIYOR (araca yüklenmemeli)',
+  });
+  // Hiç başlanmamış: "Hazır değil" uyarısının kaynağı. İkisi ayrı hâl — biri beklemeye değer, öteki
+  // müdahale ister; ekran ikisini ayrı rozetle söylüyor.
+  // Müşteri BÖLGESİ OLAN biri olmalı: `b2cAlman` (Offenburg 77652) hiçbir rota bölgesinde değil ve
+  // ona rota siparişi yazmak, checkout'un asla üretemeyeceği bir veri olurdu (`isInRoute` onu kargoya
+  // düşürür). Ölçüldü 07.08: gün planında "Bölgesi çözülemedi" grubunda tek başına duruyordu —
+  // ekranın veri-sorunu grubunu SAHTE bir satırla doldurmak, o grubu yalancı çıkarırdı.
+  await siparis({
+    musteri: 'b2bBekleyen', kalemler: [kalem(43, 3)], hedef: 'confirmed', channel: 'b2b', paymentMethod: 'online',
+    tahsilat: toplam([kalem(43, 3)]), teslimGunu: 0, etiket: 'Bugün — HAZIR DEĞİL ama ödenmiş (kapıda para konuşulmaz)',
+  });
+
+  // — KARGO KUYRUĞU: taşıyıcıya verilmeyi bekleyenler ──────────────────────────────────────────
+  // Kargonun teslim GÜNÜ yoktur (şema: "rota günü; kargoda null"), o yüzden bu satırlar gün planına
+  // değil KUYRUĞA düşer. İkisi bilerek farklı: biri takip numarasını almış, öteki almamış — ekranın
+  // "takip numarası yok" uyarısı ancak eksik olan bir satır varsa sınanabilir.
+  await siparis({
+    musteri: 'b2cAlman', kalemler: [kalem(44, 1)], hedef: 'ready', channel: 'b2c', deliveryType: 'shipping', kargo: 7.9,
+    paymentMethod: 'online', tahsilat: toplam([kalem(44, 1)], 7.9),
+    tasiyici: { carrier: 'colissimo', takipNo: '6A14785236974' }, etiket: 'Kargo kuyruğu — takip numarası VAR',
+  });
+  await siparis({
+    musteri: 'b2cSadik', kalemler: [kalem(45, 2)], hedef: 'ready', channel: 'b2c', deliveryType: 'shipping', kargo: 7.9,
+    paymentMethod: 'online', tahsilat: toplam([kalem(45, 2)], 7.9),
+    etiket: 'Kargo kuyruğu — takip numarası YOK (gün kapanmadan görünür eksiklik)',
+  });
+
   // — SINIR ÖTESİ: teslimat ülkesi ve vergi modeli (0022 · DOMAIN §5) ────────────────────────────
   // Üç ayrı vergi hâli vardır ve üçü de FATURAYI değiştirir; hiçbiri kod tarafında seçilmez, motor
   // karar verir. Yerelde yalnız `domestic` bulunması, diğer ikisinin hiç görülmemesi demekti.
@@ -534,11 +607,13 @@ export async function seedOrders(
   await siparis({
     musteri: 'b2bAlman', kalemler: [kalem(39, 8), kalem(40, 6)], hedef: 'completed', channel: 'b2b',
     deliveryType: 'shipping', kargo: 12.5, onAccount: true, tahsilat: 0, yasi: 14,
+    tasiyici: { carrier: 'dhl', takipNo: 'JJD0099887766554' },
     etiket: 'SINIR ÖTESİ B2B — reverse charge (Autoliquidation)',
   });
   await siparis({
     musteri: 'b2cAlman', kalemler: [kalem(41, 2)], hedef: 'out_for_delivery', channel: 'b2c',
     deliveryType: 'shipping', kargo: 9.9, paymentMethod: 'online', tahsilat: toplam([kalem(41, 2)], 9.9),
+    tasiyici: { carrier: 'colissimo', takipNo: '6A 1234 5678 90' },
     etiket: 'DE B2C kargo — OSS eşiği izlemi (yolda)',
   });
 
@@ -568,6 +643,7 @@ export async function seedOrders(
     await siparis({
       musteri: 'b2cAlman', kalemler: [kehlKalem(1, 2)], hedef: 'completed', channel: 'b2c', depo: 'kehl',
       deliveryType: 'shipping', kargo: 6.5, paymentMethod: 'online', tahsilat: toplam([kehlKalem(1, 2)], 6.5),
+      tasiyici: { carrier: 'ups', takipNo: '1Z999AA10123456784' },
       yasi: 11, etiket: 'KEHL deposundan — kapandı',
     });
     // Kehl'de bekleyen taze sipariş: depo kuyruğu ikinci depoda da dolu görünsün.

@@ -1,36 +1,48 @@
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { listCourierDay } from '@/lib/courier/day';
-import { guarded, requireCourier } from '@/lib/guard';
+import { guarded, requireAdmin, requireCourier } from '@/lib/guard';
 import { DeliveriesClient } from './deliveries-client';
+import { DISPATCH_NOTES } from './deliveries-labels';
+import { parseDeliveriesUrl, toIsoDate } from './deliveries-url';
+import { DispatchClient } from './dispatch-client';
+import { readDispatchDay } from './dispatch-read';
 
-// **Teslimat & Rota** (`/operations/deliveries`) — rayın SON ölü girişiydi.
+// **Teslimat & Rota** (`/operations/deliveries`) — İKİ DAL, TEK ADRES.
 //
-// ── BUGÜN YALNIZ KURYENİN GÜNÜ ──────────────────────────────────────────────
-// Rota aynı adreste iki ekran olacak: kuryenin günü (11.1) ve sevkiyatçının gün planı (09.15). Nav
-// zaten tek giriş taşıyor ("Teslimat & Rota", `DAILY` rolü) ve ikisi aynı veriye bakıyor — ayrı
-// rotalar açmak, aynı günü iki adresten anlatmak olurdu.
+// ── NEDEN TEK SAYFA ─────────────────────────────────────────────────────────
+// Sevkiyatçının gün planı (09.15) ve kuryenin günü (11.1) aynı veriye bakıyor: o günün çıkışları.
+// Nav da tek giriş taşıyor ("Teslimat & Rota"). Ayrı rotalar açmak, aynı günü iki adresten anlatmak
+// olurdu — ve "kurye atandı mı" sorusunun cevabı iki ekranda ayrı ayrı türetilirdi.
 //
-// **Sevkiyatçı dalı bugün yok** çünkü kapısı yok: `listByCourier` kurye kimliğini ZORUNLU tutuyor
-// (ve kuryenin ekranı için tutmalı — o imza bir güvenlik sınırı), atanmamış teslimatlar okunamıyor.
-// Talep açık: `docs/talep/arka-uc-rota-gunu-ve-kurye-atama.md`. Kapı gelince bu dosyaya ikinci bir
-// dal eklenir; kuryenin dalı değişmez. BEKLEYEN(09.15)
+// ── DAL ROLDEN SEÇİLİR, ADRESTEN DEĞİL ──────────────────────────────────────
+// Yönetici günün planını görür, kurye kendi durak listesini. `?view=mine` yalnız **iki şapkayı da
+// taşıyan** kişi için var (`admin` + `courier` sık bir bileşim) — yetki değiştirmez, GÖRÜNÜM seçer:
+// kurye dalı kimliği yine guard'dan alıyor, adresten değil. `?courierId=` gibi bir parametre olsaydı
+// bir kurye başkasının gününü açardı.
 //
-// ── KURYE YALNIZ KENDİ TESLİMATLARINI GÖRÜR ─────────────────────────────────
-// Kimlik guard'dan geliyor, adresten DEĞİL: `?courierId=` gibi bir parametre olsaydı bir kurye
-// başkasının gününü açabilirdi. Kapının imzası da aynı şeyi yapısal kılıyor.
+// ── TASARIM SÖZLEŞMESİ ──────────────────────────────────────────────────────
+// `design/pages/admin-teslimat.md` (sevkiyatçı dalı) + `kurye-gun.md` (kurye dalı). Sayfanın adı
+// "Rotalar" değil "Teslimat": bu sistemde rota bir sayfa değil bir teslimat TÜRÜDÜR.
 
-export default async function DeliveriesPage() {
-  const access = await guarded(requireCourier);
-  if (!access.ok) {
-    return (
-      <NoAccessPane
-        title="Teslimat & Rota"
-        reason="Bu ekran kuryenin günü içindir. Günün planını kurmak ve kurye atamak sevkiyat ekranından yapılır — o ekran henüz açılmadı."
-      />
-    );
+interface DeliveriesPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function DeliveriesPage({ searchParams }: DeliveriesPageProps) {
+  const params = await searchParams;
+  const urlState = parseDeliveriesUrl(params, toIsoDate(new Date()));
+
+  const admin = await guarded(requireAdmin);
+  if (admin.ok && urlState.view !== 'mine') {
+    return <DispatchClient day={await readDispatchDay(urlState.date)} />;
   }
 
-  const stops = await listCourierDay({ courierId: access.user.id });
+  const courier = await guarded(requireCourier);
+  if (!courier.ok) return <NoAccessPane title="Teslimat & Rota" reason={DISPATCH_NOTES.noAccess} />;
+
+  // **Kurye kimliği GUARD'dan.** Kurye dalı gün seçmez: sahadaki soru "bugün ne var" — geçmiş bir
+  // günün durakları üzerinde yapılacak bir iş de yok.
+  const stops = await listCourierDay({ courierId: courier.user.id });
 
   return <DeliveriesClient stops={stops} />;
 }
