@@ -57,7 +57,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         // ortada durur. Masaüstünde tasarım onu başlığın sağ ucuna koyuyor.
         right:
           device === 'mobile' ? undefined : (
-            <ReorderButton locale={locale as Locale} orderId={order.id} label={t.reorder} busyLabel={t.reordering} />
+            <ReorderButton locale={locale as Locale} orderId={order.id} />
           ),
       }}
     >

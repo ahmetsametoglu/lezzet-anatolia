@@ -7,6 +7,9 @@ import { LoadMore } from '@/components/customer/ui/load-more';
 import { formatPrice } from '@/lib/storefront/format';
 import { OrderStatusBadge } from './components/order-status-badge';
 import { ReorderNotice } from './components/reorder-notice';
+// Liste `ReorderButton`ı KULLANMIYOR (meşgul durumu tüm satırlar için tek yerde), ama kelimeler
+// ortak — düğmeyle aynı kaynaktan okunuyor (08.20).
+import reorderCopy from './components/reorder-messages.json';
 import { summaryOf } from './orders.desktop';
 import type { OrdersViewProps } from './orders-types';
 
@@ -70,7 +73,7 @@ export function OrdersMobile({
                 disabled={busyOrderId !== null}
                 onClick={() => onReorder(order.id)}
               >
-                {busyOrderId === order.id ? t.reordering : t.reorder}
+                {busyOrderId === order.id ? reorderCopy[locale].reordering : reorderCopy[locale].reorder}
               </Button>
               <Link
                 href={{ pathname: '/orders/[reference]', params: { reference: order.id } }}

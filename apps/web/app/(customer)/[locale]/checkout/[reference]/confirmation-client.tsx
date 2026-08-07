@@ -5,7 +5,7 @@ import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import { ConfirmationDesktop } from './confirmation.desktop';
 import { ConfirmationMobile } from './confirmation.mobile';
-import type { ConfirmationView, Messages } from './confirmation-types';
+import type { ConfirmationView, Messages, SharedCopy } from './confirmation-types';
 
 /**
  * Sipariş alındı sayfasının cihaz çatalı (Sapma 3 · `orders/[reference]` ile aynı desen).
@@ -20,13 +20,15 @@ import type { ConfirmationView, Messages } from './confirmation-types';
  */
 interface ConfirmationClientProps {
   t: Messages;
+  /** Aile kökünün sözlüğü — özetin ortak sözcükleri (`confirmation-types` künyesi, 08.20). */
+  shared: SharedCopy;
   locale: Locale;
   view: ConfirmationView;
   device: Device;
 }
 
-export function ConfirmationClient({ t, locale, view, device }: ConfirmationClientProps) {
+export function ConfirmationClient({ t, shared, locale, view, device }: ConfirmationClientProps) {
   const compact = useDevice(device) === 'mobile';
-  const props = { t, locale, view, compact };
+  const props = { t, shared, locale, view, compact };
   return compact ? <ConfirmationMobile {...props} /> : <ConfirmationDesktop {...props} />;
 }

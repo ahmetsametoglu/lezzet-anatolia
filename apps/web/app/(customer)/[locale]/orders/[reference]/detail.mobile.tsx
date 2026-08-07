@@ -27,7 +27,7 @@ export function DetailMobile({ t, listT, locale, order }: DetailViewProps) {
       <SummaryCard t={t} locale={locale} order={order} title={t.amountTitle} />
       <HelpCard t={t} order={order} />
 
-      <ReorderButton locale={locale} orderId={order.id} label={t.reorder} busyLabel={t.reordering} fullWidth />
+      <ReorderButton locale={locale} orderId={order.id} fullWidth />
     </div>
   );
 }

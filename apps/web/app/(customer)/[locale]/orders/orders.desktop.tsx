@@ -8,6 +8,9 @@ import { formatOrderDate, formatPrice } from '@/lib/storefront/format';
 import type { CustomerOrderSummary } from '@/lib/order/customer-orders';
 import { OrderStatusBadge } from './components/order-status-badge';
 import { ReorderNotice } from './components/reorder-notice';
+// Liste `ReorderButton`ı KULLANMIYOR (kendi meşgul durumunu tüm satırlar için tek yerde tutuyor),
+// ama kelimeler ortak — düğmeyle aynı kaynaktan okunuyor (08.20).
+import reorderCopy from './components/reorder-messages.json';
 import type { OrdersViewProps } from './orders-types';
 
 /**
@@ -74,7 +77,7 @@ export function OrdersDesktop({
               onClick={() => onReorder(order.id)}
               className="flex-none"
             >
-              {busyOrderId === order.id ? t.reordering : t.reorder}
+              {busyOrderId === order.id ? reorderCopy[locale].reordering : reorderCopy[locale].reorder}
             </Button>
 
             <Link

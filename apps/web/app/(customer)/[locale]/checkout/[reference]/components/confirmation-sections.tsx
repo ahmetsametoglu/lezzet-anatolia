@@ -100,15 +100,15 @@ export function CelebrationBand({ t, locale, view, compact }: ConfirmationViewPr
 /* ————————————————————————————— Teslimat · Ödeme ————————————————————————————— */
 
 /** Nereye, ne zaman. Adres ANLIK GÖRÜNTÜDEN okunur, adres tablosundan değil (07). */
-export function DeliveryCard({ t, locale, view, compact }: ConfirmationViewProps) {
+export function DeliveryCard({ t, shared, locale, view, compact }: ConfirmationViewProps) {
   const day = view.deliveryDate ? formatDeliveryDate(view.deliveryDate, locale) : null;
   return (
     <Card compact={compact} gap="sm">
       <Eyebrow>{t.delivery.title}</Eyebrow>
       <span className={['font-serif leading-tight text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>
-        {day ?? t.delivery.shipping}
+        {day ?? shared.delivery.shipping}
       </span>
-      <Chip>{view.onRoute ? t.delivery.route : `📦 ${t.delivery.shipping}`}</Chip>
+      <Chip>{view.onRoute ? shared.delivery.route : `📦 ${shared.delivery.shipping}`}</Chip>
       {view.address && (
         <span className="font-sans text-body-sm leading-relaxed text-body">
           {view.address.label ? `${view.address.label} · ` : ''}
@@ -124,11 +124,11 @@ export function DeliveryCard({ t, locale, view, compact }: ConfirmationViewProps
 }
 
 /** Ne ödendi, neyle. "Ödendi" siparişin KENDİ durumundan okunur — dönüşü başarı saymaz. */
-export function PaymentCard({ t, locale, view, compact }: ConfirmationViewProps) {
+export function PaymentCard({ t, shared, locale, view, compact }: ConfirmationViewProps) {
   const total = formatPrice(view.totalCents, locale);
   return (
     <Card compact={compact} gap="sm">
-      <Eyebrow>{t.payment.title}</Eyebrow>
+      <Eyebrow>{shared.payment.title}</Eyebrow>
       <span className={['font-serif leading-tight text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>
         {view.onAccount
           ? t.payment.onAccount.replace('{amount}', total)
@@ -238,14 +238,14 @@ export function HelpBand({ t, compact }: Pick<ConfirmationViewProps, 't' | 'comp
 }
 
 /** Ne alındı, ne ödendi + iki çıkış (takip / katalog). */
-export function SummaryCard({ t, locale, view, compact }: ConfirmationViewProps) {
+export function SummaryCard({ t, shared, locale, view, compact }: ConfirmationViewProps) {
   const total = formatPrice(view.totalCents, locale);
   // Kod tasarımda birebir yazılı ("İndirim — HOSGELDIN10"); kodsuz indirimde satır genel adında kalır.
-  const discountLabel = view.discountName ? `${t.summary.discount} — ${view.discountName}` : t.summary.discount;
+  const discountLabel = view.discountName ? `${shared.summary.discount} — ${view.discountName}` : shared.summary.discount;
 
   return (
     <Card compact={compact} gap="sm">
-      <span className={['font-serif leading-tight text-ink', compact ? 'text-card-title-sm' : 'text-card-title'].join(' ')}>{t.summary.title}</span>
+      <span className={['font-serif leading-tight text-ink', compact ? 'text-card-title-sm' : 'text-card-title'].join(' ')}>{shared.summary.title}</span>
 
       <ul className="flex flex-col gap-2.5">
         {view.lines.map((line) => (
@@ -268,16 +268,16 @@ export function SummaryCard({ t, locale, view, compact }: ConfirmationViewProps)
           <SummaryRow label={discountLabel} value={`−${formatPrice(view.discountCents, locale)}`} tone="olive" />
         )}
         <SummaryRow
-          label={t.summary.delivery}
-          value={view.shippingFeeCents > 0 ? formatPrice(view.shippingFeeCents, locale) : t.summary.free}
+          label={shared.summary.delivery}
+          value={view.shippingFeeCents > 0 ? formatPrice(view.shippingFeeCents, locale) : shared.summary.free}
           // Ücretsizde YALNIZ tutar yeşil (tasarım): ücret maliyet, ücretsizlik kazanç.
           tone={view.shippingFeeCents > 0 ? 'default' : 'oliveValue'}
         />
         <div className="flex items-baseline justify-between gap-3 border-t border-sand-200 pt-2.5">
-          <span className="font-sans text-lead font-bold text-ink">{t.summary.total}</span>
+          <span className="font-sans text-lead font-bold text-ink">{shared.summary.total}</span>
           <span className="font-sans text-lead font-bold text-ink">{total}</span>
         </div>
-        <span className="font-sans text-micro text-muted">{t.summary.vatIncluded}</span>
+        <span className="font-sans text-micro text-muted">{shared.summary.vatIncluded}</span>
       </div>
 
       {view.cancelled ? (

@@ -11,13 +11,10 @@
     "retry": "Ödemeyi tekrar dene",
     "delivery": {
       "title": "Teslimat",
-      "route": "Kapıya teslim · ücretsiz",
-      "shipping": "Kargo",
       "coldChain": "❄ Soğuk zincir bozulmadan kapınıza gelir. Kurye yola çıkınca saat aralığını bildiririz.",
       "shippingNote": "📦 Kargoya verildiğinde takip numarasını e-posta ile göndeririz."
     },
     "payment": {
-      "title": "Ödeme",
       "paid": "Ödendi · {amount}",
       "due": "Kapıda ödenecek · {amount}",
       "onAccount": "Hesaba yazıldı · {amount}",
@@ -40,16 +37,6 @@
       "preparingAt": "Teslimattan bir gün önce mutfakta",
       "onTheWayAt": "{date} sabah",
       "deliveredAt": "{date}"
-    },
-    "summary": {
-      "title": "Sipariş özeti",
-      "discount": "İndirim",
-      "discountCampaign": "kampanya",
-      "discountCustomerRate": "size özel",
-      "delivery": "Teslimat",
-      "free": "Ücretsiz",
-      "total": "Genel toplam",
-      "vatIncluded": "Fiyatlara KDV dahildir."
     },
     "continue": "Alışverişe devam et",
     "notFound": "Bu siparişi bulamadık.",
@@ -75,13 +62,10 @@
     "retry": "Réessayer le paiement",
     "delivery": {
       "title": "Livraison",
-      "route": "Livraison à domicile · offerte",
-      "shipping": "Envoi postal",
       "coldChain": "❄ Livraison sans rupture de la chaîne du froid. Nous vous indiquerons le créneau au départ du livreur.",
       "shippingNote": "📦 Nous vous enverrons le numéro de suivi dès l'expédition."
     },
     "payment": {
-      "title": "Paiement",
       "paid": "Payé · {amount}",
       "due": "À payer à la livraison · {amount}",
       "onAccount": "Porté au compte · {amount}",
@@ -104,16 +88,6 @@
       "preparingAt": "En cuisine la veille",
       "onTheWayAt": "{date} au matin",
       "deliveredAt": "{date}"
-    },
-    "summary": {
-      "title": "Récapitulatif",
-      "discount": "Remise",
-      "discountCampaign": "promotion",
-      "discountCustomerRate": "votre remise",
-      "delivery": "Livraison",
-      "free": "Offerte",
-      "total": "Total",
-      "vatIncluded": "Prix TTC."
     },
     "continue": "Continuer mes achats",
     "notFound": "Commande introuvable.",
@@ -139,13 +113,10 @@
     "retry": "Zahlung erneut versuchen",
     "delivery": {
       "title": "Lieferung",
-      "route": "Lieferung an die Tür · kostenlos",
-      "shipping": "Versand",
       "coldChain": "❄ Ohne Unterbrechung der Kühlkette bis zu Ihrer Tür. Das Zeitfenster nennen wir, sobald der Fahrer losfährt.",
       "shippingNote": "📦 Die Sendungsnummer senden wir Ihnen beim Versand."
     },
     "payment": {
-      "title": "Zahlung",
       "paid": "Bezahlt · {amount}",
       "due": "Bei Lieferung zu zahlen · {amount}",
       "onAccount": "Auf Rechnung · {amount}",
@@ -168,16 +139,6 @@
       "preparingAt": "Am Vortag in der Küche",
       "onTheWayAt": "{date} morgens",
       "deliveredAt": "{date}"
-    },
-    "summary": {
-      "title": "Bestellübersicht",
-      "discount": "Rabatt",
-      "discountCampaign": "Aktion",
-      "discountCustomerRate": "Ihr Rabatt",
-      "delivery": "Lieferung",
-      "free": "Kostenlos",
-      "total": "Gesamtsumme",
-      "vatIncluded": "Preise inkl. MwSt."
     },
     "continue": "Weiter einkaufen",
     "notFound": "Bestellung nicht gefunden.",

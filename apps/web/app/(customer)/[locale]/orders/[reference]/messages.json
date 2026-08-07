@@ -6,8 +6,6 @@
     "discount": "İndirim",
     "shipping": "Teslimat",
     "freeShipping": "Ücretsiz",
-    "reorder": "↻ Tekrar sipariş",
-    "reordering": "Ekleniyor…",
     "helpTitle": "Bir sorun mu var?",
     "timelineTitle": "Sipariş durumu",
     "milestone": {
@@ -46,8 +44,6 @@
     "discount": "Remise",
     "shipping": "Livraison",
     "freeShipping": "Offerte",
-    "reorder": "↻ Recommander",
-    "reordering": "Ajout en cours…",
     "helpTitle": "Un problème ?",
     "timelineTitle": "Suivi de la commande",
     "milestone": {
@@ -86,8 +82,6 @@
     "discount": "Rabatt",
     "shipping": "Lieferung",
     "freeShipping": "Kostenlos",
-    "reorder": "↻ Erneut bestellen",
-    "reordering": "Wird hinzugefügt…",
     "helpTitle": "Gibt es ein Problem?",
     "timelineTitle": "Bestellstatus",
     "milestone": {

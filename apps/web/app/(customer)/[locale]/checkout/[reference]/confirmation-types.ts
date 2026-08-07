@@ -5,8 +5,28 @@ import type { StorefrontImage } from '@/lib/storefront/storefront-types';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir).
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import messages from './messages.json';
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+import checkoutMessages from '../messages.json';
 
 export type Messages = LocalizedCopy<typeof messages>;
+
+/**
+ * **Sipariş özetinin ORTAK sözcükleri — aile kökünden okunur** (08.20).
+ *
+ * "Sipariş özeti · İndirim · Teslimat · Ücretsiz · Genel toplam · Fiyatlara KDV dahildir" ile
+ * "Kapıya teslim · ücretsiz / Kargo" ve "Ödeme" başlığı iki ekranda da AYNI blokun kelimeleri;
+ * onay ekranı bunların birebir kopyasını taşıyordu (üç dilde 30 satır). Kopya sessizce ayrışır:
+ * checkout'ta "Genel toplam"ı değiştiren, onay ekranının eski kelimede kaldığını göremez — üstelik
+ * iki bloku ÇİZEN komponent zaten ortak (`SummaryRow`).
+ *
+ * Aile kökünün sözlüğü okunuyor, üçüncü bir dosya AÇILMADI: desen `support`ta zaten var (alt rota
+ * `../messages.json`'u okur) ve buradaki ilişki de aynı — onay ekranı checkout'un devamı.
+ *
+ * **Tamamı taşınmadı, taşınamazdı:** `summary` isim alanının yarısı checkout'a özel (`submit`,
+ * `terms`, `minBasket`, `coldChain`…) ve `delivery.title` iki ekranda FARKLI ("Teslimat günü" ile
+ * "Teslimat"). Taşınan yalnız üç dilde de birebir aynı olanlar.
+ */
+export type SharedCopy = LocalizedCopy<typeof checkoutMessages>;
 
 /**
  * Sipariş alındı ekranının GÖRÜNÜM MODELİ — sunucuda bir kez çözülür, iki cihaz dalı aynı nesneyi
@@ -61,6 +81,8 @@ export interface ConfirmationLine {
 /** İki cihaz dalının ortak sözleşmesi — yerleşim ayrışır, veri ayrışmaz. */
 export interface ConfirmationViewProps {
   t: Messages;
+  /** Aile kökünün sözlüğü — özetin ortak sözcükleri (künye yukarıda). */
+  shared: SharedCopy;
   locale: Locale;
   view: ConfirmationView;
   /** Mobil yerleşim (cihaz forku — `md:` yok). */

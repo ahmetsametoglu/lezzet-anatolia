@@ -6,6 +6,7 @@ import { Button } from '@/components/customer/ui/button';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { useRouter } from '@/i18n/navigation';
 import { reorderAction } from '../actions';
+import reorderCopy from './reorder-messages.json';
 
 /**
  * "↻ Tekrar sipariş" — **kendi durumunu taşıyan** düğme.
@@ -20,16 +21,21 @@ import { reorderAction } from '../actions';
  *
  * Hiçbir kalem eklenemezse sepete GİDİLMEZ: boş bir sepete götürmek, müşteriye olmayan bir başarı
  * göstermek olurdu. Hata da sessiz — sayfa yerinde kalır, düğme yeniden denenebilir.
+ *
+ * ── METİNLERİ KENDİ TAŞIR (08.20) ────────────────────────────────────────────
+ * Etiketler prop olarak geliyordu ve aynı iki kelime İKİ sözlükte birden duruyordu (`orders` ve
+ * `orders/[reference]`) — üstelik üç yerde çiziliyorlar. Kelimeler onları çizen komponente ait
+ * (`site-frame` emsali): tek kaynak, sıfır plumbing. Ekleme sırasındaki etiket de burada, çünkü
+ * "meşgul" hâli düğmenin kendi hâli — çağıranın bilmesi gereken bir şey değil.
  */
 interface ReorderButtonProps {
   locale: Locale;
   orderId: string;
-  label: string;
-  busyLabel: string;
   fullWidth?: boolean;
 }
 
-export function ReorderButton({ locale, orderId, label, busyLabel, fullWidth }: ReorderButtonProps) {
+export function ReorderButton({ locale, orderId, fullWidth }: ReorderButtonProps) {
+  const t = reorderCopy[locale];
   const cart = useCart();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -48,7 +54,7 @@ export function ReorderButton({ locale, orderId, label, busyLabel, fullWidth }: 
 
   return (
     <Button variant="outlineOlive" size="sm" fullWidth={fullWidth} disabled={busy} onClick={onClick} className={fullWidth ? '' : 'flex-none'}>
-      {busy ? busyLabel : label}
+      {busy ? t.reordering : t.reorder}
     </Button>
   );
 }

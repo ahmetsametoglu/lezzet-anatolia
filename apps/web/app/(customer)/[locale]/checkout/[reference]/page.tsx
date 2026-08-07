@@ -14,6 +14,8 @@ import { OrderWatch } from './components/order-watch';
 import { ConfirmationClient } from './confirmation-client';
 import type { ConfirmationView } from './confirmation-types';
 import messages from './messages.json';
+// Aile kökünün sözlüğü: özetin ortak sözcükleri orada yaşıyor (`confirmation-types`, 08.20).
+import checkoutMessages from '../messages.json';
 
 /**
  * Sipariş alındı sayfası (08.13) — ödeme dönüşünün ve kapıda ödemenin ortak varış noktası.
@@ -127,7 +129,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     <SiteFrame device={device} locale={locale}>
       {/* Ödeme beklerken sayfa canlıdır: webhook düşünce kendini yeniler (çizmez, yalnız dinler). */}
       {view.awaitingCard && <OrderWatch orderId={order.id} />}
-      <ConfirmationClient t={t} locale={locale as Locale} view={view} device={device} />
+      <ConfirmationClient t={t} shared={checkoutMessages[locale]} locale={locale as Locale} view={view} device={device} />
     </SiteFrame>
   );
 }
