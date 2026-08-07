@@ -20,6 +20,20 @@ const WRONG_CODE = TEST_CODE === '999999' ? '111111' : '999999';
 const email = `otp-app-${Date.now()}@example.com`;
 const db = serviceDb();
 
+/**
+ * Kapının İKİNCİ kilidi: `OTP_TEST_CODE` tam altı RAKAM değilse sessizce yok sayılır. Bu kilit
+ * bozulursa hiçbir şey patlamaz — yarım yazılmış bir env "kod sabitlendi" sanılır ve tahmin
+ * edilebilir bir OTP gerçek akışa sızar. Sessiz kilit, koşulmayan testin en tehlikeli hâlidir.
+ * Her vaka KENDİ damgalı adresini kullanır: cooldown (60 sn) ve rate-limit (5/saat) e-posta
+ * başınadır, tek adresi paylaşan üç istek ikinciden itibaren `cooldown`'a düşerdi.
+ */
+const GATE_STAMP = Date.now();
+const INVALID_GATE_CASES = [
+  { label: 'beş hane', raw: '12345', email: `otp-app-gate-short-${GATE_STAMP}@example.com` },
+  { label: 'yedi hane', raw: '1234567', email: `otp-app-gate-long-${GATE_STAMP}@example.com` },
+  { label: 'harf içeren', raw: 'abc123', email: `otp-app-gate-alpha-${GATE_STAMP}@example.com` },
+];
+
 let prevTestCode: string | undefined;
 let authUserId: string | undefined;
 
@@ -32,7 +46,10 @@ afterAll(async () => {
   // Env eski hâline: "boşa çek" de bir varsayımdır ve bir gün yanlış olur (CLAUDE §4b).
   if (prevTestCode === undefined) delete process.env.OTP_TEST_CODE;
   else process.env.OTP_TEST_CODE = prevTestCode;
-  await purgeTestData(db, { verificationEmails: [email], authUserIds: authUserId ? [authUserId] : [] });
+  await purgeTestData(db, {
+    verificationEmails: [email, ...INVALID_GATE_CASES.map((c) => c.email)],
+    authUserIds: authUserId ? [authUserId] : [],
+  });
 });
 
 describe('requestOtpCode + verifyOtpCode (OTP_TEST_CODE kapısıyla)', () => {
@@ -71,5 +88,38 @@ describe('requestOtpCode + verifyOtpCode (OTP_TEST_CODE kapısıyla)', () => {
 
   it('kod TEK kullanımlıktır: aynı kod ikinci kez no_active_code', async () => {
     expect(await verifyOtpCode(db, { email, code: TEST_CODE, locale: 'tr' })).toEqual({ status: 'no_active_code' });
+  });
+});
+
+describe('OTP_TEST_CODE bozuksa kapı devreye GİRMEZ', () => {
+  let prevResendKey: string | undefined;
+
+  beforeAll(() => {
+    // Kapı kapalıyken GERÇEK mail yolu işler. Ortamda `RESEND_API_KEY` varsa her tam koşu
+    // example.com'a üç gerçek gönderim denemesi olurdu — kota, gürültü, kontrolsüz alıcı; yani
+    // test kapısının var oluş gerekçesinin ta kendisi. Anahtar bu blok boyunca kaldırılır:
+    // `sendEmail` istemcisiz dalına düşer (`{ error: null }`), akış bloklanmaz, mail gitmez.
+    prevResendKey = process.env.RESEND_API_KEY;
+    delete process.env.RESEND_API_KEY;
+  });
+
+  afterAll(() => {
+    // Değiştirdiğimiz İKİ env de aynen geri (CLAUDE §4b): anahtar dışarıdan geldiği hâliyle,
+    // test kodu ise dosyanın geri kalanının dayandığı geçerli değere.
+    if (prevResendKey === undefined) delete process.env.RESEND_API_KEY;
+    else process.env.RESEND_API_KEY = prevResendKey;
+    process.env.OTP_TEST_CODE = TEST_CODE;
+  });
+
+  it.each(INVALID_GATE_CASES)('$label ($raw) → kod bu değere sabitlenmez, gerçek üretim yolu işler', async ({ raw, email: gateEmail }) => {
+    process.env.OTP_TEST_CODE = raw;
+
+    expect(await requestOtpCode(db, { email: gateEmail, locale: 'fr' })).toEqual({ status: 'ok' });
+
+    // TEK sonuç üç ihtimali birden ayırır — testin gücü burada:
+    //   • kapı yanlışlıkla AÇILSAYDI  → saklanan hash sha256(raw) olurdu → 'ok'
+    //   • istek RPC'ye HİÇ gitmeseydi → ortada aktif kod olmazdı      → 'no_active_code'
+    //   • doğru davranış: rastgele üretilmiş bir kod saklandı          → 'invalid_code'
+    expect(await verifyOtpCode(db, { email: gateEmail, code: raw, locale: 'fr' })).toEqual({ status: 'invalid_code' });
   });
 });
