@@ -27,6 +27,8 @@ export { ProductVariantService } from './services/product-variant.service';
 export { ProductImageService } from './services/product-image.service';
 export { BundleService, type CreateBundleInput } from './services/bundle.service';
 export { BundleItemService } from './services/bundle-item.service';
+export { RecipeService, type CreateRecipeInput } from './services/recipe.service';
+export { RecipeItemService } from './services/recipe-item.service';
 export { PriceService } from './services/price.service';
 export { DiscountService, type DiscountUsage } from './services/discount.service';
 export { DiscountCodeService } from './services/discount-code.service';

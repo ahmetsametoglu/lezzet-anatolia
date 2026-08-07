@@ -39,6 +39,8 @@ export interface PurgeTargets {
   productIds?: string[];
   categoryIds?: string[];
   collectionIds?: string[];
+  /** Tarifler — kalemleri CASCADE ile gider (`recipe_item.recipe_id`). */
+  recipeIds?: string[];
   /** Tedarikçiler — kod eşlemeleri CASCADE, siparişleri burada elle silinir. */
   supplierIds?: string[];
   /** Kimlik profilleri (`user_profiles`) — adresleri CASCADE ile gider. Ayrı müşteri tablosu yok. */
@@ -100,6 +102,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     productIds,
     categoryIds,
     collectionIds,
+    recipeIds,
     supplierIds,
     profileIds,
     temperatureLocations,
@@ -116,6 +119,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     productIds: clean(targets.productIds),
     categoryIds: clean(targets.categoryIds),
     collectionIds: clean(targets.collectionIds),
+    recipeIds: clean(targets.recipeIds),
     supplierIds: clean(targets.supplierIds),
     profileIds: clean(targets.profileIds),
     temperatureLocations: clean(targets.temperatureLocations),
@@ -158,6 +162,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       if (stockIds.length > 0) await mustDelete(db, 'stock_adjustment', (q) => q.in('stock_id', stockIds));
       await mustDelete(db, 'reservation', (q) => q.in('variant_id', variantIds));
       await mustDelete(db, 'purchase_order_item', (q) => q.in('variant_id', variantIds));
+      // **Tarif kalemi ÜRÜNDEN ÖNCE** (05.16 · denetim eki 07.08): `recipe_item.variant_id` FK'si
+      // `restrict` — tarifte duran varyantın ürünü silinemez. Burada olmasaydı, bir tarif fikstürü
+      // kuran test MEVCUT ürün-fikstürlü testlerin teardown'unu kırardı; kırılma da kendi
+      // dosyasında değil BAŞKA bir dosyada görünürdü.
+      await mustDelete(db, 'recipe_item', (q) => q.in('variant_id', variantIds));
       await mustDelete(db, 'stock', (q) => q.in('variant_id', variantIds));
     }
   }
@@ -183,6 +192,9 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   }
 
   // 4) Katalog ve müşteri kökleri.
+  // Tarif ÜRÜNDEN ÖNCE: kalemleri `cascade` ile gider ve o kalemler ürünün varyantını `restrict`
+  // ile tutuyor. Ters sırada ürün silinemez ve hata BAŞKA bir testin teardown'unda görünürdü.
+  if (recipeIds.length > 0) await mustDelete(db, 'recipe', (q) => q.in('id', recipeIds));
   if (productIds.length > 0) await mustDelete(db, 'product', (q) => q.in('id', productIds));
   if (categoryIds.length > 0) await mustDelete(db, 'category', (q) => q.in('id', categoryIds));
   if (collectionIds.length > 0) await mustDelete(db, 'collection', (q) => q.in('id', collectionIds));

@@ -259,3 +259,46 @@ Birden çok ürünü tek fiyata sunan katalog kısayolu; sepete eklenince tek te
 | variant_id | uuid | pakete dahil satılabilir birim |
 | qty | number | |
 | allocated_unit_price | number | bu kaleme atanmış birim fiyat, **TTC** (müşteri görmez); Σ(allocated×qty)=`Bundle.total_price`; **hediye = 0** |
+
+## Recipe (tarif — "Sofradan Fikirler")
+
+Tarif bir ürün DEĞİL, bir **vitrindir**: kendi ürünlerimizi bir yemeğin içinde gösterir ve sepete kalem kalem ekletir. Fiyatı, stoğu, siparişi yoktur — kalemleri vardır (`0038_recipe.sql`, 05.16).
+
+**Hesaplanmayan alan tip taşımaz** (kullanıcı kararı 07.08): `duration` ve `serves` çok dilli METİNdir, sayı değil. İkisinde de hesap yok — kimse süreye göre süzmüyor, sıralamıyor; sayı tutulsaydı üç dile birim eki basan bir biçimlendirici gerekirdi (`dk` · `min` · `Min.`). `serves` ayrıca sayı OLAMAZ: tasarım "3–4 kişilik" diyor, yani aralık. **Sayı kalan tek alan `RecipeItem.qty`**, çünkü gerçekten hesaba giriyor (toplam = Σ qty × fiyat).
+
+**`steps` ve `pantry` tek yerelleştirilmiş metindir, satır = madde.** Ayrı tablo açılmadı, "çok dilli dizi" tipi icat edilmedi — emsal `Product.ingredients` (düz metin + `**vurgu**`). Adım numarasını EKRAN verir. *Ödünç yazılı:* madde başına veri (adım görseli/süresi) gerekirse bu model taşımaz.
+
+**Üç dil dolmadan yayın yok — kural VERİDE** (`recipe_publish_requires_all_locales`): `is_active = true` ancak yedi alanın (`name · description · duration · serves · meal · steps · pantry`) tr/fr/de'si **dolu** olduğunda geçer; boş dize dolu sayılmaz. Yan kazancı: yayındaki tarifte eksik dil olmadığı için **dil yedek zinciri sorusu ortadan kalkar** — Fransız müşteriye Türkçe hazırlanış adımı düşmez. (Üründe yedeğe düşmek doğrudur, müşteri ürünü adından tanır; tarifte yanlıştır, anlaşılmayan bir adım işe yaramaz.) Zorlama ÇEVİRİYE değil DOLULUĞA: kısıt "AI çevirdi mi" diye sorsaydı kota bittiği gün tarif yayınlanamaz olurdu.
+
+**Malzeme toplamı KOLON DEĞİL** ve serviste de hesaplanmaz: fiyat personaya (B2B toptan) ve depoya bağlıdır, saklanan bir toplam ilk gün yalan söyler. **Depo ekseni tasarımda hiç anılmıyor ama en büyük gizli gereksinim odur** (`DOMAIN §17`): "6,40 €" de "tükendi" de müşterinin yerine bağlı; tarif okuması vitrin okumalarıyla aynı depo süzgecinden geçmek zorunda.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| slug | string | dil-bağımsız (tek); dış URL'in dil farkı `routing.ts`'ten (`SEO_I18N`) |
+| name | LocalizedText (jsonb) | |
+| description | LocalizedText (jsonb) \| null | |
+| duration | LocalizedText (jsonb) \| null | "35 dk" — serbest metin, hesap yok |
+| serves | LocalizedText (jsonb) \| null | "3–4 kişilik" — **aralık olabildiği için sayı değil** |
+| meal | LocalizedText (jsonb) \| null | "Akşam yemeği" |
+| steps | LocalizedText (jsonb) \| null | hazırlanış; **satır = adım**, numarayı ekran verir |
+| pantry | LocalizedText (jsonb) \| null | evde olması gerekenler; bizim ürünümüz DEĞİL |
+| image_* | ImageMeta | ürün/paketle aynı alanlar (3:2 kaynak + odak + alt) |
+| is_active | boolean | **varsayılan `false`** — `true` olsaydı tek dille açılan her tarif kısıtta patlardı |
+| sort_order | int | editoryal seçki sırası; müşteri sıralamaz |
+| created_at | timestamptz | |
+
+## RecipeItem (tarif kalemi)
+
+Bağ **varyanta** kurulur, ürüne değil: sepet yalnız varyantla çalışır ve `product_id` de tutmak bir gün ayrışan iki gerçek demekti (`CLAUDE §1`) — ürün varyanttan zaten türer. `variant_id` FK'si **`restrict`** (`BundleItem` ile aynı karar): tarifte duran varyant silinemez.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| recipe_id | uuid | tarif silinince kalemler `cascade` ile gider |
+| variant_id | uuid | `restrict` — tarifte duran varyant silinemez |
+| qty | number | **sayı kalan tek alan**; toplam = Σ qty × fiyat |
+| sort_order | int | müşterinin malzeme listesinde gördüğü sıra |
+| created_at | timestamptz | |
+
+Aynı varyant bir tarifte **iki kez yazılamaz** (`unique(recipe_id, variant_id)`): iki satır toplamı iki kez sayar ve malzeme ekranda alt alta iki kere görünürdü — adet artırmak için `qty` var.
