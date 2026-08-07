@@ -96,6 +96,8 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
           key={zoneState}
           warehouse={data.card.row}
           editing={zoneEditing}
+          // Deponun öteki bölgeleri: harita "başka bölgede tanımlı" kodları ancak onlarla çizebilir.
+          siblingZones={data.card.zones}
           onClose={() => setZoneState(null)}
           onSaved={() => {
             setZoneState(null);

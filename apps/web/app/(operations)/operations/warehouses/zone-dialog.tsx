@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PostalCodeSuggestion } from '@lezzet/database';
 import { Chip } from '@/components/operation/ui/chip';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
@@ -10,7 +10,8 @@ import { Input } from '@/components/operation/form/input';
 import { MultiSelect } from '@/components/operation/form/multi-select';
 import { ToggleField } from '@/components/operation/form/toggle';
 import { WEEKDAYS } from '@/components/operation/form/calendar-math';
-import { saveZoneAction, searchPostalCodesAction } from './actions';
+import { ZoneMap, keyOfPoint, type ZoneCodeState, type ZoneMapPoint } from '@/components/operation/ui/zone-map';
+import { saveZoneAction, searchPostalCodesAction, zoneMapPointsAction } from './actions';
 import type { PostalCodePick, WarehouseRowView, ZoneCardView } from './warehouses-types';
 
 /**
@@ -25,11 +26,16 @@ import type { PostalCodePick, WarehouseRowView, ZoneCardView } from './warehouse
  * Kodlar referans tablosundan (`postal_code_place`) seçilir. Yazım hatası sınıfı böyle kapanır:
  * haritada — yani veride — olmayan bir kod sisteme hiç giremez.
  *
- * ── HARİTA HENÜZ YOK ────────────────────────────────────────────────────────
- * Tasarım bölge kurulumunun ASIL aracını harita olarak tanımlıyor (koridor kararı coğrafi bir
- * karardır) ve liste onun ikinci görünümü. Bugün yalnız liste var: harita ayrı bir iştir (MapLibre +
- * karo stili) ve kendi görevinde duruyor. Liste eksik bir araç değil, aynı gerçeğin öteki
- * görünümü — kural (tek bölge, çakışma reddi) her iki yolda da aynı.
+ * ── HARİTA GELDİ, AMA YARIM (07.08) ─────────────────────────────────────────
+ * Tasarım bölge kurulumunun ASIL aracını harita olarak tanımlıyor (bölge kararı coğrafi bir
+ * karardır) ve liste onun ikinci görünümü. Harita artık burada ve **tanımlı kodları** çiziyor: bu
+ * bölgenin kodları ile deponun öteki bölgelerinin tuttukları. Tıklayarak ÇIKARABİLİRSİNİZ.
+ *
+ * **Henüz EKLEYEMEZSİNİZ ve sebebi bir kapı:** "boşta" kodları görebilmek için haritanın kendi
+ * okuması gerekiyor (görünen alandaki tüm kodlar) — o kod hiçbir bölgeye ait olmadığı için başka
+ * hiçbir yerde listelenmiyor. Talep açık (`docs/talep/arka-uc-harita-icin-posta-kodu-okumasi.md`).
+ * O gelene kadar ekleme yolu aşağıdaki seçici; tasarımın *"serbest metin girişi yok"* kuralı zaten
+ * bugün de geçerli — seçici referans tablosundan seçtiriyor, yazdırmıyor. BEKLEYEN(19.20)
  */
 const FORM_ID = 'zone-form';
 
@@ -37,17 +43,77 @@ interface ZoneDialogProps {
   warehouse: WarehouseRowView;
   /** null = yeni bölge. */
   editing: ZoneCardView | null;
+  /** Aynı deponun öteki bölgeleri — haritada "başka bölgede tanımlı" hâlini çizebilmek için. */
+  siblingZones: ZoneCardView[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-export function ZoneDialog({ warehouse, editing, onClose, onSaved }: ZoneDialogProps) {
+export function ZoneDialog({ warehouse, editing, siblingZones, onClose, onSaved }: ZoneDialogProps) {
   const [name, setName] = useState(editing?.name ?? '');
   const [weekdays, setWeekdays] = useState<number[]>(editing?.weekdays ?? []);
   const [isActive, setIsActive] = useState(editing?.isActive ?? true);
   const [codes, setCodes] = useState<PostalCodePick[]>(editing?.postalCodes ?? []);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [points, setPoints] = useState<ZoneMapPoint[]>([]);
+
+  /** Deponun ÖTEKİ bölgelerinin tuttuğu kodlar — haritada "başka bölgede tanımlı" hâli. */
+  const taken = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const zone of siblingZones) {
+      if (zone.id === editing?.id) continue;
+      for (const pick of zone.postalCodes) map.set(`${pick.country}:${pick.postalCode}`, zone.name);
+    }
+    return map;
+  }, [siblingZones, editing?.id]);
+
+  const mine = useMemo(() => new Set(codes.map((pick) => `${pick.country}:${pick.postalCode}`)), [codes]);
+
+  // Koordinatlar seçiciden GELMEZ (öneri satırı koordinat taşımaz) — kod kümesi değiştikçe okunur.
+  useEffect(() => {
+    const wanted = [...codes, ...[...taken.keys()].map(fromKey)];
+    if (wanted.length === 0) {
+      setPoints([]);
+      return;
+    }
+    let live = true;
+    void zoneMapPointsAction(wanted).then(({ data }) => {
+      if (live && data) setPoints(data);
+    });
+    return () => {
+      live = false;
+    };
+  }, [codes, taken]);
+
+  const stateOf = useCallback(
+    (point: ZoneMapPoint): ZoneCodeState =>
+      mine.has(keyOfPoint(point)) ? 'mine' : taken.has(keyOfPoint(point)) ? 'taken' : 'free',
+    [mine, taken],
+  );
+
+  /**
+   * Noktaya tıklama. **Yalnız KENDİ kodunu çıkarır**: başka bölgenin tuttuğu koda tıklamak bir işlem
+   * değil bir SORUDUR ("kim tutuyor?") ve cevabı yazılır — sessizce hiçbir şey yapmayan bir tıklama
+   * operatöre "bozuk" der.
+   */
+  const onPick = useCallback(
+    (point: ZoneMapPoint) => {
+      const key = keyOfPoint(point);
+      if (mine.has(key)) {
+        setCodes((prev) => prev.filter((pick) => `${pick.country}:${pick.postalCode}` !== key));
+        setError(null);
+        return;
+      }
+      const holder = taken.get(key);
+      setError(
+        holder
+          ? `${point.postalCode} eklenemez — ${holder} bölgesinde tanımlı. Bir kod tek bölgede olabilir; taşımak için önce oradan çıkarın.`
+          : null,
+      );
+    },
+    [mine, taken],
+  );
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +170,20 @@ export function ZoneDialog({ warehouse, editing, onClose, onSaved }: ZoneDialogP
                 </Chip>
               );
             })}
+          </div>
+        </FieldShell>
+
+        {/* Harita, listenin ÜSTÜNDE: tasarım kod listesini haritanın SONUCU sayıyor, girdisi değil. */}
+        <FieldShell label="Hizmet alanı" labelAside={points.length === 0 ? 'kod seçilince harita dolar' : undefined}>
+          <div className="flex flex-col gap-1.5">
+            <div className="h-[280px] overflow-hidden rounded-ops-card border border-ops-line">
+              <ZoneMap points={points} stateOf={stateOf} onPick={onPick} />
+            </div>
+            <div className="flex flex-wrap items-center gap-3 font-ops-body text-ops-micro text-ops-muted">
+              <Legend tone="bg-ops-olive" label="bu bölgenin kodu" />
+              <Legend tone="bg-ops-amber" label="başka bölgede tanımlı" />
+              <span className="ml-auto">Noktaya tıkla → bölgeden çıkar</span>
+            </div>
           </div>
         </FieldShell>
 
@@ -201,4 +281,20 @@ function labelOf(
   // Ülke eki yalnız deponun kendi ülkesinden farklıysa: aynı ülkede her satıra "FR" yazmak gürültü.
   const country = c.country === homeCountry ? '' : ` · ${COUNTRY_LABELS[c.country]}`;
   return where ? `${c.postalCode} · ${where}${country}` : `${c.postalCode}${country}`;
+}
+
+/** Harita göstergesi — nokta rengiyle anlamı yan yana; renk tek başına bir sözlük değildir. */
+function Legend({ tone, label }: { tone: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={`inline-block h-2.5 w-2.5 rounded-full ${tone}`} />
+      {label}
+    </span>
+  );
+}
+
+/** `ülke:kod` → seçim nesnesi. Anahtar biçimini bilen tek yer burasıdır. */
+function fromKey(key: string): PostalCodePick {
+  const [country, postalCode] = key.split(':');
+  return { country: country as PostalCodePick['country'], postalCode: postalCode ?? '' };
 }

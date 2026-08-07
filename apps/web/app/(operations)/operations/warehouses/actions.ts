@@ -15,6 +15,7 @@ import { constraintMessage } from '@/lib/constraint-message';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { WAREHOUSES_PATH } from './warehouses-url';
 import { WarehouseFormSchema, ZoneFormSchema, type PostalCodePick } from './warehouses-types';
+import type { ZoneMapPoint } from '@/components/operation/ui/zone-map';
 
 // Depolar ekranının yazma kapıları (19.5).
 //
@@ -205,5 +206,40 @@ export async function searchPostalCodesAction(term: string): Promise<ActionResul
     // çeviriyor; hiç kısıt üretmeyen bir yola onu bağlamak, olmayan bir hâli varmış gibi göstermek
     // olurdu. Buraya bir gün yazma eklenirse `readable`'a bağlanmalı.
     return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/**
+ * **Kodların harita üstündeki yerleri** (19.20) — bölge diyaloğunun harita paneli.
+ *
+ * Neden ayrı bir tur: `PostalCodeSuggestion` (seçicinin döndürdüğü) koordinat TAŞIMAZ ve taşımamalı
+ * — öneri listesi bir arama sonucudur, sekiz satır için enlem/boylam gereksiz yüktür. Harita ise
+ * yalnız koordinat ister, yerleşim adlarını değil. İki okuma iki ayrı soru soruyor.
+ *
+ * Koordinatı olmayan kod ATLANIR: haritada `(0, 0)`a düşen bir nokta Gine Körfezi'nde durur ve
+ * operatöre "bu kod orada" der (19.18'in kendi kuralı).
+ */
+export async function zoneMapPointsAction(
+  picks: ReadonlyArray<{ country: string; postalCode: string }>,
+): Promise<ActionResult<ZoneMapPoint[]>> {
+  try {
+    await requireAdmin();
+    if (picks.length === 0) return { data: [], error: null };
+
+    const rows = await new PostalCodePlaceService(serviceDb()).listByPostalCodes([
+      ...new Set(picks.map((pick) => pick.postalCode)),
+    ]);
+    // Ülke süzgeci BURADA: `67000` hem Fransa'da hem Almanya'da geçerli ve okuma yalnız kodla
+    // yapılıyor — istenmeyen ülkenin noktası haritaya sızmamalı.
+    const wanted = new Set(picks.map((pick) => `${pick.country}:${pick.postalCode}`));
+
+    return {
+      data: rows
+        .filter((row) => wanted.has(`${row.country}:${row.postalCode}`) && row.lat !== null && row.lng !== null)
+        .map((row) => ({ country: row.country, postalCode: row.postalCode, lat: row.lat!, lng: row.lng! })),
+      error: null,
+    };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
   }
 }
