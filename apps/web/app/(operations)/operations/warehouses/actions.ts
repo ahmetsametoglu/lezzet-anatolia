@@ -2,20 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import {
-  DeliveryZonePostalCodeService,
-  DeliveryZoneService,
-  PostalCodePlaceService,
-  WarehouseService,
-  serviceDb,
-  type PostalCodeSuggestion,
-} from '@lezzet/database';
+import { WarehouseService, serviceDb } from '@lezzet/database';
 import { requireAdmin } from '@/lib/guard';
 import { constraintMessage } from '@/lib/constraint-message';
-import { getErrorMessage, type ActionResult } from '@/lib/error';
+import type { ActionResult } from '@/lib/error';
 import { WAREHOUSES_PATH } from './warehouses-url';
-import { WarehouseFormSchema, ZoneFormSchema, type PostalCodePick } from './warehouses-types';
-import type { ZoneMapPoint } from '@/components/operation/ui/zone-map';
+import { WarehouseFormSchema } from './warehouses-types';
 
 // Depolar ekranının yazma kapıları (19.5).
 //
@@ -31,7 +23,6 @@ import type { ZoneMapPoint } from '@/components/operation/ui/zone-map';
 const CONSTRAINT_MESSAGE: Record<string, string> = {
   warehouse_single_online: 'Bu ülkede kargo çıkış deposu rolünü zaten başka bir depo taşıyor — ülke başına en fazla bir tane olabilir. Önce o depodan kaldırın.',
   warehouse_code_key: 'Bu kod başka bir depoda kullanılıyor. Kod belge önekidir; iki tesis aynı öneki taşıyamaz.',
-  delivery_zone_postal_code_pkey: 'Eklemek istediğiniz posta kodlarından biri başka bir bölgede tanımlı. Bir kod yalnız tek bölgede olabilir.',
 };
 
 const readable = (error: unknown): string => constraintMessage(error, CONSTRAINT_MESSAGE);
@@ -125,121 +116,6 @@ export async function reorderWarehousesAction(ids: string[]): Promise<ActionResu
 
 // ── Hizmet alanı (bölge + posta kodları) ────────────────────────────────────
 
-/**
- * Bölge ekle / düzenle — ad, teslim günleri ve kod kümesi TEK yazımda.
- *
- * Kod kümesi sil-yaz ile değişir (servis sözleşmesi): ekran kümenin son hâlini gönderir, "hangileri
- * eklendi hangileri silindi" hesabını iki tarafın da tutması gerekmez.
- *
- * **Çakışma önce OKUNUR, sonra yazılır** — ama kural yine de veritabanındadır. Buradaki ön okuma
- * kuralı uygulamak için değil, ihlali ANLATABİLMEK için: kısıt "kod zaten var" der, operatörün
- * ihtiyacı olan cümle ise "67100'ü Kuzey hattı tutuyor (COL)". Ön okuma ile yazma arasında başka
- * biri aynı kodu alırsa kısıt yine tutar; kaybedilen tek şey cümlenin ayrıntısı olur.
- */
-export async function saveZoneAction(input: unknown): Promise<ActionResult<{ id: string }>> {
-  try {
-    await requireAdmin();
-    const parsed = ZoneFormSchema.extend({
-      id: z.string().uuid().optional(),
-      warehouseId: z.string().uuid(),
-    }).parse(input);
-    const { id, warehouseId, postalCodes, ...fields } = parsed;
-
-    const db = serviceDb();
-    const zoneSvc = new DeliveryZoneService(db);
-
-    const conflict = await findConflict(db, postalCodes, id ?? null);
-    if (conflict) return { data: null, error: conflict };
-
-    const zone = id
-      ? await zoneSvc.update({ id, warehouseId, ...fields })
-      : await zoneSvc.insert({ warehouseId, ...fields });
-
-    await zoneSvc.replacePostalCodes(zone.id, postalCodes);
-    revalidatePath(WAREHOUSES_PATH);
-    return { data: { id: zone.id }, error: null };
-  } catch (error) {
-    return { data: null, error: readable(error) };
-  }
-}
-
-/**
- * Kodlardan biri BAŞKA bir bölgede mi — cevabı hangi bölgenin ve hangi deponun tuttuğuyla birlikte.
- *
- * Sessiz "ilki kazanır" YOKTUR: çok depoda bunun bedeli siparişin yanlış şehre düşmesidir.
- */
-async function findConflict(
-  db: ReturnType<typeof serviceDb>,
-  codes: readonly PostalCodePick[],
-  currentZoneId: string | null,
-): Promise<string | null> {
-  if (codes.length === 0) return null;
-
-  const rows = await new DeliveryZonePostalCodeService(db).listByCodes(codes.map((c) => c.postalCode));
-  const mine = new Set(codes.map((c) => `${c.country}:${c.postalCode}`));
-  const taken = rows.filter((r) => r.zoneId !== currentZoneId && mine.has(`${r.country}:${r.postalCode}`));
-  if (taken.length === 0) return null;
-
-  const zoneSvc = new DeliveryZoneService(db);
-  const zone = await zoneSvc.getById(taken[0]!.zoneId);
-  const warehouse = zone ? await new WarehouseService(db).getById(zone.warehouseId) : null;
-  const list = taken.map((r) => r.postalCode).join(', ');
-  const holder = zone ? `“${zone.name}”${warehouse ? ` bölgesi (${warehouse.code})` : ' bölgesi'}` : 'başka bir bölge';
-  return `${list} kodu ${holder} tarafından tutuluyor. Bir kod yalnız tek bölgede olabilir — taşımak için önce o bölgeden çıkarın.`;
-}
-
-/**
- * Posta kodu önerisi — bölge kurulumunun giriş aracı.
- *
- * **Serbest metin girişi YOK:** seçenekler referans tablosundan gelir, yani haritada (ve veride)
- * olmayan bir kod sisteme hiç giremez. Yazım hatası sınıfı böyle kapanır. Öneri bir OKUMA'dır ve
- * `recordDemand` sayacını KİRLETMEZ — o sayaç niyete bağlıdır (19.7'nin kayıtlı kararı).
- */
-export async function searchPostalCodesAction(term: string): Promise<ActionResult<PostalCodeSuggestion[]>> {
-  try {
-    await requireAdmin();
-    const rows = await new PostalCodePlaceService(serviceDb()).searchPrefix(term, 12);
-    return { data: rows, error: null };
-  } catch (error) {
-    // `readable` DEĞİL, çıplak funnel — ve bu bilinçli (denetim S2): bu uç salt OKUMA yapıyor
-    // (önek araması), yani çarpabileceği bir kısıt yok. `readable` kısıt adını insan cümlesine
-    // çeviriyor; hiç kısıt üretmeyen bir yola onu bağlamak, olmayan bir hâli varmış gibi göstermek
-    // olurdu. Buraya bir gün yazma eklenirse `readable`'a bağlanmalı.
-    return { data: null, error: getErrorMessage(error) };
-  }
-}
-
-/**
- * **Kodların harita üstündeki yerleri** (19.20) — bölge diyaloğunun harita paneli.
- *
- * Neden ayrı bir tur: `PostalCodeSuggestion` (seçicinin döndürdüğü) koordinat TAŞIMAZ ve taşımamalı
- * — öneri listesi bir arama sonucudur, sekiz satır için enlem/boylam gereksiz yüktür. Harita ise
- * yalnız koordinat ister, yerleşim adlarını değil. İki okuma iki ayrı soru soruyor.
- *
- * Koordinatı olmayan kod ATLANIR: haritada `(0, 0)`a düşen bir nokta Gine Körfezi'nde durur ve
- * operatöre "bu kod orada" der (19.18'in kendi kuralı).
- */
-export async function zoneMapPointsAction(
-  picks: ReadonlyArray<{ country: string; postalCode: string }>,
-): Promise<ActionResult<ZoneMapPoint[]>> {
-  try {
-    await requireAdmin();
-    if (picks.length === 0) return { data: [], error: null };
-
-    const rows = await new PostalCodePlaceService(serviceDb()).listByPostalCodes([
-      ...new Set(picks.map((pick) => pick.postalCode)),
-    ]);
-    // Ülke süzgeci BURADA: `67000` hem Fransa'da hem Almanya'da geçerli ve okuma yalnız kodla
-    // yapılıyor — istenmeyen ülkenin noktası haritaya sızmamalı.
-    const wanted = new Set(picks.map((pick) => `${pick.country}:${pick.postalCode}`));
-
-    return {
-      data: rows
-        .filter((row) => wanted.has(`${row.country}:${row.postalCode}`) && row.lat !== null && row.lng !== null)
-        .map((row) => ({ country: row.country, postalCode: row.postalCode, lat: row.lat!, lng: row.lng! })),
-      error: null,
-    };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
-}
+// Rota (bölge) kurulumunun eylemleri BURADAN TAŞINDI (07.08) →
+// `deliveries/routes-actions.ts`. Gerekçe: kurulum yüzeyi Teslimat & Rota'ya geçti; eylem
+// ekranıyla aynı klasörde yaşar (CLAUDE §2 kolokasyon). Bölge KAYDI hâlâ deponun nesnesidir.

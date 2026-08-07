@@ -156,3 +156,16 @@ export const DOOR_METHODS: Array<{ key: DoorMethod; label: string }> = [
   { key: 'card', label: 'Kart' },
   { key: 'cheque', label: 'Çek' },
 ];
+
+/**
+ * Rota kurulumunun sözlüğü (19.20). **Arayüz dili tek kelime: ROTA.** Kullanıcının tanımı (07.08):
+ * *"bir bölge tanımlamak = bir dağıtım güzergâhı tanımlamak."* Veri modeli adı `delivery_zone` kalır —
+ * iç ad, arayüz dili değil; ekranda "bölge" demek operatörü çevirmeye zorluyordu.
+ */
+export const ROUTE_NOTES = {
+  pickRoute: 'Soldaki haritada tanımlı güzergâhlar görünüyor. Düzenlemek için listeden bir rota seçin, ya da "+ Rota" ile yenisini kurun.',
+  noCodes: 'Henüz kod yok — bu rota hiçbir adrese hizmet etmiyor.',
+  /** Ekleme kapısı yok; eksik olanı GİZLEMEK operatöre "harita bozuk" dedirtirdi. */
+  addPending:
+    'Haritadan şimdilik yalnız ÇIKARABİLİRSİNİZ: noktaya tıklayın, rotadan düşer. Yeni kod eklemek için haritanın "boşta" kodları da çizmesi gerekiyor — o okuma hazırlanıyor.',
+} as const;

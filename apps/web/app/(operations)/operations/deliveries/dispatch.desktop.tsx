@@ -1,8 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PageHeader } from '@/components/operation/ui/page-header';
+import { DeliveryTabs } from './delivery-tabs';
 import { AssignBar, DayPicker, DaySummary, ShippingSection, ZoneGroup } from './dispatch-sections';
 import { DISPATCH_NOTES } from './deliveries-labels';
 import { dayLabel } from './deliveries-url';
@@ -20,14 +20,8 @@ export function DispatchDesktop(props: DispatchViewProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <PageHeader title="Teslimat" subtitle={`${dayLabel(day.date, day.today)} · günün çıkışları`}>
-        {/* Bölge TANIMI burada değişmez, Depolar'ın nesnesidir (tasarım §6) — köprü veriliyor. */}
-        <Link
-          href="/operations/warehouses"
-          className="cursor-pointer rounded-ops-btn border border-ops-line-strong px-3 py-1.5 font-ops-display text-ops-sm font-semibold text-ops-strong transition-colors hover:border-ops-olive"
-        >
-          Bölge tanımları
-        </Link>
+      <PageHeader title="Teslimat & Rota" subtitle={`${dayLabel(day.date, day.today)} · günün çıkışları`}>
+        <DeliveryTabs value="plan" />
       </PageHeader>
 
       <DayPicker day={day} onDate={props.onDate} />

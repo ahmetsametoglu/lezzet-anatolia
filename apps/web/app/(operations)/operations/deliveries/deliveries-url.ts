@@ -4,6 +4,10 @@
 // birine gönderebilmeli, tazelediğinde aynı günde kalmalı. Kuryenin dalında URL durumu YOKTU ve
 // hâlâ yok — onun tek bir görünümü var (bugünün durakları).
 
+/** Sayfanın iki yüzü — tasarım ikisini tek sayfada, iki sekmede topluyor. */
+export const DELIVERY_TABS = ['plan', 'routes'] as const;
+export type DeliveryTab = (typeof DELIVERY_TABS)[number];
+
 interface DeliveriesUrlState {
   /** ISO `YYYY-MM-DD`. Yoksa bugün. */
   date: string;
@@ -13,6 +17,10 @@ interface DeliveriesUrlState {
    * `admin` + `courier` sık bir bileşim).
    */
   view: 'dispatch' | 'mine' | null;
+  /** `plan` günün çıkışları · `routes` güzergâh kurulumu. Varsayılan `plan`: günlük iş odur. */
+  tab: DeliveryTab;
+  /** Rotalar sekmesinde seçili güzergâh. Adreste durur: bir rotanın bağlantısı paylaşılabilmeli. */
+  routeId: string | null;
 }
 
 /**
@@ -25,7 +33,9 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export function parseDeliveriesUrl(params: Record<string, string | string[] | undefined>, today: string): DeliveriesUrlState {
   const raw = typeof params.d === 'string' ? params.d : undefined;
   const view = params.view === 'mine' ? 'mine' : params.view === 'dispatch' ? 'dispatch' : null;
-  return { date: raw && ISO_DATE.test(raw) && isRealDate(raw) ? raw : today, view };
+  const tab = params.tab === 'routes' ? 'routes' : 'plan';
+  const routeId = typeof params.route === 'string' ? params.route : null;
+  return { date: raw && ISO_DATE.test(raw) && isRealDate(raw) ? raw : today, view, tab, routeId };
 }
 
 /** `2026-02-31` biçimi tutar ama gün yoktur — takvim de doğrulanmalı. */

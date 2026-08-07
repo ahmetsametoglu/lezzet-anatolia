@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { CloseWarehouseDialog } from './close-warehouse-dialog';
 import { WarehouseDialog } from './warehouse-dialog';
 import { WarehousesDesktop } from './warehouses.desktop';
-import { ZoneDialog } from './zone-dialog';
 import { warehousesUrl, type WarehousesUrlState } from './warehouses-url';
 import type { WarehousesData, WarehouseRowView, ZoneCardView } from './warehouses-types';
 
@@ -37,10 +36,14 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
   // Kapatma AYRI pencere: künye formunun içinde bir anahtar olsaydı, dört sonucu olan bir karar
   // "kaydet"e basmanın yan etkisi hâline gelirdi.
   const [closing, setClosing] = useState<WarehouseRowView | null>(null);
-  /** Bölge penceresi: `null` kapalı · `'new'` yeni · bölge kimliği düzenleme. */
-  const [zoneState, setZoneState] = useState<'new' | string | null>(null);
-  const zoneEditing: ZoneCardView | null =
-    zoneState && zoneState !== 'new' ? (data.card?.zones.find((z) => z.id === zoneState) ?? null) : null;
+  /**
+   * **Rota KURULUMU burada değil (07.08, kullanıcı kararı).** Rota tanımlamak ile günü planlamak
+   * aynı işin iki anıdır; tasarım ikisini tek sayfada topluyor ve kurulum Teslimat & Rota'ya taşındı.
+   * Bu ekran rotaları OKUR — "bu depo şu güzergâhlara bakıyor" künyesi burada anlamlı — ama
+   * düzenlemeyi kendi penceresinde yapmaz: aynı kurulumun iki evi olmaz.
+   */
+  const openRoute = (zoneId?: string) =>
+    router.push(`/operations/deliveries?tab=routes${zoneId ? `&route=${zoneId}` : ''}`);
 
   const view = {
     data,
@@ -49,8 +52,8 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
     onSelect,
     onNewWarehouse: () => setFormState('new'),
     onEditWarehouse: (row: WarehouseRowView) => setFormState(row.id),
-    onNewZone: () => setZoneState('new'),
-    onEditZone: (zone: ZoneCardView) => setZoneState(zone.id),
+    onNewZone: () => openRoute(),
+    onEditZone: (zone: ZoneCardView) => openRoute(zone.id),
   };
 
   return (
@@ -91,20 +94,7 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
         />
       ) : null}
 
-      {zoneState && data.card ? (
-        <ZoneDialog
-          key={zoneState}
-          warehouse={data.card.row}
-          editing={zoneEditing}
-          // Deponun öteki bölgeleri: harita "başka bölgede tanımlı" kodları ancak onlarla çizebilir.
-          siblingZones={data.card.zones}
-          onClose={() => setZoneState(null)}
-          onSaved={() => {
-            setZoneState(null);
-            router.refresh();
-          }}
-        />
-      ) : null}
+
     </>
   );
 }

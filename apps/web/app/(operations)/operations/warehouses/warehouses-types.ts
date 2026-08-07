@@ -3,7 +3,7 @@ import type { ZoneDemandRow } from '@/lib/delivery/zone-demand';
 import {
   AddressSchema,
   CountryEnum,
-  DeliveryZoneInsertSchema,
+  type DeliveryZonePostalCode,
   WarehouseInsertSchema,
   type Country,
   type DeliveryZone,
@@ -47,20 +47,12 @@ export type WarehouseFormInput = z.infer<typeof WarehouseFormSchema>;
  * Posta kodu SEÇİMİ — `(ülke, kod)` ikilisi, çünkü kod tek başına benzersiz değil (`67000` hem
  * Fransa'da hem Almanya'da geçerli). Bölge sınır ötesi olabildiği için ikisi de taşınır.
  */
-export const PostalCodePickSchema = z.object({ country: CountryEnum, postalCode: z.string().min(1) });
-export type PostalCodePick = z.infer<typeof PostalCodePickSchema>;
-
 /**
- * Bölge formu — ad + teslim günleri + kodlar. `warehouseId` formda değil: bölge hangi deponun
- * kartından açıldıysa onundur, seçtirmek aynı kararı iki yerde sormak olurdu.
- *
- * `weekdays` boş kalabilir: kurulmuş ama günü henüz verilmemiş bölge geçerli bir ara hâldir
- * (kod listesi haritadan doldurulurken gün sonra konur). Kod listesi de boş kalabilir — bölge
- * kabuğu önce doğar, kodlar sonra biner.
+ * Rotaya bağlı kod — kartların okuduğu şekil. Rota FORMU burada değil (kurulum Teslimat & Rota'ya
+ * taşındı, 07.08); bu ekran yalnız okur, o yüzden yalnız tip kaldı.
  */
-export const ZoneFormSchema = DeliveryZoneInsertSchema.pick({ name: true, weekdays: true, isActive: true })
-  .required({ weekdays: true, isActive: true })
-  .extend({ postalCodes: z.array(PostalCodePickSchema) });
+export type PostalCodePick = Pick<DeliveryZonePostalCode, 'country' | 'postalCode'>;
+
 
 // ── Görünüm satırları ───────────────────────────────────────────────────────
 

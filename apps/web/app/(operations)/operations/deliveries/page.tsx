@@ -6,6 +6,8 @@ import { DISPATCH_NOTES } from './deliveries-labels';
 import { parseDeliveriesUrl, toIsoDate } from './deliveries-url';
 import { DispatchClient } from './dispatch-client';
 import { readDispatchDay } from './dispatch-read';
+import { RoutesClient } from './routes-client';
+import { readRoutes } from './routes-read';
 
 // **Teslimat & Rota** (`/operations/deliveries`) — İKİ DAL, TEK ADRES.
 //
@@ -34,6 +36,21 @@ export default async function DeliveriesPage({ searchParams }: DeliveriesPagePro
 
   const admin = await guarded(requireAdmin);
   if (admin.ok && urlState.view !== 'mine') {
+    // İKİ SEKME, TEK SAYFA (tasarım): rota TANIMLAMAK ile günü PLANLAMAK aynı işin iki anı —
+    // "bir bölge tanımlamak, bir dağıtım güzergâhı tanımlamaktır; günü gelince o rota dağıtıma
+    // çıkar" (kullanıcı kararı 07.08). İkisini iki sayfaya bölmek, operatörü aynı işin ortasında
+    // gezinmeye zorluyordu.
+    if (urlState.tab === 'routes') {
+      const warehouseId = typeof params.depo === 'string' ? params.depo : null;
+      return (
+        <RoutesClient
+          key={urlState.routeId ?? 'new'}
+          data={await readRoutes()}
+          routeId={urlState.routeId}
+          warehouseId={warehouseId}
+        />
+      );
+    }
     return <DispatchClient day={await readDispatchDay(urlState.date)} />;
   }
 

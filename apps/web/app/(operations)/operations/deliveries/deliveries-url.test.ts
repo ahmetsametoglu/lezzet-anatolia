@@ -6,8 +6,20 @@ import { dayLabel, parseDeliveriesUrl, shiftDay, toIsoDate } from './deliveries-
 const TODAY = '2026-08-07';
 
 describe('parseDeliveriesUrl', () => {
-  it('gün yoksa bugüne düşer', () => {
-    expect(parseDeliveriesUrl({}, TODAY)).toEqual({ date: TODAY, view: null });
+  it('gün yoksa bugüne düşer, sekme varsayılanı GÜN PLANI', () => {
+    // Varsayılan `plan` çünkü günlük iş odur; rota kurulumu ara sıra yapılan bir kurulum işidir.
+    expect(parseDeliveriesUrl({}, TODAY)).toEqual({ date: TODAY, view: null, tab: 'plan', routeId: null });
+  });
+
+  it('sekme yalnız bilinen değeri kabul eder', () => {
+    expect(parseDeliveriesUrl({ tab: 'routes' }, TODAY).tab).toBe('routes');
+    // Uydurma sekme sessizce boş bir ekran açmaz, günlük işe düşer.
+    expect(parseDeliveriesUrl({ tab: 'bolgeler' }, TODAY).tab).toBe('plan');
+  });
+
+  it('seçili rota adresten okunur', () => {
+    expect(parseDeliveriesUrl({ tab: 'routes', route: 'abc' }, TODAY).routeId).toBe('abc');
+    expect(parseDeliveriesUrl({ route: ['a', 'b'] }, TODAY).routeId).toBeNull();
   });
 
   it('geçerli günü olduğu gibi alır', () => {
