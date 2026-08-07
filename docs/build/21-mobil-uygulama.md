@@ -231,6 +231,17 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     arama kutusu/süzgeç düğmesi buna bağlı, ikisi de ekrana o zaman girer) · `app.json`
     `supportedLocales`'in `LOCALES`ten türemesi (`app.config.ts` geçişi) · sekme kabuğuna
     çalışma-zamanı smoke testi · `ui:shot:mobile` aracı.
+- [~] (21.8) **Operasyon yüzeyi ön hazırlık — rol × senaryo etüdü + tasarım brief seti:**
+  `docs/uygulama/04-operasyon-rolleri-ve-senaryolar.md` (kullanıcı kararları: tek kabuk + rol
+  bölümleri; telefon, barkod v2; tedarik kapsamda; TEK SÜRÜM) + Claude Design yükleme dosyaları
+  `design/pages/app-{operasyon-zemin,kurye,depo,yonetim,para}.md`.
+  - **Durum (07.08):** 21 senaryo kartı (K1-K7 · D1-D6 · Y1-Y6 · M1-M2) denetim yorumları +
+    arka uç ajanının kart-başına veri envanteri ölçümüyle DOĞRULANDI; beş brief veri-gerçekli
+    (enum kümeleri/etiket sözlükleri birebir, YOKLAR bölümlü). Ölçümün çıkardığı iş listesi doc
+    04 omurgasında (operasyon uçları mobile-api'de yok · push altyapısı yok · K5 not/foto
+    kalıcılığı · D6 guard). Denetime iki bulgu bildirildi (defter): Y4 "eşik yok" tespiti
+    yanlıştı (alan+motor var; kanıtla düzeltildi) + `markUndelivered` `note` kaybı arızası.
+    **Kalan:** tasarım dönüşü + uç programının açılması (tasarımla koordineli).
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:

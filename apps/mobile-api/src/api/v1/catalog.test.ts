@@ -10,7 +10,7 @@ import {
   serviceDb,
   UserProfileService,
 } from '@lezzet/database';
-import { createTestWarehouse, mustDelete, purgeTestData } from '@lezzet/database/testing';
+import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 // Testin beklediği şekil ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil
 // DERLEME kırılır. Terfi etmiş şemanın (`catalog-api.schema.ts`) ilk tüketicisi de budur.
 import type { CatalogCategory, CatalogPage, CatalogProductDetail, Product } from '@lezzet/types';
@@ -170,11 +170,16 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await purgeTestData(db, { productIds, categoryIds: [categoryId], warehouseIds, profileIds, authUserIds });
-  // Aile satırı `purgeTestData`nın hedefleri arasında YOK ve bu görevin sınırı `packages/database`'e
-  // dokunmamak — hedefi eklemek yerine hatası FIRLATILAN silmeyle toplanıyor (`CLAUDE §4b`: sessiz
-  // yarım kalan teardown yasak). Sıra önemli: üyeler (ürünler) çoktan silindi, aile artık serbest.
-  if (familyId) await mustDelete(db, 'product_family', (q) => q.eq('id', familyId));
+  // Aile dahil TÜM hedefler purge'te (`familyIds` talep karşılığı eklendi, 07.08) — silme sırası
+  // bilgisi tek yerde (`cleanup.ts`), dosyada elle silme yok (CLAUDE §4b).
+  await purgeTestData(db, {
+    productIds,
+    categoryIds: [categoryId],
+    warehouseIds,
+    profileIds,
+    authUserIds,
+    familyIds: familyId ? [familyId] : [],
+  });
 });
 
 describe('GET /api/v1/categories', () => {
