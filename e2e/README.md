@@ -23,7 +23,15 @@ Anlık ekran bakışı için test yazmaya gerek yok: `pnpm ui:shot <yol>`.
 5. **Her senaryo iki projede koşar** (desktop + mobile — cihaz forkunun iki yüzü). Mobilde
    kırılan bir akış, forkun mobil yarısının işidir; testi daraltma (`test.skip` yazma), ekranı düzelt.
 
-## Koşu gerçeği (04.08 ölçümü) — tam paket SAKİN pencerede koşulur
+## Koşu gerçeği (04.08 ölçümü · 06.08 vakası) — önce ÖN-UÇUŞ, tam paket SAKİN pencerede
+
+**Asılı sunucu vakası (06.08):** Next dev süreci 30+ saat sonra ASILDI — süreç canlı (CPU %0),
+port açık, her istek sonsuz beklemede (ölçüldü: 0,3 sn'lik rota → 90 sn+ cevapsız). E2E bunu
+ayırt edemeyince zaman aşımlarını sırayla yaktı. Tedbir: **`pnpm test:e2e` artık ön-uçuş
+yoklamasıyla başlar** (`scripts/e2e-preflight.mjs`) — sunucu cevapsız/500 ise koşu HİÇ başlamaz,
+adlı hatayla düşer; çare dev server'ı yeniden başlatmaktır (kullanıcı yönetir). Elle koşuda da
+önce yoklamayı çağırın. Belirtiyi tanıyın: koşular topluca ve rastgele zaman aşıyorsa suçlu
+senaryo değil, sunucudur.
 
 Dev server üç şeritle paylaşılıyor ve bir şerit kaydettiği an rotalar yeniden derleniyor: aynı
 URL sakin anda 0,3 sn, patlama anında 60 sn+ (ölçüldü). Bu yüzden: *(1)* tüm gezinmeler

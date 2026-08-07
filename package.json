@@ -28,7 +28,7 @@
     "hooks:install": "git config core.hooksPath .githooks",
     "test": "node scripts/shared-test-run.mjs",
     "test:status": "node scripts/shared-test-run.mjs --status",
-    "test:e2e": "node scripts/with-test-lock.mjs pnpm exec playwright test",
+    "test:e2e": "node scripts/e2e-preflight.mjs && node scripts/with-test-lock.mjs pnpm exec playwright test",
     "ui:shot": "node scripts/ui-shot.mjs",
     "test:unit": "vitest run --project unit",
     "test:integration": "node scripts/with-test-lock.mjs pnpm exec vitest run --project integration",
