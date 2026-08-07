@@ -17,7 +17,7 @@
 create table public.email_verifications (
   id           uuid primary key default gen_random_uuid(),
   email        text not null,
-  token_hash   text not null unique,                 -- sha256(plain_kod)
+  token_hash   text not null,                        -- sha256(plain_kod) — tekil DEĞİL, gerekçe aşağıda
   expires_at   timestamptz not null,
   used_at      timestamptz,
   attempts     integer not null default 0,           -- yanlış giriş sayacı; >=5 → 'locked'
@@ -30,6 +30,36 @@ alter table public.email_verifications enable row level security;
 
 create index email_verifications_email_created_idx
   on public.email_verifications (email, created_at desc);
+
+/**
+ * ── `token_hash` TEKİLLİĞİ KALDIRILDI, YERİNE GERÇEK DEĞİŞMEZ KONDU (07.08) ──────────────────
+ * İki şerit aynı kökü ayrı yollardan buldu: müşteri şeridi sabit test kodunun ikinci kez
+ * yazılamadığını, mobil şerit aynı kısıtın ÜRETİMDE çarpıştığını ölçtü.
+ *
+ * **Eski kısıt `token_hash text not null unique` idi ve OKUYUCUSU YOKTU.** Doğrulama satırı
+ * hash'ten değil E-POSTADAN buluyor (`verify_passwordless_code`: `where email = ... and used_at is
+ * null order by created_at desc limit 1`); hash yalnız bulunan satırla KARŞILAŞTIRILIYOR. Yani
+ * tekillik hiçbir sorguya hizmet etmiyordu — yalnız iki arıza üretiyordu:
+ *
+ *   1. Tüketilen satırlar silinmiyor (`used_at` işaretlenir, satır kalır) ve gerçek kodlar 10⁶
+ *      değerden çekiliyor. Tablo N satıra ulaştığında her yeni kod isteğinin var olan bir hash'e
+ *      çarpma olasılığı ≈ N/10⁶ — 10 bin satırda %1, 100 bin satırda %10. Çarpışmada `insert`
+ *      kısıt ihlali fırlatıyor ve müşteri kod yerine **sert bir hata** alıyor; yeniden denenince
+ *      geçtiği için teşhisi en pahalı türden.
+ *   2. Sabit dev/test kodu koşuda yalnız BİR kez yazılabiliyordu (hash hep aynı).
+ *
+ * **İki farklı e-postanın aynı 6 haneli kodu alması bir çakışma değil, beklenen bir hâldir** —
+ * kod e-postaya aittir, küresel bir jeton değildir. Kod tek başına da işe yaramaz: doğrulama
+ * (e-posta + kod) çiftini ister, yani tekilliğin bir güvenlik karşılığı da yoktu.
+ *
+ * ── YERİNE KONAN: E-POSTA BAŞINA EN FAZLA BİR AKTİF KOD ──────────────────────────────────────
+ * Bu değişmez zaten kod tarafından kuruluyordu (`request_passwordless_code` yeni satırı yazmadan
+ * önce o e-postanın açık satırlarını `used_at` ile kapatıyor) ama HİÇBİR YERDE ZORLANMIYORDU.
+ * Zorlanması gerekiyor çünkü doğrulama `limit 1` ile okuyor: iki aktif satır olsaydı biri sessizce
+ * yok sayılırdı — müşterinin elindeki kod "yanlış" görünürdü ve hiçbir yerde hata çıkmazdı.
+ */
+create unique index email_verifications_one_active_per_email
+  on public.email_verifications (email) where used_at is null;
 
 comment on table public.email_verifications is
   'Passwordless giriş için 6-haneli OTP; DB''de yalnız SHA-256 hash. service_role erişir.';
