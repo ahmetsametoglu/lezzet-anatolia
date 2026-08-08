@@ -118,6 +118,7 @@ import { seedErrorLog, seedSystemHealth } from './seed/observability';
 import { seedCarts, seedOrders } from './seed/orders';
 import { seedDraftCustomers, seedKisiler } from './seed/people';
 import { seedPrices } from './seed/pricing';
+import { seedRecipes } from './seed/recipe';
 import { seedScopedSettings } from './seed/settings';
 import { katalogVaryantlari } from './seed/shared';
 import { seedStock, seedAdjustments, seedTemperatureLogs } from './seed/stock';
@@ -151,6 +152,10 @@ async function main(): Promise<void> {
   // Paketler FİYATLARDAN SONRA: paket fiyatı kalemlerin birim fiyatlarından türetiliyor (elle yazılan
   // bir sayı değil). Sıra bozulursa paketler fiyatsız kalemlerle kurulur ve seed anlamsız veri üretir.
   await seedBundles(db);
+  // Tarifler paketlerden SONRA ama aynı gerekçeyle değil: tarif kendi fiyatını SAKLAMIYOR (05.16),
+  // yani fiyat sırası burada bağlayıcı değil. Sıra okunabilirlik için — ikisi de varyantlar üzerine
+  // kurulan editoryal seçkiler ve yan yana durmaları hangi kümenin nereden doğduğunu anlatıyor.
+  await seedRecipes(db);
   await seedDeliveryZones(db, depolar);
   // Kapsamlı ayarlar BÖLGELERDEN SONRA: bölge kapsamlı satır, bölgenin kimliğine yazılır.
   await seedScopedSettings(db);
