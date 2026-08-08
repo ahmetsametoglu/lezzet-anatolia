@@ -5,6 +5,7 @@ import { fail, ok } from '../../lib/respond';
 import { authOtp } from './auth-otp';
 import { catalog } from './catalog';
 import { courier } from './courier';
+import { warehouse } from './warehouse';
 import { bearerAuth, type V1Env } from './auth';
 
 /**
@@ -48,10 +49,13 @@ v1.get('/me', async (c) => {
 });
 
 /**
- * Kurye bölümü (21.10) — `bearerAuth`ın ARDINDA ve orada kalacak: katalogun aksine bu uçlar
- * personelindir, oturumsuz gezilmez. İkinci bir kapı daha var ve o rota dosyasının kendi
- * içinde: `courierGuard` rolü süzer ve kurye kimliğini JETONDAN çözer (`courier.ts` künyesi).
+ * Personel bölümleri (21.10 · 21.11) — `bearerAuth`ın ARDINDA ve orada kalacaklar: katalogun aksine
+ * bu uçlar personelindir, oturumsuz gezilmez. İkinci bir kapı daha var ve o rota dosyalarının kendi
+ * içinde: `requireStaffRole` rolü süzer ve personel kimliğini JETONDAN çözer (`auth.ts` künyesi).
+ * Depo bölümünün ÜÇÜNCÜ bir kapısı daha var — "hangi depo" sorusu (`warehouse.ts` künyesi:
+ * varsayılan depo YOKTUR).
  *
- * Önek burada veriliyor, dosyada değil: uçların adresini router'ın okuyan gözü tek yerden görsün.
+ * Önekler burada veriliyor, dosyada değil: uçların adresini router'ın okuyan gözü tek yerden görsün.
  */
 v1.route('/courier', courier);
+v1.route('/warehouse', warehouse);

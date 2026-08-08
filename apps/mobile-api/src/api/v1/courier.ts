@@ -1,6 +1,6 @@
-import { Hono, type Context, type Next } from 'hono';
+import { Hono } from 'hono';
 import { z } from 'zod';
-import { serviceDb, UserProfileService } from '@lezzet/database';
+import { serviceDb } from '@lezzet/database';
 import {
   closeCourierDay,
   confirmDoorDelivery,
@@ -26,7 +26,8 @@ import {
   StartCourierDayResponseSchema,
 } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
-import type { V1Env } from './auth';
+import { IsoDateSchema, readJsonBody, UuidSchema } from '../../lib/request';
+import { requireStaffRole, type StaffEnv } from './auth';
 
 /**
  * Kurye uçları (21.10) — mobil "Yol" bölümünün taşıma katmanı (K1 · K3–K5 · K7).
@@ -68,73 +69,19 @@ import type { V1Env } from './auth';
  */
 
 /**
- * Rol kapısı — `bearerAuth`ın ARDINDAN koşar ve iki işi birden yapar: yetkiyi sorar, kimliği çözer.
+ * **Kurye kimliği JETONDAN gelir, gövdeden ASLA.**
  *
- * ── KURYE KİMLİĞİ JETONDAN GELİR, GÖVDEDEN ASLA ─────────────────────────────
  * Sözleşmelerin hiçbirinde `courierId` yok ve bu bilinçliydi (`courier-api.schema.ts` künyesi):
  * gövdeye konsaydı kurye başkasının kimliğini yazıp onun durağını kapatabilirdi. Kapılar `courierId`
  * ZORUNLU parametre alıyor ("yalnız kendi teslimatları" imzada durur) ve o değeri buraya koyan tek
- * yer bu ara katmandır.
- *
- * ── HANGİ KİMLİK: `user_profiles.id`, `auth.users.id` DEĞİL ─────────────────
- * Ölçüldü, varsayılmadı: `order.courier_id` sütunu `references public.user_profiles (id)`
- * (`0012_order.sql:103`), yani kapılara verilecek kimlik PROFİL kimliğidir. Auth kullanıcısının
- * kimliği profil satırında AYRI bir sütunda (`auth_user_id`) durur — ikisi farklı uuid'lerdir
- * (`apps/web/lib/guard.ts` künyesi: *"auth kimliği ≠ müşteri kimliği"*). Jetondan çıkan auth
- * kimliğini doğrudan `listCourierDay`e vermek hiçbir siparişle eşleşmez ve kurye **boş bir gün**
- * görürdü — hata da vermezdi, çünkü boş liste geçerli bir cevaptır. Zincir bu yüzden katalogun
- * `readViewer`'ıyla aynı: auth kullanıcısı → `findByAuthUserId` → profil.
- *
- * ── TEK OKUMA, İKİ CEVAP ────────────────────────────────────────────────────
- * Rol de kurye kimliği de AYNI profil satırındadır (`roles` dizisi + `id`). `hasRole` çağırıp sonra
- * ayrıca profili okumak aynı satırı iki kez getirirdi; bir okuma ikisini birden veriyor.
- *
- * ── `admin` DE GEÇER ────────────────────────────────────────────────────────
- * Rol kümesi `courier` YA DA `admin`. Yönetici kendi üstüne atanmış bir durağı kapatabilmelidir
- * (küçük ekipte aynı kişi hem yönetici hem kuryedir) ve `roles` bir DİZİDİR — çok şapkalı kişi
- * zaten iki rolü birden taşır. `admin` ek bir kapı AÇMIYOR: kapılar yine yalnız `courier_id` o kişiye
- * eşit siparişleri döndürür, yani yönetici başkasının rotasını buradan göremez.
- *
- * ── ROLSÜZ İLE PROFİLSİZ AYNI CEVABI ALIR ───────────────────────────────────
- * `403 forbidden` — `bearerAuth`ın "token yok ile token çöp aynı cevabı alır" kararıyla aynı
- * gerekçe: ayrım çağırana bir şey kazandırmaz. Profil satırının hiç olmaması (trigger boşluğu) bir
- * altyapı arızasıdır ve `/me` onu 404 ile ayrıca söylüyor; kurye kapısının cevabı ise her iki hâlde
- * de aynıdır: bu kapı sana kapalı.
- *
- * **İkinci tüketicisi çıktığında taşınır:** depo bölümü (21.11) aynı şekle ihtiyaç duyacak
- * (`roles` süzgeci + profil kimliği). O gün ortak parça `auth.ts`e, `bearerAuth`ın yanına iner —
- * paketin kendi terfi ölçütü ("en az iki çağıran") bugün karşılanmıyor, tek çağıranlı bir
- * soyutlama ise erken.
+ * yer rol kapısıdır (`requireStaffRole` — 21.11'de `auth.ts`e taşındı; hangi kimlik, neden profil ve
+ * `admin`in neden ek kapı açmadığı orada yazılı).
  */
-interface CourierEnv {
-  Variables: V1Env['Variables'] & { courierId: string };
-}
-
-async function courierGuard(c: Context<CourierEnv>, next: Next): Promise<Response | void> {
-  const authUser = c.get('authUser');
-  const profile = await new UserProfileService(serviceDb()).findByAuthUserId(authUser.id);
-  if (!profile) return fail(c, 'forbidden', 403);
-  if (!profile.roles.includes('courier') && !profile.roles.includes('admin')) return fail(c, 'forbidden', 403);
-
-  c.set('courierId', profile.id);
-  await next();
-}
-
-/**
- * Gün anahtarı — `YYYY-MM-DD`. Biçim kontrolü bir iş kuralı değil, taşımanın ödevi: doğrulanmamış
- * bir dize `date` sütununa gidince PostgreSQL "invalid input syntax" fırlatır ve çağıran, kendi
- * gönderdiği bozuk parametre için **500** görür. 400 doğru cevaptır — soru istemciye geri verilir.
- */
-const IsoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-
 const DateQuerySchema = z.object({ date: IsoDateSchema.optional() });
 
-/** Yol parametresi — uuid olmayan bir kimlik de sorguya inmeden 400 alır (aynı gerekçe). */
-const OrderIdSchema = z.string().uuid();
+export const courier = new Hono<StaffEnv>();
 
-export const courier = new Hono<CourierEnv>();
-
-courier.use('*', courierGuard);
+courier.use('*', requireStaffRole('courier', 'admin'));
 
 /**
  * **Günün rotası** (K1). Gün verilmezse bugün.
@@ -161,7 +108,7 @@ courier.get('/day', async (c) => {
   // ötekini beklemiyor. Ayarın anahtarı ve kullanılamaz değerin akıbeti (null → tahsilat kapısı
   // kapalı) KAPIDA yaşıyor; burada yalnız cevaba konuyor.
   const [stops, doorAccountId] = await Promise.all([
-    listCourierDay(db, { courierId: c.get('courierId'), date }),
+    listCourierDay(db, { courierId: c.get('staff').id, date }),
     readDoorCashAccountId(db),
   ]);
 
@@ -196,7 +143,7 @@ courier.post('/day/start', async (c) => {
   const parsed = StartDayBodySchema.safeParse((await readJsonBody(c)) ?? {});
   if (!parsed.success) return fail(c, 'invalid_body', 400);
 
-  const result = await startCourierDay(serviceDb(), { courierId: c.get('courierId'), date: parsed.data.date });
+  const result = await startCourierDay(serviceDb(), { courierId: c.get('staff').id, date: parsed.data.date });
 
   const body: z.input<typeof StartCourierDayResponseSchema> = result;
   return ok(c, StartCourierDayResponseSchema.parse(body));
@@ -214,7 +161,7 @@ courier.post('/day/start', async (c) => {
  * sınırı (oku-sonra-yaz; atomik değil) `application/order/payment.ts` künyesinde yazılı.
  */
 courier.post('/stops/:orderId/deliver', async (c) => {
-  const orderId = OrderIdSchema.safeParse(c.req.param('orderId'));
+  const orderId = UuidSchema.safeParse(c.req.param('orderId'));
   if (!orderId.success) return fail(c, 'invalid_order_id', 400);
 
   const parsed = ConfirmDoorDeliveryRequestSchema.safeParse(await readJsonBody(c));
@@ -222,7 +169,7 @@ courier.post('/stops/:orderId/deliver', async (c) => {
 
   const outcome = await confirmDoorDelivery(serviceDb(), {
     orderId: orderId.data,
-    courierId: c.get('courierId'),
+    courierId: c.get('staff').id,
     ...parsed.data,
     // `effects` BİLEREK geçirilmiyor — dosya künyesindeki yan etki sınırı.
   });
@@ -248,7 +195,7 @@ courier.post('/stops/:orderId/deliver', async (c) => {
 const MarkUndeliveredBodySchema = MarkUndeliveredRequestSchema.extend({ note: z.string().trim().min(1) });
 
 courier.post('/stops/:orderId/undelivered', async (c) => {
-  const orderId = OrderIdSchema.safeParse(c.req.param('orderId'));
+  const orderId = UuidSchema.safeParse(c.req.param('orderId'));
   if (!orderId.success) return fail(c, 'invalid_order_id', 400);
 
   const raw = await readJsonBody(c);
@@ -263,7 +210,7 @@ courier.post('/stops/:orderId/undelivered', async (c) => {
 
   const outcome = await markUndelivered(serviceDb(), {
     orderId: orderId.data,
-    courierId: c.get('courierId'),
+    courierId: c.get('staff').id,
     outcome: parsed.data.outcome,
     note: parsed.data.note,
   });
@@ -293,7 +240,7 @@ courier.post('/stops/:orderId/undelivered', async (c) => {
  * (şema işi; bu görevin alanı dışında, rapora yazıldı).
  */
 courier.post('/stops/:orderId/proof-upload', async (c) => {
-  const orderId = OrderIdSchema.safeParse(c.req.param('orderId'));
+  const orderId = UuidSchema.safeParse(c.req.param('orderId'));
   if (!orderId.success) return fail(c, 'invalid_order_id', 400);
 
   const parsed = DeliveryProofUploadRequestSchema.safeParse(await readJsonBody(c));
@@ -301,7 +248,7 @@ courier.post('/stops/:orderId/proof-upload', async (c) => {
 
   const result = await requestDeliveryProofUploadUrl(serviceDb(), {
     orderId: orderId.data,
-    courierId: c.get('courierId'),
+    courierId: c.get('staff').id,
     ...parsed.data,
   });
 
@@ -322,7 +269,7 @@ courier.get('/day-close', async (c) => {
   const query = DateQuerySchema.safeParse(c.req.query());
   if (!query.success) return fail(c, 'invalid_query', 400);
 
-  const draft = await openDayClose(serviceDb(), { courierId: c.get('courierId'), date: query.data.date });
+  const draft = await openDayClose(serviceDb(), { courierId: c.get('staff').id, date: query.data.date });
 
   const body: z.input<typeof DayCloseDraftSchema> = draft;
   return ok(c, DayCloseDraftSchema.parse(body));
@@ -345,24 +292,8 @@ courier.post('/day-close', async (c) => {
   const parsed = CloseDayBodySchema.safeParse(await readJsonBody(c));
   if (!parsed.success) return fail(c, 'invalid_body', 400);
 
-  const result = await closeCourierDay(serviceDb(), { courierId: c.get('courierId'), ...parsed.data });
+  const result = await closeCourierDay(serviceDb(), { courierId: c.get('staff').id, ...parsed.data });
 
   const body: z.input<typeof CourierDayCloseResultSchema> = result;
   return ok(c, CourierDayCloseResultSchema.parse(body));
 });
-
-/**
- * Gövdeyi ham okur — **çözülemeyen gövde bir istisna değil, geçersiz bir istektir.**
- *
- * `c.req.json()` bozuk/boş gövdede fırlatır; yakalanmasaydı `app.onError` onu bir SUNUCU hatası gibi
- * kaydeder (500 + `error_log` satırı) ve hata defteri istemci kaynaklı gürültüyle dolardı. `undefined`
- * dönüyor: kararı şemaya bırakıyoruz — gövdesi hiç olmayan bir isteğin cevabı da `safeParse`ten
- * çıkan 400'dür, ayrı bir dal gerekmiyor.
- */
-async function readJsonBody(c: Context<CourierEnv>): Promise<unknown> {
-  try {
-    return await c.req.json();
-  } catch {
-    return undefined;
-  }
-}
