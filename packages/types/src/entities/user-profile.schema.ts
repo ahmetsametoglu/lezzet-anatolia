@@ -191,9 +191,56 @@ export const UserProfileSchema = z.object({
    */
   anonymizedAt: z.string().datetime({ offset: true }).nullable(),
 
+  /**
+   * **Bu kayıt hangi müşteriye birleştirildi** (09.10); `null` = birleştirilmedi.
+   *
+   * Kayıt SİLİNMEZ, kapanır: `order.customer_id` `restrict` olduğu için silme zaten reddedilirdi.
+   * Ekran bu bağı okuyup *"Bu kayıt X ile birleştirildi"* diyebilir ve operatör eski bağlantıyı
+   * takip edebilir — `anonymizedAt` deseninin ikizi, orada da satır duruyor kimliği boşalıyor.
+   *
+   * **Zincir YASAK** (A→B→C): kapanmış bir kayıt ne hedef ne kaynak olabilir (RPC reddeder).
+   * Zincire izin verseydik "bu kayıt nereye gitti" sorusunun cevabı tek bir ada değil bir yola
+   * dönerdi ve ekran onu gösteremezdi.
+   */
+  mergedIntoId: z.string().uuid().nullable(),
+  /** Birleştirme anı — bayrak değil TARİH (`anonymizedAt` ile aynı gerekçe). */
+  mergedAt: z.string().datetime({ offset: true }).nullable(),
+  /** Birleştirmeyi yapan personel; ayrılırsa `null`a döner — iz gider, kayıt kalır. */
+  mergedBy: z.string().uuid().nullable(),
+
   createdAt: z.string(),
 });
 export type UserProfile = z.infer<typeof UserProfileSchema>;
+
+/**
+ * Birleştirme ÖN İZLEMESİ (09.10) — onay diyaloğunun okuduğu döküm.
+ *
+ * Taşımanın kendisiyle **aynı sorgudan** türüyor (`preview_customer_merge`): iki ayrı liste bir gün
+ * ayrışırsa operatör onayladığından farklı bir şey taşınmış olurdu.
+ *
+ * **Düşecekler de sayılıyor** ve bu bir dürüstlük kararı: yalnız kazanımı gösteren bir onay ekranı
+ * kaybı gizler. Operatör *"3 değerlendirme taşınacak, 1'i düşecek"* cümlesini görmeli.
+ */
+export const CustomerMergePreviewSchema = z.object({
+  orders: z.number().int(),
+  addresses: z.number().int(),
+  tickets: z.number().int(),
+  conversations: z.number().int(),
+  feedback: z.number().int(),
+  /** Hedefte aynı ürün+bağlam zaten değerlendirilmiş → kaynağınki düşer. */
+  feedbackDropped: z.number().int(),
+  points: z.number().int(),
+  /** Bakiyeye eklenecek NET puan — düşecekler hariç. Sayı ile tutar ayrı iki sorudur. */
+  pointsDelta: z.number().int(),
+  /** Aynı gün ziyaret puanı hedefte zaten var → kaynağınki düşer. */
+  pointsDropped: z.number().int(),
+  /** İkisinin de sepeti var → kaynağınki silinir (iki sepeti birleştirmek uydurma olurdu). */
+  cartDropped: z.boolean(),
+  /** Hedef bu birleşmeyle TELEFONU kazanıyor — birleştirmenin asıl sebebi çoğu zaman budur. */
+  gainsPhone: z.boolean(),
+  gainsEmail: z.boolean(),
+});
+export type CustomerMergePreview = z.infer<typeof CustomerMergePreviewSchema>;
 
 // id/role/createdAt DB-üretimli/varsayılanlı → insert'te opsiyonel. Ticari alanların hepsi de
 // varsayılanlı ya da nullable: personel profili hiçbirini vermeden açılır.

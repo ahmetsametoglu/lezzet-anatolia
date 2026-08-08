@@ -1,12 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizeEmail } from '@lezzet/helper';
+import { dbToApp } from '../utils/case-transformers';
 import {
   UserProfileInsertSchema,
   UserProfileSchema,
   UserProfileUpdateSchema,
+  CustomerMergePreviewSchema,
   DEFAULT_PAGE_SIZE,
   MarketingChannelEnum,
   STAFF_ROLES,
+  type CustomerMergePreview,
   type CustomerType,
   type MarketingChannel,
   type KeysetCursor,
@@ -392,6 +395,40 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
         throw new Error(`anonymize: auth kullanıcısı silinemedi (${customerId}): ${authError.message}`);
       }
     }
+  }
+
+  /**
+   * **Birleştirme ön izlemesi** (09.10) — onay diyaloğunun okuduğu döküm.
+   *
+   * Taşımanın kendisiyle AYNI kaynaktan türüyor (`preview_customer_merge`): sayıları ekranda tek tek
+   * saymak beş ayrı okuma olurdu ve daha kötüsü, iki liste bir gün ayrışınca operatör onayladığından
+   * farklı bir şey taşınmış olurdu.
+   */
+  async previewMerge(targetId: string, sourceId: string): Promise<CustomerMergePreview> {
+    const rows = await this.executeRpc<unknown[]>('preview_customer_merge', {
+      p_target_id: targetId,
+      p_source_id: sourceId,
+    });
+    return CustomerMergePreviewSchema.parse(dbToApp((rows ?? [])[0]));
+  }
+
+  /**
+   * **Müşteri birleştirme** (09.10) — kaynağın kayıtları hedefe taşınır, kaynak KAPANIR.
+   *
+   * Kararın tamamı `merge_customers` (0040) içinde ve **başka hiçbir yerde tekrarlanmaz**: hangi
+   * tablo taşınır, hangi çakışma nasıl çözülür, hangi kimlik anahtarı hedefe geçer. Uygulama
+   * katmanına dağıtılsaydı yarın eklenen bir tablo birinde unutulur ve birleştirme sessizce yarım
+   * kalırdı — üstelik hata vermeden.
+   *
+   * **Yön çağıranındır, kapı sormaz:** hangi kaydın kalacağı bir iş kararıdır (operatör hangisinin
+   * adresi/vadesi doğru diye bakar). Servis yalnız verileni uygular.
+   */
+  async merge(input: { targetId: string; sourceId: string; actorId?: string | null }): Promise<void> {
+    await this.executeRpc('merge_customers', {
+      p_target_id: input.targetId,
+      p_source_id: input.sourceId,
+      p_actor_id: input.actorId ?? null,
+    });
   }
 
   /**
