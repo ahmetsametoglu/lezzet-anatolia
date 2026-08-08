@@ -12,6 +12,12 @@
 ## 0. Kırmızı çizgiler
 - **Onaysız `git commit`/`push` YOK.** Onay her commit için ayrı; "commitle" bir sonrakini kapsamaz. → WORKFLOW §5
 - **Çalışma ağacını topluca silen komut YOK** — `git checkout -- .`, `git restore .`, `git reset --hard`, `git clean`, yolsuz `git stash`. Bunlar KULLANICININ komutudur. Geri alma daima **yol adı vererek** ve önce doğrulanarak yapılır. → WORKFLOW §5
+- **Commit DAİMA yol adı vererek: `git commit -- <yollar>`; `git add` ile commit arasında boşluk BIRAKILMAZ**
+  (yaşandı 08.08). Üç şerit **tek çalışma ağacını ve tek indeksi** paylaşıyor: indekste bekleyen dosya,
+  o pencerede commit atan **başka şeridin** commit'ine girer. Onay beklerken staged bırakılan dört dosya
+  böyle kayboldu — kod kayıp değildi ama gerekçesi başkasının künyesinin altında kaldı ve `git log`'dan
+  bulunamaz oldu. İki yönlü kural: kendi işini `git add`siz tek adımda commit'le (`git commit -- <yollar>`
+  indeksi zaten yok sayar), **ve yolsuz `git commit` atma** — o an indekste ne varsa alır. → WORKFLOW §5
 - Canlı DB'ye bağlanma / prod env dosyası okuma yok. → WORKFLOW §4
 - Kanıtsız "oldu/geçti" deme; çıktıyı göster. → WORKFLOW §1
 - **Sebebi KANITLANMADAN müdahale YOK; pansuman çözüm YOK** (kullanıcı kararı 05.08). Bir arıza

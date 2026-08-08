@@ -115,6 +115,14 @@ Gerekçe: yereldeki veri "değersiz" değildir. Kullanıcı elle ürün girmiş,
 - `git add -A` **kullanma.** Daima kendi dokunduğun dosyaları adla: `git commit -m "..." -- path/a path/b`
 - Sebebi: paralel çalışan başka bir işlem (veya kullanıcının açık düzenlemesi) aynı çalışma dizinindedir; `-A` onların yarım işini de yutar
 - **Yaşandı (27.07.2026):** paralel ajan `-A` ile stage'ledi; fiyat motoru doküman kararları ilgisiz bir görsel-kırpma commit'inin içinde kaldı. İçerik kaybolmadı ama tarihçe okunamaz oldu — kural teoride değil, pratikte kırılıyor
+- **`git add` ile commit arasında BOŞLUK BIRAKMA.** Yol vermek yetmiyor: dosyalarını indekse koyup
+  (onay beklemek, bir doğrulama daha koşturmak için) beklersen, o pencerede commit atan **başka** şerit
+  onları kendi commit'ine alır. İndeks ortak, `git add` "bu benim" demez. `git commit -- <yollar>`
+  indeksi zaten yok sayar; ayrıca `git add` çalıştırmaya gerek yok, çalıştırma
+- **Yaşandı (08.08.2026):** müşteri şeridi dört dosyayı stage'leyip onay için sordu; ~30 saniye sonra
+  kurye şeridi yolsuz `git commit` attı ve dördü de `11.4` commit'inin içinde kaldı. Bu sefer kaybolan
+  içerik değil **gerekçeydi**: 07.14'ün ikinci turunu `git log`'da arayan onu kurye notunun altında
+  bulur. Kural iki yönlü — staged bırakma **ve** yolsuz commit atma; ikisinden biri tutarsa kaza olmaz
 - Yarış durumu oluştuysa **düzeltmeye kalkışma** — durumu bildir, kararı kullanıcıya bırak. Geçmişi düzeltme denemesi neredeyse her zaman durumu kötüleştirir
 
 ### Geri alma: yıkıcı komutlar kullanıcınındır

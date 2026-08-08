@@ -220,7 +220,9 @@ export function TimelineCard({ t, locale, view, compact }: ConfirmationViewProps
  * Yardım şeridi: kart değil BANT — "bir sorunuz mu var" siparişin bir parçası değil, sayfanın
  * altındaki açık kapı. Düğme mobilde çizilmiyor (tasarım): dar ekranda bant zaten tek satır.
  *
- * BEKLEYEN(15.1): WhatsApp yazışma bağlantısı — düğme yerinde, kanal yok.
+ * BEKLEYEN(15.3): WhatsApp yazışma bağlantısı — düğme yerinde, kanal yok. (İşaret 15.1'e asılıydı;
+ * o görev veri zeminiydi ve 08.08'de kapandı — düğmenin beklediği şey `wa.me` girişi, yani 15.3:
+ * numara + dile uygun önceden yazılı mesaj. Zemin hazır olduğu için kalan iş yalnız bu bağ.)
  */
 export function HelpBand({ t, compact }: Pick<ConfirmationViewProps, 't' | 'compact'>) {
   return (
