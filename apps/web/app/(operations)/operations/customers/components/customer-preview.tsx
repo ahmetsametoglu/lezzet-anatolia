@@ -9,7 +9,7 @@ import { InlineMetric } from '@/components/operation/ui/inline-metric';
 import { Metric } from '@/components/operation/ui/metric';
 import { Skeleton, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
 import { money, percent, shortDate } from '@/components/operation/ui/format';
-import { B2B_STATUS_VIEW, paymentTone, statusHint, statusOf, typeTone } from '../customers-labels';
+import { B2B_STATUS_VIEW, GDPR_NOTES, paymentTone, statusHint, statusOf, typeTone } from '../customers-labels';
 import { TYPE_LABEL } from '../customers-url';
 import type { ConsentView, CustomerDetail, CustomerOrderRow, CustomerRow } from '../customers-types';
 
@@ -52,6 +52,8 @@ interface CustomerPreviewProps {
   onEdit: () => void;
   /** B2B kontrol kartı diyaloğu — yalnız şirket müşterisinde gösterilir. */
   onOpenB2b: () => void;
+  /** GDPR silme onayını açar (09.10). Zaten silinmiş kayıtta düğme hiç çizilmez. */
+  onGdprDelete: () => void;
 }
 
 export function CustomerPreview({
@@ -65,6 +67,7 @@ export function CustomerPreview({
   onEditCredit,
   onEdit,
   onOpenB2b,
+  onGdprDelete,
 }: CustomerPreviewProps) {
   if (!row) {
     return (
@@ -118,6 +121,10 @@ export function CustomerPreview({
                   {status.label}
                 </Badge>
               </span>
+              {/* Silinmiş kayıt AYIRT EDİLEBİLİR olmalı: silme kaydı silmiyor, kişisel alanları
+                  boşaltıyor — rozet olmasa silinmiş hesap ile yarım kalmış taslak müşteri panelde
+                  tıpatıp aynı görünürdü (ikisi de adsız) ve operatör silinmişi düzenlemeye kalkardı. */}
+              {row.anonymizedAt ? <Badge tone="red">{GDPR_NOTES.anonymized}</Badge> : null}
             </div>
           </div>
         </div>
@@ -470,8 +477,16 @@ export function CustomerPreview({
         <Button variant="secondary" size="sm" onClick={onEditCredit} disabled={saving || !detail}>
           Vade / limit
         </Button>
-        {/* Birleştir ve GDPR sil tasarımda BU ŞERİTTE ama işi 09.10'un: siparişleri/puanları taşıyan
-            bir RPC ve geri dönüşsüz onay akışı gerekiyor. Çalışmayan bir düğme "basınca bir şey olur"
+        {/* **Silinmiş kayıtta düğme HİÇ çizilmez.** Kapı idempotent, yani ikinci basış zararsız —
+            ama düğmeyi bırakmak "silinecek bir şey var" demek olurdu; oysa yok. Yerine ne olduğunu
+            söyleyen bir işaret duruyor (üstteki rozet). */}
+        {row.anonymizedAt ? null : (
+          <Button variant="danger" size="sm" onClick={onGdprDelete} disabled={saving || !detail}>
+            GDPR sil
+          </Button>
+        )}
+        {/* Birleştir tasarımda BU ŞERİTTE ama arkası yok: siparişleri/puanları taşıyan bir RPC
+            gerekiyor ve o yazılmadı (talep açıldı). Çalışmayan bir düğme "basınca bir şey olur"
             sözü vermek olurdu, o yüzden hiç çizilmiyor. BEKLEYEN(09.10) */}
         {saveError ? (
           <span className="font-ops-body text-ops-xs font-semibold text-ops-red" role="alert">

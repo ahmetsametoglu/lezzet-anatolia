@@ -7,6 +7,10 @@ import {
   RecipeService,
   serviceDb,
 } from '@lezzet/database';
+// `splitLines` PAYLAŞILAN (`@lezzet/helper`): satır = madde kuralı burada da, müşteri yüzeyinde de
+// (08.24) aynı. İki kopya bir gün ayrışsaydı operatörün önizlemede saydığı adım sayısı müşterinin
+// gördüğüyle tutmazdı — ve kimse fark etmezdi, çünkü iki taraf da kendi içinde tutarlı olurdu.
+import { splitLines } from '@lezzet/helper';
 import { LOCALIZED_TEXT_KEYS, resolveLocalizedText } from '@lezzet/types';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import type { RecipeItemView, RecipeView, RecipesData } from './recipes-types';
@@ -72,19 +76,6 @@ export async function readRecipes(selectedId: string | null): Promise<RecipesDat
     activeCount: views.filter((recipe) => recipe.isActive).length,
     unavailableCount: views.filter((recipe) => recipe.hasUnavailableItem).length,
   };
-}
-
-/**
- * Metni maddelere böler: **satır = madde** (05.16 · `KARARLAR §3z`).
- *
- * Boş satır ATILIR — operatör iki madde arasına nefes bırakabilir ve o boşluk numaralı bir adım
- * olarak görünmemeli. `\r\n` de bölünür: Windows'tan yapıştırılan metin tek satır sayılmasın.
- */
-function splitLines(value: string): string[] {
-  return value
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
 }
 
 /**

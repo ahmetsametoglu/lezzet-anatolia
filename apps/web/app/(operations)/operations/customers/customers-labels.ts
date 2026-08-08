@@ -98,3 +98,25 @@ export function statusHint(row: CustomerRow): string {
  * (`hasOverdue`) zaten söyleniyor.
  */
 export { paymentTone } from '@/components/operation/ui/tone';
+
+/**
+ * **GDPR silme sözlüğü** (09.10). Metin ekranda değil burada, çünkü söz verilen şeyin kendisi:
+ * onay diyaloğunun ne kaldığını ve ne gittiğini SAYMASI gerekiyor.
+ *
+ * Liste kapının davranışından türedi, tahminden değil (`UserProfileService.anonymize`): fatura
+ * kayıtları ve üstündeki ad-adres Fransız hukuku gereği kalır, ürün puanı kimliksizleşir ama
+ * SİLİNMEZ — silinseydi bir müşterinin ayrılması başkalarının gördüğü ürün skorunu geriye dönük
+ * değiştirirdi.
+ */
+export const GDPR_NOTES = {
+  subtitle: 'Kişisel veriler boşaltılır, kayıt silinmez — sipariş geçmişi kimliksiz olarak durur.',
+  irreversible:
+    'Bu işlem geri alınamaz. Yanlış müşteriye uygulanırsa telafisi yoktur; aynı müşteriye ikinci kez uygulamak ise zararsızdır (silme tarihi ilk işlemde kalır).',
+  removed:
+    'Ad, telefon, e-posta, adres defteri, talep yazışmaları, bildirim istekleri, puan geçmişi, kişiye özel fiyat ve kuponlar, ürün yorumlarının metni. Giriş kapanır — müşteri bir daha oturum açamaz.',
+  kept: 'Sipariş ve fatura kayıtları; faturanın üstündeki ad ve adres de kalır (Fransız hukuku faturanın bunları içermesini zorunlu kılıyor). Ürün puanı kalır ama kimliksiz.',
+  /** Silinmiş kaydın listedeki ve panelindeki işareti — taslak müşteriyle karışmasın diye. */
+  anonymized: 'Verileri silindi',
+  /** Personel kaydında silme YOK: istihdam kaydı müşteri talebiyle silinmez (kapı da fırlatır). */
+  staffBlocked: 'Personel kaydına GDPR silme uygulanmaz — istihdam kaydı müşteri talebiyle silinmez.',
+} as const;

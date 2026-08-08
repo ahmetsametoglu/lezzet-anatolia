@@ -6,6 +6,7 @@ import type { CustomerType } from '@lezzet/types';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import type { OrderSummaryView } from '@/lib/order/summary';
 import {
+  anonymizeCustomerAction,
   loadMoreCustomersAction,
   readCustomerDetailAction,
   readB2bCheckAction,
@@ -17,6 +18,7 @@ import {
 import { B2bApprovalDialog } from './components/b2b-approval-dialog';
 import { CreditDialog } from './components/credit-dialog';
 import { CustomerEditDialog } from './components/customer-edit-dialog';
+import { GdprDeleteDialog } from './components/gdpr-delete-dialog';
 import { OrderDialog } from './components/order-dialog';
 import { CustomersDesktop } from './customers.desktop';
 import { customersUrl, type CustomerScope, type CustomersUrlState, type MarketingChannelFilter } from './customers-url';
@@ -223,6 +225,7 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
 
   const [creditOpen, setCreditOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [gdprOpen, setGdprOpen] = useState(false);
 
   // ── B2B kontrol kartı ──
   // Kart SEÇİMLE değil DİYALOG AÇILINCA okunur: dört okuma (profil, adres, teslim bölgeleri, mükerrer
@@ -289,6 +292,10 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
       setSaveError(null);
       setB2bOpen(true);
     },
+    onGdprDelete: () => {
+      setSaveError(null);
+      setGdprOpen(true);
+    },
     saving,
     saveError,
   };
@@ -307,6 +314,29 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
             void runWrite(() => setCustomerCreditAction(selected.id, input), () => setCreditOpen(false))
           }
           onClose={() => setCreditOpen(false)}
+        />
+      ) : null}
+      {gdprOpen && selected ? (
+        <GdprDeleteDialog
+          key={`gdpr-${selected.id}`}
+          customerName={selected.name}
+          busy={saving}
+          error={saveError}
+          onClose={() => setGdprOpen(false)}
+          onConfirm={() =>
+            void runWrite(
+              () => anonymizeCustomerAction(selected.id),
+              () => {
+                setGdprOpen(false);
+                // Satır YAMANIR, liste yeniden okunmaz: rozetin dayanağı bu alan ve silme sonrası
+                // panel hâlâ aynı kaydı gösteriyor — "silindi" işareti anında görünmeli.
+                setRowPatch((prev) => ({
+                  ...prev,
+                  [selected.id]: { ...prev[selected.id], anonymizedAt: new Date().toISOString() },
+                }));
+              },
+            )
+          }
         />
       ) : null}
       {editOpen && selected && detail ? (

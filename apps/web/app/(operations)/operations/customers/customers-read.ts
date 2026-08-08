@@ -43,6 +43,7 @@ export function toCustomerRows(profiles: readonly UserProfile[], overdueIds: Rea
     preferredLanguage: p.preferredLanguage,
     vatNumber: p.vatNumber,
     createdAt: p.createdAt,
+    anonymizedAt: p.anonymizedAt,
   }));
 }
 

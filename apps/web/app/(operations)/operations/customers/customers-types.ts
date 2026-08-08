@@ -53,6 +53,14 @@ export type CustomerRow = Pick<
   | 'preferredLanguage'
   | 'vatNumber'
   | 'createdAt'
+  /**
+   * GDPR silme damgası (09.10) — `null` = hiç silinmedi.
+   *
+   * **Satırda taşınması ŞART:** silme kaydı silmiyor, kişisel alanları boşaltıyor. Bu alan
+   * okunmazsa silinmiş bir hesap ile yarım kalmış bir taslak müşteri listede **tıpatıp aynı**
+   * görünür (ikisi de adsız) ve operatör silinmiş kaydı yeniden düzenlemeye kalkar.
+   */
+  | 'anonymizedAt'
 > & {
   /** Başvurunun dört hâli (`none · pending · approved · rejected`) — motordan gelir, ekranda türetilmez. */
   b2bStatus: B2bApplicationStatus;
@@ -307,6 +315,8 @@ export interface CustomersViewProps {
    * (kullanıcı kararı 30.07). Yalnız şirket müşterisinde çizilir.
    */
   onOpenB2b: () => void;
+  /** GDPR silme onay diyaloğunu açar (09.10) — zaten silinmiş kayıtta düğme çizilmez. */
+  onGdprDelete: () => void;
   /** Yazma işlemi sürüyor (anahtar/kaydet düğmeleri kilitlenir). */
   saving: boolean;
   /** Son yazma hatası — sessiz düşen bir kaydetme, operatörün yanlış sandığı bir limittir. */

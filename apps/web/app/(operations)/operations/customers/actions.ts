@@ -307,3 +307,30 @@ export async function updateCustomerAction(customerId: string, input: CustomerEd
     return { data: null, error: getErrorMessage(err) };
   }
 }
+
+/**
+ * **GDPR silme** (09.10) — kişisel veriyi boşaltır, kaydı bırakır.
+ *
+ * Kapı tek çağrı (`anonymize`) ve kuralın tamamı onun içinde; buradaki iş yetkiyi sormak ve hatayı
+ * Türkçeye çevirmek. **Fırlatırsa iş YAPILMAMIŞTIR** — o yüzden hata yutulmuyor, ekranda görünüyor.
+ *
+ * **Satır silinmez, kimliği boşalır:** `order` profile `restrict` ile bağlı, silme zaten
+ * veritabanınca reddedilirdi. Fatura kayıtları ve üstündeki ad-adres KALIR (Fransız hukuku faturanın
+ * bunları içermesini zorunlu kılıyor). Giden şey adres defteri, talep yazışmaları, bildirim
+ * istekleri, puan geçmişi, kişisel fiyat/kupon ve yorum METİNLERİ; ürün PUANI kimliksiz kalır —
+ * silinseydi bir müşterinin ayrılması, başkalarının gördüğü ürün skorunu geriye dönük değiştirirdi.
+ *
+ * **İdempotent ama telafisiz:** ikinci çağrı sessizce çıkar ve damga ilk silmenin tarihinde kalır.
+ * Yani "iki kez bastım" zararsız, "yanlış müşteriye bastım" geri alınamaz — onay diyaloğunun
+ * ciddiyeti buradan geliyor, ekranın kendi tercihinden değil.
+ */
+export async function anonymizeCustomerAction(customerId: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    await new UserProfileService(serviceDb()).anonymize(customerId);
+    revalidatePath(CUSTOMERS_PATH);
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}

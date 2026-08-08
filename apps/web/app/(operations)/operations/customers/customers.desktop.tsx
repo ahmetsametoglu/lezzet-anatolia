@@ -45,7 +45,8 @@ const COLUMNS: Column<CustomerRow>[] = withCells<CustomerRow>(CUSTOMERS_COLUMN_T
 
 export function CustomersDesktop(props: CustomersViewProps) {
   const { data, rows, urlState, search, onSearch, onScope, onType, onChannel, hasMore, loadingMore, onLoadMore, navPending } = props;
-  const { selectedId, onSelect, detail, detailLoading, detailError, onOpenOrder, onEditCredit, onEdit, onOpenB2b, saving, saveError } = props;
+  const { selectedId, onSelect, detail, detailLoading, detailError, onOpenOrder, onEditCredit, onEdit, onOpenB2b, onGdprDelete, saving, saveError } =
+    props;
   const selected = rows.find((r) => r.id === selectedId) ?? null;
   const { total, draft } = data.counts;
 
@@ -131,6 +132,7 @@ export function CustomersDesktop(props: CustomersViewProps) {
           onEditCredit={onEditCredit}
           onEdit={onEdit}
           onOpenB2b={onOpenB2b}
+          onGdprDelete={onGdprDelete}
         />
       </div>
     </div>
