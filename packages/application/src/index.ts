@@ -75,3 +75,35 @@ export type {
   ProviderRefundOutcome,
   ProviderRefunder,
 } from './order/effects';
+
+// ── Depo orkestrasyonu (D1 · D2 · D4 · D5) — terfi 21.11 ────────────────────
+// Kaynak `apps/web/lib/{order/preparation,stock/fefo,stock/intake,stock/adjustment}.ts`; transfer
+// kapısı ise hiçbir yerde YOKTU (web servisi doğrudan çağırıyordu) ve ilk kez burada yazıldı.
+// Ölçüt karşılandı: aynı kuyruğu/formu operasyon web ekranları ve mobil Depo bölümü okuyor.
+//
+// Web kopyaları bugün hâlâ kendi ekranlarını besliyor (KÖPRÜ) — benimsemesi web şeridinin işi;
+// görev satırının şartı: web aynı kapıya ihtiyaç duyduğunda PAKETTEN çağırır, ikinci yol açılmaz.
+//
+// **Her kapı DEPO KİMLİĞİ ister** (CLAUDE.md §1: varsayılan depo YOKTUR) ve kapsam dışı yazım
+// görünür retle döner (`forbidden`/`out_of_scope` — kurye kapılarının emsali).
+export { confirmPreparation, listPreparationQueue } from './warehouse/preparation';
+export type { PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
+export { openIntakeForm, receiveGoods, receivePurchase } from './warehouse/intake';
+export type {
+  IntakeDifference,
+  IntakeFormLine,
+  IntakeFormRow,
+  IntakeWarning,
+  PurchaseIntakeLine,
+  RepricePort,
+} from './warehouse/intake';
+export { recordAdjustment } from './warehouse/adjustment';
+export type { AdjustmentLine, AdjustmentOutcome, WarehouseReason } from './warehouse/adjustment';
+export { cancelTransfer, dispatchTransfer, listInboundTransfers, receiveTransfer } from './warehouse/transfer';
+export type {
+  CancelTransferOutcome,
+  DispatchTransferOutcome,
+  InboundTransfer,
+  InboundTransferLine,
+  ReceiveTransferOutcome,
+} from './warehouse/transfer';

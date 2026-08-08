@@ -1,0 +1,291 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  CategoryService,
+  OrderItemBatchService,
+  OrderService,
+  ProductService,
+  ReservationService,
+  StockService,
+  UserProfileService,
+  serviceDb,
+} from '@lezzet/database';
+import { purgeTestData, createTestWarehousePair, mustDelete } from '@lezzet/database/testing';
+import { advanceOrder } from '../order/advance.testkit';
+import { confirmPreparation, listPreparationQueue, type PreparationLine, type PreparationOrder } from './preparation';
+
+/**
+ * **Depo hazırlığı — D1** (10.1–10.3), terfi 21.11 (kaynağı `apps/web/lib/order/preparation-queue.test.ts`).
+ *
+ * En kritik doğrulama para DEĞİL, paranın YOKLUĞU: depo ekranına giden veride hiçbir tutar
+ * bulunmamalı (tasarım §6). Bunu bir arayüz disiplinine bırakmak yerine veri şeklinde sınıyoruz.
+ *
+ * Terfiyle gelen İKİ yeni iddia var, ikisi de depo değişmezinin (CLAUDE.md §1) karşılığı:
+ * kuyruk başka deponun siparişini GÖSTERMEZ ve onay başka deponun siparişine YAZMAZ.
+ */
+const db = serviceDb();
+const orders = new OrderService(db);
+const itemBatches = new OrderItemBatchService(db);
+const stocks = new StockService(db);
+const reservations = new ReservationService(db);
+
+const stamp = Date.now();
+let customerId: string;
+/** Depo geçişi (DOMAIN §17): sipariş/parti deposuz yazılamaz — testin KENDİ iki deposu. */
+let warehouseId: string;
+let otherWarehouseId: string;
+let variantId: string;
+let productId: string;
+let categoryId: string;
+let nearBatch: string;
+let farBatch: string;
+const createdProfiles: string[] = [];
+
+const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+
+beforeAll(async () => {
+  const { primary, secondary } = await createTestWarehousePair(db);
+  warehouseId = primary.id;
+  otherWarehouseId = secondary.id;
+
+  const category = await new CategoryService(db).create({ name: { tr: `Hazırlık kapısı ${stamp}` } });
+  const { product, variants } = await new ProductService(db).create({
+    name: { tr: `Fıstıklı Baklava ${stamp}` },
+    categoryId: category.id,
+    variants: [{ label: { tr: '500 g' } }],
+  });
+  categoryId = category.id;
+  productId = product.id;
+  variantId = variants[0]!.id;
+
+  // E-posta benzersiz: damga + DOSYAYA ÖZGÜ önek (kurye emsali). İki dosya aynı damgaya düşerse
+  // ("aynı milisaniye") önek ayırır; öneksiz bir damga bir gün mutlaka çakışır.
+  const profile = await new UserProfileService(db).insert({
+    name: 'Ayşe Yılmaz',
+    email: `hazirlik-kapisi-${stamp}@example.test`,
+  });
+  customerId = profile.id;
+  createdProfiles.push(profile.id);
+});
+
+beforeEach(async () => {
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
+  await mustDelete(db, 'stock', (q) => q.eq('variant_id', variantId));
+  // Yakın tarihli parti önce çıkmalı (FEFO) — konum da öneriyle birlikte gitmeli.
+  nearBatch = (
+    await stocks.insert({ warehouseId, variantId, physicalQty: 4, expiryDate: dayOffset(10), purchasePriceCents: 400, location: 'Dolap A' })
+  ).id;
+  farBatch = (
+    await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(90), purchasePriceCents: 500, location: 'Dolap B' })
+  ).id;
+});
+
+afterAll(async () => {
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: createdProfiles,
+    warehouseIds: [warehouseId, otherWarehouseId],
+  });
+});
+
+/** Onaylanmış sipariş — kuyruğa düşmesi için gereken en kısa yol. */
+async function confirmedOrder(
+  qty: number,
+  opts: { pinTo?: string; deliveryDate?: string; inWarehouse?: string; stockId?: string } = {},
+) {
+  const warehouse = opts.inWarehouse ?? warehouseId;
+  const { order, items } = await orders.create(
+    { warehouseId: warehouse, customerId, channel: 'b2c', deliveryType: 'route', deliveryDate: opts.deliveryDate, totalCents: qty * 1000 },
+    [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5, stockId: opts.pinTo }],
+  );
+  await reservations.reserve({ orderId: order.id, warehouseId: warehouse, variantId, qty, stockId: opts.pinTo });
+  await advanceOrder(db, order.id, ['confirmed']);
+  return { orderId: order.id, itemId: items[0]!.id };
+}
+
+/** Yalnız BU testin kurduğu sipariş — küresel kuyruk sayısına bakılmaz (CLAUDE.md §4b). */
+async function queueRowOf(orderId: string, opts: { deliveryDate?: string } = {}): Promise<PreparationOrder | undefined> {
+  const queue = await listPreparationQueue(db, { warehouseId, ...opts });
+  return queue.find((row) => row.orderId === orderId);
+}
+
+describe('hazırlık kuyruğu (D1 · 10.1)', () => {
+  it('kalem başına parti önerisi verir — önce tarihi yakın olan, konumuyla', async () => {
+    const { orderId } = await confirmedOrder(6);
+
+    const line: PreparationLine = (await queueRowOf(orderId))!.lines[0]!;
+
+    // 4 adet yakın partiden, kalan 2 uzak partiden — bir kalem birden çok partiye bölünebilir.
+    expect(line.suggestion).toEqual([
+      { stockId: nearBatch, qty: 4, expiryDate: dayOffset(10), location: 'Dolap A' },
+      { stockId: farBatch, qty: 2, expiryDate: dayOffset(90), location: 'Dolap B' },
+    ]);
+    expect(line.productName).toContain('Fıstıklı Baklava');
+    expect(line.variantLabel).toBe('500 g');
+    expect(line.shortfallQty).toBe(0);
+  });
+
+  it('depoya giden veride HİÇBİR tutar yok (tasarım §6)', async () => {
+    const { orderId } = await confirmedOrder(2);
+
+    const mine = (await queueRowOf(orderId))!;
+
+    const serialized = JSON.stringify(mine);
+    // Anahtar adları `…Cents` oldu (02.9) ama iddia AYNI: alt-dize araması hem eski hem yeni adı
+    // yakalar, çünkü yeni ad eskisini içeriyor (`unitPrice` ⊂ `unitPriceCents`).
+    for (const moneyKey of ['unitPrice', 'total', 'purchasePrice', 'lineDiscountAmount', 'amountCollected', 'vatRate']) {
+      expect(serialized).not.toContain(moneyKey);
+    }
+    // Adres ve iletişim de yok; yalnız koli etiketi için ad var.
+    expect(serialized).not.toContain('@example.test');
+    expect(mine.customerName).toBe('Ayşe Yılmaz');
+  });
+
+  it('yarım kalan hazırlık kuyrukta KALIR ve ilerlemesi görünür (v2: "yarım iş sürer")', async () => {
+    const { orderId, itemId } = await confirmedOrder(5);
+    await advanceOrder(db, orderId, ['preparing']);
+    await orders.recordPreparation(orderId, [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 2 }] }]);
+
+    const order = (await queueRowOf(orderId))!;
+
+    expect(order.status).toBe('preparing');
+    expect(order.pickedLineCount).toBe(0); // kalem tamamlanmadı
+    expect(order.lines[0]!.pickedQty).toBe(2);
+    // Öneri KALAN adet için kurulur — toplanan tekrar toplanmaz.
+    expect(order.lines[0]!.suggestion.reduce((sum, pick) => sum + pick.qty, 0)).toBe(3);
+  });
+
+  it('teslim edilmiş sipariş kuyruğa girmez — arşiv yığılmaz', async () => {
+    const { orderId, itemId } = await confirmedOrder(1);
+    await orders.recordPreparation(orderId, [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 1 }] }]);
+    await advanceOrder(db, orderId, ['ready', 'out_for_delivery']);
+
+    expect(await queueRowOf(orderId)).toBeUndefined();
+  });
+
+  it('gün süzgeci: başka günün siparişi listede yok', async () => {
+    const mine = await confirmedOrder(1, { deliveryDate: dayOffset(1) });
+    const other = await confirmedOrder(1, { deliveryDate: dayOffset(5) });
+
+    expect(await queueRowOf(mine.orderId, { deliveryDate: dayOffset(1) })).toBeDefined();
+    expect(await queueRowOf(other.orderId, { deliveryDate: dayOffset(1) })).toBeUndefined();
+  });
+
+  it('BAŞKA DEPONUN siparişi bu kuyrukta GÖRÜNMEZ (CLAUDE.md §1 — depo değişmezi)', async () => {
+    // İkinci deponun kendi partisi olmalı: rezervasyon deposuz yazılamaz.
+    await stocks.insert({ warehouseId: otherWarehouseId, variantId, physicalQty: 5, expiryDate: dayOffset(30), purchasePriceCents: 400 });
+    const { orderId } = await confirmedOrder(2, { inWarehouse: otherWarehouseId });
+
+    expect(await queueRowOf(orderId)).toBeUndefined();
+    // Ama kendi deposunda GÖRÜNÜR — süzgeç körlük değil, kapsam.
+    const theirs = await listPreparationQueue(db, { warehouseId: otherWarehouseId });
+    expect(theirs.some((row) => row.orderId === orderId)).toBe(true);
+  });
+});
+
+describe('partiye kilitli kalem (10.2)', () => {
+  it('kilitli kalemde öneri o partiye sabitlenir, FEFO devreye girmez', async () => {
+    const { orderId } = await confirmedOrder(2, { pinTo: farBatch }); // FEFO yakın partiyi önerirdi
+
+    const line = (await queueRowOf(orderId))!.lines[0]!;
+
+    expect(line.pinnedStockId).toBe(farBatch);
+    expect(line.suggestion).toEqual([{ stockId: farBatch, qty: 2, expiryDate: dayOffset(90), location: 'Dolap B' }]);
+  });
+
+  it('kilitli kalem başka partiden verilemez — yazım HİÇ yapılmaz', async () => {
+    const { orderId, itemId } = await confirmedOrder(2, { pinTo: farBatch });
+
+    const outcome = await confirmPreparation(db, {
+      orderId,
+      warehouseId,
+      picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 2 }] }],
+    });
+
+    expect(outcome).toMatchObject({ status: 'pinned_violation', itemId, requiredStockId: farBatch });
+    expect(await itemBatches.listByOrder(orderId)).toHaveLength(0);
+  });
+});
+
+describe('hazırlık onayı ve eksik kararı (10.3)', () => {
+  it('tamamı toplanınca sipariş HAZIR olur', async () => {
+    const { orderId, itemId } = await confirmedOrder(3);
+
+    const outcome = await confirmPreparation(db, {
+      orderId,
+      warehouseId,
+      picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 3 }] }],
+    });
+
+    expect(outcome).toMatchObject({ status: 'ok', items: 1, ready: true, shortfalls: [] });
+    expect((await orders.getById(orderId))?.status).toBe('ready');
+  });
+
+  it('eksik varsa sipariş `preparing`te KALIR — karar yönetim ekranında (D1 → Y2)', async () => {
+    const { orderId, itemId } = await confirmedOrder(4);
+
+    const outcome = await confirmPreparation(db, {
+      orderId,
+      warehouseId,
+      picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 1 }] }],
+    });
+
+    expect(outcome).toMatchObject({ status: 'ok', ready: false });
+    expect((await orders.getById(orderId))?.status).not.toBe('ready');
+  });
+
+  it('büyük eksikte "müşteriye sor" önerilir, tavsiye TUTAR taşımaz', async () => {
+    const { orderId, itemId } = await confirmedOrder(4);
+
+    const outcome = await confirmPreparation(db, {
+      orderId,
+      warehouseId,
+      picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 1 }] }],
+    });
+
+    const shortfall = outcome.status === 'ok' ? outcome.shortfalls[0] : null;
+    expect(shortfall?.suggestion).toEqual({ action: 'ask_customer', reason: 'large_share', missingQty: 3 });
+  });
+
+  it('küçük eksikte "kalanı gönder" önerilir', async () => {
+    const { orderId, itemId } = await confirmedOrder(10);
+
+    const outcome = await confirmPreparation(db, {
+      orderId,
+      warehouseId,
+      picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 4 }, { stockId: farBatch, qty: 5 }] }],
+    });
+
+    const shortfall = outcome.status === 'ok' ? outcome.shortfalls[0] : null;
+    expect(shortfall?.suggestion).toMatchObject({ action: 'send_rest', missingQty: 1 });
+  });
+
+  it('BAŞKA DEPONUN siparişine onay YAZILMAZ — görünür ret döner', async () => {
+    const { orderId, itemId } = await confirmedOrder(2);
+
+    const outcome = await confirmPreparation(db, {
+      orderId,
+      // Depocu ikinci depoda çalışıyor; sipariş birincinin.
+      warehouseId: otherWarehouseId,
+      picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 2 }] }],
+    });
+
+    expect(outcome).toEqual({ status: 'forbidden', reason: 'out_of_scope' });
+    // Ret GÖRÜNÜR ama sessiz DEĞİL: hiçbir satır yazılmadı, sipariş durumu da değişmedi.
+    expect(await itemBatches.listByOrder(orderId)).toHaveLength(0);
+    expect((await orders.getById(orderId))?.status).toBe('confirmed');
+  });
+
+  it('olmayan sipariş `not_found` döner', async () => {
+    const outcome = await confirmPreparation(db, {
+      orderId: '00000000-0000-0000-0000-000000000000',
+      warehouseId,
+      picks: [],
+    });
+
+    expect(outcome).toEqual({ status: 'not_found' });
+  });
+});

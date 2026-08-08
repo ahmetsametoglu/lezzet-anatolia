@@ -1,0 +1,365 @@
+import {
+  OrderItemService,
+  OrderService,
+  ReservationService,
+  SettingsService,
+  StockService,
+  UserProfileService,
+} from '@lezzet/database';
+import { isSellableBatch, suggestFefoPicks, suggestShortfallAction, type ShortfallSuggestion } from '@lezzet/domain-core';
+import type { Order, OrderItem, PreparationPick, PreparationResult, TransitionResult } from '@lezzet/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { variantNames } from './names';
+
+/**
+ * **Depo hazırlığı — D1** (10.1–10.3), terfi 21.11. Kaynağı `apps/web/lib/order/preparation.ts` +
+ * `apps/web/lib/stock/fefo.ts`; `design/pages/depo-hazirlik.md` ve mobil v2'nin "Toplama" ekranı
+ * bağlayıcı.
+ *
+ * ── NEDEN PAKETTE ────────────────────────────────────────────────────────────
+ * Paketin kabul ölçütü "EN AZ İKİ yüzeyin çağırdığı orkestrasyon" (`index.ts`). Aynı kuyruğu
+ * operasyon web ekranı (`/operations/preparation`) ve mobil Depo bölümü (D1) okuyor; ikinci bir
+ * uygulama yazmak, aynı FEFO önerisini iki kez üretmek olurdu. Web kopyası bugün hâlâ ekranını
+ * besliyor — **köprü**; benimsemesi web şeridinin işi (görev satırı 21.11'in notu: web aynı kapıya
+ * ihtiyaç duyduğunda PAKETTEN çağırır, ikinci yol açılmaz).
+ *
+ * ── PARA BU DOSYADAN GEÇMEZ ──────────────────────────────────────────────────
+ * Tasarımın altın kuralı ("depocu fiyat, tutar, kâr, maliyet asla görmez") burada bir arayüz
+ * disiplini değil **yapısal bir sınır**: dönen görünüm modelinde para alanı YOKTUR. Ekran isteseydi
+ * bile gösteremez. Eksik kararının parasal ölçütü motora GİRDİ olarak verilir, dönen değerde yer
+ * almaz (`domain-core/stock/shortfall`).
+ *
+ * ── DEPO KİMLİĞİ ZORUNLU ─────────────────────────────────────────────────────
+ * İki kapı da `warehouseId` ister (CLAUDE.md §1: varsayılan depo YOKTUR). Web kopyasında süzgeç
+ * OPSİYONELDİ ve depo-üstü okuma admin'in yoluydu; burada değil: kapıyı çağıran yüzey personelin
+ * sabit deposunu kendi çözer (jetondan/guard'dan) ve kimliği geçirir. Süzgeci unutulan bir sorgu
+ * tek depolu veride DOĞRU cevap verir — ve sistem sessizce başka şehrin işini gösterir.
+ */
+
+/** Bir kalemin hazırlık satırı — ürün/adet/parti; fiyat yok. */
+export interface PreparationLine {
+  itemId: string;
+  variantId: string;
+  /** "Fıstıklı Baklava" — müşterinin dilinde değil, operasyon dilinde (Türkçe). */
+  productName: string;
+  /** "500 g" gibi boy etiketi; tek boylu üründe boş. */
+  variantLabel: string;
+  orderedQty: number;
+  /** Daha önce hazırlanmış adet — **yarım kalan iş kaldığı yerden sürer** (mobil v2: "Yarım iş sürer"). */
+  pickedQty: number;
+  /**
+   * Partiye kilitli mi (indirimli teklif kalemi). Kilitliyse öneri değil ZORUNLULUKTUR: depocu
+   * başka partiden veremez, kapı da yazdırmaz.
+   */
+  pinnedStockId: string | null;
+  /** Sistem önerisi: hangi partiden kaç adet — bir kalem birden çok partiye bölünebilir. */
+  suggestion: PreparationSuggestion[];
+  /** Önerilen partiler istenen adedi karşılayamıyorsa kalan (fiziksel eksik sinyali). */
+  shortfallQty: number;
+}
+
+/** Motorun önerdiği tek parti — depocunun rafta arayacağı şey. */
+export interface PreparationSuggestion {
+  stockId: string;
+  qty: number;
+  expiryDate: string;
+  location: string | null;
+}
+
+/** Kuyruk satırı — sipariş künyesi + kalemleri. Tutar, adres, iletişim YOK (tasarım §6). */
+export interface PreparationOrder {
+  orderId: string;
+  referenceNo: string | null;
+  customerName: string;
+  /** B2B/B2C — hacim beklentisini kurar (B2B 10-50 koli olabilir). */
+  channel: Order['channel'];
+  status: Order['status'];
+  deliveryDate: string | null;
+  lineCount: number;
+  /** Toplanan kalem sayısı — hazırlık ilerlemesi. */
+  pickedLineCount: number;
+  lines: PreparationLine[];
+}
+
+/**
+ * **Günün hazırlama listesi** (D1). `confirmed` ve `preparing` birlikte gelir: ikincisi yarım kalan
+ * iştir ve ekranda kaybolmamalıdır (tasarım §4).
+ *
+ * Teslim gününe göre süzülür; gün verilmezse o deponun bekleyen her siparişi gelir. **Arşiv
+ * yığılmaz**: teslim edilmiş/kapanmış sipariş bu okumaya hiç girmez.
+ *
+ * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`), `auth/otp` deseni.
+ */
+export async function listPreparationQueue(
+  db: SupabaseClient,
+  input: { warehouseId: string; deliveryDate?: string; limit?: number },
+): Promise<PreparationOrder[]> {
+  const orders = await new OrderService(db).listByStatus(['confirmed', 'preparing'], {
+    deliveryDate: input.deliveryDate,
+    limit: input.limit ?? 50,
+    warehouseId: input.warehouseId,
+  });
+  if (orders.length === 0) return [];
+
+  const items = await new OrderItemService(db).listByOrders(orders.map((order) => order.id));
+  const [names, customers, pinned] = await Promise.all([
+    variantNames(db, items.map((item) => item.variantId)),
+    customerNames(db, orders),
+    pinnedStockIds(db, orders.map((order) => order.id)),
+  ]);
+
+  const queue: PreparationOrder[] = [];
+  for (const order of orders) {
+    const orderItems = items.filter((item) => item.orderId === order.id);
+    const lines = await Promise.all(
+      orderItems.map((item) =>
+        buildLine(
+          db,
+          // Hazırlık siparişin deposundan toplanır. Süzgeç zaten `warehouseId` ile kuruldu, ama
+          // öneri SİPARİŞİN deposundan çıkar: ikisi eşit, ve eşitliği kaynağından okumak niyeti
+          // yazılı tutar.
+          order.warehouseId,
+          item,
+          names.get(item.variantId),
+          pinned.get(`${order.id}:${item.variantId}`) ?? item.stockId,
+        ),
+      ),
+    );
+
+    queue.push({
+      orderId: order.id,
+      referenceNo: order.referenceNo,
+      customerName: customers.get(order.customerId) ?? '—',
+      channel: order.channel,
+      status: order.status,
+      deliveryDate: order.deliveryDate,
+      lineCount: lines.length,
+      pickedLineCount: lines.filter((line) => line.pickedQty >= line.orderedQty).length,
+      lines,
+    });
+  }
+  return queue;
+}
+
+/**
+ * Kalem satırı + parti önerisi. Kilitli kalemde öneri o partiye sabitlenir — FEFO'ya sorulmaz:
+ * teklife söz verilen stok başka partiyle karşılanamaz (DOMAIN §4).
+ */
+async function buildLine(
+  db: SupabaseClient,
+  warehouseId: string,
+  item: OrderItem,
+  variant: { productName: string; variantLabel: string } | undefined,
+  pinnedStockId: string | null,
+): Promise<PreparationLine> {
+  const remaining = Math.max(0, item.qty - item.fulfilledQty);
+  const base = {
+    itemId: item.id,
+    variantId: item.variantId,
+    productName: variant?.productName ?? '—',
+    variantLabel: variant?.variantLabel ?? '',
+    orderedQty: item.qty,
+    pickedQty: item.fulfilledQty,
+  };
+
+  if (pinnedStockId) {
+    const batch = await new StockService(db).getById(pinnedStockId);
+    return {
+      ...base,
+      pinnedStockId,
+      suggestion: batch
+        ? [{ stockId: batch.id, qty: remaining, expiryDate: batch.expiryDate, location: batch.location ?? null }]
+        : [],
+      shortfallQty: batch ? Math.max(0, remaining - batch.physicalQty) : remaining,
+    };
+  }
+
+  const fefo = await suggestPicksForVariant(db, warehouseId, item.variantId, remaining);
+  return {
+    ...base,
+    pinnedStockId: null,
+    suggestion: fefo.picks.map((pick) => ({
+      stockId: pick.stockId,
+      qty: pick.qty,
+      expiryDate: pick.expiryDate,
+      location: pick.location,
+    })),
+    shortfallQty: fefo.shortfall,
+  };
+}
+
+type ConfirmOutcome =
+  | { status: 'ok'; items: number; ready: boolean; shortfalls: { itemId: string; suggestion: ShortfallSuggestion }[] }
+  /** Kilitli kalem başka partiden verilmek istendi — yazım yapılmadı. */
+  | { status: 'pinned_violation'; itemId: string; requiredStockId: string }
+  /**
+   * Sipariş çağıranın deposunda değil. **Yetki kararı DEĞİL, kapsam kararı** (`order/refund`
+   * emsali): kimliğin doğrulanması uç katmanın işi; burada yalnız "bu sipariş bu depoda mı" sorusu
+   * var ve o bir İŞ kuralıdır (DOMAIN §17).
+   */
+  | { status: 'forbidden'; reason: 'out_of_scope' }
+  | { status: 'not_found' };
+
+/**
+ * **Hazırlık onayı** (10.1/10.2). Seçilen partiler yazılır; sipariş tamamen toplandıysa `ready`'e
+ * geçer. Eksik kalan kalem varsa motorun tavsiyesi döner — **karar depocunun değildir**: mobil v2
+ * "Eksik bildirildi — karar yönetim ekranında" diyor (D1 → Y2). Kapı kimsenin yerine karar vermez,
+ * tavsiyeyi taşır.
+ *
+ * Kilitli kalem kontrolü BURADA: RPC fiziksel gerçeği korur (olmayan mal yazılmaz) ama "bu kalem şu
+ * partiden çıkmalı" bir iş kuralıdır, veritabanının değil uygulamanın sorusudur.
+ *
+ * **Yarım iş sürdürülebilir ve bu cevapta görünür:** `ready: false` dönen bir onay hata değildir —
+ * toplanan adet kayıtta kalır, sipariş `preparing`te bekler, depocu kaldığı yerden devam eder.
+ */
+export async function confirmPreparation(
+  db: SupabaseClient,
+  input: {
+    orderId: string;
+    /** Depocunun çalıştığı depo — siparişinki değilse yazım HİÇ yapılmaz (CLAUDE.md §1). */
+    warehouseId: string;
+    picks: readonly PreparationPick[];
+    actorId?: string | null;
+  },
+): Promise<ConfirmOutcome> {
+  const found = await new OrderService(db).getWithItems(input.orderId);
+  if (!found) return { status: 'not_found' };
+  if (found.order.warehouseId !== input.warehouseId) return { status: 'forbidden', reason: 'out_of_scope' };
+
+  const pinned = await pinnedStockIds(db, [input.orderId]);
+  for (const pick of input.picks) {
+    const item = found.items.find((row) => row.id === pick.orderItemId);
+    if (!item) continue;
+    const requiredStockId = pinned.get(`${input.orderId}:${item.variantId}`) ?? item.stockId;
+    if (!requiredStockId) continue;
+
+    const wrong = pick.batches.find((batch) => batch.stockId !== requiredStockId);
+    if (wrong) return { status: 'pinned_violation', itemId: item.id, requiredStockId };
+  }
+
+  const result: PreparationResult = await new OrderService(db).recordPreparation(input.orderId, input.picks);
+
+  // Tavsiye için tutar motora GİRDİ olarak verilir, dönen değerde yer almaz (depocu parayı görmez).
+  const thresholds = await shortfallThresholds(db);
+  const shortfalls = [];
+  for (const pick of input.picks) {
+    const item = found.items.find((row) => row.id === pick.orderItemId);
+    if (!item) continue;
+    const picked = pick.batches.reduce((sum, batch) => sum + batch.qty, 0);
+    if (picked >= item.qty) continue;
+
+    shortfalls.push({
+      itemId: item.id,
+      suggestion: suggestShortfallAction({
+        orderedQty: item.qty,
+        pickedQty: picked,
+        missingValueCents: item.unitPriceCents * (item.qty - picked),
+        thresholds,
+      }),
+    });
+  }
+
+  // Tamamı toplandıysa sipariş sevkiyata hazırdır. Eksik varsa `preparing`'de kalır: karar
+  // verilmeden ilerletmek, yönetimin elindeki soruyu atlamak olurdu.
+  const complete = found.items.every((item) => {
+    const pick = input.picks.find((row) => row.orderItemId === item.id);
+    return (pick?.batches.reduce((sum, batch) => sum + batch.qty, 0) ?? item.fulfilledQty) >= item.qty;
+  });
+
+  let ready = false;
+  if (complete) {
+    const transition: TransitionResult = await new OrderService(db).transition({
+      orderId: input.orderId,
+      from: found.order.status,
+      to: 'ready',
+      actorId: input.actorId,
+    });
+    ready = transition.ok;
+  }
+
+  return { status: 'ok', items: result.items, ready, shortfalls };
+}
+
+/** Eşikler ayardan — kodda sabit yok (CLAUDE.md §4). */
+async function shortfallThresholds(db: SupabaseClient): Promise<{ ratio: number; valueCents: number }> {
+  const settings = new SettingsService(db);
+  const [ratioPercent, valueCents] = await Promise.all([
+    settings.getNumber('shortfall_ask_ratio_percent', 50),
+    settings.getNumber('shortfall_ask_value_cents', 1_500),
+  ]);
+  return { ratio: ratioPercent / 100, valueCents };
+}
+
+/** Siparişin partiye ÇIPALI rezervasyonları — `order:variant` anahtarıyla. */
+async function pinnedStockIds(db: SupabaseClient, orderIds: readonly string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const reservations = new ReservationService(db);
+  for (const orderId of orderIds) {
+    for (const row of await reservations.listActiveByOrder(orderId)) {
+      if (row.stockId) map.set(`${orderId}:${row.variantId}`, row.stockId);
+    }
+  }
+  return map;
+}
+
+/** Müşteri adı — koli etiketleme için. İletişim ve adres OKUNMAZ (tasarım §6). */
+async function customerNames(db: SupabaseClient, orders: readonly Order[]): Promise<Map<string, string>> {
+  const profiles = new UserProfileService(db);
+  const map = new Map<string, string>();
+  for (const customerId of new Set(orders.map((order) => order.customerId))) {
+    const profile = await profiles.getById(customerId);
+    if (profile) map.set(customerId, profile.name);
+  }
+  return map;
+}
+
+/**
+ * **FEFO parti önerisi** (06.5) — kaynağı `apps/web/lib/stock/fefo.ts`.
+ *
+ * Burada yaşamasının sebebi sınır kuralıdır (STACK §4/§13): `domain-core` DB'yi bilmez, `database`
+ * motoru bilmez. Satırları servis getirir, kararı motor verir, ikisini birleştiren yer burasıdır.
+ * Uygulama kuralı KENDİ hesaplamaz — sıralamayı, satılabilirliği ve çıpalı düşümü motora sorar.
+ *
+ * Öneridir, emir değil: depo ekranı bunu gösterir, depocu saparsa yalnız o satırı değiştirir
+ * (DOMAIN §4).
+ *
+ * `warehouseId` zorunlu: hazırlık daima siparişin deposundan toplanır. Süzgeçsiz bir FEFO önerisi
+ * başka şehirdeki partiyi önerir; depocu onu seçer ve `record_preparation` reddeder (DOMAIN §17).
+ *
+ * **Web kopyasının taşıdığı iki alan burada YOK** (`flag`, `remainingPercent`, `lotNumber`): D1
+ * ekranı raf ömrü işareti göstermiyor (o D3'ün sorusu) ve kimse okumuyordu. Hesaplanıp atılan bir
+ * değer, bir gün "bu neden hep boş" diye aranacak ölü koddur.
+ */
+async function suggestPicksForVariant(
+  db: SupabaseClient,
+  warehouseId: string,
+  variantId: string,
+  qty: number,
+  now: Date = new Date(),
+): Promise<{ picks: PreparationSuggestion[]; shortfall: number }> {
+  const [batches, reservations] = await Promise.all([
+    new StockService(db).listByVariantWithDates(warehouseId, variantId),
+    new ReservationService(db).listActiveByVariant(variantId),
+  ]);
+
+  const decision = suggestFefoPicks(
+    qty,
+    batches.map((batch) => ({
+      stockId: batch.id,
+      physicalQty: batch.physicalQty,
+      expiryDate: batch.expiryDate,
+      sellable: isSellableBatch(batch.variant.product.dateType, batch.expiryDate, now),
+    })),
+    reservations.map((row) => ({ qty: row.qty, stockId: row.stockId, expiresAt: row.expiresAt })),
+    now,
+  );
+
+  const byId = new Map(batches.map((batch) => [batch.id, batch]));
+  return {
+    shortfall: decision.shortfall,
+    picks: decision.picks.map((pick) => {
+      const batch = byId.get(pick.stockId)!;
+      return { stockId: pick.stockId, qty: pick.qty, expiryDate: batch.expiryDate, location: batch.location };
+    }),
+  };
+}
