@@ -1,0 +1,209 @@
+{
+  "tr": {
+    "back": "Geri",
+    "share": "Paylaş",
+    "badge": {
+      "soldOut": "Tükendi",
+      "discount": "İndirim"
+    },
+    "meta": {
+      "perKg": "{price} / kg",
+      "vat": "KDV dahil",
+      "was": "normal {price}"
+    },
+    "limit": "Bu fiyattan en fazla {n} adet",
+    "noShip": "Yalnız bölge içi kapıya teslim — kargoya verilmez",
+    "family": {
+      "browse": "{name} — GÖZ ATIN",
+      "from": "{price}'dan",
+      "current": "Bakıyorsunuz"
+    },
+    "accordion": {
+      "ingredients": "İçindekiler & alerjenler",
+      "allergens": "Alerjenler: {list}",
+      "traces": "Aynı tesiste {list} işlenmektedir.",
+      "nutrition": "Besin değerleri & net ağırlık",
+      "per100": "100 g için: {rows}",
+      "netWeight": "Net ağırlık: {grams} g",
+      "storage": "Saklama & tazelik"
+    },
+    "nutrition": {
+      "energy": "Enerji",
+      "fat": "Yağ",
+      "saturatedFat": "doymuş yağ",
+      "carbohydrate": "Karbonhidrat",
+      "sugars": "şeker",
+      "protein": "Protein",
+      "salt": "Tuz"
+    },
+    "reviews": {
+      "title": "Değerlendirmeler",
+      "empty": "Henüz yorum yok — bu ürünü satın alırsanız teslimattan sonra ilk yorumu siz bırakabilirsiniz."
+    },
+    "related": "Bunları da sevebilirsiniz",
+    "cta": {
+      "add": "Sepete ekle",
+      "closed": "Bu ürün şu an satışa kapalı"
+    },
+    "stepper": {
+      "decrease": "{name} adedini azalt",
+      "increase": "{name} adedini artır"
+    },
+    "soldOutBar": {
+      "text": "Tükendi — yakında yeniden gelecek",
+      "alert": "Stok gelince haber ver",
+      "alertOn": "✓ Haber verilecek"
+    },
+    "error": {
+      "title": "Bağlantı kurulamadı",
+      "body": "İnternet bağlantınızı kontrol edin. Bağlantı gelince kaldığınız yerden devam edersiniz.",
+      "retry": "Tekrar dene"
+    },
+    "notFound": {
+      "title": "Ürün bulunamadı",
+      "body": "Ürün satıştan kalkmış ya da bağlantı eskimiş olabilir.",
+      "back": "Kataloğa dön"
+    },
+    "cart": {
+      "open": "Sepeti aç, {n} ürün"
+    }
+  },
+  "fr": {
+    "back": "Retour",
+    "share": "Partager",
+    "badge": {
+      "soldOut": "Épuisé",
+      "discount": "Promo"
+    },
+    "meta": {
+      "perKg": "{price} / kg",
+      "vat": "TVA incluse",
+      "was": "au lieu de {price}"
+    },
+    "limit": "À ce prix, {n} maximum",
+    "noShip": "Uniquement livraison à domicile en zone locale — pas d'expédition",
+    "family": {
+      "browse": "{name} — À DÉCOUVRIR",
+      "from": "dès {price}",
+      "current": "Vous consultez"
+    },
+    "accordion": {
+      "ingredients": "Ingrédients & allergènes",
+      "allergens": "Allergènes : {list}",
+      "traces": "Fabriqué dans un atelier qui manipule également {list}.",
+      "nutrition": "Valeurs nutritionnelles & poids net",
+      "per100": "pour 100 g : {rows}",
+      "netWeight": "Poids net : {grams} g",
+      "storage": "Conservation & fraîcheur"
+    },
+    "nutrition": {
+      "energy": "Énergie",
+      "fat": "Matières grasses",
+      "saturatedFat": "dont saturés",
+      "carbohydrate": "Glucides",
+      "sugars": "dont sucres",
+      "protein": "Protéines",
+      "salt": "Sel"
+    },
+    "reviews": {
+      "title": "Avis",
+      "empty": "Pas encore d'avis — si vous achetez ce produit, vous pourrez laisser le premier avis après la livraison."
+    },
+    "related": "Vous aimerez aussi",
+    "cta": {
+      "add": "Ajouter au panier",
+      "closed": "Ce produit n'est pas en vente actuellement"
+    },
+    "stepper": {
+      "decrease": "Réduire la quantité de {name}",
+      "increase": "Augmenter la quantité de {name}"
+    },
+    "soldOutBar": {
+      "text": "Épuisé — bientôt de retour",
+      "alert": "Me prévenir du retour",
+      "alertOn": "✓ Nous vous préviendrons"
+    },
+    "error": {
+      "title": "Connexion impossible",
+      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez où vous en étiez.",
+      "retry": "Réessayer"
+    },
+    "notFound": {
+      "title": "Produit introuvable",
+      "body": "Le produit n'est peut-être plus en vente, ou le lien a expiré.",
+      "back": "Retour au catalogue"
+    },
+    "cart": {
+      "open": "Ouvrir le panier, {n} articles"
+    }
+  },
+  "de": {
+    "back": "Zurück",
+    "share": "Teilen",
+    "badge": {
+      "soldOut": "Ausverkauft",
+      "discount": "Angebot"
+    },
+    "meta": {
+      "perKg": "{price} / kg",
+      "vat": "inkl. MwSt.",
+      "was": "statt {price}"
+    },
+    "limit": "Zu diesem Preis maximal {n} Stück",
+    "noShip": "Nur Lieferung an die Haustür im Liefergebiet — kein Versand",
+    "family": {
+      "browse": "{name} — ENTDECKEN",
+      "from": "ab {price}",
+      "current": "Sie sehen gerade"
+    },
+    "accordion": {
+      "ingredients": "Zutaten & Allergene",
+      "allergens": "Allergene: {list}",
+      "traces": "Wird im selben Betrieb verarbeitet wie {list}.",
+      "nutrition": "Nährwerte & Nettogewicht",
+      "per100": "pro 100 g: {rows}",
+      "netWeight": "Nettogewicht: {grams} g",
+      "storage": "Aufbewahrung & Frische"
+    },
+    "nutrition": {
+      "energy": "Energie",
+      "fat": "Fett",
+      "saturatedFat": "davon gesättigte",
+      "carbohydrate": "Kohlenhydrate",
+      "sugars": "davon Zucker",
+      "protein": "Eiweiß",
+      "salt": "Salz"
+    },
+    "reviews": {
+      "title": "Bewertungen",
+      "empty": "Noch keine Bewertungen — wenn Sie dieses Produkt kaufen, können Sie nach der Lieferung die erste Bewertung hinterlassen."
+    },
+    "related": "Das könnte Ihnen auch schmecken",
+    "cta": {
+      "add": "In den Korb",
+      "closed": "Dieses Produkt ist derzeit nicht im Verkauf"
+    },
+    "stepper": {
+      "decrease": "Menge von {name} verringern",
+      "increase": "Menge von {name} erhöhen"
+    },
+    "soldOutBar": {
+      "text": "Ausverkauft — bald wieder da",
+      "alert": "Bei Verfügbarkeit benachrichtigen",
+      "alertOn": "✓ Wir benachrichtigen Sie"
+    },
+    "error": {
+      "title": "Keine Verbindung",
+      "body": "Prüfen Sie Ihre Internetverbindung. Sobald sie wieder da ist, geht es weiter.",
+      "retry": "Erneut versuchen"
+    },
+    "notFound": {
+      "title": "Produkt nicht gefunden",
+      "body": "Das Produkt ist möglicherweise nicht mehr im Verkauf, oder der Link ist veraltet.",
+      "back": "Zurück zum Katalog"
+    },
+    "cart": {
+      "open": "Warenkorb öffnen, {n} Artikel"
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { CatalogCategoryListSchema, CatalogPageSchema, type CatalogSort } from '@lezzet/types';
+import { CatalogCategoryListSchema, CatalogPageSchema, CatalogProductDetailSchema, type CatalogSort } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
 import { apiFetch, type ApiResult } from './client';
@@ -45,6 +45,11 @@ interface ProductPageQuery {
    * olduğu sunucunun bileceği iş; istemci onu okumaya kalksaydı keyset'in şekli sözleşme olurdu.
    */
   cursor?: string;
+}
+
+/** Ürün detayı — sayfanın TAMAMI tek turda (boylar, aile, benzerler, beyan); bölüm başına çağrı yok. */
+export function fetchProductDetail(slug: string, locale: Locale): Promise<ApiResult<z.infer<typeof CatalogProductDetailSchema>>> {
+  return apiFetch(`/api/v1/products/${encodeURIComponent(slug)}${queryOf({ locale })}`, CatalogProductDetailSchema);
 }
 
 /** Ürün sayfası — keyset imleçli (`nextCursor === null` → liste bitti). */

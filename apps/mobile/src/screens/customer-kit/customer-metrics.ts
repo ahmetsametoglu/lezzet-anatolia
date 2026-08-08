@@ -37,11 +37,27 @@ export const customerMetrics = {
   /** Fırsat kartındaki küçük daire (v3:93 — 48). */
   offerPhoto: 48,
 
+  /** Ürün detayının kahraman fotoğrafı (v3:240 — 400) ve alt kenardan sarkan fiyat rozeti (22). */
+  productHero: 400,
+  productPriceDrop: 22,
+  /** Aile (çeşit) çipindeki küçük daire (v3:263 — 34). */
+  productFamilyPhoto: 34,
+  /** Yapışkan bar stepper'ı (v3:1233 — düğme 44×48, değer sütunu 30) ve barın kaydırma payı (v3:314 — 108). */
+  productStepButtonWidth: 44,
+  productStepButtonHeight: 48,
+  productStepValueWidth: 30,
+  productBarSpace: 108,
+  /** Sepet FAB'ının yapışkan barın üstündeki konumu (v3:602 — `b:'112px'`). */
+  productFabBottom: 112,
+
   /** Sipariş detayındaki canlı takip haritası (v3:702 — 195). */
   mapHeight: 195,
 
   /** Tek kullanımlık kod alanı — rakamlar için özellikle yüksek (v3:781 — 62). */
   codeFieldHeight: 62,
+
+  /** Giriş ekranındaki logo yüksekliği (v3:770 — 52; genişlik kaynak oranından türer). */
+  loginLogoHeight: 52,
 
   /** Onay ekranlarının büyük ✓ dairesi (v3:614 — 92) ve ödeme ekranındaki küçüğü (v3:604 — 64). */
   confirmMark: 92,

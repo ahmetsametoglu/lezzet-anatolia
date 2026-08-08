@@ -71,6 +71,10 @@ export const ICON_PATHS = {
   money: { paths: ['M18 7a6 6 0 1 0 0 10 M4 11h9 M4 15h7'] },
   /** Bildirim zili — bölüm köklerinin sağ üst düğmesi. Şablon burada İKİ ayrı `path` yazıyor. */
   bell: { paths: ['M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9', 'M13.7 21a2 2 0 0 1-3.4 0'] },
+  /** Paylaş — yukarı ok + tepsi (v3:245, ürün detayının kahraman düğmesi). */
+  share: {
+    paths: ['M12 3v12M8 6.5 12 3l4 3.5M6.5 10H5.8A1.8 1.8 0 0 0 4 11.8v7A1.8 1.8 0 0 0 5.8 20.5h12.4a1.8 1.8 0 0 0 1.8-1.7v-7a1.8 1.8 0 0 0-1.8-1.8h-.7'],
+  },
   /** "Tekrar dene" oku — v2'nin üç hata bloğunda da aynı geometri (v2:51, 280, 499). */
   refresh: { paths: ['M23 4v6h-6', 'M20.49 15a9 9 0 1 1-2.12-9.36L23 10'] },
 

@@ -1,19 +1,20 @@
 import { useLocalSearchParams } from 'expo-router';
 
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { ProductDetailScreen } from '@/screens/product/product-detail-screen';
 
 /*
-  ÜRÜN DETAY — bugün YER TUTUCU (kendi dilimi ayrı iş: kahraman foto, çeşit çipleri, akordeonlar,
-  yapışkan alt bar). Rota şimdiden var çünkü katalog kartının basılınca gideceği bir yer olmalı;
-  olmasaydı kartın `onPress`i ya boş dururdu (ölü etkileşim) ya da geçici bir davranış uydurulurdu.
+  ÜRÜN DETAY ROTASI — ekran gerçek uçtan okur (`GET /api/v1/products/:slug`), tasarım ve
+  sapmaları ekranın künyesinde.
 
   Sekme kabuğunun DIŞINDA (kök `Stack` altında): tasarımda yığına girildiğinde sekme çubuğu
   gizleniyor (envanter §4) — dosyanın `(tabs)` grubunda olmaması tam olarak bunu sağlıyor.
 
-  Başlık olarak SLUG yazılıyor: bu bir arayüz metni değil, hangi ürüne gelindiğinin kanıtı.
-  Yer tutucuya uydurma bir başlık yazmak, olmayan bir tasarım kararı icat etmek olurdu.
+  `key={slug}`: aile çipleri slug'ı `setParams`la YERİNDE değiştirir (yığına sayfa eklenmez —
+  kullanıcı kararı 08.08); ekranın seçim durumu (boy/adet/akordeon) yeni ürüne taşınmasın diye
+  ürün değişince ekran anahtarıyla yeniden kurulur.
 */
-export default function ProductScreen() {
+export default function ProductRoute() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
-  return <ScreenPlaceholder title={slug} />;
+  const key = typeof slug === 'string' ? slug : '';
+  return <ProductDetailScreen key={key} slug={key} />;
 }
