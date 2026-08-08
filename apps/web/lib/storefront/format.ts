@@ -1,26 +1,19 @@
+import { formatPrice } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 
 /**
- * Vitrin para biçimi — sözleşme HAM cent taşır (`storefront-types`), gösterim burada kurulur.
- * Ayrı durmasının sebebi: aynı fiyat masaüstü ve mobil dosyada iki kez biçimlendirilmesin.
+ * Vitrin biçimleri — sözleşme HAM cent taşır (`storefront-types`), gösterim burada kurulur.
+ * Ayrı durmasının sebebi: aynı değer masaüstü ve mobil web dosyasında iki kez biçimlendirilmesin.
  *
- * Para birimi her dilde EUR — işletme Fransa'dadır; `tr` Fransa'daki Türk diasporasının dilidir,
- * ayrı bir para birimi değil.
- *
- * **Simge SAYININ ARDINDA, üç dilde de.** `Intl`'in `style: 'currency'`si Türkçede simgeyi ÖNE
- * koyuyor (`€75,53`) — Türkiye'nin yerel geleneği bu, ama bizim müşterimiz Fransa'da yaşıyor,
- * fiyatı her yerde "75,53 €" diye görüyor ve tasarımın Türkçe maketlerinde de öyle yazılı
- * (`113,20 €` · `−10,00 €`; maketlerin hiçbirinde simge önde geçmiyor). Sonuç: aynı ürün Türkçe
- * ekranda `€75,53`, Fransızcada `75,53 €` görünüyordu — tek işletme, iki para yazımı (29.07).
- *
- * `tr-FR` denendi, çare değil: ICU'da öyle bir veri kümesi yok, `tr`ye düşüyor. Bu yüzden SAYI
- * dilin ayraçlarıyla biçimlenir (Türkçe/Almanca `1.234,50`, Fransızca `1 234,50`) ve simge sabit
- * biçimde eklenir. Ayraç yine `Intl`in işi; elle kurulan tek şey simgenin yeri.
+ * `formatPrice` gövdesi BURADA DEĞİL: `@lezzet/helper`a terfi etti (21.7 — native uygulama da aynı
+ * kaynaktan tüketiyor; "webde 75,53 €, mobilde €75,53" ayrışmasını tek kaynak kapatır). Simge-sonda
+ * kararının gerekçesi de artık o dosyanın künyesinde. Web çağıranları için buradan yeniden dışa
+ * verilir — 32 dosya import yolunu değiştirmeden tek kaynağa bağlı (web ikizi silindi, 07.08).
  */
-const INTL_LOCALE: Record<Locale, string> = { tr: 'tr-TR', fr: 'fr-FR', de: 'de-DE' };
+export { formatPrice };
 
-/** Sayı ile simge arasında BÖLÜNMEYEN boşluk: satır sonu tutarı ikiye ayırmasın (Fransız dizgisi). */
-const EURO_SUFFIX = ' €';
+/** Dil → ICU eşlemesi — bu modüldeki tarih/sayı biçimleri bundan türer. */
+const INTL_LOCALE: Record<Locale, string> = { tr: 'tr-TR', fr: 'fr-FR', de: 'de-DE' };
 
 /**
  * Tutarı BİLİNMEYEN satırın değeri — sıfır DEĞİL, cevapsızlık (`CLAUDE §1`).
@@ -31,14 +24,6 @@ const EURO_SUFFIX = ' €';
  * onların idiyomunu paylaşılabilir hâle getiriyor.
  */
 export const UNKNOWN_AMOUNT = '—';
-
-export function formatPrice(cents: number, locale: Locale): string {
-  const amount = new Intl.NumberFormat(INTL_LOCALE[locale], {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(cents / 100);
-  return `${amount}${EURO_SUFFIX}`;
-}
 
 /**
  * Ondalıklı sayı — ayraç DİLE göre değişir (tr/fr/de: virgül). Elle `String(value)` yazmak Türkçe

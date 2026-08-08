@@ -5,8 +5,9 @@ import type { Locale } from '@lezzet/i18n';
   BİREBİR aynısıdır ve artık tek kaynak burasıdır (02-mimari §3.4: "para/tarih/slug `@lezzet/helper`;
   RN tarafında bunların hiçbiri yeniden yazılmaz"). İki yazımın ayrışması "aynı fiyat webde
   75,53 €, mobilde €75,53" demekti ve o hata bu projede BİR KEZ YAŞANDI (web format.ts künyesi,
-  29.07). Mobil buradan tüketiyor; web kopyası geçiş köprüsüdür, benimseme talebiyle silinecek
-  (`musteri-application-storefront-benimseme.md`). Webin format ailesinin KALANI (tarih/ağırlık/
+  29.07). Mobil buradan tüketiyor; web kopyası 07.08'de SİLİNDİ (denetim, kullanıcı talimatı) —
+  webin `lib/storefront/format.ts`i artık buradan yeniden dışa veriyor, 32 çağıranı tek kaynağa
+  bağlı. Webin format ailesinin KALANI (tarih/ağırlık/
   UNKNOWN_AMOUNT) bilerek taşınmadı: bugün tek tüketenleri web, ikinci tüketen doğunca teker teker
   aynı yolla iner.
 
