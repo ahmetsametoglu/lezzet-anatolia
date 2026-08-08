@@ -296,4 +296,4 @@ Kataloğun veri ve iş katmanı: `Category / Collection / Product / ProductVaria
 
 ## Netleşecekler
 
-- **AI sağlayıcı kurulumu:** `packages/ai`'ın ilk gerçek bağlantısı — sağlayıcı hesabı/anahtarı kullanıcıyla birlikte kurulur (dış hesap işlemi); arayüz agnostik kalır.
+- **AI sağlayıcı kurulumu — ANAHTAR KURULDU, tek satır kaldı (ölçüldü 07.08, denetim):** `GOOGLE_GENERATIVE_AI_API_KEY` `apps/web/.env.local`'da dolu ve gerçek çağrı `pnpm ai:smoke` ile kanıtlandı (gemini-2.5-flash, üç dilde doğru çeviri, 1.360 token). **Ama zincir dev'de hâlâ kapalı:** `AI_PROVIDER` satırı boş ve paket varsayılanı `anthropic` (anahtarı yok) — `apps/web/.env.local`'a `AI_PROVIDER=google` yazılınca açılır (dev restart kullanıcının). Backend'de (`apps/backend/.env.local`) İKİSİ de boş — haftalık içgörü işi (13.7) çalışmak için aynı iki satırı orada da ister.

@@ -562,6 +562,16 @@ Amaç: birkaç ürünü bir arada tek pakette, kendi fiyatıyla sunmak (sosyal m
 - **Atanmış paylar TÜRETİLİR:** admin tek sayı girer (paket fiyatı), sistem payları kalemlerin **liste fiyatlarına oransal** dağıtır — pahalı kalem indirimin çoğunu taşır. Elle giriş kaçış kapısıdır (hediye kalem, bilinçli kaydırma) ve o satır sonraki dağıtımlarda korunur. Birim fiyatlar tam kuruş olduğu için hedef **her zaman tutturulamaz** (bkz. `domain-core/bundle-allocation`); tutmazsa sistem sessizce yuvarlamaz, farkı söyler.
 - **Aynı ürün hem pakette hem ayrıca sepette olabilir:** ikisi **ayrı kalem** kalır (paket kalemi atanmış fiyat + `bundle_id`; ayrı eklenen normal fiyat + boş `bundle_id`). Birleşmezler — müşteri ikisini de ister. Sepette paket **grup** olarak görünür ve bütün eklenir/çıkarılır; ayrı kalem bağımsız düzenlenir. Stok ikisini de sayar.
 
+### Tarif ("Sofradan Fikirler") — editoryal içerik, satış birimi DEĞİL
+
+Amaç: var olan ürünleri bir yemek fikri etrafında sunmak; malzeme satırından tek ürün, alttan tüm tarif sepete eklenir. Kararlar müşteri şeridinin araştırmasıyla verildi (07.08); uygulama planı `build/05-katalog (05.16)` · `09-admin (09.21)` · `08-musteri-app (08.24)`.
+
+- **Paketin tam tersidir:** kendi fiyatı, kendi sipariş kalemi, faturada izi YOKTUR — yalnız var olan varyantları sepete taşır; sepete giren her şey sıradan kalemdir. Karıştırılırsa tarif bir gün faturaya kalem olarak düşmeye çalışır.
+- **Malzeme bağı VARYANTA kurulur** — "Ezine Beyaz Peynir" yetmez, sepete eklenebilen tek şey "350 g" satırıdır; ürün kimliği varyanttan türer.
+- **Üç dil dolmadan yayına çıkmaz; kural VERİDE ve DOLULUK arar** (boş metin de reddedilir). Yayındaki tarifte dil yedeğine düşülmez: ürün adında yedek doğrudur (müşteri ürünü tanır), hazırlanış adımında yanlıştır (anlaşılmayan adım işe yaramaz). Zorlanan şey doluluktur, çeviri kaynağı değil — AI önerir (Sınıf 1), operatör elle de yazar; tarif BİZİM editoryal metnimiz olduğundan "orijinal/çeviri" kavramı yoktur.
+- **Fiyat ve tükenme müşterinin YERİNE ve personasına göre okunur** — vitrinle aynı depo süzgecinden (§17). Tükenen kalem toplamdan düşer, toplam kalanla hesaplanır; hepsi tükendiyse "sepete ekle" pasif, kısmen tükendiyse aktif ve onay mesajı yalnız EKLENENİ sayar ("3 malzeme sepete eklendi" — dördüncüsü tükendiyse üç der).
+- **Tarif içeriği operatörden doğar** (09.21 ekranı): taslak `is_active=false` doğar, üç dil dolunca yayınlanır; slug operatörden istenmez, addan türetilir.
+
 ### Aday ürün ve keşif (tinder-kart)
 
 - **Aday ürün** (`Product.is_candidate=true`): stokta olmayan ama tedarik edilebilecek ürün. **Satılamaz** — yalnız müşteri tarafındaki **keşif/beğeni bölümünde** (mobil-öncelikli tinder-kart) gösterilir. Normal (satılabilir) kataloğa karışmaz.
