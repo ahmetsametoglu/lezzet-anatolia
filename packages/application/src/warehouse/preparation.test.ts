@@ -158,6 +158,52 @@ describe('hazırlık kuyruğu (D1 · 10.1)', () => {
     expect(order.lines[0]!.suggestion.reduce((sum, pick) => sum + pick.qty, 0)).toBe(3);
   });
 
+  it('yarım kalan kalemin PARTİ DAĞILIMI da döner — devam eden depocu tahmin etmez (21.11d)', async () => {
+    const { orderId, itemId } = await confirmedOrder(8);
+    await advanceOrder(db, orderId, ['preparing']);
+    // İki partiden toplanmış yarım iş: dağılım tek sayıya (`pickedQty: 6`) indirgenirse geri
+    // ÜRETİLEMEZ — hangi 4'ün yakın, hangi 2'nin uzak partiden çıktığı kaybolur.
+    await orders.recordPreparation(orderId, [
+      { orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 4 }, { stockId: farBatch, qty: 2 }] },
+    ]);
+
+    const line = (await queueRowOf(orderId))!.lines[0]!;
+
+    expect(line.pickedQty).toBe(6);
+    // Sıra veritabanının, o yüzden içerik karşılaştırması sıradan bağımsız kuruluyor.
+    expect([...line.pickedBatches].sort((a, b) => a.stockId.localeCompare(b.stockId))).toEqual(
+      [{ stockId: nearBatch, qty: 4 }, { stockId: farBatch, qty: 2 }].sort((a, b) => a.stockId.localeCompare(b.stockId)),
+    );
+    // Şekil yazımınkiyle AYNI: dönen dizi doğrudan `confirmPreparation`a geri verilebilmeli.
+    const replay = await confirmPreparation(db, { orderId, warehouseId, picks: [{ orderItemId: itemId, batches: line.pickedBatches }] });
+    expect(replay).toMatchObject({ status: 'ok', ready: false });
+  });
+
+  it('hiç toplanmamış kalemde dağılım BOŞ DİZİ — eksik alan değil, boş gerçek', async () => {
+    const { orderId } = await confirmedOrder(2);
+
+    expect((await queueRowOf(orderId))!.lines[0]!.pickedBatches).toEqual([]);
+  });
+
+  it('parti kaydı KALEM kimliğiyle eşleşir — iki kalemli sipariş dağılımları karıştırmaz', async () => {
+    // Aynı varyanttan iki satır: haritanın anahtarı sipariş olsaydı ikisi tek yığına düşerdi.
+    const { order, items } = await orders.create(
+      { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', totalCents: 3000 },
+      [
+        { variantId, qty: 1, unitPriceCents: 1000, vatRate: 5.5 },
+        { variantId, qty: 2, unitPriceCents: 1000, vatRate: 5.5 },
+      ],
+    );
+    await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty: 3 });
+    await advanceOrder(db, order.id, ['confirmed', 'preparing']);
+    await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId: nearBatch, qty: 1 }] }]);
+
+    const row = (await queueRowOf(order.id))!;
+
+    expect(row.lines.find((line) => line.itemId === items[0]!.id)!.pickedBatches).toEqual([{ stockId: nearBatch, qty: 1 }]);
+    expect(row.lines.find((line) => line.itemId === items[1]!.id)!.pickedBatches).toEqual([]);
+  });
+
   it('teslim edilmiş sipariş kuyruğa girmez — arşiv yığılmaz', async () => {
     const { orderId, itemId } = await confirmedOrder(1);
     await orders.recordPreparation(orderId, [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 1 }] }]);

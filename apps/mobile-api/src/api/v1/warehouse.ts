@@ -5,8 +5,11 @@ import {
   adjustFulfillment,
   confirmPreparation,
   listInboundTransfers,
+  listPendingIntakes,
   listPreparationQueue,
+  listWarehouseReturns,
   openIntakeForm,
+  readIntakeHeader,
   receiveGoods,
   receiveTransfer,
   recordAdjustment,
@@ -16,6 +19,7 @@ import {
   ConfirmPreparationResponseSchema,
   InboundTransfersResponseSchema,
   IntakeFormResponseSchema,
+  PendingIntakesResponseSchema,
   PreparationQueueResponseSchema,
   ReceiveGoodsRequestSchema,
   ReceiveGoodsResponseSchema,
@@ -23,6 +27,7 @@ import {
   ReceiveTransferResponseSchema,
   RecordAdjustmentRequestSchema,
   RecordAdjustmentResponseSchema,
+  WarehouseReturnQueueResponseSchema,
   WarehouseReturnRequestSchema,
   WarehouseReturnResponseSchema,
 } from '@lezzet/types';
@@ -211,21 +216,50 @@ warehouse.post('/preparation/:orderId/confirm', async (c) => {
 // ── D2 · Mal kabul ──────────────────────────────────────────────────────────
 
 /**
- * **Tedarik siparişinden dolu form** (D2). Boş dizi = plansız alım; form elle doldurulur.
+ * **Bekleyen sevkiyatlar** (D2'nin KONUSUZ açılışı — 21.11d). Ekran hangi siparişi kabul edeceğini
+ * bilmeden açılıyordu; bu uç o boşluğu kapatıyor: referans · tedarikçi · kaç kalem.
+ *
+ * Adres neden `/intake` (yani PO'lu formun bir üstü): liste, formun KAPSAYICISI — aynı kaynağın
+ * çoğulu. Ayrı bir ad (`/purchase-orders`) aynı şeyin ikinci adı olurdu ve depo bölümünde tedarik
+ * siparişi diye ayrı bir kaynak yok; depocunun gördüğü şey "bekleyen kabul"dür.
+ *
+ * Bu uçtan da PARA çıkmaz: kapı fiyatı okur ama dönen tipte taşımaz (`listPendingIntakes` künyesi).
+ */
+warehouse.get('/intake', async (c) => {
+  const intakes = await listPendingIntakes(serviceDb());
+
+  const body: z.input<typeof PendingIntakesResponseSchema> = { intakes };
+  return ok(c, PendingIntakesResponseSchema.parse(body));
+});
+
+/**
+ * **Tedarik siparişinden dolu form** (D2). Boş `rows` = plansız alım; form elle doldurulur.
  *
  * Depo süzgeci YOK ve olmamalı (kapının künyesi): satın alma depo-üstüdür (K6), mal hangi kapıdan
  * gireceğini kabul anında söyler. Formu depoya süzmek, aynı siparişin ikinci deposundaki kalemleri
  * gizlerdi. Bölümün depo kapısı yine de koşuyor — depo, D2'nin değil BÖLÜMÜN bağlamıdır (v2 başlığı
  * her depo ekranında sabit depoyu yazıyor) ve fail-closed bir çözüm, unutulabilir bir çözümden
  * iyidir.
+ *
+ * **Künye 21.11d'de eklendi** (`purchaseOrder`): ekran başlığa *"TS-26-0114 · Gaziantep Gıda"*
+ * yazamıyordu — cevapta ne referans ne tedarikçi adı vardı ve depocunun elindeki kâğıtla ekranı
+ * eşleştirmesinin tek yolu buydu. İki kapı tek turda okunuyor (`Promise.all`), çünkü ikisi de aynı
+ * ekranın aynı anındaki ihtiyacı; sıralı çağrı gereksiz bir gidiş-dönüş eklerdi.
+ *
+ * `purchaseOrder: null` "sipariş YOK" demektir ve boş `rows` ile karıştırılmaz: biri olmayan
+ * siparişi, öteki kalemsiz formu anlatır.
  */
 warehouse.get('/intake/:purchaseOrderId', async (c) => {
   const purchaseOrderId = UuidSchema.safeParse(c.req.param('purchaseOrderId'));
   if (!purchaseOrderId.success) return fail(c, 'invalid_purchase_order_id', 400);
 
-  const rows = await openIntakeForm(serviceDb(), purchaseOrderId.data);
+  const db = serviceDb();
+  const [purchaseOrder, rows] = await Promise.all([
+    readIntakeHeader(db, purchaseOrderId.data),
+    openIntakeForm(db, purchaseOrderId.data),
+  ]);
 
-  const body: z.input<typeof IntakeFormResponseSchema> = { rows };
+  const body: z.input<typeof IntakeFormResponseSchema> = { purchaseOrder, rows };
   return ok(c, IntakeFormResponseSchema.parse(body));
 });
 
@@ -361,6 +395,26 @@ warehouse.post('/transfers/:transferId/receive', async (c) => {
 });
 
 // ── D6 · Kurye dönüşü kabulü ────────────────────────────────────────────────
+
+/**
+ * **"Rampama ne geri geldi"** (D6'nın okuma yarısı — 21.11d). Yalnız akıbeti BEKLEYEN kalemi olan
+ * dönüşler; tamamı işaretlenmiş sipariş listeden düşer (depocunun işi bitmiştir).
+ *
+ * ── SORGUDA `courierDayCloseId` YOK, VE BU ÖLÇÜLMÜŞ BİR KARAR ───────────────
+ * Kurye gün kapanışına bağlamak ilk akla gelendi ve elendi: siparişin kapanış kaydına FK'si YOK
+ * (bağ "aynı kurye + aynı gün" üzerinden dolaylı kurulurdu) ve bir kuryenin günü deponun listesi
+ * değildir — aynı rampaya iki kurye döner, biri günü hiç kapatmamış olabilir, kurye atanmadan dönen
+ * sipariş de hiç görünmezdi. Anahtar bölümün kendi bağlamı: DEPO (`warehouseGuard`).
+ *
+ * Süzgeç de yok: dönüş güne değil MALA aittir (hazırlık kuyruğuyla aynı ayrım). Dün dönmüş ama
+ * akıbeti işaretlenmemiş koli, bugünün ekranından silinemez.
+ */
+warehouse.get('/returns', async (c) => {
+  const drops = await listWarehouseReturns(serviceDb(), { warehouseId: c.get('warehouseId') });
+
+  const body: z.input<typeof WarehouseReturnQueueResponseSchema> = { drops };
+  return ok(c, WarehouseReturnQueueResponseSchema.parse(body));
+});
 
 /**
  * **Kurye dönüşü kabulü** (D6). Dönen malın akıbeti işaretlenir; sipariş düzeltilir, iade borcu

@@ -13,7 +13,7 @@ export type { RequestOtpCodeResult, VerifyOtpCodeResult } from './auth/otp';
 // Kaynağı `apps/web/lib/storefront`ti; ticari bağlam (fiyat · stok · teklif · aile · benzer) orada
 // yaşadığı için mobil katalog uçları bilerek bağlamsız kalmıştı. Kopyalamak tüzükçe yasak —
 // taşındı. Web kopyaları geçiş köprüsüdür, benimsemesi ayrı talep dosyasıyla gider.
-export { getCatalogData } from './catalog/catalog';
+export { getCatalogData, readCollectionHead } from './catalog/catalog';
 export type { CatalogInput, CatalogQuery } from './catalog/catalog';
 export { getProductDetail } from './catalog/product';
 export type { ProductDetailInput } from './catalog/product';
@@ -35,6 +35,7 @@ export type {
   PurchaseMode,
   StorefrontCatalog,
   StorefrontCategory,
+  StorefrontCollectionHead,
   StorefrontDeclaration,
   StorefrontFamilyMember,
   StorefrontImage,
@@ -88,12 +89,14 @@ export type {
 // görünür retle döner (`forbidden`/`out_of_scope` — kurye kapılarının emsali).
 export { confirmPreparation, listPreparationQueue } from './warehouse/preparation';
 export type { PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
-export { openIntakeForm, receiveGoods, receivePurchase } from './warehouse/intake';
+export { listPendingIntakes, openIntakeForm, readIntakeHeader, receiveGoods, receivePurchase } from './warehouse/intake';
 export type {
   IntakeDifference,
   IntakeFormLine,
   IntakeFormRow,
+  IntakeHeader,
   IntakeWarning,
+  PendingIntake,
   PurchaseIntakeLine,
   RepricePort,
 } from './warehouse/intake';
@@ -107,3 +110,15 @@ export type {
   InboundTransferLine,
   ReceiveTransferOutcome,
 } from './warehouse/transfer';
+// D6'nın OKUMA yarısı (21.11d). Yazma yarısı `order/refund.adjustFulfillment`ta ve orada KALIYOR:
+// sipariş düzeltmesi depo işi değil, üç ayrı çağıranı var (`refund.ts` künyesi). Burada yalnız
+// "rampama ne geri geldi" sorusu yaşıyor ve o gerçekten deponun sorusudur.
+export { listWarehouseReturns } from './warehouse/returns';
+export type { ReturnDrop, ReturnDropLine } from './warehouse/returns';
+
+// ── Depo: parti görünümü — terfi 06.13 ──────────────────────────────────────
+// Yakın-SKT kararının TEK adresi. Kaynağı `apps/web/lib/stock/batch-view.ts`ti ve `server-only`
+// olduğu için `apps/mobile-api` okuyamıyordu — mobil D3 ekranı bu yüzden açılamıyordu. Eşiği
+// kopyalamak iki yüzeyin aynı parti için farklı karar göstermesi demekti. Web tarafı ince köprü.
+export { readExpiryThresholds, toBatchViews } from './warehouse/batch-view';
+export type { BatchView } from './warehouse/batch-types';

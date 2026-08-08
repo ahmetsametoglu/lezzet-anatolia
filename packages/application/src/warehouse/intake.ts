@@ -4,6 +4,7 @@ import {
   PurchaseOrderItemService,
   PurchaseOrderService,
   StockIntakeService,
+  SupplierService,
 } from '@lezzet/database';
 import { meetsMlor } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
@@ -93,6 +94,86 @@ export async function openIntakeForm(db: SupabaseClient, purchaseOrderId: string
     variantLabel: names.get(line.variantId)?.variantLabel ?? '',
     expectedQty: line.qty,
   }));
+}
+
+/**
+ * Tedarik siparişinin KÜNYESİ (21.11d) — ekranın başlığı: *"TS-26-0114 · Gaziantep Gıda"*.
+ *
+ * **Para taşımaz ve taşıyamaz:** sipariş tutarı da birim alış da bu tipte YOK. Depocu hangi belgeyi
+ * elinde tuttuğunu bilmeli, o belgenin kaç para olduğunu değil (`receiveGoods` ile aynı sınır).
+ */
+export interface IntakeHeader {
+  purchaseOrderId: string;
+  /** İnsan-okur numara; **taslakta `null`** — numara gönderimde doğar (`markSent`). */
+  referenceNo: string | null;
+  /** Tedarikçi adı; erişilemeyen kayıtta `null` — uydurma ad yerine görünür boşluk. */
+  supplierName: string | null;
+}
+
+/**
+ * **Siparişin künyesi** (D2 · 21.11d) — sipariş yoksa `null`.
+ *
+ * ── NEDEN `openIntakeForm`A ALAN OLARAK EKLENMEDİ ───────────────────────────
+ * O kapı satır DİZİSİ döndürüyor ve künye sipariş başına TEKİLDİR; satıra kopyalamak aynı iki dizeyi
+ * N kez taşımak olurdu (kurye ucundaki `readDoorCashAccountId` kararının aynısı). Dönüş tipini
+ * nesneye çevirmek de seçenek değildi: kapının ikinci bir çağıranı var (operasyon web'in mal kabul
+ * ekranı) ve künyeye ihtiyacı olmayan o çağıran, ihtiyacı olmayan iki sorgunun bedelini öderdi.
+ *
+ * İki tur okur (sipariş, sonra tedarikçi): `purchase_order` tek satır ve tedarikçi adı ayrı tabloda.
+ * Yalnız bir sipariş açıldığında koşar — liste yolu (`listPendingIntakes`) adı gömülü okuyor.
+ */
+export async function readIntakeHeader(db: SupabaseClient, purchaseOrderId: string): Promise<IntakeHeader | null> {
+  const order = await new PurchaseOrderService(db).getById(purchaseOrderId);
+  if (!order) return null;
+
+  const supplier = await new SupplierService(db).getById(order.supplierId);
+  return { purchaseOrderId: order.id, referenceNo: order.referenceNo, supplierName: supplier?.name ?? null };
+}
+
+/** Bekleyen sevkiyat satırı — künye + ISMARLANAN KALEM sayısı (adet değil). */
+export interface PendingIntake extends IntakeHeader {
+  lineCount: number;
+}
+
+/**
+ * **"Hangi sevkiyatı bekliyorum"** (D2'nin konusuz açılışı · 21.11d).
+ *
+ * ── HANGİ DURUMLAR, VE NEDEN ÜÇÜ DEĞİL İKİSİ ────────────────────────────────
+ * `sent` **ve** `partially_received`. İkincisi ölçümle geldi, kolaylık olsun diye değil: tek sipariş
+ * birden çok depoda parça parça kabul edilebilir (K6 — `expectedQtysOf` künyesi) ve ilk kabul
+ * siparişi kapatmaz; `partially_received` süzülseydi Strasbourg kabul ettikten sonra Kehl'in payı
+ * listeden SESSİZCE kaybolurdu. `draft` DIŞARIDA: tedarikçi ondan habersizdir, mal yolda değildir
+ * (`openProgress` künyesindeki aynı ayrım). `received`/`cancelled` zaten kapandı.
+ *
+ * ── DEPO SORULMAZ ───────────────────────────────────────────────────────────
+ * `openIntakeForm` ile aynı gerekçe: satın alma depo-üstüdür (K6), mal hangi kapıdan gireceğini
+ * kabul ANINDA söyler. Listeyi depoya süzmek, aynı siparişin ikinci deposundaki payını gizlerdi.
+ *
+ * ── PARA OKUNUR AMA ÇIKMAZ ──────────────────────────────────────────────────
+ * `listRows` kalemleri fiyatlarıyla getiriyor (tek turda tedarikçi adı + kalem sayısı veren tek
+ * kamu okuması bu). Fiyat bu fonksiyonun SINIRINDA kalır: dönen tipte para alanı yok, yani depo
+ * ekranı isteseydi bile gösteremez.
+ */
+export async function listPendingIntakes(db: SupabaseClient, opts: { limit?: number } = {}): Promise<PendingIntake[]> {
+  const limit = opts.limit ?? 20;
+  const service = new PurchaseOrderService(db);
+
+  // İki çağrı, çünkü `listRows` tek durum süzüyor. Paralel: ikisi birbirini beklemez.
+  const [sent, partial] = await Promise.all([
+    service.listRows({ status: 'sent', limit }),
+    service.listRows({ status: 'partially_received', limit }),
+  ]);
+
+  return [...sent.rows, ...partial.rows]
+    // En yeni sipariş önce — birleştirilen iki sayfanın sırası tek başına anlamlı değil.
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit)
+    .map((row) => ({
+      purchaseOrderId: row.id,
+      referenceNo: row.referenceNo,
+      supplierName: row.supplier?.name ?? null,
+      lineCount: row.items.length,
+    }));
 }
 
 export interface IntakeWarning {

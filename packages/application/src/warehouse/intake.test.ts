@@ -2,7 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, ProductService, PurchaseOrderService, StockService, SupplierService, serviceDb } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
 import {
+  listPendingIntakes,
   openIntakeForm,
+  readIntakeHeader,
   receiveGoods,
   receivePurchase,
   type IntakeDifference,
@@ -225,6 +227,99 @@ describe('raf ömrü uyarısı (MLOR) — engellemez, uyarır', () => {
 describe('boş form', () => {
   it('kalemsiz kabul yazım YAPMAZ', async () => {
     expect(await receiveGoods(db, { warehouseId, supplierId, lines: [] })).toEqual({ status: 'empty' });
+  });
+});
+
+/**
+ * **Künye ve bekleyen sevkiyat listesi** (21.11d) — ekranın *"TS-26-0114 · Gaziantep Gıda"* başlığı
+ * ve konusuz açılışı.
+ *
+ * Paylaşılan DB (CLAUDE.md §4b): liste küresel okuyor (satın alma depo-üstüdür), o yüzden **hiçbir
+ * iddia sayıya bakmaz** — kendi damgalı sipariş kimliklerimiz listede aranır. Başka ajanın açtığı
+ * bir PO bu dosyayı kızartamaz.
+ */
+describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
+  const purchaseOrders = new PurchaseOrderService(db);
+
+  it('künye referans + TEDARİKÇİ ADI taşır, para taşımaz', async () => {
+    const purchaseOrderId = await draftPurchaseOrder(6, 400);
+    await purchaseOrders.markSent(purchaseOrderId, `TS-KUNYE-${stamp}`);
+
+    const header = await readIntakeHeader(db, purchaseOrderId);
+
+    expect(header).toEqual({
+      purchaseOrderId,
+      referenceNo: `TS-KUNYE-${stamp}`,
+      supplierName: `Kabul tedarikçisi ${stamp}`,
+    });
+    // "Para yok" iddiası ALAN ADIYLA kurulur (form satırındaki emsalle aynı).
+    expect(Object.keys(header!).sort()).toEqual(['purchaseOrderId', 'referenceNo', 'supplierName']);
+  });
+
+  it('TASLAK siparişin referansı `null` — numara gönderimde doğar, uydurulmaz', async () => {
+    const purchaseOrderId = await draftPurchaseOrder(3, 400);
+
+    expect(await readIntakeHeader(db, purchaseOrderId)).toMatchObject({ referenceNo: null });
+  });
+
+  it('olmayan sipariş `null` döner — boş künye ile karıştırılmaz', async () => {
+    expect(await readIntakeHeader(db, '00000000-0000-0000-0000-000000000000')).toBeNull();
+  });
+
+  it('bekleyen liste GÖNDERİLMİŞ siparişi künyesi + kalem sayısıyla verir', async () => {
+    const purchaseOrderId = await draftPurchaseOrder(9, 400);
+    await purchaseOrders.markSent(purchaseOrderId, `TS-BEKLEYEN-${stamp}`);
+
+    const mine = (await listPendingIntakes(db, { limit: 100 })).find((row) => row.purchaseOrderId === purchaseOrderId);
+
+    expect(mine).toEqual({
+      purchaseOrderId,
+      referenceNo: `TS-BEKLEYEN-${stamp}`,
+      supplierName: `Kabul tedarikçisi ${stamp}`,
+      // Kalem SAYISI, adet değil: sipariş tek kalemli (9 adet).
+      lineCount: 1,
+    });
+  });
+
+  it('TASLAK listede YOK — tedarikçi ondan habersiz, mal yolda değil', async () => {
+    const purchaseOrderId = await draftPurchaseOrder(4, 400);
+
+    const list = await listPendingIntakes(db, { limit: 100 });
+
+    expect(list.some((row) => row.purchaseOrderId === purchaseOrderId)).toBe(false);
+  });
+
+  it('PARÇALI kabul edilmiş sipariş listede KALIR — ikinci deponun payı gizlenmez (K6)', async () => {
+    const purchaseOrderId = await draftPurchaseOrder(20, 400);
+    await purchaseOrders.markSent(purchaseOrderId, `TS-PARCALI-${stamp}`);
+    // İlk depo payını aldı; sipariş kapanmadı (`partially_received`).
+    await receiveGoods(db, { warehouseId, purchaseOrderId, lines: [{ variantId, qty: 8, expiryDate: dayOffset(90) }] });
+    expect((await purchaseOrders.getById(purchaseOrderId))?.status).toBe('partially_received');
+
+    const list = await listPendingIntakes(db, { limit: 100 });
+
+    expect(list.some((row) => row.purchaseOrderId === purchaseOrderId)).toBe(true);
+  });
+
+  it('KAPANMIŞ sipariş listeden düşer — tamamı gelen mal beklenmez', async () => {
+    const purchaseOrderId = await draftPurchaseOrder(5, 400);
+    await purchaseOrders.markSent(purchaseOrderId, `TS-KAPANAN-${stamp}`);
+    await receiveGoods(db, { warehouseId, purchaseOrderId, lines: [{ variantId, qty: 5, expiryDate: dayOffset(90) }] });
+    expect((await purchaseOrders.getById(purchaseOrderId))?.status).toBe('received');
+
+    const list = await listPendingIntakes(db, { limit: 100 });
+
+    expect(list.some((row) => row.purchaseOrderId === purchaseOrderId)).toBe(false);
+  });
+
+  it('listede PARA yok — kapı fiyatı okur ama taşımaz', async () => {
+    const purchaseOrderId = await draftPurchaseOrder(7, 1234);
+    await purchaseOrders.markSent(purchaseOrderId, `TS-PARASIZ-${stamp}`);
+
+    const mine = (await listPendingIntakes(db, { limit: 100 })).find((row) => row.purchaseOrderId === purchaseOrderId);
+
+    expect(Object.keys(mine!).sort()).toEqual(['lineCount', 'purchaseOrderId', 'referenceNo', 'supplierName']);
+    expect(JSON.stringify(mine)).not.toContain('1234');
   });
 });
 

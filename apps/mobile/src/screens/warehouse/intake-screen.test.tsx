@@ -58,7 +58,8 @@ function withForm(rows: unknown[], receive?: unknown) {
         ),
       );
     }
-    return Promise.resolve(ok({ rows }));
+    // `purchaseOrder` 21.11d'de zorunlu anahtar oldu (IntakeFormResponseSchema) — null sözleşmece geçerli.
+    return Promise.resolve(ok({ purchaseOrder: null, rows }));
   });
 }
 

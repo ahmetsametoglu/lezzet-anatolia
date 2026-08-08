@@ -3,7 +3,13 @@ import { FulfillmentAdjustmentSchema, PreparationPickSchema } from '../entities/
 import { AdjustBatchResultSchema, StockAdjustmentReasonEnum } from '../entities/stock-adjustment.schema';
 import { ReceiveIntakeResultSchema } from '../entities/supply.schema';
 import { DispatchLineSchema, ReceiveLineSchema } from '../entities/warehouse.schema';
-import { ChannelEnum, OrderStatusEnum, PaymentStatusEnum, TransferStatusEnum } from '../primitives/enums.schema';
+import {
+  ChannelEnum,
+  OrderStatusEnum,
+  PaymentStatusEnum,
+  ReturnDispositionEnum,
+  TransferStatusEnum,
+} from '../primitives/enums.schema';
 
 /**
  * Depo SÖZLEŞME şemaları (21.11) — mobil `/api/v1/warehouse/*` uçlarının ve onları tüketen "Depo"
@@ -57,6 +63,26 @@ export const PreparationLineSchema = z.object({
   orderedQty: z.number().int(),
   /** Daha önce toplanmış adet — **yarım iş sürer**, ekran kaldığı yerden devam eder. */
   pickedQty: z.number().int(),
+  /**
+   * Kalemin ŞU ANDA yazılı parti dağılımı (21.11d) — boş dizi = henüz hiç toplanmamış.
+   *
+   * ── NEDEN ŞEKİL YAZIM ŞEMASININ AYNISI ──────────────────────────────────────
+   * Alan `PreparationPickSchema.shape.batches`ten TÜRER, elle yazılmaz: yazım sözleşmesi absolüttür
+   * (`record_preparation`, 0015 künyesi — *"önceki parti kaydı tamamen yenisiyle değişir"*), yani
+   * ekranın göndereceği dizi bu dizinin devamıdır. İki şekli ayrı tanımlamak, aynı kalemi iki dilde
+   * konuşmak ve bir gün ayrışmalarına izin vermek olurdu.
+   *
+   * ── NE ÇÖZÜYOR ──────────────────────────────────────────────────────────────
+   * Bu alan olmadan yarım kalmış bir kalemin eski dağılımı ekrandan yeniden ÜRETİLEMİYORDU: adet
+   * alanı "toplam kaç topladım"ı değil "bu kayıtla kaç yazıyorum"u sormak zorunda kalıyor,
+   * varsayılanı 0 oluyordu (mobil `use-preparation.hook.ts` künyesi). Dağılım gelince alan
+   * kümülatife döner — ve kritik olan şu: eksik kalanı "ilk öneri partisine" eklemek parti atamasını
+   * TAHMİN etmek olurdu; geri çağırmanın dayandığı kayıt tahminle yazılmaz.
+   *
+   * `suggestion` ile karıştırılmaz: o motorun ÖNERİSİ (ne alınmalı), bu depocunun YAZDIĞI gerçek
+   * (ne alınmış). İkisi çakışmak zorunda değil — depocu öneriden sapabilir (DOMAIN §4).
+   */
+  pickedBatches: PreparationPickSchema.shape.batches,
   /** Doluysa öneri değil ZORUNLULUK: indirimli teklif kalemi yalnız bu partiden verilebilir. */
   pinnedStockId: z.string().uuid().nullable(),
   suggestion: z.array(PreparationSuggestionSchema),
@@ -140,9 +166,60 @@ export const IntakeFormRowSchema = z.object({
 });
 export type IntakeFormRowContract = z.infer<typeof IntakeFormRowSchema>;
 
-/** `GET /warehouse/intake/:purchaseOrderId` yanıtı. Boş dizi = plansız alım (form elle doldurulur). */
-export const IntakeFormResponseSchema = z.object({ rows: z.array(IntakeFormRowSchema) });
+/**
+ * Tedarik siparişinin KÜNYESİ (21.11d) — ekranın başlığı: *"TS-26-0114 · Gaziantep Gıda"*.
+ *
+ * ── NEDEN SATIRLARDAN AYRI ──────────────────────────────────────────────────
+ * `IntakeFormRowSchema` kalemin şeklidir ve künye kalem başına DEĞİL sipariş başına tekildir; satıra
+ * kopyalansaydı aynı iki dize N kez taşınır ve "satırın tedarikçisi başka olabilir" diye yanlış bir
+ * beklenti kurardı (kurye ucundaki `doorAccountId` kararının aynısı).
+ *
+ * **Para YOK ve olamaz:** sipariş tutarı, birim alış, beklenen toplam — hiçbiri burada değil. Depocu
+ * hangi belgeyi elinde tuttuğunu bilmeli, o belgenin kaç para olduğunu değil.
+ *
+ * `referenceNo` taslakta `null`dır (numara gönderimde doğar) ve `supplierName` silinmiş/erişilemeyen
+ * tedarikçide `null` döner — uydurma bir ad yerine görünür bir boşluk.
+ */
+export const IntakePurchaseOrderSchema = z.object({
+  purchaseOrderId: z.string().uuid(),
+  referenceNo: z.string().nullable(),
+  supplierName: z.string().nullable(),
+});
+export type IntakePurchaseOrderContract = z.infer<typeof IntakePurchaseOrderSchema>;
+
+/**
+ * `GET /warehouse/intake/:purchaseOrderId` yanıtı. Boş `rows` = plansız alım (form elle doldurulur).
+ *
+ * `purchaseOrder` `null` ise sipariş HİÇ YOK: boş satır listesiyle karıştırılmaz — biri "kalemsiz
+ * sipariş", öteki "olmayan sipariş"tir ve ekranın kuracağı cümle farklıdır.
+ */
+export const IntakeFormResponseSchema = z.object({
+  purchaseOrder: IntakePurchaseOrderSchema.nullable(),
+  rows: z.array(IntakeFormRowSchema),
+});
 export type IntakeFormResponse = z.infer<typeof IntakeFormResponseSchema>;
+
+/**
+ * Bekleyen sevkiyat satırı (D2'nin konusuz açılışı, 21.11d) — künye + satır sayısı.
+ *
+ * Künyeden TÜRER (`.extend`): liste ile detay aynı üç alanı gösteriyor ve ikisini ayrı yazmak, bir
+ * gün listede tedarikçi adı, detayda tedarikçi kodu göstermenin önünü açardı.
+ *
+ * `lineCount` "kaç KALEM ısmarlandı"dır, "kaç adet" DEĞİL: depocu kaç satır sayacağını bilmek ister;
+ * toplam adet siparişin büyüklüğünü söyler ve o bir satın alma sorusudur.
+ */
+export const PendingIntakeSchema = IntakePurchaseOrderSchema.extend({ lineCount: z.number().int() });
+export type PendingIntakeContract = z.infer<typeof PendingIntakeSchema>;
+
+/**
+ * `GET /warehouse/intake` yanıtı — "hangi sevkiyatı bekliyorum".
+ *
+ * Sayfalanmaz ve gerekçesi ölçüldü: açık tedarik siparişi kümesi veriyle BÜYÜMEZ, kabul edildikçe
+ * kapanır (`PurchaseOrderService.openProgress` künyesi) — CLAUDE.md §1'in "doğal tavanı olan küme"
+ * dalı. Tavan yine de var (kapının `limit`i), çünkü tavansız bir okuma bir gün sessizce kesilir.
+ */
+export const PendingIntakesResponseSchema = z.object({ intakes: z.array(PendingIntakeSchema) });
+export type PendingIntakesResponse = z.infer<typeof PendingIntakesResponseSchema>;
 
 /**
  * Depocunun gönderdiği kabul satırı. **Maliyet alanı YOKTUR** — bu bir ekran kuralı değil, tip
@@ -337,6 +414,63 @@ export type CancelTransferResponse = z.infer<typeof CancelTransferResponseSchema
 // ── D6 · Kurye dönüşü kabulü ────────────────────────────────────────────────
 // Kapı YENİ DEĞİL: `application/order/refund.adjustFulfillment` zaten var ve `warehouseScope`
 // parametresini taşıyor. Burada yalnız o kapının uç ZARFI tanımlanıyor — ikinci bir davranış değil.
+
+/**
+ * Dönen kolinin tek satırı (21.11d okuma ayağı).
+ *
+ * ── ÖLÇÜ `fulfilledQty`, `qty` DEĞİL — VE BU BİR YAZIM KISITI ────────────────
+ * `adjust_fulfillment` (0020) hedef değeri MEVCUT karşılanan adedin üstüne çıkaramaz: *"karşılanan
+ * miktar artırılamaz"*. Ekranın tavanı bu yüzden sipariş edilen adet değil, hâlihazırda karşılanmış
+ * adettir — sipariş adedini göstermek depocuya kapının reddedeceği bir sayı girdirirdi.
+ *
+ * `disposition` dolu = bu satırın akıbeti ZATEN işaretlenmiş. Alan gösterilmeseydi ekran aynı satırı
+ * ikinci kez gönderir, `restock` ikinci kez stoğa yazılırdı; boş bırakmak da "hiç dokunulmadı"
+ * demenin tek yolu olurdu ve ikisi ayrı şeydir.
+ */
+export const ReturnDropLineSchema = z.object({
+  orderItemId: z.string().uuid(),
+  /** "Ürün (boy)" — operasyon dilinde (Türkçe). */
+  name: z.string(),
+  fulfilledQty: z.number().int(),
+  disposition: ReturnDispositionEnum.nullable(),
+});
+export type ReturnDropLineContract = z.infer<typeof ReturnDropLineSchema>;
+
+/**
+ * Depoya geri gelen bir sipariş — D6'nın "döküm"ü.
+ *
+ * **Para YOK** (D6'nın YANITINDAKİ istisna buraya taşınmaz): dönüşü karşılayan depocu iade tutarını
+ * görmez; tutar yalnız işaretleme YAZILDIKTAN sonraki cevapta, yönetim akışı için döner.
+ *
+ * `note` kuryenin kapıdaki serbest notudur (`order_status_log.note` — `returned`'a geçiş satırı);
+ * depocunun akıbet kararının tek bağlamı odur. `courierName` `null` olabilir: sipariş bir kuryeye
+ * hiç atanmamış olabilir (kargo/mağaza yolu) — uydurma bir ad yerine görünür boşluk.
+ */
+export const ReturnDropSchema = z.object({
+  orderId: z.string().uuid(),
+  referenceNo: z.string().nullable(),
+  courierName: z.string().nullable(),
+  note: z.string().nullable(),
+  /** `returned`'a geçiş ANI — liste bununla sıralanır. Geçiş kaydı yoksa `null`. */
+  returnedAt: z.string().nullable(),
+  lines: z.array(ReturnDropLineSchema),
+});
+export type ReturnDropContract = z.infer<typeof ReturnDropSchema>;
+
+/**
+ * `GET /warehouse/returns` yanıtı — "bu depoya ne geri geldi, hangisinin akıbeti belirsiz".
+ *
+ * ── ANAHTAR KURYENİN GÜNÜ DEĞİL, DEPONUN RAMPASI ────────────────────────────
+ * Bir `courierDayCloseId` süzgeci ölçüldü ve ELENDİ: siparişin kapanış kaydına bağı YOK (bağ
+ * kurye + gün üzerinden dolaylı kurulurdu) ve bir kuryenin günü deponun listesi değildir — aynı
+ * rampaya iki kurye dönebilir, biri günü kapatmamış olabilir. Deponun sorusu "bugün kim kapattı"
+ * değil, "elimde akıbeti belirsiz ne var".
+ *
+ * **Ulaşılamayanlar bu listede YOK ve olmamalı:** o mal araca yüklenmiş, kabul EDİLMEMİŞ ve yarına
+ * devrolmuştur (v2:505) — sipariş `ready`'e döner, deponun rampasına hiç girmez.
+ */
+export const WarehouseReturnQueueResponseSchema = z.object({ drops: z.array(ReturnDropSchema) });
+export type WarehouseReturnQueueResponse = z.infer<typeof WarehouseReturnQueueResponseSchema>;
 
 /**
  * Dönen malın akıbeti (D6). Satır tipi VARLIK şemasından (`FulfillmentAdjustmentSchema`):

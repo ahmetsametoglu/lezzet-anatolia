@@ -22,10 +22,12 @@ import type {
   InboundTransfersResponse,
   IntakeFormResponse,
   OrderStatus,
+  PendingIntakesResponse,
   PreparationQueueResponse,
   ReceiveGoodsResponse,
   ReceiveTransferResponse,
   RecordAdjustmentResponse,
+  WarehouseReturnQueueResponse,
   WarehouseReturnResponse,
 } from '@lezzet/types';
 import { app } from '../../app';
@@ -449,6 +451,27 @@ describe('D1 · POST /api/v1/warehouse/preparation/:orderId/confirm', () => {
     expect((await orders.getById(order.orderId))?.status).toBe('confirmed');
   });
 
+  it('yarım işten sonra kuyruk PARTİ DAĞILIMINI geri verir — döngü kapanır (21.11d)', async () => {
+    const order = await pendingOrder({ qty: 4 });
+    await post(`/api/v1/warehouse/preparation/${order.orderId}/confirm`, {
+      picks: [{ orderItemId: order.itemId, batches: [{ stockId, qty: 1 }] }],
+    });
+
+    const queue = await dataOf<PreparationQueueResponse>(await asStaff('/api/v1/warehouse/preparation'));
+    const line = queue.orders.find((row) => row.orderId === order.orderId)!.lines[0]!;
+
+    // Ekran artık "önceden 1 yazılmış" demek zorunda değil: hangi partiden olduğunu da biliyor ve
+    // alanı kümülatif kurabiliyor — eksiği bir partiye TAHMİNEN eklemesi gerekmiyor.
+    expect(line.pickedQty).toBe(1);
+    expect(line.pickedBatches).toEqual([{ stockId, qty: 1 }]);
+
+    // Ve dönen dizi doğrudan geri gönderilebiliyor: okuma ile yazma AYNI şekli konuşuyor.
+    const replay = await post(`/api/v1/warehouse/preparation/${order.orderId}/confirm`, {
+      picks: [{ orderItemId: order.itemId, batches: [...line.pickedBatches, { stockId, qty: 3 }] }],
+    });
+    expect(await dataOf<ConfirmPreparationResponse>(replay)).toMatchObject({ status: 'ok', ready: true });
+  });
+
   it('BAŞKA DEPONUN siparişi 200 + `out_of_scope` ile döner — ve hiçbir yazım yapılmaz', async () => {
     const order = await pendingOrder({ warehouse: otherWarehouseId });
 
@@ -481,6 +504,53 @@ describe('D2 · mal kabul', () => {
     expect(form.rows).toHaveLength(1);
     expect(form.rows[0]).toMatchObject({ variantId, expectedQty: 20, variantLabel: '1 kg' });
     expect(Object.keys(form.rows[0]!).sort()).toEqual(['expectedQty', 'productName', 'variantId', 'variantLabel']);
+  });
+
+  it('form KÜNYESİ referans + tedarikçi adı taşır — ekran başlığı yazılabilsin (21.11d)', async () => {
+    const purchaseOrderId = await draftPurchaseOrder(20, 600);
+    await new PurchaseOrderService(db).markSent(purchaseOrderId, `TS-API-${stamp}`);
+
+    const form = await dataOf<IntakeFormResponse>(await asStaff(`/api/v1/warehouse/intake/${purchaseOrderId}`));
+
+    expect(form.purchaseOrder).toEqual({
+      purchaseOrderId,
+      referenceNo: `TS-API-${stamp}`,
+      supplierName: `Gaziantep Gıda ${stamp}`,
+    });
+  });
+
+  it('OLMAYAN sipariş: künye `null`, satırlar boş — ikisi ayrı şeydir', async () => {
+    const form = await dataOf<IntakeFormResponse>(
+      await asStaff('/api/v1/warehouse/intake/00000000-0000-0000-0000-000000000000'),
+    );
+
+    expect(form).toEqual({ purchaseOrder: null, rows: [] });
+  });
+
+  it('BEKLEYEN SEVKİYAT listesi: gönderilmiş sipariş künyesi + kalem sayısıyla gelir', async () => {
+    const purchaseOrderId = await draftPurchaseOrder(12, 600);
+    await new PurchaseOrderService(db).markSent(purchaseOrderId, `TS-API-BEKLEYEN-${stamp}`);
+
+    const body = await dataOf<PendingIntakesResponse>(await asStaff('/api/v1/warehouse/intake'));
+
+    // Küresel sayıya BAKILMAZ: liste depo-üstüdür (satın alma K6), kendi kimliğimiz aranır.
+    const mine = body.intakes.find((row) => row.purchaseOrderId === purchaseOrderId);
+    expect(mine).toEqual({
+      purchaseOrderId,
+      referenceNo: `TS-API-BEKLEYEN-${stamp}`,
+      supplierName: `Gaziantep Gıda ${stamp}`,
+      lineCount: 1,
+    });
+    // Depo ekranına giden listede TUTAR yok — kapı fiyatı okur ama taşımaz.
+    expect(JSON.stringify(mine)).not.toContain('600');
+  });
+
+  it('bekleyen listesi TASLAĞI göstermez — tedarikçi ondan habersiz', async () => {
+    const purchaseOrderId = await draftPurchaseOrder(5, 600);
+
+    const body = await dataOf<PendingIntakesResponse>(await asStaff('/api/v1/warehouse/intake'));
+
+    expect(body.intakes.some((row) => row.purchaseOrderId === purchaseOrderId)).toBe(false);
   });
 
   it('kabul yazılır ve maliyet PO’dan eşleşir — depocu fiyatı hiç görmeden', async () => {
@@ -743,6 +813,60 @@ describe('D5 · transfer (gelen)', () => {
     const res = await post('/api/v1/warehouse/transfers/trf-1/receive', { lines: [] });
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ data: null, error: 'invalid_transfer_id' });
+  });
+});
+
+describe('D6 · GET /api/v1/warehouse/returns', () => {
+  it('rampaya dönen sipariş künyesi, kuryesi ve satırlarıyla gelir', async () => {
+    const order = await returnedOrder(2);
+
+    const body = await dataOf<WarehouseReturnQueueResponse>(await asStaff('/api/v1/warehouse/returns'));
+
+    const mine = body.drops.find((drop) => drop.orderId === order.orderId);
+    expect(mine?.lines).toEqual([
+      // Tavan KARŞILANMIŞ adet: `adjust_fulfillment` hedefi bunun üstüne çıkaramaz.
+      { orderItemId: order.itemId, name: expect.stringContaining('Fıstıklı Baklava'), fulfilledQty: 2, disposition: null },
+    ]);
+    expect(mine?.returnedAt).not.toBeNull();
+  });
+
+  it('BAŞKA DEPONUN dönüşü bu listede YOK — depo bölümün bağlamıdır', async () => {
+    const order = await preparedOrder(2);
+    // Aynı siparişi başka depoya taşıyamayız; ikinci deponun kendi dönüşünü kurmak gerekiyor.
+    const foreign = await pendingOrder({ warehouse: otherWarehouseId });
+    await advance(foreign.orderId, ['preparing']);
+    await orders.recordPreparation(foreign.orderId, [{ orderItemId: foreign.itemId, batches: [{ stockId: foreignStockId, qty: foreign.qty }] }]);
+    await advance(foreign.orderId, ['ready', 'out_for_delivery', 'returned']);
+    await advance(order.orderId, ['ready', 'out_for_delivery', 'returned']);
+
+    const body = await dataOf<WarehouseReturnQueueResponse>(await asStaff('/api/v1/warehouse/returns'));
+
+    expect(body.drops.some((drop) => drop.orderId === order.orderId)).toBe(true);
+    expect(body.drops.some((drop) => drop.orderId === foreign.orderId)).toBe(false);
+  });
+
+  it('AKIBET işaretlenince liste kendini temizler — okuma ile yazma aynı gerçeği söyler', async () => {
+    const order = await returnedOrder(2);
+    const before = await dataOf<WarehouseReturnQueueResponse>(await asStaff('/api/v1/warehouse/returns'));
+    expect(before.drops.some((drop) => drop.orderId === order.orderId)).toBe(true);
+
+    await post(`/api/v1/warehouse/returns/${order.orderId}`, {
+      adjustments: [{ orderItemId: order.itemId, fulfilledQty: 0, returnDisposition: 'discard', note: 'koku şüphesi' }],
+    });
+
+    const after = await dataOf<WarehouseReturnQueueResponse>(await asStaff('/api/v1/warehouse/returns'));
+    expect(after.drops.some((drop) => drop.orderId === order.orderId)).toBe(false);
+  });
+
+  it('listede TUTAR yok — dönüşü karşılayan depocu parayı görmez', async () => {
+    const order = await returnedOrder(2);
+
+    const body = await dataOf<WarehouseReturnQueueResponse>(await asStaff('/api/v1/warehouse/returns'));
+    const serialized = JSON.stringify(body.drops.find((drop) => drop.orderId === order.orderId));
+
+    for (const moneyKey of ['unitPrice', 'total', 'purchasePrice', 'refunded', 'amountCollected', 'vatRate']) {
+      expect(serialized).not.toContain(moneyKey);
+    }
   });
 });
 

@@ -34,6 +34,8 @@ export function preparationLine(overrides: Partial<PreparationLineContract> = {}
     variantId: uuid(31),
     productName: 'Fıstıklı Baklava',
     variantLabel: '1 kg',
+    // 21.11d: kuyruk artık mevcut parti dağılımını taşıyor — varsayılan "hiç kayıt yok".
+    pickedBatches: [],
     orderedQty: 2,
     pickedQty: 0,
     pinnedStockId: null,

@@ -1,4 +1,5 @@
 import {
+  OrderItemBatchService,
   OrderItemService,
   OrderService,
   ReservationService,
@@ -47,6 +48,24 @@ export interface PreparationLine {
   orderedQty: number;
   /** Daha önce hazırlanmış adet — **yarım kalan iş kaldığı yerden sürer** (mobil v2: "Yarım iş sürer"). */
   pickedQty: number;
+  /**
+   * Kalemin ŞU ANDA yazılı parti dağılımı (21.11d) — boş dizi = henüz hiç toplanmamış.
+   *
+   * ── NEDEN OKUMA TARAFINDA DA GEREKİYOR ──────────────────────────────────────
+   * Yazım ABSOLÜT: `record_preparation` (0015) kalemin önceki parti kaydını **silip yeniden yazıyor**
+   * ("önceki parti kaydı tamamen yenisiyle değişir, yamalanmaz") ve `fulfilled_qty` gönderilen
+   * toplamın kendisi oluyor. Okuma yalnız `pickedQty`'yi taşıdığı sürece yarım kalmış bir kalemin
+   * eski dağılımı hiçbir ekrandan yeniden ÜRETİLEMEZ — devam eden depocu ya sıfırdan yazar (önceki
+   * emeği görünmez şekilde siler) ya da eksiği "ilk öneri partisine" ekleyerek atamayı TAHMİN eder.
+   * İkincisi daha tehlikeli: geri çağırmanın ve gerçek COGS'un dayandığı kayıt tahminle yazılamaz.
+   *
+   * Şekil yazım tipinin AYNISI (`PreparationPick['batches']`) çünkü ekranın göndereceği dizi bunun
+   * devamıdır; ikinci bir şekil, aynı kalemi iki dilde konuşmak olurdu.
+   *
+   * `suggestion` ile karıştırılmaz: o motorun ÖNERİSİ, bu depocunun YAZDIĞI gerçek. Çakışmak zorunda
+   * değiller — depocu öneriden sapabilir (DOMAIN §4).
+   */
+  pickedBatches: PreparationPick['batches'];
   /**
    * Partiye kilitli mi (indirimli teklif kalemi). Kilitliyse öneri değil ZORUNLULUKTUR: depocu
    * başka partiden veremez, kapı da yazdırmaz.
@@ -102,10 +121,13 @@ export async function listPreparationQueue(
   if (orders.length === 0) return [];
 
   const items = await new OrderItemService(db).listByOrders(orders.map((order) => order.id));
-  const [names, customers, pinned] = await Promise.all([
+  // Dördü AYNI dalgada: parti dağılımı okuması mevcut turların yanına giriyor, arkalarına DEĞİL —
+  // ikinci bir uçuş açsaydı kuyruğun gecikmesi iki katına çıkardı (21.11d ölçümü).
+  const [names, customers, pinned, picked] = await Promise.all([
     variantNames(db, items.map((item) => item.variantId)),
     customerNames(db, orders),
     pinnedStockIds(db, orders.map((order) => order.id)),
+    pickedBatches(db, orders.map((order) => order.id)),
   ]);
 
   const queue: PreparationOrder[] = [];
@@ -122,6 +144,7 @@ export async function listPreparationQueue(
           item,
           names.get(item.variantId),
           pinned.get(`${order.id}:${item.variantId}`) ?? item.stockId,
+          picked.get(item.id) ?? [],
         ),
       ),
     );
@@ -151,6 +174,7 @@ async function buildLine(
   item: OrderItem,
   variant: { productName: string; variantLabel: string } | undefined,
   pinnedStockId: string | null,
+  picked: PreparationPick['batches'],
 ): Promise<PreparationLine> {
   const remaining = Math.max(0, item.qty - item.fulfilledQty);
   const base = {
@@ -160,6 +184,7 @@ async function buildLine(
     variantLabel: variant?.variantLabel ?? '',
     orderedQty: item.qty,
     pickedQty: item.fulfilledQty,
+    pickedBatches: picked,
   };
 
   if (pinnedStockId) {
@@ -288,6 +313,37 @@ async function shortfallThresholds(db: SupabaseClient): Promise<{ ratio: number;
     settings.getNumber('shortfall_ask_value_cents', 1_500),
   ]);
   return { ratio: ratioPercent / 100, valueCents };
+}
+
+/**
+ * **Kalemlerin yazılı parti dağılımı** (21.11d) — `order_item_batch`, KALEM kimliğiyle anahtarlanır.
+ *
+ * ── ÖLÇÜM: BU İKİNCİ BİR UÇUŞ DEĞİL, MEVCUT DALGANIN BİR TURU ───────────────
+ * Kuyruk zaten sipariş başına tur atıyor (`pinnedStockIds` → `listActiveByOrder`) ve müşteri başına
+ * bir tur daha (`customerNames`). Bu okuma o dalganın İÇİNE giriyor (`Promise.all`), yani gecikme
+ * en yavaş turun kendisi kadar kalıyor; sıralı yazılsaydı kuyruk iki tam gidiş-dönüş uzardı.
+ *
+ * ── TERFİ İHTİYACI (raporlandı, kendim dokunmadım) ──────────────────────────
+ * `OrderItemBatchService`in çok-siparişli okuması YOK (`listByOrder` tekil, `getAll` korumalı), bu
+ * yüzden sipariş başına bir sorgu kuruluyor. `listByOrders(orderIds)` eklendiği gün buradaki
+ * `Promise.all` tek çağrıya iner ve künyenin bu bölümü silinir. Bugünkü hâl yeni bir N+1 SINIFI
+ * açmıyor — aynı döngü kuyruğun içinde zaten iki kez var.
+ */
+async function pickedBatches(
+  db: SupabaseClient,
+  orderIds: readonly string[],
+): Promise<Map<string, PreparationPick['batches']>> {
+  const service = new OrderItemBatchService(db);
+  const perOrder = await Promise.all(orderIds.map((orderId) => service.listByOrder(orderId)));
+
+  const map = new Map<string, PreparationPick['batches']>();
+  for (const row of perOrder.flat()) {
+    const batches = map.get(row.orderItemId);
+    // Bir kalem birden çok partiye bölünmüş olabilir: satırlar TOPLANIR, üzerine yazılmaz.
+    if (batches) batches.push({ stockId: row.stockId, qty: row.qty });
+    else map.set(row.orderItemId, [{ stockId: row.stockId, qty: row.qty }]);
+  }
+  return map;
 }
 
 /** Siparişin partiye ÇIPALI rezervasyonları — `order:variant` anahtarıyla. */
