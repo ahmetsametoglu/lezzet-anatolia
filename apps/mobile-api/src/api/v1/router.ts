@@ -4,6 +4,7 @@ import { MeSchema } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { authOtp } from './auth-otp';
 import { catalog } from './catalog';
+import { courier } from './courier';
 import { bearerAuth, type V1Env } from './auth';
 
 /**
@@ -45,3 +46,12 @@ v1.get('/me', async (c) => {
   // `parse` süzgeçtir: pick'te olmayan alan (kredi limiti, personel kapsamı) zarfa sızamaz.
   return ok(c, MeSchema.parse(profile));
 });
+
+/**
+ * Kurye bölümü (21.10) — `bearerAuth`ın ARDINDA ve orada kalacak: katalogun aksine bu uçlar
+ * personelindir, oturumsuz gezilmez. İkinci bir kapı daha var ve o rota dosyasının kendi
+ * içinde: `courierGuard` rolü süzer ve kurye kimliğini JETONDAN çözer (`courier.ts` künyesi).
+ *
+ * Önek burada veriliyor, dosyada değil: uçların adresini router'ın okuyan gözü tek yerden görsün.
+ */
+v1.route('/courier', courier);

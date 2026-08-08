@@ -21,6 +21,13 @@ const stocks = new StockService(db);
 const reservations = new ReservationService(db);
 
 const stamp = Date.now();
+/*
+  Telefon DAMGALI (`user_profiles.phone` benzersiz — sabit numara paralel koşuda web köprü
+  testiyle çarpışıyordu, defter 08.08). Önek '07': web ve mobile-api aynı `Date.now()` formülünü
+  '06' ile kullanıyor; aynı milisaniyede başlayan iki dosya aynı numarayı üretmesin.
+  Bağlantı testi de BU değerden türetir — sabit numara beklentisi damgayla birlikte kalktı.
+*/
+const customerPhone = `07${String(stamp).slice(-8)}`;
 let customerId: string;
 // Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
 let warehouseId: string;
@@ -50,7 +57,7 @@ beforeAll(async () => {
   variantId = variants[0]!.id;
 
   const profiles = new UserProfileService(db);
-  const customer = await profiles.insert({ name: 'Marie Dupont', email: `kurye-${stamp}@example.test`, phone: '06 12 34 56 78' });
+  const customer = await profiles.insert({ name: 'Marie Dupont', email: `kurye-${stamp}@example.test`, phone: customerPhone });
   const courier = await profiles.insert({ name: 'Kurye Ali', email: `ali-${stamp}@example.test` });
   const other = await profiles.insert({ name: 'Kurye Veli', email: `veli-${stamp}@example.test` });
   customerId = customer.id;
@@ -158,7 +165,8 @@ describe('gün listesi (11.1)', () => {
 
     const stop = mine(await listCourierDay(db, { courierId, locale: 'fr' }), orderId);
 
-    expect(stop.whatsAppLink).toContain('wa.me/33612345678');
+    // E.164: baştaki 0 düşer, ülke kodu 33 gelir — beklenti damgalı numaradan türetilir.
+    expect(stop.whatsAppLink).toContain(`wa.me/33${customerPhone.slice(1)}`);
     expect(decodeURIComponent(stop.whatsAppLink!)).toContain('Bonjour Marie Dupont');
   });
 
