@@ -82,6 +82,7 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
   - **"Depocuya restok seçeneği sunulmaz" TİPTE zorlanıyor:** kapının sebep tipi `return_restock`'u kabul etmez (admin istisnası, DOMAIN §4/§8) — arayüz disiplini olarak bırakılsaydı er geç bir ekranda o seçenek belirirdi.
 - [ ] (10.6) **Sıcaklık kaydı:** `TemperatureLog` (dolap/araç + derece), günde 1-2 elle giriş
   - *Bitti:* kayıt tutuluyor, geçmiş görünüyor
+  - **Durum (08.08, akşam) — TALEP AÇILDI.** `docs/talep/arka-uc-sicaklik-kaydi.md`: ölçüm NOKTASI bir varlık olmalı (serbest metin değil) — tasarımın *"ölçülmemiş nokta amber görünür kalır"* kuralı ancak önceden tanımlı noktalarla cevaplanabilir; ölçülmeyen nokta hiç yazılmamıştır ve yokluğundan haberimiz olmaz. Sıra dışı değer UYARIR ama engellemez (MLOR'un ikizi), beklenen aralık ayardan gelir — donuk (−18°) ile soğuk oda (+4°) aynı eşiği paylaşmaz. Ekranda bölüm çizili ve kapalı, sebebi yazılı; kapı gelince tek turda açılır.
   - **Durum (08.08) — tek gerçekten BOŞ görev.** Öteki beşinde arka uç hazır, bunda hiçbir şey yok: `TemperatureLog` şeması, servisi ve kapısı yazılmamış. Ekranı imha/sayım karesiyle aynı yerde yaşıyor (`design/pages/depo-imha-sayim.md §2`), o yüzden masaüstü isteğine birlikte yazıldı (`depo-masaustu-tasarim-istegi.md §C`) — ama çizim gelse bile arka uç ayrı bir iştir.
 
 ## Netleşecekler
