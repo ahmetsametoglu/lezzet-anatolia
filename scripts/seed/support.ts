@@ -1,5 +1,5 @@
-import { TicketService } from '@lezzet/database';
-import { statusAfterCustomerReply } from '@lezzet/domain-core';
+import { ConversationService, MessageService, TicketService } from '@lezzet/database';
+import { serviceWindowExpiry, statusAfterCustomerReply } from '@lezzet/domain-core';
 import type { TicketStatus } from '@lezzet/types';
 import { an, r2Keys, tabloDolu, uploadImage, type Db, type Kisiler } from './shared';
 
@@ -15,11 +15,14 @@ import { an, r2Keys, tabloDolu, uploadImage, type Db, type Kisiler } from './sha
 // DURUM KARARI MOTORUNDUR: müşteri kapanmış talebe yazınca ne olacağını `statusAfterCustomerReply`
 // söyler. Seed "burada yeniden açılsın" diye kendi kuralını yazmaz, sorar.
 
-/** WhatsApp konuşma bağı — 15.x'te gerçek konuşmaya işaret edecek; zeminde sabit ve deterministik. */
-const WA_CONVERSATION = {
-  ai: '5eed0000-0000-4000-8000-000000000001',
-  devralinan: '5eed0000-0000-4000-8000-000000000002',
-} as const;
+// ── WhatsApp konuşma bağı: SABİT UUID'ler kaldırıldı (15.1, 08.08) ──────────────────────────────
+// Burada iki uydurma kimlik duruyordu ve künyesinde "15.x'te gerçek konuşmaya işaret edecek"
+// yazıyordu. O gün geldi: `ticket.conversation_id` artık gerçek bir FK (0039) ve uydurma kimlikler
+// seed'i kırdı — FK'nin işi tam olarak bu, var olmayan bir bağı sessizce taşımaya izin vermemek.
+//
+// Konuşma artık ÜRETİMDEKİ kapıdan açılıyor (`open_conversation`, anahtar müşterinin telefonu) ve
+// talebin yazışması konuşmaya da yansıtılıyor: mesajsız bir konuşma satırı, gelen kutusu ekranında
+// (15.5) boş bir sohbet olarak görünürdü — içi boş kayıt üretmek seed'in işi değil.
 
 interface Mesaj {
   sender: 'customer' | 'admin' | 'ai';
@@ -61,7 +64,6 @@ interface Talep {
   ai?: boolean;
   /** AI başlamış, insan DEVRALMIŞ (16.5) — tek yönlü geçiş. */
   devralindi?: boolean;
-  conversationId?: string;
   /** Müşteri fotoğraf ekledi mi — R2 ayarsızsa sessizce eksiz kalır. */
   fotograf?: string;
   yas: number;
@@ -139,7 +141,6 @@ const TALEPLER: Talep[] = [
     ilkMesaj: 'Merhaba, Krutenau bölgesine hangi günler geliyorsunuz?',
     yazisma: [{ sender: 'ai', body: 'Merhaba! 67000 posta kodu salı ve cuma rotasında. Sipariş vermek ister misiniz?' }],
     ai: true,
-    conversationId: WA_CONVERSATION.ai,
     yas: 2,
     etiket: 'AÇIK · WhatsApp · AI yanıtladı',
   },
@@ -156,7 +157,6 @@ const TALEPLER: Talep[] = [
       { sender: 'admin', body: 'Merhaba, ben Deniz — konuyu ben devraldım. Depo kaydına baktım, haklısınız. Telafisini bu haftaki teslimata ekliyorum.', durum: 'in_progress' },
     ],
     devralindi: true,
-    conversationId: WA_CONVERSATION.devralinan,
     yas: 6,
     etiket: 'İŞLEMDE · WhatsApp · AI→insan DEVRALDI',
   },
@@ -255,6 +255,61 @@ async function ceviriDamgala(db: Db, ticketId: string, t: Talep): Promise<void> 
   }
 }
 
+/**
+ * WhatsApp kaynaklı talebin ARKASINDAKİ konuşma (15.1) — üretimdeki kapıdan.
+ *
+ * Anahtar müşterinin telefonudur (`open_conversation`, tekillik `(source, external_ref)`), çünkü
+ * üretimde de öyle: gelen mesaj numaradan tanınır. Seed'in kendi kimliğini uydurması, tam da FK'nin
+ * yasakladığı şeydi.
+ *
+ * **Yazışma konuşmaya da yansıtılıyor** ve yön çevirisi burada olur: talepte "kim yazdı"
+ * (müşteri/personel/AI) sorulur, konuşmada "hangi tarafa aktı" — AI da personel de aynı numaradan
+ * çıkar, yani ikisi de `outbound`'dur.
+ *
+ * **Pencere GEÇMİŞE göre hesaplanıyor** (`serviceWindowExpiry(alindi)`): talep 2 günlükse pencere
+ * çoktan kapanmıştır ve seed bunu olduğu gibi göstermeli. "Şimdi"den hesaplayıp her seed konuşmasını
+ * açık göstermek, ekranı gerçekte olmayan bir ücretsiz aralıkla kandırırdı.
+ *
+ * Telefonu olmayan müşteride konuşma kurulamaz ve `null` döner — talep de `whatsapp` kaynağını
+ * taşıyamayacağı için (DB kısıtı) çağıran o talebi atlar.
+ */
+async function waKonusmaKur(db: Db, customerId: string, t: Talep): Promise<string | null> {
+  const { data, error } = await db.from('user_profiles').select('phone').eq('id', customerId).single();
+  if (error) throw error;
+  const phone = (data as { phone: string | null } | null)?.phone;
+  if (!phone) return null;
+
+  const konusma = await new ConversationService(db).open({ externalRef: phone, customerId });
+  const messages = new MessageService(db);
+  const alindi = an(-t.yas);
+
+  await messages.record({
+    conversationId: konusma.id,
+    direction: 'inbound',
+    body: { text: t.ilkMesaj },
+    windowExpiresAt: serviceWindowExpiry(alindi),
+  });
+  for (const m of t.yazisma ?? []) {
+    const gelen = m.sender === 'customer';
+    await messages.record({
+      conversationId: konusma.id,
+      direction: gelen ? 'inbound' : 'outbound',
+      body: { text: m.body },
+      // Pencereyi yalnız gelen mesaj açar; giden mesaj ona dokunmaz.
+      windowExpiresAt: gelen ? serviceWindowExpiry(alindi) : null,
+    });
+  }
+
+  // Yaşlandırma: `record_message` damgayı `now()` atıyor (üretimde doğru). Seed'de sohbetin talebiyle
+  // aynı yaşta görünmesi gerekiyor — yoksa gelen kutusu, günler önceki bir konuşmayı en üste koyar.
+  const { error: mErr } = await db.from('message').update({ created_at: alindi }).eq('conversation_id', konusma.id);
+  if (mErr) throw mErr;
+  const { error: cErr } = await db.from('conversation').update({ last_message_at: alindi }).eq('id', konusma.id);
+  if (cErr) throw cErr;
+
+  return konusma.id;
+}
+
 export async function seedTickets(db: Db, kisiler: Kisiler): Promise<void> {
   if (await tabloDolu(db, 'ticket')) {
     console.log('▸ talepler zaten dolu — atlandı');
@@ -289,6 +344,18 @@ export async function seedTickets(db: Db, kisiler: Kisiler): Promise<void> {
       kalemIdleri = ((kalemler ?? []) as Array<{ id: string }>).slice(0, t.kalemAdedi).map((k) => k.id);
     }
 
+    // WhatsApp kaynağı KONUŞMA ZORUNLU kılar (DB kısıtı `ticket_source_link` + FK 0039).
+    // Numarası olmayan müşteride konuşma kurulamaz; talep de kurulamaz — sessizce yanlış kaynakla
+    // yazmak yerine atlanır, çünkü `form` yazmak talebin nereden geldiği hakkında yalan olurdu.
+    let conversationId: string | null = null;
+    if (t.source === 'whatsapp') {
+      conversationId = await waKonusmaKur(db, customerId, t);
+      if (!conversationId) {
+        console.log(`  · ${t.subject} atlandı (müşterinin telefonu yok — WhatsApp konuşması kurulamaz)`);
+        continue;
+      }
+    }
+
     const ticket = await tickets.createWithMessage({
       customerId,
       source: t.source,
@@ -297,7 +364,7 @@ export async function seedTickets(db: Db, kisiler: Kisiler): Promise<void> {
       subject: t.subject,
       orderId: siparis?.id ?? null,
       orderItemIds: kalemIdleri,
-      conversationId: t.conversationId ?? null,
+      conversationId,
       sender: t.source === 'admin' ? 'admin' : 'customer',
       authorId: t.source === 'admin' ? admin : null,
     });

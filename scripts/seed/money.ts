@@ -190,6 +190,15 @@ async function orderDerivedRows(db: Db, frDate: (daysAgo: number) => string) {
  * bağ daha kurardı.
  */
 export async function seedBankQueue(db: Db): Promise<void> {
+  // Koruma EKSİKTİ (08.08): buradaki her satır her koşuda yeniden yazılıyordu ve ikinci koşu
+  // `bank_import_profile_name_key` tekilliğine çarpıp seed'i KESİYORDU — kendisinden sonraki
+  // bölümler (talep, geri bildirim, iş izleri) hiç çalışmıyordu. Öteki bölümlerin hepsinde bu
+  // koruma var; burada unutulmuştu ve hata dosyanın kendi içinde değil, SONRAKİ bölümlerin
+  // yokluğunda görünüyordu.
+  if (await tabloDolu(db, 'bank_import_profile')) {
+    console.log('▸ banka ekstresi zaten dolu — atlandı');
+    return;
+  }
   const { data } = await db.from('account').select('id').eq('name', 'Crédit Mutuel').maybeSingle();
   if (!data) return;
   await seedBankImport(db, (data as { id: string }).id);
