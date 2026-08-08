@@ -11,6 +11,9 @@ export * from './auth.schema';
 export * from './me-api.schema';
 // Katalog — kategori/ürün/varyant/stok varlık şemalarından türer.
 export * from './catalog-api.schema';
+// Kurye — gün listesi, kapıda teslim/tahsilat, kanıt yükleme, gün kapanışı. Kaynağı
+// `@lezzet/application`ın kurye kapıları; kanıt ve kapanış varlık şemalarından türer.
+export * from './courier-api.schema';
 // Bildirim — tablo değil, müşteriye giden mesajın veri şekli; üç yer okur (şablon `packages/email`,
 // sürücü `packages/notify`, veriyi kuran uygulama kapısı).
 export * from './notification.schema';

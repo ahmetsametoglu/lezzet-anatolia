@@ -1,0 +1,302 @@
+import { AccountService, MoneyMovementService, OrderService } from '@lezzet/database';
+import { canTransition } from '@lezzet/domain-core';
+import type { FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus } from '@lezzet/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { notifyExceptionEffect, providerRefunder, type OrderEffects } from './effects';
+import { recordOrderRefund, syncOrderPaymentStatus } from './payment';
+
+/**
+ * Kısmi karşılama (07.8) ve iptal/iade (07.9) kapısı (terfi 21.10 — kaynağı
+ * `apps/web/lib/order/refund.ts`). DOMAIN §8, ORDER_LIFECYCLE. Web kopyası geçiş köprüsüdür.
+ *
+ * ── NEDEN `courier/`İN İÇİNDE DEĞİL ──────────────────────────────────────────
+ * Kapıda eksik kalem işaretlemek kurye işidir ama **sipariş düzeltmesi kurye işi değildir**: aynı
+ * kapıyı operasyon sipariş detayı (iptal, teslim sonrası iade) ve şikâyet çözümü de çağırıyor
+ * (ölçüldü: `operations/orders/actions.ts`, `lib/ticket/write.ts`, `lib/order/stripe-webhook.ts`).
+ * `courier/refund.ts` deseydik, kurye şeridi olmayan üç çağıran kurye klasöründen ithal ederdi.
+ *
+ * Üç katman birleşir: malın gerçeğini veritabanı yazar (`adjust_fulfillment` / `cancel_order`,
+ * bölünemez), iade borcunu motor TÜRETİR (`derivePaymentStatus`), hareketi para kapısı yazar (12.2).
+ *
+ * **"Peşin mi, kapıda mı" diye dallanılmaz.** İade borcu = net tahsilat − karşılanan tutar; bu sayı
+ * peşin ödenmişse kendiliğinden pozitif çıkar (fark iade edilir), kapıda ödenecekse sıfır çıkar
+ * (yalnız tahsil edilecek tutar düşer). Tek yol, iki sonuç — ödeme yöntemine bakan bir `if` yok.
+ *
+ * İadenin gideceği hesap da SORULMAZ, türetilir: para hangi hesaba girdiyse oradan çıkar (son
+ * tahsilat hareketi). Çağıran isterse başka hesap verebilir (Stripe'tan tahsil, nakit iade).
+ */
+
+interface RefundOutcome {
+  /** Fiilen yazılan iade tutarı (**cent**). 0 = iade borcu yoktu **ya da** yazılamadı (`refundBlocked`). */
+  refundedAmountCents: number;
+  paymentStatus: PaymentStatus;
+  /** Kapıda/vadeli tahsil edilmeyi bekleyen kalan (**cent**) — kısmi karşılamada düşmüş hâli. */
+  amountToCollectCents: number;
+  /**
+   * Borç vardı ama iade YAZILAMADI — sebebiyle. Yokluğu "iade tamam" demektir.
+   *
+   * Sessizce sıfır dönmek en tehlikeli seçenekti: operatör iadeyi yapılmış sanır, müşteri parasını
+   * bekler. Borç zaten `amountToCollect`'in negatifinde görünür; bu alan onu **sebebiyle** söyler.
+   */
+  refundBlocked?: RefundBlockReason;
+}
+
+/**
+ * `no_account` — paranın hangi hesaba girdiği türetilemedi (hiç tahsilat yok).
+ * `provider_ref_missing` — sağlayıcı hesabına yazılmış ama ödeme künyesi tutulmamış bir tahsilat;
+ *   hangi ödemenin üzerinden dönüleceği bilinmiyor.
+ * `provider_unavailable` — sağlayıcı portu kayıtlı değil ya da anahtarı yok (yerel ortam).
+ * `provider_failed` — sağlayıcı reddetti ya da ulaşılamadı.
+ */
+export type RefundBlockReason = 'no_account' | 'provider_ref_missing' | 'provider_unavailable' | 'provider_failed';
+
+export type AdjustOutcome =
+  | ({ status: 'ok'; restockedQty: number; discardedQty: number; releasedQty: number } & RefundOutcome)
+  /**
+   * Sipariş çağıranın depo kapsamı dışında (D6). **Yetki kararı DEĞİL, kapsam kararı:** kimliğin
+   * doğrulanması ve rolün okunması uç katmanın işidir (guard); burada yalnız "bu siparişin deposu
+   * verilen kümede mi" sorusu var — ve bu bir İŞ kuralıdır, taşımanın değil.
+   */
+  | { status: 'forbidden'; reason: 'out_of_scope' }
+  /** Sipariş artık düzeltilebilir bir durumda değil (iptal edilmiş). */
+  | { status: 'stale'; currentStatus: OrderStatus }
+  | { status: 'not_found' };
+
+export type CancelOutcome =
+  | ({ status: 'ok'; releasedQty: number } & RefundOutcome)
+  | { status: 'forbidden'; reason: 'same_status' | 'terminal' | 'not_allowed' | 'out_of_scope' }
+  | { status: 'stale'; currentStatus: OrderStatus }
+  | { status: 'not_found' };
+
+export interface RefundOptions {
+  /** İadenin çıkacağı hesap — verilmezse paranın girdiği hesaptan türetilir. */
+  refundAccountId?: string | null;
+  /**
+   * Tutarı elle vermek. Tek gerçek kullanımı **jest iadesidir** (`goodwill`): mal müşteride kaldığı
+   * için karşılanan tutar düşmez, borç türetilemez — tutarı operatör söyler (DOMAIN §8).
+   */
+  refundAmountCents?: number | null;
+  valueDate?: string;
+  description?: string | null;
+  /**
+   * Sağlayıcıya iade portu (07.11) + müşteri haberi portu (14.5). Kayıtlı değillerse davranış
+   * `effects.ts`te yazılı: haber atlanır ve uyarılır, sağlayıcı `provider_unavailable` döner.
+   */
+  effects?: OrderEffects;
+}
+
+/**
+ * **Depo kapsamı** (D6 hazırlığı — 21.10 · 21.11).
+ *
+ * `undefined` = kapsam sorulmuyor; bugünkü web köprüsünün davranışı budur (ekranın `requireAdmin`
+ * guard'ı zaten kapıda duruyor) ve **değişmedi**. Bir kimlik listesi verilirse siparişin deposu o
+ * kümede olmak zorundadır.
+ *
+ * Neden şimdiden imzada: DOMAIN §8 "akıbet kararı depocunundur" diyor ama kapı bugün yalnız
+ * yöneticiye açık. Mobil depo ucu (21.11) açıldığında kapsam parametresi olmasaydı ya guard uçta
+ * ikinci kez yazılırdı ya da depocu BÜTÜN siparişlere erişirdi — ikincisi depo değişmezinin
+ * (CLAUDE §1) sessiz ihlali olurdu.
+ */
+export type WarehouseScope = readonly string[] | undefined;
+
+/** Kapsam süzgeci — kapsam verilmemişse soru sorulmaz (bugünkü davranış). */
+function outOfScope(orderWarehouseId: string, scope: WarehouseScope): boolean {
+  return scope !== undefined && !scope.includes(orderWarehouseId);
+}
+
+/**
+ * **Kısmi karşılama / kalem iadesi** (07.8). Eksik çıkan ya da geri gelen adet yazılır; ardından
+ * ödeme durumu yeniden türetilir ve iade borcu varsa hareket yazılır.
+ *
+ * Sıra önemlidir: önce mal, sonra para. Tersi olsaydı iade yazılıp düzeltme başarısız olduğunda
+ * "parası iade edilmiş ama hâlâ karşılanmış görünen" sipariş kalırdı.
+ */
+export async function adjustFulfillment(
+  db: SupabaseClient,
+  orderId: string,
+  lines: readonly FulfillmentAdjustment[],
+  opts: RefundOptions & { actorId?: string | null; warehouseScope?: WarehouseScope } = {},
+): Promise<AdjustOutcome> {
+  const orders = new OrderService(db);
+  const order = await orders.getById(orderId);
+  if (!order) return { status: 'not_found' };
+  if (outOfScope(order.warehouseId, opts.warehouseScope)) return { status: 'forbidden', reason: 'out_of_scope' };
+
+  const result = await orders.adjustFulfillment(orderId, lines, opts.actorId);
+  if (!result.ok) return { status: 'stale', currentStatus: result.currentStatus };
+
+  const settled = await settleRefund(db, orderId, opts);
+  if (!settled) return { status: 'not_found' };
+
+  // Haberin hangisi olduğunu malın nerede olduğu belirler: mal daha çıkmadıysa bu bir EKSİK
+  // KARŞILANMA (müşteri kapıda sürprizle karşılaşmasın), çıktıysa bir İADE (para geri döndü).
+  const delivered = result.currentStatus === 'delivered' || result.currentStatus === 'completed';
+  await notifyExceptionEffect(opts.effects, orderId, delivered ? 'order_refunded' : 'order_shortfall', {
+    refundedAmountCents: settled.refundedAmountCents,
+  });
+
+  return {
+    status: 'ok',
+    restockedQty: result.restockedQty ?? 0,
+    discardedQty: result.discardedQty ?? 0,
+    releasedQty: result.releasedQty ?? 0,
+    ...settled,
+  };
+}
+
+/**
+ * **İptal** (07.9). Ayrılmış mal geri bırakılır ve tahsil edilmiş para varsa TAMAMI iade edilir —
+ * iptal edilen siparişte karşılanan tutar 0'dır (ORDER_LIFECYCLE), gerisi türetimden gelir.
+ */
+export async function cancelOrder(
+  db: SupabaseClient,
+  orderId: string,
+  opts: RefundOptions & {
+    actorId?: string | null;
+    reason?: OrderCancelReason | null;
+    warehouseScope?: WarehouseScope;
+  } = {},
+): Promise<CancelOutcome> {
+  const orders = new OrderService(db);
+
+  const order = await orders.getById(orderId);
+  if (!order) return { status: 'not_found' };
+  if (outOfScope(order.warehouseId, opts.warehouseScope)) return { status: 'forbidden', reason: 'out_of_scope' };
+
+  // Kural motorun: teslim edilmiş sipariş iptal edilmez, iade yoluna girer (`returned`).
+  const verdict = canTransition(order.status, 'cancelled');
+  if (!verdict.allowed) return { status: 'forbidden', reason: verdict.reason };
+
+  const result = await orders.cancel(orderId, order.status, opts.actorId, opts.reason);
+  if (!result.ok) return { status: 'stale', currentStatus: result.currentStatus };
+
+  const settled = await settleRefund(db, orderId, { description: 'Sipariş iptali — iade', ...opts });
+  if (!settled) return { status: 'not_found' };
+
+  await notifyExceptionEffect(opts.effects, orderId, 'order_cancelled', { refundedAmountCents: settled.refundedAmountCents });
+
+  return { status: 'ok', releasedQty: result.releasedQty ?? 0, ...settled };
+}
+
+/**
+ * **İadeyi tek başına yeniden dener** (07.11).
+ *
+ * Neden ayrı bir yol: sağlayıcı çağrısı düştüğünde düzeltme/iptal ZATEN yazılmıştır ve geri
+ * alınmaz — `cancelOrder` ikinci kez koşamaz (sipariş artık iptal), `adjustFulfillment` koşarsa
+ * adetleri ikinci kez uygular. Yani "tekrar deneyin" demenin karşılığı olan bir kapı yoksa uyarı
+ * boş bir cümledir; operatörün elinde sağlayıcı panelinden başka bir şey kalmaz.
+ *
+ * Borç yeniden TÜRETİLİR, saklanmaz: aradan geçen sürede tahsilat ya da başka bir düzeltme olmuş
+ * olabilir. Borç kalmadıysa iade de yazılmaz — bu bir hata değil, cevabın kendisidir.
+ */
+export async function retryRefund(
+  db: SupabaseClient,
+  orderId: string,
+  opts: RefundOptions = {},
+): Promise<({ status: 'ok' } & RefundOutcome) | { status: 'not_found' }> {
+  if (!(await new OrderService(db).getById(orderId))) return { status: 'not_found' };
+
+  const settled = await settleRefund(db, orderId, opts);
+  if (!settled) return { status: 'not_found' };
+  return { status: 'ok', ...settled };
+}
+
+/**
+ * Ödeme durumunu tazeler ve borç varsa iadeyi yazar. Borç türetimden gelir; tek istisnası çağıranın
+ * verdiği açık tutardır (jest iadesi).
+ *
+ * İade hareketi yazıldığında durum bir kez daha türetilir (para kapısı yapar) — bu yüzden dönen
+ * değer hareketten SONRAKİ hâldir, öncekinden değil.
+ *
+ * **SIRA TERSİNE ÇEVRİLEMEZ (07.11): önce sağlayıcı çağrısı, sonra hareket.** Kartla ödenmiş bir
+ * siparişte para gerçekten dönmeden hareket yazılırsa defter kapanmış görünür, müşteri parasını
+ * beklemeye devam eder — hatanın en sinsi hâli, çünkü hiçbir ekranda iz bırakmaz. Çağrı düşerse
+ * hareket HİÇ yazılmaz ve sebep `refundBlocked` ile çağırana söylenir.
+ */
+async function settleRefund(db: SupabaseClient, orderId: string, opts: RefundOptions): Promise<RefundOutcome | null> {
+  const before = await syncOrderPaymentStatus(db, orderId);
+  if (before.status !== 'ok') return null;
+
+  // Motor zaten cent veriyordu; `/ 100` ile euro'ya inip sonra tekrar `* 100` ile çıkmak, aynı
+  // sayının iki kez çevrilmesiydi — birim karışıklığının tipik izi (02.9).
+  const dueCents = opts.refundAmountCents ?? before.derivation.refundDueCents;
+  const unsettled = (refundBlocked?: RefundBlockReason): RefundOutcome => ({
+    refundedAmountCents: 0,
+    paymentStatus: before.paymentStatus,
+    amountToCollectCents: before.derivation.amountToCollectCents,
+    ...(refundBlocked ? { refundBlocked } : {}),
+  });
+
+  if (dueCents <= 0) return unsettled();
+
+  const payment = await lastPayment(db, orderId);
+  const accountId = opts.refundAccountId ?? payment?.accountId ?? null;
+  // Hesap türetilemiyorsa iade yazılamaz ama düzeltme geçerlidir: borç `amountToCollect`'in negatifi
+  // olarak zaten görünür. Sessizce yanlış hesaba yazmaktansa borcu açıkta bırakmak doğrudur.
+  if (!accountId) return unsettled('no_account');
+
+  // Sağlayıcı çağrısı hesabın TÜRÜNE bağlıdır, siparişin ödeme yöntemine değil. Operatör kartla
+  // ödenmiş bir siparişi kasadan nakit iade etmeyi seçebilir (`refundAccountId`) — o zaman dönülecek
+  // bir sağlayıcı yoktur ve olmamalıdır.
+  const account = await new AccountService(db).getById(accountId);
+  let refundMeta: Record<string, unknown> | null = null;
+
+  if (account?.type === 'provider') {
+    const providerRef = typeof payment?.meta?.['providerRef'] === 'string' ? payment.meta['providerRef'] : null;
+    // Künye yoksa hangi ödemenin üzerinden dönüleceği bilinmiyor. Tahmin edilemez: yanlış niyete
+    // yapılan bir iade başka bir müşterinin parasını geri gönderir.
+    if (!providerRef) return unsettled('provider_ref_missing');
+
+    const result = await providerRefunder(opts.effects)({
+      paymentIntentId: providerRef,
+      amountCents: dueCents,
+      idempotencyKey: await refundIdempotencyKey(db, orderId, dueCents),
+    });
+    if (result.status === 'unavailable') return unsettled('provider_unavailable');
+    if (result.status === 'failed') return unsettled('provider_failed');
+
+    refundMeta = { providerRef, refundId: result.refundId };
+  }
+
+  const after = await recordOrderRefund(db, {
+    orderId,
+    accountId,
+    amountCents: dueCents,
+    valueDate: opts.valueDate,
+    description: opts.description ?? 'Sipariş iadesi',
+    meta: refundMeta,
+  });
+  if (after.status !== 'ok') {
+    // Para SAĞLAYICIDAN ÇIKTI ama deftere geçmedi — sessiz kalınamaz. Hangi iade olduğunu ancak bu
+    // satır söyleyebilir; çağıranın hata funnel'ı bunu `error_log`'a düşürür (18.5).
+    throw new Error(
+      `[refund] sağlayıcı iadesi yapıldı ama hareket yazılamadı — sipariş ${orderId}, iade ${String(refundMeta?.['refundId'] ?? '-')}`,
+    );
+  }
+
+  return {
+    refundedAmountCents: dueCents,
+    paymentStatus: after.paymentStatus,
+    amountToCollectCents: after.derivation.amountToCollectCents,
+  };
+}
+
+/** Para hangi hesaba girdiyse oradan çıkar — son tahsilat hareketi (künyesi de ondan okunur). */
+async function lastPayment(db: SupabaseClient, orderId: string) {
+  const movements = await new MoneyMovementService(db).listByOrder(orderId);
+  return movements.filter((movement) => movement.type === 'order_payment').at(-1) ?? null;
+}
+
+/**
+ * Sağlayıcı tarafında mükerrer iadeyi engelleyen anahtar.
+ *
+ * Sıradaki iadenin **kaçıncı** olduğu ve **tutarı** anahtara girer. Aynı iadenin tekrar denenmesi
+ * (çağrı geçti ama hareket yazılamadı, operatör yeniden bastı) aynı anahtarla gider ve Stripe ilk
+ * iadenin sonucunu döner — para iki kez çıkmaz. Gerçekten yeni bir kısmi iade ise sıra numarası
+ * değişmiştir, yeni anahtar üretilir.
+ */
+async function refundIdempotencyKey(db: SupabaseClient, orderId: string, amount: number): Promise<string> {
+  const movements = await new MoneyMovementService(db).listByOrder(orderId);
+  const sequence = movements.filter((movement) => movement.type === 'order_refund').length;
+  return `refund:${orderId}:${sequence}:${Math.round(amount * 100)}`;
+}
