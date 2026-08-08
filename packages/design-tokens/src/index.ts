@@ -36,6 +36,20 @@ export {
   customerAppBlur,
   customerAppGradient,
 } from './customer-app';
+// OPERASYON MOBİL (21.9): müşteri tabanının ÜÇÜNCÜ katmanı — `operations.ts`in "Veri Masası"
+// setiyle akrabalığı yalnız addadır. Operasyon mobil teması üç katmanı yayar:
+//     { ...customerColors, ...customerAppColors, ...operationsAppColors }
+// Gerekçe ve ölçüm `operations-app.ts` başlığında; web bu ihraçları da hiç görmez.
+export {
+  operationsAppOverrides,
+  operationsAppSurface,
+  operationsAppInk,
+  operationsAppColors,
+  operationsAppText,
+  operationsAppRadius,
+  operationsAppShadow,
+  operationsAppGradient,
+} from './operations-app';
 export {
   operationsText,
   operationsSurface,
