@@ -682,6 +682,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     actorId?: string | null;
     /** İlk kalıcı durumda üretilen referans (motor üretir); mevcut numarayı ezmez. */
     referenceNo?: string | null;
+    /** Geçişe bağlı serbest bağlam (ör. kuryenin "teslim edilemedi" notu) — log satırına yazılır. */
+    note?: string | null;
   }): Promise<TransitionResult> {
     const raw = await this.executeRpc('transition_order_status', {
       p_order_id: input.orderId,
@@ -689,6 +691,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       p_to: input.to,
       p_actor_id: input.actorId ?? null,
       p_reference_no: input.referenceNo ?? null,
+      p_note: input.note ?? null,
     });
     return TransitionResultSchema.parse(dbToApp(raw));
   }

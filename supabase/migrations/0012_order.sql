@@ -217,6 +217,9 @@ create table public.order_status_log (
   from_status order_status,                          -- ilk kayıtta null (siparişin doğuşu)
   to_status order_status not null,
   actor_id uuid references public.user_profiles (id) on delete set null, -- sistem olayında null
+  -- Geçişe bağlı serbest bağlam — kuryenin "teslim edilemedi" notu ("zil bozuk") gibi. Ayrı tablo
+  -- değil: not tek başına değil, O GEÇİŞLE anlamlı (yarınki deneme dünkü sebebi buradan okur).
+  note text,
   created_at timestamptz not null default now()
 );
 create index order_status_log_order_idx on public.order_status_log (order_id, created_at);
@@ -241,7 +244,8 @@ create or replace function public.transition_order_status(
   p_from order_status,
   p_to order_status,
   p_actor_id uuid default null,
-  p_reference_no text default null                   -- ilk kalıcı durumda üretilen referans (motor verir)
+  p_reference_no text default null,                  -- ilk kalıcı durumda üretilen referans (motor verir)
+  p_note text default null                           -- geçişe bağlı serbest bağlam (ör. kurye notu)
 ) returns jsonb
 language plpgsql
 security invoker
@@ -268,14 +272,14 @@ begin
          reference_no = coalesce(reference_no, p_reference_no)
    where id = p_order_id;
 
-  insert into public.order_status_log (order_id, from_status, to_status, actor_id)
-  values (p_order_id, p_from, p_to, p_actor_id);
+  insert into public.order_status_log (order_id, from_status, to_status, actor_id, note)
+  values (p_order_id, p_from, p_to, p_actor_id, p_note);
 
   return jsonb_build_object('ok', true, 'current_status', p_to);
 end;
 $$;
 
-revoke execute on function public.transition_order_status(uuid, order_status, order_status, uuid, text)
+revoke execute on function public.transition_order_status(uuid, order_status, order_status, uuid, text, text)
   from public, anon, authenticated;
 
 

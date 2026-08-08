@@ -174,6 +174,7 @@ Hazırlıkta fiilen çıkan parti(ler)in kaydı — depocu FEFO önerisini onayl
 | from_status | enum \| null | ilk kayıtta null (siparişin doğuşu) |
 | to_status | enum | |
 | actor_id | uuid \| null | kim (sistem olayında null) |
+| note | text \| null | geçişe bağlı serbest bağlam — kuryenin "teslim edilemedi" notu gibi (08.08; ayrı tablo değil: not o geçişle anlamlı, yarınki deneme dünkü sebebi buradan okur) |
 | created_at | timestamptz | |
 
 **`transition_order_status` fonksiyonu (07.6):** durum güncellemesi + log satırı tek transaction'da ve **yalnız beklenen kaynaktan** (koşullu). Araya biri girmişse yazmaz, güncel durumu bildirir — depocu "hazır" derken kurye "yolda" dediğinde biri diğerini sessizce ezmez. Geçişin izinli olup olmadığına fonksiyon KARAR VERMEZ; o motorun işidir (`domain-core/order/status-machine`).

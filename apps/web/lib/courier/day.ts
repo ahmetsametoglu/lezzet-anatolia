@@ -178,7 +178,7 @@ export async function markUndelivered(input: {
   const verdict = canTransition(order.status, to);
   if (!verdict.allowed) return { status: 'forbidden', reason: verdict.reason };
 
-  const result = await orders.transition({ orderId: input.orderId, from: order.status, to, actorId: input.courierId });
+  const result = await orders.transition({ orderId: input.orderId, from: order.status, to, actorId: input.courierId, note: input.note ?? null });
   if (!result.ok) return { status: 'stale', currentStatus: result.currentStatus };
 
   return { status: 'ok', outcome: input.outcome, currentStatus: result.currentStatus };

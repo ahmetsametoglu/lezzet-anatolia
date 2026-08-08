@@ -230,6 +230,8 @@ export const OrderStatusLogSchema = z.object({
   fromStatus: OrderStatusEnum.nullable(),
   toStatus: OrderStatusEnum,
   actorId: z.string().uuid().nullable(),
+  /** Geçişe bağlı serbest bağlam — kuryenin "teslim edilemedi" notu gibi; notsuz geçişte null. */
+  note: z.string().nullable(),
   createdAt: z.string(),
 });
 export type OrderStatusLog = z.infer<typeof OrderStatusLogSchema>;
@@ -237,6 +239,7 @@ export type OrderStatusLog = z.infer<typeof OrderStatusLogSchema>;
 export const OrderStatusLogInsertSchema = OrderStatusLogSchema.omit({ id: true, createdAt: true }).extend({
   fromStatus: OrderStatusEnum.nullish(),
   actorId: z.string().uuid().nullish(),
+  note: z.string().nullish(),
 });
 export type OrderStatusLogInsert = z.infer<typeof OrderStatusLogInsertSchema>;
 
