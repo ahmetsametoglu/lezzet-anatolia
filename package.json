@@ -11,6 +11,7 @@
     "dev": "turbo run dev",
     "dev:web": "pnpm --filter @lezzet/web run dev",
     "dev:backend": "pnpm --filter @lezzet/backend run dev",
+    "dev:mobile": "pnpm --filter @lezzet/mobile run start",
     "mobile:rebuild:ios": "pnpm --filter @lezzet/mobile run rebuild:ios",
     "mobile:rebuild:android": "pnpm --filter @lezzet/mobile run rebuild:android",
     "build": "turbo run build",
