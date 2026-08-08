@@ -27,7 +27,16 @@ const config: ExpoConfig = {
   updates: {
     enabled: false,
   },
+  /*
+    PAKET KİMLİKLERİ — yerel dev-client derlemesi kimliksiz yapılamıyor (prebuild dinamik config'e
+    otomatik yazamaz, 08.08'de ölçüldü). Değer PARAMETRİKTİR ve mağaza başvurusundan önce marka
+    alan adıyla kesinleşmeli (ters alan adı kuralı); dev-client için tek şart var olması.
+  */
+  ios: {
+    bundleIdentifier: 'com.lezzetanatolia.app',
+  },
   android: {
+    package: 'com.lezzetanatolia.app',
     adaptiveIcon: {
       // BEKLEYEN(21.3): nötr beyaz — marka kremi (`sand-50`) değil. Token'dan gelmeli, ama önce
       // ikon/splash GÖRSELLERİ krem zemine göre yeniden üretilmeli; renk tek başına değişirse

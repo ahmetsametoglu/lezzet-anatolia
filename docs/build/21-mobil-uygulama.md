@@ -240,8 +240,12 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     `LOCALES`, ikinci yazım kalktı). Bilinçli sapma: "Sadece indirimliler" anahtarı çizilmedi —
     sözleşmede yok, istemcide süzmek sayfalı listeyi yalan söyletir. Doğrulama (yönetici tekrarı):
     mobil 33 suite/187 test · design-tokens 19 (parite istisnasız) · typecheck/eslint/boundaries
-    temiz; ham hex yalnız `app.config.ts` splash (`BEKLEYEN(21.3)`). **Üç yerel modül eklendi →
-    dev-client YENİDEN DERLENMELİ.** **Kalan (bu görev `[~]`):** Android cam bulanıklığı
+    temiz; ham hex yalnız `app.config.ts` splash (`BEKLEYEN(21.3)`). ~~Üç yerel modül eklendi →
+    dev-client yeniden derlenmeli~~ (08.08: iOS dev-client yeniden derlendi ve simülatöre kuruldu —
+    `Build Succeeded`, `com.lezzetanatolia.app`; paket kimlikleri `app.config.ts`'e eklendi çünkü
+    prebuild dinamik config'e otomatik yazamıyor, değer parametrik ve mağaza öncesi kesinleşecek.
+    Android dev-client derlemesi Android işleriyle aynı sıraya bırakıldı). **Kalan (bu görev
+    `[~]`):** Android cam bulanıklığı
     (`BlurTargetView` bağı) · `BottomSheet` çift-eğri animasyonu (Reanimated'la) · sekme kabuğuna
     çalışma-zamanı smoke testi · `ui:shot:mobile` aracı.
 - [~] (21.8) **Operasyon yüzeyi ön hazırlık — rol × senaryo etüdü + tasarım brief seti:**
