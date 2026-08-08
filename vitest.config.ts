@@ -74,6 +74,13 @@ export default defineConfig({
           setupFiles: ['./vitest.setup.ts'],
           // Aynı satırlara giren testler paralel koşamaz; suite küçük, seri kalması sorun değil.
           fileParallelism: false,
+          // Varsayılan 5 sn/10 sn tavanları paylaşılan yerel Supabase için DAR (ölçüldü 08.08):
+          // üç şerit aynı DB'ye vururken tam paket koşusunda testler tam 5000 ms'te, kancalar
+          // 10000 ms'te kesiliyordu — hep FARKLI dosyalarda, izole koşuda hepsi <200 ms. Bu bir
+          // kod yavaşlığı değil sıra bekleme; tavanı kaldırmak değil genişletmek doğru: asılı
+          // kalan sorgu yine düşer, yalnız yalancı kırmızı üretmez.
+          testTimeout: 15_000,
+          hookTimeout: 30_000,
         },
       },
     ],

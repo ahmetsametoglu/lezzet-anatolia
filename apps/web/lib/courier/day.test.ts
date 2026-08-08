@@ -33,6 +33,9 @@ let stockId: string;
 let accountId: string;
 const createdProfiles: string[] = [];
 
+// WhatsApp beklentisi de BU değerden türer — sabit yazılsaydı damga her koşuda beklentiyi kırardı.
+const customerPhone = `06${String(stamp).slice(-8)}`;
+
 const today = new Date().toISOString().slice(0, 10);
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
@@ -49,7 +52,9 @@ beforeAll(async () => {
   variantId = variants[0]!.id;
 
   const profiles = new UserProfileService(db);
-  const customer = await profiles.insert({ name: 'Marie Dupont', email: `kurye-${stamp}@example.test`, phone: '06 12 34 56 78' });
+  // Telefon DAMGALI: `user_profiles.phone` benzersiz (phone-key) ve bu fikstürün paket kopyası da
+  // var — sabit bir numara yazan iki dosya aynı pencerede koşunca unique kısıta çarpışıyor (08.08).
+  const customer = await profiles.insert({ name: 'Marie Dupont', email: `kurye-${stamp}@example.test`, phone: customerPhone });
   const courier = await profiles.insert({ name: 'Kurye Ali', email: `ali-${stamp}@example.test` });
   const other = await profiles.insert({ name: 'Kurye Veli', email: `veli-${stamp}@example.test` });
   customerId = customer.id;
@@ -157,7 +162,7 @@ describe('gün listesi (11.1)', () => {
 
     const stop = mine(await listCourierDay({ courierId, locale: 'fr' }), orderId);
 
-    expect(stop.whatsAppLink).toContain('wa.me/33612345678');
+    expect(stop.whatsAppLink).toContain(`wa.me/33${customerPhone.slice(1)}`);
     expect(decodeURIComponent(stop.whatsAppLink!)).toContain('Bonjour Marie Dupont');
   });
 
