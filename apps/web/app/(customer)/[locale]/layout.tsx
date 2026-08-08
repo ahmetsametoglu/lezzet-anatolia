@@ -14,6 +14,8 @@ import { AccountProvider } from '@/components/customer/account/account-context';
 import { VisitPing } from '@/components/customer/account/visit-ping';
 import { getDeliveryZones } from '@/lib/delivery/read';
 import { currentCustomer } from '@/lib/guard';
+import { TITLE_TEMPLATE } from '@/lib/seo/title';
+import layoutMessages from './layout-messages.json';
 
 // Müşteri evreni fontları. latin-ext → Türkçe (ş ğ ı) ve Almanca (ä ö ü ß) doğru gösterilir.
 const lora = Lora({ subsets: ['latin', 'latin-ext'], variable: '--font-lora', display: 'swap' });
@@ -29,11 +31,38 @@ const karla = Karla({ subsets: ['latin', 'latin-ext'], variable: '--font-karla',
  * Köken tek kaynaktan (`siteOrigin`): mailin gösterdiği adres ile sayfanın kanonik adresi aynı
  * olmalı, yoksa arama motoru mailden gelen bağı ayrı bir sayfa sanar.
  */
-export const metadata: Metadata = {
-  metadataBase: new URL(siteOrigin()),
-  title: brand.name,
-  description: `${brand.name} — donuk Türk gıdası`,
-};
+/**
+ * ── BAŞLIK ŞABLONU (08.1) ────────────────────────────────────────────────────
+ * Sayfalar kendi başlığını yazıyor ("Baklava Fıstıklı") ve sekmede marka adı HİÇ görünmüyordu —
+ * paylaşılan bir sekme ya da yer imi kimin sayfası olduğunu söylemiyordu. Şablon markayı ekliyor;
+ * `default` ise başlığı olmayan sayfaların hâli.
+ *
+ * **Şablon layout'ta olmalı, sayfalarda değil:** her sayfanın kendi başlığına marka eklemesi aynı
+ * dizginin onlarca kopyası olurdu ve biri mutlaka unutulurdu — unutulduğu da fark edilmezdi.
+ *
+ * ── AÇIKLAMA DİLE GÖRE ───────────────────────────────────────────────────────
+ * Buradaki `description` Türkçe SABİTTİ ve bu sessiz bir hataydı: Next onu kendi açıklaması
+ * olmayan HER sayfaya basıyor, yani Fransız ziyaretçinin gördüğü sayfa arama motoruna Türkçe
+ * açıklama beyan ediyordu. Artık dile göre çözülüyor; `layout-messages.json` de aynı kural
+ * (`CLAUDE §2`: global JSON yok, metin onu kullanan yerin yanında).
+ *
+ * `metadataBase` — göreli `alternates` ve `og:url` adreslerini mutlak hâle getiren kök.
+ * `hreflang` ve `canonical` MUTLAK adres ister; olmadan Next göreli değerleri olduğu gibi basar ve
+ * tarayıcı onları "geçersiz" sayıp yok sayar. Yani bu satır olmadan bütün hreflang işi sessizce
+ * çalışmaz — hata da vermez, sadece etkisiz kalır.
+ *
+ * Köken tek kaynaktan (`siteOrigin`): mailin gösterdiği adres ile sayfanın kanonik adresi aynı
+ * olmalı, yoksa arama motoru mailden gelen bağı ayrı bir sayfa sanar.
+ */
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = hasLocale(routing.locales, locale) ? layoutMessages[locale] : layoutMessages[brand.defaultLocale];
+  return {
+    metadataBase: new URL(siteOrigin()),
+    title: { template: TITLE_TEMPLATE, default: brand.name },
+    description: t.description,
+  };
+}
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));

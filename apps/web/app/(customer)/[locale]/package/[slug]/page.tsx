@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { localeAlternates } from '@/lib/seo/alternates';
+import { openGraphOf } from '@/lib/seo/open-graph';
 import { setRequestLocale } from 'next-intl/server';
 import { detectDevice } from '@/lib/device';
 import { getPackageDetail } from '@/lib/storefront/packages';
@@ -34,7 +35,22 @@ export async function generateMetadata({ params }: PackagePageProps): Promise<Me
   if (!hasLocale(routing.locales, locale)) return {};
   const pack = await getPackageDetail(slug, locale);
   if (!pack) return {};
-  return { title: pack.name, alternates: localeAlternates('/package/[slug]', locale, { slug }) };
+  return {
+    title: pack.name,
+    // `description` ARTIK VAR: paylaşım kartı adı tek başına gösterse "Bayram Sofrası Paketi"
+    // yazan çıplak bir kutu üretirdi. Paketin açıklaması boş olabilir (operatör girmemiş) — kapı
+    // o hâlde alanı hiç yazmıyor.
+    ...(pack.description ? { description: pack.description } : {}),
+    alternates: localeAlternates('/package/[slug]', locale, { slug }),
+    openGraph: openGraphOf({
+      route: '/package/[slug]',
+      locale,
+      params: { slug },
+      title: pack.name,
+      description: pack.description,
+      image: pack.image.url,
+    }),
+  };
 }
 
 export default async function PackagePage({ params, searchParams }: PackagePageProps) {

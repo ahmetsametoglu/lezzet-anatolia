@@ -52,6 +52,47 @@ Yani içerik seçili dilde boşsa önce Türkçe, o da boşsa Fransızca, o da b
 
 ---
 
+## Paylaşım kartları (Open Graph)
+
+**Yeni bir sayfa açan herkes og'yi hreflang gibi düşünmeli** — bu bölüm o yüzden sözleşmede
+(08.1, 08.08). Ölçüm bu bölümün yokluğunda ne olduğunu gösterdi: repoda sıfır `openGraph` etiketi
+vardı ve WhatsApp'ta dolaşan her ürün bağlantısı **görselsiz, çıplak adres** olarak çıkıyordu.
+Sayfa yapılırken kimse unutmamıştı; sözleşmede yazmıyordu.
+
+- **Tek kapı: `openGraphOf` (`apps/web/lib/seo/open-graph.ts`)**, `localeAlternates`in kardeşi.
+  Blok her sayfaya elle yazılsaydı kopyalar ayrışırdı — biri `siteName` yazar öteki yazmaz — ve
+  fark ancak WhatsApp'ta görülürdü. Kapı `og:url`i **yol tablosundan türetir**: segment kelimesi
+  dile göre değişiyor (`/recettes` · `/tarifler`), elle yazılan adres bir dilde yanlış olurdu.
+- **Görsel yoksa alan HİÇ yazılmaz.** Boş `og:image` kartı görselsiz değil KIRIK üretir: paylaşım
+  aracı adresi çeker, alamaz ve bazı istemcilerde kartın tamamını düşürür. Yapısal verinin *"ne
+  söylenirse doğru söylenir"* kuralı burada da geçerli.
+- **`og:type` `product` DEĞİL.** Ürün kartı fiyat/stok beklentisi doğurur (`og:price`,
+  `availability`) ve o alanları doğru doldurmak bugün taşımadığımız bir söz. Satılan sayfalar
+  `website`, okunan içerik (tarif) `article`.
+- **`og:url` ile `canonical` AYNI adresi göstermeli.** İkisi ayrışırsa paylaşım aracı bir sayfayı,
+  arama motoru başkasını görür. İkisi de yol tablosundan türediği için bu yapısal olarak korunuyor.
+- **Bugün kart üreten sayfalar:** ana sayfa · ürün · paket · tarif listesi ve detayı. Görseli
+  olanlar ürün, paket ve tarif (kapak görseli); ana sayfa ve tarif listesi görselsiz başlıyor —
+  paylaşıma ayrılmış marka görseli yok (`design/BACKLOG §1` kahraman-görsel ailesi).
+
+### Sekme başlığı
+
+`title.template` kök layout'ta (`%s · Lezzet Anatolia`) ve **tek kaynak** `lib/seo/title.ts`.
+Sayfalar markayı elle eklemez; ekleseler aynı dizginin onlarca kopyası olurdu.
+
+⚠ **Next şablonu KENDİ segmentine uygulamaz, yalnız ALT rotalara.** Ana sayfa layout'la aynı
+segmentte olduğu için ekini almıyordu (ölçüldü: ürün sayfasında ek var, ana sayfada yoktu) —
+markasız kalan sayfa sitenin en çok arananıydı. `titleWithBrand` o boşluğu aynı ayırıcıyla kapatır.
+
+### Varsayılan açıklama dile göredir
+
+Kök layout'un `description`ı bir süre **Türkçe sabitti** ve Next onu kendi açıklaması olmayan HER
+sayfaya basıyordu: Fransız ziyaretçinin gördüğü sayfa arama motoruna Türkçe açıklama beyan
+ediyordu. Hata sessizdi — hiçbir yerde uyarı üretmez, yalnız yanlış dilde bir satır bırakır.
+Artık `layout-messages.json`'dan dile göre çözülüyor.
+
+---
+
 ## Kalıcı kararlar
 
 - Çeviri **AI ile, admin onaylı, zorunlu değil.**

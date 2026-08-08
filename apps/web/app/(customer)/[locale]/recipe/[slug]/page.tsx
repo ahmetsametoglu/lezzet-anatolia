@@ -4,6 +4,7 @@ import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { localizedUrl } from '@lezzet/i18n';
 import { localeAlternates } from '@/lib/seo/alternates';
+import { openGraphOf } from '@/lib/seo/open-graph';
 import { RecipeJsonLd } from '@/lib/seo/json-ld';
 import { detectDevice } from '@/lib/device';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
@@ -42,31 +43,28 @@ export async function generateMetadata({ params }: RecipePageProps): Promise<Met
   if (!hasLocale(routing.locales, locale)) return {};
   const recipe = await getRecipeDetail(slug, locale, await readPlaceWarehouses(), await readPricingViewer());
   if (!recipe) return {};
-  const url = localizedUrl('/recipe/[slug]', locale, { slug });
   return {
     title: recipe.name,
     ...(recipe.description ? { description: recipe.description } : {}),
     alternates: localeAlternates('/recipe/[slug]', locale, { slug }),
     /**
-     * **Paylaşım kartı BAŞTAN var** (denetim eki 08.08, kullanıcı onayı) — ürün sayfalarında og
-     * ayrı bir iş olarak bekliyor (`musteri-og-kartlari` talebi), tarifte beklemiyor ve sebebi
-     * içeriğin kendisi: tarif WhatsApp'ta paylaşılacak şeyin ta kendisi. Görselsiz bir tarif
-     * bağlantısı, paylaşıldığı grupta hiç tıklanmaz.
+     * **Paylaşım kartı** (08.1 · `lib/seo/open-graph.ts`) — tarif WhatsApp'ta paylaşılacak şeyin
+     * ta kendisi; görselsiz bir tarif bağlantısı, paylaşıldığı grupta hiç tıklanmaz.
+     *
+     * `type: 'article'` — tarif okunan bir içerik, satılan bir şey değil.
      *
      * `description` burada HEP dolu ve bu bir şans değil, yayın kısıtının sonucu: üç dilde
      * açıklaması olmayan tarif yayına giremiyor (0038). Ürün tarafında aynı güvence yok.
-     *
-     * `type: 'article'` — tarif bir ürün değil, okunan bir içerik. `product` demek paylaşımı
-     * alışveriş kartı olarak gösterirdi ve fiyat beklentisi doğururdu; tarifin fiyatı yok.
      */
-    openGraph: {
-      type: 'article',
-      title: recipe.name,
-      ...(recipe.description ? { description: recipe.description } : {}),
-      url,
+    openGraph: openGraphOf({
+      route: '/recipe/[slug]',
       locale,
-      ...(recipe.image.url ? { images: [recipe.image.url] } : {}),
-    },
+      params: { slug },
+      title: recipe.name,
+      description: recipe.description,
+      image: recipe.image.url,
+      type: 'article',
+    }),
   };
 }
 

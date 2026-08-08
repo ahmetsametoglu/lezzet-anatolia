@@ -1,5 +1,9 @@
 {
   "tr": {
+    "meta": {
+      "title": "Donuk Türk gıdası — Strasbourg ve Fransa",
+      "description": "El emeğiyle hazırlanan börek, baklava ve künefe. Strasbourg ve çevresinde kapıya teslim, Fransa geneline kargo — soğuk zincir bozulmadan."
+    },
     "hero": {
       "eyebrow": "Strasbourg'dan sofranıza",
       "titleLead": "Anadolu'nun lezzeti,",
@@ -44,6 +48,10 @@
     }
   },
   "fr": {
+    "meta": {
+      "title": "Produits turcs surgelés — Strasbourg",
+      "description": "Böreks, baklavas et künefe préparés à la main. Livraison à domicile à Strasbourg et alentours, expédition dans toute la France — chaîne du froid respectée."
+    },
     "hero": {
       "eyebrow": "De Strasbourg à votre table",
       "titleLead": "La saveur d'Anatolie,",
@@ -88,6 +96,10 @@
     }
   },
   "de": {
+    "meta": {
+      "title": "Türkische Tiefkühlprodukte — Straßburg",
+      "description": "Handgemachte Börek, Baklava und Künefe. Lieferung nach Hause in Straßburg und Umgebung, Versand in ganz Frankreich — durchgehende Kühlkette."
+    },
     "hero": {
       "eyebrow": "Von Straßburg auf Ihren Tisch",
       "titleLead": "Anatoliens Geschmack,",

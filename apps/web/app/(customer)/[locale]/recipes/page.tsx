@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { localeAlternates } from '@/lib/seo/alternates';
+import { openGraphOf } from '@/lib/seo/open-graph';
 import { detectDevice } from '@/lib/device';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { listStorefrontRecipes } from '@/lib/storefront/recipe';
@@ -40,7 +41,7 @@ export async function generateMetadata({ params }: RecipesPageProps): Promise<Me
     // Görselsiz og bilinçli: liste sayfasının kendi görseli yok (kartlardan birini seçmek
     // editoryal bir karar olurdu ve o kart yarın değişir). Başlık + açıklama yine kart üretir;
     // görsel ihtiyacı çıkarsa `design/BACKLOG §1`'in kahraman-görsel ailesine düşer.
-    openGraph: { type: 'website', title: t.title, description: t.heroBody, locale },
+    openGraph: openGraphOf({ route: '/recipes', locale, title: t.title, description: t.heroBody }),
   };
 }
 
