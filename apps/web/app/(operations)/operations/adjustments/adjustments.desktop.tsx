@@ -4,9 +4,11 @@ import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { Input, Textarea } from '@/components/operation/form/input';
+import { FieldShell } from '@/components/operation/form/field-shell';
 import { Combobox } from '@/components/operation/form/combobox';
 import { num } from '@/components/operation/ui/format';
 import { ADJ_NOTES, REASON_LABEL, expiryLabel } from './adjustments-labels';
+import { TemperatureCard, fmt } from './temperature-card';
 import type { AdjustmentsData, BatchOption } from './adjustments-types';
 import type { WarehouseReason } from '@lezzet/application';
 
@@ -39,6 +41,11 @@ interface AdjustmentsViewProps {
 }
 
 const REASONS: WarehouseReason[] = ['expired', 'damaged', 'count_diff', 'lost'];
+
+/** ISO damgası → "08:10". Okuma tarafındaki `entry.time` ile aynı biçim; iki şerit yan yana duruyor. */
+function timeOf(iso: string): string {
+  return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
 
 export function AdjustmentsDesktop(props: AdjustmentsViewProps) {
   const { data, stockId, qty, reason, note, busy, error, success } = props;
@@ -73,7 +80,7 @@ export function AdjustmentsDesktop(props: AdjustmentsViewProps) {
             </p>
           ) : (
             <>
-              <Field label="Parti" hint="ürün · son tarih">
+              <FieldShell label="Parti" labelAside="ürün · son tarih">
                 <Combobox
                   value={stockId}
                   onChange={props.onStock}
@@ -88,9 +95,9 @@ export function AdjustmentsDesktop(props: AdjustmentsViewProps) {
                     {selected.isExpired ? <Badge tone="red">geçti</Badge> : null}
                   </span>
                 ) : null}
-              </Field>
+              </FieldShell>
 
-              <Field label="Adet">
+              <FieldShell label="Adet">
                 <Input
                   type="number"
                   min={1}
@@ -101,9 +108,9 @@ export function AdjustmentsDesktop(props: AdjustmentsViewProps) {
                   onChange={(event) => props.onQty(event.target.value)}
                   disabled={busy}
                 />
-              </Field>
+              </FieldShell>
 
-              <Field label="Sebep" hint="zorunlu">
+              <FieldShell label="Sebep" labelAside="zorunlu">
                 <div className="flex flex-wrap gap-2">
                   {REASONS.map((option) => (
                     <button
@@ -124,9 +131,9 @@ export function AdjustmentsDesktop(props: AdjustmentsViewProps) {
                 <span className="mt-1 font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
                   {ADJ_NOTES.reasonRequired}
                 </span>
-              </Field>
+              </FieldShell>
 
-              <Field label="Not" hint="isteğe bağlı">
+              <FieldShell label="Not" labelAside="isteğe bağlı">
                 <Textarea
                   rows={2}
                   value={note}
@@ -134,7 +141,7 @@ export function AdjustmentsDesktop(props: AdjustmentsViewProps) {
                   disabled={busy}
                   placeholder="İstisnai durumun kısa açıklaması"
                 />
-              </Field>
+              </FieldShell>
 
               {error ? (
                 <p className="rounded-ops-btn border border-ops-red-line bg-ops-red-bg px-3 py-2 font-ops-body text-ops-sm text-ops-red">
@@ -162,13 +169,9 @@ export function AdjustmentsDesktop(props: AdjustmentsViewProps) {
             </>
           )}
 
-          {/* Sıcaklık kaydı ÇİZİLİYOR AMA KAPALI: kaydı saklayacak yer yok (`TemperatureLog`
-              yazılmadı). Bölümü hiç göstermemek, tasarımda olan bir işi görünmez kılardı;
-              çalışıyormuş gibi göstermek ise girilen dereceyi hiçbir yere yazmazdı. */}
-          <div className="mt-2 flex flex-col gap-1 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3 opacity-80">
-            <span className="font-ops-display text-ops-sm font-semibold text-ops-muted">Sıcaklık kaydı</span>
-            <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">{ADJ_NOTES.temperaturePending}</span>
-          </div>
+          {/* Sıcaklık kaydı imha formuyla AYNI masada (tasarım: "stoktan düşme, dönen mal kararı
+              ve sıcaklık kaydı tek masada") ama ayrı bir iş — kendi durumunu kendi taşıyor. */}
+          <TemperatureCard points={data.points} />
         </div>
 
         <aside className="flex min-h-0 flex-col overflow-y-auto border-l border-ops-line bg-ops-panel">
@@ -202,24 +205,56 @@ export function AdjustmentsDesktop(props: AdjustmentsViewProps) {
               Günün son kayıtları tarandı — daha eski girişler bu listede olmayabilir.
             </p>
           ) : null}
+
+          {/* ── SICAKLIK · BUGÜN (10.6) ────────────────────────────────────────────────────
+              Tasarım bu şeridi imha kayıtlarıyla AYNI raya koyuyor ve sebebi ortak: ikisi de
+              "bugün ne yaptım" sorusunun cevabı.
+
+              **Ölçülmemiş nokta amber KALIR, listeden düşmez** — tasarımın kendi cümlesi. Düşseydi
+              atlanan dolap görünmez olurdu ve hijyen defterindeki boşluk ancak denetimde çıkardı;
+              amber satır gün boyunca bir hatırlatmadır. */}
+          <div className="border-t border-ops-line px-5 py-3">
+            <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Sıcaklık · bugün</span>
+          </div>
+          {data.points.length === 0 ? (
+            <p className="px-5 py-3 font-ops-body text-ops-xs text-ops-muted">{ADJ_NOTES.temperatureNewPoint}</p>
+          ) : (
+            <ul>
+              {data.points.map((point) => (
+                <li
+                  key={point.name}
+                  className={`flex items-center justify-between gap-2 border-b border-ops-line-soft px-5 py-2 ${
+                    point.temperatureC === null ? 'bg-ops-amber-bg' : ''
+                  }`}
+                >
+                  <span className="truncate font-ops-body text-ops-xs text-ops-body">
+                    {point.name}
+                    {point.recordedAt ? ` · ${timeOf(point.recordedAt)}` : ''}
+                  </span>
+                  {point.temperatureC === null ? (
+                    <span className="flex-none font-ops-body text-ops-micro font-semibold text-ops-amber-dark">
+                      henüz ölçülmedi
+                    </span>
+                  ) : (
+                    <span
+                      className={`flex-none font-ops-mono text-ops-xs font-semibold ${
+                        point.outOfRange ? 'text-ops-amber-dark' : 'text-ops-olive-dark'
+                      }`}
+                    >
+                      {fmt(point.temperatureC)} {point.outOfRange ? '!' : '✓'}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
           <p className="mt-auto border-t border-ops-line-soft px-5 py-2.5 font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
             {ADJ_NOTES.documentRule}
           </p>
         </aside>
       </div>
     </div>
-  );
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="flex items-baseline gap-2">
-        <span className="font-ops-display text-ops-xs font-semibold text-ops-ink">{label}</span>
-        {hint ? <span className="font-ops-body text-ops-micro text-ops-faint">{hint}</span> : null}
-      </span>
-      {children}
-    </label>
   );
 }
 

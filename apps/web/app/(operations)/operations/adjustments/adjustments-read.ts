@@ -3,6 +3,7 @@ import { StockAdjustmentDetailService, StockService, serviceDb } from '@lezzet/d
 import { resolveLocalizedText } from '@lezzet/types';
 import { titleOf } from '@/lib/catalog/title';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
+import { readTemperature } from './temperature-read';
 import type { AdjustmentsData, BatchOption, TodayEntry } from './adjustments-types';
 
 /** Şeridin tavanı — bir günün düzeltmeleri doğal tavanlı ama sonsuz değil. */
@@ -25,8 +26,13 @@ export async function readAdjustments(warehouse: { id: string; name: string }): 
   const db = serviceDb();
   const stocks = new StockService(db);
 
-  // Eldeki partiler (fiziksel adedi sıfırdan büyük olanlar, son tarihe göre sıralı).
-  const details = await stocks.listInStockDetailed(undefined, [warehouse.id]);
+  // Eldeki partiler + sıcaklık noktaları TEK turda: ikisi de aynı deponun aynı anki gerçeği ve
+  // sırayla beklemelerinin sebebi yok.
+  const [details, temperature] = await Promise.all([
+    // Eldeki partiler (fiziksel adedi sıfırdan büyük olanlar, son tarihe göre sıralı).
+    stocks.listInStockDetailed(undefined, [warehouse.id]),
+    readTemperature(warehouse.id),
+  ]);
 
   const today = new Date();
   const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -85,6 +91,7 @@ export async function readAdjustments(warehouse: { id: string; name: string }): 
   return {
     batches,
     today: entries,
+    points: temperature.points,
     // Tarama nerede kesildi — ekran bunu yazabilsin diye. Sessiz kırpma, olmayan bir tamlık sözü
     // vermek olurdu; süzgeç bellekte olduğu için burada "daha fazlası var" değil "tarama kesildi"
     // deniyor: kesilen kısımda bu depoya ait kayıt olabilir de olmayabilir de.

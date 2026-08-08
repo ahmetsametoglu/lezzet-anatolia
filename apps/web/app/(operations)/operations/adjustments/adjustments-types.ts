@@ -35,9 +35,34 @@ export interface TodayEntry {
   time: string;
 }
 
+/**
+ * Ölçüm noktası ve BUGÜNKÜ hâli (10.6).
+ *
+ * `temperatureC: null` = **bugün ölçülmedi** — sıfır değil. Ölçülmeyen bir noktayı "0 °C" diye
+ * göstermek, bozuk ölçümü sağlıklı gibi okutmanın ders kitabı örneği olurdu (`CLAUDE §1`).
+ * Ekran bu `null`'u amber "henüz ölçülmedi" olarak çiziyor — tasarımın kuralı.
+ */
+export interface TemperaturePoint {
+  /** Dolap adı / araç plakası — depo içi konum. */
+  name: string;
+  /** Günün SON ölçümü (°C); bugün ölçülmediyse `null`. */
+  temperatureC: number | null;
+  /** Son ölçümün anı (ISO); ölçülmediyse `null`. */
+  recordedAt: string | null;
+  /**
+   * Bu noktanın ALIŞKANLIĞI (°C) — geçmiş ölçümlerinin ortancası. `null` = yeterli geçmiş yok,
+   * yani "sıra dışı mı" sorusuna cevap veremiyoruz. Sıfır değil, bilinmiyor.
+   */
+  usualC: number | null;
+  /** Alışkanlığından toleransı aşacak kadar sapmış mı — bir UYARIDIR, kayıt zaten yazılmıştır. */
+  outOfRange: boolean;
+}
+
 export interface AdjustmentsData {
   batches: BatchOption[];
   today: TodayEntry[];
+  /** Ölçüm noktaları + bugünkü durumları. Boş dizi = bu depoda hiç sıcaklık kaydı geçmemiş. */
+  points: TemperaturePoint[];
   /**
    * Günün kayıt TARAMASI kesildi mi — tavan doldu.
    *

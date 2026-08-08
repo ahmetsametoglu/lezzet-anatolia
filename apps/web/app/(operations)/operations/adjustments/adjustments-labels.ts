@@ -38,9 +38,13 @@ export const ADJ_NOTES = {
     'Bir kayıtta birden çok parti düşülebilir; hepsi tek belge numarasını paylaşır. Bir satır tutmazsa hiçbiri yazılmaz.',
   empty: 'Bugün stoktan düşülen bir şey yok.',
   noBatch: 'Elde düşülebilecek parti yok — stok girişi yapılmamış ya da kapsamınızdaki depo boş.',
-  /** Sıcaklık kaydı: arka ucu yok. */
-  temperaturePending:
-    'Sıcaklık kaydı henüz açık değil: ölçüm noktalarını ve dereceyi saklayacak kayıt (`TemperatureLog`) yazılmadı. Bugünkü ölçümleri kâğıda işleyip operasyona bildirin.',
+  /** Sıcaklık girişi: hijyen denetiminin ilk istediği veri; giriş 10 saniyeden uzun sürmemeli. */
+  temperatureHint: 'Nokta seçin, dereceyi yazın. Sıra dışı değer uyarır ama kaydı engellemez.',
+  /**
+   * Nokta kümesinin sınırı — GÖRÜNÜR yazılıyor. Küme geçmiş kayıtlardan türüyor; hiç ölçülmemiş
+   * bir dolap listede yoktur ve operatör onu "yok" değil "henüz yazılmamış" diye okumalı.
+   */
+  temperatureNewPoint: 'Listede olmayan bir nokta adını yazabilirsiniz — ilk kayıttan sonra listeye girer.',
 } as const;
 
 /** Partinin son tarih rozeti — geçmiş parti listede kalır ve işaretlenir. */
