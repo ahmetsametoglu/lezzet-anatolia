@@ -1,10 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { confirmPreparation } from '@lezzet/application';
+import { serviceDb } from '@lezzet/database';
 import type { PreparationPick } from '@lezzet/types';
-import { confirmPreparation } from '@/lib/order/preparation';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireWarehouseScope } from '@/lib/guard';
+import { readWorkWarehouse } from '@/lib/warehouse/context';
 
 /**
  * Hazırlık masasının tek yazma yolu (10.1–10.3).
@@ -12,6 +14,11 @@ import { requireWarehouseScope } from '@/lib/guard';
  * **Kural yazmıyor, kapıya devrediyor.** Kilitli parti kontrolü, parti kaydı, sipariş durumu ve
  * eksik tavsiyesi `confirmPreparation`'ın içinde; burada yalnız kimlik soruluyor ve cevap Türkçeye
  * çevriliyor. Ekranın karar sandığı her satır bir gün kapıyla ayrışırdı.
+ *
+ * **Depo kimliği İSTEMCİDEN GELMEZ** (10.7): sunucuda bağlamdan yeniden çözülür. Parametre olarak
+ * alsaydık, çereze dokunmadan doğrudan action'a başka bir depo kimliği gönderen bir istek o deponun
+ * siparişini kapatırdı — kapının `out_of_scope` kontrolü de kanmış olurdu, çünkü ona verilen kimlik
+ * "operatörün deposu" diye geçerdi. Bağlam kapısı kimliği kapsama karşı doğrulanmış hâlde döndürür.
  */
 const PREP_PATH = '/operations/preparation';
 
@@ -29,13 +36,30 @@ export async function confirmPreparationAction(
   picks: PreparationPick[],
 ): Promise<ActionResult<ConfirmResult>> {
   try {
-    // Depo kapsamı SORULUYOR ama depo kimliği kapıya geçilmiyor: onay siparişin kendi deposundan
-    // yazılır (partiler oradan seçildi). Buradaki soru "bu kişi depoda mı" — fail-closed.
+    // İki ayrı soru, iki ayrı kapı: guard "bu kişi depo personeli mi" (fail-closed), bağlam ise
+    // "bugün hangi depoda çalışıyor". Kimliği guard'dan almak yetmezdi — kapsam çok depolu
+    // olabilir ve o zaman "hangisi" sorusunun cevabı guard'da yok.
     const { user } = await requireWarehouseScope();
+    const workplace = await readWorkWarehouse();
+    if (workplace.status !== 'ok') {
+      throw new Error('Hangi depoda çalıştığınız belli değil — üst bardan depo seçip tekrar deneyin. Hiçbir kayıt yazılmadı.');
+    }
 
-    const result = await confirmPreparation({ orderId, picks, actorId: user.profileId });
+    const result = await confirmPreparation(serviceDb(), {
+      orderId,
+      warehouseId: workplace.warehouseId,
+      picks,
+      actorId: user.profileId,
+    });
 
     if (result.status === 'not_found') throw new Error('Sipariş bulunamadı.');
+    // **Başka deponun siparişi: HİÇBİR yazım yapılmadı.** Kuyruk zaten süzülü olduğu için normal
+    // akışta görünmez; buraya düşmesi bayat bir sekmenin ya da bağlam değişikliğinin işaretidir.
+    if (result.status === 'forbidden') {
+      throw new Error(
+        `Bu sipariş ${workplace.name} deposunun değil — başka bir deponun kuyruğundan geliyor. Hiçbir kayıt yazılmadı; sayfayı tazeleyin.`,
+      );
+    }
     // **Kilitli kalem ihlali: HİÇBİR yazım yapılmadı.** Cümle bunu açıkça söylüyor — "olmadı" ile
     // "yarısı oldu" arasındaki farkı depocu bilmek zorunda, yoksa kalemi ikinci kez toplar.
     if (result.status === 'pinned_violation') {

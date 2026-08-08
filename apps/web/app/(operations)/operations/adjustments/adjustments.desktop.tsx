@@ -8,7 +8,7 @@ import { Combobox } from '@/components/operation/form/combobox';
 import { num } from '@/components/operation/ui/format';
 import { ADJ_NOTES, REASON_LABEL, expiryLabel } from './adjustments-labels';
 import type { AdjustmentsData, BatchOption } from './adjustments-types';
-import type { WarehouseReason } from '@/lib/stock/adjustment';
+import type { WarehouseReason } from '@lezzet/application';
 
 /**
  * **Stoktan düş masası** (10.5) — `design/project/Operasyon - Depo Imha Sayim.dc.html` (*"· web"*).
@@ -62,7 +62,7 @@ export function AdjustmentsDesktop(props: AdjustmentsViewProps) {
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader
         title="Stoktan düş"
-        subtitle={`${data.warehouseName ? `${data.warehouseName} · ` : ''}Sebep zorunlu · kayıt anında stok düşer`}
+        subtitle={`${data.warehouseName} · Sebep zorunlu · kayıt anında stok düşer`}
       />
 
       <div className="grid min-h-0 flex-1 grid-cols-[1.7fr_minmax(280px,1fr)] overflow-hidden">
@@ -194,10 +194,12 @@ export function AdjustmentsDesktop(props: AdjustmentsViewProps) {
             </ul>
           )}
           {/* Kırpma GÖRÜNÜR: sessiz tavan, operatöre "bugünün tamamı bu" der ve göremediği kaydı
-              ikinci kez girdirir. */}
+              ikinci kez girdirir. Cümle taramayı anlatıyor, listeyi değil — depo süzgeci bellekte
+              olduğu için "bugün daha fazlası var" demek bilmediğimiz bir şeyi iddia etmek olurdu
+              (gerekçe `adjustments-read.ts`). */}
           {data.todayTruncated ? (
             <p className="border-t border-ops-line-soft px-5 py-2 font-ops-body text-ops-micro text-ops-amber-dark">
-              Son {num(data.today.length)} kayıt gösteriliyor — bugün daha fazlası var.
+              Günün son kayıtları tarandı — daha eski girişler bu listede olmayabilir.
             </p>
           ) : null}
           <p className="mt-auto border-t border-ops-line-soft px-5 py-2.5 font-ops-body text-ops-micro leading-[1.5] text-ops-faint">

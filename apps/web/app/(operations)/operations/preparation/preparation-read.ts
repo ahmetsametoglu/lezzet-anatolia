@@ -1,7 +1,7 @@
 import 'server-only';
-import { WarehouseService, serviceDb } from '@lezzet/database';
+import { listPreparationQueue } from '@lezzet/application';
+import { serviceDb } from '@lezzet/database';
 import { titleOf } from '@/lib/catalog/title';
-import { listPreparationQueue } from '@/lib/order/preparation';
 import type { PreparationData, PreparationLineView, PreparationOrderView } from './preparation-types';
 
 /**
@@ -17,19 +17,17 @@ import type { PreparationData, PreparationLineView, PreparationOrderView } from 
  * tutar/maliyet ve müşteri adresi/telefonu bu yüzeyde yoktur"*) böylece bir arayüz disiplini değil,
  * verinin şekli olarak duruyor.
  *
- * ── DEPO SÜZGECİ KAPSAMDAN, VARSAYILANDAN DEĞİL ─────────────────────────────
- * Depocu yalnız kendi deposunun kuyruğunu görür (`DOMAIN §17`); depo-üstü okuma yalnız yöneticiye
- * açıktır. "Varsayılan depo" YOKTUR — kapsam tek depoysa o, değilse süzgeçsiz okuma.
+ * ── KUYRUK TEK BİR DEPONUNDUR ───────────────────────────────────────────────
+ * Depo kimliği ZORUNLU (10.7 · `CLAUDE §1`). Eskiden opsiyoneldi ve boş bırakıldığında süzgeçsiz
+ * okuma yapılırdı ("depo-üstü, yöneticiye açık"); o okuma tek depolu veride DOĞRU cevap verir ve
+ * çok depoluda sessizce başka şehrin işini gösterirdi. Hangi depoda çalışıldığı sayfanın kararıdır
+ * (`readWorkWarehouse`), bu dosyanınki değil — buraya artık yalnız kesinleşmiş bir kimlik gelir.
  */
-export async function readPreparation(warehouseId: string | null, deliveryDate: string): Promise<PreparationData> {
-  const orders = await listPreparationQueue({
-    deliveryDate,
-    warehouseId: warehouseId ?? undefined,
-  });
-
-  // Depo adı yalnız TEK depolu kapsamda yazılır: "Tüm depolar" başlığı depocuya yanlış bir kapsam
-  // sözü verirdi, yöneticide ise başlıktaki tek bir ad hangi deponun kuyruğu olduğunu yanıltırdı.
-  const warehouseName = warehouseId ? ((await new WarehouseService(serviceDb()).getById(warehouseId))?.name ?? null) : null;
+export async function readPreparation(
+  warehouse: { id: string; name: string },
+  deliveryDate: string,
+): Promise<PreparationData> {
+  const orders = await listPreparationQueue(serviceDb(), { warehouseId: warehouse.id, deliveryDate });
 
   const views: PreparationOrderView[] = orders.map((order) => {
     const lines: PreparationLineView[] = order.lines.map((line) => {
@@ -58,6 +56,6 @@ export async function readPreparation(warehouseId: string | null, deliveryDate: 
     orders: views,
     readyCount: views.filter((order) => order.isComplete).length,
     deliveryDate,
-    warehouseName,
+    warehouseName: warehouse.name,
   };
 }

@@ -59,7 +59,10 @@ export function ReceivingDesktop({
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader
         title="Mal kabul"
-        subtitle={`${data.warehouseName ? `${data.warehouseName} · ` : ''}Kabul bekliyor ${num(data.pending.length)}`}
+        // Depo adı SAYIDAN SONRA ve "giriş deposu" diye etiketli (10.7): başa konsaydı listenin o
+        // depoya süzüldüğünü söylerdi ve bu YANLIŞ olurdu — bekleyen siparişler depo-üstü, depo
+        // yalnız malın gireceği kapı. Seçilmemişse hiç yazılmaz; kabul diyaloğu zaten soracak.
+        subtitle={`Kabul bekliyor ${num(data.pending.length)}${data.warehouseName ? ` · Giriş deposu: ${data.warehouseName}` : ''}`}
       />
 
       {error ? (

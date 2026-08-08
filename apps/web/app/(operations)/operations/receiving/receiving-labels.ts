@@ -43,8 +43,13 @@ export function rowStatus(row: IntakeRow): { label: string; tone: OpsTone } | nu
 export const RECEIVING_NOTES = {
   empty: 'Kabul bekleyen tedarik siparişi yok. Siparişsiz gelen mal için "Boş formla kabul" kullanın.',
   pick: 'Soldan kabul edilecek siparişi seçin; kalemleri beklenen adetleriyle burada açılır.',
-  /** Depo süzgeci YOK — depocu kendi evreninde çalışır (tasarımın kuralı). */
-  noWarehouseFilter: 'Depo süzgeci yok — başka deponun stoğu bu ekranda görünmez.',
+  /**
+   * Depo süzgeci YOK ve bu bir eksiklik değil: tedarik siparişi bir depoya ait DEĞİLDİR, mal kabul
+   * edilirken bir kapıdan girer. Cümle 10.7'de düzeltildi — eskisi *"başka deponun stoğu bu ekranda
+   * görünmez"* diyordu ve iki bakımdan yanlıştı: liste stok değil SİPARİŞ gösteriyor, ve o siparişler
+   * gerçekten depo-üstü. Yanlış bir güvence, hiç güvence vermemekten kötüdür.
+   */
+  noWarehouseFilter: 'Bekleyen siparişler depo-üstüdür — mal hangi depoya girecekse kabulü bitirirken seçilir.',
   /** Siparişsiz kabul: sonradan eşleştirme YOK, karar girişte verilir. */
   freeForm: 'Sipariş kaydı olmayan alım — kamyondan inen neyse o girilir; sonradan siparişle eşleştirilmez.',
   /** Klavye birinci giriş yolu (tasarımın etkileşim sözleşmesi). */

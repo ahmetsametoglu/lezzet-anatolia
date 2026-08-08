@@ -94,6 +94,44 @@ export const readWarehouseContext = cache(async (): Promise<WarehouseContext> =>
 });
 
 /**
+ * **İŞ deposu** — okuma süzgeci değil, YAZMA hedefi (10.7).
+ *
+ * Depo ekranları (hazırlık · mal kabul · stoktan düş) bağlamın `warehouseIds` süzgecini
+ * KULLANAMAZ: o bir küme ve "hepsi" hâli var; bu ekranlar ise tek bir depoya YAZIYOR. Kayıt bir
+ * kümeye yazılamaz, bir kapıya yazılır — `@lezzet/application`'ın üç depo kapısı da bu yüzden
+ * `warehouseId`'yi zorunlu istiyor (CLAUDE §1: *"varsayılan depo YOKTUR"*).
+ *
+ * Üç hâl, üç ayrı cevap — ve `needs_choice` ile `none` BİLEREK ayrı:
+ * - **`ok`** — bağlamda seçili depo var, ya da kapsamda zaten tek depo var (seçilecek bir şey yok).
+ * - **`needs_choice`** — kapsam çok depolu ve operatör henüz seçmedi. Ekran onun yerine SEÇMEZ;
+ *   "ilkini al" bir varsayılandır ve malı yanlış kapıdan sokar.
+ * - **`none`** — kapsamdaki depoların hepsi kapatılmış. Operatörü "depo seçin" diye boş bir
+ *   seçiciye göndermek, çözemeyeceği bir iş vermek olurdu.
+ *
+ * Tek depolu kapsamda seçim SORULMAZ: `warehouseOptions`ın kuralı (*"seçenek sunmak, olmayan bir
+ * kararı varmış gibi göstermektir"*) burada da geçerli — çerez boş olsa bile cevap bellidir.
+ */
+type WorkWarehouse =
+  | { status: 'ok'; warehouseId: string; name: string }
+  | { status: 'needs_choice' }
+  | { status: 'none' };
+
+export async function readWorkWarehouse(): Promise<WorkWarehouse> {
+  const ctx = await readWarehouseContext();
+
+  // Seçili bağlam kazanır. Kapsam doğrulaması `readWarehouseContext` içinde yapıldı — burada
+  // ikinci kez sorulmaz, yoksa aynı kuralın iki kopyası olurdu.
+  const chosen = ctx.activeWarehouseId
+    ? ctx.warehouses.find((w) => w.id === ctx.activeWarehouseId)
+    : ctx.warehouses.length === 1
+      ? ctx.warehouses[0]
+      : null;
+
+  if (chosen) return { status: 'ok', warehouseId: chosen.id, name: chosen.name };
+  return ctx.warehouses.length === 0 ? { status: 'none' } : { status: 'needs_choice' };
+}
+
+/**
  * Kimlik → ad/kod, TÜM depolar için (KAPALI olanlar dahil).
  *
  * Bağlamın `warehouses`'ı yalnız aktif ve kapsam içi depoları taşır — o bir YETKİ kümesidir.

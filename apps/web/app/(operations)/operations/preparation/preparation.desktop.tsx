@@ -38,7 +38,9 @@ export function PreparationDesktop({ data, selectedId, onSelect, busy, error, on
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader
         title="Hazırlık"
-        subtitle={`${data.warehouseName ? `${data.warehouseName} · ` : ''}Bugün hazırlanacak ${num(data.orders.length)} · hazır ${num(data.readyCount)}`}
+        // Depo adı DAİMA yazılı (10.7): kuyruk tek bir deponun kuyruğu, ve hangisi olduğu
+        // başlıkta durmazsa çok depolu operatör yanlış rafın önünde doğru listeye bakar.
+        subtitle={`${data.warehouseName} · Bugün hazırlanacak ${num(data.orders.length)} · hazır ${num(data.readyCount)}`}
       />
 
       {error ? (

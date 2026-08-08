@@ -1,6 +1,5 @@
 import 'server-only';
-import { StockAdjustmentDetailService, StockService, WarehouseService, serviceDb } from '@lezzet/database';
-import type { WarehouseScope } from '@lezzet/domain-core';
+import { StockAdjustmentDetailService, StockService, serviceDb } from '@lezzet/database';
 import { resolveLocalizedText } from '@lezzet/types';
 import { titleOf } from '@/lib/catalog/title';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
@@ -17,20 +16,17 @@ const TODAY_LIMIT = 30;
  * taşınmıyor: tasarımın kuralı *"fire maliyeti/parasal değer asla görünmez"*. Alanı burada
  * susturmak, ekranda unutmaktan güvenli — ekran isteseydi bile gösteremez.
  *
- * ── PARTİLER DEPO KAPSAMINDAN ───────────────────────────────────────────────
+ * ── PARTİLER TEK BİR DEPONUN ────────────────────────────────────────────────
  * Depocu yalnız kendi deposunun partisini düşebilir; başka deponun malını buradan eksiltmek,
- * olmayan bir rafı saymak olurdu (`DOMAIN §17`).
+ * olmayan bir rafı saymak olurdu (`DOMAIN §17`). Kimlik ZORUNLU (10.7): kapı da öyle istiyor ve
+ * hangi depoda çalışıldığı sayfanın kararı — buraya kesinleşmiş bir kimlik gelir.
  */
-export async function readAdjustments(scope: WarehouseScope): Promise<AdjustmentsData> {
+export async function readAdjustments(warehouse: { id: string; name: string }): Promise<AdjustmentsData> {
   const db = serviceDb();
-  const warehouseIds = scope.kind === 'limited' ? [...scope.warehouseIds] : undefined;
-  const singleId = scope.kind === 'limited' && scope.warehouseIds.length === 1 ? (scope.warehouseIds[0] ?? null) : null;
+  const stocks = new StockService(db);
 
-  const [details, warehouse] = await Promise.all([
-    // Eldeki partiler (fiziksel adedi sıfırdan büyük olanlar, son tarihe göre sıralı).
-    new StockService(db).listInStockDetailed(undefined, warehouseIds),
-    singleId ? new WarehouseService(db).getById(singleId) : Promise.resolve(null),
-  ]);
+  // Eldeki partiler (fiziksel adedi sıfırdan büyük olanlar, son tarihe göre sıralı).
+  const details = await stocks.listInStockDetailed(undefined, [warehouse.id]);
 
   const today = new Date();
   const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -54,28 +50,46 @@ export async function readAdjustments(scope: WarehouseScope): Promise<Adjustment
    * **Tavan GÖRÜNÜR, sessiz değil:** okuma keyset sayfalı ve `nextCursor` dönüyor. Bu şerit
    * doğal tavanlı bir liste sayılıyor (bir günün düzeltmeleri, `CLAUDE §1`) ama çok düzeltme
    * girilen bir depoda imleç gerçekten dolabilir — arka uç şeridi bunu ayrıca uyardı. Kuyruğu
-   * sessizce yutmuyoruz: ekran son N kaydı gösterdiğini yazıyor (`hasMore`).
+   * sessizce yutmuyoruz: ekran taramanın nerede kesildiğini yazıyor.
+   *
+   * ── DEPO SÜZGECİ BURADA, SORGUDA DEĞİL — VE BU BİR ÖDÜNÇ ────────────────────
+   * `listPage`in depo süzgeci YOK (`stock_adjustment_detail` görünümü depo kolonu bile
+   * seçmiyor, ölçüldü 08.08) ve o dosya bizim şeridimizde değil. Süzgeçsiz bırakmak seçenek
+   * değildi: çok depolu bir operatörde şerit BAŞKA deponun imhalarını da gösteriyordu — hem
+   * "girdim mi" sorusunun cevabını bozar hem depo değişmezini deler.
+   *
+   * Süzgeç bu yüzden bellekte: satırların partileri `listByIds` ile okunuyor (tükenmiş parti de
+   * gelir — `listInStockDetailed` onları elerdi ve bugün düşülen partinin çoğu tam olarak öyle
+   * biter) ve yalnız bu deponunkiler kalıyor. **Ödünç şurada:** sayfalama süzgeçten ÖNCE
+   * çalışıyor, yani taranan 30 satırın kaçı bu depodansa o kadarı görünür. Kesilme noktası
+   * ekranda yazılı; sessiz kırpma yok. Kalıcı çözüm sorguya süzgeç eklemek — talep açıldı.
    */
   const page = await new StockAdjustmentDetailService(db).listPage({ from: startOfDay, limit: TODAY_LIMIT });
-  const entries: TodayEntry[] = page.rows.map((row) => ({
-    id: row.id,
-    title: titleOf(
-      resolveLocalizedText(row.stock.variant.product.name, OPERATIONS_LOCALE) || 'Adsız ürün',
-      resolveLocalizedText(row.stock.variant.label, OPERATIONS_LOCALE),
-    ),
-    qty: Math.abs(row.qty),
-    reason: row.reason,
-    referenceNo: row.referenceNo,
-    time: new Date(row.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-  }));
+  const pageStocks = await stocks.listByIds([...new Set(page.rows.map((row) => row.stockId))]);
+  const warehouseOfStock = new Map(pageStocks.map((batch) => [batch.id, batch.warehouseId]));
+
+  const entries: TodayEntry[] = page.rows
+    .filter((row) => warehouseOfStock.get(row.stockId) === warehouse.id)
+    .map((row) => ({
+      id: row.id,
+      title: titleOf(
+        resolveLocalizedText(row.stock.variant.product.name, OPERATIONS_LOCALE) || 'Adsız ürün',
+        resolveLocalizedText(row.stock.variant.label, OPERATIONS_LOCALE),
+      ),
+      qty: Math.abs(row.qty),
+      reason: row.reason,
+      referenceNo: row.referenceNo,
+      time: new Date(row.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+    }));
 
   return {
     batches,
     today: entries,
-    // Tavan doldu mu — ekran "son N kayıt" diyebilsin diye. Sessiz kırpma, olmayan bir tamlık
-    // sözü vermek olurdu.
+    // Tarama nerede kesildi — ekran bunu yazabilsin diye. Sessiz kırpma, olmayan bir tamlık sözü
+    // vermek olurdu; süzgeç bellekte olduğu için burada "daha fazlası var" değil "tarama kesildi"
+    // deniyor: kesilen kısımda bu depoya ait kayıt olabilir de olmayabilir de.
     todayTruncated: page.nextCursor !== null,
-    warehouseId: singleId,
-    warehouseName: warehouse?.name ?? null,
+    warehouseId: warehouse.id,
+    warehouseName: warehouse.name,
   };
 }

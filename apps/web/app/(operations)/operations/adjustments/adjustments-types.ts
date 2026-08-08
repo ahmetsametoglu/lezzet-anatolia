@@ -39,12 +39,17 @@ export interface AdjustmentsData {
   batches: BatchOption[];
   today: TodayEntry[];
   /**
-   * Şerit kırpıldı mı — tavan doldu ve daha eski kayıtlar var.
+   * Günün kayıt TARAMASI kesildi mi — tavan doldu.
    *
    * Sessiz kırpma, olmayan bir tamlık sözü vermek olurdu: operatör listeyi "bugünün tamamı" sanır
    * ve girdiği bir kaydı göremeyince ikinci kez girerdi.
+   *
+   * **"Daha fazlası var" demiyor, "tarama kesildi" diyor** (10.7): depo süzgeci sorguda değil
+   * bellekte (gerekçe `adjustments-read.ts`'te), yani kesilen kısımda bu depoya ait kayıt olabilir
+   * de olmayabilir de. Bilmediğimiz şeyi biliyormuş gibi yazmak, yanlış bir güven verirdi.
    */
   todayTruncated: boolean;
-  warehouseName: string | null;
-  warehouseId: string | null;
+  /** Çalışılan depo — 10.7'den beri DAİMA dolu; depo seçilmemişken sayfa bu veriyi hiç kurmaz. */
+  warehouseName: string;
+  warehouseId: string;
 }

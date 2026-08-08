@@ -1,11 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { openIntakeForm, receiveGoods, type IntakeFormLine, type IntakeFormRow } from '@lezzet/application';
 import { ProductService, SupplierService, serviceDb } from '@lezzet/database';
 import { resolveLocalizedText } from '@lezzet/types';
 import { titleOf } from '@/lib/catalog/title';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
-import { openIntakeForm, receiveGoods, type IntakeFormLine, type IntakeFormRow } from '@/lib/stock/intake';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireWarehouseScope } from '@/lib/guard';
 import type { ReceiveOutcome } from './receiving-types';
@@ -23,7 +23,7 @@ const RECEIVING_PATH = '/operations/receiving';
 export async function openIntakeFormAction(purchaseOrderId: string): Promise<ActionResult<IntakeFormRow[]>> {
   try {
     await requireWarehouseScope();
-    return { data: await openIntakeForm(purchaseOrderId), error: null };
+    return { data: await openIntakeForm(serviceDb(), purchaseOrderId), error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
@@ -50,7 +50,7 @@ export async function receiveGoodsAction(input: {
 
     if (input.lines.length === 0) throw new Error('Kabul edilecek satır yok — en az bir kaleme adet girin.');
 
-    const result = await receiveGoods({
+    const result = await receiveGoods(serviceDb(), {
       warehouseId: input.warehouseId,
       purchaseOrderId: input.purchaseOrderId,
       supplierId: input.supplierId,

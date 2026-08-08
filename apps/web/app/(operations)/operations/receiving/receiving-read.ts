@@ -1,6 +1,6 @@
 import 'server-only';
-import { PurchaseOrderService, SupplierService, WarehouseService, serviceDb } from '@lezzet/database';
-import type { WarehouseScope } from '@lezzet/domain-core';
+import { PurchaseOrderService, SupplierService, serviceDb } from '@lezzet/database';
+import { readWarehouseContext, readWorkWarehouse } from '@/lib/warehouse/context';
 import type { PendingPurchase, ReceivingData } from './receiving-types';
 
 /**
@@ -12,11 +12,19 @@ import type { PendingPurchase, ReceivingData } from './receiving-types';
  * açık sipariş kümesi veriyle büyümez, kabul edildikçe kapanır (`CLAUDE §1`).
  *
  * ── DEPO SÜZGECİ YOK, DEPO KİMLİKTEN GELİR ──────────────────────────────────
- * Tasarımın kuralı: *"Depo süzgeci yok — depocu kendi evreninde çalışır."* Kapsam tek depoysa adı
- * başlıkta yazar ve kabul oraya gider; yönetici (`all`) için depo **bitirme diyaloğunda açık
- * seçimdir** ve **ön seçim üretilmez** — tasarım bunu ayrıca vurguluyor.
+ * Tasarımın kuralı: *"Depo süzgeci yok — depocu kendi evreninde çalışır."* Liste gerçekten
+ * depo-üstüdür ve öyle kalmalı: **tedarik siparişi bir depoya ait değildir**, mal kabul edilirken
+ * bir kapıdan girer. Depo sorusu bu yüzden okumanın değil, YAZMANIN sorusu — cevabı bitirme
+ * diyaloğunda veriliyor ve **ön seçim üretilmiyor**.
+ *
+ * ── SEÇENEKLER KAPSAMDAN GELİR, YALNIZ YÖNETİCİDEN DEĞİL (10.7) ─────────────
+ * Eskiden seçenek listesi yalnız `all` kapsamda doluyordu; kapsamı İKİ depolu bir depocuda hem
+ * sabit depo (`null`) hem seçenekler (`[]`) boş kalıyordu ve bitirme diyaloğu kalıcı olarak
+ * *"Kabul edilecek depoyu seçin"* diyordu — seçecek bir şey göstermeden. Yani o kişi kabulü hiç
+ * tamamlayamıyordu ve hiçbir yerde hata görünmüyordu. Seçenekler artık bağlamın kapsamla süzülmüş
+ * depo listesinden geliyor; üst barda bir depo seçilmişse soru zaten cevaplanmıştır.
  */
-export async function readReceiving(scope: WarehouseScope): Promise<ReceivingData> {
+export async function readReceiving(): Promise<ReceivingData> {
   const db = serviceDb();
   const progress = await new PurchaseOrderService(db).openProgress();
 
@@ -57,15 +65,15 @@ export async function readReceiving(scope: WarehouseScope): Promise<ReceivingDat
   // En eski önce: 14 gündür bekleyen sipariş listenin dibinde kaybolmamalı.
   pending.sort((a, b) => (b.ageDays ?? -1) - (a.ageDays ?? -1));
 
-  const warehouses = scope.kind === 'all' ? await new WarehouseService(db).list({ activeOnly: true }) : [];
-  const singleId = scope.kind === 'limited' && scope.warehouseIds.length === 1 ? (scope.warehouseIds[0] ?? null) : null;
-  const single = singleId ? await new WarehouseService(db).getById(singleId) : null;
+  // Bağlam iki soruyu birden cevaplıyor: "kabul hangi kapıdan" (seçilmişse) ve "seçilmemişse hangi
+  // kapılar açık". İkinci okuma yok — `readWarehouseContext` istek başına önbellekli (`cache()`).
+  const [workplace, ctx] = await Promise.all([readWorkWarehouse(), readWarehouseContext()]);
 
   return {
     pending,
-    warehouseId: singleId,
-    warehouseName: single?.name ?? null,
-    warehouseOptions: warehouses.map((warehouse) => ({ id: warehouse.id, name: warehouse.name })),
+    warehouseId: workplace.status === 'ok' ? workplace.warehouseId : null,
+    warehouseName: workplace.status === 'ok' ? workplace.name : null,
+    warehouseOptions: ctx.warehouses.map((warehouse) => ({ id: warehouse.id, name: warehouse.name })),
     // Aynı okumadan: tedarikçi adları hem bekleyen kartlarda hem siparişsiz kabulün seçicisinde
     // kullanılıyor, ikinci bir tur açmaya gerek yok.
     suppliers: suppliers.filter((supplier) => supplier.isActive).map((supplier) => ({ id: supplier.id, name: supplier.name })),

@@ -1,4 +1,4 @@
-import type { IntakeDifference, IntakeWarning } from '@/lib/stock/intake';
+import type { IntakeDifference, IntakeWarning } from '@lezzet/application';
 
 // Mal kabul masasının görünüm modeli (10.4).
 // Tasarım: `design/project/Operasyon - Depo Stok Giris.dc.html` (*"· web"*).

@@ -1,4 +1,4 @@
-import type { PreparationLine, PreparationOrder } from '@/lib/order/preparation';
+import type { PreparationLine, PreparationOrder } from '@lezzet/application';
 
 // Hazırlık masasının görünüm modeli (10.1–10.3).
 //
@@ -40,15 +40,9 @@ export interface PreparationData {
   readyCount: number;
   /** Kuyruğun süzüldüğü teslim günü (ISO tarih) — başlıkta yazılı. */
   deliveryDate: string;
-  /** Depo adı — başlıkta "Strasbourg deposu"; kapsam tek depoysa dolu, depo-üstü ise `null`. */
-  warehouseName: string | null;
+  /**
+   * Depo adı — başlıkta "Strasbourg deposu". **Artık daima dolu** (10.7): kuyruk tek bir deponun
+   * kuyruğudur, depo-üstü hâl kalmadı. Depo seçilmemişken sayfa bu veriyi hiç kurmaz.
+   */
+  warehouseName: string;
 }
-
-/**
- * Kalem başına kuryenin/depocunun ekranda kurduğu seçim.
- *
- * `null` = "öneriye dokunulmadı" — onayda sistemin önerdiği partiler gider. Dolu ise operatör
- * sapmış demektir (10.2) ve giden şey onun yazdığıdır. İkisini ayırmak şart: boş diziyi
- * "sapma yok" saymak, kalemin hiç toplanmadığını söyleyen bir seçimle karışırdı.
- */
-export type PickDraft = { stockId: string; qty: number }[] | null;

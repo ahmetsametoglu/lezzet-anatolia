@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { recordAdjustmentAction } from './adjustments-actions';
 import { AdjustmentsDesktop } from './adjustments.desktop';
 import type { AdjustmentsData } from './adjustments-types';
-import type { WarehouseReason } from '@/lib/stock/adjustment';
+import type { WarehouseReason } from '@lezzet/application';
 
 /**
  * Stoktan düşme masasının istemci kökü (10.5).

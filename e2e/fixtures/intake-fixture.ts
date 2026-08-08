@@ -5,13 +5,12 @@ import { loadRootEnv } from './order-fixture';
  * (bilerek STOKSUZ) ve girişi üretim RPC'siyle yapar; `purgeTestData` toplar.
  *
  * ── NEDEN GİRİŞ RPC'DEN, EKRANDAN DEĞİL ─────────────────────────────────────
- * Mal kabul EKRANI henüz yok (10.4 — arka uç hazır, çizim bekleniyor; `docs/build/10-depo.md`).
- * Ekran inene dek duman testinin sınayabildiği şey girişin EKRANA YANSIMASIDIR: yazım, ekranın da
- * kullanacağı tek transaction'lı RPC'den geçer (`StockIntakeService.receive` → `receive_intake`:
- * giriş kaydı + parti + belge numarası bölünmez). Uygulama kapısı `apps/web/lib/stock/intake.ts`
- * buradan ÇAĞRILAMAZ: zinciri `server-only` importuna uzanıyor ve Playwright sürecinde patlar;
- * kapının kendi güvencesi (MLOR uyarısı, PO farkı, maliyet eşlemesi) zaten kendi entegrasyon
- * testlerinde (`intake.test.ts`, 7 test). Ekran gelince yazım adımı UI'a taşınır, iddialar kalır.
+ * Duman testinin sınadığı şey girişin EKRANA YANSIMASIDIR: yazım, ekranın da kullanacağı tek
+ * transaction'lı RPC'den geçer (`StockIntakeService.receive` → `receive_intake`: giriş kaydı +
+ * parti + belge numarası bölünmez). Uygulama kapısı — 10.7'den beri `@lezzet/application`'ın
+ * `receiveGoods`'u, eskiden `apps/web/lib/stock/intake.ts` — buradan çağrılMIYOR: fikstürün derdi
+ * kapının kendi kuralları değil, ekranda görünen sonuç. Kapının güvencesi kendi entegrasyon
+ * testlerinde (`packages/application/src/warehouse/intake.test.ts`).
  *
  * ── ENV ─────────────────────────────────────────────────────────────────────
  * `loadRootEnv` + dinamik import deseni `order-fixture`'dan: modül yükü env'den SONRA olmalı,
