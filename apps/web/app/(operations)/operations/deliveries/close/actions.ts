@@ -25,7 +25,7 @@ export async function closeDayAction(input: {
   try {
     const courier = await requireCourier();
 
-    const result = await closeCourierDay({ courierId: courier.id, ...input });
+    const result = await closeCourierDay({ courierId: courier.profileId, ...input });
     if (!result.ok) {
       throw new Error(
         result.reason === 'already_closed'

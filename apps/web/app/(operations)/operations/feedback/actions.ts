@@ -79,7 +79,7 @@ export async function adjustPointsAction(input: { customerId: string; delta: num
 
   try {
     const staff = await requireAdmin();
-    const result = await adjustPointsManually({ customerId: input.customerId, points: input.delta, note: reason, staffId: staff.id });
+    const result = await adjustPointsManually({ customerId: input.customerId, points: input.delta, note: reason, staffId: staff.profileId });
     if (!result.ok) return { data: null, error: rejectionText(result.reason) };
 
     revalidatePath(FEEDBACK_PATH);

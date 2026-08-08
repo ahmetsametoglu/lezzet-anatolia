@@ -33,7 +33,7 @@ export async function confirmPreparationAction(
     // yazılır (partiler oradan seçildi). Buradaki soru "bu kişi depoda mı" — fail-closed.
     const { user } = await requireWarehouseScope();
 
-    const result = await confirmPreparation({ orderId, picks, actorId: user.id });
+    const result = await confirmPreparation({ orderId, picks, actorId: user.profileId });
 
     if (result.status === 'not_found') throw new Error('Sipariş bulunamadı.');
     // **Kilitli kalem ihlali: HİÇBİR yazım yapılmadı.** Cümle bunu açıkça söylüyor — "olmadı" ile

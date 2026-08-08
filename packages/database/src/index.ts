@@ -54,7 +54,7 @@ export {
 } from './services/order.service';
 export { StockService, LOT_SEARCH_LIMIT } from './services/stock.service';
 export { ReservationService, type ReserveInput } from './services/reservation.service';
-export { StockAdjustmentService, type AdjustInput } from './services/stock-adjustment.service';
+export { StockAdjustmentService, StockAdjustmentDetailService, type AdjustInput } from './services/stock-adjustment.service';
 export { TemperatureLogService } from './services/temperature-log.service';
 export { SupplierService, SupplierProductService } from './services/supplier.service';
 export { PurchaseOrderService, PurchaseOrderItemService, type DraftLine, type PurchaseListLine } from './services/purchase-order.service';

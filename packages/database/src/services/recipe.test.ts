@@ -147,3 +147,20 @@ describe('vitrin okuması', () => {
     expect(detay?.items[0]!.qty).toBe(2);
   });
 });
+
+describe('operasyon listesi (09.21 talebi)', () => {
+  it('listAllWithItems TASLAĞI DA verir ve kalemleri getirir — vitrin okumasından ayrıldığı yer bu', async () => {
+    // Liste ekranının "Malzeme" sütunu kalem sayısını istiyor; `listAll` kalemsiz, `listActiveWithItems`
+    // ise taslakları düşürüyordu — operasyon listesinin yarısı taslaktır.
+    const taslak = await tarifAc();
+    await items.syncItems(taslak.id, [{ variantId, qty: 3 }]);
+
+    const satirlar = await recipes.listAllWithItems();
+    const bizimki = satirlar.find((r) => r.id === taslak.id);
+
+    expect(bizimki).toBeDefined();
+    expect(bizimki!.isActive).toBe(false);
+    expect(bizimki!.items).toHaveLength(1);
+    expect(bizimki!.items[0]!.qty).toBe(3);
+  });
+});

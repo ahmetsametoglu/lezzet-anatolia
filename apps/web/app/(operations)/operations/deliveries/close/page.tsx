@@ -25,7 +25,7 @@ export default async function DayClosePage() {
     );
   }
 
-  const draft = await openDayClose({ courierId: access.user.id });
+  const draft = await openDayClose({ courierId: access.user.profileId });
 
   return <DayCloseClient draft={draft} />;
 }

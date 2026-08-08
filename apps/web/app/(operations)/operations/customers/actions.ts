@@ -213,7 +213,7 @@ export async function setB2bApprovalAction(customerId: string, approved: boolean
     const actor = await requireAdmin();
     const profiles = new UserProfileService(serviceDb());
     if (approved) await profiles.approveB2b(customerId);
-    else await profiles.rejectB2b(customerId, { actorId: actor.id, reason });
+    else await profiles.rejectB2b(customerId, { actorId: actor.profileId, reason });
     // Sonuç başvurana bildirilir (14.10 · arka uç şeridi). Bu satır YAZILANA KADAR gerekçe veride
     // zorunluydu, üç dile çevriliyordu ve hiçbir okuyucuya ulaşmıyordu — yukarıdaki künyenin
     // "müşteriye e-postayla gidiyor" sözü karşılıksızdı.

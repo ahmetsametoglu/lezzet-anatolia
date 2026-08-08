@@ -59,7 +59,7 @@ export default async function DeliveriesPage({ searchParams }: DeliveriesPagePro
 
   // **Kurye kimliği GUARD'dan.** Kurye dalı gün seçmez: sahadaki soru "bugün ne var" — geçmiş bir
   // günün durakları üzerinde yapılacak bir iş de yok.
-  const stops = await listCourierDay({ courierId: courier.user.id });
+  const stops = await listCourierDay({ courierId: courier.user.profileId });
 
   return <DeliveriesClient stops={stops} />;
 }

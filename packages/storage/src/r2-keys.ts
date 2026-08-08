@@ -46,6 +46,18 @@ export const r2Keys = {
     `catalog/bundles/${sanitize(slug)}.${extOf(sourceFilename)}`,
 
   /**
+   * Tarif görseli (05.16 · 09.21) — **16:10 kaynak, min 1600×1000**; aynı deterministik desen.
+   *
+   * Tek kare yeter: web kartı, web detayı ve mobil hero bu kareden türetilir (tasarım kararı,
+   * `Operasyon - Tarifler.dc.html`) — ayrı yükleme yok. Kırpma oranı ekranın işi, anahtar burada.
+   *
+   * Slug'a bağlı ve timestamp'siz olması bir SİLME kararıdır: görsel değişince aynı objenin üstüne
+   * yazılır, yani kovada yetim obje birikmez. Kardeşlerinin hepsi aynı sebeple böyle.
+   */
+  recipeImage: (slug: string, sourceFilename: string): string =>
+    `catalog/recipes/${sanitize(slug)}.${extOf(sourceFilename)}`,
+
+  /**
    * **Şikâyet fotoğrafı** (16.2) — PRIVATE kovaya yazılır (`getR2Private`), public adresi yoktur.
    *
    * Katalog anahtarlarının tersine **deterministik DEĞİL**: aynı talebe birden çok fotoğraf

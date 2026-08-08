@@ -30,7 +30,7 @@ export default async function DeliveryStopPage({ params }: DeliveryStopPageProps
   }
 
   const { orderId } = await params;
-  const view = await readDeliveryStop({ courierId: access.user.id, orderId });
+  const view = await readDeliveryStop({ courierId: access.user.profileId, orderId });
 
   // `notFound()` DEĞİL: durak var olabilir, yalnız bu kuryenin bugünkü listesinde değildir. "Yok"
   // demek yanlış bilgi olurdu; "sizin listenizde değil" doğrusu ve aynı zamanda başka bir kuryenin

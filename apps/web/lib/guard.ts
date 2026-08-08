@@ -1,7 +1,7 @@
 import 'server-only';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import { canAccessWarehouse, warehouseScope, type WarehouseScope } from '@lezzet/domain-core';
-import { DEV_ADMIN_PROFILE_ID, type UserRole } from '@lezzet/types';
+import { canAccessWarehouse, isStaff, warehouseScope, type WarehouseScope } from '@lezzet/domain-core';
+import { DEV_ADMIN_PROFILE_ID, DEV_BYPASS_AUTH_ID, type UserProfile, type UserRole } from '@lezzet/types';
 import { createClient } from './supabase/server';
 import { logger } from '@lezzet/observability';
 
@@ -19,8 +19,32 @@ export class AuthError extends Error {
 }
 
 export interface AuthUser {
+  /** **Auth kimliği** (`auth.users.id`) — oturumun sahibi. Profil-FK'li bir kolona YAZILMAZ. */
   id: string;
   email: string | null;
+}
+
+/**
+ * Personel guard'larının dönüşü: auth kimliğinin **yanında** profil kimliği (04.11).
+ *
+ * ── NEDEN İKİSİ BİRDEN ───────────────────────────────────────────────────────
+ * `user_profiles`'a FK veren her kolon (`order.courier_id`, `order_status_log.actor_id`,
+ * `settings.updated_by`, `product_feedback.moderated_by`) **profil** kimliğini bekler; oturumun
+ * kimliği ise `auth.users`'ındır ve profilde `auth_user_id` sütununda AYRI durur. İkisi farklı
+ * uzaylardır ve biri ötekinin yerine yazılırsa **hiçbir yerde hata olmaz** — yalnız sorgu boş döner.
+ *
+ * ── NEDEN BUGÜNE KADAR GÖRÜNMEDİ ─────────────────────────────────────────────
+ * Dev bypass'ta `DEV_BYPASS_USER.id` zaten bir PROFİL kimliğidir (seed aynı id ile profil açıyor),
+ * yani geliştirmede iki kimlik tesadüfen çakışık. Gerçek girişte ayrışırlar. Ölçülen sonuç: kurye
+ * günü listesi **sessizce boş** dönüyordu — hata yok, yanlış veri yok, yalnız hiçlik. Ne `typecheck`
+ * ne `lint` görebilirdi: iki alan da `string`.
+ *
+ * Bu yüzden alan ADLI: çağıran hangisini geçtiğini okurken görür (`user.id` mi `user.profileId` mi),
+ * ayrı bir çözümleyici fonksiyona güvenmek zorunda kalmaz.
+ */
+export interface StaffUser extends AuthUser {
+  /** **Profil kimliği** (`user_profiles.id`) — FK'li kolonlara yazılacak olan. */
+  profileId: string;
 }
 
 // ─── Dev-only auth bypass ──────────────────────────────────────────────────────
@@ -49,8 +73,21 @@ export interface AuthUser {
 // burada yapmıyoruz — guard'ın sıcak yoluna her istekte bir sorgu koymak, yalnız dev'de işe yarayan
 // bir kolaylık için ödenecek yanlış bedel. Yanlış kimlik verilirse ekran ilk aktör yazımında düşer
 // ve sebebi bellidir.
-const DEV_BYPASS_USER: AuthUser = {
-  id: process.env.DEV_AUTH_BYPASS_USER_ID || DEV_ADMIN_PROFILE_ID,
+// ── İKİ KİMLİK BYPASS'TA DA AYRI (04.11) ───────────────────────────────────────────────────────
+// Eskiden bypass tek bir id veriyordu ve o id bir PROFİL kimliğiydi — yani dev'de `user.id` ile
+// `user.profileId` tesadüfen aynıydı. Profil-FK'li bir kolona auth kimliği yazan her kod dev'de
+// çalışıyor, gerçek girişte **sessizce boş dönüyordu**: hata yok, yanlış veri yok, yalnız hiçlik.
+//
+// Artık ayrılar ve bu bir NÖBETTİR: `user.id`'yi profil kolonuna yazan bir yol dev'de ilk denemede
+// FK ihlaliyle patlar. Ne `typecheck` ne `lint` bunu görebilir (iki alan da `string`, kural dil
+// değil proje disiplini) — nöbeti veri tutuyor.
+//
+// `DEV_AUTH_BYPASS_USER_ID` bir PROFİL kimliğidir (07.08: kurye ekranlarını dolu görebilmek için),
+// o yüzden `profileId`ye gider. Auth tarafı sabit ve karşılığı olan bir `auth.users` satırı yok —
+// bypass zaten auth'u atlıyor.
+const DEV_BYPASS_USER: StaffUser = {
+  id: DEV_BYPASS_AUTH_ID,
+  profileId: process.env.DEV_AUTH_BYPASS_USER_ID || DEV_ADMIN_PROFILE_ID,
   email: 'dev-admin@lezzet.local',
 };
 
@@ -120,22 +157,34 @@ export async function requireAuth(): Promise<AuthUser> {
   return user;
 }
 
-async function requireRole(role: UserRole): Promise<AuthUser> {
-  if (devBypassActive()) return DEV_BYPASS_USER;
+/**
+ * Personel guard'larının ortak gövdesi: oturum → profil → rol kararı → **iki kimlik birden**.
+ *
+ * Profil BURADA okunuyor ve dışarı veriliyor. Eskiden `isStaff`/`hasRole` çağrılıyordu; ikisi de
+ * içeride aynı profili getirip yalnız `boolean` döndürüyordu — yani satır zaten okunuyordu, kimliği
+ * atılıyordu. Bu yüzden profil kimliğini eklemek ek bir sorgu GETİRMEDİ; atılan bir değeri geri aldı.
+ *
+ * Rol kararı motorun (`domain-core/identity/roles`): guard yalnız satırı getirir ve sorar (STACK §4).
+ */
+async function staffProfile(allowed: (roles: readonly UserRole[]) => boolean): Promise<{ user: StaffUser; profile: UserProfile }> {
   const user = await requireAuth();
-  if (!(await new UserProfileService(serviceDb()).hasRole(user.id, role))) throw new AuthError('forbidden');
-  return user;
+  const profile = await new UserProfileService(serviceDb()).findByAuthUserId(user.id);
+  if (!profile || !allowed(profile.roles)) throw new AuthError('forbidden');
+  return { user: { id: user.id, email: user.email, profileId: profile.id }, profile };
+}
+
+async function requireRole(role: UserRole): Promise<StaffUser> {
+  if (devBypassActive()) return DEV_BYPASS_USER;
+  return (await staffProfile((roles) => roles.includes(role))).user;
 }
 
 /**
  * Herhangi bir personel rolü şart (Operasyon yüzeyine giriş kapısı). Müşteri ↔ personel keskin
  * ayrımdır: müşteri rolü olan kişi buradan geçemez (DOMAIN §2).
  */
-export async function requireStaff(): Promise<AuthUser> {
+export async function requireStaff(): Promise<StaffUser> {
   if (devBypassActive()) return DEV_BYPASS_USER;
-  const user = await requireAuth();
-  if (!(await new UserProfileService(serviceDb()).isStaff(user.id))) throw new AuthError('forbidden');
-  return user;
+  return (await staffProfile(isStaff)).user;
 }
 
 /**
@@ -147,12 +196,13 @@ export async function requireStaff(): Promise<AuthUser> {
  * **Fail-closed:** kapsamsız depocu/kurye HİÇBİR depoyu göremez — boş kapsam "hepsi" değildir.
  * Karar motorda (`warehouseScope`), guard yalnız kimliği getirip motora sorar (STACK §4).
  */
-export async function requireWarehouseScope(warehouseId?: string): Promise<{ user: AuthUser; scope: WarehouseScope }> {
-  const user = await requireStaff();
-  if (devBypassActive()) return { user, scope: { kind: 'all' } };
+export async function requireWarehouseScope(warehouseId?: string): Promise<{ user: StaffUser; scope: WarehouseScope }> {
+  if (devBypassActive()) return { user: DEV_BYPASS_USER, scope: { kind: 'all' } };
 
-  const profile = await new UserProfileService(serviceDb()).findByAuthUserId(user.id);
-  if (!profile) throw new AuthError('forbidden');
+  // Profil TEK kez okunuyor: eskiden `requireStaff` bir kez, burası ikinci kez okuyordu ve ikisi de
+  // aynı satırdı. Kapsam kararı için zaten `roles`/`warehouseIds` gerekiyor — aynı satır ikisini de
+  // taşıyor.
+  const { user, profile } = await staffProfile(isStaff);
 
   const scope = warehouseScope(profile.roles, profile.warehouseIds);
   if (scope.kind === 'none') throw new AuthError('forbidden');
@@ -167,32 +217,34 @@ export async function requireWarehouseScope(warehouseId?: string): Promise<{ use
  * `forbidden` fırlatması ikinciyi hiç çalıştırmazdı. Tek rollü kapılar için `requireAdmin` vb.
  * kısayolları durmaya devam eder.
  */
-export async function requireAnyRole(roles: readonly UserRole[]): Promise<AuthUser> {
+export async function requireAnyRole(roles: readonly UserRole[]): Promise<StaffUser> {
   if (devBypassActive()) return DEV_BYPASS_USER;
-  const user = await requireAuth();
-  const owned = await new UserProfileService(serviceDb()).getRoles(user.id);
-  if (!roles.some((r) => owned.includes(r))) throw new AuthError('forbidden');
-  return user;
+  return (await staffProfile((owned) => roles.some((r) => owned.includes(r)))).user;
 }
 
-export const requireAdmin = (): Promise<AuthUser> => requireRole('admin');
+export const requireAdmin = (): Promise<StaffUser> => requireRole('admin');
 /** Yönetici ya da muhasebeci — para gözü (tedarikçi borcu, sipariş tahsilatı, hesaplar). */
-export const requireFinance = (): Promise<AuthUser> => requireAnyRole(['admin', 'accounting']);
-export const requireWarehouse = (): Promise<AuthUser> => requireRole('warehouse');
-export const requireCourier = (): Promise<AuthUser> => requireRole('courier');
+export const requireFinance = (): Promise<StaffUser> => requireAnyRole(['admin', 'accounting']);
+export const requireWarehouse = (): Promise<StaffUser> => requireRole('warehouse');
+export const requireCourier = (): Promise<StaffUser> => requireRole('courier');
 /** Muhasebe: para/muhasebe ekranları ve export. Bir kişi hem depo hem muhasebe olabilir. */
-export const requireAccounting = (): Promise<AuthUser> => requireRole('accounting');
+export const requireAccounting = (): Promise<StaffUser> => requireRole('accounting');
 
 // ─── Sarıcı: Server Action / route handler için throw yerine {ok} döndürür ──────
 
-export type GuardResult = { ok: true; user: AuthUser } | { ok: false; code: AuthErrorCode };
+/**
+ * Guard'ın kimlik tipi KORUNUR (`T`): personel kapısından geçen çağıran `g.user.profileId`'yi
+ * görebilsin diye. Jenerik olmasaydı dönüş `AuthUser`a daralır ve profil kimliği — tam da bu görevin
+ * eklediği şey — çağrı yerinde kaybolurdu.
+ */
+export type GuardResult<T extends AuthUser = AuthUser> = { ok: true; user: T } | { ok: false; code: AuthErrorCode };
 
 /**
  * Bir guard'ı çağırıp sonucu {ok} biçiminde döndürür — action'lar hatayı bilinçli
  * ele alır (kullanıcıya {error} döner), exception fırlatmaz.
  * Örn: `const g = await guarded(requireAdmin); if (!g.ok) return { error: g.code };`
  */
-export async function guarded(guard: () => Promise<AuthUser>): Promise<GuardResult> {
+export async function guarded<T extends AuthUser>(guard: () => Promise<T>): Promise<GuardResult<T>> {
   try {
     const user = await guard();
     return { ok: true, user };

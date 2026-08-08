@@ -39,9 +39,9 @@ function refresh(orderId: string): void {
 export async function startDeliveryAction(orderId: string): Promise<ActionResult<{ started: true }>> {
   try {
     const courier = await requireCourier();
-    await assertOwnStop(orderId, courier.id);
+    await assertOwnStop(orderId, courier.profileId);
 
-    const result = await transitionOrder({ orderId, to: 'out_for_delivery', actorId: courier.id });
+    const result = await transitionOrder({ orderId, to: 'out_for_delivery', actorId: courier.profileId });
     if (result.status === 'not_found') throw new Error('Sipariş bulunamadı.');
     if (result.status === 'forbidden') throw new Error(FORBIDDEN[result.reason]);
     if (result.status === 'stale') throw new Error(`Sipariş artık "${result.currentStatus}" durumunda — listeyi tazeleyin.`);
@@ -70,7 +70,7 @@ export async function requestProofUploadAction(
 ): Promise<ActionResult<{ key: string; uploadUrl: string }>> {
   try {
     const courier = await requireCourier();
-    const result = await requestDeliveryProofUploadUrl({ orderId, courierId: courier.id, filename, alreadyRequested });
+    const result = await requestDeliveryProofUploadUrl({ orderId, courierId: courier.profileId, filename, alreadyRequested });
     if (!result.ok) throw new Error(UPLOAD_REFUSAL[result.reason]);
     return { data: { key: result.key, uploadUrl: result.uploadUrl }, error: null };
   } catch (err) {
@@ -108,7 +108,7 @@ export async function confirmDeliveryAction(
 
     const result = await confirmDoorDelivery({
       orderId,
-      courierId: courier.id,
+      courierId: courier.profileId,
       adjustments: input.adjustments,
       collection: input.collection,
       proof: input.proof,
@@ -153,7 +153,7 @@ export async function markUndeliveredAction(
   try {
     const courier = await requireCourier();
 
-    const result = await markUndelivered({ orderId, courierId: courier.id, outcome, note });
+    const result = await markUndelivered({ orderId, courierId: courier.profileId, outcome, note });
     if (result.status === 'not_found') throw new Error('Sipariş bulunamadı.');
     if (result.status === 'forbidden') throw new Error(FORBIDDEN[result.reason]);
     if (result.status === 'stale') throw new Error(`Sipariş artık "${result.currentStatus}" durumunda — listeyi tazeleyin.`);

@@ -28,7 +28,7 @@ import { SYSTEM_PATH } from './system-url';
 export async function resolveErrorAction(id: string): Promise<ActionResult<{ id: string }>> {
   try {
     const user = await requireAdmin();
-    await new ErrorLogService(serviceDb()).resolve(id, user.id);
+    await new ErrorLogService(serviceDb()).resolve(id, user.profileId);
     revalidatePath(SYSTEM_PATH);
     return { data: { id }, error: null };
   } catch (err) {

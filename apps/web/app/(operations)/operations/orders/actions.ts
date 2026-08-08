@@ -111,7 +111,7 @@ export async function adjustFulfillmentAction(
 ): Promise<ActionResult<{ refundedAmountCents: number; amountToCollectCents: number; refundNotice: string | null; refundBlocked: RefundBlockReason | null }>> {
   try {
     const actor = await requireAdmin();
-    const result = await adjustFulfillment(orderId, lines, { actorId: actor.id, ...opts });
+    const result = await adjustFulfillment(orderId, lines, { actorId: actor.profileId, ...opts });
 
     if (result.status === 'not_found') throw new Error('Sipariş bulunamadı.');
     if (result.status === 'stale') {
@@ -145,7 +145,7 @@ export async function cancelOrderAction(
     const actor = await requireAdmin();
     // Sebep `staff` (07.14): iptali operasyon istedi. Müşterinin kendi iptali ayrı bir sebeptir ve
     // ayrı bir kapıdan gelir — ikisini tek kovaya koymak "neden iptal oldu" sorusunu geri alırdı.
-    const result = await cancelOrder(orderId, { actorId: actor.id, reason: 'staff', ...opts });
+    const result = await cancelOrder(orderId, { actorId: actor.profileId, reason: 'staff', ...opts });
 
     if (result.status === 'not_found') throw new Error('Sipariş bulunamadı.');
     if (result.status === 'forbidden') {
@@ -253,7 +253,7 @@ export async function advanceOrderStatusAction(
       );
     }
 
-    const result = await new OrderService(serviceDb()).transition({ orderId, from, to, actorId: actor.id });
+    const result = await new OrderService(serviceDb()).transition({ orderId, from, to, actorId: actor.profileId });
 
     // `stale` = araya biri girdi (başka bir ekran ilerletti). Ezmek yerine gerçeği söyleriz.
     if (!result.ok) {

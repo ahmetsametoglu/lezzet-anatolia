@@ -66,7 +66,7 @@ function refresh(): void {
 export async function replyToTicketAction(ticketId: string, body: string): Promise<ActionResult<{ id: string }>> {
   try {
     const actor = await requireAdmin();
-    const result = await replyAsStaff({ ticketId, authorId: actor.id, body });
+    const result = await replyAsStaff({ ticketId, authorId: actor.profileId, body });
     if (!result.ok) return { data: null, error: readable(result.reason) };
     refresh();
     return { data: { id: result.data.id }, error: null };
@@ -145,7 +145,7 @@ export async function openManualTicketAction(input: unknown): Promise<ActionResu
       body: parsed.body,
       orderId: parsed.orderId ?? null,
       subject: parsed.subject || null,
-      authorId: actor.id,
+      authorId: actor.profileId,
     });
     if (!result.ok) return { data: null, error: readable(result.reason) };
     refresh();

@@ -66,6 +66,23 @@ export const STAFF_ROLES = ['admin', 'warehouse', 'courier', 'accounting'] as co
  */
 export const DEV_ADMIN_PROFILE_ID = '00000000-0000-0000-0000-0000000000ad';
 
+/**
+ * Dev bypass'ının **AUTH** kimliği — profil kimliğinden BİLEREK farklı (04.11).
+ *
+ * Eskiden bypass tek bir id veriyordu ve o id bir profil kimliğiydi; yani geliştirmede
+ * `user.id` ile `user.profileId` tesadüfen aynıydı. Sonucu şuydu: profil-FK'li bir kolona auth
+ * kimliği yazan her kod dev'de ÇALIŞIYOR, gerçek girişte **sessizce boş dönüyordu** — hata yok,
+ * yanlış veri yok, yalnız hiçlik (ölçüldü: kurye günü listesi, `04.11`).
+ *
+ * İkisini ayırmak dev'i üretime BENZETİR ve arızayı gürültüye çevirir: artık `user.id`'yi profil
+ * kolonuna yazan bir yol, ilk denemede FK ihlaliyle patlar. `typecheck` göremez (iki alan da
+ * `string`), `lint` göremez (dil kuralı değil) — nöbeti veri tutuyor.
+ *
+ * Bu id'ye karşılık gelen bir `auth.users` satırı YOKTUR ve olmamalı: bypass zaten auth'u atlıyor.
+ * Rol okuyan yollar bunu zaten biliyordu (operasyon layout'u boş rol kümesinde yöneticiye düşüyor).
+ */
+export const DEV_BYPASS_AUTH_ID = '00000000-0000-0000-0000-0000000000a0';
+
 export const UserProfileSchema = z.object({
   id: z.string().uuid(),
   /**

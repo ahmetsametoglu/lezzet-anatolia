@@ -51,6 +51,22 @@ export class RecipeService extends BaseDbService<Recipe, RecipeInsert, RecipeUpd
     return this.getAll({ isActive: true }, { orderBy: 'sortOrder', limit });
   }
 
+  /**
+   * Operasyon listesi + kalemleri TEK sorguda — `listAll`ın kalemli ikizi (09.21 talebi).
+   *
+   * Neden `listAll` yetmiyordu: liste ekranının "Malzeme" sütunu kalem SAYISINI istiyor ve o sayı
+   * tarif başına ayrı sorguyla toplansaydı liste boyunca N+1 olurdu — `listActiveWithItems`in
+   * künyesinde zaten reddedilen şey. `listActiveWithItems` de yetmiyordu: operasyon listesinin
+   * yarısı taslak, o ise yalnız yayındakileri getiriyor.
+   *
+   * **Sayfalama YOK ve bu bilinçli** (`CLAUDE §1`): tarif kümesi operatörün elle kurduğu editoryal
+   * bir seçki, veriyle büyümüyor. Sınır da yok — vitrindeki şeritten farkı bu: orada seçki
+   * gösteriliyor, burada envanter yönetiliyor.
+   */
+  async listAllWithItems(): Promise<RecipeWithItems[]> {
+    return this.getAllAs(RecipeWithItemsSchema, undefined, { select: '*,items:recipe_item(*)', orderBy: 'sortOrder' });
+  }
+
   /** Tarifler + kalemleri TEK sorguda — kalem başına ayrı sorgu liste boyunca N+1 doğururdu. */
   async listActiveWithItems(limit = 12): Promise<RecipeWithItems[]> {
     return this.getAllAs(RecipeWithItemsSchema, { isActive: true }, {
