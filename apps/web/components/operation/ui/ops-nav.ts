@@ -72,6 +72,9 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Depo',
     items: [
+      // Hazırlık grubun BAŞINDA: depocunun günü bu ekranda başlıyor (`design/pages/depo-hazirlik.md §5`),
+      // stok sayfası ise günün içinde bakılan bir defter. Sıra kullanım sıklığını izliyor.
+      { key: 'hazirlik', label: 'Hazırlık', href: '/operations/preparation', roles: STOCK_FLOOR },
       { key: 'stock', label: 'Stok', href: '/operations/stock', roles: STOCK_FLOOR },
       // Tedarik muhasebeye de açık: tedarikçi borcu ve vadesi onun da sorusu.
       { key: 'satinalma', label: 'Tedarik', href: '/operations/procurement', roles: FINANCE },

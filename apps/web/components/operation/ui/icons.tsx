@@ -30,6 +30,7 @@ export type NavIconName =
   | 'urunler'
   | 'fiyatlar'
   | 'tarifler'
+  | 'hazirlik'
   | 'stock'
   | 'satinalma'
   | 'depolar'
@@ -85,6 +86,16 @@ const NAV_PATHS: Record<NavIconName, ReactNode> = {
       <path d="M19 5 5 19" />
       <circle cx="6.5" cy="6.5" r="2.5" />
       <circle cx="17.5" cy="17.5" r="2.5" />
+    </>
+  ),
+  // Hazırlık — panoya tutturulmuş toplama listesi, işaretli satırıyla. Kutu/koli değil BİLEREK:
+  // stok ikonu zaten katman katman kutu ve ikisi rayda alt alta duruyor; aynı metafor iki satırda
+  // hangisinin hangisi olduğunu bakışta ayırt edilemez kılardı.
+  hazirlik: (
+    <>
+      <path d="M9 3h6v3H9z" />
+      <path d="M15 4.5h2.5A1.5 1.5 0 0 1 19 6v13.5A1.5 1.5 0 0 1 17.5 21h-11A1.5 1.5 0 0 1 5 19.5V6a1.5 1.5 0 0 1 1.5-1.5H9" />
+      <path d="m8.5 13 2 2 4-4" />
     </>
   ),
   stock: (
