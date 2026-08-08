@@ -4,7 +4,7 @@ import { FramedImage } from '@/components/media/framed-image';
 import { Price } from '@/components/customer/ui/price';
 import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
 import { Link } from '@/i18n/navigation';
-import type { StorefrontProduct } from '@/lib/storefront/storefront-types';
+import type { StorefrontProduct } from '@lezzet/application';
 
 /**
  * "Bunları da sevebilirsiniz" — MOBİL şerit. Yatay kaydırılan 140 px kartlar; yalnız görsel, ad ve

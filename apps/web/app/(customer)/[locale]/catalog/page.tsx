@@ -6,8 +6,10 @@ import { setRequestLocale } from 'next-intl/server';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { detectDevice } from '@/lib/device';
-import { getCatalogData } from '@/lib/storefront/catalog';
-import { CATALOG_SORTS, type CatalogSort } from '@/lib/storefront/storefront-types';
+import { getCatalogData } from '@lezzet/application';
+import { serviceDb } from '@lezzet/database';
+import { CATALOG_SORTS, type CatalogSort } from '@lezzet/types';
+import { FIXTURE_CATEGORIES } from '@/lib/storefront/fixtures';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordEvent } from '@/lib/analytics/record';
 import { recordPageView } from '@/lib/analytics/page-view';
@@ -55,12 +57,15 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
 
   const t: Messages = messages[locale];
   const [data, device] = await Promise.all([
-    getCatalogData(
+    getCatalogData(serviceDb(), {
       locale,
-      { categorySlug: category, search: q, sort: activeSort, onlyOffers, onlyShippable },
-      await readPlaceWarehouses(),
-      await readPricingViewer(),
-    ),
+      query: { categorySlug: category, search: q, sort: activeSort, onlyOffers, onlyShippable },
+      place: await readPlaceWarehouses(),
+      viewer: await readPricingViewer(),
+      // Boş katalogda vitrin fikstürü — paket varsayılanı "yedek yok" (mobil ucun kararı); web
+      // bugünkü davranışını bu parametreyle korur. Geçirmeyi unutan, boş katalogda boş ekran üretir.
+      fallbackCategories: FIXTURE_CATEGORIES,
+    }),
     detectDevice(),
   ]);
 

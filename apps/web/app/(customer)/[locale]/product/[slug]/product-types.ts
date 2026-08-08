@@ -1,6 +1,6 @@
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type { ProductScore } from '@lezzet/domain-core';
-import type { StorefrontProductDetail, StorefrontVariant } from '@/lib/storefront/storefront-types';
+import type { StorefrontProductDetail, StorefrontVariant } from '@lezzet/application';
 import type { PublishedReview } from '@/lib/feedback/product-feedback';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir) — bu yüzden `import type` değil.
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports

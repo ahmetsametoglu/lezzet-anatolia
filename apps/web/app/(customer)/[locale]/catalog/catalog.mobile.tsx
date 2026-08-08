@@ -1,4 +1,4 @@
-import { CATALOG_SORTS } from '@/lib/storefront/storefront-types';
+import { CATALOG_SORTS } from '@lezzet/types';
 import { EmptyState, FilterChip } from '@/components/customer/ui/filter-controls';
 import { SortSelect } from '@/components/customer/ui/sort-select';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';

@@ -1,7 +1,8 @@
 import type { ComponentProps } from 'react';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type { Link } from '@/i18n/navigation';
-import type { CatalogSort, StorefrontCatalog, StorefrontProduct } from '@/lib/storefront/storefront-types';
+import type { CatalogSort } from '@lezzet/types';
+import type { StorefrontCatalog, StorefrontProduct } from '@lezzet/application';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir) — bu yüzden `import type` değil.
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import messages from './messages.json';

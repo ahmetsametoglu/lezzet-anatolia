@@ -1,6 +1,7 @@
 import { brand } from '@lezzet/brand';
 import { siteOrigin, type Locale } from '@lezzet/i18n';
-import type { StorefrontProductDetail, StorefrontRecipeDetail, StorefrontVariant } from '@/lib/storefront/storefront-types';
+import type { StorefrontProductDetail, StorefrontVariant } from '@lezzet/application';
+import type { StorefrontRecipeDetail } from '@/lib/storefront/storefront-types';
 
 /**
  * schema.org yapısal verisi (08.1) — arama sonucunda fiyat, stok ve puan görünmesini sağlayan şey.

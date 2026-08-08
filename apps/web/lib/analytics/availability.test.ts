@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { StorefrontVariant } from '@/lib/storefront/storefront-types';
+import type { StorefrontVariant } from '@lezzet/application';
 import { availabilityOf } from './availability';
 
 /**

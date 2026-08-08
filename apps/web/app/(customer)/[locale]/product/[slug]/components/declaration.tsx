@@ -4,7 +4,7 @@ import { ALLERGEN_LABELS, resolveLocalizedText } from '@lezzet/types';
 import type { Nutrition, ProductAllergen } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { formatDecimal } from '@/lib/storefront/format';
-import type { StorefrontDeclaration } from '@/lib/storefront/storefront-types';
+import type { StorefrontDeclaration } from '@lezzet/application';
 import type { Messages } from '../product-types';
 
 /**

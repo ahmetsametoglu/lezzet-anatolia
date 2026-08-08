@@ -6,9 +6,8 @@ import type { LocalizedText, ProductVariant, ProductWithRelations, Recipe, Recip
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Locale } from '@lezzet/i18n';
 import type { PlaceWarehouses } from '@/lib/delivery/place-types';
-import { EMPTY_PRODUCT_CONTEXT, imageOf, toVariant } from './map';
-import type { ProductContext } from './map';
-import { loadProductContext } from './read-context';
+import { EMPTY_PRODUCT_CONTEXT, imageOf, toVariant, loadProductContext } from '@lezzet/application';
+import type { ProductContext } from '@lezzet/application';
 import type { PricingViewer } from './read-viewer';
 import type { StorefrontRecipe, StorefrontRecipeDetail, StorefrontRecipeItem } from './storefront-types';
 

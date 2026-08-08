@@ -5,7 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import { Badge } from '@/components/customer/ui/badge';
 import { buttonClass } from '@/components/customer/ui/button';
 import { recordVariantStockNoticeAction } from '@/lib/delivery/notice-actions';
-import type { StockStatus } from '@/lib/storefront/storefront-types';
+import type { StockStatus } from '@lezzet/types';
 import { useDeliveryPlace } from './place-context';
 import { NoticeDialog } from './notice-dialog';
 import messages from './place-messages.json';

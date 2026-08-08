@@ -8,7 +8,7 @@ import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
 import { FramedImage } from '@/components/media/framed-image';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
-import type { StorefrontFamilyMember, StorefrontVariant } from '@/lib/storefront/storefront-types';
+import type { StorefrontFamilyMember, StorefrontVariant } from '@lezzet/application';
 import type { Messages } from '../product-types';
 
 /**

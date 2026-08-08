@@ -2,8 +2,8 @@ import 'server-only';
 import { ProductFeedbackService, ProductService, serviceDb } from '@lezzet/database';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
-import { imageOf } from '@/lib/storefront/map';
-import type { StorefrontImage } from '@/lib/storefront/storefront-types';
+import { imageOf } from '@lezzet/application';
+import type { StorefrontImage } from '@lezzet/application';
 
 /**
  * Keşif destesinin OKUMA kapısı (08.7 · design/pages/musteri-kesif.md).

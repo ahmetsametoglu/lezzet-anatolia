@@ -7,11 +7,11 @@ import type { Locale } from '@lezzet/i18n';
 import type { AnalyticsProductSignal, ProductWithRelations } from '@lezzet/types';
 import type { PlaceWarehouses } from '@/lib/delivery/place-types';
 import { FIXTURE_CATEGORIES } from './fixtures';
-import { listOfferProductIds, loadProductContext } from './read-context';
+import { listOfferProductIds, loadProductContext, EMPTY_PRODUCT_CONTEXT, toCategory, toProduct } from '@lezzet/application';
 import type { PricingViewer } from './read-viewer';
-import { EMPTY_PRODUCT_CONTEXT, toCategory, toProduct } from './map';
 import { HOME_PACKAGE_LIMIT, listStorefrontPackages } from './packages';
-import type { StorefrontHome, StorefrontOffer, StorefrontProduct } from './storefront-types';
+import type { StorefrontProduct } from '@lezzet/application';
+import type { StorefrontHome, StorefrontOffer } from './storefront-types';
 
 /**
  * Anasayfa okuması — vitrinin veri KAPISI (08.10). Sayfa servisi doğrudan çağırmaz, buradan okur.

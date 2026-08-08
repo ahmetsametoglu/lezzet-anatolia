@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
-import type { StorefrontCatalog, StorefrontProduct } from '@/lib/storefront/storefront-types';
+import type { StorefrontCatalog, StorefrontProduct } from '@lezzet/application';
 import { loadMoreCatalogAction } from './actions';
 import type { CatalogFilterPatch, CatalogFilters, CatalogHref, Messages } from './catalog-types';
 import { CatalogDesktop } from './catalog.desktop';

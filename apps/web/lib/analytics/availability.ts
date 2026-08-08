@@ -1,5 +1,5 @@
 import type { AnalyticsAvailability } from '@lezzet/types';
-import type { StorefrontVariant } from '@/lib/storefront/storefront-types';
+import type { StorefrontVariant } from '@lezzet/application';
 
 /**
  * Görüntüleme ANINDAKİ satılabilirlik (08.9 · `ANALYTICS §3`).

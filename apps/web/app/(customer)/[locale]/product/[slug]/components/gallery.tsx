@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { FramedImage } from '@/components/media/framed-image';
-import type { StorefrontImage } from '@/lib/storefront/storefront-types';
+import type { StorefrontImage } from '@lezzet/application';
 
 /**
  * Ürün galerisi — ana görsel + küçük görsel şeridi. Küçüğe dokunmak ana görseli değiştirir.

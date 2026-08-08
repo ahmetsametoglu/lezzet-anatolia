@@ -3,7 +3,7 @@ import type { CouponRejection, ShippingFeeResult } from '@lezzet/domain-core';
 import type { AnalyticsBlockedReason, CartItem } from '@lezzet/types';
 import type { LocalizedText } from '@lezzet/types';
 import type { CartLineRoute } from '@lezzet/domain-core';
-import type { StorefrontImage } from '@/lib/storefront/storefront-types';
+import type { StorefrontImage } from '@lezzet/application';
 
 /**
  * Kuponun neden tutmadığı — motorun sebepleri (`CouponRejection`) + kapının iki kendi hâli.

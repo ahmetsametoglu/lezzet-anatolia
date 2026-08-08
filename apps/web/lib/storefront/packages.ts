@@ -11,7 +11,7 @@ import {
   type ProductVariant,
 } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
-import { imageOf } from './map';
+import { imageOf } from '@lezzet/application';
 import type { StorefrontPackage, StorefrontPackageDetail, StorefrontPackageItem } from './storefront-types';
 
 /**

@@ -278,7 +278,7 @@ async function unitCostsOf(db: ReturnType<typeof serviceDb>, purchaseOrderId?: s
 /**
  * Siparişin KALAN beklentisi — "bu kabulden önce daha ne bekliyorduk".
  *
- * Ölçü `purchase_order_progress` görünümüdür (0042), PO kaleminin ham `qty`'si DEĞİL. Fark bu
+ * Ölçü `purchase_order_progress` görünümüdür (0031_warehouse), PO kaleminin ham `qty`'si DEĞİL. Fark bu
  * yüzden önemli: tek sipariş birden çok depoda parça parça kabul edilebilir (K6). Ham `qty`'ye
  * bakan bir karşılaştırma, 30'luk siparişin 20'si Strasbourg'a girdikten sonra Kehl'deki ikinci
  * kabulde "20 eksik" derdi — oysa o 20 çoktan gelmişti. Sistem aynı soruya iki cevap verirdi:

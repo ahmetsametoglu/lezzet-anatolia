@@ -2,7 +2,7 @@ import 'server-only';
 import { ProductService, ProductVariantService, type Db } from '@lezzet/database';
 import { resolveLocalizedText, type OrderItem } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
-import { imageOf } from '@/lib/storefront/map';
+import { imageOf } from '@lezzet/application';
 
 /**
  * Sipariş kaleminin MÜŞTERİ künyesi — ürün adı, boy etiketi, görsel.

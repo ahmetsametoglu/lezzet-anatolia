@@ -2,7 +2,7 @@
 
 import type { Locale } from '@lezzet/i18n';
 import { formatPrice } from '@/lib/storefront/format';
-import type { StorefrontVariant } from '@/lib/storefront/storefront-types';
+import type { StorefrontVariant } from '@lezzet/application';
 import { Badge } from '@/components/customer/ui/badge';
 import { Price } from '@/components/customer/ui/price';
 import { buttonClass } from '@/components/customer/ui/button';

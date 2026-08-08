@@ -4,10 +4,8 @@ import { decideCartAgainstWarehouse, meetsMinBasket, type CartLineInput, type Ca
 import { CROP_CENTER, resolveLocalizedText } from '@lezzet/types';
 import type { ProductVariant, ProductWithRelations } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
-import { EMPTY_PRODUCT_CONTEXT, imageOf, toVariant } from '@/lib/storefront/map';
-import type { ProductContext } from '@/lib/storefront/map';
-import { loadProductContext } from '@/lib/storefront/read-context';
-import { pricingViewerOf } from '@/lib/storefront/read-viewer';
+import { EMPTY_PRODUCT_CONTEXT, imageOf, toVariant, loadProductContext, pricingViewerOf } from '@lezzet/application';
+import type { ProductContext } from '@lezzet/application';
 import { getPackagesByIds } from '@/lib/storefront/packages';
 import type { StorefrontPackageDetail } from '@/lib/storefront/storefront-types';
 import {
@@ -114,7 +112,7 @@ export async function getCartView(
     db,
     page.rows,
     { warehouseId: opts.warehouseId ?? null, shippingWarehouseId: opts.shippingWarehouseId ?? null },
-    await pricingViewerOf(opts.customerId ?? null),
+    await pricingViewerOf(db, opts.customerId ?? null),
   );
 
   const lines: CartLine[] = [];

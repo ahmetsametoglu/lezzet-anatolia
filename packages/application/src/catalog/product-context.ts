@@ -91,6 +91,10 @@ export async function loadProductContext(
     // Bu, sıralamayla kartı da HİZALAR: `product_listing` yersiz okumada liste fiyatıyla sıralıyor
     // (0043). Teklifi burada okusaydık kart 3 € yazar, sıra 30 €'ya göre kurulurdu — ekran kendi
     // kendisiyle çelişirdi.
+    //
+    // BEKLEYEN(19.7): teklifin VARLIĞI (`has_near_expiry_offer`) posta kodu davetine dönüşecek —
+    // "posta kodunuzu girin, size ulaşabilecek son tarih indirimlerini görün". (İşaret webin
+    // silinen kopyasından taşındı — 21.6 benimsemesi, 08.08.)
     warehouseId ? stocks.listOfferBatches(variantIds, warehouseId) : Promise.resolve([]),
   ]);
 

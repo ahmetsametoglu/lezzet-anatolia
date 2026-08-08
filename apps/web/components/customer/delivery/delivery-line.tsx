@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { formatDeliveryDate } from '@/lib/storefront/format';
-import type { StockStatus } from '@/lib/storefront/storefront-types';
+import type { StockStatus } from '@lezzet/types';
 import { useDeliveryPlace } from './place-context';
 import { PlaceDialog } from './place-dialog';
 import messages from './place-messages.json';

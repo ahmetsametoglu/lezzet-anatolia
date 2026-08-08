@@ -4,12 +4,14 @@ import { hasLocale } from 'next-intl';
 import { localizedUrl, type Locale } from '@lezzet/i18n';
 import type { PreferredLanguage } from '@lezzet/types';
 import { localeAlternates } from '@/lib/seo/alternates';
+import { openGraphOf } from '@/lib/seo/open-graph';
 import { ProductJsonLd } from '@/lib/seo/json-ld';
 import { setRequestLocale } from 'next-intl/server';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { detectDevice } from '@/lib/device';
-import { getProductDetail } from '@/lib/storefront/product';
+import { getProductDetail } from '@lezzet/application';
+import { serviceDb } from '@lezzet/database';
 import { getProductScore, getReviewEligibility, listProductReviews } from '@/lib/feedback/product-feedback';
 import { currentCustomerId } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
@@ -53,13 +55,31 @@ interface ProductPageProps {
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) return {};
-  const product = await getProductDetail(locale, slug, await readPlaceWarehouses(), await readPricingViewer());
+  const product = await getProductDetail(serviceDb(), { locale, slug, place: await readPlaceWarehouses(), viewer: await readPricingViewer() });
   if (!product) return {};
 
   return {
     title: product.name,
     ...(product.description ? { description: product.description } : {}),
     alternates: localeAlternates('/product/[slug]', locale, { slug }),
+    /**
+     * **Paylaşım kartı** (08.1 · `lib/seo/open-graph.ts`). Ürün bağlantısı WhatsApp'ta dolaşan en
+     * yaygın içerik ve bugüne dek GÖRSELSİZ çıkıyordu — kart yalnız çıplak adres gösteriyordu.
+     *
+     * Görsel kaynağı JSON-LD ile AYNI (`product.image.url`, mutlak): iki yerde iki farklı görsel
+     * seçmek, arama sonucunda bir fotoğraf paylaşım kartında başkasını gösterirdi.
+     *
+     * `type` `product` DEĞİL `website` ve gerekçesi kapının künyesinde: `product` kartı fiyat/stok
+     * beklentisi doğurur, o alanları doğru doldurmak bugün taşımadığımız bir söz.
+     */
+    openGraph: openGraphOf({
+      route: '/product/[slug]',
+      locale,
+      params: { slug },
+      title: product.name,
+      description: product.description,
+      image: product.image.url,
+    }),
   };
 }
 
@@ -71,7 +91,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
 
   const t: Messages = messages[locale];
   const [product, device] = await Promise.all([
-    getProductDetail(locale, slug, await readPlaceWarehouses(), await readPricingViewer()),
+    getProductDetail(serviceDb(), { locale, slug, place: await readPlaceWarehouses(), viewer: await readPricingViewer() }),
     detectDevice(),
   ]);
   if (!product) notFound();
