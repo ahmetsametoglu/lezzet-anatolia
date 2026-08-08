@@ -1,6 +1,14 @@
 import { ProductService, RecipeService } from '@lezzet/database';
 import { resolveLocalizedText, type LocalizedText } from '@lezzet/types';
-import { tabloDolu, type Db } from './shared';
+import { r2Keys, tabloDolu, uploadImage, type Db } from './shared';
+
+/**
+ * Tarif kapakları — `temp/`teki paylaşılan kareler, sırayla dağıtılır.
+ *
+ * Aynı kare birden çok tarifte görünebilir ve bu üründe kabul edilemez olurdu ("bu tam olarak
+ * alacağınız şey" der), tarifte edilir: tarif fotoğrafı bir SUNUM önerisidir.
+ */
+const RECIPE_IMAGE_FILES = ['3.jpeg', '1.jpeg', '5.jpeg', '2.jpeg', '4.jpeg'];
 
 /**
  * **TARİF seed'i — "Sofradan Fikirler"** (05.16 · müşteri yüzeyi 08.24 · yönetim 09.21).
@@ -18,11 +26,15 @@ import { tabloDolu, type Db } from './shared';
  * ancak böyle bir satır varsa görünür. Müşteri yüzeyinde ise görünmemesi gerekiyor ve bu da
  * denenebilir hâle geliyor.
  *
- * ── GÖRSEL YOK ve bu bir eksik değil, SIRA ──────────────────────────────────
- * `r2Keys`te tarif anahtarı henüz yok (`docs/talep/arka-uc-tarif-gorseli-r2-anahtari.md`).
- * Anahtar geldiğinde yükleme buraya bir satırla girer (paket emsali: create'ten SONRA, slug
- * kesinleştikten sonra). O güne dek kartlar görselsiz çiziliyor — `FramedImage` boş çerçeveyi
- * zaten taşıyor, yani ekran bozulmuyor.
+ * ── GÖRSEL BAĞLANDI (08.08) ─────────────────────────────────────────────────
+ * `r2Keys.recipeImage` geldi; yükleme create'ten SONRA yapılıyor (paket emsali: anahtar, servisin
+ * benzersizleştirdiği KESİN slug'a bağlanmalı — önce yüklersek slug çakışmasında anahtar yetim
+ * kalır). Kaynak `temp/`teki paylaşılan kareler: tarif fotoğrafı bir SUNUM önerisidir, ürün
+ * fotoğrafı gibi "bu tam olarak alacağınız şey" demez — o yüzden paylaşılan bir kare burada
+ * yanıltıcı değil (üründe olurdu, orada her kapak kendi ürününün).
+ *
+ * **Bir tarif bilerek görselsiz kalıyor:** taslak olan. Yayın kapısı zaten onu tutuyor, ama
+ * operasyon listesinde "görselsiz tarif" satırının nasıl göründüğü de denenebilmeli.
  */
 
 interface SeedRecipeItem {
@@ -143,6 +155,82 @@ const RECIPES: SeedRecipe[] = [
     isActive: false,
     items: [{ sku: '700904', qty: 2 }],
   },
+  // ── Seçki BÜYÜTÜLDÜ (08.08 · kullanıcı isteği) ─────────────────────────────
+  // Üç yayın tarifi "Sofradan Fikirler" sayfasını kurmuyor: şerit üç kartla bitiyor, sayfa boş
+  // görünüyor ve seçkinin kendi işi (gezinme daveti) denenemiyor. Aşağıdakiler farklı ÖĞÜNLERİ ve
+  // farklı KATEGORİLERİ kapsıyor — aynı kategoriden beş tarif, listeyi uzatır ama çeşitliliği
+  // göstermez. Hepsinin kalemleri gerçek SKU; çözülemeyen SKU tarifi atlatır (yukarıdaki kural).
+  {
+    name: { tr: 'Mezeli Akşam Sofrası', fr: 'Table de mezze', de: 'Meze-Abend' },
+    description: {
+      tr: 'Humus, şakşuka ve sarmayla kurulan paylaşımlı bir sofra — hiçbir şey pişirmeden.',
+      fr: "Une table à partager avec houmous, şakşuka et feuilles de vigne — sans rien cuisiner.",
+      de: 'Ein Teilen-Tisch mit Hummus, Şakşuka und Weinblättern — ganz ohne Kochen.',
+    },
+    duration: { tr: '10 dk', fr: '10 min', de: '10 Min.' },
+    serves: { tr: '4–6 kişilik', fr: '4–6 personnes', de: '4–6 Personen' },
+    meal: { tr: 'Akşam yemeği', fr: 'Dîner', de: 'Abendessen' },
+    steps: {
+      tr: 'Mezeleri buzdolabından çıkarıp yarım saat bekletin — soğuk meze tadını saklar.\nGeniş bir tabağa kaşıkla yayın, üzerine zeytinyağı gezdirin.\nSarmaları kenara dizip limon dilimleriyle servis edin.',
+      fr: "Sortez les mezzés du réfrigérateur une demi-heure avant — le froid masque les saveurs.\nÉtalez-les à la cuillère dans un grand plat, arrosez d'huile d'olive.\nDisposez les feuilles de vigne sur le côté et servez avec des quartiers de citron.",
+      de: 'Nehmen Sie die Mezze eine halbe Stunde vorher aus dem Kühlschrank — Kälte verdeckt den Geschmack.\nMit dem Löffel auf einer großen Platte verteilen, mit Olivenöl beträufeln.\nDie Weinblätter an den Rand legen und mit Zitronenspalten servieren.',
+    },
+    pantry: {
+      tr: 'Zeytinyağı\nLimon\nTaze ekmek',
+      fr: "Huile d'olive\nCitron\nPain frais",
+      de: 'Olivenöl\nZitrone\nFrisches Brot',
+    },
+    isActive: true,
+    items: [
+      { sku: '200412', qty: 1 },
+      { sku: '200411', qty: 1 },
+      { sku: '200201', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Dondurmalı Baklava Tabağı', fr: 'Baklava glacé', de: 'Baklava mit Eis' },
+    description: {
+      tr: 'Sıcak baklavanın yanına Maraş dondurması — iki dokunuşluk klasik.',
+      fr: "Du baklava tiède avec de la glace de Kahramanmaraş — un classique en deux gestes.",
+      de: 'Lauwarmes Baklava mit Maraş-Eis — ein Klassiker in zwei Handgriffen.',
+    },
+    duration: { tr: '15 dk', fr: '15 min', de: '15 Min.' },
+    serves: { tr: '4 kişilik', fr: '4 personnes', de: '4 Personen' },
+    meal: { tr: 'Tatlı', fr: 'Dessert', de: 'Dessert' },
+    steps: {
+      tr: "Baklavayı 150 °C fırında 8 dakika ısıtın — şerbet akmaya başlayınca çıkarın.\nDondurmayı servisten 5 dakika önce dolaptan alın.\nTabakta yan yana koyun; dondurma baklavanın üstüne konmaz, ısı onu hemen eritir.",
+      fr: "Réchauffez le baklava 8 minutes à 150 °C — sortez-le dès que le sirop coule.\nSortez la glace 5 minutes avant de servir.\nDressez côte à côte : ne posez pas la glace sur le baklava, la chaleur la ferait fondre aussitôt.",
+      de: 'Baklava 8 Minuten bei 150 °C erwärmen — herausnehmen, sobald der Sirup fließt.\nDas Eis 5 Minuten vor dem Servieren aus dem Gefrierfach nehmen.\nNebeneinander anrichten: Das Eis nicht auf das Baklava setzen, die Wärme lässt es sofort schmelzen.',
+    },
+    pantry: { tr: 'Toz fıstık', fr: 'Pistaches concassées', de: 'Gehackte Pistazien' },
+    isActive: true,
+    items: [
+      { sku: 'BAK-F-500', qty: 1 },
+      { sku: '111112', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Çocuklara Çıtır Tabak', fr: 'Assiette croustillante des enfants', de: 'Knusperteller für Kinder' },
+    description: {
+      tr: 'Fırında çıtırlayan tavuk ve mini pideyle hızlı bir çocuk sofrası.',
+      fr: 'Poulet croustillant au four et mini pides — un repas rapide pour les enfants.',
+      de: 'Knuspriges Hähnchen aus dem Ofen und Mini-Pide — ein schnelles Kinderessen.',
+    },
+    duration: { tr: '25 dk', fr: '25 min', de: '25 Min.' },
+    serves: { tr: '2–3 kişilik', fr: '2–3 personnes', de: '2–3 Personen' },
+    meal: { tr: 'Öğle yemeği', fr: 'Déjeuner', de: 'Mittagessen' },
+    steps: {
+      tr: "Fırını 200 °C'ye ısıtın.\nTavukları tepsiye tek sıra dizin — üst üste koyarsanız çıtırlamaz, buharda pişer.\n18 dakika pişirin, son 5 dakikada mini pideleri yanına ekleyin.",
+      fr: "Préchauffez le four à 200 °C.\nDisposez le poulet en une seule couche — empilé, il cuit à la vapeur au lieu de croustiller.\nCuisez 18 minutes ; ajoutez les mini pides pour les 5 dernières minutes.",
+      de: 'Ofen auf 200 °C vorheizen.\nDas Hähnchen in einer Lage auslegen — übereinander gestapelt wird es dampfgegart statt knusprig.\n18 Minuten backen; die Mini-Pide in den letzten 5 Minuten dazulegen.',
+    },
+    pantry: { tr: 'Ketçap\nSalatalık', fr: 'Ketchup\nConcombre', de: 'Ketchup\nGurke' },
+    isActive: true,
+    items: [
+      { sku: '311201', qty: 1 },
+      { sku: '701221', qty: 1 },
+    ],
+  },
 ];
 
 export async function seedRecipes(db: Db): Promise<void> {
@@ -171,7 +259,7 @@ export async function seedRecipes(db: Db): Promise<void> {
       continue;
     }
 
-    await recipes.createWithItems({
+    const olusan = await recipes.createWithItems({
       name: r.name,
       description: r.description,
       duration: r.duration,
@@ -180,9 +268,18 @@ export async function seedRecipes(db: Db): Promise<void> {
       steps: r.steps,
       pantry: r.pantry,
       isActive: r.isActive,
-      sortOrder: sira++,
+      sortOrder: sira,
       items: items.map((i) => ({ variantId: i.variantId as string, qty: i.qty })),
     });
+
+    // Görsel create'ten SONRA: anahtar servisin benzersizleştirdiği KESİN slug'a bağlanır.
+    // Taslak tarif bilerek görselsiz kalıyor (künye).
+    if (r.isActive) {
+      const dosya = RECIPE_IMAGE_FILES[sira % RECIPE_IMAGE_FILES.length]!;
+      const key = await uploadImage(dosya, r2Keys.recipeImage(olusan.slug, dosya));
+      if (key) await recipes.update({ id: olusan.id, imageKey: key });
+    }
+    sira += 1;
   }
 
   const yayinda = RECIPES.filter((r) => r.isActive).length;

@@ -133,7 +133,49 @@ try {
   // .env yoksa ortam değişkenleri zaten tanımlı olabilir.
 }
 
+/**
+ * **Seed YALNIZ yerel veritabanına yazar** (08.08 · kullanıcı besin künyesi sorununu sorunca ölçüldü).
+ *
+ * Koruma YOKTU ve bedeli somuttu: `pnpm db:seed`, `.env`'i ne gösteriyorsa oraya yazıyor. Bir kez
+ * yanlış `SUPABASE_URL` ile çalıştırıldığında canlı kataloğa **141 sahte ürün** ve bunların
+ * **üretilmiş besin künyeleri** girerdi — besin künyesi INCO kapsamında yasal bir beyandır ve
+ * kategori ortalamasından türetilmiş bir sayı orada durursa yanlış beyan olur. Seed'i geri alan bir
+ * düğme de yok.
+ *
+ * **Neden koda gömülü işaret (ör. künyeye "örnek" anahtarı) yerine BU:** `NutritionSchema` kapalı bir
+ * nesne ve `NUTRITION_KEYS` onun şeklinden türüyor (INCO beyan sırası — hem form hem müşteri tablosu
+ * onu izliyor). Torbaya fazladan bir anahtar koymak müşteri tablosuna sahte bir beyan satırı ekler;
+ * Zod da bilinmeyen anahtarı zaten okurken düşürür, yani işaret sessizce kaybolurdu. Verinin şekli
+ * bir sözleşme; koruma kapıda durmalı, verinin içinde değil.
+ *
+ * Yerel ölçüt HOST: Supabase yereli `127.0.0.1`/`localhost` üzerinden konuşur. Bilerek üretime
+ * yazmak isteyen (ör. demo ortamı kurulumu) `SEED_ALLOW_REMOTE=true` der — ve o an ne yaptığını
+ * bilir; kaza ile yazılmaz.
+ */
+function assertLocalDatabase(): void {
+  if (process.env.SEED_ALLOW_REMOTE === 'true') {
+    console.warn('⚠ SEED_ALLOW_REMOTE=true — UZAK veritabanına yazılıyor. Bilerek yaptığınızdan emin olun.');
+    return;
+  }
+  const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  const host = (() => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return '';
+    }
+  })();
+  if (host === '127.0.0.1' || host === 'localhost' || host === '::1') return;
+
+  throw new Error(
+    `Seed YEREL veritabanı bekliyor, hedef: ${host || '(SUPABASE_URL okunamadı)'}\n` +
+      'Seed sahte katalog ve ÜRETİLMİŞ besin künyeleri yazar — canlı veriye girmesi yasal bir beyan hatasıdır.\n' +
+      'Gerçekten uzak bir ortamı doldurmak istiyorsanız: SEED_ALLOW_REMOTE=true pnpm db:seed',
+  );
+}
+
 async function main(): Promise<void> {
+  assertLocalDatabase();
   const db = createServiceRoleClient();
   // `db:refresh` = reset + seed. Reset, VERİTABANI sağlıklı olur olmaz döner ama PostgREST o anda hâlâ
   // şema önbelleğini yüklüyor olabilir; ilk sorgu kapıdan 502 alıp seed'i ilk bölümde düşürüyordu.

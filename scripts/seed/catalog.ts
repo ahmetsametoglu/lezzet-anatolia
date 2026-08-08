@@ -329,6 +329,7 @@ export async function seedCatalog(db: Db): Promise<void> {
   console.log(`✓ katalog: ${catId.size} kategori, ${PRODUCTS.length + lezza.made} ürün`);
 }
 
+
 // ── Koleksiyon + üyelik (05) ─────────────────────────────────────────────────────────────────────
 
 interface SeedCollection {
@@ -339,6 +340,23 @@ interface SeedCollection {
   isActive?: boolean;
   /** Ürün slug'ları — DİZİNİN SIRASI vitrin kürasyon sırasıdır (position). */
   products: string[];
+  /**
+   * **Kuralla tamamlanır** (08.08 · kullanıcı: *"koleksiyonların sağlıklı yapılmış olması"*).
+   *
+   * Elle yazılan slug'lar başta kalır — kürasyon sırası bir KARARDIR ve türetilemez. Ama arkasına
+   * gerçek katalogdan üye eklenmezse "dolu koleksiyon" örneği 144 ürünlük bir katalogda 4 üyeyle
+   * kalıyor: koleksiyon sayfası neredeyse boş görünüyor, sıralama ve kürasyon sürükleme fiilen
+   * denenemiyor. Kural bunu düzeltiyor ve UYDURMA DEĞİL — koleksiyon zaten bir seçki kuralıdır.
+   *
+   * Elle yazılan üyelerin listede kalmasının ikinci bir sebebi var: onlar tam beyanlı vitrin
+   * örnekleri, yani koleksiyon sayfası hem eksiksiz hem eksik kartı yan yana gösteriyor.
+   */
+  fillFrom?: {
+    /** Kategori slug'ları — sıra öncelik sırasıdır (önce baklava, sonra tatlı…). */
+    categorySlugs: string[];
+    /** Toplam üye tavanı (elle yazılanlar dâhil). Koleksiyon sayfalanmıyor; tavan bilinçli. */
+    upTo: number;
+  };
 }
 
 // Bilinçli çeşitlilik: dolu+kapaklı, kapaksız, pasif (taslak kampanya) ve BOŞ koleksiyon
@@ -354,6 +372,9 @@ const COLLECTIONS: SeedCollection[] = [
     },
     image: '1.jpeg',
     products: ['fistikli-baklava', 'kunefe', 'cevizli-baklava', 'kazandibi'], // kürasyon sırası
+    // "DOLU koleksiyon" örneği bu — o yüzden gerçekten dolu olmalı. Elle kürasyon başta, arkası
+    // bayram sofrasına giden kategorilerden.
+    fillFrom: { categorySlugs: ['baklava', 'serbetli-tatlilar', 'tatli'], upTo: 24 },
   },
   {
     slug: 'yeni-gelenler',
@@ -367,6 +388,9 @@ const COLLECTIONS: SeedCollection[] = [
     // `su-boregi` PASİF: aktif bir koleksiyonun içinde pasif üye durumunu örnekler — vitrin onu
     // elemeli, operasyon listesi göstermeli.
     products: ['kazandibi', 'kunefe', 'su-boregi'],
+    // İkinci dolu örnek, ama BAŞKA kategorilerden: iki koleksiyon aynı ürünleri gösterseydi
+    // "bir ürün birden çok koleksiyonda" durumu denenirdi ama "farklı seçkiler" denenmezdi.
+    fillFrom: { categorySlugs: ['pasta', 'dondurma'], upTo: 18 },
   },
   {
     slug: 'indirimde',
@@ -390,11 +414,31 @@ export async function seedCollections(db: Db): Promise<void> {
   }
 
   // Üyelik ürün id'sine muhtaç: slug → id eşlemesi DB'den (kaynak doğru, seed sırasından bağımsız).
-  const idBySlug = new Map((await new ProductService(db).listAll()).map((p) => [p.slug, p.id]));
+  const urunler = await new ProductService(db).listAll();
+  const idBySlug = new Map(urunler.map((p) => [p.slug, p.id]));
+  // Kategori slug → id: kural tabanlı doldurma kategoriyle çalışıyor, ürün satırı ise id taşıyor.
+  const catIdBySlug = new Map((await new CategoryService(db).list()).map((c) => [c.slug, c.id]));
 
   console.log('▸ KOLEKSİYON seed');
   for (const c of COLLECTIONS) {
     const productIds = c.products.map((slug) => idBySlug.get(slug)).filter((id): id is string => Boolean(id));
+    // Kuralla tamamlama: elle kürasyon başta kalır, arkasına kategori sırasına göre eklenir.
+    // **Yalnız SATILABİLİR ürün** — pasif/aday bir ürünü vitrin seçkisine kural ile koymak, o
+    // koleksiyonu açan müşteriye alınamayan bir kart göstermek olurdu. (Elle yazılan `su-boregi`
+    // pasif ve orada KALIYOR: o, bilinçli bir sınır durumu örneği.)
+    if (c.fillFrom) {
+      const secili = new Set(productIds);
+      for (const catSlug of c.fillFrom.categorySlugs) {
+        const catId = catIdBySlug.get(catSlug);
+        if (!catId) continue;
+        for (const p of urunler) {
+          if (productIds.length >= c.fillFrom.upTo) break;
+          if (p.categoryId !== catId || p.status !== 'active' || secili.has(p.id)) continue;
+          secili.add(p.id);
+          productIds.push(p.id);
+        }
+      }
+    }
     const created = await collections.create({
       name: c.name,
       description: c.description ?? null,
