@@ -1,0 +1,90 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vOrder · Sipariş Detay -->
+<!-- kaynak satırlar: 693-755, 1968-1984 -->
+
+<!-- kaynak: satır 693-755 · görünüm bloğu -->
+        <sc-if value="{{ vOrder }}">
+          <div data-screen-label="Sipariş Detay" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 17px 'Lora';color:#343b41;flex:1">{{ od.ref }}</span>
+              <span style="font:700 11.5px 'Karla';color:{{ od.stFg }};background:{{ od.stBg }};border-radius:11px;padding:5px 11px;transform:rotate(2deg);flex:none">{{ od.st }}</span>
+            </div>
+            <div style="padding:16px 18px 30px;display:flex;flex-direction:column;gap:16px">
+              <sc-if value="{{ od.mapOn }}">
+                <div style="position:relative;border-radius:18px;overflow:hidden;height:195px;background:#e7ebd8">
+                  <svg width="100%" height="100%" viewBox="0 0 340 195" preserveAspectRatio="xMidYMid slice">
+                    <path d="M-10 45 H350" stroke="#f3efe2" stroke-width="11" fill="none"></path>
+                    <path d="M-10 110 H350" stroke="#f3efe2" stroke-width="8" fill="none"></path>
+                    <path d="M70 -10 V205" stroke="#f3efe2" stroke-width="8" fill="none"></path>
+                    <path d="M180 -10 V205" stroke="#f3efe2" stroke-width="11" fill="none"></path>
+                    <path d="M255 -10 L340 90" stroke="#f3efe2" stroke-width="7" fill="none"></path>
+                    <path d="M-10 170 C 90 140, 200 190, 350 145" stroke="#cfe0e6" stroke-width="16" fill="none"></path>
+                    <path d="M55 160 C 100 130, 140 135, 185 100 S 255 62, 288 58" stroke="#5f7a2c" stroke-width="3.5" stroke-dasharray="7 6" fill="none" stroke-linecap="round"></path>
+                    <circle cx="150" cy="122" r="9" fill="#b05c2e" stroke="#f3efe2" stroke-width="3"></circle>
+                    <circle cx="150" cy="122" r="9" fill="none" stroke="#b05c2e" stroke-width="2" opacity=".5"><animate attributeName="r" values="9;24" dur="1.6s" repeatCount="indefinite"></animate><animate attributeName="opacity" values=".5;0" dur="1.6s" repeatCount="indefinite"></animate></circle>
+                    <g transform="translate(288,58)"><path d="M0 0C0 0 -9 -8 -9 -14a9 9 0 1 1 18 0C9 -8 0 0 0 0z" fill="#343b41"></path><circle cx="0" cy="-13.5" r="3.4" fill="#f3efe2"></circle></g>
+                  </svg>
+                  <div style="position:absolute;left:12px;top:12px;background:#343b41;color:#f3efe2;font:700 11.5px 'Karla';padding:7px 12px;border-radius:12px">Kurye yolda · tahmini {{ od.eta }}</div>
+                  <div style="position:absolute;right:12px;bottom:12px;background:rgba(243,239,226,.92);color:#8a8270;font:600 10.5px 'Karla';padding:5px 10px;border-radius:10px">Canlı takip</div>
+                </div>
+              </sc-if>
+              <div style="background:#ece3c8;border-radius:18px;padding:16px 16px 4px;display:flex;flex-direction:column">
+                <sc-for list="{{ od.tl }}" as="t" hint-placeholder-count="4">
+                  <div style="display:flex;gap:12px">
+                    <div style="display:flex;flex-direction:column;align-items:center">
+                      <div style="width:34px;height:34px;border-radius:50%;background:{{ t.cBg }};color:{{ t.cFg }};display:flex;align-items:center;justify-content:center;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ t.ic }}"></path></svg></div>
+                      <sc-if value="{{ t.line }}"><div style="width:2.5px;flex:1;min-height:16px;background:{{ t.line }};border-radius:2px;margin:3px 0"></div></sc-if>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:1px;padding-bottom:14px">
+                      <span style="font:700 13.5px 'Karla';color:{{ t.col }}">{{ t.n }}</span>
+                      <sc-if value="{{ t.time }}"><span style="font:400 11.5px 'Karla';color:#8a8270">{{ t.time }}</span></sc-if>
+                      <sc-if value="{{ t.note }}"><span style="font:600 11.5px/1.4 'Karla';color:#b05c2e">{{ t.note }}</span></sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">SİPARİŞ İÇERİĞİ</span>
+                <sc-for list="{{ od.items }}" as="l" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:11px;padding:9px 2px;border-bottom:1.5px dashed #d8cfb6">
+                    <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;background:#e2d8bd;display:flex;align-items:center;justify-content:center;flex:none"><sc-if value="{{ l.photo }}" hint-placeholder-val="{{ false }}"><div style="width:100%;height:100%;background-image:url({{ l.photo }});background-size:cover;background-position:center"></div></sc-if><sc-if value="{{ l.noPh }}"><span style="font:600 16px 'Lora';color:#8a8270">{{ l.init }}</span></sc-if></div>
+                    <div style="display:flex;flex-direction:column;gap:1px;flex:1"><span style="font:700 13px 'Karla';color:#343b41">{{ l.t }}</span><span style="font:400 11.5px 'Karla';color:#8a8270">{{ l.l2 }}</span></div>
+                    <span style="font:700 13px 'Karla';color:#343b41;flex:none">{{ l.f }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="background:#efdfc2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;justify-content:space-between;font:400 13px 'Karla';color:#6d7261"><span>Teslimat</span><span style="text-align:right">{{ od.day }}</span></div>
+                <div style="display:flex;justify-content:space-between;gap:14px;font:400 13px 'Karla';color:#6d7261"><span style="flex:none">Adres</span><span style="text-align:right">{{ od.addr }}</span></div>
+                <div style="display:flex;justify-content:space-between;font:400 13px 'Karla';color:#6d7261"><span>Ödeme</span><span>{{ od.pay }}</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;border-top:1.5px dashed #d8cfb6;padding-top:8px"><span style="font:700 14px 'Karla';color:#343b41">Toplam</span><span style="background:#b05c2e;color:#fff;font:600 16px 'Lora';padding:6px 12px;border-radius:12px;transform:rotate(2deg)">{{ od.totF }}</span></div>
+              </div>
+              <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s;box-shadow:3px 3px 0 #343b41" style-active="transform:translate(2px,2px)" onClick="{{ od.re }}">↻ Tekrar sipariş ver</div>
+              <sc-if value="{{ od.delivered }}"><div style="border:1.5px solid #cddbb0;color:#4a6121;font:700 14px 'Karla';border-radius:16px;height:50px;display:flex;align-items:center;justify-content:center" onClick="{{ od.fb }}">★ Ürünleri değerlendir</div></sc-if>
+              <span style="font:700 13px 'Karla';color:#b05c2e;text-align:center;padding:4px" onClick="{{ od.talep }}">Bir sorun mu var? Bize yazın</span>
+            </div>
+          </div>
+        </sc-if>
+
+<!-- kaynak: satır 1968-1984 · görünüm-modeli kurucusu -->
+<script type="text/x-dc-fragment">
+    if(V.vOrder){ const o=s.orders.find(x=>x.ref===top.ref);
+      const si={'Alındı':0,'Hazırlanıyor':1,'Yolda':2,'Teslim edildi':3}[o.st];
+      const TICONS=['M20 6 9 17l-5-5','M21 8 12 3 3 8l9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8','M1 5h12v10H1zM13 8h5l4 4v3h-9M4.5 18a1.8 1.8 0 1 0 3.6 0M15.5 18a1.8 1.8 0 1 0 3.6 0','M3 11.5 12 4l9 7.5M5.5 10V20h13v-10'];
+      const TNAMES=['Sipariş alındı','Hazırlanıyor','Yolda','Teslim edildi'];
+      const times=o.times||[o.dt,null,null,null];
+      const delivered=o.st==='Teslim edildi';
+      V.od={ref:o.ref,dt:o.dt,st:o.st,stBg:(stC[o.st]||stC['Alındı'])[0],stFg:(stC[o.st]||stC['Alındı'])[1],
+        mapOn:o.st==='Yolda',eta:'30–40 dk',
+        tl:TNAMES.map((n,i)=>{ const done=si!=null&&i<=si; const cur=si===i&&!delivered;
+          return {n,ic:TICONS[i],cBg:cur?'#b05c2e':done?'#5f7a2c':'#e2d8bd',cFg:done||cur?'#fff':'#8a8270',col:done?'#343b41':'#9a917c',time:done?times[i]:null,
+            note:cur?(o.st==='Yolda'?'Kurye bölgenizde — kapınıza yaklaşıyor':o.st==='Hazırlanıyor'?'Siparişiniz özenle paketleniyor':'Siparişiniz onaylandı'):null,
+            line:i<3?(si!=null&&i<si?'#5f7a2c':'#d8cfb6'):null}; }),
+        items:o.items.map(l=>{ const p=this.prod(l.pid), v=this.vOf(p,l.vid); return {t:l.qty+'× '+p.n,l2:v.l,f:this.fmt(this.uPrice(p,v)*l.qty),photo:this.PHOTO[l.pid]||'',noPh:!this.PHOTO[l.pid],init:p.n.charAt(0)}; })
+          .concat((o.pkgs||[]).map(l=>{ const k=this.K.find(x=>x.id===l.kid); return {t:l.qty+'× '+k.n,l2:'Hazır paket',f:this.fmt(k.pr*l.qty),photo:this.PKPH[l.kid]||'',noPh:!this.PKPH[l.kid],init:k.n.charAt(0)}; })),
+        totF:this.fmt(o.t),pay:o.pay,addr:o.addr,day:o.day,delivered:o.st==='Teslim edildi',
+        re:()=>this.reorder(o),talep:()=>this.openTalepNew(o.ref),fb:()=>this.openFb(o.ref)};
+    } else V.od={};
+</script>

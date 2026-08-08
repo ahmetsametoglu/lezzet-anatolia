@@ -1,0 +1,37 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vDSay · Depo · Sayım Düzeltme -->
+<!-- kaynak satırlar: 400-430 -->
+
+<!-- kaynak: satır 400-430 · görünüm bloğu -->
+    <!-- ================= D4 SAYIM ================= -->
+    <sc-if value="{{ vDSay }}">
+      <div data-screen-label="Depo · Sayım Düzeltme" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">Sayım / Düzeltme</span><span style="font:700 10.5px 'Karla';color:#8a8270">P-0641 · Kaymaklı Baklava · 1 kg</span></div>
+        </div>
+        <div style="flex:1;padding:6px 22px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">SEBEP — DÖRT TİP</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ dSebep }}" as="s" hint-placeholder-count="4"><span style="font:700 12px 'Karla';color:{{ s.fg }};background:{{ s.bg }};border:1.5px solid {{ s.bd }};border-radius:12px;padding:8px 13px;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ s.pick }}">{{ s.n }}</span></sc-for>
+            </div>
+            <span style="font:400 11px 'Karla';color:#8a8270">"İade stoğa döndü" depocuya açılmaz — yönetim istisnasıdır.</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="display:flex;flex-direction:column;flex:1"><span style="font:700 13.5px 'Karla'">Adet (işaretli)</span><span style="font:400 11.5px 'Karla';color:#8a8270">− düşüm · + yalnız sayım fazlasında</span></div>
+            <input type="number" inputmode="numeric" value="{{ dAdetV }}" onChange="{{ dAdetSet }}" style="width:80px;background:#fff;border:1.5px solid #343b41;border-radius:12px;padding:10px 8px;font:800 18px 'Karla';color:{{ dAdetFg }};text-align:center;outline:none">
+          </div>
+          <sc-if value="{{ dGeriNot }}"><div style="background:#f9ede2;border-radius:16px;padding:11px 14px"><span style="font:700 12px 'Karla';color:#b05c2e">Geri eklemede sebep notu zorunlu — sistem zorlar.</span></div></sc-if>
+          <div style="background:#fbfaf4;border:1.5px solid #c9c2ae;border-radius:16px;padding:12px 15px;display:flex;flex-direction:column;gap:2px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">OLAY REFERANSI</span>
+            <span style="font:800 16px 'Karla';letter-spacing:.04em">{{ dRef }}</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">kâğıt tutanakla eşleşir · kayıt atomiktir — bir satır düşerse hiçbiri yazılmaz</span>
+          </div>
+        </div>
+        <div style="padding:10px 20px 16px">
+          <div style="background:{{ dSayCta.bg }};color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:{{ dSayCta.sh }};transition:transform .12s" style-active="transform:translate(2px,2px)">{{ dSayCta.l }}</div>
+        </div>
+      </div>
+    </sc-if>

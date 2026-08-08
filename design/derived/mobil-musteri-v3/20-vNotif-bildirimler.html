@@ -1,0 +1,49 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vNotif · Bildirimler -->
+<!-- kaynak satırlar: 1138-1180 -->
+
+<!-- kaynak: satır 1138-1180 · görünüm bloğu -->
+        <sc-if value="{{ vNotif }}">
+          <div data-screen-label="Bildirimler" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 17px 'Lora';color:#343b41">Bildirimler</span>
+            </div>
+            <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px">
+              <sc-if value="{{ nv.netErr }}">
+                <div style="margin:16px 0;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;border:2px dashed #d8cfb6;border-radius:18px;padding:28px 20px">
+                  <span style="font:600 17px 'Lora';color:#343b41">Bağlantı kurulamadı</span>
+                  <span style="background:#343b41;color:#f3efe2;font:700 13px 'Karla';padding:11px 22px;border-radius:16px" onClick="{{ nv.netErr.retry }}">Tekrar dene</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ nv.emptyL }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:60px 30px;text-align:center">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5c0-3.3-2.7-5.5-6-5.5S6 5.2 6 8.5c0 6-2.5 7-2.5 7h17s-2.5-1-2.5-7"></path><path d="M10 19.5a2.2 2.2 0 0 0 4 0"></path></svg>
+                  <span style="font:600 18px 'Lora';color:#343b41">Şimdilik bildirim yok</span>
+                  <span style="font:400 13px/1.5 'Karla';color:#8a8270">Sipariş durumu, fırsat ve stok haberleri burada görünecek.</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ nv.guest }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 30px;text-align:center">
+                  <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5c0-3.3-2.7-5.5-6-5.5S6 5.2 6 8.5c0 6-2.5 7-2.5 7h17s-2.5-1-2.5-7"></path><path d="M10 19.5a2.2 2.2 0 0 0 4 0"></path></svg>
+                  <span style="font:600 18px 'Lora';color:#343b41">Bildirimleriniz burada toplanır</span>
+                  <span style="font:400 13px/1.5 'Karla';color:#8a8270">Sipariş durumu, fırsatlar ve stok haberleri için birkaç saniyede doğrulanın.</span>
+                  <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:16px;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ nv.loginGo }}">Hızlı doğrulama</span>
+                </div>
+              </sc-if>
+              <sc-for list="{{ nv.rows }}" as="n" hint-placeholder-count="3">
+                <div style="display:flex;gap:12px;align-items:center;background:#ece3c8;border-radius:18px;padding:13px 15px;transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ n.go }}">
+                  <div style="width:40px;height:40px;border-radius:50%;background:#eef2e2;display:flex;align-items:center;justify-content:center;flex:none"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4a6121" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.ic }}"></path></svg></div>
+                  <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+                    <span style="font:700 13px 'Karla';color:#343b41">{{ n.t }}</span>
+                    <span style="font:400 12px/1.4 'Karla';color:#8a8270">{{ n.sb }}</span>
+                    <span style="font:600 10.5px 'Karla';color:#b3ab97;margin-top:2px">{{ n.tm }}</span>
+                  </div>
+                  <sc-if value="{{ n.un }}"><span style="width:9px;height:9px;border-radius:50%;background:#b05c2e;flex:none"></span></sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ nv.logged }}"><span style="font:400 11.5px/1.5 'Karla';color:#9a917c;text-align:center;padding:6px 12px">Bildirim tercihlerinizi Hesap bölümündeki Kampanya iletişimi ayarlarından yönetebilirsiniz.</span></sc-if>
+            </div>
+          </div>
+        </sc-if>

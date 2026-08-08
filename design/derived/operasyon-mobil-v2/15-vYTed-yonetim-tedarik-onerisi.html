@@ -1,0 +1,34 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vYTed · Yönetim · Tedarik Önerisi -->
+<!-- kaynak satırlar: 635-662 -->
+
+<!-- kaynak: satır 635-662 · görünüm bloğu -->
+    <!-- ================= Y4 TEDARİK ================= -->
+    <sc-if value="{{ vYTed }}">
+      <div data-screen-label="Yönetim · Tedarik Önerisi" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">Tedarik Önerisi</span><span style="font:700 10.5px 'Karla';color:#8a8270">öneri listesi elle de açılır — bildirim tek kapı değil</span></div>
+        </div>
+        <div style="flex:1;padding:6px 22px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font:700 13px 'Karla'">Gaziantep Gıda · TED-04</span>
+            <sc-for list="{{ yTed }}" as="t" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px;padding:10px 0;border-bottom:1.5px dashed #ddd6c4">
+                <div style="display:flex;justify-content:space-between"><span style="font:700 13.5px 'Karla'">{{ t.n }}</span><span style="font:800 13.5px 'Karla';color:#5f7a2c">+{{ t.oner }}</span></div>
+                <span style="font:400 11.5px 'Karla';color:#8a8270">mevcut {{ t.mev }} · eşik {{ t.esik }} · son alış {{ t.alis }} · yoldaki düşülmüş, koli katına yuvarlı</span>
+                <sc-if value="{{ t.baska }}"><span style="font:700 11px 'Karla';color:#8a6d3a">başka depoda var: {{ t.baska }} — transfer seçeneğinin ham verisi</span></sc-if>
+              </div>
+            </sc-for>
+            <div style="background:{{ yTedCta.bg }};color:#fff;font:700 13.5px 'Karla';border-radius:16px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:{{ yTedCta.sh }};margin-top:8px;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ yTedOnay }}">{{ yTedCta.l }}</div>
+            <span style="font:400 11px 'Karla';color:#8a8270">Sistem tedarikçiye bir şey göndermez — metni kurar, gönderim (WhatsApp/PDF) insanın. Referans TS-26-… gönderimde doğar.</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;opacity:.65">
+            <span style="font:700 13px 'Karla'">Eşlenmemiş grup · 1 varyant</span>
+            <span style="font:400 12px 'Karla';color:#8a8270">Acılı Ezme · 250 g — mevcut 4 · eşik 12 · tedarikçi eşlemesi yok</span>
+            <span style="font:700 11.5px 'Karla';color:#a44a3f">Bu gruptan sipariş açılamaz — önce masada tedarikçi eşleyin.</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>

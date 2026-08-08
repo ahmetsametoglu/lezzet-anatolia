@@ -1,0 +1,28 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vMGun · Para · Gün Sonu -->
+<!-- kaynak satırlar: 758-779 -->
+
+<!-- kaynak: satır 758-779 · görünüm bloğu -->
+    <!-- ================= PARA M2 ================= -->
+    <sc-if value="{{ vMGun }}">
+      <div data-screen-label="Para · Gün Sonu" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">Gün Sonu Özeti</span><span style="font:700 10.5px 'Karla';color:#8a8270">salt okuma · çözüm masaüstünde</span></div>
+        </div>
+        <div style="flex:1;padding:6px 22px 16px;display:flex;flex-direction:column;gap:13px">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13px 'Karla'">Tahsilat toplamı</span><span style="font:800 15px 'Karla'">739,80 €</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13px 'Karla'">İadeler</span><span style="font:700 13.5px 'Karla';color:#a44a3f">−12,90 €</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13px 'Karla'">Kurye nakit teslimi (K7)</span><span style="font:700 13.5px 'Karla'">68,00 €</span></div>
+          </div>
+          <div style="background:#fbfaf4;border:1.5px solid #b05c2e;border-radius:20px;padding:13px 16px;display:flex;flex-direction:column;gap:3px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">UYUŞMAZLIK — YALNIZ GÖRÜNÜR</span>
+            <span style="font:800 22px 'Karla';color:#a44a3f">−10,00 €</span>
+            <span style="font:400 12px/1.5 'Karla';color:#6d7261">Beklenen 78,00 € ↔ teslim edilen 68,00 € nakit. Eksi = eksik. Düzeltme kaydı masaüstünde.</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13px 'Karla'">Eşleşmemiş hareket</span><span style="font:700 13.5px 'Karla';color:#8a8270">sayaç yok (null ≠ 0)</span></div>
+        </div>
+      </div>
+    </sc-if>

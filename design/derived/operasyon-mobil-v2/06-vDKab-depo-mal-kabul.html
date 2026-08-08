@@ -1,0 +1,48 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vDKab · Depo · Mal Kabul -->
+<!-- kaynak satırlar: 334-375 -->
+
+<!-- kaynak: satır 334-375 · görünüm bloğu -->
+    <!-- ================= D2 MAL KABUL ================= -->
+    <sc-if value="{{ vDKab }}">
+      <div data-screen-label="Depo · Mal Kabul" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">Mal Kabul</span><span style="font:700 10.5px 'Karla';color:#8a8270">TS-26-0114 · Gaziantep Gıda · gönderildi</span></div>
+          <span style="margin-left:auto;font:700 11px 'Karla';color:#5f7a2c">+ plansız kabul</span>
+        </div>
+        <div style="flex:1;padding:6px 22px;display:flex;flex-direction:column">
+          <sc-for list="{{ dKab }}" as="k" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:7px;padding:13px 0;border-bottom:1.5px dashed #ddd6c4">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="display:flex;flex-direction:column;gap:1px;flex:1"><span style="font:700 14px 'Karla'">{{ k.n }}</span><span style="font:400 11.5px 'Karla';color:#8a8270">beklenen {{ k.bek }}</span></div>
+                <input type="number" inputmode="numeric" value="{{ k.gelV }}" onChange="{{ k.set }}" style="width:70px;background:#fff;border:1.5px solid #343b41;border-radius:12px;padding:10px 8px;font:800 15px 'Karla';color:{{ k.gelFg }};text-align:center;outline:none">
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <span style="font:700 11px 'Karla';color:{{ k.sktFg }};border:1.5px solid {{ k.sktBd }};background:{{ k.sktBg }};border-radius:12px;padding:6px 11px;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ k.sktAc }}">{{ k.sktL }}</span>
+                <span style="font:700 11px 'Karla';color:{{ k.lotFg }};border:1.5px solid #c9c2ae;border-radius:12px;padding:6px 11px" onClick="{{ k.lotT }}">{{ k.lotTx }}</span>
+                <span style="font:700 11px 'Karla';color:{{ k.hasFg }};border:1.5px solid {{ k.hasBd }};background:{{ k.hasBg }};border-radius:12px;padding:6px 11px;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ k.hasT }}">{{ k.hasL }}</span>
+              </div>
+              <sc-if value="{{ k.sktEdit }}">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <input type="date" value="{{ k.sktV }}" onChange="{{ k.sktSet }}" style="flex:1;background:#fff;border:1.5px solid #343b41;border-radius:12px;padding:10px 12px;font:700 13px 'Karla';color:#343b41;outline:none">
+                  <span style="font:700 12px 'Karla';color:#5f7a2c" onClick="{{ k.sktKapat }}">tamam</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ k.omurUyari }}"><span style="font:700 11px 'Karla';color:#b05c2e">⚠ kalan ömür %{{ k.omur }} — uyarı, engellemez</span></sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ dKabFark }}">
+            <div style="margin-top:12px;background:#fbfaf4;border:1.5px solid #c9c2ae;border-radius:16px;padding:12px 15px;display:flex;flex-direction:column;gap:4px">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">FARK ÖZETİ — YALNIZ SAPAN SATIRLAR</span>
+              <sc-for list="{{ dKabFarkList }}" as="f" hint-placeholder-count="1"><span style="font:700 12.5px 'Karla';color:#b05c2e">{{ f }}</span></sc-for>
+            </div>
+          </sc-if>
+          <span style="font:400 11.5px/1.6 'Karla';color:#8a8270;padding:12px 0">SKT her satırda zorunlu — girilmeden kabul kapanmaz. Parçalı kabul mümkün; lot geri çağırma anahtarıdır, boş bırakmak bilinçli olmalı.</span>
+        </div>
+        <div style="padding:10px 20px 16px">
+          <div style="background:{{ dKabCta.bg }};color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:{{ dKabCta.sh }};transition:transform .12s" style-active="transform:translate(2px,2px)">{{ dKabCta.l }}</div>
+        </div>
+      </div>
+    </sc-if>

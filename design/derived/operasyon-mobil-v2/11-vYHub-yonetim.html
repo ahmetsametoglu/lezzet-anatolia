@@ -1,0 +1,52 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vYHub · Yönetim -->
+<!-- kaynak satırlar: 483-528 -->
+
+<!-- kaynak: satır 483-528 · görünüm bloğu -->
+    <!-- ================= YÖNETİM HUB ================= -->
+    <sc-if value="{{ vYHub }}">
+      <div data-screen-label="Yönetim" style="animation:tabIn .25s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="padding:20px 22px 6px;display:flex;align-items:flex-start;justify-content:space-between">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#343b41">YÖNETİM · BİLDİRİM → KISA KARAR</span>
+            <span style="font:600 24px 'Lora';color:#343b41">Karar Kutusu</span>
+          </div>
+          <div style="width:42px;height:42px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;position:relative;transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBildirim }}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#343b41" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
+            <sc-if value="{{ bilN }}"><span style="position:absolute;top:-2px;right:-2px;background:#b05c2e;color:#fff;font:700 10px 'Karla';border-radius:9px;padding:1px 6px;animation:pop .3s ease">{{ bilN }}</span></sc-if>
+          </div>
+        </div>
+        <sc-if value="{{ kError }}">
+          <div style="margin:24px 22px;background:#fbfaf4;border:1.5px solid #c9c2ae;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:8px;align-items:center">
+            <span style="font:700 15px 'Karla'">Karar kutusu yüklenemedi</span>
+            <span style="font:700 13px 'Karla';color:#343b41;border:1.5px solid #343b41;border-radius:16px;padding:12px 26px;transition:transform .12s" style-active="transform:scale(.97)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:7px"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>Tekrar dene</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ kEmpty }}">
+          <div style="margin:24px 22px;background:#fbfaf4;border:1.5px dashed #c9c2ae;border-radius:20px;padding:26px 22px;display:flex;flex-direction:column;gap:6px;align-items:center">
+            <span style="font:600 17px 'Lora'">Karar kutusu boş</span>
+            <span style="font:400 12.5px/1.5 'Karla';color:#8a8270;text-align:center">Bekleyen karar yok — gün özeti aşağıdan hâlâ açılır.</span>
+            <span style="font:700 12.5px 'Karla';color:#5f7a2c;padding-top:4px" onClick="{{ goOzet }}">Gün özeti →</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ kList }}">
+          <div style="margin:12px 22px 0;background:#fbfaf4;border:1.5px solid #c9c2ae;border-radius:20px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ goOzet }}">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">GÜN ÖZETİ</span>
+            <span style="font:700 14px/1.45 'Karla'">31 sipariş · 6 hazırlanıyor · 5 tahsilat bekliyor</span>
+            <span style="font:400 12px 'Karla';color:#8a8270">ciro 1.412,60 € · açık şikâyet 3 · yarın 14 sevkiyat →</span>
+          </div>
+          <div style="flex:1;padding:8px 22px;display:flex;flex-direction:column">
+            <sc-for list="{{ yHub }}" as="y" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1.5px dashed #ddd6c4;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ y.go }}">
+                <span style="width:10px;height:10px;border-radius:50%;background:{{ y.dot }};flex:none"></span>
+                <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:700 14px 'Karla'">{{ y.t }}</span><span style="font:400 11.5px 'Karla';color:#8a8270">{{ y.s }}</span></div>
+                <sc-if value="{{ y.top }}"><span style="font:700 10.5px 'Karla';color:#b05c2e;border:1.5px solid #b05c2e;border-radius:12px;padding:3px 8px;flex:none">top bizde</span></sc-if>
+                <span style="font:400 20px 'Karla';color:#b3ab97">›</span>
+              </div>
+            </sc-for>
+            <span style="font:400 11.5px/1.6 'Karla';color:#8a8270;padding:14px 0">Uzun iş masaya kalır — her ekran "masada devam et" der. Kurulum/ayar mobile taşınmaz.</span>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>

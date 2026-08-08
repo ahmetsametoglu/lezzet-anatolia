@@ -1,0 +1,33 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vDDon · Depo · Kurye Dönüşü -->
+<!-- kaynak satırlar: 455-481 -->
+
+<!-- kaynak: satır 455-481 · görünüm bloğu -->
+    <!-- ================= D6 KURYE DÖNÜŞÜ ================= -->
+    <sc-if value="{{ vDDon }}">
+      <div data-screen-label="Depo · Kurye Dönüşü" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">Kurye Dönüşü Kabulü</span><span style="font:700 10.5px 'Karla';color:#8a8270">Musa K. · rota kapandı</span></div>
+        </div>
+        <div style="flex:1;padding:6px 22px;display:flex;flex-direction:column;gap:6px">
+          <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270;padding-top:6px">DÖNEN MALLAR — AKIBET İŞARETLE</span>
+          <div style="display:flex;flex-direction:column;gap:6px;padding:10px 0;border-bottom:1.5px dashed #ddd6c4">
+            <span style="font:700 14px 'Karla'">LZA-26-9Q2B · 2 × Su Böreği</span>
+            <span style="display:flex;align-items:center;gap:6px;font:400 12px 'Karla';color:#8a8270">kurye notu: "kapıda reddetti — koku şüphesi" ·<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>hasar fotoğrafı var</span>
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ dAkibet }}" as="a" hint-placeholder-count="3"><span style="flex:1;text-align:center;font:700 12px 'Karla';color:{{ a.fg }};background:{{ a.bg }};border:1.5px solid {{ a.bd }};border-radius:12px;padding:9px 0;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ a.pick }}">{{ a.n }}</span></sc-for>
+            </div>
+            <sc-if value="{{ dAkibetNot }}"><span style="font:700 11.5px 'Karla';color:#b05c2e">"Stoğa dön"de sebep notu zorunlu: <strong style="color:#343b41">soğuk zincir kesintisiz — ambalaj sağlam</strong></span></sc-if>
+            <sc-if value="{{ dAkibetJest }}"><span style="font:400 11.5px 'Karla';color:#8a8270">Jest: mal ve stok değişmez — yalnız kayıt düşülür.</span></sc-if>
+          </div>
+          <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270;padding-top:10px">ULAŞILAMAYANLAR — ARAÇTA KALIR, KABUL EDİLMEZ</span>
+          <span style="font:700 13.5px 'Karla';padding:8px 0;opacity:.55">LZA-26-… · 2 koli — yarına devrolur</span>
+          <span style="font:400 11.5px/1.6 'Karla';color:#8a8270;padding:10px 0">Miktar hedef değer olarak girilir; fark sistemde hesaplanır.</span>
+        </div>
+        <div style="padding:10px 20px 16px">
+          <div style="background:{{ dDonCta.bg }};color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:{{ dDonCta.sh }};transition:transform .12s" style-active="transform:translate(2px,2px)">{{ dDonCta.l }}</div>
+        </div>
+      </div>
+    </sc-if>

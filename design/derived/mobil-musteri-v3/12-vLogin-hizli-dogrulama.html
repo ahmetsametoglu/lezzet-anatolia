@@ -1,0 +1,46 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vLogin · Hızlı Doğrulama -->
+<!-- kaynak satırlar: 757-796 -->
+
+<!-- kaynak: satır 757-796 · görünüm bloğu -->
+        <sc-if value="{{ vLogin }}">
+          <div data-screen-label="Hızlı Doğrulama" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 14px">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ lg.cancel }}">‹</div>
+            </div>
+            <div style="padding:20px 26px;display:flex;flex-direction:column;gap:16px">
+              <img src="assets/logo.jpg" style="height:52px;mix-blend-mode:multiply;align-self:flex-start" alt="Lezzet Anatolia">
+              <h1 style="margin:0;font:600 26px/1.25 'Lora';color:#343b41">Birkaç saniyede<br>doğrulanın</h1>
+              <span style="font:400 13.5px/1.5 'Karla';color:#6d7261">Şifre yok, form yok. İster yeni ister dönen müşteri olun — aynı yoldan devam edersiniz.</span>
+              <sc-if value="{{ lg.mNull }}">
+                <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+                  <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #d8cfb6;border-radius:26px;height:54px;padding:0 20px" onClick="{{ lg.g }}"><span style="font:700 16px 'Karla';color:#4285f4">G</span><span style="font:700 14px 'Karla';color:#343b41">Google ile devam et</span></div>
+                  <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #d8cfb6;border-radius:26px;height:54px;padding:0 20px" onClick="{{ lg.w }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#25d366" stroke-width="1.9" stroke-linejoin="round"><path d="M21 11.5c0 3.9-4 7-9 7-1.1 0-2.1-.15-3.1-.42L4.5 19.5l1.3-3.1C4.3 15.1 3 13.4 3 11.5c0-3.9 4-7 9-7s9 3.1 9 7z"></path></svg><span style="font:700 14px 'Karla';color:#343b41">WhatsApp ile devam et</span></div>
+                  <div style="display:flex;align-items:center;gap:12px;background:#5f7a2c;border-radius:26px;height:54px;padding:0 20px" onClick="{{ lg.e }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2"></rect><path d="m4 7.5 8 6 8-6"></path></svg><span style="font:700 14px 'Karla';color:#fff">E-posta ile devam et</span></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ lg.emailShown }}">
+                <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+                  <sc-if value="{{ lg.notSent }}">
+                    <input value="{{ lg.email }}" onChange="{{ lg.onEmail }}" placeholder="E-posta adresiniz" style="border:1.5px solid #d8cfb6;border-radius:26px;height:54px;padding:0 22px;font:400 15px 'Karla';color:#343b41;background:#fff;outline:none">
+                    <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:54px;display:flex;align-items:center;justify-content:center;transition:transform .12s;box-shadow:3px 3px 0 #343b41" style-active="transform:translate(2px,2px)" onClick="{{ lg.send }}">Tek kullanımlık kod gönder</div>
+                  </sc-if>
+                  <sc-if value="{{ lg.sent }}">
+                    <span style="font:600 13.5px 'Karla';color:#343b41">{{ lg.email }} adresine kod gönderdik.</span>
+                    <input value="{{ lg.code }}" onChange="{{ lg.onCode }}" placeholder="• • • • • •" inputMode="numeric" style="border:1.5px solid #5f7a2c;border-radius:20px;height:62px;padding:0 22px;font:700 26px 'Karla';color:#343b41;background:#fff;outline:none;text-align:center;letter-spacing:.22em">
+                    <span style="font:400 12px 'Karla';color:#8a8270;text-align:center">Demo: herhangi 6 rakam girin</span>
+                    <span style="font:700 13px 'Karla';color:#5f7a2c;text-align:center" onClick="{{ lg.resend }}">Kod gelmedi mi? Yeniden gönder</span>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <sc-if value="{{ lg.busy }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:26px 0">
+                  <div style="width:40px;height:40px;border-radius:50%;border:4px solid #eef2e2;border-top-color:#5f7a2c;animation:spin .8s linear infinite"></div>
+                  <span style="font:600 13.5px 'Karla';color:#6d7261">Doğrulanıyor…</span>
+                </div>
+              </sc-if>
+              <span style="font:400 11.5px/1.5 'Karla';color:#9a917c;margin-top:10px">Doğrulanarak <span style="color:#5f7a2c;text-decoration:underline" onClick="{{ goGizlilik }}">gizlilik politikamızı</span> kabul etmiş olursunuz. Hangi yolu seçerseniz seçin aynı hesabınıza ulaşırsınız.</span>
+            </div>
+          </div>
+        </sc-if>

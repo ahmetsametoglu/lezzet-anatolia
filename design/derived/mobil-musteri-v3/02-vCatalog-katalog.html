@@ -1,0 +1,69 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vCatalog · Katalog -->
+<!-- kaynak satırlar: 174-236 -->
+
+<!-- kaynak: satır 174-236 · görünüm bloğu -->
+        <sc-if value="{{ vCatalog }}">
+          <div data-screen-label="Katalog" style="animation:tabIn .25s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:#f3efe2;padding:8px 18px 10px;display:flex;flex-direction:column;gap:10px;border-bottom:1.5px solid #343b41">
+              <div style="display:flex;gap:10px;align-items:center">
+                <div style="flex:1;display:flex;align-items:center;gap:8px;border:1.5px solid #343b41;border-radius:16px;padding:0 16px;height:46px">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9a917c" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20.5 20.5-4.2-4.2"></path></svg>
+                  <input ref="{{ qRef }}" value="{{ q }}" onChange="{{ onQ }}" placeholder="Ürün ara…" style="border:none;outline:none;background:none;font:400 14.5px 'Karla';color:#343b41;width:100%">
+                </div>
+                <div style="width:46px;height:46px;border-radius:50%;background:{{ filterBg }};border:1px solid {{ filterBd }};display:flex;align-items:center;justify-content:center;flex:none" onClick="{{ filterOpen }}">
+                  <svg width="19" height="17" viewBox="0 0 19 17" fill="none" stroke="{{ filterFg }}" stroke-width="1.8" stroke-linecap="round"><path d="M1 3.5h17M4 8.5h11M7 13.5h5"></path></svg>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;overflow-x:auto;margin:0 -18px;padding:0 18px">
+                <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+                  <span style="flex:none;font:700 12.5px 'Karla';padding:9px 15px;border-radius:18px;background:{{ c.bg }};color:{{ c.fg }};border:1px solid {{ c.bd }};transition:transform .12s" style-active="transform:scale(.93)" onClick="{{ c.pick }}">{{ c.n }}</span>
+                </sc-for>
+              </div>
+            </div>
+            <sc-if value="{{ netErr }}">
+              <div style="margin:30px 22px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;border:2px dashed #d8cfb6;border-radius:18px;padding:28px 20px">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.7" stroke-linecap="round"><path d="M5 12.5a7 7 0 0 1 14 0M8 15.5a4 4 0 0 1 8 0M12 19h.01M2 2l20 20"></path></svg>
+                <span style="font:600 17px 'Lora';color:#343b41">Bağlantı kurulamadı</span>
+                <span style="font:400 12.5px/1.5 'Karla';color:#8a8270">İnternet bağlantınızı kontrol edin. Sepetiniz güvende — bağlantı gelince kaldığınız yerden devam edersiniz.</span>
+                <span style="background:#343b41;color:#f3efe2;font:700 13px 'Karla';padding:11px 22px;border-radius:16px;transition:transform .12s" style-active="transform:scale(.95)" onClick="{{ netErr.retry }}">Tekrar dene</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ catSkel }}">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px 14px;padding:20px 22px 10px;animation:skel 1.1s ease infinite">
+                <div style="width:100%;aspect-ratio:1;border-radius:20px;background:#e2d8bd"></div>
+                <div style="width:100%;aspect-ratio:1;border-radius:20px;background:#e2d8bd"></div>
+                <div style="width:100%;aspect-ratio:1;border-radius:20px;background:#e2d8bd"></div>
+                <div style="width:100%;aspect-ratio:1;border-radius:20px;background:#e2d8bd"></div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:9px;padding:14px"><div style="width:18px;height:18px;border-radius:50%;border:3px solid #e2d8bd;border-top-color:#5f7a2c;animation:spin .8s linear infinite"></div><span style="font:600 12px 'Karla';color:#8a8270">Yükleniyor…</span></div>
+            </sc-if>
+            <sc-if value="{{ zeroRes }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:70px 40px;text-align:center">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20.5 20.5-4.2-4.2"></path></svg>
+                <span style="font:600 17px 'Lora';color:#343b41">Aradığınızı bulamadık</span>
+                <span style="font:400 13px 'Karla';color:#8a8270">Farklı bir yazım deneyin ya da kategorilere göz atın.</span>
+                <span style="background:#5f7a2c;color:#fff;font:700 13px 'Karla';padding:11px 22px;border-radius:20px;margin-top:6px" onClick="{{ clearSearch }}">Tüm katalog</span>
+              </div>
+            </sc-if>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px 14px;padding:20px 22px 12px">
+              <sc-for list="{{ catProds }}" as="p" hint-placeholder-count="6">
+                <div style="position:relative;aspect-ratio:1;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ p.open }}">
+                  <div style="position:absolute;inset:0;border-radius:20px;overflow:hidden;opacity:{{ p.imgOp }}">
+                    <image-slot id="{{ p.img }}" shape="rect" src="{{ p.photo }}" placeholder=" "></image-slot>
+                    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,23,15,0) 40%,rgba(21,23,15,.82));pointer-events:none"></div>
+                    <sc-if value="{{ p.so }}"><span style="position:absolute;top:10px;left:10px;background:rgba(21,23,15,.72);color:#f3efe2;font:700 10px 'Karla';letter-spacing:.06em;padding:4px 9px;border-radius:9px">TÜKENDİ</span></sc-if>
+                    <sc-if value="{{ p.disc }}"><span style="position:absolute;top:10px;left:10px;background:rgba(243,239,226,.94);color:#b05c2e;font:700 10px 'Karla';letter-spacing:.06em;padding:4px 9px;border-radius:9px">İNDİRİM</span></sc-if>
+                    <div style="position:absolute;left:12px;right:12px;bottom:10px;display:flex;flex-direction:column;gap:2px">
+                      <span style="font:600 15px/1.15 'Lora';color:#f5f1e6">{{ p.n }}</span>
+                      <sc-if value="{{ p.opts }}"><span style="font:600 11.5px 'Karla';color:#d5d0c2">{{ p.opts }}</span></sc-if>
+                    </div>
+                  </div>
+                  <span style="position:absolute;top:-8px;right:-5px;background:#b05c2e;color:#fff;font:700 12.5px 'Karla';padding:6px 11px;border-radius:12px;transform:rotate(4deg);box-shadow:0 3px 8px rgba(21,23,15,.25)">{{ p.priceF }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ catEnd }}"><span style="grid-column:1/-1;text-align:center;font:600 11.5px 'Karla';color:#b3ab97;padding:8px 0 2px">— hepsi bu kadar —</span></sc-if>
+            </div>
+          </div>
+        </sc-if>

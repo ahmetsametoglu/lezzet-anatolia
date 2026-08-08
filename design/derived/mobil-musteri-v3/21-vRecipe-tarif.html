@@ -1,0 +1,67 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vRecipe · Tarif -->
+<!-- kaynak satırlar: 1182-1223, 1272-1276, 1892-1899 -->
+
+<!-- kaynak: satır 1182-1223 · görünüm bloğu -->
+        <sc-if value="{{ vRecipe }}">
+          <div data-screen-label="Tarif" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:relative;height:300px;flex:none">
+              <image-slot id="m-rcp-{{ rc.rid }}" shape="rect" placeholder="{{ rc.n }} — servis edilmiş, buğusu üstünde"></image-slot>
+              <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,23,15,.28),rgba(21,23,15,0) 32%);pointer-events:none"></div>
+              <div style="position:absolute;top:8px;left:16px;right:16px;display:flex;justify-content:space-between">
+                <div style="width:42px;height:42px;border-radius:50%;background:rgba(243,239,226,.9);display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:transform .12s" style-active="transform:scale(.88)" onClick="{{ goBack }}">‹</div>
+              </div>
+              <span style="position:absolute;right:18px;bottom:-18px;background:#343b41;color:#f3efe2;font:700 12px 'Karla';padding:8px 14px;border-radius:14px;transform:rotate(3deg);box-shadow:0 6px 16px rgba(21,23,15,.28);z-index:3">{{ rc.time }} · {{ rc.serves }}</span>
+            </div>
+            <div style="padding:20px 22px 8px;display:flex;flex-direction:column;gap:10px">
+              <span style="font:700 10.5px 'Karla';letter-spacing:.16em;color:#b05c2e">SOFRADAN FİKİRLER</span>
+              <h1 style="margin:0;font:600 28px/1.1 'Lora';color:#343b41">{{ rc.n }}</h1>
+              <p style="margin:0;font:400 14px/1.55 'Karla';color:#6d7261">{{ rc.d }}</p>
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e;margin-top:8px">MALZEMELER — BİZDEN</span>
+              <div style="display:flex;flex-direction:column">
+                <sc-for list="{{ rc.rows }}" as="l" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1.5px dashed #d8cfb6">
+                    <div style="width:46px;height:46px;border-radius:50%;overflow:hidden;background:#e2d8bd;display:flex;align-items:center;justify-content:center;flex:none" onClick="{{ l.open }}"><sc-if value="{{ l.photo }}" hint-placeholder-val="{{ false }}"><div style="width:100%;height:100%;background-image:url({{ l.photo }});background-size:cover;background-position:center"></div></sc-if><sc-if value="{{ l.noPh }}"><span style="font:600 17px 'Lora';color:#8a8270">{{ l.init }}</span></sc-if></div>
+                    <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0" onClick="{{ l.open }}"><span style="font:700 13.5px 'Karla';color:#343b41">{{ l.n }}</span><span style="font:400 11.5px 'Karla';color:#8a8270">{{ l.l }} · {{ l.prF }}</span></div>
+                    <sc-if value="{{ l.ok }}"><div style="width:38px;height:38px;border-radius:12px;border:1.5px solid #343b41;background:#f3efe2;color:#343b41;font:400 21px 'Karla';display:flex;align-items:center;justify-content:center;flex:none;box-shadow:2px 2px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ l.add }}">+</div></sc-if>
+                    <sc-if value="{{ l.so }}"><span style="font:700 11px 'Karla';color:#8a8270;flex:none">Tükendi</span></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e;margin-top:6px">EVİNİZDEN</span>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <sc-for list="{{ rc.pantry }}" as="p" hint-placeholder-count="3"><span style="font:400 13px/1.4 'Karla';color:#6d7261">• {{ p }}</span></sc-for>
+              </div>
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e;margin-top:8px">HAZIRLANIŞI</span>
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <sc-for list="{{ rc.steps }}" as="st" hint-placeholder-count="3">
+                  <div style="display:flex;gap:12px">
+                    <span style="width:28px;height:28px;border-radius:50%;background:#efdfc2;color:#b05c2e;font:700 13px 'Karla';display:flex;align-items:center;justify-content:center;flex:none">{{ st.i }}</span>
+                    <span style="font:400 13.5px/1.55 'Karla';color:#343b41">{{ st.t }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="height:108px"></div>
+          </div>
+        </sc-if>
+
+<!-- kaynak: satır 1272-1276 · ekran dışı blok -->
+      <sc-if value="{{ vRecipe }}">
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);border-top:1.5px solid #343b41;padding:12px 18px 24px">
+          <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ rc.addAll }}">{{ rc.addAllF }}</div>
+        </div>
+      </sc-if>
+
+<!-- kaynak: satır 1892-1899 · görünüm-modeli kurucusu -->
+<script type="text/x-dc-fragment">
+    if(V.vRecipe){ const r=this.RCP.find(x=>x.id===top.id);
+      const rows=r.it.map(([pid,vid])=>{ const p=this.prod(pid); const v=this.vOf(p,vid);
+        return {n:p.n,l:v.l,prF:this.fmt(this.uPrice(p,v)),photo:this.PHOTO[pid]||'',noPh:!this.PHOTO[pid],init:p.n.charAt(0),ok:p.stk,so:!p.stk,add:()=>this.addLine(pid,vid,1),open:()=>this.go({n:'product',id:pid})}; });
+      const tot=r.it.reduce((a,[pid,vid])=>{ const p=this.prod(pid); return a+(p.stk?this.uPrice(p,this.vOf(p,vid)):0); },0);
+      V.rc={rid:r.id,n:r.n,d:r.d,time:r.time,serves:r.serves,rows,pantry:r.pantry,steps:r.steps.map((x,i)=>({i:i+1,t:x})),
+        addAllF:'Malzemeleri sepete ekle · '+this.fmt(tot),
+        addAll:()=>{ let c=0; r.it.forEach(([pid,vid])=>{ const p=this.prod(pid); if(p.stk){ this.addLine(pid,vid,1); c++; } }); this.toastM(c+' malzeme sepete eklendi ✓'); }};
+    } else V.rc={};
+</script>

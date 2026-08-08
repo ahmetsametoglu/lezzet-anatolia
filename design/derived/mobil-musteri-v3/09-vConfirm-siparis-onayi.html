@@ -1,0 +1,24 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vConfirm · Sipariş Onayı -->
+<!-- kaynak satırlar: 612-629 -->
+
+<!-- kaynak: satır 612-629 · görünüm bloğu -->
+        <sc-if value="{{ vConfirm }}">
+          <div data-screen-label="Sipariş Onayı" style="animation:pageIn .28s ease;display:flex;flex-direction:column;align-items:center;gap:14px;padding:70px 30px 30px;text-align:center">
+            <div style="width:92px;height:92px;border-radius:50%;background:#5f7a2c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:42px;animation:pop .5s ease">✓</div>
+            <h1 style="margin:0;font:600 26px 'Lora';color:#343b41">Siparişiniz alındı!</h1>
+            <span style="font:600 14px 'Karla';color:#8a8270">Sipariş no: <span style="color:#343b41">{{ cf.ref }}</span></span>
+            <div style="background:#efdfc2;border-radius:16px;padding:14px 18px;display:flex;flex-direction:column;gap:6px;width:100%">
+              <div style="display:flex;justify-content:space-between;font:600 13px 'Karla';color:#343b41"><span>Teslimat</span><span>{{ cf.day }}</span></div>
+              <div style="display:flex;justify-content:space-between;font:600 13px 'Karla';color:#343b41"><span>Ödeme</span><span>{{ cf.label }}</span></div>
+              <div style="display:flex;justify-content:space-between;font:700 15px 'Karla';color:#343b41;border-top:1px solid #e0d8c2;padding-top:6px"><span>Toplam</span><span>{{ cf.totF }}</span></div>
+            </div>
+            <sc-if value="{{ cf.ptsF }}"><span style="background:#f9ede2;color:#b05c2e;font:700 13.5px 'Karla';padding:9px 18px;border-radius:18px">✦ {{ cf.ptsF }}</span></sc-if>
+            <span style="font:400 12.5px/1.5 'Karla';color:#8a8270">Sipariş durumunuzu e-posta ve WhatsApp bildirimlerinden takip edebilirsiniz.</span>
+            <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:8px">
+              <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s;box-shadow:3px 3px 0 #343b41" style-active="transform:translate(2px,2px)" onClick="{{ cf.goOrders }}">Siparişlerimi görüntüle</div>
+              <div style="border:1.5px solid #d8cfb6;color:#343b41;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s;box-shadow:3px 3px 0 #343b41" style-active="transform:translate(2px,2px)" onClick="{{ cf.goHome }}">Alışverişe dön</div>
+            </div>
+          </div>
+        </sc-if>

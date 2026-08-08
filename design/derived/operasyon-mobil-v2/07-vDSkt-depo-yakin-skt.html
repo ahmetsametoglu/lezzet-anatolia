@@ -1,0 +1,28 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vDSkt · Depo · Yakın-SKT -->
+<!-- kaynak satırlar: 377-398 -->
+
+<!-- kaynak: satır 377-398 · görünüm bloğu -->
+    <!-- ================= D3 SKT ================= -->
+    <sc-if value="{{ vDSkt }}">
+      <div data-screen-label="Depo · Yakın-SKT" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">Yakın-SKT Turu</span><span style="font:700 10.5px 'Karla';color:#8a8270">eşikler: %25 yakın-SKT · %30 öneri indirimi</span></div>
+        </div>
+        <div style="flex:1;padding:6px 22px;display:flex;flex-direction:column">
+          <sc-for list="{{ dSkt }}" as="s" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1.5px dashed #ddd6c4">
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:700 14px 'Karla'">{{ s.n }}</span>
+                <span style="font:400 11.5px 'Karla';color:{{ s.gunFg }}">{{ s.adet }} adet · {{ s.gun }} · {{ s.pct }}</span>
+              </div>
+              <span style="font:700 11px 'Karla';color:{{ s.kFg }};background:{{ s.kBg }};border-radius:12px;padding:5px 10px;flex:none">{{ s.karar }}</span>
+            </div>
+          </sc-for>
+          <span style="font:400 11.5px/1.6 'Karla';color:#8a8270;padding:12px 0">Karar sistemce türetilir — bu liste fiziksel ayıklama rehberidir; işaretleme yok. "İmha edilmeli" → Sayım/Düzeltme; teklif oranı yönetimde onaylanır.</span>
+          <span style="text-align:center;font:700 12.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:12px 0;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ goSayim }}">Sayım/Düzeltme →</span>
+        </div>
+      </div>
+    </sc-if>

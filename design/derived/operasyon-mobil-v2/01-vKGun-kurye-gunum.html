@@ -1,0 +1,68 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vKGun · Kurye · Günüm -->
+<!-- kaynak satırlar: 33-94 -->
+
+<!-- kaynak: satır 33-94 · görünüm bloğu -->
+    <!-- ================= KURYE K1 ================= -->
+    <sc-if value="{{ vKGun }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="Kurye · Günüm" style="animation:tabIn .25s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="padding:20px 22px 6px;display:flex;align-items:flex-start;justify-content:space-between">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#5f7a2c">KURYE · 8 AĞUSTOS · MUSA K.</span>
+            <span style="font:600 24px 'Lora';color:#343b41">Günün Rotası</span>
+          </div>
+          <div style="width:42px;height:42px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;position:relative;transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBildirim }}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#343b41" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
+            <sc-if value="{{ bilN }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-2px;right:-2px;background:#b05c2e;color:#fff;font:700 10px 'Karla';border-radius:9px;padding:1px 6px;animation:pop .3s ease">{{ bilN }}</span></sc-if>
+          </div>
+        </div>
+
+        <sc-if value="{{ kError }}">
+          <div style="margin:24px 22px;background:#fbfaf4;border:1.5px solid #c9c2ae;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:8px;align-items:center">
+            <span style="font:700 15px 'Karla'">Rota yüklenemedi</span>
+            <span style="font:400 12.5px/1.5 'Karla';color:#8a8270;text-align:center">Bağlantı ya da sunucu sorunu — kayıtlı işaretlerin güvende.</span>
+            <span style="font:700 13px 'Karla';color:#343b41;border:1.5px solid #343b41;border-radius:16px;padding:12px 26px;margin-top:4px;transition:transform .12s" style-active="transform:scale(.97)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:7px"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>Tekrar dene</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ kEmpty }}">
+          <div style="margin:24px 22px;background:#fbfaf4;border:1.5px dashed #c9c2ae;border-radius:20px;padding:26px 22px;display:flex;flex-direction:column;gap:6px;align-items:center">
+            <span style="font:600 17px 'Lora'">Bugün için rota yok</span>
+            <span style="font:400 12.5px/1.5 'Karla';color:#8a8270;text-align:center">Rota atandığında bildirim gelir — bu ekran kendiliğinden dolar.</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ kList }}" hint-placeholder-val="{{ true }}">
+          <div style="margin:8px 22px 0;display:flex;align-items:center;gap:12px">
+            <span style="font:800 20px 'Karla'">{{ kDone }}<span style="font-weight:400;color:#8a8270">/{{ kTotal }}</span></span>
+            <div style="flex:1;height:7px;border-radius:4px;background:#e2ddcc;overflow:hidden"><div style="width:{{ kPct }};height:100%;background:#5f7a2c;border-radius:4px;transition:width .3s"></div></div>
+            <span style="font:700 11.5px 'Karla';color:#8a8270">cepte {{ kCepteF }}</span>
+          </div>
+          <sc-if value="{{ kKapida }}"><span style="margin:6px 22px 0;font:700 11.5px 'Karla';color:#b05c2e">{{ kKapida }} kapıda tahsilat kaldı · {{ kKapidaF }}</span></sc-if>
+          <sc-if value="{{ basHint }}"><div style="margin:12px 22px 0;background:#e7e2d2;border-radius:16px;padding:11px 14px"><span style="font:700 12px/1.5 'Karla';color:#6d7261">Önce "Yola çıktım" — durak sonuçları yola çıkmadan yazılamaz (kapı sırası).</span></div></sc-if>
+          <sc-if value="{{ retKart }}" hint-placeholder-val="{{ false }}">
+            <div style="margin:12px 22px 0;background:#f4e3e0;border-radius:16px;padding:12px 15px;display:flex;flex-direction:column;gap:3px">
+              <span style="font:700 12.5px 'Karla';color:#a44a3f">Eşitleme reddi — LZA-26-9Q2B</span>
+              <span style="font:400 12px/1.5 'Karla';color:#a44a3f">"Teslim edildi" işaretin reddedildi: sipariş bu arada webden iptal edilmiş. Kaydın duruyor, yönetim bilgilendirildi.</span>
+            </div>
+          </sc-if>
+          <div style="flex:1;padding:4px 22px 8px;display:flex;flex-direction:column">
+            <sc-for list="{{ kStops }}" as="s" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1.5px dashed #ddd6c4;opacity:{{ s.op }};transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ s.open }}">
+                <span style="width:30px;height:30px;border-radius:50%;background:{{ s.cBg }};border:1.5px solid {{ s.cBd }};color:{{ s.cFg }};font:700 13px 'Karla';display:flex;align-items:center;justify-content:center;flex:none">{{ s.cTx }}</span>
+                <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                  <span style="font:700 15px 'Karla';color:{{ s.addrFg }};text-decoration:{{ s.deco }}">{{ s.addr }}</span>
+                  <span style="font:400 12px 'Karla';color:{{ s.subFg }}">{{ s.sub }}</span>
+                  <sc-if value="{{ s.chip }}"><span style="background:#b05c2e;color:#fff;font:700 11px 'Karla';letter-spacing:.04em;padding:4px 10px;border-radius:12px;width:max-content">{{ s.chip }}</span></sc-if>
+                  <sc-if value="{{ s.queue }}"><span style="display:flex;align-items:center;gap:6px;font:700 10.5px 'Karla';color:#8a8270"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1.6s linear infinite"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>eşitlenmeyi bekliyor</span></sc-if>
+                </div>
+                <span style="font:400 20px 'Karla';color:#b3ab97">›</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="position:sticky;bottom:0;padding:12px 20px 16px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 40%)">
+            <div style="background:{{ gunCta.bg }};color:{{ gunCta.fg }};font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:{{ gunCta.sh }};transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ gunCta.go }}">{{ gunCta.l }}<sc-if value="{{ gunCta.badge }}"><span style="font:700 11px 'Karla';color:#efdfc2;background:rgba(255,255,255,.14);border-radius:9px;padding:3px 8px">{{ gunCta.badge }}</span></sc-if></div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>

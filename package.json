@@ -25,6 +25,7 @@
     "format:check": "prettier --check .",
     "boundaries": "depcruise packages apps/backend apps/mobile-api && pnpm -C apps/web exec depcruise --config ../../.dependency-cruiser.cjs --ts-config tsconfig.json .",
     "knip": "knip",
+    "design:split": "node scripts/design-split.mjs 'design/project/Mobil - Musteri v3.dc.html' && node scripts/design-split.mjs 'design/project/Operasyon Mobil v2.dc.html'",
     "docs:check": "node scripts/docs-check.mjs",
     "docs:sync": "node scripts/docs-check.mjs --fix",
     "postal:build": "node scripts/build-postal-codes.mjs",

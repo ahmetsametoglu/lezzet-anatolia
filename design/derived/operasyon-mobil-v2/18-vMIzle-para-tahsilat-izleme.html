@@ -1,0 +1,47 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vMIzle · Para · Tahsilat İzleme -->
+<!-- kaynak satırlar: 716-756 -->
+
+<!-- kaynak: satır 716-756 · görünüm bloğu -->
+    <!-- ================= PARA M1 ================= -->
+    <sc-if value="{{ vMIzle }}">
+      <div data-screen-label="Para · Tahsilat İzleme" style="animation:tabIn .25s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="padding:20px 22px 6px;display:flex;align-items:flex-start;justify-content:space-between">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">PARA · SALT OKUMA</span>
+            <span style="font:600 24px 'Lora';color:#343b41">Tahsilat İzleme</span>
+          </div>
+          <span style="font:700 12px 'Karla';color:#5f7a2c;padding-top:8px" onClick="{{ goGunSonu }}">Gün sonu →</span>
+        </div>
+        <div style="flex:1;padding:6px 22px 16px;display:flex;flex-direction:column;gap:13px">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">BEKLEYEN KAPIDA ÖDEMELER — K4 İLE CANLI</span>
+            <sc-for list="{{ mBek }}" as="b" hint-placeholder-count="3">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1.5px dashed #ddd6c4">
+                <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 13.5px 'Karla'">{{ b.ref }}</span><span style="font:400 11.5px 'Karla';color:#8a8270">{{ b.kim }}</span></div>
+                <span style="font:700 12.5px 'Karla';color:#b05c2e">{{ b.cumle }}</span>
+              </div>
+            </sc-for>
+            <span style="font:400 11px 'Karla';color:#8a8270;padding-top:4px">Tutar yalnız tahsil edilecekse yazılır — ödenmişte rakam tekrarlanmaz.</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">BUGÜN GERÇEKLEŞEN — YÖNTEM KIRILIMI</span>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13px 'Karla'">Nakit</span><span style="font:700 13.5px 'Karla'">86,50 €</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13px 'Karla'">Kart</span><span style="font:700 13.5px 'Karla'">40,50 €</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13px 'Karla'">Online</span><span style="font:700 13.5px 'Karla'">612,80 €</span></div>
+          </div>
+          <div style="background:#fbfaf4;border:1.5px solid #c9c2ae;border-radius:20px;padding:13px 16px;display:flex;flex-direction:column;gap:2px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">KURYENİN ÜSTÜNDE (K7'YE DEK)</span>
+            <span style="font:800 20px 'Karla'">78,00 € nakit · 22,50 € kart</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">yalnız nakit/kart/çek sayılır — online/havale bu dökümde yoktur</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">HESAP BAKİYELERİ — DEFTERDEN TOPLANIR</span>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13px 'Karla'">Kasa</span><span style="font:700 13.5px 'Karla'">412,30 €</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 0"><span style="font:400 13px 'Karla'">Banka</span><span style="font:700 13.5px 'Karla'">8.214,77 €</span></div>
+            <span style="font:400 11px 'Karla';color:#8a8270">"bakiye düzeltme" diye bir kavram yok — hiçbir yazma aksiyonu çizilmez.</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>

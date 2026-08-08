@@ -1,0 +1,37 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vTalepD · Talep Detay -->
+<!-- kaynak satırlar: 926-947, 1988-1992 -->
+
+<!-- kaynak: satır 926-947 · görünüm bloğu -->
+        <sc-if value="{{ vTalepD }}">
+          <div data-screen-label="Talep Detay" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <div style="display:flex;flex-direction:column;flex:1"><span style="font:600 17px 'Lora';color:#343b41">{{ td.tp }}</span><span style="font:400 11.5px 'Karla';color:#8a8270">{{ td.ord }} · {{ td.dt }}</span></div>
+              <span style="font:700 11.5px 'Karla';color:{{ td.stFg }};background:{{ td.stBg }};border-radius:11px;padding:5px 11px;transform:rotate(2deg);flex:none">{{ td.st }}</span>
+            </div>
+            <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;flex:1">
+              <sc-if value="{{ td.res }}"><div style="background:#eef2e2;border:1px solid #cddbb0;border-radius:12px;padding:11px 14px"><span style="font:600 12.5px 'Karla';color:#4a6121">✓ Sonuç: {{ td.res }}</span></div></sc-if>
+              <sc-for list="{{ td.msgs }}" as="m" hint-placeholder-count="3">
+                <div style="display:flex;justify-content:{{ m.jc }}">
+                  <span style="max-width:78%;background:{{ m.bg }};color:{{ m.fg }};border:1px solid #ece5d2;border-radius:16px;padding:11px 15px;font:400 13px/1.5 'Karla'">{{ m.t }}</span>
+                </div>
+              </sc-for>
+              <span style="font:400 11.5px 'Karla';color:#9a917c;text-align:center">Cevap geldiğinde e-posta ile haber veririz.</span>
+            </div>
+            <div style="position:sticky;bottom:0;background:#f3efe2;border-top:1px solid #ece5d2;padding:10px 18px 14px;display:flex;gap:8px">
+              <input value="{{ td.reply }}" onChange="{{ td.onReply }}" placeholder="Mesaj yazın…" style="flex:1;border:1.5px solid #d8cfb6;border-radius:22px;padding:0 18px;height:46px;font:400 13.5px 'Karla';color:#343b41;background:#fff;outline:none">
+              <div style="width:46px;height:46px;border-radius:50%;background:#5f7a2c;color:#fff;display:flex;align-items:center;justify-content:center;flex:none;transition:transform .12s" style-active="transform:scale(.88)" onClick="{{ td.send }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linejoin="round"><path d="M21 3 3 10.5l7 3 3 7L21 3zM10 13.5 21 3"></path></svg></div>
+            </div>
+          </div>
+        </sc-if>
+
+<!-- kaynak: satır 1988-1992 · görünüm-modeli kurucusu -->
+<script type="text/x-dc-fragment">
+    if(V.vTalepD){ const t=s.talepler.find(x=>x.id===top.id);
+      V.td={id:t.id,tp:t.tp,dt:t.dt,ord:t.ord?'Sipariş '+t.ord:'Genel talep',st:t.st,stBg:(stC[t.st]||stC['Açık'])[0],stFg:(stC[t.st]||stC['Açık'])[1],res:t.res,
+        msgs:t.msg.map(m=>({me:m.who==='m',jc:m.who==='m'?'flex-end':'flex-start',bg:m.who==='m'?'#5f7a2c':'transparent',fg:m.who==='m'?'#fff':'#343b41',t:m.t})),
+        reply:s.tReply,onReply:e=>this.setState({tReply:e.target.value}),send:()=>this.tSend()};
+    } else V.td={};
+</script>

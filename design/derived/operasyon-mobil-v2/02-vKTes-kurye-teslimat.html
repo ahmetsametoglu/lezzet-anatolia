@@ -1,0 +1,126 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vKTes · Kurye · Teslimat -->
+<!-- kaynak satırlar: 96-215 -->
+
+<!-- kaynak: satır 96-215 · görünüm bloğu -->
+    <!-- ================= KURYE TESLİMAT ================= -->
+    <sc-if value="{{ vKTes }}">
+      <div data-screen-label="Kurye · Teslimat" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <sc-if value="{{ sonTeslim }}"><div style="background:#e3ecd2;padding:9px 16px;animation:slideDown .3s ease;display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4a6121" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:pop .35s ease"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="M22 4 12 14.01l-3-3"></path></svg><span style="font:700 12px 'Karla';color:#4a6121">{{ sonTeslim }} kaydedildi — sıradaki durak</span></div></sc-if>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">Durak {{ ts.no }}/{{ kTotal }}</span><span style="font:700 10.5px 'Karla';color:#8a8270">{{ ts.ref }} · {{ ts.den }}</span></div>
+          <sc-if value="{{ ts.b2b }}"><span style="margin-left:auto;font:700 10.5px 'Karla';letter-spacing:.06em;color:#343b41;border:1.5px solid #343b41;border-radius:12px;padding:4px 10px">B2B</span></sc-if>
+        </div>
+        <div style="padding:6px 22px 12px;display:flex;flex-direction:column;gap:13px;flex:1">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span style="font:600 20px/1.25 'Lora';color:#343b41">{{ ts.addr }}</span>
+            <span style="font:400 13px 'Karla';color:#6d7261">{{ ts.detail }}</span>
+          </div>
+          <div style="display:flex;gap:9px;align-items:stretch">
+            <sc-if value="{{ ts.nav }}" hint-placeholder-val="{{ true }}"><span style="flex:1.4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font:700 11.5px 'Karla';color:#fff;background:#5f7a2c;border-radius:16px;padding:11px 0;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"></path></svg>Navigasyon</span></sc-if>
+            <sc-if value="{{ ts.noNav }}"><span style="flex:1.4;display:flex;align-items:center;justify-content:center;text-align:center;font:700 12px 'Karla';color:#8a8270;border:1.5px dashed #c9c2ae;border-radius:16px;padding:11px 0">adres kayıtlı değil</span></sc-if>
+            <span style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font:700 11.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:11px 0;transition:transform .12s" style-active="transform:scale(.97)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#343b41" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>Ara</span>
+            <sc-if value="{{ ts.wa }}" hint-placeholder-val="{{ true }}"><span style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font:700 11.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:11px 0;transition:transform .12s" style-active="transform:scale(.97)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#128c4b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>WhatsApp</span></sc-if>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">1 · KANIT {{ ts.kanitEt }}</span>
+            <sc-if value="{{ ts.evidYok }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:9px">
+                <span style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font:700 13px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:12px 0;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ ts.imzaAc }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#343b41" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>İmza al</span>
+                <span style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font:700 13px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:12px 0;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ ts.foto }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#343b41" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>Fotoğraf</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ ts.imzaPanel }}">
+              <div style="border:1.5px solid #343b41;border-radius:16px;background:#fbfaf4;padding:12px;display:flex;flex-direction:column;gap:9px">
+                <div onClick="{{ ts.ciz }}" style="height:110px;border:1.5px dashed #c9c2ae;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#fff">
+                  <sc-if value="{{ ts.imzaCiz }}"><svg width="200" height="60" viewBox="0 0 200 60"><path d="M10 40 C 30 10, 50 55, 70 30 S 110 15, 130 38 S 170 50, 190 22" stroke="#343b41" fill="none" stroke-width="2"></path></svg></sc-if>
+                  <sc-if value="{{ ts.imzaBos }}" hint-placeholder-val="{{ true }}"><span style="font:400 12.5px 'Karla';color:#8a8270">buraya imzalayın — {{ ts.alan }}</span></sc-if>
+                </div>
+                <div style="display:flex;gap:9px">
+                  <span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:#8a8270;border:1.5px solid #c9c2ae;border-radius:12px;padding:11px 0;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ ts.imzaTemizle }}">Temizle</span>
+                  <span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:#fff;background:{{ ts.imzaOkBg }};border-radius:12px;padding:11px 0;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ ts.imzaOnay }}">Onayla</span>
+                  <span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:12px;padding:11px 0" onClick="{{ ts.imzaVazgec }}">Vazgeç</span>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ ts.evidVar }}">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="background:#e3ecd2;color:#4a6121;font:700 12px 'Karla';border-radius:12px;padding:7px 12px">{{ ts.evidL }}</span>
+                <span style="font:700 11.5px 'Karla';color:#5f7a2c" onClick="{{ ts.evidSil }}">yeniden al</span>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">2 · MAL · {{ ts.kalemN }} KALEM — dokun: ✓ teslim · ✕ reddedildi</span>
+            <sc-for list="{{ ts.mal }}" as="m" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:5px;padding:11px 0;border-bottom:1.5px dashed #ddd6c4">
+                <div style="display:flex;align-items:center;gap:12px;transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ m.t }}">
+                  <span style="width:26px;height:26px;border-radius:8px;background:{{ m.bBg }};border:1.5px solid {{ m.bBd }};color:{{ m.bFg }};display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';flex:none">{{ m.bTx }}</span>
+                  <span style="font:700 13.5px 'Karla';flex:1;color:{{ m.nFg }}">{{ m.n }}</span>
+                  <sc-if value="{{ m.cold }}"><span style="font:700 11.5px 'Karla';color:#4a6121">❄</span></sc-if>
+                </div>
+                <sc-if value="{{ m.redRow }}">
+                  <div style="display:flex;align-items:center;gap:9px;margin-left:38px">
+                    <span style="font:700 11.5px 'Karla';color:#a44a3f">iade adedi</span>
+                    <span style="width:30px;height:30px;border-radius:10px;border:1.5px solid #c9c2ae;display:flex;align-items:center;justify-content:center;font:400 17px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ m.rEksi }}">−</span>
+                    <span style="font:800 14px 'Karla';color:#a44a3f">{{ m.redN }}/{{ m.q }}</span>
+                    <span style="width:30px;height:30px;border-radius:10px;border:1.5px solid #c9c2ae;display:flex;align-items:center;justify-content:center;font:400 17px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ m.rArti }}">+</span>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+            <sc-if value="{{ ts.kismiNot }}"><span style="font:700 11.5px 'Karla';color:#b05c2e;padding-top:6px">Kısmi red — iade kalemleri depo kabulüne düşer; iade tutarını motor hesaplar.</span></sc-if>
+          </div>
+
+          <sc-if value="{{ ts.kapida }}">
+            <div style="background:#fbfaf4;border:1.5px solid #b05c2e;border-radius:20px;padding:13px 16px;display:flex;flex-direction:column;gap:8px">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">3 · TAHSİLAT — MOTOR TUTARI {{ ts.motorF }}</span>
+              <div style="display:flex;align-items:center;gap:9px">
+                <input type="number" inputmode="decimal" value="{{ ts.gercekV }}" onChange="{{ ts.gercekSet }}" style="flex:1;min-width:0;background:#fff;border:1.5px solid #343b41;border-radius:12px;padding:11px 12px;font:800 20px 'Karla';color:#343b41;outline:none">
+                <span style="font:800 16px 'Karla';color:#8a8270">€</span>
+                <span style="width:34px;height:34px;border-radius:12px;border:1.5px solid #c9c2ae;display:flex;align-items:center;justify-content:center;font:400 19px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ ts.eksi }}">−</span>
+                <span style="width:34px;height:34px;border-radius:12px;border:1.5px solid #c9c2ae;display:flex;align-items:center;justify-content:center;font:400 19px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ ts.arti }}">+</span>
+              </div>
+              <sc-if value="{{ ts.kismi }}"><span style="font:700 11px 'Karla';color:#b05c2e;background:#f9ede2;border-radius:12px;padding:4px 10px;width:max-content">Eksik ödeme — durum "Kısmi"ye türer</span></sc-if>
+              <div style="display:flex;gap:8px">
+                <sc-for list="{{ ts.yontemler }}" as="y" hint-placeholder-count="3"><span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:{{ y.fg }};background:{{ y.bg }};border:1.5px solid {{ y.bd }};border-radius:12px;padding:10px 0;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ y.pick }}">{{ y.n }}</span></sc-for>
+              </div>
+              <sc-if value="{{ ts.nakitUyari }}"><span style="font:400 11.5px/1.5 'Karla';color:#b05c2e">⚠ Nakit yasal sınırın üstünde — bilgi amaçlıdır, engellemez.</span></sc-if>
+              <span style="font:400 11px 'Karla';color:#8a8270">Ödeme durumu tahsilattan türetilir; "tekrar dene" güvenlidir, para iki kez yazılmaz.</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ ts.odendi }}">
+            <div style="background:#e3ecd2;border-radius:20px;padding:12px 16px;display:flex;align-items:center;gap:10px"><span style="font:700 13.5px 'Karla';color:#4a6121">✓ Borç yok</span><span style="font:400 12px 'Karla';color:#6d7261">bu kapıda para konuşulmaz</span></div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ ts.sonucYok }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:10px 20px 16px;display:flex;flex-direction:column;gap:9px">
+            <div style="background:{{ ts.okBg }};color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:{{ ts.okSh }};transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ ts.teslim }}">{{ ts.okL }}</div>
+            <sc-if value="{{ ts.gateNot }}"><span style="font:400 11.5px 'Karla';color:#8a8270;text-align:center">{{ ts.gateNot }}</span></sc-if>
+            <div style="display:flex;gap:9px">
+              <span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:13px 0;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ ts.ulasAc }}">Ulaşılamadı</span>
+              <span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:#a44a3f;border:1.5px solid #a44a3f;border-radius:16px;padding:13px 0;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ ts.redAc }}">Kabul etmedi</span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ ts.sonucVar }}">
+          <div style="padding:10px 20px 16px;background:#fbfaf4;border-top:1.5px solid #ddd6c4;display:flex;flex-direction:column;gap:10px">
+            <span style="font:700 13.5px 'Karla';color:#a44a3f">{{ ts.sonucBaslik }}</span>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <sc-for list="{{ ts.sonucNotlar }}" as="n" hint-placeholder-count="3"><span style="font:700 12px 'Karla';color:{{ n.fg }};background:{{ n.bg }};border:1.5px solid {{ n.bd }};border-radius:12px;padding:8px 12px;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ n.pick }}">{{ n.n }}</span></sc-for>
+            </div>
+            <span style="display:flex;align-items:center;gap:7px;font:700 12px 'Karla';color:{{ ts.sFotoFg }};border:1.5px solid {{ ts.sFotoBd }};background:{{ ts.sFotoBg }};border-radius:12px;padding:9px 12px;width:max-content;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ ts.sFotoT }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>{{ ts.sFotoL }}</span>
+            <sc-if value="{{ ts.sonucRedNot }}"><span style="font:400 11.5px/1.5 'Karla';color:#8a8270">Koliler iade akışına düşer — akıbet kararı depo kabulünde verilir.</span></sc-if>
+            <div style="display:flex;gap:9px">
+              <span style="flex:1;text-align:center;font:700 13px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:13px 0;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ ts.sonucVazgec }}">Vazgeç</span>
+              <span style="flex:1.3;text-align:center;font:700 13px 'Karla';color:#fff;background:{{ ts.sonucOkBg }};border-radius:16px;padding:13px 0;box-shadow:{{ ts.sonucOkSh }};transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ ts.sonucOnay }}">Onayla — kaydet</span>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>

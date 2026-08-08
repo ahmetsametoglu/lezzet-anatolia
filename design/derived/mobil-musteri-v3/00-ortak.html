@@ -1,0 +1,869 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekrana bağlanamayan kalan parçalar: sayfa iskeleti, stil, sekme çubuğu, sheet'ler, betik kalanı -->
+<!-- parça sayısı: 34 -->
+
+<!-- kaynak: satır 1-48 · ortak -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+  body { margin:0; background:#e9e6df; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; } a:hover { color:#4a6121; }
+  * { scrollbar-width:none; -webkit-tap-highlight-color:transparent; box-sizing:border-box; }
+  *::-webkit-scrollbar { display:none; }
+  input, button, textarea { font-family:'Karla',sans-serif; }
+  @keyframes pageIn { from { opacity:0; transform:translateX(22px); } to { opacity:1; transform:none; } }
+  @keyframes tabIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes shUp { from { transform:translateY(100%); } to { transform:none; } }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes kOutL { to { transform:translateX(-130%) rotate(-9deg); opacity:0; } }
+  @keyframes kOutR { to { transform:translateX(130%) rotate(9deg); opacity:0; } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes pop { 0% { transform:scale(.5); opacity:0; } 70% { transform:scale(1.08); } 100% { transform:scale(1); opacity:1; } }
+  @keyframes skel { 0%,100% { opacity:.45; } 50% { opacity:.9; } }
+</style>
+</helmet>
+
+<section style="min-height:100vh;background:#e9e6df;display:flex;flex-direction:column;align-items:center;gap:14px;padding:36px 20px 48px;font-family:'Karla',sans-serif">
+  <span style="font:600 15px 'Karla';color:#343b41">Lezzet Anatolia — Mobil Uygulama · Müşteri</span>
+  <span style="font:400 12.5px 'Karla';color:#8a8270">Persona (misafir / B2C / B2B) sağdaki Tweaks panelinden değiştirilebilir</span>
+
+  <div style="width:390px;height:844px;background:#15170f;border-radius:56px;padding:10px;box-shadow:0 24px 70px rgba(38,44,30,.35);flex:none">
+    <div style="position:relative;width:100%;height:100%;border-radius:46px;overflow:hidden;background:#f3efe2">
+
+      <div style="position:absolute;top:0;left:0;right:0;height:46px;z-index:40;display:flex;align-items:center;justify-content:space-between;padding:0 28px;pointer-events:none">
+        <span style="font:700 14px 'Karla';color:#343b41">9:41</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <svg width="17" height="12" viewBox="0 0 17 12"><g fill="#343b41"><rect x="0" y="7" width="3" height="5" rx="1"></rect><rect x="4.5" y="4.5" width="3" height="7.5" rx="1"></rect><rect x="9" y="2" width="3" height="10" rx="1"></rect><rect x="13.5" y="0" width="3" height="12" rx="1" opacity=".35"></rect></g></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0" y="0" width="21" height="12" rx="3.5" fill="none" stroke="#343b41" stroke-opacity=".5"></rect><rect x="2" y="2" width="13" height="8" rx="2" fill="#343b41"></rect><rect x="22.5" y="3.5" width="2" height="5" rx="1" fill="#343b41" fill-opacity=".5"></rect></svg>
+        </div>
+      </div>
+
+      <div ref="{{ scRef }}" onTouchStart="{{ tchS }}" onTouchEnd="{{ tchE }}" style="position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding-top:46px;padding-bottom:{{ padB }}px">
+
+
+<!-- kaynak: satır 173-173 · ortak -->
+
+
+<!-- kaynak: satır 237-237 · ortak -->
+
+
+<!-- kaynak: satır 317-317 · ortak -->
+
+
+<!-- kaynak: satır 350-350 · ortak -->
+
+
+<!-- kaynak: satır 393-393 · ortak -->
+
+
+<!-- kaynak: satır 476-476 · ortak -->
+
+
+<!-- kaynak: satır 563-563 · ortak -->
+
+
+<!-- kaynak: satır 611-611 · ortak -->
+
+
+<!-- kaynak: satır 630-630 · ortak -->
+
+
+<!-- kaynak: satır 692-692 · ortak -->
+
+
+<!-- kaynak: satır 756-756 · ortak -->
+
+
+<!-- kaynak: satır 797-797 · ortak -->
+
+
+<!-- kaynak: satır 898-898 · ortak -->
+
+
+<!-- kaynak: satır 925-925 · ortak -->
+
+
+<!-- kaynak: satır 948-948 · ortak -->
+
+
+<!-- kaynak: satır 999-999 · ortak -->
+
+
+<!-- kaynak: satır 1057-1057 · ortak -->
+
+
+<!-- kaynak: satır 1127-1127 · ortak -->
+
+
+<!-- kaynak: satır 1137-1137 · ortak -->
+
+
+<!-- kaynak: satır 1181-1181 · ortak -->
+
+
+<!-- kaynak: satır 1224-1227 · ortak -->
+
+        <!--@views-->
+      </div>
+
+
+<!-- kaynak: satır 1253-1253 · ortak -->
+
+
+<!-- kaynak: satır 1271-1271 · ortak -->
+
+
+<!-- kaynak: satır 1277-1277 · ortak -->
+
+
+<!-- kaynak: satır 1288-1512 · ortak -->
+
+      <sc-if value="{{ tabsVisible }}">
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:45;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);border-top:1.5px solid #343b41;padding:8px 8px 6px;display:flex">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 4px;color:{{ t.col }};position:relative" onClick="{{ t.go }}">
+              <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .18s;transform:{{ t.tf }}"><path d="{{ t.icon }}"></path></svg>
+              <span style="font:700 10.5px 'Karla'">{{ t.l }}</span>
+              <sc-if value="{{ t.badge }}"><span style="position:absolute;top:0;left:calc(50% + 6px);background:#b05c2e;color:#fff;font:700 10px 'Karla';border-radius:9px;padding:1px 6px">{{ t.badge }}</span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div style="position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:130px;height:5px;border-radius:3px;background:#343b41;opacity:.25;z-index:46"></div>
+      </sc-if>
+
+      <sc-if value="{{ fab }}">
+        <div style="position:absolute;right:18px;bottom:{{ fab.b }};z-index:48;width:58px;height:58px;border-radius:50%;background:#5f7a2c;display:flex;align-items:center;justify-content:center;box-shadow:4px 4px 0 #343b41;transition:transform .12s" style-active="transform:translate(3px,3px)" onClick="{{ fab.go }}">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.5 11h-13zM8 9c0-4.5 8-4.5 8 0"></path></svg>
+          <span style="position:absolute;top:-5px;right:-3px;background:#b05c2e;color:#fff;font:700 11px 'Karla';border-radius:11px;padding:2px 7px;border:2px solid #f3efe2">{{ fab.n }}</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ shOn }}">
+        <div style="position:absolute;inset:0;z-index:70">
+          <div style="position:absolute;inset:0;background:rgba(30,33,26,.45);animation:fadeIn .25s ease" onClick="{{ shClose }}"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:#f3efe2;border-radius:26px 26px 0 0;padding:10px 20px 30px;animation:shUp .32s cubic-bezier(.2,.8,.25,1);max-height:82%;overflow-y:auto;display:flex;flex-direction:column;gap:14px">
+            <div style="width:44px;height:5px;border-radius:3px;background:#d8cfb6;margin:2px auto 0"></div>
+
+            <sc-if value="{{ shVar }}">
+              <span style="font:600 19px 'Lora';color:#343b41">{{ sv.n }}</span>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ sv.vars }}" as="v" hint-placeholder-count="2">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:14px;background:{{ v.bg }};border:1.5px solid {{ v.bd }}" onClick="{{ v.pick }}">
+                    <span style="font:700 14px 'Karla';color:#343b41">{{ v.l }}</span><span style="font:700 14.5px 'Karla';color:#4a6121">{{ v.prF }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px">
+                <div style="display:flex;align-items:center;background:#ece3c8;border-radius:16px;overflow:hidden">
+                  <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#5f7a2c" onClick="{{ sv.dec }}">−</div>
+                  <span style="width:34px;text-align:center;font:700 16px 'Karla';color:#343b41">{{ sv.qty }}</span>
+                  <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#5f7a2c" onClick="{{ sv.inc }}">+</div>
+                </div>
+                <sc-if value="{{ b2bChip }}">
+                  <div style="display:flex;gap:6px">
+                    <sc-for list="{{ sv.chips }}" as="c" hint-placeholder-count="3"><span style="font:700 12px 'Karla';color:#5f7a2c;border:1px solid #cddbb0;border-radius:14px;padding:7px 11px" onClick="{{ c.pick }}">{{ c.n }}</span></sc-for>
+                  </div>
+                </sc-if>
+              </div>
+              <div style="background:#5f7a2c;color:#fff;font:700 15.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s;box-shadow:3px 3px 0 #343b41" style-active="transform:translate(2px,2px)" onClick="{{ sv.add }}">{{ sv.addF }}</div>
+            </sc-if>
+
+            <sc-if value="{{ shFilter }}">
+              <span style="font:600 19px 'Lora';color:#343b41">Sırala &amp; filtrele</span>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ sf.sorts }}" as="o" hint-placeholder-count="3">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-radius:14px;background:{{ o.bg }};border:1.5px solid {{ o.bd }}" onClick="{{ o.pick }}">
+                    <span style="font:700 13.5px 'Karla';color:#343b41">{{ o.l }}</span><sc-if value="{{ o.sel }}"><span style="color:#4a6121;font:700 15px 'Karla'">✓</span></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 2px">
+                <span style="font:700 14px 'Karla';color:#343b41">Sadece indirimliler</span>
+                <div style="width:50px;height:30px;border-radius:16px;padding:3px;background:{{ sf.tBg }};display:flex;justify-content:{{ sf.tJc }};transition:background .2s" onClick="{{ sf.discT }}"><div style="width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2)"></div></div>
+              </div>
+              <div style="display:flex;gap:10px">
+                <div style="flex:1;border:1.5px solid #d8cfb6;color:#343b41;font:700 14px 'Karla';border-radius:24px;height:48px;display:flex;align-items:center;justify-content:center" onClick="{{ sf.clear }}">Temizle</div>
+                <div style="flex:1.4;background:#5f7a2c;color:#fff;font:700 14px 'Karla';border-radius:24px;height:48px;display:flex;align-items:center;justify-content:center" onClick="{{ shClose }}">Göster</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ shAddr }}">
+              <span style="font:600 19px 'Lora';color:#343b41">{{ sa.title }}</span>
+              <input value="{{ sa.n }}" onChange="{{ sa.onN }}" placeholder="Etiket (Ev, Ofis…)" style="border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#343b41;background:#fff;outline:none">
+              <input value="{{ sa.l }}" onChange="{{ sa.onL }}" placeholder="Adres" style="border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#343b41;background:#fff;outline:none">
+              <div style="display:flex;gap:10px">
+                <input value="{{ sa.zip }}" onChange="{{ sa.onZ }}" placeholder="Posta kodu" style="width:120px;border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#343b41;background:#fff;outline:none">
+                <input value="{{ sa.city }}" onChange="{{ sa.onC }}" placeholder="Şehir" style="flex:1;border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#343b41;background:#fff;outline:none">
+              </div>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">67 ile başlayan posta kodları teslimat bölgemizdedir — kapıya ücretsiz teslim.</span>
+              <div style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s;box-shadow:3px 3px 0 #343b41" style-active="transform:translate(2px,2px)" onClick="{{ sa.save }}">Kaydet</div>
+              <sc-if value="{{ sa.del }}"><span style="font:700 13px 'Karla';color:#b05c2e;text-align:center;padding:4px" onClick="{{ sa.del }}">Adresi sil</span></sc-if>
+            </sc-if>
+
+            <sc-if value="{{ shCoupon }}">
+              <span style="font:600 19px 'Lora';color:#343b41">Kupon kodu</span>
+              <input value="{{ cv.couponIn }}" onChange="{{ cv.onCoupon }}" placeholder="Örn. HOSGELDIN10" style="border:1.5px solid #d8cfb6;border-radius:16px;padding:14px 16px;font:700 15px 'Karla';color:#343b41;background:#fff;outline:none;text-transform:uppercase">
+              <sc-if value="{{ cv.cMsg }}"><span style="font:600 12.5px 'Karla';color:{{ cv.cCol }}">{{ cv.cMsg.t }}</span></sc-if>
+              <div style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s;box-shadow:3px 3px 0 #343b41" style-active="transform:translate(2px,2px)" onClick="{{ cv.applySheet }}">Uygula</div>
+            </sc-if>
+
+            <sc-if value="{{ shStripe }}">
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 19px 'Lora';color:#343b41">Kartla öde</span><span style="display:flex;align-items:center;gap:5px;font:700 12px 'Karla';color:#635bff"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="2.2"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>stripe</span></div>
+              <div style="border:1.5px solid #d8cfb6;border-radius:12px;background:#fff;overflow:hidden">
+                <div style="display:flex;align-items:center;padding:0 14px;height:48px;gap:10px">
+                  <input placeholder="1234 1234 1234 1234" inputMode="numeric" style="border:none;outline:none;background:none;font:400 15px 'Karla';color:#343b41;flex:1;letter-spacing:.03em">
+                  <svg width="27" height="18" viewBox="0 0 27 18"><rect width="27" height="18" rx="3" fill="#1a1f71"></rect><text x="13.5" y="12.5" text-anchor="middle" font-family="Karla" font-size="7" font-weight="700" fill="#fff" font-style="italic">VISA</text></svg>
+                  <svg width="27" height="18" viewBox="0 0 27 18"><rect width="27" height="18" rx="3" fill="#f3efe2"></rect><circle cx="11" cy="9" r="5.5" fill="#eb001b"></circle><circle cx="16" cy="9" r="5.5" fill="#f79e1b" fill-opacity=".85"></circle></svg>
+                </div>
+                <div style="display:flex;border-top:1.5px solid #d8cfb6">
+                  <input placeholder="AA / YY" inputMode="numeric" style="width:50%;height:48px;padding:0 14px;border:none;outline:none;background:none;font:400 15px 'Karla';color:#343b41">
+                  <input placeholder="CVC" inputMode="numeric" style="width:50%;height:48px;padding:0 14px;border:none;outline:none;background:none;font:400 15px 'Karla';color:#343b41;border-left:1.5px solid #d8cfb6">
+                </div>
+              </div>
+              <div style="border:1.5px solid #d8cfb6;border-radius:12px;background:#fff;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 14px"><span style="font:400 14.5px 'Karla';color:#343b41">Fransa</span><span style="color:#8a8270">▾</span></div>
+              <div style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ pm.payCard }}">{{ pm.amountF }} öde</div>
+              <span style="font:400 11px 'Karla';color:#9a917c;text-align:center">Demo: ilk deneme reddedilir (başarısız durum), ikincisi onaylanır.</span>
+            </sc-if>
+
+            <sc-if value="{{ shZip }}">
+              <span style="font:600 19px 'Lora';color:#343b41">Teslimat bölgeniz</span>
+              <input value="{{ sz.zip }}" onChange="{{ sz.onZip }}" placeholder="Posta kodu — örn. 67000" inputMode="numeric" style="border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:700 16px 'Karla';color:#343b41;background:#fff;outline:none;letter-spacing:.05em">
+              <sc-if value="{{ sz.note }}"><span style="font:600 12.5px/1.5 'Karla';color:{{ sz.col }}">{{ sz.note }}</span></sc-if>
+              <div style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ sz.save }}">Kaydet</div>
+            </sc-if>
+
+            <sc-if value="{{ shShare }}">
+              <span style="font:600 19px 'Lora';color:#343b41">Paylaş</span>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:#fff;border:1px solid #ece5d2" onClick="{{ shareWa }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#25d366" stroke-width="1.8" stroke-linejoin="round"><path d="M21 11.5c0 3.9-4 7-9 7-1.1 0-2.1-.15-3.1-.42L4.5 19.5l1.3-3.1C4.3 15.1 3 13.4 3 11.5c0-3.9 4-7 9-7s9 3.1 9 7z"></path></svg><span style="font:700 14px 'Karla';color:#343b41">WhatsApp ile paylaş</span></div>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:#fff;border:1px solid #ece5d2" onClick="{{ shareCopy }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round"><path d="M9.5 14.5a4 4 0 0 0 5.7 0l3.5-3.5a4 4 0 0 0-5.7-5.7l-1.5 1.5M14.5 9.5a4 4 0 0 0-5.7 0L5.3 13a4 4 0 0 0 5.7 5.7l1.5-1.5"></path></svg><span style="font:700 14px 'Karla';color:#343b41">Bağlantıyı kopyala</span></div>
+            </sc-if>
+
+            <sc-if value="{{ shPf }}">
+              <span style="font:600 19px 'Lora';color:#343b41">Profili düzenle</span>
+              <input value="{{ sp.name }}" onChange="{{ sp.onName }}" placeholder="Ad soyad" style="border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#343b41;background:#fff;outline:none">
+              <input value="{{ sp.mail }}" onChange="{{ sp.onMail }}" placeholder="E-posta" style="border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#343b41;background:#fff;outline:none">
+              <input value="{{ sp.tel }}" onChange="{{ sp.onTel }}" placeholder="Telefon (WhatsApp)" style="border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 14px 'Karla';color:#343b41;background:#fff;outline:none">
+              <span style="font:400 11.5px 'Karla';color:#8a8270">Telefon numaranız WhatsApp bildirimleri için kullanılır.</span>
+              <div style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s;box-shadow:3px 3px 0 #343b41" style-active="transform:translate(2px,2px)" onClick="{{ sp.save }}">Kaydet</div>
+            </sc-if>
+
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ toast }}">
+        <div style="position:absolute;left:20px;right:20px;bottom:104px;z-index:80;display:flex;justify-content:center;pointer-events:none">
+          <span style="background:#343b41;color:#f3efe2;font:600 13px 'Karla';padding:12px 20px;border-radius:22px;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:pop .3s ease;text-align:center">{{ toast }}</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ ob }}">
+        <div style="position:absolute;inset:0;z-index:85;background:#f3efe2;display:flex;flex-direction:column;padding-top:46px;animation:fadeIn .35s ease">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 22px 0;margin-bottom:-8px">
+            <img src="assets/logo.jpg" style="height:52px;mix-blend-mode:multiply" alt="Lezzet Anatolia">
+            <span style="font:700 12.5px 'Karla';color:#8a8270;padding:8px;transition:opacity .12s" style-active="opacity:.5" onClick="{{ ob.skip }}">Atla</span>
+          </div>
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:{{ ob.jc }};padding:0 26px;gap:13px">
+            <sc-if value="{{ ob.s1 }}">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">HOŞ GELDİNİZ · BIENVENUE</span>
+              <span style="font:600 30px/1.12 'Lora';color:#343b41">Hangi dilde devam edelim?</span>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+                <sc-for list="{{ ob.langs }}" as="l" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;justify-content:space-between;background:{{ l.bg }};border:1.5px solid #343b41;border-radius:16px;padding:15px 18px;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ l.pick }}">
+                    <span style="font:700 15px 'Karla';color:{{ l.fg }}">{{ l.n }}</span><span style="font:700 15px 'Karla';color:{{ l.fg }}">{{ l.mark }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ ob.s2 }}">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">TESLİMAT BÖLGESİ</span>
+              <span style="font:600 30px/1.12 'Lora';color:#343b41">Size nasıl ulaştıralım?</span>
+              <span style="font:400 13.5px/1.55 'Karla';color:#6d7261">Posta kodunuzu girin, teslimat şeklinizi söyleyelim.</span>
+              <input value="{{ ob.zip }}" onChange="{{ ob.onZip }}" placeholder="Posta kodu — örn. 67000" inputMode="numeric" style="border:1.5px solid #343b41;border-radius:16px;height:56px;padding:0 20px;font:700 18px 'Karla';color:#343b41;background:#fff;outline:none;letter-spacing:.06em">
+              <sc-if value="{{ ob.zipNote }}"><span style="font:600 13px/1.5 'Karla';color:{{ ob.zipCol }}">{{ ob.zipNote }}</span></sc-if>
+            </sc-if>
+            <sc-if value="{{ ob.s3 }}">
+              <div style="display:flex;flex-direction:column;margin:2px -26px 0">
+                <div style="position:relative;height:228px;flex:none">
+                  <image-slot id="ob-cold" shape="rect" src="assets/foto/su-boregi.jpeg" placeholder=" "></image-slot>
+                </div>
+                <div style="border-top:2.5px dashed #b05c2e;padding:14px 26px 0;display:flex;flex-direction:column;gap:10px">
+                  <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">SOĞUK ZİNCİR</span>
+                  <span style="font:600 30px/1.12 'Lora';color:#343b41">Tazelik kapınıza kadar korunur</span>
+                </div>
+              </div>
+              <span style="font:400 13.5px/1.55 'Karla';color:#6d7261">Donuk ürünleriniz -18°C bozulmadan gelir: bölge içinde kendi soğutuculu araçlarımızla, bölge dışına soğuk zincir korumalı kargoyla. Teslim alınca dondurucuya koymanız yeterli.</span>
+            </sc-if>
+            <sc-if value="{{ ob.s4 }}">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">ÖDEME</span>
+              <span style="font:600 30px/1.12 'Lora';color:#343b41">Nasıl isterseniz öyle ödeyin</span>
+              <div style="display:flex;flex-direction:column;margin-top:4px">
+                <div style="display:flex;align-items:center;gap:13px;padding:12px 0;border-bottom:1.5px dashed #d8cfb6">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" style="flex:none"><rect x="2" y="5" width="20" height="14" rx="2.5"></rect><path d="M2 10h20"></path></svg>
+                  <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 13.5px 'Karla';color:#343b41">Online ödeme</span><span style="font:400 12px/1.45 'Karla';color:#8a8270">Stripe altyapısıyla — kart bilgileriniz bizde tutulmaz</span></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:13px;padding:12px 0;border-bottom:1.5px dashed #d8cfb6">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 11.5 12 4l9 7.5M5.5 10V20h13v-10"></path></svg>
+                  <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 13.5px 'Karla';color:#343b41">Kapıda ödeme</span><span style="font:400 12px/1.45 'Karla';color:#8a8270">Bölge içi teslimatlarda nakit, kart veya çekle</span></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:13px;padding:12px 0">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" style="flex:none"><path d="M3 21V8l9-5 9 5v13M9 21v-8h6v8M3 21h18"></path></svg>
+                  <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 13.5px 'Karla';color:#343b41">Havale ve vadeli hesap</span><span style="font:400 12px/1.45 'Karla';color:#8a8270">Profesyonel müşterilerimize özel</span></div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;background:#efdfc2;border-radius:14px;padding:12px 15px">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4a6121" stroke-width="2" style="flex:none"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
+                <span style="font:600 12px/1.45 'Karla';color:#4a6121">Ödemeleriniz Stripe güvencesinde — bankanızın uyguladığı korumanın aynısı. Bir sorun olursa iade kolay.</span>
+              </div>
+            </sc-if>
+          </div>
+          <div style="padding:0 22px 30px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;justify-content:center;gap:6px">
+              <sc-for list="{{ ob.dots }}" as="d" hint-placeholder-count="4"><span style="width:{{ d.w }};height:5px;border-radius:3px;background:{{ d.bg }};transition:all .25s"></span></sc-for>
+            </div>
+            <div style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';border-radius:16px;height:54px;display:flex;align-items:center;justify-content:center;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ ob.next }}">{{ ob.cta }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ splash }}">
+        <div style="position:absolute;inset:0;z-index:90;background:#f3efe2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;opacity:{{ splashOp }};transition:opacity .5s ease;overflow:hidden">
+          <span style="position:absolute;top:-44px;left:-50px;font:600 190px/1 'Lora';color:#e7ebd8;transform:rotate(-12deg)">✺</span>
+          <span style="position:absolute;bottom:-58px;right:-44px;font:600 210px/1 'Lora';color:#efdfc2;transform:rotate(14deg)">✺</span>
+          <span style="position:absolute;top:34%;right:26px;font:600 34px/1 'Lora';color:#b05c2e;transform:rotate(9deg)">✺</span>
+          <img src="assets/logo.jpg" style="height:122px;mix-blend-mode:multiply;position:relative;animation:pop .6s ease" alt="Lezzet Anatolia">
+          <div style="width:74px;border-top:2.5px dashed #b05c2e"></div>
+          <span style="font:500 12px 'Karla';color:#8a8270;letter-spacing:.14em;position:relative">ANADOLU'NUN LEZZETİ, KAPINIZDA</span>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:520,&quot;height&quot;:980},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;b2c&quot;,&quot;options&quot;:[&quot;misafir&quot;,&quot;b2c&quot;,&quot;b2b&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;,&quot;description&quot;:&quot;Oturum durumu: misafir girişsiz gezer, B2B toptan fiyat görür&quot;},&quot;offersActive&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;,&quot;description&quot;:&quot;İndirimli fırsat şeridi (yokken vitrinde hiç görünmez)&quot;},&quot;introActive&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;,&quot;description&quot;:&quot;Uygulamaya giriş adımları (splash sonrası 4 adım)&quot;},&quot;demoDurum&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;normal&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;ag-hatasi&quot;,&quot;bos-listeler&quot;,&quot;sepette-tukendi&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;,&quot;description&quot;:&quot;Durum çizimleri: ağ hatası blokları, oturumlu boş listeler, sepette tükenen ürün&quot;}}">
+
+<!-- kaynak: satır 1513-1859 · betik kalanı -->
+<script type="text/x-dc-fragment">
+class Component extends DCLogic {
+  CATS = ['Börekler','Tatlılar','Hamur İşleri','Çerezler','Kahvaltılık','Et Ürünleri'];
+  FAM = {borek:{n:'BÖREK ÇEŞİTLERİ',ids:['sub','kol','sig']},serbetli:{n:'ŞERBETLİ ÇEŞİTLER',ids:['bak','sar']}};
+  FAMOF = {sub:'borek',kol:'borek',sig:'borek',bak:'serbetli',sar:'serbetli'};
+  PHOTO = {sub:'assets/foto/su-boregi.jpeg',kol:'assets/foto/kol-boregi.jpeg',bak:'assets/foto/baklava.jpeg',sar:'assets/foto/sarma.jpeg'};
+  CATPH = {'Börekler':'assets/foto/kol-boregi.jpeg','Tatlılar':'assets/foto/sarma-tepsi.jpeg'};
+  PKPH = {bayram:'assets/foto/baklava.jpeg'};
+  P = [
+    {id:'sub',n:'Ispanaklı Su Böreği',c:'Börekler',d:'El açması yufka, bol ıspanak ve beyaz peynirle klasik su böreği. Pişirilmeye hazır, donuk gönderilir.',vs:[{id:'s5',l:'500 g',w:.5,p:8.9,pb:6.9},{id:'s1',l:'1 kg',w:1,p:16.5,pb:12.9}],stk:true,ship:true,ing:'Buğday unu, ıspanak (%28), beyaz peynir, yumurta, süt, tereyağı, tuz',alg:'Gluten, süt, yumurta',nut:'Enerji 245 kcal · Yağ 12 g · Karbonhidrat 24 g · Protein 9 g',sto:'-18°C\u2019de saklayınız. Asgari tazelik tarihi paket üzerindedir. Çözündükten sonra tekrar dondurmayınız.',rt:'4,8',rc:24,rev:[{a:'Selin K.',t:'Annemin böreğinden farksız — misafirlerim tarifini sordu.',r:5},{a:'Marc D.',t:'Très bon produit, cuisson facile au four.',r:5}]},
+    {id:'kol',n:'Kıymalı Kol Böreği',c:'Börekler',d:'Dana kıyma ve soğanla sarılmış kol böreği; fırında 25 dakikada hazır.',vs:[{id:'k4',l:'400 g',w:.4,p:7.5,pb:5.9}],disc:{vid:'k4',pr:5.9,was:7.5,lim:3},stk:true,ship:true,ing:'Buğday unu, dana kıyma (%24), soğan, ayçiçek yağı, baharat, tuz',alg:'Gluten, yumurta',nut:'Enerji 268 kcal · Yağ 14 g · Karbonhidrat 25 g · Protein 11 g',sto:'-18°C\u2019de saklayınız. Çözündükten sonra tekrar dondurmayınız.',rt:'4,6',rc:11,rev:[{a:'Deniz A.',t:'Fırsattan 3 tane aldım, hepsi tertemiz paketlenmişti.',r:5}]},
+    {id:'bak',n:'Fıstıklı Baklava',c:'Tatlılar',d:'Gaziantep fıstığıyla, tereyağlı el açması baklava. Şerbetiyle birlikte gelir.',vs:[{id:'b1',l:'250 g',w:.25,p:9.9,pb:7.9},{id:'b2',l:'500 g',w:.5,p:18.5,pb:14.9},{id:'b3',l:'1 kg',w:1,p:34,pb:27.5}],stk:true,ship:true,ing:'Buğday unu, Antep fıstığı (%22), tereyağı, şeker, glukoz şurubu',alg:'Gluten, süt, sert kabuklu meyve (fıstık)',nut:'Enerji 512 kcal · Yağ 28 g · Karbonhidrat 58 g · Protein 9 g',sto:'Serin ve kuru yerde saklayınız. Asgari tazelik tarihi paket üzerindedir.',rt:'4,9',rc:37,rev:[{a:'Leyla T.',t:'Şerbeti ayrı gelmesi çok iyi düşünülmüş, çıtır kaldı.',r:5},{a:'Julien R.',t:'Meilleur baklava de Strasbourg, sans hésiter.',r:5}]},
+    {id:'man',n:'El Mantısı',c:'Hamur İşleri',d:'Tek tek elle kapatılmış, kıymalı minik mantı. Kaynar suda 12 dakikada sofrada.',vs:[{id:'m5',l:'500 g',w:.5,p:9.2,pb:7.2}],stk:true,ship:true,ing:'Buğday unu, dana kıyma (%30), soğan, yumurta, tuz, baharat',alg:'Gluten, yumurta',nut:'Enerji 231 kcal · Yağ 6 g · Karbonhidrat 32 g · Protein 12 g',sto:'-18°C\u2019de saklayınız. Çözdürmeden pişiriniz.',rt:'4,7',rc:19,rev:[{a:'Zeynep B.',t:'Boyutu tam kayınvalide standardı, elinize sağlık.',r:5}]},
+    {id:'sar',n:'Cevizli Sarma',c:'Tatlılar',d:'İnce yufkada bol cevizli, şerbetli sarma dilimleri.',vs:[{id:'r3',l:'350 g',w:.35,p:11.4,pb:9.2}],stk:false,ship:true,ing:'Buğday unu, ceviz (%26), tereyağı, şeker',alg:'Gluten, süt, sert kabuklu meyve (ceviz)',nut:'Enerji 495 kcal · Yağ 27 g · Karbonhidrat 55 g · Protein 8 g',sto:'Serin ve kuru yerde saklayınız.',rt:'4,5',rc:8,rev:[]},
+    {id:'fis',n:'Kavrulmuş Antep Fıstığı',c:'Çerezler',d:'Taş fırında günlük kavrulan, hafif tuzlu Antep fıstığı.',vs:[{id:'f2',l:'200 g',w:.2,p:7.8,pb:6.2},{id:'f5',l:'500 g',w:.5,p:17.9,pb:14.5}],stk:true,ship:true,ing:'Antep fıstığı, deniz tuzu',alg:'Sert kabuklu meyve (fıstık)',nut:'Enerji 582 kcal · Yağ 46 g · Karbonhidrat 18 g · Protein 21 g',sto:'Ağzı kapalı, serin ve kuru yerde saklayınız.',rt:'4,9',rc:31,rev:[{a:'Hakan Y.',t:'Taze kavrulmuş olduğu her tanesinden belli.',r:5}]},
+    {id:'sig',n:'Sigara Böreği · 24\u2019lü',c:'Börekler',d:'Peynirli, elde sarılmış sigara böreği; dondurulmuş, kızartmaya hazır.',vs:[{id:'g4',l:'450 g · 24 adet',w:.45,p:6.9,pb:5.4}],stk:true,ship:false,ing:'Buğday unu (yufka), beyaz peynir (%30), maydanoz, ayçiçek yağı',alg:'Gluten, süt',nut:'Enerji 297 kcal · Yağ 15 g · Karbonhidrat 30 g · Protein 10 g',sto:'-18°C\u2019de saklayınız. Çözdürmeden kızartınız.',rt:'4,7',rc:15,rev:[{a:'Elif S.',t:'Çocuklar bayılıyor, dolapta hep hazır duruyor.',r:4}]},
+    {id:'pey',n:'Ezine Beyaz Peynir',c:'Kahvaltılık',d:'Tam yağlı, koyun sütü ağırlıklı Ezine beyaz peynir; salamurasıyla gelir.',vs:[{id:'y3',l:'350 g',w:.35,p:6.4,pb:5.1},{id:'y7',l:'700 g',w:.7,p:11.9,pb:9.6}],stk:true,ship:true,ing:'Koyun sütü, keçi sütü, inek sütü, tuz, maya',alg:'Süt',nut:'Enerji 289 kcal · Yağ 24 g · Karbonhidrat 1 g · Protein 17 g',sto:'+4°C\u2019de, salamurası içinde saklayınız.',rt:'4,8',rc:22,rev:[{a:'Fatma G.',t:'Fransa\u2019da bu kalite peynir bulmak mucize.',r:5}]},
+    {id:'kof',n:'Izgara Köfte (Donuk)',c:'Et Ürünleri',d:'Baharatı ustasından, ızgaraya hazır dana köfte.',vs:[{id:'o4',l:'450 g · 12 adet',w:.45,p:10.9,pb:8.7}],stk:true,ship:false,ing:'Dana eti (%88), galeta unu, soğan, baharat, tuz',alg:'Gluten',nut:'Enerji 254 kcal · Yağ 18 g · Karbonhidrat 6 g · Protein 17 g',sto:'-18°C\u2019de saklayınız. Çözdürmeden pişirilebilir.',rt:'4,6',rc:13,rev:[]},
+    {id:'kun',n:'Künefe · 2 Kişilik',c:'Tatlılar',d:'Hatay usulü tel kadayıf ve künefe peyniriyle; tavasında fırına girmeye hazır.',vs:[{id:'n4',l:'400 g · 2 kişilik',w:.4,p:8.4,pb:6.7}],disc:{vid:'n4',pr:6.9,was:8.4,lim:2},stk:true,ship:true,ing:'Tel kadayıf, künefe peyniri (%38), tereyağı, şeker',alg:'Gluten, süt',nut:'Enerji 398 kcal · Yağ 19 g · Karbonhidrat 48 g · Protein 10 g',sto:'-18°C\u2019de saklayınız.',rt:'4,8',rc:26,rev:[{a:'Murat Ö.',t:'Tavasıyla gelmesi işi çok kolaylaştırıyor.',r:5}]},
+    {id:'acm',n:'Zeytinli Açma · 6\u2019lı',c:'Kahvaltılık',d:'Yumuşacık hamurlu, zeytinli açma; fırında 8 dakikada gün taze.',vs:[{id:'a4',l:'420 g · 6 adet',w:.42,p:5.6,pb:4.4}],stk:true,ship:true,ing:'Buğday unu, zeytin (%14), süt, maya, ayçiçek yağı',alg:'Gluten, süt',nut:'Enerji 312 kcal · Yağ 11 g · Karbonhidrat 44 g · Protein 8 g',sto:'-18°C\u2019de saklayınız.',rt:'4,4',rc:9,rev:[]}
+  ];
+  RCP = [
+    {id:'kuymak',n:'Mıhlama (Kuymak)',d:'Karadeniz kahvaltısının yıldızı: mısır ununda eriyip uzayan peynir — 15 dakikada sofrada.',time:'15 dk',serves:'2 kişilik',it:[['pey','y3']],pantry:['Mısır unu — 2 yemek kaşığı','Tereyağı — 2 yemek kaşığı','Sıcak su — 1 su bardağı'],steps:['Tereyağını tavada eritin, mısır ununu ekleyip orta ateşte 2–3 dakika kavurun.','Sıcak suyu azar azar ekleyip pürüzsüz bir kıvam alana dek karıştırın.','Ezine peynirini ekleyin; eriyip uzamaya başlayınca ocaktan alın, bekletmeden servis edin.']},
+    {id:'manti',n:'Mantı Sofrası',d:'El mantısı, sarımsaklı yoğurt ve kızgın tereyağı — misafir ağırlatan klasik.',time:'25 dk',serves:'3–4 kişilik',it:[['man','m5'],['pey','y3']],pantry:['Yoğurt — 3 yemek kaşığı','Sarımsak — 2 diş','Tereyağı ve pul biber'],steps:['Mantıyı kaynar tuzlu suda 12 dakika haşlayın.','Yoğurdu sarımsakla çırpın, tuzunu ayarlayın.','Tereyağını pul biberle kızdırıp mantının üzerinde gezdirin; yoğurtla servis edin.']},
+    {id:'brunch',n:'Çıtır Pazar Kahvaltısı',d:'Sigara böreği, zeytinli açma ve Ezine peyniriyle kalabalık pazar sofrası.',time:'20 dk',serves:'4 kişilik',it:[['sig','g4'],['acm','a4'],['pey','y7']],pantry:['Domates, salatalık','Zeytin ve bal'],steps:['Açmaları 180°C fırında 8 dakika ısıtın.','Sigara böreklerini kızgın yağda altın rengi alana dek kızartın.','Peyniri ve taze malzemeleri tabaklayın, sıcak çayla servis edin.']}
+  ];
+  K = [
+    {id:'bayram',n:'Bayram Paketi',pr:49.9,d:'Bayram sofrasını tek kutuda kurar: baklava, su böreği, fıstık ve künefe.',it:[['bak','500 g fıstıklı baklava',1],['sub','1 kg su böreği',1],['fis','200 g Antep fıstığı',1],['kun','2 kişilik künefe',1]],ship:true},
+    {id:'kahvalti',n:'Hafta Sonu Kahvaltı Paketi',pr:32.9,d:'Kalabalık bir pazar kahvaltısı: Ezine peyniri, açma ve sıcacık sigara böreği.',it:[['pey','350 g Ezine peyniri',1],['acm','6\u2019lı zeytinli açma',2],['sig','24\u2019lü sigara böreği',1]],ship:false}
+  ];
+  KS = [
+    {n:'İçli Köfte · 12\u2019li',d:'Bulgur kabuğunda cevizli-kıymalı iç; kızartmaya hazır donuk.'},
+    {n:'Kazandibi',d:'Karamelize tabanlı, klasik tavuk göğsüz kazandibi.'},
+    {n:'Mıhlama Seti',d:'Trabzon peyniri ve mısır unu, adım adım tarifiyle.'},
+    {n:'Susamlı Simit · 5\u2019li',d:'Taş fırın simidi; fırında 8 dakikada gün taze.'},
+    {n:'Acılı Ezme',d:'Taş dövme usulü, közlenmiş biberli ezme.'}
+  ];
+  state = {
+    splash:true, splashHide:false, tab:'home', stack:[], li:null, lang:'TR',
+    q:'', cat:'Tümü', sort:'onerilen', onlyDisc:false,
+    pv:{}, pq:1, acc:{d:true},
+    cart:[{pid:'sub',vid:'s5',qty:1},{pid:'bak',vid:'b1',qty:1}], cartPkgs:[],
+    couponIn:'', coupon:null, cMsg:null,
+    co:{addr:1,mode:null,day:null,pay:null,mkt:false}, payBusy:false, payOk:false, payFail:false, payTried:false,
+    orders:[
+      {ref:'LA-2417',dt:'28 Temmuz 2026',st:'Yolda',t:43.3,times:['28 Temmuz 14:32','29 Temmuz 09:10','30 Temmuz 08:05',null],items:[{pid:'sub',vid:'s5',qty:2},{pid:'bak',vid:'b1',qty:1},{pid:'man',vid:'m5',qty:1},{pid:'pey',vid:'y3',qty:1}],pkgs:[],pay:'Online ödendi',addr:'Ev — 12 Rue des Orfèvres, 67000 Strasbourg',day:'30 Temmuz, Çarşamba'},
+      {ref:'LA-2331',dt:'12 Temmuz 2026',st:'Teslim edildi',t:34.2,times:['12 Temmuz 10:12','13 Temmuz 08:40','15 Temmuz 09:20','15 Temmuz 14:05'],items:[{pid:'kol',vid:'k4',qty:2},{pid:'sar',vid:'r3',qty:1},{pid:'fis',vid:'f2',qty:1}],pkgs:[],pay:'Kapıda ödendi',addr:'Ev — 12 Rue des Orfèvres, 67000 Strasbourg',day:'15 Temmuz, Çarşamba'},
+      {ref:'LA-2250',dt:'27 Haziran 2026',st:'Teslim edildi',t:19.6,times:['27 Haziran 16:45','30 Haziran 08:30','1 Temmuz 09:05','1 Temmuz 13:40'],items:[{pid:'kun',vid:'n4',qty:1},{pid:'acm',vid:'a4',qty:2}],pkgs:[],pay:'Online ödendi',addr:'Ev — 12 Rue des Orfèvres, 67000 Strasbourg',day:'1 Temmuz, Çarşamba'}
+    ],
+    talepler:[{id:'T-108',tp:'Eksik ürün',ord:'LA-2331',dt:'14 Temmuz 2026',st:'Çözüldü',res:'11,40 € iade edildi',msg:[{who:'m',t:'Cevizli sarma pakette çıkmadı, kontrol edebilir misiniz?'},{who:'i',t:'Merhaba! Depo kaydını kontrol ettik, haklısınız — tutarı aynı karta iade ettik. Özür dileriz.'},{who:'m',t:'Hızlı dönüş için teşekkürler.'}]}],
+    tReply:'',
+    kIdx:0, kAnim:null, kAward:false,
+    points:240, myCoupons:[],
+    login:{m:null,email:'',sent:false,code:'',busy:false},
+    pro:{mode:'fr',siret:'',found:false,comp:'',cadr:'',name:'',mail:'',tel:'',vat:'',vatOk:false,err:null,sent:false},
+    tn:{ord:null,step:0,items:[],tp:null,msg:'',photo:false},
+    fb:{ord:null,idx:0,votes:[],comment:'',stage:0},
+    addresses:[{id:1,n:'Ev',l:'12 Rue des Orfèvres',zip:'67000',city:'Strasbourg',def:true},{id:2,n:'Ofis',l:'4 Avenue de la Forêt-Noire',zip:'68100',city:'Mulhouse',def:false}],
+    aE:null, pfO:null, pfE:null,
+    mkt:{email:true,wa:false},
+    sheet:null, toast:null, onbStep:0, onbDone:false, onbZip:'', skelCat:false, skelOrd:false,
+    now:Date.now(), stockAlerts:{},
+    notifs:[
+      {ic:'truck',t:'Siparişiniz yolda',sb:'LA-2417 bugün 14:00–17:00 arasında kapınızda',tm:'2 sa önce',un:true,ord:'LA-2417'},
+      {ic:'tag',t:'Günün fırsatı başladı',sb:'Kıymalı kol böreği bugün 5,90 €',tm:'6 sa önce',un:true,pid:'kol'},
+      {ic:'star',t:'+15 puan kazandınız',sb:'Değerlendirmeniz için teşekkürler',tm:'12 Temmuz',un:false}
+    ]
+  };
+  componentDidMount(){ setTimeout(()=>this.setState({splashHide:true}),1400); setTimeout(()=>this.setState({splash:false}),1950); this._iv=setInterval(()=>this.setState({now:Date.now()}),1000); }
+  componentWillUnmount(){ clearInterval(this._iv); clearTimeout(this._tt); }
+  per(){ return this.props.persona ?? 'b2c'; }
+  logged(){ return this.state.li ?? (this.per()!=='misafir'); }
+  isB2B(){ return this.per()==='b2b' && this.logged(); }
+  prod(id){ return this.P.find(p=>p.id===id); }
+  vOf(p,vid){ return p.vs.find(v=>v.id===vid)||p.vs[0]; }
+  discOf(p,v){ return (!this.isB2B() && p.disc && p.disc.vid===v.id) ? p.disc : null; }
+  uPrice(p,v){ const d=this.discOf(p,v); return d?d.pr:(this.isB2B()?v.pb:v.p); }
+  fmt(x){ return x.toFixed(2).replace('.',',')+' €'; }
+  toastM(m){ clearTimeout(this._tt); this.setState({toast:m}); this._tt=setTimeout(()=>this.setState({toast:null}),2400); }
+  st0(){ if(this.sc) this.sc.scrollTop=0; }
+  go(pg){ this.setState(s=>({stack:[...s.stack,pg],pq:1}),()=>this.st0()); }
+  back(){ this.setState(s=>({stack:s.stack.slice(0,-1)})); }
+  goTab(t){ const sk={}; if(t==='catalog')sk.skelCat=true; if(t==='orders')sk.skelOrd=true; this.setState({stack:[],tab:t,...sk},()=>this.st0()); clearTimeout(this._skt); this._skt=setTimeout(()=>this.setState({skelCat:false,skelOrd:false}),700); }
+  top(){ const st=this.state.stack; return st[st.length-1]||null; }
+  openSheet(sh){ this.setState({sheet:sh}); }
+  closeSheet(){ this.setState({sheet:null}); }
+  addLine(pid,vid,qty){
+    const p=this.prod(pid), v=this.vOf(p,vid), d=this.discOf(p,v);
+    let msg='Sepete eklendi ✓';
+    this.setState(s=>{
+      const c=[...s.cart]; const i=c.findIndex(l=>l.pid===pid&&l.vid===vid);
+      let q=i>=0?c[i].qty+qty:qty;
+      if(d&&q>d.lim){ q=d.lim; msg='Bu fiyattan en fazla '+d.lim+' adet eklenebilir'; }
+      if(i>=0)c[i]={...c[i],qty:q}; else c.push({pid,vid,qty:q});
+      return {cart:c};
+    });
+    this.toastM(msg);
+  }
+  quickAdd(p){ if(!p.stk)return; if(p.vs.length>1)this.openSheet({t:'var',pid:p.id,vid:p.vs[0].id,qty:1}); else this.addLine(p.id,p.vs[0].id,1); }
+  addPkg(kid,qty){
+    const k=this.K.find(x=>x.id===kid);
+    if(!k.it.every(i=>this.prod(i[0]).stk)){ this.toastM('Paket şu an tükendi'); return; }
+    this.setState(s=>{ const cp=[...s.cartPkgs]; const i=cp.findIndex(l=>l.kid===kid); if(i>=0)cp[i]={...cp[i],qty:cp[i].qty+qty}; else cp.push({kid,qty}); return {cartPkgs:cp}; });
+    this.toastM('Paket sepete eklendi ✓');
+  }
+  lines(){ return this.state.cart.map(l=>{ const p=this.prod(l.pid), v=this.vOf(p,l.vid), d=this.discOf(p,v); const u=this.uPrice(p,v); return {...l,p,v,d,unit:u,tot:u*l.qty}; }); }
+  pkgLines(){ return this.state.cartPkgs.map(l=>{ const k=this.K.find(x=>x.id===l.kid); return {...l,k,tot:k.pr*l.qty}; }); }
+  subT(){ return this.lines().reduce((a,l)=>a+l.tot,0)+this.pkgLines().reduce((a,l)=>a+l.tot,0); }
+  coupBase(){ return this.lines().filter(l=>!l.d).reduce((a,l)=>a+l.tot,0); }
+  codes(){ const o={'HOSGELDIN10':{type:'pct',v:10,min:30}}; this.state.myCoupons.forEach(c=>o[c.code]={type:'amt',v:c.v,min:0}); return o; }
+  discount(){ const c=this.state.coupon; if(!c)return 0; const b=this.coupBase(); return c.type==='pct'?b*c.v/100:Math.min(c.v,b); }
+  applyCoupon(){
+    const code=this.state.couponIn.trim().toUpperCase(); if(!code)return;
+    const c=this.codes()[code];
+    if(!c){ this.setState({cMsg:{ok:false,t:'Kod geçersiz veya süresi dolmuş.'}}); return; }
+    if(this.coupBase()<c.min){ this.setState({cMsg:{ok:false,t:'Bu kod için paket ve indirimli ürünler dışında en az '+c.min+' € sepet gerekir.'}}); return; }
+    this.setState({coupon:{...c,code},cMsg:{ok:true,t:code+' uygulandı ✓'},couponIn:''});
+  }
+  hasNoShip(){ return this.lines().some(l=>!l.p.ship)||this.pkgLines().some(l=>!l.k.ship); }
+  addrSel(){ return this.state.addresses.find(a=>a.id===this.state.co.addr)||this.state.addresses[0]; }
+  inRegion(){ const a=this.addrSel(); return !!a && a.zip.slice(0,2)==='67'; }
+  mode(){ return this.state.co.mode || (this.inRegion()?'kapi':'kargo'); }
+  shipFee(){ if(this.mode()==='kapi')return 0; const t=this.subT()-this.discount(); return t>=60?0:6.9; }
+  grandCo(){ return this.subT()-this.discount()+this.shipFee(); }
+  minGap(){ return Math.max(0,25-(this.subT()-this.discount())); }
+  payOpts(){
+    if(this.isB2B())return [['online','Online ödeme','Kart ile güvenli ödeme'],['havale','Banka havalesi','IBAN bilgileri e-posta ile gelir'],['vade','Hesaba (vadeli)','Ay sonu faturalandırma']];
+    if(this.mode()==='kapi'){ const o=[['online','Online ödeme','Kart ile güvenli ödeme']]; if(this.grandCo()<=150)o.push(['kapida','Kapıda ödeme','Nakit, kart veya çek']); return o; }
+    return [['online','Online ödeme','Kart ile güvenli ödeme']];
+  }
+  confirmBlock(){
+    const s=this.state;
+    if(!this.logged())return 'Devam etmek için hızlı doğrulama gerekli';
+    if(this.hasNoShip()&&this.mode()==='kargo')return 'Sepetinizdeki bazı ürünler kargoyla gönderilemez — kapıya teslim seçin';
+    if(this.minGap()>0)return 'Asgari sepet 25 € — '+this.fmt(this.minGap())+' eksik';
+    if(this.mode()==='kapi'&&!s.co.day)return 'Teslimat günü seçin';
+    if(!s.co.pay)return 'Ödeme yolu seçin';
+    return null;
+  }
+  coConfirm(){
+    const r=this.confirmBlock(); if(r){ this.toastM(r); return; }
+    const pay=this.state.co.pay;
+    if(pay==='online'){ this.setState({payBusy:false,payOk:false,payFail:false,payTried:false}); this.go({n:'payment'}); }
+    else this.finalize(pay==='kapida'?'Kapıda ödenecek':pay==='havale'?'Havale bekleniyor':'Vadeli hesaba işlendi');
+  }
+  finalize(label){
+    const s=this.state; const total=this.grandCo(); const a=this.addrSel(); const inR=this.inRegion();
+    const day=this.mode()==='kapi'?s.co.day:'Kargo ile · 2–4 iş günü';
+    const ref='LA-'+(2418+s.orders.length);
+    const pts=(!this.isB2B()&&this.logged())?Math.round(total):0;
+    const order={ref,dt:'7 Ağustos 2026',st:'Alındı',t:total,times:['7 Ağustos, az önce',null,null,null],items:s.cart.map(l=>({...l})),pkgs:s.cartPkgs.map(l=>({...l})),pay:label,addr:a.n+' — '+a.l+', '+a.zip+' '+a.city,day};
+    this.setState(st=>({orders:[order,...st.orders],cart:[],cartPkgs:[],coupon:null,cMsg:null,points:st.points+pts,payBusy:false,payOk:false,co:{...st.co,day:null,pay:null},stack:[{n:'confirm',ref,day,pts,label,total}]}),()=>this.st0());
+  }
+  payNow(ok){ this.setState({payBusy:true,payFail:false}); setTimeout(()=>{ if(ok||this.state.payTried){ this.setState({payOk:true}); setTimeout(()=>this.finalize('Online ödendi'),900); } else { this.setState({payBusy:false,payTried:true,payFail:true}); } },1400); }
+  reorder(o){
+    const skipped=[]; const add=[];
+    o.items.forEach(l=>{ const p=this.prod(l.pid); if(!p||!p.stk){ if(p)skipped.push(p.n); return; } add.push({pid:l.pid,vid:l.vid,qty:l.qty}); });
+    const addP=[]; (o.pkgs||[]).forEach(l=>{ const k=this.K.find(x=>x.id===l.kid); const ok=k&&k.it.every(i=>this.prod(i[0]).stk); if(ok)addP.push({kid:l.kid,qty:l.qty}); else if(k)skipped.push(k.n); });
+    this.setState(s=>{
+      const cart=[...s.cart]; add.forEach(a=>{ const i=cart.findIndex(c=>c.pid===a.pid&&c.vid===a.vid); if(i>=0)cart[i]={...cart[i],qty:cart[i].qty+a.qty}; else cart.push({...a}); });
+      const cp=[...s.cartPkgs]; addP.forEach(a=>{ const i=cp.findIndex(c=>c.kid===a.kid); if(i>=0)cp[i]={...cp[i],qty:cp[i].qty+a.qty}; else cp.push({...a}); });
+      return {cart,cartPkgs:cp,stack:[{n:'cart'}]};
+    },()=>this.st0());
+    this.toastM(skipped.length?skipped.join(', ')+' eklenemedi (tükendi)':'Kalemler güncel fiyatlarla sepete eklendi ✓');
+  }
+  kGo(dir){
+    if(this.state.kAnim||this.state.kIdx>=this.KS.length)return;
+    this.setState({kAnim:dir});
+    setTimeout(()=>{ this.setState(s=>{ const i=s.kIdx+1; let pts=s.points,aw=s.kAward; if(i>=this.KS.length&&!aw&&this.logged()&&!this.isB2B()){pts+=10;aw=true;} return {kIdx:i,kAnim:null,points:pts,kAward:aw}; }); },330);
+  }
+  loginOpen(){ this.setState({login:{m:null,email:'',sent:false,code:'',busy:false}}); this.go({n:'login'}); }
+  gLogin(){ this.setState(s=>({login:{...s.login,busy:true}})); setTimeout(()=>this.finishLogin(),1100); }
+  finishLogin(){ this.setState(s=>({li:true,login:{m:null,email:'',sent:false,code:'',busy:false},stack:s.stack.filter(p=>p.n!=='login')})); this.toastM('Doğrulandı — hoş geldiniz ✓'); }
+  sendCode(){ const e=this.state.login.email; if(!/.+@.+\..+/.test(e)){ this.toastM('Geçerli bir e-posta girin'); return; } this.setState(s=>({login:{...s.login,sent:true}})); }
+  onCode(e){ const v=e.target.value.replace(/\D/g,'').slice(0,6); this.setState(s=>({login:{...s.login,code:v}})); if(v.length===6)setTimeout(()=>this.finishLogin(),400); }
+  logout(){ this.setState({li:false,tab:'home',stack:[]}); this.toastM('Çıkış yapıldı'); }
+  setLang(l){ this.setState({lang:l}); this.toastM(l==='TR'?'Dil: Türkçe':'Dil tercihi kaydedildi — prototip arayüzü Türkçe kalır'); }
+  convertPoints(){ if(this.state.points<200)return; this.setState(s=>({points:s.points-200,myCoupons:[...s.myCoupons,{code:'PUAN5',v:5}]})); this.toastM('PUAN5 kuponu oluşturuldu — sepette kod olarak girin'); }
+  pf(){ const d=this.isB2B()?{name:'Emre Aydın',mail:'emre@anadolu-restaurant.fr',tel:'+33 6 12 45 78 90'}:{name:'Ayşe Demir',mail:'ayse.demir@gmail.com',tel:'+33 6 24 51 09 88'}; return this.state.pfO||d; }
+  openAddr(a){ this.setState({aE:a?{...a}:{id:null,n:'',l:'',zip:'',city:'',def:false}}); this.openSheet({t:'addr'}); }
+  saveA(){
+    const a=this.state.aE;
+    if(!a.n||!a.l||!a.zip){ this.toastM('Etiket, adres ve posta kodu gerekli'); return; }
+    this.setState(s=>{ let list; const nu={...a,id:a.id==null?Date.now():a.id}; if(a.id==null)list=[...s.addresses,nu]; else list=s.addresses.map(x=>x.id===a.id?nu:x); if(nu.def)list=list.map(x=>({...x,def:x.id===nu.id})); return {addresses:list}; });
+    this.closeSheet(); this.toastM('Adres kaydedildi ✓');
+  }
+  openTalepNew(ord){ this.setState({tn:{ord,step:ord?2:0,items:[],tp:null,msg:'',photo:false}}); this.go({n:'talepNew'}); }
+  tnSubmit(){
+    const t=this.state.tn;
+    if(!t.msg.trim()&&!t.items.length){ this.toastM('Kısa bir açıklama yazın'); return; }
+    const id='T-'+(109+this.state.talepler.length);
+    const rec={id,tp:t.tp||(t.ord?'Sipariş sorunu':'Mesaj'),ord:t.ord,dt:'7 Ağustos 2026',st:'Açık',res:null,msg:[{who:'m',t:t.msg||'(ürünler işaretlendi)'}]};
+    this.setState(s=>({talepler:[rec,...s.talepler],stack:[{n:'talepler'}]}),()=>this.st0());
+    this.toastM('Talebiniz alındı — cevabı e-posta ile bildireceğiz');
+  }
+  tSend(){
+    if(!this.state.tReply.trim())return; const id=this.top().id;
+    this.setState(s=>({talepler:s.talepler.map(t=>t.id===id?{...t,st:t.st==='Çözüldü'?'Yeniden açıldı':t.st,msg:[...t.msg,{who:'m',t:s.tReply}]}:t),tReply:''}));
+    this.toastM('Mesajınız iletildi');
+  }
+  openFb(ord){ this.setState({fb:{ord,idx:0,votes:[],comment:'',stage:0}}); this.go({n:'fb'}); }
+  fbVote(v){ this.setState(s=>{ const o=s.orders.find(x=>x.ref===s.fb.ord); const n=s.fb.idx+1; return {fb:{...s.fb,idx:n,votes:[...s.fb.votes,v],stage:n>=o.items.length?1:0}}; }); }
+  fbFinish(){ const pts=(this.logged()&&!this.isB2B())?15:0; this.setState(s=>({fb:{...s.fb,stage:2},points:s.points+pts})); }
+  proLookup(){
+    const p=this.state.pro;
+    if(p.siret.length!==14){ this.setState(s=>({pro:{...s.pro,err:'SIRET 14 haneli olmalı. Bulamadıysanız elle devam edin veya bize yazın.'}})); return; }
+    this.setState(s=>({pro:{...s.pro,found:true,err:null,comp:'RESTAURANT ANADOLU SARL',cadr:'12 Quai des Bateliers, 67000 Strasbourg · Restauration traditionnelle'}}));
+  }
+  proSubmit(){
+    const p=this.state.pro;
+    const okId=p.mode==='fr'?p.found:(p.vatOk&&p.comp);
+    if(!okId){ this.setState(s=>({pro:{...s.pro,err:p.mode==='fr'?'Önce SIRET numaranızla şirketinizi bulun.':'Şirket adı ve geçerli USt-IdNr gerekli (örn. DE123456789).'}})); return; }
+    if(!p.name||!/.+@.+\..+/.test(p.mail)){ this.setState(s=>({pro:{...s.pro,err:'Ad soyad ve geçerli bir e-posta gerekli.'}})); return; }
+    this.setState(s=>({pro:{...s.pro,sent:true,err:null}}),()=>this.st0());
+  }
+  renderVals(){
+    const s=this.state, b2b=this.isB2B(), logged=this.logged();
+    const top=this.top(); const cur=top?top.n:s.tab;
+    const F=n=>cur===n;
+    const cartCount=s.cart.reduce((a,l)=>a+l.qty,0)+s.cartPkgs.reduce((a,l)=>a+l.qty,0);
+    const card=p=>{ const v=p.vs[0]; const d=this.discOf(p,v);
+      return {n:p.n,img:'m-prd-'+p.id,photo:this.PHOTO[p.id]||'',opts:p.vs.length>1?p.vs.length+' seçenek':null,w:p.vs.map(x=>x.l).join(' · '),priceF:this.fmt(this.uPrice(p,v)),wasF:d?this.fmt(d.was):null,disc:!!d&&p.stk,prCol:d?'#b05c2e':'#343b41',so:!p.stk,imgOp:p.stk?1:.45,canAdd:p.stk,add:()=>this.quickAdd(p),open:()=>this.go({n:'product',id:p.id})}; };
+    const V={};
+    // chrome
+    V.fab=null;
+    V.padB = top?24:96;
+    V.tabsVisible = !top;
+    V.toast = s.toast;
+    V.splash = s.splash; V.splashOp = s.splashHide?0:1;
+    V.scRef = el=>{ this.sc=el; };
+    V.b2bChip = b2b;
+    V.pageKey = cur+'-'+(top?(top.id||top.ref||top.k||''):'');
+    V.goBack = ()=>this.back();
+    const IC={home:'M3 11.5 12 4l9 7.5M5.5 10V20h13v-10',catalog:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',cart:'M4 9h16l-1.5 11h-13zM8 9c0-4.5 8-4.5 8 0',orders:'M6.5 3h11v18l-1.9-1.5L13.7 21l-1.8-1.5L10 21l-1.8-1.5L6.5 21zM9.5 8h5M9.5 12h4',hesap:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20c1.5-3.8 5.5-4.8 7.5-4.8s6 1 7.5 4.8'};
+    V.tabs = [['home','Vitrin'],['catalog','Katalog'],['orders','Siparişler'],['hesap','Hesap']].map(([id,l])=>({id,l,icon:IC[id],col:s.tab===id?'#b05c2e':'#8a8270',tf:s.tab===id?'translateY(-2px) scale(1.12)':'none',go:()=>this.goTab(id),badge:null}));
+    // flags
+const demo=this.props.demoDurum??'normal'; const demoNet=demo==='ag-hatasi'; const demoEmpty=demo==='bos-listeler';
+    const netErrObj=demoNet?{retry:()=>this.toastM('Bağlantı yeniden deneniyor… (demo)')}:null;
+    const cartThumbs=s.cart.slice(0,4).map(l=>({photo:this.PHOTO[l.pid]||'',noPh:!this.PHOTO[l.pid],init:(this.prod(l.pid)||{n:'?'}).n.charAt(0)})).concat(s.cartPkgs.slice(0,1).map(l=>{const k=this.K.find(x=>x.id===l.kid);return {photo:this.PKPH[l.kid]||'',noPh:!this.PKPH[l.kid],init:k?k.n.charAt(0):'?'};}));
+    const goCart=()=>this.go({n:'cart'});
+    V.cartBar=cartCount>0?{n:cartCount+' ürün',totF:this.fmt(this.subT()),thumbs:cartThumbs,go:goCart}:null;
+    V.vHome=F('home'); V.vCatalog=F('catalog'); V.vCart=F('cart'); V.vOrders=F('orders'); V.vHesap=F('hesap');
+    V.vProduct=F('product'); V.vPackage=F('package'); V.vRecipe=F('recipe');
+    if(cartCount>0&&(F('home')||F('catalog')||F('product')||F('package'))) V.fab={b:(F('home')||F('catalog'))?'84px':'112px',n:cartCount,go:goCart}; V.vKesif=F('kesif'); V.vCheckout=F('checkout'); V.vPayment=F('payment'); V.vConfirm=F('confirm'); V.vOrder=F('order'); V.vLogin=F('login'); V.vPro=F('pro'); V.vTalepler=F('talepler'); V.vTalepD=F('talepD'); V.vTalepNew=F('talepNew'); V.vFb=F('fb'); V.vStatic=F('static'); V.vNotif=F('notif');
+    // home
+    V.loc=s.onbZip?(s.onbZip+(s.onbZip.slice(0,2)==='67'?' STRASBOURG':'')):'67000 STRASBOURG';
+    V.pillTap = ()=>{ if(logged){ this.toastM('Adresleriniz Hesap bölümünde yönetilir'); } else { this.openSheet({t:'zip'}); } };
+    V.searchGo = ()=>{ this.goTab('catalog'); setTimeout(()=>this.qRef&&this.qRef.focus(),350); };
+    V.goCatalog = ()=>this.goTab('catalog');
+    V.goKesif = ()=>this.go({n:'kesif'});
+    V.goPro = ()=>this.go({n:'pro'});
+    V.goWrite = ()=>{ if(!logged){this.loginOpen();return;} this.openTalepNew(null); };
+    V.goGizlilik = ()=>this.go({n:'static',k:'gizlilik'});
+    V.goTeslimatInfo = ()=>this.go({n:'static',k:'teslimat'});
+    const CSUB={'Börekler':'El açması, fırına hazır','Tatlılar':'Şerbetli ve sütlü','Hamur İşleri':'Mantı ve el emeği','Çerezler':'Taş fırında kavrulmuş','Kahvaltılık':'Pazar sofrası kurulur','Et Ürünleri':'Izgaraya hazır'};
+    const BS=[{bg:'#5f7a2c',tagCol:'#dfe7cb',ttlCol:'#f3efe2',cntCol:'#a9c46b'},{bg:'#efdfc2',tagCol:'#b05c2e',ttlCol:'#343b41',cntCol:'#b05c2e'},{bg:'#b05c2e',tagCol:'#f6d9c4',ttlCol:'#fff',cntCol:'#f6d9c4'}];
+    V.homeCats = this.CATS.map((c,i)=>{const st=BS[i%3];const r=i%2===1;return {tag:c.toLocaleUpperCase('tr-TR'),sub:CSUB[c]||c,init:c.charAt(0),noPh:!(this.CATPH[c]),bg:st.bg,tagCol:st.tagCol,ttlCol:st.ttlCol,cntCol:st.cntCol,photo:this.CATPH[c]||'',cnt:this.P.filter(p=>p.c===c).length+' çeşit',tl:r?'auto':'22px',tr:r?'22px':'auto',ai:r?'flex-end':'flex-start',ta:r?'right':'left',il:r?'-34px':'auto',ir:r?'auto':'-34px',rot:r?'-6deg':'5deg',open:()=>this.setState({tab:'catalog',cat:c,q:'',stack:[]},()=>this.st0())};});
+    const catGo=c=>()=>this.setState({tab:'catalog',cat:c,q:'',stack:[]},()=>this.st0());
+    const ccnt=c=>this.P.filter(p=>p.c===c).length+' çeşit';
+    V.band1={tag:'BÖREKLER',sub:'El açması, fırına hazır',cnt:ccnt('Börekler'),open:catGo('Börekler')};
+    V.band2={tag:'TATLILAR',sub:'Şerbetli ve sütlü',cnt:ccnt('Tatlılar'),open:catGo('Tatlılar')};
+    V.band3={tag:'KAHVALTILIK',sub:'Pazar sofrası kurulur',cnt:ccnt('Kahvaltılık'),open:catGo('Kahvaltılık')};
+    V.moreCats=['Hamur İşleri','Çerezler','Et Ürünleri'].map(c=>({n:c,open:catGo(c)}));
+    const fbOrd=logged?s.orders.find(o=>o.st==='Teslim edildi'):null;
+    V.ptsBar=(logged&&!b2b)?{pts:s.points,fbGo:fbOrd?()=>this.openFb(fbOrd.ref):null}:null;
+    const lo=logged?s.orders.find(o=>o.st==='Alındı'||o.st==='Hazırlanıyor'||o.st==='Yolda'):null;
+    V.liveOrder=lo?{ref:lo.ref,stL:lo.st==='Yolda'?'yolda':lo.st==='Hazırlanıyor'?'hazırlanıyor':'alındı',day:lo.day,open:()=>this.go({n:'order',ref:lo.ref})}:null;
+    const ld=(logged&&!lo)?s.orders.find(o=>o.st==='Teslim edildi'):null;
+    V.lastOrder=ld?{sum:ld.ref+' · '+this.fmt(ld.t),re:()=>this.reorder(ld)}:null;
+    const hr=new Date().getHours();
+    V.greet=logged?((hr<11?'Günaydın':hr<18?'Merhaba':'İyi akşamlar')+', '+this.pf().name.split(' ')[0]):'Hoş geldiniz';
+    V.goNotif=()=>{ this.go({n:'notif'}); setTimeout(()=>this.setState(st=>({notifs:st.notifs.map(n=>({...n,un:false}))})),700); };
+    V.notifBadge=s.notifs.some(n=>n.un);
+    V.notifCount=logged?(s.notifs.filter(n=>n.un).length||null):null;
+    const NIC={truck:'M1.5 5h12.5v10H1.5zM14 9h4.5l3.5 3.5V15H14M5 18.2a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 1 0-3.6 0M15.5 18.2a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 1 0-3.6 0',tag:'M3 9V6h18v3a2 2 0 0 0 0 6v3H3v-3a2 2 0 0 0 0-6z',star:'M12 3l2.7 5.8 6.3.7-4.7 4.3 1.3 6.2-5.6-3.2-5.6 3.2 1.3-6.2L3 9.5l6.3-.7z'};
+    V.nv={guest:!logged,logged,netErr:logged?netErrObj:null,emptyL:logged&&!demoNet&&(demoEmpty||!s.notifs.length),loginGo:()=>this.loginOpen(),rows:(logged&&!demoNet&&!demoEmpty)?s.notifs.map(n=>({t:n.t,sb:n.sb,tm:n.tm,un:n.un,ic:NIC[n.ic],
+      go:()=>{ if(n.ord)this.go({n:'order',ref:n.ord}); else if(n.pid)this.go({n:'product',id:n.pid}); }})):[]};
+    const fp=this.prod('kol');
+    if(fp.disc&&fp.stk&&!b2b){ const end=new Date(); end.setHours(23,59,59,999); const rem=Math.max(0,end.getTime()-s.now); const z=x=>String(x).padStart(2,'0');
+      V.flash={n:fp.n,photo:this.PHOTO[fp.id]||'',prF:this.fmt(fp.disc.pr),wasF:this.fmt(fp.disc.was),lim:'kişi başı '+fp.disc.lim+' adet',h:z(Math.floor(rem/3.6e6)),m:z(Math.floor(rem%3.6e6/6e4)),sec:z(Math.floor(rem%6e4/1e3)),
+        open:()=>this.go({n:'product',id:'kol'}),add:e=>{ e.stopPropagation(); this.quickAdd(fp); }};
+    } else V.flash=null;
+const obOn=(this.props.introActive??true)&&!s.onbDone;
+    if(obOn){ const st=s.onbStep; const zip=s.onbZip;
+      V.ob={s1:st===0,s2:st===1,s3:st===2,s4:st===3,jc:st===2?'flex-start':'center',zip,
+        onZip:e=>this.setState({onbZip:e.target.value.replace(/\D/g,'').slice(0,5)}),
+        zipNote:zip.length>=2?(zip.slice(0,2)==='67'?'Harika — kapınıza ücretsiz teslim ediyoruz! Kapıda ödeme de kullanabilirsiniz.':'Soğuk zincir korumalı kargoyla 2–4 iş gününde ulaştırırız; 60 € üzeri kargo ücretsiz.'):null,
+        zipCol:zip.slice(0,2)==='67'?'#4a6121':'#6d7261',
+        langs:[['TR','Türkçe'],['FR','Français'],['DE','Deutsch']].map(([id,n])=>({n,mark:s.lang===id?'✓':'',bg:s.lang===id?'#5f7a2c':'transparent',fg:s.lang===id?'#fff':'#343b41',pick:()=>{ this.setState({lang:id}); setTimeout(()=>this.setState({onbStep:1}),250); }})),
+        dots:[0,1,2,3].map(i=>({w:i===st?'24px':'8px',bg:i===st?'#b05c2e':'#d8cfb6'})),
+        cta:st===3?'Alışverişe başla':'Devam',
+        next:()=>{ if(st<3)this.setState({onbStep:st+1}); else { this.setState({onbDone:true}); this.toastM('Hoş geldiniz — afiyetle! ✓'); } },
+        skip:()=>this.setState({onbDone:true})};
+    } else V.ob=null;
+    V.hdrPts=(logged&&!b2b)?s.points:null; V.hdrPtsGo=()=>this.goTab('hesap');
+    V.tchS=e=>{const t=e.touches[0];this._sw=t.clientX<32?{x:t.clientX,y:t.clientY}:null;};
+    V.tchE=e=>{if(!this._sw)return;const t=e.changedTouches[0];if(t.clientX-this._sw.x>70&&Math.abs(t.clientY-this._sw.y)<60&&this.state.stack.length)this.back();this._sw=null;};
+    const offers=this.P.filter(p=>p.disc&&p.stk&&p.id!=='kol').map(p=>{ const v=p.vs.find(x=>x.id===p.disc.vid);
+      return {n:p.n,photo:this.PHOTO[p.id]||'',noPh:!this.PHOTO[p.id],init:p.n.charAt(0),pct:'−%'+Math.round((1-p.disc.pr/p.disc.was)*100),l:v.l,prF:this.fmt(p.disc.pr),wasF:this.fmt(p.disc.was),lim:'En fazla '+p.disc.lim+' adet',open:()=>this.go({n:'product',id:p.id})}; });
+    V.offers=offers; V.offersOn=(this.props.offersActive??true)&&offers.length>0&&!b2b;
+    V.vitrin = ['sub','man','pey','kun'].map(id=>card(this.prod(id)));
+    V.pkgsHome = this.K.map(k=>({n:k.n,d:k.d,prF:this.fmt(k.pr),cnt:k.it.length+' çeşit',img:'m-pkg-'+k.id,photo:this.PKPH[k.id]||'',noPh:!this.PKPH[k.id],init:k.n.charAt(0),open:()=>this.go({n:'package',id:k.id})}));
+    // catalog
+    V.q=s.q; V.onQ=e=>this.setState({q:e.target.value});
+    V.qRef=el=>{ this.qRef=el; };
+    V.clearSearch=()=>this.setState({q:'',cat:'Tümü',onlyDisc:false});
+    V.chips=['Tümü',...this.CATS].map(c=>({n:c,bg:s.cat===c?'#5f7a2c':'transparent',fg:s.cat===c?'#fff':'#343b41',bd:s.cat===c?'#5f7a2c':'#343b41',pick:()=>this.setState({cat:c})}));
+    let list=this.P.filter(p=>(s.cat==='Tümü'||p.c===s.cat)&&(!s.q||p.n.toLowerCase().includes(s.q.toLowerCase()))&&(!s.onlyDisc||(p.disc&&p.stk)));
+    if(s.sort==='artan')list=[...list].sort((a,b)=>this.uPrice(a,a.vs[0])-this.uPrice(b,b.vs[0]));
+    if(s.sort==='azalan')list=[...list].sort((a,b)=>this.uPrice(b,b.vs[0])-this.uPrice(a,a.vs[0]));
+    V.catSkel=s.skelCat&&!demoNet; V.netErr=netErrObj;
+    V.catProds=(demoNet||s.skelCat)?[]:list.map(card); V.zeroRes=!demoNet&&!s.skelCat&&list.length===0; V.catEnd=!demoNet&&!s.skelCat&&list.length>3;
+    const fAct=s.onlyDisc||s.sort!=='onerilen';
+    V.filterBg=fAct?'#efdfc2':'transparent'; V.filterBd='#343b41'; V.filterFg=fAct?'#4a6121':'#343b41';
+    V.filterOpen=()=>this.openSheet({t:'filter'});
+    // sheet
+    const sh=s.sheet;
+    V.shOn=!!sh; V.shClose=()=>this.closeSheet();
+    V.shZip=sh&&sh.t==='zip'; V.shStripe=sh&&sh.t==='stripe'; V.shVar=sh&&sh.t==='var'; V.shFilter=sh&&sh.t==='filter'; V.shAddr=sh&&sh.t==='addr'; V.shShare=sh&&sh.t==='share'; V.shPf=sh&&sh.t==='pf'; V.shCoupon=sh&&sh.t==='coupon';
+    if(V.shVar){ const p=this.prod(sh.pid); const v=this.vOf(p,sh.vid);
+      V.sv={n:p.n,qty:sh.qty,
+        vars:p.vs.map(x=>({l:x.l,prF:this.fmt(this.uPrice(p,x)),bg:x.id===sh.vid?'#efdfc2':'transparent',bd:x.id===sh.vid?'#343b41':'#d8cfb6',pick:()=>this.setState(st=>({sheet:{...st.sheet,vid:x.id}}))})),
+        inc:()=>this.setState(st=>({sheet:{...st.sheet,qty:Math.min(99,st.sheet.qty+1)}})),
+        dec:()=>this.setState(st=>({sheet:{...st.sheet,qty:Math.max(1,st.sheet.qty-1)}})),
+        chips:[5,10,20].map(n=>({n:'×'+n,pick:()=>this.setState(st=>({sheet:{...st.sheet,qty:n}}))})),
+        addF:'Sepete ekle · '+this.fmt(this.uPrice(p,v)*sh.qty),
+        add:()=>{ this.addLine(sh.pid,sh.vid,sh.qty); this.closeSheet(); }};
+    } else V.sv={};
+    V.sf={sorts:[['onerilen','Önerilen'],['artan','Fiyat: önce düşük'],['azalan','Fiyat: önce yüksek']].map(([id,l])=>({l,sel:s.sort===id,bg:s.sort===id?'#efdfc2':'transparent',bd:s.sort===id?'#343b41':'#d8cfb6',pick:()=>this.setState({sort:id})})),
+      tBg:s.onlyDisc?'#5f7a2c':'#d8cfb6',tJc:s.onlyDisc?'flex-end':'flex-start',discT:()=>this.setState(st=>({onlyDisc:!st.onlyDisc})),
+      clear:()=>this.setState({sort:'onerilen',onlyDisc:false})};
+    const aE=s.aE||{};
+    V.sa={title:aE.id==null?'Yeni adres':'Adresi düzenle',n:aE.n||'',l:aE.l||'',zip:aE.zip||'',city:aE.city||'',
+      onN:e=>this.setState(st=>({aE:{...st.aE,n:e.target.value}})),onL:e=>this.setState(st=>({aE:{...st.aE,l:e.target.value}})),
+      onZ:e=>this.setState(st=>({aE:{...st.aE,zip:e.target.value.replace(/\D/g,'').slice(0,5)}})),onC:e=>this.setState(st=>({aE:{...st.aE,city:e.target.value}})),
+      save:()=>this.saveA(),
+      del:aE.id!=null?()=>{ const id=aE.id; this.setState(st=>({addresses:st.addresses.filter(x=>x.id!==id)})); this.closeSheet(); this.toastM('Adres silindi'); }:null};
+    V.sz={zip:s.onbZip,onZip:e=>this.setState({onbZip:e.target.value.replace(/\D/g,'').slice(0,5)}),
+      note:s.onbZip.length>=2?(s.onbZip.slice(0,2)==='67'?'Harika — kapınıza ücretsiz teslim ediyoruz!':'Soğuk zincir kargoyla 2–4 iş gününde ulaştırırız.'):null,
+      col:s.onbZip.slice(0,2)==='67'?'#4a6121':'#6d7261',
+      save:()=>{ this.closeSheet(); this.toastM('Teslimat bölgeniz güncellendi ✓'); }};
+    V.shareWa=()=>{ this.closeSheet(); this.toastM('WhatsApp paylaşımı açılıyor (demo)'); };
+    V.shareCopy=()=>{ this.closeSheet(); this.toastM('Bağlantı kopyalandı ✓'); };
+    const pfE=s.pfE||{};
+    V.sp={name:pfE.name||'',mail:pfE.mail||'',tel:pfE.tel||'',
+      onName:e=>this.setState(st=>({pfE:{...st.pfE,name:e.target.value}})),onMail:e=>this.setState(st=>({pfE:{...st.pfE,mail:e.target.value}})),onTel:e=>this.setState(st=>({pfE:{...st.pfE,tel:e.target.value}})),
+      save:()=>{ this.setState(st=>({pfO:st.pfE})); this.closeSheet(); this.toastM('Profil güncellendi ✓'); }};
+    // product page
+</script>
+
+<!-- kaynak: satır 1884-1884 · betik kalanı -->
+<script type="text/x-dc-fragment">
+    // package page
+</script>
+
+<!-- kaynak: satır 1891-1891 · betik kalanı -->
+<script type="text/x-dc-fragment">
+    V.rcps=this.RCP.map(r=>({id:r.id,n:r.n,time:r.time,cnt:r.it.length+r.pantry.length,open:()=>this.go({n:'recipe',id:r.id})}));
+</script>
+
+<!-- kaynak: satır 1900-1967 · betik kalanı -->
+<script type="text/x-dc-fragment">
+    // kesif
+    const kT=this.KS.length; const kDone=s.kIdx>=kT;
+    V.kv={done:kDone,prog:Math.min(s.kIdx+1,kT)+' / '+kT,pct:Math.round(Math.min(s.kIdx,kT)/kT*100)+'%',
+      cur:kDone?null:{n:this.KS[s.kIdx].n,d:this.KS[s.kIdx].d,img:'m-ks-'+s.kIdx},
+      hasNext:s.kIdx+1<kT,next:s.kIdx+1<kT?{img:'m-ks-'+(s.kIdx+1)}:null,
+      anim:s.kAnim==='like'?'kOutR .33s ease-in forwards':s.kAnim==='pass'?'kOutL .33s ease-in forwards':'none',
+      like:()=>this.kGo('like'),pass:()=>this.kGo('pass'),
+      ptsShow:logged&&!b2b,award:'+10 puan kazandınız',loginHint:!logged,
+      goCat:()=>this.goTab('catalog'),loginGo:()=>this.loginOpen()};
+    // cart
+    const lines=this.lines(), pkgs=this.pkgLines(); const disc=this.discount(); const sub=this.subT(); const gap=this.minGap();
+    const mkL=(l,i)=>({n:l.p.n,l:l.v.l,img:'m-prd-'+l.pid,photo:this.PHOTO[l.pid]||'',so:!l.p.stk||(demo==='sepette-tukendi'&&i===0),qty:l.qty,unitF:this.fmt(l.unit),totF:this.fmt(l.tot),disc:!!l.d,
+      inc:()=>{ if(l.d&&l.qty>=l.d.lim){this.toastM('Bu fiyattan en fazla '+l.d.lim+' adet');return;} this.setState(st=>({cart:st.cart.map((x,j)=>j===i?{...x,qty:x.qty+1}:x)})); },
+      dec:()=>this.setState(st=>({cart:st.cart.map((x,j)=>j===i?{...x,qty:Math.max(1,x.qty-1)}:x)})),
+      del:()=>this.setState(st=>({cart:st.cart.filter((x,j)=>j!==i)}))});
+    V.cv={lines:lines.map(mkL),
+      pkgs:pkgs.map((l,i)=>({n:l.k.n,cnt:l.k.it.map(x=>x[1]).join(' · '),img:'m-pkg-'+l.kid,photo:this.PKPH[l.kid]||'',qty:l.qty,totF:this.fmt(l.tot),
+        inc:()=>this.setState(st=>({cartPkgs:st.cartPkgs.map((x,j)=>j===i?{...x,qty:x.qty+1}:x)})),
+        dec:()=>this.setState(st=>({cartPkgs:st.cartPkgs.map((x,j)=>j===i?{...x,qty:Math.max(1,x.qty-1)}:x)})),
+        del:()=>this.setState(st=>({cartPkgs:st.cartPkgs.filter((x,j)=>j!==i)}))})),
+      empty:!lines.length&&!pkgs.length,notEmpty:!!(lines.length||pkgs.length),cnt:cartCount+' ürün',
+      subF:this.fmt(sub),discRow:disc>0,discF:'−'+this.fmt(disc),discLabel:s.coupon?'Kupon · '+s.coupon.code:'İndirim',
+      grandF:this.fmt(sub-disc),
+      couponIn:s.couponIn,onCoupon:e=>this.setState({couponIn:e.target.value,cMsg:null}),apply:()=>this.applyCoupon(),
+      couponOpen:()=>{this.setState({cMsg:null});this.openSheet({t:'coupon'});},
+      applySheet:()=>{this.applyCoupon();setTimeout(()=>{if(this.state.coupon)this.closeSheet();},60);},
+      applied:s.coupon?s.coupon.code:null,noCoupon:!s.coupon,removeC:()=>{ this.setState({coupon:null,cMsg:null}); this.toastM('Kupon kaldırıldı'); },
+      cMsg:s.cMsg,cCol:s.cMsg&&s.cMsg.ok?'#4a6121':'#b05c2e',
+      minMsg:gap>0&&(lines.length||pkgs.length)?'Asgari sepet 25 € — '+this.fmt(gap)+' eksik':null,
+      canGo:(lines.length||pkgs.length)&&gap<=0,ckBg:(lines.length||pkgs.length)&&gap<=0?'#5f7a2c':'#b9b29e',
+      goCk:()=>{ if(gap>0){this.toastM('Asgari sepet 25 €');return;} this.go({n:'checkout'}); },browse:()=>this.goTab('catalog')};
+    // checkout
+    const inR=this.inRegion(); const fee=this.shipFee(); const grand=this.grandCo(); const block=this.confirmBlock();
+    V.pkShare=()=>this.openSheet({t:'share'});
+    V.ck={logged,guest:!logged,thumbs:cartThumbs,kargoRow:!inR,who:this.pf().name+' · '+this.pf().mail,loginGo:()=>this.loginOpen(),
+      addrs:s.addresses.map(a=>({n:a.n,line:a.l+', '+a.zip+' '+a.city,def:a.def,bg:a.id===s.co.addr?'#efdfc2':'transparent',bd:a.id===s.co.addr?'#343b41':'#d8cfb6',pick:()=>this.setState(st=>({co:{...st.co,addr:a.id,mode:null,day:null,pay:null}}))})),
+      addNew:()=>this.openAddr(null),
+      inR,
+      modes:[
+        {l:'Kapıya teslim — ücretsiz',sb:inR?'Soğutuculu araçlarımızla, teslimat gününüzü seçin':'Bu adres teslimat bölgemizin (67) dışında',dis:!inR,id:'kapi'},
+        {l:'Soğuk zincir kargo',sb:this.hasNoShip()?'Sepetinizdeki bazı ürünler kargoyla gönderilemiyor':'2–4 iş günü · 60 € üzeri kargo ücretsiz',dis:this.hasNoShip()&&inR,id:'kargo'}
+      ].map(m=>{ const sel=this.mode()===m.id; return {l:m.l,sb:m.sb,bg:sel?'#efdfc2':'transparent',bd:sel?'#343b41':'#d8cfb6',op:m.dis?.45:1,
+        pick:()=>{ if(m.dis){ this.toastM(m.sb); return; } this.setState(st=>({co:{...st.co,mode:m.id,pay:null}})); }}; }),
+      days:this.mode()==='kapi'&&inR?['Çarşamba 13 Ağustos','Cumartesi 16 Ağustos'].map(d=>({d,bg:s.co.day===d?'#efdfc2':'transparent',bd:s.co.day===d?'#343b41':'#d8cfb6',pick:()=>this.setState(st=>({co:{...st.co,day:d}}))})):[],
+      feeF:fee>0?this.fmt(fee):'Ücretsiz',
+      noShipBlock:this.hasNoShip()&&this.mode()==='kargo',noShipNames:lines.filter(l=>!l.p.ship).map(l=>l.p.n).concat(pkgs.filter(l=>!l.k.ship).map(l=>l.k.n)).join(', '),
+      pays:this.payOpts().map(([id,l,sb])=>({l,sb,bg:s.co.pay===id?'#efdfc2':'transparent',bd:s.co.pay===id?'#343b41':'#d8cfb6',pick:()=>this.setState(st=>({co:{...st.co,pay:id}}))})),
+      kapidaNote:(!b2b&&this.mode()==='kapi'&&grand>150)?'Bu tutarda kapıda ödeme sunulamıyor — online ödeme gerekir.':null,
+      sumLines:lines.map(l=>({t:l.qty+'× '+l.p.n+' · '+l.v.l,f:this.fmt(l.tot)})).concat(pkgs.map(l=>({t:l.qty+'× '+l.k.n,f:this.fmt(l.tot)}))),
+      subF:this.fmt(sub),discRow:disc>0,discF:'−'+this.fmt(disc),grandF:this.fmt(grand),
+      mkt:s.co.mkt,mktBg:s.co.mkt?'#5f7a2c':'transparent',mktT:()=>this.setState(st=>({co:{...st.co,mkt:!st.co.mkt}})),
+      block,btnBg:block?'#b9b29e':'#5f7a2c',
+      confirmLabel:s.co.pay==='online'?'Ödemeye geç · '+this.fmt(grand):'Siparişi onayla · '+this.fmt(grand),
+      confirm:()=>this.coConfirm()};
+    // payment
+    V.pm={amountF:this.fmt(grand),busy:s.payBusy&&!s.payOk,ok:s.payOk,fail:s.payFail&&!s.payBusy&&!s.payOk,idle:!s.payBusy&&!s.payOk,
+      payApple:()=>this.payNow(true),openCard:()=>this.openSheet({t:'stripe'}),payCard:()=>{ this.closeSheet(); this.payNow(false); },cancel:()=>this.back()};
+    // confirm
+    V.cf=top&&top.n==='confirm'?{ref:top.ref,day:top.day,totF:this.fmt(top.total),label:top.label,ptsF:top.pts?'+'+top.pts+' puan kazandınız':null,
+      goOrders:()=>this.goTab('orders'),goHome:()=>this.goTab('home')}:{};
+    // orders
+    const stC={'Alındı':['#eef2e2','#4a6121'],'Hazırlanıyor':['#f9ede2','#b05c2e'],'Yolda':['#f9ede2','#b05c2e'],'Teslim edildi':['#efe9db','#6d7261'],'İptal':['#f4e3e0','#a44a3f'],'Açık':['#f9ede2','#b05c2e'],'İlgileniyoruz':['#f9ede2','#b05c2e'],'Çözüldü':['#eef2e2','#4a6121'],'Yeniden açıldı':['#f9ede2','#b05c2e']};
+    V.ov={logged,guest:!logged,show:logged,skel:s.skelOrd&&!demoNet,netErr:netErrObj,emptyL:logged&&!demoNet&&!s.skelOrd&&(demoEmpty||!s.orders.length),loginGo:()=>this.loginOpen(),empty:!s.orders.length,browse:()=>this.goTab('catalog'),
+      rows:(demoNet||demoEmpty||s.skelOrd)?[]:s.orders.map(o=>({ref:o.ref,dt:o.dt,st:o.st,stBg:(stC[o.st]||stC['Alındı'])[0],stFg:(stC[o.st]||stC['Alındı'])[1],totF:this.fmt(o.t),cnt:(o.items.reduce((a,l)=>a+l.qty,0)+(o.pkgs||[]).reduce((a,l)=>a+l.qty,0))+' ürün',
+        thumbs:o.items.slice(0,4).map(l=>{const p=this.prod(l.pid);return {photo:this.PHOTO[l.pid]||'',noPh:!this.PHOTO[l.pid],init:p?p.n.charAt(0):'?'};}).concat((o.pkgs||[]).slice(0,1).map(l=>{const k=this.K.find(x=>x.id===l.kid);return {photo:this.PKPH[l.kid]||'',noPh:!this.PKPH[l.kid],init:k?k.n.charAt(0):'?'};})),
+        moreN:(o.items.length+(o.pkgs||[]).length)>5?(o.items.length+(o.pkgs||[]).length-5):null,
+        open:()=>this.go({n:'order',ref:o.ref}),re:()=>this.reorder(o)}))};
+    // order detail
+</script>
+
+<!-- kaynak: satır 1985-1987 · betik kalanı -->
+<script type="text/x-dc-fragment">
+    // talepler
+    V.tv={netErr:netErrObj,rows:demoNet?[]:s.talepler.map(t=>({id:t.id,tp:t.tp,ord:t.ord?('Sipariş '+t.ord):'Genel',dt:t.dt,st:t.st,stBg:(stC[t.st]||stC['Açık'])[0],stFg:(stC[t.st]||stC['Açık'])[1],open:()=>this.go({n:'talepD',id:t.id})})),
+      empty:!s.talepler.length,nw:()=>this.openTalepNew(null)};
+</script>
+
+<!-- kaynak: satır 1993-2006 · betik kalanı -->
+<script type="text/x-dc-fragment">
+    // talep new
+    const tnOrd=s.tn.ord?s.orders.find(x=>x.ref===s.tn.ord):null;
+    V.tn={step0:s.tn.step===0,step1:s.tn.step===1,step2:s.tn.step===2,hasOrd:!!s.tn.ord,ordRef:s.tn.ord,
+      yes:()=>{ if(!logged){this.loginOpen();return;} this.setState(st=>({tn:{...st.tn,step:1}})); },
+      no:()=>this.setState(st=>({tn:{...st.tn,step:2,ord:null}})),
+      orders:s.orders.map(o=>({ref:o.ref,dt:o.dt,pick:()=>this.setState(st=>({tn:{...st.tn,ord:o.ref,step:2}}))})),
+      items:tnOrd?tnOrd.items.map(l=>{ const p=this.prod(l.pid); const on=s.tn.items.includes(l.pid);
+        return {t:l.qty+'× '+p.n,on,bg:on?'#efdfc2':'transparent',bd:on?'#343b41':'#d8cfb6',mark:on?'✓':'',tog:()=>this.setState(st=>({tn:{...st.tn,items:on?st.tn.items.filter(x=>x!==l.pid):[...st.tn.items,l.pid]}}))}; }):[],
+      types:['Bozuk ürün','Eksik ürün','Soru','Diğer'].map(t=>({t,bg:s.tn.tp===t?'#5f7a2c':'transparent',fg:s.tn.tp===t?'#fff':'#343b41',bd:s.tn.tp===t?'#5f7a2c':'#343b41',pick:()=>this.setState(st=>({tn:{...st.tn,tp:t}}))})),
+      msg:s.tn.msg,onMsg:e=>this.setState(st=>({tn:{...st.tn,msg:e.target.value}})),
+      photo:s.tn.photo,photoT:()=>{ this.setState(st=>({tn:{...st.tn,photo:!st.tn.photo}})); if(!s.tn.photo)this.toastM('Fotoğraf eklendi (demo)'); },
+      photoL:s.tn.photo?'✓ 1 fotoğraf eklendi':'Fotoğraf ekle',
+      submit:()=>this.tnSubmit()};
+    // feedback
+</script>
+
+<!-- kaynak: satır 2019-2064 · betik kalanı -->
+<script type="text/x-dc-fragment">
+    // hesap
+    V.hv={logged,guest:!logged,show:logged,initial:this.pf().name.charAt(0),loginGo:()=>this.loginOpen(),isB2B:b2b,pf:this.pf(),
+      edit:()=>{ this.setState({pfE:{...this.pf()}}); this.openSheet({t:'pf'}); },
+      comp:b2b?{n:'RESTAURANT ANADOLU SARL',siret:'SIRET 842 156 337 00021',vat:'TVA FR 84 842156337'}:null,
+      addrs:s.addresses.map(a=>({n:a.n,line:a.l+', '+a.zip+' '+a.city,def:a.def,notDef:!a.def,edit:()=>this.openAddr(a),mkDef:()=>{ this.setState(st=>({addresses:st.addresses.map(x=>({...x,def:x.id===a.id}))})); this.toastM(a.n+' varsayılan yapıldı'); }})),
+      addNew:()=>this.openAddr(null),
+      langs:['TR','FR','DE'].map(l=>({l,bg:s.lang===l?'#5f7a2c':'transparent',fg:s.lang===l?'#fff':'#343b41',pick:()=>this.setLang(l)})),
+      mktE:s.mkt.email,mktEBg:s.mkt.email?'#5f7a2c':'#d8cfb6',mktEJc:s.mkt.email?'flex-end':'flex-start',mktET:()=>this.setState(st=>({mkt:{...st.mkt,email:!st.mkt.email}})),
+      mktW:s.mkt.wa,mktWBg:s.mkt.wa?'#5f7a2c':'#d8cfb6',mktWJc:s.mkt.wa?'flex-end':'flex-start',mktWT:()=>this.setState(st=>({mkt:{...st.mkt,wa:!st.mkt.wa}})),
+      refOn:logged&&!b2b,refCode:'LEZZET-'+this.pf().name.split(' ')[0].toUpperCase(),refShare:()=>this.openSheet({t:'share'}),
+      ptsShow:logged&&!b2b,pts:s.points,canConv:s.points>=200,convBg:s.points>=200?'#5f7a2c':'#b9b29e',
+      convGap:s.points>=200?null:'Çevirmek için '+(200-s.points)+' puan daha gerekli',
+      conv:()=>this.convertPoints(),
+      coupons:s.myCoupons.map(c=>({code:c.code,v:c.v+' € indirim — sepette kod olarak girin'})),hasCoupons:s.myCoupons.length>0,
+      goOrders:()=>this.goTab('orders'),goTaleps:()=>this.go({n:'talepler'}),write:()=>this.openTalepNew(null),
+      gizlilik:()=>this.go({n:'static',k:'gizlilik'}),teslimat:()=>this.go({n:'static',k:'teslimat'}),
+      logout:()=>this.logout()};
+    // login
+    V.lg={m:s.login.m,busy:s.login.busy,mNull:!s.login.m&&!s.login.busy,
+      g:()=>this.gLogin(),w:()=>this.gLogin(),e:()=>this.setState(st=>({login:{...st.login,m:'email'}})),
+      email:s.login.email,onEmail:e=>this.setState(st=>({login:{...st.login,email:e.target.value}})),
+      send:()=>this.sendCode(),sent:s.login.sent,notSent:!s.login.sent,emailShown:s.login.m==='email'&&!s.login.busy,
+      code:s.login.code,onCode:e=>this.onCode(e),resend:()=>this.toastM('Kod yeniden gönderildi'),
+      cancel:()=>this.back()};
+    // pro
+    const pr=s.pro;
+    V.pr={fr:pr.mode==='fr',de:pr.mode==='de',sent:pr.sent,notSent:!pr.sent,err:pr.err,
+      frBg:pr.mode==='fr'?'#5f7a2c':'transparent',frFg:pr.mode==='fr'?'#fff':'#343b41',deBg:pr.mode==='de'?'#5f7a2c':'transparent',deFg:pr.mode==='de'?'#fff':'#343b41',
+      setFr:()=>this.setState(st=>({pro:{...st.pro,mode:'fr',err:null}})),setDe:()=>this.setState(st=>({pro:{...st.pro,mode:'de',err:null}})),
+      siret:pr.siret,onSiret:e=>{ const v=e.target.value.replace(/\D/g,'').slice(0,14); this.setState(st=>({pro:{...st.pro,siret:v,err:null,found:false}})); },
+      lookup:()=>this.proLookup(),found:pr.found,comp:pr.comp,cadr:pr.cadr,
+      compIn:pr.comp,onComp:e=>this.setState(st=>({pro:{...st.pro,comp:e.target.value}})),
+      vat:pr.vat,onVat:e=>{ const v=e.target.value.toUpperCase().replace(/\s/g,'').slice(0,11); this.setState(st=>({pro:{...st.pro,vat:v,vatOk:/^DE[0-9]{9}$/.test(v)}})); },
+      vatOk:pr.vatOk,vatMark:pr.vatOk?'✓ Geçerli':'',
+      name:pr.name,onName:e=>this.setState(st=>({pro:{...st.pro,name:e.target.value}})),
+      mail:pr.mail,onMail:e=>this.setState(st=>({pro:{...st.pro,mail:e.target.value}})),
+      tel:pr.tel,onTel:e=>this.setState(st=>({pro:{...st.pro,tel:e.target.value}})),
+      submit:()=>this.proSubmit(),wa:()=>this.toastM('WhatsApp sohbeti açılıyor (demo)'),goCat:()=>this.goTab('catalog')};
+    // static
+    const ST={gizlilik:{t:'Gizlilik Politikası',b:'Kişisel verileriniz yalnız siparişinizi hazırlamak, teslim etmek ve (izin verdiyseniz) kampanyalarımızı iletmek için işlenir. Verileriniz üçüncü taraflara satılmaz. Dilediğiniz an hesabınızdan izinlerinizi değiştirebilir, verilerinizin silinmesini bonjour@lezzetanatolia.fr adresine yazarak talep edebilirsiniz.'},
+      teslimat:{t:'Teslimat & Soğuk Zincir',b:'Strasbourg ve çevresinde (67 posta bölgesi) siparişleriniz kendi soğutuculu araçlarımızla kapınıza ücretsiz teslim edilir. Bölge dışına gönderiler soğuk zincir korumalı özel ambalajla kargoya verilir; 60 € üzeri kargo ücretsizdir. Donuk ürünler -18°C bozulmadan ulaşır — teslim aldığınızda dondurucuya koymanız yeterli.'}};
+    const stt=top&&top.n==='static'?ST[top.k]:null;
+    V.sx=stt?{t:stt.t,b:stt.b}:{};
+    return V;
+  }
+}
+</script>
+
+<!-- kaynak: satır 2065-2067 · ortak -->
+</script>
+</body>
+</html>

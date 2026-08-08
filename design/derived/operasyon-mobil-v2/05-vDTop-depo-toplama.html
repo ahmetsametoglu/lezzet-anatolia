@@ -1,0 +1,33 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vDTop · Depo · Toplama -->
+<!-- kaynak satırlar: 306-332 -->
+
+<!-- kaynak: satır 306-332 · görünüm bloğu -->
+    <!-- ================= D1 TOPLAMA ================= -->
+    <sc-if value="{{ vDTop }}">
+      <div data-screen-label="Depo · Toplama" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">Toplama</span><span style="font:700 10.5px 'Karla';color:#8a8270">LZA-26-3M8C · Restaurant Bosphore · B2B</span></div>
+        </div>
+        <div style="flex:1;padding:6px 22px;display:flex;flex-direction:column">
+          <sc-for list="{{ dTop }}" as="t" hint-placeholder-count="4">
+            <div style="display:flex;flex-direction:column;gap:6px;padding:13px 0;border-bottom:1.5px dashed #ddd6c4">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:700 14px 'Karla'">{{ t.n }}</span><span style="font:400 11.5px 'Karla';color:#8a8270">istenen {{ t.ist }} · parti {{ t.parti }} — motor önerisi</span></div>
+                <input type="number" inputmode="numeric" value="{{ t.gotV }}" onChange="{{ t.set }}" style="width:64px;background:#fff;border:1.5px solid #343b41;border-radius:12px;padding:10px 8px;font:800 15px 'Karla';color:{{ t.adetFg }};text-align:center;outline:none">
+                <span style="font:700 11.5px 'Karla';color:{{ t.tamFg }};border:1.5px solid {{ t.tamBd }};background:{{ t.tamBg }};border-radius:12px;padding:9px 11px;flex:none;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ t.tamamla }}">tamamı ✓</span>
+              </div>
+              <sc-if value="{{ t.cipa }}"><span style="font:700 11px 'Karla';color:#b05c2e;background:#f9ede2;border-radius:12px;padding:4px 10px;width:max-content">⚓ İndirimli teklif — yalnız bu partiden verilebilir</span></sc-if>
+              <sc-if value="{{ t.eksikBildirildi }}"><span style="font:700 11px 'Karla';color:#8a8270">Eksik bildirildi — karar yönetim ekranında</span></sc-if>
+              <sc-if value="{{ t.eksikLink }}"><span style="font:700 12px 'Karla';color:#b05c2e" onClick="{{ t.eksikBildir }}">eksik bildir</span></sc-if>
+            </div>
+          </sc-for>
+          <span style="font:400 11.5px 'Karla';color:#8a8270;padding:12px 0">Yarım iş sürer — toplanan adet kayıtta kalır. Fark tutarı bu ekranda görünmez.</span>
+        </div>
+        <div style="padding:10px 20px 16px">
+          <div style="background:{{ dTopCta.bg }};color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:{{ dTopCta.sh }};transition:transform .12s" style-active="transform:translate(2px,2px)">{{ dTopCta.l }}</div>
+        </div>
+      </div>
+    </sc-if>

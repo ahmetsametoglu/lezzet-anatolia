@@ -1,0 +1,28 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vYSkt · Yönetim · SKT Onayı -->
+<!-- kaynak satırlar: 612-633 -->
+
+<!-- kaynak: satır 612-633 · görünüm bloğu -->
+    <!-- ================= Y3 SKT ONAY ================= -->
+    <sc-if value="{{ vYSkt }}">
+      <div data-screen-label="Yönetim · SKT Onayı" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">Yakın-SKT Kampanya Onayı</span><span style="font:700 10.5px 'Karla';color:#8a8270">D3 aday listesi · satır çıkarılabilir, fiyat düzeltilebilir</span></div>
+        </div>
+        <div style="flex:1;padding:6px 22px;display:flex;flex-direction:column">
+          <sc-for list="{{ ySkt }}" as="s" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1.5px dashed #ddd6c4;opacity:{{ s.op }}">
+              <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:700 14px 'Karla';text-decoration:{{ s.deco }}">{{ s.n }}</span><span style="font:400 11.5px 'Karla';color:#8a8270">{{ s.parti }} · {{ s.adet }} adet · {{ s.gun }} gün · öneri {{ s.oneriF }}</span></div>
+              <sc-if value="{{ s.inList }}" hint-placeholder-val="{{ true }}"><input type="number" inputmode="decimal" value="{{ s.fV }}" onChange="{{ s.fSet }}" style="width:72px;background:#fff;border:1.5px solid #343b41;border-radius:12px;padding:9px 8px;font:800 14px 'Karla';color:#343b41;text-align:right;outline:none"></sc-if>
+              <span style="width:34px;height:34px;border-radius:12px;border:1.5px solid #c9c2ae;color:{{ s.xFg }};display:flex;align-items:center;justify-content:center;font:700 14px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ s.x }}">{{ s.xTx }}</span>
+            </div>
+          </sc-for>
+          <span style="font:400 11.5px 'Karla';color:#8a8270;padding:12px 0">Çıkarılan parti aday listesinde kalır — yarınki turda yeniden önerilir.</span>
+        </div>
+        <div style="padding:10px 20px 16px">
+          <div style="background:{{ ySktCta.bg }};color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:{{ ySktCta.sh }};transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ ySktOnay }}">{{ ySktCta.l }}</div>
+        </div>
+      </div>
+    </sc-if>

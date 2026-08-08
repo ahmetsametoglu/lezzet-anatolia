@@ -1,0 +1,92 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vCheckout · Checkout -->
+<!-- kaynak satırlar: 477-562 -->
+
+<!-- kaynak: satır 477-562 · görünüm bloğu -->
+        <sc-if value="{{ vCheckout }}">
+          <div data-screen-label="Checkout" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 17px 'Lora';color:#343b41">Siparişi tamamla</span>
+            </div>
+            <div style="padding:14px 18px 30px;display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="font:600 25px/1.12 'Lora';color:#343b41;flex:1">Az kaldı — sofra kurulsun</span>
+                <div style="display:flex;padding-left:12px;flex:none">
+                  <sc-for list="{{ ck.thumbs }}" as="th" hint-placeholder-count="2">
+                    <div style="width:42px;height:42px;border-radius:50%;border:2.5px solid #f3efe2;margin-left:-12px;overflow:hidden;background:#e2d8bd;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 3px 8px rgba(21,23,15,.18)">
+                      <sc-if value="{{ th.photo }}" hint-placeholder-val="{{ false }}"><div style="width:100%;height:100%;background-image:url({{ th.photo }});background-size:cover;background-position:center"></div></sc-if>
+                      <sc-if value="{{ th.noPh }}"><span style="font:600 15px 'Lora';color:#8a8270">{{ th.init }}</span></sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <sc-if value="{{ ck.logged }}">
+                <div style="display:flex;align-items:center;gap:10px;background:#efdfc2;border-radius:14px;padding:12px 14px">
+                  <span style="font:700 14px 'Karla';color:#4a6121">✓</span><span style="font:600 13px 'Karla';color:#343b41">{{ ck.who }}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ ck.guest }}">
+                <div style="border:2px dashed #b05c2e;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:8px">
+                  <span style="font:700 14px 'Karla';color:#343b41">Siparişinizi tamamlamak için hızlı doğrulama</span>
+                  <span style="font:400 12.5px 'Karla';color:#8a8270">Şifre yok — birkaç saniyede doğrulanın, kaldığınız yerden devam edin.</span>
+                  <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:12px 22px;border-radius:22px;width:max-content" onClick="{{ ck.loginGo }}">Doğrulan ve devam et</span>
+                </div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">TESLİMAT ADRESİ</span>
+                <sc-for list="{{ ck.addrs }}" as="a" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:10px;padding:13px 15px;border-radius:14px;background:{{ a.bg }};border:1.5px solid {{ a.bd }}" onClick="{{ a.pick }}">
+                    <div style="display:flex;flex-direction:column;gap:2px;flex:1"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font:700 13px 'Karla';color:#343b41">{{ a.n }}</span><sc-if value="{{ a.def }}"><span style="font:600 10.5px 'Karla';color:#4a6121;background:#e3ecd2;border-radius:8px;padding:2px 7px">varsayılan</span></sc-if></div><span style="font:400 12px 'Karla';color:#8a8270">{{ a.line }}</span></div>
+                  </div>
+                </sc-for>
+                <span style="font:700 13px 'Karla';color:#5f7a2c;padding:2px" onClick="{{ ck.addNew }}">＋ Yeni adres ekle</span>
+              </div>
+              <sc-if value="{{ ck.noShipBlock }}">
+                <div style="background:#f4e3e0;border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:4px">
+                  <span style="font:700 13px 'Karla';color:#a44a3f">Bu ürünler yalnız teslimat bölgemizde</span>
+                  <span style="font:400 12.5px/1.45 'Karla';color:#a44a3f">{{ ck.noShipNames }} kargoyla gönderilemiyor. Bölge içi (67) bir adres seçin ya da bu ürünleri sepetten çıkarın.</span>
+                </div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">TESLİMAT</span>
+                <sc-for list="{{ ck.modes }}" as="m" hint-placeholder-count="2">
+                  <div style="display:flex;flex-direction:column;gap:2px;padding:13px 15px;border-radius:14px;background:{{ m.bg }};border:1.5px solid {{ m.bd }};opacity:{{ m.op }};transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ m.pick }}">
+                    <span style="font:700 13.5px 'Karla';color:#343b41">{{ m.l }}</span><span style="font:400 12px/1.4 'Karla';color:#8a8270">{{ m.sb }}</span>
+                  </div>
+                </sc-for>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <sc-for list="{{ ck.days }}" as="d" hint-placeholder-count="2">
+                    <span style="font:700 12.5px 'Karla';color:#343b41;padding:11px 16px;border-radius:14px;background:{{ d.bg }};border:1.5px solid {{ d.bd }}" onClick="{{ d.pick }}">{{ d.d }}</span>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">ÖDEME</span>
+                <sc-for list="{{ ck.pays }}" as="p" hint-placeholder-count="2">
+                  <div style="display:flex;flex-direction:column;gap:2px;padding:13px 15px;border-radius:14px;background:{{ p.bg }};border:1.5px solid {{ p.bd }}" onClick="{{ p.pick }}">
+                    <span style="font:700 13.5px 'Karla';color:#343b41">{{ p.l }}</span><span style="font:400 12px 'Karla';color:#8a8270">{{ p.sb }}</span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ ck.kapidaNote }}"><span style="font:400 12px 'Karla';color:#8a8270">{{ ck.kapidaNote }}</span></sc-if>
+              </div>
+              <div style="background:#efdfc2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:7px">
+                <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">SİPARİŞ ÖZETİ</span>
+                <sc-for list="{{ ck.sumLines }}" as="l" hint-placeholder-count="2">
+                  <div style="display:flex;justify-content:space-between;gap:10px;font:400 12.5px 'Karla';color:#6d7261"><span>{{ l.t }}</span><span style="flex:none">{{ l.f }}</span></div>
+                </sc-for>
+                <div style="display:flex;justify-content:space-between;font:400 13px 'Karla';color:#6d7261;border-top:1px solid #e0d8c2;padding-top:7px"><span>Ara toplam</span><span>{{ ck.subF }}</span></div>
+                <sc-if value="{{ ck.discRow }}"><div style="display:flex;justify-content:space-between;font:600 13px 'Karla';color:#4a6121"><span>İndirim</span><span>{{ ck.discF }}</span></div></sc-if>
+                <div style="display:flex;justify-content:space-between;font:400 13px 'Karla';color:#6d7261"><span>Teslimat</span><span>{{ ck.feeF }}</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;border-top:1.5px dashed #d8cfb6;padding-top:9px;margin-top:2px"><span style="font:700 14px 'Karla';color:#343b41">Genel toplam</span><span style="background:#b05c2e;color:#fff;font:600 17px 'Lora';padding:6px 13px;border-radius:12px;transform:rotate(2deg);box-shadow:0 3px 8px rgba(21,23,15,.2)">{{ ck.grandF }}</span></div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start" onClick="{{ ck.mktT }}">
+                <div style="width:22px;height:22px;border-radius:7px;border:1.5px solid #cdc4a8;background:{{ ck.mktBg }};display:flex;align-items:center;justify-content:center;color:#fff;font:700 13px 'Karla';flex:none">✓</div>
+                <span style="font:400 12.5px/1.45 'Karla';color:#6d7261">Kampanya ve yeni ürünlerden e-posta/WhatsApp ile haberdar olmak istiyorum. (İsteğe bağlı — siparişinizi etkilemez.)</span>
+              </div>
+              <sc-if value="{{ ck.block }}"><span style="font:600 12.5px 'Karla';color:#b05c2e;text-align:center">{{ ck.block }}</span></sc-if>
+              <div style="background:{{ ck.btnBg }};color:#fff;font:700 15.5px 'Karla';border-radius:16px;height:54px;display:flex;align-items:center;justify-content:center;transition:transform .12s;box-shadow:3px 3px 0 #343b41" style-active="transform:translate(2px,2px)" onClick="{{ ck.confirm }}">{{ ck.confirmLabel }}</div>
+            </div>
+          </div>
+        </sc-if>

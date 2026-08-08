@@ -1,0 +1,36 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vYIst · Yönetim · Sipariş İstisnası -->
+<!-- kaynak satırlar: 581-610 -->
+
+<!-- kaynak: satır 581-610 · görünüm bloğu -->
+    <!-- ================= Y2 İSTİSNA ================= -->
+    <sc-if value="{{ vYIst }}">
+      <div data-screen-label="Yönetim · Sipariş İstisnası" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">Eksik Toplama Kararı</span><span style="font:700 10.5px 'Karla';color:#8a8270">LZA-26-3M8C · Restaurant Bosphore · Hazırlanıyor</span></div>
+        </div>
+        <div style="flex:1;padding:6px 22px;display:flex;flex-direction:column;gap:13px">
+          <div style="display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13px 'Karla'">2 × Fıstıklı Baklava · 1 kg</span><span style="font:700 13px 'Karla'">64,00 €</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13px 'Karla';color:#a44a3f">2 × Su Böreği — yalnız 1 toplandı</span><span style="font:700 13px 'Karla'">25,80 €</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 0"><span style="font:700 13.5px 'Karla'">Sipariş toplamı</span><span style="font:800 15px 'Karla'">89,80 €</span></div>
+          </div>
+          <div style="background:#fbfaf4;border:1.5px solid #c9c2ae;border-radius:20px;padding:13px 16px;display:flex;flex-direction:column;gap:4px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">MOTOR ÖNERİSİ — GEREKÇELİ</span>
+            <span style="font:700 14px/1.45 'Karla'">Kalanı gönder</span>
+            <span style="font:400 12.5px/1.5 'Karla';color:#6d7261">Eksik oran %14, tutar 12,90 € — eşiğin altında; B2B müşteride bekletme maliyeti yüksek.</span>
+            <span style="font:700 12.5px 'Karla';color:#b05c2e">Para önizlemesi (motordan): iade edilecek 12,90 €</span>
+          </div>
+          <span style="font:400 11.5px 'Karla';color:#8a8270">Karar insanın; izinli geçişleri motor bilir — yalnız geçerli seçenekler sunulur. İptal sebebi v1'de seçilmez.</span>
+        </div>
+        <div style="padding:10px 20px 16px;display:flex;flex-direction:column;gap:9px">
+          <div style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)">Kalanı gönder — 12,90 € iade</div>
+          <div style="display:flex;gap:9px">
+            <span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:13px 0">Müşteriye sor</span>
+            <span style="flex:1;text-align:center;font:700 12.5px 'Karla';color:#8a8270;border:1.5px solid #c9c2ae;border-radius:16px;padding:13px 0">Masada devam et</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>

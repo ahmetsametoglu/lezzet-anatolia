@@ -1,0 +1,39 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vYOzet · Yönetim · Gün Özeti -->
+<!-- kaynak satırlar: 664-696 -->
+
+<!-- kaynak: satır 664-696 · görünüm bloğu -->
+    <!-- ================= Y5 GÜN ÖZETİ ================= -->
+    <sc-if value="{{ vYOzet }}">
+      <div data-screen-label="Yönetim · Gün Özeti" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">Gün Özeti</span><span style="font:700 10.5px 'Karla';color:#8a8270">salt okuma · günün fotoğrafı</span></div>
+        </div>
+        <div style="flex:1;padding:6px 22px 16px;display:flex;flex-direction:column;gap:13px">
+          <span style="font:700 15px/1.5 'Karla'">31 sipariş · 6 hazırlanıyor · 5 tahsilat bekliyor</span>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">CİRO — KANAL KIRILIMI (SİPARİŞ TARİHİNE GÖRE)</span>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13px 'Karla'">Web</span><span style="font:700 13.5px 'Karla'">1.086,40 €</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13px 'Karla'">Kapıda satış</span><span style="font:700 13.5px 'Karla'">326,20 €</span></div>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed #ddd6c4"><span style="font:400 13px 'Karla'">WhatsApp</span><span style="font:700 13.5px 'Karla';color:#8a8270">— bilinmiyor (sıfır değil)</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="background:#fbfaf4;border:1.5px solid #c9c2ae;border-radius:16px;padding:11px 13px;display:flex;flex-direction:column;gap:1px"><span style="font:700 10px 'Karla';color:#8a8270">KAPIDA BEKLEYEN</span><span style="font:800 16px 'Karla'">5 · 178,50 €</span></div>
+            <div style="background:#fbfaf4;border:1.5px solid #c9c2ae;border-radius:16px;padding:11px 13px;display:flex;flex-direction:column;gap:1px"><span style="font:700 10px 'Karla';color:#8a8270">AÇIK ŞİKÂYET</span><span style="font:800 16px 'Karla'">3</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">YARIN — SEVKİYAT</span>
+            <span style="font:400 13px/1.6 'Karla'">14 sipariş · 9 hazır · <strong style="color:#b05c2e">5 rotaya atanmamış</strong> · kapıda ödeme yükü 212,00 €</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#8a8270">HAFTALIK YZ İÇGÖRÜSÜ</span>
+            <div style="display:flex;gap:9px;align-items:flex-start"><span style="width:9px;height:9px;border-radius:50%;background:#5f7a2c;margin-top:5px;flex:none"></span><span style="font:400 12.5px/1.5 'Karla'">B2B siparişleri %18 arttı — perşembe yoğunluğu sürüyor.</span></div>
+            <div style="display:flex;gap:9px;align-items:flex-start"><span style="width:9px;height:9px;border-radius:50%;background:#b05c2e;margin-top:5px;flex:none"></span><span style="font:400 12.5px/1.5 'Karla'">İzle: su böreği eksik toplaması bu hafta 3. kez.</span></div>
+            <div style="display:flex;gap:9px;align-items:flex-start"><span style="width:9px;height:9px;border-radius:50%;background:#a44a3f;margin-top:5px;flex:none"></span><span style="font:400 12.5px/1.5 'Karla'">Kötü: ulaşılamayan durak oranı %9'a çıktı — sonraki adım boş.</span></div>
+          </div>
+          <div style="background:#e7e2d2;border-radius:16px;padding:11px 14px"><span style="font:700 12px 'Karla';color:#6d7261">Stok riski bloğu ısınıyor — bekleyin (üç hâl: hazır · ısınıyor · yok).</span></div>
+        </div>
+      </div>
+    </sc-if>

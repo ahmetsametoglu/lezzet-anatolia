@@ -1,0 +1,67 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vOrders · Siparişler -->
+<!-- kaynak satırlar: 631-691 -->
+
+<!-- kaynak: satır 631-691 · görünüm bloğu -->
+        <sc-if value="{{ vOrders }}">
+          <div data-screen-label="Siparişler" style="animation:tabIn .25s ease;display:flex;flex-direction:column;gap:12px;padding:10px 18px 20px">
+            <div style="display:flex;flex-direction:column;gap:3px;padding-top:6px"><span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">HESABIM</span><h1 style="margin:0;font:600 26px 'Lora';color:#343b41">Siparişlerim</h1></div>
+            <sc-if value="{{ ov.guest }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 30px;text-align:center">
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3h11v18l-1.9-1.5L13.7 21l-1.8-1.5L10 21l-1.8-1.5L6.5 21zM9.5 8h5M9.5 12h4"></path></svg>
+                <span style="font:600 18px 'Lora';color:#343b41">Siparişleriniz için hızlı doğrulama</span>
+                <span style="font:400 13px/1.5 'Karla';color:#8a8270">Şifre yok — e-posta, Google veya WhatsApp ile birkaç saniyede doğrulanın.</span>
+                <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:24px" onClick="{{ ov.loginGo }}">Hızlı doğrulama</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ ov.show }}">
+              <sc-if value="{{ ov.netErr }}">
+                <div style="margin:20px 0;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;border:2px dashed #d8cfb6;border-radius:18px;padding:28px 20px">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.7" stroke-linecap="round"><path d="M5 12.5a7 7 0 0 1 14 0M8 15.5a4 4 0 0 1 8 0M12 19h.01M2 2l20 20"></path></svg>
+                  <span style="font:600 17px 'Lora';color:#343b41">Bağlantı kurulamadı</span>
+                  <span style="background:#343b41;color:#f3efe2;font:700 13px 'Karla';padding:11px 22px;border-radius:16px;transition:transform .12s" style-active="transform:scale(.95)" onClick="{{ ov.netErr.retry }}">Tekrar dene</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ ov.skel }}">
+                <div style="display:flex;flex-direction:column;gap:12px;animation:skel 1.1s ease infinite">
+                  <div style="background:#ece3c8;border-radius:18px;height:110px"></div>
+                  <div style="background:#ece3c8;border-radius:18px;height:110px"></div>
+                  <div style="background:#ece3c8;border-radius:18px;height:110px"></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ ov.emptyL }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 30px;text-align:center">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3h11v18l-1.9-1.5L13.7 21l-1.8-1.5L10 21l-1.8-1.5L6.5 21zM9.5 8h5M9.5 12h4"></path></svg>
+                  <span style="font:600 18px 'Lora';color:#343b41">Henüz siparişiniz yok</span>
+                  <span style="font:400 13px/1.5 'Karla';color:#8a8270">İlk siparişinizi verin — teslimatta burada canlı takip edin.</span>
+                  <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:16px;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ ov.browse }}">Kataloğa göz at</span>
+                </div>
+              </sc-if>
+              <sc-for list="{{ ov.rows }}" as="o" hint-placeholder-count="3">
+                <div style="background:#ece3c8;border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:9px">
+                  <div style="display:flex;align-items:center;justify-content:space-between" onClick="{{ o.open }}">
+                    <div style="display:flex;flex-direction:column;gap:2px"><span style="font:700 14px 'Karla';color:#343b41">{{ o.ref }}</span><span style="font:400 12px 'Karla';color:#8a8270">{{ o.dt }} · {{ o.cnt }}</span></div>
+                    <span style="font:700 11.5px 'Karla';color:{{ o.stFg }};background:{{ o.stBg }};border-radius:11px;padding:5px 11px;transform:rotate(2deg);flex:none">{{ o.st }}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;padding-left:10px" onClick="{{ o.open }}">
+                    <sc-for list="{{ o.thumbs }}" as="th" hint-placeholder-count="3">
+                      <div style="width:40px;height:40px;border-radius:50%;border:2.5px solid #ece3c8;margin-left:-10px;overflow:hidden;background:#e2d8bd;display:flex;align-items:center;justify-content:center;flex:none">
+                        <sc-if value="{{ th.photo }}" hint-placeholder-val="{{ false }}"><div style="width:100%;height:100%;background-image:url({{ th.photo }});background-size:cover;background-position:center"></div></sc-if>
+                        <sc-if value="{{ th.noPh }}"><span style="font:600 15px 'Lora';color:#8a8270">{{ th.init }}</span></sc-if>
+                      </div>
+                    </sc-for>
+                    <sc-if value="{{ o.moreN }}"><span style="margin-left:7px;font:700 11.5px 'Karla';color:#8a8270">+{{ o.moreN }}</span></sc-if>
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;border-top:1.5px dashed #d8cfb6;padding-top:9px">
+                    <span style="font:700 15px 'Karla';color:#343b41" onClick="{{ o.open }}">{{ o.totF }}</span>
+                    <div style="display:flex;gap:8px">
+                      <span style="border:1.5px solid #cddbb0;color:#4a6121;font:700 12px 'Karla';padding:9px 14px;border-radius:18px" onClick="{{ o.re }}">↻ Tekrar sipariş</span>
+                      <span style="font:700 12px 'Karla';color:#8a8270;padding:9px 6px" onClick="{{ o.open }}">Detay ›</span>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </sc-if>
+          </div>
+        </sc-if>

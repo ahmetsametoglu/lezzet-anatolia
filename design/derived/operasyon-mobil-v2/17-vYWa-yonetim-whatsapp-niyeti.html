@@ -1,0 +1,23 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vYWa · Yönetim · WhatsApp Niyeti -->
+<!-- kaynak satırlar: 698-714 -->
+
+<!-- kaynak: satır 698-714 · görünüm bloğu -->
+    <!-- ================= Y6 WHATSAPP ================= -->
+    <sc-if value="{{ vYWa }}">
+      <div data-screen-label="Yönetim · WhatsApp Niyeti" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">WhatsApp — Sipariş Niyeti</span><span style="font:700 10.5px 'Karla';color:#8a8270">+33 6 12 … 84 · 4 dk önce</span></div>
+        </div>
+        <div style="flex:1;padding:6px 22px;display:flex;flex-direction:column;gap:10px">
+          <div style="align-self:flex-start;max-width:86%;background:#fbfaf4;border:1.5px solid #c9c2ae;border-radius:16px;padding:11px 14px"><span style="font:400 13px/1.5 'Karla'">"Cumartesi için 2 kg fıstıklı baklava, 1 tepsi su böreği alabilir miyim? Illkirch'e."</span></div>
+          <span style="font:400 11.5px/1.6 'Karla';color:#8a8270">Uygulamadan sipariş kaydı v1'de yok — kayıt masada kurulur (kaynak sözlüğünde "whatsapp" hazır).</span>
+        </div>
+        <div style="padding:10px 20px 16px;display:flex;flex-direction:column;gap:9px">
+          <div style="background:{{ yWaCta.bg }};color:#fff;font:700 14px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:{{ yWaCta.sh }};transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ yWaNot }}">{{ yWaCta.l }}</div>
+          <span style="text-align:center;font:700 12.5px 'Karla';color:#343b41;border:1.5px solid #c9c2ae;border-radius:16px;padding:13px 0">Konuşmayı WhatsApp'ta aç</span>
+        </div>
+      </div>
+    </sc-if>

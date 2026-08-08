@@ -1,0 +1,30 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekran: vBil · Bildirimler -->
+<!-- kaynak satırlar: 781-804 -->
+
+<!-- kaynak: satır 781-804 · görünüm bloğu -->
+    <!-- ================= BİLDİRİMLER ================= -->
+    <sc-if value="{{ vBil }}">
+      <div data-screen-label="Bildirimler" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#e7e2d2;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ goBack }}">‹</span>
+          <div style="display:flex;flex-direction:column"><span style="font:600 17px 'Lora'">Bildirimler</span><span style="font:700 10.5px 'Karla';color:#8a8270">{{ bilKapsam }}</span></div>
+        </div>
+        <div style="flex:1;padding:0 22px;display:flex;flex-direction:column">
+          <sc-if value="{{ bilBos }}">
+            <div style="margin:24px 0;background:#fbfaf4;border:1.5px dashed #c9c2ae;border-radius:20px;padding:26px 22px;display:flex;flex-direction:column;gap:6px;align-items:center">
+              <span style="font:600 17px 'Lora'">Bildirim yok</span>
+              <span style="font:400 12.5px/1.5 'Karla';color:#8a8270;text-align:center">Yeni iş düştüğünde burada görünür — listeler elle de açılır.</span>
+            </div>
+          </sc-if>
+          <sc-for list="{{ bil }}" as="b" hint-placeholder-count="5">
+            <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1.5px dashed #ddd6c4;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ b.go }}">
+              <span style="width:10px;height:10px;border-radius:50%;background:{{ b.dot }};margin-top:5px;flex:none"></span>
+              <div style="display:flex;flex-direction:column;gap:1px;flex:1"><span style="font:700 13.5px 'Karla'">{{ b.t }}</span><span style="font:400 11.5px 'Karla';color:#8a8270">{{ b.bolum }} · {{ b.dk }}</span></div>
+            </div>
+          </sc-for>
+          <span style="font:400 11.5px/1.6 'Karla';color:#8a8270;padding:14px 0">Süzme kuralı: tek rollü kullanıcı yalnız kendi bölümünün bildirimlerini görür; çok rollüde tümü akar. Bildirim hızlandırıcıdır, tek kapı değil.</span>
+        </div>
+      </div>
+    </sc-if>

@@ -1,0 +1,445 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v2.dc.html -->
+<!-- ekrana bağlanamayan kalan parçalar: sayfa iskeleti, stil, sekme çubuğu, sheet'ler, betik kalanı -->
+<!-- parça sayısı: 23 -->
+
+<!-- kaynak: satır 1-32 · ortak -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400..700&family=Karla:wght@400..800&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; display:flex; justify-content:center; padding:36px 16px; }
+  a { color:#5f7a2c; text-decoration:none; } a:hover { color:#4a6121; }
+  input { font-family:'Karla',sans-serif; }
+  @keyframes pageIn { from { opacity:0; transform:translateX(14px); } to { opacity:1; transform:none; } }
+  @keyframes tabIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes pop { 0% { transform:scale(.5); opacity:0; } 70% { transform:scale(1.08); } 100% { transform:scale(1); opacity:1; } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes slideDown { from { transform:translateY(-100%); opacity:0; } to { transform:none; opacity:1; } }
+</style>
+</helmet>
+
+<div style="width:390px;height:820px;background:#f2f0e8;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.16);color:#343b41;display:flex;flex-direction:column;position:relative">
+
+  <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#343b41;color:#f5f1e6;font:700 11.5px 'Karla';padding:8px 16px;display:flex;align-items:center;gap:8px;flex:none"><span style="width:7px;height:7px;border-radius:50%;background:#b05c2e"></span>Çevrimdışı — saha işaretleri kuyruğa yazılır, depo yazma ekranları kilitli</div>
+  </sc-if>
+
+  <div style="flex:1;overflow-y:auto;min-height:0">
+
+
+<!-- kaynak: satır 95-95 · ortak -->
+
+
+<!-- kaynak: satır 216-216 · ortak -->
+
+
+<!-- kaynak: satır 263-263 · ortak -->
+
+
+<!-- kaynak: satır 305-305 · ortak -->
+
+
+<!-- kaynak: satır 333-333 · ortak -->
+
+
+<!-- kaynak: satır 376-376 · ortak -->
+
+
+<!-- kaynak: satır 399-399 · ortak -->
+
+
+<!-- kaynak: satır 431-431 · ortak -->
+
+
+<!-- kaynak: satır 454-454 · ortak -->
+
+
+<!-- kaynak: satır 482-482 · ortak -->
+
+
+<!-- kaynak: satır 529-529 · ortak -->
+
+
+<!-- kaynak: satır 580-580 · ortak -->
+
+
+<!-- kaynak: satır 611-611 · ortak -->
+
+
+<!-- kaynak: satır 634-634 · ortak -->
+
+
+<!-- kaynak: satır 663-663 · ortak -->
+
+
+<!-- kaynak: satır 697-697 · ortak -->
+
+
+<!-- kaynak: satır 715-715 · ortak -->
+
+
+<!-- kaynak: satır 757-757 · ortak -->
+
+
+<!-- kaynak: satır 780-780 · ortak -->
+
+
+<!-- kaynak: satır 805-820 · ortak -->
+  </div>
+
+  <!-- ================= SEKME ÇUBUĞU ================= -->
+  <sc-if value="{{ tabsVisible }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none;background:rgba(242,240,232,.96);backdrop-filter:blur(8px);border-top:1.5px solid #ddd6c4;padding:8px 8px 10px;display:flex">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0 2px;color:{{ t.col }};transition:transform .12s" style-active="transform:scale(.94)" onClick="{{ t.go }}">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ t.icon }}"></path></svg>
+          <span style="font:700 10.5px 'Karla'">{{ t.l }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:460,&quot;height&quot;:900},&quot;roller&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;hepsi&quot;,&quot;options&quot;:[&quot;hepsi&quot;,&quot;kurye&quot;,&quot;depo&quot;,&quot;yonetim&quot;,&quot;muhasebe&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;cevrimdisi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;veri&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;dolu&quot;,&quot;options&quot;:[&quot;dolu&quot;,&quot;bos&quot;,&quot;hata&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;}}">
+
+<!-- kaynak: satır 821-1143 · betik kalanı -->
+<script type="text/x-dc-fragment">
+class Component extends DCLogic {
+  state = { tab:'kurye', view:null, key:0, sel:0, st:{}, basladi:false, evid:null, imzaPanel:false, imzaCiz:false, mal:{}, redQ:{}, yontem:'nakit', gercek:{}, sonuc:null, sonucNot:null, sonucFoto:false, sonTeslim:null, kapali:false, kapOnay:false, kapNot:'', sayilan:{}, topla:{}, eksik:{}, gelen:{}, skt:{ 0:'2026-11-02' }, sktEdit:null, lotYok:{}, hasar:{}, trfGelen:{}, sebep:'süresi geçti (imha)', sayAdet:-6, akibet:null, talep:'Açık', yz:false, ySktOut:{}, ySktF:{}, y4:false, ywa:false };
+  nav(v) { this.setState(s => ({ view:v, key:s.key+1, sonTeslim:null })); }
+  renderVals() {
+    const fmt = v => v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' \u20ac';
+    const off = !!this.props.cevrimdisi;
+    const rol = this.props.roller ?? 'hepsi';
+    const veri = this.props.veri ?? 'dolu';
+    const S = this.state;
+    const nav = v => () => this.nav(v);
+    const num = (e) => { const v = e.target.value; return v === '' ? null : Math.max(0, parseFloat(v) || 0); };
+    // ---- KURYE ----
+    const stops = veri === 'dolu' ? [
+      { no:1, ref:'LZA-26-7K1A', addr:'Grand Rue 24', kim:'T. Arslan', b2b:false, wa:true, adres:true, pay:null, mal:[{n:'Fıstıklı Baklava · 1 kg', q:1}], st0:'teslim', den:1 },
+      { no:2, ref:'LZA-26-9Q2B', addr:'Rue de la Krutenau 41', kim:'E. Kaya', b2b:false, wa:false, adres:true, pay:{ a:14.0, m:'nakit' }, mal:[{n:'Su Böreği · tepsi', q:2}], st0:'ulasilamadi', den:2 },
+      { no:3, ref:'LZA-26-3M8C', addr:'Quai des Bateliers 3', kim:'Restaurant Bosphore', b2b:true, wa:true, adres:true, detail:'Hakan Bey · arka kapı, 11:00\u2019e kadar', pay:{ a:42.0, m:'nakit' }, mal:[{n:'Fıstıklı Baklava · 1 kg', q:2, cold:true},{n:'Mantı · 500 g', q:1, cold:true},{n:'Sigara Böreği · 24\u2019lü', q:3}], st0:'bekliyor', den:1 },
+      { no:4, ref:'LZA-26-5T1D', addr:'(adres kayıtlı değil)', kim:'S. Demir', b2b:false, wa:true, adres:false, pay:null, mal:[{n:'Künefe Seti', q:1}], st0:'bekliyor', den:1 },
+      { no:5, ref:'LZA-26-8R4E', addr:'Rue de Zurich 15', kim:'Pastane Merve', b2b:true, wa:true, adres:true, pay:{ a:1240.0, m:'nakit' }, mal:[{n:'Karışık koli', q:12, cold:true}], st0:'bekliyor', den:1 },
+      { no:6, ref:'LZA-26-2N6F', addr:'Route du Rhin 102', kim:'B. Şen', b2b:false, wa:false, adres:true, pay:{ a:64.0, m:'kart' }, mal:[{n:'Baklava · 500 g', q:1}], st0:'bekliyor', den:1 },
+    ] : [];
+    const stOf = s => S.st[s.no] ? S.st[s.no].r : s.st0;
+    const kDone = stops.filter(s => ['teslim','kismi'].includes(stOf(s))).length;
+    const sorunN = stops.filter(s => ['ulasilamadi','red'].includes(stOf(s))).length;
+    const kAcik = stops.length - kDone - sorunN;
+    const gOf = s => S.st[s.no] && S.st[s.no].g != null ? S.st[s.no].g : (s.pay ? s.pay.a : 0);
+    const cepte = stops.filter(s => ['teslim','kismi'].includes(stOf(s)) && s.pay).reduce((t, s) => t + gOf(s), 0);
+    const kapAcik = stops.filter(s => stOf(s) === 'bekliyor' && s.pay);
+    const nextNo = (stops.find(s => stOf(s) === 'bekliyor') || {}).no;
+    const kStops = stops.map((s, i) => {
+      const st = stOf(s);
+      const c = st === 'teslim' ? { cBg:'#e3ecd2', cBd:'#e3ecd2', cFg:'#4a6121', cTx:'\u2713' }
+        : st === 'kismi' ? { cBg:'#f9ede2', cBd:'#f9ede2', cFg:'#b05c2e', cTx:'\u00b1' }
+        : ['ulasilamadi','red'].includes(st) ? { cBg:'#f4e3e0', cBd:'#f4e3e0', cFg:'#a44a3f', cTx:String(s.no) }
+        : s.no === nextNo && S.basladi ? { cBg:'#343b41', cBd:'#343b41', cFg:'#f5f1e6', cTx:String(s.no) }
+        : { cBg:'transparent', cBd:'#cdc4a8', cFg:'#8a8270', cTx:String(s.no) };
+      let sub = s.kim + (s.b2b ? ' · B2B' : ' · B2C') + ' · ' + s.mal.length + ' kalem' + (s.den > 1 ? ' · ' + s.den + '. deneme' : ''), subFg = '#8a8270';
+      if (st === 'teslim') sub = s.kim + ' · teslim edildi' + (s.pay ? ' · tahsil edildi' : '');
+      if (st === 'kismi') { sub = s.kim + ' · kısmi teslim — iade kalemi depoya'; subFg = '#b05c2e'; }
+      if (st === 'ulasilamadi') { sub = s.kim + ' · ulaşılamadı — ' + (S.st[s.no] && S.st[s.no].not ? S.st[s.no].not : 'tekrar denenecek'); subFg = '#a44a3f'; }
+      if (st === 'red') { sub = s.kim + ' · kabul etmedi — iade akışında'; subFg = '#a44a3f'; }
+      if (!s.pay && st === 'bekliyor') sub += ' · borç yok';
+      return { ...c, addr:s.addr, sub, subFg,
+        addrFg: st === 'teslim' ? '#8a8270' : '#343b41', deco: st === 'teslim' ? 'line-through' : 'none',
+        op: st === 'teslim' ? '.55' : (S.basladi ? '1' : '.75'),
+        chip: s.pay && st === 'bekliyor' ? 'KAPIDA · ' + fmt(s.pay.a) + ' ' + s.pay.m.toUpperCase() : null,
+        queue: off && S.st[s.no] ? true : null,
+        open: () => { if (!S.basladi) return; this.setState(k => ({ view:'kt', sel:i, key:k.key+1, evid:null, imzaPanel:false, imzaCiz:false, sonuc:null, sonucNot:null, sonucFoto:false, sonTeslim:null, yontem:s.pay ? s.pay.m : 'nakit' })); } };
+    });
+    const cur = stops[S.sel] || stops[0] || { no:0, ref:'', mal:[], pay:null };
+    const gercek = S.gercek[cur.no] != null ? S.gercek[cur.no] : (cur.pay ? cur.pay.a : 0);
+    const mKey = j => cur.no + '-' + j;
+    const mSt = j => S.mal[mKey(j)];
+    const allMarked = cur.mal.every((m, j) => mSt(j));
+    const hasRed = cur.mal.some((m, j) => mSt(j) === 'red');
+    const allRed = cur.mal.length > 0 && cur.mal.every((m, j) => mSt(j) === 'red');
+    const gate = (!cur.b2b || S.evid) && allMarked && !allRed;
+    const mark = (r, g, not) => this.setState(k => {
+      const st = Object.assign({}, k.st, { [cur.no]:{ r, g, not } });
+      const base = { st, sonuc:null, sonucNot:null, sonucFoto:false };
+      if (r === 'teslim' || r === 'kismi') {
+        const ni = stops.findIndex(s => (st[s.no] ? st[s.no].r : s.st0) === 'bekliyor');
+        if (ni >= 0) return Object.assign(base, { sel:ni, key:k.key+1, view:'kt', evid:null, imzaPanel:false, imzaCiz:false, sonTeslim:cur.ref, yontem:stops[ni].pay ? stops[ni].pay.m : 'nakit' });
+      }
+      return Object.assign(base, { view:null, sonTeslim:null });
+    });
+    const seg = on => on ? { fg:'#fff', bg:'#343b41', bd:'#343b41' } : { fg:'#343b41', bg:'transparent', bd:'#c9c2ae' };
+    const sonucNotlar = S.sonuc === 'red' ? ['koku / hasar şüphesi','sipariş beklenmiyordu','çok geç geldi'] : ['kapı açılmadı','telefona yanıt yok','adres bulunamadı'];
+    const ts = {
+      no:cur.no, ref:cur.ref, den:cur.den + '. deneme', b2b:cur.b2b,
+      addr: cur.adres ? cur.addr + ', Strasbourg' : 'Adres kayıtlı değil',
+      detail: cur.detail || cur.kim + (cur.b2b ? ' · B2B' : ''),
+      nav:cur.adres, noNav:!cur.adres, wa:cur.wa,
+      kanitEt: cur.b2b ? '— B2B\u2019DE ZORUNLU' : '— İSTEĞE BAĞLI (AYAR)',
+      alan: cur.b2b ? 'Hakan B.' : cur.kim,
+      evidYok: !S.evid && !S.imzaPanel, imzaPanel: S.imzaPanel, imzaCiz: S.imzaCiz, imzaBos: !S.imzaCiz,
+      imzaAc: () => this.setState({ imzaPanel:true, imzaCiz:false }),
+      ciz: () => this.setState({ imzaCiz:true }),
+      imzaTemizle: () => this.setState({ imzaCiz:false }),
+      imzaOkBg: S.imzaCiz ? '#5f7a2c' : '#b9b29e',
+      imzaOnay: () => { if (S.imzaCiz) this.setState({ evid:'imza', imzaPanel:false }); },
+      imzaVazgec: () => this.setState({ imzaPanel:false, imzaCiz:false }),
+      foto: () => this.setState({ evid:'foto' }),
+      evidVar: !!S.evid, evidL: S.evid === 'imza' ? 'İmza alındı — ' + (cur.b2b ? 'Hakan B.' : cur.kim) + ' \u2713' : 'Fotoğraf alındı \u2713',
+      evidSil: () => this.setState({ evid:null, imzaCiz:false }),
+      kalemN: cur.mal.length,
+      mal: cur.mal.map((m, j) => {
+        const st = mSt(j);
+        const b = st === 'ok' ? { bBg:'#5f7a2c', bBd:'#5f7a2c', bFg:'#fff', bTx:'\u2713' }
+          : st === 'red' ? { bBg:'#f4e3e0', bBd:'#a44a3f', bFg:'#a44a3f', bTx:'\u2715' }
+          : { bBg:'#fbfaf4', bBd:'#343b41', bFg:'#343b41', bTx:'' };
+        const rq = S.redQ[mKey(j)] != null ? S.redQ[mKey(j)] : m.q;
+        return { ...b, n: m.q + ' \u00d7 ' + m.n, q:m.q, cold:!!m.cold,
+          nFg: st === 'red' ? '#a44a3f' : '#343b41',
+          redRow: st === 'red' && m.q > 1, redN: rq,
+          rEksi: () => this.setState(k => ({ redQ:Object.assign({}, k.redQ, { [mKey(j)]:Math.max(1, rq - 1) }) })),
+          rArti: () => this.setState(k => ({ redQ:Object.assign({}, k.redQ, { [mKey(j)]:Math.min(m.q, rq + 1) }) })),
+          t: () => this.setState(k => { const c2 = k.mal[mKey(j)]; const n2 = c2 === 'ok' ? 'red' : (c2 === 'red' ? undefined : 'ok'); return { mal:Object.assign({}, k.mal, { [mKey(j)]:n2 }) }; }) };
+      }),
+      kismiNot: hasRed && !allRed,
+      kapida:!!cur.pay, odendi:!cur.pay,
+      motorF: cur.pay ? fmt(cur.pay.a) : '',
+      gercekV: gercek, gercekSet: (e) => { const v = num(e); this.setState(k => ({ gercek:Object.assign({}, k.gercek, { [cur.no]: v == null ? 0 : v }) })); },
+      eksi: () => this.setState(k => ({ gercek:Object.assign({}, k.gercek, { [cur.no]:Math.max(0, gercek - 1) }) })),
+      arti: () => this.setState(k => ({ gercek:Object.assign({}, k.gercek, { [cur.no]:gercek + 1 }) })),
+      kismi: cur.pay && gercek < cur.pay.a,
+      yontemler: ['nakit','kart','çek'].map(y => ({ n:y, ...seg(S.yontem === y), pick: () => this.setState({ yontem:y }) })),
+      nakitUyari: cur.pay && S.yontem === 'nakit' && gercek > 1000,
+      okL: allRed ? 'tümü reddedildi — "Kabul etmedi"yi kullan' : hasRed ? 'Kısmi teslim — iade kaydıyla' : (cur.pay ? 'Teslim edildi — ' + fmt(gercek) + ' alındı' : 'Teslim edildi'),
+      okBg: gate ? '#5f7a2c' : '#b9b29e', okSh: gate ? '3px 3px 0 #343b41' : 'none',
+      gateNot: gate ? null : 'sıra: kanıt → mal → teslim → para' + (cur.b2b && !S.evid ? ' — kanıt eksik' : '') + (!allMarked ? ' — her kalemi işaretle' : ''),
+      teslim: () => { if (gate) mark(hasRed ? 'kismi' : 'teslim', cur.pay ? gercek : null); },
+      sonucYok: !S.sonuc, sonucVar: !!S.sonuc,
+      sonucBaslik: S.sonuc === 'red' ? 'Kabul etmedi — iade kaydı (2/2: not + onay)' : 'Ulaşılamadı — kayıt (2/2: not + onay)',
+      sonucNotlar: sonucNotlar.map(n => ({ n, ...(S.sonucNot === n ? { fg:'#fff', bg:'#a44a3f', bd:'#a44a3f' } : { fg:'#343b41', bg:'transparent', bd:'#c9c2ae' }), pick: () => this.setState({ sonucNot:n }) })),
+      sFotoL: S.sonucFoto ? 'fotoğraf eklendi \u2713' : 'fotoğraf ekle (isteğe bağlı)',
+      sFotoFg: S.sonucFoto ? '#4a6121' : '#343b41', sFotoBd: S.sonucFoto ? '#5f7a2c' : '#c9c2ae', sFotoBg: S.sonucFoto ? '#e3ecd2' : 'transparent',
+      sFotoT: () => this.setState(k => ({ sonucFoto:!k.sonucFoto })),
+      sonucRedNot: S.sonuc === 'red',
+      sonucOkBg: S.sonucNot ? '#a44a3f' : '#b9b29e', sonucOkSh: S.sonucNot ? '3px 3px 0 #343b41' : 'none',
+      sonucOnay: () => { if (S.sonucNot) mark(S.sonuc === 'red' ? 'red' : 'ulasilamadi', null, S.sonucNot); },
+      sonucVazgec: () => this.setState({ sonuc:null, sonucNot:null, sonucFoto:false }),
+      ulasAc: () => this.setState({ sonuc:'ulasilamadi', sonucNot:null, sonucFoto:false }),
+      redAc: () => this.setState({ sonuc:'red', sonucNot:null, sonucFoto:false }),
+    };
+    const bekPara = { nakit:0, kart:0, cek:0 };
+    stops.forEach(s => { if (['teslim','kismi'].includes(stOf(s)) && s.pay) { const key = s.pay.m === 'çek' ? 'cek' : s.pay.m; bekPara[key] += gOf(s); } });
+    const kp = {
+      kapali:S.kapali, teslim:kDone, bekleyen:kAcik + stops.filter(s => stOf(s) === 'ulasilamadi').length, donen:stops.filter(s => ['red','kismi'].includes(stOf(s))).length,
+      uyari: !S.kapali && kAcik ? kAcik + ' durak sonuçlanmadı — kapanış yine de mümkün' : null,
+      para: [['nakit','Nakit'],['kart','Kart'],['cek','Çek']].map(([k, n]) => {
+        const bek = bekPara[k]; const say = S.sayilan[k] != null ? S.sayilan[k] : bek; const fark = say - bek;
+        return { n, bekF:fmt(bek), sayV:say,
+          set: (e) => { if (!S.kapali) { const v = num(e); this.setState(x => ({ sayilan:Object.assign({}, x.sayilan, { [k]: v == null ? 0 : v }) })); } },
+          farkF:(fark > 0 ? '+' : fark < 0 ? '\u2212' : '') + fmt(Math.abs(fark)).replace(' \u20ac',''), farkFg: fark === 0 ? '#8a8270' : (fark < 0 ? '#a44a3f' : '#4a6121') };
+      }),
+      notV: S.kapNot, notSet: (e) => this.setState({ kapNot:e.target.value }),
+      onayda: S.kapOnay && !S.kapali, onaydaDegil: !S.kapOnay || S.kapali,
+      ctaL: S.kapali ? 'Gün zaten kapalı' : 'Günü kapat',
+      ctaBg: S.kapali ? '#b9b29e' : '#343b41', ctaSh: S.kapali ? 'none' : '3px 3px 0 #b8b09a',
+      onayIste: () => { if (!S.kapali) this.setState({ kapOnay:true }); },
+      vazgec: () => this.setState({ kapOnay:false }),
+      kapat: () => this.setState({ kapali:true, kapOnay:false }),
+    };
+    // ---- DEPO ----
+    const dHub = veri === 'dolu' ? [
+      { n:'Toplama listesi', s:'3 sipariş bekliyor · 1 yarım', ic:'D1', badge:'3', go:nav('dt') },
+      { n:'Mal kabul', s:'TS-26-0114 · gönderildi', ic:'D2', badge:'1', go:nav('dk') },
+      { n:'Yakın-SKT turu', s:'4 parti listede · 1 imhalık', ic:'D3', go:nav('ds') },
+      { n:'Sayım / düzeltme', s:'dört sebep · işaretli adet', ic:'D4', go:nav('dy') },
+      { n:'Transfer', s:'TRF-COL-26-0007 yolda', ic:'D5', badge:'1', go:nav('dtr') },
+      { n:'Kurye dönüşü', s:'1 döküm · Musa K.', ic:'D6', badge:'1', go:nav('dd') },
+    ] : [];
+    const topItems = [
+      { n:'Fıstıklı Baklava · 1 kg', ist:2, parti:'P-0712 · SKT 12.08' },
+      { n:'Mantı · 500 g', ist:1, parti:'P-0725 · SKT 18.08' },
+      { n:'Su Böreği · tepsi', ist:2, parti:'P-0698 · SKT 09.08', cipa:true },
+      { n:'Künefe · 2 kişilik', ist:1, parti:'P-0731 · SKT 21.08' },
+    ];
+    const dTop = topItems.map((t, i) => {
+      const got = S.topla[i] || 0; const eksik = S.eksik[i]; const tam = got >= t.ist;
+      return { n:t.n, ist:t.ist, parti:t.parti, cipa:!!t.cipa,
+        gotV: got, adetFg: tam ? '#4a6121' : (eksik ? '#a44a3f' : '#343b41'),
+        set: (e) => { const v = num(e); this.setState(k => ({ topla:Object.assign({}, k.topla, { [i]: v == null ? 0 : Math.min(t.ist, Math.round(v)) }) })); },
+        tamFg: tam ? '#fff' : '#4a6121', tamBd: tam ? '#5f7a2c' : '#cdd8b6', tamBg: tam ? '#5f7a2c' : 'transparent',
+        tamamla: () => this.setState(k => ({ topla:Object.assign({}, k.topla, { [i]:t.ist }) })),
+        eksikBildirildi: eksik, eksikLink: !eksik && !tam,
+        eksikBildir: () => this.setState(k => ({ eksik:Object.assign({}, k.eksik, { [i]:true }) })) };
+    });
+    const topDone = topItems.every((t, i) => (S.topla[i] || 0) >= t.ist || S.eksik[i]);
+    const anyEksik = topItems.some((t, i) => S.eksik[i]);
+    const dTopCta = topDone
+      ? (anyEksik ? { l:'Bildirildi — "Hazırlanıyor"da kalır', bg:'#b9b29e', sh:'none' } : { l:'Sipariş HAZIR', bg:'#5f7a2c', sh:'3px 3px 0 #343b41' })
+      : { l:'Kalem kalem say — ya da "tamamı"', bg:'#b9b29e', sh:'none' };
+    const kabItems = [
+      { n:'Antep Fıstığı · 5 kg', bek:10 },
+      { n:'Mısır Unu · 25 kg', bek:4 },
+      { n:'Ezine Peyniri · 350 g', bek:60, omurUyari:true, omur:68 },
+    ];
+    const fmtD = d => { if (!d) return null; const p = d.split('-'); return p[2] + '.' + p[1] + '.' + p[0].slice(2); };
+    const dKab = kabItems.map((k, i) => {
+      const gel = S.gelen[i]; const lot = S.lotYok[i]; const skt = S.skt[i]; const has = S.hasar[i];
+      return { n:k.n, bek:k.bek, omurUyari:!!k.omurUyari, omur:k.omur,
+        gelV: gel == null ? '' : gel, gelFg: gel == null ? '#8a8270' : (gel === k.bek ? '#343b41' : '#b05c2e'),
+        set: (e) => { const v = num(e); this.setState(x => ({ gelen:Object.assign({}, x.gelen, { [i]: v == null ? null : Math.round(v) }) })); },
+        sktL: skt ? 'SKT ' + fmtD(skt) + ' \u2713' : 'SKT gir *',
+        sktFg: skt ? '#4a6121' : '#b05c2e', sktBd: skt ? '#cdd8b6' : '#b05c2e', sktBg: skt ? '#e3ecd2' : 'transparent',
+        sktAc: () => this.setState({ sktEdit: S.sktEdit === i ? null : i }),
+        sktEdit: S.sktEdit === i, sktV: skt || '',
+        sktSet: (e) => this.setState(x => ({ skt:Object.assign({}, x.skt, { [i]:e.target.value || null }) })),
+        sktKapat: () => this.setState({ sktEdit:null }),
+        lotTx: lot ? 'lot yok — bilinçli boş' : 'lot: GAZ-' + (7120 + i), lotFg: lot ? '#b05c2e' : '#343b41',
+        lotT: () => this.setState(x => ({ lotYok:Object.assign({}, x.lotYok, { [i]:!lot }) })),
+        hasL: has ? 'hasar notu + fotoğraf eklendi \u2713' : 'hasar bildir',
+        hasFg: has ? '#a44a3f' : '#8a8270', hasBd: has ? '#a44a3f' : '#c9c2ae', hasBg: has ? '#f4e3e0' : 'transparent',
+        hasT: () => this.setState(x => ({ hasar:Object.assign({}, x.hasar, { [i]:!has }) })) };
+    });
+    const sapan = kabItems.map((k, i) => ({ k, g:S.gelen[i] })).filter(x => x.g != null && x.g !== x.k.bek);
+    const kabHazir = kabItems.every((k, i) => S.gelen[i] != null && S.skt[i]);
+    const dKabCta = off ? { l:'Bağlantı yok — kabul kilitli', bg:'#b9b29e', sh:'none' }
+      : kabHazir ? { l:sapan.length ? 'Kısmen teslim alındı olarak kaydet' : 'Kabulü kaydet — partiler açılır', bg:'#5f7a2c', sh:'3px 3px 0 #343b41' }
+      : { l:'Her satırda adet + SKT zorunlu', bg:'#b9b29e', sh:'none' };
+    const dSkt = [
+      { n:'Su Böreği · tepsi', adet:6, gun:'2 gün', pct:'kalan ömür %18', karar:'teklif AÇIK', kFg:'#4a6121', kBg:'#e3ecd2', gunFg:'#b05c2e' },
+      { n:'Kaymaklı Baklava · 1 kg', adet:4, gun:'\u22121 gün (geçti)', pct:'%0', karar:'imha edilmeli', kFg:'#a44a3f', kBg:'#f4e3e0', gunFg:'#a44a3f' },
+      { n:'Şöbiyet · 500 g', adet:9, gun:'5 gün', pct:'kalan ömür %23', karar:'teklife girebilir', kFg:'#b05c2e', kBg:'#f9ede2', gunFg:'#8a8270' },
+      { n:'Acılı Ezme · 250 g', adet:12, gun:'9 gün', pct:'raf ömrü bilinmiyor', karar:'karar yok', kFg:'#8a8270', kBg:'#e7e2d2', gunFg:'#8a8270' },
+    ];
+    const dSebepList = ['süresi geçti (imha)','hasar / soğuk zincir','sayım farkı','kayıp'];
+    const dSebep = dSebepList.map(n => { const on = S.sebep === n;
+      return { n, fg:on ? '#fff' : '#343b41', bg:on ? '#343b41' : 'transparent', bd:on ? '#343b41' : '#c9c2ae', pick: () => this.setState({ sebep:n }) }; });
+    const geri = S.sayAdet > 0 && S.sebep === 'sayım farkı';
+    const refOn = S.sebep.includes('imha') ? 'IMH' : 'SAY';
+    const dSayOk = !(S.sayAdet > 0 && S.sebep !== 'sayım farkı');
+    // ---- YÖNETİM ----
+    const yHub = veri === 'dolu' ? [
+      { t:'Şikâyet — Bozuk ürün', s:'LZA-26-7K1A · 12 dk · 2 ek', dot:'#a44a3f', top:true, go:nav('yt') },
+      { t:'Sipariş istisnası — eksik toplama', s:'LZA-26-3M8C · motor önerisi hazır', dot:'#b05c2e', go:nav('yi') },
+      { t:'Yakın-SKT kampanya onayı', s:'3 aday parti · D3\u2019ten', dot:'#5f7a2c', go:nav('ys') },
+      { t:'Tedarik önerisi', s:'2 grup · 1 eşlenmemiş', dot:'#8a6d3a', go:nav('yted') },
+      { t:'WhatsApp sipariş niyeti', s:'+33 6 12 … 84 · 4 dk', dot:'#343b41', go:nav('yw') },
+    ] : [];
+    const ySktBase = [
+      { n:'Su Böreği · tepsi', parti:'P-0698', adet:6, gun:2, f:9.9 },
+      { n:'Şöbiyet · 500 g', parti:'P-0703', adet:9, gun:5, f:7.2 },
+      { n:'Kadayıf · 500 g', parti:'P-0709', adet:5, gun:4, f:5.6 },
+    ];
+    const ySkt = ySktBase.map((s, i) => {
+      const out = S.ySktOut[i]; const f = S.ySktF[i] != null ? S.ySktF[i] : s.f;
+      return { n:s.n, parti:s.parti, adet:s.adet, gun:s.gun, oneriF:fmt(s.f),
+        inList:!out, op: out ? '.45' : '1', deco: out ? 'line-through' : 'none',
+        fV: f, fSet: (e) => { const v = num(e); this.setState(x => ({ ySktF:Object.assign({}, x.ySktF, { [i]: v == null ? s.f : v }) })); },
+        xTx: out ? '+' : '\u2715', xFg: out ? '#4a6121' : '#a44a3f',
+        x: () => this.setState(x => ({ ySktOut:Object.assign({}, x.ySktOut, { [i]:!out }) })) };
+    });
+    const ySktN = ySktBase.filter((s, i) => !S.ySktOut[i]).length;
+    const ySktCta = S.y3 ? { l:'Teklife açıldı — vitrine düştü \u2713', bg:'#b9b29e', sh:'none' }
+      : ySktN ? { l:ySktN + ' partiyi teklife aç', bg:'#5f7a2c', sh:'3px 3px 0 #343b41' } : { l:'Listede parti kalmadı', bg:'#b9b29e', sh:'none' };
+    const yTed = [
+      { n:'Fıstıklı Baklava · 1 kg', mev:6, esik:20, oner:24, alis:'21,40 \u20ac', baska:'KEHL 14' },
+      { n:'Su Böreği · tepsi', mev:2, esik:10, oner:12, alis:'8,10 \u20ac' },
+    ];
+    const mBek = [
+      { ref:'LZA-26-3M8C', kim:'Restaurant Bosphore · rotada', cumle:'Kapıda 42,00 \u20ac · nakit' },
+      { ref:'LZA-26-8R4E', kim:'Pastane Merve · rotada', cumle:'Kapıda 1.240,00 \u20ac · nakit' },
+      { ref:'LZA-26-4H7G', kim:'C. Acar · vade', cumle:'Vade 12.08' },
+      { ref:'LZA-26-1B2K', kim:'L. Petit · kısmi', cumle:'Kalan 12,90 \u20ac · kart' },
+    ];
+    // ---- BİLDİRİM (rol süzme) ----
+    const bilAll = veri === 'dolu' ? [
+      { t:'Yeni sipariş onaylandı — toplama bekliyor', bolum:'Depo', r:'depo', dot:'#8a6d3a', dk:'2 dk', go:nav('dt') },
+      { t:'Rota güncellendi — 1 durak eklendi', bolum:'Kurye', r:'kurye', dot:'#5f7a2c', dk:'9 dk', go: () => this.setState({ tab:'kurye', view:null }) },
+      { t:'Eksik toplama — karar bekliyor', bolum:'Yönetim', r:'yonetim', dot:'#b05c2e', dk:'14 dk', go:nav('yi') },
+      { t:'Yeni şikâyet — Bozuk', bolum:'Yönetim', r:'yonetim', dot:'#a44a3f', dk:'12 dk', go:nav('yt') },
+      { t:'Uyuşmazlık göründü — gün sonu', bolum:'Para', r:'muhasebe', dot:'#a44a3f', dk:'25 dk', go:nav('mg') },
+      { t:'Azalan stok tespiti — tetik yakında', bolum:'Yönetim', r:'yonetim', dot:'#8a8270', dk:'1 sa', go:nav('yted') },
+    ] : [];
+    const bil = rol === 'hepsi' ? bilAll : bilAll.filter(b => b.r === rol);
+    // ---- KABUK ----
+    const rolTabs = rol === 'hepsi' ? ['kurye','depo','yonetim','muhasebe'] : [rol];
+    const icons = {
+      kurye:'M1 5h14v11H1z M15 9h4l3 4v3h-7 M5.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M17.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+      depo:'M3 21V9l9-5 9 5v12 M3 21h18 M9 21v-6h6v6',
+      yonetim:'M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z',
+      muhasebe:'M18 7a6 6 0 1 0 0 10 M4 11h9 M4 15h7',
+    };
+    const labels = { kurye:'Kurye', depo:'Depo', yonetim:'Yönetim', muhasebe:'Para' };
+    const tabs = rolTabs.map(t => ({ l:labels[t], icon:icons[t], col: S.tab === t ? '#343b41' : '#a49b85',
+      go: () => this.setState({ tab:t, view:null, sonTeslim:null }) }));
+    const v = S.view, tab = S.tab;
+    const isRoot = v === null;
+    const gunCta = !S.basladi
+      ? { l:'Yola çıktım — günü başlat', bg:'#5f7a2c', fg:'#fff', sh:'3px 3px 0 #343b41', badge:null, go: () => this.setState({ basladi:true }) }
+      : { l:'Günü kapat', bg:'#343b41', fg:'#f5f1e6', sh:'3px 3px 0 #b8b09a', badge: kAcik ? kAcik + ' açık' : null, go: nav('kk') };
+    return {
+      offline: off, pageKey: S.key, bilN: bil.length || null,
+      kError: veri === 'hata', kEmpty: veri === 'bos', kList: veri === 'dolu',
+      tabsVisible: isRoot && rolTabs.length > 1, tabs,
+      goBildirim: nav('bl'), goBack: () => this.setState({ view:null, sonTeslim:null }),
+      goSayim: nav('dy'), goOzet: nav('yo'), goGunSonu: nav('mg'),
+      vKGun: isRoot && tab === 'kurye', vKTes: v === 'kt', vKKap: v === 'kk',
+      vDHub: isRoot && tab === 'depo', vDTop: v === 'dt', vDKab: v === 'dk', vDSkt: v === 'ds', vDSay: v === 'dy', vDTrf: v === 'dtr', vDDon: v === 'dd',
+      vYHub: isRoot && tab === 'yonetim', vYTal: v === 'yt', vYIst: v === 'yi', vYSkt: v === 'ys', vYTed: v === 'yted', vYOzet: v === 'yo', vYWa: v === 'yw',
+      vMIzle: isRoot && tab === 'muhasebe', vMGun: v === 'mg', vBil: v === 'bl',
+      kStops, kTotal: stops.length, kDone, kAcik: kAcik || null,
+      kPct: stops.length ? Math.round((kDone / stops.length) * 100) + '%' : '0%', kCepteF: fmt(cepte),
+      kKapida: kapAcik.length || null, kKapidaF: fmt(kapAcik.reduce((t, s) => t + s.pay.a, 0)),
+      basHint: !S.basladi && veri === 'dolu', gunCta,
+      retKart: S.basladi && !off && veri === 'dolu', sonTeslim: S.sonTeslim,
+      ts, kp,
+      dHub, dTop, dTopCta, dKab, dKabFark: sapan.length > 0,
+      dKabFarkList: sapan.map(x => x.k.n + ' — beklenen ' + x.k.bek + ' · gelen ' + x.g),
+      dKabCta, dSkt, dSebep,
+      dAdetV: S.sayAdet, dAdetFg: S.sayAdet > 0 ? '#4a6121' : '#a44a3f',
+      dAdetSet: (e) => { const v2 = e.target.value; this.setState({ sayAdet: v2 === '' ? 0 : (parseInt(v2) || 0) }); },
+      dGeriNot: geri, dRef: refOn + '-STR-26-00' + (refOn === 'IMH' ? '12' : '31'),
+      dSayCta: off ? { l:'Bağlantı yok — sayım kilitli', bg:'#b9b29e', sh:'none' } : dSayOk ? { l:'Kaydet — ' + refOn + ' referansı doğar', bg:'#5f7a2c', sh:'3px 3px 0 #343b41' } : { l:'Geri ekleme yalnız sayım fazlasında', bg:'#b9b29e', sh:'none' },
+      dTrf: [
+        { n:'Fıstıklı Baklava · 1 kg', bek:12 },
+        { n:'Lokum · 500 g', bek:6 },
+      ].map((t, i) => { const g = S.trfGelen[i];
+        return { n:t.n, bek:t.bek, gelV: g == null ? '' : g, gelFg: g === 0 ? '#a44a3f' : '#343b41',
+          set: (e) => { const v2 = num(e); this.setState(x => ({ trfGelen:Object.assign({}, x.trfGelen, { [i]: v2 == null ? null : Math.round(v2) }) })) } }; }),
+      dTrfCta: off ? { l:'Bağlantı yok — kabul kilitli', bg:'#b9b29e', sh:'none' }
+        : ([0,1].every(i => S.trfGelen[i] != null) ? { l:'Teslim al — stok her iki depoda doğru', bg:'#5f7a2c', sh:'3px 3px 0 #343b41' } : { l:'Boş satır kabulü bloklar', bg:'#b9b29e', sh:'none' }),
+      dAkibet: ['stoğa dön','imha','jest'].map(n => { const on = S.akibet === n;
+        return { n, fg:on ? '#fff' : '#343b41', bg:on ? '#343b41' : 'transparent', bd:on ? '#343b41' : '#c9c2ae', pick: () => this.setState({ akibet:n }) }; }),
+      dAkibetNot: S.akibet === 'stoğa dön', dAkibetJest: S.akibet === 'jest',
+      dDonCta: S.akibet ? (off ? { l:'Bağlantı yok — kabul kilitli', bg:'#b9b29e', sh:'none' } : { l:'Kabulü kaydet', bg:'#5f7a2c', sh:'3px 3px 0 #343b41' }) : { l:'Akıbet işaretle', bg:'#b9b29e', sh:'none' },
+      yHub, ySkt, ySktCta, ySktOnay: () => { if (ySktN) this.setState({ y3:true }); }, yTed,
+      yzBekliyor: !S.yz, yzGitti: S.yz, yzGonder: () => this.setState({ yz:true }),
+      yTalDurum: S.talep, yTalDurumFg: S.talep === 'İşlemde' ? '#4a6121' : '#b05c2e', yTalDurumBg: S.talep === 'İşlemde' ? '#e3ecd2' : '#f9ede2',
+      yTalUstlenL: S.talep === 'İşlemde' ? 'Üstlenildi \u2713' : 'Üstlen — İşlemde',
+      yTalUstlenBg: S.talep === 'İşlemde' ? '#b9b29e' : '#5f7a2c', yTalUstlenSh: S.talep === 'İşlemde' ? 'none' : '3px 3px 0 #343b41',
+      yTalUstlen: () => this.setState({ talep:'İşlemde' }),
+      yTedCta: S.y4 ? { l:'Taslak TS oluşturuldu \u2713', bg:'#b9b29e', sh:'none' } : { l:'Grubu onayla — taslak TS', bg:'#5f7a2c', sh:'3px 3px 0 #343b41' },
+      yTedOnay: () => this.setState({ y4:true }),
+      yWaCta: S.ywa ? { l:'Not düştü — masada kurulacak \u2713', bg:'#b9b29e', sh:'none' } : { l:'"Masada kur" notu düş', bg:'#5f7a2c', sh:'3px 3px 0 #343b41' },
+      yWaNot: () => this.setState({ ywa:true }),
+      mBek, bil, bilBos: bil.length === 0,
+      bilKapsam: rol === 'hepsi' ? 'tüm bölümler — çok rollü oturum' : 'yalnız ' + labels[rol] + ' — rol süzmesi',
+    };
+  }
+}
+</script>
+
+<!-- kaynak: satır 1144-1146 · ortak -->
+</script>
+</body>
+</html>

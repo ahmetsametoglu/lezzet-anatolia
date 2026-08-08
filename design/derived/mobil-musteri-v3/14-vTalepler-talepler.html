@@ -1,0 +1,32 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vTalepler · Talepler -->
+<!-- kaynak satırlar: 899-924 -->
+
+<!-- kaynak: satır 899-924 · görünüm bloğu -->
+        <sc-if value="{{ vTalepler }}">
+          <div data-screen-label="Talepler" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 17px 'Lora';color:#343b41;flex:1">Taleplerim</span>
+              <span style="font:700 12.5px 'Karla';color:#5f7a2c" onClick="{{ tv.nw }}">＋ Yeni</span>
+            </div>
+            <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px">
+              <sc-if value="{{ tv.empty }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 30px;text-align:center">
+                  <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.6" stroke-linejoin="round"><path d="M21 11.5c0 3.9-4 7-9 7-1.1 0-2.1-.15-3.1-.42L4.5 19.5l1.3-3.1C4.3 15.1 3 13.4 3 11.5c0-3.9 4-7 9-7s9 3.1 9 7z"></path></svg>
+                  <span style="font:600 18px 'Lora';color:#343b41">Henüz talebiniz yok</span>
+                  <span style="font:400 13px 'Karla';color:#8a8270">Bir sorunuz ya da sorununuz olursa buradan yazabilirsiniz.</span>
+                  <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:12px 24px;border-radius:22px" onClick="{{ tv.nw }}">Bize yazın</span>
+                </div>
+              </sc-if>
+              <sc-for list="{{ tv.rows }}" as="t" hint-placeholder-count="2">
+                <div style="background:#ece3c8;border-radius:18px;padding:13px 15px;display:flex;align-items:center;gap:10px" onClick="{{ t.open }}">
+                  <div style="display:flex;flex-direction:column;gap:2px;flex:1"><span style="font:700 13.5px 'Karla';color:#343b41">{{ t.tp }}</span><span style="font:400 12px 'Karla';color:#8a8270">{{ t.ord }} · {{ t.dt }}</span></div>
+                  <span style="font:700 11.5px 'Karla';color:{{ t.stFg }};background:{{ t.stBg }};border-radius:11px;padding:5px 11px;transform:rotate(2deg);flex:none">{{ t.st }}</span>
+                  <span style="color:#b3ab97">›</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>

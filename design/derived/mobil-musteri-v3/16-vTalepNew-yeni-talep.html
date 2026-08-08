@@ -1,0 +1,56 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vTalepNew · Yeni Talep -->
+<!-- kaynak satırlar: 949-998 -->
+
+<!-- kaynak: satır 949-998 · görünüm bloğu -->
+        <sc-if value="{{ vTalepNew }}">
+          <div data-screen-label="Yeni Talep" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
+            <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <span style="font:600 17px 'Lora';color:#343b41">Bize yazın</span>
+            </div>
+            <div style="padding:16px 18px 30px;display:flex;flex-direction:column;gap:14px">
+              <sc-if value="{{ tn.step0 }}">
+                <span style="font:600 19px 'Lora';color:#343b41">Bir siparişle mi ilgili?</span>
+                <span style="font:400 13px/1.5 'Karla';color:#6d7261">Sorununuzu doğru yere iletmemiz için soruyoruz.</span>
+                <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+                  <div style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s;box-shadow:3px 3px 0 #343b41" style-active="transform:translate(2px,2px)" onClick="{{ tn.yes }}">Evet, bir siparişimle ilgili</div>
+                  <div style="border:1.5px solid #d8cfb6;color:#343b41;font:700 14px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s;box-shadow:3px 3px 0 #343b41" style-active="transform:translate(2px,2px)" onClick="{{ tn.no }}">Hayır, genel bir konu</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ tn.step1 }}">
+                <span style="font:600 19px 'Lora';color:#343b41">Hangi sipariş?</span>
+                <sc-for list="{{ tn.orders }}" as="o" hint-placeholder-count="3">
+                  <div style="background:#ece3c8;border-radius:18px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center" onClick="{{ o.pick }}">
+                    <span style="font:700 13.5px 'Karla';color:#343b41">{{ o.ref }}</span><span style="font:400 12px 'Karla';color:#8a8270">{{ o.dt }}</span>
+                  </div>
+                </sc-for>
+              </sc-if>
+              <sc-if value="{{ tn.step2 }}">
+                <sc-if value="{{ tn.hasOrd }}">
+                  <span style="font:600 13px 'Karla';color:#8a8270">Sipariş {{ tn.ordRef }}</span>
+                  <span style="font:600 16px 'Lora';color:#343b41">Hangi ürünlerle ilgili?</span>
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <sc-for list="{{ tn.items }}" as="it" hint-placeholder-count="3">
+                      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 15px;border-radius:13px;background:{{ it.bg }};border:1.5px solid {{ it.bd }}" onClick="{{ it.tog }}">
+                        <span style="font:600 13px 'Karla';color:#343b41">{{ it.t }}</span><span style="font:700 14px 'Karla';color:#4a6121">{{ it.mark }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <span style="font:600 16px 'Lora';color:#343b41">Konu</span>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <sc-for list="{{ tn.types }}" as="t" hint-placeholder-count="4">
+                      <span style="font:700 12.5px 'Karla';padding:10px 16px;border-radius:18px;background:{{ t.bg }};color:{{ t.fg }};border:1px solid {{ t.bd }};transition:transform .12s" style-active="transform:scale(.93)" onClick="{{ t.pick }}">{{ t.t }}</span>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <span style="font:600 16px 'Lora';color:#343b41">Bize anlatın</span>
+                <textarea value="{{ tn.msg }}" onChange="{{ tn.onMsg }}" placeholder="Kısaca anlatın — ne oldu, nasıl yardımcı olabiliriz?" style="border:1.5px solid #d8cfb6;border-radius:16px;padding:14px 16px;font:400 14px/1.5 'Karla';color:#343b41;background:#fff;outline:none;min-height:110px;resize:none"></textarea>
+                <div style="border:1.5px dashed #cdc4a8;border-radius:14px;padding:13px 16px;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';color:#5f7a2c" onClick="{{ tn.photoT }}">{{ tn.photoL }}</div>
+                <span style="font:400 11.5px/1.45 'Karla';color:#9a917c">Fotoğraf, özellikle hasarlı ürünlerde çözümü hızlandırır — zorunlu değil.</span>
+                <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;transition:transform .12s;box-shadow:3px 3px 0 #343b41" style-active="transform:translate(2px,2px)" onClick="{{ tn.submit }}">Gönder</div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>

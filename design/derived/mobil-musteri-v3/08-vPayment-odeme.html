@@ -1,0 +1,53 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vPayment · Ödeme -->
+<!-- kaynak satırlar: 564-610 -->
+
+<!-- kaynak: satır 564-610 · görünüm bloğu -->
+        <sc-if value="{{ vPayment }}">
+          <div data-screen-label="Ödeme" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 14px">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ pm.cancel }}">‹</div>
+              <div style="display:flex;flex-direction:column"><span style="font:700 13.5px 'Karla';color:#343b41">Lezzet Anatolia</span><span style="font:400 11px 'Karla';color:#8a8270">lezzetanatolie.com</span></div>
+              <span style="margin-left:auto;display:flex;align-items:center;gap:5px;font:700 10.5px 'Karla';letter-spacing:.08em;color:#8a8270"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="2.2"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>GÜVENLİ</span>
+            </div>
+            <div style="padding:8px 22px 30px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;flex-direction:column;gap:1px"><span style="font:400 12.5px 'Karla';color:#8a8270">Ödenecek tutar</span><span style="font:600 34px 'Lora';color:#343b41">{{ pm.amountF }}</span></div>
+              <sc-if value="{{ pm.fail }}">
+                <div style="display:flex;flex-direction:column;gap:9px;background:#f4e3e0;border-radius:16px;padding:15px 16px">
+                  <span style="font:700 13.5px 'Karla';color:#a44a3f">Ödeme alınamadı</span>
+                  <span style="font:400 12.5px/1.5 'Karla';color:#a44a3f">Kartınız reddedildi; hesabınızdan para çekilmedi. Bilgileri kontrol edip yeniden deneyin ya da başka bir yöntemle ödeyin.</span>
+                  <div style="background:#343b41;color:#f3efe2;font:700 13.5px 'Karla';border-radius:16px;height:46px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ pm.openCard }}">Tekrar dene</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ pm.idle }}">
+                <div style="background:#000;color:#fff;border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;gap:6px;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ pm.payApple }}">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="#fff"><path d="M16.7 12.6c0-2 1.6-3 1.7-3.1-1-1.4-2.4-1.6-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.6-.7-1.3 0-2.6.8-3.3 2-1.4 2.4-.4 6 1 8 .7 1 1.5 2.1 2.5 2 1 0 1.4-.6 2.6-.6 1.2 0 1.5.6 2.6.6s1.8-1 2.4-2c.8-1.1 1.1-2.2 1.1-2.3 0 0-2.1-.8-2.1-3zM14.6 6.6c.5-.7.9-1.6.8-2.6-.8 0-1.8.6-2.3 1.2-.5.6-1 1.6-.8 2.5.9.1 1.8-.4 2.3-1.1z"></path></svg>
+                  <span style="font:600 17px 'Karla'">Pay</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px"><div style="flex:1;height:1.5px;background:#d8cfb6"></div><span style="font:600 11.5px 'Karla';color:#8a8270">veya</span><div style="flex:1;height:1.5px;background:#d8cfb6"></div></div>
+                <div style="border:1.5px solid #343b41;background:#fff;color:#343b41;border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ pm.openCard }}">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#343b41" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2.5"></rect><path d="M2 10h20"></path></svg>
+                  <span style="font:700 15px 'Karla'">Kartla öde</span>
+                </div>
+                <span style="font:400 11.5px/1.5 'Karla';color:#8a8270;text-align:center">Kart bilgileriniz uygulamada tutulmaz — güvenli Stripe penceresinde girilir.</span>
+                <div style="display:flex;align-items:center;justify-content:center;gap:6px">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="2.2"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
+                  <span style="font:600 11px 'Karla';color:#8a8270">Powered by</span><span style="font:700 14px 'Karla';color:#635bff">stripe</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ pm.busy }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:36px 0">
+                  <div style="width:44px;height:44px;border-radius:50%;border:4px solid #e2d8bd;border-top-color:#5f7a2c;animation:spin .8s linear infinite"></div>
+                  <span style="font:600 14px 'Karla';color:#6d7261">Ödemeniz işleniyor…</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ pm.ok }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:34px 0">
+                  <div style="width:64px;height:64px;border-radius:50%;background:#5f7a2c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;animation:pop .45s ease">✓</div>
+                  <span style="font:600 16px 'Lora';color:#343b41">Ödeme alındı</span>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
