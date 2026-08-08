@@ -155,10 +155,17 @@ describe('mesaj kaydı ve servis penceresi', () => {
       conversationId: sonuc.conversation.id,
       text: 'Siparişiniz hazırlanıyor.',
       templateName: 'order_confirm',
+      templateCategory: 'utility',
     });
 
     const liste = await messages.listByConversation(sonuc.conversation.id);
-    expect(liste[0]).toMatchObject({ direction: 'outbound', kind: 'template', templateName: 'order_confirm' });
+    expect(liste[0]).toMatchObject({
+      direction: 'outbound',
+      kind: 'template',
+      templateName: 'order_confirm',
+      // Ücret sınıfı defterde duruyor: "bu ay ne ödedik" sorusu ancak bu kolonla cevaplanır.
+      templateCategory: 'utility',
+    });
   });
 
   it('pencere AÇIKKEN gönderilen şablon kaydı REDDEDİLMEZ — nöbetin işi gerçeği susturmak değil', async () => {
@@ -176,11 +183,13 @@ describe('mesaj kaydı ve servis penceresi', () => {
     });
     const kayit = await recordOutboundMessage({
       conversationId: sonuc.conversation.id,
-      text: 'Siparişiniz hazırlanıyor.',
-      templateName: 'order_confirm',
+      text: 'Bu hafta mantıda %20 indirim!',
+      templateName: 'weekly_promo',
+      // Pazarlama şablonu + açık pencere = israf; nöbet bunu log'a yazar ama KAYDI reddetmez.
+      templateCategory: 'marketing',
     });
 
-    expect(kayit).toMatchObject({ kind: 'template', templateName: 'order_confirm' });
+    expect(kayit).toMatchObject({ kind: 'template', templateName: 'weekly_promo', templateCategory: 'marketing' });
     // Pencere de kaymadı: giden mesaj onu ne uzatır ne kısaltır.
     const acik = await conversations.getById(sonuc.conversation.id);
     expect(serviceWindowState(acik?.windowExpiresAt).open).toBe(true);

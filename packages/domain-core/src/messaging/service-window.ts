@@ -16,6 +16,8 @@
  * yani fatura sürpriz olur.
  */
 
+import type { TemplateCategory } from '@lezzet/types';
+
 /** Meta'nın kullanıcı-başlatan servis penceresi. Sabit; işletme ayarı DEĞİL — kuralı biz koymuyoruz. */
 export const SERVICE_WINDOW_HOURS = 24;
 
@@ -59,4 +61,26 @@ export function serviceWindowState(windowExpiresAt: string | null | undefined, n
   const remaining = new Date(windowExpiresAt).getTime() - now.getTime();
   // Damga varsa pencere bir zamanlar açılmıştır — kapanmış olması bunu değiştirmez.
   return { open: remaining > 0, everOpened: true, msRemaining: remaining > 0 ? remaining : 0 };
+}
+
+/**
+ * **Bu şablon gönderilmeseydi de olur muydu** — yani bedava olana para mı ödendi?
+ *
+ * "Pencere açıkken şablon = israf" kestirmesi YANLIŞ ve fark kategoride:
+ *
+ *   · `marketing` — pencere açıkken aynı içerik serbest metinle ücretsiz giderdi. **İsraf.**
+ *   · `utility`   — pencere içinde zaten ücretsiz ve ADR-005 onu orada ÖNERİYOR (sipariş onayı,
+ *     kargo bildirimi). İsraf saymak, doğru davranışı uyarıyla cezalandırmak olurdu.
+ *   · `authentication` — israf SAYILMIYOR ve bu bilinçli bir sınır: güvenlik kodunun şablonla
+ *     gitmesi bir maliyet hatası değil bir teslim edilebilirlik kararıdır (biçim, kopyala düğmesi,
+ *     tutarlı görünüm). Elimizde onu israf diye adlandıracak bir dayanak yok; olmayan bir dayanakla
+ *     uyarı basmak, gerçek israfın da göz ardı edilmesine yol açar.
+ *
+ * Pencere kapalıyken hiçbir şablon israf değildir: alternatifi yok.
+ */
+export function isAvoidableTemplate(
+  category: TemplateCategory | null | undefined,
+  window: ServiceWindowState,
+): boolean {
+  return window.open && category === 'marketing';
 }

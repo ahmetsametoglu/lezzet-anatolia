@@ -42,6 +42,7 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | kind | enum(`text`,`interactive`,`template`,`media`) | |
 | body | jsonb | metin veya kart/interaktif yapı |
 | template_name | string \| null | outbound template ise (Meta-onaylı) |
+| template_category | enum(`marketing`,`utility`,`authentication`) \| null | şablonun **ücret sınıfı** — adla birlikte gelir, ondan ayrı düşemez |
 | provider_message_id | string \| null | 360dialog/Cloud API mesaj id'si |
 | created_at | timestamptz | |
 
@@ -49,7 +50,14 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 
 **`direction` ile `TicketMessage.sender` karıştırılmaz** ve ayrım kalıcı: orada "kim yazdı" (müşteri/personel/AI), burada "hangi tarafa aktı" sorulur. WhatsApp'ta bizim adımıza AI da personel de yazabilir; ikisi de aynı numaradan çıkar ve müşteri farkı görmez.
 
-**`kind = template` bir SÜS değil ÜCRET sınıfıdır:** servis penceresi dışında yalnız Meta-onaylı şablon gidebilir ve ücretlidir (~€0,13 FR/DE) — ADR-005'in "önce müşteri yazsın" ilkesi bu satırdan doğuyor. Üç kural veride durur (0039): metin mesajı metinsiz olamaz, şablon adı ile tür ayrışamaz (adsız template / adlı serbest metin reddedilir), **gelen mesaj template olamaz** (template işletme-başlatandır; tersi mümkün olsaydı gelen bir mesaj pencere hesabında "biz gönderdik" gibi okunurdu).
+**`kind = template` bir SÜS değil ÜCRET sınıfıdır:** servis penceresi dışında yalnız Meta-onaylı şablon gidebilir — ADR-005'in "önce müşteri yazsın" ilkesi bu satırdan doğuyor.
+
+**Fiyatı `kind` değil `template_category` belirler** ve ayrım üç yerde birden önemli:
+- **Muhasebe:** düz `kind='template'` sayımı üç farklı fiyatı tek toplama atar; "bu ay WhatsApp bize ne yazdı" sessizce yanlış çıkar.
+- **İsraf ölçütü:** *"pencere açıkken şablon = israf"* kestirmesi YANLIŞ. `marketing` israftır (aynı içerik serbest metinle ücretsiz giderdi); `utility` (sipariş onayı, kargo) pencere içinde zaten ücretsiz ve **ADR-005 onu orada öneriyor** — israf saymak doğru davranışı uyarıyla cezalandırmak olurdu. `authentication` bilerek israf sayılmıyor: şablonla gitmesi maliyet hatası değil teslim edilebilirlik kararıdır. Kural motorda tek yerde (`isAvoidableTemplate`).
+- **İzin:** `opt_in` şartı yalnız `marketing` içindir. `utility`nin dayanağı izin değil **siparişin kendisidir** (sözleşmenin ifası) — üçünü tek kovaya atmak, sipariş onayını izin arkasına saklamak olurdu.
+
+**Kolon defterle BİRLİKTE doğdu, sonradan eklenmedi:** yazılırken atlanan bir boyut geriye dönük doldurulamaz. Kategorisiz geçen mesajlar için "geçen ay ne ödedik" hiçbir zaman cevaplanamazdı (`ticket.handled_by` ile aynı gerekçe). Şablon adına bakıp türetmek de çözüm değil: kategori Meta tarafında sonradan değişebilir ve o gün geçmiş faturamız bugünün sınıflandırmasıyla yeniden yazılırdı. Defter olanı yazar. Üç kural veride durur (0039): metin mesajı metinsiz olamaz, şablon adı ile tür ayrışamaz (adsız template / adlı serbest metin reddedilir), **gelen mesaj template olamaz** (template işletme-başlatandır; tersi mümkün olsaydı gelen bir mesaj pencere hesabında "biz gönderdik" gibi okunurdu).
 
 **`body` jsonb ve adım 1'de `payload` AÇIK** — kart/interaktif/medya yapısının şekli sağlayıcıya bağlı ve 15.9'da netleşecek. Bugün kapalı bir sözlük yazmak, henüz görmediğimiz bir yapıyı uydurmak olurdu; uydurulan sözlük gerçeği gördüğümüz gün sessizce yanlış olurdu. `text` her türde okunur (kartın başlığı da bir metindir) — gelen kutusu önizlemesi ve AI bağlamı onu okur.
 

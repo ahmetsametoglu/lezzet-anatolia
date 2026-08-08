@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SERVICE_WINDOW_HOURS, serviceWindowExpiry, serviceWindowState } from './service-window';
+import { isAvoidableTemplate, SERVICE_WINDOW_HOURS, serviceWindowExpiry, serviceWindowState } from './service-window';
 
 /**
  * Servis penceresi (15.1). Sınanan tek şey pencerenin **neye göre** hesaplandığı: mesajın anına
@@ -55,5 +55,36 @@ describe('pencerenin şu anki hâli — ücret kararının tek kapısı', () => 
 
   it('tam bitiş anında pencere KAPALIDIR — sınırda iyimserlik fatura yazar', () => {
     expect(serviceWindowState('2026-08-08T12:00:00.000Z', simdi).open).toBe(false);
+  });
+});
+
+describe('kaçınılabilir şablon — "pencere açıkken şablon = israf" kestirmesi YANLIŞ', () => {
+  const acik = serviceWindowState('2026-08-08T18:00:00.000Z', new Date('2026-08-08T12:00:00.000Z'));
+  const kapali = serviceWindowState('2026-08-08T09:00:00.000Z', new Date('2026-08-08T12:00:00.000Z'));
+
+  it('pencere açıkken PAZARLAMA şablonu israftır — aynı içerik serbest metinle ücretsiz giderdi', () => {
+    expect(isAvoidableTemplate('marketing', acik)).toBe(true);
+  });
+
+  it('pencere açıkken UTILITY şablonu israf DEĞİLDİR — ADR-005 onu orada öneriyor', () => {
+    // Doğru davranışı uyarıyla cezalandırmak, uyarının kendisini değersizleştirir: her gönderim
+    // uyarı basınca kimse uyarıya bakmaz ve gerçek israf da görünmez olur.
+    expect(isAvoidableTemplate('utility', acik)).toBe(false);
+  });
+
+  it('AUTHENTICATION bilerek israf sayılmıyor — dayanağımız yok', () => {
+    // Kodun şablonla gitmesi bir maliyet hatası değil teslim edilebilirlik kararıdır (biçim,
+    // kopyala düğmesi). Olmayan bir dayanakla uyarı basmak, uyarıyı gürültüye çevirir.
+    expect(isAvoidableTemplate('authentication', acik)).toBe(false);
+  });
+
+  it('pencere kapalıyken HİÇBİR şablon israf değildir — alternatifi yok', () => {
+    expect(isAvoidableTemplate('marketing', kapali)).toBe(false);
+    expect(isAvoidableTemplate('utility', kapali)).toBe(false);
+  });
+
+  it('şablon olmayan mesaj hiç sorulmaz', () => {
+    expect(isAvoidableTemplate(null, acik)).toBe(false);
+    expect(isAvoidableTemplate(undefined, acik)).toBe(false);
   });
 });

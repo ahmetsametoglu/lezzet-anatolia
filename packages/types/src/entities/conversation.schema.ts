@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ConversationSourceEnum, MessageDirectionEnum, MessageKindEnum } from '../primitives/enums.schema';
+import { ConversationSourceEnum, MessageDirectionEnum, MessageKindEnum, TemplateCategoryEnum } from '../primitives/enums.schema';
 
 // Conversation / Message — WhatsApp konuşma zemini (15.1, migration 0039). CHANNELS §7.
 //
@@ -81,6 +81,15 @@ export const MessageSchema = z.object({
   body: MessageBodySchema,
   /** Meta-onaylı şablonun adı — yalnız `template` mesajında dolu (DB kısıtı da bunu zorlar). */
   templateName: z.string().nullable(),
+  /**
+   * Şablonun kategorisi = **ücret sınıfı**; adla birlikte doğar, ondan ayrı düşemez (DB kısıtı).
+   *
+   * Defterle birlikte geliyor, sonradan eklenmiyor: yazılırken atlanan bir boyut geriye dönük
+   * doldurulamaz — kategorisiz yazılan mesajlar için "geçen ay ne ödedik" hiçbir zaman
+   * cevaplanamazdı. Şablon adına bakıp türetmek de olmaz: kategori Meta tarafında sonradan
+   * değişebilir ve o gün geçmiş faturamız bugünün sınıflandırmasıyla yeniden yazılırdı.
+   */
+  templateCategory: TemplateCategoryEnum.nullable(),
   /** 360dialog/Cloud API mesaj kimliği. Adım 1'de boş (elle kayıt), adım 2'de dolar. */
   providerMessageId: z.string().nullable(),
   createdAt: z.string(),
@@ -93,6 +102,7 @@ export const MessageInsertSchema = z.object({
   kind: MessageKindEnum.default('text'),
   body: MessageBodySchema,
   templateName: z.string().nullish(),
+  templateCategory: TemplateCategoryEnum.nullish(),
   providerMessageId: z.string().nullish(),
 });
 export type MessageInsert = z.infer<typeof MessageInsertSchema>;

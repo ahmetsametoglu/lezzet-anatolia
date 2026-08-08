@@ -402,3 +402,18 @@ export type MessageDirection = z.infer<typeof MessageDirectionEnum>;
  */
 export const MessageKindEnum = z.enum(['text', 'interactive', 'template', 'media']);
 export type MessageKind = z.infer<typeof MessageKindEnum>;
+
+/**
+ * Şablonun Meta kategorisi — **fiyatı belirleyen alan.** Adlar Meta'nındır, uydurulmadı.
+ *
+ *   · `marketing`      — kampanya/duyuru. Her hâlde ücretli; ayrıca izin ister (`DOMAIN §11`).
+ *   · `utility`        — sipariş onayı, kargo bildirimi. Servis penceresi İÇİNDE ücretsizdir ve
+ *     ADR-005 zaten "pencere içinde önceliklidir" diyor. Dayanağı izin değil, siparişin kendisidir
+ *     (sözleşmenin ifası) — bu yüzden `opt_in` şartı yalnız `marketing` içindir.
+ *   · `authentication` — güvenlik kodu.
+ *
+ * Ayrım muhasebeden ibaret değil: kategori olmadan "bu ay WhatsApp bize ne yazdı" sorusu üç farklı
+ * fiyatı tek toplama atar ve cevap sessizce yanlış çıkar.
+ */
+export const TemplateCategoryEnum = z.enum(['marketing', 'utility', 'authentication']);
+export type TemplateCategory = z.infer<typeof TemplateCategoryEnum>;

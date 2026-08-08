@@ -1,8 +1,8 @@
 import { ConversationService, MessageService, serviceDb } from '@lezzet/database';
-import { serviceWindowExpiry, serviceWindowState } from '@lezzet/domain-core';
+import { isAvoidableTemplate, serviceWindowExpiry, serviceWindowState } from '@lezzet/domain-core';
 import { normalizePhone } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
-import type { Conversation, Message, MessageBody, MessageKind, UserProfile } from '@lezzet/types';
+import type { Conversation, Message, MessageBody, MessageKind, TemplateCategory, UserProfile } from '@lezzet/types';
 import { findOrCreateCustomer } from '../identity/find-or-create';
 
 /**
@@ -124,14 +124,12 @@ export async function recordInboundMessage(input: RecordMessageInput & { receive
  * **Giden mesaj** — pencereye DOKUNMAZ, ama pencereye BAKAR.
  *
  * Pencereyi uzatmamasının gerekçesi yukarıda (`serviceWindowExpiry` künyesi). Bakmasının gerekçesi
- * ayrı ve maliyet nöbetidir: pencere açıkken serbest metin ÜCRETSİZDİR, aynı içeriği şablonla
- * göndermek ise para öder.
+ * ayrı ve maliyet nöbetidir: pencere açıkken **pazarlama** içeriği serbest metinle ücretsiz giderdi;
+ * aynı şeyi şablonla göndermek bedava olana para ödemektir.
  *
- * **Uyarı bugün şablonun KATEGORİSİNİ bilmiyor ve bu bir eksiklik** (`message.kind` yalnız
- * "template" diyor). Kategori fiyatı belirliyor: pazarlama şablonu her hâlde ücretli, utility
- * (sipariş onayı/kargo) ise açık pencere içinde ücretsiz olabiliyor — Meta bunu değiştirdi ve
- * güncel hâli `15.6` onboarding'inde doğrulanacak. Yani uyarı şu an **fazla geniş**: gerçekten
- * israf olanı da, olmayabilecek olanı da işaretliyor. Kategori kolonu eklenince daralacak.
+ * Kararı motor veriyor (`isAvoidableTemplate`), burası değil — ve kestirme "pencere açıkken şablon =
+ * israf" YANLIŞ olurdu: `utility` (sipariş onayı/kargo) pencere içinde zaten ücretsiz ve ADR-005
+ * onu orada ÖNERİYOR. Düz kestirme, doğru davranışı uyarıyla cezalandırırdı.
  *
  * **Kayıt REDDEDİLMEZ, işaretlenir** ve bu ayrım adım 1'de kritik: burada mesaj zaten gönderilmiş
  * oluyor (admin telefonundan yazıyor, biz deftere işliyoruz). Olmuş bir şeyi kaydetmeyi reddetmek
@@ -139,18 +137,25 @@ export async function recordInboundMessage(input: RecordMessageInput & { receive
  * ENGELLEYEN kapı, gönderimin kendisi doğduğunda kurulur (15.11 · `packages/notify` sürücüsü) ve
  * kararı yine buradan (`serviceWindowState`) okur.
  *
- * Log'a yalnız kimlik yazılır (`CLAUDE §1`): hangi konuşma ve ne kadar süre boşa gitti — mesajın
- * içeriği değil.
+ * Log'a yalnız kimlik yazılır (`CLAUDE §1`): hangi konuşma, hangi şablon, ne kadar süre boşa gitti —
+ * mesajın içeriği değil.
  */
-export async function recordOutboundMessage(input: RecordMessageInput & { templateName?: string | null }): Promise<Message> {
+export async function recordOutboundMessage(
+  input: RecordMessageInput & { templateName?: string | null; templateCategory?: TemplateCategory | null },
+): Promise<Message> {
   const db = serviceDb();
   const conversation = await new ConversationService(db).getById(input.conversationId);
   const pencere = serviceWindowState(conversation?.windowExpiresAt);
 
-  if (pencere.open && input.templateName) {
+  if (isAvoidableTemplate(input.templateCategory, pencere)) {
     logger.warn(
-      { context: 'whatsapp/outbound', conversationId: input.conversationId, msRemaining: pencere.msRemaining },
-      'pencere AÇIKKEN şablon gönderildi — serbest metin ücretsizdi',
+      {
+        context: 'whatsapp/outbound',
+        conversationId: input.conversationId,
+        templateName: input.templateName,
+        msRemaining: pencere.msRemaining,
+      },
+      'pencere AÇIKKEN pazarlama şablonu gönderildi — serbest metin ücretsizdi',
     );
   }
 
@@ -160,6 +165,7 @@ export async function recordOutboundMessage(input: RecordMessageInput & { templa
     kind: input.kind ?? (input.templateName ? 'template' : 'text'),
     body: bodyOf(input.text),
     templateName: input.templateName,
+    templateCategory: input.templateCategory,
     providerMessageId: input.providerMessageId,
   });
 }

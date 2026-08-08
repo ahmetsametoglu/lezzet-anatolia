@@ -20,8 +20,20 @@ create type conversation_source as enum ('whatsapp');
 -- ikisi de aynı numaradan çıkar ve müşteri farkı görmez — yani taşıma açısından tek yöndür.
 create type message_direction as enum ('inbound', 'outbound');
 -- Mesajın taşıdığı biçim. `template` bir ÜCRET sınıfıdır, süs değil: 24 saatlik servis penceresi
--- dışında yalnız Meta-onaylı template gönderilebilir ve ücretlidir (~€0,13 FR/DE).
+-- dışında yalnız Meta-onaylı template gönderilebilir.
 create type message_kind as enum ('text', 'interactive', 'template', 'media');
+-- Şablonun Meta kategorisi — **FİYATI BELİRLEYEN alan.** Adlar Meta'nındır, biz uydurmuyoruz.
+--
+--   · marketing      — kampanya/duyuru. Her hâlde ÜCRETLİ; ayrıca izin ister (DOMAIN §11).
+--   · utility        — sipariş onayı, kargo bildirimi. Servis penceresi İÇİNDE ücretsizdir ve
+--                      ADR-005 zaten "pencere içinde önceliklidir" diyor. Dayanağı izin değil,
+--                      siparişin kendisidir (sözleşmenin ifası).
+--   · authentication — güvenlik kodu.
+--
+-- **Neden mesajda saklanıyor, ayrı bir şablon tablosunda değil:** bu bir DEFTERDİR ve defter olanı
+-- yazar. Kategori Meta tarafında sonradan değişebilir (yeniden sınıflandırma olağan); mesajı
+-- değişebilen bir kayda bağlasaydık, geçmiş faturamız bugünün sınıflandırmasıyla yeniden yazılırdı.
+create type template_category as enum ('marketing', 'utility', 'authentication');
 
 create table public.conversation (
   id uuid primary key default gen_random_uuid(),
@@ -76,6 +88,10 @@ create table public.message (
 
   -- Meta-onaylı şablonun adı — yalnız `template` mesajında.
   template_name text,
+  -- Şablonun kategorisi = ücret sınıfı. **Defterle birlikte doğuyor, sonradan eklenmiyor:** yazılırken
+  -- atlanan bir boyut geriye dönük doldurulamaz — bugün kategorisiz yazılan mesajlar için "geçen ay
+  -- ne ödedik" sorusu hiçbir zaman cevaplanamazdı. (`ticket.handled_by` ile aynı gerekçe.)
+  template_category template_category,
   -- 360dialog/Cloud API mesaj kimliği. Adım 1'de boş (elle kayıt), adım 2'de dolar.
   provider_message_id text,
 
@@ -89,6 +105,10 @@ create table public.message (
   -- Şablon adı ile tür AYRIŞAMAZ: adsız bir template gönderilemez, adlı bir serbest metin de
   -- ücretlendirme tarafında template sanılırdı.
   constraint message_template_name check ((kind = 'template') = (template_name is not null)),
+  -- Kategori de aynı kapıdan geçer ve ŞART: kategorisiz bir şablon kaydı, faturası okunamayan bir
+  -- gönderimdir. Kolonu nullable bırakıp "sonra doldururuz" demek, tam da doldurulamayacak olan
+  -- boyutu boş bırakmaktı.
+  constraint message_template_category check ((kind = 'template') = (template_category is not null)),
   -- Template İŞLETME-BAŞLATANDIR; gelen mesaj template olamaz. Tersi mümkün olsaydı, gelen bir
   -- mesaj pencere hesabında "biz gönderdik" gibi okunurdu.
   constraint message_inbound_kind check (direction = 'outbound' or kind <> 'template')
@@ -169,6 +189,7 @@ create or replace function public.record_message(
   p_kind message_kind,
   p_body jsonb,
   p_template_name text default null,
+  p_template_category template_category default null,
   p_provider_message_id text default null,
   p_window_expires_at timestamptz default null
 ) returns public.message
@@ -179,8 +200,8 @@ as $$
 declare
   v_message public.message;
 begin
-  insert into public.message (conversation_id, direction, kind, body, template_name, provider_message_id)
-  values (p_conversation_id, p_direction, p_kind, p_body, p_template_name, p_provider_message_id)
+  insert into public.message (conversation_id, direction, kind, body, template_name, template_category, provider_message_id)
+  values (p_conversation_id, p_direction, p_kind, p_body, p_template_name, p_template_category, p_provider_message_id)
   returning * into v_message;
 
   update public.conversation
@@ -193,7 +214,7 @@ end;
 $$;
 
 revoke all on function public.open_conversation(conversation_source, text, uuid) from anon;
-revoke all on function public.record_message(uuid, message_direction, message_kind, jsonb, text, text, timestamptz) from anon;
+revoke all on function public.record_message(uuid, message_direction, message_kind, jsonb, text, template_category, text, timestamptz) from anon;
 
 comment on table public.conversation is
   'WhatsApp/mesajlaşma konuşması (15.1): kimlik bağı, opt-in, 24s servis penceresi, son hareket.';

@@ -177,17 +177,38 @@ describe('mesaj kaydı', () => {
     const konusma = await konusmaAc(numara());
 
     await expect(
-      messages.record({ conversationId: konusma.id, direction: 'outbound', kind: 'template', body: { text: 'onay' } }),
+      messages.record({ conversationId: konusma.id, direction: 'outbound', kind: 'template', body: { text: 'onay' }, templateCategory: 'utility' }),
     ).rejects.toThrow();
     await expect(
       messages.record({ conversationId: konusma.id, direction: 'outbound', kind: 'text', body: { text: 'onay' }, templateName: 'order_confirm' }),
     ).rejects.toThrow();
   });
 
+  it('şablon KATEGORİSİZ kaydedilemez — faturası okunamayan bir gönderim olurdu', async () => {
+    // Kolonu nullable bırakıp "sonra doldururuz" demek, tam da doldurulamayacak olan boyutu boş
+    // bırakmaktı: kategori yazılmadan geçen mesaj için "ne ödedik" hiçbir zaman cevaplanamaz.
+    const konusma = await konusmaAc(numara());
+
+    await expect(
+      messages.record({ conversationId: konusma.id, direction: 'outbound', kind: 'template', body: { text: 'onay' }, templateName: 'order_confirm' }),
+    ).rejects.toThrow();
+    // Ters yön de yasak: şablon olmayan mesaj ücret sınıfı taşıyamaz.
+    await expect(
+      messages.record({ conversationId: konusma.id, direction: 'outbound', kind: 'text', body: { text: 'selam' }, templateCategory: 'marketing' }),
+    ).rejects.toThrow();
+  });
+
   it('GELEN mesaj template olamaz — template işletme-başlatandır', async () => {
     const konusma = await konusmaAc(numara());
     await expect(
-      messages.record({ conversationId: konusma.id, direction: 'inbound', kind: 'template', body: { text: 'x' }, templateName: 'order_confirm' }),
+      messages.record({
+        conversationId: konusma.id,
+        direction: 'inbound',
+        kind: 'template',
+        body: { text: 'x' },
+        templateName: 'order_confirm',
+        templateCategory: 'utility',
+      }),
     ).rejects.toThrow();
   });
 
@@ -195,7 +216,7 @@ describe('mesaj kaydı', () => {
     const konusma = await konusmaAc(numara());
     await messages.record({ conversationId: konusma.id, direction: 'inbound', body: { text: 'bir' } });
     await messages.record({ conversationId: konusma.id, direction: 'outbound', body: { text: 'iki' } });
-    await messages.record({ conversationId: konusma.id, direction: 'outbound', kind: 'template', body: { text: 'üç' }, templateName: 'order_confirm' });
+    await messages.record({ conversationId: konusma.id, direction: 'outbound', kind: 'template', body: { text: 'üç' }, templateName: 'order_confirm', templateCategory: 'utility' });
 
     const liste = await messages.listByConversation(konusma.id);
     expect(liste.map((m) => m.body.text)).toEqual(['bir', 'iki', 'üç']);

@@ -14,6 +14,7 @@ import {
   type MessageDirection,
   type MessageInsert,
   type MessageKind,
+  type TemplateCategory,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
@@ -110,6 +111,8 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
     body: MessageBody;
     kind?: MessageKind;
     templateName?: string | null;
+    /** Şablonun ücret sınıfı — adla birlikte gelir, ondan ayrı düşemez (DB kısıtı zorlar). */
+    templateCategory?: TemplateCategory | null;
     providerMessageId?: string | null;
     windowExpiresAt?: string | null;
   }): Promise<Message> {
@@ -119,6 +122,7 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
       p_kind: input.kind ?? 'text',
       p_body: input.body,
       p_template_name: input.templateName ?? null,
+      p_template_category: input.templateCategory ?? null,
       p_provider_message_id: input.providerMessageId ?? null,
       p_window_expires_at: input.windowExpiresAt ?? null,
     });
