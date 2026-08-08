@@ -41,12 +41,13 @@ export const NOTES = {
   // ── Kapıdaki durak (11.2/11.3/11.4) ───────────────────────────────────────
   /** Yola çıkmadan hiçbir sonuç yazılamaz — düğmenin altındaki tek cümlelik sebep. */
   notOnTheWay: 'Bu durak henüz yola çıkmış görünmüyor. Teslim, tahsilat ve "ulaşılamadı" işaretleri yoldaki siparişe yazılır.',
+  /** Kanıt bölümünün başlık yanı — neyin, neden istendiği tek satırda. */
+  proofAside: 'imza ya da fotoğraf · ihtilafta açılan şey bu',
   /**
-   * Kanıt yakalama açık değil. Cümle ne olduğunu ve neyin BEKLENDİĞİNİ söylüyor; "yakında" demek
-   * söz vermek olurdu, sebebini yazmak ise kuryeye kapıda ne yapacağını söyler.
+   * Kanıt zorunlu ama henüz alınmamış. Cümle NE eksik olduğunu söylüyor; "kanıt gerekli" demek
+   * kuryeyi düğmeye bakıp sebebini aramaya bırakırdı.
    */
-  proofPending:
-    'Bu kanalda imza ya da fotoğraf zorunlu. Kanıt yakalama bu ekranda henüz açık değil — teslim kapatılamaz. Müşteri bekletilmemeli: durağı "ulaşılamadı" işaretleyip depoya bildirin.',
+  proofMissing: 'Bu kanalda teslim imza ya da fotoğraf ister. Kanıt alınmadan "Teslim ettim" açılmaz.',
   /** Hesap seçilmemişse tahsilat yazılamaz; teslim yine de kapanabilir, borç açık kalır. */
   noDoorAccount:
     'Kapı tahsilat hesabı seçilmemiş (Ayarlar → Ödeme). Para kaydı yazılamaz; teslim kapatılabilir ama borç açık kalır.',

@@ -21,6 +21,22 @@ export type DeliveryLineView = Pick<
 /** Kapıda seçilebilen üç yöntem. Online ve havale kuryenin eline HİÇ girmez (11.3). */
 export type DoorMethod = 'cash' | 'card' | 'cheque';
 
+/**
+ * Yüklenmiş kanıtın istemcideki hâli (11.2).
+ *
+ * `imageKey` R2'ye YAZILMIŞ bir anahtardır — yükleme tamamlanmadan bu nesne doğmaz. Taslak hâlde
+ * anahtar tutup teslimi kapatmak, kanıtı var göstermek olurdu; "eksik geldi" ihtilafının tek
+ * sigortası açıldığında boş çıkardı.
+ *
+ * `previewUrl` tarayıcının kendi ürettiği yerel adres (`URL.createObjectURL`) — sunucudan imzalı
+ * adres istemeye gerek yok, dosya zaten elimizde. Sekme kapanınca ölür ve ölmesi doğru.
+ */
+export interface ProofDraft {
+  kind: 'signature' | 'photo';
+  imageKey: string;
+  previewUrl: string;
+}
+
 export interface DeliveryStopView {
   /** Gün listesindeki durağın kendisi — adres, telefon, "yoldayım", kanal. İkinci kez okunmaz. */
   stop: CourierStop;
@@ -71,4 +87,11 @@ export interface DeliveryViewProps {
   onStart: () => void;
   onConfirm: () => void;
   onUndelivered: (outcome: 'unreachable' | 'refused', note: string | null) => void;
+  /** Yüklenmiş kanıtlar — boşsa ve kanal kanıt istiyorsa teslim kapanmaz. */
+  proofs: ProofDraft[];
+  onProof: (proof: ProofDraft) => void;
+  onProofRemove: (imageKey: string) => void;
+  /** Kapıda teslim ALAN kişi — B2B'de "kim imzaladı" ihtilafın asıl cevabı. */
+  receivedBy: string;
+  onReceivedBy: (name: string) => void;
 }

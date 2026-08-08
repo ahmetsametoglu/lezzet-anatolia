@@ -7,7 +7,7 @@ import { fromCents, toCents } from '@lezzet/helper';
 import type { FulfillmentAdjustment } from '@lezzet/types';
 import { confirmDeliveryAction, markUndeliveredAction, startDeliveryAction } from './actions';
 import { DeliveryStopDesktop } from './delivery.desktop';
-import type { DeliveryStopView, DoorMethod } from './delivery-types';
+import type { DeliveryStopView, DoorMethod, ProofDraft } from './delivery-types';
 
 /**
  * Kapıdaki durağın istemci kökü — kuryenin kapıda verdiği kararların tutulduğu yer.
@@ -35,6 +35,17 @@ export function DeliveryClient({ view }: { view: DeliveryStopView }) {
   const [method, setMethod] = useState<DoorMethod>(doorMethodOf(view));
   /** `null` = "motorun türetimini izle". Kurye kutuya dokununca kendi sayısı geçerli olur. */
   const [amountDraft, setAmountDraft] = useState<number | null>(null);
+
+  /**
+   * Yüklenmiş kanıtlar (11.2). Her biri R2'ye YAZILMIŞ bir anahtar taşır — taslak yok.
+   *
+   * Çoğul, çünkü kapı çoğulu destekliyor (`alreadyRequested` tavanı) ve saha da öyle: imza + hasarlı
+   * kolinin fotoğrafı aynı teslimatta anlamlı. Ama kayda giden TEK kanıt (`DeliveryProofInput`
+   * tekil) — ilki yazılır, gerisi bugün yalnız kuryenin gördüğü ek çekimdir.
+   * BEKLEYEN(11.2) — çoklu kanıdın kayda geçmesi kapının şeklini değiştirmeyi ister.
+   */
+  const [proofs, setProofs] = useState<ProofDraft[]>([]);
+  const [receivedBy, setReceivedBy] = useState('');
 
   const onTheWay = view.order.status === 'out_for_delivery';
 
@@ -66,6 +77,22 @@ export function DeliveryClient({ view }: { view: DeliveryStopView }) {
     });
   };
 
+  /**
+   * Kanıtı listeden çıkarır ve yerel önizleme adresini serbest bırakır.
+   *
+   * Yan etki güncelleyicinin İÇİNDE değil: React güncelleyiciyi saf sayar ve geliştirmede iki kez
+   * çağırır — adresi orada bırakmak, bir kez fazladan serbest bırakmak demekti.
+   *
+   * **R2'deki dosya silinmez.** Yüklenmiş ama kullanılmayan bir nesne kalır; silmek için ayrı bir
+   * yetki ve ayrı bir kapı gerekir, ve kuryenin "yanlış fotoğraf" demesi silme yetkisi vermez.
+   * Anahtar hiçbir kayda girmediği için kimseye görünmez.
+   */
+  const removeProof = (imageKey: string) => {
+    const gone = proofs.find((proof) => proof.imageKey === imageKey);
+    if (gone) URL.revokeObjectURL(gone.previewUrl);
+    setProofs((current) => current.filter((proof) => proof.imageKey !== imageKey));
+  };
+
   const confirm = () => {
     // Yalnız DEĞİŞEN satır gönderilir: dokunulmamış kalemi de yazmak, aynı sayıyı yeniden yazan
     // gereksiz bir düzeltme kaydı doğururdu.
@@ -88,7 +115,14 @@ export function DeliveryClient({ view }: { view: DeliveryStopView }) {
         ? { method, amountCents, accountId: view.doorAccountId }
         : null;
 
-    run(() => confirmDeliveryAction(view.stop.orderId, { adjustments, collection }), true);
+    // Kanıt: ilk yüklenen kayda geçer. `receivedBy` boşsa `null` — boş dize yazmak "adı yok" ile
+    // "ad girilmedi" arasındaki farkı silerdi.
+    const first = proofs[0];
+    const proof = first
+      ? { kind: first.kind, imageKey: first.imageKey, receivedBy: receivedBy.trim() || null }
+      : null;
+
+    run(() => confirmDeliveryAction(view.stop.orderId, { adjustments, collection, proof }), true);
   };
 
   return (
@@ -107,6 +141,11 @@ export function DeliveryClient({ view }: { view: DeliveryStopView }) {
       onStart={() => run(() => startDeliveryAction(view.stop.orderId), false)}
       onConfirm={confirm}
       onUndelivered={(outcome, note) => run(() => markUndeliveredAction(view.stop.orderId, outcome, note), true)}
+      proofs={proofs}
+      onProof={(proof) => setProofs((current) => [...current, proof])}
+      onProofRemove={removeProof}
+      receivedBy={receivedBy}
+      onReceivedBy={setReceivedBy}
     />
   );
 }

@@ -8,7 +8,8 @@ import { PageHeader } from '@/components/operation/ui/page-header';
 import { num } from '@/components/operation/ui/format';
 import { StopContactActions } from '../deliveries-sections';
 import { NOTES, OUTCOME_VIEW } from '../deliveries-labels';
-import { CollectionPanel, LineAdjuster, OutcomeDialog, ProofNotice } from './delivery-sections';
+import { CollectionPanel, LineAdjuster, OutcomeDialog } from './delivery-sections';
+import { ProofCapture } from './delivery-proof';
 import type { DeliveryViewProps } from './delivery-types';
 
 // Kapıdaki durak — MASAÜSTÜ. Gün listesiyle aynı dar sütunda (560 px) ve aynı gerekçeyle: bu ekranın
@@ -21,9 +22,11 @@ export function DeliveryStopDesktop(props: DeliveryViewProps) {
 
   const settled = view.stop.outcome !== 'pending' && view.stop.outcome !== 'unreachable';
   const outcome = OUTCOME_VIEW[view.stop.outcome];
-  // Kanıt zorunluysa teslim KAPANMAZ (bkz. `ProofNotice`). Kapalı ama sebebi yazılı bir düğme,
-  // basılınca sessizce başarısız olan bir düğmeden iyidir.
-  const canConfirm = onTheWay && !view.proofRequired && !busy;
+  // Kanıt zorunlu olan kanalda teslim ancak kanıt YÜKLENDİKTEN sonra kapanır. Kapı bunu kendisi de
+  // soruyor (`confirmDoorDelivery` → `proof_required`); buradaki kontrol o reddi kapıya varmadan
+  // önlemek için — kapalı ama sebebi yazılı bir düğme, basılınca reddedilen düğmeden iyidir.
+  const proofSatisfied = !view.proofRequired || props.proofs.length > 0;
+  const canConfirm = onTheWay && proofSatisfied && !busy;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -68,7 +71,26 @@ export function DeliveryStopDesktop(props: DeliveryViewProps) {
           disabled={busy || settled}
         />
 
-        {view.proofRequired ? <ProofNotice /> : null}
+        {/* Kanıt bölümü kanal zorunlu kılmasa da açık: B2C'de zorunlu değil ama kurye yine de
+            fotoğraf çekmek isteyebilir (kapı önüne bırakılan koli). Zorunluluk düğmeyi kapatır,
+            bölümü gizlemez. */}
+        {!settled ? (
+          <ProofCapture
+            orderId={view.stop.orderId}
+            proofs={props.proofs}
+            onProof={props.onProof}
+            onRemove={props.onProofRemove}
+            receivedBy={props.receivedBy}
+            onReceivedBy={props.onReceivedBy}
+            disabled={busy || !onTheWay}
+          />
+        ) : null}
+
+        {view.proofRequired && props.proofs.length === 0 ? (
+          <p className="mx-4 mt-3 rounded-ops-btn border border-ops-amber-line bg-ops-amber-bg px-3 py-2 font-ops-body text-ops-xs leading-[1.55] text-ops-amber-dark">
+            {NOTES.proofMissing}
+          </p>
+        ) : null}
 
         {error ? (
           <p className="mx-4 mt-3 rounded-ops-btn border border-ops-red-line bg-ops-red-bg px-3 py-2 font-ops-body text-ops-sm text-ops-red">

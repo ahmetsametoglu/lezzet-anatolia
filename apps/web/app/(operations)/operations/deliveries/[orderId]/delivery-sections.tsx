@@ -177,29 +177,6 @@ export function CollectionPanel({
 }
 
 /**
- * **Teslim onayı (kanıt)** — bu kanalda zorunluysa görünür.
- *
- * Kanıt YAKALAMA bu ekranda henüz yok: imza/fotoğraf bir görsel demek, görsel de bir depolama
- * anahtarı demek (`DeliveryProofInput.imageKey`) ve o anahtarı üreten kapı yazılmadı. Uydurma bir
- * anahtar yazmak kanıtı VAR göstermek olurdu — "eksik geldi" ihtilafının tek sigortası boş çıkardı.
- *
- * Bu yüzden düğme kapalı ve sebebi yazılı: kapalı ama açıklanmış bir düğme, basılınca sessizce
- * başarısız olan bir düğmeden iyidir. BEKLEYEN(11.2)
- */
-export function ProofNotice() {
-  return (
-    <section className="border-b border-ops-line-soft px-4 py-3">
-      <h2 className="mb-1.5 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
-        Teslim onayı
-      </h2>
-      <p className="rounded-ops-btn border border-ops-line bg-ops-surface-sunken px-3 py-2 font-ops-body text-ops-xs leading-[1.55] text-ops-muted">
-        {NOTES.proofPending}
-      </p>
-    </section>
-  );
-}
-
-/**
  * **Ulaşılamadı / reddedildi penceresi** (11.4). Tek pencere, iki sonuç — soru aynı ("ne oldu?"),
  * akıbet farklı; ayrımı başlık ve onay düğmesinin tonu taşır.
  */

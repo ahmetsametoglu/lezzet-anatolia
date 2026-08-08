@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { OrderService, serviceDb } from '@lezzet/database';
 import type { FulfillmentAdjustment } from '@lezzet/types';
 import { markUndelivered } from '@/lib/courier/day';
-import { confirmDoorDelivery, type DoorCollectionInput } from '@/lib/courier/delivery';
+import { confirmDoorDelivery, type DeliveryProofInput, type DoorCollectionInput } from '@/lib/courier/delivery';
+import { requestDeliveryProofUploadUrl } from '@/lib/courier/proof';
 import { transitionOrder } from '@/lib/order/transition';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireCourier } from '@/lib/guard';
@@ -52,6 +53,31 @@ export async function startDeliveryAction(orderId: string): Promise<ActionResult
   }
 }
 
+/**
+ * **Kanıt için imzalı yükleme izni** (11.2).
+ *
+ * Dosya SUNUCUDAN GEÇMEZ: tarayıcı doğrudan R2'ye yükler, buradan çıkan tek şey kısa ömürlü bir
+ * izin. Sunucu üzerinden geçirmek fotoğrafı iki kez taşımak ve Next'in gövde sınırıyla boğuşmak
+ * olurdu (kapının kendi künyesi).
+ *
+ * **Anahtarı istemci seçmez** — kapı kendi kurar. Seçseydi gelen yolu doğrulamak zorunda kalırdık
+ * ve o doğrulamanın unutulduğu gün private kovanın herhangi bir yerine yazma izni verilirdi.
+ */
+export async function requestProofUploadAction(
+  orderId: string,
+  filename: string,
+  alreadyRequested: number,
+): Promise<ActionResult<{ key: string; uploadUrl: string }>> {
+  try {
+    const courier = await requireCourier();
+    const result = await requestDeliveryProofUploadUrl({ orderId, courierId: courier.id, filename, alreadyRequested });
+    if (!result.ok) throw new Error(UPLOAD_REFUSAL[result.reason]);
+    return { data: { key: result.key, uploadUrl: result.uploadUrl }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
 interface DoorDeliveryResult {
   /** Fiilen yazılan tahsilat (**cent**). */
   collectedCents: number;
@@ -71,7 +97,11 @@ interface DoorDeliveryResult {
  */
 export async function confirmDeliveryAction(
   orderId: string,
-  input: { adjustments: FulfillmentAdjustment[]; collection: DoorCollectionInput | null },
+  input: {
+    adjustments: FulfillmentAdjustment[];
+    collection: DoorCollectionInput | null;
+    proof: DeliveryProofInput | null;
+  },
 ): Promise<ActionResult<DoorDeliveryResult>> {
   try {
     const courier = await requireCourier();
@@ -81,6 +111,7 @@ export async function confirmDeliveryAction(
       courierId: courier.id,
       adjustments: input.adjustments,
       collection: input.collection,
+      proof: input.proof,
     });
 
     if (result.status === 'not_found') throw new Error('Sipariş bulunamadı.');
@@ -143,6 +174,25 @@ const FORBIDDEN: Record<'not_assigned' | 'same_status' | 'terminal' | 'not_allow
   same_status: 'Sipariş zaten bu durumda.',
   terminal: 'Bu sipariş kapanmış; üzerinde değişiklik yapılamaz.',
   not_allowed: 'Bu adım şu an yapılamaz — önce "Yola çıktım" işaretlenmeli.',
+};
+
+/**
+ * Yükleme kapısının ret kodları — kuryenin diline. `FORBIDDEN`'dan SONRA tanımlı olması şart:
+ * modül yüklenirken değerlendiriliyor ve `not_found` ona bakıyor.
+ *
+ * `storage_unavailable` en tehlikelisi, o yüzden en açık yazılanı: kova yapılandırılmamışken
+ * sessizce "oldu" demek kuryeye kanıtı yüklediğini sandırırdı — teslim kanıtsız kapanır ve bunu
+ * ancak ihtilaf gününde öğrenirdik.
+ *
+ * `not_found` kasıtlı olarak "senin değil" ile AYNI cümle: kapı da ikisini ayırmıyor (olmayan bir
+ * siparişin varlığı doğrulanmaz), ekran ayırsaydı kapının sakladığını sızdırırdı.
+ */
+const UPLOAD_REFUSAL: Record<'unsupported_type' | 'too_many' | 'not_found' | 'storage_unavailable', string> = {
+  unsupported_type: 'Bu dosya türü kabul edilmiyor — fotoğraf gönderin (jpg, png, webp, heic).',
+  too_many: 'Bu teslimat için kanıt sayısı sınırına ulaşıldı.',
+  not_found: FORBIDDEN.not_assigned,
+  storage_unavailable:
+    'Kanıt deposu şu an yapılandırılmamış — yükleme yapılamıyor. Teslim kanıtsız kapatılamaz; operasyonu arayın.',
 };
 
 /**

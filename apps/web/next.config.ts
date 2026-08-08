@@ -19,10 +19,23 @@ function supabaseOrigins(): { http: string; ws: string } {
 }
 
 // R2 host'u: public okuma adresi (05.11) — bugün r2.dev geliştirme adresi, alan adı gelince
-// cdn.<domain> buraya eklenir. S3 API host'u (*.r2.cloudflarestorage.com) BİLEREK yok: imzalı okuma
-// kalktı, yükleme sunucu tarafında — tarayıcı o host'a hiç gitmiyor, izin vermek gereksiz yüzey.
-// Görsel <img>=img-src; ileride tarayıcıdan doğrudan yükleme/fetch için connect-src.
+// cdn.<domain> buraya eklenir. Görsel `<img>` = img-src.
 const R2_HOSTS = 'https://*.r2.dev';
+
+// S3 API host'u — YALNIZ `connect-src`, yalnız YÜKLEME için (11.2, ölçüldü 08.08).
+//
+// 05.11'de bilerek dışarıda bırakılmıştı ve o gün doğruydu: *"yükleme sunucu tarafında, tarayıcı o
+// host'a hiç gitmiyor"*. Sonra kapı değişti — teslim kanıtının yükleme kapısı (`lib/courier/proof.ts`)
+// imzalı adres üretiyor ve künyesi *"dosya SUNUCUDAN GEÇMEZ: tarayıcı doğrudan R2'ye yükler"* diyor.
+// CSP o değişiklikte güncellenmedi ve **hiçbir yerde patlamadı, çünkü tüketicisi yoktu**: imzalı
+// yükleme kapısı yazıldığı günden beri hiçbir ekrandan çağrılmıyordu (şikâyet eki de dahil).
+// Kanıt yakalama bağlanınca ilk PUT'ta göründü — tarayıcı isteği CSP'de kesti, `fetch` hata verdi.
+//
+// **Neden sunucuya taşımak değil de host açmak:** dosyayı sunucu üzerinden geçirmek fotoğrafı iki kez
+// taşımak ve Next'in gövde sınırıyla boğuşmak demek — kapının kendi künyesi bu yolu bilinçle
+// reddediyor. Açılan yüzey dar: yalnız `connect-src` (bu host'tan script çalıştırılamaz, çerçeve
+// açılamaz), ve giden şey imzalı, süreli (10 dk) bir adrese yapılan tek PUT.
+const R2_UPLOAD_HOST = 'https://*.r2.cloudflarestorage.com';
 
 // Stripe host'ları (07.5) — kart alanı KENDİ checkout sayfamızda, Stripe'ın `PaymentElement`
 // iframe'i içinde (ADR Sapma 6). Barındırılan Checkout'a yönlendirseydik hiçbiri gerekmezdi;
@@ -74,7 +87,7 @@ function securityHeaders(): Array<{ key: string; value: string }> {
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline' ${STRIPE_SCRIPT}${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
-    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${STRIPE_API}`.replace(/\s+/g, ' ').trim(),
+    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${R2_UPLOAD_HOST} ${STRIPE_API}`.replace(/\s+/g, ' ').trim(),
     // Harita karoları BURADA ve yalnız burada: Leaflet onları `<img>` olarak yükler.
     `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS} ${STRIPE_IMG} ${MAP_TILES}`.replace(/\s+/g, ' ').trim(),
     "font-src 'self' data:",
