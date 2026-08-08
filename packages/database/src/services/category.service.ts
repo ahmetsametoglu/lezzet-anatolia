@@ -16,6 +16,15 @@ import { uniqueSlugForTable } from '../utils/slug';
 // Yeni kategori girişi — slug servis tarafından addan (TR→FR→DE) türetilir; çağıran vermez.
 export interface CreateCategoryInput {
   name: LocalizedText;
+  /**
+   * Alt yazı (05.17) — vitrin bandının İKİNCİ satırı. `CollectionService`in `description`'ıyla aynı
+   * yerde durur ve simetri bilinçli: ikisi de "adın altındaki cümle"dir, biri yazılabilirken
+   * ötekinin yazılamaması bir eksiklikti (kolon ve Zod 05.17'de kondu, yazma yüzeyi unutuldu).
+   *
+   * **Doğuşta da yazılabilir, sonradan da.** Yalnız `edit()`e koysaydık operatör yeni kategoriyi
+   * alt yazısıyla kaydeder, alt yazı sessizce düşer ve ancak müşteri sayfasına bakınca fark ederdi.
+   */
+  tagline?: LocalizedText | null;
   sortOrder?: number;
   isActive?: boolean;
 }
@@ -23,6 +32,8 @@ export interface CreateCategoryInput {
 // Düzenlenebilir alanlar — slug YOK (URL korunur). Görsel kırpma künyesi ortak ImageCropFields'ten.
 interface EditCategoryInput extends Partial<ImageCropFields> {
   name?: LocalizedText;
+  /** Alt yazı — gerekçe `CreateCategoryInput.tagline` künyesinde. `null` = alt yazıyı KALDIR. */
+  tagline?: LocalizedText | null;
   isActive?: boolean;
 }
 
@@ -65,7 +76,7 @@ export class CategoryService extends BaseDbService<Category, CategoryInsert, Cat
   async create(input: CreateCategoryInput): Promise<Category> {
     const slug = await uniqueSlugForTable(this.supabase, this.tableName, resolveLocalizedText(input.name));
     const sortOrder = input.sortOrder ?? (await this.count());
-    return this.insert({ name: input.name, slug, sortOrder, isActive: input.isActive });
+    return this.insert({ name: input.name, tagline: input.tagline, slug, sortOrder, isActive: input.isActive });
   }
 
   /** Aktif/pasif (soft). */
