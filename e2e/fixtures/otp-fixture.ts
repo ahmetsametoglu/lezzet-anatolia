@@ -5,9 +5,9 @@ import { loadRootEnv } from './order-fixture';
  *
  * Kurulum yok, yalnız TEMİZLİK var — akışın kendisi UI'dan yaşanıyor; fikstürün işi doğrulamanın
  * geride bıraktığı ÜÇ kalıcı izi toplamak:
- *  1. `email_verifications` satırı — `token_hash` GLOBAL TEKİL ve sabit kodun hash'i hep aynı:
- *     satır silinmezse SONRAKİ koşu (ve şeritlerin testleri) kısıta çarpar (`BEKLEYEN(08.22)`
- *     kalkana dek sabit kodla tek istek hakkı var; temizlik bu hakkı her koşuda tazeler).
+ *  1. `email_verifications` satırı — kısıt artık "e-posta başına tek aktif kod" (07.08, küresel
+ *     `token_hash` tekilliği kalktı): sabit kod başka e-postaları engellemez ama AYNI damgalı
+ *     e-postanın sonraki koşusu aktif satıra çarpabilir; temizlik izi sıfırlar (§4b).
  *  2. `user_profiles` satırı — doğrulama müşteriyi trigger'la açar; purge'ün bildiği hedef.
  *  3. `auth.users` satırı — purge'ün BİLMEDİĞİ tek iz: profil `auth.users.id`'siyle yaşar ama
  *     silinmesi Supabase admin API'si ister; profil silinip auth bırakılsaydı öksüz kimlik

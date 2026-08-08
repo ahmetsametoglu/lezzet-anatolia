@@ -9,9 +9,10 @@ import { createGuestOtp, OTP_TEST_CODE, type GuestOtpFixture } from '../fixtures
  * süre, tek kullanım, auth.users→Customer trigger'ı) GERÇEK yoldan işler. Ön koşul: dev server
  * `.env`'inde `OTP_TEST_CODE=123456` (kapı NODE_ENV=production'da env'e rağmen kapalı).
  *
- * TEK doğrulama senaryosu (BEKLEYEN(08.22) kalkana dek büyümez): sabit kodun hash'i global tekil
- * kısıtla yarışır; her koşu kendi doğrulama satırını purge'ler, iki proje (desktop→mobile) bu
- * sayede sırayla temiz koşar. Katman 2 (gerçek Resend teslimat provası) Kademe 3'ün işi.
+ * Sınır KALKTI (07.08, arka-uc): `token_hash` küresel tekilliği kaldırıldı, yeni değişmez
+ * "e-posta başına tek aktif kod" — sabit kod artık koşuda istenen sayıda e-postayla kullanılabilir,
+ * OTP senaryoları çoğalabilir (uç senaryo listesi kullanıcı onayında). Her koşu yine kendi
+ * doğrulama satırını purge'ler. Katman 2 (gerçek Resend teslimat provası) Kademe 3'ün işi.
  *
  * Gezinme sözleşmesi: `storefront.smoke.ts` başındaki gerekçe.
  */

@@ -47,9 +47,11 @@
     "db:refresh": "node scripts/with-test-lock.mjs --kind=ddl sh -c \"supabase db reset && tsx scripts/seed.ts\"",
     "set-role": "tsx scripts/set-role.ts",
     "stripe:listen": "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
-    "stripe:smoke": "tsx scripts/stripe-smoke.ts"
+    "stripe:smoke": "tsx scripts/stripe-smoke.ts",
+    "ai:smoke": "tsx scripts/ai-smoke.ts"
   },
   "devDependencies": {
+    "@lezzet/ai": "workspace:*",
     "@lezzet/database": "workspace:*",
     "@lezzet/domain-core": "workspace:*",
     "@lezzet/eslint-config": "workspace:*",

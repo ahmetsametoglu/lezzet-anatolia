@@ -4,9 +4,9 @@ import { defineConfig, devices } from '@playwright/test';
  * Playwright — duman katmanı (00.9 Kademe 2). ÇALIŞAN dev server'a karşı koşar; build YOK,
  * `webServer` bloğu BİLEREK yok: dev server'ı KULLANICI yönetir (CLAUDE §4), test başlatmaz.
  *
- * İki proje: desktop her şeyi koşar; mobile YALNIZ müşteri testlerini — operasyon web'i
- * masaüstü-yalnız (kullanıcı kararı 06.08), operasyonun mobil forku native uygulamada
- * (`docs/uygulama`). Görüntü/iz YALNIZ düşüşte toplanır ve `.test-results/e2e/` altına düşer — ajanların inceleme
+ * İki proje: desktop her şeyi koşar; mobile-web YALNIZ müşteri testlerini — operasyon web'i
+ * masaüstü-yalnız (kullanıcı kararı 06.08), personelin mobil deneyimi native uygulamada
+ * (`docs/uygulama`). Proje adı BİLEREK `mobile-web`: native uygulamayla karışmasın (CLAUDE §2). Görüntü/iz YALNIZ düşüşte toplanır ve `.test-results/e2e/` altına düşer — ajanların inceleme
  * kaynağı (anlık bakış için ayrı araç: `pnpm ui:shot`).
  *
  * Veri disiplini CLAUDE §4b'nin AYNISI: okuyan test seed'in deterministik satırlarını kullanır,
@@ -20,7 +20,7 @@ export default defineConfig({
 
   outputDir: './.test-results/e2e',
   fullyParallel: false, // paylaşılan DB + paylaşılan dev server — sıra, yarıştan ucuz
-  // TEK işçi: iki proje (desktop+mobile) paralel işçilere düşünce dev server'ı aynı anda eziyor ve
+  // TEK işçi: iki proje (desktop+mobile-web) paralel işçilere düşünce dev server'ı aynı anda eziyor ve
   // yazan akışların eylemleri zaman aşıyordu (ölçüldü 05.08: order-advance yalnızken 3,5 sn yeşil,
   // paralelde iki proje de kırmızı). Süre bedeli kabul — istikrar önce; Kademe 3 kendi build'inde
   // yeniden değerlendirilir.
@@ -35,12 +35,18 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE ?? 'http://localhost:3000',
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
+    // Cihaz profilleri GERÇEK tarayıcı UA'sı taşır — analitik kapısının BOT süzgeci koşuları
+    // göremez ve her duman koşusu deftere ziyaret/niyet yazar (ölçüldü 07.08: dönüşüm oranının
+    // payı da paydası da şişiyordu). Kapı `x-e2e: 1`i prefetch/bot/personel ile aynı yerde
+    // düşürür (lib/analytics/record.ts). Defterde VERİ İSTEYEN bir senaryo yazılırsa o test
+    // kendi `extraHTTPHeaders`'ını üstbilgisiz ezmeli — varsayılan temiz defterdir.
+    extraHTTPHeaders: { 'x-e2e': '1' },
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
     // iPhone profili varsayılanda WebKit ister; deneme katmanı TEK motorda (chromium) koşar —
     // UA/viewport/touch emülasyonu fork kararı için yeter. Gerçek WebKit Kademe 3'ün konusu.
-    // YALNIZ müşteri: operasyon web'i masaüstü-yalnız (06.08), mobil fork native uygulamada.
-    { name: 'mobile', testMatch: 'e2e/customer/**/*.smoke.ts', use: { ...devices['iPhone 13'], browserName: 'chromium' } },
+    // YALNIZ müşteri: operasyon web'i masaüstü-yalnız (06.08), personelin mobil deneyimi native uygulamada.
+    { name: 'mobile-web', testMatch: 'e2e/customer/**/*.smoke.ts', use: { ...devices['iPhone 13'], browserName: 'chromium' } },
   ],
 });

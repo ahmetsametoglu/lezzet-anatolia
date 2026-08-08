@@ -46,7 +46,7 @@ interface SeedProduct {
   variants?: SeedVariant[];
 }
 
-// Kategori görseli anasayfa şeridinde görünür (web 3:2 kart · mobil daire). `image` verilmeyen kategori
+// Kategori görseli anasayfa şeridinde görünür (masaüstü 3:2 kart · mobil webde daire). `image` verilmeyen kategori
 // görselsiz durumu örnekler (müşteride ad baş harfiyle çıkar, boş gri kutu çizilmez).
 const CATEGORIES = [
   { key: 'baklava', image: '1.jpeg', name: { tr: 'Baklava', fr: 'Baklava', de: 'Baklava' } },

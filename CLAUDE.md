@@ -45,6 +45,10 @@
   **İstisna — OPERASYON yüzeyi YALNIZ MASAÜSTÜ (kullanıcı kararı 06.08):** operasyonda `*.mobile`
   forku YAZILMAZ ve mevcutları söküldü — personelin mobil deneyimi native uygulamanın işidir
   (`docs/uygulama/README.md` yüzey formülü). Müşteri yüzeyinde fork aynen sürer.
+- **İki "mobil" var; çıplak "mobil" YAZILMAZ (kullanıcı kararı 07.08):** müşteri yüzeyinin cihaz
+  forku **"mobil web"**dir (`*.mobile.tsx`, Playwright `mobile-web` projesi, `ui:shot`
+  `mobile-web.png`); `apps/mobile*` + `docs/uygulama` ise **"native uygulama"**. Metinde, yorumda,
+  script çıktısında ve talep imzasında hangisi kastediliyorsa o terim kullanılır.
 - **Dosya adları:** `page` · `<f>-client` · `<f>.desktop/.mobile` · `<f>-types.ts` (tip dosyası "view" değil).
 - **Komponent yerleşimi:** paylaşılan → `components/{customer,operation}/` (`ui/`+`form/`); sayfaya-özel → `<sayfa>/components/`. Ham `<input>/<select>` son çare, form kitini kullan. → STACK §7,§9
 - **URL:** iç yol İngilizce, dış URL dile göre (fr/de/tr); operasyon öneksiz ama segment yine İngilizce (`/operations/products`). Yeni müşteri rotası → `routing.ts` pathnames. → SEO_I18N
@@ -123,5 +127,5 @@ Sipariş durum makinesi → `ORDER_LIFECYCLE` · i18n/SEO → `SEO_I18N` ·
 Log / hata izleme / sistem sağlığı → `OBSERVABILITY` (iş kaydı DEĞİL — ayrım §1'de) ·
 Faz 2 niyeti: MCP ile sınırlı AI yönetici asistanı → `AI_ADMIN_ASSISTANT` (karar değil; bugünkü kararlar bu hedefin önünü kapatmasın) ·
 Blueprint'ten sapmalar → `ARCHITECTURE_DECISIONS` · Modül planı + durum → `docs/build/NN-*.md` · Kapsam listesi → `BACKLOG` ·
-Tasarım ↔ kod açığı (çizili ama kodlanamayan, bilinçli sapmalar) → `design/BACKLOG.md`.
+Tasarım ↔ kod açığı (yalnız AÇIK maddeler) → `design/BACKLOG.md` · kapanmış tasarım kararları ve bilinçli sapmalar (yeniden tartışılmaz) → `design/KARARLAR.md`.
 Tam navigasyon: `docs/architecture/README.md`.

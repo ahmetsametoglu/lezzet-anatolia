@@ -20,8 +20,9 @@ Anlık ekran bakışı için test yazmaya gerek yok: `pnpm ui:shot <yol>`.
    `db:refresh` hiçbir koşuda ön şart değildir. Küresel tekil satıra (settings) dokunma.
 4. **Görüntü assertion DEĞİL, artefakttır.** Piksel-diff yok (UI oynakken kırmızı gürültü olur —
    Kademe 3'te yeniden bakılır); düşüşte görüntü+iz `.test-results/e2e/` altına kendiliğinden düşer.
-5. **Her senaryo iki projede koşar** (desktop + mobile — cihaz forkunun iki yüzü). Mobilde
-   kırılan bir akış, forkun mobil yarısının işidir; testi daraltma (`test.skip` yazma), ekranı düzelt.
+5. **Her senaryo iki projede koşar** (desktop + mobile-web — cihaz forkunun iki yüzü; ad BİLEREK
+   `mobile-web`, native uygulamayla karışmasın — CLAUDE §2). Mobil webde kırılan bir akış, forkun
+   mobil web yarısının işidir; testi daraltma (`test.skip` yazma), ekranı düzelt.
 
 ## Koşu gerçeği (04.08 ölçümü · 06.08 vakası) — önce ÖN-UÇUŞ, tam paket SAKİN pencerede
 

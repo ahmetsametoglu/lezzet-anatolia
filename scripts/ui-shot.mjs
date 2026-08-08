@@ -3,10 +3,11 @@
  * `pnpm ui:shot <yol> [<yol> …]` — ajanlara GÖZ (00.9 Kademe 1, kullanıcı kararı 03.08).
  *
  * ÇALIŞAN dev server'daki sayfayı açar (build yok, DB şartı yok) ve `.ui-shots/<slug>/` altına:
- *   - müşteri yollarında: `desktop.png` (1440×900) + `mobile.png` (iPhone 13) — cihaz forku iki yüzüyle
+ *   - müşteri yollarında: `desktop.png` (1440×900) + `mobile-web.png` (iPhone 13) — cihaz forku iki yüzüyle
+ *     (ad BİLEREK `mobile-web`: native uygulamayla karışmasın — CLAUDE §2)
  *   - operasyon yollarında (`/operations…`): `desktop.png` + `desktop-dark.png` (token'lar dönüyor mu)
- *     — mobil çekim YOK: operasyon web'i masaüstü-yalnız (06.08), mobil deneyim native uygulamada
- *     (`docs/uygulama`)
+ *     — mobil web çekimi YOK: operasyon web'i masaüstü-yalnız (06.08), personelin mobil deneyimi
+ *     native uygulamada (`docs/uygulama`)
  *   - `console.txt` — sayfanın konsol hataları/uyarıları + başarısız istekler (boşsa dosya yok)
  *
  * Ekran yapan şerit anlık çağırır ("nasıl görünüyor?"); tasarım/fork denetimi görüntüden okunur.
@@ -74,11 +75,11 @@ for (const path of paths) {
   const allLogs = [];
   allLogs.push(...(await shoot(browser, path, 'desktop', { viewport: { width: 1440, height: 900 } })));
   if (path.startsWith('/operations')) {
-    // Mobil çekim yok (masaüstü-yalnız, 06.08); onun yerine karanlık mod: `data-theme` sistem
+    // Mobil web çekimi yok (masaüstü-yalnız, 06.08); onun yerine karanlık mod: `data-theme` sistem
     // tercihinden türer (theme-toggle.tsx) — emülasyon yeter.
     allLogs.push(...(await shoot(browser, path, 'desktop-dark', { viewport: { width: 1440, height: 900 }, colorScheme: 'dark' })));
   } else {
-    allLogs.push(...(await shoot(browser, path, 'mobile', { ...devices['iPhone 13'] })));
+    allLogs.push(...(await shoot(browser, path, 'mobile-web', { ...devices['iPhone 13'] })));
   }
   if (allLogs.length > 0) writeFileSync(join(dir, 'console.txt'), allLogs.join('\n') + '\n');
 }

@@ -36,9 +36,9 @@ Yok — ilk modül.
 - [x] (00.8) `.env.example` + README (lokal kurulum üç adımda)
   - *Bitti:* temiz klonda README takip edilerek proje ayağa kalkıyor
 - [~] (00.9) **Playwright — önce GÖZ, sonra duman** (kullanıcı kararı 03.08; denetim etüdü) · `touches: playwright.config.ts, scripts/ui-shot.mjs, e2e/**, package.json`
-  - **Durum (03.08) — ÇEKİRDEK KURULDU (denetim ajanı, kullanıcı talimatıyla):** `pnpm ui:shot <yol>` (desktop+mobile+ops-karanlık görüntü + konsol dökümü → `.ui-shots/`, dev kapalıysa net mesaj) · `playwright.config.ts` (iki proje = fork'un iki yüzü; `webServer` bilerek yok — dev'i kullanıcı yönetir; artefakt yalnız düşüşte) · `pnpm test:e2e` (test kilidine bağlı) · iki DENEME dumanı (`e2e/customer/storefront` · `e2e/operations/panel` — kaba yapısal iddialar, örnek olsun diye) · **şerit disiplini `e2e/README.md`'de beş kural** (senaryo kaynağı tasarım+DOMAIN; çapraz yazım; §4b veri disiplini; görüntü=artefakt; iki proje).
+  - **Durum (03.08) — ÇEKİRDEK KURULDU (denetim ajanı, kullanıcı talimatıyla):** `pnpm ui:shot <yol>` (desktop+mobile-web+ops-karanlık görüntü + konsol dökümü → `.ui-shots/`, dev kapalıysa net mesaj) · `playwright.config.ts` (iki proje = fork'un iki yüzü; `webServer` bilerek yok — dev'i kullanıcı yönetir; artefakt yalnız düşüşte) · `pnpm test:e2e` (test kilidine bağlı) · iki DENEME dumanı (`e2e/customer/storefront` · `e2e/operations/panel` — kaba yapısal iddialar, örnek olsun diye) · **şerit disiplini `e2e/README.md`'de beş kural** (senaryo kaynağı tasarım+DOMAIN; çapraz yazım; §4b veri disiplini; görüntü=artefakt; iki proje).
   - **DUYURU — Kademe 2 senaryolarını DENETİM AJANI yazar (kullanıcı kararı 03.08, çapraz-yazım kararının yerine geçti):** denetmen hiçbir ekranın kodunu yazmadı ("bilen ama yazmayan"), kaynak yine tasarım+DOMAIN. **HENÜZ BAŞLAMADI** — kullanıcı işaret edince başlar. Şeritler `e2e/`ye senaryo AÇMAZ; senaryolara itiraz/katkı `e2e/README`'deki döngüyle. **Bakım ekran sahibinde** (ekranı değiştirip testi kızartan düzeltir). Sınırların tamamı `e2e/README.md`'de.
-  - **Canlı doğrulama yapıldı (03.08):** `ui:shot` 5 görüntü + konsol dökümü; duman 8/8 yeşil (iki kurulum pürüzü giderildi: dev-yoklama 15 sn, mobil profil chromium'a sabit — gerçek WebKit Kademe 3).
+  - **Canlı doğrulama yapıldı (03.08):** `ui:shot` 5 görüntü + konsol dökümü; duman 8/8 yeşil (iki kurulum pürüzü giderildi: dev-yoklama 15 sn, mobil web profili chromium'a sabit — gerçek WebKit Kademe 3).
   - **Kademe 2 · Parti 1 İNDİ (04.08, denetim — kullanıcı işaretiyle):** iki müşteri salt-okur
     yolculuğu (`katalog → ürün → sepete ekle → sepette görünür` · `fr/de/tr rota sözlüğü + İngilizce
     iç yolun dış kelimeye yönlenişi`). Yol üstünde iki ortam kararı: gezinmeler `domcontentloaded`
@@ -79,9 +79,10 @@ Yok — ilk modül.
     `apps/web/.env.local`'da olmalı (iki restart'a mal oldu); *(2)* kod girişi 6 AYRI kutu —
     tek-alan fill "incorrect" üretir, klavyeden yazılır; *(3)* doğrulama bu aşamada YALNIZ
     `auth.users` açıyor (profil sonra bağlanıyor) — temizlik admin API'den e-postayla bulur.
-    **Sınır:** sabit kodla TEK doğrulama (`BEKLEYEN(08.22)` — hash tekilliği kısıtı arka uçta);
-    her koşu kendi satırını purge'ler, iki proje bu sayede sırayla temiz. Katman 2 (gerçek Resend
-    teslimat provası, kod API'den geri okunur) Kademe 3'ün işi.
+    ~~Sınır: sabit kodla TEK doğrulama (`BEKLEYEN(08.22)`)~~ **SINIR KALKTI (07.08, arka-uc):**
+    küresel `token_hash` tekilliği yerine "e-posta başına tek aktif kod" kondu — sabit kod koşuda
+    istenen sayıda e-postayla çalışır, OTP senaryoları çoğalabilir. Her koşu kendi satırını yine
+    purge'ler. Katman 2 (gerçek Resend teslimat provası, kod API'den geri okunur) Kademe 3'ün işi.
   - **Parti 5b İNDİ (07.08, kullanıcı sorusundan doğdu):** KISMÎ stok azalması — sepette 2 adet
     varken stok 1'e düşer: adet DEĞİŞMEZ (sessiz eksiltme yok), tavan cümlesi + "Réduire à 1"
     düğmesi çıkar; düzeltme MÜŞTERİNİN tıklamasıyla iner, cümle tavandayken bilgi olarak kalır
@@ -90,7 +91,7 @@ Yok — ilk modül.
     beklemek YANLIŞTI — sözleşme kodda okundu, iddia ona hizalandı (bulgu-doğrulama disiplini).
   - Kalan: mal kabulün UI adımı (10.4 ekranı inince `stock-intake` yazım adımı UI'a taşınır,
     iddialar aynı kalır) + Katman 2 gerçek-OTP provası (Kademe 3).
-  - **Kademe 1 — `pnpm ui:shot <yol>`:** ÇALIŞAN dev server'daki sayfayı açar (`reuseExistingServer` — build YOK), **desktop + mobile** (cihaz forku gereği ikisi de) ve operasyon yollarında **karanlık mod** görüntüsünü `.ui-shots/`a yazar; sayfanın konsol hatalarını da yanına döker. Amaç test değil, ajanlara GÖZ: ekran yapan şerit anlık çağırır, tasarım/fork denetimi görüntüden okunur. DB şartı yok.
+  - **Kademe 1 — `pnpm ui:shot <yol>`:** ÇALIŞAN dev server'daki sayfayı açar (`reuseExistingServer` — build YOK), **desktop + mobile-web** (cihaz forku gereği ikisi de) ve operasyon yollarında **karanlık mod** görüntüsünü `.ui-shots/`a yazar; sayfanın konsol hatalarını da yanına döker. Amaç test değil, ajanlara GÖZ: ekran yapan şerit anlık çağırır, tasarım/fork denetimi görüntüden okunur. DB şartı yok.
   - **Kademe 2 — ~10 duman yolculuğu** (aynı kurulum, dev server'a karşı): müşteri (vitrin→ürün→sepet→checkout taslağı Stripe sınırına dek · misafir OTP · fr/de/tr rotaları · sipariş onayı) + operasyon (rol yönlendirmesi · kuyruk→hazırlık · mal kabul · para ekranı). **Veri disiplini entegrasyon testleriyle AYNI** (§4b): okuyan test seed'in deterministik satırları, yazan test damgalı veri + `purgeTestData`; **`db:refresh` hiçbir koşuda ön şart DEĞİL.** Koşu test kilidine girer (DB'ye vuruyor). Görüntüler assertion değil ARTEFAKT (piksel-diff yok — UI oynakken kırmızı gürültü üretir).
   - **Kademe 3 — ERTELENDİ (canlı öncesi):** production-build koşusu + geniş regresyon + piksel-diff kararı. Bugün kurulmaz.
   - Müşteri OTP'si için test ortamında kod-yakalama kapısı gerekir (Resend'e gitmeden) — Kademe 2'nin tek yeni parçası; tasarımı iskeleti alan şeridin.

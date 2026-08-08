@@ -41,6 +41,13 @@ kullanıcı kurye değildir. Böyle gözlemler artık buraya düşer:
 üçü de aynı dosyada diyalog kurar (kurallar dosyanın başında). Başka konuya emsal DEĞİLDİR —
 yeni bir ortak dosya ancak kullanıcı kararıyla açılır.
 
+## İstisna 2: `koordinasyon-web-mobil.md` (kullanıcı kararı 07.08 — KURUM)
+
+Web sorumlusu (denetim; altında arka-uc · operasyon · musteri) ile native uygulama sorumlusunun
+(mobil; altında expo · mobil-backend) **kalıcı diyalog defteri**. Alt ajanlar sınır aşan konuda
+birbirine doğrudan yazmaz — kendi sorumlusuna iletir, sorumlular defterde konuşup işi dağıtır.
+Protokol dosyanın başında; iki sorumlu da oturum başında bakar.
+
 ```markdown
 # Not: <kısa başlık>
 
