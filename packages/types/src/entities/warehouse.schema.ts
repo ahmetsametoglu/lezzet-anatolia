@@ -1,0 +1,156 @@
+import { z } from 'zod';
+import { dbNumeric } from '../primitives/db-numeric';
+import { CountryEnum, TransferStatusEnum } from '../primitives/enums.schema';
+
+// Depo ağı şemaları (DOMAIN §17, data-model/depo.md). Sistem tek depo varsayımıyla kuruldu;
+// bu dosya o varsayımın kalktığı yerdir.
+//
+// Depo müşteriye GÖSTERİLMEZ — altın kural: sistemin karmaşıklığı arayüze yansımaz. Müşteri posta
+// kodunu girer, gerisi içeride çözülür (posta kodu → bölge → depo).
+
+// ── Warehouse ───────────────────────────────────────────────────────────────
+
+export const WarehouseSchema = z.object({
+  id: z.string().uuid(),
+  /** Belge numarasına ve ekrana giren kısa kod ('STR'). `IMH-STR-26-0012` elle yazılacak kadar kısa. */
+  code: z.string(),
+  name: z.string(),
+  /**
+   * Deponun ülkesi — FİZİKSEL tesis nerede. Bölgenin ülkesiyle karıştırılmamalı: bir bölge sınır
+   * ötesi olabilir (ADR-002), depo olamaz. KDV'nin bağlı olduğu alan da budur (DOMAIN §5/§17).
+   */
+  countryCode: CountryEnum,
+  address: z.record(z.unknown()).nullable(),
+  /** Kargo çıkış deposu. Ülke başına en fazla bir aktif tane — kural veritabanında (0042). */
+  shipsOnline: z.boolean(),
+  isActive: z.boolean(),
+  sortOrder: z.number().int(),
+  createdAt: z.string(),
+});
+export type Warehouse = z.infer<typeof WarehouseSchema>;
+
+export const WarehouseInsertSchema = z.object({
+  code: z.string().min(1),
+  name: z.string().min(1),
+  countryCode: CountryEnum.optional(),
+  address: z.record(z.unknown()).nullish(),
+  shipsOnline: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+});
+export type WarehouseInsert = z.infer<typeof WarehouseInsertSchema>;
+
+export const WarehouseUpdateSchema = WarehouseSchema.partial().required({ id: true });
+export type WarehouseUpdate = z.infer<typeof WarehouseUpdateSchema>;
+
+// ── Vehicle — KALDIRILDI (02.11, 03.08) ─────────────────────────────────────
+// Şema `vehicle` tablosuyla birlikte düştü: tablonun servisi yoktu, `from('vehicle')` hiçbir yerde
+// geçmiyordu ve hiçbir tasarım sayfası aracı bir VARLIK olarak kullanmıyordu.
+//
+// Tip tek başına bırakılsaydı daha kötü olurdu: karşılığı olmayan bir `Vehicle` tipi, okuyanı
+// "araçlar sistemde tutuluyor" diye inandırır ve ilk kullananı çalışma zamanında (tablo yok)
+// karşılar. Gerekçe: `data-model/depo.md` › Vehicle.
+
+// ── Depo bazlı asgari stok eşiği (C6) ───────────────────────────────────────
+// Varyanttaki `minStockQty` VARSAYILAN kalır; bu satır yalnız İSTİSNA yazar (fiyatın
+// müşteriye-özel satır deseni). Satır yoksa genel eşik işler.
+
+export const WarehouseVariantThresholdSchema = z.object({
+  warehouseId: z.string().uuid(),
+  variantId: z.string().uuid(),
+  minStockQty: z.number().int().nonnegative(),
+});
+export type WarehouseVariantThreshold = z.infer<typeof WarehouseVariantThresholdSchema>;
+
+// Ayrı bir `Insert` şeması YOK: üç alanın üçü de zorunlu — yazım ile okuma aynı şekil.
+
+// ── Transfer (K11, T4) ──────────────────────────────────────────────────────
+// İki fiziksel-gerçek an: sevk → kabul. Yoldaki mal hiçbir depoda satılamaz çünkü hiçbir deponun
+// stoğunda değildir — sanal "transit depo" yoktur, "yolda ne var" bu kaydın kendisidir.
+
+export const WarehouseTransferSchema = z.object({
+  id: z.string().uuid(),
+  fromWarehouseId: z.string().uuid(),
+  toWarehouseId: z.string().uuid(),
+  status: TransferStatusEnum,
+  /** TRF-STR-26-0007 — kaynak deponun kodu; kâğıt klasör o depoda durur. */
+  referenceNo: z.string(),
+  dispatchedBy: z.string().uuid().nullable(),
+  dispatchedAt: z.string(),
+  receivedBy: z.string().uuid().nullable(),
+  receivedAt: z.string().nullable(),
+  /** Sevk kaydının geri alınması (19.6) — `received*`'tan AYRI: "kabul edildi" ile "hiç çıkmamış" aynı şey değil. */
+  cancelledBy: z.string().uuid().nullable(),
+  cancelledAt: z.string().nullable(),
+  /** Geri almanın gerekçesi — `note` sevk anının notudur, bu onu iptal eden kararın. */
+  cancelReason: z.string().nullable(),
+  note: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type WarehouseTransfer = z.infer<typeof WarehouseTransferSchema>;
+
+export const WarehouseTransferLineSchema = z.object({
+  id: z.string().uuid(),
+  transferId: z.string().uuid(),
+  sourceStockId: z.string().uuid(),
+  qty: z.number().int(),
+  /** Kabulde hedefte doğan YENİ parti (T4: parti kimliği korunur, birleşmez). */
+  targetStockId: z.string().uuid().nullable(),
+  /** null = henüz kabul edilmedi. 0 = "geldi ama kayıp" — ikisi ayrı şeydir (0042). */
+  receivedQty: z.number().int().nullable(),
+});
+export type WarehouseTransferLine = z.infer<typeof WarehouseTransferLineSchema>;
+
+/** Sevk isteği tek kalemi — hangi partiden ne kadar. */
+export const DispatchLineSchema = z.object({
+  sourceStockId: z.string().uuid(),
+  qty: z.number().int().positive(),
+});
+export type DispatchLine = z.infer<typeof DispatchLineSchema>;
+
+/**
+ * Kabul isteği tek kalemi. `receivedQty` sıfır OLABİLİR ve bu bir beyandır ("sevk edildi ama
+ * gelmedi"); satırı hiç göndermemek ise kabulü bloklar — eksik satır transferi kapatamaz.
+ */
+export const ReceiveLineSchema = z.object({
+  lineId: z.string().uuid(),
+  receivedQty: z.number().int().nonnegative(),
+});
+export type ReceiveLine = z.infer<typeof ReceiveLineSchema>;
+
+export const DispatchTransferResultSchema = z.object({
+  ok: z.boolean(),
+  transferId: z.string().uuid(),
+  referenceNo: z.string(),
+});
+export type DispatchTransferResult = z.infer<typeof DispatchTransferResultSchema>;
+
+export const ReceiveTransferResultSchema = z.object({
+  ok: z.boolean(),
+  transferId: z.string().uuid(),
+  createdBatches: z.number().int(),
+});
+export type ReceiveTransferResult = z.infer<typeof ReceiveTransferResultSchema>;
+
+/** `restoredLines` — kaynağa geri yazılan parti sayısı; ekran "3 parti geri alındı" diyebilsin. */
+export const CancelTransferResultSchema = z.object({
+  ok: z.boolean(),
+  transferId: z.string().uuid(),
+  restoredLines: z.number().int(),
+});
+export type CancelTransferResult = z.infer<typeof CancelTransferResultSchema>;
+
+// ── Tedarik ilerlemesi (K6) ─────────────────────────────────────────────────
+// `purchase_order_progress` görünümü: PO durumu saklanan sayaçtan değil BURADAN türer. Ölçü
+// `initialQty` — `physicalQty` satışla erir ve "ne kadar geldi" sorusuna yanlış cevap verir.
+
+export const PurchaseOrderProgressSchema = z.object({
+  purchaseOrderId: z.string().uuid(),
+  purchaseOrderItemId: z.string().uuid(),
+  variantId: z.string().uuid(),
+  targetWarehouseId: z.string().uuid().nullable(),
+  orderedQty: z.number().int(),
+  receivedQty: dbNumeric,
+  missingQty: dbNumeric,
+});
+export type PurchaseOrderProgress = z.infer<typeof PurchaseOrderProgressSchema>;

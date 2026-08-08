@@ -37,7 +37,7 @@ Tüm veri modelinin **tek kaynak** Zod şemaları: varlıklar, enum'lar, `Locali
 - [~] (01.10) Insert/Update türevleri (id/created_at hariç tutan `.omit()/.partial()` türevleri) — servis katmanının kullanacağı biçimler
   - *Bitti:* en az Order/Customer/Product için türev tipler derleniyor
 - [ ] (01.11) `README` (paket içi): şema ekleme kuralı — "önce DATA_MODEL, sonra şema; çelişkide doküman güncellenir"
-- [ ] (01.12) **`schemas/` klasörüne eksen düzeni (kullanıcı kararı 08.08):** DB modelleri ile
+- [x] (01.12) **`schemas/` klasörüne eksen düzeni (kullanıcı kararı 08.08):** DB modelleri ile
   öteki şemalar tek düzlemde durmayacak — "modeller birbirine girmemeli". Ölçüldü (08.08): 48
   dosyada üç eksen iç içe: **DB satır aynaları** (product, order, money, cart, …), **yüzey
   sözleşmeleri** (`auth`, `catalog-api`, `me-api` — kendi künyeleri "sözleşme" diyor), **yapı
@@ -50,6 +50,15 @@ Tüm veri modelinin **tek kaynak** Zod şemaları: varlıklar, enum'lar, `Locali
   commit'lenmemiş işi var (conversation/enums/order) — çakışan iş aynı anda başlamaz (CLAUDE §5);
   taşıma onların commit penceresinden sonra TEK harekette yapılır (defter girdisi 08.08).
   `touches: packages/types (yapı), docs/architecture/STACK.md §5 (kural satırı)`
+  - **Durum (08.08 — TAMAMLANDI):** `schemas/` kalktı → `src/{primitives(6),entities(38),contracts(4)}/`
+    (50 `git mv`, tarih korundu). `notification.schema.ts` → `contracts` (yönetici onayı: künyesi
+    "görünüm modelidir, tablo değil" diyor; üç paketin ortak dili). İhraç eşitliği makineyle
+    kanıtlandı: önce/sonra 721 ihraç, ad+tür+tip imzası md5 eşit. `layering.test.ts` yönü import
+    satırlarından zorlar (kasıtlı ihlalle ısırdığı kanıtlandı; bugünkü ihlal: sıfır — primitives
+    içi yatay kenarlar meşru, kural katman SIRASI). `docs-check` şema keşfi üç klasörü tarar.
+    Bölünme adayları (davranış değişmedi, rapora): `analytics` (girdi sözleşmesi + ayna),
+    `image` (şekil + politika), `user-profile` (`FindOrCreateInput`), `enums` (78 ihraç, aile
+    bazlı bölünme). Doğrulama: typecheck 17/17 · birim 1103 · lint/knip/boundaries temiz.
 
 **Modül durumu (26.07.2026):** artımlı ilerliyor — şemalar ihtiyaç duyan modülle birlikte yazılıyor (toptan değil, CLAUDE.md §1).
 - **Var:** `LocalizedText`, `UserProfile`, `EmailVerification`, `Category`, `Collection`, `Product`, `ProductVariant`, `ProductCollection` + hepsinin Insert/Update türevleri; enum'lardan `ProductAllergen`, `ProductDateType`.

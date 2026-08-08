@@ -35,7 +35,7 @@
 
 ## Görevler
 
-- [x] (13.1) **Olay toplama:** sunucu-tarafı `AnalyticsEvent`; çerezsiz oturum anahtarı; **kişisel kimlik YOK** · `touches: supabase/migrations/0035_analytics.sql, packages/types/src/schemas/analytics.schema.ts, packages/database/src/services/analytics.service.ts, apps/web/lib/analytics/**, apps/backend/src/jobs/analytics-rollup.ts`
+- [x] (13.1) **Olay toplama:** sunucu-tarafı `AnalyticsEvent`; çerezsiz oturum anahtarı; **kişisel kimlik YOK** · `touches: supabase/migrations/0035_analytics.sql, packages/types/src/entities/analytics.schema.ts, packages/database/src/services/analytics.service.ts, apps/web/lib/analytics/**, apps/backend/src/jobs/analytics-rollup.ts`
   - **`product_swipe` BU LİSTEDE DEĞİL (29.07):** beğen/geç bir iz değil bir beyandır — puan kazandırır, kişiye bağlanır, "aynı ürüne bir kez" tekilliği ister. `ProductFeedback`'te yaşar (17.3). Analitik yalnız müşteriyi tanımadan toplanan gezinme izini tutar; "toplu ölçüm, banner gerekmez" iddiası buna dayanır.
   - ~~giriş varsa opsiyonel `customer_id`~~ — **kolon YOK, nullable bile değil** (kullanıcı kararı 04.08 · `ANALYTICS §2`). Başlıktaki eski söz üstü çizildi: nullable bir kimlik "opsiyonel" değil KARARSIZdır ve şema kararsız kalınca kararı her okuma kendi verir.
   - *Bitti:* olaylar cihaza yazmadan kaydediliyor; parmak izi yok

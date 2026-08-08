@@ -24,7 +24,7 @@ WhatsApp'ın satış yüzeyi olarak kurulması — **iki adımda, ikisi de Faz 1
 
 ### Adım 1 — Zemin (elle işleme)
 
-- [x] (15.1) `Conversation` + `Message` servisleri ve elle konuşma/mesaj kaydı (admin, gelen DM'i işler) `touches: supabase/migrations/0039_conversation.sql, packages/types/src/schemas/conversation.schema.ts, packages/database/src/services/conversation.service.ts, packages/domain-core/src/messaging/**, apps/web/lib/whatsapp/**`
+- [x] (15.1) `Conversation` + `Message` servisleri ve elle konuşma/mesaj kaydı (admin, gelen DM'i işler) `touches: supabase/migrations/0039_conversation.sql, packages/types/src/entities/conversation.schema.ts, packages/database/src/services/conversation.service.ts, packages/domain-core/src/messaging/**, apps/web/lib/whatsapp/**`
   - *Bitti:* konuşma açılıyor, mesajlar yön/tür ile kaydediliyor; alanlar `DATA_MODEL.md` ile birebir
   - **Durum (08.08 · arka uç):** `0039_conversation.sql` — `conversation` + `message`, `ConversationService`/`MessageService`, uygulama kapısı `apps/web/lib/whatsapp/conversation.ts`. Alanlar `docs:check` nöbetine alındı (veri modeli ↔ migration ↔ Zod artık makineyle karşılaştırılıyor).
   - **Bir kişi, bir konuşma:** tekillik `(source, external_ref)` üzerinde. WhatsApp'ta thread kavramı yok — aynı numaradan gelen her mesaj aynı sohbetin devamıdır; indeks olmasaydı ikinci mesaj yeni satır açar, admin aynı müşteriyi gelen kutusunda iki kez görür, AI ajanı geçmişin yarısını okurdu. Açılış tek deyimlik upsert (`open_conversation`): oku-sonra-yaz yarışır ve adım 2'de arka arkaya gelen iki mesajın ikincisi kaybolurdu.

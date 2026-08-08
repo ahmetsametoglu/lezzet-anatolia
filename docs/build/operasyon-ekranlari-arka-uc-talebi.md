@@ -300,7 +300,7 @@ Ekran yazıldı ve çalışıyor; aşağıdaki üçü olmadan da ayakta ama ikis
 kendi künyesi depo bazlı olmaya aday değerleri de sayıyor (kesim saati, rota teslimat birim maliyeti,
 paketleme maliyeti, minimum sepet — "kâr hesabına girer, global kalırsa kâr sessizce yanlışlaşır").
 
-`packages/types/src/schemas/setting.schema.ts` ise DÖRT değerli — `warehouse` yok. `SettingScopeContext`'te
+`packages/types/src/entities/setting.schema.ts` ise DÖRT değerli — `warehouse` yok. `SettingScopeContext`'te
 de `warehouseId` yok, dolayısıyla `SettingsService`'in `SCOPE_PRIORITY`'si onu hiç aramıyor.
 
 Sonuç: depo kapsamlı bir satır bugün yazılsa **okuma tarafında Zod'a takılır** (`SettingSchema.parse`).

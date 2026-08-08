@@ -124,6 +124,16 @@ helper    brand / i18n / storage / email / notify / domain-core
 
 Her entity için üç şema, tek dosyada. Kurallar genel blueprint ile aynı (camelCase, `z.infer`, alan yorumu tek dokümantasyon, min/max hem Zod hem DB `check`).
 
+**Eksen düzeni (kullanıcı kararı 08.08, görev 01.12):** paket üç klasördür ve modeller birbirine
+girmez — `src/primitives/` (tabloya ait olmayan yapı taşları: `db-numeric`, `enums`,
+`localized-text`, `pagination`…), `src/entities/` (DB satır aynaları), `src/contracts/` (yüzey
+sözleşmeleri: `auth`, `catalog-api`, `me-api`, `notification` — üreten ile tüketenin ortak dili,
+tablo değil). Bağımlılık yönü `primitives ← entities ← contracts` (aynı katman içi serbest,
+yukarı bakmak yasak) ve `layering.test.ts` bunu import satırlarından makineyle zorlar. Dış
+görünüm tek barrel'dır (`@lezzet/types`); tüketici klasör adını bilmez, derin import yazmaz.
+Yeni şemanın yeri içeriğinden okunur: satır aynası mı → `entities`, yüzeyler arası zarf mı →
+`contracts`, gömülü şekil mi → `primitives`.
+
 **Bu projeye özgü — çok dilli alan tipi:**
 
 ```ts

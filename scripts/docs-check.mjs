@@ -170,12 +170,19 @@ function zodFields(src, name, seen = new Set()) {
   return [...topLevelKeys(body), ...merged];
 }
 
-/** Tüm şema dosyalarını birleştirir — `.merge()` başka dosyadaki şemayı işaret edebilir. */
+/**
+ * Tüm şema dosyalarını birleştirir — `.merge()` başka dosyadaki şemayı işaret edebilir.
+ * Şemalar 01.12'de üç eksene bölündü (`primitives` / `entities` / `contracts`); ÜÇÜ DE taranır,
+ * çünkü birleşme her yöne olabilir ve gözden kaçan klasör denetimi sessizce eksiltir.
+ */
 function allSchemaSrc() {
-  const dir = 'packages/types/src/schemas';
-  return readdirSync(join(ROOT, dir))
-    .filter((f) => f.endsWith('.ts'))
-    .map((f) => read(`${dir}/${f}`))
+  const dirs = ['packages/types/src/primitives', 'packages/types/src/entities', 'packages/types/src/contracts'];
+  return dirs
+    .flatMap((dir) =>
+      readdirSync(join(ROOT, dir))
+        .filter((f) => f.endsWith('.ts'))
+        .map((f) => read(`${dir}/${f}`)),
+    )
     .join('\n');
 }
 

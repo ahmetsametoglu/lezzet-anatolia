@@ -490,7 +490,7 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
 
 - **Tasarım onay ritmi:** hangi sayfa hangi sırada tasarlanıp onaylanacak (design/README: müşteri evreni ürün detayla başlar) — kodlama bu ritme uyar, toplu üretim yapılmaz.
 
-- [~] (08.13) **Checkout + sipariş alındı — sepetin ölü düğmesini kapatan iş** · `touches: apps/web/app/(customer)/[locale]/checkout/**, apps/web/lib/order/{checkout-draft,checkout-session,stripe-webhook}.ts, apps/web/lib/stripe-client.ts, apps/web/app/api/webhooks/stripe/route.ts, apps/web/i18n/routing.ts, packages/types/src/schemas/address.schema.ts, supabase/migrations/0011_customer_fields.sql`
+- [~] (08.13) **Checkout + sipariş alındı — sepetin ölü düğmesini kapatan iş** · `touches: apps/web/app/(customer)/[locale]/checkout/**, apps/web/lib/order/{checkout-draft,checkout-session,stripe-webhook}.ts, apps/web/lib/stripe-client.ts, apps/web/app/api/webhooks/stripe/route.ts, apps/web/i18n/routing.ts, packages/types/src/entities/address.schema.ts, supabase/migrations/0011_customer_fields.sql`
   - **Neden şimdi:** sepetteki "Ödemeye geç" düğmesi görünüyor ama hiçbir yere gitmiyordu (`checkoutPending`). Arka uç 07'de bitmişti — ama bir halkası eksikti (aşağıda).
   - **Engel kararı 04.08'de TEK kapıya alındı** (`checkoutBlocker`) ve bu turda kart ödemesi formunun sepetteki gönderilemeyen kalemi görmediği ortaya çıktı — ayrıntı ve gerekçe `08.9` altında (analitiğin "sebep tipli olmalı" kuralı bu düzeltmeyi doğurdu).
   - **Durum (28.07 · birinci tur):** `/checkout` + `/checkout/[reference]` indi, üç dilde (`/odeme` · `/commande` · `/kasse`), web ve mobil.
