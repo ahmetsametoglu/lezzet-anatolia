@@ -31,6 +31,7 @@ export type NavIconName =
   | 'fiyatlar'
   | 'tarifler'
   | 'hazirlik'
+  | 'malkabul'
   | 'stock'
   | 'satinalma'
   | 'depolar'
@@ -96,6 +97,15 @@ const NAV_PATHS: Record<NavIconName, ReactNode> = {
       <path d="M9 3h6v3H9z" />
       <path d="M15 4.5h2.5A1.5 1.5 0 0 1 19 6v13.5A1.5 1.5 0 0 1 17.5 21h-11A1.5 1.5 0 0 1 5 19.5V6a1.5 1.5 0 0 1 1.5-1.5H9" />
       <path d="m8.5 13 2 2 4-4" />
+    </>
+  ),
+  // Mal kabul — kutu, içine inen okla. Yön ŞART: aynı kutu çıkışı da anlatabilirdi ve depo grubunda
+  // giren malla çıkan malın ekranları yan yana duruyor.
+  malkabul: (
+    <>
+      <path d="M4 9h16v10.5A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5z" />
+      <path d="M12 3v5" />
+      <path d="m9.5 6 2.5 2.5L14.5 6" />
     </>
   ),
   stock: (
