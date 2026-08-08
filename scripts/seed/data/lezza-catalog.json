@@ -12,7 +12,8 @@
         "tr": "Fırın",
         "fr": "Boulangerie",
         "de": "Backwaren"
-      }
+      },
+      "imageUrl": "https://lezzafoods.eu/wp-content/uploads/2026/04/Adsiz-tasarim-17.webp"
     },
     {
       "key": "dessert",
@@ -20,7 +21,8 @@
         "tr": "Tatlı",
         "fr": "Desserts",
         "de": "Süßspeisen"
-      }
+      },
+      "imageUrl": "https://lezzafoods.eu/wp-content/uploads/2026/04/Adsiz-tasarim-18.webp"
     },
     {
       "key": "cake",
@@ -28,7 +30,8 @@
         "tr": "Pasta",
         "fr": "Gâteaux",
         "de": "Torten"
-      }
+      },
+      "imageUrl": "https://lezzafoods.eu/wp-content/uploads/2026/04/cakes.webp"
     },
     {
       "key": "chicken",
@@ -36,7 +39,8 @@
         "tr": "Tavuk Ürünleri",
         "fr": "Produits de volaille",
         "de": "Geflügelprodukte"
-      }
+      },
+      "imageUrl": "https://lezzafoods.eu/wp-content/uploads/2026/06/Chicken-Products.webp"
     },
     {
       "key": "ice-cream",
@@ -44,7 +48,8 @@
         "tr": "Dondurma",
         "fr": "Glaces",
         "de": "Speiseeis"
-      }
+      },
+      "imageUrl": "https://lezzafoods.eu/wp-content/uploads/2026/04/Ice-Cream.webp"
     },
     {
       "key": "anatolian",
@@ -52,7 +57,8 @@
         "tr": "Anadolu Mutfağı",
         "fr": "Cuisine anatolienne",
         "de": "Anatolische Küche"
-      }
+      },
+      "imageUrl": "https://lezzafoods.eu/wp-content/uploads/2026/04/Fresh-Products.webp"
     }
   ],
   "products": [
@@ -814,14 +820,28 @@
       "sourceLanguage": "en",
       "category": "bakery",
       "brand": "Lezza",
-      "description": "Cheese Filled Pastry 130g – frozen uncooked Turkish cheese poğaça for wholesale and horeca supply. Bulk orders, authentic soft bakery, and private label manufacturing available.",
+      "description": "Cheese Filled Pastry 4x80g – 4 pre-baked Turkish cheese poğaça portions, heat and eat. For grocery retail, wholesale distribution, and private label supply.",
       "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Filled-Pastry-4x80g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Filled-Pastry-4x80g-01.webp",
         "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Filled-Pastry-130g.webp"
       ],
       "channels": [
+        "b2c",
         "b2b"
       ],
       "variants": [
+        {
+          "label": {
+            "tr": "4x80g",
+            "fr": "4x80g",
+            "de": "4x80g"
+          },
+          "netWeightG": 320,
+          "sku": "700202",
+          "sourceId": 9770,
+          "sourceSlug": "cheese-filled-pastry-4x80g"
+        },
         {
           "label": {
             "tr": "130g",
@@ -832,34 +852,6 @@
           "sku": "700210",
           "sourceId": 9767,
           "sourceSlug": "cheese-filled-pastry-130g"
-        }
-      ]
-    },
-    {
-      "slug": "cheese-filled-pastry-4x80g",
-      "name": {
-        "tr": "Cheese Filled Pastry 4x80g",
-        "fr": "Cheese Filled Pastry 4x80g",
-        "de": "Cheese Filled Pastry 4x80g"
-      },
-      "sourceLanguage": "en",
-      "category": "bakery",
-      "brand": "Lezza",
-      "description": "Cheese Filled Pastry 4x80g – 4 pre-baked Turkish cheese poğaça portions, heat and eat. For grocery retail, wholesale distribution, and private label supply.",
-      "imageUrls": [
-        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Filled-Pastry-4x80g.webp",
-        "https://lezzafoods.eu/wp-content/uploads/2026/04/Cheese-Filled-Pastry-4x80g-01.webp"
-      ],
-      "channels": [
-        "b2c"
-      ],
-      "variants": [
-        {
-          "label": null,
-          "netWeightG": null,
-          "sku": "700202",
-          "sourceId": 9770,
-          "sourceSlug": "cheese-filled-pastry-4x80g"
         }
       ]
     },
@@ -1742,14 +1734,27 @@
       "sourceLanguage": "en",
       "category": "bakery",
       "brand": "Lezza",
-      "description": "Gobit Bread 150g – frozen cooked Turkish gobit flatbread with pocket interior for döner and kebap service. Wholesale horeca supply and private label manufacturing from Lezza Foods.",
+      "description": "Gobit Bread 4x150g – 4 frozen cooked Turkish gobit pocket bread portions, heat and serve. Authentic flatbread for home kebap and sandwich use. Wholesale supply and private label.",
       "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Gobit-Bread-4x150g.webp",
         "https://lezzafoods.eu/wp-content/uploads/2026/04/Gobit-Bread-150g.webp"
       ],
       "channels": [
+        "b2c",
         "b2b"
       ],
       "variants": [
+        {
+          "label": {
+            "tr": "4x150g",
+            "fr": "4x150g",
+            "de": "4x150g"
+          },
+          "netWeightG": 600,
+          "sku": "701304",
+          "sourceId": 9923,
+          "sourceSlug": "gobit-bread-4x150g"
+        },
         {
           "label": {
             "tr": "150g",
@@ -1760,34 +1765,6 @@
           "sku": "701306",
           "sourceId": 9921,
           "sourceSlug": "gobit-bread-150g"
-        }
-      ]
-    },
-    {
-      "slug": "gobit-bread-4x150g",
-      "name": {
-        "tr": "Gobit Bread 4x150g",
-        "fr": "Gobit Bread 4x150g",
-        "de": "Gobit Bread 4x150g"
-      },
-      "sourceLanguage": "en",
-      "category": "bakery",
-      "brand": "Lezza",
-      "description": "Gobit Bread 4x150g – 4 frozen cooked Turkish gobit pocket bread portions, heat and serve. Authentic flatbread for home kebap and sandwich use. Wholesale supply and private label.",
-      "imageUrls": [
-        "https://lezzafoods.eu/wp-content/uploads/2026/04/Gobit-Bread-4x150g.webp",
-        "https://lezzafoods.eu/wp-content/uploads/2026/04/Gobit-Bread-150g.webp"
-      ],
-      "channels": [
-        "b2c"
-      ],
-      "variants": [
-        {
-          "label": null,
-          "netWeightG": null,
-          "sku": "701304",
-          "sourceId": 9923,
-          "sourceSlug": "gobit-bread-4x150g"
         }
       ]
     },
@@ -2011,57 +1988,46 @@
       ]
     },
     {
-      "slug": "lahmacun-3x180g",
+      "slug": "lahmacun",
       "name": {
-        "tr": "Lahmacun 3x180g",
-        "fr": "Lahmacun 3x180g",
-        "de": "Lahmacun 3x180g"
-      },
-      "sourceLanguage": "en",
-      "category": "bakery",
-      "brand": "Lezza",
-      "description": "Lahmacun 3x180g – 3 frozen cooked Turkish lahmacun portions, heat and eat. Authentic spiced meat flatbread for retail, wholesale supply, and private label.",
-      "imageUrls": [
-        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lahmacun-3x180g.webp",
-        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lahmacun-3x180g-01.webp"
-      ],
-      "channels": [
-        "b2c"
-      ],
-      "variants": [
-        {
-          "label": null,
-          "netWeightG": null,
-          "sku": "200103",
-          "sourceId": 9973,
-          "sourceSlug": "lahmacun-3x180g"
-        }
-      ]
-    },
-    {
-      "slug": "lahmacun-5x170g",
-      "name": {
-        "tr": "Lahmacun 5x170g",
-        "fr": "Lahmacun 5x170g",
-        "de": "Lahmacun 5x170g"
+        "tr": "Lahmacun",
+        "fr": "Lahmacun",
+        "de": "Lahmacun"
       },
       "sourceLanguage": "en",
       "category": "bakery",
       "brand": "Lezza",
       "description": "Lahmacun 5x170g – 5 frozen Turkish lahmacun for family meals. Authentic spiced flatbread with wholesale supply and private label from Lezza Foods.",
       "imageUrls": [
-        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lahmacun-3x180g-01.webp"
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lahmacun-3x180g-01.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Lahmacun-3x180g.webp"
       ],
       "channels": [
-        "b2b"
+        "b2b",
+        "b2c"
       ],
       "variants": [
         {
-          "label": null,
-          "netWeightG": null,
+          "label": {
+            "tr": "5x170g",
+            "fr": "5x170g",
+            "de": "5x170g"
+          },
+          "netWeightG": 850,
           "sku": "200105",
           "sourceId": 9976,
           "sourceSlug": "lahmacun-5x170g"
+        },
+        {
+          "label": {
+            "tr": "3x180g",
+            "fr": "3x180g",
+            "de": "3x180g"
+          },
+          "netWeightG": 540,
+          "sku": "200103",
+          "sourceId": 9973,
+          "sourceSlug": "lahmacun-3x180g"
         }
       ]
     },
@@ -2870,14 +2836,28 @@
       "sourceLanguage": "en",
       "category": "bakery",
       "brand": "Lezza",
-      "description": "Plain Pastry 130g – frozen uncooked Turkish poğaça for wholesale and horeca supply. Bulk orders, authentic soft bakery format, and private label manufacturing available.",
+      "description": "Plain Pastry 4x80g – 4 pre-baked Turkish poğaça portions, heat and eat. Authentic soft bakery for grocery retail, wholesale supply, and private label.",
       "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Plain-Pastry-320g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Plain-Pastry-4x80g-01.webp",
         "https://lezzafoods.eu/wp-content/uploads/2026/04/Plain-Pastry-130g.webp"
       ],
       "channels": [
+        "b2c",
         "b2b"
       ],
       "variants": [
+        {
+          "label": {
+            "tr": "4x80g",
+            "fr": "4x80g",
+            "de": "4x80g"
+          },
+          "netWeightG": 320,
+          "sku": "700201",
+          "sourceId": 9765,
+          "sourceSlug": "plain-pastry-4x80g"
+        },
         {
           "label": {
             "tr": "130g",
@@ -2888,34 +2868,6 @@
           "sku": "700209",
           "sourceId": 9762,
           "sourceSlug": "plain-pastry-130g"
-        }
-      ]
-    },
-    {
-      "slug": "plain-pastry-4x80g",
-      "name": {
-        "tr": "Plain Pastry 4x80g",
-        "fr": "Plain Pastry 4x80g",
-        "de": "Plain Pastry 4x80g"
-      },
-      "sourceLanguage": "en",
-      "category": "bakery",
-      "brand": "Lezza",
-      "description": "Plain Pastry 4x80g – 4 pre-baked Turkish poğaça portions, heat and eat. Authentic soft bakery for grocery retail, wholesale supply, and private label.",
-      "imageUrls": [
-        "https://lezzafoods.eu/wp-content/uploads/2026/04/Plain-Pastry-320g.webp",
-        "https://lezzafoods.eu/wp-content/uploads/2026/04/Plain-Pastry-4x80g-01.webp"
-      ],
-      "channels": [
-        "b2c"
-      ],
-      "variants": [
-        {
-          "label": null,
-          "netWeightG": null,
-          "sku": "700201",
-          "sourceId": 9765,
-          "sourceSlug": "plain-pastry-4x80g"
         }
       ]
     },
@@ -3679,14 +3631,28 @@
       "sourceLanguage": "en",
       "category": "bakery",
       "brand": "Lezza",
-      "description": "Spiral Rose Börek with Cheese 200g – frozen individual cheese börek in a rose spiral form. Premium horeca display format with wholesale supply and private label manufacturing.",
+      "description": "Spiral Rose Börek with Cheese 6x80g – 6 frozen rose spiral cheese börek, bake from frozen. Retail pack with wholesale supply and private label from Lezza Foods.",
       "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Spiral-Rose-Borek-with-Cheese-6x80g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Spiral-Rose-Borek-with-Cheese-6x80g-01.webp",
         "https://lezzafoods.eu/wp-content/uploads/2026/04/Spiral-Rose-Borek-with-Cheese-200g.webp"
       ],
       "channels": [
+        "b2c",
         "b2b"
       ],
       "variants": [
+        {
+          "label": {
+            "tr": "6x80g",
+            "fr": "6x80g",
+            "de": "6x80g"
+          },
+          "netWeightG": 480,
+          "sku": "700701",
+          "sourceId": 10219,
+          "sourceSlug": "spiral-rose-borek-with-cheese-6x80g"
+        },
         {
           "label": {
             "tr": "200g",
@@ -3697,34 +3663,6 @@
           "sku": "700906",
           "sourceId": 9816,
           "sourceSlug": "spiral-rose-borek-with-cheese-200g"
-        }
-      ]
-    },
-    {
-      "slug": "spiral-rose-borek-with-cheese-6x80g",
-      "name": {
-        "tr": "Spiral Rose Börek with Cheese 6x80g",
-        "fr": "Spiral Rose Börek with Cheese 6x80g",
-        "de": "Spiral Rose Börek with Cheese 6x80g"
-      },
-      "sourceLanguage": "en",
-      "category": "bakery",
-      "brand": "Lezza",
-      "description": "Spiral Rose Börek with Cheese 6x80g – 6 frozen rose spiral cheese börek, bake from frozen. Retail pack with wholesale supply and private label from Lezza Foods.",
-      "imageUrls": [
-        "https://lezzafoods.eu/wp-content/uploads/2026/05/Spiral-Rose-Borek-with-Cheese-6x80g.webp",
-        "https://lezzafoods.eu/wp-content/uploads/2026/05/Spiral-Rose-Borek-with-Cheese-6x80g-01.webp"
-      ],
-      "channels": [
-        "b2c"
-      ],
-      "variants": [
-        {
-          "label": null,
-          "netWeightG": null,
-          "sku": "700701",
-          "sourceId": 10219,
-          "sourceSlug": "spiral-rose-borek-with-cheese-6x80g"
         }
       ]
     },
@@ -3800,14 +3738,28 @@
       "sourceLanguage": "en",
       "category": "bakery",
       "brand": "Lezza",
-      "description": "Spiral Rose Börek with Spinach & Cheese 200g – frozen spinach cheese börek in a rose spiral form. Premium horeca display format with B2B wholesale and private label supply.",
+      "description": "Spiral Rose Börek with Spinach & Cheese 6x80g – 6 frozen rose spiral spinach börek, bake from frozen. Retail pack, wholesale supply and private label from Lezza Foods.",
       "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Spiral-Rose-Borek-with-Spinach-Cheese-6x80g.webp",
+        "https://lezzafoods.eu/wp-content/uploads/2026/05/Spiral-Rose-Borek-with-Spinach-Cheese-6x80g-01.webp",
         "https://lezzafoods.eu/wp-content/uploads/2026/04/Spiral-Rose-Borek-with-Spinach-Cheese-200g.webp"
       ],
       "channels": [
+        "b2c",
         "b2b"
       ],
       "variants": [
+        {
+          "label": {
+            "tr": "6x80g",
+            "fr": "6x80g",
+            "de": "6x80g"
+          },
+          "netWeightG": 480,
+          "sku": null,
+          "sourceId": 10224,
+          "sourceSlug": "spiral-rose-borek-with-spinach-cheese-6x80g"
+        },
         {
           "label": {
             "tr": "200g",
@@ -3818,34 +3770,6 @@
           "sku": "700907",
           "sourceId": 9819,
           "sourceSlug": "spiral-rose-borek-with-spinach-cheese-200g"
-        }
-      ]
-    },
-    {
-      "slug": "spiral-rose-borek-with-spinach-cheese-6x80g",
-      "name": {
-        "tr": "Spiral Rose Börek with Spinach & Cheese 6x80g",
-        "fr": "Spiral Rose Börek with Spinach & Cheese 6x80g",
-        "de": "Spiral Rose Börek with Spinach & Cheese 6x80g"
-      },
-      "sourceLanguage": "en",
-      "category": "bakery",
-      "brand": "Lezza",
-      "description": "Spiral Rose Börek with Spinach & Cheese 6x80g – 6 frozen rose spiral spinach börek, bake from frozen. Retail pack, wholesale supply and private label from Lezza Foods.",
-      "imageUrls": [
-        "https://lezzafoods.eu/wp-content/uploads/2026/05/Spiral-Rose-Borek-with-Spinach-Cheese-6x80g.webp",
-        "https://lezzafoods.eu/wp-content/uploads/2026/05/Spiral-Rose-Borek-with-Spinach-Cheese-6x80g-01.webp"
-      ],
-      "channels": [
-        "b2c"
-      ],
-      "variants": [
-        {
-          "label": null,
-          "netWeightG": null,
-          "sku": null,
-          "sourceId": 10224,
-          "sourceSlug": "spiral-rose-borek-with-spinach-cheese-6x80g"
         }
       ]
     },
@@ -4334,14 +4258,27 @@
       "sourceLanguage": "en",
       "category": "bakery",
       "brand": "Lezza",
-      "description": "Authentic Turkish Bagel (Simit) 125g by Lezza Foods BV. Bulk carton with 80 pieces, traditional sesame-coated, ideal for retail and horeca use. Premium Anatolian bakery product with consistent quality and convenience.",
+      "description": "Turkish Bagel (Simit) 4 x 105g by Lezza Foods BV. Partially baked (80% cooked) and ready to heat and serve. A convenient retail pack with authentic sesame simit, offering quick preparation, fresh taste, and consistent",
       "imageUrls": [
+        "https://lezzafoods.eu/wp-content/uploads/2026/04/Turkish-Bagel-Simit-4-x-105g.webp",
         "https://lezzafoods.eu/wp-content/uploads/2026/04/Turkish-Bagel-Simit-125g.webp"
       ],
       "channels": [
+        "b2c",
         "b2b"
       ],
       "variants": [
+        {
+          "label": {
+            "tr": "4x105g",
+            "fr": "4x105g",
+            "de": "4x105g"
+          },
+          "netWeightG": 420,
+          "sku": "700101",
+          "sourceId": 9310,
+          "sourceSlug": "turkish-bagel-simit-4-x-105g"
+        },
         {
           "label": {
             "tr": "125g",
@@ -4352,38 +4289,6 @@
           "sku": "700102",
           "sourceId": 9274,
           "sourceSlug": "turkish-bagel-simit-125g"
-        }
-      ]
-    },
-    {
-      "slug": "turkish-bagel-simit-4-x",
-      "name": {
-        "tr": "Turkish Bagel (Simit) 4 x",
-        "fr": "Turkish Bagel (Simit) 4 x",
-        "de": "Turkish Bagel (Simit) 4 x"
-      },
-      "sourceLanguage": "en",
-      "category": "bakery",
-      "brand": "Lezza",
-      "description": "Turkish Bagel (Simit) 4 x 105g by Lezza Foods BV. Partially baked (80% cooked) and ready to heat and serve. A convenient retail pack with authentic sesame simit, offering quick preparation, fresh taste, and consistent",
-      "imageUrls": [
-        "https://lezzafoods.eu/wp-content/uploads/2026/04/Turkish-Bagel-Simit-4-x-105g.webp",
-        "https://lezzafoods.eu/wp-content/uploads/2026/04/Turkish-Bagel-Simit-125g.webp"
-      ],
-      "channels": [
-        "b2c"
-      ],
-      "variants": [
-        {
-          "label": {
-            "tr": "105g",
-            "fr": "105g",
-            "de": "105g"
-          },
-          "netWeightG": 105,
-          "sku": "700101",
-          "sourceId": 9310,
-          "sourceSlug": "turkish-bagel-simit-4-x-105g"
         }
       ]
     },
@@ -4584,42 +4489,11 @@
       ]
     },
     {
-      "slug": "vegan-kibbeh-10-x",
+      "slug": "vegan-kibbeh",
       "name": {
-        "tr": "Vegan Kibbeh 10 x",
-        "fr": "Vegan Kibbeh 10 x",
-        "de": "Vegan Kibbeh 10 x"
-      },
-      "sourceLanguage": "en",
-      "category": "anatolian",
-      "brand": "Lezza",
-      "description": "Frozen vegan kibbeh 10 x 70 g for horeca, catering, and retail. Plant-based Middle Eastern specialty with consistent quality, ideal for bulk supply and foodservice use.",
-      "imageUrls": [
-        "https://lezzafoods.eu/wp-content/uploads/2026/04/Vegan-Kibbeh-10-x-70-g.webp"
-      ],
-      "channels": [
-        "b2b"
-      ],
-      "variants": [
-        {
-          "label": {
-            "tr": "70g",
-            "fr": "70g",
-            "de": "70g"
-          },
-          "netWeightG": 70,
-          "sku": "200302",
-          "sourceId": 9321,
-          "sourceSlug": "vegan-kibbeh-10-x-70-g"
-        }
-      ]
-    },
-    {
-      "slug": "vegan-kibbeh-5-x",
-      "name": {
-        "tr": "Vegan Kibbeh 5 x",
-        "fr": "Vegan Kibbeh 5 x",
-        "de": "Vegan Kibbeh 5 x"
+        "tr": "Vegan Kibbeh",
+        "fr": "Vegan Kibbeh",
+        "de": "Vegan Kibbeh"
       },
       "sourceLanguage": "en",
       "category": "anatolian",
@@ -4630,19 +4504,31 @@
         "https://lezzafoods.eu/wp-content/uploads/2026/04/Vegan-Kibbeh-10-x-70-g.webp"
       ],
       "channels": [
-        "b2c"
+        "b2c",
+        "b2b"
       ],
       "variants": [
         {
           "label": {
-            "tr": "70g",
-            "fr": "70g",
-            "de": "70g"
+            "tr": "5x70g",
+            "fr": "5x70g",
+            "de": "5x70g"
           },
-          "netWeightG": 70,
+          "netWeightG": 350,
           "sku": "200301",
           "sourceId": 9323,
           "sourceSlug": "vegan-kibbeh-5-x-70-g"
+        },
+        {
+          "label": {
+            "tr": "10x70g",
+            "fr": "10x70g",
+            "de": "10x70g"
+          },
+          "netWeightG": 700,
+          "sku": "200302",
+          "sourceId": 9321,
+          "sourceSlug": "vegan-kibbeh-10-x-70-g"
         }
       ]
     },

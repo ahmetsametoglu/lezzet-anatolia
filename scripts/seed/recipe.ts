@@ -205,7 +205,8 @@ const RECIPES: SeedRecipe[] = [
     pantry: { tr: 'Toz fıstık', fr: 'Pistaches concassées', de: 'Gehackte Pistazien' },
     isActive: true,
     items: [
-      { sku: 'BAK-F-500', qty: 1 },
+      // Elle ürünler kalktı (08.08) — fıstıklı baklava artık gerçek katalogdan (6'lı kutu).
+      { sku: '600106', qty: 1 },
       { sku: '111112', qty: 1 },
     ],
   },

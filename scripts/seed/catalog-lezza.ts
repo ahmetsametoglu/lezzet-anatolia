@@ -54,7 +54,7 @@ interface LezzaProduct {
   variants: LezzaVariant[];
 }
 interface LezzaCatalog {
-  categories: Array<{ key: string; name: LocalizedText }>;
+  categories: Array<{ key: string; name: LocalizedText; imageUrl: string | null }>;
   products: LezzaProduct[];
 }
 
@@ -62,6 +62,16 @@ const DATA = join(dirname(fileURLToPath(import.meta.url)), 'data/lezza-catalog.j
 
 function readLezzaCatalog(): LezzaCatalog {
   return JSON.parse(readFileSync(DATA, 'utf8')) as LezzaCatalog;
+}
+
+/**
+ * Koleksiyon/paket KAPAKLARI için: ürün slug'ı → kaynak kapak URL'i (JSON'dan, DB'siz).
+ * Kapaklar da gerçek üründen gelir (kullanıcı kararı 08.08) — temp örnek dosyalar kalktı; ürünün
+ * DB'deki `image_key`i kopyalanMAZ: iki kayıt aynı anahtara işaret etseydi, ürün kapağı değişince
+ * koleksiyon kapağı da sessizce değişirdi (sürpriz bağ). Herkes kendi anahtarına yükler.
+ */
+export function lezzaGorselBySlug(): Map<string, string> {
+  return new Map(readLezzaCatalog().products.flatMap((p) => (p.imageUrls[0] ? [[p.slug, p.imageUrls[0]] as const] : [])));
 }
 
 /**
@@ -194,6 +204,21 @@ function icindekiler(alerjenler: ProductAllergen[]): LocalizedText {
   return { tr: `${tr.join(', ')}, şeker.`, fr: `${fr.join(', ')}, sucre.`, de: `${de.join(', ')}, Zucker.` };
 }
 
+/**
+ * Kategori ALTYAZILARI (05.17 · kullanıcı kararı 08.08) — mobil vitrin bandının ikinci satırı,
+ * web kullanımı tasarım kararına açık. Metinler EDİTORYAL fikstürdür: operatör Katalog ekranından
+ * değiştirir (üç dilli form + AI çeviri önerisi); buradaki değer ilk kurulumun cümlesi, sözleşme
+ * değil. Boş bırakılan kategori altyazısız çizilir — yedek metin uydurulmaz.
+ */
+const KATEGORI_TAGLINE: Record<string, LocalizedText> = {
+  bakery: { tr: 'Börekler ve el açması hamur işleri', fr: 'Böreks et pâtisseries salées', de: 'Börek und handgemachtes Gebäck' },
+  dessert: { tr: 'Baklavadan sütlü tatlıya', fr: 'Du baklava aux desserts lactés', de: 'Von Baklava bis Milchdessert' },
+  cake: { tr: 'Dilim ve bütün pastalar', fr: 'Gâteaux entiers et en parts', de: 'Torten im Ganzen und in Stücken' },
+  chicken: { tr: 'Pişirmeye hazır tavuk', fr: 'Volaille prête à cuire', de: 'Küchenfertiges Geflügel' },
+  'ice-cream': { tr: 'Maraş usulü dondurma', fr: 'Glace façon Maraş', de: 'Eis nach Maraş-Art' },
+  anatolian: { tr: 'Sofraya hazır Anadolu yemekleri', fr: 'Plats anatoliens prêts à servir', de: 'Anatolische Gerichte, servierfertig' },
+};
+
 const SAKLAMA: LocalizedText = {
   tr: '−18 °C’de saklayın. Çözdürdükten sonra **tekrar dondurmayın**; 24 saat içinde tüketin.',
   fr: 'Conserver à −18 °C. **Ne pas recongeler** après décongélation ; à consommer sous 24 heures.',
@@ -216,12 +241,26 @@ export async function seedLezzaProducts(
   /** Aile bağı ÜRÜNLER KURULDUKTAN SONRA yazılır: bağ iki ucun da var olmasını ister. */
   const urunIdBySlug = new Map<string, string>();
 
-  // Aile kategorileri — elle yazılan dördün YANINA gelir, onların yerine değil: eski dört kategori
-  // elle yazılmış beş ürünün evi ve koleksiyonlar o slug'lara bağlı.
+  // Kategoriler ARTIK YALNIZ kaynaktan kurulur (kullanıcı kararı 08.08: "resmî olmayan kategori
+  // kalmasın"): elle yazılmış üçlü (Baklava/Şerbetli/Börek) ve `Malzeme` kaldırıldı, ürünleri de
+  // gerçek katalogda birebir karşılığı olduğu için (kopyaydılar) katalogdan çıktı.
+  //
+  // Üç besleme birden (08.08): GÖRSEL kaynağın kendi kategori kapağından (`imageUrl` — build
+  // script `/products/categories` ucundan çeker; "boş gri kutu" hâli seed'de artık örneklenmez),
+  // TAGLINE alttaki sözlükten (mobil vitrin bandının altyazısı — 05.17; başlık = kategori ADI),
+  // `isFeatured` HEPSİNE true: tasarımın vitrin ızgarası 6 slot ve kategori sayısı tam 6 —
+  // operatör dilediğini Katalog ekranından vitrinden düşürür (05.18).
   for (const c of katalog.categories) {
     if (catId.has(c.key)) continue;
+    // `create` girdisi bilinçli dar (ad + sıra); tagline ve vitrin işareti update ile — aile
+    // bağının `products.update` emsali. Tek çağrıda: ikisi de aynı ilk-kurulum kararının parçası.
     const created = await categories.create({ name: c.name });
+    await categories.update({ id: created.id, tagline: KATEGORI_TAGLINE[c.key] ?? null, isFeatured: true });
     catId.set(c.key, created.id);
+    if (c.imageUrl) {
+      const key = await uploadImageFromUrl(c.imageUrl, r2Keys.categoryImage(created.slug, c.imageUrl.split('/').pop() || 'cover.webp'));
+      if (key) await categories.setImageKey(created.id, key);
+    }
   }
 
   let made = 0;
