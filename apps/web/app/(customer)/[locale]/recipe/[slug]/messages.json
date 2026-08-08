@@ -1,0 +1,50 @@
+{
+  "tr": {
+    "back": "Tarifler",
+    "eyebrow": "Tarif detayı",
+    "steps": "Hazırlanışı",
+    "ingredients": "Malzemeler — bizden",
+    "pantry": "Evinizden",
+    "pantryInline": "Evinizden:",
+    "total": "Malzeme toplamı",
+    "addAll": "Tüm malzemeleri sepete ekle",
+    "addAllShort": "Tümünü sepete ekle",
+    "addOne": "+ Sepete",
+    "inCart": "Sepette",
+    "soldOut": "Tükendi",
+    "added": "{n} malzeme sepete eklendi ✓",
+    "note": "Tükenen malzeme listeden düşer; toplam, kalan ürünlerle hesaplanır. Fiyatlar hesabınıza göre gösterilir."
+  },
+  "fr": {
+    "back": "Recettes",
+    "eyebrow": "Détail de la recette",
+    "steps": "Préparation",
+    "ingredients": "Ingrédients — chez nous",
+    "pantry": "De votre cuisine",
+    "pantryInline": "De votre cuisine :",
+    "total": "Total des ingrédients",
+    "addAll": "Ajouter tous les ingrédients au panier",
+    "addAllShort": "Tout ajouter au panier",
+    "addOne": "+ Panier",
+    "inCart": "Au panier",
+    "soldOut": "Épuisé",
+    "added": "{n} ingrédients ajoutés au panier ✓",
+    "note": "Un ingrédient épuisé sort de la liste ; le total est calculé avec les produits restants. Les prix s'affichent selon votre compte."
+  },
+  "de": {
+    "back": "Rezepte",
+    "eyebrow": "Rezeptdetails",
+    "steps": "Zubereitung",
+    "ingredients": "Zutaten — von uns",
+    "pantry": "Aus Ihrer Küche",
+    "pantryInline": "Aus Ihrer Küche:",
+    "total": "Zutaten gesamt",
+    "addAll": "Alle Zutaten in den Warenkorb",
+    "addAllShort": "Alle in den Warenkorb",
+    "addOne": "+ Warenkorb",
+    "inCart": "Im Warenkorb",
+    "soldOut": "Ausverkauft",
+    "added": "{n} Zutaten in den Warenkorb gelegt ✓",
+    "note": "Ausverkaufte Zutaten fallen aus der Liste; die Summe wird mit den verbleibenden Produkten berechnet. Preise erscheinen gemäß Ihrem Konto."
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "tr": {
+    "title": "Tarifler",
+    "eyebrow": "Sofradan Fikirler",
+    "heroTitle": "Bu sofra nasıl kurulur?",
+    "heroBody": "Küçük tarifler, büyük sofralar: her tarifte hangi ürünlerin nasıl kullanıldığını anlatıyoruz — malzemeleri tek dokunuşla sepete ekleyin, gerisi fırında.",
+    "items": "{n} ürün",
+    "pantry": "+ {n} ev malzemesi",
+    "soldOut": "Malzemeleri şu an alınamıyor",
+    "soldOutShort": "Şu an alınamıyor",
+    "cta": "Tarifi gör",
+    "empty": {
+      "title": "Şu an yayında tarif yok",
+      "body": "Yeni tarifler hazırlanıyor. O zamana dek katalogdan kendi sofranızı kurabilirsiniz.",
+      "cta": "Kataloğa git"
+    }
+  },
+  "fr": {
+    "title": "Recettes",
+    "eyebrow": "Idées de table",
+    "heroTitle": "Comment dresser cette table ?",
+    "heroBody": "Petites recettes, grandes tablées : chaque recette raconte comment utiliser nos produits — ajoutez les ingrédients au panier en un geste, le reste se passe au four.",
+    "items": "{n} produits",
+    "pantry": "+ {n} ingrédients maison",
+    "soldOut": "Ingrédients indisponibles pour le moment",
+    "soldOutShort": "Indisponible",
+    "cta": "Voir la recette",
+    "empty": {
+      "title": "Aucune recette publiée pour le moment",
+      "body": "De nouvelles recettes se préparent. En attendant, composez votre table depuis le catalogue.",
+      "cta": "Aller au catalogue"
+    }
+  },
+  "de": {
+    "title": "Rezepte",
+    "eyebrow": "Ideen für den Tisch",
+    "heroTitle": "Wie deckt man diesen Tisch?",
+    "heroBody": "Kleine Rezepte, große Tafeln: Jedes Rezept zeigt, wie unsere Produkte verwendet werden — legen Sie die Zutaten mit einem Griff in den Warenkorb, den Rest erledigt der Ofen.",
+    "items": "{n} Produkte",
+    "pantry": "+ {n} Zutaten von zuhause",
+    "soldOut": "Zutaten derzeit nicht erhältlich",
+    "soldOutShort": "Nicht erhältlich",
+    "cta": "Rezept ansehen",
+    "empty": {
+      "title": "Derzeit keine veröffentlichten Rezepte",
+      "body": "Neue Rezepte sind in Vorbereitung. Bis dahin stellen Sie Ihre Tafel im Katalog zusammen.",
+      "cta": "Zum Katalog"
+    }
+  }
+}

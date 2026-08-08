@@ -52,6 +52,16 @@ export const PATHNAMES = {
   // Paket = "coffret" (FR) · "Paket" (DE) — kart ve menü metinleriyle aynı sözcük.
   '/packages': { fr: '/coffrets', de: '/pakete', tr: '/paketler' },
   '/package/[slug]': { fr: '/coffret/[slug]', de: '/paket/[slug]', tr: '/paket/[slug]' },
+  /**
+   * Tarifler — "Sofradan Fikirler" (08.24). Segment üç dilde de yemek tarifinin kendi sözcüğü:
+   * sayfa aramadan trafik alır ("recette börek", "türkisches rezept") ve marka sözcüğü değil ARAMA
+   * sözcüğü olduğu için çevrilir — `/professionals`ta verilen kararın tersi yönü, aynı ölçüt.
+   *
+   * Slug dil-bağımsızdır (içerikten türer, `RecipeService.createWithItems`): paylaşılan bağ hangi
+   * dilde açılırsa açılsın aynı tarife düşer.
+   */
+  '/recipes': { fr: '/recettes', de: '/rezepte', tr: '/tarifler' },
+  '/recipe/[slug]': { fr: '/recette/[slug]', de: '/rezept/[slug]', tr: '/tarif/[slug]' },
   // Hesap grubu (08.5). Segment kelimeleri dile göre; iç yol İngilizce kalır.
   '/account': { fr: '/compte', de: '/konto', tr: '/hesap' },
   '/orders': { fr: '/commandes', de: '/bestellungen', tr: '/siparislerim' },

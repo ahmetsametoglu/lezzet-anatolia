@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { BundleService, ProductService, serviceDb } from '@lezzet/database';
+import { BundleService, ProductService, RecipeService, serviceDb } from '@lezzet/database';
 import { LOCALES, localizedPath, siteOrigin, type AppRoute } from '@lezzet/i18n';
 
 /**
@@ -19,11 +19,21 @@ import { LOCALES, localizedPath, siteOrigin, type AppRoute } from '@lezzet/i18n'
  * `PATHNAMES` künyesi) — yani üç dil aynı slug'ı paylaşır, yalnız segment kelimesi değişir.
  */
 
+/**
+ * Haritaya girecek tarif TAVANI (08.24). `listActive` varsayılanı 12 ve o sayı mobil ana ekrandaki
+ * şeridin sınırı — editoryal bir seçki. Harita ise seçki değil, indekslenebilir sayfaların listesi:
+ * varsayılanla çağırmak yayındaki tariflerin çoğunu sessizce haritanın dışında bırakırdı.
+ */
+const SITEMAP_RECIPE_LIMIT = 200;
+
 /** Menüden ulaşılan ve herkese açık olan rotalar — sıra önem sırasıdır, `priority` ondan türer. */
 const STATIC_ROUTES: AppRoute[] = [
   '/',
   '/catalog',
   '/packages',
+  // Tarifler (08.24) — ziyaretçiye açık ve ARAMADAN trafik alan bir sayfa: "recette börek",
+  // "türkisches rezept" türü sorgular ürün sayfalarına değil buraya düşer. Menüden de ulaşılıyor.
+  '/recipes',
   // Professionnels (08.7) — ziyaretçiye açık ve aranan bir sayfa: "grossiste turc" türü sorgular
   // tam olarak buraya düşer. Adres dile göre çevrildiği için üç satırı da harita taşıyor.
   '/professionals',
@@ -42,9 +52,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const db = serviceDb();
   // `listSellable` zaten "aday ve pasif hariç" süzüyor — haritaya özel ikinci bir okuma yazmak,
   // aynı kuralın iki tanımı olurdu ve biri bir gün aday ürünleri indekse açardı.
-  const [products, bundles] = await Promise.all([
+  const [products, bundles, recipes] = await Promise.all([
     new ProductService(db).listSellable(),
     new BundleService(db).listAll(),
+    // `listActive` zaten yalnız YAYINDAKİLERİ veriyor — taslak tarif haritaya girmez, çünkü sayfası
+    // da 404 döner (`getRecipeDetail`). Sınır listenin sayfa tavanı değil harita tavanıdır: harita
+    // "şunları indeksle" davetidir, gösterim kararı değil.
+    new RecipeService(db).listActive(SITEMAP_RECIPE_LIMIT),
   ]);
 
   const entries: MetadataRoute.Sitemap = [];
@@ -53,6 +67,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Pasif paket haritaya girmez: satılmayan bir sayfaya trafik çekmek, ziyaretçiyi boş bir rafa
   // götürmektir. Aynı süzme ürün tarafında sorgunun içinde yapılıyor.
   for (const bundle of bundles.filter((b) => b.isActive)) entries.push(...localizedEntries('/package/[slug]', { slug: bundle.slug }));
+  for (const recipe of recipes) entries.push(...localizedEntries('/recipe/[slug]', { slug: recipe.slug }));
 
   return entries;
 }

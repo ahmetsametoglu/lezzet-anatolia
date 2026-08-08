@@ -68,6 +68,10 @@ export function MobileMenu({ locale }: MobileMenuProps) {
             <Link href="/packages" onClick={close} className={ITEM}>
               {t.nav.packages}
             </Link>
+            {/* Sıra masaüstüyle AYNI (08.24): aynı menünün iki biçimi aynı düzeni göstermeli. */}
+            <Link href="/recipes" onClick={close} className={ITEM}>
+              {t.nav.recipes}
+            </Link>
             {/* Fırsatlar ve Professionnels MASAÜSTÜNDE bağlanmıştı, burada ölü kalmıştı — aynı
                 menünün iki biçimi aynı yere gitmeli. Fırsatlar ayrı bir rota değil, katalogun
                 teklif süzgeçli hâli (`?offers=1`); üstteki menüyle birebir aynı hedef. */}

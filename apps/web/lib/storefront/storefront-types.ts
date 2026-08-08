@@ -333,3 +333,75 @@ export interface StorefrontCatalog {
   /** null ise liste bitti; istemci "daha fazla"yı kapatır. */
   nextCursor: KeysetCursor | null;
 }
+
+/**
+ * **TARİF KARTI** — "Sofradan Fikirler" listesinin öğesi (08.24 · veri modeli 05.16).
+ *
+ * Tarif bir SATIŞ BİRİMİ DEĞİL: kendi fiyatı, kendi stoğu, kendi sipariş kalemi yoktur. Pakete
+ * (`StorefrontPackage`) benzemesi aldatıcı — paket bütün olarak satılır ve tek fiyatı vardır,
+ * tarif ise yalnız var olan varyantları sepete TAŞIR. Bu yüzden `priceCents` yerine `totalCents`
+ * var ve anlamı farklı: paketin fiyatı bir tanımdır, tarifin toplamı bir HESAPTIR — kalemlerinden
+ * doğar ve tükenen kalemle birlikte düşer.
+ */
+export interface StorefrontRecipe {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  image: StorefrontImage;
+  /**
+   * Rozetin iki parçası — "15 dk · 2 kişilik". İkisi de **serbest metin** (05.16): hesap yok,
+   * süzme yok, sıralama yok. `serves` sayı OLAMAZ, tasarım "3–4 kişilik" diyor.
+   * Boş olan parça rozetten düşer; ikisi de boşsa rozet hiç basılmaz.
+   */
+  duration: string | null;
+  serves: string | null;
+  /** BİZİM ürünlerimizin satır sayısı — "1 ürün" (adet toplamı değil, `qty` ayrı). */
+  itemCount: number;
+  /** "Evinizden" madde sayısı — "+ 3 ev malzemesi". Metnin satır sayısından türer. */
+  pantryCount: number;
+  /**
+   * Alınabilir kalemlerin toplamı. **Tükenen kalem toplamdan DÜŞER** (tasarımın açık kuralı):
+   * müşteri o kalemi sepete koyamayacağına göre ödeyeceği tutar da onu içermez.
+   * `null` = alınabilir kalem yok; ekran fiyat yazmaz. Sıfır YAZILMAZ — bedava görünürdü.
+   */
+  totalCents: number | null;
+  /** Hiçbir kalem alınamıyor. Tarif yine okunur (yemek tarifi bir içeriktir), CTA pasifleşir. */
+  soldOut: boolean;
+}
+
+/**
+ * **TARİFİN TEK MALZEMESİ** — bizim ürünümüz olan satır (ev malzemesi burada DEĞİL, o `pantry`).
+ *
+ * Bağ VARYANTA kurulu (05.16): sepet yalnız varyantla çalışır, "Ezine Beyaz Peynir" yetmez —
+ * "350 g" olan satır sepete eklenebilen tek şeydir. `productSlug` yalnız bağlantı içindir:
+ * malzeme satırına dokunmak ürünün detay sayfasına gider (tasarımın etkileşim sözleşmesi).
+ */
+export interface StorefrontRecipeItem {
+  variantId: string;
+  productSlug: string;
+  name: string;
+  /** Boy etiketi ("350 g") — çok dilli, sunucuda çözülür. */
+  unitLabel: string;
+  image: StorefrontImage;
+  qty: number;
+  /** Birim fiyat — persona (B2B toptan) ve depo süzgecinden geçmiş. `null` = satışa kapalı. */
+  unitPriceCents: number | null;
+  /** `qty × unitPriceCents`; fiyatsızda `null` — çarpımı 0 yazmak kalemi bedava gösterirdi. */
+  lineTotalCents: number | null;
+  /** Teklif kalemi hangi partiye çıpalı (DOMAIN §5) — sepete o kimlikle gider. */
+  stockId: string | null;
+  /** GERÇEK tükenme (`stockStatus === 'out_of_stock'`) — "senin deponda yok" bu değildir (C3). */
+  soldOut: boolean;
+}
+
+/** Tarif detayı — kartın taşıdığı her şey + hazırlanış, evden malzemeler ve kalemler. */
+export interface StorefrontRecipeDetail extends StorefrontRecipe {
+  /** "Akşam yemeği" — öğün künyesi, ayrı renkte rozet. Boşsa rozet basılmaz. */
+  meal: string | null;
+  /** Hazırlanış adımları — **satır = adım** (05.16); numarayı EKRAN verir, metin taşımaz. */
+  steps: string[];
+  /** "Evinizden" maddeleri — satır = madde. Bunlar bizim ürünümüz DEĞİL, sepete eklenmez. */
+  pantry: string[];
+  items: StorefrontRecipeItem[];
+}

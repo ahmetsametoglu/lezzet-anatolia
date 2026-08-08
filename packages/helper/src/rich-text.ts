@@ -45,6 +45,27 @@ export function parseEmphasis(text: string): TextSegment[] {
   return segments;
 }
 
+/**
+ * **Çok satırlı metni maddelere böler: satır = madde** (05.16 · `KARARLAR §3z`).
+ *
+ * Tarif adımları ve "Evinizden" listesi tek bir metin alanında duruyor — madde başına ayrı satır
+ * bileşeni YAZILMADI, çünkü üç dilin madde sayısı eşit olmak zorunda kalırdı (Fransızca iki adımı
+ * birleştirmek isteyebilir). Metni maddeye çeviren kural bu yüzden GÖSTERİM tarafındadır.
+ *
+ * Boş satır ATILIR: operatör iki madde arasına nefes bırakabilir ve o boşluk numaralı bir adım
+ * olarak görünmemeli. `\r\n` de bölünür — Windows'tan yapıştırılan metin tek satır sayılmasın.
+ *
+ * **Burada, çünkü İKİ yüzey birden okuyor** (`CLAUDE §1`): operasyonun tarif önizlemesi ve müşteri
+ * yüzeyinin tarif detayı. İki kopya bir gün ayrışırsa operatörün önizlemede saydığı adım sayısı ile
+ * müşterinin gördüğü tutmazdı — üstelik kimse fark etmezdi.
+ */
+export function splitLines(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
 /** Vurgu işaretlerini söker — arama, özet ve paylaşım (OG) açıklaması ham metni ister. */
 export function stripEmphasis(text: string): string {
   return parseEmphasis(text)

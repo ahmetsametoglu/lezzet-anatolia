@@ -1,6 +1,6 @@
 import { brand } from '@lezzet/brand';
 import { siteOrigin, type Locale } from '@lezzet/i18n';
-import type { StorefrontProductDetail, StorefrontVariant } from '@/lib/storefront/storefront-types';
+import type { StorefrontProductDetail, StorefrontRecipeDetail, StorefrontVariant } from '@/lib/storefront/storefront-types';
 
 /**
  * schema.org yapısal verisi (08.1) — arama sonucunda fiyat, stok ve puan görünmesini sağlayan şey.
@@ -73,6 +73,58 @@ export function ProductJsonLd({ product, locale, url, rating }: ProductJsonLdPro
                 inLanguage: locale,
               })),
             }
+          : {}),
+      }}
+    />
+  );
+}
+
+/**
+ * `Recipe` — tarif sayfasının yapısal verisi (08.24).
+ *
+ * Google'ın tarif zengin sonuçları (fotoğraf + süre + malzeme) tam olarak bu tipi istiyor ve
+ * alanların çoğu modelde zaten hazır. Tarif sayfaları, ürün sayfalarından farklı bir aramaya
+ * cevap veriyor ("mıhlama nasıl yapılır") — o trafiği karşılayan şey bu blok.
+ *
+ * ── `totalTime` YAZILMIYOR ve bu bir eksik değil ────────────────────────────
+ * Schema.org süreyi ISO 8601 istiyor (`PT35M`); bizim `duration` alanımız ise BİLEREK serbest
+ * metin (05.16: hesabı olmayan alan tip taşımaz — "35 dk" · "1 saat 20 dk" · "bir gece bekletin").
+ * Metni ayrıştırıp süreye çevirmek, ölçülmemiş bir değeri ölçülmüş gibi beyan etmek olurdu ve
+ * yapısal veride uydurma değerin yaptırımı var. `totalTime`sız `Recipe` de geçerlidir.
+ *
+ * ── MALZEME LİSTESİ İKİ KAYNAĞI BİRLEŞTİRİR ─────────────────────────────────
+ * `recipeIngredient` müşterinin mutfağında olması gereken HER ŞEYDİR: bizim ürünlerimiz ve evden
+ * eklenenler. Yalnız bizimkileri yazmak, tarifi eksik beyan etmek olurdu — arama sonucunda "3
+ * malzeme" görünüp sayfada altı madde çıkardı. Bizim kalemlerimiz adet ve boyuyla yazılıyor
+ * ("2 × 350 g Ezine Beyaz Peynir"), ev malzemesi operatörün yazdığı hâliyle.
+ */
+export function RecipeJsonLd({ recipe, url }: { recipe: StorefrontRecipeDetail; url: string }) {
+  const ingredients = [
+    ...recipe.items.map((item) =>
+      [item.qty > 1 ? `${item.qty} ×` : null, item.unitLabel, item.name].filter(Boolean).join(' '),
+    ),
+    ...recipe.pantry,
+  ];
+
+  return (
+    <JsonLd
+      data={{
+        '@context': 'https://schema.org',
+        '@type': 'Recipe',
+        name: recipe.name,
+        ...(recipe.description ? { description: recipe.description } : {}),
+        ...(recipe.image.url ? { image: recipe.image.url } : {}),
+        url,
+        author: { '@type': 'Organization', name: brand.name },
+        // "3–4 kişilik" serbest metin ve schema.org `recipeYield`i metin olarak kabul ediyor —
+        // burada dönüşüm gerekmiyor, alan zaten metin bekliyor.
+        ...(recipe.serves ? { recipeYield: recipe.serves } : {}),
+        ...(recipe.meal ? { recipeCategory: recipe.meal } : {}),
+        ...(ingredients.length > 0 ? { recipeIngredient: ingredients } : {}),
+        // Adımlar `HowToStep` olarak yazılıyor: düz metin dizisi de geçerli ama adım nesnesi
+        // arama sonucunda numaralı gösterime izin veriyor.
+        ...(recipe.steps.length > 0
+          ? { recipeInstructions: recipe.steps.map((text) => ({ '@type': 'HowToStep', text })) }
           : {}),
       }}
     />

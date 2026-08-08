@@ -29,7 +29,7 @@ import messages from './site-frame-messages.json';
  * sayfada durması hem satırı boşaltıyor hem de "ne aradığım" bilgisini sonucun yanında tutuyor.
  * Diğer sayfalardan aramaya giden yol menüdeki "Katalog".
  */
-type NavKey = 'catalog' | 'packages' | 'deals' | 'discover' | 'pro';
+type NavKey = 'catalog' | 'packages' | 'recipes' | 'deals' | 'discover' | 'pro';
 /** Hesap alanının üç sekmesi (tasarım: `Hesabım · Siparişlerim · Taleplerim`). */
 type AccountTab = 'account' | 'orders' | 'support';
 
@@ -250,6 +250,12 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
             <Link href="/packages" className={navClass('packages', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
               {t.nav.packages}
             </Link>
+            {/* Tarifler (08.24) — sırası tasarımın kararı: Paketler ile Fırsatlar ARASINDA. İkisi de
+                satın alınacak şeyler, tarif ise onları KULLANMANIN yolu; kampanyadan önce gelmesi
+                "önce ne pişireceğim, sonra ne kadara" akışını koruyor. */}
+            <Link href="/recipes" className={navClass('recipes', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
+              {t.nav.recipes}
+            </Link>
             {/* Fırsatlar her sayfada terracotta — kampanya vurgusu sabittir, aktiflikten bağımsız.
                 AYRI BİR ROTA DEĞİL: katalogun teklif süzgeçli hâli (`?offers=1`), o süzgeç zaten
                 çalışıyordu ama menüden ulaşılamıyordu — çipe basmadan fırsatları görmenin yolu
@@ -328,6 +334,7 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
               items={[
                 { label: t.nav.catalog, href: '/catalog' },
                 { label: t.nav.packages, href: '/packages' },
+                { label: t.nav.recipes, href: '/recipes' },
                 { label: t.nav.deals, href: { pathname: '/catalog', query: { offers: '1' } } },
               ]}
             />
