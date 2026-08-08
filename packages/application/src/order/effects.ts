@@ -23,7 +23,7 @@ import type { OrderStatus } from '@lezzet/types';
  * her teslimatta basılsaydı gürültüye dönüşür, gürültü de görünmezliğin ikinci hâlidir.
  *
  * **`@lezzet/notify` + `notification-data` + `rewardCompletedOrder` terfisi mobil ucun ÖN ŞARTIDIR**
- * (rapor edildi): o terfi olmadan `/api/v1/courier/*` teslimatı müşteriye haber vermez.
+ * (BEKLEYEN(14.11)): o terfi olmadan `/api/v1/courier/*` teslimatı müşteriye haber vermez.
  */
 
 /** İstisna haberleri (14.5) — iptal, eksik karşılanma, iade. Durum geçişine değil PARA çözümüne bağlı. */

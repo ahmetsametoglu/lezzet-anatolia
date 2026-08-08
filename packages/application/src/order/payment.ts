@@ -82,6 +82,9 @@ export function recordOrderRefund(db: SupabaseClient, input: OrderMovementInput)
 /**
  * Bu anahtarla zaten yazılmış bir hareket var mı. Sipariş başına okunur — anahtar siparişin
  * hareketleri arasında aranır, tablo taranmaz.
+ *
+ * BEKLEYEN(12.11): bu arama atomik DEĞİL (birinci kilit durum makinesi); kalıcı kapanış
+ * `money_movement.idempotency_key` kolonu + kısmi tekil indeks + RPC parametresi.
  */
 async function alreadyWritten(
   db: SupabaseClient,

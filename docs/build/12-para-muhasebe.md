@@ -116,6 +116,8 @@ Tüm finans tek mantıkla: para bir hesapta durur, hareketlerle girer/çıkar. H
     - **Ay aritmetiği testli:** şubat (28/29), yıl sınırı (`2026-01` → `2025-12`), 30/31 günlük aylar. Elle yazılan bir ay sonu sessizce yanılır — yalnız o ayın son gününde kesilmiş bir ciro olarak görünür.
 - [ ] (12.10) **Banka dosyası yükleme (xlsx/CSV → satır dizisi)**: `12.4`'ün kalanı — kapı ham satır dizisi alıyor (`analyzeFile(rows)`), dosya biçimi ayrıştırıcısı yok. Yeni bağımlılık gerektiriyor, o yüzden ayrı satır · `touches: apps/web/app/(operations)/operations/finance/**`
   - *Bitti:* banka dosyası yüklenince sütun eşlemesi öneriliyor, onaylanınca satırlar hesabın hareketleri olarak giriyor ve aynı dosya ikinci kez yüklenince çoğalmıyor
+- [ ] (12.11) **`money_movement.idempotency_key` — K4 tahsilatının atomik kapanışı** *(mobil önerisi 08.08, koordinasyon defteri; kabul edildi)*: kolon + kısmi tekil indeks + hareket RPC'sine parametre. Bugünkü ara mekanizma `meta.idempotencyKey` + yazım-öncesi arama (`application/order/payment.ts`) — atomik değil, birinci kilit durum makinesi. Emsal: `order.idempotency_key` (`0012`). Migration ister; bir sonraki şema penceresiyle kümelenir (`db:refresh` kullanıcı kararı) · `touches: supabase/migrations/, packages/types/src/entities/, packages/database/src/services/`
+  - *Bitti:* aynı anahtarla ikinci yazım DB kısıtına çarpıyor (uygulama araması değil) ve tekrar eden istek ilk yazımın sonucunu görüyor
 
 ## Netleşecekler
 
