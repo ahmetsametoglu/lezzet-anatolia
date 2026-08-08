@@ -30,7 +30,12 @@ import type { VariantOption } from '../../products-types';
 // (throw yok) + revalidatePath. Alanlar `BundleDetailsUpdate`'ten türer (no-duplication).
 
 /** Formun gönderdiği tam girdi: düzenlenebilir paket alanları + kalem satırları. */
-type BundleFormInput = BundleDetailsUpdate & { items: BundleItemEntry[] };
+/**
+ * `isFeatured` AYRI duruyor, `BundleDetailsUpdate`in içinde değil: servisin detay güncellemesi bu
+ * alanı taşımıyor (yalnız `setFeatured(id, bool)` var), o yüzden sıra burada kuruluyor — önce kayıt,
+ * sonra işaret. İki tur ama tek eylem; servis alanı girdisine alırsa tek yazıma katlanır.
+ */
+type BundleFormInput = BundleDetailsUpdate & { items: BundleItemEntry[]; isFeatured: boolean };
 
 function requireName(name: LocalizedText | undefined): LocalizedText {
   if (!name || !resolveLocalizedText(name)) throw new Error('Paket adı gerekli.');
@@ -165,11 +170,15 @@ export async function loadBundleFormAction(bundleId: string | null): Promise<Act
 export async function createBundleAction(input: BundleFormInput): Promise<ActionResult<{ id: string }>> {
   try {
     await requireStaff();
-    const { items, ...fields } = input;
+    const { items, isFeatured, ...fields } = input;
     const name = requireName(fields.name);
     const totalPrice = requireTotal(fields.totalPrice);
     requireBalanced(items, totalPrice);
-    const { bundle } = await new BundleService(serviceDb()).create({ ...fields, name, totalPrice, items });
+    const svc = new BundleService(serviceDb());
+    const { bundle } = await svc.create({ ...fields, name, totalPrice, items });
+    // Vitrin işareti YALNIZ işaretliyse: varsayılan `false` ve her doğan paket için ikinci bir tur
+    // atmanın karşılığı yok.
+    if (isFeatured) await svc.setFeatured(bundle.id, true);
     revalidatePath(PRODUCTS_PATH);
     return { data: { id: bundle.id }, error: null };
   } catch (err) {
@@ -181,12 +190,15 @@ export async function createBundleAction(input: BundleFormInput): Promise<Action
 export async function updateBundleAction(id: string, input: BundleFormInput): Promise<ActionResult> {
   try {
     await requireStaff();
-    const { items, ...fields } = input;
+    const { items, isFeatured, ...fields } = input;
     requireName(fields.name);
     requireBalanced(items, fields.totalPrice);
     const svc = new BundleService(serviceDb());
     await svc.updateDetails(id, fields);
     await svc.syncItems(id, items);
+    // Düzenlemede KOŞULSUZ: form işareti KALDIRMIŞ da olabilir ve "yalnız true ise yaz" o
+    // kaldırmayı sessizce yutardı.
+    await svc.setFeatured(id, isFeatured);
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
   } catch (err) {

@@ -281,6 +281,9 @@ export function CatalogTab({ kind, rows, withMembers, filter, creating, onCreate
             name: editing.name,
             slug: editing.slug,
             isActive: editing.isActive,
+            // İyimser örtüden okunuyor: satırdaki anahtarı çevirip hemen formu açan operatör,
+            // sunucu turu bitmemişse eski hâli görürdü.
+            isFeatured: isFeatured(editing),
             // Görsel künyesi İKİ türde de var (kategori görseli + koleksiyon OG kapağı).
             imageUrl: editing.imageUrl,
             ...pickCropFields(editing),

@@ -56,7 +56,7 @@ import type { CatalogKind } from '../../products-types';
 // Dialogun öndolduracağı alanlar — ŞEMADAN TÜRETİLİR (elle interface yazılmaz, no-duplication): kimlik/
 // içerik/aktiflik/kapak-künyesi Collection'dan pick'lenir. `imageUrl` (public URL) ve `productIds`
 // (join) şemada değil, yalnızca view'a ait türev alanlardır → ayrıca eklenir.
-type CatalogEditTarget = Pick<Collection, 'id' | 'name' | 'description' | 'slug' | 'isActive' | 'imageFocalX' | 'imageFocalY' | 'imageZoom'> & {
+type CatalogEditTarget = Pick<Collection, 'id' | 'name' | 'description' | 'slug' | 'isActive' | 'isFeatured' | 'imageFocalX' | 'imageFocalY' | 'imageZoom'> & {
   imageUrl: string | null;
   productIds: string[];
   /** Yalnız kategoride dolu (05.17); koleksiyon satırında bu alan yoktur. */
@@ -68,6 +68,12 @@ type CatalogEditTarget = Pick<Collection, 'id' | 'name' | 'description' | 'slug'
 const FormSchema = CollectionInsertSchema.omit({ imageKey: true, imageAlt: true, sortOrder: true })
   .extend({
     isActive: z.boolean(),
+    /**
+     * **Vitrinde göster** — `isActive`ten AYRI bir karar (05.18): aktiflik yayın, bu ana sayfa
+     * seçkisi. Formda DA duruyor, yalnız satırda değil: yeni kayıt oluştururken satır henüz yok,
+     * yani formda olmasaydı yeni bir kategoriyi vitrine işaretlemek hiç mümkün olmazdı.
+     */
+    isFeatured: z.boolean(),
     productIds: z.array(z.string()),
     // Kategorinin ikinci çok dilli alanı (05.17); koleksiyonda çizilmez ve gönderilmez. Tipi elle
     // yazılmıyor, kaynağından alınıyor — `Category.tagline` bir gün nullable olmaktan çıkarsa form
@@ -116,6 +122,10 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
       tagline: edit?.tagline ?? null,
       slug: edit?.slug ?? '',
       isActive: edit?.isActive ?? true,
+      // Yeni kayıt vitrine KAPALI doğar: vitrin bir seçkidir, varsayılan olarak girilmez — altı
+      // slotluk bir ızgaraya her yeni kategoriyi kendiliğinden sokmak, seçkiyi seçki olmaktan
+      // çıkarırdı.
+      isFeatured: edit?.isFeatured ?? false,
       productIds: edit?.productIds ?? [],
       ...(edit ? pickCropFields(edit) : DEFAULT_CROP_FIELDS),
     },
@@ -157,7 +167,7 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
 
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null);
-    const { name, description, tagline, slug, isActive, productIds: ids } = values;
+    const { name, description, tagline, slug, isActive, isFeatured, productIds: ids } = values;
     // Kırpma künyesi İKİ türde de gider (kategori görseli + koleksiyon OG kapağı); ikinci metin
     // alanı türe göre ayrışıyor (koleksiyon → açıklama, kategori → alt yazı), üyelik yalnız
     // koleksiyonda. `null` GÖNDERİLİYOR, alan atlanmıyor: boşaltmak da bir karar ve servis
@@ -165,6 +175,7 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
     const payload = {
       name,
       isActive,
+      isFeatured,
       ...pickCropFields(values),
       ...(isCollection ? { description: description ?? null } : { tagline: tagline ?? null }),
       ...(showMembers ? { productIds: ids } : {}),
@@ -207,9 +218,9 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
   // metni değil. Oluşturmada da görünür — pasif (taslak) olarak yaratmak mümkün.
   //
   // Etiket "vitrinde görünür" DEĞİL (05.18 · kullanıcı uyarısı 08.08): aktiflik YAYIN kararıdır —
-  // pasif kayıt müşteri yüzeyinde hiç çizilmez. "Vitrin" ise ANA SAYFA seçkisidir ve ayrı bir
-  // anahtarı var (satırdaki "Vitrinde"). Eski etiket ikisini tek cümlede topluyordu ve operatörü
-  // "aktif ettim, neden ana sayfada yok" sorusuna götürürdü.
+  // pasif kayıt müşteri yüzeyinde hiç çizilmez. "Vitrin" ANA SAYFA seçkisidir, ayrı bir anahtarı
+  // var ve o anahtar İÇERİK bölmesinde (altlık 460 pikselde iki etiketli anahtarı taşımıyor —
+  // ölçüldü: ikincisi "Kaydet"in altına giriyordu ve tıklanamıyordu).
   const footer = (
     <DialogFooter
       formId={FORM_ID}
@@ -299,6 +310,26 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
               </>
             )}
           </LocaleCard>
+
+          {/* ── VİTRİNDE (05.18) ─────────────────────────────────────────────────────────
+              İÇERİK bölmesinde, altlıkta değil: kategori diyaloğu 460 piksel ve iki etiketli
+              anahtar oraya sığmıyor — denendi, ikinci anahtar "Kaydet"in altına giriyor ve
+              tıklanamıyordu (ekran görüntüsüyle yakalandı, `typecheck` göremezdi).
+
+              Yeri işlevsel olarak da doğru: aktiflik kayda EŞLİK EDEN karardır (altlığın işi),
+              vitrin işareti ise kaydın kendi ÖZELLİĞİ — üstündeki alanlarla aynı bölmede durur.
+
+              **Satırda da var, ve ikisi de gerekli:** satırdaki hızlı kürasyon içindir (listeye
+              bakarak altı kategori seçmek), buradaki oluşturma içindir — yeni kayıtta satır henüz
+              yoktur ve formda olmasaydı yeni bir kategoriyi vitrine işaretlemenin yolu olmazdı.
+              Aynı alan, iki giriş noktası, tek yazma yolu. */}
+          <div className="flex flex-col gap-1.5">
+            <FormSwitch control={form.control} name="isFeatured" label="Vitrinde göster (ana sayfa)" />
+            <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
+              Aktiflikten ayrıdır: aktif olan her kayıt katalogda görünür, vitrinde yalnız burada
+              işaretlenenler. Pasif kayıt işaretli olsa da ana sayfaya çıkmaz.
+            </span>
+          </div>
         </div>
 
         {/* ── 3. Üyelik bölmesi (yalnız koleksiyon) ── */}

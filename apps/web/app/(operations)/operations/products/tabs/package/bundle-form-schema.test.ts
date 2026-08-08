@@ -12,6 +12,9 @@ const form = (over: Partial<BundleFormValues> = {}): BundleFormValues => ({
   totalPrice: 49.9,
   serves: null,
   status: 'active',
+  // Vitrin işareti kaydetme kapısını İLGİLENDİRMEZ (05.18): işaretli bir paket de işaretsizi de
+  // aynı ön koşullarla kaydedilir. Fikstürde kapalı — varsayılan hâl.
+  isFeatured: false,
   imageFocalX: 50,
   imageFocalY: 50,
   imageZoom: 1,

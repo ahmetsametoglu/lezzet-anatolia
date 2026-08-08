@@ -33,6 +33,14 @@ function requireCatalogName(kind: CatalogKind, name: LocalizedText): LocalizedTe
 interface CatalogInput extends Partial<ImageCropFields> {
   name: LocalizedText;
   isActive: boolean;
+  /**
+   * Vitrinde göster (05.18) — `isActive`ten ayrı karar.
+   *
+   * **Servisin `create`/`edit` girdisi bu alanı TAŞIMIYOR** (yalnız `setFeatured(id, bool)` var),
+   * o yüzden sıra burada kuruluyor: önce kayıt, sonra işaret. İki tur ama tek eylem — sıranın
+   * sahibi tek yer. Servis alanı girdisine alırsa (talep açık) burası tek yazıma katlanır.
+   */
+  isFeatured: boolean;
   description?: LocalizedText | null;
   /**
    * Kategori alt yazısı (05.17) — yalnız kategoride. `null` alt yazıyı KALDIRIR: alan nullable ve
@@ -51,17 +59,21 @@ export async function createCatalogAction(kind: CatalogKind, input: CatalogInput
     await requireStaff();
     const db = serviceDb();
     const name = requireCatalogName(kind, input.name);
-    if (kind === 'category') {
-      await new CategoryService(db).create({ name, tagline: input.tagline, isActive: input.isActive });
-    } else {
-      await new CollectionService(db).create({
-        name,
-        description: input.description,
-        slug: input.slug,
-        isActive: input.isActive,
-        productIds: input.productIds,
-      });
-    }
+    const created =
+      kind === 'category'
+        ? await new CategoryService(db).create({ name, tagline: input.tagline, isActive: input.isActive })
+        : await new CollectionService(db).create({
+            name,
+            description: input.description,
+            slug: input.slug,
+            isActive: input.isActive,
+            productIds: input.productIds,
+          });
+
+    // Vitrin işareti YALNIZ işaretliyse yazılıyor: varsayılan zaten `false` ve her doğan kayıt için
+    // ikinci bir tur atmanın karşılığı yok. İşaretli doğan kayıtta tur atılır — form onu vaat etti.
+    if (input.isFeatured) await catalogService(kind).setFeatured(created.id, true);
+
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
   } catch (err) {
@@ -89,6 +101,9 @@ export async function updateCatalogAction(kind: CatalogKind, id: string, input: 
       await svc.edit(id, { name, description: input.description, isActive: input.isActive, ...crop });
       if (input.productIds) await svc.setProducts(id, input.productIds);
     }
+    // Vitrin işareti ayrı uçtan (servisin `edit` girdisi taşımıyor). Düzenlemede KOŞULSUZ yazılır:
+    // form işareti KALDIRMIŞ da olabilir ve "yalnız true ise yaz" o kaldırmayı sessizce yutardı.
+    await catalogService(kind).setFeatured(id, input.isFeatured);
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
   } catch (err) {

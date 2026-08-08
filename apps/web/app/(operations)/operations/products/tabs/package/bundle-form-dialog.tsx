@@ -10,6 +10,7 @@ import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
 import { LocaleCard } from '@/components/operation/form/locale-card';
 import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
 import { FormMultiToggle } from '@/components/operation/form/form-multi-toggle';
+import { FormSwitch } from '@/components/operation/form/form-switch';
 import { FormNumber } from '@/components/operation/form/form-input';
 import { FormMoney, PercentField } from '@/components/operation/form/money-input';
 import { ImageCropField } from '@/components/operation/form/image-crop-field';
@@ -149,7 +150,7 @@ export function BundleFormDialog({ bundle, onClose }: BundleFormDialogProps) {
           className="w-[168px]"
           options={[
             // İpucu metinleri "vitrin" DEMİYOR (05.18 · kullanıcı uyarısı 08.08): satışta olmak
-            // yayın kararıdır, ana sayfada görünmek ayrı bir işaret (listedeki "Vitrinde" anahtarı).
+            // yayın kararıdır, ana sayfada görünmek ayrı bir işaret (İÇERİK bölmesindeki anahtar).
             // Eskisi ikisini tek cümlede topluyordu — "satışa açtım, neden ana sayfada yok".
             { key: 'active', label: 'Satışta', tone: 'olive', title: 'Müşteri satın alabilir' },
             { key: 'passive', label: 'Pasif', tone: 'neutral', title: 'Müşteride gizli — silinmiş değil' },
@@ -267,6 +268,19 @@ export function BundleFormDialog({ bundle, onClose }: BundleFormDialogProps) {
                 uygulanmaz. İndirim yüzdesi kalemlerin tek fiyatları toplamına göre hesaplanır; birini yazarsan öbürü
                 dolar. “Kaç kişilik” boş bırakılırsa müşteri tarafında o künye satırı hiç çizilmez.
               </span>
+
+              {/* VİTRİNDE (05.18) — altlıkta DEĞİL: orada "Durum" var ve ikisi yan yana taşıyor
+                  (kategori diyaloğunda ölçüldü, ikinci anahtar Kaydet'in altına giriyordu). Yeri
+                  işlevsel olarak da doğru: satışta olmak kayda eşlik eden karar, vitrin işareti
+                  kaydın kendi özelliği. Satırdaki hızlı anahtarın ikizi; buradaki asıl olarak
+                  OLUŞTURMA içindir — yeni pakette satır henüz yoktur. */}
+              <div className="flex flex-col gap-1.5 border-t border-ops-line-soft pt-3">
+                <FormSwitch control={control} name="isFeatured" label="Vitrinde göster (ana sayfa)" />
+                <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
+                  Satışta olmaktan ayrıdır: satıştaki her paket paketler sayfasında görünür, ana sayfada yalnız burada
+                  işaretlenenler. Satışta olmayan paket işaretli olsa da vitrine çıkmaz.
+                </span>
+              </div>
             </FormSection>
   
             {/* Paylar burada TÜRETİLİR: editör yalnız alan yazar (`setValue`), formun sahibi bu dialog. */}

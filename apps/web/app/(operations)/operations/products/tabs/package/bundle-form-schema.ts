@@ -31,6 +31,12 @@ export const BundleFormSchema = BundleInsertSchema.omit({
     // boolean'a çevrilir — ürün formunun `vatRate`'te yaptığı daraltmanın aynısı. Alternatif, paylaşılan
     // komponente boolean kipi eklemekti; tek alan için ortak komponenti karmaşıklaştırmaya değmez.
     status: z.enum(['active', 'passive']),
+    /**
+     * **Vitrinde göster** (05.18) — `status`tan AYRI karar: biri satış, öteki ana sayfa seçkisi.
+     * Formda DA duruyor (satırdaki hızlı anahtarın yanında), çünkü YENİ pakette satır henüz yok:
+     * formda olmasaydı yeni bir paketi vitrine işaretlemenin hiçbir yolu olmazdı.
+     */
+    isFeatured: z.boolean(),
     items: z.array(BundleItemEntrySchema),
   })
   .merge(ImageCropFieldsSchema)
@@ -95,6 +101,8 @@ export function buildBundleDefaults(b: BundleView | null, items: BundleItemEntry
       totalPrice: 0,
       serves: null,
       status: 'active',
+      // Yeni paket vitrine KAPALI doğar: vitrin bir seçkidir, varsayılan olarak girilmez.
+      isFeatured: false,
       ...DEFAULT_CROP_FIELDS,
       items: [],
     };
@@ -105,6 +113,7 @@ export function buildBundleDefaults(b: BundleView | null, items: BundleItemEntry
     totalPrice: b.totalPrice,
     serves: b.serves,
     status: b.isActive ? 'active' : 'passive',
+    isFeatured: b.isFeatured,
     ...pickCropFields(b),
     items,
   };
@@ -118,6 +127,7 @@ export function toBundlePayload(values: BundleFormValues) {
     totalPrice: values.totalPrice,
     serves: values.serves ?? null,
     isActive: values.status === 'active',
+    isFeatured: values.isFeatured,
     ...pickCropFields(values),
     items: values.items.map((i) => ({
       id: i.id,
