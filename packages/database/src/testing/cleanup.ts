@@ -49,6 +49,14 @@ export interface PurgeTargets {
   familyIds?: string[];
   /** Tedarikçiler — kod eşlemeleri CASCADE, siparişleri burada elle silinir. */
   supplierIds?: string[];
+  /**
+   * Siparişler (e2e checkout dumanları UI'dan GERÇEK sipariş açar — 00.9). Kalemler, durum
+   * logları ve `discount_use` CASCADE ile gider; `money_movement.order_id` `set null` (hareketin
+   * anahtarı HESAP, üstteki künye). Tek tuzak REZERVASYON: `reservation.order_id` FK'sız
+   * (bilinçli — `0006`, tablo siparişten önce doğdu), yani hiçbir cascade toplamaz; burada açıkça
+   * silinir, yoksa sipariş başına öksüz rezervasyon birikir ve `available_stock`u sessizce düşürür.
+   */
+  orderIds?: string[];
   /** Kimlik profilleri (`user_profiles`) — adresleri CASCADE ile gider. Ayrı müşteri tablosu yok. */
   profileIds?: string[];
   /**
@@ -127,6 +135,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     recipeIds,
     familyIds,
     supplierIds,
+    orderIds,
     profileIds,
     conversationIds,
     temperatureLocations,
@@ -147,6 +156,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     recipeIds: clean(targets.recipeIds),
     familyIds: clean(targets.familyIds),
     supplierIds: clean(targets.supplierIds),
+    orderIds: clean(targets.orderIds),
     profileIds: clean(targets.profileIds),
     conversationIds: clean(targets.conversationIds),
     temperatureLocations: clean(targets.temperatureLocations),
@@ -180,6 +190,14 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   if (jobNames.length > 0) {
     await mustDelete(db, 'job_run', (q) => q.in('name', jobNames));
     for (const name of jobNames) await mustDelete(db, 'error_log', (q) => q.eq('context->>job', name));
+  }
+
+  // 0b) Sipariş grafiği ÜRÜNDEN VE PROFİLDEN ÖNCE: `order_item.variant_id` restrict ürünü,
+  //     `order.customer_id` restrict profili tutar — sipariş dururken ikisi de silinemez.
+  //     Rezervasyon AÇIKÇA: `order_id` bağı FK'sız (0006), cascade toplamaz (interface künyesi).
+  if (orderIds.length > 0) {
+    await mustDelete(db, 'reservation', (q) => q.in('order_id', orderIds));
+    await mustDelete(db, 'order', (q) => q.in('id', orderIds)); // kalem/log/discount_use CASCADE
   }
 
   // 1) Ürün grafiği: varyantlara `restrict` ile bağlı ne varsa ÖNCE gider.

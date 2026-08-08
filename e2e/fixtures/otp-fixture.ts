@@ -39,7 +39,11 @@ export function createGuestOtp(): GuestOtpFixture {
       if (listError) throw new Error(`auth kullanıcıları listelenemedi — ${listError.message}`);
       const authUser = data.users.find((u) => u.email === email);
 
-      const { data: profile } = await db.from('user_profiles').select('id').eq('id', authUser?.id ?? '00000000-0000-0000-0000-000000000000').maybeSingle();
+      // Profil `auth_user_id` İLE aranır, `id` ile DEĞİL (ölçüldü 08.08 — 04.11 guard dersinin
+      // aynısı: auth id ≠ profil id; sipariş açan checkout dumanı profili İLK kez doğurunca çıktı).
+      // Ve auth silinmeden ÖNCE aranmalı: FK `set null` — auth önce gitse profil öksüz kalır,
+      // e-posta/kimlik bağı buharlaşır ve satır bir daha bulunamazdı.
+      const { data: profile } = await db.from('user_profiles').select('id').eq('auth_user_id', authUser?.id ?? '00000000-0000-0000-0000-000000000000').maybeSingle();
       await purgeTestData(db, {
         verificationEmails: [email],
         profileIds: profile ? [profile.id] : [],

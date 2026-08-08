@@ -104,6 +104,20 @@ Yok — ilk modül.
     b2c'de asgari sepet fiilen kapalı; kullanıcı kararına sunuldu (08.08). Onaylı listenin kalanı
     (iki-sekme bayat sepet · OTP beklerken tükenme · adres değişimi · rezervasyon yarışı · COD
     tavanı) checkout adım dumanlarını (adres/gün/ödeme) ister — kör yazılmaz, ilk canlı partiyle.
+  - **Checkout ADIM DUMANI teslim edildi ve İKİ PROJEDE YEŞİL (08.08 akşam, denetim):**
+    `checkout-steps.smoke.ts` — OTP sınırının ötesi tek yolculukta: damgalı adres formu → gün
+    (kart/tek-gün iki hâl de meşru) → KAPIDA ÖDEME → gerçek sipariş → onay sayfası
+    (desktop 41,6 sn · mobile-web 15,9 sn; teardown sıfır artık, DB'den sayımla kanıtlı).
+    Uç senaryoların ön şartı hazır. Yol üstünde ÜÇ kalıcı kazanım:
+    (1) `purgeTestData`ya **`orderIds` hedefi** — sipariş açan test kendi çöpünü toplayamıyordu;
+    kalemler/log/`discount_use` cascade ama REZERVASYONUN `order_id` bağı FK'sız (0006, bilinçli) —
+    hiçbir cascade toplamaz, hedef açıkça siler; `order-fixture`ın kural ihlali elle `delete()`i de
+    (hata kontrolsüzdü) aynı hedefe çevrildi.
+    (2) `otp-fixture` profili artık **`auth_user_id` İLE arıyor** (04.11 guard dersinin e2e'deki
+    ikizi: auth id ≠ profil id; profil doğuran İLK test çıkardı — eski desen siparişli profili hiç
+    bulamıyor, auth önce silinince FK `set null` profili öksüz bırakıyordu).
+    (3) Yönlendirme beklemesi de gezinme sözleşmesine bağlandı (`waitForURL` varsayılan `load`
+    dev'de asılıyken sipariş DB'de confirmed YAZILMIŞTI — ölçüldü; `domcontentloaded` şart).
   - Kalan: mal kabulün UI adımı (10.4 ekranı inince `stock-intake` yazım adımı UI'a taşınır,
     iddialar aynı kalır) + Katman 2 gerçek-OTP provası (Kademe 3).
   - **Kademe 1 — `pnpm ui:shot <yol>`:** ÇALIŞAN dev server'daki sayfayı açar (`reuseExistingServer` — build YOK), **desktop + mobile-web** (cihaz forku gereği ikisi de) ve operasyon yollarında **karanlık mod** görüntüsünü `.ui-shots/`a yazar; sayfanın konsol hatalarını da yanına döker. Amaç test değil, ajanlara GÖZ: ekran yapan şerit anlık çağırır, tasarım/fork denetimi görüntüden okunur. DB şartı yok.

@@ -81,8 +81,10 @@ export async function createStampedOrder(): Promise<StampedOrder> {
     productName,
     warehouseId,
     cleanup: async () => {
-      await db.from('order').delete().eq('customer_id', profile.id);
+      // Sipariş purge'ün KENDİ hedefi (08.08): önceki elle `delete()` hatayı DÖNDÜRÜR, fırlatmaz —
+      // sessiz düşerse profil restrict'e takılırdı ve yarım silme başka testte görünürdü (§4b).
       await purgeTestData(db, {
+        orderIds: [order.id],
         productIds: [product.id],
         categoryIds: [category.id],
         profileIds: [profile.id],
