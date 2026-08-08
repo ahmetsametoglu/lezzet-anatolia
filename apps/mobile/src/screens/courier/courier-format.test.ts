@@ -1,16 +1,11 @@
-import {
-  centsToAmountText,
-  dayLabel,
-  parseAmountToCents,
-  parseContentSummary,
-  shortName,
-  signedMoney,
-  turkishUpper,
-} from './courier-format';
+import { centsToAmountText, dayLabel, parseAmountToCents, shortName, signedMoney, turkishUpper } from './courier-format';
 
 /*
   Biçimleme kuralları SAF olduğu için ayrı ve ucuz ölçülüyor: üç ekran testinin hepsinde aynı
   çevrimler geçiyor ve bir hatası ekranda "yanlış ama düzgün görünen" bir sayı olarak çıkardı.
+
+  İçerik özeti ayrıştırmasının testleri 21.10e'de KALDIRILDI: kural kalktı (kalem satırları artık
+  sözleşmeden geliyor), dolayısıyla ölçecek bir şey de kalmadı.
 */
 
 describe('gün adı', () => {
@@ -80,35 +75,5 @@ describe('işaretli fark', () => {
   it('eksi işareti U+2212, tire DEĞİL — rakamla aynı genişlikte durur ve sütun hizası bozulmaz', () => {
     expect(signedMoney(-350).startsWith('−')).toBe(true);
     expect(signedMoney(-350)).toContain(NBSP);
-  });
-});
-
-describe('içerik özeti', () => {
-  it('"{adet} × {ad}" parçalarını satıra çevirir', () => {
-    const parsed = parseContentSummary('2 × Fıstıklı Baklava, 1 × Mantı', 2);
-    expect(parsed.lines).toEqual([
-      { key: 'line-0', qty: 2, name: 'Fıstıklı Baklava' },
-      { key: 'line-1', qty: 1, name: 'Mantı' },
-    ]);
-    expect(parsed.hidden).toBe(0);
-  });
-
-  it('kuyruktaki "+N" gizli kalem sayısıdır, satır değil', () => {
-    const parsed = parseContentSummary('2 × A, 1 × B, 3 × C +2', 5);
-    expect(parsed.lines.map((line) => line.name)).toEqual(['A', 'B', 'C']);
-    expect(parsed.hidden).toBe(2);
-  });
-
-  it('kalem sayısı özetten fazlaysa fark GİZLİ sayılır (kuyruk yazılmamış olsa da)', () => {
-    expect(parseContentSummary('1 × A', 4).hidden).toBe(3);
-  });
-
-  it('tanınmayan parça ATILMAZ — kuryenin kolide gördüğü şey listeden düşmez', () => {
-    const parsed = parseContentSummary('Karışık koli', 1);
-    expect(parsed.lines).toEqual([{ key: 'line-0', qty: 1, name: 'Karışık koli' }]);
-  });
-
-  it('boş özet satır üretmez, kalem sayısını gizli sayar', () => {
-    expect(parseContentSummary('', 3)).toEqual({ lines: [], hidden: 3 });
   });
 });

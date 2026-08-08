@@ -1,12 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { CourierDeliveryScreen } from './delivery-screen';
-import { courierDay, courierStop } from './courier-fixture';
+import { courierDay, courierStop, DOOR_ACCOUNT_ID, stopItemId } from './courier-fixture';
 import messages from './messages.json';
 
 /*
-  TESLİMAT EKRANI — kanıt kapısı, kalem üç hâli, tahsilat paneli, iki adımlı sonuç akışı ve kapının
-  olumsuz cevaplarının EKRANDA görünmesi.
+  TESLİMAT EKRANI — kanıt kapısı, kalem üç hâli, kısmi iade, tahsilat paneli, iki adımlı sonuç akışı
+  ve kapının olumsuz cevaplarının EKRANDA görünmesi.
 
   Hook taklit EDİLMEZ (katalog/K1 emsali): gerçek hook + taklit `fetch`. Yalnız İKİ şey taklit
   edilir ve ikisi de yerel (native) sınırdır:
@@ -35,6 +35,9 @@ jest.mock('./signature-capture', () => ({ captureSignaturePng: async () => 'iVBO
 
 const t = messages;
 const ORDER_ID = '00000000-0000-4000-8000-000000000001';
+/** Fixture'ın birinci durağının iki kalemi — satır anahtarı artık KİMLİK (21.10e). */
+const BAKLAVA = stopItemId(1, 0);
+const MANTI = stopItemId(1, 1);
 
 interface Route {
   ok?: unknown;
@@ -92,6 +95,26 @@ function okDelivery(overrides: Record<string, unknown> = {}) {
 const settledStop = (overrides = {}) =>
   courierStop(1, { payment: { dueAmountCents: null, expectedMethod: null }, ...overrides });
 
+/** Tek kalemli borçsuz durak — kapı testlerinin çoğunun ilgilendiği en küçük hâl. */
+const oneLineStop = (overrides = {}) =>
+  settledStop({
+    itemCount: 1,
+    contentSummary: '1 × Mantı',
+    items: [{ orderItemId: MANTI, name: 'Mantı', qty: 1 }],
+    ...overrides,
+  });
+
+/** Teslim isteğinin gövdesi — kapıya NE gittiği tek yerden okunur. */
+function deliverBody(): Record<string, unknown> {
+  const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/deliver'));
+  return JSON.parse(String(call?.[1]?.body)) as Record<string, unknown>;
+}
+
+/** Teslim ucuna kaç istek gitti — "hiç gitmedi" iddiasının ölçüsü. */
+function deliverCalls(): number {
+  return fetchMock.mock.calls.filter(([url]) => String(url).includes('/deliver')).length;
+}
+
 async function renderDelivery() {
   await render(<CourierDeliveryScreen orderId={ORDER_ID} />);
   await waitFor(() => expect(screen.getByTestId('courier-delivery-body')).toBeOnTheScreen());
@@ -147,35 +170,47 @@ describe('teslimat · durak künyesi', () => {
 });
 
 describe('teslimat · kalem işaretleri', () => {
+  it('satırlar SÖZLEŞMEDEN gelir: adı, adedi ve anahtarı kalem kimliğidir', async () => {
+    mockRoutes({ day: courierDay([settledStop()]) });
+
+    await renderDelivery();
+
+    // Anahtar `orderItemId`: ekranda işaretlenen satır, uca gidecek satırın kendisi.
+    expect(screen.getByTestId(`courier-line-${BAKLAVA}`)).toBeOnTheScreen();
+    expect(screen.getByTestId(`courier-line-${MANTI}`)).toBeOnTheScreen();
+    expect(screen.getByText('2 × Fıstıklı Baklava')).toBeOnTheScreen();
+    expect(screen.getByText('1 × Mantı')).toBeOnTheScreen();
+  });
+
   it('kalem ÜÇ HÂLLİDİR: işaretsiz → teslim → reddedildi → işaretsiz', async () => {
     mockRoutes({ day: courierDay([settledStop()]) });
 
     await renderDelivery();
-    const line = screen.getByTestId('courier-line-line-0');
+    const line = screen.getByTestId(`courier-line-${BAKLAVA}`);
 
     await fireEvent.press(line);
     expect(screen.getByRole('button', { name: '2 × Fıstıklı Baklava', selected: true })).toBeOnTheScreen();
     await fireEvent.press(line);
     // Reddedilen çok adetli kalemde iade adedi satırı açılır (v2:155).
-    expect(screen.getByTestId('courier-line-return-line-0')).toBeOnTheScreen();
+    expect(screen.getByTestId(`courier-line-return-${BAKLAVA}`)).toBeOnTheScreen();
     expect(screen.getByText('2/2')).toBeOnTheScreen();
     await fireEvent.press(line);
-    expect(screen.queryByTestId('courier-line-return-line-0')).toBeNull();
+    expect(screen.queryByTestId(`courier-line-return-${BAKLAVA}`)).toBeNull();
   });
 
   it('iade adedi 1 ile kalem adedi arasında kalır', async () => {
     mockRoutes({ day: courierDay([settledStop()]) });
 
     await renderDelivery();
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-${BAKLAVA}`));
+    await fireEvent.press(screen.getByTestId(`courier-line-${BAKLAVA}`));
 
-    await fireEvent.press(screen.getByTestId('courier-line-return-minus-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-return-minus-${BAKLAVA}`));
     expect(screen.getByText('1/2')).toBeOnTheScreen();
-    await fireEvent.press(screen.getByTestId('courier-line-return-minus-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-return-minus-${BAKLAVA}`));
     expect(screen.getByText('1/2')).toBeOnTheScreen();
-    await fireEvent.press(screen.getByTestId('courier-line-return-plus-line-0'));
-    await fireEvent.press(screen.getByTestId('courier-line-return-plus-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-return-plus-${BAKLAVA}`));
+    await fireEvent.press(screen.getByTestId(`courier-line-return-plus-${BAKLAVA}`));
     expect(screen.getByText('2/2')).toBeOnTheScreen();
   });
 
@@ -186,78 +221,105 @@ describe('teslimat · kalem işaretleri', () => {
 
     expect(screen.getByTestId('courier-delivery-gate')).toHaveTextContent(/her kalemi işaretle/);
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
-    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/deliver'))).toHaveLength(0);
+    expect(deliverCalls()).toBe(0);
   });
 
   it('TÜMÜ reddedildiğinde teslim kapatılır ve "Kabul etmedi"ye yönlendirilir', async () => {
-    mockRoutes({ day: courierDay([settledStop({ contentSummary: '1 × Mantı', itemCount: 1 })]) });
+    mockRoutes({ day: courierDay([oneLineStop()]) });
 
     await renderDelivery();
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
 
     expect(screen.getByText(t.delivery.cta.allRefused)).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
-    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/deliver'))).toHaveLength(0);
+    expect(deliverCalls()).toBe(0);
   });
 
-  it('KISMİ red uca gönderilemiyor — sebep ekranda yazılı ve kapı kapalı', async () => {
-    mockRoutes({ day: courierDay([settledStop({ contentSummary: '1 × A, 1 × B', itemCount: 2 })]) });
+  it('teslim edilen kalemler için DÜZELTME DOĞMAZ — gövdede `adjustments` hiç olmaz', async () => {
+    mockRoutes({ day: courierDay([settledStop()]) });
 
     await renderDelivery();
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
-    await fireEvent.press(screen.getByTestId('courier-line-line-1'));
-    await fireEvent.press(screen.getByTestId('courier-line-line-1'));
+    await fireEvent.press(screen.getByTestId(`courier-line-${BAKLAVA}`));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
+    await waitFor(() => expect(deliverCalls()).toBe(1));
+    expect(deliverBody()).toEqual({});
+  });
+});
+
+describe('teslimat · kısmi iade (21.10e)', () => {
+  it('reddedilen kalem KİMLİĞİYLE gider ve `fulfilledQty` HEDEF adettir (fark değil)', async () => {
+    mockRoutes({ day: courierDay([settledStop()]) });
+
+    await renderDelivery();
+    // Baklava reddedildi (2 adetin 1'i geri dönüyor), mantı teslim edildi.
+    await fireEvent.press(screen.getByTestId(`courier-line-${BAKLAVA}`));
+    await fireEvent.press(screen.getByTestId(`courier-line-${BAKLAVA}`));
+    await fireEvent.press(screen.getByTestId(`courier-line-return-minus-${BAKLAVA}`));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
+
+    // Kapı ARTIK AÇIK: 21.10d öncesinde kalem kimliği olmadığı için burası kapalıydı.
     expect(screen.getByTestId('courier-partial-note')).toBeOnTheScreen();
-    expect(screen.getByTestId('courier-delivery-gate')).toHaveTextContent(/kalem kimliği taşımıyor/);
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
-    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/deliver'))).toHaveLength(0);
+
+    await waitFor(() => expect(deliverCalls()).toBe(1));
+    // 2 sipariş edildi, 1 geri döndü → kapıda kalan 1. Teslim edilen mantı gövdede YOK.
+    expect(deliverBody()).toEqual({ adjustments: [{ orderItemId: BAKLAVA, fulfilledQty: 1 }] });
   });
 
-  it('özete sığmayan kalemler GÖRÜNÜR sayılır ve kapıyı kilitlemez', async () => {
-    mockRoutes({ day: courierDay([settledStop({ contentSummary: '1 × A +3', itemCount: 4 })]) });
+  it('tek adetli kalem reddedilince hedef adet SIFIRDIR', async () => {
+    mockRoutes({
+      day: courierDay([
+        settledStop({
+          itemCount: 2,
+          items: [
+            { orderItemId: BAKLAVA, name: 'Fıstıklı Baklava', qty: 1 },
+            { orderItemId: MANTI, name: 'Mantı', qty: 1 },
+          ],
+        }),
+      ]),
+    });
 
     await renderDelivery();
-    expect(screen.getByTestId('courier-lines-hidden')).toHaveTextContent(/\+3 kalem daha/);
-
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-${BAKLAVA}`));
+    await fireEvent.press(screen.getByTestId(`courier-line-${BAKLAVA}`));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
-    await waitFor(() =>
-      expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/deliver'))).toHaveLength(1),
-    );
+    await waitFor(() => expect(deliverCalls()).toBe(1));
+    expect(deliverBody()).toEqual({ adjustments: [{ orderItemId: BAKLAVA, fulfilledQty: 0 }] });
   });
 });
 
 describe('teslimat · kanıt kapısı', () => {
   it('B2B durağında kanıt ZORUNLU: imzasız teslim kapısı kapalı', async () => {
-    mockRoutes({ day: courierDay([settledStop({ channel: 'b2b', contentSummary: '1 × A', itemCount: 1 })]) });
+    mockRoutes({ day: courierDay([oneLineStop({ channel: 'b2b' })]) });
 
     await renderDelivery();
     expect(screen.getByTestId('courier-proof-heading')).toHaveTextContent(/B2B'DE ZORUNLU/);
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
 
     expect(screen.getByTestId('courier-delivery-gate')).toHaveTextContent(/kanıt eksik/);
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
-    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/deliver'))).toHaveLength(0);
+    expect(deliverCalls()).toBe(0);
   });
 
   it('B2C durağında kanıt İSTEĞE BAĞLI: imzasız teslim gönderilir', async () => {
-    mockRoutes({ day: courierDay([settledStop({ contentSummary: '1 × A', itemCount: 1 })]) });
+    mockRoutes({ day: courierDay([oneLineStop()]) });
 
     await renderDelivery();
     expect(screen.getByTestId('courier-proof-heading')).toHaveTextContent(/İSTEĞE BAĞLI \(AYAR\)/);
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
     await waitFor(() => expect(screen.getByTestId('courier-delivery-notice')).toBeOnTheScreen());
-    const body = fetchMock.mock.calls.find(([url]) => String(url).includes('/deliver'))?.[1]?.body;
-    expect(JSON.parse(String(body))).toEqual({});
+    expect(deliverBody()).toEqual({});
   });
 
   it('imza alınınca kanıt YÜKLENİR ve teslim gövdesine anahtarıyla girer', async () => {
-    mockRoutes({ day: courierDay([settledStop({ channel: 'b2b', contentSummary: '1 × A', itemCount: 1 })]) });
+    mockRoutes({ day: courierDay([oneLineStop({ channel: 'b2b' })]) });
 
     await renderDelivery();
     await fireEvent.press(screen.getByTestId('courier-proof-sign'));
@@ -266,14 +328,15 @@ describe('teslimat · kanıt kapısı', () => {
     await fireEvent.press(screen.getByTestId('courier-signature-confirm'));
 
     await waitFor(() => expect(screen.getByTestId('courier-proof-taken')).toBeOnTheScreen());
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
-    await waitFor(() =>
-      expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/deliver'))).toHaveLength(1),
-    );
-    const body = JSON.parse(String(fetchMock.mock.calls.find(([url]) => String(url).includes('/deliver'))?.[1]?.body));
-    expect(body.proof).toEqual({ kind: 'signature', imageKey: 'delivery/proofs/x/sig.png', receivedBy: 'Müşteri 1' });
+    await waitFor(() => expect(deliverCalls()).toBe(1));
+    expect(deliverBody().proof).toEqual({
+      kind: 'signature',
+      imageKey: 'delivery/proofs/x/sig.png',
+      receivedBy: 'Müşteri 1',
+    });
   });
 
   it('kova yapılandırılmamışsa kanıt "alındı" GÖSTERİLMEZ, sebep yazılır', async () => {
@@ -354,15 +417,60 @@ describe('teslimat · tahsilat', () => {
     expect(screen.getByTestId('courier-settled')).toBeOnTheScreen();
   });
 
-  it('tahsilat uca yazılamıyor: sebep ekranda ve teslim kapısı KAPALI (para yazılmadan teslim yok)', async () => {
-    mockRoutes({ day: courierDay([courierStop(1, { contentSummary: '1 × A', itemCount: 1 })]) });
+  it('kapı kasası hesabı YOKSA sebep ekranda ve teslim kapısı KAPALI (para yazılmadan teslim yok)', async () => {
+    // Gün cevabının `doorAccountId`si null — ayar boş; fixture'ın varsayılanı bu.
+    mockRoutes({ day: courierDay([oneLineStop({ payment: { dueAmountCents: 4200, expectedMethod: 'cash' } })]) });
 
     await renderDelivery();
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
 
-    expect(screen.getByTestId('courier-collection-blocked')).toBeOnTheScreen();
+    expect(screen.getByTestId('courier-collection-blocked')).toHaveTextContent(/kapı kasası hesabı ayarlanmamış/);
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
-    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/deliver'))).toHaveLength(0);
+    expect(deliverCalls()).toBe(0);
+  });
+
+  it('hesap GELİNCE tahsilat gövdeye girer: tutar, yöntem, hesap ve istek kimliğiyle', async () => {
+    mockRoutes({
+      day: courierDay([oneLineStop({ payment: { dueAmountCents: 4200, expectedMethod: 'cash' } })], {
+        doorAccountId: DOOR_ACCOUNT_ID,
+      }),
+      deliver: { ok: okDelivery({ collectedCents: 4200 }) },
+    });
+
+    await renderDelivery();
+    expect(screen.queryByTestId('courier-collection-blocked')).toBeNull();
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+
+    await waitFor(() => expect(deliverCalls()).toBe(1));
+    expect(deliverBody().collection).toEqual({
+      method: 'cash',
+      amountCents: 4200,
+      accountId: DOOR_ACCOUNT_ID,
+      // Anahtar İSTEĞİN kimliği: içeriği rastgele, varlığı sözleşme (para iki kez yazılmasın).
+      idempotencyKey: expect.stringMatching(/^col-/) as unknown as string,
+    });
+  });
+
+  it('borç varken tutar BOŞSA teslim yine gider ama düğme "tahsilat yazılmaz" der', async () => {
+    mockRoutes({
+      day: courierDay([oneLineStop({ payment: { dueAmountCents: 4200, expectedMethod: 'cash' } })], {
+        doorAccountId: DOOR_ACCOUNT_ID,
+      }),
+      deliver: { ok: okDelivery({ amountDueCents: 4200, paymentStatus: 'pending' }) },
+    });
+
+    await renderDelivery();
+    await fireEvent.changeText(screen.getByTestId('courier-collection-amount'), '');
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
+
+    expect(screen.getByTestId('courier-delivery-cta')).toHaveTextContent(t.delivery.cta.deliverNoCollection);
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+
+    await waitFor(() => expect(deliverCalls()).toBe(1));
+    // Tahsilat DOĞMAZ (boş tutar "para almadım"dır) ve kalan borç sonuçta yazılır.
+    expect(deliverBody().collection).toBeUndefined();
+    expect(screen.getByTestId('courier-delivery-notice')).toHaveTextContent(/Kalan borç 42,00 €/);
   });
 });
 
@@ -427,12 +535,12 @@ describe('teslimat · sonuç akışı (K5)', () => {
 describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
   it('`stale` yutulmaz: siparişin ŞU ANKİ durumu ve "ikilenmedi" cümlesi yazılır', async () => {
     mockRoutes({
-      day: courierDay([settledStop({ contentSummary: '1 × A', itemCount: 1 })]),
+      day: courierDay([oneLineStop()]),
       deliver: { ok: { status: 'stale', currentStatus: 'cancelled' } },
     });
 
     await renderDelivery();
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
     await waitFor(() => expect(screen.getByTestId('courier-delivery-notice')).toBeOnTheScreen());
@@ -445,12 +553,12 @@ describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
 
   it('`proof_required` kanalıyla birlikte ve "hiçbir kayıt yazılmadı" diye gösterilir', async () => {
     mockRoutes({
-      day: courierDay([settledStop({ contentSummary: '1 × A', itemCount: 1 })]),
+      day: courierDay([oneLineStop()]),
       deliver: { ok: { status: 'proof_required', channel: 'b2b' } },
     });
 
     await renderDelivery();
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
     await waitFor(() =>
@@ -460,12 +568,12 @@ describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
 
   it('`forbidden: not_assigned` başkasının durağı olduğunu söyler', async () => {
     mockRoutes({
-      day: courierDay([settledStop({ contentSummary: '1 × A', itemCount: 1 })]),
+      day: courierDay([oneLineStop()]),
       deliver: { ok: { status: 'forbidden', reason: 'not_assigned' } },
     });
 
     await renderDelivery();
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
     await waitFor(() =>
@@ -474,9 +582,9 @@ describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
   });
 
   it('bağlantı yokken kuyruk YOKTUR: "gönderilemedi" dürüstçe yazılır', async () => {
-    mockRoutes({ day: courierDay([settledStop({ contentSummary: '1 × A', itemCount: 1 })]) });
+    mockRoutes({ day: courierDay([oneLineStop()]) });
     await renderDelivery();
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
 
     fetchMock.mockImplementation(() => Promise.reject(new Error('ağ yok')));
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
@@ -488,12 +596,12 @@ describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
 
   it('`deduped` tahsilatın İKİLENMEDİĞİNİ söyler ve teslim sonuca döner', async () => {
     mockRoutes({
-      day: courierDay([settledStop({ contentSummary: '1 × A', itemCount: 1 })]),
+      day: courierDay([oneLineStop()]),
       deliver: { ok: okDelivery({ collectedCents: 4200, collectionDeduped: true }) },
     });
 
     await renderDelivery();
-    await fireEvent.press(screen.getByTestId('courier-line-line-0'));
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
     await waitFor(() => expect(screen.getByTestId('courier-delivery-done')).toBeOnTheScreen());

@@ -6,8 +6,12 @@ import { courierCopy } from './copy';
   KURYE EKRANLARININ BİÇİMLEME KURALLARI — saf, React'siz, testli.
 
   Ekranlardan AYRI durur çünkü hiçbiri bir görünüm kararı değil: gün adının Türkçe yazımı, tutarın
-  cent ↔ metin çevrimi, farkın işaretli gösterimi ve içerik özetinin satırlara ayrılması dört ayrı
-  kuraldır ve dördü de bir bileşen değişse bile aynı kalır.
+  cent ↔ metin çevrimi ve farkın işaretli gösterimi üç ayrı kuraldır ve üçü de bir bileşen değişse
+  bile aynı kalır.
+
+  İÇERİK ÖZETİNİ AYRIŞTIRAN KURAL (`parseContentSummary`) 21.10e'de SÖKÜLDÜ: durak sözleşmesi artık
+  kalem satırlarını kimlikleriyle taşıyor (`CourierStop.items`), yani ekranın listesi bir metinden
+  tahmin edilmiyor — kaynağından okunuyor. Ayrıştırma o boşluğun pansumanıydı; boşluk kapandı.
 */
 
 const t = courierCopy;
@@ -86,53 +90,4 @@ export function centsToAmountText(cents: number): string {
 export function signedMoney(cents: number): string {
   const sign = cents > 0 ? '+' : cents < 0 ? '−' : '';
   return `${sign}${money(Math.abs(cents))}`;
-}
-
-/** Durak özetinden çıkan tek kalem. `orderItemId` YOKTUR — sözleşme taşımıyor (ekran künyesi). */
-export interface SummaryLine {
-  /** Satır anahtarı: özet metnindeki sıra. Kalem KİMLİĞİ değil, liste anahtarı. */
-  key: string;
-  qty: number;
-  name: string;
-}
-
-interface ParsedSummary {
-  lines: SummaryLine[];
-  /** Özete sığmayan kalem sayısı (`+2`) — işaretlenemeyen kalemler. */
-  hidden: number;
-}
-
-/**
- * İÇERİK ÖZETİNİ SATIRLARA AYIRIR — `"2 × Baklava, 1 × Mantı +3"`.
- *
- * Biçim uydurma değil, sözleşmenin ürettiği biçim: `application/courier/day.ts`'in `summarize`ı
- * ilk ÜÇ kalemi `"{qty} × {ad}"` olarak virgülle birleştirip kalanı `+N` diye ekliyor. Ekranın
- * kalem listesi bugün BUNDAN çıkıyor, çünkü sözleşmede kalem satırı YOK (yalnız `itemCount` ve
- * bu özet). Ayrıştırma bu yüzden ihtiyattır: tanınmayan bir parça ATILMAZ, adı olduğu gibi
- * `qty:1` ile satıra alınır — kuryenin kolide gördüğü bir şeyi ekranın yutması, listeyi
- * güvenilmez yapardı.
- */
-export function parseContentSummary(summary: string, itemCount: number): ParsedSummary {
-  const trimmed = summary.trim();
-  if (trimmed.length === 0) return { lines: [], hidden: itemCount };
-
-  const tail = /\s\+(\d+)$/.exec(trimmed);
-  const body = tail ? trimmed.slice(0, tail.index) : trimmed;
-  const hiddenFromTail = tail ? Number(tail[1]) : 0;
-
-  const lines = body
-    .split(', ')
-    .filter((part) => part.trim().length > 0)
-    .map((part, index) => {
-      const match = /^(\d+)\s×\s(.+)$/.exec(part.trim());
-      return {
-        key: `line-${index}`,
-        qty: match ? Number(match[1]) : 1,
-        name: match ? (match[2] ?? part.trim()) : part.trim(),
-      };
-    });
-
-  // Gizli sayı iki kaynaktan doğrulanır: özetin kuyruğu ve `itemCount` farkı. Büyük olan alınır —
-  // özet kuyruğu yoksa ama sayı tutmuyorsa da kurye eksik olduğunu GÖRMELİ.
-  return { lines, hidden: Math.max(hiddenFromTail, itemCount - lines.length, 0) };
 }

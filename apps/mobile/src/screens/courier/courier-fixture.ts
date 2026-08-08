@@ -14,6 +14,22 @@ import type { CourierDayResponse, CourierStopContract, DayCloseDraftContract } f
 
 const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
+/**
+ * **Kapı kasası hesabı** — tahsilat senaryosu kuran testin gün cevabına koyduğu kimlik.
+ * Fixture'ın varsayılanı `null` (ayar boş) çünkü kapının kapalı hâli de ölçülüyor.
+ * Sayı kalem kimliklerinin (`stopItemId`) uzayının dışında seçildi: çakışan iki kimlik, testi
+ * yanlış satırı işaretlerken YEŞİL gösterirdi.
+ */
+export const DOOR_ACCOUNT_ID = uuid(7000);
+
+/**
+ * Durak kaleminin kimliği — testler işaretleyecekleri satırı bu kimlikle bulur (satır anahtarı artık
+ * sıra numarası değil, `orderItemId`). İki durağın kalemleri çakışmasın diye durak sırasından türer.
+ */
+export function stopItemId(stopIndex: number, lineIndex: number): string {
+  return uuid((lineIndex + 5) * 100 + stopIndex);
+}
+
 /** Kapıda nakit tahsilatlı, iki kalemli, bekleyen B2C durağı — testlerin "normal" satırı. */
 export function courierStop(index: number, overrides: Partial<CourierStopContract> = {}): CourierStopContract {
   return {
@@ -30,8 +46,8 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
     // Kalem satırları KİMLİKLİ (21.10d): kısmi iade `orderItemId` ile gönderilir; fixture'ın
     // kimliği durak kimliğinden türetilir ki iki durağın kalemleri çakışmasın.
     items: [
-      { orderItemId: uuid(500 + index), name: 'Fıstıklı Baklava', qty: 2 },
-      { orderItemId: uuid(600 + index), name: 'Mantı', qty: 1 },
+      { orderItemId: stopItemId(index, 0), name: 'Fıstıklı Baklava', qty: 2 },
+      { orderItemId: stopItemId(index, 1), name: 'Mantı', qty: 1 },
     ],
     outcome: 'pending',
     attempts: 0,
@@ -39,10 +55,16 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
   };
 }
 
-export function courierDay(stops: CourierStopContract[], date = '2026-08-08'): CourierDayResponse {
-  // Kasa hesabı GÜN başına (21.10d): null = ayar boş → ekran tahsilat kapısını kapalı gösterir;
-  // tahsilat senaryosu kuran test kendi uuid'ini geçirir.
-  return { date, stops, doorAccountId: null };
+/**
+ * Günün cevabı. Kasa hesabı GÜN başına (21.10d) ve varsayılanı `null` — ayar boşken ekran tahsilat
+ * kapısını kapalı gösteriyor ve o hâl de ölçülüyor; tahsilat senaryosu kuran test
+ * `{ doorAccountId: DOOR_ACCOUNT_ID }` geçirir.
+ */
+export function courierDay(
+  stops: CourierStopContract[],
+  overrides: Partial<Omit<CourierDayResponse, 'stops'>> = {},
+): CourierDayResponse {
+  return { date: '2026-08-08', doorAccountId: null, stops, ...overrides };
 }
 
 export function dayCloseDraft(overrides: Partial<DayCloseDraftContract> = {}): DayCloseDraftContract {

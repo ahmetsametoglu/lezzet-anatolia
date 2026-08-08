@@ -28,7 +28,7 @@ import { useDelivery } from './use-delivery.hook';
      Düğme SİLİNMEDİ çünkü tasarımın kararı iki kanıt yolu olması; kapalı ve sebebi yazılı duruyor
      (CLAUDE §3: "dış-modül bekleyende UI tam, arka uç stub"). İmza yolu TAM çalışıyor, yani
      B2B'nin kanıt kapısı bugün de geçilebiliyor.
-     BEKLEYEN(21.10): kanıt fotoğrafı — kamera modülü + aynı yükleme kapısı.
+     BEKLEYEN(21.13): kanıt fotoğrafı — kamera modülü + aynı yükleme kapısı.
   2. **Başarıdan sonra SIRADAKİ DURAĞA otomatik geçilmiyor** (v2:882). Şablon bunu YEREL durumla
      yapıyor (liste bellekte); gerçek akışta bir sonraki durak ancak liste tazelendikten sonra
      bilinir ve o tazeleme K1'de zaten var. Ekran bunun yerine sonucu GÖSTERİP kalıyor — kurye
@@ -227,20 +227,24 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
 
         {/* ── 2 · MAL ───────────────────────────────────────────────────────── */}
         <View style={styles.section}>
+          {/* Sayı ÇİZİLEN listeden gelir, `itemCount`tan değil: başlık dokunulabilir satırları
+              tarif ediyor, ikisi ayrışırsa başlık ekranda olmayan bir kalemi vaat ederdi. */}
           <Text style={styles.sectionHeading}>
-            {fillCopy(t.delivery.goods.heading, { n: String(stop.itemCount) })}
+            {fillCopy(t.delivery.goods.heading, { n: String(delivery.lines.length) })}
           </Text>
           {delivery.lines.map((line) => {
-            const mark = delivery.markOf(line.key);
+            const mark = delivery.markOf(line.orderItemId);
             return (
-              <View key={line.key} style={styles.lineRow}>
+              /* ANAHTAR KALEMİN KİMLİĞİ: ekranda işaretlenen satır, uca `adjustments` olarak giden
+                 satırın kendisidir — sıra numarası olsaydı liste tazelendiğinde işaret kayabilirdi. */
+              <View key={line.orderItemId} style={styles.lineRow}>
                 <PressableSurface
-                  onPress={() => delivery.toggleLine(line.key)}
+                  onPress={() => delivery.toggleLine(line.orderItemId)}
                   feedback="scale"
                   style={styles.lineHead}
                   accessibilityLabel={`${line.qty} × ${line.name}`}
                   selected={mark === 'delivered'}
-                  testID={`courier-line-${line.key}`}
+                  testID={`courier-line-${line.orderItemId}`}
                 >
                   <View
                     style={[
@@ -262,14 +266,14 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
                   </Text>
                 </PressableSurface>
                 {mark === 'refused' && line.qty > 1 ? (
-                  <View style={styles.returnRow} testID={`courier-line-return-${line.key}`}>
+                  <View style={styles.returnRow} testID={`courier-line-return-${line.orderItemId}`}>
                     <Text style={styles.returnLabel}>{t.delivery.goods.returnQty}</Text>
                     <OperationsStepperButton
                       direction="decrease"
                       size="sm"
                       onPress={() => delivery.changeReturnQty(line, -1)}
                       accessibilityLabel={t.delivery.goods.decrease}
-                      testID={`courier-line-return-minus-${line.key}`}
+                      testID={`courier-line-return-minus-${line.orderItemId}`}
                     />
                     <Text style={styles.returnCount}>{`${delivery.returnQtyOf(line)}/${line.qty}`}</Text>
                     <OperationsStepperButton
@@ -277,19 +281,14 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
                       size="sm"
                       onPress={() => delivery.changeReturnQty(line, 1)}
                       accessibilityLabel={t.delivery.goods.increase}
-                      testID={`courier-line-return-plus-${line.key}`}
+                      testID={`courier-line-return-plus-${line.orderItemId}`}
                     />
                   </View>
                 ) : null}
               </View>
             );
           })}
-          {delivery.hiddenLines > 0 ? (
-            <Text style={styles.hintText} testID="courier-lines-hidden">
-              {fillCopy(t.delivery.goods.hidden, { n: String(delivery.hiddenLines) })}
-            </Text>
-          ) : null}
-          {delivery.partialBlocked ? (
+          {delivery.partialReturn ? (
             <Text style={styles.warnText} testID="courier-partial-note">
               {t.delivery.goods.partialNote}
             </Text>

@@ -38,7 +38,18 @@
     "pocketUnknown": "cepte bilinmiyor",
     "doorLeft": "{n} kapıda tahsilat kaldı · {amount}",
     "startHint": "Önce \"Yola çıktım\" — durak sonuçları yola çıkmadan yazılamaz (kapı sırası).",
-    "start": "Yola çıktım — günü başlat",
+    "startCta": "Yola çıktım — günü başlat",
+    "starting": "Başlatılıyor…",
+    "start": {
+      "started": "{n} durak yola çıktı.",
+      "alreadyOut": "{n} durak zaten yoldaydı.",
+      "skipped": "{n} durak hazırlanmayı bekliyor ({statuses}) — hazırlık bitince tekrar başlat.",
+      "stale": "{n} durağın durumu tam o sırada değişti — liste tazelendi, gerekirse tekrar başlat.",
+      "none": "Hiçbir durak yola çıkmadı — gün BAŞLAMADI, duraklar kilitli kalır.",
+      "failed": "Gün başlatılamadı ({error}) — hiçbir durak yola çıkmadı.",
+      "network": "Bağlantı yok — gün başlatılamadı. Bağlantı gelince tekrar deneyin.",
+      "retry": "Kalanları yola çıkar"
+    },
     "close": "Günü kapat",
     "openBadge": "{n} açık",
     "stop": {
@@ -94,12 +105,10 @@
     },
     "goods": {
       "heading": "2 · MAL · {n} KALEM — dokun: ✓ teslim · ✕ reddedildi",
-      "hidden": "+{n} kalem daha — durak özeti ilk üç kalemi yazıyor, kalanlar işaretlenemez.",
       "returnQty": "iade adedi",
       "decrease": "İade adedini azalt",
       "increase": "İade adedini artır",
-      "partialNote": "Kısmi red — iade kalemleri depo kabulüne düşer; iade tutarını motor hesaplar.",
-      "partialBlocked": "Kısmi iade bu sürümde KAYDEDİLEMİYOR: durak özeti kalem kimliği taşımıyor, düzeltme uca gönderilemez. Tümü reddedildiyse \"Kabul etmedi\"yi kullanın."
+      "partialNote": "Kısmi red — iade kalemleri depo kabulüne düşer; iade tutarını motor hesaplar."
     },
     "collection": {
       "heading": "3 · TAHSİLAT — MOTOR TUTARI {amount}",
@@ -109,13 +118,14 @@
       "partial": "Eksik ödeme — durum \"Kısmi\"ye türer",
       "cashWarning": "⚠ Nakit yasal sınırın üstünde — bilgi amaçlıdır, engellemez.",
       "note": "Ödeme durumu tahsilattan türetilir; \"tekrar dene\" güvenlidir, para iki kez yazılmaz.",
-      "blocked": "Tahsilat uca YAZILAMIYOR: kapı kasası hesabı bu uçtan gelmiyor. Para yazılmadan teslim kapatılmaz — operasyonu arayın.",
+      "blocked": "Tahsilat YAZILAMIYOR: kapı kasası hesabı ayarlanmamış (sistem ayarı boş ya da geçersiz). Para yazılmadan teslim kapatılmaz — operasyonu arayın.",
       "settled": "✓ Borç yok",
       "settledNote": "bu kapıda para konuşulmaz"
     },
     "cta": {
       "deliver": "Teslim edildi",
       "deliverWithAmount": "Teslim edildi — {amount} alındı",
+      "deliverNoCollection": "Teslim edildi — tahsilat YAZILMAZ, borç kalır",
       "partial": "Kısmi teslim — iade kaydıyla",
       "allRefused": "tümü reddedildi — \"Kabul etmedi\"yi kullan",
       "sending": "Kaydediliyor…",

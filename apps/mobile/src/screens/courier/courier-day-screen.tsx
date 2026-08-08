@@ -9,6 +9,7 @@ import { OperationsSectionHeader } from '@/components/operations/section-header'
 import { NotificationBell } from '@/components/operations/notification-bell';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { TextAction } from '@/components/ui/text-action';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { useOperationsUserName } from '@/screens/operations/sections-context';
 import { useOperationsNotifications } from '@/screens/operations/use-notifications.hook';
@@ -42,6 +43,10 @@ import { useCourierDay } from './use-courier-day.hook';
   3. **"±" (kısmi) durak dairesi hiç doğmaz** (v2:852). Sözleşmenin durak sonucu dörtlü:
      `pending · delivered · unreachable · refused` — "kısmi" ayrı bir sonuç DEĞİL, teslim edilmiş
      bir durağın kalan borcudur. O bilgi satırın alt metninde yazılıyor.
+  4. **"Yola çıktım"ın sonucu için bir bildirim satırı eklendi** (v2'de yok — şablonun düğmesi yalnız
+     yerel bir bayrak çeviriyor, ağa çıkmıyor). Gerçek kapı KISMİ başarı döndürebiliyor ("3 yola
+     çıktı, 1 hazırlanmayı bekliyor") ve o cümlenin yazılacak bir yeri olmadan cevap yutulurdu.
+     Yapışkan alana, CTA'nın ÜSTÜNE kondu: kurye listenin neresinde olursa olsun görür.
 */
 
 const t = courierCopy;
@@ -64,6 +69,9 @@ export function CourierDayScreen() {
   const doorTotal = doorStops.reduce((total, stop) => total + (stop.payment.dueAmountCents ?? 0), 0);
   /** Sıradaki durak — v2:848: ilk sonuçlanmamış durak, koyu daireyle işaretlenir. */
   const nextOrderId = stops.find((stop) => stop.outcome === 'pending')?.orderId ?? null;
+
+  /** Başlatma havadayken düğme kendi hâlini söyler — basılamaz olduğu ayrıca `disabled`la duyulur. */
+  const ctaStartLabel = day.starting ? t.day.starting : t.day.startCta;
 
   const eyebrow = [t.day.eyebrow, day.date === null ? null : dayLabel(day.date), turkishUpper(shortName(userName))]
     .filter((part): part is string => part !== null && part.length > 0)
@@ -178,15 +186,37 @@ export function CourierDayScreen() {
 
       {/* YAPIŞKAN CTA — liste altından akar, gradyan onu kesmeden bitirir (v2:89). */}
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
+        {day.startNotice === null ? null : (
+          <View style={styles.startNoticeBlock}>
+            <Text
+              style={[styles.startNotice, styles[`startNotice_${day.startNotice.tone}`]]}
+              accessibilityRole="alert"
+              testID="courier-day-start-notice"
+            >
+              {day.startNotice.text}
+            </Text>
+            {/* Gün başladıktan sonra birincil düğme "Günü kapat"a döner; hazırlığı geciken durak
+                için İKİNCİ bir başlatma yolu olmasaydı o durak uygulamadan yola çıkarılamazdı. */}
+            {day.startNotice.canRetry ? (
+              <TextAction
+                label={t.day.start.retry}
+                onPress={day.start}
+                disabled={day.starting}
+                testID="courier-day-start-retry"
+              />
+            ) : null}
+          </View>
+        )}
         <PressableSurface
           onPress={day.started ? () => router.navigate('/day-close') : day.start}
+          disabled={day.starting}
           feedback="shadow"
           style={[styles.cta, day.started ? styles.ctaClose : styles.ctaStart]}
-          accessibilityLabel={day.started ? t.day.close : t.day.start}
+          accessibilityLabel={day.started ? t.day.close : ctaStartLabel}
           testID="courier-day-cta"
         >
           <Text style={[styles.ctaLabel, day.started ? styles.ctaLabelClose : styles.ctaLabelStart]}>
-            {day.started ? t.day.close : t.day.start}
+            {day.started ? t.day.close : ctaStartLabel}
           </Text>
           {day.started && openCount > 0 ? (
             <Text style={styles.ctaBadge}>{fillCopy(t.day.openBadge, { n: String(openCount) })}</Text>
@@ -445,6 +475,32 @@ const styles = StyleSheet.create({
     paddingTop: operationsTheme.space.xl,
     paddingBottom: operationsTheme.space['3xl'],
     paddingHorizontal: operationsTheme.space['5xl'],
+  },
+  startNoticeBlock: {
+    alignItems: 'flex-start',
+    gap: operationsTheme.space.xs,
+    marginBottom: operationsTheme.space.md,
+  },
+  startNotice: {
+    alignSelf: 'stretch',
+    padding: operationsTheme.space.xl,
+    borderRadius: operationsTheme.radius.control,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    fontWeight: operationsTheme.text['button--font-weight'],
+    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
+  },
+  startNotice_ok: {
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    color: operationsTheme.colors['olive-dark'],
+  },
+  startNotice_warn: {
+    backgroundColor: operationsTheme.colors['terracotta-bg'],
+    color: operationsTheme.colors.terracotta,
+  },
+  startNotice_error: {
+    backgroundColor: operationsTheme.colors['error-bg'],
+    color: operationsTheme.colors.error,
   },
   cta: {
     height: operationsTheme.size.controlLg,

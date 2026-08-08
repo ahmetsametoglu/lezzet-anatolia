@@ -5,6 +5,7 @@ import {
   type CourierStopContract,
   type DeliveryProofInputContract,
   type DoorCollectionInputContract,
+  type FulfillmentAdjustment,
   type MarkUndeliveredResponse,
 } from '@lezzet/types';
 
@@ -19,7 +20,7 @@ import {
 import { newRequestKey } from '@/lib/request-key';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
-import { centsToAmountText, money, parseAmountToCents, parseContentSummary, type SummaryLine } from './courier-format';
+import { centsToAmountText, money, parseAmountToCents } from './courier-format';
 
 /*
   TESLİMAT EKRANININ MOTORU (K3 · K4 · K5) — durak okuması, kanıt yüklemesi, kapılar ve iki yazma
@@ -41,23 +42,21 @@ import { centsToAmountText, money, parseAmountToCents, parseContentSummary, type
   `stale`/`deduped` açıkça "para/kayıt ikilenmedi" diye okunur — HTTP koduna indirgenen bir ret
   taşıdığı bilgiyi kaybeder (uç künyesi).
 
-  ── BUGÜN GÖNDERİLEMEYEN İKİ ALAN — SÖZLEŞME BOŞLUĞU, EKRAN KUSURU DEĞİL ────
-  Ölçüldü (08.08), varsayılmadı:
-  · `collection.accountId` ZORUNLU bir uuid (`DoorCollectionInputSchema`) ve mobil istemcinin onu
-    öğrenebileceği bir yol YOK — web ekranı değeri `door_cash_account_id` AYARINDAN sunucu
-    tarafında okuyor (`deliveries/[orderId]/delivery-read.ts:36`), `/api/v1/courier/day` cevabı da
-    `/me` de bu alanı taşımıyor. Uydurulmuş bir uuid 400 alır, alansız gövde sözleşmeye uymaz.
-    → Tahsilat paneli TAM çalışır (tutar, ±, yöntem, kısmi rozeti, nakit uyarısı) ama TESLİM KAPISI
-    kapalıdır ve sebebi ekranda yazılıdır. "Teslim yazıp parayı yazmamak" bilerek seçilmedi: kapıda
-    alınan 42 € kayda geçmeden teslim kapanırsa sipariş borçlu görünür, müşteriye borç hatırlatması
-    gider ve para ancak ay sonu mutabakatında aranır. Kanıt kapısının kendi kuralı da aynı — eksik
-    girdide HİÇBİR yazım yapılmaz. Bugünkü çalışan yol operasyon WEB ekranıdır (o kapı tam).
-  · `adjustments[].orderItemId` de yok: durak sözleşmesi kalem SATIRI taşımıyor, yalnız `itemCount`
-    ve bir özet metni (`contentSummary`). Kalem işaretleri bu yüzden iki KAPIYI besliyor ("her
-    kalemi işaretle" · "tümü reddedildiyse Kabul etmedi'yi kullan") ama kısmi iade uca
-    GÖNDERİLEMEZ; o hâlde de teslim kapısı kapalı ve sebebi yazılı.
-  BEKLEYEN(21.10): `/courier/day` cevabına kapı kasası hesabı + kalem satırları (`orderItemId`,
-  `qty`) eklenmeli — ikisi de `packages/types` + `apps/mobile-api` işi, bu şeridin yazma alanı dışı.
+  ── KALEM SATIRLARI SÖZLEŞMEDEN OKUNUR, METİNDEN TAHMİN EDİLMEZ ─────────────
+  Liste `stop.items`ten çıkıyor ve satırın anahtarı `orderItemId`nin KENDİSİDİR — yani ekranda
+  işaretlenen satır, uca gönderilen satırla aynı satırdır. 21.10d'den önce burada içerik özeti
+  (`contentSummary`) ayrıştırılıyordu: kurye işaretleyebiliyor ama gönderemiyordu, çünkü kimlik
+  yoktu. Kısmi iade artık gerçekten yazılıyor ve `fulfilledQty` **HEDEF** değerdir (kalan adet),
+  fark değil — ekranda görülen sayı gönderilir (sözleşme künyesi).
+
+  ── TAHSİLAT KAPISININ ANAHTARI GÜN CEVABINDA ───────────────────────────────
+  `collection.accountId` zorunlu bir uuid ve değeri gün başına tekil: `/courier/day` onu
+  `doorAccountId` olarak taşıyor (ayardan; kullanılamaz hâlde `null`). `null` gelirse tahsilat
+  paneli TAM çalışır (tutar, ±, yöntem, kısmi rozeti, nakit uyarısı) ama TESLİM KAPISI kapanır ve
+  sebebi ekranda yazılır. "Teslim yazıp parayı yazmamak" bilerek seçilmedi: kapıda alınan 42 €
+  kayda geçmeden teslim kapanırsa sipariş borçlu görünür, müşteriye borç hatırlatması gider ve para
+  ancak ay sonu mutabakatında aranır. Kanıt kapısının kuralı da aynı — eksik girdide HİÇBİR yazım
+  yapılmaz.
 */
 
 const t = courierCopy;
@@ -75,18 +74,11 @@ const CASH_LIMIT_CENTS = 100_000;
 /** Tutar ±/− adımı — v2 bir euro artırıp azaltıyor (`gercek - 1`). */
 const AMOUNT_STEP_CENTS = 100;
 
-/**
- * **KAPI KASASI HESABI — bugün `null`.** Dosya künyesindeki sözleşme boşluğunun tek dikişi burası:
- * alan uca eklendiği gün bu fonksiyon durağı okur ve tahsilat kendiliğinden açılır. Sabit bir
- * `null` yerine adlandırılmış bir dikiş olması bilinçli — "neden tahsilat gönderilmiyor?" sorusunun
- * cevabı koda bakan kişinin ilk gördüğü şey olsun.
- */
-function doorCashAccountId(): string | null {
-  return null;
-}
-
 /** Kalemin üç hâli (v2:917): işaretsiz → teslim → reddedildi → işaretsiz. */
 type LineMark = 'delivered' | 'refused' | undefined;
+
+/** Kapıdaki kalem satırı — tip SÖZLEŞMEDEN türer, elle yazılmaz (CLAUDE §1). */
+type StopLine = CourierStopContract['items'][number];
 
 /** Kapının olumsuz dalları — iki uç da aynı şekli döndürür, çeviri de tek yerden yapılır. */
 type CourierRefusal =
@@ -118,17 +110,16 @@ interface UseDeliveryResult {
   confirmSignature: (pngBase64: string) => void;
   clearProof: () => void;
 
-  lines: SummaryLine[];
-  /** Özete sığmayan kalem sayısı — işaretlenemezler, kapıyı da bloke etmezler. */
-  hiddenLines: number;
-  markOf: (key: string) => LineMark;
-  toggleLine: (key: string) => void;
-  returnQtyOf: (line: SummaryLine) => number;
-  changeReturnQty: (line: SummaryLine, delta: number) => void;
+  /** Durağın kalem satırları — sözleşmeden, anahtarı `orderItemId`. */
+  lines: StopLine[];
+  markOf: (orderItemId: string) => LineMark;
+  toggleLine: (orderItemId: string) => void;
+  returnQtyOf: (line: StopLine) => number;
+  changeReturnQty: (line: StopLine, delta: number) => void;
   hasRefused: boolean;
   allRefused: boolean;
-  /** Kısmi iade uca gönderilemiyor (künye) — kapı kapalı, sebebi ekranda. */
-  partialBlocked: boolean;
+  /** Bir kısmı reddedildi — düzeltme uca GİDER; not iade akışının nereye düştüğünü söyler. */
+  partialReturn: boolean;
 
   /** Kapıda tahsil edilecek tutar (cent); `null` = borç yok. */
   dueCents: number | null;
@@ -140,7 +131,7 @@ interface UseDeliveryResult {
   setMethod: (method: 'cash' | 'card' | 'cheque') => void;
   partialPayment: boolean;
   cashLimitWarning: boolean;
-  /** Tahsilat gönderilemiyor (künye) — panel çalışır, teslim kapısı kapalıdır. */
+  /** Kapı kasası hesabı yok (ayar boş) — panel çalışır, teslim kapısı kapalıdır. */
   collectionBlocked: boolean;
   amountStepCents: number;
 
@@ -190,6 +181,13 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   const [stop, setStop] = useState<CourierStopContract | null>(null);
   const [order, setOrder] = useState(0);
   const [total, setTotal] = useState(0);
+  /**
+   * **Kapı kasası hesabı** — gün cevabından (`doorAccountId`). Durak başına değil gün başına, çünkü
+   * ayarın kendisi tekil. `null` = ayar boş ya da kullanılamaz → tahsilat kapısı kapalı ve sebebi
+   * ekranda (dosya künyesi). Uydurma bir uuid göndermek 400 alırdı; rastgele bir değer ise kapıda
+   * alınan parayı olmayan bir hesaba yazardı.
+   */
+  const [doorAccountId, setDoorAccountId] = useState<string | null>(null);
 
   const [proof, setProof] = useState<DeliveryProofInputContract | null>(null);
   const [signing, setSigning] = useState(false);
@@ -235,6 +233,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     setStop(found);
     setOrder(index + 1);
     setTotal(result.data.stops.length);
+    setDoorAccountId(result.data.doorAccountId);
     setStatus('ready');
     // Tutar alanı MOTORUN tutarıyla açılır (K4: "alan onunla açılır"); kurye gerçekleşeni düzeltir.
     setAmountText(found.payment.dueAmountCents === null ? '' : centsToAmountText(found.payment.dueAmountCents));
@@ -247,12 +246,24 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     void load();
   }, [load]);
 
-  const summary = parseContentSummary(stop?.contentSummary ?? '', stop?.itemCount ?? 0);
-  const lines = summary.lines;
-  const allMarked = lines.length > 0 && lines.every((line) => marks[line.key] !== undefined);
-  const hasRefused = lines.some((line) => marks[line.key] === 'refused');
-  const allRefused = lines.length > 0 && lines.every((line) => marks[line.key] === 'refused');
-  const partialBlocked = hasRefused && !allRefused;
+  const lines = stop?.items ?? [];
+  const allMarked = lines.length > 0 && lines.every((line) => marks[line.orderItemId] !== undefined);
+  const hasRefused = lines.some((line) => marks[line.orderItemId] === 'refused');
+  const allRefused = lines.length > 0 && lines.every((line) => marks[line.orderItemId] === 'refused');
+  const partialReturn = hasRefused && !allRefused;
+
+  /**
+   * **KALEM DÜZELTMELERİ** — yalnız REDDEDİLEN satırlardan doğar ve `fulfilledQty` HEDEF adettir:
+   * sipariş edilen adetten kapıda geri kalan çıkarılır. İşaretsiz ya da teslim edilen satır
+   * gönderilmez, çünkü onlarda değişen bir şey yok ve düzeltilmeyen satır kapıda olduğu gibi kalır.
+   *
+   * `returnDisposition` BİLEREK boş: malın akıbeti (stoğa dönsün mü, imha mı) kapıda değil DEPO
+   * KABULÜNDE karara bağlanır (DOMAIN §8 — "akıbet kararı depocunundur"). Kurye ne gördüğünü söyler,
+   * ne olacağını söylemez.
+   */
+  const adjustments: FulfillmentAdjustment[] = lines
+    .filter((line) => marks[line.orderItemId] === 'refused')
+    .map((line) => ({ orderItemId: line.orderItemId, fulfilledQty: line.qty - (returnQty[line.orderItemId] ?? line.qty) }));
 
   const dueCents = stop?.payment.dueAmountCents ?? null;
   const amountCents = parseAmountToCents(amountText);
@@ -266,27 +277,32 @@ export function useDelivery(orderId: string): UseDeliveryResult {
    */
   const buildCollection = useCallback((): DoorCollectionInputContract | null => {
     if (dueCents === null || amountCents === null || amountCents <= 0) return null;
-    const accountId = doorCashAccountId();
-    if (accountId === null) return null;
+    if (doorAccountId === null) return null;
     collectionKey.current ??= newRequestKey('col');
-    return { method, amountCents, accountId, idempotencyKey: collectionKey.current };
-  }, [amountCents, dueCents, method]);
+    return { method, amountCents, accountId: doorAccountId, idempotencyKey: collectionKey.current };
+  }, [amountCents, doorAccountId, dueCents, method]);
 
-  const collectionBlocked = dueCents !== null && buildCollection() === null;
+  /**
+   * **Tahsilat YAZILAMAZ** — borç var ama kapı kasası hesabı yok (ayar boş / bozuk).
+   *
+   * Tutarın BOŞ olması bu kapıyı kapatmaz ve bu bilinçli bir ayrım: boş tutar "hesap bilinmiyor"
+   * değil, kuryenin "kapıda para almadım" demesidir — sipariş borçlu kalır, cevabın `amountDueCents`i
+   * bunu söyler ve CTA'nın kendisi de tahsilat yazılmayacağını yazar. İkisini tek bayrağa toplamak
+   * çalışan bir kapıyı, çalışmayan bir kapının gerekçesiyle kapatırdı.
+   */
+  const collectionBlocked = dueCents !== null && doorAccountId === null;
 
   const proofRequired = stop?.channel === 'b2b';
   const proofSatisfied = !proofRequired || proof !== null;
-  const gateOpen = proofSatisfied && allMarked && !allRefused && !partialBlocked && !collectionBlocked && !finished;
+  const gateOpen = proofSatisfied && allMarked && !allRefused && !collectionBlocked && !finished;
 
   const gateNote = gateOpen
     ? null
     : allRefused
       ? null
-      : partialBlocked
-        ? t.delivery.goods.partialBlocked
-        : collectionBlocked
-          ? t.delivery.collection.blocked
-          : `${t.delivery.cta.gate}${proofSatisfied ? '' : t.delivery.cta.gateProof}${allMarked ? '' : t.delivery.cta.gateGoods}`;
+      : collectionBlocked
+        ? t.delivery.collection.blocked
+        : `${t.delivery.cta.gate}${proofSatisfied ? '' : t.delivery.cta.gateProof}${allMarked ? '' : t.delivery.cta.gateGoods}`;
 
   const ctaLabel = allRefused
     ? t.delivery.cta.allRefused
@@ -294,9 +310,12 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       ? t.delivery.cta.sending
       : hasRefused
         ? t.delivery.cta.partial
-        : dueCents !== null && amountCents !== null
-          ? fillCopy(t.delivery.cta.deliverWithAmount, { amount: money(amountCents) })
-          : t.delivery.cta.deliver;
+        : dueCents === null
+          ? t.delivery.cta.deliver
+          : // Borç varken tutarın boş/sıfır olması sessiz kalmaz: düğmenin kendisi "para yazılmıyor" der.
+            amountCents !== null && amountCents > 0
+            ? fillCopy(t.delivery.cta.deliverWithAmount, { amount: money(amountCents) })
+            : t.delivery.cta.deliverNoCollection;
 
   const confirmSignature = useCallback(
     (pngBase64: string) => {
@@ -338,11 +357,12 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     setNotice(null);
 
     void (async () => {
-      /* Gövde bugün YALNIZ kanıt taşıyor: `adjustments` kalem kimliği olmadığı için hiç doğmuyor,
-         `collection` da kasa hesabı olmadığı için (künye). İkisi de sözleşmede opsiyonel — eksik
-         alanla gönderilen bir istek DEĞİL, o alanların doğmadığı bir istek gidiyor. */
+      /* Üç alan da sözleşmede OPSİYONEL ve yalnız gerçekten bir şey söylüyorsa doğuyor: kanıt
+         alındıysa `proof`, kalem reddedildiyse `adjustments`, para alındıysa `collection`. Boş bir
+         dizi ya da sıfırlı bir gövde göndermek, olmayan bir düzeltmeyi kapıya iş olarak vermekti. */
       const collection = buildCollection();
       const result = await submitDoorDelivery(orderId, {
+        ...(adjustments.length === 0 ? {} : { adjustments }),
         ...(proof === null ? {} : { proof }),
         ...(collection === null ? {} : { collection }),
       });
@@ -372,7 +392,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       });
       setFinished(true);
     })();
-  }, [buildCollection, gateOpen, orderId, proof, sending]);
+  }, [adjustments, buildCollection, gateOpen, orderId, proof, sending]);
 
   const confirmOutcome = useCallback(() => {
     if (outcome === null || sending) return;
@@ -438,22 +458,22 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     }, []),
 
     lines,
-    hiddenLines: summary.hidden,
-    markOf: (key) => marks[key],
-    toggleLine: (key) =>
+    markOf: (orderItemId) => marks[orderItemId],
+    toggleLine: (orderItemId) =>
       setMarks((current) => ({
         ...current,
-        [key]: current[key] === undefined ? 'delivered' : current[key] === 'delivered' ? 'refused' : undefined,
+        [orderItemId]:
+          current[orderItemId] === undefined ? 'delivered' : current[orderItemId] === 'delivered' ? 'refused' : undefined,
       })),
-    returnQtyOf: (line) => returnQty[line.key] ?? line.qty,
+    returnQtyOf: (line) => returnQty[line.orderItemId] ?? line.qty,
     changeReturnQty: (line, delta) =>
       setReturnQty((current) => ({
         ...current,
-        [line.key]: Math.min(line.qty, Math.max(1, (current[line.key] ?? line.qty) + delta)),
+        [line.orderItemId]: Math.min(line.qty, Math.max(1, (current[line.orderItemId] ?? line.qty) + delta)),
       })),
     hasRefused,
     allRefused,
-    partialBlocked,
+    partialReturn,
 
     dueCents,
     amountText,

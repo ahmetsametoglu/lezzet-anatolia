@@ -10,6 +10,8 @@ import {
   DeliveryProofUploadResponseSchema,
   type MarkUndeliveredRequest,
   MarkUndeliveredResponseSchema,
+  type StartCourierDayRequest,
+  StartCourierDayResponseSchema,
 } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
@@ -50,6 +52,24 @@ function queryOf(params: Record<string, string | undefined>): string {
  */
 export function fetchCourierDay(date?: string): Promise<ApiResult<z.infer<typeof CourierDayResponseSchema>>> {
   return authorizedFetch(`/api/v1/courier/day${queryOf({ date })}`, CourierDayResponseSchema);
+}
+
+/**
+ * **"Yola çıktım" — günü başlat** (K1). Günün HAZIR duraklarını yola çıkarır.
+ *
+ * Cevap tek bir `ok` DEĞİL, dört listedir (`started` · `alreadyOut` · `stale` · `skipped`) ve
+ * hepsi **200** ile gelir: bu ucun "yarısı oldu" hâli normaldir. Yani burada da hiçbir şey hataya
+ * çevrilmez — hangi durağın geçtiğini, hangisinin geçmediğini ve NEDEN geçmediğini ekran okur.
+ *
+ * Gün gönderilir çünkü ekranın gösterdiği gün ile başlatılan gün AYNI olmak zorunda: liste gece
+ * yarısından önce okunmuş ve düğmeye sonra basılmışsa, günsüz bir istek YARININ rotasını başlatıp
+ * ekranda duran bugünkü listeyi kilitli bırakırdı. Bu ikinci bir hesap değil, cevabın kendi
+ * `date`inin geri gönderilmesidir.
+ */
+export function startCourierDay(
+  body: StartCourierDayRequest = {},
+): Promise<ApiResult<z.infer<typeof StartCourierDayResponseSchema>>> {
+  return authorizedFetch('/api/v1/courier/day/start', StartCourierDayResponseSchema, { method: 'POST', body });
 }
 
 /**
