@@ -22,6 +22,16 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | last_message_at | timestamptz \| null | |
 | created_at | timestamptz | |
 
+**Bir kişi, bir konuşma** — tekillik `(source, external_ref)` üzerinde (0039). WhatsApp'ta thread kavramı yoktur: aynı numaradan gelen her mesaj aynı sohbetin devamıdır. İndeks olmasaydı ikinci mesaj yeni bir satır açar, admin aynı müşteriyi gelen kutusunda iki kez görür, AI ajanı geçmişin yarısını okurdu. Açılış bu yüzden tek deyimlik upsert (`open_conversation`): oku-sonra-yaz yarışır ve canlı kanalda arka arkaya gelen iki mesajın ikincisi kaybolurdu.
+
+**`customer_id` nullable ve öyle kalmalı:** canlı adımda webhook mesajı önce yazar, kimliği sonra çözer — kimlik çözülemediği için mesajın kaybolduğu bir yol olamaz. Mevcut bağ da EZİLMEZ (`coalesce`): bağlanmış bir konuşmayı başka müşteriye kaydırmak bir **birleştirme** kararıdır ve insana aittir (`DOMAIN §10`).
+
+**24 saatlik pencerenin hesabı burada DEĞİL, motorda** (`serviceWindowExpiry` — domain-core). Tablo yalnız saklar; süreyi RPC'ye de yazmak aynı kuralın iki dilde iki kopyası olurdu. **Pencereyi yalnız GELEN mesaj açar:** giden mesajın uzatması ücretsiz mesajlaşma süresini kendi kendimize uzatmak olurdu — Meta tarafında pencere kapanmıştır ve gönderim şablon ücretiyle geçer.
+
+**Pencere GERİ GİTMEZ** (`greatest`, `coalesce` değil): sağlayıcı webhook'ları ne sıralı gelir ne tek kez denenir. Geç düşen ya da yeniden denenen eski bir mesaj, kendi anına göre hesaplanmış daha erken bir bitişi yazsaydı pencereyi kısaltır ve hâlâ ücretsiz olan bir aralıkta şablon ücreti ödetirdi — üstelik hiçbir yerde hata vermeden. Aynı sebeple `recordInboundMessage`'ın `receivedAt` alanı ZORUNLUDUR: "şimdi"ye düşen bir varsayılan, elle işlenen mesajda pencereyi Meta'nınkinden geç bitirir ve ters yönde aynı faturayı yazar.
+
+**GDPR:** konuşma ve mesajlar `anonymize_customer`'ın **silinir** kovasındadır (0037) — müşterinin kendi cümleleri ve `external_ref`'te duran telefon numarası. `customer_id` FK'si `cascade`, yani hesabın hard-delete edildiği yolda da giderler.
+
 ## Message (mesaj)
 
 | Alan | Tip | Not |
@@ -34,6 +44,14 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | template_name | string \| null | outbound template ise (Meta-onaylı) |
 | provider_message_id | string \| null | 360dialog/Cloud API mesaj id'si |
 | created_at | timestamptz | |
+
+**Defterdir — yazılır, güncellenmez.** `TicketMessage` ile aynı gerekçe: gönderilmiş mesaj değişmez. Servisin güncelleme tipi bu yüzden `never`; bir gün biri "mesajı düzelt" demek istese derlemede durur.
+
+**`direction` ile `TicketMessage.sender` karıştırılmaz** ve ayrım kalıcı: orada "kim yazdı" (müşteri/personel/AI), burada "hangi tarafa aktı" sorulur. WhatsApp'ta bizim adımıza AI da personel de yazabilir; ikisi de aynı numaradan çıkar ve müşteri farkı görmez.
+
+**`kind = template` bir SÜS değil ÜCRET sınıfıdır:** servis penceresi dışında yalnız Meta-onaylı şablon gidebilir ve ücretlidir (~€0,13 FR/DE) — ADR-005'in "önce müşteri yazsın" ilkesi bu satırdan doğuyor. Üç kural veride durur (0039): metin mesajı metinsiz olamaz, şablon adı ile tür ayrışamaz (adsız template / adlı serbest metin reddedilir), **gelen mesaj template olamaz** (template işletme-başlatandır; tersi mümkün olsaydı gelen bir mesaj pencere hesabında "biz gönderdik" gibi okunurdu).
+
+**`body` jsonb ve adım 1'de `payload` AÇIK** — kart/interaktif/medya yapısının şekli sağlayıcıya bağlı ve 15.9'da netleşecek. Bugün kapalı bir sözlük yazmak, henüz görmediğimiz bir yapıyı uydurmak olurdu; uydurulan sözlük gerçeği gördüğümüz gün sessizce yanlış olurdu. `text` her türde okunur (kartın başlığı da bir metindir) — gelen kutusu önizlemesi ve AI bağlamı onu okur.
 
 ## WebhookEvent (dış olay kaydı)
 

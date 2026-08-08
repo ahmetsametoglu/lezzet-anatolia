@@ -40,6 +40,7 @@ export * from './job-run.schema';
 export * from './notification.schema';
 export * from './webhook-event.schema';
 export * from './ticket.schema';
+export * from './conversation.schema';
 export * from './product-feedback.schema';
 export * from './points.schema';
 export * from './feedback-request.schema';

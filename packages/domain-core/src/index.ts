@@ -45,6 +45,7 @@ export * from './bank/parse';
 export * from './bank/fingerprint';
 export * from './bank/match';
 export * from './support/ticket-flow';
+export * from './messaging/service-window';
 export * from './feedback/feedback-score';
 export * from './feedback/points';
 export * from './feedback/invite';

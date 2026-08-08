@@ -378,3 +378,27 @@ export const CATALOG_SORTS = CatalogSortEnum.options;
  */
 export const StockStatusEnum = z.enum(['available', 'shipping', 'elsewhere', 'out_of_stock']);
 export type StockStatus = z.infer<typeof StockStatusEnum>;
+
+/**
+ * Konuşmanın kaynağı (15.1). Bugün tek değerli ve yine de bir enum: yarın Instagram DM eklenirse
+ * `externalRef` artık telefon olmaz — tekillik anahtarının hangi uzayda olduğunu SÖYLEYEN bir alan
+ * gerekir, yoksa aynı dize iki farklı kişiyi gösterebilir.
+ */
+export const ConversationSourceEnum = z.enum(['whatsapp']);
+export type ConversationSource = z.infer<typeof ConversationSourceEnum>;
+
+/**
+ * Mesajın YÖNÜ — `TicketSenderEnum` ile karıştırılmaz ve ayrım kalıcı: orada "kim yazdı"
+ * (müşteri/personel/AI) sorulur, burada "hangi tarafa aktı". WhatsApp'ta bizim adımıza AI da
+ * personel de yazabilir; ikisi de aynı numaradan çıkar ve müşteri farkı görmez.
+ */
+export const MessageDirectionEnum = z.enum(['inbound', 'outbound']);
+export type MessageDirection = z.infer<typeof MessageDirectionEnum>;
+
+/**
+ * Mesajın taşıdığı biçim. `template` bir SÜS değil ÜCRET sınıfıdır: 24 saatlik servis penceresi
+ * dışında yalnız Meta-onaylı şablon gönderilebilir ve ücretlidir (~€0,13 FR/DE) — ADR-005'in
+ * "önce müşteri yazsın" ilkesi tam olarak bu satırdan doğuyor.
+ */
+export const MessageKindEnum = z.enum(['text', 'interactive', 'template', 'media']);
+export type MessageKind = z.infer<typeof MessageKindEnum>;

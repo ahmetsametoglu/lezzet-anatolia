@@ -66,6 +66,17 @@ begin
   -- `ticket_message` talebe `cascade` ile bağlı, tek silme yeter.
   delete from public.ticket where customer_id = p_customer_id;
 
+  -- WhatsApp konuşması (15.1): müşterinin kendi cümleleri + `external_ref`'te duran telefon
+  -- numarası — ikisi de kişisel verinin ta kendisi, yasal saklama gerekçesi yok. `message` konuşmaya
+  -- `cascade` ile bağlı, tek silme yeter.
+  --
+  -- **Talepten SONRA, tesadüfen değil:** `ticket.conversation_id` FK'si `restrict` (0039) — konuşmayı
+  -- önce silmeye çalışan bir sıra, o konuşmadan açılmış bir talep varsa hata verirdi.
+  --
+  -- Tablo bu dosyadan SONRAKİ bir migration'da (0039) doğuyor; plpgsql gövdesi tablo adlarını
+  -- çalışma anında çözdüğü için sıra sorun değil — fonksiyon yine de bugün oluşturulabiliyor.
+  delete from public.conversation where customer_id = p_customer_id;
+
   -- Bildirim istekleri: `email` bu tablolarda ZORUNLU kolon, yani satır kimliğin kendisidir.
   -- Kimlikle DE eşleştiriliyor çünkü ziyaretçiyken bırakılmış bir istek `customer_id` taşımaz —
   -- yalnız kimliğe baksaydık müşterinin en eski kaydı sistemde kalırdı.

@@ -51,6 +51,15 @@ export interface PurgeTargets {
   supplierIds?: string[];
   /** Kimlik profilleri (`user_profiles`) — adresleri CASCADE ile gider. Ayrı müşteri tablosu yok. */
   profileIds?: string[];
+  /**
+   * WhatsApp konuşmaları (15.1) — mesajları CASCADE ile gider.
+   *
+   * Müşteriye bağlı konuşma zaten profil silinince gider (`conversation.customer_id` CASCADE); bu
+   * hedef **kimliksiz** konuşmalar içindir. Kimliksiz konuşma bir kaza değil, tasarımın bir
+   * hâlidir: adım 2'de webhook mesajı önce yazar, kimliği sonra çözer. Profile bağlı olmadıkları
+   * için hiçbir cascade onları toplamaz — bildirilmezse sessizce birikirler.
+   */
+  conversationIds?: string[];
   /** Sıcaklık kaydı konumları (testler benzersiz konum adı üretir). */
   temperatureLocations?: string[];
   /**
@@ -112,6 +121,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     familyIds,
     supplierIds,
     profileIds,
+    conversationIds,
     temperatureLocations,
     verificationEmails,
     authUserIds,
@@ -130,6 +140,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     familyIds: clean(targets.familyIds),
     supplierIds: clean(targets.supplierIds),
     profileIds: clean(targets.profileIds),
+    conversationIds: clean(targets.conversationIds),
     temperatureLocations: clean(targets.temperatureLocations),
     verificationEmails: clean(targets.verificationEmails),
     authUserIds: clean(targets.authUserIds),
@@ -209,6 +220,9 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   if (familyIds.length > 0) await mustDelete(db, 'product_family', (q) => q.in('id', familyIds));
   if (categoryIds.length > 0) await mustDelete(db, 'category', (q) => q.in('id', categoryIds));
   if (collectionIds.length > 0) await mustDelete(db, 'collection', (q) => q.in('id', collectionIds));
+  // Konuşma PROFİLDEN ÖNCE: profile bağlı olanlar zaten cascade ile giderdi, ama kimliksiz olanlar
+  // gitmez ve bu sıra ikisini tek yoldan toplar. Mesajları `cascade` ile gider.
+  if (conversationIds.length > 0) await mustDelete(db, 'conversation', (q) => q.in('id', conversationIds));
   if (profileIds.length > 0) await mustDelete(db, 'user_profiles', (q) => q.in('id', profileIds)); // adresleri CASCADE
 
   // 5) Bağımsız kayıtlar.
