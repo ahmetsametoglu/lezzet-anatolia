@@ -42,6 +42,18 @@ export const OrderSchema = z.object({
    * dalda tahsilat hiç yazılmıyor ve durum `pending` kalıyor.
    */
   cancelReason: OrderCancelReasonEnum.nullable(),
+  /**
+   * Sağlayıcıya iade damgası — `null` = sağlayıcı ödemesi iade edilmedi (07.14).
+   *
+   * **`cancelReason`dan AYRI, çünkü ayrı sorular:** sebep "neden iptal oldu", bu "para çekilip geri
+   * verildi mi". `out_of_stock` dalında çakışırlar; webhook'un birinci iade dalında ayrışırlar
+   * (sipariş `superseded` iptal edilmiş, sonradan gelen ödeme iade ediliyor) — sebebi
+   * `out_of_stock`a çevirmek yalan olurdu, boş bırakmak ekrana "tahsilat yapılmadı" dedirtiyordu.
+   *
+   * Ekranın "iade edildi mi" sorusu **buradan** cevaplanır, sebepten değil: iki dal da aynı alanı
+   * dolduruyor, yani kural tek.
+   */
+  providerRefundedAt: z.string().datetime({ offset: true }).nullable(),
   paymentStatus: PaymentStatusEnum,
   paymentMethod: PaymentMethodEnum.nullable(),
   /** Vadeli mi — vade bir ödeme YÖNTEMİ değil, siparişin bayrağıdır (DOMAIN §7). */

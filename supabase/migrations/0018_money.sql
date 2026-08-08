@@ -265,6 +265,15 @@ create index money_movement_provider_ref_idx on public.money_movement ((meta ->>
 -- `o.*`: görünüm siparişin ALANLARINI yeniden yazmaz, yalnız `sale_date`i ekler — şema da öyle
 -- türetilir (`OrderSchema.extend({saleDate})`). Alan listesi kopyalasaydık `order`a eklenen her
 -- kolon burada da elle eklenmeyi beklerdi ve unutulan kolon sessizce eksik kalırdı.
+-- ⚠ **`o.*` GÖRÜNÜM KURULDUĞU AN DONAR.** `order`a yeni bir kolon eklendiğinde bu görünüm onu
+-- KENDİLİĞİNDEN almaz; yerel veritabanında görünüm yeniden kurulmalıdır (`drop view` + `create`).
+-- `create or replace` yetmez: `o.*` genişlemesi yeni kolonu `sale_date`ten ÖNCE yerleştirir ve
+-- Postgres kolon sırası değişen bir görünümü değiştirmeyi reddeder.
+--
+-- Yaşandı (08.08): `order`a `cancel_reason` + `provider_refunded_at` eklendi, migration doğruydu,
+-- ama yerel görünüm eski kolon listesiyle kaldı ve `OrderSale` şeması artık bulunmayan alanları
+-- isteyince **22 test birden** düştü — hepsi Zod ayrıştırmasında, hiçbiri kendi konusuyla ilgili
+-- değil. `db:reset` atan biri bunu hiç görmez; günü kurtaran şey tam paketin koşmasıydı.
 create or replace view public.order_sale as
 select o.*,
        s.sale_date

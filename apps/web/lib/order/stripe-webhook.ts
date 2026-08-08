@@ -191,8 +191,7 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null): P
    * reddedilecek ve **para alınmış, siparişi olmayan** bir müşteri kalacaktı.
    */
   if (order.status === 'cancelled') {
-    const stripe = stripeClient();
-    if (stripe && event.paymentIntentId) await stripe.refunds.create({ payment_intent: event.paymentIntentId });
+    await refundProviderPayment(event, order.id);
     return { status: 'ok', action: 'refunded' };
   }
 
@@ -288,11 +287,28 @@ async function decideForOrder(
  * Stripe iadesi önce yapılır: iade edilemeyen bir ödemede siparişi iptal etmek müşteriyi hem malsız
  * hem parasız bırakırdı.
  */
-async function refundAndCancel(event: VerifiedEvent, orderId: string, accountId: string | null): Promise<void> {
+/**
+ * **Sağlayıcı ödemesini iade eder ve DAMGALAR** — iki iade dalının ortak ayağı (07.14).
+ *
+ * Damga `cancel_reason`dan ayrı bir kolonda çünkü iki dal iki farklı sebeple iade ediyor
+ * (`out_of_stock` ve "zaten iptal edilmiş siparişe geç gelen ödeme") ama ekranın sorduğu soru
+ * ikisinde de aynı: **para çekilip geri verildi mi.** Kural tek yerde olmasaydı biri damgalanır
+ * öteki damgalanmazdı — ve damgalanmayan dalda ekran yine "tahsilat yapılmadı" derdi, ki müşteri
+ * o sırada hesabında eksik parayı görüyor olurdu.
+ *
+ * Damga yazımı iadeden SONRA: önce yazsaydık, iadesi düşen bir ödeme "iade edildi" görünürdü —
+ * ekranda müşteriye tutulmayan bir söz.
+ */
+async function refundProviderPayment(event: VerifiedEvent, orderId: string): Promise<void> {
   const stripe = stripeClient();
   if (stripe && event.paymentIntentId) {
     await stripe.refunds.create({ payment_intent: event.paymentIntentId });
   }
+  await new OrderService(serviceDb()).update({ id: orderId, providerRefundedAt: new Date().toISOString() });
+}
+
+async function refundAndCancel(event: VerifiedEvent, orderId: string, accountId: string | null): Promise<void> {
+  await refundProviderPayment(event, orderId);
 
   // Tahsilat hiç yazılmadığı için kasada iz bırakmayız; iptal kapısı rezervasyonu bırakır ve
   // bildirimi gönderir. `refundAccountId` yalnız hareket yazılacaksa anlamlıdır.

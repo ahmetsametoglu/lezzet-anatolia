@@ -62,6 +62,22 @@ create table public.order (
   -- "para hareket etti mi" demez, "neden iptal oldu" der; `out_of_stock` ile `payment_failed`
   -- farkı zaten paranın çekilip çekilmediğini söylüyor.
   cancel_reason order_cancel_reason,
+  -- SAĞLAYICIYA İADE damgası (07.14). `null` = sağlayıcı ödemesi iade edilmedi.
+  --
+  -- `cancel_reason`dan AYRI bir kolon, çünkü ikisi AYRI SORULAR ve bir dalda ayrışıyorlar:
+  -- sebep "neden iptal oldu" der, bu "para çekilip geri verildi mi" der. `out_of_stock` dalında
+  -- ikisi çakışıyor (iptalin sebebi de para hareketinin sebebi de aynı), ama webhook'un BİRİNCİ
+  -- iade dalında çakışmıyor: sipariş zaten `superseded` diye iptal edilmiş, sonradan gelen ödeme
+  -- iade ediliyor. Sebebi `out_of_stock`a çevirmek YALAN olurdu (stok kalmıştı), sebepsiz bırakmak
+  -- ise ekranın "tahsilat yapılmadı" demesine yol açıyordu — oysa para çekilmiş ve geri verilmişti.
+  --
+  -- Bu, `settleRefund`'ın yazdığı MÜŞTERİ İADE BORCUNDAN farklıdır: orada mal eksik geldiği için
+  -- müşteriye para borçluyuz ve defterde hareket vardır. Burada sipariş hiç doğmadı; para gelip
+  -- geri gitti, defter net sıfır (`refundAndCancel` künyesi). Damga o net sıfırın izidir.
+  --
+  -- Bayrak değil TARİH: "ne zaman iade edildi" destek konuşmasının ilk sorusudur ("ekstremde
+  -- görünmüyor" diyen müşteriye tarih söylenir), ve boolean onu bir daha cevaplayamaz.
+  provider_refunded_at timestamptz,
   -- TÜRETİLİR (net tahsilat vs karşılanan tutar) — elle set edilmez, motor hesaplar (03.6).
   payment_status payment_status not null default 'pending',
   payment_method payment_method,

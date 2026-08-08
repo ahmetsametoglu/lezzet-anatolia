@@ -161,6 +161,24 @@ describe('geç ödeme — rezervasyon düşmüşken onay gelirse (DOMAIN §4)', 
     // yazılmıyor ve durum `pending` kalıyor; test o ayrımın sebepten geldiğini çiviliyor.
     expect(cancelled?.cancelReason).toBe('out_of_stock');
     expect(cancelled?.paymentStatus).toBe('pending');
+    // İade DAMGASI da düşer: ekranın "para geri verildi mi" sorusu buradan cevaplanıyor.
+    expect(cancelled?.providerRefundedAt).not.toBeNull();
+  });
+
+  it('ZATEN İPTAL siparişe geç gelen ödeme de damgalanır — sebep DEĞİŞMEZ', async () => {
+    // 07.14'ün kapanmayan yarısı buydu: bu dal parayı iade ediyor ama hiçbir iz bırakmıyordu.
+    // Sipariş `superseded` diye iptal edilmiş; sebebi `out_of_stock`a çevirmek YALAN olurdu
+    // (stok kalmıştı), sebepsiz bırakmak da ekrana "tahsilat yapılmadı" dedirtiyordu — oysa para
+    // çekilmiş ve geri verilmişti. İki soru ayrı, iki kolon ayrı.
+    const orderId = await pendingOrder(2, { reserve: false });
+    await orders.cancel(orderId, 'draft', null, 'superseded');
+
+    const outcome = await handleStripeEvent(paidEvent(orderId, 2000), stripeAccount);
+
+    expect(outcome).toMatchObject({ status: 'ok', action: 'refunded' });
+    const after = await orders.getById(orderId);
+    expect(after?.cancelReason).toBe('superseded');
+    expect(after?.providerRefundedAt).not.toBeNull();
   });
 });
 
