@@ -219,11 +219,86 @@ const KATEGORI_TAGLINE: Record<string, LocalizedText> = {
   anatolian: { tr: 'Sofraya hazır Anadolu yemekleri', fr: 'Plats anatoliens prêts à servir', de: 'Anatolische Gerichte, servierfertig' },
 };
 
-const SAKLAMA: LocalizedText = {
-  tr: '−18 °C’de saklayın. Çözdürdükten sonra **tekrar dondurmayın**; 24 saat içinde tüketin.',
-  fr: 'Conserver à −18 °C. **Ne pas recongeler** après décongélation ; à consommer sous 24 heures.',
-  de: 'Bei −18 °C lagern. Nach dem Auftauen **nicht wieder einfrieren**; innerhalb von 24 Stunden verzehren.',
+/**
+ * **SAKLAMA REJİMLERİ — `shippable` buradan TÜRER, ayrı yazılmaz** (müşteri şeridi talebi 08.08).
+ *
+ * ── NEDEN TEK KAYNAK ────────────────────────────────────────────────────────
+ * Önce iki alan elle ayrı yazılıyordu: saklama metni TEK bir sabitti (`−18 °C`, 110 ürüne aynısı)
+ * ve `shippable` ondan bağımsız bir kategori kuralıydı (`p.category !== 'ice-cream'`). İki alan
+ * elle ayrı tutulduğunda **bir gün çelişirler** ve çelişkinin görüldüğü yer ekran olur: *"−18 °C'de
+ * saklayın"* yazan bir ürün kargoya verilir. Rejim tek kaynak; metin de kargo izni de ondan çıkar.
+ *
+ * ── AYRI BİR KOLON DEĞİL, SEED SÖZLÜĞÜ ──────────────────────────────────────
+ * `storage_instructions` modelde SERBEST METİNDİR (çok dilli, operatör yazar) ve öyle kalmalı —
+ * rejimi kolona çevirmek, operatörün cümlesini bir listeye hapsederdi. Bu sözlük yalnız BESLEMENİN
+ * kuralı: gerçek katalogda rejimi insan seçer, burada üretilmesi gerekiyor.
+ *
+ * ── ORAN ────────────────────────────────────────────────────────────────────
+ * Ölçülen sorun (talep 08.08): 120 üründen 114'ü `shippable=true`, yani yer'e bağlı her ekran
+ * (katalog çipi, `StockMark`, sepet teslimat kısıtı, "karma paket" kuralı) altı dondurma üzerinden
+ * sınanıyordu. Karma paket hâli seed'de HİÇ doğmuyordu. Serpiştirme ~%40'ı kargo dışına taşır.
+ */
+type SaklamaRejimi = 'donuk' | 'soguk-zincir' | 'sogutulmus' | 'raf';
+
+const SAKLAMA: Record<SaklamaRejimi, { metin: LocalizedText; shippable: boolean }> = {
+  // Donuk ama kargolanabilir: yalıtımlı kutu 24-48 saatlik yolu kaldırır — kataloğun ana kütlesi.
+  donuk: {
+    metin: {
+      tr: '−18 °C’de saklayın. Çözdürdükten sonra **tekrar dondurmayın**; 24 saat içinde tüketin.',
+      fr: 'Conserver à −18 °C. **Ne pas recongeler** après décongélation ; à consommer sous 24 heures.',
+      de: 'Bei −18 °C lagern. Nach dem Auftauen **nicht wieder einfrieren**; innerhalb von 24 Stunden verzehren.',
+    },
+    shippable: true,
+  },
+  // Kesintisiz soğuk zincir: çözülmeyi hiç kaldırmaz, kendi aracımızla gider. Dondurmanın rejimi.
+  'soguk-zincir': {
+    metin: {
+      tr: '−18 °C’de, **kesintisiz soğuk zincirde** saklayın. Kısmi çözülme ürünü bozar; kargoyla gönderilmez.',
+      fr: 'Conserver à −18 °C en **chaîne du froid ininterrompue**. Une décongélation partielle altère le produit ; non expédiable.',
+      de: 'Bei −18 °C in **ununterbrochener Kühlkette** lagern. Teilweises Auftauen verdirbt das Produkt; kein Versand.',
+    },
+    shippable: false,
+  },
+  // Soğutulmuş (0-4 °C), kısa raf ömrü: yolda geçen saat doğrudan tazelikten düşer.
+  sogutulmus: {
+    metin: {
+      tr: '**0-4 °C**’de buzdolabında saklayın. Dondurmayın; ambalajı açıldıktan sonra 48 saat içinde tüketin.',
+      fr: 'Conserver au réfrigérateur entre **0 et 4 °C**. Ne pas congeler ; à consommer sous 48 heures après ouverture.',
+      de: 'Im Kühlschrank bei **0-4 °C** lagern. Nicht einfrieren; nach dem Öffnen innerhalb von 48 Stunden verzehren.',
+    },
+    shippable: false,
+  },
+  // Rafta duran kuru ürün (kuru baklava, simit, kuru pasta): oda sıcaklığı, kargonun en kolayı.
+  raf: {
+    metin: {
+      tr: '**Serin ve kuru** yerde, oda sıcaklığında saklayın. Doğrudan güneş ışığından uzak tutun.',
+      fr: 'Conserver dans un endroit **frais et sec**, à température ambiante. Tenir à l’abri du soleil.',
+      de: 'An einem **kühlen, trockenen** Ort bei Raumtemperatur lagern. Vor direkter Sonne schützen.',
+    },
+    shippable: true,
+  },
 };
+
+/**
+ * Ürünün rejimi — kategori gerçek kuralı verir, serpiştirme çeşitliliği.
+ *
+ * **Dondurma her zaman soğuk zincir** ve bu serpiştirme DEĞİL, gerçek bir iş kuralı: eski kodun tek
+ * doğru satırıydı, aynen korundu. Ötekilerde `i` üzerinden deterministik dağıtım — her kategoride
+ * hem kargolanan hem kargolanmayan kalem bulunsun (talebin birinci maddesi), çünkü "karma paket"
+ * hâli ancak öyle doğar ve `packages.ts`'in *"bir kalem kargolanamıyorsa paket tamamen rota içi"*
+ * kuralı ancak öyle sınanır.
+ *
+ * Rastgele DEĞİL: seed her koşuda aynı kataloğu kurmalı, yoksa "dün geçen test bugün düştü" olur.
+ */
+function saklamaRejimi(kategori: string | null, i: number): SaklamaRejimi {
+  if (kategori === 'ice-cream') return 'soguk-zincir';
+  // Bölenler ÖLÇÜLEREK seçildi (talebin istediği ~%25-40 bandı): 5/5/7 denendi → %48, 6/7/5 → %39,
+  // 7/8/5 → %36. Sonuncusu alındı; üçünde de her kategoride iki yön birden doğuyor.
+  if (i % 7 === 0) return 'soguk-zincir';
+  if (i % 8 === 3) return 'sogutulmus';
+  if (i % 5 === 2) return 'raf';
+  return 'donuk';
+}
 
 /**
  * Kataloğu kurar. İmza eski toplu üreticiyle aynı şekilde: çağıran servisleri ve başlangıç sırasını
@@ -286,6 +361,12 @@ export async function seedLezzaProducts(
     const kapaksiz = i % 19 === 0; // görselsiz kayıt → boş kapak durumu
     const durum: ProductStatus = i % 23 === 0 ? 'passive' : i % 29 === 0 ? 'candidate' : 'active';
 
+    // Saklama rejimi TEK KAYNAK: metin de kargo izni de buradan çıkar, ikisi ayrışamaz.
+    // **Beyansız ürün kargolanmaz** ve bu, kolonun yeni varsayılanının (`false`) tam olarak
+    // anlatmak istediği şey: beyanı olmayan bir üründe "kargolanabilir mi" sorusunun cevabı
+    // "bilmiyoruz"dur ve donuk gıdada bilinmeyen, "evet" değil "hayır" sayılır.
+    const rejim = SAKLAMA[saklamaRejimi(p.category ?? null, i)];
+
     const name: LocalizedText = dilEksik ? { tr: ad } : p.name;
     const aciklama: LocalizedText | null = p.description
       ? dilEksik
@@ -309,13 +390,12 @@ export async function seedLezzaProducts(
       // zayıf söylemektir.
       traces: beyanEksik ? [] : (NADIR_IZLER[i % NADIR_IZLER.length] ?? []).filter((a) => !alerjenler.includes(a)),
       ingredients: beyanEksik ? null : icindekiler(alerjenler),
-      storageInstructions: beyanEksik ? null : SAKLAMA,
+      storageInstructions: beyanEksik ? null : rejim.metin,
       nutrition: beyanEksik ? null : besinDegeri(p.category, i),
       vatRate: HAZIR_TUKETIM.test(ad) ? KDV_HAZIR : KDV_GIDA,
       shelfLifeDays: RAF_OMRU[p.category ?? ''] ?? 180,
-      // Dondurma KARGOLANMAZ ve bu gerçek bir iş kuralı, serpiştirme değil: soğuk zincir kendi
-      // aracımızla taşınır (`CLAUDE §1`, `Product.shippable`).
-      shippable: p.category !== 'ice-cream',
+      // Kargo izni SAKLAMA REJİMİNDEN türer, ayrı yazılmaz — gerekçe `SAKLAMA` künyesinde.
+      shippable: beyanEksik ? false : rejim.shippable,
       targetMarginPercent: 30 + (i % 6) * 3,
       autoPrice: i % 4 === 0,
       status: durum,

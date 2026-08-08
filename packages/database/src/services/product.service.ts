@@ -135,14 +135,37 @@ export const VARIANT_POOL_LIMIT = 500;
  * Sınıfın dışında: `ProductListingService` de bunu kullanır ve süzgeç mantığı iki yerde yaşayamaz —
  * kategori süzgeci sıralamaya göre farklı davranırsa katalog kendi kendisiyle çelişir.
  */
+/**
+ * **Ürün projeksiyonu — koleksiyon süzgeci varsa gömülü ilişki `!inner` olur.**
+ *
+ * Tek fonksiyon, çünkü kural iki yerde birden geçerli ve ayrışırsa arıza SESSİZ olur: liste doğru
+ * süzer, sayaç süzmez ve ekran "24 sonuç" yazıp 119 kart çizer (ya da tersi).
+ *
+ * **Koşullu, çünkü `!inner` sabit olsaydı HİÇBİR koleksiyonda olmayan ürün katalogdan düşerdi** —
+ * bugün 133 ürünün büyük çoğunluğu öyle. Süzgeç yokken ilişki yalnız gösterim içindir (kartın
+ * hangi koleksiyonlarda olduğunu bilmesi için) ve LEFT kalmalı.
+ *
+ * `product_listing` görünümünde de çalışıyor (ölçüldü: `!inner` + depo süzgeci → 24, junction ile
+ * birebir). Görünümde depo süzgeci ZATEN zorunlu — onsuz aynı ürün depo sayısı kadar tekrarlar
+ * (`!inner` bunu 72'ye çıkarıyordu, yani süzgeç doğru çalışsa bile sayı depo boyutuyla şişerdi).
+ */
+function productSelect(f?: ProductFilters): string {
+  const collections = f?.collectionId
+    ? 'collections:product_collections!inner(collection_id)'
+    : 'collections:product_collections(collection_id)';
+  return `*,variants:product_variant(*),${collections}`;
+}
+
 function buildProductQuery(f?: ProductFilters): { filters: Record<string, unknown>; orFilters: string[] } {
   const filters: Record<string, unknown> = {};
   const orFilters: string[] = [];
   if (f?.categoryId) filters.categoryId = f.categoryId;
   if (f?.familyId) filters.familyId = f.familyId;
   // Koleksiyon üyeliği GÖMÜLÜ İLİŞKİ üzerinden (junction) — kategori gibi bir kolon değil.
-  // Okumalar zaten `collections:product_collections(collection_id)` ile geliyor, yani ilişki
-  // sorguda mevcut; süzgeç onun üstünde çalışıyor ve PostgREST bunu sunucuda join'e çeviriyor.
+  // **Süzgecin işe yaraması için projeksiyonun `!inner` olması ŞART** (`productSelect`); ilk
+  // yazımda değildi ve künyesi "PostgREST bunu sunucuda join'e çeviriyor" diyordu — join kuruluyordu
+  // ama LEFT. Ölçüldü (08.08, 24 üyeli koleksiyon): `!inner`siz **119** (tüm aktif katalog),
+  // `!inner`li **24** (junction'ın kendisiyle birebir). Yani süzgeç sessizce "hepsi" diyordu.
   if (f?.collectionId) filters['collections.collection_id'] = f.collectionId;
   if (f?.ids) filters.id = f.ids; // dizi → IN (base sorgu kurucusu çevirir)
   if (f?.status) filters.status = f.status; // tek kolon → düz eşitlik (eski ikili bayrak çevrimi kalktı)
@@ -211,7 +234,7 @@ export class ProductListingService extends BaseDbService<ProductListingRow, neve
     // `has_near_expiry_offer`i hesaplıyor, servis çöpe atıyordu. Hiçbir yerde hata vermiyordu;
     // yalnız her tüketici ziyaretçi fiyatını ikinci kez hesaplamak zorunda kalıyordu.
     return this.getPageAs(ProductListingRowSchema, scoped, {
-      select: '*,variants:product_variant(*),collections:product_collections(collection_id)',
+      select: productSelect(opts.filters),
       orderBy: 'sortPrice',
       orderDirection: opts.direction,
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
@@ -317,7 +340,7 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   async listWithRelations(opts: ProductListOptions = {}): Promise<Page<ProductWithRelations>> {
     const { filters, orFilters } = this.buildQuery(opts.filters);
     return this.getPageAs(ProductWithRelationsSchema, filters, {
-      select: '*,variants:product_variant(*),collections:product_collections(collection_id)',
+      select: productSelect(opts.filters),
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
@@ -396,7 +419,10 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
    */
   async countMatching(filters?: ProductFilters): Promise<number> {
     const { filters: eq, orFilters } = buildProductQuery(filters);
-    return this.count(eq, { orFilters });
+    // **Projeksiyon sayımda da geçiyor** ve şart: gömülü ilişkide süzen bir sayım, ilişki select'te
+    // yoksa `PGRST108` ile patlar (ölçüldü — ana sayfa `/tr` bu yüzden düştü, `digest 2878299763`).
+    // Aynı `productSelect` kullanılıyor: listenin süzdüğü küme ile sayacın saydığı küme ayrışamaz.
+    return this.count(eq, { orFilters, select: productSelect(filters) });
   }
 
   private buildQuery(f?: ProductFilters): { filters: Record<string, unknown>; orFilters: string[] } {

@@ -111,8 +111,22 @@ export class StockAdjustmentService extends BaseDbService<StockAdjustment, Stock
    *
    * Ayrıntılı analiz burada DEĞİL (raporlar, DOMAIN §12): bu liste "ne oldu" sorusunu yanıtlar,
    * `lossSummary` ise "ne kadar" sorusunu.
+   *
+   * **`warehouseIds` buradan da geçer** (operasyon notu 08.08 — "aynı sınıf bir açık olabilir;
+   * ölçmedim, alan sizin"). Ölçüldü ve doğruydu: `listPage` depo süzgecini aldığı hâlde bu sarmal
+   * onu SÖZLEŞMESİNE koymuyordu, yani stok ekranının imha geçmişi hâlâ bütün depoları gösteriyordu.
+   * Tek depolu yerelde görünmeyen, çok depoluda depo değişmezini delen sessiz açık (`CLAUDE §1`).
    */
-  listRecent(opts: { from?: Date; to?: Date; limit?: number; cursor?: KeysetCursor; query?: string } = {}): Promise<Page<StockAdjustmentDetail>> {
+  listRecent(
+    opts: {
+      from?: Date;
+      to?: Date;
+      limit?: number;
+      cursor?: KeysetCursor;
+      query?: string;
+      warehouseIds?: readonly string[];
+    } = {},
+  ): Promise<Page<StockAdjustmentDetail>> {
     return new StockAdjustmentDetailService(this.supabase).listPage(opts);
   }
 
@@ -214,16 +228,33 @@ export class StockAdjustmentDetailService extends BaseDbService<StockAdjustmentD
   }
 
   /**
-   * **`warehouseId` SUNUCUDA süzülür** (10.5 · operasyon talebi 08.08). Ekran geçici olarak bellekte
+   * **`warehouseIds` SUNUCUDA süzülür** (10.5 · operasyon talebi 08.08). Ekran geçici olarak bellekte
    * süzüyordu: sayfa okunuyor, satırların partileri ayrıca çekiliyor, yalnız o deponunkiler
    * kalıyordu. Çalışıyordu ama bedeli vardı — sayfa keyset'li, yani "30 satırın içindeki bu depo"
    * demek oluyordu ve sonraki sayfalar sessizce eksik geliyordu (`onlyShippable` ile aynı sınıf).
+   *
+   * **DİZİ, tekil değil** — sözleşme deponun her yerdeki sözleşmesiyle aynı (`StockService`,
+   * `WarehouseService`): verilmezse süzgeç yok (depo-üstü okuma), verilirse yalnız o depolar.
+   * İlk yazımda tekil `warehouseId`di ve bu ikinci bir kural doğuruyordu: personelin kapsamı
+   * zaten bir DİZİ (`user_profile.warehouse_ids`), çağıran onu tekile indirmek zorunda kalırdı ve
+   * iki depolu bir depocunun ikinci deposu sessizce düşerdi.
+   *
+   * **Boş dizi "hepsi" DEĞİL "hiçbiri"** (`stock.service.ts:127` ile aynı): kapsamı boş bir
+   * personele bütün depoların imhasını göstermek, süzgecin var oluş sebebini tersine çevirirdi.
    */
   async listPage(
-    opts: { from?: Date; to?: Date; limit?: number; cursor?: KeysetCursor; query?: string; warehouseId?: string } = {},
+    opts: {
+      from?: Date;
+      to?: Date;
+      limit?: number;
+      cursor?: KeysetCursor;
+      query?: string;
+      warehouseIds?: readonly string[];
+    } = {},
   ): Promise<Page<StockAdjustmentDetail>> {
+    if (opts.warehouseIds?.length === 0) return { rows: [], nextCursor: null };
     const term = opts.query?.trim();
-    const page = await this.getPageAs(StockAdjustmentDetailRowSchema, { warehouseId: opts.warehouseId }, {
+    const page = await this.getPageAs(StockAdjustmentDetailRowSchema, { warehouseId: opts.warehouseIds ? [...opts.warehouseIds] : undefined }, {
       // `search_text` seçilmiyor: süzgeç sunucuda çalışıyor, metnin kendisi ekrana taşınmıyor.
       select: 'id,stock_id,qty,reason,unit_cost,note,created_by,reference_no,created_at,warehouse_id,lot_number,expiry_date,variant_id,variant_label,product_id,product_name',
       rangeFilters: periodFilters(opts.from, opts.to),

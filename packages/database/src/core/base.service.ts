@@ -53,13 +53,22 @@ interface FilterOptions {
    * (posta kodu büyük harf, e-posta küçük).
    */
   prefixFilters?: ReadonlyArray<{ field: string; value: string }>;
+  /**
+   * Projeksiyon. Okumada "hangi kolonlar"dır; **sayımda ise bir ZORUNLULUK olabilir.**
+   *
+   * `count()` uzun süre `select('*')` yazıyordu ve gömülü ilişki üzerinden süzen her sayım
+   * `PGRST108` ile patlıyordu (*"'collections' is not an embedded resource in this request"*) —
+   * ölçüldü, ana sayfayı düşürdü. PostgREST gömülü bir alanda süzebilmek için o ilişkinin
+   * **select'te de** bulunmasını ister; liste sorgusu onu zaten seçtiği için sorun yalnız sayım
+   * yolunda görünüyordu, yani süzgeç listede sessizce yanlış, sayımda gürültülü yanlıştı.
+   */
+  select?: string;
 }
 interface GetAllOptions extends FilterOptions {
   orderBy?: string;
   orderDirection?: 'asc' | 'desc';
   limit?: number;
   offset?: number;
-  select?: string;
   /**
    * Keyset sayfalama: bu imleçten SONRAKİ satırlar. `orderBy` ile aynı alanı işaret eder; `id`
    * ikinci sıralama anahtarı olarak eklenir (eşit değerlerde belirleyici). Offset ile birlikte
@@ -367,7 +376,9 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
    * yoksa "12 sonuç" yazıp 5 satır gösteren ekranlar doğar.
    */
   protected async count(filters?: Record<string, unknown>, options?: FilterOptions): Promise<number> {
-    let query = this.supabase.from(this.tableName).select('*', { count: 'exact', head: true });
+    // `head: true` gövdeyi getirmez ama projeksiyon yine de GEÇERLİ olmalı — gömülü süzgeç için
+    // ilişkinin select'te bulunması şart (seçenek künyesinde ölçümüyle birlikte).
+    let query = this.supabase.from(this.tableName).select(options?.select ?? '*', { count: 'exact', head: true });
     for (const [key, value] of Object.entries(filters ?? {})) {
       if (value === undefined || value === null) continue;
       if (Array.isArray(value)) {

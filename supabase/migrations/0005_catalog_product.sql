@@ -52,7 +52,11 @@ create table public.product (
   vat_rate numeric(4, 2) not null default 5.5,       -- 5.5 / 20
   date_type product_date_type not null default 'DDM',
   shelf_life_days int,                               -- toplam raf ömrü (gün); kalan % = (parti.dlc − bugün) ÷ bu
-  shippable boolean not null default true,           -- false = yalnız rota/kapı (soğuk zincir)
+  -- **VARSAYILAN `false` — kullanıcı kararı 08.08.** Önce `true`ydu: işaretlenmemiş her ürün
+  -- "evet, kargola" sayılıyordu. Donuk gıdada o varsayımın bedeli ekranda bir sayı değil, müşteriye
+  -- çözülmüş ulaşan bir pakettir. Unutulan alanın bedeli **"satılamadı"** olmalı, "bozuk gitti" değil.
+  -- Not: bu bir güvenlik kısıtı değil bir varsayılan — `false` = yalnız rota/kapı (soğuk zincir).
+  shippable boolean not null default false,
   status product_status not null default 'active',   -- satışta / pasif / aday (tek alan, yukarıdaki enum)
   target_margin_percent numeric(5, 2),              -- hedef kâr marjı (markup %); marj uyarısı / oto-fiyat
   auto_price boolean not null default false,         -- açıksa fiyat hedef marja göre otomatik (motor sonraki modül)
