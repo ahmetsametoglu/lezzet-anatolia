@@ -106,3 +106,25 @@ export const MessageInsertSchema = z.object({
   providerMessageId: z.string().nullish(),
 });
 export type MessageInsert = z.infer<typeof MessageInsertSchema>;
+
+/**
+ * `conversation_inbox` görünümü (15.5) — gelen kutusunun okuduğu satır.
+ *
+ * Ekran bu satırı okur, ikinci bir sorgu atmaz: müşteri adı, son mesajın metni/yönü/türü ve mesaj
+ * sayısı burada türetilmiş hâlde gelir. Kopya DEĞİL — görünüm her okumada kaynaktan üretir.
+ *
+ * **`awaitingReply` durumdan ÇIKARILAMAZ:** konuşmanın "durumu" yok. Kuyruğun tek amacı cevap
+ * bekleyeni bekletmemek ve o soru son mesajın YÖNÜNDEN türer — son sözü müşteri söylediyse top
+ * bizdedir.
+ */
+export const ConversationInboxRowSchema = ConversationSchema.extend({
+  /** Kimliksiz konuşmada `null` — eksik değil, tasarımın bir hâli (webhook önce yazar, sonra çözer). */
+  customerName: z.string().nullable(),
+  messageCount: z.number().int(),
+  awaitingReply: z.boolean(),
+  /** Son mesajın TAM metni; önizleme kırpması bir sunum kararıdır, veri kapısına ait değil. */
+  lastMessageText: z.string().nullable(),
+  lastMessageDirection: MessageDirectionEnum.nullable(),
+  lastMessageKind: MessageKindEnum.nullable(),
+});
+export type ConversationInboxRow = z.infer<typeof ConversationInboxRowSchema>;

@@ -1,4 +1,5 @@
 import { OrderService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
+import { settingScopeOf } from '@/lib/settings-scope';
 import {
   apportionShippingVat,
   creditPosition,
@@ -62,12 +63,33 @@ interface CheckoutOptionsInput {
   basketCents: number;
   /** KDV kırılımı için kalem tutarları + oranları. */
   lines: readonly { totalCents: number; vatRate: number }[];
+  /**
+   * Ayar kapsamının yer eksenleri (07.15) — çağıran çözer, burası okumaz.
+   *
+   * `resolveCheckoutPayment` istek bağlamına bağlanamaz: aynı hesap kapıda ödeme akışından ve
+   * ileride WhatsApp/mobil uçlarından da çağrılacak. Çerezi okuyan yüzey, kapsamı geçen de o.
+   */
+  country?: string | null;
+  zoneId?: string | null;
+  warehouseId?: string | null;
 }
 
 export async function resolveCheckoutPayment(input: CheckoutOptionsInput): Promise<CheckoutOptionsResult> {
   const db = serviceDb();
   const settings = new SettingsService(db);
-  const scope = { channel: undefined as string | undefined };
+  // **KAPSAM ÖNCE ÇÖZÜLÜR — SIRA ZORUNLU** (07.15). Eskiden `scope` boştu (`{ channel: undefined }`)
+  // ve beş okuma da kapsamsız gidiyordu; doldurmak da mümkün değildi, çünkü `customer` AYNI
+  // `Promise.all` içindeydi — kanal, kendisini belirleyecek satır gelmeden okunuyordu.
+  //
+  // Ek turun bedeli bir okuma; karşılığı b2b'ye perakende eşiği, Almanya'ya Fransa tarifesi ve
+  // bölge asgari sepetinin hiç uygulanmaması. Kapsam SEPETLE AYNI yerden kuruluyor
+  // (`settingScopeOf`) — iki yüzey farklı kapsam okursa sepette yazan eşik checkout'ta tutmaz.
+  const scope = await settingScopeOf({
+    customerId: input.customerId,
+    country: input.country,
+    zoneId: input.zoneId,
+    warehouseId: input.warehouseId,
+  });
 
   const [customer, codMaxCents, cashLegalLimitCents, freeThresholdCents, feeCents, minBasketCents] = await Promise.all([
     new UserProfileService(db).getById(input.customerId),

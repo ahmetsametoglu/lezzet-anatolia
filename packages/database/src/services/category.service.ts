@@ -36,8 +36,25 @@ export class CategoryService extends BaseDbService<Category, CategoryInsert, Cat
   }
 
   /** Sıralı liste; `activeOnly` ile yalnız aktifler (vitrin okuması). */
-  async list(opts?: { activeOnly?: boolean }): Promise<Category[]> {
-    return this.getAll(opts?.activeOnly ? { isActive: true } : undefined, { orderBy: 'sortOrder' });
+  async list(opts?: { activeOnly?: boolean; featuredOnly?: boolean }): Promise<Category[]> {
+    return this.getAll(
+      { isActive: opts?.activeOnly ? true : undefined, isFeatured: opts?.featuredOnly ? true : undefined },
+      { orderBy: 'sortOrder' },
+    );
+  }
+
+  /**
+   * **Vitrin işareti** (05.18) — "ana sayfada göster" anahtarı.
+   *
+   * Ayrı bir metot, çünkü ayrı bir KARAR: aktiflik yayın kararıdır (`setActive`), bu vitrin
+   * kürasyonudur. İkisini tek `update`'e bırakmak, operasyon ekranında bir anahtarın ötekini
+   * habersiz çevirmesine kapı açardı.
+   *
+   * Sıra YAZILMAZ — `sortOrder` zaten var ve vitrin onu izler (görev satırı 05.18: ikinci bir
+   * vitrin sırası tutulmaz, iki sıra bir gün çelişir).
+   */
+  setFeatured(id: string, isFeatured: boolean): Promise<Category> {
+    return this.update({ id, isFeatured });
   }
 
   /**

@@ -51,6 +51,23 @@ interface ProductFilters {
   categoryId?: string;
   /** Ürün ailesi (05.15) — "öteki çeşitler" okuması ve operatörün aile diyaloğu. */
   familyId?: string;
+  /**
+   * **Koleksiyon üyeliği** (05.18) — katalogun koleksiyon hâli (`/catalog?collection=<slug>`).
+   *
+   * Kategori gibi bir kolon DEĞİL, junction (`product_collections`): bir ürün çok koleksiyona girer.
+   * Bu yüzden gömülü ilişki üzerinden süzülüyor (`collections.collection_id`) — PostgREST bunu
+   * sunucuda join'e çeviriyor, yani sayfalama ve sayaçlar bozulmuyor.
+   *
+   * **İstemcide süzmek YANLIŞ olurdu** ve sebebi `onlyShippable` ile aynı: liste keyset sayfalı,
+   * istemcide süzmek "30 satırın içindeki koleksiyon üyeleri" demek olur ve sonraki sayfalar
+   * sessizce eksik gelirdi.
+   *
+   * **Kürasyon SIRASI burada YOK.** `product_collections.position` koleksiyon sayfasının sırasıdır;
+   * katalog kendi sırasını (`sortOrder`) kullanır. İkisini birleştirmek, aynı listenin iki sıraya
+   * birden uyması demekti — koleksiyon görünümü tasarımda katalogun bir HÂLİ (başlık bandı değişir,
+   * süzgeç/sıralama satırı aynen kalır), ayrı bir kürasyon sayfası değil.
+   */
+  collectionId?: string;
   status?: ProductStatus;
   /** Belirli ürünler — çağıran kimlikleri başka bir okumadan türetmişse (ör. teklifli partiler). */
   ids?: string[];
@@ -123,6 +140,10 @@ function buildProductQuery(f?: ProductFilters): { filters: Record<string, unknow
   const orFilters: string[] = [];
   if (f?.categoryId) filters.categoryId = f.categoryId;
   if (f?.familyId) filters.familyId = f.familyId;
+  // Koleksiyon üyeliği GÖMÜLÜ İLİŞKİ üzerinden (junction) — kategori gibi bir kolon değil.
+  // Okumalar zaten `collections:product_collections(collection_id)` ile geliyor, yani ilişki
+  // sorguda mevcut; süzgeç onun üstünde çalışıyor ve PostgREST bunu sunucuda join'e çeviriyor.
+  if (f?.collectionId) filters['collections.collection_id'] = f.collectionId;
   if (f?.ids) filters.id = f.ids; // dizi → IN (base sorgu kurucusu çevirir)
   if (f?.status) filters.status = f.status; // tek kolon → düz eşitlik (eski ikili bayrak çevrimi kalktı)
 

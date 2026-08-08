@@ -110,6 +110,12 @@ export type StockAdjustmentDetail = z.infer<typeof StockAdjustmentDetailSchema>;
  * yok (ve taşınsaydı her satırda gereksiz bir metin bloğu gidip gelirdi).
  */
 export const StockAdjustmentDetailRowSchema = StockAdjustmentSchema.extend({
+  /**
+   * Partinin deposu (10.5) — düzeltme kaydının kendisi depo taşımaz, PARTİSİ taşır ve karar oradan
+   * okunur. Ekranın "bugün ben ne düştüm" şeridi bununla süzülür: depo süzgeci olmadan depocu
+   * başka deponun imhasını kendi şeridinde görür ve o sorunun cevabı bozulur.
+   */
+  warehouseId: z.string().uuid(),
   lotNumber: z.string().nullable(),
   expiryDate: z.string(),
   variantId: z.string().uuid(),

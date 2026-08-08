@@ -87,7 +87,27 @@ begin
   delete from public.points_entry where customer_id = p_customer_id;
 
   -- Müşteriye özel fiyat satırı ve kişiye özel kupon: kişi gidince dayanağı kalmıyor.
+  --
+  -- **KUPON SATIRI EKSİKTİ** (08.08 · müşteri şeridinin ölçümü): yorum iki şey söylüyor, kod
+  -- birini yapıyordu. Kişisel kupon `price`'ta değil `discount`ta duruyor (`0024`) ve silinmiyordu
+  -- — üstelik silme diyaloğunun üç dildeki metni onu ADIYLA sayıyor ("vos points et bons
+  -- personnels"). Yani ekran, motorun yapmadığı bir şeyi vaat ediyordu.
+  --
+  -- Bu, bu dosyanın künyesindeki uyarının ta kendisi: kararı tek yerde tutmak yetmiyor, o tek yerin
+  -- KENDİSİ eksik kalabiliyor ve hata vermediği için kimse fark etmiyor.
   delete from public.price where customer_id = p_customer_id;
+  delete from public.discount where customer_id = p_customer_id;
+
+  -- **Geri bildirim daveti — KİMLİK YERİNE GEÇEN ANAHTAR** (0029). Ötekilerden ayrı bir sınıf:
+  -- burada mesele kimliksizleşmemiş bir satır değil, hesap kapandıktan sonra da ÇALIŞAN bir giriş
+  -- yolu. Token oturum yerine geçiyor, ömrü 90 gün ve `/feedback/<token>` sayfası giriş sormadan
+  -- açılıyor — silinen hesabın siparişindeki ürünler görünmeye devam ediyordu. Daha kötüsü: o
+  -- sayfadan verilen bir yorum, silmenin az önce boşalttığı `product_feedback.comment` alanını
+  -- yeniden dolduruyordu.
+  delete from public.feedback_request where customer_id = p_customer_id;
+
+  -- Sepet: kişinin ALMAK ÜZERE olduğu şeyler. Sipariş değil niyet; yasal saklama gerekçesi yok.
+  delete from public.cart where customer_id = p_customer_id;
 
   -- ── 2) KİMLİKSİZLEŞİR ─────────────────────────────────────────────────────────────────────────
   -- Ürün geri bildirimi: **puan/oy KALIR, YAZI GİDER.**
@@ -104,6 +124,12 @@ begin
          translated_at = null,
          language = null
    where customer_id = p_customer_id;
+
+  -- **`discount_use` BİLEREK KALIR** (08.08, soruldu ve karara bağlandı). Satır "bu kampanyayı kaç
+  -- kişi kullandı" sorusunun kaydıdır ve kampanya geçmişi bir işletme kaydıdır — silinseydi geçmiş
+  -- bir kampanyanın sayısı geriye dönük düşerdi. Kimlik sorunu da doğurmuyor: profilin kendisi
+  -- birazdan boşalıyor, yani `customer_id` artık kimseyi göstermiyor. `product_feedback` ile aynı
+  -- ilke — istatistik kalır, kimlik gider; `0024`'ün `discount_code` için yazdığı gerekçenin ikizi.
 
   -- ── 3) KİMLİK BOŞALTILIR ──────────────────────────────────────────────────────────────────────
   -- `name` boş dizeye düşer (`not null default ''`), kimlik anahtarları null olur — kısmi unique

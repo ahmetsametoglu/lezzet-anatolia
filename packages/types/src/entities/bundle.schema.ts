@@ -21,6 +21,8 @@ export const BundleSchema = z
     serves: z.number().int().positive().nullable(),
     isActive: z.boolean(),
     sortOrder: z.number().int(),
+    /** **Ana sayfada göster** (05.18) — işaret seçim, sıra `sortOrder`'dan. `isActive` "satışta mı", bu "vitrinde mi". */
+    isFeatured: z.boolean(),
     createdAt: z.string(),
   })
   .merge(ImageMetaSchema); // görsel künyesi ortak şemadan (3:2 kaynak + odak + alt metin)
@@ -35,6 +37,7 @@ export const BundleInsertSchema = z
     serves: z.number().int().positive().nullish(),
     isActive: z.boolean().optional(),
     sortOrder: z.number().int().optional(),
+    isFeatured: z.boolean().optional(),
   })
   .merge(ImageMetaInsertSchema);
 export type BundleInsert = z.infer<typeof BundleInsertSchema>;

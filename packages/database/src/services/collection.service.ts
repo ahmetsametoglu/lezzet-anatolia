@@ -48,8 +48,16 @@ export class CollectionService extends BaseDbService<Collection, CollectionInser
   }
 
   /** Sıralı liste; `activeOnly` ile yalnız aktifler. */
-  async list(opts?: { activeOnly?: boolean }): Promise<Collection[]> {
-    return this.getAll(opts?.activeOnly ? { isActive: true } : undefined, { orderBy: 'sortOrder' });
+  async list(opts?: { activeOnly?: boolean; featuredOnly?: boolean }): Promise<Collection[]> {
+    return this.getAll(
+      { isActive: opts?.activeOnly ? true : undefined, isFeatured: opts?.featuredOnly ? true : undefined },
+      { orderBy: 'sortOrder' },
+    );
+  }
+
+  /** Vitrin işareti (05.18) — gerekçe `CategoryService.setFeatured` künyesinde. */
+  setFeatured(id: string, isFeatured: boolean): Promise<Collection> {
+    return this.update({ id, isFeatured });
   }
 
   /**

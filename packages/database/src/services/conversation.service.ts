@@ -1,11 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  ConversationInboxRowSchema,
   ConversationInsertSchema,
   ConversationSchema,
   ConversationUpdateSchema,
   MessageInsertSchema,
   MessageSchema,
   type Conversation,
+  type ConversationInboxRow,
   type ConversationInsert,
   type ConversationSource,
   type ConversationUpdate,
@@ -15,6 +17,9 @@ import {
   type MessageInsert,
   type MessageKind,
   type TemplateCategory,
+  type KeysetCursor,
+  type Page,
+  DEFAULT_PAGE_SIZE,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
@@ -140,5 +145,61 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
    */
   listByConversation(conversationId: string): Promise<Message[]> {
     return this.getAll({ conversationId }, { orderBy: 'createdAt' });
+  }
+
+  /**
+   * **Sayfalı geçmiş** (15.5) — canlı kanalda tek sohbet aylarca sürer.
+   *
+   * `listByConversation` adım 1'de doğruydu (elle işlenen bir avuç mesaj) ve DURUYOR: konuşmayı
+   * baştan okuyan yollar (AI bağlamı, dışa aktarma) tamamını ister. Bu ise ekranın kapısı.
+   *
+   * **Sıra eskiden yeniye KORUNUYOR** — okunan şey bir sohbet, ters sıralı bir sohbet okunmaz.
+   * "Daha eski" düğmesi imleci ileri taşır; ekran satırları yukarı ekler.
+   */
+  listPage(conversationId: string, cursor?: KeysetCursor, limit = DEFAULT_PAGE_SIZE): Promise<Page<Message>> {
+    return this.getPage({ conversationId }, { orderBy: 'createdAt', limit, keysetAfter: cursor });
+  }
+}
+
+/**
+ * `conversation_inbox` görünümü (15.5) — gelen kutusunun okuduğu satır.
+ *
+ * Ayrı bir servis, çünkü görünüm YAZILMAZ: aynı sınıfa koymak, insert/update'i olmayan bir tabloya
+ * yazma metotları açardı (`TicketQueueService` emsali).
+ */
+export class ConversationInboxService extends BaseDbService<ConversationInboxRow, never, never> {
+  constructor(supabase: SupabaseClient) {
+    super(
+      supabase,
+      'conversation_inbox',
+      ConversationInboxRowSchema,
+      ConversationInboxRowSchema as never,
+      ConversationInboxRowSchema as never,
+      false,
+    );
+  }
+
+  /**
+   * Kuyruk — **son harekete göre** sıralı: tek amacı cevap bekleyeni bekletmemek, o yüzden sıra
+   * açılış tarihine değil son mesaja bakar.
+   *
+   * Sayfalı, çünkü konuşma kümesi veriyle SINIRSIZ büyür (`CLAUDE §1`) — canlı kanalda aylarca.
+   * İmleci ekran tüketiyor ("daha eski" düğmesi), yani sessiz kırpma yok.
+   */
+  list(filter: { awaitingReply?: boolean } = {}, cursor?: KeysetCursor, limit = DEFAULT_PAGE_SIZE): Promise<Page<ConversationInboxRow>> {
+    return this.getPage(
+      { awaitingReply: filter.awaitingReply },
+      { orderBy: 'lastMessageAt', orderDirection: 'desc', limit, keysetAfter: cursor },
+    );
+  }
+
+  /**
+   * "3 cevap bekliyor" başlığının sayısı — SAYIM, sayfa uzunluğu değil.
+   *
+   * Yüklenmiş sayfadan saymak, tam da sayının anlam kazandığı yerde (kalabalık kuyrukta) yalan
+   * söylerdi: "ilk sayfada 3 bekliyor" ile "3 bekliyor" aynı cümle değil.
+   */
+  countAwaitingReply(): Promise<number> {
+    return this.count({ awaitingReply: true });
   }
 }

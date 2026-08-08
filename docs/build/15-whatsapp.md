@@ -49,6 +49,9 @@ WhatsApp'ın satış yüzeyi olarak kurulması — **iki adımda, ikisi de Faz 1
   - *Bitti:* köprüden girilen sipariş kaynak=whatsapp ile normal yaşam döngüsünde akıyor
   - **Engeli kalktı (08.08):** konuşma zemini hazır (15.1) — köprünün ihtiyacı olan `conversation.customer_id` dolu geliyor, `order_source` alanı 07'den beri var. Kalan iş operasyon yüzeyinde.
 - [ ] (15.5) **Admin konuşma izleme:** konuşma listesi + detay (mesaj geçmişi, bağlı müşteri/sipariş)
+  - **Durum (08.08 · arka uç) — İKİ OKUMA HAZIR** (ekran şeridi başladığını bildirdi, tasarımı bu satırda bekliyordu). `conversation_inbox` görünümü (0041) + `ConversationInboxService.list/countAwaitingReply` + `MessageService.listPage` (sayfalı geçmiş, sıra eskiden yeniye korunuyor).
+    - Ekran şeridinin "son mesajı `last_message_at` ile eşleştir" kestirmesinden vazgeçmesi doğruydu: aynı ana düşen iki mesajda sessizce YANLIŞ satırı gösterirdi. Görünüm `array_agg(... order by created_at desc)` ile tek anlamlı cevap veriyor.
+    - İstenmeyen ikisi yazılmadı: devralma alanı (ajan yok, 15.13'ün işi) ve okunmamış sayacı ("okundu"yu yazan yüzey yok → sayaç ilk günden yalan söylerdi). `awaitingReply` aynı soruyu yazma yükü olmadan cevaplıyor.
   - *Bitti:* admin tüm konuşmaları görüyor; müşteri kartından konuşmasına geçilebiliyor
   - **Engeli kalktı (08.08):** tablolar ve servisler hazır (15.1). Bugün var olan okumalar: `ConversationService.findByExternalRef` / `listByCustomer` (müşteri kartından sohbete geçiş) ve `MessageService.listByConversation` (geçmiş, eskiden yeniye).
   - **İki okuma BİLEREK yazılmadı** — tüketicisi olmayan okuma yazıldığı gün ölü koddur; ekran başlarken tek turda eklenir. Tasarımları burada dursun ki o gün mekanik bir ekleme olsun:

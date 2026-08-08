@@ -19,11 +19,32 @@ create table public.category (
   -- okuma URL'i public+immutable → sürüm damgası olmadan CDN/tarayıcı bir yıl eskiyi gösterir.
   -- Yalnız dosya değişince yazılır; odak/zoom değişimi dosyayı değiştirmez (kırpma CSS'te).
   image_updated_at timestamptz,
+  -- Kısa tanıtım — mobil vitrin bandının ALTYAZISI (05.17). Bugün o metin tasarımın içinde sabit
+  -- bir sözlük (`Mobil - Musteri v3.dc.html`, `CSUB`): veriden gelmiyor, yani yeni kategori
+  -- altyazısız doğuyor ve cümle operatörün elinde değil.
+  --
+  -- **Başlık DEĞİL, ikincil satır.** Bandın başlığı kategori ADIdır (`name`); ikinci bir başlık
+  -- alanı açılsaydı aynı şeyin iki kaynağı olur ve bir gün ayrışırdı.
+  --
+  -- **Boş bırakılabilir ve öyle kalmalı:** altyazısı olmayan kategori altyazısız çizilir — yedek
+  -- metin UYDURULMAZ (ada düşmek "Börekler / Börekler" gibi bir tekrar üretirdi).
+  tagline jsonb,                                -- LocalizedText {tr?,fr?,de?}
   sort_order int not null default 0,
   is_active boolean not null default true,
+  -- **Vitrinde göster** (05.18) — ana sayfanın ızgarası sınırlı (tasarım: kategoride 6 slot), kod
+  -- ise bugün kategorileri SINIRSIZ okuyor; seed'de 10 kategori var ve ızgara bozuluyor.
+  --
+  -- **İŞARET SEÇİMDİR, SIRA `sort_order`'DAN GELİR.** İkinci bir vitrin sırası tutulmuyor: iki sıra
+  -- bir gün çelişir ve hangisinin kazandığı ekrandan anlaşılmaz. Aynı sebeple "vitrin ekranı" da
+  -- yok — seçim katalog ekranından yapılır (kullanıcı kararı 08.08).
+  --
+  -- Hiç işaret yoksa okuma bugünkü davranışa düşer (sıradan ilk N): vitrin boş kalmaz.
+  is_featured boolean not null default false,
   created_at timestamptz not null default now()
 );
 create unique index category_slug_key on public.category (slug);
+-- Vitrin okuması yalnız işaretlilere bakar ve küme küçüktür (tasarım 6 slot) — kısmi indeks.
+create index category_featured_idx on public.category (sort_order) where is_featured;
 
 -- ── collection — esnek pazarlama grubu (Bayram/Yeni/İndirimde); ürün çok koleksiyona girer ──
 -- Koleksiyon aynı zamanda KENDİ bağlantısıyla paylaşılan bir vitrin sayfasıdır (DOMAIN §13) →
@@ -43,9 +64,15 @@ create table public.collection (
   image_updated_at timestamptz,                 -- görsel dosyasının sürüm damgası (kategoridekiyle aynı gerekçe)
   sort_order int not null default 0,
   is_active boolean not null default true,
+  -- Vitrinde göster (05.18) — gerekçe ve kural kategoridekiyle birebir aynı; ana sayfa tasarımı
+  -- koleksiyona 2 slot çiziyor. `is_active` ile KARIŞTIRILMAZ: aktiflik "yayında mı", bu "ana
+  -- sayfada mı" — pasif bir koleksiyon işaretli kalabilir (kampanya hazırlanıyor) ve okuma ikisini
+  -- birden sorar.
+  is_featured boolean not null default false,
   created_at timestamptz not null default now()
 );
 create unique index collection_slug_key on public.collection (slug);
+create index collection_featured_idx on public.collection (sort_order) where is_featured;
 
 -- ── product_family — ÇEŞİT ekseni (05.15 · kullanıcı kararları 04.08) ────────
 -- Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâlleri. **Üye = bugünkü

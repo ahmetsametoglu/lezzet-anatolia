@@ -213,11 +213,19 @@ export class StockAdjustmentDetailService extends BaseDbService<StockAdjustmentD
     );
   }
 
-  async listPage(opts: { from?: Date; to?: Date; limit?: number; cursor?: KeysetCursor; query?: string } = {}): Promise<Page<StockAdjustmentDetail>> {
+  /**
+   * **`warehouseId` SUNUCUDA süzülür** (10.5 · operasyon talebi 08.08). Ekran geçici olarak bellekte
+   * süzüyordu: sayfa okunuyor, satırların partileri ayrıca çekiliyor, yalnız o deponunkiler
+   * kalıyordu. Çalışıyordu ama bedeli vardı — sayfa keyset'li, yani "30 satırın içindeki bu depo"
+   * demek oluyordu ve sonraki sayfalar sessizce eksik geliyordu (`onlyShippable` ile aynı sınıf).
+   */
+  async listPage(
+    opts: { from?: Date; to?: Date; limit?: number; cursor?: KeysetCursor; query?: string; warehouseId?: string } = {},
+  ): Promise<Page<StockAdjustmentDetail>> {
     const term = opts.query?.trim();
-    const page = await this.getPageAs(StockAdjustmentDetailRowSchema, undefined, {
+    const page = await this.getPageAs(StockAdjustmentDetailRowSchema, { warehouseId: opts.warehouseId }, {
       // `search_text` seçilmiyor: süzgeç sunucuda çalışıyor, metnin kendisi ekrana taşınmıyor.
-      select: 'id,stock_id,qty,reason,unit_cost,note,created_by,reference_no,created_at,lot_number,expiry_date,variant_id,variant_label,product_id,product_name',
+      select: 'id,stock_id,qty,reason,unit_cost,note,created_by,reference_no,created_at,warehouse_id,lot_number,expiry_date,variant_id,variant_label,product_id,product_name',
       rangeFilters: periodFilters(opts.from, opts.to),
       ...(term ? { searchFilters: [{ field: 'searchText', query: term }] } : {}),
       orderBy: 'createdAt',

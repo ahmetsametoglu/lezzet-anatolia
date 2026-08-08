@@ -6,6 +6,7 @@ import type { ProductVariant, ProductWithRelations } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { EMPTY_PRODUCT_CONTEXT, imageOf, toVariant, loadProductContext, pricingViewerOf } from '@lezzet/application';
 import type { ProductContext } from '@lezzet/application';
+import { settingScopeOf } from '@/lib/settings-scope';
 import { getPackagesByIds } from '@/lib/storefront/packages';
 import type { StorefrontPackageDetail } from '@/lib/storefront/storefront-types';
 import {
@@ -69,6 +70,16 @@ export async function getCartView(
      * `decideCartAgainstWarehouse` motoruna veriyor (19.11).
      */
     shippingWarehouseId?: string | null;
+    /**
+     * Ayar kapsamının yer eksenleri (07.15) — `warehouseId` zaten yukarıda; ülke ve bölge de
+     * kapsamlı ayar sorabiliyor (DE kargo tarifesi, bölge asgari sepeti).
+     *
+     * **Parametre, çerez okuması DEĞİL** ve bu bilinçli: yeri çözen taraf isteğin sahibi olan
+     * sayfadır. Sepet okuması `cookies()`e bağlansaydı istek dışında (cron, webhook, test)
+     * çağrılamaz hâle gelirdi — ölçüldü, 34 test o yüzden düştü.
+     */
+    country?: string | null;
+    zoneId?: string | null;
   } = {},
 ): Promise<CartView> {
   const db = serviceDb();
@@ -78,12 +89,22 @@ export async function getCartView(
   // Anahtarlar ORTAK sabitten gelir (`lib/settings-keys`): burada `free_shipping_cents` yazıyordu
   // ve öyle bir ayar hiç yoktu — okuma sessizce varsayılana düşüyor, checkout ise gerçek ayarı
   // okuyordu. İkisi tesadüfen aynı değerde olduğu için görünmüyordu (29.07).
+  // **KAPSAM ŞART** (07.15): üçü de kapsamsız okunuyordu ve b2b/DE/bölge satırları hiç
+  // uygulanmıyordu — ayar yazılıyor, okunmuyordu. Kapsamı checkout ile AYNI yerden kuruyoruz
+  // (`settingScopeOf`): anahtar ortaklığı 29.07'de yetmemişti, kapsam da ortak olmalı — yoksa
+  // sepette "13 € eşik" yazıp checkout'ta 0 € uygulanır ve müşteri arada ne olduğunu anlamaz.
+  const scope = await settingScopeOf({
+    customerId: opts.customerId,
+    country: opts.country,
+    zoneId: opts.zoneId,
+    warehouseId: opts.warehouseId,
+  });
   const [minBasketCents, freeShippingCents, shippingTariffCents] = await Promise.all([
-    settings.getNumber(MIN_BASKET_KEY, MIN_BASKET_DEFAULT),
-    settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT),
+    settings.getNumber(MIN_BASKET_KEY, MIN_BASKET_DEFAULT, scope),
+    settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT, scope),
     // Tarife de aynı sebeple ortak anahtardan: kargo grubunun blokunda yazdığımız sayı, checkout'un
     // keseceği sayının ta kendisi olmalı.
-    settings.getNumber(SHIPPING_FEE_KEY, SHIPPING_FEE_DEFAULT),
+    settings.getNumber(SHIPPING_FEE_KEY, SHIPPING_FEE_DEFAULT, scope),
   ]);
   if (entries.length === 0) return { ...EMPTY_CART, freeShippingCents, shippingTariffCents, ...meets(0, minBasketCents) };
   // Motorun kalem sözleşmesi: satır çözülürken doldurulur (kategori/koleksiyon oradan gelir).

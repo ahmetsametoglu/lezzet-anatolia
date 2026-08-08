@@ -74,18 +74,56 @@ const AILELER = {
  */
 const KANAL_ONEKI = { horeca: 'b2b', retail: 'b2c' };
 
-/** Gramaj/adet eki — addan ayrılıp varyanta gider. Ad SONUNDA da ORTASINDA da olabilir. */
+/**
+ * Gramaj/adet eki — addan ayrılıp varyanta gider. Ad SONUNDA da ORTASINDA da olabilir.
+ *
+ * ── ÇOKLU PAKET BİÇİMİ (`4x80g`) — ÖNCE, ve sebebi ölçüldü (08.08, operasyon şeridi) ────────────
+ * Tek desen vardı ve `\b`'si bu biçimi HİÇ eşleştirmiyordu: `80`'in önündeki `x` bir sözcük
+ * karakteri, yani orada sınır oluşmuyor; `4`'ten sonra da birim gelmiyor. Sonuç sessizdi —
+ * `Cheese Filled Pastry 4x80g`, `Lahmacun 3x180g`, `Spiral Rose Borek 6x80g` boy olarak
+ * AYRIŞMIYOR, ayrı ürün gibi kataloğa giriyordu (33 kayıt, 14 ürün olmalıydı).
+ *
+ * Bu aynı zamanda `05.15`'teki "boy kardeşleri ailesiz kalıyor" açığının KÖKÜ: iki paket boyu ayrı
+ * ürün sanıldığı için aile kurulamıyor, "benzer ürünler" de aynı ürünün üç gramajını gösteriyordu.
+ *
+ * Çoklu desen ÖNCE denenir: `4x80g` tek desene de kısmen uyar (`80g`) ve o zaman "4 paket" bilgisi
+ * sessizce düşerdi — 320 g'lık kutu 80 g diye etiketlenirdi.
+ */
+const COKLU_BOY = /(\d+)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(kg|g|gr|ml|lt|cc)\b/i;
 const BOY = /\b(\d+(?:[.,]\d+)?)\s*(kg|g|gr|ml|lt|cc|pcs|adet)\b/i;
 
+/** Birimi grama çevirir; ml/adet ölçü birimi olarak etikette kalır (net ağırlık değil). */
+function grama(sayi, birim) {
+  if (birim === 'kg') return Math.round(sayi * 1000);
+  return ['g', 'gr'].includes(birim) ? Math.round(sayi) : null;
+}
+
 function boyAyir(name) {
+  const coklu = COKLU_BOY.exec(name);
+  if (coklu) {
+    const adet = Number.parseInt(coklu[1], 10);
+    const birimAgirlik = Number.parseFloat(coklu[2].replace(',', '.'));
+    const birim = coklu[3].toLowerCase();
+    const tekil = grama(birimAgirlik, birim);
+    const taban = `${name.slice(0, coklu.index)}${name.slice(coklu.index + coklu[0].length)}`.replace(/\s{2,}/g, ' ').trim();
+    return {
+      taban,
+      boy: {
+        // Etiket kaynaktaki biçimi KORUR (`4x80g`): müşteri kutunun üstünde onu görüyor.
+        // "320 g" yazmak doğru toplamı verir ama raftaki ürünle eşleşmez.
+        etiket: `${adet}x${birimAgirlik}${birim}`,
+        // Net ağırlık ise TOPLAMDIR — kargo ve fiyat/kg hesabı kutunun tamamını taşır.
+        netWeightG: tekil === null ? null : tekil * adet,
+      },
+    };
+  }
+
   const m = BOY.exec(name);
   if (!m) return { taban: name.trim(), boy: null };
   const sayi = Number.parseFloat(m[1].replace(',', '.'));
   const birim = m[2].toLowerCase();
-  // Yalnız gram/kilogram net ağırlığa çevrilir; ml/adet ölçü birimi olarak etikette kalır.
-  const netWeightG = birim === 'kg' ? Math.round(sayi * 1000) : ['g', 'gr'].includes(birim) ? Math.round(sayi) : null;
   const taban = `${name.slice(0, m.index)}${name.slice(m.index + m[0].length)}`.replace(/\s{2,}/g, ' ').trim();
-  return { taban, boy: { etiket: `${sayi % 1 === 0 ? sayi : sayi}${birim}`, netWeightG } };
+  return { taban, boy: { etiket: `${sayi}${birim}`, netWeightG: grama(sayi, birim) } };
 }
 
 /**
@@ -130,6 +168,27 @@ async function cek(page) {
   return res.json();
 }
 
+/**
+ * Kategori GÖRSELLERİ — aynı Store API'nin `/products/categories` ucundan (kullanıcı kararı 08.08:
+ * "kategoriler görselsiz kalmasın, kaynağın kendi görseliyle dolsun"). Yalnız AİLE kategorilerinin
+ * görseli alınır; HoReCa/Retail satırları kanal kovasıdır ve görsel de taşımıyorlar (ölçüldü).
+ *
+ * Uçtaki slug aile anahtarıyla birebir değil (`anatolian-cuisine-ready-meals`), o yüzden eşleme
+ * ürün tarafındaki çözümlemenin genişletilmişi: birebir → önek soyulmuş → "ile başlayan".
+ */
+async function kategoriGorselleri() {
+  const res = await fetch(`${API}/categories`, { headers: { 'User-Agent': 'lezzet-anatolia/catalog-build' } });
+  if (!res.ok) throw new Error(`kategori ucu: HTTP ${res.status}`);
+  const gorsel = new Map();
+  for (const c of await res.json()) {
+    const soyulmus = c.slug.replace(/^(horeca|retail)-/, '');
+    const aile =
+      AILELER[c.slug] ?? AILELER[soyulmus] ?? AILELER[Object.keys(AILELER).find((k) => c.slug.startsWith(k)) ?? ''];
+    if (aile && c.image?.src && !gorsel.has(aile.key)) gorsel.set(aile.key, c.image.src);
+  }
+  return gorsel;
+}
+
 const ham = [];
 for (let page = 1; ; page += 1) {
   const batch = await cek(page);
@@ -137,7 +196,8 @@ for (let page = 1; ; page += 1) {
   ham.push(...batch);
   if (batch.length < 100) break;
 }
-console.log(`▸ kaynaktan ${ham.length} kayıt çekildi`);
+const gorseller = await kategoriGorselleri();
+console.log(`▸ kaynaktan ${ham.length} kayıt + ${gorseller.size} kategori görseli çekildi`);
 
 /** taban slug → ürün */
 const urunler = new Map();
@@ -201,7 +261,8 @@ const cikti = {
       'ÜRETİLMİŞ DOSYA — elle düzenlenmez. Fiyat, stok, alerjen, içindekiler, besin değeri ve raf ömrü ' +
       'KAYNAKTA YOKTUR ve burada UYDURULMAZ; onlar seed fikstürüdür. Yasal beyanlar bilerek boştur.',
   },
-  categories: Object.values(AILELER),
+  // Görsel URL'i kaynaktan gelir, sabitte durmaz — kaynak kapağı değiştirirse sonraki üretim izler.
+  categories: Object.values(AILELER).map((a) => ({ ...a, imageUrl: gorseller.get(a.key) ?? null })),
   products: [...urunler.values()].sort((a, b) => a.slug.localeCompare(b.slug)),
 };
 

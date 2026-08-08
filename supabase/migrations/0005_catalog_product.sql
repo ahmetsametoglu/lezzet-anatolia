@@ -160,9 +160,14 @@ create table public.bundle (
   serves int,
   is_active boolean not null default true,
   sort_order int not null default 0,                 -- kürelenmiş vitrin sırası (müşteri sıralamaz)
+  -- Vitrinde göster (05.18) — ana sayfa tasarımı pakete 2 slot çiziyor; kod bugün seçimsiz ilk
+  -- üçünü kesiyor (`HOME_PACKAGE_LIMIT`). İşaret SEÇİMDİR, sıra `sort_order`'dan gelir.
+  -- `is_active` ile karıştırılmaz: aktiflik "satışta mı", bu "ana sayfada mı".
+  is_featured boolean not null default false,
   created_at timestamptz not null default now()
 );
 create unique index bundle_slug_key on public.bundle (slug);
+create index bundle_featured_idx on public.bundle (sort_order) where is_featured;
 
 -- Paket kalemi. `allocated_unit_price` MÜŞTERİYE GÖRÜNMEZ: iç muhasebe aracıdır — faturada her
 -- kalemin KDV'si kendi ürününün oranından işlensin diye gerekli (baklava %5,5, malzeme %20).

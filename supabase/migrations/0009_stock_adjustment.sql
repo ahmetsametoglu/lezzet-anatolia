@@ -124,6 +124,13 @@ select a.id,
        v.label             as variant_label,
        p.id                as product_id,
        p.name              as product_name,
+       -- **DEPO** (10.5/10.7 · operasyon talebi 08.08). Görünüm depoyu select'e bile koymuyordu ve
+       -- `listPage` süzgeç almıyordu: "Bugünün kayıtları" şeridi BÜTÜN depoların imhasını
+       -- gösteriyordu. Tek depolu yerel veride bu görünmez — doğru cevap verir; çok depoluda
+       -- depocu başka deponun kaydını kendi şeridinde görür, hem "ben mi girdim" sorusunun cevabını
+       -- bozar hem depo değişmezini deler (`CLAUDE §1`). Parti zaten depoya bağlı, yani veri
+       -- buradaydı; yalnız dışarı verilmiyordu.
+       s.warehouse_id      as warehouse_id,
        -- ARAMA METNİ görünümün içinde kuruluyor: ekranın terimi tek bir düz kolona bakar, `or`
        -- gerekmez ve sorgu kurucusu yeterli olur. Üç dil birden: operasyon Türkçe ama katalog üç
        -- dilli ve operatör ürünü hangi adla hatırlıyorsa onu yazar.

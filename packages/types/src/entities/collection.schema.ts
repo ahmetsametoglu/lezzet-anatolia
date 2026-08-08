@@ -14,6 +14,12 @@ export const CollectionSchema = z
     slug: z.string(),
     sortOrder: z.number().int(),
     isActive: z.boolean(),
+    /**
+     * **Ana sayfada göster** (05.18) — kategoridekiyle aynı kural: işaret seçim, sıra
+     * `sortOrder`'dan. `isActive` ile ayrı iki soru: pasif bir koleksiyon (hazırlanan kampanya)
+     * işaretli kalabilir, okuma ikisini birden sorar.
+     */
+    isFeatured: z.boolean(),
     createdAt: z.string(),
   })
   .merge(ImageMetaSchema); // kapak (OG kartı) görsel künyesi ortak şemadan: anahtar + odak + zoom + alt
@@ -26,6 +32,7 @@ export const CollectionInsertSchema = z
     slug: z.string(),
     sortOrder: z.number().int().optional(),
     isActive: z.boolean().optional(),
+    isFeatured: z.boolean().optional(),
   })
   .merge(ImageMetaInsertSchema);
 export type CollectionInsert = z.infer<typeof CollectionInsertSchema>;

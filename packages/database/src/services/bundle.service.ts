@@ -40,8 +40,16 @@ export class BundleService extends BaseDbService<Bundle, BundleInsert, BundleUpd
   }
 
   /** Kürelenmiş vitrin sırasında tüm paketler (operasyon listesi — aktif/pasif hepsi). */
-  async listAll(): Promise<Bundle[]> {
-    return this.getAll(undefined, { orderBy: 'sortOrder' });
+  async listAll(opts?: { activeOnly?: boolean; featuredOnly?: boolean }): Promise<Bundle[]> {
+    return this.getAll(
+      { isActive: opts?.activeOnly ? true : undefined, isFeatured: opts?.featuredOnly ? true : undefined },
+      { orderBy: 'sortOrder' },
+    );
+  }
+
+  /** Vitrin işareti (05.18) — gerekçe `CategoryService.setFeatured` künyesinde. */
+  setFeatured(id: string, isFeatured: boolean): Promise<Bundle> {
+    return this.update({ id, isFeatured });
   }
 
   /** Verilen paketler TEK sorguda — sipariş kaleminden paket adına çıkmak için (bildirim, 14.5). */

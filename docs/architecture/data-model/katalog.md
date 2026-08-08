@@ -14,6 +14,7 @@ Düz (tek seviye), iç içe ağaç yok. Her ürün tek kategoride (bkz. `DOMAIN.
 | --- | --- | --- |
 | id | uuid | |
 | name | LocalizedText (jsonb) | çok dilli |
+| tagline | LocalizedText (jsonb) \| null | **kısa tanıtım — vitrin bandının ALTYAZISI** (05.17). Başlık değil: başlık kategori adıdır; ikinci bir başlık alanı açılsaydı aynı şeyin iki kaynağı olurdu. Boş bırakılabilir ve öyle kalmalı — altyazısız kategori altyazısız çizilir, **yedek metin uydurulmaz** (ada düşmek "Börekler / Börekler" tekrarı üretirdi). Doğuş sebebi ölçüldü: mobil vitrin bandının altyazısı tasarımın içinde SABİT bir sözlüktü (`CSUB`), yani yeni kategori altyazısız doğuyor ve cümle operatörün elinde değildi |
 | slug | string | dil-bağımsız URL parçası; benzersiz |
 | image_key | string \| null | kategori görseli; depo anahtarı, tam URL değil (STACK §5). Anasayfa kategori şeridinde görünür: **web 3:2 kart, mobil daire** (aynı kare kırpma + yuvarlak maske) |
 | image_focal_x | smallint | odak %, 0-100 (object-position X); tek kaynak 3:2'den tüm çerçeveler bununla türer (Komponent Envanteri §0B) |
@@ -23,6 +24,7 @@ Düz (tek seviye), iç içe ağaç yok. Her ürün tek kategoride (bkz. `DOMAIN.
 | image_updated_at | timestamptz \| null | görsel DOSYASININ son değişme anı; public okuma URL'inin sürüm damgası (`?v=`). Anahtar deterministik + cache `immutable` olduğu için damgasız yeni dosya bir yıl görünmez. Kırpma (odak/zoom) dosyayı değiştirmez → damgayı yalnız yükleme yazar |
 | sort_order | int | |
 | is_active | boolean | |
+| is_featured | boolean | **ana sayfada göster** (05.18). `is_active` ile KARIŞTIRILMAZ — aktiflik "yayında mı", bu "vitrinde mi"; ikisi ayrı sorudur. **İşaret SEÇİMDİR, sıra `sort_order`'dan gelir**: ikinci bir vitrin sırası tutulmaz, iki sıra bir gün çelişir ve hangisinin kazandığı ekrandan anlaşılmaz. Hiç işaret yoksa okuma sıradan ilk N'e düşer — vitrin boş kalmaz |
 | created_at | timestamptz | |
 
 ## Collection (koleksiyon)
@@ -42,6 +44,7 @@ Esnek pazarlama grubu (Bayram, Yeni, İndirimde). Bir ürün birden çok koleksi
 | image_alt | LocalizedText (jsonb) \| null | OG kartı alt metni; boşsa ada düşer |
 | image_updated_at | timestamptz \| null | görsel dosyasının sürüm damgası (gerekçe: Category satırı) |
 | is_active | boolean | |
+| is_featured | boolean | ana sayfada göster (05.18) — kural Category satırındakiyle birebir. Pasif bir koleksiyon (hazırlanan kampanya) işaretli kalabilir; okuma ikisini birden sorar |
 | sort_order | int | |
 | created_at | timestamptz | |
 
@@ -249,6 +252,7 @@ Birden çok ürünü tek fiyata sunan katalog kısayolu; sepete eklenince tek te
 | total_price | number | müşterinin gördüğü paket fiyatı, **TTC** (= atanmış fiyatların toplamı); yalnız B2C |
 | is_active | boolean | |
 | sort_order | int | |
+| is_featured | boolean | ana sayfada göster (05.18) — kural Category satırındakiyle aynı; `is_active` "satışta mı", bu "vitrinde mi" |
 
 ## BundleItem (paket kalemi)
 

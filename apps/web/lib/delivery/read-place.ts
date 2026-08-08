@@ -106,6 +106,26 @@ export async function readPlaceWarehouses(): Promise<{ warehouseId: string | nul
  */
 export const readPlaceAnswer = cache(readPlaceAnswerFromCookie);
 
+/**
+ * **Ayar kapsamının yer ekseni** (07.15) — ülke + bölge + depo, tek okumadan.
+ *
+ * `readPlaceWarehouses` yetmiyordu: kapsamlı ayar `zone` ve `country` eksenlerini de sorabiliyor
+ * (bölge asgari sepeti, DE kargo tarifesi) ve o iki değer bu çözümün İÇİNDE zaten duruyordu —
+ * dışarı verilmediği için kimse okuyamıyordu.
+ *
+ * **Bölge kimliği ÇÖZÜMDEN gelir, çerezten değil** ve bu bir güvenlik sınırı: çerezi istemci
+ * yazabilir; çözülmüş bölge kimliğini oradan okusaydık uydurulmuş bir çerez hangi asgari sepetin
+ * uygulanacağını belirlerdi. Aynı gerekçe `warehouseId` için de yazılı (bu dosyanın künyesi).
+ */
+export async function readPlaceScope(): Promise<{ country: string | null; zoneId: string | null; warehouseId: string | null }> {
+  const { answer, resolution, warehouseId } = await readPlaceContext();
+  return {
+    country: answer?.country ?? null,
+    zoneId: resolution?.kind === 'route' ? resolution.zoneId : null,
+    warehouseId,
+  };
+}
+
 async function readPlaceAnswerFromCookie(): Promise<PlaceAnswer | null> {
   const raw = (await cookies()).get('lezzet.place.v2')?.value;
   if (!raw) return null;

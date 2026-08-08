@@ -32,6 +32,11 @@ returns table (
   serves int,
   is_active boolean,
   sort_order int,
+  -- **Vitrin işareti** (05.18). Kolon listesi AÇIK yazıldığı için buraya da eklenmek ZORUNDA:
+  -- `BundleListRow` şeması `BundleSchema`'dan türüyor, yani alan eklenip burası unutulduğunda
+  -- okuma Zod'da patlıyor — ve hata kendi konusuyla ilgisiz bir yerde görünüyor (bugün ölçüldü:
+  -- `order_sale` görünümünde aynı tuzak, 22 test kırmızıydı).
+  is_featured boolean,
   created_at timestamptz,
   -- ── Kalemlerden türeyen özet ──
   item_count int,
@@ -87,7 +92,7 @@ as $$
   select
     b.id, b.name, b.description, b.slug,
     b.image_key, b.image_focal_x, b.image_focal_y, b.image_zoom, b.image_alt, b.image_updated_at,
-    b.total_price, b.serves, b.is_active, b.sort_order, b.created_at,
+    b.total_price, b.serves, b.is_active, b.sort_order, b.is_featured, b.created_at,
     coalesce(a.item_count, 0),
     coalesce(a.variant_ids, '{}'::uuid[]),
     coalesce(a.item_names, '[]'::jsonb),
