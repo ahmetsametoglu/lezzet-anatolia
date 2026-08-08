@@ -143,65 +143,12 @@
   </div>
 
   <div style="display:flex;flex-direction:column;gap:16px">
-    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
-      <span style="font:700 20px 'Space Grotesk';color:#22251f">Fiyatlar — mobil</span>
-      <span style="font:400 13.5px 'Karla';color:#6a7065">En sık: tek fiyat düzeltme, marj-altı uyarısına bakıp güncelleme, near-expiry teklif — üçü de birkaç dokunuş.</span>
-    </div>
-    <div style="display:flex;gap:28px;flex-wrap:wrap">
-
-      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
-        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:9px">
-          <span style="color:#a5443c"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span>
-          <span style="font:600 17px 'Space Grotesk';color:#22251f">Marj-altı</span>
-          <span style="margin-left:auto;font:500 10px 'IBM Plex Mono';color:#a5443c;background:#fbe9e7;border-radius:9px;padding:2px 8px">3</span>
-        </div>
-        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">
-          <sc-for list="{{ mobMargin }}" as="m" hint-placeholder-count="3">
-            <div style="border:1px solid #e2c4c0;border-left:3px solid #c2571f;border-radius:11px;padding:12px 13px;display:flex;flex-direction:column;gap:8px">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                <div style="display:flex;flex-direction:column;gap:1px">
-                  <span style="font:600 13.5px 'Karla';color:#22251f">{{ m.name }}</span>
-                  <span style="font:400 11px 'Karla';color:#8b9086">Maliyet {{ m.cost }} · hedef {{ m.target }}</span>
-                </div>
-                <span style="font:600 11px 'Space Grotesk';color:#a5443c;background:#fbe9e7;border-radius:6px;padding:3px 8px">{{ m.margin }}</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:10px">
-                <span style="font:400 11.5px 'Karla';color:#6a7065">Fiyat {{ m.price }}</span>
-                <span style="margin-left:auto;font:600 12px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:8px;padding:8px 14px">Düzelt</span>
-              </div>
-            </div>
-          </sc-for>
-        </div>
-      </div>
-
-      <div style="width:340px;background:rgba(34,39,43,.35);border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14);display:flex;flex-direction:column;justify-content:flex-end;min-height:560px">
-        <div style="background:#fbfbf9;border-radius:20px 20px 26px 26px;padding:16px;display:flex;flex-direction:column;gap:13px">
-          <div style="width:42px;height:5px;border-radius:3px;background:#d4d7ce;align-self:center"></div>
-          <span style="font:600 16px 'Space Grotesk';color:#22251f">Fıstıklı Baklava 1kg · B2C</span>
-          <div style="display:flex;gap:9px">
-            <div style="flex:1;border:1px solid #e6e7e1;border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;background:#f8f9f5"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Maliyet</span><span style="font:500 15px 'IBM Plex Mono';color:#22251f">9,20 €</span></div>
-            <div style="flex:1;border:1px solid #e2c4c0;border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;background:#fbe9e7"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#a5443c">Marj</span><span style="font:500 15px 'IBM Plex Mono';color:#a5443c">%28</span></div>
-            <div style="flex:1;border:1px solid #e6e7e1;border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;background:#f8f9f5"><span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Hedef</span><span style="font:500 15px 'IBM Plex Mono';color:#22251f">%42</span></div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            <span style="font:500 11px 'Space Grotesk';text-transform:uppercase;letter-spacing:.05em;color:#8b9086">Yeni B2C fiyatı</span>
-            <div style="border:1.5px solid #5f7a2c;border-radius:9px;padding:12px 14px;font:500 18px 'IBM Plex Mono';color:#22251f;display:flex;justify-content:space-between;box-shadow:0 0 0 3px rgba(95,122,44,.12)"><span>18,00</span><span style="color:#9aa094">€</span></div>
-            <span style="font:400 11px 'Karla';color:#4a6121">Hedef marj için önerilen: 15,90 € → %42</span>
-          </div>
-          <span style="font:400 11px/1.5 'Karla';color:#8b9086;text-align:center">Verilmiş siparişlerin fiyatı değişmez; yalnız bundan sonraki satışları etkiler.</span>
-          <span style="background:#5f7a2c;color:#fff;font:600 15px 'Space Grotesk';padding:15px;border-radius:12px;text-align:center">Fiyatı kaydet</span>
-        </div>
-      </div>
-
-      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
-        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+    <div style="max-width:560px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Kurallar</span>
         <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
-          <li><strong>Web</strong> → toplu gözden geçirme, kupon/kampanya kurma, müşteriye özel fiyat, çözüm sırası.</li>
-          <li><strong>Mobil</strong> → tek fiyat düzeltme, marj-altı uyarısı, near-expiry teklif kararı.</li>
-          <li><strong>Kural</strong> → tek-en-büyük indirim (üst üste binmez); pakete ve near-expiry teklife genel indirim binmez; verilmiş sipariş fiyatı sabit.</li>
+          <li>tek-en-büyük indirim (üst üste binmez); pakete ve near-expiry teklife genel indirim binmez; verilmiş sipariş fiyatı sabit.</li>
         </ul>
       </div>
-    </div>
   </div>
 
   <!-- FİYAT DÜZENLEME DIALOG -->

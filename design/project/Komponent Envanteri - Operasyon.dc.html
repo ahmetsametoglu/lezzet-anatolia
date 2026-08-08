@@ -21,7 +21,7 @@
   <div style="display:flex;flex-direction:column;gap:10px">
     <span style="font:600 12px 'Space Grotesk';letter-spacing:.14em;text-transform:uppercase;color:#5f7a2c">Lezzet Anatolia · Operasyon Evreni (admin + depo + kurye)</span>
     <h1 style="margin:0;font:600 34px 'Space Grotesk';color:#22251f">Komponent Envanteri</h1>
-    <p style="margin:0;font:400 15px/1.6 'Karla';color:#6a7065;max-width:820px">Onaylı yön: <strong>Veri Masası</strong> — açık zemin, ince çizgi, gölge yok; başlık/etiket <strong>Space Grotesk</strong>, rakam/fiyat <strong>IBM Plex Mono</strong>, gövde <strong>Karla</strong>. Olive vurgu · amber dikkat · kırmızı hata. Kaynak: 14 admin sayfası (web+mobil) + 6 saha sayfası (kurye/depo, telefon öncelikli). Müşteri evreninden ayrı settir; ortaklaşan parça açıkça yazılır.</p>
+    <p style="margin:0;font:400 15px/1.6 'Karla';color:#6a7065;max-width:820px">Onaylı yön: <strong>Veri Masası</strong> — açık zemin, ince çizgi, gölge yok; başlık/etiket <strong>Space Grotesk</strong>, rakam/fiyat <strong>IBM Plex Mono</strong>, gövde <strong>Karla</strong>. Olive vurgu · amber dikkat · kırmızı hata. Kaynak: 14 admin sayfası + 6 saha sayfası (kurye/depo). Operasyon web yüzeyi <strong>yalnız masaüstü</strong> (karar 08.08) — responsive/mobil varyantlar kaldırıldı; saha akışları ayrı cihaz uygulamasında yaşar (bkz. Operasyon Mobil). Müşteri evreninden ayrı settir; ortaklaşan parça açıkça yazılır.</p>
   </div>
 
   <!-- §0 -->
@@ -122,7 +122,7 @@
       <span style="font:500 22px 'IBM Plex Mono';color:#22251f">1.240,00 € <span style="font:400 12px 'Karla';color:#8b9086">— IBM Plex Mono rakam/fiyat</span></span>
       <span style="font:400 15px 'Karla';color:#22251f">Karla gövde metni <span style="font:400 12px 'Karla';color:#8b9086">— açıklama, satır</span></span>
     </div>
-    <span style="font:400 13.5px/1.7 'Karla';color:#6a7065">Yarıçap: kart 8px · dialog 14px · çip 14px · buton 7-8px · mobil kart 26px. Kenarlık <code>gri-200</code>, iç ayraç <code>gri-50</code>; <strong>gölge yok</strong> (mobil kartlarda tek hafif katman serbest). Kart yüksekliği 640px, iç tablo gövdesi kaydırılır (başlık sabit) — uzun listeler infinite scroll. Renk <strong>anlam taşır</strong>: olive=yolunda, amber=dikkat/karar, kırmızı=hata/gecikme, <strong>mavi=bilgi</strong>, mor=AI, gri=kapanmış/pasif. Tüm kartlar <code>max-width:1360px</code> ile pane'e sığar.</span>
+    <span style="font:400 13.5px/1.7 'Karla';color:#6a7065">Yarıçap: kart 8px · dialog 14px · çip 14px · buton 7-8px. Kenarlık <code>gri-200</code>, iç ayraç <code>gri-50</code>; <strong>gölge yok</strong>. Kart yüksekliği 640px, iç tablo gövdesi kaydırılır (başlık sabit) — uzun listeler infinite scroll. Renk <strong>anlam taşır</strong>: olive=yolunda, amber=dikkat/karar, kırmızı=hata/gecikme, <strong>mavi=bilgi</strong>, mor=AI, gri=kapanmış/pasif. Tüm kartlar <code>max-width:1360px</code> ile pane'e sığar.</span>
 
     <!-- 0.5 -->
     <div style="display:flex;flex-direction:column;gap:11px;border-top:1px solid #f0f1ec;padding-top:16px">
@@ -350,22 +350,7 @@
         </div>
       </div>
       <div style="display:flex;gap:16px;align-items:flex-start;border-top:1px solid #f0f1ec;padding-top:14px;flex-wrap:wrap">
-        <div style="width:250px;flex:none;background:#22251f;border-radius:20px;padding:10px;display:flex;flex-direction:column;gap:8px">
-          <div style="background:#fbfbf9;border-radius:13px;padding:11px 12px;display:flex;flex-direction:column;gap:9px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="width:24px;height:24px;border-radius:7px;background:#22251f;color:#a9c46b;font:700 12px 'Space Grotesk';display:grid;place-items:center">L</span>
-              <span style="font:600 13px 'Space Grotesk';color:#22251f;flex:1">Panel</span>
-              <span style="font:500 16px 'Space Grotesk';color:#6a7065">☰</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;background:#eef0ea;border:1px solid #e0e2da;border-radius:9px;padding:9px 10px">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 21V9l9-5 9 5v12"></path><path d="M3 21h18"></path><path d="M9 21v-6h6v6"></path></svg>
-              <span style="font:600 12.5px 'Space Grotesk';color:#22251f;flex:1">Tüm depolar</span>
-              <span style="font:500 11px 'Karla';color:#9aa094">değiştir ▾</span>
-            </div>
-            <span style="font:400 10.5px/1.45 'Karla';color:#8b9086">Mobilde bağlam başlık barının altında tam genişlikte tek satır; dokununca alttan çıkan liste (bottom sheet) açılır. Gezinme menüsünün içine gizlenmez — sayfanın anlamı ona bağlıdır.</span>
-          </div>
-        </div>
-        <div style="flex:1;min-width:300px;display:flex;flex-direction:column;gap:7px">
+                <div style="flex:1;min-width:300px;display:flex;flex-direction:column;gap:7px">
           <span style="font:600 13.5px 'Space Grotesk';color:#22251f">Bağlam değişince ne olur</span>
           <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
             <li>Açık sayfa yeni evrenle yeniden yüklenir; <strong>tablo depo süzgeci temizlenir</strong>. Durum/kategori/dönem süzgeçleri korunur — onlar depo ekseni değildir.</li>
@@ -538,7 +523,7 @@
 
     <div style="display:flex;flex-direction:column;gap:11px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
       <span style="font:600 16px 'Space Grotesk'">O3I · Kabul adet girişi — tam / kısmi / boş ≠ sıfır</span>
-      <span style="font:400 13.5px 'Karla';color:#6a7065">Kabul <strong>sayarak</strong> yapılan bir iştir: satır satır, telefon önceliklidir, −/+ ile tek elle. Hata en çok burada olur ve fark <strong>kalıcı kayda</strong> geçer; sessizce eşitlenmez.</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Kabul <strong>sayarak</strong> yapılan bir iştir: satır satır, klavye önceliklidir — Tab/Enter akışı, barkod ilgili satıra atlar. Hata en çok burada olur ve fark <strong>kalıcı kayda</strong> geçer; sessizce eşitlenmez.</span>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
         <div style="border:1px solid #cdd8b6;background:#f6f9f0;border-radius:10px;padding:11px 12px;display:flex;flex-direction:column;gap:7px">
           <span style="font:600 12px 'Karla';color:#22251f">Tam kabul</span>
@@ -714,11 +699,11 @@
 
   <!-- §4 -->
   <div style="background:#fbfbf9;border:1px solid #e2e3dd;border-radius:12px;padding:26px 30px;display:flex;flex-direction:column;gap:22px">
-    <h2 style="margin:0;font:600 21px 'Space Grotesk'">§4 · Saha (kurye + depo) — telefon öncelikli</h2>
+    <h2 style="margin:0;font:600 21px 'Space Grotesk'">§4 · Saha (kurye + depo) <span style="font:400 13px 'Karla';color:#9a6416">— ayrı cihaz uygulaması (Operasyon Mobil); buradaki bileşenler o uygulamanın envanteridir, web'e taşınmaz</span></h2>
     <div style="display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #f0f1ec;padding-bottom:20px">
       <span style="font:600 16px 'Space Grotesk'">O11 · Mobil ekran kabuğu</span>
       <span style="font:400 13.5px 'Karla';color:#6a7065">380px açık kart, olive "L" + ekran adı başlık. Büyük dokunma hedefleri (≥44px), basılı-tut onayı (eldiven koşulu), aşağı-çek yenileme. Aynı v2 renk/font dili; admin tablosu yok.</span>
-      <span style="font:400 12.5px 'Karla';color:#8b9086">Canlı: <a href="Operasyon - Kurye Gun.dc.html">Kurye Gün</a> · <a href="Operasyon - Depo Hazirlik.dc.html">Depo Hazırlık</a></span>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Canlı: <a href="Operasyon Mobil v2.dc.html">Operasyon Mobil v2</a> (cihaz uygulaması; eski sayfa taslakları arsiv/ altında)</span>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <span style="font:600 16px 'Space Grotesk'">O12 · Rol duvarı</span>
@@ -813,14 +798,14 @@
         <span style="font:600 11px 'Space Grotesk';color:#6a7065;background:#eef0ea;border:1px solid #e0e2da;border-radius:7px;padding:5px 11px">İnceleme</span>
         <span style="font:400 12.5px 'Karla';color:#8b9086">— 352px liste + minmax(0,1fr) okuma sütunu, min yükseklik 560px</span>
       </div>
-      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Sistem (yalnız masaüstü). Telefonda bu yüzey yok — mobil kart + O24 bloğu kullanılır. O9 dialogu korunur: listeden hızlı bakış için.</span>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">Kullanıldığı sayfalar: Sistem. O9 dialogu korunur: listeden hızlı bakış için.</span>
     </div>
   </div>
 
   <div style="background:#22251f;color:#f2f3ee;border-radius:12px;padding:24px 30px;display:flex;flex-direction:column;gap:10px">
     <h2 style="margin:0;font:600 19px 'Space Grotesk'">Evren kuralları (kodlayan ajan için)</h2>
     <ul style="margin:0;padding-left:20px;font:400 13.5px/1.75 'Karla';color:#c8ccc2">
-      <li>Admin web + mobil birlikte; saha (kurye/depo) yalnız telefon öncelikli. AdminSidebar tek kaynaktır — nav kopyalanmaz.</li>
+      <li>Operasyon web yüzeyi yalnız masaüstü (08.08); saha (kurye/depo) ayrı cihaz uygulamasında. AdminSidebar tek kaynaktır — nav kopyalanmaz.</li>
       <li><strong>Depo ekseni iki katmandır</strong> (§1B): bağlam kimlik düzeyinde ve kalıcı, süzgeç tablo düzeyinde ve geçici. Süzgeç bağlamı asla yazmaz; bağlam tek depoya inince süzgeç kaybolur — "bağlam=KEHL, süzgeç=STR" gibi tanımsız kesişim yapısal olarak imkânsızdır. <strong>Varsayılan depo üretilmez</strong>: depo ya kimlikten (kapsam) ya açık seçimden gelir.</li>
       <li>Oluştur/düzenle hep dialogda; sekmeler içerik değiştirir, çipler filtreler — statik taklit değil, işlevsel.</li>
       <li>Rakam/fiyat/saat IBM Plex Mono; başlık/etiket Space Grotesk; gövde Karla. Gölge yok, ince çizgi + boşluk ayırır.</li>

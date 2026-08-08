@@ -88,37 +88,13 @@
 
   <!-- MOBİL -->
   <div style="display:flex;flex-direction:column;gap:16px">
-    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
-      <span style="font:700 20px 'Space Grotesk';color:#22251f">Rotalar — mobil</span>
-      <span style="font:400 13.5px 'Karla';color:#6a7065">Gün planına en sık sabah, depoda/araç başında bakılır — liste ve atama hızlı yürümeli.</span>
-    </div>
-    <div style="display:flex;gap:28px;flex-wrap:wrap">
-      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
-        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;flex-direction:column;gap:8px">
-          <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 17px 'Space Grotesk';color:#22251f">Perş 24 Tem</span><span style="font:500 10px 'IBM Plex Mono';color:#4a6121;background:#eef4e2;border-radius:9px;padding:2px 8px">8 durak</span></div>
-          <span style="font:600 10.5px 'Space Grotesk';color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6;border-radius:8px;padding:6px 10px;align-self:flex-start;display:flex;align-items:center;gap:6px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Liste kesinleşti</span>
-        </div>
-        <div style="padding:8px 16px;display:flex;flex-direction:column">
-          <sc-for list="{{ mobStops }}" as="s" hint-placeholder-count="5">
-            <div style="padding:11px 0;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:11px">
-              <span style="width:26px;height:26px;border-radius:7px;background:#eef0ea;color:#6a7065;font:600 12px 'IBM Plex Mono';display:grid;place-items:center;flex:none">{{ s.seq }}</span>
-              <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 13px 'Karla';color:#22251f">{{ s.name }}</span><span style="font:400 10.5px 'Karla';color:#8b9086">{{ s.addr }}</span></div>
-              <span style="font:600 9.5px 'Space Grotesk';color:{{ s.stFg }};background:{{ s.stBg }};border-radius:6px;padding:2px 7px">{{ s.short }}</span>
-            </div>
-          </sc-for>
-        </div>
-      </div>
-
-      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
-        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+    <div style="max-width:560px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Kurallar</span>
         <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
-          <li><strong>Web</strong> → bölge tanımı (posta kodu + gün), gün planı, kurye atama, güne taşıma, hazırlık durumu.</li>
-          <li><strong>Mobil</strong> → sabah gün listesi taraması, hızlı atama, kesinleşme hali.</li>
-          <li><strong>Kural</strong> → rota optimizasyonu/kapasite yok (ileri faz); teslim/tahsilat kurye ekranında; kesim saati Ayarlar'da (burada etkisi görünür).</li>
+          <li>rota optimizasyonu/kapasite yok (ileri faz); teslim/tahsilat kurye ekranında; kesim saati Ayarlar'da (burada etkisi görünür).</li>
           <li><strong>Depo bağı</strong> → bölge ↔ depo eşleşmesi burada kurulur; müşterinin posta kodu hangi depodan karşılanacağını bu tablo belirler. Müşteri bu eşleşmeyi hiç görmez.</li>
         </ul>
       </div>
-    </div>
   </div>
 
   <!-- BÖLGE DIALOG -->

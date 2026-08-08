@@ -114,46 +114,12 @@
 
   <!-- MOBİL -->
   <div style="display:flex;flex-direction:column;gap:16px">
-    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
-      <span style="font:700 20px 'Space Grotesk';color:#22251f">Ayarlar — mobil</span>
-      <span style="font:400 13.5px 'Karla';color:#6a7065">Seyrek ama bazen acil ("bugün minimum sepeti düşür"). Tek ayarı arayıp değiştirmek hızlı olmalı.</span>
-    </div>
-    <div style="display:flex;gap:28px;flex-wrap:wrap">
-      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
-        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;flex-direction:column;gap:10px">
-          <span style="font:600 17px 'Space Grotesk';color:#22251f">Ayarlar</span>
-          <div style="display:flex;align-items:center;gap:8px;background:#eef0ea;border:1px solid #e0e2da;border-radius:9px;padding:9px 12px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="font:400 13px 'Karla';color:#9aa094">Ayar ara…</span></div>
-        </div>
-        <div style="padding:10px 16px;display:flex;flex-direction:column;gap:9px">
-          <sc-for list="{{ mobSettings }}" as="s" hint-placeholder-count="4">
-            <div style="border:1px solid #e6e7e1;border-radius:11px;padding:11px 13px;display:flex;align-items:center;gap:12px">
-              <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 12.5px 'Karla';color:#22251f">{{ s.name }}</span><span style="font:400 10.5px 'Karla';color:#8b9086">{{ s.desc }}</span></div>
-              <span style="font:500 14px 'IBM Plex Mono';color:#22251f;flex:none">{{ s.value }}</span>
-            </div>
-          </sc-for>
-        </div>
-      </div>
-
-      <div style="width:340px;background:rgba(34,39,43,.35);border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14);display:flex;flex-direction:column;justify-content:flex-end;min-height:560px">
-        <div style="background:#fbfbf9;border-radius:20px 20px 26px 26px;padding:16px;display:flex;flex-direction:column;gap:13px">
-          <div style="width:42px;height:5px;border-radius:3px;background:#d4d7ce;align-self:center"></div>
-          <div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 16px 'Space Grotesk';color:#22251f">Minimum sepet tutarı</span><span style="font:400 11.5px 'Karla';color:#8b9086">Bu tutarın altında sipariş tamamlanamaz.</span></div>
-          <div style="display:flex;align-items:center;gap:12px;border:1.5px solid #5f7a2c;border-radius:11px;padding:12px 14px"><span style="font:500 20px 'IBM Plex Mono';color:#22251f;flex:1">25,00 €</span><span style="width:30px;height:30px;border-radius:8px;background:#f4f5f1;border:1px solid #e0e2da;display:grid;place-items:center;color:#6a7065;font:600 17px 'Space Grotesk'">−</span><span style="width:30px;height:30px;border-radius:8px;background:#f4f5f1;border:1px solid #e0e2da;display:grid;place-items:center;color:#6a7065;font:600 17px 'Space Grotesk'">+</span></div>
-          <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:10px 13px;display:flex;flex-direction:column;gap:6px"><span style="font:500 11px/1.5 'Karla';color:#8a6410">İstisna: B2B için 100,00 € (ayrı değer).</span></div>
-          <span style="font:400 11px 'Karla';color:#8b9086">Genel değer + istisnalar. Değişiklik geleceğe uygulanır; verilmiş siparişleri etkilemez.</span>
-          <span style="background:#5f7a2c;color:#fff;font:600 15px 'Space Grotesk';padding:14px;border-radius:12px;text-align:center">Kaydet</span>
-        </div>
-      </div>
-
-      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
-        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+    <div style="max-width:560px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Kurallar</span>
         <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
-          <li><strong>Web</strong> → tüm parametre grupları, istisna ekleme, kullanıcı/rol yönetimi.</li>
-          <li><strong>Mobil</strong> → ara + tek ayarı hızlı değiştir (acil senaryolar).</li>
-          <li><strong>Kural</strong> → iç anahtar adı yok (insan dili); rol izin matrisi düzenlenmez (sabit kalıp); değişiklik geçmişe etki etmez; sınırlı değerler reddedilir.</li>
+          <li>iç anahtar adı yok (insan dili); rol izin matrisi düzenlenmez (sabit kalıp); değişiklik geçmişe etki etmez; sınırlı değerler reddedilir.</li>
         </ul>
       </div>
-    </div>
   </div>
 
   <!-- AYAR DÜZENLE DIALOG -->

@@ -135,61 +135,12 @@
 
   <!-- MOBİL -->
   <div style="display:flex;flex-direction:column;gap:16px">
-    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
-      <span style="font:700 20px 'Space Grotesk';color:#22251f">Müşteriler — mobil</span>
-      <span style="font:400 13.5px 'Karla';color:#6a7065">En sık: WhatsApp yazışırken telefonla müşteri bulma, vadeli karar öncesi karneye bakma, limit değiştirme.</span>
-    </div>
-    <div style="display:flex;gap:28px;flex-wrap:wrap">
-
-      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
-        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;flex-direction:column;gap:10px">
-          <span style="font:600 17px 'Space Grotesk';color:#22251f">Müşteriler</span>
-          <div style="display:flex;align-items:center;gap:8px;background:#eef0ea;border:1px solid #e0e2da;border-radius:9px;padding:9px 12px">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
-            <span style="font:400 13px 'Karla';color:#9aa094">Telefon veya ad…</span>
-          </div>
-        </div>
-        <div style="padding:8px 16px;display:flex;flex-direction:column">
-          <sc-for list="{{ mobList }}" as="m" hint-placeholder-count="5">
-            <div style="padding:11px 0;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:11px">
-              <span style="width:38px;height:38px;border-radius:9px;background:{{ m.avBg }};color:#fff;font:600 13px 'Space Grotesk';display:grid;place-items:center;flex:none">{{ m.initials }}</span>
-              <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 13.5px 'Karla';color:#22251f">{{ m.name }}</span><span style="font:400 11px 'IBM Plex Mono';color:#8b9086">{{ m.phone }}</span></div>
-              <span style="font:600 10px 'Space Grotesk';color:{{ m.stFg }};background:{{ m.stBg }};border-radius:6px;padding:2px 8px">{{ m.status }}</span>
-            </div>
-          </sc-for>
-        </div>
-      </div>
-
-      <div style="width:340px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:26px;overflow:hidden;box-shadow:0 8px 40px rgba(34,39,43,.14)">
-        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:11px">
-          <span style="width:40px;height:40px;border-radius:10px;background:#9a6416;color:#fff;font:600 14px 'Space Grotesk';display:grid;place-items:center">CM</span>
-          <div style="display:flex;flex-direction:column;gap:1px"><span style="font:600 15px 'Space Grotesk';color:#22251f">Café Marceau</span><span style="font:400 11px 'IBM Plex Mono';color:#8b9086">+33 3 88 12 …</span></div>
-          <span style="margin-left:auto;font:600 10px 'Space Grotesk';color:#a5443c;background:#fbe9e7;border-radius:6px;padding:2px 8px">Gecikmiş</span>
-        </div>
-        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">
-          <div style="border:1px solid #e2c4c0;background:#fbe9e7;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
-            <span style="font:600 12px 'Space Grotesk';color:#8a3a33">Ödeme karnesi</span>
-            <div style="display:flex;gap:14px">
-              <div style="display:flex;flex-direction:column"><span style="font:400 10px 'Karla';color:#a5443c">Ort. ödeme</span><span style="font:500 14px 'IBM Plex Mono';color:#a5443c">+8 gün</span></div>
-              <div style="display:flex;flex-direction:column"><span style="font:400 10px 'Karla';color:#a5443c">Gecikme</span><span style="font:500 14px 'IBM Plex Mono';color:#a5443c">3 kez</span></div>
-              <div style="display:flex;flex-direction:column"><span style="font:400 10px 'Karla';color:#8b9086">Açık bakiye</span><span style="font:500 14px 'IBM Plex Mono';color:#22251f">312 €</span></div>
-            </div>
-          </div>
-          <span style="font:400 11px/1.5 'Karla';color:#8b9086">Karne karar desteğidir — limit puana göre otomatik belirlenmez.</span>
-          <div style="border:1px solid #d9dbd2;border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between"><span style="font:500 12.5px 'Karla';color:#22251f">Vade limiti</span><div style="display:flex;align-items:center;gap:10px"><span style="font:500 15px 'IBM Plex Mono';color:#22251f">500 €</span><span style="width:26px;height:26px;border-radius:7px;background:#f4f5f1;border:1px solid #e0e2da;display:grid;place-items:center;color:#6a7065;font:600 15px 'Space Grotesk'">−</span><span style="width:26px;height:26px;border-radius:7px;background:#f4f5f1;border:1px solid #e0e2da;display:grid;place-items:center;color:#6a7065;font:600 15px 'Space Grotesk'">+</span></div></div>
-          <span style="background:#5f7a2c;color:#fff;font:600 14px 'Space Grotesk';padding:13px;border-radius:11px;text-align:center">Limiti kaydet</span>
-        </div>
-      </div>
-
-      <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
-        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Web / mobil ayrımı</span>
+    <div style="max-width:560px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 14px 'Space Grotesk';color:#3a4147">Kurallar</span>
         <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
-          <li><strong>Web</strong> → tam detay, birleştirme, GDPR silme, indirim/kupon, izin görüntüleme, sipariş geçmişi.</li>
-          <li><strong>Mobil</strong> → telefonla bulma, karneye bakma, limit değiştirme; geri dönüşsüz işlemler yanlışlıkla tetiklenmeden.</li>
-          <li><strong>Kural</strong> → vade/limit/karne başka role görünmez; pazarlama izni salt görünüm; türetilmiş değerler elle düzeltilmez.</li>
+          <li>vade/limit/karne başka role görünmez; pazarlama izni salt görünüm; türetilmiş değerler elle düzeltilmez.</li>
         </ul>
       </div>
-    </div>
   </div>
 
   <!-- VADE DIALOG -->
