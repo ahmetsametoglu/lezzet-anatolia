@@ -8,7 +8,6 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { LOCALIZED_TEXT_KEYS, resolveLocalizedText } from '@lezzet/types';
-import { titleOf } from '@/lib/catalog/title';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import type { RecipeItemView, RecipeView, RecipesData } from './recipes-types';
 
@@ -130,9 +129,4 @@ async function describeItems(
         isAvailable: variant?.isActive === true && product?.status === 'active',
       };
     });
-}
-
-/** Listedeki başlık — ürün adı + boy, tek yerden (`titleOf`). */
-export function recipeItemTitle(item: RecipeItemView): string {
-  return titleOf(item.productName, item.variantLabel);
 }

@@ -1,6 +1,6 @@
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { guarded, requireAdmin } from '@/lib/guard';
-import { RecipesDesktop } from './recipes.desktop';
+import { RecipesClient } from './recipes-client';
 import { readRecipes } from './recipes-read';
 
 /**
@@ -34,5 +34,5 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   // adres, seçimi belirsiz bırakır ve ekran o hâlde hiçbir tarifi seçmemeli.
   const selectedId = typeof params.r === 'string' ? params.r : null;
 
-  return <RecipesDesktop data={await readRecipes(selectedId)} selectedId={selectedId} />;
+  return <RecipesClient data={await readRecipes(selectedId)} selectedId={selectedId} />;
 }

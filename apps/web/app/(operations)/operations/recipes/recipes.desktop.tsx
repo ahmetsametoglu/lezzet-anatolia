@@ -1,10 +1,12 @@
+'use client';
+
 import Link from 'next/link';
 import { Badge } from '@/components/operation/ui/badge';
+import { Button } from '@/components/operation/ui/button';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { money, num } from '@/components/operation/ui/format';
-import { RECIPE_NOTES, langBadge, statusBadge } from './recipes-labels';
-import { recipeItemTitle } from './recipes-read';
+import { RECIPE_NOTES, langBadge, recipeItemTitle, statusBadge } from './recipes-labels';
 import type { RecipeView, RecipesData } from './recipes-types';
 
 /**
@@ -18,7 +20,17 @@ import type { RecipeView, RecipesData } from './recipes-types';
  * Seçim ADRESTE (`?r=<id>`) ve satırlar `Link`: bir tarifin bağlantısı paylaşılabilmeli, ve bu
  * seçim için istemci durumu gerekmiyor — sunucu zaten o tarifin kalemlerini okuyor.
  */
-export function RecipesDesktop({ data, selectedId }: { data: RecipesData; selectedId: string | null }) {
+interface RecipesViewProps {
+  data: RecipesData;
+  selectedId: string | null;
+  busy: boolean;
+  error: string | null;
+  onCreate: () => void;
+  onEdit: (recipe: RecipeView) => void;
+  onTogglePublish: (recipe: RecipeView) => void;
+}
+
+export function RecipesDesktop({ data, selectedId, busy, error, onCreate, onEdit, onTogglePublish }: RecipesViewProps) {
   const selected = data.recipes.find((recipe) => recipe.id === selectedId) ?? null;
   const draftCount = data.recipes.length - data.activeCount;
 
@@ -27,7 +39,17 @@ export function RecipesDesktop({ data, selectedId }: { data: RecipesData; select
       <PageHeader
         title="Tarifler"
         subtitle={`${num(data.recipes.length)} tarif · ${num(data.activeCount)} yayında · ${num(draftCount)} taslak`}
-      />
+      >
+        <Button variant="primary" size="sm" onClick={onCreate}>
+          + Tarif
+        </Button>
+      </PageHeader>
+
+      {error ? (
+        <p className="mx-6 mt-3 rounded-ops-btn border border-ops-red-line bg-ops-red-bg px-3 py-2 font-ops-body text-ops-sm text-ops-red">
+          {error}
+        </p>
+      ) : null}
 
       {data.recipes.length === 0 ? (
         <EmptyState title="Henüz tarif yok" description={RECIPE_NOTES.empty} />
@@ -53,7 +75,16 @@ export function RecipesDesktop({ data, selectedId }: { data: RecipesData; select
           </div>
 
           <aside className="flex min-h-0 flex-col overflow-y-auto bg-ops-panel">
-            {selected ? <RecipePreview recipe={selected} /> : <EmptyState title="Tarif seçin" description={RECIPE_NOTES.pick} />}
+            {selected ? (
+              <RecipePreview
+                recipe={selected}
+                busy={busy}
+                onEdit={() => onEdit(selected)}
+                onTogglePublish={() => onTogglePublish(selected)}
+              />
+            ) : (
+              <EmptyState title="Tarif seçin" description={RECIPE_NOTES.pick} />
+            )}
           </aside>
         </div>
       )}
@@ -86,8 +117,18 @@ function RecipeRow({ recipe, selected }: { recipe: RecipeView; selected: boolean
   );
 }
 
-/** Seçili tarifin künyesi — okumak için, düzenlemek için değil. */
-function RecipePreview({ recipe }: { recipe: RecipeView }) {
+/** Seçili tarifin künyesi — okumak için; değiştirmek diyalogda. */
+function RecipePreview({
+  recipe,
+  busy,
+  onEdit,
+  onTogglePublish,
+}: {
+  recipe: RecipeView;
+  busy: boolean;
+  onEdit: () => void;
+  onTogglePublish: () => void;
+}) {
   const status = statusBadge(recipe);
   return (
     <div className="flex flex-col gap-3.5 px-5 py-4">
@@ -164,6 +205,22 @@ function RecipePreview({ recipe }: { recipe: RecipeView }) {
       >
         {RECIPE_NOTES.publishGate(recipe)}
       </p>
+
+      <div className="flex gap-2 border-t border-ops-line pt-3">
+        {/* Yayın düğmesi kapalıysa SEBEBİ üstteki kutuda yazılı — düğmeyi gizlemek, operatöre
+            "böyle bir şey yok" derdi; kapalı ama görünür olması "henüz değil" diyor. */}
+        <Button
+          variant="secondary"
+          className="flex-1"
+          disabled={busy || (!recipe.isActive && !recipe.canPublish)}
+          onClick={onTogglePublish}
+        >
+          {recipe.isActive ? 'Taslağa çek' : 'Yayına al'}
+        </Button>
+        <Button variant="primary" className="flex-1" onClick={onEdit}>
+          Düzenle
+        </Button>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
+import { titleOf } from '@/lib/catalog/title';
 import type { OpsTone } from '@/components/operation/ui/tone';
-import type { RecipeView } from './recipes-types';
+import type { RecipeItemView, RecipeView } from './recipes-types';
 
 /**
  * Tarif ekranının sözlüğü (09.21). İç terim ham kullanılmaz: ekranda `is_active` değil
@@ -33,6 +34,13 @@ export const RECIPE_NOTES = {
   empty:
     'Tarifler buradan doğuyor — müşteri yüzeyindeki "Sofradan Fikirler" bu kayıtları okuyor. İlk tarifi ekleyip malzemelerini ürün kayıtlarından bağlayın.',
   pick: 'Soldaki listeden bir tarif seçin; malzemeleri, adımları ve yayın durumu burada görünür.',
+  /** Yeni tarif taslak DOĞAR — yayın ayrı bir karar ve ayrı bir düğme. */
+  newSubtitle: 'Taslak olarak açılır; üç dilde ad dolunca yayına alınabilir.',
+  /** Fiyat burada girilmez (tasarımın kuralı) — ekran fiyatın sahibi değil, okuyucusu. */
+  itemsAside: 'ürün kaydından seçilir · fiyat oradan okunur',
+  /** Satır = madde; kullanıcı kararı 07.08 (`KARARLAR §3z`). Numarayı önizleme veriyor. */
+  lineIsItem: 'her satır bir adım',
+  pantryAside: 'her satır bir madde · satışa bağlanmaz',
   /** Kalemi olmayan tarif geçerli bir taslaktır — eksiklik değil, henüz bağlanmamış demek. */
   noItems: 'Henüz bağlı malzeme yok — bu tarif müşteride sepete eklenebilir bir şey göstermez.',
 
@@ -51,3 +59,14 @@ export const RECIPE_NOTES = {
     return `Yayınlanamaz: ${missing} dilinde ad yok. Tarif adı üç dilde de dolmadan yayına alınamaz — müşteri o dilde adsız bir kart görürdü.`;
   },
 } as const;
+
+/**
+ * Malzeme satırının başlığı — ürün adı + boy, tek yerden (`titleOf`).
+ *
+ * **Sözlükte, okumada DEĞİL:** `recipes-read` `server-only` ve bunu çağıran ekran bir İSTEMCİ
+ * bileşeni. Orada dururken sayfa 500 dönüyordu (ölçüldü 08.08) — sunucuya kilitli bir modül
+ * istemci ağacına girdiği an derleme değil ÇALIŞMA anında patlıyor, yani typecheck göremiyor.
+ */
+export function recipeItemTitle(item: RecipeItemView): string {
+  return titleOf(item.productName, item.variantLabel);
+}

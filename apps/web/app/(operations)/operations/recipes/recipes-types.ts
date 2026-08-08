@@ -1,4 +1,5 @@
-import type { RecipeWithItems } from '@lezzet/types';
+import { z } from 'zod';
+import { LocalizedTextDraftSchema, RecipeInsertSchema, RecipeItemEntrySchema, type RecipeWithItems } from '@lezzet/types';
 
 /**
  * Tarif yönetiminin görünüm tipleri (09.21) — `design/project/Operasyon - Tarifler.dc.html`.
@@ -67,3 +68,42 @@ export interface RecipesData {
   unavailableCount: number;
 }
 
+
+/**
+ * Diyalog formunun şeması — **paket şemasından TÜRETİLİR** (`CLAUDE §1`), alanlar elle yazılmaz.
+ *
+ * `slug` DIŞARIDA: addan türetiliyor ve operatörden istenmiyor (05.16 kararı — sormak, aynı tarifin
+ * iki kez farklı slug'la açılmasına kapı açardı). `isActive` de dışarıda: yayın ayrı bir KARAR ve
+ * ayrı bir eylemi var (`setRecipeActiveAction`); kaydetme akışına gömülseydi bir yazım hatasını
+ * düzeltmek tarifi istemeden yayından kaldırabilirdi.
+ */
+export const RecipeFormSchema = RecipeInsertSchema.omit({ slug: true, isActive: true }).extend({
+  /** Doluysa güncelleme, boşsa oluşturma. */
+  id: z.string().uuid().optional(),
+  items: z.array(RecipeItemEntrySchema),
+  /**
+   * İsteğe bağlı metinler formda `null` OLMAZ, boş nesne olur.
+   *
+   * Paket şeması `.nullish()` diyor (veritabanında alan gerçekten boş olabilir) ama form alanı üç
+   * dilin kutusudur ve o kutu hep vardır — `null` geçirmek, alanın "yok" ile "boş" hâlini aynı
+   * yapar ve kontrol her açılışta tipini sorgulamak zorunda kalırdı.
+   *
+   * `.default({})` KULLANILMIYOR: zod'un varsayılanı giriş tipini isteğe bağlı, çıkış tipini
+   * zorunlu yapıyor ve RHF çözücüsü ikisini bağdaştıramıyor. Boş nesneyi form `defaultValues` ile
+   * veriyor — varsayılanın yeri zaten orası.
+   */
+  description: LocalizedTextDraftSchema,
+  duration: LocalizedTextDraftSchema,
+  serves: LocalizedTextDraftSchema,
+  meal: LocalizedTextDraftSchema,
+  steps: LocalizedTextDraftSchema,
+  pantry: LocalizedTextDraftSchema,
+});
+export type RecipeFormValues = z.infer<typeof RecipeFormSchema>;
+
+/** Malzeme seçicisinin satırı — seçilen şey VARYANT, ürün değil (05.16). */
+export interface RecipeVariantOption {
+  variantId: string;
+  /** "Ezine Beyaz Peynir · 350 g" — `titleOf` ile kurulur, ekran ikinci kez kurmaz. */
+  label: string;
+}

@@ -13,8 +13,12 @@ type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'danger' | 'destructive'
 const VARIANT: Record<ButtonVariant, string> = {
   primary: 'bg-ops-olive text-ops-card hover:bg-ops-olive-dark disabled:bg-ops-gray-600',
   dark: 'bg-ops-ink text-ops-card hover:bg-ops-ink-hover disabled:bg-ops-gray-600',
-  secondary: 'border border-ops-line-strong bg-ops-card text-ops-strong hover:border-ops-olive',
-  danger: 'border border-ops-red-line bg-ops-card text-ops-red hover:bg-ops-red-bg',
+  // Çerçeveli ikilinin de KAPALI hâli görünür olmalı: dolu varyantlar rengi değiştirerek söylüyor,
+  // bunlar hiçbir şey söylemiyordu — kapalı düğme açığıyla tıpatıp aynı çiziliyordu (ölçüldü 08.08:
+  // tarif önizlemesinde "Yayına al" `disabled` ama `opacity: 1`). `cursor-not-allowed` yalnız fareyi
+  // getirene görünür; operatör düğmenin kapalı olduğunu BASMADAN önce görmeli.
+  secondary: 'border border-ops-line-strong bg-ops-card text-ops-strong hover:border-ops-olive disabled:opacity-50',
+  danger: 'border border-ops-red-line bg-ops-card text-ops-red hover:bg-ops-red-bg disabled:opacity-50',
   // DOLU renkli onay düğmeleri: `danger` çerçeveli bir "yıkıcı seçenek"tir, bunlar KARARIN KENDİSİ
   // (iadeyi onayla · kısmi karşılamayı kaydet). Üç diyalog aynı sınıf zincirini elle kuruyordu.
   destructive: 'bg-ops-red text-ops-card hover:bg-ops-red-dark disabled:opacity-50',
