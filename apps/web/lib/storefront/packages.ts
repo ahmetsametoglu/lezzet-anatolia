@@ -12,6 +12,7 @@ import {
 } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { imageOf } from '@lezzet/application';
+import { pickFeatured } from './featured';
 import type { StorefrontPackage, StorefrontPackageDetail, StorefrontPackageItem } from './storefront-types';
 
 /**
@@ -34,16 +35,29 @@ import type { StorefrontPackage, StorefrontPackageDetail, StorefrontPackageItem 
  * GÖSTERİM kararıdır ve ekranda çözülür; sorgu bölünmez.
  */
 
-/** Anasayfa bandının sabit sınırı — editoryal seçki, liste değil (CLAUDE.md §1). */
-export const HOME_PACKAGE_LIMIT = 3;
+/**
+ * Anasayfa bandının sabit sınırı — editoryal seçki, liste değil (CLAUDE.md §1).
+ *
+ * **3 → 2 (08.26):** yeni ana sayfa tasarımı paket bölümünü iki slotlu çiziyor
+ * (`Musteri - Anasayfa.dc.html`, `hint-placeholder-count="2"`). Üçüncü kart ızgarayı taşırıyordu.
+ */
+export const HOME_PACKAGE_LIMIT = 2;
 
 /** Paket + kalemleri; `listSellable`/`getWithItems` ikisi de bu şekli döner. */
 type BundleRow = Bundle & { items: BundleItem[] };
 
-export async function listStorefrontPackages(locale: Locale): Promise<StorefrontPackage[]> {
+/**
+ * `limit` verilirse liste ANA SAYFA BANDIDIR: önce vitrine işaretliler süzülür, sonra kesilir
+ * (08.26 · `pickFeatured` künyesi). Verilmezse `/packages` sayfasının tam listesi döner.
+ *
+ * Süzgeç kart üretiminden ÖNCE: iki kart çizecekken on paketin fiyatını ve stoğunu çözmek boşa
+ * iştir ve maliyeti paket sayısıyla büyürdü.
+ */
+export async function listStorefrontPackages(locale: Locale, limit?: number): Promise<StorefrontPackage[]> {
   // `listSellable` pasif paketi ve kalemi satıştan kalkmış paketi zaten düşürür; STOK burada
   // bakılmaz çünkü tükenmiş paket GİZLENMEZ — sona alınır (tasarım: link boşa düşmesin).
-  const bundles = await new BundleService(serviceDb()).listSellable();
+  const sellable = await new BundleService(serviceDb()).listSellable();
+  const bundles = limit === undefined ? sellable : pickFeatured(sellable, limit);
   if (bundles.length === 0) return [];
 
   const context = await loadContext(bundles);

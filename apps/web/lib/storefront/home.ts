@@ -1,17 +1,27 @@
 import 'server-only';
-import { AnalyticsProductDailyService, CategoryService, ProductService, SettingsService, serviceDb } from '@lezzet/database';
+import { AnalyticsProductDailyService, CategoryService, CollectionService, ProductService, SettingsService, serviceDb } from '@lezzet/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Locale } from '@lezzet/i18n';
 // `ProductWithRelations` şema tipidir, servis tipi değil — kaynağı `@lezzet/types` (`CLAUDE §1`:
 // şema tek kaynak). `@lezzet/database`'ten yeniden dışa açmak aynı tipe ikinci bir yol açardı.
 import type { AnalyticsProductSignal, ProductWithRelations } from '@lezzet/types';
 import type { PlaceWarehouses } from '@/lib/delivery/place-types';
+import { resolveLocalizedText } from '@lezzet/types';
 import { FIXTURE_CATEGORIES } from './fixtures';
-import { listOfferProductIds, loadProductContext, EMPTY_PRODUCT_CONTEXT, toCategory, toProduct } from '@lezzet/application';
+import {
+  imageOf,
+  listCollectionProductIds,
+  listOfferProductIds,
+  loadProductContext,
+  EMPTY_PRODUCT_CONTEXT,
+  toCategory,
+  toProduct,
+} from '@lezzet/application';
 import type { PricingViewer } from './read-viewer';
 import { HOME_PACKAGE_LIMIT, listStorefrontPackages } from './packages';
+import { pickFeatured, rotateDaily } from './featured';
 import type { StorefrontProduct } from '@lezzet/application';
-import type { StorefrontHome, StorefrontOffer } from './storefront-types';
+import type { StorefrontCollection, StorefrontHome, StorefrontOffer } from './storefront-types';
 
 /**
  * Anasayfa okuması — vitrinin veri KAPISI (08.10). Sayfa servisi doğrudan çağırmaz, buradan okur.
@@ -29,6 +39,12 @@ import type { StorefrontHome, StorefrontOffer } from './storefront-types';
 
 /** Fırsat bandında en çok kaç kart — tasarımda üçlü ızgara (K8), fazlası bandı taşırır. */
 const OFFER_LIMIT = 6;
+
+/** Kategori ızgarası — tasarım altılı tek sıra (`repeat(6,1fr)`). Seçim `is_featured`, sıra `sort_order`. */
+const HOME_CATEGORY_LIMIT = 6;
+
+/** Koleksiyon bandı — tasarım ikili ızgara, 16:7 kapak. Havuz büyükse güne göre döner. */
+const HOME_COLLECTION_LIMIT = 2;
 
 /**
  * Vitrin seçkisinde kaç kart — tasarımda dörtlü ızgara (anasayfa ve boş sepet, ikisinde de 4).
@@ -179,6 +195,44 @@ async function readOffers(db: SupabaseClient, locale: Locale, place: PlaceWareho
   return page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)).filter(isOffer);
 }
 
+/**
+ * **Koleksiyon bandı** (08.26) — kataloğun bir kesitine açılan iki kapı.
+ *
+ * Sıra bilinçli ve maliyeti belirliyor: önce HAVUZ süzülür (`pickFeatured`), sonra güne göre İKİSİ
+ * seçilir, ürün sayısı **yalnız o ikisi için** sorulur. Ters sırada koleksiyon başına bir sayım
+ * sorgusu atılırdı ve bandın maliyeti kataloğun koleksiyon sayısıyla büyürdü — iki kart çizen bir
+ * bölüm için.
+ *
+ * **Sayaç kataloğun ölçütüyle AYNI** (`status: 'active'` + aynı `collectionId` süzgeci): kart "9
+ * ürün" deyip katalog 4 gösterirse müşteri haklı olarak kandırıldığını düşünür. Üyelik sayısını
+ * basmak daha ucuz olurdu ve tam bu yalanı söylerdi.
+ *
+ * Ürünü kalmamış koleksiyon banda GİRMEZ: tıklanınca boş katalog açan bir kapı, kapı değildir.
+ */
+async function readCollections(db: SupabaseClient, locale: Locale): Promise<StorefrontCollection[]> {
+  const pool = pickFeatured(await new CollectionService(db).list({ activeOnly: true }));
+  const chosen = rotateDaily(pool, HOME_COLLECTION_LIMIT);
+  if (chosen.length === 0) return [];
+
+  const products = new ProductService(db);
+  const cards = await Promise.all(
+    chosen.map(async (c) => {
+      // Üyelik ÖNDEN kimliklere çözülür (`listCollectionProductIds` künyesi): `ProductFilters`ın
+      // `collectionId` süzgeci ölçüldü ve süzmüyor — sayım yolunda ise PostgREST'i reddettiriyor.
+      const memberIds = await listCollectionProductIds(db, c.id);
+      return {
+        id: c.id,
+        slug: c.slug,
+        name: resolveLocalizedText(c.name, locale),
+        image: imageOf(c),
+        // Sayaç kataloğun ölçütüyle AYNI: üye VE aktif. Üyelik sayısını basmak kartı yalancı yapardı.
+        productCount: memberIds.length === 0 ? 0 : await products.countMatching({ ids: memberIds, status: 'active' }),
+      };
+    }),
+  );
+  return cards.filter((c) => c.productCount > 0);
+}
+
 /** Anasayfanın tüm bölümleri tek turda — bölüm başına ayrı çağrı yapılmaz. */
 /**
  * `warehouseId` — müşterinin yerinden çözülen depo. **Zorunlu ve varsayılansız**: `null` meşru bir
@@ -195,17 +249,21 @@ async function readOffers(db: SupabaseClient, locale: Locale, place: PlaceWareho
  */
 export async function getHomeData(locale: Locale, place: PlaceWarehouses, viewer: PricingViewer): Promise<StorefrontHome> {
   const db = serviceDb();
-  const [categoryRows, featured, offers, packages] = await Promise.all([
+  const [categoryRows, featured, offers, packages, collections] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
     // Vitrin seçkisi boş sepetle PAYLAŞILIR — tek kaynak (`readShowcase`).
     readShowcase(db, locale, place, viewer),
     readOffers(db, locale, place, viewer),
-    listStorefrontPackages(locale),
+    listStorefrontPackages(locale, HOME_PACKAGE_LIMIT),
+    readCollections(db, locale),
   ]);
 
-  const categories = (categoryRows.length ? categoryRows : FIXTURE_CATEGORIES).map((c) => toCategory(c, locale));
+  // **Üç bölümün üçü de VİTRİNE İŞARETLİ olanı gösterir** (08.26). Sınır tasarımın ızgarası:
+  // kategori 6 · paket 2 · koleksiyon 2. Kural tek yerde (`pickFeatured`) — ayrı ayrı yazılsaydı
+  // biri gün gelip ötekilerden ayrışır ve ayrışma sessiz olurdu.
+  const categories = (categoryRows.length ? pickFeatured(categoryRows, HOME_CATEGORY_LIMIT) : FIXTURE_CATEGORIES).map((c) =>
+    toCategory(c, locale),
+  );
 
-  // Bant bir SEÇKİ, liste değil: sabit sınırla kesilir (CLAUDE.md §1). Tükenmişler sona alınmış
-  // geldiği için sınır önce satılabilirleri alır.
-  return { categories, featured, offers, packages: packages.slice(0, HOME_PACKAGE_LIMIT) };
+  return { categories, featured, offers, packages, collections };
 }

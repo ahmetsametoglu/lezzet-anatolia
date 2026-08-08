@@ -3,7 +3,7 @@ import { FramedImage } from '@/components/media/framed-image';
 import { PlacePrompt } from '@/components/customer/delivery/place-prompt';
 import { buttonClass } from '@/components/customer/ui/button';
 import { CtaBand, InviteBand, SectionHeading } from '@/components/customer/ui/section';
-import { CategoryCard, OfferCard, PackageCard, ProductCard } from '@/components/customer/ui/storefront-cards';
+import { CategoryCard, CollectionCard, OfferCard, PackageCard, ProductCard } from '@/components/customer/ui/storefront-cards';
 import { Link } from '@/i18n/navigation';
 import { limitText, type HomeViewProps } from './home-types';
 
@@ -59,6 +59,24 @@ export function HomeDesktop({ t, locale, data }: HomeViewProps) {
           ))}
         </div>
       </section>
+
+      {/* Koleksiyonlar — koşullu bölüm (08.26).
+          Tasarımın `hasCollections` koşulu: koleksiyon yoksa başlık da bant da HİÇ doğmaz. Fırsat
+          bölümünün kuralının aynısı (envanter K8) — boş bir "Koleksiyonlar" başlığı, olmayan bir
+          seçkiyi var gibi gösterir.
+          **Bu bölüm YALNIZ masaüstünde:** tasarımın mobil ekranında koleksiyon bandı çizilmemiş
+          (ölçüldü — `Musteri - Anasayfa.dc.html` mobil bloğunda `collections` bağı yok). Cihaz
+          forku burada bir yerleşim farkı değil, bir İÇERİK kararı; improvise edilmedi (CLAUDE §3). */}
+      {data.collections.length > 0 && (
+        <section className="flex flex-col gap-4 px-12 pb-12">
+          <SectionHeading title={t.collections.title} note={t.collections.note} />
+          <div className="grid grid-cols-2 gap-[18px]">
+            {data.collections.map((c) => (
+              <CollectionCard key={c.id} collection={c} labels={t.collections} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Fırsatlar — koşullu bölüm */}
       {data.offers.length > 0 && (

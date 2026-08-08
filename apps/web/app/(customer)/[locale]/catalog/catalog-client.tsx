@@ -63,11 +63,13 @@ export function CatalogClient({ t, locale, data, active, device, search }: Catal
    */
   const hrefFor = (patch: CatalogFilterPatch): CatalogHref => {
     const category = patch.category === null ? undefined : (patch.category ?? active.category);
+    const collection = patch.collection === null ? undefined : (patch.collection ?? active.collection);
     const sort = patch.sort ?? active.sort;
     const onlyOffers = patch.onlyOffers ?? active.onlyOffers;
     const onlyShippable = patch.onlyShippable ?? active.onlyShippable;
     const query: Record<string, string> = {};
     if (category) query.category = category;
+    if (collection) query.collection = collection;
     if (sort !== 'featured') query.sort = sort;
     if (onlyOffers) query.offers = '1';
     if (onlyShippable) query.shippable = '1';

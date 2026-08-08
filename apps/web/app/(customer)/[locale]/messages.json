@@ -16,6 +16,13 @@
     "categories": {
       "title": "Ne arıyorsunuz?"
     },
+    "collections": {
+      "title": "Koleksiyonlar",
+      "note": "Döneme özel temalar — göz atın, dilediğinizi tek tek seçin",
+      "tag": "Koleksiyon",
+      "items": "{n} ürün",
+      "go": "Koleksiyona git →"
+    },
     "offers": {
       "title": "Bu haftanın fırsatları",
       "note": "Stokla sınırlı",
@@ -64,6 +71,13 @@
     "categories": {
       "title": "Que cherchez-vous ?"
     },
+    "collections": {
+      "title": "Collections",
+      "note": "Des thèmes de saison — parcourez, choisissez ce qui vous plaît",
+      "tag": "Collection",
+      "items": "{n} produits",
+      "go": "Voir la collection →"
+    },
     "offers": {
       "title": "Les offres de la semaine",
       "note": "Dans la limite des stocks",
@@ -111,6 +125,13 @@
     },
     "categories": {
       "title": "Wonach suchen Sie?"
+    },
+    "collections": {
+      "title": "Kollektionen",
+      "note": "Saisonale Themen — stöbern Sie und wählen Sie einzeln aus",
+      "tag": "Kollektion",
+      "items": "{n} Produkte",
+      "go": "Zur Kollektion →"
     },
     "offers": {
       "title": "Angebote der Woche",

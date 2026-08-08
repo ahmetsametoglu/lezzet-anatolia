@@ -234,10 +234,38 @@ export interface StorefrontProductDetail {
 }
 
 /** Katalog okumasının sonucu — sayfa ve süzgeç bileşenlerinin paylaştığı şekil. */
+/**
+ * Koleksiyonun katalog başlığındaki künyesi (08.26) — ürün listesi değil, ÜST BİLGİ.
+ *
+ * `description` ve `image` paylaşım kartı (OG) içindir: koleksiyon bağlantısı WhatsApp'ta dolaşan
+ * içeriğin ta kendisi. Ana sayfa bandının kartı (`StorefrontCollection`, web tarafında) bundan
+ * ayrı durur — o bandın sorusu "kaç ürün", bunun sorusu "bu kesit nedir".
+ */
+export interface StorefrontCollectionHead {
+  id: string;
+  slug: string;
+  name: string;
+  /** Boş olabilir — koleksiyona açıklama girmek zorunlu değil; ekran satırı sessizce atlar. */
+  description: string;
+  image: StorefrontImage;
+}
+
 export interface StorefrontCatalog {
   categories: StorefrontCategory[];
   /** Seçili kategori (yoksa tüm katalog) — başlık bandı ve çip seçimi bunu kullanır. */
   activeCategory: StorefrontCategory | null;
+  /**
+   * **Seçili koleksiyon** (08.26) — katalogun "koleksiyon görünümü" hâli.
+   *
+   * Kategoriden AYRI bir alan, çünkü ayrı bir soru: kategori kataloğun kalıcı bölümlemesidir
+   * (çiplerle gezilir), koleksiyon ise editoryal bir kesittir ve o görünümde **kategori çipleri
+   * gizlenir**. Tek alanda birleştirilseydi ekran hangisinde olduğunu bilemez, iki farklı başlık
+   * bandını aynı veriden kurmaya çalışırdı.
+   *
+   * Slug verilmiş ama karşılığı yoksa `null` — ekran o zaman sıradan katalogu gösterir; ölü bir
+   * bağlantı 404 yerine tam kataloğa düşer.
+   */
+  activeCollection: StorefrontCollectionHead | null;
   products: StorefrontProduct[];
   /** Sonuç sayısı — "24 ürün" satırı. Süzgeçle birlikte değişir. */
   total: number;

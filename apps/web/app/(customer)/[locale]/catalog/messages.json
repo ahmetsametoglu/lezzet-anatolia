@@ -1,6 +1,8 @@
 {
   "tr": {
     "title": "Katalog",
+    "collectionTag": "Koleksiyon",
+    "collectionExit": "Tüm kataloğa dön ✕",
     "all": "Tümü",
     "count": "{n} ürün",
     "loadMore": "Daha fazla ürün",
@@ -32,6 +34,8 @@
   },
   "fr": {
     "title": "Catalogue",
+    "collectionTag": "Collection",
+    "collectionExit": "Retour au catalogue ✕",
     "all": "Tout",
     "count": "{n} produits",
     "loadMore": "Voir plus de produits",
@@ -63,6 +67,8 @@
   },
   "de": {
     "title": "Katalog",
+    "collectionTag": "Kollektion",
+    "collectionExit": "Zurück zum Katalog ✕",
     "all": "Alle",
     "count": "{n} Produkte",
     "loadMore": "Mehr Produkte",

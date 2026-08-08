@@ -1,4 +1,4 @@
-import { PriceService, ProductVariantService, StockService } from '@lezzet/database';
+import { CollectionService, PriceService, ProductVariantService, StockService } from '@lezzet/database';
 import type { ActiveOffer } from '@lezzet/domain-core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ProductWithRelations } from '@lezzet/types';
@@ -130,6 +130,31 @@ export async function listOfferProductIds(db: SupabaseClient, warehouseId: strin
   if (!batches.length) return [];
   const variants = await new ProductVariantService(db).listByIds([...new Set(batches.map((b) => b.variantId))]);
   return [...new Set(variants.map((v) => v.productId))];
+}
+
+/**
+ * Koleksiyon üyesi ÜRÜNLERİN kimlikleri — "yalnız indirimliler"in aynı deseni (08.26).
+ *
+ * ── NEDEN `ProductFilters.collectionId` KULLANILMIYOR — ÖLÇÜLDÜ, O SÜZGEÇ SÜZMÜYOR ──────────
+ * `buildProductQuery` üyeliği gömülü ilişki üzerinden yazıyor (`collections.collection_id`) ve
+ * PostgREST'te bu, ana satırları DEĞİL gömülü diziyi budar — `!inner` olmadan ürün süzülmez.
+ * Yerelde ölçüldü (08.08): 24 üyeli bir koleksiyon için süzgeç **131** satır (tüm aktif katalog)
+ * döndürdü; `!inner` ile ve junction tablosunun kendisinde sayı **24**. Yani süzgeç sessizce
+ * "hepsi" diyor — hata vermeyen, en tehlikeli türden.
+ *
+ * Sayım yolunda ise sessiz bile değil: `count()` gömülü ilişkiyi SEÇMEDEN sorguyor ve PostgREST
+ * `PGRST108` ile reddediyor (`/tr` ana sayfası bu yüzden düştü).
+ *
+ * Süzgecin kendisi `packages/database`'in işi; düzeltmesi arka uca talep olarak açıldı. Bu okuma
+ * bir pansuman DEĞİL, var olan ve ÇALIŞAN desenin ikinci uygulaması: kimlikler önden çözülür ve
+ * `ids` süzgeciyle SORGUYA girer — teklif süzgeci de aylardır tam olarak böyle çalışıyor, aynı
+ * gerekçeyle (sonuç sayfası çekildikten sonra elemek keyset sayfalamayı ve sayacı bozar).
+ *
+ * Koleksiyon operatörün elle kurduğu bir seçkidir (doğal tavanı var), yani kimlik listesi veriyle
+ * sınırsız büyümez — `ids` süzgecinin taşıyabileceği boy.
+ */
+export async function listCollectionProductIds(db: SupabaseClient, collectionId: string): Promise<string[]> {
+  return new CollectionService(db).productIds(collectionId);
 }
 
 /**

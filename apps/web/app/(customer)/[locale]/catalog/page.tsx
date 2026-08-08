@@ -6,7 +6,8 @@ import { setRequestLocale } from 'next-intl/server';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { detectDevice } from '@/lib/device';
-import { getCatalogData } from '@lezzet/application';
+import { getCatalogData, readCollectionHead } from '@lezzet/application';
+import { openGraphOf } from '@/lib/seo/open-graph';
 import { serviceDb } from '@lezzet/database';
 import { CATALOG_SORTS, type CatalogSort } from '@lezzet/types';
 import { FIXTURE_CATEGORIES } from '@/lib/storefront/fixtures';
@@ -20,7 +21,7 @@ import messages from './messages.json';
 
 interface CatalogPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ category?: string; sort?: string; offers?: string; shippable?: string; q?: string }>;
+  searchParams: Promise<{ category?: string; collection?: string; sort?: string; offers?: string; shippable?: string; q?: string }>;
 }
 
 /**
@@ -37,10 +38,42 @@ interface CatalogPageProps {
  * süzgeçli katalog" ayrı bir sayfa değil, aynı sayfanın bir görünümü — indekste ayrı tutulsaydı
  * yüzlerce neredeyse-aynı sayfa doğardı.
  */
-export async function generateMetadata({ params }: CatalogPageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: CatalogPageProps): Promise<Metadata> {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) return {};
-  return { title: messages[locale].title, alternates: localeAlternates('/catalog', locale) };
+  const { collection } = await searchParams;
+
+  /**
+   * **Koleksiyon hâlinin KENDİ paylaşım kartı** (08.26) — ötekilerden ayrılan tek süzgeç bu.
+   *
+   * Kategori/sıralama/çip hâlleri kart almaz ve almamalı: onlar aynı sayfanın görünümleri, kimse
+   * "artan fiyata sıralı katalog" bağlantısını paylaşmaz. Koleksiyon ise **paylaşılmak için var** —
+   * "Bayram" bağlantısı WhatsApp'ta dolaşan içeriğin ta kendisi ve kartı adını, açıklamasını ve
+   * kapağını göstermeli. Kart yoksa paylaşılan bağlantı "Katalog" başlığıyla düşer, yani
+   * koleksiyonun tamamı görünmez olur.
+   *
+   * Sorgu YALNIZ slug varken atılır; süzgeçsiz katalogun metadata'sı bir sorgu daha ödemez.
+   * `canonical` yine süzgeçsiz katalogu gösteriyor (aşağıdaki `localeAlternates`) — koleksiyon
+   * ayrı bir sayfa değil, indekste ikinci bir kayıt doğurmamalı.
+   */
+  const head = collection ? await readCollectionHead(serviceDb(), collection, locale) : null;
+  const title = head ? `${head.name} · ${messages[locale].title}` : messages[locale].title;
+
+  return {
+    title,
+    alternates: localeAlternates('/catalog', locale),
+    ...(head
+      ? {
+          openGraph: openGraphOf({
+            route: '/catalog',
+            locale,
+            title: head.name,
+            description: head.description || null,
+            image: head.image.url,
+          }),
+        }
+      : {}),
+  };
 }
 
 export default async function CatalogPage({ params, searchParams }: CatalogPageProps) {
@@ -49,7 +82,7 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
   setRequestLocale(locale);
   void recordPageView('/catalog', await searchParams);
 
-  const { category, sort, offers, shippable, q } = await searchParams;
+  const { category, collection, sort, offers, shippable, q } = await searchParams;
   const activeSort: CatalogSort = CATALOG_SORTS.includes(sort as CatalogSort) ? (sort as CatalogSort) : 'featured';
   const onlyOffers = offers === '1';
   // Kargo çipi URL'de yaşar: süzülmüş liste paylaşılabilir ve geri tuşu çalışır (offers ile aynı desen).
@@ -59,7 +92,7 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
   const [data, device] = await Promise.all([
     getCatalogData(serviceDb(), {
       locale,
-      query: { categorySlug: category, search: q, sort: activeSort, onlyOffers, onlyShippable },
+      query: { categorySlug: category, collectionSlug: collection, search: q, sort: activeSort, onlyOffers, onlyShippable },
       place: await readPlaceWarehouses(),
       viewer: await readPricingViewer(),
       // Boş katalogda vitrin fikstürü — paket varsayılanı "yedek yok" (mobil ucun kararı); web
@@ -100,7 +133,7 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
 
   return (
     <SiteFrame device={device} locale={locale} activeNav="catalog">
-      <CatalogClient t={t} locale={locale} data={data} active={{ category, sort: activeSort, onlyOffers, onlyShippable }} device={device} search={q} />
+      <CatalogClient t={t} locale={locale} data={data} active={{ category, collection, sort: activeSort, onlyOffers, onlyShippable }} device={device} search={q} />
     </SiteFrame>
   );
 }

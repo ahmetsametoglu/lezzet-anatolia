@@ -1,11 +1,11 @@
-import { CategoryService, ProductListingService, ProductService } from '@lezzet/database';
-import { DEFAULT_PAGE_SIZE } from '@lezzet/types';
+import { CategoryService, CollectionService, ProductListingService, ProductService } from '@lezzet/database';
+import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import type { CatalogSort, KeysetCursor, PreferredLanguage } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { listOfferProductIds, loadProductContext } from './product-context';
+import { listCollectionProductIds, listOfferProductIds, loadProductContext } from './product-context';
 import type { PricingViewer } from './pricing-viewer';
-import { EMPTY_PRODUCT_CONTEXT, toCategory, toProduct, type CatalogCategoryRow } from './map';
-import type { PlaceWarehouses, StorefrontCatalog } from './storefront-types';
+import { EMPTY_PRODUCT_CONTEXT, imageOf, toCategory, toProduct, type CatalogCategoryRow } from './map';
+import type { PlaceWarehouses, StorefrontCatalog, StorefrontCollectionHead } from './storefront-types';
 
 /**
  * Katalog okuması (08.10; terfi 21.6 — kaynağı `apps/web/lib/storefront/catalog.ts`).
@@ -24,6 +24,13 @@ import type { PlaceWarehouses, StorefrontCatalog } from './storefront-types';
 export interface CatalogQuery {
   /** Kategori slug'ı — dil-bağımsız, içerikten türer. */
   categorySlug?: string;
+  /**
+   * **Koleksiyon slug'ı** (08.26) — katalogun editoryal kesiti (`/catalog?collection=<slug>`).
+   *
+   * Kategoriyle BİRLİKTE verilebilir ve ikisi birbirini daraltır (kesişim): "Bayram koleksiyonunun
+   * tatlıları" anlamlı bir sorudur. Biri ötekini ezmez.
+   */
+  collectionSlug?: string;
   search?: string;
   sort?: CatalogSort;
   /** "Yalnız indirimliler" — açık teklifi olan ürünlere daraltır (DOMAIN §5). */
@@ -85,9 +92,13 @@ export interface CatalogInput {
 const noProducts = (
   categories: StorefrontCatalog['categories'],
   activeCategory: StorefrontCatalog['activeCategory'],
+  // Koleksiyon boş cevapta da TAŞINIR: başlık bandı ürün listesinden bağımsız — "Bayram · 0 ürün"
+  // demek, müşteriyi kimliksiz bir boş sayfada bırakmaktan iyidir.
+  activeCollection: StorefrontCatalog['activeCollection'],
 ): StorefrontCatalog => ({
   categories,
   activeCategory,
+  activeCollection,
   products: [],
   total: 0,
   nextCursor: null,
@@ -107,25 +118,33 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
   const source = categoryRows.length ? categoryRows : (input.fallbackCategories ?? []);
   const categories = source.map((c) => toCategory(c, locale));
   const activeCategory = q.categorySlug ? (categories.find((c) => c.slug === q.categorySlug) ?? null) : null;
+  // Koleksiyon SLUG'DAN çözülür (kategoriyle aynı sözleşme: dil-bağımsız, paylaşılabilir URL).
+  // Slug verilmemişse sorgu HİÇ atılmaz — katalogun sıradan hâli koleksiyon tablosuna uğramaz.
+  const activeCollection = q.collectionSlug ? await readCollectionHead(db, q.collectionSlug, locale) : null;
 
-  // "Yalnız indirimliler": teklifli ürünler önden çözülür ve SORGUYA girer — sayfa çekildikten
-  // sonra elemek keyset sayfalamayı ve toplam sayıyı bozardı.
+  // "Yalnız indirimliler" ve KOLEKSİYON üyeliği: ikisi de ürün kimliklerine çözülüp SORGUYA girer
+  // — sayfa çekildikten sonra elemek keyset sayfalamayı ve toplam sayıyı bozardı.
   const offerIds = q.onlyOffers ? await listOfferProductIds(db, place.warehouseId) : undefined;
-  if (offerIds && !offerIds.length) return noProducts(categories, activeCategory);
+  const memberIds = activeCollection ? await listCollectionProductIds(db, activeCollection.id) : undefined;
+  // İkisi birden açıksa KESİŞİM alınır, biri ötekini EZMEZ: "Bayram koleksiyonunun indirimlileri"
+  // anlamlı bir sorudur ve tek `ids` alanına son yazan kazansaydı ekran sessizce yanlış liste
+  // gösterirdi.
+  const ids = offerIds && memberIds ? offerIds.filter((id) => memberIds.includes(id)) : (offerIds ?? memberIds);
+  if (ids && !ids.length) return noProducts(categories, activeCategory, activeCollection);
 
   // Aday ürün katalogda GÖRÜNMEZ (`musteri-katalog.md §6`) — `status: 'active'` bunu sağlar.
   const filters = {
     query: q.search,
     categoryId: activeCategory?.id,
     status: 'active' as const,
-    ids: offerIds,
+    ids,
     onlyShippable: q.onlyShippable,
   };
   const productSvc = new ProductService(db);
   // Fiyat sıralaması AYRI kaynaktan okunur (`product_listing` görünümü, 0043): sıralama anahtarı
   // ürün tablosunda yoktur. Süzgeçler ve satır şeması ortaktır — ayrışan tek şey sıra.
   const direction = q.sort === 'priceAsc' ? 'asc' : q.sort === 'priceDesc' ? 'desc' : null;
-  const [page, counts] = await Promise.all([
+  const [page, total] = await Promise.all([
     direction
       ? new ProductListingService(db).listByPrice({
           filters,
@@ -135,15 +154,51 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
           warehouseId: place.warehouseId,
         })
       : productSvc.listWithRelations({ filters, cursor: q.cursor, limit }),
-    productSvc.counts(filters),
+    // **`countMatching`, `counts` DEĞİL** — ve bu bir tercih değil, geri gelmiş bir arızanın
+    // kapatılması (08.26'da ölçüldü). `counts()` operasyon RPC'sini çağırıyor ve süzgeçlerin
+    // yalnız dördünü iletiyor (`query · category · status · onlyIncomplete`); vitrin ise altı-yedi
+    // ile çağırıyor — `ids` (yalnız indirimliler), `onlyShippable` ve artık `collectionId`
+    // SESSİZCE düşüyordu. Tam bu arıza 07.08'de bulunup `countMatching`e taşınmıştı (08.10
+    // künyesi: *"çip açıkken liste 1 satır basarken başlık 131 diyordu"*); okuma bu pakete terfi
+    // ederken eski çağrı geri gelmiş. Hata fırlatmıyor, çünkü çağrı tip olarak kusursuz: tam
+    // nesne veriliyor, içeride üçü atılıyor.
+    productSvc.countMatching(filters),
   ]);
   const context = await loadProductContext(db, page.rows, place, viewer);
 
   return {
     categories,
     activeCategory,
+    activeCollection,
     products: page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)),
-    total: counts.total,
+    total,
     nextCursor: page.nextCursor,
+  };
+}
+
+/**
+ * Slug'dan koleksiyon künyesi. **Aktif olmayan koleksiyon `null` döner** — pasife çekilmiş bir
+ * koleksiyonun bağlantısı bir gün paylaşılmış olabilir ve onu hâlâ açmak, operatörün "yayından
+ * kaldırdım" kararını görmezden gelmek olurdu. Ekran o hâlde sıradan katalogu gösterir.
+ *
+ * **Dışa VERİLİR** çünkü ikinci bir okuyanı var: `generateMetadata` paylaşım kartını kurarken
+ * yalnız künyeye ihtiyaç duyuyor, ürün listesine değil. Sayfanın kendi okumasını (`getCatalogData`)
+ * metadata için ikinci kez çağırmak, kartı çizmek için tüm katalog sayfasını sorgulamak olurdu.
+ */
+export async function readCollectionHead(
+  db: SupabaseClient,
+  slug: string,
+  locale: PreferredLanguage,
+): Promise<StorefrontCollectionHead | null> {
+  const row = (await new CollectionService(db).list({ activeOnly: true })).find((c) => c.slug === slug);
+  if (!row) return null;
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: resolveLocalizedText(row.name, locale),
+    // Açıklama NULLABLE (koleksiyona metin girmek zorunlu değil) — boş dizeye indiriliyor ki
+    // okuyan taraf "yok" ile "boş"u ayırt etmek zorunda kalmasın; ikisi de aynı ekranı üretir.
+    description: row.description ? resolveLocalizedText(row.description, locale) : '',
+    image: imageOf(row),
   };
 }

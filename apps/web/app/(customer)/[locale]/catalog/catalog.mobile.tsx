@@ -5,6 +5,7 @@ import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { LoadMore } from '@/components/customer/ui/load-more';
 import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
 import { SearchField } from '@/components/customer/ui/search-field';
+import { Link } from '@/i18n/navigation';
 import type { CatalogViewProps } from './catalog-types';
 import { CartBar } from '@/components/customer/cart/cart-bar';
 
@@ -18,17 +19,36 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
   return (
     <div className="flex flex-col pb-24">
       <section className="flex flex-col gap-3 px-4 pt-5 pb-3">
-        <h1 className="font-serif text-page-title-sm text-ink">{data.activeCategory?.name ?? t.title}</h1>
-        {/* Arama başlığın ALTINDA, tam genişlikte: dar ekranda başlıkla yan yana sığmaz. */}
-        <SearchField placeholder={t.searchPlaceholder} clearLabel={t.searchClear} defaultValue={search} fullWidth />
+        {/* Koleksiyon görünümü — masaüstüyle AYNI sözleşme, dar ekranın yerleşimiyle (08.26):
+            üst etiket, başlık, çıkış bağlantısı alta iner (yan yana sığmaz), açıklama altında. */}
+        {data.activeCollection && (
+          <span className="font-sans text-micro font-semibold uppercase tracking-wider text-olive">{t.collectionTag}</span>
+        )}
+        <h1 className="font-serif text-page-title-sm text-ink">{data.activeCollection?.name ?? data.activeCategory?.name ?? t.title}</h1>
+        {data.activeCollection ? (
+          <>
+            {data.activeCollection.description && (
+              <p className="font-sans text-note leading-relaxed text-body">{data.activeCollection.description}</p>
+            )}
+            <Link href={hrefFor({ collection: null })} className="cursor-pointer font-sans text-note font-bold text-olive">
+              {t.collectionExit}
+            </Link>
+          </>
+        ) : (
+          /* Arama başlığın ALTINDA, tam genişlikte: dar ekranda başlıkla yan yana sığmaz. */
+          <SearchField placeholder={t.searchPlaceholder} clearLabel={t.searchClear} defaultValue={search} fullWidth />
+        )}
       </section>
 
-      <div className={`${SCROLL_STRIP} gap-2 px-4`}>
-        <FilterChip label={t.all} href={hrefFor({ category: null })} active={!active.category} compact />
-        {data.categories.map((c) => (
-          <FilterChip key={c.id} label={c.name} href={hrefFor({ category: c.slug })} active={active.category === c.slug} compact />
-        ))}
-      </div>
+      {/* Kategori şeridi koleksiyon görünümünde gizlenir — masaüstündeki kuralın aynısı. */}
+      {!data.activeCollection && (
+        <div className={`${SCROLL_STRIP} gap-2 px-4`}>
+          <FilterChip label={t.all} href={hrefFor({ category: null })} active={!active.category} compact />
+          {data.categories.map((c) => (
+            <FilterChip key={c.id} label={c.name} href={hrefFor({ category: c.slug })} active={active.category === c.slug} compact />
+          ))}
+        </div>
+      )}
 
       {/* Sonuç sayısı + süzgeç + sıralama TEK SATIR (tasarım). İki satıra bölmek dar ekranda
           ürünleri katlama aşağı iter; mobilde dikey yer en kıt kaynaktır. Bölünmesinin sebebi

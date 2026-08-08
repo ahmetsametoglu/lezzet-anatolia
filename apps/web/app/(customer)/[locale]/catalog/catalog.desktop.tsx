@@ -4,6 +4,7 @@ import { SearchField } from '@/components/customer/ui/search-field';
 import { SortSelect } from '@/components/customer/ui/sort-select';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { LoadMore } from '@/components/customer/ui/load-more';
+import { Link } from '@/i18n/navigation';
 import type { CatalogViewProps } from './catalog-types';
 
 /**
@@ -24,17 +25,42 @@ export function CatalogDesktop({ t, locale, data, products, hasMore, loadingMore
       <section className="flex flex-col gap-5 px-12 pt-9 pb-5">
         {/* Arama BAŞLIKLA aynı satırda: çerçeveden buraya indi (28.07) — sonucu gösteren sayfada
             durması hem üst çubuğu boşaltıyor hem "ne aradığım"ı sonucun yanında tutuyor. */}
+        {/* KOLEKSİYON GÖRÜNÜMÜ — başlık bandı değişir, gerisi aynı kalır (tasarım: "Durum:
+            koleksiyon görünümü"). Ayrı bir sayfa AÇILMADI ve bu kullanıcı kararı: koleksiyon
+            kataloğun bir kesiti, ayrı bir mağaza değil — süzgeç, sıralama ve sayfalama aynen
+            çalışmalı. Ayrı sayfa olsaydı bunların hepsi ikinci kez yazılırdı. */}
+        {data.activeCollection && (
+          <span className="font-sans text-eyebrow font-semibold uppercase tracking-wider text-olive">{t.collectionTag}</span>
+        )}
+
         <div className="flex items-center justify-between gap-6">
-          <h1 className="font-serif text-page-title text-ink">{data.activeCategory?.name ?? t.title}</h1>
-          <SearchField placeholder={t.searchPlaceholder} clearLabel={t.searchClear} defaultValue={search} />
+          <h1 className="font-serif text-page-title text-ink">{data.activeCollection?.name ?? data.activeCategory?.name ?? t.title}</h1>
+          {data.activeCollection ? (
+            // Çıkış yolu ARAMANIN yerinde: koleksiyon görünümündeyken müşterinin ilk ihtiyacı
+            // "buradan nasıl çıkarım", arama değil. Süzgeci temizler, ötekilere dokunmaz.
+            <Link href={hrefFor({ collection: null })} className="cursor-pointer font-sans text-note font-bold text-olive hover:text-olive-dark">
+              {t.collectionExit}
+            </Link>
+          ) : (
+            <SearchField placeholder={t.searchPlaceholder} clearLabel={t.searchClear} defaultValue={search} />
+          )}
         </div>
 
-        <div className="flex flex-wrap gap-2.5">
-          <FilterChip label={t.all} href={hrefFor({ category: null })} active={!active.category} />
-          {data.categories.map((c) => (
-            <FilterChip key={c.id} label={c.name} href={hrefFor({ category: c.slug })} active={active.category === c.slug} />
-          ))}
-        </div>
+        {data.activeCollection?.description && (
+          <p className="max-w-[760px] font-sans text-body-sm leading-relaxed text-body">{data.activeCollection.description}</p>
+        )}
+
+        {/* Kategori çipleri koleksiyon görünümünde GİZLENİR (tasarımın açık kuralı): koleksiyon
+            zaten bir seçkidir, üstüne kategori bölmesi sunmak müşteriye "bu seçki neydi"yi
+            unutturur. Süzgeç/sıralama satırı aşağıda aynen kalır. */}
+        {!data.activeCollection && (
+          <div className="flex flex-wrap gap-2.5">
+            <FilterChip label={t.all} href={hrefFor({ category: null })} active={!active.category} />
+            {data.categories.map((c) => (
+              <FilterChip key={c.id} label={c.name} href={hrefFor({ category: c.slug })} active={active.category === c.slug} />
+            ))}
+          </div>
+        )}
 
         <div className="flex items-center gap-3">
           <span className="font-sans text-body-sm text-muted">{t.count.replace('{n}', String(data.total))}</span>

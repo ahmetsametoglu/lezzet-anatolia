@@ -84,6 +84,27 @@ export interface StorefrontPackageDetail extends StorefrontPackage {
   shelfLifeDays: number | null;
 }
 
+/**
+ * **KOLEKSİYON BANDI** — ana sayfanın "Koleksiyonlar" bölümü (08.26).
+ *
+ * Koleksiyon bir SATIŞ BİRİMİ DEĞİL, paketle karıştırılmamalı: kendi fiyatı, kendi sipariş kalemi
+ * yoktur; yalnız kataloğun bir kesitine açılan kapıdır (`/catalog?collection=<slug>`). Kartın
+ * taşıdığı her alan tasarımın o banttan istediği kadarı — `description` burada YOK çünkü bantta
+ * yazmıyor; paylaşım kartının (OG) metnini katalog sayfası kendi okur.
+ */
+export interface StorefrontCollection {
+  id: string;
+  slug: string;
+  name: string;
+  /** 16:7 kapak bandı; kapaksız koleksiyon da çizilir (kart adını taşır — boş bant değil). */
+  image: StorefrontImage;
+  /**
+   * Kaç ürün — **kataloğun sayacağıyla AYNI ölçüt** (aktif ürün). Üyelik sayısını basmak kolay
+   * olurdu ve yalan söylerdi: pasif üyeler karta girer, müşteri "14 ürün" okuyup 9 görürdü.
+   */
+  productCount: number;
+}
+
 /** Anasayfanın tek okuma sonucu — bölümler ayrı ayrı çağrılmaz (tek turda toplanır). */
 export interface StorefrontHome {
   categories: StorefrontCategory[];
@@ -92,6 +113,8 @@ export interface StorefrontHome {
   /** Boşsa fırsat bölümü HİÇ render edilmez (envanter: "teklif yoksa bu bölüm var olmamalı"). */
   offers: StorefrontOffer[];
   packages: StorefrontPackage[];
+  /** Boşsa koleksiyon bölümü HİÇ çizilmez (tasarımın `hasCollections` koşulu) — boş hâl gösterilmez. */
+  collections: StorefrontCollection[];
 }
 
 /**

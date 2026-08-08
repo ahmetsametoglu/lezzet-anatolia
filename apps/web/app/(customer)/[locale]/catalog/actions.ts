@@ -63,6 +63,11 @@ export async function loadMoreCatalogAction(locale: string, q: CatalogPageQuery,
       locale,
       query: {
         categorySlug: q.category,
+        // Koleksiyon da bir SÜZGEÇTİR ve sonraki sayfa onu taşımak zorunda: taşımasaydı müşteri
+        // koleksiyon içinde kaydırırken liste sessizce tüm kataloğa açılırdı. `CatalogPageQuery`
+        // `CatalogFilters`ten türediği için bu alanı geçirmemek derleme hatası DEĞİL — künyedeki
+        // `onlyShippable` vakasının aynısı, o yüzden elle bağlanıyor.
+        collectionSlug: q.collection,
         search: q.search,
         sort,
         onlyOffers: q.onlyOffers,

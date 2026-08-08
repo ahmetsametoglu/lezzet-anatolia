@@ -6,7 +6,7 @@ import { FramedImage } from '@/components/media/framed-image';
 import { Link } from '@/i18n/navigation';
 import { formatComparison } from '@/lib/storefront/format';
 import type { StorefrontCategory, StorefrontProduct } from '@lezzet/application';
-import type { StorefrontOffer, StorefrontPackage } from '@/lib/storefront/storefront-types';
+import type { StorefrontCollection, StorefrontOffer, StorefrontPackage } from '@/lib/storefront/storefront-types';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { StockMark, StockNoticeButton } from '@/components/customer/delivery/stock-mark';
 import { Badge } from './badge';
@@ -38,6 +38,31 @@ const productHref = (slug: string) => ({ pathname: '/product/[slug]' as const, p
 /** Paket detayının hedefi (05.5) — ürünle aynı kural: slug dil-bağımsız, segment kelimesi çevrilir. */
 const packageHref = (slug: string) => ({ pathname: '/package/[slug]' as const, params: { slug } });
 
+/**
+ * **Kapaksız kartın yedek çizimi — ad baş harfi** (08.26; arka-uç notu 08.08).
+ *
+ * Kart bugüne dek `placeholder` geçirmiyordu ve `FramedImage` boş gri bir dikdörtgen çiziyordu —
+ * yani müşteri onu "bozuk" diye okuyordu. Oysa kapaksızlık bir arıza değil, **beklenen bir hâl**:
+ * seed'in kendi künyesi bunu bir test durumu olarak kuruyor (*"müşteride ad baş harfiyle çıkar,
+ * boş gri kutu çizilmez"*) ve üretimde de operatör bir kategoriyi kapaksız bırakabilir.
+ * Ölçüldü (08.08): on kategorinin yedisi kapaksızdı, yani boşluk istisna değil çoğunluktu.
+ *
+ * Zemin `absolute inset-0` ile FramedImage'in kendi kutusunu KAPLAR — çerçevenin varsayılan gri
+ * zemini (paylaşılan primitif, operasyon da kullanıyor) müşteri kartında görünmesin diye. Harf
+ * serif ve zeytin: kart bir kapı, boşluğun kendisi değil.
+ *
+ * Baş harf `Intl`e bırakılmadan alınıyor ama **kod noktası bazında** (`[...name]`): "Şerbetli"nin
+ * baş harfi Ş'dir ve `name[0]` çok baytlı bir karakterin yarısını kesebilirdi.
+ */
+function InitialMark({ name }: { name: string }) {
+  const initial = [...name.trim()][0]?.toLocaleUpperCase('tr') ?? '';
+  return (
+    <span className="absolute inset-0 grid place-items-center bg-sand-100 font-serif text-h2 font-medium text-olive" aria-hidden>
+      {initial}
+    </span>
+  );
+}
+
 interface CategoryCardProps {
   category: StorefrontCategory;
   /** Mobil şeritte kategori dairesi (kırpma yine kare) — envanter O15. */
@@ -61,8 +86,77 @@ export function CategoryCard({ category, circle = false }: CategoryCardProps) {
         crop={category.image.crop}
         circle={circle}
         className={circle ? 'w-[86px]' : 'w-full'}
+        placeholder={<InitialMark name={category.name} />}
       />
       <span className={['font-sans font-bold text-ink', circle ? 'text-micro' : 'text-body'].join(' ')}>{category.name}</span>
+    </Link>
+  );
+}
+
+/**
+ * **K—Koleksiyon bandı** (08.26) — ana sayfanın "Koleksiyonlar" bölümünün kartı.
+ *
+ * Koleksiyon kartı öteki kartlardan AYRI bir tür ve karıştırılmamalı: ürün/paket kartı bir SATIN
+ * ALMA sunar (fiyat, sepet düğmesi), koleksiyon kartı yalnız kataloğun bir kesitine kapı açar.
+ * Fiyat, stok, sepet — hiçbiri yok ve olmamalı; koleksiyonun kendi fiyatı yoktur.
+ *
+ * ── ÇERÇEVE 16:7, KAYNAK 16:9 ────────────────────────────────────────────────
+ * Tasarım bandı `aspect-ratio:16/7` çiziyor, kapak ise 16:9 kayıtlı (`RATIO_BAND`, aynı kapak OG
+ * kartında da kullanılıyor). İkisi çelişmiyor: tek kaynaktan odak+zoom ile türeyen iki çerçeve —
+ * `FramedImage`'in tüm varlık sebebi bu (envanter §0B). Kırpılmış ikinci bir kopya saklanmaz.
+ *
+ * ⚠ **Operatörün kırpma önizlemesi bu çerçeveyi HENÜZ göstermiyor:** `ImageFrame` listesi
+ * (`packages/types`) koleksiyon için 16:9 önizliyor. Kapağı 16:9'a göre ayarlayan operatör, ana
+ * sayfada üstten/alttan biraz daha dar bir bant görüyor. Ayrı bir şeridin dosyası olduğu için
+ * dokunmadım; not `docs/talep`'e yazıldı.
+ *
+ * ── GRADYAN TOKEN'DAN ────────────────────────────────────────────────────────
+ * Tasarımın `rgba(52,59,65,.78→0)` gradyanı ham yazılmadı: `--color-ink` üzerinden `color-mix` ile
+ * kuruluyor (`CLAUDE §3` — ham hex yasak). Marka tonu bir gün değişirse bant da onunla döner.
+ */
+const RATIO_COLLECTION_BAND = 16 / 7;
+const BAND_SCRIM =
+  'linear-gradient(90deg, color-mix(in srgb, var(--color-ink) 78%, transparent) 0%,' +
+  ' color-mix(in srgb, var(--color-ink) 35%, transparent) 55%, transparent 100%)';
+
+interface CollectionCardProps {
+  collection: StorefrontCollection;
+  /** Üst etiket ("Koleksiyon") ve gidiş cümlesi — komponent metin taşımaz, çağıran sayfadan gelir. */
+  labels: { tag: string; go: string; items: string };
+  compact?: boolean;
+}
+
+export function CollectionCard({ collection, labels, compact = false }: CollectionCardProps) {
+  return (
+    <Link
+      // Koleksiyon AYRI BİR SAYFA DEĞİL, katalogun bir hâli (tasarım kararı 08.08): süzgeç URL'de
+      // yaşar, "tüm kataloğa dön" tek tıkla geri alır ve bağlantı paylaşılabilir kalır.
+      href={{ pathname: '/catalog', query: { collection: collection.slug } }}
+      // Yarıçap `rounded-card` (18px): tasarım 22px çiziyor ama envanterde o kademe YOK ve dört
+      // piksel için ölçeği bölmek, sayfadaki her kartın köşesini birbirinden ayırmak olurdu.
+      className="relative block cursor-pointer overflow-hidden rounded-card transition-opacity hover:opacity-95"
+      style={{ aspectRatio: RATIO_COLLECTION_BAND }}
+    >
+      <FramedImage
+        src={collection.image.url}
+        alt={collection.name}
+        ratio={RATIO_COLLECTION_BAND}
+        crop={collection.image.crop}
+        className="absolute inset-0 h-full w-full"
+        placeholder={<InitialMark name={collection.name} />}
+      />
+      {/* Örtü ŞART, süs değil: başlık fotoğrafın üstünde duruyor ve kapağın açık bir bölgesine
+          denk gelen bir koleksiyon adı okunamaz hâle gelirdi. */}
+      <span className="absolute inset-0" style={{ background: BAND_SCRIM }} />
+      <span className={['absolute flex flex-col gap-1.5', compact ? 'bottom-4 left-4' : 'bottom-6 left-7'].join(' ')}>
+        <span className="font-sans text-micro font-semibold uppercase tracking-wider text-olive-light">{labels.tag}</span>
+        <span className={['font-serif font-medium text-on-image', compact ? 'text-card-title-sm' : 'text-card-title'].join(' ')}>
+          {collection.name}
+        </span>
+        <span className="font-sans text-note font-bold text-on-image">
+          {labels.items.replace('{n}', String(collection.productCount))} · {labels.go}
+        </span>
+      </span>
     </Link>
   );
 }

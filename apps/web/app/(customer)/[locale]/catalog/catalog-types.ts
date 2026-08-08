@@ -26,13 +26,21 @@ export type CatalogHref = ComponentProps<typeof Link>['href'];
  */
 export interface CatalogFilters {
   category?: string;
+  /** Koleksiyon kesiti (08.26) — kategoriyle birlikte durabilir, biri ötekini ezmez. */
+  collection?: string;
   sort: CatalogSort;
   onlyOffers: boolean;
   onlyShippable: boolean;
 }
 
-/** Tek süzgeci değiştirip diğerlerini koruyan yama — `category: null` süzgeci kaldırır ("Tümü"). */
-export type CatalogFilterPatch = Partial<Omit<CatalogFilters, 'category'>> & { category?: string | null };
+/**
+ * Tek süzgeci değiştirip diğerlerini koruyan yama — `category: null` süzgeci kaldırır ("Tümü").
+ * `collection: null` da aynı anlamda: "tüm kataloğa dön".
+ */
+export type CatalogFilterPatch = Partial<Omit<CatalogFilters, 'category' | 'collection'>> & {
+  category?: string | null;
+  collection?: string | null;
+};
 
 export interface CatalogViewProps {
   t: Messages;
